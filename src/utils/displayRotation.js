@@ -354,7 +354,7 @@ export const DISPLAY_PAGE_PARAMS = Object.freeze({
       opt('unified', '🗄️ ตู้ Kanban รวม'), opt('chart', '🕐 Store Time Chart'), opt('board', '🏪 Store Board'),
       opt('timeline', '📊 Heijunka Board'), opt('pull', '🔄 Pull / ใบสั่งผลิต'), opt('demand', '📋 ความต้องการวันนี้')] },
     { key: 'store', label: 'สโตร์', kind: 'select', showIf: { view: ['', 'unified'] }, options: [
-      opt('fg', '🏭 Store FG'), opt('child', '🔧 Store Child'), opt('purchase', '🛒 จัดซื้อ'), opt('raw', 'Raw Mat'),
+      opt('fg', '🚚 รอบส่งคัมบังเข้าไลน์'), opt('child', '🔧 Store Child'), opt('purchase', '🛒 จัดซื้อ'), opt('raw', 'Raw Mat'),
       opt('rack', '📦 Rack Center'), opt('wip', 'WIP'), opt('plating', 'ชุบ')] },
     { key: 'sec', label: 'ส่วนงาน', kind: 'section' },
     { key: 'fline', label: 'ไลน์', kind: 'line' },

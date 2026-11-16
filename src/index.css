@@ -1239,3 +1239,14 @@ body.esm-tv-shell .tv-hide { display: none !important; }
   color: var(--text2); font-size: 12.5px; }
 .notice-bar b { color: var(--text); font-weight: 600; }
 .notice-bar-act { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+
+/* 🔍 แถวที่แตะแล้วเปิดรายละเอียด (ถังเหลือง/แดง · ใบรายงานของเสีย · 2026-11-16) — hover เฉพาะอุปกรณ์มีเมาส์ */
+@media (hover: hover) {
+  .qb-row:hover > td { background: var(--bg2); }
+}
+
+/* 📏 B6 (2026-11-16 · หน้า /scrap-report เท่านั้น) — ช่องเลือกไลน์ในแถบกรองยาว 465px จนแถบตกบรรทัด
+   ต้นเหตุ: `.filter-bar select { max-width: 280px }` ข้างบน **แพ้** `.filter-bar :is(select, input:not(...)×5)`
+   (specificity ของ :is() = ตัวที่สูงสุดในวงเล็บ = 0,6,1) ⇒ เพดาน 280 ไม่เคยมีผลทั้งระบบ
+   ⚠️ แก้เฉพาะหน้านี้ตามที่สั่ง — แก้ตัวกลางจะทำให้ select ทุกหน้าแคบลงพร้อมกัน (ต้องตัดสินใจแยก) */
+.scrap-page .filter-bar select { max-width: 280px !important; }

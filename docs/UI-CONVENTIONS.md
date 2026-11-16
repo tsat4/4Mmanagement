@@ -11,6 +11,7 @@
 อัพเดท 2026-10-28: §6.23 — การ์ดรอบส่ง `/customer-demand` แปลงเป็น `<PartCard>` แล้ว (รูปชิ้นงาน + MAT 3 ชั้น เหมือนสโตร์)
 อัพเดท 2026-11-16: §5.1.2 — ใหม่ **`<BomChildSelect>`** ช่อง "พาร์ทลูกของ MAT นี้" (ของเสียที่ child part ใน `/daily-report`) · ลิสต์มาจาก BOM ของ MAT แม่เท่านั้น (`useBomChildren` → `buildBomIndex`) · `allowFree` ปิดตาย · **ไม่มีลูก/อ่าน BOM ไม่ได้ = ยังบันทึกได้ ต้องเขียนบนจอว่าเพราะอะไร** (fail-open)
 อัพเดท 2026-11-09: §5.3 ข้อ 9 — **`<SectionScopeSelect>`** = ตัวแปลงสำหรับหน้าที่กรองแค่ "ส่วนงาน" (state สตริงตัวเดียว · `pickDept` = แผนกด้วย) · กวาด 12 หน้า/17 ช่องที่ยังวาด `<select>` ส่วนงานแบนเอง · ด่าน `section-select-hand-built`
+อัพเดท 2026-11-16: §5.3 ข้อ 9 — 🔴 **`<LineSelect>` ต้องบอก "เหตุผล" ของค่าที่ไม่อยู่ในลิสต์ให้ถูก** — หน้าที่ส่ง `lines` ที่กรองมาแล้ว (เช่นกรองตามส่วนงาน) เคยทำให้ป้ายขึ้นว่า `⚠ ไม่มีในทะเบียนไลน์` ทั้งที่ไลน์มีอยู่จริง (13/11: เลือก PD1 แล้วโชว์ `Assembly Line B - FORD` ซึ่งอยู่ PD2) ⇒ `lineOptions` หาเหตุผลจาก **ทะเบียนเต็ม** (`allLines` จาก `useProductionLinesState`) + แยก "ยังโหลดไม่เสร็จ" ออกจาก "ไม่มีในทะเบียน" · และ **หน้าที่กรอง `lines` เองต้องรีเซ็ตค่าที่หลุดลิสต์ พร้อมบอกบนจอ ห้ามสลับเงียบ** (มีด่าน `line-select-reason-honest`)
 อัพเดท 2026-10-02: §5.3 ข้อ 9 — ทุกช่องขอบเขตวาดด้วย `<OrgScopePicker>` ตัวเดียว (`<LineScopeSelect>` = ตัวแปลงสำหรับหน้า section/line) · หัวกลุ่ม LineSelect = 📁 · ไลน์เดียว = `<LineSelect>`
 
 อัพเดท 2026-10-01: §5.3 ข้อ 10 ใหม่ — **ลำดับของรายการจากผังองค์กร (ส่วนงาน/แผนก/กลุ่ม/ทีม) = `sort_order` ใน /org-setup → ชื่อธรรมชาติ** (`src/utils/listOrder.js`)
@@ -363,6 +364,7 @@ robot ส่วนใหญ่ติดจิ๊กที่ปลายแข�
 - **เขียนอย่างไร:** `className="overlay"` (CSS กลาง) หรือ inline `background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)'`
   (ต้องมี `Webkit-` ด้วย — iPhone Safari < 18 ไม่รู้จักแบบไม่มี prefix) · ชั้นม่านที่เป็น `position:absolute; inset:0` ข้างใน wrapper ก็ใช้ token เดียวกัน
 - 🔴 **ห้ามเขียน `rgba(0,0,0,0.x)` เองบน fixed เต็มจอ** (ด่าน `scrim-token-only`) · อยากเปลี่ยนความมืดทั้งระบบ = แก้ `index.css` บรรทัดเดียว
+- 🔴 **modal ที่มีม่านต้อง `zIndex` ≥ 2000** (เท่า `.overlay`) — ต่ำกว่า 1200 กระดิ่งแจ้งเตือนมุมขวาบน (App.jsx · 1200) ทับปุ่ม ✕ (2026-11-16 · ด่าน `scrim-modal-above-bell`)
 - ยกเว้นที่ตั้งใจทึบ (alpha 1 = `var(--bg)`): โหมดเต็มจอ TV/Meeting · toast/แถบล่างไม่ใช่ม่าน ไม่เข้าข่าย
 - 📄 ตัวเลขก่อน/หลังรายตัว → `docs/modules/ux-laws-audit.md`
 

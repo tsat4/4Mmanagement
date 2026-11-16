@@ -792,3 +792,53 @@ export function checkStdSelection(rows = [], stdItems = null) {
   }
   return { weight, diff, ok: diff === 0 && missingFixed.length === 0, missingFixed };
 }
+
+/* ── 🧾 "KPI นี้ตัดสินยังไง" เป็นประโยคเดียว + ตรวจเกณฑ์ที่ตั้งขัดกัน (2026-11-16 · user: "หน้ากรอก KPI งงเรื่อง plan และผ่าน/ตก") ──
+   เกณฑ์ทุกตัวตั้งได้ต่อ KPI อยู่แล้ว (เป้า · Commit · ทิศทาง · เทียบแผนรายเดือนไหม · วิธีสรุปปี) — ที่ขาดคือ "ประโยคสรุป" ให้คนกรอกเห็น
+   · อ่านผ่าน defBars() เท่านั้น (ข้อความเก่าก็แกะให้) · ไม่คิดเกณฑ์ใหม่ · pure มีเทส */
+export const CMP_SYM = { '<=': '≤', '>=': '≥', '<': '<', '>': '>', '=': '=' };
+export function scoreRuleText(def = {}, { unit = null, fmt = (v) => String(v), summaryLabel = null } = {}) {
+  const b = defBars(def);
+  const u = unit != null ? unit : unitOf(def);
+  const f = (v) => `${fmt(v)}${u ? ' ' + u : ''}`;
+  const mode = summaryLabel || summaryModeLabel(summaryModeOf(def));
+  if (b.target_value == null && b.commit_value == null) return { text: `ยังไม่ตั้งเป้า — ไม่ตัดสิน ○△✗ (เห็นแค่ตัวเลข) · สรุปปี = ${mode}`, ok: false, mode };
+  const cmp = b.target_compare || b.commit_compare;
+  if (!cmp) return { text: 'ตั้งเป้าไว้แต่ไม่ได้บอกทิศทาง (≥ หรือ ≤) — ตัดสิน ○△✗ ไม่ได้', ok: false, mode };
+  const sym = CMP_SYM[cmp] || cmp;
+  const down = String(cmp).startsWith('<');
+  const parts = [];
+  if (b.target_value != null) parts.push(`○ ${sym} ${f(b.target_value)}`);
+  if (b.commit_value != null) parts.push(`△ ${sym} ${f(b.commit_value)}`);
+  parts.push(`✗ ${down ? 'เกิน' : 'ต่ำกว่า'}นั้น`);
+  const head = def.score_by_plan
+    ? 'รายเดือนเทียบ "แผนของเดือนนั้น" (ช่องแผน = เป้าเดือน · △ = แผน×สัดส่วน Commit/Target · เดือนไม่มีแผน = เทียบเป้าปี) · เป้าปี: '
+    : 'ทุกเดือนเทียบเป้าเดียวกัน: ';
+  return { text: `${head}${parts.join(' · ')} · สรุปปี = ${mode}`, ok: true, mode, down, bars: b };
+}
+
+/** เกณฑ์ที่ตั้งขัดกัน/ไม่ครบ — จอขึ้นเตือนแดงที่แถวทันที ไม่รอให้บอร์ดสีเพี้ยน · `plans` = {เดือน: ค่า} ของแถว (ไม่ส่ง = ไม่ตรวจเรื่องแผน) */
+export function defIssues(def = {}, { plans = null } = {}) {
+  const out = [];
+  const b = defBars(def);
+  const hasNum = b.target_value != null || b.commit_value != null;
+  if (hasNum && !(b.target_compare || b.commit_compare)) out.push({ code: 'no_direction', text: 'ตั้งเป้าแล้วแต่ไม่ได้เลือกทิศทาง ≥/≤ — ตัดสิน ○△✗ ไม่ได้' });
+  const cmp = b.target_compare || b.commit_compare;
+  const dirOf = (c) => (c == null ? null : String(c).startsWith('<') ? 'down' : String(c).startsWith('>') ? 'up' : null);
+  if (b.target_compare && b.commit_compare && dirOf(b.target_compare) && dirOf(b.commit_compare) && dirOf(b.target_compare) !== dirOf(b.commit_compare)) {
+    out.push({ code: 'commit_dir_conflict', text: `เครื่องหมายของ Commitment (${CMP_SYM[b.commit_compare] || b.commit_compare}) สวนทางกับ Target (${CMP_SYM[b.target_compare] || b.target_compare}) — น่าจะพิมพ์ผิดด้าน (เคส "≤ 0" กับเป้า ≥ 30)` });
+  } else if (cmp && b.target_value != null && b.commit_value != null) {
+    const down = String(cmp).startsWith('<');
+    if (down ? b.commit_value < b.target_value : b.commit_value > b.target_value) {
+      out.push({ code: 'commit_wrong_side', text: `Commitment (${b.commit_value}) เข้มกว่า Target (${b.target_value}) ทั้งที่ทิศทาง "${down ? 'ยิ่งน้อยยิ่งดี' : 'ยิ่งมากยิ่งดี'}" — △ จะไม่มีวันเกิด (น่าจะใส่เครื่องหมายผิดด้าน)` });
+    }
+  }
+  const ct = def.commitment == null ? '' : String(def.commitment).trim();
+  if (b.commit_value == null && ct && ct !== '-' && !/\d/.test(ct)) out.push({ code: 'commit_text_unparsed', text: `Commitment เป็นข้อความที่อ่านตัวเลขไม่ได้ ("${ct}") — ไม่ถูกใช้ตัดสิน` });
+  if (plans && typeof plans === 'object') {
+    const n = Object.values(plans).filter(v => v != null && v !== '' && !Number.isNaN(Number(v))).length;
+    if (n && !def.score_by_plan) out.push({ code: 'plan_unused', text: `กรอกแผนไว้ ${n} เดือน แต่ตั้งให้เทียบเป้าปี — แผนเป็นแค่เส้นประกอบ ไม่มีผลกับ ○△✗ (ถ้าต้องการให้มีผล เลือก "เทียบแผนของเดือนนั้น" ในนิยาม)` });
+    if (!n && def.score_by_plan) out.push({ code: 'plan_missing', text: 'ตั้งให้เทียบแผนของเดือนนั้น แต่ยังไม่กรอกแผนสักเดือน — ทุกเดือนจะถอยไปเทียบเป้าปี' });
+  }
+  return out;
+}

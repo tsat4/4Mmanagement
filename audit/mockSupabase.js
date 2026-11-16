@@ -999,6 +999,17 @@ const TABLE_FIXED = {
         { key: 'from_vendor', label: 'รับคืนจากชุบ', kind: 'input' },
         { key: 'at_vendor', label: 'ค้างที่ร้านชุบ', kind: 'recur', recur: 'สูตรที่ยังไม่มี' },
       ] },
+    /* 🏬 บอร์ดสโตร์ (16/11) — start_date ว่าง = หน้าต่างเลื่อนตามวันนี้ · ไม่มี FC/SL · แถว รับ/จ่าย/คงเหลือ/SAP/Diff */
+    { id: 'mon-store', board_key: 'store-s407', name: 'S407 · พื้นที่สโตร์ภายนอก (Purchase part)', kind: 'st_purchase',
+      line_name: 'STORE', customer: null, period_kind: 'day', period_count: 22,
+      start_date: null, sl_row: 'out', sl_includes_seed: false, sort_order: 2, note: null,
+      rows: [
+        { key: 'in', label: 'รับ', kind: 'system' },
+        { key: 'out', label: 'จ่าย', kind: 'system' },
+        { key: 'balance', label: 'คงเหลือ', kind: 'recur', recur: 'stock_run' },
+        { key: 'sap', label: 'SAP', kind: 'input' },
+        { key: 'diff', label: 'Diff (SAP − คงเหลือ)', kind: 'recur', recur: 'sap_diff' },
+      ] },
   ],
   /* พาร์ท: mp-1 ใส่ยอดยกมาครบ · mp-2 **ไม่ใส่** (ต้องขึ้นแถบ "ยังไม่ใส่ยอดยกมา") ·
      mp-3 ไม่มีเลข MAT ในทะเบียนสินค้า (ต้องขึ้นป้าย "ยังไม่อยู่ในทะเบียนสินค้า") */
@@ -1027,6 +1038,12 @@ const TABLE_FIXED = {
       model: null, raw_mat: null, process: null, rack: null, lot_qty: null, packing: null, cost: null,
       ct_sec: null, fc: null, pieces_per_shot: 2, kg_per_piece: 0.148, spec: 'WSS-M1A365-A11 1.40 X 187 X COIL',
       semi_part: 'GST FRT FNDR APR LH', sort_order: 1, note: null, is_active: true },
+    { id: 'mp-st1', board_id: 'mon-store', mat_no: '30047784', part_no: null, part_name: 'N1WB-E286F72-AC',
+      model: null, raw_mat: null, process: null, rack: null, lot_qty: null, packing: 300, cost: null,
+      ct_sec: null, fc: null, pieces_per_shot: null, kg_per_piece: null, spec: null, semi_part: null, sort_order: 1, note: null, is_active: true },
+    { id: 'mp-st2', board_id: 'mon-store', mat_no: '30047785', part_no: null, part_name: 'N1WB-E286F73-AC',
+      model: null, raw_mat: null, process: null, rack: null, lot_qty: null, packing: 300, cost: null,
+      ct_sec: null, fc: null, pieces_per_shot: null, kg_per_piece: null, spec: null, semi_part: null, sort_order: 2, note: null, is_active: true },
     { id: 'mp-6', board_id: 'mon-bad', mat_no: '20066542', part_no: 'R1WB-17K824-AAW', part_name: null,
       model: null, raw_mat: null, process: null, rack: null, lot_qty: null, packing: null, cost: null,
       ct_sec: null, fc: 3383.6, pieces_per_shot: null, kg_per_piece: null, spec: null, semi_part: null,

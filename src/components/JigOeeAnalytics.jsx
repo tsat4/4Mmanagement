@@ -22,7 +22,7 @@ import { pct1, stopPareto, dailyCapacityRows } from '../utils/machineOee';
 import { lineNameCompare } from '../utils/lineHierarchy';
 import { tr as trI18n } from '../utils/i18n';
 import { loadJigShift, loadJigReport, combineJigRows } from '../lib/jigOeeData';
-import { JigOeeCard, JigDrilldown, JigKpiRow, KindLegend, StopParetoChart, ShiftTrendChart, LossWaterfall, DailyCapacityChart } from './JigOee';
+import { JigOeeCard, JigDrilldown, JigKpiRow, KindLegend, StopParetoChart, ShiftTrendChart, LossWaterfall, DailyCapacityChart, StopDrillPanel } from './JigOee';
 
 const TARGET = 0.85;
 const card = { background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 14, boxShadow: 'var(--shadow-sm)', minWidth: 0 };
@@ -136,7 +136,7 @@ function ShiftView({ sp, setParam }) {
             <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>
               {sel.machineNo} <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--muted)' }}>{sel.lineName} · {wd} · {SHIFT_LABEL[sh]}</span>
             </div>
-            <JigDrilldown j={sel} trendRows={trend} target={TARGET} />
+            <JigDrilldown key={`${jigKey}|${wd}|${sh}`} j={sel} trendRows={trend} target={TARGET} />
           </>) : <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>กดการ์ดจิ๊กเพื่อดูลึก (แถบสถานะ · รายชั่วโมง · Loss · Pareto · การหยุด · ใบผลิต · แนวโน้ม)</div>}
         </>)}
     </div>
@@ -188,6 +188,11 @@ function ReportView({ setSp }) {
     return [...m.values()].map(x => ({ j: x.j, c: combineJigRows(x.rows) }));
   }, [data]);
   const daily = useMemo(() => dailyCapacityRows(rows), [rows]);
+  /* 🔎 กดแท่ง Pareto ⇒ รายครั้ง + ผูก ESM (ชุดเหตุการณ์เดียวกับที่นับในแท่ง) */
+  const [drill, setDrill] = useState(null);
+  const drillEvents = useMemo(() => (data?.pareto || []).filter(e => !pick || `${e.source_id}|${e.machine_tag}` === pick), [data, pick]);
+  const drillOrders = useMemo(() => [...new Map(rows.flatMap(r => r.orders || []).map(o => [o.id, o])).values()], [rows]);
+  const drillTagNo = useMemo(() => new Map((data?.jigs || []).map(j => [`${j.sourceId}|${j.tag}`, j.machineNo])), [data]);
   /* (ค) คลิกวัน ⇒ ไปมุมมองทั้งวันของวันนั้น (จิ๊กที่เลือกอยู่ ถ้าเลือก) */
   const openDay = (d) => setSp(p => { const n = new URLSearchParams(p); n.delete('mview'); n.set('wd', d); n.set('sh', 'all'); if (pick) n.set('jig', pick); else n.delete('jig'); return n; });
 
@@ -234,7 +239,7 @@ function ReportView({ setSp }) {
           <div style={card}>
             <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>Pareto สาเหตุการหยุด</div>
             <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>นาทีที่เสีย (Alarm / Idle / หยุดนอกแผน ≥ 2 นาที + หยุดสั้นรวม)</div>
-            {data.pErr ? <NoticeBar tone="bad">อ่านช่วงหยุดรายสาเหตุไม่สำเร็จ</NoticeBar> : <StopParetoChart pareto={paretoRows} />}
+            {data.pErr ? <NoticeBar tone="bad">อ่านช่วงหยุดรายสาเหตุไม่สำเร็จ</NoticeBar> : <StopParetoChart pareto={paretoRows} onPick={r => setDrill(p => (p?.key === r.key ? null : r))} />}
           </div>
           <div style={card}>
             <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>OEE Loss ช่วงที่เลือก</div>
@@ -242,6 +247,10 @@ function ReportView({ setSp }) {
             <LossWaterfall o={wf} />
           </div>
         </div>
+        {drill && (
+          <StopDrillPanel row={drill} events={drillEvents} orders={drillOrders} tagNo={drillTagNo}
+            fromMs={Date.parse(`${from}T08:00:00+07:00`)} toMs={Date.parse(`${to}T08:00:00+07:00`) + 86400000} onClose={() => setDrill(null)} />
+        )}
         <div style={card}>
           <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>ยอดผลิตรายวัน & ชิ้นที่ควรทำได้</div>
           <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>
