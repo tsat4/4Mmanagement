@@ -120,7 +120,8 @@ export const baseVarOf = (key) => KPI_BASE_VARS.find(v => v.key === key) || null
 export const KPI_FORMULAS = [
   { key: 'dl_pct',        label: 'DL %',        expr: 'dl ÷ sale_product × 100',                  vars: ['dl', 'sale_product'],             unit: '%' },
   { key: 'oh_pct',        label: 'OH %',        expr: 'oh ÷ sale_product × 100',                  vars: ['oh', 'sale_product'],             unit: '%' },
-  { key: 'dloh_pct',      label: 'DL&OH %',     expr: '(dl + oh) ÷ sale_product × 100',           vars: ['dl', 'oh', 'sale_product'],       unit: '%' },
+  /* `parts` (16/11 · user: "dl+oh พอเจาะเข้าไปควรแตกเป็น 2 กราฟ dl กับ oh") = สูตรลูกที่ใช้ตัวแปรชุดเดียวกัน — จอ 🔍 วาดให้เองผ่าน `formulaPartSeries()` */
+  { key: 'dloh_pct',      label: 'DL&OH %',     expr: '(dl + oh) ÷ sale_product × 100',           vars: ['dl', 'oh', 'sale_product'],       unit: '%', parts: ['dl_pct', 'oh_pct'] },
   { key: 'rm_pct',        label: '%RM',         expr: 'raw_material ÷ sale_product × 100',        vars: ['raw_material', 'sale_product'],   unit: '%' },
   { key: 'p100_pct',      label: '100P %',      expr: 'cost_100p ÷ sale_product × 100',           vars: ['cost_100p', 'sale_product'],      unit: '%' },
   { key: 'inventory_day', label: 'DSI (วัน)',   expr: '(inventory_baht ÷ cogs) × days_in_month',      vars: ['inventory_baht', 'cogs', 'days_in_month'], unit: 'วัน' },
@@ -371,23 +372,70 @@ export const boardSlotOf = (d) => {
    · 🔴 เดือนที่ไม่มีทั้งผลและแผน = **คาดการณ์ไม่ได้** (`value:null` + `missing`) — ห้ามเดา ห้ามเติม 0 ห้ามลากค่าเฉลี่ยไปแทน
    · `rate` ไม่มียอดดิบของแผนให้หาร ⇒ เฉลี่ย + `approx` (กฎเดียวกับ summaryOf/planProgress)
    · ตัดสิน "รอด/ร่วง" ที่ผู้เรียกด้วย `scoreDef(value, def)` — ที่นี่ไม่ตัดสิน (สูตรสีมีที่เดียว) */
-export function yearForecast({ actual = [], plan = [], def = null } = {}) {
+export function yearForecast({ actual = [], plan = [], def = null, fallback = false } = {}) {
   const num = (v) => (v == null || v === '' || Number.isNaN(Number(v)) ? null : Number(v));
   const a = Array.from({ length: 12 }, (_, i) => num(actual[i]));
   const p = Array.from({ length: 12 }, (_, i) => num(plan[i]));
-  const used = []; const missing = [];
-  let actualMonths = 0, planMonths = 0;
-  for (let m = 1; m <= 12; m++) {
-    if (a[m - 1] != null) { used.push(a[m - 1]); actualMonths += 1; }
-    else if (p[m - 1] != null) { used.push(p[m - 1]); planMonths += 1; }
-    else missing.push(m);
-  }
   const mode0 = summaryModeOf(def);
   const approx = mode0 === 'rate';
   const mode = approx ? 'average' : mode0;
-  if (!actualMonths) return { value: null, reason: 'no_actual', mode, approx, actualMonths, planMonths, missing };
-  if (missing.length) return { value: null, reason: 'no_plan', mode, approx, actualMonths, planMonths, missing };
-  return { value: summarizeMonths(used, mode), reason: null, mode, approx, actualMonths, planMonths, missing: [] };
+  /* 📈 16/11 (user: "ทุกกราฟตอบไม่ได้ว่าจบปีจะผ่านไหม เดือนที่ยังไม่ถึงเหมือนไม่มีค่า") — `fallback: true` =
+     เดือนที่ไม่มีทั้งผลและแผน **สมมติว่าทำได้เท่าเดิม** แล้วบอกบนจอว่าสมมติอะไร (ห้ามเนียนเป็นแผน):
+     · ตัวไม่สะสม (average/sum/rate≈average) = เท่าค่าเฉลี่ยของเดือนที่มีผลจริง
+     · ตัวสะสม (max/as_of) = เพิ่มต่อด้วยอัตราเดิม (ค่าล่าสุด ÷ จำนวนเดือนที่เดินมา) — ค่าสะสมถอยหลังไม่ได้
+     ค่าเริ่มต้น (ไม่ส่ง fallback) = พฤติกรรมเดิมเป๊ะ: ขาดเดือนไหน = คาดไม่ได้ */
+  const have = a.filter(x => x != null);
+  const cumulative = mode === 'max' || mode === 'as_of';
+  const lastIdx = a.map((x, i) => (x != null ? i : -1)).reduce((m, i) => Math.max(m, i), -1);
+  const firstIdx = a.findIndex(x => x != null);
+  let assumed = null;
+  if (fallback && have.length) {
+    if (cumulative) {
+      const last = a[lastIdx];
+      const slope = lastIdx > firstIdx ? (last - a[firstIdx]) / (lastIdx - firstIdx) : last / (lastIdx + 1);
+      assumed = { kind: 'slope', rate: slope, from: last, fromIdx: lastIdx };
+    } else {
+      assumed = { kind: 'average', rate: have.reduce((s, x) => s + x, 0) / have.length };
+    }
+  }
+  const used = []; const missing = []; const months = []; const src = []; const assumedMonths = [];
+  let actualMonths = 0, planMonths = 0;
+  for (let m = 1; m <= 12; m++) {
+    const i = m - 1;
+    if (a[i] != null) { used.push(a[i]); months.push(a[i]); src.push('actual'); actualMonths += 1; }
+    else if (p[i] != null) { used.push(p[i]); months.push(p[i]); src.push('plan'); planMonths += 1; }
+    else if (assumed) {
+      const v = assumed.kind === 'slope' ? assumed.from + assumed.rate * Math.max(0, i - assumed.fromIdx) : assumed.rate;
+      used.push(v); months.push(v); src.push('assumed'); assumedMonths.push(m);
+    } else { missing.push(m); months.push(null); src.push(null); }
+  }
+  const basis = assumedMonths.length ? (planMonths ? 'mixed' : 'runrate') : planMonths ? 'plan' : 'actual';
+  const base = { mode, approx, actualMonths, planMonths, assumedMonths, assumed, basis, months, src };
+  if (!actualMonths) return { ...base, value: null, reason: 'no_actual', missing };
+  if (missing.length) return { ...base, value: null, reason: 'no_plan', missing };
+  return { ...base, value: summarizeMonths(used, mode), reason: null, missing: [] };
+}
+
+/** 🎯 "เดือนที่เหลือต้องทำได้เท่าไหร่ถึงจะถึงเป้าทั้งปี" (16/11) — คู่กับ yearForecast · pure
+ *  · average: (เป้า × 12 − Σ จริง) ÷ เดือนที่เหลือ · sum: (เป้า − Σ จริง) ÷ เดือนที่เหลือ
+ *  · ตัวสะสม (max/as_of): ต้อง "ไปถึง" เป้าภายใน ธ.ค. ⇒ คืนส่วนที่ต้องเพิ่มจากค่าล่าสุด · rate: คำนวณไม่ได้ (ต้องรู้ยอดดิบ)
+ *  @returns null เมื่อไม่มีเป้า/ไม่มีผลจริง/ครบ 12 เดือนแล้ว · ไม่งั้น { kind:'avg'|'sum'|'reach', perMonth, remaining, add? } */
+export function neededRunRate({ actual = [], target = null, def = null } = {}) {
+  const num = (v) => (v == null || v === '' || Number.isNaN(Number(v)) ? null : Number(v));
+  const t = num(target);
+  const a = Array.from({ length: 12 }, (_, i) => num(actual[i]));
+  const have = a.filter(x => x != null);
+  const remaining = 12 - have.length;
+  if (t == null || !have.length || remaining <= 0) return null;
+  const mode0 = summaryModeOf(def);
+  const sum = have.reduce((s, x) => s + x, 0);
+  if (mode0 === 'rate') return null;
+  if (mode0 === 'max' || mode0 === 'as_of') {
+    const last = a[a.map((x, i) => (x != null ? i : -1)).reduce((m, i) => Math.max(m, i), -1)];
+    return { kind: 'reach', perMonth: t, remaining, add: t - last };
+  }
+  if (mode0 === 'sum') return { kind: 'sum', perMonth: (t - sum) / remaining, remaining };
+  return { kind: 'avg', perMonth: (t * 12 - sum) / remaining, remaining };
 }
 
 /** จัดรูปตัวเลขตามทศนิยมของแถว — `null`/ไม่ใช่ตัวเลข = สตริงว่าง **ห้ามคืน 0** */
@@ -703,4 +751,54 @@ export function checkStdSelection(rows = [], stdItems = null) {
       .map(m => m.item);
   }
   return { weight, diff, ok: diff === 0 && missingFixed.length === 0, missingFixed };
+}
+
+/* ── 🧾 "KPI นี้ตัดสินยังไง" เป็นประโยคเดียว + ตรวจเกณฑ์ที่ตั้งขัดกัน (2026-11-16 · user: "หน้ากรอก KPI งงเรื่อง plan และผ่าน/ตก") ──
+   เกณฑ์ทุกตัวตั้งได้ต่อ KPI อยู่แล้ว (เป้า · Commit · ทิศทาง · เทียบแผนรายเดือนไหม · วิธีสรุปปี) — ที่ขาดคือ "ประโยคสรุป" ให้คนกรอกเห็น
+   · อ่านผ่าน defBars() เท่านั้น (ข้อความเก่าก็แกะให้) · ไม่คิดเกณฑ์ใหม่ · pure มีเทส */
+export const CMP_SYM = { '<=': '≤', '>=': '≥', '<': '<', '>': '>', '=': '=' };
+export function scoreRuleText(def = {}, { unit = null, fmt = (v) => String(v), summaryLabel = null } = {}) {
+  const b = defBars(def);
+  const u = unit != null ? unit : unitOf(def);
+  const f = (v) => `${fmt(v)}${u ? ' ' + u : ''}`;
+  const mode = summaryLabel || summaryModeLabel(summaryModeOf(def));
+  if (b.target_value == null && b.commit_value == null) return { text: `ยังไม่ตั้งเป้า — ไม่ตัดสิน ○△✗ (เห็นแค่ตัวเลข) · สรุปปี = ${mode}`, ok: false, mode };
+  const cmp = b.target_compare || b.commit_compare;
+  if (!cmp) return { text: 'ตั้งเป้าไว้แต่ไม่ได้บอกทิศทาง (≥ หรือ ≤) — ตัดสิน ○△✗ ไม่ได้', ok: false, mode };
+  const sym = CMP_SYM[cmp] || cmp;
+  const down = String(cmp).startsWith('<');
+  const parts = [];
+  if (b.target_value != null) parts.push(`○ ${sym} ${f(b.target_value)}`);
+  if (b.commit_value != null) parts.push(`△ ${sym} ${f(b.commit_value)}`);
+  parts.push(`✗ ${down ? 'เกิน' : 'ต่ำกว่า'}นั้น`);
+  const head = def.score_by_plan
+    ? 'รายเดือนเทียบ "แผนของเดือนนั้น" (ช่องแผน = เป้าเดือน · △ = แผน×สัดส่วน Commit/Target · เดือนไม่มีแผน = เทียบเป้าปี) · เป้าปี: '
+    : 'ทุกเดือนเทียบเป้าเดียวกัน: ';
+  return { text: `${head}${parts.join(' · ')} · สรุปปี = ${mode}`, ok: true, mode, down, bars: b };
+}
+
+/** เกณฑ์ที่ตั้งขัดกัน/ไม่ครบ — จอขึ้นเตือนแดงที่แถวทันที ไม่รอให้บอร์ดสีเพี้ยน · `plans` = {เดือน: ค่า} ของแถว (ไม่ส่ง = ไม่ตรวจเรื่องแผน) */
+export function defIssues(def = {}, { plans = null } = {}) {
+  const out = [];
+  const b = defBars(def);
+  const hasNum = b.target_value != null || b.commit_value != null;
+  if (hasNum && !(b.target_compare || b.commit_compare)) out.push({ code: 'no_direction', text: 'ตั้งเป้าแล้วแต่ไม่ได้เลือกทิศทาง ≥/≤ — ตัดสิน ○△✗ ไม่ได้' });
+  const cmp = b.target_compare || b.commit_compare;
+  const dirOf = (c) => (c == null ? null : String(c).startsWith('<') ? 'down' : String(c).startsWith('>') ? 'up' : null);
+  if (b.target_compare && b.commit_compare && dirOf(b.target_compare) && dirOf(b.commit_compare) && dirOf(b.target_compare) !== dirOf(b.commit_compare)) {
+    out.push({ code: 'commit_dir_conflict', text: `เครื่องหมายของ Commitment (${CMP_SYM[b.commit_compare] || b.commit_compare}) สวนทางกับ Target (${CMP_SYM[b.target_compare] || b.target_compare}) — น่าจะพิมพ์ผิดด้าน (เคส "≤ 0" กับเป้า ≥ 30)` });
+  } else if (cmp && b.target_value != null && b.commit_value != null) {
+    const down = String(cmp).startsWith('<');
+    if (down ? b.commit_value < b.target_value : b.commit_value > b.target_value) {
+      out.push({ code: 'commit_wrong_side', text: `Commitment (${b.commit_value}) เข้มกว่า Target (${b.target_value}) ทั้งที่ทิศทาง "${down ? 'ยิ่งน้อยยิ่งดี' : 'ยิ่งมากยิ่งดี'}" — △ จะไม่มีวันเกิด (น่าจะใส่เครื่องหมายผิดด้าน)` });
+    }
+  }
+  const ct = def.commitment == null ? '' : String(def.commitment).trim();
+  if (b.commit_value == null && ct && ct !== '-' && !/\d/.test(ct)) out.push({ code: 'commit_text_unparsed', text: `Commitment เป็นข้อความที่อ่านตัวเลขไม่ได้ ("${ct}") — ไม่ถูกใช้ตัดสิน` });
+  if (plans && typeof plans === 'object') {
+    const n = Object.values(plans).filter(v => v != null && v !== '' && !Number.isNaN(Number(v))).length;
+    if (n && !def.score_by_plan) out.push({ code: 'plan_unused', text: `กรอกแผนไว้ ${n} เดือน แต่ตั้งให้เทียบเป้าปี — แผนเป็นแค่เส้นประกอบ ไม่มีผลกับ ○△✗ (ถ้าต้องการให้มีผล เลือก "เทียบแผนของเดือนนั้น" ในนิยาม)` });
+    if (!n && def.score_by_plan) out.push({ code: 'plan_missing', text: 'ตั้งให้เทียบแผนของเดือนนั้น แต่ยังไม่กรอกแผนสักเดือน — ทุกเดือนจะถอยไปเทียบเป้าปี' });
+  }
+  return out;
 }

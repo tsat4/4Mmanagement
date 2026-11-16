@@ -17,7 +17,7 @@ user: *"recheck work flow ทุก tab ให้ที ใครทำอะไ
 | 🟫 Store Raw Mat (`raw_withdrawal_requests`) | รอจ่าย → จ่ายแล้ว | สโตร์ "จ่ายวัตถุดิบ" | สโตร์ → ไลน์ child | CAS pending→issued (นับแถว) + ledger `consume` ที่ `source_line` ของล็อต · ledger ล้ม = คืน pending · ล็อตของซื้อ (ไม่มี `source_line`) ไม่ตัด (แก้ตารางให้ตรงโค้ด 03/11 — พฤติกรรมเปลี่ยนตั้งแต่ 06/10 ดูข้อ 1) |
 | 📦 ภาชนะ/แร็ค | เรียก → เตรียม → ส่ง → รับ | **อ่านอย่างเดียวที่นี่** · ตัวจริง `/rack-center` (`rack_center:operate`) | — | `rack_requests` / `packaging_withdrawal_requests` |
 | 🚚 Store FG (รอบส่ง · ซ่อนเมื่อไม่มีรอบ) | ยังไม่ยืนยัน → ยืนยันส่ง → รับครบ | สโตร์ "✅ ยืนยันส่งแล้ว" · "✔️ รับครบ" | สโตร์ → ไลน์ | `kanban_deliveries` + ledger issue |
-| 📥 รอรับเข้า (`/line-stock` · `stock_receipts`) | รอรับ/ค้าง → รับแล้ว | คลัง "✅ นับแล้วตรง · รับ N" / "✏️ ยอดไม่ตรง" (`line_stock:issue`) | ไลน์ปิดใบผลิต → คลัง | RPC `stock_receipt_confirm` (ธุรกรรมเดียว) |
+| 📥 รอรับเข้า (`/line-stock` · `stock_receipts`) | รอรับ/ค้าง → รับแล้ว | คลัง "✅ นับแล้วตรง · รับ N" / "✏️ ยอดไม่ตรง" (`line_stock:issue`) | ไลน์ปิดใบผลิต → คลัง | RPC `stock_receipt_confirm` (ใบเดี่ยว) · `stock_receipt_confirm_group` (ทั้งกอง · ค่าตั้งต้น 22/10) |
 
 ## รูปแบบ (05/10)
 - แท็บที่มี ≥2 สถานะเปิดใช้ `<StatusZones>` + การ์ด `PartCard` ครบแล้ว: WIP · Child · **จัดซื้อ (ทำ 05/10)** · Raw · รอรับเข้า
@@ -820,3 +820,20 @@ user เคาะ: (ข) ขั้นหลังได้พาร์ทแล�
     · ย้อน: `update storage_locations set line_names = array_remove(line_names,'Assembly Line D - GWM&RA') where code='P413';`
 - กฎ "ครอบ" (ปรับ 09/11): แม่ถูกระบุในรหัสคลังที่มีลูก **อย่างน้อย 1 ตัว** = ลูกตัวนั้นคอนเฟิร์มแล้วหักของที่แม่ได้
   (ลูกที่อยู่พื้นที่อื่น เช่น D1 ไม่ใช้กองนี้ ตามที่ตั้ง) ⇒ ข้อมูลจริงตอนนี้ไม่มีไลน์แม่ค้างเหลือ แผงจะไม่ขึ้น
+
+## 🏷️ เปลี่ยนชื่อแท็บ + ตู้ (2026-11-16 · คำสั่ง user)
+- เลิกคำ "ขาออก/ขาเข้า" (คน W/H อ่านกลับด้าน — ขาออกของ W/H = ส่งลูกค้า): `/line-stock?tab=out` = **📤 ส่งของเข้าไลน์** ·
+  `?tab=in` = **📥 รับของเข้าคลัง** · key `out`/`in` คงเดิม (ลิงก์เก่าใช้ได้)
+- ตู้ `fg` เปลี่ยนป้ายจาก "Store FG" เป็น **🚚 รอบส่งคัมบังเข้าไลน์** — ของในตู้คือรอบส่งชิ้นส่วนตามคัมบัง ไม่ใช่ FG
+  (กติกา user: **ไม่มี FG เข้าไลน์** · ใบเบิก 1xx เข้าไลน์ปิดแล้ว 13/11 → `demand-flow-tower.md`) · key `fg` คงเดิม (`?store=fg`)
+- ทะเบียนพื้นที่เพิ่ม **R402** (สโตร์วัตถุดิบ · `20261116_sloc_r402_raw_dr.sql`)
+
+## 📦 รวมเป็น Stock Management (2026-11-16 · คำสั่ง user "รวมสต๊อกในไลน์กับ Monitoring แผน-สต๊อกเป็น tab stock management")
+- เมนูเดียว **Stock Management** (`/line-stock`) · `/monitoring` redirect เข้าแท็บ `?tab=monitoring` (บอร์ดย่อย `?mon=`)
+- 🔐 **สิทธิ์ไม่เปลี่ยน** — `canAccessPage('/line-stock')` = `page:/line-stock` **หรือ** `page:/monitoring` · แท็บกรองด้วย `TABS[].perm`
+  (ทะเบียน 16/11: warehouse_delivery 6 คนมีแค่ Monitoring ⇒ เปิดมาเจอแท็บ Monitoring อย่างเดียว · document_control มีแค่สต๊อก)
+- ลำดับแท็บ: **Stock (default)** · ส่งของเข้าไลน์ · รับของเข้าคลัง · Monitoring แผน-สต๊อก · ตรวจนับ/เฟิร์มยอด · ค้างตัด SAP · คลังพัก/ผลต่าง · WIP ค้างระหว่างขั้น · **ตั้งค่า** (5 แท็บเดิมเป็นแท็บย่อย `?set=`)
+- แท็บ Stock: ช่องขอบเขตเป็นต้นไม้ `<LineScopeSelect includeSupport>` (เลือกส่วนงาน = เห็นทุกพื้นที่ในส่วนงาน เช่น PD3 = P409+P411 · STORE เลือกได้)
+  · ชิปฝั่งงานใช้ป้าย **ของป้อนไลน์ (2xx·3xx·5xx)** / **FG รอส่ง (1xx)** (`SideFilterChips labels=`) · กลุ่มพื้นที่เรียง สโตร์ → วัตถุดิบ → ผลิต → คลัง FG (`kindFirst`) + หัวหมวด
+- ที่จัดเก็บหลักของพาร์ทสโตร์ (`parts_master.home_sloc`) ตั้งจาก `Stock_Store.xlsm` 201 พาร์ท (`20261116_parts_home_sloc_store_dr.sql` · ตั้งเฉพาะที่ว่าง)
+- ⏳ ยังค้าง: คลัง FG (FG WAREHOUSE) ย้ายไปหมวด Warehouse & Delivery — รอ user เลือกรหัส W401/W403/W404

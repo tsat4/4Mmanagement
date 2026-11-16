@@ -9,12 +9,12 @@ import { fetchAllPages, fetchByIds } from '../utils/fetchByIds';
 import { useLiveBoard } from '../utils/useLiveBoard';
 import { getWorkDate, addDaysStr } from '../utils/workDate';
 import { toast } from '../components/Toast';
-import Page, { Hub } from '../components/Page';
+import Page, { Hub, HubContext } from '../components/Page';
 import PageHeader from '../components/PageHeader';
 import FilterBar from '../components/FilterBar';
 import useTabParam from '../utils/useTabParam';
 import MonitorBoardGrid from '../components/MonitorBoardGrid';
-import { BOARD_TABS, boardPeriods, rowDefs } from '../utils/monitorBoards';
+import { BOARD_TABS, boardPeriods, rowDefs, isStoreBoard, STORE_LEDGER_LINE } from '../utils/monitorBoards';
 import {
   sumByMatDate, firstByMat, makeSystemLookup, OUT_TXN_TYPES, IN_TXN_TYPES,
   DEMAND_SKIP_STATUS, onHandAtRef, outAtRef, inAtRef, fgAnchorBalance, makeAnchorLookup, rackOrderSyncPlan,
@@ -63,7 +63,10 @@ export default function Monitoring() {
      (audit 15/10 — เดิมโหลดทุกบอร์ด แล้ว syncRackOrder ยิงต่อเป็นใบส่งของจริง)
      🔴 บอร์ดชนิด `fg` ผูก "ลูกค้า" ไม่ใช่ไลน์ ⇒ ไม่มีไลน์ให้เทียบ = ตัดสินไม่ได้ ⇒ ไม่บล็อก */
   const lineRows = useProductionLines();
-  const [tab, setTab] = useTabParam(BOARD_TABS.map(t => t.key), BOARD_TABS[0].key);
+  /* 📦 16/11 — ฝังเป็นแท็บ "Monitoring แผน-สต๊อก" ของ Stock Management (`/line-stock?tab=monitoring`)
+     แท็บซ้อนแท็บต้องคนละ query param (UI §6.8 ข้อ 2.4) ⇒ ใน hub ใช้ `?mon=` · เปิดเดี่ยว (ไม่มีแล้ว — route redirect) ใช้ `?tab=` */
+  const inHub = useContext(HubContext);
+  const [tab, setTab] = useTabParam(BOARD_TABS.map(t => t.key), BOARD_TABS[0].key, inHub ? 'mon' : 'tab');
   /* แท็บซ้อนแท็บต้องคนละ query param (UI §6.8 ข้อ 2.4) — หน้าลูกของแท็บ FG ใช้ `?fgv=` */
   const [fgView, setFgView] = useTabParam(['rundown', 'board'], 'rundown', 'fgv');
 
@@ -85,6 +88,8 @@ export default function Monitoring() {
   const [adjReq, setAdjReq] = useState(null);            // { mat, part_name, loc, onHand }
   const [sysOut, setSysOut] = useState(() => new Map());
   const [sysMin, setSysMin] = useState(() => new Map());
+  /* 🏬 บอร์ดสโตร์: MAT → { min, max } จาก kanban_standards (ทะเบียนเดียวกับหน้า Stock · 16/11) */
+  const [sysLevels, setSysLevels] = useState(() => new Map());
   const [registry, setRegistry] = useState(null);
   const [loading, setLoading] = useState(true);
   const [warn, setWarn] = useState('');
@@ -137,6 +142,8 @@ export default function Monitoring() {
   const isFg = board?.kind === 'fg';
   /* บอร์ด Argen (ชิ้นส่วนส่งเกรท) — ไม่ผูกไลน์/ลูกค้า แต่ของอยู่ในคลังจริง ⇒ ยึดยอดคลังได้ (13/10 · user สั่ง) */
   const isGreat = board?.kind === 'great';
+  /* 🏬 บอร์ดสโตร์ (16/11) — ยอดอยู่ที่ ledger `STORE` · ตัดสินชนิดที่ `isStoreBoard()` ที่เดียว */
+  const isStore = isStoreBoard(board);
   /* 🔴 deps เป็น primitive ล้วน — ส่ง object/array เข้า deps = พ่อ setState ใบใหม่เนื้อเดิม
      แล้วลูกยิงคิวรีซ้ำฟรีๆ (กฎเหล็กการเขียน DB ข้อ 9) */
   /* 🔴 guard กัน stale-response (กฎเหล็กการเขียน DB ข้อ 4) — สลับบอร์ดเร็วๆ แล้วคำตอบของ
@@ -221,7 +228,7 @@ export default function Monitoring() {
     const scope = isFg ? bCust : (isGreat ? 'great' : bLine);
     if (!scope || !dFrom || !dTo || !matsKey) {
       setSysIn(new Map()); setSysOut(new Map()); setSysMin(new Map()); setSysOrder(new Map());
-      setSysAnchor(new Map()); setSysNote(''); setSysLock(new Map()); setSysLoc(new Map());
+      setSysAnchor(new Map()); setSysNote(''); setSysLock(new Map()); setSysLoc(new Map()); setSysLevels(new Map());
       /* 🔴 บอร์ดที่ไม่ผูกไลน์/ลูกค้า (รายแร็ค) ก็ต้องเช็คทะเบียน — เดิมข้ามไป ⇒ ทุกพาร์ทขึ้น
          "ยังไม่อยู่ในทะเบียนสินค้า" ทั้งที่อยู่ (12/10 · 10057225) = ป้ายเตือนปลอม */
       const myKey = `reg|${matsKey}`;
@@ -234,7 +241,8 @@ export default function Monitoring() {
       return;
     }
     const mats = matsKey.split(',');
-    const myKey = `${isFg ? 'fg' : (isGreat ? 'great' : 'line')}|${scope}|${dFrom}|${dTo}|${matsKey}`;
+    const myKey = `${isFg ? 'fg' : (isGreat ? 'great' : (isStore ? 'store' : 'line'))}|${scope}|${dFrom}|${dTo}|${matsKey}`;
+    if (!isStore) setSysLevels(new Map());
     const mine = () => curSysRef.current === myKey;
     curSysRef.current = myKey;
 
@@ -284,6 +292,62 @@ export default function Monitoring() {
           noRow ? `⚠️ ${noRow} พาร์ทไม่มีแถวในคลัง ⇒ ยังเช็คยอดจริงไม่ได้ — ตั้งยอดที่ /line-stock?tab=count` : '',
         ].filter(Boolean).join(' · '));
       setRegistry(new Set((prodR.rows || []).filter(r => r.is_active !== false).map(r => String(r.mat_no || '').trim())));
+      return;
+    }
+
+    /* ── 🏬 บอร์ดสโตร์ (16/11 · แบบที่สโตร์ส่งมา) ─────────────────────────────────────────
+       รับ = ledger `issue` ที่ STORE · จ่าย = `consume`+`return` ที่ STORE (ชนิดเดียวกับบอร์ดไลน์ — OUT/IN_TXN_TYPES)
+       คงเหลือวันนี้ = ยอดจริงใน `line_stock_summary` ที่ STORE (ยึด) · ยอดยกมา = ยอดจริง − Σ(รับ − จ่าย) ถึงวันนี้
+       MIN/MAX = `kanban_standards` (ทะเบียนเดียวกับหน้า Stock — ห้ามเก็บซ้ำในบอร์ด) */
+    if (isStore) {
+      const todayW = getWorkDate();
+      const [txnR, stkR, kbR, pmR] = await Promise.all([
+        fetchAllPages(() => supabaseDR.from('line_stock_transactions')
+          .select('id, line_name, mat_no, qty, type, status, work_date')
+          .eq('line_name', STORE_LEDGER_LINE).in('type', [...OUT_TXN_TYPES, ...IN_TXN_TYPES]).eq('status', 'approved')
+          .in('mat_no', mats).gte('work_date', dFrom).lte('work_date', dTo), { orderBy: ['id'] }),
+        fetchAllPages(() => supabaseDR.from('line_stock_summary')
+          .select('line_name, mat_no, qty_on_hand').eq('line_name', STORE_LEDGER_LINE).in('mat_no', mats), { orderBy: ['mat_no'] }),
+        fetchAllPages(() => supabaseDR.from('kanban_standards')
+          .select('mat_no, min_qty, max_qty').eq('is_active', true).in('mat_no', mats), { orderBy: ['mat_no'] }),
+        fetchAllPages(() => supabaseDR.from('parts_master').select('mat_no').in('mat_no', mats), { orderBy: ['mat_no'] }),
+      ]);
+      if (!mine()) return;
+      const loadErr = (r) => r?.error || (r?.errors && r.errors[0]) || (r?.truncated ? 'ดึงข้อมูลได้ไม่ครบ' : null);
+      const refErr = loadErr(txnR) || loadErr(stkR);
+      const locOf = refErr ? () => null : () => STORE_LEDGER_LINE;
+      const inIdx = refErr ? new Map() : inAtRef(txnR.rows || [], locOf);
+      const outIdx = refErr ? new Map() : outAtRef(txnR.rows || [], locOf);
+      const onHand = refErr ? new Map() : onHandAtRef(stkR.rows || [], locOf);
+      /* ยอดยกมา (คอลัมน์แรก) ย้อนจากยอดจริง — ไม่มีแถวในคลัง = ไม่รู้ ⇒ ไม่ใส่ (ห้ามเดา 0) */
+      const ps = periodsRef.current || [];
+      const seedBal = new Map();
+      for (const m of mats) {
+        if (!onHand.has(m)) continue;
+        let v = onHand.get(m);
+        for (const p of ps.slice(1)) {
+          if (p.key > todayW) break;
+          v -= (inIdx.get(`${m}|${p.key}`) || 0) - (outIdx.get(`${m}|${p.key}`) || 0);
+        }
+        seedBal.set(m, v);
+      }
+      setSysIn(inIdx); setSysOut(outIdx); setSysAnchor(onHand); setSysSeedBal(seedBal);
+      setSysMin(new Map()); setSysOrder(new Map());
+      const kbErr = loadErr(kbR);
+      setSysLevels(kbErr ? new Map() : new Map((kbR.rows || []).map(r => [String(r.mat_no || '').trim(),
+        { min: r.min_qty ?? null, max: r.max_qty ?? null }])));
+      applyLock({ refErr, poR: { rows: [] }, inRows: txnR.rows, locOf, mats });
+      const noRow = mats.filter(m => !onHand.has(m)).length;
+      const noLv = kbErr ? mats.length : mats.filter(m => !(kbR.rows || []).some(r => String(r.mat_no || '').trim() === m && (r.min_qty != null || r.max_qty != null))).length;
+      setSysNote(refErr
+        ? `⚠️ อ่านยอดคลัง STORE ไม่ครบ (${refErr.message || refErr}) ⇒ รับ/จ่าย/คงเหลือ ยังไม่ขึ้นจากระบบ`
+        : [
+          'รับ / จ่าย / คงเหลือ = รายการจริงที่ STORE · คอลัมน์วันนี้ = ยอดคงเหลือจริง · SAP = สโตร์กรอก · Diff = SAP − คงเหลือ',
+          noRow ? `⚠️ ${noRow} พาร์ทยังไม่มียอดที่ STORE ⇒ คงเหลือขึ้น – (ตั้งยอดที่ /line-stock?tab=count)` : '',
+          kbErr ? '⚠️ อ่าน MIN/MAX ไม่ได้ ⇒ ช่องคงเหลือยังไม่ตีสี'
+            : (noLv ? `${noLv} พาร์ทยังไม่ตั้ง MIN/MAX ⇒ ช่องคงเหลือไม่ตีสี (ตั้งที่ /products แท็บ Kanban Std)` : ''),
+        ].filter(Boolean).join(' · '));
+      setRegistry(loadErr(pmR) ? null : new Set((pmR.rows || []).map(r => String(r.mat_no || '').trim())));
       return;
     }
 
@@ -440,7 +504,7 @@ export default function Monitoring() {
         noRow ? `⚠️ ${noRow} พาร์ทไม่มีแถวในคลังอ้างอิง ⇒ ยังเช็คยอดจริงไม่ได้ (เดินสูตรจากยอดยกมา) — ตั้งยอดที่ /line-stock?tab=count` : '',
       ].filter(Boolean).join(' · '));
     setRegistry(new Set((prodR.rows || []).map(r => String(r.mat_no || '').trim())));
-  }, [isFg, isGreat, bCust, bLine, dFrom, dTo, matsKey, periodsKey]);
+  }, [isFg, isGreat, isStore, bCust, bLine, dFrom, dTo, matsKey, periodsKey]);
 
   useEffect(() => { loadSystem(); }, [loadSystem]);
 
@@ -698,6 +762,7 @@ export default function Monitoring() {
           onLockedCell={canRequestAdj ? onLockedCell : null}
           onEditCell={onEditCell} editable={canEdit} truncated={truncated}
           windowSize={board?.period_kind === 'week' ? 10 : 14}
+          levelOf={isStore ? (part) => sysLevels.get(String(part.mat_no || '').trim()) || null : null}
         />
       </>)}
       {adjReq ? (

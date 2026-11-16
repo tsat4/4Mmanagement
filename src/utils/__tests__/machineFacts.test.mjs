@@ -14,10 +14,11 @@ test('กะ ESM จากเวลาไทย: 07:59 = ดึกของเ�
   assert.equal(factShiftOf('ไม่ใช่เวลา'), null);
 });
 
-test('master เหตุผล: ตามแผน/ไม่มีแผน = onplan · FAULT/IDLE = unplan · COMM_LOSS = ไม่รู้ (null)', () => {
+test('master เหตุผล: ตามแผน/ไม่มีแผน = onplan · FAULT = alarm · UNPLANNED/IDLE = unplan · COMM_LOSS = ไม่รู้ (null)', () => {
   assert.equal(reasonKindOf('planned_stop'), 'onplan');
   assert.equal(reasonKindOf('no_plan'), 'onplan');
-  assert.equal(reasonKindOf('fault'), 'unplan');
+  assert.equal(reasonKindOf('fault'), 'alarm');
+  assert.equal(reasonKindOf('unplanned'), 'unplan');
   assert.equal(reasonKindOf('idle'), 'unplan');
   assert.equal(reasonKindOf('comm_loss'), null);
 });
@@ -68,10 +69,10 @@ test('เหตุผล: แยกตาม master (รหัสเดียว
     { state: 'comm_loss', reason_code: 0 },
   ], [{ reason_kind: 'unplan', reason_code: 9, reason_text: 'JIG', downtime_type_id: 't1' }]);
   assert.equal(unmappable, 1);
-  assert.deepEqual(rows.map(r => `${r.kind}:${r.code}:${r.count}`), ['onplan:3:1', 'unplan:3:3', 'unplan:9:0']);
-  assert.equal(rows[1].sec, 160);
+  assert.deepEqual(rows.map(r => `${r.kind}:${r.code}:${r.count}`), ['onplan:3:1', 'alarm:3:2', 'unplan:3:1', 'unplan:9:0']);
+  assert.equal(rows[1].sec, 150);
   assert.equal(rows[1].text, 'Robot alarm');
-  assert.equal(rows[2].map.downtime_type_id, 't1');
+  assert.equal(rows[3].map.downtime_type_id, 't1');
 });
 
 test('เสนอประเภท downtime: ชื่อตรงเป๊ะตัวเดียวเท่านั้น · คล้าย/ซ้ำ = ไม่เสนอ', () => {
@@ -138,4 +139,44 @@ test('เทียบ Daily Report: DT ของคนแยกรายเค�
   const t = rows.find(r => r.workDate === '2026-11-11');
   assert.equal(t.session, null); assert.equal(t.humanDtMin, null);        // ไม่มีใบผลิต ≠ คนลง 0
   assert.ok(!rows.some(r => r.line === 'Line D9'));
+});
+
+test('รหัสเหตุผล 0 = ไม่ได้กด/รีเซ็ต — ไม่อยู่ในรายการจับคู่ แต่นับแยกให้จอบอก (ไม่หายเงียบ)', () => {
+  const { rows, noReason } = reasonRows([
+    { state: 'no_plan', reason_code: 0, reason_text: 'None', duration_sec: 600 },
+    { state: 'idle', reason_code: 0, reason_text: 'None', duration_sec: 20 },
+    { state: 'planned_stop', reason_code: 2, reason_text: 'พัก 10 นาที', duration_sec: 600 },
+  ]);
+  assert.deepEqual(rows.map(r => `${r.kind}:${r.code}`), ['onplan:2']);
+  assert.deepEqual(noReason, { count: 2, sec: 620 });
+});
+
+test('เครื่องเสียแต่ยังไม่ลง DT: FAULT > 5 นาที · เฉพาะจิ๊กที่มีใบในกะ · ทับ DT แล้ว = ไม่เตือน · รหัส 0 ไม่เสนอประเภท', async () => {
+  const { faultGaps } = await import('../machineFacts.js');
+  const session = { work_date: '2026-11-13', shift: 'day' };
+  const base = {
+    tagMap: [{ tag: 'T3', machine_id: 'm3' }, { tag: 'T4', machine_id: 'm4' }, { tag: 'T9', machine_id: null }],
+    machines: [{ id: 'm3', machine_no: 'JTSRA03-03' }, { id: 'm4', machine_no: 'JTSRA03-04' }],
+    orders: [{ machine_no: 'jtsra 03-03' }],                       // มีใบเฉพาะ 03-03
+    reasonMap: [{ reason_kind: 'alarm', reason_code: 7, downtime_type_id: 'dtRobot' }],
+    session, nowMs: Date.parse(bkk('2026-11-13T15:00:00')),
+  };
+  const st = (tag, a, b, extra = {}) => ({ machine_tag: tag, started_at: bkk(`2026-11-13T${a}:00`), ended_at: bkk(`2026-11-13T${b}:00`), state: 'fault', reason_code: 7, ...extra });
+  const r = faultGaps({ ...base, downtimes: [
+    { machine_no: 'JTSRA03-03', started_at: bkk('2026-11-13T11:02:00'), ended_at: bkk('2026-11-13T11:05:00') },
+  ], states: [
+    st('T3', '09:00', '09:05'),                                   // = 5 นาที ไม่เกิน → ไม่เตือน
+    st('T3', '09:10', '09:16'),                                   // 6 นาที → เตือน + เสนอประเภท
+    st('T3', '10:00', '10:20', { reason_code: 0 }),               // รหัส 0 → เตือน แต่ไม่เสนอประเภท
+    st('T3', '11:00', '11:10'),                                   // ทับ DT ที่ลงแล้ว → ไม่เตือน
+    st('T3', '12:00', '12:30', { state: 'idle' }),                // ไม่ใช่ fault → ไม่เตือน
+    st('T4', '09:00', '09:30'),                                   // 03-04 ไม่มีใบในกะ → ไม่เตือน
+    st('T9', '09:00', '09:30'),                                   // tag ยังไม่ผูก → ไม่เตือน
+    { machine_tag: 'T3', started_at: bkk('2026-11-13T21:00:00'), ended_at: bkk('2026-11-13T21:30:00'), state: 'fault' },   // คนละกะ
+  ] });
+  assert.deepEqual(r.map(x => `${x.machineNo}@${Math.round(x.min)}:${x.suggestTypeId}`), ['JTSRA03-03@6:dtRobot', 'JTSRA03-03@20:null']);
+  // downtime ระดับไลน์ (ไม่ระบุเครื่อง) ครอบไว้ = นับว่าลงแล้ว
+  const r2 = faultGaps({ ...base, downtimes: [{ machine_no: null, started_at: bkk('2026-11-13T09:00:00'), duration_min: 30 }], states: [st('T3', '09:10', '09:16')] });
+  assert.equal(r2.length, 0);
+  assert.deepEqual(faultGaps({ ...base, session: null, states: [st('T3', '09:10', '09:16')] }), []);
 });

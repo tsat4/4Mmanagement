@@ -615,3 +615,35 @@ user: *"รูปแบบหัวตาราง รูปแบบการ v
 · ⚠️ **แต่ละชีทคิด Total SL คนละสูตร — เก็บเป็น `sl_row` ห้ามยุบเอง**
 · 📦 **บอร์ดชนิด `fg` ผูก "ลูกค้า" ไม่ใช่ "ไลน์"** (ยอดสั่งจาก EDI 862/830) ⇒ **IN ห้ามกรองไลน์**
 📄 `docs/modules/monitoring-boards.md`
+
+---
+
+## 🏬 บอร์ดสโตร์ — 6 แท็บ รับ/จ่าย/คงเหลือ/SAP/Diff (2026-11-16 · แบบหน้า "Monitor stock" ที่สโตร์ส่งมา)
+
+| แท็บ (`kind`) | บอร์ด (1 บอร์ด = 1 รหัสพื้นที่ · `board_key = store-<code>`) |
+|---|---|
+| `st_raw` Raw Mat | R401 · R402 |
+| `st_semi` Semi Part | S401 · S406 |
+| `st_purchase` Purchase Part | S402 · S407 |
+| `st_before` Before Coating | S403 |
+| `st_after` After Coating | S405 |
+| `st_blank` Blank | S408 |
+
+- **ชนิด/ชุดแถวตัดสินที่ `monitorBoards.js` ที่เดียว** — `STORE_BOARD_KINDS` · `isStoreBoard()` · `ROW_PRESETS.store`
+  (ห้ามเทียบ `kind.startsWith('st_')` ในหน้า) · `monitor_boards_kind_chk` (DR) ต้องเพิ่มค่าตามทุกครั้งที่เพิ่มชนิด
+- **แถว:** `in` รับ (system) · `out` จ่าย (system) · `balance` คงเหลือ (`stock_run`) · `sap` SAP (สโตร์กรอก) · `diff` (`sap_diff` = SAP − คงเหลือ)
+  🔴 ไม่กรอก SAP = Diff ว่าง **ไม่ใช่ 0** (0 = นับแล้วตรง)
+- **ที่มาของตัวเลข (Monitoring.jsx สาขา `isStore`):** ledger ที่ `line_name = 'STORE'` (`STORE_LEDGER_LINE`) —
+  รับ = `issue` · จ่าย = `consume`+`return` (ชุดเดียวกับบอร์ดไลน์) · คอลัมน์วันนี้ = `line_stock_summary` ที่ STORE (ยึด) ·
+  ยอดยกมา = ยอดจริง − Σ(รับ−จ่าย) ถึงวันนี้ · ไม่มีแถวในคลัง = ว่าง ห้ามเดา 0
+  ⚠️ `adjust` ไม่นับในรับ/จ่าย (กติกาเดิม §4) ⇒ คอลัมน์ย้อนหลังอาจกระโดดที่วันนี้ (วันนี้ = ยอดจริงเสมอ)
+- **MIN/MAX = `kanban_standards.min_qty/max_qty` ที่เดียว** (คำสั่ง user 16/11 — ทะเบียนเดียวกับหน้า Stock · **ห้ามเก็บซ้ำในบอร์ด**)
+  ตีสีช่องคงเหลือผ่าน `levelState()` (`monitorGrid.js`): ต่ำกว่า MIN = แดง · เกิน MAX = ส้ม · ในช่วง = เขียว · **ไม่ตั้ง = ไม่ตีสี** + จอบอกจำนวน
+- **ไม่มี FC / TOTAL SL / %SL** (สโตร์ขอตัด) · หัวพาร์ทโชว์ STD/PC (`packing`) + MIN/MAX
+- **หน้าต่างเวลา:** `start_date` ว่าง ⇒ ย้อน `STORE_LOOKBACK_DAYS` (7) วัน + 22 คอลัมน์ เลื่อนตามวันนี้
+- **ข้อมูลตั้งต้น:** `20261116_monitor_store_boards_dr.sql` — 9 บอร์ด · 245 พาร์ทจาก `Stock_Store.xlsm`
+  (R402 79 · S403 40 · S405 40 · S406 27 · S407 59) · **R401/S401/S402/S408 = บอร์ดเปล่า รอรายชื่อจากสโตร์**
+  · ช่อง MAX/MIN และช่องรายวันในไฟล์ว่างทั้งหมด ⇒ ไม่ได้เขียนอะไรลง `kanban_standards`
+- 🐞 **แก้แล้ว 16/11 (คำสั่ง user):** CHECK `monitor_boards_kind_chk` ไม่เคยมี `fg` (migration 06/10 เพิ่มชนิดในโค้ดแต่ลืม CHECK)
+  ⇒ ปุ่ม "📦 สร้างบอร์ด FG จากออเดอร์" upsert ล้มทุกครั้ง · DR ไม่มีบอร์ด `fg` สักบอร์ด · แก้ที่ `20261116b_monitor_boards_kind_fg_dr.sql`
+  🔴 **เพิ่มชนิดบอร์ดใหม่ = ต้องเพิ่มใน CHECK ด้วย migration ใหม่** — มีเทสล็อก (`monitorBoards.test.mjs` อ่าน CHECK ของ migration ล่าสุดเทียบ `BOARD_KINDS`)

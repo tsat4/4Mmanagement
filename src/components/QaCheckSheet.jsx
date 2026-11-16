@@ -31,7 +31,10 @@ import { QA_STAGES, FME_SHEET_STAGE } from '../utils/qaStages';
 import { notifyEvent } from '../utils/notifyEvent';
 import { checkWrite, checkWriteRows } from '../utils/dbWrite';
 import InspectorCodeField from './InspectorCodeField';   // ✍️ รหัสผู้ตรวจจริง (C1 · 05/11)
-import { printQaSheet } from '../lib/qaSheetPrint';         // 🖨️ ใบพิมพ์ QA (05/11)
+import { prepareQaSheetHtml } from '../lib/qaSheetPrint';   // 📄 ใบ Inspection Data FM-QA-112 (05/11 · หน้าตาใบจริง 16/11)
+import { buildDataSheet, dataSheetCsvRows } from '../utils/qaDataSheet';
+import { downloadCsvDoc, csvText } from '../utils/csvDoc';
+import { loadDocForms } from '../utils/docForms';
 import { resolveEmployeeSigner, inspectorForExport, loadEmployeeSigners, signatureOfPerson } from '../utils/employeeSignature';
 import { stageLabel } from '../utils/qaStages';
 import { specLabel, judgeVariable } from '../utils/qaSpec';
@@ -616,39 +619,76 @@ export default function QaCheckSheet({ canRecord }) {
   /* 🖨️ พิมพ์ใบตรวจ (doc_key qa_inspection_sheet) — ผู้ตรวจ: รหัสที่บันทึกไว้ชนะบัญชี (inspectorForExport)
      ไม่มีรหัส = บัญชีที่สร้างใบ (inspector_uid) → ลายเซ็นโปรไฟล์ → ลายเซ็นในฐานพนักงานที่ผูกไว้ · อ่านไม่ได้ = บอก */
   const [printing, setPrinting] = useState(false);
-  const handlePrint = async () => {
+  const [viewHtml, setViewHtml] = useState('');       // 📄 ดูผลบนจอ = HTML ใบเดียวกับที่พิมพ์ (iframe)
+  const viewRef = useRef(null);
+  /* ข้อมูลชุดเดียวที่ใช้ทั้ง ดูผล / พิมพ์-PDF / CSV — 3 ทางต้องออกมาตรงกัน (utils/qaDataSheet.js) */
+  const exportParams = async (sh) => {
+    let accountName = sh.inspector_name || null, accountSig = null;
+    if (!sh.inspector_code && sh.inspector_uid) {
+      const { data: prof, error } = await supabase.from('profiles').select('full_name, signature_url, employee_id').eq('id', sh.inspector_uid).maybeSingle();
+      if (error) toast.error(`โหลดลายเซ็นผู้ตรวจไม่สำเร็จ — ใบจะเว้นช่องลายเซ็น (${error.message})`);
+      let empSig = null;
+      if (prof && !prof.signature_url && prof.employee_id) {
+        const er = await loadEmployeeSigners(supabase, { ids: [prof.employee_id] });
+        if (er.error) toast.error(`โหลดลายเซ็นจากฐานพนักงานไม่สำเร็จ (${er.error})`);
+        empSig = er.rows?.[0]?.signature_url || null;
+      }
+      accountName = prof?.full_name || accountName;
+      accountSig = signatureOfPerson({ profileSig: prof?.signature_url, employeeSig: empSig });
+    }
+    const signer = sh.inspector_code ? await resolveEmployeeSigner(supabase, sh.inspector_code) : null;
+    const who = inspectorForExport({ code: sh.inspector_code, signer, accountName, accountSig });
+    return { sheet: sh, part: part || {}, items, results, pieces, actions, drawings,
+      inspector: { ...who, code: sh.inspector_code || '' }, stageLabel: sh.stage ? stageLabel(sh.stage) : '' };
+  };
+  const curSheet = () => {
     const sh = matchesKey(sheet) ? sheet : null;
-    if (!sh) { toast.error('ยังไม่มีใบตรวจของรอบนี้ — บันทึกผลอย่างน้อย 1 จุดก่อนพิมพ์'); return; }
+    if (!sh) toast.error('ยังไม่มีใบตรวจของรอบนี้ — บันทึกผลอย่างน้อย 1 จุดก่อน');
+    return sh;
+  };
+  const handleView = async () => {
+    const sh = curSheet(); if (!sh) return;
     setPrinting(true);
     try {
-      let accountName = sh.inspector_name || null, accountSig = null;
-      if (!sh.inspector_code && sh.inspector_uid) {
-        const { data: prof, error } = await supabase.from('profiles').select('full_name, signature_url, employee_id').eq('id', sh.inspector_uid).maybeSingle();
-        if (error) toast.error(`โหลดลายเซ็นผู้ตรวจไม่สำเร็จ — ใบจะเว้นช่องลายเซ็น (${error.message})`);
-        let empSig = null;
-        if (prof && !prof.signature_url && prof.employee_id) {
-          const er = await loadEmployeeSigners(supabase, { ids: [prof.employee_id] });
-          if (er.error) toast.error(`โหลดลายเซ็นจากฐานพนักงานไม่สำเร็จ (${er.error})`);
-          empSig = er.rows?.[0]?.signature_url || null;
-        }
-        accountName = prof?.full_name || accountName;
-        accountSig = signatureOfPerson({ profileSig: prof?.signature_url, employeeSig: empSig });
-      }
-      const signer = sh.inspector_code ? await resolveEmployeeSigner(supabase, sh.inspector_code) : null;
-      const who = inspectorForExport({ code: sh.inspector_code, signer, accountName, accountSig });
-      if (who.note) toast.info(`ผู้ตรวจรหัส ${sh.inspector_code}: ${who.note}`);
-      else if (!who.signatureUrl) toast.info('ผู้ตรวจยังไม่มีลายเซ็นในระบบ — ใบจะเว้นช่องให้เซ็นมือ');
-      const ok = await printQaSheet({ sheet: sh, items, results, pieces, actions,
-        inspector: { ...who, code: sh.inspector_code || '' }, stageLabel: sh.stage ? stageLabel(sh.stage) : '' });
-      if (!ok) toast.error('เปิดหน้าต่างพิมพ์ไม่ได้ — อนุญาต pop-up ของเว็บนี้ก่อน');
+      const p = await exportParams(sh);
+      if (p.inspector.note) toast.info(`ผู้ตรวจรหัส ${sh.inspector_code}: ${p.inspector.note}`);
+      setViewHtml(await prepareQaSheetHtml(p));
     } catch (e) {
-      toast.error(`พิมพ์ใบตรวจไม่สำเร็จ: ${e?.message || e}`);
+      toast.error(`เตรียมใบ Inspection Data ไม่สำเร็จ: ${e?.message || e}`);
     } finally { setPrinting(false); }
+  };
+  const handlePrintView = () => {
+    const w = viewRef.current?.contentWindow;
+    if (!w) { toast.error('ใบยังโหลดไม่เสร็จ — รอสักครู่แล้วกดใหม่'); return; }
+    w.focus(); w.print();
+  };
+  const handleCsv = async () => {
+    const sh = curSheet(); if (!sh) return;
+    await loadDocForms();   // ชื่อไฟล์ตามทะเบียน (csvDoc ต้องโหลดก่อน)
+    const rows = dataSheetCsvRows({ sheet: sh, part: part || {}, data: buildDataSheet({ items, results }) });
+    const name = `InspectionData_${String(sh.part_no || '').replace(/\s+/g, '-')}_${sh.work_date}_${sh.shift}_R${sh.round_no ?? ''}`;
+    downloadCsvDoc('csv_qa_inspection_data', name, csvText(rows[0], rows.slice(1)));
   };
 
   /* ── UI ─────────────────────────────────────────────────────────────── */
   return (
     <div>
+      {/* 📄 ดูผลแบบใบ Inspection Data (FM-QA-112) — HTML ชุดเดียวกับที่พิมพ์ · พิมพ์/บันทึก PDF จาก iframe นี้ */}
+      {viewHtml && (
+        <div role="dialog" aria-modal="true" aria-label={tr('ใบ Inspection Data')}
+          style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', flexDirection: 'column', padding: isMobile ? 0 : 16 }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', padding: '8px 12px', background: 'var(--card)', borderBottom: '1px solid var(--border)' }}>
+            <b style={{ fontSize: 14 }}>📄 {tr('ใบ Inspection Data')}</b>
+            <span style={{ fontSize: 12, color: 'var(--muted)' }}>{sheet?.part_no} · {sheet?.work_date} · {tr('รอบ')} {sheet?.round_no}</span>
+            <span style={{ flex: 1 }} />
+            <button type="button" className="tbtn" onClick={handlePrintView} style={{ fontWeight: 700 }}>{tr('🖨️ พิมพ์ / บันทึก PDF')}</button>
+            <button type="button" className="tbtn" onClick={handleCsv}>{tr('⬇ CSV')}</button>
+            <button type="button" className="tbtn" onClick={() => setViewHtml('')} aria-label={tr('ปิด')}>✕</button>
+          </div>
+          <iframe ref={viewRef} title={tr('ใบ Inspection Data')} srcDoc={viewHtml}
+            style={{ flex: 1, width: '100%', border: 0, background: 'var(--bg3)' }} />
+        </div>
+      )}
       {needMigration && (
         <div style={{
           ...cardSt, marginBottom: 12, borderColor: '#f59e0b',
@@ -763,10 +803,15 @@ export default function QaCheckSheet({ canRecord }) {
               <span style={{ flex: 1 }} />
               {/* ใบปิดเองเมื่อตัวเดินกฎบอก "ยอมรับ" — ไม่มีปุ่มปิดใบ/ผ่านทั้งหมด (ตรวจทีละชิ้น 2026-09-07) */}
               <Chip label={`ชิ้นที่ตรวจแล้ว ${pieces.length}`} color="#6b7280" />
-              <button type="button" className="tbtn" disabled={printing || !matchesKey(sheet)} onClick={handlePrint}
-                title={matchesKey(sheet) ? tr('พิมพ์/บันทึก PDF ใบตรวจรอบนี้') : tr('ยังไม่มีใบตรวจของรอบนี้')}
+              <button type="button" className="tbtn" disabled={printing || !matchesKey(sheet)} onClick={handleView}
+                title={matchesKey(sheet) ? tr('ดูผลแบบใบ Inspection Data — พิมพ์/บันทึก PDF ได้จากหน้าที่เปิด') : tr('ยังไม่มีใบตรวจของรอบนี้')}
                 style={{ padding: '5px 12px', fontSize: 12, fontWeight: 700 }}>
-                {printing ? tr('กำลังเตรียม…') : tr('🖨️ พิมพ์ใบตรวจ')}
+                {printing ? tr('กำลังเตรียม…') : tr('📄 ใบ Inspection Data')}
+              </button>
+              <button type="button" className="tbtn" disabled={!matchesKey(sheet)} onClick={handleCsv}
+                title={tr('ดาวน์โหลดผลตรวจรอบนี้เป็น CSV (คอลัมน์เดียวกับใบ Inspection Data)')}
+                style={{ padding: '5px 12px', fontSize: 12, fontWeight: 700 }}>
+                {tr('⬇ CSV')}
               </button>
             </>
           )}

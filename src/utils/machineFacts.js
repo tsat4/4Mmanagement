@@ -40,19 +40,21 @@ export function factShiftOf(v) {
  *  หยุดตามแผน/ไม่มีแผน = OnplanMaster · FAULT/IDLE = UnplanMaster · COMM_LOSS/อื่นๆ = ยังไม่รู้ ⇒ null (ห้ามเดา) */
 export function reasonKindOf(state) {
   if (state === 'planned_stop' || state === 'no_plan') return 'onplan';
-  if (state === 'fault' || state === 'idle') return 'unplan';
+  if (state === 'fault') return 'alarm';                          // 13/11: FAULT = AlarmMaster (หลักฐานจากจอ Node-RED)
+  if (state === 'unplanned' || state === 'idle') return 'unplan';
   return null;
 }
 
 export const STATE_META = {
-  fault:        { label: 'เสีย / ขัดข้อง', color: 'var(--red, #e5484d)' },
+  fault:        { label: 'Alarm / เสีย', color: 'var(--red, #e5484d)' },
+  unplanned:    { label: 'หยุดนอกแผน',   color: 'var(--orange, #f97316)' },
   idle:         { label: 'ว่าง (รอ)',      color: 'var(--yellow, #f5a524)' },
   planned_stop: { label: 'หยุดตามแผน',     color: 'var(--blue, #3b82f6)' },
   no_plan:      { label: 'ไม่มีแผนผลิต',   color: 'var(--text-dim, #888)' },
   comm_loss:    { label: 'ขาดการสื่อสาร',  color: 'var(--purple, #a855f7)' },
   other:        { label: 'อื่นๆ (ต้นทางส่งค่าที่ไม่รู้จัก)', color: 'var(--text-dim, #888)' },
 };
-export const STATE_ORDER = ['fault', 'idle', 'planned_stop', 'no_plan', 'comm_loss', 'other'];
+export const STATE_ORDER = ['fault', 'unplanned', 'idle', 'planned_stop', 'no_plan', 'comm_loss', 'other'];
 
 /** tag → machine_id จากทะเบียนจับคู่ (เฉพาะที่ผูกแล้ว) */
 export function tagIndex(tagMap = []) {
@@ -140,7 +142,7 @@ export function stopTotals(stopSec = {}) {
   const v = (k) => Number(stopSec[k]) || 0;
   return {
     all: STATE_ORDER.reduce((s, k) => s + v(k), 0),
-    unplanned: v('fault') + v('idle'),
+    unplanned: v('fault') + v('unplanned') + v('idle'),
     planned: v('planned_stop') + v('no_plan'),
     unknown: v('comm_loss') + v('other'),
   };
@@ -150,15 +152,19 @@ export function stopTotals(stopSec = {}) {
  * เหตุผลหยุดที่เห็นจากต้นทาง (สำหรับจอจับคู่) — 1 แถวต่อ (master, รหัส)
  * @returns `{ kind, code, text, count, sec, map|null }` · map = แถว machine_reason_map ที่ยืนยันแล้ว
  *   สถานะที่ยังไม่รู้ master (COMM_LOSS/อื่นๆ) ไม่อยู่ในลิสต์นี้ — คืนจำนวนแยกใน `unmappable`
+ *   รหัส 0 (ไม่ได้กดเหตุผล) ไม่อยู่ในลิสต์ — คืนแยกใน `noReason { count, sec }` ให้จอเขียนบอก
  */
 export function reasonRows(states = [], reasonMap = []) {
   const mapped = new Map((reasonMap || []).map(r => [`${r.reason_kind}|${r.reason_code}`, r]));
   const out = new Map();
   let unmappable = 0;
+  const noReason = { count: 0, sec: 0 };
   for (const s of states || []) {
     const kind = reasonKindOf(s?.state);
     if (!kind) { unmappable++; continue; }
     if (s.reason_code == null) continue;
+    // รหัส 0 = ไม่ได้กดเหตุผล / พนักงานรีเซ็ตกลับค่าปกติ (user ยืนยัน 13/11) — ไม่ใช่เหตุผล ห้ามให้จับคู่
+    if (Number(s.reason_code) === NO_REASON_CODE) { noReason.count++; noReason.sec += Number(s.duration_sec) || 0; continue; }
     const key = `${kind}|${s.reason_code}`;
     if (!out.has(key)) out.set(key, { kind, code: Number(s.reason_code), text: null, count: 0, sec: 0, map: mapped.get(key) || null });
     const r = out.get(key);
@@ -168,9 +174,13 @@ export function reasonRows(states = [], reasonMap = []) {
   }
   // ที่เคยจับคู่ไว้แต่ช่วงนี้ไม่เห็น ยังต้องโชว์ (แก้/ลบได้)
   for (const [key, m] of mapped) if (!out.has(key)) out.set(key, { kind: m.reason_kind, code: m.reason_code, text: m.reason_text, count: 0, sec: 0, map: m });
-  const rows = [...out.values()].sort((a, b) => (a.kind === b.kind ? a.code - b.code : a.kind === 'onplan' ? -1 : 1));
-  return { rows, unmappable };
+  const KORD = { onplan: 0, alarm: 1, unplan: 2 };
+  const rows = [...out.values()].sort((a, b) => (a.kind === b.kind ? a.code - b.code : (KORD[a.kind] ?? 9) - (KORD[b.kind] ?? 9)));
+  return { rows, unmappable, noReason };
 }
+
+/** รหัสเหตุผล 0 ของต้นทาง = "ปกติ / ยังไม่กดเหตุผล" (กดรีเซ็ตแล้วกลับเป็น 0) — ไม่ใช่เหตุผลหยุด */
+export const NO_REASON_CODE = 0;
 
 /** ข้อเสนอประเภท downtime — ตรงชื่อเป๊ะ (หลังตัดช่องว่าง/ตัวพิมพ์) เท่านั้น · ไม่เจอ/เจอหลายตัว = null (ห้ามเดา) */
 export function suggestDowntimeType(text, types = []) {
@@ -260,4 +270,70 @@ export function compareWithSessions(factRows = [], { machines = [], sessions = [
     (a.workDate < b.workDate ? 1 : a.workDate > b.workDate ? -1 : 0)
     || (a.shift === b.shift ? 0 : a.shift === 'night' ? -1 : 1)
     || a.line.localeCompare(b.line));
+}
+
+/* ═══ ⚠️ เครื่องเสียแต่ยังไม่ลง downtime (ทางที่ 2 · user เลือก 13/11) ═══════════════════
+   user: "เรื่องที่ 1 = ทางที่ 2" · เกณฑ์ "> 5 นาที" · สถานะ "fault" เท่านั้น
+   🔴 ระบบ **เสนอ** — ไม่บันทึกเอง · คนกด "ลงจากช่วงนี้" แล้วเลือกสาเหตุเอง (เวลา/เครื่องเติมให้)
+   🔴 เครื่องที่เข้าข่าย = จิ๊ก/เซลล์ที่ **มีใบผลิตในกะนั้น** (`prod_orders.machine_no` ที่เลือกตอนเปิดใบ)
+      ⇒ ไม่ต้องมีทะเบียนพาร์ท↔เครื่องเพิ่ม · เครื่องไม่มีใบในกะ = ไม่เตือน (เครื่องว่างไม่ใช่ downtime ของไลน์)
+   🔴 "ลงแล้ว" = มี downtime ของเครื่องเดียวกัน (machineKey ตรง) หรือระดับไลน์ (ไม่ระบุเครื่อง) ที่ **ทับเวลา** กับช่วงนั้น
+      ทับบางส่วนก็นับว่าลงแล้ว (ไม่ตามจี้คนที่ลงแล้วแต่เวลาไม่เป๊ะ) */
+export const FAULT_GAP_MIN = 5;          // เตือนเมื่อ "นานกว่า" ค่านี้ (นาที)
+export const FAULT_GAP_STATES = ['fault'];
+/** นาฬิกา PLC คลาดจากเวลาจริง (วัด 16/11: ~3–5 นาที) — เผื่อตอนจับคู่กับ DT ที่คนลง */
+export const CLOCK_SLACK_MS = 10 * 60000;
+
+const tOf = (v) => ms(v);
+/** ช่วงเวลาของ downtime ที่คนลง — มีเวลาจบใช้เลย · ไม่มีใช้ duration · ไม่มีทั้งคู่ (ยังเปิดค้าง) = ถึง nowMs */
+function dtInterval(d, nowMs) {
+  const s = tOf(d?.started_at);
+  if (s == null) return null;
+  const e = tOf(d?.ended_at) ?? (Number(d?.duration_min) > 0 ? s + Number(d.duration_min) * 60000 : nowMs);
+  return e != null && e > s ? [s, e] : [s, s + 1];
+}
+
+/**
+ * @param {{ states, tagMap, machines, orders, downtimes, reasonMap, session:{work_date,shift}, nowMs?, minMin?, statesWanted? }} p
+ *   states = machine_state_events · tagMap = machine_tag_map (ผูกแล้ว) · machines = ทะเบียน (id, machine_no)
+ *   orders = prod_orders ของกะ (machine_no) · downtimes = downtime_logs ของกะ · reasonMap = machine_reason_map
+ * @returns `[{ key, tag, machineNo, startMs, endMs, min, reasonCode, reasonText, suggestTypeId }]` เรียงตามเวลา
+ */
+export function faultGaps({
+  states = [], tagMap = [], machines = [], orders = [], downtimes = [], reasonMap = [], session,
+  nowMs = Date.now(), minMin = FAULT_GAP_MIN, statesWanted = FAULT_GAP_STATES,
+} = {}) {
+  if (!session?.work_date || !session?.shift) return [];
+  const noById = new Map((machines || []).map(m => [m.id, m.machine_no]));
+  const tagNo = new Map();
+  for (const t of tagMap || []) if (t?.tag && t?.machine_id && noById.get(t.machine_id)) tagNo.set(t.tag, noById.get(t.machine_id));
+  const withOrders = new Set((orders || []).map(o => (o?.machine_no ? machineKey(o.machine_no) : '')).filter(Boolean));
+  const dts = (downtimes || []).map(d => ({ mk: d?.machine_no ? machineKey(d.machine_no) : '', iv: dtInterval(d, nowMs) })).filter(d => d.iv);
+  const rmap = new Map((reasonMap || []).filter(r => r.reason_kind === 'alarm').map(r => [Number(r.reason_code), r.downtime_type_id || null]));
+
+  const out = [];
+  for (const s of states || []) {
+    if (!statesWanted.includes(s?.state)) continue;
+    const machineNo = tagNo.get(s.machine_tag);
+    if (!machineNo) continue;                                  // ยังไม่ผูก tag = ไม่รู้ว่าเครื่องไหน ห้ามเดา
+    const mk = machineKey(machineNo);
+    if (!withOrders.has(mk)) continue;
+    const st = tOf(s.started_at);
+    const en = tOf(s.ended_at) ?? (s.duration_sec != null && Number.isFinite(Number(s.duration_sec)) ? st + Number(s.duration_sec) * 1000 : null);
+    if (st == null || en == null || !(en > st)) continue;
+    const min = (en - st) / 60000;
+    if (!(min > minMin)) continue;
+    const f = factShiftOf(st);
+    if (!f || f.workDate !== session.work_date || f.shift !== session.shift) continue;
+    // ⏱️ นาฬิกา PLC คลาด ~3–5 นาที (วัด 16/11) ⇒ เผื่อ ±CLOCK_SLACK_MS ตอนเช็คว่าคนลง DT ทับช่วงนี้แล้วหรือยัง
+    const covered = dts.some(d => (!d.mk || d.mk === mk) && d.iv[0] < en + CLOCK_SLACK_MS && d.iv[1] > st - CLOCK_SLACK_MS);
+    if (covered) continue;
+    const code = s.reason_code == null ? null : Number(s.reason_code);
+    out.push({
+      key: `${s.machine_tag}|${s.started_at}`, tag: s.machine_tag, machineNo, startMs: st, endMs: en, min,
+      reasonCode: code, reasonText: code === NO_REASON_CODE ? null : (s.reason_text || null),
+      suggestTypeId: code != null && code !== NO_REASON_CODE ? (rmap.get(code) ?? null) : null,
+    });
+  }
+  return out.sort((a, b) => a.startMs - b.startMs);
 }

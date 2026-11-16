@@ -13,7 +13,7 @@ import PageHeader from '../components/PageHeader';
 import Icon from '../components/Icon';
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer } from 'recharts';
 import { useNavigate } from 'react-router-dom';
-import { can, canAccessPage } from '../utils/permissions';
+import { can, canAccessPage, canSeeded } from '../utils/permissions';
 import resizeImg from '../utils/resizeImage';
 import { getLineFamilyNames, getLineFamilyIds, getAncestorNames } from '../utils/lineHierarchy';
 import LineSelect from '../components/LineSelect';
@@ -28,17 +28,18 @@ import useIsMobile from '../utils/useIsMobile';
 import { visibleInterval } from '../utils/usePolling';
 import { RATE, LIVE } from '../utils/refreshRates';
 import { coalesce, makeIdleGate } from '../utils/liveRefresh';
-import { positionAllCards, delayedCountOf, orderKeyOf, projectedFinishMs, planStatusOf, pushChainOf, dayDelaySummaryOf } from '../utils/heijunkaQueue';
+import { positionAllCards, delayedCountOf, orderKeyOf, projectedFinishMs, planStatusOf, pushChainOf, dayDelaySummaryOf, planFramePct, stretchOverBreaks } from '../utils/heijunkaQueue';
 import { matchPlanToActual } from '../utils/planLots';
 import PlanFrameBar from '../components/PlanFrameBar';
 import PlanFrameRow from '../components/PlanFrameRow';
+import PlanSlipFrame from '../components/PlanSlipFrame';
 import { buildBoardCards } from '../utils/boardCards';
 import PlanSlipBar from '../components/PlanSlipBar';   // 📋 แถบ "หลุดแผนไปแค่ไหน" (เวลา+ยอด · 2026-09-30)
 import DowntimeBand from '../components/DowntimeBand';   // ⛔ แถบเครื่องหยุดเต็มความสูงแถว (2026-11-04)
 import { downtimeBandsIn } from '../utils/downtimeBands';
 import DelayBlameBar from '../components/DelayBlameBar';   // 🔗 สรุปดีเลย์ของวัน + ต้นเหตุ/ผู้ถูกพาล (ทีมปั๊ม 2026-09-30)
 import { liveChannel } from '../utils/liveChannel';
-import { checkWrite } from '../utils/dbWrite';
+import { checkWrite, checkWriteRows } from '../utils/dbWrite';
 import { uploadOpts } from '../utils/storageUpload';
 import { acceptImageFile } from '../utils/acceptImageFile';
 import { tr } from '../utils/i18n';
@@ -462,6 +463,30 @@ export default function Management() {
     fetchLineProd(viewLineNames, selectedLine);
     return visibleInterval(() => fetchLineProd(viewLineNames, selectedLine), RATE.BOARD);
   }, [selectedLine, viewKey, fetchLineProd]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* ══ 🧲 ลากจัดลำดับ "กรอบแผน" จากบอร์ด (27/10 · คำสั่ง user) ═══════════════════════
+     🔴 ลากได้เฉพาะแถวกรอบแผน (Layer 1) — กล่องใบคัมบังข้างล่างคือสิ่งที่เกิดขึ้นจริง
+        (ลำดับมาจาก confirmed_at / เวลาเปิดใบ) ลากมันได้ = บอร์ดโกหกว่าอดีตเป็นอีกแบบ
+     🔴 บอร์ดไม่มีปุ่มบันทึก ⇒ เขียนทันที และ **ต้องนับแถว** (RLS ปฏิเสธ UPDATE = 0 แถว ไม่มี error)
+     🔴 เขียนเฉพาะล็อตที่ seq เปลี่ยนจริง — ยิงทั้งกะทุกครั้ง = เขียนทับงานกะอื่นโดยไม่จำเป็น */
+  const canPlanDrag = canSeeded('production_plan', 'write', role) && !isMobile;
+  const handlePlanReorder = useCallback(async (shiftKey, nextLots) => {
+    const before = new Map((lineProdData?.planLots || []).map(l => [l.id, l.seq]));
+    const changed = (nextLots || []).filter(l => before.get(l.id) !== l.seq);
+    if (!changed.length) return;
+    let okRows = 0;
+    for (const l of changed) {
+      const res = await supabaseDR.from('production_plan_lots').update({ seq: l.seq })
+        .eq('id', l.id).select('id');
+      if (await checkWriteRows(res, 'จัดลำดับกรอบแผน', {
+        zeroMsg: 'จัดลำดับไม่สำเร็จ — บัญชีนี้อาจไม่มีสิทธิ์แก้แผนของไลน์นี้ (แผนไม่ถูกเปลี่ยน)',
+      })) okRows++;
+    }
+    /* 🔴 เขียนได้ไม่ครบ = ลำดับบนฐานครึ่งๆ ⇒ ต้องบอก ไม่ใช่โหลดใหม่เงียบแล้วให้คนงงว่าทำไมไม่ขยับ */
+    if (okRows < changed.length) toast.error(`จัดลำดับสำเร็จ ${okRows}/${changed.length} ล็อต — รีเฟรชแล้วลองใหม่`);
+    else toast.success(`🧲 จัดลำดับกรอบแผนกะ${shiftKey === 'night' ? 'ดึก' : 'เช้า'}แล้ว (${changed.length} ล็อตขยับ)`);
+    fetchLineProd(viewLineNames, selectedLine);
+  }, [lineProdData, fetchLineProd, viewLineNames, selectedLine]);
 
   // ── Downtime alarm — จุดเครื่องจักรบนผังกระพริบแดงเฉพาะตอน downtime ยังเปิดค้าง (ปิดรายการ = ดับทันที) ──
   // realtime: บันทึก/ปิดรายการที่หน้า Daily Report แล้วผังหน้านี้ต้องอัปเดตทันที
@@ -1669,15 +1694,9 @@ export default function Management() {
               tailLeftPct = tLeft;
               tailWidthPct = Math.max(0, tRight - tLeft);
             }
-            /* 🖼️ กรอบแผน — **วาดทุกใบ** (ภาพร่าง user 30/09) · ดูเหตุผลเต็มใน Dashboard.jsx */
-            let planLeftPct = 0, planWidthPct = 0, planSlipped = false;
-            if (item.planStartMs != null && item.plannedEndMs != null) {
-              const pl = Math.max(0, Math.min(100, (item.planStartMs - hs) * pctPerMs));
-              const pr = Math.max(0, Math.min(100, (item.plannedEndMs - hs) * pctPerMs));
-              if (pr > pl) { planLeftPct = pl; planWidthPct = pr - pl; }
-              planSlipped = (item.startMs - item.planStartMs) > 2 * 60000
-                || (Math.max(item.endMs, item.occupiedEndMs) - item.plannedEndMs) > 2 * 60000;
-            }
+            /* 🖼️ กรอบคิวตามอุดมคติ — สูตรเดียวทั้งระบบ (`planFramePct`) **ห้ามคิดพิกัดเองในหน้า**
+               เดิมก๊อปไว้ 2 หน้าแล้วสีเพี้ยนกัน (13/11) ⇒ ย้ายมาที่เดียว · ดู heijunkaQueue.js */
+            const { planLeftPct, planWidthPct, planSlipped } = planFramePct(item, hs, pctPerMs);
             return { o: item.o, leftPct, widthPct, tailLeftPct, tailWidthPct, realEndMs: item.endMs, isDelayed: item.isDelayed, isLateDone: item.isLateDone, startMs: item.startMs, occupiedEndMs: item.occupiedEndMs, planLeftPct, planWidthPct, planStartMs: item.planStartMs, plannedEndMs: item.plannedEndMs, planSlipped };
           };
 
@@ -1781,20 +1800,11 @@ export default function Management() {
             const NIGHT_OT_IN  = gridStartMs + 12   * 3600000;  // 20:00 (เข้าแบบเปิด OT)
             const NIGHT_REG_IN = gridStartMs + 14.5 * 3600000;  // 22:30 (เข้าปกติ)
             const FRAME_END    = gridEndMs;                     // 08:00
-            const finishFrom = (startMs, workMs) => {
-              const breaks = allBreaksOnce(boardLine);
-              let end = startMs + workMs;
-              const consumed = new Set();
-              let ext = true;
-              while (ext) {
-                ext = false;
-                breaks.forEach(([bs, be], i) => {
-                  if (consumed.has(i)) return;
-                  if (bs < end && be > startMs) { consumed.add(i); end += be - bs; ext = true; }
-                });
-              }
-              return end;
-            };
+            /* 🔴 ยืดคร่อมเวลาพัก = `stretchOverBreaks()` (utils/heijunkaQueue.js) เท่านั้น
+               คอมเมนต์ของมันเขียนไว้เองว่า "ต้องเป็นฟังก์ชันเดียว · ก๊อป 2 ที่แล้วดริฟท์แน่"
+               แต่ 13/11 เจอ **ก๊อปซ้ำ 3 ชุด**ในหน้า (MG 1 · DB 2) — ยุบแล้ว ห้าม inline กลับมา */
+            const finishFrom = (startMs, workMs) =>
+              stretchOverBreaks(startMs, startMs + workMs, allBreaksOnce(boardLine));
             const chips = [];
             ['day', 'night'].forEach(shift => {
               let remainCards = 0, remainQty = 0, projEndMs = null, noCt = 0, workMs = 0, started = false;
@@ -2077,14 +2087,10 @@ export default function Management() {
                                 </div>
                                 )}
                               </div>
-                              {/* 🖼️ กรอบแผน — "ใบนี้ควรอยู่ตรงนี้" (ดู Dashboard.jsx · วาดเฉพาะใบที่หลุดกรอบ) */}
-                              {planWidthPct > 0 && (
-                                <div title={`กรอบแผนของใบนี้: ${fmtMs(planStartMs)}–${fmtMs(plannedEndMs)}${planSlipped ? ` · หลุดกรอบ (เริ่มช้า ${Math.max(0, Math.round((startMs - planStartMs) / 60000))} น. · จบช้า ${Math.max(0, Math.round((Math.max(realEndMs, occupiedEndMs || realEndMs) - plannedEndMs) / 60000))} น.)` : ' · อยู่ในกรอบ'}`}
-                                  style={{ position: 'absolute', top: 1, bottom: 1, left: `${planLeftPct}%`, width: `${planWidthPct}%`,
-                                    /* ใบที่หลุดกรอบ วาดทับแท่ง (z=2) ให้เห็นกล่อง "แผนจบตรงนี้" · ดู Dashboard.jsx */
-                                    border: `${planSlipped ? 2 : 1}px dashed ${planSlipped ? '#e5e7eb' : 'var(--muted)'}`, borderRadius: 'var(--r-xs)',
-                                    opacity: planSlipped ? 0.95 : 0.35, zIndex: planSlipped ? 2 : 0, pointerEvents: 'none' }} />
-                              )}
+                              {/* 🖼️ กรอบคิวตามอุดมคติของใบนี้ — ตัววาดตัวเดียวทั้งระบบ (ห้ามวาดเองในหน้า) */}
+                              <PlanSlipFrame planLeftPct={planLeftPct} planWidthPct={planWidthPct} planSlipped={planSlipped}
+                                planStartMs={planStartMs} plannedEndMs={plannedEndMs}
+                                startMs={startMs} realEndMs={realEndMs} occupiedEndMs={occupiedEndMs} fmtMs={fmtMs} />
                               {/* หางเงาแดง — ยังไม่ปิดงานแม้เลยกำหนดแล้ว ครองไลน์อยู่จนถึงตอนนี้ ดันใบถัดไปไปต่อท้าย */}
                               {tailWidthPct > 0 && (
                                 <div title={tr('ยังไม่ปิดงาน — ดีเลย์ยังดำเนินอยู่')}
@@ -2154,6 +2160,7 @@ export default function Management() {
                       halves={HALVES} breaksOf={getBreakIntervals} lineName={boardLine}
                       ctOf={(mat) => ctByMatNo[mat] || null} pairOf={(mat) => pairMatByMat[mat] || null}
                       leftW={LEFT_W} isMobile={isMobile}
+                      editable={canPlanDrag} onReorder={handlePlanReorder}
                     />
                     {/* Rows ต่อ product — ป้าย+รูปใหญ่ 1 อันครอบทั้ง 2 แถบเวลา */}
                     {productRows.map((row) => {
