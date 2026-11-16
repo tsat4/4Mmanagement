@@ -70,3 +70,27 @@ test('🏠 กอง STORE: พาร์ทที่ยังไม่ตั้�
   const g = groupStockBySloc([{ line_name: 'STORE', mat_no: '50027079', qty_on_hand: 5 }], { slocs: SLOCS, lines: LINES, homeOf: new Map() });
   assert.deepEqual(g.map(x => x.code), [null]);
 });
+
+import { slocKindLabel } from '../slocStockView.js';
+test('🏬 kindFirst (16/11): สโตร์ → วัตถุดิบ → พื้นที่ผลิต → คลัง FG · ไม่ผูก = ท้ายสุด · ไม่ส่ง = เรียงเดิม', () => {
+  const slocs = [
+    { code: 'P401', name: 'ผลิต 1', kind: 'production', sort_order: 20, line_names: ['L1'] },
+    { code: 'W401', name: 'WH', kind: 'warehouse', sort_order: 40, line_names: [] },
+    { code: 'R402', name: 'Raw', kind: 'raw', sort_order: 55, line_names: [] },
+    { code: 'S403', name: 'ก่อนชุบ', kind: 'store_part', sort_order: 90, line_names: [] },
+  ];
+  const rows = [
+    { line_name: 'L1', mat_no: 'A', qty_on_hand: 1 },
+    { line_name: 'STORE', mat_no: 'B', qty_on_hand: 1 },
+    { line_name: 'STORE', mat_no: 'C', qty_on_hand: 1 },
+    { line_name: 'FG WAREHOUSE', mat_no: 'D', qty_on_hand: 1 },
+    { line_name: 'STORE', mat_no: 'E', qty_on_hand: 1 },
+  ];
+  const homeOf = new Map([['B', 'S403'], ['C', 'R402'], ['D', 'W401']]);
+  const g = groupStockBySloc(rows, { slocs, lines: [{ name: 'L1' }], homeOf, kindFirst: true });
+  assert.deepEqual(g.map(x => x.code), ['S403', 'R402', 'P401', 'W401', null]);
+  const g0 = groupStockBySloc(rows, { slocs, lines: [{ name: 'L1' }], homeOf });
+  assert.deepEqual(g0.map(x => x.code), ['P401', 'W401', 'R402', 'S403', null]);
+  assert.equal(slocKindLabel('store_part', 'S403'), '🏬 สโตร์');
+  assert.equal(slocKindLabel('production', null), '⚠️ ยังไม่ผูกพื้นที่');
+});

@@ -21,8 +21,20 @@ export const BOARD_TABS = [
   /* 📦 FG ทุกตัวที่ลูกค้าสั่งจริง — ไม่ได้มาจากไฟล์ Excel แต่มาจาก EDI 862/830 ที่นำเข้าทุกวัน
      (คำขอ user 06/10: "อยากให้มอนิเตอร์ได้ทุก product FG ด้วย ที่อัพจาก 862 830")
      🔴 บอร์ดชนิดนี้ผูก **ลูกค้า** (`monitor_boards.customer`) ไม่ใช่ไลน์ */
-  { key: 'fg',     label: '📦 FG ทุกตัว (862/830)', sheets: 'สร้างจากออเดอร์ลูกค้า ไม่ใช่จากไฟล์ Excel' },
+  { key: 'fg',     label: '📦 FG ทุกตัว (862/830)', sheets: 'สร้างจากออเดอร์ลูกค้า ไม่ใช่จากไฟล์ Excel' },  /* 🏬 บอร์ดสโตร์ (16/11 · แบบที่สโตร์ส่งมา + ไฟล์ Stock_Store.xlsm) — 1 แท็บ = ชนิดสโตร์ · 1 บอร์ด = 1 รหัสพื้นที่ (SLoc)
+     แถว รับ/จ่าย/คงเหลือ/SAP/Diff · รับ/จ่าย/คงเหลือมาจาก ledger ที่ `STORE` · MIN/MAX จาก `kanban_standards` (ที่เดียวกับหน้า Stock) */
+  { key: 'st_raw',      label: '🧱 Raw Mat',        sheets: 'R401 · R402', store: true },
+  { key: 'st_semi',     label: '🔧 Semi Part',      sheets: 'S401 · S406', store: true },
+  { key: 'st_purchase', label: '🏪 Purchase Part',  sheets: 'S402 · S407', store: true },
+  { key: 'st_before',   label: '🧪 Before Coating', sheets: 'S403',        store: true },
+  { key: 'st_after',    label: '✨ After Coating',  sheets: 'S405',        store: true },
+  { key: 'st_blank',    label: '⬜ Blank',          sheets: 'S408',        store: true },
 ];
+/** ชนิดบอร์ดสโตร์ — ตัดสินที่นี่ที่เดียว (ห้ามเทียบ `kind.startsWith('st_')` เองในหน้า) */
+export const STORE_BOARD_KINDS = BOARD_TABS.filter((t) => t.store).map((t) => t.key);
+export const isStoreBoard = (board) => STORE_BOARD_KINDS.includes(board?.kind);
+/** ที่ตั้งของยอดสโตร์ใน ledger (`line_stock_transactions.line_name`) — ใช้ร่วมกับ `/line-stock` */
+export const STORE_LEDGER_LINE = 'STORE';
 export const BOARD_KINDS = BOARD_TABS.map((t) => t.key);
 
 /** ป้ายไทยของแถว (ไฟล์ Excel เขียนอังกฤษ — จอเราเขียนไทยให้หน้างานอ่านออก) */
@@ -47,6 +59,8 @@ export const ROW_LABEL = {
   diff_fc:     'ห่างจาก Forecast',
   on_hand_kg:  'เหล็กคงเหลือ (กก.)',
   queue_pcs:   'งานท้ายไลน์ (ชิ้น)',
+  sap:         'SAP',
+  diff:        'Diff (SAP − คงเหลือ)',
 };
 
 /* ── ชุดแถวตั้งต้นต่อชนิดบอร์ด (ถอดจากไฟล์จริง 01/10) ─────────────────────────────── */
@@ -103,6 +117,16 @@ export const ROW_PRESETS = {
     R('balance', 'recur', 'fg_run'),
     R('min', 'const'),
   ],
+  /* 🏬 บอร์ดสโตร์ (16/11) — 5 บรรทัดตามแบบสโตร์ · ป้ายเขียนตามคำสโตร์ (รับ/จ่าย/คงเหลือ)
+     key `in`/`out`/`balance` ใช้ตัวเดิม ⇒ สูตร `stock_run` + ล็อก IN + ยึดยอดวันนี้ ใช้ร่วมกับบอร์ดไลน์ได้เลย
+     SAP = สโตร์กรอก · Diff = ระบบคิด (ไม่กรอก SAP = ว่าง ไม่ใช่ 0) */
+  store: [
+    { key: 'in', label: 'รับ', kind: 'system' },
+    { key: 'out', label: 'จ่าย', kind: 'system' },
+    { key: 'balance', label: 'คงเหลือ', kind: 'recur', recur: 'stock_run' },
+    { key: 'sap', label: 'SAP', kind: 'input' },
+    { key: 'diff', label: 'Diff (SAP − คงเหลือ)', kind: 'recur', recur: 'sap_diff' },
+  ],
   /* RA · 824-825 — งานส่งชุบข้างนอก */
   vendor: [
     R('to_vendor', 'input'),
@@ -110,6 +134,9 @@ export const ROW_PRESETS = {
     R('at_vendor', 'recur', 'vendor_wip'),
   ],
 };
+
+/* ทุกชนิดบอร์ดสโตร์ใช้ชุดแถวเดียวกัน (เทส `ทุกชนิดบอร์ดมีชุดแถวตั้งต้น` ล็อกไว้) */
+for (const k of STORE_BOARD_KINDS) ROW_PRESETS[k] = ROW_PRESETS.store;
 
 /** ค่าตั้งต้นของบอร์ดใหม่ตามชนิด (ตรงกับที่วัดจากไฟล์จริง) */
 export const BOARD_DEFAULTS = {
@@ -121,7 +148,11 @@ export const BOARD_DEFAULTS = {
   /* 🔴 ใช้ `day` (ปฏิทินต่อเนื่อง) ไม่ใช่ `date` — คอลัมน์ของ `date` มาจาก "ช่องที่กรอกไว้"
      แต่บอร์ด FG ไม่มีใครกรอก (ระบบเติมทั้งแถว) ⇒ ถ้าใช้ `date` จะได้บอร์ดเปล่าตลอดกาล */
   fg:     { period_kind: 'day',  period_count: 34, sl_row: 'order', sl_includes_seed: false },
+  /* บอร์ดสโตร์: ย้อน 7 วัน + วันนี้ + ล่วงหน้า 14 วัน (start_date ว่าง = เลื่อนตามวันนี้ · ดู boardPeriods) */
+  ...Object.fromEntries(STORE_BOARD_KINDS.map((k) => [k, { period_kind: 'day', period_count: 22, sl_row: 'out', sl_includes_seed: false }])),
 };
+/** ย้อนหลังกี่วันของบอร์ดสโตร์ (start_date ว่าง) — ยอดยกมา = คอลัมน์แรก */
+export const STORE_LOOKBACK_DAYS = 7;
 
 /**
  * ชุดแถวของบอร์ด — **ทางเดียวที่จอควรอ่าน**
@@ -182,7 +213,9 @@ export function boardPeriods(board, { now, dates, horizon = 0 } = {}) {
     if (!uniq.length) return [];
     return buildDatePeriods([addDays(uniq[0], -1), ...uniq]);
   }
-  const start = board?.start_date ? String(board.start_date).slice(0, 10) : getWorkDate(now);
+  /* 🏬 บอร์ดสโตร์ไม่ตั้ง start_date = หน้าต่างเลื่อนตามวันนี้ (ย้อน STORE_LOOKBACK_DAYS วัน) */
+  const start = board?.start_date ? String(board.start_date).slice(0, 10)
+    : (isStoreBoard(board) ? addDays(getWorkDate(now), -STORE_LOOKBACK_DAYS) : getWorkDate(now));
   if (!(n > 0)) return [];
   return kind === 'week' ? buildWeekPeriods(start, n) : buildDayPeriods(start, n);
 }
