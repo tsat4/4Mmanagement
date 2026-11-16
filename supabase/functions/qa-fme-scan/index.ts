@@ -319,11 +319,20 @@ Deno.serve(async (req) => {
       coreMats.set(c, [...(coreMats.get(c) ?? []), p.mat_no]);
     }
     const repOf = (mat: string) => { const c = coreOf(mat); return (c && coreRep.get(c)) || mat; };
-    const canon = (mat: string) => {
+    const canon1 = (mat: string) => {
       const base = repOf(opParent.get(mat) || mat);
       const pairRaw = pairOf.get(opParent.get(mat) || mat) || pairOf.get(base);
       const pair = pairRaw ? repOf(pairRaw) : null;
       return pair && pair < base ? pair : base;
+    };
+    /* 🔴 OP ที่เป็นคู่ RH/LH กันเอง (ปั๊มทีเดียวได้ 2 ตัว) = รุ่นเดียว แม้พาร์ทแม่คนละตัว (16/11 · HDF2 ท่อ
+       90031601↔90031602 ผูกแม่คนละพาร์ท ⇒ เดิมเรียก First 2 งานเวลาเดียวกัน) — เลือกตัวแทนที่เรียงน้อยกว่า */
+    const canon = (mat: string) => {
+      const a = canon1(mat);
+      const p = opParent.has(mat) ? pairOf.get(mat) : null;
+      if (!p || !opParent.has(p)) return a;
+      const b = canon1(p);
+      return b < a ? b : a;
     };
     /* MAT ทั้งตระกูลของรุ่น (ใช้หาขนาดล็อต) — ตัวที่ผลิตจริงในกะ + พี่น้องเลขพาร์ทเดียวกัน */
     const familyOf = (mats: string[]) => {
