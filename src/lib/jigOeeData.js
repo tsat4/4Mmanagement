@@ -98,6 +98,19 @@ function policyBreaksFor(policies, jig, workDate, shift, startMs, endMs, orders 
   const usable = shiftEndMs ? policies : policies.filter(p => p?.anchor !== 'shift_end');
   return breakIntervalsIn({ policies: usable, startMs, endMs, workDate, shift, shiftEndMs, lineName: jig.lineName || null });
 }
+/** ช่วงพักนโยบายของกรอบที่ดู — ทั้งวัน (`all`) = พักกะเช้า + พักกะดึก (แต่ละกะใช้เวลาเลิกกะของใบกะนั้น) · ไม่รู้นโยบาย = null */
+function jigBreaks(policies, jig, workDate, shift, endMs, orders) {
+  const shifts = shift === 'all' ? ['day', 'night'] : [shift];
+  const out = [];
+  for (const sh of shifts) {
+    const w = shiftBounds(workDate, sh);
+    if (!w || w.startMs >= endMs) continue;
+    const iv = policyBreaksFor(policies, jig, workDate, sh, w.startMs, Math.min(w.endMs, endMs), orders.filter(o => o.production_sessions?.shift === sh));
+    if (iv == null) return null;
+    out.push(...iv);
+  }
+  return out;
+}
 const ivSec = (iv) => (iv ? iv.reduce((t, [a, b]) => t + Math.max(0, b - a) / 1000, 0) : null);
 
 const ordersOfJig = (orders, jig, workDate, shift) => orders.filter(o =>
@@ -112,7 +125,7 @@ function ngPeopleOf(orders, defects) {
 }
 
 /**
- * 1 กะ ละเอียด (การ์ดจอหน้าไลน์ + ดูลึกรายเครื่อง)
+ * 1 กะ ละเอียด (การ์ดจอหน้าไลน์ + ดูลึกรายเครื่อง) · `shift='all'` = ทั้งวัน 08:00→08:00 (เช้า+ดึก รวมเป็นกรอบเดียว)
  * @returns `{ jigs: [{ ...jig, win, events, hourly, orders, ctInfo, oee, segments, buckets, stops, pareto }], errors }`
  */
 export async function loadJigShift({ lineNames = null, workDate, shift, nowMs = Date.now(), jigFilter = null }) {
@@ -133,7 +146,7 @@ export async function loadJigShift({ lineNames = null, workDate, shift, nowMs = 
     Promise.all(srcIds.map(sid => supabaseDR.rpc('fn_machine_counter_hourly', {
       p_source: sid, p_from: new Date(win.startMs).toISOString(), p_to: new Date(win.endMs).toISOString(),
     }).then(r => ({ sid, ...r })))),
-    loadOrdersAndNg(jigs, { workDate, shift }),
+    loadOrdersAndNg(jigs, { workDate, shift: shift === 'all' ? null : shift }),
     loadCtMapSafe(),
     // สถานะสด — มีความหมายเฉพาะกะที่กำลังเดิน · ตารางยังไม่มี/อ่านไม่ได้ = ไม่โชว์สถานะสด (การ์ดถอยไปสถานะล่าสุดที่รู้ + บอก)
     isNow ? supabaseDR.from('machine_live_state').select('source_id, machine_tag, state_code, state_text, since, alarm_text, onplan_text, unplan_text, production_enable, received_at')
@@ -157,7 +170,7 @@ export async function loadJigShift({ lineNames = null, workDate, shift, nowMs = 
     const ngMachine = hourly.reduce((s, h) => s + (Number(h.ng) || 0), 0);
     const w = { startMs: win.startMs, endMs: end };
     const breakCodes = bk.breakCodesBy.get(j.sourceId) || null;
-    const brkIv = policyBreaksFor(bk.policies, j, workDate, shift, win.startMs, end, orders);
+    const brkIv = jigBreaks(bk.policies, j, workDate, shift, end, orders);
     const oee = machineShiftOee({ agg: aggregateStops(events, w, breakCodes), pieces, ngMachine, ngPeople, elapsedSec: Math.max(0, (end - win.startMs) / 1000), ct: ctInfo.ct, policyBreakSec: ivSec(brkIv) });
     if (ctInfo.why && !oee.why.includes(ctInfo.why)) oee.why.unshift(ctInfo.why);
     const last = events.length ? events[events.length - 1] : null;

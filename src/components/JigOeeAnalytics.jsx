@@ -5,7 +5,6 @@
    🔴 อ่านไม่ได้ = เขียนบอก · ไม่มีจิ๊กต่อ Node-RED = บอกว่าต้องไปผูกที่ /integrations */
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import NoticeBar from './NoticeBar';
 import Segmented from './Segmented';
 import TimeRangeBar from './TimeRangeBar';
@@ -19,18 +18,18 @@ import { getWorkDate, getCurrentShift, addDaysStr } from '../utils/workDate';
 import { fetchAllRows } from '../utils/fetchAllRows';
 import { downloadCsvDoc, csvText } from '../utils/csvDoc';
 import { loadDocForms } from '../utils/docForms';
-import { axisTick, tooltipProps, CHART_MARGIN } from '../utils/chartAxis';
-import { pct1, stopPareto } from '../utils/machineOee';
+import { pct1, stopPareto, dailyCapacityRows } from '../utils/machineOee';
 import { lineNameCompare } from '../utils/lineHierarchy';
 import { tr as trI18n } from '../utils/i18n';
 import { loadJigShift, loadJigReport, combineJigRows } from '../lib/jigOeeData';
-import { JigOeeCard, JigDrilldown, JigKpiRow, KindLegend, StopParetoChart, ShiftTrendChart, LossWaterfall } from './JigOee';
+import { JigOeeCard, JigDrilldown, JigKpiRow, KindLegend, StopParetoChart, ShiftTrendChart, LossWaterfall, DailyCapacityChart } from './JigOee';
 
 const TARGET = 0.85;
 const card = { background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 14, boxShadow: 'var(--shadow-sm)', minWidth: 0 };
 const fmtPct = (v) => (v == null ? '–' : `${pct1(v).toFixed(1)}%`);
 const tone = (v, t = TARGET) => (v == null ? 'var(--muted)' : v >= t ? 'var(--green)' : v >= t * 0.85 ? 'var(--amber)' : 'var(--red)');
-const SHIFT_OPTS = [{ value: 'day', label: 'กะเช้า' }, { value: 'night', label: 'กะดึก' }];
+const SHIFT_OPTS = [{ value: 'day', label: 'กะเช้า' }, { value: 'night', label: 'กะดึก' }, { value: 'all', label: 'ทั้งวัน' }];
+const SHIFT_LABEL = { day: 'กะเช้า', night: 'กะดึก', all: 'ทั้งวัน (เช้า+ดึก)' };
 const VIEW_OPTS = [{ value: 'shift', label: 'ภาพรวมกะ' }, { value: 'report', label: 'รายงาน & Pareto' }];
 const sumWaterfall = (rows) => {
   const keys = ['plannedSec', 'fault', 'unplanned', 'idle', 'breakOver', 'operatingSec', 'minorSec', 'speedSec', 'netSec', 'ngSec', 'fullySec'];
@@ -56,14 +55,14 @@ export default function JigOeeAnalytics() {
         🏭 OEE <b>รายจิ๊ก/เครื่อง จากข้อมูลเครื่อง</b> (Node-RED ผ่านศูนย์เชื่อมต่อ) — สูตรของ ESM · CT จากพาร์ทในใบผลิตบนจิ๊ก · %Q จาก NG ที่คน/QA ตัดสิน
         · คนละชุดกับ OEE ไลน์ที่ประทับตอนปิดกะ (แท็บอื่น)
       </NoticeBar>
-      {view === 'shift' ? <ShiftView sp={sp} setParam={setParam} /> : <ReportView />}
+      {view === 'shift' ? <ShiftView sp={sp} setParam={setParam} /> : <ReportView setSp={setSp} />}
     </div>
   );
 }
 
 function ShiftView({ sp, setParam }) {
   const wd = /^\d{4}-\d{2}-\d{2}$/.test(sp.get('wd') || '') ? sp.get('wd') : getWorkDate();
-  const sh = ['day', 'night'].includes(sp.get('sh')) ? sp.get('sh') : getCurrentShift();
+  const sh = ['day', 'night', 'all'].includes(sp.get('sh')) ? sp.get('sh') : getCurrentShift();
   const jigKey = sp.get('jig') || '';
   const [data, setData] = useState(null);
   const [trend, setTrend] = useState(null);
@@ -135,7 +134,7 @@ function ShiftView({ sp, setParam }) {
           ))}
           {sel ? (<>
             <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>
-              {sel.machineNo} <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--muted)' }}>{sel.lineName} · {wd} · {sh === 'day' ? 'กะเช้า' : 'กะดึก'}</span>
+              {sel.machineNo} <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--muted)' }}>{sel.lineName} · {wd} · {SHIFT_LABEL[sh]}</span>
             </div>
             <JigDrilldown j={sel} trendRows={trend} target={TARGET} />
           </>) : <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>กดการ์ดจิ๊กเพื่อดูลึก (แถบสถานะ · รายชั่วโมง · Loss · Pareto · การหยุด · ใบผลิต · แนวโน้ม)</div>}
@@ -144,7 +143,7 @@ function ShiftView({ sp, setParam }) {
   );
 }
 
-function ReportView() {
+function ReportView({ setSp }) {
   const tr = useTimeRange({ defaultScale: 'day', defaultDays: 7, finest: 'day' });
   const { from, to } = tr;
   const [data, setData] = useState(null);
@@ -188,16 +187,9 @@ function ReportView() {
     for (const r of data?.rows || []) { const k = `${r.sourceId}|${r.tag}`; if (!m.has(k)) m.set(k, { j: r, rows: [] }); m.get(k).rows.push(r); }
     return [...m.values()].map(x => ({ j: x.j, c: combineJigRows(x.rows) }));
   }, [data]);
-  const daily = useMemo(() => {
-    const m = new Map();
-    for (const r of rows) {
-      const d = m.get(r.workDate) || { d: r.workDate, good: 0, ng: 0, cap: 0, capKnown: true };
-      d.good += Math.max(0, (r.oee.pieces || 0) - (r.oee.ngMachine || 0)); d.ng += r.oee.ngMachine || 0;
-      if (r.oee.ct > 0) d.cap += Math.floor(r.oee.plannedSec / r.oee.ct); else if (r.oee.plannedSec > 0) d.capKnown = false;
-      m.set(r.workDate, d);
-    }
-    return [...m.values()].sort((a, b) => (a.d < b.d ? -1 : 1)).map(d => ({ ...d, label: `${d.d.slice(8, 10)}/${d.d.slice(5, 7)}`, cap: d.capKnown ? d.cap : null }));
-  }, [rows]);
+  const daily = useMemo(() => dailyCapacityRows(rows), [rows]);
+  /* (ค) คลิกวัน ⇒ ไปมุมมองทั้งวันของวันนั้น (จิ๊กที่เลือกอยู่ ถ้าเลือก) */
+  const openDay = (d) => setSp(p => { const n = new URLSearchParams(p); n.delete('mview'); n.set('wd', d); n.set('sh', 'all'); if (pick) n.set('jig', pick); else n.delete('jig'); return n; });
 
   const exportCsv = async () => {
     await loadDocForms().catch(() => null);
@@ -251,21 +243,11 @@ function ReportView() {
           </div>
         </div>
         <div style={card}>
-          <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>ยอดผลิตรายวัน เทียบกำลังผลิตตามแผน</div>
-          <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>ชิ้นดี/NG จากเครื่อง · กำลังผลิต = เวลาแผน ÷ CT พาร์ทในใบ (ว่าง = มีกะที่ไม่รู้ CT)</div>
-          <div style={{ width: '100%', height: 240 }}>
-            <ResponsiveContainer>
-              <BarChart data={daily} margin={CHART_MARGIN}>
-                <CartesianGrid stroke="var(--border)" vertical={false} />
-                <XAxis dataKey="label" tick={axisTick()} />
-                <YAxis width="auto" tick={axisTick()} allowDecimals={false} />
-                <Tooltip {...tooltipProps()} />
-                <Bar dataKey="cap" name="กำลังผลิตตามแผน" fill="var(--border2)" isAnimationActive={false} />
-                <Bar dataKey="good" name="ชิ้นดี (เครื่อง)" stackId="q" fill="var(--green)" isAnimationActive={false} />
-                <Bar dataKey="ng" name="NG (หน้าเครื่อง)" stackId="q" fill="var(--red)" isAnimationActive={false} />
-              </BarChart>
-            </ResponsiveContainer>
+          <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>ยอดผลิตรายวัน & ชิ้นที่ควรทำได้</div>
+          <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>
+            {pick ? 'จิ๊กที่เลือก' : 'ทุกจิ๊กรวมกัน'} · เทา = ยังขาดจากที่ควรทำได้ (เวลาแผน ÷ CT พาร์ทในใบ · ไม่มีเทา = มีกะที่ไม่รู้ CT) · ชี้เพื่อดูเวลารายสถานะ · คลิกวันเพื่อดูทั้งวันรายชั่วโมง
           </div>
+          <DailyCapacityChart rows={daily} onPick={openDay} />
         </div>
         <div style={card}>
           <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>แนวโน้มรายกะ</div>

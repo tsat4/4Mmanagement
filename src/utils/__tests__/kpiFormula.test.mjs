@@ -141,3 +141,16 @@ test('amountCompanion: อ่าน amount_var ที่ขอบเขตขอ
   assert.equal(amountCompanion({ def: { kpi_catalog: {} }, scope: { kind: 'section', value: 'PD2' }, base, month: 4 }), null);
   assert.equal(fmtMoney(10_158_808.55), '10.16 MB'); assert.equal(fmtMoney(null), '—');
 });
+
+/* 🔬 formulaPartSeries (16/11) — DL+OH แตกเป็น DL % กับ OH % จาก inputs ชุดเดียวกัน */
+test('formulaPartSeries: dloh_pct → dl_pct + oh_pct รายเดือน · สูตรที่ไม่มี parts = []', async () => {
+  const { formulaPartSeries } = await import('../kpiFormula.js');
+  const info = { key: 'dloh_pct', inputs: { 1: { dl: 10, oh: 30, sale_product: 1000 }, 2: { dl: 20, sale_product: 1000 } } };
+  const parts = formulaPartSeries(info);
+  assert.deepEqual(parts.map(p => p.key), ['dl_pct', 'oh_pct']);
+  assert.equal(parts[0].months[1], 1); assert.equal(parts[1].months[1], 3);
+  assert.equal(parts[0].months[2], 2); assert.equal(parts[1].months[2], null);   // ขาด oh = null ไม่ใช่ 0
+  assert.equal(parts[0].months[7], null);
+  assert.deepEqual(formulaPartSeries({ key: 'rm_pct', inputs: {} }), []);
+  assert.deepEqual(formulaPartSeries(null), []);
+});
