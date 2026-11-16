@@ -211,3 +211,24 @@ user เลือก "ทางเลือก B" หลังเทียบ 3 
 · ใบพิมพ์ `src/lib/mktProductionOrderDoc.js` — 2 หน้าในไฟล์เดียว (หน้า 2 = F-MKT-002) อ่าน `docFormSync()` ทั้ง 2 คีย์ + `withDocFoot(html, 'mkt_production_order')`
 · 🔴 **เป็น "บันทึก" ไม่ใช่ใบ generate** — เลขที่ + snapshot อยู่ `mkt_awards.production_order_*` · พิมพ์ซ้ำ = ใบเดิม (กฎเดียวกับ `prod_problem_reports`)
 · migration `20261030b_mkt_rfq_phase1_main.sql` (MAIN · **apply แล้ว 30/10** · ตรวจกลับ: 2 แถว) · 📄 `docs/modules/mkt-rfq.md` §5 ข้อ 4
+
+---
+
+## 📥 CSV ผลตรวจ QA — 3 คีย์ (2026-11-16 · feedback ประชุม 16/11)
+
+user: *"หน้า QA พวกการตรวจสอบและทุกๆการตรวจสอบ export data พวกผลตรวจ เป็น CSV ทั้งดาต้ารายพาร์ทและ SPC"*
+
+| doc_key | ไฟล์คืออะไร | ปุ่มอยู่ไหน |
+|---|---|---|
+| `csv_qa_inspection_results` | ผลตรวจรายจุด ทุกรอบ ของพาร์ทที่เลือก (ย้อนหลัง 7/30/60/90/180 วัน) | `/qa?tab=sheet` · `components/QaCheckSheet.jsx` |
+| `csv_qa_spc_values` | ค่าวัด SPC รายค่า (1 แถว = 1 ค่า + LSL/Nominal/USL + ธง "หลุด") | `/qa?tab=spc` · `pages/QualityControl.jsx` (`SPCTab`) |
+| `csv_qa_spc_summary` | สรุป n/Mean/σ/Cp/Cpk/Pp/Ppk/ค่าหลุด spec รายจุดวัด | `/qa?tab=spc` (โหมดใบตรวจ) |
+
+· แถวประกอบที่ **`src/utils/qaCsvRows.js`** (pure · เทส `src/utils/__tests__/qaCsvRows.test.mjs` 12 เคส) —
+  ไฟล์ออกทาง `downloadCsvDoc()` + `csvText()` ของ `csvDoc.js` (ไม่มี `new Blob('text/csv')` ในหน้า · ด่าน `csv-export-via-csvDoc`)
+· migration `20261116_doc_forms_csv_qa_exports_main.sql` (MAIN · **ยังไม่ apply** — ก่อน apply ได้ชื่อไฟล์เดิม
+  `qa_results_<พาร์ท>_<from>_<to>.csv` / `qa_spc_values_…` / `qa_spc_summary_…` ไม่ล้ม · `form_code` ว่างทั้ง 3 แถว)
+· 🔴 **ชื่อไฟล์ติดคำว่า "ไม่ครบ" เมื่อข้อมูลที่ดึงมาไม่ครบ** (error / ชนเพดานหน้า) + ถามยืนยันก่อนดาวน์โหลด —
+  เตือนในเนื้อ CSV ไม่ได้ เพราะแถวแรกต้องเป็นหัวตาราง (คอลัมน์เลื่อน = พัง pivot/สูตรของผู้ใช้)
+· สิทธิ์ปุ่ม = `report:export` (คีย์เดียวกับปุ่ม export ทั้งระบบ · ดาวน์โหลดไม่ได้เขียนอะไร ⇒ ไม่ผูก `qa:record`)
+· 📄 กฎรายไฟล์ (ค่าว่าง ≠ 0 · จุดที่ข้าม · egress) → `docs/modules/qa-inspection.md` §Export ผลตรวจเป็น CSV
