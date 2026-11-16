@@ -11055,3 +11055,22 @@ test('🚫 no-fg-line-request — ทุกจุดที่ออกใบเ�
     '\n\n❌ ไฟล์นี้ออกใบเบิกเข้าไลน์โดยไม่กันเลข FG 1xx:\n   ' + offenders.join('\n   ')
     + '\n   ใช้ `isFgMat(mat)` + ข้อความ `FG_NO_LINE_REQUEST` จาก src/utils/storeOps.js ก่อน insert\n');
 });
+
+/* ═══ 🗑️ "อื่นๆ" ต้องใส่เหตุผลจริง — ห้ามพิมพ์ "อื่นๆ" ลงช่องพิมพ์ (2026-11-16 · คำสั่ง user) ══
+   ที่มา: หมวด "อื่นๆ (ในแผน)" = 41.5% ของนาทีหยุดตามแผนทั้งโรงงาน (พ.ย. 69 · 34,639/83,382 น.)
+   ด่านเดิมเช็คแค่ `!description.trim()` ⇒ พิมพ์ `อื่นๆ` / `-` / `ไม่ระบุ` ผ่านฉลุย */
+test('🗑️ DailyReport: ด่าน "อื่นๆ ต้องบอกเหตุผล" ต้องผ่าน checkOtherDescription ทั้ง downtime และของเสีย', () => {
+  const dr = stripComments(readFileSync(join(ROOT, 'src/pages/DailyReport.jsx'), 'utf8'))
+  assert.ok((dr.match(/checkOtherDescription\(/g) || []).length >= 4,
+    '\n\n❌ ต้องใช้ checkOtherDescription ทั้งตอนกดบันทึก (downtime + ของเสีย) และบนฟอร์มทั้ง 2 ช่อง\n')
+  for (const [re, what] of [[/const dtDescChk = checkOtherDescription\(dtTypeName, dtForm\.description\)/, 'downtime'],
+                            [/const defDescChk = checkOtherDescription\(defTypeName, defectForm\.description\)/, 'ของเสีย']]) {
+    assert.match(dr, re, `\n\n❌ ด่านตอนบันทึก${what}หายไป\n`)
+  }
+  assert.ok(!/includes\('อื่น'\) && !\w+Form\.description\?\.trim\(\)/.test(dr),
+    '\n\n❌ ด่านเก่าที่เช็คแค่ "ช่องว่างไหม" กลับมาแล้ว — พิมพ์ "อื่นๆ" ซ้ำจะผ่านอีก\n')
+  assert.ok(!/ประเภท "อื่นๆ" ต้องระบุ/.test(dr),
+    '\n\n❌ ข้อความเตือนต้องมาจาก otherDescMessage() ห้ามเขียนเองในหน้า (3 จอต้องพูดเหมือนกัน)\n')
+  const u = stripComments(readFileSync(join(ROOT, 'src/utils/unclassified.js'), 'utf8'))
+  assert.match(u, /export function checkOtherDescription\(/, '\n\n❌ กฎต้องอยู่ใน utils/unclassified.js (pure + เทสได้)\n')
+})

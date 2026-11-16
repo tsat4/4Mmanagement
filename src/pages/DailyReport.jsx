@@ -57,6 +57,8 @@ import { planMatTimeWrites, MAT_TIME_SKIP_OPEN } from '../utils/matTimeEdit';
 import { resolveShiftTime, checkShiftTime, shiftWindow, windowLabel, fmtOffset, MAX_SHIFT_MIN, checkCloseTime, dtCoverMin } from '../utils/shiftWindow';
 /* 🛡️ poka-yoke หน้าปิดกะ — กฎทั้งหมดอยู่ใน utils/closeChecks.js ห้ามเขียนเงื่อนไขเองในหน้า */
 import { checkQtyFit, qtyFitMessage, buildCloseChecks, confirmChecks } from '../utils/closeChecks';
+/* 🗑️ ด่าน "อื่นๆ ต้องบอกเหตุผลจริง" — กฎ+ข้อความอยู่ utils/unclassified.js ห้ามเขียนเองในหน้า */
+import { checkOtherDescription, otherDescMessage, isVague } from '../utils/unclassified';
 import ScanModal from '../components/ScanModal';
 import SearchSelect from '../components/SearchSelect';
 import Segmented from '../components/Segmented';
@@ -1435,12 +1437,13 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
       toast.error(`ช่วงเวลาที่กรอกยาว ${fmtOffset((endedAt - startedAt) / 60000)} — ยาวเกินกว่า 1 กะ ตรวจเวลาอีกครั้ง`);
       return;
     }
-    // ประเภท "อื่นๆ" เปล่าๆ บอกอะไรไม่ได้ในสรุปประชุมเช้า/รายงาน — บังคับระบุสาเหตุจริงเสมอ
+    /* 🗑️ ประเภท "อื่นๆ" ต้องบอกสาเหตุจริง — **พิมพ์ "อื่นๆ / ไม่ระบุ / -" ซ้ำไม่ผ่าน**
+       (16/11 · คำสั่ง user) หมวด "อื่นๆ (ในแผน)" กินนาทีหยุดตามแผน 41.5% ของทั้งโรงงาน
+       = ก้อนเวลาที่ถูกตัดออกจากฐาน %A/%P ใหญ่สุด แต่ไม่มีใครรู้ว่าคืออะไร
+       🔴 กฎ+ข้อความอยู่ `utils/unclassified.js` ห้ามเขียนเงื่อนไข/ข้อความเองที่นี่ */
     const dtTypeName = dtTypes.find(t => t.id === dtForm.downtime_type_id)?.name_th || '';
-    if (dtTypeName.includes('อื่น') && !dtForm.description?.trim()) {
-      toast.error('ประเภท "อื่นๆ" ต้องระบุรายละเอียด/สาเหตุด้วย — เพื่อให้รายงานและประชุมเช้าอ่านรู้เรื่อง');
-      return;
-    }
+    const dtDescChk = checkOtherDescription(dtTypeName, dtForm.description);
+    if (!dtDescChk.ok) { toast.error(otherDescMessage(dtDescChk.reason, 'สาเหตุที่หยุด')); return; }
     // นอกแผน (เครื่องเสีย) ส่วนใหญ่ควรระบุเครื่อง — ไม่บังคับ (พาร์ทหมด/ไฟดับทั้งโรงงานลงเครื่องไม่ได้)
     // แต่ไม่ปล่อยข้ามเงียบ: ถ้า unplanned แล้วไม่เลือกเครื่อง เด้งถามยืนยันก่อน (planned ไม่ผูกเครื่องอยู่แล้ว ไม่ถาม)
     const dtCat = dtTypes.find(t => t.id === dtForm.downtime_type_id)?.category;
@@ -2455,12 +2458,10 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
     const repair  = parseInt(defectForm.qty_repair)  || 0;
     if (ng < 0 || suspect < 0 || repair < 0) { toast.error('จำนวนงานเสียติดลบไม่ได้ — แก้ช่องที่มีเครื่องหมายลบ'); return; }
     if (ng + suspect + repair === 0) { toast.error('กรอกจำนวนงานเสียอย่างน้อย 1 ช่อง'); return; }
-    // ประเภท "อื่นๆ" เปล่าๆ บอกอะไรไม่ได้ — บังคับระบุอาการ/สาเหตุจริงเสมอ (เหมือนกฎฝั่ง Downtime)
+    /* 🗑️ กฎเดียวกับฝั่ง Downtime — พิมพ์คำกลวงซ้ำไม่ผ่าน (utils/unclassified.js) */
     const defTypeName = defectTypes.find(t => t.id === defectForm.defect_type_id)?.name_th || '';
-    if (defTypeName.includes('อื่น') && !defectForm.description?.trim()) {
-      toast.error('ประเภท "อื่นๆ" ต้องระบุรายละเอียด/อาการด้วย — เพื่อให้รายงานและประชุมเช้าอ่านรู้เรื่อง');
-      return;
-    }
+    const defDescChk = checkOtherDescription(defTypeName, defectForm.description);
+    if (!defDescChk.ok) { toast.error(otherDescMessage(defDescChk.reason, 'อาการของเสีย')); return; }
     setSavingDefect(true);
     /* 📷 อัปโหลดรูป **ก่อน** เขียนแถว — ล้มแล้วเขียนต่อ = แถวบอกว่ามีรูปแต่เปิดไม่ขึ้น (ห้ามล้มเหลวเงียบ)
        ⚠️ คีย์ชื่อไฟล์ใช้ `session_id` ไม่ใช่ id ของแถว (ตอน insert ยังไม่มี id) */
@@ -6838,9 +6839,25 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                   ))}
                 </div>
 
-                <Field label={tr('รายละเอียด / สาเหตุ')}>
-                  <input type="text" value={defectForm.description} onChange={e => setDefectForm(f => ({ ...f, description: e.target.value }))} placeholder={tr('เช่น มิติไม่ได้เพราะแม่พิมพ์สึก...')} style={inputStyle} />
-                </Field>
+                {/* กฎเดียวกับฝั่ง Downtime — ประเภท "อื่นๆ" ต้องบอกอาการจริง */}
+                {(() => {
+                  const tn = defectTypes.find(t => t.id === defectForm.defect_type_id)?.name_th || '';
+                  const need = isVague(tn);
+                  const chk = checkOtherDescription(tn, defectForm.description);
+                  return (
+                    <Field label={need ? `${tr('รายละเอียด / สาเหตุ')} *` : tr('รายละเอียด / สาเหตุ')}>
+                      <input type="text" value={defectForm.description}
+                        onChange={e => setDefectForm(f => ({ ...f, description: e.target.value }))}
+                        placeholder={need ? tr('บอกอาการจริง เช่น รอยขีดข่วนที่ขอบงาน') : tr('เช่น มิติไม่ได้เพราะแม่พิมพ์สึก...')}
+                        style={need && !chk.ok ? { ...inputStyle, borderColor: 'var(--amber)' } : inputStyle} />
+                      {need && (
+                        <div style={{ fontSize: 11, color: chk.ok ? 'var(--muted)' : 'var(--amber)', marginTop: 3, lineHeight: 1.5 }}>
+                          {chk.ok ? tr('✓ ระบุอาการแล้ว') : otherDescMessage(chk.reason, tr('อาการของเสีย'))}
+                        </div>
+                      )}
+                    </Field>
+                  );
+                })()}
 
                 {/* 📷 รูปงานเสีย — **ทางเลือก ห้ามทำเป็นช่องบังคับ** (คำสั่ง user 12/10)
                     หน้างานใส่ถุงมือ/รีบ บังคับถ่ายทุกใบ = คนเลิกลงข้อมูล
@@ -7223,9 +7240,26 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                       )}
                     </Field>
                   </div>
-                  <Field label={tr('รายละเอียด')}>
-                    <input type="text" value={dtForm.description} onChange={e => setDtForm(f => ({ ...f, description: e.target.value }))} placeholder={tr('สาเหตุ...')} style={inputStyle} />
-                  </Field>
+                  {/* 🗑️ ประเภทถังขยะ ("อื่นๆ") = ช่องนี้บังคับ และพิมพ์คำกลวงซ้ำไม่ผ่าน
+                      ⇒ บอกตั้งแต่ตอนกรอก ไม่ใช่ไปเด้ง toast ตอนกดบันทึก (utils/unclassified.js) */}
+                  {(() => {
+                    const tn = dtTypes.find(t => t.id === dtForm.downtime_type_id)?.name_th || '';
+                    const chk = checkOtherDescription(tn, dtForm.description);
+                    const need = !isVague(tn) ? false : true;
+                    return (
+                      <Field label={need ? `${tr('รายละเอียด')} *` : tr('รายละเอียด')}>
+                        <input type="text" value={dtForm.description}
+                          onChange={e => setDtForm(f => ({ ...f, description: e.target.value }))}
+                          placeholder={need ? tr('บอกสาเหตุจริง เช่น โซ่ลำเลียงติด / ลมตก') : tr('สาเหตุ...')}
+                          style={need && !chk.ok ? { ...inputStyle, borderColor: 'var(--amber)' } : inputStyle} />
+                        {need && (
+                          <div style={{ fontSize: 11, color: chk.ok ? 'var(--muted)' : 'var(--amber)', marginTop: 3, lineHeight: 1.5 }}>
+                            {chk.ok ? tr('✓ ระบุสาเหตุแล้ว') : otherDescMessage(chk.reason, tr('สาเหตุที่หยุด'))}
+                          </div>
+                        )}
+                      </Field>
+                    );
+                  })()}
                 </div>
 
                 <div className={isMobile ? 'm-modalfoot' : undefined} style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
