@@ -6,7 +6,7 @@ import { useState, useEffect, useMemo, useCallback, useRef, useContext, Fragment
 import { UserContext } from '../App';
 import { supabase, supabaseDR } from '../supabaseClient';
 import { toast } from './Toast';
-import { wavg, wLoad, sumDefectQty, dtMinBySession, QBIN_EMBED } from '../utils/oee';
+import { wavg, wLoad, sumDefectQty, dtMinBySession, ppmOf, QBIN_EMBED } from '../utils/oee';
 import { loadAffectsLanes } from '../utils/affectsLanes';
 import { defectUnitCost } from '../utils/costSaving';
 import { fetchByIds } from '../utils/fetchByIds';
@@ -613,9 +613,10 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
     });
     out.forEach(m => {
       m.oee = m.sess.length ? wavg(m.sess, x => x.oee, wLoad) : null;
-      /* ไม่มียอดผลิตเลยแต่มีของเสีย = ยอดผลิตยังไม่ถูกบันทึก ไม่ใช่ "เสียล้านชิ้นในล้าน" ⇒ null (จอเขียน "—")
+      /* 🔴 PPM ผ่าน `ppmOf` (oee.js §7.3) ที่เดียว — คืนจำนวนเต็ม (ชิ้นต่อล้าน ทศนิยมไม่มีความหมาย
+         · feedback 16/11) และคืน null เมื่อยอดผลิตยังไม่ถูกบันทึก ไม่ใช่ "เสียล้านชิ้นในล้าน"
          (UX audit 05/10: แท็บตั้งค่าโชว์ PPM 1,000,000 ตอนผลิต 0 · NG 91) */
-      m.ppm = m.produce > 0 ? (m.ng / (m.produce + m.ng)) * 1e6 : null;
+      m.ppm = ppmOf(m.ng, m.produce);
       /* ⚠️ "ตีมูลค่าไม่ได้" ≠ "ไม่มีต้นทุน" — ของเสียมีจริงแต่ไม่มีพาร์ทไหนตีมูลค่าได้เลย
          ต้องเป็น "—" ห้ามเป็น 0 (กฎเดียวกับ OEE: ประเมินไม่ได้ = null ห้ามแปลงเป็นศูนย์)
          ไม่มีของเสียเลย → 0 ถูกต้อง                                                     */
@@ -632,7 +633,7 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
       n: out.reduce((s, m) => s + m.n, 0),
       oee: allSess.length ? wavg(allSess, x => x.oee, wLoad) : null,
     };
-    tot.ppm = tot.produce > 0 ? (tot.ng / (tot.produce + tot.ng)) * 1e6 : null;
+    tot.ppm = ppmOf(tot.ng, tot.produce);
     tot.costKnown = tot.costQty > 0 || tot.costMissQty === 0;
     return { out, tot };
   }, [data]);

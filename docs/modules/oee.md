@@ -2788,3 +2788,81 @@ OEE ก.ย.: LASER-345 82.5→**83.0** · LASER-789 86.3→**86.7** · HDF1 84.
 
 ## 🏭 OEE รายจิ๊กจากข้อมูลเครื่อง (13/11)
 คนละชุดกับ OEE ไลน์ในไฟล์นี้ — สูตร `src/utils/machineOee.js` · 📄 `docs/modules/integration-hub.md` §OEE รายจิ๊ก · ห้ามเอาไปทับค่าที่ประทับตอนปิดกะ
+
+
+## 🎯 PPM ของเสียภายใน — ยุบเหลือสูตรเดียว + แก้ "PPM ไลน์ปั๊มที่มีการเทส กระโดด" (2026-11-16)
+
+**ที่มา: feedback ประชุม 16/11 (นาย ณัฐวุฒิ ทรงดอน)**
+1. 🔴 *"แก้ PPM ไลน์ปั๊มที่มีการเทสแล้วทำให้ PPM กระโดดไปเกิน 100 สูงผิดปกติ"*
+2. *"PPM ต้องโชว์จำนวนเต็ม"*
+
+> "เกิน 100" = **ทะลุเป้า** ไม่ใช่เพดานของหน่วย — PPM = ชิ้นต่อล้าน ⇒ ค่าเกิน 100 เกิดได้ตามธรรมชาติ **ห้าม clamp**
+> · เป้าในทะเบียน `kpi_definitions` (MAIN · ปี 2026) = **50 / 75 / 300**
+> · เป้าในใบ KPI ทางการรายกลุ่มไลน์ (📄 `docs/OBEYA-KPI-SOURCES.md` §10) = PD3 ≤150 · **HDF ≤100** ·
+>   Laser cut ≤200 · Apron Ass'y ≤0 ⇒ **"เกิน 100" ตรงกับเป้าของ HDF** ซึ่งเป็นไลน์ที่งานคู่ 100%
+>   (HDF1/HDF2 ทุก MAT มีคู่) = ไลน์ที่โดนบั๊ก (ข) เต็มที่
+
+### สิ่งที่พบ (ไล่ฐานจริง DR 16/11 · `defect_logs` 367 แถว · ทดลอง 27 แถว = 209 ชิ้นจาก 1,500)
+สูตร PPM เคยเขียนมือ **5 ที่** แล้ว drift กัน **2 คลาส ทั้งคู่ดัน PPM ขึ้น**:
+
+**(ก) ตัวเศษกับตัวหารคนละฐาน — งานทดลองเข้าตัวเศษ** (`/dept-dashboard` แท็บ QA)
+คิวรีไม่ได้ขอ `is_trial` / `dr_defect_types(excl_from_q)` / ทะเบียนถัง มาเลย แล้วบวก `qty_ng + qty_suspect`
+**ดิบ** หารด้วยยอดผลิตของไลน์ ⇒ ของเสียจากการลองแม่พิมพ์/ลองงานใหม่ไปโทษไลน์ผลิต
+
+| ไลน์ | PPM ที่ควรเป็น (line-mode) | PPM ที่จอโชว์ (รวมงานทดลอง) | เท่า |
+|---|---|---|---|
+| Laser GOR | 145 | 1,432 | 9.9× |
+| Laser LWR | 347 | 2,358 | 6.8× |
+| LINE A ( 800 Ton ) | **0** | 22 | ∞ (ของเสียทุกชิ้นของไลน์นี้เป็นงานทดลอง) |
+| LINE A รายกะ 03/10 (ผลิตดี 1,800 · ทดลองเสีย 3) | **0** | **1,664** | — |
+
+**(ข) ตัวหารเป็น "shot" แต่ตัวเศษเป็น "ชิ้น"** (เด็ค Monthly Review · `src/lib/monthlyReviewPptx.js`)
+`ppmOfSessions()` รับ `output` ที่ผ่าน `pairAwareTotal` + `collapseOps` (ยุบงานคู่ RH/LH เป็น 1 stroke
+และยุบขั้น OP) มาเป็นตัวหาร — ชนกฎ `pairTotals.js` ตรงๆ: **%Q · ยอดผลิต · ของเสีย นับชิ้น ห้ามยุบ ·
+เฉพาะเวลามาตรฐานของ %P นับ shot** ⇒ เฟ้อ **เฉพาะไลน์แม่พิมพ์คู่** (ปั๊ม/เลเซอร์/HDF)
+
+| ไลน์ | ชิ้นจริง | ยุบคู่แล้ว | NG | PPM ถูก | PPM เด็คเดิม |
+|---|---|---|---|---|---|
+| HDF1 | 115,171 | 63,713 | 224 | 1,941 | **3,503** |
+| LASER-345 | 116,088 | 64,585 | 221 | 1,900 | **3,410** |
+| HDF2 | 129,251 | 72,514 | 135 | 1,043 | **1,858** |
+| LASER-789 | 117,076 | 70,988 | 132 | 1,126 | **1,856** |
+| LINE B ( 600 Ton ) | 233,070 | 156,160 | 5 | 21 | 32 |
+
+(ไลน์ที่ไม่มีงานคู่ไม่ขยับเลย — LASER EXPORT · BENDING · Line 60/61 · Assy = ยืนยันว่าแตะเฉพาะไลน์คู่)
+สัดส่วนงานคู่ของไลน์ปั๊ม: LINE B 156,620/233,070 (67%) · LINE A 115,740/180,520 (64%) · LINE D 205,160/387,499 (53%)
+
+### 🔴 กฎใหม่ข้าม session — `src/utils/oee.js` **§7.3** เป็นเจ้าของสูตร PPM ที่เดียว
+- `ppmOf(ngQty, goodQty)` — `ng ÷ (good + ng) × 1e6` · **คืนจำนวนเต็มเสมอ** · `goodQty <= 0` = **`null`**
+  (ผลิต 0 แต่มีของเสีย ≠ "เสียล้านชิ้นในล้าน") **ห้ามคืน 0 · ห้ามคืน 1,000,000**
+- `ppmFromDefects(rows, goodQty)` — กรองงานทดลอง (§7) + ของสงสัยรอ QA (§7.1/§7.2) ในตัว
+  คืน `{ ppm, ngQty, goodQty, baseQty, trialQty, pendingQty, unsureQty }`
+  🔴 **`trialQty`/`pendingQty`/`unsureQty` ต้องถูกเขียนบนจอ** — ของที่กันออกจากตัวเศษห้ามหายเงียบ
+- `trialState(d)` — `'trial' | 'line' | **'unknown'**` · `'unknown'` = คิวรีไม่ได้ embed
+  `dr_defect_types(excl_from_q)` ⇒ **ห้ามเดา**: นับเข้าตัวเศษตามพฤติกรรมเดิม (เหมือน `suspectState`)
+  แล้วคืนยอดใน `unsureQty` ให้จอเขียนว่า "แยกงานทดลองไม่ได้ N ชิ้น"
+- `fmtPpm(v, dash = '—')` — ตัวจัดรูปแบบตัวเดียว · จำนวนเต็ม + ตัวคั่นหลักพัน · `null` = ขีด
+- 🔴 **ตัวหารต้องเป็น "ชิ้น" (ยอดสแกนดี) — ห้ามส่งยอดที่ผ่าน `pairAwareTotal`/`collapseOps`/`orderTotal`**
+- 🔴 **ห้ามเขียน `… * 1e6` เองในหน้าอีก** · 🔴 **ห้ามแก้ค่าที่สูงด้วยการ clamp** — แก้ที่ความไม่สมมาตรของเศษ/ส่วน
+
+**ด่าน (regressionGuards):** `ppm-single-entry` (จับคูณ 1e6 เองในหน้า · ยกเว้น `oee.js`) ·
+`ppm-base-not-pair-collapsed` (จับการส่ง `output`/`pairAware*`/`collapseOps` เป็นตัวหารของ PPM) ·
+`ppmFromDefects` ถูกเพิ่มเข้า `Q_HELPERS` ของด่าน `oee-suspect-needs-qbin-embed` แล้ว
+⇒ **จอที่คิด PPM ต้อง embed ทะเบียนถัง (`QBIN_EMBED`) ด้วย** · เทส `src/utils/__tests__/ppm.test.mjs`
+
+### จุดที่แก้
+| ไฟล์ | ก่อน | หลัง |
+|---|---|---|
+| `src/utils/oee.js` §7.3 | — | `trialState` · `ppmOf` · `ppmFromDefects` · `fmtPpm` |
+| `src/pages/DeptDashboard.jsx` (แท็บ QA) | `qty_ng+qty_suspect` ดิบ ÷ ยอดผลิต · ยอดดีคิดกติกา `qty_ok ?? qty` ซ้ำในหน้า | `ppmFromDefects(d.defs, sessionProducedQty(d.orders))` · select เพิ่ม `is_trial` + `excl_from_q` + `QBIN_EMBED` · การ์ดเขียน 🧪 งานทดลอง / ⏳ รอ QA / ⚠️ แยกไม่ได้ |
+| `src/lib/monthlyReviewPptx.js` | `ppmOfSessions(ss, defIdx, output)` (output = shot) · ผลิต 0 คืน **0** | `ppmOfSessions(ss, defIdx, ordersIdx)` คิดตัวหารเอง = `goodPiecesOfSessions()` (ไม่ยุบคู่/ไม่ยุบ OP) · ผลิต 0 = `null` → เด็คพิมพ์ "—" |
+| `src/pages/QualityControl.jsx` (3 จุด) | คูณ 1e6 เองในหน้า · แท่งรายไลน์ `: 0` | `ppmOf()` · การ์ด PPM ใช้ `fmtPpm` + เขียนเหตุเมื่อคิดไม่ได้ |
+| `src/components/KpiMonthly.jsx` (2 จุด) | คูณ 1e6 เอง · **ค่าเป็นทศนิยม** (กราฟ/tooltip เห็น) | `ppmOf()` → จำนวนเต็ม |
+| `src/utils/obeyaYear.js` `axisPpmYear` | คูณ 1e6 เอง (RPC กรอง `trial_ng` ถูกอยู่แล้ว) | `ppmOf()` |
+| `supabase/migrations/20261116c_kpi_ppm_decimals_zero_main.sql` (MAIN) | `kpi_catalog.decimals = 2` ⇒ บอร์ด Obeya/ใบ KPI วาด "1,431.76" | `decimals = 0` ทั้งทะเบียน + แถวนิยาม PPM ที่ไม่ผูกทะเบียน (ย้อนได้ · SQL rollback อยู่ในหัวไฟล์) |
+
+**ยังไม่ทำ (เฟสถัดไป · อย่าเดาว่าลืม):**
+- `obeya_year_rollup` (RPC ฝั่ง DR) นับ `qty_suspect` เข้า `ng` **ไม่ดูผลพิจารณาถัง** ⇒ PPM โหมดปีบน
+  บอร์ด Obeya ยังสูงกว่าโหมดเดือนได้เมื่อมีของสงสัยค้าง (คลาสเดียวกับ §7.1 · ต้องแก้ใน SQL พร้อมกับ %Q)
+- เด็ค Monthly Review ยังไม่ embed `QBIN_EMBED` ในคิวรี `defect_logs` ⇒ ของสงสัยยังถูกนับเป็นของเสียตาม
+  พฤติกรรมเดิม (ตัวเลข NG/PPM ของเด็คจึงไม่ขยับจากงานนี้ นอกจากเรื่องตัวหาร) — แก้พร้อมกันทีเดียวจะดีกว่า
