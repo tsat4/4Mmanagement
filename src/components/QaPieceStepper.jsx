@@ -23,6 +23,7 @@ import SignedDecimalInput from './SignedDecimalInput';
 import { calcOf, calcFormula, qaCalcDraft } from '../utils/inspectCalc';
 
 import { tr } from '../utils/i18n';
+import { pointType, TYPE_ORDER } from '../utils/qaDataSheet';
 const JUDGE = {
   ok: { label: 'ผ่าน', color: '#22c55e' },
   ng: { label: 'ไม่ผ่าน', color: '#ef4444' },
@@ -63,6 +64,7 @@ function effectiveJudge(item, d) {
 export default function QaPieceStepper({
   items, results, pieces, actions, seq, sheet, part, workDate, shift,
   canRecord, canAction, busy, isMobile, fullName, onSavePiece, onSaveAction,
+  focusReq = null, rowRef = null,   // 🎯 จิ้มบอลลูนบนแบบ → { id, n } เลื่อนมาที่แถวกรอกของจุดนั้น + โฟกัสช่อง (16/11)
 }) {
   const [rawDraft, setDraft] = useState({});         // item_id → { value, judge, note } — ที่คนกรอก
   /* 🧮 จุดคำนวณ (A − B) เติมค่าจากจุด A/B ของชิ้นนี้ — คนตรวจไม่ต้องพิมพ์ (utils/inspectCalc) */
@@ -86,6 +88,31 @@ export default function QaPieceStepper({
   const inputSt = { width: '100%', padding: '8px 10px', borderRadius: 8, fontSize: fs, background: 'var(--bg3)', border: '1px solid var(--border2)', color: 'var(--text)' };
 
   const judges = useMemo(() => Object.fromEntries(items.map(i => [i.id, effectiveJudge(i, draft[i.id])])), [items, draft]);
+  /* 🗂️ แบ่งกลุ่มจุดตรวจ (16/11 · user "แค่จุดตรวจก็เยอะแล้ว ไม่ได้แบ่ง group เลื่อนจนเมื่อยมือ")
+     กลุ่ม = ประเภทจุดแบบเดียวกับใบ Inspection Data (`pointType` · Hole/Surface/Trim/Thickness/Appearance)
+     เห็นทีละกลุ่ม + ตัวนับกรอกแล้ว/ทั้งหมด · การตรวจ "ครบชิ้น" ยังนับทุกจุดเหมือนเดิม (กลุ่ม = แค่การแสดง) */
+  const groupOf = useMemo(() => Object.fromEntries(items.map(i => [i.id, pointType(i)])), [items]);
+  const groups = useMemo(() => TYPE_ORDER.map(t => {
+    const its = items.filter(i => groupOf[i.id] === t);
+    return { t, n: its.length, done: its.filter(i => judges[i.id]).length, ng: its.some(i => judges[i.id] === 'ng') };
+  }).filter(g => g.n), [items, groupOf, judges]);
+  const [grp, setGrp] = useState(null);   // null = ยังไม่เลือก → กลุ่มแรกที่ยังกรอกไม่ครบ
+  const activeGrp = grp ?? (groups.find(g => g.done < g.n)?.t || groups[0]?.t || 'all');
+  const shownItems = activeGrp === 'all' ? items : items.filter(i => groupOf[i.id] === activeGrp);
+  const rowEls = useRef({});
+  useEffect(() => {
+    if (!focusReq?.id) return;
+    const g = groupOf[focusReq.id];
+    if (g && activeGrp !== 'all' && g !== activeGrp) setGrp(g);
+    const t = setTimeout(() => {
+      const el = rowEls.current[focusReq.id];
+      if (!el) return;
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const inp = el.querySelector('input:not([disabled]), button:not([disabled])');
+      setTimeout(() => inp?.focus({ preventScroll: true }), 350);
+    }, 60);
+    return () => clearTimeout(t);
+  }, [focusReq?.n]); // eslint-disable-line react-hooks/exhaustive-deps
   const result = pieceResult(items.map(i => judges[i.id]));
   const missing = items.filter(i => !judges[i.id]);
   const ngNoNote = items.filter(i => judges[i.id] === 'ng' && !(draft[i.id]?.note || '').trim());
@@ -217,15 +244,32 @@ export default function QaPieceStepper({
       {/* ── ฟอร์มชิ้นที่ N ── */}
       {state === 'inspecting' && canRecord && (
         <>
+          {groups.length > 1 && (
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+              {[...groups, { t: 'all', n: items.length, done: items.filter(i => judges[i.id]).length, ng: items.some(i => judges[i.id] === 'ng') }].map(g => {
+                const on = activeGrp === g.t;
+                const full = g.done >= g.n;
+                return (
+                  <button key={g.t} type="button" className="tbtn" onClick={() => setGrp(g.t)} aria-pressed={on}
+                    style={{ padding: '5px 11px', borderRadius: 'var(--r-pill)', fontSize: 12, fontWeight: 700,
+                      background: on ? 'var(--accent-dim)' : 'var(--bg3)', border: `1px solid ${on ? 'var(--accent)' : 'var(--border2)'}`,
+                      color: g.ng ? 'var(--red)' : full ? 'var(--green)' : 'var(--text)' }}>
+                    {g.t === 'all' ? tr('ทั้งหมด') : g.t} {g.done}/{g.n}{full ? ' ✓' : ''}
+                  </button>
+                );
+              })}
+            </div>
+          )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {items.map(i => {
+            {shownItems.map(i => {
               const d = draft[i.id] || {};
               const j = judges[i.id];
               const needValue = i.item_type === 'variable' && (i.lsl != null || i.usl != null);
               const color = j ? JUDGE[j].color : 'var(--border2)';
               return (
-                <div key={i.id} style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', padding: '7px 10px',
-                  borderRadius: 'var(--r-md)', background: 'var(--bg3)', borderLeft: `4px solid ${color}` }}>
+                <div key={i.id} ref={el => { if (el) rowEls.current[i.id] = el; else delete rowEls.current[i.id]; rowRef?.(i.id, el); }} style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', padding: '7px 10px',
+                  borderRadius: 'var(--r-md)', background: 'var(--bg3)', borderLeft: `4px solid ${color}`,
+                  outline: focusReq?.id === i.id ? '2px solid var(--accent)' : 'none', outlineOffset: 1 }}>
                   <span style={{ minWidth: 34, height: 22, padding: '0 8px', borderRadius: 'var(--r-pill)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                     fontWeight: 800, fontSize: 12, color: '#fff', background: j ? JUDGE[j].color : '#4d9fff' }}>{i.balloon_no}</span>
                   {/* 🔍 รูปโคลสอัพของจุด (ตั้งที่ /qa-setup) — แตะซูม · แบบเดียวกับใบตรวจ PM */}

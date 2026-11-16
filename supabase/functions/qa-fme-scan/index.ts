@@ -637,23 +637,39 @@ Deno.serve(async (req) => {
       .select('*').in('status', ['pending', 'acked']).gte('work_date', yest);
     const obs = open ?? [];
     const { data: sheets } = await supabase.from('qa_inspection_sheets')
-      .select('id, part_id, line_name, work_date, shift, stage, status, result')
+      .select('id, part_id, line_name, work_date, shift, stage, status, result, created_at')
       .in('work_date', [today, yest]);
 
     let closed = 0;
-    for (const ob of obs) {
-      let sh = ob.sheet_id ? (sheets ?? []).find(s => s.id === ob.sheet_id) : null;
-      if (!sh) {
-        // ใบที่ QA เปิดเองโดยไม่ผ่านปุ่มในคิว → จับคู่ด้วย พาร์ท+วัน+กะ+สเตจ
-        sh = (sheets ?? []).find(s =>
-          s.work_date === ob.work_date && s.shift === ob.shift &&
-          s.stage === SHEET_STAGE[ob.stage] &&
-          (ob.part_id ? s.part_id === ob.part_id : s.line_name === ob.line_name));
-      }
+    /* 🔗 จับคู่งานตรวจ ↔ ใบตรวจจริง (16/11 · user: "หน้างานตรวจจากฟอร์มแต่ไม่ได้กดจากไทม์ไลน์ กลายเป็นว่าไม่ได้ตรวจ")
+       ใบที่ QA เปิดเองจากฟอร์มตรวจ **ไม่มี stage** (null) — เดิมบังคับ stage ตรง ⇒ ไม่เคยจับคู่ได้ งานค้าง "เกินเวลา" ทั้งที่ตรวจแล้ว
+       ⇒ จับด้วย พาร์ท (ไม่ผูกพาร์ท = ไลน์) + วันงาน + กะ · stage ตรง **หรือว่าง** · เปิดใบไม่ก่อนเรียก 30 นาที และไม่เกิน 8 ชม.หลังเรียก
+       · 1 ใบใช้ปิดได้งานเดียว (ไล่งานตามเวลาเรียก เลือกใบที่ใกล้สุด — ใบที่ปิดแล้วก่อนใบที่ยังเปิด) · ผูกด้วย sheet_id ไว้ตลอด */
+    const PRE_MS = 30 * 60_000, POST_MS = 8 * 3600_000;
+    const used = new Set(obs.map(o => o.sheet_id).filter(Boolean));
+    const sheetsAll = sheets ?? [];
+    const pickSheet = (ob: Record<string, unknown>) => {
+      const t0 = new Date(ob.triggered_at as string).getTime();
+      const cands = sheetsAll.filter(s =>
+        !used.has(s.id) && s.work_date === ob.work_date && s.shift === ob.shift &&
+        (!s.stage || s.stage === SHEET_STAGE[ob.stage as string]) &&
+        (ob.part_id ? s.part_id === ob.part_id : s.line_name === ob.line_name) &&
+        (() => { const t = new Date(s.created_at).getTime(); return t >= t0 - PRE_MS && t <= t0 + POST_MS; })());
+      if (!cands.length) return null;
+      const dist = (s: { created_at: string }) => Math.abs(new Date(s.created_at).getTime() - t0);
+      cands.sort((a, b) => (a.status === 'done' ? 0 : 1) - (b.status === 'done' ? 0 : 1) || dist(a) - dist(b));
+      return cands[0];
+    };
+    for (const ob of [...obs].sort((a, b) => String(a.triggered_at).localeCompare(String(b.triggered_at)))) {
+      let sh = ob.sheet_id ? sheetsAll.find(s => s.id === ob.sheet_id) : null;
+      // ผูกใบที่ยังเปิดค้าง (เช่น รอบ 1 ไม่ได้ปิด) แต่มีใบที่ตรวจจบแล้วในช่วงเดียวกัน = ใช้ใบที่จบ
+      if (!sh || sh.status !== 'done') { const alt = pickSheet(ob); if (alt && (!sh || alt.status === 'done')) sh = alt; }
       if (!sh) continue;
+      used.add(sh.id);
       const patch = sh.status === 'done'
         ? { status: sh.result === 'fail' ? 'done_ng' : 'done_ok', done_at: new Date().toISOString(), sheet_id: sh.id }
-        : (ob.status === 'pending' ? { status: 'acked', acked_at: new Date().toISOString(), sheet_id: sh.id } : null);
+        : (ob.status === 'pending' ? { status: 'acked', acked_at: new Date().toISOString(), sheet_id: sh.id }
+          : (ob.sheet_id !== sh.id ? { sheet_id: sh.id } : null));
       if (!patch) continue;
       await supabase.from('qa_fme_obligations').update(patch).eq('id', ob.id);
       Object.assign(ob, patch);

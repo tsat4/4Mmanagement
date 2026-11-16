@@ -497,6 +497,15 @@ const RULES = [
     allow: {},
   },
   {
+    id: 'scrim-modal-above-bell',
+    scan: ['src/pages', 'src/components'], ext: ['.jsx'],
+    /* modal ที่มีม่าน (--scrim) แต่ zIndex ต่ำกว่า 1200 = กระดิ่งแจ้งเตือนมุมขวาบน (App.jsx · zIndex 1200) ทับปุ่มปิด ✕ */
+    re: /background:\s*'var\(--scrim\)'[^{}\n]{0,200}zIndex:\s*(?:\d{1,3}|1[01]\d\d)\b|zIndex:\s*(?:\d{1,3}|1[01]\d\d)\b[^{}\n]{0,200}background:\s*'var\(--scrim\)'/g,
+    why: 'user 16/11 "กระดิ่งบังปิดรึป่าว" — ใบ Inspection Data (zIndex 1000) โดนกระดิ่ง (1200) ทับปุ่ม ✕ · พบอีก 2 จอแบบเดียวกัน (PartThumb 900 · ManpowerBoardSetup 1000)',
+    fix: "modal เต็มจอใช้ zIndex 2000 (เท่า .overlay ใน index.css) หรือ className=\"overlay\"",
+    allow: {},
+  },
+  {
     id: 'i18n-map-label-at-declaration',
     scan: ['src/pages', 'src/components', 'src/utils', 'src/lib'], ext: ['.jsx', '.js'],
     /* label: tr('…') ที่จุดประกาศ map ค่าคงที่ — แปลตอน import ครั้งเดียว · สลับภาษาแล้ว App remount (ไม่ reload) ⇒ ป้ายค้างภาษาเดิม */

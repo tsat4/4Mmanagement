@@ -362,6 +362,7 @@ robot ส่วนใหญ่ติดจิ๊กที่ปลายแข�
 - **เขียนอย่างไร:** `className="overlay"` (CSS กลาง) หรือ inline `background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)'`
   (ต้องมี `Webkit-` ด้วย — iPhone Safari < 18 ไม่รู้จักแบบไม่มี prefix) · ชั้นม่านที่เป็น `position:absolute; inset:0` ข้างใน wrapper ก็ใช้ token เดียวกัน
 - 🔴 **ห้ามเขียน `rgba(0,0,0,0.x)` เองบน fixed เต็มจอ** (ด่าน `scrim-token-only`) · อยากเปลี่ยนความมืดทั้งระบบ = แก้ `index.css` บรรทัดเดียว
+- 🔴 **modal ที่มีม่านต้อง `zIndex` ≥ 2000** (เท่า `.overlay`) — ต่ำกว่า 1200 กระดิ่งแจ้งเตือนมุมขวาบน (App.jsx · 1200) ทับปุ่ม ✕ (2026-11-16 · ด่าน `scrim-modal-above-bell`)
 - ยกเว้นที่ตั้งใจทึบ (alpha 1 = `var(--bg)`): โหมดเต็มจอ TV/Meeting · toast/แถบล่างไม่ใช่ม่าน ไม่เข้าข่าย
 - 📄 ตัวเลขก่อน/หลังรายตัว → `docs/modules/ux-laws-audit.md`
 
