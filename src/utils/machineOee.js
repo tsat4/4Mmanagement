@@ -22,10 +22,10 @@
    ⏱️ **ยึด "ระยะเวลา" ไม่ยึด "เวลานาฬิกา"** (16/11 · คำสั่ง user "PLC มีปัญหาเรื่องเวลา อยากให้เน้นที่ duration")
       วัดจริง: received_at − ended_at ต่ำสุด 3.3–4 นาที ทั้งที่ flow ส่งทุก 1 นาที ⇒ นาฬิกา PLC คลาด ~3–5 นาที
       ⇒ ช่วงหยุดใช้ `duration_sec` ของต้นทางก่อน (เวลาเริ่มใช้แค่ "ตกกะไหน")
-   🍱 **เวลาพัก = นโยบาย ESM (`breakIntervalsIn`) แบบโควตานาที** — ไม่จับคู่ช่วงเวลา (นาฬิกาคลาด):
-      ส่วนแผน = กรอบกะที่ผ่านไป − โควตาพัก − ไม่มีแผน − หยุดตามแผนที่ไม่ใช่พัก − ขาดการสื่อสาร
-      กดพักหน้าเครื่อง (เหตุผลที่ติดป้าย is_break) > โควตา ⇒ ส่วนเกิน = เสีย A ("พักเกินเวลานโยบาย" · user เลือกทาง A)
-      กดพัก < โควตา (พักแต่ไม่ได้กด เครื่องขึ้น Idle) ⇒ โควตาที่เหลือหักจาก Idle ≥ 2 นาทีก่อน — จอเขียนบอกเสมอ */
+   🍱 **เวลาพัก = นโยบาย ESM (`breakIntervalsIn`) แบบโควตานาที = "พื้นขั้นต่ำ" ของเวลาที่กันออก** — ไม่จับคู่นาฬิกา:
+      กันออก = max(สิ่งที่เครื่องกันเอง [ไม่มีแผน + หยุดตามแผน + กดพักไม่เกินโควตา + ขาดสื่อสาร], โควตาพัก)
+      ส่วนที่โควตามากกว่า (พักแต่ไม่ได้กด เครื่องขึ้น Idle) ⇒ หักจาก Idle ≥ 2 นาทีก่อน — จอเขียนบอกเสมอ
+      กดพักหน้าเครื่อง (เหตุผลติดป้าย is_break) > โควตา ⇒ ส่วนเกิน = เสีย A ("พักเกินเวลานโยบาย" · user เลือกทาง A) */
 
 const H = 3600000;
 const BKK = 7 * H;
@@ -38,7 +38,9 @@ const tms = (v) => {
 /** กรอบกะ ESM เป็น epoch ms — เช้า 08–20 · ดึก 20–08 (เวลาไทยตรงๆ) */
 export function shiftBounds(workDate, shift) {
   const base = Date.parse(`${workDate}T00:00:00+07:00`);
-  if (!Number.isFinite(base) || !(shift === 'day' || shift === 'night')) return null;
+  if (!Number.isFinite(base)) return null;
+  if (shift === 'all') return { startMs: base + 8 * H, endMs: base + 32 * H };   // (ข) ทั้งวัน = 08:00 → 08:00 วันถัดไป (เช้า+ดึก)
+  if (!(shift === 'day' || shift === 'night')) return null;
   const s = base + (shift === 'night' ? 20 : 8) * H;
   return { startMs: s, endMs: s + 12 * H };
 }
@@ -129,11 +131,17 @@ export function machineShiftOee({ agg = {}, pieces = null, ngMachine = 0, ngPeop
   /* 🍱 โควตาพักนโยบาย — ไม่ส่งมา (ไม่รู้นโยบาย) = ถือการกดพักหน้าเครื่องเป็นพักทั้งหมด (พฤติกรรมเดิม) + บอกบนจอ */
   const allowance = policyBreakSec == null ? breakPressSec : Math.max(0, Number(policyBreakSec) || 0);
   if (policyBreakSec == null) why.push('no_break_policy');
+  /* 🍱 โควตาพักนโยบาย = "พื้นขั้นต่ำ" ของเวลาที่กันออก ไม่ใช่ของบวกเพิ่ม (แก้ 16/11 — เดิมบวกซ้อน = หักพักซ้ำ)
+     จริง 16/11 JTSRA03-04: ไม่มีแผน 08:00–08:25 = ประชุมแถว · กด "พัก 10 นาที" = พักเบรค ⇒ เครื่องกันออกให้แล้ว
+     · เครื่องกันออกแล้ว (ไม่มีแผน + หยุดตามแผน + กดพักไม่เกินโควตา) ≥ โควตา ⇒ ไม่กันเพิ่ม
+     · น้อยกว่า (พักแต่ไม่ได้กด เครื่องขึ้น Idle) ⇒ ส่วนที่ขาดหักจาก Idle ≥ 2 นาทีก่อน แล้วกันออกตามนโยบาย
+     · กดพักเกินโควตา ⇒ ส่วนเกิน = เสีย A (ทาง A) · ยึดระยะเวลา ไม่จับคู่นาฬิกา (PLC คลาด) */
   const breakOverSec = Math.max(0, breakPressSec - allowance);
-  const unusedAllowance = Math.max(0, allowance - breakPressSec);
+  const machineExcl = nonBreakExcl + (breakPressSec - breakOverSec);
+  const shortfall = Math.max(0, allowance - machineExcl);
   const idleRaw = g(agg, 'idle');
-  const idleAbsorbedSec = Math.min(unusedAllowance, idleRaw);
-  const excludedSec = nonBreakExcl + allowance;
+  const idleAbsorbedSec = Math.min(shortfall, idleRaw);
+  const excludedSec = machineExcl + shortfall;
   const plannedSec = Math.max(0, (Number(elapsedSec) || 0) - excludedSec);
   const loss = {
     fault: g(agg, 'fault'), unplanned: g(agg, 'unplanned'), idle: idleRaw - idleAbsorbedSec, idleRaw, idleAbsorbedSec,
@@ -298,6 +306,73 @@ export function stopPareto(events = [], { startMs, endMs }) {
     m.set(label, r);
   }
   return [...m.values()].sort((a, b) => b.min - a.min);
+}
+
+/** 🔍 แถบสถานะแบบซูมได้ — นาทีรายสถานะในช่วงที่ดูอยู่ (ตัดตามกรอบ) · คืน { [kind]: นาที } */
+export function segmentMinutesIn(segments = [], a, b) {
+  const out = {};
+  for (const sg of segments || []) {
+    const sec = clipSec(sg.startMs, sg.endMs, a, b);
+    if (sec > 0) out[sg.kind] = (out[sg.kind] || 0) + sec / 60;
+  }
+  return out;
+}
+/** ระยะห่างของขีดเวลาตามความกว้างที่ซูม — ให้ได้ราว 4–8 ขีด */
+export function tickStepMs(spanMs) {
+  const steps = [60000, 2 * 60000, 5 * 60000, 10 * 60000, 15 * 60000, 30 * 60000, 3600000, 2 * 3600000];
+  return steps.find(st => spanMs / st <= 8) || 2 * 3600000;
+}
+/** ขีดเวลาในช่วง [a,b] ตรงนาทีกลม (เวลาไทย = UTC+7 ทั้งชั่วโมง ⇒ ปัดด้วย epoch ได้ตรง) */
+export function timeTicks(a, b) {
+  const st = tickStepMs(b - a);
+  const out = [];
+  for (let t = Math.ceil(a / st) * st; t <= b; t += st) out.push(t);
+  return out;
+}
+
+/** 📊 (ก) นาทีรายสถานะของแต่ละชั่วโมง — วางใต้กราฟชิ้นรายชั่วโมง (แกน X เดียวกัน) · ชั่วโมงอนาคต = {} */
+export function hourlyStateMinutes(segments = [], buckets = []) {
+  return (buckets || []).map(b => (b.future ? {} : segmentMinutesIn(segments, b.hourMs, b.hourMs + H)));
+}
+
+/** 🎯 (ข) สรุปยอดของช่วงที่ดู (กะ/ทั้งวัน) จากถังรายชั่วโมง — ชิ้นดีเครื่อง · เป้า (เวลาแผน ÷ CT) · ทำได้ % · เฉลี่ย/ชม.
+ *  เป้า null = ยังไม่รู้ CT (ห้ามโชว์ 0) · นับเฉพาะชั่วโมงที่ผ่านไปแล้ว */
+export function hourlySummary(buckets = []) {
+  const past = (buckets || []).filter(b => !b.future);
+  const hasQty = past.some(b => b.qty != null);
+  const good = hasQty ? past.reduce((s, b) => s + Math.max(0, (b.qty || 0) - (b.ng || 0)), 0) : null;
+  const ng = past.reduce((s, b) => s + (b.ng || 0), 0);
+  const plannedSec = past.reduce((s, b) => s + (b.plannedSec || 0), 0);
+  const tKnown = past.length > 0 && past.every(b => b.target != null);
+  const target = tKnown ? past.reduce((s, b) => s + b.target, 0) : null;
+  return {
+    good, ng, target, plannedSec,
+    achieve: good != null && target > 0 ? good / target : null,
+    perHour: good != null && plannedSec > 0 ? good / (plannedSec / 3600) : null,
+  };
+}
+
+/** 📅 (ค) ยอดรายวัน เทียบ "ชิ้นที่ควรทำได้" (เวลาแผน ÷ CT) จากแถวรายกะ (loadJigReport) — รวมทุกจิ๊ก/กะของวันนั้น
+ *  ghost = ส่วนที่ยังขาด (ควรได้ − ชิ้นทั้งหมด ≥ 0) · cap null = มีกะที่ไม่รู้ CT ⇒ ไม่วาดเงา (ห้ามเดา)
+ *  นาทีรายสถานะมาจากสูตร OEE เดียวกัน (loss หลังหักโควตาพัก) */
+export function dailyCapacityRows(rows = []) {
+  const m = new Map();
+  for (const r of rows || []) {
+    const o = r.oee || {};
+    const d = m.get(r.workDate) || { d: r.workDate, good: 0, ng: 0, cap: 0, capKnown: true, run: 0, minor: 0, fault: 0, unplanned: 0, idle: 0, breakOver: 0, excluded: 0, planned: 0, oeeRows: [] };
+    d.good += Math.max(0, (o.pieces || 0) - (o.ngMachine || 0)); d.ng += o.ngMachine || 0;
+    if (o.ct > 0) d.cap += Math.floor((o.plannedSec || 0) / o.ct); else if ((o.plannedSec || 0) > 0) d.capKnown = false;
+    const L = o.loss || {};
+    d.run += Math.max(0, (o.operatingSec || 0) - (o.minorSec || 0)) / 60; d.minor += (o.minorSec || 0) / 60;
+    d.fault += (L.fault || 0) / 60; d.unplanned += (L.unplanned || 0) / 60; d.idle += (L.idle || 0) / 60;
+    d.breakOver += (L.breakOver || 0) / 60; d.excluded += (o.excludedSec || 0) / 60; d.planned += (o.plannedSec || 0) / 60;
+    d.oeeRows.push(r);
+    m.set(r.workDate, d);
+  }
+  return [...m.values()].sort((a, b) => (a.d < b.d ? -1 : 1)).map(d => {
+    const cap = d.capKnown ? d.cap : null;
+    return { ...d, label: `${d.d.slice(8, 10)}/${d.d.slice(5, 7)}`, cap, ghost: cap == null ? null : Math.max(0, cap - d.good - d.ng), achieve: cap > 0 ? d.good / cap : null };
+  });
 }
 
 /** 🔢 ทศนิยม → % ปัด 1 ตำแหน่ง (null คงเป็น null) */
