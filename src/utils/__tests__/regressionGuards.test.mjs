@@ -370,6 +370,9 @@ const RULES = [
       'src/pages/RackCenter.jsx': 1,           // จอสแกน QR — กล้องอย่างเดียว
       'src/components/ObeyaSheet.jsx': 1,      // ขยายแผ่น A4 ของบอร์ด KPI/SQDCM — ดูอย่างเดียว
       'src/components/inspect/PointZoom.jsx': 1,   // ขยายรูปโคลสอัพจุดตรวจ PM+QA (lightbox · ย้ายมาจาก PMCheckData 15/10) — ดูอย่างเดียว
+      /* ฉากดูรูปแนบของกลาง (16/11) — ไม่มีช่องกรอกเลย เผลอแตะพื้นหลังก็ไม่เสียอะไร
+         (ตัวนี้คือฉากที่ PointZoom ด้านบนเรียกใช้ต่อ — ของกลางตัวเดียวทั้งแอป) */
+      'src/components/ImageLightbox.jsx': 1,
     },
   },
   {
@@ -11257,4 +11260,187 @@ test('🔎 insight-popup-chart-first — popup 🔍 ของแผ่น KPI: �
   if (!/const rest = items\.length - shown\.length/.test(il)) bad.push(`${IL}: ต้องนับข้อที่ซ่อนไว้ แล้วเขียนจำนวนบนปุ่มกาง (ห้ามซ่อนเงียบ)`);
   if (!/aria-expanded=\{open\}/.test(il)) bad.push(`${IL}: ปุ่มกาง/ย่อ ต้องมี aria-expanded`);
   assert.deepEqual(bad, [], '\n\n❌ กราฟใน popup 🔍 เสี่ยงถูก insight กินที่อีก:\n   ' + bad.join('\n   ') + '\n');
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   🗜️ upload-needs-compress — "ทุกจุดอัปโหลดรูป ต้องบอกได้ว่าบีบด้วยอะไร" (16/11)
+
+   คำสั่ง user (feedback ประชุม 16/11): *"ออดิทระบบอัพรูปด้วยนะ ที่มีเพิ่มมา
+   และอย่าปล่อยให้ลืมเรื่องบีบอัดไฟล์"*
+
+   ── ทำไมด่านเดิมไม่พอ ───────────────────────────────────────────────────────
+   มีด่านอยู่ 2 ตัวแล้ว แต่ทั้งคู่ตอบคำถามอื่น:
+     · `storageUpload.test.mjs` → "ส่ง `uploadOpts()` ไหม" (= อายุ cache ถูกไหม)
+     · `image-input-via-accept-helper` → "ช่องรับไฟล์ผ่านด่าน HEIC/ชนิดไฟล์ไหม"
+   **ไม่มีตัวไหนถามว่า "ไบต์ที่กำลังส่งขึ้นไป ถูกบีบแล้วหรือยัง"**
+   ⇒ จุดที่ลืมบีบจะผ่าน build ทุกด่าน แล้วไปโตเป็น egress เงียบๆ
+   เคสจริงที่ทำให้ต้องมีด่านนี้: `QaPointsEditor` อัปรูปโคลสอัพจุดตรวจ (`cp-*`) ด้วย
+   **ไฟล์ดิบจากกล้องมือถือ** เพราะไปใช้ `upload()` ตัวเดียวกับแผ่น Drawing
+   (ซึ่งบีบมาแล้วตอนเลือกไฟล์) — ฝั่ง PM จุดเดียวกันบีบอยู่แล้ว
+   บทเรียนเดิมของโมดูลนี้: egress ทะลุโควต้า = **ทั้งโรงงาน login ไม่ได้** (11/09/2026)
+
+   ── ด่านนี้ทำงานยังไง ───────────────────────────────────────────────────────
+   ทะเบียนข้างล่าง = จุดอัปโหลดทั้งหมดในรีโป + "บีบด้วยอะไร"
+     · เจอไฟล์ที่อัปโหลดแต่ไม่อยู่ในทะเบียน / จำนวนบรรทัดไม่ตรง ⇒ **build ล่ม**
+       ⇒ คนเพิ่มจุดอัปโหลดใหม่ **ถูกบังคับให้ตอบว่าบีบด้วยอะไร** (= หัวใจของกฎนี้)
+     · `tokens` ต้องปรากฏในไฟล์นั้นจริง (ตัดคอมเมนต์แล้ว) — ถอดตัวบีบออก = ล่มทันที
+     · `callers` = ไฟล์ที่บีบให้แทน (helper กลางที่รับ blob ที่บีบแล้วมา)
+   🔴 ห้ามแก้ตัวเลข `n` ให้ผ่านโดยไม่ดูว่าบรรทัดใหม่นั้นบีบแล้วจริง
+   📄 docs/modules/storage-images.md §ผล audit จุดอัปโหลดรูป 16/11
+   ═══════════════════════════════════════════════════════════════════════════════ */
+const UPLOAD_SITES = {
+  /* ── สายรูปผัง/ชั้นวาง — WebP 2560px (ห้ามลดความละเอียด) ─────────────────── */
+  'src/pages/LineSetup.jsx':        { n: 1, via: 'compressLayoutImage (ผังไลน์)',         tokens: ['compressLayoutImage'] },
+  'src/pages/FactoryMap.jsx':       { n: 1, via: 'compressLayoutImage (ผังโรงงาน)',       tokens: ['compressLayoutImage'] },
+  'src/pages/MtnMachineLayout.jsx': { n: 1, via: 'compressLayoutImage (ผังโซน facility)', tokens: ['compressLayoutImage'] },
+  'src/components/DieLayout.jsx':   { n: 1, via: 'compressLayoutImage (ผังแม่พิมพ์)',      tokens: ['compressLayoutImage'] },
+  'src/components/RackMap.jsx':     { n: 1, via: 'compressLayoutImage (ผังชั้นวาง)',       tokens: ['compressLayoutImage'] },
+  'src/utils/recompressLayouts.js': { n: 1, via: 'ตัวบีบย้อนหลังเอง (ปุ่ม 🗜️ /storage-maintenance)', tokens: ['compressLayoutImage'] },
+
+  /* ── สายรูปจุดตรวจ/เฟรมหมุน — WebP 2000px/0.35MB ───────────────────────── */
+  'src/pages/PMSetup.jsx':             { n: 2, via: 'compressPhotoImage (เฟรมหมุน + รูปจุดตรวจ)', tokens: ['compressPhotoImage'] },
+  'src/components/QaPointsEditor.jsx': { n: 2, via: 'imageCompression 2560px (แผ่น Drawing) + compressPhotoImage (รูปโคลสอัพจุดตรวจ)', tokens: ['imageCompression', 'compressPhotoImage'] },
+
+  /* ── สายรูปหลักฐาน/รูปงาน — resizeImage หรือ ImageCropModal ─────────────── */
+  'src/pages/Management.jsx':   { n: 2, via: 'resizeImage 1280px (รูปหลักฐาน 4M / OJT)',   tokens: ['resizeImage'] },
+  'src/pages/Report.jsx':       { n: 1, via: 'resizeImage 1280px (รูปยืนยันคุณภาพ QA)',    tokens: ['resizeImage'] },
+  'src/pages/Improvements.jsx': { n: 1, via: 'resizeImage 1280px (รูปก่อน/หลังไคเซ็น)',    tokens: ['resizeImage'] },
+  'src/pages/PEDocs.jsx':       { n: 1, via: 'resizeImage 2560px/q0.9 (รูปในเอกสาร PE)',   tokens: ['resizeImage'] },
+  'src/pages/operator.jsx':     { n: 2, via: 'resizeImage (เอกสารอบรม · PDF ส่งดิบ ≤20MB) + ImageCropModal (รูปพนักงาน)', tokens: ['resizeImage', 'ImageCropModal'] },
+  'src/pages/Register.jsx':     { n: 1, via: 'ImageCropModal 480px webp (รูปพนักงานใหม่)', tokens: ['ImageCropModal'] },
+  'src/pages/ProductMaster.jsx':        { n: 2, via: 'ImageCropModal 480px (รูปสินค้า/พาร์ท)', tokens: ['ImageCropModal'] },
+  'src/components/SparePartMaster.jsx': { n: 1, via: 'ImageCropModal 480px (รูปอะไหล่)',       tokens: ['ImageCropModal'] },
+
+  /* ── helper กลางของแต่ละสายงาน (รับ File แล้วบีบเองในไฟล์) ───────────────── */
+  'src/utils/mtnImage.js':     { n: 1, via: 'resizeMoImage 1024px webp (รูปใบ MO)',          tokens: ['resizeImg'] },
+  'src/utils/qualityImage.js': { n: 1, via: 'resizeQualityImage 1024px webp (รูปของเสีย)',   tokens: ['resizeImg'] },
+  'src/utils/actionImage.js':  { n: 1, via: 'resizeActionImage 1024px webp (รูปปิด action)', tokens: ['resizeImg'] },
+  'src/utils/fileAttach.js':   { n: 1, via: 'imageCompression 2560px/2.5MB (ไฟล์แนบ · PDF/Office ส่งดิบ)', tokens: ['imageCompression'] },
+
+  /* ── สกรีนช็อต / ลายเซ็น — บีบด้วยสเปคของตัวเอง ─────────────────────────── */
+  'src/components/FeedbackModal.jsx':  { n: 1, via: 'compressScreenshotImage 1920px webp',                   tokens: ['compressScreenshotImage'] },
+  'src/components/SignatureModal.jsx': { n: 1, via: 'canvas 800px + ตัดพื้นกระดาษให้ขาวก่อน toBlob PNG',      tokens: ['toBlob', 'pickPaperCutoff'] },
+  'src/pages/OjtTraining.jsx':         { n: 1, via: 'ลายเซ็นวาดบนจอ (canvas toBlob PNG ~14 KB)',             tokens: ['toBlob'] },
+  'src/pages/LayerProcessAudit.jsx':   { n: 1, via: 'ลายเซ็นวาดบนจอ (canvas toBlob PNG ~14 KB)',             tokens: ['toBlob'] },
+
+  /* ── helper ที่ "ผู้เรียกบีบมาให้" — ต้องพิสูจน์ที่ไฟล์ผู้เรียก ───────────── */
+  'src/utils/profileSelf.js': {
+    n: 1, via: 'ImageCropModal 480px webp ที่หน้าผู้เรียก (แถบซ้าย App.jsx · DeptHub)',
+    tokens: ['ImageCropModal'], callers: ['src/App.jsx', 'src/pages/DeptHub.jsx'],
+  },
+};
+
+test('🛡️ upload-needs-compress — ทุกจุด storage.upload() ต้องอยู่ในทะเบียน + พิสูจน์ได้ว่าบีบแล้ว', () => {
+  /* ① สแกนจุดอัปโหลดจริงทั้งรีโป (ตัดคอมเมนต์ก่อน — เอกสารในโค้ดพูดถึง `.upload(` ได้) */
+  const found = {};
+  for (const file of walk(join(ROOT, 'src'), ['.jsx', '.js', '.mjs'])) {
+    if (file.includes('__tests__')) continue;
+    const rel = relative(ROOT, file);
+    const n = stripComments(readFileSync(file, 'utf8')).split('\n').filter(l => /\.upload\(/.test(l)).length;
+    if (n) found[rel] = n;
+  }
+
+  const miss = Object.keys(found).filter(f => !UPLOAD_SITES[f]);
+  assert.deepEqual(miss, [], '\n\n❌ จุดอัปโหลดใหม่ที่ยังไม่ขึ้นทะเบียน:\n   • ' + miss.join('\n   • ')
+    + '\n\n   ทำไมต้องขึ้นทะเบียน: build จะตรวจไม่ได้ว่า "ไบต์ที่ส่งขึ้นไปถูกบีบแล้วหรือยัง"\n'
+    + '   ⇒ รูปดิบจากกล้องมือถือ (3-8 MB/ใบ) ขึ้น Storage เงียบๆ แล้วทุกคนที่เปิดดูจ่าย egress ซ้ำ\n'
+    + '      (11/09/2026 egress ทะลุโควต้า = ทั้งโรงงาน login ไม่ได้ · docs/modules/storage-images.md)\n'
+    + '   แก้ยังไง: ① บีบก่อนอัปด้วยของกลางที่มีอยู่แล้ว —\n'
+    + '        รูปผัง/แบบ → compressLayoutImage() · รูปถ่าย/จุดตรวจ → compressPhotoImage()\n'
+    + '        สกรีนช็อต → compressScreenshotImage() · รูปหลักฐาน → resizeImage() / <ImageCropModal>\n'
+    + '        ใบ MO → utils/mtnImage · ของเสีย → utils/qualityImage · action → utils/actionImage\n'
+    + '      ② แล้วเติมไฟล์ลง UPLOAD_SITES ในไฟล์นี้ พร้อม `via` ว่าบีบด้วยอะไร\n');
+
+  const stale = Object.keys(UPLOAD_SITES).filter(f => !found[f]);
+  assert.deepEqual(stale, [], '\n\n❌ ทะเบียน UPLOAD_SITES มีไฟล์ที่ไม่มี .upload() แล้ว (ย้าย/ลบไปแล้ว):\n   • '
+    + stale.join('\n   • ') + '\n   ⇒ ลบออกจากทะเบียน (ทะเบียนที่ล้าสมัยทำให้คนถัดไปเลิกเชื่อด่าน)\n');
+
+  /* ② จำนวนบรรทัดต้องตรง — เพิ่มจุดอัปโหลดในไฟล์ที่ขึ้นทะเบียนแล้ว ก็ต้องมาทบทวนที่นี่ */
+  const countBad = Object.entries(found)
+    .filter(([f, n]) => UPLOAD_SITES[f] && UPLOAD_SITES[f].n !== n)
+    .map(([f, n]) => `${f}: ทะเบียนบอก ${UPLOAD_SITES[f].n} แต่เจอ ${n}`);
+  assert.deepEqual(countBad, [], '\n\n❌ จำนวนจุดอัปโหลดไม่ตรงทะเบียน:\n   • ' + countBad.join('\n   • ')
+    + '\n   ⇒ ไปดูบรรทัดที่เพิ่มมาว่า **บีบแล้วจริงไหม** แล้วค่อยอัปเดตเลข n + `via` ในทะเบียน\n'
+    + '     (แก้เลขให้ผ่านโดยไม่ดู = ทำลายเหตุผลทั้งหมดของด่านนี้)\n');
+
+  /* ③ ตัวบีบต้องยังอยู่จริงในไฟล์ (หรือในไฟล์ผู้เรียกที่ระบุไว้) */
+  const tokenBad = [];
+  for (const [f, spec] of Object.entries(UPLOAD_SITES)) {
+    if (!found[f]) continue;
+    const targets = spec.callers?.length ? spec.callers : [f];
+    for (const t of targets) {
+      const src = stripComments(readFileSync(join(ROOT, t), 'utf8'));
+      for (const tok of spec.tokens) {
+        if (!src.includes(tok)) tokenBad.push(`${f} → ไม่เจอ "${tok}" ใน ${t} (via: ${spec.via})`);
+      }
+    }
+  }
+  assert.deepEqual(tokenBad, [], '\n\n❌ ตัวบีบรูปหายไปจากจุดอัปโหลด:\n   • ' + tokenBad.join('\n   • ')
+    + '\n   ⇒ ย้ายไปใช้ตัวบีบตัวอื่น = อัปเดต `tokens` + `via` ในทะเบียน **พร้อมบอกสเปคใหม่**\n'
+    + '     ถอดการบีบออกจริง = ห้าม (ทุกไบต์ที่ขึ้น Storage ถูกจ่าย egress ซ้ำทุกคนที่เปิดดู)\n');
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   🔍 attach-image-zoomable — "รูปที่แนบไว้ ต้องกดขยายดูได้" (16/11 · คำสั่ง user)
+
+   *"พวกรูปที่แนบ ต้องกดขยายดูได้ เช่น ใน ใบ MO"*
+
+   รูปแนบบนจอสูง 60-130px — ดูไม่ออกว่าเสียตรงไหน / แก้อะไรไป ⇒ ต้องขยายได้
+   🔴 ขยายต้อง **ในแอป** ห้าม `target="_blank"` / `window.open` — หน้างานใช้มือถือ
+      เปิดแท็บใหม่ = เด้งออกจากใบที่กรอกค้างอยู่ (บทเรียนเดิมของ `CpImage` ฝั่ง PM 21/08)
+   🔴 ฉากขยายมี **ตัวเดียว** = `src/components/ImageLightbox.jsx` ห้ามเขียนโมดัลดูรูปในหน้า
+      (เคยมี 3 แบบปนกัน: `<a target=_blank>` · `window.open` · โมดัลเขียนเองใน Report.jsx)
+   📄 docs/UI-CONVENTIONS.md §6.39
+   ═══════════════════════════════════════════════════════════════════════════════ */
+const ATTACH_IMG_PAGES = {
+  'src/pages/MtnRepair.jsx':              'รูปก่อน/หลังซ่อม + รูป QA + ลายเซ็นในใบ MO',
+  'src/components/QualityPhotoField.jsx': 'รูปหลักฐานของเสีย (ใช้ร่วม DailyReport/QualityBins/ScrapReport)',
+  'src/components/KpiMonthNoteModal.jsx': 'รูปแนบในหมายเหตุรายเดือนของ KPI',
+  'src/components/ObeyaSqdcmBoard.jsx':   'รูปหลักฐานตอนปิด action บนบอร์ด Obeya',
+  'src/pages/QAInspectionSetup.jsx':      'รูปชิ้นงานจาก Product Master ในหน้าตั้งค่าจุดตรวจ',
+  'src/pages/Improvements.jsx':           'รูปก่อน/หลังของโปรเจคไคเซ็น',
+  'src/pages/Report.jsx':                 'รูปจากผู้แจ้งในโมดัล QA Approve',
+  'src/components/inspect/PointZoom.jsx': 'รูปโคลสอัพของจุดตรวจ (PM/QA) — เปลือกบางบน ImageLightbox',
+};
+
+test('🛡️ attach-image-zoomable — จอที่โชว์รูปแนบต้องใช้ ImageLightbox ของกลาง (ห้ามเปิดแท็บใหม่)', () => {
+  const noImport = [], tabOpen = [];
+  for (const [f, what] of Object.entries(ATTACH_IMG_PAGES)) {
+    const src = stripComments(readFileSync(join(ROOT, f), 'utf8'));
+    if (!/(?:components\/ImageLightbox|\.\.\/ImageLightbox|\.\/ImageLightbox)/.test(src)) {
+      noImport.push(`${f} (${what})`);
+    }
+    /* เปิดรูปด้วยแท็บใหม่ = ห้าม · `window.open` ที่ใช้ทำอย่างอื่น (สั่งพิมพ์ใบ) ไม่เข้าข่าย
+       จึงจับเฉพาะรูปแบบ "เปิด url ของรูป" คือชื่อตัวแปรลงท้าย _img / _url / Img / img */
+    if (/window\.open\(\s*[A-Za-z0-9_.?[\]]*(?:_img|_url|Img|img)\b[^)]*'_blank'/.test(src)) {
+      tabOpen.push(`${f}: window.open(<url รูป>, '_blank')`);
+    }
+  }
+  assert.deepEqual(noImport, [], '\n\n❌ จอที่โชว์รูปแนบแต่ไม่ได้ใช้ ImageLightbox ของกลาง:\n   • '
+    + noImport.join('\n   • ')
+    + '\n\n   คำสั่ง user 16/11: "พวกรูปที่แนบ ต้องกดขยายดูได้ เช่น ใน ใบ MO"\n'
+    + "   แก้ยังไง: import { AttachImage } from '…/components/ImageLightbox'\n"
+    + '             แล้วใช้ <AttachImage url={...} title="…" /> แทน <img> เปล่า\n'
+    + '   🔴 ห้าม <a target="_blank"> / window.open — หน้างานใช้มือถือ เปิดแท็บใหม่ = เด้งออกจากใบที่กรอกค้าง\n'
+    + '   🔴 ห้ามเขียนโมดัลดูรูปเองในหน้า — ฉากขยายมีตัวเดียวทั้งแอป\n');
+  assert.deepEqual(tabOpen, [], '\n\n❌ กลับไปเปิดรูปด้วยแท็บใหม่:\n   • ' + tabOpen.join('\n   • ')
+    + '\n   ⇒ ใช้ <AttachImage> / <ImageLightbox> แทน (ตัวบล็อกป็อปอัปกิน window.open ได้เงียบๆ ด้วย)\n');
+});
+
+test('🛡️ attach-image-zoomable — ฉากดูรูปขยายต้องมีที่เดียว + fit จอ + ไม่ครอป', () => {
+  const lb = readFileSync(join(ROOT, 'src/components/ImageLightbox.jsx'), 'utf8');
+  /* fit จอเดียวไม่มี scroll + ไม่ครอป (รูปหลักฐานที่ถูกครอป = ของสำคัญหลุดกรอบ · 21/08) */
+  assert.ok(/maxHeight: '7\dvh'/.test(lb) && /objectFit: 'contain'/.test(lb),
+    '\n\n❌ ImageLightbox ไม่ได้จำกัดความสูงเป็น vh หรือเปลี่ยนไปครอปรูป\n'
+    + '   รูปหลักฐานที่ถูกครอป = ของสำคัญหลุดกรอบ (บทเรียนเดียวกับรูปผังเครื่องจักร 21/08)\n');
+  /* เพดานเบราว์เซอร์จอ TV = Chromium 94 — ตัดคอมเมนต์ก่อน (คำเตือนในไฟล์พูดถึง color-mix ได้) */
+  const lbCode = stripComments(lb);
+  assert.ok(!/color-mix\(/.test(lbCode) && !/\d(?:dvh|svh|lvh)\b/.test(lbCode),
+    '\n\n❌ ImageLightbox ใช้ CSS ที่เกินเพดาน Chromium 94 (จอ TV webOS) — color-mix / dvh / svh\n');
+  /* PointZoom ต้องเป็นเปลือกบาง ห้ามกลับไปวาดฉากเอง */
+  const pz = stripComments(readFileSync(join(ROOT, 'src/components/inspect/PointZoom.jsx'), 'utf8'));
+  assert.ok(!/position: 'fixed'/.test(pz),
+    '\n\n❌ PointZoom กลับไปวาดฉากเต็มจอของตัวเองอีกแล้ว\n'
+    + '   ⇒ มีฉากดูรูป 2 ชุด = แก้ที่เดียวไม่ครบ (Esc / ปุ่มปิด / ขนาดรูป ไม่เหมือนกัน)\n'
+    + '   ให้ render <ImageLightbox items={[…]} /> แทน\n');
 });
