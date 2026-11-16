@@ -11055,3 +11055,22 @@ test('🚫 no-fg-line-request — ทุกจุดที่ออกใบเ�
     '\n\n❌ ไฟล์นี้ออกใบเบิกเข้าไลน์โดยไม่กันเลข FG 1xx:\n   ' + offenders.join('\n   ')
     + '\n   ใช้ `isFgMat(mat)` + ข้อความ `FG_NO_LINE_REQUEST` จาก src/utils/storeOps.js ก่อน insert\n');
 });
+
+/* ═══ 🟢 การ์ด "ตอนนี้ (LIVE)" ต้องเขียนบอกเมื่อ %P ถูก cap (2026-11-16 · user ทัก) ════════
+   เคสจริง: จอ OEE รายไลน์บนมือถือโชว์ "LIVE 100%" เขียวสนิท + "🟢 กำลังผลิต"
+   ทั้งที่ของจริงกะนั้น 73.6% — 100 มาจาก %P ดิบทะลุ 100 แล้วถูก cap × %A ที่ 100 เพราะ
+   ยังไม่มีใครลง downtime · สูตรส่ง `pOver`/`pRawPct` มาให้อยู่แล้ว แต่การ์ดทิ้งทั้งคู่
+   วัดจริง พ.ย. 69: กะปิดแล้ว 512 กะ → %P = 100 เป๊ะ 141 กะ (27.5%) · OEE = 100.00 จำนวน 72 กะ */
+test('🟢 LineOeeBoard: การ์ด LIVE ต้องใช้ pOver/pRawPct — ห้ามโชว์ 100% เขียวเงียบ', () => {
+  const src = stripComments(readFileSync(join(ROOT, 'src/pages/LineOeeBoard.jsx'), 'utf8'))
+  assert.match(src, /C\.liveNow\?\.pOver \? 'var\(--amber\)' : 'var\(--green\)'/,
+    '\n\n❌ เลข OEE สดที่ %P ถูก cap ต้องไม่เป็นสีเขียว (ต้องเตือนว่าเลขนี้ไม่น่าเชื่อ)\n')
+  assert.match(src, /C\.liveNow\.pRawPct/,
+    '\n\n❌ ต้องเขียน "%P คิดได้เท่าไหร่ก่อนถูกตัด" บนจอ — ไม่งั้น 100% อ่านเหมือนไลน์สมบูรณ์แบบ\n')
+  assert.match(src, /A \{C\.liveNow\.A \?\? '—'\} · P \{C\.liveNow\.P \?\? '—'\} · Q \{C\.liveNow\.Q \?\? '—'\}/,
+    '\n\n❌ การ์ด LIVE ต้องแยก A/P/Q ให้เห็น — เลขรวม 100% ต้องอธิบายได้ว่ามาจากขาไหน\n')
+  assert.match(src, /C\.liveNoDt && \(/,
+    '\n\n❌ กะที่ยังไม่มีใครลง Downtime ต้องเขียนบอก (%A = 100 เพราะไม่มีข้อมูล ไม่ใช่เครื่องไม่เคยหยุด)\n')
+  assert.match(src, /const liveNoDt = !!liveSess && !dts\.some/,
+    '\n\n❌ ธง liveNoDt ต้องดูจากใบ downtime ของ "กะที่การ์ดโชว์" จริงๆ\n')
+})
