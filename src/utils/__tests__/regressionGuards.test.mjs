@@ -11090,3 +11090,42 @@ test('🚫 no-fg-line-request — ทุกจุดที่ออกใบเ�
     '\n\n❌ ไฟล์นี้ออกใบเบิกเข้าไลน์โดยไม่กันเลข FG 1xx:\n   ' + offenders.join('\n   ')
     + '\n   ใช้ `isFgMat(mat)` + ข้อความ `FG_NO_LINE_REQUEST` จาก src/utils/storeOps.js ก่อน insert\n');
 });
+
+test('🏭 line-select-reason-honest — "ไม่มีในทะเบียนไลน์" ต้องเช็คทะเบียนเต็มก่อนถึงพูดได้', () => {
+  const bad = [];
+  const read = (rel) => stripComments(readFileSync(join(ROOT, rel), 'utf8'));
+  const ls = read('src/components/LineSelect.jsx');
+
+  /* 🔴 13/11: เลือกส่วนงาน PD1 แล้วช่องโชว์ "Assembly Line B - FORD ⚠ ไม่มีในทะเบียนไลน์"
+     ทั้งที่ไลน์นั้นอยู่ในทะเบียนจริง (ส่วนงาน PD2 · ใช้งานปกติ) — เพราะหน้าแม่ส่ง `lines`
+     ที่กรองตามส่วนงานมาแล้ว แล้ว lineOptions หาใน "ลิสต์ที่กรองมา" ไม่เจอ เลยฟันว่าไม่มีในทะเบียน
+     ⇒ คนไปตามหาทะเบียนผิดที่ ทั้งที่เป็นเรื่องขอบเขต */
+  if (!/allLines/.test(ls))
+    bad.push('src/components/LineSelect.jsx (lineOptions ไม่รับทะเบียนเต็ม — จะฟันผิดว่า "ไม่มีในทะเบียน")');
+  if (!/useProductionLinesState\(/.test(ls))
+    bad.push('src/components/LineSelect.jsx (ไม่ได้อ่านทะเบียนผ่านตัวกลาง useProductionLines)');
+  /* 🔴 ยังโหลดไม่เสร็จ = ยังไม่รู้ ห้ามฟันว่าไม่มี */
+  if (!/registryReady/.test(ls))
+    bad.push('src/components/LineSelect.jsx (ไม่ได้แยก "ยังโหลดไม่เสร็จ" ออกจาก "ไม่มีในทะเบียน")');
+  const why = (ls.match(/const why = known[\s\S]{0,400}?;/) || [''])[0];
+  if (why && !/registryReady \?/.test(why))
+    bad.push('src/components/LineSelect.jsx (ป้ายเหตุผลยังฟัน "ไม่มีในทะเบียน" โดยไม่ดูว่าทะเบียนโหลดเสร็จยัง)');
+
+  /* 🔴 ค่าที่เลือกไว้ต้องไม่ค้างนอกลิสต์ที่เลือกได้ — สลับตัวกรองส่วนงานแล้วไลน์เดิมต้องไม่ค้าง */
+  const pl = read('src/components/ProdLotPlanner.jsx');
+  const eff = (pl.match(/useEffect\(\(\) => \{[\s\S]{0,700}?setLineName\(lines\[0\]\.name\)[\s\S]{0,500}?\}, \[lines, lineName\]\);/) || [''])[0];
+  if (!eff) bad.push('src/components/ProdLotPlanner.jsx (ไม่มี effect ที่คุมไลน์ที่เลือกแล้ว)');
+  else {
+    if (!/lines\.some\(/.test(eff))
+      bad.push('src/components/ProdLotPlanner.jsx (ไม่ได้เช็คว่าไลน์ที่เลือกยังอยู่ในลิสต์ — ค้างข้ามส่วนงานได้)');
+    if (!/toast\./.test(eff))
+      bad.push('src/components/ProdLotPlanner.jsx (สลับไลน์ให้เองแบบเงียบ — คนกำลังแก้แผนอยู่ ต้องบอก)');
+    if (!/if \(!lines\.length\) return;/.test(eff))
+      bad.push('src/components/ProdLotPlanner.jsx (ไม่ได้กันตอนทะเบียนยังโหลดไม่เสร็จ — จะรีเซ็ตทิ้งเปล่าๆ)');
+  }
+
+  assert.deepEqual(bad, [], 'ช่องเลือกไลน์บอกเหตุผลผิด:\n' + bad.join('\n')
+    + '\nwhy: "นอกขอบเขตของคุณ" กับ "ไม่มีในทะเบียนไลน์" แก้คนละทางคนละคน — บอกผิดคนไปตามหาผิดที่'
+    + '\nfix: lineOptions รับ allLines (ทะเบียนเต็มจาก useProductionLinesState) + registryReady'
+    + '\n     และหน้าที่กรอง lines เองต้องรีเซ็ตค่าที่หลุดลิสต์ พร้อมบอกบนจอ');
+});
