@@ -157,7 +157,8 @@ const SheetIconBtn = ({ fs, title, onClick, children, className }) => (
 );
 
 /* `bigNote` (30/09 · user: "ตัวเลขที่โชว์คืออะไร ไม่มี text บอก") = ป้ายเล็กติดตัวเลขใหญ่ว่าเป็นค่าของอะไร (เช่น "ก.ย." = ค่าเดือนที่เลือก) */
-export function Sheet({ k, cw = 0, span = 1, icon, title, sub, big, unit, bigNote, delta, stat, foot, link, onLink, zoom = true, onClose, children }) {
+/* `statZoom` (16/11 · user: ชิปไม่ตามเป้า กดแล้วไปหน้ากรอกเพื่ออะไร ควรเป็นสรุป insight) = กดชิปสถานะแล้วเปิด popup 🔍 ของแผ่นนี้แทน onLink · ใน popup เองชิปไม่มีลิงก์ */
+export function Sheet({ k, cw = 0, span = 1, icon, title, sub, big, unit, bigNote, delta, stat, foot, link, onLink, zoom = true, onClose, statZoom = false, children }) {
   const fs = (n) => Math.max(11, Math.round(n * k));
   const status = stat?.status;
   /* 📱 มือถือ: กริดเหลือ 1 คอลัมน์ ⇒ แผ่นกว้าง 2 ช่อง (OEE · ACTION BOARD) ต้องเป็น 1 ช่อง
@@ -223,7 +224,7 @@ export function Sheet({ k, cw = 0, span = 1, icon, title, sub, big, unit, bigNot
                 {delta >= 0 ? '▲' : '▼'} {Math.abs(delta)}
               </div>
             )}
-            <StatusLamp k={k} w={sheetW} stat={stat} onGo={onLink} forceCompact={fit >= 1} />
+            <StatusLamp k={k} w={sheetW} stat={stat} onGo={statZoom ? (onClose ? null : () => setZoomed(true)) : onLink} forceCompact={fit >= 1} />
           </div>
         </div>
       </div>
@@ -243,7 +244,7 @@ export function Sheet({ k, cw = 0, span = 1, icon, title, sub, big, unit, bigNot
     {zoomed && (
       <SheetZoom onClose={() => setZoomed(false)}>
         <Sheet k={zk} cw={1200} icon={icon} title={title} sub={sub} big={big} unit={unit} bigNote={bigNote}
-          delta={delta} stat={stat} foot={foot} link={link} onLink={onLink} zoom={false} onClose={() => setZoomed(false)}>
+          delta={delta} stat={stat} foot={foot} link={link} onLink={onLink} zoom={false} statZoom={statZoom} onClose={() => setZoomed(false)}>
           {children}
         </Sheet>
       </SheetZoom>
