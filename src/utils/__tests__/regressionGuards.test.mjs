@@ -370,6 +370,9 @@ const RULES = [
       'src/pages/RackCenter.jsx': 1,           // จอสแกน QR — กล้องอย่างเดียว
       'src/components/ObeyaSheet.jsx': 1,      // ขยายแผ่น A4 ของบอร์ด KPI/SQDCM — ดูอย่างเดียว
       'src/components/inspect/PointZoom.jsx': 1,   // ขยายรูปโคลสอัพจุดตรวจ PM+QA (lightbox · ย้ายมาจาก PMCheckData 15/10) — ดูอย่างเดียว
+      /* ฉากดูรูปแนบของกลาง (16/11) — ไม่มีช่องกรอกเลย เผลอแตะพื้นหลังก็ไม่เสียอะไร
+         (ตัวนี้คือฉากที่ PointZoom ด้านบนเรียกใช้ต่อ — ของกลางตัวเดียวทั้งแอป) */
+      'src/components/ImageLightbox.jsx': 1,
     },
   },
   {
@@ -643,6 +646,30 @@ const RULES = [
        + '(ครอบทั้งแถวเก่าที่เป็น null และแถวใหม่ที่เป็น \'manual\') '
        + '· กฎทั่วไป: **คอลัมน์ที่มี `not null default` ห้ามเช็คด้วย truthiness** — อ่าน default จาก migration ที่ '
        + '*สร้างตาราง* เสมอ อย่าเชื่อ comment ของ migration ที่มาทีหลัง',
+    allow: {},
+  },
+  {
+    id: 'csat-no-second-entry-point',
+    scan: ['src'], ext: ['.jsx', '.js'],
+    /* จับช่องทางกรอก/เก็บคะแนนความพึงพอใจชุดที่ 2 — ตารางของตัวเอง หรือคอลัมน์คะแนนดิบที่ไม่ผ่านตัวแปรฐาน */
+    re: /\b(kpi_customer_sat_parts|actual_score|total_score)\b/g,
+    why: '🤝 **Customer Satisfaction ต้องมีค่าเดียว ทุกหน่วยดึงไปใช้** (16/11/2026 · คำสั่ง user '
+       + '"customer satisfaction ต้อง single source of truth และยิ่งค่าของโรงงาน ต้องมีค่าเดียว ดึงไปใช้เอา") '
+       + '· แบบสอบถามลูกค้า = **ใบเดียวของโรงงาน** ⇒ คะแนนดิบเก็บเป็น **ตัวแปรฐาน `level:\'plant\'`** '
+       + 'ใน `kpi_base_inputs` (`csat_q_actual`/`csat_q_total`/`csat_d_actual`/`csat_d_total`) '
+       + 'กรอกครั้งเดียวที่ขอบเขต ทั้งโรงงาน · นิยามของทุกหน่วย (QA · PD1-4 · Die MTN) ใช้สูตร '
+       + '`csat_qd_pct` ที่ `scope:\'plant\'` ⇒ อ่านเลขเดียวกันโดยโครงสร้าง เขียนเลขที่ 2 ไม่ได้ '
+       + '· กับดักที่เคยทำจริงแล้วถอยออก (16/11): ตาราง `kpi_customer_sat_parts` คีย์ด้วย `kpi_id` '
+       + '⇒ 7 แถวนิยาม = **7 ชุดคะแนนของแบบสอบถามใบเดียวกัน** = ตรงข้ามกับ "ค่าเดียว" '
+       + '· กับดักที่ 2: เอา % ของ 2 ขามา**เฉลี่ย** (Q 21/24 = 87.5% · D 6/8 = 75% ⇒ ทางการ 27/32 = 84.375% '
+       + 'แต่เฉลี่ยได้ 81.25 = เลขที่ไม่มีอยู่จริง เพราะตัวหาร 2 ขาไม่เท่ากัน)',
+    fix: 'แตกค่าผ่านราง `KPI_FORMULAS` เท่านั้น: หัวข้อรวม = `csat_qd_pct` '
+       + '(`(q_actual + d_actual) ÷ (q_total + d_total) × 100` — **ตัวตั้งรวม ÷ ตัวหารรวม ห้ามเฉลี่ย**) '
+       + '· ขาย่อยประกาศที่ `parts: [\'csat_q_pct\', \'csat_d_pct\']` แล้ว `formulaPartSeries()` วาดคนละกราฟให้เอง '
+       + '· ขาไม่ครบ = `evalFormula` คืน `{ value: null, missing }` อยู่แล้ว **ห้ามเดา 0** '
+       + '· ช่องกรอกมาจาก `KpiBaseInputsPanel` ของกลาง (สิทธิ์ 3 ชั้น + นับแถว + audit ครบแล้ว) '
+       + '· `Internal Satisfaction` ของหน่วยสนับสนุน = แบบสอบถามคนละใบรายหน่วย ยังกรอกมือที่หน่วยนั้น '
+       + '· 📄 docs/modules/obeya-kpi-board.md §ความพึงพอใจ Q/D',
     allow: {},
   },
   {
@@ -1665,6 +1692,52 @@ const RULES = [
     fix: '`backfillWindowError(hhmm)` ใน DailyReport (→ `resolveShiftTime` + `checkShiftTime` ของ src/utils/shiftWindow.js)',
     allow: {},
   },
+  {
+    id: 'ppm-single-entry',
+    scan: ['src'], ext: ['.jsx', '.js'],
+    /* จับการคูณ 1e6 "เพื่อคิดอัตรา" เองในหน้า — ตัดเคส `Math.round(x * 1e6) / 1e6`
+       (ปัดทศนิยมลอยตัว) และเคส "ถ่วงน้ำหนักเพื่อเรียงลำดับ" (`s.amDNg * 1e6 + …` ใน FactoryMap) ออก:
+       ต้องมี `/` (= คิดอัตราอยู่) หรือคำว่า ppm อยู่ก่อนบนบรรทัดเดียวกัน และต้องไม่มี `/ 1e6`·`/ 1e3` ตามหลัง */
+    re: /(?:\/|\bppm\w*\b)[^\n;]*\*\s*(?:1e6|1_?000_?000)\b(?![^\n]*\/\s*1e[36])/gi,
+    why: '🎯 PPM (16/11 · นาย ณัฐวุฒิ ทรงดอน "PPM ไลน์ปั๊มที่มีการเทส กระโดดไปเกิน 100"): สูตร PPM เคยถูกเขียนมือ 5 ที่ '
+       + '(QualityControl · DeptDashboard · KpiMonthly · obeyaYear · monthlyReviewPptx) แล้ว drift 2 คลาส ทั้งคู่ดัน PPM **ขึ้น** — '
+       + '(ก) ตัวเศษรวมของเสียงานทดลองแต่ตัวหารเป็นยอดผลิตปกติ (วัดจริง: Laser GOR 145→1,432 · Laser LWR 347→2,358) · '
+       + '(ข) ตัวหารเป็น shot ที่ยุบงานคู่ RH/LH แต่ตัวเศษเป็นชิ้น (HDF1 1,941→3,503 · LASER-345 1,900→3,410)',
+    fix: "ใช้ ppmOf(ngQty, goodQty) หรือ ppmFromDefects(rows, goodQty) จาก src/utils/oee.js §7.3 — "
+       + 'ตัวหารต้องเป็น "ชิ้น" (สแกนดี) ห้ามส่งยอดที่ผ่าน pairAwareTotal/collapseOps · ผลิต 0 = null ห้าม 0',
+    allow: {
+      'src/utils/oee.js': 'เจ้าของสูตร PPM (§7.3 ppmOf) — จุดเดียวในระบบที่คูณ 1e6 เพื่อคิดอัตราได้',
+    },
+  },
+  {
+    id: 'ppm-base-not-pair-collapsed',
+    scan: ['src'], ext: ['.jsx', '.js'],
+    /* จับการส่งยอด "ภาพใหญ่" (output / ยอดที่ผ่าน pairAwareTotal·collapseOps) เป็นตัวหารของ PPM */
+    re: /\bppm[A-Za-z]*\s*[:(=][^\n]*\b(output|outQty|pairAware\w*|collapseOps)\b/gi,
+    why: '👯 กฎ "ชิ้น ≠ shot" (pairTotals.js): ยอดผลิตภาพใหญ่ยุบงานคู่ RH/LH เป็น 1 stroke และยุบขั้น OP เข้าพาร์ทจริง '
+       + '⇒ เล็กกว่าจำนวนชิ้นจริง · แต่ของเสียนับเป็นชิ้นเสมอ ⇒ เอามาเป็นตัวหาร PPM = เศษกับส่วนคนละหน่วย '
+       + 'เฟ้อ 1.5–1.8 เท่า **เฉพาะไลน์แม่พิมพ์คู่ (ปั๊ม/เลเซอร์)** — เด็ค Monthly Review เป็นแบบนี้จนถึง 16/11',
+    fix: 'คิดตัวหารของ PPM แยกจาก Output: ยอดผลิต "รายชิ้น" ไม่ยุบคู่/ไม่ยุบ OP '
+       + '(ตัวอย่าง `goodPiecesOfSessions()` ใน src/lib/monthlyReviewPptx.js) แล้วส่งเข้า ppmOf()',
+    allow: {},
+  },
+  {
+    id: 'defect-child-qty-not-in-oee',
+    scan: ['src'], ext: ['.jsx', '.js'],
+    /* `child_qty_per_fg` = อัตรา BOM ที่ snapshot ไว้ "ดูย้อนหลัง" (migration 20261116) */
+    re: /child_qty_per_fg/g,
+    why: 'ของเสียที่ระบุ "พาร์ทลูก" (16/11) ยังนับเข้า %Q/%P ของ MAT แม่ **1 ชิ้น = 1 ชิ้น** '
+       + 'เพราะคำถาม *"ลูกเสีย N ชิ้น = FG เสียกี่ชิ้น"* และ *"เปลี่ยนชิ้นลูกแล้ว FG ยังดีอยู่ไหม"* '
+       + 'ยังไม่มีคำตอบจาก user · `child_qty_per_fg` เป็นสแนปช็อตอัตรา BOM ไว้ดูย้อนหลังเท่านั้น '
+       + '⇒ เอาไปคูณ/หารในสูตรไหนก็ตาม = OEE ของทุกกะเพี้ยนย้อนหลังโดยไม่มีใครสั่ง '
+       + '(และ %P จะเพี้ยนซ้ำ เพราะ CT ที่ระบบรู้คือ CT ของงานที่เครื่องเดิน ไม่ใช่ของชิ้นส่วนลูก)',
+    fix: 'อ่าน/เขียนช่องนี้ผ่าน `childPartPatch`/`defectPartOf` (src/utils/defectPart.js) เท่านั้น · '
+       + 'ถ้า user เคาะกฎใหม่แล้วให้แก้ที่ `src/utils/oee.js` อย่างตั้งใจ + เติม allow ที่นี่พร้อมวันที่/เหตุผล',
+    allow: {
+      'src/utils/defectPart.js': 'เจ้าของกฎ — ประกอบ/อ่าน payload 3 ช่องที่เดียว',
+      'src/pages/DailyReport.jsx': 'ฟอร์มบันทึกงานเสีย (เก็บค่าที่คนเลือก · ไม่คำนวณอะไรกับค่านี้)',
+    },
+  },
 ];
 
 function violations(rule) {
@@ -1979,7 +2052,7 @@ test('🛡️ unfiltered-session-bump-needs-shift-tier — bump ที่เก�
 });
 
 test('🛡️ oee-suspect-needs-qbin-embed — ทุกคิวรีที่ดึง qty_suspect ในไฟล์ที่คิด %Q ต้อง embed ทะเบียนถัง', () => {
-  const Q_HELPERS = /\b(defectQty|sumDefectQty|splitDefectQty|sumSuspectPending|suspectPendingQty)\b/;
+  const Q_HELPERS = /\b(defectQty|sumDefectQty|splitDefectQty|sumSuspectPending|suspectPendingQty|ppmFromDefects)\b/;
   /* ยกเว้นรายคิวรี — ต้องเขียนเหตุผลทุกตัว · 05/10: เปลี่ยนจาก "ไฟล์:บรรทัด" เป็น "ไฟล์ + ข้อความใน select"
      (คีย์บรรทัดเลื่อนทุกครั้งที่ใครแก้ไฟล์ข้างบน ⇒ ด่านล้มทั้งที่คิวรีเดิมไม่ได้เปลี่ยน) */
   const ALLOW = {
@@ -11098,6 +11171,343 @@ test('🚫 no-fg-line-request — ทุกจุดที่ออกใบเ�
   assert.deepEqual(offenders, [],
     '\n\n❌ ไฟล์นี้ออกใบเบิกเข้าไลน์โดยไม่กันเลข FG 1xx:\n   ' + offenders.join('\n   ')
     + '\n   ใช้ `isFgMat(mat)` + ข้อความ `FG_NO_LINE_REQUEST` จาก src/utils/storeOps.js ก่อน insert\n');
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   🧾 สถานะใบ MO ต้องถูก "จัดประเภท" ครบทุกตัว            2026-11-16 · คำสั่ง user
+   เคสจริง: `returned` + `waiting_vendor` ถูกเพิ่มเข้า `MO_STATUS_LABEL` แต่ไม่มีใครเติมใน
+   `OPEN_MO_STATUSES` ⇒ ตัวโหลดคิวงาน (`.in('status', OPEN_MO_STATUSES)`) ไม่เคย select ใบพวกนั้น
+   ⇒ **ใบหลุดจากคิวทุกชั้นเงียบๆ** (วัด 13/11: returned 9 ใบ เก่าสุด 52 วัน ไม่โผล่ที่ไหนเลย)
+   ⇒ ด่านนี้บังคับว่า "สถานะใหม่ = ต้องบอกว่าเปิดหรือจบ" ไม่งั้น build ไม่ผ่าน
+   ═══════════════════════════════════════════════════════════════════════════ */
+test('🧾 mo-status-must-be-classified — ทุกสถานะใน MO_STATUS_LABEL ต้องเป็น "เปิด" หรือ "จบ" อย่างใดอย่างหนึ่ง', async () => {
+  const m = await import('../mtnStepPerm.js');
+  const labels = Object.keys(m.MO_STATUS_LABEL);
+  const open = new Set(m.OPEN_MO_STATUSES);
+  const done = new Set(m.MO_DONE_STATUSES);
+  const unclassified = labels.filter(s => !open.has(s) && !done.has(s));
+  const both = labels.filter(s => open.has(s) && done.has(s));
+  assert.deepEqual(unclassified, [],
+    '\n\n❌ สถานะที่ยังไม่จัดประเภท: ' + unclassified.join(', ')
+    + '\n   ใบสถานะนี้จะไม่ถูก select เข้าคิวงาน และไม่ถูกนับว่าจบ = หายจากทุกจอเงียบๆ'
+    + '\n   เติมใน OPEN_MO_STATUSES (ยังมีคนต้องทำ) หรือ MO_DONE_STATUSES (จบแล้ว) ใน src/utils/mtnStepPerm.js\n');
+  assert.deepEqual(both, [], '\n\n❌ สถานะที่อยู่ทั้ง 2 ลิสต์ (ขัดกันเอง): ' + both.join(', ') + '\n');
+  // ลิสต์ "เปิด" ต้องมีชุดเดียวในระบบ — dieStatus re-export ตัวนี้ ห้ามประกาศเอง
+  const die = readFileSync(join(ROOT, 'src/utils/dieStatus.js'), 'utf8');
+  assert.equal(/export const OPEN_MO_STATUSES\s*=/.test(die), false,
+    '\n\n❌ src/utils/dieStatus.js ประกาศ OPEN_MO_STATUSES เองอีกแล้ว'
+    + '\n   เคยมี 2 ชุดที่เนื้อหาไม่เท่ากัน (ฝั่ง dieStatus มี returned ฝั่ง mtnStepPerm ไม่มี)'
+    + '\n   ⇒ Andon/ผังโรงงาน/TvBoard นับใบตีกลับว่าค้าง แต่คิวงานมองไม่เห็นเลย ~2 เดือน'
+    + "\n   ใช้ `export { OPEN_MO_STATUSES } from './mtnStepPerm.js'` เท่านั้น\n");
+});
+
+/* ↩️📤 ทะเบียน "ใบนอกลูปขั้น" มี 2 ฝั่งที่ต้องเติมคู่กันเสมอ:
+     `OFF_LOOP_WAIT` (mtnStepPerm) = ใครต้องลงมือ · `STATUS_SINCE` (mtnStale) = เข้าสถานะนี้เมื่อไหร่
+   เติมฝั่งเดียว = ใบโผล่ในคิวแต่บอกอายุไม่ได้ (หรือกลับกัน) ⇒ ล็อกให้คีย์ตรงกัน */
+test('↩️ off-loop-registry-in-sync — ทะเบียนใบนอกลูปขั้น 2 ฝั่งต้องมีสถานะชุดเดียวกัน', async () => {
+  const { OFF_LOOP_STATUSES } = await import('../mtnStepPerm.js');
+  const src = readFileSync(join(ROOT, 'src/utils/mtnStale.js'), 'utf8');
+  const block = src.match(/const STATUS_SINCE\s*=\s*\{([\s\S]*?)\n\};/);
+  assert.ok(block, 'หา STATUS_SINCE ใน src/utils/mtnStale.js ไม่เจอ (เปลี่ยนชื่อ/ย้ายแล้วต้องแก้ด่านนี้ด้วย)');
+  const sinceKeys = [...block[1].matchAll(/^\s{2}(\w+):/gm)].map(x => x[1]).sort();
+  assert.deepEqual(sinceKeys, [...OFF_LOOP_STATUSES].sort(),
+    '\n\n❌ ทะเบียนใบนอกลูปขั้นไม่ตรงกัน'
+    + `\n   OFF_LOOP_WAIT (mtnStepPerm.js): ${[...OFF_LOOP_STATUSES].sort().join(', ')}`
+    + `\n   STATUS_SINCE  (mtnStale.js)   : ${sinceKeys.join(', ')}`
+    + '\n   เพิ่มสถานะนอกลูปขั้น = ต้องเติมทั้ง 2 ที่ (ใครต้องลงมือ + เข้าสถานะนี้เมื่อไหร่)\n');
+});
+
+/* 👥 ใบที่มอบหมายช่างหลายคน — "รอเรา" ต้องเทียบทุกคนในชุด ห้ามเทียบสตริงที่ต่อกันแล้ว */
+test('👥 mo-service-queue-matches-all-techs — คิวงานต้องเทียบช่างทุกคนในใบ', () => {
+  const src = readFileSync(join(ROOT, 'src/utils/myQueue.js'), 'utf8');
+  assert.ok(/assignedTechsOf\(/.test(src),
+    '\n\n❌ src/utils/myQueue.js ไม่ได้แตกชื่อช่างผ่าน `assignedTechsOf()` อีกแล้ว'
+    + '\n   `assigned_to` เก็บชื่อต่อกันด้วยจุลภาค (สำเนาไว้ให้ใบพิมพ์อ่าน) ⇒ เทียบชื่อเดี่ยวไม่เคยตรง'
+    + '\n   วัด 13/11: ใบขั้น 3 เปิดอยู่ 32 ใบ มอบหมาย ≥2 คน 21 ใบ (66%) + tech_main_uid ว่างทั้ง 32 ใบ'
+    + '\n   ⇒ ใบไม่ขึ้นคิว "รอคุณ" ของช่างคนไหนเลย (ค้าง ≥7 วัน 15 ใบ เก่าสุด 66 วัน)\n');
+  assert.ok(/isMeAmong\(w, me\)/.test(src),
+    '\n\n❌ ชั้น `mine` กลับไปเทียบคนเดียวด้วย `isMe(w.who, me)` อีกแล้ว'
+    + '\n   ใช้ `isMeAmong(w, me)` (OR รายคน) — และห้ามแก้ `isMe` ให้ชื่อสู้ uid ได้\n');
+  assert.equal(/\.split\(\s*\/?\s*,/.test(src), false,
+    '\n\n❌ มี .split(",") ในคิวงาน — ห้ามแกะชื่อช่างเอง ใช้ `assignedTechsOf()` ของกลางที่เดียว\n');
+});
+
+/* 🙋 ผู้เปิดใบถอนใบของตัวเองได้ — แต่ต้องเป็น "ยกเลิก" ไม่ใช่ "ลบ" (2026-11-16 · คำสั่ง user)
+   เคสจริง 11/11: ใบถูก DELETE ตอนยัง `pending` 4 ใบ ⇒ ปัญหาหายจากระบบหมด (ไม่เหลือร่องรอย)
+   ⇒ ถ้าเปิดทางให้ผู้แจ้งลบได้ บั๊กนั้นกลับมาทันทีและกว้างกว่าเดิม (ผู้แจ้งมีหลายร้อยคน) */
+test('🙋 owner-cancel-never-deletes — เส้นทาง "เจ้าของใบถอนเอง" ต้องบีบเป็นยกเลิกเท่านั้น', () => {
+  const src = readFileSync(join(ROOT, 'src/pages/MtnRepair.jsx'), 'utf8');
+  assert.ok(/canCancelOwnMo\(/.test(src),
+    '\n\n❌ MtnRepair.jsx ไม่ได้ถาม `canCancelOwnMo()` แล้ว — เกณฑ์ "ใครเป็นเจ้าของใบ" ต้องอยู่ที่'
+    + ' mtnStepPerm.js ห้ามเทียบชื่อผู้แจ้งเองในหน้า\n');
+  assert.ok(/ownCancel\s*&&\s*!canRemoveAsBoss\s*\)\s*\?\s*MO_REMOVE_CANCEL/.test(src),
+    '\n\n❌ เส้นทางเจ้าของใบไม่ได้ถูกบีบเป็น MO_REMOVE_CANCEL อีกแล้ว'
+    + '\n   ใบที่ยังไม่มีเลข MO โหมดปกติคือ "ลบ" ⇒ ผู้แจ้งจะลบใบหายได้'
+    + '\n   (11/11 เคยหายไป 4 ใบด้วยคลาสนี้ — Reed ชำรุด Line 61 ค้าง 50 วันโดยไม่มีใครรู้)\n');
+});
+
+/* ── 🧭 ตัวกรอง "ไลน์" ห้ามซ่อนคนที่ไม่ได้สังกัดไลน์ (regression จริง 13/11 → แจ้ง 16/11) ────
+   13/11 เพิ่ม `defaultLineFilter()` ให้หัวหน้าไลน์เปิดจอมาเห็นไลน์ตัวเองก่อน (คำสั่ง user) ⇒
+   ตัวกรองไลน์ทำงานทันทีที่เปิดจอ · แต่ตัวกรองนั้นถามแค่ "อยู่ไลน์ไหน" ⇒ สายสนับสนุน/ช่าง/
+   คนที่ยังไม่ผูกไลน์ **หายทั้งกองเงียบ ๆ** — หน้างาน: "พนักงานออฟฟิศ ตอนนี้ไม่โชว์เลย"
+   (วัดจริง Main 16/11 · active: support 64 / 13 คนไม่มี line_id · technician 22 · shopfloor ไม่มีไลน์ 4)
+   คลาสเดียวกับที่ 05/10 แก้ไว้แล้วสำหรับช่อง "ส่วนงาน" (เทสด้านบน) — รอบนี้คือแกน "ไลน์"
+   🔴 ห้ามแก้ด้วยการถอด defaultLineFilter (= ย้อนคำสั่ง user 13/11) · ห้ามซ่อนเงียบ */
+test('🛡️ /checkin: ตัวกรองไลน์ซ่อนได้เฉพาะคนที่แกนไลน์อธิบายได้ (lineAxisFilter)', () => {
+  const ck = stripComments(readFileSync(join(ROOT, 'src/pages/Checkin.jsx'), 'utf8'));
+  const bad = [];
+  if (!/if\s*\(\s*selLine\s*\)\s*return\s+axisOf\(emp\)\s*!==\s*AXIS_OTHER/.test(ck))
+    bad.push('ตัวกรอง selLine ไม่ได้ตัดสินผ่าน axisOf()/AXIS_OTHER (ของกลาง utils/lineAxisFilter.js)');
+  if (/selLineFamilyIds\.has\(/.test(ck))
+    bad.push('กลับไปถาม selLineFamilyIds.has(line_id) ตรงๆ = คนที่ไม่สังกัดไลน์หายเงียบอีก');
+  if (!/defaultLineFilter\(/.test(ck))
+    bad.push('ถอด defaultLineFilter ทิ้ง — หัวหน้าไลน์ต้องเปิดจอมาเห็นไลน์ตัวเองก่อน (คำสั่ง user 13/11)');
+  if (!/offAxisShown\s*>\s*0/.test(ck))
+    bad.push('ไม่เขียนบนจอว่าแสดงคนที่ไม่สังกัดไลน์กี่คน (กฎจอซื่อสัตย์)');
+  if (!/hiddenOtherLines\s*>\s*0/.test(ck))
+    bad.push('ไม่เขียนบนจอว่าซ่อนคนไลน์อื่นไปกี่คน (กฎจอซื่อสัตย์)');
+
+  const ax = stripComments(readFileSync(join(ROOT, 'src/utils/lineAxisFilter.js'), 'utf8'));
+  if (!/isShopfloorStaff/.test(ax))
+    bad.push('lineAxisFilter ไม่ได้ถาม isShopfloorStaff — ห้ามพิมพ์ลิสต์ staff_kind เองซ้ำ (staffKind.js)');
+  if (/['"](support|technician|indirect|shopfloor)['"]/.test(ax))
+    bad.push('lineAxisFilter เขียนค่า staff_kind เป็นสตริงเอง = ลิสต์ที่ 2 ที่จะ drift จาก staffKind.js');
+
+  assert.deepEqual(bad, [], '\n\n❌ จอเช็คชื่อ: ตัวกรองไลน์ซ่อนคนผิดกลุ่ม\n   ' + bad.join('\n   ')
+    + '\n   กฎ+เหตุผลเต็ม: src/utils/lineAxisFilter.js · docs/modules/employee-identity.md\n');
+});
+
+/* ── 🤝 มุมมองสะสม "ถูกยืมออกกี่วัน" ต้องคิดที่ util เดียว + บอกช่วงเวลาบนจอ (16/11) ──────
+   หน้างาน: "ยืมตัวพนักงาน ยืมแล้วไม่ยอมคืน เจ้าของจะมองไม่เห็นรึป่าว"
+   ตัวเลขสะสมที่นับในหน้า = อีกไม่นานจะมีจอที่ 2 ที่นับไม่เหมือนกัน (บทเรียน OEE 4 ไฟล์) */
+test('🛡️ /checkin: สรุปวันถูกยืมออก ต้องมาจาก summarizeBorrowOut + เขียนช่วงวันบนจอ', () => {
+  const ck = stripComments(readFileSync(join(ROOT, 'src/pages/Checkin.jsx'), 'utf8'));
+  const bad = [];
+  if (!/summarizeBorrowOut\(/.test(ck)) bad.push('ไม่ได้ใช้ summarizeBorrowOut() — ห้ามนับวันเองในหน้า');
+  if (!/borrowWindow\(/.test(ck))       bad.push('ไม่ได้ใช้ borrowWindow() — ช่วงวันต้องมาจาก getWorkDate ไม่ใช่ new Date()');
+  if (!/borrowSum\.from/.test(ck))      bad.push('ไม่เขียนช่วงวันที่นับบนจอ (ตัวเลขสะสมที่ไม่บอกช่วง = อ่านผิดแน่)');
+  if (!/borrowSum\.unknownHome\s*>\s*0/.test(ck)) bad.push('ไม่เขียนบนจอว่ามีแถวที่นับไม่ได้กี่แถว');
+  if (/from\('line_helpers'\)[\s\S]{0,200}select\('\*'\)/.test(ck)) bad.push("อ่าน line_helpers ด้วย select('*') — กฎ egress");
+
+  const bd = stripComments(readFileSync(join(ROOT, 'src/utils/borrowDays.js'), 'utf8'));
+  if (/new Date\(\)\s*\./.test(bd) || !/now = new Date\(\)/.test(bd))
+    bad.push('borrowDays ไม่รับ `now` เป็นพารามิเตอร์ = เทสระเบิดเวลา (npm test รันรอบนาฬิกา +400 วัน)');
+  if (!/getWorkDate\(/.test(bd)) bad.push('borrowDays ไม่ใช้ getWorkDate() — วันทำงานตัด 08:00');
+
+  assert.deepEqual(bad, [], '\n\n❌ มุมมองสะสมการยืมตัว\n   ' + bad.join('\n   ')
+    + '\n   กฎ+เหตุผลเต็ม: src/utils/borrowDays.js\n');
+});
+
+test('🔎 insight-popup-chart-first — popup 🔍 ของแผ่น KPI: กราฟได้พื้นที่คงที่ · insight 3 ข้อ · ส่วนเกินต้องบอกจำนวน', () => {
+  /* 🔴 16/11 คำสั่ง user: *"popup graph kpi ที่กดแว่นขยาย ดู insight ไม่เกิน 3-4 บรรทัดพอ บางหน้า insight เยอะ
+     จน กราฟหาย ต้องรักษาความชัดเจนของกราฟไห้ได้ insight เป็นส่วนเสริม"*
+     คลาสบั๊ก: ท้ายแผ่นใน popup เป็นกล่องสูงตามเนื้อหา ⇒ แผ่นที่ insight 8-9 ข้อ (เกินเป้า + คาดปลายปี +
+     อัตราที่ต้องทำ + ตัวแปรสูตร + หมายเหตุคน) ดันกราฟเหลือไม่ถึง 1/3 ของ popup
+     ด่านนี้ล็อก 3 อย่าง: (ก) จอวาด insight ผ่าน <InsightList> (เพดาน 3 ข้อ) ห้าม map เองในหน้า ·
+     (ข) ท้ายแผ่นใน popup มีเพดาน % + เลื่อนในตัวเอง และมีทางเลือก "รางขวา" (footAside) ·
+     (ค) ซ่อนแล้วต้องนับจำนวนที่ซ่อนมาเขียนบนปุ่ม (กฎความซื่อสัตย์ของจอ) */
+  const bad = [];
+  const KPI = 'src/components/ObeyaKpiBoard.jsx';
+  const kpi = stripComments(readFileSync(join(ROOT, KPI), 'utf8'));
+  if (!/<InsightList\b/.test(kpi)) bad.push(`${KPI}: ต้องวาด insight ผ่าน <InsightList> (ของกลาง src/components/InsightList.jsx)`);
+  if (/\bins\.map\(/.test(kpi)) bad.push(`${KPI}: วาดรายการ insight เองในหน้า = ไม่มีเพดาน 3 ข้อ แล้วกราฟจะถูกดันหายอีก`);
+  if (!/footAside/.test(kpi)) bad.push(`${KPI}: แผ่น KPI ต้องส่ง footAside ให้ popup 🔍 (insight ไปรางขวา = ไม่กินความสูงกราฟ)`);
+
+  const SH = 'src/components/ObeyaSheet.jsx';
+  const sh = stripComments(readFileSync(join(ROOT, SH), 'utf8'));
+  if (!/maxHeight:\s*'[23]\d%'/.test(sh)) bad.push(`${SH}: ท้ายแผ่นใน popup ต้องมีเพดานเป็น % (maxHeight) ไม่ใช่สูงตามเนื้อหา`);
+  if (!/overflowY:\s*'auto',\s*overscrollBehavior:\s*'contain'/.test(sh)) bad.push(`${SH}: ท้ายแผ่นที่เกินเพดานต้องเลื่อนในตัวเอง (overflowY auto + overscrollBehavior contain)`);
+  if (!/const aside = !!onClose && footAside/.test(sh)) bad.push(`${SH}: ถอดรางขวา (aside) ออกแล้ว — insight ยาวจะกลับไปบีบความสูงกราฟ`);
+
+  const IL = 'src/components/InsightList.jsx';
+  const il = stripComments(readFileSync(join(ROOT, IL), 'utf8'));
+  if (!/items\.slice\(0, max\)/.test(il)) bad.push(`${IL}: ต้องตัดเหลือ max ข้อตอนย่อ`);
+  if (!/const rest = items\.length - shown\.length/.test(il)) bad.push(`${IL}: ต้องนับข้อที่ซ่อนไว้ แล้วเขียนจำนวนบนปุ่มกาง (ห้ามซ่อนเงียบ)`);
+  if (!/aria-expanded=\{open\}/.test(il)) bad.push(`${IL}: ปุ่มกาง/ย่อ ต้องมี aria-expanded`);
+  assert.deepEqual(bad, [], '\n\n❌ กราฟใน popup 🔍 เสี่ยงถูก insight กินที่อีก:\n   ' + bad.join('\n   ') + '\n');
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   🗜️ upload-needs-compress — "ทุกจุดอัปโหลดรูป ต้องบอกได้ว่าบีบด้วยอะไร" (16/11)
+
+   คำสั่ง user (feedback ประชุม 16/11): *"ออดิทระบบอัพรูปด้วยนะ ที่มีเพิ่มมา
+   และอย่าปล่อยให้ลืมเรื่องบีบอัดไฟล์"*
+
+   ── ทำไมด่านเดิมไม่พอ ───────────────────────────────────────────────────────
+   มีด่านอยู่ 2 ตัวแล้ว แต่ทั้งคู่ตอบคำถามอื่น:
+     · `storageUpload.test.mjs` → "ส่ง `uploadOpts()` ไหม" (= อายุ cache ถูกไหม)
+     · `image-input-via-accept-helper` → "ช่องรับไฟล์ผ่านด่าน HEIC/ชนิดไฟล์ไหม"
+   **ไม่มีตัวไหนถามว่า "ไบต์ที่กำลังส่งขึ้นไป ถูกบีบแล้วหรือยัง"**
+   ⇒ จุดที่ลืมบีบจะผ่าน build ทุกด่าน แล้วไปโตเป็น egress เงียบๆ
+   เคสจริงที่ทำให้ต้องมีด่านนี้: `QaPointsEditor` อัปรูปโคลสอัพจุดตรวจ (`cp-*`) ด้วย
+   **ไฟล์ดิบจากกล้องมือถือ** เพราะไปใช้ `upload()` ตัวเดียวกับแผ่น Drawing
+   (ซึ่งบีบมาแล้วตอนเลือกไฟล์) — ฝั่ง PM จุดเดียวกันบีบอยู่แล้ว
+   บทเรียนเดิมของโมดูลนี้: egress ทะลุโควต้า = **ทั้งโรงงาน login ไม่ได้** (11/09/2026)
+
+   ── ด่านนี้ทำงานยังไง ───────────────────────────────────────────────────────
+   ทะเบียนข้างล่าง = จุดอัปโหลดทั้งหมดในรีโป + "บีบด้วยอะไร"
+     · เจอไฟล์ที่อัปโหลดแต่ไม่อยู่ในทะเบียน / จำนวนบรรทัดไม่ตรง ⇒ **build ล่ม**
+       ⇒ คนเพิ่มจุดอัปโหลดใหม่ **ถูกบังคับให้ตอบว่าบีบด้วยอะไร** (= หัวใจของกฎนี้)
+     · `tokens` ต้องปรากฏในไฟล์นั้นจริง (ตัดคอมเมนต์แล้ว) — ถอดตัวบีบออก = ล่มทันที
+     · `callers` = ไฟล์ที่บีบให้แทน (helper กลางที่รับ blob ที่บีบแล้วมา)
+   🔴 ห้ามแก้ตัวเลข `n` ให้ผ่านโดยไม่ดูว่าบรรทัดใหม่นั้นบีบแล้วจริง
+   📄 docs/modules/storage-images.md §ผล audit จุดอัปโหลดรูป 16/11
+   ═══════════════════════════════════════════════════════════════════════════════ */
+const UPLOAD_SITES = {
+  /* ── สายรูปผัง/ชั้นวาง — WebP 2560px (ห้ามลดความละเอียด) ─────────────────── */
+  'src/pages/LineSetup.jsx':        { n: 1, via: 'compressLayoutImage (ผังไลน์)',         tokens: ['compressLayoutImage'] },
+  'src/pages/FactoryMap.jsx':       { n: 1, via: 'compressLayoutImage (ผังโรงงาน)',       tokens: ['compressLayoutImage'] },
+  'src/pages/MtnMachineLayout.jsx': { n: 1, via: 'compressLayoutImage (ผังโซน facility)', tokens: ['compressLayoutImage'] },
+  'src/components/DieLayout.jsx':   { n: 1, via: 'compressLayoutImage (ผังแม่พิมพ์)',      tokens: ['compressLayoutImage'] },
+  'src/components/RackMap.jsx':     { n: 1, via: 'compressLayoutImage (ผังชั้นวาง)',       tokens: ['compressLayoutImage'] },
+  'src/utils/recompressLayouts.js': { n: 1, via: 'ตัวบีบย้อนหลังเอง (ปุ่ม 🗜️ /storage-maintenance)', tokens: ['compressLayoutImage'] },
+
+  /* ── สายรูปจุดตรวจ/เฟรมหมุน — WebP 2000px/0.35MB ───────────────────────── */
+  'src/pages/PMSetup.jsx':             { n: 2, via: 'compressPhotoImage (เฟรมหมุน + รูปจุดตรวจ)', tokens: ['compressPhotoImage'] },
+  'src/components/QaPointsEditor.jsx': { n: 2, via: 'imageCompression 2560px (แผ่น Drawing) + compressPhotoImage (รูปโคลสอัพจุดตรวจ)', tokens: ['imageCompression', 'compressPhotoImage'] },
+
+  /* ── สายรูปหลักฐาน/รูปงาน — resizeImage หรือ ImageCropModal ─────────────── */
+  'src/pages/Management.jsx':   { n: 2, via: 'resizeImage 1280px (รูปหลักฐาน 4M / OJT)',   tokens: ['resizeImage'] },
+  'src/pages/Report.jsx':       { n: 1, via: 'resizeImage 1280px (รูปยืนยันคุณภาพ QA)',    tokens: ['resizeImage'] },
+  'src/pages/Improvements.jsx': { n: 1, via: 'resizeImage 1280px (รูปก่อน/หลังไคเซ็น)',    tokens: ['resizeImage'] },
+  'src/pages/PEDocs.jsx':       { n: 1, via: 'resizeImage 2560px/q0.9 (รูปในเอกสาร PE)',   tokens: ['resizeImage'] },
+  'src/pages/operator.jsx':     { n: 2, via: 'resizeImage (เอกสารอบรม · PDF ส่งดิบ ≤20MB) + ImageCropModal (รูปพนักงาน)', tokens: ['resizeImage', 'ImageCropModal'] },
+  'src/pages/Register.jsx':     { n: 1, via: 'ImageCropModal 480px webp (รูปพนักงานใหม่)', tokens: ['ImageCropModal'] },
+  'src/pages/ProductMaster.jsx':        { n: 2, via: 'ImageCropModal 480px (รูปสินค้า/พาร์ท)', tokens: ['ImageCropModal'] },
+  'src/components/SparePartMaster.jsx': { n: 1, via: 'ImageCropModal 480px (รูปอะไหล่)',       tokens: ['ImageCropModal'] },
+
+  /* ── helper กลางของแต่ละสายงาน (รับ File แล้วบีบเองในไฟล์) ───────────────── */
+  'src/utils/mtnImage.js':     { n: 1, via: 'resizeMoImage 1024px webp (รูปใบ MO)',          tokens: ['resizeImg'] },
+  'src/utils/qualityImage.js': { n: 1, via: 'resizeQualityImage 1024px webp (รูปของเสีย)',   tokens: ['resizeImg'] },
+  'src/utils/actionImage.js':  { n: 1, via: 'resizeActionImage 1024px webp (รูปปิด action)', tokens: ['resizeImg'] },
+  'src/utils/fileAttach.js':   { n: 1, via: 'imageCompression 2560px/2.5MB (ไฟล์แนบ · PDF/Office ส่งดิบ)', tokens: ['imageCompression'] },
+
+  /* ── สกรีนช็อต / ลายเซ็น — บีบด้วยสเปคของตัวเอง ─────────────────────────── */
+  'src/components/FeedbackModal.jsx':  { n: 1, via: 'compressScreenshotImage 1920px webp',                   tokens: ['compressScreenshotImage'] },
+  'src/components/SignatureModal.jsx': { n: 1, via: 'canvas 800px + ตัดพื้นกระดาษให้ขาวก่อน toBlob PNG',      tokens: ['toBlob', 'pickPaperCutoff'] },
+  'src/pages/OjtTraining.jsx':         { n: 1, via: 'ลายเซ็นวาดบนจอ (canvas toBlob PNG ~14 KB)',             tokens: ['toBlob'] },
+  'src/pages/LayerProcessAudit.jsx':   { n: 1, via: 'ลายเซ็นวาดบนจอ (canvas toBlob PNG ~14 KB)',             tokens: ['toBlob'] },
+
+  /* ── helper ที่ "ผู้เรียกบีบมาให้" — ต้องพิสูจน์ที่ไฟล์ผู้เรียก ───────────── */
+  'src/utils/profileSelf.js': {
+    n: 1, via: 'ImageCropModal 480px webp ที่หน้าผู้เรียก (แถบซ้าย App.jsx · DeptHub)',
+    tokens: ['ImageCropModal'], callers: ['src/App.jsx', 'src/pages/DeptHub.jsx'],
+  },
+};
+
+test('🛡️ upload-needs-compress — ทุกจุด storage.upload() ต้องอยู่ในทะเบียน + พิสูจน์ได้ว่าบีบแล้ว', () => {
+  /* ① สแกนจุดอัปโหลดจริงทั้งรีโป (ตัดคอมเมนต์ก่อน — เอกสารในโค้ดพูดถึง `.upload(` ได้) */
+  const found = {};
+  for (const file of walk(join(ROOT, 'src'), ['.jsx', '.js', '.mjs'])) {
+    if (file.includes('__tests__')) continue;
+    const rel = relative(ROOT, file);
+    const n = stripComments(readFileSync(file, 'utf8')).split('\n').filter(l => /\.upload\(/.test(l)).length;
+    if (n) found[rel] = n;
+  }
+
+  const miss = Object.keys(found).filter(f => !UPLOAD_SITES[f]);
+  assert.deepEqual(miss, [], '\n\n❌ จุดอัปโหลดใหม่ที่ยังไม่ขึ้นทะเบียน:\n   • ' + miss.join('\n   • ')
+    + '\n\n   ทำไมต้องขึ้นทะเบียน: build จะตรวจไม่ได้ว่า "ไบต์ที่ส่งขึ้นไปถูกบีบแล้วหรือยัง"\n'
+    + '   ⇒ รูปดิบจากกล้องมือถือ (3-8 MB/ใบ) ขึ้น Storage เงียบๆ แล้วทุกคนที่เปิดดูจ่าย egress ซ้ำ\n'
+    + '      (11/09/2026 egress ทะลุโควต้า = ทั้งโรงงาน login ไม่ได้ · docs/modules/storage-images.md)\n'
+    + '   แก้ยังไง: ① บีบก่อนอัปด้วยของกลางที่มีอยู่แล้ว —\n'
+    + '        รูปผัง/แบบ → compressLayoutImage() · รูปถ่าย/จุดตรวจ → compressPhotoImage()\n'
+    + '        สกรีนช็อต → compressScreenshotImage() · รูปหลักฐาน → resizeImage() / <ImageCropModal>\n'
+    + '        ใบ MO → utils/mtnImage · ของเสีย → utils/qualityImage · action → utils/actionImage\n'
+    + '      ② แล้วเติมไฟล์ลง UPLOAD_SITES ในไฟล์นี้ พร้อม `via` ว่าบีบด้วยอะไร\n');
+
+  const stale = Object.keys(UPLOAD_SITES).filter(f => !found[f]);
+  assert.deepEqual(stale, [], '\n\n❌ ทะเบียน UPLOAD_SITES มีไฟล์ที่ไม่มี .upload() แล้ว (ย้าย/ลบไปแล้ว):\n   • '
+    + stale.join('\n   • ') + '\n   ⇒ ลบออกจากทะเบียน (ทะเบียนที่ล้าสมัยทำให้คนถัดไปเลิกเชื่อด่าน)\n');
+
+  /* ② จำนวนบรรทัดต้องตรง — เพิ่มจุดอัปโหลดในไฟล์ที่ขึ้นทะเบียนแล้ว ก็ต้องมาทบทวนที่นี่ */
+  const countBad = Object.entries(found)
+    .filter(([f, n]) => UPLOAD_SITES[f] && UPLOAD_SITES[f].n !== n)
+    .map(([f, n]) => `${f}: ทะเบียนบอก ${UPLOAD_SITES[f].n} แต่เจอ ${n}`);
+  assert.deepEqual(countBad, [], '\n\n❌ จำนวนจุดอัปโหลดไม่ตรงทะเบียน:\n   • ' + countBad.join('\n   • ')
+    + '\n   ⇒ ไปดูบรรทัดที่เพิ่มมาว่า **บีบแล้วจริงไหม** แล้วค่อยอัปเดตเลข n + `via` ในทะเบียน\n'
+    + '     (แก้เลขให้ผ่านโดยไม่ดู = ทำลายเหตุผลทั้งหมดของด่านนี้)\n');
+
+  /* ③ ตัวบีบต้องยังอยู่จริงในไฟล์ (หรือในไฟล์ผู้เรียกที่ระบุไว้) */
+  const tokenBad = [];
+  for (const [f, spec] of Object.entries(UPLOAD_SITES)) {
+    if (!found[f]) continue;
+    const targets = spec.callers?.length ? spec.callers : [f];
+    for (const t of targets) {
+      const src = stripComments(readFileSync(join(ROOT, t), 'utf8'));
+      for (const tok of spec.tokens) {
+        if (!src.includes(tok)) tokenBad.push(`${f} → ไม่เจอ "${tok}" ใน ${t} (via: ${spec.via})`);
+      }
+    }
+  }
+  assert.deepEqual(tokenBad, [], '\n\n❌ ตัวบีบรูปหายไปจากจุดอัปโหลด:\n   • ' + tokenBad.join('\n   • ')
+    + '\n   ⇒ ย้ายไปใช้ตัวบีบตัวอื่น = อัปเดต `tokens` + `via` ในทะเบียน **พร้อมบอกสเปคใหม่**\n'
+    + '     ถอดการบีบออกจริง = ห้าม (ทุกไบต์ที่ขึ้น Storage ถูกจ่าย egress ซ้ำทุกคนที่เปิดดู)\n');
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   🔍 attach-image-zoomable — "รูปที่แนบไว้ ต้องกดขยายดูได้" (16/11 · คำสั่ง user)
+
+   *"พวกรูปที่แนบ ต้องกดขยายดูได้ เช่น ใน ใบ MO"*
+
+   รูปแนบบนจอสูง 60-130px — ดูไม่ออกว่าเสียตรงไหน / แก้อะไรไป ⇒ ต้องขยายได้
+   🔴 ขยายต้อง **ในแอป** ห้าม `target="_blank"` / `window.open` — หน้างานใช้มือถือ
+      เปิดแท็บใหม่ = เด้งออกจากใบที่กรอกค้างอยู่ (บทเรียนเดิมของ `CpImage` ฝั่ง PM 21/08)
+   🔴 ฉากขยายมี **ตัวเดียว** = `src/components/ImageLightbox.jsx` ห้ามเขียนโมดัลดูรูปในหน้า
+      (เคยมี 3 แบบปนกัน: `<a target=_blank>` · `window.open` · โมดัลเขียนเองใน Report.jsx)
+   📄 docs/UI-CONVENTIONS.md §6.39
+   ═══════════════════════════════════════════════════════════════════════════════ */
+const ATTACH_IMG_PAGES = {
+  'src/pages/MtnRepair.jsx':              'รูปก่อน/หลังซ่อม + รูป QA + ลายเซ็นในใบ MO',
+  'src/components/QualityPhotoField.jsx': 'รูปหลักฐานของเสีย (ใช้ร่วม DailyReport/QualityBins/ScrapReport)',
+  'src/components/KpiMonthNoteModal.jsx': 'รูปแนบในหมายเหตุรายเดือนของ KPI',
+  'src/components/ObeyaSqdcmBoard.jsx':   'รูปหลักฐานตอนปิด action บนบอร์ด Obeya',
+  'src/pages/QAInspectionSetup.jsx':      'รูปชิ้นงานจาก Product Master ในหน้าตั้งค่าจุดตรวจ',
+  'src/pages/Improvements.jsx':           'รูปก่อน/หลังของโปรเจคไคเซ็น',
+  'src/pages/Report.jsx':                 'รูปจากผู้แจ้งในโมดัล QA Approve',
+  'src/components/inspect/PointZoom.jsx': 'รูปโคลสอัพของจุดตรวจ (PM/QA) — เปลือกบางบน ImageLightbox',
+};
+
+test('🛡️ attach-image-zoomable — จอที่โชว์รูปแนบต้องใช้ ImageLightbox ของกลาง (ห้ามเปิดแท็บใหม่)', () => {
+  const noImport = [], tabOpen = [];
+  for (const [f, what] of Object.entries(ATTACH_IMG_PAGES)) {
+    const src = stripComments(readFileSync(join(ROOT, f), 'utf8'));
+    if (!/(?:components\/ImageLightbox|\.\.\/ImageLightbox|\.\/ImageLightbox)/.test(src)) {
+      noImport.push(`${f} (${what})`);
+    }
+    /* เปิดรูปด้วยแท็บใหม่ = ห้าม · `window.open` ที่ใช้ทำอย่างอื่น (สั่งพิมพ์ใบ) ไม่เข้าข่าย
+       จึงจับเฉพาะรูปแบบ "เปิด url ของรูป" คือชื่อตัวแปรลงท้าย _img / _url / Img / img */
+    if (/window\.open\(\s*[A-Za-z0-9_.?[\]]*(?:_img|_url|Img|img)\b[^)]*'_blank'/.test(src)) {
+      tabOpen.push(`${f}: window.open(<url รูป>, '_blank')`);
+    }
+  }
+  assert.deepEqual(noImport, [], '\n\n❌ จอที่โชว์รูปแนบแต่ไม่ได้ใช้ ImageLightbox ของกลาง:\n   • '
+    + noImport.join('\n   • ')
+    + '\n\n   คำสั่ง user 16/11: "พวกรูปที่แนบ ต้องกดขยายดูได้ เช่น ใน ใบ MO"\n'
+    + "   แก้ยังไง: import { AttachImage } from '…/components/ImageLightbox'\n"
+    + '             แล้วใช้ <AttachImage url={...} title="…" /> แทน <img> เปล่า\n'
+    + '   🔴 ห้าม <a target="_blank"> / window.open — หน้างานใช้มือถือ เปิดแท็บใหม่ = เด้งออกจากใบที่กรอกค้าง\n'
+    + '   🔴 ห้ามเขียนโมดัลดูรูปเองในหน้า — ฉากขยายมีตัวเดียวทั้งแอป\n');
+  assert.deepEqual(tabOpen, [], '\n\n❌ กลับไปเปิดรูปด้วยแท็บใหม่:\n   • ' + tabOpen.join('\n   • ')
+    + '\n   ⇒ ใช้ <AttachImage> / <ImageLightbox> แทน (ตัวบล็อกป็อปอัปกิน window.open ได้เงียบๆ ด้วย)\n');
+});
+
+test('🛡️ attach-image-zoomable — ฉากดูรูปขยายต้องมีที่เดียว + fit จอ + ไม่ครอป', () => {
+  const lb = readFileSync(join(ROOT, 'src/components/ImageLightbox.jsx'), 'utf8');
+  /* fit จอเดียวไม่มี scroll + ไม่ครอป (รูปหลักฐานที่ถูกครอป = ของสำคัญหลุดกรอบ · 21/08) */
+  assert.ok(/maxHeight: '7\dvh'/.test(lb) && /objectFit: 'contain'/.test(lb),
+    '\n\n❌ ImageLightbox ไม่ได้จำกัดความสูงเป็น vh หรือเปลี่ยนไปครอปรูป\n'
+    + '   รูปหลักฐานที่ถูกครอป = ของสำคัญหลุดกรอบ (บทเรียนเดียวกับรูปผังเครื่องจักร 21/08)\n');
+  /* เพดานเบราว์เซอร์จอ TV = Chromium 94 — ตัดคอมเมนต์ก่อน (คำเตือนในไฟล์พูดถึง color-mix ได้) */
+  const lbCode = stripComments(lb);
+  assert.ok(!/color-mix\(/.test(lbCode) && !/\d(?:dvh|svh|lvh)\b/.test(lbCode),
+    '\n\n❌ ImageLightbox ใช้ CSS ที่เกินเพดาน Chromium 94 (จอ TV webOS) — color-mix / dvh / svh\n');
+  /* PointZoom ต้องเป็นเปลือกบาง ห้ามกลับไปวาดฉากเอง */
+  const pz = stripComments(readFileSync(join(ROOT, 'src/components/inspect/PointZoom.jsx'), 'utf8'));
+  assert.ok(!/position: 'fixed'/.test(pz),
+    '\n\n❌ PointZoom กลับไปวาดฉากเต็มจอของตัวเองอีกแล้ว\n'
+    + '   ⇒ มีฉากดูรูป 2 ชุด = แก้ที่เดียวไม่ครบ (Esc / ปุ่มปิด / ขนาดรูป ไม่เหมือนกัน)\n'
+    + '   ให้ render <ImageLightbox items={[…]} /> แทน\n');
 });
 
 test('🏭 line-select-reason-honest — "ไม่มีในทะเบียนไลน์" ต้องเช็คทะเบียนเต็มก่อนถึงพูดได้', () => {

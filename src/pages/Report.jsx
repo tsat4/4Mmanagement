@@ -13,6 +13,7 @@ import ToggleDot from '../components/ToggleDot';
 import { loadDocForms, docFormSync, fullCode, getDocForm, getDocFormRevisions, withDocFoot } from '../utils/docForms';
 import { downloadCsvDoc, csvText } from '../utils/csvDoc';
 import resizeImg from '../utils/resizeImage';
+import ImageLightbox from '../components/ImageLightbox';   // 🔍 ฉากดูรูปขยายของกลาง (ห้ามวาดโมดัลดูรูปในหน้า)
 // recharts ไม่ต้อง import ที่นี่แล้ว — radar ย้ายไปอยู่ใน SkillRadarPanel (2026-08-06)
 import { fmtDate, fmtDateTime } from '../utils/dateFormat';
 import { can } from '../utils/permissions';
@@ -1942,18 +1943,12 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
         </div>
       )}
 
-      {/* Image viewer modal */}
+      {/* 🔍 ฉากดูรูปขยาย = ของกลาง `components/ImageLightbox.jsx` (16/11)
+          เดิมหน้านี้วาดโมดัลดูรูปเอง — ของดีแต่อยู่หน้าเดียว หน้าอื่นก๊อปไม่ได้
+          ⇒ ยุบมาใช้ตัวกลาง (Esc ปิด · แตะฉากหลังปิด · ปุ่มปิด 44px มาให้ในตัว) */}
       {imageViewModal && (
-        <div className="modal-scroll" style={{ position: 'fixed', inset: 0, zIndex: 4000, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh' }} onClick={e => e.stopPropagation()}>
-            <div style={{ fontSize: 13, color: '#fff', marginBottom: 8, fontWeight: 600 }}>{imageViewModal.title}</div>
-            <img src={imageViewModal.url} style={{ maxWidth: '88vw', maxHeight: '80vh', borderRadius: 10, objectFit: 'contain', display: 'block' }} />
-            <button onClick={() => setImageViewModal(null)}
-              style={{ position: 'absolute', top: -10, right: -10, background: 'var(--red)', color: '#fff', border: 'none', borderRadius: '50%', width: 28, height: 28, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              ×
-            </button>
-          </div>
-        </div>
+        <ImageLightbox items={[{ url: imageViewModal.url, title: imageViewModal.title }]}
+          onClose={() => setImageViewModal(null)} />
       )}
 
       <TimeRangeBar

@@ -52,7 +52,10 @@ const LIMIT = 1000;
 const MO_COLS = [
   'id', 'mo_no', 'work_date', 'current_step', 'status', 'dept_section', 'line_name',
   'machine_no', 'mtn_dept', 'item_type',
-  'assigned_to', 'tech_main', 'tech_main_uid',
+  /* 👥 `assigned_techs` = ตัวจริงของ "ช่างที่มอบหมาย" (array) · `assigned_to` คือสำเนาที่ต่อกันด้วย
+     จุลภาคไว้ให้ใบพิมพ์อ่าน — ขาดคอลัมน์นี้ = `isMeAmong` ถอยไปแกะสตริง (ยังทำงาน แต่แม่นน้อยกว่า
+     เมื่อชื่อมีจุลภาค) ⇒ select มาด้วยเสมอ (16/11) */
+  'assigned_to', 'assigned_techs', 'tech_main', 'tech_main_uid',
   'reporter_prod', 'reporter_prod_uid', 'reported_by_name', 'reported_by_uid',
   // nextStepOf() ต้องใช้ตัดสินขั้นถัดไป (รอ QA หรือข้ามแล้ว · ช่วงเซ็นปิดของใบ MTN) — 05/10
   'qa_skipped_at', 'purpose', 'mtn_head_at', 'approve_at',
