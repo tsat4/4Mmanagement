@@ -232,8 +232,11 @@ export function Sheet({ k, cw = 0, span = 1, icon, title, sub, big, unit, bigNot
         {goalsNode && <div style={{ marginTop: Math.round(4 * k) }}>{goalsNode}</div>}
       </div>
       <div style={{ flex: 1, minHeight: 0, padding: `${Math.round(4 * k)}px ${Math.round(4 * k)}px 0` }}>{body}</div>
+      {/* 🔍 ใน popup ท้ายแผ่นยาวได้ (insight หลายบรรทัด) แต่ **ห้ามกินกราฟจนหาย** (16/11 · user: "บางกราฟ insight เยอะจนกราฟหาย")
+          ⇒ เพดาน 38% ของ popup แล้วเลื่อนในตัวเอง · กราฟ (body flex:1) จึงได้อย่างน้อย ~55% เสมอ · แผ่นในกริดไม่เปลี่ยน (foot ≤ 1 บรรทัดอยู่แล้ว) */}
       {(footNode || (link && !tv)) && (
-        <div style={{ padding: `${Math.round(5 * k)}px ${Math.round(9 * k)}px ${Math.round(7 * k)}px`, flexShrink: 0 }}>
+        <div style={{ padding: `${Math.round(5 * k)}px ${Math.round(9 * k)}px ${Math.round(7 * k)}px`, flexShrink: 0,
+          ...(onClose ? { maxHeight: '38%', minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain' } : null) }}>
           {footNode && <div style={{ fontSize: fs(10.5), lineHeight: 1.35, color: 'var(--muted)' }}>{footNode}</div>}
           {link && (
             <button className="tv-hide" onClick={onLink} style={{
