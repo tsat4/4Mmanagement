@@ -143,7 +143,7 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
   const [busy, setBusy] = useState(null);
   const rpc = async (key, fn, args, okMsg) => {
     // ด่านชั้นเขียนจริง — ไม่พึ่งการซ่อนปุ่ม (monitor = ห้ามขยับยอดเด็ดขาด)
-    if (readOnly) { toast.error('หน้านี้ดูอย่างเดียว — ทำรายการที่ Line Stock › 📤 ขาออก / 📥 ขาเข้า'); return null; }
+    if (readOnly) { toast.error('หน้านี้ดูอย่างเดียว — ทำรายการที่ Stock Management › 📤 ส่งของเข้าไลน์ / 📥 รับของเข้าคลัง'); return null; }
     setBusy(key);
     const { data, error } = await supabaseDR.rpc(fn, args);
     setBusy(null);

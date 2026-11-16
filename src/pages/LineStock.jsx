@@ -1826,8 +1826,8 @@ const HeijunkaKanban = lazy(() => import('./HeijunkaKanban'));
 const LEGACY_TABS = { store: 'out', purchase: 'in', receipts: 'in' };
 const TABS = [
   /* 05/11 (คำสั่ง user) — แยกตามทิศของ: ขาออก = สโตร์ → พื้นที่ผลิต · ขาเข้า = supplier/พื้นที่ผลิต → สโตร์ */
-  { key:'out',       label: 'ขาออก (สโตร์ → ผลิต)' },
-  { key:'in',        label: 'ขาเข้า (→ สโตร์)' },
+  { key:'out',       label: 'ส่งของเข้าไลน์' },   // 16/11 (คำสั่ง user) เลิกคำ ขาออก/ขาเข้า — คน W/H อ่านกลับด้าน
+  { key:'in',        label: 'รับของเข้าคลัง' },
   { key:'sap',       label: 'ค้างตัด SAP' },    // ใบที่ส่งถึงไลน์แล้วแต่ตัดจ่ายใน SAP ไม่ได้ (04/11)
   { key:'diff',      label: 'คลังพัก/ผลต่าง' },  // รับไม่ครบ = ส่วนที่ขาดพักไว้ รอผลิต+สโตร์ยืนยันคู่ (05/11)
   { key:'stock',     label: 'Stock' },
