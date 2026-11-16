@@ -9,6 +9,7 @@
 อัพเดท 2026-09-07: ใหม่ §5.1.2 — ช่อง "ชื่อคน/เลขเครื่อง/MAT/ลูกค้า/รหัสคลัง" ต้องใช้ picker กลาง (`PersonSelect`/`MachineSelect`/`ProductSelect`/`CustomerSelect`/`StorageLocSelect`) + `useOrgTeams` — audit ทั้งระบบ `docs/SINGLE-SOURCE-AUDIT-2026-09-07.md`
 อัพเดท 2026-09-24: §5.3 ข้อ 9 รอบ 2 — **ตัวกรองไลน์ห้ามตัดไลน์ลูกทิ้ง** (งานจริงอยู่ที่ไลน์ลูก · `/line-oee` เหลือแต่ไลน์แม่ 9 ตัว) · `lineOptionLabel()` = สูตรเยื้องจุดเดียว · เป้าระดับกรุ๊ปต้องไล่ขึ้นสายบนแล้วบอกบนจอว่ายืมจากไหน · มีด่าน `line-dropdown-hand-built`
 อัพเดท 2026-10-28: §6.23 — การ์ดรอบส่ง `/customer-demand` แปลงเป็น `<PartCard>` แล้ว (รูปชิ้นงาน + MAT 3 ชั้น เหมือนสโตร์)
+อัพเดท 2026-11-16: §5.1.2 — ใหม่ **`<BomChildSelect>`** ช่อง "พาร์ทลูกของ MAT นี้" (ของเสียที่ child part ใน `/daily-report`) · ลิสต์มาจาก BOM ของ MAT แม่เท่านั้น (`useBomChildren` → `buildBomIndex`) · `allowFree` ปิดตาย · **ไม่มีลูก/อ่าน BOM ไม่ได้ = ยังบันทึกได้ ต้องเขียนบนจอว่าเพราะอะไร** (fail-open)
 อัพเดท 2026-11-09: §5.3 ข้อ 9 — **`<SectionScopeSelect>`** = ตัวแปลงสำหรับหน้าที่กรองแค่ "ส่วนงาน" (state สตริงตัวเดียว · `pickDept` = แผนกด้วย) · กวาด 12 หน้า/17 ช่องที่ยังวาด `<select>` ส่วนงานแบนเอง · ด่าน `section-select-hand-built`
 อัพเดท 2026-10-02: §5.3 ข้อ 9 — ทุกช่องขอบเขตวาดด้วย `<OrgScopePicker>` ตัวเดียว (`<LineScopeSelect>` = ตัวแปลงสำหรับหน้า section/line) · หัวกลุ่ม LineSelect = 📁 · ไลน์เดียว = `<LineSelect>`
 
@@ -717,6 +718,7 @@ user ส่งคลิปจอมือถือมา: **เนื้อห�
 | ชื่อคน (ผู้ตรวจ/อนุมัติ/รับผิดชอบ/แจ้ง/สอน/หัวหน้า/ผู้แก้) | `<PersonSelect>` | `usePeople` (Main profiles ∪ employees) | ชื่อ text เหมือนเดิม + `*_uid`/`employee_id` เมื่อคอลัมน์มี |
 | หมายเลขเครื่อง / แม่พิมพ์ / จิ๊ก | `<MachineSelect>` | `useMachines` (DR machines) | `machine_no` + `machine_id` เมื่อคอลัมน์มี |
 | MAT SAP / เลขพาร์ท / Kanban Std / die set / PE set / NPI part | `<ProductSelect>` (+`extraOptions` BOM/parts_master) | `useProducts` (DR dr_products) | `mat_no` + `product_id` เมื่อคอลัมน์มี |
+| **พาร์ทลูกของ MAT ตัวหนึ่ง** (ของเสียที่ child part · 2026-11-16) | `<BomChildSelect>` — **ห้ามใช้ `<ProductSelect>`** ที่นี่ (มันเอา Product Master ทั้งทะเบียนมาเป็นกลุ่มหลัก ⇒ เลือกพาร์ทอะไรก็ได้เป็นลูกของ FG ได้) | `useBomChildren(mat)` → `buildBomIndex` + `bomChildCandidates` (DR `bom_items` · **ใบเดียว ห้ามรวมหลายใบ**) | `child_mat_no` text (+ชื่อ/อัตราเป็น snapshot) |
 | ลูกค้า | `<CustomerSelect>` | `useCustomers` (DR `customers` — 2026-09-08 · alias แม็ปเข้าสะกดหลัก · fallback derive จาก Product Master) | ชื่อ text (name หลัก) |
 | ผู้ขาย / ผู้รับจ้าง / แหล่งที่มา (parts_master · container · routing จ้างนอก · อะไหล่ · NPI tooling maker) | `<SupplierSelect>` (`kinds` = ชนิดที่เกี่ยวข้องขึ้นก่อน) | `useSuppliers` (DR `suppliers` — 2026-09-08) | ชื่อ text |
 | Cost Center (ไลน์ · ผัง · rate · หัวใบ OT) | `<CostCenterSelect>` (allowFree ปิด — รหัสใหม่ตั้งที่ทะเบียนก่อน) | `useCostCenters` (Main `cost_centers` — 2026-09-08 · RLS `cost_rate:manage`) | code text |

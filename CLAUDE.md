@@ -225,6 +225,12 @@ Realtime + Edge Functions/Deno) · Telegram Bot API · deploy = Render.com (Stat
 > `ct_snapshot`/`break_snapshot` (DR) · เจ้าของกฎ **`src/utils/oee.js` §snapshot** · **เก็บ input ไม่ใช่ช่วงพักสำเร็จรูป**
 > · 🔴 **ไม่มี snapshot = ถอยไปทะเบียนสดเป๊ะ ห้ามบล็อก ห้าม backfill กะเก่า** · 🔴 **มีแล้วห้ามทับด้วยทะเบียนวันนี้** (2 ด่าน)
 
+> ### 🧩 ของเสียเลือก "พาร์ทลูก" ได้ แต่ **ไม่เข้าสูตร %Q/%P เลย** (2026-11-16 · คำสั่ง user)
+> `defect_logs.child_mat_no/child_part_name/child_qty_per_fg` · ของกลาง **`src/utils/defectPart.js`**
+> ยังหักของเสียที่ MAT แม่ **1 ชิ้น = 1 ชิ้น** · ตัวหาร %Q ไม่เปลี่ยน · %P ยังผูก `prod_orders.mat_no`
+> 🔴 **ห้ามคูณ/หาร `child_qty_per_fg` ในสูตรใดๆ** (รอ user เคาะ "ลูกเสีย N = FG เสียกี่ชิ้น" · มีด่าน)
+> 🔴 **ไม่มีลูกใน BOM / อ่าน BOM ไม่ได้ = ยังลงของเสียได้ ห้ามบล็อก** · ลิสต์ลูกผ่าน `useBomChildren` เท่านั้น
+
 > 📄 รายละเอียดเต็ม → `docs/modules/oee.md`
 
 ---

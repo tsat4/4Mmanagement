@@ -1656,6 +1656,23 @@ const RULES = [
     fix: '`backfillWindowError(hhmm)` ใน DailyReport (→ `resolveShiftTime` + `checkShiftTime` ของ src/utils/shiftWindow.js)',
     allow: {},
   },
+  {
+    id: 'defect-child-qty-not-in-oee',
+    scan: ['src'], ext: ['.jsx', '.js'],
+    /* `child_qty_per_fg` = อัตรา BOM ที่ snapshot ไว้ "ดูย้อนหลัง" (migration 20261116) */
+    re: /child_qty_per_fg/g,
+    why: 'ของเสียที่ระบุ "พาร์ทลูก" (16/11) ยังนับเข้า %Q/%P ของ MAT แม่ **1 ชิ้น = 1 ชิ้น** '
+       + 'เพราะคำถาม *"ลูกเสีย N ชิ้น = FG เสียกี่ชิ้น"* และ *"เปลี่ยนชิ้นลูกแล้ว FG ยังดีอยู่ไหม"* '
+       + 'ยังไม่มีคำตอบจาก user · `child_qty_per_fg` เป็นสแนปช็อตอัตรา BOM ไว้ดูย้อนหลังเท่านั้น '
+       + '⇒ เอาไปคูณ/หารในสูตรไหนก็ตาม = OEE ของทุกกะเพี้ยนย้อนหลังโดยไม่มีใครสั่ง '
+       + '(และ %P จะเพี้ยนซ้ำ เพราะ CT ที่ระบบรู้คือ CT ของงานที่เครื่องเดิน ไม่ใช่ของชิ้นส่วนลูก)',
+    fix: 'อ่าน/เขียนช่องนี้ผ่าน `childPartPatch`/`defectPartOf` (src/utils/defectPart.js) เท่านั้น · '
+       + 'ถ้า user เคาะกฎใหม่แล้วให้แก้ที่ `src/utils/oee.js` อย่างตั้งใจ + เติม allow ที่นี่พร้อมวันที่/เหตุผล',
+    allow: {
+      'src/utils/defectPart.js': 'เจ้าของกฎ — ประกอบ/อ่าน payload 3 ช่องที่เดียว',
+      'src/pages/DailyReport.jsx': 'ฟอร์มบันทึกงานเสีย (เก็บค่าที่คนเลือก · ไม่คำนวณอะไรกับค่านี้)',
+    },
+  },
 ];
 
 function violations(rule) {

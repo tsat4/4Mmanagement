@@ -1370,3 +1370,16 @@ Promise.all(mats.map(m => supabaseDR.rpc('fn_bom_direct_demand', { p_fg_mat: m }
 - 🔴 **เพดาน 1000 แถวของ PostgREST** — `bomKidsOf` เช็คทุกก้อน ชนเพดาน = **คืน error (fail-closed)
   ห้ามคืนของไม่ครบ** (กฎเดียวกับ `fetchByIds`/`fetchAllPages`)
 - **ทุก MAT ที่ส่งเข้าไปต้องมีคีย์กลับมาเสมอ** (ไม่มีลูก = `[]`) — ผู้เรียกพึ่งพฤติกรรมนี้
+
+## 🧩 ผู้ใช้รายใหม่ของต้นไม้ BOM — ช่อง "พาร์ทลูกที่เสีย" ใน Daily Report (2026-11-16)
+
+ของกลาง 3 ชิ้นที่เพิ่มในรอบนี้ (ของเดิมไม่เปลี่ยนพฤติกรรม):
+| ชิ้น | ทำอะไร |
+|---|---|
+| `bomChildCandidates(mat, ix)` (`utils/bomTree.js`) | "FG ตัวนี้มีลูกอะไรให้เลือก" — เลือก **ใบเดียว** (ใบของตัวเองก่อน → ไม่มีก็ `sheetsWithKidsOf` ใบแรก) แล้วกางผ่าน `explodeBom({ sheetFor, startSheet })` · ยุบ mat ซ้ำเหลือ**ชั้นตื้นสุด** · ตัดแถว `cycle` + ตัว root ออก · คืน `sheets` ให้จอเตือนว่ามีหลายใบ **ห้ามรวม** |
+| `useBomChildren(mat, { enabled })` (`utils/useBomChildren.js`) | ตัวโหลด — ยิงเฉพาะใบที่เกี่ยวข้อง (`product_id` ของ mat + แถวที่ `parent_mat = mat`) ผ่าน `cachedRows` ⇒ **แยก "ว่าง" ออกจาก "โหลดไม่สำเร็จ"** (`failed`) · ไม่โหลด `bom_items` ทั้งตาราง |
+| `bomChildOptions(rows)` (`utils/pickerOptions.js`) | option ของ `<BomChildSelect>` · ชั้น 1 / ชั้นลึก แยกกลุ่ม · `flatDupe` ติด `⚠ ซ้ำ 2 ชั้น` และ**ไม่โชว์อัตราต่อ FG** (ยอดเชื่อไม่ได้) · ค่าเดิมที่หลุดจาก BOM ยังเป็นตัวเลือก (`offList`) |
+
+- `explodeBom` คืนฟิลด์ **`part_no`** ของบรรทัดเพิ่ม (16/11 · additive) เพื่อให้ป้าย MAT เรียง Part No. → ชื่อ → MAT ได้เหมือน `<MatLabel>`
+- 🔴 เลือกพาร์ทลูกแล้ว **ไม่กระทบ %Q/%P** และ **ห้ามเอา `child_qty_per_fg` ไปคูณ** (ด่าน `defect-child-qty-not-in-oee`)
+  📄 `docs/modules/daily-report.md` §ลงของเสียที่พาร์ทลูก · `docs/modules/oee.md` ท้ายไฟล์
