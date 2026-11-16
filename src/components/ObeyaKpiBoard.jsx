@@ -43,6 +43,7 @@ import BoardPager from './BoardPager';
 import useFitHeight from '../utils/useFitHeight';
 import { packPages, clampPage, pageLabels, cellsUsed } from '../utils/boardPager';
 import useIsMobile from '../utils/useIsMobile';
+import { isProductionUnit } from '../utils/unitKind';   // 🏭 แผ่น OEE/PPM เฉพาะขอบเขตที่มี "ไลน์ผลิต" (16/11)
 import { statusColor, gapToTarget } from '../utils/obeyaKpi';
 import {
   yearOf, monthKeys, monthLabel, lastDayOf, SUMMARY_KEY,
@@ -249,13 +250,17 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
     const mine = new Set(org.lineNamesOf(scope.kind, scope.value));
     return inUser.filter(n => mine.has(n));
   }, [lines, scopeSet, scope, org]);
-  const scopeNoLines = !!scope && !isPlant(scope) && orgReady && org.lineNamesOf(scope.kind, scope.value).length === 0;
+  /* 🏭 "มีไลน์ผลิตไหม" นับเฉพาะ unit_kind=production (16/11 · user: "Tooling Maintenance ขึ้น OEE/PPM ที่ไม่เกี่ยว")
+     หน่วยสนับสนุน (QA · STORE · Die/JIG/Tooling MTN) อยู่ในทะเบียนไลน์ตั้งแต่ 05/11 (unit_kind='support') ⇒ นับรวมแล้วแผ่นอัตโนมัติจากกะผลิตโผล่ผิดหน่วย */
+  const prodNames = useMemo(() => new Set(lines.filter(isProductionUnit).map(l => l.name)), [lines]);
+  const scopeNoLines = !!scope && !isPlant(scope) && orgReady && org.lineNamesOf(scope.kind, scope.value).filter(n => prodNames.has(n)).length === 0;
   const members = useMemo(() => {
     const set = new Set(lineNames);
     const m = lines.filter(l => set.has(l.name));
     return {
       names: set,
       groups: [...new Set(m.map(l => l.parent_line_name || l.name))].sort(lineNameCompare),   // กลุ่มไลน์ (เป้า OEE ตั้งรายกลุ่ม)
+      prodGroups: [...new Set(m.filter(isProductionUnit).map(l => l.parent_line_name || l.name))].sort(lineNameCompare),   // เฉพาะไลน์ผลิต — ตัดสินว่ามีแผ่น OEE/PPM ไหม
       ccs: [...new Set(m.filter(l => l.cost_center).map(l => l.cost_center))].sort(lineNameCompare),
     };
   }, [lines, lineNames]);
@@ -350,7 +355,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
       const kemps = em.data || [];
       /* 📝 หมายเหตุรายเดือนของขอบเขตที่ดู (remark/action/note) — ตารางยังไม่มี = ไม่มีโน้ต ไม่ใช่บอร์ดล่ม */
       const kn = await supabase.from('kpi_month_notes')
-        .select('id, month, row_key, kind, text, created_by_name, created_at')
+        .select('id, month, row_key, kind, text, image_url, created_by_name, created_at')
         .eq('year', year).eq('scope_kind', kSel.kind || 'plant').eq('scope_value', kSel.value || '').eq('is_active', true)
         .order('created_at', { ascending: true }).limit(1000);
       if (kn.error && (kn.error.code || '') !== '42P01') warn.push('หมายเหตุรายเดือน');
@@ -456,7 +461,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
     const rollupOf = (gk) => (gk && childGroups.has(gk) ? rollupChildDefs(childGroups.get(gk), entByKpi, { labelOf: org.labelOf }) : null);
     /* กติกาเลือกแผ่นอยู่ใน utils/kpiBoardRows.js (pure · มีเทส) — ที่นี่แค่ส่ง closure หา-นิยาม 2 ตัว */
     const { rows: boardRows } = pickBoardRows({
-      templates: boardRowsFor(year), kdefs, scope, hasLines: members.groups.length > 0, childGroups,
+      templates: boardRowsFor(year), kdefs, scope, hasLines: members.prodGroups.length > 0, childGroups,
       findManual: (r) => manualOf(r.name, false, r.key), findAuto: autoDefOf,
       ownScopes: [scope, ...(org.unitsOf ? org.unitsOf(scope.kind, scope.value) : [])],   // CC = หน่วยเจ้าของรหัส (06/10)
       order: layoutOverride || data.layoutKeys,   // ลำดับที่คนจัด (ค่าที่เพิ่งกดยังไม่โหลดกลับ ชนะค่าที่โหลดมา)

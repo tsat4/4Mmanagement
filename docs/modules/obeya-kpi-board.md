@@ -1357,3 +1357,14 @@ user: *"1. target/commitment ควรโชว์ให้ชัดตอนข
   · **บนจอ:** เดือนที่ยังไม่ถึง = แท่งโปร่งเส้นประ (`proj` · แกน X ซ่อน `xAxisId="proj"` ไม่ให้แท่งจริงแคบลง) · บรรทัด "ปลายปี ≈ … (จริง 10+คาด 2 ด.)" + title บอกสมมติฐาน ·
   ชิปใต้บอร์ด "N แผ่นคาดจากทำได้เท่าที่ผ่านมา" แทนชิป "คาดไม่ได้" เดิม · ตัดสินรอด/ร่วงยังผ่าน `scoreDef(fc.value, def)` เท่านั้น
   · **`neededRunRate({ actual, target, def })`** (`kpiSetup.js`) = เดือนที่เหลือต้องเฉลี่ย/เดือนละ/ไปให้ถึงเท่าไหร่ (average · sum · max/as_of · rate = null) → บรรทัด 🏁 ใน insight
+
+## 🧹 4 จุดจากหน้างาน 16/11 (user): Inventory สรุปปี · รูปแนบหมายเหตุ · popup ซ้อนผิดชั้น · แผ่น OEE/PPM โผล่ที่หน่วยช่าง
+- **Inventory = เดือนล่าสุด ไม่ใช่เฉลี่ย** — `kpi_catalog.summary_mode` ของ "Day Sales of Inventory (DSI)" และ "Inventory Balance" เปลี่ยนเป็น `as_of` (ข้อมูล MAIN · ตั้งที่ 📘 ทะเบียน)
+- **หมายเหตุรายเดือนแนบรูปได้** — `kpi_month_notes.image_url` (migration `20261116b_kpi_month_notes_image_main.sql` · apply แล้ว) · ถัง **`action-images` เดิม** path `kpi-note/<ปี>-<เดือน>-<id>.<ext>`
+  ผ่าน `resizeActionImage()` + `uploadActionImg()` (`utils/actionImage.js` — ห้ามเรียก storage ตรง มีด่าน) · ช่องเลือก = `<QualityPhotoField>` (crop 4:3 · ใช้ทั้งรูปเป็นค่าเริ่มต้น)
+  · ลำดับ: **เขียนแถวก่อน → อัปโหลด → update image_url (นับแถว) · ผูกไม่ได้ = ลบไฟล์** · รูปล้ม = ข้อความยังอยู่ + toast บอก · โชว์ thumbnail ในลิสต์ + 📷 ใน insight
+- **🔴 บั๊ก popup หมายเหตุอยู่หลังกราฟที่ขยาย** — โหมดจอของบอร์ด (`shell` position:fixed zIndex 1010) เป็น stacking context ⇒ modal zIndex 2000 ที่วาดในต้นไม้บอร์ดถูกขังใต้ 1010
+  ขณะที่ popup 🔍 portal ไป body ที่ 1900 ⇒ **`KpiMonthNoteModal` ต้อง `createPortal(…, document.body)`** เหมือน SheetZoom · กฎทั่วไป: **modal ที่ต้องอยู่เหนือ popup 🔍 ต้อง portal ไป body เสมอ** (zIndex อย่างเดียวไม่พอ)
+- **แผ่น OEE/PPM เฉพาะขอบเขตที่มี "ไลน์ผลิต"** — หน่วยสนับสนุน (Tooling MTN ฯลฯ) อยู่ในทะเบียนไลน์ตั้งแต่ 05/11 (`unit_kind='support'`) ⇒ `hasLines`/`scopeNoLines` ของบอร์ดเคยนับรวมแล้วแผ่นจากกะผลิตโผล่ผิดหน่วย
+  · แก้: `members.prodGroups` + `prodNames` กรองด้วย `isProductionUnit()` (`utils/unitKind.js`) · `members.groups` เดิมยังใช้กับเป้า OEE รายกลุ่ม
+- แผ่นอัตโนมัติ (OEE/PPM) กดชิปสถานะเปิด insight ได้เหมือนแผ่นกรอกมือ (`statZoom` ทุกแถว) · ปุ่ม "เจาะดู ↗" ยังพาไป `/oee-analytics` พร้อมขอบเขต

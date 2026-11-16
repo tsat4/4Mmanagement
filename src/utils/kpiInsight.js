@@ -105,7 +105,7 @@ export function buildInsight({
 
   /* 5) หมายเหตุของเดือนที่ดู (คนเขียนเหตุผลไว้แล้ว = ของจริงกว่าทุกข้อข้างบน) */
   const notes = valueIdx != null ? (series[valueIdx]?.notes || []) : [];
-  notes.slice(0, 3).forEach(n => out.push({ icon: '📝', tone: 'none', text: `${n.kind === 'action' ? 'Action' : n.kind === 'remark' ? 'Remark' : 'Note'}: ${n.text}${n.created_by_name ? ` — ${n.created_by_name}` : ''}` }));
+  notes.slice(0, 3).forEach(n => out.push({ icon: '📝', tone: 'none', text: `${n.kind === 'action' ? 'Action' : n.kind === 'remark' ? 'Remark' : 'Note'}: ${n.text}${n.image_url ? ' 📷' : ''}${n.created_by_name ? ` — ${n.created_by_name}` : ''}` }));
 
   /* 6) จบปี — คาดการณ์ + ต้องทำเท่าไหร่ถึงผ่าน (สมมติฐานต้องเขียนเสมอ) */
   if (forecast && forecast.value != null) {
