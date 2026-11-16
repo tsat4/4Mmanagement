@@ -469,7 +469,7 @@ export default function Improvements() {
       //    คิวรีล้มเหลวเงียบ แล้วผลก่อน/หลังจะเป็น 0 ทั้งคู่ = โปรเจคดูเหมือน "แก้หายสนิท" ทั้งที่วัดไม่ได้
       const dtRes = await fetchByIds(allIds, c => {
         let q = supabaseDR.from('downtime_logs')
-          .select('session_id, duration_min, machine_no, mat_no, dr_downtime_types(category)')
+          .select('session_id, duration_min, machine_no, mat_no, dr_downtime_types(category, planned_cap_min)')
           .in('session_id', c);
         if (imp.problem_type_id) q = q.eq('downtime_type_id', imp.problem_type_id);
         if (imp.mat_no) q = q.eq('mat_no', imp.mat_no);
@@ -690,7 +690,7 @@ export default function Improvements() {
       //    (บรรทัด 379/404 ในไฟล์นี้ใช้ fetchByIds อยู่แล้ว ตัวนี้ตกสำรวจ)
       const { rows: data, error: pErr, truncated: pTrunc } = await fetchByIds(ids, (c) =>
         supabaseDR.from('downtime_logs')
-          .select('downtime_type_id, machine_no, duration_min, description, dr_downtime_types(category)')
+          .select('downtime_type_id, machine_no, duration_min, description, dr_downtime_types(category, planned_cap_min)')
           .in('session_id', c));
       if (pErr || pTrunc) toast.error('โหลด downtime ไม่ครบ — พาเรโต้อาจชี้เป้าไม่ตรง');
       (data || []).forEach(r => {

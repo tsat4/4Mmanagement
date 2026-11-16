@@ -244,7 +244,7 @@ export default function GroupOverview() {
       const sessIds = sessions.map(s => s.id);
       const [ordRes, dtRes, defRes, pairMap, , brk] = await Promise.all([   // loadPairMap() คืน map/null ไม่ใช่ { data }
         supabaseDR.from('prod_orders').select('session_id, status, qty, qty_ok, qty_actual, qty_target, mat_no').in('session_id', sessIds),
-        supabaseDR.from('downtime_logs').select('session_id, duration_min, started_at, ended_at, dr_downtime_types(category)').in('session_id', sessIds),
+        supabaseDR.from('downtime_logs').select('session_id, duration_min, started_at, ended_at, dr_downtime_types(category, planned_cap_min)').in('session_id', sessIds),
         supabaseDR.from('defect_logs').select('session_id, qty_ng, qty_suspect').in('session_id', sessIds),
         loadPairMap(),   // cache ทะเบียนสินค้ากลาง (25/09) — เดิมดึงทั้งตารางทุกรอบโหลด
         loadOpInfo(), // map รายการขั้นตอน (OP งานขับนัท) — ตัวที่ 5 ไม่เข้า destructure แค่ให้ cache พร้อม

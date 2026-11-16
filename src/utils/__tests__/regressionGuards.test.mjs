@@ -11093,3 +11093,28 @@ test('🟢 LineOeeBoard: การ์ด LIVE ต้องใช้ pOver/pRawPc
   assert.match(src, /const liveNoDt = !!liveSess && !dts\.some/,
     '\n\n❌ ธง liveNoDt ต้องดูจากใบ downtime ของ "กะที่การ์ดโชว์" จริงๆ\n')
 })
+
+/* ═══ 🧾 เพดาน "หยุดตามแผน" — ของกลางตัวเดียว + คิวรีต้องดึงเพดานมาด้วย (16/11 · คำสั่ง user) ══
+   "set up machine ควรจะมีเพดานของ planned เกินกว่านี้ ออกไปเป็น unplanned … ควรจะเซ็ทได้ ไม่ฮาร์ดโค้ด"
+   🔴 ลืม `planned_cap_min` ในคิวรี = ไม่มีเพดาน = เงียบสนิท (คลาสเดียวกับลืม `select('pair_mat_no')`) */
+test('🧾 เพดานหยุดตามแผน: แยก planned/unplanned ที่ dtPlannedSplit ที่เดียว + ทุกคิวรีต้องดึงเพดาน', () => {
+  const oee = stripComments(readFileSync(join(ROOT, 'src/utils/oee.js'), 'utf8'))
+  assert.match(oee, /export function dtPlannedSplit\(/, '\n\n❌ ของกลางของเพดานหายไป\n')
+  // ห้ามมีใครแยก planned/unplanned เองนอก dtPlannedSplit (เดิมมี 4 จุดเขียนซ้ำกัน)
+  const raw = (oee.match(/=== 'planned'/g) || []).length
+  assert.ok(raw <= 2, `\n\n❌ ยังมีจุดที่เทียบ category === 'planned' เองอยู่ ${raw} จุด — ต้องผ่าน dtPlannedSplit\n`)
+  assert.ok(!/planned_cap_min\s*[:=]\s*\d/.test(oee), '\n\n❌ ห้าม hardcode เลขเพดานในโค้ด — เพดานอยู่ในทะเบียน\n')
+
+  /* ทุกคิวรีที่ดึง category ของประเภท downtime ต้องดึง planned_cap_min มาด้วย */
+  const bad = []
+  for (const file of walk(join(ROOT, 'src'), ['.js', '.jsx'])) {
+    const lines = stripComments(readFileSync(file, 'utf8')).split('\n')
+    lines.forEach((ln, i) => {
+      const m = ln.match(/dr_downtime_types\(([^()]*)\)/)
+      if (!m || !/\bcategory\b/.test(m[1]) || /planned_cap_min/.test(m[1])) return
+      bad.push(`${file.slice(ROOT.length)}:${i + 1}`)
+    })
+  }
+  assert.deepEqual(bad, [], '\n\n❌ คิวรีที่ดึง `dr_downtime_types(category)` แต่ไม่ดึง `planned_cap_min`:\n   '
+    + bad.join('\n   ') + '\n   ⇒ เพดานจะไม่ทำงานในจอนั้น **โดยไม่มีใครรู้** (เลขต่างจากจอปิดกะเงียบๆ)\n')
+})

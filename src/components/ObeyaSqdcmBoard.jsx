@@ -227,7 +227,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
              เขียนผิดมาตั้งแต่สร้างบอร์ด ⇒ คิวรีนี้ล้มทั้งก้อน แผง "ทำไมถึงหลุดเป้า" กับครึ่งหนึ่งของ C
              ว่างเปล่ามาตลอด (จอขึ้นเหมือน "ไม่มีเครื่องหยุด" ทั้งที่จริงคือโหลดไม่ได้)
              · ทุก component อื่นในรีโปใช้ `description` หมด — ดู OeeInsightPanel / MachineReliability */
-          .select('session_id, duration_min, description, machine_no, dr_downtime_types(name_th, category)').in('session_id', c)),
+          .select('session_id, duration_min, description, machine_no, dr_downtime_types(name_th, category, planned_cap_min)').in('session_id', c)),
         fetchByIds(ids, c => supabaseDR.from('defect_logs')
           .select(`session_id, qty_ng, qty_suspect, is_trial, dr_defect_types(name_th, excl_from_q), prod_orders(mat_no), ${QBIN_EMBED}`).in('session_id', c)),
         fetchByIds(ids, c => supabaseDR.from('prod_orders')

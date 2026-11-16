@@ -398,7 +398,7 @@ export default function Dashboard({ view = 'timeline' }) {
       const ordCols = 'session_id, status, qty, qty_ok, qty_actual, qty_target, is_manual, prod_no, part_name, mat_no, machine_no, opened_at, confirmed_at';
       const [ordRes, { data: dtLogs, error: dtErr }, { data: defectLogs, error: dfErr }] = await Promise.all([
         supabaseDR.from('prod_orders').select(ordCols).in('session_id', sessionIds),
-        supabaseDR.from('downtime_logs').select('id, session_id, machine_no, description, duration_min, started_at, ended_at, created_at, dr_downtime_types(category, name_th)').in('session_id', sessionIds),
+        supabaseDR.from('downtime_logs').select('id, session_id, machine_no, description, duration_min, started_at, ended_at, created_at, dr_downtime_types(category, planned_cap_min, name_th)').in('session_id', sessionIds),
         // prod_orders(mat_no) = ไว้ชี้ CT ของ NG ตอนบวกเข้าตัวเศษ %P (ngByMatFrom)
         supabaseDR.from('defect_logs').select(`session_id, qty_ng, qty_suspect, is_trial, description, prod_orders(mat_no), dr_defect_types(name_th, excl_from_q), ${QBIN_EMBED}`).in('session_id', sessionIds),
       ]);

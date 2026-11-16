@@ -181,11 +181,11 @@ async function loadProduction(ctx) {
      → ผ่าน fetchByIds ทุกคิวรีที่ยิงด้วย id list (QC audit 2026-08-20 · T3-14) */
   const [ordRes, dtRes, defRes, { data: prods }, dt7Res] = await Promise.all([
     fetchByIds(ids, c => supabaseDR.from('prod_orders').select('id, session_id, status, qty, qty_ok, qty_actual, qty_target, mat_no, opened_at').in('session_id', c)),
-    fetchByIds(ids, c => supabaseDR.from('downtime_logs').select('id, session_id, duration_min, started_at, ended_at, machine_no, description, dr_downtime_types(name_th, category)').in('session_id', c)),
+    fetchByIds(ids, c => supabaseDR.from('downtime_logs').select('id, session_id, duration_min, started_at, ended_at, machine_no, description, dr_downtime_types(name_th, category, planned_cap_min)').in('session_id', c)),
     /* prod_orders(mat_no)/is_trial/excl_from_q/QBIN_EMBED = ให้ OEE สดของกะที่ยังเปิดคิด %P/%Q ตามกฎเดียวกับจออื่น (11/11) */
     fetchByIds(ids, c => supabaseDR.from('defect_logs').select(`id, session_id, qty_ng, qty_suspect, is_trial, prod_orders(mat_no), dr_defect_types(excl_from_q), ${QBIN_EMBED}`).in('session_id', c)),
     loadPairMap().then(data => ({ data })),   // cache ทะเบียนสินค้ากลาง (25/09)
-    fetchByIds(ids7, c => supabaseDR.from('downtime_logs').select('id, session_id, duration_min, started_at, ended_at, machine_no, description, dr_downtime_types(name_th, category)').in('session_id', c)),
+    fetchByIds(ids7, c => supabaseDR.from('downtime_logs').select('id, session_id, duration_min, started_at, ended_at, machine_no, description, dr_downtime_types(name_th, category, planned_cap_min)').in('session_id', c)),
     loadOpInfo(), // map รายการขั้นตอน (OP งานขับนัท) — ตัวสุดท้ายไม่เข้า destructure แค่ให้ cache พร้อม
   ]);
   // นโยบายพัก + เป้า OEE — ล้ม = ติดธง loadErr (ห้ามถือว่า "ไม่มีพัก" แล้วหักซ้ำ / ห้ามเดาเป้า 80/65)
@@ -442,7 +442,7 @@ async function loadMaintenance(ctx) {
   /* ⚠️ 30 วัน ≈ 270 กะ — `.in()` ตรงๆ URL ยาวเกินจน proxy ตัด แล้วคืนค่าว่าง "เงียบ"
      (จอช่างจะขึ้น DT 0 นาที / เครื่องหยุดซ้ำ 0 เครื่อง ทั้งที่มีของจริง) → ผ่าน fetchByIds เสมอ */
   const [dt30Res, { data: cls }] = await Promise.all([
-    fetchByIds(sIds, c => supabaseDR.from('downtime_logs').select('session_id, machine_no, duration_min, started_at, ended_at, call_mtn, description, dr_downtime_types(name_th, category)').in('session_id', c)),
+    fetchByIds(sIds, c => supabaseDR.from('downtime_logs').select('session_id, machine_no, duration_min, started_at, ended_at, call_mtn, description, dr_downtime_types(name_th, category, planned_cap_min)').in('session_id', c)),
     supabaseDR.from('checklists').select('id, equipment_id, department').eq('module', 'mtn'),
   ]);
   const eqIds = [...new Set((cls || []).map(c => c.equipment_id).filter(Boolean))];

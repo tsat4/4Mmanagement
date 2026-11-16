@@ -77,7 +77,7 @@ export default function DowntimeSiren({ mode = 'open_15min', team = null, lineNa
 
   const fetchAlerts = useCallback(async () => {
     let q = supabaseDR.from('downtime_logs')
-      .select('id, machine_no, description, started_at, call_mtn, call_mtn_at, call_mtn_ack_at, call_mtn_team, open_alerted_at, open_ack_at, dr_downtime_types(name_th, category), production_sessions(line_name, status)')
+      .select('id, machine_no, description, started_at, call_mtn, call_mtn_at, call_mtn_ack_at, call_mtn_team, open_alerted_at, open_ack_at, dr_downtime_types(name_th, category, planned_cap_min), production_sessions(line_name, status)')
       .is('duration_min', null).is('ended_at', null)
     // โหมด 'all' กรอง ack รายแถวตอนจัดชนิด (แถวเดียวมี 2 ช่อง ack) — downtime ที่เปิดค้างพร้อมกันมีไม่กี่แถว
     if (mode === 'call_mtn') q = q.eq('call_mtn', true).is('call_mtn_ack_at', null)

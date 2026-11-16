@@ -156,7 +156,7 @@ export default function LineOeeBoard() {
 
     const [dtR, defR, prods, kstds, breaks] = await Promise.all([
       fetchByIds(ids, c => supabaseDR.from('downtime_logs')
-        .select('id, session_id, duration_min, started_at, ended_at, machine_no, description, call_mtn, dr_downtime_types(name_th, category)')
+        .select('id, session_id, duration_min, started_at, ended_at, machine_no, description, call_mtn, dr_downtime_types(name_th, category, planned_cap_min)')
         .in('session_id', c)),
       fetchByIds(ids, c => supabaseDR.from('defect_logs')
         // prod_orders(mat_no) = ไว้ชี้ CT ของ NG ตอนบวกเข้าตัวเศษ %P (ngByMatFrom)

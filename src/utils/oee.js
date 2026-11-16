@@ -601,20 +601,58 @@ export function sessionDowntimeMin({
     ? breakIntervalsIn({ policies: breakPolicies, startMs: win.startMs, endMs: win.endMs, workDate: win.workDate, shift: win.shift, processType, lineName: session?.line_name ?? null, lineRules })
     : [];
   const w = weightFn || (() => 1);
-  let planned = 0, unplanned = 0, plannedRaw = 0, unplannedRaw = 0, breakOverlapMin = 0;
+  let planned = 0, unplanned = 0, plannedRaw = 0, unplannedRaw = 0, breakOverlapMin = 0, plannedOverMin = 0;
   for (const d of downtimes) {
     const raw = dtRawMin(d, nowMs);
     const eff = dtMinOutsideBreaks(d, brkIv, nowMs);
     breakOverlapMin += Math.max(0, raw - eff);
-    const isPlanned = (d?.dr_downtime_types?.category ?? d?.dt_category) === 'planned';
-    if (isPlanned) { planned += eff * w(d); plannedRaw += raw; }
-    else { unplanned += eff * w(d); unplannedRaw += raw; }
+    /* เพดานของ "หยุดตามแผน" — เกินเพดานไหลไปเป็น unplanned (§เพดาน · ห้ามแยกเองที่นี่) */
+    const sp = dtPlannedSplit(d, eff, w(d));
+    planned += sp.planned; unplanned += sp.unplanned; plannedOverMin += sp.overMin;
+    if ((d?.dr_downtime_types?.category ?? d?.dt_category) === 'planned') plannedRaw += raw;
+    else unplannedRaw += raw;
   }
   return {
-    planned, unplanned, plannedRaw, unplannedRaw, breakOverlapMin,
+    planned, unplanned, plannedRaw, unplannedRaw, breakOverlapMin, plannedOverMin,
     breakIv: brkIv, breakMin: brkIv.reduce((a, [x, y]) => a + (y - x) / 60000, 0),
     noBreakPolicy: !breakPolicies.length,
   };
+}
+
+/* ═══ 🧾 เพดานของ "หยุดตามแผน" — เกินมาตรฐาน = ความสูญเสีย (2026-11-16 · คำสั่ง user) ════
+   ที่มา (วัดจริง ก.ย.–พ.ย. 69): นาทีที่ตีเป็น "หยุดตามแผน" ส่วนใหญ่ **ไม่ใช่งานตามแผนจริง**
+   ⇒ ถูกตัดออกจากฐานเวลาทั้ง %A และ %P ⇒ **ยิ่งลงหยุดตามแผนเยอะ OEE ยิ่งสูง** (incentive กลับทาง)
+   · `Set up Machine` 733 ใบ — p50 = p75 = p90 = **30 นาทีเป๊ะ** (หน้างานลงเลขมาตรฐาน) แต่ max 345
+   · `เปลี่ยน Cap Tip` p50 6 · max 32 · `เปลี่ยนตะกร้า` เกิน 10 นาทีถึง 59-73% ของนาทีทั้งหมด
+
+   🔴 กติกา: ประเภทที่เป็น `planned` และ **ตั้งเพดานไว้** (`dr_downtime_types.planned_cap_min`)
+      ⇒ นาทีที่เกินเพดาน **ของใบนั้น** ไหลไปเป็น `unplanned` (= หักจาก %A ตามจริง)
+   🔴 **เพดานอยู่ในทะเบียน ห้าม hardcode ในโค้ด** (กฎเดียวกับเวลา setup ใน `pressSetup.js`)
+   🔴 **ไม่ได้ตั้งเพดาน (null) = พฤติกรรมเดิมเป๊ะ** — ห้ามเดาเพดานให้ใคร
+   🔴 เพดานเทียบกับ "นาทีของใบหลังหักช่วงพัก **ก่อน**หารเลน" — เปลี่ยนรุ่น 1 ครั้งบนไลน์ 6 เลน
+      ก็ยังเป็นการเปลี่ยนรุ่น 1 ครั้ง (ถ้าหารเลนก่อน เพดานจะไม่มีวันทำงานบนไลน์ขนาน)
+   ⚠️ **คิวรีที่ join `dr_downtime_types(category)` ต้องดึง `planned_cap_min` มาด้วยทุกที่**
+      ไม่ดึง = ไม่มีเพดาน = เงียบสนิท (คลาสเดียวกับลืม `select('pair_mat_no')`) — มีด่าน      */
+
+/** แยกนาทีของใบ downtime 1 ใบเป็น planned/unplanned ตามเพดานของประเภท
+ *  @param {object} d        แถว downtime (ต้อง join `dr_downtime_types(category, planned_cap_min)`)
+ *  @param {number} effMin   นาทีของใบหลังหักช่วงพักแล้ว **ก่อน**หารเลน
+ *  @param {number} weight   น้ำหนักเลน (`laneWeightFn`) — คูณท้ายสุดกับทั้ง 2 ขา
+ *  @returns {{planned:number, unplanned:number, overMin:number}}
+ */
+export function dtPlannedSplit(d, effMin, weight = 1) {
+  const eff = Math.max(0, Number(effMin) || 0);
+  const w = Number(weight);
+  const wt = Number.isFinite(w) ? w : 1;
+  const cat = d?.dr_downtime_types?.category ?? d?.dt_category;
+  if (cat !== 'planned') return { planned: 0, unplanned: eff * wt, overMin: 0 };
+  const capRaw = d?.dr_downtime_types?.planned_cap_min ?? d?.dt_planned_cap_min;
+  const cap = Number(capRaw);
+  // ไม่ได้ตั้งเพดาน / ตั้งค่าอ่านไม่ออก = ไม่มีเพดาน (ห้ามเดา)
+  if (capRaw == null || !Number.isFinite(cap) || cap < 0) return { planned: eff * wt, unplanned: 0, overMin: 0 };
+  const inPlan = Math.min(eff, cap);
+  const over = eff - inPlan;
+  return { planned: inPlan * wt, unplanned: over * wt, overMin: over * wt };
 }
 
 /** นาที downtime ต่อกะ สำหรับใช้เป็น **น้ำหนัก/ฐานเวลา** (wLoad, OOE/TEEP, strictOee)
@@ -640,9 +678,9 @@ export function dtMinBySession(sessions = [], downtimes = [], breakPolicies = []
     const sid = d.session_id;
     const o = (out[sid] ||= { planned: 0, unplanned: 0, breakMin: 0 });
     // กะที่ไม่ได้ส่งมาใน sessions (ไม่รู้ไลน์) = น้ำหนัก 1 — ห้ามเดาว่าเป็นไลน์ขนาน
-    const eff = dtMinOutsideBreaks(d, ivBy[sid] || []) * (wBy[sid] ? wBy[sid](d) : 1);
-    if ((d?.dr_downtime_types?.category ?? d?.dt_category) === 'planned') o.planned += eff;
-    else o.unplanned += eff;
+    const effRaw = dtMinOutsideBreaks(d, ivBy[sid] || []);
+    const sp = dtPlannedSplit(d, effRaw, wBy[sid] ? wBy[sid](d) : 1);
+    o.planned += sp.planned; o.unplanned += sp.unplanned; o.plannedOverMin = (o.plannedOverMin || 0) + sp.overMin;
   }
   for (const s of sessions) {
     const o = (out[s.id] ||= { planned: 0, unplanned: 0, breakMin: 0 });
@@ -779,11 +817,11 @@ export function computeLiveOee({ session, orders = [], downtimes = [], ctMap = {
   const dtOne = (d) => dtMinOutsideBreaks(d, brkIv, nowMs) * dtW(d);
   /* แยกหยุดตามแผน (PM/เปลี่ยนรุ่น) ออกจากหยุดนอกแผน — ต้อง join dr_downtime_types(category) มา
      ไม่ได้ join = ทุกแถวถูกนับเป็นนอกแผน (fail-safe ฝั่งเข้มงวด ไม่ใช่ปล่อยผ่าน) */
-  let plannedDtMin = 0, unplannedDtMin = 0;
+  let plannedDtMin = 0, unplannedDtMin = 0, plannedOverMin = 0;
   downtimes.forEach(d => {
-    const m = dtOne(d);
-    if ((d?.dr_downtime_types?.category ?? d?.dt_category) === 'planned') plannedDtMin += m;
-    else unplannedDtMin += m;
+    // เพดาน "หยุดตามแผน" คิดก่อนหารเลน แล้วค่อยถ่วงน้ำหนัก (§เพดาน)
+    const sp = dtPlannedSplit(d, dtMinOutsideBreaks(d, brkIv, nowMs), dtW(d));
+    plannedDtMin += sp.planned; unplannedDtMin += sp.unplanned; plannedOverMin += sp.overMin;
   });
   const netAvail = elapsed - plannedDtMin - breakMin;
   if (!(netAvail > 0)) return null;                    // ยังอยู่ในพัก/หยุดตามแผนทั้งช่วง = ยังประเมินไม่ได้
@@ -836,7 +874,7 @@ export function computeLiveOee({ session, orders = [], downtimes = [], ctMap = {
   const baseInfo = {
     netAvailMin: Math.round(netAvail), breakMin: Math.round(breakMin),
     plannedDtMin: Math.round(plannedDtMin), unplannedDtMin: Math.round(unplannedDtMin),
-    noBreakPolicy: !breakPolicies.length, startTimeOutOfFrame,
+    noBreakPolicy: !breakPolicies.length, startTimeOutOfFrame, plannedOverMin: Math.round(plannedOverMin),
     /* ยังไม่รู้เวลาเลิกกะ ⇒ พักท้ายกะ (5ส.) ยังไม่ถูกหัก — จอต้องเขียนบอก ห้ามเงียบ */
     noShiftEndBreak: !hardEndMs && anchoredPolicies.length > 0,
   };
@@ -1610,13 +1648,27 @@ export function computeSessionOee({
       return min > 0 ? sum + min * weightFn(d) : sum;
     }, 0);
   };
-  const isPlanned = d => (d?.dr_downtime_types?.category ?? d?.dt_category) === 'planned';
-
   const breakIv = brkIvIn(openedAt, closedAt);
   const policyBreakMin = ivMin(breakIv);
   const dtEff = d => dtMinOutsideBreaks(d, breakIv) * dtW(d);
-  const loggedPlannedDT = dtl.filter(isPlanned).reduce((s, d) => s + dtEff(d), 0);
-  const loggedUnplannedDT = dtl.filter(d => !isPlanned(d)).reduce((s, d) => s + dtEff(d), 0);
+  /* 🧾 สัดส่วนของใบที่ยังนับเป็น "ตามแผน" หลังชนเพดาน (§เพดาน)
+     ชั้น %P คิดเป็น **ช่วงเวลาต่อ MAT** ⇒ เพดานซึ่งเป็น "ต่อใบ" ต้องเฉลี่ยลงตามสัดส่วนของใบ
+     (ไม่มีเพดาน = 1 หรือ 0 ตามหมวด = พฤติกรรมเดิมเป๊ะ) */
+  const plannedShare = (d) => {
+    const full = dtMinOutsideBreaks(d, breakIv);
+    const sp = dtPlannedSplit(d, full, 1);
+    const tot = sp.planned + sp.unplanned;
+    return tot > 0 ? sp.planned / tot : 0;
+  };
+  const wPlanned = d => dtW(d) * plannedShare(d);
+  const wUnplanned = d => dtW(d) * (1 - plannedShare(d));
+  const anyRow = () => true;
+  /* เพดานของ "หยุดตามแผน" — เกินเพดานไหลไปเป็น unplanned (§เพดาน · ของกลาง `dtPlannedSplit`) */
+  let loggedPlannedDT = 0, loggedUnplannedDT = 0, plannedOverMin = 0;
+  dtl.forEach(d => {
+    const sp = dtPlannedSplit(d, dtMinOutsideBreaks(d, breakIv), dtW(d));
+    loggedPlannedDT += sp.planned; loggedUnplannedDT += sp.unplanned; plannedOverMin += sp.overMin;
+  });
   const dtBreakOverlapMin = dtl.reduce((s, d) =>
     s + Math.max(0, ((Number(d.duration_min) || 0) - dtMinOutsideBreaks(d, breakIv)) * dtW(d)), 0);
   const plannedDT = loggedPlannedDT + policyBreakMin;
@@ -1659,8 +1711,8 @@ export function computeSessionOee({
     const windowMin = (matEndMs - matStartMs) / 60000;
     const matBreakIv = brkIvIn(new Date(matStartMs), new Date(matEndMs));
     const matPolicyBreakMin = ivMin(matBreakIv);
-    const matLoggedPlanned = dtOverlapMin(matStartMs, matEndMs, isPlanned, dtl, dtW, matBreakIv);
-    const matLoggedUnplanned = dtOverlapMin(matStartMs, matEndMs, d => !isPlanned(d), dtl, dtW, matBreakIv);
+    const matLoggedPlanned = dtOverlapMin(matStartMs, matEndMs, anyRow, dtl, wPlanned, matBreakIv);
+    const matLoggedUnplanned = dtOverlapMin(matStartMs, matEndMs, anyRow, dtl, wUnplanned, matBreakIv);
     const matNetAvail = Math.max(0, windowMin - matPolicyBreakMin - matLoggedPlanned);
     const matRunMin = Math.max(0, matNetAvail - matLoggedUnplanned);
     totalNetAvailByMat += matNetAvail;
@@ -1668,11 +1720,12 @@ export function computeSessionOee({
     matRunMinMap[matNo] = matRunMin;
     matWins.push([matStartMs, matEndMs]);
   });
-  const untimedPlanned = dtl.filter(d => !d.started_at && isPlanned(d)).reduce((s, d) => s + (d.duration_min || 0) * dtW(d), 0);
-  const untimedUnplanned = dtl.filter(d => !d.started_at && !isPlanned(d)).reduce((s, d) => s + (d.duration_min || 0) * dtW(d), 0);
+  const untimed = dtl.filter(d => !d.started_at);
+  const untimedPlanned = untimed.reduce((s, d) => s + (d.duration_min || 0) * wPlanned(d), 0);
+  const untimedUnplanned = untimed.reduce((s, d) => s + (d.duration_min || 0) * wUnplanned(d), 0);
   const coveredIv = unionIv([...matWins, ...breakIv]);
-  const outsidePlanned = dtl.filter(isPlanned).reduce((s, d) => s + dtMinOutsideWork(d, coveredIv, shiftFrame) * dtW(d), 0);
-  const outsideUnplanned = dtl.filter(d => !isPlanned(d)).reduce((s, d) => s + dtMinOutsideWork(d, coveredIv, shiftFrame) * dtW(d), 0);
+  const outsidePlanned = dtl.reduce((s, d) => s + dtMinOutsideWork(d, coveredIv, shiftFrame) * wPlanned(d), 0);
+  const outsideUnplanned = dtl.reduce((s, d) => s + dtMinOutsideWork(d, coveredIv, shiftFrame) * wUnplanned(d), 0);
   if (totalNetAvailByMat > 0 && (untimedPlanned || untimedUnplanned || outsidePlanned || outsideUnplanned)) {
     totalNetAvailByMat = Math.max(0, totalNetAvailByMat - untimedPlanned - outsidePlanned);
     totalRunMinByMat = Math.max(0, totalRunMinByMat - untimedPlanned - untimedUnplanned - outsidePlanned - outsideUnplanned);
@@ -1778,7 +1831,7 @@ export function computeSessionOee({
   return {
     A, P, Q, oee, shiftMin, netAvail, runMin, policyBreakMin, plannedDT, breakSnapshot,
     totalProduced, ngQty, knownQty, unknownQty, ctUsed, ngInP, ngNoMatP, stdMin,
-    loggedPlannedDT, loggedUnplannedDT, dtBreakOverlapMin,
+    loggedPlannedDT, loggedUnplannedDT, dtBreakOverlapMin, plannedOverMin,
     pOver: pRawRatio != null && pRawRatio > 1.001,
     pRawPct: pRawRatio == null ? null : Math.round(pRawRatio * 1000) / 10,
     dtOverstateMin, loggedDtMin: Math.round(loggedPlannedDT + loggedUnplannedDT),

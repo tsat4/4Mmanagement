@@ -229,7 +229,7 @@ export default function VSM() {
       //    + `const { data }` กลืน error ⇒ C/O (setup) กับเวลาหยุดตามแผน ต่ำกว่าจริง/เป็น 0
       //    แล้ว **ค้างอยู่ใน snapshot ที่พิมพ์ออกไปแล้ว** (VSM เก็บถาวร แก้ย้อนหลังไม่ได้)
       const dtRes = await fetchByIds(sessionIds, (c) => supabaseDR.from('downtime_logs')
-        .select('session_id, duration_min, started_at, ended_at, dr_downtime_types(category, six_big_loss)')
+        .select('session_id, duration_min, started_at, ended_at, dr_downtime_types(category, planned_cap_min, six_big_loss)')
         .in('session_id', c));
       const dtRaw = dtRes.rows;
       if (dtRes.error || dtRes.truncated) setLoadWarn('โหลด downtime ไม่ครบ — ค่า C/O และเวลาหยุดตามแผนอาจต่ำกว่าจริง (อย่าเพิ่งบันทึกเป็นเอกสาร)');
@@ -374,7 +374,7 @@ export default function VSM() {
           .select('session_id, mat_no, status, qty, qty_ok, qty_actual, qty_target, machine_no, opened_at, confirmed_at')
           .in('session_id', ids),
         supabaseDR.from('downtime_logs')
-          .select('session_id, machine_no, description, started_at, ended_at, duration_min, created_at, dr_downtime_types(name_th, category)')
+          .select('session_id, machine_no, description, started_at, ended_at, duration_min, created_at, dr_downtime_types(name_th, category, planned_cap_min)')
           .in('session_id', ids),
         // excl_from_q ต้อง join มาด้วย ไม่งั้นงานทดลองตกหล่นเงียบ (กฎ %Q)
         supabaseDR.from('defect_logs')

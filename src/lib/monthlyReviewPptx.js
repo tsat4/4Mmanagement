@@ -382,7 +382,7 @@ async function buildTrendMonths({ monthKeys, sections, allLineNames, perLine = f
     if (sessions.truncated) return { series: {}, byLine: null, warn: 'กะย้อนหลังเกินเพดานที่ดึงได้ — ลดช่วงเดือนหรือลดจำนวนไลน์' };
     const ids = sessions.map(x => x.id);
     const [dtR, defR, ordR, brkR] = await Promise.all([
-      fetchByIds(ids, c => supabaseDR.from('downtime_logs').select('session_id, duration_min, started_at, ended_at, dr_downtime_types(name_th, category)').in('session_id', c)),
+      fetchByIds(ids, c => supabaseDR.from('downtime_logs').select('session_id, duration_min, started_at, ended_at, dr_downtime_types(name_th, category, planned_cap_min)').in('session_id', c)),
       fetchByIdsTolerant(ids,
         (sel, c) => supabaseDR.from('defect_logs').select(sel).in('session_id', c),
         'session_id, qty_ng, qty_suspect, is_trial, dr_defect_types(excl_from_q)',
@@ -574,8 +574,8 @@ export async function buildMonthlyReviewData({ monthKey, sections, trendMonths =
   //    (เคยเขียน name → query ล้มเงียบทั้งเด็ค DT=0h — ต้นเหตุรายงาน JULY 2026 ว่าง)
   /* ⚠️ `started_at`/`ended_at` ต้องอยู่ทั้ง FULL และ SLIM — `dtMinOutsideBreaks` ตัดช่วงพักไม่ได้
      ถ้าไม่มี `started_at` แล้วคืนค่าดิบเงียบๆ ⇒ ตกลงมา SLIM เมื่อไหร่ ตัวเลขจะหักซ้ำโดยไม่มีใครรู้ */
-  const DT_FULL = 'id, session_id, machine_no, description, duration_min, started_at, ended_at, fix_action, fix_by, followup_result, followup_by, dr_downtime_types(name_th, category, six_big_loss, waste_type)';
-  const DT_SLIM = 'id, session_id, machine_no, description, duration_min, started_at, ended_at, dr_downtime_types(name_th, category)';
+  const DT_FULL = 'id, session_id, machine_no, description, duration_min, started_at, ended_at, fix_action, fix_by, followup_result, followup_by, dr_downtime_types(name_th, category, planned_cap_min, six_big_loss, waste_type)';
+  const DT_SLIM = 'id, session_id, machine_no, description, duration_min, started_at, ended_at, dr_downtime_types(name_th, category, planned_cap_min)';
   const DEF_FULL = 'session_id, qty_ng, qty_suspect, description, is_trial, fix_action, fix_by, followup_result, dr_defect_types(name_th, excl_from_q, six_big_loss, waste_type)';
   const DEF_SLIM = 'session_id, qty_ng, qty_suspect, description, dr_defect_types(name_th)';
   const [dtRes, defRes, ordRes, brkRes] = await Promise.all([

@@ -872,7 +872,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
   const loadDT = useCallback(async (sessionId) => {
     if (!sessionId) return;
     const { data, error } = await supabaseDR.from('downtime_logs')
-      .select('*, dr_downtime_types(name_th, color, category)')
+      .select('*, dr_downtime_types(name_th, color, category, planned_cap_min)')
       .eq('session_id', sessionId)
       .order('started_at', { ascending: false });
     if (isStaleSess(sessionId)) return;   // กะถูกสลับระหว่างรอ — คำตอบนี้ไม่ใช่ของกะที่เลือก
@@ -7676,7 +7676,7 @@ function HistoryTab({ role }) {
     if (!force && dtMap[sessionId]) return { dts: dtMap[sessionId], defects: defectMap[sessionId] || [] }; // already loaded
     const [{ data: dts, error: e1 }, { data: defects, error: e2 }, { data: orders, error: e3 }] = await Promise.all([
       supabaseDR.from('downtime_logs')
-        .select('*, dr_downtime_types(name_th, color, category)')
+        .select('*, dr_downtime_types(name_th, color, category, planned_cap_min)')
         .eq('session_id', sessionId).order('started_at'),
       supabaseDR.from('defect_logs')
         // mat_no/part_name ต้องมาด้วย — โมดัล 🛠 ใช้จับคู่ WI การซ่อมจากเลขพาร์ท (WI-PD3-069 §6)
@@ -8262,7 +8262,7 @@ function ExportTab() {
       let q = supabaseDR.from('production_sessions')
         .select(`*, dr_products(name, cycle_time_sec, target_per_shift),
                  prod_orders(*),
-                 downtime_logs(*, dr_downtime_types(name_th, category)),
+                 downtime_logs(*, dr_downtime_types(name_th, category, planned_cap_min)),
                  defect_logs(*, dr_defect_types(name_th))`)
         .eq('status', 'closed')
         .gte('work_date', filter.date_from)
@@ -9827,9 +9827,9 @@ function DowntimeTypeSetup({ role }) {
   const openEdit = (item = null) => {
     setEditing(item?.id || 'new');
     setForm(item
-      ? { name_th: item.name_th, name_en: item.name_en || '', category: item.category, process_type: item.process_type || 'welding_assembly', color: item.color, sort_order: item.sort_order, is_active: item.is_active, six_big_loss: item.six_big_loss || '', waste_type: item.waste_type || '', machine_type_ids: item.machine_type_ids || [], equipment_kinds: item.equipment_kinds || [], mb_flag: mbFlagOf(item) }
+      ? { name_th: item.name_th, name_en: item.name_en || '', category: item.category, planned_cap_min: item.planned_cap_min ?? '', process_type: item.process_type || 'welding_assembly', color: item.color, sort_order: item.sort_order, is_active: item.is_active, six_big_loss: item.six_big_loss || '', waste_type: item.waste_type || '', machine_type_ids: item.machine_type_ids || [], equipment_kinds: item.equipment_kinds || [], mb_flag: mbFlagOf(item) }
       // สร้างใหม่ default สีที่ยังไม่ซ้ำกับประเภทที่มี (ผู้ใช้เปลี่ยนทับได้)
-      : { name_th: '', name_en: '', category: 'unplanned', process_type: 'welding_assembly', color: pickUnusedColor(items.map(i => i.color)), sort_order: items.length + 1, is_active: true, six_big_loss: '', waste_type: '', machine_type_ids: [], equipment_kinds: [], mb_flag: 'unset' });
+      : { name_th: '', name_en: '', category: 'unplanned', planned_cap_min: '', process_type: 'welding_assembly', color: pickUnusedColor(items.map(i => i.color)), sort_order: items.length + 1, is_active: true, six_big_loss: '', waste_type: '', machine_type_ids: [], equipment_kinds: [], mb_flag: 'unset' });
   };
 
   const handleSave = async () => {
@@ -9839,7 +9839,11 @@ function DowntimeTypeSetup({ role }) {
     /* 🔧 ธง "ของช่างไหม" — `mb_flag` เป็นคีย์บนจอ ต้องแปลงเป็น boolean/null ก่อนลงฐาน
          🔴 ยังไม่ระบุ = null ห้ามเก็บ false (false = ตัดสินแล้วว่าไม่ใช่ของช่าง คนละเรื่อง) */
     const { mb_flag, ...rest } = form;
-    const payload = { ...rest, six_big_loss: form.six_big_loss || null, waste_type: form.waste_type || null, machine_type_ids: idsForDb(form.machine_type_ids), equipment_kinds: idsForDb(form.equipment_kinds), is_machine_breakdown: mbValueForDb(mb_flag) };
+    /* 🧾 เพดานหยุดตามแผน — ว่าง = null (ไม่มีเพดาน) · หมวดนอกแผนไม่เก็บเพดานไว้ให้สับสน
+       🔴 ห้ามเก็บ '' (จะกลายเป็น 0 = "ทั้งใบเป็นนอกแผน" ซึ่งคนละความหมายกับ "ไม่ได้ตั้ง") */
+    const capNum = parseInt(form.planned_cap_min, 10);
+    const planned_cap_min = form.category === 'planned' && Number.isFinite(capNum) && capNum >= 0 ? capNum : null;
+    const payload = { ...rest, planned_cap_min, six_big_loss: form.six_big_loss || null, waste_type: form.waste_type || null, machine_type_ids: idsForDb(form.machine_type_ids), equipment_kinds: idsForDb(form.equipment_kinds), is_machine_breakdown: mbValueForDb(mb_flag) };
     const { error } = editing === 'new'
       ? await supabaseDR.from('dr_downtime_types').insert(payload)
       : await supabaseDR.from('dr_downtime_types').update(payload).eq('id', editing);
@@ -9978,6 +9982,20 @@ function DowntimeTypeSetup({ role }) {
                   <option value="planned">{tr('ในแผน (Planned)')}</option>
                 </select>
               </Field>
+              {/* 🧾 เพดานของ "หยุดตามแผน" — เกินเพดาน = นับเป็นนอกแผน (oee.js dtPlannedSplit · 16/11)
+                  🔴 เพดานอยู่ในทะเบียน **ห้าม hardcode ในโค้ด** · ว่าง = ไม่มีเพดาน = พฤติกรรมเดิม */}
+              {form.category === 'planned' && (
+                <Field label={tr('เพดานนาทีต่อใบ (เกินกว่านี้นับเป็นนอกแผน)')}>
+                  <input type="number" min="0" max="1440" inputMode="numeric"
+                    value={form.planned_cap_min ?? ''}
+                    onChange={e => setForm(f => ({ ...f, planned_cap_min: e.target.value }))}
+                    placeholder={tr('ว่าง = ไม่มีเพดาน')} style={inputStyle} />
+                  <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3, lineHeight: 1.5 }}>
+                    {tr('เช่น เปลี่ยนรุ่นมาตรฐาน 30 นาที — ใบที่ใช้ 60 นาที จะนับเป็นในแผน 30 + นอกแผน 30')}
+                    <br />{tr('ว่างไว้ = ไม่จำกัด (ทั้งใบนับเป็นหยุดตามแผน เหมือนเดิม)')}
+                  </div>
+                </Field>
+              )}
               {/* แกน Lean — แยกจาก category ที่ใช้คิด OEE โดยตั้งใจ (ดู src/utils/oee.js §6)
                   ตอบคนละคำถาม: "เวลาที่เสียไปเป็นความสูญเปล่าประเภทไหน แก้ด้วยเครื่องมืออะไร" */}
               <Field label={tr('6 Big Losses (TPM) — สำหรับวิเคราะห์ ไม่กระทบ OEE')}>
