@@ -135,6 +135,7 @@ migration `20261008_doc_forms_csv_round2_main.sql` (MAIN · **apply แล้ว
 
 **เพิ่ม 05/11:** `xlsx_die_registry` — Excel ทะเบียนแม่พิมพ์ (`/equipment?tab=die` ปุ่ม 📥 · `DieRegistry.jsx` · แถว `src/utils/dieRegistryExport.js`) · migration `20261105b_doc_forms_xlsx_die_registry_main.sql` (MAIN · **apply แล้ว** · `form_code` ว่าง)
 
+**16/11:** `qa_inspection_sheet` ตั้ง FM-QA-112 Rev. 01 (Effective 13/11/2020 · ช่องเซ็น Approved/Checked/Prepared) ตามใบจริง · เพิ่ม `csv_qa_inspection_data` (CSV ผล Inspection Data) — migration `20261116b_doc_forms_qa_inspection_data_main.sql`
 **เพิ่ม 05/11:** `qa_inspection_sheet` — ใบตรวจตามมาตรฐาน QA (ปุ่ม 🖨️ ใน `/qa` แท็บใบตรวจ · `src/lib/qaSheetPrint.js` · แถว `src/utils/qaPrintRows.js`)
 · migration `20261105_doc_forms_qa_inspection_sheet_main.sql` (MAIN · **apply แล้ว**) · `form_code` ว่าง — doc_control ตั้งเลข/ช่องเซ็นที่ `/doc-forms` (fallback ช่องเซ็น: ผู้ตรวจ · ผู้ทบทวน)
 · 🔴 จุดที่ยังไม่ตรวจต้องพิมพ์ด้วย (แถว "ยังไม่ตรวจ" + หัวใบ "ตรวจแล้ว X/Y จุด") · ใบที่ยังไม่ปิด = แถบเตือนบนใบ
