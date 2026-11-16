@@ -197,3 +197,18 @@ export function amountText(a, { monthLabel = (m) => `เดือน ${m}` } = {
   const miss = a.missing.length ? ` · ขาด ${a.missing.map(monthLabel).join(' ')}` : '';
   return `💰 ${cur} · สะสม ${fmtMoney(a.ytd)} (${a.have.length} เดือน${miss})`;
 }
+
+/* ── 🔬 แตกสูตรรวมเป็นสูตรลูก (16/11 · user: "dl+oh พอเจาะเข้าไปควรแตกเป็น 2 กราฟ dl กับ oh") ──
+   สูตรที่ประกาศ `parts` ใน KPI_FORMULAS (dloh_pct → dl_pct · oh_pct) — ใช้ `inputs` รายเดือนชุดเดียวกับที่คำนวณค่าหลัก
+   (`applyFormulaEntries().info[defId]`) ⇒ ตัวเลขลูกกับแม่มาจากตัวแปรชุดเดียวกันเสมอ · ไม่มี parts = [] */
+export function formulaPartSeries(info) {
+  const f = info?.key ? formulaOf(info.key) : null;
+  if (!f || !Array.isArray(f.parts) || !f.parts.length) return [];
+  return f.parts.map((pk) => {
+    const pf = formulaOf(pk);
+    if (!pf) return null;
+    const months = {};
+    for (let m = 1; m <= 12; m++) months[m] = evalFormula(pk, info.inputs?.[m] || {}).value;
+    return { key: pk, label: pf.label, unit: pf.unit, expr: pf.expr, months };
+  }).filter(Boolean);
+}
