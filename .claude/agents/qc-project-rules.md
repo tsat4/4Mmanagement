@@ -452,6 +452,13 @@ model: inherit
   · grep: `domain=\{\[(dataMin|\(?\w+\)? =>|[1-9])` · `domain:\s*\[(dataMin|\w+ =>)` · ด่าน `chart-yaxis-domain-hand-made`
 - **F-KPILEVEL** ช่องตัดสิน KPI (`yn`/`ynTotal`/สีจุดกราฟ) ต้องเป็นระดับ 1/0.5/0 จาก `scoreDef` — ห้าม `v >= target` / `v < target` เอง (2 สีไม่รู้จัก Commitment)
   · grep: `yn(Total)?:\s*[^,]*(>=|<=)` · `const \w*(miss|hit|pass)Target\w* =` · ด่าน `kpi-yn-boolean-compare`
+- **F-CSATQD** 🤝 คะแนนรายขา Quality/Delivery ของ Customer/Internal Satisfaction ต้องผ่าน `src/utils/kpiCustomerSat.js`
+  (`legPct`/`combineLegs`/`csatMonth`/`csatCoverage`) — **ค่ารวมของเดือน = (ΣActual ÷ ΣTotal) × 100 · ห้ามเฉลี่ย % ของ 2 ขา**
+  (ตัวหารไม่เท่ากัน) · ขาไม่ครบ = `null` + เขียนบนจอ **ห้ามนับ 0** · ทะเบียนมีหัวข้อนี้ **1 ข้อ 1 คะแนน** ⇒ ห้ามแตกเป็น KPI 2 ตัว
+  · โค้ดห้ามเขียนทับ `kpi_manual_entries.value` เอง (คนกดปุ่มเท่านั้น)
+  · grep: `actual_score` · `total_score` · ด่าน `csat-qd-via-util`
+- **F-KPIDUP** 👯 จอที่ตั้ง/กรอก KPI ต้องฟ้องเมื่อมี KPI ซ้ำในขอบเขตเดียวกัน (`findDupDefs` · `utils/kpiDupDefs.js`)
+  — **ห้ามลบ/ปิด/ย้ายค่าให้เอง** (ค่าที่กรอกไว้กำพร้า) · เคสจริง: ระดับโรงงานมี `Customer Satisfaction` 2 แถว ต่างกันแค่ `(Q&D)`
 - **F-SHADOW** 💥 `const <ชื่อ>` ที่**ชนกับ named import ในไฟล์เดียวกัน** แล้วมีการเรียก `<ชื่อ>()` ข้างใน
   = **TDZ จอขาวทั้งหน้า** (เคสจริง 25-26/10 · 4 หน้า: /energy /morning-meeting die/jig registry)
   · lint `no-use-before-define` จับไม่ได้เพราะการอ่านอยู่ใน callback (คนละ scope)

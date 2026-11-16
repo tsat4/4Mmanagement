@@ -23,7 +23,11 @@ import { checkWriteRows } from '../utils/dbWrite';
 import { findClosedTwin, restoreQuestion } from '../utils/kpiClosed';
 import { scoreDef, KPI_LEVELS, KPI_PERSPECTIVES, perspectiveLabel, KPI_SUMMARY_MODES,
   unitOf, decimalsOf, summaryModeOf, summaryShort, summaryModeLabel, fmtKpi, summaryOf, planProgress, valueScopeOf, sharedValueDef, KPI_VALUE_SCOPES, KPI_BOARD_SLOTS, boardSlotOf, missingPlantValueDefs, plantDefPayloadFrom,
-  KPI_FORMULAS, formulaOf, baseVarOf, KPI_BASE_VARS } from '../utils/kpiSetup';
+  KPI_FORMULAS, formulaOf, baseVarOf, KPI_BASE_VARS, checkStdSelection, guessStdUnit, stdUnitLabel } from '../utils/kpiSetup';
+/* 🤝 แยก Q/D ของ Customer/Internal Satisfaction (16/11) — สูตร/สถานะอยู่ใน util ห้ามคิดในหน้า */
+import { canSplitQd, indexCsatParts, legMonths, splitMonths, csatCoverage, csatMonth, CSAT_LEGS, CSAT_LEG_KEYS, CSAT_FORMULA } from '../utils/kpiCustomerSat';
+import { findDupDefs, dupGroupFacts, dupReasonLabel, DUP_REASONS } from '../utils/kpiDupDefs';
+import KpiCustomerSatModal from './KpiCustomerSatModal';
 import { applyFormulaEntries, buildBaseIndex, formulaNoteText, formulaSummaryText, formulaOfDef, formulaMonthMode } from '../utils/kpiFormula';
 import KpiBaseInputsPanel from './KpiBaseInputsPanel';
 import { headcountAuto, headcountAutoVar } from '../utils/kpiHeadcount';
@@ -153,12 +157,21 @@ function MiniChart({ vals, kind, target, dir, curIdx, plan, def = null }) {
 }
 
 /* กราฟใหญ่ (คลิกจากแถว) — Recharts เต็มแกน + เส้นเป้า · ตัวเลขชุดเดียวกับตาราง ห้ามคำนวณใหม่ */
+const EXTRA_COLORS = ['var(--blue)', 'var(--text2)'];   // ขา Q/D — ไม่ใช่สถานะ ⇒ ห้ามใช้เขียว/เหลือง/แดง (พาเลต ≤5 สี · UI §6.17)
 function ChartModal({ c, curIdx, onClose }) {
   const sdef = c.def || defOfTarget(c.target, c.dir);
-  const data = TH_M.map((m, i) => ({ m: m.replace('.', ''), v: c.vals[i] != null && Number.isFinite(c.vals[i]) ? +Number(c.vals[i]).toFixed(c.dec ?? 0) : null, i }));
+  /* 🤝 เส้นประกอบ (ขา Q/D ของ satisfaction) — หน่วยเดียวกับเส้นหลัก ⇒ แกนเดียว (ห้ามแกน Y 2 ข้าง · UI §6.19) */
+  const extra = (c.extra || []).filter(s => Array.isArray(s?.vals));
+  const data = TH_M.map((m, i) => ({
+    m: m.replace('.', ''), i,
+    v: c.vals[i] != null && Number.isFinite(c.vals[i]) ? +Number(c.vals[i]).toFixed(c.dec ?? 0) : null,
+    ...Object.fromEntries(extra.map(s => [`x_${s.key}`, s.vals[i] != null && Number.isFinite(s.vals[i]) ? +Number(s.vals[i]).toFixed(c.dec ?? 0) : null])),
+  }));
   /* กราฟเส้นขยายช่วงค่าให้เห็นความต่าง — ช่วงต้องมาจาก focusDomain (ทุกจุด+เป้าอยู่ในช่วง · มี 0 จริง = ไม่โฟกัส) และต้องมีป้ายบอกว่าแกนไม่เริ่ม 0
      (05/10 · audit — เดิม domain ['auto','auto'] = Recharts ยกพื้นแกนเองเงียบๆ ไม่มีป้าย) · แท่ง = เริ่ม 0 เสมอ */
-  const focus = c.kind === 'line' ? focusDomain([...data.map(d => d.v), c.target], { max: null }) : null;
+  const focus = c.kind === 'line'
+    ? focusDomain([...data.map(d => d.v), ...extra.flatMap(s => data.map(d => d[`x_${s.key}`])), c.target], { max: null })
+    : null;
   return (
     <div className="modal-scroll" onClick={onClose} /* ดูกราฟอย่างเดียว ไม่ใช่ฟอร์มกรอก → ปิดจาก backdrop ได้ตามกฎ */ style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14 }}>
       <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: '16px 18px', width: 'min(860px, 96vw)' }}>
@@ -187,12 +200,25 @@ function ChartModal({ c, curIdx, onClose }) {
               <Line dataKey="v" type="monotone" stroke="var(--accent)" strokeWidth={2.4} connectNulls
                 isAnimationActive={false} dot={{ r: 3.5 }} label={{ position: 'top', fontSize: 11, fill: 'var(--text2)' }} />
             )}
+            {/* 🤝 ขา Q/D = เส้นประบาง ไม่มีป้ายตัวเลข — เป็นรายละเอียดของค่ารวม ไม่ใช่ตัวตัดสินคะแนน */}
+            {extra.map((s, k) => (
+              <Line key={s.key} dataKey={`x_${s.key}`} name={s.label} type="monotone" stroke={EXTRA_COLORS[k % EXTRA_COLORS.length]}
+                strokeWidth={1.6} strokeDasharray="5 3" connectNulls isAnimationActive={false} dot={{ r: 2.4 }} />
+            ))}
           </ComposedChart>
         </ResponsiveContainer>
         </div>
         <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
           ตัวเลขชุดเดียวกับตาราง (นับเฉพาะกะปิดแล้ว){curIdx >= 0 ? ` · ${TH_M[curIdx]} ยังไม่จบเดือน (แสดงจาง)` : ''}
           {sdef ? ' · เขียว = ถึง Target · เหลือง = ถึงแค่ Commitment · แดง = ไม่ถึง (เกณฑ์เดียวกับ ○△✗ ในตาราง)' : ''}
+          {extra.length > 0 && (
+            <div>
+              {extra.map((s, k) => (
+                <span key={s.key} style={{ marginRight: 10, color: EXTRA_COLORS[k % EXTRA_COLORS.length], fontWeight: 700 }}>— — {s.label}</span>
+              ))}
+              <span>เส้นประ = ขาของแบบสอบถาม (รายละเอียดของค่ารวม) · <b>ไม่มีคะแนนรายขา</b> — คะแนน 1/0.5/0 ตัดสินจากค่ารวมตัวเดียว</span>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -252,6 +278,14 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
   const [empRows, setEmpRows] = useState([]);      // 👥 ทะเบียนพนักงาน active — ตัวหาร manpower อัตโนมัติ (ค่ากรอกมือชนะ)
   /* แผนรายเดือน (kpi_month_plans) — คนละตารางกับค่าจริงโดยตั้งใจ (unique(kpi_id,month) ของค่าจริงจะพังถ้ายัด kind เข้าไป) */
   const [plans, setPlans] = useState({});          // kpi_id -> { month: plan_value }
+  /* 🤝 ขา Q/D ของ Customer/Internal Satisfaction (`kpi_customer_sat_parts` · 16/11)
+     — คนละตารางกับค่ารวมโดยตั้งใจ: ค่ารวมที่ส่งกลุ่มยังอยู่ `kpi_manual_entries.value` ตัวเดิม */
+  const [csat, setCsat] = useState({});            // kpi_id -> { month: { quality|delivery: row } }
+  const [csatMissing, setCsatMissing] = useState(false);   // ยังไม่ apply migration (42P01)
+  const [csatOpen, setCsatOpen] = useState(null);  // แถวที่เปิดแผงแยก Q/D อยู่
+  const [splitRows, setSplitRows] = useState({});  // kpi_id -> true = กางแถว Q/D ในตาราง
+  /* 📘 ทะเบียนมาตรฐานของหน่วยงานที่ใบนี้อิง — ใช้ฟ้องว่า "ข้อบังคับข้อไหนยังไม่ได้ตั้ง" (เคส QA 16/11) */
+  const [stdItems, setStdItems] = useState(null);  // null = ยังไม่โหลด/ไม่มีหน่วยงานมาตรฐาน
   const [showPlan, setShowPlan] = useState(false); // ปิดไว้ก่อน — เปิดแล้วตารางสูงเท่าตัว
   /* ⚡ KPI ช่างตามสูตรทางการ (KPI Guideline 2026 หน้า 10 · 24/09) — ขอบเขตที่เป็น "ทีมช่าง" (mtn_teams.dept_name ตรงกับ
      ชื่อแผนกในผัง เช่น JIG MTN) โหลด Σ รายเดือนจาก RPC `kpi_mtn_rollup` แล้วคำนวณ MO Closed/MBD/MTBF/MTTR ใน `utils/kpiAuto.js`
@@ -485,6 +519,22 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
     entRes.rows.forEach(e => { (map[e.kpi_id] = map[e.kpi_id] || {})[e.month] = e.value != null ? Number(e.value) : null; });
     setEntries(map);
 
+    /* 🤝 ขา Q/D — โหลดเฉพาะแถวที่เป็น satisfaction (ทะเบียนบอกว่าสูตร (Actual/Total)×100)
+       tolerant: ยังไม่ apply migration = ไม่มีการแยกขา ไม่ใช่ทั้งแท็บล่ม (ติดป้ายบอกบนแผงแยกขา) */
+    /* ยิงตรง (ไม่ผ่าน fetchByIds) เพื่ออ่าน `error.code` ให้ได้ — fetchByIds คืน error เป็นข้อความ แยก 42P01 ไม่ออก
+       ⇒ ต้องกันเพดาน 1000 แถวเอง: ตัดที่ 30 นิยาม × 12 เดือน × 2 ขา = **สูงสุด 720 แถว** (วัดจริง 16/11:
+       ขอบเขตที่มีแถว satisfaction มากสุดมี 1 แถว ⇒ 24 แถว) · ถ้าวันหนึ่งนิยามเกิน 30 ให้ย้ายไป fetchByIds */
+    const satIds = [...rows, ...below].filter(canSplitQd).map(r => r.id).slice(0, 30);
+    if (satIds.length) {
+      const sp = await supabase.from('kpi_customer_sat_parts')
+        .select('id, kpi_id, month, part, actual_score, total_score').in('kpi_id', satIds);
+      if (!alive()) return;
+      const missing = (sp.error?.code || '') === '42P01';
+      setCsatMissing(missing);
+      if (sp.error && !missing) toast.error('โหลดคะแนนแยก Q/D ไม่สำเร็จ: ' + sp.error.message);
+      setCsat(sp.error ? {} : indexCsatParts(sp.data || []));
+    } else { setCsat({}); setCsatMissing(false); }
+
     /* แผนรายเดือน — tolerant เหมือนกัน: ยังไม่ apply migration = ไม่มีแผน ไม่ใช่ทั้งแท็บล่ม */
     const planRes = await fetchByIds(rows.map(r => r.id), (c) => supabase.from('kpi_month_plans')
       .select('id, kpi_id, month, plan_value').in('kpi_id', c));
@@ -533,6 +583,37 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
       return;
     }
     setPlans(p => ({ ...p, [kpiId]: { ...(p[kpiId] || {}), [month]: value } }));
+  };
+
+  /* 🤝 บันทึกคะแนนดิบรายขา (Q/D) — คนละตารางกับค่ารวม · กติกาเดียวกับ saveCell/savePlanCell
+     🔴 ตัวนี้ **ไม่แตะค่ารวมที่ส่งกลุ่ม** (`kpi_manual_entries.value`) เลย — ค่ารวมเปลี่ยนได้ด้วยการกดปุ่มของคนเท่านั้น
+     🔴 2 ช่องว่างทั้งคู่ = ลบแถว (ไม่เก็บแถวเปล่าไว้ให้ดูเหมือน "แยกแล้ว") */
+  const saveCsatPart = async (kpiId, month, part, payload) => {
+    /* 🔐 ด่านชั้นที่ 3 ซ้ำตอนกดจริง — ซ่อนช่องอย่างเดียวไม่พอ (deep-link `?scope=` เปิดตรงได้) */
+    if (!scopeWrite.ok) { toast.info(writeBlockText(scopeWrite, { what: 'KPI ของขอบเขตนี้', unit: scopeOwner })); return; }
+    if (!CSAT_LEG_KEYS.includes(part)) { toast.error('ขาที่ไม่รู้จัก: ' + part); return; }
+    const a = payload.actual_score, t = payload.total_score;
+    const empty = a == null && t == null;
+    const res = empty
+      ? await supabase.from('kpi_customer_sat_parts').delete().eq('kpi_id', kpiId).eq('month', month).eq('part', part).select('id')
+      : await supabase.from('kpi_customer_sat_parts')
+        .upsert({ kpi_id: kpiId, month, part, actual_score: a, total_score: t }, { onConflict: 'kpi_id,month,part' }).select('id');
+    if (res.error) {
+      toast.error((res.error.code === '42501' ? 'ไม่มีสิทธิ์กรอกคะแนนแยก Q/D (ต้องมี kpi:manage) — '
+        : res.error.code === '42P01' ? 'ยังไม่ได้ apply migration 20261116c_kpi_customer_sat_parts_main.sql (Main) — ' : 'บันทึกไม่สำเร็จ: ') + res.error.message);
+      setCsat(p => ({ ...p }));
+      return;
+    }
+    /* กฎ DB ข้อ 2: RLS ปฏิเสธ upsert/delete = สำเร็จ 0 แถวไม่มี error — ลบของที่ไม่มีอยู่ก็ 0 แถว ⇒ เช็คเฉพาะตอนเขียน */
+    if (!empty && !res.data?.length) { toast.error('บันทึกไม่ได้ (ไม่มีสิทธิ์แก้แถวนี้ — RLS ปฏิเสธเงียบ)'); setCsat(p => ({ ...p })); return; }
+    setCsat((p) => {
+      const byMonth = { ...(p[kpiId] || {}) };
+      const legs = { ...(byMonth[month] || {}) };
+      if (empty) delete legs[part];
+      else legs[part] = { ...(legs[part] || {}), kpi_id: kpiId, month, part, actual_score: a, total_score: t };
+      byMonth[month] = legs;
+      return { ...p, [kpiId]: byMonth };
+    });
   };
 
   const monthsOf = (src, id) => Array.from({ length: 12 }, (_, i) => src[id]?.[i + 1] ?? null);
@@ -693,6 +774,43 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
      (เฉพาะกรอกมือ) จะนับน้ำหนักขาด และฟ้องว่าข้อบังคับที่ ESM คำนวณให้อยู่แล้ว (OEE/PPM) "ยังไม่ได้หยิบ" */
   const defsForStd = useMemo(() => (allDefs || []).filter(d => sameScope(canonicalScope(org, scopeOfDef(d)), kpiScope)), [allDefs, org, kpiScope]);
 
+  /* ── 👯 KPI ซ้ำในขอบเขตเดียวกัน (16/11) ──────────────────────────────────────────────
+     เคสจริง: ระดับ ทั้งโรงงาน มี `Customer Satisfaction (Q&D)` + `Customer Satisfaction` active พร้อมกัน
+     (ชื่อต่างแค่วงเล็บ ⇒ บอร์ดขึ้น 2 แผ่น · คนกรอกค่าเดียวกัน 2 ที่ · ก.ย. ได้ 100 กับ 93.75 ขัดกันแล้ว)
+     🔴 จอ "ฟ้อง" เท่านั้น ห้ามลบ/ปิดให้เอง — Actual ที่กรอกไว้จะกำพร้า (คนต้องเลือกว่าเก็บตัวไหน)
+     ขอบเขตเทียบด้วย canonical (CC ↔ หน่วยเจ้าของ ต้องนับเป็นขอบเขตเดียวกัน · กฎ kpi-scope-write-raw) */
+  const dupGroups = useMemo(() => {
+    if (!allDefs) return [];
+    const sk = (d) => { const c = canonicalScope(org, scopeOfDef(d)); return scopeKey(c.kind, c.value); };
+    return findDupDefs(allDefs, { scopeKeyOf: sk });
+  }, [allDefs, org]);
+
+  /* ── 📘 ข้อบังคับของหน่วยงานมาตรฐานที่ "ยังไม่ได้ตั้ง" (16/11 · เคส QA ไม่มี Customer Satisfaction เลย)
+     🔴 ระบบ**ห้ามสร้างแถว KPI ให้เอง** — การเลือก KPI ต่อหน่วยงานเป็นการตั้งค่าของคน (CLAUDE.md §OBEYA)
+        หน้าที่ของจอ = บอกว่าขาดข้อไหน + พาไปจอที่ตั้งได้ (ห้ามปล่อยให้เห็นตารางว่างแล้วเข้าใจว่าไม่มีข้อบังคับ) */
+  const savedStdUnit = useMemo(() => defsForStd.map(d => d.std_unit).find(Boolean) || '', [defsForStd]);
+  const scopeStdGuess = useMemo(
+    () => (savedStdUnit ? '' : guessStdUnit(kpiScope.kind === 'plant' ? '' : kpiScope.value) || ''),
+    [savedStdUnit, kpiScope]);
+  useEffect(() => {
+    let alive = true;
+    const unit = savedStdUnit;
+    if (!unit) { setStdItems(null); return () => { alive = false; }; }
+    (async () => {
+      const r = await supabase.from('kpi_standard_items')
+        .select('id, seq, sort_order, perspective, topic, formula_text, requirement')
+        .eq('year', year).eq('std_unit', unit).order('sort_order');
+      if (!alive) return;
+      setStdItems(r.error ? null : (r.data || []));    // โหลดไม่ได้ = ไม่ฟ้องว่าขาด (ห้ามเดา) ไม่ใช่แท็บล่ม
+    })();
+    return () => { alive = false; };
+  }, [year, savedStdUnit]);
+  const stdGap = useMemo(() => {
+    if (!Array.isArray(stdItems) || !stdItems.length) return null;
+    const chk = checkStdSelection(defsForStd, stdItems);
+    return chk.missingFixed.length ? chk : null;
+  }, [stdItems, defsForStd]);
+
   /* นิยามของแถวอัตโนมัติ — เก็บ "เป้า/ทิศทาง/commitment" ไว้ที่ kpi_definitions (source='auto:<key>')
      ⚠️ ค่าไม่ได้มาจากที่นี่ (ระบบคำนวณเอง) แถวนิยามเก็บแค่เกณฑ์ตัดสิน                       */
   const autoDefBy = useMemo(() => {
@@ -752,6 +870,13 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
     vals: Array.from({ length: 12 }, (_, i) => entriesFx[d2.id]?.[i + 1] ?? null),
     target: d2.target_value != null ? Number(d2.target_value) : null, dir: d2.direction || null,
     def: d2,   // ให้สีจุดรู้จัก Commitment ด้วย (scoreDef 3 ระดับ)
+    /* 🤝 กดเข้าไปดูแล้วเห็น 2 ขา Q/D ด้วย (16/11 · คำสั่ง user) — หน่วยเดียวกัน (%) จึงอยู่แกนเดียวกันได้
+       🔴 เส้นประ + ไม่มีจุดสีคะแนน: ขาไม่มีคะแนนของตัวเอง (คะแนน 1/0.5/0 มาจากค่ารวมตัวเดียวเท่านั้น) */
+    extra: canSplitQd(d2)
+      /* ค่าโรงงาน (value_scope=plant): ขา Q/D อยู่ที่นิยามเดียวกับค่ารวม ⇒ หา id ผ่าน valueDefOf เหมือนช่องกรอก */
+      ? CSAT_LEGS.map(l => ({ key: l.key, label: `${l.icon} ${l.label}`, vals: legMonths(csat[(valueDefOf(d2) || d2).id] || {}, l.key) }))
+        .filter(s => s.vals.some(v => v != null))
+      : [],
   });
 
   const scopeLabel = isPlant(scope) ? 'ทุกส่วนงานในขอบเขต'
@@ -1177,6 +1302,77 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
           </ul>
         </div>
       )}
+      {/* ── 👯 KPI ซ้ำในขอบเขตเดียวกัน (16/11) — ฟ้องเท่านั้น ห้ามลบ/ปิดให้เอง ──────────────
+          เคสจริง: ระดับ ทั้งโรงงาน มี Customer Satisfaction 2 แถว (ต่างกันแค่ "(Q&D)")
+          ⇒ บอร์ด 2 แผ่น · ค่าเดียวกันกรอก 2 ที่ · น้ำหนักนับซ้ำ · ตัดสินไม่ได้ว่าเชื่อแถวไหน */}
+      {!kpiMissing && dupGroups.length > 0 && (
+        <div style={{ ...card, borderColor: 'var(--red)', fontSize: 12.5 }}>
+          <b style={{ color: 'var(--red)' }}>⚠ {tr('เจอ KPI ซ้ำในขอบเขตเดียวกัน')} {dupGroups.length} {tr('ชุด')}</b>
+          <span style={{ color: 'var(--muted)' }}> {tr('— บอร์ดจะขึ้นเป็น 2 แผ่น · ค่าเดียวกันถูกกรอก 2 ที่ · น้ำหนักนับซ้ำ')}</span>
+          <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>
+            🔴 {tr('ระบบไม่ลบ/ไม่ปิดให้เอง — ค่าที่กรอกไว้จะกำพร้า')} · {tr('ดูจำนวนเดือนที่กรอกไว้ด้านล่างแล้วเลือกเก็บตัวที่ถูก (ปิดอีกตัวด้วยปุ่ม 🗑 ในตาราง)')}
+          </div>
+          {dupGroups.map(g => (
+            <div key={g.key} style={{ marginTop: 6, paddingLeft: 10, borderLeft: '3px solid var(--red)' }}>
+              <div style={{ fontSize: 11.5, color: 'var(--text2)' }}>
+                {tr('ขอบเขต')} <b>{g.scopeKey === 'plant' ? tr('ทั้งโรงงาน') : g.scopeKey}</b>
+                {' · '}{tr('เหตุ')}: {g.reasons.map(dupReasonLabel).join(' · ')}
+                {!DUP_REASONS[g.reason]?.sure && <span style={{ color: 'var(--amber)' }}> ({tr('เป็นข้อสงสัย — คนตัดสิน')})</span>}
+              </div>
+              <ul style={{ margin: '3px 0 0', paddingLeft: 18 }}>
+                {dupGroupFacts(g, entries).map(f => (
+                  <li key={f.id} style={{ marginBottom: 2 }}>
+                    <b style={{ color: 'var(--text)' }}>{f.name}</b>
+                    <span style={{ color: 'var(--muted)', fontSize: 11.5 }}>
+                      {' · '}{tr('กรอกไว้')} <b style={{ color: f.filled ? 'var(--text)' : 'var(--muted)' }}>{f.filled}</b> {tr('เดือน')}
+                      {f.filled ? ` (${f.months.map(m => `${TH_M[m.month - 1]} ${m.value}`).join(' · ')})` : ''}
+                      {f.weight != null ? ` · น้ำหนัก ${f.weight}` : ' · ไม่ได้ตั้งน้ำหนัก'}
+                      {f.stdItemId ? ' · ผูกทะเบียนมาตรฐาน' : ' · ไม่ผูกทะเบียนมาตรฐาน'}
+                      {f.createdAt ? ` · สร้าง ${String(f.createdAt).slice(0, 10)}` : ''}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+      {/* ── 📘 ข้อบังคับของหน่วยงานมาตรฐานที่ยังไม่ได้ตั้ง (16/11 · เคส QA ไม่มี Customer Satisfaction เลย)
+          🔴 ระบบห้ามสร้างแถวให้เอง — บอกว่าขาดข้อไหน + พาไปจอที่ตั้งได้ */}
+      {!kpiMissing && allDefs && stdGap && (
+        <div style={{ ...card, borderColor: 'var(--amber)', fontSize: 12.5 }}>
+          <b style={{ color: 'var(--amber)' }}>⚠ {tr('ยังไม่ได้ตั้ง KPI ข้อบังคับของหน่วยงานนี้')} {stdGap.missingFixed.length} {tr('ข้อ')}</b>
+          <span style={{ color: 'var(--muted)' }}> ({stdUnitLabel(savedStdUnit)} · {tr('ทะเบียนมาตรฐานของกลุ่ม ปี')} {year + 543})</span>
+          <div style={{ fontSize: 11.5, marginTop: 3 }}>
+            {stdGap.missingFixed.map(it => (
+              <span key={it.id} style={{ display: 'inline-block', marginRight: 8, color: 'var(--text2)' }}
+                title={it.formula_text || ''}>· <b>{it.topic}</b></span>
+            ))}
+          </div>
+          <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 4 }}>
+            {tr('ข้อบังคับ (Fixed) ตัดทิ้งไม่ได้ตามประกาศของกลุ่ม — ระบบไม่หยิบให้เอง เพราะ "หน่วยไหนมี KPI อะไร" เป็นการตั้งค่าของคน')}
+            {canManage
+              ? <button onClick={() => setShowStd(true)} style={{ ...btnSt, marginLeft: 8, padding: '2px 8px', fontSize: 11.5 }}>{tr('📘 เปิด KPI Standard เพื่อหยิบข้อ')}</button>
+              : <span> · {tr('ต้องมีสิทธิ์ kpi:manage')}</span>}
+          </div>
+        </div>
+      )}
+      {/* ขอบเขตที่ยังไม่ได้ผูก "หน่วยงานมาตรฐาน" เลย = ระบบไม่รู้ว่าต้องมี KPI ข้อไหน ⇒ ต้องเขียนบอก
+          (เคส QA 16/11: ไม่มีแถว KPI สักข้อ ⇒ ไม่มี std_unit ⇒ เงียบสนิทถ้าไม่มีแถบนี้) */}
+      {!kpiMissing && allDefs && !savedStdUnit && !isPlant(kpiScope) && (
+        <div style={{ ...card, borderColor: 'var(--amber)', fontSize: 12.5 }}>
+          <b style={{ color: 'var(--amber)' }}>⚠ {tr('ขอบเขตนี้ยังไม่ได้ผูกกับ "หน่วยงานมาตรฐาน" ของกลุ่ม')}</b>
+          <span style={{ color: 'var(--muted)' }}> — {tr('ระบบจึงยังไม่รู้ว่าใบนี้ต้องมี KPI ข้อไหน (ไม่ใช่ว่าไม่มีข้อบังคับ)')}</span>
+          {!!scopeStdGuess && (
+            <div style={{ fontSize: 11.5, marginTop: 3, color: 'var(--text2)' }}>
+              {tr('ชื่อขอบเขตตรงกับหน่วยงานมาตรฐาน')} <b>{stdUnitLabel(scopeStdGuess)}</b> — {tr('เปิดทะเบียนแล้วเลือกยืนยันเอง (ระบบไม่ตั้งให้)')}
+            </div>
+          )}
+          {canManage && (
+            <button onClick={() => setShowStd(true)} style={{ ...btnSt, marginTop: 4, padding: '2px 8px', fontSize: 11.5 }}>{tr('📘 เปิด KPI Standard')}</button>
+          )}
+        </div>
+      )}
       {/* allDefs === null = ยังโหลดอยู่ (defs เป็น array เสมอหลัง filter จึงเช็คไม่ได้) */}
       {!kpiMissing && allDefs && (
         <div style={{ ...card, overflowX: 'auto' }}>
@@ -1416,6 +1612,27 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
                                 ✍️ หน่วยนี้เคยกรอกไว้ {Object.values(entries[d2.id] || {}).filter(v => v != null).length} เดือน (ซ่อนอยู่ — ไม่ใช่ค่าโรงงาน)
                               </span>
                             )}
+                            {/* 🤝 แยก Q/D (16/11) — เฉพาะหัวข้อ satisfaction ที่ทะเบียนให้สูตร (Actual/Total)×100
+                                🔴 ไม่ใช่ KPI 2 ตัว · คะแนนยังมาจากค่ารวมตัวเดียว (ปุ่มเปิดแผงกรอก/ดูรายละเอียด) */}
+                            {canSplitQd(d2) && (() => {
+                              const cid = (vDef || d2).id;
+                              const cov = csatCoverage(csat[cid] || {}, Object.fromEntries(rowVals.map((v, i) => [i + 1, v])));
+                              return (
+                                <div style={{ fontSize: 11, marginTop: 2, display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                                  <button type="button" onClick={() => setCsatOpen({ def: d2, id: cid, ro: sharedRO || (plantKpi && !vDef) })}
+                                    title={tr('กรอก/ดูคะแนนแยกขา คุณภาพ (Q) กับ การส่งมอบ (D) รายเดือน — ค่ารวมที่ส่งกลุ่มยังเป็นตัวเดิม')}
+                                    style={{ ...btnSt, padding: '1px 7px', fontSize: 11, fontWeight: 700 }}>✂️ {tr('แยก Q/D')}</button>
+                                  {cov.any && (
+                                    <button type="button" onClick={() => setSplitRows(p => ({ ...p, [cid]: !p[cid] }))}
+                                      style={{ ...btnSt, padding: '1px 7px', fontSize: 11, fontWeight: 600 }}>
+                                      {splitRows[cid] ? tr('▲ ซ่อนขา') : `▼ ${tr('กางขา')} (${cov.split} ${tr('ด.')})`}
+                                    </button>
+                                  )}
+                                  {cov.partial > 0 && <span style={{ color: 'var(--amber)' }} title={tr('เดือนที่กรอกขาเดียว — ยังไม่คิดค่ารวมจากขา (ไม่ใช่ 0)')}>{tr('แยกไม่ครบ')} {cov.partial} {tr('ด.')}</span>}
+                                  {cov.mismatch > 0 && <span style={{ color: 'var(--red)', fontWeight: 700 }} title={tr('ค่ารวมที่กรอกไว้ไม่เท่ากับที่คำนวณจาก 2 ขา — ระบบไม่แก้ให้เอง')}>≠ {tr('ไม่ตรงค่ารวม')} {cov.mismatch} {tr('ด.')}</span>}
+                                </div>
+                              );
+                            })()}
                             <div style={{ fontSize: 11, color: 'var(--muted)' }}>
                               {[d2.commitment && `เป้า ${d2.commitment}`, d2.scope_text].filter(Boolean).join(' · ')}
                             </div>
@@ -1468,6 +1685,62 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
                             </td>
                           )}
                         </tr>
+                        {/* ── 🤝 ขา Q/D กางใต้แถว (16/11) — อ่านอย่างเดียว · กรอกที่แผง ✂️ แยก Q/D
+                            🔴 ขาไม่ครบ = ช่อง "รวมจาก 2 ขา" เป็น · (ไม่ใช่ 0) · ต่างจากค่ารวมที่กรอก = ขึ้น ≠ */}
+                        {canSplitQd(d2) && splitRows[(vDef || d2).id] && (() => {
+                          const cid = (vDef || d2).id;
+                          const byMonth = csat[cid] || {};
+                          const comb = splitMonths(byMonth);
+                          return [
+                            ...CSAT_LEGS.map((l) => {
+                              const vals = legMonths(byMonth, l.key);
+                              const s2 = summaryOf(vals, d2);
+                              return (
+                                <tr key={`${cid}-${l.key}`} style={{ background: 'var(--bg2)' }}>
+                                  <td style={{ ...tdSt, textAlign: 'left', whiteSpace: 'normal', fontSize: 11, color: 'var(--text2)' }} title={l.hint}>
+                                    {l.icon} <b>{tr(l.label)}</b>
+                                    <div style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('คะแนนที่ได้ ÷ คะแนนเต็ม ของขานี้')}</div>
+                                  </td>
+                                  {vals.map((v, i) => {
+                                    const leg = (byMonth[i + 1] || {})[l.key] || null;
+                                    return (
+                                      <td key={i} style={{ ...tdSt, fontSize: 11.5, color: v == null ? 'var(--muted)' : 'var(--text2)', fontVariantNumeric: 'tabular-nums' }}
+                                        title={leg ? `${leg.actual_score ?? '—'} / ${leg.total_score ?? '—'}` : tr('เดือนนี้ยังไม่ได้กรอกขานี้')}>
+                                        {v == null ? '·' : v.toFixed(1)}
+                                      </td>
+                                    );
+                                  })}
+                                  <td style={{ ...tdSt, fontSize: 11 }} colSpan={2}
+                                    title={tr('สรุปทั้งปีของขานี้ คิดด้วยวิธีรวมเดียวกับค่ารวม (ไม่ใช่คะแนน — คะแนนมีที่เดียวคือค่ารวม)')}>
+                                    {s2.value == null ? '—' : `${s2.value.toFixed(1)} (${summaryShort(s2.effMode)})`}
+                                  </td>
+                                  {canManage && <td style={tdSt} />}
+                                </tr>
+                              );
+                            }),
+                            <tr key={`${cid}-comb`} style={{ background: 'var(--bg2)', opacity: 0.95 }}>
+                              <td style={{ ...tdSt, textAlign: 'left', whiteSpace: 'normal', fontSize: 11, color: 'var(--accent)' }}
+                                title={`${CSAT_FORMULA}\nค่ารวมของเดือน = (ΣActual ÷ ΣTotal) × 100 — ห้ามเฉลี่ย % ของ 2 ขา`}>
+                                ✂️ <b>{tr('รวมจาก 2 ขา')}</b>
+                                <div style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('(ΣActual ÷ ΣTotal) × 100 · ขาไม่ครบ = ไม่คิด')}</div>
+                              </td>
+                              {comb.map((v, i) => {
+                                const st = csatMonth({ entered: rowVals[i], parts: byMonth[i + 1] || {} });
+                                return (
+                                  <td key={i} style={{ ...tdSt, fontSize: 11.5, color: v == null ? 'var(--muted)' : 'var(--text2)', fontVariantNumeric: 'tabular-nums' }}
+                                    title={v == null ? (st.state === 'partial' ? tr('กรอกขาเดียว — ยังไม่คิดค่ารวม') : tr('เดือนนี้ยังไม่ได้แยกขา')) : `${st.split.actual} ÷ ${st.split.total} × 100`}>
+                                    {v == null ? '·' : v.toFixed(1)}
+                                    {st.mismatch && <span style={{ color: 'var(--red)', fontWeight: 700 }} title={tr('ไม่ตรงกับค่ารวมที่กรอกไว้')}> ≠</span>}
+                                  </td>
+                                );
+                              })}
+                              <td style={{ ...tdSt, fontSize: 11 }} colSpan={2}>
+                                {(() => { const s3 = summaryOf(comb, d2); return s3.value == null ? '—' : `${s3.value.toFixed(1)} (${summaryShort(s3.effMode)})`; })()}
+                              </td>
+                              {canManage && <td style={tdSt} />}
+                            </tr>,
+                          ];
+                        })()}
                         {showPlan && (() => {
                           const pg = planOf(d2);
                           return (
@@ -1617,6 +1890,24 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
           row={autoTgt} def={autoDefBy[autoTgt.src]} year={year} scopeText={org.labelOf(scope.kind, scope.value)} deep={!isPlant(scope)}
           onClose={() => setAutoTgt(null)}
           onSave={async f => { if (await saveAutoTarget(f)) setAutoTgt(null); }}
+        />
+      )}
+
+      {/* 🤝 แผงแยก Q/D — กรอกคะแนนดิบรายขา + ดูรายละเอียดรายเดือน (16/11)
+          ค่ารวมที่ส่งกลุ่มเปลี่ยนได้ด้วยปุ่ม "ใช้ค่านี้" ของคนเท่านั้น (เขียนผ่าน saveCell ตัวเดิม) */}
+      {csatOpen && (
+        <KpiCustomerSatModal
+          def={csatOpen.def} year={year} scopeText={scopePathText(org, scope)}
+          byMonth={csat[csatOpen.id] || {}}
+          entries={Object.fromEntries(Array.from({ length: 12 }, (_, i) => [i + 1, entriesFx[csatOpen.id]?.[i + 1] ?? null]))}
+          canEdit={canManage && scopeWrite.ok && !csatOpen.ro}
+          blockText={csatOpen.ro
+            ? tr('KPI นี้ใช้ "ค่าโรงงาน" — กรอกที่ขอบเขต ทั้งโรงงาน')
+            : (canManageKpi && !scopeWrite.ok ? writeBlockText(scopeWrite, { what: 'KPI ของขอบเขตนี้', unit: scopeOwner }) : (canManageKpi ? '' : tr('ต้องมีสิทธิ์ kpi:manage')))}
+          tableMissing={csatMissing}
+          onSave={(m, part, payload) => saveCsatPart(csatOpen.id, m, part, payload)}
+          onApplyTotal={(m, v) => saveCell(csatOpen.id, m, String(v))}
+          onClose={() => setCsatOpen(null)}
         />
       )}
 
