@@ -295,7 +295,7 @@ const EN = {
   'เช็คชื่อ-PPE · จัดการไลน์ · Daily Report · Daily Checker · Kaizen': 'Attendance-PPE · Line management · Daily Report · Daily Checker · Kaizen',
   'OEE · VSM · สอบกลับ Order · ประวัติผลิต · รายงาน/ใบพิมพ์': 'OEE · VSM · Order traceability · Production history · Reports / printouts',
   'ฐานข้อมูลพนักงาน · สกิล & Level Up · OJT · ตารางกะ': 'Employee database · Skills & Level Up · OJT · Shift schedule',
-  'แผนงาน + Store (3xx ซื้อนอก · 5xx raw · 2xx ผลิตเอง) — Planner & Sales · สต๊อกในไลน์ · บอร์ดคัมบัง · ขนส่งเข้าไลน์':
+  'แผนงาน + Store (3xx ซื้อนอก · 5xx raw · 2xx ผลิตเอง) — Planner & Sales · Stock Management · บอร์ดคัมบัง · ขนส่งเข้าไลน์':
     'Planning + Store (3xx purchased · 5xx raw · 2xx in-house) — Planner & Sales · Line stock · Kanban board · Transport to lines',
   'Warehouse (FG 1xx) · Delivery · Rack Center — จัดส่งลูกค้า · คาดการณ์ของจะขาด · ภาชนะ':
     'Warehouse (FG 1xx) · Delivery · Rack Center — Customer delivery · Shortage forecast · Containers',
@@ -5487,7 +5487,7 @@ const EN = {
   'ยังไม่ผูกกับการตัดสต็อก — ระบบยังเบิกตามไลน์เหมือนเดิม': 'Not linked to stock deduction — the system still issues by line as before',
   'ยังไม่ผูกชุด PE (✏️ พาร์ท)': 'PE set not linked (✏️ Part)',
   'ยังไม่ผูกชุด PFC/FMEA/CP': 'PFC/FMEA/CP set not linked',
-  'ยังไม่ผูกรหัสคลัง SAP (ผูกที่ 📦 สต๊อกในไลน์ → 🏬 พื้นที่ SAP / โซนคลัง → “ทะเบียนรหัสคลัง” กด ✏️ ที่รหัสแล้วติ๊กไลน์)': 'SAP store code not linked (link at 📦 Line stock → 🏬 SAP area / store zone → “Store code registry”, press ✏️ on the code and tick the line)',
+  'ยังไม่ผูกรหัสคลัง SAP (ผูกที่ 📦 Stock Management → ตั้งค่า → พื้นที่ SAP / โซนคลัง → “ทะเบียนรหัสคลัง” กด ✏️ ที่รหัสแล้วติ๊กไลน์)': 'SAP store code not linked (link at 📦 Line stock → 🏬 SAP area / store zone → “Store code registry”, press ✏️ on the code and tick the line)',
   'ยังไม่ผูกไลน์ (คนหน้างานที่ไม่มีไลน์จะไม่ขึ้นในหน้าเช็คชื่อ)': 'No line linked (floor staff without a line do not appear on the attendance page)',
   'ยังไม่มอบหมาย': 'Unassigned',
   'ยังไม่มี': 'None yet',
@@ -6242,7 +6242,7 @@ const EN = {
   'สต็อกคงเหลือจำลอง (ถ้าไม่ผลิตเพิ่มจากนี้)': 'Simulated remaining stock (if no further production)',
   'สต็อกส่วนนั้น (': 'That section\'s stock (',
   'สต๊อกค้างเกินจำเป็น': 'Excess stock beyond need',
-  'สต๊อกในไลน์ → 🏬 พื้นที่ SAP / โซนคลัง → “ทะเบียนรหัสคลัง”': 'Stock in line → 🏬 SAP area / warehouse zone → “Store code registry”',
+  '📦 Stock Management → ตั้งค่า → พื้นที่ SAP / โซนคลัง → “ทะเบียนรหัสคลัง”': 'Stock in line → 🏬 SAP area / warehouse zone → “Store code registry”',
   'สต๊อกไม่พอ — คงเหลือ': 'Insufficient stock — remaining',
   'สถานที่': 'Location',
   'สถานะ PPAP': 'PPAP status',

@@ -827,3 +827,13 @@ user เคาะ: (ข) ขั้นหลังได้พาร์ทแล�
 - ตู้ `fg` เปลี่ยนป้ายจาก "Store FG" เป็น **🚚 รอบส่งคัมบังเข้าไลน์** — ของในตู้คือรอบส่งชิ้นส่วนตามคัมบัง ไม่ใช่ FG
   (กติกา user: **ไม่มี FG เข้าไลน์** · ใบเบิก 1xx เข้าไลน์ปิดแล้ว 13/11 → `demand-flow-tower.md`) · key `fg` คงเดิม (`?store=fg`)
 - ทะเบียนพื้นที่เพิ่ม **R402** (สโตร์วัตถุดิบ · `20261116_sloc_r402_raw_dr.sql`)
+
+## 📦 รวมเป็น Stock Management (2026-11-16 · คำสั่ง user "รวมสต๊อกในไลน์กับ Monitoring แผน-สต๊อกเป็น tab stock management")
+- เมนูเดียว **Stock Management** (`/line-stock`) · `/monitoring` redirect เข้าแท็บ `?tab=monitoring` (บอร์ดย่อย `?mon=`)
+- 🔐 **สิทธิ์ไม่เปลี่ยน** — `canAccessPage('/line-stock')` = `page:/line-stock` **หรือ** `page:/monitoring` · แท็บกรองด้วย `TABS[].perm`
+  (ทะเบียน 16/11: warehouse_delivery 6 คนมีแค่ Monitoring ⇒ เปิดมาเจอแท็บ Monitoring อย่างเดียว · document_control มีแค่สต๊อก)
+- ลำดับแท็บ: **Stock (default)** · ส่งของเข้าไลน์ · รับของเข้าคลัง · Monitoring แผน-สต๊อก · ตรวจนับ/เฟิร์มยอด · ค้างตัด SAP · คลังพัก/ผลต่าง · WIP ค้างระหว่างขั้น · **ตั้งค่า** (5 แท็บเดิมเป็นแท็บย่อย `?set=`)
+- แท็บ Stock: ช่องขอบเขตเป็นต้นไม้ `<LineScopeSelect includeSupport>` (เลือกส่วนงาน = เห็นทุกพื้นที่ในส่วนงาน เช่น PD3 = P409+P411 · STORE เลือกได้)
+  · ชิปฝั่งงานใช้ป้าย **ของป้อนไลน์ (2xx·3xx·5xx)** / **FG รอส่ง (1xx)** (`SideFilterChips labels=`) · กลุ่มพื้นที่เรียง สโตร์ → วัตถุดิบ → ผลิต → คลัง FG (`kindFirst`) + หัวหมวด
+- ที่จัดเก็บหลักของพาร์ทสโตร์ (`parts_master.home_sloc`) ตั้งจาก `Stock_Store.xlsm` 201 พาร์ท (`20261116_parts_home_sloc_store_dr.sql` · ตั้งเฉพาะที่ว่าง)
+- ⏳ ยังค้าง: คลัง FG (FG WAREHOUSE) ย้ายไปหมวด Warehouse & Delivery — รอ user เลือกรหัส W401/W403/W404

@@ -9,7 +9,7 @@ import { fetchAllPages, fetchByIds } from '../utils/fetchByIds';
 import { useLiveBoard } from '../utils/useLiveBoard';
 import { getWorkDate, addDaysStr } from '../utils/workDate';
 import { toast } from '../components/Toast';
-import Page, { Hub } from '../components/Page';
+import Page, { Hub, HubContext } from '../components/Page';
 import PageHeader from '../components/PageHeader';
 import FilterBar from '../components/FilterBar';
 import useTabParam from '../utils/useTabParam';
@@ -63,7 +63,10 @@ export default function Monitoring() {
      (audit 15/10 — เดิมโหลดทุกบอร์ด แล้ว syncRackOrder ยิงต่อเป็นใบส่งของจริง)
      🔴 บอร์ดชนิด `fg` ผูก "ลูกค้า" ไม่ใช่ไลน์ ⇒ ไม่มีไลน์ให้เทียบ = ตัดสินไม่ได้ ⇒ ไม่บล็อก */
   const lineRows = useProductionLines();
-  const [tab, setTab] = useTabParam(BOARD_TABS.map(t => t.key), BOARD_TABS[0].key);
+  /* 📦 16/11 — ฝังเป็นแท็บ "Monitoring แผน-สต๊อก" ของ Stock Management (`/line-stock?tab=monitoring`)
+     แท็บซ้อนแท็บต้องคนละ query param (UI §6.8 ข้อ 2.4) ⇒ ใน hub ใช้ `?mon=` · เปิดเดี่ยว (ไม่มีแล้ว — route redirect) ใช้ `?tab=` */
+  const inHub = useContext(HubContext);
+  const [tab, setTab] = useTabParam(BOARD_TABS.map(t => t.key), BOARD_TABS[0].key, inHub ? 'mon' : 'tab');
   /* แท็บซ้อนแท็บต้องคนละ query param (UI §6.8 ข้อ 2.4) — หน้าลูกของแท็บ FG ใช้ `?fgv=` */
   const [fgView, setFgView] = useTabParam(['rundown', 'board'], 'rundown', 'fgv');
 
