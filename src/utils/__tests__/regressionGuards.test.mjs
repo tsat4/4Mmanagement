@@ -10920,3 +10920,62 @@ test('🚫 no-fg-line-request — ทุกจุดที่ออกใบเ�
     '\n\n❌ ไฟล์นี้ออกใบเบิกเข้าไลน์โดยไม่กันเลข FG 1xx:\n   ' + offenders.join('\n   ')
     + '\n   ใช้ `isFgMat(mat)` + ข้อความ `FG_NO_LINE_REQUEST` จาก src/utils/storeOps.js ก่อน insert\n');
 });
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   🧾 สถานะใบ MO ต้องถูก "จัดประเภท" ครบทุกตัว            2026-11-16 · คำสั่ง user
+   เคสจริง: `returned` + `waiting_vendor` ถูกเพิ่มเข้า `MO_STATUS_LABEL` แต่ไม่มีใครเติมใน
+   `OPEN_MO_STATUSES` ⇒ ตัวโหลดคิวงาน (`.in('status', OPEN_MO_STATUSES)`) ไม่เคย select ใบพวกนั้น
+   ⇒ **ใบหลุดจากคิวทุกชั้นเงียบๆ** (วัด 13/11: returned 9 ใบ เก่าสุด 52 วัน ไม่โผล่ที่ไหนเลย)
+   ⇒ ด่านนี้บังคับว่า "สถานะใหม่ = ต้องบอกว่าเปิดหรือจบ" ไม่งั้น build ไม่ผ่าน
+   ═══════════════════════════════════════════════════════════════════════════ */
+test('🧾 mo-status-must-be-classified — ทุกสถานะใน MO_STATUS_LABEL ต้องเป็น "เปิด" หรือ "จบ" อย่างใดอย่างหนึ่ง', async () => {
+  const m = await import('../mtnStepPerm.js');
+  const labels = Object.keys(m.MO_STATUS_LABEL);
+  const open = new Set(m.OPEN_MO_STATUSES);
+  const done = new Set(m.MO_DONE_STATUSES);
+  const unclassified = labels.filter(s => !open.has(s) && !done.has(s));
+  const both = labels.filter(s => open.has(s) && done.has(s));
+  assert.deepEqual(unclassified, [],
+    '\n\n❌ สถานะที่ยังไม่จัดประเภท: ' + unclassified.join(', ')
+    + '\n   ใบสถานะนี้จะไม่ถูก select เข้าคิวงาน และไม่ถูกนับว่าจบ = หายจากทุกจอเงียบๆ'
+    + '\n   เติมใน OPEN_MO_STATUSES (ยังมีคนต้องทำ) หรือ MO_DONE_STATUSES (จบแล้ว) ใน src/utils/mtnStepPerm.js\n');
+  assert.deepEqual(both, [], '\n\n❌ สถานะที่อยู่ทั้ง 2 ลิสต์ (ขัดกันเอง): ' + both.join(', ') + '\n');
+  // ลิสต์ "เปิด" ต้องมีชุดเดียวในระบบ — dieStatus re-export ตัวนี้ ห้ามประกาศเอง
+  const die = readFileSync(join(ROOT, 'src/utils/dieStatus.js'), 'utf8');
+  assert.equal(/export const OPEN_MO_STATUSES\s*=/.test(die), false,
+    '\n\n❌ src/utils/dieStatus.js ประกาศ OPEN_MO_STATUSES เองอีกแล้ว'
+    + '\n   เคยมี 2 ชุดที่เนื้อหาไม่เท่ากัน (ฝั่ง dieStatus มี returned ฝั่ง mtnStepPerm ไม่มี)'
+    + '\n   ⇒ Andon/ผังโรงงาน/TvBoard นับใบตีกลับว่าค้าง แต่คิวงานมองไม่เห็นเลย ~2 เดือน'
+    + "\n   ใช้ `export { OPEN_MO_STATUSES } from './mtnStepPerm.js'` เท่านั้น\n");
+});
+
+/* ↩️📤 ทะเบียน "ใบนอกลูปขั้น" มี 2 ฝั่งที่ต้องเติมคู่กันเสมอ:
+     `OFF_LOOP_WAIT` (mtnStepPerm) = ใครต้องลงมือ · `STATUS_SINCE` (mtnStale) = เข้าสถานะนี้เมื่อไหร่
+   เติมฝั่งเดียว = ใบโผล่ในคิวแต่บอกอายุไม่ได้ (หรือกลับกัน) ⇒ ล็อกให้คีย์ตรงกัน */
+test('↩️ off-loop-registry-in-sync — ทะเบียนใบนอกลูปขั้น 2 ฝั่งต้องมีสถานะชุดเดียวกัน', async () => {
+  const { OFF_LOOP_STATUSES } = await import('../mtnStepPerm.js');
+  const src = readFileSync(join(ROOT, 'src/utils/mtnStale.js'), 'utf8');
+  const block = src.match(/const STATUS_SINCE\s*=\s*\{([\s\S]*?)\n\};/);
+  assert.ok(block, 'หา STATUS_SINCE ใน src/utils/mtnStale.js ไม่เจอ (เปลี่ยนชื่อ/ย้ายแล้วต้องแก้ด่านนี้ด้วย)');
+  const sinceKeys = [...block[1].matchAll(/^\s{2}(\w+):/gm)].map(x => x[1]).sort();
+  assert.deepEqual(sinceKeys, [...OFF_LOOP_STATUSES].sort(),
+    '\n\n❌ ทะเบียนใบนอกลูปขั้นไม่ตรงกัน'
+    + `\n   OFF_LOOP_WAIT (mtnStepPerm.js): ${[...OFF_LOOP_STATUSES].sort().join(', ')}`
+    + `\n   STATUS_SINCE  (mtnStale.js)   : ${sinceKeys.join(', ')}`
+    + '\n   เพิ่มสถานะนอกลูปขั้น = ต้องเติมทั้ง 2 ที่ (ใครต้องลงมือ + เข้าสถานะนี้เมื่อไหร่)\n');
+});
+
+/* 👥 ใบที่มอบหมายช่างหลายคน — "รอเรา" ต้องเทียบทุกคนในชุด ห้ามเทียบสตริงที่ต่อกันแล้ว */
+test('👥 mo-service-queue-matches-all-techs — คิวงานต้องเทียบช่างทุกคนในใบ', () => {
+  const src = readFileSync(join(ROOT, 'src/utils/myQueue.js'), 'utf8');
+  assert.ok(/assignedTechsOf\(/.test(src),
+    '\n\n❌ src/utils/myQueue.js ไม่ได้แตกชื่อช่างผ่าน `assignedTechsOf()` อีกแล้ว'
+    + '\n   `assigned_to` เก็บชื่อต่อกันด้วยจุลภาค (สำเนาไว้ให้ใบพิมพ์อ่าน) ⇒ เทียบชื่อเดี่ยวไม่เคยตรง'
+    + '\n   วัด 13/11: ใบขั้น 3 เปิดอยู่ 32 ใบ มอบหมาย ≥2 คน 21 ใบ (66%) + tech_main_uid ว่างทั้ง 32 ใบ'
+    + '\n   ⇒ ใบไม่ขึ้นคิว "รอคุณ" ของช่างคนไหนเลย (ค้าง ≥7 วัน 15 ใบ เก่าสุด 66 วัน)\n');
+  assert.ok(/isMeAmong\(w, me\)/.test(src),
+    '\n\n❌ ชั้น `mine` กลับไปเทียบคนเดียวด้วย `isMe(w.who, me)` อีกแล้ว'
+    + '\n   ใช้ `isMeAmong(w, me)` (OR รายคน) — และห้ามแก้ `isMe` ให้ชื่อสู้ uid ได้\n');
+  assert.equal(/\.split\(\s*\/?\s*,/.test(src), false,
+    '\n\n❌ มี .split(",") ในคิวงาน — ห้ามแกะชื่อช่างเอง ใช้ `assignedTechsOf()` ของกลางที่เดียว\n');
+});

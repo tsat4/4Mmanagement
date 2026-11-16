@@ -189,8 +189,21 @@ export function mtnCloseStage(order = {}) {
   return 8;
 }
 
-/** สถานะใบที่ยัง "มีคนต้องทำต่อ" — ตัวโหลดคิวงานใช้กรอง (ปิด/ตีกลับ/โอน/ปฏิเสธ = ไม่อยู่ในคิว) */
-export const OPEN_MO_STATUSES = ['pending', 'assigned', 'repairing', 'repaired', 'checked', 'qa', 'handover'];
+/** สถานะใบที่ยัง "มีคนต้องทำต่อ" — ตัวโหลดคิวงานใช้กรอง · **allowlist** (สถานะจบตัวใหม่จึงไม่หลุดมาเอง)
+ *
+ *  🔴 **กลับคำตัดสินเดิม 2026-11-16 (คำสั่ง user):** เดิมลิสต์นี้ตัด `returned` + `waiting_vendor` ออก
+ *     ด้วยเหตุผล "ตีกลับ = ไม่อยู่ในคิว" — **ผิด** เพราะทั้ง 2 สถานะคือ "ใบยังเปิด และรอคนจริง"
+ *     (ตีกลับ = รอผู้แจ้งแก้แผนกแล้วส่งใหม่ · ส่งซ่อมนอก = รอช่างตามของกับ supplier)
+ *     วัดจริง 13/11: ใบ `returned` 9 ใบ **เก่าสุด 52 วัน** · กระดิ่ง `mtn_returned` ยิงถึงผู้แจ้งครั้งเดียว
+ *     แล้ว **ไม่อ่าน 13/15 ใบ** · ตัวโหลดคิวไม่เคย `select` ใบพวกนี้มาเลย ⇒ ใบหลุดจากทั้ง 3 ชั้น + badge
+ *     ⇒ ใครต้องลงมือ = ทะเบียน `OFF_LOOP_WAIT` ข้างล่าง (ใบนอกลูปขั้น ไม่มีเลขขั้นให้อ้าง)
+ *  🔴 ลิสต์นี้เป็น **ชุดเดียวของระบบ** — `dieStatus.js` re-export ตัวนี้ ห้ามประกาศลิสต์ที่ 2 อีก
+ *     (เคยมี 2 ชุดที่เนื้อหาไม่เท่ากัน: ฝั่ง dieStatus มี `returned` ฝั่งนี้ไม่มี ⇒ Andon/ผังโรงงาน
+ *      นับใบตีกลับว่าค้าง แต่คิวงานมองไม่เห็นเลย — เถียงกันเองอยู่ ~2 เดือนโดยไม่มีใครรู้)
+ *  🛡️ ด่าน `mo-status-must-be-classified` (regressionGuards): ทุกคีย์ใน `MO_STATUS_LABEL`
+ *     ต้องอยู่ใน `OPEN_MO_STATUSES` หรือ `MO_DONE_STATUSES` **อย่างใดอย่างหนึ่ง ห้ามตกหล่น ห้ามซ้ำ**
+ *     ⇒ เพิ่มสถานะใหม่แล้วไม่จัดประเภท = build ไม่ผ่าน (เดิมหลุดเงียบมาแล้ว 2 ตัว) */
+export const OPEN_MO_STATUSES = ['pending', 'assigned', 'repairing', 'repaired', 'checked', 'qa', 'handover', 'returned', 'waiting_vendor'];
 
 /**
  * 🔴 ขั้น "ถัดไปที่ต้องทำ" ของใบ — ตัดสินจาก `status` ไม่ใช่ `current_step`   (2026-10-05 · workflow audit)
@@ -956,6 +969,48 @@ export function moWaitMeta(order) {
   if (!step) return { stage: null, step: null, meta: null };
   // `stage` ไม่เปลี่ยนตามทีม (ยังเป็น accept_work) — เปลี่ยนแค่ "ใครเซ็น" ⇒ ส่ง toolTeam เฉพาะ meta
   return { stage: stageOf(step, { mtnForm }), step, meta: stepMeta(step, { mtnForm, toolTeam }) };
+}
+
+/* ── ↩️📤 ใบที่อยู่ "นอกลูปขั้น" — ไม่มีเลขขั้น แต่มีคนที่ต้องลงมือ ──────────  2026-11-16 · คำสั่ง user
+   🔴 **`moWaitMeta()` คืน `stage: null` ให้ 2 สถานะนี้โดยเจตนา และห้ามเปลี่ยน** — มี 3 จอพึ่งความว่างนั้น:
+      บอร์ด TV ทิ้งลงตะกร้า "นอกลำดับขั้น" (`moTvBoard.moTvGroupOf`) · แผงไล่ MO ตอบ `outside`
+      (`moChase.chaseSideOf`) · แผงใบค้างแยกถัง `status:<สถานะ>` (`mtnStale.STATUS_SINCE`)
+      ⇒ ยัดลง `moWaitMeta` = 3 จอเปลี่ยนพฤติกรรมพร้อมกันโดยไม่มีใครขอ
+   ⚠️ แต่ **"ไม่มีขั้น" ≠ "ไม่มีใครต้องทำ"** — ทะเบียนนี้ตอบคำถามที่ 2 แยกกันชัดเจน: *แล้วใครต้องลงมือ*
+      (ผู้เรียกวันนี้มีรายเดียว = `myQueue.moWaitingOn` ตอนที่ `moWaitMeta` คืน meta ว่าง)
+   🔑 เพิ่มสถานะใหม่ที่นี่ = ต้องเติม `STATUS_SINCE` ใน `mtnStale.js` ด้วย (คอลัมน์ "เข้าสถานะนี้เมื่อไหร่")
+      — มีด่าน `off-loop-registry-in-sync` เทียบคีย์ 2 ฝั่ง ไม่ครบ = build ไม่ผ่าน
+   🔴 `stage` ขึ้นต้น `status:` เพื่อ **กันชนกับ stage ของลูปขั้น** และกันไม่ให้ใครเอาไปยัดใน
+      `MO_TV_GROUPS[].stages` / ตัวกรอง `?wait=` ของหน้า MO (ซึ่งรู้จักแต่ stage ของลูปขั้น) */
+export const OFF_LOOP_WAIT = Object.freeze({
+  returned: Object.freeze({
+    stage: 'status:returned', offLoop: true, byReporter: true, side: 'reporter',
+    icon: '↩️', title: 'ตีกลับ — แก้แผนกแล้วส่งใหม่',
+    who: 'ผู้เปิดใบแจ้งซ่อม (ฝ่ายที่แจ้ง)', whoShort: 'ผู้เปิดใบ',
+  }),
+  /* 📤 ของอยู่กับ supplier — "นาฬิกาไม่ได้อยู่ที่เรา" แต่ยังต้องมีคนตามของ
+     ⚠️ ไม่ผูกตัวบุคคล (`byReporter: false`) ⇒ เข้าชั้น `unit` ของคิว ไม่ใช่ `mine`
+        เพราะใบพวกนี้ไม่มีช่องชื่อ "คนตามของ" ให้ยึด — ทีมช่างเจ้าของใบตามกันเอง */
+  waiting_vendor: Object.freeze({
+    stage: 'status:waiting_vendor', offLoop: true, byReporter: false, side: 'mtn',
+    icon: '📤', title: 'ส่งซ่อมภายนอก — รอของกลับจาก supplier',
+    who: 'ทีมช่างเจ้าของใบ (ตามของกับ supplier)', whoShort: 'ทีมช่าง',
+  }),
+});
+export const OFF_LOOP_STATUSES = Object.freeze(Object.keys(OFF_LOOP_WAIT));
+
+/**
+ * ใบนี้อยู่นอกลูปขั้นและรอใครอยู่ — `{ status, meta }` · **`null` = ไม่ใช่ใบนอกลูปขั้น**
+ * (ให้ผู้เรียกไปใช้คำตอบของ `moWaitMeta` ตามปกติ — ที่นี่ไม่ตอบแทน)
+ *
+ * 🔴 ใบที่จบแล้วคืน `null` เสมอ (`isMoOpen`) — ใบที่ถูกยกเลิก/ปฏิเสธไม่ได้ "รอ" ใคร
+ *    และห้ามเขียนลิสต์สถานะจบซ้ำที่นี่ (`transferred` เคยตกหล่นมาแล้ว)
+ */
+export function offLoopWaitOf(order = {}) {
+  if (!isMoOpen(order)) return null;
+  const st = String(order?.status || '').trim();
+  const meta = OFF_LOOP_WAIT[st] || null;
+  return meta ? { status: st, meta } : null;
 }
 
 /**
