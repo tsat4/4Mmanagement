@@ -459,11 +459,16 @@ model: inherit
   · grep: `domain=\{\[(dataMin|\(?\w+\)? =>|[1-9])` · `domain:\s*\[(dataMin|\w+ =>)` · ด่าน `chart-yaxis-domain-hand-made`
 - **F-KPILEVEL** ช่องตัดสิน KPI (`yn`/`ynTotal`/สีจุดกราฟ) ต้องเป็นระดับ 1/0.5/0 จาก `scoreDef` — ห้าม `v >= target` / `v < target` เอง (2 สีไม่รู้จัก Commitment)
   · grep: `yn(Total)?:\s*[^,]*(>=|<=)` · `const \w*(miss|hit|pass)Target\w* =` · ด่าน `kpi-yn-boolean-compare`
-- **F-CSATQD** 🤝 คะแนนรายขา Quality/Delivery ของ Customer/Internal Satisfaction ต้องผ่าน `src/utils/kpiCustomerSat.js`
-  (`legPct`/`combineLegs`/`csatMonth`/`csatCoverage`) — **ค่ารวมของเดือน = (ΣActual ÷ ΣTotal) × 100 · ห้ามเฉลี่ย % ของ 2 ขา**
-  (ตัวหารไม่เท่ากัน) · ขาไม่ครบ = `null` + เขียนบนจอ **ห้ามนับ 0** · ทะเบียนมีหัวข้อนี้ **1 ข้อ 1 คะแนน** ⇒ ห้ามแตกเป็น KPI 2 ตัว
-  · โค้ดห้ามเขียนทับ `kpi_manual_entries.value` เอง (คนกดปุ่มเท่านั้น)
-  · grep: `actual_score` · `total_score` · ด่าน `csat-qd-via-util`
+- **F-CSATQD** 🤝 **ความพึงพอใจลูกค้า = ค่าเดียวของโรงงาน ทุกหน่วยดึงไปใช้** (คำสั่ง user 16/11
+  "ต้อง single source of truth · ค่าของโรงงานต้องมีค่าเดียว ดึงไปใช้เอา") ⇒ คะแนนดิบเป็น **ตัวแปรฐาน
+  `level:'plant'`** ใน `kpi_base_inputs` (`csat_q_actual`/`csat_q_total`/`csat_d_actual`/`csat_d_total`)
+  · ค่ารวม = สูตร `csat_qd_pct` (`scope:'plant'`) · ขาย่อย = `parts: ['csat_q_pct','csat_d_pct']`
+  — ⛔ **ห้ามมีตาราง/ช่องกรอกคะแนนรายขาชุดที่ 2** (เคยทำแล้วถอน: `kpi_customer_sat_parts` คีย์ `kpi_id`
+  ⇒ นิยาม 7 แถวถือคะแนนคนละชุดของแบบสอบถามใบเดียวกัน) · 🔴 **ค่ารวม = ตัวตั้งรวม ÷ ตัวหารรวม
+  ห้ามเฉลี่ย % ของ 2 ขา** (ตัวหารไม่เท่ากัน: Q 21/24 + D 6/8 ⇒ 84.375 ไม่ใช่ 81.25) · ขาไม่ครบ = `null`
+  **ห้ามนับ 0** · ทะเบียนมีหัวข้อนี้ **1 ข้อ 1 คะแนน** ⇒ ห้ามแตกเป็น KPI 2 ตัว/2 น้ำหนัก
+  · `Internal Satisfaction` (`value_scope='own'`) = ใบคนละใบรายหน่วย **ห้ามเอามารวมค่ากลาง**
+  · grep: `kpi_customer_sat_parts` · `actual_score` · `total_score` · ด่าน `csat-no-second-entry-point`
 - **F-KPIDUP** 👯 จอที่ตั้ง/กรอก KPI ต้องฟ้องเมื่อมี KPI ซ้ำในขอบเขตเดียวกัน (`findDupDefs` · `utils/kpiDupDefs.js`)
   — **ห้ามลบ/ปิด/ย้ายค่าให้เอง** (ค่าที่กรอกไว้กำพร้า) · เคสจริง: ระดับโรงงานมี `Customer Satisfaction` 2 แถว ต่างกันแค่ `(Q&D)`
 - **F-SHADOW** 💥 `const <ชื่อ>` ที่**ชนกับ named import ในไฟล์เดียวกัน** แล้วมีการเรียก `<ชื่อ>()` ข้างใน

@@ -10,7 +10,24 @@
    pure ล้วน · มีเทส `src/utils/__tests__/kpiDupDefs.test.mjs`
    ══════════════════════════════════════════════════════════════════════════════════════════════ */
 import { normKpiRowName } from './kpiBoardRows.js';
-import { normSatName, satKindOf } from './kpiCustomerSat.js';
+
+/* ── ชื่อหัวข้อ "ความพึงพอใจ" แบบเทียบได้ ─────────────────────────────────────────────────────
+   `normKpiRowName` ตัดช่องว่าง/ขีด/วงเล็บแล้ว แต่ยังเหลือ `&` ⇒ `Customer Satisfaction` กับ
+   `Customer Satisfaction (Q&D)` ต้องรู้ว่าเป็นหัวข้อเดียวกัน (เคสจริงหัวไฟล์) */
+export const normSatName = (s) => normKpiRowName(s).replace(/&/g, '').replace(/q(and)?d$/, '');
+
+/** หัวข้อนี้เป็น "ความพึงพอใจ" ไหม — คืนตระกูล หรือ `null`
+ *  @returns 'customer' | 'internal' | 'other' | null
+ *    other = มีคำ satisfaction แต่ไม่ใช่ 2 ชื่อหลัก (เช่น `General Affair satisfaction` ของ HRM)
+ *  🔴 `customer` กับ `internal` คนละแบบสอบถาม — customer = ใบเดียวของโรงงาน (ค่ากลาง · สูตร
+ *     `csat_qd_pct`) · internal = ใบของหน่วยสนับสนุนแต่ละหน่วย (กรอกมือรายหน่วย) ห้ามยุบเป็นตระกูลเดียว */
+export function satKindOf(def) {
+  const n = normSatName(def?.name ?? def?.topic ?? '');
+  if (!n.includes('satisfaction')) return null;
+  if (n.includes('customersatisfaction')) return 'customer';
+  if (n.includes('internalsatisfaction')) return 'internal';
+  return 'other';
+}
 
 /* เหตุที่ถือว่าซ้ำ — เรียงจาก "แน่นอนที่สุด" ไป "เป็นข้อสงสัย" (จอเอาป้ายไปขึ้นตรงๆ ได้) */
 export const DUP_REASONS = {

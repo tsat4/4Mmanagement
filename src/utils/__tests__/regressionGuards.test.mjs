@@ -640,24 +640,28 @@ const RULES = [
     allow: {},
   },
   {
-    id: 'csat-qd-via-util',
+    id: 'csat-no-second-entry-point',
     scan: ['src'], ext: ['.jsx', '.js'],
-    /* จับการอ่านคะแนนดิบรายขา (`actual_score`/`total_score` ของ `kpi_customer_sat_parts`) นอกเจ้าของกฎ */
-    re: /\b(actual_score|total_score)\b/g,
-    why: '🤝 **Customer/Internal Satisfaction = 1 KPI 1 คะแนน** ตามทะเบียน `kpi_standard_items` '
-       + '(สูตร `(Actual Score/Total Score) x 100` · ทะเบียน**ไม่มีข้อย่อย** Q และ D — 16/11/2026) '
-       + '⇒ ขา Q/D คือการแยก "ตัวตั้ง-ตัวหาร" ของสูตรเดิม **ไม่ใช่ KPI 2 ตัว** '
-       + '· กับดักที่คนถัดไปจะพลาด: เอา % ของ 2 ขามา**เฉลี่ย** (Q 8/8 = 100% · D 3/4 = 75% '
-       + '⇒ ทางการ 11/12 = 91.67% แต่เฉลี่ยได้ 87.5 = เลขที่ไม่มีอยู่จริง เพราะตัวหาร 2 ขาไม่เท่ากัน) '
-       + '· กับดักที่ 2: ขาไม่ครบแล้วคิดค่ารวมจากขาเดียว/นับเป็น 0 (ต้องเป็น null + เขียนบนจอ)',
-    fix: 'ผ่าน `src/utils/kpiCustomerSat.js` เท่านั้น — `legPct` · `combineLegs` · `csatMonth` · `csatCoverage` '
-       + '· ค่ารวมที่ส่งกลุ่มยังอยู่ `kpi_manual_entries.value` **ห้ามให้โค้ดเขียนทับเอง** '
-       + '(เปลี่ยนได้ด้วยปุ่มที่คนกด) · 📄 docs/modules/obeya-kpi-board.md §แยก 2 ขา',
-    allow: {
-      'src/utils/kpiCustomerSat.js': 'เจ้าของกฎ — สูตร/สถานะทั้งหมดอยู่ที่นี่ที่เดียว',
-      'src/components/KpiCustomerSatModal.jsx': 'ช่องกรอก "ได้/เต็ม" รายขา — ส่งค่าดิบขึ้นไปให้ util คิด ไม่คิดเอง',
-      'src/components/KpiMonthly.jsx': 'saveCsatPart() เขียนแถว + tooltip โชว์ "ได้/เต็ม" ของเดือนนั้น — % มาจาก util',
-    },
+    /* จับช่องทางกรอก/เก็บคะแนนความพึงพอใจชุดที่ 2 — ตารางของตัวเอง หรือคอลัมน์คะแนนดิบที่ไม่ผ่านตัวแปรฐาน */
+    re: /\b(kpi_customer_sat_parts|actual_score|total_score)\b/g,
+    why: '🤝 **Customer Satisfaction ต้องมีค่าเดียว ทุกหน่วยดึงไปใช้** (16/11/2026 · คำสั่ง user '
+       + '"customer satisfaction ต้อง single source of truth และยิ่งค่าของโรงงาน ต้องมีค่าเดียว ดึงไปใช้เอา") '
+       + '· แบบสอบถามลูกค้า = **ใบเดียวของโรงงาน** ⇒ คะแนนดิบเก็บเป็น **ตัวแปรฐาน `level:\'plant\'`** '
+       + 'ใน `kpi_base_inputs` (`csat_q_actual`/`csat_q_total`/`csat_d_actual`/`csat_d_total`) '
+       + 'กรอกครั้งเดียวที่ขอบเขต ทั้งโรงงาน · นิยามของทุกหน่วย (QA · PD1-4 · Die MTN) ใช้สูตร '
+       + '`csat_qd_pct` ที่ `scope:\'plant\'` ⇒ อ่านเลขเดียวกันโดยโครงสร้าง เขียนเลขที่ 2 ไม่ได้ '
+       + '· กับดักที่เคยทำจริงแล้วถอยออก (16/11): ตาราง `kpi_customer_sat_parts` คีย์ด้วย `kpi_id` '
+       + '⇒ 7 แถวนิยาม = **7 ชุดคะแนนของแบบสอบถามใบเดียวกัน** = ตรงข้ามกับ "ค่าเดียว" '
+       + '· กับดักที่ 2: เอา % ของ 2 ขามา**เฉลี่ย** (Q 21/24 = 87.5% · D 6/8 = 75% ⇒ ทางการ 27/32 = 84.375% '
+       + 'แต่เฉลี่ยได้ 81.25 = เลขที่ไม่มีอยู่จริง เพราะตัวหาร 2 ขาไม่เท่ากัน)',
+    fix: 'แตกค่าผ่านราง `KPI_FORMULAS` เท่านั้น: หัวข้อรวม = `csat_qd_pct` '
+       + '(`(q_actual + d_actual) ÷ (q_total + d_total) × 100` — **ตัวตั้งรวม ÷ ตัวหารรวม ห้ามเฉลี่ย**) '
+       + '· ขาย่อยประกาศที่ `parts: [\'csat_q_pct\', \'csat_d_pct\']` แล้ว `formulaPartSeries()` วาดคนละกราฟให้เอง '
+       + '· ขาไม่ครบ = `evalFormula` คืน `{ value: null, missing }` อยู่แล้ว **ห้ามเดา 0** '
+       + '· ช่องกรอกมาจาก `KpiBaseInputsPanel` ของกลาง (สิทธิ์ 3 ชั้น + นับแถว + audit ครบแล้ว) '
+       + '· `Internal Satisfaction` ของหน่วยสนับสนุน = แบบสอบถามคนละใบรายหน่วย ยังกรอกมือที่หน่วยนั้น '
+       + '· 📄 docs/modules/obeya-kpi-board.md §ความพึงพอใจ Q/D',
+    allow: {},
   },
   {
     id: 'kpi-unit-decimals-via-helper',

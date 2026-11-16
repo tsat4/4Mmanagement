@@ -99,6 +99,14 @@ export const KPI_BASE_VARS = [
   { key: 'inventory_baht', label: 'มูลค่าสต็อกสิ้นเดือน (ตาม storage location)', unit: 'บาท', level: 'unit' },
   { key: 'manpower',       label: 'กำลังคนทั้งโรงงาน (Total Head count All)', unit: 'คน',  level: 'plant' },   // 09/11 user: ยอดขาย/หัว = ค่ากลาง ⇒ ตัวหาร = คนทั้งโรงงานจากใบ 5.Manpower (เดิม level unit)
   { key: 'cost_100p',      label: '100P + CR (มูลค่าที่ลดได้)',              unit: 'บาท', level: 'unit' },
+  /* 🤝 แบบสอบถามความพึงพอใจลูกค้า (16/11 · user: "customer satisfaction ต้อง single source of truth
+     และยิ่งค่าของโรงงาน ต้องมีค่าเดียว ดึงไปใช้เอา") — คะแนนดิบของ "แบบสอบถามใบเดียวของโรงงาน"
+     ⇒ `level:'plant'` = กรอกครั้งเดียวที่ขอบเขต ทั้งโรงงาน · ทุกหน่วยที่มี KPI ข้อนี้อ่านตัวเดียวกัน
+     🔴 ห้ามเพิ่มที่กรอกชุดที่ 2 ต่อหน่วย (ตารางของตัวเอง/ช่องกรอกในหน้า) — มี 2 ที่กรอก = ไม่มีค่าเดียว */
+  { key: 'csat_q_actual', label: 'ความพึงพอใจ — คะแนนที่ได้ ด้านคุณภาพ (Q)',     unit: 'คะแนน', level: 'plant' },
+  { key: 'csat_q_total',  label: 'ความพึงพอใจ — คะแนนเต็ม ด้านคุณภาพ (Q)',       unit: 'คะแนน', level: 'plant' },
+  { key: 'csat_d_actual', label: 'ความพึงพอใจ — คะแนนที่ได้ ด้านการส่งมอบ (D)',  unit: 'คะแนน', level: 'plant' },
+  { key: 'csat_d_total',  label: 'ความพึงพอใจ — คะแนนเต็ม ด้านการส่งมอบ (D)',    unit: 'คะแนน', level: 'plant' },
 ];
 
 export const baseVarOf = (key) => KPI_BASE_VARS.find(v => v.key === key) || null;
@@ -130,6 +138,22 @@ export const KPI_FORMULAS = [
   /* 09/11 user: "sales/head ต้องเท่ากันทุกส่วนงาน เป็นค่ากลาง ยอดขายรวม ÷ ยอดคนทั้งโรงงาน จากไฟล์บัญชี" ⇒ `scope:'plant'` = ทุกตัวแปรอ่านจาก ทั้งโรงงาน
      ไม่ว่านิยามจะอยู่หน่วยไหน (เคส PD1: Σ ยอดขายโรงงาน ÷ กำลังคน PD1 32 คน = 47.951 ทั้งที่ค่ากลาง ~4) · catalog `value_scope='plant'` ให้ทุกหน่วยอ่านแผ่นโรงงาน */
   { key: 'sale_per_head', label: 'ยอดขาย/หัว (MB)', expr: 'Σ sale_total (ม.ค.→เดือนนี้) ÷ manpower ทั้งโรงงาน ÷ 1,000,000', vars: ['sale_total', 'manpower'], cum: ['sale_total'], unit: 'MB', scope: 'plant' },
+  /* ── 🤝 ความพึงพอใจลูกค้า (Q&D) · 16/11 ─────────────────────────────────────────────────────
+     ทะเบียนกลางของกลุ่ม (`kpi_standard_items` 2026) เขียนหัวข้อนี้เป็น **1 แถว 1 คะแนน** สูตร
+     `(Actual Score / Total Score) x 100` · **ทะเบียนไม่มีข้อย่อย Q และ D** — `(Q&D)` คือ *ขอบเขตของ
+     แบบสอบถาม* (คุณภาพ + การส่งมอบ) ไม่ใช่ KPI 2 ตัว ⇒ ห้ามแตกเป็น 2 แถว KPI / 2 คะแนน / 2 น้ำหนัก
+     ⇒ แตกที่ **ตัวแปรฐาน** แทน: 4 ช่อง (ได้/เต็ม × Q/D) ที่ขอบเขต ทั้งโรงงาน
+     🔴 ค่ารวม = (Σคะแนนที่ได้ ÷ Σคะแนนเต็ม) × 100 — **ห้ามเฉลี่ย % ของ 2 ขา** (ตัวหารแต่ละขาไม่เท่ากัน
+        เฉลี่ยแล้วได้เลขที่ไม่มีอยู่ในใบจริง) · `parts` = % ของขานั้นเทียบคะแนนเต็มของขาเอง (คนละคำถาม
+        กับค่ารวม) จอ 🔍 วาดแยกคนละกราฟ พร้อมสูตรของตัวเอง ไม่ได้ซ้อนทับให้บวกกัน
+     🔴 `scope:'plant'` = ทุกตัวแปรอ่านจากขอบเขต ทั้งโรงงาน ไม่ว่านิยามจะอยู่หน่วยไหน (QA · PD1-4 ·
+        Die MTN เห็นเลขเดียวกับโรงงาน) — นี่คือ "ค่าเดียว ดึงไปใช้" ที่ user สั่ง 16/11
+     ℹ️ `Internal Satisfaction` ของหน่วยสนับสนุน = **แบบสอบถามคนละใบ รายหน่วย** ยังกรอกมือที่หน่วยนั้น
+        ห้ามเอามารวมสูตรนี้ (Tooling MTN มีค่าจริงของตัวเอง 7 เดือน) */
+  { key: 'csat_q_pct',    label: 'ความพึงพอใจ — คุณภาพ (Q) %',   expr: 'csat_q_actual ÷ csat_q_total × 100', vars: ['csat_q_actual', 'csat_q_total'], unit: '%', scope: 'plant' },
+  { key: 'csat_d_pct',    label: 'ความพึงพอใจ — ส่งมอบ (D) %',   expr: 'csat_d_actual ÷ csat_d_total × 100', vars: ['csat_d_actual', 'csat_d_total'], unit: '%', scope: 'plant' },
+  { key: 'csat_qd_pct',   label: 'Customer Satisfaction (Q&D) %', expr: '(csat_q_actual + csat_d_actual) ÷ (csat_q_total + csat_d_total) × 100',
+    vars: ['csat_q_actual', 'csat_q_total', 'csat_d_actual', 'csat_d_total'], unit: '%', scope: 'plant', parts: ['csat_q_pct', 'csat_d_pct'] },
 ];
 
 export const formulaOf = (key) => KPI_FORMULAS.find(f => f.key === key) || null;
@@ -152,6 +176,10 @@ export function evalFormula(formulaKey, vars = {}) {
     case 'rm_pct':        value = div(v.raw_material, v.sale_product); break;
     case 'p100_pct':      value = div(v.cost_100p, v.sale_product); break;
     case 'inventory_day': { const r = div(v.inventory_baht, v.cogs); value = r == null ? null : r * Number(v.days_in_month); break; }
+    case 'csat_q_pct':    value = div(v.csat_q_actual, v.csat_q_total); break;
+    case 'csat_d_pct':    value = div(v.csat_d_actual, v.csat_d_total); break;
+    /* 🔴 ตัวตั้งรวม ÷ ตัวหารรวม — ห้ามเฉลี่ย (csat_q_pct + csat_d_pct) ÷ 2 */
+    case 'csat_qd_pct':   value = div(v.csat_q_actual + v.csat_d_actual, v.csat_q_total + v.csat_d_total); break;
     case 'sale_per_head': { const per = div(v.sale_total, v.manpower); return { value: per == null ? null : per / 1e6, missing: [], error: null }; }
     default: return { value: null, missing: [], error: 'ยังไม่ได้ทำสูตรนี้' };
   }
