@@ -35,7 +35,7 @@ import { mtnAutoSeries, autoKpiOfName, toRowUnit, autoDetailText, HOURS_PER_MONT
 import { GAP, useSheetGrid, StatusLamp, Sheet, WarnNote, EmptyChart, FocusAxisNote, TV_SHEET_GRID } from './ObeyaSheet';
 import useTvShell from '../utils/useTvShell';
 import { balanceGrid } from '../utils/sheetGrid';
-import { applyFormulaEntries, buildBaseIndex, formulaNoteText } from '../utils/kpiFormula';
+import { applyFormulaEntries, buildBaseIndex, formulaNoteText, amountCompanion, amountText } from '../utils/kpiFormula';
 import { headcountAuto, headcountAutoVar } from '../utils/kpiHeadcount';
 import { boardFlipSec, activeDwellSecOf } from '../utils/displayRotation';
 import BoardPager from './BoardPager';
@@ -308,7 +308,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
       const actions = (acts.data || []).filter(a => secOk(a.section));
       // 6) นิยาม KPI ของปี + ค่ารายเดือน (กรอกมือ / เป้าของแถว auto)
       let kdRes = await supabase.from('kpi_definitions')
-        .select('*, kpi_catalog(id, name, unit, direction, decimals, summary_mode, value_scope, board_slot)').eq('year', year).eq('is_active', true);
+        .select('*, kpi_catalog(id, name, unit, direction, decimals, summary_mode, value_scope, board_slot, amount_var)').eq('year', year).eq('is_active', true);
       if (kdRes.error && (kdRes.error.code || '') !== '42P01') {
         kdRes = await supabase.from('kpi_definitions').select('*').eq('year', year).eq('is_active', true);
       }
@@ -398,8 +398,8 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
     const entByKpi = {};
     (kentries || []).forEach(e => (entByKpi[e.kpi_id] = entByKpi[e.kpi_id] || {})[e.month] = e.value);
     /* 🧮 นิยามสูตร: ค่ารายเดือน = ยอดเงินของหน่วย ÷ ยอดขายกลาง (utils/kpiFormula.js) — ทับค่ากรอกมือ · คำนวณไม่ได้ = ใช้ค่ากรอกมือ + ป้าย ✍️ */
-    const fxB = applyFormulaEntries([...(kdefs || []), ...(kdefsBelow || [])], entByKpi,
-      buildBaseIndex(kbase || [], { auto: headcountAutoVar(headcountAuto(kemps || [], { year, today })) }), org);
+    const baseIdxB = buildBaseIndex(kbase || [], { auto: headcountAutoVar(headcountAuto(kemps || [], { year, today })) });
+    const fxB = applyFormulaEntries([...(kdefs || []), ...(kdefsBelow || [])], entByKpi, baseIdxB, org);
     Object.assign(entByKpi, fxB.entries);
     const fInfoB = fxB.info;
     const skLabelB = (sk) => { const i = String(sk).indexOf(':'); return i < 0 ? 'ทั้งโรงงาน' : org.labelOf(sk.slice(0, i), sk.slice(i + 1)); };
@@ -620,6 +620,13 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
         const parts = vars.map(v => `${(baseVarOf(v)?.label || v).split(' (')[0].replace(/^[^\wก-๙]+\s*/, '')} ${fmtIn(v, ins[v])}${fiB.inputSrc?.[useM]?.[v] === 'auto' ? ' ≈ทะเบียน' : ''}`);
         fxSrc = `🧮 ${fiB.label} · ${parts.join(' ÷ ')}${useM !== mNo ? ` (${monthLabel(`${year}-${String(useM).padStart(2, '0')}`)})` : ''}`;
       }
+      /* 💰 ยอดเงินคู่กัน (16/11 · user: "ให้ขึ้นยอดเงินคู่กัน") — KPI ที่เป็น % ของยอดขาย (100P) ใบบัญชีมียอดเงินคู่กันเสมอ
+         ⇒ บรรทัดรองบอกทั้งเดือนที่เลือก + สะสม (MB) จาก kpi_base_inputs ตัวแปรที่ตั้งไว้ใน 📘 ทะเบียน (`amount_var`) · เดือนที่ขาดเขียนบอก ห้ามเดา 0 */
+      const amtDef = man?.def || null;
+      const amtText = amtDef && !r.auto
+        ? amountText(amountCompanion({ def: amtDef, scope: canonicalScope(org, scopeOfDef(amtDef)), base: baseIdxB,
+          month: Number(String(valueKey || monthKey).slice(5, 7)) || monthNo }), { monthLabel: (m) => monthLabel(`${year}-${String(m).padStart(2, '0')}`) })
+        : '';
       /* 🎯 เป้า/Commitment อ่านผ่าน `defBars()` ตัวเดียว (กฎ kpiSetup "ห้ามให้จอไหนแกะเอง") — เดิมอ่าน `target_value` ตรงๆ
          ⇒ นิยามที่พิมพ์เป้าไว้ในช่องข้อความ ("730" · "≤ 0.5%") แต่ไม่กรอกช่องตัวเลข ขึ้น "ไม่มีเป้า" ทั้งที่ ⚙️ ตัดสิน ○△✗ ได้ (user 09/10) */
       const bars = def ? defBars(def) : null;
@@ -674,7 +681,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
         hasTarget: !!(def && (target != null || bars?.commit_value != null)),
       };
       return {
-        ...r, def, unit, dir, series, value, valueKey, stale, target, st, why, note, manual, fxSrc, fromDept, months, sumKind, sumApprox, ytd, actualMonths, forecast, curFilled, curChild, curDetail, curMan, hrPerPct, childMix, mix, roll,
+        ...r, def, unit, dir, series, value, valueKey, stale, target, st, why, note, manual, fxSrc, amtText, fromDept, months, sumKind, sumApprox, ytd, actualMonths, forecast, curFilled, curChild, curDetail, curMan, hrPerPct, childMix, mix, roll,
         atLabel: man?.inherited && man.at ? org.labelOf(man.at.kind, man.at.value) : '',
         commit: bars?.commit_value ?? null, hasPlan: Object.keys(planMap).length > 0,
         dec: decimalsOf(def),
@@ -1086,7 +1093,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
                   /* 30/09 (user): เลขใหญ่ = ค่าเดือนที่เลือก · บรรทัดรอง = YTD บอกวิธีรวม+จำนวนเดือน · ท้ายแผ่น = คาดปลายปี */
                   sub={`${r.curChild ? '⬆ ค่ารวมจากหน่วยลูก (เดือนนี้ระดับนี้ไม่ได้กรอก)' : srcLabel(r)}${r.ytd != null
                     ? ` · YTD ${nf(cvR(r, r.ytd), decR(r))}${unitR(r) ? ' ' + unitR(r) : ''} (${r.sumApprox ? '≈ เฉลี่ย' : summaryShort(r.sumKind)}${r.auto && !r.fromDept && !r.sumApprox && r.sumKind !== 'sum' ? 'ถ่วงน้ำหนัก' : ''} ${r.actualMonths} เดือน)`
-                    : ''}`}
+                    : ''}${r.amtText ? ` · ${r.amtText}` : ''}`}
                   big={r.value == null ? '—' : nf(cvR(r, r.value), decR(r))}
                   unit={r.value != null ? unitR(r) : ''} bigNote={r.value != null ? `เดือน ${monthLabel(r.valueKey)}${r.stale ? ' (ล่าสุด)' : ''}${r.curDetail ? ` · ${r.curDetail}` : ''}${r.curMan != null ? ` · ✍️ กรอกมือ ${nf(cvR(r, r.curMan), decR(r))}${unitR(r) ? ' ' + unitR(r) : ''}` : ''}` : ''} delta={r.delta}
                   stat={toLamp(r.st, r.note && !(r.st === ST.unknown) ? `${r.why} · ${r.note}` : r.why)}
