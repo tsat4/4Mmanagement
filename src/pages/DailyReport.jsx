@@ -3,6 +3,7 @@ import { confirmAndSyncLineDemand, syncSummaryText } from '../lib/lineDemandSync
 import InfoMore from '../components/InfoMore';   // ⓘ คำอธิบายยาวพับไว้ (UI §6.10)
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase, supabaseDR } from '../supabaseClient';
+import QaFmeLineBanner from '../components/QaFmeLineBanner';
 import { UserContext } from '../App';
 import { canWriteLine, writeBlockText } from '../utils/writeScope';   // 🔐 ชั้นที่ 3 — ทะเบียนสินค้าของไลน์ส่วนงานอื่น (20/10)
 import { fmtDate, fmtDateTime, fmtDateTimeFull, fmtTime } from '../utils/dateFormat';
@@ -4063,6 +4064,8 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                   </div>
                 );
               })()}
+              {/* 🟡 QA ยังไม่ตรวจ First ของกะนี้ — เตือนอย่างเดียว ไม่ล็อก (16/11 · คำสั่ง user) */}
+              {selSession && <QaFmeLineBanner lineName={selSession.line_name} workDate={selSession.work_date} shift={selSession.shift} />}
               {/* 🔔 ของไลน์นี้ที่ถึง min แล้ว — รอแพลนนิ่งจัดแผนลง (ไลน์ดูเพื่อเตรียมตัว ไม่ได้กดอะไร) */}
               {selSession?.line_name && minAlertsForLine(minAll.rows, selSession.line_name).length > 0 && (
                 <div style={{ marginBottom: 10 }}>

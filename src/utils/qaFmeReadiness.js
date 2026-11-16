@@ -8,7 +8,7 @@
  *
  * ลำดับที่ต้องครบก่อนเปิด (ห้ามสลับ — docs/modules/qa-inspection.md):
  *   1. /qa-setup ลงพาร์ท + ผูกให้ครอบรุ่นที่วิ่งจริง (> 0 ก็พอ ไม่ต้องครบ)
- *   2. /notification-config เลือกห้องให้ qa_fme_call (+ qa_fme_overdue)
+ *   2. /notification-config ตั้งผู้รับในแอปให้ qa_fme_call (+ qa_fme_overdue) — Telegram ไม่บังคับ (16/11)
  *   3. /qa ⚙️ ค่อยเปิดสวิตช์
  *
  * ⚠️ `resolveQaPartId` ต้อง **ตรงกับ edge `qa-fme-scan` §5 (resolvePart)** ทุกบรรทัด —
@@ -60,7 +60,12 @@ export function countLinkedModels(qaParts, products) {
   return { models: models.length, linked, parts, partsWithMat };
 }
 
-const roomOk = (rule) => !!rule && rule.is_enabled !== false && Array.isArray(rule.channel_ids) && rule.channel_ids.length > 0;
+/* 🔔 ช่องทาง = ผู้รับในแอป (`inapp_roles`) **หรือ** ห้อง Telegram (16/11 · กฎ "แจ้งเตือนใหม่ = ในแอป")
+   edge ไม่ถอยไปห้อง fallback แล้วเมื่อ rule ไม่เลือกห้อง ⇒ ตั้งผู้รับในแอปอย่างเดียวก็พอ */
+const nIn = (rule) => (Array.isArray(rule?.inapp_roles) ? rule.inapp_roles.length : 0);
+const nTg = (rule) => (Array.isArray(rule?.channel_ids) ? rule.channel_ids.length : 0);
+const roomOk = (rule) => !!rule && rule.is_enabled !== false && (nIn(rule) + nTg(rule)) > 0;
+const roomText = (rule) => [nIn(rule) ? `ในแอป ${nIn(rule)} role` : '', nTg(rule) ? `Telegram ${nTg(rule)} ห้อง` : ''].filter(Boolean).join(' · ');
 
 /**
  * ประเมินความพร้อมก่อนเปิดสวิตช์ — คืนรายการเช็ค + สรุปว่าเปิดได้ไหม
@@ -90,22 +95,22 @@ export function assessFmeReadiness({ qaParts, products, rules } = {}) {
   }
 
   if (!Array.isArray(rules)) {
-    checks.push({ key: 'room_call', ok: null, hard: true, label: 'ห้อง Telegram สำหรับ "เรียกตรวจ" (qa_fme_call)',
+    checks.push({ key: 'room_call', ok: null, hard: true, label: 'ผู้รับแจ้ง "เรียกตรวจ" (qa_fme_call)',
       detail: 'อ่าน notification_rules ไม่ได้ — ประเมินไม่ได้', fixAt: '/notification-config' });
-    checks.push({ key: 'room_overdue', ok: null, hard: false, label: 'ห้อง Telegram สำหรับ "เกินเวลา" (qa_fme_overdue)',
+    checks.push({ key: 'room_overdue', ok: null, hard: false, label: 'ผู้รับแจ้ง "เกินเวลา" (qa_fme_overdue)',
       detail: 'อ่าน notification_rules ไม่ได้ — ประเมินไม่ได้', fixAt: '/notification-config' });
   } else {
     const call = rules.find(r => r?.event_key === 'qa_fme_call');
     const over = rules.find(r => r?.event_key === 'qa_fme_overdue');
-    checks.push({ key: 'room_call', ok: roomOk(call), hard: true, label: 'ห้อง Telegram สำหรับ "เรียกตรวจ" (qa_fme_call)',
-      detail: roomOk(call) ? `เลือกแล้ว ${call.channel_ids.length} ห้อง`
+    checks.push({ key: 'room_call', ok: roomOk(call), hard: true, label: 'ผู้รับแจ้ง "เรียกตรวจ" (qa_fme_call)',
+      detail: roomOk(call) ? roomText(call)
         : !call ? 'ยังไม่มี rule นี้ (ยังไม่ apply migration 20260819_qa_fme_call.sql)'
-        : call.is_enabled === false ? 'rule ถูกปิดอยู่' : 'ยังไม่เลือกห้อง — เปิดแล้วข้อความชุดแรกจะไปห้อง fallback',
+        : call.is_enabled === false ? 'rule ถูกปิดอยู่' : 'ยังไม่ตั้งผู้รับ — เปิดแล้วไม่มีใครได้รับแจ้ง (ตั้ง role ผู้รับในแอป)',
       fixAt: '/notification-config' });
-    checks.push({ key: 'room_overdue', ok: roomOk(over), hard: false, label: 'ห้อง Telegram สำหรับ "เกินเวลา" (qa_fme_overdue)',
-      detail: roomOk(over) ? `เลือกแล้ว ${over.channel_ids.length} ห้อง`
+    checks.push({ key: 'room_overdue', ok: roomOk(over), hard: false, label: 'ผู้รับแจ้ง "เกินเวลา" (qa_fme_overdue)',
+      detail: roomOk(over) ? roomText(over)
         : !over ? 'ยังไม่มี rule นี้' : over.is_enabled === false ? 'rule ถูกปิดอยู่ — เกินเวลาจะไม่มีใครถูกเตือน'
-        : 'ยังไม่เลือกห้อง — เตือนเกินเวลาจะไปห้อง fallback (เปิดได้ แต่ควรตั้ง)',
+        : 'ยังไม่ตั้งผู้รับ — เกินเวลาจะไม่มีใครถูกเตือน (เปิดได้ แต่ควรตั้ง)',
       fixAt: '/notification-config' });
   }
 
