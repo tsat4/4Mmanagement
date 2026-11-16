@@ -11055,3 +11055,55 @@ test('🚫 no-fg-line-request — ทุกจุดที่ออกใบเ�
     '\n\n❌ ไฟล์นี้ออกใบเบิกเข้าไลน์โดยไม่กันเลข FG 1xx:\n   ' + offenders.join('\n   ')
     + '\n   ใช้ `isFgMat(mat)` + ข้อความ `FG_NO_LINE_REQUEST` จาก src/utils/storeOps.js ก่อน insert\n');
 });
+
+/* ── 🧭 ตัวกรอง "ไลน์" ห้ามซ่อนคนที่ไม่ได้สังกัดไลน์ (regression จริง 13/11 → แจ้ง 16/11) ────
+   13/11 เพิ่ม `defaultLineFilter()` ให้หัวหน้าไลน์เปิดจอมาเห็นไลน์ตัวเองก่อน (คำสั่ง user) ⇒
+   ตัวกรองไลน์ทำงานทันทีที่เปิดจอ · แต่ตัวกรองนั้นถามแค่ "อยู่ไลน์ไหน" ⇒ สายสนับสนุน/ช่าง/
+   คนที่ยังไม่ผูกไลน์ **หายทั้งกองเงียบ ๆ** — หน้างาน: "พนักงานออฟฟิศ ตอนนี้ไม่โชว์เลย"
+   (วัดจริง Main 16/11 · active: support 64 / 13 คนไม่มี line_id · technician 22 · shopfloor ไม่มีไลน์ 4)
+   คลาสเดียวกับที่ 05/10 แก้ไว้แล้วสำหรับช่อง "ส่วนงาน" (เทสด้านบน) — รอบนี้คือแกน "ไลน์"
+   🔴 ห้ามแก้ด้วยการถอด defaultLineFilter (= ย้อนคำสั่ง user 13/11) · ห้ามซ่อนเงียบ */
+test('🛡️ /checkin: ตัวกรองไลน์ซ่อนได้เฉพาะคนที่แกนไลน์อธิบายได้ (lineAxisFilter)', () => {
+  const ck = stripComments(readFileSync(join(ROOT, 'src/pages/Checkin.jsx'), 'utf8'));
+  const bad = [];
+  if (!/if\s*\(\s*selLine\s*\)\s*return\s+axisOf\(emp\)\s*!==\s*AXIS_OTHER/.test(ck))
+    bad.push('ตัวกรอง selLine ไม่ได้ตัดสินผ่าน axisOf()/AXIS_OTHER (ของกลาง utils/lineAxisFilter.js)');
+  if (/selLineFamilyIds\.has\(/.test(ck))
+    bad.push('กลับไปถาม selLineFamilyIds.has(line_id) ตรงๆ = คนที่ไม่สังกัดไลน์หายเงียบอีก');
+  if (!/defaultLineFilter\(/.test(ck))
+    bad.push('ถอด defaultLineFilter ทิ้ง — หัวหน้าไลน์ต้องเปิดจอมาเห็นไลน์ตัวเองก่อน (คำสั่ง user 13/11)');
+  if (!/offAxisShown\s*>\s*0/.test(ck))
+    bad.push('ไม่เขียนบนจอว่าแสดงคนที่ไม่สังกัดไลน์กี่คน (กฎจอซื่อสัตย์)');
+  if (!/hiddenOtherLines\s*>\s*0/.test(ck))
+    bad.push('ไม่เขียนบนจอว่าซ่อนคนไลน์อื่นไปกี่คน (กฎจอซื่อสัตย์)');
+
+  const ax = stripComments(readFileSync(join(ROOT, 'src/utils/lineAxisFilter.js'), 'utf8'));
+  if (!/isShopfloorStaff/.test(ax))
+    bad.push('lineAxisFilter ไม่ได้ถาม isShopfloorStaff — ห้ามพิมพ์ลิสต์ staff_kind เองซ้ำ (staffKind.js)');
+  if (/['"](support|technician|indirect|shopfloor)['"]/.test(ax))
+    bad.push('lineAxisFilter เขียนค่า staff_kind เป็นสตริงเอง = ลิสต์ที่ 2 ที่จะ drift จาก staffKind.js');
+
+  assert.deepEqual(bad, [], '\n\n❌ จอเช็คชื่อ: ตัวกรองไลน์ซ่อนคนผิดกลุ่ม\n   ' + bad.join('\n   ')
+    + '\n   กฎ+เหตุผลเต็ม: src/utils/lineAxisFilter.js · docs/modules/employee-identity.md\n');
+});
+
+/* ── 🤝 มุมมองสะสม "ถูกยืมออกกี่วัน" ต้องคิดที่ util เดียว + บอกช่วงเวลาบนจอ (16/11) ──────
+   หน้างาน: "ยืมตัวพนักงาน ยืมแล้วไม่ยอมคืน เจ้าของจะมองไม่เห็นรึป่าว"
+   ตัวเลขสะสมที่นับในหน้า = อีกไม่นานจะมีจอที่ 2 ที่นับไม่เหมือนกัน (บทเรียน OEE 4 ไฟล์) */
+test('🛡️ /checkin: สรุปวันถูกยืมออก ต้องมาจาก summarizeBorrowOut + เขียนช่วงวันบนจอ', () => {
+  const ck = stripComments(readFileSync(join(ROOT, 'src/pages/Checkin.jsx'), 'utf8'));
+  const bad = [];
+  if (!/summarizeBorrowOut\(/.test(ck)) bad.push('ไม่ได้ใช้ summarizeBorrowOut() — ห้ามนับวันเองในหน้า');
+  if (!/borrowWindow\(/.test(ck))       bad.push('ไม่ได้ใช้ borrowWindow() — ช่วงวันต้องมาจาก getWorkDate ไม่ใช่ new Date()');
+  if (!/borrowSum\.from/.test(ck))      bad.push('ไม่เขียนช่วงวันที่นับบนจอ (ตัวเลขสะสมที่ไม่บอกช่วง = อ่านผิดแน่)');
+  if (!/borrowSum\.unknownHome\s*>\s*0/.test(ck)) bad.push('ไม่เขียนบนจอว่ามีแถวที่นับไม่ได้กี่แถว');
+  if (/from\('line_helpers'\)[\s\S]{0,200}select\('\*'\)/.test(ck)) bad.push("อ่าน line_helpers ด้วย select('*') — กฎ egress");
+
+  const bd = stripComments(readFileSync(join(ROOT, 'src/utils/borrowDays.js'), 'utf8'));
+  if (/new Date\(\)\s*\./.test(bd) || !/now = new Date\(\)/.test(bd))
+    bad.push('borrowDays ไม่รับ `now` เป็นพารามิเตอร์ = เทสระเบิดเวลา (npm test รันรอบนาฬิกา +400 วัน)');
+  if (!/getWorkDate\(/.test(bd)) bad.push('borrowDays ไม่ใช้ getWorkDate() — วันทำงานตัด 08:00');
+
+  assert.deepEqual(bad, [], '\n\n❌ มุมมองสะสมการยืมตัว\n   ' + bad.join('\n   ')
+    + '\n   กฎ+เหตุผลเต็ม: src/utils/borrowDays.js\n');
+});
