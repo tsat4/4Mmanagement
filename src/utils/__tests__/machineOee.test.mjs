@@ -121,3 +121,41 @@ test('รายการหยุด/พาเรโต: ไม่รวมห�
   const p = stopPareto(ev, W);
   assert.deepEqual(p.map(x => [x.state, Math.round(x.min)]), [['idle', 6], ['fault', 4]]);
 });
+
+test('🍱 พักแบบโควตานาที (ทาง A · ยึด duration): กดพักเกินนโยบาย = เสีย A · กดพักน้อยกว่า = หักโควตาที่เหลือจาก Idle', async () => {
+  const { aggregateStops: agS, machineShiftOee: mso, BREAK_PRESS } = await import('../machineOee.js');
+  const breakCodes = new Set([2, 3, 4]);
+  const W2 = { startMs: Date.parse(bkk('2026-11-13T08:00:00')), endMs: Date.parse(bkk('2026-11-13T16:00:00')) };
+  // กดพัก 15 + 55 + 10 = 80 นาที · โควตานโยบาย 70 นาที (10+50+10) ⇒ เกิน 10 นาที
+  const ev = [
+    { state: 'planned_stop', reason_code: 2, started_at: bkk('2026-11-13T10:05:00'), duration_sec: 15 * 60 },
+    { state: 'planned_stop', reason_code: 3, started_at: bkk('2026-11-13T11:55:00'), duration_sec: 55 * 60 },
+    { state: 'planned_stop', reason_code: 4, started_at: bkk('2026-11-13T14:59:00'), duration_sec: 10 * 60 },
+    { state: 'planned_stop', reason_code: 21, started_at: bkk('2026-11-13T13:00:00'), duration_sec: 60 },     // Tip dressing = หยุดตามแผน ไม่ใช่พัก
+  ];
+  const agg = agS(ev, W2, breakCodes);
+  assert.equal(agg[BREAK_PRESS].sec, 80 * 60);
+  assert.equal(agg.planned_stop.sec, 60);
+  const r = mso({ agg, pieces: 0, ngPeople: 0, elapsedSec: 480 * 60, ct: 40, policyBreakSec: 70 * 60 });
+  assert.equal(r.loss.breakOver, 10 * 60);
+  assert.equal(r.plannedSec, (480 - 70 - 1) * 60);
+  assert.equal(r.downSec, 10 * 60);
+  assert.ok(!r.why.includes('no_break_policy'));
+
+  // ไม่ได้กดพักเลย — เครื่องขึ้น Idle 75 นาที · โควตา 70 ⇒ หัก Idle 70 เหลือเสีย 5
+  const agg2 = agS([{ state: 'idle', started_at: bkk('2026-11-13T12:00:00'), duration_sec: 75 * 60 }], W2, breakCodes);
+  const r2 = mso({ agg: agg2, pieces: 0, ngPeople: 0, elapsedSec: 480 * 60, ct: 40, policyBreakSec: 70 * 60 });
+  assert.equal(r2.loss.idleAbsorbedSec, 70 * 60);
+  assert.equal(r2.loss.idle, 5 * 60);
+  assert.equal(r2.loss.breakOver, 0);
+  assert.equal(r2.operatingSec, (480 - 70 - 5) * 60);
+});
+
+test('⏱️ ระยะเวลายึด duration_sec ของต้นทางก่อน ended_at (นาฬิกา PLC คลาด)', async () => {
+  const { evSpan } = await import('../machineOee.js');
+  const sp = evSpan({ started_at: bkk('2026-11-13T10:00:00'), ended_at: bkk('2026-11-13T10:09:00'), duration_sec: 300 });
+  assert.equal((sp[1] - sp[0]) / 1000, 300);
+  const sp2 = evSpan({ started_at: bkk('2026-11-13T10:00:00'), ended_at: bkk('2026-11-13T10:09:00') });
+  assert.equal((sp2[1] - sp2[0]) / 1000, 540);
+  assert.equal(evSpan({ started_at: null, duration_sec: 5 }), null);
+});

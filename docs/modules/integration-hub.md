@@ -153,3 +153,14 @@ user เลือกจาก 4 ทาง: ① เทียบอย่างเ
 | `supabase/migrations/20261113d_machine_live_state_dr.sql` (DR · apply แล้ว) | `machine_live_state` |
 | `src/utils/machineOee.js` · `src/lib/jigOeeData.js` | สูตร · โหลด |
 | `src/components/JigOee.jsx` · `JigOeeAnalytics.jsx` · `LineJigCards.jsx` | การ์ด/ดูลึก/รายงาน · แท็บ · แถวบน /line-oee |
+
+## 🍱 เวลาพัก + ⏱️ ยึดระยะเวลา (16/11 · คำสั่ง user · เลือกทาง A)
+- **นาฬิกา PLC คลาด ~3–5 นาที** (วัด: received_at − ended_at ต่ำสุด 3.3–4 นาที ทั้งที่ส่งทุก 1 นาที) ⇒ user: *"อยากให้เน้นที่ duration"*
+  - ช่วงหยุดใช้ `duration_sec` ของต้นทางก่อน `ended_at` (`evSpan()` · rpc `fn_machine_shift_facts` v2 ก็เช่นกัน)
+  - ไม่จับคู่ช่วงหยุดกับนโยบายพักด้วยเวลานาฬิกา · เตือนเครื่องเสียใน Daily Report เผื่อ ±10 นาที (`CLOCK_SLACK_MS`)
+- **เวลาพัก = นโยบาย ESM แบบ "โควตานาที"** (`breakIntervalsIn` ตามไลน์ของจิ๊ก · พักท้ายกะใช้เมื่อรู้เวลาเลิกกะ)
+  - เหตุผล Onplan ที่ติดป้าย 🍱 "เวลาพัก (ESM คิดเอง)" (`machine_reason_map.is_break` · migration `20261116`) = การกดพักหน้าเครื่อง
+  - กดพัก > โควตา ⇒ ส่วนเกิน = **เสีย A "พักเกินเวลานโยบาย"** (ขึ้นใน Loss + Pareto)
+  - กดพัก < โควตา (พักแต่ไม่ได้กด เครื่องขึ้น Idle) ⇒ โควตาที่เหลือหักจาก Idle ≥ 2 นาทีก่อน — จอเขียนบอก
+  - อ่านนโยบายไม่ได้ ⇒ ถอยไปใช้เวลาที่กดพักหน้าเครื่อง + เขียน `no_break_policy`
+- ไฟล์: `supabase/migrations/20261116_machine_reason_is_break_dr.sql` (apply แล้ว) · `20261116b_machine_shift_facts_reason_dr.sql` (rpc + reason_code · ดูสถานะ apply ในคอมมิท)

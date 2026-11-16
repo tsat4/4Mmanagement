@@ -17,7 +17,15 @@
      ไม่มีใบบนจิ๊กในกะ / MAT ไม่มี CT = P null (ห้ามใช้ ideal ของต้นทางแทน — CT เป็น master ของ ESM)
    Q = (ชิ้น − NG ที่คนลง) ÷ ชิ้น · NG ที่คนลง = defect_logs ของใบบนจิ๊ก (defectQty — กฎ "ของสงสัยยังไม่ใช่ของเสีย")
      NG ที่กดหน้าเครื่อง = โชว์คู่ (ข้อมูลเสนอ) ไม่ใช้คิด · ไม่มีใบ = Q null (ไม่รู้ว่าคนตัดสินอะไร)
-   OEE = A × P × Q (ทุกตัวต้องไม่ null) */
+   OEE = A × P × Q (ทุกตัวต้องไม่ null)
+
+   ⏱️ **ยึด "ระยะเวลา" ไม่ยึด "เวลานาฬิกา"** (16/11 · คำสั่ง user "PLC มีปัญหาเรื่องเวลา อยากให้เน้นที่ duration")
+      วัดจริง: received_at − ended_at ต่ำสุด 3.3–4 นาที ทั้งที่ flow ส่งทุก 1 นาที ⇒ นาฬิกา PLC คลาด ~3–5 นาที
+      ⇒ ช่วงหยุดใช้ `duration_sec` ของต้นทางก่อน (เวลาเริ่มใช้แค่ "ตกกะไหน")
+   🍱 **เวลาพัก = นโยบาย ESM (`breakIntervalsIn`) แบบโควตานาที** — ไม่จับคู่ช่วงเวลา (นาฬิกาคลาด):
+      ส่วนแผน = กรอบกะที่ผ่านไป − โควตาพัก − ไม่มีแผน − หยุดตามแผนที่ไม่ใช่พัก − ขาดการสื่อสาร
+      กดพักหน้าเครื่อง (เหตุผลที่ติดป้าย is_break) > โควตา ⇒ ส่วนเกิน = เสีย A ("พักเกินเวลานโยบาย" · user เลือกทาง A)
+      กดพัก < โควตา (พักแต่ไม่ได้กด เครื่องขึ้น Idle) ⇒ โควตาที่เหลือหักจาก Idle ≥ 2 นาทีก่อน — จอเขียนบอกเสมอ */
 
 const H = 3600000;
 const BKK = 7 * H;
@@ -38,32 +46,45 @@ export function shiftBounds(workDate, shift) {
 export const DOWN_STATES = ['fault', 'unplanned', 'idle'];          // เสีย A (เมื่อไม่ใช่หยุดสั้น)
 export const MINOR_LOSS_STATES = ['fault', 'unplanned'];           // หยุดสั้นที่นับเสีย P
 export const EXCLUDED_STATES = ['no_plan', 'planned_stop', 'comm_loss'];
+/** ถังพิเศษ: หยุดตามแผนที่เหตุผลติดป้าย "เวลาพัก" — ไม่กันออกตรงๆ แต่ใช้เทียบโควตาพักนโยบาย */
+export const BREAK_PRESS = 'break_press';
+
+/** ระยะเวลาของช่วงหยุด — **ใช้ duration_sec ของต้นทางก่อน** (นาฬิกา PLC คลาด) · ไม่มีค่อยใช้ ended − started */
+export function evSpan(ev) {
+  const s = tms(ev?.started_at);
+  if (s == null) return null;
+  const d = ev.duration_sec != null && Number.isFinite(Number(ev.duration_sec)) && Number(ev.duration_sec) >= 0 ? Number(ev.duration_sec) * 1000 : null;
+  const e = d != null ? s + d : tms(ev.ended_at);
+  return e != null && e > s ? [s, e] : null;
+}
+/** ถังของช่วงหยุด — planned_stop ที่เหตุผลเป็นพัก (breakCodes ของต้นทางนั้น) = BREAK_PRESS */
+export const bucketOf = (ev, breakCodes = null) =>
+  (ev?.state === 'planned_stop' && breakCodes && ev.reason_code != null && breakCodes.has(Number(ev.reason_code)) ? BREAK_PRESS : ev?.state);
 
 /** ตัดช่วง [s,e) ให้อยู่ในกรอบ [a,b) — คืนวินาที */
 const clipSec = (s, e, a, b) => Math.max(0, (Math.min(e, b) - Math.max(s, a)) / 1000);
 
 /** แถวช่วงหยุด (machine_state_events) → ก้อนรวม `{ [state]: { sec, minorSec, n, minorN } }` ในกรอบ */
-export function aggregateStops(events = [], { startMs, endMs }) {
+export function aggregateStops(events = [], { startMs, endMs }, breakCodes = null) {
   const agg = {};
   for (const ev of events || []) {
-    const s = tms(ev?.started_at);
-    if (s == null) continue;
-    const e = tms(ev.ended_at) ?? (ev.duration_sec != null && Number.isFinite(Number(ev.duration_sec)) ? s + Number(ev.duration_sec) * 1000 : null);
-    if (e == null || !(e > s)) continue;
+    const sp = evSpan(ev);
+    if (!sp) continue;
+    const [s, e] = sp;
     const sec = clipSec(s, e, startMs, endMs);
     if (!(sec > 0)) continue;
-    const a = (agg[ev.state] ||= { sec: 0, minorSec: 0, n: 0, minorN: 0 });
+    const a = (agg[bucketOf(ev, breakCodes)] ||= { sec: 0, minorSec: 0, n: 0, minorN: 0 });
     const first = s >= startMs && s < endMs;
     if (ev.is_minor) { a.minorSec += sec; if (first) a.minorN++; } else { a.sec += sec; if (first) a.n++; }
   }
   return agg;
 }
 
-/** แถวจาก rpc fn_machine_shift_facts (state, is_minor, sec, n) → ก้อนรวมรูปเดียวกับ aggregateStops */
-export function aggregateFromRollup(rows = []) {
+/** แถวจาก rpc fn_machine_shift_facts (state, reason_code, is_minor, sec, n) → ก้อนรวมรูปเดียวกับ aggregateStops */
+export function aggregateFromRollup(rows = [], breakCodes = null) {
   const agg = {};
   for (const r of rows || []) {
-    const a = (agg[r.state] ||= { sec: 0, minorSec: 0, n: 0, minorN: 0 });
+    const a = (agg[bucketOf(r, breakCodes)] ||= { sec: 0, minorSec: 0, n: 0, minorN: 0 });
     if (r.is_minor) { a.minorSec += Number(r.sec) || 0; a.minorN += Number(r.n) || 0; }
     else { a.sec += Number(r.sec) || 0; a.n += Number(r.n) || 0; }
   }
@@ -100,17 +121,27 @@ export function jigCt(orders = [], ctMap = {}) {
  *   ngMachine NG ที่กดหน้าเครื่อง · ngPeople NG ที่คนลง (null = ไม่มีใบ ⇒ ไม่รู้)
  *   elapsedSec กรอบกะที่ผ่านไป · ct วินาที/ชิ้น (null = ไม่รู้)
  */
-export function machineShiftOee({ agg = {}, pieces = null, ngMachine = 0, ngPeople = null, elapsedSec, ct = null }) {
+export function machineShiftOee({ agg = {}, pieces = null, ngMachine = 0, ngPeople = null, elapsedSec, ct = null, policyBreakSec = null }) {
   const why = [];
-  const excludedSec = EXCLUDED_STATES.reduce((s, st) => s + g(agg, st) + g(agg, st, 'minorSec'), 0);
+  const nonBreakExcl = EXCLUDED_STATES.reduce((s, st) => s + g(agg, st) + g(agg, st, 'minorSec'), 0);
   const commLossSec = g(agg, 'comm_loss') + g(agg, 'comm_loss', 'minorSec');
+  const breakPressSec = g(agg, BREAK_PRESS) + g(agg, BREAK_PRESS, 'minorSec');
+  /* 🍱 โควตาพักนโยบาย — ไม่ส่งมา (ไม่รู้นโยบาย) = ถือการกดพักหน้าเครื่องเป็นพักทั้งหมด (พฤติกรรมเดิม) + บอกบนจอ */
+  const allowance = policyBreakSec == null ? breakPressSec : Math.max(0, Number(policyBreakSec) || 0);
+  if (policyBreakSec == null) why.push('no_break_policy');
+  const breakOverSec = Math.max(0, breakPressSec - allowance);
+  const unusedAllowance = Math.max(0, allowance - breakPressSec);
+  const idleRaw = g(agg, 'idle');
+  const idleAbsorbedSec = Math.min(unusedAllowance, idleRaw);
+  const excludedSec = nonBreakExcl + allowance;
   const plannedSec = Math.max(0, (Number(elapsedSec) || 0) - excludedSec);
   const loss = {
-    fault: g(agg, 'fault'), unplanned: g(agg, 'unplanned'), idle: g(agg, 'idle'),
+    fault: g(agg, 'fault'), unplanned: g(agg, 'unplanned'), idle: idleRaw - idleAbsorbedSec, idleRaw, idleAbsorbedSec,
+    breakOver: breakOverSec, breakPress: breakPressSec, policyBreak: allowance,
     minorFault: g(agg, 'fault', 'minorSec'), minorUnplanned: g(agg, 'unplanned', 'minorSec'),
     minorIdle: g(agg, 'idle', 'minorSec'),
   };
-  const downSec = Math.min(plannedSec, loss.fault + loss.unplanned + loss.idle);
+  const downSec = Math.min(plannedSec, loss.fault + loss.unplanned + loss.idle + loss.breakOver);
   const operatingSec = Math.max(0, plannedSec - downSec);
   const minorSec = Math.min(operatingSec, loss.minorFault + loss.minorUnplanned);
   const counts = {
@@ -146,7 +177,7 @@ export function machineShiftOee({ agg = {}, pieces = null, ngMachine = 0, ngPeop
   const fallSpeed = idealSec != null ? Math.max(0, operatingSec - minorSec - idealSec) : null;
   const ngLossSec = idealSec != null && good != null ? Math.max(0, (pieces - good) * ct) : null;
   const waterfall = {
-    plannedSec, fault: loss.fault, unplanned: loss.unplanned, idle: loss.idle, operatingSec,
+    plannedSec, fault: loss.fault, unplanned: loss.unplanned, idle: loss.idle, breakOver: loss.breakOver, operatingSec,
     minorSec, speedSec: fallSpeed, netSec: idealSec, ngSec: ngLossSec,
     fullySec: idealSec != null && ngLossSec != null ? Math.max(0, idealSec - ngLossSec) : null,
   };
@@ -175,6 +206,7 @@ export const WHY_TEXT = {
   no_planned_time: 'ไม่มีเวลาแผนผลิต (ไม่มีแผน/พักทั้งช่วง)',
   no_people_q: 'ไม่มีใบผลิตบนจิ๊ก — ยังไม่รู้ NG ที่คนตัดสิน (%Q)',
   comm_loss: 'มีช่วงขาดการสื่อสาร — กันออกจากเวลาแผน (ไม่นับเป็นเสีย)',
+  no_break_policy: 'ไม่รู้นโยบายพักของไลน์ — ใช้เวลาที่กดพักหน้าเครื่องแทน',
 };
 
 /** แถบสถานะตลอดกะ — ช่องว่างระหว่างช่วงหยุด = เดินเครื่อง · คืน `[{ startMs, endMs, kind }]` เรียงเวลา
@@ -182,9 +214,8 @@ export const WHY_TEXT = {
 export function stateSegments(events = [], { startMs, endMs }) {
   const segs = [];
   const evs = (events || []).map(ev => {
-    const s = tms(ev?.started_at);
-    const e = s == null ? null : (tms(ev.ended_at) ?? (ev.duration_sec != null ? s + Number(ev.duration_sec) * 1000 : null));
-    return s != null && e != null && e > s ? { s: Math.max(s, startMs), e: Math.min(e, endMs), ev } : null;
+    const sp = evSpan(ev);
+    return sp ? { s: Math.max(sp[0], startMs), e: Math.min(sp[1], endMs), ev } : null;
   }).filter(x => x && x.e > x.s).sort((a, b) => a.s - b.s);
   let cur = startMs;
   for (const x of evs) {
@@ -213,7 +244,7 @@ export function stateSegments(events = [], { startMs, endMs }) {
 
 /** รายชั่วโมงของกะ — ชิ้น/NG จากเครื่อง · เวลาแผนต่อชั่วโมง · เป้า = เวลาแผน ÷ CT · OEE ชั่วโมง = ชิ้นดี×CT ÷ เวลาแผน
  *  hourly = แถวจาก rpc fn_machine_counter_hourly ของจิ๊กนี้ · events = ช่วงหยุด */
-export function hourlyBuckets({ hourly = [], events = [], startMs, endMs, nowMs, ct = null }) {
+export function hourlyBuckets({ hourly = [], events = [], startMs, endMs, nowMs, ct = null, breakIntervals = [], breakCodes = null }) {
   const end = Math.min(endMs, nowMs ?? endMs);
   const out = [];
   for (let h = startMs; h < endMs; h += H) {
@@ -221,12 +252,14 @@ export function hourlyBuckets({ hourly = [], events = [], startMs, endMs, nowMs,
     const row = (hourly || []).find(r => tms(r.hour_at) === h);
     const elapsed = Math.max(0, (Math.min(he, end) - h) / 1000);
     let excl = 0;
+    // พักนโยบาย (นาฬิกาจริง) + ไม่มีแผน/หยุดตามแผนที่ไม่ใช่พัก (ระยะเวลาจากเครื่อง)
+    for (const [bs, be] of breakIntervals || []) excl += clipSec(bs, be, h, Math.min(he, end));
     for (const ev of events || []) {
-      if (!EXCLUDED_STATES.includes(ev?.state)) continue;
-      const s = tms(ev.started_at);
-      const e = tms(ev.ended_at) ?? (s != null && ev.duration_sec != null ? s + Number(ev.duration_sec) * 1000 : null);
-      if (s != null && e != null) excl += clipSec(s, e, h, Math.min(he, end));
+      if (!EXCLUDED_STATES.includes(bucketOf(ev, breakCodes))) continue;
+      const sp = evSpan(ev);
+      if (sp) excl += clipSec(sp[0], sp[1], h, Math.min(he, end));
     }
+    excl = Math.min(excl, elapsed);
     const plannedSec = Math.max(0, elapsed - excl);
     const qty = row ? Number(row.qty) || 0 : null;
     const ng = row ? Number(row.ng) || 0 : null;
@@ -242,9 +275,10 @@ export function hourlyBuckets({ hourly = [], events = [], startMs, endMs, nowMs,
 /** รายการหยุด (ไม่รวมหยุดสั้น/idle สั้น และไม่มีแผน) ล่าสุดก่อน */
 export function stopList(events = [], { startMs, endMs, limit = 200 } = {}) {
   return (events || []).filter(ev => !ev?.is_minor && ev?.state !== 'no_plan').map(ev => {
-    const s = tms(ev.started_at);
-    const e = tms(ev.ended_at) ?? (s != null && ev.duration_sec != null ? s + Number(ev.duration_sec) * 1000 : null);
-    return s != null && e != null && e > startMs && s < endMs ? { startMs: s, endMs: e, min: (e - s) / 60000, state: ev.state, code: ev.reason_code ?? null, text: ev.reason_text || null } : null;
+    const sp = evSpan(ev);
+    if (!sp) return null;
+    const [s, e] = sp;
+    return e > startMs && s < endMs ? { startMs: s, endMs: e, min: (e - s) / 60000, state: ev.state, code: ev.reason_code ?? null, text: ev.reason_text || null } : null;
   }).filter(Boolean).sort((a, b) => b.startMs - a.startMs).slice(0, limit);
 }
 
@@ -254,10 +288,9 @@ export function stopPareto(events = [], { startMs, endMs }) {
   for (const ev of events || []) {
     if (!DOWN_STATES.includes(ev?.state)) continue;
     if (ev.is_minor && ev.state === 'idle') continue;              // idle สั้น = จังหวะโหลดงาน ไม่ใช่เสีย
-    const s = tms(ev.started_at);
-    const e = tms(ev.ended_at) ?? (s != null && ev.duration_sec != null ? s + Number(ev.duration_sec) * 1000 : null);
-    if (s == null || e == null) continue;
-    const sec = clipSec(s, e, startMs, endMs);
+    const sp = evSpan(ev);
+    if (!sp) continue;
+    const sec = clipSec(sp[0], sp[1], startMs, endMs);
     if (!(sec > 0)) continue;
     const label = ev.is_minor ? 'หยุดสั้น (< 2 นาที)' : `${ev.state}|${ev.reason_code ?? ''}|${ev.reason_text || ''}`;
     const r = m.get(label) || { key: label, state: ev.is_minor ? 'minor' : ev.state, code: ev.is_minor ? null : (ev.reason_code ?? null), text: ev.is_minor ? null : (ev.reason_text || null), min: 0, n: 0 };

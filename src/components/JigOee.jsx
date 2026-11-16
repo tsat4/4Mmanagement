@@ -25,6 +25,7 @@ export const KIND_META = {
   planned_stop: { label: 'หยุดตามแผน',           color: 'var(--blue)' },
   no_plan:      { label: 'ไม่มีแผนผลิต',          color: 'var(--border2)' },
   comm_loss:    { label: 'ขาดการสื่อสาร',         color: 'var(--blue-line)' },
+  break_over:   { label: 'พักเกินเวลานโยบาย',     color: 'var(--red-line)' },
   other:        { label: 'อื่นๆ (ไม่รู้จัก)',      color: 'var(--muted)' },
 };
 const kindMeta = (k) => KIND_META[k] || KIND_META.other;
@@ -179,6 +180,7 @@ export function LossWaterfall({ o }) {
     { label: '− Alarm ≥ 2 นาที', sec: w.fault, loss: true },
     { label: '− หยุดนอกแผน', sec: w.unplanned, loss: true },
     { label: '− รองาน / Idle ≥ 2 นาที', sec: w.idle, loss: true },
+    { label: '− พักเกินเวลานโยบาย', sec: w.breakOver ?? 0, loss: true },
     { label: 'เวลาเดินเครื่อง (Operating)', sec: w.operatingSec, main: true },
     { label: '− หยุดสั้น < 2 นาที', sec: w.minorSec, loss: true },
     { label: '− ช้ากว่า CT', sec: w.speedSec, loss: true },
@@ -200,6 +202,14 @@ export function LossWaterfall({ o }) {
         </div>
       ))}
       <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>OEE = เวลาผลิตงานดี ÷ เวลาแผนผลิต · หยุดตามแผน/ไม่มีแผน/พัก ไม่นับในเวลาแผน</div>
+      {o.loss && (
+        /* 🍱 พักแบบโควตานาที (ยึด duration — นาฬิกา PLC คลาด) · เขียนที่มาเสมอ */
+        <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>
+          พักตามนโยบาย {fmtHM(o.loss.policyBreak)} · กดพักหน้าเครื่อง {fmtHM(o.loss.breakPress)}
+          {o.loss.breakOver > 0 && <span style={{ color: 'var(--red)' }}> · พักเกิน {fmtHM(o.loss.breakOver)} (นับเป็นเสีย)</span>}
+          {o.loss.idleAbsorbedSec > 0 && <span> · ไม่ได้กดพัก ⇒ หักโควตาพักที่เหลือจาก Idle {fmtHM(o.loss.idleAbsorbedSec)}</span>}
+        </div>
+      )}
     </div>
   );
 }

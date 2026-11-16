@@ -51,7 +51,7 @@ export default function MachineFactsPanel({ src, canManage, callAdmin }) {
         q => q.eq('source_id', src.id).gte('started_at', fromIso).order('started_at').order('machine_tag')),
       supabaseDR.rpc('fn_machine_counter_hourly', { p_source: src.id, p_from: fromIso }),
       supabaseDR.from('machine_tag_map').select('tag, machine_id, confirmed_by, confirmed_at').eq('source_id', src.id),
-      supabaseDR.from('machine_reason_map').select('reason_kind, reason_code, reason_text, downtime_type_id, confirmed_by, confirmed_at').eq('source_id', src.id),
+      supabaseDR.from('machine_reason_map').select('reason_kind, reason_code, reason_text, downtime_type_id, is_break, confirmed_by, confirmed_at').eq('source_id', src.id),
       supabaseDR.from('dr_downtime_types').select('id, name_th, category, process_type, is_active, sort_order').order('sort_order'),
     ]);
     if (id !== req.current) return;
@@ -209,7 +209,17 @@ export default function MachineFactsPanel({ src, canManage, callAdmin }) {
                       <td style={td}><span style={{ fontFamily: 'ui-monospace, monospace', fontWeight: 700 }}>{r.code}</span> · {r.text || <i style={{ color: 'var(--muted)' }}>ต้นทางไม่ส่งชื่อ</i>}</td>
                       <td style={{ ...td, whiteSpace: 'nowrap' }}>{r.count.toLocaleString()} ครั้ง · {minTxt(r.sec)} นาที</td>
                       <td style={{ ...td, minWidth: 260 }}>
-                        {canManage ? (
+                        {r.map?.is_break ? (
+                          /* 🍱 เวลาพัก — ESM ใช้นโยบายพัก (โควตานาที) · กดพักเกินนโยบาย = เสีย A (16/11 · ทาง A) */
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                            <b style={{ color: 'var(--blue)' }}>🍱 เวลาพัก — ESM คิดจากนโยบายพักเอง</b>
+                            <span style={{ fontSize: 12, color: 'var(--muted)' }}>กดพักเกินโควตานโยบาย = เสีย A (พักเกินเวลา)</span>
+                            {canManage && (
+                              <button type="button" className="pg-btn" disabled={!!busy}
+                                onClick={() => save(k, 'map_reason', { ...base, clear: true }, `ล้างป้ายเวลาพัก ${r.code}`)}>ล้าง</button>
+                            )}
+                          </div>
+                        ) : canManage ? (
                           <div style={{ display: 'grid', gap: 6 }}>
                             <SearchSelect value={cur} options={dtOptions} placeholder="ค้นประเภท downtime…"
                               loadFail={data.errs.includes('ประเภท downtime') ? 'โหลดประเภท downtime ไม่สำเร็จ' : ''}
@@ -221,6 +231,11 @@ export default function MachineFactsPanel({ src, canManage, callAdmin }) {
                               {sug && (
                                 <button type="button" className="pg-btn" disabled={!!busy}
                                   onClick={() => save(k, 'map_reason', { ...base, downtime_type_id: sug.id }, `จับคู่เหตุผล ${r.code}`)}>✓ ใช้ข้อเสนอ: {sug.name_th}</button>
+                              )}
+                              {r.kind === 'onplan' && (
+                                <button type="button" className="pg-btn" disabled={!!busy}
+                                  title="ใช้กับเหตุผลที่เป็นการกดพักหน้าเครื่อง — ESM คิดเวลาพักจากนโยบายเอง ส่วนที่เกินนโยบายนับเป็นเสีย"
+                                  onClick={() => save(k, 'map_reason', { ...base, downtime_type_id: null, is_break: true }, `ติดป้ายเวลาพัก ${r.code}`)}>🍱 เวลาพัก (ESM คิดเอง)</button>
                               )}
                               {!(r.map && !cur) && (
                                 <button type="button" className="pg-btn" disabled={!!busy}

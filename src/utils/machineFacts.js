@@ -281,6 +281,8 @@ export function compareWithSessions(factRows = [], { machines = [], sessions = [
       ทับบางส่วนก็นับว่าลงแล้ว (ไม่ตามจี้คนที่ลงแล้วแต่เวลาไม่เป๊ะ) */
 export const FAULT_GAP_MIN = 5;          // เตือนเมื่อ "นานกว่า" ค่านี้ (นาที)
 export const FAULT_GAP_STATES = ['fault'];
+/** นาฬิกา PLC คลาดจากเวลาจริง (วัด 16/11: ~3–5 นาที) — เผื่อตอนจับคู่กับ DT ที่คนลง */
+export const CLOCK_SLACK_MS = 10 * 60000;
 
 const tOf = (v) => ms(v);
 /** ช่วงเวลาของ downtime ที่คนลง — มีเวลาจบใช้เลย · ไม่มีใช้ duration · ไม่มีทั้งคู่ (ยังเปิดค้าง) = ถึง nowMs */
@@ -323,7 +325,8 @@ export function faultGaps({
     if (!(min > minMin)) continue;
     const f = factShiftOf(st);
     if (!f || f.workDate !== session.work_date || f.shift !== session.shift) continue;
-    const covered = dts.some(d => (!d.mk || d.mk === mk) && d.iv[0] < en && d.iv[1] > st);
+    // ⏱️ นาฬิกา PLC คลาด ~3–5 นาที (วัด 16/11) ⇒ เผื่อ ±CLOCK_SLACK_MS ตอนเช็คว่าคนลง DT ทับช่วงนี้แล้วหรือยัง
+    const covered = dts.some(d => (!d.mk || d.mk === mk) && d.iv[0] < en + CLOCK_SLACK_MS && d.iv[1] > st - CLOCK_SLACK_MS);
     if (covered) continue;
     const code = s.reason_code == null ? null : Number(s.reason_code);
     out.push({

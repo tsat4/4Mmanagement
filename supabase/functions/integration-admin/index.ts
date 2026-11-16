@@ -15,7 +15,8 @@
      pause   { id } · resume { id }
      legacy_off { id }   เลิกรับ secret กลาง (หลังต้นทางเปลี่ยนไปใช้รหัสของตัวเองแล้ว)
      map_tag    { id, tag, machine_id|null }          ผูก/เลิกผูก รหัสเครื่องของต้นทาง → machines.id (null = ลบการผูก)
-     map_reason { id, kind, code, text?, downtime_type_id|null, clear? }
+     map_reason { id, kind, code, text?, downtime_type_id|null, is_break?, clear? }
+                is_break = เหตุผลนี้คือกดพักหน้าเครื่อง (เฉพาะ onplan) — ESM คิดเวลาพักจากนโยบาย · ส่วนเกิน = เสีย A (16/11)
                 เหตุผลหยุดของต้นทาง → dr_downtime_types (null = ยืนยันว่า "ไม่มีตัวตรง" · clear = ลบการจับคู่)
                 🔴 คนกดเท่านั้น — จอเสนอได้ แต่ห้ามเรียก action นี้อัตโนมัติ
    🔴 รายชื่อชนิดข้างล่างต้องตรง src/utils/integrationKinds.js (edge import จาก src/ ไม่ได้) */
@@ -149,7 +150,7 @@ Deno.serve(async (req) => {
       }
       const { error } = await sb.from('machine_reason_map').upsert({
         source_id: id, reason_kind: kind, reason_code: code, reason_text: str(body.text, 200),
-        downtime_type_id: dt, confirmed_by: who, confirmed_at: now,
+        downtime_type_id: body.is_break ? null : dt, is_break: kind === 'onplan' && !!body.is_break, confirmed_by: who, confirmed_at: now,
       }, { onConflict: 'source_id,reason_kind,reason_code' });
       return error ? json({ error: error.message }, 500) : json({ ok: true });
     }

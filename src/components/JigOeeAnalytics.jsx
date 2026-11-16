@@ -32,7 +32,7 @@ const tone = (v, t = TARGET) => (v == null ? 'var(--muted)' : v >= t ? 'var(--gr
 const SHIFT_OPTS = [{ value: 'day', label: 'กะเช้า' }, { value: 'night', label: 'กะดึก' }];
 const VIEW_OPTS = [{ value: 'shift', label: 'ภาพรวมกะ' }, { value: 'report', label: 'รายงาน & Pareto' }];
 const sumWaterfall = (rows) => {
-  const keys = ['plannedSec', 'fault', 'unplanned', 'idle', 'operatingSec', 'minorSec', 'speedSec', 'netSec', 'ngSec', 'fullySec'];
+  const keys = ['plannedSec', 'fault', 'unplanned', 'idle', 'breakOver', 'operatingSec', 'minorSec', 'speedSec', 'netSec', 'ngSec', 'fullySec'];
   const w = Object.fromEntries(keys.map(k => [k, 0]));
   for (const r of rows) for (const k of keys) {
     const v = r.oee.waterfall[k];
@@ -178,6 +178,8 @@ function ReportView() {
     const minorSec = rows.reduce((s, r) => s + (r.oee.minorSec || 0), 0);
     const minorN = rows.reduce((s, r) => s + (r.oee.counts.minor || 0), 0);
     if (minorSec > 0) p.push({ key: 'minor', state: 'minor', min: minorSec / 60, n: minorN });
+    const overSec = rows.reduce((s, r) => s + (r.oee.loss?.breakOver || 0), 0);
+    if (overSec > 0) p.push({ key: 'break_over', state: 'break_over', min: overSec / 60, n: rows.filter(r => r.oee.loss?.breakOver > 0).length });
     return p.sort((a, b) => b.min - a.min);
   }, [data, pick, rows]);
   const byJig = useMemo(() => {
