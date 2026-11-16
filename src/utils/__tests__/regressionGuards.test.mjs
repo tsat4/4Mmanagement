@@ -1676,6 +1676,35 @@ const RULES = [
     fix: '`backfillWindowError(hhmm)` ใน DailyReport (→ `resolveShiftTime` + `checkShiftTime` ของ src/utils/shiftWindow.js)',
     allow: {},
   },
+  {
+    id: 'ppm-single-entry',
+    scan: ['src'], ext: ['.jsx', '.js'],
+    /* จับการคูณ 1e6 "เพื่อคิดอัตรา" เองในหน้า — ตัดเคส `Math.round(x * 1e6) / 1e6`
+       (ปัดทศนิยมลอยตัว) และเคส "ถ่วงน้ำหนักเพื่อเรียงลำดับ" (`s.amDNg * 1e6 + …` ใน FactoryMap) ออก:
+       ต้องมี `/` (= คิดอัตราอยู่) หรือคำว่า ppm อยู่ก่อนบนบรรทัดเดียวกัน และต้องไม่มี `/ 1e6`·`/ 1e3` ตามหลัง */
+    re: /(?:\/|\bppm\w*\b)[^\n;]*\*\s*(?:1e6|1_?000_?000)\b(?![^\n]*\/\s*1e[36])/gi,
+    why: '🎯 PPM (16/11 · นาย ณัฐวุฒิ ทรงดอน "PPM ไลน์ปั๊มที่มีการเทส กระโดดไปเกิน 100"): สูตร PPM เคยถูกเขียนมือ 5 ที่ '
+       + '(QualityControl · DeptDashboard · KpiMonthly · obeyaYear · monthlyReviewPptx) แล้ว drift 2 คลาส ทั้งคู่ดัน PPM **ขึ้น** — '
+       + '(ก) ตัวเศษรวมของเสียงานทดลองแต่ตัวหารเป็นยอดผลิตปกติ (วัดจริง: Laser GOR 145→1,432 · Laser LWR 347→2,358) · '
+       + '(ข) ตัวหารเป็น shot ที่ยุบงานคู่ RH/LH แต่ตัวเศษเป็นชิ้น (HDF1 1,941→3,503 · LASER-345 1,900→3,410)',
+    fix: "ใช้ ppmOf(ngQty, goodQty) หรือ ppmFromDefects(rows, goodQty) จาก src/utils/oee.js §7.3 — "
+       + 'ตัวหารต้องเป็น "ชิ้น" (สแกนดี) ห้ามส่งยอดที่ผ่าน pairAwareTotal/collapseOps · ผลิต 0 = null ห้าม 0',
+    allow: {
+      'src/utils/oee.js': 'เจ้าของสูตร PPM (§7.3 ppmOf) — จุดเดียวในระบบที่คูณ 1e6 เพื่อคิดอัตราได้',
+    },
+  },
+  {
+    id: 'ppm-base-not-pair-collapsed',
+    scan: ['src'], ext: ['.jsx', '.js'],
+    /* จับการส่งยอด "ภาพใหญ่" (output / ยอดที่ผ่าน pairAwareTotal·collapseOps) เป็นตัวหารของ PPM */
+    re: /\bppm[A-Za-z]*\s*[:(=][^\n]*\b(output|outQty|pairAware\w*|collapseOps)\b/gi,
+    why: '👯 กฎ "ชิ้น ≠ shot" (pairTotals.js): ยอดผลิตภาพใหญ่ยุบงานคู่ RH/LH เป็น 1 stroke และยุบขั้น OP เข้าพาร์ทจริง '
+       + '⇒ เล็กกว่าจำนวนชิ้นจริง · แต่ของเสียนับเป็นชิ้นเสมอ ⇒ เอามาเป็นตัวหาร PPM = เศษกับส่วนคนละหน่วย '
+       + 'เฟ้อ 1.5–1.8 เท่า **เฉพาะไลน์แม่พิมพ์คู่ (ปั๊ม/เลเซอร์)** — เด็ค Monthly Review เป็นแบบนี้จนถึง 16/11',
+    fix: 'คิดตัวหารของ PPM แยกจาก Output: ยอดผลิต "รายชิ้น" ไม่ยุบคู่/ไม่ยุบ OP '
+       + '(ตัวอย่าง `goodPiecesOfSessions()` ใน src/lib/monthlyReviewPptx.js) แล้วส่งเข้า ppmOf()',
+    allow: {},
+  },
 ];
 
 function violations(rule) {
@@ -1990,7 +2019,7 @@ test('🛡️ unfiltered-session-bump-needs-shift-tier — bump ที่เก�
 });
 
 test('🛡️ oee-suspect-needs-qbin-embed — ทุกคิวรีที่ดึง qty_suspect ในไฟล์ที่คิด %Q ต้อง embed ทะเบียนถัง', () => {
-  const Q_HELPERS = /\b(defectQty|sumDefectQty|splitDefectQty|sumSuspectPending|suspectPendingQty)\b/;
+  const Q_HELPERS = /\b(defectQty|sumDefectQty|splitDefectQty|sumSuspectPending|suspectPendingQty|ppmFromDefects)\b/;
   /* ยกเว้นรายคิวรี — ต้องเขียนเหตุผลทุกตัว · 05/10: เปลี่ยนจาก "ไฟล์:บรรทัด" เป็น "ไฟล์ + ข้อความใน select"
      (คีย์บรรทัดเลื่อนทุกครั้งที่ใครแก้ไฟล์ข้างบน ⇒ ด่านล้มทั้งที่คิวรีเดิมไม่ได้เปลี่ยน) */
   const ALLOW = {
