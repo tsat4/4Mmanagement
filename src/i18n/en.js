@@ -10352,6 +10352,9 @@ const EN = {
   // 🏭 OEE รายจิ๊ก (16/11)
   'จบ': 'End',
   'สาเหตุ (จากหน้าเครื่อง)': 'Reason (from machine)',
+  '✕ ปิด': '✕ Close',
+  'พาร์ทที่ผลิตอยู่': 'Part in production',
+  'downtime ที่คนลง': 'Downtime logged by staff',
 };
 
 export default EN;

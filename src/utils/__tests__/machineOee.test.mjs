@@ -207,3 +207,38 @@ test('📊 ก/ข/ค: นาทีรายสถานะรายชั่�
   assert.equal(d[0].cap, 990); assert.equal(d[0].good, 380); assert.equal(d[0].ghost, 990 - 400); assert.equal(d[0].fault, 20);
   assert.equal(d[1].cap, null); assert.equal(d[1].ghost, null);                   // ไม่รู้ CT ⇒ ไม่วาดเงา
 });
+
+test('🔎 กดแท่ง Pareto: รายครั้งชุดเดียวกับแท่ง · ผูก MAT / downtime ที่คนลง / ใบแจ้งซ่อม (เผื่อนาฬิกา PLC คลาด)', async () => {
+  const { stopPareto, stopOccurrences, linkStops, stopKeyOf } = await import('../machineOee.js');
+  const t = (hm) => Date.parse(bkk(`2026-11-16T${hm}:00`));
+  const iso = (hm) => new Date(t(hm)).toISOString();
+  const ev = (hm, sec, code, text, extra = {}) => ({ source_id: 'S', machine_tag: 'J4', started_at: iso(hm), duration_sec: sec, state: 'fault', reason_code: code, reason_text: text, is_minor: false, ...extra });
+  const events = [ev('09:00', 300, 13, 'Robot Error'), ev('13:00', 600, 13, 'Robot Error'), ev('10:00', 240, 15, 'Robot Water Flow Error'), ev('11:00', 30, 13, 'Robot Error', { is_minor: true })];
+  const p = stopPareto(events, { startMs: t('08:00'), endMs: t('20:00') });
+  const robot = p.find(r => r.text === 'Robot Error');
+  const occ = stopOccurrences(events, robot.key, { tagNo: new Map([['S|J4', 'JTSRA03-04']]) });
+  assert.equal(occ.length, robot.n);                                        // แท่งนับเท่าไร กดแล้วเห็นเท่านั้น
+  assert.equal(occ[0].startMs, t('13:00')); assert.equal(occ[0].machineNo, 'JTSRA03-04');
+  assert.equal(stopOccurrences(events, stopKeyOf(events[3])).length, 1);    // หยุดสั้นเป็นกลุ่มของตัวเอง
+  const orders = [
+    { id: 'o1', machine_no: 'JTSRA03-04', mat_no: 'M1', opened_at: iso('08:05'), confirmed_at: iso('12:00'), production_sessions: { work_date: '2026-11-16', shift: 'day' } },
+    { id: 'o2', machine_no: 'jtsra03-04 ', mat_no: 'M2', opened_at: iso('12:30'), confirmed_at: null, production_sessions: { work_date: '2026-11-16', shift: 'day' } },
+  ];
+  const downtimes = [
+    { id: 'd1', machine_no: 'JTSRA03-04', started_at: iso('13:07'), ended_at: iso('13:20') },   // PLC คลาด 7 นาที ยังนับว่าทับ
+    { id: 'd2', machine_no: 'OTHER', started_at: iso('09:00'), ended_at: iso('09:10') },        // คนละเครื่อง = ไม่ผูก
+  ];
+  const repairs = [
+    { id: 'm1', mo_no: 'MO1', machine_no: 'X', source_downtime_id: 'd1', report_at: iso('15:00') }, // เปิดจาก DT ⇒ ผูกแม้เครื่องไม่ตรง
+    { id: 'm2', mo_no: 'MO2', machine_no: 'JTSRA03-04', occurred_at: iso('09:02') },               // เวลาตรงกัน
+    { id: 'm3', mo_no: 'MO3', machine_no: 'JTSRA03-04', occurred_at: iso('11:30') },               // นอกช่วง
+  ];
+  const keyOf = (v) => String(v || '').trim().toUpperCase();
+  const L = linkStops(occ, { orders, downtimes, repairs, keyOf, nowMs: t('19:00') });
+  assert.deepEqual(L[0].mats, ['M2']); assert.equal(L[0].matBy, 'open');
+  assert.deepEqual(L[0].downtimes.map(d => d.id), ['d1']); assert.deepEqual(L[0].repairs.map(r => [r.mo_no, r.moBy]), [['MO1', 'downtime']]);
+  assert.deepEqual(L[1].mats, ['M1']); assert.equal(L[1].downtimes.length, 0); assert.deepEqual(L[1].repairs.map(r => [r.mo_no, r.moBy]), [['MO2', 'time']]);
+  assert.deepEqual(L[0].shift, { workDate: '2026-11-16', shift: 'day' });
+  const noMachine = linkStops([{ ...occ[0], machineNo: null }], { orders, downtimes, repairs, keyOf });
+  assert.equal(noMachine[0].downtimes.length, 0); assert.equal(noMachine[0].repairs.length, 0);   // ไม่รู้เครื่อง = ไม่เดา
+});
