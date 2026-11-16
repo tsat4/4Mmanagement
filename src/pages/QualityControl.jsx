@@ -652,7 +652,6 @@ function SPCTab({ lineObjs, canRecord, canManage, partOpts = [], instruments = [
   const [pointQ, setPointQ] = useState('');
   const [pointFilter, setPointFilter] = useState('all');
   const [partLine, setPartLine] = useState('');      // กรองชิ้นงานตามไลน์ ('' = ทุกไลน์)
-  const [partQ, setPartQ] = useState('');            // ค้นชิ้นงาน
   const [manualPart, setManualPart] = useState('');  // โหมดตั้งเอง: กรองจุดควบคุมตามพาร์ท
 
   const selItem = items.find(i => i.id === itemId) || null;
@@ -716,15 +715,16 @@ function SPCTab({ lineObjs, canRecord, canManage, partOpts = [], instruments = [
       id: x.id, label: x.p.part_no, name: x.p.part_name || '', line: x.p.line_name || '', n: x.n,
     })).sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
   }, [items]);
-  /* 🧩 แผงเลือกชิ้นงาน (15/11 · user "ควรมีฟิลเตอร์รายพาร์ท ตอนนี้มันเลือกยาก") — โชว์ทุกพาร์ทเป็นปุ่มให้เห็นเลย
-     ไม่ซ่อนในช่องค้นหา · กรองด้วยไลน์ + คำค้น */
+  /* 🔽 เลือกชิ้นงาน (15/11 "เลือกยาก" → 16/11 "ไม่ใช่การ์ดรกๆ เอาเป็นดรอปดาวเลือก") — ไลน์ → ดรอปดาวน์ค้นหาได้ในแถบกรอง */
   const partLineSet = useMemo(() => new Set(partOpts2.map(p => p.line).filter(Boolean)), [partOpts2]);
   const partLineObjs = useMemo(() => lineObjs.filter(l => partLineSet.has(l.name)), [lineObjs, partLineSet]);
-  const shownParts = useMemo(() => {
-    const q = partQ.trim().toLowerCase();
-    return partOpts2.filter(p => (!partLine || p.line === partLine)
-      && (!q || `${p.label} ${p.name} ${p.line}`.toLowerCase().includes(q)));
-  }, [partOpts2, partLine, partQ]);
+  const partSelOpts = useMemo(() => partOpts2
+    .filter(p => !partLine || p.line === partLine || p.id === partId)
+    .map(p => ({
+      id: p.id, label: p.label, lead: p.label, title: p.name || '—',
+      sub: `${p.line || trI18n('ไม่ระบุไลน์')} · ${p.n} ${trI18n('จุดวัดค่า')}`,
+      keywords: `${p.name} ${p.line}`,
+    })), [partOpts2, partLine, partId]);
   const pickPart = (id) => { setPartId(id); setItemId(null); setPointQ(''); };
   // โหมดตั้งเอง: พาร์ทของจุดควบคุม + จุดที่ผ่านตัวกรองพาร์ท
   const manualParts = useMemo(() => [...new Set(chars.map(c => c.part_no).filter(Boolean))]
@@ -871,6 +871,11 @@ function SPCTab({ lineObjs, canRecord, canManage, partOpts = [], instruments = [
         {isSheet ? (
           <>
             <LineSelect lines={partLineObjs} value={partLine} onChange={setPartLine} placeholder={ALL.line} includeSupport />
+            {/* 🔽 เลือกชิ้นงาน = ดรอปดาวน์ค้นหาได้ (16/11 · user "ไม่ใช่การ์ดรกๆ เอาเป็นดรอปดาวเลือก") — กรองตามไลน์ที่เลือกข้างหน้า */}
+            <SearchSelect value={partId || ''} options={partSelOpts} style={{ minWidth: 'min(300px, 100%)' }}
+              placeholder={trI18n('— เลือกชิ้นงาน (พิมพ์ค้นเลขพาร์ท/ชื่อ) —')}
+              emptyText={partOpts2.length ? trI18n('ไม่มีพาร์ทที่ตรงตัวกรอง') : trI18n('ยังไม่มีพาร์ทที่ตั้งจุดวัดค่าไว้ (ตั้งที่ /qa-setup)')}
+              onChange={({ id }) => { if (id) pickPart(id); }} />
             <Segmented label={trI18n('แสดง')} value={pointFilter} onChange={setPointFilter}
               options={POINT_FILTERS.map(f => ({ ...f, label: `${trI18n(f.label)} ${pointCounts[f.value] ?? 0}` }))} />
             <SearchInput value={pointQ} onChange={setPointQ} fields="เลขบอลลูน / ชื่อจุด" />
@@ -912,31 +917,9 @@ function SPCTab({ lineObjs, canRecord, canManage, partOpts = [], instruments = [
         )}
       </FilterBar>
 
-      {/* 🧩 เลือกชิ้นงาน — เห็นทุกพาร์ท กดเลือกได้เลย */}
-      {isSheet && (
-        <div style={{ ...cardSt, padding: '12px 14px' }}>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
-            <span style={{ fontWeight: 800, fontSize: 13.5 }}>🧩 {trI18n('เลือกชิ้นงาน')}</span>
-            <span style={{ fontSize: 12, color: 'var(--muted)' }}>{trI18n('แสดง')} {shownParts.length}/{partOpts2.length} {trI18n('พาร์ท')}{partLine ? ` · ${partLine}` : ''}</span>
-            <SearchInput value={partQ} onChange={setPartQ} fields="เลขพาร์ท / ชื่อ" grow={false} style={{ marginLeft: 'auto', minWidth: 'min(240px, 100%)' }} />
-          </div>
-          {itemsErr && <div style={{ fontSize: 12, color: 'var(--red)', marginBottom: 8 }}>⚠️ {itemsErr}</div>}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, maxHeight: 220, overflowY: 'auto' }}>
-            {shownParts.map(p => {
-              const on = p.id === partId;
-              return (
-                <button key={p.id} type="button" onClick={() => pickPart(p.id)} aria-pressed={on}
-                  style={{ textAlign: 'left', cursor: 'pointer', padding: '8px 12px', borderRadius: 10, minWidth: 200, maxWidth: 320,
-                    border: `1px solid ${on ? 'var(--accent)' : 'var(--border2)'}`, background: on ? 'var(--accent-dim)' : 'var(--bg3)', color: 'var(--text)' }}>
-                  <div style={{ fontWeight: 800, fontSize: 13, fontFamily: 'monospace' }}>{p.label}</div>
-                  <div style={{ fontSize: 11.5, color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={p.name}>{p.name || '—'}</div>
-                  <div style={{ fontSize: 11, color: 'var(--muted)' }}>{p.line || trI18n('ไม่ระบุไลน์')} · {p.n} {trI18n('จุดวัดค่า')}</div>
-                </button>
-              );
-            })}
-            {!shownParts.length && <span style={{ fontSize: 12, color: 'var(--muted)' }}>{partOpts2.length ? trI18n('ไม่มีพาร์ทที่ตรงตัวกรอง') : trI18n('ยังไม่มีพาร์ทที่ตั้งจุดวัดค่าไว้ (ตั้งที่ /qa-setup)')}</span>}
-          </div>
-        </div>
+      {isSheet && itemsErr && <div style={{ fontSize: 12, color: 'var(--red)' }}>⚠️ {itemsErr}</div>}
+      {isSheet && !itemsErr && items.length > 0 && !partOpts2.length && (
+        <div style={{ fontSize: 12, color: 'var(--muted)' }}>{trI18n('ยังไม่มีพาร์ทที่ตั้งจุดวัดค่าไว้ (ตั้งที่ /qa-setup)')}</div>
       )}
 
       {/* 📋 ตารางสรุปทุกจุดของชิ้นงาน — เรียงแย่สุดก่อน · กดแถว = ดูกราฟจุดนั้น */}

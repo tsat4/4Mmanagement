@@ -116,7 +116,7 @@ export default function QaFmeQueue({ scopedLineNames, onOpen }) {
         }
         return out;
       }).then(d => (Array.isArray(d) ? d : null)),
-      supabase.from('notification_rules').select('event_key, channel_ids, is_enabled')
+      supabase.from('notification_rules').select('event_key, channel_ids, inapp_roles, is_enabled')
         .in('event_key', ['qa_fme_call', 'qa_fme_overdue'])
         .then(r => (r.error ? null : (r.data || []))),
     ]);
