@@ -64,7 +64,11 @@ const EN = {
   'พาร์ทใหม่ APQP / PPAP': 'New Parts APQP / PPAP',
   'บอร์ด New Model (IEC)': 'New Model Board (IEC)',
   'RFQ / เสนอราคา (Marketing)': 'RFQ / Quotation (Marketing)',
+  'ใบงานออนไลน์ (e-Workflow)': 'Online forms (e-Workflow)',
+  'ออกแบบใบงาน (e-Workflow)': 'Form designer (e-Workflow)',
   'เพิ่มพนักงาน': 'Add Employee',
+  'คนในไลน์อื่น': 'in other lines',
+  'อยู่ในขอบเขตที่คุณดูได้ แต่เป็นไลน์อื่น — เปลี่ยนช่อง “ขอบเขต” เพื่อดู หรือยืมคนเข้าไลน์ตัวเอง': 'Within your visible scope but on another line — change the Scope filter to view them, or borrow them into your line',
   '➕ เพิ่มพนักงาน': '➕ Add Employee',
   'เพิ่มพนักงาน (แท็บ ➕ ใน ฐานข้อมูลพนักงาน — ต้องมี employees:register ด้วยจึงเห็นแท็บ)': 'Add Employee (➕ tab in Employee Database — the tab also needs employees:register)',
   'ฐานข้อมูลพนักงาน': 'Employee Database',
@@ -96,7 +100,6 @@ const EN = {
   '3 ระดับ PM': '3 Maintenance Levels',
   'Delivery — ติดตามการส่งงานลูกค้า': 'Delivery — Customer Shipment Tracking',
   'Improvements — โปรเจคปรับปรุง': 'Improvements — Kaizen Projects',
-  'Line Stock — สต๊อกหน้าไลน์': 'Line Stock — Line-side Inventory',
   'Monitoring ติดตามแผน-สต๊อก': 'Monitoring — Plan & Stock',
   'PM ล่วงหน้า (Planner)': 'PM Forecast (Planner)',
   'Planner & Sales — Forecast จากลูกค้า': 'Planner & Sales — Customer Forecast',
@@ -10307,6 +10310,44 @@ const EN = {
   'ติ๊กครบทุกประเภทแล้ว': 'Every type has been flagged',
   'แท่งนี้ไม่กระทบเลขที่ส่งกลุ่ม — Machine Break Down / MTBF / MTTR ในตารางข้างล่างยังนับไลน์หยุดเต็มตาม KPI Guideline เหมือนเดิม':
     'This bar does not affect the numbers reported to the group — Machine Break Down / MTBF / MTTR in the table below still count the full line stop per the KPI Guideline',
+  /* ── 🗂 แท็บกลุ่ม 2 ชั้น (13/11) ── */
+  'ทะเบียนอ้างอิง': 'Reference registries',
+  'งานรอตรวจ': 'Awaiting QA',
+  'ของเสีย / ปัญหา': 'Defects / problems',
+  'ติดตาม / กระทบยอด': 'Follow-up / reconcile',
+  'ตั้งค่าคลัง': 'Store setup',
+  'BOM': 'BOM',
+  'Product': 'Product',
+
+  /* ── ⏳ ใบ MO ที่เปิดให้ตอนกดเรียกช่าง แล้วยังรอรายละเอียด (13/11) ── */
+  'เอกสารใบ MO': 'MO paperwork',
+  'รอเพิ่มรายละเอียด': 'Details pending',
+  '⏳ รอเพิ่มรายละเอียด': '⏳ Details pending',
+  '➕ เพิ่มรายละเอียด': '➕ Add details',
+  'เพิ่มรายละเอียด': 'Add details',
+  'ใบนี้เปิดให้อัตโนมัติตอนกดเรียกช่าง': 'This MO was opened automatically when maintenance was called',
+  'ยังไม่มีใครใส่รายละเอียด': 'nobody has filled in the details yet',
+  'เปิดใบให้อัตโนมัติตอนกดเรียกช่าง — เปิดใบนี้แล้วกดเพิ่มรายละเอียดได้':
+    'Opened automatically when maintenance was called — open it and add the details',
+  'เรียกช่างแล้ว — ระบบเปิดใบ MO ให้อัตโนมัติ · กดเพื่อเพิ่มรายละเอียด (ชนิดอุปกรณ์ · ลักษณะปัญหา · รูปก่อนซ่อม)':
+    'Maintenance was called — an MO was opened automatically · tap to add the details (equipment kind · problem · before photo)',
+
+  /* ── 🔴 บังคับเลือกทีมช่าง (13/11 · หน้างานแจ้ง "ส่งไปผิดแผนกบ่อย") ── */
+  'เลือกทีมช่าง': 'Select maintenance team',
+  'ต้องเลือกทีมช่างก่อน — ส่งผิดทีมแล้วใบต้องตีกลับ เสียเวลาทั้ง 2 ฝั่ง':
+    'Pick the maintenance team first — the wrong team means the MO gets bounced back, costing both sides time',
+  '💡 จากทะเบียน/ทีมของคุณ น่าจะเป็น': '💡 From the registry / your team, likely',
+  '↑ เลือกทีมช่างก่อน': '↑ Pick a maintenance team first',
+  'ทะเบียนเครื่องนี้อยู่ทีม': 'The registry puts this machine with',
+  'ถ้าใช่ กดเลือกด้านล่าง': 'if that is right, tap it below',
+  /* ── 💼 RFQ เฟส 2a (13/11) — ใบประเมิน IEC · เอกสารแนบ · model life/job type ── */
+  'กระบวนการ *': 'Process *',
+  'CT (วิ)': 'CT (s)',
+  '+ ขั้น': '+ step',
+  'เช่น Blanking · Draw · Spot weld': 'e.g. Blanking · Draw · Spot weld',
+  'ยังไม่ระบุ — ตัวนี้บอกว่า IEC ต้องออกแบบก่อนคิดราคาไหม': 'Not set — tells whether IEC must design before costing',
+  'คิดยอดรวมไม่ได้ — ขาด volume/ปี': 'Cannot total — annual volume missing',
+  'ยังไม่ระบุ model life — ค่าแม่พิมพ์ต่อชิ้นคิดไม่ได้': 'Model life not set — tooling cost per piece cannot be computed',
 };
 
 export default EN;

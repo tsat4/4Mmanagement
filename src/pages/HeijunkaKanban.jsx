@@ -22,7 +22,7 @@ import StoreTimeChart from '../components/StoreTimeChart';
 import StoreCallSiren from '../components/StoreCallSiren';
 import PurchaseBulkModal from '../components/PurchaseBulkModal';
 import OpenOrderDemandPanel from '../components/OpenOrderDemandPanel';
-import { storeOfMat, WIP_STORES } from '../utils/storeOps';   // 🗂️ ใบเบิก-ส่งเข้าไลน์ไปอยู่ตู้ตามเลขพาร์ท (04/11)
+import { storeOfMat, WIP_STORES, isFgMat, FG_NO_LINE_REQUEST } from '../utils/storeOps';   // 🗂️ ใบเบิก-ส่งเข้าไลน์ไปอยู่ตู้ตามเลขพาร์ท (04/11)
 import { shortReceiptRows } from '../utils/stockDiscrepancy';   // ⚠️ รับไม่ครบ = ย้ายไปคลังพัก ไม่ตัดทิ้ง (05/11)
 import StockReceiptQueue from '../components/StockReceiptQueue';   // 📥 ขาเข้า: รอรับเข้า (05/11)
 import PlatingBoard from '../components/PlatingBoard';
@@ -2342,7 +2342,9 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
     let ok = 0, dup = 0, noSourceCol = false, noSlocCol = false;
     const errs = [];
     const noSlocLines = new Set();
+    const fgSkip = [];   // 🚫 ไม่มี FG เข้าไลน์ (13/11 · utils/storeOps.js)
     for (const it of items) {
+      if (isFgMat(it.mat_no)) { fgSkip.push(it.mat_no); continue; }
       const row = {
         line_name: it.line, mat_no: it.mat_no, part_name: it.part_name || null,
         request_qty: it.qty, status: 'pending',
@@ -2363,6 +2365,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
     if (ok) toast.success(`🚚 สร้างใบส่ง ${ok} รายการ เข้าตู้งานสโตร์แล้ว${dup ? ` · ${dup} รายการมีใบค้างอยู่แล้ว` : ''}`);
     else if (dup && !errs.length) toast.error(`ทุกรายการมีใบค้างอยู่ในคิวแล้ว (${dup}) — ดูที่ตู้งานสโตร์ตามเลขพาร์ท`);
     if (errs.length) toast.error(`สร้างไม่สำเร็จ ${errs.length} รายการ: ${errs[0]}`);
+    if (fgSkip.length) toast.error(`ไม่ได้สร้างใบ ${fgSkip.length} รายการ (${fgSkip.slice(0, 3).join(', ')}${fgSkip.length > 3 ? '…' : ''}) — ${FG_NO_LINE_REQUEST}`);
     if (noSourceCol) toast.error('บันทึกใบแล้ว แต่ยังไม่ได้ apply migration 20260907_wip_replenish_source (Main) — ใบไม่ถูกมาร์กว่ามาจากสโตร์');
     if (noSlocCol) toast.error('บันทึกใบแล้ว แต่ยังไม่ได้ apply migration 20260908_wip_replenish_storage_location (Main) — ใบไม่ถูกแปะรหัสคลัง SAP');
     else if (ok && noSlocLines.size) toast.info(`ℹ️ ${[...noSlocLines].join(', ')} ยังไม่ผูกรหัสคลัง SAP — ใบไม่มีมุม SAP (ผูกที่ 📦 Line Stock → แท็บ 🏬 โซนคลัง → ทะเบียนรหัสคลัง)`);
@@ -3372,7 +3375,7 @@ function ReceiveModal({ round, parts, mode, fmt, saving, onCancel, onSubmit }) {
   const [actual, setActual] = useState(() => Object.fromEntries(netParts.map(p => [p.mat_no, p.netTotal])));
 
   return (
-    <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+    <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       <div style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 24, width: 'min(440px,100%)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
         <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginBottom: 4, fontFamily: 'var(--font-display)' }}>
           {mode === 'full' ? '✔️ ยืนยันรับของครบ' : '⚠️ บันทึกรับของไม่ครบ'}

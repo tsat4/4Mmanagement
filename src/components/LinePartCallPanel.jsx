@@ -38,6 +38,7 @@ import { getWorkDate } from '../utils/workDate';   // 👤 "ใครเรี�
 import { pointsForLine, DELIVER_GATES, unreceivedAge } from '../utils/replenishGate';
 import MatLabel from './MatLabel';
 import { slocCodeOfLine } from '../utils/storageLoc';   // 🏬 มุม SAP ของใบ (2026-09-08)
+import { isFgMat, FG_NO_LINE_REQUEST } from '../utils/storeOps';   // 🚫 ไม่มี FG เข้าไลน์ (13/11)
 import ProductSelect from './ProductSelect';
 import { splitLevels, refStockOf, madeHereMats, selfMadeRequestBlock, lineRequestFromBom } from '../utils/partRefStock';
 import { buildBomIndex } from '../utils/bomTree';
@@ -342,6 +343,8 @@ export default function LinePartCallPanel({ lineName, lines = [], role, fullName
        (`HeijunkaKanban` stamp `requested_by` อยู่แล้ว · ที่นี่เคย stamp แต่ `decided_by_name`
        ⇒ วัดจริง: ใบ source='line' ทั้ง 4 ใบมี `requested_by` = null สโตร์โทรกลับไม่ได้ว่าใครขอ)
        ตัวตนมาจาก `getActor()` ที่เดียว (utils/actorStamp.js) — ไม่รู้ตัวตน = ไม่ stamp ห้ามเดา */
+    // 🚫 ไม่มี FG เข้าไลน์ (13/11 · utils/storeOps.js) — บล็อกก่อนเขียน คืนรูปเดียวกับ error ของ supabase ให้ผู้เรียกโชว์ข้อความ
+    if (isFgMat(row.mat_no)) return { error: { message: `${row.mat_no} — ${FG_NO_LINE_REQUEST}` } };
     const who = getActor();
     const base = { ...row,
                    requested_by: row.requested_by ?? (who.name || fullName || null),
@@ -1043,7 +1046,7 @@ function LevelSetupModal({ lineName, lines = [], upMats = [], levels, onHand, re
   const shown = rows.filter(r => !q.trim() || r.mat_no.toLowerCase().includes(q.trim().toLowerCase()));
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       {/* ⚠️ ไม่ปิดจากการคลิกพื้นหลัง — กรอกตัวเลขหลายสิบช่องแล้วเผลอแตะ = หายทั้งหมด (UI-CONVENTIONS §5) */}
       <div style={{ background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', width: 'min(820px, 96vw)', maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border2)' }}>
