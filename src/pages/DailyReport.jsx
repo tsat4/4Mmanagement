@@ -29,7 +29,9 @@ import { parallelUnitsOf, flowModeOf } from '../utils/lineTypes';
 import { checkShiftCapacity, checkOtCapacity, otSpanMin } from '../utils/shiftCapacity';
 import { splitCloseOrders, autoCarryPatch, autoCarryText } from '../utils/closeShiftOrders';   // 🔁 ปิดกะ: ใบที่ยังไม่แตะ = ยกเอง (20/10)
 import { debtByPart, debtPcs, debtAgeDays } from '../utils/carryDebt';   // 📥 ของค้าง "ต้องไล่เก็บอีกเท่าไหร่" (20/10)
-import { loadCarryOffers, importCarryOrders } from '../lib/carryDebtOps';   // 📥 โหลด/รับของค้าง — ที่เดียวทั้งระบบ
+import { loadCarryOffers, importCarryOrders } from '../lib/carryDebtOps';
+import { loadMinAlerts, minAlertsForLine } from '../lib/minDemandOps';
+import MinDemandPanel from '../components/MinDemandPanel';   // 📥 โหลด/รับของค้าง — ที่เดียวทั้งระบบ
 // 📤 ปิดใบข้ามไลน์ "สแกนจากจอไหนก็ปิดได้" (30/10) — กติกาอยู่ไฟล์เดียว ห้ามตัดสินเองในหน้า
 import { crossLineCloseState, crossLineCloseText, crossLineNameOf, crossLineWhen, CROSS_CLOSE_COLS } from '../utils/crossLineClose';
 import { canShortClose, shortCloseError, shortClosePatch, isShortClosed } from '../utils/shortClose';   // ✂️ ปิดใบด้วยยอดเศษ (งานปั๊ม 2xx · 2026-10-02)   // ⏱️ ด่าน "เปิดใบนี้แล้วเกินกะไหม" (ไลน์เครื่องขนานนับเป็นเลน · 2026-10-02)
@@ -108,6 +110,7 @@ import { SESSION_VOID, SESSION_STATUSES_LIVE, SESSION_STATUSES_REAL, isVoidSessi
 import { shiftCloseFlow } from '../utils/stepFlow';
 import StepFlow from '../components/StepFlow';
 import MachineSelect from '../components/MachineSelect';
+import MachineFaultGaps from '../components/MachineFaultGaps';
 import { loadFamilyQtyTotals, familyQtyChip } from '../utils/familyTotals';
 import { tr } from '../utils/i18n';
 import { statusColor as toneColor, toneVar, toneDim, toneLine } from '../utils/statusTone';   // 🎨 token พาเลต 5 สี (UI §6.17)   // สีสถานะชุดเดียวทั้งระบบ (ห้ามตั้ง hex เอง · ชื่อ statusColor ชนกับตัวแปรในหน้า)
@@ -920,6 +923,16 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
    *   2. กะก่อนหน้าปิด/ส่งขอปิด ⇒ `production_sessions` ขยับ ⇒ `load()` (subscribe ไม่กรอง) → เรียกต่อ
    *   (+ หลังกด "รับยอดค้างเข้ากะ" เพื่อให้แบนเนอร์เคลียร์ทันที)
    */
+  /* 🔔 ของไลน์นี้ที่ถึง min แล้ว — "รอแผน" (คำสั่ง user 13/11: ไลน์ต้องเห็นเพื่อเตรียมตัว)
+     🔴 ดูอย่างเดียว — ไลน์ไม่ได้เป็นคนจัดแผน (งานของ Planning + Store)
+     กฎการตัดสินอยู่ utils/replenish.js · โหลดผ่าน lib/minDemandOps.js ห้ามคิดเองในหน้า */
+  const [minAll, setMinAll] = useState({ rows: [], summary: null, error: null, loading: true });
+  useEffect(() => {
+    let alive = true;
+    loadMinAlerts().then(r => { if (alive) setMinAll({ ...r, loading: false }); });
+    return () => { alive = false; };
+  }, []);
+
   const loadCarryOrders = useCallback(async (sessionId, lineName) => {
     if (!sessionId || !lineName) { setCarryOrders([]); return; }
     const { data } = await supabaseDR.from('prod_orders')
@@ -4053,6 +4066,17 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
               })()}
               {/* 🟡 QA ยังไม่ตรวจ First ของกะนี้ — เตือนอย่างเดียว ไม่ล็อก (16/11 · คำสั่ง user) */}
               {selSession && <QaFmeLineBanner lineName={selSession.line_name} workDate={selSession.work_date} shift={selSession.shift} />}
+              {/* 🔔 ของไลน์นี้ที่ถึง min แล้ว — รอแพลนนิ่งจัดแผนลง (ไลน์ดูเพื่อเตรียมตัว ไม่ได้กดอะไร) */}
+              {selSession?.line_name && minAlertsForLine(minAll.rows, selSession.line_name).length > 0 && (
+                <div style={{ marginBottom: 10 }}>
+                  <MinDemandPanel
+                    rows={minAlertsForLine(minAll.rows, selSession.line_name)}
+                    summary={null} error={minAll.error} loading={minAll.loading}
+                    title="ของไลน์นี้ถึง min แล้ว — รอแพลนนิ่งจัดแผนลง"
+                    showOwnerLine={false} onAdd={null}
+                    emptyText="ยังไม่มีพาร์ทของไลน์นี้ถึง min" />
+                </div>
+              )}
               {/* Carry-over banner */}
               {carryOrders.length > 0 && canScan && (
                 <div style={{ marginBottom: 10, padding: '10px 14px', background: 'var(--blue-dim)', border: '1px solid var(--blue-line)', borderRadius: 'var(--r-md)' }}>
@@ -4630,6 +4654,14 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                 </button>
                 )}
               </div>
+              {/* 🏭 แสดงแม้การ์ดหุบอยู่ (ไลน์ที่ไม่เคยลง DT การ์ดหุบเอง = คำเตือนต้องไม่ถูกซ่อน) · ไลน์ที่ไม่ต่อ Node-RED = ไม่วาดอะไรเลย · เครื่องเสีย (Node-RED) ที่ยังไม่ลง downtime — เสนอเท่านั้น คนเลือกสาเหตุ+บันทึกเอง (ทางที่ 2 · 13/11) */}
+              <MachineFaultGaps session={selSession} orders={prodOrders} downtimes={dtLogs} machines={machines}
+                canEdit={canEditRecords} style={{ marginTop: dtOpen ? 0 : 10, marginBottom: dtOpen ? 10 : 0 }}
+                onUse={(g) => {
+                  setDtForm({ id: null, downtime_type_id: g.downtime_type_id || '', mode: 'start_end', start_time: g.start_time,
+                    end_time: g.end_time, duration_min: '', machine_no: g.machine_no, mat_no: '', description: '' });
+                  setShowDT(true);
+                }} />
               {dtOpen && (<>
               {dtLogs.length === 0 && <div style={{ textAlign: 'center', padding: '20px', color: 'var(--muted)', fontSize: 13 }}>{tr('ยังไม่มี Downtime ในกะนี้')}</div>}
               <div style={DT_GRID}>

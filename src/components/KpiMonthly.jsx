@@ -23,7 +23,7 @@ import { checkWriteRows } from '../utils/dbWrite';
 import { findClosedTwin, restoreQuestion } from '../utils/kpiClosed';
 import { scoreDef, KPI_LEVELS, KPI_PERSPECTIVES, perspectiveLabel, KPI_SUMMARY_MODES,
   unitOf, decimalsOf, summaryModeOf, summaryShort, summaryModeLabel, fmtKpi, summaryOf, planProgress, valueScopeOf, sharedValueDef, KPI_VALUE_SCOPES, KPI_BOARD_SLOTS, boardSlotOf, missingPlantValueDefs, plantDefPayloadFrom,
-  KPI_FORMULAS, formulaOf, baseVarOf } from '../utils/kpiSetup';
+  KPI_FORMULAS, formulaOf, baseVarOf, KPI_BASE_VARS } from '../utils/kpiSetup';
 import { applyFormulaEntries, buildBaseIndex, formulaNoteText, formulaSummaryText, formulaOfDef, formulaMonthMode } from '../utils/kpiFormula';
 import KpiBaseInputsPanel from './KpiBaseInputsPanel';
 import { headcountAuto, headcountAutoVar } from '../utils/kpiHeadcount';
@@ -431,7 +431,7 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
     const seq = ++loadSeq.current;
     const alive = () => seq === loadSeq.current;
         /* 🔴 ต้องดึง `summary_mode` + `decimals` มาด้วย — ขาดไปแถวทุกตัวตกเป็น "เฉลี่ย" / ทศนิยม 2 เงียบๆ */
-    const CAT_EMBED = '*, kpi_catalog(id, name, unit, category, formula_text, scope_text, direction, decimals, summary_mode, value_scope, board_slot)';
+    const CAT_EMBED = '*, kpi_catalog(id, name, unit, category, formula_text, scope_text, direction, decimals, summary_mode, value_scope, board_slot, amount_var)';
     const run = (cols) => supabase.from('kpi_definitions').select(cols)
       .eq('year', year).eq('is_active', true)
       .order('category').order('seq').order('created_at');
@@ -1872,6 +1872,16 @@ function CatalogModal({ rows, canManage, usedNames = [], onClose, onChanged, onP
                           <select style={{ ...mini, width: 168 }} value={summaryModeOf({ kpi_catalog: r })} disabled={!canManage || busy === r.id}
                             onChange={e => patch(r, 'summary_mode', e.target.value, 'วิธีรวม 12 เดือน')}>
                             {KPI_SUMMARY_MODES.map(m => <option key={m.key} value={m.key}>{tr(m.label)}</option>)}
+                          </select>
+                        </label>
+                        {/* 💰 16/11 (user: "ให้ขึ้นยอดเงินคู่กัน") — KPI ที่เป็น % ของยอดขาย (100P) ใบบัญชีมีแถวยอดเงินคู่กัน
+                            ⇒ ชี้ตัวแปรฐาน (บาท) ที่ถือยอดเงินนั้น แผ่น Obeya จะเขียน "💰 เดือน X MB · สะสม Y MB" ใต้ % · ของตัวตน KPI เหมือนวิธีรวม */}
+                        <label style={miniLbl} title={tr('ตัวแปรฐาน (บาท) ใน kpi_base_inputs ที่เป็น "ยอดเงิน" ของ KPI นี้ — แผ่นบน OBEYA จะโชว์ยอดเงินเดือนที่เลือก + สะสม คู่กับ % · ไม่เลือก = ไม่โชว์')}>
+                          {tr('ยอดเงินคู่กัน')}
+                          <select style={{ ...mini, width: 190 }} value={r.amount_var || ''} disabled={!canManage || busy === r.id}
+                            onChange={e => patch(r, 'amount_var', e.target.value || null, 'ยอดเงินคู่กัน')}>
+                            <option value="">{tr('— ไม่โชว์ยอดเงิน —')}</option>
+                            {KPI_BASE_VARS.filter(v => v.unit === 'บาท').map(v => <option key={v.key} value={v.key}>{v.label}</option>)}
                           </select>
                         </label>
                       </div>

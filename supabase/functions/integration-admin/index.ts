@@ -15,14 +15,15 @@
      pause   { id } · resume { id }
      legacy_off { id }   เลิกรับ secret กลาง (หลังต้นทางเปลี่ยนไปใช้รหัสของตัวเองแล้ว)
      map_tag    { id, tag, machine_id|null }          ผูก/เลิกผูก รหัสเครื่องของต้นทาง → machines.id (null = ลบการผูก)
-     map_reason { id, kind, code, text?, downtime_type_id|null, clear? }
+     map_reason { id, kind, code, text?, downtime_type_id|null, is_break?, clear? }
+                is_break = เหตุผลนี้คือกดพักหน้าเครื่อง (เฉพาะ onplan) — ESM คิดเวลาพักจากนโยบาย · ส่วนเกิน = เสีย A (16/11)
                 เหตุผลหยุดของต้นทาง → dr_downtime_types (null = ยืนยันว่า "ไม่มีตัวตรง" · clear = ลบการจับคู่)
                 🔴 คนกดเท่านั้น — จอเสนอได้ แต่ห้ามเรียก action นี้อัตโนมัติ
    🔴 รายชื่อชนิดข้างล่างต้องตรง src/utils/integrationKinds.js (edge import จาก src/ ไม่ได้) */
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 const MAIN_URL = 'https://ewhdfqwfwofivojtsizn.supabase.co';
-const KINDS = ['energy_readings', 'energy_events', 'energy_daily', 'energy_limits', 'machine_state', 'piece_count'];
+const KINDS = ['energy_readings', 'energy_events', 'energy_daily', 'energy_limits', 'machine_state', 'piece_count', 'machine_live'];
 const COLS = 'id, code, name, note, kinds, key_hint, legacy_secret, is_paused, last_seen_at, last_ok_at, last_error, updated_at, updated_by';
 const CORS = {
   'access-control-allow-origin': '*',
@@ -135,9 +136,9 @@ Deno.serve(async (req) => {
     }
     case 'map_reason': {
       if (!id) return json({ error: 'id required' }, 400);
-      const kind = body.kind === 'onplan' || body.kind === 'unplan' ? body.kind : null;
+      const kind = ['onplan', 'unplan', 'alarm'].includes(body.kind) ? body.kind : null;
       const code = Number.isInteger(Number(body.code)) && body.code !== '' && body.code != null ? Number(body.code) : null;
-      if (!kind || code == null) return json({ error: 'ต้องระบุชนิด (onplan/unplan) + รหัสเหตุผล' }, 400);
+      if (!kind || code == null) return json({ error: 'ต้องระบุชนิด (onplan/unplan/alarm) + รหัสเหตุผล' }, 400);
       if (body.clear) {
         const { error } = await sb.from('machine_reason_map').delete().eq('source_id', id).eq('reason_kind', kind).eq('reason_code', code);
         return error ? json({ error: error.message }, 500) : json({ ok: true });
@@ -149,7 +150,7 @@ Deno.serve(async (req) => {
       }
       const { error } = await sb.from('machine_reason_map').upsert({
         source_id: id, reason_kind: kind, reason_code: code, reason_text: str(body.text, 200),
-        downtime_type_id: dt, confirmed_by: who, confirmed_at: now,
+        downtime_type_id: body.is_break ? null : dt, is_break: kind === 'onplan' && !!body.is_break, confirmed_by: who, confirmed_at: now,
       }, { onConflict: 'source_id,reason_kind,reason_code' });
       return error ? json({ error: error.message }, 500) : json({ ok: true });
     }

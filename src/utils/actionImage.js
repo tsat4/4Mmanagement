@@ -20,9 +20,12 @@ export const ACTION_BUCKET = 'action-images';
    — รูปหลักฐานที่ครอบจนของสำคัญหลุดกรอบ = ใช้ไม่ได้เลย (ชุดเดียวกับรูปของเสีย) */
 export const ACTION_IMG_ASPECT = 4 / 3;
 
-/* 🗜️ 1024px + webp — ต้องใหญ่พอให้เห็นสิ่งที่แก้ไป (480px ของรูปโปรไฟล์เล็กเกินไป) */
+/* 🗜️ 1024px + webp — ต้องใหญ่พอให้เห็นสิ่งที่แก้ไป (480px ของรูปโปรไฟล์เล็กเกินไป)
+   🔴 **ไม่ครอบซ้ำตอนบีบ** (16/11 · หน้างาน: "รูปที่ใส่ตรง KPI ไม่ fix scale ได้ไหม" — เลือก "ใช้ทั้งรูป" ในกรอบครอปแล้ว
+   แต่ตอนอัปโหลดถูก centerCrop 4:3 ทับอีกรอบ ⇒ ใบรายงานแนวตั้งโดนตัดหัวท้ายเงียบๆ) — สัดส่วนตัดสินที่ `<ImageCropModal>` ที่เดียว
+   (โหมดครอบ = ออก 4:3 อยู่แล้ว · โหมดใช้ทั้งรูป = สัดส่วนเดิม) ตัวนี้แค่ย่อ+แปลง webp · `ACTION_IMG_ASPECT` ยังเป็นกรอบของ modal */
 export const resizeActionImage = (file, maxPx = 1024, quality = 0.8) =>
-  resizeImg(file, maxPx, quality, { webp: true, aspect: ACTION_IMG_ASPECT });
+  resizeImg(file, maxPx, quality, { webp: true });
 
 /** อัปโหลดขึ้น bucket action-images → คืน public URL · โยน error ถ้าล้ม (ผู้เรียก toast เอง) */
 export async function uploadActionImg(blob, path) {
