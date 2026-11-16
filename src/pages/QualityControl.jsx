@@ -66,6 +66,13 @@ import { DeleteButton } from '../components/IconButton';
 import { tr as trI18n } from '../utils/i18n';
 import { tint } from '../utils/statusTone';
 import { itemAsChar, itemLabel, matchCharToItem, groupRowsByItem, POINT_FILTERS, pointPasses, sortPoints, CPK_OK } from '../utils/qaSpcSource';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
+/* 📥 CSV ค่าวัด SPC + สรุป Cp-Cpk (16/11) — CSV = เอกสาร ⇒ ชื่อไฟล์ผ่านทะเบียน /doc-forms */
+import { downloadCsvDoc, csvText } from '../utils/csvDoc';
+import { loadDocForms } from '../utils/docForms';
+import {
+  QA_SPC_VALUE_HEADERS, qaSpcValueRows, spcValuesFrom,
+  QA_SPC_SUMMARY_HEADERS, qaSpcSummaryRows, csvStamp,
+} from '../utils/qaCsvRows';
 
 /* ตัวกรองสถานะใบ NCR / CAPA (UI-STANDARD 2026-09-24) — ค่า state เดิม 'all'/'active'/'closed' */
 const STATUS_SEG = [
@@ -622,7 +629,7 @@ const SPC_SRC_SEG = [
 ];
 const EMPTY_CHAR = { part_no: '', part_name: '', line_name: '', characteristic: '', unit: 'mm', nominal: '', usl: '', lsl: '', subgroup_size: 5, gauge: '', control_method: '' };
 
-function SPCTab({ lineObjs, canRecord, canManage, partOpts = [], instruments = [] }) {
+function SPCTab({ lineObjs, canRecord, canManage, canExport = false, partOpts = [], instruments = [] }) {
   const { fullName, role, section: homeSection, sections: mySections, allUnits, respCostCenters, scopeIdx } = useContext(UserContext);
   /* 🔐 จุดควบคุม SPC ผูกไลน์ ⇒ ลงค่าวัด/ลบค่าวัด/แก้ spec ได้เฉพาะไลน์ส่วนงานตัวเอง (audit 15/10)
      เดิม `loadChars()` ดึงทุกไลน์ ⇒ เลือกจุดของไลน์อื่นแล้วลงค่าทับ Cpk ของเขาได้
@@ -751,7 +758,11 @@ function SPCTab({ lineObjs, canRecord, canManage, partOpts = [], instruments = [
     const r = rws.length ? computeSPC(rws, itemAsChar(it)) : null;
     const last = rws.length ? rws[rws.length - 1] : null;
     return { it, balloon: it.balloon_no, n: rws.length, mean: r?.xbarbar ?? null, cpk: r?.cpk ?? null,
-      oos: r?.oos || 0, last: last?.readings?.[0] ?? null, lastDate: last?.work_date || null };
+      oos: r?.oos || 0, last: last?.readings?.[0] ?? null, lastDate: last?.work_date || null,
+      /* 📥 ช่องเพิ่มสำหรับไฟล์ CSV สรุป (16/11) — จอยังโชว์แค่ 4 ช่องเดิม แต่ไฟล์เอาไปทำรายงาน
+         ⇒ ค่าที่คิดไม่ได้ต้องเป็น null (ไฟล์เขียนช่องว่าง) ห้าม 0 */
+      cp: r?.cp ?? null, pp: r?.pp ?? null, ppk: r?.ppk ?? null,
+      sigmaWithin: r?.sigmaWithin ?? null, sigmaOverall: r?.sigmaOverall ?? null };
   })), [partItems, partRes, limitN]);
   const pointCounts = useMemo(() => Object.fromEntries(POINT_FILTERS.map(f => [f.value, pointStats.filter(s => pointPasses(s, f.value)).length])), [pointStats]);
   const shownPoints = useMemo(() => {
@@ -863,6 +874,49 @@ function SPCTab({ lineObjs, canRecord, canManage, partOpts = [], instruments = [
 
   const violations = spc ? spc.points.filter(p => p.oocX || p.oocR || p.run) : [];
 
+  /* ── 📥 CSV ค่าวัด + สรุป Cp-Cpk (16/11 · feedback ประชุม "export ผลตรวจเป็น CSV … และ SPC") ──
+     🔴 egress = 0 คิวรีเพิ่ม — ใช้ชุดข้อมูลเดียวกับที่กราฟ/ตารางบนจอคิดอยู่แล้ว
+        (โหมดใบตรวจ = `partRes.byItem` ที่ `fetchAllPages` ดึงมา · โหมดตั้งเอง = `rows`)
+     🔴 ไฟล์ = หน้าต่างเดียวกับจอ (ล่าสุด N ค่า/จุด) ⇒ ติด `lastN` ไว้ที่ชื่อไฟล์ ไม่ให้เข้าใจว่าเป็นทั้งหมด
+     🔴 โหลดมาไม่ครบ (error/ชนเพดาน) = ถามก่อนดาวน์โหลด + ติด "ไม่ครบ" ที่ชื่อไฟล์ ห้ามส่งไฟล์ขาดเงียบๆ */
+  useEffect(() => { loadDocForms().catch(() => { /* ไม่ได้เลขฟอร์ม = ชื่อไฟล์เดิม ไม่ล้ม */ }); }, []);
+  const partLabel = partOpts2.find(o => o.id === partId)?.label || '';
+  const askIfPartial = () => {
+    if (!isSheet || !partRes.err) return true;
+    toast.error(`ข้อมูลไม่ครบ: ${partRes.err}`);
+    return window.confirm(`⚠️ ${partRes.err}\n\nไฟล์ที่ได้จะไม่ครบ (ชื่อไฟล์จะติดคำว่า "ไม่ครบ")\nดาวน์โหลดต่อไหม?`);
+  };
+  const partialTag = () => (isSheet && partRes.err ? 'ไม่ครบ' : '');
+
+  const exportSpcValues = () => {
+    const groups = isSheet
+      ? partItems
+        .map(it => ({ point: itemAsChar(it), values: spcValuesFrom((partRes.byItem.get(it.id) || []).slice(-limitN)) }))
+        .filter(g => g.values.length)
+      : (sel ? [{ point: sel, values: spcValuesFrom(rows) }] : []);
+    const csvRows = qaSpcValueRows(groups);
+    if (!csvRows.length) { toast.info(trI18n('ยังไม่มีค่าวัดให้ส่งออก')); return; }
+    if (!askIfPartial()) return;
+    const name = isSheet
+      ? csvStamp(['qa_spc_values', partLabel, `last${limitN}`, partialTag()])
+      : csvStamp(['qa_spc_values', sel?.part_no, sel?.characteristic, `last${limitN}`]);
+    downloadCsvDoc('csv_qa_spc_values', name, csvText(QA_SPC_VALUE_HEADERS, csvRows));
+    toast.success(`ส่งออก ${csvRows.length.toLocaleString()} ค่าวัด จาก ${groups.length} จุด ✓`);
+  };
+
+  const exportSpcSummary = () => {
+    const stats = pointStats.map(st => ({
+      point: itemAsChar(st.it),
+      n: st.n, mean: st.mean, sigmaWithin: st.sigmaWithin, sigmaOverall: st.sigmaOverall,
+      cp: st.cp, cpk: st.cpk, pp: st.pp, ppk: st.ppk, oos: st.oos, last: st.last, lastDate: st.lastDate,
+    }));
+    if (!stats.length) { toast.info(trI18n('ชิ้นงานนี้ยังไม่มีจุดวัดค่าแบบตัวเลข')); return; }
+    if (!askIfPartial()) return;
+    downloadCsvDoc('csv_qa_spc_summary', csvStamp(['qa_spc_summary', partLabel, `last${limitN}`, partialTag()]),
+      csvText(QA_SPC_SUMMARY_HEADERS, qaSpcSummaryRows(stats)));
+    toast.success(`ส่งออกสรุป ${stats.length} จุด ✓`);
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {/* 🎛️ แถบกรอง (13/11) — แหล่งค่าวัด → ชิ้นงาน → แสดงจุดแบบไหน → ค้นจุด · ตารางสรุปจุดอยู่ข้างล่าง */}
@@ -899,6 +953,21 @@ function SPCTab({ lineObjs, canRecord, canManage, partOpts = [], instruments = [
           {(isSheet ? [25, 50, 100, 200] : [25, 50, 100]).map(n => <option key={n} value={n}>{trI18n('ล่าสุด')} {n} {isSheet ? trI18n('ค่า') : trI18n('กลุ่ม')}</option>)}
         </select>
         <span className="spacer" />
+        {/* 📥 ปุ่ม export อยู่หลัง spacer ตามลำดับมาตรฐานของแถบกรอง (UI-STANDARD §3 ข้อ 1) */}
+        {canExport && (
+          <>
+            <button style={ghostBtn} onClick={exportSpcValues}
+              title={trI18n('ค่าวัดทุกค่า 1 แถว = 1 ค่า (วันงาน/กะ/รอบ/ชิ้น + LSL-USL) — เอาไปทำกราฟควบคุมใน Excel ได้ตรงๆ')}>
+              {trI18n('📥 CSV ค่าวัด')}
+            </button>
+            {isSheet && (
+              <button style={ghostBtn} onClick={exportSpcSummary}
+                title={trI18n('สรุปทุกจุดวัดของชิ้นงานนี้ (n / Mean / σ / Cp / Cpk / Pp / Ppk / ค่าหลุด spec) — ช่องว่าง = คิดไม่ได้ ไม่ใช่ 0')}>
+                {trI18n('📥 CSV สรุป Cpk')}
+              </button>
+            )}
+          </>
+        )}
         {canManage && !isSheet && (
           <>
             <button style={btnSt()} onClick={() => setCharModal({ ...EMPTY_CHAR })}>{trI18n('+ เพิ่มจุดควบคุม')}</button>
@@ -2107,6 +2176,9 @@ export default function QualityControl() {
   const { role, lineId, sections, scopeIdx } = useContext(UserContext);
   const canRecord = can('qa', 'record');
   const canManage = can('qa', 'manage');
+  /* 📥 ดาวน์โหลด CSV = คีย์เดียวกับปุ่ม export ทั้งระบบ (`report:export` — "Export รายงาน (PDF/CSV)")
+     ไม่ผูกกับ qa:record เพราะไฟล์เป็นการ "อ่าน" ไม่ได้เขียนอะไร · ห้าม hardcode role array */
+  const canExport = can('report', 'export');
   const [tab, setTab] = useTabParam(TABS.map(t => t.key), 'dashboard');
   const [allLines, setAllLines] = useState([]);
   const [capaPrefill, setCapaPrefill] = useState(null); // NCR → เปิด 8D
@@ -2149,7 +2221,7 @@ export default function QualityControl() {
       {tab === 'dashboard' && <QualityDashboard />}
       {tab === 'morepair' && <QaMoPending />}
       {tab === 'sheet' && <QaCheckSheet canRecord={canRecord} />}
-      {tab === 'spc' && <SPCTab lineObjs={lineObjs} canRecord={canRecord} canManage={canManage} partOpts={partOpts} instruments={instruments} />}
+      {tab === 'spc' && <SPCTab lineObjs={lineObjs} canRecord={canRecord} canManage={canManage} canExport={canExport} partOpts={partOpts} instruments={instruments} />}
       {tab === 'ncr' && <NCRTab lineObjs={lineObjs} canRecord={canRecord} canManage={canManage} onOpenCapa={openCapaFromNcr} partOpts={partOpts} />}
       {tab === 'capa' && <CAPATab canRecord={canRecord} canManage={canManage} prefill={capaPrefill} onPrefillDone={() => setCapaPrefill(null)} lineObjs={lineObjs} partOpts={partOpts} />}
       {/* 🗑️ ชิ้นเดียวกับแท็บถังเหลือง/แดงใน /scrap-report (ฝ่ายผลิต) — ข้อมูลชุดเดียว ไม่ได้ก๊อป

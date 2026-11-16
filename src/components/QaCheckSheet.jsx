@@ -42,6 +42,12 @@ import ScanModal from './ScanModal';
 import { useSearchParams } from 'react-router-dom';
 import { useMergeParams } from '../utils/useTabParam';
 import { parseQrPayload, findQaPartByScan } from '../utils/qrCode';
+/* 📥 CSV ผลตรวจรายพาร์ท (16/11) — CSV = เอกสาร ⇒ ชื่อไฟล์ผ่านทะเบียน /doc-forms (csv_qa_inspection_results) */
+import { downloadCsvDoc, csvText } from '../utils/csvDoc';
+import { loadDocForms } from '../utils/docForms';
+import { QA_RESULT_HEADERS, qaResultCsvRows, csvStamp } from '../utils/qaCsvRows';
+import { fetchByIds, fetchAllPages } from '../utils/fetchByIds';
+import { addDaysStr } from '../utils/workDate';
 
 import { tr } from '../utils/i18n';
 /* ── helpers เวลา/วันงาน (กฎเดียวกับทั้งระบบ) ───────────────────────────── */
@@ -91,6 +97,9 @@ export default function QaCheckSheet({ canRecord }) {
   const { role, lineId, sections, fullName } = useContext(UserContext);
   // ฝ่ายผลิต/หัวหน้าไลน์บันทึก action หลัง alarm (cross-function กับ QA) — คีย์แยกจาก qa:record
   const canAction = can('qa', 'record_action', role);
+  /* 📥 ดาวน์โหลดผลตรวจ = คีย์เดียวกับปุ่ม export ทั้งระบบ (`report:export` — "Export รายงาน (PDF/CSV)")
+     ไม่ใช่ qa:record: อ่าน/ดาวน์โหลดไม่ได้เขียนอะไร · ห้าม hardcode role array (UI §can()) */
+  const canExport = can('report', 'export', role);
   const isMobile = useIsMobile();
 
   const [allLines, setAllLines] = useState([]);
@@ -646,6 +655,48 @@ export default function QaCheckSheet({ canRecord }) {
     } finally { setPrinting(false); }
   };
 
+  /* ── 📥 CSV ผลตรวจของพาร์ทนี้ (16/11 · feedback ประชุม "export data พวกผลตรวจ เป็น CSV รายพาร์ท") ──
+     ช่วง = ย้อนหลัง N วันถึงวันงานที่เลือกอยู่ (พารามิเตอร์ของปุ่ม ไม่ใช่ตัวกรองมุมมอง · UI-STANDARD §3 ข้อ 5)
+     🔴 egress: เลือกเฉพาะคอลัมน์ที่ไฟล์ใช้ · ใบ > 1000 แถว ⇒ `fetchAllPages` · ผลรายจุดผ่าน `fetchByIds`
+        (`.in()` ยาว = URL เกินเพดาน proxy → คืนค่าว่างเงียบ · กฎเหล็ก DB ข้อ 5/11)
+     🔴 โหลดไม่ครบ ห้ามส่งไฟล์ที่ขาดเงียบๆ — ถามก่อน แล้วติด "ไม่ครบ" ไว้ที่ **ชื่อไฟล์**
+        (ห้ามแทรกบรรทัดเตือนในเนื้อ CSV — แถวแรกต้องเป็นหัวตาราง) */
+  const [csvDays, setCsvDays] = useState(30);
+  const [csvBusy, setCsvBusy] = useState(false);
+  useEffect(() => { loadDocForms().catch(() => { /* ไม่ได้ชื่อจากทะเบียน = ชื่อไฟล์เดิม ไม่ล้ม */ }); }, []);
+
+  const exportResultsCsv = async () => {
+    if (!partId) { toast.error('เลือกพาร์ทก่อน'); return; }
+    const from = addDaysStr(workDate, -(csvDays - 1));
+    if (!from) { toast.error('อ่านวันงานไม่ออก — เลือกวันใหม่'); return; }
+    setCsvBusy(true);
+    try {
+      const sh = await fetchAllPages(() => supabase.from('qa_inspection_sheets')
+        .select('id, part_no, part_name, line_name, work_date, shift, round_no, stage, lot_no, machine_no, inspector_name, inspector_code, status, result')
+        .eq('part_id', partId).gte('work_date', from).lte('work_date', workDate));
+      if (sh.error) { toast.error(`โหลดใบตรวจไม่สำเร็จ: ${sh.error} — ยังไม่ได้ไฟล์`); return; }
+      if (!sh.rows.length) { toast.info(`ช่วง ${from} – ${workDate} ยังไม่มีใบตรวจของพาร์ทนี้`); return; }
+      const rs = await fetchByIds(sh.rows.map(s => s.id), (ids) => supabase.from('qa_inspection_results')
+        .select('id, sheet_id, balloon_no, characteristic, item_type, spec_text, judgement, values_json, qty_checked, qty_ng, note, ncr_id, recorded_by, recorded_at')
+        .in('sheet_id', ids));
+      if (rs.error && !rs.rows.length) { toast.error(`โหลดผลตรวจไม่สำเร็จ: ${rs.error} — ยังไม่ได้ไฟล์`); return; }
+      const rows = qaResultCsvRows(sh.rows, rs.rows);
+      if (!rows.length) { toast.info(`ช่วงนี้มีใบตรวจ ${sh.rows.length} ใบ แต่ยังไม่มีผลรายจุดที่บันทึกไว้`); return; }
+      const miss = [sh.truncated && 'ใบตรวจเกินเพดานที่ดึงได้', rs.truncated && 'ผลรายจุดเกินเพดานที่ดึงได้',
+        rs.failed > 0 && `ผลรายจุดบางก้อนโหลดไม่สำเร็จ (${rs.error})`].filter(Boolean);
+      if (miss.length) {
+        toast.error(`ข้อมูลไม่ครบ: ${miss.join(' · ')}`);
+        if (!window.confirm(`⚠️ ข้อมูลไม่ครบ\n${miss.join('\n')}\n\nไฟล์ที่ได้จะไม่ครบ (ชื่อไฟล์จะติดคำว่า "ไม่ครบ")\nดาวน์โหลดต่อไหม?`)) return;
+      }
+      downloadCsvDoc('csv_qa_inspection_results',
+        csvStamp(['qa_results', part?.part_no || partId, from, workDate, miss.length ? 'ไม่ครบ' : '']),
+        csvText(QA_RESULT_HEADERS, rows));
+      toast.success(`ส่งออก ${rows.length.toLocaleString()} แถว จาก ${sh.rows.length} ใบตรวจ ✓`);
+    } catch (e) {
+      toast.error(`ส่งออก CSV ไม่สำเร็จ: ${e?.message || e}`);
+    } finally { setCsvBusy(false); }
+  };
+
   /* ── UI ─────────────────────────────────────────────────────────────── */
   return (
     <div>
@@ -767,6 +818,23 @@ export default function QaCheckSheet({ canRecord }) {
                 title={matchesKey(sheet) ? tr('พิมพ์/บันทึก PDF ใบตรวจรอบนี้') : tr('ยังไม่มีใบตรวจของรอบนี้')}
                 style={{ padding: '5px 12px', fontSize: 12, fontWeight: 700 }}>
                 {printing ? tr('กำลังเตรียม…') : tr('🖨️ พิมพ์ใบตรวจ')}
+              </button>
+            </>
+          )}
+          {/* 📥 CSV ผลตรวจรายพาร์ท (16/11) — ช่อง "ย้อนหลัง" = พารามิเตอร์ของปุ่มนี้ ไม่ใช่ตัวกรองมุมมอง
+              (UI-STANDARD §3 ข้อ 5 · วางชิดปุ่มพร้อมป้ายบอกว่าเป็นของปุ่มไหน) */}
+          {canExport && (
+            <>
+              {!items.length && <span style={{ flex: 1 }} />}
+              <span style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 700 }}>{tr('CSV ย้อนหลัง')}</span>
+              <select value={csvDays} onChange={e => setCsvDays(Number(e.target.value))} aria-label={tr('ช่วงวันของไฟล์ CSV')}
+                style={{ height: 28, fontSize: 12, borderRadius: 8, padding: '0 6px', background: 'var(--bg3)', border: '1px solid var(--border2)', color: 'var(--text)' }}>
+                {[7, 30, 60, 90, 180].map(d => <option key={d} value={d}>{d} {tr('วัน')}</option>)}
+              </select>
+              <button type="button" className="tbtn" disabled={csvBusy || !partId} onClick={exportResultsCsv}
+                title={tr('ผลตรวจทุกจุด ทุกรอบ ของพาร์ทนี้ในช่วงที่เลือก — เปิดใน Excel ได้ (ช่องว่าง = ไม่มีค่า ไม่ใช่ 0)')}
+                style={{ padding: '5px 12px', fontSize: 12, fontWeight: 700 }}>
+                {csvBusy ? tr('กำลังรวบรวม…') : tr('📥 CSV ผลตรวจ')}
               </button>
             </>
           )}
