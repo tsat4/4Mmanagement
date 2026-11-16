@@ -28,7 +28,9 @@ import { parallelUnitsOf, flowModeOf } from '../utils/lineTypes';
 import { checkShiftCapacity, checkOtCapacity, otSpanMin } from '../utils/shiftCapacity';
 import { splitCloseOrders, autoCarryPatch, autoCarryText } from '../utils/closeShiftOrders';   // 🔁 ปิดกะ: ใบที่ยังไม่แตะ = ยกเอง (20/10)
 import { debtByPart, debtPcs, debtAgeDays } from '../utils/carryDebt';   // 📥 ของค้าง "ต้องไล่เก็บอีกเท่าไหร่" (20/10)
-import { loadCarryOffers, importCarryOrders } from '../lib/carryDebtOps';   // 📥 โหลด/รับของค้าง — ที่เดียวทั้งระบบ
+import { loadCarryOffers, importCarryOrders } from '../lib/carryDebtOps';
+import { loadMinAlerts, minAlertsForLine } from '../lib/minDemandOps';
+import MinDemandPanel from '../components/MinDemandPanel';   // 📥 โหลด/รับของค้าง — ที่เดียวทั้งระบบ
 // 📤 ปิดใบข้ามไลน์ "สแกนจากจอไหนก็ปิดได้" (30/10) — กติกาอยู่ไฟล์เดียว ห้ามตัดสินเองในหน้า
 import { crossLineCloseState, crossLineCloseText, crossLineNameOf, crossLineWhen, CROSS_CLOSE_COLS } from '../utils/crossLineClose';
 import { canShortClose, shortCloseError, shortClosePatch, isShortClosed } from '../utils/shortClose';   // ✂️ ปิดใบด้วยยอดเศษ (งานปั๊ม 2xx · 2026-10-02)   // ⏱️ ด่าน "เปิดใบนี้แล้วเกินกะไหม" (ไลน์เครื่องขนานนับเป็นเลน · 2026-10-02)
@@ -917,6 +919,16 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
    *   2. กะก่อนหน้าปิด/ส่งขอปิด ⇒ `production_sessions` ขยับ ⇒ `load()` (subscribe ไม่กรอง) → เรียกต่อ
    *   (+ หลังกด "รับยอดค้างเข้ากะ" เพื่อให้แบนเนอร์เคลียร์ทันที)
    */
+  /* 🔔 ของไลน์นี้ที่ถึง min แล้ว — "รอแผน" (คำสั่ง user 13/11: ไลน์ต้องเห็นเพื่อเตรียมตัว)
+     🔴 ดูอย่างเดียว — ไลน์ไม่ได้เป็นคนจัดแผน (งานของ Planning + Store)
+     กฎการตัดสินอยู่ utils/replenish.js · โหลดผ่าน lib/minDemandOps.js ห้ามคิดเองในหน้า */
+  const [minAll, setMinAll] = useState({ rows: [], summary: null, error: null, loading: true });
+  useEffect(() => {
+    let alive = true;
+    loadMinAlerts().then(r => { if (alive) setMinAll({ ...r, loading: false }); });
+    return () => { alive = false; };
+  }, []);
+
   const loadCarryOrders = useCallback(async (sessionId, lineName) => {
     if (!sessionId || !lineName) { setCarryOrders([]); return; }
     const { data } = await supabaseDR.from('prod_orders')
@@ -4000,6 +4012,17 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                   </div>
                 );
               })()}
+              {/* 🔔 ของไลน์นี้ที่ถึง min แล้ว — รอแพลนนิ่งจัดแผนลง (ไลน์ดูเพื่อเตรียมตัว ไม่ได้กดอะไร) */}
+              {selSession?.line_name && minAlertsForLine(minAll.rows, selSession.line_name).length > 0 && (
+                <div style={{ marginBottom: 10 }}>
+                  <MinDemandPanel
+                    rows={minAlertsForLine(minAll.rows, selSession.line_name)}
+                    summary={null} error={minAll.error} loading={minAll.loading}
+                    title="ของไลน์นี้ถึง min แล้ว — รอแพลนนิ่งจัดแผนลง"
+                    showOwnerLine={false} onAdd={null}
+                    emptyText="ยังไม่มีพาร์ทของไลน์นี้ถึง min" />
+                </div>
+              )}
               {/* Carry-over banner */}
               {carryOrders.length > 0 && canScan && (
                 <div style={{ marginBottom: 10, padding: '10px 14px', background: 'var(--blue-dim)', border: '1px solid var(--blue-line)', borderRadius: 'var(--r-md)' }}>

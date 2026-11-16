@@ -150,7 +150,8 @@ export const isFgMat = (mat) => /^1/.test(String(mat ?? '').trim());
  *          `state`: 'at_min' (ติด min แล้ว) · 'ok' (ยังพอ) · 'unknown' (ตอบไม่ได้)
  *          เรียง: ติด min ก่อน → ขาดลึกสุดก่อน → ตอบไม่ได้ต่อท้าย (**ห้ามตัดทิ้ง**)
  */
-export function minAlerts(levels = [], onHandOf = () => null, ownerLineOf = () => null) {
+export function minAlerts(levels = [], onHandOf = () => null, ownerLineOf = () => null,
+  { lastMoveOf = null, now = null, staleDays = STALE_DAYS } = {}) {
   const rows = (levels || []).filter(Boolean).map((l) => {
     const min = num(l.min_qty);
     const max = num(l.max_qty);
@@ -165,6 +166,21 @@ export function minAlerts(levels = [], onHandOf = () => null, ownerLineOf = () =
     /* 🔴 ไม่มีบัญชี = ยังไม่เคยนับ ไม่ใช่ของหมด — นับเป็น "ติด min" ไม่ได้ */
     if (onHand == null) return { ...base, state: 'unknown', why: 'ไม่มีบัญชีคงเหลือของคู่นี้ — ยังไม่เคยนับ' };
     if (onHand > min) return { ...base, state: 'ok', why: null };
+    /* 🔴🔴 ด่านความสดของบัญชี — **เลข 0 บนบัญชีที่ไม่มีใครขยับ ไม่ได้แปลว่าของหมด**
+       วัดจริง 16/11: 41 คู่ที่ตั้ง min ไว้ → ติด min 32 คู่ และ **ทั้ง 32 คู่คงเหลือ 0 เป๊ะ**
+       ไม่มีสักคู่ที่มีของเหลือบางส่วน · บัญชีขยับล่าสุด 30/10 (17 วันก่อน) · 7 คู่ไม่เคยขยับเลย
+       ⇒ ปล่อยตามนี้ = จอขึ้น "ติด min 32 ตัว" ที่ผิดทั้ง 32 ตัว แล้วคนเลิกเชื่อทั้งจอ
+       (กับดักเดียวกับ `refillNeed()` ข้างบน · ไม่ส่ง `lastMoveOf` = ไม่ตรวจ = พฤติกรรมเดิม) */
+    if (lastMoveOf) {
+      const at = lastMoveOf(l.line_name, l.mat_no);
+      if (!at) return { ...base, state: 'unknown', why: 'บัญชีของคู่นี้ไม่เคยขยับเลย — เลข 0 ไม่ได้แปลว่าของหมด' };
+      const age = daysSince(at, now);
+      if (age == null) return { ...base, state: 'unknown', why: 'อ่านเวลาเคลื่อนไหวล่าสุดของบัญชีไม่ได้' };
+      if (age > (num(staleDays) ?? STALE_DAYS)) {
+        return { ...base, state: 'unknown', staleDays: age,
+          why: `บัญชีไม่ขยับมา ${age} วัน (ล่าสุด ${String(at).slice(0, 10)}) — ยอดคงเหลือเชื่อเป็นของจริงไม่ได้` };
+      }
+    }
     return {
       ...base, state: 'at_min',
       /* รู้ max ถึงจะบอกได้ว่าเติมเท่าไหร่ — ไม่รู้ = null ให้จอเขียนว่ายังตอบไม่ได้ */

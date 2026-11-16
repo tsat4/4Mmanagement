@@ -167,3 +167,42 @@ test('ลิสต์ว่าง/ข้อมูลเพี้ยน ต้อ
   assert.equal(minAlertSummary([]).atMin, 0);
   assert.equal(minAlerts([null, LV('A', 100, null)], () => 1).length, 1);
 });
+
+/* ═══ 🔴 ด่านความสดของบัญชี (16/11) ════════════════════════════════════════════
+   วัดจริง: 41 คู่ที่ตั้ง min → ติด min 32 คู่ และ **ทั้ง 32 คู่คงเหลือ 0 เป๊ะ**
+   ไม่มีคู่ไหนมีของเหลือบางส่วนเลย · บัญชีขยับล่าสุด 30/10 (17 วันก่อน) · 7 คู่ไม่เคยขยับ
+   ⇒ "0" คือ "ไม่ได้นับ" ไม่ใช่ "ของหมด" — ปล่อยผ่าน = จอขึ้นติด min 32 ตัวที่ผิดทั้งหมด */
+const NOW16 = '2026-11-16T03:00:00Z';
+
+test('🔴 บัญชีไม่ขยับเกินเกณฑ์ = unknown ห้ามรายงานว่าติด min', () => {
+  const r = minAlerts([LV('20059152', 6000, null)], () => 0, () => 'LINE D',
+    { lastMoveOf: () => '2026-10-30T00:00:00Z', now: NOW16 })[0];
+  assert.equal(r.state, 'unknown');
+  assert.equal(r.staleDays, 17);
+  assert.match(r.why, /ไม่ขยับมา 17 วัน/);
+});
+
+test('🔴 บัญชีไม่เคยขยับเลย = unknown (เคส 7 คู่ที่วัดได้)', () => {
+  const r = minAlerts([LV('X', 100, null)], () => 0, () => 'L',
+    { lastMoveOf: () => null, now: NOW16 })[0];
+  assert.equal(r.state, 'unknown');
+  assert.match(r.why, /ไม่เคยขยับ/);
+});
+
+test('บัญชีสด = ติด min ได้ตามปกติ · ขอบเกณฑ์ไม่พลิกก่อน', () => {
+  const at = (iso) => minAlerts([LV('X', 100, null)], () => 80, () => 'L',
+    { lastMoveOf: () => iso, now: NOW16 })[0].state;
+  assert.equal(at('2026-11-15T03:00:00Z'), 'at_min');          // 1 วัน
+  assert.equal(at('2026-11-13T03:00:00Z'), 'at_min');          // 3 วัน = เท่าเกณฑ์
+  assert.equal(at('2026-11-12T03:00:00Z'), 'unknown');         // 4 วัน = เกิน
+});
+
+test('ไม่ส่ง lastMoveOf = ไม่ตรวจความสด (พฤติกรรมเดิมเป๊ะ)', () => {
+  assert.equal(minAlerts([LV('X', 100, null)], () => 0)[0].state, 'at_min');
+});
+
+test('ด่านความสดไม่แตะของที่ "พอ" — ของพอก็คือพอ ไม่ต้องสนใจว่าบัญชีเก่าแค่ไหน', () => {
+  const r = minAlerts([LV('X', 100, null)], () => 500, () => 'L',
+    { lastMoveOf: () => '2026-01-01T00:00:00Z', now: NOW16 })[0];
+  assert.equal(r.state, 'ok');
+});
