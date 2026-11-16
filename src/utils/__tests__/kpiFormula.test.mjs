@@ -112,3 +112,32 @@ test('ตัวแปรประมาณจากทะเบียน (auto) 
   const o2 = applyFormulaEntries([def], entries, base2, org);
   assert.ok(Math.abs(o2.entries.sph1[1] - 160 / 382) < 1e-6); assert.equal(formulaMonthMode(o2.info.sph1, 1), 'computed');
 });
+
+/* 💰 ยอดเงินคู่กัน (16/11) — 100P เป็น % ของยอดขาย ใบบัญชีมียอดเงินคู่กัน ⇒ แผ่นต้องบอก MB ด้วย · เดือนที่ขาดต้องเขียน ห้ามเดา 0 */
+test('amountCompanion: อ่าน amount_var ที่ขอบเขตของนิยาม · สะสมเฉพาะเดือนที่มี · เดือนขาดถูกระบุ · ไม่มีตัวแปร = null', async () => {
+  const { amountCompanion, amountText, amountVarOf, fmtMoney } = await import('../kpiFormula.js');
+  const base = buildBaseIndex([
+    { year: 2026, month: 1, scope_kind: 'section', scope_value: 'PD2', var_key: 'cost_100p', value: 1_000_000 },
+    { year: 2026, month: 2, scope_kind: 'section', scope_value: 'PD2', var_key: 'cost_100p', value: 2_500_000 },
+    { year: 2026, month: 4, scope_kind: 'section', scope_value: 'PD2', var_key: 'cost_100p', value: 500_000 },
+    { year: 2026, month: 1, scope_kind: 'section', scope_value: 'PD1', var_key: 'cost_100p', value: 9_000_000 },
+  ]);
+  const def = { id: 'x', scope_kind: 'section', scope_value: 'PD2', kpi_catalog: { amount_var: 'cost_100p' } };
+  const a = amountCompanion({ def, scope: { kind: 'section', value: 'PD2' }, base, month: 4 });
+  assert.equal(a.ytd, 4_000_000);                 // ไม่ปนของ PD1 · ไม่นับเดือน 3 ที่ขาดเป็น 0
+  assert.deepEqual(a.have, [1, 2, 4]); assert.deepEqual(a.missing, [3]);
+  assert.equal(a.value, 500_000);
+  const txt = amountText(a, { monthLabel: (m) => `M${m}` });
+  assert.match(txt, /M4 500,000 บ\./); assert.match(txt, /สะสม 4 MB \(3 เดือน · ขาด M3\)/);
+  // เดือนที่เลือกยังไม่กรอก ⇒ โชว์เดือนล่าสุดที่มี + บอกว่าเดือนที่เลือกยังไม่กรอก
+  const b = amountCompanion({ def, scope: { kind: 'section', value: 'PD2' }, base, month: 5 });
+  assert.equal(b.value, null); assert.equal(b.ytd, 4_000_000);
+  assert.match(amountText(b, { monthLabel: (m) => `M${m}` }), /M4 500,000 บ\. \(M5 ยังไม่กรอก\)/);
+  // ไม่มีสักเดือน ⇒ ytd null + ข้อความบอกว่ายังไม่กรอก (ห้ามเป็น 0)
+  const c = amountCompanion({ def, scope: { kind: 'section', value: 'PD3' }, base, month: 3 });
+  assert.equal(c.ytd, null); assert.match(amountText(c), /ยังไม่กรอกยอดเงิน/);
+  // ตัวแปรที่ไม่ใช่เงิน / ไม่ตั้ง = null
+  assert.equal(amountVarOf({ kpi_catalog: { amount_var: 'manpower' } }), null);
+  assert.equal(amountCompanion({ def: { kpi_catalog: {} }, scope: { kind: 'section', value: 'PD2' }, base, month: 4 }), null);
+  assert.equal(fmtMoney(10_158_808.55), '10.16 MB'); assert.equal(fmtMoney(null), '—');
+});
