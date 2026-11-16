@@ -637,6 +637,26 @@ const RULES = [
     allow: {},
   },
   {
+    id: 'csat-qd-via-util',
+    scan: ['src'], ext: ['.jsx', '.js'],
+    /* จับการอ่านคะแนนดิบรายขา (`actual_score`/`total_score` ของ `kpi_customer_sat_parts`) นอกเจ้าของกฎ */
+    re: /\b(actual_score|total_score)\b/g,
+    why: '🤝 **Customer/Internal Satisfaction = 1 KPI 1 คะแนน** ตามทะเบียน `kpi_standard_items` '
+       + '(สูตร `(Actual Score/Total Score) x 100` · ทะเบียน**ไม่มีข้อย่อย** Q และ D — 16/11/2026) '
+       + '⇒ ขา Q/D คือการแยก "ตัวตั้ง-ตัวหาร" ของสูตรเดิม **ไม่ใช่ KPI 2 ตัว** '
+       + '· กับดักที่คนถัดไปจะพลาด: เอา % ของ 2 ขามา**เฉลี่ย** (Q 8/8 = 100% · D 3/4 = 75% '
+       + '⇒ ทางการ 11/12 = 91.67% แต่เฉลี่ยได้ 87.5 = เลขที่ไม่มีอยู่จริง เพราะตัวหาร 2 ขาไม่เท่ากัน) '
+       + '· กับดักที่ 2: ขาไม่ครบแล้วคิดค่ารวมจากขาเดียว/นับเป็น 0 (ต้องเป็น null + เขียนบนจอ)',
+    fix: 'ผ่าน `src/utils/kpiCustomerSat.js` เท่านั้น — `legPct` · `combineLegs` · `csatMonth` · `csatCoverage` '
+       + '· ค่ารวมที่ส่งกลุ่มยังอยู่ `kpi_manual_entries.value` **ห้ามให้โค้ดเขียนทับเอง** '
+       + '(เปลี่ยนได้ด้วยปุ่มที่คนกด) · 📄 docs/modules/obeya-kpi-board.md §แยก 2 ขา',
+    allow: {
+      'src/utils/kpiCustomerSat.js': 'เจ้าของกฎ — สูตร/สถานะทั้งหมดอยู่ที่นี่ที่เดียว',
+      'src/components/KpiCustomerSatModal.jsx': 'ช่องกรอก "ได้/เต็ม" รายขา — ส่งค่าดิบขึ้นไปให้ util คิด ไม่คิดเอง',
+      'src/components/KpiMonthly.jsx': 'saveCsatPart() เขียนแถว + tooltip โชว์ "ได้/เต็ม" ของเดือนนั้น — % มาจาก util',
+    },
+  },
+  {
     id: 'kpi-unit-decimals-via-helper',
     scan: ['src'], ext: ['.jsx', '.js'],
     /* จับการอ่าน `…kpi_catalog.unit` / `.decimals` / `.summary_mode` ตรงๆ ในหน้า

@@ -710,6 +710,18 @@ export const stdUnitLabel = (unit) => {
 export const normTopic = (s) => String(s == null ? '' : s).trim().toLowerCase();
 const rowTopic = (r) => normTopic(r?.topic ?? r?.name);
 
+/** เดา "หน่วยงานมาตรฐาน" จากชื่อขอบเขต — **เป็นข้อเสนอให้คนกดยืนยันเท่านั้น ห้ามตั้งให้เอง**
+ *  (16/11 · เคส QA: ขอบเขตชื่อตรงกับหน่วยงานในทะเบียนเป๊ะ แต่ยังไม่มีแถว KPI เลยสักข้อ ⇒ จอต้องชี้ทางได้
+ *   ไม่ใช่โชว์ตารางว่าง — กฎความซื่อสัตย์ของจอ · การเลือก KPI ต่อหน่วยงานเป็นการตั้งค่าของคน)
+ *  🔴 ตรงเป๊ะเท่านั้น (ไม่สนตัวพิมพ์/ช่องว่าง/เครื่องหมาย) — ไม่ตรง = `null` ห้ามเดาคลุม
+ *     เช่น "Tooling MTN" ต้องคืน null ไม่ใช่เดาเป็น "Tooling" (คนละชุด KPI กัน) */
+export function guessStdUnit(name) {
+  const flat = (s) => normTopic(s).replace(/[\s\-_.&/()]+/g, '');
+  const n = flat(name);
+  if (!n) return null;
+  return KPI_STD_UNITS.find(u => flat(u.unit) === n)?.unit || null;
+}
+
 /**
  * จับคู่ "ทะเบียนมาตรฐาน" กับ "แถวที่อยู่ในใบจริงแล้ว"
  * @param stdItems แถวจาก `kpi_standard_items` ของหน่วยงาน+ปีนั้น
