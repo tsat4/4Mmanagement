@@ -38,6 +38,18 @@ function hhmm(iso: string | null): string {
   return `${String(b.getUTCHours()).padStart(2, '0')}:${String(b.getUTCMinutes()).padStart(2, '0')}`;
 }
 const norm = (s: unknown) => String(s ?? '').replace(/[\s-]/g, '').toUpperCase();
+/* "พาร์ทจริง" = สินค้า ไม่ใช่ MAT ตัวเดียว (กฎเหล็ก CLAUDE.md · 13/11 user: สาย 60/61 มี FTM/AAT/FVL
+   คนละ MAT แต่เลขพาร์ทลูกค้าเดียวกัน ⇒ สลับลูกค้า ≠ เปลี่ยนรุ่น · ห้ามเรียก First ใหม่)
+   🔴 ตรรกะต้องตรงกับ `partCoreOf()` ใน src/utils/partGroup.js ทุกบรรทัด (edge import src ไม่ได้) */
+function partCoreOf(pNo: unknown): string {
+  const toks = String(pNo || '').toUpperCase().split(/[^A-Z0-9]+/).filter(Boolean);
+  if (!toks.length) return '';
+  if (toks.length >= 3) {
+    const mid = toks.slice(1, -1).join('');
+    if (mid.length >= 3 && /\d/.test(mid)) return mid;
+  }
+  return toks.join('');
+}
 
 /* ── Telegram routing (pattern เดียวกับ mtn-daily-summary) ── */
 type Route = { enabled: boolean; chats: string[]; template?: string | null };
@@ -73,7 +85,10 @@ function chatsFor(routes: Record<string, Route>, key: string): string[] | null {
   const r = routes[key];
   if (r && !r.enabled) return null;                       // ปิดที่ /notification-config = ไม่ส่ง
   if (r && r.chats.length) return r.chats;
-  return TELEGRAM_CHAT_ID ? [TELEGRAM_CHAT_ID] : [];      // ยังไม่ตั้งห้อง = ห้อง default
+  /* 🔔 มีกฎแต่ไม่ได้เลือกห้อง = ในแอปอย่างเดียว (13/11 · กฎ: แจ้งเตือนใหม่ = ในแอป ห้ามเพิ่มทาง Telegram)
+     เดิมถอยไปห้อง default ⇒ เปิดสวิตช์ FME แล้วข้อความเด้งเข้ากลุ่ม Telegram รวมโดยไม่มีใครตั้ง */
+  if (r) return [];
+  return TELEGRAM_CHAT_ID ? [TELEGRAM_CHAT_ID] : [];      // ไม่มีกฎเลย (ยังไม่ apply migration) = ห้อง default
 }
 /* ── 🔔 แจ้งเตือน "ในแอป" (กระดิ่ง + Web Push ผ่าน trigger trg_notify_push) ───────────────
    เดิมฟังก์ชันนี้ส่ง **Telegram ทางเดียว** — ถอด Telegram ออกเมื่อไหร่ การแจ้งเตือนหายสนิท
@@ -135,13 +150,22 @@ async function sendTelegram(message: string, chats: string[]): Promise<boolean> 
 }
 
 /* ── DR REST (คนละ project — ใช้ anon key ตาม convention ของ supabaseDR) ── */
-async function dr<T>(path: string): Promise<T[]> {
+/* ⚠️ PostgREST ตัดที่ 1000 แถว/คำขอเงียบๆ — อ่านทีละหน้าจนหมดเสมอ (13/11 · dry-run จริงเจอ
+   ใบผลิต 2 วัน = 1,011 ใบ แต่อ่านได้ 1,000 ⇒ รุ่นที่ตกไปไม่เกิดงาน First/End โดยไม่มีใครรู้)
+   `orderCol` = คอลัมน์ไม่ซ้ำที่ใช้เรียงให้หน้าไม่เหลื่อมกัน (ไม่เรียง = หน้าซ้อน/ข้ามแถวได้) */
+const DR_PAGE = 1000;
+async function dr<T>(path: string, orderCol = 'id'): Promise<T[]> {
   if (!DR_URL || !DR_KEY) return [];
-  const res = await fetch(`${DR_URL}/rest/v1/${path}`, {
-    headers: { apikey: DR_KEY, Authorization: `Bearer ${DR_KEY}` },
-  });
-  if (!res.ok) throw new Error(`DR ${path} → ${res.status} ${await res.text()}`);
-  return await res.json() as T[];
+  const out: T[] = [];
+  for (let off = 0; ; off += DR_PAGE) {
+    const url = `${DR_URL}/rest/v1/${path}${path.includes('?') ? '&' : '?'}order=${orderCol}&limit=${DR_PAGE}&offset=${off}`;
+    const res = await fetch(url, { headers: { apikey: DR_KEY, Authorization: `Bearer ${DR_KEY}` } });
+    if (!res.ok) throw new Error(`DR ${path} → ${res.status} ${await res.text()}`);
+    const rows = await res.json() as T[];
+    out.push(...rows);
+    if (rows.length < DR_PAGE) return out;
+    if (off >= 50 * DR_PAGE) throw new Error(`DR ${path} → เกิน ${50 * DR_PAGE} แถว (หยุดกันวนไม่จบ)`);
+  }
 }
 
 type Sess = { id: string; work_date: string; line_name: string; shift: string; status: string; closed_at: string | null };
@@ -154,7 +178,7 @@ type Prod = { mat_no: string | null; pair_mat_no: string | null; name: string | 
 const STAGE_LABEL: Record<string, string> = { first: 'ชิ้นแรก (First)', middle: 'ระหว่างผลิต (Middle)', end: 'ชิ้นสุดท้าย (End)' };
 const REASON_LABEL: Record<string, string> = {
   shift_start: 'เริ่มกะ', model_change: 'เปลี่ยนรุ่น', mid_run: 'รุ่นนี้ผลิตต่อเนื่องนาน',
-  model_change_out: 'จบรุ่น (กำลังเปลี่ยนรุ่น)', shift_end: 'ปิดกะ',
+  model_change_out: 'จบรุ่น (กำลังเปลี่ยนรุ่น)', shift_end: 'ปิดกะ', lot_end: 'ครบล็อต',
 };
 // สเตจของ obligation ↔ stage ในใบตรวจ (qa_inspection_sheets.stage) — ใช้จับคู่ว่า "ตรวจแล้ว"
 const SHEET_STAGE: Record<string, string> = { first: 'setup_first', middle: 'inprocess', end: 'final' };
@@ -201,11 +225,8 @@ Deno.serve(async (req) => {
     const orders = await dr<Ord>(
       `prod_orders?select=id,session_id,mat_no,part_name,status,opened_at,confirmed_at,qty,qty_ok,qty_actual&session_id=in.(${sIds.join(',')})`);
     const products = await dr<Prod>('dr_products?select=mat_no,pair_mat_no,name,p_no,is_operation,op_parent_mat');
-    /* ⚠️ PostgREST ตัดที่ 1000 แถวเงียบๆ (กฎ CLAUDE.md) — 2 master นี้ยังไม่ถึง แต่โตได้
-       ชนเพดานเมื่อไหร่ = พาร์ทที่หายไปจะไม่มี lot_size/pair/OP → ไม่มี Middle แบบไม่มีใครรู้
-       → ไม่แก้ให้เอง (ต้องไป paginate) แต่ **ต้องรายงานเสมอ ห้ามเงียบ** */
+    /* เพดาน 1000 แถว: `dr()` อ่านทีละหน้าจนหมดแล้ว (13/11) — `truncated` เหลือไว้ให้รูปคำตอบเดิมไม่เปลี่ยน */
     const truncated: string[] = [];
-    if (products.length >= 1000) truncated.push(`dr_products (${products.length})`);
     /* lot_size รายพาร์ท = ฐานของคาบตรวจ Middle (คำสั่ง user 2026-08-20)
        ⚠️ ไม่ตั้ง lot_size = ไม่เดา → พาร์ทนั้นไม่มี Middle แต่ต้องรายงานออกมา ห้ามเงียบ */
     /* ⚠️ kanban_standards ไม่มีคอลัมน์ line_name (เจอตอน dry-run 2026-08-21 → 42703)
@@ -214,7 +235,6 @@ Deno.serve(async (req) => {
                   qty_per_kanban: number | null; min_qty: number | null; max_qty: number | null };
     const kstd = await dr<Kstd>(
       'kanban_standards?select=mat_no,product_id,lot_size,qty_per_kanban,min_qty,max_qty&is_active=eq.true');
-    if (kstd.length >= 1000) truncated.push(`kanban_standards (${kstd.length})`);
     /* ⚠️ 1 mat มีได้หลายแถว (คนละไลน์/ปลายทาง) — เดิม `set()` ทับกันไปเรื่อยๆ แถวสุดท้ายชนะ
        = หยิบ lot_size มาแบบสุ่มโดยไม่มีใครรู้ · ถ้าค่าไม่ตรงกัน **ไม่เลือกให้เอง** ต้องรายงาน */
     const lotRows = new Map<string, Kstd[]>();
@@ -234,7 +254,7 @@ Deno.serve(async (req) => {
            → ออกมา 500-600 ชิ้นทุกตัว = ล็อตที่ตั้งใจตั้งไว้จริง ไม่ใช่ค่ามั่ว */
     type Kparam = { mat_no: string; calc_type: string | null; lot_qty: number | null;
                     lot_size: number | null; packaging: number | null };
-    const kparam = await dr<Kparam>('kanban_calc_params?select=mat_no,calc_type,lot_qty,lot_size,packaging');
+    const kparam = await dr<Kparam>('kanban_calc_params?select=mat_no,calc_type,lot_qty,lot_size,packaging', 'mat_no');
     const paramRows = new Map<string, Kparam>();
     for (const p of kparam) if (p.mat_no) paramRows.set(p.mat_no, p);
 
@@ -286,10 +306,30 @@ Deno.serve(async (req) => {
     //    ของพาร์ทเดียวกัน · ไม่ยุบ = เรียก QA ซ้ำหลายรอบต่อพาร์ทเดียว (dry-run 2026-08-19 เจอ
     //    14/30 รายการเป็น OP) · กฎเหล็กชั้น Operation ใน CLAUDE.md
     //    OP ที่ยังไม่ผูกพาร์ทจริง (op_parent_mat null) = ใช้เลขเดิมไปก่อน + ติดธงบอกให้ไปผูก
+    // MAT ทุกตัวที่เลขพาร์ทลูกค้าแกนเดียวกัน → ตัวแทน = เลขที่เรียงน้อยสุด (ไม่ใช่ OP · OP ยุบเข้าพาร์ทจริงแล้ว)
+    const coreOf = (mat: string) => partCoreOf(pnoOf.get(mat));
+    const coreRep = new Map<string, string>();
+    const coreMats = new Map<string, string[]>();
+    for (const p of products) {
+      if (!p.mat_no || p.is_operation) continue;
+      const c = partCoreOf(p.p_no);
+      if (!c) continue;
+      const cur = coreRep.get(c);
+      if (!cur || p.mat_no < cur) coreRep.set(c, p.mat_no);
+      coreMats.set(c, [...(coreMats.get(c) ?? []), p.mat_no]);
+    }
+    const repOf = (mat: string) => { const c = coreOf(mat); return (c && coreRep.get(c)) || mat; };
     const canon = (mat: string) => {
-      const base = opParent.get(mat) || mat;
-      const pair = pairOf.get(base);
+      const base = repOf(opParent.get(mat) || mat);
+      const pairRaw = pairOf.get(opParent.get(mat) || mat) || pairOf.get(base);
+      const pair = pairRaw ? repOf(pairRaw) : null;
       return pair && pair < base ? pair : base;
+    };
+    /* MAT ทั้งตระกูลของรุ่น (ใช้หาขนาดล็อต) — ตัวที่ผลิตจริงในกะ + พี่น้องเลขพาร์ทเดียวกัน */
+    const familyOf = (mats: string[]) => {
+      const out = new Set<string>(mats);
+      for (const m of mats) { const c = coreOf(m); for (const x of (c && coreMats.get(c)) || []) out.add(x); }
+      return [...out];
     };
 
     /* ── 3) แตกเป็น "run" ต่อ (กะ × รุ่น) ── */
@@ -348,6 +388,7 @@ Deno.serve(async (req) => {
     const noLot = new Set<string>();
     const tooSmall = new Map<string, number>();   // mat → คาบที่คำนวณได้ (ต่ำเกินจนไม่น่าใช่ค่าจริง)
     const everyByMat = new Map<string, number>(); // mat → คาบที่ใช้จริง (ไว้ตรวจสอบใน dry-run)
+    const lotOfRun = new Map<Run, number>();      // ขนาดล็อตที่ใช้ของรุ่นนี้ (ไว้ตัดสิน "ครบล็อต = End")
     const midEveryFor = (r: Run): number | null => {
       for (const m of [r.mat, ...r.mats]) {
         const rule = ruleByMat.get(m);
@@ -360,14 +401,17 @@ Deno.serve(async (req) => {
           }
         }
       }
-      for (const m of [r.mat, ...r.mats]) {
-        const lot = lotByMat.get(m);
-        if (lot) {
-          const every = Math.max(1, Math.round(lot * Number(cfg.mid_lot_ratio ?? 1)));
-          if (every < midMin) { tooSmall.set(r.mat, every); return null; }
-          everyByMat.set(r.mat, every);
-          return every;
-        }
+      /* ขนาดล็อตของ "รุ่น" = ล็อตที่ใหญ่สุดในตระกูล (13/11 · user: 60/61 ลอทผลิต 500 → เรียก 1/250/500)
+         ตัวเล็ก (เช่น AAT ตั้ง 1 ใบ × 10 = 10 ชิ้น) คือล็อตเบิกของลูกค้ารายนั้น ไม่ใช่ล็อตผลิต
+         ⇒ หยิบตัวแรกที่เจอ = Middle ทุก 10 ชิ้น = เรียกทุกออเดอร์ที่สแกน */
+      let lot = 0;
+      for (const m of familyOf([r.mat, ...r.mats])) lot = Math.max(lot, lotByMat.get(m) ?? 0);
+      if (lot) {
+        const every = Math.max(1, Math.round(lot * Number(cfg.mid_lot_ratio ?? 1)));
+        if (every < midMin) { tooSmall.set(r.mat, every); return null; }
+        everyByMat.set(r.mat, every);
+        lotOfRun.set(r, lot);
+        return every;
       }
       // ค่าไม่ตรงกันระหว่างแถว = "ไม่รู้ว่าอันไหนใช่" ไม่ใช่ "ไม่มี" — แยกให้ขาด (รายงานคนละช่อง)
       if ([r.mat, ...r.mats].some(m => lotConflict.has(m))) return null;
@@ -379,6 +423,8 @@ Deno.serve(async (req) => {
       ? (Number(o.qty_ok ?? o.qty) || 0)
       : (Number(o.qty_actual) || 0);
 
+    const lotEndAt = new Map<Run, number>();      // ยอดสะสมตอน End ครบล็อตครั้งล่าสุด
+    const runQty = new Map<Run, number>();        // ยอดรวมของรุ่นในกะ
     const bySess = new Map<string, Run[]>();
     for (const r of runs.values()) {
       const arr = bySess.get(r.sess.id) ?? [];
@@ -404,16 +450,30 @@ Deno.serve(async (req) => {
               .map(o => ({ at: o.confirmed_at || o.opened_at, q: qtyOf(o) }))
               .filter(e => !!e.at && e.q > 0)
               .sort((a, b) => (a.at as string) < (b.at as string) ? -1 : 1);
+            /* 🎯 ต่อ 1 ล็อต = First (ชิ้นแรก) · Middle (กลางล็อต) · End (ครบล็อต) — 13/11 คำสั่ง user
+               "60/61 สแกนใบละ 10 แต่ลอทผลิต 500 → เรียก 1/250/500 ไม่ใช่ทุกใบ"
+               ⇒ หลักที่ลงตัวกับขนาดล็อต (500, 1000…) = **End ครบล็อต** · หลักอื่น (250, 750…) = Middle
+               seq ของ Middle/End นับแยกกันตามลำดับในรอบ (unique key รวม seq) */
             const cap = Number(cfg.mid_max_per_run ?? 12);
-            let acc = 0, k = 0;
+            const lot = lotOfRun.get(r) ?? 0;
+            let acc = 0, k = 0, nMid = 0, nEnd = 0;
             for (const e of evts) {
               acc += e.q;
               while (acc >= (k + 1) * every && k < cap) {
                 k += 1;
-                add(r, 'middle', 'mid_run', e.at as string, cfg.first_due_min, k, k * every);
+                const mark = k * every;
+                if (lot && mark % lot === 0) {
+                  nEnd += 1;
+                  add(r, 'end', 'lot_end', e.at as string, cfg.end_due_min, nEnd, mark);
+                  lotEndAt.set(r, mark);
+                } else {
+                  nMid += 1;
+                  add(r, 'middle', 'mid_run', e.at as string, cfg.first_due_min, nMid, mark);
+                }
               }
               if (k >= cap) break;   // เพดานกัน QA ถูกเรียกรัวจนใช้งานไม่ได้
             }
+            runQty.set(r, evts.reduce((a, e) => a + e.q, 0));
           }
         } else if (midMode === 'min' && cfg.mid_after_min > 0) {
           // โหมดเดิม (ตามเวลา) — เก็บไว้เผื่อบางไลน์อยากใช้ ไม่ใช่ค่าเริ่มต้นแล้ว
@@ -421,12 +481,18 @@ Deno.serve(async (req) => {
           if (midAt <= now && !r.allDone) add(r, 'middle', 'mid_run', midAt.toISOString(), cfg.first_due_min);
         }
 
-        // end — ปิดกะ หรือ รุ่นนี้ปิดใบครบแล้วและมีรุ่นอื่นเริ่มหลังจากนั้น (= กำลังเปลี่ยนรุ่น)
-        if (r.sess.status === 'closed') {
-          add(r, 'end', 'shift_end', r.sess.closed_at || r.lastAct, cfg.end_due_min);
-        } else if (r.allDone) {
-          const next = list.find(x => x !== r && x.firstOpen > r.lastAct);
-          if (next) add(r, 'end', 'model_change_out', next.firstOpen, cfg.end_due_min);
+        /* end — ปิดกะ หรือ รุ่นนี้ปิดใบครบแล้วและมีรุ่นอื่นเริ่มหลังจากนั้น (= กำลังเปลี่ยนรุ่น)
+           ⚠️ seq = 0 (คนละคีย์กับ End ครบล็อต seq 1..n) · จบตรงหลักครบล็อตพอดี (เหลือไม่ถึง mid_min_pcs)
+              = End ครบล็อตครอบแล้ว **ไม่เรียกซ้ำ** (ลอท 500 ผลิต 500 = เรียก End ครั้งเดียว) */
+        const tail = (runQty.get(r) ?? 0) - (lotEndAt.get(r) ?? -1e9);
+        const coveredByLotEnd = lotEndAt.has(r) && tail < midMin;
+        if (!coveredByLotEnd) {
+          if (r.sess.status === 'closed') {
+            add(r, 'end', 'shift_end', r.sess.closed_at || r.lastAct, cfg.end_due_min, 0);
+          } else if (r.allDone) {
+            const next = list.find(x => x !== r && x.firstOpen > r.lastAct);
+            if (next) add(r, 'end', 'model_change_out', next.firstOpen, cfg.end_due_min, 0);
+          }
         }
       });
     }

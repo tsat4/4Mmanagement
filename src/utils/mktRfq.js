@@ -10,6 +10,8 @@
    · สรุป won/lost แบบ Model Report
    ═══════════════════════════════════════════════════════════════════════════════════════ */
 
+const num = (v) => (v == null || v === '' || Number.isNaN(Number(v)) ? null : Number(v));
+
 /** สถานะ RFQ — ถอดจาก flowchart Q-neX (§6.2) · `tone` = คีย์ของ statusTone (good/warn/bad/none) */
 export const RFQ_STATUS = {
   received:        { label: 'รับ RFQ แล้ว',          tone: 'none', stage: 1 },
@@ -27,7 +29,7 @@ export const RFQ_STATUS = {
   cancelled:       { label: 'ลูกค้ายกเลิกโครงการ',    tone: 'none', stage: 9, closed: true },
 };
 /** เฟส 1 จอให้เลือกแค่ชุดนี้ (ชั้นมอบงาน/ต้นทุน/อนุมัติ 2 ชั้นมาเฟส 2-3) — ค่าอื่นที่มีในฐานยังอ่านออก */
-export const RFQ_STATUS_PHASE1 = ['received', 'assessing', 'quoted', 'customer_review', 'design_change', 'declined'];
+export const RFQ_STATUS_PHASE1 = ['received', 'assessing', 'pre_review', 'quoted', 'customer_review', 'design_change', 'declined'];
 export const RFQ_OUTCOMES = {
   awarded:   { label: 'ได้งาน (AWARDED)',    tone: 'good' },
   lost:      { label: 'ไม่ได้งาน (LOST)',    tone: 'bad' },
@@ -44,6 +46,143 @@ export const VOLUME_SOURCES = {
 };
 
 export const rfqStatusMeta = (s) => RFQ_STATUS[s] || { label: s || '—', tone: 'none', stage: 0 };
+
+/* ═══ เฟส 2a (13/11 · feedback Marketing §10) — ชนิดงาน · อายุรุ่น · เอกสารแนบ · ใบประเมินของ IEC ═══ */
+
+/** Q-neX โมดูล 1 "job type" — ตัวนี้บอกว่า IEC ต้องออกแบบก่อนคิดราคาไหม */
+export const JOB_TYPES = {
+  make_to_print: 'Make-to-print (ลูกค้าให้แบบสมบูรณ์มา ผลิตตามแบบ)',
+  co_design:     'Co-design (ร่วมออกแบบกับลูกค้า — IEC ต้องออกแบบก่อนคิดราคา)',
+};
+
+/** ยอดรวมตลอดอายุรุ่น = volume/ปี × อายุรุ่น (ปี) — ตัวที่ใช้หารค่าแม่พิมพ์ต่อชิ้น · ขาดตัวใดตัวหนึ่ง = null ห้าม 0 */
+export function lifetimeVolume(annualVolume, modelLifeYears) {
+  const v = num(annualVolume), y = num(modelLifeYears);
+  if (v == null || y == null) return null;
+  return Math.round(v * y);
+}
+
+/** ชนิดเอกสารแนบ (= แกน access matrix) · `mktOnly` = ราคา เห็นเฉพาะ rfq:edit (RLS ตรงกัน) · `iec` = IEC แนบได้ (rfq:assess)
+ *  🔴 เพิ่มชนิดใหม่ต้องเพิ่ม CHECK ใน mkt_rfq_files + policy ด้วย (migration 20261113a) */
+export const FILE_KINDS = {
+  rfq_letter:     { label: 'ใบ RFQ / จดหมายลูกค้า', icon: '📨' },
+  drawing:        { label: 'แบบ (Drawing)',          icon: '📐' },
+  cad:            { label: 'CAD / 3D data',           icon: '🧊' },
+  spec:           { label: 'สเปค / มาตรฐานลูกค้า',    icon: '📋' },
+  volume:         { label: 'Volume sheet',            icon: '📈' },
+  customer_other: { label: 'เอกสารลูกค้าอื่นๆ',        icon: '📎' },
+  assessment:     { label: 'เอกสารประเมินของ IEC',    icon: '📝', iec: true },
+  cost:           { label: '🔒 Cost breakdown',       icon: '💰', mktOnly: true },
+  quotation:      { label: '🔒 ใบเสนอราคา',           icon: '🧾', mktOnly: true },
+  other:          { label: 'อื่นๆ',                    icon: '📄' },
+};
+export const fileKindMeta = (k) => FILE_KINDS[k] || { label: k || 'ไม่ระบุชนิด', icon: '📄' };
+/** ใครแนบชนิดไหนได้ — ต้องตรงกับ policy mkt_rfq_files_ins (MKT ทุกชนิด · IEC เฉพาะ assessment) */
+export const canUploadKind = (kind, { canEdit = false, canAssess = false } = {}) =>
+  !!FILE_KINDS[kind] && (canEdit || (canAssess && !!FILE_KINDS[kind].iec));
+export const visibleFileKinds = ({ canEdit = false } = {}) =>
+  Object.keys(FILE_KINDS).filter(k => canEdit || !FILE_KINDS[k].mktOnly);
+
+/** ผลประเมินความเป็นไปได้ · โทนอ้าง statusTone */
+export const FEASIBLE = {
+  yes:         { label: 'ผลิตได้',              tone: 'good' },
+  conditional: { label: 'ได้แบบมีเงื่อนไข',     tone: 'warn' },
+  no:          { label: 'ผลิตไม่ได้ / ไม่รับ',   tone: 'bad' },
+};
+export const TARGET_PRICE_FEASIBLE = {
+  yes:     { label: 'เป็นไปได้',               tone: 'good' },
+  no:      { label: 'ต่ำกว่าที่น่าจะทำได้',     tone: 'bad' },
+  unknown: { label: 'ยังตอบไม่ได้ (รอคิดต้นทุน)', tone: 'none' },
+};
+export const ASSESS_STATUS = { draft: { label: 'IEC กำลังประเมิน', tone: 'warn' }, submitted: { label: 'ส่งผลแล้ว', tone: 'good' } };
+
+/** รอบล่าสุด / รอบถัดไป ของใบประเมิน (1 รอบ = 1 แถว · ขอแก้แบบ = รอบใหม่) */
+export const latestAssessment = (list) => (list || []).reduce((m, a) => (!m || (a.round ?? 0) > (m.round ?? 0) ? a : m), null);
+export const nextAssessmentRound = (list) => ((latestAssessment(list)?.round ?? 0) + 1);
+
+/** ก่อนส่งผล — ช่องที่ยังขาด (จอเขียนบอก · ว่าง = ส่งได้) · ราคาเป้าหมายต้องตอบเมื่อ RFQ มีราคาเป้าหมาย */
+export function assessmentMissing(a, rfq = {}) {
+  const out = [];
+  if (!a?.feasible) out.push('ผลิตได้ไหม');
+  if (a?.feasible && a.feasible !== 'no') {
+    if (!a.ref_line_name) out.push('ไลน์อ้างอิง');
+    if (!(Array.isArray(a.process_flow) && a.process_flow.some(r => r?.process))) out.push('ร่าง process flow อย่างน้อย 1 ขั้น');
+  }
+  if (a?.feasible === 'no' && !a.feasible_note) out.push('เหตุผลที่ผลิตไม่ได้');
+  if (rfq?.customer_target_price != null && !a?.target_price_feasible) out.push('ราคาเป้าหมายลูกค้าเป็นไปได้ไหม');
+  return out;
+}
+
+/**
+ * ด่านเปลี่ยนสถานะ RFQ — "ข้ามขั้นประเมินไม่ได้" (feedback 12/11: ประเมิน (IEC) ✗ — เดิม MKT กดข้ามจาก received ไป quoted ได้)
+ * · ไปสถานะที่ stage > 2 (หลังประเมิน) ต้องมีใบประเมินที่ **ส่งผลแล้ว** อย่างน้อย 1 รอบ
+ * · ยกเว้น declined/cancelled (ปิดงานโดยไม่ประเมินได้) และ assessing (= การส่งประเมินเอง)
+ * @returns { ok, reason }
+ */
+export function assessmentGate(nextStatus, { assessments = [] } = {}) {
+  const meta = RFQ_STATUS[nextStatus];
+  if (!meta) return { ok: false, reason: `สถานะ ${nextStatus} ไม่อยู่ในชุดที่ระบบรู้จัก` };
+  if (nextStatus === 'declined' || nextStatus === 'cancelled' || meta.stage <= 2) return { ok: true, reason: null };
+  const submitted = (assessments || []).some(a => a?.status === 'submitted');
+  if (!submitted) return { ok: false, reason: 'ยังไม่มีผลประเมินจาก IEC — ต้องส่งให้ IEC ประเมิน (ขั้น 2) และได้ผลกลับมาก่อน จึงจะเดินต่อขั้น 3 ขึ้นไปได้' };
+  return { ok: true, reason: null };
+}
+
+/** 🧑‍💼 คนในโมดูลนี้ = บัญชีที่ role การตลาด (feedback Marketing 12/11 "ข้อมูลคนที่ขึ้นยังเป็นคนในบริษัทเรา")
+ *  Marketing ไม่อยู่ในทะเบียนพนักงาน/ผังองค์กรของโรงงาน ⇒ ช่อง "ผู้รับผิดชอบ" ต้อง `strict` ด้วยชุดนี้
+ *  ชื่อนอกลิสต์ยังพิมพ์เองได้ (ติดป้ายไม่ได้อยู่ในทะเบียน) — ห้ามถอด strict กลับไปโชว์ทั้งโรงงาน */
+export const MKT_PEOPLE_ROLES = ['marketing'];
+
+/** ขั้นของสายธาร RFQ (แถบ ✓→⑦ บนใบ · ถอดจาก flowchart Q-neX) — `stage` ใน RFQ_STATUS ชี้มาที่ลำดับนี้ */
+export const RFQ_FLOW_STEPS = [
+  { n: 1, label: 'รับ RFQ' },
+  { n: 2, label: 'IEC ประเมิน' },
+  { n: 3, label: 'MKT ทบทวน' },
+  { n: 4, label: 'คิดต้นทุน' },
+  { n: 5, label: 'ทบทวนราคา' },
+  { n: 6, label: 'อนุมัติราคา' },
+  { n: 7, label: 'ส่งใบเสนอราคา' },
+  { n: 8, label: 'ลูกค้าพิจารณา' },
+  { n: 9, label: 'ผลตัดสิน' },
+];
+/** "⏳ รอ: ใคร — ทำอะไร" ต่อสถานะ (ข้อความเดียวทั้งระบบ · ห้ามแต่งในหน้า) */
+const RFQ_WAITING = {
+  received:        'MKT — ส่ง CRD ให้ IEC/แผนกที่เกี่ยวข้องประเมิน',
+  assessing:       'IEC/แผนก — ประเมินความเป็นไปได้ + ต้นทุนเบื้องต้น',
+  pre_review:      'MKT — ทบทวน concept/cost ก่อนคิดราคา',
+  costing:         'CSC — คิดต้นทุน (Cost Breakdown)',
+  quote_review:    'MKT Engineer — ทบทวนราคาเสนอ',
+  quote_approval:  'MKT Manager — อนุมัติใบเสนอราคา',
+  quoted:          'ลูกค้า — ตอบใบเสนอราคา',
+  customer_review: 'ลูกค้า — ตัดสินผล (nomination)',
+  design_change:   'MKT — รับแบบที่แก้แล้วส่งประเมินใหม่',
+};
+
+/**
+ * แถบขั้นตอนของใบ RFQ 1 ใบ → { steps:[{n,label,state:'done'|'current'|'todo',tone?}], waiting, closed }
+ * · ขั้นก่อนสถานะปัจจุบัน = done (ทำนอกระบบก็นับว่าผ่านแล้ว — เฟส 1 ยังไม่มีขั้น 3-6 ในจอ)
+ * · ขั้น 9 ปิดแล้ว = ใส่ tone ของผล (ได้งาน good · ไม่ได้ bad · ยกเลิก/ปฏิเสธ none) และ label เป็นผลจริง
+ * · `award` ส่งมาเมื่อได้งาน: ยังไม่ออกใบแจ้งจัดทำ = ยังมีคนต้องทำต่อ (ไม่ใช่ "จบแล้ว")
+ * · สถานะที่ไม่รู้จัก = ไม่มี current (ทุกขั้น todo) + waiting = null — จอเขียนว่าสถานะอ่านไม่ออก ห้ามเดา
+ */
+export function rfqFlow(status, { award = null } = {}) {
+  const meta = RFQ_STATUS[status];
+  const cur = meta?.stage || 0;
+  const closed = !!meta?.closed;
+  const steps = RFQ_FLOW_STEPS.map(s => {
+    let state = s.n < cur ? 'done' : s.n === cur ? 'current' : 'todo';
+    if (closed && s.n === 9) state = 'done';
+    const out = { n: s.n, label: s.label, state };
+    if (closed && s.n === 9) { out.label = meta.label; out.tone = meta.tone; }
+    return out;
+  });
+  let waiting = null;
+  if (!meta) waiting = null;
+  else if (status === 'awarded') waiting = award?.production_order_no ? null : 'MKT — ออกใบแจ้งจัดทำ (F-MKT-001/002) ส่งโรงงาน';
+  else if (closed) waiting = null;
+  else waiting = RFQ_WAITING[status] || null;
+  return { steps, waiting, closed, known: !!meta };
+}
 /** ผล award เขียนทับสถานะ RFQ เสมอ (awarded/lost/cancelled = สถานะปิด) */
 export const isClosed = (status) => !!RFQ_STATUS[status]?.closed;
 
@@ -68,8 +207,6 @@ export function nextProductionOrderNo(existingNos, today) {
   const max = (existingNos || []).reduce((m, c) => { const x = re.exec(c || ''); return x ? Math.max(m, +x[1]) : m; }, 0);
   return `MKT/${String(max + 1).padStart(3, '0')}/${mo}/${y}`;
 }
-
-const num = (v) => (v == null || v === '' || Number.isNaN(Number(v)) ? null : Number(v));
 
 /** ยอดขายต่อปี = volume × ราคาชิ้น · ขาดตัวใดตัวหนึ่ง = null (ห้ามคืน 0 — 0 แปลว่า "ขายได้ศูนย์บาท")
  *  ปัดเป็นสตางค์ (2 ตำแหน่ง) — 10000 × 32.23 ใน float = 322299.99999999994 (Model Report ของจริงก็โชว์เลขนี้) */
