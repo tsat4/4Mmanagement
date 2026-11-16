@@ -12,7 +12,8 @@ import { usePerms } from '../utils/usePerms';
 import { fetchByIds } from '../utils/fetchByIds';
 import { SESSION_STATUSES_LIVE } from '../utils/sessionStatus';
 import { scoreDef, defBars, unitOf, decimalsOf, summaryModeOf, summaryShort, summaryModeLabel, fmtBar, valueScopeOf, sharedValueDef, yearForecast, neededRunRate, boardSlotOf, baseVarOf } from '../utils/kpiSetup';
-import { buildInsight } from '../utils/kpiInsight';   // 🔎 สรุป insight ใน popup 🔍 (16/11)
+import { buildInsight } from '../utils/kpiInsight';   // 🔎 สรุป insight ใน popup 🔍 (16/11 · เรียงตามความสำคัญมาแล้ว)
+import InsightList from './InsightList';             // 🔎 กล่อง insight 3 ข้อ + กางดูที่เหลือ (ของกลาง · UI §6.38)
 import { scopedLineNames } from '../utils/sectionScope';
 import useOrgScope from '../utils/useOrgScope';
 import OrgScopePicker from './OrgScopePicker';
@@ -887,8 +888,8 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
   };
   /* 🎯 แถวเกณฑ์ใต้ตัวเลขใหญ่ใน popup 🔍 — ตัวเลขใหญ่ สีตามเกณฑ์ (แดง = Target · เหลือง = Commitment · น้ำเงิน = แผนสะสมเดือนนี้) ไม่ใช่ตัวจิ๋วปนกับหมายเหตุ
      (user 16/11: "Target/commitment ตอนนี้ไปขึ้นเหมือน note/remark น่าจะไฮไลท์ให้ชัดเหมือนค่า YTD") · บนแผ่นเล็กไม่วาด (ที่ไม่พอ · tooltip ไฟบอกอยู่แล้ว) */
-  const goalsRow = (r, kk) => {
-    if (!(kk > k * 1.15)) return null;
+  const goalsRow = (r, kk, zoomedCopy = false) => {
+    if (!(zoomedCopy || kk > k * 1.15)) return null;
     const fs = (n) => Math.max(11, Math.round(n * kk));
     const bars = r.def ? defBars(r.def) : null;
     const idx = r.valueKey && r.valueKey !== SUMMARY_KEY ? Number(String(r.valueKey).slice(5, 7)) - 1 : null;
@@ -919,17 +920,19 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
       ['สรุปปี', summaryModeLabel(r.sumKind)],
       r.def?.score_by_plan ? ['○△✗ รายเดือน', 'เทียบแผนสะสม (เส้นน้ำเงิน)'] : null,
     ].filter(Boolean);
-    const chip = { fontSize: fs(11), fontWeight: 700, padding: '3px 8px', borderRadius: 'var(--r-md)', background: 'var(--bg3)', border: '1px solid var(--border2)', color: 'var(--text)', whiteSpace: 'nowrap' };
+    /* 🔴 ชิปกติกาห้าม `nowrap` — ในรางขวา (กว้าง ~30% ของ popup) ชิปยาวอย่าง "○△✗ รายเดือน เทียบแผนสะสม"
+       จะล้นออกนอกราง แล้วถูก `overflow:clip` ของแผ่นตัดหายเงียบ ⇒ ยอมให้ตัดบรรทัดในชิป */
+    const chip = { fontSize: fs(11), fontWeight: 700, lineHeight: 1.3, padding: '3px 8px', borderRadius: 'var(--r-md)', background: 'var(--bg3)', border: '1px solid var(--border2)', color: 'var(--text)', maxWidth: '100%' };
     const ins = insightOf(r);
-    const tone = (t) => (t === 'good' ? 'var(--green)' : t === 'bad' ? 'var(--red)' : t === 'warn' ? 'var(--amber)' : 'var(--text2)');
+    /* 🔎 ลำดับในราง/ชั้นล่างของ popup (16/11 · user: "insight เป็นส่วนเสริม … กราฟต้องชัด"):
+       ① สรุป 3 ข้อสำคัญสุด (ที่เหลือกางดูได้ ใน `<InsightList>`) → ② กติกาที่ใช้ตัดสิน → ③ ที่มา/หมายเหตุ
+       **ห้ามเอา ② ③ ขึ้นก่อน ①** — คนกดแว่นขยายเพื่อถาม "ตกเพราะอะไร" ไม่ใช่มาอ่านกติกา */
     return (
       <>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
+        <InsightList k={kk} items={ins} label="🔎 สรุป"
+          empty="ยังไม่มีข้อมูลพอสรุป — ต้องมีค่าอย่างน้อย 1 เดือน + เป้าที่ตั้งไว้" />
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, margin: '8px 0 6px' }}>
           {crit.map(([lb, v]) => <span key={lb} style={chip}><span style={{ color: 'var(--muted)', fontWeight: 600 }}>{lb}</span> {v}</span>)}
-        </div>
-        <div style={{ display: 'grid', gap: 3, marginBottom: 6, fontSize: fs(11.5), lineHeight: 1.4, color: 'var(--text2)' }}>
-          {ins.length ? ins.map((l, i) => <div key={i} style={{ display: 'flex', gap: 6 }}><span style={{ flexShrink: 0 }}>{l.icon}</span><span style={{ color: tone(l.tone) }}>{l.text}</span></div>)
-            : <div style={{ color: 'var(--muted)' }}>ยังไม่มีข้อมูลพอสรุป — ต้องมีค่าอย่างน้อย 1 เดือน + เป้าที่ตั้งไว้</div>}
         </div>
         {/* บรรทัด "ปลายปี" ไม่ซ้ำใน popup — อยู่ในรายการ insight (🔮) แล้ว */}
         {r.why && <div style={{ marginBottom: 3 }}>{r.why}</div>}
@@ -943,9 +946,9 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
   const cvR = (r, v) => (v == null ? null : hvR(r) ? v * r.hrPerPct : v);
   const unitR = (r) => (hvR(r) ? 'ชม.' : r.unit);
   const decR = (r) => (hvR(r) ? 1 : r.dec);
-  const rowChart = (r, kk = k, sheetW = cw) => {
+  const rowChart = (r, kk = k, sheetW = cw, zoomedCopy = false) => {
     const fs = (n) => Math.max(11, Math.round(n * kk));
-    const zoomed = kk > k * 1.15;   // ใน popup 🔍 = ป้าย T/C บอกตัวเลข · ตัวเลขบนแท่งคาดการณ์ · กราฟลูกของสูตรรวม
+    const zoomed = zoomedCopy || kk > k * 1.15;   // ใน popup 🔍 = ป้าย T/C บอกตัวเลข · ตัวเลขบนแท่งคาดการณ์ · กราฟลูกของสูตรรวม (`zoomedCopy` จาก Sheet = ของจริง ห้ามเดาจาก k อย่างเดียว)
     const axisTick = { fontSize: fs(9.5), fill: 'var(--muted)' };
     const chartTip = tooltipProps(fs(11));   // สี/พื้น/cursor มาตรฐาน — utils/chartAxis.js
     const hv = hvR(r); const cv = (v) => cvR(r, v); const unitL = unitR(r); const decL = decR(r);
@@ -1206,7 +1209,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
                     <button onClick={() => moveSheet(r.key, 1)} disabled={rows[rows.length - 1]?.key === r.key} title={tr('เลื่อนไปถัดไป')} style={{ ...navBtn, fontSize: 13, padding: '2px 8px' }}>▶</button>
                   </div>
                 )}
-                <Sheet k={k} cw={cw} icon={r.icon} title={r.name} statZoom goals={(kk) => goalsRow(r, kk)}
+                <Sheet k={k} cw={cw} icon={r.icon} title={r.name} statZoom goals={(kk, zoomedCopy) => goalsRow(r, kk, zoomedCopy)} footAside
                   /* 30/09 (user): เลขใหญ่ = ค่าเดือนที่เลือก · บรรทัดรอง = YTD บอกวิธีรวม+จำนวนเดือน · ท้ายแผ่น = คาดปลายปี
                      16/11 (user): กดชิปสถานะ = เปิด popup 🔍 (insight) ไม่ใช่พาไปหน้ากรอก — ปุ่ม "กรอก/ตั้งเป้า" ท้ายแผ่นยังไปหน้ากรอกเหมือนเดิม */
                   sub={`${r.curChild ? '⬆ ค่ารวมจากหน่วยลูก (เดือนนี้ระดับนี้ไม่ได้กรอก)' : srcLabel(r)}${r.ytd != null
@@ -1217,10 +1220,10 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
                   stat={toLamp(r.st, r.note && !(r.st === ST.unknown) ? `${r.why} · ${r.note}` : r.why)}
                   /* 🧹 ท้ายแผ่น ≤ 1 บรรทัด (user 09/10 "note เยอะไป กราฟเล็กลง") — เหลือเฉพาะ (ก) คาดปลายปีที่คำนวณได้ หรือ (ข) เตือนที่ต้องเห็น
                      (ไฟเทา/ค่ากรอกมือถูกทับ/ขอบเขตโรงงานยังไม่มีนิยาม) · Target/Commit/ที่มาเต็มๆ ย้ายไป tooltip ของไฟ + popup 🔍 (`zoomFoot`) */
-                  foot={(kk) => (kk > k * 1.15 ? zoomFoot(r, kk) : (forecastLine(r, kk) || cardWarn(r, kk)))}
+                  foot={(kk, zoomedCopy) => (zoomedCopy || kk > k * 1.15 ? zoomFoot(r, kk) : (forecastLine(r, kk) || cardWarn(r, kk)))}
                   link={r.to ? 'เจาะดู' : r.roll ? 'ตั้ง KPI ระดับนี้' : (r.manual ? 'กรอก/ตั้งเป้า' : null)}
                   onLink={() => (r.to ? goTo(r.to) : onTab?.('table'))}>
-                  {(kk, w) => rowChart(r, kk, w)}
+                  {(kk, w, zoomedCopy) => rowChart(r, kk, w, zoomedCopy)}
                 </Sheet>
                 </div>
               ))}

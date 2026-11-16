@@ -11229,3 +11229,32 @@ test('🛡️ /checkin: สรุปวันถูกยืมออก ต้�
   assert.deepEqual(bad, [], '\n\n❌ มุมมองสะสมการยืมตัว\n   ' + bad.join('\n   ')
     + '\n   กฎ+เหตุผลเต็ม: src/utils/borrowDays.js\n');
 });
+
+test('🔎 insight-popup-chart-first — popup 🔍 ของแผ่น KPI: กราฟได้พื้นที่คงที่ · insight 3 ข้อ · ส่วนเกินต้องบอกจำนวน', () => {
+  /* 🔴 16/11 คำสั่ง user: *"popup graph kpi ที่กดแว่นขยาย ดู insight ไม่เกิน 3-4 บรรทัดพอ บางหน้า insight เยอะ
+     จน กราฟหาย ต้องรักษาความชัดเจนของกราฟไห้ได้ insight เป็นส่วนเสริม"*
+     คลาสบั๊ก: ท้ายแผ่นใน popup เป็นกล่องสูงตามเนื้อหา ⇒ แผ่นที่ insight 8-9 ข้อ (เกินเป้า + คาดปลายปี +
+     อัตราที่ต้องทำ + ตัวแปรสูตร + หมายเหตุคน) ดันกราฟเหลือไม่ถึง 1/3 ของ popup
+     ด่านนี้ล็อก 3 อย่าง: (ก) จอวาด insight ผ่าน <InsightList> (เพดาน 3 ข้อ) ห้าม map เองในหน้า ·
+     (ข) ท้ายแผ่นใน popup มีเพดาน % + เลื่อนในตัวเอง และมีทางเลือก "รางขวา" (footAside) ·
+     (ค) ซ่อนแล้วต้องนับจำนวนที่ซ่อนมาเขียนบนปุ่ม (กฎความซื่อสัตย์ของจอ) */
+  const bad = [];
+  const KPI = 'src/components/ObeyaKpiBoard.jsx';
+  const kpi = stripComments(readFileSync(join(ROOT, KPI), 'utf8'));
+  if (!/<InsightList\b/.test(kpi)) bad.push(`${KPI}: ต้องวาด insight ผ่าน <InsightList> (ของกลาง src/components/InsightList.jsx)`);
+  if (/\bins\.map\(/.test(kpi)) bad.push(`${KPI}: วาดรายการ insight เองในหน้า = ไม่มีเพดาน 3 ข้อ แล้วกราฟจะถูกดันหายอีก`);
+  if (!/footAside/.test(kpi)) bad.push(`${KPI}: แผ่น KPI ต้องส่ง footAside ให้ popup 🔍 (insight ไปรางขวา = ไม่กินความสูงกราฟ)`);
+
+  const SH = 'src/components/ObeyaSheet.jsx';
+  const sh = stripComments(readFileSync(join(ROOT, SH), 'utf8'));
+  if (!/maxHeight:\s*'[23]\d%'/.test(sh)) bad.push(`${SH}: ท้ายแผ่นใน popup ต้องมีเพดานเป็น % (maxHeight) ไม่ใช่สูงตามเนื้อหา`);
+  if (!/overflowY:\s*'auto',\s*overscrollBehavior:\s*'contain'/.test(sh)) bad.push(`${SH}: ท้ายแผ่นที่เกินเพดานต้องเลื่อนในตัวเอง (overflowY auto + overscrollBehavior contain)`);
+  if (!/const aside = !!onClose && footAside/.test(sh)) bad.push(`${SH}: ถอดรางขวา (aside) ออกแล้ว — insight ยาวจะกลับไปบีบความสูงกราฟ`);
+
+  const IL = 'src/components/InsightList.jsx';
+  const il = stripComments(readFileSync(join(ROOT, IL), 'utf8'));
+  if (!/items\.slice\(0, max\)/.test(il)) bad.push(`${IL}: ต้องตัดเหลือ max ข้อตอนย่อ`);
+  if (!/const rest = items\.length - shown\.length/.test(il)) bad.push(`${IL}: ต้องนับข้อที่ซ่อนไว้ แล้วเขียนจำนวนบนปุ่มกาง (ห้ามซ่อนเงียบ)`);
+  if (!/aria-expanded=\{open\}/.test(il)) bad.push(`${IL}: ปุ่มกาง/ย่อ ต้องมี aria-expanded`);
+  assert.deepEqual(bad, [], '\n\n❌ กราฟใน popup 🔍 เสี่ยงถูก insight กินที่อีก:\n   ' + bad.join('\n   ') + '\n');
+});
