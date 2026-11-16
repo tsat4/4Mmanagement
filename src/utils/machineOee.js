@@ -22,10 +22,10 @@
    ⏱️ **ยึด "ระยะเวลา" ไม่ยึด "เวลานาฬิกา"** (16/11 · คำสั่ง user "PLC มีปัญหาเรื่องเวลา อยากให้เน้นที่ duration")
       วัดจริง: received_at − ended_at ต่ำสุด 3.3–4 นาที ทั้งที่ flow ส่งทุก 1 นาที ⇒ นาฬิกา PLC คลาด ~3–5 นาที
       ⇒ ช่วงหยุดใช้ `duration_sec` ของต้นทางก่อน (เวลาเริ่มใช้แค่ "ตกกะไหน")
-   🍱 **เวลาพัก = นโยบาย ESM (`breakIntervalsIn`) แบบโควตานาที** — ไม่จับคู่ช่วงเวลา (นาฬิกาคลาด):
-      ส่วนแผน = กรอบกะที่ผ่านไป − โควตาพัก − ไม่มีแผน − หยุดตามแผนที่ไม่ใช่พัก − ขาดการสื่อสาร
-      กดพักหน้าเครื่อง (เหตุผลที่ติดป้าย is_break) > โควตา ⇒ ส่วนเกิน = เสีย A ("พักเกินเวลานโยบาย" · user เลือกทาง A)
-      กดพัก < โควตา (พักแต่ไม่ได้กด เครื่องขึ้น Idle) ⇒ โควตาที่เหลือหักจาก Idle ≥ 2 นาทีก่อน — จอเขียนบอกเสมอ */
+   🍱 **เวลาพัก = นโยบาย ESM (`breakIntervalsIn`) แบบโควตานาที = "พื้นขั้นต่ำ" ของเวลาที่กันออก** — ไม่จับคู่นาฬิกา:
+      กันออก = max(สิ่งที่เครื่องกันเอง [ไม่มีแผน + หยุดตามแผน + กดพักไม่เกินโควตา + ขาดสื่อสาร], โควตาพัก)
+      ส่วนที่โควตามากกว่า (พักแต่ไม่ได้กด เครื่องขึ้น Idle) ⇒ หักจาก Idle ≥ 2 นาทีก่อน — จอเขียนบอกเสมอ
+      กดพักหน้าเครื่อง (เหตุผลติดป้าย is_break) > โควตา ⇒ ส่วนเกิน = เสีย A ("พักเกินเวลานโยบาย" · user เลือกทาง A) */
 
 const H = 3600000;
 const BKK = 7 * H;
@@ -129,11 +129,17 @@ export function machineShiftOee({ agg = {}, pieces = null, ngMachine = 0, ngPeop
   /* 🍱 โควตาพักนโยบาย — ไม่ส่งมา (ไม่รู้นโยบาย) = ถือการกดพักหน้าเครื่องเป็นพักทั้งหมด (พฤติกรรมเดิม) + บอกบนจอ */
   const allowance = policyBreakSec == null ? breakPressSec : Math.max(0, Number(policyBreakSec) || 0);
   if (policyBreakSec == null) why.push('no_break_policy');
+  /* 🍱 โควตาพักนโยบาย = "พื้นขั้นต่ำ" ของเวลาที่กันออก ไม่ใช่ของบวกเพิ่ม (แก้ 16/11 — เดิมบวกซ้อน = หักพักซ้ำ)
+     จริง 16/11 JTSRA03-04: ไม่มีแผน 08:00–08:25 = ประชุมแถว · กด "พัก 10 นาที" = พักเบรค ⇒ เครื่องกันออกให้แล้ว
+     · เครื่องกันออกแล้ว (ไม่มีแผน + หยุดตามแผน + กดพักไม่เกินโควตา) ≥ โควตา ⇒ ไม่กันเพิ่ม
+     · น้อยกว่า (พักแต่ไม่ได้กด เครื่องขึ้น Idle) ⇒ ส่วนที่ขาดหักจาก Idle ≥ 2 นาทีก่อน แล้วกันออกตามนโยบาย
+     · กดพักเกินโควตา ⇒ ส่วนเกิน = เสีย A (ทาง A) · ยึดระยะเวลา ไม่จับคู่นาฬิกา (PLC คลาด) */
   const breakOverSec = Math.max(0, breakPressSec - allowance);
-  const unusedAllowance = Math.max(0, allowance - breakPressSec);
+  const machineExcl = nonBreakExcl + (breakPressSec - breakOverSec);
+  const shortfall = Math.max(0, allowance - machineExcl);
   const idleRaw = g(agg, 'idle');
-  const idleAbsorbedSec = Math.min(unusedAllowance, idleRaw);
-  const excludedSec = nonBreakExcl + allowance;
+  const idleAbsorbedSec = Math.min(shortfall, idleRaw);
+  const excludedSec = machineExcl + shortfall;
   const plannedSec = Math.max(0, (Number(elapsedSec) || 0) - excludedSec);
   const loss = {
     fault: g(agg, 'fault'), unplanned: g(agg, 'unplanned'), idle: idleRaw - idleAbsorbedSec, idleRaw, idleAbsorbedSec,
@@ -298,6 +304,28 @@ export function stopPareto(events = [], { startMs, endMs }) {
     m.set(label, r);
   }
   return [...m.values()].sort((a, b) => b.min - a.min);
+}
+
+/** 🔍 แถบสถานะแบบซูมได้ — นาทีรายสถานะในช่วงที่ดูอยู่ (ตัดตามกรอบ) · คืน { [kind]: นาที } */
+export function segmentMinutesIn(segments = [], a, b) {
+  const out = {};
+  for (const sg of segments || []) {
+    const sec = clipSec(sg.startMs, sg.endMs, a, b);
+    if (sec > 0) out[sg.kind] = (out[sg.kind] || 0) + sec / 60;
+  }
+  return out;
+}
+/** ระยะห่างของขีดเวลาตามความกว้างที่ซูม — ให้ได้ราว 4–8 ขีด */
+export function tickStepMs(spanMs) {
+  const steps = [60000, 2 * 60000, 5 * 60000, 10 * 60000, 15 * 60000, 30 * 60000, 3600000, 2 * 3600000];
+  return steps.find(st => spanMs / st <= 8) || 2 * 3600000;
+}
+/** ขีดเวลาในช่วง [a,b] ตรงนาทีกลม (เวลาไทย = UTC+7 ทั้งชั่วโมง ⇒ ปัดด้วย epoch ได้ตรง) */
+export function timeTicks(a, b) {
+  const st = tickStepMs(b - a);
+  const out = [];
+  for (let t = Math.ceil(a / st) * st; t <= b; t += st) out.push(t);
+  return out;
 }
 
 /** 🔢 ทศนิยม → % ปัด 1 ตำแหน่ง (null คงเป็น null) */

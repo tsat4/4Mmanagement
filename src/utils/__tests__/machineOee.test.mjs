@@ -159,3 +159,27 @@ test('⏱️ ระยะเวลายึด duration_sec ของต้น�
   assert.equal((sp2[1] - sp2[0]) / 1000, 540);
   assert.equal(evSpan({ started_at: null, duration_sec: 5 }), null);
 });
+
+test('🍱 จริง 16/11 JTSRA03-04 08:00–10:20: ไม่มีแผน 25.2 + หยุดตามแผน 15.4 ≥ โควตา 40 ⇒ ไม่หักพักซ้ำ · Idle 7.7 เป็นเสีย ⇒ A ≈ 92% (จอ Node-RED 91.9%)', () => {
+  const agg = aggregateFromRollup([
+    { state: 'no_plan', is_minor: false, sec: 25.2 * 60, n: 2 },
+    { state: 'planned_stop', is_minor: false, sec: 15.4 * 60, n: 7 },     // พัก 10 + Tip dressing/change 5.4 (ยังไม่ติดป้ายพัก)
+    { state: 'idle', is_minor: false, sec: 7.7 * 60, n: 2 },
+  ]);
+  const r = machineShiftOee({ agg, pieces: 101, ngPeople: 0, elapsedSec: 140 * 60, ct: 40, policyBreakSec: 40 * 60 });
+  assert.equal(Math.round(r.plannedSec / 60 * 10) / 10, 99.4);
+  assert.equal(r.loss.idleAbsorbedSec, 0);
+  assert.equal(pct1(r.A), 92.3);
+});
+
+test('🔍 ซูมแถบสถานะ: นาทีรายสถานะตัดตามช่วงที่ดู · ขีดเวลา 4–8 ขีดตรงนาทีกลม', async () => {
+  const { segmentMinutesIn, timeTicks } = await import('../machineOee.js');
+  const t = (hm) => Date.parse(bkk(`2026-11-16T${hm}:00`));
+  const segs = [{ startMs: t('10:00'), endMs: t('10:09'), kind: 'planned_stop' }, { startMs: t('10:09'), endMs: t('10:20'), kind: 'idle' }];
+  const m = segmentMinutesIn(segs, t('10:05'), t('10:15'));
+  assert.equal(m.planned_stop, 4); assert.equal(m.idle, 6);
+  const ticks = timeTicks(t('10:00'), t('10:20'));
+  assert.ok(ticks.length >= 4 && ticks.length <= 8);
+  assert.equal(ticks[0], t('10:00'));
+  assert.ok(timeTicks(t('08:00'), t('20:00')).length <= 8);
+});

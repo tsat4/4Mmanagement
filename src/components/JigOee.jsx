@@ -6,14 +6,14 @@
      · เป้า/ยอดยืนยันจากใบผลิต เทียบชิ้นที่เครื่องนับ · เหตุผลที่ตัวเลขคิดไม่ได้เขียนบนจอเสมอ (ไม่รู้ ≠ 0)
    🔴 ไฟล์นี้วาดอย่างเดียว ห้ามคิดสูตร · ฟอนต์ขั้นต่ำ 11px · ห้าม color-mix (จอ TV Chromium 94)
    🔴 Pareto ใช้ <ParetoChart> กลาง · แท่งสีจาก Cell ต้อง CELL_BAR_FILL + tooltipProps (ไม่ได้ใช้ Cell ในไฟล์นี้) */
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, ReferenceLine,
 } from 'recharts';
 import ParetoChart from './ParetoChart';
 import { classifyAbc } from '../utils/pareto';
 import { axisTick, tooltipProps, CHART_MARGIN } from '../utils/chartAxis';
-import { WHY_TEXT, pct1 } from '../utils/machineOee';
+import { WHY_TEXT, pct1, segmentMinutesIn, timeTicks } from '../utils/machineOee';
 import { tr } from '../utils/i18n';
 
 export const KIND_META = {
@@ -79,6 +79,71 @@ export function JigStateStrip({ segments = [], startMs, endMs, height = 12, show
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/** 🔍 แถบสถานะตลอดกะ แบบซูมได้ (16/11 · user "ระบบซูม ดูช่วงกราฟแท่ง เรายังไม่มี")
+ *  ลาก = เลือกช่วงซูม · คลิก = ซูม ±15 นาทีรอบจุดนั้น · ปุ่ม "ย่อกลับ" · เส้นตอนนี้ · นาทีรายสถานะในช่วงที่ดู
+ *  pointer events = ใช้ได้ทั้งเมาส์และนิ้ว · ส่วนอนาคตเป็นพื้นว่าง */
+export function ZoomStateStrip({ segments = [], startMs, endMs, nowMs = Date.now(), height = 30 }) {
+  const [view, setView] = useState(null);           // null = ทั้งกะ · [a,b]
+  const [drag, setDrag] = useState(null);           // { x0, x1 } พิกเซลในแถบ
+  const ref = useRef(null);
+  const a = view ? view[0] : startMs, b = view ? view[1] : endMs;
+  const span = b - a;
+  const mins = useMemo(() => segmentMinutesIn(segments, a, Math.min(b, nowMs)), [segments, a, b, nowMs]);
+  if (!(endMs > startMs)) return null;
+  const toMs = (x) => { const w = ref.current?.clientWidth || 1; return a + Math.max(0, Math.min(1, x / w)) * span; };
+  const xOf = (e) => e.clientX - (ref.current?.getBoundingClientRect().left || 0);
+  const onDown = (e) => { e.currentTarget.setPointerCapture?.(e.pointerId); const x = xOf(e); setDrag({ x0: x, x1: x }); };
+  const onMove = (e) => { if (drag) setDrag(d => ({ ...d, x1: xOf(e) })); };
+  const onUp = () => {
+    if (!drag) return;
+    const lo = Math.min(drag.x0, drag.x1), hi = Math.max(drag.x0, drag.x1);
+    setDrag(null);
+    if (hi - lo >= 6) { const s0 = toMs(lo), e0 = toMs(hi); if (e0 - s0 >= 60000) setView([s0, e0]); return; }
+    const c = toMs(lo), half = Math.min(15 * 60000, span / 4);
+    if (span <= 2 * 60000) return;                    // ซูมสุดแล้ว
+    setView([Math.max(startMs, c - half), Math.min(endMs, c + half)]);
+  };
+  const pctOf = (t) => ((t - a) / span) * 100;
+  const kinds = ['run', 'minor', 'fault', 'unplanned', 'idle', 'planned_stop', 'no_plan', 'comm_loss'];
+  return (
+    <div style={{ display: 'grid', gap: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--muted)' }}>
+        <span>{view ? `ซูม ${hm(a)}–${hm(b)}` : 'ทั้งกะ'} · ลากเพื่อเลือกช่วง หรือคลิกเพื่อซูม</span>
+        {view && <button type="button" className="pg-btn" style={{ marginLeft: 'auto' }} onClick={() => setView(null)}>⤢ ย่อกลับทั้งกะ</button>}
+      </div>
+      <div ref={ref} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={() => setDrag(null)}
+        style={{ position: 'relative', height, background: 'var(--bg3)', borderRadius: 4, overflow: 'hidden', cursor: 'zoom-in', touchAction: 'none', userSelect: 'none' }}
+        role="img" aria-label={`แถบสถานะเครื่อง ${hm(a)}–${hm(b)}`}>
+        {segments.filter(sg => sg.endMs > a && sg.startMs < b).map((sg, i) => {
+          const l = Math.max(0, pctOf(sg.startMs)), r = Math.min(100, pctOf(sg.endMs));
+          return (
+            <div key={i} title={`${kindMeta(sg.kind).label} ${hms(sg.startMs)}–${hms(sg.endMs)} (${((sg.endMs - sg.startMs) / 60000).toFixed(1)} น.)${sg.reason ? ` · ${sg.reason}` : ''}`}
+              style={{ position: 'absolute', top: 0, bottom: 0, left: `${l}%`, width: `${Math.max(0.12, r - l)}%`, background: kindMeta(sg.kind).color }} />
+          );
+        })}
+        {nowMs > a && nowMs < b && (
+          <div aria-hidden="true" style={{ position: 'absolute', top: 0, bottom: 0, left: `${pctOf(nowMs)}%`, width: 2, background: 'var(--text)' }} />
+        )}
+        {drag && Math.abs(drag.x1 - drag.x0) >= 2 && (
+          <div aria-hidden="true" style={{ position: 'absolute', top: 0, bottom: 0, left: Math.min(drag.x0, drag.x1), width: Math.abs(drag.x1 - drag.x0), background: 'var(--blue-dim)', border: '1px solid var(--blue)' }} />
+        )}
+      </div>
+      <div style={{ position: 'relative', height: 16 }}>
+        {timeTicks(a, b).map(t => (
+          <span key={t} style={{ position: 'absolute', left: `${pctOf(t)}%`, transform: 'translateX(-50%)', fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{hm(t)}</span>
+        ))}
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, fontSize: 11.5, color: 'var(--muted)' }}>
+        {kinds.filter(k => mins[k] > 0).map(k => (
+          <span key={k} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ width: 9, height: 9, borderRadius: 2, background: kindMeta(k).color }} />{kindMeta(k).label} <b style={{ color: 'var(--text)' }}>{mins[k] >= 10 ? Math.round(mins[k]) : mins[k].toFixed(1)} น.</b>
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
@@ -339,8 +404,7 @@ export function JigDrilldown({ j, trendRows = null, target = 0.85 }) {
       )}
       {sec('สถานะตลอดกะ', `${hm(j.win.startMs)}–${hm(j.win.endMs)} · ชี้ที่แถบเพื่อดูเวลาและสาเหตุ · อัปเดตล่าสุด ${j.lastEventAt ? hm(j.lastEventAt) : '–'}`, (
         <div style={{ display: 'grid', gap: 8 }}>
-          <JigStateStrip segments={j.segments} startMs={j.win.startMs} endMs={j.win.endMs} height={26} showTicks />
-          <KindLegend />
+          <ZoomStateStrip segments={j.segments} startMs={j.win.startMs} endMs={j.win.endMs} />
         </div>
       ))}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 12, alignItems: 'start' }}>
