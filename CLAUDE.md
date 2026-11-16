@@ -190,19 +190,17 @@ Realtime + Edge Functions/Deno) · Telegram Bot API · deploy = Render.com (Stat
 > · 🔴 **ไลน์เครื่องขนานบันทึก DT รายเครื่อง ⇒ หารจำนวนเลนก่อนหักจากเวลากะ (`laneWeightFn()`) · `dtMinBySession` ต้องส่ง `{ lines }`**
 >   (มีด่าน) · 🔴 **stamp `oee_a` ต้อง stamp `actual_qty` ด้วย** (`sessionProducedQty()` · มีด่าน)
 >   🔴 **แต่ "ของกลางของไลน์" (คอนเวเยอร์/ระบบลม) หยุด = ไลน์หยุดทั้งไลน์ ห้ามหารเลน** (28/10 · คำสั่ง user)
->   ⇒ ทะเบียน `machines.affects_lanes` · โหลดผ่าน **`src/utils/affectsLanes.js`** → `laneWeightFn(N, affectsBy)`
->   · **ว่าง = 1 เลน = พฤติกรรมเดิม**
->   · ห้ามเขียน `1/parallelN` เองในหน้า (ด่าน `lane-weight-single-entry`)
+>   ⇒ ทะเบียน `machines.affects_lanes` ผ่าน **`src/utils/affectsLanes.js`** → `laneWeightFn(N, affectsBy)`
+>   · **ว่าง = 1 เลน = พฤติกรรมเดิม** · ห้ามเขียน `1/parallelN` เองในหน้า (ด่าน `lane-weight-single-entry`)
 > · 🏭 **"ไลน์นี้พักกี่นาที" ไม่เท่ากันทุกไลน์** (`break_line_rules` · 20/10) — เจ้าของกฎ **`src/utils/breakLineRules.js`**
->   🔴 **ห้ามทับค่า/ไล่สายเองในหน้า · ห้ามถอดการอ่านทะเบียนกลาง** · 🔴 **จอที่วาด "แถบเงาเวลาพัก" เอง
->   ต้องส่งชื่อไลน์ของแถว** เข้า `halfDayBreakBands()` + อ่านชื่อพักจาก `band.policies`
->   **ห้ามจับคู่จาก `start_time`** (พักท้ายกะ = `null`) (ด่าน `break-line-rules-single-entry`)
+>   🔴 **ห้ามทับค่า/ไล่สายเองในหน้า · ห้ามถอดการอ่านทะเบียนกลาง** · จอที่วาดแถบเงาเวลาพักเองมีกฎเพิ่ม
+>   (ด่าน `break-line-rules-single-entry` · 📄 `docs/modules/oee.md`)
 
 > ### 🔴🔴 กฎเหล็กข้าม session — **ชิ้น ≠ shot** (งานคู่ gang die / RH-LH · 2026-09-18)
-> CT = เวลาต่อ **1 จังหวะ** แต่ปั๊มทีเดียวได้ 2 ชิ้น
-> · **ยอดผลิต/%Q/ของเสีย นับ "ชิ้น" · เวลามาตรฐานของ %P นับ "shot" — ห้ามสลับ**
+> CT = เวลาต่อ **1 จังหวะ** แต่ปั๊มทีเดียวได้ 2 ชิ้น ⇒ **ยอดผลิต/%Q/ของเสีย นับ "ชิ้น" ·
+> เวลามาตรฐานของ %P นับ "shot" — ห้ามสลับ**
 > · ยุบผ่าน `collapsePairShots()` (`utils/pairTotals.js`) — **ภาระกะตอนวางแผน ใช้ `pairLoadTotal()`
->   ในไฟล์เดียวกัน** (มีด่าน) · `computeLiveOee` ต้องส่ง `pairMap` ทุกจอ (มีด่าน) · **ลืม `select('pair_mat_no')` = pairMap ว่าง = นับ 2 เท่าเงียบๆ**
+>   ในไฟล์เดียวกัน** (มีด่าน) · `computeLiveOee` ต้องส่ง `pairMap` ทุกจอ (มีด่าน)
 
 > ### 🔴🔴 กฎเหล็กข้าม session — **"พาร์ทจริง" = สินค้า ไม่ใช่ MAT ตัวเดียว** (2026-10-05 · คำสั่ง user)
 > `op_parent_mat` = **text ช่องเดียว** ⇒ สินค้าเดียวกันคนละลูกค้า ชั้น OP ไม่ยุบ = **นับซ้ำเงียบๆ**
@@ -216,7 +214,7 @@ Realtime + Edge Functions/Deno) · Telegram Bot API · deploy = Render.com (Stat
 > · 🔴 **%Q ใช้ `defectQty` · พาเรโต/มูลค่า/รายการ + ตัวเศษ %P ใช้ `defectQtyAll` — ห้ามสลับ**
 > · 🔴 **คิวรีที่เอาไปคิด %Q ต้องต่อ `${QBIN_EMBED}` ใน select** ไม่ต่อ = `suspectState()` คืน `unknown`
 >   แล้วถอยไปใช้พฤติกรรมเดิม · มีด่าน `oee-suspect-needs-qbin-embed`
->   🔴 กะที่ QA ยังไม่ตัดสิน = **ค่าชั่วคราว** — ตัดสินแล้วคิดใหม่ผ่าน `restampSessionQByDefects()` · **NG ที่ใบเหลืองครอบ = กฎเดียวกัน** (§7.2 `binCoveredSplit`)
+>   🔴 กะที่ QA ยังไม่ตัดสิน = **ค่าชั่วคราว** ต้องคิดใหม่เมื่อตัดสิน (`restampSessionQByDefects()` · ใบเหลืองครอบ = กฎเดียวกัน)
 
 > ### 🔴🔴 กฎเหล็กข้าม session — **ปิดกะต้องตรึง CT + นโยบายพักเป็น snapshot** (2026-11-11 · คำสั่ง user)
 > `ct_snapshot`/`break_snapshot` (DR) · เจ้าของกฎ **`src/utils/oee.js` §snapshot** · **เก็บ input ไม่ใช่ช่วงพักสำเร็จรูป**
@@ -227,7 +225,13 @@ Realtime + Edge Functions/Deno) · Telegram Bot API · deploy = Render.com (Stat
 > · 🔴 **ตัวเศษ/ตัวหารฐานเดียวกัน — งานทดลองออกทั้งคู่** (`trialState()` · แยกไม่ออก = คืน `unsureQty` ให้จอเขียน **ห้ามเดา**)
 > · 🔴 **ตัวหาร = "ชิ้น" (ยอดสแกนดี) ห้ามใช้ยอดที่ยุบคู่ RH/LH** (`pairAwareTotal`/`collapseOps` = shot · กฎ "ชิ้น ≠ shot")
 > · ผลิต 0 แต่มีของเสีย = **`null`** ห้าม 0 / 1,000,000 · **โชว์จำนวนเต็ม** (ทศนิยมจาก `kpi_catalog.decimals`)
-> · 🔴 **ห้าม clamp ค่าที่สูง** — PPM = ชิ้นต่อล้าน เกิน 100 ได้ปกติ (เป้าในทะเบียน 50/75/300)
+> · 🔴 **ห้าม clamp ค่าที่สูง** — PPM = ชิ้นต่อล้าน เกิน 100 ได้ปกติ
+
+> ### 🧩 ของเสียเลือก "พาร์ทลูก" ได้ แต่ **ไม่เข้าสูตร %Q/%P เลย** (2026-11-16 · คำสั่ง user)
+> `defect_logs.child_*` · ของกลาง **`src/utils/defectPart.js`** · ยังหักที่ MAT แม่ **1 ชิ้น = 1 ชิ้น**
+> ตัวหาร %Q ไม่เปลี่ยน · %P ยังผูก `prod_orders.mat_no`
+> 🔴 **ห้ามคูณ/หาร `child_qty_per_fg` ในสูตรใดๆ** (รอ user เคาะ "ลูกเสีย N = FG เสียกี่ชิ้น" · มีด่าน)
+> 🔴 **ไม่มีลูกใน BOM / อ่าน BOM ไม่ได้ = ยังลงของเสียได้ ห้ามบล็อก** · ลิสต์ลูกผ่าน `useBomChildren` เท่านั้น
 
 > 📄 รายละเอียดเต็ม → `docs/modules/oee.md`
 

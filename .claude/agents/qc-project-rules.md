@@ -60,6 +60,13 @@ model: inherit
   · payload ไหนที่เขียน `oee_a` ลง `production_sessions` **ต้องเขียน `actual_qty`/`qty_ok` ด้วย**
     (ด่าน `oee-restamp-needs-qty`) — ไม่งั้นแถวเดียวกันขัดแย้งกันเอง: ยอด 1,000 แต่ %P คิดจาก 1,100
     (วัดจริง ก.ย. 2026: 26 กะ · 885 ชิ้น) · ยอดขยับ = ต้องขึ้น toast บอกก่อน-หลัง ห้ามแก้เงียบ
+- **A5.3** 🧩 **ของเสียระดับ "พาร์ทลูก" ห้ามเข้าสูตร %Q/%P** (2026-11-16 · คำสั่ง user)
+  · `defect_logs.child_mat_no/child_part_name/child_qty_per_fg` = ข้อมูลเพิ่มเพื่อพาเรโต/ใบรายงาน
+    **ไม่ใช่ตัวแปรของสูตร** — ของเสียยังหักที่ MAT แม่ 1 ชิ้น = 1 ชิ้น · ตัวหาร %Q ไม่เปลี่ยน
+  · grep: `child_qty_per_fg` นอก `utils/defectPart.js` / `pages/DailyReport.jsx` = **ผิด**
+    (ด่าน `defect-child-qty-not-in-oee`) · เอาไปคูณ = OEE เพี้ยนย้อนหลังทั้งโรงงาน
+  · ลิสต์พาร์ทลูกต้องมาจาก `useBomChildren` → `bomChildCandidates` (ใบเดียว ห้ามรวมหลายใบ = นับซ้ำ)
+    และ **ไม่มีลูก/อ่าน BOM ไม่ได้ ต้องยังลงของเสียได้** (fail-open · ช่องนี้ห้ามเป็นช่องบังคับ)
 - **A6** ห้ามสร้างช่วงเวลาพักเอง — `break_policies` → ช่วงเวลา ต้องผ่าน `breakIntervalsIn()` /
   `policyBreakOverlapMin()` / `policyBreakForShift()` เท่านั้น (เคยมีสูตรซ้ำ 4 ชุด ให้ผลต่างกัน
   · ชุดที่เขียนเองมักตก `process_type = null` และ `ot_scope` → นับพักเกิน 20 นาทีทุกกะเช้าที่ทำโอ)
