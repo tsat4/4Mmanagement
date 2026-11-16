@@ -3,3 +3,9 @@
 --   (ผูกไม่ได้ = QA กดเปิดใบตรวจจากคิวไม่ได้อยู่แล้ว) · ตัวที่ข้ามรายงานใน dry-run `skipped_unlinked`
 -- ย้อนกลับ: alter table public.qa_fme_config drop column if exists linked_only;  (edge อ่านไม่เจอ = ถือว่า true)
 alter table public.qa_fme_config add column if not exists linked_only boolean not null default true;
+
+-- 16/11 · รันจริงครั้งแรกพบ CHECK trigger_reason ไม่มี 'lot_end' (edge ส่ง End ครบล็อต) ⇒ upsert ล้มทั้งก้อน
+-- ขยาย CHECK อย่างเดียว (ย้อนได้ — rollback: ใส่ชุดเดิม 5 ค่า หลังยกเลิก/ลบแถว lot_end)
+alter table public.qa_fme_obligations drop constraint if exists qa_fme_obligations_trigger_reason_check;
+alter table public.qa_fme_obligations add constraint qa_fme_obligations_trigger_reason_check
+  check (trigger_reason in ('shift_start','model_change','mid_run','model_change_out','shift_end','lot_end'));

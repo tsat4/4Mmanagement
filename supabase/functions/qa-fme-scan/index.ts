@@ -446,10 +446,17 @@ Deno.serve(async (req) => {
         if (midMode === 'lot') {
           const every = midEveryFor(r);
           if (every) {
-            const evts = r.list
-              .map(o => ({ at: o.confirmed_at || o.opened_at, q: qtyOf(o) }))
-              .filter(e => !!e.at && e.q > 0)
-              .sort((a, b) => (a.at as string) < (b.at as string) ? -1 : 1);
+            /* 🔴 ใบที่ยืนยัน "นาทีเดียวกัน" = เหตุการณ์เดียว (16/11 · รันจริงครั้งแรก: คู่ RH/LH ของ LASER-789
+               ยืนยันพร้อมกัน 07:48 ⇒ เดิมแยกเป็น End 2 งานห่างกัน 0 นาที) — QA เดินไปครั้งเดียวตรวจทั้งคู่ */
+            const byMin = new Map<string, { at: string; q: number }>();
+            for (const o of r.list) {
+              const at = o.confirmed_at || o.opened_at; const q = qtyOf(o);
+              if (!at || q <= 0) continue;
+              const k = at.slice(0, 16);
+              const cur = byMin.get(k);
+              if (cur) { cur.q += q; if (at > cur.at) cur.at = at; } else byMin.set(k, { at, q });
+            }
+            const evts = [...byMin.values()].sort((a, b) => a.at < b.at ? -1 : 1);
             /* 🎯 ต่อ 1 ล็อต = First (ชิ้นแรก) · Middle (กลางล็อต) · End (ครบล็อต) — 13/11 คำสั่ง user
                "60/61 สแกนใบละ 10 แต่ลอทผลิต 500 → เรียก 1/250/500 ไม่ใช่ทุกใบ"
                ⇒ หลักที่ลงตัวกับขนาดล็อต (500, 1000…) = **End ครบล็อต** · หลักอื่น (250, 750…) = Middle
@@ -494,7 +501,9 @@ Deno.serve(async (req) => {
         const coveredByLotEnd = lotEndAt.has(r) && tail < midMin;
         if (!coveredByLotEnd) {
           if (r.sess.status === 'closed') {
-            add(r, 'end', 'shift_end', r.sess.closed_at || r.lastAct, cfg.end_due_min, 0);
+            /* เวลาเรียก = ชิ้นสุดท้ายที่ผลิตจริง (lastAct) ไม่ใช่เวลากดปิดกะ — 16/11 กะเช้าเมื่อวานปิดตอน 08:30 วันนี้
+               ⇒ เดิมเรียก End ช้า 15 ชม. (ของถูกส่งไปแล้ว ตรวจไม่ได้) · ใช้ lastAct แล้วด่าน skip_older_min ตัดทิ้งเอง */
+            add(r, 'end', 'shift_end', r.lastAct || r.sess.closed_at, cfg.end_due_min, 0);
           } else if (r.allDone) {
             const next = list.find(x => x !== r && x.firstOpen > r.lastAct);
             if (next) add(r, 'end', 'model_change_out', next.firstOpen, cfg.end_due_min, 0);
