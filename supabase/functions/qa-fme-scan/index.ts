@@ -457,19 +457,25 @@ Deno.serve(async (req) => {
             const cap = Number(cfg.mid_max_per_run ?? 12);
             const lot = lotOfRun.get(r) ?? 0;
             let acc = 0, k = 0, nMid = 0, nEnd = 0;
+            /* 🔴 ใบเดียวข้ามหลายหลัก = เรียก **ครั้งเดียว** (16/11 · dry-run จริง: LASER-789 ยืนยันใบเดียว 600 ชิ้น
+               ⇒ เดิมเกิด 12 งานในนาทีเดียว ทุก 50 ชิ้นย้อนหลัง — ตรวจย้อนหลังไม่ได้ = เรียกเปล่า)
+               ข้ามหลักครบล็อตในใบนั้น = End ที่หลักครบล็อตสูงสุด · ไม่ครบล็อต = Middle ที่หลักสูงสุด */
             for (const e of evts) {
               acc += e.q;
+              let lastMark = 0, lastLotEnd = 0;
               while (acc >= (k + 1) * every && k < cap) {
                 k += 1;
                 const mark = k * every;
-                if (lot && mark % lot === 0) {
-                  nEnd += 1;
-                  add(r, 'end', 'lot_end', e.at as string, cfg.end_due_min, nEnd, mark);
-                  lotEndAt.set(r, mark);
-                } else {
-                  nMid += 1;
-                  add(r, 'middle', 'mid_run', e.at as string, cfg.first_due_min, nMid, mark);
-                }
+                lastMark = mark;
+                if (lot && mark % lot === 0) lastLotEnd = mark;
+              }
+              if (lastLotEnd) {
+                nEnd += 1;
+                add(r, 'end', 'lot_end', e.at as string, cfg.end_due_min, nEnd, lastLotEnd);
+                lotEndAt.set(r, lastLotEnd);
+              } else if (lastMark) {
+                nMid += 1;
+                add(r, 'middle', 'mid_run', e.at as string, cfg.first_due_min, nMid, lastMark);
               }
               if (k >= cap) break;   // เพดานกัน QA ถูกเรียกรัวจนใช้งานไม่ได้
             }
@@ -524,13 +530,18 @@ Deno.serve(async (req) => {
     let created = 0;
     // กันคีย์ซ้ำในก้อนเดียวกัน (ข้อมูลกะซ้ำผิดปกติ) ก่อนส่งเข้า upsert
     const seen = new Set<string>();
-    const rows = want
+    let rows = want
       .filter(w => {
         const k = `${w.line_name}|${w.work_date}|${w.shift}|${w.mat_no}|${w.stage}|${w.seq}`;
         if (seen.has(k)) return false;
         seen.add(k); return true;
       })
       .map(w => ({ ...w, part_id: resolvePart(w.mat_group, w.mat_no) }));
+    /* 🎯 linked_only (16/11 · คำสั่ง user "เฉพาะพาร์ทที่ตั้งจุดตรวจไว้แล้วก่อน") — รุ่นที่ไม่มีพาร์ทในระบบตรวจ
+       = QA กดเปิดใบตรวจจากคิวไม่ได้ ⇒ ไม่สร้างงาน · นับไว้รายงาน (ห้ามตัดเงียบ) · คอลัมน์ไม่มี = ถือว่า true */
+    const linkedOnly = cfg.linked_only !== false;
+    const unlinkedSkipped = linkedOnly ? rows.filter(r => !r.part_id) : [];
+    if (linkedOnly) rows = rows.filter(r => r.part_id);
 
     // ── โหมดทดลอง: บอกว่า "จะเรียกอะไรบ้าง" แล้วจบ (ไม่เขียน ไม่ส่ง) ──
     if (dry) {
@@ -543,6 +554,10 @@ Deno.serve(async (req) => {
         scanned: { sessions: sessions.length, orders: orders.length, runs: runs.size },
         summary: {
           would_create: list.length,
+          linked_only: linkedOnly,
+          // รุ่นที่ผลิตแต่ไม่มีพาร์ทในระบบตรวจ (ข้ามเพราะ linked_only) — ต้องเห็นว่าข้ามอะไรไป
+          skipped_unlinked: unlinkedSkipped.length,
+          skipped_unlinked_lines: [...new Set(unlinkedSkipped.map(r => r.line_name))],
           // part_linked = กดปุ่ม "เปิดใบตรวจ" จากคิวได้จริงกี่รายการ (ต้องผูก qa_parts.mat_no ก่อน)
           part_linked: list.filter(r => r.part_id).length,
           op_unlinked: [...new Set(list.flatMap(r => r.mat_group.filter(m => opNoParent.has(m))))],
