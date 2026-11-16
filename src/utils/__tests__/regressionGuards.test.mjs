@@ -10442,6 +10442,41 @@ test('🛡️ DailyReport: ด่าน poka-yoke ตอนลงยอด + ก
     /export function decidedDtLogs\(/, '\n\n❌ decidedDtLogs ต้องอยู่ใน utils (pure) ไม่ใช่ในหน้า\n')
 })
 
+test('🛡️ monitoring-orders-replace-atomic — นำเข้าออเดอร์ Monitoring ห้ามลบ+ใส่แยกคำขอ', () => {
+  /* บั๊กที่เคยเปิดอยู่จริง (ปิด 16/11/2026): `src/components/MonitoringUpload.jsx` ทำ
+       ① .from('customer_shipping_orders').delete().eq('source','monitoring').eq('status','pending')
+       ② insertChunked('customer_shipping_orders', …)
+     = **คนละ transaction** (คนละคำขอ HTTP) ⇒ ถ้า ② ล้มหลัง ① สำเร็จ (เน็ตสะดุด/ไฟล์ใหญ่)
+       **ออเดอร์ค้างส่งหายทั้งชุด ไม่มีอะไรย้อนให้** — จอขึ้นว่าบันทึกไม่สำเร็จ แต่ของเดิมหายแล้ว
+       ร้ายกว่านั้น `shipping_phase_alerts` ผูก FK `on delete cascade` = หายตามไปด้วย
+
+     แก้ด้วย RPC `fn_monitoring_orders_replace(jsonb, text)` (migration 20261113c · DR)
+     ลบ+ใส่ใน transaction เดียว + ปิด audit รายแถว แล้วเขียน audit สรุป 1 แถว (`BULK_REPLACE`)
+     แทน N แถว — ตารางนี้กิน **28.2% ของ `audit_log` ทั้งตาราง**
+
+     ด่านนี้จับการถอยกลับ: `.delete()` ที่กรองด้วย `source='monitoring'` = **ล้างทั้งชุด**
+     🔴 ลบด้วย `.in('id', […])` ที่ระบุใบชัดเจน **ไม่เข้าข่าย** — `syncRackOrder` ใน
+        `src/pages/Monitoring.jsx` แก้ยอดช่องเดียวบนบอร์ดแร็ค เป็นงานคนละเรื่อง ต้องไม่โดนจับ */
+  const hits = [];
+  for (const f of walk(join(ROOT, 'src'), ['.js', '.jsx'])) {
+    const src = stripComments(readFileSync(f, 'utf8'));
+    for (const m of src.matchAll(/from\(\s*['"`]customer_shipping_orders['"`]\s*\)([\s\S]{0,300}?)\.delete\(([\s\S]{0,200})/g)) {
+      if (/\.eq\(\s*['"`]source['"`]\s*,\s*['"`]monitoring['"`]\s*\)/.test(m[2])) {
+        hits.push(relative(ROOT, f));
+        break;
+      }
+    }
+  }
+  assert.deepEqual(hits, [],
+    '\n\n❌ ไฟล์ด้านล่างลบออเดอร์ `source=monitoring` จากฝั่งจอโดยตรง\n'
+    + '   ทำไมพัง: ลบกับใส่เป็นคนละ transaction ⇒ ใส่ล้มหลังลบสำเร็จ = ออเดอร์หายทั้งชุด\n'
+    + '        (+ shipping_phase_alerts ผูก on delete cascade = หายตามไปด้วย)\n'
+    + '   แก้ยังไง: เรียก `supabaseDR.rpc(\'fn_monitoring_orders_replace\', { p_rows, p_by })`\n'
+    + '        ส่งทั้งก้อนในคำขอเดียว ห้ามแบ่ง chunk (ไม่งั้นหมดความเป็น transaction เดียว)\n'
+    + '   🔴 RPC ตัดแถวที่ไม่มีรหัส/ไม่มีดิวทิ้ง ⇒ จอต้องเทียบ `inserted` กับจำนวนที่ส่ง แล้วบอกคน\n\n'
+    + hits.map(h => '   • ' + h).join('\n') + '\n');
+});
+
 test('🛡️ bom-direct-demand-batch — ฝั่งจอห้ามเรียก fn_bom_direct_demand ทีละ MAT', () => {
   /* บั๊กที่เคยเกิดจริง (วัด 10-11/11/2026): `src/lib/lineDemandSync.js` เขียนว่า
        Promise.all(mats.map(m => supabaseDR.rpc('fn_bom_direct_demand', { p_fg_mat: m })))
