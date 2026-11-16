@@ -25,7 +25,14 @@ const num = (v) => (Number.isFinite(parseFloat(v)) ? parseFloat(v) : 0);
  *   · `code: null` = กลุ่ม "ยังไม่ผูกพื้นที่" (อยู่ท้ายเสมอ)
  *   · parts[] = { mat_no, part_name, qty, lineQtys:[{line_name, qty}] } เรียงตาม mat_no
  */
-export function groupStockBySloc(rows, { slocs = [], lines = [], homeOf = null } = {}) {
+/** 🏬 16/11 (mockup Stock Management) — ลำดับหมวดพื้นที่: สโตร์ → วัตถุดิบ → พื้นที่ผลิต → คลัง FG → อื่นๆ
+ *  ใช้เมื่อเรียก `groupStockBySloc(..., { kindFirst: true })` · ป้ายหัวหมวดผ่าน `slocKindLabel()` */
+export const SLOC_KIND_ORDER = ['store_part', 'raw', 'production', 'warehouse'];
+export const SLOC_KIND_LABEL = { store_part: '🏬 สโตร์', raw: '🧱 วัตถุดิบ', production: '🏭 พื้นที่ผลิต', warehouse: '🚚 คลัง FG' };
+export const slocKindLabel = (kind, code) => (code ? (SLOC_KIND_LABEL[kind] || '📦 พื้นที่อื่น') : '⚠️ ยังไม่ผูกพื้นที่');
+const kindRank = (k) => { const i = SLOC_KIND_ORDER.indexOf(k); return i < 0 ? SLOC_KIND_ORDER.length : i; };
+
+export function groupStockBySloc(rows, { slocs = [], lines = [], homeOf = null, kindFirst = false } = {}) {
   const orderOf = {};
   (slocs || []).forEach((s, i) => {
     const c = slocLabel(s?.code);
@@ -66,6 +73,7 @@ export function groupStockBySloc(rows, { slocs = [], lines = [], homeOf = null }
   out.sort((a, b) => {
     if (!a.code !== !b.code) return a.code ? -1 : 1;
     if (!a.code) return 0;
+    if (kindFirst) { const d = kindRank(orderOf[a.code]?.kind) - kindRank(orderOf[b.code]?.kind); if (d) return d; }
     return (orderOf[a.code]?.sort ?? 999) - (orderOf[b.code]?.sort ?? 999) || a.code.localeCompare(b.code);
   });
   return out;

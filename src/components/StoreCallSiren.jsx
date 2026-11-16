@@ -190,7 +190,7 @@ export default function StoreCallSiren({ slot = 0 }) {
                 แตะเพื่อเปิดเสียง
               </span>
             )}
-            <button onClick={() => goPrep(a)} title={tr('ไปหน้าเตรียมงาน — Line Stock › 📤 ขาออก › ตู้ตามเลขพาร์ท (กรองเฉพาะพาร์ทนี้)')}
+            <button onClick={() => goPrep(a)} title={tr('ไปหน้าเตรียมงาน — Stock Management › 📤 ส่งของเข้าไลน์ › ตู้ตามเลขพาร์ท (กรองเฉพาะพาร์ทนี้)')}
               style={{ flexShrink: 0, background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 'var(--r-md)',
                 padding: '7px 14px', fontSize: 12.5, fontWeight: 800, cursor: 'pointer' }}>
               {tr('ไปเตรียมงาน')}
@@ -209,7 +209,7 @@ export default function StoreCallSiren({ slot = 0 }) {
       {alerts.length > maxBars && (
         <div style={{ pointerEvents: 'auto', background: 'rgba(8,20,14,0.96)', border: '1px solid rgba(34,197,94,0.5)',
           borderRadius: 'var(--r-md)', padding: '7px 12px', fontSize: 11.5, fontWeight: 800, color: '#86efac', textAlign: 'center' }}>
-          + อีก {alerts.length - maxBars} ใบที่ไลน์เรียกแล้วยังไม่มีใครรับทราบ — ทำรายการที่ Line Stock → 📤 ขาออก (ตู้ตามเลขพาร์ท)
+          + อีก {alerts.length - maxBars} ใบที่ไลน์เรียกแล้วยังไม่มีใครรับทราบ — ทำรายการที่ Stock Management → 📤 ส่งของเข้าไลน์ (ตู้ตามเลขพาร์ท)
         </div>
       )}
     </div>
