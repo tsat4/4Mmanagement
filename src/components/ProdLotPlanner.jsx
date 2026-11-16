@@ -36,6 +36,8 @@ import {
   lotRunMin, lotRunInfo, isTrialLot, lotKeyText, qtyText,
 } from '../utils/planLots';
 import { breakIntervalsIn } from '../utils/oee';
+import { loadMinAlerts } from '../lib/minDemandOps';
+import MinDemandPanel from './MinDemandPanel';
 import { buildHorizon, assignShifts, horizonSummary, orderAcrossHorizon, SEG_HOURS, SHIFT_LABEL } from '../utils/planHorizon';
 import { layoutLots } from '../utils/planTimeline';
 import PlanTimeline from './PlanTimeline';
@@ -142,6 +144,15 @@ export default function ProdLotPlanner({
   const [dirty, setDirty]     = useState(false);
 
   useEffect(() => { if (!lineName && lines.length) setLineName(lines[0].name); }, [lines, lineName]);
+
+  /* 🔔 ของถึง min แล้ว — ตัวป้อนงานให้แพลนนิ่ง (คำสั่ง user 13/11)
+     กฎการตัดสินอยู่ utils/replenish.js · โหลดผ่าน lib/minDemandOps.js — ห้ามคิดเองที่นี่ */
+  const [minA, setMinA] = useState({ rows: [], summary: null, error: null, loading: true });
+  useEffect(() => {
+    let alive = true;
+    loadMinAlerts().then(r => { if (alive) setMinA({ ...r, loading: false }); });
+    return () => { alive = false; };
+  }, []);
 
   /* ── 🗓️ ขอบเขต: กะเช้า → กะดึก → วันถัดไป ต่อกันเป็นเส้นเดียว ─────────────────────
      🔴 กติกาทั้งหมด (กะยาวเท่าไหร่ · วันไหนโรงงานไม่เดิน · ข้ามวันหยุดยังไง) อยู่ใน
@@ -703,6 +714,10 @@ export default function ProdLotPlanner({
         <TrialBookingModal lineName={lineName} dies={dies}
           onClose={() => setTrialOpen(false)} onAdd={addTrial} />
       )}
+
+      {/* 🔔 ของถึง min — เห็นว่ามีงานตัวไหนต้องจัดแผนลง (user 13/11) · กดเข้าแผนได้เลย */}
+      <MinDemandPanel rows={minA.rows} summary={minA.summary} error={minA.error} loading={minA.loading}
+        onAdd={mayWrite ? ((mat, qty) => addLot(mat, qty > 0 ? qty : 1)) : null} />
 
       {/* ── ความต้องการที่ยังไม่ได้วางแผน ── */}
       <div style={card}>

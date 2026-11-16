@@ -632,3 +632,37 @@ test('📅 score_by_plan: เดือนที่มีแผนสะสม �
   assert.equal(warn.status, 'warn', 'ต่ำกว่าแผนแต่ถึง commit ของเดือน (3.806)');
   assert.equal(planBarsOf({ score_by_plan: true, direction: 'up', target_value: 10 }, 4).commit_value, null, 'ไม่มี commit ปี = ไม่มีขั้น 0.5');
 });
+
+import { neededRunRate } from '../kpiSetup.js';
+/* ── 📈 yearForecast fallback + neededRunRate (16/11 · user: "ทุกกราฟต้องตอบได้ว่าจบปีจะผ่านไหม") ── */
+test('yearForecast fallback: ไม่มีแผน = สมมติเท่าค่าเฉลี่ย (บอก basis/assumed/เดือนที่สมมติ) · ค่าเริ่มต้นยังเป็น no_plan เหมือนเดิม', () => {
+  const actual = [80, 90, 100, null, null, null, null, null, null, null, null, null];
+  const def = { kpi_catalog: { summary_mode: 'average' } };
+  assert.equal(yearForecast({ actual, plan: [], def }).reason, 'no_plan');
+  const r = yearForecast({ actual, plan: [], def, fallback: true });
+  assert.equal(r.reason, null); assert.equal(r.basis, 'runrate'); assert.equal(r.assumed.kind, 'average'); assert.equal(r.assumed.rate, 90);
+  assert.equal(r.value, 90); assert.deepEqual(r.assumedMonths, [4, 5, 6, 7, 8, 9, 10, 11, 12]); assert.equal(r.src[3], 'assumed'); assert.equal(r.src[0], 'actual');
+  // มีแผนบางเดือน = แผนชนะสมมติ ⇒ mixed
+  const plan = [null, null, null, 120, null, null, null, null, null, null, null, null];
+  const m = yearForecast({ actual, plan, def, fallback: true });
+  assert.equal(m.basis, 'mixed'); assert.equal(m.planMonths, 1); assert.equal(m.assumedMonths.length, 8); assert.equal(m.months[3], 120);
+});
+test('yearForecast fallback: ตัวสะสม (max) เพิ่มต่อด้วยอัตราเดิม ไม่ใช่เฉลี่ย (ค่าสะสมถอยหลังไม่ได้)', () => {
+  const actual = [1, 2, 3, null, null, null, null, null, null, null, null, null];
+  const r = yearForecast({ actual, plan: [], def: { kpi_catalog: { summary_mode: 'max' } }, fallback: true });
+  assert.equal(r.assumed.kind, 'slope'); assert.equal(r.assumed.rate, 1);
+  assert.equal(r.months[11], 12); assert.equal(r.value, 12);
+  // เดือนเดียว = อัตรา = ค่า ÷ เดือนที่เดินมา
+  const one = yearForecast({ actual: [null, null, 6, ...Array(9).fill(null)], plan: [], def: { kpi_catalog: { summary_mode: 'as_of' } }, fallback: true });
+  assert.equal(one.assumed.rate, 2); assert.equal(one.value, 6 + 2 * 9);
+});
+test('neededRunRate: average/sum/reach · ไม่มีเป้า/ครบปี/rate = null', () => {
+  const def = (mode) => ({ kpi_catalog: { summary_mode: mode } });
+  const a = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, null, null];   // Σ 10 · 10 เดือน
+  assert.deepEqual(neededRunRate({ actual: a, target: 1.2, def: def('average') }), { kind: 'avg', perMonth: (1.2 * 12 - 10) / 2, remaining: 2 });
+  assert.deepEqual(neededRunRate({ actual: a, target: 16, def: def('sum') }), { kind: 'sum', perMonth: 3, remaining: 2 });
+  assert.deepEqual(neededRunRate({ actual: a, target: 5, def: def('max') }), { kind: 'reach', perMonth: 5, remaining: 2, add: 4 });
+  assert.equal(neededRunRate({ actual: a, target: null, def: def('average') }), null);
+  assert.equal(neededRunRate({ actual: Array(12).fill(1), target: 2, def: def('average') }), null);
+  assert.equal(neededRunRate({ actual: a, target: 2, def: def('rate') }), null);
+});

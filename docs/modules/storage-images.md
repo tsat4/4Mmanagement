@@ -482,3 +482,8 @@
   🔴 โมดัลต้อง render **นอก `<form>`** (ปุ่มในโมดัลไม่มี type = submit ฟอร์มพนักงาน)
 - ลำดับที่ใบพิมพ์ใช้ = **โปรไฟล์ → ฐานพนักงาน → ค่าที่ใบเก็บไว้ → `null`** ผ่าน `signatureOfPerson()` (`utils/employeeSignature.js`) ที่เดียว
 - ยังไม่ apply = แถว `select('*')` ไม่มีคีย์ `signature_url` ⇒ จอเขียนบอก · ใบพิมพ์เว้นช่อง + toast บอกเหตุผล (ไม่เงียบ)
+
+## 🖼️ รูปหลักฐาน action/หมายเหตุ KPI ไม่ครอบซ้ำตอนอัปโหลด (2026-11-16 · หน้างาน: "รูปที่ใส่ตรง KPI ไม่ fix scale ได้ไหม")
+- เคสจริง: แนบใบ incident report แนวตั้งที่หมายเหตุ KPI เลือก "ใช้ทั้งรูป" ใน `<ImageCropModal>` แล้ว แต่ `resizeActionImage()` ยังส่ง `aspect: 4/3` เข้า `resizeImage` ⇒ centerCrop ตัดหัวท้ายอีกรอบ
+- **กฎ:** สัดส่วนตัดสินที่ `<ImageCropModal>` ที่เดียว (ครอบ = ออก 4:3 · ใช้ทั้งรูป = สัดส่วนเดิม) · ตัวบีบ (`resizeActionImage`) **ห้ามส่ง aspect** — แค่ย่อ 1024px + webp
+- 🔴 **`resizeQualityImage` (`qualityImage.js`) และ `resizeMtnImage` (`mtnImage.js`) คงครอบ 4:3 ตอนอัปโหลด — ตั้งใจ ห้ามแก้ตาม** (คำสั่ง user 16/11: "ไม่ต้องยุ่งเรื่องไม่บังคับ crop กับ MO/scrap เพราะต้อง export PDF") — ใบ MO / ใบ scrap / ใบปัญหาการผลิตวางรูปในช่องสัดส่วนคงที่บน PDF · สัดส่วนอิสระใช้เฉพาะรูปที่ดูบนจอ (action · หมายเหตุ KPI)
