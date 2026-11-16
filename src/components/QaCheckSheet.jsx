@@ -45,9 +45,8 @@ import ScanModal from './ScanModal';
 import { useSearchParams } from 'react-router-dom';
 import { useMergeParams } from '../utils/useTabParam';
 import { parseQrPayload, findQaPartByScan } from '../utils/qrCode';
-/* 📥 CSV ผลตรวจรายพาร์ท (16/11) — CSV = เอกสาร ⇒ ชื่อไฟล์ผ่านทะเบียน /doc-forms (csv_qa_inspection_results) */
-import { downloadCsvDoc, csvText } from '../utils/csvDoc';
-import { loadDocForms } from '../utils/docForms';
+/* 📥 CSV ผลตรวจรายพาร์ท (16/11) — CSV = เอกสาร ⇒ ชื่อไฟล์ผ่านทะเบียน /doc-forms (csv_qa_inspection_results)
+   ใช้ `downloadCsvDoc`/`csvText`/`loadDocForms` ที่ import ไว้ด้านบนร่วมกับใบ Inspection Data */
 import { QA_RESULT_HEADERS, qaResultCsvRows, csvStamp } from '../utils/qaCsvRows';
 import { fetchByIds, fetchAllPages } from '../utils/fetchByIds';
 import { addDaysStr } from '../utils/workDate';
