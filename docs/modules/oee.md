@@ -2784,3 +2784,7 @@ OEE ก.ย.: LASER-345 82.5→**83.0** · LASER-789 86.3→**86.7** · HDF1 84.
   อยู่ในถังเหลืองรอพิจารณา · สำรองค่าเดิมใน `archive.restamp_q_20261110` · apply คู่กับการ merge โค้ด §7.2
   (ลง DB ก่อนโค้ด = จอเก่ากับค่าที่ stamp ไม่ตรงกันชั่วคราว)
 · **จอ Andon ฝ่ายผลิต (`/tv?dept=production`) มี OEE สดรายไลน์แล้ว (11/11)** — `lib/liveLineOee.js` → `computeLiveOee` ชุดเดียวกัน (📄 `dept-dashboard-tv.md`)
+
+
+## 🏭 OEE รายจิ๊กจากข้อมูลเครื่อง (13/11)
+คนละชุดกับ OEE ไลน์ในไฟล์นี้ — สูตร `src/utils/machineOee.js` · 📄 `docs/modules/integration-hub.md` §OEE รายจิ๊ก · ห้ามเอาไปทับค่าที่ประทับตอนปิดกะ
