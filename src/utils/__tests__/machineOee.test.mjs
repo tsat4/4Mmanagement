@@ -183,3 +183,27 @@ test('🔍 ซูมแถบสถานะ: นาทีรายสถาน�
   assert.equal(ticks[0], t('10:00'));
   assert.ok(timeTicks(t('08:00'), t('20:00')).length <= 8);
 });
+
+test('📊 ก/ข/ค: นาทีรายสถานะรายชั่วโมง · สรุปเป้า/ทำได้ · ยอดรายวันเทียบชิ้นที่ควรได้ · ทั้งวัน = 08→08', async () => {
+  const { hourlyStateMinutes, hourlySummary, dailyCapacityRows, shiftBounds } = await import('../machineOee.js');
+  const t = (hm) => Date.parse(bkk(`2026-11-16T${hm}:00`));
+  const all = shiftBounds('2026-11-16', 'all');
+  assert.equal(all.startMs, t('08:00')); assert.equal(all.endMs - all.startMs, 24 * 3600000);
+  assert.equal(shiftBounds('2026-11-16', 'x'), null);
+  const buckets = [
+    { hourMs: t('08:00'), qty: 60, ng: 2, plannedSec: 3000, target: 50, future: false },
+    { hourMs: t('09:00'), qty: 40, ng: 0, plannedSec: 3600, target: 60, future: false },
+    { hourMs: t('10:00'), qty: null, ng: null, plannedSec: 0, target: 0, future: true },
+  ];
+  const segs = [{ startMs: t('08:00'), endMs: t('08:10'), kind: 'no_plan' }, { startMs: t('08:10'), endMs: t('09:30'), kind: 'run' }, { startMs: t('09:30'), endMs: t('10:00'), kind: 'fault' }];
+  const hs = hourlyStateMinutes(segs, buckets);
+  assert.deepEqual(hs[0], { no_plan: 10, run: 50 }); assert.deepEqual(hs[1], { run: 30, fault: 30 }); assert.deepEqual(hs[2], {});
+  const s = hourlySummary(buckets);
+  assert.equal(s.good, 98); assert.equal(s.target, 110); assert.equal(Math.round(s.achieve * 100), 89);
+  assert.equal(hourlySummary([{ ...buckets[0], target: null }]).target, null);   // ไม่รู้ CT ⇒ null ไม่ใช่ 0
+  const mk = (wd, ct, pieces, ng, plannedSec) => ({ workDate: wd, oee: { ct, pieces, ngMachine: ng, plannedSec, operatingSec: plannedSec - 600, minorSec: 60, excludedSec: 1200, loss: { fault: 600 } } });
+  const d = dailyCapacityRows([mk('2026-11-12', 40, 300, 20, 36000), mk('2026-11-12', 40, 100, 0, 3600), mk('2026-11-13', null, 50, 0, 3600)]);
+  assert.equal(d.length, 2);
+  assert.equal(d[0].cap, 990); assert.equal(d[0].good, 380); assert.equal(d[0].ghost, 990 - 400); assert.equal(d[0].fault, 20);
+  assert.equal(d[1].cap, null); assert.equal(d[1].ghost, null);                   // ไม่รู้ CT ⇒ ไม่วาดเงา
+});

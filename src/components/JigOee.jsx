@@ -12,8 +12,8 @@ import {
 } from 'recharts';
 import ParetoChart from './ParetoChart';
 import { classifyAbc } from '../utils/pareto';
-import { axisTick, tooltipProps, CHART_MARGIN } from '../utils/chartAxis';
-import { WHY_TEXT, pct1, segmentMinutesIn, timeTicks } from '../utils/machineOee';
+import { axisTick, tooltipProps, CHART_MARGIN, alignedYWidth } from '../utils/chartAxis';
+import { WHY_TEXT, pct1, segmentMinutesIn, timeTicks, hourlySummary, hourlyStateMinutes } from '../utils/machineOee';
 import { tr } from '../utils/i18n';
 
 export const KIND_META = {
@@ -112,8 +112,8 @@ export function ZoomStateStrip({ segments = [], startMs, endMs, nowMs = Date.now
   return (
     <div style={{ display: 'grid', gap: 6 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--muted)' }}>
-        <span>{view ? `ซูม ${hm(a)}–${hm(b)}` : 'ทั้งกะ'} · ลากเพื่อเลือกช่วง หรือคลิกเพื่อซูม</span>
-        {view && <button type="button" className="pg-btn" style={{ marginLeft: 'auto' }} onClick={() => setView(null)}>⤢ ย่อกลับทั้งกะ</button>}
+        <span>{view ? `ซูม ${hm(a)}–${hm(b)}` : 'ทั้งช่วง'} · ลากเพื่อเลือกช่วง หรือคลิกเพื่อซูม</span>
+        {view && <button type="button" className="pg-btn" style={{ marginLeft: 'auto' }} onClick={() => setView(null)}>⤢ ย่อกลับทั้งช่วง</button>}
       </div>
       <div ref={ref} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={() => setDrag(null)}
         style={{ position: 'relative', height, background: 'var(--bg3)', borderRadius: 4, overflow: 'hidden', cursor: 'zoom-in', touchAction: 'none', userSelect: 'none' }}
@@ -280,20 +280,43 @@ export function LossWaterfall({ o }) {
   );
 }
 
-/** ยอดรายชั่วโมง เทียบเป้า (เวลาแผนของชั่วโมง ÷ CT) — แกนเดียว */
-export function HourlyChart({ buckets = [] }) {
-  const data = buckets.map(b => ({
+const STATE_KINDS = ['run', 'minor', 'fault', 'unplanned', 'idle', 'planned_stop', 'no_plan', 'comm_loss', 'other'];
+
+/** ยอดรายชั่วโมง เทียบเป้า + (ก) นาทีรายสถานะของชั่วโมงเดียวกัน — 2 กราฟซ้อนแกน X เดียว (UI §6.19 · ล็อกความกว้างแกน Y เท่ากัน)
+ *  + (ข) การ์ดสรุปของช่วงที่ดู · สูตรอยู่ machineOee.js (hourlySummary / hourlyStateMinutes) */
+export function HourlyChart({ buckets = [], segments = null }) {
+  const sum = useMemo(() => hourlySummary(buckets), [buckets]);
+  const stateMin = useMemo(() => (segments ? hourlyStateMinutes(segments, buckets) : null), [segments, buckets]);
+  const data = buckets.map((b, i) => ({
     h: hm(b.hourMs), good: b.qty == null ? null : Math.max(0, b.qty - (b.ng || 0)), ng: b.ng, target: b.target,
     oee: b.oee == null ? null : Math.round(b.oee * 100),
+    ...(stateMin ? Object.fromEntries(Object.entries(stateMin[i]).map(([k, v]) => [`m_${k}`, Math.round(v * 10) / 10])) : {}),
   }));
+  const kinds = stateMin ? STATE_KINDS.filter(k => stateMin.some(m => m[k] > 0)) : [];
+  const yW = alignedYWidth([...data.map(d => Math.max(d.target || 0, (d.good || 0) + (d.ng || 0))), 60].map(v => String(Math.ceil(v))));
+  const tile = (label, value, sub, color = 'var(--text)') => (
+    <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 10px', minWidth: 0 }}>
+      <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{label}</div>
+      <div style={{ fontSize: 22, fontWeight: 800, color }}>{value}</div>
+      {sub && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{sub}</div>}
+    </div>
+  );
+  const fmtN = (v) => (v == null ? '–' : Math.round(v).toLocaleString());
   return (
-    <div>
-      <div style={{ width: '100%', height: 220 }}>
+    <div style={{ display: 'grid', gap: 8 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8 }}>
+        {tile('ชิ้นดี (เครื่อง)', fmtN(sum.good), `NG หน้าเครื่อง ${sum.ng}`)}
+        {tile('เป้า (เวลาแผน ÷ CT)', fmtN(sum.target), sum.target == null ? 'ยังไม่รู้ CT บางชั่วโมง' : 'ชิ้น · เฉพาะชั่วโมงที่ผ่านไปแล้ว')}
+        {tile('ทำได้', sum.achieve == null ? '–' : `${Math.round(sum.achieve * 100)}%`, 'ของเป้า', toneOfPct(sum.achieve, 0.85))}
+        {tile('เฉลี่ย', sum.perHour == null ? '–' : sum.perHour.toFixed(1), 'ชิ้น / ชั่วโมงแผน')}
+      </div>
+      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>ชิ้น / ชั่วโมง</div>
+      <div style={{ width: '100%', height: 200 }}>
         <ResponsiveContainer>
-          <ComposedChart data={data} margin={CHART_MARGIN}>
+          <ComposedChart data={data} margin={CHART_MARGIN} syncId={stateMin ? 'jig-hourly' : undefined}>
             <CartesianGrid stroke="var(--border)" vertical={false} />
-            <XAxis dataKey="h" tick={axisTick()} />
-            <YAxis width="auto" tick={axisTick()} allowDecimals={false} />
+            <XAxis dataKey="h" tick={stateMin ? false : axisTick()} height={stateMin ? 4 : undefined} />
+            <YAxis width={yW} tick={axisTick()} allowDecimals={false} />
             <Tooltip {...tooltipProps()} />
             <Bar dataKey="good" name="ชิ้นดี (เครื่อง)" stackId="q" fill="var(--green)" isAnimationActive={false} />
             <Bar dataKey="ng" name="NG (หน้าเครื่อง)" stackId="q" fill="var(--red)" isAnimationActive={false} />
@@ -301,10 +324,74 @@ export function HourlyChart({ buckets = [] }) {
           </ComposedChart>
         </ResponsiveContainer>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${data.length || 1}, 1fr)`, fontSize: 11, color: 'var(--muted)', textAlign: 'center', paddingLeft: 40 }}>
-        {data.map(d => <span key={d.h}>{d.oee == null ? '–' : `${d.oee}%`}</span>)}
+      {stateMin && (<>
+        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>นาทีในแต่ละสถานะ (เวลาเดียวกับกราฟบน)</div>
+        <div style={{ width: '100%', height: 170 }}>
+          <ResponsiveContainer>
+            <ComposedChart data={data} margin={CHART_MARGIN} syncId="jig-hourly">
+              <CartesianGrid stroke="var(--border)" vertical={false} />
+              <XAxis dataKey="h" tick={axisTick()} />
+              <YAxis width={yW} tick={axisTick()} allowDecimals={false} domain={[0, 60]} ticks={[0, 30, 60]} />
+              <Tooltip {...tooltipProps()} formatter={(v) => [`${v} นาที`]} />
+              {kinds.map(k => <Bar key={k} dataKey={`m_${k}`} name={kindMeta(k).label} stackId="s" fill={kindMeta(k).color} isAnimationActive={false} />)}
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      </>)}
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${data.length || 1}, 1fr)`, fontSize: 11, color: 'var(--muted)', textAlign: 'center', paddingLeft: yW + CHART_MARGIN.left, paddingRight: CHART_MARGIN.right }}>
+        {data.map(d => <span key={d.h} style={{ overflow: 'hidden' }}>{d.oee == null ? '–' : `${d.oee}%`}</span>)}
       </div>
-      <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>แถวล่าง = OEE ของชั่วโมง (ชิ้นดี × CT ÷ เวลาแผนของชั่วโมง) · เป้าว่าง = ยังไม่รู้ CT</div>
+      <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>
+        แถวล่าง = OEE ของชั่วโมง (ชิ้นดี × CT ÷ เวลาแผนของชั่วโมง) · เป้าว่าง = ยังไม่รู้ CT{stateMin ? ' · ชี้ชั่วโมงเดียวกันได้ทั้ง 2 กราฟ' : ''}
+      </div>
+    </div>
+  );
+}
+
+/** 📅 (ค) ยอดรายวัน เทียบชิ้นที่ควรทำได้ — แท่งซ้อน ดี/NG/ยังขาด (เทา) · tooltip = เวลารายสถานะของวันนั้น · คลิก = เปิดทั้งวัน
+ *  แถวจาก dailyCapacityRows() (สูตรอยู่ machineOee.js) · แท่งต่อเนื่อง ไม่ปัดเป็นช่องละ N ชิ้น (วันยอดน้อยต้องไม่หาย) */
+export function DailyCapacityChart({ rows = [], onPick }) {
+  const fmtM = (m) => fmtHM(m * 60);
+  const Tip = ({ active, payload }) => {
+    const d = active && payload?.[0]?.payload;
+    if (!d) return null;
+    const line = (color, v, label) => (
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        <span style={{ width: 9, height: 9, borderRadius: 2, background: color, flex: 'none' }} />
+        <b style={{ minWidth: 64 }}>{v}</b><span style={{ color: 'var(--muted)' }}>{label}</span>
+      </div>
+    );
+    return (
+      <div style={{ background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 6, padding: '8px 10px', fontSize: 12, color: 'var(--text)', boxShadow: 'var(--shadow-float)', display: 'grid', gap: 2 }}>
+        <div style={{ fontWeight: 700, marginBottom: 2 }}>{d.d}{onPick ? ' · คลิกเพื่อดูทั้งวัน' : ''}</div>
+        {line('var(--green)', d.good.toLocaleString(), `ชิ้นดี${d.cap != null ? ` · ควรได้ ${d.cap.toLocaleString()}${d.achieve != null ? ` (${Math.round(d.achieve * 100)}%)` : ''}` : ' · ไม่รู้ CT บางกะ'}`)}
+        {d.ng > 0 && line('var(--red)', d.ng.toLocaleString(), 'NG หน้าเครื่อง')}
+        {line('var(--border2)', fmtM(d.planned), 'เวลาแผนผลิต')}
+        {line(KIND_META.run.color, fmtM(d.run), KIND_META.run.label)}
+        {d.minor > 0 && line(KIND_META.minor.color, fmtM(d.minor), KIND_META.minor.label)}
+        {d.fault > 0 && line(KIND_META.fault.color, fmtM(d.fault), KIND_META.fault.label)}
+        {d.unplanned > 0 && line(KIND_META.unplanned.color, fmtM(d.unplanned), KIND_META.unplanned.label)}
+        {d.idle > 0 && line(KIND_META.idle.color, fmtM(d.idle), KIND_META.idle.label)}
+        {d.breakOver > 0 && line(KIND_META.break_over.color, fmtM(d.breakOver), KIND_META.break_over.label)}
+        {line(KIND_META.planned_stop.color, fmtM(d.excluded), 'หยุดตามแผน / พัก / ไม่มีแผน (ไม่นับในเวลาแผน)')}
+      </div>
+    );
+  };
+  if (!rows.length) return <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>ไม่มีข้อมูลจากเครื่องในช่วงนี้</div>;
+  const click = onPick ? (_, i) => rows[i] && onPick(rows[i].d) : undefined;
+  return (
+    <div style={{ width: '100%', height: 260 }}>
+      <ResponsiveContainer>
+        <ComposedChart data={rows} margin={CHART_MARGIN} style={{ cursor: onPick ? 'pointer' : 'default' }}>
+          <CartesianGrid stroke="var(--border)" vertical={false} />
+          <XAxis dataKey="label" tick={axisTick()} />
+          <YAxis width="auto" tick={axisTick()} allowDecimals={false} />
+          <Tooltip content={<Tip />} cursor={tooltipProps().cursor} />
+          <Bar dataKey="good" name="ชิ้นดี (เครื่อง)" stackId="q" fill="var(--green)" isAnimationActive={false} onClick={click} maxBarSize={56} />
+          <Bar dataKey="ng" name="NG (หน้าเครื่อง)" stackId="q" fill="var(--red)" isAnimationActive={false} onClick={click} maxBarSize={56} />
+          <Bar dataKey="ghost" name="ยังขาดจากที่ควรได้" stackId="q" fill="var(--border2)" fillOpacity={0.55} isAnimationActive={false} onClick={click} maxBarSize={56} />
+        </ComposedChart>
+      </ResponsiveContainer>
     </div>
   );
 }
@@ -379,6 +466,7 @@ export function JigDrilldown({ j, trendRows = null, target = 0.85 }) {
   const o = j.oee;
   const why = (o.why || []).filter(w => WHY_TEXT[w]);
   const ordersDone = j.orders.filter(x => x.status === 'confirmed');
+  const span = j.win.endMs - j.win.startMs > 13 * 3600000 ? 'ทั้งวัน' : 'กะนี้';
   const sec = (title, sub, body) => (
     <div style={{ ...card }}>
       <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{title}</div>
@@ -389,7 +477,7 @@ export function JigDrilldown({ j, trendRows = null, target = 0.85 }) {
   return (
     <div style={{ display: 'grid', gap: 12, alignContent: 'start' }}>
       <JigKpiRow items={[
-        { label: 'OEE กะนี้ (จากเครื่อง)', value: fmtPct(o.oee), color: toneOfPct(o.oee, target), sub: `เป้า ${Math.round(target * 100)}% · สูตร ESM` },
+        { label: `OEE ${span} (จากเครื่อง)`, value: fmtPct(o.oee), color: toneOfPct(o.oee, target), sub: `เป้า ${Math.round(target * 100)}% · สูตร ESM` },
         { label: 'Availability', value: fmtPct(o.A), color: toneOfPct(o.A, target), sub: `เดิน ${fmtHM(o.operatingSec)} / แผน ${fmtHM(o.plannedSec)}` },
         { label: 'Performance', value: fmtPct(o.P), color: toneOfPct(o.P, target), sub: o.ct ? `CT ${Math.round(o.ct * 10) / 10} s (พาร์ทในใบ) · เฉลี่ย ${o.avgCycleSec?.toFixed(1) ?? '–'} s` : 'ไม่รู้ CT' },
         { label: 'Quality', value: fmtPct(o.Q), color: toneOfPct(o.Q, 0.99), sub: o.ngPeople == null ? 'ไม่มีใบ ⇒ ไม่รู้ NG ที่คนตัดสิน' : `NG คนตัดสิน ${o.ngPeople} · หน้าเครื่อง ${o.ngMachine}` },
@@ -402,18 +490,17 @@ export function JigDrilldown({ j, trendRows = null, target = 0.85 }) {
           {o.pOver && <div style={{ color: 'var(--red)' }}>⚠ %P เกิน 100% (ตัดไว้) — CT ในระบบอาจยาวกว่าที่จิ๊กทำได้จริง</div>}
         </div>
       )}
-      {sec('สถานะตลอดกะ', `${hm(j.win.startMs)}–${hm(j.win.endMs)} · ชี้ที่แถบเพื่อดูเวลาและสาเหตุ · อัปเดตล่าสุด ${j.lastEventAt ? hm(j.lastEventAt) : '–'}`, (
+      {sec(span === 'ทั้งวัน' ? 'สถานะตลอดวัน' : 'สถานะตลอดกะ', `${hm(j.win.startMs)}–${hm(j.win.endMs)} · ลากบนแถบเพื่อซูม · คลิกเพื่อดูช่วง ±15 นาที · ชี้เพื่อดูเวลาและสาเหตุ · อัปเดตล่าสุด ${j.lastEventAt ? hm(j.lastEventAt) : '–'}`, (
         <div style={{ display: 'grid', gap: 8 }}>
-          <ZoomStateStrip segments={j.segments} startMs={j.win.startMs} endMs={j.win.endMs} />
+          <ZoomStateStrip key={`${j.win.startMs}-${j.win.endMs}`} segments={j.segments} startMs={j.win.startMs} endMs={j.win.endMs} />
         </div>
       ))}
+      {sec('ยอดผลิต & สถานะเครื่องรายชั่วโมง', 'บน: ชิ้นดี + NG จากเครื่อง เทียบเป้า (เวลาแผนของชั่วโมง ÷ CT พาร์ทในใบ) · ล่าง: แต่ละชั่วโมงหมดเวลาไปกับสถานะไหน', <HourlyChart buckets={j.buckets} segments={j.segments} />)}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 12, alignItems: 'start' }}>
-        {sec('ยอดผลิตรายชั่วโมง', 'ชิ้นดี + NG จากเครื่อง เทียบเป้า (เวลาแผนของชั่วโมง ÷ CT พาร์ทในใบ)', <HourlyChart buckets={j.buckets} />)}
-        {sec('OEE Loss กะนี้', 'เวลาแผนหายไปไหนบ้าง (Six Big Losses แบบย่อ)', <LossWaterfall o={o} />)}
+        {sec(`OEE Loss ${span}`, 'เวลาแผนหายไปไหนบ้าง (Six Big Losses แบบย่อ)', <LossWaterfall o={o} />)}
+        {sec(`Pareto สาเหตุการหยุด ${span}`, `Alarm/Idle/หยุดนอกแผน ≥ 2 นาที + หยุดสั้น (นับใน Performance) · หยุดสั้น ${o.counts.minor} ครั้ง ${fmtMin(o.minorSec)}`, <StopParetoChart pareto={j.pareto} />)}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 12, alignItems: 'start' }}>
-        {sec('Pareto สาเหตุการหยุด กะนี้', `Alarm/Idle/หยุดนอกแผน ≥ 2 นาที + หยุดสั้น (นับใน Performance) · หยุดสั้น ${o.counts.minor} ครั้ง ${fmtMin(o.minorSec)}`, <StopParetoChart pareto={j.pareto} />)}
-        {sec('ใบผลิตบนจิ๊กนี้ (ESM)', 'เป้า/ยอดยืนยันจากพนักงาน เทียบชิ้นที่เครื่องนับ — ตัวเชื่อม = เครื่องที่เลือกตอนเปิดใบ', (
+      {sec('ใบผลิตบนจิ๊กนี้ (ESM)', 'เป้า/ยอดยืนยันจากพนักงาน เทียบชิ้นที่เครื่องนับ — ตัวเชื่อม = เครื่องที่เลือกตอนเปิดใบ', (
           j.orders.length ? (
             <div style={{ display: 'grid', gap: 4, fontSize: 12.5 }}>
               {j.orders.map(x => (
@@ -432,7 +519,6 @@ export function JigDrilldown({ j, trendRows = null, target = 0.85 }) {
             </div>
           ) : <div style={{ fontSize: 12.5, color: 'var(--amber)' }}>{WHY_TEXT.no_order}</div>
         ))}
-      </div>
       {sec('การหยุดล่าสุด', 'ไม่รวมหยุดสั้น และช่วงไม่มีแผน', <StopTable stops={j.stops} />)}
       {trendRows && sec('แนวโน้มรายกะ', `A / P / Q / OEE จากเครื่อง · ${trendRows.length} กะล่าสุด`, <ShiftTrendChart rows={trendRows} target={target} />)}
     </div>

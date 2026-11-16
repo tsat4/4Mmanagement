@@ -38,7 +38,9 @@ const tms = (v) => {
 /** กรอบกะ ESM เป็น epoch ms — เช้า 08–20 · ดึก 20–08 (เวลาไทยตรงๆ) */
 export function shiftBounds(workDate, shift) {
   const base = Date.parse(`${workDate}T00:00:00+07:00`);
-  if (!Number.isFinite(base) || !(shift === 'day' || shift === 'night')) return null;
+  if (!Number.isFinite(base)) return null;
+  if (shift === 'all') return { startMs: base + 8 * H, endMs: base + 32 * H };   // (ข) ทั้งวัน = 08:00 → 08:00 วันถัดไป (เช้า+ดึก)
+  if (!(shift === 'day' || shift === 'night')) return null;
   const s = base + (shift === 'night' ? 20 : 8) * H;
   return { startMs: s, endMs: s + 12 * H };
 }
@@ -326,6 +328,51 @@ export function timeTicks(a, b) {
   const out = [];
   for (let t = Math.ceil(a / st) * st; t <= b; t += st) out.push(t);
   return out;
+}
+
+/** 📊 (ก) นาทีรายสถานะของแต่ละชั่วโมง — วางใต้กราฟชิ้นรายชั่วโมง (แกน X เดียวกัน) · ชั่วโมงอนาคต = {} */
+export function hourlyStateMinutes(segments = [], buckets = []) {
+  return (buckets || []).map(b => (b.future ? {} : segmentMinutesIn(segments, b.hourMs, b.hourMs + H)));
+}
+
+/** 🎯 (ข) สรุปยอดของช่วงที่ดู (กะ/ทั้งวัน) จากถังรายชั่วโมง — ชิ้นดีเครื่อง · เป้า (เวลาแผน ÷ CT) · ทำได้ % · เฉลี่ย/ชม.
+ *  เป้า null = ยังไม่รู้ CT (ห้ามโชว์ 0) · นับเฉพาะชั่วโมงที่ผ่านไปแล้ว */
+export function hourlySummary(buckets = []) {
+  const past = (buckets || []).filter(b => !b.future);
+  const hasQty = past.some(b => b.qty != null);
+  const good = hasQty ? past.reduce((s, b) => s + Math.max(0, (b.qty || 0) - (b.ng || 0)), 0) : null;
+  const ng = past.reduce((s, b) => s + (b.ng || 0), 0);
+  const plannedSec = past.reduce((s, b) => s + (b.plannedSec || 0), 0);
+  const tKnown = past.length > 0 && past.every(b => b.target != null);
+  const target = tKnown ? past.reduce((s, b) => s + b.target, 0) : null;
+  return {
+    good, ng, target, plannedSec,
+    achieve: good != null && target > 0 ? good / target : null,
+    perHour: good != null && plannedSec > 0 ? good / (plannedSec / 3600) : null,
+  };
+}
+
+/** 📅 (ค) ยอดรายวัน เทียบ "ชิ้นที่ควรทำได้" (เวลาแผน ÷ CT) จากแถวรายกะ (loadJigReport) — รวมทุกจิ๊ก/กะของวันนั้น
+ *  ghost = ส่วนที่ยังขาด (ควรได้ − ชิ้นทั้งหมด ≥ 0) · cap null = มีกะที่ไม่รู้ CT ⇒ ไม่วาดเงา (ห้ามเดา)
+ *  นาทีรายสถานะมาจากสูตร OEE เดียวกัน (loss หลังหักโควตาพัก) */
+export function dailyCapacityRows(rows = []) {
+  const m = new Map();
+  for (const r of rows || []) {
+    const o = r.oee || {};
+    const d = m.get(r.workDate) || { d: r.workDate, good: 0, ng: 0, cap: 0, capKnown: true, run: 0, minor: 0, fault: 0, unplanned: 0, idle: 0, breakOver: 0, excluded: 0, planned: 0, oeeRows: [] };
+    d.good += Math.max(0, (o.pieces || 0) - (o.ngMachine || 0)); d.ng += o.ngMachine || 0;
+    if (o.ct > 0) d.cap += Math.floor((o.plannedSec || 0) / o.ct); else if ((o.plannedSec || 0) > 0) d.capKnown = false;
+    const L = o.loss || {};
+    d.run += Math.max(0, (o.operatingSec || 0) - (o.minorSec || 0)) / 60; d.minor += (o.minorSec || 0) / 60;
+    d.fault += (L.fault || 0) / 60; d.unplanned += (L.unplanned || 0) / 60; d.idle += (L.idle || 0) / 60;
+    d.breakOver += (L.breakOver || 0) / 60; d.excluded += (o.excludedSec || 0) / 60; d.planned += (o.plannedSec || 0) / 60;
+    d.oeeRows.push(r);
+    m.set(r.workDate, d);
+  }
+  return [...m.values()].sort((a, b) => (a.d < b.d ? -1 : 1)).map(d => {
+    const cap = d.capKnown ? d.cap : null;
+    return { ...d, label: `${d.d.slice(8, 10)}/${d.d.slice(5, 7)}`, cap, ghost: cap == null ? null : Math.max(0, cap - d.good - d.ng), achieve: cap > 0 ? d.good / cap : null };
+  });
 }
 
 /** 🔢 ทศนิยม → % ปัด 1 ตำแหน่ง (null คงเป็น null) */
