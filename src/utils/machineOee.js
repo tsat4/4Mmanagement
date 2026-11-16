@@ -290,6 +290,9 @@ export function stopList(events = [], { startMs, endMs, limit = 200 } = {}) {
   }).filter(Boolean).sort((a, b) => b.startMs - a.startMs).slice(0, limit);
 }
 
+/** คีย์กลุ่มของช่วงหยุด — ใช้ร่วม Pareto กับรายการเจาะลึก (กดแท่งแล้วต้องได้ชุดเดียวกับที่นับในแท่ง) */
+export const stopKeyOf = (ev) => (ev?.is_minor ? 'หยุดสั้น (< 2 นาที)' : `${ev?.state}|${ev?.reason_code ?? ''}|${ev?.reason_text || ''}`);
+
 /** Pareto เวลาที่เสีย (A-loss + หยุดสั้น) แยกตามสถานะ+สาเหตุ — นาที มาก→น้อย */
 export function stopPareto(events = [], { startMs, endMs }) {
   const m = new Map();
@@ -300,12 +303,74 @@ export function stopPareto(events = [], { startMs, endMs }) {
     if (!sp) continue;
     const sec = clipSec(sp[0], sp[1], startMs, endMs);
     if (!(sec > 0)) continue;
-    const label = ev.is_minor ? 'หยุดสั้น (< 2 นาที)' : `${ev.state}|${ev.reason_code ?? ''}|${ev.reason_text || ''}`;
+    const label = stopKeyOf(ev);
     const r = m.get(label) || { key: label, state: ev.is_minor ? 'minor' : ev.state, code: ev.is_minor ? null : (ev.reason_code ?? null), text: ev.is_minor ? null : (ev.reason_text || null), min: 0, n: 0 };
     r.min += sec / 60; r.n++;
     m.set(label, r);
   }
   return [...m.values()].sort((a, b) => b.min - a.min);
+}
+
+/** 🔎 กดแท่ง Pareto ⇒ รายครั้งของสาเหตุนั้น (กฎคัดเดียวกับ stopPareto) · ใหม่ก่อน
+ *  tagNo = Map(`${source_id}|${machine_tag}` หรือ machine_tag → machineNo) สำหรับรายงานหลายจิ๊ก */
+export function stopOccurrences(events = [], key, { startMs = 0, endMs = 8.64e15, tagNo = null } = {}) {
+  const out = [];
+  for (const ev of events || []) {
+    if (!DOWN_STATES.includes(ev?.state)) continue;
+    if (ev.is_minor && ev.state === 'idle') continue;
+    if (stopKeyOf(ev) !== key) continue;
+    const sp = evSpan(ev);
+    if (!sp || !(clipSec(sp[0], sp[1], startMs, endMs) > 0)) continue;
+    out.push({
+      startMs: sp[0], endMs: sp[1], min: (sp[1] - sp[0]) / 60000, state: ev.state, code: ev.reason_code ?? null, text: ev.reason_text || null,
+      tag: ev.machine_tag || null, machineNo: tagNo ? (tagNo.get(`${ev.source_id}|${ev.machine_tag}`) ?? tagNo.get(ev.machine_tag) ?? null) : null,
+    });
+  }
+  return out.sort((a, b) => b.startMs - a.startMs);
+}
+
+/** 🔗 ผูกแต่ละครั้งกับข้อมูล ESM (16/11 · คำสั่ง user "กด Robot Error แล้วเห็นรายละเอียด")
+ *  · MAT   = ใบผลิตบนจิ๊กนั้นที่เปิดอยู่ตอนเกิด (opened_at ≤ เวลา ≤ confirmed_at/ยังเปิด) · ไม่มีใบเปิดอยู่ ⇒ ใบในกะเดียวกัน (บอก `matBy`)
+ *  · DT    = downtime ที่คนลง เครื่องเดียวกัน (หรือไม่ระบุเครื่อง) ทับช่วง ± slack (นาฬิกา PLC คลาด) — กฎเดียวกับ faultGaps
+ *  · MO    = ใบแจ้งซ่อมที่เปิดจาก DT ข้างบน (source_downtime_id) หรือ เครื่องเดียวกันและเวลาเกิด/แจ้งอยู่ในช่วง ± slack (`moBy`)
+ *  เทียบเครื่องด้วย machineKey ที่ส่งเข้ามา (keyOf) · ห้ามเดาเครื่องเมื่อ machineNo ว่าง */
+export function linkStops(occ = [], { orders = [], downtimes = [], repairs = [], keyOf = (v) => String(v || '').trim().toUpperCase(), slackMs = 10 * 60000, nowMs = Date.now() } = {}) {
+  const t = (v) => tms(v);
+  const dts = (downtimes || []).map(d => {
+    const s = t(d.started_at);
+    if (s == null) return null;
+    const e = t(d.ended_at) ?? (Number(d.duration_min) > 0 ? s + Number(d.duration_min) * 60000 : nowMs);
+    return { d, s, e: e > s ? e : s + 1, mk: d.machine_no ? keyOf(d.machine_no) : '' };
+  }).filter(Boolean);
+  return (occ || []).map(o => {
+    const mk = o.machineNo ? keyOf(o.machineNo) : null;
+    const mine = mk ? (orders || []).filter(x => x?.machine_no && keyOf(x.machine_no) === mk) : [];
+    let ords = mine.filter(x => { const a = t(x.opened_at); const b = t(x.confirmed_at) ?? nowMs; return a != null && a - slackMs <= o.startMs && o.startMs <= b + slackMs; });
+    let matBy = 'open';
+    if (!ords.length) {
+      const sb = shiftOfMs(o.startMs);
+      ords = mine.filter(x => x.production_sessions?.work_date === sb.workDate && x.production_sessions?.shift === sb.shift);
+      matBy = ords.length ? 'shift' : null;
+    }
+    const dt = mk ? dts.filter(x => (!x.mk || x.mk === mk) && x.s < o.endMs + slackMs && x.e > o.startMs - slackMs).map(x => x.d) : [];
+    const dtIds = new Set(dt.map(d => d.id));
+    const mo = mk ? (repairs || []).filter(r => {
+      if (r.source_downtime_id && dtIds.has(r.source_downtime_id)) return true;
+      if (!r.machine_no || keyOf(r.machine_no) !== mk) return false;
+      const at = t(r.occurred_at) ?? t(r.report_at);
+      return at != null && at >= o.startMs - slackMs && at <= o.endMs + slackMs;
+    }).map(r => ({ ...r, moBy: r.source_downtime_id && dtIds.has(r.source_downtime_id) ? 'downtime' : 'time' })) : [];
+    return { ...o, shift: shiftOfMs(o.startMs), mats: [...new Set(ords.map(x => x.mat_no).filter(Boolean))], matBy, downtimes: dt, repairs: mo };
+  });
+}
+
+/** วันทำงาน/กะของเวลา (เช้า 08–20 · ดึก 20–08 ⇒ ก่อน 08:00 = วันก่อนหน้า) — เวลาไทยตรงๆ */
+export function shiftOfMs(ms) {
+  const local = new Date(ms + BKK);
+  const h = local.getUTCHours();
+  const wd = new Date(ms + BKK - 8 * H);
+  const workDate = `${wd.getUTCFullYear()}-${String(wd.getUTCMonth() + 1).padStart(2, '0')}-${String(wd.getUTCDate()).padStart(2, '0')}`;
+  return { workDate, shift: h >= 8 && h < 20 ? 'day' : 'night' };
 }
 
 /** 🔍 แถบสถานะแบบซูมได้ — นาทีรายสถานะในช่วงที่ดูอยู่ (ตัดตามกรอบ) · คืน { [kind]: นาที } */
