@@ -58,6 +58,16 @@ function stripComments(src) {
    scan: โฟลเดอร์ที่ตรวจ · ext: นามสกุล · re: regex (global) · allow: ไฟล์ที่ยกเว้น + เหตุผล */
 const RULES = [
   {
+    id: 'wf-tables-write-via-rpc',
+    scan: ['src'], ext: ['.jsx', '.js'],
+    /* จับการเขียนตาราง e-Workflow ตรงจาก client: from('wf_…').insert/update/upsert/delete */
+    re: /from\(\s*['"`]wf_(defs|versions|instances|tasks|actions)['"`]\s*\)\s*\.\s*(insert|update|upsert|delete)\b/g,
+    why: '🧩 e-Workflow (13/11): ตาราง wf_* ไม่มี policy เขียนเลย (ตั้งใจ) — การเปลี่ยนขั้น/สถานะต้องผ่าน RPC ที่ตรวจผู้กด + '
+       + 'compare-and-swap (step_rev) + ขอบเขตส่วนงานฝั่ง DB · เขียนตรง = ได้ 42501 หรือถ้ามีคนไปเปิด policy = ข้ามขั้นได้',
+    fix: 'เรียก supabase.rpc(\'wf_save_draft\' | \'wf_request_publish\' | \'wf_review_publish\' | \'wf_start\' | \'wf_act\' | \'wf_resubmit\' | \'wf_cancel\') — 📄 docs/modules/e-workflow.md',
+    allow: {},
+  },
+  {
     id: 'uom-write-via-normuom',
     scan: ['src'], ext: ['.jsx', '.js'],
     /* จับ default หน่วยแบบเดิม: `uom: x || 'EA'` · `unit: x || 'Pcs'` · `uom: 'pcs'` */
@@ -6937,6 +6947,40 @@ test('📥 carry-debt-no-session-window — ของค้างต้องถ
     + '        📄 docs/modules/daily-report.md §ของค้าง\n');
 });
 
+test('🧺 receipt-group-keeps-slips — ยุบใบเพื่อ "กด" ได้ แต่ห้ามยุบการเก็บ/การปัน', () => {
+  const bad = [];
+  const read = (rel) => stripComments(readFileSync(join(ROOT, rel), 'utf8'));
+  const q = read('src/components/StockReceiptQueue.jsx');
+  const u = read('src/utils/stockReceipts.js');
+
+  /* 🔴 user เคาะ 22/10 "เก็บรายใบไว้ กางดูได้" — ยุบ 169 ใบแล้วตามรอยกลับไม่ได้ = สอบกลับออเดอร์ตาย */
+  if (/stock_receipt_confirm_group/.test(q) && !/กางดูรายใบ/.test(q))
+    bad.push('src/components/StockReceiptQueue.jsx (รับทั้งกองแต่ไม่มีปุ่มกางดูรายใบ — สอบกลับรายออเดอร์หาย)');
+
+  /* 🔴 ยอดไม่ตรงต้องปันผ่าน allocateFifo เท่านั้น — เฉลี่ยเองในหน้า = ได้เศษทศนิยมของ "ชิ้น" */
+  if (/stock_receipt_confirm_group/.test(q) && !/allocateFifo\(/.test(q))
+    bad.push('src/components/StockReceiptQueue.jsx (ไม่ได้ใช้ allocateFifo — การปันยอดต้องตรงกับฝั่ง DB)');
+
+  /* 🔴 ห้ามวนยิง RPC ใบเดี่ยวแทนการรับทั้งกอง (169 ครั้ง = ล้มกลางคัน ครึ่งรับครึ่งไม่รับ) */
+  if (/\.(map|forEach)\([^)]{0,80}=>[\s\S]{0,200}rpc\('stock_receipt_confirm'/.test(q))
+    bad.push('src/components/StockReceiptQueue.jsx (วนยิง stock_receipt_confirm ทีละใบ — ต้องใช้ RPC กอง)');
+
+  /* 🔴 การปันต้องเป็นจำนวนเต็ม — ของนับเป็นชิ้น */
+  const alloc = (u.match(/export function allocateFifo[\s\S]{0,1200}?\n\}/) || [''])[0];
+  if (!alloc) bad.push('src/utils/stockReceipts.js (ไม่มี allocateFifo แล้ว — จอกับ DB จะปันคนละแบบ)');
+  else if (!/Math\.floor\(/.test(alloc) || !/Math\.min\(/.test(alloc))
+    bad.push('src/utils/stockReceipts.js (allocateFifo ไม่ได้ปัดเป็นจำนวนเต็ม/ไม่ได้ตัดที่ยอดของใบ)');
+
+  /* 🔴 ตัวเดิมต้องอยู่ — โหมด "ทีละใบ" ใช้อยู่ และเป็นทางถอยถ้า RPC กองถูก rollback */
+  if (!/rpc\('stock_receipt_confirm'/.test(q))
+    bad.push('src/components/StockReceiptQueue.jsx (ถอด stock_receipt_confirm ใบเดี่ยวออก — ไม่เหลือทางถอย)');
+
+  assert.deepEqual(bad, [], 'ยุบใบรอรับผิดกติกา:\n' + bad.join('\n')
+    + '\nwhy: 22/10 พาร์ท 20058498 ค้าง 169 ใบ/3 วัน คิวตายเพราะการ์ดต่อใบ · FG เลยติดลบ −630'
+    + '\nfix: ยุบด้วย groupReceipts + ปันด้วย allocateFifo + ปิดใบรายตัวผ่าน RPC `stock_receipt_confirm_group`'
+    + ' และต้องมีปุ่ม "กางดูรายใบ" เสมอ');
+});
+
 test('🛡️ order-close-single-entry — "เวลาปิดของใบผลิต" ต้องมีสูตรเดียว', () => {
   const bad = [];
   const oee = stripComments(readFileSync(join(ROOT, 'src/utils/oee.js'), 'utf8'));
@@ -7589,6 +7633,47 @@ test('🫙 manual-open-product-empty-reason — ช่องเลือกส�
   assert.deepEqual(bad, [], '\n\n❌ ช่องเลือกสินค้ากลับไปบอกสาเหตุเดียว:\n  ' + bad.join('\n  ')
     + '\n\n   ทำไมสำคัญ: "ไม่มีสินค้า register" กับ "มีแต่ถูกปิดใช้งาน" แก้คนละทางกันคนละคน\n'
     + '              บอกผิด = หน้างานรอของที่ไม่ต้องรอ และของที่ต้องทำไม่มีใครทำ\n');
+});
+
+test('🧲 plan-drag-layer1-only — ลากจัดลำดับได้เฉพาะ "กรอบแผน" ห้ามลากกล่องใบคัมบัง', () => {
+  const bad = [];
+  const read = (rel) => stripComments(readFileSync(join(ROOT, rel), 'utf8'));
+  const frame = read('src/components/PlanFrameRow.jsx');
+  const mg = read('src/pages/Management.jsx');
+
+  /* 🔴 Layer 2 (ใบคัมบังจริง) เรียงจาก confirmed_at / เวลาเปิดใบ = ข้อเท็จจริง
+     ลากได้เมื่อไหร่ = บอร์ดโกหกว่าอดีตเกิดคนละลำดับ (กฎ Layer1/Layer2 ใน CLAUDE.md) */
+  const board = (mg.match(/\{productRows\.map\(\(row\)[\s\S]{0,12000}/) || [''])[0];
+  if (/draggable=\{(?!false)/.test(board) && !/PlanFrameRow/.test(board))
+    bad.push('src/pages/Management.jsx (แถวใบคัมบังถูกทำให้ลากได้ — Layer 2 คือสิ่งที่เกิดขึ้นจริง ห้ามลาก)');
+
+  /* 🔴 ลำดับใหม่ต้องมาจาก reorderTo ตัวเดียวกับจอวางแผน ห้ามเขียนสูตรสลับเองในคอมโพเนนต์ */
+  if (/draggable=/.test(frame) && !/reorderTo\(/.test(frame))
+    bad.push('src/components/PlanFrameRow.jsx (ลากได้แต่ไม่ได้ใช้ reorderTo — สูตรลำดับต้องมีชุดเดียว)');
+
+  /* 🔴 ลากข้ามกะ = เปลี่ยนกรอบเวลา/ทีม ไม่ใช่สลับลำดับ — ต้องมีด่านกันไว้ */
+  if (/draggable=/.test(frame) && !/shiftKey !== shiftKey|d\.shiftKey !== shiftKey/.test(frame))
+    bad.push('src/components/PlanFrameRow.jsx (ไม่ได้กันการลากข้ามกะ)');
+
+  /* 🔴 บอร์ดไม่มีปุ่มบันทึก = เขียนทันที ⇒ ต้องนับแถว (RLS ปฏิเสธ UPDATE = 0 แถว ไม่มี error) */
+  const h = (mg.match(/const handlePlanReorder[\s\S]{0,1800}?\n  \}, \[/) || [''])[0];
+  if (!h) bad.push('src/pages/Management.jsx (ไม่มี handlePlanReorder แล้ว — ลากบนบอร์ดจะไม่ถูกบันทึก)');
+  else {
+    if (!/checkWriteRows\(/.test(h))
+      bad.push('src/pages/Management.jsx (handlePlanReorder ไม่ได้นับแถว — ลากแล้วไม่ขยับโดยไม่มี error)');
+    if (!/production_plan_lots/.test(h))
+      bad.push('src/pages/Management.jsx (handlePlanReorder ไม่ได้เขียน production_plan_lots)');
+    if (!/before\.get\(l\.id\) !== l\.seq/.test(h))
+      bad.push('src/pages/Management.jsx (ยิงอัปเดตทุกล็อตแม้ seq ไม่เปลี่ยน — เขียนทับงานกะอื่นโดยไม่จำเป็น)');
+  }
+  /* 🔴 สิทธิ์ต้องผ่าน can()/canSeeded ห้าม hardcode role */
+  if (!/canSeeded\('production_plan', 'write', role\)/.test(mg))
+    bad.push('src/pages/Management.jsx (สิทธิ์ลากแผนไม่ได้ผ่าน canSeeded(production_plan, write))');
+
+  assert.deepEqual(bad, [], 'ลากจัดแผนผิดกติกา:\n' + bad.join('\n')
+    + '\nwhy: บอร์ดแสดง 2 ชั้น — กรอบแผน (Layer 1 แก้ได้) กับใบคัมบังจริง (Layer 2 คือข้อเท็จจริง)'
+    + '\nfix: ลากเฉพาะ PlanFrameRow · ลำดับจาก reorderTo() · เขียน seq พร้อม checkWriteRows()'
+    + '\n     📄 docs/modules/production-plan.md §ลากจัดแผนจากบอร์ด');
 });
 
 /* ═══ 🔧 ขั้น 4 ของใบ JIG/DIE เป็นของหัวหน้าแผนกช่าง — ห้ามลืมส่ง `toolTeam` ═══  2026-10-27
@@ -10432,6 +10517,35 @@ test('🛡️ DailyReport: ด่าน poka-yoke ตอนลงยอด + ก
     /export function decidedDtLogs\(/, '\n\n❌ decidedDtLogs ต้องอยู่ใน utils (pure) ไม่ใช่ในหน้า\n')
 })
 
+test('🛡️ bom-direct-demand-batch — ฝั่งจอห้ามเรียก fn_bom_direct_demand ทีละ MAT', () => {
+  /* บั๊กที่เคยเกิดจริง (วัด 10-11/11/2026): `src/lib/lineDemandSync.js` เขียนว่า
+       Promise.all(mats.map(m => supabaseDR.rpc('fn_bom_direct_demand', { p_fg_mat: m })))
+     = **1 คำขอ HTTP ต่อ 1 MAT (N+1)** คูณจำนวนจอที่เปิดอยู่
+     ⇒ `rpc/fn_bom_direct_demand` ถูกเรียก **25,512 ครั้ง/วัน = 59% ของ POST ทั้งหมดฝั่ง DR**
+     (ใบผลิตที่เปิดอยู่ 29 MAT = 29 คำขอ ต่อการโหลด 1 รอบ ต่อ 1 จอ)
+
+     แก้ด้วย `fn_bom_direct_demand_many(text[])` (migration 20261113 · DR) ที่ `cross join lateral`
+     เรียกฟังก์ชันเดิมทีละ MAT ⇒ ผลเหมือนเดิมเป๊ะ (พิสูจน์: 243 สินค้า = 476 แถว ต่าง 0 แถว)
+     เรียกผ่าน `bomKidsOf()` ใน `src/lib/lineDemandSync.js` ซึ่งแบ่งก้อน + เช็คเพดาน 1000 แถว
+
+     🔴 ตัวเดิม `fn_bom_direct_demand(text)` **ยังต้องอยู่** — trigger `fn_explode_child_demand`
+        ใช้ตอน confirm ใบผลิต · ห้ามถอด · ห้ามไว้แค่ "ห้ามมีชื่อนี้ในรีโป" */
+  const hits = [];
+  for (const f of walk(join(ROOT, 'src'), ['.js', '.jsx'])) {
+    const src = stripComments(readFileSync(f, 'utf8'));
+    // จับเฉพาะการเรียก RPC ตัว "ทีละ MAT" จากฝั่งจอ — ตัว _many ไม่เข้าข่าย
+    if (/\.rpc\(\s*['"`]fn_bom_direct_demand['"`]/.test(src)) hits.push(relative(ROOT, f));
+  }
+  assert.deepEqual(hits, [],
+    '\n\n❌ ไฟล์ด้านล่างเรียก `fn_bom_direct_demand` (ทีละ MAT) จากฝั่งจอ\n'
+    + '   ทำไมพัง: เรียกใน loop/map = 1 คำขอ HTTP ต่อ 1 MAT คูณจำนวนจอที่เปิด\n'
+    + '   (วัด 10-11/11/2026: 25,512 ครั้ง/วัน = 59% ของ POST ทั้งหมดฝั่ง DR จากจุดเดียว)\n'
+    + '   แก้ยังไง: ใช้ `bomKidsOf(mats)` จาก `src/lib/lineDemandSync.js`\n'
+    + '        (ยิง `fn_bom_direct_demand_many` เป็นก้อน + เช็คเพดาน 1000 แถว · ผลเหมือนเดิมเป๊ะ)\n'
+    + '   🔴 ฟังก์ชันเดิมฝั่ง DB ยังต้องอยู่ — trigger fn_explode_child_demand ใช้ตอน confirm ใบ\n\n'
+    + hits.map(h => '   • ' + h).join('\n') + '\n');
+});
+
 /* ═══ 🚫 4M ห้ามอนุมัติใบตัวเอง / ห้ามคนเดียวเซ็นทั้ง SV+QA (2026-11-13 · คำสั่ง user) ═════════
    คู่กับ trigger `protect_four_m_status()` (20261113_four_m_no_self_approve_main.sql) */
 test('🛡️ 4M: ปุ่มอนุมัติต้องผ่าน fourMSelfBlock ทั้งขั้น SV และ QA', () => {
@@ -10627,6 +10741,66 @@ test('🔧 dt-mb-flag-three-state — ธง "เครื่องเสีย�
     + '   ซ่อน = คนอ่านคิดว่าติ๊กครบแล้ว ทั้งที่ยังไม่มีใครตัดสิน\n');
 });
 
+test('🖼️ plan-slip-frame-single-entry — กรอบ "คิวตามอุดมคติ" ต้องมีสูตร/ตัววาดชุดเดียว', () => {
+  const bad = [];
+  const read = (rel) => stripComments(readFileSync(join(ROOT, rel), 'utf8'));
+  const pages = ['src/pages/Management.jsx', 'src/pages/Dashboard.jsx'];
+
+  for (const rel of pages) {
+    const src = read(rel);
+    /* 🔴 ห้ามคิดพิกัดกรอบเองในหน้า — เดิมก๊อปไว้ 2 หน้าแล้ว "สีเพี้ยนกัน" โดยไม่มีใครรู้ */
+    if (/planSlipped\s*=\s*\(item\.startMs - item\.planStartMs\)/.test(src))
+      bad.push(`${rel} (คิด planSlipped เองในหน้า — ต้องใช้ planFramePct() จาก utils/heijunkaQueue.js)`);
+    /* 🔴 ห้ามวาดกรอบเอง — ต้องผ่าน <PlanSlipFrame> ตัวเดียว */
+    if (/planSlipped \? 2 : 1/.test(src))
+      bad.push(`${rel} (วาดกรอบเองในหน้า — ต้องใช้ <PlanSlipFrame>)`);
+    if (/planFramePct\(/.test(src) && !/<PlanSlipFrame\b/.test(src))
+      bad.push(`${rel} (คิดพิกัดแล้วแต่ไม่ได้วาดด้วย <PlanSlipFrame>)`);
+  }
+
+  const frame = read('src/components/PlanSlipFrame.jsx');
+  /* 🔴 สีต้องมาจาก token — ฮาร์ดโค้ดสีธีมมืด (#e5e7eb) ทำให้ใบที่ "หลุดแผน" หายไปบนธีมสว่าง
+     = สัญญาณกับสิ่งรบกวนสลับที่กัน (เจอจากภาพหน้าจอ user 13/11) */
+  if (/#[0-9a-fA-F]{3,8}\b/.test(frame))
+    bad.push('src/components/PlanSlipFrame.jsx (มีสีดิบ — ต้องใช้ var(--text)/var(--muted) เท่านั้น)');
+  if (!/var\(--text\)/.test(frame) || !/var\(--muted\)/.test(frame))
+    bad.push('src/components/PlanSlipFrame.jsx (ไม่ได้ใช้ token สีของธีม)');
+  /* 🔴 ไม่รู้กรอบ = ไม่วาด (ห้ามวาดกล่องกว้าง 0 ทิ้งไว้) */
+  if (!/planWidthPct > 0/.test(frame))
+    bad.push('src/components/PlanSlipFrame.jsx (ไม่ได้กันกรณีไม่มีกรอบให้วาด)');
+
+  const q = read('src/utils/heijunkaQueue.js');
+  if (!/export function planFramePct/.test(q))
+    bad.push('src/utils/heijunkaQueue.js (ไม่มี planFramePct() — เจ้าของสูตรหายไป)');
+
+  assert.deepEqual(bad, [], 'กรอบคิวตามอุดมคติผิดกติกา:\n' + bad.join('\n')
+    + '\nwhy: 13/11 สูตรถูกก๊อปไว้ 2 หน้า แล้ว Management ฮาร์ดโค้ด #e5e7eb (สีธีมมืด)'
+    + ' ⇒ บนจอธีมสว่างที่หน้างานใช้ กรอบของใบที่หลุดแผนแทบมองไม่เห็น แต่ใบที่ตรงแผนเห็นชัด'
+    + '\nfix: พิกัดจาก planFramePct() (utils/heijunkaQueue.js) · วาดด้วย <PlanSlipFrame> เท่านั้น'
+    + '\n     📄 docs/modules/production-plan.md §กรอบคิวตามอุดมคติ');
+});
+
+test('⏱️ stretch-over-breaks-single-entry — "ยืดคร่อมเวลาพัก" ห้ามเขียนลูปเองในหน้า', () => {
+  const bad = [];
+  const read = (rel) => stripComments(readFileSync(join(ROOT, rel), 'utf8'));
+  /* ลายเซ็นของลูป: ไล่ breaks แล้ว "ใช้แล้วไม่ใช้ซ้ำ" + ยืด end ออกไป
+     13/11 เจอก๊อป 3 ชุด (Management 1 · Dashboard 2) ทั้งที่ stretchOverBreaks() มีอยู่แล้ว
+     และคอมเมนต์ของมันเขียนเองว่า "ก๊อป 2 ที่แล้วดริฟท์แน่" */
+  const RE = /consumed\.has\(\s*i\s*\)|used\.has\(\s*i\s*\)[\s\S]{0,160}?\+=\s*\(?\s*be\s*-\s*bs/;
+  for (const rel of ['src/pages/Management.jsx', 'src/pages/Dashboard.jsx', 'src/components/PlanTimeline.jsx',
+                     'src/components/ProdLotPlanner.jsx', 'src/pages/ProductionPlan.jsx']) {
+    let src; try { src = read(rel); } catch { continue; }
+    if (RE.test(src)) bad.push(`${rel} (เขียนลูปยืดคร่อมเบรคเอง — ต้องใช้ stretchOverBreaks() จาก utils/heijunkaQueue.js)`);
+  }
+  const q = read('src/utils/heijunkaQueue.js');
+  if (!/export function stretchOverBreaks/.test(q))
+    bad.push('src/utils/heijunkaQueue.js (ไม่มี stretchOverBreaks() — เจ้าของสูตรหายไป)');
+
+  assert.deepEqual(bad, [], 'ยืดคร่อมเวลาพักผิดกติกา:\n' + bad.join('\n')
+    + '\nwhy: สูตรนี้ตัดสิน "คาดเสร็จกี่โมง / ต้องเปิด OT กี่นาที" บนแถบ PLANNER — 2 จอคิดคนละชุด = ตอบคนละเลข'
+    + '\nfix: finishFrom(a, w) => stretchOverBreaks(a, a + w, breaks)');
+});
+
 /* ═══ 🏠 checkin-opens-on-own-line — 2026-11-13 · หัวหน้ากลุ่ม PD4 แจ้งหน้างาน ═══════════════
    *"หัวหน้าไลน์เห็นพนักงานไลน์อื่นด้วยตอนเช็คชื่อ"* — วัดจริง: หัวหน้า GOR ควรเห็น 24 คน
    แต่เห็น 52 (ติดครอบครัว LWR BAR 21 + Office PD4 7) · เป็นทุกส่วนงาน ไม่ใช่แค่ PD4
@@ -10764,6 +10938,24 @@ test('⏳ mo-details-pending — เรียกช่าง = ต้องม�
   assert.ok(!/details_pending[^\n]{0,80}(return toast\.error|canDoStep)/.test(mr),
     '\n\n❌ เอาธง details_pending ไปบล็อกขั้น/ปุ่ม — ใบที่รอเอกสารต้องยังรับงาน/ซ่อม/ปิดได้ตามปกติ\n'
     + '   (กฎโมดูล: "งานซ่อมกับบริการ แค่แจ้งให้ทราบ ไม่งั้นไลน์จะหยุดรอการอนุมัติ")\n');
+});
+
+test('🧾 qbin-edit-modal-both-modes — modal บันทึก/แก้ไขของถังต้องวาดทั้งโหมดคิวและโหมดเต็ม', () => {
+  /* บั๊ก 13/11: โหมดคิว (/qa?tab=bins) `return` ก่อนถึง modal ⇒ ปุ่ม "✏️ กรอกเลขใบ FM-QA-042" กดแล้วเงียบ */
+  const Q = 'src/components/QualityBins.jsx';
+  const q = stripComments(readFileSync(join(ROOT, Q), 'utf8'));
+  const bad = [];
+  const i = q.indexOf('if (queueOnly) return (');
+  if (i < 0) bad.push(`${Q}: หา "if (queueOnly) return (" ไม่เจอ — เปลี่ยนโครงแล้วต้องแก้ด่านนี้`);
+  else {
+    const def = q.indexOf('const renderEditModal = ');
+    if (def < 0 || def > i) bad.push(`${Q}: ต้องประกาศ renderEditModal() ก่อน return โหมดคิว`);
+    const after = q.slice(i);
+    const n = (after.match(/\{renderEditModal\(\)\}/g) || []).length;
+    if (n < 2) bad.push(`${Q}: ต้องเรียก {renderEditModal()} ทั้งใน return โหมดคิวและโหมดเต็ม (เจอ ${n})`);
+  }
+  if (/ระบบไม่ย้ายให้เอง/.test(q)) bad.push(`${Q}: ข้อความ "ระบบไม่ย้ายให้เอง" ไม่ตรงพฤติกรรม (save() เรียก toRed ให้แล้ว)`);
+  assert.deepEqual(bad, []);
 });
 
 test('🔍 dt-closed-at-shift-end — ใบที่ปิดตรงเวลาเลิกกะต้องถูกถาม (เตือน ไม่บล็อก)', () => {

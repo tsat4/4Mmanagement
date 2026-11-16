@@ -651,6 +651,9 @@ function SPCTab({ lineObjs, canRecord, canManage, partOpts = [], instruments = [
   const [partRes, setPartRes] = useState({ part: null, byItem: new Map(), err: null, loading: true });
   const [pointQ, setPointQ] = useState('');
   const [pointFilter, setPointFilter] = useState('all');
+  const [partLine, setPartLine] = useState('');      // กรองชิ้นงานตามไลน์ ('' = ทุกไลน์)
+  const [partQ, setPartQ] = useState('');            // ค้นชิ้นงาน
+  const [manualPart, setManualPart] = useState('');  // โหมดตั้งเอง: กรองจุดควบคุมตามพาร์ท
 
   const selItem = items.find(i => i.id === itemId) || null;
   const sel = src === 'sheet' ? itemAsChar(selItem) : (chars.find(c => c.id === selId) || null);
@@ -710,11 +713,23 @@ function SPCTab({ lineObjs, canRecord, canManage, partOpts = [], instruments = [
       cur.n += 1; m.set(i.part_id, cur);
     }
     return [...m.values()].map(x => ({
-      id: x.id, label: x.p.part_no, lead: x.p.part_no, title: x.p.part_name || '',
-      sub: [x.p.line_name, `${x.n} จุดวัดค่า`].filter(Boolean).join(' · '),
-      keywords: `${x.p.part_no} ${x.p.part_name || ''} ${x.p.line_name || ''}`,
-    }));
+      id: x.id, label: x.p.part_no, name: x.p.part_name || '', line: x.p.line_name || '', n: x.n,
+    })).sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
   }, [items]);
+  /* 🧩 แผงเลือกชิ้นงาน (15/11 · user "ควรมีฟิลเตอร์รายพาร์ท ตอนนี้มันเลือกยาก") — โชว์ทุกพาร์ทเป็นปุ่มให้เห็นเลย
+     ไม่ซ่อนในช่องค้นหา · กรองด้วยไลน์ + คำค้น */
+  const partLineSet = useMemo(() => new Set(partOpts2.map(p => p.line).filter(Boolean)), [partOpts2]);
+  const partLineObjs = useMemo(() => lineObjs.filter(l => partLineSet.has(l.name)), [lineObjs, partLineSet]);
+  const shownParts = useMemo(() => {
+    const q = partQ.trim().toLowerCase();
+    return partOpts2.filter(p => (!partLine || p.line === partLine)
+      && (!q || `${p.label} ${p.name} ${p.line}`.toLowerCase().includes(q)));
+  }, [partOpts2, partLine, partQ]);
+  const pickPart = (id) => { setPartId(id); setItemId(null); setPointQ(''); };
+  // โหมดตั้งเอง: พาร์ทของจุดควบคุม + จุดที่ผ่านตัวกรองพาร์ท
+  const manualParts = useMemo(() => [...new Set(chars.map(c => c.part_no).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), [chars]);
+  const shownChars = useMemo(() => chars.filter(c => !manualPart || c.part_no === manualPart), [chars, manualPart]);
   const partItems = useMemo(() => items.filter(i => i.part_id === partId), [items, partId]);
   // ผลตรวจทั้งชิ้นงานโหลดครั้งเดียว (ทุกหน้า · ไม่ชนเพดาน 1000) แล้วแตกรายจุด — ตารางสรุปกับกราฟใช้ชุดเดียวกัน
   useEffect(() => {
@@ -751,19 +766,18 @@ function SPCTab({ lineObjs, canRecord, canManage, partOpts = [], instruments = [
     if (itemId && partItems.some(i => i.id === itemId)) return;
     setItemId((pointStats.find(s => s.n) || pointStats[0])?.it.id ?? null);
   }, [isSheet, partRes.loading, partRes.part, partId, partItems, pointStats, itemId]);
-  // กราฟ/ตารางค่าของจุดที่เลือก = ชุดเดียวกับตารางสรุป (ไม่ยิงคิวรีซ้ำ)
-  useEffect(() => {
-    if (!isSheet) return;
-    rowsReq.current += 1;                       // ตัดคำตอบของโหมดตั้งเองที่ค้างอยู่
-    setRows((partRes.byItem.get(itemId) || []).slice(-limitN));
-    setLoading(partRes.loading);
-  }, [isSheet, itemId, partRes, limitN]);
+  /* กราฟ/ตารางค่าของจุดที่เลือก = ชุดเดียวกับตารางสรุป (ไม่ยิงคิวรีซ้ำ)
+     🔴 derive ตรงๆ ห้ามส่งผ่าน state `rows` ร่วมกับโหมดตั้งเอง (15/11 · เจอใน harness): สลับโหมดแล้ว
+        render รอบแรกยังเป็นค่าวัดของอีกโหมด ⇒ วาดผิดชุด/จอพัง (`readings[0]` ของแถวคนละรูป) */
+  const sheetRows = useMemo(() => (partRes.byItem.get(itemId) || []).slice(-limitN), [partRes, itemId, limitN]);
+  const viewRows = isSheet ? sheetRows : rows;
+  const viewLoading = isSheet ? partRes.loading : loading;
 
   useEffect(() => {
     setReadings(Array(sel?.subgroup_size || 1).fill(''));
   }, [selId, sel?.subgroup_size]);
 
-  const spcRaw = useMemo(() => sel ? computeSPC(rows, sel) : null, [rows, sel]);
+  const spcRaw = useMemo(() => sel ? computeSPC(viewRows, sel) : null, [viewRows, sel]);
   // แถวที่จำนวนค่าวัดไม่ตรง n ถูกตัดออกจากการคำนวณ (ค่าคงที่ SPC ผูกกับ n คงที่ —
   // กลุ่มไม่เท่ากันทำ Cpk เฟ้อแบบ false pass) · allExcluded = ตัดหมดทุกแถว → ไม่มีอะไรคำนวณได้
   const spc = spcRaw && !spcRaw.allExcluded ? spcRaw : null;
@@ -856,22 +870,30 @@ function SPCTab({ lineObjs, canRecord, canManage, partOpts = [], instruments = [
         <Segmented label={trI18n('แหล่งค่าวัด')} value={src} onChange={setSrc} options={SPC_SRC_SEG} />
         {isSheet ? (
           <>
-            <SearchSelect value={partId || ''} placeholder={trI18n('ชิ้นงาน — ค้นเลขพาร์ท / ชื่อ / ไลน์')} style={{ minWidth: 'min(280px, 100%)' }}
-              options={partOpts2} loadFail={itemsErr || ''}
-              onChange={({ id }) => { if (id) { setPartId(id); setItemId(null); setPointQ(''); } }} />
+            <LineSelect lines={partLineObjs} value={partLine} onChange={setPartLine} placeholder={ALL.line} includeSupport />
             <Segmented label={trI18n('แสดง')} value={pointFilter} onChange={setPointFilter}
               options={POINT_FILTERS.map(f => ({ ...f, label: `${trI18n(f.label)} ${pointCounts[f.value] ?? 0}` }))} />
             <SearchInput value={pointQ} onChange={setPointQ} fields="เลขบอลลูน / ชื่อจุด" />
           </>
         ) : (
+          <>
+          <select value={manualPart} onChange={e => {
+            const v = e.target.value; setManualPart(v);
+            const first = chars.find(c => !v || c.part_no === v);
+            if (first && !(selId && chars.some(c => c.id === selId && (!v || c.part_no === v)))) setSelId(first.id);
+          }} aria-label={trI18n('พาร์ท')}>
+            <option value="">{trI18n('ทุกพาร์ท')} ({chars.length})</option>
+            {manualParts.map(pn => <option key={pn} value={pn}>{pn} ({chars.filter(c => c.part_no === pn).length})</option>)}
+          </select>
           <select value={selId || ''} onChange={e => setSelId(e.target.value || null)} aria-label={trI18n('จุดควบคุม')}>
             {chars.length === 0 && <option value="">{trI18n('— ยังไม่มีจุดควบคุม กด "+ เพิ่มจุดควบคุม" —')}</option>}
-            {chars.map(c => (
+            {shownChars.map(c => (
               <option key={c.id} value={c.id}>
                 {c.part_no} · {c.characteristic}{c.unit ? ` (${c.unit})` : ''}{c.is_active ? '' : ' [ปิดใช้งาน]'}
               </option>
             ))}
           </select>
+          </>
         )}
         <select value={limitN} onChange={e => setLimitN(Number(e.target.value))} aria-label={trI18n('จำนวนค่าล่าสุดที่ใช้คำนวณ')}>
           {(isSheet ? [25, 50, 100, 200] : [25, 50, 100]).map(n => <option key={n} value={n}>{trI18n('ล่าสุด')} {n} {isSheet ? trI18n('ค่า') : trI18n('กลุ่ม')}</option>)}
@@ -889,6 +911,33 @@ function SPCTab({ lineObjs, canRecord, canManage, partOpts = [], instruments = [
           </>
         )}
       </FilterBar>
+
+      {/* 🧩 เลือกชิ้นงาน — เห็นทุกพาร์ท กดเลือกได้เลย */}
+      {isSheet && (
+        <div style={{ ...cardSt, padding: '12px 14px' }}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
+            <span style={{ fontWeight: 800, fontSize: 13.5 }}>🧩 {trI18n('เลือกชิ้นงาน')}</span>
+            <span style={{ fontSize: 12, color: 'var(--muted)' }}>{trI18n('แสดง')} {shownParts.length}/{partOpts2.length} {trI18n('พาร์ท')}{partLine ? ` · ${partLine}` : ''}</span>
+            <SearchInput value={partQ} onChange={setPartQ} fields="เลขพาร์ท / ชื่อ" grow={false} style={{ marginLeft: 'auto', minWidth: 'min(240px, 100%)' }} />
+          </div>
+          {itemsErr && <div style={{ fontSize: 12, color: 'var(--red)', marginBottom: 8 }}>⚠️ {itemsErr}</div>}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, maxHeight: 220, overflowY: 'auto' }}>
+            {shownParts.map(p => {
+              const on = p.id === partId;
+              return (
+                <button key={p.id} type="button" onClick={() => pickPart(p.id)} aria-pressed={on}
+                  style={{ textAlign: 'left', cursor: 'pointer', padding: '8px 12px', borderRadius: 10, minWidth: 200, maxWidth: 320,
+                    border: `1px solid ${on ? 'var(--accent)' : 'var(--border2)'}`, background: on ? 'var(--accent-dim)' : 'var(--bg3)', color: 'var(--text)' }}>
+                  <div style={{ fontWeight: 800, fontSize: 13, fontFamily: 'monospace' }}>{p.label}</div>
+                  <div style={{ fontSize: 11.5, color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={p.name}>{p.name || '—'}</div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)' }}>{p.line || trI18n('ไม่ระบุไลน์')} · {p.n} {trI18n('จุดวัดค่า')}</div>
+                </button>
+              );
+            })}
+            {!shownParts.length && <span style={{ fontSize: 12, color: 'var(--muted)' }}>{partOpts2.length ? trI18n('ไม่มีพาร์ทที่ตรงตัวกรอง') : trI18n('ยังไม่มีพาร์ทที่ตั้งจุดวัดค่าไว้ (ตั้งที่ /qa-setup)')}</span>}
+          </div>
+        </div>
+      )}
 
       {/* 📋 ตารางสรุปทุกจุดของชิ้นงาน — เรียงแย่สุดก่อน · กดแถว = ดูกราฟจุดนั้น */}
       {isSheet && (
@@ -1008,7 +1057,7 @@ function SPCTab({ lineObjs, canRecord, canManage, partOpts = [], instruments = [
                     <Line type="linear" dataKey="xbar" name={sel.subgroup_size === 1 ? 'X' : 'X̄'} stroke="var(--blue)" strokeWidth={2} dot={dot('xbar')} isAnimationActive={false} />
                   </LineChart>
                 </ResponsiveContainer>
-              ) : <div style={{ color: 'var(--muted)', fontSize: 12, padding: 30, textAlign: 'center' }}>{loading ? trI18n('กำลังโหลด…') : trI18n('ยังไม่มีผลวัด')}</div>}
+              ) : <div style={{ color: 'var(--muted)', fontSize: 12, padding: 30, textAlign: 'center' }}>{viewLoading ? trI18n('กำลังโหลด…') : trI18n('ยังไม่มีผลวัด')}</div>}
             </div>
 
             {/* R chart */}
@@ -1057,7 +1106,7 @@ function SPCTab({ lineObjs, canRecord, canManage, partOpts = [], instruments = [
             <div style={cardSt}>
               {isSheet ? (
                 <>
-                  <div style={{ fontWeight: 800, fontSize: 13.5, marginBottom: 4 }}>📋 {trI18n('ค่าจากใบตรวจ')} ({rows.length} {trI18n('ค่าล่าสุด')})</div>
+                  <div style={{ fontWeight: 800, fontSize: 13.5, marginBottom: 4 }}>📋 {trI18n('ค่าจากใบตรวจ')} ({sheetRows.length} {trI18n('ค่าล่าสุด')})</div>
                   <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 10 }}>{trI18n('อ่านอย่างเดียว — แก้/เพิ่มค่าที่แท็บใบตรวจ (Check Sheet)')}</div>
                   <div style={{ maxHeight: 290, overflowY: 'auto', overflowX: 'auto' }}>
                     <table style={{ width: '100%', minWidth: 420, borderCollapse: 'collapse' }}>
@@ -1066,8 +1115,8 @@ function SPCTab({ lineObjs, canRecord, canManage, partOpts = [], instruments = [
                         <th style={thSt}>{trI18n('ค่าวัด')}</th><th style={thSt}>{trI18n('ผู้ตรวจ')}</th>
                       </tr></thead>
                       <tbody>
-                        {[...rows].reverse().map(r => {
-                          const v = r.readings[0];
+                        {[...sheetRows].reverse().map(r => {
+                          const v = r.readings?.[0];
                           const out = (sel.usl != null && v > sel.usl) || (sel.lsl != null && v < sel.lsl);
                           return (
                             <tr key={r.id}>
@@ -1079,7 +1128,7 @@ function SPCTab({ lineObjs, canRecord, canManage, partOpts = [], instruments = [
                             </tr>
                           );
                         })}
-                        {rows.length === 0 && <tr><td style={tdSt} colSpan={5}><span style={{ color: 'var(--muted)' }}>{loading ? trI18n('กำลังโหลด…') : trI18n('จุดนี้ยังไม่มีค่าในใบตรวจ')}</span></td></tr>}
+                        {sheetRows.length === 0 && <tr><td style={tdSt} colSpan={5}><span style={{ color: 'var(--muted)' }}>{partRes.loading ? trI18n('กำลังโหลด…') : trI18n('จุดนี้ยังไม่มีค่าในใบตรวจ')}</span></td></tr>}
                       </tbody>
                     </table>
                   </div>
