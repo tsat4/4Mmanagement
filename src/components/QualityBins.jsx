@@ -1204,8 +1204,9 @@ export default function QualityBins({ mode = 'full' }) {
         onFrom={tr.setFrom} onTo={tr.setTo} onPreset={tr.setPreset} style={{ marginBottom: 14 }}
       >
         {/* เลือกถัง = ตัวเลือก 2 ตัวที่เท่ากัน ⇒ Segmented อยู่ในแถบเดียว (เดิมเป็นแถวปุ่มแยกเหนือแถบกรอง) · สีถัง = ความหมาย */}
+        {/* B6 (16/11): ป้ายสั้น (ความหมายเต็มอยู่ใน title) — ป้ายยาว 2 อันกินแถบ ~330px จนตัวกรองตกบรรทัด */}
         <Segmented label={trI18n('ถัง')} value={bin} onChange={setBin}
-          options={BINS.map(b => ({ value: b.key, label: b.label, color: b.color }))} />
+          options={BINS.map(b => ({ value: b.key, label: `${b.key === 'yellow' ? '🟡' : '🔴'} ${trI18n(b.short)}`, title: trI18n(b.label), color: b.color }))} />
         <LineSelect lines={lineObjs} value={lineFilter} onChange={setLineFilter} placeholder={ALL.line} />
         <SearchInput value={search} onChange={setSearch} fields="ชิ้นงาน / สาเหตุ / ผู้แจ้ง" />
         {/* ⏱️ ของค้างเกินอายุแท็ก — ปุ่มโผล่เฉพาะเมื่อมีของค้างจริง (ปุ่มที่กดแล้วว่างเปล่าเสมอ = คนเลิกกด)
@@ -1222,19 +1223,16 @@ export default function QualityBins({ mode = 'full' }) {
         )}
         <span className="spacer" />
         {canRecord && <button onClick={openNew} style={{ padding: '8px 18px', borderRadius: 'var(--r-md)', border: 'none', background: 'var(--accent)', color: 'var(--accent-ink)', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>{trI18n('+ บันทึกรายการ')}</button>}
-        <button onClick={doPrint} style={{ padding: '8px 16px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>{trI18n('พิมพ์ใบ')} {trI18n(B.short)}</button>
-        <button onClick={() => setShowWiReg(v => !v)}
-          title={trI18n('ทะเบียน QRs ↔ WI การซ่อม ตาม WI-PD3-069 §6 — อาการไหนซ่อมตาม WI เล่มไหน')}
-          style={{ padding: '8px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: showWiReg ? 'var(--bg2)' : 'var(--bg3)', color: 'var(--text)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
-          {trI18n('ทะเบียน WI ซ่อม')}
-        </button>
       </TimeRangeBar>
 
       {/* 🟡 B1 (16/11 · คำสั่ง user "รวมเป็นชุดเดียว") — หน้าฝ่ายผลิตไม่มีการ์ดคิวแยกแล้ว
           ของค้างในสายถังเหลืองอยู่ในตารางเดียวกับของที่ปิดแล้ว (ค้าง = ทุกวันที่ · ปิดแล้ว = ตามช่วง)
           การ์ดคิวยังใช้ที่ /qa (โหมด queue) */}
 
-      <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 8 }}>
+      {/* B6 (16/11): ปุ่ม "พิมพ์ใบ" + "ทะเบียน WI ซ่อม" ย้ายจากแถบกรองมาอยู่หัวตาราง — เป็นคำสั่งของตาราง ไม่ใช่ตัวกรอง
+          (อยู่ในแถบกรองแล้วดันแถบเป็น 2 บรรทัด) */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+      <div style={{ fontSize: 12.5, color: 'var(--muted)', flex: '1 1 420px', minWidth: 0 }}>
         {loading ? 'กำลังโหลด…' : `${filtered.length} รายการ · รวม ${totalQty.toLocaleString('th-TH')} ชิ้น`}
         {!loading && isY && !overdueOnly && (
           <span> · <b style={{ color: 'var(--amber)' }}>{trI18n('ค้างในสาย')} {pendOpen.length}</b> {trI18n('(ทุกวันที่ ไม่ขึ้นกับช่วง) · ที่ปิดแล้วแสดงตามช่วงที่เลือก')}</span>
@@ -1253,6 +1251,41 @@ export default function QualityBins({ mode = 'full' }) {
         {overdueOnly && <span> {trI18n('· แสดงเฉพาะของค้าง (ทุกวันที่ ไม่ขึ้นกับช่วงที่เลือก)')} <button onClick={() => setOverdueOnly(false)} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: 12.5, textDecoration: 'underline', padding: 0 }}>{trI18n('แสดงทั้งหมด')}</button></span>}
         <span> · {trI18n('แตะแถวเพื่อดูรูป · ที่มา · ประวัติ')}</span>
       </div>
+        <button onClick={doPrint} className="tbtn" style={{ padding: '6px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text)', cursor: 'pointer', fontSize: 12.5, fontWeight: 600 }}>🖨 {trI18n('พิมพ์ใบ')} {trI18n(B.short)}</button>
+        <button onClick={() => setShowWiReg(v => !v)} className="tbtn"
+          title={trI18n('ทะเบียน QRs ↔ WI การซ่อม ตาม WI-PD3-069 §6 — อาการไหนซ่อมตาม WI เล่มไหน')}
+          style={{ padding: '6px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: showWiReg ? 'var(--bg2)' : 'var(--bg3)', color: 'var(--text)', cursor: 'pointer', fontSize: 12.5, fontWeight: 600 }}>
+          📕 {trI18n('ทะเบียน WI ซ่อม')} {showWiReg ? '▲' : '▼'}
+        </button>
+      </div>
+
+      {/* ── 📕 ทะเบียน QRs ↔ WI การซ่อม (WI-PD3-069 §6) — เปิดใต้ปุ่มของมันเหนือตาราง (B6 · 16/11) ──
+          ⚠️ **ไม่ใช่คลัง "วิธีแก้มาตรฐาน"** (ตารางแบบนั้นห้ามสร้าง — จะเป็นที่ที่ 4 ต่อจาก
+             mtn_orders.solution / improvements / pe_fmea_items แล้ว drift กัน)
+             ตารางนี้เก็บแค่ "อาการนี้อ้าง WI เล่มไหน" — เนื้อหาการซ่อมอยู่ในเล่ม WI ตามเดิม
+          ⚠️ data-driven ตั้งแต่วันแรก: WI มีการแก้/เพิ่มรายการทุกปี ห้าม hardcode 6 แถวนี้ในโค้ด
+          ชิปแนะนำ WI โผล่ให้หัวหน้ากลุ่มเห็นตอนลงวิธีแก้ไขใน <ProblemFixModal> */}
+      {showWiReg && (
+        <div style={{ marginBottom: 14 }}>
+          <SimpleMasterPanel
+            client={supabaseDR} table="repair_wi_registry" keyCol="code"
+            /* ด่านนับปลายทางก่อนลบ — เลข WI ถูก "พิมพ์ลงใน fix_action" ของใบของเสีย/ใบเครื่องหยุด
+               (ไม่ใช่คอลัมน์อ้างอิง) ⇒ นับแบบ substring · ดู utils/masterRefs.js */
+            onBeforeDelete={masterDeleteGuard(supabaseDR, 'repair_wi_registry', r => r?.wi_no)}
+            canManage={canManage} stampCol="updated_by_name" stampName={fullName}
+            title={trI18n('ทะเบียน QRs ↔ WI การซ่อม')}
+            help={trI18n('จาก WI-PD3-069 Rev.02 §6 — อาการที่ซ่อมได้ต้องอ้าง WI เล่มที่กำหนด · หัวหน้ากลุ่มจะเห็นชิปแนะนำ WI ตอนลงวิธีแก้ไขในหน้า Daily Report')}
+            emptyText={trI18n('ยังไม่มีรายการ — เพิ่มจากตัว WI-PD3-069 §6')}
+            offNote="รายการนี้จะไม่ถูกแนะนำในโมดัลลงวิธีแก้ไขอีก (บันทึกเก่าที่อ้าง WI นี้ไว้แล้วไม่กระทบ)"
+            fields={[
+              { key: 'symptom',   label: 'อาการ', required: true, placeholder: 'Missing nut' },
+              { key: 'wi_no',     label: 'WI ซ่อม', required: true, mono: true, placeholder: 'WI-PD3-018 (หลายเล่มคั่นด้วย , )' },
+              { key: 'part_name', label: 'ชื่อชิ้นงาน' },
+              { key: 'note',      label: 'หมายเหตุ' },
+            ]}
+          />
+        </div>
+      )}
 
       {/* ── ตาราง ── B2/B4 (16/11): 2 ถังมีคอลัมน์ไลน์เหมือนกัน · รายละเอียดการซ่อม/QA/DOA ย้ายเข้าโมดัล (แตะแถว) */}
       <div style={{ overflowX: 'auto', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
@@ -1379,34 +1412,6 @@ export default function QualityBins({ mode = 'full' }) {
         </table>
       </div>
       {isY && filtered.length > 0 && permNote()}
-
-      {/* ── 📕 ทะเบียน QRs ↔ WI การซ่อม (WI-PD3-069 §6) ──
-          ⚠️ **ไม่ใช่คลัง "วิธีแก้มาตรฐาน"** (ตารางแบบนั้นห้ามสร้าง — จะเป็นที่ที่ 4 ต่อจาก
-             mtn_orders.solution / improvements / pe_fmea_items แล้ว drift กัน)
-             ตารางนี้เก็บแค่ "อาการนี้อ้าง WI เล่มไหน" — เนื้อหาการซ่อมอยู่ในเล่ม WI ตามเดิม
-          ⚠️ data-driven ตั้งแต่วันแรก: WI มีการแก้/เพิ่มรายการทุกปี ห้าม hardcode 6 แถวนี้ในโค้ด
-          ชิปแนะนำ WI โผล่ให้หัวหน้ากลุ่มเห็นตอนลงวิธีแก้ไขใน <ProblemFixModal> */}
-      {showWiReg && (
-        <div style={{ marginBottom: 14 }}>
-          <SimpleMasterPanel
-            client={supabaseDR} table="repair_wi_registry" keyCol="code"
-            /* ด่านนับปลายทางก่อนลบ — เลข WI ถูก "พิมพ์ลงใน fix_action" ของใบของเสีย/ใบเครื่องหยุด
-               (ไม่ใช่คอลัมน์อ้างอิง) ⇒ นับแบบ substring · ดู utils/masterRefs.js */
-            onBeforeDelete={masterDeleteGuard(supabaseDR, 'repair_wi_registry', r => r?.wi_no)}
-            canManage={canManage} stampCol="updated_by_name" stampName={fullName}
-            title={trI18n('ทะเบียน QRs ↔ WI การซ่อม')}
-            help={trI18n('จาก WI-PD3-069 Rev.02 §6 — อาการที่ซ่อมได้ต้องอ้าง WI เล่มที่กำหนด · หัวหน้ากลุ่มจะเห็นชิปแนะนำ WI ตอนลงวิธีแก้ไขในหน้า Daily Report')}
-            emptyText={trI18n('ยังไม่มีรายการ — เพิ่มจากตัว WI-PD3-069 §6')}
-            offNote="รายการนี้จะไม่ถูกแนะนำในโมดัลลงวิธีแก้ไขอีก (บันทึกเก่าที่อ้าง WI นี้ไว้แล้วไม่กระทบ)"
-            fields={[
-              { key: 'symptom',   label: 'อาการ', required: true, placeholder: 'Missing nut' },
-              { key: 'wi_no',     label: 'WI ซ่อม', required: true, mono: true, placeholder: 'WI-PD3-018 (หลายเล่มคั่นด้วย , )' },
-              { key: 'part_name', label: 'ชื่อชิ้นงาน' },
-              { key: 'note',      label: 'หมายเหตุ' },
-            ]}
-          />
-        </div>
-      )}
 
       {/* ── modal บันทึก/แก้ไข ── */}
       {renderEditModal()}
