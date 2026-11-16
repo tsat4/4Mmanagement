@@ -10348,6 +10348,9 @@ const EN = {
   'ยังไม่ระบุ — ตัวนี้บอกว่า IEC ต้องออกแบบก่อนคิดราคาไหม': 'Not set — tells whether IEC must design before costing',
   'คิดยอดรวมไม่ได้ — ขาด volume/ปี': 'Cannot total — annual volume missing',
   'ยังไม่ระบุ model life — ค่าแม่พิมพ์ต่อชิ้นคิดไม่ได้': 'Model life not set — tooling cost per piece cannot be computed',
+  // 🏭 OEE รายจิ๊ก (16/11)
+  'จบ': 'End',
+  'สาเหตุ (จากหน้าเครื่อง)': 'Reason (from machine)',
 };
 
 export default EN;

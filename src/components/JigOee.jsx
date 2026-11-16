@@ -14,6 +14,7 @@ import ParetoChart from './ParetoChart';
 import { classifyAbc } from '../utils/pareto';
 import { axisTick, tooltipProps, CHART_MARGIN } from '../utils/chartAxis';
 import { WHY_TEXT, pct1 } from '../utils/machineOee';
+import { tr } from '../utils/i18n';
 
 export const KIND_META = {
   /* พาเลต ≤ 5 สี (UI §6.17) — แยกเฉดด้วย -line แทนสีใหม่ */
@@ -287,7 +288,7 @@ export function StopTable({ stops = [], limit = 40 }) {
   return (
     <div style={{ overflowX: 'auto' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead><tr><th style={th}>เริ่ม</th><th style={th}>จบ</th><th style={{ ...th, textAlign: 'right' }}>นาที</th><th style={th}>สถานะ</th><th style={th}>สาเหตุ (จากหน้าเครื่อง)</th></tr></thead>
+        <thead><tr><th style={th}>{tr('เริ่ม')}</th><th style={th}>{tr('จบ')}</th><th style={{ ...th, textAlign: 'right' }}>{tr('นาที')}</th><th style={th}>{tr('สถานะ')}</th><th style={th}>{tr('สาเหตุ (จากหน้าเครื่อง)')}</th></tr></thead>
         <tbody>
           {shown.map(s => (
             <tr key={`${s.startMs}|${s.state}`}>

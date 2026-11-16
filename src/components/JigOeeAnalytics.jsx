@@ -22,6 +22,7 @@ import { loadDocForms } from '../utils/docForms';
 import { axisTick, tooltipProps, CHART_MARGIN } from '../utils/chartAxis';
 import { pct1, stopPareto } from '../utils/machineOee';
 import { lineNameCompare } from '../utils/lineHierarchy';
+import { tr as trI18n } from '../utils/i18n';
 import { loadJigShift, loadJigReport, combineJigRows } from '../lib/jigOeeData';
 import { JigOeeCard, JigDrilldown, JigKpiRow, KindLegend, StopParetoChart, ShiftTrendChart, LossWaterfall } from './JigOee';
 
@@ -101,7 +102,7 @@ function ShiftView({ sp, setParam }) {
       <FilterBar>
         <input type="date" value={wd} onChange={e => setParam('wd', e.target.value)} aria-label="วันทำงาน" />
         <Segmented value={sh} onChange={v => setParam('sh', v)} options={SHIFT_OPTS} label="กะ" />
-        <button type="button" className="pg-btn" onClick={load}>🔄 โหลดใหม่</button>
+        <button type="button" className="pg-btn" onClick={load}>🔄 {trI18n('โหลดใหม่')}</button>
         <span style={{ fontSize: 12, color: 'var(--muted)' }}>อัปเดตทุก 1 นาที{data?.at ? ` · ล่าสุด ${new Date(data.at).toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok' })}` : ''}</span>
       </FilterBar>
       {data?.errors?.length > 0 && <NoticeBar tone="bad">อ่านไม่สำเร็จ: {data.errors.join(' · ')} — ตัวเลขด้านล่างอาจไม่ครบ</NoticeBar>}
