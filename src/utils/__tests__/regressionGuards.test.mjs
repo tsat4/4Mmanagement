@@ -10979,3 +10979,17 @@ test('👥 mo-service-queue-matches-all-techs — คิวงานต้อง
   assert.equal(/\.split\(\s*\/?\s*,/.test(src), false,
     '\n\n❌ มี .split(",") ในคิวงาน — ห้ามแกะชื่อช่างเอง ใช้ `assignedTechsOf()` ของกลางที่เดียว\n');
 });
+
+/* 🙋 ผู้เปิดใบถอนใบของตัวเองได้ — แต่ต้องเป็น "ยกเลิก" ไม่ใช่ "ลบ" (2026-11-16 · คำสั่ง user)
+   เคสจริง 11/11: ใบถูก DELETE ตอนยัง `pending` 4 ใบ ⇒ ปัญหาหายจากระบบหมด (ไม่เหลือร่องรอย)
+   ⇒ ถ้าเปิดทางให้ผู้แจ้งลบได้ บั๊กนั้นกลับมาทันทีและกว้างกว่าเดิม (ผู้แจ้งมีหลายร้อยคน) */
+test('🙋 owner-cancel-never-deletes — เส้นทาง "เจ้าของใบถอนเอง" ต้องบีบเป็นยกเลิกเท่านั้น', () => {
+  const src = readFileSync(join(ROOT, 'src/pages/MtnRepair.jsx'), 'utf8');
+  assert.ok(/canCancelOwnMo\(/.test(src),
+    '\n\n❌ MtnRepair.jsx ไม่ได้ถาม `canCancelOwnMo()` แล้ว — เกณฑ์ "ใครเป็นเจ้าของใบ" ต้องอยู่ที่'
+    + ' mtnStepPerm.js ห้ามเทียบชื่อผู้แจ้งเองในหน้า\n');
+  assert.ok(/ownCancel\s*&&\s*!canRemoveAsBoss\s*\)\s*\?\s*MO_REMOVE_CANCEL/.test(src),
+    '\n\n❌ เส้นทางเจ้าของใบไม่ได้ถูกบีบเป็น MO_REMOVE_CANCEL อีกแล้ว'
+    + '\n   ใบที่ยังไม่มีเลข MO โหมดปกติคือ "ลบ" ⇒ ผู้แจ้งจะลบใบหายได้'
+    + '\n   (11/11 เคยหายไป 4 ใบด้วยคลาสนี้ — Reed ชำรุด Line 61 ค้าง 50 วันโดยไม่มีใครรู้)\n');
+});

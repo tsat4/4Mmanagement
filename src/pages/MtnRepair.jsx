@@ -24,7 +24,7 @@ import StepFlow from '../components/StepFlow';
 import { can, canDelete, isActionSeeded, isSharedAccount } from '../utils/permissions';
 import { confirmSign, needsSignConfirm } from '../utils/signConfirm';
 import { moTimeline } from '../utils/mtnTimeline';   // ⏱️ 4 ช่วงของไลน์หยุด (คำศัพท์ชุดเดียวของระบบ)
-import { MO_DONE_STATUSES, MO_STATUS_META as STATUS_META, QA_NOT_RELATED, QA_RELATED, QA_SKIP_REASON_STEP4, canBounceBack, canDoStep, canHandoff, canSignMtnApproval, canSkipQa, isMoOpen, isOrderReporter, isQaSkipped, isWaitingQa, lastStep, orderReporterText, nextStepOf, moQaState, mtnCloseStage, moStatusLabel, moStatusMeta, orderInReporterScope, stageOf, stepDenyHint, stepLabel, stepMeta, moFlow, moWaitMeta, qaRelatedView, moRemoveMode, MO_REMOVE_BLOCKED, MO_REMOVE_CANCEL, MO_REMOVE_DELETE, actorSideOf, stepAssumptions, assumptionHint } from '../utils/mtnStepPerm';
+import { MO_DONE_STATUSES, MO_STATUS_META as STATUS_META, QA_NOT_RELATED, QA_RELATED, QA_SKIP_REASON_STEP4, canBounceBack, canDoStep, canHandoff, canSignMtnApproval, canSkipQa, isMoOpen, isOrderReporter, isQaSkipped, isWaitingQa, lastStep, orderReporterText, nextStepOf, moQaState, mtnCloseStage, moStatusLabel, moStatusMeta, orderInReporterScope, stageOf, stepDenyHint, stepLabel, stepMeta, moFlow, moWaitMeta, qaRelatedView, moRemoveMode, canCancelOwnMo, MO_REMOVE_BLOCKED, MO_REMOVE_CANCEL, MO_REMOVE_DELETE, actorSideOf, stepAssumptions, assumptionHint } from '../utils/mtnStepPerm';
 import { positionRank } from '../utils/positions';
 import { findOpenOnMachine, dupLevel } from '../utils/mtnDuplicate';
 /* 🔢 เลข MO ออกยังไง — ต้องตรงกับ RPC `mtn_assign_mo_no` เป๊ะ (14/10 · ห้ามเดารูปแบบเองในหน้า) */
@@ -2880,13 +2880,25 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], mtnDepts = MT
   /* 🗑️→🚫 เลิกใบ — **ลบได้เฉพาะใบที่ยังไม่มีเลข** · ออกเลขแล้ว = ยกเลิก (เลข+ประวัติต้องอยู่)
      เกณฑ์อยู่ `moRemoveMode()` ใน mtnStepPerm.js **ห้ามเขียน if (status === …) ที่นี่** */
   const removal = moRemoveMode(o);
+  /* 🙋 ผู้เปิดใบถอนใบของตัวเองได้ ตอนยังไม่มีช่างรับ / ถูกตีกลับมา (16/11 · คำสั่ง user)
+     เกณฑ์ "ใครเป็นเจ้าของใบ" อยู่ `canCancelOwnMo()` ใน mtnStepPerm.js **ห้ามเทียบชื่อเองที่นี่**
+     🔴 เส้นทางนี้ได้แค่ "ยกเลิก" — ใบที่ยังไม่มีเลข MO (โหมดปกติ = ลบ) ต้องถูกบีบเป็นยกเลิก
+        เพราะ 11/11 เจอใบถูกลบตอน `pending` 4 ใบ แล้วปัญหาหายจากระบบหมด */
+  const canRemoveAsBoss = canDelete('mtn_repair', 'manage_master', role);
+  const ownCancel = canCancelOwnMo(o, { fullName });
+  const removeMode = (ownCancel && !canRemoveAsBoss) ? MO_REMOVE_CANCEL : removal.mode;
+  const removeWhy = (ownCancel && !canRemoveAsBoss)
+    ? 'คุณเป็นผู้เปิดใบนี้ และยังไม่มีช่างรับงาน — ยกเลิกได้ (ใบยังอยู่ให้สอบกลับ ลบไม่ได้)'
+    : removal.why;
   const del = async () => {
     /* 🔐 ลบใบของทีมอื่น = ไม่มีเหตุผลทางธุรกิจรองรับเลย (audit 15/10) — ต่างจากการ "แก้ย้อนหลัง"
        ของหัวหน้า ที่ยังเป็นพฤติกรรมเดิม · ไม่ผูกทีม = ไม่บล็อก (ไม่รู้ ≠ ปฏิเสธ) */
+    /* ✋ ด่านทีมไว้กัน "ลบใบของทีมอื่น" — **ไม่ใช้กับผู้เปิดใบที่ถอนใบตัวเอง** (16/11)
+       ผู้แจ้งอยู่ฝั่งผู้แจ้ง ไม่เคยอยู่ทีมช่าง ⇒ ถ้าไม่ยกเว้น เมนูจะโผล่แต่กดแล้วเด้ง "ใบของทีมนี้" */
     const tw = canWriteTeam(userTeams, o.mtn_dept, { role, allUnits });
-    if (!tw.ok) { toast.info(teamBlockText(tw, 'ใบแจ้งซ่อมของทีมนี้')); return; }
-    if (removal.mode === MO_REMOVE_DELETE) {
-      if (!confirm(`ลบใบแจ้งซ่อมนี้?\n\n${removal.why}`)) return;
+    if (!tw.ok && !ownCancel) { toast.info(teamBlockText(tw, 'ใบแจ้งซ่อมของทีมนี้')); return; }
+    if (removeMode === MO_REMOVE_DELETE) {
+      if (!confirm(`ลบใบแจ้งซ่อมนี้?\n\n${removeWhy}`)) return;
       /* 🔴 นับแถวที่ลบได้ก่อน ค่อยลบรูปใน storage — เช็คแค่ `error` แล้วลบรูปไปก่อน
          = RLS ปฏิเสธเงียบ (0 แถว ไม่มี error) แถวยังอยู่แต่รูปหายถาวร (กฎเหล็กข้อ 2) */
       /* 🔗 ด่านชั้น DB: FK `mtn_order_handoffs.to_order_id` เป็น `on delete restrict` (11/11)
@@ -2904,12 +2916,12 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], mtnDepts = MT
       toast.success('ลบแล้ว'); onReload && onReload(); onClose();
       return;
     }
-    if (removal.mode !== MO_REMOVE_CANCEL) return toast.error(removal.why);
+    if (removeMode !== MO_REMOVE_CANCEL) return toast.error(removeWhy);
     /* ยกเลิก = ต้องมีเหตุผลเสมอ — ไม่งั้นเดือนหน้ามีคนถามว่า "เลข M5 หายไปไหน" แล้วตอบไม่ได้
        🔴 ไม่ลบรูป/ไม่ลบค่าแรง-อะไหล่ — ใบยังอยู่ให้สอบกลับ */
     /* 🔗 ใบที่ถูกส่งต่อมายังไม่ออกเลข MO (ออกตอนทีมปลายทางกดรับงาน) ⇒ ห้ามขึ้น "ยกเลิกใบ undefined" */
     const label = String(o.mo_no || '').trim() || '(ยังไม่ออกเลข MO)';
-    const why = (prompt(`ยกเลิกใบ ${label}?\n\n${removal.why}\n\nเหตุผล (บังคับ):`) || '').trim();
+    const why = (prompt(`ยกเลิกใบ ${label}?\n\n${removeWhy}\n\nเหตุผล (บังคับ):`) || '').trim();
     if (!why) return;
     const rows = await checkWriteRows(await supabaseDR.from('mtn_orders').update({
       status: 'cancelled',
@@ -3508,8 +3520,8 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], mtnDepts = MT
             { key: 'skipqa', icon: '✅', label: 'QA ระบุว่าไม่เกี่ยวกับคุณภาพ — ไปขั้น 6', onClick: () => onStep(5, false, { skipQa: true }),
               hidden: isMobile || !skipQa.ok,
               title: 'QA ตัดสินว่างานนี้ไม่เกี่ยวกับคุณภาพชิ้นงาน — ไม่ต้องตรวจ ส่งไปรับมอบ/ติดตามผลเลย (เฉพาะ QA กดได้)' },
-            { key: 'remove', icon: '🗑', label: removal.mode === MO_REMOVE_DELETE ? 'ลบใบนี้' : 'ยกเลิกใบนี้', onClick: del, danger: true,
-              title: removal.why, hidden: !canDelete('mtn_repair', 'manage_master', role) || removal.mode === MO_REMOVE_BLOCKED },
+            { key: 'remove', icon: '🗑', label: removeMode === MO_REMOVE_DELETE ? 'ลบใบนี้' : 'ยกเลิกใบนี้', onClick: del, danger: true,
+              title: removeWhy, hidden: (!canRemoveAsBoss && !ownCancel) || removeMode === MO_REMOVE_BLOCKED },
           ]} />
           <button type="button" className="pg-btn" onClick={onClose}>{trI18n('ปิด')}</button>
           {!isMobile && next && canEditStep(next.step) && <button type="button" className="pg-btn primary" onClick={() => onStep(next.step, false)}>{stripIcon(trI18n(next.label))}</button>}
