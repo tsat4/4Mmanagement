@@ -158,7 +158,8 @@ const SheetIconBtn = ({ fs, title, onClick, children, className }) => (
 
 /* `bigNote` (30/09 · user: "ตัวเลขที่โชว์คืออะไร ไม่มี text บอก") = ป้ายเล็กติดตัวเลขใหญ่ว่าเป็นค่าของอะไร (เช่น "ก.ย." = ค่าเดือนที่เลือก) */
 /* `statZoom` (16/11 · user: ชิปไม่ตามเป้า กดแล้วไปหน้ากรอกเพื่ออะไร ควรเป็นสรุป insight) = กดชิปสถานะแล้วเปิด popup 🔍 ของแผ่นนี้แทน onLink · ใน popup เองชิปไม่มีลิงก์ */
-export function Sheet({ k, cw = 0, span = 1, icon, title, sub, big, unit, bigNote, delta, stat, foot, link, onLink, zoom = true, onClose, statZoom = false, children }) {
+/* `goals` (16/11 · user: "Target/commitment ไปขึ้นเหมือน note น่าจะไฮไลท์ให้ชัดเหมือนค่า YTD") = แถวเกณฑ์ใต้ตัวเลขใหญ่ · รับ `(k) => node` เหมือน foot (คืน null = ไม่วาด) */
+export function Sheet({ k, cw = 0, span = 1, icon, title, sub, big, unit, bigNote, delta, stat, foot, link, onLink, zoom = true, onClose, statZoom = false, goals = null, children }) {
   const fs = (n) => Math.max(11, Math.round(n * k));
   const status = stat?.status;
   /* 📱 มือถือ: กริดเหลือ 1 คอลัมน์ ⇒ แผ่นกว้าง 2 ช่อง (OEE · ACTION BOARD) ต้องเป็น 1 ช่อง
@@ -173,6 +174,7 @@ export function Sheet({ k, cw = 0, span = 1, icon, title, sub, big, unit, bigNot
   const bigScale = headFitBigScale(fit);
   const body = typeof children === 'function' ? children(k, cw) : children;   // cw = ความกว้างแผ่น (popup = 1200) ให้กราฟตัดสินความหนาแน่นของป้าย
   const footRaw = typeof foot === 'function' ? foot(k) : foot;     // foot ก็รับ `(k) => node` ได้ (ให้บรรทัดท้ายโตตามใน popup)
+  const goalsNode = typeof goals === 'function' ? goals(k) : goals;
   /* 📺 จอประชุม: ท้ายแผ่นเหลือเฉพาะ "คำเตือนข้อมูลไม่ครบ" (`<WarnNote>`) — คำอธิบาย/คาดปลายปี/เป้า ซ่อน (อ่านไม่ออกที่ 2-3 ม. · กินที่กราฟ)
      🔴 คำเตือนห้ามหาย (กฎความซื่อสัตย์ของจอ) · WarnNote ที่เป็นแค่คำอธิบายให้ส่ง `tvHide` */
   const tv = useTvShell();
@@ -227,6 +229,7 @@ export function Sheet({ k, cw = 0, span = 1, icon, title, sub, big, unit, bigNot
             <StatusLamp k={k} w={sheetW} stat={stat} onGo={statZoom ? (onClose ? null : () => setZoomed(true)) : onLink} forceCompact={fit >= 1} />
           </div>
         </div>
+        {goalsNode && <div style={{ marginTop: Math.round(4 * k) }}>{goalsNode}</div>}
       </div>
       <div style={{ flex: 1, minHeight: 0, padding: `${Math.round(4 * k)}px ${Math.round(4 * k)}px 0` }}>{body}</div>
       {(footNode || (link && !tv)) && (
@@ -244,7 +247,7 @@ export function Sheet({ k, cw = 0, span = 1, icon, title, sub, big, unit, bigNot
     {zoomed && (
       <SheetZoom onClose={() => setZoomed(false)}>
         <Sheet k={zk} cw={1200} icon={icon} title={title} sub={sub} big={big} unit={unit} bigNote={bigNote}
-          delta={delta} stat={stat} foot={foot} link={link} onLink={onLink} zoom={false} statZoom={statZoom} onClose={() => setZoomed(false)}>
+          delta={delta} stat={stat} foot={foot} link={link} onLink={onLink} zoom={false} statZoom={statZoom} goals={goals} onClose={() => setZoomed(false)}>
           {children}
         </Sheet>
       </SheetZoom>

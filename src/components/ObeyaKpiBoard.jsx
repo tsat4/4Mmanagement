@@ -880,13 +880,36 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
       fmtIn: fmtInVar, info: r.fxInfo, forecast: r.forecast, needed: r.needed,
     });
   };
+  /* 🎯 แถวเกณฑ์ใต้ตัวเลขใหญ่ใน popup 🔍 — ตัวเลขใหญ่ สีตามเกณฑ์ (แดง = Target · เหลือง = Commitment · น้ำเงิน = แผนสะสมเดือนนี้) ไม่ใช่ตัวจิ๋วปนกับหมายเหตุ
+     (user 16/11: "Target/commitment ตอนนี้ไปขึ้นเหมือน note/remark น่าจะไฮไลท์ให้ชัดเหมือนค่า YTD") · บนแผ่นเล็กไม่วาด (ที่ไม่พอ · tooltip ไฟบอกอยู่แล้ว) */
+  const goalsRow = (r, kk) => {
+    if (!(kk > k * 1.15)) return null;
+    const fs = (n) => Math.max(11, Math.round(n * kk));
+    const bars = r.def ? defBars(r.def) : null;
+    const idx = r.valueKey && r.valueKey !== SUMMARY_KEY ? Number(String(r.valueKey).slice(5, 7)) - 1 : null;
+    const planV = r.def?.score_by_plan && idx != null ? (r.series[idx]?.plan ?? null) : null;
+    const items = [
+      { lb: '🎯 Target', v: bars?.target_value != null ? fmtBar(bars.target_compare, bars.target_value, r.unit) : 'ยังไม่ตั้ง', c: bars?.target_value != null ? 'var(--red)' : 'var(--muted)' },
+      bars?.commit_value != null ? { lb: '🤝 Commitment', v: fmtBar(bars.commit_compare, bars.commit_value, r.unit), c: 'var(--amber)' } : null,
+      planV != null ? { lb: `📅 แผนสะสม ${monthLabel(r.valueKey)}`, v: `${nf(cvR(r, planV), decR(r))}${unitR(r) ? ' ' + unitR(r) : ''}`, c: 'var(--blue)' } : null,
+      r.ytd != null ? { lb: `YTD (${summaryShort(r.sumKind)})`, v: `${nf(cvR(r, r.ytd), decR(r))}${unitR(r) ? ' ' + unitR(r) : ''}`, c: 'var(--text)' } : null,
+    ].filter(Boolean);
+    return (
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: `${Math.round(6 * kk)}px ${Math.round(18 * kk)}px`, alignItems: 'baseline' }}>
+        {items.map((it) => (
+          <div key={it.lb} style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+            <span style={{ fontSize: fs(11), fontWeight: 700, color: 'var(--muted)' }}>{it.lb}</span>
+            <b style={{ fontSize: fs(17), fontWeight: 900, color: it.c, lineHeight: 1 }}>{it.v}</b>
+          </div>
+        ))}
+      </div>
+    );
+  };
   const zoomFoot = (r, kk) => {
     const fs = (n) => Math.max(11, Math.round(n * kk));
     const bars = r.def ? defBars(r.def) : null;
     /* 🎯 เกณฑ์ที่ใช้ตัดสิน เขียนชัดๆ ตอนขยาย (user 16/11 "target/commitment ควรโชว์ให้ชัดเจนตอนขยายกราฟ") */
-    const crit = [
-      bars?.target_value != null ? ['🎯 Target', fmtBar(bars.target_compare, bars.target_value, r.unit)] : ['🎯 Target', 'ยังไม่ตั้ง (แท็บ ⚙️)'],
-      bars?.commit_value != null ? ['🤝 Commitment', fmtBar(bars.commit_compare, bars.commit_value, r.unit)] : null,
+    const crit = [   // Target/Commitment ย้ายขึ้นไปแถว `goalsRow` ใต้ตัวเลขใหญ่แล้ว (user 16/11 "ควรไฮไลท์ให้ชัดเหมือนค่า YTD") — ที่นี่เหลือกติกาประกอบ
       r.dir ? ['ทิศทาง', r.dir === 'down' ? 'ยิ่งต่ำยิ่งดี' : 'ยิ่งสูงยิ่งดี'] : null,
       ['สรุปปี', summaryModeLabel(r.sumKind)],
       r.def?.score_by_plan ? ['○△✗ รายเดือน', 'เทียบแผนสะสม (เส้นน้ำเงิน)'] : null,
@@ -1178,7 +1201,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
                     <button onClick={() => moveSheet(r.key, 1)} disabled={rows[rows.length - 1]?.key === r.key} title={tr('เลื่อนไปถัดไป')} style={{ ...navBtn, fontSize: 13, padding: '2px 8px' }}>▶</button>
                   </div>
                 )}
-                <Sheet k={k} cw={cw} icon={r.icon} title={r.name} statZoom
+                <Sheet k={k} cw={cw} icon={r.icon} title={r.name} statZoom goals={(kk) => goalsRow(r, kk)}
                   /* 30/09 (user): เลขใหญ่ = ค่าเดือนที่เลือก · บรรทัดรอง = YTD บอกวิธีรวม+จำนวนเดือน · ท้ายแผ่น = คาดปลายปี
                      16/11 (user): กดชิปสถานะ = เปิด popup 🔍 (insight) ไม่ใช่พาไปหน้ากรอก — ปุ่ม "กรอก/ตั้งเป้า" ท้ายแผ่นยังไปหน้ากรอกเหมือนเดิม */
                   sub={`${r.curChild ? '⬆ ค่ารวมจากหน่วยลูก (เดือนนี้ระดับนี้ไม่ได้กรอก)' : srcLabel(r)}${r.ytd != null
