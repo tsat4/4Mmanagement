@@ -155,3 +155,45 @@ export const BASE_VARS_BY_LEVEL = {
   plant: KPI_BASE_VARS.filter(v => v.level === 'plant'),
   unit: KPI_BASE_VARS.filter(v => v.level !== 'plant'),
 };
+
+/* ── 💰 ยอดเงินคู่กัน (2026-11-16 · user: "ให้ขึ้นยอดเงินคู่กัน") ──
+   KPI ที่ค่ารายเดือนเป็น "% ของยอดขาย" (100P · Cost Reduction) — ใบบัญชีมี 2 บรรทัดคู่กันเสมอ: % และยอดเงิน (100P: 0.73% · 10.16 MB)
+   · ตัวแปรยอดเงิน = `kpi_catalog.amount_var` (คีย์ใน KPI_BASE_VARS ที่หน่วยเป็น "บาท") ตั้งที่ 📘 ทะเบียน — ของตัวตน KPI ไม่ใช่รายแถว
+   · อ่านจาก kpi_base_inputs ที่ขอบเขตของนิยาม (unit var) / ทั้งโรงงาน (plant var) ผ่าน `baseScopeForVar` — แหล่งเดียวกับสูตร
+   · ยอดสะสม = Σ ม.ค.→เดือนที่เลือก เฉพาะเดือนที่มีตัวเลข · **เดือนที่ขาดต้องเขียนบนจอ ห้ามเดา 0** · ไม่มีเลย = `value/ytd = null` (จอเขียนว่ายังไม่กรอก) */
+export const amountVarOf = (d) => {
+  const k = d?.kpi_catalog?.amount_var || d?.amount_var || null;
+  const v = k ? baseVarOf(k) : null;
+  return v && v.unit === 'บาท' ? v : null;
+};
+export function fmtMoney(x) {
+  if (x == null || !Number.isFinite(Number(x))) return '—';
+  const n = Number(x);
+  return Math.abs(n) >= 1e6 ? `${(n / 1e6).toLocaleString('th-TH', { maximumFractionDigits: 2 })} MB` : `${Math.round(n).toLocaleString('th-TH')} บ.`;
+}
+export function amountCompanion({ def, scope, base, month }) {
+  const v = amountVarOf(def);
+  if (!v || !base) return null;
+  const sk = baseScopeForVar(v.key, scope);
+  const upto = Math.min(12, Math.max(1, Number(month) || 12));
+  const months = {}, have = [], missing = [];
+  for (let m = 1; m <= upto; m++) {
+    const x = base.get(sk, v.key, m);
+    months[m] = x;
+    if (x != null) have.push(m); else missing.push(m);
+  }
+  const ytd = have.length ? have.reduce((s, m) => s + months[m], 0) : null;
+  return { varKey: v.key, label: v.label, scopeKey: sk, month: upto, value: months[upto] ?? null, ytd, have, missing, months };
+}
+/** ข้อความบรรทัดรองของแผ่น — `monthLabel(m)` = ป้ายเดือนสั้น · ไม่มีตัวแปร = '' */
+export function amountText(a, { monthLabel = (m) => `เดือน ${m}` } = {}) {
+  if (!a) return '';
+  const name = String(a.label || '').split(' (')[0];
+  if (!a.have.length) return `💰 ${name}: ยังไม่กรอกยอดเงิน`;
+  const lastHave = a.have[a.have.length - 1];
+  const cur = a.value != null
+    ? `${monthLabel(a.month)} ${fmtMoney(a.value)}`
+    : `${monthLabel(lastHave)} ${fmtMoney(a.months[lastHave])} (${monthLabel(a.month)} ยังไม่กรอก)`;
+  const miss = a.missing.length ? ` · ขาด ${a.missing.map(monthLabel).join(' ')}` : '';
+  return `💰 ${cur} · สะสม ${fmtMoney(a.ytd)} (${a.have.length} เดือน${miss})`;
+}
