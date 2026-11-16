@@ -10,6 +10,8 @@ import { imgExt } from '../utils/resizeImage';
 /* 🖼️ กติการูปใบ MO (16:9 · webp · bucket) อยู่ที่เดียว — ห้ามประกาศซ้ำในหน้า */
 import { resizeMoImage, uploadMtnImg, removeMtnImg } from '../utils/mtnImage';
 import { useObjectUrl } from '../utils/useObjectUrl';
+/* 🔍 รูปแนบทุกจุดบนจอ = กดขยายได้ · ฉากดูรูปเป็นของกลางตัวเดียว ห้ามเขียนโมดัลดูรูปในหน้า */
+import { AttachImage } from '../components/ImageLightbox';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase, supabaseDR } from '../supabaseClient';
 import { UserContext } from '../App';
@@ -410,7 +412,8 @@ function ImgField({ label, value, onPick, required }) {
   return (
     <div>
       <label style={lbl}>{label}{required && <span style={{ color: 'var(--red)' }}> *</span>}</label>
-      {value && <img src={value} alt="" style={{ display: 'block', maxHeight: 120, borderRadius: 8, border: '1px solid var(--border)', marginBottom: 6 }} />}
+      {/* 🔍 รูปที่แนบอยู่ต้องกดขยายดูได้ก่อนตัดสินใจเปลี่ยน (16/11) — ของกลาง ImageLightbox */}
+      {value && <AttachImage url={value} title={label} maxHeight={120} style={{ marginBottom: 6 }} />}
       {/* reset value เสมอ — ไม่งั้นเลือก "รูปเดิม" ซ้ำแล้ว change ไม่ยิง (feedback 2026-09-08 "รูปเดิมก็ลงไม่ได้") */}
       <input type="file" accept="image/*" onChange={async e => { const p = e.target.files?.[0]; e.target.value = ''; const f = await acceptImageFile(p); if (f) onPick(f); }} style={{ fontSize: 12 }} />
     </div>
@@ -2923,7 +2926,25 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], mtnDepts = MT
     onReload && onReload(); onClose();
   };
   const Row = ({ k, v }) => v ? <div style={{ display: 'flex', gap: 8, fontSize: 12.5, padding: '2px 0' }}><span style={{ color: 'var(--muted)', minWidth: 120 }}>{k}</span><span style={{ color: 'var(--text)', flex: 1 }}>{v}</span></div> : null;
-  const Img = ({ label, url }) => url ? <div><div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 2 }}>{label}</div><img src={url} alt="" style={{ maxHeight: 130, borderRadius: 8, border: '1px solid var(--border)' }} /></div> : null;
+  /* 🖼️ รูปแนบในใบต้อง "กดขยายดูได้" (คำสั่ง user 16/11 · ของกลาง `components/ImageLightbox.jsx`)
+     รูปสูง 130px ดูไม่ออกว่าเสียตรงไหน · 3 รูปของงานซ่อม (ก่อน/หลัง/QA) ส่งเป็น "ชุดเดียว"
+     ⇒ ขยายแล้วกด ← → เทียบก่อน-หลังได้ทันที · ลายเซ็นไม่อยู่ในชุด (ขยายเดี่ยว) */
+  const moPhotos = [
+    [o.before_img, 'รูปก่อนซ่อม'],
+    [o.after_img, 'รูปหลังซ่อม'],
+    [o.qa_img, 'รูปยืนยันคุณภาพ'],
+  ].filter(([u]) => u).map(([url, t]) => ({ url, title: trI18n(t) }));
+  const Img = ({ label, url }) => {
+    if (!url) return null;
+    const idx = moPhotos.findIndex(p => p.url === url);
+    return (
+      <div>
+        <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 2 }}>{label}</div>
+        <AttachImage url={url} title={label} maxHeight={130}
+          items={idx >= 0 ? moPhotos : null} index={idx >= 0 ? idx : 0} />
+      </div>
+    );
+  };
   /* หัวข้อขั้น + "ใครทำ" มาจาก MTN_STEPS (ขั้น 1 เป็นการเปิดใบ ไม่อยู่ในตารางนั้น)
      เดิมพิมพ์ชื่อขั้นมือ 7 ที่ แล้วไม่ตรงกับปุ่ม/หัวโมดัล — คนอ่านไม่รู้ว่าใครต้องทำต่อ */
   /* `note` = ข้อความที่ต้องเห็น **แม้ขั้นนั้นยังไม่ถูกทำ** — ใช้บอก "ขั้นนี้ไม่ต้องทำแล้ว"
@@ -3057,7 +3078,8 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], mtnDepts = MT
             {handoffIn.src?.solution   && <div style={{ color: 'var(--text2)' }}>{trI18n('สิ่งที่ทำไปแล้ว:')} {handoffIn.src.solution}</div>}
             {(handoffIn.src?.tech_main || handoffIn.src?.tech_secondary) && <div style={{ color: 'var(--muted)' }}>{trI18n('ช่างที่เข้าดู:')} {[handoffIn.src.tech_main, handoffIn.src.tech_secondary].filter(Boolean).join(' · ')}</div>}
             {handoffIn.src?.repair_done_at && <div style={{ color: 'var(--muted)' }}>{trI18n('ทีมก่อนหน้าใช้เวลา')} {minutesBetween(handoffIn.src.accept_at, handoffIn.src.repair_done_at) ?? '—'} {trI18n('นาที ก่อนตัดสินใจส่งต่อ')}</div>}
-            {handoffIn.src?.after_img && <img src={handoffIn.src.after_img} alt="" style={{ maxHeight: 110, borderRadius: 8, border: '1px solid var(--border)', marginTop: 4 }} />}
+            {handoffIn.src?.after_img && <AttachImage url={handoffIn.src.after_img} maxHeight={110}
+              title={trI18n('รูปหลังซ่อม')} caption={`${trI18n('จากใบ')} ${handoffIn.src?.mo_no || ''}`} style={{ marginTop: 4 }} />}
           </div>
         </div>
       )}

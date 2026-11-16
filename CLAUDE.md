@@ -448,6 +448,8 @@ Realtime + Edge Functions/Deno) · Telegram Bot API · deploy = Render.com (Stat
 
 - อัปโหลดรูปทุกหน้าต้องผ่าน `ImageCropModal` (crop + บีบ JPEG 480px q0.85 อัตโนมัติ)
 - **🔴 ทุก `.upload()` ต้องส่ง options ผ่าน `uploadOpts()` (`src/utils/storageUpload.js` · มีด่าน)** · path ที่ `upsert` ทับได้ต้องใส่ `mutable: true`
+- **🔴 จุดอัปโหลดใหม่ต้อง "บีบก่อนอัป" + ขึ้นทะเบียน `UPLOAD_SITES`** (ด่าน `upload-needs-compress` · ของกลางบีบรูปอยู่ `src/utils/layoutImage.js` / `resizeImage.js`)
+- **🔴 รูปแนบที่โชว์บนจอ ต้องกดขยายได้ด้วย `<AttachImage>` (`src/components/ImageLightbox.jsx`) ตัวเดียวทั้งแอป** — ห้าม `target="_blank"`/`window.open` ห้ามเขียนโมดัลดูรูปในหน้า (ด่าน `attach-image-zoomable` · UI §6.38)
 - **🔴 ทุกช่อง `<input type="file" accept="image/*">` ต้องผ่าน `acceptImageFile()`** (`src/utils/acceptImageFile.js` · มีด่าน — HEIC) · เข้าหน้าครอปใช้ `<ImageCropModal>`
 - **🚫 รูปพนักงานไม่รับ GIF** (`allowGif={false}` · ตัวตรวจชนิดไฟล์ = `src/utils/imageFileKind.js` จุดเดียว ดูนามสกุลด้วย) ·
   **ปฏิเสธไฟล์ต้องขึ้น toast บอกเหตุผล+ทางแก้ ห้ามปิดเงียบ**

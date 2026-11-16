@@ -9,6 +9,7 @@ import { createPortal } from 'react-dom';
 import { supabase } from '../supabaseClient';
 import { checkWrite, checkWriteRows } from '../utils/dbWrite';
 import QualityPhotoField from './QualityPhotoField';
+import { AttachImage } from './ImageLightbox';   // 🔍 รูปแนบกดขยายในแอป (ห้ามเปิดแท็บใหม่)
 import { resizeActionImage, uploadActionImg, removeActionImg } from '../utils/actionImage';   // 📷 ถังเดียวกับรูป action (policy เดิม) · path kpi-note/
 import { imgExt } from '../utils/resizeImage';
 import { toast } from './Toast';
@@ -98,10 +99,11 @@ export default function KpiMonthNoteModal({ title, icon, monthText, valueText, n
                   <div style={{ fontSize: 13.5, color: 'var(--text)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{n.text}</div>
                   <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>{tr(m.label)} · {n.created_by_name || 'ไม่ระบุผู้บันทึก'} · {fmtWhen(n.created_at)}</div>
                 </div>
+                {/* 🔍 กดขยายในแอป (16/11) — เดิมเปิดแท็บใหม่ = หลุดออกจากโมดัลที่กำลังอ่านบันทึก */}
                 {n.image_url && (
-                  <a href={n.image_url} target="_blank" rel="noreferrer" title={tr('เปิดรูปเต็ม')} style={{ flexShrink: 0 }}>
-                    <img src={n.image_url} alt="" loading="lazy" style={{ width: 84, height: 63, objectFit: 'cover', borderRadius: 'var(--r-xs)', border: '1px solid var(--border2)', display: 'block' }} />
-                  </a>
+                  <AttachImage url={n.image_url} title={n.text} caption={n.created_by_name || null}
+                    hint={tr('เปิดรูปเต็ม')} style={{ flexShrink: 0 }}
+                    imgStyle={{ width: 84, height: 63, maxHeight: 63, objectFit: 'cover', borderRadius: 'var(--r-xs)', border: '1px solid var(--border2)' }} />
                 )}
                 {canEdit && <DeleteButton onClick={() => remove(n)} title={tr('ลบ')} />}
               </div>

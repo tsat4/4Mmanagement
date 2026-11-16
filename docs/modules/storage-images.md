@@ -482,3 +482,63 @@
   🔴 โมดัลต้อง render **นอก `<form>`** (ปุ่มในโมดัลไม่มี type = submit ฟอร์มพนักงาน)
 - ลำดับที่ใบพิมพ์ใช้ = **โปรไฟล์ → ฐานพนักงาน → ค่าที่ใบเก็บไว้ → `null`** ผ่าน `signatureOfPerson()` (`utils/employeeSignature.js`) ที่เดียว
 - ยังไม่ apply = แถว `select('*')` ไม่มีคีย์ `signature_url` ⇒ จอเขียนบอก · ใบพิมพ์เว้นช่อง + toast บอกเหตุผล (ไม่เงียบ)
+
+---
+
+## 🔎 ผล audit "จุดอัปโหลดรูปทั้งระบบ" + ด่านกันลืมบีบอัด (2026-11-16 · คำสั่ง user)
+
+*"ออดิทระบบอัพรูปด้วยนะ ที่มีเพิ่มมา และอย่าปล่อยให้ลืมเรื่องบีบอัดไฟล์"* (feedback ประชุม 16/11)
+
+### 🔴 ช่องว่างที่ด่านเดิมมองไม่เห็น (เหตุที่ต้องเพิ่มด่านที่ 3)
+ก่อนรอบนี้มีด่าน 2 ตัว แต่ทั้งคู่ตอบคำถามอื่น:
+| ด่าน | ถามว่า |
+|---|---|
+| `storageUpload.test.mjs` | ส่ง `uploadOpts()` ไหม (= อายุ cache ถูกฝั่งไหม) |
+| `image-input-via-accept-helper` | ช่องรับไฟล์ผ่านด่าน HEIC / ชนิดไฟล์ไหม |
+| **(ใหม่) `upload-needs-compress`** | **ไบต์ที่กำลังส่งขึ้นไป ถูกบีบแล้วหรือยัง** |
+
+⇒ จุดที่ "ลืมบีบ" ผ่าน build ได้ทุกด่าน แล้วไปโตเป็น egress เงียบๆ (รอบ 11/09 = **ทั้งโรงงาน login ไม่ได้**)
+
+### ผลตรวจ 29 จุดอัปโหลด ใน 25 ไฟล์ (16/11)
+| จุด | บีบด้วย | ผล |
+|---|---|---|
+| `LineSetup` ผังไลน์ · `FactoryMap` ผังโรงงาน · `MtnMachineLayout` โซน · `DieLayout` · `RackMap` | `compressLayoutImage` (WebP 2560px) | ✅ |
+| `recompressLayouts` (ปุ่ม 🗜️ /storage-maintenance) | ตัวบีบย้อนหลังเอง | ✅ |
+| `PMSetup` เฟรมหมุน + รูปจุดตรวจ | `compressPhotoImage` (WebP 2000px/0.35MB) | ✅ |
+| `QaPointsEditor` แผ่น Drawing | `imageCompression` 2560px/2.5MB/q0.9 | ✅ |
+| **`QaPointsEditor` รูปโคลสอัพจุดตรวจ (`cp-*`)** | **ไม่มีเลย — อัปไฟล์ดิบจากกล้อง** | 🔴 **แก้แล้ว** → `compressPhotoImage` |
+| `Management` 4M/OJT · `Report` รูป QA · `Improvements` ก่อน/หลัง | `resizeImage` 1280px | ✅ |
+| `PEDocs` รูปในเอกสาร PE | `resizeImage` 2560px/q0.9 | ✅ |
+| `operator` เอกสารอบรม (PDF ส่งดิบ ≤20MB) | `resizeImage` | ✅ |
+| `operator` / `Register` รูปพนักงาน · `ProductMaster` ×2 · `SparePartMaster` | `ImageCropModal` 480px | ✅ |
+| `utils/mtnImage` (ใบ MO) · `utils/qualityImage` (ของเสีย) · `utils/actionImage` (ปิด action) | `resizeImg` 1024px webp | ✅ |
+| `utils/fileAttach` (ไฟล์แนบ NPI/อื่นๆ) | `imageCompression` 2560px/2.5MB | ✅ |
+| `utils/profileSelf` (avatar) | `ImageCropModal` ที่หน้าผู้เรียก (`App.jsx` · `DeptHub`) | ✅ |
+| `FeedbackModal` สกรีนช็อต | `compressScreenshotImage` 1920px webp | ✅ |
+| `SignatureModal` อัปรูปลายเซ็น | canvas 800px + ตัดพื้นกระดาษขาวก่อน `toBlob` PNG | ✅ |
+| `OjtTraining` · `LayerProcessAudit` ลายเซ็น | วาดบนจอ → canvas `toBlob` PNG (~14 KB) | ✅ |
+
+**`uploadOpts()` ครบ 29/29 จุด** (ไม่มีจุดไหนตก) · `mutable: true` ยังเป็น 2 จุดเดิมตามหัวไฟล์นี้
+
+### 🔴 บั๊กที่เจอ — `QaPointsEditor` รูปโคลสอัพจุดตรวจ อัปไฟล์ดิบ
+`QaPointsEditor` มี `upload(file, prefix)` **ตัวเดียว** ใช้ทั้งแผ่น Drawing และรูปโคลสอัพ (`cp-*`)
+· แผ่น Drawing บีบมาแล้วตอนเลือกไฟล์ (`addFrames`/`replaceFrame`) ⇒ ตัว `upload()` ไม่ต้องบีบ
+· **รูปโคลสอัพมาจาก `PointCardShell` ตรงๆ** (ผ่านแค่ `acceptImageFile` = ด่าน HEIC/ชนิดไฟล์ ไม่ใช่ตัวบีบ)
+  ⇒ รูปจากกล้องมือถือ 3-8 MB ขึ้น `qa-drawings` ทั้งใบ · ฝั่ง PM จุดเดียวกัน (`handleCpImage` → `compressPhotoImage`) บีบอยู่แล้ว
+**แก้:** เพิ่ม `uploadCloseup()` (บีบ `compressPhotoImage` + นามสกุลจาก `ext` ที่ตัวบีบคืนมา **ห้าม hardcode `.jpg`**)
+**พ่วง:** จุดนั้นไม่เคย `setState` ให้ `_imgPreview` ⇒ แนบรูปแล้วจอยังเขียน *"แนบรูปจุดนี้"* เหมือนไม่มีอะไรเกิดขึ้น
+(คนแนบซ้ำหลายรอบ = อัปซ้ำหลายไฟล์) — เติมพรีวิวแล้ว
+
+### ด่านใหม่ `upload-needs-compress` (`src/utils/__tests__/regressionGuards.test.mjs`)
+ทะเบียน `UPLOAD_SITES` = **ทุกไฟล์ที่มี `.upload()` + จำนวนบรรทัด + "บีบด้วยอะไร" (`via`/`tokens`)**
+- ไฟล์ที่อัปโหลดแต่ไม่อยู่ในทะเบียน / จำนวนบรรทัดไม่ตรง ⇒ **build ล่ม**
+  ⇒ คนเพิ่มจุดอัปโหลดใหม่ **ถูกบังคับให้ตอบว่าบีบด้วยอะไร** (ไม่ใช่กฎที่อยู่แต่ในเอกสารแล้วลืม)
+- `tokens` ต้องยังอยู่ในไฟล์จริง (ตัดคอมเมนต์ก่อนตรวจ) — ถอดตัวบีบออก = ล่มทันที
+- `callers` = ไฟล์ที่บีบให้แทน (ใช้กับ helper ที่รับ blob ที่บีบแล้วมา เช่น `profileSelf`)
+- 🔴 **ห้ามแก้เลข `n` ให้ผ่านโดยไม่ดูว่าบรรทัดใหม่บีบแล้วจริง** = ทำลายเหตุผลทั้งหมดของด่าน
+
+### 🔍 รูปแนบต้องกดขยายดูได้ — `components/ImageLightbox.jsx` (งานเดียวกัน 16/11)
+*"พวกรูปที่แนบ ต้องกดขยายดูได้ เช่น ใน ใบ MO"* — รูปบนจอสูง 60–130px ดูไม่ออกว่าเสียตรงไหน
+· ฉากขยาย **ตัวเดียวทั้งแอป** · ขยายในแอปเท่านั้น **ห้าม `target="_blank"` / `window.open`**
+  (เด้งออกจากใบที่กรอกค้าง — บทเรียนเดิมของ `CpImage` 21/08) · `PointZoom` ยุบเป็นเปลือกบนตัวนี้
+· มีด่าน `attach-image-zoomable` · 📄 กติกาเต็ม → `docs/UI-CONVENTIONS.md` §6.38
