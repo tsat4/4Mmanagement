@@ -102,6 +102,18 @@
   · v20 (16/11): **OP ที่เป็นคู่ RH/LH กันเอง = รุ่นเดียว แม้ผูกพาร์ทแม่คนละตัว** (`canon()` · HDF2 ท่อ `90031601`↔`90031602` ตั้งคู่ไว้แล้วแต่ `op_parent_mat` ชี้ `10100385` กับ `20065715` ⇒ เดิมเรียก First 2 งาน) · ⚠️ ท่อ LH ชี้พาร์ทแม่ RH — รอ user ยืนยันข้อมูล
   · 🔴 16/11: cron `qa-fme-scan` (jobid 9) เจอ `active=false` ทั้งที่สวิตช์เปิด ⇒ ไม่สร้างงานเลยหลัง 08:43 · เปิดคืนแล้ว — **เปิดสวิตช์ FME ต้องเช็ค `cron.job` ด้วย**
 
+### 📄 ใบ "Inspection Data" FM-QA-112 — ดูผลบนจอ · พิมพ์/PDF · CSV (2026-11-16 · คำสั่ง user แนบใบจริง 5 พาร์ท)
+- ปุ่ม **📄 ใบ Inspection Data** (แท็บใบตรวจ) เปิดใบบนจอใน iframe = **HTML ชุดเดียวกับที่พิมพ์** → 🖨️ พิมพ์/บันทึก PDF จากหน้านั้น · **⬇ CSV**
+- หน้าตาตามใบจริง: หัวใบ (Part/Dwg/Rev/Model · Part Classification จาก `qa_parts.part_rank`/`part_kind` · Concern · Prod date · Lot ·
+  Shift 01/02 · ช่องเซ็น Approved/Checked/Prepared จากทะเบียน — Prepared = ลายเซ็นผู้ตรวจ) → หน้า Product sketch 1 แผ่น/หน้า
+  (บอลลูนจาก `pos_x/pos_y` · วง = รู · เหลี่ยม = ผิว/ขอบตัด · NG แดงทึบ) + กล่องสรุป Type OK/Total/P.I.S.T % → ตารางผล (หัวใบซ้ำทุกหน้า · ท้ายหน้า = เลขฟอร์ม/Effective date)
+- 🔴 แถว/สเปค/สรุป = `src/utils/qaDataSheet.js` ที่เดียว (`buildDataSheet` · `fmtStandard` · `dataSheetCsvRows`) — ใบพิมพ์ จอ และ CSV **ห้ามจัดเอง**
+  · บอลลูน `H14 (T)`/`H14(W)` รวมใต้ `H14` · ลำดับ A* (Appearance) → Datum → H → S → T · ในบอลลูนเดียวกัน ค่าวัดก่อนแบบนับ
+  · P.I.S.T % = OK ÷ จุดทั้งหมด (ยังไม่ตรวจ ≠ OK) · ประเภทจุดจากชื่อจุดก่อน แล้วค่อยบอลลูน (`pointType`)
+- ทะเบียน: `qa_inspection_sheet` = FM-QA-112 · Rev. 01 · Effective 13/11/2020 · ช่องเซ็น Approved/Checked/Prepared (ค่าจากใบจริง · migration `20261116b_doc_forms_qa_inspection_data_main.sql` · apply แล้ว)
+  · CSV = `csv_qa_inspection_data` (เลขฟอร์มที่ชื่อไฟล์) · 1 แถว = 1 จุด · Nominal/LSL/USL แยกช่องตัวเลข · No.1…No.N · Judgement
+- แบบที่เป็น PDF แปะลงใบไม่ได้ → เขียนบอกในกรอบ sketch · **ยังไม่มี:** ตารางประวัติแก้ไขเอกสาร (Revision history) รายพาร์ท — ไม่มีในฐาน ห้ามแต่งขึ้น
+
 #### 🟡 ป้ายเตือนฝั่งผลิต — "รุ่นนี้ QA ยังไม่ตรวจ First" (16/11)
 - `src/components/QaFmeLineBanner.jsx` วางในจอ Daily Report (แผงใบสั่งผลิตของกะที่เลือก) · ตัดสินที่ `src/utils/qaFmeLineWarn.js`
 - 🔴 **เตือนอย่างเดียว ห้ามล็อก** (คำสั่ง user 13/11) · ไม่มีปุ่ม · หายเองเมื่อ QA ปิดใบผ่าน (`done_ok`) หรือยกเลิกงาน
