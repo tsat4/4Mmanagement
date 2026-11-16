@@ -44,6 +44,10 @@ import Page from '../components/Page';
 import TimeRangeBar from '../components/TimeRangeBar';
 import useTimeRange from '../utils/useTimeRange';
 import { PointThumb } from '../components/inspect/PointZoom';
+/* 🔎 C4 (16/11): ตัวกรองสถานะ/ไลน์/ค้นหา ของรายการใบ — ของกลางตามมาตรฐานแถบกรอง (UI-STANDARD) */
+import Segmented from '../components/Segmented';
+import SearchInput from '../components/SearchInput';
+import { ALL } from '../utils/filterLabels';
 import { DeleteButton } from '../components/IconButton';
 import { checkWriteRows } from '../utils/dbWrite';   // RLS ปฏิเสธ UPDATE/DELETE = 0 แถวไม่มี error (กฎเขียน DB ข้อ 2)
 import useIsMobile from '../utils/useIsMobile';
@@ -163,6 +167,13 @@ export default function ScrapReport() {
   /* ผูกกับ URL `?from=&to=` เหมือนแท็บถัง (UI §6.16) · ไม่ได้แบ่งถังเวลา ⇒ `scales={null}` */
   const listRange = useTimeRange({ defaultDays: 30 });
   const { from: listFrom, to: listTo } = listRange;
+  /* 🔎 C4 — กรองรายการใบที่โหลดมาแล้ว (ช่วงวันที่ยังกรองฝั่ง server ตามเดิม) · เป็น state ไม่ขึ้น URL
+     ⇒ ส่ง `onClear` ให้ปุ่มล้างตัวกรองเฉพาะตอนมีตัวกรองค้าง (ปุ่มที่กดแล้วไม่เกิดอะไร = คนเลิกเชื่อปุ่ม) */
+  const [stFilter, setStFilter] = useState('');
+  const [lineFilter, setLineFilter] = useState('');
+  const [q, setQ] = useState('');
+  const clearListFilters = () => { setStFilter(''); setLineFilter(''); setQ(''); };
+  const hasListFilter = !!(stFilter || lineFilter || q.trim());
   const [editor, setEditor] = useState(null); // { report, items } กำลังแก้/สร้าง
   const saveBusyRef = useRef(false); // กันแตะ 💾 เบิ้ล — ครั้งที่ 2 ยังถือ id=null ⇒ ได้หัวใบ+เลขใบซ้ำ 2 ใบ (audit handheld 2026-10-20)
   const [sapPicker, setSapPicker] = useState(null); // { itemKey } | { addSource }
@@ -738,9 +749,14 @@ export default function ScrapReport() {
     setEditor(null);
   };
   const STATUS_META = { draft: { label: 'ร่าง', color: '#6b7280' }, submitted: { label: 'ส่งอนุมัติ', color: '#f59e0b' }, approved: { label: 'อนุมัติแล้ว', color: '#22c55e' } };
+  /* รายการที่ผ่านตัวกรอง C4 — ไลน์เทียบชื่อตรงตัว (ตัวเลือกมาจากทะเบียนไลน์เดียวกับที่เขียนลงใบ) */
+  const ql = q.trim().toLowerCase();
+  const shown = reports.filter(rep => (!stFilter || rep.status === stFilter)
+    && (!lineFilter || rep.line_name === lineFilter)
+    && (!ql || [rep.doc_no, rep.line_name].some(v => String(v || '').toLowerCase().includes(ql))));
 
   return (
-    <Page>
+    <Page className="scrap-page">
       <ReadOnlyNote show={!canRecord} role={role} what="สร้าง/แก้ใบรายงานของเสีย"
         permKey="scrap:record" hint={tr('ยังเปิดดูใบเดิม พิมพ์ และ export Excel ได้ตามปกติ')} />
       <PageHeader title={tr('ของเสีย — ใบรายงาน & ถังเหลือง/แดง')} icon="♻️"
@@ -756,11 +772,22 @@ export default function ScrapReport() {
       {/* UI-STANDARD 2026-09-24: แถบกรองมาตรฐาน (ไม่ใส่ขนาด inline ในช่อง) */}
       <TimeRangeBar
         scale={listRange.scale} from={listFrom} to={listTo} today={listRange.today} scales={null}
-        onFrom={listRange.setFrom} onTo={listRange.setTo} onPreset={listRange.setPreset} style={{ marginBottom: 14 }}
+        onFrom={listRange.setFrom} onTo={listRange.setTo} onPreset={listRange.setPreset} style={{ marginBottom: 8 }}
+        onClear={hasListFilter ? clearListFilters : undefined}
       >
+        <Segmented label={tr('สถานะ')} value={stFilter} onChange={setStFilter}
+          options={[{ value: '', label: ALL.status }, ...Object.entries(STATUS_META).map(([v, m]) => ({ value: v, label: tr(m.label) }))]} />
+        <LineSelect lines={lines} value={lineFilter} onChange={setLineFilter} placeholder={ALL.line} />
+        <SearchInput value={q} onChange={setQ} fields="เลขที่ / ไลน์" />
         <span className="spacer" />
         {canRecord && <button style={btnSt()} onClick={openNew}>{tr('+ เปิดใบใหม่')}</button>}
       </TimeRangeBar>
+      {/* 🔴 กรองแล้วต้องบอกว่าซ่อนกี่ใบ (กฎความซื่อสัตย์ของจอ) */}
+      <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 10 }}>
+        {hasListFilter
+          ? <>{tr('แสดง')} {shown.length} {tr('จาก')} {reports.length} {tr('ใบ')} · {tr('ซ่อนตามตัวกรอง')} {reports.length - shown.length} {tr('ใบ')}</>
+          : <>{reports.length} {tr('ใบในช่วงที่เลือก')}</>}
+      </div>
 
       {/* 🔴 ตัดขอบเขตไม่ชัด = เขียนบนจอ ห้ามปล่อยให้คนเข้าใจว่ารายการที่เห็นคือทั้งหมดของเขา
           (ของกลาง `lineScope()` บอกเองผ่าน `unsure` + `reason`) */}
@@ -778,7 +805,7 @@ export default function ScrapReport() {
           ต้องปัดตารางไปขวาถึงจะเจอ (ไม่มีอะไรบอกว่าปัดได้) ⇒ เปิดใบแก้ไม่ได้ในทางปฏิบัติ · 15/10 */}
       {isMobile ? (
         <div className="sr-cards">
-          {reports.map(rep => {
+          {shown.map(rep => {
             const sm = STATUS_META[rep.status];
             return (
               <div key={rep.id} className="sr-card">
@@ -798,6 +825,9 @@ export default function ScrapReport() {
               </div>
             );
           })}
+          {reports.length > 0 && shown.length === 0 && (
+            <div style={{ ...cardSt, fontSize: 13, color: 'var(--muted)' }}>{tr('ไม่มีใบตรงตัวกรอง')} — {tr('ซ่อนไว้')} {reports.length} {tr('ใบ')} · {tr('กด 🧹 บนแถบกรองเพื่อดูทั้งหมด')}</div>
+          )}
           {reports.length === 0 && (
             <div style={{ ...cardSt, fontSize: 13 }}>
               {listErr ? <span style={{ color: 'var(--red)', fontWeight: 700 }}>{tr('⚠️ โหลดรายการไม่สำเร็จ:')} {listErr} — ไม่ใช่ "ไม่มีใบ" ให้ลองใหม่อีกครั้ง</span>
@@ -826,7 +856,7 @@ export default function ScrapReport() {
             <th style={thSt}>{tr('รายการ')}</th><th style={thSt}>{tr('รวมของเสีย')}</th><th style={thSt}>{tr('สถานะ')}</th><th style={thSt}>{tr('ดู / ส่งออก / แก้ไข')}</th>
           </tr></thead>
           <tbody>
-            {reports.map(rep => (
+            {shown.map(rep => (
               <tr key={rep.id} className="qb-row" onClick={() => openView(rep)} title={tr('แตะเพื่อดูใบ')} style={{ cursor: 'pointer' }}>
                 <td style={{ ...tdSt, fontWeight: 700, whiteSpace: 'nowrap' }}>{rep.doc_no || '—'}</td>
                 <td style={{ ...tdSt, whiteSpace: 'nowrap' }}>{fmtD(rep.report_date)}</td>
@@ -843,6 +873,11 @@ export default function ScrapReport() {
                 </td>
               </tr>
             ))}
+            {reports.length > 0 && shown.length === 0 && (
+              <tr><td style={{ ...tdSt, color: 'var(--muted)' }} colSpan={7}>
+                {tr('ไม่มีใบตรงตัวกรอง')} — {tr('ซ่อนไว้')} {reports.length} {tr('ใบ')} · {tr('กด 🧹 บนแถบกรองเพื่อดูทั้งหมด')}
+              </td></tr>
+            )}
             {reports.length === 0 && (
               <tr><td style={tdSt} colSpan={7}>
                 {listErr ? (
