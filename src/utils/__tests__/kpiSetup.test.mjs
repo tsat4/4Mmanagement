@@ -666,3 +666,26 @@ test('neededRunRate: average/sum/reach · ไม่มีเป้า/ครบ�
   assert.equal(neededRunRate({ actual: Array(12).fill(1), target: 2, def: def('average') }), null);
   assert.equal(neededRunRate({ actual: a, target: 2, def: def('rate') }), null);
 });
+
+/* ── 🧾 scoreRuleText / defIssues (16/11 · หน้ากรอก KPI ต้องบอกกติกาเป็นประโยค + เตือนเกณฑ์ขัดกัน) ── */
+import { scoreRuleText, defIssues } from '../kpiSetup.js';
+test('scoreRuleText: อ่านจาก defBars (ตัวเลข/ข้อความเก่า) · ไม่มีเป้า = ไม่ตัดสิน · ไม่มีทิศทาง = บอกว่าตัดสินไม่ได้ · score_by_plan เปลี่ยนหัวประโยค', () => {
+  const r = scoreRuleText({ target_value: 1.017, commit_value: 1.0485, direction: 'down', unit: '%', kpi_catalog: { summary_mode: 'average' } });
+  assert.equal(r.ok, true); assert.match(r.text, /ทุกเดือนเทียบเป้าเดียวกัน: ○ ≤ 1\.017 % · △ ≤ 1\.0485 % · ✗ เกินนั้น · สรุปปี = ค่าเฉลี่ยรายเดือน/);
+  const t = scoreRuleText({ target: '≥ 95%', commitment: '≥ 90%', unit: '%' });   // ข้อความเก่า
+  assert.match(t.text, /○ ≥ 95 % · △ ≥ 90 % · ✗ ต่ำกว่านั้น/);
+  assert.equal(scoreRuleText({ unit: '%' }).ok, false);
+  assert.match(scoreRuleText({ target_value: 5, unit: 'MB' }).text, /ไม่ได้บอกทิศทาง/);
+  assert.match(scoreRuleText({ target_value: 5.654, commit_value: 5.489, direction: 'up', score_by_plan: true, unit: 'MB' }).text, /^รายเดือนเทียบ "แผนของเดือนนั้น"/);
+});
+test('defIssues: Commit ผิดด้าน (เคส QCC PD1 "≤ 0" กับเป้า 30) · ไม่มีทิศทาง · ข้อความอ่านไม่ออก · แผนกรอกแต่ไม่ใช้ / ตั้งใช้แต่ไม่กรอก', () => {
+  const qcc = defIssues({ target_value: 30, direction: 'up', commitment: '≤ 0' });
+  assert.ok(qcc.some(i => i.code === 'commit_dir_conflict'));   // เครื่องหมายสวนทาง
+  assert.ok(defIssues({ target_value: 1.0, commit_value: 0.9, direction: 'down' }).some(i => i.code === 'commit_wrong_side'));   // ด้านเดียวกันแต่ Commit เข้มกว่า
+  assert.ok(defIssues({ target_value: 5 }).some(i => i.code === 'no_direction'));
+  assert.ok(defIssues({ target_value: 5, direction: 'up', commitment: 'ตามแผน' }).some(i => i.code === 'commit_text_unparsed'));
+  assert.equal(defIssues({ target_value: 5, direction: 'up', commitment: '-' }).length, 0);   // "-" = ไม่มี Commitment ไม่ใช่ปัญหา
+  assert.ok(defIssues({ target_value: 5, direction: 'up' }, { plans: { 1: 1, 2: 2 } }).some(i => i.code === 'plan_unused'));
+  assert.ok(defIssues({ target_value: 5, direction: 'up', score_by_plan: true }, { plans: {} }).some(i => i.code === 'plan_missing'));
+  assert.equal(defIssues({ target_value: 1.017, commit_value: 1.0485, direction: 'down' }, { plans: {} }).length, 0);
+});

@@ -10526,6 +10526,41 @@ test('🛡️ DailyReport: ด่าน poka-yoke ตอนลงยอด + ก
     /export function decidedDtLogs\(/, '\n\n❌ decidedDtLogs ต้องอยู่ใน utils (pure) ไม่ใช่ในหน้า\n')
 })
 
+test('🛡️ monitoring-orders-replace-atomic — นำเข้าออเดอร์ Monitoring ห้ามลบ+ใส่แยกคำขอ', () => {
+  /* บั๊กที่เคยเปิดอยู่จริง (ปิด 16/11/2026): `src/components/MonitoringUpload.jsx` ทำ
+       ① .from('customer_shipping_orders').delete().eq('source','monitoring').eq('status','pending')
+       ② insertChunked('customer_shipping_orders', …)
+     = **คนละ transaction** (คนละคำขอ HTTP) ⇒ ถ้า ② ล้มหลัง ① สำเร็จ (เน็ตสะดุด/ไฟล์ใหญ่)
+       **ออเดอร์ค้างส่งหายทั้งชุด ไม่มีอะไรย้อนให้** — จอขึ้นว่าบันทึกไม่สำเร็จ แต่ของเดิมหายแล้ว
+       ร้ายกว่านั้น `shipping_phase_alerts` ผูก FK `on delete cascade` = หายตามไปด้วย
+
+     แก้ด้วย RPC `fn_monitoring_orders_replace(jsonb, text)` (migration 20261113c · DR)
+     ลบ+ใส่ใน transaction เดียว + ปิด audit รายแถว แล้วเขียน audit สรุป 1 แถว (`BULK_REPLACE`)
+     แทน N แถว — ตารางนี้กิน **28.2% ของ `audit_log` ทั้งตาราง**
+
+     ด่านนี้จับการถอยกลับ: `.delete()` ที่กรองด้วย `source='monitoring'` = **ล้างทั้งชุด**
+     🔴 ลบด้วย `.in('id', […])` ที่ระบุใบชัดเจน **ไม่เข้าข่าย** — `syncRackOrder` ใน
+        `src/pages/Monitoring.jsx` แก้ยอดช่องเดียวบนบอร์ดแร็ค เป็นงานคนละเรื่อง ต้องไม่โดนจับ */
+  const hits = [];
+  for (const f of walk(join(ROOT, 'src'), ['.js', '.jsx'])) {
+    const src = stripComments(readFileSync(f, 'utf8'));
+    for (const m of src.matchAll(/from\(\s*['"`]customer_shipping_orders['"`]\s*\)([\s\S]{0,300}?)\.delete\(([\s\S]{0,200})/g)) {
+      if (/\.eq\(\s*['"`]source['"`]\s*,\s*['"`]monitoring['"`]\s*\)/.test(m[2])) {
+        hits.push(relative(ROOT, f));
+        break;
+      }
+    }
+  }
+  assert.deepEqual(hits, [],
+    '\n\n❌ ไฟล์ด้านล่างลบออเดอร์ `source=monitoring` จากฝั่งจอโดยตรง\n'
+    + '   ทำไมพัง: ลบกับใส่เป็นคนละ transaction ⇒ ใส่ล้มหลังลบสำเร็จ = ออเดอร์หายทั้งชุด\n'
+    + '        (+ shipping_phase_alerts ผูก on delete cascade = หายตามไปด้วย)\n'
+    + '   แก้ยังไง: เรียก `supabaseDR.rpc(\'fn_monitoring_orders_replace\', { p_rows, p_by })`\n'
+    + '        ส่งทั้งก้อนในคำขอเดียว ห้ามแบ่ง chunk (ไม่งั้นหมดความเป็น transaction เดียว)\n'
+    + '   🔴 RPC ตัดแถวที่ไม่มีรหัส/ไม่มีดิวทิ้ง ⇒ จอต้องเทียบ `inserted` กับจำนวนที่ส่ง แล้วบอกคน\n\n'
+    + hits.map(h => '   • ' + h).join('\n') + '\n');
+});
+
 test('🛡️ bom-direct-demand-batch — ฝั่งจอห้ามเรียก fn_bom_direct_demand ทีละ MAT', () => {
   /* บั๊กที่เคยเกิดจริง (วัด 10-11/11/2026): `src/lib/lineDemandSync.js` เขียนว่า
        Promise.all(mats.map(m => supabaseDR.rpc('fn_bom_direct_demand', { p_fg_mat: m })))
@@ -11063,4 +11098,43 @@ test('🚫 no-fg-line-request — ทุกจุดที่ออกใบเ�
   assert.deepEqual(offenders, [],
     '\n\n❌ ไฟล์นี้ออกใบเบิกเข้าไลน์โดยไม่กันเลข FG 1xx:\n   ' + offenders.join('\n   ')
     + '\n   ใช้ `isFgMat(mat)` + ข้อความ `FG_NO_LINE_REQUEST` จาก src/utils/storeOps.js ก่อน insert\n');
+});
+
+test('🏭 line-select-reason-honest — "ไม่มีในทะเบียนไลน์" ต้องเช็คทะเบียนเต็มก่อนถึงพูดได้', () => {
+  const bad = [];
+  const read = (rel) => stripComments(readFileSync(join(ROOT, rel), 'utf8'));
+  const ls = read('src/components/LineSelect.jsx');
+
+  /* 🔴 13/11: เลือกส่วนงาน PD1 แล้วช่องโชว์ "Assembly Line B - FORD ⚠ ไม่มีในทะเบียนไลน์"
+     ทั้งที่ไลน์นั้นอยู่ในทะเบียนจริง (ส่วนงาน PD2 · ใช้งานปกติ) — เพราะหน้าแม่ส่ง `lines`
+     ที่กรองตามส่วนงานมาแล้ว แล้ว lineOptions หาใน "ลิสต์ที่กรองมา" ไม่เจอ เลยฟันว่าไม่มีในทะเบียน
+     ⇒ คนไปตามหาทะเบียนผิดที่ ทั้งที่เป็นเรื่องขอบเขต */
+  if (!/allLines/.test(ls))
+    bad.push('src/components/LineSelect.jsx (lineOptions ไม่รับทะเบียนเต็ม — จะฟันผิดว่า "ไม่มีในทะเบียน")');
+  if (!/useProductionLinesState\(/.test(ls))
+    bad.push('src/components/LineSelect.jsx (ไม่ได้อ่านทะเบียนผ่านตัวกลาง useProductionLines)');
+  /* 🔴 ยังโหลดไม่เสร็จ = ยังไม่รู้ ห้ามฟันว่าไม่มี */
+  if (!/registryReady/.test(ls))
+    bad.push('src/components/LineSelect.jsx (ไม่ได้แยก "ยังโหลดไม่เสร็จ" ออกจาก "ไม่มีในทะเบียน")');
+  const why = (ls.match(/const why = known[\s\S]{0,400}?;/) || [''])[0];
+  if (why && !/registryReady \?/.test(why))
+    bad.push('src/components/LineSelect.jsx (ป้ายเหตุผลยังฟัน "ไม่มีในทะเบียน" โดยไม่ดูว่าทะเบียนโหลดเสร็จยัง)');
+
+  /* 🔴 ค่าที่เลือกไว้ต้องไม่ค้างนอกลิสต์ที่เลือกได้ — สลับตัวกรองส่วนงานแล้วไลน์เดิมต้องไม่ค้าง */
+  const pl = read('src/components/ProdLotPlanner.jsx');
+  const eff = (pl.match(/useEffect\(\(\) => \{[\s\S]{0,700}?setLineName\(lines\[0\]\.name\)[\s\S]{0,500}?\}, \[lines, lineName\]\);/) || [''])[0];
+  if (!eff) bad.push('src/components/ProdLotPlanner.jsx (ไม่มี effect ที่คุมไลน์ที่เลือกแล้ว)');
+  else {
+    if (!/lines\.some\(/.test(eff))
+      bad.push('src/components/ProdLotPlanner.jsx (ไม่ได้เช็คว่าไลน์ที่เลือกยังอยู่ในลิสต์ — ค้างข้ามส่วนงานได้)');
+    if (!/toast\./.test(eff))
+      bad.push('src/components/ProdLotPlanner.jsx (สลับไลน์ให้เองแบบเงียบ — คนกำลังแก้แผนอยู่ ต้องบอก)');
+    if (!/if \(!lines\.length\) return;/.test(eff))
+      bad.push('src/components/ProdLotPlanner.jsx (ไม่ได้กันตอนทะเบียนยังโหลดไม่เสร็จ — จะรีเซ็ตทิ้งเปล่าๆ)');
+  }
+
+  assert.deepEqual(bad, [], 'ช่องเลือกไลน์บอกเหตุผลผิด:\n' + bad.join('\n')
+    + '\nwhy: "นอกขอบเขตของคุณ" กับ "ไม่มีในทะเบียนไลน์" แก้คนละทางคนละคน — บอกผิดคนไปตามหาผิดที่'
+    + '\nfix: lineOptions รับ allLines (ทะเบียนเต็มจาก useProductionLinesState) + registryReady'
+    + '\n     และหน้าที่กรอง lines เองต้องรีเซ็ตค่าที่หลุดลิสต์ พร้อมบอกบนจอ');
 });

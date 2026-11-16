@@ -47,7 +47,7 @@ async function loadOrdersAndNg(jigs, { fromDate, toDate, workDate = null, shift 
   const nos = [...new Set(jigs.map(j => j.machineNo).filter(Boolean))];
   if (!nos.length) return { orders: [], defects: [], errors };
   const o = await fetchAllRows(supabaseDR, 'prod_orders',
-    'id, mat_no, machine_no, qty, qty_ok, status, opened_at, confirmed_at, production_sessions!inner(work_date, shift, line_name, status, end_time)',
+    'id, session_id, mat_no, machine_no, qty, qty_ok, status, opened_at, confirmed_at, production_sessions!inner(work_date, shift, line_name, status, end_time)',
     (q0) => {
       let q = q0.in('machine_no', nos).in('production_sessions.status', SESSION_STATUSES_REAL);
       q = workDate ? q.eq('production_sessions.work_date', workDate) : q.gte('production_sessions.work_date', fromDate).lte('production_sessions.work_date', toDate);
@@ -278,4 +278,31 @@ export function combineJigRows(rows = []) {
     partialP: !s.hasP && P != null, partialQ: !s.hasQ,
     mttrMin: s.faultN ? s.faultSec / 60 / s.faultN : null, mtbfMin: s.faultN ? s.operatingSec / 60 / s.faultN : null,
   };
+}
+
+/**
+ * 🔗 ข้อมูล ESM ที่ใช้ผูกรายครั้งของการหยุด (กดแท่ง Pareto) — โหลดตอนกดเท่านั้น (egress)
+ *  · downtime ที่คนลง = ของกะที่จิ๊กมีใบผลิต (session_id ของใบ — ผูกตรง ไม่เดาจากชื่อไลน์)
+ *  · ใบแจ้งซ่อม = เวลาเกิด/แจ้งอยู่ในช่วงที่ดู ± 1 ชม. + ใบที่เปิดจาก downtime ข้างบน · เทียบเครื่องที่ linkStops()
+ * @returns `{ downtimes, repairs, typeName: Map, errors }` — อ่านไม่ได้ = errors (จอเขียนบอก ห้ามโชว์ "ไม่มี")
+ */
+export async function loadStopLinks({ orders = [], fromMs, toMs }) {
+  const errors = [];
+  const sids = [...new Set((orders || []).map(o => o.session_id).filter(Boolean))];
+  const dtR = sids.length ? await fetchByIds(sids, part => supabaseDR.from('downtime_logs')
+    .select('id, session_id, downtime_type_id, started_at, ended_at, duration_min, machine_no, description, reported_by_name, call_mtn').in('session_id', part))
+    : { rows: [], error: null };
+  if (dtR.error || dtR.truncated) errors.push('downtime ที่คนลง');
+  const downtimes = dtR.rows || [];
+  const a = new Date(fromMs - 3600000).toISOString(), b = new Date(toMs + 3600000).toISOString();
+  const MO_COLS = 'id, mo_no, status, machine_no, occurred_at, report_at, problem_detail, root_cause, source_downtime_id';
+  const [moT, moD, ty] = await Promise.all([
+    fetchAllRows(supabaseDR, 'mtn_orders', MO_COLS, q => q.or(`and(occurred_at.gte.${a},occurred_at.lte.${b}),and(report_at.gte.${a},report_at.lte.${b})`).order('id')),
+    downtimes.length ? fetchByIds(downtimes.map(d => d.id), part => supabaseDR.from('mtn_orders').select(MO_COLS).in('source_downtime_id', part)) : Promise.resolve({ rows: [], error: null }),
+    downtimes.length ? fetchByIds([...new Set(downtimes.map(d => d.downtime_type_id).filter(Boolean))], part => supabaseDR.from('dr_downtime_types').select('id, name_th').in('id', part)) : Promise.resolve({ rows: [], error: null }),
+  ]);
+  if (moT.error || moD.error || moD.truncated) errors.push('ใบแจ้งซ่อม');
+  if (ty.error) errors.push('ชื่อประเภท downtime');
+  const repairs = [...new Map([...(moT.data || []), ...(moD.rows || [])].map(r => [r.id, r])).values()];
+  return { downtimes, repairs, typeName: new Map((ty.rows || []).map(t => [t.id, t.name_th])), errors };
 }

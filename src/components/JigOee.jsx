@@ -6,14 +6,16 @@
      · เป้า/ยอดยืนยันจากใบผลิต เทียบชิ้นที่เครื่องนับ · เหตุผลที่ตัวเลขคิดไม่ได้เขียนบนจอเสมอ (ไม่รู้ ≠ 0)
    🔴 ไฟล์นี้วาดอย่างเดียว ห้ามคิดสูตร · ฟอนต์ขั้นต่ำ 11px · ห้าม color-mix (จอ TV Chromium 94)
    🔴 Pareto ใช้ <ParetoChart> กลาง · แท่งสีจาก Cell ต้อง CELL_BAR_FILL + tooltipProps (ไม่ได้ใช้ Cell ในไฟล์นี้) */
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, ReferenceLine,
 } from 'recharts';
 import ParetoChart from './ParetoChart';
 import { classifyAbc } from '../utils/pareto';
 import { axisTick, tooltipProps, CHART_MARGIN, alignedYWidth } from '../utils/chartAxis';
-import { WHY_TEXT, pct1, segmentMinutesIn, timeTicks, hourlySummary, hourlyStateMinutes } from '../utils/machineOee';
+import { WHY_TEXT, pct1, segmentMinutesIn, timeTicks, hourlySummary, hourlyStateMinutes, stopOccurrences, linkStops } from '../utils/machineOee';
+import { machineKey } from '../utils/machineNo';
+import { loadStopLinks } from '../lib/jigOeeData';
 import { tr } from '../utils/i18n';
 
 export const KIND_META = {
@@ -421,16 +423,91 @@ export function ShiftTrendChart({ rows = [], target = 0.85 }) {
   );
 }
 
-/** Pareto เวลาที่เสีย — ผ่าน <ParetoChart> กลาง */
-export function StopParetoChart({ pareto = [] }) {
+/** Pareto เวลาที่เสีย — ผ่าน <ParetoChart> กลาง · ส่ง onPick ⇒ กดแท่งเพื่อเจาะลึก (StopDrillPanel) */
+export function StopParetoChart({ pareto = [], onPick }) {
   const rows = useMemo(() => classifyAbc(pareto.map(p => ({
     ...p, name: p.state === 'minor' ? 'หยุดสั้น < 2 นาที' : `${kindMeta(p.state).label}${p.text ? ` · ${p.code ?? ''} ${p.text}` : p.code ? ` · ${p.code}` : ''}`,
   })), p => p.min), [pareto]);
   if (!rows.length) return <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>ไม่มีเวลาที่เสียจากการหยุดในช่วงนี้</div>;
-  return <ParetoChart rows={rows} unit="นาที" height={280} />;
+  return (
+    <div style={{ display: 'grid', gap: 4 }}>
+      <ParetoChart rows={rows} unit="นาที" height={280} onPick={onPick} />
+      {onPick && <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>กดแท่งเพื่อดูรายครั้ง · พาร์ทที่ผลิตอยู่ · downtime ที่คนลง · ใบแจ้งซ่อม</div>}
+    </div>
+  );
 }
 
-/** รายการหยุด */
+const fmtDT = (ms) => new Date(ms).toLocaleString('en-GB', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+
+/** 🔎 เจาะลึก 1 แท่ง Pareto — รายครั้ง + ผูก ESM (สูตร linkStops ใน machineOee.js · โหลด loadStopLinks ตอนกดเท่านั้น)
+ *  events = ช่วงหยุดดิบที่ใช้วาด Pareto ชุดเดียวกัน · orders = ใบผลิตบนจิ๊ก (มี session_id) · tagNo = Map tag → เลขเครื่อง */
+export function StopDrillPanel({ row, events = [], orders = [], tagNo, fromMs, toMs, onClose }) {
+  const [links, setLinks] = useState(null);
+  const occ = useMemo(() => (row?.key ? stopOccurrences(events, row.key, { tagNo }) : []), [row, events, tagNo]);
+  const orderKey = orders.map(o => o.id).join(',');
+  useEffect(() => {
+    let alive = true;
+    setLinks(null);
+    if (!occ.length) return undefined;
+    loadStopLinks({ orders, fromMs, toMs }).then(r => { if (alive) setLinks(r); });
+    return () => { alive = false; };
+  }, [row?.key, orderKey, fromMs, toMs]); // eslint-disable-line react-hooks/exhaustive-deps
+  const linked = useMemo(() => (links ? linkStops(occ, { orders, downtimes: links.downtimes, repairs: links.repairs, keyOf: machineKey }) : null), [links, occ, orders]);
+  if (!row) return null;
+  const title = row.state === 'minor' ? 'หยุดสั้น < 2 นาที' : row.state === 'break_over' ? KIND_META.break_over.label : `${kindMeta(row.state).label}${row.code != null ? ` · ${row.code}` : ''}${row.text ? ` ${row.text}` : ''}`;
+  const th = { textAlign: 'left', padding: '5px 8px', fontSize: 12, color: 'var(--muted)', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' };
+  const td = { padding: '5px 8px', fontSize: 12.5, borderBottom: '1px solid var(--border)', verticalAlign: 'top' };
+  const list = linked || occ;
+  const nDt = linked ? linked.filter(o => o.downtimes.length).length : null;
+  const nMo = linked ? linked.filter(o => o.repairs.length).length : null;
+  return (
+    <div style={{ ...card, display: 'grid', gap: 8, borderColor: 'var(--accent)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>🔎 {title}</div>
+        <button type="button" className="pg-btn" style={{ marginLeft: 'auto' }} onClick={onClose}>{tr('✕ ปิด')}</button>
+      </div>
+      {row.state === 'break_over' ? (
+        <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>พักเกินเวลานโยบาย = ยอดรวมทั้งกะ (กดพักรวมเกินโควตา) ไม่ได้เป็นรายครั้ง — ดูช่วงที่กดพักในแถบสถานะ</div>
+      ) : !occ.length ? (
+        <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>
+          {row.key === 'minor' ? 'หยุดสั้นในรายงานหลายวันนับจากยอดสรุป ไม่มีรายครั้ง — ดูรายครั้งได้ในมุมมอง "ภาพรวมกะ"' : 'ไม่พบรายครั้งของสาเหตุนี้ในข้อมูลที่โหลดไว้'}
+        </div>
+      ) : (<>
+        <div style={{ fontSize: 12.5, color: 'var(--text)' }}>
+          {occ.length} ครั้ง · รวม {fmtHM(occ.reduce((t, o) => t + o.min * 60, 0))}
+          {linked && <> · คนลง downtime แล้ว <b>{nDt}/{occ.length}</b> ครั้ง · มีใบแจ้งซ่อม <b>{nMo}</b> ครั้ง</>}
+          {!links && <span style={{ color: 'var(--muted)' }}> · กำลังโหลดข้อมูลจาก ESM…</span>}
+        </div>
+        {links?.errors?.length > 0 && <div style={{ fontSize: 12, color: 'var(--red)' }}>อ่านไม่สำเร็จ: {links.errors.join(' · ')} — ช่อง "ยังไม่ลง/ไม่มี" อาจไม่จริง</div>}
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead><tr>{['เริ่ม', 'นาที', 'เครื่อง', 'กะ', 'พาร์ทที่ผลิตอยู่', 'downtime ที่คนลง', 'ใบแจ้งซ่อม'].map(h => <th key={h} style={th}>{tr(h)}</th>)}</tr></thead>
+            <tbody>{list.slice(0, 200).map(o => (
+              <tr key={`${o.tag}|${o.startMs}`}>
+                <td style={{ ...td, whiteSpace: 'nowrap' }}>{fmtDT(o.startMs)}</td>
+                <td style={{ ...td, textAlign: 'right', fontWeight: 700 }}>{o.min.toFixed(1)}</td>
+                <td style={{ ...td, fontFamily: 'ui-monospace, monospace', whiteSpace: 'nowrap' }}>{o.machineNo || o.tag || '–'}</td>
+                <td style={{ ...td, whiteSpace: 'nowrap' }}>{o.shift ? `${o.shift.workDate.slice(8, 10)}/${o.shift.workDate.slice(5, 7)} ${o.shift.shift === 'day' ? 'เช้า' : 'ดึก'}` : '–'}</td>
+                <td style={td}>{!linked ? '…' : o.mats.length ? <>{o.mats.join(', ')}{o.matBy === 'shift' && <span style={{ color: 'var(--muted)' }}> (ใบในกะ — ไม่มีใบเปิดตอนนั้น)</span>}</> : <span style={{ color: 'var(--amber)' }}>ไม่มีใบผลิตบนจิ๊ก</span>}</td>
+                <td style={td}>{!linked ? '…' : o.downtimes.length ? o.downtimes.map(d => (
+                  <div key={d.id}>{links.typeName.get(d.downtime_type_id) || 'ไม่ระบุประเภท'} · {Math.round(Number(d.duration_min) || 0)} น.{d.description ? ` · ${d.description}` : ''}{d.reported_by_name ? <span style={{ color: 'var(--muted)' }}> ({d.reported_by_name})</span> : null}</div>
+                )) : <span style={{ color: 'var(--amber)' }}>ยังไม่ลง</span>}</td>
+                <td style={td}>{!linked ? '…' : o.repairs.length ? o.repairs.map(r => (
+                  <div key={r.id}><b>{r.mo_no || 'MO'}</b> · {r.status}{r.root_cause ? ` · สาเหตุ: ${r.root_cause}` : r.problem_detail ? ` · ${r.problem_detail}` : ''}{r.moBy === 'time' && <span style={{ color: 'var(--muted)' }}> (เวลาตรงกัน)</span>}</div>
+                )) : <span style={{ color: 'var(--muted)' }}>ไม่มี</span>}</td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+        {list.length > 200 && <div style={{ fontSize: 12, color: 'var(--amber)' }}>แสดง 200 ครั้งล่าสุดจาก {list.length} ครั้ง</div>}
+        <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>
+          ผูกด้วยเครื่องเดียวกัน + เวลาทับกัน (เผื่อ ±10 นาที เพราะนาฬิกา PLC คลาด) · ใบแจ้งซ่อม "(เวลาตรงกัน)" = ไม่ได้เปิดจาก downtime ใบนั้นโดยตรง ให้ตรวจก่อนสรุป
+        </div>
+      </>)}
+    </div>
+  );
+}
+
 export function StopTable({ stops = [], limit = 40 }) {
   const [all, setAll] = useState(false);
   const shown = all ? stops : stops.slice(0, limit);
@@ -467,6 +544,8 @@ export function JigDrilldown({ j, trendRows = null, target = 0.85 }) {
   const why = (o.why || []).filter(w => WHY_TEXT[w]);
   const ordersDone = j.orders.filter(x => x.status === 'confirmed');
   const span = j.win.endMs - j.win.startMs > 13 * 3600000 ? 'ทั้งวัน' : 'กะนี้';
+  const [pick, setPick] = useState(null);
+  const drillTagNo = useMemo(() => new Map([[j.tag, j.machineNo]]), [j.tag, j.machineNo]);
   const sec = (title, sub, body) => (
     <div style={{ ...card }}>
       <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{title}</div>
@@ -498,8 +577,9 @@ export function JigDrilldown({ j, trendRows = null, target = 0.85 }) {
       {sec('ยอดผลิต & สถานะเครื่องรายชั่วโมง', 'บน: ชิ้นดี + NG จากเครื่อง เทียบเป้า (เวลาแผนของชั่วโมง ÷ CT พาร์ทในใบ) · ล่าง: แต่ละชั่วโมงหมดเวลาไปกับสถานะไหน', <HourlyChart buckets={j.buckets} segments={j.segments} />)}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 12, alignItems: 'start' }}>
         {sec(`OEE Loss ${span}`, 'เวลาแผนหายไปไหนบ้าง (Six Big Losses แบบย่อ)', <LossWaterfall o={o} />)}
-        {sec(`Pareto สาเหตุการหยุด ${span}`, `Alarm/Idle/หยุดนอกแผน ≥ 2 นาที + หยุดสั้น (นับใน Performance) · หยุดสั้น ${o.counts.minor} ครั้ง ${fmtMin(o.minorSec)}`, <StopParetoChart pareto={j.pareto} />)}
+        {sec(`Pareto สาเหตุการหยุด ${span}`, `Alarm/Idle/หยุดนอกแผน ≥ 2 นาที + หยุดสั้น (นับใน Performance) · หยุดสั้น ${o.counts.minor} ครั้ง ${fmtMin(o.minorSec)}`, <StopParetoChart pareto={j.pareto} onPick={r => setPick(p => (p?.key === r.key ? null : r))} />)}
       </div>
+      {pick && <StopDrillPanel row={pick} events={j.events} orders={j.orders} tagNo={drillTagNo} fromMs={j.win.startMs} toMs={j.endMs ?? j.win.endMs} onClose={() => setPick(null)} />}
       {sec('ใบผลิตบนจิ๊กนี้ (ESM)', 'เป้า/ยอดยืนยันจากพนักงาน เทียบชิ้นที่เครื่องนับ — ตัวเชื่อม = เครื่องที่เลือกตอนเปิดใบ', (
           j.orders.length ? (
             <div style={{ display: 'grid', gap: 4, fontSize: 12.5 }}>

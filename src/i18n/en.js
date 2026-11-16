@@ -295,7 +295,7 @@ const EN = {
   'เช็คชื่อ-PPE · จัดการไลน์ · Daily Report · Daily Checker · Kaizen': 'Attendance-PPE · Line management · Daily Report · Daily Checker · Kaizen',
   'OEE · VSM · สอบกลับ Order · ประวัติผลิต · รายงาน/ใบพิมพ์': 'OEE · VSM · Order traceability · Production history · Reports / printouts',
   'ฐานข้อมูลพนักงาน · สกิล & Level Up · OJT · ตารางกะ': 'Employee database · Skills & Level Up · OJT · Shift schedule',
-  'แผนงาน + Store (3xx ซื้อนอก · 5xx raw · 2xx ผลิตเอง) — Planner & Sales · สต๊อกในไลน์ · บอร์ดคัมบัง · ขนส่งเข้าไลน์':
+  'แผนงาน + Store (3xx ซื้อนอก · 5xx raw · 2xx ผลิตเอง) — Planner & Sales · Stock Management · บอร์ดคัมบัง · ขนส่งเข้าไลน์':
     'Planning + Store (3xx purchased · 5xx raw · 2xx in-house) — Planner & Sales · Line stock · Kanban board · Transport to lines',
   'Warehouse (FG 1xx) · Delivery · Rack Center — จัดส่งลูกค้า · คาดการณ์ของจะขาด · ภาชนะ':
     'Warehouse (FG 1xx) · Delivery · Rack Center — Customer delivery · Shortage forecast · Containers',
@@ -647,8 +647,8 @@ const EN = {
   'ขาดรวม': 'Total shortfall',
   'ขาดหนักสุด': 'Worst shortfall',
   'ขาดเป้า': 'Below target',
-  'ขาออก (สโตร์ → ผลิต)': 'Outbound (store → production)',
-  'ขาเข้า (→ สโตร์)': 'Inbound (→ store)',
+  'ส่งของเข้าไลน์': 'Send to line',
+  'รับของเข้าคลัง': 'Receive into store',
   'ขึ้นตรงฝ่าย — ไม่อยู่ใต้ Section ใด': 'Reports to division — not under any section',
   'ขึ้นต้นรหัส': 'Code prefix',
   'ข้อ': 'Item',
@@ -5487,7 +5487,7 @@ const EN = {
   'ยังไม่ผูกกับการตัดสต็อก — ระบบยังเบิกตามไลน์เหมือนเดิม': 'Not linked to stock deduction — the system still issues by line as before',
   'ยังไม่ผูกชุด PE (✏️ พาร์ท)': 'PE set not linked (✏️ Part)',
   'ยังไม่ผูกชุด PFC/FMEA/CP': 'PFC/FMEA/CP set not linked',
-  'ยังไม่ผูกรหัสคลัง SAP (ผูกที่ 📦 สต๊อกในไลน์ → 🏬 พื้นที่ SAP / โซนคลัง → “ทะเบียนรหัสคลัง” กด ✏️ ที่รหัสแล้วติ๊กไลน์)': 'SAP store code not linked (link at 📦 Line stock → 🏬 SAP area / store zone → “Store code registry”, press ✏️ on the code and tick the line)',
+  'ยังไม่ผูกรหัสคลัง SAP (ผูกที่ 📦 Stock Management → ตั้งค่า → พื้นที่ SAP / โซนคลัง → “ทะเบียนรหัสคลัง” กด ✏️ ที่รหัสแล้วติ๊กไลน์)': 'SAP store code not linked (link at 📦 Line stock → 🏬 SAP area / store zone → “Store code registry”, press ✏️ on the code and tick the line)',
   'ยังไม่ผูกไลน์ (คนหน้างานที่ไม่มีไลน์จะไม่ขึ้นในหน้าเช็คชื่อ)': 'No line linked (floor staff without a line do not appear on the attendance page)',
   'ยังไม่มอบหมาย': 'Unassigned',
   'ยังไม่มี': 'None yet',
@@ -6242,7 +6242,7 @@ const EN = {
   'สต็อกคงเหลือจำลอง (ถ้าไม่ผลิตเพิ่มจากนี้)': 'Simulated remaining stock (if no further production)',
   'สต็อกส่วนนั้น (': 'That section\'s stock (',
   'สต๊อกค้างเกินจำเป็น': 'Excess stock beyond need',
-  'สต๊อกในไลน์ → 🏬 พื้นที่ SAP / โซนคลัง → “ทะเบียนรหัสคลัง”': 'Stock in line → 🏬 SAP area / warehouse zone → “Store code registry”',
+  '📦 Stock Management → ตั้งค่า → พื้นที่ SAP / โซนคลัง → “ทะเบียนรหัสคลัง”': 'Stock in line → 🏬 SAP area / warehouse zone → “Store code registry”',
   'สต๊อกไม่พอ — คงเหลือ': 'Insufficient stock — remaining',
   'สถานที่': 'Location',
   'สถานะ PPAP': 'PPAP status',
@@ -7666,7 +7666,7 @@ const EN = {
   'ไปลงทะเบียนที่แท็บ AM →': 'Register at the AM tab →',
   'ไปวางที่แท็บผังจัดเก็บ': 'Place it on the storage layout tab',
   'ไปหน้าส่งของ (Heijunka)': 'Go to delivery page (Heijunka)',
-  'ไปหน้าเตรียมงาน — Line Stock › 📤 ขาออก › ตู้ตามเลขพาร์ท (กรองเฉพาะพาร์ทนี้)': 'Go to preparation page — Line Stock › 📤 Outbound › bins by part no. (filtered to this part)',
+  'ไปหน้าเตรียมงาน — Stock Management › 📤 ส่งของเข้าไลน์ › ตู้ตามเลขพาร์ท (กรองเฉพาะพาร์ทนี้)': 'Go to preparation page — Stock Management › 📤 Send to line › bins by part no. (filtered to this part)',
   'ไปเพิ่ม BOM ที่หน้า 📦 BOM ก่อน แล้วข้อมูลจะแตกให้อัตโนมัติ': 'Add the BOM on the 📦 BOM page first; the data will then explode automatically',
   'ไปแล้ว': 'Gone',
   'ไฟฟ้า': 'Electrical',
@@ -8424,7 +8424,8 @@ const EN = {
   'บางนา-ตราด · สมุทรปราการ · ฉะเชิงเทรา': 'Bangna-Trad · Samut Prakan · Chachoengsao',
   'ของซื้อ (300/500) → รับเข้าสโตร์': 'Purchased items (300/500) → receive into store',
   'ครบล็อตแล้ว รอสโตร์ปล่อยงานให้ไลน์': 'Lot complete, waiting for store to release to line',
-  'งาน FG 1xx → ไลน์ประกอบ · รอบส่งคัมบัง': 'FG 1xx → assembly line · kanban delivery round',
+  'รอบส่งคัมบังเข้าไลน์': 'Kanban delivery rounds to line',
+  'รอบส่งชิ้นส่วนเข้าไลน์ตามคัมบัง (ไม่มี FG เข้าไลน์)': 'Kanban part delivery rounds to line (no FG goes to lines)',
   'ชิ้นส่วน 2xx — ส่งเข้าไลน์ · ปล่อยใบล็อตให้ไลน์ผลิต แล้วรับของกลับเข้าสโตร์': 'Parts 2xx — issue to line · release lot ticket to the line, then receive back into store',
   'ชิ้นส่วนซื้อ 3xx → ส่งเข้าไลน์': 'Purchased parts 3xx → issue to line',
   'ภาชนะ + Packaging → ทุกไลน์ · จัดการที่ ภาชนะ & Packaging': 'Containers + packaging → all lines · managed at Containers & Packaging',
@@ -10351,6 +10352,9 @@ const EN = {
   // 🏭 OEE รายจิ๊ก (16/11)
   'จบ': 'End',
   'สาเหตุ (จากหน้าเครื่อง)': 'Reason (from machine)',
+  '✕ ปิด': '✕ Close',
+  'พาร์ทที่ผลิตอยู่': 'Part in production',
+  'downtime ที่คนลง': 'Downtime logged by staff',
 };
 
 export default EN;
