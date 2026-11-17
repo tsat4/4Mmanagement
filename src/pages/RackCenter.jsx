@@ -242,7 +242,7 @@ export default function RackCenter() {
         <img src="${dataUrl}" />
         <div class="ln">${c.line}</div>
         <div class="ct">${c.ct.code ? c.ct.code + ' · ' : ''}${c.ct.name}</div>
-        <div class="hint">{tr('สแกนเพื่อเรียกภาชนะ')}</div>
+        <div class="hint">${tr('สแกนเพื่อเรียกภาชนะ')}</div>
       </div>`);
     }
     const html = `<style>
