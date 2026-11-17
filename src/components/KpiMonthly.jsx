@@ -855,7 +855,7 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
         PPM = ของเสีย ÷ ยอดที่ผลิตทั้งหมด (สแกนดี + เสีย) × 10⁶ (ไม่รวมงานทดลอง) · พิมพ์ ${new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}
       </div>
       <table style="border-collapse:collapse;width:100%">
-        <tr><th style="${th};text-align:left">KPI</th>${TH_M.map(m => `<th style="${th}">${m}</th>`).join('')}<th style="${th}">{tr('สรุปทั้งปี')}</th></tr>
+        <tr><th style="${th};text-align:left">KPI</th>${TH_M.map(m => `<th style="${th}">${m}</th>`).join('')}<th style="${th}">${tr('สรุปทั้งปี')}</th></tr>
         ${rows}
         ${manRows ? `<tr><td colspan="14" style="${td};text-align:left;background:#f4f4f4;font-weight:bold">KPI กรอกมือ (นอกระบบ)${!isPlant(scope) ? ' — รวมนิยามที่ตกทอดจากระดับแม่ (ติดป้ายในวงเล็บ)' : ''}</td></tr>${manRows}` : ''}
       </table>

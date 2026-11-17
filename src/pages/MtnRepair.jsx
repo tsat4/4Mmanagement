@@ -2178,18 +2178,18 @@ function printMoReport(o, dparts = [], logo0, dlabor = [], cmt = NO_CMT, costErr
   <table>
     <tr class="hdr">
       <td rowspan="2" style="width:9.85%;vertical-align:middle;text-align:center"><img src="${esc(logo)}" style="max-width:100%;max-height:40pt"/></td>
-      <td style="width:25.09%" class="co">{trI18n('บริษัท ไทยซัมมิท โอโตโมทีฟ จำกัด สาขา 1')}</td>
+      <td style="width:25.09%" class="co">${trI18n('บริษัท ไทยซัมมิท โอโตโมทีฟ จำกัด สาขา 1')}</td>
       <td class="ttl" colspan="2" style="width:32.53%">ใบแจ้งซ่อมและปรับปรุง ${esc(dept)}</td>
       <td class="mo" style="width:32.53%">MO NO: ${esc(o.mo_no || '-')}</td>
     </tr>
     <tr class="hdr">
-      <td colspan="2"><span class="fk">{trI18n('แจ้งถึงหน่วยงาน:')}</span> ${esc(dept)}</td>
-      <td colspan="2"><span class="fk">{trI18n('สถานะดำเนินการ:')}</span> ${esc(statusTh)}</td>
+      <td colspan="2"><span class="fk">${trI18n('แจ้งถึงหน่วยงาน:')}</span> ${esc(dept)}</td>
+      <td colspan="2"><span class="fk">${trI18n('สถานะดำเนินการ:')}</span> ${esc(statusTh)}</td>
     </tr>
   </table>
   <table>
-    <tr><td class="sech" style="width:50.2%"><b>1 [OPEN MO]</b> <span class="en">{trI18n('ส่วนผู้แจ้ง')}</span></td>
-        <td class="sech" style="width:49.8%"><b>2 [ACCEPT/ASSIGN]</b> <span class="en">{trI18n('ส่วนผู้รับงาน')}</span></td></tr>
+    <tr><td class="sech" style="width:50.2%"><b>1 [OPEN MO]</b> <span class="en">${trI18n('ส่วนผู้แจ้ง')}</span></td>
+        <td class="sech" style="width:49.8%"><b>2 [ACCEPT/ASSIGN]</b> <span class="en">${trI18n('ส่วนผู้รับงาน')}</span></td></tr>
     <tr>
       <td rowspan="3">
         ${P(L('ส่วน:', o.work_area), L('แผนก:', o.dept_section))}
@@ -2204,19 +2204,19 @@ function printMoReport(o, dparts = [], logo0, dlabor = [], cmt = NO_CMT, costErr
         ${P(L('ผู้รับงาน:', o.accepted_by), L('ผู้รับผิดชอบ:', o.assigned_to))}
         ${L('วันที่คาดการณ์เสร็จ:', beDT(o.target_done_at))}${L('ประเภทงานซ่อม:', o.repair_type)}${L('รายละเอียด:', o.assign_note)}${o.reject_reason ? L('เหตุ Reject:', o.reject_reason) : ''}</td>
     </tr>
-    <tr><td class="sech" style="height:20pt"><b>3 [REPAIR]</b> <span class="en">{trI18n('ส่วนผู้ซ่อม')}</span></td></tr>
+    <tr><td class="sech" style="height:20pt"><b>3 [REPAIR]</b> <span class="en">${trI18n('ส่วนผู้ซ่อม')}</span></td></tr>
     <tr><td style="height:99pt">${L('วันที่เสร็จ:', beDT(o.repair_done_at))}
         ${P(L('ผู้ซ่อมหลัก:', o.tech_main), L('ผู้ซ่อมรอง:', o.tech_secondary))}
         ${L('สาเหตุปัญหา:', o.root_cause)}${L('วิธีการแก้ไข:', o.solution)}${dparts.length ? L('อะไหล่:', dparts.map(p => `${p.part_name} ×${p.qty}${p.unit || ''}`).join(', ')) : ''}${costErr ? `<div style="font-size:7.2pt;margin-top:3pt">⚠ รายการอะไหล่/ค่าแรงโหลดไม่สำเร็จ — ใบนี้อาจแสดงไม่ครบ</div>` : ''}</td></tr>
   </table>
   <table>
-    <tr><td class="sech" style="width:50.2%;height:21pt"><b>[BEFORE IMPROVEMENT]</b> <span class="en">{trI18n('ภาพปัญหาก่อนปรับปรุง')}</span></td>
-        <td class="sech" style="width:49.8%;height:21pt"><b>[AFTER IMPROVEMENT]</b> <span class="en">{trI18n('ภาพปัญหาหลังปรับปรุง')}</span></td></tr>
+    <tr><td class="sech" style="width:50.2%;height:21pt"><b>[BEFORE IMPROVEMENT]</b> <span class="en">${trI18n('ภาพปัญหาก่อนปรับปรุง')}</span></td>
+        <td class="sech" style="width:49.8%;height:21pt"><b>[AFTER IMPROVEMENT]</b> <span class="en">${trI18n('ภาพปัญหาหลังปรับปรุง')}</span></td></tr>
     <tr><td class="imgcell">${o.before_img ? `<img src="${esc(o.before_img)}"/>` : ''}</td><td class="imgcell">${o.after_img ? `<img src="${esc(o.after_img)}"/>` : ''}</td></tr>
   </table>
   <table>
-    <tr><td class="sech" style="width:50.2%;height:25pt"><b>4&5 [CONFIRM QUALITY]</b> <span class="en">{trI18n('ยืนยันคุณภาพ')}</span></td>
-        <td class="sech" style="width:49.8%;height:25pt"><b>6 [ACCEPT]</b> <span class="en">{trI18n('รับมอบหลังซ่อม')}</span></td></tr>
+    <tr><td class="sech" style="width:50.2%;height:25pt"><b>4&5 [CONFIRM QUALITY]</b> <span class="en">${trI18n('ยืนยันคุณภาพ')}</span></td>
+        <td class="sech" style="width:49.8%;height:25pt"><b>6 [ACCEPT]</b> <span class="en">${trI18n('รับมอบหลังซ่อม')}</span></td></tr>
     <tr class="q"><td>${L('4.ผลงานหลังแก้ไข:', o.check_result)}${L(isToolTeamOrder(o) ? '4.ผู้ตรวจรับ (หัวหน้าแผนกช่าง):' : '4.ผู้ตรวจรับ (ฝ่ายที่แจ้ง):', o.checker_name)}${L('4.รายละเอียด:', o.check_note)}${L('5.คุณภาพหลังการแก้ไข:', o.qa_result || (qaSkippedPrint(o) ? 'ไม่เกี่ยวกับคุณภาพ (ไม่ต้องตรวจ QA)' : ''))}${L('5.รายละเอียด', o.qa_note || (qaSkippedPrint(o) ? `${o.qa_skip_reason || QA_SKIP_REASON_STEP4}${o.qa_skipped_by ? ` — ${o.qa_skipped_by}` : ''}` : ''))}</td>
         <td>${L('สถานะ:', o.follow_up)}${L('ผู้แจ้ง:', o.ho_reporter || o.reporter_prod)}${L('รายละเอียด:', '')}</td></tr>
   </table>
@@ -2364,7 +2364,7 @@ function printMoReportMtn(o, dparts = [], logo0, dlabor = [], cmt = NO_CMT, cost
       <td style="width:62%;padding:3px 5px">
         <table class="nob"><tr>
           <td style="width:52px"><img src="${esc(logo)}" style="width:46px"/></td>
-          <td><div class="hdco">{trI18n('บริษัท ไทยซัมมิท โอโตโมทีฟ จำกัด')}</div><div class="hden">Thai Summit  Automotive Co.,Ltd</div></td>
+          <td><div class="hdco">${trI18n('บริษัท ไทยซัมมิท โอโตโมทีฟ จำกัด')}</div><div class="hden">Thai Summit  Automotive Co.,Ltd</div></td>
         </tr></table>
       </td>
       <td style="width:38%;padding:3px 5px" class="mono">MO.No. <span class="dot" style="min-width:150px">${esc(o.mo_no || '')}</span></td>
@@ -2380,8 +2380,8 @@ function printMoReportMtn(o, dparts = [], logo0, dlabor = [], cmt = NO_CMT, cost
           จุดประสงค์ (${purpose === 'repair' ? '✓' : '&nbsp;'}) ซ่อม (${purpose === 'improve' ? '✓' : '&nbsp;'}) ปรับปรุง (${purpose === 'service' ? '✓' : '&nbsp;'}) บริการ (${purpose === 'build' ? '✓' : '&nbsp;'}) สร้าง</div>
       </td>
       <td style="width:22%;padding:3px 5px">
-        <div>${chk(!done)} {trI18n('รอดำเนินการ')}</div>
-        <div style="margin-top:4px">${chk(done)} {trI18n('ดำเนินการแล้ว')}</div>
+        <div>${chk(!done)} ${trI18n('รอดำเนินการ')}</div>
+        <div style="margin-top:4px">${chk(done)} ${trI18n('ดำเนินการแล้ว')}</div>
       </td>
     </tr>
   </table>
@@ -2411,7 +2411,7 @@ function printMoReportMtn(o, dparts = [], logo0, dlabor = [], cmt = NO_CMT, cost
 
   <!-- ══ ขั้นตอนการดำเนินการและแก้ไข ══ -->
   <table>
-    <tr><td class="sec" colspan="2">{trI18n('ขั้นตอนการดำเนินการและแก้ไข (ซ่อมบำรุง)')}</td></tr>
+    <tr><td class="sec" colspan="2">${trI18n('ขั้นตอนการดำเนินการและแก้ไข (ซ่อมบำรุง)')}</td></tr>
     <tr>
       <td style="width:62%">
         <div>สาเหตุเกิดจาก
@@ -2445,18 +2445,18 @@ function printMoReportMtn(o, dparts = [], logo0, dlabor = [], cmt = NO_CMT, cost
   <table style="table-layout:fixed"><tr>
     <td style="width:50%;padding:0;border-right:none">
       <table class="tb">
-        <tr><th colspan="4">{trI18n('ค่าแรงในการปฏิบัติงาน')}</th></tr>
-        <tr><th style="width:34px">{trI18n('ลำดับ')}</th><th>{trI18n('ชื่อผู้ปฏิบัติงาน')}</th><th style="width:74px">{trI18n('ค่าแรง/ชม.')}</th><th style="width:62px">{trI18n('ราคา')}</th></tr>
+        <tr><th colspan="4">${trI18n('ค่าแรงในการปฏิบัติงาน')}</th></tr>
+        <tr><th style="width:34px">${trI18n('ลำดับ')}</th><th>${trI18n('ชื่อผู้ปฏิบัติงาน')}</th><th style="width:74px">${trI18n('ค่าแรง/ชม.')}</th><th style="width:62px">${trI18n('ราคา')}</th></tr>
         ${laborHtml}
-        <tr><td colspan="3" style="font-size:8.5px">ค่าแรง : วิศวกร = 200 บาท/ช.ม., ช่างเทคนิค = 100 บาท/ช.ม. &nbsp;<b>{trI18n('(1) รวมค่าแรง')}</b></td><td class="r"><b>${money(sumL)}</b></td></tr>
+        <tr><td colspan="3" style="font-size:8.5px">ค่าแรง : วิศวกร = 200 บาท/ช.ม., ช่างเทคนิค = 100 บาท/ช.ม. &nbsp;<b>${trI18n('(1) รวมค่าแรง')}</b></td><td class="r"><b>${money(sumL)}</b></td></tr>
       </table>
     </td>
     <td style="width:50%;padding:0">
       <table class="tb">
-        <tr><th colspan="4">{trI18n('ค่าอะไหล่และอุปกรณ์')}</th></tr>
-        <tr><th style="width:34px">{trI18n('ลำดับ')}</th><th>{trI18n('รายการ')}</th><th style="width:74px">{trI18n('จำนวน/หน่วย')}</th><th style="width:62px">{trI18n('ราคา')}</th></tr>
+        <tr><th colspan="4">${trI18n('ค่าอะไหล่และอุปกรณ์')}</th></tr>
+        <tr><th style="width:34px">${trI18n('ลำดับ')}</th><th>${trI18n('รายการ')}</th><th style="width:74px">${trI18n('จำนวน/หน่วย')}</th><th style="width:62px">${trI18n('ราคา')}</th></tr>
         ${partHtml}
-        <tr><td colspan="3"><b>{trI18n('(2) รวมค่าอะไหล่และอุปกรณ์')}</b></td><td class="r"><b>${money(sumP)}</b></td></tr>
+        <tr><td colspan="3"><b>${trI18n('(2) รวมค่าอะไหล่และอุปกรณ์')}</b></td><td class="r"><b>${money(sumP)}</b></td></tr>
       </table>
     </td>
   </tr></table>
@@ -2465,10 +2465,10 @@ function printMoReportMtn(o, dparts = [], logo0, dlabor = [], cmt = NO_CMT, cost
   <!-- ══ ความพึงพอใจ + ลายเซ็นท้ายใบ ══ -->
   <table style="table-layout:fixed"><tr>
     <td style="width:50%">
-      <div style="font-weight:700">{trI18n('แบบสำรวจความพึงพอใจหลังการปฏิบัติงานของหน่วยงานซ่อมบำรุง')}</div>
-      <div style="font-size:9px">{trI18n('กรุณาใส่เครื่องหมาย x ลงในช่องคะแนน')}</div>
+      <div style="font-weight:700">${trI18n('แบบสำรวจความพึงพอใจหลังการปฏิบัติงานของหน่วยงานซ่อมบำรุง')}</div>
+      <div style="font-size:9px">${trI18n('กรุณาใส่เครื่องหมาย x ลงในช่องคะแนน')}</div>
       <table class="tb" style="margin-top:2px">
-        <tr><th style="text-align:left">{trI18n('ความพึงพอใจ')}</th><th style="width:46px">{trI18n('พอใช้')}</th><th style="width:52px">{trI18n('ปานกลาง')}</th><th style="width:40px">{trI18n('ดี')}</th></tr>
+        <tr><th style="text-align:left">${trI18n('ความพึงพอใจ')}</th><th style="width:46px">${trI18n('พอใช้')}</th><th style="width:52px">${trI18n('ปานกลาง')}</th><th style="width:40px">${trI18n('ดี')}</th></tr>
         ${satHtml}
       </table>
       <div style="margin-top:3px">${line('คะแนนรวม', ss.sum == null ? '' : `${ss.sum}/${ss.max}`, '60px')} ${line('คิดเป็น', ss.pct == null ? '' : `${ss.pct} %`, '55px')} ${line('ลงชื่อผู้ประเมิน', o.satisfaction_by, '85px')}</div>
@@ -2483,7 +2483,7 @@ function printMoReportMtn(o, dparts = [], logo0, dlabor = [], cmt = NO_CMT, cost
         <tr>
           <td colspan="2" style="padding:3px 5px;border:none;height:1px">
             <div>${line('ค่าใช้จ่ายทั้งหมดเป็นของหน่วยงาน', o.cost_owner_dept, '110px')}</div>
-            <div style="margin-top:2px">{trI18n('และได้รับมอบงานเรียบร้อยแล้ว')}</div>
+            <div style="margin-top:2px">${trI18n('และได้รับมอบงานเรียบร้อยแล้ว')}</div>
           </td>
         </tr>
         <tr><td class="sgc" colspan="2" style="border:none">${sg('ผู้จัดการ', o.cost_mgr_name, sgn(o.cost_mgr_uid, o.cost_mgr_sign), o.cost_mgr_at)}</td></tr>
@@ -2496,7 +2496,7 @@ function printMoReportMtn(o, dparts = [], logo0, dlabor = [], cmt = NO_CMT, cost
   <div class="ft"><span>${[df.form_code, df.rev].filter(Boolean).join('-')}</span><span>${df.footer_note || ''}</span><span>${df.effective_date ? 'Effective : ' + df.effective_date : ''}</span></div>
 
   ${(o.before_img || o.after_img) ? `<div class="ph"><table>
-    <tr><td class="sec" style="width:50%">{trI18n('ภาพก่อนซ่อม/ปรับปรุง')}</td><td class="sec" style="width:50%">{trI18n('ภาพหลังซ่อม/ปรับปรุง')}</td></tr>
+    <tr><td class="sec" style="width:50%">${trI18n('ภาพก่อนซ่อม/ปรับปรุง')}</td><td class="sec" style="width:50%">${trI18n('ภาพหลังซ่อม/ปรับปรุง')}</td></tr>
     <tr><td class="phc">${o.before_img ? `<img src="${esc(o.before_img)}"/>` : ''}</td><td class="phc">${o.after_img ? `<img src="${esc(o.after_img)}"/>` : ''}</td></tr>
     <tr><td colspan="2" style="font-size:9px">แนบท้ายใบ MO ${esc(o.mo_no || '')} — ${esc(dept)}</td></tr>
   </table></div>` : ''}
