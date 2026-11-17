@@ -105,7 +105,7 @@ import { notifyEvent } from '../utils/notifyEvent';
 import useStaleSessions, { STALE_SESSION_DAYS, sessionAgeDays, ballSideText } from '../utils/staleSessions';
 import { carryDowntimesTo, prevSessionOfLine, nextOpenSessionOfLine } from '../lib/downtimeCarry';
 import { decidedDtLogs } from '../utils/downtimeCarryRules';
-import { openShiftDefaults, shiftStartTime } from '../utils/workDate';
+import { openShiftDefaults, shiftStartTime, addDaysStr } from '../utils/workDate';
 import { liveChannel } from '../utils/liveChannel';
 import { LIVE } from '../utils/refreshRates';
 import { coalesce } from '../utils/liveRefresh';
@@ -869,10 +869,34 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
      🔴 กฎ: ตัวเลือกกะ = ตัวกรอง **ไม่ใช่ด่าน** ⇒ ด่านจริงอยู่ที่ `doInsertProdOrder` (ตัวเขียน DB)
      ⚠️ `Date.now()` ตอน render พอ — ลิสต์กะรีเฟรชเองผ่าน realtime/poll อยู่แล้ว
         (ด่านตอนเขียนอ่านเวลาสดอีกรอบ) */
+  /* 🔴 กะที่ "มาทีหลัง" อาจปิดไปแล้ว ⇒ ไม่อยู่ในลิสต์ `sessions` (ลิสต์โหลดแค่ open/pending_close)
+     เคสจริง LINE B กะ 24/10 ถูกเปิดใบเพิ่ม 26/10 10:39 (31 ใบ 3,860 ชิ้น) ทั้งที่กะ 25-26/10 จบไปแล้ว
+     ⇒ ถามฐานตรงๆ เฉพาะ "ไลน์นี้ + ตั้งแต่วันของกะนี้ถึง +3 วัน" (คอลัมน์เท่าที่ใช้ · egress เป็นไบต์)
+     `null` = อ่านไม่ได้ ⇒ จอต้องเขียนว่าเช็คไม่ได้ ห้ามเงียบ */
+  const [lineSessions, setLineSessions] = useState([]);
+  useEffect(() => {
+    const ln = selSession?.line_name, wd = selSession?.work_date;
+    if (!ln || !wd) { setLineSessions([]); return; }
+    let alive = true;
+    (async () => {
+      const to = addDaysStr(wd, 3);
+      let q = supabaseDR.from('production_sessions')
+        .select('id, line_name, work_date, shift, start_time, end_time, shift_min, status')
+        .eq('line_name', ln).gte('work_date', wd);
+      if (to) q = q.lte('work_date', to);
+      const { data, error } = await q.limit(40);
+      if (!alive) return;
+      setLineSessions(error ? null : (data || []));
+    })();
+    return () => { alive = false; };
+  }, [selSession?.line_name, selSession?.work_date]);
+
   const handover = useMemo(
-    () => (selSession ? handoverOf(selSession, sessions, Date.now()) : null),
-    [selSession, sessions]);
+    () => (selSession ? handoverOf(selSession, [...(sessions || []), ...(lineSessions || [])], Date.now()) : null),
+    [selSession, sessions, lineSessions]);
   const handoverRef = useRef(null); handoverRef.current = handover;
+  /* เช็คไม่ได้ = ไม่รู้เวลาเริ่มกะ **หรือ** อ่านกะของไลน์นี้ไม่ได้ — ต้องขึ้นบนจอทั้ง 2 ทาง */
+  const handoverUnsure = !!handover?.unsure || lineSessions === null;
 
   // ไลน์ที่เปิดกะได้ตาม scope (leader→family · role อื่น→sections · admin/qa→null=ทั้งหมด) — กันเปิดกะไลน์ข้ามส่วนงาน
   /* 🔭 ของกลาง `lineScope()` (QC audit 09/11) — เดิม leader ได้ครอบครัวไลน์ล้วน
@@ -3776,9 +3800,9 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                   {/* ── 🔁 กะนี้ถูกส่งต่อไปแล้ว (17/11 · หัวหน้าแจ้ง "ยอดกะ02 ไปขึ้นกะ01 ที่ลืมปิด") ──
                       จอที่เปิดค้างจากกะก่อนยังผูกกับกะเดิม ⇒ ต้องเห็นชัดก่อนยิงใบ + สลับได้ในคลิกเดียว
                       🔴 อ่านเวลาเริ่มกะไม่ได้ = เช็คไม่ได้ ต้องเขียนบนจอ ห้ามเงียบ (กฎความซื่อสัตย์ของจอ) */}
-                  {handover?.unsure && (
+                  {handoverUnsure && (
                     <div style={{ marginBottom: 10, padding: '6px 10px', borderRadius: 'var(--r-sm)', background: 'var(--card2)', color: 'var(--muted)', fontSize: 11 }}>
-                      เช็ค “ไลน์นี้ขึ้นกะใหม่ไปแล้วหรือยัง” ไม่ได้ — กะนี้ไม่มีเวลาเริ่มกะในระบบ
+                      เช็ค “ไลน์นี้ขึ้นกะใหม่ไปแล้วหรือยัง” ไม่ได้ — {handover?.unsure ? 'กะนี้ไม่มีเวลาเริ่มกะในระบบ' : 'อ่านรายการกะของไลน์นี้ไม่สำเร็จ'}
                     </div>
                   )}
                   {handover?.next && (
