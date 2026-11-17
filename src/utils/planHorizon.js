@@ -268,6 +268,82 @@ export function visibleRows(rows = []) {
   return rows.slice(0, Math.min(rows.length, Math.max(1, last + 2)));
 }
 
+/**
+ * 📅 มุมมองสัปดาห์ — ยุบบรรทัดกะให้เป็น "คอลัมน์ละ 1 วันทำงาน" แกนเวลาลงล่าง (2026-11-17 · คำสั่ง user)
+ *   user ส่งคลิปหน้า Schedule แบบปฏิทินสัปดาห์มา: *"ขยับแผนงานได้เหมือนหน้า schedule แบบนี้"*
+ *
+ * 🔴 **ไม่คิดเวลาใหม่เลย** — รับ `rows` จาก `sliceBySegments()` แล้ว**หมุนแกน**เฉยๆ
+ *    (`leftPct` → `topPct` · `widthPct` → `heightPct`) ⇒ กล่องในมุมมองสัปดาห์ยาวเท่ากับ
+ *    แท่งในมุมมองราง **เสมอ** · ห้ามเขียนสูตร ms→% ขึ้นมาใหม่ที่ไหน (2 จอจะเถียงกัน)
+ * 🔴 **ส่วนสูงของแต่ละกะในคอลัมน์ = สัดส่วนเวลาจริงของกะนั้น** ไม่ใช่หาร 50/50 ตายตัว —
+ *    วันที่มีกะเดียว (ขอบเขตเริ่มกลางวัน/จบกลางวัน) ต้องกินเต็มคอลัมน์ ไม่ใช่ลอยอยู่ครึ่งบน
+ * 🔴 **วันหยุดโรงงานต้องมีคอลัมน์ของตัวเอง** (`closedDay`) — ข้ามเงียบ = คนอ่านว่า "สัปดาห์นี้
+ *    ทำงาน 5 วันรวด" ทั้งที่จริงหยุดกลางสัปดาห์ (กฎเดียวกับแถบ ⏸ ใต้ราง)
+ *
+ * @param {Array} rows     ผลจาก `sliceBySegments()` (จะกรองด้วย `visibleRows()` มาก่อนหรือไม่ก็ได้)
+ * @param {Array} skipped  ผลจาก `buildHorizon().skipped` — วันที่โรงงานไม่เดิน
+ * @returns {Array<{ workDate, closedDay, reason, segs, pieces, breaks, hasWork }>} เรียงตามวันที่
+ *   pieces = { box, boxIndex, run:{…, topPct, heightPct}, setup:{…, topPct, heightPct} }
+ */
+export function stackByDay(rows = [], skipped = []) {
+  const byDay = new Map();
+  for (const r of rows || []) {
+    if (!r?.seg?.workDate) continue;
+    const d = r.seg.workDate;
+    if (!byDay.has(d)) byDay.set(d, { workDate: d, closedDay: false, reason: '', rowsIn: [] });
+    byDay.get(d).rowsIn.push(r);
+  }
+  /* วันหยุดที่ขอบเขตข้ามไป — ไม่มี segment จึงไม่เคยอยู่ใน rows ต้องเติมเองให้เห็นเป็นคอลัมน์ */
+  for (const s of skipped || []) {
+    if (!s?.workDate || byDay.has(s.workDate)) continue;
+    byDay.set(s.workDate, { workDate: s.workDate, closedDay: true, reason: s.reason || '', rowsIn: [] });
+  }
+
+  return [...byDay.values()]
+    .sort((a, b) => (a.workDate < b.workDate ? -1 : a.workDate > b.workDate ? 1 : 0))
+    .map((col) => {
+      const rowsIn = col.rowsIn.slice().sort((a, b) => a.seg.startMs - b.seg.startMs);
+      const totalMs = rowsIn.reduce((s, r) => s + (r.seg.endMs - r.seg.startMs), 0);
+      const segs = [];
+      const pieces = [];
+      const breaks = [];
+      let usedPct = 0;
+      for (const r of rowsIn) {
+        const sharePct = totalMs > 0 ? ((r.seg.endMs - r.seg.startMs) / totalMs) * 100 : 0;
+        const base = usedPct;
+        /* แปลงพิกัดแนวนอนของบรรทัดนั้น → แนวตั้งของคอลัมน์วัน (เชิงเส้นล้วน ไม่แตะเวลา) */
+        const down = (p) => (p == null ? null : { ...p, topPct: base + (p.leftPct * sharePct) / 100, heightPct: (p.widthPct * sharePct) / 100 });
+        segs.push({ seg: r.seg, shift: r.seg.shift, topPct: base, heightPct: sharePct, hasWork: r.hasWork });
+        for (const pc of r.pieces) pieces.push({ ...pc, run: down(pc.run), setup: down(pc.setup) });
+        for (const b of r.breaks) breaks.push(down(b));
+        usedPct += sharePct;
+      }
+      return { workDate: col.workDate, closedDay: col.closedDay, reason: col.reason, segs, pieces, breaks, hasWork: pieces.length > 0 };
+    });
+}
+
+/**
+ * ป้ายชั่วโมงของ "คอลัมน์วัน" ในมุมมองสัปดาห์ — แกนลงล่าง
+ * 🔴 ไล่จาก `segs` ของคอลัมน์นั้นเอง **ไม่ใช่สเกลกลางที่สมมติว่าทุกวันมี 2 กะ** —
+ *    วันแรก/วันสุดท้ายของขอบเขตมีกะเดียวได้ ถ้าใช้สเกลกลางป้ายจะชี้ผิดเวลา
+ * @returns {Array<{ ms, topPct, label, major }>} major = ต้นกะ (เส้นหนา)
+ */
+export function dayTicks(col, everyHours = 4) {
+  const out = [];
+  for (const s of col?.segs || []) {
+    const span = s.seg.endMs - s.seg.startMs;
+    if (!(span > 0)) continue;
+    for (let ms = s.seg.startMs; ms < s.seg.endMs; ms += everyHours * 3600000) {
+      const d = new Date(ms);
+      out.push({
+        ms, topPct: s.topPct + ((ms - s.seg.startMs) / span) * s.heightPct,
+        label: `${String(d.getHours()).padStart(2, '0')}:00`, major: ms === s.seg.startMs,
+      });
+    }
+  }
+  return out;
+}
+
 /** ป้ายชั่วโมงของบรรทัดเดียว (สเกลของกะนั้นเอง) */
 export function rowTicks(seg, everyHours = 2) {
   if (!seg) return [];

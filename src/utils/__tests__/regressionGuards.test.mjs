@@ -649,6 +649,51 @@ const RULES = [
     allow: {},
   },
   {
+    id: 'no-id-table-needs-orderby',
+    scan: ['src'], ext: ['.js', '.jsx'],
+    /* จับ `fetchByIds`/`fetchAllPages` ที่อ่านตาราง/วิว **ที่ไม่มีคอลัมน์ id** แล้วไม่ส่ง orderBy
+       (ลิสต์ของจริงอยู่หัว `src/utils/fetchByIds.js` — ถอดมาจาก schema snapshot) */
+    re: new RegExp(
+      '(?:fetchByIds|fetchAllPages)\\((?:[^;]|\\n){0,400}?' +
+      "from\\(\\s*['\"`](?:company_calendar|employee_home_positions|notification_rules|part_registry" +
+      '|permission_catalog|section_signers|skill_update_runs|child_demand_accumulator|internal_delivery_sla' +
+      "|line_stock_summary|lot_post_accumulations|ship_to_plants|shipping_phase_alerts)['\"`]\\s*\\)" +
+      '(?:(?!orderBy)(?:[^;]|\\n)){0,400}?\\);', 'g'),
+    why: '💥 **`fetchByIds`/`fetchAllPages` ดีฟอลต์ `orderBy: \'id\'`** — ตาราง/วิวที่ไม่มีคอลัมน์ `id` '
+       + 'จะล้มทั้งก้อนด้วย `42703 column X.id does not exist` '
+       + '· เกิดจริง 18/11/2026: แผง "ของถึง min แล้ว" ใน `/production-plan?tab=lots` ขึ้น '
+       + '"โหลดไม่ครบ — column line_stock_summary.id does not exist" (หน้างานเห็นก่อน) '
+       + '· กับดักที่คนถัดไปจะพลาดซ้ำ: เขียนคิวรีใหม่กับวิวพวกนี้แล้วลืมส่ง orderBy — '
+       + '**build/lint/เทสผ่านหมด เห็นจาก log/หน้าจอเท่านั้น** (คลาสเดียวกับกฎ DB ข้อ 9) '
+       + '· กับดักที่ 2: ส่ง orderBy ที่**มีค่าซ้ำได้** (เช่น `mat_no` เดี่ยว ทั้งที่คีย์จริงคือ '
+       + '(line_name, mat_no)) ⇒ `range()` ข้ามหน้าแล้วแถวหลุด/ซ้ำเงียบๆ (กฎ DB ข้อ 5)',
+    fix: 'ส่ง `{ orderBy: <คอลัมน์ที่ unique และคงที่> }` เสมอ — เดี่ยวหรือ composite '
+       + "เช่น `{ orderBy: ['line_name', 'mat_no'] }` · ลิสต์ตาราง/วิวที่ไม่มี `id` อยู่หัวไฟล์ "
+       + '`src/utils/fetchByIds.js` (ถอดจาก `docs/sql/00_schema_snapshot_*.sql`) — '
+       + 'เจอตัวใหม่ให้เติมทั้งในลิสต์นั้นและใน regex ของด่านนี้',
+    allow: {},
+  },
+  {
+    id: 'plan-view-no-own-time-math',
+    scan: ['src/components/PlanTimeline.jsx', 'src/components/PlanWeek.jsx'], ext: ['.jsx'],
+    /* จับ "การคิดพิกัดเอง" ในจอแผน — ตั้งค่า *Pct เอง หรือสเกลผลต่างเวลาเป็น %
+       (แปลง ms → นาที เพื่อ**แสดงผล** เช่น `fmtMin(setupMs / 60000)` ไม่ใช่พิกัด ⇒ ไม่เข้าเงื่อน) */
+    re: /\b(top|left|width|height)Pct\s*[:=][^=]|\bMs\b[^;\n]{0,60}\*\s*100\b/g,
+    why: '📅 **มุมมองราง กับ มุมมองสัปดาห์ ต้องวาดแผนใบเดียวกันให้ยาวเท่ากัน** (17/11/2026 · user ส่งคลิป '
+       + 'หน้า Schedule มาแล้วสั่ง "ขยับแผนงานได้เหมือนหน้า schedule แบบนี้") '
+       + '· เวลาทุกค่ามาจาก `layoutLots()` (`utils/planTimeline.js`) → `sliceBySegments()` → '
+       + '`stackByDay()`/`dayTicks()` (`utils/planHorizon.js`) ซึ่ง **หมุนแกนเฉยๆ ไม่คิดเวลาใหม่** '
+       + '· เขียนสูตร ms→% ขึ้นมาเองในจอไหนจอหนึ่ง = กล่องเดียวกันยาวไม่เท่ากัน 2 จอ '
+       + 'แล้วผู้วางแผนไม่รู้ว่าจะเชื่อจอไหน (บทเรียนเดียวกับ "ห้ามมี OEE 2 ชุด") '
+       + '· กับดักที่ 2: เวลาเปลี่ยนรุ่น/คู่ RH-LH/ยืดข้ามเบรค อยู่ใน `layoutLots` หมด — '
+       + 'คิดเองในหน้าจะได้เลขที่ไม่มีของพวกนี้',
+    fix: 'ขอพิกัดจาก util: แนวนอนใช้ `leftPct`/`widthPct` จาก `sliceBySegments()` · '
+       + 'แนวตั้งใช้ `topPct`/`heightPct` จาก `stackByDay()` · ป้ายชั่วโมงใช้ `rowTicks()`/`dayTicks()` '
+       + '· ต้องการพิกัดแบบใหม่ = เพิ่มฟังก์ชันใน `utils/planHorizon.js` พร้อมเทส ไม่ใช่คำนวณในจอ '
+       + '· 📄 docs/modules/production-plan.md §มุมมองสัปดาห์',
+    allow: {},
+  },
+  {
     id: 'csat-no-second-entry-point',
     scan: ['src'], ext: ['.jsx', '.js'],
     /* จับช่องทางกรอก/เก็บคะแนนความพึงพอใจชุดที่ 2 — ตารางของตัวเอง หรือคอลัมน์คะแนนดิบที่ไม่ผ่านตัวแปรฐาน */
