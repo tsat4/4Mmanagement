@@ -42,6 +42,7 @@ import { buildHorizon, assignShifts, horizonSummary, orderAcrossHorizon, SEG_HOU
 import { layoutLots } from '../utils/planTimeline';
 import PlanTimeline from './PlanTimeline';
 import PlanWeek from './PlanWeek';
+import useTabParam from '../utils/useTabParam';
 import FilterBar from './FilterBar';
 import LineSelect from './LineSelect';
 import Segmented from './Segmented';
@@ -143,8 +144,13 @@ export default function ProdLotPlanner({
   const [saving, setSaving]   = useState(false);
   const [trialOpen, setTrialOpen] = useState(false);
   const [dirty, setDirty]     = useState(false);
-  /* 📅 มุมมองไทม์ไลน์ (17/11 · user ส่งคลิปหน้า Schedule มา) — `rail` = ของเดิมเป๊ะ (default ห้ามเปลี่ยน) */
-  const [planView, setPlanView] = useState('rail');
+  /* 📅 มุมมองไทม์ไลน์ (17/11 · user ส่งคลิปหน้า Schedule มา) — `rail` = ของเดิมเป๊ะ (default ห้ามเปลี่ยน)
+     🔴 ผูกกับ URL (`?view=`) ไม่ใช่ state ลอย — 2 เหตุผล:
+       1. บุ๊กมาร์ก/ส่งลิงก์ให้กันดูมุมมองเดียวกันได้ (กติกาเดียวกับ `?cap=`/`?mode=` ของหน้านี้)
+       2. 🛡️ **crashsweep กดได้แค่ปุ่มหัวเพจ** — ปุ่มสลับมุมมองอยู่ในเนื้อหน้า ⇒ ถ้าเป็น state ลอย
+          จอสัปดาห์จะ **ไม่เคยถูกเรนเดอร์ในด่านไหนเลย** (audit/README §โค้ดหลังปุ่มที่สวีปกดไม่ถึง)
+     🔴 ใช้ `?view=` ห้ามใช้ `?tab=` ซ้ำกับแท็บแม่ (UI §6.8 ข้อ 2.4) */
+  const [planView, setPlanView] = useTabParam(['rail', 'week'], 'rail', 'view');
 
   /* 🔴 ค่าที่เลือกไว้ต้องไม่ค้างอยู่นอกลิสต์ที่เลือกได้ (13/11 · user: เลือก PD1 แล้วจอโชว์ไลน์ PD2)
      หน้าแม่กรอง `lines` ตามส่วนงาน ⇒ สลับตัวกรองแล้วไลน์เดิมหลุดลิสต์ แต่ state ยังค้าง

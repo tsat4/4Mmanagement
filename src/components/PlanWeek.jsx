@@ -139,13 +139,16 @@ export default function PlanWeek({
                   ))}
 
                   {/* ── กล่องล็อต ── */}
-                  {col.pieces.map(({ box: b, boxIndex, run, setup }) => {
+                  {col.pieces.map(({ box: b, boxIndex, run, setup }, pi) => {
                     const isUnknown = b.noCt;
                     const isTrial = isTrialLot(b.lot);
                     /* 🔴 สีมาจาก `lotTone()` ที่เดียว (utils/planTimeline.js) — ชุดเดียวกับมุมมองราง ห้ามตั้งเองที่นี่ */
                     const color = lotTone(b, { isTrial });
+                    /* 🔴 คีย์ต้องมี `pi` — ล็อตที่คร่อมเส้นแบ่งกะโผล่ **2 ท่อนในคอลัมน์เดียวกัน**
+                       (ทั้งคู่มี run) ⇒ คีย์จาก lot.id อย่างเดียวซ้ำ แล้ว React รีไซเคิล DOM ผิดท่อน
+                       (จับได้จากด่าน "คีย์ซ้ำ" ของ crashsweep 17/11) */
                     return (
-                      <div key={`${b.lot.id}-${run ? 'r' : 's'}`}>
+                      <div key={`${b.lot.id}-${pi}`}>
                         {setup && (
                           <div title={`${tr('เปลี่ยนรุ่นก่อนเริ่มใบนี้')} ~${fmtMin(b.setupMs / 60000)}`}
                             style={{ position: 'absolute', left: 2, right: 2, top: `${setup.topPct}%`, height: `${setup.heightPct}%`,
