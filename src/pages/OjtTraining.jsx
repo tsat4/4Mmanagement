@@ -683,14 +683,14 @@ body{font-family:'Sarabun',sans-serif;font-size:11px;color:#000;background:#fff}
 table{border-collapse:collapse}
 @media print{@page{size:A4 portrait;margin:7mm}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 </style></head><body style="padding:6mm">
-<div style="font-size:9px;text-align:right">หน้า 1 ของ ${1 + printImgs.length} {tr('หน้า')}</div>
+<div style="font-size:9px;text-align:right">หน้า 1 ของ ${1 + printImgs.length} ${tr('หน้า')}</div>
 <table style="width:100%;border:1px solid #000">
   <tr>
     <td style="border:1px solid #000;width:110px;text-align:center;vertical-align:middle;padding:4px">
       ${logo ? `<img src="${logo}" style="width:80px"/>` : '<b>TS AUTOMOTIVE</b>'}
     </td>
     <td style="border:1px solid #000;text-align:center;vertical-align:middle;padding:4px">
-      <div style="font-size:15px;font-weight:bold">{tr('ใบแจ้งการอบรมสอนงานโดยหัวหน้างาน')}</div>
+      <div style="font-size:15px;font-weight:bold">${tr('ใบแจ้งการอบรมสอนงานโดยหัวหน้างาน')}</div>
       <div style="font-size:13px;font-weight:bold">( ON THE JOB TRAINING )</div>
     </td>
     <td style="border:1px solid #000;width:130px;text-align:center;vertical-align:bottom;padding:4px;font-size:10px">
@@ -727,10 +727,10 @@ table{border-collapse:collapse}
 
 <table style="width:100%;border:1px solid #000;border-top:none">
   <tr style="background:#f0f0f0">
-    <th style="border:1px solid #000;padding:2px;width:34%;font-size:10px">{tr('หัวข้อและรหัสเอกสารที่สอน')}</th>
-    <th style="border:1px solid #000;padding:2px;width:18%;font-size:10px">{tr('ผู้สอนงาน')}</th>
-    <th style="border:1px solid #000;padding:2px;width:12%;font-size:10px">{tr('ระยะเวลา')}</th>
-    <th style="border:1px solid #000;padding:2px;font-size:10px">{tr('ขอบเขตเนื้อหา')}</th>
+    <th style="border:1px solid #000;padding:2px;width:34%;font-size:10px">${tr('หัวข้อและรหัสเอกสารที่สอน')}</th>
+    <th style="border:1px solid #000;padding:2px;width:18%;font-size:10px">${tr('ผู้สอนงาน')}</th>
+    <th style="border:1px solid #000;padding:2px;width:12%;font-size:10px">${tr('ระยะเวลา')}</th>
+    <th style="border:1px solid #000;padding:2px;font-size:10px">${tr('ขอบเขตเนื้อหา')}</th>
   </tr>
   <tr>
     <td style="border:1px solid #000;padding:3px 6px;vertical-align:top">${topicHtml}</td>
@@ -742,17 +742,17 @@ table{border-collapse:collapse}
 
 <table style="width:100%;border:1px solid #000;border-top:none;margin-top:0">
   <tr style="background:#f0f0f0;font-size:10px">
-    <th rowspan="3" style="border:1px solid #000;padding:2px">{tr('รายชื่อพนักงาน')}</th>
-    <th rowspan="3" style="border:1px solid #000;padding:2px;width:70px">{tr('เลขประจำตัว')}</th>
-    <th colspan="10" style="border:1px solid #000;padding:2px">{tr('ความเข้าใจ')}</th>
-    <th rowspan="3" style="border:1px solid #000;padding:2px;width:90px">{tr('พนักงานลงชื่อ')}</th>
-    <th colspan="2" style="border:1px solid #000;padding:2px">{tr('ผลการประเมิน')}<br/>{tr('(ความเข้าใจ)')}</th>
+    <th rowspan="3" style="border:1px solid #000;padding:2px">${tr('รายชื่อพนักงาน')}</th>
+    <th rowspan="3" style="border:1px solid #000;padding:2px;width:70px">${tr('เลขประจำตัว')}</th>
+    <th colspan="10" style="border:1px solid #000;padding:2px">${tr('ความเข้าใจ')}</th>
+    <th rowspan="3" style="border:1px solid #000;padding:2px;width:90px">${tr('พนักงานลงชื่อ')}</th>
+    <th colspan="2" style="border:1px solid #000;padding:2px">${tr('ผลการประเมิน')}<br/>${tr('(ความเข้าใจ)')}</th>
   </tr>
   <tr style="background:#f0f0f0;font-size:10px">
-    <th colspan="5" style="border:1px solid #000;padding:1px">{tr('ก่อนOJT')}</th>
-    <th colspan="5" style="border:1px solid #000;padding:1px;background:#f7f3c8">{tr('หลังOJT')}</th>
-    <th rowspan="2" style="border:1px solid #000;padding:1px;width:44px">{tr('เห็นด้วย')}</th>
-    <th rowspan="2" style="border:1px solid #000;padding:1px;width:50px">{tr('ไม่เห็นด้วย')}</th>
+    <th colspan="5" style="border:1px solid #000;padding:1px">${tr('ก่อนOJT')}</th>
+    <th colspan="5" style="border:1px solid #000;padding:1px;background:#f7f3c8">${tr('หลังOJT')}</th>
+    <th rowspan="2" style="border:1px solid #000;padding:1px;width:44px">${tr('เห็นด้วย')}</th>
+    <th rowspan="2" style="border:1px solid #000;padding:1px;width:50px">${tr('ไม่เห็นด้วย')}</th>
   </tr>
   <tr style="background:#f0f0f0;font-size:9px">
     ${SCORE_LABELS.map(sl => `<th style="border:1px solid #000;width:16px">${sl}</th>`).join('')}

@@ -11568,3 +11568,30 @@ test('🏭 line-select-reason-honest — "ไม่มีในทะเบี�
     + '\nfix: lineOptions รับ allLines (ทะเบียนเต็มจาก useProductionLinesState) + registryReady'
     + '\n     และหน้าที่กรอง lines เองต้องรีเซ็ตค่าที่หลุดลิสต์ พร้อมบอกบนจอ');
 });
+
+test('🖨️ print-html-needs-dollar-tr — ใบพิมพ์เป็น HTML string ต้องใช้ ${trI18n()} ไม่ใช่ {trI18n()}', () => {
+  /* 🔴 17/11 หน้างานส่งใบ MO ที่พิมพ์ออกมาแล้วขึ้นข้อความดิบ:
+       `{trI18n('บริษัท ไทยซัมมิท โอโตโมทีฟ จำกัด')}` · `{trI18n('ค่าอะไหล่และอุปกรณ์')}` ฯลฯ
+     ต้นเหตุ: codemod i18n รอบ 3 ห่อข้อความไทยด้วยท่า **JSX** `{trI18n('…')}`
+       แต่ใบพิมพ์ MO ประกอบ HTML ด้วย **template literal** ⇒ ในสตริงต้องเป็น `${trI18n('…')}`
+       ⇒ ปีกกาเดี่ยวถูกพิมพ์ออกมาตรงๆ เป็นตัวหนังสือบนใบที่ส่งให้ลูกค้า/ผู้จัดการเซ็น (15 จุด)
+     🔑 ตัวจับ: บรรทัดที่มี **HTML ดิบ** (`class="` / `colspan=` / `<td` / `<th`) = อยู่ในสตริงแน่นอน
+       (JSX เขียน `className=` ไม่ใช่ `class=`) ⇒ ถ้าบรรทัดนั้นมี `{trI18n(` ที่ไม่มี `$` นำหน้า = บั๊กตัวนี้ */
+  const bad = [];
+  for (const f of walk(join(ROOT, 'src'), ['.js', '.jsx'])) {
+    if (f.includes('__tests__')) continue;
+    const src = readFileSync(f, 'utf8');
+    src.split('\n').forEach((ln, i) => {
+      /* 🔑 สัญญาณที่เป็น "HTML แท้" เท่านั้น — JSX เขียน className / colSpan / style={{…}}
+         (เคยใช้ `<td`/`<th` แล้วไป match JSX ทั้งรีโป ⇒ ด่านเสียงดังจนใช้ไม่ได้) */
+      const htmlish = /class="|style="|colspan=|rowspan=|<!doctype/.test(ln);
+      if (htmlish && /(^|[^$])\{tr(I18n)?\(/.test(ln)) {
+        bad.push(`${f.replace(ROOT + '/', '')}:${i + 1}  ${ln.trim().slice(0, 90)}`);
+      }
+    });
+  }
+  assert.deepEqual(bad, [],
+    '\n\n❌ เจอ `{trI18n(...)}` ท่า JSX อยู่ใน HTML string (ใบพิมพ์) — ต้องเป็น `${trI18n(...)}`\n'
+    + '   ไม่งั้นปีกกาถูกพิมพ์ออกมาเป็นตัวหนังสือบนใบจริง (เกิดแล้ว 17/11 · ใบ MO 15 จุด)\n\n'
+    + bad.join('\n') + '\n');
+});
