@@ -649,6 +649,31 @@ const RULES = [
     allow: {},
   },
   {
+    id: 'no-id-table-needs-orderby',
+    scan: ['src'], ext: ['.js', '.jsx'],
+    /* จับ `fetchByIds`/`fetchAllPages` ที่อ่านตาราง/วิว **ที่ไม่มีคอลัมน์ id** แล้วไม่ส่ง orderBy
+       (ลิสต์ของจริงอยู่หัว `src/utils/fetchByIds.js` — ถอดมาจาก schema snapshot) */
+    re: new RegExp(
+      '(?:fetchByIds|fetchAllPages)\\((?:[^;]|\\n){0,400}?' +
+      "from\\(\\s*['\"`](?:company_calendar|employee_home_positions|notification_rules|part_registry" +
+      '|permission_catalog|section_signers|skill_update_runs|child_demand_accumulator|internal_delivery_sla' +
+      "|line_stock_summary|lot_post_accumulations|ship_to_plants|shipping_phase_alerts)['\"`]\\s*\\)" +
+      '(?:(?!orderBy)(?:[^;]|\\n)){0,400}?\\);', 'g'),
+    why: '💥 **`fetchByIds`/`fetchAllPages` ดีฟอลต์ `orderBy: \'id\'`** — ตาราง/วิวที่ไม่มีคอลัมน์ `id` '
+       + 'จะล้มทั้งก้อนด้วย `42703 column X.id does not exist` '
+       + '· เกิดจริง 18/11/2026: แผง "ของถึง min แล้ว" ใน `/production-plan?tab=lots` ขึ้น '
+       + '"โหลดไม่ครบ — column line_stock_summary.id does not exist" (หน้างานเห็นก่อน) '
+       + '· กับดักที่คนถัดไปจะพลาดซ้ำ: เขียนคิวรีใหม่กับวิวพวกนี้แล้วลืมส่ง orderBy — '
+       + '**build/lint/เทสผ่านหมด เห็นจาก log/หน้าจอเท่านั้น** (คลาสเดียวกับกฎ DB ข้อ 9) '
+       + '· กับดักที่ 2: ส่ง orderBy ที่**มีค่าซ้ำได้** (เช่น `mat_no` เดี่ยว ทั้งที่คีย์จริงคือ '
+       + '(line_name, mat_no)) ⇒ `range()` ข้ามหน้าแล้วแถวหลุด/ซ้ำเงียบๆ (กฎ DB ข้อ 5)',
+    fix: 'ส่ง `{ orderBy: <คอลัมน์ที่ unique และคงที่> }` เสมอ — เดี่ยวหรือ composite '
+       + "เช่น `{ orderBy: ['line_name', 'mat_no'] }` · ลิสต์ตาราง/วิวที่ไม่มี `id` อยู่หัวไฟล์ "
+       + '`src/utils/fetchByIds.js` (ถอดจาก `docs/sql/00_schema_snapshot_*.sql`) — '
+       + 'เจอตัวใหม่ให้เติมทั้งในลิสต์นั้นและใน regex ของด่านนี้',
+    allow: {},
+  },
+  {
     id: 'plan-view-no-own-time-math',
     scan: ['src/components/PlanTimeline.jsx', 'src/components/PlanWeek.jsx'], ext: ['.jsx'],
     /* จับ "การคิดพิกัดเอง" ในจอแผน — ตั้งค่า *Pct เอง หรือสเกลผลต่างเวลาเป็น %
