@@ -11672,3 +11672,29 @@ test('🖨️ print-html-needs-dollar-tr — ใบพิมพ์เป็น H
     + '   ไม่งั้นปีกกาถูกพิมพ์ออกมาเป็นตัวหนังสือบนใบจริง (เกิดแล้ว 17/11 · ใบ MO 15 จุด)\n\n'
     + bad.join('\n') + '\n');
 });
+
+/* ═══ ☼ ☾ ไอคอนกะต้องเป็นเส้นโมโนโครม — shift-glyph-no-emoji (2026-11-17 · คำสั่ง user) ═══
+   หน้างานขอไอคอนพระอาทิตย์/พระจันทร์กลับมา (การ์ดกะอ่านไม่ออกว่ากลางวัน/กลางคืน) แต่ต้องไม่กลับไป
+   เป็นอีโมจิ ☀️/🌙 ที่ถอดออกไปแล้วเพื่อความ premium (คุมสีไม่ได้ · หน้าตาต่างกันทุก OS)
+   📄 docs/UI-CONVENTIONS.md §6.41 */
+test('☼☾ shift-glyph-no-emoji — ลิสต์กะใช้ <ShiftGlyph> ห้ามอีโมจิ ☀️/🌙 ใน DailyReport', () => {
+  const glyph = readFileSync(join(ROOT, 'src/components/ShiftGlyph.jsx'), 'utf8')
+  assert.match(glyph, /stroke:\s*'currentColor'/,
+    '\n\n❌ ShiftGlyph ต้องวาดด้วย currentColor — แยกกะด้วยรูปทรง ไม่ใช่ด้วยสี (§6.17 คุมจำนวนสี)\n')
+  assert.match(glyph, /if \(!isDay && !isNight\) return null/,
+    '\n\n❌ กะที่ไม่รู้จักต้องไม่วาดอะไรเลย ห้ามเดาว่าเป็นกะเช้า\n')
+
+  const src = stripComments(readFileSync(join(ROOT, 'src/pages/DailyReport.jsx'), 'utf8'))
+  assert.match(src, /<ShiftGlyph shift=/,
+    '\n\n❌ ลิสต์กะไม่ได้ใช้ <ShiftGlyph> — หน้างานแยกกะกลางวัน/กลางคืนไม่ออก (แจ้ง 17/11)\n')
+  /* ขอบเขตของกฎ = **แถวในลิสต์กะ** (ตัวแปรแถวชื่อ `s`) ที่หน้างานต้องไล่สายตาเร็ว
+     ประโยคที่พูดถึง "กะที่เลือกอยู่" (`selSession`) ไม่เข้าข่าย — อีโมจิในประโยคไม่ได้ทำให้ลิสต์รก */
+  const SUN_MOON = /s\.shift === '(?:day|night)' \? '[^']*(?:\u2600|\uD83C\uDF1E|\uD83C\uDF19|\uD83C\uDF12)/g
+  const emoji = (src.match(SUN_MOON) || [])
+  assert.deepEqual(emoji, [],
+    '\n\n❌ แถวในลิสต์กะกลับไปใช้อีโมจิพระอาทิตย์/พระจันทร์แล้ว:\n   '
+    + emoji.join(' · ') + '\n   ⇒ ใช้ <ShiftGlyph shift={s.shift} size={12} /> แทน (UI-CONVENTIONS §6.41)\n')
+  assert.ok((src.match(/<ShiftGlyph shift=/g) || []).length >= 2,
+    '\n\n❌ ลิสต์กะมี 2 ที่ (แถบซ้าย + กะค้าง) ต้องใช้ <ShiftGlyph> ทั้งคู่ ไม่งั้น 2 จอหน้าตาไม่ตรงกัน\n')
+})
+

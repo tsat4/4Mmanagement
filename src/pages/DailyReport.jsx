@@ -64,6 +64,7 @@ import { affectsLanesMap, computeSessionOee, sessionProducedQty, strictOee, stri
 import { planMatTimeWrites, MAT_TIME_SKIP_OPEN } from '../utils/matTimeEdit';
 import { resolveShiftTime, checkShiftTime, shiftWindow, windowLabel, fmtOffset, MAX_SHIFT_MIN, checkCloseTime, dtCoverMin } from '../utils/shiftWindow';
 import { handoverOf, handoverBlockText, sessionLabel as hoSessionLabel } from '../utils/sessionHandover';
+import ShiftGlyph from '../components/ShiftGlyph';
 /* 🛡️ poka-yoke หน้าปิดกะ — กฎทั้งหมดอยู่ใน utils/closeChecks.js ห้ามเขียนเงื่อนไขเองในหน้า */
 import { checkQtyFit, qtyFitMessage, buildCloseChecks, confirmChecks } from '../utils/closeChecks';
 /* 🗑️ ด่าน "อื่นๆ ต้องบอกเหตุผลจริง" — กฎ+ข้อความอยู่ utils/unclassified.js ห้ามเขียนเองในหน้า */
@@ -3633,7 +3634,12 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                     {/* 🪜 เปิดกะ → ขอปิดกะ → ปิดแล้ว — กฎ shiftCloseFlow() (utils/stepFlow.js) · UI §6.30 */}
                     {(() => { const f = shiftCloseFlow(s); return <StepFlow compact steps={f.steps} unknown={!f.known} style={{ margin: '3px 0 2px' }} />; })()}
                     <div style={{ fontSize: 11, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 5 }}>
-                      <span>{s.shift === 'day' ? 'กะเช้า' : 'กะดึก'} · {fmtDate(s.work_date)}</span>
+                      {/* ☼ ☾ ไอคอนกะ — เส้นโมโนโครมสีเดียวกับข้อความ (17/11 · หน้างาน "ดูไม่ออกว่ากะไหน")
+                          ห้ามกลับไปใช้อีโมจิ ☀️/🌙 (คุมสีไม่ได้ + หน้าตาต่างกันทุก OS · ด่าน shift-glyph-no-emoji) */}
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <ShiftGlyph shift={s.shift} size={12} title={s.shift === 'day' ? 'กะเช้า' : 'กะดึก'} />
+                        {s.shift === 'day' ? 'กะเช้า' : 'กะดึก'} · {fmtDate(s.work_date)}
+                      </span>
                       {/* ชิปอายุกะค้าง — เหลืองนิ่ง ≥3 วัน · แดงนิ่งเกิน STALE_SESSION_DAYS (งานค้าง ไม่ใช่ alarm ห้ามกระพริบ) */}
                       {(() => { const age = sessionAgeDays(s.work_date); if (age < 3) return null;
                         const late = age > STALE_SESSION_DAYS;
@@ -7965,7 +7971,10 @@ function HistoryTab({ role }) {
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{s.line_name}</span>
-                    <span style={{ fontSize: 11, color: 'var(--muted)' }}>{s.shift === 'day' ? '☀️ กะเช้า' : '🌙 กะดึก'} · {fmtDate(s.work_date)}</span>
+                    <span style={{ fontSize: 11, color: 'var(--muted)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <ShiftGlyph shift={s.shift} size={12} title={s.shift === 'day' ? 'กะเช้า' : 'กะดึก'} />
+                      {s.shift === 'day' ? 'กะเช้า' : 'กะดึก'} · {fmtDate(s.work_date)}
+                    </span>
                     {s.dr_products?.name && <span style={{ fontSize: 11, color: 'var(--blue)' }}>· {s.dr_products.name}</span>}
                   </div>
                 </div>
