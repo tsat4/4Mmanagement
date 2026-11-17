@@ -1328,6 +1328,92 @@ export function splitDefectQty(rows) {
 export const sumSuspectPending = (rows) =>
   (rows || []).reduce((s, d) => s + suspectPendingQty(d), 0);
 
+/* ═══ 7.3) 🔴🔴 กฎเหล็กข้าม session — PPM ของเสียภายใน มีสูตรที่นี่ที่เดียว (2026-11-16) ═══
+   ที่มา: feedback ประชุม 16/11 (นาย ณัฐวุฒิ ทรงดอน) *"แก้ PPM ไลน์ปั๊มที่มีการเทส
+   แล้วทำให้ PPM กระโดดไปเกิน 100 สูงผิดปกติ"* (เป้า PPM ในทะเบียน = 50 / 75 / 300)
+
+   เดิมสูตรนี้ถูกเขียนมือ **5 ที่** (QualityControl · DeptDashboard · KpiMonthly ·
+   obeyaYear · monthlyReviewPptx) แล้ว drift กันจริง 2 คลาส — ทั้งคู่ดัน PPM **ขึ้น**:
+
+     (1) **ตัวเศษกับตัวหารคนละฐาน (งานทดลอง)** — `/dept-dashboard` แท็บ QA บวก
+         `qty_ng + qty_suspect` ดิบ (ไม่ดู `is_trial`/`excl_from_q`/ผลพิจารณาถัง)
+         แล้วหารด้วยยอดผลิตของไลน์ ⇒ ของเสียจากการลองแม่พิมพ์ไปโทษไลน์ผลิต
+         วัดฐานจริง 16/11: Laser GOR 145 → 1,432 PPM (9.9×) · Laser LWR 347 → 2,358 (6.8×) ·
+         LINE A (800 Ton) 0 → 22 (ของเสียทุกชิ้นของไลน์นี้เป็นงานทดลอง) ·
+         รายกะ LINE A 03/10 (ผลิต 1,800 · ทดลองเสีย 3) = 1,664 PPM ทั้งที่ของจริง 0
+
+     (2) **ตัวหารเป็น "shot" แต่ตัวเศษเป็น "ชิ้น"** — เด็ค Monthly Review เอา `output`
+         ที่ผ่าน `pairAwareTotal`/`collapseOps` (ยุบงานคู่ RH/LH เป็น 1 stroke) มาเป็นตัวหาร
+         ⇒ ไลน์แม่พิมพ์คู่ (ปั๊ม/เลเซอร์) ตัวหารหายไปเกือบครึ่ง · วัดฐานจริง 16/11:
+         HDF1 1,941 → 3,503 · LASER-345 1,900 → 3,410 · HDF2 1,043 → 1,858 ·
+         LASER-789 1,126 → 1,856 · LINE B (600 Ton) 21 → 32  (1.5–1.8 เท่า)
+
+   🔴 กติกาที่ห้ามพลาด (ต่อจากกฎ "ชิ้น ≠ shot" ใน CLAUDE.md §OEE):
+     · PPM = **1 − %Q** ⇒ ตัวเศษ/ตัวหาร**ต้องฐานเดียวกันเสมอ** (งานทดลองออกทั้งคู่ · นับ "ชิ้น" ทั้งคู่)
+     · ตัวหาร = **ยอดผลิตจริงเป็นชิ้น** (สแกนดี + ของเสีย) — **ห้ามใช้ยอดที่ยุบคู่/ยุบขั้น (OP)**
+     · ยอดผลิตยังไม่ถูกบันทึก (`goodQty <= 0`) = **ตอบไม่ได้ ⇒ `null`** ห้ามคืน 0 และห้ามคืน 1,000,000
+     · PPM = ชิ้นต่อล้าน ⇒ **จำนวนเต็มเสมอ** (ทศนิยมไม่มีความหมาย · feedback 16/11)
+   🔴 **ห้ามเขียน `… / … * 1e6` เองในหน้าอีก** (มีด่าน `ppm-single-entry` + `ppm-base-not-pair-collapsed`) */
+
+/** ตอบได้ไหมว่าแถวนี้เป็น "งานทดลอง" — `'trial'` | `'line'` | `'unknown'`
+ *  `'unknown'` = คิวรีไม่ได้ embed `dr_defect_types(excl_from_q)` มา ⇒ **ตอบไม่ได้ ห้ามเดา**
+ *  (คงพฤติกรรมเดิมไว้: นับเข้าตัวเศษ แต่ `ppmFromDefects` คืน `unsureQty` ให้จอเขียนบอก) */
+export function trialState(d) {
+  if (!d || typeof d !== 'object') return 'unknown';
+  if (d.is_trial === true) return 'trial';
+  if (d.excl_from_q !== undefined) return d.excl_from_q === true ? 'trial' : 'line';   // แถว rollup/แบน
+  if ('dr_defect_types' in d) {
+    const t = d.dr_defect_types;
+    if (t == null) return 'line';                                 // ไม่มีประเภทผูกไว้ = ตอบได้ว่าไม่ใช่
+    if ('excl_from_q' in t) return t.excl_from_q === true ? 'trial' : 'line';
+  }
+  return 'unknown';                                               // ไม่ได้ขอทะเบียนประเภทมา = ตอบไม่ได้
+}
+
+/**
+ * PPM จาก "ตัวเลขสองตัวที่ฐานเดียวกันแล้ว" — จุดเดียวที่คูณ 1e6 ได้ในระบบ
+ * @param {number} ngQty    ของเสีย line-mode เป็น **ชิ้น** (ไม่รวมงานทดลอง)
+ * @param {number} goodQty  ยอดสแกน (ของดีล้วน) เป็น **ชิ้น** — ห้ามส่งยอดที่ยุบคู่/ยุบขั้น
+ * @returns {number|null} จำนวนเต็ม · `null` เมื่อยังไม่มียอดผลิต (ตอบไม่ได้ — ห้ามเป็น 0)
+ */
+export function ppmOf(ngQty, goodQty) {
+  const ng = Number(ngQty) || 0;
+  const good = Number(goodQty) || 0;
+  if (!(good > 0)) return null;        // ผลิต 0 แต่มีของเสีย ≠ "เสียล้านชิ้นในล้าน" (UX audit 05/10)
+  return Math.round((ng / (good + ng)) * 1e6);
+}
+
+/**
+ * PPM จากแถว `defect_logs` ดิบ — กรองงานทดลอง/ของสงสัยให้ตามกฎ §7.1/§7.2 ในตัว
+ * @param {Array}  rows     แถว defect_logs (ควร embed `dr_defect_types(excl_from_q)` + `QBIN_EMBED`)
+ * @param {number} goodQty  ยอดสแกน (ของดีล้วน) เป็นชิ้น
+ * @returns {{ppm:number|null, ngQty:number, goodQty:number, baseQty:number, trialQty:number, pendingQty:number, unsureQty:number}}
+ *   `trialQty`  = ของเสียงานทดลอง (กันออกจาก PPM แล้ว — จอควรเขียนแยกว่ามีกี่ชิ้น ห้ามหายเงียบ)
+ *   `pendingQty`= ของสงสัย/NG ในถังเหลืองที่ QA ยังไม่ตัดสิน (ยังไม่เข้า PPM ⇒ PPM เป็นค่าชั่วคราว)
+ *   `unsureQty` = ของเสียที่ **แยกไม่ออกว่าเป็นงานทดลองหรืองานผลิต** (คิวรีไม่ได้ embed ทะเบียนประเภท)
+ *                 🔴 นับเข้าตัวเศษไว้ตามพฤติกรรมเดิม แต่ **จอต้องเขียนบอกว่ามีกี่ชิ้น**
+ */
+export function ppmFromDefects(rows, goodQty) {
+  let ng = 0, trial = 0, pending = 0, unsure = 0;
+  (rows || []).forEach((d) => {
+    const q = defectQty(d);
+    pending += suspectPendingQty(d);
+    const st = trialState(d);
+    if (st === 'trial') { trial += q; return; }
+    if (st === 'unknown') unsure += q;    // ตอบไม่ได้ = คงพฤติกรรมเดิม (เข้าตัวเศษ) + ชูธง
+    ng += q;
+  });
+  const good = Number(goodQty) || 0;
+  return {
+    ppm: ppmOf(ng, good), ngQty: ng, goodQty: good,
+    baseQty: good > 0 ? good + ng : 0, trialQty: trial, pendingQty: pending, unsureQty: unsure,
+  };
+}
+
+/** ข้อความ PPM บนจอ — จำนวนเต็มเสมอ · `null` = ขีด (ห้ามเป็น 0) */
+export const fmtPpm = (v, dash = '—') =>
+  (v == null || !Number.isFinite(Number(v)) ? dash : Math.round(Number(v)).toLocaleString());
+
 /* ═══ เป้า A/P/Q และค่าเฉลี่ยข้ามเดือน/ไตรมาส (2026-09-08 · เด็ค Monthly Review โหมด full data) ═══
    อยู่ในไฟล์นี้เพราะเป็น "สูตร OEE" — กฎโปรเจค: util OEE มีไฟล์เดียว ห้ามแตกเพิ่ม */
 

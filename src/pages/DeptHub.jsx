@@ -157,7 +157,7 @@ const CARD_META = {
   'วิเคราะห์ & รายงาน':       { code: 'ANL·03', route: '/oee-analytics', label: 'Analytics & Reports',    desc: 'OEE · VSM · สอบกลับ Order · ประวัติผลิต · รายงาน/ใบพิมพ์' },
   'พนักงาน & ทักษะ':          { code: 'HRM·04', route: '/operator',     label: 'People & Skills',         desc: 'ฐานข้อมูลพนักงาน · สกิล & Level Up · OJT · ตารางกะ' },
   // Logistic แยก 3 ฝั่งตามแผนกเจ้าของ — ⚠️ Warehouse (FG 1xx · ส่งลูกค้า) ≠ Store (2xx/3xx/5xx · ป้อนไลน์) · ชื่อหมวดจาก LOGISTIC_GROUPS
-  [LOGISTIC_GROUPS.inbound]:  { code: 'STO·06', route: '/line-stock',      label: 'Planning & Store',      desc: 'แผนงาน + Store (3xx ซื้อนอก · 5xx raw · 2xx ผลิตเอง) — Planner & Sales · สต๊อกในไลน์ · บอร์ดคัมบัง · ขนส่งเข้าไลน์' },
+  [LOGISTIC_GROUPS.inbound]:  { code: 'STO·06', route: '/line-stock',      label: 'Planning & Store',      desc: 'แผนงาน + Store (3xx ซื้อนอก · 5xx raw · 2xx ผลิตเอง) — Planner & Sales · Stock Management · บอร์ดคัมบัง · ขนส่งเข้าไลน์' },
   [LOGISTIC_GROUPS.outbound]: { code: 'DLV·07', route: '/customer-demand', label: 'Warehouse & Delivery',  desc: 'Warehouse (FG 1xx) · Delivery · Rack Center — จัดส่งลูกค้า · คาดการณ์ของจะขาด · ภาชนะ' },
   'การตรวจสอบและซ่อมบำรุง':   { code: 'MTN·08', route: '/mtn-repair',   label: 'Inspection & Maintenance', desc: 'แจ้งซ่อม MO · ศูนย์ PM (ตรวจ·แผน·ล่วงหน้า) · ผังเครื่องจักร · พลังงาน' },
   'คุณภาพ & วิศวกรรม':        { code: 'QUA·09', route: '/qa',           label: 'Quality & Engineering',   desc: 'ใบตรวจ · SPC · NCR · CAPA/8D · เคลมลูกค้า · CQI-15 · PFMEA/Control Plan' },

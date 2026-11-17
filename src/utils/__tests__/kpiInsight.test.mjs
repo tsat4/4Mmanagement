@@ -1,7 +1,7 @@
 /* 🔎 insight ของแผ่น KPI (16/11) — เรียบเรียงจากตัวเลขที่ตัดสินแล้ว ไม่คิดเกณฑ์เอง · ไม่มีข้อมูล = ไม่เขียนข้อนั้น */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildInsight, formulaDrivers } from '../kpiInsight.js';
+import { buildInsight, formulaDrivers, INSIGHT_PRIO } from '../kpiInsight.js';
 import { yearForecast, neededRunRate } from '../kpiSetup.js';
 
 const M = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
@@ -53,4 +53,23 @@ test('buildInsight: ตัวสะสม (max) — ถึงเป้าแล�
   const n2 = neededRunRate({ actual: cum.map(p => p.v), target: 20, def: defSum });   // Σ = 45 ≥ 20 แล้ว
   const l2 = buildInsight({ series: cum, valueIdx: 8, value: 9, target: 20, dir: 'up', fmt: (v) => String(v), monthOf: (i) => M[i], needed: n2 });
   assert.match(l2.map(l => l.text).join('\n'), /ได้ 0 ก็ยังผ่าน/);
+});
+
+test('buildInsight: เรียงตามความสำคัญ — ตกเป้า/จบปีไม่ถึง/ต้องทำเท่าไหร่ มาก่อน · ตัวแปรดิบ (🧮) ไปท้ายสุด', () => {
+  /* 🔴 16/11 คำสั่ง user: popup โชว์แค่ 3-4 ข้อ ⇒ "3 ข้อแรก" ต้องเป็นข้อที่ต้องลงมือก่อน ไม่ใช่ลำดับที่เขียนโค้ด */
+  const info = { key: 'dloh_pct', inputs: { 9: { dl: 900000, oh: 480000, sale_product: 147816190 }, 10: { dl: 856655, oh: 478507, sale_product: 113207777 } } };
+  const actual = series.map(p => p.v);
+  const def = { kpi_catalog: { summary_mode: 'average' } };
+  const needed = neededRunRate({ actual, target: 1.017, def });
+  const base = { series, valueIdx: 9, value: 1.1794, target: 1.017, commit: 1.0485, dir: 'down', targetCompare: '≤',
+    monthStatus: statusOf, fmt, monthOf: (i) => M[i], info, needed };
+  const good = buildInsight({ ...base, forecast: { ...yearForecast({ actual, plan: [], def, fallback: true }), status: 'good' } });
+  assert.deepEqual(good.map(l => l.kind), ['gap', 'needed', 'driver', 'note', 'year', 'trend', 'forecast', 'vars']);
+  assert.equal(good[0].icon, '❌');                                  // เดือนนี้หลุดเป้า = พาดหัว
+  assert.ok(good.every((l, i) => i === 0 || l.prio >= good[i - 1].prio));
+  assert.ok(good.slice(0, 3).every(l => l.kind !== 'vars'));         // 🧮 ห้ามแย่งที่ 3 ข้อแรก
+  /* จบปีไม่ถึงเป้า = ขึ้นเป็นข้อที่ 2 (แซงอัตราที่ต้องทำ/เหตุหลัก) */
+  const bad = buildInsight({ ...base, forecast: { ...yearForecast({ actual, plan: [], def, fallback: true }), status: 'bad' } });
+  assert.deepEqual(bad.slice(0, 3).map(l => l.kind), ['gap', 'forecast', 'needed']);
+  assert.ok(INSIGHT_PRIO.gapBad < INSIGHT_PRIO.fcBad && INSIGHT_PRIO.fcBad < INSIGHT_PRIO.vars);
 });

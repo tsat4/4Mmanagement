@@ -2,7 +2,7 @@
 // pure module (ไม่ import supabase) → import ตรงได้เลย ไม่ต้อง bundle
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { canDoStep, canSignMtnApproval, lastStep, canSkipQa, isOrderReporter, orderReporterText, isQaSkipped, isWaitingQa, MTN_STEPS, stepDenyHint, stepLabel, stepMeta } from '../mtnStepPerm.js';
+import { canDoStep, canSignMtnApproval, lastStep, canSkipQa, canCancelOwnMo, isOrderReporter, orderReporterText, isQaSkipped, isWaitingQa, MTN_STEPS, stepDenyHint, stepLabel, stepMeta } from '../mtnStepPerm.js';
 
 // ผูก role เป็นชุดสิทธิ์ง่ายๆ: keys = คีย์ที่ role นั้นถือ
 const perms = (keys, seededKeys = null) => ({
@@ -791,4 +791,40 @@ test('🖥️ บัญชีกลางเซ็นช่องที่ล็
   assert.equal(canDoStep(7, { ...base, isShared: false }).ok, true);
   assert.equal(canSignMtnApproval('dept', { order: {}, can: () => true, isShared: true }).code, 'shared_account');
   assert.equal(canSignMtnApproval('mtn_mgr', { order: { mo_approved_by: 'x' }, fullName: 'x', isShared: true }).code, 'shared_account');
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   🙋 ผู้เปิดใบถอนใบของตัวเองได้                           2026-11-16 · คำสั่ง user
+   *"MO กรณี owner รู้ว่าเปิดผิดและยังไม่ถูกรับงานหรือ reject สามารถเข้าไปยกเลิกเองได้"*
+   ═══════════════════════════════════════════════════════════════════════════ */
+test('🙋 canCancelOwnMo — เจ้าของใบถอนได้เฉพาะ pending/returned', () => {
+  const own = { reported_by_name: 'สมชาย ใจดี' };
+  for (const status of ['pending', 'returned']) {
+    assert.equal(canCancelOwnMo({ ...own, status }, { fullName: 'สมชาย ใจดี' }), true, status);
+  }
+  // ช่างรับงาน/ลงมือแล้ว = เรื่องของทีมช่าง ไม่ใช่ของผู้แจ้งฝ่ายเดียว
+  for (const status of ['assigned', 'repairing', 'repaired', 'checked', 'qa', 'handover']) {
+    assert.equal(canCancelOwnMo({ ...own, status }, { fullName: 'สมชาย ใจดี' }), false, status);
+  }
+  // ใบที่จบแล้วไม่ต้องถอนซ้ำ
+  for (const status of ['closed', 'rejected', 'cancelled', 'transferred']) {
+    assert.equal(canCancelOwnMo({ ...own, status }, { fullName: 'สมชาย ใจดี' }), false, status);
+  }
+});
+
+test('🙋 canCancelOwnMo — คนอื่นถอนใบเราไม่ได้ · ไม่รู้ชื่อ = ไม่ได้', () => {
+  const o = { status: 'pending', reported_by_name: 'สมชาย ใจดี' };
+  assert.equal(canCancelOwnMo(o, { fullName: 'คนอื่น ไม่เกี่ยว' }), false);
+  assert.equal(canCancelOwnMo(o, { fullName: '' }), false, 'ไม่รู้ชื่อ = ไม่ใช่เจ้าของ (ไม่รู้ ≠ ใช่)');
+  assert.equal(canCancelOwnMo(o, {}), false);
+  // ใบเก่าก่อนมีคอลัมน์ stamp — ถอยไปดู `reporter_prod` (กติกาเดียวกับ isOrderReporter)
+  assert.equal(canCancelOwnMo({ status: 'pending', reporter_prod: 'สมชาย ใจดี' },
+    { fullName: 'สมชาย ใจดี' }), true);
+  /* ⚠️ `isOrderReporter` เทียบชื่อแบบ **ไม่ตัดคำนำหน้า** (ใช้ `norm` ไม่ใช่ `normPersonName`)
+     ⇒ "นายสมชาย ใจดี" ไม่ตรงกับ "สมชาย ใจดี" · **ล็อกพฤติกรรมนี้ไว้โดยเจตนา**
+     ปกติไม่เป็นปัญหาเพราะใบ stamp ชื่อจากโปรไฟล์คนเดียวกันตอนเปิดใบ (สตริงเดียวกันทั้ง 2 ฝั่ง)
+     🔴 ห้ามแก้ `isOrderReporter` ให้หลวมลงเพื่อเคสนี้ — มันเป็นด่าน `isReporterSelf` ของทุกขั้น
+        (ขั้น 4/6/7 ข้ามด่านตำแหน่งได้ถ้าเป็นผู้เปิดใบ) ⇒ หลวม = คนชื่อคล้ายเซ็นแทนกันได้ */
+  assert.equal(canCancelOwnMo({ status: 'pending', reporter_prod: 'สมชาย ใจดี' },
+    { fullName: 'นายสมชาย ใจดี' }), false);
 });

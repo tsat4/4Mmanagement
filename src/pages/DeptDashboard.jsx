@@ -5,7 +5,7 @@ import { supabase, supabaseDR } from '../supabaseClient';
 import { loadLinesRes } from '../utils/useProductionLines';
 import { UserContext } from '../App';
 import { OBEYA_TITLE, OBEYA_ICON } from '../utils/obeyaPage';
-import { wavg, orderPlanQty, dtMinBySession, oeeTargetForLines, buildCtMap, QBIN_EMBED } from '../utils/oee';
+import { wavg, orderPlanQty, dtMinBySession, oeeTargetForLines, buildCtMap, sessionProducedQty, ppmFromDefects, fmtPpm, QBIN_EMBED } from '../utils/oee';
 import { liveOeeByLine } from '../lib/liveLineOee';
 import { loadAffectsLanes } from '../utils/affectsLanes';
 import { loadBreakPolicies, fetchOeeTargets, loadCtProducts, loadCtKanban } from '../utils/oeeMasters';
@@ -726,7 +726,10 @@ async function loadQa(ctx) {
   /* ⚠️ 7 วัน ≈ 200 กะ → prod_orders ~700+ แถวและโตตาม adoption — ต้องผ่าน fetchByIds
      (แบ่งก้อน id + แบ่งหน้า) ไม่งั้นตัวส่วน PPM ขาดเงียบ = PPM สูงเกินจริง (QC audit · T3-14) */
   const [defRes, ordRes] = await Promise.all([
-    fetchByIds(ids, c => supabaseDR.from('defect_logs').select('id, session_id, qty_ng, qty_suspect, description, prod_orders(mat_no), dr_defect_types(name_th)').in('session_id', c)),
+    /* 🔴 ต้อง select `is_trial` + `dr_defect_types(excl_from_q)` + ทะเบียนถัง (QBIN_EMBED) ด้วย —
+       ไม่ถามมา = `ppmFromDefects` แยก "งานทดลอง" กับ "ของสงสัยที่ QA ยังไม่ตัดสิน" ไม่ออก
+       (บั๊กจริงถึง 16/11: ของเสียจากการลองแม่พิมพ์ไปโทษไลน์ผลิต — Laser GOR 145 → 1,432 PPM) */
+    fetchByIds(ids, c => supabaseDR.from('defect_logs').select(`id, session_id, qty_ng, qty_suspect, description, is_trial, defect_type_id, prod_orders(mat_no), dr_defect_types(name_th, excl_from_q), ${QBIN_EMBED}`).in('session_id', c)),
     fetchByIds(ids, c => supabaseDR.from('prod_orders').select('id, session_id, status, qty, qty_ok, qty_actual').in('session_id', c)),
   ]);
   if (defRes.error) console.warn('[deptDashboard/qa] โหลดของเสียไม่สำเร็จ', defRes.error);
@@ -761,9 +764,14 @@ function QaView({ d, ctx }) {
   const { workDate, navigate, isMobile } = ctx;
   const sMap = useMemo(() => { const m = {}; d.sess.forEach(s => { m[s.id] = s; }); return m; }, [d.sess]);
 
-  const ng7 = d.defs.reduce((a, x) => a + (+x.qty_ng || 0) + (+x.qty_suspect || 0), 0);
-  const ok7 = d.orders.reduce((a, o) => a + (o.status === 'confirmed' ? (o.qty_ok ?? o.qty ?? 0) : (o.qty_actual ?? 0)), 0);
-  const ppm = (ok7 + ng7) > 0 ? Math.round(ng7 / (ok7 + ng7) * 1e6) : null;   // กฎ Q: หารด้วยผลิตจริง (ดี+เสีย)
+  /* 🔴 PPM ผ่าน `ppmFromDefects` (oee.js §7.3) ที่เดียว — ห้ามบวก qty_ng เองในหน้า
+     เดิมที่นี่บวก `qty_ng + qty_suspect` **ดิบ** ⇒ ของเสียงานทดลอง (ลองแม่พิมพ์/ลองงานใหม่)
+     กับของสงสัยที่ QA ยังไม่ตัดสิน ถูกนับเป็นของเสียของไลน์ผลิต แล้วหารด้วยยอดผลิตปกติ
+     = ตัวเศษกับตัวหารคนละฐาน ⇒ PPM พุ่ง (วัดฐานจริง 16/11: Laser GOR 145 → 1,432 ·
+     Laser LWR 347 → 2,358 · LINE A 800 Ton 0 → 22 · รายกะ LINE A 03/10 = 1,664 ทั้งที่ของจริง 0)
+     ยอดผลิตดีผ่าน `sessionProducedQty` (oee.js §6.0.1) — เดิมเขียนกติกา qty_ok ?? qty ซ้ำในหน้า */
+  const q7 = ppmFromDefects(d.defs, sessionProducedQty(d.orders));
+  const { ngQty: ng7, goodQty: ok7, ppm, trialQty: trial7, pendingQty: pend7, unsureQty: unsure7 } = q7;
 
   // ⭐ adoption: ไลน์ที่เดินกะวันนี้ แต่ยังไม่มีบันทึกของเสียเลย (ของดี 100% จริง หรือยังไม่ได้ลง?)
   const todaySess = d.sess.filter(s => s.work_date === workDate);
@@ -847,9 +855,12 @@ function QaView({ d, ctx }) {
     </Section>
 
     <div style={KPI_GRID(isMobile)}>
-      <Kpi label={tr('ของเสีย 7 วัน')} value={fmtNum(ng7)} unit="ชิ้น" color={ng7 ? 'var(--red)' : 'var(--green)'} sub={`ผลิตดี ${fmtNum(ok7)} ชิ้น`} />
-      <Kpi label={tr('PPM (7 วัน)')} value={ppm == null ? '—' : fmtNum(ppm)} color={ppm == null ? undefined : ppm > 5000 ? 'var(--red)' : ppm > 1000 ? 'var(--amber)' : 'var(--green)'}
-        sub={tr('เสีย ÷ ยอดที่ผลิตทั้งหมด (ดี+เสีย) × 1,000,000')} />
+      {/* 🧪 งานทดลอง/ของสงสัยที่กันออกจาก PPM **ต้องเห็นบนจอ** ห้ามหายเงียบ (oee.js §7 · §7.1) */}
+      <Kpi label={tr('ของเสีย 7 วัน')} value={fmtNum(ng7)} unit="ชิ้น" color={ng7 ? 'var(--red)' : 'var(--green)'}
+        sub={`ผลิตดี ${fmtNum(ok7)} ชิ้น${trial7 ? ` · 🧪 งานทดลองอีก ${fmtNum(trial7)} (ไม่นับ)` : ''}${pend7 ? ` · ⏳ รอ QA ${fmtNum(pend7)}` : ''}`} />
+      <Kpi label={tr('PPM (7 วัน)')} value={fmtPpm(ppm)} color={ppm == null ? undefined : ppm > 5000 ? 'var(--red)' : ppm > 1000 ? 'var(--amber)' : 'var(--green)'}
+        sub={ppm == null && ng7 > 0 ? tr('คิดไม่ได้ — มีของเสียแต่ยังไม่มียอดผลิต 7 วันนี้')
+          : `${tr('เสีย ÷ ยอดที่ผลิตทั้งหมด (ดี+เสีย) × 1,000,000')}${unsure7 ? ` · ⚠️ แยกงานทดลองไม่ได้ ${fmtNum(unsure7)} ชิ้น` : ''}${pend7 ? ' · ค่าชั่วคราว (รอ QA ตัดสิน)' : ''}`} />
       <Kpi label={tr('✍️ ไลน์ที่บันทึกของเสียวันนี้')} value={`${ranLines.length - noLog.length}/${ranLines.length}`}
         color={noLog.length ? 'var(--amber)' : 'var(--green)'} sub={tr('ไลน์ที่เดินกะวันนี้')} />
       <Kpi label={tr('4M รออนุมัติ QA')} value={d.fourM.length} unit="ใบ" color={d.fourM.length ? 'var(--amber)' : 'var(--green)'} sub={tr('ค้างที่ QA')} />

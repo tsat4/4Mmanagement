@@ -143,7 +143,18 @@ export default function ProdLotPlanner({
   const [trialOpen, setTrialOpen] = useState(false);
   const [dirty, setDirty]     = useState(false);
 
-  useEffect(() => { if (!lineName && lines.length) setLineName(lines[0].name); }, [lines, lineName]);
+  /* 🔴 ค่าที่เลือกไว้ต้องไม่ค้างอยู่นอกลิสต์ที่เลือกได้ (13/11 · user: เลือก PD1 แล้วจอโชว์ไลน์ PD2)
+     หน้าแม่กรอง `lines` ตามส่วนงาน ⇒ สลับตัวกรองแล้วไลน์เดิมหลุดลิสต์ แต่ state ยังค้าง
+     ⇒ แผนที่กำลังดู/กำลังแก้ เป็นของไลน์ที่ไม่ได้เลือกอยู่ **โดยไม่มีอะไรบอก**
+     🔴 เปลี่ยนให้แล้วต้องบอก ห้ามสลับเงียบ (คนกำลังแก้แผนอยู่) · `lines` ว่าง = ยังโหลดไม่เสร็จ ห้ามแตะ */
+  useEffect(() => {
+    if (!lines.length) return;
+    if (!lineName) { setLineName(lines[0].name); return; }
+    if (lines.some(l => l.name === lineName)) return;
+    const prev = lineName;
+    setLineName(lines[0].name);
+    toast.info(`ไลน์ "${prev}" ไม่อยู่ในขอบเขตที่เลือก — สลับไป "${lines[0].name}" ให้แล้ว`);
+  }, [lines, lineName]);
 
   /* 🔔 ของถึง min แล้ว — ตัวป้อนงานให้แพลนนิ่ง (คำสั่ง user 13/11)
      กฎการตัดสินอยู่ utils/replenish.js · โหลดผ่าน lib/minDemandOps.js — ห้ามคิดเองที่นี่ */

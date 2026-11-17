@@ -72,6 +72,29 @@
 
 ⛔ **ห้ามแยกกลับเป็น 2 ตัวอัพโหลดอีก** · เพิ่มชั้นใหม่ให้ต่อใน `doImport` ของตัวเดียวนี้
 
+#### 🔴🔴 ชั้นออเดอร์ — ลบ+ใส่ ต้องอยู่ใน **transaction เดียว** (16/11/2026)
+
+ชั้นออเดอร์เขียนผ่าน RPC **`fn_monitoring_orders_replace(p_rows, p_by)`** (DR) ตัวเดียว
+**ห้ามกลับไป `.delete().eq('source','monitoring')` + `insertChunked` แยกคำขอ** — มีด่าน
+`monitoring-orders-replace-atomic` (`regressionGuards`)
+
+**ทำไม:** เดิมลบกับใส่เป็นคนละคำขอ HTTP = คนละ transaction ⇒ ตัวใส่ล้มหลังตัวลบสำเร็จ
+(เน็ตสะดุด/ไฟล์ใหญ่) **= ออเดอร์ค้างส่งหายทั้งชุด ไม่มีอะไรย้อนให้**
+จอขึ้นว่า "บันทึกไม่สำเร็จ" แต่ของเดิมหายไปแล้ว · และ `shipping_phase_alerts` ผูก FK
+**`on delete cascade`** = หายตามไปด้วย
+(ของแถม: RPC ปิด audit รายแถวแล้วเขียนสรุป 1 แถว — ตารางนี้กิน 28.2% ของ `audit_log`)
+
+⚠️ **ส่งทั้งก้อนในคำขอเดียว ห้ามแบ่ง chunk** (ไม่งั้นหมดความเป็น transaction เดียว) ·
+ไฟล์ปกติหลักร้อยถึงพันแถว ≈ ไม่กี่ร้อย KB · ถ้าวันหนึ่งไฟล์ใหญ่กว่านี้มาก
+ต้องเปลี่ยนไปใช้ **staging table ฝั่ง DB** ไม่ใช่กลับไปแบ่ง chunk
+
+🔴 **RPC ตัดแถวที่ไม่มีรหัสพาร์ท/ไม่มีวันดิวทิ้ง** ⇒ จอต้องเทียบ `inserted` ที่ RPC คืน
+กับจำนวนแถวที่ส่ง แล้ว **บอกคนว่าตกไปกี่แถว ห้ามเงียบ**
+
+🔴 **`syncRackOrder()` ใน `src/pages/Monitoring.jsx` เป็นงานคนละเรื่อง** — แก้ยอดช่องเดียว
+บนบอร์ดแร็ค ลบด้วย `.in('id', […])` ที่ระบุใบชัดเจน **ห้ามยุบมารวมกับ RPC ตัวนี้**
+(📄 เหตุผล + ผลพิสูจน์ → `docs/modules/traceability-audit-log.md` §หยุด audit การนำเข้าเป็นชุด)
+
 ---|---|---|
 | `/monitoring` → **📥 นำเข้าจากไฟล์ Excel** (`MonitorImport`) | `monitor_boards` / `monitor_board_parts` / `monitor_cells` = **ตัวตารางบอร์ด** | บอร์ดยังเป็นข้อมูลเดือนก่อน |
 | `/planner-sales?tab=monitoring` → **📗 Monitoring (Planning)** (`MonitoringUpload`) | FC · ออเดอร์ · ประวัติการส่ง · MIN/MAX · ปรับสต็อก = **ตัวเลขที่ไหลต่อ** | แผนผลิต/Delivery/คานบังไม่เห็นยอดเดือนใหม่ |
@@ -592,3 +615,35 @@ user: *"รูปแบบหัวตาราง รูปแบบการ v
 · ⚠️ **แต่ละชีทคิด Total SL คนละสูตร — เก็บเป็น `sl_row` ห้ามยุบเอง**
 · 📦 **บอร์ดชนิด `fg` ผูก "ลูกค้า" ไม่ใช่ "ไลน์"** (ยอดสั่งจาก EDI 862/830) ⇒ **IN ห้ามกรองไลน์**
 📄 `docs/modules/monitoring-boards.md`
+
+---
+
+## 🏬 บอร์ดสโตร์ — 6 แท็บ รับ/จ่าย/คงเหลือ/SAP/Diff (2026-11-16 · แบบหน้า "Monitor stock" ที่สโตร์ส่งมา)
+
+| แท็บ (`kind`) | บอร์ด (1 บอร์ด = 1 รหัสพื้นที่ · `board_key = store-<code>`) |
+|---|---|
+| `st_raw` Raw Mat | R401 · R402 |
+| `st_semi` Semi Part | S401 · S406 |
+| `st_purchase` Purchase Part | S402 · S407 |
+| `st_before` Before Coating | S403 |
+| `st_after` After Coating | S405 |
+| `st_blank` Blank | S408 |
+
+- **ชนิด/ชุดแถวตัดสินที่ `monitorBoards.js` ที่เดียว** — `STORE_BOARD_KINDS` · `isStoreBoard()` · `ROW_PRESETS.store`
+  (ห้ามเทียบ `kind.startsWith('st_')` ในหน้า) · `monitor_boards_kind_chk` (DR) ต้องเพิ่มค่าตามทุกครั้งที่เพิ่มชนิด
+- **แถว:** `in` รับ (system) · `out` จ่าย (system) · `balance` คงเหลือ (`stock_run`) · `sap` SAP (สโตร์กรอก) · `diff` (`sap_diff` = SAP − คงเหลือ)
+  🔴 ไม่กรอก SAP = Diff ว่าง **ไม่ใช่ 0** (0 = นับแล้วตรง)
+- **ที่มาของตัวเลข (Monitoring.jsx สาขา `isStore`):** ledger ที่ `line_name = 'STORE'` (`STORE_LEDGER_LINE`) —
+  รับ = `issue` · จ่าย = `consume`+`return` (ชุดเดียวกับบอร์ดไลน์) · คอลัมน์วันนี้ = `line_stock_summary` ที่ STORE (ยึด) ·
+  ยอดยกมา = ยอดจริง − Σ(รับ−จ่าย) ถึงวันนี้ · ไม่มีแถวในคลัง = ว่าง ห้ามเดา 0
+  ⚠️ `adjust` ไม่นับในรับ/จ่าย (กติกาเดิม §4) ⇒ คอลัมน์ย้อนหลังอาจกระโดดที่วันนี้ (วันนี้ = ยอดจริงเสมอ)
+- **MIN/MAX = `kanban_standards.min_qty/max_qty` ที่เดียว** (คำสั่ง user 16/11 — ทะเบียนเดียวกับหน้า Stock · **ห้ามเก็บซ้ำในบอร์ด**)
+  ตีสีช่องคงเหลือผ่าน `levelState()` (`monitorGrid.js`): ต่ำกว่า MIN = แดง · เกิน MAX = ส้ม · ในช่วง = เขียว · **ไม่ตั้ง = ไม่ตีสี** + จอบอกจำนวน
+- **ไม่มี FC / TOTAL SL / %SL** (สโตร์ขอตัด) · หัวพาร์ทโชว์ STD/PC (`packing`) + MIN/MAX
+- **หน้าต่างเวลา:** `start_date` ว่าง ⇒ ย้อน `STORE_LOOKBACK_DAYS` (7) วัน + 22 คอลัมน์ เลื่อนตามวันนี้
+- **ข้อมูลตั้งต้น:** `20261116_monitor_store_boards_dr.sql` — 9 บอร์ด · 245 พาร์ทจาก `Stock_Store.xlsm`
+  (R402 79 · S403 40 · S405 40 · S406 27 · S407 59) · **R401/S401/S402/S408 = บอร์ดเปล่า รอรายชื่อจากสโตร์**
+  · ช่อง MAX/MIN และช่องรายวันในไฟล์ว่างทั้งหมด ⇒ ไม่ได้เขียนอะไรลง `kanban_standards`
+- 🐞 **แก้แล้ว 16/11 (คำสั่ง user):** CHECK `monitor_boards_kind_chk` ไม่เคยมี `fg` (migration 06/10 เพิ่มชนิดในโค้ดแต่ลืม CHECK)
+  ⇒ ปุ่ม "📦 สร้างบอร์ด FG จากออเดอร์" upsert ล้มทุกครั้ง · DR ไม่มีบอร์ด `fg` สักบอร์ด · แก้ที่ `20261116b_monitor_boards_kind_fg_dr.sql`
+  🔴 **เพิ่มชนิดบอร์ดใหม่ = ต้องเพิ่มใน CHECK ด้วย migration ใหม่** — มีเทสล็อก (`monitorBoards.test.mjs` อ่าน CHECK ของ migration ล่าสุดเทียบ `BOARD_KINDS`)

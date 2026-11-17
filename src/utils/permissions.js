@@ -165,6 +165,12 @@ export function canAccessPage(path, role) {
   if (path === '/workflow-designer') {
     return hasPermission('page:/workflow-designer', role) || hasPermission('wf:design', role) || hasPermission('wf:publish', role);
   }
+  /* 📦 Stock Management (16/11 · คำสั่ง user "รวมสต๊อกในไลน์กับ Monitoring แผน-สต๊อกเป็นหน้าเดียว")
+     piggyback สิทธิ์ 2 หน้าเดิม — ไม่ seed คีย์ใหม่ ไม่มีใครได้/เสียสิทธิ์ (ทะเบียน 16/11: warehouse_delivery มีแค่ Monitoring ·
+     document_control มีแค่สต๊อก) · แท็บใน LineStock.jsx กรองด้วย hasPermission ซ้ำอีกชั้น */
+  if (path === '/line-stock') {
+    return hasPermission('page:/line-stock', role) || hasPermission('page:/monitoring', role);
+  }
   if (path === '/display-rotation') {
     return hasPermission('page:/display-rotation', role) || hasPermission('display_rotation:manage', role);
   }

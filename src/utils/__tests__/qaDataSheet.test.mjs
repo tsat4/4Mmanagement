@@ -52,3 +52,20 @@ test('buildDataSheet: รวมแถวบอลลูนเดียวกั�
   const h2 = csv.find(r => r[11] === 'H2')
   assert.equal(h2[h2.length - 3], 'ยังไม่ตรวจ'); assert.equal(h2[20], '')
 })
+
+import { mergeShiftResults } from '../qaDataSheet.js'
+test('mergeShiftResults: รวมทุกรอบของกะ → คอลัมน์ต่อชิ้น · NG สักชิ้น = NG · ยังไม่ตรวจ ≠ OK', () => {
+  const sheets = [{ id: 's2', round_no: 2 }, { id: 's1', round_no: 1 }]
+  const results = [
+    { sheet_id: 's1', item_id: 'a', judgement: 'ok', values_json: [10.0] },
+    { sheet_id: 's2', item_id: 'a', judgement: 'ng', values_json: [10.5] },
+    { sheet_id: 's2', item_id: 'b', judgement: 'ok', values_json: ['ok'] },
+  ]
+  const m = mergeShiftResults(sheets, results)
+  assert.deepEqual(m.colLabels, ['R1', 'R2'])
+  const a = m.results.find(r => r.item_id === 'a'), b = m.results.find(r => r.item_id === 'b')
+  assert.deepEqual(a.values_json, [10.0, 10.5]); assert.equal(a.judgement, 'ng')
+  assert.deepEqual(b.values_json, ['', 'ok']); assert.equal(b.judgement, 'ok')
+  const ds = buildDataSheet({ items: [{ id: 'a', balloon_no: 'H1', item_type: 'variable' }, { id: 'b', balloon_no: 'A1', item_type: 'attribute' }, { id: 'c', balloon_no: 'H2' }], results: m.results, colLabels: m.colLabels })
+  assert.equal(ds.pieceCols, 5); assert.equal(ds.totals.unchecked, 1); assert.equal(ds.hiddenCols, 0)
+})

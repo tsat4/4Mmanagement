@@ -610,11 +610,11 @@ export default function MorningMeeting() {
 <p>{tr('📦 ผลิตรวม')} <b>${sum.actual}${sum.target > 0 ? `/${sum.target} (${sum.achieve}%)` : ' (ไม่มีเป้าให้เทียบ)'}</b> · 📊 OEE เฉลี่ย ${sum.oeeAvg ?? '-'}% ·
 ⏱️ Downtime ${sum.dtMin} นาที (${sum.dtCount} ครั้ง${sum.dtPct != null ? ` = ${sum.dtPct}% ของเวลาเครื่องรวม ≈${Math.round(sum.dtBaseMin / 60)} ชม. · ${sum.dtMachines} เครื่อง` : ''} — รวมทุกไลน์/เครื่อง เวลาซ้อนกันได้) · ❌ NG ${sum.ng} · 👥 เข้างาน ${sum.present}/${sum.attTotal}</p>
 <h2>📉 งานหลุดแผน (${missedOrders.length})</h2>
-<table><tr><th style="${td}">{tr('ไลน์')}</th><th style="${td}">{tr('พาร์ท')}</th><th style="${td}">{tr('เป้า')}</th><th style="${td}">{tr('ได้จริง')}</th><th style="${td}">{tr('ขาด')}</th><th style="${td}">{tr('สาเหตุ')}</th></tr>${missedRows || `<tr><td colspan="6" style="${td}">— ไม่มี —</td></tr>`}</table>
+<table><tr><th style="${td}">${tr('ไลน์')}</th><th style="${td}">${tr('พาร์ท')}</th><th style="${td}">${tr('เป้า')}</th><th style="${td}">${tr('ได้จริง')}</th><th style="${td}">${tr('ขาด')}</th><th style="${td}">${tr('สาเหตุ')}</th></tr>${missedRows || `<tr><td colspan="6" style="${td}">— ไม่มี —</td></tr>`}</table>
 <h2>{tr('🛠️ Top Downtime นอกแผน')}</h2>
-<table><tr><th style="${td}">{tr('สาเหตุ')}</th><th style="${td}">{tr('นาที')}</th><th style="${td}">{tr('ครั้ง')}</th><th style="${td}">{tr('เครื่อง')}</th></tr>${dtRows || `<tr><td colspan="4" style="${td}">— ไม่มี —</td></tr>`}</table>
+<table><tr><th style="${td}">${tr('สาเหตุ')}</th><th style="${td}">${tr('นาที')}</th><th style="${td}">${tr('ครั้ง')}</th><th style="${td}">${tr('เครื่อง')}</th></tr>${dtRows || `<tr><td colspan="4" style="${td}">— ไม่มี —</td></tr>`}</table>
 <h2>📌 Action Items</h2>
-<table><tr><th style="${td}">{tr('จากวัน')}</th><th style="${td}">{tr('ไลน์')}</th><th style="${td}">{tr('เรื่อง')}</th><th style="${td}">{tr('ผู้รับผิดชอบ')}</th><th style="${td}">{tr('กำหนด')}</th><th style="${td}">{tr('สถานะ')}</th></tr>${actRows || `<tr><td colspan="6" style="${td}">— ไม่มี —</td></tr>`}</table>
+<table><tr><th style="${td}">${tr('จากวัน')}</th><th style="${td}">${tr('ไลน์')}</th><th style="${td}">${tr('เรื่อง')}</th><th style="${td}">${tr('ผู้รับผิดชอบ')}</th><th style="${td}">${tr('กำหนด')}</th><th style="${td}">${tr('สถานะ')}</th></tr>${actRows || `<tr><td colspan="6" style="${td}">— ไม่มี —</td></tr>`}</table>
 <p style="margin-top:18px;color:#888">พิมพ์จาก ESM Morning Meeting · ${new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}</p>
 <script>window.onload = () => window.print();</script></body></html>`;
     const w = window.open('', '_blank'); w.document.write(withDocFoot(html, 'morning_meeting')); w.document.close();

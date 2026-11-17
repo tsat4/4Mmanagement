@@ -7,7 +7,7 @@
    Inspection equipment · Rank M/SC · No.1…No.N · OK · NG — กลุ่มตรวจสภาพ (A*) ขึ้นก่อน ป้าย "Appearance"
    🔴 จุดที่ยังไม่ตรวจ = แถวว่างพร้อมป้าย (ไม่ใช่ OK) · ค่าว่าง ≠ 0 · % P.I.S.T นับเฉพาะจุดที่ OK จริง */
 
-const MAX_PIECES = 6;
+const MAX_PIECES = 10;   // คอลัมน์ No.k บนใบพิมพ์ (A4 แนวนอนพอ 10 · เกินนี้บอกบนใบ + CSV มีครบ)
 
 /** "H14 (T)" / "H14(W)" / "Datum B (T)" → "H14" / "Datum B" — แถวลูก TL/WL รวมใต้บอลลูนเดียวกัน */
 export function baseBalloon(b) {
@@ -70,7 +70,7 @@ export function pieceText(itemType, v) {
  * @returns {{ groups, pieceCols, summary, totals }}
  *   groups = [{ no, appearance, rows: [{ id, balloon, item, standard, equipment, rank, itemType, values, judgement, checked, retired, note }] }]
  */
-export function buildDataSheet({ items = [], results = [] } = {}) {
+export function buildDataSheet({ items = [], results = [], colLabels = null, maxCols = MAX_PIECES } = {}) {
   const resById = new Map((results || []).map(r => [r.item_id, r]));
   const rows = [];
   const seen = new Set();
@@ -95,7 +95,11 @@ export function buildDataSheet({ items = [], results = [] } = {}) {
     if (last && last.no === r.no) last.rows.push(r);
     else groups.push({ no: r.no, appearance: /^A\d/i.test(r.no), rows: [r] });
   }
-  const pieceCols = Math.min(MAX_PIECES, Math.max(5, ...rows.map(r => Math.max(r.values.length, r.sample || 0))));
+  const allCols = colLabels ? colLabels.length : Math.max(0, ...rows.map(r => r.values.length));
+  const pieceCols = colLabels
+    ? Math.min(maxCols, Math.max(5, colLabels.length))
+    : Math.min(maxCols, Math.max(5, ...rows.map(r => Math.max(r.values.length, r.sample || 0))));
+  const hiddenCols = Math.max(0, allCols - pieceCols);
 
   const byType = new Map();
   for (const r of rows) {
@@ -109,7 +113,7 @@ export function buildDataSheet({ items = [], results = [] } = {}) {
   const summary = TYPE_ORDER.filter(k => byType.has(k)).map(k => ({ ...byType.get(k), pist: pist(byType.get(k)) }));
   const tot = summary.reduce((a, t) => ({ ok: a.ok + t.ok, ng: a.ng + t.ng, total: a.total + t.total }), { ok: 0, ng: 0, total: 0 });
   const checked = rows.filter(r => r.checked).length;
-  return { groups, rows, pieceCols, summary, totals: { ...tot, pist: pist(tot), checked, unchecked: tot.total - checked } };
+  return { groups, rows, pieceCols, hiddenCols, colLabels: colLabels || null, summary, totals: { ...tot, pist: pist(tot), checked, unchecked: tot.total - checked } };
 }
 
 function toRow(it, r, retired) {
@@ -132,13 +136,13 @@ export function dataSheetCsvRows({ sheet = {}, part = {}, data }) {
   const n = data.pieceCols;
   const head = ['Part No.', 'Part Name', 'Customer', 'Model', 'Line', 'Inspection Date', 'Shift', 'Round', 'Stage', 'Lot',
     'No.', 'Balloon', 'Inspection item', 'Quality standard', 'Nominal', 'LSL', 'USL', 'Unit', 'Inspection equipment', 'Rank',
-    ...Array.from({ length: n }, (_, i) => `No.${i + 1}`), 'Judgement', 'Type', 'Note'];
+    ...Array.from({ length: n }, (_, i) => `No.${i + 1}${data.colLabels?.[i] ? ` (${data.colLabels[i]})` : ''}`), 'Judgement', 'Type', 'Note'];
   const shift = sheet.shift === 'day' ? 'Shift 01' : sheet.shift === 'night' ? 'Shift 02' : (sheet.shift || '');
   const out = [head];
   for (const r of data.rows) {
     out.push([
       sheet.part_no || part.part_no || '', sheet.part_name || part.part_name || '', part.customer || '', part.model || '',
-      sheet.line_name || '', sheet.work_date || '', shift, sheet.round_no ?? '', sheet.stage || '', sheet.lot_no || '',
+      sheet.line_name || '', sheet.work_date || '', shift, sheet.rounds_label ?? sheet.round_no ?? '', sheet.stage || '', sheet.lot_no || '',
       r.no, r.balloon, r.item, r.standard, r.nominal ?? '', r.lsl ?? '', r.usl ?? '', r.unit, r.equipment, r.rank,
       ...Array.from({ length: n }, (_, i) => pieceText(r.itemType, r.values[i])),
       r.judgement === 'ok' ? 'OK' : r.judgement === 'ng' ? 'NG' : r.judgement === 'na' ? 'N/A' : 'ยังไม่ตรวจ',
@@ -146,4 +150,47 @@ export function dataSheetCsvRows({ sheet = {}, part = {}, data }) {
     ]);
   }
   return out;
+}
+
+/**
+ * 📑 รวมผลทั้งกะเป็นใบเดียว (16/11 · user "รีพอร์ตใบนึงต้องโชว์ของกะนั้น 3 ตัว 5 ตัว แล้วแต่ตรวจกี่ตัว ไม่ใช่ตัวละใบ")
+ * ใบตรวจในระบบ = 1 รอบ (มักรอบละ 1 ชิ้น) ⇒ รวมทุกใบของ พาร์ท+วัน+กะ เรียงตามรอบ → คอลัมน์ No.1…No.N = ชิ้นที่ตรวจทั้งกะ
+ * @param {object[]} sheets   ใบของกะนั้น (qa_inspection_sheets)
+ * @param {object[]} results  ผลของทุกใบ (มี sheet_id)
+ * @returns {{ results: object[], colLabels: string[], rounds: number[] }} results = 1 แถวต่อจุด (values ต่อกันตามคอลัมน์)
+ *   ตัดสินต่อจุด: มี NG สักชิ้น = ng · มีผลและไม่มี NG = ok · ข้ามทุกชิ้น = na · ไม่มีผลเลย = ยังไม่ตรวจ
+ */
+export function mergeShiftResults(sheets = [], results = []) {
+  const ordered = [...sheets].sort((a, b) => (a.round_no ?? 0) - (b.round_no ?? 0)
+    || String(a.created_at || '').localeCompare(String(b.created_at || '')));
+  const bySheet = new Map();
+  for (const r of results) {
+    if (!bySheet.has(r.sheet_id)) bySheet.set(r.sheet_id, []);
+    bySheet.get(r.sheet_id).push(r);
+  }
+  const cols = [];   // [{ sheetId, k, label }]
+  for (const sh of ordered) {
+    const rs = bySheet.get(sh.id) || [];
+    const n = Math.max(0, ...rs.map(r => (Array.isArray(r.values_json) ? r.values_json.length : 0)));
+    for (let k = 0; k < n; k++) cols.push({ sheetId: sh.id, k, label: `R${sh.round_no ?? '?'}${n > 1 ? `-${k + 1}` : ''}` });
+  }
+  const colIdx = new Map(cols.map((c, i) => [`${c.sheetId}|${c.k}`, i]));
+  const byItem = new Map();
+  for (const sh of ordered) {
+    for (const r of bySheet.get(sh.id) || []) {
+      const cur = byItem.get(r.item_id) || { ...r, values_json: Array(cols.length).fill(''), _j: [], note: '' };
+      (Array.isArray(r.values_json) ? r.values_json : []).forEach((v, k) => {
+        const i = colIdx.get(`${sh.id}|${k}`);
+        if (i != null) cur.values_json[i] = v;
+      });
+      if (r.judgement) cur._j.push(r.judgement);
+      if (r.note) cur.note = cur.note ? `${cur.note} · R${sh.round_no}: ${r.note}` : `R${sh.round_no}: ${r.note}`;
+      byItem.set(r.item_id, cur);
+    }
+  }
+  const merged = [...byItem.values()].map(({ _j, ...r }) => ({
+    ...r,
+    judgement: _j.includes('ng') ? 'ng' : _j.includes('ok') ? 'ok' : _j.length ? 'na' : null,
+  }));
+  return { results: merged, colLabels: cols.map(c => c.label), rounds: ordered.map(s => s.round_no) };
 }

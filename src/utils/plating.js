@@ -245,7 +245,7 @@ export function directUsesOfBefore(before, after, { products = [], bomRows = [] 
 export function sendBlockReason({ route, qty, fromLoc }) {
   if (!route?.before) return 'เส้นทางนี้ยังไม่มีเลขก่อนชุบใน BOM';
   if (!(num(qty) > 0)) return 'ใส่จำนวนที่ส่ง';
-  if (!norm(fromLoc)) return `ยังไม่มีกฎรับเข้าคลังของ ${route.before} — ไม่รู้ว่าต้องตัดของจากคลังไหน (ตั้งที่ /line-stock?tab=inflow)`;
+  if (!norm(fromLoc)) return `ยังไม่มีกฎรับเข้าคลังของ ${route.before} — ไม่รู้ว่าต้องตัดของจากคลังไหน (ตั้งที่ /line-stock?tab=settings&set=inflow)`;
   return null;
 }
 

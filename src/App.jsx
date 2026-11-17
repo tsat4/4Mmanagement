@@ -74,7 +74,6 @@ const ScanLanding   = lazy(() => import('./pages/ScanLanding'));
 const AddUser      = lazy(() => import('./pages/AddUser'));
 const CustomerDemand = lazy(() => import('./pages/CustomerDemand'));
 const PlannerSales   = lazy(() => import('./pages/PlannerSales'));
-const Monitoring     = lazy(() => import('./pages/Monitoring'));
 const StoreMonitor   = lazy(() => import('./pages/StoreMonitor'));
 const Transport      = lazy(() => import('./pages/Transport'));
 const Report       = lazy(() => import('./pages/Report'));
@@ -212,7 +211,8 @@ export const NAV_ITEMS = [
   /* Logistic & Sales แบ่ง 3 ฝั่งตามความรับผิดชอบจริงของแผนกย่อย (2026-09-03 · คำสั่ง user)
      ⚠️ Warehouse (เก็บ FG 1xx → ขาออก) ≠ Store (คุม 2xx/3xx/5xx → ขาเข้า) — ห้ามสลับ
      นิยามฝั่ง + การจัดฝั่งจากเลข MAT อยู่ที่ src/utils/logisticSide.js จุดเดียว */
-  { to: '/line-stock',      icon: '📦', label: 'สต๊อกในไลน์',              group: LOGISTIC_GROUPS.inbound },
+  /* 📦 16/11 (คำสั่ง user) รวม "สต๊อกในไลน์" + "Monitoring แผน-สต๊อก" เป็นหน้าเดียว — /monitoring พาไปแท็บ ?tab=monitoring */
+  { to: '/line-stock',      icon: '📦', label: 'Stock Management',         group: LOGISTIC_GROUPS.inbound },
   { to: '/heijunka',       icon: '🎴', label: 'บอร์ดคัมบัง (ทุกสโตร์)',   group: LOGISTIC_GROUPS.inbound },
   { to: '/transport',       icon: '🚚', label: 'มอบหมายขนส่ง (Transport)',   group: LOGISTIC_GROUPS.inbound },
   // เฝ้าระวังสต๊อกจับทั้ง 2 ฝั่ง (A/B เทียบ min-max ของทุกเลข · E ใบสั่งซื้อค้าง) → โผล่ทั้งสองหมวด
@@ -221,12 +221,8 @@ export const NAV_ITEMS = [
   // 🔴 หมวดแผนงานยุบเข้ามาที่นี่ (30/09 · คำสั่ง user — planner + store = หน่วยเดียว ดู logisticSide.js)
   { to: '/planner-sales',   icon: '📈', label: 'Planner & Sales',           group: LOGISTIC_GROUPS.inbound },
 
-  /* 📉 บอร์ด Monitoring = ไฟล์ Excel ที่ทีมวางแผนทำมือทุกวัน ยกเข้าระบบ (01/10 · คำสั่ง user)
-     บ้านจริง = แผนงาน (ทีมวางแผนเป็นเจ้าของตัวเลข)
-     🔴 **ถอด `alsoIn: 'ฝ่ายผลิต'` ออกแล้ว** (11/11 · คำสั่ง user "พยายามไม่ให้มี shortcut แบบนี้")
-     — ฝ่ายผลิตเข้าหน้านี้ได้แต่**ดูอย่างเดียว** (ช่อง IN ที่ระบบมีตัวเลขแล้ว = ล็อก) ไม่ใช่งานประจำวันของเขา
-     ⇒ ทางลัดกินที่ในเมนูฝ่ายผลิตโดยไม่มีใครต้องลงมือ · **อย่าเอากลับโดยไม่ถาม user** */
-  { to: '/monitoring',      icon: '📉', label: 'Monitoring แผน-สต๊อก',    group: LOGISTIC_GROUPS.inbound },
+  /* 📉 บอร์ด Monitoring (01/10) = แท็บ `?tab=monitoring` ของ Stock Management แล้ว (16/11 · คำสั่ง user)
+     🔴 ถอด `alsoIn: 'ฝ่ายผลิต'` ไปแล้ว 11/11 · **อย่าเอาเมนูแยกหรือทางลัดกลับโดยไม่ถาม user** */
   { to: '/customer-demand', icon: '🚚', label: 'จัดส่งลูกค้า',             group: LOGISTIC_GROUPS.outbound },
   { to: '/rack-center',    icon: '🗃️', label: 'ภาชนะ & Packaging',       group: LOGISTIC_GROUPS.outbound },
 
@@ -2356,9 +2352,8 @@ function ProtectedLayout({ session, theme, onToggleTheme, userRole, realRole, vi
                   user: *"เรื่องเดียวกันปะ สองเรื่องนี้"*) — จอเดิมยังอยู่ครบ แค่ย้ายที่อยู่
                   ⚠️ หน้าเดิมไม่เคยมี `?tab=` ของตัวเอง จึงไม่ต้องส่ง subParam */}
               <Route path="/rundown-stock" element={<LegacyTabRedirect to="/monitoring" tab="fg" />} />
-              <Route path="/monitoring" element={
-                <RoleRoute path="/monitoring" userRole={role}><Monitoring /></RoleRoute>
-              } />
+              {/* 📦 16/11 — Monitoring เป็นแท็บของ Stock Management แล้ว · `?tab=<บอร์ด>` เดิม → `?mon=` (param ของลูก) */}
+              <Route path="/monitoring" element={<LegacyTabRedirect to="/line-stock" tab="monitoring" subParam="mon" />} />
               <Route path="/store-monitor" element={
                 <RoleRoute path="/store-monitor" userRole={role}><StoreMonitor /></RoleRoute>
               } />

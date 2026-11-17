@@ -99,6 +99,14 @@ export const KPI_BASE_VARS = [
   { key: 'inventory_baht', label: 'มูลค่าสต็อกสิ้นเดือน (ตาม storage location)', unit: 'บาท', level: 'unit' },
   { key: 'manpower',       label: 'กำลังคนทั้งโรงงาน (Total Head count All)', unit: 'คน',  level: 'plant' },   // 09/11 user: ยอดขาย/หัว = ค่ากลาง ⇒ ตัวหาร = คนทั้งโรงงานจากใบ 5.Manpower (เดิม level unit)
   { key: 'cost_100p',      label: '100P + CR (มูลค่าที่ลดได้)',              unit: 'บาท', level: 'unit' },
+  /* 🤝 แบบสอบถามความพึงพอใจลูกค้า (16/11 · user: "customer satisfaction ต้อง single source of truth
+     และยิ่งค่าของโรงงาน ต้องมีค่าเดียว ดึงไปใช้เอา") — คะแนนดิบของ "แบบสอบถามใบเดียวของโรงงาน"
+     ⇒ `level:'plant'` = กรอกครั้งเดียวที่ขอบเขต ทั้งโรงงาน · ทุกหน่วยที่มี KPI ข้อนี้อ่านตัวเดียวกัน
+     🔴 ห้ามเพิ่มที่กรอกชุดที่ 2 ต่อหน่วย (ตารางของตัวเอง/ช่องกรอกในหน้า) — มี 2 ที่กรอก = ไม่มีค่าเดียว */
+  { key: 'csat_q_actual', label: 'ความพึงพอใจ — คะแนนที่ได้ ด้านคุณภาพ (Q)',     unit: 'คะแนน', level: 'plant' },
+  { key: 'csat_q_total',  label: 'ความพึงพอใจ — คะแนนเต็ม ด้านคุณภาพ (Q)',       unit: 'คะแนน', level: 'plant' },
+  { key: 'csat_d_actual', label: 'ความพึงพอใจ — คะแนนที่ได้ ด้านการส่งมอบ (D)',  unit: 'คะแนน', level: 'plant' },
+  { key: 'csat_d_total',  label: 'ความพึงพอใจ — คะแนนเต็ม ด้านการส่งมอบ (D)',    unit: 'คะแนน', level: 'plant' },
 ];
 
 export const baseVarOf = (key) => KPI_BASE_VARS.find(v => v.key === key) || null;
@@ -130,6 +138,22 @@ export const KPI_FORMULAS = [
   /* 09/11 user: "sales/head ต้องเท่ากันทุกส่วนงาน เป็นค่ากลาง ยอดขายรวม ÷ ยอดคนทั้งโรงงาน จากไฟล์บัญชี" ⇒ `scope:'plant'` = ทุกตัวแปรอ่านจาก ทั้งโรงงาน
      ไม่ว่านิยามจะอยู่หน่วยไหน (เคส PD1: Σ ยอดขายโรงงาน ÷ กำลังคน PD1 32 คน = 47.951 ทั้งที่ค่ากลาง ~4) · catalog `value_scope='plant'` ให้ทุกหน่วยอ่านแผ่นโรงงาน */
   { key: 'sale_per_head', label: 'ยอดขาย/หัว (MB)', expr: 'Σ sale_total (ม.ค.→เดือนนี้) ÷ manpower ทั้งโรงงาน ÷ 1,000,000', vars: ['sale_total', 'manpower'], cum: ['sale_total'], unit: 'MB', scope: 'plant' },
+  /* ── 🤝 ความพึงพอใจลูกค้า (Q&D) · 16/11 ─────────────────────────────────────────────────────
+     ทะเบียนกลางของกลุ่ม (`kpi_standard_items` 2026) เขียนหัวข้อนี้เป็น **1 แถว 1 คะแนน** สูตร
+     `(Actual Score / Total Score) x 100` · **ทะเบียนไม่มีข้อย่อย Q และ D** — `(Q&D)` คือ *ขอบเขตของ
+     แบบสอบถาม* (คุณภาพ + การส่งมอบ) ไม่ใช่ KPI 2 ตัว ⇒ ห้ามแตกเป็น 2 แถว KPI / 2 คะแนน / 2 น้ำหนัก
+     ⇒ แตกที่ **ตัวแปรฐาน** แทน: 4 ช่อง (ได้/เต็ม × Q/D) ที่ขอบเขต ทั้งโรงงาน
+     🔴 ค่ารวม = (Σคะแนนที่ได้ ÷ Σคะแนนเต็ม) × 100 — **ห้ามเฉลี่ย % ของ 2 ขา** (ตัวหารแต่ละขาไม่เท่ากัน
+        เฉลี่ยแล้วได้เลขที่ไม่มีอยู่ในใบจริง) · `parts` = % ของขานั้นเทียบคะแนนเต็มของขาเอง (คนละคำถาม
+        กับค่ารวม) จอ 🔍 วาดแยกคนละกราฟ พร้อมสูตรของตัวเอง ไม่ได้ซ้อนทับให้บวกกัน
+     🔴 `scope:'plant'` = ทุกตัวแปรอ่านจากขอบเขต ทั้งโรงงาน ไม่ว่านิยามจะอยู่หน่วยไหน (QA · PD1-4 ·
+        Die MTN เห็นเลขเดียวกับโรงงาน) — นี่คือ "ค่าเดียว ดึงไปใช้" ที่ user สั่ง 16/11
+     ℹ️ `Internal Satisfaction` ของหน่วยสนับสนุน = **แบบสอบถามคนละใบ รายหน่วย** ยังกรอกมือที่หน่วยนั้น
+        ห้ามเอามารวมสูตรนี้ (Tooling MTN มีค่าจริงของตัวเอง 7 เดือน) */
+  { key: 'csat_q_pct',    label: 'ความพึงพอใจ — คุณภาพ (Q) %',   expr: 'csat_q_actual ÷ csat_q_total × 100', vars: ['csat_q_actual', 'csat_q_total'], unit: '%', scope: 'plant' },
+  { key: 'csat_d_pct',    label: 'ความพึงพอใจ — ส่งมอบ (D) %',   expr: 'csat_d_actual ÷ csat_d_total × 100', vars: ['csat_d_actual', 'csat_d_total'], unit: '%', scope: 'plant' },
+  { key: 'csat_qd_pct',   label: 'Customer Satisfaction (Q&D) %', expr: '(csat_q_actual + csat_d_actual) ÷ (csat_q_total + csat_d_total) × 100',
+    vars: ['csat_q_actual', 'csat_q_total', 'csat_d_actual', 'csat_d_total'], unit: '%', scope: 'plant', parts: ['csat_q_pct', 'csat_d_pct'] },
 ];
 
 export const formulaOf = (key) => KPI_FORMULAS.find(f => f.key === key) || null;
@@ -152,6 +176,10 @@ export function evalFormula(formulaKey, vars = {}) {
     case 'rm_pct':        value = div(v.raw_material, v.sale_product); break;
     case 'p100_pct':      value = div(v.cost_100p, v.sale_product); break;
     case 'inventory_day': { const r = div(v.inventory_baht, v.cogs); value = r == null ? null : r * Number(v.days_in_month); break; }
+    case 'csat_q_pct':    value = div(v.csat_q_actual, v.csat_q_total); break;
+    case 'csat_d_pct':    value = div(v.csat_d_actual, v.csat_d_total); break;
+    /* 🔴 ตัวตั้งรวม ÷ ตัวหารรวม — ห้ามเฉลี่ย (csat_q_pct + csat_d_pct) ÷ 2 */
+    case 'csat_qd_pct':   value = div(v.csat_q_actual + v.csat_d_actual, v.csat_q_total + v.csat_d_total); break;
     case 'sale_per_head': { const per = div(v.sale_total, v.manpower); return { value: per == null ? null : per / 1e6, missing: [], error: null }; }
     default: return { value: null, missing: [], error: 'ยังไม่ได้ทำสูตรนี้' };
   }
@@ -710,6 +738,18 @@ export const stdUnitLabel = (unit) => {
 export const normTopic = (s) => String(s == null ? '' : s).trim().toLowerCase();
 const rowTopic = (r) => normTopic(r?.topic ?? r?.name);
 
+/** เดา "หน่วยงานมาตรฐาน" จากชื่อขอบเขต — **เป็นข้อเสนอให้คนกดยืนยันเท่านั้น ห้ามตั้งให้เอง**
+ *  (16/11 · เคส QA: ขอบเขตชื่อตรงกับหน่วยงานในทะเบียนเป๊ะ แต่ยังไม่มีแถว KPI เลยสักข้อ ⇒ จอต้องชี้ทางได้
+ *   ไม่ใช่โชว์ตารางว่าง — กฎความซื่อสัตย์ของจอ · การเลือก KPI ต่อหน่วยงานเป็นการตั้งค่าของคน)
+ *  🔴 ตรงเป๊ะเท่านั้น (ไม่สนตัวพิมพ์/ช่องว่าง/เครื่องหมาย) — ไม่ตรง = `null` ห้ามเดาคลุม
+ *     เช่น "Tooling MTN" ต้องคืน null ไม่ใช่เดาเป็น "Tooling" (คนละชุด KPI กัน) */
+export function guessStdUnit(name) {
+  const flat = (s) => normTopic(s).replace(/[\s\-_.&/()]+/g, '');
+  const n = flat(name);
+  if (!n) return null;
+  return KPI_STD_UNITS.find(u => flat(u.unit) === n)?.unit || null;
+}
+
 /**
  * จับคู่ "ทะเบียนมาตรฐาน" กับ "แถวที่อยู่ในใบจริงแล้ว"
  * @param stdItems แถวจาก `kpi_standard_items` ของหน่วยงาน+ปีนั้น
@@ -751,4 +791,54 @@ export function checkStdSelection(rows = [], stdItems = null) {
       .map(m => m.item);
   }
   return { weight, diff, ok: diff === 0 && missingFixed.length === 0, missingFixed };
+}
+
+/* ── 🧾 "KPI นี้ตัดสินยังไง" เป็นประโยคเดียว + ตรวจเกณฑ์ที่ตั้งขัดกัน (2026-11-16 · user: "หน้ากรอก KPI งงเรื่อง plan และผ่าน/ตก") ──
+   เกณฑ์ทุกตัวตั้งได้ต่อ KPI อยู่แล้ว (เป้า · Commit · ทิศทาง · เทียบแผนรายเดือนไหม · วิธีสรุปปี) — ที่ขาดคือ "ประโยคสรุป" ให้คนกรอกเห็น
+   · อ่านผ่าน defBars() เท่านั้น (ข้อความเก่าก็แกะให้) · ไม่คิดเกณฑ์ใหม่ · pure มีเทส */
+export const CMP_SYM = { '<=': '≤', '>=': '≥', '<': '<', '>': '>', '=': '=' };
+export function scoreRuleText(def = {}, { unit = null, fmt = (v) => String(v), summaryLabel = null } = {}) {
+  const b = defBars(def);
+  const u = unit != null ? unit : unitOf(def);
+  const f = (v) => `${fmt(v)}${u ? ' ' + u : ''}`;
+  const mode = summaryLabel || summaryModeLabel(summaryModeOf(def));
+  if (b.target_value == null && b.commit_value == null) return { text: `ยังไม่ตั้งเป้า — ไม่ตัดสิน ○△✗ (เห็นแค่ตัวเลข) · สรุปปี = ${mode}`, ok: false, mode };
+  const cmp = b.target_compare || b.commit_compare;
+  if (!cmp) return { text: 'ตั้งเป้าไว้แต่ไม่ได้บอกทิศทาง (≥ หรือ ≤) — ตัดสิน ○△✗ ไม่ได้', ok: false, mode };
+  const sym = CMP_SYM[cmp] || cmp;
+  const down = String(cmp).startsWith('<');
+  const parts = [];
+  if (b.target_value != null) parts.push(`○ ${sym} ${f(b.target_value)}`);
+  if (b.commit_value != null) parts.push(`△ ${sym} ${f(b.commit_value)}`);
+  parts.push(`✗ ${down ? 'เกิน' : 'ต่ำกว่า'}นั้น`);
+  const head = def.score_by_plan
+    ? 'รายเดือนเทียบ "แผนของเดือนนั้น" (ช่องแผน = เป้าเดือน · △ = แผน×สัดส่วน Commit/Target · เดือนไม่มีแผน = เทียบเป้าปี) · เป้าปี: '
+    : 'ทุกเดือนเทียบเป้าเดียวกัน: ';
+  return { text: `${head}${parts.join(' · ')} · สรุปปี = ${mode}`, ok: true, mode, down, bars: b };
+}
+
+/** เกณฑ์ที่ตั้งขัดกัน/ไม่ครบ — จอขึ้นเตือนแดงที่แถวทันที ไม่รอให้บอร์ดสีเพี้ยน · `plans` = {เดือน: ค่า} ของแถว (ไม่ส่ง = ไม่ตรวจเรื่องแผน) */
+export function defIssues(def = {}, { plans = null } = {}) {
+  const out = [];
+  const b = defBars(def);
+  const hasNum = b.target_value != null || b.commit_value != null;
+  if (hasNum && !(b.target_compare || b.commit_compare)) out.push({ code: 'no_direction', text: 'ตั้งเป้าแล้วแต่ไม่ได้เลือกทิศทาง ≥/≤ — ตัดสิน ○△✗ ไม่ได้' });
+  const cmp = b.target_compare || b.commit_compare;
+  const dirOf = (c) => (c == null ? null : String(c).startsWith('<') ? 'down' : String(c).startsWith('>') ? 'up' : null);
+  if (b.target_compare && b.commit_compare && dirOf(b.target_compare) && dirOf(b.commit_compare) && dirOf(b.target_compare) !== dirOf(b.commit_compare)) {
+    out.push({ code: 'commit_dir_conflict', text: `เครื่องหมายของ Commitment (${CMP_SYM[b.commit_compare] || b.commit_compare}) สวนทางกับ Target (${CMP_SYM[b.target_compare] || b.target_compare}) — น่าจะพิมพ์ผิดด้าน (เคส "≤ 0" กับเป้า ≥ 30)` });
+  } else if (cmp && b.target_value != null && b.commit_value != null) {
+    const down = String(cmp).startsWith('<');
+    if (down ? b.commit_value < b.target_value : b.commit_value > b.target_value) {
+      out.push({ code: 'commit_wrong_side', text: `Commitment (${b.commit_value}) เข้มกว่า Target (${b.target_value}) ทั้งที่ทิศทาง "${down ? 'ยิ่งน้อยยิ่งดี' : 'ยิ่งมากยิ่งดี'}" — △ จะไม่มีวันเกิด (น่าจะใส่เครื่องหมายผิดด้าน)` });
+    }
+  }
+  const ct = def.commitment == null ? '' : String(def.commitment).trim();
+  if (b.commit_value == null && ct && ct !== '-' && !/\d/.test(ct)) out.push({ code: 'commit_text_unparsed', text: `Commitment เป็นข้อความที่อ่านตัวเลขไม่ได้ ("${ct}") — ไม่ถูกใช้ตัดสิน` });
+  if (plans && typeof plans === 'object') {
+    const n = Object.values(plans).filter(v => v != null && v !== '' && !Number.isNaN(Number(v))).length;
+    if (n && !def.score_by_plan) out.push({ code: 'plan_unused', text: `กรอกแผนไว้ ${n} เดือน แต่ตั้งให้เทียบเป้าปี — แผนเป็นแค่เส้นประกอบ ไม่มีผลกับ ○△✗ (ถ้าต้องการให้มีผล เลือก "เทียบแผนของเดือนนั้น" ในนิยาม)` });
+    if (!n && def.score_by_plan) out.push({ code: 'plan_missing', text: 'ตั้งให้เทียบแผนของเดือนนั้น แต่ยังไม่กรอกแผนสักเดือน — ทุกเดือนจะถอยไปเทียบเป้าปี' });
+  }
+  return out;
 }
