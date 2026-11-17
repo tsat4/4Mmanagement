@@ -56,6 +56,7 @@ import ProcessTypeSetup from '../components/ProcessTypeSetup';
 import { affectsLanesMap, computeSessionOee, sessionProducedQty, strictOee, strictGap, STRICT_WARN_SHARE_PCT, policyBreakOverlapMin, breakIntervalsIn, breakBandsIn, breakBandName, breakBandTitle, dtMinOutsideBreaks, overlapMinutesWith, buildCtMap, ctForMat, groupSameProductKeys, shiftFrameOf, shiftStartDate, clampWinToShift, unionIv, dtMinOutsideWork, SIX_BIG_LOSSES, EIGHT_WASTES, sumDefectQty, isTrialDefect, splitDefectQty, QBIN_EMBED, sumSuspectPending, orderCloseMs, matRawWindow } from '../utils/oee';
 import { planMatTimeWrites, MAT_TIME_SKIP_OPEN } from '../utils/matTimeEdit';
 import { resolveShiftTime, checkShiftTime, shiftWindow, windowLabel, fmtOffset, MAX_SHIFT_MIN, checkCloseTime, dtCoverMin } from '../utils/shiftWindow';
+import { handoverOf, handoverBlockText, sessionLabel as hoSessionLabel } from '../utils/sessionHandover';
 /* 🛡️ poka-yoke หน้าปิดกะ — กฎทั้งหมดอยู่ใน utils/closeChecks.js ห้ามเขียนเงื่อนไขเองในหน้า */
 import { checkQtyFit, qtyFitMessage, buildCloseChecks, confirmChecks } from '../utils/closeChecks';
 /* 🗑️ ด่าน "อื่นๆ ต้องบอกเหตุผลจริง" — กฎ+ข้อความอยู่ utils/unclassified.js ห้ามเขียนเองในหน้า */
@@ -579,6 +580,11 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
   const [savingProdOpen, setSavingProdOpen] = useState(false);
   // Overflow confirmation modal
   const [overflowInfo, setOverflowInfo]   = useState(null); // { prodNo, matNo, qty, std, overMin, remainMin, newOrderMin }
+  /* 🔴 17/11 (หัวหน้าแจ้ง "กะ01 ลืมปิด แล้วกะ02 ยิงปิดแท็ก ยอดไปขึ้นกะ01")
+     กล่องถามตอนจะเปิดใบลง **กะที่ไลน์นี้ขึ้นกะใหม่ไปแล้ว** · `handoverOkRef` = ยืนยันแล้วทั้งกะ (ผูกกับ id กะ)
+     ⇒ เลือก "ลงกะเดิม" ครั้งเดียวแล้วยิงรัวต่อได้ (ของค้างกะจริงมีเยอะใบ) แต่แถบเตือนบนจอยังอยู่ ห้ามหาย */
+  const [handoverAsk, setHandoverAsk]     = useState(null); // { text, run }
+  const handoverOkRef = useRef(null);
   /* 🔴 "จำคำตอบไว้ทั้งกะ" ของใบที่เกินเวลากะ (คำสั่ง user 10/11 · หน้างานแจ้ง)
      ใกล้เลิกกะ **ทุกใบที่สแกนจะเกินความจุหมด** ⇒ เด้งโมดัลให้เลือกทุกใบ = ยิง Tag ต่อกันไม่ได้เลย
      ⇒ เลือกครั้งเดียวแล้วติ๊ก "ใช้กับใบถัดไป" · `null` = ถามทุกใบเหมือนเดิม
@@ -844,6 +850,17 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
     (sessions || []).forEach(s => ((s.work_date || '') >= wd ? fresh : stale).push(s));
     return [fresh, stale];
   }, [sessions]);
+
+  /* ── 🔁 "กะนี้ถูกส่งต่อไปแล้วหรือยัง" (17/11 · หัวหน้าแจ้ง) ─────────────────────────────
+     ไลน์เดียวกันมีกะที่เริ่มทีหลังและเริ่มไปแล้ว = ทุกอย่างที่ยิงลงกะที่เลือกไปขึ้น **กะเก่า**
+     ไล่ฐานจริงเจอ 164 ใบ · 21,647 ชิ้น · 18 กะ (ตั้งแต่ 01/10) ที่ถูกเปิดใบลงกะที่ส่งต่อไปแล้ว
+     🔴 กฎ: ตัวเลือกกะ = ตัวกรอง **ไม่ใช่ด่าน** ⇒ ด่านจริงอยู่ที่ `doInsertProdOrder` (ตัวเขียน DB)
+     ⚠️ `Date.now()` ตอน render พอ — ลิสต์กะรีเฟรชเองผ่าน realtime/poll อยู่แล้ว
+        (ด่านตอนเขียนอ่านเวลาสดอีกรอบ) */
+  const handover = useMemo(
+    () => (selSession ? handoverOf(selSession, sessions, Date.now()) : null),
+    [selSession, sessions]);
+  const handoverRef = useRef(null); handoverRef.current = handover;
 
   // ไลน์ที่เปิดกะได้ตาม scope (leader→family · role อื่น→sections · admin/qa→null=ทั้งหมด) — กันเปิดกะไลน์ข้ามส่วนงาน
   /* 🔭 ของกลาง `lineScope()` (QC audit 09/11) — เดิม leader ได้ครอบครัวไลน์ล้วน
@@ -1864,6 +1881,12 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
 
   // insert จริง (ใช้ทั้งจาก handleScanOpen และ handleOverflowForce)
   const doInsertProdOrder = async (prodNo, matNo, qty, std, status = 'open') => {
+    /* 🔴 ด่านจริงของ "ยอดลงกะเก่าที่ลืมปิด" (17/11) — อยู่ที่ตัวเขียน DB ไม่ใช่แค่ป้ายบนจอ
+       ทุกทางที่เปิดใบ (สแกน · เกินความจุ · ยกกะถัดไป) วิ่งผ่านฟังก์ชันนี้ตัวเดียว */
+    const hoTxt = handoverBlockText(handoverRef.current, `เปิดใบผลิต ${prodNo}`, selSession);
+    if (hoTxt && handoverOkRef.current !== selSession?.id) {
+      return { error: { message: `${hoTxt}\n— ยืนยันที่กล่องเตือนก่อน (หรือสลับไปกะที่เดินอยู่)`, code: 'HANDOVER' }, data: null };
+    }
     const opened_at = backfillOpenedAt();
     const { data, error } = await supabaseDR.from('prod_orders').insert({
       session_id:  selSession.id,
@@ -1894,6 +1917,8 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
   /* 🔴 โหมด "จำคำตอบ" ผูกกับกะที่เปิดอยู่ — สลับกะ/ปิดกะ ต้องล้างทิ้งเสมอ
      ไม่ล้าง = ใบของกะใหม่ถูกตัดสินใจแทนด้วยคำตอบของกะก่อน (ยกไปกะอื่นเงียบๆ) */
   useEffect(() => { setOverflowMode(null); }, [selSession?.id]);
+  /* ยืนยัน "ลงกะที่ส่งต่อไปแล้ว" ก็ผูกกับกะเดียวกัน — สลับกะต้องถามใหม่ */
+  useEffect(() => { handoverOkRef.current = null; setHandoverAsk(null); }, [selSession?.id]);
 
   const handleScanOpen = async () => {
     if (prodBusyRef.current) return;
@@ -1928,6 +1953,14 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
     const dup = prodOrders.find(o => o.prod_no === prodNo);
     if (dup) {
       toast.error(`PROD.NO ${prodNo} เปิดไปแล้วในกะนี้ (${dup.status === 'confirmed' ? 'ปิดแล้ว' : 'กำลังผลิต'})`);
+      return;
+    }
+
+    /* 🔴 ไลน์นี้ขึ้นกะใหม่ไปแล้ว = ใบนี้จะไปขึ้นยอดกะเก่า — ถามก่อน (ด่านจริงอยู่ใน doInsertProdOrder)
+       ยืนยันครั้งเดียวใช้ได้ทั้งกะ (ของค้างกะจริงมีหลายใบ) · สลับกะ = ถามใหม่ */
+    const hoAsk = handoverBlockText(handover, `ใบ ${prodNo}`, selSession);
+    if (hoAsk && handoverOkRef.current !== selSession?.id) {
+      setHandoverAsk({ text: hoAsk, run: () => { handoverOkRef.current = selSession?.id; handleScanOpen(); } });
       return;
     }
 
@@ -2094,9 +2127,15 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
     const partnerOpenNo = match.paired_order_id
       ? prodOrders.find(o => o.id === match.paired_order_id && o.status === 'open')?.prod_no
       : null;
+    /* 🔴 17/11 (หัวหน้าแจ้ง) — ใบนี้ผูกกับกะที่เปิดมันไว้ (session_id ของแถว) ปิดแล้ว **ยอดขึ้นกะนั้น**
+       ไลน์ขึ้นกะใหม่ไปแล้วแต่ยังยิงปิดใบของกะเก่า = ถูกต้องตามใบ แต่ต้องบอกให้เห็นว่ายอดไปขึ้นกะไหน
+       (ห้ามเด้งโมดัลตรงนี้ — ของค้างกะมีหลายใบ ยิงรัวไม่ได้เลย · ด่านจริงอยู่ตอน "เปิด" ใบ) */
+    const hoClose = handoverRef.current;
+    const hoNote = hoClose && !hoClose.unsure && hoClose.next
+      ? ` · ⚠️ ยอดขึ้น ${hoSessionLabel(selSession)} (ไลน์นี้ขึ้น${hoSessionLabel(hoClose.next)} ไปแล้ว)` : '';
     toast.success(partnerOpenNo
-      ? `ปิด Order ${match.prod_no} · ${match.qty} ชิ้น ✓ (คู่ RH/LH ${partnerOpenNo} ยังเปิดอยู่ ต้องสแกนปิดแยก)`
-      : `ปิด Order ${match.prod_no} · ${match.qty} ชิ้น ✓`);
+      ? `ปิด Order ${match.prod_no} · ${match.qty} ชิ้น ✓ (คู่ RH/LH ${partnerOpenNo} ยังเปิดอยู่ ต้องสแกนปิดแยก)${hoNote}`
+      : `ปิด Order ${match.prod_no} · ${match.qty} ชิ้น ✓${hoNote}`);
     setCloseProdNo('');
     setCloseMatch(null);
     loadProdOrders(selSession.id, selSession.line_name);
@@ -2259,6 +2298,12 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
     if (manualForm.is_backfill && manualForm.backfill_time && selSession) {
       const winErr = backfillWindowError(manualForm.backfill_time);
       if (winErr) { toast.error(winErr); return; }
+    }
+    /* 🔁 เปิดเป้า manual ก็ลงกะเก่าที่ลืมปิดได้เหมือนกัน (17/11) — ด่านเดียวกับใบสแกน */
+    const hoMan = handoverBlockText(handover, `เป้าผลิต ${matNo}`, selSession);
+    if (hoMan && handoverOkRef.current !== selSession?.id) {
+      setHandoverAsk({ text: hoMan, run: () => { handoverOkRef.current = selSession?.id; handleManualOpen(); } });
+      return;
     }
     setSavingManual(true);
     const std = kanbanStds.find(s => s.mat_no === matNo);
@@ -3693,6 +3738,29 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
               /* ── หัวกะ (LIVE · ชื่อไลน์ · ปุ่มคำสั่ง) ── */
               const sessionHeaderEl = (
                 <div style={{ background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: '16px 20px', marginBottom: isMobile ? 16 : 0 }}>
+                  {/* ── 🔁 กะนี้ถูกส่งต่อไปแล้ว (17/11 · หัวหน้าแจ้ง "ยอดกะ02 ไปขึ้นกะ01 ที่ลืมปิด") ──
+                      จอที่เปิดค้างจากกะก่อนยังผูกกับกะเดิม ⇒ ต้องเห็นชัดก่อนยิงใบ + สลับได้ในคลิกเดียว
+                      🔴 อ่านเวลาเริ่มกะไม่ได้ = เช็คไม่ได้ ต้องเขียนบนจอ ห้ามเงียบ (กฎความซื่อสัตย์ของจอ) */}
+                  {handover?.unsure && (
+                    <div style={{ marginBottom: 10, padding: '6px 10px', borderRadius: 'var(--r-sm)', background: 'var(--card2)', color: 'var(--muted)', fontSize: 11 }}>
+                      เช็ค “ไลน์นี้ขึ้นกะใหม่ไปแล้วหรือยัง” ไม่ได้ — กะนี้ไม่มีเวลาเริ่มกะในระบบ
+                    </div>
+                  )}
+                  {handover?.next && (
+                    <div style={{ marginBottom: 12, padding: '10px 12px', borderRadius: 'var(--r-md)', background: 'var(--amber-dim)', border: '1px solid var(--amber)' }}>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--amber)' }}>
+                        🔁 ไลน์นี้ขึ้น{hoSessionLabel(handover.next)} ไปแล้ว — กะที่เลือกอยู่คือกะเก่า
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--text)', marginTop: 4 }}>
+                        ทุกใบ/ยอด/Downtime ที่ลงตรงนี้จะไปขึ้นยอดของ <b>{hoSessionLabel(selSession)}</b>
+                        {handover.lateMin >= 60 ? ` (ขึ้นกะใหม่มา ${Math.floor(handover.lateMin / 60)} ชม.${handover.lateMin % 60 ? ` ${handover.lateMin % 60} น.` : ''})` : ` (ขึ้นกะใหม่มา ${handover.lateMin} นาที)`}
+                      </div>
+                      <button onClick={() => { setSelSession(handover.next); toast.info(`สลับไป ${hoSessionLabel(handover.next)} แล้ว`); }}
+                        style={{ marginTop: 8, padding: '6px 12px', borderRadius: 'var(--r-sm)', border: 'none', background: 'var(--amber)', color: '#000', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
+                        ➡️ สลับไปกะที่เดินอยู่
+                      </button>
+                    </div>
+                  )}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
@@ -6192,6 +6260,33 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
             </div>
           );
         })()}
+
+        {/* ── 🔁 กะที่ส่งต่อไปแล้ว: ถามก่อนเปิดใบ (17/11 · หัวหน้าแจ้ง) ───────────────
+            2 ทางเลือกเท่านั้น: สลับไปกะที่เดินอยู่ (ทางที่ควรเป็น) หรือยืนยันลงกะเดิม (ของค้างกะจริง)
+            ยืนยันแล้ว = ไม่ถามซ้ำทั้งกะ แต่แถบเตือนบนหัวกะยังอยู่ (ห้ามเงียบ) */}
+        {handoverAsk && (
+          <div className="overlay" style={{ zIndex: 2100 }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg3)', border: '2px solid var(--amber)', borderRadius: 'var(--r-lg)', padding: 28, width: 'min(95vw,460px)', display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--amber)' }}>🔁 กะนี้ถูกส่งต่อไปแล้ว</div>
+              <div style={{ background: 'var(--amber-dim)', border: '1px solid var(--amber)', borderRadius: 'var(--r-md)', padding: '12px 16px', fontSize: 13, color: 'var(--text)', whiteSpace: 'pre-line', lineHeight: 1.6 }}>
+                {handoverAsk.text}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {handover?.next && (
+                  <button onClick={() => { const nx = handover.next; setHandoverAsk(null); setSelSession(nx); toast.info(`สลับไป ${hoSessionLabel(nx)} แล้ว — ยิงใบใหม่ได้เลย`); }}
+                    style={{ padding: '12px 16px', borderRadius: 'var(--r-md)', border: 'none', background: 'var(--green)', color: '#fff', fontSize: 14, fontWeight: 800, cursor: 'pointer' }}>
+                    ➡️ สลับไป{hoSessionLabel(handover.next)} (ยิงใบใหม่อีกครั้ง)
+                  </button>
+                )}
+                <button onClick={() => { const r = handoverAsk.run; setHandoverAsk(null); r?.(); }}
+                  style={{ padding: '10px 16px', borderRadius: 'var(--r-md)', border: '1px solid var(--amber)', background: 'transparent', color: 'var(--amber)', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>
+                  ยืนยันลงกะเดิม — ของนี้ผลิตในกะนั้นจริง (ไม่ถามซ้ำทั้งกะ)
+                </button>
+                <button onClick={() => setHandoverAsk(null)} style={{ ...cancelBtnStyle, alignSelf: 'center' }}>{tr('ยกเลิก')}</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── OVERFLOW CONFIRMATION modal ─────────────────────── */}
         {overflowInfo && (

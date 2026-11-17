@@ -11118,3 +11118,35 @@ test('🧾 เพดานหยุดตามแผน: แยก planned/unpl
   assert.deepEqual(bad, [], '\n\n❌ คิวรีที่ดึง `dr_downtime_types(category)` แต่ไม่ดึง `planned_cap_min`:\n   '
     + bad.join('\n   ') + '\n   ⇒ เพดานจะไม่ทำงานในจอนั้น **โดยไม่มีใครรู้** (เลขต่างจากจอปิดกะเงียบๆ)\n')
 })
+
+/* ═══ 🔁 ยอดห้ามลงกะเก่าที่ลืมปิด — handover-gate-open-order (2026-11-17) ═══════════════
+   หัวหน้าแจ้ง: *"ถ้ากะ01ลืมปิดกะ แล้วกะ02 ยิงปิดแท็ก ยอดจะไปขึ้นของกะ01ที่ลืมปิด"*
+   ไล่ฐานจริง (prod_orders ตั้งแต่ 01/10): **164 ใบ · 21,647 ชิ้น · 18 กะ** ถูก *เปิดใบ* ลงกะที่
+   ไลน์เดียวกันขึ้นกะใหม่ไปแล้ว (LINE A 10/11 กะเช้า: เปิดใบ 20:04–20:10 ทั้งที่กะดึกเริ่ม 20:00)
+   🔴 ด่านต้องอยู่ที่ `doInsertProdOrder` (ตัวเขียน DB) — "กะที่เลือก" เป็นแค่ตัวกรอง ไม่ใช่ด่าน */
+test('🔁 handover-gate-open-order — เปิดใบลงกะที่ส่งต่อไปแล้ว ต้องผ่านด่านที่ตัวเขียน DB', () => {
+  const src = stripComments(readFileSync(join(ROOT, 'src/pages/DailyReport.jsx'), 'utf8'))
+  const i = src.indexOf('const doInsertProdOrder =')
+  assert.ok(i > 0, '\n\n❌ หา doInsertProdOrder ไม่เจอ\n')
+  const body = src.slice(i, src.indexOf('await supabaseDR.from(\'prod_orders\').insert', i))
+  assert.match(body, /handoverBlockText\(/,
+    '\n\n❌ ถอดด่าน handover ออกจาก doInsertProdOrder — ใบจะกลับไปลงกะเก่าที่ลืมปิดเงียบๆ\n'
+    + '   (164 ใบ · 21,647 ชิ้น ที่เจอในฐานมาจากทางนี้)\n')
+  assert.match(body, /handoverOkRef\.current !== selSession\?\.id/,
+    '\n\n❌ ด่านต้องเทียบ "ยืนยันมาแล้วสำหรับกะนี้" กับ id ของกะที่เลือก\n')
+
+  /* ยืนยันแล้วต้องผูกกับ "กะ" เท่านั้น — สลับกะต้องถามใหม่ (ไม่งั้นใบของกะใหม่ถูกตัดสินแทนด้วยคำตอบเก่า) */
+  assert.match(src, /handoverOkRef\.current = null;[\s\S]{0,60}\}, \[selSession\?\.id\]\)/,
+    '\n\n❌ ไม่ได้ล้างคำยืนยัน handover ตอนสลับกะ\n')
+
+  /* แถบบนจอ: ส่งต่อแล้ว = ต้องเห็น + เช็คไม่ได้ก็ต้องเขียน (กฎความซื่อสัตย์ของจอ) */
+  assert.match(src, /handover\?\.next &&/, '\n\n❌ หัวกะไม่มีแถบเตือน "ไลน์นี้ขึ้นกะใหม่ไปแล้ว"\n')
+  assert.match(src, /handover\?\.unsure &&/,
+    '\n\n❌ อ่านเวลาเริ่มกะไม่ได้ = เช็คไม่ได้ ต้องเขียนบนจอ ห้ามเงียบ\n')
+
+  /* กฎ "เวลาเริ่มกะ" ต้องมาจากของกลาง ห้ามเดาจากเลขกะ/created_at */
+  const util = stripComments(readFileSync(join(ROOT, 'src/utils/sessionHandover.js'), 'utf8'))
+  assert.match(util, /shiftFrameOf/, '\n\n❌ sessionHandover ต้องอ่านเวลาเริ่มกะผ่าน shiftFrameOf (oee.js)\n')
+  assert.ok(!/created_at/.test(util),
+    '\n\n❌ ห้ามตัดสิน "กะไหนมาก่อน" ด้วย created_at — กะที่เปิดย้อนหลังจะสลับลำดับเงียบๆ\n')
+})
