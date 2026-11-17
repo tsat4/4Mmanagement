@@ -41,6 +41,7 @@ import MinDemandPanel from './MinDemandPanel';
 import { buildHorizon, assignShifts, horizonSummary, orderAcrossHorizon, SEG_HOURS, SHIFT_LABEL } from '../utils/planHorizon';
 import { layoutLots } from '../utils/planTimeline';
 import PlanTimeline from './PlanTimeline';
+import PlanWeek from './PlanWeek';
 import FilterBar from './FilterBar';
 import LineSelect from './LineSelect';
 import Segmented from './Segmented';
@@ -142,6 +143,8 @@ export default function ProdLotPlanner({
   const [saving, setSaving]   = useState(false);
   const [trialOpen, setTrialOpen] = useState(false);
   const [dirty, setDirty]     = useState(false);
+  /* 📅 มุมมองไทม์ไลน์ (17/11 · user ส่งคลิปหน้า Schedule มา) — `rail` = ของเดิมเป๊ะ (default ห้ามเปลี่ยน) */
+  const [planView, setPlanView] = useState('rail');
 
   /* 🔴 ค่าที่เลือกไว้ต้องไม่ค้างอยู่นอกลิสต์ที่เลือกได้ (13/11 · user: เลือก PD1 แล้วจอโชว์ไลน์ PD2)
      หน้าแม่กรอง `lines` ตามส่วนงาน ⇒ สลับตัวกรองแล้วไลน์เดิมหลุดลิสต์ แต่ state ยังค้าง
@@ -537,10 +540,33 @@ export default function ProdLotPlanner({
       {/* ── 🧲 ไทม์ไลน์จัดแผน (ลากสลับก่อนหลัง) ── */}
       {rec.rows.length > 0 && frame.startMs && (
         <div style={card}>
-          <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8 }}>
-            ไทม์ไลน์ — 1 บรรทัด = 1 กะ <span style={{ color: 'var(--muted)', fontWeight: 600, fontSize: 11.5 }}>
-              (ความยาวกล่อง = เวลาที่ต้องใช้จริง · งานล้นกะไหลลงบรรทัดถัดไปเอง · ลากเพื่อสลับลำดับ)</span>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
+            <div style={{ fontSize: 13, fontWeight: 800 }}>
+              {planView === 'week' ? 'ไทม์ไลน์ — 1 คอลัมน์ = 1 วัน' : 'ไทม์ไลน์ — 1 บรรทัด = 1 กะ'}
+              <span style={{ color: 'var(--muted)', fontWeight: 600, fontSize: 11.5 }}>
+                {planView === 'week'
+                  ? ' (เห็นทั้งสัปดาห์ทีเดียว · แกนเวลาลงล่าง · ลากเพื่อสลับลำดับ)'
+                  : ' (ความยาวกล่อง = เวลาที่ต้องใช้จริง · งานล้นกะไหลลงบรรทัดถัดไปเอง · ลากเพื่อสลับลำดับ)'}
+              </span>
+            </div>
+            {/* 2 ตัวเลือก = <Segmented> ตามมาตรฐานหน้าตา (UI-STANDARD) */}
+            <div style={{ marginLeft: 'auto' }}>
+              <Segmented value={planView} onChange={setPlanView} options={[
+                { value: 'rail', label: '▭ ราง (รายกะ)' },
+                { value: 'week', label: '📅 สัปดาห์' },
+              ]} />
+            </div>
           </div>
+          {/* 🔴 2 มุมมองกินข้อมูลชุดเดียวกันเป๊ะ (layoutLots ตัวเดียว) — ห้ามแยกสูตร ไม่งั้น 2 จอเถียงกัน */}
+          {planView === 'week' ? (
+            <PlanWeek
+              lots={lots} ctOf={ctOf} pairOf={pairOf} dieOf={dieOf} rule={rule}
+              startMs={frame.startMs} endMs={frame.endMs} breaks={breaks}
+              closed={horizon.closed} segments={horizon.segments} skipped={horizon.skipped}
+              editable={mayWrite}
+              onReorder={(next) => { setLots(next); setDirty(true); }}
+            />
+          ) : (
           <PlanTimeline
             lots={lots} ctOf={ctOf} pairOf={pairOf} dieOf={dieOf} rule={rule}
             startMs={frame.startMs} endMs={frame.endMs} breaks={breaks}
@@ -548,6 +574,7 @@ export default function ProdLotPlanner({
             editable={mayWrite} nameOfMat={nameOfMat}
             onReorder={(next) => { setLots(next); setDirty(true); }}
           />
+          )}
           {/* 🔴 ปฏิทินยังไม่โหลด = ยังไม่ได้เช็ควันหยุด ต้องเขียนบนจอ ห้ามเงียบ */}
           {horizon.calendarUnknown && (
             <div style={{ fontSize: 11.5, color: '#f59e0b', marginTop: 5 }}>

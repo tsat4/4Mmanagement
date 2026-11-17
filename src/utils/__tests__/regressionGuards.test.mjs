@@ -649,6 +649,26 @@ const RULES = [
     allow: {},
   },
   {
+    id: 'plan-view-no-own-time-math',
+    scan: ['src/components/PlanTimeline.jsx', 'src/components/PlanWeek.jsx'], ext: ['.jsx'],
+    /* จับ "การคิดพิกัดเอง" ในจอแผน — ตั้งค่า *Pct เอง หรือสเกลผลต่างเวลาเป็น %
+       (แปลง ms → นาที เพื่อ**แสดงผล** เช่น `fmtMin(setupMs / 60000)` ไม่ใช่พิกัด ⇒ ไม่เข้าเงื่อน) */
+    re: /\b(top|left|width|height)Pct\s*[:=][^=]|\bMs\b[^;\n]{0,60}\*\s*100\b/g,
+    why: '📅 **มุมมองราง กับ มุมมองสัปดาห์ ต้องวาดแผนใบเดียวกันให้ยาวเท่ากัน** (17/11/2026 · user ส่งคลิป '
+       + 'หน้า Schedule มาแล้วสั่ง "ขยับแผนงานได้เหมือนหน้า schedule แบบนี้") '
+       + '· เวลาทุกค่ามาจาก `layoutLots()` (`utils/planTimeline.js`) → `sliceBySegments()` → '
+       + '`stackByDay()`/`dayTicks()` (`utils/planHorizon.js`) ซึ่ง **หมุนแกนเฉยๆ ไม่คิดเวลาใหม่** '
+       + '· เขียนสูตร ms→% ขึ้นมาเองในจอไหนจอหนึ่ง = กล่องเดียวกันยาวไม่เท่ากัน 2 จอ '
+       + 'แล้วผู้วางแผนไม่รู้ว่าจะเชื่อจอไหน (บทเรียนเดียวกับ "ห้ามมี OEE 2 ชุด") '
+       + '· กับดักที่ 2: เวลาเปลี่ยนรุ่น/คู่ RH-LH/ยืดข้ามเบรค อยู่ใน `layoutLots` หมด — '
+       + 'คิดเองในหน้าจะได้เลขที่ไม่มีของพวกนี้',
+    fix: 'ขอพิกัดจาก util: แนวนอนใช้ `leftPct`/`widthPct` จาก `sliceBySegments()` · '
+       + 'แนวตั้งใช้ `topPct`/`heightPct` จาก `stackByDay()` · ป้ายชั่วโมงใช้ `rowTicks()`/`dayTicks()` '
+       + '· ต้องการพิกัดแบบใหม่ = เพิ่มฟังก์ชันใน `utils/planHorizon.js` พร้อมเทส ไม่ใช่คำนวณในจอ '
+       + '· 📄 docs/modules/production-plan.md §มุมมองสัปดาห์',
+    allow: {},
+  },
+  {
     id: 'csat-no-second-entry-point',
     scan: ['src'], ext: ['.jsx', '.js'],
     /* จับช่องทางกรอก/เก็บคะแนนความพึงพอใจชุดที่ 2 — ตารางของตัวเอง หรือคอลัมน์คะแนนดิบที่ไม่ผ่านตัวแปรฐาน */
