@@ -11698,3 +11698,28 @@ test('☼☾ shift-glyph-no-emoji — ลิสต์กะใช้ <ShiftGlyph
     '\n\n❌ ลิสต์กะมี 2 ที่ (แถบซ้าย + กะค้าง) ต้องใช้ <ShiftGlyph> ทั้งคู่ ไม่งั้น 2 จอหน้าตาไม่ตรงกัน\n')
 })
 
+
+/* ═══ 📅 ใบที่ยกข้ามกะต้องพกต้นทางไปด้วย — carry-origin-propagated (2026-11-17) ═══════════
+   หัวหน้าแจ้ง: *"แท็กนี้เปิดวันที่เท่าไร … บางอันมันค้างนานแล้ว จะได้เคลียร์ก่อน"*
+   `importCarryOrders()` สร้าง **แถวใหม่** ทุกครั้งที่ยก ⇒ ถ้าไม่ส่งต่อ `first_opened_at`/`carry_hops`
+   การ์ดทุกกะจะดูเหมือน "เพิ่งเปิดวันนี้" ทั้งที่วนมาหลายวัน (คลาสเดียวกับลืมใส่ฟิลด์ใน CARRY_COLS) */
+test('📅 carry-origin-propagated — ยกยอดต้องส่งต่อ first_opened_at/carry_hops + อยู่ใน CARRY_COLS', () => {
+  const src = readFileSync(join(ROOT, 'src/lib/carryDebtOps.js'), 'utf8')
+  const cols = /export const CARRY_COLS = '([^']+)'/.exec(src)?.[1] || ''
+  for (const c of ['first_opened_at', 'carry_hops']) {
+    assert.ok(cols.includes(c),
+      `\n\n❌ CARRY_COLS ไม่ได้ดึง \`${c}\` — ค่าจะเป็น undefined แล้วโซ่ต้นทางขาดเงียบๆ\n`)
+  }
+  const body = stripComments(src)
+  assert.match(body, /first_opened_at:\s*o\.first_opened_at \|\| o\.opened_at/,
+    '\n\n❌ ใบที่ยกมาต้องสืบทอด "เปิดครั้งแรก" จากใบต้นทาง (ไม่มี = ใช้ opened_at ของต้นทาง)\n')
+  assert.match(body, /carry_hops:\s*\(Number\(o\.carry_hops\) \|\| 0\) \+ 1/,
+    '\n\n❌ ทุกครั้งที่ยก ต้อง +1 ไม่งั้นนับไม่ได้ว่าวนมากี่กะ\n')
+
+  /* 🔴 ห้ามกลับไปเดาต้นทางจาก prod_no — การ์ดคัมบังใช้เลขซ้ำข้ามเดือน (0124060820 ใช้มา 57 ครั้ง) */
+  const util = stripComments(readFileSync(join(ROOT, 'src/utils/carryDebt.js'), 'utf8'))
+  assert.match(util, /export function carryAgeOf\(o, nowMs = Date\.now\(\)\)/,
+    '\n\n❌ carryAgeOf ต้องรับ nowMs เป็นพารามิเตอร์ (กฎเทสระเบิดเวลา)\n')
+  assert.ok(!/min\(.*opened_at/.test(util),
+    '\n\n❌ ห้ามหาต้นทางด้วย min(opened_at) ของ prod_no — PROD.NO เป็นการ์ดคัมบังที่ใช้เลขซ้ำ\n')
+})

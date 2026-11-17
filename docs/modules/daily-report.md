@@ -2109,6 +2109,32 @@ Alarm History บน `/line-oee` เอาค่านี้ไปวาดส�
 · ด่าน: `handover-gate-open-order` (regressionGuards) · เทส `src/utils/__tests__/sessionHandover.test.mjs`
 · **164 ใบในอดีตยังไม่แก้** — ย้ายยอดข้ามกะย้อนหลัง = ตัวเลขของ 2 กะเปลี่ยนทั้งคู่ (เดือนที่รายงานไปแล้ว) ⇒ รอ user สั่ง
 
+## 📅 ใบที่วนข้ามกะ — "เปิดตั้งแต่วันไหน · ค้างมากี่วัน" (2026-11-17 · หัวหน้าแจ้ง)
+
+**คำแจ้ง:** *"แท็กนี้เปิดวันที่เท่าไร และปิดวันที่เท่าไร … ตอนนี้เหมือนบางอันมันค้างนานแล้ว จะได้เคลียร์ก่อน"*
+
+### ทำไมเดิมดูไม่ออก
+`importCarryOrders()` (`src/lib/carryDebtOps.js`) **สร้างแถวใหม่ทุกครั้งที่ยกข้ามกะ** โดย
+`opened_at` = เวลาเปิดกะใหม่ ⇒ การ์ดเขียน "เปิด 08:00" เหมือนกันทุกกะ แม้ใบนั้นวนมา 2 สัปดาห์แล้ว
+
+🔴 **ไล่ย้อนเองจาก `prod_no` ไม่ได้** — PROD.NO คือ**การ์ดคัมบังที่ใช้ซ้ำ**
+(วัดจริง: `0124060820` มี **57 แถว** ตั้งแต่ 13/07 ถึง 17/11 · ทุกแถว qty 14)
+⇒ ต้นทางที่ถูกต้องมีทางเดียว = เดินโซ่ `carry_over_from_session_id`
+
+### ที่ทำ — ให้ DB จำไว้ตอนยก (ไม่ใช่คิดใหม่ทุกครั้งที่ render)
+`prod_orders.first_opened_at` (timestamptz) + `prod_orders.carry_hops` (smallint default 0)
+· migration `20261117_prod_orders_carry_origin_dr.sql` (DR) — backfill แล้ว **3,014 แถว · ลึกสุด 11 กะ**
+· `importCarryOrders()` ส่งต่อ `first_opened_at = o.first_opened_at || o.opened_at` และ `carry_hops + 1`
+  (**ต้องอยู่ใน `CARRY_COLS` ด้วย** ไม่งั้นค่าเป็น undefined แล้วโซ่ขาดเงียบๆ · ด่าน `carry-origin-propagated`)
+· จอใช้ผ่าน **`carryAgeOf(order, nowMs)`** (`src/utils/carryDebt.js`) — `null` = เปิดใหม่ในกะนี้ ·
+  `days: null` = รู้ว่าวนมาแต่ไม่รู้วันแรก **ห้ามเดา 0**
+· การ์ดใบผลิตโชว์: ชิป `⏳ ค้างมา N วัน · M กะ` (แดงเมื่อ ≥3 วัน) + บรรทัดล่าง `· เปิดครั้งแรก dd/mm/yy HH:mm`
+
+### 🕳️ กับดักที่เจอตอน backfill
+มีแถวเก่า **ชี้ตัวเอง** (`carry_over_from_session_id = session_id`) **18 แถว** — บั๊กเก่าที่โค้ดปัจจุบัน
+กันไว้แล้ว (คอมเมนต์ใน `handleCloseSession`) แต่ข้อมูลยังค้าง ⇒ recursive CTE เดินวนไม่จบ ชน cap 100
+**แก้:** ตัดการชี้ตัวเองออกจาก base case + กันวนด้วย path array (`seen`) · แถวพวกนี้ถือว่า "ไม่มีต้นทาง"
+
 ## 🪜 แถบ "ถึงขั้นไหน" (2026-11-12)
 ขอปิดกะ (open → pending_close → closed · void) — แถบย่อในการ์ดกะ sidebar (`shiftCloseFlow()` `utils/stepFlow.js`) · กติกา + ทะเบียนทุกใบ → `docs/modules/step-flow.md` · UI §6.30
 

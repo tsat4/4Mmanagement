@@ -69,6 +69,24 @@ export function debtAgeDays(workDate, today) {
   return Math.max(0, Math.round((b - a) / 86400000));
 }
 
+/* ═══ 📅 "ใบนี้วนมากี่กะ/กี่วันแล้ว" — ตอบจาก 2 คอลัมน์ที่ DB จำไว้ให้  (2026-11-17) ══════════
+   ที่มา (หัวหน้าแจ้ง): *"แท็กนี้เปิดวันที่เท่าไร … บางอันมันค้างนานแล้ว จะได้เคลียร์ก่อน"*
+   🔴 **ห้ามไล่หาเองจาก `prod_no`** — PROD.NO คือการ์ดคัมบังที่ **ใช้ซ้ำ** (เลขเดียวใช้มาหลายเดือน)
+      ต้นทางที่ถูกต้องเดินตามโซ่ `carry_over_from_session_id` เท่านั้น ⇒ ฝั่ง DB จำใส่
+      `first_opened_at` / `carry_hops` ตอน `importCarryOrders()` (migration 20261117 · backfill แล้ว)
+   🔴 รับ `nowMs` เป็นพารามิเตอร์เสมอ (กฎเทสระเบิดเวลา) */
+
+/** @returns {{hops:number, firstMs:number|null, days:number|null}|null}
+ *  `null` = ใบนี้เปิดใหม่ในกะนี้ (ไม่ได้วนมา) · `days:null` = รู้ว่าวนมาแต่ไม่รู้วันแรก **ห้ามเดา 0** */
+export function carryAgeOf(o, nowMs = Date.now()) {
+  const hops = Math.max(0, Number(o?.carry_hops) || 0);
+  const raw  = o?.first_opened_at ? Date.parse(o.first_opened_at) : NaN;
+  const firstMs = Number.isFinite(raw) ? raw : null;
+  if (!hops && firstMs == null) return null;
+  const days = firstMs == null ? null : Math.max(0, Math.floor((nowMs - firstMs) / 86400000));
+  return { hops, firstMs, days };
+}
+
 /** สรุปหนี้ต่อพาร์ท — จอต้องตอบ user ได้ว่า "ต้องไล่เก็บอีกแค่ไหน"
  *  @returns [{ mat_no, part_name, pcs, cards, oldestDays }] เรียงหนี้มาก→น้อย */
 export function debtByPart(offers = [], today = null, workDateOf = (o) => o?.work_date) {

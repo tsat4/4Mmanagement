@@ -28,7 +28,7 @@ import { fetchByIds, fetchAllPages } from '../utils/fetchByIds';
 import { parallelUnitsOf, flowModeOf } from '../utils/lineTypes';
 import { checkShiftCapacity, checkOtCapacity, otSpanMin } from '../utils/shiftCapacity';
 import { splitCloseOrders, autoCarryPatch, autoCarryText } from '../utils/closeShiftOrders';   // 🔁 ปิดกะ: ใบที่ยังไม่แตะ = ยกเอง (20/10)
-import { debtByPart, debtPcs, debtAgeDays } from '../utils/carryDebt';   // 📥 ของค้าง "ต้องไล่เก็บอีกเท่าไหร่" (20/10)
+import { debtByPart, debtPcs, debtAgeDays, carryAgeOf } from '../utils/carryDebt';   // 📥 ของค้าง "ต้องไล่เก็บอีกเท่าไหร่" (20/10) · อายุใบที่วนข้ามกะ (17/11)
 import { loadCarryOffers, importCarryOrders } from '../lib/carryDebtOps';
 import { loadMinAlerts, minAlertsForLine } from '../lib/minDemandOps';
 import MinDemandPanel from '../components/MinDemandPanel';   // 📥 โหลด/รับของค้าง — ที่เดียวทั้งระบบ
@@ -4454,6 +4454,25 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                             </span>
                           )}
                           {/* ร่องรอยการถอยใบ — โชว์เสมอให้หัวหน้าแผนกตรวจย้อนหลังได้ว่าใครถอย */}
+                          {/* ⏳ ใบที่วนข้ามกะมานาน — หัวหน้าแจ้ง 17/11 "บางอันมันค้างนานแล้ว จะได้เคลียร์ก่อน"
+                              เลขมาจาก `carry_hops`/`first_opened_at` ที่ DB จำไว้ตอนรับยกยอด
+                              🔴 ห้ามไล่หาเองจาก prod_no — การ์ดคัมบังใช้เลขซ้ำข้ามเดือน */}
+                          {(() => {
+                            const age = carryAgeOf(o);
+                            if (!age || age.hops < 1) return null;
+                            const late = age.days == null ? false : age.days >= 3;
+                            return (
+                              <span title={age.days == null
+                                ? `ใบนี้ถูกยกข้ามกะมาแล้ว ${age.hops} ครั้ง (ไม่รู้วันเปิดครั้งแรก)`
+                                : `เปิดครั้งแรก ${fmtDateTime(age.firstMs)} · ยกข้ามกะมาแล้ว ${age.hops} ครั้ง`}
+                                style={{ fontSize: 11, fontWeight: 800, padding: '1px 6px', borderRadius: 'var(--r-md)', whiteSpace: 'nowrap',
+                                  background: late ? 'var(--red-dim)' : 'var(--amber-dim)',
+                                  color: late ? 'var(--red)' : 'var(--amber)',
+                                  border: `1px solid ${late ? 'var(--red-line)' : 'var(--amber-line)'}` }}>
+                                ⏳ {age.days == null ? `วนมา ${age.hops} กะ` : `ค้างมา ${age.days} ${tr('วัน')} · ${age.hops} กะ`}
+                              </span>
+                            );
+                          })()}
                           {(o.reopen_count || 0) > 0 && (
                             <span title={`ใบนี้เคยถูกถอยจาก "ปิดแล้ว" กลับมาผลิตต่อ ${o.reopen_count} ครั้ง · ล่าสุดโดย ${o.reopened_by || '-'}`}
                               style={{ fontSize: 11, padding: '1px 7px', borderRadius: 'var(--r-pill)', background: 'var(--amber-dim)', color: 'var(--amber)', fontWeight: 700 }}>
@@ -4463,6 +4482,8 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                         </div>
                         <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
                           เปิด {fmtTime(new Date(o.opened_at))} {o.opened_by && `· ${o.opened_by}`}
+                          {(() => { const age = carryAgeOf(o);
+                            return age?.firstMs ? ` · เปิดครั้งแรก ${fmtDateTime(age.firstMs)}` : null; })()}
                           {confirmed && o.confirmed_at && ` · ปิด ${fmtTime(new Date(o.confirmed_at))} · ${o.confirmed_by}`}
                           {manualOpen && ` · อัพเดทยอดล่าสุด ${fmtTime(lastUpd)}`}
                           {manualStale && <span style={{ color: 'var(--amber)', fontWeight: 700 }}> {tr('⚠ เกิน 2.5 ชม.แล้ว — อัพเดทยอดด้วย')}</span>}
