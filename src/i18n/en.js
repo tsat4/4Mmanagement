@@ -10393,6 +10393,8 @@ const EN = {
   'ตั้งไว้': 'Set',
   'เปิดตัวกรองที่นานๆ ใช้': 'Show the rarely-used filters',
   'งาน PR รอ': 'PR waiting',
+  'ย้อนหลัง…': 'Last…',
+  'ตั้งกรอบเวลาเป็น N วันล่าสุด (นับถึงวันทำงานวันนี้) — แก้วันต่อได้': 'Set the range to the last N days (up to today\'s work date) — you can still edit the dates',
 };
 
 export default EN;
