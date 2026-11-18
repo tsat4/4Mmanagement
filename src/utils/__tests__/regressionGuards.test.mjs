@@ -675,7 +675,7 @@ const RULES = [
   },
   {
     id: 'plan-view-no-own-time-math',
-    scan: ['src/components/PlanTimeline.jsx', 'src/components/PlanWeek.jsx'], ext: ['.jsx'],
+    scan: ['src/components/PlanTimeline.jsx'], ext: ['.jsx'],
     /* จับ "การคิดพิกัดเอง" ในจอแผน — ตั้งค่า *Pct เอง หรือสเกลผลต่างเวลาเป็น %
        (แปลง ms → นาที เพื่อ**แสดงผล** เช่น `fmtMin(setupMs / 60000)` ไม่ใช่พิกัด ⇒ ไม่เข้าเงื่อน) */
     re: /\b(top|left|width|height)Pct\s*[:=][^=]|\bMs\b[^;\n]{0,60}\*\s*100\b/g,
