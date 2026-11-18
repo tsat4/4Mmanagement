@@ -911,7 +911,7 @@ export default function QaCheckSheet({ canRecord }) {
               {!items.length && <span style={{ flex: 1 }} />}
               <span style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 700 }}>{tr('CSV ย้อนหลัง')}</span>
               <select value={csvDays} onChange={e => setCsvDays(Number(e.target.value))} aria-label={tr('ช่วงวันของไฟล์ CSV')}
-                style={{ height: 28, fontSize: 12, borderRadius: 8, padding: '0 6px', background: 'var(--bg3)', border: '1px solid var(--border2)', color: 'var(--text)' }}>
+                style={{ width: 'auto', height: 28, fontSize: 12, borderRadius: 8, padding: '0 6px', background: 'var(--bg3)', border: '1px solid var(--border2)', color: 'var(--text)' }}>   {/* width:auto กัน trap index.css select{width:100%} ใน flex row — stdsweep 18/11 ยืด 1,510px */}
                 {[7, 30, 60, 90, 180].map(d => <option key={d} value={d}>{d} {tr('วัน')}</option>)}
               </select>
               <button type="button" className="tbtn" disabled={csvBusy || !partId} onClick={exportResultsCsv}
