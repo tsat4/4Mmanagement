@@ -33,13 +33,19 @@ const FactRow = ({ children }) => (
     {children}
   </div>
 );
+/* 🔴 คำเตือนเป็น **ชิปแยก** ไม่ใช่ส่วนท้ายของชิปเดิม — รวมไว้ในก้อน nowrap เดียวกันเมื่อไหร่
+   ชิปจะยาวเกินจอมือถือแล้วตัดบรรทัดไม่ได้ ⇒ ล้นออกนอกจอ (mobilesweep จับได้ 18/11:
+   กล่อง 370 เนื้อหา 442 ที่ "🌳 รวมงานจาก BOM 3,333,014 ชิ้น ⚠ ยังไม่มี BOM 12 ตัว")
+   · ข้างในชิปก็ต้อง `flexWrap:'wrap'` เผื่อป้ายยาว — ชิ้นที่ห้ามแตกมีแค่ label กับ value */
 const Fact = ({ icon, label, value, title = '', warn = '', warnTone = false }) => (
-  <span title={title} style={{ whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'baseline', gap: 4 }}>
-    {icon && <span>{icon}</span>}
-    <span>{label}</span>
-    <b style={{ color: warnTone ? 'var(--amber)' : 'var(--text2)' }}>{value}</b>
+  <>
+    <span title={title} style={{ display: 'inline-flex', alignItems: 'baseline', gap: 4, flexWrap: 'wrap', minWidth: 0 }}>
+      {icon && <span>{icon}</span>}
+      <span style={{ whiteSpace: 'nowrap' }}>{label}</span>
+      <b style={{ whiteSpace: 'nowrap', color: warnTone ? 'var(--amber)' : 'var(--text2)' }}>{value}</b>
+    </span>
     {warn && <span style={{ color: 'var(--amber)', fontWeight: 700 }}>{warn}</span>}
-  </span>
+  </>
 );
 import SimpleMasterPanel from '../components/SimpleMasterPanel';
 import { invalidateTrialReasons } from '../utils/useTrialReasons'; // 🧪 ทะเบียนเหตุผลจองเครื่องทดลอง (05/11)
