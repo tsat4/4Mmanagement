@@ -27,6 +27,9 @@ PAGES='ProductionPlan' FULL=1 TAG=before node audit/uishot.mjs
 
 # มือถือ · มุมมองสิทธิ์อื่น
 PAGES='Obeya&tab=kpi' W=390 H=1400 FULL=1 ROLE=supervisor SECTIONS=PD1 node audit/uishot.mjs
+
+# จอที่จำมุมมองไว้ใน localStorage (ไม่ใช่ URL) — เช่นบอร์ด Heijunka ใน /management
+PAGES='Management' LS='mg_main_view=heijunka' node audit/uishot.mjs
 ```
 
 **3. ส่งให้ user** ด้วย `SendUserFile` (`display: "render"`) พร้อมคำบรรยาย 1 บรรทัดว่ารูปไหนคืออะไร
@@ -52,6 +55,7 @@ PAGES='Obeya&tab=kpi' W=390 H=1400 FULL=1 ROLE=supervisor SECTIONS=PD1 node audi
 | `Cannot find package 'playwright'` | รันสคริปต์ที่อยู่นอกรีโป (scratchpad) | สคริปต์ต้องอยู่ใน `audit/` ถึงจะเห็น `node_modules` |
 | ครอปแล้วได้ทั้งหน้า / ได้แค่แถบหัวข้อบางๆ | `locator().filter({hasText}).first()` คืน **ancestor ก้อนใหญ่** เพราะ hasText match ทุกชั้นที่มีข้อความอยู่ข้างใน | ใช้ `.last()` (ชั้นในสุด) แล้วไต่ขึ้นด้วย `UP=` ให้ถึง "การ์ด" |
 | รูปว่าง / `vite:000` | harness ตายไปแล้ว (มันตายเงียบระหว่าง session) | เช็ค `curl` ก่อนถ่ายทุกครั้ง แล้วเปิดใหม่ |
+| ถ่ายได้แต่มุมมองดีฟอลต์ ทั้งที่หน้ามีหลายมุมมอง | มุมมองเก็บใน `localStorage` ไม่ใช่ URL (เช่น `mg_main_view` ของ `/management`) | ใช้ `LS='key=value'` · คลาสเดียวกับ "สวีปกดไม่ถึง" — ถ้าเป็นของใหม่ ควรย้ายไปผูก URL ไปเลย |
 | หน้าโหลดแต่เนื้อหาไม่ขึ้น | หน้ากันไว้ด้วยเงื่อนไข เช่น `rows.length > 0` แล้ว mock ไม่มีข้อมูลพอ | อ่านเงื่อนไขในหน้านั้นก่อน · ถ้าจำเป็นให้เติมแถวใน `audit/mockSupabase.js` (ห้ามถอดแถวพิเศษที่มีอยู่) |
 
 ## เกี่ยวข้อง

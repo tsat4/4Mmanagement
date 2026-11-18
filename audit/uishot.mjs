@@ -19,6 +19,9 @@
      TAG    คำต่อท้ายชื่อไฟล์ (เช่น before/after)
      SCALE  deviceScaleFactor (ดีฟอลต์ 2 = คมพอให้คนอ่านตัวหนังสือบนมือถือ)
      OUT    โฟลเดอร์ปลายทาง (ดีฟอลต์ = scratchpad ของ session)
+     LS     ตั้ง localStorage ก่อนโหลดหน้า — `key=value` คั่นด้วย `;`
+            (จอที่จำมุมมองไว้ใน localStorage เช่น `/management` ⇒ `LS='mg_main_view=heijunka'`
+             คลาสเดียวกับ "สวีปกดไม่ถึง": ถ้าไม่ตั้ง จะถ่ายได้แต่มุมมองดีฟอลต์ตลอดไป)
 
    🔴 ต้องเปิด harness ค้างไว้ก่อน: `npx vite --config audit/vite.audit.mjs` (พอร์ต 5199)
    🔴 ใช้ `executablePath: '/opt/pw-browsers/chromium'` เหมือนสวีปตัวอื่น — ไม่ใส่ = playwright
@@ -49,6 +52,10 @@ for (const p of PAGES) {
   /* ชื่อไฟล์: เอาอักขระที่ใช้ในชื่อไฟล์ไม่ได้ออก (`&`/`=` ของ query) */
   const name = p.replace(/[^A-Za-z0-9ก-๙_-]+/g, '_').replace(/^_|_$/g, '')
   const page = await b.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: SCALE })
+  if (process.env.LS) {
+    const pairs = process.env.LS.split(';').map(x => x.trim()).filter(Boolean).map(x => { const i = x.indexOf('='); return [x.slice(0, i), x.slice(i + 1)] })
+    await page.addInitScript(([...kv]) => { try { for (const [k, v] of kv) localStorage.setItem(k, v) } catch { /* private mode */ } }, pairs)
+  }
   const errs = []
   page.on('pageerror', e => errs.push(String(e).split('\n')[0].slice(0, 120)))
   const url = `http://localhost:5199/audit/index.html?p=${p}&role=${ROLE}${SECTIONS ? `&sections=${SECTIONS}` : ''}`
