@@ -267,7 +267,41 @@ export function moFlow(order = {}) {
   let waiting = null;
   if (vendor) waiting = 'ผู้รับจ้างภายนอก (supplier) — ส่งของกลับ แล้วช่างอัพเดทผลซ่อม';
   else if (next) { const m = next === 1 ? { whoShort: 'ผู้แจ้ง', title: 'แจ้งซ่อม' } : stepMeta(next, { mtnForm, toolTeam }); waiting = m ? `${m.whoShort} — ${m.title}` : null; }
-  return { steps, waiting, closed: closed || !!stop, known };
+  return { steps, waiting, closed: closed || !!stop, known, acks: moPendingAcks(order) };
+}
+
+/**
+ * ✍️ **ลายเซ็นที่อยู่ "นอกลำดับขั้น" และยังไม่ถูกเซ็น** — 2026-11-18 (หน้างานแจ้ง)
+ *
+ * 🔴 ที่มา: แถบขั้นบนใบบอกว่า *"รอ: ผจก.ฝ่ายที่แจ้ง อนุมัติปิดใบ"* เหมือนเหลือขั้นเดียว
+ *    แต่ของจริงยังค้างลายเซ็น **ไม่ล็อกงาน** อีก 2 ช่อง (ผจก.ส่วนซ่อมบำรุงรับทราบ ·
+ *    ผจก.ต้นสังกัดเซ็นรับทราบ) ที่ไม่โผล่ในแถบเลย ⇒ คนอ่านแถบคิดว่าใบใกล้จบแล้ว
+ *    คำ user: *"flow เหมือนขาดแค่ขั้นสุดท้าย แต่ขั้นไม่บล็อกงานไม่มีบอกเลย"*
+ *
+ * 🔴 **ช่องพวกนี้ไม่ใช่ "ขั้น" — ห้ามยัดเป็นขั้นในแถบ** (หลักเดียวกับด่านอนุมัติ 13/10:
+ *    ยัดเป็นขั้น = ทุกจอที่ไล่คิวด้วยเลขขั้นเพี้ยนตาม) ⇒ คืนเป็นลิสต์แยกให้จอเขียนใต้แถบ
+ * 🔴 **`undefined` = ไม่ได้ select คอลัมน์มา = ไม่รู้ ห้ามเดาว่าค้าง** (จะได้ไม่ขึ้นป้ายผิดบนจอ
+ *    ที่ดึงคอลัมน์ไม่ครบ) · ช่อง ผจก.ส่วนซ่อมบำรุงมีจริงเฉพาะใบที่ระบุชื่อไว้/เซ็นแล้ว
+ *    (เงื่อนไขเดียวกับแผงบนจอ) — ไม่มีชื่อ = ไม่มีช่องนั้น ไม่ใช่ "ค้าง"
+ * @returns {Array<{key,label,done}>} เฉพาะช่องที่ "มีจริงในใบนี้"
+ */
+export function moPendingAcks(order = {}) {
+  const out = [];
+  if (!isMtnFormRow(order)) return out;              // ช่องพวกนี้มีเฉพาะฟอร์ม FM-MTN-006
+  /* ① ผจก.ส่วนซ่อมบำรุง (ทีมที่รับใบ) รับทราบ */
+  if (order?.mo_ack_at !== undefined && (order?.mo_approved_by || order?.mo_ack_at)) {
+    out.push({ key: 'mtn_mgr', label: 'ผจก.ส่วนซ่อมบำรุง รับทราบ', done: !!order.mo_ack_at });
+  }
+  /* ② ผจก.ต้นสังกัด (+ ผจก.โรงงาน เมื่อเป็นงานสร้าง) — เฉพาะตอนที่ "ไม่ล็อกงาน"
+        ถ้ายัง `blocked` อยู่ = เป็นด่านจริง มีแผงของตัวเองบนจอแล้ว ไม่ต้องซ้ำที่นี่ */
+  if (order?.dept_manager_at !== undefined) {
+    const ap = mtnApprovalState(order);
+    if (ap.ackPending) {
+      if (ap.missing.includes('dept')) out.push({ key: 'dept', label: 'ผจก.ต้นสังกัด เซ็นรับทราบ', done: false });
+      if (ap.missing.includes('plant')) out.push({ key: 'plant', label: 'ผจก.โรงงาน เซ็นรับทราบ', done: false });
+    }
+  }
+  return out;
 }
 
 /** meta ของขั้น — `mtnForm` = ใบนี้ใช้ฟอร์ม FM-MTN-006 (ผู้เรียกคำนวณจากทีมช่างมาให้) */

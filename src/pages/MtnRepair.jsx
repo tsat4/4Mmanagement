@@ -3335,6 +3335,23 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], mtnDepts = MT
       {(() => { const f = moFlow(o); return (
         <div style={{ marginBottom: 12, padding: '10px 12px 8px', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--bg2)' }}>
           <StepFlow steps={f.steps} waiting={f.waiting} unknown={!f.known} />
+          {/* ✍️ ลายเซ็นที่อยู่ "นอกลำดับขั้น" (18/11 · หน้างานแจ้ง)
+              🔴 แถบขั้นบอกว่าเหลือขั้นเดียว แต่ยังค้างลายเซ็นไม่ล็อกงานอีก 2 ช่องที่ไม่โผล่ที่ไหนเลย
+                 ⇒ คนอ่านแถบคิดว่าใบใกล้จบ · คำ user: "ขั้นไม่บล็อกงานไม่มีบอกเลย"
+              🔴 **ห้ามยัดเป็นขั้นในแถบ** — ช่องพวกนี้ไม่ใช่ขั้น (ยัดแล้วทุกจอที่ไล่คิวด้วยเลขขั้นเพี้ยนตาม)
+                 กฎว่าใบนี้มีช่องไหนบ้าง/เซ็นหรือยัง อยู่ที่ `moPendingAcks()` ห้ามตัดสินในหน้า */}
+          {f.acks?.length > 0 && (
+            <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px dashed var(--border)', fontSize: 11.5, lineHeight: 1.7 }}>
+              {f.acks.map(a2 => (
+                <div key={a2.key} style={{ color: a2.done ? 'var(--muted)' : 'var(--amber)' }}>
+                  {a2.done ? '✔' : '✍️'} {trI18n(a2.label)}
+                  {a2.done
+                    ? <span> — {trI18n('เซ็นแล้ว')}</span>
+                    : <b> — {trI18n('ยังไม่เซ็น (ไม่ล็อกงาน — ปิดใบได้ แต่เอกสารยังไม่ครบ)')}</b>}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       ); })()}
       <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
