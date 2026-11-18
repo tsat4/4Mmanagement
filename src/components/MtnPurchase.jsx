@@ -29,6 +29,7 @@ import {
   GL_CATEGORIES, glCategoryLabel, glCategoryForPr, defaultGlFor, isBelowMin, suggestReorderQty, openPrQtyByPart,
   normalizePrNo, isAwaitingPrNo, mosNeedingPr, NEEDS_PR_PATHS, prFlow,
 } from '../utils/mtnPurchase';
+import { groupPrs, prGroupDefaults } from '../utils/prGroups';   // 🧾 1 ใบ PR หลายรายการ (18/11)
 import StepFlow from './StepFlow';
 import { isMoOpen, MO_DONE_STATUSES } from '../utils/mtnStepPerm';
 import { isMttrHeld, mttrHoldMin } from '../utils/mtnVendor';
@@ -335,6 +336,82 @@ function NewPrForm({ parts = [], glCodes = [], defaults = {}, fullName, onDone, 
   );
 }
 
+/* ── 🧾 ใบ PR ใบเดียวที่มีหลายรายการ (18/11 · หน้างานแจ้ง ข้อ 1) ─────────────────────
+   *"บาง PR เปิดหลายชิ้น ใน Vendor เจ้าเดียว · ควรเพิ่มรายการใน 1 PR ได้"*
+   ของจริง O-MTN.2026/10-47 = 19 แถวใช้เลข PR เดียวกัน `1210104223` แล้ว **2 แถวตกหล่น
+   ไม่เคยได้เลข PO** ⇒ ลากทั้งใบค้างอยู่ขั้น "รอสั่ง"
+   🔴 กลุ่มนี้ "มองเห็นเป็นใบเดียว" แต่ **แต่ละรายการยังเดินสถานะของตัวเอง** (ตารางเก็บ 1 แถว =
+      1 รายการเหมือนเดิม · ไม่แตะ schema) ⇒ ต้องเขียนบนจอว่ารายการไหนตกหล่น ห้ามสรุปรวมให้ดูเรียบร้อย
+   🔴 ปุ่มรับของทั้งใบ = **วนเรียก RPC ทีละแถว** (แต่ละแถวเป็นทรานแซกชันของตัวเอง)
+      ⇒ ล้มกลางทางต้องรายงานว่าสำเร็จกี่รายการ ห้ามบอกว่าสำเร็จทั้งใบ */
+function PrGroupCard({ g, canEdit, mayAdd, fullName, parts, glCodes, orderId, teamKey, path, order, onChanged }) {
+  const [adding, setAdding] = useState(false);
+  const [bulk, setBulk] = useState(false);
+  const [inv, setInv] = useState('');
+  const [busy, setBusy] = useState(false);
+  const recvables = g.openRows;
+  const doBulkReceive = async () => {
+    const invNo = inv.trim();
+    if (!invNo) return toast.error('ใส่เลข Invoice ที่มากับของ');
+    if (!confirm(`รับของเข้า ${recvables.length} รายการของใบ PR ${g.prNo} ด้วย Invoice ${invNo}?\n(อะไหล่ที่ผูกทะเบียนจะเข้าสต็อกให้เอง)`)) return;
+    setBusy(true);
+    let ok = 0; const fails = [];
+    try {
+      for (const pr of recvables) {
+        const { error } = await supabaseDR.rpc('mtn_pr_receive',
+          { p_id: pr.id, p_qty: Number(pr.qty), p_by_name: fullName || null, p_invoice_no: invNo });
+        if (error) fails.push(`${pr.item_name}: ${error.message}`); else ok++;
+      }
+      await endHoldIfPartsIn(orderId);
+    } finally { setBusy(false); }
+    /* 🔴 ล้มบางรายการ = บอกตามจริง ห้ามเขียนว่าสำเร็จทั้งใบ */
+    if (fails.length) toast.error(`รับของสำเร็จ ${ok} จาก ${recvables.length} รายการ — ที่เหลือ: ${fails.join(' · ')}`);
+    else toast.success(`รับของแล้ว ${ok} รายการ (Invoice ${invNo})`);
+    setBulk(false); setInv(''); onChanged?.();
+  };
+  return (
+    <div style={{ border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '7px 8px', marginBottom: 7, background: 'var(--bg3)' }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 5, fontSize: 12 }}>
+        <b style={{ fontFamily: 'monospace', fontSize: 13 }}>PR {g.prNo}</b>
+        <span style={{ fontWeight: 700 }}>{g.rows.length} {tr('รายการ')}</span>
+        {g.suppliers.length === 1 && <span style={{ color: 'var(--text2)' }}>{tr('ผู้ขาย')} {g.suppliers[0]}</span>}
+        <span style={{ flex: 1 }} />
+        {canEdit && recvables.length > 1 && !bulk && (
+          <button disabled={busy} onClick={() => setBulk(true)} style={{ ...btnGhost, color: 'var(--green)', borderColor: 'var(--green)' }}>
+            {tr('รับของทั้งใบ')} ({recvables.length})
+          </button>
+        )}
+        {mayAdd && !adding && (
+          <button onClick={() => setAdding(true)} style={{ ...btnGhost, color: 'var(--accent)', borderColor: 'var(--accent)' }}>{tr('+ เพิ่มรายการในใบนี้')}</button>
+        )}
+      </div>
+      {/* 🔴 รายการที่ตกหล่นต้องเห็น — นี่คือสาเหตุที่ใบ 10-47 ค้างขั้น "รอสั่ง" ทั้งที่สั่งไปแล้ว */}
+      {g.warns.map((w, i) => (
+        <div key={i} data-warn="1" style={{ fontSize: 11, color: 'var(--amber)', marginBottom: 4 }}>⚠ {tr(w)}</div>
+      ))}
+      {bulk && (
+        <div style={{ display: 'flex', gap: 6, marginBottom: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+          <input autoFocus value={inv} onChange={e => setInv(e.target.value)} placeholder={tr('เลข Invoice (บังคับ)')}
+            style={{ ...inp, flex: 1, minWidth: 150, fontFamily: 'monospace', borderColor: inv.trim() ? undefined : 'var(--amber)' }} />
+          <button disabled={busy || !inv.trim()} onClick={doBulkReceive} style={btnPri}>
+            {busy ? tr('กำลังรับของ…') : `${tr('รับของ')} ${recvables.length} ${tr('รายการ')}`}
+          </button>
+          <button onClick={() => { setBulk(false); setInv(''); }} style={btnGhost}>{tr('ปิด')}</button>
+          <div style={{ fontSize: 11, color: 'var(--muted)', width: '100%' }}>
+            {tr('รับเต็มจำนวนที่ขอไว้ทุกรายการ — ถ้าของมาไม่ครบ ให้กดรับทีละรายการแทน')}
+          </div>
+        </div>
+      )}
+      {g.rows.map(pr => <PrRow key={pr.id} pr={pr} canEdit={canEdit} fullName={fullName} onChanged={onChanged} />)}
+      {adding && (
+        <NewPrForm parts={parts} glCodes={glCodes} fullName={fullName}
+          defaults={{ source: 'mo', order_id: orderId, order, team: teamKey, repairPath: path, ...prGroupDefaults(g) }}
+          onCancel={() => setAdding(false)} onDone={() => { setAdding(false); onChanged?.(); }} />
+      )}
+    </div>
+  );
+}
+
 /* ══ แผงในใบ MO ════════════════════════════════════════════════════════════════════════ */
 /* 🔓 `canEdit` = ทำ PR **ที่มีอยู่แล้ว** ต่อได้ไหม (ลงเลข PR · สั่งซื้อ · รับของ · ยกเลิก)
       `canAdd`  = เปิด PR **ใบใหม่** ได้ไหม — ไม่ส่ง = ใช้ค่าเดียวกับ canEdit (พฤติกรรมเดิม)
@@ -398,6 +475,11 @@ export function MtnPrPanel({ order, parts = [], fullName, canEdit = false, canAd
   const held = isMttrHeld(order);
   const meta = repairPathMeta(path);
   const openCount = prs.filter(isPrOpen).length;
+  /* 🧾 1 ใบ PR = หลายรายการได้ (18/11) — ของจริง 19 แถวใช้เลขเดียวกัน (กฎใน utils/prGroups.js) */
+  const prGroups = useMemo(() => groupPrs(prs), [prs]);
+  /* ใบพิมพ์เว้นช่อง PR.No. เมื่อมี **หลายเลข** ไม่ใช่หลายแถว — นับเลขไม่ซ้ำ ไม่งั้นข้อความโกหก */
+  const prNoCount = useMemo(() => new Set(prs.filter(p => p.status !== 'cancelled' && p.pr_no)
+    .map(p => normalizePrNo(p.pr_no))).size, [prs]);
 
   return (
     <div style={box}>
@@ -449,8 +531,12 @@ export function MtnPrPanel({ order, parts = [], fullName, canEdit = false, canAd
           <div style={{ color: 'var(--muted)' }}>{tr('ผจก.ฝ่ายที่แจ้งเซ็นปิดใบไม่ได้ระหว่างนี้ — ใบจะค้างอยู่ที่ขั้นปิดใบ')}</div>
         </div>
       )}
-      {prs.map(pr => <PrRow key={pr.id} pr={pr} canEdit={canEdit} fullName={fullName} onChanged={load} />)}
-      {prs.length > 1 && <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 6 }}>{tr('ใบพิมพ์: มีหลายเลข PR ⇒ ช่อง PR.No. ข้างบนเว้นว่าง และพิมพ์ทุกเลขในช่องรายละเอียด')}</div>}
+      {/* 🧾 จัดกลุ่มตามเลข PR (18/11) — ใบที่มีรายการเดียว/ยังไม่มีเลข = แถวเดี่ยวเหมือนเดิมเป๊ะ */}
+      {prGroups.map(g => (g.rows.length > 1
+        ? <PrGroupCard key={g.key} g={g} canEdit={canEdit} mayAdd={mayAdd} fullName={fullName} parts={parts}
+            glCodes={glCodes} orderId={orderId} teamKey={teamKey} path={path} order={order} onChanged={load} />
+        : <PrRow key={g.rows[0].id} pr={g.rows[0]} canEdit={canEdit} fullName={fullName} onChanged={load} />))}
+      {prNoCount > 1 && <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 6 }}>{tr('ใบพิมพ์: มีหลายเลข PR ⇒ ช่อง PR.No. ข้างบนเว้นว่าง และพิมพ์ทุกเลขในช่องรายละเอียด')}</div>}
       {mayAdd && (adding
         ? <NewPrForm parts={parts} glCodes={glCodes} fullName={fullName}
             defaults={{ source: 'mo', order_id: orderId, order, team: teamKey, repairPath: path, supplier: path === 'outsource' ? order?.supplier : '' }}
