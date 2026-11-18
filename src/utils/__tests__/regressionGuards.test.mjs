@@ -11815,3 +11815,35 @@ test('✍️ mo-flow-shows-pending-acks — ลายเซ็นนอกลำ
   assert.match(page, /f\.acks\?\.length > 0 &&/,
     '\n\n❌ ใบ MO เลิกวาดลายเซ็นที่ยังค้างใต้แถบขั้น — กลับไปเป็นอาการที่หน้างานแจ้ง 18/11\n');
 });
+
+test('🔴 carry-order-shows-date — เวลาบนใบผลิตที่ข้ามวันได้ ห้ามโชว์แค่ HH:MM', () => {
+  /* หัวหน้าแจ้ง 18/11 (รูป IMG_5540): *"วันที่ยังไม่มี มีแต่เวลาครับ"*
+     การ์ดใบที่ยกยอดมาขึ้น "เปิด 08:00" ⇒ อ่านเหมือนเพิ่งเปิดเช้านี้ ทั้งที่ของจริงวนมาหลายวัน
+     (เคสจริง prod_no 0124060780 / 0124061580 ไลน์ Assy GOR — ไล่โซ่เจอว่าเริ่มตั้งแต่ 14/11)
+
+     2 ชั้นที่ต้องมีพร้อมกัน:
+       ① `fmtTimeOn(ts, workDateที่กำลังดู)` — คนละวัน = เติม DD/MM ให้เอง
+       ② ใบที่ยกยอดมาแต่ไม่มี `first_opened_at` (ใบที่สร้างก่อน deploy 18/11)
+          ต้องบอก "กะต้นทาง" จาก `carry_over_from_session_id` — ข้อเท็จจริง 1 ชั้น ไม่ใช่การเดา
+     🔴 ห้ามถอยกลับไป `fmtTime(o.opened_at)` เปล่าๆ — จอจะโกหกเงียบอีกรอบ */
+  const fmt = stripComments(readFileSync(join(ROOT, 'src/utils/dateFormat.js'), 'utf8'));
+  assert.match(fmt, /export const fmtTimeOn = /,
+    '\n\n❌ ไม่มี fmtTimeOn() — กฎ "เวลาที่ข้ามวันได้ต้องมีวันที่" หายไปจากของกลาง\n');
+  assert.match(fmt, /getWorkDate\(d\) === base/,
+    '\n\n❌ fmtTimeOn ไม่ได้เทียบด้วย "วันทำงาน" — กะดึกข้ามเที่ยงคืนจะขึ้นวันที่ผิด\n');
+
+  const page = stripComments(readFileSync(join(ROOT, 'src/pages/DailyReport.jsx'), 'utf8'));
+  for (const col of ['opened_at', 'confirmed_at']) {
+    assert.ok(!new RegExp(`fmtTime\\(new Date\\(o\\.${col}\\)\\)`).test(page),
+      `\n\n❌ การ์ดใบผลิตกลับไปโชว์ ${col} ด้วย fmtTime() เปล่า — ใบที่ข้ามวันจะไม่มีวันที่\n`
+      + '   ใช้ fmtTimeOn(ts, selSession?.work_date) แทน\n');
+  }
+  assert.match(page, /fmtTimeOn\(o\.opened_at, selSession\?\.work_date\)/,
+    '\n\n❌ การ์ดใบผลิตไม่ได้ส่ง "วันทำงานของกะที่กำลังดู" ให้ fmtTimeOn\n');
+  assert.match(page, /carry_over_from_session_id/,
+    '\n\n❌ จอเลิกอ่านกะต้นทางของใบยกยอด — ใบเก่าที่ไม่มี first_opened_at จะเงียบสนิท\n');
+  assert.match(page, /const carryFromLabel = /,
+    '\n\n❌ ไม่มี carryFromLabel() — ป้าย "ยกยอดมาจาก <วันที่ กะ>" หายไป\n');
+  assert.match(page, /if \(!src\?\.work_date\) return null;/,
+    '\n\n❌ carryFromLabel ไม่ได้ fail-closed — อ่านกะต้นทางไม่ได้ต้องคืน null ห้ามเดาวันที่\n');
+});

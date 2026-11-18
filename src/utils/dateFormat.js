@@ -3,6 +3,7 @@
  * Use these everywhere a date is DISPLAYED to users. Never use toLocaleDateString()
  * or toLocaleString() directly — they produce inconsistent output across OS locales.
  */
+import { getWorkDate } from './workDate.js';
 
 const toDate = (v) => {
   if (!v) return null;
@@ -86,6 +87,28 @@ export const fmtDateMedium = (v) => {
   if (!d) return '';
   const yy = String(d.getFullYear()).slice(-2);
   return `${String(d.getDate()).padStart(2, '0')} ${MONTHS_SHORT[d.getMonth()]} ${yy}`;
+};
+
+/**
+ * HH:MM ถ้าเป็น "วันทำงานเดียวกับที่กำลังดู" · ไม่งั้น **DD/MM HH:MM**
+ *
+ * 🔴 กฎ (2026-11-18 · หัวหน้าแจ้ง *"วันที่ยังไม่มี มีแต่เวลาครับ"*):
+ *    **เวลาที่อาจไม่ใช่วันเดียวกับกะที่เปิดดูอยู่ ห้ามโชว์แค่ HH:MM** — ใบที่ยกยอดข้ามวัน
+ *    จะอ่านเหมือนเพิ่งเปิดเมื่อเช้านี้ (การ์ดขึ้น "เปิด 08:00" ทั้งที่เปิดมาตั้งแต่ 3 วันก่อน)
+ *    ⇒ ไม่ใช่แค่ใบผลิต: ใช้กับทุกเวลาที่ข้ามวันได้ (เปิด/ปิดใบ · แจ้งซ่อม · อัพเดทยอด)
+ *
+ * @param v   timestamp
+ * @param ref วันทำงานที่กำลังดู `'YYYY-MM-DD'` · ไม่ส่ง = วันทำงานตอนนี้
+ * @param now เวลาอ้างอิง (ใส่เองได้เพื่อเทส)
+ */
+export const fmtTimeOn = (v, ref = null, now = new Date()) => {
+  if (!v) return '';
+  const d = v instanceof Date ? v : new Date(v);
+  if (isNaN(d)) return '';
+  const hhmm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  const base = ref || getWorkDate(now);
+  if (!base || getWorkDate(d) === base) return hhmm;
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')} ${hhmm}`;
 };
 
 /** HH:MM  from any timestamp */
