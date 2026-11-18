@@ -9452,6 +9452,17 @@ test('↩️ mo-list-shows-resubmit — ใบที่ถูกตีกลั�
   /* ส่งใหม่ต้องรู้ว่าใครกด ไม่งั้นรอบหน้าก็ตอบหน้างานไม่ได้อีก */
   assert.match(page, /resubmitted_by: fullName \|\| null, resubmitted_at: nowIso/,
     '\n\n❌ resubmit() ไม่ได้เก็บว่าใครกดส่งใหม่ — คำถาม "ใบนี้ใครเปิด" จะตอบไม่ได้อีก\n');
+  /* 🔴 แจ้งเตือนต้องแยก event — ยิง mtn_reported = ช่างได้ข้อความ "มีใบแจ้งซ่อมใหม่" ทั้งที่เป็นใบเก่า
+     🔴 event ที่ edge ไม่รู้จัก = ตอบ 400 "unknown event" แล้วแจ้งเตือนหายทั้งก้อน
+        ⇒ ชื่อ event ต้องตรงกับ `supabase/functions/send-mtn-notification/index.ts` */
+  assert.match(page, /notifyMtn\(fresh, 'mtn_resubmitted'\)/,
+    '\n\n❌ ส่งใหม่ยังยิงแจ้งเตือนด้วย event ของ "ใบแจ้งซ่อมใหม่" — ช่างแยกไม่ออกว่าเป็นใบเก่า\n');
+  const edge = readFileSync(join(ROOT, 'supabase/functions/send-mtn-notification/index.ts'), 'utf8');
+  for (const spot of [/case 'mtn_resubmitted':/, /mtn_resubmitted: \{ people:/, /mtn_resubmitted: \{ t: \(v\)/]) {
+    assert.match(edge, spot,
+      '\n\n❌ edge ไม่รู้จัก event mtn_resubmitted ครบทุกจุด (case / MO_AUDIENCE / MO_INAPP)\n'
+      + '   ขาด case = ตอบ 400 unknown event ⇒ ทั้ง Telegram และกระดิ่งเงียบสนิท\n');
+  }
 });
 test('🧾 pr-group-shows-stragglers — ใบ PR ที่มีหลายรายการ ต้องบอกว่ารายการไหนตกหล่น', () => {
   /* why (18/11 · หน้างานแจ้ง ข้อ 1): *"บาง PR เปิดหลายชิ้น ใน Vendor เจ้าเดียว —

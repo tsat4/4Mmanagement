@@ -2745,7 +2745,11 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
     const { error } = await supabaseDR.from('mtn_orders').update(upd).eq('id', o.id).eq('status', 'returned');
     if (error) { setResubBusy(false); return toast.error(error.message); }
     const { data: fresh } = await supabaseDR.from('mtn_orders').select('*').eq('id', o.id).single();
-    notifyMtn(fresh, 'mtn_reported');   // แจ้งทีมใหม่ให้มารับงาน
+    /* ↩️ 18/11 — ใบที่ถูกตีกลับแล้วส่งใหม่ **ไม่ใช่ใบแจ้งซ่อมใหม่** (หน้างานแจ้ง
+       "ใบ MO ไม่ได้มีคนเปิด แต่เด้งไปหาช่างเอง") · ข้อความบอกว่าเป็นใบเก่า + ส่งใหม่ครั้งที่เท่าไหร่
+       🔴 ต้องมีทะเบียนกฎ `mtn_resubmitted` + edge รู้จัก event นี้ก่อน ไม่งั้น edge ตอบ 400
+          "unknown event" แล้ว**แจ้งเตือนหายทั้งก้อน** (deploy edge + insert rule ไปแล้ว 18/11) */
+    notifyMtn(fresh, 'mtn_resubmitted');   // แจ้งทีมใหม่ให้มารับงาน (บอกว่าเป็นใบเก่า)
     setResubBusy(false); toast.success(`ส่งใหม่ให้ทีม ${resubDept} แล้ว`); onReload && onReload(); onClose();
   };
 
