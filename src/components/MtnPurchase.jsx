@@ -354,7 +354,12 @@ function PrGroupCard({ g, canEdit, mayAdd, fullName, parts, glCodes, orderId, te
   const doBulkReceive = async () => {
     const invNo = inv.trim();
     if (!invNo) return toast.error('ใส่เลข Invoice ที่มากับของ');
-    if (!confirm(`รับของเข้า ${recvables.length} รายการของใบ PR ${g.prNo} ด้วย Invoice ${invNo}?\n(อะไหล่ที่ผูกทะเบียนจะเข้าสต็อกให้เอง)`)) return;
+    /* 🔴 กล่องยืนยันในแอป ห้าม window.confirm (ด่าน `no-native-confirm` · ทั้งระบบย้ายมา askConfirm 18/11) */
+    if (!await askConfirm({
+      title: `รับของเข้า ${recvables.length} รายการของใบ PR ${g.prNo}?`,
+      message: `ใช้เลข Invoice ${invNo} กับทุกรายการ · อะไหล่ที่ผูกทะเบียนจะเข้าสต็อกให้เอง`,
+      okLabel: 'รับของ',
+    })) return;
     setBusy(true);
     let ok = 0; const fails = [];
     try {
