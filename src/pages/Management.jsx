@@ -449,7 +449,7 @@ export default function Management() {
     (orders || []).forEach(o => { (ordersBySession[o.session_id] ||= []).push(o); });
     // downtime ของ session เหล่านี้ — ใช้วาดแถบ ⛔ บนไทม์ไลน์ และบอกสาเหตุใน tooltip ของใบที่ดีเลย์
     const { data: dtLogs } = await supabaseDR.from('downtime_logs')
-      .select('session_id, duration_min, started_at, ended_at, machine_no, description, dr_downtime_types(category, name_th)')
+      .select('session_id, duration_min, started_at, ended_at, machine_no, description, dr_downtime_types(category, planned_cap_min, name_th)')
       .in('session_id', sessionIds);
     const dtBySession = {};
     (dtLogs || []).forEach(d => { (dtBySession[d.session_id] ||= []).push(d); });

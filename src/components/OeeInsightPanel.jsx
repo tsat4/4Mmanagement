@@ -102,7 +102,7 @@ export default function OeeInsightPanel({ lines, ccRates = [], initLine = '', se
       //    กับที่เจอในตารางสรุป OEE 2026-08-20) — วิเคราะห์สาเหตุที่บอกว่า "ไม่มีปัญหา" อันตรายที่สุด
       const [dtRes, defRes, ordRes, { data: kstd }, { data: prodCt }, { data: breakPols }] = await Promise.all([
         fetchByIds(ids, c => supabaseDR.from('downtime_logs')
-          .select('session_id, machine_no, duration_min, started_at, ended_at, description, dr_downtime_types(name_th, category, six_big_loss, waste_type)').in('session_id', c)),
+          .select('session_id, machine_no, duration_min, started_at, ended_at, description, dr_downtime_types(name_th, category, planned_cap_min, six_big_loss, waste_type)').in('session_id', c)),
         fetchByIds(ids, c => supabaseDR.from('defect_logs')
           .select('session_id, qty_ng, qty_suspect, dr_defect_types(name_th, six_big_loss, waste_type)').in('session_id', c)),
         fetchByIds(ids, c => supabaseDR.from('prod_orders')

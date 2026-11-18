@@ -182,7 +182,7 @@ export default function MtnAndonBoard({ d, ctx, cards = 'maintenance' }) {
        ⚠️ คอลัมน์ชื่อประเภทคือ `name_th` (dr_*_types ทุกตัว) — ใส่ `name` = 42703 คิวรีล้มทั้งก้อนเงียบ */
     const [dtRes, sessRes] = await Promise.all([
       supabaseDR.from('downtime_logs')
-        .select('id, machine_no, description, started_at, call_mtn, call_mtn_at, call_mtn_ack_at, call_mtn_team, open_alerted_at, open_ack_at, duration_min, ended_at, dr_downtime_types(name_th, category), production_sessions(line_name, status, shift)')
+        .select('id, machine_no, description, started_at, call_mtn, call_mtn_at, call_mtn_ack_at, call_mtn_team, open_alerted_at, open_ack_at, duration_min, ended_at, dr_downtime_types(name_th, category, planned_cap_min), production_sessions(line_name, status, shift)')
         .is('duration_min', null).is('ended_at', null),
       supabaseDR.from('production_sessions').select('line_name, status').eq('work_date', workDate),
     ]);

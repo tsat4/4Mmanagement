@@ -150,7 +150,7 @@ export default function MaintenanceLevels() {
           qq => qq.eq('is_active', true).order('sort_order').order('id')),
         /* เฉพาะแถวที่ระบุเครื่อง — จอนี้เป็น "รายอุปกรณ์" (downtime ไม่ระบุเครื่องดูได้ที่ KPI ช่าง) */
         fetchAllRows(supabaseDR, 'downtime_logs',
-          'id, session_id, machine_no, started_at, ended_at, duration_min, call_mtn_ack_at, fix_at, dr_downtime_types(name_th, category)',
+          'id, session_id, machine_no, started_at, ended_at, duration_min, call_mtn_ack_at, fix_at, dr_downtime_types(name_th, category, planned_cap_min)',
           qq => qq.gte('started_at', sinceIso).not('machine_no', 'is', null).neq('machine_no', '').order('started_at').order('id')),
         fetchAllRows(supabaseDR, 'production_sessions', 'id, line_name, work_date, shift, shift_min, start_time, end_time',
           qq => qq.gte('work_date', baseFrom).lte('work_date', todayStr).order('work_date').order('id')),
