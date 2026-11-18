@@ -249,6 +249,13 @@ const MO_LIST_COLS = [
   /* 💳 I/O (03/11 · ประชุม 02/11 ข้อ A8 "IO ขึ้นขาด") — Excel export อ่านจากแถวลิสต์ชุดนี้
      ไม่ได้ select มา = คอลัมน์ I/O ในไฟล์เป็นขีดทุกแถว · ข้อความ 12 ตัว ส่วนใหญ่ว่าง (egress ~ไม่กี่ KB) */
   'io_no',
+  /* ↩️ 18/11 — ใบที่ถูกตีกลับแล้ว "ส่งใหม่" จะถูกรีเซ็ต `report_at` เป็นเวลาที่ส่งใหม่ (นาฬิกา KPI
+     ของทีมที่เพิ่งถูกส่งให้ · `resubmit()`) ⇒ บนลิสต์มันดูเหมือน**ใบเพิ่งเปิดเมื่อกี้** ทั้งที่
+     ปัญหาเก่าหลายวัน · เคสจริง 18/11: 4 ใบที่สร้างไว้ 09–14/11 ถูกส่งใหม่ 15:16–15:18
+     แล้วเด้งขึ้นหัวลิสต์พร้อมกัน ⇒ หน้างานแจ้ง "ใบ MO ไม่ได้มีคนเปิด แต่เด้งไปหาช่างเอง"
+     🔴 2 ช่องนี้ต้องอยู่ในคิวรีลิสต์ ไม่งั้นแถวโกหกว่าเป็นใบใหม่ (ข้อมูลมีอยู่แล้ว แค่ไม่เคยขอมา)
+        int + timestamp ส่วนใหญ่ว่าง ⇒ egress ไม่กี่ KB */
+  'bounce_count', 'first_report_at',
 ].join(',');
 const SCOPE_OPTS = [{ v: 'in_line', t: 'ซ่อมในไลน์' }, { v: 'off_line', t: 'ซ่อมนอกไลน์' }];
 const CHECK_RESULTS = ['ตรวจสอบผ่าน', 'ตรวจสอบไม่ผ่าน'];
@@ -1410,6 +1417,19 @@ function MoRow({ o, onOpen }) {
             </div>
           );
         })()}
+        {/* ↩️ ใบที่ถูกตีกลับแล้วส่งใหม่ — `report_at` ถูกรีเซ็ตเป็นเวลาที่ส่งใหม่ ⇒ แถวดูเหมือนใบใหม่เอี่ยม
+            🔴 ต้องบอก**บนแถว** ไม่ใช่แค่ในใบที่เปิดเข้าไป (เดิมเขียนไว้ใน DetailDrawer เท่านั้น
+               ⇒ ช่างที่ไล่คิวอยู่หน้าลิสต์ไม่เคยเห็น)
+            🔴 `undefined` (ไม่ได้ select มา) ≠ "ไม่เคยถูกตีกลับ" ⇒ ไม่ขึ้นป้าย ไม่ใช่ขึ้นว่า 0 */}
+        {o.bounce_count > 0 && (
+          <div title={trI18n('ใบเก่าที่ถูกตีกลับแล้วส่งใหม่ — เวลาที่เห็นคือเวลาที่ส่งใหม่ ไม่ใช่เวลาที่เปิดใบครั้งแรก')}
+            style={{ marginTop: 2, fontSize: 11, fontWeight: 700, color: 'var(--blue)',
+                     background: 'var(--blue-dim)', borderRadius: 'var(--r-xs)',
+                     padding: '1px 5px', display: 'inline-block', whiteSpace: 'nowrap' }}>
+            ↩️ {trI18n('ส่งใหม่')} ×{o.bounce_count}
+            {o.first_report_at ? ` · ${trI18n('เปิดครั้งแรก')} ${fmtDateTime(o.first_report_at)}` : ''}
+          </div>
+        )}
       </td>
       <td style={{ whiteSpace: 'nowrap' }}>
         {o.status === 'rejected' ? <span style={{ color: 'var(--muted)' }}>—</span> : <>
@@ -2714,6 +2734,10 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
       report_at: nowIso,                                   // รีเซ็ตนาฬิกา — แผนกที่ถูกเริ่มนับใหม่
       first_report_at: o.first_report_at || o.report_at,   // เก็บเวลาเปิดครั้งแรกไว้อ้างอิง
       bounce_count: (o.bounce_count || 0) + 1,
+      /* ↩️ 18/11 — เก็บว่า "ใครกดส่งใหม่" ไว้ด้วย · เดิมไม่เก็บเลย ⇒ ตอนหน้างานถามว่า
+         "ใบนี้ใครเปิด" ตอบไม่ได้ ทั้งที่เป็นการส่งใหม่ไม่ใช่การเปิดใบ (เคสจริง 18/11 4 ใบ)
+         🔴 คนละตัวกับ `report_at` (นาฬิกา KPI ของทีมปลายทาง) และคนละคนกับ `reported_by_name` */
+      resubmitted_by: fullName || null, resubmitted_at: nowIso,
       returned_at: null, reject_reason: null, returned_from_dept: null,
       accept_at: null, accepted_by: null, repair_type: null, assigned_to: null, assigned_techs: null, assign_note: null, target_done_at: null,
       updated_at: nowIso,

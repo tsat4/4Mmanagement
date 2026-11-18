@@ -9432,6 +9432,27 @@ test('🧑‍🔧 mo-export-shows-real-techs — ไฟล์ Excel ของ MO
       + '   แก้: โหลดตอนกดปุ่มผ่าน loadRepairTechsFor() (src/lib/moRepairTechs.js)\n');
   }
 });
+test('↩️ mo-list-shows-resubmit — ใบที่ถูกตีกลับแล้วส่งใหม่ ต้องเห็นบนลิสต์ ไม่ใช่แค่ในใบ', () => {
+  /* why (18/11 15:38 · หน้างานแจ้ง): *"ใบ MO ไม่ได้มีคนเปิด แต่เด้งไปหาช่างเองครับ"*
+     ตรวจฐานแล้ว: 4 ใบนั้น **สร้างไว้ 09–14/11** แต่ `report_at` ถูกรีเซ็ตเป็น 18/11 15:16–15:18
+     = ลายนิ้วมือของ `resubmit()` (ตีกลับ → ส่งใหม่: status=pending · step=1 · bounce_count+1 ·
+     returned_at ถูกล้าง · report_at=ตอนนี้ เพื่อเริ่มนาฬิกา KPI ของทีมปลายทางใหม่)
+     🔴 ใบไม่ได้เกิดเอง **แต่ลิสต์ไม่มีอะไรบอกเลยว่านี่คือใบเก่าที่ส่งใหม่** ⇒ ช่างเห็นเป็นใบใหม่เอี่ยม
+        (ข้อความ "เคยถูกตีกลับ" มีอยู่แล้ว แต่อยู่ใน DetailDrawer ซึ่งต้องกดเข้าไปถึงจะเห็น)
+     🔴 `bounce_count`/`first_report_at` ต้องอยู่ใน MO_LIST_COLS ไม่งั้นป้ายไม่มีทางขึ้น (undefined เงียบๆ) */
+  const page = readFileSync(join(ROOT, 'src/pages/MtnRepair.jsx'), 'utf8');
+  const listCols = page.slice(page.indexOf('const MO_LIST_COLS'), page.indexOf('const SCOPE_OPTS'));
+  for (const col of ['bounce_count', 'first_report_at']) {
+    assert.ok(listCols.includes(`'${col}'`),
+      `\n\n❌ MO_LIST_COLS ไม่ได้ select '${col}' — ป้าย "ส่งใหม่" บนลิสต์จะไม่ขึ้นเลย\n`
+      + '   ผล: ใบเก่าที่ส่งใหม่ดูเหมือนใบเพิ่งเปิด (อาการที่หน้างานแจ้ง 18/11)\n');
+  }
+  assert.match(page, /o\.bounce_count > 0 && \(/,
+    '\n\n❌ แถวในลิสต์ไม่ได้วาดป้าย "ส่งใหม่" — ข้อมูลมีแต่ไม่มีใครเห็น\n');
+  /* ส่งใหม่ต้องรู้ว่าใครกด ไม่งั้นรอบหน้าก็ตอบหน้างานไม่ได้อีก */
+  assert.match(page, /resubmitted_by: fullName \|\| null, resubmitted_at: nowIso/,
+    '\n\n❌ resubmit() ไม่ได้เก็บว่าใครกดส่งใหม่ — คำถาม "ใบนี้ใครเปิด" จะตอบไม่ได้อีก\n');
+});
 test('🧾 pr-group-shows-stragglers — ใบ PR ที่มีหลายรายการ ต้องบอกว่ารายการไหนตกหล่น', () => {
   /* why (18/11 · หน้างานแจ้ง ข้อ 1): *"บาง PR เปิดหลายชิ้น ใน Vendor เจ้าเดียว —
      ควรเพิ่มรายการใน 1 PR ได้"* · ของจริง O-MTN.2026/10-47 = **19 แถวใช้เลข PR เดียวกัน**
