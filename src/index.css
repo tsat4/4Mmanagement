@@ -35,6 +35,10 @@
   --blue-dim:  rgba(79, 143, 232, 0.12); --blue-line:  rgba(79, 143, 232, 0.40);
   --scrim: rgba(0, 0, 0, 0.7);    /* ม่านหลัง modal — ค่าเดียวทั้งระบบ (13/11 · วัดจริง 0.55/0.6 เหลือ contrast หน้าหลัง 3.1–3.6:1 ยังแย่งสายตา · 0.7 เหลือ 2.2:1) */
   --scrim-blur: blur(4px);        /* เบลอหน้าหลังคู่กับ --scrim เสมอ (Chromium 76+ · Safari ต้อง -webkit-) */
+  /* ข้อความที่วางบนม่าน (ชื่อรูป/คำอธิบายในฉากดูรูปขยาย) — ม่านมืดทั้ง 2 ธีม ⇒ ค่าเดียวพอ
+     มีไว้เพื่อไม่ต้องเขียน #fff ดิบในหน้า (ด่านสีดิบ · UI-CONVENTIONS §6.17 · 16/11) */
+  --scrim-ink:  #ffffff;
+  --scrim-ink2: #e5e7eb;
 
   --text:   #e6e9ef;
   --text2:  #a3abb8;
@@ -1222,8 +1226,10 @@ body.esm-tv-shell .tv-hide { display: none !important; }
 .pg-menu-badge { font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: var(--bg3); color: var(--text2); flex-shrink: 0; }
 
 /* การ์ด KPI โครงเดียว (components/KpiTile.jsx) — ชื่อ → ตัวเลข → บรรทัดบริบท · ตัวเลขสีเดียว สีอยู่ที่บรรทัดล่าง */
-.kpi-tile { background: var(--card); border: 1px solid var(--border); border-radius: var(--r-md); padding: 12px 14px;
+.kpi-tile { background: var(--card); border: 1px solid var(--border); border-radius: var(--r-md); padding: 16px 18px;   /* 18/11: 12/14 → 16/18 ที่ว่างในการ์ด (ก๊อป ERP) */
   display: flex; flex-direction: column; gap: 2px; text-align: left; font: inherit; color: var(--text); min-width: 0; }
+.kpi-tile.hero { background: var(--accent-dim); border-color: var(--accent); }   /* ใบพระเอก 1 ใบต่อแถว — token เดิม ไม่เพิ่มสี */
+.kpi-tile-spark { display: block; width: 100%; height: 22px; margin-top: 6px; opacity: 0.9; }
 .kpi-tile-k { color: var(--text2); font-size: 12px; font-weight: 500; }
 .kpi-tile-v { font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; margin-top: 4px; font-variant-numeric: tabular-nums; }
 .kpi-tile-v small { font-size: 12px; color: var(--muted); font-weight: 500; margin-left: 4px; }
@@ -1235,3 +1241,14 @@ body.esm-tv-shell .tv-hide { display: none !important; }
   color: var(--text2); font-size: 12.5px; }
 .notice-bar b { color: var(--text); font-weight: 600; }
 .notice-bar-act { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+
+/* 🔍 แถวที่แตะแล้วเปิดรายละเอียด (ถังเหลือง/แดง · ใบรายงานของเสีย · 2026-11-16) — hover เฉพาะอุปกรณ์มีเมาส์ */
+@media (hover: hover) {
+  .qb-row:hover > td { background: var(--bg2); }
+}
+
+/* 📏 B6 (2026-11-16 · หน้า /scrap-report เท่านั้น) — ช่องเลือกไลน์ในแถบกรองยาว 465px จนแถบตกบรรทัด
+   ต้นเหตุ: `.filter-bar select { max-width: 280px }` ข้างบน **แพ้** `.filter-bar :is(select, input:not(...)×5)`
+   (specificity ของ :is() = ตัวที่สูงสุดในวงเล็บ = 0,6,1) ⇒ เพดาน 280 ไม่เคยมีผลทั้งระบบ
+   ⚠️ แก้เฉพาะหน้านี้ตามที่สั่ง — แก้ตัวกลางจะทำให้ select ทุกหน้าแคบลงพร้อมกัน (ต้องตัดสินใจแยก) */
+.scrap-page .filter-bar select { max-width: 280px !important; }

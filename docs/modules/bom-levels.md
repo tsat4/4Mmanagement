@@ -1335,3 +1335,51 @@ migration `supabase/migrations/20261104_bom_one_level_deduct_phantom_dr.sql`
 >   · อ่าน `ownOrders` ไม่ได้ = `unknown` ห้ามบีบเป็น 0)
 > 🔴 **"ต่อ 1 FG" ฝั่งแผน (`explodeBom`) ≠ สิ่งที่ตัดตอน confirm** — ฝั่งแผนคูณสะสมทุกชั้น · ห้ามสลับ
 > 📄 `docs/modules/bom-levels.md`
+
+---
+
+## ⚡ แตก BOM หลาย MAT = `fn_bom_direct_demand_many` (13/11/2026)
+
+**ที่มา:** วัด 10-11/11 — `rpc/fn_bom_direct_demand` ถูกเรียก **25,512 ครั้ง/วัน = 59% ของ POST
+ทั้งหมดฝั่ง DR** จากจุดเดียว: `src/lib/lineDemandSync.js` เขียนว่า
+
+```js
+Promise.all(mats.map(m => supabaseDR.rpc('fn_bom_direct_demand', { p_fg_mat: m })))   // ❌ N+1
+```
+
+= **1 คำขอ HTTP ต่อ 1 MAT** คูณจำนวนจอที่เปิดอยู่ · ไปถึง 3 จอที่คนใช้หนัก
+(`DailyReport` ตอนเปิดใบผลิต · `HeijunkaKanban` · `LinePartCallPanel`)
+วัด 13/11: ใบผลิตที่เปิดอยู่ 29 MAT = **29 คำขอต่อการโหลด 1 รอบ ต่อ 1 จอ**
+
+### ของใหม่
+
+| | |
+|---|---|
+| ฝั่ง DB | `fn_bom_direct_demand_many(p_fg_mats text[])` (migration `20261113_…_dr.sql`) |
+| ฝั่งจอ | `bomKidsOf(mats)` ใน `src/lib/lineDemandSync.js` — แบ่งก้อนละ `BOM_MANY_CHUNK` (60) |
+
+🔑 **ตัวใหม่ไม่ได้เขียนตรรกะ BOM ใหม่** — มัน `cross join lateral public.fn_bom_direct_demand(…)`
+เรียกตัวเดิมทีละ MAT ⇒ **ผลเหมือนเดิมเป๊ะโดยโครงสร้าง**
+พิสูจน์แล้ว 13/11: สินค้าทั้งทะเบียน **243 ตัว = 476 แถว ตรงกันทั้งสองทาง ต่างกัน 0 แถวทั้งสองทิศ**
+
+### 🔴 กฎที่ต้องรักษา
+
+- **ห้ามก๊อปตรรกะ recursive ของตัวเดิมมาไว้ในตัว `_many`** — กฎ BOM มีชุดเดียว
+- **ตัวเดิม `fn_bom_direct_demand(text)` ห้ามถอด** — trigger `fn_explode_child_demand` ใช้ตอน confirm ใบผลิต
+- **ฝั่งจอห้ามเรียกตัวทีละ MAT อีก** (ด่าน `bom-direct-demand-batch` ใน `regressionGuards`)
+- 🔴 **เพดาน 1000 แถวของ PostgREST** — `bomKidsOf` เช็คทุกก้อน ชนเพดาน = **คืน error (fail-closed)
+  ห้ามคืนของไม่ครบ** (กฎเดียวกับ `fetchByIds`/`fetchAllPages`)
+- **ทุก MAT ที่ส่งเข้าไปต้องมีคีย์กลับมาเสมอ** (ไม่มีลูก = `[]`) — ผู้เรียกพึ่งพฤติกรรมนี้
+
+## 🧩 ผู้ใช้รายใหม่ของต้นไม้ BOM — ช่อง "พาร์ทลูกที่เสีย" ใน Daily Report (2026-11-16)
+
+ของกลาง 3 ชิ้นที่เพิ่มในรอบนี้ (ของเดิมไม่เปลี่ยนพฤติกรรม):
+| ชิ้น | ทำอะไร |
+|---|---|
+| `bomChildCandidates(mat, ix)` (`utils/bomTree.js`) | "FG ตัวนี้มีลูกอะไรให้เลือก" — เลือก **ใบเดียว** (ใบของตัวเองก่อน → ไม่มีก็ `sheetsWithKidsOf` ใบแรก) แล้วกางผ่าน `explodeBom({ sheetFor, startSheet })` · ยุบ mat ซ้ำเหลือ**ชั้นตื้นสุด** · ตัดแถว `cycle` + ตัว root ออก · คืน `sheets` ให้จอเตือนว่ามีหลายใบ **ห้ามรวม** |
+| `useBomChildren(mat, { enabled })` (`utils/useBomChildren.js`) | ตัวโหลด — ยิงเฉพาะใบที่เกี่ยวข้อง (`product_id` ของ mat + แถวที่ `parent_mat = mat`) ผ่าน `cachedRows` ⇒ **แยก "ว่าง" ออกจาก "โหลดไม่สำเร็จ"** (`failed`) · ไม่โหลด `bom_items` ทั้งตาราง |
+| `bomChildOptions(rows)` (`utils/pickerOptions.js`) | option ของ `<BomChildSelect>` · ชั้น 1 / ชั้นลึก แยกกลุ่ม · `flatDupe` ติด `⚠ ซ้ำ 2 ชั้น` และ**ไม่โชว์อัตราต่อ FG** (ยอดเชื่อไม่ได้) · ค่าเดิมที่หลุดจาก BOM ยังเป็นตัวเลือก (`offList`) |
+
+- `explodeBom` คืนฟิลด์ **`part_no`** ของบรรทัดเพิ่ม (16/11 · additive) เพื่อให้ป้าย MAT เรียง Part No. → ชื่อ → MAT ได้เหมือน `<MatLabel>`
+- 🔴 เลือกพาร์ทลูกแล้ว **ไม่กระทบ %Q/%P** และ **ห้ามเอา `child_qty_per_fg` ไปคูณ** (ด่าน `defect-child-qty-not-in-oee`)
+  📄 `docs/modules/daily-report.md` §ลงของเสียที่พาร์ทลูก · `docs/modules/oee.md` ท้ายไฟล์

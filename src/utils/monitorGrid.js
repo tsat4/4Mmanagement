@@ -94,6 +94,14 @@ export const RECUR = {
     needs: ['in', 'order'],
     calc: (prev, cur) => (prev === null ? null : prev + flow(cur.in) - flow(cur.order)),
   },
+  /* 🏬 Diff ของบอร์ดสโตร์ (16/11) = SAP − คงเหลือ ในคอลัมน์เดียวกัน (ไม่ใช่ recurrence จริง — ไม่กินค่าเมื่อวาน)
+     🔴 ไม่กรอก SAP = null (ไม่รู้) ห้ามเป็น 0 — 0 แปลว่า "นับแล้วตรง" */
+  sap_diff: {
+    label: 'SAP − คงเหลือ',
+    needs: ['sap', 'balance'],
+    calc: (_prev, cur) => (cur.sap === null || cur.sap === undefined || cur.balance === null || cur.balance === undefined
+      ? null : cur.sap - cur.balance),
+  },
   /* stock ที่ร้านชุบ = เมื่อวาน + ส่งไป − รับคืน (RA/824-825) */
   vendor_wip: {
     label: 'ค้างที่ร้าน',
@@ -400,4 +408,22 @@ export function rackCount({ qty, packStd }) {
   const p = num(packStd);
   if (q === null || p === null || p <= 0) return null;
   return q / p;
+}
+
+/**
+ * 🏬 สถานะช่องคงเหลือของบอร์ดสโตร์ เทียบ MIN/MAX (16/11 · แบบที่สโตร์ส่งมา "ขอ Visual แสดงสถานะเทียบ Max-Min")
+ * @param {number|null} v  ยอดคงเหลือ
+ * @param {{min:number|null, max:number|null}|null} lv  จาก kanban_standards
+ * @returns {'low'|'high'|'ok'|null}  null = ไม่รู้ยอด หรือยังไม่ตั้ง MIN/MAX เลย ⇒ **ไม่ตีสี** (ห้ามเดาเกณฑ์)
+ *   · มีแค่ MIN = ตัดสินได้แค่ต่ำ/ไม่ต่ำ · มีแค่ MAX = ตัดสินได้แค่เกิน/ไม่เกิน
+ */
+export function levelState(v, lv) {
+  if (v === null || v === undefined || !Number.isFinite(Number(v)) || !lv) return null;
+  const min = lv.min === null || lv.min === undefined ? null : Number(lv.min);
+  const max = lv.max === null || lv.max === undefined ? null : Number(lv.max);
+  if (min === null && max === null) return null;
+  const n = Number(v);
+  if (min !== null && n < min) return 'low';
+  if (max !== null && n > max) return 'high';
+  return 'ok';
 }

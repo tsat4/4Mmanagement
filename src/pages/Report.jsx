@@ -13,6 +13,7 @@ import ToggleDot from '../components/ToggleDot';
 import { loadDocForms, docFormSync, fullCode, getDocForm, getDocFormRevisions, withDocFoot } from '../utils/docForms';
 import { downloadCsvDoc, csvText } from '../utils/csvDoc';
 import resizeImg from '../utils/resizeImage';
+import ImageLightbox from '../components/ImageLightbox';   // 🔍 ฉากดูรูปขยายของกลาง (ห้ามวาดโมดัลดูรูปในหน้า)
 // recharts ไม่ต้อง import ที่นี่แล้ว — radar ย้ายไปอยู่ใน SkillRadarPanel (2026-08-06)
 import { fmtDate, fmtDateTime } from '../utils/dateFormat';
 import { can } from '../utils/permissions';
@@ -451,17 +452,17 @@ body{font-family:'Sarabun',sans-serif;font-size:11px;color:#000;background:#fff}
 table{border-collapse:collapse;width:100%}
 @media print{@page{size:A4 portrait;margin:10mm}body{-webkit-print-color-adjust:exact}}</style>
 </head><body style="padding:10mm">
-<h2 style="margin:0 0 4px;font-size:16px">{trI18n('รายชื่อพนักงานจองมาทำ OT (สำหรับจองรถรับส่ง)')}</h2>
-<p style="color:#666;margin:0 0 12px;font-size:10px">วันที่ทำ OT: ${date} (${DAY_TYPE_META[dayType].label}) · พิมพ์วันที่: ${printedAt} · รวม ${filteredRows.length} {trI18n('คน')}</p>
+<h2 style="margin:0 0 4px;font-size:16px">${trI18n('รายชื่อพนักงานจองมาทำ OT (สำหรับจองรถรับส่ง)')}</h2>
+<p style="color:#666;margin:0 0 12px;font-size:10px">วันที่ทำ OT: ${date} (${DAY_TYPE_META[dayType].label}) · พิมพ์วันที่: ${printedAt} · รวม ${filteredRows.length} ${trI18n('คน')}</p>
 <table><thead><tr style="background:#f3f4f6">
 <th style="border:1px solid #ccc;padding:4px">#</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('รหัส')}</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('ชื่อ')}</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('ไลน์/แผนก')}</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('กะ')}</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('ช่วงเวลา OT')}</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('สายรถ')}</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('งานที่ทำ')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('รหัส')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('ชื่อ')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('ไลน์/แผนก')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('กะ')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('ช่วงเวลา OT')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('สายรถ')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('งานที่ทำ')}</th>
 </tr></thead><tbody>${rowsHtml}</tbody></table>
 <script>window.onload = () => window.print();</script></body></html>`;
     const w = window.open('', '_blank');
@@ -834,20 +835,20 @@ body{font-family:'Sarabun',sans-serif;font-size:11px;color:#000;background:#fff}
 table{border-collapse:collapse;width:100%}
 @media print{@page{size:A4 landscape;margin:10mm}body{-webkit-print-color-adjust:exact}}</style>
 </head><body style="padding:10mm">
-<h2 style="margin:0 0 4px;font-size:16px">{trI18n('รายงานเช็คชื่อประจำวัน')}</h2>
-<p style="color:#666;margin:0 0 12px;font-size:10px">วันที่: ${date} (${dayTypeLabel}) · กะ: ${shift === 'day' ? 'เช้า' : shift === 'night' ? 'ดึก' : 'ทั้งหมด'} · พิมพ์วันที่: ${todayStr} · รวม ${filteredLogs.length} {trI18n('คน')}</p>
+<h2 style="margin:0 0 4px;font-size:16px">${trI18n('รายงานเช็คชื่อประจำวัน')}</h2>
+<p style="color:#666;margin:0 0 12px;font-size:10px">วันที่: ${date} (${dayTypeLabel}) · กะ: ${shift === 'day' ? 'เช้า' : shift === 'night' ? 'ดึก' : 'ทั้งหมด'} · พิมพ์วันที่: ${todayStr} · รวม ${filteredLogs.length} ${trI18n('คน')}</p>
 <table><thead><tr style="background:#f3f4f6">
 <th style="border:1px solid #ccc;padding:4px">#</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('รหัส')}</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('ชื่อ')}</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('แผนก')}</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('ทีม')}</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('มาทำงาน')}</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('หมวก')}</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('รองเท้า')}</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('ถุงมือ')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('รหัส')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('ชื่อ')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('แผนก')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('ทีม')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('มาทำงาน')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('หมวก')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('รองเท้า')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('ถุงมือ')}</th>
 <th style="border:1px solid #ccc;padding:4px">OT</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('จุดงาน')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('จุดงาน')}</th>
 </tr></thead><tbody>${rowsHtml}</tbody></table>
 <script>window.onload = () => window.print();</script></body></html>`;
     const w = window.open('', '_blank');
@@ -1024,16 +1025,16 @@ body{font-family:'Sarabun',sans-serif;font-size:11px;color:#000;background:#fff}
 table{border-collapse:collapse;width:100%}
 @media print{@page{size:A4 portrait;margin:10mm}body{-webkit-print-color-adjust:exact}}</style>
 </head><body style="padding:10mm">
-<h2 style="margin:0 0 4px;font-size:16px">{trI18n('รายงานรายพนักงาน')}</h2>
+<h2 style="margin:0 0 4px;font-size:16px">${trI18n('รายงานรายพนักงาน')}</h2>
 <p style="color:#666;margin:0 0 12px;font-size:10px">${emp?.employee_id_code || ''} — ${emp?.name || ''} · เดือน: ${month} · พิมพ์วันที่: ${todayStr}</p>
 <table><thead><tr style="background:#f3f4f6">
-<th style="border:1px solid #ccc;padding:4px">{trI18n('วันที่')}</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('ประเภทวัน')}</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('มาทำงาน')}</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('หมวก')}</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('รองเท้า')}</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('ถุงมือ')}</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('จุดงาน')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('วันที่')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('ประเภทวัน')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('มาทำงาน')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('หมวก')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('รองเท้า')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('ถุงมือ')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('จุดงาน')}</th>
 </tr></thead><tbody>${rowsHtml}</tbody></table>
 <script>window.onload = () => window.print();</script></body></html>`;
     const w = window.open('', '_blank');
@@ -1224,17 +1225,17 @@ table{border-collapse:collapse;width:100%}
 @media print{@page{size:A4 landscape;margin:10mm}body{-webkit-print-color-adjust:exact}}</style>
 </head><body style="padding:10mm">
 <h2 style="margin:0 0 4px;font-size:16px">Log จุดงาน: ${station?.station_name || ''}</h2>
-<p style="color:#666;margin:0 0 12px;font-size:10px">ไลน์: ${station?.line_name || ''} · ${from} — ${to} · พิมพ์วันที่: ${todayStr} · รวม ${filteredRows.length} {trI18n('รายการ')}</p>
+<p style="color:#666;margin:0 0 12px;font-size:10px">ไลน์: ${station?.line_name || ''} · ${from} — ${to} · พิมพ์วันที่: ${todayStr} · รวม ${filteredRows.length} ${trI18n('รายการ')}</p>
 <table><thead><tr style="background:#f3f4f6">
 <th style="border:1px solid #ccc;padding:4px">#</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('วันที่')}</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('ประเภทวัน')}</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('รหัส')}</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('ชื่อ')}</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('ทีม')}</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('กะ')}</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('มาทำงาน')}</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('PPE ครบ')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('วันที่')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('ประเภทวัน')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('รหัส')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('ชื่อ')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('ทีม')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('กะ')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('มาทำงาน')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('PPE ครบ')}</th>
 </tr></thead><tbody>${rowsHtml}</tbody></table>
 <script>window.onload = () => window.print();</script></body></html>`;
     const w = window.open('', '_blank');
@@ -1411,17 +1412,17 @@ body{font-family:'Sarabun',sans-serif;font-size:11px;color:#000;background:#fff}
 table{border-collapse:collapse;width:100%}
 @media print{@page{size:A4 portrait;margin:10mm}body{-webkit-print-color-adjust:exact}}</style>
 </head><body style="padding:10mm">
-<h2 style="margin:0 0 4px;font-size:16px">{trI18n('สรุปการมาทำงานช่วงเวลา')}</h2>
-<p style="color:#666;margin:0 0 12px;font-size:10px">${from} — ${to} · พิมพ์วันที่: ${todayStr} · รวม ${filteredRows.length} {trI18n('คน')}</p>
+<h2 style="margin:0 0 4px;font-size:16px">${trI18n('สรุปการมาทำงานช่วงเวลา')}</h2>
+<p style="color:#666;margin:0 0 12px;font-size:10px">${from} — ${to} · พิมพ์วันที่: ${todayStr} · รวม ${filteredRows.length} ${trI18n('คน')}</p>
 <table><thead><tr style="background:#f3f4f6">
 <th style="border:1px solid #ccc;padding:4px">#</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('รหัส')}</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('ชื่อ')}</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('ส่วนงาน')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('รหัส')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('ชื่อ')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('ส่วนงาน')}</th>
 <th style="border:1px solid #ccc;padding:4px">Team</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('มาทำงาน')}</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('วันทั้งหมด')}</th>
-<th style="border:1px solid #ccc;padding:4px">{trI18n('%การมาทำงาน')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('มาทำงาน')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('วันทั้งหมด')}</th>
+<th style="border:1px solid #ccc;padding:4px">${trI18n('%การมาทำงาน')}</th>
 </tr></thead><tbody>${rowsHtml}</tbody></table>
 <script>window.onload = () => window.print();</script></body></html>`;
     const w = window.open('', '_blank');
@@ -1942,18 +1943,12 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
         </div>
       )}
 
-      {/* Image viewer modal */}
+      {/* 🔍 ฉากดูรูปขยาย = ของกลาง `components/ImageLightbox.jsx` (16/11)
+          เดิมหน้านี้วาดโมดัลดูรูปเอง — ของดีแต่อยู่หน้าเดียว หน้าอื่นก๊อปไม่ได้
+          ⇒ ยุบมาใช้ตัวกลาง (Esc ปิด · แตะฉากหลังปิด · ปุ่มปิด 44px มาให้ในตัว) */}
       {imageViewModal && (
-        <div className="modal-scroll" style={{ position: 'fixed', inset: 0, zIndex: 4000, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh' }} onClick={e => e.stopPropagation()}>
-            <div style={{ fontSize: 13, color: '#fff', marginBottom: 8, fontWeight: 600 }}>{imageViewModal.title}</div>
-            <img src={imageViewModal.url} style={{ maxWidth: '88vw', maxHeight: '80vh', borderRadius: 10, objectFit: 'contain', display: 'block' }} />
-            <button onClick={() => setImageViewModal(null)}
-              style={{ position: 'absolute', top: -10, right: -10, background: 'var(--red)', color: '#fff', border: 'none', borderRadius: '50%', width: 28, height: 28, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              ×
-            </button>
-          </div>
-        </div>
+        <ImageLightbox items={[{ url: imageViewModal.url, title: imageViewModal.title }]}
+          onClose={() => setImageViewModal(null)} />
       )}
 
       <TimeRangeBar
@@ -2577,12 +2572,12 @@ table{border-collapse:collapse;width:100%}
 <table><thead>
 <tr style="background:#f3f4f6">
 <th rowspan="2" style="border:1px solid #ccc;padding:3px">#</th>
-<th rowspan="2" style="border:1px solid #ccc;padding:3px">{trI18n('รหัส')}</th>
-<th rowspan="2" style="border:1px solid #ccc;padding:3px">{trI18n('ชื่อ')}</th>
-<th rowspan="2" style="border:1px solid #ccc;padding:3px">{trI18n('ส่วนงาน')}</th>
+<th rowspan="2" style="border:1px solid #ccc;padding:3px">${trI18n('รหัส')}</th>
+<th rowspan="2" style="border:1px solid #ccc;padding:3px">${trI18n('ชื่อ')}</th>
+<th rowspan="2" style="border:1px solid #ccc;padding:3px">${trI18n('ส่วนงาน')}</th>
 <th rowspan="2" style="border:1px solid #ccc;padding:3px">Team</th>
 ${catHeaderCells}
-<th rowspan="2" style="border:1px solid #ccc;padding:3px;background:#d1fae5;color:#16a34a">{trI18n('เฉลี่ย')}</th>
+<th rowspan="2" style="border:1px solid #ccc;padding:3px;background:#d1fae5;color:#16a34a">${trI18n('เฉลี่ย')}</th>
 </tr>
 <tr style="background:#e5e7eb">${headerCells}</tr>
 </thead><tbody>${rowsHtml}</tbody></table>
@@ -2904,29 +2899,29 @@ function buildMultiSkillHtml({ empRows, levelCounts, skillDefs, dept, section, d
           <td style="border:1px solid #666;padding:2px;text-align:center">(${approver || '......................'})</td>
         </tr>
         <tr>
-          <td style="border:1px solid #666;padding:1px;text-align:center;font-size:7px">{trI18n('หัวหน้าแผนก')}</td>
-          <td style="border:1px solid #666;padding:1px;text-align:center;font-size:7px">{trI18n('วิศวกร/หัวหน้าส่วน')}</td>
-          <td style="border:1px solid #666;padding:1px;text-align:center;font-size:7px">{trI18n('ผู้จัดการส่วนผลิต')}</td>
+          <td style="border:1px solid #666;padding:1px;text-align:center;font-size:7px">${trI18n('หัวหน้าแผนก')}</td>
+          <td style="border:1px solid #666;padding:1px;text-align:center;font-size:7px">${trI18n('วิศวกร/หัวหน้าส่วน')}</td>
+          <td style="border:1px solid #666;padding:1px;text-align:center;font-size:7px">${trI18n('ผู้จัดการส่วนผลิต')}</td>
         </tr>
         <tr>
-          <td style="border:1px solid #666;padding:1px;text-align:center;font-size:7px">{trI18n('วันที่ .................')}</td>
-          <td style="border:1px solid #666;padding:1px;text-align:center;font-size:7px">{trI18n('วันที่ .................')}</td>
-          <td style="border:1px solid #666;padding:1px;text-align:center;font-size:7px">{trI18n('วันที่ .................')}</td>
+          <td style="border:1px solid #666;padding:1px;text-align:center;font-size:7px">${trI18n('วันที่ .................')}</td>
+          <td style="border:1px solid #666;padding:1px;text-align:center;font-size:7px">${trI18n('วันที่ .................')}</td>
+          <td style="border:1px solid #666;padding:1px;text-align:center;font-size:7px">${trI18n('วันที่ .................')}</td>
         </tr>
       </table>
     </td>
   </tr></table>
   <table style="width:100%"><thead>
     <tr style="background:#d1d5db">
-      <th style="border:1px solid #666;padding:3px;text-align:center;width:24px" rowspan="3">{trI18n('ลำดับ')}</th>
-      <th style="border:1px solid #666;padding:3px;text-align:center;width:70px" rowspan="3">{trI18n('เลขที่บัตร')}</th>
-      <th style="border:1px solid #666;padding:3px;text-align:center;min-width:110px" rowspan="3">{trI18n('ชื่อ-นามสกุล')}</th>
-      <th style="border:1px solid #666;padding:3px;text-align:center;min-width:80px" rowspan="3">{trI18n('ตำแหน่ง')}</th>
-      <th style="border:1px solid #666;padding:3px;text-align:center;min-width:60px" rowspan="3">{trI18n('อายุงาน')}</th>
-      <th style="border:1px solid #666;padding:3px;text-align:center" colspan="${orderedDefs.length + 1}">{trI18n('ทักษะความสามารถการปฏิบัติงานของพนักงาน')}</th>
+      <th style="border:1px solid #666;padding:3px;text-align:center;width:24px" rowspan="3">${trI18n('ลำดับ')}</th>
+      <th style="border:1px solid #666;padding:3px;text-align:center;width:70px" rowspan="3">${trI18n('เลขที่บัตร')}</th>
+      <th style="border:1px solid #666;padding:3px;text-align:center;min-width:110px" rowspan="3">${trI18n('ชื่อ-นามสกุล')}</th>
+      <th style="border:1px solid #666;padding:3px;text-align:center;min-width:80px" rowspan="3">${trI18n('ตำแหน่ง')}</th>
+      <th style="border:1px solid #666;padding:3px;text-align:center;min-width:60px" rowspan="3">${trI18n('อายุงาน')}</th>
+      <th style="border:1px solid #666;padding:3px;text-align:center" colspan="${orderedDefs.length + 1}">${trI18n('ทักษะความสามารถการปฏิบัติงานของพนักงาน')}</th>
     </tr>
     <tr style="background:#f9fafb">${catHeaderCells}
-      <th style="border:1px solid #666;background:#d1fae5;padding:3px 2px;font-size:8px;text-align:center" rowspan="2">{trI18n('ทักษะโดยรวม')}</th>
+      <th style="border:1px solid #666;background:#d1fae5;padding:3px 2px;font-size:8px;text-align:center" rowspan="2">${trI18n('ทักษะโดยรวม')}</th>
     </tr>
     <tr style="background:#e5e7eb">${skillHeaderCells}
     </tr>
@@ -2934,9 +2929,9 @@ function buildMultiSkillHtml({ empRows, levelCounts, skillDefs, dept, section, d
   <div style="margin-top:10px">
     <table style="width:100%"><thead>
       <tr style="background:#d1d5db">
-        <th style="border:1px solid #666;padding:3px;font-size:9px;text-align:center" colspan="2" rowspan="2">{trI18n('ระดับความสามารถ')}</th>
+        <th style="border:1px solid #666;padding:3px;font-size:9px;text-align:center" colspan="2" rowspan="2">${trI18n('ระดับความสามารถ')}</th>
         ${catGroups.map(g => `<th colspan="${g.skills.length}" style="border:1px solid #666;background:${g.color}18;color:${g.color};padding:3px 2px;font-size:8px;font-weight:800;text-align:center">${g.icon} ${g.label}</th>`).join('')}
-        <th style="border:1px solid #666;background:#d1fae5;padding:3px 2px;font-size:9px;text-align:center" rowspan="2">{trI18n('ทักษะโดยรวม')}</th>
+        <th style="border:1px solid #666;background:#d1fae5;padding:3px 2px;font-size:9px;text-align:center" rowspan="2">${trI18n('ทักษะโดยรวม')}</th>
       </tr>
       <tr style="background:#e5e7eb">
         ${orderedDefs.map(s => `<th style="border:1px solid #666;background:#e5e7eb;padding:3px 2px;font-size:9px;text-align:center;writing-mode:vertical-rl;transform:rotate(180deg);height:70px;white-space:nowrap">${s.label}</th>`).join('')}
@@ -2944,13 +2939,13 @@ function buildMultiSkillHtml({ empRows, levelCounts, skillDefs, dept, section, d
     </thead><tbody>
       ${summaryRowsHtml}
       <tr style="background:#f3f4f6;font-weight:700">
-        <td colspan="2" style="border:1px solid #999;text-align:center;padding:2px;font-size:9px">{trI18n('รวมพนักงานทั้งหมด')}</td>
+        <td colspan="2" style="border:1px solid #999;text-align:center;padding:2px;font-size:9px">${trI18n('รวมพนักงานทั้งหมด')}</td>
         ${orderedDefs.map(() => `<td style="text-align:center;border:1px solid #999;font-size:9px">${totalEmps}</td>`).join('')}
         <td style="text-align:center;border:1px solid #999;font-size:9px">${totalEmps}</td>
       </tr>
     </tbody></table>
   </div>
-  <div style="margin-top:6px;font-size:8px;color:#555">พิมพ์วันที่ ${today} · จำนวนพนักงาน ${totalEmps} {trI18n('คน')}</div>
+  <div style="margin-top:6px;font-size:8px;color:#555">พิมพ์วันที่ ${today} · จำนวนพนักงาน ${totalEmps} ${trI18n('คน')}</div>
 </div>
 <div style="text-align:right;font-size:8px;color:#666;margin-top:2px">${fullCode(docFormSync('multi_skill', { form_code: 'FM-PD1-017' }))}${docFormSync('multi_skill', {}).effective_date ? ' · Effective Date : ' + docFormSync('multi_skill', {}).effective_date : ''}</div>
 <script>window.onload = () => { window.print(); }</script></body></html>`;
@@ -3765,13 +3760,13 @@ function SkillAllowanceTab() {
     }).join('');
 
     const headerBlock = `
-      <div style="text-align:right;font-size:${fz(12)};margin-bottom:2px">{trI18n('ฟอร์ม 2')}</div>
+      <div style="text-align:right;font-size:${fz(12)};margin-bottom:2px">${trI18n('ฟอร์ม 2')}</div>
       <table style="border:none;margin-bottom:${padV(6)};width:100%">
         <tr>
           <td style="border:1px solid #333;width:230px;padding:${padV(6)};vertical-align:middle">
             <div style="display:flex;align-items:center;gap:8px">
               <div style="width:${Math.round(44*scale)}px;flex-shrink:0">${logoDataUrl ? `<img src="${logoDataUrl}" style="width:${Math.round(40*scale)}px;height:auto"/>` : ''}</div>
-              <div style="font-size:${fz(12)};font-weight:bold">{trI18n('บริษัทไทยซัมมิทโอโตโมทีฟ จำกัด')}</div>
+              <div style="font-size:${fz(12)};font-weight:bold">${trI18n('บริษัทไทยซัมมิทโอโตโมทีฟ จำกัด')}</div>
             </div>
           </td>
           <td style="border:none;text-align:center">
@@ -3804,7 +3799,7 @@ function SkillAllowanceTab() {
             ['ผู้จัดการส่วน HRM', signerHRM],
           ].map(([label, name]) => `
             <td style="border:1px solid #333;width:25%;text-align:center;padding:${padV(8)} 4px;vertical-align:bottom">
-              <div style="font-size:${fz(11)};margin-bottom:2px">{trI18n('บันทึกโดย')}</div>
+              <div style="font-size:${fz(11)};margin-bottom:2px">${trI18n('บันทึกโดย')}</div>
               <div style="border-bottom:1px dotted #333;height:${Math.round(24*scale)}px;margin-bottom:4px"></div>
               <div style="font-size:${fz(11)}">${name ? `(${name})` : '( &nbsp; )'}</div>
               <div style="font-size:${fz(10)};color:#555">${label}</div>
@@ -3835,16 +3830,16 @@ function SkillAllowanceTab() {
   <thead>
     <tr><th colspan="${totalCols}" style="border:none;background:#fff;padding:0;text-align:left">${headerBlock}</th></tr>
     <tr>
-      <th rowspan="2">{trI18n('ลำดับ')}</th>
-      <th rowspan="2">{trI18n('เลขที่บัตรพนักงาน')}</th>
-      <th rowspan="2">{trI18n('ชื่อ - สกุล')}</th>
-      <th rowspan="2">{trI18n('กะ')}</th>
+      <th rowspan="2">${trI18n('ลำดับ')}</th>
+      <th rowspan="2">${trI18n('เลขที่บัตรพนักงาน')}</th>
+      <th rowspan="2">${trI18n('ชื่อ - สกุล')}</th>
+      <th rowspan="2">${trI18n('กะ')}</th>
       <th colspan="${days.length}">เดือน ${THAI_MONTHS[month]}</th>
-      <th rowspan="2">{trI18n('รวม')}</th>
-      <th rowspan="2">{trI18n('ลายเซ็นพนักงาน')}</th>
-      <th rowspan="2">{trI18n('TA ตรวจสอบการทำงาน')}</th>
-      <th rowspan="2">{trI18n('ลายเซ็น TA')}</th>
-      <th rowspan="2">{trI18n('หมายเหตุ')}</th>
+      <th rowspan="2">${trI18n('รวม')}</th>
+      <th rowspan="2">${trI18n('ลายเซ็นพนักงาน')}</th>
+      <th rowspan="2">${trI18n('TA ตรวจสอบการทำงาน')}</th>
+      <th rowspan="2">${trI18n('ลายเซ็น TA')}</th>
+      <th rowspan="2">${trI18n('หมายเหตุ')}</th>
     </tr>
     <tr>
       ${days.map(d => `<th>${d}</th>`).join('')}
@@ -4388,7 +4383,7 @@ function AttendanceFormTab() {
         </tr>
         <tr>
           ${days.map(d => makeDayRow2(d, r)).join('')}
-          <td colspan="8" style="border:1px solid #000;font-size:7px;text-align:right;padding:0 3px;height:12px">{trI18n('→ จำนวน ชม. ที่ทำ OT')}</td>
+          <td colspan="8" style="border:1px solid #000;font-size:7px;text-align:right;padding:0 3px;height:12px">${trI18n('→ จำนวน ชม. ที่ทำ OT')}</td>
           <td style="${tdOTStyle}">${totalOTHrs > 0 ? totalOTHrs : ''}</td>
         </tr>`;
     }).join('');
@@ -4416,8 +4411,8 @@ function AttendanceFormTab() {
       ${logoDataUrl ? `<img src="${logoDataUrl}" style="width:42px;height:auto;display:block;margin:0 auto"/>` : ''}
     </td>
     <td style="vertical-align:middle;padding:2px 8px">
-      <div style="font-size:11px;font-weight:bold;text-align:center">{trI18n('บริษัท ไทยซัมมิท โอโตโมทีฟ จำกัด')}</div>
-      <div style="font-size:10px;font-weight:bold;text-align:center;margin-top:2px">{trI18n('ใบบันทึกการมาทำงาน - การหยุดงานของพนักงาน')}</div>
+      <div style="font-size:11px;font-weight:bold;text-align:center">${trI18n('บริษัท ไทยซัมมิท โอโตโมทีฟ จำกัด')}</div>
+      <div style="font-size:10px;font-weight:bold;text-align:center;margin-top:2px">${trI18n('ใบบันทึกการมาทำงาน - การหยุดงานของพนักงาน')}</div>
       <div style="font-size:10px;text-align:center;margin-top:2px">${deptLabel}</div>
     </td>
     <td style="width:48%;vertical-align:top;padding:0">
@@ -4430,15 +4425,15 @@ function AttendanceFormTab() {
         <tr>
           <td style="border:1px solid #000;padding:2px 6px;text-align:center">เดือน ${THAI_MONTHS[month]} ${year+543}</td>
           <td style="border:1px solid #000;padding:2px 6px;text-align:center">งวด วันที่ ${dStr}</td>
-          <td style="border:1px solid #000;padding:2px 6px;text-align:center">{trI18n('จำนวนพนักงาน')} <b>${totalEmp}</b> {trI18n('คน')}</td>
+          <td style="border:1px solid #000;padding:2px 6px;text-align:center">${trI18n('จำนวนพนักงาน')} <b>${totalEmp}</b> ${trI18n('คน')}</td>
         </tr>
         <tr>
           <td style="border:1px solid #000;height:52px;text-align:center;vertical-align:bottom;padding-bottom:2px;font-size:7px">
             ${sigDataUrl ? `<img src="${sigDataUrl}" style="max-height:36px;max-width:70px;object-fit:contain;display:block;margin:0 auto 2px"/>` : '<div style="height:36px"></div>'}
             หัวหน้าแผนก
           </td>
-          <td style="border:1px solid #000;height:52px;text-align:center;vertical-align:bottom;padding-bottom:2px;font-size:7px">{trI18n('หัวหน้าส่วน')}</td>
-          <td style="border:1px solid #000;height:52px;text-align:center;vertical-align:bottom;padding-bottom:2px;font-size:7px">{trI18n('ผู้จัดการ')}</td>
+          <td style="border:1px solid #000;height:52px;text-align:center;vertical-align:bottom;padding-bottom:2px;font-size:7px">${trI18n('หัวหน้าส่วน')}</td>
+          <td style="border:1px solid #000;height:52px;text-align:center;vertical-align:bottom;padding-bottom:2px;font-size:7px">${trI18n('ผู้จัดการ')}</td>
         </tr>
       </table>
     </td>
@@ -4464,18 +4459,18 @@ function AttendanceFormTab() {
   </colgroup>
   <thead>
     <tr>
-      <th rowspan="2" style="${thStyle}">{trI18n('ลำดับ')}</th>
-      <th rowspan="2" style="${thStyle}">{trI18n('ชื่อ - สกุล')}</th>
-      <th rowspan="2" style="${thStyle}">{trI18n('เลขที่บัตร')}</th>
+      <th rowspan="2" style="${thStyle}">${trI18n('ลำดับ')}</th>
+      <th rowspan="2" style="${thStyle}">${trI18n('ชื่อ - สกุล')}</th>
+      <th rowspan="2" style="${thStyle}">${trI18n('เลขที่บัตร')}</th>
       ${dayHeaderRow1}
-      <th rowspan="2" style="${thStyle}width:13px">{trI18n('ส')}</th>
-      <th rowspan="2" style="${thStyle}width:13px">{trI18n('ป')}</th>
-      <th rowspan="2" style="${thStyle}width:13px">{trI18n('ก')}</th>
-      <th rowspan="2" style="${thStyle}width:14px">{trI18n('พ')}</th>
-      <th rowspan="2" style="${thStyle}width:14px">{trI18n('กธ')}</th>
-      <th rowspan="2" style="${thStyle}width:14px">{trI18n('บ')}</th>
-      <th rowspan="2" style="${thStyle}width:13px">{trI18n('ข')}</th>
-      <th rowspan="2" style="${thStyle}width:14px">{trI18n('พง')}</th>
+      <th rowspan="2" style="${thStyle}width:13px">${trI18n('ส')}</th>
+      <th rowspan="2" style="${thStyle}width:13px">${trI18n('ป')}</th>
+      <th rowspan="2" style="${thStyle}width:13px">${trI18n('ก')}</th>
+      <th rowspan="2" style="${thStyle}width:14px">${trI18n('พ')}</th>
+      <th rowspan="2" style="${thStyle}width:14px">${trI18n('กธ')}</th>
+      <th rowspan="2" style="${thStyle}width:14px">${trI18n('บ')}</th>
+      <th rowspan="2" style="${thStyle}width:13px">${trI18n('ข')}</th>
+      <th rowspan="2" style="${thStyle}width:14px">${trI18n('พง')}</th>
       <th rowspan="2" style="${thStyle}width:16px">OT</th>
     </tr>
     <tr>

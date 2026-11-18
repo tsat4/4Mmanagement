@@ -5,8 +5,13 @@
    · เขียนได้เมื่อ `can('kpi','manage')` (คีย์เดียวกับ RLS) · อ่านได้ทุกคน — จอนำเสนอกดดูอย่างเดียว
    · ทุก write ผ่าน checkWrite + นับแถว (กฎเหล็ก DB ข้อ 1-2) */
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '../supabaseClient';
-import { checkWrite } from '../utils/dbWrite';
+import { checkWrite, checkWriteRows } from '../utils/dbWrite';
+import QualityPhotoField from './QualityPhotoField';
+import { AttachImage } from './ImageLightbox';   // 🔍 รูปแนบกดขยายในแอป (ห้ามเปิดแท็บใหม่)
+import { resizeActionImage, uploadActionImg, removeActionImg } from '../utils/actionImage';   // 📷 ถังเดียวกับรูป action (policy เดิม) · path kpi-note/
+import { imgExt } from '../utils/resizeImage';
 import { toast } from './Toast';
 import { DeleteButton } from './IconButton';
 
@@ -23,6 +28,7 @@ const fmtWhen = (iso) => (iso ? new Date(iso).toLocaleString('th-TH', { timeZone
 export default function KpiMonthNoteModal({ title, icon, monthText, valueText, notes = [], canEdit, ctx, onClose, onChanged }) {
   const [kind, setKind] = useState('remark');
   const [text, setText] = useState('');
+  const [file, setFile] = useState(null);   // 📷 รูปแนบ (16/11 · user: "add note/remark/action เหมือนยังใส่รูปไม่ได้")
   const [busy, setBusy] = useState(false);
 
   const add = async () => {
@@ -36,7 +42,20 @@ export default function KpiMonthNoteModal({ title, icon, monthText, valueText, n
     setBusy(false);
     if (!checkWrite(res, 'บันทึกหมายเหตุ')) return;
     if (!res.data?.length) { toast.error('บันทึกหมายเหตุไม่สำเร็จ — ไม่มีสิทธิ์ (ต้องมี kpi:manage)'); return; }
-    setText('');
+    /* 📷 แถวเขียนสำเร็จก่อน ค่อยอัปโหลดรูปแล้วผูก URL — รูปล้มข้อความยังอยู่ (บอกตรงๆ ไม่เงียบ) · ผูกไม่ได้ = ลบไฟล์ทิ้ง (กฎ db-write ข้อ 2) */
+    if (file) {
+      const id = res.data[0].id;
+      setBusy(true);
+      try {
+        const blob = await resizeActionImage(file);
+        const url = await uploadActionImg(blob, `kpi-note/${ctx.year}-${String(ctx.month).padStart(2, '0')}-${id}.${imgExt(blob)}`);
+        const ok = checkWriteRows(await supabase.from('kpi_month_notes').update({ image_url: url }).eq('id', id).select('id'), 'แนบรูปหมายเหตุ');
+        if (!ok) removeActionImg(url);
+      } catch (e) {
+        toast.error('บันทึกข้อความแล้ว แต่อัปโหลดรูปไม่สำเร็จ: ' + (e?.message || e));
+      } finally { setBusy(false); }
+    }
+    setText(''); setFile(null);
     toast.success('บันทึกหมายเหตุแล้ว');
     onChanged?.();
   };
@@ -50,9 +69,12 @@ export default function KpiMonthNoteModal({ title, icon, monthText, valueText, n
 
   const box = { background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 10, width: 'min(560px, 100%)', boxShadow: 'var(--shadow-lg)', display: 'flex', flexDirection: 'column', maxHeight: '90vh' };
   const chip = (active, color) => ({ fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 999, cursor: 'pointer', border: `1px solid ${active ? color : 'var(--border2)'}`, background: active ? `${color}22` : 'var(--bg3)', color: active ? color : 'var(--text2)' });
-  return (
+  /* 🔴 portal ใต้ body (16/11 · บั๊กหน้างาน "กดแท่งในกราฟที่ขยายแล้ว popup หมายเหตุไปอยู่หลังกราฟ"):
+     โหมดจอของบอร์ดเป็น position:fixed zIndex 1010 = stacking context ⇒ zIndex 2000 ของ modal นี้ถูกขังอยู่ใต้ 1010
+     ขณะที่ popup 🔍 (SheetZoom) portal ไป body ที่ 1900 ⇒ ซ้อนทับ · portal ออกมาเท่ากันแล้ว 2000 > 1900 จริง */
+  return createPortal(
     <div className="modal-scroll" /* ปิดจาก backdrop ได้เฉพาะตอนยังไม่พิมพ์อะไร (UI-CONVENTIONS §5) */
-      onClick={() => { if (!text.trim()) onClose(); }}
+      onClick={() => { if (!text.trim() && !file) onClose(); }}
       style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14 }}>
       <div style={box} onClick={e => e.stopPropagation()}>
         <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -77,6 +99,12 @@ export default function KpiMonthNoteModal({ title, icon, monthText, valueText, n
                   <div style={{ fontSize: 13.5, color: 'var(--text)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{n.text}</div>
                   <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>{tr(m.label)} · {n.created_by_name || 'ไม่ระบุผู้บันทึก'} · {fmtWhen(n.created_at)}</div>
                 </div>
+                {/* 🔍 กดขยายในแอป (16/11) — เดิมเปิดแท็บใหม่ = หลุดออกจากโมดัลที่กำลังอ่านบันทึก */}
+                {n.image_url && (
+                  <AttachImage url={n.image_url} title={n.text} caption={n.created_by_name || null}
+                    hint={tr('เปิดรูปเต็ม')} style={{ flexShrink: 0 }}
+                    imgStyle={{ width: 84, height: 63, maxHeight: 63, objectFit: 'cover', borderRadius: 'var(--r-xs)', border: '1px solid var(--border2)' }} />
+                )}
                 {canEdit && <DeleteButton onClick={() => remove(n)} title={tr('ลบ')} />}
               </div>
             );
@@ -92,6 +120,8 @@ export default function KpiMonthNoteModal({ title, icon, monthText, valueText, n
             </div>
             <textarea value={text} onChange={e => setText(e.target.value)} rows={3} placeholder={noteKindMeta(kind).hint}
               style={{ width: '100%', resize: 'vertical', fontSize: 13.5 }} />
+            <QualityPhotoField label={tr('รูปแนบ (ไม่บังคับ)')} file={file} onPick={setFile}
+              hint={tr('ถ่ายสิ่งที่เกิดขึ้น/สิ่งที่แก้ไป — เปิดดูตอนนำเสนอได้จากแท่งเดือนนี้')} />
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
               <button onClick={onClose} style={{ fontSize: 13, padding: '6px 12px', borderRadius: 'var(--r-md)', cursor: 'pointer', background: 'var(--bg3)', color: 'var(--text)', border: '1px solid var(--border2)' }}>{tr('ปิด')}</button>
               <button onClick={add} disabled={busy} style={{ fontSize: 13, fontWeight: 700, padding: '6px 14px', borderRadius: 'var(--r-md)', cursor: 'pointer', background: 'var(--accent)', color: 'var(--accent-ink)', border: 'none' }}>{busy ? tr('กำลังบันทึก…') : tr('บันทึก')}</button>
@@ -101,6 +131,7 @@ export default function KpiMonthNoteModal({ title, icon, monthText, valueText, n
           <div style={{ padding: '8px 14px', borderTop: '1px solid var(--border)', fontSize: 11.5, color: 'var(--muted)' }}>{tr('ดูอย่างเดียว — เพิ่ม/ลบหมายเหตุต้องมีสิทธิ์ kpi:manage')}</div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -54,7 +54,7 @@ import { pairAwareTotal, collapseOps } from '../utils/pairTotals';
 import { dtBucketName, buildDtIndex } from '../utils/downtimeCategory';
 import { loadOpInfo, opInfoSync } from '../utils/opItems';
 import { wavg, wLoad, wRun, wProd, isTrialDefect, normOeeTarget, avgOeeTarget, weightedOeeOf, weekOfMonth,
-         buildCtMap, groupLean, dtMinBySession, SIX_BIG_LOSSES, EIGHT_WASTES } from '../utils/oee';
+         buildCtMap, groupLean, dtMinBySession, ppmOf, SIX_BIG_LOSSES, EIGHT_WASTES } from '../utils/oee';
 import { loadAffectsLanes } from '../utils/affectsLanes';
 import { lineCostCenter, rateFor, ratePerHour, RATE_COMPONENTS } from '../utils/costSaving';
 import { fetchByIds } from '../utils/fetchByIds';
@@ -188,12 +188,31 @@ function outputOfSessions(ss, ordersIdx, pairMap) {
   return pairAwareTotal(collapseOps(Object.values(perMat), opInfoSync()), mt => pairMap[mt] || null).produced + nullMat;
 }
 
-/** PPM line-mode: ไม่รวมงานทดลอง (ให้ตรงกับ FTT/PPM ใน /qa และ oee_q ที่ stamp ตอนปิดกะ) */
-function ppmOfSessions(ss, defectsIdx, output) {
+/* ── 🔴🔴 ตัวหารของ PPM ต้องเป็น "ชิ้น" ไม่ใช่ "shot" (แก้ 2026-11-16 · feedback ประชุม 16/11) ──
+   `outputOfSessions` ยุบงานคู่ RH/LH (ปั๊มทีเดียวได้ 2 ชิ้น) เป็น 1 stroke และยุบขั้น OP เข้าพาร์ทจริง
+   = ตัวเลข "Output" ภาพใหญ่ของเด็ค ซึ่ง **เล็กกว่าจำนวนชิ้นจริง** · แต่ของเสียนับเป็นชิ้น
+   ⇒ เอามาเป็นตัวหารของ PPM = ตัวเศษ/ตัวหารคนละหน่วย ⇒ PPM เฟ้อ 1.5–1.8 เท่า **เฉพาะไลน์แม่พิมพ์คู่**
+     (วัดฐานจริง 16/11: HDF1 1,941 → 3,503 · LASER-345 1,900 → 3,410 · HDF2 1,043 → 1,858 ·
+      LASER-789 1,126 → 1,856 · LINE B 600 Ton 21 → 32 — ไลน์ที่ไม่มีคู่ไม่ขยับเลย)
+   🔴 กฎ `pairTotals.js`: **%Q · ยอดผลิต · ของเสีย นับชิ้น ห้ามยุบ · เฉพาะเวลามาตรฐาน %P นับ shot**
+      (KpiMonthly เขียนกฎนี้ไว้ในหัวไฟล์มาตั้งแต่ต้น — ที่นี่พลาดไปที่เดียว)
+   ⇒ ตั้งแต่นี้ `ppmOfSessions` **คิดตัวหารของตัวเอง** จาก `ordersIdx` ห้ามรับ `output` เข้ามาอีก */
+
+/** ยอดผลิต "รายชิ้น" ของชุดกะ — กติกาต่อใบเหมือน `outputOfSessions` แต่ **ไม่ยุบคู่/ไม่ยุบขั้น OP** */
+function goodPiecesOfSessions(ss, ordersIdx) {
+  return rowsOfSessions(ss, ordersIdx).reduce((a, o) => {
+    if (o.status === 'confirmed') return a + (Number(o.qty_ok ?? o.qty) || 0);
+    if (['carry_over', 'imported'].includes(o.status)) return a + (Number(o.qty_actual) || 0);
+    return a;
+  }, 0);
+}
+
+/** PPM line-mode: ไม่รวมงานทดลอง (ให้ตรงกับ FTT/PPM ใน /qa และ oee_q ที่ stamp ตอนปิดกะ)
+ *  สูตร + กฎ "ผลิต 0 = ตอบไม่ได้ (null)" อยู่ที่ `ppmOf` ใน utils/oee.js §7.3 ที่เดียว */
+function ppmOfSessions(ss, defectsIdx, ordersIdx) {
   const ng = rowsOfSessions(ss, defectsIdx).filter(d => !isTrialDefect(d))
     .reduce((a, d) => a + (Number(d.qty_ng) || 0) + (Number(d.qty_suspect) || 0), 0);
-  const base = output + ng;
-  return base > 0 ? Math.round((ng / base) * 1e6) : 0;
+  return ppmOf(ng, goodPiecesOfSessions(ss, ordersIdx));
 }
 
 /** ชั่วโมงหยุดนอกแผน + ประเภทที่หยุดนานสุด + นาทีแยกรายประเภท (ใช้ทำกราฟ DT รายประเภท 12 เดือน) */
@@ -422,7 +441,7 @@ async function buildTrendMonths({ monthKeys, sections, allLineNames, perLine = f
       const agg = aggregateSessions(ss, (id) => plannedBySess[id] || 0, (id) => ngBySess[id] || 0);
       const output = outputOfSessions(ss, ordersIdx, pairMap);
       const dt = dtOfSessions(ss, dtIdx);
-      const base = { monthKey: mk, ...agg, output, dtHr: dt.dtHr, topDt: dt.topDt, ppm: ppmOfSessions(ss, defIdx, output) };
+      const base = { monthKey: mk, ...agg, output, dtHr: dt.dtHr, topDt: dt.topDt, ppm: ppmOfSessions(ss, defIdx, ordersIdx) };
       if (!withDetail) return base;
       // ⚠️ shift ว่าง (null) ถูกนับเป็นกะเช้า — ค่าจริงในระบบมีแค่ 'day'/'night' แต่กันไว้ไม่ให้ยอดหาย
       const day = ss.filter(x => x.shift !== 'night');
@@ -693,7 +712,7 @@ export async function buildMonthlyReviewData({ monthKey, sections, trendMonths =
   const aggSessions = (ss) => aggregateSessions(ss, plannedMinOf, (id) => ngBySession[id] || 0);
   const outputOf = (ss) => outputOfSessions(ss, ordersIdx, pairMap);
   const dtStats = (ss) => dtOfSessions(ss, dtIdx);
-  const ppmOf = (ss, output) => ppmOfSessions(ss, defIdx, output);
+  const ppmOfSess = (ss) => ppmOfSessions(ss, defIdx, ordersIdx);
   const trialQtyOf = (ss) => { // ของเสียงานทดลอง — โชว์แยก ห้ามหายเงียบ (กฎ §7)
     const ids = new Set(ss.map(s => s.id));
     return defects.filter(d => ids.has(d.session_id) && isTrialDefect(d))
@@ -813,7 +832,7 @@ export async function buildMonthlyReviewData({ monthKey, sections, trendMonths =
       const ld = dtStats(ls);
       // byTypeMin/outDay/outNight/defGroups ใช้เฉพาะโหมด full (สไลด์เจาะรายไลน์) — คิดจากชุดเดียวกัน ไม่มีคิวรีเพิ่ม
       return {
-        name: ln, ...la, output: lo, dtHr: ld.dtHr, ppm: ppmOf(ls, lo), dtGroups: dtGroupsOf(ld.unplanned),
+        name: ln, ...la, output: lo, dtHr: ld.dtHr, ppm: ppmOfSess(ls), dtGroups: dtGroupsOf(ld.unplanned),
         byTypeMin: ld.byType, defGroups: defGroupsOf(ls),
         outDay: outputOf(ls.filter(x => x.shift !== 'night')),
         outNight: outputOf(ls.filter(x => x.shift === 'night')),
@@ -889,7 +908,7 @@ export async function buildMonthlyReviewData({ monthKey, sections, trendMonths =
     const photoPairs = photoPairsOf(unplanned);
     imps.forEach(i => { if (i.before || i.after) photoPairs.push({ label: `Kaizen: ${i.title}`.slice(0, 40), before: i.before, after: i.after }); });
     return {
-      code: sec.code, groups: sec.groups || [], ...agg, output, dtHr, ppm: ppmOf(ss, output), trialQty: trialQtyOf(ss),
+      code: sec.code, groups: sec.groups || [], ...agg, output, dtHr, ppm: ppmOfSess(ss), trialQty: trialQtyOf(ss),
       lines, dtGroups: dtGroupsOf(unplanned), defGroups: defGroupsOf(ss),
       fixCov: fixCoverage(unplanned), machineTop: machineStatsOf(unplanned),
       moOpen, act, fourM, imps, photoPairs: photoPairs.slice(0, 3),

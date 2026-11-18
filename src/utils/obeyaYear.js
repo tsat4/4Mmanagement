@@ -18,7 +18,7 @@
    ════════════════════════════════════════════════════════════════════════════════════════ */
 import { round1, statusOf, Q_THIN_DEFECT_ROWS } from './obeyaKpi.js';
 import { scoreDef, summaryOf } from './kpiSetup.js';
-import { DEFAULT_OEE_TARGET, orderPlanQty } from './oee.js';
+import { DEFAULT_OEE_TARGET, orderPlanQty, ppmOf } from './oee.js';
 
 /* ── ช่วงเวลา ─────────────────────────────────────────────────────────────────────── */
 export const MONTH_TH = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
@@ -221,8 +221,9 @@ export function axisPpmYear({ sessions = [], defects = [], year, target = null, 
     const a = map.get(k); a.ng += n(d.ng) - n(d.trial_ng); a.rows += n(d.rows);
   });
   const { series, ytd, total, months } = monthSeries(year, map, seedPpm,
-    /* ยอดผลิต 0 แต่มีของเสีย = ยอดผลิตยังไม่ถูกบันทึก ⇒ null ไม่ใช่ 1,000,000 (UX audit 05/10) */
-    a => (a.qty > 0 ? Math.round((a.ng / (a.qty + a.ng)) * 1e6) : null), 'avg');
+    /* 🔴 สูตรเดียวของระบบ = `ppmOf` (oee.js §7.3) — ยอดผลิต 0 แต่มีของเสีย = ยอดผลิตยังไม่ถูกบันทึก
+       ⇒ null ไม่ใช่ 1,000,000 (UX audit 05/10) · คืนจำนวนเต็มเสมอ (feedback 16/11) */
+    a => ppmOf(a.ng, a.qty), 'avg');
   return {
     key: 'PPM', unit: 'PPM', better: direction === 'up' ? 'up' : 'down', target, months,
     value: ytd, series, summaryKind: 'avg', ngQty: total.ng, qty: total.qty, defectRows: total.rows,

@@ -40,7 +40,14 @@ import { buildBomIndex } from '../utils/bomTree';
 import { notifyEvent } from '../utils/notifyEvent';
 import PageHeader from '../components/PageHeader';
 import Page from '../components/Page';
-import FilterBar from '../components/FilterBar';
+/* ⏱️ C2 (16/11): ตัวกรองช่วงวันที่ = <TimeRangeBar> ตัวกลาง (เดิมช่องวันที่เปล่า ไม่เหมือนแท็บถังที่อยู่ติดกัน) */
+import TimeRangeBar from '../components/TimeRangeBar';
+import useTimeRange from '../utils/useTimeRange';
+import { PointThumb } from '../components/inspect/PointZoom';
+/* 🔎 C4 (16/11): ตัวกรองสถานะ/ไลน์/ค้นหา ของรายการใบ — ของกลางตามมาตรฐานแถบกรอง (UI-STANDARD) */
+import Segmented from '../components/Segmented';
+import SearchInput from '../components/SearchInput';
+import { ALL } from '../utils/filterLabels';
 import { DeleteButton } from '../components/IconButton';
 import { checkWriteRows } from '../utils/dbWrite';   // RLS ปฏิเสธ UPDATE/DELETE = 0 แถวไม่มี error (กฎเขียน DB ข้อ 2)
 import useIsMobile from '../utils/useIsMobile';
@@ -157,8 +164,16 @@ export default function ScrapReport() {
     () => pickerLines(allLines, { role, lineId, sections }),
     [allLines, role, lineId, sections]);
   const [defectTypes, setDefectTypes] = useState([]);
-  const [listFrom, setListFrom] = useState(() => { const d = new Date(); d.setDate(d.getDate() - 30); return localDateStr(d); });
-  const [listTo, setListTo] = useState(getWorkDate());
+  /* ผูกกับ URL `?from=&to=` เหมือนแท็บถัง (UI §6.16) · ไม่ได้แบ่งถังเวลา ⇒ `scales={null}` */
+  const listRange = useTimeRange({ defaultDays: 30 });
+  const { from: listFrom, to: listTo } = listRange;
+  /* 🔎 C4 — กรองรายการใบที่โหลดมาแล้ว (ช่วงวันที่ยังกรองฝั่ง server ตามเดิม) · เป็น state ไม่ขึ้น URL
+     ⇒ ส่ง `onClear` ให้ปุ่มล้างตัวกรองเฉพาะตอนมีตัวกรองค้าง (ปุ่มที่กดแล้วไม่เกิดอะไร = คนเลิกเชื่อปุ่ม) */
+  const [stFilter, setStFilter] = useState('');
+  const [lineFilter, setLineFilter] = useState('');
+  const [q, setQ] = useState('');
+  const clearListFilters = () => { setStFilter(''); setLineFilter(''); setQ(''); };
+  const hasListFilter = !!(stFilter || lineFilter || q.trim());
   const [editor, setEditor] = useState(null); // { report, items } กำลังแก้/สร้าง
   const saveBusyRef = useRef(false); // กันแตะ 💾 เบิ้ล — ครั้งที่ 2 ยังถือ id=null ⇒ ได้หัวใบ+เลขใบซ้ำ 2 ใบ (audit handheld 2026-10-20)
   const [sapPicker, setSapPicker] = useState(null); // { itemKey } | { addSource }
@@ -697,6 +712,28 @@ export default function ScrapReport() {
     if (!ok) toast.error('เบราว์เซอร์บล็อก popup — อนุญาต popup ของเว็บนี้แล้วลองใหม่');
   };
 
+  /* 🔍 C1 (16/11 · คำสั่ง user "นี่บังคับ export pdf ดูอย่างเดียวเลย") — ดูใบในแอปแบบอ่านอย่างเดียว
+     เปิดได้ทุกคนที่เข้าหน้านี้ (ไม่ต้องมี scrap:record) · ไม่เขียน DB · ใบเต็มดึงตอนเปิดทีละใบ (กฎเขียน DB ข้อ 11)
+     stale guard: เปิดใบอื่นเร็วๆ ผลของใบเก่าห้ามทับ (กฎเขียน DB ข้อ 4) */
+  const [viewing, setViewing] = useState(null);   // { rep, full, items, err } | null
+  const viewReq = useRef(0);
+  const openView = async (rep) => {
+    const rid = ++viewReq.current;
+    setViewing({ rep, full: null, items: null, err: '' });
+    const [{ data: full, error: fErr }, { data: items, error: iErr }] = await Promise.all([
+      supabaseDR.from('scrap_reports')
+        .select('id, doc_no, report_date, line_name, section, dept, storage_location, product_categories, status, created_by')
+        .eq('id', rep.id).maybeSingle(),
+      supabaseDR.from('scrap_report_items')
+        .select('id, seq, source, part_no, part_name, mat_no, model, code, bom_ref, qty, m_cause, stage, confirm_qty, defect_codes, defect_img, src_bin_id')
+        .eq('report_id', rep.id).order('seq'),
+    ]);
+    if (rid !== viewReq.current) return;
+    const err = fErr?.message || iErr?.message || (!full ? 'ไม่พบใบนี้ (อาจถูกลบไปแล้ว)' : '');
+    setViewing({ rep, full: full || null, items: items || [], err });
+  };
+  const closeView = () => { viewReq.current++; setViewing(null); };
+
   const isMobile = useIsMobile();
   /* 📱 มือถือ: ปิดใบที่แก้แล้วยังไม่บันทึก = ถามก่อน (22/10 · audit handheld ข้อ 4) — เดิม ✕/ยกเลิก ทิ้งทั้งใบเงียบๆ
      ทั้งที่แตะพลาดง่ายบนจอ 360px · เทียบกับภาพตอนเปิดใบ (ไฟล์รูปที่ยังไม่อัปนับด้วย) · จอคอมปิดทันทีเหมือนเดิม */
@@ -712,9 +749,14 @@ export default function ScrapReport() {
     setEditor(null);
   };
   const STATUS_META = { draft: { label: 'ร่าง', color: '#6b7280' }, submitted: { label: 'ส่งอนุมัติ', color: '#f59e0b' }, approved: { label: 'อนุมัติแล้ว', color: '#22c55e' } };
+  /* รายการที่ผ่านตัวกรอง C4 — ไลน์เทียบชื่อตรงตัว (ตัวเลือกมาจากทะเบียนไลน์เดียวกับที่เขียนลงใบ) */
+  const ql = q.trim().toLowerCase();
+  const shown = reports.filter(rep => (!stFilter || rep.status === stFilter)
+    && (!lineFilter || rep.line_name === lineFilter)
+    && (!ql || [rep.doc_no, rep.line_name].some(v => String(v || '').toLowerCase().includes(ql))));
 
   return (
-    <Page>
+    <Page className="scrap-page">
       <ReadOnlyNote show={!canRecord} role={role} what="สร้าง/แก้ใบรายงานของเสีย"
         permKey="scrap:record" hint={tr('ยังเปิดดูใบเดิม พิมพ์ และ export Excel ได้ตามปกติ')} />
       <PageHeader title={tr('ของเสีย — ใบรายงาน & ถังเหลือง/แดง')} icon="♻️"
@@ -728,14 +770,24 @@ export default function ScrapReport() {
       {tab === 'bins' ? <QualityBins mode="full" /> : (<>
 
       {/* UI-STANDARD 2026-09-24: แถบกรองมาตรฐาน (ไม่ใส่ขนาด inline ในช่อง) */}
-      <FilterBar style={{ marginBottom: 14 }}>
-        <span className="filter-label">{tr('ช่วง')}</span>
-        <input type="date" value={listFrom} max={listTo} onChange={e => setListFrom(e.target.value)} />
-        <span className="filter-label">{tr('ถึง')}</span>
-        <input type="date" value={listTo} min={listFrom} onChange={e => setListTo(e.target.value)} />
+      <TimeRangeBar
+        scale={listRange.scale} from={listFrom} to={listTo} today={listRange.today} scales={null}
+        onFrom={listRange.setFrom} onTo={listRange.setTo} onPreset={listRange.setPreset} style={{ marginBottom: 8 }}
+        onClear={hasListFilter ? clearListFilters : undefined}
+      >
+        <Segmented label={tr('สถานะ')} value={stFilter} onChange={setStFilter}
+          options={[{ value: '', label: ALL.status }, ...Object.entries(STATUS_META).map(([v, m]) => ({ value: v, label: tr(m.label) }))]} />
+        <LineSelect lines={lines} value={lineFilter} onChange={setLineFilter} placeholder={ALL.line} />
+        <SearchInput value={q} onChange={setQ} fields="เลขที่ / ไลน์" />
         <span className="spacer" />
         {canRecord && <button style={btnSt()} onClick={openNew}>{tr('+ เปิดใบใหม่')}</button>}
-      </FilterBar>
+      </TimeRangeBar>
+      {/* 🔴 กรองแล้วต้องบอกว่าซ่อนกี่ใบ (กฎความซื่อสัตย์ของจอ) */}
+      <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 10 }}>
+        {hasListFilter
+          ? <>{tr('แสดง')} {shown.length} {tr('จาก')} {reports.length} {tr('ใบ')} · {tr('ซ่อนตามตัวกรอง')} {reports.length - shown.length} {tr('ใบ')}</>
+          : <>{reports.length} {tr('ใบในช่วงที่เลือก')}</>}
+      </div>
 
       {/* 🔴 ตัดขอบเขตไม่ชัด = เขียนบนจอ ห้ามปล่อยให้คนเข้าใจว่ารายการที่เห็นคือทั้งหมดของเขา
           (ของกลาง `lineScope()` บอกเองผ่าน `unsure` + `reason`) */}
@@ -753,7 +805,7 @@ export default function ScrapReport() {
           ต้องปัดตารางไปขวาถึงจะเจอ (ไม่มีอะไรบอกว่าปัดได้) ⇒ เปิดใบแก้ไม่ได้ในทางปฏิบัติ · 15/10 */}
       {isMobile ? (
         <div className="sr-cards">
-          {reports.map(rep => {
+          {shown.map(rep => {
             const sm = STATUS_META[rep.status];
             return (
               <div key={rep.id} className="sr-card">
@@ -764,6 +816,7 @@ export default function ScrapReport() {
                 <div className="sr-line">{rep.line_name || '—'} · {fmtD(rep.report_date)}</div>
                 <div className="sr-sum"><ItemCount reportId={rep.id} /> {tr('· ของเสีย')} <ScrapSum reportId={rep.id} /></div>
                 <div className="sr-acts">
+                  <button className={canRecord ? undefined : 'sr-main'} onClick={() => openView(rep)}>{tr('ดูใบ')}</button>
                   {canRecord && <button className="sr-main" onClick={() => openEdit(rep)}>{tr('เปิด/แก้ใบ')}</button>}
                   <button onClick={() => doPrint(rep)}>PDF</button>
                   <button onClick={() => doExport(rep)}>Excel</button>
@@ -772,13 +825,16 @@ export default function ScrapReport() {
               </div>
             );
           })}
+          {reports.length > 0 && shown.length === 0 && (
+            <div style={{ ...cardSt, fontSize: 13, color: 'var(--muted)' }}>{tr('ไม่มีใบตรงตัวกรอง')} — {tr('ซ่อนไว้')} {reports.length} {tr('ใบ')} · {tr('กด 🧹 บนแถบกรองเพื่อดูทั้งหมด')}</div>
+          )}
           {reports.length === 0 && (
             <div style={{ ...cardSt, fontSize: 13 }}>
               {listErr ? <span style={{ color: 'var(--red)', fontWeight: 700 }}>{tr('⚠️ โหลดรายการไม่สำเร็จ:')} {listErr} — ไม่ใช่ "ไม่มีใบ" ให้ลองใหม่อีกครั้ง</span>
                 : outside ? (
                   <span style={{ color: 'var(--text2)' }}>
                     ไม่มีใบในช่วงนี้ — แต่<b>{tr('มีใบอยู่นอกช่วง')}</b> {tr('ล่าสุด')} <b style={{ color: 'var(--accent)' }}>{outside.latest}</b>{' '}
-                    <button onClick={() => { setListFrom(outside.latest); setListTo(getWorkDate()); }}
+                    <button onClick={() => listRange.setView({ from: outside.latest, to: getWorkDate() })}
                       style={{ marginTop: 6, fontSize: 13, fontWeight: 800, padding: '8px 12px', borderRadius: 'var(--r-md)', cursor: 'pointer',
                         background: 'rgba(61,214,92,0.12)', color: 'var(--accent)', border: '1px solid rgba(61,214,92,0.45)', fontFamily: 'var(--font-body)' }}>
                       {tr('ขยายช่วงไปถึงวันนั้น')}
@@ -797,18 +853,19 @@ export default function ScrapReport() {
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>
           <thead><tr>
             <th style={thSt}>{tr('เลขที่')}</th><th style={thSt}>{tr('วันที่')}</th><th style={thSt}>{tr('ไลน์')}</th>
-            <th style={thSt}>{tr('รายการ')}</th><th style={thSt}>{tr('รวมของเสีย')}</th><th style={thSt}>{tr('สถานะ')}</th><th style={thSt}></th>
+            <th style={thSt}>{tr('รายการ')}</th><th style={thSt}>{tr('รวมของเสีย')}</th><th style={thSt}>{tr('สถานะ')}</th><th style={thSt}>{tr('ดู / ส่งออก / แก้ไข')}</th>
           </tr></thead>
           <tbody>
-            {reports.map(rep => (
-              <tr key={rep.id}>
+            {shown.map(rep => (
+              <tr key={rep.id} className="qb-row" onClick={() => openView(rep)} title={tr('แตะเพื่อดูใบ')} style={{ cursor: 'pointer' }}>
                 <td style={{ ...tdSt, fontWeight: 700, whiteSpace: 'nowrap' }}>{rep.doc_no || '—'}</td>
                 <td style={{ ...tdSt, whiteSpace: 'nowrap' }}>{fmtD(rep.report_date)}</td>
                 <td style={tdSt}>{rep.line_name || '—'}</td>
                 <td style={tdSt}><ItemCount reportId={rep.id} /></td>
                 <td style={tdSt}><ScrapSum reportId={rep.id} /></td>
                 <td style={tdSt}><span style={{ fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 'var(--r-pill)', color: STATUS_META[rep.status]?.color, background: `${tint(STATUS_META[rep.status]?.color, 'dim')}`, border: `1px solid ${tint(STATUS_META[rep.status]?.color, 'line')}` }}>{tr(STATUS_META[rep.status]?.label) || rep.status}</span></td>
-                <td style={{ ...tdSt, whiteSpace: 'nowrap' }}>
+                <td style={{ ...tdSt, whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
+                  <button className="tbtn" style={{ ...ghostBtn, padding: '4px 10px', marginRight: 4 }} onClick={() => openView(rep)}>{tr('🔍 ดูใบ')}</button>
                   <button className="tbtn" style={{ ...ghostBtn, padding: '4px 10px' }} onClick={() => doPrint(rep)}>PDF</button>
                   <button className="tbtn" style={{ ...ghostBtn, padding: '4px 10px', marginLeft: 4 }} onClick={() => doExport(rep)}>Excel</button>
                   {canRecord && <button className="tbtn" style={{ ...ghostBtn, padding: '4px 10px', marginLeft: 4 }} onClick={() => openEdit(rep)}>✏️</button>}
@@ -816,6 +873,11 @@ export default function ScrapReport() {
                 </td>
               </tr>
             ))}
+            {reports.length > 0 && shown.length === 0 && (
+              <tr><td style={{ ...tdSt, color: 'var(--muted)' }} colSpan={7}>
+                {tr('ไม่มีใบตรงตัวกรอง')} — {tr('ซ่อนไว้')} {reports.length} {tr('ใบ')} · {tr('กด 🧹 บนแถบกรองเพื่อดูทั้งหมด')}
+              </td></tr>
+            )}
             {reports.length === 0 && (
               <tr><td style={tdSt} colSpan={7}>
                 {listErr ? (
@@ -823,7 +885,7 @@ export default function ScrapReport() {
                 ) : outside ? (
                   <span style={{ color: 'var(--text2)' }}>
                     ไม่มีใบในช่วงนี้ — แต่<b>{tr('มีใบอยู่นอกช่วง')}</b> {tr('ล่าสุด')} <b style={{ color: 'var(--accent)' }}>{outside.latest}</b>{' '}
-                    <button onClick={() => { setListFrom(outside.latest); setListTo(getWorkDate()); }}
+                    <button onClick={() => listRange.setView({ from: outside.latest, to: getWorkDate() })}
                       style={{ marginLeft: 6, fontSize: 12, fontWeight: 800, padding: '3px 10px', borderRadius: 'var(--r-md)', cursor: 'pointer',
                         background: 'rgba(61,214,92,0.12)', color: 'var(--accent)', border: '1px solid rgba(61,214,92,0.45)', fontFamily: 'var(--font-body)' }}>
                       {tr('ขยายช่วงไปถึงวันนั้น')}
@@ -841,6 +903,81 @@ export default function ScrapReport() {
           </tbody>
         </table>
       </div>
+      )}
+
+      {viewing && (
+        <Modal title={`🔍 ${tr('ใบรายงานของเสีย')} ${viewing.rep.doc_no || ''}`} onClose={closeView} width={1180}>
+          {viewing.err ? (
+            <div style={{ color: 'var(--red)', fontWeight: 700, fontSize: 13 }}>⚠️ {tr('เปิดใบไม่สำเร็จ:')} {viewing.err}</div>
+          ) : !viewing.full ? (
+            <div style={{ color: 'var(--muted)', fontSize: 13 }}>{tr('กำลังโหลด…')}</div>
+          ) : (() => {
+            const f = viewing.full;
+            const its = viewing.items || [];
+            const sumQty = its.reduce((a, x) => a + (Number(x.qty) || 0), 0);
+            const sumConf = its.reduce((a, x) => a + (Number(x.confirm_qty) || 0), 0);
+            const mLbl = Object.fromEntries(M_OPTS);
+            const stLbl = Object.fromEntries(STAGE_OPTS);
+            const catLbl = Object.fromEntries(CAT_OPTS);
+            const sm = STATUS_META[f.status];
+            const flow = scrapReportFlow(f);
+            const KV = ({ k, v }) => (
+              <div><div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{tr(k)}</div><div style={{ fontSize: 13.5, fontWeight: 700 }}>{v || '—'}</div></div>
+            );
+            return (<>
+              <div style={{ marginBottom: 12 }}><StepFlow steps={flow.steps} waiting={flow.waiting} unknown={!flow.known} /></div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, marginBottom: 14, alignContent: 'start' }}>
+                <KV k="วันที่" v={fmtD(f.report_date)} />
+                <KV k="ไลน์" v={f.line_name} />
+                <KV k="ส่วน / แผนก" v={[f.section, f.dept].filter(Boolean).join(' / ')} />
+                <KV k="Storage Location" v={f.storage_location} />
+                <KV k="ประเภทชิ้นงาน" v={(f.product_categories || []).map(c => catLbl[c] || c).join(', ')} />
+                <KV k="ผู้เปิดใบ" v={f.created_by} />
+                <div><div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{tr('สถานะ')}</div>
+                  <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 9px', borderRadius: 'var(--r-pill)', color: sm?.color, background: `${tint(sm?.color, 'dim')}`, border: `1px solid ${tint(sm?.color, 'line')}` }}>{tr(sm?.label) || f.status || '—'}</span></div>
+              </div>
+              {/* ปุ่มอยู่บนตาราง — ใบยาวไม่ต้องเลื่อนลงไปหา */}
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap', marginBottom: 12 }}>
+                <button style={ghostBtn} onClick={() => doPrint(viewing.rep)}>PDF</button>
+                <button style={ghostBtn} onClick={() => doExport(viewing.rep)}>Excel</button>
+                {canRecord && <button style={btnSt()} onClick={() => { const r = viewing.rep; closeView(); openEdit(r); }}>✏️ {tr('แก้ไขใบนี้')}</button>}
+              </div>
+              <div style={{ fontWeight: 800, fontSize: 13.5, marginBottom: 6 }}>
+                {tr('รายการของเสีย')} ({its.length}) · {tr('รวม')} <span style={{ color: 'var(--red)' }}>{sumQty.toLocaleString()}</span>
+                {sumConf ? <span style={{ color: 'var(--muted)', fontWeight: 600 }}> · {tr('ยืนยัน')} {sumConf.toLocaleString()}</span> : null}
+              </div>
+              <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 820 }}>
+                  <thead><tr>
+                    {['#', 'รูป', 'ชิ้นงาน', 'Code', 'จำนวน', 'ยืนยัน', 'สาเหตุ (4M)', 'ช่วง', 'รหัสงานเสีย'].map(h => <th key={h} style={thSt}>{tr(h)}</th>)}
+                  </tr></thead>
+                  <tbody>
+                    {its.map((it, i) => (
+                      <tr key={it.id}>
+                        <td style={tdSt}>{it.seq ?? i + 1}</td>
+                        <td style={tdSt}>{it.defect_img
+                          ? <PointThumb url={it.defect_img} height={48} name={it.part_name || it.part_no || ''} />
+                          : <span style={{ fontSize: 11, color: 'var(--muted)' }}>—</span>}</td>
+                        <td style={tdSt}>
+                          <div style={{ fontWeight: 700 }}>{it.part_name || '—'}</div>
+                          <div style={{ fontSize: 11, color: 'var(--muted)' }}>{[it.part_no, it.mat_no, it.model].filter(Boolean).join(' · ')}</div>
+                          {it.src_bin_id && <div style={{ fontSize: 11, color: 'var(--red)' }}>{tr('🔴 ดึงจากถังแดง')}</div>}
+                        </td>
+                        <td style={tdSt}>{it.code || '—'}</td>
+                        <td style={{ ...tdSt, fontWeight: 800, color: 'var(--red)' }}>{Number(it.qty || 0).toLocaleString()}</td>
+                        <td style={tdSt}>{it.confirm_qty ?? '—'}</td>
+                        <td style={tdSt}>{mLbl[it.m_cause] ? tr(mLbl[it.m_cause]) : (it.m_cause || '—')}</td>
+                        <td style={tdSt}>{stLbl[it.stage] ? tr(stLbl[it.stage]) : (it.stage || '—')}</td>
+                        <td style={tdSt}>{it.defect_codes || '—'}</td>
+                      </tr>
+                    ))}
+                    {its.length === 0 && <tr><td colSpan={9} style={{ ...tdSt, color: 'var(--muted)', textAlign: 'center' }}>{tr('ใบนี้ยังไม่มีรายการ')}</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </>);
+          })()}
+        </Modal>
       )}
 
       {editor && (

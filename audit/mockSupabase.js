@@ -257,6 +257,19 @@ const AM_TARGET = {
 const AM_INSP = { 2: 'fail', 5: 'pending', 8: 'pending', 12: 'pending', 13: 'pending', 14: 'pending' }
 
 const TABLE_ROWS = {
+  /* 📈 SPC จากใบตรวจ (13/11 · ห้ามถอด) — เดิมแถวกลางไม่มี `qa_parts` embed / `values_json`
+     ⇒ แท็บ SPC "จากใบตรวจ" เดินแต่สาขา "ชิ้นงานนี้ยังไม่มีจุดวัดค่า" · ตารางสรุปจุด/กราฟ I-MR ไม่เคยถูกรัน
+     รูปทรง = ของจริง: จุด variable ผูกพาร์ท · ผล 1 แถว = 1 รอบ × 1 จุด · มีค่าหลุด spec 1 ค่า + จุดที่กด "ข้าม" */
+  qa_inspection_items: (r, i) => isNullish(r) ? r : ({
+    ...r, id: `id-${i}`, part_id: i % 2 ? 'id-1' : 'id-2', item_type: 'variable', balloon_no: String(i),
+    characteristic: `ระยะรู ${i}`, unit: 'mm', nominal: 10, lsl: 9.9, usl: 10.1, is_active: true, calc: null,
+    qa_parts: { part_no: i % 2 ? 'P-TEST-001' : 'P-TEST-002', part_name: 'พาร์ททดสอบ', line_name: LINE_NAME(1) },
+  }),
+  qa_inspection_results: (r, i) => ({
+    ...r, item_id: `id-${(i % 5) * 2 + 1}`, item_type: 'variable', judgement: i === 4 ? 'na' : 'ok',
+    values_json: isNullish(r) ? null : [i === 9 ? 10.2 : 10 + ((i % 7) - 3) * 0.02],
+    qa_inspection_sheets: { part_id: 'id-1', work_date: _recentDay(i % 10), shift: i % 2 ? 'day' : 'night', round_no: (i % 3) + 1, inspector_name: 'QA ทดสอบ' },
+  }),
   /* 🔨 ผังจัดเก็บแม่พิมพ์ — ชื่อต้องไม่ชนชื่อไลน์ (2026-10-16 · ห้ามถอด)
      เดิมได้ `name` = LINE_NAME(i) เหมือนไลน์ผลิต ⇒ FactoryMap `openLine()` เข้าใจว่าทุกกรอบเป็นโซนแม่พิมพ์
      แล้ว navigate ทิ้ง ⇒ **กล่องรายละเอียดไลน์ (story modal) ไม่เคยถูกเรนเดอร์ใน harness เลย** */
@@ -686,6 +699,14 @@ const TABLE_ROWS = {
     hour_at: isNullish(r) ? null : new Date(Date.now() - (i + 1) * 3600000).toISOString(),
     qty: 40 + i, ng: i % 2, minutes: 60,
   }),
+  fn_machine_shift_facts: (r, i) => ({
+    ...r, machine_tag: `JTSRA03-0${(i % 4) + 1}`, work_date: '2026-11-13', shift: i % 2 ? 'night' : 'day',
+    state: ['fault', 'idle', 'planned_stop', 'no_plan', 'unplanned'][i % 5], is_minor: i % 3 === 0, sec: 300 + i * 10, n: 1 + (i % 4),
+  }),
+  machine_live_state: (r, i) => ({
+    ...r, machine_tag: `JTSRA03-0${(i % 4) + 1}`, state_code: i % 5, state_text: i % 2 ? 'รองาน/Idle' : 'เดินเครื่อง',
+    since: new Date(Date.now() - (i + 1) * 60000).toISOString(), alarm_text: i % 3 ? null : 'None', received_at: new Date(Date.now() - (i % 2 ? 30000 : 600000)).toISOString(),
+  }),
   machine_reason_map: (r, i) => ({ ...r, reason_kind: i % 2 ? 'onplan' : 'unplan', reason_code: i % 4, downtime_type_id: i % 3 ? `id-${i}` : null }),
 
   v_demand_flow_blocks: (r, i) => ({
@@ -978,6 +999,17 @@ const TABLE_FIXED = {
         { key: 'from_vendor', label: 'รับคืนจากชุบ', kind: 'input' },
         { key: 'at_vendor', label: 'ค้างที่ร้านชุบ', kind: 'recur', recur: 'สูตรที่ยังไม่มี' },
       ] },
+    /* 🏬 บอร์ดสโตร์ (16/11) — start_date ว่าง = หน้าต่างเลื่อนตามวันนี้ · ไม่มี FC/SL · แถว รับ/จ่าย/คงเหลือ/SAP/Diff */
+    { id: 'mon-store', board_key: 'store-s407', name: 'S407 · พื้นที่สโตร์ภายนอก (Purchase part)', kind: 'st_purchase',
+      line_name: 'STORE', customer: null, period_kind: 'day', period_count: 22,
+      start_date: null, sl_row: 'out', sl_includes_seed: false, sort_order: 2, note: null,
+      rows: [
+        { key: 'in', label: 'รับ', kind: 'system' },
+        { key: 'out', label: 'จ่าย', kind: 'system' },
+        { key: 'balance', label: 'คงเหลือ', kind: 'recur', recur: 'stock_run' },
+        { key: 'sap', label: 'SAP', kind: 'input' },
+        { key: 'diff', label: 'Diff (SAP − คงเหลือ)', kind: 'recur', recur: 'sap_diff' },
+      ] },
   ],
   /* พาร์ท: mp-1 ใส่ยอดยกมาครบ · mp-2 **ไม่ใส่** (ต้องขึ้นแถบ "ยังไม่ใส่ยอดยกมา") ·
      mp-3 ไม่มีเลข MAT ในทะเบียนสินค้า (ต้องขึ้นป้าย "ยังไม่อยู่ในทะเบียนสินค้า") */
@@ -1006,6 +1038,12 @@ const TABLE_FIXED = {
       model: null, raw_mat: null, process: null, rack: null, lot_qty: null, packing: null, cost: null,
       ct_sec: null, fc: null, pieces_per_shot: 2, kg_per_piece: 0.148, spec: 'WSS-M1A365-A11 1.40 X 187 X COIL',
       semi_part: 'GST FRT FNDR APR LH', sort_order: 1, note: null, is_active: true },
+    { id: 'mp-st1', board_id: 'mon-store', mat_no: '30047784', part_no: null, part_name: 'N1WB-E286F72-AC',
+      model: null, raw_mat: null, process: null, rack: null, lot_qty: null, packing: 300, cost: null,
+      ct_sec: null, fc: null, pieces_per_shot: null, kg_per_piece: null, spec: null, semi_part: null, sort_order: 1, note: null, is_active: true },
+    { id: 'mp-st2', board_id: 'mon-store', mat_no: '30047785', part_no: null, part_name: 'N1WB-E286F73-AC',
+      model: null, raw_mat: null, process: null, rack: null, lot_qty: null, packing: 300, cost: null,
+      ct_sec: null, fc: null, pieces_per_shot: null, kg_per_piece: null, spec: null, semi_part: null, sort_order: 2, note: null, is_active: true },
     { id: 'mp-6', board_id: 'mon-bad', mat_no: '20066542', part_no: 'R1WB-17K824-AAW', part_name: null,
       model: null, raw_mat: null, process: null, rack: null, lot_qty: null, packing: null, cost: null,
       ct_sec: null, fc: 3383.6, pieces_per_shot: null, kg_per_piece: null, spec: null, semi_part: null,

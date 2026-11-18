@@ -2,6 +2,7 @@ import { useState, useEffect, useContext, useMemo, useCallback } from 'react';
 import { useObjectUrl } from '../utils/useObjectUrl';
 import resizeImg from '../utils/resizeImage';
 import ReadOnlyNote from '../components/ReadOnlyNote';
+import { AttachImage } from '../components/ImageLightbox';   // 🔍 รูปแนบกดขยายในแอป (ห้าม window.open)
 import { supabase, supabaseDR } from '../supabaseClient';
 import { UserContext } from '../App';
 import { toast } from '../components/Toast';
@@ -1102,11 +1103,18 @@ export default function Improvements() {
                 {/* before/after images */}
                 {(imp.image_before_url || imp.image_after_url) && (
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 10 }}>
-                    {[['image_before_url', 'ก่อนแก้ไข'], ['image_after_url', 'หลังแก้ไข']].map(([f, label]) => (
+                    {/* 🔍 กดขยายในแอป + เลื่อน ← → เทียบก่อน/หลังได้ (16/11 · ของกลาง ImageLightbox)
+                        เดิม `window.open(url, '_blank')` = เด้งออกจากหน้า + ตัวบล็อกป็อปอัปกินได้เงียบๆ */}
+                    {[['image_before_url', 'ก่อนแก้ไข'], ['image_after_url', 'หลังแก้ไข']].map(([f, label], iImg) => (
                       <div key={f}>
                         <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', marginBottom: 3 }}>{label}</div>
                         {imp[f]
-                          ? <img src={imp[f]} alt={label} loading="lazy" style={{ width: '100%', height: 110, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border)', cursor: 'pointer' }} onClick={() => window.open(imp[f], '_blank')} />
+                          ? <AttachImage url={imp[f]} alt={label} title={tr(label)} caption={imp.title || null}
+                              items={[[imp.image_before_url, 'ก่อนแก้ไข'], [imp.image_after_url, 'หลังแก้ไข']]
+                                .filter(([u]) => u).map(([url, t]) => ({ url, title: tr(t), caption: imp.title || null }))}
+                              index={iImg && imp.image_before_url ? 1 : 0}
+                              style={{ width: '100%' }}
+                              imgStyle={{ width: '100%', height: 110, maxHeight: 110, objectFit: 'cover', borderRadius: 8 }} />
                           : <div style={{ width: '100%', height: 110, borderRadius: 'var(--r-md)', border: '1px dashed var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--muted)' }}>{tr('ยังไม่มีรูป')}</div>}
                       </div>
                     ))}
@@ -1553,8 +1561,11 @@ export default function Improvements() {
                     ['after', 'รูปหลังแก้ไข', afterPreview, setAfterFile, modal.image_after_url]].map(([key, label, preview, setFile, existing]) => (
                     <div key={key}>
                       <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', marginBottom: 4 }}>{label}</div>
+                      {/* 🔍 รูปที่แนบอยู่กดขยายดูได้ก่อนตัดสินใจเปลี่ยน (16/11) */}
                       {(preview || existing) && (
-                        <img src={preview || existing} alt={label} style={{ width: '100%', height: 100, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border)', marginBottom: 4 }} />
+                        <AttachImage url={preview || existing} alt={label} title={tr(label)} lazy={false}
+                          style={{ width: '100%', marginBottom: 4 }}
+                          imgStyle={{ width: '100%', height: 100, maxHeight: 100, objectFit: 'cover', borderRadius: 8 }} />
                       )}
                       {/* reset value เสมอ — เลือกไฟล์เดิมซ้ำแล้ว change ไม่ยิง (เคสหน้างาน: ลองแนบรูปเดิมหลังล้มแล้วเงียบ) */}
                       <input type="file" accept="image/*" onChange={async e => { const p = e.target.files?.[0]; e.target.value = ''; const f = await acceptImageFile(p); if (f) setFile(f); }} style={{ fontSize: 11 }} />

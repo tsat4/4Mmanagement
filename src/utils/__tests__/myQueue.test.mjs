@@ -66,9 +66,12 @@ test('🔴 moWaitingOn — ขั้นที่รอ "ตำแหน่ง" �
   }
 });
 
-test('moWaitingOn — ใบปิด/ตีกลับ (ไม่อยู่ในลูป) คืน meta = null', () => {
+test('moWaitingOn — ใบที่ "ไม่มีใครต้องทำต่อ" คืน meta = null', () => {
   assert.equal(moWaitingOn(mo({ status: 'closed', current_step: 7 })).meta, null);
-  assert.equal(moWaitingOn(mo({ status: 'returned', current_step: 1 })).meta, null);
+  /* 🔄 **แก้เทสนี้ 16/11 (คำสั่ง user)** — เดิมบรรทัดนี้ล็อกว่าใบ `returned` ต้องคืน null ด้วย
+     ซึ่งคือพฤติกรรมที่ทำให้ใบตีกลับหลุดจากคิวทุกชั้น (9 ใบ เก่าสุด 52 วัน · วัด 13/11)
+     ตอนนี้ใบตีกลับมีเจ้าภาพ = ผู้แจ้ง (ดูหมวด "ใบนอกลูปขั้น" ท้ายไฟล์) */
+  assert.ok(moWaitingOn(mo({ status: 'returned', current_step: 1 })).meta, 'ใบตีกลับต้องมีเจ้าภาพแล้ว');
 });
 
 test('🔴 moWaitingOn — ขั้นรอ = ขั้น "ถัดไป" จาก status ไม่ใช่ current_step (workflow audit 05/10)', () => {
@@ -629,4 +632,113 @@ test('🔴 ถังแดงยังไม่ออกใบ → ชั้น 
   assert.equal(q.mine.some(x => x.key === 'binred_unit'), false);
   assert.equal(bq({}, me, now).missing.includes('redBins'), false);
   assert.ok(bq({ redBins: null }, me, now).missing.includes('redBins'));
+});
+
+test('📐 RFQ รอ IEC ประเมิน (เฟส 2a) — เข้าชั้น unit เฉพาะคนมีสิทธิ์ rfq:assess · ไม่ผ่าน keep (ไม่มีส่วนงาน) · ไม่ขึ้น badge · ไม่ส่ง = ไม่ partial', () => {
+  const now = new Date('2026-11-13T03:00:00Z');
+  const src = { mo: [], moAll: [], sessions: [], fourM: [], actions: [], summaries: [], bins: [], redBins: [],
+    rfqAssess: [{ id: 'a1', rfq_id: 'r1', round: 2, requested_at: '2026-11-10', rfq_no: 'RFQ-2026-003', customer: 'FORD', model: 'P703', priority: 'urgent' }] };
+  const q = buildQueue(src, { sections: ['PD1'], canRfqAssess: true }, now);
+  const it = q.unit.find(x => x.key === 'rfqassess:a1');
+  assert.ok(it, 'ต้องอยู่ชั้น unit'); assert.equal(it.to, '/rfq?rfq=r1'); assert.match(it.detail, /รอบ 2/); assert.equal(it.tag, '🔴 ด่วน');
+  assert.equal(it.age, 3);
+  assert.equal(q.mine.some(x => x.key === 'rfqassess:a1'), false, 'ห้ามขึ้น mine/badge');
+  // ไม่มีสิทธิ์ = ไม่โหลด = ไม่ต้องติด partial
+  const q2 = buildQueue({ ...src, rfqAssess: undefined }, { sections: [], canRfqAssess: false }, now);
+  assert.equal(q2.unit.some(x => x.key.startsWith('rfqassess:')), false);
+  assert.equal(q2.missing.includes('rfqAssess'), false);
+  // มีสิทธิ์แต่โหลดล่ม = partial (ห้ามเงียบ)
+  const q3 = buildQueue({ ...src, rfqAssess: undefined }, { sections: [], canRfqAssess: true }, now);
+  assert.ok(q3.missing.includes('rfqAssess'));
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   👥 ใบที่มอบหมายช่างหลายคน + ↩️📤 ใบนอกลูปขั้น            2026-11-16 · คำสั่ง user
+   ตัวเลขในหมวดนี้ถอดจาก DR จริง 13/11: ใบขั้น 3 เปิดอยู่ 32 ใบ — มอบหมาย ≥2 คน **21 ใบ**
+   · `tech_main_uid` ว่างทั้ง 32 ใบ · ใบ `returned` 9 ใบ เก่าสุด 52 วัน
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/** src ที่ "โหลดครบทุกก้อน" — จำเป็นเมื่อทดสอบ badge (ขาดก้อนใด = `partial` = badgeCount คืน 0 ตามกฎ) */
+const whole = (rows) => ({ mo: rows, sessions: [], fourM: [], actions: [], bins: [] });
+
+/** ใบขั้น 3 (ช่างรับงานแล้ว) — ฟอร์ม JIG/DIE · `accept_at` ให้ stage เป็น service */
+const svc = (o) => mo({ status: 'assigned', current_step: 2, accept_at: '2026-11-04T01:00:00Z', ...o });
+
+test('ช่าง 2 คน — ใบต้องขึ้น mine ของ "ทั้งคู่" (เดิมไม่ขึ้นของใครเลย)', () => {
+  const row = svc({
+    assigned_to: 'นายวัชระ  ใจนิ่ม, นายสหพลล์  แสงชา',
+    assigned_techs: ['นายวัชระ  ใจนิ่ม', 'นายสหพลล์  แสงชา'],
+    tech_main: null, tech_main_uid: null,
+  });
+  const w = moWaitingOn(row);
+  assert.equal(w.meta.stage, 'service');
+  assert.equal(w.byName, true);
+  // 🔴 `who` (ตัวที่เอาไปโชว์) ต้องคงรูปเดิมเป๊ะ — จอห้ามเปลี่ยน
+  assert.equal(w.who.name, 'นายวัชระ  ใจนิ่ม, นายสหพลล์  แสงชา');
+  for (const nm of ['วัชระ  ใจนิ่ม', 'นายสหพลล์ แสงชา']) {
+    const q = buildQueue(whole([row]), { uid: 'u1', name: nm, sections: ['PD3'] }, NOW);
+    assert.equal(q.mine.length, 1, `${nm} ต้องเห็นใบนี้ใน mine`);
+    assert.equal(q.partial, false, 'src ครบ = ห้ามติด partial (ไม่งั้น badge คืน 0 โดยถูกต้อง)');
+    assert.equal(badgeCount(q), 1);
+  }
+  // คนอื่นในส่วนงานเดียวกันยังเป็นคิวหน่วยงาน ไม่ใช่ของเรา
+  const other = buildQueue({ mo: [row] }, { uid: 'u9', name: 'คนอื่น ไม่เกี่ยว', sections: ['PD3'] }, NOW);
+  assert.equal(other.mine.length, 0);
+  assert.equal(other.unit.length, 1);
+});
+
+test('ช่างคนเดียว + ไม่มี assigned_techs — พฤติกรรมเดิมเป๊ะ (ถอยไปแกะ assigned_to)', () => {
+  const row = svc({ assigned_to: 'ณัฐพล สีพิมพ์ขัด', assigned_techs: null, tech_main: null });
+  const q = buildQueue({ mo: [row] }, { uid: 'u2', name: 'ณัฐพล สีพิมพ์ขัด', sections: ['PD3'] }, NOW);
+  assert.equal(q.mine.length, 1);
+  assert.equal(moWaitingOn(row).who.name, 'ณัฐพล สีพิมพ์ขัด');
+});
+
+test('uid ของช่างหลักยังชนะชื่อ — และไม่บล็อกช่างคนที่ 2 ที่เทียบด้วยชื่อ', () => {
+  const row = svc({
+    assigned_to: 'ก ข, ค ง', assigned_techs: ['ก ข', 'ค ง'],
+    tech_main: 'ก ข', tech_main_uid: 'uid-main',
+  });
+  // ช่างหลักเข้าทาง uid (ชื่อในโปรไฟล์สะกดต่างก็ยังตรง)
+  assert.equal(buildQueue({ mo: [row] }, { uid: 'uid-main', name: 'สะกดคนละแบบ', sections: ['PD3'] }, NOW).mine.length, 1);
+  // 🔴 ช่างคนที่ 2 มี uid ของตัวเอง (ไม่ตรงกับ tech_main_uid) ต้องยังเข้าทางชื่อได้
+  assert.equal(buildQueue({ mo: [row] }, { uid: 'uid-other', name: 'ค ง', sections: ['PD3'] }, NOW).mine.length, 1);
+  // คนที่ไม่เกี่ยวเลย ยังต้องไม่เข้า
+  assert.equal(buildQueue({ mo: [row] }, { uid: 'uid-x', name: 'ไม่เกี่ยว เลย', sections: ['PD3'] }, NOW).mine.length, 0);
+});
+
+test('↩️ ใบตีกลับ — ต้องขึ้น mine ของผู้แจ้ง (เดิมหลุดทั้ง 3 ชั้น)', () => {
+  const row = mo({
+    status: 'returned', current_step: 1, mo_no: null,
+    reporter_prod: 'ฉัตรชัย  ใจรักเรียน', reporter_prod_uid: 'uid-rep',
+    returned_at: '2026-09-25T03:30:00Z',
+  });
+  const w = moWaitingOn(row);
+  assert.ok(w.meta, 'ใบตีกลับต้องมีเจ้าภาพ');
+  assert.equal(w.meta.offLoop, true);
+  assert.equal(w.step, null, 'ใบนอกลูปขั้นไม่มีเลขขั้น ห้ามแปลงเป็น 0');
+  const q = buildQueue(whole([row]), { uid: 'uid-rep', name: 'ฉัตรชัย ใจรักเรียน', sections: ['PD3'] }, NOW);
+  assert.equal(q.mine.length, 1);
+  assert.match(q.mine[0].title, /ตีกลับ/);
+  assert.equal(q.mine[0].to, `/mtn-repair?mo=${row.id}`, 'ต้องพาไปถึงใบนั้นจริง');
+  assert.equal(badgeCount(q), 1);
+});
+
+test('📤 ส่งซ่อมภายนอก — เข้าชั้นหน่วยงาน ไม่ใช่ mine และห้ามขึ้น badge', () => {
+  const row = mo({ status: 'waiting_vendor', current_step: 3, vendor_sent_at: '2026-11-01T02:00:00Z' });
+  const q = buildQueue({ mo: [row] }, { uid: 'u3', name: 'ใครก็ได้ ในหน่วย', sections: ['PD3'] }, NOW);
+  assert.equal(q.mine.length, 0);
+  assert.equal(q.unit.length, 1);
+  assert.equal(badgeCount(q), 0);
+  // 🔴 ห้ามหลุดไปอยู่บรรทัดสรุปชั้น floor (ลิงก์ ?wait= ของหน้า MO ไม่รู้จัก stage นี้ = กดแล้วลิสต์ว่าง)
+  assert.equal(q.floor.some(x => /status:/.test(x.key || '')), false);
+});
+
+test('ใบที่จบแล้วยังต้องไม่มีเจ้าภาพ — cancelled/transferred ห้ามโผล่ในคิว', () => {
+  for (const status of ['cancelled', 'rejected', 'transferred', 'closed']) {
+    const row = mo({ status, current_step: 3 });
+    assert.equal(moWaitingOn(row).meta, null, `${status} ต้องไม่มี meta`);
+    const q = buildQueue({ mo: [row] }, ME, NOW);
+    assert.equal(q.mine.length + q.unit.length, 0, `${status} ห้ามเข้าคิว`);
+  }
 });

@@ -64,6 +64,8 @@ const EN = {
   'พาร์ทใหม่ APQP / PPAP': 'New Parts APQP / PPAP',
   'บอร์ด New Model (IEC)': 'New Model Board (IEC)',
   'RFQ / เสนอราคา (Marketing)': 'RFQ / Quotation (Marketing)',
+  'ใบงานออนไลน์ (e-Workflow)': 'Online forms (e-Workflow)',
+  'ออกแบบใบงาน (e-Workflow)': 'Form designer (e-Workflow)',
   'เพิ่มพนักงาน': 'Add Employee',
   'คนในไลน์อื่น': 'in other lines',
   'อยู่ในขอบเขตที่คุณดูได้ แต่เป็นไลน์อื่น — เปลี่ยนช่อง “ขอบเขต” เพื่อดู หรือยืมคนเข้าไลน์ตัวเอง': 'Within your visible scope but on another line — change the Scope filter to view them, or borrow them into your line',
@@ -98,7 +100,6 @@ const EN = {
   '3 ระดับ PM': '3 Maintenance Levels',
   'Delivery — ติดตามการส่งงานลูกค้า': 'Delivery — Customer Shipment Tracking',
   'Improvements — โปรเจคปรับปรุง': 'Improvements — Kaizen Projects',
-  'Line Stock — สต๊อกหน้าไลน์': 'Line Stock — Line-side Inventory',
   'Monitoring ติดตามแผน-สต๊อก': 'Monitoring — Plan & Stock',
   'PM ล่วงหน้า (Planner)': 'PM Forecast (Planner)',
   'Planner & Sales — Forecast จากลูกค้า': 'Planner & Sales — Customer Forecast',
@@ -294,7 +295,7 @@ const EN = {
   'เช็คชื่อ-PPE · จัดการไลน์ · Daily Report · Daily Checker · Kaizen': 'Attendance-PPE · Line management · Daily Report · Daily Checker · Kaizen',
   'OEE · VSM · สอบกลับ Order · ประวัติผลิต · รายงาน/ใบพิมพ์': 'OEE · VSM · Order traceability · Production history · Reports / printouts',
   'ฐานข้อมูลพนักงาน · สกิล & Level Up · OJT · ตารางกะ': 'Employee database · Skills & Level Up · OJT · Shift schedule',
-  'แผนงาน + Store (3xx ซื้อนอก · 5xx raw · 2xx ผลิตเอง) — Planner & Sales · สต๊อกในไลน์ · บอร์ดคัมบัง · ขนส่งเข้าไลน์':
+  'แผนงาน + Store (3xx ซื้อนอก · 5xx raw · 2xx ผลิตเอง) — Planner & Sales · Stock Management · บอร์ดคัมบัง · ขนส่งเข้าไลน์':
     'Planning + Store (3xx purchased · 5xx raw · 2xx in-house) — Planner & Sales · Line stock · Kanban board · Transport to lines',
   'Warehouse (FG 1xx) · Delivery · Rack Center — จัดส่งลูกค้า · คาดการณ์ของจะขาด · ภาชนะ':
     'Warehouse (FG 1xx) · Delivery · Rack Center — Customer delivery · Shortage forecast · Containers',
@@ -646,8 +647,8 @@ const EN = {
   'ขาดรวม': 'Total shortfall',
   'ขาดหนักสุด': 'Worst shortfall',
   'ขาดเป้า': 'Below target',
-  'ขาออก (สโตร์ → ผลิต)': 'Outbound (store → production)',
-  'ขาเข้า (→ สโตร์)': 'Inbound (→ store)',
+  'ส่งของเข้าไลน์': 'Send to line',
+  'รับของเข้าคลัง': 'Receive into store',
   'ขึ้นตรงฝ่าย — ไม่อยู่ใต้ Section ใด': 'Reports to division — not under any section',
   'ขึ้นต้นรหัส': 'Code prefix',
   'ข้อ': 'Item',
@@ -5486,7 +5487,7 @@ const EN = {
   'ยังไม่ผูกกับการตัดสต็อก — ระบบยังเบิกตามไลน์เหมือนเดิม': 'Not linked to stock deduction — the system still issues by line as before',
   'ยังไม่ผูกชุด PE (✏️ พาร์ท)': 'PE set not linked (✏️ Part)',
   'ยังไม่ผูกชุด PFC/FMEA/CP': 'PFC/FMEA/CP set not linked',
-  'ยังไม่ผูกรหัสคลัง SAP (ผูกที่ 📦 สต๊อกในไลน์ → 🏬 พื้นที่ SAP / โซนคลัง → “ทะเบียนรหัสคลัง” กด ✏️ ที่รหัสแล้วติ๊กไลน์)': 'SAP store code not linked (link at 📦 Line stock → 🏬 SAP area / store zone → “Store code registry”, press ✏️ on the code and tick the line)',
+  'ยังไม่ผูกรหัสคลัง SAP (ผูกที่ 📦 Stock Management → ตั้งค่า → พื้นที่ SAP / โซนคลัง → “ทะเบียนรหัสคลัง” กด ✏️ ที่รหัสแล้วติ๊กไลน์)': 'SAP store code not linked (link at 📦 Line stock → 🏬 SAP area / store zone → “Store code registry”, press ✏️ on the code and tick the line)',
   'ยังไม่ผูกไลน์ (คนหน้างานที่ไม่มีไลน์จะไม่ขึ้นในหน้าเช็คชื่อ)': 'No line linked (floor staff without a line do not appear on the attendance page)',
   'ยังไม่มอบหมาย': 'Unassigned',
   'ยังไม่มี': 'None yet',
@@ -6241,7 +6242,7 @@ const EN = {
   'สต็อกคงเหลือจำลอง (ถ้าไม่ผลิตเพิ่มจากนี้)': 'Simulated remaining stock (if no further production)',
   'สต็อกส่วนนั้น (': 'That section\'s stock (',
   'สต๊อกค้างเกินจำเป็น': 'Excess stock beyond need',
-  'สต๊อกในไลน์ → 🏬 พื้นที่ SAP / โซนคลัง → “ทะเบียนรหัสคลัง”': 'Stock in line → 🏬 SAP area / warehouse zone → “Store code registry”',
+  '📦 Stock Management → ตั้งค่า → พื้นที่ SAP / โซนคลัง → “ทะเบียนรหัสคลัง”': 'Stock in line → 🏬 SAP area / warehouse zone → “Store code registry”',
   'สต๊อกไม่พอ — คงเหลือ': 'Insufficient stock — remaining',
   'สถานที่': 'Location',
   'สถานะ PPAP': 'PPAP status',
@@ -7665,7 +7666,7 @@ const EN = {
   'ไปลงทะเบียนที่แท็บ AM →': 'Register at the AM tab →',
   'ไปวางที่แท็บผังจัดเก็บ': 'Place it on the storage layout tab',
   'ไปหน้าส่งของ (Heijunka)': 'Go to delivery page (Heijunka)',
-  'ไปหน้าเตรียมงาน — Line Stock › 📤 ขาออก › ตู้ตามเลขพาร์ท (กรองเฉพาะพาร์ทนี้)': 'Go to preparation page — Line Stock › 📤 Outbound › bins by part no. (filtered to this part)',
+  'ไปหน้าเตรียมงาน — Stock Management › 📤 ส่งของเข้าไลน์ › ตู้ตามเลขพาร์ท (กรองเฉพาะพาร์ทนี้)': 'Go to preparation page — Stock Management › 📤 Send to line › bins by part no. (filtered to this part)',
   'ไปเพิ่ม BOM ที่หน้า 📦 BOM ก่อน แล้วข้อมูลจะแตกให้อัตโนมัติ': 'Add the BOM on the 📦 BOM page first; the data will then explode automatically',
   'ไปแล้ว': 'Gone',
   'ไฟฟ้า': 'Electrical',
@@ -8423,7 +8424,8 @@ const EN = {
   'บางนา-ตราด · สมุทรปราการ · ฉะเชิงเทรา': 'Bangna-Trad · Samut Prakan · Chachoengsao',
   'ของซื้อ (300/500) → รับเข้าสโตร์': 'Purchased items (300/500) → receive into store',
   'ครบล็อตแล้ว รอสโตร์ปล่อยงานให้ไลน์': 'Lot complete, waiting for store to release to line',
-  'งาน FG 1xx → ไลน์ประกอบ · รอบส่งคัมบัง': 'FG 1xx → assembly line · kanban delivery round',
+  'รอบส่งคัมบังเข้าไลน์': 'Kanban delivery rounds to line',
+  'รอบส่งชิ้นส่วนเข้าไลน์ตามคัมบัง (ไม่มี FG เข้าไลน์)': 'Kanban part delivery rounds to line (no FG goes to lines)',
   'ชิ้นส่วน 2xx — ส่งเข้าไลน์ · ปล่อยใบล็อตให้ไลน์ผลิต แล้วรับของกลับเข้าสโตร์': 'Parts 2xx — issue to line · release lot ticket to the line, then receive back into store',
   'ชิ้นส่วนซื้อ 3xx → ส่งเข้าไลน์': 'Purchased parts 3xx → issue to line',
   'ภาชนะ + Packaging → ทุกไลน์ · จัดการที่ ภาชนะ & Packaging': 'Containers + packaging → all lines · managed at Containers & Packaging',
@@ -10330,6 +10332,63 @@ const EN = {
     'Opened automatically when maintenance was called — open it and add the details',
   'เรียกช่างแล้ว — ระบบเปิดใบ MO ให้อัตโนมัติ · กดเพื่อเพิ่มรายละเอียด (ชนิดอุปกรณ์ · ลักษณะปัญหา · รูปก่อนซ่อม)':
     'Maintenance was called — an MO was opened automatically · tap to add the details (equipment kind · problem · before photo)',
+
+  /* ── 🔴 บังคับเลือกทีมช่าง (13/11 · หน้างานแจ้ง "ส่งไปผิดแผนกบ่อย") ── */
+  'เลือกทีมช่าง': 'Select maintenance team',
+  'ต้องเลือกทีมช่างก่อน — ส่งผิดทีมแล้วใบต้องตีกลับ เสียเวลาทั้ง 2 ฝั่ง':
+    'Pick the maintenance team first — the wrong team means the MO gets bounced back, costing both sides time',
+  '💡 จากทะเบียน/ทีมของคุณ น่าจะเป็น': '💡 From the registry / your team, likely',
+  '↑ เลือกทีมช่างก่อน': '↑ Pick a maintenance team first',
+  'ทะเบียนเครื่องนี้อยู่ทีม': 'The registry puts this machine with',
+  'ถ้าใช่ กดเลือกด้านล่าง': 'if that is right, tap it below',
+  /* ── 💼 RFQ เฟส 2a (13/11) — ใบประเมิน IEC · เอกสารแนบ · model life/job type ── */
+  'กระบวนการ *': 'Process *',
+  'CT (วิ)': 'CT (s)',
+  '+ ขั้น': '+ step',
+  'เช่น Blanking · Draw · Spot weld': 'e.g. Blanking · Draw · Spot weld',
+  'ยังไม่ระบุ — ตัวนี้บอกว่า IEC ต้องออกแบบก่อนคิดราคาไหม': 'Not set — tells whether IEC must design before costing',
+  'คิดยอดรวมไม่ได้ — ขาด volume/ปี': 'Cannot total — annual volume missing',
+  'ยังไม่ระบุ model life — ค่าแม่พิมพ์ต่อชิ้นคิดไม่ได้': 'Model life not set — tooling cost per piece cannot be computed',
+  // 🏭 OEE รายจิ๊ก (16/11)
+  'จบ': 'End',
+  'สาเหตุ (จากหน้าเครื่อง)': 'Reason (from machine)',
+  // 📥 CSV ผลตรวจ QA (16/11)
+  'CSV ย้อนหลัง': 'CSV, past',
+  'ช่วงวันของไฟล์ CSV': 'Date range of the CSV file',
+  '📥 CSV ผลตรวจ': '📥 Results CSV',
+  // ('กำลังรวบรวม…' มีคำแปลอยู่แล้วด้านบน — ห้ามซ้ำ lint no-dupe-keys)
+  'ผลตรวจทุกจุด ทุกรอบ ของพาร์ทนี้ในช่วงที่เลือก — เปิดใน Excel ได้ (ช่องว่าง = ไม่มีค่า ไม่ใช่ 0)':
+    'Every point, every round of this part within the chosen range — opens in Excel (blank = no value, not 0)',
+  '📥 CSV ค่าวัด': '📥 Readings CSV',
+  '📥 CSV สรุป Cpk': '📥 Cpk summary CSV',
+  'ค่าวัดทุกค่า 1 แถว = 1 ค่า (วันงาน/กะ/รอบ/ชิ้น + LSL-USL) — เอาไปทำกราฟควบคุมใน Excel ได้ตรงๆ':
+    'Every reading, one row each (work date / shift / round / piece + LSL-USL) — ready for control charts in Excel',
+  'สรุปทุกจุดวัดของชิ้นงานนี้ (n / Mean / σ / Cp / Cpk / Pp / Ppk / ค่าหลุด spec) — ช่องว่าง = คิดไม่ได้ ไม่ใช่ 0':
+    'Summary of every measured point of this part (n / Mean / σ / Cp / Cpk / Pp / Ppk / out-of-spec) — blank = not computable, not 0',
+  'ยังไม่มีค่าวัดให้ส่งออก': 'No readings to export yet',
+  // 🧩 ของเสียระดับพาร์ทลูก (16/11)
+  '🧩 พาร์ทลูกที่เสีย (ไม่บังคับ — ไม่เลือก = เสียที่ชิ้นงานหลัก)':
+    '🧩 Child part defected (optional — blank = main part)',
+  'ไม่ได้เลือก = เสียที่ชิ้นงานหลัก': 'Blank = defect on the main part',
+  'พาร์ทลูก (MAT / Part No.)': 'Child part (MAT / Part No.)',
+  'กำลังอ่าน BOM ของพาร์ทนี้…': 'Reading this part\'s BOM…',
+  'MAT นี้ยังไม่มีพาร์ทย่อยใน BOM — เลือกพาร์ทลูกไม่ได้ (ลงของเสียที่ชิ้นงานหลักได้ตามปกติ)':
+    'This MAT has no BOM children yet — cannot pick a child part (logging on the main part still works)',
+  'MAT นี้ยังไม่มีพาร์ทย่อยใน BOM — เพิ่มชั้น BOM ได้ที่ /products แท็บ BOM':
+    'This MAT has no BOM children yet — add BOM levels in /products, BOM tab',
+  'เพิ่มชั้น BOM ได้ที่': 'Add BOM levels in',
+  'แท็บ BOM': 'BOM tab',
+  '✕ ปิด': '✕ Close',
+  'พาร์ทที่ผลิตอยู่': 'Part in production',
+  'downtime ที่คนลง': 'Downtime logged by staff',
+
+  /* ── ✍️ ลายเซ็นนอกลำดับขั้นบนใบ MO (18/11) ── */
+  'ผจก.ส่วนซ่อมบำรุง รับทราบ': 'Maintenance manager acknowledgement',
+  'ผจก.ต้นสังกัด เซ็นรับทราบ': 'Reporting department manager acknowledgement',
+  'ผจก.โรงงาน เซ็นรับทราบ': 'Plant manager acknowledgement',
+  'เซ็นแล้ว': 'signed',
+  'ยังไม่เซ็น (ไม่ล็อกงาน — ปิดใบได้ แต่เอกสารยังไม่ครบ)':
+    'not signed yet (does not block work — the MO can close, but the paperwork is incomplete)',
 };
 
 export default EN;

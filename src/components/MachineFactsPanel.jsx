@@ -30,7 +30,7 @@ const DAYS = 7;
 const card = { background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 14, boxShadow: 'var(--shadow-sm)', minWidth: 0 };
 const th = { textAlign: 'left', padding: '6px 8px', fontSize: 12, color: 'var(--muted)', fontWeight: 700, borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' };
 const td = { padding: '6px 8px', fontSize: 12.5, borderBottom: '1px solid var(--border)', verticalAlign: 'top' };
-const KIND_LABEL = { onplan: 'หยุดตามแผน (OnplanMaster)', unplan: 'หยุดนอกแผน (UnplanMaster)' };
+const KIND_LABEL = { onplan: 'หยุดตามแผน (OnplanMaster)', alarm: 'Alarm (AlarmMaster)', unplan: 'หยุดนอกแผน/รอ (UnplanMaster)' };
 const fmtTime = (ms) => (ms ? new Date(ms).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—');
 const fmtDate = (d) => new Date(`${d}T00:00:00+07:00`).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok', weekday: 'short', day: 'numeric', month: 'short' });
 const minTxt = (sec) => (sec == null ? '–' : `${Math.round(sec / 60).toLocaleString()}`);
@@ -52,7 +52,7 @@ export default function MachineFactsPanel({ src, canManage, callAdmin }) {
         q => q.eq('source_id', src.id).gte('started_at', fromIso).order('started_at').order('machine_tag')),
       supabaseDR.rpc('fn_machine_counter_hourly', { p_source: src.id, p_from: fromIso }),
       supabaseDR.from('machine_tag_map').select('tag, machine_id, confirmed_by, confirmed_at').eq('source_id', src.id),
-      supabaseDR.from('machine_reason_map').select('reason_kind, reason_code, reason_text, downtime_type_id, confirmed_by, confirmed_at').eq('source_id', src.id),
+      supabaseDR.from('machine_reason_map').select('reason_kind, reason_code, reason_text, downtime_type_id, is_break, confirmed_by, confirmed_at').eq('source_id', src.id),
       supabaseDR.from('dr_downtime_types').select('id, name_th, category, process_type, is_active, sort_order').order('sort_order'),
     ]);
     if (id !== req.current) return;
@@ -91,7 +91,7 @@ export default function MachineFactsPanel({ src, canManage, callAdmin }) {
   const compare = useMemo(() => (data?.sessions ? compareWithSessions(facts, { machines, sessions: data.sessions, downtimes: data.downtimes }) : null),
     [facts, machines, data?.sessions, data?.downtimes]);
   const tags = useMemo(() => (data ? tagRows({ ...data, machines }) : []), [data, machines]);
-  const reasons = useMemo(() => (data ? reasonRows(data.states, data.reasonMap) : { rows: [], unmappable: 0 }), [data]);
+  const reasons = useMemo(() => (data ? reasonRows(data.states, data.reasonMap) : { rows: [], unmappable: 0, noReason: { count: 0, sec: 0 } }), [data]);
   const dtById = useMemo(() => new Map((data?.dtTypes || []).map(t => [t.id, t])), [data?.dtTypes]);
   const dtOptions = useMemo(() => (data?.dtTypes || []).filter(t => t.is_active !== false).map(t => ({
     id: t.id, label: t.name_th, group: t.category === 'planned' ? 'ในแผน' : 'นอกแผน',
@@ -183,6 +183,12 @@ export default function MachineFactsPanel({ src, canManage, callAdmin }) {
         <div style={{ fontSize: 12, color: 'var(--muted)', margin: '4px 0 8px' }}>
           เลือกเองทีละรายการ · ระบบเสนอเฉพาะชื่อที่ตรงเป๊ะ · ไม่มีตัวตรงก็กด "ไม่มีใน ESM" ได้ (บันทึกว่าตรวจแล้ว) · ตอนนี้ใช้แสดงชื่อเท่านั้น ยังไม่สร้างใบ downtime
         </div>
+        {reasons.noReason.count > 0 && (
+          <NoticeBar tone="info" style={{ marginBottom: 8 }}>
+            {reasons.noReason.count.toLocaleString()} ช่วง ({minTxt(reasons.noReason.sec)} นาที) ไม่ได้กดเหตุผลที่หน้าเครื่อง
+            (รหัส 0 = ปกติ / รีเซ็ต) — ไม่ใช่เหตุผลหยุด จึงไม่อยู่ในรายการให้จับคู่
+          </NoticeBar>
+        )}
         {reasons.unmappable > 0 && (
           <NoticeBar tone="warn" style={{ marginBottom: 8 }}>
             {reasons.unmappable.toLocaleString()} ช่วงเป็นสถานะ ขาดการสื่อสาร/อื่นๆ — ยังไม่รู้ว่าต้นทางใช้ master เหตุผลชุดไหน จึงยังไม่ให้จับคู่
@@ -204,7 +210,17 @@ export default function MachineFactsPanel({ src, canManage, callAdmin }) {
                       <td style={td}><span style={{ fontFamily: 'ui-monospace, monospace', fontWeight: 700 }}>{r.code}</span> · {r.text || <i style={{ color: 'var(--muted)' }}>{tr('ต้นทางไม่ส่งชื่อ')}</i>}</td>
                       <td style={{ ...td, whiteSpace: 'nowrap' }}>{r.count.toLocaleString()} {tr('ครั้ง ·')} {minTxt(r.sec)} {tr('นาที')}</td>
                       <td style={{ ...td, minWidth: 260 }}>
-                        {canManage ? (
+                        {r.map?.is_break ? (
+                          /* 🍱 เวลาพัก — ESM ใช้นโยบายพัก (โควตานาที) · กดพักเกินนโยบาย = เสีย A (16/11 · ทาง A) */
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                            <b style={{ color: 'var(--blue)' }}>🍱 เวลาพัก — ESM คิดจากนโยบายพักเอง</b>
+                            <span style={{ fontSize: 12, color: 'var(--muted)' }}>กดพักเกินโควตานโยบาย = เสีย A (พักเกินเวลา)</span>
+                            {canManage && (
+                              <button type="button" className="pg-btn" disabled={!!busy}
+                                onClick={() => save(k, 'map_reason', { ...base, clear: true }, `ล้างป้ายเวลาพัก ${r.code}`)}>ล้าง</button>
+                            )}
+                          </div>
+                        ) : canManage ? (
                           <div style={{ display: 'grid', gap: 6 }}>
                             <SearchSelect value={cur} options={dtOptions} placeholder={tr('ค้นประเภท downtime…')}
                               loadFail={data.errs.includes('ประเภท downtime') ? 'โหลดประเภท downtime ไม่สำเร็จ' : ''}
@@ -216,6 +232,11 @@ export default function MachineFactsPanel({ src, canManage, callAdmin }) {
                               {sug && (
                                 <button type="button" className="pg-btn" disabled={!!busy}
                                   onClick={() => save(k, 'map_reason', { ...base, downtime_type_id: sug.id }, `จับคู่เหตุผล ${r.code}`)}>{tr('✓ ใช้ข้อเสนอ:')} {sug.name_th}</button>
+                              )}
+                              {r.kind === 'onplan' && (
+                                <button type="button" className="pg-btn" disabled={!!busy}
+                                  title="ใช้กับเหตุผลที่เป็นการกดพักหน้าเครื่อง — ESM คิดเวลาพักจากนโยบายเอง ส่วนที่เกินนโยบายนับเป็นเสีย"
+                                  onClick={() => save(k, 'map_reason', { ...base, downtime_type_id: null, is_break: true }, `ติดป้ายเวลาพัก ${r.code}`)}>🍱 เวลาพัก (ESM คิดเอง)</button>
                               )}
                               {!(r.map && !cur) && (
                                 <button type="button" className="pg-btn" disabled={!!busy}

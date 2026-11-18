@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useContext, useMemo, lazy, Suspense } from
 import { LOGISTIC_GROUPS } from '../utils/logisticSide';
 import { useNavigate } from 'react-router-dom';
 import { navItemsForGroups, isNavGuest, NAV_GROUP_META, NAV_GROUP_ORDER, UserContext } from '../App';
-import { toneOf } from '../utils/statusTone';
+import { toneOf, statusColor } from '../utils/statusTone';
 import { topPaths } from '../utils/navRecent';
 import { scopedLineNames, MAINTENANCE_ROLES } from '../utils/sectionScope';
 import { roleLabel } from '../utils/roleMeta';
@@ -14,7 +14,10 @@ import { supabase, supabaseDR } from '../supabaseClient';
 import { loadLinesRes } from '../utils/useProductionLines';
 import { fetchActiveDowntimes } from '../utils/downtimeAlarm';
 import { toast } from '../components/Toast';
-import KpiTile from '../components/KpiTile';   // การ์ดตัวเลขโครงเดียว (UI §6.35 · 04/11)
+import KpiTile from '../components/KpiTile';
+import { motion } from 'framer-motion';
+import { stagger } from '../utils/motion';
+import { buildStatusLine } from '../utils/statusLine';   // การ์ดตัวเลขโครงเดียว (UI §6.35 · 04/11)
 import { uploadMyAvatar } from '../utils/profileSelf';
 import ImageCropModal from '../components/ImageCropModal';
 import SignatureModal from '../components/SignatureModal';
@@ -157,7 +160,7 @@ const CARD_META = {
   'วิเคราะห์ & รายงาน':       { code: 'ANL·03', route: '/oee-analytics', label: 'Analytics & Reports',    desc: 'OEE · VSM · สอบกลับ Order · ประวัติผลิต · รายงาน/ใบพิมพ์' },
   'พนักงาน & ทักษะ':          { code: 'HRM·04', route: '/operator',     label: 'People & Skills',         desc: 'ฐานข้อมูลพนักงาน · สกิล & Level Up · OJT · ตารางกะ' },
   // Logistic แยก 3 ฝั่งตามแผนกเจ้าของ — ⚠️ Warehouse (FG 1xx · ส่งลูกค้า) ≠ Store (2xx/3xx/5xx · ป้อนไลน์) · ชื่อหมวดจาก LOGISTIC_GROUPS
-  [LOGISTIC_GROUPS.inbound]:  { code: 'STO·06', route: '/line-stock',      label: 'Planning & Store',      desc: 'แผนงาน + Store (3xx ซื้อนอก · 5xx raw · 2xx ผลิตเอง) — Planner & Sales · สต๊อกในไลน์ · บอร์ดคัมบัง · ขนส่งเข้าไลน์' },
+  [LOGISTIC_GROUPS.inbound]:  { code: 'STO·06', route: '/line-stock',      label: 'Planning & Store',      desc: 'แผนงาน + Store (3xx ซื้อนอก · 5xx raw · 2xx ผลิตเอง) — Planner & Sales · Stock Management · บอร์ดคัมบัง · ขนส่งเข้าไลน์' },
   [LOGISTIC_GROUPS.outbound]: { code: 'DLV·07', route: '/customer-demand', label: 'Warehouse & Delivery',  desc: 'Warehouse (FG 1xx) · Delivery · Rack Center — จัดส่งลูกค้า · คาดการณ์ของจะขาด · ภาชนะ' },
   'การตรวจสอบและซ่อมบำรุง':   { code: 'MTN·08', route: '/mtn-repair',   label: 'Inspection & Maintenance', desc: 'แจ้งซ่อม MO · ศูนย์ PM (ตรวจ·แผน·ล่วงหน้า) · ผังเครื่องจักร · พลังงาน' },
   'คุณภาพ & วิศวกรรม':        { code: 'QUA·09', route: '/qa',           label: 'Quality & Engineering',   desc: 'ใบตรวจ · SPC · NCR · CAPA/8D · เคลมลูกค้า · CQI-15 · PFMEA/Control Plan' },
@@ -195,7 +198,8 @@ export default function DeptHub({ onLogout, theme, onToggleTheme, userFullName, 
   const navigate = useNavigate();
   const { lang, toggleLang, tr } = useLang();
   // scope ของผู้ใช้ (DeptHub อยู่ใน UserContext.Provider ของ App แล้ว)
-  const { lineId: userLineId, sections: userSections = [] } = useContext(UserContext);
+  const { lineId: userLineId, sections: userSections = [], fullName } = useContext(UserContext);
+  const firstName = (fullName || '').trim().split(/\s+/)[0] || null;   // ทักทายชื่อต้น — ไม่มีชื่อ (บัญชีกลาง) = ไม่ทักทายชื่อ
 
   // ── โปรไฟล์เมนู: รายการมาจาก buildProfileMenu (utils/profileMenu.js) ชุดเดียวกับ sidebar ──
   //    เดิมหน้านี้เขียนเมนูของตัวเองแล้ว drift (ขาด 💬 แจ้งปัญหา / 🎭 จำลองมุมมอง / รีโมทจอ)
@@ -587,14 +591,30 @@ export default function DeptHub({ onLogout, theme, onToggleTheme, userFullName, 
           <span style={{ flex: 1, height: 1, background: 'var(--border)' }} />
           <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('อัปเดตทุก 60 วินาที')}</span>
         </div>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        {/* 🗣 ประโยคสรุปสถานะ (18/11 · ก๊อป ERP) — ข้อมูลชุดเดียวกับการ์ด TELE · ทักทายชื่อจาก login · null = "ยังไม่มีข้อมูล" */}
+        {(() => {
+          const sl = buildStatusLine(TELE.map(t => ({ label: t.label, value: t.val, unit: t.unit, tone: t.tone,
+            need: t.val != null && t.val > 0 ? `${t.label} ${t.val} ${t.unit}` : t.label })), { now: new Date(), name: firstName });
+          return (
+            <div style={{ margin: '0 0 12px', fontSize: 'clamp(13px, 1.6vw, 15px)', lineHeight: 1.55, color: 'var(--text2)' }}>
+              {sl.text.split(' — ').map((seg, k, arr) => (
+                <span key={k} style={k === arr.length - 1 && sl.focus ? { color: statusColor(sl.tone), fontWeight: 700 } : undefined}>
+                  {k > 0 ? ' — ' : ''}{seg}
+                </span>
+              ))}
+            </div>
+          );
+        })()}
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           {/* การ์ดตัวเลขโครงเดียว (UI §6.35) — ตัวเลขสีเดียว · สถานะอยู่ที่บรรทัดล่าง · กดได้เฉพาะที่มีสิทธิ์เข้าปลายทาง */}
-          {TELE.map(t => (
-            <KpiTile key={t.key} label={tr(t.label)} value={t.val}
+          {TELE.map((t, i) => (
+            <motion.div key={t.key} {...stagger(i)} style={{ flex: '1 1 150px', display: 'flex' }}>
+            <KpiTile label={tr(t.label)} value={t.val}
               unit={t.of != null && t.val != null ? `/ ${t.of} ${tr(t.unit)}` : tr(t.unit)}
               note={t.val == null ? 'ยังโหลดไม่ได้' : tr(t.note)} tone={t.val == null ? undefined : (t.tone === 'none' ? undefined : t.tone)}
-              title={t.goTitle} style={{ flex: '1 1 150px' }}
+              title={t.goTitle} style={{ flex: 1 }} hero={t.key === 'dt'}
               onClick={t.to && canAccessPage(t.to.split('?')[0], userRole) ? () => navigate(t.to) : undefined} />
+            </motion.div>
           ))}
         </div>
       </div>

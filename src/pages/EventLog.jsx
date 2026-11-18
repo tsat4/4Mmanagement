@@ -783,8 +783,8 @@ function exportPDF(logs) {
         <th colspan="3">Event</th>
         <th rowspan="2" style="width:40px">Event ID</th>
         <th rowspan="2" style="width:18px"></th>
-        <th rowspan="2" style="width:46px">{tr('ส่วนงาน')}</th>
-        <th rowspan="2" style="width:110px">{tr('รายละเอียดงาน')}</th>
+        <th rowspan="2" style="width:46px">${tr('ส่วนงาน')}</th>
+        <th rowspan="2" style="width:110px">${tr('รายละเอียดงาน')}</th>
         <th rowspan="2" style="width:40px">Product Q'ty</th>
         <th rowspan="2" style="width:32px">OK Q'ty</th>
         <th rowspan="2" style="width:32px">NG Q'ty</th>
@@ -802,7 +802,7 @@ function exportPDF(logs) {
     </thead>
     <tbody>${rowsHtml}</tbody>
   </table>
-  <div class="footer">{tr('หมายเหตุ: ในการเช็คย้อนกลับยึดตาม หัว/กลาง/ท้าย')}</div>
+  <div class="footer">${tr('หมายเหตุ: ในการเช็คย้อนกลับยึดตาม หัว/กลาง/ท้าย')}</div>
   <script>window.onload = function(){ window.print(); }</script>
   </body></html>`;
 

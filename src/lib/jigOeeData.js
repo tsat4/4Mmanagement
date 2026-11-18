@@ -1,0 +1,308 @@
+/* 🏭 โหลดข้อมูล OEE รายจิ๊ก (ข้อมูลเครื่องจาก Node-RED + ใบผลิต/NG/CT ของ ESM) — ใช้ร่วม /line-oee + /oee-analytics
+   📄 docs/modules/integration-hub.md §OEE รายจิ๊ก · สูตร = src/utils/machineOee.js (ไฟล์นี้ "โหลด+ประกอบ" อย่างเดียว ไม่คิดสูตร)
+
+   ตัวเชื่อม 3 ตัว: เวลา (กรอบกะ ESM) · เครื่อง (machine_tag_map → machines.id) · พาร์ท (prod_orders.machine_no ตอนเปิดใบ)
+   🔴 อ่านไม่ได้ = คืน `errors[]` ให้จอเขียนบอก ห้ามคืนลิสต์ว่างเงียบ · ตารางฝั่ง DR อ่านด้วย anon (กฎเหล็ก supabaseDR)
+   ⚠️ egress: เลือกคอลัมน์ · ช่วงหยุดดึงเฉพาะกรอบที่ถาม · ชิ้นดึงรายชั่วโมงผ่าน RPC · ย้อนหลังหลายกะใช้ rpc rollup */
+import { supabaseDR } from '../supabaseClient';
+import { fetchAllRows } from '../utils/fetchAllRows';
+import { fetchByIds } from '../utils/fetchByIds';
+import { loadMachinesMaster } from '../utils/useMachines';
+import { loadCtProducts, loadCtKanban, loadBreakPolicies } from '../utils/oeeMasters';
+import { buildCtMap, defectQty, defectQtyAll, QBIN_EMBED, breakIntervalsIn } from '../utils/oee';
+import { machineKey } from '../utils/machineNo';
+import { SESSION_STATUSES_REAL } from '../utils/sessionStatus';
+import {
+  shiftBounds, aggregateStops, aggregateFromRollup, machineShiftOee, jigCt, stateSegments, hourlyBuckets, stopList, stopPareto,
+} from '../utils/machineOee';
+
+const EV_COLS = 'source_id, machine_tag, started_at, ended_at, duration_sec, state, reason_code, reason_text, is_minor';
+/** สถานะสดเก่ากว่านี้ = ต้นทางเงียบ ⇒ การ์ดเขียนว่า "สถานะสดขาด" ไม่โชว์เหมือนยังสด */
+export const LIVE_STALE_MS = 3 * 60000;
+
+/** จิ๊กที่ผูกกับ Node-RED แล้ว (+ ทะเบียนเครื่อง) · lineNames = จำกัดไลน์ (null = ทุกไลน์) */
+export async function loadLinkedJigs(lineNames = null) {
+  const errors = [];
+  const [tm, machines] = await Promise.all([
+    supabaseDR.from('machine_tag_map').select('source_id, tag, machine_id').not('machine_id', 'is', null),
+    loadMachinesMaster().catch(() => null),
+  ]);
+  if (tm.error) errors.push('การผูกเครื่องกับ Node-RED');
+  if (!machines) errors.push('ทะเบียนเครื่อง');
+  const byId = new Map((machines || []).map(m => [m.id, m]));
+  const want = lineNames ? new Set(lineNames) : null;
+  const jigs = (tm.data || []).map(t => {
+    const m = byId.get(t.machine_id);
+    return m ? { sourceId: t.source_id, tag: t.tag, machineId: m.id, machineNo: m.machine_no, machineName: m.machine_name || null, lineName: m.line_name || null } : null;
+  }).filter(j => j && (!want || want.has(j.lineName)))
+    // คีย์ (ต้นทาง, tag) ไม่ซ้ำโดย unique ฝั่ง DB อยู่แล้ว — กันซ้ำอีกชั้นไม่ให้การ์ด/แถวโผล่ 2 ครั้ง
+    .filter((j, i, arr) => arr.findIndex(x => x.sourceId === j.sourceId && x.tag === j.tag) === i)
+    .sort((a, b) => String(a.machineNo).localeCompare(String(b.machineNo), 'th', { numeric: true }));
+  return { jigs, errors };
+}
+
+/** ใบผลิตของจิ๊กในช่วง (กะที่ไม่ใช่โมฆะ) + NG ที่คนลงของใบเหล่านั้น */
+async function loadOrdersAndNg(jigs, { fromDate, toDate, workDate = null, shift = null }) {
+  const errors = [];
+  const nos = [...new Set(jigs.map(j => j.machineNo).filter(Boolean))];
+  if (!nos.length) return { orders: [], defects: [], errors };
+  const o = await fetchAllRows(supabaseDR, 'prod_orders',
+    'id, session_id, mat_no, machine_no, qty, qty_ok, status, opened_at, confirmed_at, production_sessions!inner(work_date, shift, line_name, status, end_time)',
+    (q0) => {
+      let q = q0.in('machine_no', nos).in('production_sessions.status', SESSION_STATUSES_REAL);
+      q = workDate ? q.eq('production_sessions.work_date', workDate) : q.gte('production_sessions.work_date', fromDate).lte('production_sessions.work_date', toDate);
+      if (shift) q = q.eq('production_sessions.shift', shift);
+      return q.order('id');
+    });
+  if (o.error) { errors.push('ใบผลิต'); return { orders: [], defects: [], errors }; }
+  const orders = (o.data || []).filter(r => r.status !== 'cancelled');
+  const d = await fetchByIds(orders.map(r => r.id), part => supabaseDR.from('defect_logs')
+    .select(`id, prod_order_id, qty_ng, qty_suspect, is_trial, ${QBIN_EMBED}`).in('prod_order_id', part));
+  if (d.error || d.truncated) errors.push('NG ที่คนลง');
+  return { orders, defects: d.rows || [], errors };
+}
+
+async function loadCtMapSafe() {
+  const [prods, kstds] = await Promise.all([loadCtProducts().catch(() => null), loadCtKanban().catch(() => null)]);
+  return { ctMap: buildCtMap({ kanbanStds: kstds || [], products: prods || [] }), failed: !prods || !kstds };
+}
+
+/* 🍱 บริบทเวลาพัก (16/11 · ทาง A · ยึด duration):
+   · breakCodes = รหัสเหตุผล Onplan ที่ติดป้าย "เวลาพัก" (machine_reason_map.is_break) ต่อต้นทาง
+   · policies   = นโยบายพักของ ESM (loadBreakPolicies — ปลุกทะเบียนรายไลน์ด้วย) ⇒ breakIntervalsIn(lineName) คิดโควตา
+   อ่านไม่ได้ = policies null ⇒ machineShiftOee ถอยไปใช้เวลาที่กดพักหน้าเครื่อง + เขียนบอก (ไม่เงียบ) */
+async function loadBreakContext(srcIds) {
+  const [rm, pol] = await Promise.all([
+    supabaseDR.from('machine_reason_map').select('source_id, reason_kind, reason_code, is_break').in('source_id', srcIds),
+    loadBreakPolicies().catch(() => null),
+  ]);
+  const breakCodesBy = new Map();
+  for (const r of rm.data || []) {
+    if (!r.is_break || r.reason_kind !== 'onplan') continue;
+    if (!breakCodesBy.has(r.source_id)) breakCodesBy.set(r.source_id, new Set());
+    breakCodesBy.get(r.source_id).add(Number(r.reason_code));
+  }
+  return { breakCodesBy, policies: pol, errors: [rm.error && 'ป้ายเหตุผลเวลาพัก', !pol && 'นโยบายพัก'].filter(Boolean) };
+}
+
+/** ช่วงพักนโยบายของจิ๊ก (ไลน์ของมัน) ในกรอบ [startMs, endMs] — พักท้ายกะใช้ได้เมื่อรู้เวลาเลิกกะจริง (กฎเดียวกับ computeLiveOee) */
+function policyBreaksFor(policies, jig, workDate, shift, startMs, endMs, orders = []) {
+  if (!policies) return null;
+  const endHm = orders.map(o => o.production_sessions?.end_time).find(Boolean);
+  let shiftEndMs = null;
+  if (endHm) {
+    const base = shiftBounds(workDate, shift);
+    let e = Date.parse(`${workDate}T${String(endHm).slice(0, 5)}:00+07:00`);
+    if (base && Number.isFinite(e)) { while (e <= base.startMs) e += 86400000; shiftEndMs = e; }
+  }
+  const usable = shiftEndMs ? policies : policies.filter(p => p?.anchor !== 'shift_end');
+  return breakIntervalsIn({ policies: usable, startMs, endMs, workDate, shift, shiftEndMs, lineName: jig.lineName || null });
+}
+/** ช่วงพักนโยบายของกรอบที่ดู — ทั้งวัน (`all`) = พักกะเช้า + พักกะดึก (แต่ละกะใช้เวลาเลิกกะของใบกะนั้น) · ไม่รู้นโยบาย = null */
+function jigBreaks(policies, jig, workDate, shift, endMs, orders) {
+  const shifts = shift === 'all' ? ['day', 'night'] : [shift];
+  const out = [];
+  for (const sh of shifts) {
+    const w = shiftBounds(workDate, sh);
+    if (!w || w.startMs >= endMs) continue;
+    const iv = policyBreaksFor(policies, jig, workDate, sh, w.startMs, Math.min(w.endMs, endMs), orders.filter(o => o.production_sessions?.shift === sh));
+    if (iv == null) return null;
+    out.push(...iv);
+  }
+  return out;
+}
+const ivSec = (iv) => (iv ? iv.reduce((t, [a, b]) => t + Math.max(0, b - a) / 1000, 0) : null);
+
+const ordersOfJig = (orders, jig, workDate, shift) => orders.filter(o =>
+  machineKey(o.machine_no) === machineKey(jig.machineNo)
+  && (!workDate || (o.production_sessions?.work_date === workDate && o.production_sessions?.shift === shift)));
+
+function ngPeopleOf(orders, defects) {
+  if (!orders.length) return { ngPeople: null, ngAll: null };
+  const ids = new Set(orders.map(o => o.id));
+  const mine = defects.filter(d => ids.has(d.prod_order_id) && !d.is_trial);
+  return { ngPeople: mine.reduce((s, d) => s + defectQty(d), 0), ngAll: mine.reduce((s, d) => s + defectQtyAll(d), 0) };
+}
+
+/**
+ * 1 กะ ละเอียด (การ์ดจอหน้าไลน์ + ดูลึกรายเครื่อง) · `shift='all'` = ทั้งวัน 08:00→08:00 (เช้า+ดึก รวมเป็นกรอบเดียว)
+ * @returns `{ jigs: [{ ...jig, win, events, hourly, orders, ctInfo, oee, segments, buckets, stops, pareto }], errors }`
+ */
+export async function loadJigShift({ lineNames = null, workDate, shift, nowMs = Date.now(), jigFilter = null }) {
+  const win = shiftBounds(workDate, shift);
+  if (!win) return { jigs: [], errors: ['วัน/กะไม่ถูกต้อง'] };
+  const linked = await loadLinkedJigs(lineNames);
+  let jigs = linked.jigs;
+  if (jigFilter) jigs = jigs.filter(jigFilter);
+  const errors = [...linked.errors];
+  if (!jigs.length) return { jigs: [], errors };
+  const end = Math.min(win.endMs, nowMs);
+  const srcIds = [...new Set(jigs.map(j => j.sourceId))];
+  const isNow = nowMs >= win.startMs && nowMs < win.endMs;
+  const [evR, hrR, od, ct, lvR, bk] = await Promise.all([
+    fetchAllRows(supabaseDR, 'machine_state_events', EV_COLS, q => q.in('source_id', srcIds).in('machine_tag', jigs.map(j => j.tag))
+      .lt('started_at', new Date(win.endMs).toISOString()).gte('started_at', new Date(win.startMs - 12 * 3600000).toISOString())
+      .order('started_at').order('machine_tag')),
+    Promise.all(srcIds.map(sid => supabaseDR.rpc('fn_machine_counter_hourly', {
+      p_source: sid, p_from: new Date(win.startMs).toISOString(), p_to: new Date(win.endMs).toISOString(),
+    }).then(r => ({ sid, ...r })))),
+    loadOrdersAndNg(jigs, { workDate, shift: shift === 'all' ? null : shift }),
+    loadCtMapSafe(),
+    // สถานะสด — มีความหมายเฉพาะกะที่กำลังเดิน · ตารางยังไม่มี/อ่านไม่ได้ = ไม่โชว์สถานะสด (การ์ดถอยไปสถานะล่าสุดที่รู้ + บอก)
+    isNow ? supabaseDR.from('machine_live_state').select('source_id, machine_tag, state_code, state_text, since, alarm_text, onplan_text, unplan_text, production_enable, received_at')
+      .in('source_id', srcIds).in('machine_tag', jigs.map(j => j.tag)) : Promise.resolve({ data: [] }),
+    loadBreakContext(srcIds),
+  ]);
+  errors.push(...bk.errors);
+  if (evR.error) errors.push('ช่วงหยุดของเครื่อง');
+  if (lvR.error) errors.push('สถานะสดของเครื่อง');
+  if (hrR.some(r => r.error)) errors.push('นับชิ้นจากเครื่อง');
+  errors.push(...od.errors);
+  if (ct.failed) errors.push('CT ของพาร์ท');
+  const hourlyAll = hrR.flatMap(r => (r.data || []).map(x => ({ ...x, source_id: r.sid })));
+  const out = jigs.map(j => {
+    const events = (evR.data || []).filter(e => e.source_id === j.sourceId && e.machine_tag === j.tag);
+    const hourly = hourlyAll.filter(h => h.source_id === j.sourceId && h.machine_tag === j.tag);
+    const orders = ordersOfJig(od.orders, j);
+    const ctInfo = jigCt(orders, ct.ctMap);
+    const { ngPeople, ngAll } = ngPeopleOf(orders, od.defects);
+    const pieces = hourly.length ? hourly.reduce((s, h) => s + (Number(h.qty) || 0), 0) : null;
+    const ngMachine = hourly.reduce((s, h) => s + (Number(h.ng) || 0), 0);
+    const w = { startMs: win.startMs, endMs: end };
+    const breakCodes = bk.breakCodesBy.get(j.sourceId) || null;
+    const brkIv = jigBreaks(bk.policies, j, workDate, shift, end, orders);
+    const oee = machineShiftOee({ agg: aggregateStops(events, w, breakCodes), pieces, ngMachine, ngPeople, elapsedSec: Math.max(0, (end - win.startMs) / 1000), ct: ctInfo.ct, policyBreakSec: ivSec(brkIv) });
+    if (ctInfo.why && !oee.why.includes(ctInfo.why)) oee.why.unshift(ctInfo.why);
+    const last = events.length ? events[events.length - 1] : null;
+    const lv = (lvR.data || []).find(r => r.source_id === j.sourceId && r.machine_tag === j.tag);
+    const live = lv ? {
+      text: [lv.state_text, lv.alarm_text, lv.unplan_text, lv.onplan_text].filter(t => t && t !== 'None').join(' · ') || (lv.state_code != null ? `สถานะ ${lv.state_code}` : 'ไม่ทราบ'),
+      sinceMs: lv.since ? Date.parse(lv.since) : null, receivedMs: Date.parse(lv.received_at),
+      stale: nowMs - Date.parse(lv.received_at) > LIVE_STALE_MS, productionEnable: lv.production_enable,
+    } : null;
+    return {
+      ...j, win, endMs: end, events, hourly, orders, ctInfo, ngAll, oee, live,
+      segments: stateSegments(events, w),
+      buckets: hourlyBuckets({ hourly, events, startMs: win.startMs, endMs: win.endMs, nowMs, ct: ctInfo.ct, breakIntervals: brkIv || [], breakCodes }),
+      breakIntervals: brkIv || [],
+      stops: stopList(events, w),
+      // พักเกินนโยบาย = เสีย A ⇒ ต้องอยู่ในพาเรโตด้วย (ห้ามหายจากจอ)
+      pareto: [...stopPareto(events, w), ...(oee.loss.breakOver > 0 ? [{ key: 'break_over', state: 'break_over', code: null, text: null, min: oee.loss.breakOver / 60, n: 1 }] : [])].sort((a, b) => b.min - a.min),
+      lastEventAt: last ? Date.parse(last.ended_at || last.started_at) : null,
+      lastPieceHour: hourly.length ? Date.parse(hourly[hourly.length - 1].hour_at) : null,
+      confirmedQty: orders.reduce((s, o) => s + (o.status === 'confirmed' ? Number(o.qty_ok ?? o.qty) || 0 : 0), 0),
+      planQty: orders.reduce((s, o) => s + (Number(o.qty) || 0), 0),
+    };
+  });
+  return { jigs: out, errors };
+}
+
+/**
+ * หลายกะ (รายงานย้อนหลัง) — rollup ฝั่ง DB · คืนแถวราย จิ๊ก × วันทำงาน × กะ
+ * @returns `{ rows: [{ ...jig, workDate, shift, oee, ctInfo, orders }], jigs, errors }`
+ */
+export async function loadJigReport({ lineNames = null, fromDate, toDate, nowMs = Date.now() }) {
+  const linked = await loadLinkedJigs(lineNames);
+  const errors = [...linked.errors];
+  const jigs = linked.jigs;
+  if (!jigs.length) return { rows: [], jigs, errors };
+  const fromMs = Date.parse(`${fromDate}T08:00:00+07:00`);
+  const toMs = Math.min(Date.parse(`${toDate}T08:00:00+07:00`) + 24 * 3600000, nowMs);
+  const srcIds = [...new Set(jigs.map(j => j.sourceId))];
+  const [facts, hrs, od, ct, bk] = await Promise.all([
+    Promise.all(srcIds.map(sid => supabaseDR.rpc('fn_machine_shift_facts', { p_source: sid, p_from: new Date(fromMs).toISOString(), p_to: new Date(toMs).toISOString() }).then(r => ({ sid, ...r })))),
+    Promise.all(srcIds.map(sid => supabaseDR.rpc('fn_machine_counter_hourly', { p_source: sid, p_from: new Date(fromMs).toISOString(), p_to: new Date(toMs).toISOString() }).then(r => ({ sid, ...r })))),
+    loadOrdersAndNg(jigs, { fromDate, toDate }),
+    loadCtMapSafe(),
+    loadBreakContext(srcIds),
+  ]);
+  errors.push(...bk.errors);
+  if (facts.some(r => r.error)) errors.push('ช่วงหยุดของเครื่อง (สรุปรายกะ)');
+  if (hrs.some(r => r.error)) errors.push('นับชิ้นจากเครื่อง');
+  errors.push(...od.errors);
+  if (ct.failed) errors.push('CT ของพาร์ท');
+  const keyOf = (wd, sh) => `${wd}|${sh}`;
+  const shiftOfHour = (ms) => {
+    const local = new Date(ms + 7 * 3600000);
+    const h = local.getUTCHours();
+    const wd = new Date(ms + 7 * 3600000 - 8 * 3600000);
+    return keyOf(`${wd.getUTCFullYear()}-${String(wd.getUTCMonth() + 1).padStart(2, '0')}-${String(wd.getUTCDate()).padStart(2, '0')}`, h >= 8 && h < 20 ? 'day' : 'night');
+  };
+  const rows = [];
+  for (const j of jigs) {
+    const f = (facts.find(r => r.sid === j.sourceId)?.data || []).filter(r => r.machine_tag === j.tag);
+    const h = (hrs.find(r => r.sid === j.sourceId)?.data || []).filter(r => r.machine_tag === j.tag);
+    const keys = new Set([...f.map(r => keyOf(r.work_date, r.shift)), ...h.map(r => shiftOfHour(Date.parse(r.hour_at)))]);
+    for (const k of keys) {
+      const [wd, sh] = k.split('|');
+      if (wd < fromDate || wd > toDate) continue;
+      const win = shiftBounds(wd, sh);
+      if (!win) continue;
+      const hh = h.filter(r => shiftOfHour(Date.parse(r.hour_at)) === k);
+      const orders = ordersOfJig(od.orders, j, wd, sh);
+      const ctInfo = jigCt(orders, ct.ctMap);
+      const { ngPeople } = ngPeopleOf(orders, od.defects);
+      const end = Math.min(win.endMs, nowMs);
+      const breakCodes = bk.breakCodesBy.get(j.sourceId) || null;
+      const oee = machineShiftOee({
+        policyBreakSec: ivSec(policyBreaksFor(bk.policies, j, wd, sh, win.startMs, end, orders)),
+        agg: aggregateFromRollup(f.filter(r => keyOf(r.work_date, r.shift) === k), breakCodes),
+        pieces: hh.length ? hh.reduce((s, r) => s + (Number(r.qty) || 0), 0) : null,
+        ngMachine: hh.reduce((s, r) => s + (Number(r.ng) || 0), 0), ngPeople,
+        elapsedSec: Math.max(0, (end - win.startMs) / 1000), ct: ctInfo.ct,
+      });
+      if (ctInfo.why && !oee.why.includes(ctInfo.why)) oee.why.unshift(ctInfo.why);
+      rows.push({ ...j, workDate: wd, shift: sh, oee, ctInfo, orders, open: end < win.endMs });
+    }
+  }
+  rows.sort((a, b) => (a.workDate === b.workDate ? (a.shift === b.shift ? String(a.machineNo).localeCompare(String(b.machineNo)) : a.shift === 'night' ? -1 : 1) : a.workDate < b.workDate ? 1 : -1));
+  return { rows, jigs, errors };
+}
+
+/** รวมหลายกะ/หลายจิ๊กเป็นก้อนเดียว — ถ่วงด้วยเวลา (ไม่เฉลี่ย % ตรงๆ) · ใช้สูตรเดียวกับรายกะ */
+export function combineJigRows(rows = []) {
+  const s = { plannedSec: 0, operatingSec: 0, idealSec: 0, pieces: 0, good: 0, ngMachine: 0, minorSec: 0, faultN: 0, faultSec: 0, hasP: true, hasQ: true, idealKnownOpSec: 0 };
+  for (const r of rows) {
+    const o = r.oee;
+    s.plannedSec += o.plannedSec; s.operatingSec += o.operatingSec; s.minorSec += o.minorSec;
+    s.pieces += o.pieces || 0; s.ngMachine += o.ngMachine || 0;
+    s.faultN += (o.counts.alarm || 0) + (o.counts.alarmMinor || 0); s.faultSec += (o.loss.fault || 0) + (o.loss.minorFault || 0);
+    if (o.idealSec != null) { s.idealSec += o.idealSec; s.idealKnownOpSec += o.operatingSec; } else if (o.operatingSec > 0) s.hasP = false;
+    if (o.good != null) s.good += o.good; else if ((o.pieces || 0) > 0) s.hasQ = false;
+  }
+  const A = s.plannedSec > 0 ? s.operatingSec / s.plannedSec : null;
+  const P = s.idealKnownOpSec > 0 ? Math.min(1, s.idealSec / s.idealKnownOpSec) : null;
+  const Q = s.pieces > 0 && s.hasQ ? s.good / s.pieces : null;
+  return {
+    ...s, A, P, Q, oee: A != null && P != null && Q != null ? A * P * Q : null,
+    partialP: !s.hasP && P != null, partialQ: !s.hasQ,
+    mttrMin: s.faultN ? s.faultSec / 60 / s.faultN : null, mtbfMin: s.faultN ? s.operatingSec / 60 / s.faultN : null,
+  };
+}
+
+/**
+ * 🔗 ข้อมูล ESM ที่ใช้ผูกรายครั้งของการหยุด (กดแท่ง Pareto) — โหลดตอนกดเท่านั้น (egress)
+ *  · downtime ที่คนลง = ของกะที่จิ๊กมีใบผลิต (session_id ของใบ — ผูกตรง ไม่เดาจากชื่อไลน์)
+ *  · ใบแจ้งซ่อม = เวลาเกิด/แจ้งอยู่ในช่วงที่ดู ± 1 ชม. + ใบที่เปิดจาก downtime ข้างบน · เทียบเครื่องที่ linkStops()
+ * @returns `{ downtimes, repairs, typeName: Map, errors }` — อ่านไม่ได้ = errors (จอเขียนบอก ห้ามโชว์ "ไม่มี")
+ */
+export async function loadStopLinks({ orders = [], fromMs, toMs }) {
+  const errors = [];
+  const sids = [...new Set((orders || []).map(o => o.session_id).filter(Boolean))];
+  const dtR = sids.length ? await fetchByIds(sids, part => supabaseDR.from('downtime_logs')
+    .select('id, session_id, downtime_type_id, started_at, ended_at, duration_min, machine_no, description, reported_by_name, call_mtn').in('session_id', part))
+    : { rows: [], error: null };
+  if (dtR.error || dtR.truncated) errors.push('downtime ที่คนลง');
+  const downtimes = dtR.rows || [];
+  const a = new Date(fromMs - 3600000).toISOString(), b = new Date(toMs + 3600000).toISOString();
+  const MO_COLS = 'id, mo_no, status, machine_no, occurred_at, report_at, problem_detail, root_cause, source_downtime_id';
+  const [moT, moD, ty] = await Promise.all([
+    fetchAllRows(supabaseDR, 'mtn_orders', MO_COLS, q => q.or(`and(occurred_at.gte.${a},occurred_at.lte.${b}),and(report_at.gte.${a},report_at.lte.${b})`).order('id')),
+    downtimes.length ? fetchByIds(downtimes.map(d => d.id), part => supabaseDR.from('mtn_orders').select(MO_COLS).in('source_downtime_id', part)) : Promise.resolve({ rows: [], error: null }),
+    downtimes.length ? fetchByIds([...new Set(downtimes.map(d => d.downtime_type_id).filter(Boolean))], part => supabaseDR.from('dr_downtime_types').select('id, name_th').in('id', part)) : Promise.resolve({ rows: [], error: null }),
+  ]);
+  if (moT.error || moD.error || moD.truncated) errors.push('ใบแจ้งซ่อม');
+  if (ty.error) errors.push('ชื่อประเภท downtime');
+  const repairs = [...new Map([...(moT.data || []), ...(moD.rows || [])].map(r => [r.id, r])).values()];
+  return { downtimes, repairs, typeName: new Map((ty.rows || []).map(t => [t.id, t.name_th])), errors };
+}

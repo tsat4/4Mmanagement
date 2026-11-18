@@ -4,6 +4,8 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase, supabaseDR } from '../supabaseClient';
 import { loadLinesRes } from '../utils/useProductionLines';
 import { motion, AnimatePresence } from 'framer-motion';
+import { stagger } from '../utils/motion';
+import { buildStatusLine } from '../utils/statusLine';
 import { UserContext } from '../App';
 import { isAlarmingDT, isOpenDT, isPlannedDT, dtElapsedMin, fmtDtElapsed } from '../utils/downtimeAlarm';
 import { sumDefectQty, computeLiveOee, ngByMatFrom, orderProducedQty, orderPlanQty, liveTimeSplit, QBIN_EMBED, halfDayBreakIntervals, halfDayBreakBands, breakBandName, breakBandTitle } from '../utils/oee';
@@ -29,7 +31,8 @@ import { SKILL_LEVELS, getLevel } from '../utils/skillLevels';
 import { RATE, LIVE } from '../utils/refreshRates';
 import { coalesce } from '../utils/liveRefresh';
 import { visibleInterval } from '../utils/usePolling';
-import { positionAllCards, delayedCountOf, orderKeyOf, projectedFinishMs, planStatusOf, pushChainOf, dayDelaySummaryOf } from '../utils/heijunkaQueue';
+import { positionAllCards, delayedCountOf, orderKeyOf, projectedFinishMs, planStatusOf, pushChainOf, dayDelaySummaryOf, planFramePct, stretchOverBreaks } from '../utils/heijunkaQueue';
+import PlanSlipFrame from '../components/PlanSlipFrame';
 import { buildBoardCards } from '../utils/boardCards';
 import PlanSlipBar from '../components/PlanSlipBar';   // 📋 แถบ "หลุดแผนไปแค่ไหน" (เวลา+ยอด · 2026-09-30)
 import DowntimeBand from '../components/DowntimeBand';   // ⛔ แถบเครื่องหยุดเต็มความสูงแถว (2026-11-04)
@@ -53,8 +56,7 @@ import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-he
    เดิมการ์ดไลน์ตัดที่ 80% และเอา 4M มาปนสีมาทำงาน ⇒ ไลน์มา 91% ขึ้น "⚠ Risk" · มา 82% ขึ้น "✓ Normal" */
 const attendTone = (rate) => (rate == null ? 'none' : rate >= 90 ? 'good' : rate >= 75 ? 'warn' : 'bad');
 
-const FADE_UP = { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 } };
-const stagger = (i) => ({ ...FADE_UP, transition: { delay: i * 0.06, duration: 0.35 } });
+/* 18/11: FADE_UP/stagger ย้ายไป utils/motion.js (ของกลาง · นิ่งเองบนจอ TV / reduced-motion) */
 
 function useNow() {
   const [now, setNow] = useState(new Date());
@@ -1086,8 +1088,27 @@ export default function Dashboard({ view = 'timeline' }) {
         </div>
       )}
 
+      {/* ── 🗣 ประโยคสรุปสถานะ (18/11 · ก๊อป ERP: เล่าเป็นภาษาคน + ชี้สิ่งเดียวที่ต้องดู) — ข้อมูลชุดเดียวกับการ์ดข้างล่าง
+          จอ TV/บอร์ดใช้บัญชีกลาง ⇒ ไม่ทักทายชื่อ · ค่าที่ยังไม่รู้ถูกนับเป็น "ยังไม่มีข้อมูล" ไม่ใช่ 0 (utils/statusLine.js) */}
+      {!loading && (() => {
+        const sl = buildStatusLine([
+          { label: 'อัตราการมาทำงาน', value: attendRate, unit: '%', tone: attendRate == null ? 'none' : attendTone(attendRate), need: attendRate == null ? null : `อัตราการมาทำงาน ${attendRate}% (มา ${present.length} · ขาด ${absent.length})` },
+          { label: 'PPE ครบ', value: ppeRate, unit: '%', tone: ppeRate == null ? 'none' : ppeRate >= 90 ? 'good' : ppeRate >= 70 ? 'warn' : 'bad', need: ppeRate == null ? null : `PPE ครบแค่ ${ppeRate}% ของคนที่มา` },
+          { label: 'OT', value: otCount, unit: 'คน', tone: 'none' },
+          { label: '4M รอ', value: visibleFourMLogs.length, unit: 'รายการ', tone: toneOf({ value: visibleFourMLogs.length, zeroIsGood: true, over: 'warn' }), need: `4M รออนุมัติ ${visibleFourMLogs.length} รายการ` },
+        ], { now });
+        return (
+          <div data-tv-item style={{ marginBottom: 12, fontSize: T(14, 22), lineHeight: 1.5, color: 'var(--text2)' }}>
+            {sl.text.split(' — ').map((seg, k, arr) => (
+              <span key={k} style={k === arr.length - 1 && sl.focus ? { color: statusColor(sl.tone), fontWeight: 700 } : undefined}>
+                {k > 0 ? ' — ' : ''}{seg}
+              </span>
+            ))}
+          </div>
+        );
+      })()}
       {/* ── KPI Row ─────────────────────────────────────── */}
-      <div data-tv-item style={{ display: 'grid', gridTemplateColumns: isWide ? 'repeat(6, 1fr)' : 'repeat(auto-fit, minmax(175px, 1fr))', gap: isMobile ? 10 : 14, marginBottom: 24 }}>
+      <div data-tv-item style={{ display: 'grid', gridTemplateColumns: isWide ? 'repeat(6, 1fr)' : 'repeat(auto-fit, minmax(175px, 1fr))', gap: isMobile ? 10 : 16, marginBottom: 24 }}>
         {[
           /* 🚦 สีบนการ์ด = **สถานะเทียบเป้าเท่านั้น** (`utils/statusTone.js`) — 23/09 จาก brief De-AI UI
              เดิมแถวนี้ปนกัน 3 แบบในบรรทัดเดียวกัน: น้ำเงิน = สีประจำใบ · ส้ม = สีประจำใบ ·
@@ -1772,14 +1793,7 @@ export default function Dashboard({ view = 'timeline' }) {
                          🔴 **วาดทุกใบ** — กรอบคือเส้นอ้างอิงที่ต้องอยู่เสมอ คนถึงจะเทียบได้ว่าแท่งจริง
                             "ล้นออกขวาเท่าไหร่ = หลุดเท่านั้น" (ใบที่ตรงแผน กรอบจะทับแท่งพอดี = เหมือนเส้นขอบ ไม่รก)
                          · `slipped` ใช้เน้นเฉพาะใบที่หลุดจริง (กรอบเข้ม + เส้นปิดท้ายกรอบให้เห็นจุดที่แผนจบ) */
-                      let planLeftPct = 0, planWidthPct = 0, planSlipped = false;
-                      if (item.planStartMs != null && item.plannedEndMs != null) {
-                        const pl = Math.max(0, Math.min(100, (item.planStartMs - hs) * pctPerMs));
-                        const pr = Math.max(0, Math.min(100, (item.plannedEndMs - hs) * pctPerMs));
-                        if (pr > pl) { planLeftPct = pl; planWidthPct = pr - pl; }
-                        planSlipped = (item.startMs - item.planStartMs) > 2 * 60000
-                          || (Math.max(item.endMs, item.occupiedEndMs) - item.plannedEndMs) > 2 * 60000;
-                      }
+                      const { planLeftPct, planWidthPct, planSlipped } = planFramePct(item, hs, pctPerMs);
                       return { o: item.o, leftPct, widthPct, tailLeftPct, tailWidthPct, realEndMs: item.endMs, isDelayed: item.isDelayed, isLateDone: item.isLateDone, startMs: item.startMs, occupiedEndMs: item.occupiedEndMs, planLeftPct, planWidthPct, planStartMs: item.planStartMs, plannedEndMs: item.plannedEndMs, planSlipped };
                     };
 
@@ -1921,20 +1935,10 @@ export default function Dashboard({ view = 'timeline' }) {
                               </div>
                               )}
                             </div>
-                            {/* 🖼️ กรอบแผน — "ใบนี้ควรอยู่ตรงนี้" (เส้นประเทา ไม่ทึบ ไม่แย่งสายตากับสถานะ)
-                                วาดเฉพาะใบที่หลุดกรอบ ⇒ ระยะห่างระหว่างกรอบกับแถบจริง = ขนาดที่หลุด เห็นด้วยตาเปล่า */}
-                            {planWidthPct > 0 && (
-                              <div title={`กรอบแผนของใบนี้: ${fmtMs(planStartMs)}–${fmtMs(plannedEndMs)}${planSlipped ? ` · หลุดกรอบ (เริ่มช้า ${Math.max(0, Math.round((startMs - planStartMs) / 60000))} น. · จบช้า ${Math.max(0, Math.round((Math.max(realEndMs, occupiedEndMs || realEndMs) - plannedEndMs) / 60000))} น.)` : ' · อยู่ในกรอบ'}`}
-                                style={{
-                                  position: 'absolute', top: 1, bottom: 1,
-                                  left: `${planLeftPct}%`, width: `${planWidthPct}%`,
-                                  /* 🔴 ใบที่หลุดกรอบ วาดกรอบ **ทับแท่ง** (z=2) ให้เห็นเป็นกล่องชัดๆ ว่า "แผนจบตรงนี้"
-                                     แล้วส่วนที่ยื่นพ้นกล่อง = ที่หลุด (ตรงกับภาพร่าง user)
-                                     · ใบที่ตรงแผน วาดไว้ข้างหลัง (z=0) จางๆ ไม่งั้นทุกใบมีเส้นประล้อม = จอรก */
-                                  border: `${planSlipped ? 2 : 1}px dashed ${planSlipped ? 'var(--text)' : 'var(--muted)'}`, borderRadius: 'var(--r-xs)',
-                                  opacity: planSlipped ? 0.95 : 0.35, zIndex: planSlipped ? 2 : 0, pointerEvents: 'none',
-                                }} />
-                            )}
+                            {/* 🖼️ กรอบคิวตามอุดมคติของใบนี้ — ตัววาดตัวเดียวทั้งระบบ (ห้ามวาดเองในหน้า) */}
+                            <PlanSlipFrame planLeftPct={planLeftPct} planWidthPct={planWidthPct} planSlipped={planSlipped}
+                              planStartMs={planStartMs} plannedEndMs={plannedEndMs}
+                              startMs={startMs} realEndMs={realEndMs} occupiedEndMs={occupiedEndMs} fmtMs={fmtMs} />
                             {/* หางเงาแดง — ยังไม่ปิดงานแม้เลยกำหนดแล้ว ครองไลน์อยู่จนถึงตอนนี้ ดันใบถัดไปไปต่อท้าย */}
                             {tailWidthPct > 0 && (
                               <div title={tr('ยังไม่ปิดงาน — ดีเลย์ยังดำเนินอยู่')}
@@ -1968,20 +1972,11 @@ export default function Dashboard({ view = 'timeline' }) {
                       const NIGHT_REG_IN  = gridStartMs + 14.5 * 3600000;  // 22:30 (เข้าปกติ)
                       const FRAME_END     = gridEndMs;                     // 08:00
                       // จำลองเวลาเสร็จ: เริ่มจาก startMs ใส่เนื้องาน workMs แล้วยืดคร่อมช่วงพักที่ทับ
-                      const finishFrom = (startMs, workMs) => {
-                        const breaks = allBreaksOnce(lineName);
-                        let end = startMs + workMs;
-                        const consumed = new Set();
-                        let ext = true;
-                        while (ext) {
-                          ext = false;
-                          breaks.forEach(([bs, be], i) => {
-                            if (consumed.has(i)) return;
-                            if (bs < end && be > startMs) { consumed.add(i); end += be - bs; ext = true; }
-                          });
-                        }
-                        return end;
-                      };
+                      /* 🔴 ยืดคร่อมเวลาพัก = `stretchOverBreaks()` (utils/heijunkaQueue.js) เท่านั้น
+                         คอมเมนต์ของมันเขียนไว้เองว่า "ต้องเป็นฟังก์ชันเดียว · ก๊อป 2 ที่แล้วดริฟท์แน่"
+                         แต่ 13/11 เจอ **ก๊อปซ้ำ 3 ชุด**ในหน้า (MG 1 · DB 2) — ยุบแล้ว ห้าม inline กลับมา */
+                      const finishFrom = (startMs, workMs) =>
+                        stretchOverBreaks(startMs, startMs + workMs, allBreaksOnce(lineName));
                       const chips = [];
                       ['day', 'night'].forEach(shift => {
                         let remainCards = 0, remainQty = 0, projEndMs = null, noCt = 0, workMs = 0, started = false;
@@ -2025,20 +2020,11 @@ export default function Dashboard({ view = 'timeline' }) {
                           if (ediQty > 0) {
                             const NIGHT_OT_IN2 = gridStartMs + 12 * 3600000, NIGHT_REG_IN2 = gridStartMs + 14.5 * 3600000;
                             const stockNote = stockUsed > 0 ? ` · หัก stock ${stockUsed.toLocaleString()} แล้ว` : '';
-                            const finishFrom2 = (startMs, workMs) => {
-                              const breaks = allBreaksOnce(lineName);
-                              let end = startMs + workMs;
-                              const consumed = new Set();
-                              let ext = true;
-                              while (ext) {
-                                ext = false;
-                                breaks.forEach(([bs, be], i) => {
-                                  if (consumed.has(i)) return;
-                                  if (bs < end && be > startMs) { consumed.add(i); end += be - bs; ext = true; }
-                                });
-                              }
-                              return end;
-                            };
+                            /* 🔴 ยืดคร่อมเวลาพัก = `stretchOverBreaks()` (utils/heijunkaQueue.js) เท่านั้น
+                               คอมเมนต์ของมันเขียนไว้เองว่า "ต้องเป็นฟังก์ชันเดียว · ก๊อป 2 ที่แล้วดริฟท์แน่"
+                               แต่ 13/11 เจอ **ก๊อปซ้ำ 3 ชุด**ในหน้า (MG 1 · DB 2) — ยุบแล้ว ห้าม inline กลับมา */
+                            const finishFrom2 = (startMs, workMs) =>
+                              stretchOverBreaks(startMs, startMs + workMs, allBreaksOnce(lineName));
                             if (w <= 0) {
                               chips.push({ color: 'var(--muted)', text: `🌙📡 EDI: งานส่งพรุ่งนี้ ${ediQty.toLocaleString()} ชิ้น แต่ไม่มี cycle time — คาดการณ์ไม่ได้${stockNote}` });
                             } else {

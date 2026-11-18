@@ -31,7 +31,10 @@ import { QA_STAGES, FME_SHEET_STAGE } from '../utils/qaStages';
 import { notifyEvent } from '../utils/notifyEvent';
 import { checkWrite, checkWriteRows } from '../utils/dbWrite';
 import InspectorCodeField from './InspectorCodeField';   // ✍️ รหัสผู้ตรวจจริง (C1 · 05/11)
-import { printQaSheet } from '../lib/qaSheetPrint';         // 🖨️ ใบพิมพ์ QA (05/11)
+import { prepareQaSheetHtml } from '../lib/qaSheetPrint';   // 📄 ใบ Inspection Data FM-QA-112 (05/11 · หน้าตาใบจริง 16/11)
+import { buildDataSheet, dataSheetCsvRows, mergeShiftResults } from '../utils/qaDataSheet';
+import { downloadCsvDoc, csvText } from '../utils/csvDoc';
+import { loadDocForms } from '../utils/docForms';
 import { resolveEmployeeSigner, inspectorForExport, loadEmployeeSigners, signatureOfPerson } from '../utils/employeeSignature';
 import { stageLabel } from '../utils/qaStages';
 import { specLabel, judgeVariable } from '../utils/qaSpec';
@@ -42,6 +45,11 @@ import ScanModal from './ScanModal';
 import { useSearchParams } from 'react-router-dom';
 import { useMergeParams } from '../utils/useTabParam';
 import { parseQrPayload, findQaPartByScan } from '../utils/qrCode';
+/* 📥 CSV ผลตรวจรายพาร์ท (16/11) — CSV = เอกสาร ⇒ ชื่อไฟล์ผ่านทะเบียน /doc-forms (csv_qa_inspection_results)
+   ใช้ `downloadCsvDoc`/`csvText`/`loadDocForms` ที่ import ไว้ด้านบนร่วมกับใบ Inspection Data */
+import { QA_RESULT_HEADERS, qaResultCsvRows, csvStamp } from '../utils/qaCsvRows';
+import { fetchByIds, fetchAllPages } from '../utils/fetchByIds';
+import { addDaysStr } from '../utils/workDate';
 
 import { tr } from '../utils/i18n';
 /* ── helpers เวลา/วันงาน (กฎเดียวกับทั้งระบบ) ───────────────────────────── */
@@ -91,6 +99,9 @@ export default function QaCheckSheet({ canRecord }) {
   const { role, lineId, sections, fullName } = useContext(UserContext);
   // ฝ่ายผลิต/หัวหน้าไลน์บันทึก action หลัง alarm (cross-function กับ QA) — คีย์แยกจาก qa:record
   const canAction = can('qa', 'record_action', role);
+  /* 📥 ดาวน์โหลดผลตรวจ = คีย์เดียวกับปุ่ม export ทั้งระบบ (`report:export` — "Export รายงาน (PDF/CSV)")
+     ไม่ใช่ qa:record: อ่าน/ดาวน์โหลดไม่ได้เขียนอะไร · ห้าม hardcode role array (UI §can()) */
+  const canExport = can('report', 'export', role);
   const isMobile = useIsMobile();
 
   const [allLines, setAllLines] = useState([]);
@@ -131,6 +142,9 @@ export default function QaCheckSheet({ canRecord }) {
   const boxRef = useRef(null);
   const wrapRef = useRef(null);
   const rowRefs = useRef({});
+  const stepRowRefs = useRef({});   // แถวกรอกค่าในแผงตรวจทีละชิ้น (มีเมื่อกำลังตรวจ)
+  const [focusReq, setFocusReq] = useState(null);   // 🎯 { id, n } — สั่งแผงกรอกเลื่อนไปจุดนั้น (สลับกลุ่มให้เอง)
+  const [showSummary, setShowSummary] = useState(false);   // สรุปต่อจุด — พับไว้ (16/11 user: ยาวจนเมื่อยมือ ดูรีพอร์ตแทน)
   const [boxW, setBoxW] = useState(0);
   const [natSize, setNatSize] = useState({ w: 0, h: 0 });
   const [imgBox, setImgBox] = useState({ w: 0, h: 0 });
@@ -601,9 +615,17 @@ export default function QaCheckSheet({ canRecord }) {
   const focusItem = (id) => {
     setSelItemId(id);
     const it = items.find(x => x.id === id);
+    /* 🎯 16/11 user: "จิ้มบอลลูนแล้วเด้งไปค่าที่ตรวจแล้ว ไม่ควร — ยังไม่ตรวจต้องวิ่งไปช่องให้พนักงานใส่ค่า"
+       ⇒ แผงตรวจทีละชิ้นเปิดอยู่ (กำลังตรวจ) = ไปที่ช่องกรอกของจุดนั้น + โฟกัสช่อง (ไม่เปิดซูมทับ — รูปกดดูได้ที่แถว)
+          ไม่มีแผงกรอก (ใบปิด/ไม่มีสิทธิ์) = ไปแถวสรุปต่อจุดเหมือนเดิม */
+    if (Object.keys(stepRowRefs.current).length) {   // แผงกรอกกำลังแสดงอยู่ (กำลังตรวจ) — แผงจัดการสลับกลุ่ม/เลื่อน/โฟกัสเอง
+      setFocusReq({ id, n: Date.now() });
+      return;
+    }
     if (it?.image_path) setZoomItem(it);
-    // คลิกหมุด → เลื่อนไปแถวของจุดนั้น (จอเล็กจะได้ไม่ต้องไล่หา)
-    rowRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // ไม่มีแผงกรอก (ใบปิด/ดูอย่างเดียว) → กางสรุปต่อจุดแล้วเลื่อนไปแถวนั้น
+    setShowSummary(true);
+    setTimeout(() => rowRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60);
   };
   const selectRow = (i) => {
     setSelItemId(i.id);
@@ -616,39 +638,146 @@ export default function QaCheckSheet({ canRecord }) {
   /* 🖨️ พิมพ์ใบตรวจ (doc_key qa_inspection_sheet) — ผู้ตรวจ: รหัสที่บันทึกไว้ชนะบัญชี (inspectorForExport)
      ไม่มีรหัส = บัญชีที่สร้างใบ (inspector_uid) → ลายเซ็นโปรไฟล์ → ลายเซ็นในฐานพนักงานที่ผูกไว้ · อ่านไม่ได้ = บอก */
   const [printing, setPrinting] = useState(false);
-  const handlePrint = async () => {
+  const [viewHtml, setViewHtml] = useState('');       // 📄 ดูผลบนจอ = HTML ใบเดียวกับที่พิมพ์ (iframe)
+  const viewRef = useRef(null);
+  /* ข้อมูลชุดเดียวที่ใช้ทั้ง ดูผล / พิมพ์-PDF / CSV — 3 ทางต้องออกมาตรงกัน (utils/qaDataSheet.js) */
+  const exportParams = async (sh) => {
+    let accountName = sh.inspector_name || null, accountSig = null;
+    if (!sh.inspector_code && sh.inspector_uid) {
+      const { data: prof, error } = await supabase.from('profiles').select('full_name, signature_url, employee_id').eq('id', sh.inspector_uid).maybeSingle();
+      if (error) toast.error(`โหลดลายเซ็นผู้ตรวจไม่สำเร็จ — ใบจะเว้นช่องลายเซ็น (${error.message})`);
+      let empSig = null;
+      if (prof && !prof.signature_url && prof.employee_id) {
+        const er = await loadEmployeeSigners(supabase, { ids: [prof.employee_id] });
+        if (er.error) toast.error(`โหลดลายเซ็นจากฐานพนักงานไม่สำเร็จ (${er.error})`);
+        empSig = er.rows?.[0]?.signature_url || null;
+      }
+      accountName = prof?.full_name || accountName;
+      accountSig = signatureOfPerson({ profileSig: prof?.signature_url, employeeSig: empSig });
+    }
+    const signer = sh.inspector_code ? await resolveEmployeeSigner(supabase, sh.inspector_code) : null;
+    const who = inspectorForExport({ code: sh.inspector_code, signer, accountName, accountSig });
+    /* 📑 รีพอร์ต = ทั้งกะ ไม่ใช่ทีละรอบ (16/11 · user "ใบนึงต้องโชว์ของกะนั้น 3 ตัว 5 ตัว ไม่ใช่ตัวละใบ")
+       รวมทุกใบของ พาร์ท+วันงาน+กะ (ทุกรอบ) → คอลัมน์ No.k = ชิ้นที่ตรวจทั้งกะ · utils/qaDataSheet `mergeShiftResults`
+       🔴 โหลดทีละใบ (ใบละ ~200 จุด) — ห้าม .in(ids) รวด (เพดาน 1000 แถว/คิวรี = ตัดเงียบ) · อ่านไม่ได้ = หยุด ไม่พิมพ์ใบขาด */
+    const { data: shiftSheets, error: sErr } = await supabase.from('qa_inspection_sheets').select('*')
+      .eq('part_id', sh.part_id).eq('work_date', sh.work_date).eq('shift', sh.shift).order('round_no');
+    if (sErr) throw new Error(`โหลดใบตรวจทั้งกะไม่สำเร็จ: ${sErr.message}`);
+    const shs = shiftSheets?.length ? shiftSheets : [sh];
+    const per = await Promise.all(shs.map(x => Promise.all([
+      supabase.from('qa_inspection_results').select('*').eq('sheet_id', x.id),
+      supabase.from('qa_inspection_pieces').select('*').eq('sheet_id', x.id).order('piece_no'),
+      supabase.from('qa_inspection_actions').select('*').eq('sheet_id', x.id).order('round_no'),
+    ])));
+    const bad = per.flat().find(r => r.error);
+    if (bad) throw new Error(`โหลดผลตรวจทั้งกะไม่สำเร็จ: ${bad.error.message}`);
+    const allRes = per.flatMap(([r]) => r.data || []);
+    const merged = mergeShiftResults(shs, allRes);
+    const rounds = merged.rounds.filter(r => r != null);
+    const shiftSheet = {
+      ...sh,
+      rounds_label: rounds.length > 1 ? `${Math.min(...rounds)}–${Math.max(...rounds)} (${shs.length} ใบ)` : (rounds[0] ?? sh.round_no),
+      status: shs.every(x => x.status === 'done') ? 'done' : 'open',
+      result: shs.some(x => x.result === 'fail') ? 'fail' : shs.every(x => x.status === 'done' && x.result === 'pass') ? 'pass' : null,
+    };
+    return { sheet: shiftSheet, part: part || {}, items, results: merged.results, colLabels: merged.colLabels,
+      pieces: per.flatMap(([, p]) => (p.data || []).map(x => ({ ...x, round_no: x.round_no ?? shs.find(y => y.id === x.sheet_id)?.round_no }))),
+      actions: per.flatMap(([, , a]) => a.data || []), drawings,
+      inspector: { ...who, code: sh.inspector_code || '' }, stageLabel: sh.stage ? stageLabel(sh.stage) : '' };
+  };
+  const curSheet = () => {
     const sh = matchesKey(sheet) ? sheet : null;
-    if (!sh) { toast.error('ยังไม่มีใบตรวจของรอบนี้ — บันทึกผลอย่างน้อย 1 จุดก่อนพิมพ์'); return; }
+    if (!sh) toast.error('ยังไม่มีใบตรวจของรอบนี้ — บันทึกผลอย่างน้อย 1 จุดก่อน');
+    return sh;
+  };
+  const handleView = async () => {
+    const sh = curSheet(); if (!sh) return;
     setPrinting(true);
     try {
-      let accountName = sh.inspector_name || null, accountSig = null;
-      if (!sh.inspector_code && sh.inspector_uid) {
-        const { data: prof, error } = await supabase.from('profiles').select('full_name, signature_url, employee_id').eq('id', sh.inspector_uid).maybeSingle();
-        if (error) toast.error(`โหลดลายเซ็นผู้ตรวจไม่สำเร็จ — ใบจะเว้นช่องลายเซ็น (${error.message})`);
-        let empSig = null;
-        if (prof && !prof.signature_url && prof.employee_id) {
-          const er = await loadEmployeeSigners(supabase, { ids: [prof.employee_id] });
-          if (er.error) toast.error(`โหลดลายเซ็นจากฐานพนักงานไม่สำเร็จ (${er.error})`);
-          empSig = er.rows?.[0]?.signature_url || null;
-        }
-        accountName = prof?.full_name || accountName;
-        accountSig = signatureOfPerson({ profileSig: prof?.signature_url, employeeSig: empSig });
-      }
-      const signer = sh.inspector_code ? await resolveEmployeeSigner(supabase, sh.inspector_code) : null;
-      const who = inspectorForExport({ code: sh.inspector_code, signer, accountName, accountSig });
-      if (who.note) toast.info(`ผู้ตรวจรหัส ${sh.inspector_code}: ${who.note}`);
-      else if (!who.signatureUrl) toast.info('ผู้ตรวจยังไม่มีลายเซ็นในระบบ — ใบจะเว้นช่องให้เซ็นมือ');
-      const ok = await printQaSheet({ sheet: sh, items, results, pieces, actions,
-        inspector: { ...who, code: sh.inspector_code || '' }, stageLabel: sh.stage ? stageLabel(sh.stage) : '' });
-      if (!ok) toast.error('เปิดหน้าต่างพิมพ์ไม่ได้ — อนุญาต pop-up ของเว็บนี้ก่อน');
+      const p = await exportParams(sh);
+      if (p.inspector.note) toast.info(`ผู้ตรวจรหัส ${sh.inspector_code}: ${p.inspector.note}`);
+      setViewHtml(await prepareQaSheetHtml(p));
     } catch (e) {
-      toast.error(`พิมพ์ใบตรวจไม่สำเร็จ: ${e?.message || e}`);
+      toast.error(`เตรียมใบ Inspection Data ไม่สำเร็จ: ${e?.message || e}`);
     } finally { setPrinting(false); }
+  };
+  const handlePrintView = () => {
+    const w = viewRef.current?.contentWindow;
+    if (!w) { toast.error('ใบยังโหลดไม่เสร็จ — รอสักครู่แล้วกดใหม่'); return; }
+    w.focus(); w.print();
+  };
+  const handleCsv = async () => {
+    const sh = curSheet(); if (!sh) return;
+    let p;
+    try { p = await exportParams(sh); } catch (e) { toast.error(String(e?.message || e)); return; }
+    await loadDocForms();   // ชื่อไฟล์ตามทะเบียน (csvDoc ต้องโหลดก่อน)
+    // CSV = ทุกชิ้นของกะ ไม่ตัดคอลัมน์ (ใบพิมพ์ตัดที่ 10 แล้วบอกบนใบ)
+    const rows = dataSheetCsvRows({ sheet: p.sheet, part: part || {}, data: buildDataSheet({ items, results: p.results, colLabels: p.colLabels, maxCols: Infinity }) });
+    const name = `InspectionData_${String(sh.part_no || '').replace(/\s+/g, '-')}_${sh.work_date}_${sh.shift}`;
+    downloadCsvDoc('csv_qa_inspection_data', name, csvText(rows[0], rows.slice(1)));
+  };
+
+  /* ── 📥 CSV ผลตรวจของพาร์ทนี้ (16/11 · feedback ประชุม "export data พวกผลตรวจ เป็น CSV รายพาร์ท") ──
+     ช่วง = ย้อนหลัง N วันถึงวันงานที่เลือกอยู่ (พารามิเตอร์ของปุ่ม ไม่ใช่ตัวกรองมุมมอง · UI-STANDARD §3 ข้อ 5)
+     🔴 egress: เลือกเฉพาะคอลัมน์ที่ไฟล์ใช้ · ใบ > 1000 แถว ⇒ `fetchAllPages` · ผลรายจุดผ่าน `fetchByIds`
+        (`.in()` ยาว = URL เกินเพดาน proxy → คืนค่าว่างเงียบ · กฎเหล็ก DB ข้อ 5/11)
+     🔴 โหลดไม่ครบ ห้ามส่งไฟล์ที่ขาดเงียบๆ — ถามก่อน แล้วติด "ไม่ครบ" ไว้ที่ **ชื่อไฟล์**
+        (ห้ามแทรกบรรทัดเตือนในเนื้อ CSV — แถวแรกต้องเป็นหัวตาราง) */
+  const [csvDays, setCsvDays] = useState(30);
+  const [csvBusy, setCsvBusy] = useState(false);
+  useEffect(() => { loadDocForms().catch(() => { /* ไม่ได้ชื่อจากทะเบียน = ชื่อไฟล์เดิม ไม่ล้ม */ }); }, []);
+
+  const exportResultsCsv = async () => {
+    if (!partId) { toast.error('เลือกพาร์ทก่อน'); return; }
+    const from = addDaysStr(workDate, -(csvDays - 1));
+    if (!from) { toast.error('อ่านวันงานไม่ออก — เลือกวันใหม่'); return; }
+    setCsvBusy(true);
+    try {
+      const sh = await fetchAllPages(() => supabase.from('qa_inspection_sheets')
+        .select('id, part_no, part_name, line_name, work_date, shift, round_no, stage, lot_no, machine_no, inspector_name, inspector_code, status, result')
+        .eq('part_id', partId).gte('work_date', from).lte('work_date', workDate));
+      if (sh.error) { toast.error(`โหลดใบตรวจไม่สำเร็จ: ${sh.error} — ยังไม่ได้ไฟล์`); return; }
+      if (!sh.rows.length) { toast.info(`ช่วง ${from} – ${workDate} ยังไม่มีใบตรวจของพาร์ทนี้`); return; }
+      const rs = await fetchByIds(sh.rows.map(s => s.id), (ids) => supabase.from('qa_inspection_results')
+        .select('id, sheet_id, balloon_no, characteristic, item_type, spec_text, judgement, values_json, qty_checked, qty_ng, note, ncr_id, recorded_by, recorded_at')
+        .in('sheet_id', ids));
+      if (rs.error && !rs.rows.length) { toast.error(`โหลดผลตรวจไม่สำเร็จ: ${rs.error} — ยังไม่ได้ไฟล์`); return; }
+      const rows = qaResultCsvRows(sh.rows, rs.rows);
+      if (!rows.length) { toast.info(`ช่วงนี้มีใบตรวจ ${sh.rows.length} ใบ แต่ยังไม่มีผลรายจุดที่บันทึกไว้`); return; }
+      const miss = [sh.truncated && 'ใบตรวจเกินเพดานที่ดึงได้', rs.truncated && 'ผลรายจุดเกินเพดานที่ดึงได้',
+        rs.failed > 0 && `ผลรายจุดบางก้อนโหลดไม่สำเร็จ (${rs.error})`].filter(Boolean);
+      if (miss.length) {
+        toast.error(`ข้อมูลไม่ครบ: ${miss.join(' · ')}`);
+        if (!window.confirm(`⚠️ ข้อมูลไม่ครบ\n${miss.join('\n')}\n\nไฟล์ที่ได้จะไม่ครบ (ชื่อไฟล์จะติดคำว่า "ไม่ครบ")\nดาวน์โหลดต่อไหม?`)) return;
+      }
+      downloadCsvDoc('csv_qa_inspection_results',
+        csvStamp(['qa_results', part?.part_no || partId, from, workDate, miss.length ? 'ไม่ครบ' : '']),
+        csvText(QA_RESULT_HEADERS, rows));
+      toast.success(`ส่งออก ${rows.length.toLocaleString()} แถว จาก ${sh.rows.length} ใบตรวจ ✓`);
+    } catch (e) {
+      toast.error(`ส่งออก CSV ไม่สำเร็จ: ${e?.message || e}`);
+    } finally { setCsvBusy(false); }
   };
 
   /* ── UI ─────────────────────────────────────────────────────────────── */
   return (
     <div>
+      {/* 📄 ดูผลแบบใบ Inspection Data (FM-QA-112) — HTML ชุดเดียวกับที่พิมพ์ · พิมพ์/บันทึก PDF จาก iframe นี้ */}
+      {viewHtml && (
+        <div role="dialog" aria-modal="true" aria-label={tr('ใบ Inspection Data')}
+          style={{ position: 'fixed', inset: 0, zIndex: 2000, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', flexDirection: 'column', padding: isMobile ? 0 : 16 }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', padding: '8px 12px', background: 'var(--card)', borderBottom: '1px solid var(--border)' }}>
+            <b style={{ fontSize: 14 }}>📄 {tr('ใบ Inspection Data')}</b>
+            <span style={{ fontSize: 12, color: 'var(--muted)' }}>{sheet?.part_no} · {sheet?.work_date} · {sheet?.shift === 'night' ? tr('กะดึก') : tr('กะเช้า')} · {tr('รวมทุกรอบของกะ')}</span>
+            <span style={{ flex: 1 }} />
+            <button type="button" className="tbtn" onClick={handlePrintView} style={{ fontWeight: 700 }}>{tr('🖨️ พิมพ์ / บันทึก PDF')}</button>
+            <button type="button" className="tbtn" onClick={handleCsv}>{tr('⬇ CSV')}</button>
+            <button type="button" className="tbtn" onClick={() => setViewHtml('')} aria-label={tr('ปิด')}>✕</button>
+          </div>
+          <iframe ref={viewRef} title={tr('ใบ Inspection Data')} srcDoc={viewHtml}
+            style={{ flex: 1, width: '100%', border: 0, background: 'var(--bg3)' }} />
+        </div>
+      )}
       {needMigration && (
         <div style={{
           ...cardSt, marginBottom: 12, borderColor: '#f59e0b',
@@ -763,10 +892,32 @@ export default function QaCheckSheet({ canRecord }) {
               <span style={{ flex: 1 }} />
               {/* ใบปิดเองเมื่อตัวเดินกฎบอก "ยอมรับ" — ไม่มีปุ่มปิดใบ/ผ่านทั้งหมด (ตรวจทีละชิ้น 2026-09-07) */}
               <Chip label={`ชิ้นที่ตรวจแล้ว ${pieces.length}`} color="#6b7280" />
-              <button type="button" className="tbtn" disabled={printing || !matchesKey(sheet)} onClick={handlePrint}
-                title={matchesKey(sheet) ? tr('พิมพ์/บันทึก PDF ใบตรวจรอบนี้') : tr('ยังไม่มีใบตรวจของรอบนี้')}
+              <button type="button" className="tbtn" disabled={printing || !matchesKey(sheet)} onClick={handleView}
+                title={matchesKey(sheet) ? tr('ดูผลทั้งกะแบบใบ Inspection Data (ทุกรอบ/ทุกชิ้น) — พิมพ์/บันทึก PDF ได้จากหน้าที่เปิด') : tr('ยังไม่มีใบตรวจของรอบนี้')}
                 style={{ padding: '5px 12px', fontSize: 12, fontWeight: 700 }}>
-                {printing ? tr('กำลังเตรียม…') : tr('🖨️ พิมพ์ใบตรวจ')}
+                {printing ? tr('กำลังเตรียม…') : tr('📄 ใบ Inspection Data')}
+              </button>
+              <button type="button" className="tbtn" disabled={!matchesKey(sheet)} onClick={handleCsv}
+                title={tr('ดาวน์โหลดผลตรวจทั้งกะเป็น CSV (คอลัมน์เดียวกับใบ Inspection Data)')}
+                style={{ padding: '5px 12px', fontSize: 12, fontWeight: 700 }}>
+                {tr('⬇ CSV')}
+              </button>
+            </>
+          )}
+          {/* 📥 CSV ผลตรวจรายพาร์ท (16/11) — ช่อง "ย้อนหลัง" = พารามิเตอร์ของปุ่มนี้ ไม่ใช่ตัวกรองมุมมอง
+              (UI-STANDARD §3 ข้อ 5 · วางชิดปุ่มพร้อมป้ายบอกว่าเป็นของปุ่มไหน) */}
+          {canExport && (
+            <>
+              {!items.length && <span style={{ flex: 1 }} />}
+              <span style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 700 }}>{tr('CSV ย้อนหลัง')}</span>
+              <select value={csvDays} onChange={e => setCsvDays(Number(e.target.value))} aria-label={tr('ช่วงวันของไฟล์ CSV')}
+                style={{ width: 'auto', height: 28, fontSize: 12, borderRadius: 8, padding: '0 6px', background: 'var(--bg3)', border: '1px solid var(--border2)', color: 'var(--text)' }}>   {/* width:auto กัน trap index.css select{width:100%} ใน flex row — stdsweep 18/11 ยืด 1,510px */}
+                {[7, 30, 60, 90, 180].map(d => <option key={d} value={d}>{d} {tr('วัน')}</option>)}
+              </select>
+              <button type="button" className="tbtn" disabled={csvBusy || !partId} onClick={exportResultsCsv}
+                title={tr('ผลตรวจทุกจุด ทุกรอบ ของพาร์ทนี้ในช่วงที่เลือก — เปิดใน Excel ได้ (ช่องว่าง = ไม่มีค่า ไม่ใช่ 0)')}
+                style={{ padding: '5px 12px', fontSize: 12, fontWeight: 700 }}>
+                {csvBusy ? tr('กำลังรวบรวม…') : tr('📥 CSV ผลตรวจ')}
               </button>
             </>
           )}
@@ -848,19 +999,23 @@ export default function QaCheckSheet({ canRecord }) {
             <QaPieceStepper items={items} results={results} pieces={pieces} actions={actions} seq={seq}
               sheet={sheet} part={part} workDate={workDate} shift={shift}
               canRecord={canRecord && !loading} canAction={canAction} busy={busy} isMobile={isMobile} fullName={fullName}
-              onSavePiece={savePiece} onSaveAction={saveAction} />
+              onSavePiece={savePiece} onSaveAction={saveAction}
+              focusReq={focusReq} rowRef={(id, el) => { if (el) stepRowRefs.current[id] = el; else delete stepRowRefs.current[id]; }} />
           )}
 
           {/* สรุปต่อจุด (อ่านอย่างเดียว — ค่าทุกชิ้นที่วัดแล้ว · เปิด NCR จากจุดที่ตกได้ที่นี่) */}
           <div style={{ ...cardSt, padding: 0 }}>
-            <div style={{ padding: '12px 16px', fontWeight: 800, fontSize: 13.5, borderBottom: '1px solid var(--border)' }}>
-              สรุปต่อจุด ({items.length})
+            <div role="button" tabIndex={0} onClick={() => setShowSummary(v => !v)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowSummary(v => !v); } }}
+              aria-expanded={showSummary}
+              style={{ padding: '12px 16px', fontWeight: 800, fontSize: 13.5, borderBottom: showSummary ? '1px solid var(--border)' : 'none', cursor: 'pointer' }}>
+              {showSummary ? '▾' : '▸'} สรุปต่อจุด ({items.length})
+              {(() => { const ng = results.filter(r => r.judgement === 'ng').length; return ng ? <span style={{ color: 'var(--red)', fontSize: 12 }}> · {tr('ไม่ผ่าน')} {ng} {tr('จุด (เปิด NCR ได้ในนี้)')}</span> : null; })()}
               {loading && <span style={{ fontWeight: 400, color: 'var(--muted)', fontSize: 12 }}> {tr('· กำลังโหลด…')}</span>}
               <span style={{ fontWeight: 400, color: 'var(--muted)', fontSize: 12 }}>
                 {' '}· {readOnly && canRecord ? 'ใบปิดแล้ว' : !canRecord ? 'ไม่มีสิทธิ์บันทึก — ดูอย่างเดียว' : 'บันทึกที่แผงตรวจทีละชิ้นด้านบน'}
               </span>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {showSummary && <div style={{ display: 'flex', flexDirection: 'column' }}>
               {items.map(i => (
                 <ItemRow key={i.id} item={i} res={resById.get(i.id)} draft={drafts[i.id]}
                   selected={selItemId === i.id} readOnly canRecord={canRecord} busy={busy} isMobile={isMobile}
@@ -870,7 +1025,7 @@ export default function QaCheckSheet({ canRecord }) {
                   onSave={(judgement, extra) => saveResult(i, judgement, extra)}
                   onOpenNcr={res => openNcr(i, res)} />
               ))}
-            </div>
+            </div>}
           </div>
           </div>
         </div>

@@ -36,9 +36,13 @@ import {
   lotRunMin, lotRunInfo, isTrialLot, lotKeyText, qtyText,
 } from '../utils/planLots';
 import { breakIntervalsIn } from '../utils/oee';
+import { loadMinAlerts } from '../lib/minDemandOps';
+import MinDemandPanel from './MinDemandPanel';
 import { buildHorizon, assignShifts, horizonSummary, orderAcrossHorizon, SEG_HOURS, SHIFT_LABEL } from '../utils/planHorizon';
 import { layoutLots } from '../utils/planTimeline';
 import PlanTimeline from './PlanTimeline';
+import PlanWeek from './PlanWeek';
+import useTabParam from '../utils/useTabParam';
 import FilterBar from './FilterBar';
 import LineSelect from './LineSelect';
 import Segmented from './Segmented';
@@ -140,8 +144,35 @@ export default function ProdLotPlanner({
   const [saving, setSaving]   = useState(false);
   const [trialOpen, setTrialOpen] = useState(false);
   const [dirty, setDirty]     = useState(false);
+  /* 📅 มุมมองไทม์ไลน์ (17/11 · user ส่งคลิปหน้า Schedule มา) — `rail` = ของเดิมเป๊ะ (default ห้ามเปลี่ยน)
+     🔴 ผูกกับ URL (`?view=`) ไม่ใช่ state ลอย — 2 เหตุผล:
+       1. บุ๊กมาร์ก/ส่งลิงก์ให้กันดูมุมมองเดียวกันได้ (กติกาเดียวกับ `?cap=`/`?mode=` ของหน้านี้)
+       2. 🛡️ **crashsweep กดได้แค่ปุ่มหัวเพจ** — ปุ่มสลับมุมมองอยู่ในเนื้อหน้า ⇒ ถ้าเป็น state ลอย
+          จอสัปดาห์จะ **ไม่เคยถูกเรนเดอร์ในด่านไหนเลย** (audit/README §โค้ดหลังปุ่มที่สวีปกดไม่ถึง)
+     🔴 ใช้ `?view=` ห้ามใช้ `?tab=` ซ้ำกับแท็บแม่ (UI §6.8 ข้อ 2.4) */
+  const [planView, setPlanView] = useTabParam(['rail', 'week'], 'rail', 'view');
 
-  useEffect(() => { if (!lineName && lines.length) setLineName(lines[0].name); }, [lines, lineName]);
+  /* 🔴 ค่าที่เลือกไว้ต้องไม่ค้างอยู่นอกลิสต์ที่เลือกได้ (13/11 · user: เลือก PD1 แล้วจอโชว์ไลน์ PD2)
+     หน้าแม่กรอง `lines` ตามส่วนงาน ⇒ สลับตัวกรองแล้วไลน์เดิมหลุดลิสต์ แต่ state ยังค้าง
+     ⇒ แผนที่กำลังดู/กำลังแก้ เป็นของไลน์ที่ไม่ได้เลือกอยู่ **โดยไม่มีอะไรบอก**
+     🔴 เปลี่ยนให้แล้วต้องบอก ห้ามสลับเงียบ (คนกำลังแก้แผนอยู่) · `lines` ว่าง = ยังโหลดไม่เสร็จ ห้ามแตะ */
+  useEffect(() => {
+    if (!lines.length) return;
+    if (!lineName) { setLineName(lines[0].name); return; }
+    if (lines.some(l => l.name === lineName)) return;
+    const prev = lineName;
+    setLineName(lines[0].name);
+    toast.info(`ไลน์ "${prev}" ไม่อยู่ในขอบเขตที่เลือก — สลับไป "${lines[0].name}" ให้แล้ว`);
+  }, [lines, lineName]);
+
+  /* 🔔 ของถึง min แล้ว — ตัวป้อนงานให้แพลนนิ่ง (คำสั่ง user 13/11)
+     กฎการตัดสินอยู่ utils/replenish.js · โหลดผ่าน lib/minDemandOps.js — ห้ามคิดเองที่นี่ */
+  const [minA, setMinA] = useState({ rows: [], summary: null, error: null, loading: true });
+  useEffect(() => {
+    let alive = true;
+    loadMinAlerts().then(r => { if (alive) setMinA({ ...r, loading: false }); });
+    return () => { alive = false; };
+  }, []);
 
   /* ── 🗓️ ขอบเขต: กะเช้า → กะดึก → วันถัดไป ต่อกันเป็นเส้นเดียว ─────────────────────
      🔴 กติกาทั้งหมด (กะยาวเท่าไหร่ · วันไหนโรงงานไม่เดิน · ข้ามวันหยุดยังไง) อยู่ใน
@@ -515,10 +546,33 @@ export default function ProdLotPlanner({
       {/* ── 🧲 ไทม์ไลน์จัดแผน (ลากสลับก่อนหลัง) ── */}
       {rec.rows.length > 0 && frame.startMs && (
         <div style={card}>
-          <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8 }}>
-            ไทม์ไลน์ — 1 บรรทัด = 1 กะ <span style={{ color: 'var(--muted)', fontWeight: 600, fontSize: 11.5 }}>
-              (ความยาวกล่อง = เวลาที่ต้องใช้จริง · งานล้นกะไหลลงบรรทัดถัดไปเอง · ลากเพื่อสลับลำดับ)</span>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
+            <div style={{ fontSize: 13, fontWeight: 800 }}>
+              {planView === 'week' ? 'ไทม์ไลน์ — 1 คอลัมน์ = 1 วัน' : 'ไทม์ไลน์ — 1 บรรทัด = 1 กะ'}
+              <span style={{ color: 'var(--muted)', fontWeight: 600, fontSize: 11.5 }}>
+                {planView === 'week'
+                  ? ' (เห็นทั้งสัปดาห์ทีเดียว · แกนเวลาลงล่าง · ลากเพื่อสลับลำดับ)'
+                  : ' (ความยาวกล่อง = เวลาที่ต้องใช้จริง · งานล้นกะไหลลงบรรทัดถัดไปเอง · ลากเพื่อสลับลำดับ)'}
+              </span>
+            </div>
+            {/* 2 ตัวเลือก = <Segmented> ตามมาตรฐานหน้าตา (UI-STANDARD) */}
+            <div style={{ marginLeft: 'auto' }}>
+              <Segmented value={planView} onChange={setPlanView} options={[
+                { value: 'rail', label: '▭ ราง (รายกะ)' },
+                { value: 'week', label: '📅 สัปดาห์' },
+              ]} />
+            </div>
           </div>
+          {/* 🔴 2 มุมมองกินข้อมูลชุดเดียวกันเป๊ะ (layoutLots ตัวเดียว) — ห้ามแยกสูตร ไม่งั้น 2 จอเถียงกัน */}
+          {planView === 'week' ? (
+            <PlanWeek
+              lots={lots} ctOf={ctOf} pairOf={pairOf} dieOf={dieOf} rule={rule}
+              startMs={frame.startMs} endMs={frame.endMs} breaks={breaks}
+              closed={horizon.closed} segments={horizon.segments} skipped={horizon.skipped}
+              editable={mayWrite}
+              onReorder={(next) => { setLots(next); setDirty(true); }}
+            />
+          ) : (
           <PlanTimeline
             lots={lots} ctOf={ctOf} pairOf={pairOf} dieOf={dieOf} rule={rule}
             startMs={frame.startMs} endMs={frame.endMs} breaks={breaks}
@@ -526,6 +580,7 @@ export default function ProdLotPlanner({
             editable={mayWrite} nameOfMat={nameOfMat}
             onReorder={(next) => { setLots(next); setDirty(true); }}
           />
+          )}
           {/* 🔴 ปฏิทินยังไม่โหลด = ยังไม่ได้เช็ควันหยุด ต้องเขียนบนจอ ห้ามเงียบ */}
           {horizon.calendarUnknown && (
             <div style={{ fontSize: 11.5, color: '#f59e0b', marginTop: 5 }}>
@@ -703,6 +758,10 @@ export default function ProdLotPlanner({
         <TrialBookingModal lineName={lineName} dies={dies}
           onClose={() => setTrialOpen(false)} onAdd={addTrial} />
       )}
+
+      {/* 🔔 ของถึง min — เห็นว่ามีงานตัวไหนต้องจัดแผนลง (user 13/11) · กดเข้าแผนได้เลย */}
+      <MinDemandPanel rows={minA.rows} summary={minA.summary} error={minA.error} loading={minA.loading}
+        onAdd={mayWrite ? ((mat, qty) => addLot(mat, qty > 0 ? qty : 1)) : null} />
 
       {/* ── ความต้องการที่ยังไม่ได้วางแผน ── */}
       <div style={card}>

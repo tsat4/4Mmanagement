@@ -22,7 +22,7 @@ import StoreTimeChart from '../components/StoreTimeChart';
 import StoreCallSiren from '../components/StoreCallSiren';
 import PurchaseBulkModal from '../components/PurchaseBulkModal';
 import OpenOrderDemandPanel from '../components/OpenOrderDemandPanel';
-import { storeOfMat, WIP_STORES } from '../utils/storeOps';   // 🗂️ ใบเบิก-ส่งเข้าไลน์ไปอยู่ตู้ตามเลขพาร์ท (04/11)
+import { storeOfMat, WIP_STORES, isFgMat, FG_NO_LINE_REQUEST } from '../utils/storeOps';   // 🗂️ ใบเบิก-ส่งเข้าไลน์ไปอยู่ตู้ตามเลขพาร์ท (04/11)
 import { shortReceiptRows } from '../utils/stockDiscrepancy';   // ⚠️ รับไม่ครบ = ย้ายไปคลังพัก ไม่ตัดทิ้ง (05/11)
 import StockReceiptQueue from '../components/StockReceiptQueue';   // 📥 ขาเข้า: รอรับเข้า (05/11)
 import PlatingBoard from '../components/PlatingBoard';
@@ -1133,7 +1133,8 @@ function PullBoard({ lotRequests, rawRequests, accumulator, lotSizeMap, releaseD
    🛒 จัดซื้อ (300/500 ซื้อ supplier) → รับเข้าสโตร์ · Rack Center (ภาชนะ+packaging) → ทุกไลน์
    ทุกสโตร์ใช้การ์ดหน้าตาเดียวกัน: สถานะ → ปลายทาง → ปุ่มขยับสถานะ ────────────── */
 const STORE_TABS = [
-  { key: 'fg',       icon: '🏭', label: 'Store FG',      desc: 'งาน FG 1xx → ไลน์ประกอบ · รอบส่งคัมบัง' },
+  /* 16/11 (คำสั่ง user "ไม่มี FG เข้าไลน์") — ตู้นี้จริงๆ คือรอบส่งคัมบังเข้าไลน์ ไม่ใช่ FG · key 'fg' คงเดิม (identifier/URL ?store=fg) */
+  { key: 'fg',       icon: '🚚', label: 'รอบส่งคัมบังเข้าไลน์', desc: 'รอบส่งชิ้นส่วนเข้าไลน์ตามคัมบัง (ไม่มี FG เข้าไลน์)' },
   // คำอธิบายต้องบอกว่า "สโตร์ทำอะไร" ไม่ใช่ "ไลน์ทำอะไร" — คนอ่านคือสโตร์
   /* 🗂️ 04/11 (คำสั่ง user) — เลิกแท็บ "คิวเติม WIP" · ใบเบิก-ส่งเข้าไลน์ไปอยู่ตู้ตามเลขพาร์ท (`storeOfMat`)
      1xx → Store FG · 2xx → Store Semi Part (เดิม Store Child) · 3xx → สโตร์ภายนอก (ใหม่) · 5xx → Raw Mat · อื่นๆ → ไม่เข้ากลุ่ม */
@@ -1743,7 +1744,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
   /* ด่านชั้นเขียนจริง (ไม่พึ่งการซ่อนปุ่ม) — ทุกฟังก์ชันที่ขยับสถานะ/ยอดในหน้านี้เรียกตัวนี้ก่อน (มีด่าน heijunka-monitor-only) */
   const opsGuard = () => {
     if (isOps) return true;
-    toast.error('หน้านี้ดูสัญญาณอย่างเดียว — ทำรายการที่ Line Stock › 📤 ขาออก / 📥 ขาเข้า');
+    toast.error('หน้านี้ดูสัญญาณอย่างเดียว — ทำรายการที่ Stock Management › 📤 ส่งของเข้าไลน์ / 📥 รับของเข้าคลัง');
     return false;
   };   // ปลดบล็อกสแกนจุดส่ง — "ระดับหัวหน้า ไม่ใช่คนที่ถูกบล็อก" (§4.6 ข้อ 5)
   const [workDate, setWorkDate]   = useState(getWorkDate());
@@ -2342,7 +2343,9 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
     let ok = 0, dup = 0, noSourceCol = false, noSlocCol = false;
     const errs = [];
     const noSlocLines = new Set();
+    const fgSkip = [];   // 🚫 ไม่มี FG เข้าไลน์ (13/11 · utils/storeOps.js)
     for (const it of items) {
+      if (isFgMat(it.mat_no)) { fgSkip.push(it.mat_no); continue; }
       const row = {
         line_name: it.line, mat_no: it.mat_no, part_name: it.part_name || null,
         request_qty: it.qty, status: 'pending',
@@ -2363,6 +2366,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
     if (ok) toast.success(`🚚 สร้างใบส่ง ${ok} รายการ เข้าตู้งานสโตร์แล้ว${dup ? ` · ${dup} รายการมีใบค้างอยู่แล้ว` : ''}`);
     else if (dup && !errs.length) toast.error(`ทุกรายการมีใบค้างอยู่ในคิวแล้ว (${dup}) — ดูที่ตู้งานสโตร์ตามเลขพาร์ท`);
     if (errs.length) toast.error(`สร้างไม่สำเร็จ ${errs.length} รายการ: ${errs[0]}`);
+    if (fgSkip.length) toast.error(`ไม่ได้สร้างใบ ${fgSkip.length} รายการ (${fgSkip.slice(0, 3).join(', ')}${fgSkip.length > 3 ? '…' : ''}) — ${FG_NO_LINE_REQUEST}`);
     if (noSourceCol) toast.error('บันทึกใบแล้ว แต่ยังไม่ได้ apply migration 20260907_wip_replenish_source (Main) — ใบไม่ถูกมาร์กว่ามาจากสโตร์');
     if (noSlocCol) toast.error('บันทึกใบแล้ว แต่ยังไม่ได้ apply migration 20260908_wip_replenish_storage_location (Main) — ใบไม่ถูกแปะรหัสคลัง SAP');
     else if (ok && noSlocLines.size) toast.info(`ℹ️ ${[...noSlocLines].join(', ')} ยังไม่ผูกรหัสคลัง SAP — ใบไม่มีมุม SAP (ผูกที่ 📦 Line Stock → แท็บ 🏬 โซนคลัง → ทะเบียนรหัสคลัง)`);
@@ -3188,7 +3192,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
         {/* 👁 04/11 — /heijunka ดูสัญญาณอย่างเดียว · บอกทางไปจอทำรายการทุกมุมมอง */}
         {!isOps && (
           <span style={{ fontSize: 12, color: 'var(--text2)' }}>
-            → ทำรายการที่ <Link to="/line-stock?tab=out">{tr('📤 ขาออก')}</Link> · <Link to="/line-stock?tab=in">{tr('📥 ขาเข้า')}</Link>
+            → ทำรายการที่ <Link to="/line-stock?tab=out">{tr('📤 ส่งของเข้าไลน์')}</Link> · <Link to="/line-stock?tab=in">{tr('📥 รับของเข้าคลัง')}</Link>
           </span>
         )}
         {viewMode === 'demand' && (

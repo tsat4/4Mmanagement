@@ -54,6 +54,7 @@ const PAGE_GROUPS = [
       { key: 'page:/tv',          label: 'Andon Board (จอแขวน)' },
       { key: 'page:/line-oee',    label: 'OEE รายไลน์ (จอหน้าไลน์)' },
       { key: 'page:/obeya',       label: 'บอร์ด KPI ส่วนงาน (OBEYA)' },
+      { key: 'page:/workflows',   label: 'ใบงานออนไลน์ (e-Workflow) — เปิดใบ/อนุมัติ' },
     ],
   },
   {
@@ -99,7 +100,7 @@ const PAGE_GROUPS = [
   {
     group: LOGISTIC_GROUPS.inbound,
     pages: [
-      { key: 'page:/line-stock',   label: 'สต๊อกในไลน์' },
+      { key: 'page:/line-stock',   label: 'Stock Management (แท็บสต๊อก/ส่ง/รับ/ตรวจนับ/ตั้งค่า)' },
       { key: 'page:/heijunka',     label: 'บอร์ดคัมบัง (ทุกสโตร์)' },
       { key: 'page:/transport',    label: 'มอบหมายขนส่ง (Transport)' },
       // ทำงานคาบ 2 ฝั่ง (sidebar โชว์ทั้งหมวด Store และ Warehouse & Delivery ผ่าน alsoIn) แต่สิทธิ์มีชุดเดียว → ติ๊กที่นี่ที่เดียว
@@ -107,7 +108,7 @@ const PAGE_GROUPS = [
       // หมวดแผนงานยุบเข้ามาแล้ว (30/09) — คีย์สิทธิ์เดิมทุกตัว ไม่มีใครเสียสิทธิ์
       { key: 'page:/planner-sales', label: 'Planner & Sales' },
       // คาบ 2 หมวด (บ้าน = Store/แผนงาน · ทางลัดในฝ่ายผลิต ผ่าน alsoIn) — สิทธิ์ชุดเดียว (seed 20261002)
-      { key: 'page:/monitoring',    label: 'Monitoring แผน-สต๊อก · คาบ 2 หมวด' },
+      { key: 'page:/monitoring',    label: 'Stock Management › แท็บ Monitoring แผน-สต๊อก' },
     ],
   },
   {
@@ -166,6 +167,7 @@ const PAGE_GROUPS = [
       { key: 'page:/notification-config', label: 'ตั้งค่าการแจ้งเตือน' },
       { key: 'page:/integrations',     label: 'การเชื่อมต่อ Node-RED / เครื่องจักร (ต้นทาง · สุขภาพการส่ง · gen flow)' },
       { key: 'page:/display-rotation', label: 'ตั้งค่าจอวนหน้า — บัญชีจอไหนเปิดหน้าอะไรวนบ้าง' },
+      { key: 'page:/workflow-designer', label: 'ออกแบบใบงาน (e-Workflow) — Key User เข้าได้ผ่านคีย์ wf:design' },
       { key: 'page:/doc-forms',         label: 'ทะเบียนเอกสาร & ฟอร์ม' },
       { key: 'page:/qr-labels',         label: 'พิมพ์ป้าย QR อุปกรณ์' },
       { key: 'page:/audit-log',        label: 'ประวัติการแก้ไขข้อมูล (Audit Log)' },

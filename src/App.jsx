@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, useEffect, useRef, useMemo, lazy, Suspense, useCallback } from 'react';
 import { fmtDateTime } from './utils/dateFormat';
+import { motion } from 'framer-motion';
+import { railPill } from './utils/motion';   // 18/11: pill เมนู "ไหล" ไปตำแหน่งใหม่ (นิ่งเองบน TV / reduced-motion)
 import tsLogo from './assets/TS logo transparent.png';   // splash: พื้นโปร่งใส (06/11)
 import { BrowserRouter as Router, Routes, Route, Link, Navigate, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { supabase } from './supabaseClient';
@@ -74,7 +76,6 @@ const ScanLanding   = lazy(() => import('./pages/ScanLanding'));
 const AddUser      = lazy(() => import('./pages/AddUser'));
 const CustomerDemand = lazy(() => import('./pages/CustomerDemand'));
 const PlannerSales   = lazy(() => import('./pages/PlannerSales'));
-const Monitoring     = lazy(() => import('./pages/Monitoring'));
 const StoreMonitor   = lazy(() => import('./pages/StoreMonitor'));
 const Transport      = lazy(() => import('./pages/Transport'));
 const Report       = lazy(() => import('./pages/Report'));
@@ -131,6 +132,8 @@ const PEDocs = lazy(() => import('./pages/PEDocs'));
 const NPI = lazy(() => import('./pages/NPI'));
 const NewModelBoard = lazy(() => import('./pages/NewModelBoard'));
 const Rfq = lazy(() => import('./pages/Rfq'));
+const Workflows = lazy(() => import('./pages/Workflows'));             // 🧩 e-Workflow ใบงานที่ user สร้างเอง (13/11)
+const WorkflowDesigner = lazy(() => import('./pages/WorkflowDesigner')); // 🧩 ออกแบบใบงาน (Key User → admin เผยแพร่)
 const ScrapReport = lazy(() => import('./pages/ScrapReport'));
 const NotificationConfig = lazy(() => import('./pages/NotificationConfig'));
 const Integrations = lazy(() => import('./pages/Integrations'));
@@ -171,6 +174,8 @@ export const NAV_ITEMS = [
      "งานค้างส่วนงาน ควรย้ายเป็น tab ใน หมวด OBEYA ไปเลย") — route เดิม redirect (LegacyTabRedirect) พา ?dept= มาด้วย
      · สิทธิ์ยังใช้คีย์ `page:/dept-dashboard` เดิม (แท็บโผล่ตามสิทธิ์ · /permissions ยังตั้งได้) ห้ามลบคีย์ */
   { to: '/obeya',       icon: '🏛️', label: 'OBEYA (KPI · SQDCM · งานค้าง)', group: 'ภาพรวม' },
+  /* 🧩 ใบงานออนไลน์ (e-Workflow · 13/11) — ใบที่ Key User ออกแบบเอง · เปิดใบ/อนุมัติของทุกฝ่าย = ของทุกคน */
+  { to: '/workflows',   icon: '✍️', label: 'ใบงานออนไลน์ (e-Workflow)', group: 'ภาพรวม' },
   /* 📦 อัพเดทโปรแกรม — รายการสิ่งที่เพิ่ม/แก้ไปในระบบ อ่านจากประวัติการแก้จริง (git) ไม่ใช่ลิสต์ที่พิมพ์มือ
        อยู่หมวดภาพรวมเพราะเป็นของทุกคน (ทีมงานอยากรู้ว่าของที่แจ้งไปแก้แล้วยัง · ผู้มาเยี่ยมชมอยากรู้ว่าระบบยังมีคนดูแล) */
   { to: '/program-update', icon: '📦', label: 'อัพเดทโปรแกรม',    group: 'ภาพรวม' },
@@ -208,7 +213,8 @@ export const NAV_ITEMS = [
   /* Logistic & Sales แบ่ง 3 ฝั่งตามความรับผิดชอบจริงของแผนกย่อย (2026-09-03 · คำสั่ง user)
      ⚠️ Warehouse (เก็บ FG 1xx → ขาออก) ≠ Store (คุม 2xx/3xx/5xx → ขาเข้า) — ห้ามสลับ
      นิยามฝั่ง + การจัดฝั่งจากเลข MAT อยู่ที่ src/utils/logisticSide.js จุดเดียว */
-  { to: '/line-stock',      icon: '📦', label: 'สต๊อกในไลน์',              group: LOGISTIC_GROUPS.inbound },
+  /* 📦 16/11 (คำสั่ง user) รวม "สต๊อกในไลน์" + "Monitoring แผน-สต๊อก" เป็นหน้าเดียว — /monitoring พาไปแท็บ ?tab=monitoring */
+  { to: '/line-stock',      icon: '📦', label: 'Stock Management',         group: LOGISTIC_GROUPS.inbound },
   { to: '/heijunka',       icon: '🎴', label: 'บอร์ดคัมบัง (ทุกสโตร์)',   group: LOGISTIC_GROUPS.inbound },
   { to: '/transport',       icon: '🚚', label: 'มอบหมายขนส่ง (Transport)',   group: LOGISTIC_GROUPS.inbound },
   // เฝ้าระวังสต๊อกจับทั้ง 2 ฝั่ง (A/B เทียบ min-max ของทุกเลข · E ใบสั่งซื้อค้าง) → โผล่ทั้งสองหมวด
@@ -217,12 +223,8 @@ export const NAV_ITEMS = [
   // 🔴 หมวดแผนงานยุบเข้ามาที่นี่ (30/09 · คำสั่ง user — planner + store = หน่วยเดียว ดู logisticSide.js)
   { to: '/planner-sales',   icon: '📈', label: 'Planner & Sales',           group: LOGISTIC_GROUPS.inbound },
 
-  /* 📉 บอร์ด Monitoring = ไฟล์ Excel ที่ทีมวางแผนทำมือทุกวัน ยกเข้าระบบ (01/10 · คำสั่ง user)
-     บ้านจริง = แผนงาน (ทีมวางแผนเป็นเจ้าของตัวเลข)
-     🔴 **ถอด `alsoIn: 'ฝ่ายผลิต'` ออกแล้ว** (11/11 · คำสั่ง user "พยายามไม่ให้มี shortcut แบบนี้")
-     — ฝ่ายผลิตเข้าหน้านี้ได้แต่**ดูอย่างเดียว** (ช่อง IN ที่ระบบมีตัวเลขแล้ว = ล็อก) ไม่ใช่งานประจำวันของเขา
-     ⇒ ทางลัดกินที่ในเมนูฝ่ายผลิตโดยไม่มีใครต้องลงมือ · **อย่าเอากลับโดยไม่ถาม user** */
-  { to: '/monitoring',      icon: '📉', label: 'Monitoring แผน-สต๊อก',    group: LOGISTIC_GROUPS.inbound },
+  /* 📉 บอร์ด Monitoring (01/10) = แท็บ `?tab=monitoring` ของ Stock Management แล้ว (16/11 · คำสั่ง user)
+     🔴 ถอด `alsoIn: 'ฝ่ายผลิต'` ไปแล้ว 11/11 · **อย่าเอาเมนูแยกหรือทางลัดกลับโดยไม่ถาม user** */
   { to: '/customer-demand', icon: '🚚', label: 'จัดส่งลูกค้า',             group: LOGISTIC_GROUPS.outbound },
   { to: '/rack-center',    icon: '🗃️', label: 'ภาชนะ & Packaging',       group: LOGISTIC_GROUPS.outbound },
 
@@ -299,6 +301,8 @@ export const NAV_ITEMS = [
   { to: '/add-user',    icon: '🔑', label: 'จัดการผู้ใช้งาน',     group: 'ตั้งค่าโปรแกรม,ฐานข้อมูล', sub: 'ตั้งค่าระบบ' },
   // 📺 ตั้งว่าบัญชีจอไหนเปิดหน้าอะไรวนบ้าง (2026-10-09) · ตัววนอยู่ที่ components/DisplayRotator.jsx
   { to: '/display-rotation', icon: '🔁', label: 'ตั้งค่าจอวนหน้า', group: 'ตั้งค่าโปรแกรม,ฐานข้อมูล', sub: 'ตั้งค่าระบบ' },
+  // 🧩 e-Workflow (13/11) — Key User ออกแบบใบ → admin เผยแพร่ · 📄 docs/modules/e-workflow.md
+  { to: '/workflow-designer', icon: '🗂️', label: 'ออกแบบใบงาน (e-Workflow)', group: 'ตั้งค่าโปรแกรม,ฐานข้อมูล', sub: 'ตั้งค่าระบบ' },
   { to: '/notification-config', icon: '🔔', label: 'ตั้งค่าการแจ้งเตือน', group: 'ตั้งค่าโปรแกรม,ฐานข้อมูล', sub: 'ตั้งค่าระบบ' },
   // 🔌 ศูนย์เชื่อมต่อ Node-RED / เครื่องจักร (2026-11-11) · 📄 docs/modules/integration-hub.md
   { to: '/integrations', icon: '🔌', label: 'การเชื่อมต่อ Node-RED / เครื่องจักร', group: 'ตั้งค่าโปรแกรม,ฐานข้อมูล', sub: 'ตั้งค่าระบบ' },
@@ -743,7 +747,7 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
               /* ทางลัดที่เป็นหน้าปัจจุบัน: บอกแค่ "หน้านี้เปิดอยู่" ด้วยสีตัวอักษร
                  **ไม่ใส่พื้น/แถบซ้าย** — 2 อย่างนั้นสงวนให้ "บ้านจริง" ของหน้า */
               ? { color: 'var(--accent)' }
-              : { background: 'var(--accent-dim)', color: 'var(--accent)', borderLeft: '2px solid var(--accent)' })
+              : { color: 'var(--accent)', position: 'relative' })   // พื้น+แถบซ้ายย้ายไป pill (motion.span) ให้ไหลได้
             : (guest ? { color: 'var(--text2)' } : null)),
           /* บีบช่องไฟคืนให้ชื่อเมนู — แผงกว้างแค่ 210px ป้ายบ้านจริงเลยเบียดชื่อยาวๆ จนตัดคำ
              🔴 คืนที่ด้วยการลด gap/padding เท่านั้น **ห้ามลดฟอนต์ต่ำกว่า 11px** (UI-STANDARD §5) */
@@ -751,8 +755,13 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
         }}
         onClick={onClick}
       >
-        <Icon glyph={item.icon} size={17} style={{ opacity: guest ? 0.7 : 1 }} />
-        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tr(item.label)}</span>
+        {cur && !guest && (
+          <motion.span layoutId="nav-active" transition={railPill()} aria-hidden="true" style={{
+            position: 'absolute', inset: 0, borderRadius: 'inherit', background: 'var(--accent-dim)', borderLeft: '2px solid var(--accent)', pointerEvents: 'none',
+          }} />
+        )}
+        <Icon glyph={item.icon} size={17} style={{ opacity: guest ? 0.7 : 1, position: 'relative', zIndex: 1 }} />
+        <span style={{ position: 'relative', zIndex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tr(item.label)}</span>
         {/* ป้าย "บ้านจริง" — บีบ gap/ฟอนต์ให้แคบที่สุดเท่าที่ยังอ่านออก เพราะเมนูชื่อยาวจะโดนเบียดจนตัดคำ
             (`title` มีชื่อเต็ม + บอกหมวดบ้านเสมอ จึงไม่มีข้อมูลหาย) */}
         {guest && (
@@ -797,21 +806,25 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
           position: 'relative',
           width: 56, flexShrink: 0, borderRadius: 10, cursor: 'pointer', outline: 'none',
           border: `1px solid ${isOpenPanel ? 'var(--border2)' : 'transparent'}`,
-          background: isCurrent ? 'var(--accent-dim)' : 'transparent',
+          background: 'transparent',   // พื้นไฮไลต์ย้ายไปอยู่ที่ pill (motion.span ข้างล่าง) เพื่อให้ "ไหล" ได้
           color: isCurrent ? 'var(--accent)' : 'var(--text2)',
           fontWeight: isCurrent ? 800 : 400,
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
           padding: '6px 2px 4px',
         }}>
+        {/* 🎞 18/11 (ก๊อป ERP): pill ไฮไลต์เป็น element เดียวที่ใช้ `layoutId` ร่วมกันทุกปุ่มบนราง ⇒ เปลี่ยนหน้าแล้ว
+            pill ไหลจากปุ่มเก่าไปปุ่มใหม่ (framer layout animation) · หน้าตาเหมือนเดิมเป๊ะ: พื้น --accent-dim + แถบซ้าย 3px
+            · นิ่งเมื่อ reduced-motion / จอ TV (`railPill()` คืน duration 0) · ตัวตรวจ "คุณอยู่ตรงนี้" ดู aria-current ไม่ใช่สี */}
         {isCurrent && (
-          <span aria-hidden="true" style={{
-            position: 'absolute', left: 0, top: 6, bottom: 6, width: 3,
-            borderRadius: '0 3px 3px 0', background: 'var(--accent)',
-          }} />
+          <motion.span layoutId="rail-active" transition={railPill()} aria-hidden="true" style={{
+            position: 'absolute', inset: 0, borderRadius: 10, background: 'var(--accent-dim)', pointerEvents: 'none',
+          }}>
+            <span style={{ position: 'absolute', left: 0, top: 6, bottom: 6, width: 3, borderRadius: '0 3px 3px 0', background: 'var(--accent)' }} />
+          </motion.span>
         )}
-        <Icon glyph={icon} size={19} />
+        <Icon glyph={icon} size={19} style={{ position: 'relative', zIndex: 1 }} />
         {/* 11px = ฟอนต์ขั้นต่ำตาม UI-CONVENTIONS — ชื่อย่อจาก NAV_GROUP_META ถูกเลือกให้พอดี 56px */}
-        <span style={{ fontSize: 11, lineHeight: 1.2, maxWidth: 56, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+        <span style={{ position: 'relative', zIndex: 1, fontSize: 11, lineHeight: 1.2, maxWidth: 56, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
       </button>
     );
 
@@ -2325,6 +2338,12 @@ function ProtectedLayout({ session, theme, onToggleTheme, userRole, realRole, vi
               <Route path="/rfq" element={
                 <RoleRoute path="/rfq" userRole={role}><Rfq /></RoleRoute>
               } />
+              <Route path="/workflows" element={
+                <RoleRoute path="/workflows" userRole={role}><Workflows /></RoleRoute>
+              } />
+              <Route path="/workflow-designer" element={
+                <RoleRoute path="/workflow-designer" userRole={role}><WorkflowDesigner /></RoleRoute>
+              } />
               <Route path="/products"   element={
                 <RoleRoute path="/products" userRole={role}><ProductMaster /></RoleRoute>
               } />
@@ -2344,9 +2363,8 @@ function ProtectedLayout({ session, theme, onToggleTheme, userRole, realRole, vi
                   user: *"เรื่องเดียวกันปะ สองเรื่องนี้"*) — จอเดิมยังอยู่ครบ แค่ย้ายที่อยู่
                   ⚠️ หน้าเดิมไม่เคยมี `?tab=` ของตัวเอง จึงไม่ต้องส่ง subParam */}
               <Route path="/rundown-stock" element={<LegacyTabRedirect to="/monitoring" tab="fg" />} />
-              <Route path="/monitoring" element={
-                <RoleRoute path="/monitoring" userRole={role}><Monitoring /></RoleRoute>
-              } />
+              {/* 📦 16/11 — Monitoring เป็นแท็บของ Stock Management แล้ว · `?tab=<บอร์ด>` เดิม → `?mon=` (param ของลูก) */}
+              <Route path="/monitoring" element={<LegacyTabRedirect to="/line-stock" tab="monitoring" subParam="mon" />} />
               <Route path="/store-monitor" element={
                 <RoleRoute path="/store-monitor" userRole={role}><StoreMonitor /></RoleRoute>
               } />
