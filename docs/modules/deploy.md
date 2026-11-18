@@ -177,7 +177,15 @@ push เข้า main วันละถึง 31 ครั้ง (หลาย
 - ⚠️ Docker Hub จำกัดจำนวนดึง (เจอ 429 ตอนทดสอบ) — ถ้า INET build ล้มที่ `FROM` ให้ถามเรื่อง mirror ของเขา
 - ✅ ทดสอบ 13/11 (ค่า Supabase ปลอม): เทส 4412 ผ่าน 0 ล้ม · อิมเมจ 127 MB · รันด้วย UID 1000680000 ได้ ·
   `/` และ path ย่อย (`/daily-report`) = 200 + `no-cache` · `/assets/*.js` = `immutable` · ไฟล์ไม่มี = 404 · gzip ทำงาน
-- ⬜ ยังไม่ได้ทำ: ทดสอบบน INET จริง · โดเมน/HTTPS (Route) · ทางเข้าจากมือถือนอกโรงงาน · รอบ deploy (หน้าต่างเวลาข้างล่างยังใช้)
+- ✅ **ขึ้นบน INET จริง 18/11** — project `cust-tsm-atp-01` · ลิงก์ `https://esm-cust-tsm-atp-01.apps.container-platform.inet.co.th`
+  · build บน INET ผ่าน (เทส 4,641 ผ่าน 0 ล้ม · ดึง base image จาก Docker Hub ได้ ไม่ติด 429) · **login + ใช้งานได้ปกติ** (user ยืนยัน)
+  · ตั้งด้วย **`deploy/inet-esm.yaml`** (ImageStream + BuildConfig + Deployment + Service + Route ก้อนเดียว)
+  🔴 วางที่ **⊕ → Import YAML** เท่านั้น — หน้า Create BuildConfig รับทีละ 1 ตัว (error `setting 'namespace'`)
+  🔴 ช่อง Git Repo URL ต้องเป็น `https://…git` ไม่ใช่คำสั่ง `gh repo clone`
+  ⚠️ หน้า login ขึ้น toast "โหลดข้อมูลทะเบียนไม่สำเร็จ" ก่อน login — ยังไม่ได้เทียบว่าเว็บ Render เป็นด้วยไหม (หลัง login ใช้ได้ปกติ)
+- ⬜ ยังไม่ได้ทำ: BuildConfig ยังชี้ branch ทดสอบ (ต้องย้ายเป็น `main` หลัง merge) · build ใหม่ไม่อัตโนมัติ (ยังไม่มี webhook) ·
+  F5 หน้าย่อย/มือถือ 4G บน INET · repo เป็น Public (ถ้าเปลี่ยน Private ต้องใส่ Source Secret ก่อน ไม่งั้น build ล้ม) ·
+  เลิก Render (ยังไม่ — ยังเป็นเว็บหลักของหน้างาน) · หน้าต่างเวลา deploy ข้างล่างใช้กับ INET ด้วย
 
 **ขั้น 2 — self-host Supabase (ความเสี่ยงสูง ห้ามเริ่มจนครบเงื่อนไข)**
 🔴 **เงื่อนไขที่ต้องมีครบก่อน ขาดข้อใดข้อหนึ่ง = ยังไม่ย้าย:**

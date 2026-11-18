@@ -1,0 +1,94 @@
+# INET Container Platform (OpenShift) — เว็บ ESM · ใช้จริง 18/11/2026
+# วางทั้งไฟล์ที่ ⊕ → Import YAML (ห้ามวางในหน้า Create BuildConfig — รับได้ทีละ 1 ตัว)
+# แก้ 2 ค่า buildArgs ก่อนวาง (ค่าเดียวกับ Render · anon key ของโปรเจค MAIN — ห้ามใส่ service_role)
+# 📄 docs/modules/deploy.md §อิมเมจ ESM สำหรับ INET
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: esm
+spec:
+  lookupPolicy:
+    local: true
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: esm
+spec:
+  source:
+    type: Git
+    git:
+      uri: https://github.com/tsat4pd3-sketch/4Mmanagement.git
+      ref: claude/quirky-allen-yt4gsi
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Dockerfile
+      buildArgs:
+        - name: VITE_SUPABASE_URL
+          value: "ใส่ค่าจาก Render"
+        - name: VITE_SUPABASE_ANON_KEY
+          value: "ใส่ค่าจาก Render"
+  output:
+    to:
+      kind: ImageStreamTag
+      name: esm:latest
+  triggers:
+    - type: ConfigChange
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: esm
+  annotations:
+    image.openshift.io/triggers: '[{"from":{"kind":"ImageStreamTag","name":"esm:latest"},"fieldPath":"spec.template.spec.containers[?(@.name==\"esm\")].image"}]'
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: esm
+  template:
+    metadata:
+      labels:
+        app: esm
+    spec:
+      containers:
+        - name: esm
+          image: esm:latest
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: esm
+spec:
+  selector:
+    app: esm
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: esm
+spec:
+  to:
+    kind: Service
+    name: esm
+  port:
+    targetPort: 8080
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
