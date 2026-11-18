@@ -110,3 +110,52 @@ export const matReqFlow = (r) => linearFlow({
   at: { draft: 0, submitted: 1, approved: 2, issued: 4 },
   exits: { cancelled: { tone: 'none', label: 'ยกเลิก', at: (row) => (row?.approved_by || row?.approved_at ? 2 : row?.submitted_at || row?.submitted_by ? 1 : 0) } },
 });
+
+/* ══ 🌳 แตก BOM ตอนเลือกชิ้นงาน + 📋 template งานประจำ (2026-11-18 · คำสั่ง user) ══════════════════
+   "งานเบิกทดสอบ เลือกชิ้นงาน ควรแตก BOM ให้เลย และให้ user เลือกรายการ ใช้/ไม่ใช้ · สร้าง template งานประจำได้"
+   ลูกมาจาก `useBomChildren` (ใบเดียว · ยุบ mat ซ้ำแล้ว) — ที่นี่แค่จัดแถวให้คนเลือก **ไม่ตัดสินแทนคน**
+   🔴 จำนวนที่เสนอ = จำนวนชุด × qtyPerRoot · แถว `flatDupe` (อัตราเชื่อไม่ได้) = เว้นว่างให้คนกรอก **ห้ามเดา** */
+const r3 = (n) => Math.round(n * 1000) / 1000;
+
+/** แถวให้เลือก: ตัวพาร์ทเอง (ชั้น 0) + ลูกทุกชั้น · ค่าเริ่ม = ใช้ทุกแถว */
+export function bomPickRows(root, kids = [], sets = 1) {
+  const n = Number(sets) > 0 ? Number(sets) : 1;
+  const out = [{
+    key: `root:${root?.mat_no || ''}`, level: 0, mat_no: root?.mat_no || '', description: root?.part_name || '',
+    unit: root?.uom || '', qty: n, use: true, rate: 1,
+  }];
+  for (const k of kids || []) {
+    const rate = !k.flatDupe && Number(k.qtyPerRoot) > 0 ? Number(k.qtyPerRoot) : null;
+    out.push({
+      key: `${k.level}:${k.mat_no}`, level: k.level || 1, mat_no: k.mat_no, description: k.part_name || '',
+      unit: k.uom || '', qty: rate != null ? r3(n * rate) : '', use: true, rate, unsure: rate == null,
+    });
+  }
+  return out;
+}
+
+/** แถวที่ติ๊ก "ใช้" → รายการในใบ (ข้ามแถวไม่มี MAT) */
+export const pickedToItems = (rows = []) => rows
+  .filter(r => r.use && String(r.mat_no || '').trim())
+  .map(r => ({ mat_no: r.mat_no, description: r.description, qty: r.qty === '' ? '' : r.qty, unit: r.unit }));
+
+const TPL_FIELDS = ['kind', 'move_code', 'requester_dept', 'dest_storage_location', 'order_no', 'cost_center',
+  'plant_code', 'storage_location', 'detail', 'line_name'];
+
+/** ใบที่กำลังแก้ → แถว template (ไม่เก็บเลขที่/วันที่/ลายเซ็น/สถานะ — ของพวกนั้นเป็นของใบแต่ละใบ) */
+export function templateFromEditor(req = {}, items = [], name = '') {
+  const t = { name: String(name || '').trim() };
+  for (const f of TPL_FIELDS) t[f] = req[f] ?? null;
+  t.items = (items || [])
+    .filter(it => String(it.mat_no || '').trim() || String(it.description || '').trim())
+    .map(it => ({ mat_no: it.mat_no || '', description: it.description || '', qty: it.qty ?? '', unit: it.unit || '' }));
+  return t;
+}
+
+/** template → ค่าที่เติมลงใบใหม่ (หัวใบ + รายการ) · ช่องที่ template ว่าง = ไม่ทับค่าเริ่มของใบใหม่ */
+export function editorFromTemplate(t = {}) {
+  const req = {};
+  for (const f of TPL_FIELDS) if (t[f] != null && t[f] !== '') req[f] = t[f];
+  const items = Array.isArray(t.items) ? t.items.map(it => ({ ...it })) : [];
+  return { req, items };
+}
