@@ -62,8 +62,16 @@
 - DR: policy `audit_log_read` = **`anon,authenticated`** — `src/pages/OrderTrace.jsx` + `ProductHistory.jsx`
   อ่านผ่าน `supabaseDR` (= anon เสมอ)
 - รวมตรงๆ แล้วใช้ policy ของ Main ⇒ **2 จอนั้นว่างเปล่า** · ใช้ของ DR ⇒ **anon อ่าน audit ของ Main ได้ (พนักงาน/สิทธิ์/4M) = รั่ว**
-- ✅ ทางที่เลือก: คอลัมน์ `src text not null default 'main'` · แถวจาก DR = `'dr'` · `fn_audit_dr` เขียน `'dr'`
-  · policy: `authenticated` อ่านได้ทุกแถว · **`anon` อ่านได้เฉพาะ `src='dr'`** = สิทธิ์เท่าเดิมทุกประการ
+- ✅ ทางที่เลือก (ทดสอบผ่าน 18/11): **ตัดสินด้วยชื่อตาราง ไม่เพิ่มคอลัมน์ ไม่แก้เนื้อฟังก์ชัน DR**
+  · ตาราง `public.audit_anon_tables` = รายชื่อตาราง DR ตอนรวม (ตัด `profiles`/`notifications`/`audit_log` ออก — ชื่อชน Main)
+  · policy: `authenticated` อ่านทุกแถว · **`anon` อ่านเฉพาะ `table_name in audit_anon_tables`** = สิทธิ์เท่าเดิมทุกประการ
+  · ไม่ใช้คอลัมน์ `src` เพราะ DR มีอีก 2 ฟังก์ชันเขียน audit เอง (`fn_monitoring_orders_replace` ·
+    `fn_prod_order_cross_close_audit`) — ต้องไล่แก้เนื้อ = เสี่ยงกว่า
+  · 🔴 ตาราง DR ใหม่หลังรวม ที่จออ่าน audit ผ่าน `supabaseDR` → ต้องเติมชื่อใน `audit_anon_tables`
+
+### 5.1b FK ไป `auth.users` ของ DR
+`user_signatures.user_id` · `production_shots.created_by` ชี้ `auth.users` — ฐานรวมใช้ผู้ใช้ของ Main
+· วัด 18/11 ทั้งคู่ **0 แถว** ⇒ ไม่มีปัญหา · ถ้ามีแถวชี้ผู้ใช้ DR 3 คนเดิม → restore ล้มดังๆ (ไม่หายเงียบ)
 
 ### 5.2 งานล้าง audit ฝั่ง DR
 `fn_audit_log_sweep()` (cron `audit-log-sweep`) ย้ายแถวเก่าของตารางใน `audit_log_retention` ไป `archive.audit_log_aged`
@@ -84,8 +92,8 @@
 |---|---|---|
 | 1 | หน้าเว็บ ESM บน INET (ต่อ Supabase เดิม) | ✅ 18/11 |
 | 2 | วิเคราะห์ของชน + ออกแบบการรวม (ไฟล์นี้) | ✅ 18/11 |
-| 3 | สคริปต์ dump (อ่านอย่างเดียว) · รวม · นับเทียบ — `inet/` | ⏳ |
-| 4 | ซ้อมรวมในเครื่องทดสอบ (Docker) ด้วยข้อมูลจริง | ⬜ ต้องมีรหัสฐานข้อมูล (ใส่เป็น secret ห้ามแปะแชท) |
+| 3 | สคริปต์ dump (อ่านอย่างเดียว) · รวม · นับเทียบ — `inet/` | ✅ 18/11 ซ้อมผ่านบนฐานจำลอง (`inet/test/run-local-test.sh`) |
+| 4 | ซ้อมรวมด้วย**ข้อมูลจริง** (รันบน INET เป็น Job · รหัสฐานเดิมเก็บใน Secret ห้ามแปะแชท) | ⬜ |
 | 5 | ตั้ง Supabase stack บน INET | ⬜ รอคำตอบ INET §7 |
 | 6 | ยกข้อมูลรอบซ้อม + นับเทียบ 100% + ไฟล์ทุก bucket | ⬜ |
 | 7 | build หน้าเว็บชุด INET ชี้ฐาน INET · ลองใช้ · ให้ผู้บริหารดู | ⬜ |
@@ -102,3 +110,21 @@
 5. **backup อัตโนมัติ + ซ้อมกู้คืน** ใครทำ ทำบ่อยแค่ไหน
 6. CPU/RAM ของ project · **ระบบล่มนอกเวลาทำการ ใครดูแล**
 7. ออกอินเทอร์เน็ตได้ไหม (edge function ต้องเรียก Telegram API · Web Push)
+
+## 8. สคริปต์ (`inet/`)
+
+| ไฟล์ | ทำอะไร | แตะฐานเดิม? |
+|---|---|---|
+| `lib.sh` | ด่านกลาง: ปลายทางห้ามเป็นของเดิม · session ต้นทางบังคับ read-only | — |
+| `10_dump_source.sh` | pg_dump 2 ฐาน + นับแถว/checksum **ใน snapshot เดียวกัน** + เก็บ publication/bucket/policy/cron/fn_audit | **อ่านอย่างเดียว** |
+| `20_build_target.sh` | สร้างฐานรวมจากไฟล์ (ไม่ต่อฐานเดิม) — ตัดของชน · `fn_audit_dr` · รวม audit · publication · storage policy | ไม่แตะ |
+| `sql/merge_audit.sql` | รวม `audit_log` (+1e9) · `archive.audit_log_aged` · policy anon | ไม่แตะ |
+| `30_verify.sh` | เทียบจำนวนแถว + checksum ทุกตาราง · audit แยกส่วน Main/DR · auth.users | ไม่แตะ |
+| `test/run-local-test.sh` | ซ้อมทั้งท่อบนฐานจำลอง + พิสูจน์ตัวตรวจจับของหายได้ + ด่านปฏิเสธฐานเดิม | ไม่แตะ |
+
+**ผลซ้อม 18/11 (ฐานจำลอง ไม่ใช่ข้อมูลจริง):** ตรวจ 13 ตาราง ผ่านหมด · trigger DR→`fn_audit_dr` · id audit ไม่ชน ·
+anon เห็น audit DR แต่ไม่เห็นของ Main · แอบลบ 1 แถวแล้วตัวตรวจจับได้ · ปลายทาง `….supabase.co` ถูกปฏิเสธ
+· แก้ 3 จุดที่ซ้อมเจอ: `\copy` ใช้ตัวแปรไม่ได้ · boolean ของ bucket ออกเป็น `t` · ตัวตรวจนับ archive ซ้ำ
+
+**ยังไม่ทำ:** ย้ายตัวไฟล์ storage (ต้องใช้ service key ของเดิม — ใส่เป็น Secret บน INET) ·
+cron 20 งานใหม่ด้วยที่อยู่ INET · deploy edge function 25 ตัว · ตั้ง Supabase stack บน INET (รอ §7)
