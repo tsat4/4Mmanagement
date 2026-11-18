@@ -130,7 +130,11 @@
 - วัดจริง 24 ชม.: 1,092 ข้อความ ถึง 30 คน (เกินเวลา 900 = 30 รอบ × 30 คน · เรียกตรวจ 192) — ส่งทั้งโรงงานตาม role · ปิดเองไม่ได้ (`can_mute=false`) · เตือนซ้ำทุก 60 นาที ×8
 - ปรับค่า (ไม่แก้โค้ด · ย้อนได้): `qa_fme_config.max_alerts` 8 → **2** (= เรียก 1 + เกินเวลา 1) · ผู้รับ `qa_fme_call`/`qa_fme_overdue` = **role qa อย่างเดียว** (ตัด admin/manager)
   · ย้อน: `update qa_fme_config set max_alerts=8 where id=1; update notification_rules set inapp_roles='{qa,admin}' where event_key='qa_fme_call'; update notification_rules set inapp_roles='{qa,manager,admin}' where event_key='qa_fme_overdue';`
-- ยังค้าง: งานข้ามกะแล้วควรปิดเป็น "หมดเวลา" อัตโนมัติ · ส่งเฉพาะ QA ที่ดูแลไลน์นั้น (ต้องมีทะเบียน QA↔ไลน์ก่อน)
+- ⌛ **18/11 สถานะ `expired` = หมดเวลา (ข้ามกะแล้วยังไม่ได้ตรวจ)** — edge v22 ตั้งให้งาน `pending` ที่ วันงาน/กะ ≠ ตอนนี้ และเลย `due_at`
+  · **ไม่ลบ · ไม่นับเป็นตรวจแล้ว** (ย้อนดูได้ว่างานไหนไม่ได้ตรวจ) · หลุดจากคิว/เลิกเตือน · บอร์ดไทม์ไลน์เป็นแดง "⌛ หมดเวลา"
+  · QA ตรวจทีหลังแล้วจับคู่ใบได้ = sync ปิดเป็น done ให้เอง · `acked` (เปิดใบแล้ว) ไม่แตะ · CHECK เพิ่ม `expired` (migration `20261118_qa_fme_expired_status_main.sql` · applied)
+  · เก็บกวาดครั้งแรก 18/11: งานค้าง 24 งานของ 15–16/11 (นอกหน้าต่างสแกน 2 วัน) → `expired` ด้วยมือ (เหตุผลระบุไว้)
+- ยังค้าง: ส่งเฉพาะ QA ที่ดูแลไลน์นั้น (ต้องมีทะเบียน QA↔ไลน์ก่อน)
 
 #### 🟡 ป้ายเตือนฝั่งผลิต — "รุ่นนี้ QA ยังไม่ตรวจ First" (16/11)
 - `src/components/QaFmeLineBanner.jsx` วางในจอ Daily Report (แผงใบสั่งผลิตของกะที่เลือก) · ตัดสินที่ `src/utils/qaFmeLineWarn.js`
