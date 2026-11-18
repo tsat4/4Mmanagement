@@ -8,6 +8,10 @@
  * 🔴 **"ติด min" ตอบได้ · "ต้องผลิตเท่าไหร่" ยังตอบไม่ได้** (ทะเบียนชิ้นส่วนไม่มี max เลยสักแถว)
  *    ⇒ `refillPcs == null` ต้องเขียนว่า "ยังไม่ตั้ง max" **ห้ามโชว์ 0 ห้ามเดา**
  * 🔴 โหลดไม่ครบ = เขียนบนจอ ห้ามแสดงเป็น "ไม่มีของติด min" (ลิสต์ว่าง 2 ความหมาย)
+ * 🔴 **"ตอบไม่ได้เพราะทะเบียนตั้งผิดที่" (`wrongPlace`) ต้องแยกออกมาให้เห็นเป็นรายการที่แก้ได้**
+ *    (วัดจริง 18/11: 35 จาก 41 คู่ · ของอยู่ STORE/ไลน์ประกอบ แต่ทะเบียนตั้งที่ไลน์ปั๊ม)
+ *    ยุบรวมกับกอง "ตอบไม่ได้" ทั่วไป = ไม่มีใครรู้ว่ามันแก้ได้ แล้วมันค้างอยู่อย่างนั้นตลอด
+ *    🔴 **เป็นข้อเสนอ — ห้ามมีปุ่มย้ายทะเบียนให้เองในแผงนี้** (คนตัดสินที่ /line-stock)
  */
 import React from 'react';
 import { tr } from '../utils/i18n';
@@ -25,6 +29,7 @@ export default function MinDemandPanel({
   max = 24,
 }) {
   const at = (rows || []).filter(r => r?.state === 'at_min');
+  const wrong = (rows || []).filter(r => r?.wrongPlace && r?.elsewhere?.line_name);
   const unknown = summary?.unknown ?? (rows || []).filter(r => r?.state === 'unknown').length;
   const shown = at.slice(0, max);
 
@@ -42,7 +47,8 @@ export default function MinDemandPanel({
         {/* 🔴 ตอบไม่ได้กี่รายการ ต้องขึ้นเสมอ — ซ่อน = จอโกหกว่าดูครบแล้ว */}
         {!loading && unknown > 0 && (
           <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-            · {unknown} {tr('รายการยังตัดสินไม่ได้ (ไม่เคยนับ / ยังไม่ตั้ง min)')}
+            · {unknown} {tr('รายการยังตัดสินไม่ได้')}
+            {wrong.length > 0 ? ` (${tr('ในนี้')} ${wrong.length} ${tr('เป็นทะเบียนตั้งผิดที่ — แก้ได้')})` : ''}
           </span>
         )}
       </div>
@@ -92,6 +98,36 @@ export default function MinDemandPanel({
               … {tr('อีก')} {at.length - shown.length} {tr('พาร์ท')}
             </span>
           )}
+        </div>
+      )}
+
+      {/* 🔎 ตอบไม่ได้เพราะ "ทะเบียนตั้งผิดที่" — **แก้ได้** จึงต้องแยกออกมา ไม่ยุบรวมกับกองตอบไม่ได้ */}
+      {!loading && wrong.length > 0 && (
+        <div style={{ display: 'grid', gap: 4, paddingTop: 2, borderTop: '1px solid var(--border2)' }}>
+          <div style={{ fontSize: 11.5, color: 'var(--text2)' }}>
+            🔎 {wrong.length} {tr('พาร์ทตัดสินไม่ได้เพราะบัญชีที่ไลน์ในทะเบียนนิ่ง แต่ของขยับจริงที่อื่น — ย้ายทะเบียนที่')}{' '}
+            <code style={{ fontSize: 11 }}>/line-stock</code> {tr('แล้วสัญญาณจะเดินเอง')}
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {wrong.slice(0, max).map(r => (
+              <div key={`w|${r.line_name}|${r.mat_no}`} title={r.why || ''}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5, padding: '3px 7px',
+                  border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)',
+                  background: 'var(--card)', fontSize: 11,
+                }}>
+                <MatLabel mat={r.mat_no} name={r.part_name} size={11} style={{ flexWrap: 'nowrap' }} />
+                <span style={{ color: 'var(--muted)', whiteSpace: 'nowrap' }}>
+                  {r.line_name} → <b style={{ color: 'var(--text2)' }}>{r.elsewhere.line_name}</b>
+                </span>
+              </div>
+            ))}
+            {wrong.length > max && (
+              <span style={{ fontSize: 11, color: 'var(--muted)', alignSelf: 'center' }}>
+                … {tr('อีก')} {wrong.length - max} {tr('พาร์ท')}
+              </span>
+            )}
+          </div>
         </div>
       )}
 
