@@ -260,7 +260,9 @@ export default function MonitorBoardGrid({
 
       {/* ── ตาราง ───────────────────────────────────────────────────────────────── */}
       <div style={{ ...card, padding: 0, overflowX: 'auto' }}>
-        <table style={{ borderCollapse: 'separate', borderSpacing: 0, fontSize: FS, width: 'max-content', minWidth: '100%' }}>
+        {/* 18/11 — บอร์ดคอลัมน์น้อย (เหล็ก coil = ภาพ ณ วันเดียว 1 คอลัมน์) ห้ามยืดเต็มจอ: เดิม minWidth 100%
+           ทำให้ช่อง "แถว" กว้างครึ่งจอ ตัวเลขไปชิดขอบขวา (user: "ทำไมไม่เหมือน tab อื่น") */}
+        <table style={{ borderCollapse: 'separate', borderSpacing: 0, fontSize: FS, width: 'max-content', minWidth: win.length >= 6 ? '100%' : undefined }}>
           <thead>
             <tr>
               <th style={{ ...thSticky, width: HEAD_W, minWidth: HEAD_W, textAlign: 'left' }}>

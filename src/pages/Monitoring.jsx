@@ -14,7 +14,7 @@ import PageHeader from '../components/PageHeader';
 import FilterBar from '../components/FilterBar';
 import useTabParam from '../utils/useTabParam';
 import MonitorBoardGrid from '../components/MonitorBoardGrid';
-import { BOARD_TABS, boardPeriods, rowDefs, isStoreBoard, STORE_LEDGER_LINE } from '../utils/monitorBoards';
+import { BOARD_TABS, BOARD_GROUPS, MON_SUBS, subOfKind, BOARD_STAGE_LABEL, boardPeriods, rowDefs, isStoreBoard, STORE_LEDGER_LINE } from '../utils/monitorBoards';
 import {
   sumByMatDate, firstByMat, makeSystemLookup, OUT_TXN_TYPES, IN_TXN_TYPES,
   DEMAND_SKIP_STATUS, onHandAtRef, outAtRef, inAtRef, fgAnchorBalance, makeAnchorLookup, rackOrderSyncPlan,
@@ -66,7 +66,12 @@ export default function Monitoring() {
   /* 📦 16/11 — ฝังเป็นแท็บ "Monitoring แผน-สต๊อก" ของ Stock Management (`/line-stock?tab=monitoring`)
      แท็บซ้อนแท็บต้องคนละ query param (UI §6.8 ข้อ 2.4) ⇒ ใน hub ใช้ `?mon=` · เปิดเดี่ยว (ไม่มีแล้ว — route redirect) ใช้ `?tab=` */
   const inHub = useContext(HubContext);
-  const [tab, setTab] = useTabParam(BOARD_TABS.map(t => t.key), BOARD_TABS[0].key, inHub ? 'mon' : 'tab');
+  /* 🗂️ 18/11 — แท็บ 2 ชั้น: กลุ่ม (BOARD_GROUPS) → แท็บย่อย (MON_SUBS) · URL เก็บคีย์แท็บย่อย
+     ลิงก์เก่าที่ชี้ชนิดบอร์ด (`raw`/`vendor`/`st_before`/`st_after`) ตกเข้าแท็บย่อยที่รวมชนิดนั้นไว้ */
+  const [rawTab, setTab] = useTabParam([...MON_SUBS.map(s => s.key), ...BOARD_TABS.map(t => t.key)], MON_SUBS[0].key, inHub ? 'mon' : 'tab');
+  const tab = MON_SUBS.some(s => s.key === rawTab) ? rawTab : (subOfKind(rawTab) || MON_SUBS[0].key);
+  const subDef = MON_SUBS.find(s => s.key === tab) || MON_SUBS[0];
+  const groupDef = BOARD_GROUPS.find(g => g.key === subDef.group) || BOARD_GROUPS[0];
   /* แท็บซ้อนแท็บต้องคนละ query param (UI §6.8 ข้อ 2.4) — หน้าลูกของแท็บ FG ใช้ `?fgv=` */
   const [fgView, setFgView] = useTabParam(['rundown', 'board'], 'rundown', 'fgv');
 
@@ -120,7 +125,13 @@ export default function Monitoring() {
 
   useEffect(() => { loadBoards(); }, [loadBoards]);
 
-  const tabBoards = useMemo(() => boards.filter(b => b.kind === tab), [boards, tab]);
+  /* แท็บย่อยที่รวมหลายชนิด (Raw Mat · งานชุบ) เรียงบอร์ดตามลำดับชนิด = ลำดับสายงาน (ก่อนชุบ → ร้าน → หลังชุบ) */
+  const subKindsKey = subDef.kinds.join(',');
+  const tabBoards = useMemo(() => {
+    const kinds = subKindsKey.split(',');
+    return boards.filter(b => kinds.includes(b.kind)).map((b, i) => ({ b, i }))
+      .sort((x, y) => kinds.indexOf(x.b.kind) - kinds.indexOf(y.b.kind) || x.i - y.i).map(x => x.b);
+  }, [boards, subKindsKey]);
   const board = useMemo(
     () => tabBoards.find(b => b.id === boardId) || tabBoards[0] || null,
     [tabBoards, boardId],
@@ -642,17 +653,25 @@ export default function Monitoring() {
     if (isRackOrder) await syncRackOrder(partId, periodKey, row.qty);
   }, [canEdit, board, fullName, syncRackOrder]);
 
-  const tabs = BOARD_TABS.map(t => ({
-    key: t.key,
-    label: `${t.label}${boards.filter(b => b.kind === t.key).length ? ` (${boards.filter(b => b.kind === t.key).length})` : ''}`,
-  }));
+  const countOf = (kinds) => boards.filter(b => kinds.includes(b.kind)).length;
+  const groupTabs = BOARD_GROUPS.map(g => ({ key: g.key, label: g.label }));
+  const subTabs = groupDef.subs.map(sd => {
+    const full = MON_SUBS.find(x => x.key === sd.key);
+    const n = countOf(full.kinds);
+    return { key: full.key, label: `${full.label}${n ? ` (${n})` : ''}` };
+  });
 
   return (
     <Page>
       <PageHeader
         title={tr('Monitoring ติดตามแผน-สต๊อก')} icon="📉"
         sub={tr('บอร์ดแทนไฟล์ Excel ของทีมวางแผน — PLAN กรอกเอง · ของเข้า/ออก/ขั้นต่ำ ระบบเติมให้')}
-        tabs={tabs} tab={tab} onTab={setTab}
+        tabs={groupTabs} tab={groupDef.key} onTab={(g) => setTab(BOARD_GROUPS.find(x => x.key === g)?.subs[0]?.key || MON_SUBS[0].key)}
+      />
+      {/* แท็บย่อย + แถบกรอง — ครอบ <Hub> ให้ PageHeader วาดเฉพาะแท็บ/กรอง (ไม่มีชื่อหน้าซ้ำ) · ลำดับ กลุ่ม → แท็บย่อย → แถบกรอง */}
+      <Hub>
+      <PageHeader
+        tabs={subTabs} tab={tab} onTab={setTab}
         actions={canEdit ? (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {/* 📦 บอร์ด FG ไม่ได้มาจากไฟล์ Excel — ปุ่มจึงแยกจาก "นำเข้าจากไฟล์" ตั้งแต่หัวเพจ
@@ -681,7 +700,7 @@ export default function Monitoring() {
                 style={{ minWidth: 0, maxWidth: '100%', flex: 1 }}>
                 {tabBoards.map(b => (
                   <option key={b.id} value={b.id}>
-                    {b.name}{b.line_name ? ` — ${b.line_name}` : ''}{b.customer ? ` — ${b.customer}` : ''}
+                    {BOARD_STAGE_LABEL[b.kind] && subDef.kinds.length > 1 ? `${BOARD_STAGE_LABEL[b.kind]} · ` : ''}{b.name}{b.line_name ? ` — ${b.line_name}` : ''}{b.customer ? ` — ${b.customer}` : ''}
                   </option>
                 ))}
               </select>
@@ -702,6 +721,7 @@ export default function Monitoring() {
           </FilterBar>
         ) : null}
       />
+      </Hub>
 
       {warn ? (
         <div style={{ ...card, borderColor: 'var(--accent2)', fontSize: FS + 1, marginBottom: 10 }}>🔴 {warn}</div>
@@ -741,7 +761,7 @@ export default function Monitoring() {
         </Suspense>
       ) : !tabBoards.length ? (
         <div style={{ ...card, fontSize: FS + 1, lineHeight: 1.9 }}>
-          ยังไม่มีบอร์ดในหมวดนี้ ({BOARD_TABS.find(t => t.key === tab)?.sheets})
+          ยังไม่มีบอร์ดในหมวดนี้ ({subDef.kinds.map(k => BOARD_TABS.find(t => t.key === k)?.sheets).filter(Boolean).join(' · ')})
           {canEdit
             ? <> {tr('— กด')} <b>{tr('นำเข้าจากไฟล์ Excel')}</b> {tr('แล้วเลือกไฟล์')} <code>1.Monitoring-&lt;เดือน&gt;.xlsx</code> {tr('ระบบจะสร้างบอร์ดให้ตามชีทในไฟล์')}</>
             : ' — ต้องมีสิทธิ์จัดการบอร์ดจึงจะนำเข้าได้'}

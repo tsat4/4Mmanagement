@@ -16,7 +16,7 @@ export const BOARD_TABS = [
   { key: 'line',   label: '🏭 ไลน์ปั๊ม',        sheets: '110T · 300T · 250T · 800T · 600T' },
   { key: 'rack',   label: '📦 FG รายแร็ค',      sheets: 'TSPK · TSESA+LA' },
   { key: 'great',  label: '📅 ความต้องการรายสัปดาห์', sheets: 'Argen' },
-  { key: 'raw',    label: '🧱 วัตถุดิบ (R402)',  sheets: 'mat' },
+  { key: 'raw',    label: '🧱 เหล็ก coil (กก.)',  sheets: 'mat (R402)' },   // 18/11 อยู่ในแท็บย่อย Raw Mat (BOARD_GROUPS)
   { key: 'vendor', label: '🔗 งานส่งชุบ',        sheets: 'RA · 824-825' },
   /* 📦 FG ทุกตัวที่ลูกค้าสั่งจริง — ไม่ได้มาจากไฟล์ Excel แต่มาจาก EDI 862/830 ที่นำเข้าทุกวัน
      (คำขอ user 06/10: "อยากให้มอนิเตอร์ได้ทุก product FG ด้วย ที่อัพจาก 862 830")
@@ -30,6 +30,39 @@ export const BOARD_TABS = [
   { key: 'st_after',    label: '✨ After Coating',  sheets: 'S405',        store: true },
   { key: 'st_blank',    label: '⬜ Blank',          sheets: 'S408',        store: true },
 ];
+/* 🗂️ 18/11 (คำสั่ง user "tab มันมั่ว · แตกเยอะ · ควร group เป็น tab หลัก") — จัด 12 ชนิดเหลือ 3 กลุ่ม
+   แถวที่ 1 = กลุ่ม · แถวที่ 2 = แท็บย่อย (1 แท็บย่อยรวมได้หลายชนิดบอร์ด) · URL `?mon=<คีย์แท็บย่อย>`
+   · Raw Mat = บอร์ดสโตร์ R401/R402 (ชิ้น) + บอร์ด "mat" เดิมของทีมวางแผน (เหล็ก coil เป็น กก.) — user: "เก็บไว้หมวดเดียวกัน"
+   · งานชุบ = ก่อนชุบ (S403) → ที่ร้านชุบ (RA · 824-825) → หลังชุบ (S405) เรียงตามสายงาน — user: "เอาเลย"
+   🔴 ชนิดบอร์ดใหม่ต้องอยู่ในแท็บย่อยใดแท็บย่อยหนึ่งเสมอ (มีเทสล็อก) ไม่งั้นบอร์ดหายจากจอ */
+export const BOARD_GROUPS = [
+  { key: 'plan',  label: '🏭 แผนผลิต', subs: [
+    { key: 'line',  kinds: ['line'] },
+    { key: 'great', kinds: ['great'] },
+  ] },
+  { key: 'store', label: '🏬 สโตร์', subs: [
+    { key: 'st_raw',      label: '🧱 Raw Mat',   kinds: ['st_raw', 'raw'] },
+    { key: 'st_semi',     kinds: ['st_semi'] },
+    { key: 'st_purchase', kinds: ['st_purchase'] },
+    { key: 'plating',     label: '🧪 งานชุบ',    kinds: ['st_before', 'vendor', 'st_after'] },
+    { key: 'st_blank',    kinds: ['st_blank'] },
+  ] },
+  { key: 'wh',    label: '🚚 คลังสินค้า FG', subs: [
+    { key: 'rack', kinds: ['rack'] },
+    { key: 'fg',   kinds: ['fg'] },
+  ] },
+];
+const tabLabelOf = (k) => BOARD_TABS.find((t) => t.key === k)?.label || k;
+/** แท็บย่อยทั้งหมด (แบนลิสต์) — `{ key, label, kinds, group }` */
+export const MON_SUBS = BOARD_GROUPS.flatMap((g) => g.subs.map((s) => ({ ...s, label: s.label || tabLabelOf(s.key), group: g.key })));
+/** ชนิดบอร์ด → คีย์แท็บย่อย (ลิงก์เก่า `?mon=raw|vendor|st_before|st_after` พาเข้าแท็บย่อยใหม่) */
+export const subOfKind = (kind) => MON_SUBS.find((s) => s.kinds.includes(kind))?.key || null;
+/** ป้ายขั้นนำหน้าชื่อบอร์ดในช่องเลือก — บอกว่าบอร์ดนี้อยู่ตรงไหนของแท็บย่อยที่รวมหลายชนิด */
+export const BOARD_STAGE_LABEL = {
+  raw: 'เหล็ก coil (กก.)', st_raw: 'สโตร์ (ชิ้น)',
+  st_before: '① ก่อนชุบ', vendor: '② ที่ร้านชุบ', st_after: '③ หลังชุบ',
+};
+
 /** ชนิดบอร์ดสโตร์ — ตัดสินที่นี่ที่เดียว (ห้ามเทียบ `kind.startsWith('st_')` เองในหน้า) */
 export const STORE_BOARD_KINDS = BOARD_TABS.filter((t) => t.store).map((t) => t.key);
 export const isStoreBoard = (board) => STORE_BOARD_KINDS.includes(board?.kind);
