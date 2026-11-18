@@ -1,4 +1,5 @@
 import { useState, useEffect, useContext, useMemo, useCallback } from 'react';
+import { MoreMark } from '../components/InfoMore';
 import { useSearchParams } from 'react-router-dom';
 import { orgValues, sortLike } from '../utils/listOrder';
 import { supabase, supabaseDR } from '../supabaseClient';
@@ -17,7 +18,37 @@ import ScrollRow from '../components/ScrollRow';
 import Page from '../components/Page';
 import FilterBar from '../components/FilterBar';
 import Segmented from '../components/Segmented';
+import InfoMore from '../components/InfoMore';   // ⓘ พับคำอธิบายยาว (UI §6.10)
 import useTabParam from '../utils/useTabParam';
+
+/* ══ 🧱 แถบ "ที่มาของตัวเลข" — ชิปสั้นๆ แทนย่อหน้า (2026-11-18 · user: "text เยอะมาก") ══════════
+   หน้านี้สะสมย่อหน้าอธิบายจากกฎ "ข้อมูลไม่พอ/มีเงื่อนไข ต้องเขียนบนจอ" ทีละรอบ จนกลายเป็น
+   กำแพงข้อความที่ดันแผนจริงลงใต้ fold (บนมือถือยิ่งหนัก)
+   🔴 กติกาการย่อ — **ย่อรูปแบบ ไม่ย่อความจริง**:
+     · ตัวเลข → อยู่บนจอเสมอ (เป็น value ของชิป)
+     · คำเตือน (`warn`) → อยู่บนจอเสมอ สีส้ม ไม่พับ (กฎ InfoMore: ห้ามพับคำเตือนสถานะจริง)
+     · ส่วนขยายที่ขาดไปก็ยังอ่านรู้เรื่อง → `title=` (hover/กดค้าง)
+     · ประโยค "ทำไม/คิดยังไง" → `<InfoMore>` ท้ายแถว
+   🔴 ห้ามเอาสถานะที่เปลี่ยนความหมายทั้งหน้า (อ่าน BOM ไม่ได้ · ปิด BOM) มาย่อเป็นชิป — ต้องเป็นประโยคเต็ม */
+const FactRow = ({ children }) => (
+  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px 10px', fontSize: 11.5, color: 'var(--muted)' }}>
+    {children}
+  </div>
+);
+/* 🔴 คำเตือนเป็น **ชิปแยก** ไม่ใช่ส่วนท้ายของชิปเดิม — รวมไว้ในก้อน nowrap เดียวกันเมื่อไหร่
+   ชิปจะยาวเกินจอมือถือแล้วตัดบรรทัดไม่ได้ ⇒ ล้นออกนอกจอ (mobilesweep จับได้ 18/11:
+   กล่อง 370 เนื้อหา 442 ที่ "🌳 รวมงานจาก BOM 3,333,014 ชิ้น ⚠ ยังไม่มี BOM 12 ตัว")
+   · ข้างในชิปก็ต้อง `flexWrap:'wrap'` เผื่อป้ายยาว — ชิ้นที่ห้ามแตกมีแค่ label กับ value */
+const Fact = ({ icon, label, value, title = '', warn = '', warnTone = false }) => (
+  <>
+    <span title={title} style={{ display: 'inline-flex', alignItems: 'baseline', gap: 4, flexWrap: 'wrap', minWidth: 0 }}>
+      {icon && <span>{icon}</span>}
+      <span style={{ whiteSpace: 'nowrap' }}>{label}</span>
+      <b style={{ whiteSpace: 'nowrap', color: warnTone ? 'var(--amber)' : 'var(--text2)' }}>{value}</b>
+    </span>
+    {warn && <span style={{ color: 'var(--amber)', fontWeight: 700 }}>{warn}</span>}
+  </>
+);
 import SimpleMasterPanel from '../components/SimpleMasterPanel';
 import { invalidateTrialReasons } from '../utils/useTrialReasons'; // 🧪 ทะเบียนเหตุผลจองเครื่องทดลอง (05/11)
 import { masterDeleteGuard } from '../utils/masterRefs';
@@ -680,47 +711,64 @@ export default function ProductionPlan() {
       {planWarn && (
         <NoticeBar tone="bad" style={{ margin: '0 0 12px' }}>{planWarn}</NoticeBar>
       )}
-      <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-        กำลังผลิตคำนวณจาก <b>{tr('median ยอดดีจริงต่อกะ')}</b> {tr('ใน')} {HISTORY_DAYS} วันล่าสุด (ตัดค่าโดดอัตโนมัติ) · พาร์ทที่ไม่มีประวัติ fallback เป็น cycle time × OEE
-        {shiftNet && <> {tr('บนฐาน')} <b>{tr('เวลาทำงานสุทธิ')} {shiftNet.netMin} {tr('นาที/กะ')}</b> {tr('(เวลากะ')} {DEFAULT_SHIFT_MIN} {tr('− พักตามนโยบาย')} {Math.round(shiftNet.brkMin)})
-          {shiftNet.fallback && <span style={{ color: 'var(--amber)', fontWeight: 700 }}> {tr('⚠ ใช้ค่าพักสำรอง (อ่านตารางเวลาพักไม่ได้)')}</span>}</>}
-        {pairsCollapsed.length > 0 && (
-          <> · 🔗 <b>{tr('งานคู่')} {pairsCollapsed.length} {tr('คู่')}</b> {tr('ปั๊มทีเดียวได้ 2 ข้าง — ยอด')}<b>{tr('ชิ้น')}</b>{tr('บวกทั้งคู่ แต่')}<b>{tr('ภาระเวลา')}</b>นับครั้งเดียว
-            <span style={{ marginLeft: 4 }}>({pairsCollapsed.slice(0, 3).map(([a, b]) => `${a}↔${b}`).join(' · ')}{pairsCollapsed.length > 3 ? ' …' : ''})</span></>
+      {/* ⚙️ ที่มาของตัวเลข — **ตัวเลข/คำเตือนอยู่บนจอเสมอ · คำอธิบายวิธีคิดพับไว้หลัง ⓘ**
+          (18/11 · user: "text เยอะมาก" — 6 ย่อหน้าจากกฎ "ต้องเขียนบนจอ" สะสมจนแผนจริงจมใต้ fold)
+          🔴 ห้ามพับ: ตัวเลข · คำเตือนสถานะจริง (InfoMore §กฎการใช้) ⇒ พับเฉพาะประโยค "ทำไม/คิดยังไง" */}
+      <FactRow>
+        {shiftNet && (
+          <Fact icon="⚙️" label={tr('เวลาทำงานสุทธิ')} value={`${shiftNet.netMin} ${tr('นาที/กะ')}`}
+            title={`${tr('เวลากะ')} ${DEFAULT_SHIFT_MIN} − ${tr('พักตามนโยบาย')} ${Math.round(shiftNet.brkMin)}`}
+            warn={shiftNet.fallback ? tr('⚠ ใช้ค่าพักสำรอง (อ่านตารางเวลาพักไม่ได้)') : ''} />
         )}
-      </div>
+        {pairsCollapsed.length > 0 && (
+          <Fact icon="🔗" label={tr('งานคู่')} value={`${pairsCollapsed.length} ${tr('คู่')}`}
+            title={`${pairsCollapsed.slice(0, 3).map(([a, b]) => `${a}↔${b}`).join(' · ')}${pairsCollapsed.length > 3 ? ' …' : ''}`} />
+        )}
+        <InfoMore label={tr('วิธีคิดกำลังผลิต')} id="plan_cap_how">
+          กำลังผลิตคำนวณจาก <b>{tr('median ยอดดีจริงต่อกะ')}</b> {tr('ใน')} {HISTORY_DAYS} วันล่าสุด (ตัดค่าโดดอัตโนมัติ)
+          · พาร์ทที่ไม่มีประวัติ fallback เป็น cycle time × OEE
+          {shiftNet && <> {tr('บนฐาน')} <b>{tr('เวลาทำงานสุทธิ')} {shiftNet.netMin} {tr('นาที/กะ')}</b> {tr('(เวลากะ')} {DEFAULT_SHIFT_MIN} {tr('− พักตามนโยบาย')} {Math.round(shiftNet.brkMin)})</>}
+          {pairsCollapsed.length > 0 && <> · 🔗 {tr('งานคู่ปั๊มทีเดียวได้ 2 ข้าง — ยอด')}<b>{tr('ชิ้น')}</b>{tr('บวกทั้งคู่ แต่')}<b>{tr('ภาระเวลา')}</b>นับครั้งเดียว</>}
+        </InfoMore>
+      </FactRow>
 
       {/* 🔍 ความต้องการที่เลข SAP ถูกต้องแล้ว แต่ยังไม่ถูกนับในแผน — คนละเรื่องกับ "จับคู่ SAP ไม่ได้" */}
       {/* 🌳 ที่มาของงานในแผน — ต้องบอกว่าตัวเลขรวมอะไรไว้บ้าง ไม่งั้นคนอ่านจะเทียบกับ order ลูกค้าแล้วงง */}
       {!loading && (
-        <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>
+        <FactRow>
+          {/* 🔴 อ่าน BOM ไม่ได้ / ปิด BOM = สถานะจริงที่เปลี่ยนความหมายของทั้งแผน — ห้ามพับ ห้ามย่อเป็นชิป */}
           {bomErr ? (
             <span style={{ color: 'var(--amber)', fontWeight: 700 }}>{tr('⚠ อ่าน BOM ไม่ได้ — แผนนับเฉพาะพาร์ทที่ลูกค้าสั่งตรง (ไลน์ที่ทำพาร์ทลูกจะดูเหมือนไม่มีงาน)')}</span>
           ) : !useBom ? (
             <span>{tr('ปิดการรวมงานจาก BOM อยู่ — แผนนับเฉพาะพาร์ทที่ลูกค้าสั่งตรง')}</span>
           ) : demandPcs.bom ? (
-            <>{tr('🌳 รวมงานที่ระเบิดจาก BOM แล้ว:')} <b>{Math.round(demandPcs.bom.childPcs).toLocaleString()} {tr('ชิ้น')}</b> {tr('จากพาร์ทที่มี BOM')} {demandPcs.bom.rootsWithBom} ตัว
-              {demandPcs.bom.rootsNoBom > 0 && <span> {tr('· ยังไม่มี BOM')} {demandPcs.bom.rootsNoBom} {tr('ตัว (ลูกของพาร์ทเหล่านี้ยังไม่เข้าแผน)')}</span>}
-              {' · '}⏮️ <b>{tr('ไล่ย้อนวันจากดิวลูกค้าแล้ว')}</b> — lead time ของแต่ละชั้นคิดจากกำลังผลิตจริงของไลน์นั้น
-              (ถอยวันข้ามวันหยุดตามปฏิทิน + เผื่อขนย้าย 1 วันทำงานต่อชั้น){demandPcs.sched?.maxLevel > 1 ? ` · ลึกสุด ${demandPcs.sched.maxLevel} ชั้น` : ''}
+            <>
+              <Fact icon="🌳" label={tr('รวมงานจาก BOM')} value={`${Math.round(demandPcs.bom.childPcs).toLocaleString()} ${tr('ชิ้น')}`}
+                title={`${tr('จากพาร์ทที่มี BOM')} ${demandPcs.bom.rootsWithBom} ${tr('ตัว')}${demandPcs.sched?.maxLevel > 1 ? ` · ลึกสุด ${demandPcs.sched.maxLevel} ชั้น` : ''}`}
+                warn={demandPcs.bom.rootsNoBom > 0 ? `⚠ ${tr('ยังไม่มี BOM')} ${demandPcs.bom.rootsNoBom} ${tr('ตัว')}` : ''} />
+              {demandPcs.sched?.maxLevel > 1 && <Fact icon="⏮️" label={tr('ไล่ย้อนวันจากดิว')} value={`${tr('ลึก')} ${demandPcs.sched.maxLevel} ${tr('ชั้น')}`} />}
             </>
           ) : null}
+          {/* ⏱️ ไม่รู้กำลังผลิต = ช่องโหว่ของข้อมูล ไม่ใช่วิธีคิด ⇒ อยู่บนจอ */}
           {demandPcs.sched?.noCapMats?.length > 0 && (
-            <div style={{ marginTop: 2 }}>
-              ⏱️ พาร์ทที่ <b>{tr('ยังไม่รู้กำลังผลิต')} {demandPcs.sched.noCapMats.length} {tr('ตัว')}</b> — ไล่ย้อนวันให้ที่ 1 วันไว้ก่อน (อาจสั้นกว่าจริง)
-            </div>
+            <Fact icon="⏱️" label={tr('ยังไม่รู้กำลังผลิต')} value={`${demandPcs.sched.noCapMats.length} ${tr('ตัว')}`} warnTone
+              title={tr('ไล่ย้อนวันให้ที่ 1 วันไว้ก่อน (อาจสั้นกว่าจริง)')} />
           )}
-          {demandPcs.buffer && (
-            <div style={{ marginTop: 2 }}>
-              {useBuffer
-                ? <>{tr('หักของที่มีใน')} <b>STORE</b> {tr('แล้ว')} <b>{Math.round(demandPcs.buffer.dailyAbsorbed).toLocaleString()} {tr('ชิ้น')}</b> (รายวัน) ·
-                    <b> {Math.round(demandPcs.buffer.monthlyAbsorbed).toLocaleString()} {tr('ชิ้น')}</b> {tr('(รายเดือน) จาก')} {demandPcs.buffer.mats} พาร์ทที่มีของคงเหลือ
-                    {' · '}<span title={tr('backflush ยังไม่ทำงานครบ (issue 5,908 : consume 40) ⇒ ยอดคงเหลือที่ไลน์สูงกว่าความจริง เอามาหักแล้วจะสั่งผลิตน้อยเกินไป')}>
-                      ⚠️ ไม่หักยอดที่ค้างอยู่ "ที่ไลน์" (เชื่อถือไม่ได้)</span></>
-                : <>{tr('ไม่หักสต็อก STORE — ตัวเลขคือความต้องการดิบ (ยังไม่ดูของที่มีอยู่)')}</>}
-            </div>
+          {demandPcs.buffer && (useBuffer
+            ? <Fact icon="📦" label={tr('หักของใน STORE')}
+                value={`${Math.round(demandPcs.buffer.dailyAbsorbed).toLocaleString()}/${tr('วัน')} · ${Math.round(demandPcs.buffer.monthlyAbsorbed).toLocaleString()}/${tr('เดือน')}`}
+                title={`${tr('จาก')} ${demandPcs.buffer.mats} ${tr('พาร์ทที่มีของคงเหลือ')}`}
+                warn={tr('⚠️ ไม่หักยอดที่ค้างอยู่ "ที่ไลน์" (เชื่อถือไม่ได้)')} />
+            : <span>{tr('ไม่หักสต็อก STORE — ตัวเลขคือความต้องการดิบ (ยังไม่ดูของที่มีอยู่)')}</span>)}
+          {!bomErr && useBom && demandPcs.bom && (
+            <InfoMore label={tr('ที่มาของตัวเลขเหล่านี้')} id="plan_demand_how">
+              🌳 {tr('ยอดนี้รวมลูกที่ระเบิดจาก BOM แล้ว')} — {tr('พาร์ทที่ยังไม่มี BOM ลูกของมันยังไม่เข้าแผน')}
+              {' · '}⏮️ <b>{tr('ไล่ย้อนวันจากดิวลูกค้าแล้ว')}</b> — lead time ของแต่ละชั้นคิดจากกำลังผลิตจริงของไลน์นั้น
+              (ถอยวันข้ามวันหยุดตามปฏิทิน + เผื่อขนย้าย 1 วันทำงานต่อชั้น) · พาร์ทที่ยังไม่รู้กำลังผลิต ไล่ย้อนวันให้ที่ 1 วันไว้ก่อน
+              {demandPcs.buffer && useBuffer && <> · 📦 {tr('ยอดที่หัก STORE มาจากของคงเหลือในคลัง')} — {tr('backflush ยังไม่ทำงานครบ ⇒ ยอดที่ค้าง "ที่ไลน์" สูงกว่าความจริง เอามาหักแล้วจะสั่งผลิตน้อยเกินไป')}</>}
+            </InfoMore>
           )}
-        </div>
+        </FactRow>
       )}
 
       {/* 🚨 ไล่ย้อนแล้วหลุดไปก่อนวันนี้ = ต้องเริ่มตั้งแต่เมื่อวาน — ห้ามปัดเข้าวันนี้เงียบๆ */}
@@ -742,8 +790,11 @@ export default function ProductionPlan() {
               ))}
               {late.length > show.length && <div>{tr('… อีก')} {late.length - show.length} {tr('รายการ')}</div>}
             </div>
-            <div style={{ marginTop: 3, color: 'var(--muted)', fontSize: 11.5 }}>
-              → งานพวกนี้ถูกยกมาเป็นยอดค้างของวันแรกในแผนแล้ว (ไม่ได้หายไป) — ต้องเร่ง/เพิ่มกะ หรือเลื่อนดิวกับลูกค้า
+            {/* "ไม่ได้หายไป" = คำตอบของสิ่งที่ผู้วางแผนกลัวที่สุด ⇒ อยู่บนจอ · ทางเลือกที่ทำได้ → tooltip · user 18/11 */}
+            <div style={{ marginTop: 3, color: 'var(--muted)', fontSize: 11.5 }}
+              title={tr('ต้องเร่ง/เพิ่มกะ หรือเลื่อนดิวกับลูกค้า')}>
+              → {tr('งานพวกนี้ถูกยกมาเป็นยอดค้างของวันแรกในแผนแล้ว (ไม่ได้หายไป)')}{' '}
+              <MoreMark text={tr('ต้องเร่ง/เพิ่มกะ หรือเลื่อนดิวกับลูกค้า')} />
             </div>
           </div>
         );
