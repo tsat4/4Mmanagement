@@ -26,7 +26,6 @@ NAMES.push(...Object.keys(VARIANTS))
    🔴 เพิ่มมุมมอง/แท็บใหม่ที่มีโค้ดเป็นของตัวเอง = เติมที่นี่ในคอมมิทเดียวกัน */
 NAMES.push(
   'ProductionPlan&tab=lots',              // 🧲 แผนสั่งงานล็อต + ไทม์ไลน์ราง (PlanTimeline)
-  'ProductionPlan&tab=lots&view=week',    // 📅 มุมมองสัปดาห์ (PlanWeek · 17/11)
 )
 
 class EB extends React.Component {

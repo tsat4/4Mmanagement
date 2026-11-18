@@ -23,6 +23,7 @@
          เดาแทนคนแล้วงานจะไปโผล่ผิดกะบนจอหน้างาน — คงกะเดิมไว้แล้วเขียนบนจอว่าจัดให้ไม่ได้
    ══════════════════════════════════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useMemo, useCallback, useContext, useRef } from 'react';
+import { MoreMark } from './InfoMore';
 import { supabaseDR } from '../supabaseClient';
 import { UserContext } from '../App';
 import { can, canSeeded } from '../utils/permissions';
@@ -41,8 +42,6 @@ import MinDemandPanel from './MinDemandPanel';
 import { buildHorizon, assignShifts, horizonSummary, orderAcrossHorizon, SEG_HOURS, SHIFT_LABEL } from '../utils/planHorizon';
 import { layoutLots } from '../utils/planTimeline';
 import PlanTimeline from './PlanTimeline';
-import PlanWeek from './PlanWeek';
-import useTabParam from '../utils/useTabParam';
 import FilterBar from './FilterBar';
 import LineSelect from './LineSelect';
 import Segmented from './Segmented';
@@ -145,13 +144,6 @@ export default function ProdLotPlanner({
   const [saving, setSaving]   = useState(false);
   const [trialOpen, setTrialOpen] = useState(false);
   const [dirty, setDirty]     = useState(false);
-  /* 📅 มุมมองไทม์ไลน์ (17/11 · user ส่งคลิปหน้า Schedule มา) — `rail` = ของเดิมเป๊ะ (default ห้ามเปลี่ยน)
-     🔴 ผูกกับ URL (`?view=`) ไม่ใช่ state ลอย — 2 เหตุผล:
-       1. บุ๊กมาร์ก/ส่งลิงก์ให้กันดูมุมมองเดียวกันได้ (กติกาเดียวกับ `?cap=`/`?mode=` ของหน้านี้)
-       2. 🛡️ **crashsweep กดได้แค่ปุ่มหัวเพจ** — ปุ่มสลับมุมมองอยู่ในเนื้อหน้า ⇒ ถ้าเป็น state ลอย
-          จอสัปดาห์จะ **ไม่เคยถูกเรนเดอร์ในด่านไหนเลย** (audit/README §โค้ดหลังปุ่มที่สวีปกดไม่ถึง)
-     🔴 ใช้ `?view=` ห้ามใช้ `?tab=` ซ้ำกับแท็บแม่ (UI §6.8 ข้อ 2.4) */
-  const [planView, setPlanView] = useTabParam(['rail', 'week'], 'rail', 'view');
 
   /* 🔴 ค่าที่เลือกไว้ต้องไม่ค้างอยู่นอกลิสต์ที่เลือกได้ (13/11 · user: เลือก PD1 แล้วจอโชว์ไลน์ PD2)
      หน้าแม่กรอง `lines` ตามส่วนงาน ⇒ สลับตัวกรองแล้วไลน์เดิมหลุดลิสต์ แต่ state ยังค้าง
@@ -513,9 +505,12 @@ export default function ProdLotPlanner({
               งานยังไม่มีที่ลงจริง · ยืด "ไหลต่อได้" ให้ยาวขึ้น หรือลดงาน/เพิ่มกำลังผลิต
               <b> {tr('ระบบไม่ยัดลงกะสุดท้ายให้')}</b></div>
           )}
+          {/* 18/11 · user "ข้อความสีเทาแบบนั้นอยากให้เป็น tooltip มากกว่าโชว์มาเยอะๆ"
+              🔴 หัวคำเตือน + ผลที่ตามมา อยู่บนจอ · **เหตุผล**ย้ายไป title (ขาดไปก็ยังลงมือถูก) */}
           {unsureCount > 0 && (
-            <div>⚠️ <b>{unsureCount} {tr('ล็อตยังจัดกะให้ไม่ได้')}</b> — เวลาเชื่อไม่ได้ (ไม่มี cycle time
-              หรือมีล็อตที่ไม่มี CT อยู่ก่อนหน้า) · <b>{tr('ล็อตพวกนี้จะคงกะเดิมไว้ตอนบันทึก ไม่ถูกย้าย')}</b></div>
+            <div title={tr('เวลาเชื่อไม่ได้ เพราะไม่มี cycle time หรือมีล็อตที่ไม่มี CT อยู่ก่อนหน้า')}>
+              ⚠️ <b>{unsureCount} {tr('ล็อตยังจัดกะให้ไม่ได้')}</b> · <b>{tr('คงกะเดิมตอนบันทึก ไม่ถูกย้าย')}</b>{' '}
+              <MoreMark text={tr('เวลาเชื่อไม่ได้ เพราะไม่มี cycle time หรือมีล็อตที่ไม่มี CT อยู่ก่อนหน้า')} /></div>
           )}
         </div>
       )}
@@ -527,8 +522,11 @@ export default function ProdLotPlanner({
             <div>🧪 <b>{summary.noTimeLots} {tr('ใบทดลองยังไม่ได้ระบุเวลาที่ขอ')}</b> — วางบนไทม์ไลน์ไม่ได้
               และทำให้เวลาของใบที่อยู่หลังจากนั้น<b>{tr('เชื่อไม่ได้ทั้งหมด')}</b> · แก้ที่ช่อง "ขอใช้เครื่อง"</div>
           )}
+          {/* รายชื่อ MAT ไป title — บนจอเหลือ "กี่ตัว + กระทบอะไร" ซึ่งพอให้ตัดสินใจได้แล้ว */}
           {summary.noCtMats.length > 0 && (
-            <div>⚠️ <b>{summary.noCtMats.length} {tr('พาร์ทยังไม่มี cycle time')}</b> ({summary.noCtMats.slice(0, 4).join(' · ')}{summary.noCtMats.length > 4 ? ' …' : ''})
+            <div title={`${tr('พาร์ทที่ยังไม่มี cycle time')}: ${summary.noCtMats.join(' · ')}`}>
+              ⚠️ <b>{summary.noCtMats.length} {tr('พาร์ทยังไม่มี cycle time')}</b>{' '}
+              <MoreMark text={`${tr('พาร์ทที่ยังไม่มี cycle time')}: ${summary.noCtMats.join(' · ')}`} />
               — เวลาผลิตข้างบน<b>{tr('ต่ำกว่าจริง')}</b> {tr('· ไปกรอกที่ Product Master')}</div>
           )}
           {summary.setupUnknown && (
@@ -547,33 +545,12 @@ export default function ProdLotPlanner({
       {/* ── 🧲 ไทม์ไลน์จัดแผน (ลากสลับก่อนหลัง) ── */}
       {rec.rows.length > 0 && frame.startMs && (
         <div style={card}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
-            <div style={{ fontSize: 13, fontWeight: 800 }}>
-              {planView === 'week' ? 'ไทม์ไลน์ — 1 คอลัมน์ = 1 วัน' : 'ไทม์ไลน์ — 1 บรรทัด = 1 กะ'}
-              <span style={{ color: 'var(--muted)', fontWeight: 600, fontSize: 11.5 }}>
-                {planView === 'week'
-                  ? ' (เห็นทั้งสัปดาห์ทีเดียว · แกนเวลาลงล่าง · ลากเพื่อสลับลำดับ)'
-                  : ' (ความยาวกล่อง = เวลาที่ต้องใช้จริง · งานล้นกะไหลลงบรรทัดถัดไปเอง · ลากเพื่อสลับลำดับ)'}
-              </span>
-            </div>
-            {/* 2 ตัวเลือก = <Segmented> ตามมาตรฐานหน้าตา (UI-STANDARD) */}
-            <div style={{ marginLeft: 'auto' }}>
-              <Segmented value={planView} onChange={setPlanView} options={[
-                { value: 'rail', label: '▭ ราง (รายกะ)' },
-                { value: 'week', label: '📅 สัปดาห์' },
-              ]} />
-            </div>
+          <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8 }}>
+            ไทม์ไลน์ — 1 บรรทัด = 1 กะ <span
+              title={tr('ความยาวกล่อง = เวลาที่ต้องใช้จริง · งานล้นกะไหลลงบรรทัดถัดไปเอง · ดูทั้งสัปดาห์ = ตั้ง "ไหลต่อได้" เป็น 7 วัน')}
+              style={{ color: 'var(--muted)', fontWeight: 600, fontSize: 11.5 }}>(ลากเพื่อสลับลำดับ){' '}
+              <MoreMark text={tr('ความยาวกล่อง = เวลาที่ต้องใช้จริง · งานล้นกะไหลลงบรรทัดถัดไปเอง · ดูทั้งสัปดาห์ = ตั้ง "ไหลต่อได้" เป็น 7 วัน')} /></span>
           </div>
-          {/* 🔴 2 มุมมองกินข้อมูลชุดเดียวกันเป๊ะ (layoutLots ตัวเดียว) — ห้ามแยกสูตร ไม่งั้น 2 จอเถียงกัน */}
-          {planView === 'week' ? (
-            <PlanWeek
-              lots={lots} ctOf={ctOf} pairOf={pairOf} dieOf={dieOf} rule={rule}
-              startMs={frame.startMs} endMs={frame.endMs} breaks={breaks}
-              closed={horizon.closed} segments={horizon.segments} skipped={horizon.skipped}
-              editable={mayWrite}
-              onReorder={(next) => { setLots(next); setDirty(true); }}
-            />
-          ) : (
           <PlanTimeline
             lots={lots} ctOf={ctOf} pairOf={pairOf} dieOf={dieOf} rule={rule}
             startMs={frame.startMs} endMs={frame.endMs} breaks={breaks}
@@ -581,7 +558,6 @@ export default function ProdLotPlanner({
             editable={mayWrite} nameOfMat={nameOfMat}
             onReorder={(next) => { setLots(next); setDirty(true); }}
           />
-          )}
           {/* 🔴 ปฏิทินยังไม่โหลด = ยังไม่ได้เช็ควันหยุด ต้องเขียนบนจอ ห้ามเงียบ */}
           {horizon.calendarUnknown && (
             <div style={{ fontSize: 11.5, color: '#f59e0b', marginTop: 5 }}>
@@ -594,8 +570,9 @@ export default function ProdLotPlanner({
       {/* ── ตารางแผน ── */}
       <div style={{ ...card, overflowX: 'auto' }}>
         <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 6 }}>
+          {/* คำอธิบายคอลัมน์ล้วน — ไม่มีตัวเลข ไม่มีคำเตือน ⇒ พับได้ทั้งก้อน · user 18/11 */}
           คิวงาน <span style={{ color: 'var(--muted)', fontWeight: 600, fontSize: 11.5 }}>
-            (คอลัมน์ "ลงกะ" = กะที่ระบบคำนวณว่างานใบนี้ตกไปอยู่ — บันทึกแล้วหน้างานกะนั้นจะเห็น)</span>
+            <MoreMark text={tr('คอลัมน์ "ลงกะ" = กะที่ระบบคำนวณว่างานใบนี้ตกไปอยู่ — บันทึกแล้วหน้างานกะนั้นจะเห็น')} /></span>
         </div>
         {loading ? <div style={{ color: 'var(--muted)', fontSize: 12.5, padding: 12 }}>{tr('กำลังโหลด…')}</div>
           : rec.rows.length === 0 ? <div style={{ color: 'var(--muted)', fontSize: 12.5, padding: 12 }}>{tr('ยังไม่มีแผนของกะนี้ — เพิ่มจากรายการความต้องการด้านล่าง')}</div>
@@ -749,8 +726,11 @@ export default function ProdLotPlanner({
               </span>
             ))}
           </div>
-          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-            ➕ ทำเกินยอดที่วางไว้ · 🆕 พาร์ทที่ผลิตจริงแต่ไม่มีในแผน — <b>{tr('ไม่ใช่ความผิดของหน้างาน')}</b> แต่วางแผนต้องรู้
+          {/* ป้าย ➕/🆕 ต้องแปลได้บนจอ (ไม่งั้นอ่านชิปข้างบนไม่ออก) · ประโยคตีความ → tooltip · user 18/11 */}
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}
+            title={tr('ไม่ใช่ความผิดของหน้างาน แต่วางแผนต้องรู้')}>
+            ➕ {tr('ทำเกินยอดที่วางไว้')} · 🆕 {tr('ไม่มีในแผน')}{' '}
+            <MoreMark text={tr('ไม่ใช่ความผิดของหน้างาน แต่วางแผนต้องรู้')} />
           </div>
         </div>
       )}
