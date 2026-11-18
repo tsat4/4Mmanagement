@@ -43,8 +43,17 @@ test('มีคอลัมน์ I/O และอ่านจาก io_no ต�
 
 test('I/O ว่าง = ขีด (ไม่ใช่ 0/ว่างเหมือนไม่มีคอลัมน์) · โหลด PR ล้ม = เขียนกำกับ', () => {
   const H = moExportHeaders();
-  const cells = moExportCells(row({ io_no: null }), { prsError: 'timeout' });
+  /* 💳 18/11 — I/O ถอยไปอ่านทะเบียนเครื่องได้ (ใบจาก Downtime ไม่มีเลขของตัวเองเลย)
+     ⇒ "ขีด" = รู้แล้วว่าไม่มีทั้งในใบและในทะเบียน · ส่งดัชนีมาเป็น Map ว่าง = ทะเบียนไม่มีเลขของเครื่องนี้ */
+  const cells = moExportCells(row({ io_no: null }), { prsError: 'timeout', ioIdx: new Map() });
   assert.equal(cells[H.indexOf('I/O')].value, DASH);
+  /* 🔴 ไม่ส่งดัชนีมาเลย = **ยังไม่รู้** ห้ามขีด (ขีดแปลว่า "ใบนี้ไม่มีเลข" ทั้งที่ทะเบียนอาจมี) */
+  const noIdx = moExportCells(row({ io_no: null }));
+  assert.match(String(noIdx[H.indexOf('I/O')].value), /⚠/);
+  /* ใบที่ไม่มีเลขของตัวเอง แต่ทะเบียนเครื่องมี = เอาของทะเบียนมาลง (อาการที่หน้างานแจ้ง ข้อ 4) */
+  const fromReg = moExportCells(row({ io_no: null, machine_no: 'RB-123' }),
+    { ioIdx: new Map([['RB123', '215031002307']]) });
+  assert.equal(fromReg[H.indexOf('I/O')].value, '215031002307');
   assert.match(String(cells[H.indexOf('เลข PR')].value), /โหลดเลข PR ไม่สำเร็จ/);
 });
 
@@ -68,7 +77,10 @@ test('ทุกฟิลด์ที่คอลัมน์ Excel อ่าน 
   assert.ok(m, 'หา MO_LIST_COLS ไม่เจอ');
   const listCols = new Set([...m[1].matchAll(/'([a-z_]+)'/g)].map(x => x[1]));
   const used = new Set([...cols.matchAll(/r\.o\.([a-z_]+)/g)].map(x => x[1]));
-  assert.ok(used.has('io_no'));
+  /* 💳 `io_no`/`machine_no` ไม่ได้อ่านผ่าน `r.o.` ตรงๆ แล้ว (ผ่าน `ioNoOf(r.o, …)` ตั้งแต่ 18/11)
+     แต่ยังต้องอยู่ในคิวรี — ไม่ select = ใบที่กรอกเลขเองไว้จะถูกทะเบียนทับ / ชี้เครื่องไม่ได้ */
+  for (const f of ['io_no', 'machine_no']) assert.ok(listCols.has(f), `MO_LIST_COLS ต้อง select ${f}`);
+  assert.match(cols, /ioNoOf\(r\.o, c\.ioIdx/, 'คอลัมน์ I/O ต้องถอยไปอ่านทะเบียนเครื่องผ่าน ioNoOf()');
   for (const f of used) assert.ok(listCols.has(f), `คอลัมน์ Excel อ่าน ${f} แต่ MO_LIST_COLS ไม่ได้ select`);
   // ตัวทำไฟล์ต้องวนจากทะเบียน ห้ามกลับไป put รายคอลัมน์ (หัว/ค่าเลื่อนกัน = บั๊ก A8)
   const xl = readFileSync(`${root}src/lib/mtnMoExportExcel.js`, 'utf8');

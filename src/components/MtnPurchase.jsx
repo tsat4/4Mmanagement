@@ -43,7 +43,7 @@ const btnGhost = { background: 'var(--bg3)', color: 'var(--text)', border: '1px 
 const box = { padding: '9px 11px', borderRadius: 8, background: 'var(--bg2)', border: '1px solid var(--border)', marginBottom: 10 };
 
 /** คอลัมน์ที่จอใช้ (egress — ห้าม select('*')) */
-export const PR_COLS = 'id, pr_no, source, order_id, part_id, item_name, qty, unit, unit_price, amount, gl_category, gl_code, supplier, team, section, status, note, requested_at, requested_by, ordered_at, ordered_by, po_no, received_at, received_by, received_qty, cancelled_at, cancelled_by, cancel_reason';
+export const PR_COLS = 'id, pr_no, source, order_id, part_id, item_name, qty, unit, unit_price, amount, gl_category, gl_code, supplier, team, section, status, note, requested_at, requested_by, ordered_at, ordered_by, po_no, received_at, received_by, received_qty, invoice_no, cancelled_at, cancelled_by, cancel_reason';
 
 /** ทะเบียน GL — คืน { rows, error } (ห้ามแกะเป็นอาร์เรย์ลอยๆ · กฎเหล็ก DB ข้อ 12) */
 export async function loadGlCodes() {
@@ -141,6 +141,9 @@ function PrRow({ pr, canEdit, fullName, onChanged, showSource, mo = null, own = 
   const waitNo = isAwaitingPrNo(pr);
   const [mode, setMode] = useState(null);         // 'prno' | 'order' | 'receive' | 'cancel'
   const [val, setVal] = useState('');
+  /* 🧾 เลข Invoice ตอนรับของ (18/11 · หน้างานแจ้ง "ให้บังคับกรอก เลข Invoice")
+     แยก state จาก `val` เพราะโหมดรับของมี 2 ช่อง (จำนวน + เลขใบ) */
+  const [inv, setInv] = useState('');
   const [busy, setBusy] = useState(false);
   const run = async (fn) => { setBusy(true); try { await fn(); } finally { setBusy(false); } };
 
@@ -160,11 +163,16 @@ function PrRow({ pr, canEdit, fullName, onChanged, showSource, mo = null, own = 
     if (ownBlock()) return;
     const q = Number(val);
     if (!(q > 0)) return toast.error('ใส่จำนวนที่รับจริง');
-    const { data, error } = await supabaseDR.rpc('mtn_pr_receive', { p_id: pr.id, p_qty: q, p_by_name: fullName || null });
+    /* 🔴 บังคับเลข Invoice (18/11 · คำสั่งหน้างาน) — ด่านอยู่**ฝั่งจอ** ไม่ใช่ฝั่ง DB
+       (ใส่ raise ใน RPC = แท็บที่เปิดค้างบนบันเดิลเก่ากดรับของไม่ได้ทั้งโรงงานตอน deploy) */
+    const invNo = inv.trim();
+    if (!invNo) return toast.error('ใส่เลข Invoice ที่มากับของ');
+    const { data, error } = await supabaseDR.rpc('mtn_pr_receive',
+      { p_id: pr.id, p_qty: q, p_by_name: fullName || null, p_invoice_no: invNo });
     if (error) return toast.error(`รับของไม่สำเร็จ: ${error.message}`);
     toast.success(pr.part_id ? `รับของแล้ว — สต็อกคงเหลือ ${data}` : 'รับของแล้ว (ไม่ผูกอะไหล่ในทะเบียน — ไม่มีสต็อกให้เข้า)');
     await endHoldIfPartsIn(pr.order_id);
-    setMode(null); onChanged?.();
+    setMode(null); setInv(''); onChanged?.();
   });
   const doCancel = () => run(async () => {
     if (ownBlock()) return;
@@ -194,7 +202,7 @@ function PrRow({ pr, canEdit, fullName, onChanged, showSource, mo = null, own = 
         ขอ {fmtDateTime(pr.requested_at)}{pr.requested_by ? ` · ${pr.requested_by}` : ''}
         {pr.supplier ? ` · ผู้ขาย ${pr.supplier}` : ''}
         {pr.ordered_at ? ` · สั่ง ${fmtDateTime(pr.ordered_at)}${pr.po_no ? ` (PO ${pr.po_no})` : ''}` : ''}
-        {pr.received_at ? ` · รับ ${fmtDateTime(pr.received_at)} ${pr.received_qty ?? ''} ${pr.unit || ''}${pr.received_by ? ` โดย ${pr.received_by}` : ''}` : ''}
+        {pr.received_at ? ` · รับ ${fmtDateTime(pr.received_at)} ${pr.received_qty ?? ''} ${pr.unit || ''}${pr.received_by ? ` โดย ${pr.received_by}` : ''}${pr.invoice_no ? ` · Inv ${pr.invoice_no}` : ''}` : ''}
         {pr.cancelled_at ? ` · ยกเลิก: ${pr.cancel_reason || '-'}` : ''}
         {!pr.part_id && pr.status !== 'cancelled' ? ' · ไม่ผูกอะไหล่ในทะเบียน (รับแล้วไม่เข้าสต็อก)' : ''}
         {pr.note ? ` · ${pr.note}` : ''}
@@ -210,7 +218,7 @@ function PrRow({ pr, canEdit, fullName, onChanged, showSource, mo = null, own = 
           <button disabled={busy} onClick={() => { setVal(pr.pr_no || ''); setMode('prno'); }}
             style={waitNo ? { ...btnGhost, color: '#f59e0b', borderColor: '#f59e0b', fontWeight: 800 } : btnGhost}>{waitNo ? tr('✏️ กรอกเลข PR (SAP)') : tr('✏️ แก้เลข PR')}</button>
           {pr.status === 'requested' && <button disabled={busy} onClick={() => { setVal(''); setMode('order'); }} style={{ ...btnGhost, color: '#0ea5e9', borderColor: '#0ea5e9' }}>{tr('สั่งแล้ว')}</button>}
-          <button disabled={busy} onClick={() => { setVal(String(pr.qty ?? '')); setMode('receive'); }} style={{ ...btnGhost, color: '#22c55e', borderColor: '#22c55e' }}>{tr('รับของเข้า')}</button>
+          <button disabled={busy} onClick={() => { setVal(String(pr.qty ?? '')); setInv(pr.invoice_no || ''); setMode('receive'); }} style={{ ...btnGhost, color: '#22c55e', borderColor: '#22c55e' }}>{tr('รับของเข้า')}</button>
           <button disabled={busy} onClick={() => { setVal(''); setMode('cancel'); }} style={{ ...btnGhost, color: 'var(--muted)' }}>{tr('✖ ยกเลิก')}</button>
         </div>
       )}
@@ -219,8 +227,17 @@ function PrRow({ pr, canEdit, fullName, onChanged, showSource, mo = null, own = 
           <input autoFocus value={val} onChange={e => setVal(e.target.value)} type={mode === 'receive' ? 'number' : 'text'} min={mode === 'receive' ? 0 : undefined}
             placeholder={mode === 'prno' ? tr('เลข PR จาก SAP') : mode === 'order' ? tr('เลข PO (ถ้ามี)') : mode === 'receive' ? tr('จำนวนที่รับจริง') : tr('เหตุผลที่ยกเลิก (บังคับ)')}
             onKeyDown={e => { if (e.key === 'Enter' && mode === 'prno') doPrNo(); }}
-            style={{ ...inp, flex: 1, minWidth: 150, ...(mode === 'prno' ? { fontFamily: 'monospace', fontWeight: 700 } : {}) }} />
-          <button disabled={busy} onClick={mode === 'prno' ? doPrNo : mode === 'order' ? doOrder : mode === 'receive' ? doReceive : doCancel} style={btnPri}>
+            style={{ ...inp, flex: mode === 'receive' ? 0 : 1, width: mode === 'receive' ? 110 : undefined, minWidth: mode === 'receive' ? 90 : 150, ...(mode === 'prno' ? { fontFamily: 'monospace', fontWeight: 700 } : {}) }} />
+          {/* 🧾 เลข Invoice — บังคับกรอกตอนรับของ (18/11) · ปุ่มยืนยันกดไม่ได้จนกว่าจะมีเลข
+              🔴 ห้ามซ่อนปุ่มเฉยๆ — เขียนบอกข้างช่องว่าทำไมยังกดไม่ได้ (กฎความซื่อสัตย์ของจอ) */}
+          {mode === 'receive' && (
+            <input value={inv} onChange={e => setInv(e.target.value)} placeholder={tr('เลข Invoice (บังคับ)')}
+              onKeyDown={e => { if (e.key === 'Enter' && inv.trim()) doReceive(); }}
+              style={{ ...inp, flex: 1, minWidth: 150, fontFamily: 'monospace',
+                borderColor: inv.trim() ? undefined : 'var(--amber)' }} />
+          )}
+          <button disabled={busy || (mode === 'receive' && !inv.trim())}
+            onClick={mode === 'prno' ? doPrNo : mode === 'order' ? doOrder : mode === 'receive' ? doReceive : doCancel} style={btnPri}>
             {busy ? tr('กำลังบันทึก…') : mode === 'prno' ? tr('บันทึกเลข PR') : mode === 'order' ? tr('ยืนยันสั่งแล้ว') : mode === 'receive' ? (pr.part_id ? tr('รับ + เข้าสต็อก') : tr('ยืนยันรับ')) : tr('ยืนยันยกเลิก')}
           </button>
           <button onClick={() => setMode(null)} style={btnGhost}>{tr('ปิด')}</button>

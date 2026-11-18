@@ -15,6 +15,7 @@
    ════════════════════════════════════════════════════════════════════════════════════════ */
 import { assignedTechsOf, joinTechs, prNumbersOf, repairPathMeta } from './mtnPurchase.js';
 import { causeText } from './mtnMoForm.js';   // 🔧 ป้าย "สาเหตุเกิดจาก" — ชุดเดียวกับ CAUSE_CATS บนฟอร์ม
+import { ioNoOf } from './moIoNo.js';   // 💳 ใบว่าง → ถอยไปทะเบียนเครื่อง (18/11)
 import { qaRelatedView } from './mtnStepPerm.js';   // 🔴 "เกี่ยวคุณภาพ" ตอบจากที่นี่ที่เดียว
 
 /** ไม่รู้ = ขีด ห้าม 0 */
@@ -94,7 +95,12 @@ export const MO_EXPORT_COLS = Object.freeze([
   /* 💳 I/O (02/11 · A8 "IO ขึ้นขาด") — เลขที่กรอกในใบ (ตอนเลือกเครื่องระบบเติมจาก `machines.io_no` ให้)
      🔴 ส่งเป็น **ข้อความ** เสมอ: I/O 12 หลักเป็นตัวเลขล้วน ส่งเป็น number แล้ว Excel โชว์ 2.15031E+11 = หลักหาย
      ว่าง = ขีด (ใบไม่ได้กรอก ≠ ไม่มีคอลัมน์) */
-  { key: 'io_no', h: 'I/O', w: 16, val: (r) => (String(r.o.io_no ?? '').trim() || DASH), opt: () => ({ size: 9, numFmt: '@' }) },
+  /* 💳 18/11 — ใบที่ระบบเปิดเองตอนกดเรียกช่าง ไม่เคยผ่านฟอร์ม ⇒ `io_no` ว่างทุกใบ (1,175/1,175 ใน 90 วัน)
+     ทั้งที่ทะเบียนเครื่องมีเลขอยู่ ⇒ ถอยไปอ่าน `machines.io_no` ผ่าน `ioNoOf()` (ตัดสินที่ `utils/moIoNo.js`)
+     🔴 ยังไม่ส่งดัชนีทะเบียนมา = **ไม่รู้** ต้องเขียนกำกับ ห้ามขีดเฉยๆ (ขีด = "ใบนี้ไม่มีเลข") */
+  { key: 'io_no', h: 'I/O', w: 16,
+    val: (r, c) => { const io = ioNoOf(r.o, c.ioIdx ?? null); return io.value || (io.unknown ? '⚠ อ่านทะเบียนเครื่องไม่ได้' : DASH); },
+    opt: () => ({ size: 9, numFmt: '@' }) },
   /* 🛒 เลข PR — รวมใบขอซื้อที่ผูกใบนี้ + ช่อง pr_no ที่กรอกมือ (ตัดซ้ำใน `prNumbersOf`) · ใบที่ยกเลิกไม่นับ */
   { key: 'pr_no', h: 'เลข PR', w: 26,
     val: (r, c) => (c.prsError ? '⚠ โหลดเลข PR ไม่สำเร็จ' : (prNumbersOf(r.o, (c.prsBy || {})[r.o.id] || []).join(', ') || '')),
@@ -108,7 +114,7 @@ export const moExportWidths = () => MO_EXPORT_COLS.map(c => c.w);
 
 const CTX_DEFAULTS = {
   statusLabel: (o) => o?.status, teamName: (k) => k, cmtOf: () => [], commentText: () => '',
-  commentsError: null, prsBy: {}, prsError: null, techsBy: {}, techsError: null,
+  commentsError: null, prsBy: {}, prsError: null, techsBy: {}, techsError: null, ioIdx: null,
 };
 
 /**
