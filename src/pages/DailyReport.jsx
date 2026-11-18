@@ -49,6 +49,13 @@ import QualityBinLinkModal from '../components/QualityBinLinkModal';
 /* 🟡 ทุกบันทึกงานเสีย = ตั้งแท็กเหลือง "รอพิจารณา" ให้เอง (05/11 · คำสั่ง user)
    payload มาจาก `yellowRowFromDefect()` ที่เดียว — ห้ามประกอบเองในหน้า */
 import { yellowRowFromDefect } from '../utils/qualityBin';
+/* 🧩 ของเสียระดับ "พาร์ทลูก" (16/11) — ลิสต์ลูกมาจาก BOM ผ่านของกลางเท่านั้น
+   🔴 ไม่แตะสูตร %Q/%P เลย (เหตุผลเต็มใน `utils/defectPart.js` §กฎเหล็ก) */
+import useBomChildren from '../utils/useBomChildren';
+import BomChildSelect from '../components/BomChildSelect';
+import { childPartPatch, childPartText, CHILD_PART_Q_NOTE } from '../utils/defectPart';
+import { uomLabel } from '../utils/bomTree';   // PC/EA/pcs = ของเดียวกัน (แปลงเฉพาะตอนแสดง · ห้ามยุบ KG)
+import { registryFailText } from '../utils/useMasterRows';
 import StoreLotQueue from '../components/StoreLotQueue';
 import LineWipPanel from '../components/LineWipPanel';
 import LinePartCallPanel from '../components/LinePartCallPanel';
@@ -635,7 +642,12 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
     window.addEventListener(SCAN_EVENT, onScan);
     return () => window.removeEventListener(SCAN_EVENT, onScan);
   }, [isMobile]);   // eslint-disable-line react-hooks/exhaustive-deps
-  const [defectForm, setDefectForm]     = useState({ id: null, mat_no: '', defect_type_id: '', qty_ng: '0', qty_suspect: '0', qty_repair: '0', description: '', is_trial: false, defect_img: '' });
+  /* 🧩 `child_*` = พาร์ทลูกที่เสีย (16/11 · เลือกได้เมื่อ MAT แม่มีชั้น BOM) — ไม่บังคับ
+     🔴 ไม่เปลี่ยนความหมายของช่องจำนวน: ยังเป็น "กี่ชิ้น" และยังหัก %Q ของ MAT แม่ 1:1 */
+  const [defectForm, setDefectForm]     = useState({ id: null, mat_no: '', defect_type_id: '', qty_ng: '0', qty_suspect: '0', qty_repair: '0', description: '', is_trial: false, defect_img: '', child_mat_no: '', child_part_name: '', child_qty_per_fg: null });
+  /* ลิสต์ "ลูกของ MAT ที่เลือก" — โหลดเฉพาะตอนฟอร์มเปิด (ไม่เปิด = ไม่จ่าย egress)
+     🔴 โหลดไม่สำเร็จ/ไม่มีลูก = ยังลงของเสียระดับ MAT แม่ได้เหมือนเดิม (fail-open) */
+  const childBom = useBomChildren(defectForm.mat_no, { enabled: showDefect });
   /* ไฟล์รูปที่เพิ่งเลือก (ยังไม่อัปโหลด) — อัปตอนกดบันทึกเท่านั้น กดยกเลิกแล้วต้องไม่มีไฟล์ค้างในถัง */
   const [defectFile, setDefectFile]     = useState(null);
   /* ใบสแกนใบไหนกางช่อง "ทำได้กี่ชิ้น" อยู่ — ค่าเริ่มต้นพับหมด
@@ -2487,25 +2499,44 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
       description:      defectForm.description || null,
       is_trial:         !!defectForm.is_trial,
       defect_img:       defectImgUrl,
+      /* 🧩 พาร์ทลูกที่เสีย (16/11) — ประกอบผ่าน `childPartPatch` ที่เดียว (ห้ามเขียน 3 ช่องเองที่นี่)
+         ไม่ได้เลือก = null ทั้งชุด = พฤติกรรมเดิมเป๊ะ · 🔴 ไม่แตะจำนวน/สูตร %Q ใดๆ */
+      ...childPartPatch(defectForm.child_mat_no ? {
+        mat_no: defectForm.child_mat_no, part_name: defectForm.child_part_name,
+        qtyPerRoot: defectForm.child_qty_per_fg,
+      } : null),
     };
     /* 🗑️ ขอแถวที่เพิ่งเขียนกลับมาด้วย **รูปทรงเดียวกับ `loadDefectLogs`** — เอาไปเปิดขั้น "ลงถัง" ต่อทันที
        (โมดัลอ่าน `prod_orders.mat_no/part_name` + `dr_defect_types.name_th` ⇒ ต้อง embed ให้ครบ
         ประกอบ object เองจาก payload = พลาดง่ายเวลาคนอื่นเพิ่มฟิลด์ทีหลัง) */
     const INS_SELECT = '*, dr_defect_types(name_th, color, excl_from_q), prod_orders(prod_no, mat_no, part_name)';
-    let inserted = null, error = null;
-    if (defectForm.id) {
-      ({ error } = await supabaseDR.from('defect_logs').update(payload).eq('id', defectForm.id));
-    } else {
-      const res = await supabaseDR.from('defect_logs').insert({
-        ...payload,
+    /* 🔴 ยัง apply migration พาร์ทลูกไม่ครบ = 42703 (คอลัมน์ไม่มี) ⇒ เขียนซ้ำ **โดยไม่ส่ง 3 ช่องนั้น**
+       แล้ว**บอกบนจอ** ว่าพาร์ทลูกไม่ได้ถูกเก็บ — ของเสียต้องลงได้ทุกกะ (ห้ามบล็อกหน้างาน)
+       และห้าม tolerant แบบเงียบ (บทเรียน `line_type` ค้าง 2 สัปดาห์ · ENGINEERING-PRINCIPLES §6) */
+    const CHILD_KEYS = ['child_mat_no', 'child_part_name', 'child_qty_per_fg'];
+    const stripChild = (p) => Object.fromEntries(Object.entries(p).filter(([k]) => !CHILD_KEYS.includes(k)));
+    const sentChild = !!payload.child_mat_no;
+    let childDropped = false;
+    const writeDefect = async (p) => (defectForm.id
+      ? await supabaseDR.from('defect_logs').update(p).eq('id', defectForm.id)   /* แก้ไข = ไม่ขอแถวคืน (พฤติกรรมเดิม) */
+      : await supabaseDR.from('defect_logs').insert({
+        ...p,
         session_id:       selSession.id,
         reported_by_name: fullName,
         reported_by_uid:  user?.id,
-      }).select(INS_SELECT).single();
-      inserted = res.data; error = res.error;
+      }).select(INS_SELECT).single());
+    let res = await writeDefect(payload);
+    if (res.error?.code === '42703' && sentChild) {
+      childDropped = true;
+      res = await writeDefect(stripChild(payload));
     }
+    let inserted = defectForm.id ? null : res.data, error = res.error;
     setSavingDefect(false);
     if (error) { toast.error(error.message); return; }
+    if (childDropped) {
+      toast.error('บันทึกงานเสียแล้ว แต่ยังเก็บ "พาร์ทลูกที่เสีย" ไม่ได้ — ยังไม่ได้ apply migration '
+        + '20261116_defect_child_part_dr.sql (ฝั่ง Product DB) · แจ้งผู้ดูแลระบบ');
+    }
     /* 🔴 ลบไฟล์เก่าได้หลังเขียนแถวสำเร็จเท่านั้น (กฎเหล็ก db-write ข้อ 2) */
     if (defectForm.id && defectForm.defect_img && defectForm.defect_img !== defectImgUrl) {
       removeQualityImg(defectForm.defect_img);
@@ -2518,12 +2549,16 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
         `🏭 ไลน์: ${selSession.line_name} · ${selSession.shift === 'day' ? 'กะเช้า' : 'กะดึก'} · 📅 ${selSession.work_date}`,
         `🚫 ${defectTypes.find(t => t.id === defectForm.defect_type_id)?.name_th || '(ไม่ระบุประเภท)'}${defectForm.is_trial ? ' 🧪 งานทดลอง' : ''}`,
         `🔩 ${defectForm.mat_no || '(ไม่ระบุชิ้นงาน)'} · ${label}`,
+        /* 🧩 เสียที่พาร์ทลูก = คนอ่านแจ้งเตือนต้องรู้ว่าทิ้งชิ้นไหน (ไม่ใช่ทั้ง FG) */
+        defectForm.child_mat_no
+          ? `🧩 ${childPartText({ child_mat_no: defectForm.child_mat_no, child_part_name: defectForm.child_part_name })} (ไม่เสียทั้งชุด)`
+          : '',
         defectForm.description ? `📝 ${defectForm.description}` : '',
       ],
     });
     toast.success(defectForm.id ? `แก้ไขงานเสีย: ${label} ✓` : `บันทึกงานเสีย: ${label} ✓`);
     setShowDefect(false);
-    setDefectForm({ id: null, mat_no: '', defect_type_id: '', qty_ng: '0', qty_suspect: '0', qty_repair: '0', description: '', is_trial: false, defect_img: '' });
+    setDefectForm({ id: null, mat_no: '', defect_type_id: '', qty_ng: '0', qty_suspect: '0', qty_repair: '0', description: '', is_trial: false, defect_img: '', child_mat_no: '', child_part_name: '', child_qty_per_fg: null });
     setDefectFile(null);
     loadDefectLogs(selSession.id);
     /* ═══ 🟡 ตั้งแท็กเหลือง "รอพิจารณา" ให้อัตโนมัติ (2026-11-05 · คำสั่ง user) ═══════════
@@ -4555,6 +4590,14 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                               {d.prod_orders.prod_no}
                             </span>
                           )}
+                          {/* 🧩 เสียที่พาร์ทลูก — ต้องเห็นในลิสต์ ไม่งั้นคนอ่านคิดว่าทิ้งทั้งชุด (16/11)
+                              ป้ายมาจาก `childPartText()` ของกลาง · %Q/%P ของแถวนี้ยังผูกกับ MAT แม่ */}
+                          {childPartText(d) && (
+                            <span title={tr('เสียที่พาร์ทลูก — ของเสียยังนับเข้า %Q ของชิ้นงานหลักตามเดิม 1 ชิ้น = 1 ชิ้น')}
+                              style={{ fontSize: 11, padding: '1px 7px', borderRadius: 'var(--r-pill)', background: 'var(--amber-dim)', color: 'var(--amber)', fontWeight: 700, fontFamily: 'monospace' }}>
+                              {childPartText(d)}
+                            </span>
+                          )}
                           {d.qty_ng     > 0 && <span style={{ fontSize: 11, color: 'var(--red)', fontWeight: 700 }}>NG {d.qty_ng}</span>}
                           {d.qty_suspect > 0 && <span style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 700 }}>{tr('สงสัย')} {d.qty_suspect}</span>}
                           {d.qty_repair  > 0 && <span style={{ fontSize: 11, color: 'var(--blue)', fontWeight: 700 }}>{tr('ซ่อม')} {d.qty_repair}</span>}
@@ -4621,7 +4664,11 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                       })()}
                       {canEditRecords && (
                         <div style={{ display: 'flex', gap: 4 }}>
-                          <button className="tbtn" onClick={() => { setDefectForm({ id: d.id, mat_no: d.prod_orders?.mat_no || '', defect_type_id: d.defect_type_id || '', qty_ng: String(d.qty_ng||0), qty_suspect: String(d.qty_suspect||0), qty_repair: String(d.qty_repair||0), description: d.description || '', is_trial: d.is_trial === true, defect_img: d.defect_img || '' }); setDefectFile(null); setShowDefect(true); }}
+                          <button className="tbtn" onClick={() => { setDefectForm({ id: d.id, mat_no: d.prod_orders?.mat_no || '', defect_type_id: d.defect_type_id || '', qty_ng: String(d.qty_ng||0), qty_suspect: String(d.qty_suspect||0), qty_repair: String(d.qty_repair||0), description: d.description || '', is_trial: d.is_trial === true, defect_img: d.defect_img || '',
+                            /* 🧩 พาร์ทลูกที่เคยระบุไว้ต้องกลับมาในฟอร์ม — ไม่ยกมา = กดบันทึกแก้ไขแล้วค่าหายเงียบ
+                               (`child_qty_per_fg` ยกค่าที่บันทึกไว้ ไม่คำนวณใหม่จาก BOM วันนี้) */
+                            child_mat_no: d.child_mat_no || '', child_part_name: d.child_part_name || '',
+                            child_qty_per_fg: d.child_qty_per_fg ?? null }); setDefectFile(null); setShowDefect(true); }}
                             style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 13, padding: '0 4px' }}>✎</button>
                           <button className="tbtn" onClick={() => handleDeleteDefectLog(d.id)}
                             style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 14, padding: '0 4px' }}>✕</button>
@@ -5070,6 +5117,8 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                       {defectLogs.map(d => (
                         <div key={d.id} style={{ fontSize: 12, color: 'var(--text2)' }}>
                           • {d.dr_defect_types?.name_th || 'ไม่ระบุชนิด'} — NG {d.qty_ng || 0} {tr('/ สงสัย')} {d.qty_suspect || 0} {tr('/ ซ่อม')} {d.qty_repair || 0}
+                          {/* 🧩 สรุปตอนปิดกะก็ต้องเห็นว่าเสียที่ลูก ไม่ใช่ทั้งชุด (16/11) */}
+                          {childPartText(d) && <span style={{ color: 'var(--amber)', fontFamily: 'monospace' }}> {childPartText(d)}</span>}
                           {d.description && <span style={{ color: 'var(--muted)' }}> ({d.description})</span>}
                         </div>
                       ))}
@@ -6769,7 +6818,8 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                   if (!matNoOptions.length) return null;
                   return (
                     <Field label={tr('MAT.NO ที่เสีย *')}>
-                      <select autoFocus value={defectForm.mat_no} onChange={e => setDefectForm(f => ({ ...f, mat_no: e.target.value }))} style={inputStyle}>
+                      {/* 🧩 เปลี่ยน MAT แม่ = ลูกที่เลือกไว้ใช้ไม่ได้แล้ว (คนละ BOM) ⇒ ล้างทิ้ง ห้ามค้าง */}
+                      <select autoFocus value={defectForm.mat_no} onChange={e => setDefectForm(f => ({ ...f, mat_no: e.target.value, child_mat_no: '', child_part_name: '', child_qty_per_fg: null }))} style={inputStyle}>
                         <option value="">{tr('เลือก MAT.NO...')}</option>
                         {matNoOptions.map(mn => {
                           const o = prodOrders.find(o => o.mat_no === mn);
@@ -6778,6 +6828,57 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                           return <option key={mn} value={mn}>{[pn, o?.part_name, `MAT ${mn}`].filter(Boolean).join(' · ')}</option>;
                         })}
                       </select>
+                    </Field>
+                  );
+                })()}
+
+                {/* ── 🧩 พาร์ทลูกที่เสีย (2026-11-16 · user: "บางทีไม่เสียทั้ง FG") ─────────────
+                    🔴 **ไม่บังคับ และห้ามบล็อกการบันทึก** — 79% ของของเสียจริง (วัด 120 วัน · 331 แถว)
+                       อยู่บน MAT ที่ยังไม่มีชั้น BOM ⇒ ถ้าทำเป็นช่องบังคับ หน้างานลงของเสียไม่ได้ทั้งกะ
+                    🔴 ลิสต์มาจาก BOM ของ MAT แม่เท่านั้น (`useBomChildren` → `buildBomIndex`) ·
+                       "ว่าง" ต้องเขียนบนจอว่าเพราะอะไร (ไม่มีลูก / อ่าน BOM ไม่ได้) ห้ามเงียบ
+                    🔴 เลือกแล้ว **ตัวเลข %Q/%P ไม่ขยับ** — ข้อความกำกับมาจาก `CHILD_PART_Q_NOTE`
+                       (ของกลาง · ห้ามแต่งเองในหน้า) */}
+                {!!defectForm.mat_no && (() => {
+                  const kids = childBom.rows;
+                  const failTxt = childBom.failed
+                    ? `${registryFailText('BOM ของพาร์ทนี้')} — ลงของเสียที่ชิ้นงานหลักได้ตามปกติ`
+                    : '';
+                  const showPicker = kids.length > 0 || !!defectForm.child_mat_no || childBom.failed;
+                  const sel = kids.find(r => String(r.mat_no).toUpperCase() === String(defectForm.child_mat_no).toUpperCase()) || null;
+                  return (
+                    <Field label={tr('🧩 พาร์ทลูกที่เสีย (ไม่บังคับ — ไม่เลือก = เสียที่ชิ้นงานหลัก)')}>
+                      {showPicker ? (
+                        <BomChildSelect rows={kids} value={defectForm.child_mat_no} loadFail={failTxt}
+                          onChange={(opt) => setDefectForm(f => ({
+                            ...f,
+                            child_mat_no:     opt?.mat_no || '',
+                            child_part_name:  opt?.part_name || '',
+                            /* อัตราต่อ 1 FG เก็บเฉพาะที่เชื่อได้ (บรรทัดซ้ำ 2 ชั้น = null · ห้ามเดา) */
+                            child_qty_per_fg: opt && !opt.flatDupe && Number(opt.qtyPerRoot) > 0 ? Number(opt.qtyPerRoot) : null,
+                          }))} />
+                      ) : (
+                        <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.6 }}>
+                          {childBom.loading
+                            ? tr('กำลังอ่าน BOM ของพาร์ทนี้…')
+                            : <>{tr('MAT นี้ยังไม่มีพาร์ทย่อยใน BOM — เลือกพาร์ทลูกไม่ได้ (ลงของเสียที่ชิ้นงานหลักได้ตามปกติ)')}
+                              <br />{tr('เพิ่มชั้น BOM ได้ที่')} <Link to="/products?tab=bom" style={{ color: 'var(--blue)' }}>/products</Link> {tr('แท็บ BOM')}</>}
+                        </div>
+                      )}
+                      {/* ลูกถูกกรอกไว้หลายใบ = ต้องบอก แต่ **ห้ามรวมหลายใบเป็นชุดเดียว** (นับซ้ำ · กฎ §ชั้น BOM) */}
+                      {childBom.sheets.length > 1 && (
+                        <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 3 }}>
+                          {tr('⚠️ ลูกของพาร์ทนี้ถูกกรอกไว้')} {childBom.sheets.length} {tr('ใบ BOM — ลิสต์นี้แสดงใบของพาร์ทนี้ใบเดียว (ตรวจที่ /products แท็บ BOM)')}
+                        </div>
+                      )}
+                      {!!defectForm.child_mat_no && (
+                        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4, lineHeight: 1.6 }}>
+                          {Number(defectForm.child_qty_per_fg) > 0
+                            ? `BOM: ใช้ ${defectForm.child_qty_per_fg}${uomLabel(sel?.uom) ? ` ${uomLabel(sel.uom)}` : ''} ต่อ 1 ชิ้นของ ${defectForm.mat_no} · `
+                            : ''}
+                          {tr(CHILD_PART_Q_NOTE)}
+                        </div>
+                      )}
                     </Field>
                   );
                 })()}

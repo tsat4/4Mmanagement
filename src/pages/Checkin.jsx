@@ -9,11 +9,16 @@ import { onlyShopfloorStaff, staffGroupOf, STAFF_KINDS, STAFF_SHOPFLOOR } from '
 
 /* ลำดับกลุ่มคน (หน้างาน → ช่าง → สนับสนุน) — ใช้ทั้งบนจอและในใบ export ให้ตรงกัน */
 const GROUP_ORDER = STAFF_KINDS.map(k => k.key);
+/* 🧭 ตัวกรองไลน์ซ่อนได้เฉพาะคนที่ "แกนไลน์อธิบายได้" (16/11 · regression จาก defaultLineFilter 13/11)
+   — สายสนับสนุน/ช่าง/คนที่ยังไม่ผูกไลน์ ไม่ได้สังกัดไลน์โดยธรรมชาติ ⇒ ห้ามถูกช่องเลือกไลน์ซ่อน */
+import { lineAxisVerdict, familySectionsOf, AXIS_OTHER, AXIS_OFF } from '../utils/lineAxisFilter';
+/* 🤝 มุมมองสะสม "คนของไลน์เราถูกยืมออกไปกี่วัน" — สูตรนับอยู่ไฟล์นั้นที่เดียว ห้ามนับในหน้า */
+import { borrowWindow, summarizeBorrowOut, BORROW_WINDOW_DAYS } from '../utils/borrowDays';
 import { UserContext } from '../App';
 import { can } from '../utils/permissions';
 import useIsMobile from '../utils/useIsMobile';
 import { toast } from '../components/Toast';
-import { fetchByIds } from '../utils/fetchByIds';
+import { fetchByIds, fetchAllPages } from '../utils/fetchByIds';
 import { loadCompanyCalendar, getDayType, isOtHolidayType } from '../utils/companyCalendar';
 import { holidayPeriodsForShift, defaultHolidayPeriod, otPeriodLabel, WEEKDAY_OT_TIME } from '../utils/otPeriods';
 import { getLineFamilyIds } from '../utils/lineHierarchy';
@@ -179,6 +184,16 @@ export default function Checkin() {
   const [borrowResults,   setBorrowResults]   = useState([]);
   const [borrowLoading,   setBorrowLoading]   = useState(false);
   const [borrowLineId,    setBorrowLineId]    = useState('');
+
+  /* 📊 มุมมองสะสม "คนของไลน์เราถูกยืมออกไปกี่วัน" (16/11 · หน้างาน: *"ยืมตัวพนักงาน ยืมแล้ว
+     ไม่ยอมคืน เจ้าของจะมองไม่เห็นรึป่าว"*) — ป้าย `→ ไปช่วยไลน์ X (กะนี้)` ตอบได้แค่กะนี้
+     การยืมผูก work_date+shift ⇒ ไม่มีการค้างข้ามวันเชิงโครงสร้าง แต่ **ยืมซ้ำทุกวันได้** ·
+     วัดจริง 60 วัน: 123 แถว 36 คน (9 คนเข้า LINE APRON ASSY 5–9 วัน ในช่วง 2–5 สัปดาห์)
+     🔴 สูตรนับอยู่ `utils/borrowDays.js` ที่เดียว · `null` = ยังไม่โหลด (ห้ามโชว์ 0 แทน "ไม่รู้") */
+  const [showBorrowSum,    setShowBorrowSum]    = useState(false);
+  const [borrowSum,        setBorrowSum]        = useState(null);
+  const [borrowSumErr,     setBorrowSumErr]     = useState('');
+  const [borrowSumLoading, setBorrowSumLoading] = useState(false);
 
   /* ── สถานะตั้งต้นตอนโหลด — ใช้เทียบว่าการกดบันทึกแต่ละครั้งเป็น "เช็คชื่อครั้งแรก" /
      "อัพเดทกำลังคน" / "จองรถ OT" เพื่อยิงแจ้งเตือน Telegram แยกประเภท (กันหัวหน้าแผนกงง
@@ -680,6 +695,44 @@ export default function Checkin() {
     toast.success(`🤝 ย้าย ${emp.name} จาก ${curLine} มาช่วย ${target} แล้ว`);
     setShowBorrowModal(false);
     fetchData();
+  };
+
+  /* 📊 เปิดแผงสะสม "คนของเราถูกยืมออกไปกี่วัน" — ช่วง 30 วันทำงานล่าสุด (คงที่ · หน้านี้ไม่มี
+     ตัวกรองช่วงเวลา และกฎ CLAUDE.md ห้ามยัด <TimeRangeBar> ลงหน้าที่ไม่มีแกนเวลาจริง)
+     🔴 เลือกคอลัมน์เท่าที่ใช้ (กฎ egress) · อ่านไม่ได้/ไม่ครบ = เขียนบนจอ ห้ามโชว์ 0 เงียบ ๆ
+     🔴 "ของเรา" = คนในรายชื่อที่จอโหลดมา (= ขอบเขตบัญชีเดิมเป๊ะ ไม่ได้ขยายสิทธิ์)
+        **ตัดคนที่ถูกยืมเข้ามาออก** — เขาไม่ใช่คนของเรา แค่มายืนกะนี้ */
+  const openBorrowSummary = async () => {
+    setShowBorrowSum(true);
+    if (borrowSumLoading) return;
+    setBorrowSumLoading(true);
+    setBorrowSumErr('');
+    const win = borrowWindow(BORROW_WINDOW_DAYS);
+    if (!win.from) {                       // แกะวันไม่ออก = ไม่คิดเอง (ห้ามเดาเป็นช่วงอื่น)
+      setBorrowSumErr('คำนวณช่วงวันไม่ได้ — ลองเปิดใหม่อีกครั้ง');
+      setBorrowSum(null); setBorrowSumLoading(false);
+      return;
+    }
+    const { rows, error, truncated } = await fetchAllPages(() => supabase.from('line_helpers')
+      .select('employee_id, to_line_id, work_date, shift, emp_name, to_line_name')
+      .gte('work_date', win.from).lte('work_date', win.to));
+    if (error) {
+      setBorrowSumErr(error.includes('does not exist')
+        ? 'ยังไม่ได้ apply migration 20260819_line_helpers_main (แจ้ง admin)'
+        : 'อ่านประวัติการยืมตัวไม่สำเร็จ: ' + error);
+      setBorrowSum(null); setBorrowSumLoading(false);
+      return;
+    }
+    const empById = new Map(employees.map(e => [e.id, e]));
+    const sum = summarizeBorrowOut(rows, {
+      homeLineOf: (id) => empById.get(id)?.line_id ?? null,
+      familyOf:   (id) => getLineFamilyIds(lines, Number(id)),
+      nameOf:     (id) => empById.get(id)?.name,
+      lineNameOf: (id) => lines.find(l => l.id === Number(id))?.name,
+      mine:       (id) => { const e = empById.get(id); return !!e && !e._helperRowId; },
+    });
+    setBorrowSum({ ...sum, ...win, truncated, scanned: rows.length });
+    setBorrowSumLoading(false);
   };
 
   const unborrowEmployee = async (emp) => {
@@ -1228,6 +1281,25 @@ export default function Checkin() {
   // 🤝 คนที่ถูกยืมตัวมา ให้ตัวกรองไลน์/section มองเป็น "ไลน์ปลายทาง" ไม่ใช่ไลน์เดิม
   const effLineIdOf = (emp) => emp._helperToLineId || emp.line_id;
 
+  /* ── 🧭 "ตัวกรองไลน์ซ่อนใครได้" = ของกลาง `utils/lineAxisFilter.js` (2026-11-16) ─────────
+     เดิมถาม `selLineFamilyIds.has(line_id)` ตรงๆ ⇒ พอค่าตั้งต้น "ไลน์ตัวเอง" (13/11) ทำงาน
+     **สายสนับสนุน/ช่าง/คนที่ยังไม่ผูกไลน์ หายทั้งกองอย่างเงียบ ๆ** — หน้างานแจ้ง 16/11
+     *"พนักงานออฟฟิศ บางทีก็โชว์ บางทีก็ไม่โชว์ ตอนนี้ไม่โชว์เลย"* (วัดจริง: support 64 คน /
+     13 คนไม่มี line_id · technician 22 · shopfloor ยังไม่ผูกไลน์ 4) ⇒ ขัดกฎของหน้านี้เอง
+     (บรรทัด ~338 "จอเช็คชื่อต้องเห็นครบทุกกลุ่ม แยกหัวข้อตอนวาดแทน")
+     🔴 ไม่ได้ถอด `defaultLineFilter` และไม่ได้ขยายขอบเขตสิทธิ์ — คนหน้างานไลน์อื่นยังถูกซ่อน
+        เหมือนเดิมเป๊ะ · คนที่แกนไลน์อธิบายไม่ได้ ตัดด้วย "ส่วนงาน" ของครอบครัวไลน์ที่เลือกแทน
+     🔴 ครอบครัวว่าง (ไลน์ไม่อยู่ในทะเบียน) = ถอยไปเทียบ id ตรงตัว (พฤติกรรมเดิมของบรรทัดนี้) */
+  const axisFamilyIds = selLine
+    ? (selLineFamilyIds?.size ? selLineFamilyIds : new Set([Number(selLine)]))
+    : null;
+  const axisOpts = {
+    familyIds:      axisFamilyIds,
+    familySections: familySectionsOf(lines, axisFamilyIds),
+    lineSections:   Object.fromEntries(lines.map(l => [l.id, l.section])),
+  };
+  const axisOf = (emp) => lineAxisVerdict(emp, { ...axisOpts, lineId: effLineIdOf(emp) });
+
   /* 🛡️ ไลน์ตัวเองไม่อยู่ในทะเบียนแล้ว (ถูกลบ/เปลี่ยนชื่อ) ⇒ ค่าตั้งต้นจะทำให้จอว่างทั้งที่มีคน
      = "ลิสต์ว่าง 2 ความหมาย" ⇒ ล้างค่าตั้งต้น ถอยไปเห็นทั้งขอบเขต (fail-open เหมือนที่หน้านี้ใช้อยู่)
      ⚠️ เช็คหลังทะเบียนโหลดเท่านั้น — เช็คตอน lines ว่างจะล้างทิ้งทุกครั้งที่เปิดจอ */
@@ -1240,7 +1312,9 @@ export default function Checkin() {
   const displayed = employees.filter(emp => {
     if (filterShift && emp.assignedShift && emp.assignedShift !== shiftInfo.shift) return false;
     const el = effLineIdOf(emp);
-    if (selLine)    return selLineFamilyIds?.size ? selLineFamilyIds.has(el) : el === Number(selLine);
+    /* 🔴 เลือก "ไลน์" = เข้มเหมือนเดิมกับคนหน้างาน แต่ซ่อนคนที่แกนไลน์อธิบายไม่ได้ไม่ได้
+       (กฎ + เหตุผลเต็มอยู่ `utils/lineAxisFilter.js` · ตัวนับขึ้นจอใต้แถบกรอง) */
+    if (selLine)    return axisOf(emp) !== AXIS_OTHER;
     /* 🔴 กรองด้วย "ส่วนงาน" ต้องไม่ทิ้งคนที่ยังไม่ผูกไลน์ (2026-10-05 · หัวหน้า PD2 แจ้ง "หายไปหมดเลย")
        เดิมเช็ค `sectionFamilyIds.has(el)` อย่างเดียว = ถามว่า "อยู่ไลน์ไหน" ทั้งที่ผู้ใช้เลือก "ส่วนงาน"
        ⇒ คนที่ `line_id` ยัง null **หายทั้งหมดอย่างเงียบ ๆ** · วัดจริง: PD2 มีคนหน้างาน 35 คน
@@ -1255,12 +1329,16 @@ export default function Checkin() {
 
   /* 🔢 คนที่ "ดูได้แต่ถูกตัวกรองไลน์ซ่อนไว้" — กฎจอซื่อสัตย์: กรองแถวออกแล้วต้องบอกว่ากี่คน
      (ไม่บอก = หัวหน้าคิดว่าส่วนงานมีแค่นี้ แล้วหา "ยืมคน" ไม่เจอ) */
-  const hiddenOtherLines = (selLine && selLineFamilyIds?.size)
+  const hiddenOtherLines = selLine
     ? employees.filter(emp => {
         if (filterShift && emp.assignedShift && emp.assignedShift !== shiftInfo.shift) return false;
-        return !selLineFamilyIds.has(effLineIdOf(emp));
+        return axisOf(emp) === AXIS_OTHER;
       }).length
     : 0;
+
+  /* 🔢 คนที่ "โชว์อยู่เพราะแกนไลน์อธิบายเขาไม่ได้" (สายสนับสนุน/ช่าง/ยังไม่ผูกไลน์ ของส่วนงานนี้)
+     — กฎจอซื่อสัตย์ 2 ทาง: ซ่อนแล้วต้องบอก **และ** แสดงเกินตัวกรองก็ต้องบอกว่าทำไมเขาขึ้นมา */
+  const offAxisShown = selLine ? displayed.filter(emp => axisOf(emp) === AXIS_OFF).length : 0;
 
   /* 🧭 แถบกรองขอบเขต — เดิมซ่อนจาก leader ด้วยเหตุผล "หัวหน้าไลน์มีไลน์เดียว ไม่ต้องกรอง"
      13/11: สมมติฐานนั้นผิด — ขอบเขตของหัวหน้าไลน์คือ **ไลน์ตัวเอง ∪ ไลน์ในส่วนงาน** (lineScope)
@@ -1720,6 +1798,85 @@ export default function Checkin() {
 
   return (
     <Page>
+      {/* 📊 Modal สะสม "คนของเราถูกยืมออกไปกี่วัน" (16/11) — ตัวเลขทุกตัวมาจาก utils/borrowDays.js
+          🔴 ช่วงเวลาเขียนบนจอเสมอ · "ไม่รู้/ไม่ครบ" ต้องเห็น ห้ามกลายเป็น 0 เงียบ ๆ */}
+      {showBorrowSum && (
+        <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '20px 24px', maxWidth: 680, width: '100%', maxHeight: '86vh', display: 'flex', flexDirection: 'column', boxShadow: 'var(--shadow-lg)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+              <div style={{ fontSize: 18, fontWeight: 900, color: 'var(--text)' }}>{tr('คนของเราที่ถูกยืมออกไปช่วยไลน์อื่น')}</div>
+              <button onClick={() => setShowBorrowSum(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 18, cursor: 'pointer', padding: 4 }}>✕</button>
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>
+              {borrowSum
+                ? <>นับจาก<b> วันงาน {borrowSum.from} → {borrowSum.to}</b> ({borrowSum.days} {tr('วัน')}) · 1 วัน = 1 วัน ไม่ว่าถูกยืมกี่กะ · <b>{tr('ยืมข้ามไลน์แม่-ไลน์ลูกของตัวเองไม่นับว่าออก')}</b></>
+                : <>{tr('ช่วง')} {BORROW_WINDOW_DAYS} {tr('วันทำงานล่าสุด')} — {tr('การยืมผูกกับวัน+กะ หมดกะหลุดเอง · แผงนี้ตอบว่า "ถูกยืมซ้ำกี่วัน" ซึ่งป้ายบนรายชื่อตอบไม่ได้')}</>}
+            </div>
+
+            {borrowSumErr && <NoticeBar tone="bad" style={{ marginBottom: 10 }}>{borrowSumErr}</NoticeBar>}
+            {borrowSumLoading && <div style={{ padding: 14, fontSize: 13, color: 'var(--muted)' }}>{tr('⏳ กำลังรวบรวม...')}</div>}
+
+            {!borrowSumLoading && !borrowSumErr && borrowSum && (
+              <>
+                {borrowSum.people.length === 0 ? (
+                  <div style={{ padding: 14, fontSize: 13, color: 'var(--muted)' }}>
+                    {tr('ไม่มีคนในรายชื่อนี้ถูกยืมออกไปไลน์อื่นในช่วงที่นับ')}
+                    <span style={{ fontSize: 11.5 }}> {tr('(อ่านแถวการยืมทั้งโรงงาน')} {borrowSum.scanned} {tr('แถว)')}</span>
+                  </div>
+                ) : (
+                  /* 📱 ปัดได้ทั้ง 2 แกน — 4 คอลัมน์บนจอ 390px ต้องไม่ "ล้นแล้วปัดไม่ได้" */
+                  <div style={{ flex: 1, overflow: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--bg2)' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 420 }}>
+                      <thead>
+                        <tr style={{ background: 'var(--bg3)', color: 'var(--text2)' }}>
+                          <th style={{ textAlign: 'left',   padding: '6px 10px', fontSize: 11.5, fontWeight: 700 }}>{tr('พนักงาน')}</th>
+                          <th style={{ textAlign: 'left',   padding: '6px 10px', fontSize: 11.5, fontWeight: 700 }}>{tr('ไลน์ต้นสังกัด')}</th>
+                          <th style={{ textAlign: 'center', padding: '6px 10px', fontSize: 11.5, fontWeight: 700 }}>{tr('ถูกยืมออก')}</th>
+                          <th style={{ textAlign: 'left',   padding: '6px 10px', fontSize: 11.5, fontWeight: 700 }}>{tr('ไปไลน์')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {borrowSum.people.map(p => (
+                          <tr key={p.id} style={{ borderTop: '1px solid var(--border)' }}>
+                            <td style={{ padding: '6px 10px', fontWeight: 700, color: 'var(--text)' }}>{p.name}</td>
+                            <td style={{ padding: '6px 10px', color: 'var(--muted)', fontSize: 11.5 }}>{p.homeLineName || '—'}</td>
+                            <td style={{ padding: '6px 10px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                              <b style={{ color: 'var(--text)', fontSize: 13 }}>{p.days}</b> {tr('วัน')}
+                              <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+                                {p.shifts} {tr('กะ')}{p.span ? ` · ${tr('ในช่วง')} ${p.span} ${tr('วัน')}` : ''}
+                              </div>
+                            </td>
+                            <td style={{ padding: '6px 10px', fontSize: 11.5, color: 'var(--text2)' }}>
+                              {p.toLines.map(t => `${t.name} (${t.days})`).join(' · ')}
+                              <div style={{ fontSize: 11, color: 'var(--muted)' }}>{p.firstDate} → {p.lastDate}</div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                <div style={{ marginTop: 10, fontSize: 11.5, color: 'var(--muted)', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  <span>{tr('รวม')} <b style={{ color: 'var(--text)' }}>{borrowSum.people.length}</b> {tr('คน')} · <b style={{ color: 'var(--text)' }}>{borrowSum.totalDays}</b> {tr('คน-วัน')}</span>
+                  {borrowSum.unknownHome > 0 && (
+                    <span data-warn="1" style={{ color: 'var(--amber)' }}>
+                      ⚠ {borrowSum.unknownHome} {tr('แถวไม่รู้ไลน์ต้นสังกัด จึงไม่ถูกนับ — คนที่ยังไม่ผูกไลน์ (ไปผูกที่ ฐานข้อมูลพนักงาน)')}
+                    </span>
+                  )}
+                  {borrowSum.skipped > 0 && (
+                    <span>{borrowSum.skipped} {tr('แถวเป็นของคนนอกรายชื่อที่จอนี้โหลด (คนละขอบเขต/คนละทีม/ถูกยืมเข้ามา) — ไม่นับ')}</span>
+                  )}
+                  {borrowSum.truncated && (
+                    <span data-warn="1" style={{ color: 'var(--amber)' }}>⚠ {tr('ข้อมูลมากเกินกว่าจะอ่านครบในรอบเดียว — ตัวเลขนี้ยังไม่ครบ')}</span>
+                  )}
+                  <span>{tr('การยืมหมดอายุเองเมื่อเปลี่ยนกะ — ตัวเลขนี้คือ "ถูกยืมซ้ำ" ไม่ใช่ "ค้างคืนไม่ยอมคืน" · ถ้าคนเดิมถูกยืมบ่อยจนเหมือนย้ายสังกัด ให้คุยกันแล้วตั้งที่')} <strong>{tr('ผังกำลังคน')}</strong> ({tr('คนวิ่งข้ามแผนก')})</span>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* 🤝 Modal ยืมพนักงานข้ามไลน์ */}
       {showBorrowModal && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
@@ -1810,6 +1967,8 @@ export default function Checkin() {
             { key: 'preview', icon: '🌙', label: previewNight ? 'ออกจาก Preview กะดึก' : 'Preview กะดึก', onClick: () => setPreviewNight(p => !p),
               hidden: realShiftInfo.shift !== 'day', badge: previewNight ? 'เปิดอยู่' : undefined,
               title: 'ดูตัวอย่างหน้าจอกะดึก (รวมคอลัมน์ OT พรุ่งนี้) — ปิดปุ่มบันทึกอัตโนมัติระหว่าง preview' },
+            { key: 'borrowsum', icon: '📊', label: `คนของเราที่ถูกยืมออก (${BORROW_WINDOW_DAYS} วัน)`, onClick: openBorrowSummary,
+              title: 'สรุปสะสมว่าคนของไลน์เราถูกยืมไปช่วยไลน์อื่นกี่วัน / ไลน์ไหน ในช่วง 30 วันทำงานล่าสุด (ป้ายบนรายชื่อบอกได้แค่กะนี้)' },
             { key: 'export', icon: '📄', label: 'ส่งออกฟอร์ม', onClick: () => { setExportSection(selSection || ''); setShowExport(true); } },
             { key: 'otbook', icon: '🚚', label: 'จองรถ OT', onClick: openOtBookModal, title: 'จองรถ OT วันที่/ไลน์/ทีมใดก็ได้ ไม่ต้องรอเช็คชื่อกะนั้น' },
           ]} />
@@ -1874,10 +2033,19 @@ export default function Checkin() {
           {/* Employee count badge */}
           <span className="filter-count">
             แสดง <span style={{ color: 'var(--text)', fontWeight: 700 }}>{displayed.length}</span> คน
+            {/* 16/11 แก้ข้อความ tooltip: ตั้งแต่ลง lineAxisFilter คนกลุ่มนี้ **ขึ้นแม้กรองรายไลน์**
+                (ข้อความเดิมบอกว่า "จะไม่ขึ้นเมื่อกรองรายไลน์" = จอโกหกหลังเปลี่ยนพฤติกรรม) */}
             {noLineCount > 0 && (
               <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--amber)', fontWeight: 700 }}
-                title={tr('คนเหล่านี้อยู่ส่วนงานนี้แต่ยังไม่ได้ผูกไลน์ — จะไม่ขึ้นเมื่อกรองรายไลน์ ไปผูกที่ ฐานข้อมูลพนักงาน (ช่อง Group / กลุ่ม)')}>
+                title={tr('คนเหล่านี้อยู่ส่วนงานนี้แต่ยังไม่ได้ผูกไลน์ — ยังขึ้นให้เช็คชื่อได้ตามปกติ (ตัวกรองไลน์ไม่ซ่อนคนที่ไม่สังกัดไลน์) แต่กำลังคนของไลน์จะไม่นับเขา · ไปผูกที่ ฐานข้อมูลพนักงาน (ช่อง Group / กลุ่ม)')}>
                 ⚠ {noLineCount} คนยังไม่ผูกไลน์
+              </span>
+            )}
+            {/* 🧭 ทำไมคนที่ไม่ได้อยู่ไลน์นี้ยังขึ้นมา — ต้องเขียนบนจอ ไม่ใช่ให้หัวหน้าเดา */}
+            {offAxisShown > 0 && (
+              <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--muted)' }}
+                title={tr('สายสนับสนุน / ช่าง / คนที่ยังไม่ผูกไลน์ ของส่วนงานนี้ — เขาไม่ได้สังกัดไลน์โดยธรรมชาติ ตัวกรองไลน์จึงไม่ซ่อนเขา (ดูหัวข้อกลุ่มในรายชื่อ) · เช็คชื่อได้ แต่ไม่ถูกนับเป็นกำลังคนของไลน์ผลิต')}>
+                🗂️ {offAxisShown} {tr('คนไม่สังกัดไลน์')}
               </span>
             )}
             {hiddenOtherLines > 0 && (
@@ -1900,7 +2068,17 @@ export default function Checkin() {
             {tr(m.label)} {counts[key]}
           </span>
         ) : null)}
-        {role === 'leader' && !showScopeFilter && <span style={{ fontSize: 12, color: 'var(--muted)', padding: '3px 0' }}>{tr('รวม')} {displayed.length} {tr('คน')}</span>}
+        {/* ขอบเขตมีไลน์เดียว = ไม่มีแถบกรองให้ติดตัวนับ ⇒ บอกที่นี่แทน (กฎจอซื่อสัตย์ ห้ามเงียบ) */}
+        {role === 'leader' && !showScopeFilter && (
+          <span style={{ fontSize: 12, color: 'var(--muted)', padding: '3px 0' }}>
+            {tr('รวม')} {displayed.length} {tr('คน')}
+            {offAxisShown > 0 && (
+              <span title={tr('สายสนับสนุน / ช่าง / คนที่ยังไม่ผูกไลน์ ของส่วนงานนี้ — ไม่ได้สังกัดไลน์ จึงไม่ถูกตัวกรองไลน์ซ่อน')}>
+                {' '}· 🗂️ {offAxisShown} {tr('คนไม่สังกัดไลน์')}
+              </span>
+            )}
+          </span>
+        )}
       </div>
 
       <DraftRestoreBar draft={ckPending} what="การเช็คชื่อกะนี้" onRestore={restoreCkDraft}

@@ -36,8 +36,14 @@ export function dieStatusMeta(key) {
 
 /* สถานะ MO ที่ถือว่า "ยังค้างอยู่" — allowlist (ตรงข้ามกับ MO_DONE_STATUSES ใน mtnStepPerm.js)
    returned (ตีกลับ) นับว่าค้าง: ใบยังไม่จบ ผู้แจ้งต้องส่งใหม่ · transferred = จบแล้ว จึงไม่อยู่ในลิสต์
-   ⚠️ เป็น allowlist โดยตั้งใจ — สถานะจบตัวใหม่จึงไม่หลุดมาค้างเองเหมือนที่เคยเกิดกับฝั่ง blocklist */
-export const OPEN_MO_STATUSES = ['pending', 'assigned', 'repairing', 'repaired', 'checked', 'qa', 'handover', 'returned'];
+   ⚠️ เป็น allowlist โดยตั้งใจ — สถานะจบตัวใหม่จึงไม่หลุดมาค้างเองเหมือนที่เคยเกิดกับฝั่ง blocklist
+
+   🔴 **16/11: ยุบมาเหลือชุดเดียว — re-export จาก `mtnStepPerm.js` ห้ามประกาศลิสต์ที่นี่อีก**
+      เดิมไฟล์นี้มีลิสต์ของตัวเองที่ **ไม่เท่ากับฝั่ง `mtnStepPerm`** (ที่นี่มี `returned` ฝั่งนั้นไม่มี)
+      ⇒ Andon/ผังโรงงาน/TvBoard/ทะเบียนแม่พิมพ์ นับใบตีกลับว่า "ค้าง" แต่คิวงานของฉัน
+        มองไม่เห็นใบพวกนั้นเลย — 2 จอตอบคนละคำตอบอยู่ ~2 เดือนโดยไม่มีใครรู้
+      ⇒ ผู้ใช้ 4 จอนี้ไม่ต้องแก้อะไร (เนื้อหาเหมือนเดิมทุกตัว + `waiting_vendor` ที่ควรค้างอยู่แล้ว) */
+export { OPEN_MO_STATUSES } from './mtnStepPerm.js';
 
 /* ป้ายสถานะ MO — **ไม่ mirror อีกแล้ว** (2026-09-09): ย้ายไปอยู่ที่ `src/utils/mtnStepPerm.js`
    ที่เดียวกับเกณฑ์ "ขั้นไหนใครทำ" แล้ว re-export ที่นี่เพื่อไม่ให้ import เดิมพัง

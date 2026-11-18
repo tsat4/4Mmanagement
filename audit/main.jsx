@@ -18,6 +18,16 @@ const NAMES = Object.keys(mods).map(p => p.split('/').pop().replace('.jsx',''))
 const VARIANTS = { 'Dashboard@people': { view: 'people' } }
 NAMES.push(...Object.keys(VARIANTS))
 
+/* 🛡️ หน้าที่ "โค้ดจริงอยู่หลังแท็บ/ปุ่มในเนื้อหน้า" — crashsweep กดได้แค่ปุ่ม**หัวเพจ** ⇒ เข้าไม่ถึง
+   (audit/README §โค้ดที่อยู่ในโมดัล/สาขาที่ต้องกดถึง · ถ้าสวีปกดไม่ถึง = ไม่มีด่านเลย)
+   ⇒ ใส่ "ที่อยู่เต็ม" เป็นชื่อหน้าไปเลย: `?p=` ตัดที่ `&` ให้เองตอนหา component
+      ส่วน query ที่เหลือ `ENTRY` ส่งเข้า MemoryRouter ⇒ `useTabParam` อ่านได้จริง
+   🔴 เพิ่มมุมมอง/แท็บใหม่ที่มีโค้ดเป็นของตัวเอง = เติมที่นี่ในคอมมิทเดียวกัน */
+NAMES.push(
+  'ProductionPlan&tab=lots',              // 🧲 แผนสั่งงานล็อต + ไทม์ไลน์ราง (PlanTimeline)
+  'ProductionPlan&tab=lots&view=week',    // 📅 มุมมองสัปดาห์ (PlanWeek · 17/11)
+)
+
 class EB extends React.Component {
   constructor(p){ super(p); this.state={e:null} }
   static getDerivedStateFromError(e){ return {e} }

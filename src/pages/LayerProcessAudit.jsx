@@ -1012,7 +1012,7 @@ table{border-collapse:collapse;width:100%}
   <tr>
     <td rowspan="3" style="border:1px solid #000;text-align:center;font-size:9px;font-weight:bold;width:26px">Description</td>
     <td rowspan="3" colspan="2" style="border:1px solid #000;text-align:center;font-size:9px;font-weight:bold">Audit Checklist / Question</td>
-    <td colspan="${nDays}" style="border:1px solid #000;text-align:center;font-size:9px;font-weight:bold">{tr('Audit Result (ผลการตรวจสอบ Y, N, T, N/A)')}</td>
+    <td colspan="${nDays}" style="border:1px solid #000;text-align:center;font-size:9px;font-weight:bold">${tr('Audit Result (ผลการตรวจสอบ Y, N, T, N/A)')}</td>
     <td colspan="4" style="border:1px solid #000;text-align:center;font-size:8px;font-weight:bold;background:#c9e4c5">Weekly</td>
     <td rowspan="2" style="border:1px solid #000;text-align:center;vertical-align:middle;width:20px;background:#e0e0e0"><div style="writing-mode:vertical-rl;transform:rotate(180deg);font-size:8px;font-weight:bold;margin:0 auto">Monthly</div></td>
     <td rowspan="2" style="border:1px solid #000;text-align:center;vertical-align:middle;width:20px;background:#f3e8a0"><div style="writing-mode:vertical-rl;transform:rotate(180deg);font-size:8px;font-weight:bold;margin:0 auto">Quarterly</div></td>
@@ -1025,14 +1025,14 @@ table{border-collapse:collapse;width:100%}
   </tr>
   ${catRows.join('')}
   <tr>
-    <td colspan="3" style="border:1px solid #000;text-align:right;padding:1px 6px;font-size:8px;font-weight:bold;height:74px;vertical-align:middle">{tr('Work Station (ระบุ Station ที่ทำการตรวจ)')}</td>
+    <td colspan="3" style="border:1px solid #000;text-align:right;padding:1px 6px;font-size:8px;font-weight:bold;height:74px;vertical-align:middle">${tr('Work Station (ระบุ Station ที่ทำการตรวจ)')}</td>
     ${stationRow}
     ${svAud.map(a => `<td style="border:1px solid #000;text-align:center;vertical-align:bottom;background:#c9e4c5"><div style="writing-mode:vertical-rl;transform:rotate(180deg);font-size:7px;margin:0 auto;white-space:nowrap;max-height:70px;overflow:hidden">${a?.station || ''}</div></td>`).join('')}
     <td style="border:1px solid #000;text-align:center;vertical-align:bottom;background:#e0e0e0"><div style="writing-mode:vertical-rl;transform:rotate(180deg);font-size:7px;margin:0 auto;white-space:nowrap;max-height:70px;overflow:hidden">${mgrAud?.station || ''}</div></td>
     <td style="border:1px solid #000;text-align:center;vertical-align:bottom;background:#f3e8a0"><div style="writing-mode:vertical-rl;transform:rotate(180deg);font-size:7px;margin:0 auto;white-space:nowrap;max-height:70px;overflow:hidden">${gmAud?.station || ''}</div></td>
   </tr>
   <tr>
-    <td colspan="3" style="border:1px solid #000;text-align:right;padding:1px 6px;font-size:8px;font-weight:bold;height:56px;vertical-align:middle">{tr('ลงชื่อ ผู้ตรวจสอบ')}</td>
+    <td colspan="3" style="border:1px solid #000;text-align:right;padding:1px 6px;font-size:8px;font-weight:bold;height:56px;vertical-align:middle">${tr('ลงชื่อ ผู้ตรวจสอบ')}</td>
     ${sigRow}
     ${svAud.map(a => sigCell(a, 'background:#c9e4c5;')).join('')}
     ${sigCell(mgrAud, 'background:#e0e0e0;')}
@@ -1053,9 +1053,9 @@ table{border-collapse:collapse;width:100%}
   <div>{tr('N/A หมายถึง ไม่เกี่ยวข้อง')}</div>
 </div>
 <div style="display:flex;gap:18px;margin-top:2px;font-size:8px;flex-wrap:wrap">
-  <div><span style="display:inline-block;width:24px;height:9px;background:#c9e4c5;border:1px solid #999;vertical-align:middle"></span> {tr('Weekly : Cross-Functional ทำการตรวจทุกสัปดาห์ โดยทำการสุ่มตรวจ')}</div>
-  <div><span style="display:inline-block;width:24px;height:9px;background:#e0e0e0;border:1px solid #999;vertical-align:middle"></span> {tr('Monthly : Manager ทำการตรวจทุกเดือน โดยทำการสุ่มตรวจ')}</div>
-  <div><span style="display:inline-block;width:24px;height:9px;background:#f3e8a0;border:1px solid #999;vertical-align:middle"></span> {tr('Quarterly : GM Plant ทำการตรวจทุก 3 เดือน โดยสุ่มตรวจ')}</div>
+  <div><span style="display:inline-block;width:24px;height:9px;background:#c9e4c5;border:1px solid #999;vertical-align:middle"></span> ${tr('Weekly : Cross-Functional ทำการตรวจทุกสัปดาห์ โดยทำการสุ่มตรวจ')}</div>
+  <div><span style="display:inline-block;width:24px;height:9px;background:#e0e0e0;border:1px solid #999;vertical-align:middle"></span> ${tr('Monthly : Manager ทำการตรวจทุกเดือน โดยทำการสุ่มตรวจ')}</div>
+  <div><span style="display:inline-block;width:24px;height:9px;background:#f3e8a0;border:1px solid #999;vertical-align:middle"></span> ${tr('Quarterly : GM Plant ทำการตรวจทุก 3 เดือน โดยสุ่มตรวจ')}</div>
 </div>
 ${issuesHtml}
 <div style="display:flex;justify-content:space-between;margin-top:3px;font-size:9px"><div>${fullCode(df)}${df.footer_note ? ' · ' + df.footer_note : ''}</div><div>${df.effective_date ? 'Effective Date : ' + df.effective_date : ''}</div></div>

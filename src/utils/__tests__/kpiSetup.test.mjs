@@ -6,7 +6,7 @@ import { planBarsOf,
   scoreKpi, totalPoints, summarizeMonths, evalFormula, parseBar, fmtBar,
   providerReaches, scopeLabel, inferCompare, scoreDef, defBars, KPI_SCOPE_LEVELS, KPI_PROVIDERS, KPI_BASE_VARS, KPI_FORMULAS,
   KPI_STD_UNITS, KPI_REQUIREMENTS, KPI_TOTAL_WEIGHT, stdUnitOf, stdUnitLabel,
-  isStdFixed, isStdParent, checkStdSelection, matchStdItems,
+  isStdFixed, isStdParent, checkStdSelection, matchStdItems, guessStdUnit,
   unitOf, decimalsOf, summaryModeOf, summaryShort, summaryModeLabel, fmtKpi, summaryOf, KPI_SUMMARY_MODES,
   planProgress, valueScopeOf, sharedValueDef, yearForecast, boardSlotOf, KPI_BOARD_SLOTS,
 } from '../kpiSetup.js';
@@ -665,6 +665,22 @@ test('neededRunRate: average/sum/reach · ไม่มีเป้า/ครบ�
   assert.equal(neededRunRate({ actual: a, target: null, def: def('average') }), null);
   assert.equal(neededRunRate({ actual: Array(12).fill(1), target: 2, def: def('average') }), null);
   assert.equal(neededRunRate({ actual: a, target: 2, def: def('rate') }), null);
+});
+
+/* ── 📘 เดาหน่วยงานมาตรฐานจากชื่อขอบเขต (16/11 · เคส QA ที่ยังไม่มีแถว KPI เลยสักข้อ) ───────
+   เป็น "ข้อเสนอให้คนกดยืนยัน" — ไม่ตรงเป๊ะต้องคืน null ห้ามเดาคลุมแล้วลากชุด KPI ของหน่วยอื่นมาให้ */
+test('guessStdUnit — ตรงเป๊ะเท่านั้น (QA ตรง · "Tooling MTN" ต้องไม่กลายเป็น Tooling)', () => {
+  assert.equal(guessStdUnit('QA'), 'QA');
+  assert.equal(guessStdUnit('qa'), 'QA');
+  assert.equal(guessStdUnit('Logistic & Sales'), 'Logistic & Sales');
+  assert.equal(guessStdUnit('logistic and sales'), null);          // "and" ไม่ใช่ "&" ⇒ ไม่เดา
+  assert.equal(guessStdUnit('Die Maintenance'), 'Die Maintenance');
+  assert.equal(guessStdUnit('Tooling MTN'), null);                 // คนละชุด KPI กับ Tooling
+  assert.equal(guessStdUnit('PD3'), null);
+  assert.equal(guessStdUnit(''), null);
+  assert.equal(guessStdUnit(null), null);
+  /* ทุกชื่อในทะเบียนต้องเดาตัวเองเจอ (กันพิมพ์ชื่อหน่วยงานผิดในลิสต์) */
+  for (const u of KPI_STD_UNITS) assert.equal(guessStdUnit(u.unit), u.unit, u.unit);
 });
 
 /* ── 🧾 scoreRuleText / defIssues (16/11 · หน้ากรอก KPI ต้องบอกกติกาเป็นประโยค + เตือนเกณฑ์ขัดกัน) ── */

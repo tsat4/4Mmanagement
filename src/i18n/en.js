@@ -10352,6 +10352,32 @@ const EN = {
   // 🏭 OEE รายจิ๊ก (16/11)
   'จบ': 'End',
   'สาเหตุ (จากหน้าเครื่อง)': 'Reason (from machine)',
+  // 📥 CSV ผลตรวจ QA (16/11)
+  'CSV ย้อนหลัง': 'CSV, past',
+  'ช่วงวันของไฟล์ CSV': 'Date range of the CSV file',
+  '📥 CSV ผลตรวจ': '📥 Results CSV',
+  // ('กำลังรวบรวม…' มีคำแปลอยู่แล้วด้านบน — ห้ามซ้ำ lint no-dupe-keys)
+  'ผลตรวจทุกจุด ทุกรอบ ของพาร์ทนี้ในช่วงที่เลือก — เปิดใน Excel ได้ (ช่องว่าง = ไม่มีค่า ไม่ใช่ 0)':
+    'Every point, every round of this part within the chosen range — opens in Excel (blank = no value, not 0)',
+  '📥 CSV ค่าวัด': '📥 Readings CSV',
+  '📥 CSV สรุป Cpk': '📥 Cpk summary CSV',
+  'ค่าวัดทุกค่า 1 แถว = 1 ค่า (วันงาน/กะ/รอบ/ชิ้น + LSL-USL) — เอาไปทำกราฟควบคุมใน Excel ได้ตรงๆ':
+    'Every reading, one row each (work date / shift / round / piece + LSL-USL) — ready for control charts in Excel',
+  'สรุปทุกจุดวัดของชิ้นงานนี้ (n / Mean / σ / Cp / Cpk / Pp / Ppk / ค่าหลุด spec) — ช่องว่าง = คิดไม่ได้ ไม่ใช่ 0':
+    'Summary of every measured point of this part (n / Mean / σ / Cp / Cpk / Pp / Ppk / out-of-spec) — blank = not computable, not 0',
+  'ยังไม่มีค่าวัดให้ส่งออก': 'No readings to export yet',
+  // 🧩 ของเสียระดับพาร์ทลูก (16/11)
+  '🧩 พาร์ทลูกที่เสีย (ไม่บังคับ — ไม่เลือก = เสียที่ชิ้นงานหลัก)':
+    '🧩 Child part defected (optional — blank = main part)',
+  'ไม่ได้เลือก = เสียที่ชิ้นงานหลัก': 'Blank = defect on the main part',
+  'พาร์ทลูก (MAT / Part No.)': 'Child part (MAT / Part No.)',
+  'กำลังอ่าน BOM ของพาร์ทนี้…': 'Reading this part\'s BOM…',
+  'MAT นี้ยังไม่มีพาร์ทย่อยใน BOM — เลือกพาร์ทลูกไม่ได้ (ลงของเสียที่ชิ้นงานหลักได้ตามปกติ)':
+    'This MAT has no BOM children yet — cannot pick a child part (logging on the main part still works)',
+  'MAT นี้ยังไม่มีพาร์ทย่อยใน BOM — เพิ่มชั้น BOM ได้ที่ /products แท็บ BOM':
+    'This MAT has no BOM children yet — add BOM levels in /products, BOM tab',
+  'เพิ่มชั้น BOM ได้ที่': 'Add BOM levels in',
+  'แท็บ BOM': 'BOM tab',
   '✕ ปิด': '✕ Close',
   'พาร์ทที่ผลิตอยู่': 'Part in production',
   'downtime ที่คนลง': 'Downtime logged by staff',
