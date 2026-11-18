@@ -634,7 +634,7 @@ Deno.serve(async (req) => {
     /* ── 7) sync ว่า "ตรวจแล้วหรือยัง" ── */
     // เปิดใบตรวจ = รับงานแล้ว (หยุดเตือน) · ปิดใบ = จบงาน  ⇒ ห้ามเตือนซ้ำหลังคนรับงานแล้ว
     const { data: open } = await supabase.from('qa_fme_obligations')
-      .select('*').in('status', ['pending', 'acked']).gte('work_date', yest);
+      .select('*').in('status', ['pending', 'acked', 'expired']).gte('work_date', yest);   // expired: ตรวจทีหลังยังจับคู่ปิดได้
     const obs = open ?? [];
     const { data: sheets } = await supabase.from('qa_inspection_sheets')
       .select('id, part_id, line_name, work_date, shift, stage, status, result, created_at')
@@ -674,6 +674,21 @@ Deno.serve(async (req) => {
       await supabase.from('qa_fme_obligations').update(patch).eq('id', ob.id);
       Object.assign(ob, patch);
       if (sh.status === 'done') closed++;
+    }
+
+    /* ⌛ หมดเวลา = ข้ามกะแล้วยังไม่ได้ตรวจ (17/11 · user "ทำปิดงานค้างข้ามกะเป็นหมดเวลา") — เดิมค้าง pending แล้วเตือน "เกินเวลา" ทั้งคืน
+       กะของงานจบแล้ว (วันงาน/กะ ≠ ตอนนี้) และเลยกำหนดตรวจแล้ว ⇒ status 'expired' + เหตุผล · **ไม่ลบ ไม่นับเป็นตรวจแล้ว**
+       (ย้อนดูได้ว่างานไหนไม่ได้ตรวจ) · ถ้า QA ตรวจทีหลังแล้วจับคู่ใบได้ รอบ sync ข้างบนปิดเป็น done ให้เอง · acked (QA เปิดใบแล้ว) ไม่แตะ */
+    const curShift = (() => { const h = bangkok(now).getUTCHours(); return h >= 8 && h < 20 ? 'day' : 'night'; })();
+    const stale = obs.filter(ob => ob.status === 'pending'
+      && (ob.work_date !== today || ob.shift !== curShift) && now > new Date(ob.due_at));
+    let expired = 0;
+    if (stale.length) {
+      const { error: exErr } = await supabase.from('qa_fme_obligations')
+        .update({ status: 'expired', cancel_reason: 'ระบบ: หมดเวลา — ข้ามกะแล้วยังไม่ได้ตรวจ' })
+        .in('id', stale.map(o => o.id)).eq('status', 'pending');
+      if (exErr) console.error('qa-fme-scan: expire', exErr.message);
+      else { expired = stale.length; stale.forEach(o => { o.status = 'expired'; }); }
     }
 
     /* ── 8) แจ้ง Telegram: เรียกครั้งแรก + เตือนซ้ำเมื่อเกินเวลา ── */
@@ -776,7 +791,7 @@ Deno.serve(async (req) => {
     // master อ่านมาไม่ครบ = ต้องเห็นใน log ของ cron ด้วย ไม่ใช่เฉพาะ dry-run (ห้ามล้มเหลวเงียบ)
     if (truncated.length) console.error('qa-fme-scan: master ชนเพดาน 1000 แถว →', truncated.join(', '));
     return json({ ok: true, scanned: { sessions: sessions.length, runs: runs.size },
-      created, closed, calls, escalations, master_truncated: truncated });
+      created, closed, expired, calls, escalations, master_truncated: truncated });
   } catch (e) {
     console.error('qa-fme-scan', e);
     return json({ ok: false, error: String((e as Error)?.message ?? e) }, 500);

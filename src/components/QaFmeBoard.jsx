@@ -153,7 +153,9 @@ export default function QaFmeBoard({ scopedLineNames, onOpen }) {
       if (tm == null) return;
       const st = STAGE[o.stage] || STAGE.first;
       const isLate = o.status === 'pending' && new Date(o.due_at).getTime() < now;
+      /* ⌛ expired = ข้ามกะแล้วไม่ได้ตรวจ (17/11) — สีแดงเดียวกับเกินเวลา (ไม่ได้ตรวจจริง ห้ามกลืนเป็นเทาแบบยกเลิก) */
       const color = o.status === 'cancelled' ? C.cancel
+        : o.status === 'expired' ? C.late
         : o.status === 'done_ng' ? C.ng
         : o.status?.startsWith('done') ? C.ok
         : isLate ? C.late : o.status === 'acked' ? C.acked : C.pending;
@@ -164,7 +166,8 @@ export default function QaFmeBoard({ scopedLineNames, onOpen }) {
         title: `${o.line_name} · ${o.mat_no} · ${st.label}\n`
           + `เรียกตอน ${hhmm(tm)} · ครบกำหนด ${hhmm(frameMinFromIso(o.due_at) ?? tm)}\n`
           + (isLate ? '⚠️ เกินเวลาแล้ว' : o.status === 'acked' ? '📝 กำลังตรวจ'
-            : o.status === 'cancelled' ? 'ยกเลิก' : o.status?.startsWith('done') ? 'ตรวจแล้ว' : 'รอตรวจ'),
+            : o.status === 'cancelled' ? 'ยกเลิก' : o.status === 'expired' ? '⌛ หมดเวลา — ข้ามกะแล้วไม่ได้ตรวจ'
+            : o.status?.startsWith('done') ? 'ตรวจแล้ว' : 'รอตรวจ'),
         data: { kind: 'ob', o, isLate },
       });
     });
@@ -269,6 +272,7 @@ export default function QaFmeBoard({ scopedLineNames, onOpen }) {
                       เรียกตอน {hhmm(frameMinFromIso(o.triggered_at))} {tr('· ครบกำหนด')} {hhmm(frameMinFromIso(o.due_at))}
                     </div>
                     {d.isLate && <div style={{ color: C.late, fontWeight: 700 }}>{tr('⚠️ เกินเวลาแล้ว')}</div>}
+                    {o.status === 'expired' && <div style={{ color: C.late, fontWeight: 700 }}>{tr('⌛ หมดเวลา — ข้ามกะแล้วไม่ได้ตรวจ')}</div>}
                     {o.status === 'cancelled' && o.cancel_reason && (
                       <div style={{ color: 'var(--muted)' }}>{tr('ยกเลิก:')} {o.cancel_reason}</div>
                     )}
