@@ -48,6 +48,8 @@ export function activeLabels(root) {   // ใช้ร่วมกับ FilterM
   root.querySelectorAll('select').forEach(s => { if (s.selectedIndex > 0) out.push((s.options[s.selectedIndex]?.text || '').trim()); });
   root.querySelectorAll('input[type=text], input[type=search], input:not([type])').forEach(i => { if (i.value) out.push(`"${i.value}"`); });
   root.querySelectorAll('.seg').forEach(g => { const on = g.querySelector('button.on'); if (on && on !== g.firstElementChild) out.push(on.textContent.trim()); });
+  // ชิปที่หน้าวาดเอง (ไม่ใช่ Segmented) ต้องติด aria-pressed — ไม่ติด = ตั้งค่าไว้แล้วจอไม่รู้ (18/11 · FilterMore)
+  root.querySelectorAll('button[aria-pressed="true"]').forEach(b => out.push(b.textContent.trim()));
   return out.filter(Boolean);
 }
 

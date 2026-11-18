@@ -35,6 +35,7 @@ import Page, { Hub } from '../components/Page';
    13/11 · คำสั่ง user "ยุบละย้ายเพิ่มพนักงานเข้าไปในหน้าฐานข้อมูล" */
 import RegisterEmployeeForm from './Register';
 import FilterBar from '../components/FilterBar';
+import FilterMore from '../components/FilterMore';
 import SearchInput from '../components/SearchInput';
 import { ALL, allOf } from '../utils/filterLabels';
 import useTabParam from '../utils/useTabParam';
@@ -1096,13 +1097,14 @@ export default function Operator() {
           {/* Section / Group / Team / Grade filters — UI-STANDARD 2026-09-24: FilterBar คุมขนาด/ความกว้าง select ให้แล้ว
               (เดิมต้องใส่ width:'auto' เองกัน `select{width:100%}` ของธีม) · ลำดับ ขอบเขต → ตัวกรองอื่น → ค้นหา → จำนวน/ล้าง */}
           <FilterBar style={{ marginBottom: 12 }}>
-            {[
+            {(() => { const SCOPE_SELECTS = [
               // เปลี่ยนตัวแม่ = ล้างตัวลูก (กันค้างค่าที่ไม่อยู่ใน scope ใหม่แล้วตารางว่างงงๆ)
               { label: 'Section', all: ALL.section,    value: filterSection, opts: sectionOpts, set: (v) => { setFilterSection(v); setFilterDept(''); setFilterGroup(''); } },
               { label: 'Dept',    all: ALL.dept,       value: filterDept,    opts: deptOpts,    set: (v) => { setFilterDept(v); setFilterGroup(''); } },
               { label: 'Group',   all: allOf('กลุ่ม'), value: filterGroup,   opts: groupOpts,   set: setFilterGroup },
               { label: 'Team',    all: ALL.team,       value: filterTeam,    opts: teamOpts,    set: setFilterTeam },
-            ].map(f => (
+            ];
+            const scopeSel = (f) => (
               <select key={f.label} value={f.value} onChange={e => f.set(e.target.value)}
                 style={{ color: f.value ? 'var(--text)' : 'var(--muted)' }}>
                 <option value="">{tr(f.all)}</option>
@@ -1127,8 +1129,11 @@ export default function Operator() {
                   f.opts.map(o => <option key={o} value={o}>{tr(o)}</option>)
                 )}
               </select>
-            ))}
-
+            );
+            /* 🧰 18/11 (audit Choice overload — แถบนี้เคยมี 13 control): หลัก = ส่วนงาน · แผนก · เกรด · ค้นหา
+               พับ = กลุ่ม · ทีม · ประเภทพนักงาน · Direct/Indirect (ใช้ตอนจัดข้อมูล ไม่ใช่ทุกวัน) · เปิดมาโดยตั้งค่าไว้ = กางเอง */
+            return (<>
+              {SCOPE_SELECTS.slice(0, 2).map(scopeSel)}
             {/* Grade filter chips */}
             {[
               { key: 'gold',   icon: '🥇' },
@@ -1138,7 +1143,7 @@ export default function Operator() {
               const g = EMP_GRADES[key];
               const active = filterGrade === key;
               return (
-                <button key={key} onClick={() => setFilterGrade(active ? '' : key)}
+                <button key={key} aria-pressed={active} onClick={() => setFilterGrade(active ? '' : key)}
                   style={{
                     padding: '4px 11px', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 700, cursor: 'pointer',
                     border: `1px solid ${active ? g.border : 'var(--border2)'}`,
@@ -1151,6 +1156,8 @@ export default function Operator() {
               );
             })}
 
+              <FilterMore id="emp-more-filters" defaultOpen={!!(filterGroup || filterTeam || filterStaffKind || filterLabor)}>
+              {SCOPE_SELECTS.slice(2).map(scopeSel)}
             {/* 👥 ประเภทพนักงาน (staff_kind) — **คนละแกนกับ Direct/Indirect ข้างล่าง**
                 นี่คือ "ต้องเช็คชื่อ/นับเป็นกำลังคนหน้าไลน์ไหม" (รายคน)
                 ส่วน Direct/Indirect ข้างล่าง = ประเภทแรงงานเชิงต้นทุน (derive จากแผนกในผังองค์กร) */}
@@ -1162,7 +1169,7 @@ export default function Operator() {
             ].map(t => {
               const active = filterStaffKind === t.k;
               return (
-                <button key={t.k} title={t.title} onClick={() => setFilterStaffKind(active ? '' : t.k)}
+                <button key={t.k} title={t.title} aria-pressed={active} onClick={() => setFilterStaffKind(active ? '' : t.k)}
                   style={{ padding: '4px 11px', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 700, cursor: 'pointer',
                     border: `1px solid ${active ? t.color : 'var(--border2)'}`,
                     background: active ? `${tint(t.color, 'dim')}` : 'var(--bg3)',
@@ -1180,7 +1187,7 @@ export default function Operator() {
               const m = LABOR_META[t];
               const active = filterLabor === t;
               return (
-                <button key={t} onClick={() => setFilterLabor(active ? '' : t)}
+                <button key={t} aria-pressed={active} onClick={() => setFilterLabor(active ? '' : t)}
                   style={{ padding: '4px 11px', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 700, cursor: 'pointer',
                     border: `1px solid ${active ? m.color : 'var(--border2)'}`,
                     background: active ? `${tint(m.color, 'dim')}` : 'var(--bg3)',
@@ -1190,6 +1197,8 @@ export default function Operator() {
               );
             })}
 
+              </FilterMore>
+            </>); })()}
             {/* 🔎 ค้นชื่อ/รหัส — feedback หน้างาน 23/09: "พนักงานหลักร้อย เลื่อนหาแย่เลย"
                 ใช้ normSearch ของกลาง ⇒ ทนช่องว่างซ้อน/ขีด และการสะกดไทย (ธ/ธ์ · สระ/วรรณยุกต์) */}
             <SearchInput value={empSearch} onChange={setEmpSearch} fields="ชื่อ / รหัส / ตำแหน่ง" />
