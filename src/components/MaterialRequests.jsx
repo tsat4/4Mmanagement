@@ -342,7 +342,7 @@ export default function MaterialRequests() {
     const row = templateFromEditor(editor.req, editor.items, name);
     if (!row.items.length) return toast.error('ใบนี้ยังไม่มีรายการ — ใส่รายการก่อนบันทึกเป็น template');
     const same = tpls.rows.find(t => t.name.trim().toLowerCase() === name.toLowerCase());
-    if (same && !window.confirm(`มี template ชื่อ "${same.name}" อยู่แล้ว — บันทึกทับใช่ไหม?`)) return;
+    if (same && !await askConfirm(`มี template ชื่อ "${same.name}" อยู่แล้ว — บันทึกทับใช่ไหม?`)) return;
     const res = same
       ? await supabaseDR.from('material_request_templates')
         .update({ ...row, updated_by_name: fullName || null, updated_at: new Date().toISOString() }).eq('id', same.id).select('id')
@@ -353,7 +353,7 @@ export default function MaterialRequests() {
     setTplSave(null); loadTpls();
   };
   const removeTemplate = async (t) => {
-    if (!window.confirm(`ลบ template "${t.name}"? (ใบที่ออกไปแล้วไม่กระทบ)`)) return;
+    if (!await askConfirm(`ลบ template "${t.name}"? (ใบที่ออกไปแล้วไม่กระทบ)`)) return;
     const res = await supabaseDR.from('material_request_templates')
       .update({ is_active: false, updated_by_name: fullName || null, updated_at: new Date().toISOString() }).eq('id', t.id).select('id');
     if (!checkWriteRows(res, 'ลบ template')) return;
