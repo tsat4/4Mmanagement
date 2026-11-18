@@ -1,4 +1,5 @@
 import { useState, useEffect, useContext, useRef, useMemo, startTransition, lazy, Suspense } from 'react';
+import { MoreMark } from '../components/InfoMore';
 import { orgNodeCompare, naturalCompare, sortLike } from '../utils/listOrder';
 import { Link } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
@@ -1245,9 +1246,12 @@ export default function Operator() {
               <span style={{ fontSize: 12.5, color: 'var(--blue)', fontWeight: 700 }}>
                 ยังไม่มีรูป {noPhotoCount} คน
               </span>
-              <span style={{ fontSize: 11, color: 'var(--text2)' }}>
-                เปิดแก้ไขรายคนแล้วอัปรูปได้เลย · <b>{tr('ใช้รูปนิ่ง JPG/PNG เท่านั้น (ไม่รับ GIF)')}</b> —
-                ระบบย่อ/บีบให้อัตโนมัติ ไม่ต้องย่อมาก่อน
+              {/* ย่อรูปแบบ ไม่ย่อความจริง — "ไม่รับ GIF" คือ**ข้อห้าม** ต้องอยู่บนจอ (พับแล้วคนเลือกไฟล์ผิดแล้วถูกปฏิเสธ)
+                  วิธีใช้ + เรื่องบีบรูปอัตโนมัติ = ขยายความ → tooltip · user 18/11 */}
+              <span style={{ fontSize: 11, color: 'var(--text2)' }}
+                title={tr('เปิดแก้ไขรายคนแล้วอัปรูปได้เลย · ระบบย่อ/บีบให้อัตโนมัติ ไม่ต้องย่อมาก่อน')}>
+                <b>{tr('ใช้รูปนิ่ง JPG/PNG เท่านั้น (ไม่รับ GIF)')}</b>{' '}
+                <MoreMark text={tr('เปิดแก้ไขรายคนแล้วอัปรูปได้เลย · ระบบย่อ/บีบให้อัตโนมัติ ไม่ต้องย่อมาก่อน')} />
               </span>
               <button onClick={() => setFilterNoPhoto(v => !v)}
                 style={{

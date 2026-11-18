@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef, useContext, Fragment } from 'react';
+import { MoreMark } from '../components/InfoMore';
 import { orgValues, sortLike } from '../utils/listOrder';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase, supabaseDR } from '../supabaseClient';
@@ -1076,9 +1077,11 @@ export default function Dashboard({ view = 'timeline' }) {
             <div style={{ fontSize: T(13, 20), fontWeight: 800, color: 'var(--amber)' }}>
               ⚠️ เช็คชื่อแล้ว {noShiftLogs.length} คน แต่ยังจัดเข้ากะไม่ได้ — ตัวเลขด้านล่างจึงยังไม่รวมคนกลุ่มนี้
             </div>
-            <div className="tv-hide" style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 3, lineHeight: 1.6 }}>
+            {/* รายชื่อไลน์ = ข้อเท็จจริง ต้องอยู่บนจอ · ทางแก้พับไป tooltip ได้เพราะมีปุ่ม "ไปตั้งตารางกะ" ยืนอยู่ข้างๆ แล้ว · user 18/11 */}
+            <div className="tv-hide" style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 3, lineHeight: 1.6 }}
+              title={tr('ตั้งตารางกะแล้วตัวเลขจะขึ้นเอง')}>
               ไลน์ที่ยังไม่มีตารางกะของวันที่เลือก: <b style={{ color: 'var(--text)' }}>{noShiftLineNames.join(' · ') || '—'}</b>
-              {' '}— ตั้งตารางกะแล้วตัวเลขจะขึ้นเอง
+              {' '}<MoreMark text={tr('ตั้งตารางกะแล้วตัวเลขจะขึ้นเอง')} />
             </div>
           </div>
           <button type="button" className="pg-btn sm" onClick={() => setSelectedShift('all')}>{tr('ดูรวมทุกกะ')}</button>

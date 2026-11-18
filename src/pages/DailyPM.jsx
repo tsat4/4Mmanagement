@@ -324,8 +324,11 @@ export default function DailyPM() {
                     {row.firstOrderAt && <span style={{ color: 'var(--muted)', marginLeft: 8 }}>{tr('· เริ่มผลิต')} {fmtTime(row.firstOrderAt)}</span>}
                   </div>
                   {/* 🔴 ไม่ได้ตัดสินรายเครื่อง = ต้องเขียนบอก (ใบผลิตไม่ลงเลขเครื่อง ⇒ ถอยไปตัดสินทั้งไลน์) */}
+                  {/* ⓘ นำหน้าถูกตัดออก 18/11 — ข้อความนี้โชว์เต็มอยู่แล้ว ไม่มีอะไรให้กดอ่านเพิ่ม
+                      และในระบบนี้ ⓘ แปลว่า "กดแล้วมีของให้อ่าน" ค่าเดียว (UI §6.10)
+                      🔴 คอมเมนต์ต้องอยู่ "ก่อน" `{cond && (` — วางข้างใน = 2 node = จอขาว */}
                   {amModeNote(row) && (
-                    <div style={{ marginTop: 4, fontSize: 11, color: 'var(--amber)' }}>ⓘ {amModeNote(row)}</div>
+                    <div style={{ marginTop: 4, fontSize: 11, color: 'var(--amber)' }}>{amModeNote(row)}</div>
                   )}
                   {row.status === 'pending' && dueDiffMin != null && (
                     <div style={{ marginTop: 4, fontSize: 12, fontWeight: 700, color: dueDiffMin <= 15 ? '#f59a3f' : 'var(--muted)' }}>

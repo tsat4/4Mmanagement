@@ -11815,3 +11815,58 @@ test('✍️ mo-flow-shows-pending-acks — ลายเซ็นนอกลำ
   assert.match(page, /f\.acks\?\.length > 0 &&/,
     '\n\n❌ ใบ MO เลิกวาดลายเซ็นที่ยังค้างใต้แถบขั้น — กลับไปเป็นอาการที่หน้างานแจ้ง 18/11\n');
 });
+test('📝 page-sub-folds-long-text — คำบรรยายใต้ชื่อหน้ายาวต้องพับไป tooltip ที่ PageHeader ที่เดียว', () => {
+  /* 🔴 18/11 คำสั่ง user: *"ข้อความสีเทาแบบนั้นอยากให้เป็น tooltip เพื่ออ่านมากกว่าโชว์มาเยอะๆแบบนี้"*
+     `audit/textsweep.mjs` วัดได้ **~30 หน้า หน้าละ 1 จุด** และทุกจุดคือ prop `sub=` ของ `PageHeader`
+     ⇒ แก้ที่คอมโพเนนต์กลางที่เดียว = จบทุกหน้า + กันหน้าใหม่ในอนาคต (ไล่แก้ทีละหน้าได้แค่รอบเดียว)
+     กับดักที่ต้องกัน 2 ข้อ:
+       ① วันหลังมีคนเอา `{tr(sub)}` กลับมาวาดดิบใน div ⇒ กำแพงข้อความกลับมาทั้ง 30 หน้าพร้อมกัน
+       ② พับ "คำเตือน" ลง tooltip ด้วย ⇒ จอสัมผัสชี้ไม่ได้ = เตือนแล้วไม่มีใครเห็น
+          (กฎเดียวกับ `components/InfoMore.jsx`: ⚠️ ห้ามพับ) */
+  const ph = stripComments(readFileSync(join(ROOT, 'src/components/PageHeader.jsx'), 'utf8'));
+  assert.match(ph, /<SubLine\s/,
+    '\n\n❌ PageHeader เลิกใช้ <SubLine> — คำบรรยายยาวจะกลับไปโชว์เต็มทั้ง ~30 หน้าพร้อมกัน\n');
+  /* ① ห้ามวาด sub ดิบกลับมา */
+  assert.ok(!/>\s*\{tr\(sub\)\}\s*</.test(ph),
+    '\n\n❌ มี `{tr(sub)}` วาดดิบใน element — ต้องส่งผ่าน <SubLine> เท่านั้น\n');
+  /* ② ⚠️/🔴 ต้องยังอยู่บนจอ */
+  assert.match(ph, /warns\.map\(/,
+    '\n\n❌ <SubLine> ไม่ได้วาดท่อน ⚠️ แยกออกมาแล้ว — คำเตือนถูกพับลง tooltip = จอสัมผัสไม่เห็น\n');
+  assert.match(ph, /head\.length/,
+    '\n\n❌ <SubLine> ไม่เหลือ "ท่อนแรกอยู่บนจอเสมอ" — คนเปิดหน้ามาต้องรู้ว่ามาถูกหน้าไหมโดยไม่ต้องชี้เมาส์\n');
+  /* ③ 🔴 UI-CONVENTIONS §6.10: tooltip เปล่าไม่พอ — จอสัมผัส/จอ TV ไม่มีเมาส์
+        ⇒ ท่อนที่พับต้อง "กดเปิดได้" ด้วย = ต้องผ่าน <MoreMark> ไม่ใช่ title= ลอยๆ */
+  /* 🔴 18 หน้าส่ง `sub` เป็น JSX element (ชิป/ตัวหนาข้างใน) — `String(element)` = "[object Object]"
+        เกือบพลาดเองรอบนี้ ⇒ ตรึงด่านไว้ */
+  assert.match(ph, /typeof text !== 'string'/,
+    '\n\n❌ <SubLine> ไม่กัน `sub` ที่เป็น JSX element — 18 หน้าส่ง element มา จะขึ้น "[object Object]" ใต้ชื่อเพจ\n');
+  assert.match(ph, /<MoreMark\s/,
+    '\n\n❌ <SubLine> พับข้อความด้วย title= เพียวๆ — บนแท็บเล็ตหน้างาน/จอ TV ชี้เมาส์ไม่ได้ = ข้อความหายไปเลย\n'
+    + '   ต้องใช้ <MoreMark text={…} /> (components/InfoMore.jsx) ซึ่งมีทั้ง title และปุ่มกดเปิด\n');
+});
+
+test('ⓘ more-mark-is-tappable — ⓘ ทุกตัวต้องกดเปิดได้ ไม่ใช่ tooltip เปล่า', () => {
+  /* 🔴 18/11 รอบพับข้อความทั้งระบบ (คำสั่ง user "อยากให้เป็น tooltip เพื่ออ่าน") —
+     กับดักที่เกือบพลาดเองในรอบนี้: เขียน `title=` แล้วแปะ `ⓘ` เป็นตัวหนังสือเฉยๆ
+     ⇒ บนจอคอมดูดี แต่แท็บเล็ตหน้างาน/จอ TV (ไม่มี hover) ข้อความที่พับ **หายไปเลย**
+     ซึ่งผิด UI-CONVENTIONS §6.10 ที่เขียนไว้ตั้งแต่ 21/08 ว่า "ต้องมีทางกดเปิดด้วยเสมอ"
+     ⇒ ⓘ ที่เป็นตัวหนังสือลอยในหน้า = ห้าม · ต้องมาจาก <MoreMark>/<InfoMore>/<Why> เท่านั้น */
+  const files = walk(join(ROOT, 'src/pages'), ['.jsx'])
+    .concat(walk(join(ROOT, 'src/components'), ['.jsx']));
+  const bad = [];
+  for (const f of files) {
+    const body = stripComments(readFileSync(f, 'utf8'));
+    /* ⓘ ที่อยู่ในเนื้อ JSX หรือในสตริง โดยไฟล์นั้นไม่มี MoreMark/InfoMore/Why เลย */
+    if (!/ⓘ/.test(body)) continue;
+    if (/\b(MoreMark|InfoMore|MORE_MARK|Why)\b/.test(body)) continue;
+    /* 🟢 ยกเว้นตัวเดียว: `NoticeBar` ใช้ ⓘ เป็น**ไอคอนของ tone `info`** (คู่กับ ⚠ ⛔ ✓)
+          ไม่ใช่เครื่องหมาย "กดอ่านเพิ่ม" — ข้อความในกล่องโชว์เต็มอยู่แล้ว */
+    if (relative(ROOT, f) === 'src/components/NoticeBar.jsx') continue;
+    bad.push(relative(ROOT, f));
+  }
+  assert.deepEqual(bad, [],
+    '\n\n❌ ไฟล์พวกนี้มี ⓘ เป็นตัวหนังสือ แต่ไม่ได้ใช้ของกลางที่กดเปิดได้:\n   '
+    + bad.join('\n   ')
+    + '\n\n   ⓘ = สัญญากับคนใช้ว่า "กดแล้วมีของให้อ่าน" — มีแต่ title= บนจอสัมผัสคือกดแล้วไม่มีอะไรเกิดขึ้น\n'
+    + '   แก้: <MoreMark text={…} /> จาก components/InfoMore.jsx (UI-CONVENTIONS §6.10)\n');
+});

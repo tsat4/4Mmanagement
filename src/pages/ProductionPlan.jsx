@@ -1,4 +1,5 @@
 import { useState, useEffect, useContext, useMemo, useCallback } from 'react';
+import { MoreMark } from '../components/InfoMore';
 import { useSearchParams } from 'react-router-dom';
 import { orgValues, sortLike } from '../utils/listOrder';
 import { supabase, supabaseDR } from '../supabaseClient';
@@ -789,8 +790,11 @@ export default function ProductionPlan() {
               ))}
               {late.length > show.length && <div>{tr('… อีก')} {late.length - show.length} {tr('รายการ')}</div>}
             </div>
-            <div style={{ marginTop: 3, color: 'var(--muted)', fontSize: 11.5 }}>
-              → งานพวกนี้ถูกยกมาเป็นยอดค้างของวันแรกในแผนแล้ว (ไม่ได้หายไป) — ต้องเร่ง/เพิ่มกะ หรือเลื่อนดิวกับลูกค้า
+            {/* "ไม่ได้หายไป" = คำตอบของสิ่งที่ผู้วางแผนกลัวที่สุด ⇒ อยู่บนจอ · ทางเลือกที่ทำได้ → tooltip · user 18/11 */}
+            <div style={{ marginTop: 3, color: 'var(--muted)', fontSize: 11.5 }}
+              title={tr('ต้องเร่ง/เพิ่มกะ หรือเลื่อนดิวกับลูกค้า')}>
+              → {tr('งานพวกนี้ถูกยกมาเป็นยอดค้างของวันแรกในแผนแล้ว (ไม่ได้หายไป)')}{' '}
+              <MoreMark text={tr('ต้องเร่ง/เพิ่มกะ หรือเลื่อนดิวกับลูกค้า')} />
             </div>
           </div>
         );

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef, useContext, lazy, Suspense } from 'react';
+import { MoreMark } from '../components/InfoMore';
 import { supabaseDR } from '../supabaseClient';
 import { UserContext } from '../App';
 import { can, canSeeded } from '../utils/permissions';
@@ -56,6 +57,29 @@ const StockAdjustRequestModal = lazy(() => import('../components/StockAdjustRequ
 
 const card = { background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 14 };
 const FS = 12;
+
+/* ── 📝 บรรทัดหมายเหตุใต้แถบกรอง — ย่อรูปแบบ ไม่ย่อความจริง (2026-11-18 · คำสั่ง user) ──────
+   user: *"ข้อความสีเทาแบบนั้นอยากให้เป็น tooltip เพื่ออ่านมากกว่าโชว์มาเยอะๆแบบนี้"*
+   🔴 **⚠️ ทุกท่อนอยู่บนจอเสมอ** — กฎ `components/InfoMore.jsx`: คำเตือนสถานะจริงห้ามพับ
+      (ซ่อนแล้วกลับไปผิดเงียบ ซึ่งโปรเจคนี้ห้ามที่สุด)
+   🔴 ประโยคแรกอยู่บนจอ — เป็นตัวบอกว่า "บอร์ดนี้ผูกกับอะไร" ซึ่งเปลี่ยนความหมายของทุกตัวเลขในตาราง
+   · ท่อนที่เหลือ = คำอธิบายที่มาของเลข ⇒ ไป `title=` (ขาดไปก็ยังอ่านตารางถูก)
+   · ไม่มีอะไรต้องพับ = ไม่ขึ้น ⓘ ให้รก                                                     */
+function NoteLine({ text = '', fs = 12 }) {
+  const parts = String(text).split(' · ').map(x => x.trim()).filter(Boolean);
+  const head = parts[0] || '';
+  const warns = parts.slice(1).filter(x => x.startsWith('⚠'));
+  const rest = parts.slice(1).filter(x => !x.startsWith('⚠'));
+  return (
+    <span style={{ fontSize: fs, color: 'var(--muted)', flex: '1 1 100%', minWidth: 0 }}
+      title={rest.length ? rest.join(' · ') : undefined}>
+      {head}{rest.length ? ' ' : ''}{rest.length ? <MoreMark text={rest.join(' · ')} size={fs - 1} /> : null}
+      {warns.map((w, i) => (
+        <span key={i} style={{ color: 'var(--amber)', fontWeight: 700 }}> · {w}</span>
+      ))}
+    </span>
+  );
+}
 
 export default function Monitoring() {
   const { role, fullName, section: homeSection, sections: mySections, allUnits, respCostCenters, scopeIdx } = useContext(UserContext);
@@ -686,19 +710,22 @@ export default function Monitoring() {
                 ))}
               </select>
             </label>
-            <span style={{ fontSize: FS, color: 'var(--muted)', flex: '1 1 100%', minWidth: 0 }}>
-              {/* 🔴 บอร์ด FG ไม่ผูกไลน์ แต่**ไม่ใช่** "ต้องกรอกเองทุกช่อง" — ยอดลูกค้าสั่งมาจาก
-                  EDI 862/830 · ผลิตเข้าจากใบผลิตทุกไลน์ ⇒ ต้องแยกข้อความ ไม่งั้นจอโกหก (06/10) */}
-              {isFg
-                ? (bCust
-                  ? `ผูกลูกค้า ${bCust} ⇒ ยอดยกมา = ของพร้อมส่งในคลัง FG · ลูกค้าสั่งจาก EDI 862/830 (รวมใบค้างส่งไว้คอลัมน์แรก) · ผลิตเข้านับจากใบผลิตทุกไลน์${sysNote ? ` · ${sysNote}` : ''}`
-                  : '⚠️ บอร์ด FG ใบนี้ยังไม่ผูกลูกค้า ⇒ ระบบดึงยอดลูกค้าสั่งให้ไม่ได้ — กด "📦 สร้างบอร์ด FG จากออเดอร์" ใหม่อีกครั้ง')
-                : isGreat
-                  ? `ส่งเกรท (รายสัปดาห์) ⇒ ระบบเติมของเข้าให้ · ส่งลูกค้ากรอกเอง${sysNote ? ` · ${sysNote}` : ''}${lockNote}`
-                : board?.line_name
-                  ? `ผูกไลน์ ${board.line_name} ⇒ ระบบเติมของเข้า/ออก/ขั้นต่ำให้${sysNote ? ` · ${sysNote}` : ''}${lockNote}`
-                  : 'ยังไม่ผูกไลน์ ⇒ ทุกช่องต้องกรอกเอง'}
-            </span>
+            {/* 🔴 บอร์ด FG ไม่ผูกไลน์ แต่**ไม่ใช่** "ต้องกรอกเองทุกช่อง" — ยอดลูกค้าสั่งมาจาก
+                EDI 862/830 · ผลิตเข้าจากใบผลิตทุกไลน์ ⇒ ต้องแยกข้อความ ไม่งั้นจอโกหก (06/10)
+                18/11 · user "ข้อความสีเทาแบบนั้นอยากให้เป็น tooltip มากกว่าโชว์มาเยอะๆ":
+                บรรทัดนี้เคยยาว 569 ตัวอักษร (textsweep) ⇒ แยกเป็น
+                  · ประโยคแรก (บอร์ดนี้ผูกกับอะไร) = อยู่บนจอ
+                  · ⚠️ ทุกท่อน = **อยู่บนจอเสมอ ห้ามพับ** (กฎ InfoMore: คำเตือนสถานะจริงซ่อนไม่ได้)
+                  · ท่อนที่เหลือ (อธิบายว่าเลขมาจากไหน) = ไป title */}
+            <NoteLine text={isFg
+              ? (bCust
+                ? `ผูกลูกค้า ${bCust} ⇒ ยอดยกมา = ของพร้อมส่งในคลัง FG · ลูกค้าสั่งจาก EDI 862/830 (รวมใบค้างส่งไว้คอลัมน์แรก) · ผลิตเข้านับจากใบผลิตทุกไลน์${sysNote ? ` · ${sysNote}` : ''}`
+                : '⚠️ บอร์ด FG ใบนี้ยังไม่ผูกลูกค้า ⇒ ระบบดึงยอดลูกค้าสั่งให้ไม่ได้ — กด "📦 สร้างบอร์ด FG จากออเดอร์" ใหม่อีกครั้ง')
+              : isGreat
+                ? `ส่งเกรท (รายสัปดาห์) ⇒ ระบบเติมของเข้าให้ · ส่งลูกค้ากรอกเอง${sysNote ? ` · ${sysNote}` : ''}${lockNote}`
+              : board?.line_name
+                ? `ผูกไลน์ ${board.line_name} ⇒ ระบบเติมของเข้า/ออก/ขั้นต่ำให้${sysNote ? ` · ${sysNote}` : ''}${lockNote}`
+                : 'ยังไม่ผูกไลน์ ⇒ ทุกช่องต้องกรอกเอง'} fs={FS} />
           </FilterBar>
         ) : null}
       />

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useContext, useRef } from 'react';
+import { MoreMark } from '../components/InfoMore';
 import { naturalCompare } from '../utils/listOrder';
 import {
   LineChart, Line, BarChart, Bar, ComposedChart,
@@ -52,6 +53,10 @@ import { MORE_MARK } from '../components/InfoMore';   // เครื่อง�
 import { BREAK_POLICY_COLS } from '../utils/oeeMasters';
 import NoticeBar from '../components/NoticeBar';
 import { tr as trI18n } from '../utils/i18n';
+
+/* ข้อความขยายของแถบ "ค่าสด" — ใช้ทั้งที่ title= ของบรรทัด (hover ทั้งบรรทัดบนจอคอม)
+   และที่ <MoreMark> (กดเปิดได้บนจอสัมผัส) ⇒ เขียนที่เดียว ไม่ให้ 2 ที่เพี้ยนกัน · 18/11 */
+const LIVE_MIX_NOTE = 'ค่าสด = คิดถึงเวลานี้ ตัวเลขจริงยืนยันตอนปิดกะ · OOE / TEEP / OEE จริง ด้านล่างนับเฉพาะกะที่ปิดแล้ว';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 const MonthlyReviewExport = lazy(() => import('../components/MonthlyReviewExport'));
 
@@ -1494,9 +1499,15 @@ export default function OEEAnalytics() {
           {/* 1. OEE Overview */}
           <div style={s.section}>
             <div style={s.title}>OEE OVERVIEW — {tdScopeLabel}</div>
+            {/* ย่อรูปแบบ ไม่ย่อความจริง — "มีค่าสดผสมอยู่ N กะ" ต้องอยู่บนจอ (ไม่งั้นอ่านเลขผิดว่าเป็นของปิดกะแล้ว)
+                ส่วนขยาย (ค่าจริงยืนยันตอนปิดกะ · OOE/TEEP นับเฉพาะกะปิด) พับไป tooltip · user 18/11
+                🔴 คอมเมนต์ต้องอยู่ "ก่อน" `{cond && (` — วางข้างในกลายเป็น 2 node = จอขาว (พลาดมาแล้ว 3 รอบ) */}
             {tdLiveCount > 0 && (
-              <div style={{ fontSize: 11, color: 'var(--muted)', margin: '-4px 0 8px' }}>
-                🟢 รวมค่าสดของ {tdLiveCount} กะที่ยังไม่ปิด (คิดถึงตอนนี้ · ตัวเลขจริงยืนยันตอนปิดกะ) · OOE / TEEP / OEE จริง ด้านล่างนับเฉพาะกะที่ปิดแล้ว
+              <div
+                style={{ fontSize: 11, color: 'var(--muted)', margin: '-4px 0 8px' }}
+                title={LIVE_MIX_NOTE}
+              >
+                🟢 รวมค่าสดของ {tdLiveCount} กะที่ยังไม่ปิด <MoreMark text={LIVE_MIX_NOTE} />
               </div>
             )}
             <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap', alignItems: 'center' }}>
