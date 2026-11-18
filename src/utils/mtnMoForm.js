@@ -28,6 +28,24 @@ export const CAUSE_CATS = [
   { key: 'other',     label: 'อื่นๆ' },
 ];
 
+/** ป้ายของคีย์ `cause_category` — มาจาก `CAUSE_CATS` ตัวเดียว ห้ามเขียนชื่อหมวดซ้ำที่อื่น */
+export const causeCatLabel = (key) =>
+  (CAUSE_CATS.find(c => c.key === key) || {}).label || null;
+
+/**
+ * ข้อความ "สาเหตุเกิดจาก" ของใบ — ใช้ทั้งบนจอ · ใบพิมพ์ · Excel export (18/11)
+ * รับได้ทั้งแถวดิบจากฐาน (`cause_category`/`cause_other`) และรูป camelCase ที่ loader แปลงแล้ว
+ * 🔴 คีย์ที่ไม่รู้จัก = **คืนคีย์ดิบ ห้ามกลืนเป็นค่าว่าง** — ใบเก่า/หมวดที่เพิ่มทีหลังต้องยังเห็นในรายงาน
+ * 🔴 ไม่ได้เลือกหมวดแต่พิมพ์ "อื่นๆ" ไว้ = เอาคำที่พิมพ์มาแสดง (อย่าทิ้งข้อความที่คนกรอก)
+ */
+export function causeText(src = {}) {
+  const key = String(src.cause_category ?? src.causeCategory ?? '').trim();
+  const other = String(src.cause_other ?? src.causeOther ?? '').trim();
+  if (!key) return other;
+  const base = causeCatLabel(key) || key;
+  return other ? `${base} — ${other}` : base;
+}
+
 /** งาน "สร้าง" ต้องผ่านผู้จัดการโรงงาน (ข้อความบนฟอร์ม: "MO. สร้าง ส่ง ผจก.โรงงานอนุมัติ") */
 export const needsPlantManager = (purpose) => purpose === 'build';
 

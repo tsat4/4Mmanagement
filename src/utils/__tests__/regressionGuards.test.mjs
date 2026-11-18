@@ -9441,6 +9441,122 @@ test('🧑‍🔧 mo-export-shows-real-techs — ไฟล์ Excel ของ MO
       + '   แก้: โหลดตอนกดปุ่มผ่าน loadRepairTechsFor() (src/lib/moRepairTechs.js)\n');
   }
 });
+test('↩️ mo-list-shows-resubmit — ใบที่ถูกตีกลับแล้วส่งใหม่ ต้องเห็นบนลิสต์ ไม่ใช่แค่ในใบ', () => {
+  /* why (18/11 15:38 · หน้างานแจ้ง): *"ใบ MO ไม่ได้มีคนเปิด แต่เด้งไปหาช่างเองครับ"*
+     ตรวจฐานแล้ว: 4 ใบนั้น **สร้างไว้ 09–14/11** แต่ `report_at` ถูกรีเซ็ตเป็น 18/11 15:16–15:18
+     = ลายนิ้วมือของ `resubmit()` (ตีกลับ → ส่งใหม่: status=pending · step=1 · bounce_count+1 ·
+     returned_at ถูกล้าง · report_at=ตอนนี้ เพื่อเริ่มนาฬิกา KPI ของทีมปลายทางใหม่)
+     🔴 ใบไม่ได้เกิดเอง **แต่ลิสต์ไม่มีอะไรบอกเลยว่านี่คือใบเก่าที่ส่งใหม่** ⇒ ช่างเห็นเป็นใบใหม่เอี่ยม
+        (ข้อความ "เคยถูกตีกลับ" มีอยู่แล้ว แต่อยู่ใน DetailDrawer ซึ่งต้องกดเข้าไปถึงจะเห็น)
+     🔴 `bounce_count`/`first_report_at` ต้องอยู่ใน MO_LIST_COLS ไม่งั้นป้ายไม่มีทางขึ้น (undefined เงียบๆ) */
+  const page = readFileSync(join(ROOT, 'src/pages/MtnRepair.jsx'), 'utf8');
+  const listCols = page.slice(page.indexOf('const MO_LIST_COLS'), page.indexOf('const SCOPE_OPTS'));
+  for (const col of ['bounce_count', 'first_report_at']) {
+    assert.ok(listCols.includes(`'${col}'`),
+      `\n\n❌ MO_LIST_COLS ไม่ได้ select '${col}' — ป้าย "ส่งใหม่" บนลิสต์จะไม่ขึ้นเลย\n`
+      + '   ผล: ใบเก่าที่ส่งใหม่ดูเหมือนใบเพิ่งเปิด (อาการที่หน้างานแจ้ง 18/11)\n');
+  }
+  assert.match(page, /o\.bounce_count > 0 && \(/,
+    '\n\n❌ แถวในลิสต์ไม่ได้วาดป้าย "ส่งใหม่" — ข้อมูลมีแต่ไม่มีใครเห็น\n');
+  /* ส่งใหม่ต้องรู้ว่าใครกด ไม่งั้นรอบหน้าก็ตอบหน้างานไม่ได้อีก */
+  assert.match(page, /resubmitted_by: fullName \|\| null, resubmitted_at: nowIso/,
+    '\n\n❌ resubmit() ไม่ได้เก็บว่าใครกดส่งใหม่ — คำถาม "ใบนี้ใครเปิด" จะตอบไม่ได้อีก\n');
+  /* 🔴 แจ้งเตือนต้องแยก event — ยิง mtn_reported = ช่างได้ข้อความ "มีใบแจ้งซ่อมใหม่" ทั้งที่เป็นใบเก่า
+     🔴 event ที่ edge ไม่รู้จัก = ตอบ 400 "unknown event" แล้วแจ้งเตือนหายทั้งก้อน
+        ⇒ ชื่อ event ต้องตรงกับ `supabase/functions/send-mtn-notification/index.ts` */
+  assert.match(page, /notifyMtn\(fresh, 'mtn_resubmitted'\)/,
+    '\n\n❌ ส่งใหม่ยังยิงแจ้งเตือนด้วย event ของ "ใบแจ้งซ่อมใหม่" — ช่างแยกไม่ออกว่าเป็นใบเก่า\n');
+  const edge = readFileSync(join(ROOT, 'supabase/functions/send-mtn-notification/index.ts'), 'utf8');
+  for (const spot of [/case 'mtn_resubmitted':/, /mtn_resubmitted: \{ people:/, /mtn_resubmitted: \{ t: \(v\)/]) {
+    assert.match(edge, spot,
+      '\n\n❌ edge ไม่รู้จัก event mtn_resubmitted ครบทุกจุด (case / MO_AUDIENCE / MO_INAPP)\n'
+      + '   ขาด case = ตอบ 400 unknown event ⇒ ทั้ง Telegram และกระดิ่งเงียบสนิท\n');
+  }
+});
+test('🧾 pr-group-shows-stragglers — ใบ PR ที่มีหลายรายการ ต้องบอกว่ารายการไหนตกหล่น', () => {
+  /* why (18/11 · หน้างานแจ้ง ข้อ 1): *"บาง PR เปิดหลายชิ้น ใน Vendor เจ้าเดียว —
+     ควรเพิ่มรายการใน 1 PR ได้"* · ของจริง O-MTN.2026/10-47 = **19 แถวใช้เลข PR เดียวกัน**
+     แล้ว **2 แถวไม่เคยได้เลข PO · 1 แถวไม่มี GL** ⇒ ลากทั้งใบค้างอยู่ขั้น "รอสั่ง"
+     🔴 รวมให้ดูเป็นใบเดียวได้ **แต่ห้ามสรุปสถานะรวม** — ต้องเขียนบนจอว่ารายการไหนยังไม่ครบ
+        (สรุปรวม = รายการที่ตกหล่นหายไปเงียบๆ ซึ่งคือต้นเหตุของอาการเดิม) */
+  const u = readFileSync(join(ROOT, 'src/utils/prGroups.js'), 'utf8');
+  assert.match(u, /normalizePrNo/,
+    '\n\n❌ ต้องเทียบเลข PR ด้วย normalizePrNo (เทียบสตริงดิบ = "1210 104217" กับ "1210104217" แตกเป็น 2 ใบ)\n');
+  assert.match(u, /`row:\$\{p\.id\}`/,
+    '\n\n❌ แถวที่ยังไม่มีเลข PR ต้องเป็นกลุ่มของตัวเอง — จับรวมกัน = เดาว่าเป็นใบเดียวกัน\n');
+  const c = readFileSync(join(ROOT, 'src/components/MtnPurchase.jsx'), 'utf8');
+  assert.match(c, /g\.warns\.map/,
+    '\n\n❌ การ์ดกลุ่ม PR ไม่ได้วาดคำเตือนรายการที่ตกหล่น (g.warns) — ใบจะดูเรียบร้อยทั้งที่มีแถวค้าง\n');
+  /* รับของทั้งใบ = วน RPC ทีละแถว ⇒ ล้มบางแถวต้องรายงานตามจริง */
+  assert.match(c, /รับของสำเร็จ \$\{ok\} จาก/,
+    '\n\n❌ ปุ่ม "รับของทั้งใบ" ต้องรายงานว่าสำเร็จกี่รายการเมื่อมีแถวล้ม (ห้ามบอกว่าสำเร็จทั้งใบ)\n');
+});
+test('🧾 pr-receive-needs-invoice — กดรับของต้องกรอกเลข Invoice ก่อน', () => {
+  /* why (18/11 · หน้างานแจ้ง ข้อ 2): *"ตอนรับของ ที่กดของเข้า ให้บังคับกรอก เลข Invoice"*
+     ทะเบียน PR เดิมจบที่ received_at + received_qty ⇒ ตอบไม่ได้ว่าของล็อตนี้มากับใบไหน
+     🔴 **ด่านอยู่ฝั่งจอ ไม่ใช่ฝั่ง DB** — ใส่ raise ใน RPC = แท็บที่เปิดค้างบนบันเดิลเก่า
+        กดรับของไม่ได้ทั้งโรงงานตอน deploy (RPC รับ p_invoice_no แบบ default null ไว้เพื่อการนี้)
+     🔴 ปุ่มต้อง disabled + ช่องต้องมีสัญญาณ **ห้ามปล่อยให้กดแล้วค่อยด่า** */
+  const mp = readFileSync(join(ROOT, 'src/components/MtnPurchase.jsx'), 'utf8');
+  assert.match(mp, /rpc\('mtn_pr_receive',[\s\S]{0,200}p_invoice_no/,
+    '\n\n❌ ปุ่มรับของไม่ได้ส่ง p_invoice_no เข้า RPC — เลข Invoice จะไม่ถูกเก็บเลย\n');
+  assert.match(mp, /if \(!invNo\) return toast\.error/,
+    '\n\n❌ ไม่มีด่านบังคับเลข Invoice ตอนรับของ (คำสั่งหน้างาน 18/11)\n');
+  assert.match(mp, /disabled=\{busy \|\| \(mode === 'receive' && !inv\.trim\(\)\)\}/,
+    '\n\n❌ ปุ่มยืนยันรับของยังกดได้ทั้งที่ยังไม่กรอกเลข Invoice\n');
+  assert.ok(/export const PR_COLS = '[^']*\binvoice_no\b/.test(mp),
+    '\n\n❌ invoice_no ไม่อยู่ใน PR_COLS — แถวจะอ่านเลขที่เคยกรอกไม่เห็น (undefined เงียบๆ)\n');
+});
+test('🛒 pr-queue-needs-po-col — คิวรีลิสต์ MO ต้อง select po_no ผ่าน PR_QUEUE_COLS', () => {
+  /* why (18/11 · หน้างานแจ้ง): *"3. สั่งแล้ว มี PO รอของเข้า ไม่เด้งเข้า Filter"*
+     รอบ 04/11 ย้ายเงื่อนไขขั้น ③ มาตัดสินที่ **เลข PO** (`prQueueStateOf`) แต่คิวรีลิสต์ยังเป็น
+     `select('order_id, pr_no, status')` ⇒ `p.po_no` = undefined ทุกแถว ⇒ ทุกใบตกถัง ② ·
+     **ถัง ③ ว่างตลอดกาล** · วัดจริง 18/11: PR `ordered` 17 ใบมีเลข PO ครบ 17 · ใบ MO ที่ควรอยู่ถัง ③
+     (O-MTN.2026/10-47 · 10-52 · 10-57) ไม่เคยโผล่ให้ใครเห็น
+     = คลาสบั๊ก "คอลัมน์ที่ไม่ได้ select = undefined เงียบๆ" (กฎเขียน DB ข้อ 12) */
+  const mp = readFileSync(join(ROOT, 'src/utils/mtnPurchase.js'), 'utf8');
+  assert.match(mp, /export const PR_QUEUE_COLS = '[^']*\bpo_no\b[^']*'/,
+    '\n\n❌ PR_QUEUE_COLS ต้องมี po_no — เป็นคอลัมน์ที่ prQueueStateOf() ใช้ตัดสินขั้น ③\n');
+  const page = readFileSync(join(ROOT, 'src/pages/MtnRepair.jsx'), 'utf8');
+  const sel = page.match(/from\('mtn_purchase_requests'\)\.select\(([^)]*)\)/g) || [];
+  assert.ok(sel.length, 'หาคิวรี mtn_purchase_requests ใน MtnRepair.jsx ไม่เจอ — ด่านต้องตามไปถ้าย้ายโค้ด');
+  assert.ok(sel.some(x => x.includes('PR_QUEUE_COLS')),
+    '\n\n❌ คิวรีลิสต์ใบขอซื้อไม่ได้ใช้ PR_QUEUE_COLS แล้ว (พิมพ์ชื่อคอลัมน์เอง)\n'
+    + '   ผล: ลืม po_no เมื่อไหร่ ถัง "🚚 สั่งแล้ว (มี PO) · รอของเข้า" ว่างตลอดโดยไม่มีใครรู้\n');
+  /* ตัวนับต้องมีคีย์ครบทุกค่าที่สูตรคืนได้ — ขาดคีย์ = c[st]++ บน undefined = NaN เงียบๆ */
+  assert.match(page, /const c = \{ need: 0, no_no: 0, open: 0, unknown_po: 0 \}/,
+    '\n\n❌ ตัวนับถัง PR ขาดคีย์ unknown_po — c[st]++ บน undefined = NaN แล้วเลขในวงเล็บเพี้ยนทั้งแถบ\n');
+});
+test('🔧 mo-export-shows-solution — ไฟล์ Excel ของ MO ต้องมี "วิธีการแก้ไข" + สาเหตุ', () => {
+  /* why (18/11 · หน้างานแจ้ง): *"ใน Excel ที่ Export ไม่มีวิธีการแก้ไขครับผม
+     ควรเอาวิธีการแก้ไขใส่เพิ่มครับ"*
+     ขั้น 3 (ลงมือซ่อม) เก็บ `root_cause` / `solution` / `cause_category` ไว้ครบ แต่ไฟล์ export
+     ไม่มีช่องไหนอ่านมันเลย ⇒ รายงานรายเดือนตอบได้แค่ "เสียอะไร" ไม่รู้ "แก้ยังไง" = ทำ yokoten ไม่ได้
+     🔴 **ป้ายหมวดสาเหตุต้องมาจาก `CAUSE_CATS` (`mtnMoForm.js`) ชุดเดียว** — เขียนชื่อหมวดเองในไฟล์
+        export = คีย์เพี้ยน (เคยพลาดจริงรอบนี้: เขียน `part_age` ทั้งที่ฐานใช้ `part_life`
+        ⇒ ไฟล์จะขึ้นคีย์ดิบแทนป้ายไทยทุกแถวเงียบๆ)
+     🔴 **`root_cause`/`solution` ห้ามเข้า `MO_LIST_COLS`** — เหตุผลเดียวกับ tech_main
+        (textarea ยาว · มีแต่ปุ่ม export อ่าน · คิวรีรายการยิง ~1,389 ครั้ง/วันที่เพดาน 1000 ใบ) */
+  const xl = readFileSync(join(ROOT, 'src/utils/mtnMoExportCols.js'), 'utf8');
+  for (const h of ['วิธีการแก้ไข', 'สาเหตุปัญหาที่เกิด', 'สาเหตุเกิดจาก']) {
+    assert.ok(xl.includes(`h: '${h}'`),
+      `\n\n❌ คอลัมน์ "${h}" หายจากทะเบียน MO_EXPORT_COLS แล้ว\n`
+      + '   ผล: กลับไปเป็นอาการที่หน้างานแจ้ง 18/11 — export มาแล้วไม่รู้ว่าแก้ยังไง\n');
+  }
+  assert.match(xl, /import \{ causeText \} from '\.\/mtnMoForm\.js'/,
+    '\n\n❌ ป้าย "สาเหตุเกิดจาก" ต้องมาจาก causeText() ใน mtnMoForm.js (ชุดเดียวกับ CAUSE_CATS บนฟอร์ม)\n'
+    + '   เขียนชื่อหมวดเองในไฟล์ export = คีย์เพี้ยนแล้วไฟล์ขึ้นคีย์ดิบเงียบๆ\n');
+  assert.doesNotMatch(xl, /part_age|part_life/,
+    '\n\n❌ ไฟล์ export ไม่ควรรู้จักคีย์หมวดสาเหตุเลย — ให้ causeText() แปลงให้ (ทะเบียนชุดเดียว)\n');
+  const page = readFileSync(join(ROOT, 'src/pages/MtnRepair.jsx'), 'utf8');
+  const listCols = page.slice(page.indexOf('const MO_LIST_COLS'), page.indexOf('const SCOPE_OPTS'));
+  assert.ok(listCols.length > 100, 'หา MO_LIST_COLS ไม่เจอ — ด่านนี้ต้องตามไปด้วยถ้าย้ายโค้ด');
+  for (const col of ['root_cause', 'solution']) {
+    assert.doesNotMatch(listCols, new RegExp(`'${col}'`),
+      `\n\n❌ '${col}' ถูกเติมเข้า MO_LIST_COLS แล้ว — textarea ยาวในคิวรีที่ยิง ~1,389 ครั้ง/วัน\n`
+      + '   แก้: โหลดตอนกดปุ่มผ่าน loadRepairTechsFor() (src/lib/moRepairTechs.js · คิวรีเดียวกับชื่อช่าง)\n');
+  }
+});
 /* ═══ 🔻 ตัดสต็อกตอน confirm = ลูกตรงชั้นเดียว (หลัก SAP) — 2026-11-04 ═════════════════
    บั๊กจริง: `fn_explode_child_demand` วน `where product_id = v_fg` ทั้งใบโดยไม่กรอง parent_mat
    ⇒ แถว "หลาน" ที่นอนในใบแม่ถูกตัดสต็อกด้วย + ใช้ qty_per_unit ที่เป็น "ต่อ 1 ลูก" มาคูณยอด FG

@@ -108,7 +108,8 @@ import { DeleteButton } from '../components/IconButton';
 import { MtnPrPanel, MtnGlMaster } from '../components/MtnPurchase';
 import MtnOutsourcePanel from '../components/MtnOutsource';
 import MachineRepairHistory from '../components/MachineRepairHistory';
-import { prPlacement, assignedTechsOf, joinTechs, prQueueStateOf, PR_QUEUE_META } from '../utils/mtnPurchase';
+import { prPlacement, assignedTechsOf, joinTechs, prQueueStateOf, PR_QUEUE_META, PR_QUEUE_COLS } from '../utils/mtnPurchase';
+import { ioNoOf, buildIoIndex } from '../utils/moIoNo';   // 💳 "ใบนี้ลง I/O ไหน" ตอบที่เดียว (18/11)
 import { tr as trI18n } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
 /* ตัวเลือกตัวกรองงาน PR — ลำดับตามขั้นงานจริงที่ทีม MTN เขียนมา (02/11):
@@ -249,6 +250,13 @@ const MO_LIST_COLS = [
   /* 💳 I/O (03/11 · ประชุม 02/11 ข้อ A8 "IO ขึ้นขาด") — Excel export อ่านจากแถวลิสต์ชุดนี้
      ไม่ได้ select มา = คอลัมน์ I/O ในไฟล์เป็นขีดทุกแถว · ข้อความ 12 ตัว ส่วนใหญ่ว่าง (egress ~ไม่กี่ KB) */
   'io_no',
+  /* ↩️ 18/11 — ใบที่ถูกตีกลับแล้ว "ส่งใหม่" จะถูกรีเซ็ต `report_at` เป็นเวลาที่ส่งใหม่ (นาฬิกา KPI
+     ของทีมที่เพิ่งถูกส่งให้ · `resubmit()`) ⇒ บนลิสต์มันดูเหมือน**ใบเพิ่งเปิดเมื่อกี้** ทั้งที่
+     ปัญหาเก่าหลายวัน · เคสจริง 18/11: 4 ใบที่สร้างไว้ 09–14/11 ถูกส่งใหม่ 15:16–15:18
+     แล้วเด้งขึ้นหัวลิสต์พร้อมกัน ⇒ หน้างานแจ้ง "ใบ MO ไม่ได้มีคนเปิด แต่เด้งไปหาช่างเอง"
+     🔴 2 ช่องนี้ต้องอยู่ในคิวรีลิสต์ ไม่งั้นแถวโกหกว่าเป็นใบใหม่ (ข้อมูลมีอยู่แล้ว แค่ไม่เคยขอมา)
+        int + timestamp ส่วนใหญ่ว่าง ⇒ egress ไม่กี่ KB */
+  'bounce_count', 'first_report_at',
 ].join(',');
 const SCOPE_OPTS = [{ v: 'in_line', t: 'ซ่อมในไลน์' }, { v: 'off_line', t: 'ซ่อมนอกไลน์' }];
 const CHECK_RESULTS = ['ตรวจสอบผ่าน', 'ตรวจสอบไม่ผ่าน'];
@@ -724,7 +732,9 @@ const HANDOFF_CAP = 2000;
       ).then(r => ({ data: r.rows, error: r.error ? { message: r.error } : null, truncated: r.truncated })),
       // 🛒 ใบขอซื้อที่ยังไม่ยกเลิก (ตัวกรองงาน PR · ตารางเล็ก 4 คอลัมน์) — ล้ม = ตัวกรองบอกบนจอ ไม่กลืน
       /* cap-ok: mtn_purchase_requests ทั้งตาราง 1 แถว (วัด 20/10) — โตเกิน 1000 เมื่อไหร่ต้องเปลี่ยนเป็น fetchAllRows */
-      supabaseDR.from('mtn_purchase_requests').select('order_id, pr_no, status').neq('status', 'cancelled').not('order_id', 'is', null).limit(5000),
+      /* 🔴 คอลัมน์ต้องมาจาก `PR_QUEUE_COLS` — `prQueueStateOf()` ตัดสินขั้น ③ ด้วย **เลข PO**
+         ลืม select = undefined เงียบๆ แล้วถัง "สั่งแล้ว รอของเข้า" ว่างตลอด (บั๊ก 18/11) */
+      supabaseDR.from('mtn_purchase_requests').select(PR_QUEUE_COLS).neq('status', 'cancelled').not('order_id', 'is', null).limit(5000),
     ]);
     const byOrder = {};
     (prRes.data || []).forEach(r => { (byOrder[r.order_id] || (byOrder[r.order_id] = [])).push(r); });
@@ -876,7 +886,8 @@ const HANDOFF_CAP = 2000;
     return fPr === 'waiting' ? (st === 'need' || st === 'no_no') : st === fPr;
   }, [fPr, prStateOf]);
   const prCounts = useMemo(() => {
-    const c = { need: 0, no_no: 0, open: 0 };
+    /* 🔴 ต้องมีทุกคีย์ที่ `prQueueStateOf()` คืนได้ — ขาดคีย์ = `c[st]++` บน undefined = NaN เงียบๆ */
+    const c = { need: 0, no_no: 0, open: 0, unknown_po: 0 };
     beforeWait.forEach(o => { const st = prStateOf(o); if (st) c[st]++; });
     return { ...c, waiting: c.need + c.no_no };
   }, [beforeWait, prStateOf]);
@@ -1017,6 +1028,7 @@ const HANDOFF_CAP = 2000;
         commentsBy: cmt.byOrder, commentsError: cmt.error,
         prsBy: prs.byOrder, prsError: prs.error,
         techsBy: tch.byOrder, techsError: tch.error,
+        ioIdx: buildIoIndex(machines),   // 💳 ใบที่ไม่มี I/O ของตัวเอง → ทะเบียนเครื่อง (18/11)
       });
       if (prs.error) toast.error('โหลดเลข PR ไม่ครบ — คอลัมน์เลข PR ในไฟล์เขียนกำกับไว้แล้ว');
       if (tch.error) toast.error('โหลดชื่อช่างซ่อมไม่ครบ — คอลัมน์ "ช่างซ่อมจริง" ในไฟล์เขียนกำกับไว้แล้ว');
@@ -1178,6 +1190,13 @@ const HANDOFF_CAP = 2000;
           <span className="filter-count">{shown.length} {trI18n('รายการ')}</span>
           {prIgnoresDate && <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{trI18n('· งาน PR แสดงทุกช่วงเวลา (ไม่ตัดตามวันที่)')}</span>}
           {fPr && openPrs.error && <span data-warn="1" style={{ fontSize: 11.5, color: 'var(--red)' }}>{trI18n('⚠ โหลดใบขอซื้อไม่สำเร็จ — ตัวกรองงาน PR อาจไม่ครบ')}</span>}
+          {/* 🔴 คิวรีไม่ได้ดึงเลข PO มา = ตัดสินขั้น ③ ไม่ได้ ⇒ ใบหายจากทั้ง 3 ถังเงียบๆ (บั๊ก 18/11)
+              ไม่ควรเกิดแล้ว (ผูกกับ `PR_QUEUE_COLS`) — ขึ้นเมื่อไหร่แปลว่ามีคนแก้คิวรีกลับ */}
+          {prCounts.unknown_po > 0 && (
+            <span data-warn="1" style={{ fontSize: 11.5, color: 'var(--red)' }}>
+              {trI18n('⚠ อ่านเลข PO ไม่ได้')} {prCounts.unknown_po} {trI18n('ใบ — ถัง "สั่งแล้ว รอของเข้า" ไม่ครบ')}
+            </span>
+          )}
           {/* ⬇️ Export ข้อมูล MO ของช่วงที่เลือก (06/10 · user: "ยังไม่มีระบบ export data ของ mo
               ที่เกิดขึ้นในแต่ละช่วงเดือน" — เดิมมีแต่พิมพ์ใบทีละใบ)
               ส่ง `shown` = ใบที่เห็นบนจอจริง ⇒ ไฟล์ตรงกับที่คนกรองไว้ ไม่ใช่ทั้งฐาน */}
@@ -1399,6 +1418,19 @@ function MoRow({ o, onOpen }) {
             </div>
           );
         })()}
+        {/* ↩️ ใบที่ถูกตีกลับแล้วส่งใหม่ — `report_at` ถูกรีเซ็ตเป็นเวลาที่ส่งใหม่ ⇒ แถวดูเหมือนใบใหม่เอี่ยม
+            🔴 ต้องบอก**บนแถว** ไม่ใช่แค่ในใบที่เปิดเข้าไป (เดิมเขียนไว้ใน DetailDrawer เท่านั้น
+               ⇒ ช่างที่ไล่คิวอยู่หน้าลิสต์ไม่เคยเห็น)
+            🔴 `undefined` (ไม่ได้ select มา) ≠ "ไม่เคยถูกตีกลับ" ⇒ ไม่ขึ้นป้าย ไม่ใช่ขึ้นว่า 0 */}
+        {o.bounce_count > 0 && (
+          <div title={trI18n('ใบเก่าที่ถูกตีกลับแล้วส่งใหม่ — เวลาที่เห็นคือเวลาที่ส่งใหม่ ไม่ใช่เวลาที่เปิดใบครั้งแรก')}
+            style={{ marginTop: 2, fontSize: 11, fontWeight: 700, color: 'var(--blue)',
+                     background: 'var(--blue-dim)', borderRadius: 'var(--r-xs)',
+                     padding: '1px 5px', display: 'inline-block', whiteSpace: 'nowrap' }}>
+            ↩️ {trI18n('ส่งใหม่')} ×{o.bounce_count}
+            {o.first_report_at ? ` · ${trI18n('เปิดครั้งแรก')} ${fmtDateTime(o.first_report_at)}` : ''}
+          </div>
+        )}
       </td>
       <td style={{ whiteSpace: 'nowrap' }}>
         {o.status === 'rejected' ? <span style={{ color: 'var(--muted)' }}>—</span> : <>
@@ -2517,7 +2549,7 @@ function printMoReportMtn(o, dparts = [], logo0, dlabor = [], cmt = NO_CMT, cost
 }
 
 /* ── Detail drawer ───────────────────────────────────── */
-function DetailDrawer({ order, role, allUnits = false, parts = [], mtnDepts = MTN_DEPTS, fullName, signatureUrl, improvements, supplyByMachineNo, userTeams = [], reporterScope = null, onOpenImprovement, onClose, onStep, onReload, onFillDetails }) {
+function DetailDrawer({ order, role, allUnits = false, parts = [], machines = null, mtnDepts = MTN_DEPTS, fullName, signatureUrl, improvements, supplyByMachineNo, userTeams = [], reporterScope = null, onOpenImprovement, onClose, onStep, onReload, onFillDetails }) {
   const isMobile = useIsMobile();   // 📱 ปุ่ม "ขั้นถัดไป" เกาะล่างของใบ (15/10)
   /* 🔒 ฝั่ง + ระดับตำแหน่งของคนกด — ใช้ล็อกช่องเซ็นในลูป MO (2026-10-04 · คำสั่ง user)
      🔴 ตัดสินจากข้อมูลที่บันทึกไว้จริงเท่านั้น (mtn_teams / role / sections / position)
@@ -2703,6 +2735,10 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], mtnDepts = MT
       report_at: nowIso,                                   // รีเซ็ตนาฬิกา — แผนกที่ถูกเริ่มนับใหม่
       first_report_at: o.first_report_at || o.report_at,   // เก็บเวลาเปิดครั้งแรกไว้อ้างอิง
       bounce_count: (o.bounce_count || 0) + 1,
+      /* ↩️ 18/11 — เก็บว่า "ใครกดส่งใหม่" ไว้ด้วย · เดิมไม่เก็บเลย ⇒ ตอนหน้างานถามว่า
+         "ใบนี้ใครเปิด" ตอบไม่ได้ ทั้งที่เป็นการส่งใหม่ไม่ใช่การเปิดใบ (เคสจริง 18/11 4 ใบ)
+         🔴 คนละตัวกับ `report_at` (นาฬิกา KPI ของทีมปลายทาง) และคนละคนกับ `reported_by_name` */
+      resubmitted_by: fullName || null, resubmitted_at: nowIso,
       returned_at: null, reject_reason: null, returned_from_dept: null,
       accept_at: null, accepted_by: null, repair_type: null, assigned_to: null, assigned_techs: null, assign_note: null, target_done_at: null,
       updated_at: nowIso,
@@ -2710,7 +2746,11 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], mtnDepts = MT
     const { error } = await supabaseDR.from('mtn_orders').update(upd).eq('id', o.id).eq('status', 'returned');
     if (error) { setResubBusy(false); return toast.error(error.message); }
     const { data: fresh } = await supabaseDR.from('mtn_orders').select('*').eq('id', o.id).single();
-    notifyMtn(fresh, 'mtn_reported');   // แจ้งทีมใหม่ให้มารับงาน
+    /* ↩️ 18/11 — ใบที่ถูกตีกลับแล้วส่งใหม่ **ไม่ใช่ใบแจ้งซ่อมใหม่** (หน้างานแจ้ง
+       "ใบ MO ไม่ได้มีคนเปิด แต่เด้งไปหาช่างเอง") · ข้อความบอกว่าเป็นใบเก่า + ส่งใหม่ครั้งที่เท่าไหร่
+       🔴 ต้องมีทะเบียนกฎ `mtn_resubmitted` + edge รู้จัก event นี้ก่อน ไม่งั้น edge ตอบ 400
+          "unknown event" แล้ว**แจ้งเตือนหายทั้งก้อน** (deploy edge + insert rule ไปแล้ว 18/11) */
+    notifyMtn(fresh, 'mtn_resubmitted');   // แจ้งทีมใหม่ให้มารับงาน (บอกว่าเป็นใบเก่า)
     setResubBusy(false); toast.success(`ส่งใหม่ให้ทีม ${resubDept} แล้ว`); onReload && onReload(); onClose();
   };
 
@@ -3036,8 +3076,13 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], mtnDepts = MT
       const prRes = await supabaseDR.from('mtn_purchase_requests').select('order_id, pr_no, status').eq('order_id', o.id);
       if (prRes.error) toast.error('โหลดเลข PR ของใบนี้ไม่สำเร็จ — ใบพิมพ์ใช้เฉพาะเลข PR ที่กรอกในใบ');
       const prs = prRes.data || [];
+      /* 💳 I/O (18/11 · หน้างานแจ้ง "MO ที่ส่งมาจาก Downtime จะไม่มี I/O ขึ้น ทั้งที่มีการผูกในระบบแล้ว")
+         ใบที่ระบบเปิดเองตอนกดเรียกช่าง ไม่เคยผ่านฟอร์ม ⇒ `io_no` ว่างทุกใบ แต่ทะเบียนเครื่องมีเลขอยู่
+         🔴 เติมเฉพาะ**ใบพิมพ์สด** — พิมพ์ซ้ำจาก snapshot = บันทึกเดิม ห้ามแก้ (กฎ "ใบที่มีเลขที่ = บันทึก")
+         🔴 ค่าที่กรอกในใบชนะเสมอ · ชี้ทะเบียนไม่ได้ = ว่างเหมือนเดิม (ตัดสินที่ `utils/moIoNo.js`) */
+      const ioLive = ioNoOf(o, machines).value;
       printMoReport(
-        fromSnap ? { ...snap.order, _prs: prs } : { ...o, _prs: prs },
+        fromSnap ? { ...snap.order, _prs: prs } : { ...o, _prs: prs, io_no: ioLive || o.io_no || null },
         fromSnap ? snap.parts : dparts,
         logo,
         fromSnap ? snap.labor : dlabor,
