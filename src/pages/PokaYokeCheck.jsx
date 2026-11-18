@@ -21,6 +21,7 @@ import { loadRunDays, ranOn } from '../utils/runDays';
 import NoticeBar from '../components/NoticeBar';
 import { tr } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
+import { askConfirm } from '../utils/askConfirm';
 const NO_LINES = [];
 
 /* ── Poka-Yoke Check — ทดสอบอุปกรณ์ error-proofing รายวัน/กะ (TPM · 2026-07-23) ──────
@@ -138,7 +139,7 @@ export default function PokaYokeCheck() {
     toast.success('บันทึกอุปกรณ์แล้ว'); setDEditing(null); load();
   };
   const deleteDevice = async (d) => {
-    if (!window.confirm(`ลบอุปกรณ์ "${d.name}"? (ผลทดสอบที่ผูกอยู่จะถูกลบด้วย)`)) return;
+    if (!await askConfirm(`ลบอุปกรณ์ "${d.name}"? (ผลทดสอบที่ผูกอยู่จะถูกลบด้วย)`)) return;
     const { error } = await supabase.from('pokayoke_devices').delete().eq('id', d.id);
     if (error) { toast.error(error.message); return; }
     load();

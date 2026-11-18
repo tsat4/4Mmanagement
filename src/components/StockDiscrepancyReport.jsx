@@ -24,6 +24,7 @@ import SearchInput from './SearchInput';
 import Segmented from './Segmented';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 const COLS = 'id, created_at, source, ref_id, line_name, mat_no, part_name, sent_qty, received_qty, short_qty, work_date, reported_by, note, status, proposed_outcome, proposed_by, proposed_side, proposed_at, confirmed_by, confirmed_side, resolved_at, resolved_by, resolve_note, sap_doc';
 const fmt = (v) => (v == null ? '—' : Number(v).toLocaleString());
 const dt = (iso) => (iso ? new Date(iso).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—');
@@ -88,7 +89,7 @@ export default function StockDiscrepancyReport() {
     const { d, side, sapDoc, note } = form;
     const why = confirmBlock(d, { side, sides, by: fullName });
     if (why) { toast.error(why); return; }
-    if (!window.confirm(`ยืนยัน "${OUTCOME_LABEL[d.proposed_outcome]}" ในนาม${SIDE_LABEL[side]}?\n\n${d.part_name || ''} MAT ${d.mat_no} × ${fmt(d.short_qty)} (${d.line_name})\nเสนอโดย ${d.proposed_by || '—'} (${SIDE_LABEL[d.proposed_side] || ''})`)) return;
+    if (!await askConfirm(`ยืนยัน "${OUTCOME_LABEL[d.proposed_outcome]}" ในนาม${SIDE_LABEL[side]}?\n\n${d.part_name || ''} MAT ${d.mat_no} × ${fmt(d.short_qty)} (${d.line_name})\nเสนอโดย ${d.proposed_by || '—'} (${SIDE_LABEL[d.proposed_side] || ''})`)) return;
     setBusy(d.id);
     const now = new Date().toISOString();
     const claimed = checkWriteRows(await supabaseDR.from('stock_discrepancies').update({

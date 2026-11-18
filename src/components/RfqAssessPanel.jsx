@@ -34,6 +34,7 @@ import {
   FILE_KINDS, fileKindMeta, canUploadKind, visibleFileKinds, FEASIBLE, TARGET_PRICE_FEASIBLE, ASSESS_STATUS, JOB_TYPES,
   latestAssessment, nextAssessmentRound, assessmentMissing, isClosed,
 } from '../utils/mktRfq';
+import { askConfirm } from '../utils/askConfirm';
 
 export const MKT_BUCKET = 'mkt-files';
 const nowIso = () => new Date().toISOString();
@@ -59,7 +60,7 @@ export function RfqFilesCard({ rfq, files, canEdit, canAssess, fullName, onReloa
     toast.success(`แนบ ${fileKindMeta(kind).label} แล้ว`); onReload?.();
   };
   const del = async (f) => {
-    if (!window.confirm(`ลบไฟล์ ${f.file_name || ''} (${fileKindMeta(f.kind).label})?`)) return;
+    if (!await askConfirm(`ลบไฟล์ ${f.file_name || ''} (${fileKindMeta(f.kind).label})?`)) return;
     // 🔴 ลบแถวให้สำเร็จ (นับแถว > 0) ก่อนค่อยลบไฟล์ใน storage — ไม่งั้นไฟล์หายแต่แถวยังชี้
     if (!checkWriteRows(await supabase.from('mkt_rfq_files').delete().eq('id', f.id).select('id'), 'ลบเอกสารแนบ')) return;
     removeAttachment(MKT_BUCKET, f.file_url);
@@ -127,7 +128,7 @@ export function RfqAssessCard({ rfq, assessments, canEdit, canAssess, fullName, 
   const request = async () => {
     if (latest?.status === 'draft') return toast.info(`รอบ ${latest.round} ยังอยู่ที่ IEC — ยังไม่ต้องส่งซ้ำ`);
     const round = nextAssessmentRound(assessments);
-    if (!window.confirm(`ส่ง ${rfq.rfq_no} ให้ทีม IEC ประเมินความเป็นไปได้ (รอบ ${round})?\nระบบจะเปลี่ยนสถานะเป็น "IEC/แผนกกำลังประเมิน" และแจ้งทีม IEC ในแอป`)) return;
+    if (!await askConfirm(`ส่ง ${rfq.rfq_no} ให้ทีม IEC ประเมินความเป็นไปได้ (รอบ ${round})?\nระบบจะเปลี่ยนสถานะเป็น "IEC/แผนกกำลังประเมิน" และแจ้งทีม IEC ในแอป`)) return;
     setBusy(true);
     const res = await supabase.from('mkt_rfq_assessments').insert({ rfq_id: rfq.id, round, status: 'draft', requested_by_name: fullName || null, requested_at: nowIso() }).select('id');
     if (!checkWriteRows(res, 'เปิดรอบประเมิน')) { setBusy(false); return; }

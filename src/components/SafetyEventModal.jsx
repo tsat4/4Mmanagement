@@ -7,6 +7,7 @@ import { notifyEvent } from '../utils/notifyEvent';
 import LineSelect from './LineSelect';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 /* ══ 🛡️ บันทึกเหตุการณ์ความปลอดภัย (OBEYA แกน S) · 2026-08-27 ═══════════════════
    ระบบเดิม "ไม่มีที่เก็บอุบัติเหตุเลย" — ตรวจ 2026-08-27: ไม่มีตาราง accident/incident/injury
    ตัวนี้คือทางเข้าเดียวของตาราง safety_events
@@ -49,8 +50,8 @@ export default function SafetyEventModal({ init, section, date, lineRows = [], s
     return base.some(k => k.key === f.kind) ? base : [...base, safetyKind(f.kind)];
   }, [f.kind]);
 
-  const close = () => {
-    if (dirty && !window.confirm('ยังไม่ได้บันทึก — ปิดแล้วข้อมูลที่กรอกจะหาย ยืนยันปิด?')) return;
+  const close = async () => {
+    if (dirty && !await askConfirm('ยังไม่ได้บันทึก — ปิดแล้วข้อมูลที่กรอกจะหาย ยืนยันปิด?')) return;
     onClose?.();
   };
 
@@ -114,7 +115,7 @@ export default function SafetyEventModal({ init, section, date, lineRows = [], s
   };
 
   const remove = async () => {
-    if (!window.confirm('ซ่อนเหตุการณ์นี้ออกจากบอร์ด?\nระบบไม่ลบทิ้ง (เก็บไว้ในประวัติ) แต่จะไม่ถูกนับใน KPI อีก')) return;
+    if (!await askConfirm('ซ่อนเหตุการณ์นี้ออกจากบอร์ด?\nระบบไม่ลบทิ้ง (เก็บไว้ในประวัติ) แต่จะไม่ถูกนับใน KPI อีก')) return;
     setBusy(true);
     const { data, error } = await supabase.from('safety_events')
       .update({ is_active: false }).eq('id', init.id).select('id');

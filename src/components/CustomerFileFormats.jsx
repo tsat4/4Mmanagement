@@ -25,6 +25,7 @@ import { checkWrite } from '../utils/dbWrite';
 import { FALLBACK_EDI_DICT } from '../utils/ediDetect';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 /* ช่องที่ระบบอ่านได้ — 3 ตัวแรกขาดไม่ได้ (ไม่มี = ประกอบความต้องการไม่ได้เลย) */
 const FIELDS = [
   { key: 'part', label: 'เลขพาร์ท', required: true },
@@ -106,7 +107,7 @@ export default function CustomerFileFormats({ canManage, onChanged }) {
   };
 
   const toggleActive = async (r) => {
-    if (r.is_active && !window.confirm(`ปิดใช้ "${r.name || r.code}"?\n\nไฟล์ของลูกค้าเจ้านี้จะอ่านไม่ออกจนกว่าจะเปิดกลับ (ข้อมูลที่นำเข้าไปแล้วไม่หาย)`)) return;
+    if (r.is_active && !await askConfirm(`ปิดใช้ "${r.name || r.code}"?\n\nไฟล์ของลูกค้าเจ้านี้จะอ่านไม่ออกจนกว่าจะเปิดกลับ (ข้อมูลที่นำเข้าไปแล้วไม่หาย)`)) return;
     const res = await supabaseDR.from('customer_pull_formats')
       .update({ is_active: !r.is_active }).eq('code', r.code).select('code');
     if (!checkWrite(res, 'เปลี่ยนสถานะฟอร์แมต')) return;

@@ -52,6 +52,7 @@ import { SCAN_EVENT } from '../utils/scanWedge';
 
 import SectionScopeSelect from '../components/SectionScopeSelect';
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 // fallback เมื่อ master ยังว่าง/ยังไม่ apply migration 20260819 — ตัวจริงอยู่ตาราง leave_types
 // (จัดการที่ /report แผงจองรถ OT · เลิก hardcode ตาม QC audit 2026-08-19)
 const DEFAULT_LEAVE_TYPES = ['ลากิจ', 'ลาป่วย', 'ลาพักร้อน', 'อื่นๆ'];
@@ -687,7 +688,7 @@ export default function Checkin() {
       toast.error(`${emp.name} ถูกยืมไป ${curLine}${by} แล้วในกะนี้ — ให้ไลน์นั้นกด ✕ คืนก่อน หรือรอกะถัดไป (การยืมหมดอายุเองเมื่อเปลี่ยนกะ ไม่ต้องกดคืน)`);
       return;
     }
-    if (!window.confirm(`${emp.name} ถูกยืมไป ${curLine}${by} แล้วในกะนี้\nย้ายมาช่วย ${target} แทน?`)) return;
+    if (!await askConfirm(`${emp.name} ถูกยืมไป ${curLine}${by} แล้วในกะนี้\nย้ายมาช่วย ${target} แทน?`)) return;
     const { data: moved, error: mErr } = await supabase.from('line_helpers')
       .update({ to_line_id: Number(borrowLineId), created_by_name: fullName || null })
       .eq('id', cur.id).select('id');
@@ -737,7 +738,7 @@ export default function Checkin() {
 
   const unborrowEmployee = async (emp) => {
     if (!emp._helperRowId) return;
-    if (!window.confirm(`คืน ${emp.name} กลับไลน์เดิม (${emp._helperFrom})?`)) return;
+    if (!await askConfirm(`คืน ${emp.name} กลับไลน์เดิม (${emp._helperFrom})?`)) return;
     const { error } = await supabase.from('line_helpers').delete().eq('id', emp._helperRowId);
     if (error) { toast.error('ยกเลิกยืมตัวไม่สำเร็จ: ' + error.message); return; }
     toast.success(`คืน ${emp.name} กลับไลน์เดิมแล้ว`);

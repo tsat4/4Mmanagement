@@ -4,6 +4,7 @@ import { supabase, supabaseDR } from '../supabaseClient';
 import { recompressLayouts } from '../utils/recompressLayouts';
 import { tr } from '../utils/i18n';
 import InfoMore from './InfoMore';   // ⓘ คำอธิบายพับ (UI §6.10)
+import { askConfirm } from '../utils/askConfirm';
 
 /* ══ 🗜️ ImageSqueezePanel — แผงบีบรูปที่อัปไว้แล้วทั้งระบบ ═══════════════════════════
    ย้ายมาจาก `/linesetup` (2026-09-22 · คำสั่ง user: "ฟังก์ชันปุ่มบีบอัดรูปน่าจะอยู่ที่ setting")
@@ -49,7 +50,7 @@ export default function ImageSqueezePanel({ canRun = false, onDone }) {
 
   const handleRun = async () => {
     if (busy) return;
-    if (!window.confirm(
+    if (!await askConfirm(
       'บีบรูปที่อัปไว้แล้วให้เล็กลง?\n\n'
       + 'ครอบคลุม: ผังไลน์ · ผังโรงงาน · ผังเครื่องจักร · รูปจุดตรวจ PM · รูปซ่อม MO · รูปพนักงาน\n'
       + 'ความละเอียดเท่าเดิม (ไม่เบลอ) แต่ไฟล์เล็กลงมาก — แปลงเป็น WebP\n\n'

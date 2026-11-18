@@ -13,6 +13,7 @@ import { loadCostCenterRefs, costCenterBlockMessage } from '../utils/costCenterR
 import { DeleteButton } from './IconButton';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 /* ═══ 💰 Activity Rate ต่อ Cost Center — แผงใน /org-setup (2026-08-11) ═══
    rate ที่บัญชีคำนวณ ต่อ cost center (ก้อนตาม RATE_COMPONENTS) — ใช้แปลงผล Improvement เป็น cost saving
    ลิสต์ cost center = union จากผังองค์กร (org_nodes.cost_center) + ไลน์ผลิต (production_lines.cost_center)
@@ -113,7 +114,7 @@ export default function CostCenterRatePanel({ nodes, lines }) {
 
   const handleDelete = async (r) => {
     if (!canEdit) { toast.error('ไม่มีสิทธิ์ลบ Activity Rate'); return; }
-    if (!window.confirm(`ลบ rate ${r.cost_center} (effective ${r.effective_from})?`)) return;
+    if (!await askConfirm(`ลบ rate ${r.cost_center} (effective ${r.effective_from})?`)) return;
     // นับแถวที่ลบจริงเช่นกัน — RLS ปฏิเสธ DELETE ก็เงียบแบบเดียวกับ UPDATE
     const { data: gone, error } = await supabase.from('cost_center_rates').delete().eq('id', r.id).select('id');
     if (error) { toast.error(error.code === '42501' ? 'ไม่มีสิทธิ์ลบ Activity Rate' : error.message); return; }
@@ -124,8 +125,8 @@ export default function CostCenterRatePanel({ nodes, lines }) {
   /* วัน Effective ตอนแก้แถวเดิม = ล็อกกันแก้พลาด แต่ปลดล็อกได้ (แถว seed เป็น 2000-01-01 ต้องแก้เป็นวันจริงได้)
      `_unlockDate` เป็นคีย์ client-only ขึ้นต้น `_` — handleSave เลือกฟิลด์เองอยู่แล้ว ไม่มีทางหลุดลง DB */
   const dateLocked = !!form?.id && !form._unlockDate;
-  const unlockDate = () => {
-    if (!window.confirm(
+  const unlockDate = async () => {
+    if (!await askConfirm(
       'ปลดล็อกวัน Effective?\n\n'
       + 'วันนี้บอกว่า rate แถวนี้เริ่มมีผลเมื่อไหร่ — เปลี่ยนแล้ว cost saving ของโปรเจคปรับปรุงที่คิดด้วย rate ช่วงนี้จะขยับตาม\n\n'
       + 'ถ้าเป็นการ "ปรับ rate รอบใหม่" ให้กดยกเลิก แล้วใช้ปุ่ม ＋ rate ในตารางแทน (rate เดิมเก็บไว้เป็นประวัติ)'

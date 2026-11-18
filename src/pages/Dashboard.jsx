@@ -4,6 +4,8 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase, supabaseDR } from '../supabaseClient';
 import { loadLinesRes } from '../utils/useProductionLines';
 import { motion, AnimatePresence } from 'framer-motion';
+import { stagger } from '../utils/motion';
+import { buildStatusLine } from '../utils/statusLine';
 import { UserContext } from '../App';
 import { isAlarmingDT, isOpenDT, isPlannedDT, dtElapsedMin, fmtDtElapsed } from '../utils/downtimeAlarm';
 import { sumDefectQty, computeLiveOee, ngByMatFrom, orderProducedQty, orderPlanQty, liveTimeSplit, QBIN_EMBED, halfDayBreakIntervals, halfDayBreakBands, breakBandName, breakBandTitle } from '../utils/oee';
@@ -54,8 +56,7 @@ import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-he
    เดิมการ์ดไลน์ตัดที่ 80% และเอา 4M มาปนสีมาทำงาน ⇒ ไลน์มา 91% ขึ้น "⚠ Risk" · มา 82% ขึ้น "✓ Normal" */
 const attendTone = (rate) => (rate == null ? 'none' : rate >= 90 ? 'good' : rate >= 75 ? 'warn' : 'bad');
 
-const FADE_UP = { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 } };
-const stagger = (i) => ({ ...FADE_UP, transition: { delay: i * 0.06, duration: 0.35 } });
+/* 18/11: FADE_UP/stagger ย้ายไป utils/motion.js (ของกลาง · นิ่งเองบนจอ TV / reduced-motion) */
 
 function useNow() {
   const [now, setNow] = useState(new Date());
@@ -1087,8 +1088,27 @@ export default function Dashboard({ view = 'timeline' }) {
         </div>
       )}
 
+      {/* ── 🗣 ประโยคสรุปสถานะ (18/11 · ก๊อป ERP: เล่าเป็นภาษาคน + ชี้สิ่งเดียวที่ต้องดู) — ข้อมูลชุดเดียวกับการ์ดข้างล่าง
+          จอ TV/บอร์ดใช้บัญชีกลาง ⇒ ไม่ทักทายชื่อ · ค่าที่ยังไม่รู้ถูกนับเป็น "ยังไม่มีข้อมูล" ไม่ใช่ 0 (utils/statusLine.js) */}
+      {!loading && (() => {
+        const sl = buildStatusLine([
+          { label: 'อัตราการมาทำงาน', value: attendRate, unit: '%', tone: attendRate == null ? 'none' : attendTone(attendRate), need: attendRate == null ? null : `อัตราการมาทำงาน ${attendRate}% (มา ${present.length} · ขาด ${absent.length})` },
+          { label: 'PPE ครบ', value: ppeRate, unit: '%', tone: ppeRate == null ? 'none' : ppeRate >= 90 ? 'good' : ppeRate >= 70 ? 'warn' : 'bad', need: ppeRate == null ? null : `PPE ครบแค่ ${ppeRate}% ของคนที่มา` },
+          { label: 'OT', value: otCount, unit: 'คน', tone: 'none' },
+          { label: '4M รอ', value: visibleFourMLogs.length, unit: 'รายการ', tone: toneOf({ value: visibleFourMLogs.length, zeroIsGood: true, over: 'warn' }), need: `4M รออนุมัติ ${visibleFourMLogs.length} รายการ` },
+        ], { now });
+        return (
+          <div data-tv-item style={{ marginBottom: 12, fontSize: T(14, 22), lineHeight: 1.5, color: 'var(--text2)' }}>
+            {sl.text.split(' — ').map((seg, k, arr) => (
+              <span key={k} style={k === arr.length - 1 && sl.focus ? { color: statusColor(sl.tone), fontWeight: 700 } : undefined}>
+                {k > 0 ? ' — ' : ''}{seg}
+              </span>
+            ))}
+          </div>
+        );
+      })()}
       {/* ── KPI Row ─────────────────────────────────────── */}
-      <div data-tv-item style={{ display: 'grid', gridTemplateColumns: isWide ? 'repeat(6, 1fr)' : 'repeat(auto-fit, minmax(175px, 1fr))', gap: isMobile ? 10 : 14, marginBottom: 24 }}>
+      <div data-tv-item style={{ display: 'grid', gridTemplateColumns: isWide ? 'repeat(6, 1fr)' : 'repeat(auto-fit, minmax(175px, 1fr))', gap: isMobile ? 10 : 16, marginBottom: 24 }}>
         {[
           /* 🚦 สีบนการ์ด = **สถานะเทียบเป้าเท่านั้น** (`utils/statusTone.js`) — 23/09 จาก brief De-AI UI
              เดิมแถวนี้ปนกัน 3 แบบในบรรทัดเดียวกัน: น้ำเงิน = สีประจำใบ · ส้ม = สีประจำใบ ·

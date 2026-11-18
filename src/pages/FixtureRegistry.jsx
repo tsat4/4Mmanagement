@@ -28,6 +28,7 @@ import {
 
 import NoticeBar from '../components/NoticeBar';
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 const jigImgUrl = (path) => supabaseDR.storage.from('jig-images').getPublicUrl(path).data.publicUrl;
 
 /* ═══════════════════════════════════════════════════════════════
@@ -224,7 +225,7 @@ export default function FixtureRegistry() {
     load();
   };
   const removePin = async (pid) => {
-    if (!window.confirm('ถอนหมุดของจุดนี้ออกจากรูป? (ข้อมูลชิมไม่หาย)')) return;
+    if (!await askConfirm('ถอนหมุดของจุดนี้ออกจากรูป? (ข้อมูลชิมไม่หาย)')) return;
     const res = await saveShimPointPin(pid, null, fullName);
     if (!res.ok) return toast.error(`ถอนหมุดไม่สำเร็จ: ${res.error}`);
     load();
@@ -365,7 +366,7 @@ export default function FixtureRegistry() {
   };
 
   const removePoint = async (p) => {
-    if (!window.confirm(`ปิดใช้งานจุด ${p.point_no}?\nประวัติชิมยังอยู่ครบ`)) return;
+    if (!await askConfirm(`ปิดใช้งานจุด ${p.point_no}?\nประวัติชิมยังอยู่ครบ`)) return;
     // ⚠️ RLS ปฏิเสธ UPDATE = 0 แถว ไม่มี error (กฎเหล็กข้อ 2) → ต้อง .select() แล้วนับแถว
     const { data, error } = await supabaseDR.from('fixture_points')
       .update({ is_active: false, updated_by_name: fullName || null }).eq('id', p.id).select('id');

@@ -13,6 +13,7 @@ import SearchInput from './SearchInput';
 import { DeleteButton } from './IconButton';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 const KIND_LABEL = { process: 'Process', incoming_insp: 'Incoming Insp.', storage: 'Storage', transport: 'Transport', inspection: 'Inspection', rework: 'Rework', warehouse: 'Warehouse', delivery: 'Delivery' };
 const rpnColor = (v) => (v == null ? 'var(--muted)' : v >= 100 ? '#ef4444' : v >= 70 ? '#f59e0b' : '#22c55e');
 
@@ -58,7 +59,7 @@ export default function PeMasterLibrary({ masters, masterItems, proposals, usage
       : supabase.from('pe_master_items').insert({ ...row, master_process_id: sel, created_by_name: fullName || null }));
     if (ok) setItemModal(null);
   };
-  const delItem = (it) => { if (window.confirm(`ลบ "${it.failure_mode}" ออกจาก master? (แถวในพาร์ทที่ผูกอยู่ไม่ถูกลบ แค่หลุดจาก master)`)) write('ลบรายการ', () => supabase.from('pe_master_items').delete().eq('id', it.id)); };
+  const delItem = async (it) => { if (await askConfirm(`ลบ "${it.failure_mode}" ออกจาก master? (แถวในพาร์ทที่ผูกอยู่ไม่ถูกลบ แค่หลุดจาก master)`)) write('ลบรายการ', () => supabase.from('pe_master_items').delete().eq('id', it.id)); };
 
   /* รับข้อเสนอ = ทับค่า master + version+1 (improve) หรือเพิ่มแถวใหม่ (new_item) แล้วปิดข้อเสนอ
      🔴 claim ก่อน (compare-and-swap `status='proposed'` → 'accepted' นับแถว) แล้วค่อยเขียน master (QC 05/10)
@@ -226,7 +227,7 @@ export default function PeMasterLibrary({ masters, masterItems, proposals, usage
                         <td style={{ ...tdSt, textAlign: 'right', fontWeight: 800, color: rpnColor(rpnOf(it)) }}>{rpnOf(it) ?? '—'}</td>
                         <td style={tdSt}>v{it.version}</td>
                         <td style={{ ...tdSt, fontSize: 11 }}>{it.origin_set_id ? (setById[it.origin_set_id]?.part_no || '—') : '—'}</td>
-                        <td style={{ ...tdSt, whiteSpace: 'nowrap' }}>{canApprove && <><button className="tbtn" style={{ ...ghost, padding: '2px 7px' }} onClick={() => setItemModal({ ...it, severity: it.severity ?? '', occurrence: it.occurrence ?? '', detection: it.detection ?? '' })}>✏️</button> <DeleteButton onClick={() => delItem(it)} title={tr('ลบ')} /></>}</td>
+                        <td style={{ ...tdSt, whiteSpace: 'nowrap' }}>{canApprove && <><button className="tbtn" style={{ ...ghost, padding: '2px 7px' }} onClick={() => setItemModal({ ...it, severity: it.severity ?? '', occurrence: it.occurrence ?? '', detection: it.detection ?? '' })}>✏️</button> <DeleteButton onClick={async () => await delItem(it)} title={tr('ลบ')} /></>}</td>
                       </tr>
                     ))}</tbody>
                   </table>

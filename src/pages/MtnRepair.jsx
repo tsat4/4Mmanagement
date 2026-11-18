@@ -61,6 +61,7 @@ import Page from '../components/Page';
 import FilterBar from '../components/FilterBar';
 import TimeRangeBar from '../components/TimeRangeBar';
 import Segmented from '../components/Segmented';
+import FilterMore from '../components/FilterMore';
 import SearchInput from '../components/SearchInput';
 import useTimeRange from '../utils/useTimeRange';
 import fetchAllRows from '../utils/fetchAllRows';
@@ -109,6 +110,7 @@ import MtnOutsourcePanel from '../components/MtnOutsource';
 import MachineRepairHistory from '../components/MachineRepairHistory';
 import { prPlacement, assignedTechsOf, joinTechs, prQueueStateOf, PR_QUEUE_META } from '../utils/mtnPurchase';
 import { tr as trI18n } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 /* ตัวเลือกตัวกรองงาน PR — ลำดับตามขั้นงานจริงที่ทีม MTN เขียนมา (02/11):
      ① รอเปิด PR → ② เปิด PR (กรอก IO/GL แล้วได้เลขจาก SAP) → ③ รอสั่ง/รอของ
    🔴 `waiting` = ผลรวมของ ①+② — **ซ่อนจาก dropdown แต่ห้ามถอดออกจากลิสต์**
@@ -422,8 +424,8 @@ function ImgField({ label, value, onPick, required }) {
 /* ⚠️ backdrop **ไม่มี onClick โดยตั้งใจ** — ฟอร์มขั้น 1-7 ยาว เผลอแตะข้างนอกแล้วปิด = กรอกใหม่ทั้งใบ
    (UI-CONVENTIONS §5 · ห้ามเติม onClick={onClose} ที่ div ชั้นนอก)
    ส่วน ✕ / ยกเลิก เป็นการกดที่ "ตั้งใจ" → ถามยืนยันเมื่อกรอกอะไรไปแล้ว (prop `dirty`) */
-function confirmDiscard() {
-  return window.confirm('ปิดหน้าต่างนี้? ข้อมูลที่กรอกไว้ยังไม่ได้บันทึก — จะหายทั้งหมด');
+async function confirmDiscard() {
+  return await askConfirm('ปิดหน้าต่างนี้? ข้อมูลที่กรอกไว้ยังไม่ได้บันทึก — จะหายทั้งหมด');
 }
 /* fetchAllRows เคยเป็นสำเนาในหน้านี้ — ย้ายไปของกลาง `src/utils/fetchAllRows.js` แล้ว (ห้ามก๊อปกลับ) */
 
@@ -432,7 +434,7 @@ function confirmDiscard() {
 const IO_DIGITS = MO_IO_DIGITS;
 
 function ModalShell({ title, onClose, children, wide, dirty }) {
-  const askClose = () => { if (dirty && !confirmDiscard()) return; onClose(); };
+  const askClose = async () => { if (dirty && !await confirmDiscard()) return; onClose(); };
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 3000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', overflowY: 'auto', padding: '4vh 2vw' }}>
       <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', width: wide ? 'min(96vw, 1200px)' : 'min(96vw, 640px)', maxHeight: '92vh', overflowY: 'auto' }}>
@@ -1127,12 +1129,17 @@ const HANDOFF_CAP = 2000;
             <b> {trI18n('เวลาที่กดแจ้ง')}</b> {trI18n('(เช้า 08:00–19:59 · ดึก 20:00–07:59) — ใบที่แจ้งย้อนหลังจะตกกะตามเวลาที่กด ไม่ใช่กะที่เครื่องเสียจริง')}</InfoMore>}
         >
           <select value={fDept} onChange={e => setFDept(e.target.value)}><option value="">{trI18n(ALL.unit)}</option><TeamOpts list={mtnDepts} /></select>
-          {/* dropdown ไลน์ = <LineSelect> เท่านั้น (UI-CONVENTIONS §5.3 ข้อ 9) — scopedLineObjs กรอง scope ไว้แล้ว · 2026-09-07 */}
-          <LineSelect lines={scopedLineObjs} value={fLine} onChange={setFLine} placeholder={ALL.line} />
           <select value={fStatus} onChange={e => setFStatus(e.target.value)}>
             <option value="all">{trI18n(ALL.status)}</option><option value="open">{trI18n('ยังไม่ปิด')}</option>
             {Object.entries(STATUS_META).map(([k, m]) => <option key={k} value={k}>{stripIcon(trI18n(m.label))}</option>)}
           </select>
+          {/* 🧰 18/11 (audit Choice overload — แถบนี้เคยมี 25 control): ตัวกรองหลักที่ใช้ทุกวัน = หน่วยงาน · สถานะ · ค้นหา
+              ที่เหลือ (ไลน์ · กะ · ประเภท · รอขั้น · งาน PR · เอกสาร MO) อยู่หลัง "ตัวกรองเพิ่มเติม" — กางเองเมื่อเปิดมาโดยตั้งค่าไว้แล้ว
+              (ลิงก์จากกระดิ่ง/คิวงานส่ง ?pr= ?wait= ?doc=) · สัญญาณเหลืองของ PR/เอกสารค้างย้ายไปอยู่ที่ปุ่ม ไม่หายไปกับการพับ */}
+          <FilterMore id="mo-more-filters" defaultOpen={!!(fLine || fShift || fRepairType || fWait || fPr || fDoc)}
+            attention={prCounts.waiting && !fPr ? `${trI18n('งาน PR รอ')} ${prCounts.waiting}` : (docPending.known && docPending.n > 0 && !fDoc ? `${trI18n('รอเพิ่มรายละเอียด')} ${docPending.n}` : null)}>
+          {/* dropdown ไลน์ = <LineSelect> เท่านั้น (UI-CONVENTIONS §5.3 ข้อ 9) — scopedLineObjs กรอง scope ไว้แล้ว · 2026-09-07 */}
+          <LineSelect lines={scopedLineObjs} value={fLine} onChange={setFLine} placeholder={ALL.line} />
           {/* กะ = 3 ตัวเลือก ⇒ <Segmented> ไม่ใช่ dropdown (UI-STANDARD §3) */}
           <Segmented value={fShift} onChange={setFShift} label={trI18n('กะที่แจ้ง')} options={SHIFT_OPTIONS} />
           {/* ประเภทงานซ่อมมาจากทะเบียน `mtn_repair_types` — ห้าม hardcode BM/PM ในหน้า */}
@@ -1165,6 +1172,7 @@ const HANDOFF_CAP = 2000;
               </option>
             </select>
           )}
+          </FilterMore>
           <SearchInput value={fText} onChange={setFText} fields="เลข MO / เครื่อง / ปัญหา / ชื่อผู้แจ้ง / ช่างที่รับงาน" />
           <span className="spacer" />
           <span className="filter-count">{shown.length} {trI18n('รายการ')}</span>
@@ -1480,7 +1488,7 @@ function ReportModal({ lines, lineLoadErr = '', onReloadLines, machines, machine
   const [dirty, setDirty] = useState(false);
   const set = (k, v) => { setDirty(true); setF(p => ({ ...p, [k]: v })); };
   const pickBefore = (file) => { setDirty(true); setBeforeFile(file); };
-  const tryClose = () => { if (!dirty || confirmDiscard()) onClose(); };
+  const tryClose = async () => { if (!dirty || await confirmDiscard()) onClose(); };
   /* แผนก/ส่วนงาน อ่านจากผังองค์กร (org_nodes) — dept_section เป็นคีย์ scope ของ orderInReporterScope()
      พิมพ์เองผิดตัวเดียว = ใบหลุด/เข้า scope คนอื่นเงียบๆ (audit 2026-09-07) · ผังว่าง = ถอยไป section ของไลน์ */
   const orgSections = useOrgSections();
@@ -2638,7 +2646,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], mtnDepts = MT
     }
     /* ✍️ ช่องเซ็น 4 ฟอร์ม MTN — ผจก.ส่วนซ่อมบำรุง กดรับทราบเอง (13/11 · คำสั่ง user) */
     if (kind === 'mtn_mgr') {
-      if (!confirmSign({
+      if (!await confirmSign({
         what: 'รับทราบใบ MO (ผจก.ส่วนซ่อมบำรุง)',
         orderNo: o.mo_no || o.id,
         actor: fullName || '—',
@@ -2659,7 +2667,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], mtnDepts = MT
     }
     /* 🔴 ถามยืนยันก่อนเสมอ — ลายเซ็นเป็น one-way เซ็นแล้วเจ้าตัวแก้เองไม่ได้
        (คำสั่ง user 28/10: "กดพลาดคือพลาดเลย") · ข้อความต้องบอกว่าเซ็นอะไร ใบไหน ในนามใคร */
-    if (!confirmSign({
+    if (!await confirmSign({
       what: kind === 'dept' ? 'อนุมัติใบ MO (ผู้จัดการต้นสังกัด)' : 'อนุมัติใบ MO (ผจก.โรงงาน)',
       orderNo: o.mo_no || o.id,
       actor: fullName || '—',
@@ -2901,7 +2909,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], mtnDepts = MT
     const tw = canWriteTeam(userTeams, o.mtn_dept, { role, allUnits });
     if (!tw.ok && !ownCancel) { toast.info(teamBlockText(tw, 'ใบแจ้งซ่อมของทีมนี้')); return; }
     if (removeMode === MO_REMOVE_DELETE) {
-      if (!confirm(`ลบใบแจ้งซ่อมนี้?\n\n${removeWhy}`)) return;
+      if (!await askConfirm(`ลบใบแจ้งซ่อมนี้?\n\n${removeWhy}`)) return;
       /* 🔴 นับแถวที่ลบได้ก่อน ค่อยลบรูปใน storage — เช็คแค่ `error` แล้วลบรูปไปก่อน
          = RLS ปฏิเสธเงียบ (0 แถว ไม่มี error) แถวยังอยู่แต่รูปหายถาวร (กฎเหล็กข้อ 2) */
       /* 🔗 ด่านชั้น DB: FK `mtn_order_handoffs.to_order_id` เป็น `on delete restrict` (11/11)
@@ -3335,6 +3343,23 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], mtnDepts = MT
       {(() => { const f = moFlow(o); return (
         <div style={{ marginBottom: 12, padding: '10px 12px 8px', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--bg2)' }}>
           <StepFlow steps={f.steps} waiting={f.waiting} unknown={!f.known} />
+          {/* ✍️ ลายเซ็นที่อยู่ "นอกลำดับขั้น" (18/11 · หน้างานแจ้ง)
+              🔴 แถบขั้นบอกว่าเหลือขั้นเดียว แต่ยังค้างลายเซ็นไม่ล็อกงานอีก 2 ช่องที่ไม่โผล่ที่ไหนเลย
+                 ⇒ คนอ่านแถบคิดว่าใบใกล้จบ · คำ user: "ขั้นไม่บล็อกงานไม่มีบอกเลย"
+              🔴 **ห้ามยัดเป็นขั้นในแถบ** — ช่องพวกนี้ไม่ใช่ขั้น (ยัดแล้วทุกจอที่ไล่คิวด้วยเลขขั้นเพี้ยนตาม)
+                 กฎว่าใบนี้มีช่องไหนบ้าง/เซ็นหรือยัง อยู่ที่ `moPendingAcks()` ห้ามตัดสินในหน้า */}
+          {f.acks?.length > 0 && (
+            <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px dashed var(--border)', fontSize: 11.5, lineHeight: 1.7 }}>
+              {f.acks.map(a2 => (
+                <div key={a2.key} style={{ color: a2.done ? 'var(--muted)' : 'var(--amber)' }}>
+                  {a2.done ? '✔' : '✍️'} {trI18n(a2.label)}
+                  {a2.done
+                    ? <span> — {trI18n('เซ็นแล้ว')}</span>
+                    : <b> — {trI18n('ยังไม่เซ็น (ไม่ล็อกงาน — ปิดใบได้ แต่เอกสารยังไม่ครบ)')}</b>}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       ); })()}
       <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
@@ -3775,7 +3800,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
   const [dirty, setDirty] = useState(false);
   const touch = () => setDirty(true);
   const set = (k, v) => { touch(); setF(p => ({ ...p, [k]: v })); };
-  const tryClose = () => { if (!dirty || confirmDiscard()) onClose(); };
+  const tryClose = async () => { if (!dirty || await confirmDiscard()) onClose(); };
   /* ขั้นไหนต้องเซ็น + เซ็นลงคอลัมน์ไหน — ผูกกับ **stage** ไม่ใช่เลขขั้น (เลขทับกัน 2 ฟอร์ม)
      ⚠️ ต้องตรงกับ resolveSign() ในตัวบันทึกเสมอ — ไม่ตรง = ปุ่มไม่มีช่องเซ็นแต่บันทึกขอลายเซ็น
         (เคยหลุดจริง 22/09: ขั้นปิดใบของฟอร์ม MTN ตกจากลิสต์ ⇒ คนที่ไม่มีลายเซ็นในโปรไฟล์ปิดใบไม่ได้) */
@@ -3920,7 +3945,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
         const _stage = stageOf(step, { mtnForm: isMtnForm });
         const _meta = stepMeta(step, { mtnForm: isMtnForm, toolTeam: isToolTeamOrder(o) });
         if (skipQa) {
-          if (!confirmSign({
+          if (!await confirmSign({
             what: 'ข้าม QA — บันทึกว่า "ไม่ต้องให้ QA ตรวจ"',
             orderNo: o.mo_no || o.id, actor: fullName || '—', as: 'ผู้ตัดสินว่าไม่เกี่ยวกับคุณภาพ',
             effect: 'ใบข้ามขั้น QA ไปขั้นถัดไปทันที',
@@ -3943,7 +3968,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
             return toast.error(moCloseGateText(_gate));
           }
           const _isClose = _stage === 'close' || _stage === 'cost_mgr_close';
-          if (!confirmSign({
+          if (!await confirmSign({
             what: `ขั้น ${step}: ${_meta?.title || _stage}`,
             orderNo: o.mo_no || o.id, actor: fullName || '—', as: _meta?.whoShort || _meta?.who || null,
             effect: _isClose ? 'ปิดใบ MO ใบนี้' : null,
@@ -4626,7 +4651,7 @@ function MasterTab({ techs, parts, problemTypes, itemTypes, repairTypes = [], la
     for (const r of rows) { const k = teamKeyOf(r.mtn_dept) || ''; byTeam[k] = (byTeam[k] || 0) + 1; }
     const brk = Object.entries(byTeam).sort((a, b) => b[1] - a[1])
       .map(([k, n]) => `   · ${k ? (deptNameOf(k) || k) : 'ไม่ระบุทีม'} ${n} ใบ`).join('\n');
-    const okGo = confirm(
+    const okGo = await askConfirm(
       `มีใบแจ้งซ่อม ${count} ใบที่บันทึกค่าเดิมไว้ว่า "${oldV}"\n${brk}\n\n` +
       (Object.keys(byTeam).length > 1 ? `⚠️ ใบเหล่านี้อยู่หลายทีม — แก้แล้วประวัติของทุกทีมข้างบนเปลี่ยนตาม\n\n` : '') +
       `[ตกลง] = แก้ใบเหล่านั้นเป็น "${newV}" ด้วย → KPI/พาเรโต้รวมเป็นกลุ่มเดียว\n` +
@@ -4641,7 +4666,7 @@ function MasterTab({ techs, parts, problemTypes, itemTypes, repairTypes = [], la
      เป็น "ทางผ่านเดียว" ซึ่งไม่จริง delRow เป็นอีกประตู) */
   const delRow = async (table, id) => {
     if (!deptRowGuard(table, id)) return;
-    if (!confirm('ลบรายการนี้?')) return;
+    if (!await askConfirm('ลบรายการนี้?')) return;
     const { error } = await supabaseDR.from(table).update({ is_active: false }).eq('id', id); if (error) return toast.error(error.message); reload(); };
 
   // ── ช่าง (มี dept) — ช่าง = พนักงานทีมช่าง (จากฐาน employees, แก้ที่หน้าพนักงาน) + ช่างเฉพาะกิจเดิม (mtn_technicians) ──
@@ -4767,7 +4792,7 @@ function MasterTab({ techs, parts, problemTypes, itemTypes, repairTypes = [], la
         : 'รายการนี้ทุกทีมใช้ร่วมกัน — แก้ได้เฉพาะหัวหน้า (แก้ทีเดียวกระทบทุกทีม)';
     };
     // เปลี่ยนทีมของแถว = ของหายจากลิสต์ทีมเดิมทันที → ต้องบอกก่อนเสมอ ห้ามเงียบ
-    const changeTeam = (it, v) => {
+    const changeTeam = async (it, v) => {
       const from = teamKeyOf(it.team), to = teamKeyOf(v) || null;
       if (from === to) return;
       const msg = !from
@@ -4775,7 +4800,7 @@ function MasterTab({ techs, parts, problemTypes, itemTypes, repairTypes = [], la
         : to
           ? `ย้าย "${it[fields[0].k]}"\nจากทีม "${teamNameOf(from)}" → "${teamNameOf(to)}"\n\n→ ทีมเดิมจะไม่เห็นรายการนี้อีก`
           : `เปลี่ยน "${it[fields[0].k]}" เป็นของกลาง (ทุกทีมใช้ร่วมกัน)\n\n→ ทุกทีมจะเห็นรายการนี้ และแก้ได้เฉพาะหัวหน้า`;
-      if (!confirm(msg + '\n\nยืนยัน?')) return;
+      if (!await askConfirm(msg + '\n\nยืนยัน?')) return;
       updRow(table, it.id, { team: to });
     };
 
@@ -4885,7 +4910,7 @@ function MasterTab({ techs, parts, problemTypes, itemTypes, repairTypes = [], la
               if (col) await cascadeRename(col, ov, nv);
             } : undefined} style={{ ...inp, ...(ok ? null : ro), width: '100%', minWidth: 0 }} />)}
             {teamed && (
-              <select value={it.team || ''} disabled={!ok} onChange={e => changeTeam(it, e.target.value)}
+              <select value={it.team || ''} disabled={!ok} onChange={async e => await changeTeam(it, e.target.value)}
                 title={ok ? trI18n('ทีมที่ใช้รายการนี้') : lockNote(it)} style={{ ...inp, ...(ok ? null : ro), width: '100%', minWidth: 0 }}>
                 <option value="">{trI18n('ใช้ร่วมทุกทีม')}</option>
                 {teamOpts.map(t => <option key={t.key} value={t.key}>{t.icon || ''} {t.dept_name || trI18n(t.label)}</option>)}
@@ -4965,7 +4990,7 @@ function MasterTab({ techs, parts, problemTypes, itemTypes, repairTypes = [], la
     const tw = canWriteTeam(userTeams, t?.key || t?.dept_name, { role, allUnits });
     if (!tw.ok) { toast.info(teamBlockText(tw, 'เลขเอกสารของทีมนี้')); return; }
     const c = (code || '').trim().toUpperCase(); if (!c || c === (t.mo_code || '')) return;
-    if (!window.confirm(`เปลี่ยนรหัสทีม ${t.dept_name}: ${t.mo_code || '(ว่าง)'} → ${c}\n\n`
+    if (!await askConfirm(`เปลี่ยนรหัสทีม ${t.dept_name}: ${t.mo_code || '(ว่าง)'} → ${c}\n\n`
       + `⚠️ ตัวนับเลขรันผูกกับรหัส — เปลี่ยนแล้วเลขจะ**เริ่มใหม่จาก 1** (ตอนนี้อยู่ที่ ${t.last_seq})\n`
       + 'และเลขใหม่อาจซ้ำกับใบเก่าที่ออกไปแล้ว · ยืนยันหรือไม่?')) { loadMoSeq(); return; }
     const { error } = await supabaseDR.from('mtn_teams').update({ mo_code: c }).eq('id', t.id);

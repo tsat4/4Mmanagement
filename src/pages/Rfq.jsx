@@ -34,6 +34,7 @@ import { inp, card, btn, ghost, thSt, tdSt, Field, Pill, Modal, WarnBar } from '
 import { DeleteButton } from '../components/IconButton';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 /* ═══════════════════════════════════════════════════════════════════════════
    💼 RFQ / เสนอราคา — Marketing (Q-neX เฟส 1) — /rfq · 2026-10-30
    แบบเต็ม: docs/MARKETING-QNEX-DESIGN.md · กฎโมดูล: docs/modules/mkt-rfq.md
@@ -181,7 +182,7 @@ export default function Rfq() {
   };
   const delRfq = async (r) => {
     if (awardOf[r.id]) return toast.info('RFQ นี้มีผลตัดสินแล้ว — ลบไม่ได้ ให้เปลี่ยนสถานะเป็น "ยกเลิก" แทน');
-    if (!window.confirm(`ลบ ${r.rfq_no} (${r.customer || '—'}) พร้อมพาร์ททั้งหมด?`)) return;
+    if (!await askConfirm(`ลบ ${r.rfq_no} (${r.customer || '—'}) พร้อมพาร์ททั้งหมด?`)) return;
     if (!checkWriteRows(await supabase.from('mkt_rfqs').delete().eq('id', r.id).select('id'), 'ลบ RFQ')) return;
     toast.success('ลบแล้ว'); setRfq(''); loadAll();
   };
@@ -213,7 +214,7 @@ export default function Rfq() {
     toast.success('บันทึกพาร์ทแล้ว'); setPartModal(null); loadParts(rfq.id);
   };
   const delPart = async (p) => {
-    if (!window.confirm(`ลบพาร์ท ${p.part_no}?`)) return;
+    if (!await askConfirm(`ลบพาร์ท ${p.part_no}?`)) return;
     if (!checkWriteRows(await supabase.from('mkt_rfq_parts').delete().eq('id', p.id).select('id'), 'ลบพาร์ท')) return;
     toast.success('ลบแล้ว'); loadParts(rfq.id);
   };

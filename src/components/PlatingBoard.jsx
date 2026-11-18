@@ -23,6 +23,7 @@ import {
 } from '../utils/plating';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 /* ═══ 🧪 งานชุบภายนอก — แท็บในตู้ Kanban รวม (/heijunka) · 2026-10-13 คำสั่ง user
 
    ลำดับงานจริง (user 13/10 · ตัวอย่าง GOR 297):
@@ -218,7 +219,7 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
   const [woReason, setWoReason] = useState('');
   const doWriteoff = async (g) => {
     if (!woReason.trim()) { toast.error('ต้องใส่เหตุผลการตัดยอด'); return; }
-    if (!window.confirm(`ตัดยอดค้างที่ ${g.vendor} ทั้งหมด ${fmt(g.open)} ชิ้น (${g.orders} ใบ)?\nย้อนไม่ได้ — ใบจะถูกปิด`)) return;
+    if (!await askConfirm(`ตัดยอดค้างที่ ${g.vendor} ทั้งหมด ${fmt(g.open)} ชิ้น (${g.orders} ใบ)?\nย้อนไม่ได้ — ใบจะถูกปิด`)) return;
     const ok = await rpc(`wo|${g.vendor}`, 'plating_writeoff', { p_vendor: g.vendor, p_order_ids: null, p_reason: woReason.trim(), p_by: by() },
       (d) => `✂️ ตัดยอดค้าง ${g.vendor} ${fmt(d?.qty)} ชิ้น (${d?.orders} ใบ)`);
     if (ok) { setWoFor(null); setWoReason(''); }

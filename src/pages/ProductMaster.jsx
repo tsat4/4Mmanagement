@@ -72,6 +72,7 @@ import { fetchAllRows } from '../utils/fetchAllRows';          // ทะเบ�
 import { fetchAllPages } from '../utils/fetchByIds';            // คิวรีที่ต้องการ shape เอง (bom_items)
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 import TabBar from '../components/TabBar';   // แถบเลือกมุมมอง = แท็บเส้นใต้มาตรฐาน (UI §6.36 ข้อ 0)
+import { askConfirm } from '../utils/askConfirm';
 // วันที่ local (ห้าม toISOString — UTC เพี้ยนก่อน 07:00 ไทย)
 const localDateStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
 
@@ -650,7 +651,7 @@ export default function ProductMaster() {
   const handleDelete = async (id) => {
     const row = items.find(i => i.id === id);
     if (!pGuard(row?.line_name, `สินค้า ${row?.mat_no || row?.name || ''}`)) return;   // ชั้นที่ 3
-    if (!window.confirm('ปิดใช้งานสินค้านี้?\n\nสินค้าจะถูกซ่อนจากรายการ แต่เก็บประวัติไว้ (เปิดกลับได้จากปุ่ม "แสดงประวัติ")')) return;
+    if (!await askConfirm('ปิดใช้งานสินค้านี้?\n\nสินค้าจะถูกซ่อนจากรายการ แต่เก็บประวัติไว้ (เปิดกลับได้จากปุ่ม "แสดงประวัติ")')) return;
     const { error } = await supabaseDR.from('dr_products').update({ is_active: false }).eq('id', id);
     if (error) { toast.error(error.message); return; }
     toast.success('ปิดใช้งานสินค้าแล้ว');
@@ -693,7 +694,7 @@ export default function ProductMaster() {
     load();
   };
   const handleKanbanDelete = async (id) => {
-    if (!window.confirm('ลบ Kanban Standard นี้?')) return;
+    if (!await askConfirm('ลบ Kanban Standard นี้?')) return;
     const { error } = await supabaseDR.from('kanban_standards').delete().eq('id', id);
     if (error) { toast.error(error.message); return; }
     if (!error) invalidateTable('kanban_standards');   // ล้าง cache master (2026-09-15)
@@ -1819,7 +1820,7 @@ function OpStepsPanel({ parent, products, bomIx, parentKids, canEdit, guard, ful
   };
   const remove = async (op, row) => {
     if (!guard?.(`ของที่ขั้น ${op.mat_no} กิน`)) return;
-    if (!window.confirm(`เอา ${row.mat_no} ออกจาก "ของที่ขั้น ${op.mat_no} กิน"?\n\n(ไม่แตะ BOM ของแม่ ${parent.mat_no})`)) return;
+    if (!await askConfirm(`เอา ${row.mat_no} ออกจาก "ของที่ขั้น ${op.mat_no} กิน"?\n\n(ไม่แตะ BOM ของแม่ ${parent.mat_no})`)) return;
     setBusy(true);
     const res = await supabaseDR.from('bom_items').delete().eq('id', row.id).select('id');
     setBusy(false);
@@ -2476,7 +2477,7 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
     if (!pickerParent) {
       const willDup = rows.map(r => ({ mat: r.mat_no, under: deepMats.get((r.mat_no || '').trim().toUpperCase()) }))
         .filter(x => x.under);
-      if (willDup.length && !window.confirm(
+      if (willDup.length && !await askConfirm(
         `⚠️ ${willDup.length} รายการนี้อยู่ในชั้นลึกของใบนี้อยู่แล้ว:\n\n` +
         willDup.map(x => `• ${x.mat} — อยู่ใต้ ${x.under}`).join('\n') +
         `\n\nใส่ที่ชั้น 1 อีก = ยอดต่อ 1 FG ถูกนับ 2 รอบ\n` +
@@ -2563,7 +2564,7 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
 
   const handleDelete = async (it) => {
     if (!bomGuard()) return;
-    if (!window.confirm(`ลบ ${it.part_name || ''} · MAT ${it.mat_no} ออกจาก BOM?`)) return;
+    if (!await askConfirm(`ลบ ${it.part_name || ''} · MAT ${it.mat_no} ออกจาก BOM?`)) return;
     const { error } = await supabaseDR.from('bom_items').delete().eq('id', it.id);
     if (error) { toast.error(error.message); return; }
     toast.success('ลบพาร์ทแล้ว');
@@ -2584,7 +2585,7 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
     const ids = [...new Set(rows.map(r => r.id).filter(Boolean))];
     if (!ids.length) return;
     const list = rows.map(r => `• ${r.part_name || ''} — MAT ${r.mat_no} ×${r.qty} ${uomLabel(r.uom) || ''}`).join('\n');
-    if (!window.confirm(
+    if (!await askConfirm(
       `ลบแถวชั้น 1 ที่นับซ้ำ ${ids.length} รายการ ออกจาก BOM ของ ${selProduct?.mat_no}?\n\n${list}\n\n` +
       `ของพวกนี้ยังอยู่ในชั้นลึก — ยอด "ต่อ 1 FG" จะไม่หาย แค่เลิกนับซ้ำ\n(ปิดใช้งานเท่านั้น ไม่ลบทิ้งถาวร)`
     )) return;
@@ -3657,7 +3658,7 @@ function PartsMasterPanel({ canCreate, canEdit, fullName, setCsvPreview, reloadK
 
   async function toggleActive(p) {
     // ยืนยันเฉพาะตอน "ปิดใช้งาน" พาร์ท — เปิดกลับไม่ต้องถาม
-    if (p.is_active && !confirm(`ปิดใช้งานพาร์ท "${p.part_no || p.mat_no || ''}" ?\n\nจะหายจากการเลือกใช้ (ข้อมูลเดิมยังอยู่ เปิดกลับได้)`)) return;
+    if (p.is_active && !await askConfirm(`ปิดใช้งานพาร์ท "${p.part_no || p.mat_no || ''}" ?\n\nจะหายจากการเลือกใช้ (ข้อมูลเดิมยังอยู่ เปิดกลับได้)`)) return;
     /* นับแถว — ปุ่มสลับสถานะ: 0 แถวแล้ว load() จะวาดค่าเดิมกลับมา = ดูเหมือนปุ่มกดไม่ติดโดยไม่มีคำอธิบาย */
     checkWriteRows(await supabaseDR.from('parts_master').update({ is_active: !p.is_active }).eq('id', p.id).select('id'), 'เปิด/ปิดใช้งานพาร์ท');
     load();
@@ -4001,7 +4002,7 @@ function PackagingPanel({ canCreate, canEdit, mayDelete, fullName }) {
      เดิมทิ้งผลทั้งก้อน ⇒ กดลบแล้ว `loadLinks()` วาดแถวเดิมกลับมา โดยไม่มีอะไรบอกว่าทำไม
      ⇒ ผู้ใช้กดซ้ำ/คิดว่าจอค้าง (pattern ที่ถูก: SimpleMasterPanel.remove) */
   const delLink = async (it) => {
-    if (!window.confirm(`ลบ ${it.packaging_code} ออกจาก product นี้?`)) return;
+    if (!await askConfirm(`ลบ ${it.packaging_code} ออกจาก product นี้?`)) return;
     const res = await supabaseDR.from('product_packaging').update({ is_active: false }).eq('id', it.id).select('id');
     if (!checkWrite(res, 'ลบบรรจุภัณฑ์ออกจากสินค้า')) return;
     if (!(res.data || []).length) { toast.error('ลบไม่สำเร็จ (0 แถว) — สิทธิ์เขียนไม่พอ'); return; }
@@ -4023,7 +4024,7 @@ function PackagingPanel({ canCreate, canEdit, mayDelete, fullName }) {
     toast.success('บันทึกภาชนะแล้ว'); setMasterForm(EMPTY_PKG_MASTER); setEditMaster(null); loadAll();
   };
   const delMaster = async (m) => {
-    if (!window.confirm(`ลบ ${m.code}?`)) return;
+    if (!await askConfirm(`ลบ ${m.code}?`)) return;
     const res = await supabaseDR.from('container_types').update({ is_active: false }).eq('id', m.id).select('id');
     if (!checkWrite(res, 'ปิดใช้งานภาชนะ')) return;
     if (!(res.data || []).length) { toast.error('ลบไม่สำเร็จ (0 แถว) — สิทธิ์เขียนไม่พอ'); return; }

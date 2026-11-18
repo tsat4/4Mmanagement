@@ -65,6 +65,7 @@ import TabBar from '../components/TabBar';
 
 import NoticeBar from '../components/NoticeBar';
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 /* ── ผังรวมโรงงาน (Factory Master Map) — polygon อิสระ + เลือก metric, 2026-07-16 ──────
    รูปผังใหญ่ทั้งโรงงาน 1 รูป + วาด polygon ล้อมแต่ละไลน์ (L/U ได้) ระบายสีตาม metric ที่เลือก
    metric: ยอดผลิต / OEE / Downtime / ของเสีย — เลือกดูได้ · มี side panel จัดอันดับไลน์ (ใช้พื้นที่ข้าง)
@@ -2513,7 +2514,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
     const revert = () => setRegions(prev => prev.map(x => (x.id === d.id ? { ...x, points: d.base } : x)));
     const chk = checkPolygonEdit(d.base, r.points);
     if (chk.verdict === 'block') { revert(); toast.error(`กรอบ "${r.line_name}" เส้นตัดกันเอง — ไม่บันทึก คืนรูปเดิมแล้ว`); return; }
-    if (chk.verdict === 'confirm' && !window.confirm(`กรอบ "${r.line_name}" จุดขยับไป ${chk.shift}% ของผัง (เกิน ${JUMP_CONFIRM_PCT}%)\nตั้งใจย้ายไกลขนาดนี้ใช่ไหม?\n\nกด "ยกเลิก" = คืนรูปเดิม`)) { revert(); return; }
+    if (chk.verdict === 'confirm' && !await askConfirm(`กรอบ "${r.line_name}" จุดขยับไป ${chk.shift}% ของผัง (เกิน ${JUMP_CONFIRM_PCT}%)\nตั้งใจย้ายไกลขนาดนี้ใช่ไหม?\n\nกด "ยกเลิก" = คืนรูปเดิม`)) { revert(); return; }
     if (d.snap) hist.pushSnapshot(d.snap);
     checkWriteRows(await supabase.from('factory_line_regions').update({ points: r.points }).eq('id', d.id).select('id'), 'บันทึกจุด polygon');
   };
@@ -2525,7 +2526,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
     const blocked = plan.filter(x => x.s.blocked).length;
     const note = [skewed ? `${skewed} กรอบมีขอบเฉียงเกิน ${AXIS_TOL_DEG}° — ขอบนั้นไม่แตะ` : '', blocked ? `${blocked} กรอบจัดแล้วเส้นจะตัดกัน — ข้าม` : ''].filter(Boolean).join('\n');
     if (!todo.length) { toast.info(`ทุกกรอบตรงแนวอยู่แล้ว${note ? ` · ${note.replace(/\n/g, ' · ')}` : ''}`); return; }
-    if (!window.confirm(`จัดให้ตรง ${todo.length} กรอบ (จากทั้งหมด ${regions.length})${note ? `\n${note}` : ''}\n\nกด Undo ย้อนได้`)) return;
+    if (!await askConfirm(`จัดให้ตรง ${todo.length} กรอบ (จากทั้งหมด ${regions.length})${note ? `\n${note}` : ''}\n\nกด Undo ย้อนได้`)) return;
     hist.pushHistory();
     const byId = new Map(todo.map(x => [x.r.id, x.s.points]));
     setRegions(prev => prev.map(x => (byId.has(x.id) ? { ...x, points: byId.get(x.id) } : x)));
@@ -2539,7 +2540,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
   };
   const deleteRegion = async (id) => {
     const rg = regions.find(r => r.id === id);
-    if (!window.confirm(`ลบกรอบไลน์ "${rg?.line_name || ''}" ?`)) return;
+    if (!await askConfirm(`ลบกรอบไลน์ "${rg?.line_name || ''}" ?`)) return;
     hist.pushHistory();
     setRegions(prev => prev.filter(r => r.id !== id));
     const { error } = await supabase.from('factory_line_regions').delete().eq('id', id);

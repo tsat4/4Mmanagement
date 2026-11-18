@@ -24,6 +24,7 @@ import MatLabel from './MatLabel';
 import { toast } from './Toast';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 const th = { padding: '7px 10px', fontSize: 11, fontWeight: 800, color: 'var(--muted)', textAlign: 'left', whiteSpace: 'nowrap' };
 const td = { padding: '6px 10px', fontSize: 12, color: 'var(--text)', borderTop: '1px solid var(--border)' };
 const inp = { padding: '5px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', fontSize: 12 };
@@ -108,18 +109,18 @@ export default function StockMoveToChild({ lines, stock, products, productBom, c
     const qty = Number(pick[r.key]?.qty ?? r.qty);
     if (!to) { toast.error('เลือกไลน์ปลายทางก่อน'); return; }
     if (!(qty > 0)) { toast.error('จำนวนต้องมากกว่า 0'); return; }
-    if (qty > r.qty && !window.confirm(`ย้าย ${qty.toLocaleString()} ชิ้น มากกว่าคงเหลือ ${r.qty.toLocaleString()} — ยอดที่ ${r.line_name} จะติดลบ\nยืนยัน?`)) return;
+    if (qty > r.qty && !await askConfirm(`ย้าย ${qty.toLocaleString()} ชิ้น มากกว่าคงเหลือ ${r.qty.toLocaleString()} — ยอดที่ ${r.line_name} จะติดลบ\nยืนยัน?`)) return;
     /* 🔴 เลือกปลายทางที่ยัง "ไม่ผ่านขั้นขึ้นรูป" ทั้งที่ของเป็นวัตถุดิบ/blank = ถามยืนยันอีกชั้น
        เตือนดัง ไม่บล็อก — บางไลน์ปั๊ม+ประกอบรวมกันจริง และ line_type อาจยังไม่ได้ตั้ง */
     const g = r.groups.find(x => x.lines.includes(to));
     /* ⚠️ เช็คแบบ "กลุ่มที่ยกเว้น" ไม่ใช่ "กลุ่มที่ต้องเตือน" — กลุ่มใหม่ที่เพิ่มทีหลัง
        (เช่น 🏢 ไลน์อื่นทั้งโรงงาน 2026-09-09) จะได้ตกมาเตือนเองโดยไม่ต้องไล่แก้ที่นี่ */
     if (r.needsForming && !['forming', 'forming_out', 'made', 'made_out'].includes(g?.key)
-      && !window.confirm(`🔴 ปลายทางนี้ไม่ใช่ไลน์ขึ้นรูป\n\n${r.mat_no} เป็นวัตถุดิบ/งาน blank — ตาม pattern ต้องขึ้นรูปก่อน แล้วค่อยส่งเข้าขั้นถัดไป\n\n→ ${to}\n\nยืนยันว่าถูกต้องจริง?`)) return;
+      && !await askConfirm(`🔴 ปลายทางนี้ไม่ใช่ไลน์ขึ้นรูป\n\n${r.mat_no} เป็นวัตถุดิบ/งาน blank — ตาม pattern ต้องขึ้นรูปก่อน แล้วค่อยส่งเข้าขั้นถัดไป\n\n→ ${to}\n\nยืนยันว่าถูกต้องจริง?`)) return;
     // ข้ามแผนก = ของอยู่ผิดแผนก ไม่ใช่แค่ผิดชั้น — ต้องยืนยันแยก
     const cross = !(childrenOf[r.line_name] || []).includes(to);
-    if (cross && !window.confirm(`⚠️ ย้ายข้ามแผนก\n\n${r.line_name} → ${to}\n\n${to} ไม่ใช่ไลน์ลูกของ ${r.line_name}\nยืนยันว่าของอยู่ผิดแผนกจริง?`)) return;
-    if (!window.confirm(`ย้าย ${r.mat_no} จำนวน ${qty.toLocaleString()} ชิ้น\n${r.line_name} → ${to} ?`)) return;
+    if (cross && !await askConfirm(`⚠️ ย้ายข้ามแผนก\n\n${r.line_name} → ${to}\n\n${to} ไม่ใช่ไลน์ลูกของ ${r.line_name}\nยืนยันว่าของอยู่ผิดแผนกจริง?`)) return;
+    if (!await askConfirm(`ย้าย ${r.mat_no} จำนวน ${qty.toLocaleString()} ชิ้น\n${r.line_name} → ${to} ?`)) return;
 
     setBusy(r.key);
     const note = `ย้ายมินิสโตร์: ${r.line_name} → ${to}`;

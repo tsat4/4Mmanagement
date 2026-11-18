@@ -22,6 +22,7 @@ import { loadStorageLocations } from '../utils/useStorageLocations';
 import { loadProductionLines } from '../utils/useProductionLines';
 import { areaLinesOf } from '../utils/storageLoc';
 import { opInputsOf, parentKidsAfterOps, isFirstOpInChain } from '../utils/opInputs';
+import { askConfirm } from '../utils/askConfirm';
 
 const key = (s) => String(s ?? '').trim();
 
@@ -187,7 +188,7 @@ export const canNotifyStore = (role) => can('wip_request', 'decide', role) || ca
  * @returns ผลแบบ syncLineOrderDemand + `cancelled` (คนกดยกเลิก) / `nothingToSend` (ไม่มีอะไรต้องแจ้ง แสดงให้ดูแล้ว)
  */
 export async function confirmAndSyncLineDemand({ lineName, role, extra = [], title = '', focus = [],
-  confirmFn = (t) => window.confirm(t), alertFn = (t) => window.alert(t) }) {
+  confirmFn = async (t) => await askConfirm(t), alertFn = (t) => window.alert(t) }) {
   const empty = { rows: [], inserted: 0, raised: 0, dup: 0, writeErrors: [] };
   if (!canNotifyStore(role)) return { ...empty, error: NO_PERM };
   const dry = await syncLineOrderDemand({ lineName, role, extra, dryRun: true });

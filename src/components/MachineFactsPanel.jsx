@@ -26,6 +26,7 @@ import {
 } from '../utils/machineFacts';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 const DAYS = 7;
 const card = { background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 14, boxShadow: 'var(--shadow-sm)', minWidth: 0 };
 const th = { textAlign: 'left', padding: '6px 8px', fontSize: 12, color: 'var(--muted)', fontWeight: 700, borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' };
@@ -155,7 +156,7 @@ export default function MachineFactsPanel({ src, canManage, callAdmin }) {
                               )}
                               {cur && (
                                 <button type="button" className="pg-btn" disabled={!!busy}
-                                  onClick={() => window.confirm(`เลิกผูก ${t.tag}? ข้อมูลของรหัสนี้จะหายจากตารางเทียบจนกว่าจะผูกใหม่`) &&
+                                  onClick={async () => await askConfirm(`เลิกผูก ${t.tag}? ข้อมูลของรหัสนี้จะหายจากตารางเทียบจนกว่าจะผูกใหม่`) &&
                                     save(`tag:${t.tag}`, 'map_tag', { tag: t.tag, machine_id: null }, `เลิกผูก ${t.tag}`)}>{tr('เลิกผูก')}</button>
                               )}
                             </div>

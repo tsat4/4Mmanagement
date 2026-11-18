@@ -30,6 +30,7 @@ import { showsShutHeight } from '../utils/pressMachine';
 import { useNavigate } from 'react-router-dom';
 import { tr } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
+import { askConfirm } from '../utils/askConfirm';
 
 /* ─── shared little UI bits ─────────────────────────────────── */
 function Field({ label, hint, children }) {
@@ -353,7 +354,7 @@ export default function MachineDatabase() {
   };
 
   const handleDelete = async (item) => {
-    if (!window.confirm(`ปิดใช้งานเครื่องจักร "${item.machine_no}" ?\n\nจุดบนผังไลน์และประวัติ Downtime ที่อ้างอิงเครื่องนี้จะยังอยู่ แต่จะเลือกเครื่องนี้ใหม่ไม่ได้ (เปิดใช้กลับได้ภายหลัง)`)) return;
+    if (!await askConfirm(`ปิดใช้งานเครื่องจักร "${item.machine_no}" ?\n\nจุดบนผังไลน์และประวัติ Downtime ที่อ้างอิงเครื่องนี้จะยังอยู่ แต่จะเลือกเครื่องนี้ใหม่ไม่ได้ (เปิดใช้กลับได้ภายหลัง)`)) return;
     const { error } = await supabaseDR.from('machines').update({ is_active: false, updated_at: new Date().toISOString() }).eq('id', item.id);
     if (error) { toast.error(error.message); return; }
     load();
@@ -863,7 +864,7 @@ function MachineTypeManager({ types, canEdit, onClose, onChange }) {
 
   const handleDelete = async (t) => {
     if (!canEdit) { toast.error('ลบประเภทเครื่องจักรต้องมีสิทธิ์ machines:edit'); return; }
-    if (!window.confirm(`ลบประเภท "${t.label}" ?\n\nเครื่องจักรที่ใช้ประเภทนี้จะกลายเป็น "ไม่ระบุประเภท"`)) return;
+    if (!await askConfirm(`ลบประเภท "${t.label}" ?\n\nเครื่องจักรที่ใช้ประเภทนี้จะกลายเป็น "ไม่ระบุประเภท"`)) return;
     // นับแถวที่ลบจริง (กฎเขียน DB ข้อ 2) — 0 แถวแล้วปิดเงียบ = ทะเบียนยังอยู่แต่จอบอกว่าลบแล้ว
     if (!checkWriteRows(await supabaseDR.from('machine_types').delete().eq('id', t.id).select('id'), 'ลบประเภทเครื่องจักร')) return;
     onChange();

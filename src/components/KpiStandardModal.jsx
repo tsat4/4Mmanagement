@@ -23,6 +23,7 @@ import {
 } from '../utils/kpiSetup';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 /* 23/09: รับ `scope`/`scopeCols` จาก OrgScopePicker (แทน section+group) — แถวที่หยิบเขียน scope_kind/scope_value ตรง */
 export default function KpiStandardModal({ year, scopeCols = {}, scopeText = '', defs = [], canManage, onClose, onChanged, closedDefs = [], onRestore }) {
   /* หน่วยงานมาตรฐานที่ใบนี้อิงอยู่ — จำไว้ที่ `kpi_definitions.std_unit` ของแถวในใบ
@@ -74,7 +75,7 @@ export default function KpiStandardModal({ year, scopeCols = {}, scopeText = '',
       /* 🗄️ ข้อนี้เคยถูก "ปิดใช้งาน" ไว้ในใบนี้ → เปิดคืนแถวเดิมแทน (insert ซ้ำจะชน unique 23505 แล้วค้างเป็นทางตัน · 07/10) */
       const twin = findClosedTwin(closedDefs, payload);
       if (twin && onRestore) {
-        if (window.confirm(restoreQuestion(twin, year + 543)) && await onRestore(twin)) onChanged?.();
+        if (await askConfirm(restoreQuestion(twin, year + 543)) && await onRestore(twin)) onChanged?.();
         return;
       }
       const res = await supabase.from('kpi_definitions').insert(payload);
@@ -91,7 +92,7 @@ export default function KpiStandardModal({ year, scopeCols = {}, scopeText = '',
   const pickAllFixed = async () => {
     const todo = matched.filter(m => !m.row && isStdFixed(m.item)).map(m => m.item);
     if (!todo.length) return;
-    if (!window.confirm(`หยิบข้อบังคับที่ยังขาด ${todo.length} ข้อเข้าใบของ ${scopeText || 'ทั้งโรงงาน'} ปี ${year + 543}?\n\nเป้า/น้ำหนักยังต้องกรอกเองที่ตาราง`)) return;
+    if (!await askConfirm(`หยิบข้อบังคับที่ยังขาด ${todo.length} ข้อเข้าใบของ ${scopeText || 'ทั้งโรงงาน'} ปี ${year + 543}?\n\nเป้า/น้ำหนักยังต้องกรอกเองที่ตาราง`)) return;
     setBusy('all');
     try {
       const ok = checkWrite(await supabase.from('kpi_definitions').insert(todo.map(it => ({

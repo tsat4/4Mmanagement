@@ -14,6 +14,7 @@ import { checkWriteRows } from '../utils/dbWrite';
 import { dieSetMats, matSlotFor } from '../utils/dieSetMats';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 export default function DieMatLinkButton({ set, mat, role, onDone }) {
   const [busy, setBusy] = useState(false);
   const m = String(mat ?? '').trim();
@@ -31,7 +32,7 @@ export default function DieMatLinkButton({ set, mat, role, onDone }) {
   );
 
   async function link() {
-    if (!window.confirm(`ผูก MAT ${m} เข้ากับชุดแม่พิมพ์ ${set.set_code}?\n\n`
+    if (!await askConfirm(`ผูก MAT ${m} เข้ากับชุดแม่พิมพ์ ${set.set_code}?\n\n`
       + 'ทะเบียนแม่พิมพ์จะจำว่าชุดนี้ทำพาร์ทนี้ ⇒ ครั้งต่อไประบบขึ้นแม่พิมพ์ชุดนี้เป็น "ทะเบียนยืนยัน"\n'
       + 'แก้ได้ภายหลังที่ /equipment?tab=die')) return;
     setBusy(true);

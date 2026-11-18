@@ -60,6 +60,7 @@ import QualityBins from '../components/QualityBins';
 import useTabParam from '../utils/useTabParam';
 import { tr } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
+import { askConfirm } from '../utils/askConfirm';
 
 /* ── date helpers (ห้าม toISOString หา work date — ดู CLAUDE.md) ── */
 function localDateStr(d = new Date()) {
@@ -567,7 +568,7 @@ export default function ScrapReport() {
        ไม่บล็อก (บางใบอาจตั้งใจบันทึกไว้ก่อน) แต่ต้องถามให้คนกดรู้ตัว — ห้ามผ่านเงียบ (2026-09-15) */
     if (report.status !== 'draft' && opScan.opRowsCount > 0) {
       const mats = [...new Set([...opScan.ready, ...opScan.blocked].map(x => x.item.mat_no))].join(', ');
-      if (!window.confirm(`ใบนี้ยังมี ${opScan.opRowsCount} รายการที่เป็นเลขขั้นตอน (OP): ${mats}\n\nเลขพวกนี้ไม่มีใน SAP — สโตร์ตัดสต๊อกไม่ได้\nกด "🧩 ระเบิดขั้นตอน" ก่อนจะตรงกว่า\n\nยืนยันบันทึกทั้งที่ยังไม่ระเบิด?`)) return;
+      if (!await askConfirm(`ใบนี้ยังมี ${opScan.opRowsCount} รายการที่เป็นเลขขั้นตอน (OP): ${mats}\n\nเลขพวกนี้ไม่มีใน SAP — สโตร์ตัดสต๊อกไม่ได้\nกด "🧩 ระเบิดขั้นตอน" ก่อนจะตรงกว่า\n\nยืนยันบันทึกทั้งที่ยังไม่ระเบิด?`)) return;
     }
     let doc_no = report.doc_no;
     if (!doc_no) {
@@ -682,7 +683,7 @@ export default function ScrapReport() {
       toast.error(`ใบ ${rep.doc_no || ''} อยู่สถานะ "${rep.status === 'approved' ? 'อนุมัติแล้ว' : 'ส่งอนุมัติ'}" — ลบไม่ได้ (เป็นบันทึกที่ต้องเก็บ) · ถ้าทำผิด ให้เปิดใบเปลี่ยนกลับเป็นร่างก่อน`);
       return;
     }
-    if (!window.confirm(`ลบใบ ${rep.doc_no || fmtD(rep.report_date)}?`)) return;
+    if (!await askConfirm(`ลบใบ ${rep.doc_no || fmtD(rep.report_date)}?`)) return;
     /* 🔴 ปลดการผูกถังแดงก่อนลบใบ — `scrap_report_id` ไม่มี FK ⇒ ลบใบเฉยๆ = ถังชี้ใบที่ไม่มีอยู่
        แล้วขึ้น "ออกใบแล้ว" ตลอดกาล · ปลดไม่สำเร็จ = ห้ามลบ (fail-closed) */
     const { error: unErr } = await supabaseDR.from('quality_bin_records')
@@ -743,9 +744,9 @@ export default function ScrapReport() {
     if (!editor) editorSnapRef.current = null;
     else if (editorSnapRef.current == null) editorSnapRef.current = editorSnap(editor);
   }, [editor]);   // eslint-disable-line react-hooks/exhaustive-deps
-  const closeEditor = () => {
+  const closeEditor = async () => {
     if (isMobile && editor && editorSnap(editor) !== editorSnapRef.current
-      && !window.confirm('ปิดใบนี้โดยไม่บันทึก? — ที่กรอก/แก้ไว้จะหายทั้งหมด')) return;
+      && !await askConfirm('ปิดใบนี้โดยไม่บันทึก? — ที่กรอก/แก้ไว้จะหายทั้งหมด')) return;
     setEditor(null);
   };
   const STATUS_META = { draft: { label: 'ร่าง', color: '#6b7280' }, submitted: { label: 'ส่งอนุมัติ', color: '#f59e0b' }, approved: { label: 'อนุมัติแล้ว', color: '#22c55e' } };

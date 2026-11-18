@@ -490,6 +490,25 @@ const RULES = [
     allow: { 'src/pages/Report.jsx': 'ใบพิมพ์ OT เป็น HTML string ใน template literal (กระดาษไทย ไม่แปล · {tr()} ในสตริงพิมพ์ออกมาตรงตัว — บั๊กรอบ 2 แก้ 13/11)' },
   },
   {
+    id: 'motion-shared-stagger',
+    scan: ['src/pages', 'src/components'], ext: ['.jsx'],
+    /* สูตร fade-up/stagger ประกาศซ้ำในหน้า — จอ TV/reduced-motion จะไม่นิ่งเพราะไม่ได้ผ่าน motionOff() ของกลาง */
+    re: /const\s+(?:FADE_UP|stagger)\s*=/g,
+    why: '18/11 (user: ก๊อป ERP): animation ทั้งระบบต้องนิ่งเองบนจอ TV (data-perf=lite) และเมื่อผู้ใช้ตั้ง reduced-motion — '
+       + 'ทำได้ที่เดียวคือ utils/motion.js · ก๊อปสูตรไว้ในหน้า = หน้านั้นขยับบน TV ทั้งที่กฎ §2 บอกว่านิ่ง',
+    fix: "import { stagger } from '<path>/utils/motion' (UI-CONVENTIONS §6.34b)",
+    allow: {},
+  },
+  {
+    id: 'no-native-confirm',
+    scan: ['src/pages', 'src/components', 'src/lib', 'src/utils', 'src/App.jsx'], ext: ['.jsx', '.js'],
+    /* window.confirm / confirm( ตรงๆ — หน้าตาเบราว์เซอร์ ไม่ตามธีม ไม่หรี่ฉากหลัง ไม่แปล · บน iPhone ตัดข้อความยาว · บล็อก thread */
+    re: /(?:^|[^.\w$])(?:window\.)?confirm\(/g,
+    why: 'audit กฎ UX 18/11: native confirm 58 จุดที่กดถึง (234 ในโค้ด) — ทั้งระบบย้ายไป askConfirm (กล่องในแอป · ม่าน --scrim เดียวกับ modal · Enter/Esc · แปลภาษา)',
+    fix: "const ok = await askConfirm('ข้อความ') — import { askConfirm } from '<path>/utils/askConfirm' · ฟังก์ชันที่เรียกต้อง async (UI-CONVENTIONS §5)",
+    allow: { 'src/utils/askConfirm.js': 'ตัว fallback เองเมื่อไม่มี <ConfirmHost/> (เทส/harness ชิ้นเดี่ยว)' },
+  },
+  {
     id: 'scrim-token-only',
     scan: ['src/pages', 'src/components'], ext: ['.jsx'],
     /* ม่านหลัง modal (fixed เต็มจอ) ที่เขียนสีดำโปร่งเอง — วัดจริง 13/11: 225 modal มีความมืด 8 ค่า (0.5→1.0) ใน 14 หน้ามืดไม่เท่ากันในหน้าเดียว */
@@ -10628,7 +10647,7 @@ test('📸 computeSessionOee: snapshot (CT + พัก) ต้องชนะท
 test('🛡️ DailyReport: ด่าน poka-yoke ตอนลงยอด + ก่อนปิดกะ ต้องยังอยู่', () => {
   const dr = stripComments(readFileSync(join(ROOT, 'src/pages/DailyReport.jsx'), 'utf8'))
   // ① ทุกทางที่คนพิมพ์ยอดเอง ต้องผ่าน qtyFitPass ก่อนเขียน DB
-  assert.ok((dr.match(/if \(!qtyFitPass\(o, (?:v|finalQty)\)\) return;/g) || []).length >= 2,
+  assert.ok((dr.match(/if \(!(?:await )?qtyFitPass\(o, (?:v|finalQty)\)\) return;/g) || []).length >= 2,   // 18/11: qtyFitPass เป็น async (askConfirm)
     '\n\n❌ ทั้งทาง "ลงยอดสะสม" และ "ปิดใบด้วยยอดจริง" ต้องเรียก qtyFitPass() ก่อนบันทึก\n')
   assert.match(dr, /checkQtyFit\(\{/, '\n\n❌ ด่านยอดต้องคิดด้วย checkQtyFit จาก utils/closeChecks.js\n')
   // ② ด่านรีเช็คก่อนปิดกะ — ต้องกั้นก่อนเขียน DB และต้องติ๊กครบจึงไปต่อได้
@@ -11154,8 +11173,8 @@ test('🔍 dt-closed-at-shift-end — ใบที่ปิดตรงเวล
   /* ① ด่านรายใบต้องเป็น confirm ไม่ใช่ toast.error + return */
   assert.match(dr, /checkDtClosedAtShiftEnd\(/,
     '\n\n❌ หน้ารายงานผลิตไม่เรียก checkDtClosedAtShiftEnd() แล้ว — ใบที่ปิดตรงเลิกกะไม่ถูกถาม\n');
-  assert.match(dr, /dtEndChk && !window\.confirm\(/,
-    '\n\n❌ ด่านใบปิดตรงเลิกกะต้องเป็น window.confirm (เตือนแล้วไปต่อได้)\n'
+  assert.match(dr, /dtEndChk && !(?:window\.confirm|await askConfirm)\(/,   // 18/11: กล่องในแอป askConfirm แทน window.confirm
+    '\n\n❌ ด่านใบปิดตรงเลิกกะต้องเป็นกล่องยืนยัน (askConfirm — เตือนแล้วไปต่อได้)\n'
     + '   ใช้ toast.error + return = บล็อกการบันทึก ซึ่ง user สั่งว่าห้าม\n');
   assert.match(dr, /dtClosedAtShiftEnd:/,
     '\n\n❌ ไม่ได้ส่งตัวนับ dtClosedAtShiftEnd เข้า buildCloseChecks — ด่านตอนปิดกะไม่ขึ้นเลย\n');
@@ -11768,3 +11787,31 @@ test('📅 carry-origin-propagated — ยกยอดต้องส่งต�
   assert.ok(!/min\(.*opened_at/.test(util),
     '\n\n❌ ห้ามหาต้นทางด้วย min(opened_at) ของ prod_no — PROD.NO เป็นการ์ดคัมบังที่ใช้เลขซ้ำ\n')
 })
+test('✍️ mo-flow-shows-pending-acks — ลายเซ็นนอกลำดับขั้นต้องโผล่ใต้แถบขั้น', () => {
+  /* 🔴 18/11 หน้างานแจ้ง (ภาพหน้าจอใบ O-MTN.2026/11-40):
+       แถบขั้นเขียน "รอ: ผจก.ฝ่ายที่แจ้ง อนุมัติปิดใบ" เหมือนเหลือขั้นเดียว
+       แต่ใบนั้นยังค้างลายเซ็น **ไม่ล็อกงาน** อีก 2 ช่อง (ผจก.ส่วนซ่อมบำรุงรับทราบ ·
+       ผจก.ต้นสังกัดเซ็นรับทราบ) ที่ไม่โผล่ในแถบเลย
+       คำ user: *"flow เหมือนขาดแค่ขั้นสุดท้าย แต่ขั้นไม่บล็อกงานไม่มีบอกเลย"*
+     กับดัก 2 ข้อ:
+       ① เอาช่องพวกนี้ไปยัดเป็น "ขั้น" ในแถบ ⇒ ทุกจอที่ไล่คิวด้วยเลขขั้นเพี้ยนตาม
+          (หลักเดียวกับด่านอนุมัติ 13/10 ที่ย้ำว่า "ด่านนี้ไม่ใช่ขั้น")
+       ② จอเลิกวาด f.acks ⇒ ข้อมูลหายเงียบ กลับไปเป็นอาการเดิม */
+  const perm = stripComments(readFileSync(join(ROOT, 'src/utils/mtnStepPerm.js'), 'utf8'));
+  assert.match(perm, /export function moPendingAcks\(/,
+    '\n\n❌ ไม่มี moPendingAcks() — กฎ "ใบนี้ค้างลายเซ็นนอกลำดับขั้นช่องไหน" หายไป\n');
+  assert.match(perm, /acks: moPendingAcks\(order\)/,
+    '\n\n❌ moFlow() ไม่คืน acks แล้ว — จอวาดจาก moFlow ตัวเดียว ข้อมูลจะหายทั้งระบบ\n');
+  /* ① ห้ามยัดเป็นขั้น — จำนวนขั้นยังต้องมาจาก lastStep() เท่านั้น */
+  assert.ok(!/steps\.push\([^)]*ack/i.test(perm),
+    '\n\n❌ เอาช่องลายเซ็นไปยัดเป็น "ขั้น" ในแถบ — ช่องพวกนี้ไม่ใช่ขั้น\n'
+    + '   ยัดแล้วทุกจอที่ไล่คิวด้วยเลขขั้น (กระดิ่ง · คิวงานของฉัน · สรุปโรงงาน) เพี้ยนตาม\n');
+  /* 🔴 ไม่รู้ = ห้ามเดาว่าค้าง */
+  assert.match(perm, /mo_ack_at !== undefined/,
+    '\n\n❌ moPendingAcks ไม่ได้กัน undefined — จอที่ select คอลัมน์ไม่ครบจะขึ้น "ยังไม่เซ็น" มั่ว\n');
+
+  /* ② จอต้องวาดจริง */
+  const page = stripComments(readFileSync(join(ROOT, 'src/pages/MtnRepair.jsx'), 'utf8'));
+  assert.match(page, /f\.acks\?\.length > 0 &&/,
+    '\n\n❌ ใบ MO เลิกวาดลายเซ็นที่ยังค้างใต้แถบขั้น — กลับไปเป็นอาการที่หน้างานแจ้ง 18/11\n');
+});

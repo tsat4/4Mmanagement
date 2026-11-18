@@ -37,6 +37,7 @@ import { downloadCsvDoc } from '../utils/csvDoc';
 import NoticeBar from '../components/NoticeBar';
 import { tr } from '../utils/i18n';
 import InfoMore from '../components/InfoMore';   // ⓘ คำอธิบายพับ (UI §6.10)
+import { askConfirm } from '../utils/askConfirm';
 
 /* ─── PLANNER & SALES — Forecast Planner + อัพโหลดไฟล์จากลูกค้า ──────────────
    Sales อัพโหลด Excel 2 แบบ: (1) Forecast ล่วงหน้าจากลูกค้า (2) Order + รอบเวลาส่งงาน
@@ -578,7 +579,7 @@ function UploadTab({ canUpload, fullName, onImported, custLabel }) {
     if (!records.length) { toast.error('ไม่มีแถวที่นำเข้าได้ — ตรวจ mapping อีกครั้ง'); return; }
     // กันนับซ้ำ: manual import เป็นการ "เพิ่มทับ" ไม่ใช่แทนที่ — ถ้ามีไฟล์ประเภทเดียวกันอยู่แล้ว เตือนก่อน
     const sameKind = batches.filter(b => b.kind === kind);
-    if (sameKind.length && !window.confirm(
+    if (sameKind.length && !await askConfirm(
       `มีไฟล์ ${kind === 'forecast' ? 'Forecast' : 'Orders'} นำเข้าไว้แล้ว ${sameKind.length} ไฟล์\n` +
       `การนำเข้านี้จะ "เพิ่มทับ" ยอดเดิม (ไม่ได้แทนที่) — ถ้าเป็นไฟล์แก้ไข ให้ลบไฟล์เดิมก่อน\nยืนยันนำเข้าเพิ่ม?`)) return;
     setSaving(true);
@@ -840,7 +841,7 @@ function UploadTab({ canUpload, fullName, onImported, custLabel }) {
        ใบ shipped (ข้อเท็จจริงย้อนหลัง + จุดยึด ref_shipment_id ของแถวตัดสต็อก) และใบค้างส่งวันเก่า
        ห้ามหายไปกับปุ่มลบไฟล์ — กฎเหล็ก "ห้ามลบออเดอร์ที่วันส่งผ่านไปแล้ว" (QC flow-audit D1)
        → detach ใบประวัติออกจาก batch ก่อน (batch_id = null) แล้วค่อยลบ ให้ cascade โดนเฉพาะ pending อนาคต */
-    if (!window.confirm(`ลบชุดข้อมูล "${b.file_name}" (${b.row_count} แถว)? ข้อมูลที่นำเข้าจากไฟล์นี้จะถูกลบทั้งหมด`)) return;
+    if (!await askConfirm(`ลบชุดข้อมูล "${b.file_name}" (${b.row_count} แถว)? ข้อมูลที่นำเข้าจากไฟล์นี้จะถูกลบทั้งหมด`)) return;
     if (b.kind === 'orders') {
       /* 🔴 QC 05/10 — เดิม select ใบประวัติ (ติดเพดาน 1000 แถว) แล้ว detach ด้วย `.in('id', [ids ยาว])`
          (URL ยาวเกิน = คืนว่างเงียบ) ⇒ ใบที่ detach ไม่ครบโดน cascade ลบ = ประวัติส่งหายถาวร
@@ -857,7 +858,7 @@ function UploadTab({ canUpload, fullName, onImported, custLabel }) {
       if (histN) {
         const { count: shipped, error: eS } = await countHist(q => q.neq('status', 'pending'));
         if (eS) { toast.error('นับใบประวัติของไฟล์นี้ไม่ได้ — ยกเลิกการลบ: ' + eS.message); return; }
-        if (!window.confirm(
+        if (!await askConfirm(
           `ไฟล์นี้มีใบที่เป็น "ประวัติ" ${histN} ใบ (เริ่ม workflow/ส่งแล้ว ${shipped} · วันส่งผ่านมาแล้ว ${histN - shipped})\n` +
           `ใบพวกนี้จะถูก "เก็บไว้" (ไม่ลบ) — ลบเฉพาะใบ pending ในอนาคตของไฟล์นี้\nยืนยัน?`)) return;
         const { data: det, error: eDet } = await supabaseDR.from('customer_shipping_orders')

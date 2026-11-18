@@ -19,6 +19,7 @@ import useTabParam from '../utils/useTabParam';
 import { NAV_GROUP_ORDER } from '../App';
 import { tr } from '../utils/i18n';
 import InfoMore from '../components/InfoMore';   // ⓘ คำอธิบายพับ (UI §6.10)
+import { askConfirm } from '../utils/askConfirm';
 
 // ชื่อ/สีชุดสิทธิ์อ่านจาก src/utils/roleMeta.js ที่เดียว (ห้ามนิยามซ้ำในหน้า)
 // PERMISSION_COLUMN_ROLES = base roles + คอลัมน์ 🛡️ แอดมินหน่วยงาน (bucket ของ flag is_dept_admin)
@@ -285,7 +286,7 @@ export default function PermissionsManagement() {
     if (!canManage) { toast.error('ไม่มีสิทธิ์แก้ตารางสิทธิ์ (ต้องมี permissions:manage)'); return; }
     // ยืนยันเฉพาะตอน "ปิดสิทธิ์" (current=true→false) — มีผลทุกเครื่องทันที กันแตะ matrix พลาด
     // (เปิดสิทธิ์ = additive ไม่ต้องถาม ให้แก้ matrix ลื่น)
-    if (current && !confirm(`ปิดสิทธิ์ "${permissionKey}" ของ role "${role}" ?\n\nมีผลทุกเครื่องทันที — ผู้ใช้ role นี้จะเข้า/ทำสิ่งนี้ไม่ได้`)) return;
+    if (current && !await askConfirm(`ปิดสิทธิ์ "${permissionKey}" ของ role "${role}" ?\n\nมีผลทุกเครื่องทันที — ผู้ใช้ role นี้จะเข้า/ทำสิ่งนี้ไม่ได้`)) return;
     const cellId = `${role}:${permissionKey}`;
     setSaving(prev => ({ ...prev, [cellId]: true }));
     const nextVal = !current;

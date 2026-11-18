@@ -32,6 +32,8 @@ export const SIGN_STAGES = Object.freeze([
 /** `true` = จังหวะนี้ต้องถามยืนยันก่อนเขียน */
 export const needsSignConfirm = (stage) => SIGN_STAGES.includes(String(stage || ''));
 
+import { askConfirm } from './askConfirm.js';   // .js เพื่อให้ node --test import ได้ (vite ไม่สน)
+
 const line = (label, v) => (v ? `${label}: ${v}` : null);
 
 /**
@@ -62,8 +64,8 @@ export function signConfirmText({ what, orderNo, actor, as, effect, warn, docLab
  * ถามยืนยันจริง — คืน `true` เมื่อผู้ใช้กดตกลง
  * แยกออกมาเพื่อให้ด่าน grep เจอจุดเดียว และเทสได้ (ส่ง `ask` เข้ามาแทน window.confirm)
  */
-export function confirmSign(args = {}, ask = null) {
-  const fn = ask || (typeof window !== 'undefined' ? window.confirm.bind(window) : null);
-  if (!fn) return true;                  // ไม่มี window (เทส/SSR) = ไม่ขวาง
-  return !!fn(signConfirmText(args));
+export async function confirmSign(args = {}, ask = null) {
+  // 18/11: กล่องในแอป (askConfirm → <ConfirmHost/>) แทน window.confirm ⇒ คืน Promise เสมอ · ผู้เรียกต้อง `await`
+  const fn = ask || askConfirm;
+  return !!(await fn(signConfirmText(args)));
 }

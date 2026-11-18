@@ -41,6 +41,7 @@ import { notifyEvent } from '../utils/notifyEvent';
 import PageHeader from '../components/PageHeader';
 import Page from '../components/Page';
 import FilterBar from '../components/FilterBar';
+import FilterMore from '../components/FilterMore';
 import LineScopeSelect from '../components/LineScopeSelect';
 import Segmented from '../components/Segmented';
 import SearchInput from '../components/SearchInput';
@@ -3110,6 +3111,8 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
         <Segmented value={shiftFilter} onChange={setShiftFilter} label={tr('กะ')}
           options={[{ value: 'all', label: ALL.shift }, { value: 'day', label: SHIFT_LABEL.day }, { value: 'night', label: SHIFT_LABEL.night }]} />
         <span className="sep" />
+        {/* 🧰 18/11 (audit Choice overload): ชิปประเภทพาร์ท 5 ตัวพับหลัง "ตัวกรองเพิ่มเติม" — ตั้งค่าไว้ = กางเอง + ปุ่มบอกค่า */}
+        <FilterMore id="hk-more-filters" defaultOpen={!!matFilter}>
         <button onClick={() => setMatFilter('')} style={{
           padding: '8px 14px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-body)',
           background: matFilter === '' ? 'var(--accent)' : 'var(--bg2)',
@@ -3117,13 +3120,14 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
           border: `1px solid ${matFilter === '' ? 'var(--accent)' : 'var(--border)'}`,
         }}>{ALL.type}</button>
         {MAT_PREFIXES.map(m => (
-          <button key={m.prefix} onClick={() => setMatFilter(matFilter === m.prefix ? '' : m.prefix)} style={{
+          <button key={m.prefix} aria-pressed={matFilter === m.prefix} onClick={() => setMatFilter(matFilter === m.prefix ? '' : m.prefix)} style={{
             padding: '8px 14px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-body)',
             background: matFilter === m.prefix ? `${tint(m.color, 'dim')}` : 'var(--bg2)',
             color: matFilter === m.prefix ? m.color : 'var(--text2)',
             border: `1px solid ${matFilter === m.prefix ? m.color : 'var(--border)'}`,
           }}>{tr(m.label)}</button>
         ))}
+        </FilterMore>
         <span className="spacer" />
         <button onClick={exportCSV} style={{
           padding: '8px 14px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontSize: 12, fontWeight: 700,

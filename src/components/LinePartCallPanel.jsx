@@ -47,6 +47,7 @@ import { syncLineOrderDemand, syncSummaryText, confirmAndSyncLineDemand } from '
 import { qtyUnit } from '../utils/coilUom';
 import { tr } from '../utils/i18n';
 import { fetchAllRows } from '../utils/fetchAllRows';   // 🏭 ของที่ไลน์ผลิตเอง อ้างยอดคลัง (2026-10-08) // 📜 MAT ที่เคยตั้งระดับไว้ — ทะเบียนไม่มีก็ยังเลือกซ้ำได้ (2026-09-07)
+import { askConfirm } from '../utils/askConfirm';
 
 /* 🙈 05/11 (คำสั่ง user "งงกับตั้งจุดเรียกเติม … เอาออกก่อน user งง") — ซ่อนทางเบิกแบบ MIN/MAX หน้าไลน์ทั้งชุด
    (ปุ่ม ⚙️ · โมดัล · ส่วน "ถึงจุดเรียกเติม" · "ยังไม่ตั้งจุดเรียกเติม" · "ยอดคลังต่ำกว่าขั้นต่ำ ต้องผลิตเติม")
@@ -448,7 +449,7 @@ export default function LinePartCallPanel({ lineName, lines = [], role, fullName
     const selfBlock = selfMadeRequestBlock(lineName, mat, whErr ? null : refCtx.products);
     if (selfBlock?.code === 'self_made') { await placeFromBom(mat, qty); return; }   // 🔁 แตก BOM เป็นของที่ต้องเบิก
     if (selfBlock) { toast.error(selfBlock.text); return; }
-    if (!adhocKnown && !window.confirm(`"${mat}" ไม่อยู่ในทะเบียนสินค้า/BOM ของไลน์นี้\n\nยืนยันว่าจะขอเบิกพาร์ทนี้?`)) return;
+    if (!adhocKnown && !await askConfirm(`"${mat}" ไม่อยู่ในทะเบียนสินค้า/BOM ของไลน์นี้\n\nยืนยันว่าจะขอเบิกพาร์ทนี้?`)) return;
     setBusy(`adhoc:${mat}`);
     /* 🔁 05/11 — หลักการเดียวกับเปิดใบผลิต: รวมกับความต้องการที่มีอยู่ เทียบยอดหน้าไลน์ ปัดเต็มกล่อง */
     const r = await confirmAndSyncLineDemand({ lineName, role, focus: [mat], title: `➕ ขอเบิก ${mat}${adhocName ? ` · ${adhocName}` : ''} เพิ่ม ${qty.toLocaleString()}:`,
@@ -497,7 +498,7 @@ export default function LinePartCallPanel({ lineName, lines = [], role, fullName
   };
 
   const cancel = async (r) => {
-    if (!window.confirm(`ยกเลิก "${r.mat_no}" จริงๆ?\n\n(ใช้เมื่อ "ไม่ใช้พาร์ทนี้แล้ว" เท่านั้น\nถ้าแค่ยังไม่เบิกตอนนี้ ให้ใช้ ⏸ พักไว้ก่อน)`)) return;
+    if (!await askConfirm(`ยกเลิก "${r.mat_no}" จริงๆ?\n\n(ใช้เมื่อ "ไม่ใช้พาร์ทนี้แล้ว" เท่านั้น\nถ้าแค่ยังไม่เบิกตอนนี้ ให้ใช้ ⏸ พักไว้ก่อน)`)) return;
     setBusy(r.id);
     /* 🔴 06/10 (ช่องโหว่สโตร์ข้อ 8) — ยกเลิกได้เฉพาะใบ "พักไว้" (ปุ่มนี้โชว์แค่ที่นั่น) · CAS + นับแถว
        เดิม `.eq('id')` ล้วน ⇒ จอค้างแล้วคนอื่นปลดเป็นใบเบิก/สโตร์หยิบไปแล้ว (ตัดสต็อก STORE→ไลน์แล้ว)
@@ -1014,11 +1015,11 @@ function LevelSetupModal({ lineName, lines = [], upMats = [], levels, onHand, re
   /* 21/10 — ย้ายตัวโหลดไปเป็นฮุคร่วม `useBomChildOptions` (ฟอร์ม "ขอเบิกพาร์ทนี้เลย" ใช้ชุดเดียวกัน) */
   const bomExtra = useBomChildOptions(famNames);
 
-  const addMat = () => {
+  const addMat = async () => {
     const m = newMat.trim();
     if (!m) return;
     // 2026-09-07 นอกทะเบียน (กลุ่ม 📜 เคยบันทึกไว้) → ถามยืนยันแทนบล็อกแข็ง — พิมพ์ผิด = จุดเฝ้าที่ไม่เคยเตือน จึงเตือนชัด
-    if (!newMatKnown && !window.confirm(`"${m}" ไม่มีใน Product Master / BOM — ใช้ค่านี้ต่อหรือไม่?`)) return;
+    if (!newMatKnown && !await askConfirm(`"${m}" ไม่มีใน Product Master / BOM — ใช้ค่านี้ต่อหรือไม่?`)) return;
     if (rows.some(r => r.mat_no.toLowerCase() === m.toLowerCase())) { toast.info('มีพาร์ทนี้ในรายการแล้ว'); setNewMat(''); setNewMatKnown(false); return; }
     setRows(rs => [{ mat_no: m, id: null, min_qty: '', max_qty: '', reorder_qty: '', have: null, atParent: false }, ...rs]);
     setNewMat(''); setNewMatKnown(false);

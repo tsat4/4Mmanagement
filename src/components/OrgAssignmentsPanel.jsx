@@ -21,6 +21,7 @@ import {
 } from '../utils/orgAssignments';
 import { tr } from '../utils/i18n';
 import { positionLabel, loadPositions } from '../utils/positions';   // บทบาท = ตำแหน่งจริงในทะเบียน (21/10)
+import { askConfirm } from '../utils/askConfirm';
 
 const NODE_KIND_TH = { section: 'ส่วน', department: 'แผนก', line: 'กลุ่ม', team: 'ทีม' };
 
@@ -82,7 +83,7 @@ export default function OrgAssignmentsPanel({ nodes = [] }) {
     if (ok) { toast.success('ยืนยันแล้ว'); load(); }
   };
   const remove = async (row) => {
-    if (!window.confirm(`ลบ "${nameOf(row.profile_id)} — ${nodeById.get(row.org_node_id)?.name || '?'}" ?`)) return;
+    if (!await askConfirm(`ลบ "${nameOf(row.profile_id)} — ${nodeById.get(row.org_node_id)?.name || '?'}" ?`)) return;
     setBusy(true);
     const ok = checkWriteRows(await supabase.from('org_assignments').delete().eq('id', row.id).select('id'), 'ลบรายการ');
     setBusy(false);

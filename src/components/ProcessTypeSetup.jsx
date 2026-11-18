@@ -9,6 +9,7 @@ import { DeleteButton } from './IconButton';
 import { loadProcessTypeRefs, processTypeBlockMessage } from '../utils/processTypeRefs';
 import { tr } from '../utils/i18n';
 import InfoMore from './InfoMore';   // ⓘ คำอธิบายพับ (UI §6.10)
+import { askConfirm } from '../utils/askConfirm';
 
 /* ── ProcessTypeSetup — ตัวจัดการ master กระบวนการผลิต (process_types, DR) ─────────────
    component เดียว ใช้ได้หลายจุด (Daily Report ⚙️ + หน้า /process-setup ในหมวดตั้งค่าฯ)
@@ -70,7 +71,7 @@ export default function ProcessTypeSetup({ role }) {
     setBusyKey(null);
     const block = processTypeBlockMessage(it.label || it.key, refs);
     if (block) { toast.error(block); return; }
-    if (!window.confirm(`ลบกระบวนการ "${it.label}"?\nตรวจแล้วไม่มีเครื่องจักร/สินค้า/สูตรพัก/ขั้นตอน ที่ tag ค่านี้อยู่`)) return;
+    if (!await askConfirm(`ลบกระบวนการ "${it.label}"?\nตรวจแล้วไม่มีเครื่องจักร/สินค้า/สูตรพัก/ขั้นตอน ที่ tag ค่านี้อยู่`)) return;
     const { error } = await supabaseDR.from('process_types').delete().eq('key', it.key);
     if (error) { toast.error(error.message); return; }
     toast.success('ลบแล้ว'); load();

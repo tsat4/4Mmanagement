@@ -1,4 +1,5 @@
 import { tr } from '../utils/i18n';
+import { cssColorToHex } from '../utils/cssColor';
 /* ─────────────────────────────────────────────────────────────────────────────
    🧊 เสาสถานะบนผังโรงงานโหมด 3D (2.5D · 2026-10-14 · mockup)
    วาดเป็น "ลูก" ของผังที่ถูกเอียงด้วย MAP_3D_TRANSFORM — ใช้ CSS 3D transform ล้วน (ไม่มี WebGL)
@@ -14,7 +15,9 @@ export const MAP_3D_TRANSFORM = `rotateX(${MAP_TILT_X}deg) rotateZ(${MAP_ROT_Z}d
 /** มุมกล้องที่หมุนได้ (useMapOrbit) — ค่าเริ่ม = MAP_TILT_X / MAP_ROT_Z */
 export const map3dTransform = (tilt = MAP_TILT_X, rot = MAP_ROT_Z, scale = MAP_3D_SCALE) => `rotateX(${tilt}deg) rotateZ(${rot}deg) scale(${scale})`;
 
-const rgbOf = (hex) => { const n = parseInt(String(hex).slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
+/* 🔴 18/11 (user ทัก "แท่งโมเดลสี่เหลี่ยมสีดำ"): สีสถานะจาก FactoryMap เป็น `var(--green)` ฯลฯ — parseInt ได้ NaN ⇒ rgb(0,0,0)
+   ทุกกล่อง/เสาที่ไม่ใช่ idle (hex ตรงๆ) จึงดำหมด ⇒ แปลงเป็น hex ผ่าน utils/cssColor.js ก่อนเข้าสูตรเฉดเสมอ (อ่านค่าตามธีมปัจจุบัน) */
+const rgbOf = (hex) => { const n = parseInt(cssColorToHex(hex).slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
 const shade = (hex, f, a = 1) => {   // f < 1 = มืดลง · alpha แยก — ห้าม color-mix (Cr94)
   const c = rgbOf(hex).map(v => Math.max(0, Math.min(255, Math.round(v * f))));
   return a >= 1 ? `rgb(${c[0]},${c[1]},${c[2]})` : `rgba(${c[0]},${c[1]},${c[2]},${a})`;

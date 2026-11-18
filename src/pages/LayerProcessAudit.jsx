@@ -40,6 +40,7 @@ import NoticeBar from '../components/NoticeBar';
 import { tr } from '../utils/i18n';
 import { pickSignerPatch, isSelfName } from '../utils/selfSign';
 import { checkWriteRows } from '../utils/dbWrite';
+import { askConfirm } from '../utils/askConfirm';
 /* ══════════════════════════════════════════════════════════════
    📋 Layer Process Audit (LPA) — paperless แทนฟอร์มกระดาษ 2 ใบ:
    1) Layer Process Audit Plan   — แผนตรวจรายเดือน ต่อไลน์+กะ (สถานีรายวัน + ชั้นผู้ตรวจ ○●⊗)
@@ -787,7 +788,7 @@ export default function LayerProcessAudit() {
     if (!lineGuard('ใบตรวจ LPA ของไลน์นี้')) return;
     const mis = draftMismatch();
     if (mis) { toast.error(mis); return; }
-    if (!window.confirm(`ลบผลตรวจ ${thDate(auditDate)} ${SHIFT_META[selShift]} ชั้น ${LAYERS.find(l => l.key === auditLayer)?.label}?`)) return;
+    if (!await askConfirm(`ลบผลตรวจ ${thDate(auditDate)} ${SHIFT_META[selShift]} ชั้น ${LAYERS.find(l => l.key === auditLayer)?.label}?`)) return;
     const { error } = await supabase.from('lpa_audits').delete().eq('id', draft.id);
     if (error) { toast.error('ลบไม่สำเร็จ: ' + error.message); return; }
     toast.success('ลบแล้ว');
@@ -817,7 +818,7 @@ export default function LayerProcessAudit() {
   const toggleQuestion = async (q) => {
     if (!qGuard(q, 'คำถามของไลน์นี้')) return;
     // ปิดใช้งานข้อ = ถอดออกจาก checklist ทุกใบตรวจถัดไป → ยืนยันก่อน (UI-CONVENTIONS §5.4) · เปิดกลับไม่ต้องถาม
-    if (q.is_active && !window.confirm(`ปิดใช้งานข้อ "${q.question}" ?\n\nข้อนี้จะไม่ขึ้นในใบตรวจ LPA ครั้งถัดไป (เปิดกลับได้ภายหลัง)`)) return;
+    if (q.is_active && !await askConfirm(`ปิดใช้งานข้อ "${q.question}" ?\n\nข้อนี้จะไม่ขึ้นในใบตรวจ LPA ครั้งถัดไป (เปิดกลับได้ภายหลัง)`)) return;
     const { error } = await supabase.from('lpa_questions').update({ is_active: !q.is_active }).eq('id', q.id);
     if (error) { toast.error(error.message); return; }
     setQuestions(prev => prev.map(x => x.id === q.id ? { ...x, is_active: !q.is_active } : x));
@@ -843,7 +844,7 @@ export default function LayerProcessAudit() {
     const block = lpaQuestionBlockMessage(q, refs);
     if (block) { toast.error(block); return; }
     // ยืนยันต้องบอกขอบเขตเสมอ (common = กระทบทุกไลน์ · คนกดมักไม่รู้ตัว — คำสั่ง user 12/10)
-    if (!window.confirm(lpaDeleteConfirmText(q))) return;
+    if (!await askConfirm(lpaDeleteConfirmText(q))) return;
     const { error } = await supabase.from('lpa_questions').delete().eq('id', q.id);
     if (error) { toast.error(error.message); return; }
     setQuestions(prev => prev.filter(x => x.id !== q.id));

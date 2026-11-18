@@ -46,6 +46,7 @@ import {
 } from 'recharts';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 /* ═══ 📑 KPI รายเดือน (เฟส 1 · 2026-08-24 — เฟส 2 กรอกมือ + Excel 3 ชีท + drill-down · คำสั่ง user) ═══
    แทน "แพ็คกระดาษรายเดือน" ที่ปริ้นเซ็นกัน (Internal Defect Report ราย section + OEE รายเดือน)
    ซึ่งเป็นหลักฐานเบื้องหลังฟอร์ม KPI Monitoring FM-HRM-6-024
@@ -991,7 +992,7 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
       if (error) {
         /* 🗄️ ชนคีย์ unique กับแถวที่ "ปิดใช้งาน" อยู่ → เสนอเปิดคืนแถวเดิม (ค่าเก่ากลับมา) แทนทางตัน "แก้ที่แถวเดิม" ที่มองไม่เห็น */
         const twin = error.code === '23505' ? findClosedTwin(closedDefs, payload) : null;
-        if (twin) return window.confirm(restoreQuestion(twin, year + 543)) ? restoreDef(twin, { silentConfirm: true }) : false;
+        if (twin) return await askConfirm(restoreQuestion(twin, year + 543)) ? restoreDef(twin, { silentConfirm: true }) : false;
         toast.error(error.code === '23505'
           ? `KPI นี้ถูกตั้งไว้ในปี ${year + 543} ขอบเขต ${org.labelOf(form.scope?.kind, form.scope?.value)} แล้ว — แก้ที่แถวเดิมแทน`
           : 'เพิ่มไม่สำเร็จ: ' + error.message);
@@ -1028,7 +1029,7 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
       const todo = srcRows.filter(r => !(r.catalog_id ? haveCat.has(r.catalog_id) : haveName.has(normSearch(r.name || ''))));
       const skipped = srcRows.length - todo.length;
       if (!todo.length) { toast.info(`ปี ${year + 543} มีครบแล้วทั้ง ${srcRows.length} รายการ`); return; }
-      if (!window.confirm(
+      if (!await askConfirm(
         `คัดลอก ${todo.length} รายการจากปี ${be} มาปี ${year + 543}` +
         (skipped ? `\n(ข้าม ${skipped} รายการที่ปีนี้มีอยู่แล้ว)` : '') +
         '\n\nคัดลอกเฉพาะ "นิยาม" (ชื่อ/เป้า/สูตร/น้ำหนัก) — ค่ารายเดือนไม่ถูกคัดลอก')) return;
@@ -1077,7 +1078,7 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
       const { error } = await supabase.from('kpi_definitions').insert(payload);
       if (error) {
         const twin = error.code === '23505' ? findClosedTwin(closedDefs, payload) : null;   // 🗄️ เป้าแถว auto ที่เคยปิดไว้ → เปิดคืน
-        if (twin) return window.confirm(restoreQuestion(twin, year + 543)) ? restoreDef(twin, { silentConfirm: true }) : false;
+        if (twin) return await askConfirm(restoreQuestion(twin, year + 543)) ? restoreDef(twin, { silentConfirm: true }) : false;
         toast.error(error.code === '42703'
           ? 'ยังไม่ได้ apply migration 20260901_kpi_auto_target.sql (Main) — แจ้ง admin'
           : 'บันทึกไม่สำเร็จ: ' + error.message);
@@ -1100,7 +1101,7 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
     })();
     const rowWrite = canWriteUnit({ role, section: homeSection, sections: userSections, allUnits, respCostCenters, scopeIdx }, rowOwner, { unknownTarget: 'block' });
     if (!rowWrite.ok) { toast.info(writeBlockText(rowWrite, { what: `KPI "${defName(d2)}"`, unit: rowOwner })); return false; }
-    if (!silentConfirm && !window.confirm(`เปิดคืน KPI "${defName(d2)}"?\nค่ารายเดือน/แผน/หมายเหตุที่เคยกรอกไว้จะกลับมาด้วย`)) return false;
+    if (!silentConfirm && !await askConfirm(`เปิดคืน KPI "${defName(d2)}"?\nค่ารายเดือน/แผน/หมายเหตุที่เคยกรอกไว้จะกลับมาด้วย`)) return false;
     const ok = checkWriteRows(await supabase.from('kpi_definitions').update({ is_active: true }).eq('id', d2.id).select('id'),
       `เปิดคืน KPI "${defName(d2)}"`, { zeroMsg: 'ไม่มีสิทธิ์ kpi:manage หรือแถวถูกลบไปแล้ว' });
     if (!ok) return false;
@@ -1116,7 +1117,7 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
     if (isInherited(d2)) { toast.error(`"${defName(d2)}" ตกทอดมาจาก ${defScopeTag(d2)} — ปิดใช้งานได้ที่ขอบเขตนั้นเท่านั้น (ถ้าไม่อยากให้โชว์ที่นี่ ให้ตั้งแถวของระดับนี้เอง)`); return; }
     const sharedWarn = valueScopeOf(d2) === 'plant' && isPlant(scope)
       ? '\n\n⚠️ KPI นี้เป็น "ค่าโรงงาน" — ทุกหน่วยที่ถือ KPI นี้จะไม่มีตัวเลขโชว์ทันทีที่ปิด' : '';
-    if (!window.confirm(`ปิดใช้งาน KPI "${defName(d2)}"?\nค่าที่กรอกไว้ยังอยู่ (soft delete) — เปิดคืนได้ที่แผง "🗄️ ปิดใช้งานอยู่" ใต้แถบปุ่มของตารางนี้${sharedWarn}`)) return;
+    if (!await askConfirm(`ปิดใช้งาน KPI "${defName(d2)}"?\nค่าที่กรอกไว้ยังอยู่ (soft delete) — เปิดคืนได้ที่แผง "🗄️ ปิดใช้งานอยู่" ใต้แถบปุ่มของตารางนี้${sharedWarn}`)) return;
     const { data: r, error } = await supabase.from('kpi_definitions').update({ is_active: false }).eq('id', d2.id).select('id');
     if (error || !r?.length) { toast.error('ปิดใช้งานไม่สำเร็จ' + (error ? ': ' + error.message : ' (ไม่มีสิทธิ์)')); return; }
     loadDefs();
@@ -1849,8 +1850,8 @@ function AutoTargetModal({ row, def, year, scopeText, deep, onClose, onSave }) {
   const [dirty, setDirty] = useState(false);
   const set = (k, v) => { setDirty(true); setF(p => ({ ...p, [k]: v })); };
   /* ⚠️ ฟอร์มห้ามปิดจากการคลิกนอกกรอบ (UI-CONVENTIONS §5) — กรอกไปแล้วหายทั้งใบ */
-  const close = () => {
-    if (dirty && !window.confirm('ยังไม่ได้บันทึก — ปิดแล้วค่าที่กรอกจะหาย ปิดเลยไหม?')) return;
+  const close = async () => {
+    if (dirty && !await askConfirm('ยังไม่ได้บันทึก — ปิดแล้วค่าที่กรอกจะหาย ปิดเลยไหม?')) return;
     onClose();
   };
   const inp = { width: '100%', padding: '6px 8px', fontSize: 13, borderRadius: 7, background: 'var(--bg2)', border: '1px solid var(--border)', color: 'var(--text)' };
@@ -1940,7 +1941,7 @@ function CatalogModal({ rows, canManage, usedNames = [], onClose, onChanged, onP
 
   const toggle = async (r) => {
     if (r.is_active && used.has(r.id) &&
-      !window.confirm(`"${r.name}" ถูกใช้ในชุด KPI ของปีที่เปิดอยู่\nปิดใช้งานแล้วจะไม่โผล่ให้เลือกใหม่ (แถวเดิมยังอยู่)\n\nปิดใช้งาน?`)) return;
+      !await askConfirm(`"${r.name}" ถูกใช้ในชุด KPI ของปีที่เปิดอยู่\nปิดใช้งานแล้วจะไม่โผล่ให้เลือกใหม่ (แถวเดิมยังอยู่)\n\nปิดใช้งาน?`)) return;
     setBusy(r.id);
     try {
       const { data, error } = await supabase.from('kpi_catalog').update({ is_active: !r.is_active }).eq('id', r.id).select('id');

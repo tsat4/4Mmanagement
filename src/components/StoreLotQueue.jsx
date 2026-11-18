@@ -9,6 +9,7 @@ import { fetchByIds } from '../utils/fetchByIds';
 import ReadOnlyNote from './ReadOnlyNote';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 /**
  * 🔩 คิวสั่งผลิตจากสโตร์ — แผงบนหน้า Daily Report ของ "ไลน์ที่ต้องปั๊มพาร์ทลูก"
  *
@@ -253,7 +254,7 @@ export default function StoreLotQueue({ lineName, lines = [], role }) {
   const takeGroup = async (g) => {
     const ids = g.pending.map(l => l.id);
     if (!ids.length) return;
-    if (!window.confirm(`รับงาน ${g.mat} ทั้งหมด ${ids.length} ล็อต (${fmt(g.qty)} ชิ้น) ?\n\nสโตร์จะเห็นว่าไลน์เริ่มทำแล้ว (ไม่แตะสต็อก)`)) return;
+    if (!await askConfirm(`รับงาน ${g.mat} ทั้งหมด ${ids.length} ล็อต (${fmt(g.qty)} ชิ้น) ?\n\nสโตร์จะเห็นว่าไลน์เริ่มทำแล้ว (ไม่แตะสต็อก)`)) return;
     setBusy(`g:${g.mat}`);
     try {
       let done = 0;

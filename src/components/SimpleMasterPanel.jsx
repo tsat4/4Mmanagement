@@ -26,6 +26,7 @@ import { toast } from './Toast';
 import { checkWrite } from '../utils/dbWrite';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 const inp = { padding: '5px 8px', borderRadius: 6, fontSize: 12, border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text)', width: '100%' };
 const btn = (bg, color = '#fff') => ({ padding: '5px 10px', borderRadius: 6, fontSize: 11.5, fontWeight: 700, cursor: 'pointer', background: bg, color, border: '1px solid var(--border)', whiteSpace: 'nowrap' });
 
@@ -105,7 +106,7 @@ export default function SimpleMasterPanel({
   };
 
   const toggle = async (r) => {
-    if (r.is_active !== false && !window.confirm(`ปิดใช้ "${r[keyCol]}" ?\n\n${offNote}\n(เปิดกลับได้ภายหลัง)`)) return;
+    if (r.is_active !== false && !await askConfirm(`ปิดใช้ "${r[keyCol]}" ?\n\n${offNote}\n(เปิดกลับได้ภายหลัง)`)) return;
     const res = await client.from(table).update({ is_active: r.is_active === false, ...stamp }).eq(keyCol, r[keyCol]).select(keyCol);
     if (!checkWrite(res, 'เปลี่ยนสถานะ')) return;
     if (!res.data?.length) { toast.error('เปลี่ยนสถานะไม่ติด (0 แถว) — อาจไม่มีสิทธิ์'); return; }
@@ -123,7 +124,7 @@ export default function SimpleMasterPanel({
       setBusy(false);
       if (msg) { toast.error(msg); return; }
     }
-    if (!window.confirm(`ลบ "${r[keyCol]}" ออกจากทะเบียน?\n\nข้อมูลเก่าที่บันทึกด้วยชื่อ/รหัสนี้ยังอ่านออก (ไม่ผูก FK) — ถ้าแค่เลิกใช้ แนะนำกด "ปิดใช้" แทน`)) return;
+    if (!await askConfirm(`ลบ "${r[keyCol]}" ออกจากทะเบียน?\n\nข้อมูลเก่าที่บันทึกด้วยชื่อ/รหัสนี้ยังอ่านออก (ไม่ผูก FK) — ถ้าแค่เลิกใช้ แนะนำกด "ปิดใช้" แทน`)) return;
     const res = await client.from(table).delete().eq(keyCol, r[keyCol]).select(keyCol);
     if (!checkWrite(res, `ลบ ${r[keyCol]}`)) return;
     if (!res.data?.length) { toast.error('ลบไม่ติด (0 แถว) — อาจไม่มีสิทธิ์'); return; }
