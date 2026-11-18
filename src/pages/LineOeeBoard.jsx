@@ -156,7 +156,7 @@ export default function LineOeeBoard() {
 
     const [dtR, defR, prods, kstds, breaks] = await Promise.all([
       fetchByIds(ids, c => supabaseDR.from('downtime_logs')
-        .select('id, session_id, duration_min, started_at, ended_at, machine_no, description, call_mtn, dr_downtime_types(name_th, category)')
+        .select('id, session_id, duration_min, started_at, ended_at, machine_no, description, call_mtn, dr_downtime_types(name_th, category, planned_cap_min)')
         .in('session_id', c)),
       fetchByIds(ids, c => supabaseDR.from('defect_logs')
         // prod_orders(mat_no) = ไว้ชี้ CT ของ NG ตอนบวกเข้าตัวเศษ %P (ngByMatFrom)
@@ -338,14 +338,22 @@ export default function LineOeeBoard() {
     // สถานะปัจจุบัน (footer)
     const openNow = sessions.filter(s => s.status === 'open' && s.work_date === today);
     const activeDt = dts.filter(d2 => openNow.some(s => s.id === d2.session_id) && isOpenDT(d2) && !isPlannedDT(d2));
-    const liveNow = openNow.length ? liveBySess[openNow[0].id] : null;
+    const liveSess = openNow.length ? openNow[0] : null;
+    const liveNow = liveSess ? liveBySess[liveSess.id] : null;
+    /* 🔴 กฎความซื่อสัตย์ของจอ — การ์ด "ตอนนี้" ต้องตอบได้ว่าเลขนี้มาจากไหนและเชื่อได้แค่ไหน (16/11 · user ทัก "OEE 100 ผิดรึเปล่า")
+       · กะไหน (ไลน์แม่มีหลายไลน์ลูก การ์ดโชว์ได้กะเดียว ⇒ ต้องบอกชื่อ + จำนวนที่เหลือ)
+       · กะนี้ยังไม่มีใครลง downtime เลยไหม (A = 100 เพราะ "ไม่มีข้อมูล" ไม่ใช่ "เครื่องไม่เคยหยุด")
+       วัดจริง พ.ย. 69: กะที่ปิดแล้ว 512 กะ — %A = 100 เป๊ะ 191 กะ · %P = 100 เป๊ะ 141 กะ (27.5%) */
+    const liveLine = liveSess?.line_name || null;
+    const liveMore = Math.max(0, openNow.length - 1);
+    const liveNoDt = !!liveSess && !dts.some(d2 => d2.session_id === liveSess.id);
 
     return {
       trend, overall, A, P, Q, tgt, variance: overall != null ? +(overall - tgt).toFixed(1) : null,
       loadMin, runMin, unplMin, plMin, produced, ngTotal,
       dtTop6: top6(dtTop), defTop6: top6(defTop), history, forgottenDt,
       dtTrash: dtTrashStats(dts.filter(d2 => kpiSessIds.has(d2.session_id) && d2.dr_downtime_types?.category !== 'planned'), { index: dtIdx }),
-      hasOpen: !!openNow.length, activeDt, liveNow, kpiN: kpiRows.length,
+      hasOpen: !!openNow.length, activeDt, liveNow, liveLine, liveMore, liveNoDt, kpiN: kpiRows.length,
       liveInWindow: kpiRows.some(r => r.live && r.oee != null),
     };
   }, [data]);
@@ -485,13 +493,35 @@ export default function LineOeeBoard() {
                 </>
               ) : C.hasOpen ? (
                 <>
+                  {/* 🔴 %P ถูก cap ที่ 100 = "ยอด/เวลา/CT ขัดกัน" ไม่ใช่ "ไลน์เดินสมบูรณ์แบบ"
+                      ⇒ ห้ามโชว์เขียวสนิท ต้องเขียนบอก (16/11 · user ทัก "LIVE 100% ผิดรึเปล่า")
+                      สูตรส่ง `pOver` + `pRawPct` มาให้อยู่แล้ว — เดิมการ์ดนี้ทิ้งทั้งคู่ = จอโกหก */}
                   <div style={{ fontSize: tv ? 96 : 'clamp(36px,3.8vw,50px)', fontWeight: 900, lineHeight: 1.1, fontVariantNumeric: 'tabular-nums',
-                    color: C.liveNow?.oee == null ? 'var(--muted)' : 'var(--green)' }}>
+                    color: C.liveNow?.oee == null ? 'var(--muted)' : C.liveNow?.pOver ? 'var(--amber)' : 'var(--green)' }}>
                     {C.liveNow?.oee != null ? `${Math.round(C.liveNow.oee)}%` : '—'}
                   </div>
                   <div style={{ fontSize: T(11.5, 22), color: tv ? 'var(--text2)' : 'var(--muted)', marginTop: 4 }}>
                     {C.liveNow?.oee != null ? '🟢 กำลังผลิต · OEE กะนี้' : C.liveNow?.noCt ? '⚠ ยังไม่ตั้ง CT — คำนวณไม่ได้' : '🟢 กำลังผลิต · ยังประเมินไม่ได้'}
+                    {C.liveLine && C.liveLine !== line ? ` · ${C.liveLine}` : ''}
+                    {C.liveMore > 0 ? ` (+${C.liveMore} ไลน์เปิดอยู่)` : ''}
                   </div>
+                  {/* ที่มาของเลข — 100% ต้องอธิบายได้ว่ามาจากขาไหน */}
+                  {C.liveNow?.oee != null && (
+                    <div style={{ fontSize: T(11, 20), color: 'var(--muted)', marginTop: 3, fontVariantNumeric: 'tabular-nums' }}>
+                      A {C.liveNow.A ?? '—'} · P {C.liveNow.P ?? '—'} · Q {C.liveNow.Q ?? '—'}
+                    </div>
+                  )}
+                  {C.liveNow?.pOver && (
+                    <div style={{ fontSize: T(11, 20), color: 'var(--amber)', fontWeight: 700, marginTop: 4, lineHeight: 1.5 }}>
+                      ⚠ %P คิดได้ {C.liveNow.pRawPct}% (ถูกตัดเหลือ 100) — งานที่บันทึกใช้เวลามากกว่าเวลาที่เครื่องมี
+                      <span style={{ fontWeight: 400 }}> · เช็คยอดที่ลง / เวลาเปิดใบ / CT ในทะเบียน</span>
+                    </div>
+                  )}
+                  {C.liveNoDt && (
+                    <div style={{ fontSize: T(11, 20), color: 'var(--amber)', marginTop: 4, lineHeight: 1.5 }}>
+                      ⚠ กะนี้ยังไม่มีใครลง Downtime — %A = 100 เพราะ<b>ยังไม่มีข้อมูล</b> ไม่ใช่เครื่องไม่เคยหยุด
+                    </div>
+                  )}
                 </>
               ) : (
                 <>
@@ -620,7 +650,8 @@ export default function LineOeeBoard() {
                 <span className="dt-alarm-icon">🔴</span> {line} {tr('หยุดอยู่:')} {C.activeDt.map(d2 => d2.dr_downtime_types?.name_th || 'ไม่ระบุ').join(' · ')}
               </b>
             ) : C.hasOpen ? (
-              <b style={{ color: 'var(--green)', fontSize: T(14, 28) }}>▶ {line} {tr('กำลังผลิต')}{C.liveNow?.oee != null ? ` · OEE กะนี้ (สด) ${Math.round(C.liveNow.oee)}%` : C.liveNow?.noCt ? ' · ⚠ ยังไม่ตั้ง CT — คำนวณ P ไม่ได้' : ''}</b>
+              /* %P ถูก cap = เลขไม่น่าเชื่อ ⇒ แถบท้ายจอต้องเตือนเหมือนการ์ดบน (ห้ามเขียวสนิท) */
+              <b style={{ color: C.liveNow?.pOver ? 'var(--amber)' : 'var(--green)', fontSize: T(14, 28) }}>▶ {line} {tr('กำลังผลิต')}{C.liveNow?.oee != null ? ` · OEE กะนี้ (สด) ${Math.round(C.liveNow.oee)}%` : C.liveNow?.noCt ? ' · ⚠ ยังไม่ตั้ง CT — คำนวณ P ไม่ได้' : ''}{C.liveNow?.pOver ? ` · ⚠ %P คิดได้ ${C.liveNow.pRawPct}% ถูกตัดเหลือ 100` : ''}</b>
             ) : (
               <b style={{ color: 'var(--muted)', fontSize: T(14, 28) }}>⏸ {line} {tr('ยังไม่เปิดกะ')}</b>
             )}

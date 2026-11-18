@@ -586,7 +586,7 @@ async function loadAll() {
 
   const [dts, defs, rates] = await Promise.all([
     ids.length ? inChunks(ids, c => supabaseDR.from('downtime_logs')
-      .select('session_id, duration_min, started_at, ended_at, dr_downtime_types(category)').in('session_id', c)) : [],
+      .select('session_id, duration_min, started_at, ended_at, dr_downtime_types(category, planned_cap_min)').in('session_id', c)) : [],
     ids.length ? inChunks(ids, c => supabaseDR.from('defect_logs')
       .select('session_id, qty_ng, qty_suspect').in('session_id', c)) : [],
     supabase.from('cost_center_rates').select('*')   // ก้อน rate มาจาก RATE_COMPONENTS — เพิ่มก้อนใหม่แล้วไม่ต้องมาแก้ select
@@ -702,7 +702,7 @@ async function loadDeepDive() {
   const ids = cands.map(s => s.id);
   const [dtRaw, defRaw] = await Promise.all([
     inChunks(ids, c => supabaseDR.from('downtime_logs')
-      .select('session_id, duration_min, started_at, ended_at, machine_no, description, dr_downtime_types(name_th, category, six_big_loss, waste_type)')
+      .select('session_id, duration_min, started_at, ended_at, machine_no, description, dr_downtime_types(name_th, category, planned_cap_min, six_big_loss, waste_type)')
       .in('session_id', c)),
     inChunks(ids, c => supabaseDR.from('defect_logs')
       .select('session_id, qty_ng, qty_suspect, description, dr_defect_types(name_th, six_big_loss)')

@@ -403,7 +403,7 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
          → fetchByIds ทำครบ 3 ชั้น (ก้อน id + หน้า + order คงที่) */
       const dtPlanned = {}, dtUnplanned = {};
       const dtRes = await fetchByIds(ids, (c) => supabaseDR.from('downtime_logs')
-        .select('id, session_id, duration_min, dr_downtime_types(category)').in('session_id', c));
+        .select('id, session_id, duration_min, dr_downtime_types(category, planned_cap_min)').in('session_id', c));
       if (dtRes.error) throw new Error(dtRes.error);
       if (dtRes.truncated) throw new Error('โหลด Downtime ไม่ครบ — ตัวเลข OEE/DT จะผิด ยังสร้างรายงานไม่ได้');
       /* นาที downtime ที่ตกอยู่ในช่วงพักตามนโยบาย ถูกกันออกจากฐานเวลาไปแล้ว **ห้ามหักซ้ำ** (utils/oee §3.1)

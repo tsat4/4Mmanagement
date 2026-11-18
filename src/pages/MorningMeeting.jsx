@@ -263,7 +263,7 @@ export default function MorningMeeting() {
       if (ids.length) {
         const [dtRes, defRes, poRes] = await Promise.all([
           supabaseDR.from('downtime_logs')
-            .select('*, dr_downtime_types(name_th, color, category)').in('session_id', ids),
+            .select('*, dr_downtime_types(name_th, color, category, planned_cap_min)').in('session_id', ids),
           supabaseDR.from('defect_logs')
             .select('*, dr_defect_types(name_th, color), prod_orders(prod_no, part_name, mat_no)').in('session_id', ids),
           supabaseDR.from('prod_orders').select('*').in('session_id', ids).order('opened_at'),

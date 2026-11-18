@@ -86,7 +86,7 @@ export default function SymptomSearch({ inScope, onOpenOrder, machine = null, on
     const pat = machineNoLikePattern(machine);
     if (!pat) throw new Error('เลขเครื่องว่าง');
     const k = machineKey(machine);
-    const DT_COLS = 'id, machine_no, description, duration_min, started_at, downtime_type_id, session_id, dr_downtime_types(name_th, category), production_sessions!inner(work_date, line_name, shift)';
+    const DT_COLS = 'id, machine_no, description, duration_min, started_at, downtime_type_id, session_id, dr_downtime_types(name_th, category, planned_cap_min), production_sessions!inner(work_date, line_name, shift)';
     const DEF_COLS = 'id, description, qty_ng, qty_suspect, logged_at, defect_type_id, prod_order_id, session_id, dr_defect_types(name_th), prod_orders!inner(prod_no, mat_no, part_name, machine_no), production_sessions!inner(work_date, line_name, shift)';
     const [dt, def] = await Promise.all([
       supabaseDR.from('downtime_logs').select(DT_COLS).ilike('machine_no', pat)
@@ -132,7 +132,7 @@ export default function SymptomSearch({ inScope, onOpenOrder, machine = null, on
       const dtTypeIds = pickTypes(dtT.data).map((t) => t.id);
       const defTypeIds = pickTypes(defT.data).map((t) => t.id);
 
-      const DT_COLS = 'id, machine_no, description, duration_min, started_at, downtime_type_id, session_id, dr_downtime_types(name_th, category), production_sessions!inner(work_date, line_name, shift)';
+      const DT_COLS = 'id, machine_no, description, duration_min, started_at, downtime_type_id, session_id, dr_downtime_types(name_th, category, planned_cap_min), production_sessions!inner(work_date, line_name, shift)';
       const DEF_COLS = 'id, description, qty_ng, qty_suspect, logged_at, defect_type_id, prod_order_id, session_id, dr_defect_types(name_th), prod_orders(prod_no, mat_no, part_name), production_sessions!inner(work_date, line_name, shift)';
       const inRange = (qb, cols) => qb.select(cols)
         .gte('production_sessions.work_date', from).lte('production_sessions.work_date', to)
