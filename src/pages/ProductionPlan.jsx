@@ -13,6 +13,7 @@ import { fetchByIds, fetchAllPages } from '../utils/fetchByIds';
 import { dedupeForecastRows } from '../utils/demandSupply';
 import { toast } from '../components/Toast';
 import PageHeader from '../components/PageHeader';
+import ScrollRow from '../components/ScrollRow';
 import Page from '../components/Page';
 import FilterBar from '../components/FilterBar';
 import Segmented from '../components/Segmented';
@@ -924,7 +925,8 @@ export default function ProductionPlan() {
               capacityMax={hasNightShift(viewLines, line.name) ? 2 : 1}
             />
             {/* แถบปฏิทินวันต่อวัน — รายละเอียดว่าต้องเปิดอะไรบ้าง (กราฟบอกแค่ "เกินไหม") */}
-            <div style={{ display: 'flex', gap: 3, overflowX: 'auto', paddingBottom: 4 }}>
+            {/* ↔️ 18/11 กฎ Closure: ช่องวัน 40px ตัดพอดีขอบบนมือถือ ⇒ ScrollRow วาดขอบจางบอกว่ายังมีวันต่อ */}
+            <ScrollRow bg="var(--card)" innerStyle={{ gap: 3, paddingBottom: 4 }}>
               {days.map(d => {
                 const top = d.plan.includes('holiday_work') ? PLAN_META.holiday_work : d.plan.includes('recall75') ? PLAN_META.recall75 : d.plan.includes('night') ? PLAN_META.night : d.plan.includes('ot') ? PLAN_META.ot : d.plan.includes('day') ? PLAN_META.day : null;
                 const dd = new Date(`${d.date}T12:00:00`);
@@ -939,7 +941,7 @@ export default function ProductionPlan() {
                   </div>
                 );
               })}
-            </div>
+            </ScrollRow>
             <div style={{ display: 'flex', gap: 10, marginTop: 6, flexWrap: 'wrap', fontSize: 11, color: 'var(--muted)' }}>
               <span>{tr('กะเช้าพอ')}</span><span>{tr('⏰ ต้องเปิด OT')}</span><span>{tr('ต้องเปิดกะดึก')}</span><span style={{ color: 'var(--blue)' }}>{tr('⚡ ยกเลิกหยุด 75% (ค่าแรงปกติ)')}</span><span style={{ color: 'var(--red)' }}>{tr('⚠ ทำวันหยุด OT (×1.5/×2)')}</span>
             </div>
