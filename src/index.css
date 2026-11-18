@@ -457,6 +457,12 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
 .seg.seg-sm { height: 28px; }
 .seg.seg-sm > button { font-size: 12px; padding: 0 9px; }
 
+/* ↔️ ขอบจางของแถวเลื่อนแนวนอน (useScrollEdges / ScrollRow / TabBar มือถือ · 18/11 · กฎ Closure)
+   วาดเฉพาะด้านที่ยังมีของซ่อน · สีกลืนกับพื้นที่แถววางอยู่ผ่าน --hs-bg (default พื้นหน้า) · ไม่รับคลิก */
+.hs-fade-l, .hs-fade-r { position: absolute; top: 0; bottom: 0; width: 28px; pointer-events: none; z-index: 1; }
+.hs-fade-l { left: 0;  background: linear-gradient(to right, var(--hs-bg, var(--bg)), transparent); }
+.hs-fade-r { right: 0; background: linear-gradient(to left,  var(--hs-bg, var(--bg)), transparent); }
+
 /* 🔍 SearchInput — ไอคอนในกรอบ + ปุ่มล้าง */
 .search-input { position: relative; display: inline-flex; align-items: center; min-width: 180px; }
 .search-input.grow { flex: 1 1 220px; }
