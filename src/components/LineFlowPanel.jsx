@@ -7,6 +7,7 @@ import LineSelect from './LineSelect';
 import { DeleteButton } from './IconButton';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 /* ═══ 🔗 สายการไหลระหว่างไลน์ — แผงใน /linesetup (2026-08-19) ═══
    ตอบ "ไลน์นี้ป้อนงานให้ใคร / รับของมาจากใคร" ซึ่งระบบเดิมไม่เคยเก็บไว้ที่ไหนเลย
    (machine_flow_links = ในไลน์เดียวกัน · part_routings = รายพาร์ท ยังลงไม่ครบ)
@@ -80,7 +81,7 @@ export default function LineFlowPanel({ lineName, lines = [], canEdit = false })
   };
 
   const remove = async (l) => {
-    if (!window.confirm(`ลบเส้น ${l.from_line} → ${l.to_line}?`)) return;
+    if (!await askConfirm(`ลบเส้น ${l.from_line} → ${l.to_line}?`)) return;
     const { error } = await supabaseDR.from('line_flow_links').delete().eq('id', l.id);
     if (error) { toast.error(error.message); return; }
     load();

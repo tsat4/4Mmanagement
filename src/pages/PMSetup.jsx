@@ -53,6 +53,7 @@ import OverflowMenu from '../components/OverflowMenu';
 import { tr } from '../utils/i18n';
 import InfoMore from '../components/InfoMore';   // ⋯ ปุ่มตายตัว ≤2 (UI §6.35)
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
+import { askConfirm } from '../utils/askConfirm';
 /* สีจาก token (var(--red) …) ต่อ alpha-hex ไม่ได้ (SVG/CSS parse พัง = ดำ · UI §6.17) ⇒ ย่อยเป็น -dim/-line · hex จาก DB ยังต่อ alpha ได้เหมือนเดิม */
 const tintOf = (c, lvl) => {
   const m = /^var\(--(green|amber|red|blue)\)$/.exec(c || '');
@@ -516,7 +517,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
     if (!cur) { setError('แผนกนี้ยังไม่มีรายการตรวจให้คัดลอก — บันทึกจุดตรวจก่อน'); return }
     if (!copyTo.length) { setError('เลือกเครื่องปลายทางก่อน'); return }
     const nameOf = (id) => { const e = allEquip.find(x => x.id === id); return e ? (e.machine_no || e.jig_no || e.name || id) : id }
-    if (!confirm(
+    if (!await askConfirm(
       `คัดลอก ${cur.checkpointCount} จุดตรวจ ไปอีก ${copyTo.length} เครื่อง\n`
       + `(แผนก ${pmTeamsSync().find(t => t.key === department)?.label ?? department})\n\n`
       + `⚠️ เครื่องที่ "มีจุดตรวจอยู่แล้ว" จะถูกข้าม ไม่ทับของเดิม\n\nยืนยัน?`)) return
@@ -554,7 +555,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
         // ⚠️ ต้องบอกเรื่อง "แผน PM" ด้วย — FK pm_plans.checklist_id เป็น CASCADE
         //    ลบ checklist ปลายทาง = รอบเวลา/วันตรวจล่าสุด/วันครบกำหนด/เกณฑ์ยอดผลิต หายตามไปทั้งหมด
         //    (เดิมถามแค่จำนวนจุดตรวจ → คนกดตกลงโดยไม่รู้ว่ากำลังลบแผน PM ทิ้ง)
-        const ok = window.confirm(
+        const ok = await askConfirm(
           `${toLabel} มีของอยู่แล้ว: รายการตรวจ ${res.targetCheckpoints} จุด`
           + (res.targetPlans > 0 ? ` · แผน PM ${res.targetPlans} แผน` : '')
           + `\nดำเนินการต่อจะ "แทนที่ของเดิม" ทั้งหมด`
@@ -919,7 +920,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
         const { count: histN, error: eHist } = await supabaseDR.from('inspection_results')
           .select('id', { count: 'exact', head: true }).in('checkpoint_id', dropCp.map(r => r.id))
         if (eHist) throw eHist
-        if (histN > 0 && !window.confirm(
+        if (histN > 0 && !await askConfirm(
           `จุดตรวจที่ถูกลบ ${dropCp.length} จุด (${dropCp.map(r => r.name).slice(0, 5).join(', ')}${dropCp.length > 5 ? ' …' : ''})\n` +
           `มีประวัติผลตรวจผูกอยู่ ${histN} รายการ — ลบจุดแล้ว **ประวัติผลตรวจของจุดนั้นจะหายถาวร**\n\nยืนยันลบ?`)) {
           toast.info('ยังไม่บันทึก — จุดตรวจเดิมยังอยู่ครบ'); return
@@ -1694,7 +1695,7 @@ export default function PMSetup() {
     const cur = teamKindOf(department)
     const next = cur === 'am' ? 'pm' : 'am'
     const name = teams.find(t => t.key === department)?.label ?? department
-    if (!confirm(`เปลี่ยน "${name}" จาก ${cur.toUpperCase()} → ${next.toUpperCase()}?\n\n`
+    if (!await askConfirm(`เปลี่ยน "${name}" จาก ${cur.toUpperCase()} → ${next.toUpperCase()}?\n\n`
       + (next === 'am' ? 'AM = พนักงานหน้างานตรวจเองทุกต้นกะ' : 'PM = ช่าง (technician/engineer) ตรวจตามรอบเวลา/ยอดผลิต/เงื่อนไข')
       + `\nมีผลกับสิทธิ์ที่ใช้บันทึกผลตรวจของทีมนี้ (${next}:record)`)) return
     const { error } = await supabaseDR.from('mtn_teams').update({ kind: next }).eq('key', department)
@@ -1806,7 +1807,7 @@ export default function PMSetup() {
 
   const handleDelete = async (jig) => {
     if (!deptWrite.ok) { toast.info(teamBlockText(deptWrite, 'อุปกรณ์ของทีมนี้')); return }
-    if (!confirm(`ลบ "${jig.name}" ?`)) return
+    if (!await askConfirm(`ลบ "${jig.name}" ?`)) return
     /* 🔴 นับแถวก่อนแตะ storage (QC audit 06/10) — ไม่นับ = แถว jig ยังอยู่
        แต่รูปทั้งชุด (เฟรม + จุดตรวจ + โมเดล 3D) ถูกลบ ⇒ ทะเบียนจิ๊กเสียรูปถาวร */
     const dres = await supabaseDR.from('jigs').delete().eq('id', jig.id).select('id')

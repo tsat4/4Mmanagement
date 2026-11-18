@@ -7,6 +7,7 @@ import { teamKeyOf } from '../utils/mtnTeams'
 import { EQUIPMENT_KINDS } from '../utils/equipmentKinds'
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 // Generic CRUD modal for a small taxonomy table (code + label + color|icon).
 // Used for pm_checkpoint_categories and pm_checking_methods, but table-agnostic.
 //
@@ -93,7 +94,7 @@ export default function TaxonomyManagerModal({ table, title, extraField = 'color
   }
 
   const remove = async (r) => {
-    if (!confirm(`ลบ "${r.label}" (${r.code}) ?\nจุดตรวจที่ใช้ค่านี้จะยังเก็บ code เดิมไว้`)) return
+    if (!await askConfirm(`ลบ "${r.label}" (${r.code}) ?\nจุดตรวจที่ใช้ค่านี้จะยังเก็บ code เดิมไว้`)) return
     const { error } = await supabaseDR.from(table).delete().eq('id', r.id)
     if (error) { toast.error(error.message); return }
     toast.success('ลบแล้ว')

@@ -10,6 +10,7 @@ import PageHeader from '../components/PageHeader';
 import Page from '../components/Page';
 import { tr } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
+import { askConfirm } from '../utils/askConfirm';
 const MONTH_NAMES = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
 const WEEKDAY_HEAD = ['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'];
 const DAY_TYPES = ['working', 'ot15', 'ot2', 'shutdown75'];
@@ -90,7 +91,7 @@ export default function CompanyCalendar() {
       d.setDate(d.getDate() + 1);
     }
     // เขียนทับทั้งปีทีเดียว — ยืนยันก่อน (ต่างจากคลิกรายวันที่มี draft)
-    if (!confirm(`ตั้งค่า ${dates.length} วัน (ทุกวันในสัปดาห์ที่เลือก ทั้งปี ${year}) เป็น "${bulkType}" ?\n\nเขียนทับค่าเดิมของวันเหล่านี้ทันที`)) return;
+    if (!await askConfirm(`ตั้งค่า ${dates.length} วัน (ทุกวันในสัปดาห์ที่เลือก ทั้งปี ${year}) เป็น "${bulkType}" ?\n\nเขียนทับค่าเดิมของวันเหล่านี้ทันที`)) return;
     setLoading(true);
     const { error } = await supabase.from('company_calendar').upsert(
       dates.map(dt => ({ work_date: dt, day_type: bulkType, updated_at: new Date().toISOString() })),

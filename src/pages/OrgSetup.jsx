@@ -29,6 +29,7 @@ import { IconButton, DeleteButton } from '../components/IconButton';
 import NoticeBar from '../components/NoticeBar';
 import { tr } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
+import { askConfirm } from '../utils/askConfirm';
 /* 🔴 ชั้นไหนมีพาเนล/ปุ่มเพิ่มบนจอ ต้องมีป้ายครบทุกชั้น — ขาดตัวไหน หัวโมดัลขึ้น "เพิ่ม undefined"
    (เกิดจริง 05/10 ตอนเพิ่มชั้นทีมแล้วลืมเติมที่นี่ · มีด่าน regressionGuards) */
 const KIND_LABEL = { section: 'Section / ส่วน', department: 'Department / แผนก', line: 'Group / กลุ่ม', team: 'Team / ทีม' };
@@ -254,7 +255,7 @@ export default function OrgSetup() {
       if (refs.partial) return toast.error('ยังไม่บันทึก — ตรวจไม่ครบว่ามีใครอ้างชื่อเดิมอยู่ · ลองใหม่อีกครั้ง');
       const affected = (refs.textEmp || 0) + (refs.textProf || 0);
       if (affected) {
-        if (!confirm(`เปลี่ยน "${keyChg.from}" → "${keyChg.to}" ?\n\n`
+        if (!await askConfirm(`เปลี่ยน "${keyChg.from}" → "${keyChg.to}" ?\n\n`
           + `ทะเบียนที่ยังอ้างชื่อเดิม ${affected} รายการจะถูกเปลี่ยนตามให้ด้วย\n`
           + '(ถ้าไม่เปลี่ยนตาม คนเหล่านั้นจะหลุดจากหน่วยงานนี้เงียบๆ)')) return;
         cascade = keyChg;
@@ -305,7 +306,7 @@ export default function OrgSetup() {
        (เคสจริง 05/10: กลุ่มที่คนผูกอยู่ 35 คนหายจาก dropdown แล้วหน้าเช็คชื่อว่างเปล่า) */
     if (node.is_active) {
       const refs = await loadOrgNodeRefs(supabase, node, nodes);
-      if (!confirm(`ปิดใช้งาน "${node.name}" ?\n\nจะหายจาก dropdown/การเลือกในหน้าอื่น (ข้อมูลเดิมยังอยู่ เปิดกลับได้)`
+      if (!await askConfirm(`ปิดใช้งาน "${node.name}" ?\n\nจะหายจาก dropdown/การเลือกในหน้าอื่น (ข้อมูลเดิมยังอยู่ เปิดกลับได้)`
         + orgRefDeactivateNote(refs))) return;
     }
     const { data: wrote, error } = await supabase.from('org_nodes')
@@ -338,7 +339,7 @@ export default function OrgSetup() {
     const refs = await loadOrgNodeRefs(supabase, node, nodes);
     const blocked = orgRefBlockMessage(node, refs);
     if (blocked) return toast.error(blocked);
-    if (!confirm(`ลบ "${node.name}" ?` + orgRefDeleteNote(refs)
+    if (!await askConfirm(`ลบ "${node.name}" ?` + orgRefDeleteNote(refs)
       + '\n\n(ถ้าเคยผูกกับข้อมูลอื่นแนะนำ "ปิดใช้งาน" แทนการลบ)')) return;
     const { data: gone, error } = await supabase.from('org_nodes').delete().eq('id', node.id).select('id');
     // FK ฝั่ง DB เป็น restrict แล้ว (migration 20261005) — ด่านชั้นสองกันกรณีมีคนผูกเพิ่มระหว่างที่เปิดจอค้าง

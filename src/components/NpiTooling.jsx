@@ -19,6 +19,7 @@ import { ALL } from '../utils/filterLabels';
 import { DeleteButton } from './IconButton';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 export default function NpiTooling({ parts, tooling, steps, stepTemplates, dieSets, canEdit, today, onChanged, partWriteOf }) {
   /* 🔐 ชั้นที่ 3 — แผน tooling ผูกพาร์ท · ขั้นงานผูกแผน ⇒ ไล่หาไลน์ของพาร์ทแล้วตัดสิน (utils/npiScope.js)
      🔴 ย้ายแผนข้ามพาร์ทได้ (ช่อง "พาร์ท" ในโมดัล) ⇒ เช็คทั้งพาร์ทเดิมและพาร์ทที่เลือกใหม่ */
@@ -87,7 +88,7 @@ export default function NpiTooling({ parts, tooling, steps, stepTemplates, dieSe
   };
   const delPlan = async (t) => {
     if (rowBlocked(t)) return;
-    if (!window.confirm(`ลบแผน "${t.tool_name}" พร้อมขั้นงานทั้งหมด?`)) return;
+    if (!await askConfirm(`ลบแผน "${t.tool_name}" พร้อมขั้นงานทั้งหมด?`)) return;
     const { error } = await supabase.from('npi_tooling_plans').delete().eq('id', t.id);
     if (error) return toast.error(error.message);
     onChanged();
@@ -111,7 +112,7 @@ export default function NpiTooling({ parts, tooling, steps, stepTemplates, dieSe
   };
   const delStep = async (s) => {
     if (rowBlocked(planOf(s?.tooling_id), 'ขั้นงานของแผนนี้')) return;
-    if (!window.confirm(`ลบขั้น "${s.name}"?`)) return;
+    if (!await askConfirm(`ลบขั้น "${s.name}"?`)) return;
     const { error } = await supabase.from('npi_tooling_steps').delete().eq('id', s.id);
     if (error) return toast.error(error.message);
     onChanged();

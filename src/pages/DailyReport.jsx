@@ -28,7 +28,7 @@ import { fetchByIds, fetchAllPages } from '../utils/fetchByIds';
 import { parallelUnitsOf, flowModeOf } from '../utils/lineTypes';
 import { checkShiftCapacity, checkOtCapacity, otSpanMin } from '../utils/shiftCapacity';
 import { splitCloseOrders, autoCarryPatch, autoCarryText } from '../utils/closeShiftOrders';   // 🔁 ปิดกะ: ใบที่ยังไม่แตะ = ยกเอง (20/10)
-import { debtByPart, debtPcs, debtAgeDays } from '../utils/carryDebt';   // 📥 ของค้าง "ต้องไล่เก็บอีกเท่าไหร่" (20/10)
+import { debtByPart, debtPcs, debtAgeDays, carryAgeOf } from '../utils/carryDebt';   // 📥 ของค้าง "ต้องไล่เก็บอีกเท่าไหร่" (20/10) · อายุใบที่วนข้ามกะ (17/11)
 import { loadCarryOffers, importCarryOrders } from '../lib/carryDebtOps';
 import { loadMinAlerts, minAlertsForLine } from '../lib/minDemandOps';
 import MinDemandPanel from '../components/MinDemandPanel';   // 📥 โหลด/รับของค้าง — ที่เดียวทั้งระบบ
@@ -63,8 +63,12 @@ import ProcessTypeSetup from '../components/ProcessTypeSetup';
 import { affectsLanesMap, computeSessionOee, sessionProducedQty, strictOee, strictGap, STRICT_WARN_SHARE_PCT, policyBreakOverlapMin, breakIntervalsIn, breakBandsIn, breakBandName, breakBandTitle, dtMinOutsideBreaks, overlapMinutesWith, buildCtMap, ctForMat, groupSameProductKeys, shiftFrameOf, shiftStartDate, clampWinToShift, unionIv, dtMinOutsideWork, SIX_BIG_LOSSES, EIGHT_WASTES, sumDefectQty, isTrialDefect, splitDefectQty, QBIN_EMBED, sumSuspectPending, orderCloseMs, matRawWindow } from '../utils/oee';
 import { planMatTimeWrites, MAT_TIME_SKIP_OPEN } from '../utils/matTimeEdit';
 import { resolveShiftTime, checkShiftTime, shiftWindow, windowLabel, fmtOffset, MAX_SHIFT_MIN, checkCloseTime, dtCoverMin } from '../utils/shiftWindow';
+import { handoverOf, handoverBlockText, sessionLabel as hoSessionLabel } from '../utils/sessionHandover';
+import ShiftGlyph from '../components/ShiftGlyph';
 /* 🛡️ poka-yoke หน้าปิดกะ — กฎทั้งหมดอยู่ใน utils/closeChecks.js ห้ามเขียนเงื่อนไขเองในหน้า */
 import { checkQtyFit, qtyFitMessage, buildCloseChecks, confirmChecks } from '../utils/closeChecks';
+/* 🗑️ ด่าน "อื่นๆ ต้องบอกเหตุผลจริง" — กฎ+ข้อความอยู่ utils/unclassified.js ห้ามเขียนเองในหน้า */
+import { checkOtherDescription, otherDescMessage, isVague } from '../utils/unclassified';
 import ScanModal from '../components/ScanModal';
 import SearchSelect from '../components/SearchSelect';
 import Segmented from '../components/Segmented';
@@ -102,7 +106,7 @@ import { notifyEvent } from '../utils/notifyEvent';
 import useStaleSessions, { STALE_SESSION_DAYS, sessionAgeDays, ballSideText } from '../utils/staleSessions';
 import { carryDowntimesTo, prevSessionOfLine, nextOpenSessionOfLine } from '../lib/downtimeCarry';
 import { decidedDtLogs } from '../utils/downtimeCarryRules';
-import { openShiftDefaults, shiftStartTime } from '../utils/workDate';
+import { openShiftDefaults, shiftStartTime, addDaysStr } from '../utils/workDate';
 import { liveChannel } from '../utils/liveChannel';
 import { LIVE } from '../utils/refreshRates';
 import { coalesce } from '../utils/liveRefresh';
@@ -122,6 +126,7 @@ import { loadFamilyQtyTotals, familyQtyChip } from '../utils/familyTotals';
 import { tr } from '../utils/i18n';
 import { statusColor as toneColor, toneVar, toneDim, toneLine } from '../utils/statusTone';   // 🎨 token พาเลต 5 สี (UI §6.17)   // สีสถานะชุดเดียวทั้งระบบ (ห้ามตั้ง hex เอง · ชื่อ statusColor ชนกับตัวแปรในหน้า)
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
+import { askConfirm } from '../utils/askConfirm';
 
 /* ทะเบียนเอกสาร — ชื่อไฟล์ CSV ของแท็บรายงานอ่านผ่าน `docFormSync` (sync) ⇒ ต้อง warm cache เอง
    ไม่เรียก = ได้ชื่อไฟล์เดิม (fallback) ไม่ล้ม แต่ doc_control ตั้งเลขฟอร์มแล้วไม่มีผล */
@@ -584,6 +589,11 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
   const [savingProdOpen, setSavingProdOpen] = useState(false);
   // Overflow confirmation modal
   const [overflowInfo, setOverflowInfo]   = useState(null); // { prodNo, matNo, qty, std, overMin, remainMin, newOrderMin }
+  /* 🔴 17/11 (หัวหน้าแจ้ง "กะ01 ลืมปิด แล้วกะ02 ยิงปิดแท็ก ยอดไปขึ้นกะ01")
+     กล่องถามตอนจะเปิดใบลง **กะที่ไลน์นี้ขึ้นกะใหม่ไปแล้ว** · `handoverOkRef` = ยืนยันแล้วทั้งกะ (ผูกกับ id กะ)
+     ⇒ เลือก "ลงกะเดิม" ครั้งเดียวแล้วยิงรัวต่อได้ (ของค้างกะจริงมีเยอะใบ) แต่แถบเตือนบนจอยังอยู่ ห้ามหาย */
+  const [handoverAsk, setHandoverAsk]     = useState(null); // { text, run }
+  const handoverOkRef = useRef(null);
   /* 🔴 "จำคำตอบไว้ทั้งกะ" ของใบที่เกินเวลากะ (คำสั่ง user 10/11 · หน้างานแจ้ง)
      ใกล้เลิกกะ **ทุกใบที่สแกนจะเกินความจุหมด** ⇒ เด้งโมดัลให้เลือกทุกใบ = ยิง Tag ต่อกันไม่ได้เลย
      ⇒ เลือกครั้งเดียวแล้วติ๊ก "ใช้กับใบถัดไป" · `null` = ถามทุกใบเหมือนเดิม
@@ -855,6 +865,41 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
     return [fresh, stale];
   }, [sessions]);
 
+  /* ── 🔁 "กะนี้ถูกส่งต่อไปแล้วหรือยัง" (17/11 · หัวหน้าแจ้ง) ─────────────────────────────
+     ไลน์เดียวกันมีกะที่เริ่มทีหลังและเริ่มไปแล้ว = ทุกอย่างที่ยิงลงกะที่เลือกไปขึ้น **กะเก่า**
+     ไล่ฐานจริงเจอ 164 ใบ · 21,647 ชิ้น · 18 กะ (ตั้งแต่ 01/10) ที่ถูกเปิดใบลงกะที่ส่งต่อไปแล้ว
+     🔴 กฎ: ตัวเลือกกะ = ตัวกรอง **ไม่ใช่ด่าน** ⇒ ด่านจริงอยู่ที่ `doInsertProdOrder` (ตัวเขียน DB)
+     ⚠️ `Date.now()` ตอน render พอ — ลิสต์กะรีเฟรชเองผ่าน realtime/poll อยู่แล้ว
+        (ด่านตอนเขียนอ่านเวลาสดอีกรอบ) */
+  /* 🔴 กะที่ "มาทีหลัง" อาจปิดไปแล้ว ⇒ ไม่อยู่ในลิสต์ `sessions` (ลิสต์โหลดแค่ open/pending_close)
+     เคสจริง LINE B กะ 24/10 ถูกเปิดใบเพิ่ม 26/10 10:39 (31 ใบ 3,860 ชิ้น) ทั้งที่กะ 25-26/10 จบไปแล้ว
+     ⇒ ถามฐานตรงๆ เฉพาะ "ไลน์นี้ + ตั้งแต่วันของกะนี้ถึง +3 วัน" (คอลัมน์เท่าที่ใช้ · egress เป็นไบต์)
+     `null` = อ่านไม่ได้ ⇒ จอต้องเขียนว่าเช็คไม่ได้ ห้ามเงียบ */
+  const [lineSessions, setLineSessions] = useState([]);
+  useEffect(() => {
+    const ln = selSession?.line_name, wd = selSession?.work_date;
+    if (!ln || !wd) { setLineSessions([]); return; }
+    let alive = true;
+    (async () => {
+      const to = addDaysStr(wd, 3);
+      let q = supabaseDR.from('production_sessions')
+        .select('id, line_name, work_date, shift, start_time, end_time, shift_min, status')
+        .eq('line_name', ln).gte('work_date', wd);
+      if (to) q = q.lte('work_date', to);
+      const { data, error } = await q.limit(40);
+      if (!alive) return;
+      setLineSessions(error ? null : (data || []));
+    })();
+    return () => { alive = false; };
+  }, [selSession?.line_name, selSession?.work_date]);
+
+  const handover = useMemo(
+    () => (selSession ? handoverOf(selSession, [...(sessions || []), ...(lineSessions || [])], Date.now()) : null),
+    [selSession, sessions, lineSessions]);
+  const handoverRef = useRef(null); handoverRef.current = handover;
+  /* เช็คไม่ได้ = ไม่รู้เวลาเริ่มกะ **หรือ** อ่านกะของไลน์นี้ไม่ได้ — ต้องขึ้นบนจอทั้ง 2 ทาง */
+  const handoverUnsure = !!handover?.unsure || lineSessions === null;
+
   // ไลน์ที่เปิดกะได้ตาม scope (leader→family · role อื่น→sections · admin/qa→null=ทั้งหมด) — กันเปิดกะไลน์ข้ามส่วนงาน
   /* 🔭 ของกลาง `lineScope()` (QC audit 09/11) — เดิม leader ได้ครอบครัวไลน์ล้วน
      ทั้งที่ profiles อาจกำกับส่วนงานเพิ่มไว้ (กฎ 26/10) · `null` = ไม่จำกัด (ความหมายเดิม) */
@@ -882,7 +927,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
   const loadDT = useCallback(async (sessionId) => {
     if (!sessionId) return;
     const { data, error } = await supabaseDR.from('downtime_logs')
-      .select('*, dr_downtime_types(name_th, color, category)')
+      .select('*, dr_downtime_types(name_th, color, category, planned_cap_min)')
       .eq('session_id', sessionId)
       .order('started_at', { ascending: false });
     if (isStaleSess(sessionId)) return;   // กะถูกสลับระหว่างรอ — คำตอบนี้ไม่ใช่ของกะที่เลือก
@@ -1409,7 +1454,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
           : chk.kind === 'future' ? `ล่วงหน้าจากเวลาจริง ${fmtOffset(chk.minutesOff)}`
           : `เลยเวลาปิดกะ ${fmtOffset(chk.minutesOff)}`;
         if (chk.suggestHHmm) {
-          const ok = window.confirm(
+          const ok = await askConfirm(
             `⏰ เวลาที่กรอก ${at} น. อยู่นอกกรอบกะ (${whereTxt})\n` +
             `กะนี้: ${win}\n\n` +
             `💡 น่าจะหมายถึง ${chk.suggestHHmm} น. — ต่างกัน 12 ชม. พอดี (ช่องเวลาบนมือถือ/จอที่ตั้งเป็นแบบ AM-PM\n` +
@@ -1431,7 +1476,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
           return;
         }
         if (chk.kind === 'before' && chk.minutesOff <= 60) {
-          const ok = window.confirm(
+          const ok = await askConfirm(
             `⏰ เวลาเริ่ม ${at} น. อยู่${whereTxt}\nกะนี้: ${win}\n\n` +
             `ถ้าไลน์เริ่มเดินก่อนเวลาที่ลงไว้จริง กด "ตกลง" เพื่อบันทึก\n` +
             `ถ้าเวลาเปิดกะตั้งไว้ผิด ให้กด "ยกเลิก" แล้วไปแก้ที่ปุ่ม "✏️ แก้เวลากะ"`);
@@ -1448,12 +1493,13 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
       toast.error(`ช่วงเวลาที่กรอกยาว ${fmtOffset((endedAt - startedAt) / 60000)} — ยาวเกินกว่า 1 กะ ตรวจเวลาอีกครั้ง`);
       return;
     }
-    // ประเภท "อื่นๆ" เปล่าๆ บอกอะไรไม่ได้ในสรุปประชุมเช้า/รายงาน — บังคับระบุสาเหตุจริงเสมอ
+    /* 🗑️ ประเภท "อื่นๆ" ต้องบอกสาเหตุจริง — **พิมพ์ "อื่นๆ / ไม่ระบุ / -" ซ้ำไม่ผ่าน**
+       (16/11 · คำสั่ง user) หมวด "อื่นๆ (ในแผน)" กินนาทีหยุดตามแผน 41.5% ของทั้งโรงงาน
+       = ก้อนเวลาที่ถูกตัดออกจากฐาน %A/%P ใหญ่สุด แต่ไม่มีใครรู้ว่าคืออะไร
+       🔴 กฎ+ข้อความอยู่ `utils/unclassified.js` ห้ามเขียนเงื่อนไข/ข้อความเองที่นี่ */
     const dtTypeName = dtTypes.find(t => t.id === dtForm.downtime_type_id)?.name_th || '';
-    if (dtTypeName.includes('อื่น') && !dtForm.description?.trim()) {
-      toast.error('ประเภท "อื่นๆ" ต้องระบุรายละเอียด/สาเหตุด้วย — เพื่อให้รายงานและประชุมเช้าอ่านรู้เรื่อง');
-      return;
-    }
+    const dtDescChk = checkOtherDescription(dtTypeName, dtForm.description);
+    if (!dtDescChk.ok) { toast.error(otherDescMessage(dtDescChk.reason, 'สาเหตุที่หยุด')); return; }
     // นอกแผน (เครื่องเสีย) ส่วนใหญ่ควรระบุเครื่อง — ไม่บังคับ (พาร์ทหมด/ไฟดับทั้งโรงงานลงเครื่องไม่ได้)
     // แต่ไม่ปล่อยข้ามเงียบ: ถ้า unplanned แล้วไม่เลือกเครื่อง เด้งถามยืนยันก่อน (planned ไม่ผูกเครื่องอยู่แล้ว ไม่ถาม)
     const dtCat = dtTypes.find(t => t.id === dtForm.downtime_type_id)?.category;
@@ -1472,7 +1518,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
       const hint = noteHits.length
         ? `\n\n💡 หมายเหตุที่พิมพ์ไว้มีเลขเครื่อง: ${noteHits.slice(0, 3).join(', ')}\n   ถ้าใช่ กด "ยกเลิก" แล้วเลือกในช่องเครื่องจักร (ค้นหาได้ทั้งทะเบียน)`
         : '\n\n(ช่องเครื่องจักรค้นหาได้ทั้งทะเบียน — พิมพ์เลขเครื่องแล้วเลือกจากลิสต์)';
-      const ok = window.confirm(
+      const ok = await askConfirm(
         'Downtime นอกแผนนี้ยังไม่ได้เลือกเครื่องจักร\n' +
         'ไม่ระบุเครื่อง = ต่อใบซ่อม / คิด OEE รายเครื่อง / จัดคิวให้ทีมช่างที่ถูก ไม่ได้' + hint +
         '\n\nยืนยันบันทึกโดยไม่เลือกเครื่อง? — เช่น พาร์ทหมด / ไฟดับทั้งโรงงาน');
@@ -1498,7 +1544,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
         }),
       });
     })();
-    if (dtEndChk && !window.confirm(dtEndChk.text + '\n\nยืนยันบันทึกตามนี้?')) return;
+    if (dtEndChk && !await askConfirm(dtEndChk.text + '\n\nยืนยันบันทึกตามนี้?')) return;
 
     setSavingDT(true);
     const { data: { user } } = await supabase.auth.getUser();
@@ -1873,6 +1919,12 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
 
   // insert จริง (ใช้ทั้งจาก handleScanOpen และ handleOverflowForce)
   const doInsertProdOrder = async (prodNo, matNo, qty, std, status = 'open') => {
+    /* 🔴 ด่านจริงของ "ยอดลงกะเก่าที่ลืมปิด" (17/11) — อยู่ที่ตัวเขียน DB ไม่ใช่แค่ป้ายบนจอ
+       ทุกทางที่เปิดใบ (สแกน · เกินความจุ · ยกกะถัดไป) วิ่งผ่านฟังก์ชันนี้ตัวเดียว */
+    const hoTxt = handoverBlockText(handoverRef.current, `เปิดใบผลิต ${prodNo}`, selSession);
+    if (hoTxt && handoverOkRef.current !== selSession?.id) {
+      return { error: { message: `${hoTxt}\n— ยืนยันที่กล่องเตือนก่อน (หรือสลับไปกะที่เดินอยู่)`, code: 'HANDOVER' }, data: null };
+    }
     const opened_at = backfillOpenedAt();
     const { data, error } = await supabaseDR.from('prod_orders').insert({
       session_id:  selSession.id,
@@ -1903,6 +1955,8 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
   /* 🔴 โหมด "จำคำตอบ" ผูกกับกะที่เปิดอยู่ — สลับกะ/ปิดกะ ต้องล้างทิ้งเสมอ
      ไม่ล้าง = ใบของกะใหม่ถูกตัดสินใจแทนด้วยคำตอบของกะก่อน (ยกไปกะอื่นเงียบๆ) */
   useEffect(() => { setOverflowMode(null); }, [selSession?.id]);
+  /* ยืนยัน "ลงกะที่ส่งต่อไปแล้ว" ก็ผูกกับกะเดียวกัน — สลับกะต้องถามใหม่ */
+  useEffect(() => { handoverOkRef.current = null; setHandoverAsk(null); }, [selSession?.id]);
 
   const handleScanOpen = async () => {
     if (prodBusyRef.current) return;
@@ -1937,6 +1991,14 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
     const dup = prodOrders.find(o => o.prod_no === prodNo);
     if (dup) {
       toast.error(`PROD.NO ${prodNo} เปิดไปแล้วในกะนี้ (${dup.status === 'confirmed' ? 'ปิดแล้ว' : 'กำลังผลิต'})`);
+      return;
+    }
+
+    /* 🔴 ไลน์นี้ขึ้นกะใหม่ไปแล้ว = ใบนี้จะไปขึ้นยอดกะเก่า — ถามก่อน (ด่านจริงอยู่ใน doInsertProdOrder)
+       ยืนยันครั้งเดียวใช้ได้ทั้งกะ (ของค้างกะจริงมีหลายใบ) · สลับกะ = ถามใหม่ */
+    const hoAsk = handoverBlockText(handover, `ใบ ${prodNo}`, selSession);
+    if (hoAsk && handoverOkRef.current !== selSession?.id) {
+      setHandoverAsk({ text: hoAsk, run: () => { handoverOkRef.current = selSession?.id; handleScanOpen(); } });
       return;
     }
 
@@ -2103,9 +2165,15 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
     const partnerOpenNo = match.paired_order_id
       ? prodOrders.find(o => o.id === match.paired_order_id && o.status === 'open')?.prod_no
       : null;
+    /* 🔴 17/11 (หัวหน้าแจ้ง) — ใบนี้ผูกกับกะที่เปิดมันไว้ (session_id ของแถว) ปิดแล้ว **ยอดขึ้นกะนั้น**
+       ไลน์ขึ้นกะใหม่ไปแล้วแต่ยังยิงปิดใบของกะเก่า = ถูกต้องตามใบ แต่ต้องบอกให้เห็นว่ายอดไปขึ้นกะไหน
+       (ห้ามเด้งโมดัลตรงนี้ — ของค้างกะมีหลายใบ ยิงรัวไม่ได้เลย · ด่านจริงอยู่ตอน "เปิด" ใบ) */
+    const hoClose = handoverRef.current;
+    const hoNote = hoClose && !hoClose.unsure && hoClose.next
+      ? ` · ⚠️ ยอดขึ้น ${hoSessionLabel(selSession)} (ไลน์นี้ขึ้น${hoSessionLabel(hoClose.next)} ไปแล้ว)` : '';
     toast.success(partnerOpenNo
-      ? `ปิด Order ${match.prod_no} · ${match.qty} ชิ้น ✓ (คู่ RH/LH ${partnerOpenNo} ยังเปิดอยู่ ต้องสแกนปิดแยก)`
-      : `ปิด Order ${match.prod_no} · ${match.qty} ชิ้น ✓`);
+      ? `ปิด Order ${match.prod_no} · ${match.qty} ชิ้น ✓ (คู่ RH/LH ${partnerOpenNo} ยังเปิดอยู่ ต้องสแกนปิดแยก)${hoNote}`
+      : `ปิด Order ${match.prod_no} · ${match.qty} ชิ้น ✓${hoNote}`);
     setCloseProdNo('');
     setCloseMatch(null);
     loadProdOrders(selSession.id, selSession.line_name);
@@ -2125,7 +2193,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
   // เพราะหลังปิดกะ ยอด/OEE ถูก stamp ลง session แล้ว ถอยใบจะทำตัวเลขไม่ตรงกัน
   const handleRevertOrder = async (o) => {
     if (selSession?.status !== 'open') { toast.error('กะนี้ปิด/ส่งขออนุมัติปิดแล้ว — ถอยใบไม่ได้ (ยอดถูกสรุปไปแล้ว)'); return; }
-    if (!window.confirm(
+    if (!await askConfirm(
       `↩️ ถอยใบ ${o.prod_no} (${o.mat_no} · ${coalesceQty(o)} ชิ้น) กลับเป็น "กำลังผลิต"?\n\n` +
       `• ยอดที่รับเข้า stock อัตโนมัติตอนปิดใบจะถูกถอนออก\n` +
       `• ผลิตจบจริงแล้วค่อยสแกนปิดใหม่\n` +
@@ -2269,6 +2337,12 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
       const winErr = backfillWindowError(manualForm.backfill_time);
       if (winErr) { toast.error(winErr); return; }
     }
+    /* 🔁 เปิดเป้า manual ก็ลงกะเก่าที่ลืมปิดได้เหมือนกัน (17/11) — ด่านเดียวกับใบสแกน */
+    const hoMan = handoverBlockText(handover, `เป้าผลิต ${matNo}`, selSession);
+    if (hoMan && handoverOkRef.current !== selSession?.id) {
+      setHandoverAsk({ text: hoMan, run: () => { handoverOkRef.current = selSession?.id; handleManualOpen(); } });
+      return;
+    }
     setSavingManual(true);
     const std = kanbanStds.find(s => s.mat_no === matNo);
     const prod = products.find(p => p.mat_no === matNo);
@@ -2329,7 +2403,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
       }
       if (!pairSession) {
         toast.info(`⚠️ สินค้านี้มีคู่ RH/LH (${pairMat} · ไลน์ ${pairLine}) แต่ไลน์นั้นยังไม่เปิดกะ — เปิดกะแล้วค่อยเปิดเป้าคู่เอง`);
-      } else if (window.confirm(`สินค้านี้มีคู่ RH/LH: ${pairMat}${pairSession.id !== selSession.id ? ` (ไลน์ ${pairLine})` : ''}\nเปิดเป้าคู่ ${qty} ชิ้นให้พร้อมกันเลยมั้ย?`)) {
+      } else if (await askConfirm(`สินค้านี้มีคู่ RH/LH: ${pairMat}${pairSession.id !== selSession.id ? ` (ไลน์ ${pairLine})` : ''}\nเปิดเป้าคู่ ${qty} ชิ้นให้พร้อมกันเลยมั้ย?`)) {
         const { data: pairCreated, error: pe } = await supabaseDR.from('prod_orders').insert({
           session_id: pairSession.id,
           prod_no:    `${prodNo}P`,
@@ -2365,7 +2439,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
     const partner = o?.paired_order_id ? prodOrders.find(x => x.id === o.paired_order_id) : null;
     const plan = pairQtyPlan(o, partner, qty);
     if (!plan) return;
-    const ok = window.confirm(
+    const ok = await askConfirm(
       `งานคู่ RH/LH — ใบ ${plan.partner.prod_no} (${plan.partner.mat_no}) ยอดอยู่ที่ ${plan.from} ชิ้น\n` +
       `ลงยอดเป็น ${plan.to} ชิ้นให้ด้วยเลยมั้ย?` +
       (plan.locked ? '\n\n⚠️ ใบคู่ปิด/ยืนยันไปแล้ว — กดตกลงจะไปทับยอดของใบที่ปิดแล้ว' : '') +
@@ -2405,7 +2479,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
       toast.error(`ใบนี้มี ${o.qty} ชิ้น กรอกเกินไม่ได้ — ถ้าทำครบแล้วให้สแกนปิดใบ`);
       return;
     }
-    if (!qtyFitPass(o, v)) return;        // 🛡️ poka-yoke — ยอดเกินเวลาที่เครื่องมี (ไม่บล็อก แต่ต้องยืนยัน)
+    if (!await qtyFitPass(o, v)) return;        // 🛡️ poka-yoke — ยอดเกินเวลาที่เครื่องมี (ไม่บล็อก แต่ต้องยืนยัน)
     const delta = v - (o.qty_actual || 0);
     /* 🔴 RLS/สิทธิ์ไม่พอ = "สำเร็จ 0 แถว ไม่มี error" ⇒ ต้องนับแถว (กฎเขียน DB ข้อ 2 · QC audit 09/11)
        เดิมอ่านแค่ error แล้วขึ้น "อัพเดทยอดแล้ว ✓" ทั้งที่ยอดไม่ได้เปลี่ยน (ใบคู่ข้างล่างนับแถวอยู่แล้ว) */
@@ -2432,8 +2506,8 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
     const draft = parseInt(manualQtyDraft[o.id]);
     const finalQty = !isNaN(draft) ? draft : (o.qty_actual || 0);
     if (finalQty < 0) { toast.error('ยอดผลิตจริงติดลบไม่ได้'); return; }
-    if (!qtyFitPass(o, finalQty)) return;   // 🛡️ poka-yoke — ตรวจก่อนถามยืนยันปิดใบ
-    if (!window.confirm(`ปิดใบ ${o.prod_no} (${o.mat_no}) ด้วยยอดผลิตจริง ${finalQty} ชิ้น?\nเป้าที่ตั้งไว้ ${o.qty_target ?? o.qty} ชิ้น`)) return;
+    if (!await qtyFitPass(o, finalQty)) return;   // 🛡️ poka-yoke — ตรวจก่อนถามยืนยันปิดใบ
+    if (!await askConfirm(`ปิดใบ ${o.prod_no} (${o.mat_no}) ด้วยยอดผลิตจริง ${finalQty} ชิ้น?\nเป้าที่ตั้งไว้ ${o.qty_target ?? o.qty} ชิ้น`)) return;
     const nowIso = new Date().toISOString();
     /* 🔴 CAS `.eq('status','open')` + นับแถว — 2 เครื่องกดปิดใบเดียวกันพร้อมกัน หรือ RLS ปฏิเสธ
        = "สำเร็จ 0 แถว ไม่มี error" แล้วจอขึ้น "ปิดใบแล้ว ✓" ทั้งที่ยอดของอีกเครื่องถูกทับ/ไม่ได้เขียน
@@ -2468,12 +2542,10 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
     const repair  = parseInt(defectForm.qty_repair)  || 0;
     if (ng < 0 || suspect < 0 || repair < 0) { toast.error('จำนวนงานเสียติดลบไม่ได้ — แก้ช่องที่มีเครื่องหมายลบ'); return; }
     if (ng + suspect + repair === 0) { toast.error('กรอกจำนวนงานเสียอย่างน้อย 1 ช่อง'); return; }
-    // ประเภท "อื่นๆ" เปล่าๆ บอกอะไรไม่ได้ — บังคับระบุอาการ/สาเหตุจริงเสมอ (เหมือนกฎฝั่ง Downtime)
+    /* 🗑️ กฎเดียวกับฝั่ง Downtime — พิมพ์คำกลวงซ้ำไม่ผ่าน (utils/unclassified.js) */
     const defTypeName = defectTypes.find(t => t.id === defectForm.defect_type_id)?.name_th || '';
-    if (defTypeName.includes('อื่น') && !defectForm.description?.trim()) {
-      toast.error('ประเภท "อื่นๆ" ต้องระบุรายละเอียด/อาการด้วย — เพื่อให้รายงานและประชุมเช้าอ่านรู้เรื่อง');
-      return;
-    }
+    const defDescChk = checkOtherDescription(defTypeName, defectForm.description);
+    if (!defDescChk.ok) { toast.error(otherDescMessage(defDescChk.reason, 'อาการของเสีย')); return; }
     setSavingDefect(true);
     /* 📷 อัปโหลดรูป **ก่อน** เขียนแถว — ล้มแล้วเขียนต่อ = แถวบอกว่ามีรูปแต่เปิดไม่ขึ้น (ห้ามล้มเหลวเงียบ)
        ⚠️ คีย์ชื่อไฟล์ใช้ `session_id` ไม่ใช่ id ของแถว (ตอน insert ยังไม่มี id) */
@@ -2605,7 +2677,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
       return;
     }
     const n = (tied || []).length;
-    if (!window.confirm(`ลบรายการงานเสียนี้?${n ? `\n\nใบถังเหลืองที่ระบบตั้งให้ ${n} ใบ จะถูกปิดไปพร้อมกัน` : ''}`)) return;
+    if (!await askConfirm(`ลบรายการงานเสียนี้?${n ? `\n\nใบถังเหลืองที่ระบบตั้งให้ ${n} ใบ จะถูกปิดไปพร้อมกัน` : ''}`)) return;
     /* ปิดใบถังก่อนลบแถวต้นทาง — ลบก่อนแล้วปิดใบล้ม = ใบกำพร้าค้างถาวร (กู้ไม่ได้เพราะ FK เป็น null แล้ว) */
     if (n) {
       const bres = await supabaseDR.from('quality_bin_records')
@@ -2641,7 +2713,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
       made > 0 ? `\n⚠️ ใบนี้ลงยอดไปแล้ว ${made} ชิ้น — ลบแล้วยอดนี้จะหายจากกะ` : '',
       carriedFrom ? '\n📥 ใบนี้ยกยอดมาจากกะก่อน — ลบแล้วระบบจะคืนยอดค้างให้กะก่อน เพื่อให้รับใหม่ได้' : '',
     ].filter(Boolean).join('');
-    if (!window.confirm(warn)) return;
+    if (!await askConfirm(warn)) return;
     const { error } = await supabaseDR.from('prod_orders').delete().eq('id', id);
     if (error) { toast.error(error.message); return; }
     /* คืนต้นทาง — ทำ **หลัง** ลบสำเร็จเท่านั้น (คืนก่อนแล้วลบล้ม = ยอดค้างโผล่ซ้อนกับใบที่ยังอยู่)
@@ -2765,10 +2837,10 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
     return fit ? qtyFitMessage(fit, { matNo: o.mat_no, qty, ctSec }) : null;
   };
   /** คืน false = คนกดยกเลิก (ยังไม่บันทึก) */
-  const qtyFitPass = (o, qty) => {
+  const qtyFitPass = async (o, qty) => {
     const msg = qtyFitWarn(o, qty);
     if (!msg) return true;
-    return window.confirm(`⚠️ ยอดนี้ดูเป็นไปไม่ได้เมื่อเทียบกับเวลาที่เครื่องมี\n\n${msg}\n\n`
+    return await askConfirm(`⚠️ ยอดนี้ดูเป็นไปไม่ได้เมื่อเทียบกับเวลาที่เครื่องมี\n\n${msg}\n\n`
       + 'กด OK = ยืนยันว่าตรวจแล้วและยอดนี้ถูกต้อง · กด Cancel = กลับไปแก้');
   };
 
@@ -2855,9 +2927,9 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
 
     // เตือนถ้ากะนี้ไม่มีข้อมูลการผลิตเลย — เผื่อพนักงานลืม Scan เปิด Order / บันทึก Downtime ก่อนปิดกะ
     if (prodOrders.length === 0 && dtLogs.length === 0) {
-      if (!window.confirm('กะนี้ยังไม่มี Prod Order และไม่มี Downtime เลย — ยืนยันจะปิดกะหรือไม่?')) return;
+      if (!await askConfirm('กะนี้ยังไม่มี Prod Order และไม่มี Downtime เลย — ยืนยันจะปิดกะหรือไม่?')) return;
     } else if (prodOrders.length === 0) {
-      if (!window.confirm('กะนี้ยังไม่มี Prod Order เลย (มีแต่ Downtime) — ยืนยันจะปิดกะหรือไม่?')) return;
+      if (!await askConfirm('กะนี้ยังไม่มี Prod Order เลย (มีแต่ Downtime) — ยืนยันจะปิดกะหรือไม่?')) return;
     }
 
     setSavingClose(true);
@@ -3327,7 +3399,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
   };
 
   const handleDeleteDT = async (id) => {
-    if (!window.confirm('ลบ Downtime นี้?')) return;
+    if (!await askConfirm('ลบ Downtime นี้?')) return;
     const { error } = await supabaseDR.from('downtime_logs').delete().eq('id', id);
     if (error) { toast.error(error.message); return; }
     loadDT(selSession.id);
@@ -3563,7 +3635,12 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                     {/* 🪜 เปิดกะ → ขอปิดกะ → ปิดแล้ว — กฎ shiftCloseFlow() (utils/stepFlow.js) · UI §6.30 */}
                     {(() => { const f = shiftCloseFlow(s); return <StepFlow compact steps={f.steps} unknown={!f.known} style={{ margin: '3px 0 2px' }} />; })()}
                     <div style={{ fontSize: 11, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 5 }}>
-                      <span>{s.shift === 'day' ? 'กะเช้า' : 'กะดึก'} · {fmtDate(s.work_date)}</span>
+                      {/* ☼ ☾ ไอคอนกะ — เส้นโมโนโครมสีเดียวกับข้อความ (17/11 · หน้างาน "ดูไม่ออกว่ากะไหน")
+                          ห้ามกลับไปใช้อีโมจิ ☀️/🌙 (คุมสีไม่ได้ + หน้าตาต่างกันทุก OS · ด่าน shift-glyph-no-emoji) */}
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <ShiftGlyph shift={s.shift} size={12} title={s.shift === 'day' ? 'กะเช้า' : 'กะดึก'} />
+                        {s.shift === 'day' ? 'กะเช้า' : 'กะดึก'} · {fmtDate(s.work_date)}
+                      </span>
                       {/* ชิปอายุกะค้าง — เหลืองนิ่ง ≥3 วัน · แดงนิ่งเกิน STALE_SESSION_DAYS (งานค้าง ไม่ใช่ alarm ห้ามกระพริบ) */}
                       {(() => { const age = sessionAgeDays(s.work_date); if (age < 3) return null;
                         const late = age > STALE_SESSION_DAYS;
@@ -3727,6 +3804,29 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
               /* ── หัวกะ (LIVE · ชื่อไลน์ · ปุ่มคำสั่ง) ── */
               const sessionHeaderEl = (
                 <div style={{ background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: '16px 20px', marginBottom: isMobile ? 16 : 0 }}>
+                  {/* ── 🔁 กะนี้ถูกส่งต่อไปแล้ว (17/11 · หัวหน้าแจ้ง "ยอดกะ02 ไปขึ้นกะ01 ที่ลืมปิด") ──
+                      จอที่เปิดค้างจากกะก่อนยังผูกกับกะเดิม ⇒ ต้องเห็นชัดก่อนยิงใบ + สลับได้ในคลิกเดียว
+                      🔴 อ่านเวลาเริ่มกะไม่ได้ = เช็คไม่ได้ ต้องเขียนบนจอ ห้ามเงียบ (กฎความซื่อสัตย์ของจอ) */}
+                  {handoverUnsure && (
+                    <div style={{ marginBottom: 10, padding: '6px 10px', borderRadius: 'var(--r-sm)', background: 'var(--card2)', color: 'var(--muted)', fontSize: 11 }}>
+                      เช็ค “ไลน์นี้ขึ้นกะใหม่ไปแล้วหรือยัง” ไม่ได้ — {handover?.unsure ? 'กะนี้ไม่มีเวลาเริ่มกะในระบบ' : 'อ่านรายการกะของไลน์นี้ไม่สำเร็จ'}
+                    </div>
+                  )}
+                  {handover?.next && (
+                    <div style={{ marginBottom: 12, padding: '10px 12px', borderRadius: 'var(--r-md)', background: 'var(--amber-dim)', border: '1px solid var(--amber)' }}>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--amber)' }}>
+                        🔁 ไลน์นี้ขึ้น{hoSessionLabel(handover.next)} ไปแล้ว — กะที่เลือกอยู่คือกะเก่า
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--text)', marginTop: 4 }}>
+                        ทุกใบ/ยอด/Downtime ที่ลงตรงนี้จะไปขึ้นยอดของ <b>{hoSessionLabel(selSession)}</b>
+                        {handover.lateMin >= 60 ? ` (ขึ้นกะใหม่มา ${Math.floor(handover.lateMin / 60)} ชม.${handover.lateMin % 60 ? ` ${handover.lateMin % 60} น.` : ''})` : ` (ขึ้นกะใหม่มา ${handover.lateMin} นาที)`}
+                      </div>
+                      <button onClick={() => { setSelSession(handover.next); toast.info(`สลับไป ${hoSessionLabel(handover.next)} แล้ว`); }}
+                        style={{ marginTop: 8, padding: '6px 12px', borderRadius: 'var(--r-sm)', border: 'none', background: 'var(--amber)', color: '#000', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
+                        ➡️ สลับไปกะที่เดินอยู่
+                      </button>
+                    </div>
+                  )}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
@@ -4171,7 +4271,11 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                           style={{ fontSize: 11, padding: '3px 9px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text2)', cursor: 'pointer', fontWeight: 700 }}>{tr('ไม่เลือกเลย')}</button>
                       </div>
                       {carryOrders.map(o => {
-                        const age = debtAgeDays(o.production_sessions?.work_date, selSession?.work_date);
+                        /* 🔴 17/11 — "ค้างมากี่วัน" ต้องนับจาก **ต้นทางจริง** ไม่ใช่จากกะที่ส่งมา
+                           ใบที่วนมา 5 กะจะขึ้น "1 วัน" ตลอด (กะก่อน = เมื่อวาน) = จอโกหก
+                           ⇒ ใช้ first_opened_at/carry_hops ที่ DB จำไว้ · ไม่มี = ถอยไปแบบเดิมเป๊ะ */
+                        const org = carryAgeOf(o);
+                        const age = org?.days ?? debtAgeDays(o.production_sessions?.work_date, selSession?.work_date);
                         const on  = carryPick.has(o.id);
                         return (
                           <label key={o.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 4px', cursor: 'pointer', borderBottom: '1px solid var(--border2)' }}>
@@ -4183,7 +4287,10 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                             <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 800, color: 'var(--text2)', whiteSpace: 'nowrap', flexShrink: 0 }}>
                               {debtPcs(o).toLocaleString()} {tr('ชิ้น')}
                               {age != null && age > 0 && (
-                                <span style={{ color: age >= 7 ? 'var(--red)' : 'var(--amber)', fontWeight: 700 }}> · {age} {tr('วัน')}</span>
+                                <span title={org?.firstMs ? `เปิดครั้งแรก ${fmtDateTime(org.firstMs)} · ยกข้ามกะมาแล้ว ${org.hops} ครั้ง` : undefined}
+                                  style={{ color: age >= 7 ? 'var(--red)' : 'var(--amber)', fontWeight: 700 }}>
+                                  {' '}· {age} {tr('วัน')}{org?.hops > 1 ? ` (${org.hops} ${tr('กะ')})` : ''}
+                                </span>
                               )}
                             </span>
                           </label>
@@ -4355,6 +4462,25 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                             </span>
                           )}
                           {/* ร่องรอยการถอยใบ — โชว์เสมอให้หัวหน้าแผนกตรวจย้อนหลังได้ว่าใครถอย */}
+                          {/* ⏳ ใบที่วนข้ามกะมานาน — หัวหน้าแจ้ง 17/11 "บางอันมันค้างนานแล้ว จะได้เคลียร์ก่อน"
+                              เลขมาจาก `carry_hops`/`first_opened_at` ที่ DB จำไว้ตอนรับยกยอด
+                              🔴 ห้ามไล่หาเองจาก prod_no — การ์ดคัมบังใช้เลขซ้ำข้ามเดือน */}
+                          {(() => {
+                            const age = carryAgeOf(o);
+                            if (!age || age.hops < 1) return null;
+                            const late = age.days == null ? false : age.days >= 3;
+                            return (
+                              <span title={age.days == null
+                                ? `ใบนี้ถูกยกข้ามกะมาแล้ว ${age.hops} ครั้ง (ไม่รู้วันเปิดครั้งแรก)`
+                                : `เปิดครั้งแรก ${fmtDateTime(age.firstMs)} · ยกข้ามกะมาแล้ว ${age.hops} ครั้ง`}
+                                style={{ fontSize: 11, fontWeight: 800, padding: '1px 6px', borderRadius: 'var(--r-md)', whiteSpace: 'nowrap',
+                                  background: late ? 'var(--red-dim)' : 'var(--amber-dim)',
+                                  color: late ? 'var(--red)' : 'var(--amber)',
+                                  border: `1px solid ${late ? 'var(--red-line)' : 'var(--amber-line)'}` }}>
+                                ⏳ {age.days == null ? `วนมา ${age.hops} กะ` : `ค้างมา ${age.days} ${tr('วัน')} · ${age.hops} กะ`}
+                              </span>
+                            );
+                          })()}
                           {(o.reopen_count || 0) > 0 && (
                             <span title={`ใบนี้เคยถูกถอยจาก "ปิดแล้ว" กลับมาผลิตต่อ ${o.reopen_count} ครั้ง · ล่าสุดโดย ${o.reopened_by || '-'}`}
                               style={{ fontSize: 11, padding: '1px 7px', borderRadius: 'var(--r-pill)', background: 'var(--amber-dim)', color: 'var(--amber)', fontWeight: 700 }}>
@@ -4364,6 +4490,8 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                         </div>
                         <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
                           เปิด {fmtTime(new Date(o.opened_at))} {o.opened_by && `· ${o.opened_by}`}
+                          {(() => { const age = carryAgeOf(o);
+                            return age?.firstMs ? ` · เปิดครั้งแรก ${fmtDateTime(age.firstMs)}` : null; })()}
                           {confirmed && o.confirmed_at && ` · ปิด ${fmtTime(new Date(o.confirmed_at))} · ${o.confirmed_by}`}
                           {manualOpen && ` · อัพเดทยอดล่าสุด ${fmtTime(lastUpd)}`}
                           {manualStale && <span style={{ color: 'var(--amber)', fontWeight: 700 }}> {tr('⚠ เกิน 2.5 ชม.แล้ว — อัพเดทยอดด้วย')}</span>}
@@ -6241,6 +6369,33 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
           );
         })()}
 
+        {/* ── 🔁 กะที่ส่งต่อไปแล้ว: ถามก่อนเปิดใบ (17/11 · หัวหน้าแจ้ง) ───────────────
+            2 ทางเลือกเท่านั้น: สลับไปกะที่เดินอยู่ (ทางที่ควรเป็น) หรือยืนยันลงกะเดิม (ของค้างกะจริง)
+            ยืนยันแล้ว = ไม่ถามซ้ำทั้งกะ แต่แถบเตือนบนหัวกะยังอยู่ (ห้ามเงียบ) */}
+        {handoverAsk && (
+          <div className="overlay" style={{ zIndex: 2100 }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg3)', border: '2px solid var(--amber)', borderRadius: 'var(--r-lg)', padding: 28, width: 'min(95vw,460px)', display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--amber)' }}>🔁 กะนี้ถูกส่งต่อไปแล้ว</div>
+              <div style={{ background: 'var(--amber-dim)', border: '1px solid var(--amber)', borderRadius: 'var(--r-md)', padding: '12px 16px', fontSize: 13, color: 'var(--text)', whiteSpace: 'pre-line', lineHeight: 1.6 }}>
+                {handoverAsk.text}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {handover?.next && (
+                  <button onClick={() => { const nx = handover.next; setHandoverAsk(null); setSelSession(nx); toast.info(`สลับไป ${hoSessionLabel(nx)} แล้ว — ยิงใบใหม่ได้เลย`); }}
+                    style={{ padding: '12px 16px', borderRadius: 'var(--r-md)', border: 'none', background: 'var(--green)', color: '#fff', fontSize: 14, fontWeight: 800, cursor: 'pointer' }}>
+                    ➡️ สลับไป{hoSessionLabel(handover.next)} (ยิงใบใหม่อีกครั้ง)
+                  </button>
+                )}
+                <button onClick={() => { const r = handoverAsk.run; setHandoverAsk(null); r?.(); }}
+                  style={{ padding: '10px 16px', borderRadius: 'var(--r-md)', border: '1px solid var(--amber)', background: 'transparent', color: 'var(--amber)', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>
+                  ยืนยันลงกะเดิม — ของนี้ผลิตในกะนั้นจริง (ไม่ถามซ้ำทั้งกะ)
+                </button>
+                <button onClick={() => setHandoverAsk(null)} style={{ ...cancelBtnStyle, alignSelf: 'center' }}>{tr('ยกเลิก')}</button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── OVERFLOW CONFIRMATION modal ─────────────────────── */}
         {overflowInfo && (
           <div className="overlay" style={{ zIndex: 2100 }}>
@@ -6942,9 +7097,25 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                   ))}
                 </div>
 
-                <Field label={tr('รายละเอียด / สาเหตุ')}>
-                  <input type="text" value={defectForm.description} onChange={e => setDefectForm(f => ({ ...f, description: e.target.value }))} placeholder={tr('เช่น มิติไม่ได้เพราะแม่พิมพ์สึก...')} style={inputStyle} />
-                </Field>
+                {/* กฎเดียวกับฝั่ง Downtime — ประเภท "อื่นๆ" ต้องบอกอาการจริง */}
+                {(() => {
+                  const tn = defectTypes.find(t => t.id === defectForm.defect_type_id)?.name_th || '';
+                  const need = isVague(tn);
+                  const chk = checkOtherDescription(tn, defectForm.description);
+                  return (
+                    <Field label={need ? `${tr('รายละเอียด / สาเหตุ')} *` : tr('รายละเอียด / สาเหตุ')}>
+                      <input type="text" value={defectForm.description}
+                        onChange={e => setDefectForm(f => ({ ...f, description: e.target.value }))}
+                        placeholder={need ? tr('บอกอาการจริง เช่น รอยขีดข่วนที่ขอบงาน') : tr('เช่น มิติไม่ได้เพราะแม่พิมพ์สึก...')}
+                        style={need && !chk.ok ? { ...inputStyle, borderColor: 'var(--amber)' } : inputStyle} />
+                      {need && (
+                        <div style={{ fontSize: 11, color: chk.ok ? 'var(--muted)' : 'var(--amber)', marginTop: 3, lineHeight: 1.5 }}>
+                          {chk.ok ? tr('✓ ระบุอาการแล้ว') : otherDescMessage(chk.reason, tr('อาการของเสีย'))}
+                        </div>
+                      )}
+                    </Field>
+                  );
+                })()}
 
                 {/* 📷 รูปงานเสีย — **ทางเลือก ห้ามทำเป็นช่องบังคับ** (คำสั่ง user 12/10)
                     หน้างานใส่ถุงมือ/รีบ บังคับถ่ายทุกใบ = คนเลิกลงข้อมูล
@@ -7327,9 +7498,26 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                       )}
                     </Field>
                   </div>
-                  <Field label={tr('รายละเอียด')}>
-                    <input type="text" value={dtForm.description} onChange={e => setDtForm(f => ({ ...f, description: e.target.value }))} placeholder={tr('สาเหตุ...')} style={inputStyle} />
-                  </Field>
+                  {/* 🗑️ ประเภทถังขยะ ("อื่นๆ") = ช่องนี้บังคับ และพิมพ์คำกลวงซ้ำไม่ผ่าน
+                      ⇒ บอกตั้งแต่ตอนกรอก ไม่ใช่ไปเด้ง toast ตอนกดบันทึก (utils/unclassified.js) */}
+                  {(() => {
+                    const tn = dtTypes.find(t => t.id === dtForm.downtime_type_id)?.name_th || '';
+                    const chk = checkOtherDescription(tn, dtForm.description);
+                    const need = !isVague(tn) ? false : true;
+                    return (
+                      <Field label={need ? `${tr('รายละเอียด')} *` : tr('รายละเอียด')}>
+                        <input type="text" value={dtForm.description}
+                          onChange={e => setDtForm(f => ({ ...f, description: e.target.value }))}
+                          placeholder={need ? tr('บอกสาเหตุจริง เช่น โซ่ลำเลียงติด / ลมตก') : tr('สาเหตุ...')}
+                          style={need && !chk.ok ? { ...inputStyle, borderColor: 'var(--amber)' } : inputStyle} />
+                        {need && (
+                          <div style={{ fontSize: 11, color: chk.ok ? 'var(--muted)' : 'var(--amber)', marginTop: 3, lineHeight: 1.5 }}>
+                            {chk.ok ? tr('✓ ระบุสาเหตุแล้ว') : otherDescMessage(chk.reason, tr('สาเหตุที่หยุด'))}
+                          </div>
+                        )}
+                      </Field>
+                    );
+                  })()}
                 </div>
 
                 <div className={isMobile ? 'm-modalfoot' : undefined} style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
@@ -7348,7 +7536,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                   <ScanModal
                     title={tr('สแกนเครื่องจักร')}
                     hint={tr('ส่องกล้องที่ป้าย QR บนเครื่อง หรือยิงด้วยเครื่องสแกน')}
-                    onScan={(parsed) => {
+                    onScan={async (parsed) => {
                       // ค้นทั้งโรงงานก่อน แล้วค่อยดูว่าอยู่ในครอบครัวไลน์เดียวกันไหม
                       const mc = resolveMachine(parsed, machines);
                       if (!mc) return `ไม่พบเครื่องนี้ในฐานข้อมูล (${parsed.raw})`;
@@ -7359,7 +7547,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                       const fam = new Set(getLineFamilyNames(lines, selSession.line_name).map(n => (n || '').trim().toLowerCase()));
                       const mcLine = (mc.line_name || '').trim().toLowerCase();
                       if (mcLine && !fam.has(mcLine)) {
-                        const ok = window.confirm(`เครื่อง ${mc.machine_no} ลงทะเบียนไว้ที่ไลน์ "${mc.line_name}"\nไม่ใช่ "${selSession.line_name}" ที่เปิดกะอยู่\n\nยืนยันเลือกเครื่องนี้?`);
+                        const ok = await askConfirm(`เครื่อง ${mc.machine_no} ลงทะเบียนไว้ที่ไลน์ "${mc.line_name}"\nไม่ใช่ "${selSession.line_name}" ที่เปิดกะอยู่\n\nยืนยันเลือกเครื่องนี้?`);
                         if (!ok) return `ยกเลิก — เครื่อง ${mc.machine_no} อยู่ไลน์ ${mc.line_name}`;
                       }
                       setDtForm(f => ({ ...f, machine_no: mc.machine_no || f.machine_no }));
@@ -7743,7 +7931,7 @@ function HistoryTab({ role }) {
     if (!force && dtMap[sessionId]) return { dts: dtMap[sessionId], defects: defectMap[sessionId] || [] }; // already loaded
     const [{ data: dts, error: e1 }, { data: defects, error: e2 }, { data: orders, error: e3 }] = await Promise.all([
       supabaseDR.from('downtime_logs')
-        .select('*, dr_downtime_types(name_th, color, category)')
+        .select('*, dr_downtime_types(name_th, color, category, planned_cap_min)')
         .eq('session_id', sessionId).order('started_at'),
       supabaseDR.from('defect_logs')
         // mat_no/part_name ต้องมาด้วย — โมดัล 🛠 ใช้จับคู่ WI การซ่อมจากเลขพาร์ท (WI-PD3-069 §6)
@@ -7812,7 +8000,10 @@ function HistoryTab({ role }) {
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{s.line_name}</span>
-                    <span style={{ fontSize: 11, color: 'var(--muted)' }}>{s.shift === 'day' ? '☀️ กะเช้า' : '🌙 กะดึก'} · {fmtDate(s.work_date)}</span>
+                    <span style={{ fontSize: 11, color: 'var(--muted)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <ShiftGlyph shift={s.shift} size={12} title={s.shift === 'day' ? 'กะเช้า' : 'กะดึก'} />
+                      {s.shift === 'day' ? 'กะเช้า' : 'กะดึก'} · {fmtDate(s.work_date)}
+                    </span>
                     {s.dr_products?.name && <span style={{ fontSize: 11, color: 'var(--blue)' }}>· {s.dr_products.name}</span>}
                   </div>
                 </div>
@@ -7864,7 +8055,7 @@ function HistoryTab({ role }) {
                          เนื้อเปลี่ยนแล้ว = ออกใบใหม่ถูกต้อง ไม่ต้องเตือน */
                       const same = (probDocs[s.id] || []).find(doc =>
                         docMatchesNow(doc, { downtimes: dts, defects: defs }) === true);
-                      if (same && !window.confirm(
+                      if (same && !await askConfirm(
                         `กะนี้ออกใบ ${same.doc_no} ไปแล้ว และเนื้อใบยังเหมือนเดิมทุกอย่าง\n\n`
                         + 'ถ้าแค่อยากได้กระดาษอีกแผ่น ให้กดปุ่ม 🧾 เลขที่ใบ (พิมพ์ซ้ำใบเดิม) แทน\n'
                         + 'กด OK = ออกใบใหม่อีกเลขหนึ่ง')) return;
@@ -8329,7 +8520,7 @@ function ExportTab() {
       let q = supabaseDR.from('production_sessions')
         .select(`*, dr_products(name, cycle_time_sec, target_per_shift),
                  prod_orders(*),
-                 downtime_logs(*, dr_downtime_types(name_th, category)),
+                 downtime_logs(*, dr_downtime_types(name_th, category, planned_cap_min)),
                  defect_logs(*, dr_defect_types(name_th))`)
         .eq('status', 'closed')
         .gte('work_date', filter.date_from)
@@ -8918,7 +9109,7 @@ function DefectTypeSetup({ role }) {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('ลบประเภทนี้?')) return;
+    if (!await askConfirm('ลบประเภทนี้?')) return;
     const { error } = await supabaseDR.from('dr_defect_types').delete().eq('id', id);
     if (error) { toast.error(error.message); return; }
     invalidateTable('dr_defect_types');
@@ -9076,7 +9267,7 @@ function BreakLineRules({ policy, lines, canEdit, onClose }) {
   };
 
   const handleRemove = async (r) => {
-    if (!window.confirm(`เอาข้อยกเว้นของ ${r.line_name} ออก?\nไลน์นี้ (และไลน์ลูกที่ได้ตามมัน) จะกลับไปใช้ค่ากลาง ${centralMin} นาที`)) return;
+    if (!await askConfirm(`เอาข้อยกเว้นของ ${r.line_name} ออก?\nไลน์นี้ (และไลน์ลูกที่ได้ตามมัน) จะกลับไปใช้ค่ากลาง ${centralMin} นาที`)) return;
     const ok = checkWriteRows(await supabaseDR.from('break_line_rules').delete().eq('id', r.id).select('id'),
       'ลบข้อยกเว้นเวลาพักรายไลน์');
     if (!ok) return;
@@ -9245,7 +9436,7 @@ function BreakPolicySetup({ role }) {
 
   const handleDelete = async (id) => {
     if (!canEdit) { toast.error('ลบนโยบายหยุดพักต้องมีสิทธิ์ daily_report:setup'); return; }
-    if (!window.confirm('ลบนโยบายนี้?')) return;
+    if (!await askConfirm('ลบนโยบายนี้?')) return;
     // นับแถวที่ลบจริง — นโยบายพักเป็นฐานเวลาของ %A/%P ทั้งโรงงาน ลบไม่ติดแล้วบอกว่าลบ = จอโกหก
     if (!checkWriteRows(await supabaseDR.from('break_policies').delete().eq('id', id).select('id'), 'ลบนโยบายหยุดพัก')) return;
     invalidateTable('break_policies');
@@ -9550,7 +9741,7 @@ function ProductSetup({ role }) {
   const handleDelete = async (id) => {
     const row = items.find(i => i.id === id);
     if (!pGuard(row?.line_name, `สินค้า ${row?.mat_no || row?.name || ''}`)) return;   // ชั้นที่ 3
-    if (!window.confirm('ลบสินค้านี้?')) return;
+    if (!await askConfirm('ลบสินค้านี้?')) return;
     const { error } = await supabaseDR.from('dr_products').delete().eq('id', id);
     if (error) { toast.error(error.message); return; }
     invalidateTable('dr_products');
@@ -9573,7 +9764,7 @@ function ProductSetup({ role }) {
     // 2026-09-07 MAT.NO นอก Product Master → ถามยืนยัน (เดิมบล็อกแข็ง — user สั่ง: ทะเบียนไม่มีต้องยังใช้ค่าที่เคยบันทึกได้)
     //   บันทึกได้แต่ product_id = null (สแกนเปิดใบ join ด้วย mat_no ยังใช้ได้เมื่อเพิ่มสินค้าทีหลัง)
     const matched = items.find(i => String(i.mat_no || '').trim().toUpperCase() === kanbanForm.mat_no.trim().toUpperCase());
-    if (!matched && !window.confirm(`MAT.NO ${kanbanForm.mat_no.trim().toUpperCase()} ไม่มีใน Product Master — จะบันทึกโดยไม่ผูกสินค้า (product_id ว่าง) ใช้ค่านี้ต่อหรือไม่?`)) return;
+    if (!matched && !await askConfirm(`MAT.NO ${kanbanForm.mat_no.trim().toUpperCase()} ไม่มีใน Product Master — จะบันทึกโดยไม่ผูกสินค้า (product_id ว่าง) ใช้ค่านี้ต่อหรือไม่?`)) return;
     setKanbanSaving(true);
     const payload = {
       product_id: kanbanForm.product_id || matched?.id || null,
@@ -9593,7 +9784,7 @@ function ProductSetup({ role }) {
   };
 
   const handleKanbanDelete = async (id) => {
-    if (!window.confirm('ลบ Kanban Standard นี้?')) return;
+    if (!await askConfirm('ลบ Kanban Standard นี้?')) return;
     const { error } = await supabaseDR.from('kanban_standards').delete().eq('id', id);
     if (error) { toast.error(error.message); return; }
     invalidateTable('kanban_standards');
@@ -9894,9 +10085,9 @@ function DowntimeTypeSetup({ role }) {
   const openEdit = (item = null) => {
     setEditing(item?.id || 'new');
     setForm(item
-      ? { name_th: item.name_th, name_en: item.name_en || '', category: item.category, process_type: item.process_type || 'welding_assembly', color: item.color, sort_order: item.sort_order, is_active: item.is_active, six_big_loss: item.six_big_loss || '', waste_type: item.waste_type || '', machine_type_ids: item.machine_type_ids || [], equipment_kinds: item.equipment_kinds || [], mb_flag: mbFlagOf(item) }
+      ? { name_th: item.name_th, name_en: item.name_en || '', category: item.category, planned_cap_min: item.planned_cap_min ?? '', process_type: item.process_type || 'welding_assembly', color: item.color, sort_order: item.sort_order, is_active: item.is_active, six_big_loss: item.six_big_loss || '', waste_type: item.waste_type || '', machine_type_ids: item.machine_type_ids || [], equipment_kinds: item.equipment_kinds || [], mb_flag: mbFlagOf(item) }
       // สร้างใหม่ default สีที่ยังไม่ซ้ำกับประเภทที่มี (ผู้ใช้เปลี่ยนทับได้)
-      : { name_th: '', name_en: '', category: 'unplanned', process_type: 'welding_assembly', color: pickUnusedColor(items.map(i => i.color)), sort_order: items.length + 1, is_active: true, six_big_loss: '', waste_type: '', machine_type_ids: [], equipment_kinds: [], mb_flag: 'unset' });
+      : { name_th: '', name_en: '', category: 'unplanned', planned_cap_min: '', process_type: 'welding_assembly', color: pickUnusedColor(items.map(i => i.color)), sort_order: items.length + 1, is_active: true, six_big_loss: '', waste_type: '', machine_type_ids: [], equipment_kinds: [], mb_flag: 'unset' });
   };
 
   const handleSave = async () => {
@@ -9906,7 +10097,11 @@ function DowntimeTypeSetup({ role }) {
     /* 🔧 ธง "ของช่างไหม" — `mb_flag` เป็นคีย์บนจอ ต้องแปลงเป็น boolean/null ก่อนลงฐาน
          🔴 ยังไม่ระบุ = null ห้ามเก็บ false (false = ตัดสินแล้วว่าไม่ใช่ของช่าง คนละเรื่อง) */
     const { mb_flag, ...rest } = form;
-    const payload = { ...rest, six_big_loss: form.six_big_loss || null, waste_type: form.waste_type || null, machine_type_ids: idsForDb(form.machine_type_ids), equipment_kinds: idsForDb(form.equipment_kinds), is_machine_breakdown: mbValueForDb(mb_flag) };
+    /* 🧾 เพดานหยุดตามแผน — ว่าง = null (ไม่มีเพดาน) · หมวดนอกแผนไม่เก็บเพดานไว้ให้สับสน
+       🔴 ห้ามเก็บ '' (จะกลายเป็น 0 = "ทั้งใบเป็นนอกแผน" ซึ่งคนละความหมายกับ "ไม่ได้ตั้ง") */
+    const capNum = parseInt(form.planned_cap_min, 10);
+    const planned_cap_min = form.category === 'planned' && Number.isFinite(capNum) && capNum >= 0 ? capNum : null;
+    const payload = { ...rest, planned_cap_min, six_big_loss: form.six_big_loss || null, waste_type: form.waste_type || null, machine_type_ids: idsForDb(form.machine_type_ids), equipment_kinds: idsForDb(form.equipment_kinds), is_machine_breakdown: mbValueForDb(mb_flag) };
     const { error } = editing === 'new'
       ? await supabaseDR.from('dr_downtime_types').insert(payload)
       : await supabaseDR.from('dr_downtime_types').update(payload).eq('id', editing);
@@ -9919,7 +10114,7 @@ function DowntimeTypeSetup({ role }) {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('ลบประเภทนี้?')) return;
+    if (!await askConfirm('ลบประเภทนี้?')) return;
     const { error } = await supabaseDR.from('dr_downtime_types').delete().eq('id', id);
     if (error) { toast.error(error.message); return; }
     invalidateTable('dr_downtime_types');
@@ -10045,6 +10240,20 @@ function DowntimeTypeSetup({ role }) {
                   <option value="planned">{tr('ในแผน (Planned)')}</option>
                 </select>
               </Field>
+              {/* 🧾 เพดานของ "หยุดตามแผน" — เกินเพดาน = นับเป็นนอกแผน (oee.js dtPlannedSplit · 16/11)
+                  🔴 เพดานอยู่ในทะเบียน **ห้าม hardcode ในโค้ด** · ว่าง = ไม่มีเพดาน = พฤติกรรมเดิม */}
+              {form.category === 'planned' && (
+                <Field label={tr('เพดานนาทีต่อใบ (เกินกว่านี้นับเป็นนอกแผน)')}>
+                  <input type="number" min="0" max="1440" inputMode="numeric"
+                    value={form.planned_cap_min ?? ''}
+                    onChange={e => setForm(f => ({ ...f, planned_cap_min: e.target.value }))}
+                    placeholder={tr('ว่าง = ไม่มีเพดาน')} style={inputStyle} />
+                  <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3, lineHeight: 1.5 }}>
+                    {tr('เช่น เปลี่ยนรุ่นมาตรฐาน 30 นาที — ใบที่ใช้ 60 นาที จะนับเป็นในแผน 30 + นอกแผน 30')}
+                    <br />{tr('ว่างไว้ = ไม่จำกัด (ทั้งใบนับเป็นหยุดตามแผน เหมือนเดิม)')}
+                  </div>
+                </Field>
+              )}
               {/* แกน Lean — แยกจาก category ที่ใช้คิด OEE โดยตั้งใจ (ดู src/utils/oee.js §6)
                   ตอบคนละคำถาม: "เวลาที่เสียไปเป็นความสูญเปล่าประเภทไหน แก้ด้วยเครื่องมืออะไร" */}
               <Field label={tr('6 Big Losses (TPM) — สำหรับวิเคราะห์ ไม่กระทบ OEE')}>

@@ -537,7 +537,7 @@ export default function OEEAnalytics() {
       // และได้เช็ค error ในตัว (เดิมรับแค่ data → ล้มเหลวแล้วโชว์ 0 เหมือนไม่มีข้อมูลจริง)
       const [dtRes, defRes, ordRes] = await Promise.all([
         fetchByIds(sessionIds, c => supabaseDR.from('downtime_logs')
-          .select('*, dr_downtime_types(name_th, category, color)').in('session_id', c)),
+          .select('*, dr_downtime_types(name_th, category, planned_cap_min, color)').in('session_id', c)),
         fetchByIds(sessionIds, c => supabaseDR.from('defect_logs')
           .select(`*, dr_defect_types(name_th, color, excl_from_q), prod_orders(mat_no, part_name), ${QBIN_EMBED}`).in('session_id', c)),
         fetchByIds(sessionIds, c => supabaseDR.from('prod_orders')
@@ -1040,7 +1040,7 @@ export default function OEEAnalytics() {
       //    ยังโชว์ค่าจริง = จอขัดแย้งกันเอง (บั๊กจริงที่ user จับได้ 2026-08-20)
       const [dtRes, defRes, { data: dtt }, { data: deft }, lineRes] = await Promise.all([
         fetchByIds(sessionIds, c => supabaseDR.from('downtime_logs')
-          .select('*, dr_downtime_types(name_th, category, color)').in('session_id', c)),
+          .select('*, dr_downtime_types(name_th, category, planned_cap_min, color)').in('session_id', c)),
         fetchByIds(sessionIds, c => supabaseDR.from('defect_logs')
           .select(`*, dr_defect_types(name_th, color, excl_from_q), prod_orders(mat_no, part_name), ${QBIN_EMBED}`).in('session_id', c)),
         supabaseDR.from('dr_downtime_types').select('*').eq('is_active', true).order('sort_order'),

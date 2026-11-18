@@ -36,6 +36,7 @@ import CalcFormulaField from './inspect/CalcFormulaField';
 import { calcOf, calcProblems } from '../utils/inspectCalc';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 const BUCKET = QA_BUCKET;
 const PIN_DEFAULT = '#4d9fff';
 /* ชื่อ view มาตรฐานของแบบ 2D orthographic — ให้ทุกคนตั้งชื่อแผ่นสม่ำเสมอ */
@@ -298,10 +299,10 @@ export default function QaPointsEditor({ part, focusItemId, methodHist, writeChe
     setFrameIdx(frames.length);
     setTitleFor(added[0]._key);
   };
-  const removeFrame = (key) => {
+  const removeFrame = async (key) => {
     const f = frames.find(x => x._key === key);
     const cnt = points.filter(p => p._frameKey === key && p.pos_x != null).length;
-    if (!window.confirm(`เอาแผ่น "${f?.title || ''}" ออก?${cnt ? `\nหมุด ${cnt} จุดบนแผ่นนี้จะถูกถอด (ตัวจุดตรวจไม่หาย)` : ''}\n(มีผลเมื่อกดบันทึก)`)) return;
+    if (!await askConfirm(`เอาแผ่น "${f?.title || ''}" ออก?${cnt ? `\nหมุด ${cnt} จุดบนแผ่นนี้จะถูกถอด (ตัวจุดตรวจไม่หาย)` : ''}\n(มีผลเมื่อกดบันทึก)`)) return;
     setFrames(prev => prev.filter(x => x._key !== key));
     setPoints(prev => prev.map(p => (p._frameKey === key ? { ...p, pos_x: null, pos_y: null, _frameKey: null, label_dx: null, label_dy: null } : p)));
     setFrameIdx(0);

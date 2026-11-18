@@ -20,7 +20,7 @@ import { carryOffers, debtPcs, PENDING_STATUSES, TAKEABLE_SESSION_STATUSES } fro
 
 /* 🔴 คอลัมน์ต้องเลือกเท่าที่ใช้ (egress วัดจริง 25/09: `select=*` ที่นี่ = 61% ของ traffic ตารางนี้)
    **เพิ่มฟิลด์ที่ `importCarryOrders` ส่งต่อ = ต้องเติมที่นี่ด้วย** ไม่งั้นค่าหายเงียบ */
-export const CARRY_COLS = 'id, session_id, prod_no, mat_no, part_name, p_no, customer, qty, qty_actual, status, is_manual, carry_over_note, opened_at';
+export const CARRY_COLS = 'id, session_id, prod_no, mat_no, part_name, p_no, customer, qty, qty_actual, status, is_manual, carry_over_note, opened_at, first_opened_at, carry_hops';
 const SESS_EMBED = ', production_sessions!inner(id, status, line_name, work_date, shift, created_at)';
 
 /**
@@ -102,6 +102,10 @@ export async function importCarryOrders({ session, offers = [], existingProdNos 
       ...(o.is_manual ? { is_manual: true, qty_target: remainQty } : {}),
       qty_actual: 0,
       carry_over_from_session_id: o.session_id,
+      /* 📅 "ใบนี้วนมากี่กะ/ตั้งแต่เมื่อไหร่" — ต้องสืบทอดมาจากใบต้นทาง ไม่งั้นทุกกะจะดูเหมือนเพิ่งเปิดวันนี้
+         (หัวหน้าแจ้ง 17/11: "บางอันมันค้างนานแล้ว จะได้เคลียร์ก่อน") · migration 20261117 */
+      first_opened_at: o.first_opened_at || o.opened_at || null,
+      carry_hops: (Number(o.carry_hops) || 0) + 1,
       carry_over_note: o.carry_over_note || `ค้างจากกะก่อน (ทำได้ ${o.qty_actual || 0}/${o.qty} ชิ้น)`,
       ...(openedAt ? { opened_at: openedAt } : {}),
     });

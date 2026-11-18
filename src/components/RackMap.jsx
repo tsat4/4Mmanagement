@@ -22,6 +22,7 @@ import { checkWriteRows } from '../utils/dbWrite';
 import { uploadOpts } from '../utils/storageUpload';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 const lbl = { display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text2)', marginBottom: 4 };
 const inp = { width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 13, boxSizing: 'border-box' };
 const btnPri = { background: 'var(--accent)', color: 'var(--accent-ink)', border: 'none', borderRadius: 8, padding: '9px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer' };
@@ -261,7 +262,7 @@ export default function RackMap({ parts = [], canEdit, myTeams = [], mySection =
     loadCells(rackId);
   };
   const delCell = async (c) => {
-    if (!confirm(`ลบช่อง "${c.shelf_code}" ออกจากผัง?\n(ตัวอะไหล่ไม่ถูกลบ · กด Undo คืนได้)`)) return;
+    if (!await askConfirm(`ลบช่อง "${c.shelf_code}" ออกจากผัง?\n(ตัวอะไหล่ไม่ถูกลบ · กด Undo คืนได้)`)) return;
     hist.pushHistory();
     checkWriteRows(await supabaseDR.from('mtn_rack_cells').delete().eq('id', c.id).select('id'), 'ลบช่องชั้นวาง');
     setSelCell(null); loadCells(rackId);
@@ -606,7 +607,7 @@ function RackFormModal({ mode, rack, teams, myTeams, secOpts = [], defSection = 
     }
   };
   const del = async () => {
-    if (!confirm(`ลบผัง "${rack.name}"?\nช่องทั้งหมดบนผังนี้จะถูกลบด้วย (ตัวอะไหล่ไม่ถูกลบ)`)) return;
+    if (!await askConfirm(`ลบผัง "${rack.name}"?\nช่องทั้งหมดบนผังนี้จะถูกลบด้วย (ตัวอะไหล่ไม่ถูกลบ)`)) return;
     const { error } = await supabaseDR.from('mtn_rack_maps').update({ is_active: false }).eq('id', rack.id);
     if (error) return toast.error(error.message);
     toast.success('ลบผังแล้ว'); onSaved(null);

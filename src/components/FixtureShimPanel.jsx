@@ -8,6 +8,7 @@ import {
 } from '../utils/fixturePoints';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 /* ═══════════════════════════════════════════════════════════════
    🔧 บันทึกการใส่/ถอดชิม — หัวใจของโมดูล
 
@@ -109,7 +110,7 @@ export default function FixtureShimPanel({
     if (preview.after < 0)     { toast.error('ค่ารวมติดลบไม่ได้'); return; }
     if (f.reason === 'other' && !f.note.trim()) { toast.error('เหตุผล "อื่นๆ" ต้องระบุรายละเอียด'); return; }
     if (afterStack?.level === 'over' &&
-        !window.confirm(`หลังบันทึกจะเป็น ${preview.after} mm ซึ่ง **เกินเพดาน ${point.max_shim_mm} mm**\n\nชิมชดเชยต่อไปไม่ไหวแล้ว — ควรเปิดใบซ่อมเพื่อเปลี่ยนชิ้นส่วนจริง\n\nยืนยันบันทึกต่อ?`)) return;
+        !await askConfirm(`หลังบันทึกจะเป็น ${preview.after} mm ซึ่ง **เกินเพดาน ${point.max_shim_mm} mm**\n\nชิมชดเชยต่อไปไม่ไหวแล้ว — ควรเปิดใบซ่อมเพื่อเปลี่ยนชิ้นส่วนจริง\n\nยืนยันบันทึกต่อ?`)) return;
 
     setSaving(true);
     try {

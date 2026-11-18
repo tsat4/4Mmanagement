@@ -28,6 +28,7 @@ import { ALL } from '../utils/filterLabels';
 import { urlParam } from '../utils/urlInit';
 import { tr } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
+import { askConfirm } from '../utils/askConfirm';
 
 function publicUrl(path) {
   if (!path) return null
@@ -316,7 +317,7 @@ export default function MtnMachineLayout({ setupMode = false }) {
   }
   const deleteArea = async (id) => {
     if (!editMode) return
-    if (!window.confirm('ลบโซนนี้? (อุปกรณ์ที่วางบนโซนนี้จะถูกเอาออกจากผัง แต่ตัวอุปกรณ์+ประวัติ PM ไม่หาย)')) return
+    if (!await askConfirm('ลบโซนนี้? (อุปกรณ์ที่วางบนโซนนี้จะถูกเอาออกจากผัง แต่ตัวอุปกรณ์+ประวัติ PM ไม่หาย)')) return
     const oldPath = areas.find(a => a.id === id)?.image_path
     /* 🔴 นับแถวก่อนแตะ storage (QC audit 06/10) — ไม่นับ = โซนยังอยู่ แต่รูปผังถูกลบ */
     const dres = await supabaseDR.from('pm_facility_areas').delete().eq('id', id).select('id')

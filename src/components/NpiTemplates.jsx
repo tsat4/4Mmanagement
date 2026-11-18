@@ -10,6 +10,7 @@ import CustomerSelect from './CustomerSelect';
 import { DeleteButton } from './IconButton';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 const slug = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40);
 
 export default function NpiTemplates({ templates, onChanged }) {
@@ -56,12 +57,12 @@ export default function NpiTemplates({ templates, onChanged }) {
       : supabase.from('npi_template_deliverables').insert({ ...row, template_id: tpl.id, code: slug(m.code || m.label) || `dv_${Date.now().toString(36)}` }));
     if (ok) setDvModal(null);
   };
-  const delPhase = (p) => {
+  const delPhase = async (p) => {
     const n = delivs.filter(d => d.phase_code === p.code).length;
-    if (!window.confirm(`ลบเฟส "${p.label}"? ${n ? `รายการ ${n} รายการในเฟสนี้จะไม่มีเฟส (ไปกลุ่ม "ไม่อยู่ในเฟส")` : ''}\nพาร์ทที่สร้างไปแล้วไม่ถูกแตะ`)) return;
+    if (!await askConfirm(`ลบเฟส "${p.label}"? ${n ? `รายการ ${n} รายการในเฟสนี้จะไม่มีเฟส (ไปกลุ่ม "ไม่อยู่ในเฟส")` : ''}\nพาร์ทที่สร้างไปแล้วไม่ถูกแตะ`)) return;
     run('ลบเฟส', () => supabase.from('npi_template_phases').delete().eq('id', p.id));
   };
-  const delDeliv = (d) => { if (window.confirm(`ลบรายการ "${d.label}" ออกจากแม่แบบ? (พาร์ทที่สร้างไปแล้วไม่ถูกแตะ)`)) run('ลบรายการ', () => supabase.from('npi_template_deliverables').delete().eq('id', d.id)); };
+  const delDeliv = async (d) => { if (await askConfirm(`ลบรายการ "${d.label}" ออกจากแม่แบบ? (พาร์ทที่สร้างไปแล้วไม่ถูกแตะ)`)) run('ลบรายการ', () => supabase.from('npi_template_deliverables').delete().eq('id', d.id)); };
 
   return (
     <div style={card}>
@@ -91,7 +92,7 @@ export default function NpiTemplates({ templates, onChanged }) {
                   <td style={tdSt}>{p.seq}</td>
                   <td style={tdSt}><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 'var(--r-xs)', background: p.color || 'var(--border)', marginRight: 6 }} /><b>{tr(p.label)}</b>{p.description && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{p.description}</div>}</td>
                   <td style={{ ...tdSt, fontFamily: 'monospace', fontSize: 11 }}>{p.code}</td>
-                  <td style={{ ...tdSt, whiteSpace: 'nowrap' }}><button className="tbtn" style={{ ...ghost, padding: '2px 7px' }} onClick={() => setPhModal({ ...p, color: p.color || '', description: p.description || '' })}>✏️</button> <DeleteButton onClick={() => delPhase(p)} title={tr('ลบ')} /></td>
+                  <td style={{ ...tdSt, whiteSpace: 'nowrap' }}><button className="tbtn" style={{ ...ghost, padding: '2px 7px' }} onClick={() => setPhModal({ ...p, color: p.color || '', description: p.description || '' })}>✏️</button> <DeleteButton onClick={async () => await delPhase(p)} title={tr('ลบ')} /></td>
                 </tr>
               ))}</tbody>
             </table>
@@ -114,7 +115,7 @@ export default function NpiTemplates({ templates, onChanged }) {
                     <td style={tdSt}>{OWNER_ROLE[d.owner_role] || d.owner_role || '—'}</td>
                     <td style={tdSt}>{d.required ? '✓' : '—'}</td>
                     <td style={tdSt}>{d.ppap_element && <Pill label="PPAP" color="#a855f7" small />}</td>
-                    <td style={{ ...tdSt, whiteSpace: 'nowrap' }}><button className="tbtn" style={{ ...ghost, padding: '2px 7px' }} onClick={() => setDvModal({ ...d, owner_role: d.owner_role || '' })}>✏️</button> <DeleteButton onClick={() => delDeliv(d)} title={tr('ลบ')} /></td>
+                    <td style={{ ...tdSt, whiteSpace: 'nowrap' }}><button className="tbtn" style={{ ...ghost, padding: '2px 7px' }} onClick={() => setDvModal({ ...d, owner_role: d.owner_role || '' })}>✏️</button> <DeleteButton onClick={async () => await delDeliv(d)} title={tr('ลบ')} /></td>
                   </tr>
                 ))}</tbody>
               </table>

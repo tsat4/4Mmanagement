@@ -19,6 +19,7 @@ import { tr } from '../utils/i18n';
 import { useWorkDate } from '../utils/useWorkDate';   // 📅 บอร์ดเปิดค้างข้ามวัน (12/11)
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 import InfoMore from '../components/InfoMore';   // ⓘ คำอธิบายพับ (UI §6.10)
+import { askConfirm } from '../utils/askConfirm';
 
 /* ══ 🔗 Flow Control Tower — สายธารของ "ความต้องการ" ตั้งแต่ลูกค้าถึงวัตถุดิบ ═══════════
    ตอบคำถามเดียว: **ความต้องการของลูกค้าไหลย้อนกลับไปถึงต้นน้ำครบหรือยัง ตันตรงไหน**
@@ -192,7 +193,7 @@ export default function FlowTower() {
   const setLot = async (row) => {
     const v = Number(row.suggested_lot);
     if (!(v > 0)) { toast.error('ยังไม่มีค่าบรรจุต่อกล่องให้ใช้เป็นค่าเริ่มต้น — ตั้งเองที่ Product Master'); return; }
-    if (!window.confirm(`ตั้งขนาดล็อตของ ${row.mat_no} = ${fmt(v)} ชิ้น (1 กล่อง)?\n\nความต้องการที่ค้างอยู่ ${fmt(row.pending_qty)} ชิ้น จะถูกแปลงเป็นใบสั่งในรอบผลิตถัดไป`)) return;
+    if (!await askConfirm(`ตั้งขนาดล็อตของ ${row.mat_no} = ${fmt(v)} ชิ้น (1 กล่อง)?\n\nความต้องการที่ค้างอยู่ ${fmt(row.pending_qty)} ชิ้น จะถูกแปลงเป็นใบสั่งในรอบผลิตถัดไป`)) return;
     setBusy(row.mat_no);
     const { data, error } = await supabaseDR.from('kanban_standards')
       .update({ lot_size: v }).eq('mat_no', row.mat_no).eq('is_active', true).select('mat_no');

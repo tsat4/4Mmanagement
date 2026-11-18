@@ -27,6 +27,7 @@ import ScanModal from './ScanModal';   // 📷 สแกนป้ายแม่
 import { uploadOpts } from '../utils/storageUpload';
 import { tr } from '../utils/i18n';
 import { dieSetMats } from '../utils/dieSetMats'; // 🔨 ชุดแม่พิมพ์ทำได้ 2 MAT (งานคู่ RH/LH)
+import { askConfirm } from '../utils/askConfirm';
 
 const inp = { width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 13, boxSizing: 'border-box' };
 const btnPri = { background: 'var(--accent)', color: 'var(--accent-ink)', border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' };
@@ -251,7 +252,7 @@ export default function DieLayout({
   };
 
   const removeFromMap = async (d) => {
-    if (!confirm(`เอา "${d.machine_no}" ออกจากผัง?\n(ตัวแม่พิมพ์/สถานะไม่ถูกลบ · กด Undo คืนได้)`)) return;
+    if (!await askConfirm(`เอา "${d.machine_no}" ออกจากผัง?\n(ตัวแม่พิมพ์/สถานะไม่ถูกลบ · กด Undo คืนได้)`)) return;
     const ok = await writePlacement(d.id, { area_id: null, pos_x: null, pos_y: null });
     if (ok) toast.success('เอาออกจากผังแล้ว');
   };
@@ -631,7 +632,7 @@ function AreaFormModal({ mode, area, onClose, onSaved }) {
     }
   };
   const del = async () => {
-    if (!confirm(`ลบผัง "${area.name}"?\nหมุดแม่พิมพ์บนผังนี้จะกลายเป็น "ยังไม่ได้วาง" (ตัวแม่พิมพ์ไม่ถูกลบ)`)) return;
+    if (!await askConfirm(`ลบผัง "${area.name}"?\nหมุดแม่พิมพ์บนผังนี้จะกลายเป็น "ยังไม่ได้วาง" (ตัวแม่พิมพ์ไม่ถูกลบ)`)) return;
     // soft delete ผัง + ปลดหมุดของแม่พิมพ์ที่ผูกอยู่ (ไม่งั้นค้างชี้ผังที่มองไม่เห็น)
     const { error } = await supabaseDR.from('die_storage_areas').update({ is_active: false }).eq('id', area.id);
     if (error) return toast.error(error.message);

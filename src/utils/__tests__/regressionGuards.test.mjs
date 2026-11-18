@@ -500,6 +500,15 @@ const RULES = [
     allow: {},
   },
   {
+    id: 'no-native-confirm',
+    scan: ['src/pages', 'src/components', 'src/lib', 'src/utils', 'src/App.jsx'], ext: ['.jsx', '.js'],
+    /* window.confirm / confirm( ตรงๆ — หน้าตาเบราว์เซอร์ ไม่ตามธีม ไม่หรี่ฉากหลัง ไม่แปล · บน iPhone ตัดข้อความยาว · บล็อก thread */
+    re: /(?:^|[^.\w$])(?:window\.)?confirm\(/g,
+    why: 'audit กฎ UX 18/11: native confirm 58 จุดที่กดถึง (234 ในโค้ด) — ทั้งระบบย้ายไป askConfirm (กล่องในแอป · ม่าน --scrim เดียวกับ modal · Enter/Esc · แปลภาษา)',
+    fix: "const ok = await askConfirm('ข้อความ') — import { askConfirm } from '<path>/utils/askConfirm' · ฟังก์ชันที่เรียกต้อง async (UI-CONVENTIONS §5)",
+    allow: { 'src/utils/askConfirm.js': 'ตัว fallback เองเมื่อไม่มี <ConfirmHost/> (เทส/harness ชิ้นเดี่ยว)' },
+  },
+  {
     id: 'scrim-token-only',
     scan: ['src/pages', 'src/components'], ext: ['.jsx'],
     /* ม่านหลัง modal (fixed เต็มจอ) ที่เขียนสีดำโปร่งเอง — วัดจริง 13/11: 225 modal มีความมืด 8 ค่า (0.5→1.0) ใน 14 หน้ามืดไม่เท่ากันในหน้าเดียว */
@@ -10638,7 +10647,7 @@ test('📸 computeSessionOee: snapshot (CT + พัก) ต้องชนะท
 test('🛡️ DailyReport: ด่าน poka-yoke ตอนลงยอด + ก่อนปิดกะ ต้องยังอยู่', () => {
   const dr = stripComments(readFileSync(join(ROOT, 'src/pages/DailyReport.jsx'), 'utf8'))
   // ① ทุกทางที่คนพิมพ์ยอดเอง ต้องผ่าน qtyFitPass ก่อนเขียน DB
-  assert.ok((dr.match(/if \(!qtyFitPass\(o, (?:v|finalQty)\)\) return;/g) || []).length >= 2,
+  assert.ok((dr.match(/if \(!(?:await )?qtyFitPass\(o, (?:v|finalQty)\)\) return;/g) || []).length >= 2,   // 18/11: qtyFitPass เป็น async (askConfirm)
     '\n\n❌ ทั้งทาง "ลงยอดสะสม" และ "ปิดใบด้วยยอดจริง" ต้องเรียก qtyFitPass() ก่อนบันทึก\n')
   assert.match(dr, /checkQtyFit\(\{/, '\n\n❌ ด่านยอดต้องคิดด้วย checkQtyFit จาก utils/closeChecks.js\n')
   // ② ด่านรีเช็คก่อนปิดกะ — ต้องกั้นก่อนเขียน DB และต้องติ๊กครบจึงไปต่อได้
@@ -11164,8 +11173,8 @@ test('🔍 dt-closed-at-shift-end — ใบที่ปิดตรงเวล
   /* ① ด่านรายใบต้องเป็น confirm ไม่ใช่ toast.error + return */
   assert.match(dr, /checkDtClosedAtShiftEnd\(/,
     '\n\n❌ หน้ารายงานผลิตไม่เรียก checkDtClosedAtShiftEnd() แล้ว — ใบที่ปิดตรงเลิกกะไม่ถูกถาม\n');
-  assert.match(dr, /dtEndChk && !window\.confirm\(/,
-    '\n\n❌ ด่านใบปิดตรงเลิกกะต้องเป็น window.confirm (เตือนแล้วไปต่อได้)\n'
+  assert.match(dr, /dtEndChk && !(?:window\.confirm|await askConfirm)\(/,   // 18/11: กล่องในแอป askConfirm แทน window.confirm
+    '\n\n❌ ด่านใบปิดตรงเลิกกะต้องเป็นกล่องยืนยัน (askConfirm — เตือนแล้วไปต่อได้)\n'
     + '   ใช้ toast.error + return = บล็อกการบันทึก ซึ่ง user สั่งว่าห้าม\n');
   assert.match(dr, /dtClosedAtShiftEnd:/,
     '\n\n❌ ไม่ได้ส่งตัวนับ dtClosedAtShiftEnd เข้า buildCloseChecks — ด่านตอนปิดกะไม่ขึ้นเลย\n');
@@ -11228,6 +11237,103 @@ test('🚫 no-fg-line-request — ทุกจุดที่ออกใบเ�
     + '\n   ใช้ `isFgMat(mat)` + ข้อความ `FG_NO_LINE_REQUEST` จาก src/utils/storeOps.js ก่อน insert\n');
 });
 
+/* ═══ 🗑️ "อื่นๆ" ต้องใส่เหตุผลจริง — ห้ามพิมพ์ "อื่นๆ" ลงช่องพิมพ์ (2026-11-16 · คำสั่ง user) ══
+   ที่มา: หมวด "อื่นๆ (ในแผน)" = 41.5% ของนาทีหยุดตามแผนทั้งโรงงาน (พ.ย. 69 · 34,639/83,382 น.)
+   ด่านเดิมเช็คแค่ `!description.trim()` ⇒ พิมพ์ `อื่นๆ` / `-` / `ไม่ระบุ` ผ่านฉลุย */
+test('🗑️ DailyReport: ด่าน "อื่นๆ ต้องบอกเหตุผล" ต้องผ่าน checkOtherDescription ทั้ง downtime และของเสีย', () => {
+  const dr = stripComments(readFileSync(join(ROOT, 'src/pages/DailyReport.jsx'), 'utf8'))
+  assert.ok((dr.match(/checkOtherDescription\(/g) || []).length >= 4,
+    '\n\n❌ ต้องใช้ checkOtherDescription ทั้งตอนกดบันทึก (downtime + ของเสีย) และบนฟอร์มทั้ง 2 ช่อง\n')
+  for (const [re, what] of [[/const dtDescChk = checkOtherDescription\(dtTypeName, dtForm\.description\)/, 'downtime'],
+                            [/const defDescChk = checkOtherDescription\(defTypeName, defectForm\.description\)/, 'ของเสีย']]) {
+    assert.match(dr, re, `\n\n❌ ด่านตอนบันทึก${what}หายไป\n`)
+  }
+  assert.ok(!/includes\('อื่น'\) && !\w+Form\.description\?\.trim\(\)/.test(dr),
+    '\n\n❌ ด่านเก่าที่เช็คแค่ "ช่องว่างไหม" กลับมาแล้ว — พิมพ์ "อื่นๆ" ซ้ำจะผ่านอีก\n')
+  assert.ok(!/ประเภท "อื่นๆ" ต้องระบุ/.test(dr),
+    '\n\n❌ ข้อความเตือนต้องมาจาก otherDescMessage() ห้ามเขียนเองในหน้า (3 จอต้องพูดเหมือนกัน)\n')
+  const u = stripComments(readFileSync(join(ROOT, 'src/utils/unclassified.js'), 'utf8'))
+  assert.match(u, /export function checkOtherDescription\(/, '\n\n❌ กฎต้องอยู่ใน utils/unclassified.js (pure + เทสได้)\n')
+})
+
+/* ═══ 🟢 การ์ด "ตอนนี้ (LIVE)" ต้องเขียนบอกเมื่อ %P ถูก cap (2026-11-16 · user ทัก) ════════
+   เคสจริง: จอ OEE รายไลน์บนมือถือโชว์ "LIVE 100%" เขียวสนิท + "🟢 กำลังผลิต"
+   ทั้งที่ของจริงกะนั้น 73.6% — 100 มาจาก %P ดิบทะลุ 100 แล้วถูก cap × %A ที่ 100 เพราะ
+   ยังไม่มีใครลง downtime · สูตรส่ง `pOver`/`pRawPct` มาให้อยู่แล้ว แต่การ์ดทิ้งทั้งคู่
+   วัดจริง พ.ย. 69: กะปิดแล้ว 512 กะ → %P = 100 เป๊ะ 141 กะ (27.5%) · OEE = 100.00 จำนวน 72 กะ */
+test('🟢 LineOeeBoard: การ์ด LIVE ต้องใช้ pOver/pRawPct — ห้ามโชว์ 100% เขียวเงียบ', () => {
+  const src = stripComments(readFileSync(join(ROOT, 'src/pages/LineOeeBoard.jsx'), 'utf8'))
+  assert.match(src, /C\.liveNow\?\.pOver \? 'var\(--amber\)' : 'var\(--green\)'/,
+    '\n\n❌ เลข OEE สดที่ %P ถูก cap ต้องไม่เป็นสีเขียว (ต้องเตือนว่าเลขนี้ไม่น่าเชื่อ)\n')
+  assert.match(src, /C\.liveNow\.pRawPct/,
+    '\n\n❌ ต้องเขียน "%P คิดได้เท่าไหร่ก่อนถูกตัด" บนจอ — ไม่งั้น 100% อ่านเหมือนไลน์สมบูรณ์แบบ\n')
+  assert.match(src, /A \{C\.liveNow\.A \?\? '—'\} · P \{C\.liveNow\.P \?\? '—'\} · Q \{C\.liveNow\.Q \?\? '—'\}/,
+    '\n\n❌ การ์ด LIVE ต้องแยก A/P/Q ให้เห็น — เลขรวม 100% ต้องอธิบายได้ว่ามาจากขาไหน\n')
+  assert.match(src, /C\.liveNoDt && \(/,
+    '\n\n❌ กะที่ยังไม่มีใครลง Downtime ต้องเขียนบอก (%A = 100 เพราะไม่มีข้อมูล ไม่ใช่เครื่องไม่เคยหยุด)\n')
+  assert.match(src, /const liveNoDt = !!liveSess && !dts\.some/,
+    '\n\n❌ ธง liveNoDt ต้องดูจากใบ downtime ของ "กะที่การ์ดโชว์" จริงๆ\n')
+})
+
+/* ═══ 🧾 เพดาน "หยุดตามแผน" — ของกลางตัวเดียว + คิวรีต้องดึงเพดานมาด้วย (16/11 · คำสั่ง user) ══
+   "set up machine ควรจะมีเพดานของ planned เกินกว่านี้ ออกไปเป็น unplanned … ควรจะเซ็ทได้ ไม่ฮาร์ดโค้ด"
+   🔴 ลืม `planned_cap_min` ในคิวรี = ไม่มีเพดาน = เงียบสนิท (คลาสเดียวกับลืม `select('pair_mat_no')`) */
+test('🧾 เพดานหยุดตามแผน: แยก planned/unplanned ที่ dtPlannedSplit ที่เดียว + ทุกคิวรีต้องดึงเพดาน', () => {
+  const oee = stripComments(readFileSync(join(ROOT, 'src/utils/oee.js'), 'utf8'))
+  assert.match(oee, /export function dtPlannedSplit\(/, '\n\n❌ ของกลางของเพดานหายไป\n')
+  // ห้ามมีใครแยก planned/unplanned เองนอก dtPlannedSplit (เดิมมี 4 จุดเขียนซ้ำกัน)
+  const raw = (oee.match(/=== 'planned'/g) || []).length
+  assert.ok(raw <= 2, `\n\n❌ ยังมีจุดที่เทียบ category === 'planned' เองอยู่ ${raw} จุด — ต้องผ่าน dtPlannedSplit\n`)
+  assert.ok(!/planned_cap_min\s*[:=]\s*\d/.test(oee), '\n\n❌ ห้าม hardcode เลขเพดานในโค้ด — เพดานอยู่ในทะเบียน\n')
+
+  /* ทุกคิวรีที่ดึง category ของประเภท downtime ต้องดึง planned_cap_min มาด้วย */
+  const bad = []
+  for (const file of walk(join(ROOT, 'src'), ['.js', '.jsx'])) {
+    const lines = stripComments(readFileSync(file, 'utf8')).split('\n')
+    lines.forEach((ln, i) => {
+      const m = ln.match(/dr_downtime_types\(([^()]*)\)/)
+      if (!m || !/\bcategory\b/.test(m[1]) || /planned_cap_min/.test(m[1])) return
+      bad.push(`${file.slice(ROOT.length)}:${i + 1}`)
+    })
+  }
+  assert.deepEqual(bad, [], '\n\n❌ คิวรีที่ดึง `dr_downtime_types(category)` แต่ไม่ดึง `planned_cap_min`:\n   '
+    + bad.join('\n   ') + '\n   ⇒ เพดานจะไม่ทำงานในจอนั้น **โดยไม่มีใครรู้** (เลขต่างจากจอปิดกะเงียบๆ)\n')
+})
+
+/* ═══ 🔁 ยอดห้ามลงกะเก่าที่ลืมปิด — handover-gate-open-order (2026-11-17) ═══════════════
+   หัวหน้าแจ้ง: *"ถ้ากะ01ลืมปิดกะ แล้วกะ02 ยิงปิดแท็ก ยอดจะไปขึ้นของกะ01ที่ลืมปิด"*
+   ไล่ฐานจริง (prod_orders ตั้งแต่ 01/10): **164 ใบ · 21,647 ชิ้น · 18 กะ** ถูก *เปิดใบ* ลงกะที่
+   ไลน์เดียวกันขึ้นกะใหม่ไปแล้ว (LINE A 10/11 กะเช้า: เปิดใบ 20:04–20:10 ทั้งที่กะดึกเริ่ม 20:00)
+   🔴 ด่านต้องอยู่ที่ `doInsertProdOrder` (ตัวเขียน DB) — "กะที่เลือก" เป็นแค่ตัวกรอง ไม่ใช่ด่าน */
+test('🔁 handover-gate-open-order — เปิดใบลงกะที่ส่งต่อไปแล้ว ต้องผ่านด่านที่ตัวเขียน DB', () => {
+  const src = stripComments(readFileSync(join(ROOT, 'src/pages/DailyReport.jsx'), 'utf8'))
+  const i = src.indexOf('const doInsertProdOrder =')
+  assert.ok(i > 0, '\n\n❌ หา doInsertProdOrder ไม่เจอ\n')
+  const body = src.slice(i, src.indexOf('await supabaseDR.from(\'prod_orders\').insert', i))
+  assert.match(body, /handoverBlockText\(/,
+    '\n\n❌ ถอดด่าน handover ออกจาก doInsertProdOrder — ใบจะกลับไปลงกะเก่าที่ลืมปิดเงียบๆ\n'
+    + '   (164 ใบ · 21,647 ชิ้น ที่เจอในฐานมาจากทางนี้)\n')
+  assert.match(body, /handoverOkRef\.current !== selSession\?\.id/,
+    '\n\n❌ ด่านต้องเทียบ "ยืนยันมาแล้วสำหรับกะนี้" กับ id ของกะที่เลือก\n')
+
+  /* ยืนยันแล้วต้องผูกกับ "กะ" เท่านั้น — สลับกะต้องถามใหม่ (ไม่งั้นใบของกะใหม่ถูกตัดสินแทนด้วยคำตอบเก่า) */
+  assert.match(src, /handoverOkRef\.current = null;[\s\S]{0,60}\}, \[selSession\?\.id\]\)/,
+    '\n\n❌ ไม่ได้ล้างคำยืนยัน handover ตอนสลับกะ\n')
+
+  /* แถบบนจอ: ส่งต่อแล้ว = ต้องเห็น + เช็คไม่ได้ก็ต้องเขียน (กฎความซื่อสัตย์ของจอ) */
+  assert.match(src, /handover\?\.next &&/, '\n\n❌ หัวกะไม่มีแถบเตือน "ไลน์นี้ขึ้นกะใหม่ไปแล้ว"\n')
+  assert.match(src, /\{handoverUnsure &&/,
+    '\n\n❌ เช็คไม่ได้ (ไม่รู้เวลาเริ่มกะ / อ่านกะของไลน์ไม่ได้) ต้องเขียนบนจอ ห้ามเงียบ\n')
+  assert.match(src, /lineSessions === null/,
+    '\n\n❌ อ่านรายการกะของไลน์ไม่สำเร็จต้องแยกจาก "ไม่มีกะใหม่" (null ≠ [])\n'
+    + '   ไม่แยก = กะที่มาทีหลังปิดไปแล้ว จะไม่มีใครเตือน (เคส LINE B 24/10 → เปิดใบ 26/10)\n')
+
+  /* กฎ "เวลาเริ่มกะ" ต้องมาจากของกลาง ห้ามเดาจากเลขกะ/created_at */
+  const util = stripComments(readFileSync(join(ROOT, 'src/utils/sessionHandover.js'), 'utf8'))
+  assert.match(util, /shiftFrameOf/, '\n\n❌ sessionHandover ต้องอ่านเวลาเริ่มกะผ่าน shiftFrameOf (oee.js)\n')
+  assert.ok(!/created_at/.test(util),
+    '\n\n❌ ห้ามตัดสิน "กะไหนมาก่อน" ด้วย created_at — กะที่เปิดย้อนหลังจะสลับลำดับเงียบๆ\n')
+})
 /* ═══════════════════════════════════════════════════════════════════════════
    🧾 สถานะใบ MO ต้องถูก "จัดประเภท" ครบทุกตัว            2026-11-16 · คำสั่ง user
    เคสจริง: `returned` + `waiting_vendor` ถูกเพิ่มเข้า `MO_STATUS_LABEL` แต่ไม่มีใครเติมใน
@@ -11631,6 +11737,56 @@ test('🖨️ print-html-needs-dollar-tr — ใบพิมพ์เป็น H
     + bad.join('\n') + '\n');
 });
 
+/* ═══ ☼ ☾ ไอคอนกะต้องเป็นเส้นโมโนโครม — shift-glyph-no-emoji (2026-11-17 · คำสั่ง user) ═══
+   หน้างานขอไอคอนพระอาทิตย์/พระจันทร์กลับมา (การ์ดกะอ่านไม่ออกว่ากลางวัน/กลางคืน) แต่ต้องไม่กลับไป
+   เป็นอีโมจิ ☀️/🌙 ที่ถอดออกไปแล้วเพื่อความ premium (คุมสีไม่ได้ · หน้าตาต่างกันทุก OS)
+   📄 docs/UI-CONVENTIONS.md §6.41 */
+test('☼☾ shift-glyph-no-emoji — ลิสต์กะใช้ <ShiftGlyph> ห้ามอีโมจิ ☀️/🌙 ใน DailyReport', () => {
+  const glyph = readFileSync(join(ROOT, 'src/components/ShiftGlyph.jsx'), 'utf8')
+  assert.match(glyph, /stroke:\s*'currentColor'/,
+    '\n\n❌ ShiftGlyph ต้องวาดด้วย currentColor — แยกกะด้วยรูปทรง ไม่ใช่ด้วยสี (§6.17 คุมจำนวนสี)\n')
+  assert.match(glyph, /if \(!isDay && !isNight\) return null/,
+    '\n\n❌ กะที่ไม่รู้จักต้องไม่วาดอะไรเลย ห้ามเดาว่าเป็นกะเช้า\n')
+
+  const src = stripComments(readFileSync(join(ROOT, 'src/pages/DailyReport.jsx'), 'utf8'))
+  assert.match(src, /<ShiftGlyph shift=/,
+    '\n\n❌ ลิสต์กะไม่ได้ใช้ <ShiftGlyph> — หน้างานแยกกะกลางวัน/กลางคืนไม่ออก (แจ้ง 17/11)\n')
+  /* ขอบเขตของกฎ = **แถวในลิสต์กะ** (ตัวแปรแถวชื่อ `s`) ที่หน้างานต้องไล่สายตาเร็ว
+     ประโยคที่พูดถึง "กะที่เลือกอยู่" (`selSession`) ไม่เข้าข่าย — อีโมจิในประโยคไม่ได้ทำให้ลิสต์รก */
+  const SUN_MOON = /s\.shift === '(?:day|night)' \? '[^']*(?:\u2600|\uD83C\uDF1E|\uD83C\uDF19|\uD83C\uDF12)/g
+  const emoji = (src.match(SUN_MOON) || [])
+  assert.deepEqual(emoji, [],
+    '\n\n❌ แถวในลิสต์กะกลับไปใช้อีโมจิพระอาทิตย์/พระจันทร์แล้ว:\n   '
+    + emoji.join(' · ') + '\n   ⇒ ใช้ <ShiftGlyph shift={s.shift} size={12} /> แทน (UI-CONVENTIONS §6.41)\n')
+  assert.ok((src.match(/<ShiftGlyph shift=/g) || []).length >= 2,
+    '\n\n❌ ลิสต์กะมี 2 ที่ (แถบซ้าย + กะค้าง) ต้องใช้ <ShiftGlyph> ทั้งคู่ ไม่งั้น 2 จอหน้าตาไม่ตรงกัน\n')
+})
+
+
+/* ═══ 📅 ใบที่ยกข้ามกะต้องพกต้นทางไปด้วย — carry-origin-propagated (2026-11-17) ═══════════
+   หัวหน้าแจ้ง: *"แท็กนี้เปิดวันที่เท่าไร … บางอันมันค้างนานแล้ว จะได้เคลียร์ก่อน"*
+   `importCarryOrders()` สร้าง **แถวใหม่** ทุกครั้งที่ยก ⇒ ถ้าไม่ส่งต่อ `first_opened_at`/`carry_hops`
+   การ์ดทุกกะจะดูเหมือน "เพิ่งเปิดวันนี้" ทั้งที่วนมาหลายวัน (คลาสเดียวกับลืมใส่ฟิลด์ใน CARRY_COLS) */
+test('📅 carry-origin-propagated — ยกยอดต้องส่งต่อ first_opened_at/carry_hops + อยู่ใน CARRY_COLS', () => {
+  const src = readFileSync(join(ROOT, 'src/lib/carryDebtOps.js'), 'utf8')
+  const cols = /export const CARRY_COLS = '([^']+)'/.exec(src)?.[1] || ''
+  for (const c of ['first_opened_at', 'carry_hops']) {
+    assert.ok(cols.includes(c),
+      `\n\n❌ CARRY_COLS ไม่ได้ดึง \`${c}\` — ค่าจะเป็น undefined แล้วโซ่ต้นทางขาดเงียบๆ\n`)
+  }
+  const body = stripComments(src)
+  assert.match(body, /first_opened_at:\s*o\.first_opened_at \|\| o\.opened_at/,
+    '\n\n❌ ใบที่ยกมาต้องสืบทอด "เปิดครั้งแรก" จากใบต้นทาง (ไม่มี = ใช้ opened_at ของต้นทาง)\n')
+  assert.match(body, /carry_hops:\s*\(Number\(o\.carry_hops\) \|\| 0\) \+ 1/,
+    '\n\n❌ ทุกครั้งที่ยก ต้อง +1 ไม่งั้นนับไม่ได้ว่าวนมากี่กะ\n')
+
+  /* 🔴 ห้ามกลับไปเดาต้นทางจาก prod_no — การ์ดคัมบังใช้เลขซ้ำข้ามเดือน (0124060820 ใช้มา 57 ครั้ง) */
+  const util = stripComments(readFileSync(join(ROOT, 'src/utils/carryDebt.js'), 'utf8'))
+  assert.match(util, /export function carryAgeOf\(o, nowMs = Date\.now\(\)\)/,
+    '\n\n❌ carryAgeOf ต้องรับ nowMs เป็นพารามิเตอร์ (กฎเทสระเบิดเวลา)\n')
+  assert.ok(!/min\(.*opened_at/.test(util),
+    '\n\n❌ ห้ามหาต้นทางด้วย min(opened_at) ของ prod_no — PROD.NO เป็นการ์ดคัมบังที่ใช้เลขซ้ำ\n')
+})
 test('✍️ mo-flow-shows-pending-acks — ลายเซ็นนอกลำดับขั้นต้องโผล่ใต้แถบขั้น', () => {
   /* 🔴 18/11 หน้างานแจ้ง (ภาพหน้าจอใบ O-MTN.2026/11-40):
        แถบขั้นเขียน "รอ: ผจก.ฝ่ายที่แจ้ง อนุมัติปิดใบ" เหมือนเหลือขั้นเดียว

@@ -34,6 +34,7 @@ import { lineKnownSet } from '../utils/pmEquipList'
 import { filterPlanRows } from '../utils/pmPlanFilter'
 import { resolveJig } from '../utils/qrCode'
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
+import { askConfirm } from '../utils/askConfirm';
 // role ที่ควรขึ้นก่อนตอนเลือก "ผู้ที่ตกลงเลื่อนด้วย" (prefer ไม่ restrict — ตกลงทางโทรศัพท์กับใครก็พิมพ์ได้)
 const AGREE_ROLES = ['planner_store', 'supervisor', 'manager']
 
@@ -146,7 +147,7 @@ export default function PMSchedule() {
   const cancelDefer = async (r) => {
     if (!r.plan?.id) return
     if (!deptGuard('แผน PM ของทีมนี้')) return
-    if (!confirm('ยกเลิกการเลื่อนแผน กลับไปวันครบกำหนดเดิม?')) return
+    if (!await askConfirm('ยกเลิกการเลื่อนแผน กลับไปวันครบกำหนดเดิม?')) return
     const { error } = await supabaseDR.from('pm_plans').update({ deferred_to: null, defer_reason: null, defer_agreed_with: null, deferred_by: null, deferred_at: null }).eq('id', r.plan.id)
     if (error) return toast.error(error.message)
     toast.success('ยกเลิกการเลื่อนแล้ว'); fetchData()

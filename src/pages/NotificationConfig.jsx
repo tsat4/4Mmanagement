@@ -15,6 +15,7 @@ import Page from '../components/Page';
 import { UserContext } from '../App';
 import { tr } from '../utils/i18n';
 import { NOTIFY_CATEGORY_LABEL } from '../utils/notifyPrefs';   // 🔕 ป้ายหมวด — ของกลาง ใช้ร่วมกับโมดัลของผู้ใช้
+import { askConfirm } from '../utils/askConfirm';
 
 const inputStyle = {
   width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)',
@@ -251,7 +252,7 @@ export default function NotificationConfig() {
   }
 
   const deleteRoom = async (room) => {
-    if (!window.confirm(`ลบห้อง "${room.name}" ?\n\nรายการแจ้งเตือนที่ชี้ห้องนี้จะกลายเป็น "ไม่ส่ง" จนกว่าจะเลือกห้องใหม่`)) return
+    if (!await askConfirm(`ลบห้อง "${room.name}" ?\n\nรายการแจ้งเตือนที่ชี้ห้องนี้จะกลายเป็น "ไม่ส่ง" จนกว่าจะเลือกห้องใหม่`)) return
     const { error } = await supabase.from('telegram_channels').delete().eq('id', room.id)
     if (error) return toast.error(error.message)
     setRooms(prev => prev.filter(r => r.id !== room.id))
@@ -453,9 +454,9 @@ export default function NotificationConfig() {
                 return (
                 <div key={rule.event_key} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '10px 12px', display: 'flex', flexWrap: 'wrap', gap: '10px 14px', alignItems: 'center', justifyContent: 'space-between' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', flex: '1 1 200px', minWidth: 150 }}>
-                    <input type="checkbox" checked={rule.is_enabled} onChange={e => {
+                    <input type="checkbox" checked={rule.is_enabled} onChange={async e => {
                       // ยืนยันเฉพาะตอน "ปิด" การแจ้งเตือนทั้งหมวด (เปิดไม่ต้องถาม)
-                      if (!e.target.checked && !confirm(`ปิดการแจ้งเตือน "${rule.label}" ?\n\nเรื่องนี้จะไม่ส่งเข้า Telegram จนกว่าจะเปิดใหม่`)) return
+                      if (!e.target.checked && !await askConfirm(`ปิดการแจ้งเตือน "${rule.label}" ?\n\nเรื่องนี้จะไม่ส่งเข้า Telegram จนกว่าจะเปิดใหม่`)) return
                       updateRule(rule.event_key, { is_enabled: e.target.checked })
                     }} style={{ flexShrink: 0 }} />
                     <span style={{ fontSize: 13, fontWeight: 600, color: rule.is_enabled ? 'var(--text)' : 'var(--muted)' }}>{tr(rule.label)}</span>

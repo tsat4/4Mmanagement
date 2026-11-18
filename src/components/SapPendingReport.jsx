@@ -18,6 +18,7 @@ import SearchInput from './SearchInput';
 import Segmented from './Segmented';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 const COLS = 'id, line_name, mat_no, part_name, request_qty, picked_qty, delivered_at, delivered_by, status, sap_pending_qty, sap_pending_note, sap_pending_at, sap_pending_by_name, sap_cleared_at, sap_cleared_by_name';
 const fmt = (v) => (v == null ? '—' : Number(v).toLocaleString());
 const dt = (iso) => (iso ? new Date(iso).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—');
@@ -54,7 +55,7 @@ export default function SapPendingReport() {
 
   const clear = async (r) => {
     if (!canClear) { toast.error('ไม่มีสิทธิ์ (heijunka:operate)'); return; }
-    if (!window.confirm(`ยืนยันว่าตัดใน SAP แล้ว?\n\n${r.part_name || ''} MAT ${r.mat_no} × ${fmt(r.sap_pending_qty)} → ${r.line_name}`)) return;
+    if (!await askConfirm(`ยืนยันว่าตัดใน SAP แล้ว?\n\n${r.part_name || ''} MAT ${r.mat_no} × ${fmt(r.sap_pending_qty)} → ${r.line_name}`)) return;
     setBusy(r.id);
     const ok = checkWriteRows(await supabase.from('wip_replenish_requests')
       .update({ sap_cleared_at: new Date().toISOString(), sap_cleared_by_name: fullName || null })

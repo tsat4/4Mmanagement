@@ -65,6 +65,7 @@ import TabBar from '../components/TabBar';
 
 import NoticeBar from '../components/NoticeBar';
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 /* ── ผังรวมโรงงาน (Factory Master Map) — polygon อิสระ + เลือก metric, 2026-07-16 ──────
    รูปผังใหญ่ทั้งโรงงาน 1 รูป + วาด polygon ล้อมแต่ละไลน์ (L/U ได้) ระบายสีตาม metric ที่เลือก
    metric: ยอดผลิต / OEE / Downtime / ของเสีย — เลือกดูได้ · มี side panel จัดอันดับไลน์ (ใช้พื้นที่ข้าง)
@@ -802,7 +803,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
     const sessIds = sessions.map(s => s.id);
     const [oRes, dRes, fRes, prods, breaks, kstds] = await Promise.all([
       supabaseDR.from('prod_orders').select('session_id, status, qty, qty_ok, qty_actual, qty_target, qty_ng, mat_no, opened_at').in('session_id', sessIds),
-      supabaseDR.from('downtime_logs').select('session_id, duration_min, ended_at, started_at, machine_no, dr_downtime_types(category)').in('session_id', sessIds),
+      supabaseDR.from('downtime_logs').select('session_id, duration_min, ended_at, started_at, machine_no, dr_downtime_types(category, planned_cap_min)').in('session_id', sessIds),
       // ⚠️ NG ต้องมาจาก defect_logs — prod_orders.qty_ng ไม่เคยถูกเขียนทั้งระบบ (ยืนยัน 0/6100 แถว)
       // เดิมไม่ส่ง ngQty เข้า computeLiveOee → Q สดเป็น 100% เสมอ = OEE บนผังสูงกว่าความจริงทุกไลน์ (แก้ 2026-08-05)
       // prod_orders(mat_no) = ไว้ชี้ CT ของ NG ตอนบวกเข้าตัวเศษ %P (ngByMatFrom)
@@ -1200,7 +1201,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
     for (let i = 0; i < rows.length; i += 120) {
       const ids = rows.slice(i, i + 120).map(s => s.id);
       const { data: dts, error: dErr } = await supabaseDR.from('downtime_logs')
-        .select('session_id, duration_min, started_at, ended_at, dr_downtime_types(category)').in('session_id', ids);
+        .select('session_id, duration_min, started_at, ended_at, dr_downtime_types(category, planned_cap_min)').in('session_id', ids);
       if (dErr) { setOeeHistRaw([]); return; }
       dtsAll.push(...(dts || []));
     }
@@ -1591,7 +1592,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
            ⇒ `pairMap[m]` ระเบิด ⇒ catch กลืน ⇒ แผงนี้เป็น 0/0 ทั้งแผงตั้งแต่ 25/09 ถึง 02/10 (user ทัก "เมื่อวานมีผลิตงานนะ") */
         const [ordRes, dtRes, defRes, pairMap, rvBreaks] = await Promise.all([
           supabaseDR.from('prod_orders').select('session_id, status, qty, qty_ok, qty_actual, qty_target, mat_no').in('session_id', sessIds),
-          supabaseDR.from('downtime_logs').select('session_id, duration_min, started_at, ended_at, dr_downtime_types(category)').in('session_id', sessIds),
+          supabaseDR.from('downtime_logs').select('session_id, duration_min, started_at, ended_at, dr_downtime_types(category, planned_cap_min)').in('session_id', sessIds),
           supabaseDR.from('defect_logs').select('session_id, qty_ng, qty_suspect').in('session_id', sessIds),
           loadPairMap(),   // cache ทะเบียนสินค้ากลาง (25/09)
           loadBreakPolicies(),   // ล้ม = โยน ⇒ แผงบอกโหลดไม่สำเร็จ (ห้ามถือว่า "ไม่มีพัก" แล้วหักซ้ำ)
@@ -1662,7 +1663,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
         const ids = (sessions || []).map(s => s.id);
         const [ordRes, dtRes, defRes, fourMRes, prodRes] = await Promise.all([
           ids.length ? supabaseDR.from('prod_orders').select('session_id, mat_no, status, qty, qty_ok, qty_actual, qty_target, is_manual, prod_no, machine_no').in('session_id', ids) : { data: [] },
-          ids.length ? supabaseDR.from('downtime_logs').select('id, session_id, machine_no, description, duration_min, started_at, ended_at, carry_over, dr_downtime_types(name_th, category)').in('session_id', ids) : { data: [] },
+          ids.length ? supabaseDR.from('downtime_logs').select('id, session_id, machine_no, description, duration_min, started_at, ended_at, carry_over, dr_downtime_types(name_th, category, planned_cap_min)').in('session_id', ids) : { data: [] },
           ids.length ? supabaseDR.from('defect_logs').select('id, session_id, qty_ng, qty_suspect, qty_repair, description, dr_defect_types(name_th), prod_orders(mat_no)').in('session_id', ids) : { data: [] },
           supabase.from('four_m_logs').select('id, line_name, category, description, status').eq('work_date', storyDate).in('line_name', fam),
           loadProductsMaster().then(rows => ({ data: rows || [] })),   // cache กลาง (25/09) — ต้องการ name + pair_mat_no
@@ -2513,7 +2514,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
     const revert = () => setRegions(prev => prev.map(x => (x.id === d.id ? { ...x, points: d.base } : x)));
     const chk = checkPolygonEdit(d.base, r.points);
     if (chk.verdict === 'block') { revert(); toast.error(`กรอบ "${r.line_name}" เส้นตัดกันเอง — ไม่บันทึก คืนรูปเดิมแล้ว`); return; }
-    if (chk.verdict === 'confirm' && !window.confirm(`กรอบ "${r.line_name}" จุดขยับไป ${chk.shift}% ของผัง (เกิน ${JUMP_CONFIRM_PCT}%)\nตั้งใจย้ายไกลขนาดนี้ใช่ไหม?\n\nกด "ยกเลิก" = คืนรูปเดิม`)) { revert(); return; }
+    if (chk.verdict === 'confirm' && !await askConfirm(`กรอบ "${r.line_name}" จุดขยับไป ${chk.shift}% ของผัง (เกิน ${JUMP_CONFIRM_PCT}%)\nตั้งใจย้ายไกลขนาดนี้ใช่ไหม?\n\nกด "ยกเลิก" = คืนรูปเดิม`)) { revert(); return; }
     if (d.snap) hist.pushSnapshot(d.snap);
     checkWriteRows(await supabase.from('factory_line_regions').update({ points: r.points }).eq('id', d.id).select('id'), 'บันทึกจุด polygon');
   };
@@ -2525,7 +2526,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
     const blocked = plan.filter(x => x.s.blocked).length;
     const note = [skewed ? `${skewed} กรอบมีขอบเฉียงเกิน ${AXIS_TOL_DEG}° — ขอบนั้นไม่แตะ` : '', blocked ? `${blocked} กรอบจัดแล้วเส้นจะตัดกัน — ข้าม` : ''].filter(Boolean).join('\n');
     if (!todo.length) { toast.info(`ทุกกรอบตรงแนวอยู่แล้ว${note ? ` · ${note.replace(/\n/g, ' · ')}` : ''}`); return; }
-    if (!window.confirm(`จัดให้ตรง ${todo.length} กรอบ (จากทั้งหมด ${regions.length})${note ? `\n${note}` : ''}\n\nกด Undo ย้อนได้`)) return;
+    if (!await askConfirm(`จัดให้ตรง ${todo.length} กรอบ (จากทั้งหมด ${regions.length})${note ? `\n${note}` : ''}\n\nกด Undo ย้อนได้`)) return;
     hist.pushHistory();
     const byId = new Map(todo.map(x => [x.r.id, x.s.points]));
     setRegions(prev => prev.map(x => (byId.has(x.id) ? { ...x, points: byId.get(x.id) } : x)));
@@ -2539,7 +2540,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
   };
   const deleteRegion = async (id) => {
     const rg = regions.find(r => r.id === id);
-    if (!window.confirm(`ลบกรอบไลน์ "${rg?.line_name || ''}" ?`)) return;
+    if (!await askConfirm(`ลบกรอบไลน์ "${rg?.line_name || ''}" ?`)) return;
     hist.pushHistory();
     setRegions(prev => prev.filter(r => r.id !== id));
     const { error } = await supabase.from('factory_line_regions').delete().eq('id', id);

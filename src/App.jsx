@@ -10,6 +10,7 @@ import { loadProfilesPeople } from './utils/usePeople';
 import MyQueuePanel, { useMyQueue } from './components/MyQueuePanel';
 import { OLD_DAYS } from './utils/myQueue';
 import { ToastContainer, toast } from './components/Toast';
+import ConfirmHost from './components/ConfirmHost';
 import ConnBanner from './components/ConnBanner';
 import Login from './pages/Login';
 import SignatureModal from './components/SignatureModal';
@@ -2804,6 +2805,7 @@ export default function App() {
         </Router>
       )}
       <ToastContainer />
+      <ConfirmHost />   {/* ❓ กล่องยืนยันกลาง (แทน window.confirm ทั้งระบบ · 18/11) */}
       {/* ⚠️ ต่อฐานข้อมูลไม่ได้ต้องเขียนบนจอ ห้ามปล่อยให้หมุนค้างเงียบ (21/10 · utils/connGuard.js) */}
       <ConnBanner />
     </>

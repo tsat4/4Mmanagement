@@ -38,6 +38,7 @@ import { DeleteButton } from '../components/IconButton';
 import { MO_VOID_NOT_IN } from '../utils/mtnStepPerm';
 import { tr } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
+import { askConfirm } from '../utils/askConfirm';
 
 /* ── เฟส PDCA ของขั้นงาน (คำสั่ง user 2026-08-19: แผนงานต้องเห็นชัดว่าขั้นไหนคือ P-D-C-A) ──
    เก็บเป็นคอลัมน์ `improvement_milestones.phase` (migration 20260819_improvement_milestone_phase_dr)
@@ -346,7 +347,7 @@ export default function Improvements() {
     reloadMilestones(m.improvement_id);
   };
   const deleteMilestone = async (m) => {
-    if (!window.confirm(`ลบขั้นงาน "${m.title}"?`)) return;
+    if (!await askConfirm(`ลบขั้นงาน "${m.title}"?`)) return;
     const { error } = await supabaseDR.from('improvement_milestones').delete().eq('id', m.id);
     if (error) { toast.error(error.message); return; }
     reloadMilestones(m.improvement_id);
@@ -470,7 +471,7 @@ export default function Improvements() {
       //    คิวรีล้มเหลวเงียบ แล้วผลก่อน/หลังจะเป็น 0 ทั้งคู่ = โปรเจคดูเหมือน "แก้หายสนิท" ทั้งที่วัดไม่ได้
       const dtRes = await fetchByIds(allIds, c => {
         let q = supabaseDR.from('downtime_logs')
-          .select('session_id, duration_min, machine_no, mat_no, dr_downtime_types(category)')
+          .select('session_id, duration_min, machine_no, mat_no, dr_downtime_types(category, planned_cap_min)')
           .in('session_id', c);
         if (imp.problem_type_id) q = q.eq('downtime_type_id', imp.problem_type_id);
         if (imp.mat_no) q = q.eq('mat_no', imp.mat_no);
@@ -691,7 +692,7 @@ export default function Improvements() {
       //    (บรรทัด 379/404 ในไฟล์นี้ใช้ fetchByIds อยู่แล้ว ตัวนี้ตกสำรวจ)
       const { rows: data, error: pErr, truncated: pTrunc } = await fetchByIds(ids, (c) =>
         supabaseDR.from('downtime_logs')
-          .select('downtime_type_id, machine_no, duration_min, description, dr_downtime_types(category)')
+          .select('downtime_type_id, machine_no, duration_min, description, dr_downtime_types(category, planned_cap_min)')
           .in('session_id', c));
       if (pErr || pTrunc) toast.error('โหลด downtime ไม่ครบ — พาเรโต้อาจชี้เป้าไม่ตรง');
       (data || []).forEach(r => {
@@ -827,7 +828,7 @@ export default function Improvements() {
   };
 
   const handleDelete = async (imp) => {
-    if (!window.confirm(`ลบโปรเจค "${imp.title}"?`)) return;
+    if (!await askConfirm(`ลบโปรเจค "${imp.title}"?`)) return;
     const { error } = await supabaseDR.from('improvements').delete().eq('id', imp.id);
     if (error) { toast.error(error.message); return; }
     // ลบรูปหลัง DB สำเร็จ (กติกา CLAUDE.md — กันไฟล์กำพร้า)

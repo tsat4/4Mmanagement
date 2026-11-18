@@ -51,6 +51,7 @@ import { fetchByIds, fetchAllPages } from '../utils/fetchByIds';
 import { addDaysStr } from '../utils/workDate';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 /* ── helpers เวลา/วันงาน (กฎเดียวกับทั้งระบบ) ───────────────────────────── */
 const getWorkDate = () => {
   const d = new Date();
@@ -577,7 +578,7 @@ export default function QaCheckSheet({ canRecord }) {
   const openNcr = async (item, res) => {
     if (!canRecord) { toast.error('ไม่มีสิทธิ์เปิด NCR'); return; }
     if (res.ncr_id) { toast.info('จุดนี้เปิด NCR ไปแล้ว — ดูต่อที่แท็บ NCR ของเสีย'); return; }
-    if (!window.confirm(`เปิดใบ NCR จากจุด #${item.balloon_no} ${item.characteristic}?`)) return;
+    if (!await askConfirm(`เปิดใบ NCR จากจุด #${item.balloon_no} ${item.characteristic}?`)) return;
     setBusy(true);
     const ncr_no = await nextDocNo('qa_ncr', 'ncr_no', 'NCR');
     if (!ncr_no) { setBusy(false); toast.error('ออกเลขที่ NCR ไม่สำเร็จ — ลองใหม่อีกครั้ง'); return; }
@@ -791,7 +792,7 @@ export default function QaCheckSheet({ canRecord }) {
         rs.failed > 0 && `ผลรายจุดบางก้อนโหลดไม่สำเร็จ (${rs.error})`].filter(Boolean);
       if (miss.length) {
         toast.error(`ข้อมูลไม่ครบ: ${miss.join(' · ')}`);
-        if (!window.confirm(`⚠️ ข้อมูลไม่ครบ\n${miss.join('\n')}\n\nไฟล์ที่ได้จะไม่ครบ (ชื่อไฟล์จะติดคำว่า "ไม่ครบ")\nดาวน์โหลดต่อไหม?`)) return;
+        if (!await askConfirm(`⚠️ ข้อมูลไม่ครบ\n${miss.join('\n')}\n\nไฟล์ที่ได้จะไม่ครบ (ชื่อไฟล์จะติดคำว่า "ไม่ครบ")\nดาวน์โหลดต่อไหม?`)) return;
       }
       downloadCsvDoc('csv_qa_inspection_results',
         csvStamp(['qa_results', part?.part_no || partId, from, workDate, miss.length ? 'ไม่ครบ' : '']),
