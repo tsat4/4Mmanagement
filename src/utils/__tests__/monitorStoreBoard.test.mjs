@@ -43,3 +43,17 @@ test('levelState: ต่ำกว่า MIN / เกิน MAX / ในช่ว
   assert.equal(levelState(5, null), null);
   assert.equal(levelState(500, { min: 10, max: null }), 'ok');
 });
+
+import { BOARD_GROUPS, MON_SUBS, subOfKind } from '../monitorBoards.js';
+import { BOARD_KINDS } from '../monitorBoards.js';
+test('🗂️ ทุกชนิดบอร์ดอยู่ในแท็บย่อยเดียว (18/11 · 3 กลุ่ม) — ไม่มีบอร์ดหายจากจอ ไม่ซ้ำ 2 ที่', () => {
+  assert.deepEqual(BOARD_GROUPS.map(g => g.key), ['plan', 'store', 'wh']);
+  for (const k of BOARD_KINDS) {
+    const hits = MON_SUBS.filter(s => s.kinds.includes(k));
+    assert.equal(hits.length, 1, `ชนิด ${k} อยู่ใน ${hits.length} แท็บย่อย`);
+  }
+  assert.equal(subOfKind('raw'), 'st_raw');
+  assert.equal(subOfKind('vendor'), 'plating');
+  assert.deepEqual(MON_SUBS.find(s => s.key === 'plating').kinds, ['st_before', 'vendor', 'st_after']);
+  assert.ok(MON_SUBS.every(s => s.label && !s.label.includes('undefined')));
+});
