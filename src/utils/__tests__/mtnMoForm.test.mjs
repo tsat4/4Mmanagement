@@ -1,7 +1,7 @@
 // เทสสูตรเงิน/คะแนนของใบ M/O ทีม MTN — src/utils/mtnMoForm.js (pure)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { laborAmount, partAmount, sumLabor, sumParts, grandTotal, satScore, needsPlantManager, needsApprovalFirst, qaAppliesTo, mtnApprovalState, purposeOfPrint } from '../mtnMoForm.js';
+import { laborAmount, partAmount, sumLabor, sumParts, grandTotal, satScore, needsPlantManager, needsApprovalFirst, qaAppliesTo, mtnApprovalState, purposeOfPrint, causeText, causeCatLabel } from '../mtnMoForm.js';
 
 test('ค่าแรง: rate × hours · มี amount ที่กรอกเองให้ใช้ค่านั้น', () => {
   assert.equal(laborAmount({ rate_per_hour: 100, hours: 1 }), 100);
@@ -110,4 +110,20 @@ test('ช่องติ๊กจุดประสงค์บนใบพิ�
   assert.equal(purposeOfPrint({ repair_type: 'งานปรับปรุง (IM)' }), 'improve');
   assert.equal(purposeOfPrint({ repair_type: 'BM' }), 'repair');
   assert.equal(needsApprovalFirst({ repair_type: 'งานปรับปรุง (IM)' }), false, 'ด่านกั้นงานต้องไม่เดาจาก repair_type');
+});
+
+/* ── สาเหตุเกิดจาก: ป้ายชุดเดียวกับ CAUSE_CATS (18/11 · ใช้ทั้งจอ · ใบพิมพ์ · Excel) */
+test('causeText — ป้ายจาก CAUSE_CATS · เติม "อื่นๆ" ที่พิมพ์เอง · รับ 2 รูปคีย์', () => {
+  assert.equal(causeText({ cause_category: 'part_life' }), 'อายุอะไหล่');
+  assert.equal(causeText({ causeCategory: 'man' }), 'คน', 'loader แปลงเป็น camelCase แล้วต้องยังอ่านได้');
+  assert.equal(causeText({ cause_category: 'other', cause_other: 'ไฟตก' }), 'อื่นๆ — ไฟตก');
+  assert.equal(causeCatLabel('method'), 'วิธีการทำงาน');
+});
+
+test('🔴 คีย์ที่ไม่รู้จัก = คืนคีย์ดิบ ห้ามกลืนหาย · ไม่เลือกหมวดแต่พิมพ์ไว้ = เอาข้อความมาแสดง', () => {
+  assert.equal(causeText({ cause_category: 'machine' }), 'machine', 'หมวดที่เพิ่มทีหลังต้องยังเห็นในรายงาน');
+  assert.equal(causeText({ cause_category: null, cause_other: 'ของเก่าไม่ได้ติ๊กหมวด' }), 'ของเก่าไม่ได้ติ๊กหมวด');
+  assert.equal(causeText({}), '');
+  assert.equal(causeText(), '');
+  assert.equal(causeCatLabel('ไม่มีจริง'), null, 'ไม่รู้จัก = null ให้ผู้เรียกตัดสิน ห้ามคืนคีย์ดิบเป็นป้าย');
 });
