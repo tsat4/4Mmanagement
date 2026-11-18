@@ -88,3 +88,39 @@ test('กริดใบพิมพ์: I/O 12 ช่อง · PR 10 ช่อ�
   assert.equal(moGridChars(null, 10).length, 10);
   assert.ok(moGridChars('', 10).every(c => c === ''));
 });
+
+/* ── 🔧 ขั้น 3 (สาเหตุ/วิธีแก้) เข้าไฟล์ export — 18/11 หน้างานแจ้ง
+      *"ใน Excel ที่ Export ไม่มีวิธีการแก้ไข ควรเอาวิธีการแก้ไขใส่เพิ่ม"* */
+test('มีคอลัมน์ "วิธีการแก้ไข" · "สาเหตุปัญหาที่เกิด" · "สาเหตุเกิดจาก" และอ่านค่าตรงช่อง', () => {
+  const H = moExportHeaders();
+  const sol = H.indexOf('วิธีการแก้ไข'), rc = H.indexOf('สาเหตุปัญหาที่เกิด'), cc = H.indexOf('สาเหตุเกิดจาก');
+  assert.ok(sol >= 0 && rc >= 0 && cc >= 0, 'ขาดคอลัมน์ขั้นซ่อม = คำขอ 18/11 หายไป');
+  const cells = moExportCells(row({}, { open: false }), {
+    techsBy: { a1: { rootCause: 'ลูกปืนแตก', solution: 'เปลี่ยนลูกปืน 6204 + อัดจาระบี',
+                     causeCategory: 'part_life', causeOther: null, names: ['สมชาย'] } },
+  });
+  assert.equal(cells[sol].value, 'เปลี่ยนลูกปืน 6204 + อัดจาระบี');
+  assert.equal(cells[rc].value, 'ลูกปืนแตก');
+  assert.equal(cells[cc].value, 'อายุอะไหล่', 'ป้ายต้องมาจาก CAUSE_CATS ไม่ใช่คีย์ดิบ');
+  assert.ok(cells[sol].opt.wrap, 'ข้อความยาวต้อง wrap ไม่ใช่ล้นออกนอกช่อง');
+});
+
+test('🔴 โหลดข้อมูลขั้นซ่อมไม่สำเร็จ = เขียนกำกับทุกแถว ห้ามปล่อยว่างเหมือน "ช่างไม่ได้กรอก"', () => {
+  const H = moExportHeaders();
+  const cells = moExportCells(row({}), { techsError: 'พัง', techsBy: {} });
+  for (const h of ['วิธีการแก้ไข', 'สาเหตุปัญหาที่เกิด']) {
+    assert.match(cells[H.indexOf(h)].value, /⚠/, `${h} ต้องมี ⚠ เมื่อโหลดล้ม`);
+  }
+  assert.match(cells[H.indexOf('สาเหตุเกิดจาก')].value, /⚠/);
+  /* ไม่ได้ส่ง ctx มาเลย (ผู้เรียกลืม) ก็ต้องไม่พัง และต้องไม่โกหกว่ามีค่า */
+  const bare = moExportCells(row({}));
+  assert.equal(bare[H.indexOf('วิธีการแก้ไข')].value, '');
+});
+
+test('ใบปิดแล้วแต่ไม่มีวิธีแก้ = ไฮไลต์ให้ตามเก็บ · ใบที่ยังค้างเว้นว่างเฉยๆ', () => {
+  const H = moExportHeaders(); const sol = H.indexOf('วิธีการแก้ไข');
+  const closedBlank = moExportCells(row({}, { open: false }), { techsBy: { a1: { solution: null } } });
+  assert.ok(closedBlank[sol].opt.fill, 'ปิดใบแล้วไม่มีวิธีแก้ = ต้องไฮไลต์ (รายงานเดือนเอาไป yokoten ไม่ได้)');
+  const stillOpen = moExportCells(row({}, { open: true }), { techsBy: { a1: { solution: null } } });
+  assert.equal(stillOpen[sol].opt.fill, undefined, 'ใบที่ยังซ่อมอยู่ยังไม่ต้องมีวิธีแก้ — ห้ามไฮไลต์กล่าวหา');
+});

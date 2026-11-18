@@ -14,6 +14,7 @@
      · โหลดคอมเมนต์/เลข PR ล้ม = เขียนกำกับทุกแถว ห้ามปล่อยว่างเหมือนไม่มีข้อมูล
    ════════════════════════════════════════════════════════════════════════════════════════ */
 import { assignedTechsOf, joinTechs, prNumbersOf, repairPathMeta } from './mtnPurchase.js';
+import { causeText } from './mtnMoForm.js';   // 🔧 ป้าย "สาเหตุเกิดจาก" — ชุดเดียวกับ CAUSE_CATS บนฟอร์ม
 import { qaRelatedView } from './mtnStepPerm.js';   // 🔴 "เกี่ยวคุณภาพ" ตอบจากที่นี่ที่เดียว
 
 /** ไม่รู้ = ขีด ห้าม 0 */
@@ -48,6 +49,24 @@ export const MO_EXPORT_COLS = Object.freeze([
     val: (r, c) => (c.commentsError ? '⚠ โหลดคอมเมนต์ไม่สำเร็จ' : c.commentText(c.cmtOf(r.o))), opt: () => ({ size: 9, wrap: true }) },
   { key: 'comment_n', h: 'จำนวนคอมเมนต์', w: 10,
     val: (r, c) => (c.commentsError ? DASH : (c.cmtOf(r.o).length || '')), opt: () => ({ align: 'center' }) },
+  /* 🔧 ขั้น 3 (ลงมือซ่อม) — "เกิดจากอะไร / แก้ยังไง" (18/11 · หน้างานแจ้ง
+       *"ใน Excel ที่ Export ไม่มีวิธีการแก้ไข ควรเอาวิธีการแก้ไขใส่เพิ่ม"*)
+     🔴 วางต่อจากบล็อก "เกิดอะไรขึ้น" ให้อ่านซ้าย→ขวาเป็นเรื่องเดียว:
+        อาการ → รายละเอียดที่แจ้ง → คอมเมนต์ → **สาเหตุ → วิธีแก้** → เวลา
+     🔴 ค่ามาจาก `loadRepairTechsFor()` (คิวรีเดียวกับช่างซ่อมจริง) — ช่องพวกนี้ห้ามเข้า
+        `MO_LIST_COLS` (textarea ยาว · มีแต่ปุ่ม export อ่าน · กฎ egress ข้อ 11)
+     🔴 ว่าง 2 ความหมาย: โหลดไม่ติด = ⚠ เขียนกำกับ · ช่างไม่ได้กรอก = ว่าง (ถูกแล้ว ห้ามใส่ขีด
+        เพราะขีดแปลว่า "ไม่รู้" — กรณีนี้รู้แน่ว่ายังไม่มีใครกรอก) */
+  { key: 'cause_cat', h: 'สาเหตุเกิดจาก', w: 18,
+    val: (r, c) => (c.techsError ? '⚠' : causeText((c.techsBy || {})[r.o.id])), opt: () => ({ size: 9, wrap: true }) },
+  { key: 'root_cause', h: 'สาเหตุปัญหาที่เกิด', w: 34,
+    val: (r, c) => (c.techsError ? '⚠ โหลดข้อมูลขั้นซ่อมไม่สำเร็จ' : (((c.techsBy || {})[r.o.id] || {}).rootCause || '')),
+    opt: () => ({ size: 9, wrap: true }) },
+  { key: 'solution', h: 'วิธีการแก้ไข', w: 40,
+    val: (r, c) => (c.techsError ? '⚠ โหลดข้อมูลขั้นซ่อมไม่สำเร็จ' : (((c.techsBy || {})[r.o.id] || {}).solution || '')),
+    /* ปิดใบแล้วแต่ไม่มีวิธีแก้ = ไฮไลต์เหลือง (รายงานเดือนเอาไปทำ yokoten ไม่ได้) — ใบที่ยังค้างเว้นว่างถูกแล้ว */
+    opt: (r, c) => ({ size: 9, wrap: true,
+      fill: (!c.techsError && !((c.techsBy || {})[r.o.id] || {}).solution && !r.open) ? 'FFFFF2CC' : undefined }) },
   { key: 'report_at', h: 'เวลาแจ้ง', w: 16, val: (r) => bkk(r.o.report_at), opt: () => ({ size: 9 }) },
   { key: 'accept_at', h: 'เวลารับงาน', w: 16, val: (r) => bkk(r.o.accept_at), opt: () => ({ size: 9 }) },
   { key: 'repair_done_at', h: 'เวลาซ่อมเสร็จ', w: 16, val: (r) => bkk(r.o.repair_done_at), opt: () => ({ size: 9 }) },

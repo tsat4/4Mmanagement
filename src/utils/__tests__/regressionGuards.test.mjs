@@ -9432,6 +9432,36 @@ test('🧑‍🔧 mo-export-shows-real-techs — ไฟล์ Excel ของ MO
       + '   แก้: โหลดตอนกดปุ่มผ่าน loadRepairTechsFor() (src/lib/moRepairTechs.js)\n');
   }
 });
+test('🔧 mo-export-shows-solution — ไฟล์ Excel ของ MO ต้องมี "วิธีการแก้ไข" + สาเหตุ', () => {
+  /* why (18/11 · หน้างานแจ้ง): *"ใน Excel ที่ Export ไม่มีวิธีการแก้ไขครับผม
+     ควรเอาวิธีการแก้ไขใส่เพิ่มครับ"*
+     ขั้น 3 (ลงมือซ่อม) เก็บ `root_cause` / `solution` / `cause_category` ไว้ครบ แต่ไฟล์ export
+     ไม่มีช่องไหนอ่านมันเลย ⇒ รายงานรายเดือนตอบได้แค่ "เสียอะไร" ไม่รู้ "แก้ยังไง" = ทำ yokoten ไม่ได้
+     🔴 **ป้ายหมวดสาเหตุต้องมาจาก `CAUSE_CATS` (`mtnMoForm.js`) ชุดเดียว** — เขียนชื่อหมวดเองในไฟล์
+        export = คีย์เพี้ยน (เคยพลาดจริงรอบนี้: เขียน `part_age` ทั้งที่ฐานใช้ `part_life`
+        ⇒ ไฟล์จะขึ้นคีย์ดิบแทนป้ายไทยทุกแถวเงียบๆ)
+     🔴 **`root_cause`/`solution` ห้ามเข้า `MO_LIST_COLS`** — เหตุผลเดียวกับ tech_main
+        (textarea ยาว · มีแต่ปุ่ม export อ่าน · คิวรีรายการยิง ~1,389 ครั้ง/วันที่เพดาน 1000 ใบ) */
+  const xl = readFileSync(join(ROOT, 'src/utils/mtnMoExportCols.js'), 'utf8');
+  for (const h of ['วิธีการแก้ไข', 'สาเหตุปัญหาที่เกิด', 'สาเหตุเกิดจาก']) {
+    assert.ok(xl.includes(`h: '${h}'`),
+      `\n\n❌ คอลัมน์ "${h}" หายจากทะเบียน MO_EXPORT_COLS แล้ว\n`
+      + '   ผล: กลับไปเป็นอาการที่หน้างานแจ้ง 18/11 — export มาแล้วไม่รู้ว่าแก้ยังไง\n');
+  }
+  assert.match(xl, /import \{ causeText \} from '\.\/mtnMoForm\.js'/,
+    '\n\n❌ ป้าย "สาเหตุเกิดจาก" ต้องมาจาก causeText() ใน mtnMoForm.js (ชุดเดียวกับ CAUSE_CATS บนฟอร์ม)\n'
+    + '   เขียนชื่อหมวดเองในไฟล์ export = คีย์เพี้ยนแล้วไฟล์ขึ้นคีย์ดิบเงียบๆ\n');
+  assert.doesNotMatch(xl, /part_age|part_life/,
+    '\n\n❌ ไฟล์ export ไม่ควรรู้จักคีย์หมวดสาเหตุเลย — ให้ causeText() แปลงให้ (ทะเบียนชุดเดียว)\n');
+  const page = readFileSync(join(ROOT, 'src/pages/MtnRepair.jsx'), 'utf8');
+  const listCols = page.slice(page.indexOf('const MO_LIST_COLS'), page.indexOf('const SCOPE_OPTS'));
+  assert.ok(listCols.length > 100, 'หา MO_LIST_COLS ไม่เจอ — ด่านนี้ต้องตามไปด้วยถ้าย้ายโค้ด');
+  for (const col of ['root_cause', 'solution']) {
+    assert.doesNotMatch(listCols, new RegExp(`'${col}'`),
+      `\n\n❌ '${col}' ถูกเติมเข้า MO_LIST_COLS แล้ว — textarea ยาวในคิวรีที่ยิง ~1,389 ครั้ง/วัน\n`
+      + '   แก้: โหลดตอนกดปุ่มผ่าน loadRepairTechsFor() (src/lib/moRepairTechs.js · คิวรีเดียวกับชื่อช่าง)\n');
+  }
+});
 /* ═══ 🔻 ตัดสต็อกตอน confirm = ลูกตรงชั้นเดียว (หลัก SAP) — 2026-11-04 ═════════════════
    บั๊กจริง: `fn_explode_child_demand` วน `where product_id = v_fg` ทั้งใบโดยไม่กรอง parent_mat
    ⇒ แถว "หลาน" ที่นอนในใบแม่ถูกตัดสต็อกด้วย + ใช้ qty_per_unit ที่เป็น "ต่อ 1 ลูก" มาคูณยอด FG
