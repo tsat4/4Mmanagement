@@ -74,6 +74,7 @@ import {
   QA_SPC_VALUE_HEADERS, qaSpcValueRows, spcValuesFrom,
   QA_SPC_SUMMARY_HEADERS, qaSpcSummaryRows, csvStamp,
 } from '../utils/qaCsvRows';
+import { askConfirm } from '../utils/askConfirm';
 
 /* ตัวกรองสถานะใบ NCR / CAPA (UI-STANDARD 2026-09-24) — ค่า state เดิม 'all'/'active'/'closed' */
 const STATUS_SEG = [
@@ -864,7 +865,7 @@ function SPCTab({ lineObjs, canRecord, canManage, canExport = false, partOpts = 
 
   const delMeasurement = async (id) => {
     if (!selWrite.ok) { toast.info(writeBlockText(selWrite, { what: 'ผลวัดของไลน์นี้' })); return; }
-    if (!window.confirm('ลบผลวัดชุดนี้?')) return;
+    if (!await askConfirm('ลบผลวัดชุดนี้?')) return;
     const { error } = await supabase.from('qa_measurements').delete().eq('id', id);
     if (error) { toast.error(error.message); return; }
     toast.success('ลบแล้ว');
@@ -886,14 +887,14 @@ function SPCTab({ lineObjs, canRecord, canManage, canExport = false, partOpts = 
      🔴 โหลดมาไม่ครบ (error/ชนเพดาน) = ถามก่อนดาวน์โหลด + ติด "ไม่ครบ" ที่ชื่อไฟล์ ห้ามส่งไฟล์ขาดเงียบๆ */
   useEffect(() => { loadDocForms().catch(() => { /* ไม่ได้เลขฟอร์ม = ชื่อไฟล์เดิม ไม่ล้ม */ }); }, []);
   const partLabel = partOpts2.find(o => o.id === partId)?.label || '';
-  const askIfPartial = () => {
+  const askIfPartial = async () => {
     if (!isSheet || !partRes.err) return true;
     toast.error(`ข้อมูลไม่ครบ: ${partRes.err}`);
-    return window.confirm(`⚠️ ${partRes.err}\n\nไฟล์ที่ได้จะไม่ครบ (ชื่อไฟล์จะติดคำว่า "ไม่ครบ")\nดาวน์โหลดต่อไหม?`);
+    return await askConfirm(`⚠️ ${partRes.err}\n\nไฟล์ที่ได้จะไม่ครบ (ชื่อไฟล์จะติดคำว่า "ไม่ครบ")\nดาวน์โหลดต่อไหม?`);
   };
   const partialTag = () => (isSheet && partRes.err ? 'ไม่ครบ' : '');
 
-  const exportSpcValues = () => {
+  const exportSpcValues = async () => {
     const groups = isSheet
       ? partItems
         .map(it => ({ point: itemAsChar(it), values: spcValuesFrom((partRes.byItem.get(it.id) || []).slice(-limitN)) }))
@@ -901,7 +902,7 @@ function SPCTab({ lineObjs, canRecord, canManage, canExport = false, partOpts = 
       : (sel ? [{ point: sel, values: spcValuesFrom(rows) }] : []);
     const csvRows = qaSpcValueRows(groups);
     if (!csvRows.length) { toast.info(trI18n('ยังไม่มีค่าวัดให้ส่งออก')); return; }
-    if (!askIfPartial()) return;
+    if (!await askIfPartial()) return;
     const name = isSheet
       ? csvStamp(['qa_spc_values', partLabel, `last${limitN}`, partialTag()])
       : csvStamp(['qa_spc_values', sel?.part_no, sel?.characteristic, `last${limitN}`]);
@@ -909,14 +910,14 @@ function SPCTab({ lineObjs, canRecord, canManage, canExport = false, partOpts = 
     toast.success(`ส่งออก ${csvRows.length.toLocaleString()} ค่าวัด จาก ${groups.length} จุด ✓`);
   };
 
-  const exportSpcSummary = () => {
+  const exportSpcSummary = async () => {
     const stats = pointStats.map(st => ({
       point: itemAsChar(st.it),
       n: st.n, mean: st.mean, sigmaWithin: st.sigmaWithin, sigmaOverall: st.sigmaOverall,
       cp: st.cp, cpk: st.cpk, pp: st.pp, ppk: st.ppk, oos: st.oos, last: st.last, lastDate: st.lastDate,
     }));
     if (!stats.length) { toast.info(trI18n('ชิ้นงานนี้ยังไม่มีจุดวัดค่าแบบตัวเลข')); return; }
-    if (!askIfPartial()) return;
+    if (!await askIfPartial()) return;
     downloadCsvDoc('csv_qa_spc_summary', csvStamp(['qa_spc_summary', partLabel, `last${limitN}`, partialTag()]),
       csvText(QA_SPC_SUMMARY_HEADERS, qaSpcSummaryRows(stats)));
     toast.success(`ส่งออกสรุป ${stats.length} จุด ✓`);
@@ -1912,7 +1913,7 @@ function CAPATab({ canRecord, canManage, prefill, onPrefillDone, lineObjs = [], 
                 }}>{trI18n('ส่งตรวจประสิทธิผล')}</button>
               )}
               {canManage && detail.id && (
-                <button style={btnSt('var(--green)')} onClick={() => {
+                <button style={btnSt('var(--green)')} onClick={async () => {
                   if (!detail.effectiveness?.trim()) { toast.error('กรอกผลตรวจประสิทธิผลก่อนปิด'); return; }
                   /* ด่านเรื่องเอกสาร PE — IATF §10.2.3/10.2.4 บังคับให้ทบทวน PFMEA/Control Plan
                      ⚠️ soft gate โดยตั้งใจ: บังคับให้ "ตอบ" ไม่ได้บังคับให้ "แก้เสร็จ"
@@ -1925,16 +1926,16 @@ function CAPATab({ canRecord, canManage, prefill, onPrefillDone, lineObjs = [], 
                      ตัวเลขบอกว่ายังไม่ลด = ปิดได้ถ้าคนยืนยัน แต่ต้อง stamp ไว้ให้เห็นตลอดไป
                      (บล็อกแข็ง คนจะเลี่ยงด้วยการไม่ตั้งค่าการวัดเลย ซึ่งแย่กว่า) */
                   const { j, m, busy } = effRef.current || {};
-                  if (busy && !window.confirm('ตัวเลขประสิทธิผลยังคำนวณไม่เสร็จ — ปิดใบเลยไหม? (ผลที่บันทึกอาจไม่ใช่ค่าล่าสุด)')) return;
+                  if (busy && !await askConfirm('ตัวเลขประสิทธิผลยังคำนวณไม่เสร็จ — ปิดใบเลยไหม? (ผลที่บันทึกอาจไม่ใช่ค่าล่าสุด)')) return;
                   const n = (v) => (Math.round((v || 0) * 10) / 10).toFixed(1);
                   if (j && (j.verdict === 'not_effective' || j.verdict === 'worse')) {
-                    if (!window.confirm(
+                    if (!await askConfirm(
                       `⚠️ ตัวเลขจริงบอกว่าของเสียยังไม่ลด\n\n`
                       + `ก่อนแก้ ${n(m?.beforePerDay)} ชิ้น/วัน → หลังแก้ ${n(m?.afterPerDay)} ชิ้น/วัน\n`
                       + `${j.reason}\n\nปกติควรกลับไปทบทวน D4 (สาเหตุราก) ก่อน\nยืนยันจะปิดใบนี้เลยไหม? (ผลนี้จะถูกบันทึกไว้ในใบ)`
                     )) return;
                   } else if (j && (j.verdict === 'too_early' || j.verdict === 'no_pivot' || j.verdict === 'no_data' || j.verdict === 'no_baseline')) {
-                    if (!window.confirm(
+                    if (!await askConfirm(
                       `ℹ️ ระบบยังวัดประสิทธิผลจากข้อมูลจริงไม่ได้\n(${j.reason})\n\n`
                       + `ปิดใบโดยอ้างอิงแค่ข้อความที่กรอกไว้ ใช่ไหม?`
                     )) return;

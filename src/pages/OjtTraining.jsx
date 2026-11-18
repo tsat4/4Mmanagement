@@ -32,6 +32,7 @@ import { ojtFlow } from '../utils/stepFlow';
 
 import { tr } from '../utils/i18n';
 import { pickSignerPatch, isSelfName } from '../utils/selfSign';
+import { askConfirm } from '../utils/askConfirm';
 /* ══════════════════════════════════════════════════════════════
    📖 OJT Training — ใบแจ้งการอบรมสอนงานโดยหัวหน้างาน (ON THE JOB TRAINING)
    Paperless ของฟอร์มกระดาษ FM-HRM-004: บันทึกการอบรมในระบบ + พนักงานเซ็นชื่อบนจอ
@@ -599,7 +600,7 @@ export default function OjtTraining() {
   const canRemoveSheet = (t) => mayDelete || (ownsSheet(t) && !sheetSigned(t));
 
   const handleDelete = async (t) => {
-    if (!window.confirm(`ลบใบอบรม "${t.topic || thDate(t.train_date)}" ? (รายชื่อ+ลายเซ็นพนักงานในใบนี้จะถูกลบด้วย)`)) return;
+    if (!await askConfirm(`ลบใบอบรม "${t.topic || thDate(t.train_date)}" ? (รายชื่อ+ลายเซ็นพนักงานในใบนี้จะถูกลบด้วย)`)) return;
     const { data: att, error: attErr } = await supabase.from('ojt_training_attendees').select('sign_url').eq('training_id', t.id);
     if (!mayDelete) {
       // ทางที่ 2 (เจ้าของใบ) — ทวนเงื่อนไขกับข้อมูลสดอีกรอบ ชิปบนจออาจเก่ากว่าความจริง
@@ -847,7 +848,7 @@ ${printImgs.map((f, i) => attachData[i] ? `<div style="page-break-before:always;
     const { data: { user } } = await supabase.auth.getUser();
     if (!user?.id) return toast.error('เซสชันหมดอายุ — กรุณา login ใหม่');
     const mySig = (profiles.find(p => p.id === user.id) || {}).signature_url || null;
-    if (!confirmSign({
+    if (!await confirmSign({
       what: S.what,
       docLabel: 'ใบอบรม',
       orderNo: [fmtDate(editing.train_date), editing.topic].filter(Boolean).join(' · ') || editing.id,
@@ -868,7 +869,7 @@ ${printImgs.map((f, i) => attachData[i] ? `<div style="page-break-before:always;
     const S = SELF_SIGN[kind];
     if (!mayDelete) return toast.error('ปลดลายเซ็นได้เฉพาะผู้ถือสิทธิ์ลบใบอบรม (ojt:delete)');
     if (typeof window !== 'undefined'
-      && !window.confirm(`ปลดลายเซ็น "${S.label}" ของ "${editing[S.nameKey] || '—'}" ?\n\nใบจะกลับไปสถานะรอ และต้องให้เจ้าตัวกดเซ็นใหม่`)) return;
+      && !await askConfirm(`ปลดลายเซ็น "${S.label}" ของ "${editing[S.nameKey] || '—'}" ?\n\nใบจะกลับไปสถานะรอ และต้องให้เจ้าตัวกดเซ็นใหม่`)) return;
     const patch = { [S.nameKey]: null, [S.uidKey]: null, [S.sigKey]: null, [S.atKey]: null };
     const rows = await checkWriteRows(await supabase.from('ojt_trainings').update(patch).eq('id', editing.id).select('id'), 'ปลดลายเซ็น');
     if (!rows) return;

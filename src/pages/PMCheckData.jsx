@@ -50,6 +50,7 @@ import DraftRestoreBar from '../components/DraftRestoreBar'
 import { loadEmployeeSigners, signatureOfPerson, resolveEmployeeSigner, inspectorForExport } from '../utils/employeeSignature'
 import InspectorCodeField from '../components/InspectorCodeField'   // ✍️ รหัสผู้ตรวจจริง (C1 · 05/11)   // ✍️ ลายเซ็นในฐานพนักงาน (C1 · 03/11)
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
+import { askConfirm } from '../utils/askConfirm';
 
 /* 🔩 จุดชิมของ fixture บนใบตรวจ PM (2026-09-08 · คำสั่ง user "shim record กับการตรวจใช้กลไกเดียวกัน")
    ข้อมูลแยกตาราง (fixture_points/fixture_shim_events) แต่ "รูป + หมุด" ชุดเดียวกับจุดตรวจ PM:
@@ -427,8 +428,8 @@ function AttrRow({ cp, idx, value, note, onChangeAttr, onChangeNote, methodIndex
   const method = methodIndex?.[cp.checking_method]
   // 📱 มือถือ: แตะปุ่มเดิมซ้ำ (ถุงมือแตะเบิ้ล) = ล้างคำตอบเงียบๆ ⇒ ถามก่อน · จอคอมเหมือนเดิม (2026-10-20)
   const isMobile = useIsMobile()
-  const pickAttr = (v) => {
-    if (v === value) { if (isMobile && !window.confirm(`ล้างคำตอบ ${v.toUpperCase()} ของข้อนี้?`)) return; onChangeAttr(''); return }
+  const pickAttr = async (v) => {
+    if (v === value) { if (isMobile && !await askConfirm(`ล้างคำตอบ ${v.toUpperCase()} ของข้อนี้?`)) return; onChangeAttr(''); return }
     onChangeAttr(v)
   }
   return (
@@ -444,7 +445,7 @@ function AttrRow({ cp, idx, value, note, onChangeAttr, onChangeNote, methodIndex
         <CpImage cp={cp} />
         <div style={{ display: 'flex', gap: 4 }}>
           {['ok', 'ng'].map(v => (
-            <button key={v} onClick={() => pickAttr(v)} style={{
+            <button key={v} onClick={async () => await pickAttr(v)} style={{
               padding: '3px 10px', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 700, cursor: 'pointer',
               // 📱 มือถือ: ปุ่ม OK/NG = คำตอบหลักของใบตรวจ → ใหญ่พอใส่ถุงมือกด (เดิมสูง ~22px · 22/10) · จอคอมเท่าเดิม
               ...(isMobile ? { minHeight: 44, minWidth: 58, fontSize: 14, borderRadius: 'var(--r-md)' } : null),
@@ -2092,8 +2093,8 @@ export default function PMCheckData() {
                           ⚠️ **ห้ามบล็อกไม่ให้กด** — ระบบตั้งใจให้บันทึกค้างได้ (ตรวจไม่ครบ = `pending`
                              ไม่เลื่อนรอบ PM · ดูตอน save) ช่างตรวจค้างแล้วกลับมาทำต่อเป็นงานจริง
                           ⇒ แก้ที่ "สี + ถามยืนยัน" ไม่ใช่ปิดปุ่ม: ไม่ครบ = เหลือง + confirm บอกจำนวนที่ขาด */}
-                      <button onClick={() => {
-                        if (!isFormReady && !confirm(
+                      <button onClick={async () => {
+                        if (!isFormReady && !await askConfirm(
                           `ยังกรอกไม่ครบ ${nMissing} จุด จาก ${checkpoints.length} จุด\n\n`
                           + `[ตกลง] = บันทึกค้างไว้ก่อน — ผลตรวจจะเป็น "ยังไม่ครบ" และ**ไม่เลื่อนรอบ PM**\n`
                           + `[ยกเลิก] = กลับไปกรอกให้ครบ`)) return

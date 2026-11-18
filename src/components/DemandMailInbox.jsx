@@ -5,6 +5,7 @@ import { checkWrite } from '../utils/dbWrite';
 import { mailsMissingFiles } from '../utils/mailInbox';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 /* ─── 📬 ไฟล์จากเมลรอนำเข้า (2026-09-30) ─────────────────────────────────────
    แถวในคิว `demand_mail_inbox` (DR) เกิดจากสคริปต์ Outlook บนเครื่อง user
    (tools/outlook-mail-ingest) → Edge Function `ingest-demand-mail`
@@ -149,8 +150,8 @@ export default function DemandMailInbox({ refreshKey, onOpen, fullName }) {
             {newer && <span style={{ fontSize: 12, color: 'var(--accent2)', fontWeight: 700 }}
               title={tr('ไฟล์ 862/830 ฉบับใหม่แทนที่ฉบับเก่าทั้งช่วง — นำเข้าฉบับเก่าทีหลังจะดึงยอดถอยหลัง')}>⚠ {newer} {tr('— ควรกดข้าม')}</span>}
             {stale && <span style={{ fontSize: 12, color: '#ef4444', fontWeight: 700 }}>{tr('ค้าง')} {Math.floor(ageH)} {tr('ชม.')}</span>}
-            <button type="button" disabled={busy === r.id} onClick={() => {
-              if (newer && !window.confirm(`${r.file_name}: ${newer}\nนำเข้าฉบับเก่าจะแทนที่ข้อมูลที่ใหม่กว่า — ยืนยันเปิด?`)) return;
+            <button type="button" disabled={busy === r.id} onClick={async () => {
+              if (newer && !await askConfirm(`${r.file_name}: ${newer}\nนำเข้าฉบับเก่าจะแทนที่ข้อมูลที่ใหม่กว่า — ยืนยันเปิด?`)) return;
               open(r);
             }}
               style={{ fontSize: 12, fontWeight: 700, padding: '6px 12px', borderRadius: 'var(--r-md)', cursor: 'pointer',

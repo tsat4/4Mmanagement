@@ -53,6 +53,7 @@ import TrialBookingModal from './TrialBookingModal';
 import { dieSetMats, dieSetsForMat, matSlotFor } from '../utils/dieSetMats';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 const card = { background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, padding: 12, boxShadow: 'var(--shadow-sm)' };
 const th = { padding: '5px 8px', borderBottom: '1px solid var(--border)', fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' };
 const td = { padding: '5px 8px', fontSize: 12, whiteSpace: 'nowrap' };
@@ -91,7 +92,7 @@ function DieMatLinkNote({ lot, dies, role, mayWrite, onDone }) {
   if (slot !== 'mat_no' || !mayWrite) return null;
 
   async function link() {
-    if (!window.confirm(`ผูก MAT ${lot.mat_no} เข้ากับชุดแม่พิมพ์ ${set.set_code}?\n\n`
+    if (!await askConfirm(`ผูก MAT ${lot.mat_no} เข้ากับชุดแม่พิมพ์ ${set.set_code}?\n\n`
       + 'ทะเบียนแม่พิมพ์จะจำว่าชุดนี้ทำพาร์ทนี้ ⇒ ล็อตถัดไปของพาร์ทนี้ระบบเลือกชุดให้เอง\n'
       + 'แก้ได้ภายหลังที่ /equipment?tab=die')) return;
     setBusy(true);

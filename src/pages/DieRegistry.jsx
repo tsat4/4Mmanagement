@@ -39,6 +39,7 @@ import { xlsxDocName } from '../utils/csvDoc';
 
 import NoticeBar from '../components/NoticeBar';
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 /* ═══════════════════════════════════════════════════════════════
    ทะเบียนแม่พิมพ์ & DIE MAINTENANCE — /die-registry
 
@@ -154,7 +155,7 @@ function SetPairNote({ set, products, role, onDone, prodLines = [] }) {
     const olds = [pa.pair_mat_no, pb.pair_mat_no]   // คู่เก่าที่ชี้ไปที่อื่น ต้องปลดก่อน ไม่งั้นค้างชี้ข้างเดียว
       .map(v => String(v || '').trim().toUpperCase())
       .filter(v => v && v !== a && v !== b);
-    if (!window.confirm(
+    if (!await askConfirm(
       `ตั้งให้ ${a} ↔ ${b} เป็นคู่ RH/LH ในทะเบียนสินค้า?\n`
       + (olds.length ? `\n⚠️ จะปลดคู่เดิมออกก่อน: ${olds.join(', ')}\n` : '')
       + '\nมีผลกับการคำนวณ OEE ของทั้ง 2 พาร์ท (ยุบ shot งานคู่)')) return;
@@ -477,7 +478,7 @@ export default function DieRegistry() {
   };
   const removeShare = async (s, d) => {
     if (!inScope(s.line_name)) return toast.error('ชุดนี้อยู่นอกส่วนงานของคุณ');
-    if (!window.confirm(`เลิกใช้แม่พิมพ์ ${d.ext?.die_no || d.machine_no} ร่วมในชุด ${s.set_code || s.part_name}?\n(แม่พิมพ์ยังอยู่ชุดบ้านเหมือนเดิม ไม่ถูกลบ)`)) return;
+    if (!await askConfirm(`เลิกใช้แม่พิมพ์ ${d.ext?.die_no || d.machine_no} ร่วมในชุด ${s.set_code || s.part_name}?\n(แม่พิมพ์ยังอยู่ชุดบ้านเหมือนเดิม ไม่ถูกลบ)`)) return;
     // delete ที่ RLS ปฏิเสธ = "สำเร็จ 0 แถว" ⇒ ต้องนับแถว (กฎเหล็ก DB ข้อ 2)
     if (!checkWriteRows(await supabaseDR.from('die_set_shared_dies').delete()
       .eq('die_set_id', s.id).eq('machine_id', d.id).select('machine_id'), 'เลิกใช้ร่วม')) return;

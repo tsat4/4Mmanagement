@@ -37,6 +37,7 @@ import PeSetFromMasterModal from '../components/PeSetFromMasterModal';
 import { DeleteButton } from '../components/IconButton';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 /* ═══════════════════════════════════════════════════════════════════════════
    🚀 NPI — พาร์ทใหม่: APQP / PPAP / Drawing Rev / ECI / Tooling Plan — /npi
    2026-09-07 · แบบเต็ม + กฎ: docs/modules/npi-apqp.md
@@ -265,7 +266,7 @@ export default function NPI() {
     const { data: pjParts, error: ePart } = await supabase.from('npi_parts').select('id, part_no, line_name').eq('project_id', pj.id);
     const block = npiProjectDeleteBlock(partWriteOf, pjParts, { countable: !ePart });
     if (block) return toast.info(block);
-    if (!window.confirm(`ลบโปรเจค ${pj.project_code} ${pj.name} พร้อมพาร์ท/เอกสาร/ECI/tooling ทั้งหมด?`
+    if (!await askConfirm(`ลบโปรเจค ${pj.project_code} ${pj.name} พร้อมพาร์ท/เอกสาร/ECI/tooling ทั้งหมด?`
       + `${pjParts?.length ? `\nพาร์ทที่จะหายไปด้วย ${pjParts.length} รายการ` : ''}`
       + '\n(ถ้าแค่หยุดทำ ให้เปลี่ยนสถานะเป็น "ยกเลิก" แทน)')) return;
     // RLS ปฏิเสธ DELETE = 0 แถวไม่มี error ⇒ นับแถวก่อนขึ้น "ลบแล้ว" (กฎเขียน DB ข้อ 2)
@@ -317,7 +318,7 @@ export default function NPI() {
   const delPart = async (p) => {
     const w = partWriteOf(p?.line_name);
     if (!w.ok) return toast.info(writeBlockText(w, { what: 'พาร์ทของไลน์นี้' }));
-    if (!window.confirm(`ลบพาร์ท ${p.part_no} พร้อมเอกสาร/แบบ/tooling ของพาร์ทนี้ทั้งหมด?`)) return;
+    if (!await askConfirm(`ลบพาร์ท ${p.part_no} พร้อมเอกสาร/แบบ/tooling ของพาร์ทนี้ทั้งหมด?`)) return;
     if (!checkWriteRows(await supabase.from('npi_parts').delete().eq('id', p.id).select('id'), 'ลบพาร์ท')) return;
     toast.success('ลบแล้ว'); setPartId(''); reload();
   };

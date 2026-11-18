@@ -32,6 +32,7 @@ import { lineKnownSet, groupEquipRowsByLine } from '../utils/pmEquipList'
 import { filterPlanRows } from '../utils/pmPlanFilter'
 import AmMonthlyReport from '../components/AmMonthlyReport'
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
+import { askConfirm } from '../utils/askConfirm';
 
 /* 🔧 B3 (02/11) — สถานะการติดตามใบซ่อมของผลตรวจ NG หนึ่งใบ · ป้าย MO = moStatusLabel() เท่านั้น */
 function AmMoChip({ follow }) {
@@ -188,7 +189,7 @@ export default function DailyPM() {
     if (!canManage || !line_name || line_name === jig.line_name) return
     // เขียน master ทันที → ต้องยืนยันก่อน (UI-CONVENTIONS §5.4) · ยกเลิก = ไม่แตะ DB, select กลับค่าเดิมจาก state
     const movedRegPreview = targets.some(t => t.jig_id === jig.id)
-    const ok = window.confirm(
+    const ok = await askConfirm(
       jig.line_name
         ? `ย้าย "${jig.name}" จากไลน์ ${jig.line_name} → ${line_name} ?${movedRegPreview ? '\n\nรายการลงทะเบียน Daily PM ของอุปกรณ์นี้จะย้ายตามไปด้วย' : ''}`
         : `กำหนดให้ "${jig.name}" อยู่ไลน์ ${line_name} ?`)
@@ -219,7 +220,7 @@ export default function DailyPM() {
          (08/10 audit AM↔PM) · ยืนยันก่อนเพราะมีผลต่อการเตือนทั้งไลน์ · แผน AM ของจิ๊กไม่ถูกแตะ (คนตัดสินเองที่ PM Setup) */
       const rows = targets.filter(t => t.line_name === line_name && t.jig_id === jig.id)
       if (!rows.length) return
-      if (!window.confirm(`เอา "${jig.name}" ออกจากรายการเช็ค AM รายวันของไลน์ ${line_name} ?${rows.some(t => t.shift) ? '\n\n(รวมแถวที่ตั้งไว้เฉพาะกะด้วย)' : ''}`)) return
+      if (!await askConfirm(`เอา "${jig.name}" ออกจากรายการเช็ค AM รายวันของไลน์ ${line_name} ?${rows.some(t => t.shift) ? '\n\n(รวมแถวที่ตั้งไว้เฉพาะกะด้วย)' : ''}`)) return
       const ok = checkWriteRows(await supabaseDR.from('pm_daily_line_targets').update({ is_active: false })
         .in('id', rows.map(t => t.id)).select('id'), 'เอาออกจากทะเบียน AM')
       if (!ok) return

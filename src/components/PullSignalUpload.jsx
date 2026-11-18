@@ -26,6 +26,7 @@ import {
   planDockLegs, dockLegsOf, dockKey, signalKey, dateStr, timeStr, findDuplicateUploads, orderShipAt, pullRoundOptions, shipSlotOf, fileNameStamp, shipDueDate} from '../utils/pullSignal';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 const SOURCE = 'esmart';
 const inputSt = {
   padding: '8px 10px', borderRadius: 8, fontSize: 13, background: 'var(--bg2)',
@@ -346,7 +347,7 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
       }
       if (bRes.error) {
         // ตารางยังไม่ apply = เขียนใบส่งได้อยู่ แต่จะไม่มีร่องรอย → ถามก่อน ห้ามเงียบ
-        const go = window.confirm(`บันทึกประวัติการนำเข้าไม่ได้ (${bRes.error.message})\nยังจะอัพเดทใบส่งต่อไหม? (จะไม่มีบันทึกว่ามาจากไฟล์ไหน)`);
+        const go = await askConfirm(`บันทึกประวัติการนำเข้าไม่ได้ (${bRes.error.message})\nยังจะอัพเดทใบส่งต่อไหม? (จะไม่มีบันทึกว่ามาจากไฟล์ไหน)`);
         if (!go) { setSaving(false); return; }   // ⚠️ เที่ยวก่อนหน้า (ถ้ามี) ลงไปแล้ว — ตัวนับด้านล่างไม่รวม
       }
       const batchId = bRes.data?.id || null;

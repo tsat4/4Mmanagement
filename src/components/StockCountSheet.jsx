@@ -19,6 +19,7 @@ import { useDraftAutosave, loadDraft, clearDraft } from '../utils/formDraft';   
 import DraftRestoreBar from './DraftRestoreBar';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 /* ─── 📋 ตรวจนับ / เฟิร์มยอด — แท็บใน /line-stock (2026-09-23) ─────────────────
    เกิดจาก feedback หน้างาน (แพลนนิ่ง): "Stock บางตัวไม่ตรง" + "ให้ PD คีย์ผลิต
    แล้วเฟิร์มยอดให้เลยได้มั้ย"
@@ -161,7 +162,7 @@ export default function StockCountSheet({ role, scope }) {
       ? `\n\n⚠️ หลังหักจะมี ${neg.length} พาร์ทคงเหลือติดลบ — แปลว่าของออกไปแล้วแต่ "ขาเข้า" ไม่เคยถูกบันทึก`
         + `\n(ติดลบคือสัญญาณให้ไปแก้ที่การปิดใบผลิต/กฎรับเข้า แล้วเคลียร์ด้วยการตรวจนับข้างล่าง)`
       : '';
-    if (!window.confirm(
+    if (!await askConfirm(
       `หักสต็อกย้อนหลัง ${shipGap.open.length} ใบ รวม ${n0(openQty)} ชิ้น ออกจาก ${fgDest}?`
       + `\n(ใบที่ส่งก่อนรอบตรวจนับล่าสุดถูกกันออกแล้ว ${shipGap.closedByCount.length} ใบ — ยอดที่นับสะท้อนไปแล้ว)`
       + warn)) return;
@@ -204,7 +205,7 @@ export default function StockCountSheet({ role, scope }) {
     const txns = toAdjustTxns({ rows, lineName: lineFilter, workDate, by: fullName, note, counts });
     if (!txns.length) { toast.info('ยังไม่มีแถวที่ยอดต่างจากระบบ'); return; }
     const approved = approveNow && canApprove;
-    if (!window.confirm(
+    if (!await askConfirm(
       `บันทึกผลตรวจนับ ${txns.length} รายการที่ ${lineFilter}?`
       + `\n📈 เพิ่ม ${summary.up} พาร์ท (${n0(summary.upQty)} ชิ้น) · ลด ${summary.down} พาร์ท (${n0(summary.downQty)} ชิ้น)`
       + (approved ? '\n\n✅ มีผลกับยอดคงเหลือทันที (คุณมีสิทธิ์อนุมัติ)' : '\n\n⏳ เข้าคิวรออนุมัติจากสโตร์ก่อนมีผล'))) return;

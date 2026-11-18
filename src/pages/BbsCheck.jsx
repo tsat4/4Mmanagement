@@ -43,6 +43,7 @@ import FilterBar from '../components/FilterBar';
 import { DeleteButton } from '../components/IconButton';
 import { tr } from '../utils/i18n';
 import { pickSignerPatch } from '../utils/selfSign';
+import { askConfirm } from '../utils/askConfirm';
 /* ⚠️ ห้าม import SHIFT_OPTIONS มาใช้ที่นี่ (เคยพลาดมาแล้ว — ดูหัวข้อ SHEET_SHIFT_OPTIONS ด้านล่าง) */
 
 const thisMonth = () => {
@@ -281,7 +282,7 @@ export default function BbsCheck() {
       && (brush !== 'ng' || cur.agreement_seq === brushSeq);
     if (same) {
       // 📱 มือถือ: แตะเบิ้ลด้วยถุงมือ = ลบช่องที่เพิ่งทาไปเงียบๆ ⇒ ถามก่อน (จอคอมคลิกซ้ำล้างทันทีเหมือนเดิม · 2026-10-20)
-      if (isMobile && !window.confirm('ล้างเครื่องหมายช่องนี้?')) return;
+      if (isMobile && !await askConfirm('ล้างเครื่องหมายช่องนี้?')) return;
       const { error } = await supabase.from('bbs_observations').delete().eq('id', cur.id);
       if (error) return toast.error(`ล้างช่องไม่สำเร็จ: ${error.message}`);
       setCells(c => { const n = { ...c }; delete n[key]; return n; });

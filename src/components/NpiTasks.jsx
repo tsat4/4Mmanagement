@@ -12,6 +12,7 @@ import { inp, card, btn, ghost, thSt, tdSt, Field, Pill, LightDot, MetaSelect, M
 import { DeleteButton } from './IconButton';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 export default function NpiTasks({ project, parts, tplPhases, delivs, tasks, users, canEdit, fullName, today, onChanged, partWriteOf }) {
   /* 🔐 ชั้นที่ 3 — งานที่ผูกพาร์ท ตัดสินจากไลน์ของพาร์ทนั้น (utils/npiScope.js)
      งานระดับโปรเจค (ไม่ผูกพาร์ท) = ตัดสินไม่ได้ ⇒ ไม่บล็อก · ย้ายงานข้ามพาร์ท = เช็ค 2 ฝั่ง */
@@ -66,7 +67,7 @@ export default function NpiTasks({ project, parts, tplPhases, delivs, tasks, use
   };
   const del = async (t) => {
     if (rowBlocked(t)) return;
-    if (!window.confirm(`ลบงาน "${t.title}"?`)) return;
+    if (!await askConfirm(`ลบงาน "${t.title}"?`)) return;
     const { error } = await supabase.from('npi_tasks').delete().eq('id', t.id);
     if (error) return toast.error(error.message);
     onChanged();

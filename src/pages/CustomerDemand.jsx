@@ -30,6 +30,7 @@ import usePartImages from '../utils/usePartImages';
 import { tr } from '../utils/i18n';
 import { storeBtn } from '../utils/storeUi'; // วันงาน + รอบ → due_date ตามปฏิทิน (16/10)
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
+import { askConfirm } from '../utils/askConfirm';
 
 /* ─── DELIVERY — Shipping Time Chart + Ship-to Config (Logistic) ──────────
    ติดตามรอบส่งงานลูกค้ารายวัน (walkback 4 activity, FG stock, ranking ดิว)
@@ -130,12 +131,12 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
     if (!mat) { toast.error('กรอก MAT No.'); return; }
     // MAT เป็นกุญแจ join (dr_products / line_stock / kanban / Rundown) — นอก Product Master ให้ถามยืนยัน ไม่บล็อกเงียบ
     // (2026-09-07 เดิมบล็อกแข็ง — user สั่ง: ทะเบียนไม่มีต้องยังใช้ค่าที่เคยบันทึกได้ · ใบจาก EDI ก็เก็บ MAT นอกทะเบียนอยู่แล้ว)
-    if (!prodNames[mat] && !window.confirm(`MAT ${mat} ไม่มีใน Product Master — Rundown/สต็อกจะจับคู่ไม่ได้จนกว่าจะเพิ่มที่ /products · ใช้ค่านี้ต่อหรือไม่?`)) return;
+    if (!prodNames[mat] && !await askConfirm(`MAT ${mat} ไม่มีใน Product Master — Rundown/สต็อกจะจับคู่ไม่ได้จนกว่าจะเพิ่มที่ /products · ใช้ค่านี้ต่อหรือไม่?`)) return;
     if (!qty || qty <= 0) { toast.error('จำนวนต้องมากกว่า 0'); return; }
     if (!addForm.due_date) { toast.error('เลือกวันที่ส่ง'); return; }
     // ship-to นอกทะเบียน ship_to_plants (active) → ถามยืนยัน (2026-09-07 เดิมบล็อกแข็ง) — ป้าย/workflow ต่อลูกค้าจะไม่ครบจนกว่าจะตั้งที่แท็บ ⚙️ Ship-to Config
     if (addForm.customer && !(shipToCodes || []).includes(addForm.customer)
-      && !window.confirm(`Ship-to ${addForm.customer} ไม่มีในทะเบียน — ชาร์ต/workflow ต่อลูกค้าจะไม่ครบจนกว่าจะตั้งค่าที่แท็บ ⚙️ Ship-to Config · ใช้ค่านี้ต่อหรือไม่?`)) return;
+      && !await askConfirm(`Ship-to ${addForm.customer} ไม่มีในทะเบียน — ชาร์ต/workflow ต่อลูกค้าจะไม่ครบจนกว่าจะตั้งค่าที่แท็บ ⚙️ Ship-to Config · ใช้ค่านี้ต่อหรือไม่?`)) return;
     setAddSaving(true);
     const rec = {
       customer: addForm.customer.trim() || null,
@@ -167,7 +168,7 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
 
   // ลบได้เฉพาะใบที่คีย์มือและยังไม่เริ่ม workflow — ใบจาก EDI ให้จัดการด้วยการอัพโหลดแทนที่ตามปกติ
   const deleteManualOrder = async (o) => {
-    if (!window.confirm(`ลบ order ${o.mat_no} × ${fmt(o.qty)} (คีย์มือ)?`)) return;
+    if (!await askConfirm(`ลบ order ${o.mat_no} × ${fmt(o.qty)} (คีย์มือ)?`)) return;
     // นับแถวที่ลบจริง — เงื่อนไข source/status ไม่ตรง (ใบเริ่ม workflow ไปแล้ว) = ลบ 0 แถว
     // ห้ามขึ้น "ลบแล้ว" ทั้งที่ใบยังอยู่ (กฎ RLS-เงียบ: สำเร็จ 0 แถว ≠ สำเร็จ)
     const { data: del, error } = await supabaseDR.from('customer_shipping_orders')
@@ -1146,7 +1147,7 @@ function WorkflowSection({ canEdit }) {
     setBusy(null);
   };
   const remove = async (r) => {
-    if (!window.confirm(`ลบเฟส "${r.name}"? การแจ้งเตือนของเฟสนี้จะหยุดทันที`)) return;
+    if (!await askConfirm(`ลบเฟส "${r.name}"? การแจ้งเตือนของเฟสนี้จะหยุดทันที`)) return;
     setBusy(r.id);
     const { error } = await supabaseDR.from('shipping_workflow_steps').update({ is_active: false }).eq('id', r.id);
     if (error) toast.error(error.message);
@@ -1310,7 +1311,7 @@ function ShipToTab({ canEdit, onChanged, fullName }) {
     await load();
   };
   const removeCode = async (r) => {
-    if (!window.confirm(`ลบ code "${r.code}"${r.customer_name !== r.code ? ` (${r.customer_name})` : ''}?\n\nข้อมูล order/forecast ที่อ้าง code นี้ยังอยู่ครบ (จะแสดงเป็น code ดิบแทนชื่อ) และถ้า code นี้โผล่ในไฟล์ EDI ครั้งหน้า ระบบจะเพิ่มกลับมาให้อัตโนมัติ`)) return;
+    if (!await askConfirm(`ลบ code "${r.code}"${r.customer_name !== r.code ? ` (${r.customer_name})` : ''}?\n\nข้อมูล order/forecast ที่อ้าง code นี้ยังอยู่ครบ (จะแสดงเป็น code ดิบแทนชื่อ) และถ้า code นี้โผล่ในไฟล์ EDI ครั้งหน้า ระบบจะเพิ่มกลับมาให้อัตโนมัติ`)) return;
     setBusy(r.code);
     const { error } = await supabaseDR.from('ship_to_plants').delete().eq('code', r.code);
     if (error) toast.error(error.message);

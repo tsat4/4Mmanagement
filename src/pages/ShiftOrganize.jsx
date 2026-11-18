@@ -24,6 +24,7 @@ import NoticeBar from '../components/NoticeBar';
 import Page from '../components/Page';
 import { DeleteButton } from '../components/IconButton';
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 function getWeekDates(refDate) {
   const d = new Date(refDate);
   const day = d.getDay();
@@ -358,7 +359,7 @@ export default function ShiftOrganize() {
   const handleDeleteOverride = async (id) => {
     /* ด่านชั้นที่ 2 — "ปุ่มถูกซ่อนอยู่แล้ว" ไม่ใช่ด่าน (กฎเหล็กข้อ 10: สมมติฐานเรื่องสิทธิ์มีอายุ) */
     if (!canDel) return toast.error('บัญชีนี้ไม่มีสิทธิ์ลบรายการเปลี่ยนกะ');
-    if (!confirm('ยืนยันลบรายการเปลี่ยนกะรายบุคคลนี้?')) return;
+    if (!await askConfirm('ยืนยันลบรายการเปลี่ยนกะรายบุคคลนี้?')) return;
     /* 🔴 เดิมใช้ checkWrite = RLS ปฏิเสธ DELETE แล้วเงียบ (0 แถว ไม่มี error) ⇒ แถวยังอยู่
        แต่ไม่มีใครรู้ · ตัวลบ "เหตุการณ์ยุบกะ" ข้างล่างนับแถวถูกอยู่แล้ว — 2 ตัวในไฟล์เดียวกัน
        ทำไม่เหมือนกัน (QC 06/10) */
@@ -401,7 +402,7 @@ export default function ShiftOrganize() {
 
   const handleDeleteMergeEvent = async (id) => {
     if (!canDel) return toast.error('บัญชีนี้ไม่มีสิทธิ์ลบเหตุการณ์ยุบกะ');
-    if (!confirm('ยืนยันลบเหตุการณ์ยุบกะนี้?')) return;
+    if (!await askConfirm('ยืนยันลบเหตุการณ์ยุบกะนี้?')) return;
     checkWriteRows(await supabase.from('shift_merge_events').delete().eq('id', id).select('id'),
       'ลบเหตุการณ์ยุบกะ', { zeroMsg: 'ลบไม่ติด (0 แถว) — ไม่มีสิทธิ์ลบเหตุการณ์ยุบกะ หรือถูกลบไปแล้ว' });
     fetchMergeEvents();

@@ -26,6 +26,7 @@ import { INTEGRATION_KINDS, kindOf, kindLabel, sourceStatus, healthBars, SOURCE_
 import { buildNodeRedFlow, envVarName } from '../utils/nodeRedFlow';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 const COLS = 'id, code, name, note, kinds, key_hint, legacy_secret, is_paused, last_seen_at, last_ok_at, last_error, last_result, updated_at, updated_by';
 const INGEST_URL = `${DR_BASE_URL}/functions/v1/ingest-energy`;
 const card = { background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 14, boxShadow: 'var(--shadow-sm)' };
@@ -208,7 +209,7 @@ function SourceDetail({ src, hours, nowMs, canManage, canMap, onBack, onChanged,
   usePolling(loadPoints, RATE.SLOW, { enabled: hasEnergy });
 
   const act = async (action, label, confirmText) => {
-    if (confirmText && !window.confirm(confirmText)) return;
+    if (confirmText && !await askConfirm(confirmText)) return;
     setBusy(action);
     try {
       const r = await callAdmin(action, { id: src.id });

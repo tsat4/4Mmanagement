@@ -52,6 +52,7 @@ import { useOrgTeams } from '../utils/useOrgSections';
 import { tr } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 import InfoMore from '../components/InfoMore';   // ⓘ คำอธิบายพับ (UI §6.10)
+import { askConfirm } from '../utils/askConfirm';
 
 // การ์ดสรุปทักษะรายบุคคล — component เดียวกับหน้า Skill Matrix (/skills-report)
 // lazy: recharts โหลดเฉพาะตอนเปิดการ์ด ไม่ถ่วงตอนเปิดหน้าฐานข้อมูลพนักงาน
@@ -344,7 +345,7 @@ export default function Operator() {
     if (error) { toast.error('ประเมินคิวไม่สำเร็จ: ' + error.message); return; }
     const r = data || {};
     if (dry) {
-      const ok = window.confirm(
+      const ok = await askConfirm(
         `ประเมินคำขอค้าง ${r.pending_total} ใบตามเกณฑ์ใหม่:\n` +
         `  ✅ ผ่าน ${r.pass} ใบ\n` +
         `  ❌ ไม่ผ่าน ${r.fail} ใบ\n` +
@@ -360,7 +361,7 @@ export default function Operator() {
 
   const toggleExpLive = async () => {
     const next = !expCfg?.is_enabled;
-    if (!window.confirm(next
+    if (!await askConfirm(next
       ? 'เปิดสูตร EXP v2 กับคะแนนจริง?\n\nคะแนนจะถูกคำนวณใหม่จากหลักฐานที่วัดได้ — บางคนจะลดลง\nปิดกลับได้ทุกเมื่อ (ระดับที่อนุมัติไปแล้วเป็นพื้น ไม่ถูกลดต่ำกว่านั้น)'
       : 'กลับเป็นโหมดทดลอง (shadow)?\nสูตรใหม่จะคำนวณต่อแต่ไม่แตะคะแนนจริง')) return;
     /* ⚠️ RLS ปฏิเสธ UPDATE = "สำเร็จ 0 แถว ไม่มี error" ⇒ ต้อง .select() แล้วนับแถว */
@@ -387,7 +388,7 @@ export default function Operator() {
   };
 
   const handleRunWeeklyUpdate = async () => {
-    if (!window.confirm('รัน Weekly Skill Update สำหรับสัปดาห์ที่แล้ว?\n(ปกติรันอัตโนมัติทุกวันจันทร์ 08:05)')) return;
+    if (!await askConfirm('รัน Weekly Skill Update สำหรับสัปดาห์ที่แล้ว?\n(ปกติรันอัตโนมัติทุกวันจันทร์ 08:05)')) return;
     setRunningWeekly(true);
     const { data, error } = await supabase.rpc('fn_weekly_skill_update');
     setRunningWeekly(false);
@@ -571,7 +572,7 @@ export default function Operator() {
       toast.error(`แก้ไขได้เฉพาะพนักงานในส่วนงาน ${homeSection || 'ของตัวเอง'}`);
       return;
     }
-    if (!window.confirm(`ปิดใช้งานพนักงาน: ${name}?\nพนักงานจะไม่ปรากฏในระบบเช็คชื่อ แต่ข้อมูลยังคงอยู่`)) return;
+    if (!await askConfirm(`ปิดใช้งานพนักงาน: ${name}?\nพนักงานจะไม่ปรากฏในระบบเช็คชื่อ แต่ข้อมูลยังคงอยู่`)) return;
     const { error } = await supabase.from('employees').update({ is_active: false }).eq('id', id);
     if (error) toast.error('ไม่สามารถปิดใช้งานได้: ' + error.message);
     else fetchEmployees();
@@ -789,7 +790,7 @@ export default function Operator() {
        ⇒ ใช้ `canDelete()` ของกลาง (คุม "บัญชีกลางห้ามลบ" ให้ด้วย) ไม่ใช่ `can()` เปล่า */
     if (!canDeleteUtil('skills', 'delete', role)) { toast.error('ลบสกิลต้องมีสิทธิ์ skills:delete'); return; }
     if (!sdGuard(sd.scope_section, `สกิล "${sd.label}"`)) return;   // ชั้นที่ 3 — ลบของส่วนงานอื่นไม่ได้
-    if (!window.confirm(`ลบสกิล "${sd.label}"?\nคะแนนสกิลนี้ของพนักงานและ requirement ทุก station จะถูกลบด้วย`)) return;
+    if (!await askConfirm(`ลบสกิล "${sd.label}"?\nคะแนนสกิลนี้ของพนักงานและ requirement ทุก station จะถูกลบด้วย`)) return;
     // ลบลูกก่อน (คะแนน + requirement) แล้วค่อยลบนิยามสกิล + เช็ค error ทุกสเตป
     // ไม่งั้นถ้าลบลูกไม่สำเร็จแต่ลบนิยามไปแล้ว จะเหลือ skill_name ค้างที่อ้างสกิลที่ไม่มี
     const e1 = (await supabase.from('employee_skills').delete().eq('skill_name', sd.name)).error;
@@ -2532,7 +2533,7 @@ function SkillSubItemsModal({ skill, onClose }) {
   };
 
   const delItem = async (id) => {
-    if (!window.confirm('ลบหัวข้อนี้?')) return;
+    if (!await askConfirm('ลบหัวข้อนี้?')) return;
     // นับแถว — RLS (skills:edit/skills:delete) ปฏิเสธ DELETE = 0 แถว ไม่มี error ⇒ จอจะเงียบ
     // แล้วหัวข้อยังอยู่ · ฟังก์ชัน move() ใต้บรรทัดนี้นับแถวถูกอยู่แล้ว — ให้ตรงกันทั้งไฟล์
     const { data: gone, error } = await supabase.from('skill_sub_items').delete().eq('id', id).select('id');

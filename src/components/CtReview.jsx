@@ -24,6 +24,7 @@ import { fetchByIds } from '../utils/fetchByIds';
 import { BREAK_POLICY_COLS } from '../utils/oeeMasters';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 const DAYS_BACK = 60;
 const card = { background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 14px' };
 const th = { textAlign: 'left', fontSize: 11, color: 'var(--muted)', fontWeight: 700, padding: '6px 8px', whiteSpace: 'nowrap' };
@@ -152,7 +153,7 @@ export default function CtReview({ lines = [] }) {
 
   /* ── อนุมัติ = เขียน master จริง (ทางเดียวที่ CT มาตรฐานเปลี่ยน) ── */
   const approve = async (q) => {
-    if (!window.confirm(
+    if (!await askConfirm(
       `อนุมัติปรับ CT ของ ${q.mat_no}\n\n`
       + `${q.ct_standard ?? '—'} → ${q.ct_observed} วินาที/ชิ้น\n\n`
       + 'CT มาตรฐานจะถูกเปลี่ยนทันที และ %P ของกะถัดไปจะคิดจากค่าใหม่\n'

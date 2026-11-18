@@ -33,6 +33,7 @@ import { loadHomeSlocs } from '../utils/homeSloc';
 import { DeleteButton } from './IconButton';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 const inputSt = {
   width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid var(--border)',
   background: 'var(--bg2)', color: 'var(--text)', fontSize: 13, fontFamily: 'var(--font-body)',
@@ -185,7 +186,7 @@ export default function StorageLocPanel() {
        เดิมคิวรีนับล้มแล้วถือว่า "ไม่มีใครใช้" ⇒ ลบรหัสที่ BOM/ledger/จุดส่ง ยังอ้างอยู่ได้ */
     if (countFailed) { toast.error('ตรวจการใช้งานของรหัสนี้ไม่ได้ — ยังลบไม่ได้ (กดรีเฟรชแล้วลองอีกครั้ง)'); return; }
     if (usedCount[slocLabel(r.code)]) { toast.error(`รหัส ${r.code} ถูกใช้อยู่ (BOM / ledger / จุดส่ง) — ปิดใช้งานแทนการลบ (กดแก้ไข → เอาติ๊ก "ใช้งาน" ออก)`); return; }
-    if (!window.confirm(`ลบรหัส ${r.code} · ${r.name}?`)) return;
+    if (!await askConfirm(`ลบรหัส ${r.code} · ${r.name}?`)) return;
     const { error } = await supabaseDR.from('storage_locations').delete().eq('code', r.code);
     if (error) { toast.error(error.message); return; }
     toast.success('ลบแล้ว'); load();
@@ -198,7 +199,7 @@ export default function StorageLocPanel() {
     const plan = active.map(r => ({ code: slocLabel(r.code), names: coverOf(r) })).filter(p => p.names.length);
     if (!plan.length) { toast.error('ยังไม่มีรหัสคลังที่ผูกไลน์ไว้ — ผูกก่อน (กด ✏️ ที่รหัส)'); return; }
     const preview = plan.map(p => `${p.code} ← ${p.names.length} ไลน์`).join('\n');
-    if (!window.confirm(`แปะรหัสคลังให้รายการเก่าที่ยังไม่มีมุม SAP (${untagged ?? '?'} แถว)\n\n${preview}\n\nเฉพาะแถวที่ยังว่าง — ไม่ทับที่แปะแล้ว · ดำเนินการ?`)) return;
+    if (!await askConfirm(`แปะรหัสคลังให้รายการเก่าที่ยังไม่มีมุม SAP (${untagged ?? '?'} แถว)\n\n${preview}\n\nเฉพาะแถวที่ยังว่าง — ไม่ทับที่แปะแล้ว · ดำเนินการ?`)) return;
     setBusy(true);
     let total = 0, pts = 0;
     const errs = [];

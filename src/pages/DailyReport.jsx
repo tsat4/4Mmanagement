@@ -122,6 +122,7 @@ import { loadFamilyQtyTotals, familyQtyChip } from '../utils/familyTotals';
 import { tr } from '../utils/i18n';
 import { statusColor as toneColor, toneVar, toneDim, toneLine } from '../utils/statusTone';   // 🎨 token พาเลต 5 สี (UI §6.17)   // สีสถานะชุดเดียวทั้งระบบ (ห้ามตั้ง hex เอง · ชื่อ statusColor ชนกับตัวแปรในหน้า)
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
+import { askConfirm } from '../utils/askConfirm';
 
 /* ทะเบียนเอกสาร — ชื่อไฟล์ CSV ของแท็บรายงานอ่านผ่าน `docFormSync` (sync) ⇒ ต้อง warm cache เอง
    ไม่เรียก = ได้ชื่อไฟล์เดิม (fallback) ไม่ล้ม แต่ doc_control ตั้งเลขฟอร์มแล้วไม่มีผล */
@@ -1409,7 +1410,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
           : chk.kind === 'future' ? `ล่วงหน้าจากเวลาจริง ${fmtOffset(chk.minutesOff)}`
           : `เลยเวลาปิดกะ ${fmtOffset(chk.minutesOff)}`;
         if (chk.suggestHHmm) {
-          const ok = window.confirm(
+          const ok = await askConfirm(
             `⏰ เวลาที่กรอก ${at} น. อยู่นอกกรอบกะ (${whereTxt})\n` +
             `กะนี้: ${win}\n\n` +
             `💡 น่าจะหมายถึง ${chk.suggestHHmm} น. — ต่างกัน 12 ชม. พอดี (ช่องเวลาบนมือถือ/จอที่ตั้งเป็นแบบ AM-PM\n` +
@@ -1431,7 +1432,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
           return;
         }
         if (chk.kind === 'before' && chk.minutesOff <= 60) {
-          const ok = window.confirm(
+          const ok = await askConfirm(
             `⏰ เวลาเริ่ม ${at} น. อยู่${whereTxt}\nกะนี้: ${win}\n\n` +
             `ถ้าไลน์เริ่มเดินก่อนเวลาที่ลงไว้จริง กด "ตกลง" เพื่อบันทึก\n` +
             `ถ้าเวลาเปิดกะตั้งไว้ผิด ให้กด "ยกเลิก" แล้วไปแก้ที่ปุ่ม "✏️ แก้เวลากะ"`);
@@ -1472,7 +1473,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
       const hint = noteHits.length
         ? `\n\n💡 หมายเหตุที่พิมพ์ไว้มีเลขเครื่อง: ${noteHits.slice(0, 3).join(', ')}\n   ถ้าใช่ กด "ยกเลิก" แล้วเลือกในช่องเครื่องจักร (ค้นหาได้ทั้งทะเบียน)`
         : '\n\n(ช่องเครื่องจักรค้นหาได้ทั้งทะเบียน — พิมพ์เลขเครื่องแล้วเลือกจากลิสต์)';
-      const ok = window.confirm(
+      const ok = await askConfirm(
         'Downtime นอกแผนนี้ยังไม่ได้เลือกเครื่องจักร\n' +
         'ไม่ระบุเครื่อง = ต่อใบซ่อม / คิด OEE รายเครื่อง / จัดคิวให้ทีมช่างที่ถูก ไม่ได้' + hint +
         '\n\nยืนยันบันทึกโดยไม่เลือกเครื่อง? — เช่น พาร์ทหมด / ไฟดับทั้งโรงงาน');
@@ -1498,7 +1499,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
         }),
       });
     })();
-    if (dtEndChk && !window.confirm(dtEndChk.text + '\n\nยืนยันบันทึกตามนี้?')) return;
+    if (dtEndChk && !await askConfirm(dtEndChk.text + '\n\nยืนยันบันทึกตามนี้?')) return;
 
     setSavingDT(true);
     const { data: { user } } = await supabase.auth.getUser();
@@ -2125,7 +2126,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
   // เพราะหลังปิดกะ ยอด/OEE ถูก stamp ลง session แล้ว ถอยใบจะทำตัวเลขไม่ตรงกัน
   const handleRevertOrder = async (o) => {
     if (selSession?.status !== 'open') { toast.error('กะนี้ปิด/ส่งขออนุมัติปิดแล้ว — ถอยใบไม่ได้ (ยอดถูกสรุปไปแล้ว)'); return; }
-    if (!window.confirm(
+    if (!await askConfirm(
       `↩️ ถอยใบ ${o.prod_no} (${o.mat_no} · ${coalesceQty(o)} ชิ้น) กลับเป็น "กำลังผลิต"?\n\n` +
       `• ยอดที่รับเข้า stock อัตโนมัติตอนปิดใบจะถูกถอนออก\n` +
       `• ผลิตจบจริงแล้วค่อยสแกนปิดใหม่\n` +
@@ -2329,7 +2330,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
       }
       if (!pairSession) {
         toast.info(`⚠️ สินค้านี้มีคู่ RH/LH (${pairMat} · ไลน์ ${pairLine}) แต่ไลน์นั้นยังไม่เปิดกะ — เปิดกะแล้วค่อยเปิดเป้าคู่เอง`);
-      } else if (window.confirm(`สินค้านี้มีคู่ RH/LH: ${pairMat}${pairSession.id !== selSession.id ? ` (ไลน์ ${pairLine})` : ''}\nเปิดเป้าคู่ ${qty} ชิ้นให้พร้อมกันเลยมั้ย?`)) {
+      } else if (await askConfirm(`สินค้านี้มีคู่ RH/LH: ${pairMat}${pairSession.id !== selSession.id ? ` (ไลน์ ${pairLine})` : ''}\nเปิดเป้าคู่ ${qty} ชิ้นให้พร้อมกันเลยมั้ย?`)) {
         const { data: pairCreated, error: pe } = await supabaseDR.from('prod_orders').insert({
           session_id: pairSession.id,
           prod_no:    `${prodNo}P`,
@@ -2365,7 +2366,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
     const partner = o?.paired_order_id ? prodOrders.find(x => x.id === o.paired_order_id) : null;
     const plan = pairQtyPlan(o, partner, qty);
     if (!plan) return;
-    const ok = window.confirm(
+    const ok = await askConfirm(
       `งานคู่ RH/LH — ใบ ${plan.partner.prod_no} (${plan.partner.mat_no}) ยอดอยู่ที่ ${plan.from} ชิ้น\n` +
       `ลงยอดเป็น ${plan.to} ชิ้นให้ด้วยเลยมั้ย?` +
       (plan.locked ? '\n\n⚠️ ใบคู่ปิด/ยืนยันไปแล้ว — กดตกลงจะไปทับยอดของใบที่ปิดแล้ว' : '') +
@@ -2405,7 +2406,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
       toast.error(`ใบนี้มี ${o.qty} ชิ้น กรอกเกินไม่ได้ — ถ้าทำครบแล้วให้สแกนปิดใบ`);
       return;
     }
-    if (!qtyFitPass(o, v)) return;        // 🛡️ poka-yoke — ยอดเกินเวลาที่เครื่องมี (ไม่บล็อก แต่ต้องยืนยัน)
+    if (!await qtyFitPass(o, v)) return;        // 🛡️ poka-yoke — ยอดเกินเวลาที่เครื่องมี (ไม่บล็อก แต่ต้องยืนยัน)
     const delta = v - (o.qty_actual || 0);
     /* 🔴 RLS/สิทธิ์ไม่พอ = "สำเร็จ 0 แถว ไม่มี error" ⇒ ต้องนับแถว (กฎเขียน DB ข้อ 2 · QC audit 09/11)
        เดิมอ่านแค่ error แล้วขึ้น "อัพเดทยอดแล้ว ✓" ทั้งที่ยอดไม่ได้เปลี่ยน (ใบคู่ข้างล่างนับแถวอยู่แล้ว) */
@@ -2432,8 +2433,8 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
     const draft = parseInt(manualQtyDraft[o.id]);
     const finalQty = !isNaN(draft) ? draft : (o.qty_actual || 0);
     if (finalQty < 0) { toast.error('ยอดผลิตจริงติดลบไม่ได้'); return; }
-    if (!qtyFitPass(o, finalQty)) return;   // 🛡️ poka-yoke — ตรวจก่อนถามยืนยันปิดใบ
-    if (!window.confirm(`ปิดใบ ${o.prod_no} (${o.mat_no}) ด้วยยอดผลิตจริง ${finalQty} ชิ้น?\nเป้าที่ตั้งไว้ ${o.qty_target ?? o.qty} ชิ้น`)) return;
+    if (!await qtyFitPass(o, finalQty)) return;   // 🛡️ poka-yoke — ตรวจก่อนถามยืนยันปิดใบ
+    if (!await askConfirm(`ปิดใบ ${o.prod_no} (${o.mat_no}) ด้วยยอดผลิตจริง ${finalQty} ชิ้น?\nเป้าที่ตั้งไว้ ${o.qty_target ?? o.qty} ชิ้น`)) return;
     const nowIso = new Date().toISOString();
     /* 🔴 CAS `.eq('status','open')` + นับแถว — 2 เครื่องกดปิดใบเดียวกันพร้อมกัน หรือ RLS ปฏิเสธ
        = "สำเร็จ 0 แถว ไม่มี error" แล้วจอขึ้น "ปิดใบแล้ว ✓" ทั้งที่ยอดของอีกเครื่องถูกทับ/ไม่ได้เขียน
@@ -2605,7 +2606,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
       return;
     }
     const n = (tied || []).length;
-    if (!window.confirm(`ลบรายการงานเสียนี้?${n ? `\n\nใบถังเหลืองที่ระบบตั้งให้ ${n} ใบ จะถูกปิดไปพร้อมกัน` : ''}`)) return;
+    if (!await askConfirm(`ลบรายการงานเสียนี้?${n ? `\n\nใบถังเหลืองที่ระบบตั้งให้ ${n} ใบ จะถูกปิดไปพร้อมกัน` : ''}`)) return;
     /* ปิดใบถังก่อนลบแถวต้นทาง — ลบก่อนแล้วปิดใบล้ม = ใบกำพร้าค้างถาวร (กู้ไม่ได้เพราะ FK เป็น null แล้ว) */
     if (n) {
       const bres = await supabaseDR.from('quality_bin_records')
@@ -2641,7 +2642,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
       made > 0 ? `\n⚠️ ใบนี้ลงยอดไปแล้ว ${made} ชิ้น — ลบแล้วยอดนี้จะหายจากกะ` : '',
       carriedFrom ? '\n📥 ใบนี้ยกยอดมาจากกะก่อน — ลบแล้วระบบจะคืนยอดค้างให้กะก่อน เพื่อให้รับใหม่ได้' : '',
     ].filter(Boolean).join('');
-    if (!window.confirm(warn)) return;
+    if (!await askConfirm(warn)) return;
     const { error } = await supabaseDR.from('prod_orders').delete().eq('id', id);
     if (error) { toast.error(error.message); return; }
     /* คืนต้นทาง — ทำ **หลัง** ลบสำเร็จเท่านั้น (คืนก่อนแล้วลบล้ม = ยอดค้างโผล่ซ้อนกับใบที่ยังอยู่)
@@ -2765,10 +2766,10 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
     return fit ? qtyFitMessage(fit, { matNo: o.mat_no, qty, ctSec }) : null;
   };
   /** คืน false = คนกดยกเลิก (ยังไม่บันทึก) */
-  const qtyFitPass = (o, qty) => {
+  const qtyFitPass = async (o, qty) => {
     const msg = qtyFitWarn(o, qty);
     if (!msg) return true;
-    return window.confirm(`⚠️ ยอดนี้ดูเป็นไปไม่ได้เมื่อเทียบกับเวลาที่เครื่องมี\n\n${msg}\n\n`
+    return await askConfirm(`⚠️ ยอดนี้ดูเป็นไปไม่ได้เมื่อเทียบกับเวลาที่เครื่องมี\n\n${msg}\n\n`
       + 'กด OK = ยืนยันว่าตรวจแล้วและยอดนี้ถูกต้อง · กด Cancel = กลับไปแก้');
   };
 
@@ -2855,9 +2856,9 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
 
     // เตือนถ้ากะนี้ไม่มีข้อมูลการผลิตเลย — เผื่อพนักงานลืม Scan เปิด Order / บันทึก Downtime ก่อนปิดกะ
     if (prodOrders.length === 0 && dtLogs.length === 0) {
-      if (!window.confirm('กะนี้ยังไม่มี Prod Order และไม่มี Downtime เลย — ยืนยันจะปิดกะหรือไม่?')) return;
+      if (!await askConfirm('กะนี้ยังไม่มี Prod Order และไม่มี Downtime เลย — ยืนยันจะปิดกะหรือไม่?')) return;
     } else if (prodOrders.length === 0) {
-      if (!window.confirm('กะนี้ยังไม่มี Prod Order เลย (มีแต่ Downtime) — ยืนยันจะปิดกะหรือไม่?')) return;
+      if (!await askConfirm('กะนี้ยังไม่มี Prod Order เลย (มีแต่ Downtime) — ยืนยันจะปิดกะหรือไม่?')) return;
     }
 
     setSavingClose(true);
@@ -3327,7 +3328,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
   };
 
   const handleDeleteDT = async (id) => {
-    if (!window.confirm('ลบ Downtime นี้?')) return;
+    if (!await askConfirm('ลบ Downtime นี้?')) return;
     const { error } = await supabaseDR.from('downtime_logs').delete().eq('id', id);
     if (error) { toast.error(error.message); return; }
     loadDT(selSession.id);
@@ -7348,7 +7349,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                   <ScanModal
                     title={tr('สแกนเครื่องจักร')}
                     hint={tr('ส่องกล้องที่ป้าย QR บนเครื่อง หรือยิงด้วยเครื่องสแกน')}
-                    onScan={(parsed) => {
+                    onScan={async (parsed) => {
                       // ค้นทั้งโรงงานก่อน แล้วค่อยดูว่าอยู่ในครอบครัวไลน์เดียวกันไหม
                       const mc = resolveMachine(parsed, machines);
                       if (!mc) return `ไม่พบเครื่องนี้ในฐานข้อมูล (${parsed.raw})`;
@@ -7359,7 +7360,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                       const fam = new Set(getLineFamilyNames(lines, selSession.line_name).map(n => (n || '').trim().toLowerCase()));
                       const mcLine = (mc.line_name || '').trim().toLowerCase();
                       if (mcLine && !fam.has(mcLine)) {
-                        const ok = window.confirm(`เครื่อง ${mc.machine_no} ลงทะเบียนไว้ที่ไลน์ "${mc.line_name}"\nไม่ใช่ "${selSession.line_name}" ที่เปิดกะอยู่\n\nยืนยันเลือกเครื่องนี้?`);
+                        const ok = await askConfirm(`เครื่อง ${mc.machine_no} ลงทะเบียนไว้ที่ไลน์ "${mc.line_name}"\nไม่ใช่ "${selSession.line_name}" ที่เปิดกะอยู่\n\nยืนยันเลือกเครื่องนี้?`);
                         if (!ok) return `ยกเลิก — เครื่อง ${mc.machine_no} อยู่ไลน์ ${mc.line_name}`;
                       }
                       setDtForm(f => ({ ...f, machine_no: mc.machine_no || f.machine_no }));
@@ -7864,7 +7865,7 @@ function HistoryTab({ role }) {
                          เนื้อเปลี่ยนแล้ว = ออกใบใหม่ถูกต้อง ไม่ต้องเตือน */
                       const same = (probDocs[s.id] || []).find(doc =>
                         docMatchesNow(doc, { downtimes: dts, defects: defs }) === true);
-                      if (same && !window.confirm(
+                      if (same && !await askConfirm(
                         `กะนี้ออกใบ ${same.doc_no} ไปแล้ว และเนื้อใบยังเหมือนเดิมทุกอย่าง\n\n`
                         + 'ถ้าแค่อยากได้กระดาษอีกแผ่น ให้กดปุ่ม 🧾 เลขที่ใบ (พิมพ์ซ้ำใบเดิม) แทน\n'
                         + 'กด OK = ออกใบใหม่อีกเลขหนึ่ง')) return;
@@ -8918,7 +8919,7 @@ function DefectTypeSetup({ role }) {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('ลบประเภทนี้?')) return;
+    if (!await askConfirm('ลบประเภทนี้?')) return;
     const { error } = await supabaseDR.from('dr_defect_types').delete().eq('id', id);
     if (error) { toast.error(error.message); return; }
     invalidateTable('dr_defect_types');
@@ -9076,7 +9077,7 @@ function BreakLineRules({ policy, lines, canEdit, onClose }) {
   };
 
   const handleRemove = async (r) => {
-    if (!window.confirm(`เอาข้อยกเว้นของ ${r.line_name} ออก?\nไลน์นี้ (และไลน์ลูกที่ได้ตามมัน) จะกลับไปใช้ค่ากลาง ${centralMin} นาที`)) return;
+    if (!await askConfirm(`เอาข้อยกเว้นของ ${r.line_name} ออก?\nไลน์นี้ (และไลน์ลูกที่ได้ตามมัน) จะกลับไปใช้ค่ากลาง ${centralMin} นาที`)) return;
     const ok = checkWriteRows(await supabaseDR.from('break_line_rules').delete().eq('id', r.id).select('id'),
       'ลบข้อยกเว้นเวลาพักรายไลน์');
     if (!ok) return;
@@ -9245,7 +9246,7 @@ function BreakPolicySetup({ role }) {
 
   const handleDelete = async (id) => {
     if (!canEdit) { toast.error('ลบนโยบายหยุดพักต้องมีสิทธิ์ daily_report:setup'); return; }
-    if (!window.confirm('ลบนโยบายนี้?')) return;
+    if (!await askConfirm('ลบนโยบายนี้?')) return;
     // นับแถวที่ลบจริง — นโยบายพักเป็นฐานเวลาของ %A/%P ทั้งโรงงาน ลบไม่ติดแล้วบอกว่าลบ = จอโกหก
     if (!checkWriteRows(await supabaseDR.from('break_policies').delete().eq('id', id).select('id'), 'ลบนโยบายหยุดพัก')) return;
     invalidateTable('break_policies');
@@ -9550,7 +9551,7 @@ function ProductSetup({ role }) {
   const handleDelete = async (id) => {
     const row = items.find(i => i.id === id);
     if (!pGuard(row?.line_name, `สินค้า ${row?.mat_no || row?.name || ''}`)) return;   // ชั้นที่ 3
-    if (!window.confirm('ลบสินค้านี้?')) return;
+    if (!await askConfirm('ลบสินค้านี้?')) return;
     const { error } = await supabaseDR.from('dr_products').delete().eq('id', id);
     if (error) { toast.error(error.message); return; }
     invalidateTable('dr_products');
@@ -9573,7 +9574,7 @@ function ProductSetup({ role }) {
     // 2026-09-07 MAT.NO นอก Product Master → ถามยืนยัน (เดิมบล็อกแข็ง — user สั่ง: ทะเบียนไม่มีต้องยังใช้ค่าที่เคยบันทึกได้)
     //   บันทึกได้แต่ product_id = null (สแกนเปิดใบ join ด้วย mat_no ยังใช้ได้เมื่อเพิ่มสินค้าทีหลัง)
     const matched = items.find(i => String(i.mat_no || '').trim().toUpperCase() === kanbanForm.mat_no.trim().toUpperCase());
-    if (!matched && !window.confirm(`MAT.NO ${kanbanForm.mat_no.trim().toUpperCase()} ไม่มีใน Product Master — จะบันทึกโดยไม่ผูกสินค้า (product_id ว่าง) ใช้ค่านี้ต่อหรือไม่?`)) return;
+    if (!matched && !await askConfirm(`MAT.NO ${kanbanForm.mat_no.trim().toUpperCase()} ไม่มีใน Product Master — จะบันทึกโดยไม่ผูกสินค้า (product_id ว่าง) ใช้ค่านี้ต่อหรือไม่?`)) return;
     setKanbanSaving(true);
     const payload = {
       product_id: kanbanForm.product_id || matched?.id || null,
@@ -9593,7 +9594,7 @@ function ProductSetup({ role }) {
   };
 
   const handleKanbanDelete = async (id) => {
-    if (!window.confirm('ลบ Kanban Standard นี้?')) return;
+    if (!await askConfirm('ลบ Kanban Standard นี้?')) return;
     const { error } = await supabaseDR.from('kanban_standards').delete().eq('id', id);
     if (error) { toast.error(error.message); return; }
     invalidateTable('kanban_standards');
@@ -9919,7 +9920,7 @@ function DowntimeTypeSetup({ role }) {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('ลบประเภทนี้?')) return;
+    if (!await askConfirm('ลบประเภทนี้?')) return;
     const { error } = await supabaseDR.from('dr_downtime_types').delete().eq('id', id);
     if (error) { toast.error(error.message); return; }
     invalidateTable('dr_downtime_types');

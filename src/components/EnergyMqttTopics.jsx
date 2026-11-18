@@ -16,6 +16,7 @@ import { MQTT_FIELDS, mqttField, LIVE_STALE_MIN, liveAgeMin } from '../utils/ene
 import { DeleteButton } from './IconButton';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 const inp = { width: '100%', padding: '7px 9px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 13, boxSizing: 'border-box' };
 const card = { background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 10, padding: 14 };
 const th = { textAlign: 'left', fontSize: 11.5, color: 'var(--muted)', fontWeight: 700, padding: '7px 8px', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' };
@@ -90,7 +91,7 @@ export default function EnergyMqttTopics({ points, canEdit }) {
   };
 
   const del = async (r) => {
-    if (!confirm(`ลบ topic "${r.topic}" (${mqttField(r.field).label})?\n\nค่าที่เคยอ่านเข้ามาแล้วยังอยู่ ไม่ถูกลบ`)) return;
+    if (!await askConfirm(`ลบ topic "${r.topic}" (${mqttField(r.field).label})?\n\nค่าที่เคยอ่านเข้ามาแล้วยังอยู่ ไม่ถูกลบ`)) return;
     const { error } = await supabaseDR.from('energy_meter_topics').delete().eq('id', r.id);
     if (error) return toast.error(error.message);
     load();
