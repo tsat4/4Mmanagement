@@ -62,6 +62,7 @@ import QualityBinDetailModal from './QualityBinDetailModal';
 import { PointThumb } from './inspect/PointZoom';
 
 import { tr as trI18n } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 const BINS = [
   { key: 'yellow', label: '🟡 ถังเหลือง — ชิ้นงานต้องสงสัย', short: 'ถังเหลือง', color: '#f5b942' },
   { key: 'red',    label: '🔴 ถังแดง — ชิ้นงานเสีย',        short: 'ถังแดง',   color: '#e05252' },
@@ -588,7 +589,7 @@ export default function QualityBins({ mode = 'full' }) {
   const remove = async (r) => {
     if (!canManage) { toast.error('ลบรายการของเสียต้องมีสิทธิ์ scrap:manage'); return; }
     if (!guardLines(r.line_name, 'การลบรายการในถัง')) return;
-    if (!window.confirm(`ลบรายการ ${r.part_name || r.mat_no} (${r.qty} ชิ้น) ?`)) return;
+    if (!await askConfirm(`ลบรายการ ${r.part_name || r.mat_no} (${r.qty} ชิ้น) ?`)) return;
     // soft delete — ใบเก่าต้องยังสืบย้อนได้ (บันทึกคุณภาพ ห้ามลบทิ้งจริง)
     // นับแถวที่เขียนจริง (กฎเขียน DB ข้อ 2) — 0 แถวแล้วขึ้น "ลบแล้ว" = จอโกหก แถวยังอยู่
     if (!checkWriteRows(await supabaseDR.from('quality_bin_records').update({ is_active: false }).eq('id', r.id).select('id'), 'ลบรายการ')) return;
@@ -605,7 +606,7 @@ export default function QualityBins({ mode = 'full' }) {
     if (!guardLines(r.line_name, 'การย้ายของลงถังแดง')) return;
     const qty = (Number(r.qty_ng) || 0) || (r.qa_decision === 'scrap' ? (Number(r.qty) || 0) : 0);
     if (!qty) { toast.error('ยังไม่ได้กรอกจำนวน NG หลังซ่อม (หรือให้ QA ชี้ผลเป็น 🔴 ทำลาย)'); return; }
-    if (!skipConfirm && !window.confirm(`ย้าย ${qty} ชิ้นลงถังแดง?\n\n${r.part_name || r.mat_no}\nระบบจะสร้างรายการถังแดงที่ผูกกับใบนี้ให้`)) return;
+    if (!skipConfirm && !await askConfirm(`ย้าย ${qty} ชิ้นลงถังแดง?\n\n${r.part_name || r.mat_no}\nระบบจะสร้างรายการถังแดงที่ผูกกับใบนี้ให้`)) return;
     const { error } = await supabaseDR.from('quality_bin_records').insert({
       bin: 'red', work_date: today(), line_name: r.line_name,
       mat_no: r.mat_no, part_name: r.part_name, part_no: r.part_no,
@@ -644,7 +645,7 @@ export default function QualityBins({ mode = 'full' }) {
       ? { qa_decision: 'good', qa_decision_at: new Date().toISOString(), qa_by: fullName || null, return_date: when }
       : { qa_decision: 'repair', qa_decision_at: new Date().toISOString(), qa_by: fullName || null };
     const label = kind === 'good' ? 'ตรวจแล้วใช้ได้' : 'ส่งซ่อม';
-    if (!confirmSign({
+    if (!await confirmSign({
       what: `ผลพิจารณา "${label}" — ${qty.toLocaleString()} ชิ้น`,
       docLabel: 'ใบถังเหลือง', orderNo: binDocLabel(r),
       actor: fullName || '(ไม่รู้ชื่อผู้ใช้)', as: 'ผู้พิจารณา (ช่อง QA บนใบ)',
@@ -710,7 +711,7 @@ export default function QualityBins({ mode = 'full' }) {
     if (!guardLines(r.line_name, 'ตรวจรับงานซ่อม') || !guardSigner()) return;
     const okQ = Number(r.qty_ok) || 0; const ngQ = Number(r.qty_ng) || 0;
     const when = today();
-    if (!confirmSign({
+    if (!await confirmSign({
       what: `ตรวจรับงานซ่อม — ดี ${okQ.toLocaleString()} ชิ้น${ngQ ? ` · ซ่อมไม่ได้ ${ngQ.toLocaleString()} ชิ้น` : ''}`,
       docLabel: 'ใบถังเหลือง', orderNo: binDocLabel(r),
       actor: fullName || '(ไม่รู้ชื่อผู้ใช้)', as: 'QA ผู้ตรวจรับ (ติดแท็กเขียว)',
@@ -762,7 +763,7 @@ export default function QualityBins({ mode = 'full' }) {
     if (deciding) return;
     if (!guardLines(r.line_name, 'ผลพิจารณาของในถังเหลือง') || !guardSigner()) return;
     /* 🔴 "เสียแน่" = ตัดของทิ้งจริง + เปิดสายขออนุมัติทำลาย ⇒ ต้องถามยืนยันเหมือนกัน (เดิมไม่ถามเลย) */
-    if (!confirmSign({
+    if (!await confirmSign({
       what: `ผลพิจารณา "เสียแน่ — ซ่อมไม่ได้" ${(Number(r.qty) || 0).toLocaleString()} ชิ้น`,
       docLabel: 'ใบถังเหลือง', orderNo: binDocLabel(r),
       actor: fullName || '(ไม่รู้ชื่อผู้ใช้)', as: 'ผู้พิจารณา (ช่อง QA บนใบ)',

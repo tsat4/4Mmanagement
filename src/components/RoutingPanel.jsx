@@ -21,6 +21,7 @@ import { DeleteButton } from './IconButton';
 import { tr } from '../utils/i18n';
 import SupplierSelect from './SupplierSelect'; // ผู้รับจ้าง = ทะเบียน DR suppliers (จ้างนอก/บริการขึ้นก่อน) — 2026-09-08
 import useColumnHistory from '../utils/useColumnHistory'; // 📜 เลขเครื่องที่เคยบันทึกใน routing — ทะเบียน machines ไม่มีก็ยังเลือกซ้ำได้ (2026-09-07)
+import { askConfirm } from '../utils/askConfirm';
 
 const BLANK = {
   step_name: '', line_name: '', machine_no: '', process_type: '',
@@ -142,7 +143,7 @@ export default function RoutingPanel({ canEdit, lines = [] }) {
   };
 
   const remove = async (r) => {
-    if (!window.confirm(`ลบขั้น "${r.step_name}" ?`)) return;
+    if (!await askConfirm(`ลบขั้น "${r.step_name}" ?`)) return;
     const { error } = await supabaseDR.from('part_routings').delete().eq('id', r.id);
     if (error) { toast.error(error.message); return; }
     /* เรียงลำดับที่เหลือให้ต่อเนื่อง 1..n

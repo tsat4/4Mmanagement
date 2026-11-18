@@ -63,6 +63,7 @@ import { isSelfName } from '../utils/selfSign';
 import SectionScopeSelect from '../components/SectionScopeSelect';
 import { tr as trI18n } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
+import { askConfirm } from '../utils/askConfirm';
 
 /* โลโก้สำหรับฝังในใบพิมพ์ — cache ต่อ "url" ไม่ใช่ตัวเดียวตายตัว (QC audit 08/10)
    🔴 ต้องรับ url ได้ เพราะ doc_control อัปโลโก้ทับรายฟอร์มได้ (`doc_forms.logo_url`)
@@ -597,14 +598,14 @@ function OtMasterDataPanel() {
 
   // ปิดใช้งาน master = หายจาก dropdown จองรถ OT → ยืนยันก่อน (UI-CONVENTIONS §5.4) · เปิดกลับไม่ต้องถาม
   const toggleRouteActive = async (r) => {
-    if (r.is_active && !window.confirm(`ปิดใช้งานสายรถ "${r.name || r.code}" ?\n\nจะไม่ขึ้นให้เลือกตอนจองรถ OT (เปิดกลับได้ภายหลัง)`)) return;
+    if (r.is_active && !await askConfirm(`ปิดใช้งานสายรถ "${r.name || r.code}" ?\n\nจะไม่ขึ้นให้เลือกตอนจองรถ OT (เปิดกลับได้ภายหลัง)`)) return;
     const { error } = await supabase.from('bus_routes').update({ is_active: !r.is_active }).eq('id', r.id);
     if (error) toast.error('เกิดข้อผิดพลาด: ' + error.message);
     load();
   };
 
   const toggleTaskActive = async (t) => {
-    if (t.is_active && !window.confirm(`ปิดใช้งานงาน OT "${t.name || t.code}" ?\n\nจะไม่ขึ้นให้เลือกตอนจองรถ OT (เปิดกลับได้ภายหลัง)`)) return;
+    if (t.is_active && !await askConfirm(`ปิดใช้งานงาน OT "${t.name || t.code}" ?\n\nจะไม่ขึ้นให้เลือกตอนจองรถ OT (เปิดกลับได้ภายหลัง)`)) return;
     const { error } = await supabase.from('ot_task_types').update({ is_active: !t.is_active }).eq('id', t.id);
     if (error) toast.error('เกิดข้อผิดพลาด: ' + error.message);
     load();
@@ -613,14 +614,14 @@ function OtMasterDataPanel() {
   // การจอง/พนักงานเก่าอ้าง master เหล่านี้อยู่ (task_type_id / bus_route_id) — ลบแล้วประวัติจะโชว์ "—"
   // แนะนำ "ปิดใช้" แทน · เช็ค error เสมอ (ถ้ามี FK กันลบไว้ จะได้ไม่ล้มเหลวเงียบๆ)
   const removeRoute = async (r) => {
-    if (!window.confirm(`ลบสายรถ "${r.code} ${r.name}"?\n(ประวัติการจอง/พนักงานที่ผูกสายนี้จะแสดงเป็น "—" — ถ้าแค่เลิกใช้ แนะนำกด "ปิดใช้" แทน)`)) return;
+    if (!await askConfirm(`ลบสายรถ "${r.code} ${r.name}"?\n(ประวัติการจอง/พนักงานที่ผูกสายนี้จะแสดงเป็น "—" — ถ้าแค่เลิกใช้ แนะนำกด "ปิดใช้" แทน)`)) return;
     const { error } = await supabase.from('bus_routes').delete().eq('id', r.id);
     if (error) { toast.error('ลบไม่สำเร็จ: ' + error.message); return; }
     load();
   };
 
   const removeTask = async (t) => {
-    if (!window.confirm(`ลบงาน "${t.name}"?\n(ประวัติการจองที่ผูกงานนี้จะแสดงเป็น "—" — ถ้าแค่เลิกใช้ แนะนำกด "ปิดใช้" แทน)`)) return;
+    if (!await askConfirm(`ลบงาน "${t.name}"?\n(ประวัติการจองที่ผูกงานนี้จะแสดงเป็น "—" — ถ้าแค่เลิกใช้ แนะนำกด "ปิดใช้" แทน)`)) return;
     const { error } = await supabase.from('ot_task_types').delete().eq('id', t.id);
     if (error) { toast.error('ลบไม่สำเร็จ: ' + error.message); return; }
     load();
@@ -694,13 +695,13 @@ function SimpleNameMaster({ table, title, placeholder, offNote }) {
     setNewName(''); load();
   };
   const toggle = async (r) => {
-    if (r.is_active && !window.confirm(`ปิดใช้งาน "${r.name}" ?\n\n${offNote} (เปิดกลับได้ภายหลัง)`)) return;
+    if (r.is_active && !await askConfirm(`ปิดใช้งาน "${r.name}" ?\n\n${offNote} (เปิดกลับได้ภายหลัง)`)) return;
     const { error } = await supabase.from(table).update({ is_active: !r.is_active }).eq('id', r.id);
     if (error) toast.error('เกิดข้อผิดพลาด: ' + error.message);
     load();
   };
   const remove = async (r) => {
-    if (!window.confirm(`ลบ "${r.name}"?\n(ข้อมูลเก่าที่บันทึกด้วยชื่อนี้ยังอ่านออก — ถ้าแค่เลิกใช้ แนะนำกด "ปิดใช้" แทน)`)) return;
+    if (!await askConfirm(`ลบ "${r.name}"?\n(ข้อมูลเก่าที่บันทึกด้วยชื่อนี้ยังอ่านออก — ถ้าแค่เลิกใช้ แนะนำกด "ปิดใช้" แทน)`)) return;
     const { error } = await supabase.from(table).delete().eq('id', r.id);
     if (error) { toast.error('ลบไม่สำเร็จ: ' + error.message); return; }
     load();
@@ -1660,7 +1661,7 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
        · แจ้งเตือนยิงออกทันทีที่สถานะเปลี่ยน ⇒ ถอนเงียบไม่ได้
        ⚠️ ขั้น QA (`pending_qa`) ไม่ต้องถามซ้ำ — มี modal ที่ต้องแนบรูป + กด submit อยู่แล้ว
           และ "ตีกลับ" ต้องพิมพ์เหตุผล = มีด่านโดยธรรมชาติ (ห้ามถามพร่ำเพรื่อ · UI §5.4) */
-    if (!confirmSign({
+    if (!await confirmSign({
       what: 'อนุมัติใบ 4M (หัวหน้างาน)',
       docLabel: 'ใบ 4M',
       orderNo: [log.category, log.line_name].filter(Boolean).join(' · ') || log.id,
@@ -2306,7 +2307,7 @@ function DocumentControlPanel() {
   };
 
   const removeRevision = async (r) => {
-    if (!window.confirm(`ลบ Rev "${r.rev}"?`)) return;
+    if (!await askConfirm(`ลบ Rev "${r.rev}"?`)) return;
     checkWriteRows(await supabase.from('doc_form_revisions').delete().eq('id', r.id).select('id'), 'ลบ revision');
     load();
   };

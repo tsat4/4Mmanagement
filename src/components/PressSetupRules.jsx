@@ -16,6 +16,7 @@ import { checkWrite } from '../utils/dbWrite';
 import { resolveSetupRule, sequenceSetup, orderByDieHeight, setupDataReadiness } from '../utils/pressSetup';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 const COLS = 'id, scope_kind, scope_value, per_mm_sec, base_min, same_die_min, height_steps, note, is_active, updated_by_name, updated_at';
 const SCOPES = [
   { key: 'global', label: 'ทั้งโรงงาน (ค่าตั้งต้น)' },
@@ -159,7 +160,7 @@ export default function PressSetupRules({ dies = [], lineNames = [], canEdit = f
 
   const toggle = async (r) => {
     const on = r.is_active !== false;
-    if (on && !window.confirm(`ปิดใช้กฎ "${scopeLabel(r)}" ?\n\nจอที่ใช้กฎนี้จะกลับไปเป็น "ยังไม่มีกฎ" (ตอบเวลา setup ไม่ได้) จนกว่าจะเปิดกลับ`)) return;
+    if (on && !await askConfirm(`ปิดใช้กฎ "${scopeLabel(r)}" ?\n\nจอที่ใช้กฎนี้จะกลับไปเป็น "ยังไม่มีกฎ" (ตอบเวลา setup ไม่ได้) จนกว่าจะเปิดกลับ`)) return;
     const res = await supabaseDR.from('press_setup_rules').update({ is_active: !on }).eq('id', r.id).select('id');
     if (!checkWrite(res, 'เปลี่ยนสถานะกฎ')) return;
     if (!res.data?.length) { toast.error('เปลี่ยนสถานะไม่ติด (0 แถว) — อาจไม่มีสิทธิ์'); return; }

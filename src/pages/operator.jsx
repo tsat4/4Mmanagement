@@ -35,6 +35,7 @@ import Page, { Hub } from '../components/Page';
    13/11 · คำสั่ง user "ยุบละย้ายเพิ่มพนักงานเข้าไปในหน้าฐานข้อมูล" */
 import RegisterEmployeeForm from './Register';
 import FilterBar from '../components/FilterBar';
+import FilterMore from '../components/FilterMore';
 import SearchInput from '../components/SearchInput';
 import { ALL, allOf } from '../utils/filterLabels';
 import useTabParam from '../utils/useTabParam';
@@ -51,6 +52,7 @@ import { useOrgTeams } from '../utils/useOrgSections';
 import { tr } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 import InfoMore from '../components/InfoMore';   // ⓘ คำอธิบายพับ (UI §6.10)
+import { askConfirm } from '../utils/askConfirm';
 
 // การ์ดสรุปทักษะรายบุคคล — component เดียวกับหน้า Skill Matrix (/skills-report)
 // lazy: recharts โหลดเฉพาะตอนเปิดการ์ด ไม่ถ่วงตอนเปิดหน้าฐานข้อมูลพนักงาน
@@ -343,7 +345,7 @@ export default function Operator() {
     if (error) { toast.error('ประเมินคิวไม่สำเร็จ: ' + error.message); return; }
     const r = data || {};
     if (dry) {
-      const ok = window.confirm(
+      const ok = await askConfirm(
         `ประเมินคำขอค้าง ${r.pending_total} ใบตามเกณฑ์ใหม่:\n` +
         `  ✅ ผ่าน ${r.pass} ใบ\n` +
         `  ❌ ไม่ผ่าน ${r.fail} ใบ\n` +
@@ -359,7 +361,7 @@ export default function Operator() {
 
   const toggleExpLive = async () => {
     const next = !expCfg?.is_enabled;
-    if (!window.confirm(next
+    if (!await askConfirm(next
       ? 'เปิดสูตร EXP v2 กับคะแนนจริง?\n\nคะแนนจะถูกคำนวณใหม่จากหลักฐานที่วัดได้ — บางคนจะลดลง\nปิดกลับได้ทุกเมื่อ (ระดับที่อนุมัติไปแล้วเป็นพื้น ไม่ถูกลดต่ำกว่านั้น)'
       : 'กลับเป็นโหมดทดลอง (shadow)?\nสูตรใหม่จะคำนวณต่อแต่ไม่แตะคะแนนจริง')) return;
     /* ⚠️ RLS ปฏิเสธ UPDATE = "สำเร็จ 0 แถว ไม่มี error" ⇒ ต้อง .select() แล้วนับแถว */
@@ -386,7 +388,7 @@ export default function Operator() {
   };
 
   const handleRunWeeklyUpdate = async () => {
-    if (!window.confirm('รัน Weekly Skill Update สำหรับสัปดาห์ที่แล้ว?\n(ปกติรันอัตโนมัติทุกวันจันทร์ 08:05)')) return;
+    if (!await askConfirm('รัน Weekly Skill Update สำหรับสัปดาห์ที่แล้ว?\n(ปกติรันอัตโนมัติทุกวันจันทร์ 08:05)')) return;
     setRunningWeekly(true);
     const { data, error } = await supabase.rpc('fn_weekly_skill_update');
     setRunningWeekly(false);
@@ -570,7 +572,7 @@ export default function Operator() {
       toast.error(`แก้ไขได้เฉพาะพนักงานในส่วนงาน ${homeSection || 'ของตัวเอง'}`);
       return;
     }
-    if (!window.confirm(`ปิดใช้งานพนักงาน: ${name}?\nพนักงานจะไม่ปรากฏในระบบเช็คชื่อ แต่ข้อมูลยังคงอยู่`)) return;
+    if (!await askConfirm(`ปิดใช้งานพนักงาน: ${name}?\nพนักงานจะไม่ปรากฏในระบบเช็คชื่อ แต่ข้อมูลยังคงอยู่`)) return;
     const { error } = await supabase.from('employees').update({ is_active: false }).eq('id', id);
     if (error) toast.error('ไม่สามารถปิดใช้งานได้: ' + error.message);
     else fetchEmployees();
@@ -788,7 +790,7 @@ export default function Operator() {
        ⇒ ใช้ `canDelete()` ของกลาง (คุม "บัญชีกลางห้ามลบ" ให้ด้วย) ไม่ใช่ `can()` เปล่า */
     if (!canDeleteUtil('skills', 'delete', role)) { toast.error('ลบสกิลต้องมีสิทธิ์ skills:delete'); return; }
     if (!sdGuard(sd.scope_section, `สกิล "${sd.label}"`)) return;   // ชั้นที่ 3 — ลบของส่วนงานอื่นไม่ได้
-    if (!window.confirm(`ลบสกิล "${sd.label}"?\nคะแนนสกิลนี้ของพนักงานและ requirement ทุก station จะถูกลบด้วย`)) return;
+    if (!await askConfirm(`ลบสกิล "${sd.label}"?\nคะแนนสกิลนี้ของพนักงานและ requirement ทุก station จะถูกลบด้วย`)) return;
     // ลบลูกก่อน (คะแนน + requirement) แล้วค่อยลบนิยามสกิล + เช็ค error ทุกสเตป
     // ไม่งั้นถ้าลบลูกไม่สำเร็จแต่ลบนิยามไปแล้ว จะเหลือ skill_name ค้างที่อ้างสกิลที่ไม่มี
     const e1 = (await supabase.from('employee_skills').delete().eq('skill_name', sd.name)).error;
@@ -1096,13 +1098,14 @@ export default function Operator() {
           {/* Section / Group / Team / Grade filters — UI-STANDARD 2026-09-24: FilterBar คุมขนาด/ความกว้าง select ให้แล้ว
               (เดิมต้องใส่ width:'auto' เองกัน `select{width:100%}` ของธีม) · ลำดับ ขอบเขต → ตัวกรองอื่น → ค้นหา → จำนวน/ล้าง */}
           <FilterBar style={{ marginBottom: 12 }}>
-            {[
+            {(() => { const SCOPE_SELECTS = [
               // เปลี่ยนตัวแม่ = ล้างตัวลูก (กันค้างค่าที่ไม่อยู่ใน scope ใหม่แล้วตารางว่างงงๆ)
               { label: 'Section', all: ALL.section,    value: filterSection, opts: sectionOpts, set: (v) => { setFilterSection(v); setFilterDept(''); setFilterGroup(''); } },
               { label: 'Dept',    all: ALL.dept,       value: filterDept,    opts: deptOpts,    set: (v) => { setFilterDept(v); setFilterGroup(''); } },
               { label: 'Group',   all: allOf('กลุ่ม'), value: filterGroup,   opts: groupOpts,   set: setFilterGroup },
               { label: 'Team',    all: ALL.team,       value: filterTeam,    opts: teamOpts,    set: setFilterTeam },
-            ].map(f => (
+            ];
+            const scopeSel = (f) => (
               <select key={f.label} value={f.value} onChange={e => f.set(e.target.value)}
                 style={{ color: f.value ? 'var(--text)' : 'var(--muted)' }}>
                 <option value="">{tr(f.all)}</option>
@@ -1127,8 +1130,11 @@ export default function Operator() {
                   f.opts.map(o => <option key={o} value={o}>{tr(o)}</option>)
                 )}
               </select>
-            ))}
-
+            );
+            /* 🧰 18/11 (audit Choice overload — แถบนี้เคยมี 13 control): หลัก = ส่วนงาน · แผนก · เกรด · ค้นหา
+               พับ = กลุ่ม · ทีม · ประเภทพนักงาน · Direct/Indirect (ใช้ตอนจัดข้อมูล ไม่ใช่ทุกวัน) · เปิดมาโดยตั้งค่าไว้ = กางเอง */
+            return (<>
+              {SCOPE_SELECTS.slice(0, 2).map(scopeSel)}
             {/* Grade filter chips */}
             {[
               { key: 'gold',   icon: '🥇' },
@@ -1138,7 +1144,7 @@ export default function Operator() {
               const g = EMP_GRADES[key];
               const active = filterGrade === key;
               return (
-                <button key={key} onClick={() => setFilterGrade(active ? '' : key)}
+                <button key={key} aria-pressed={active} onClick={() => setFilterGrade(active ? '' : key)}
                   style={{
                     padding: '4px 11px', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 700, cursor: 'pointer',
                     border: `1px solid ${active ? g.border : 'var(--border2)'}`,
@@ -1151,6 +1157,8 @@ export default function Operator() {
               );
             })}
 
+              <FilterMore id="emp-more-filters" defaultOpen={!!(filterGroup || filterTeam || filterStaffKind || filterLabor)}>
+              {SCOPE_SELECTS.slice(2).map(scopeSel)}
             {/* 👥 ประเภทพนักงาน (staff_kind) — **คนละแกนกับ Direct/Indirect ข้างล่าง**
                 นี่คือ "ต้องเช็คชื่อ/นับเป็นกำลังคนหน้าไลน์ไหม" (รายคน)
                 ส่วน Direct/Indirect ข้างล่าง = ประเภทแรงงานเชิงต้นทุน (derive จากแผนกในผังองค์กร) */}
@@ -1162,7 +1170,7 @@ export default function Operator() {
             ].map(t => {
               const active = filterStaffKind === t.k;
               return (
-                <button key={t.k} title={t.title} onClick={() => setFilterStaffKind(active ? '' : t.k)}
+                <button key={t.k} title={t.title} aria-pressed={active} onClick={() => setFilterStaffKind(active ? '' : t.k)}
                   style={{ padding: '4px 11px', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 700, cursor: 'pointer',
                     border: `1px solid ${active ? t.color : 'var(--border2)'}`,
                     background: active ? `${tint(t.color, 'dim')}` : 'var(--bg3)',
@@ -1180,7 +1188,7 @@ export default function Operator() {
               const m = LABOR_META[t];
               const active = filterLabor === t;
               return (
-                <button key={t} onClick={() => setFilterLabor(active ? '' : t)}
+                <button key={t} aria-pressed={active} onClick={() => setFilterLabor(active ? '' : t)}
                   style={{ padding: '4px 11px', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 700, cursor: 'pointer',
                     border: `1px solid ${active ? m.color : 'var(--border2)'}`,
                     background: active ? `${tint(m.color, 'dim')}` : 'var(--bg3)',
@@ -1190,6 +1198,8 @@ export default function Operator() {
               );
             })}
 
+              </FilterMore>
+            </>); })()}
             {/* 🔎 ค้นชื่อ/รหัส — feedback หน้างาน 23/09: "พนักงานหลักร้อย เลื่อนหาแย่เลย"
                 ใช้ normSearch ของกลาง ⇒ ทนช่องว่างซ้อน/ขีด และการสะกดไทย (ธ/ธ์ · สระ/วรรณยุกต์) */}
             <SearchInput value={empSearch} onChange={setEmpSearch} fields="ชื่อ / รหัส / ตำแหน่ง" />
@@ -2523,7 +2533,7 @@ function SkillSubItemsModal({ skill, onClose }) {
   };
 
   const delItem = async (id) => {
-    if (!window.confirm('ลบหัวข้อนี้?')) return;
+    if (!await askConfirm('ลบหัวข้อนี้?')) return;
     // นับแถว — RLS (skills:edit/skills:delete) ปฏิเสธ DELETE = 0 แถว ไม่มี error ⇒ จอจะเงียบ
     // แล้วหัวข้อยังอยู่ · ฟังก์ชัน move() ใต้บรรทัดนี้นับแถวถูกอยู่แล้ว — ให้ตรงกันทั้งไฟล์
     const { data: gone, error } = await supabase.from('skill_sub_items').delete().eq('id', id).select('id');

@@ -12,6 +12,7 @@ import { NAV_ITEMS, UserContext } from '../App';
 import { getCurrentShift, getWorkDate } from '../utils/workDate';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 /* ══ 📺 DisplayRotator — จอวนหน้าเอง ตามแผนของบัญชีที่ login ══════════════════════════
    2026-10-09 · คำสั่ง user: "ตั้งว่าจอ user นี้จะเปิดอะไรวนบ้าง" · ตั้งค่าที่ /display-rotation
    ฝังที่ ProtectedLayout ทุก branch (/tv · หน้า Home · หน้าปกติ) — บัญชีที่ไม่มีแถว = ไม่ทำอะไรเลย (1 คิวรีตอนเข้า)
@@ -452,7 +453,7 @@ function TvShellBar({ pathname, search, now, loadErr, active, idx, n, sec, elaps
         )}
         {onLogout && (
           <button type="button" title={tr('ออกจากระบบ (บัญชีจอนี้)')} aria-label={tr('ออกจากระบบ')} style={barBtn}
-            onClick={() => { if (window.confirm('ออกจากระบบบัญชีจอนี้?\nจอจะกลับไปหน้าเข้าสู่ระบบ')) onLogout(); }}>🚪</button>
+            onClick={async () => { if (await askConfirm('ออกจากระบบบัญชีจอนี้?\nจอจะกลับไปหน้าเข้าสู่ระบบ')) onLogout(); }}>🚪</button>
         )}
       </div>
       {active && n > 1 && (

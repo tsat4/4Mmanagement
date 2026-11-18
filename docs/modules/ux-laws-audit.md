@@ -407,3 +407,7 @@ PANEL ASSY-COWL SIDE INNER R |
 | QualityControl | 10 | **6** | 🔔 งานรอตรวจ (ใบซ่อมรอตรวจ · ถังเหลืองรอตัดสิน · ใบเบิกทดสอบ) · 🚨 ของเสีย / ปัญหา (NCR · เคลมลูกค้า · CAPA/8D) |
 - stdsweep หลังแก้: ผิด 0 มุมมอง (แถวลูกติด `data-subtab` = ของที่อนุญาตคั่นระหว่างแท็บกับแถบกรอง)
 - ยังเหลือจากกฎ 06: DailyChecker 7 · Report 7 (พอดีเพดาน ไม่แตะ) · แถบกรอง ≥9 control 12 หน้า (MtnRepair 25) — ยังไม่สั่ง
+
+## ✅ แก้แล้ว — กฎ 01 Closure มือถือ (2026-11-18) · กฎ 06 แถบกรอง (FilterMore 3 หน้า) · native confirm → askConfirm 242 จุด
+- Closure: `useScrollEdges` + `.hs-fade-*` ใน TabBar มือถือ + `ScrollRow` ที่ ProductionPlan → วัดซ้ำ 390px: DailyChecker 1 · GroupOverview 3 · ProductionPlan 2 แถวมีขอบจางบอกว่ายังมีต่อ · Management = ล้น 6px ไม่ใช่แถวเลื่อน (ไม่แตะ)
+- รายละเอียด → `docs/MOBILE-UX-STANDARD.md` §แถวเลื่อนแนวนอน · `docs/UI-STANDARD.md` §3 ข้อ 6 (FilterMore) · `docs/UI-CONVENTIONS.md` §5 (askConfirm)

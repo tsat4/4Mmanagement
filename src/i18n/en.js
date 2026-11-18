@@ -10381,6 +10381,20 @@ const EN = {
   '✕ ปิด': '✕ Close',
   'พาร์ทที่ผลิตอยู่': 'Part in production',
   'downtime ที่คนลง': 'Downtime logged by staff',
+
+  /* ── ✍️ ลายเซ็นนอกลำดับขั้นบนใบ MO (18/11) ── */
+  'ผจก.ส่วนซ่อมบำรุง รับทราบ': 'Maintenance manager acknowledgement',
+  'ผจก.ต้นสังกัด เซ็นรับทราบ': 'Reporting department manager acknowledgement',
+  'ผจก.โรงงาน เซ็นรับทราบ': 'Plant manager acknowledgement',
+  'เซ็นแล้ว': 'signed',
+  'ยังไม่เซ็น (ไม่ล็อกงาน — ปิดใบได้ แต่เอกสารยังไม่ครบ)':
+    'not signed yet (does not block work — the MO can close, but the paperwork is incomplete)',
+  'ตัวกรองเพิ่มเติม': 'More filters',
+  'ตั้งไว้': 'Set',
+  'เปิดตัวกรองที่นานๆ ใช้': 'Show the rarely-used filters',
+  'งาน PR รอ': 'PR waiting',
+  'ย้อนหลัง…': 'Last…',
+  'ตั้งกรอบเวลาเป็น N วันล่าสุด (นับถึงวันทำงานวันนี้) — แก้วันต่อได้': 'Set the range to the last N days (up to today\'s work date) — you can still edit the dates',
 };
 
 export default EN;

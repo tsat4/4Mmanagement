@@ -14,6 +14,7 @@ import { proposeRoutingFromPfc, resolveMatForSet, toRoutingRows } from '../utils
 import LineSelect from './LineSelect';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 const inp = { fontSize: 12, padding: '4px 7px', borderRadius: 5, border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)' };
 const KIND_TH = { process: '🔧 ขั้นผลิต', inspection: '🔍 จุดตรวจ' };
 
@@ -64,7 +65,7 @@ export default function PeRoutingSuggest({ set, procs, lines = [], onClose }) {
   const confirm = async () => {
     const rows = toRoutingRows(matNo, steps);
     if (!rows.length) { toast.error('ยังไม่ได้ติ๊กขั้นไหนเลย'); return; }
-    if (existing.length && !window.confirm(
+    if (existing.length && !await askConfirm(
       `พาร์ท ${matNo} มี routing เดิมอยู่ ${existing.length} ขั้น — แทนที่ทั้งชุด?\n(ชุดเดิมถูกปิดใช้งานเก็บเป็นประวัติ ไม่ลบทิ้ง)`)) return;
     setSaving(true);
     const oldIds = existing.map(r => r.id);

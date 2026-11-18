@@ -61,6 +61,7 @@ import { INFLOW_MODES, inflowModeOf, inflowPatchFor, inflowModesFor } from '../u
 import { IconButton, DeleteButton } from '../components/IconButton';
 import { tr } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
+import { askConfirm } from '../utils/askConfirm';
 
 /* ─── LINE STOCK — Stock พาร์ทย่อยคงเหลือในแต่ละไลน์ผลิต ─────────────────
    Store จ่ายพาร์ทเข้าไลน์ → บันทึก transaction type='issue'
@@ -346,13 +347,13 @@ function StockTab({ role, scope }) {
     // กันสร้างของผี: MAT ที่ไม่มีในฐาน (Product Master / parts master / BOM) = ค่าที่พิมพ์เองใน picker ต้องยืนยันก่อน
     // (2026-09-07: MAT ที่เลือกจาก Product Master ไม่ต้องยืนยันซ้ำ — picker ยืนยันทะเบียนให้แล้ว)
     if (!knownMats.has(matUpper) && !bomMap[matUpper] && !drMats.has(matUpper)) {
-      if (!window.confirm(`MAT ${matUpper} ไม่มีในฐานข้อมูล (Parts Master / BOM)\nยืนยันสร้างรายการ stock ใหม่?`)) return;
+      if (!await askConfirm(`MAT ${matUpper} ไม่มีในฐานข้อมูล (Parts Master / BOM)\nยืนยันสร้างรายการ stock ใหม่?`)) return;
     }
     // กัน stock ติดลบเงียบๆ สำหรับรายการที่หักออก (คืน Store / ปรับลด)
     if (form.type === 'return' || isAdjustDown) {
       const cur = onHandOf(form.line_name, matUpper);
       const after = cur - qty;
-      if (after < 0 && !window.confirm(`คงเหลือปัจจุบัน ${cur.toLocaleString()} ชิ้น — ทำรายการนี้แล้วจะติดลบ (${after.toLocaleString()})\nยืนยันดำเนินการ?`)) return;
+      if (after < 0 && !await askConfirm(`คงเหลือปัจจุบัน ${cur.toLocaleString()} ชิ้น — ทำรายการนี้แล้วจะติดลบ (${after.toLocaleString()})\nยืนยันดำเนินการ?`)) return;
     }
     // ประเภทที่ต้อง review → บันทึกเป็น pending (ยังไม่มีผลต่อ on-hand จนกว่าจะอนุมัติ)
     const needsReview = REVIEW_TYPES.includes(form.type);
@@ -1286,7 +1287,7 @@ function DeliveryRoundsTab({ canEdit, fullName, scope }) {
     const row = rounds.find(r => r.id === id);
     const wd = canWriteLine(rndCtx, row?.line_name, lines);
     if (!wd.ok) { toast.info(writeBlockText(wd, { what: 'รอบจัดส่งของไลน์นี้' })); return; }
-    if (!window.confirm('ยืนยันลบรอบจัดส่งนี้?')) return;
+    if (!await askConfirm('ยืนยันลบรอบจัดส่งนี้?')) return;
     const { error } = await supabaseDR.from('kanban_delivery_rounds').update({ is_active: false }).eq('id', id);
     if (error) { toast.error(error.message); return; }
     toast.success('ลบรอบจัดส่งแล้ว');
@@ -1684,7 +1685,7 @@ function InflowRulesTab({ canEdit }) {
     if (!mv) { toast.error(form.match_type === 'prefix' ? 'กรอกเลขขึ้นต้น MAT เช่น 1 หรือ 2' : 'กรอก MAT No.'); return; }
     // MAT ตรงตัวนอก Product Master → ถามยืนยัน (2026-09-07 เดิมบล็อกแข็ง) — trigger เทียบตรงตัว พิมพ์ผิดตัวเดียวของไปกองผิดคลังเงียบๆ จึงเตือนชัด
     if (form.match_type === 'mat' && !products.some(p => String(p.mat_no || '').toUpperCase() === mv)
-      && !window.confirm(`MAT ${mv} ไม่มีใน Product Master — กฎจะ match เฉพาะเลขนี้ตรงตัว · ใช้ค่านี้ต่อหรือไม่?`)) return;
+      && !await askConfirm(`MAT ${mv} ไม่มีใน Product Master — กฎจะ match เฉพาะเลขนี้ตรงตัว · ใช้ค่านี้ต่อหรือไม่?`)) return;
     if (!dest) { toast.error('เลือกปลายทาง เช่น FG WAREHOUSE / STORE'); return; }
     setSaving(true);
     const ok = checkWriteRows(await supabaseDR.from('stock_inflow_rules').upsert({ match_type: form.match_type, match_value: mv, dest_line_name: dest, is_active: true, updated_at: new Date().toISOString() }, { onConflict: 'match_type,match_value' }).select('id'), 'บันทึกกฎ');
@@ -1700,7 +1701,7 @@ function InflowRulesTab({ canEdit }) {
   const setRuleMode = async (r, modeKey) => {
     if (noPerm()) return;
     if (modeKey === inflowModeOf(r)) return;
-    if (modeKey === 'off' && !window.confirm(
+    if (modeKey === 'off' && !await askConfirm(
       `ปิดกฎ "${r.match_type === 'prefix' ? `MAT ขึ้นต้น ${r.match_value}` : r.match_value} → ${r.dest_line_name}"?\n\n`
       + '⚠️ ปิดแล้ว ใบผลิตที่ปิดต่อจากนี้จะ "ไม่เข้าคลังนี้เลย" และไม่มีคิวให้ใครกดรับ\n'
       + 'ถ้าต้องการให้คนนับของก่อนรับ ให้เลือก 🟡 ต้องยืนยันรับ แทน')) return;
@@ -1715,7 +1716,7 @@ function InflowRulesTab({ canEdit }) {
         .select('id', { count: 'exact', head: true })
         .eq('child_mat_no', String(r.match_value ?? '').trim()).eq('status', 'producing');
       if (eLot) { toast.error(`เช็คใบล็อตค้างไม่ได้ (${eLot.message}) — ยังไม่สลับโหมด`); return; }
-      if (count && !window.confirm(
+      if (count && !await askConfirm(
         `${r.match_value} ยังมีใบล็อตค้างที่ไลน์ผลิต ${count} ใบ\n\n`
         + '⚠️ สลับโหมดตอนนี้ = ของบนใบพวกนั้น "ไม่เข้าคลังเลย"\n'
         + '(ปุ่มปิดล็อตจะเลิกลงสต็อก และใบผลิตเก่าก็ไม่มีใบ "รอรับเข้า" รองรับ)\n\n'
@@ -1731,7 +1732,7 @@ function InflowRulesTab({ canEdit }) {
 
   const deleteRule = async (r) => {
     if (noPerm()) return;
-    if (!window.confirm(`ลบกฎ "${r.match_type === 'prefix' ? `MAT ขึ้นต้น ${r.match_value}` : r.match_value} → ${r.dest_line_name}"?`)) return;
+    if (!await askConfirm(`ลบกฎ "${r.match_type === 'prefix' ? `MAT ขึ้นต้น ${r.match_value}` : r.match_value} → ${r.dest_line_name}"?`)) return;
     if (!checkWriteRows(await supabaseDR.from('stock_inflow_rules').delete().eq('id', r.id).select('id'), 'ลบกฎ')) return;
     toast.success('ลบกฎแล้ว');
     load();

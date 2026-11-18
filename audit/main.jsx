@@ -9,6 +9,7 @@ import ScrollHint from '../src/components/ScrollHint'
 import MobileNavBar from '../src/components/MobileNavBar'
 import ScanWedgeGuard from '../src/components/ScanWedgeGuard'
 import { ToastContainer } from '../src/components/Toast'
+import ConfirmHost from '../src/components/ConfirmHost'   // ❓ กล่องยืนยันกลาง (18/11) — ไม่มี = askConfirm ถอยไป window.confirm แล้ว sweep วัดกล่องในแอปไม่ได้
 import '../src/index.css'
 
 const mods = import.meta.glob('../src/pages/*.jsx')
@@ -118,7 +119,7 @@ function App(){
           ...(TV_SHELL ? { overflowX:'clip' } : { overflowY:'auto', overflowX:'hidden' }), minWidth:0 }}>
           <ScrollHint/><EB><Suspense fallback={<div>loading</div>}>{C ? <C {...(VARIANTS[name] || {})}/> : null}</Suspense></EB>
           {/* ToastContainer ต้องมีในหน้าปกติด้วย (05/10) — เดิมมีแค่ใน FeedbackLab ⇒ toast จากหน้าอื่น (เช่น "ขอบเขตนอกสังกัด" ของบอร์ด KPI) ไม่โผล่ ตรวจอัตโนมัติไม่ได้ */}
-          <ToastContainer/>
+          <ToastContainer/><ConfirmHost/>
         </main>
         {/* 📺 ?tvshell=1 — กรอบจอ TV (16/10) · แถบบน + body.esm-tv-shell เหมือนบัญชี display ในแอปจริง */}
         {TV_SHELL && <Suspense fallback={null}><TvShellHarness/></Suspense>}
@@ -142,7 +143,7 @@ const FeedbackLab = () => (
       {/* ⚠️ ต้องมี ToastContainer ใน harness ด้วย — ไม่งั้น `toast.error(...)` ไม่โผล่ที่ไหนเลย
           แล้วกฎ "ปฏิเสธไฟล์ต้องขึ้น toast บอกเหตุผล ห้ามเงียบ" จะตรวจอัตโนมัติไม่ได้
           (เจอ 22/09: เทสรายงานว่า 'ไม่มีข้อความเตือน' ทั้งที่โค้ดเรียก toast ถูกแล้ว) */}
-      <ToastContainer/>
+      <ToastContainer/><ConfirmHost/>
     </UserContext.Provider>
   </MemoryRouter>
 )
@@ -157,7 +158,7 @@ function BellLab(){
     <MemoryRouter initialEntries={[ENTRY]}>
       <UserContext.Provider value={{ ...CTX, role:'admin', sections:['PD1'], mtnTeams:[] }}>
         <EB><NotificationBell userId="x" role="admin" /></EB>
-        <ToastContainer/>
+        <ToastContainer/><ConfirmHost/>
       </UserContext.Provider>
     </MemoryRouter>
   )

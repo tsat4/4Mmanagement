@@ -28,7 +28,10 @@ import { useOrgSections } from '../utils/useOrgSections';
 import { scopedLineNames } from '../utils/sectionScope';
 import {
   movesFor, moveNeeds, moveLabel, KIND_LABEL, statusMeta, nextReqNo, maxReqSeq, reqNoPrefix, isPullable, matReqFlow,
+  bomPickRows, pickedToItems, templateFromEditor, editorFromTemplate,
 } from '../utils/materialRequest';
+import useBomChildren from '../utils/useBomChildren';
+import { checkWriteRows } from '../utils/dbWrite';
 import StepFlow from './StepFlow';
 import { printMaterialRequest } from '../lib/materialRequestPrint';
 import { notifyEvent } from '../utils/notifyEvent';
@@ -42,6 +45,7 @@ import { registryFailText } from '../utils/useMasterRows.js';
 
 import { tr } from '../utils/i18n';
 import { pickSignerPatch, isSelfName } from '../utils/selfSign';
+import { askConfirm } from '../utils/askConfirm';
 const today = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -81,6 +85,10 @@ export default function MaterialRequests() {
   const [editor, setEditor] = useState(null);   // { req, items }
   const [picker, setPicker] = useState(null);   // { itemKey } | null
   const [pq, setPq] = useState('');
+  const [bomPick, setBomPick] = useState(null);   // { root, itemKey } — 🌳 แตก BOM ให้เลือกใช้/ไม่ใช้ (18/11)
+  const [tpls, setTpls] = useState({ rows: [], failed: '' });   // 📋 template งานประจำ (DR)
+  const [tplOpen, setTplOpen] = useState(false);
+  const [tplSave, setTplSave] = useState(null);   // { name } | null
 
   /* ── scope มาตรฐาน: leader = ทั้งครอบครัวไลน์ตัวเอง · อื่น = ตาม sections ── */
   //   helper กลาง scopedLineNames — เดิมเทียบ sections.includes(l.section) ตรงตัว (ไม่ normalize
@@ -104,6 +112,16 @@ export default function MaterialRequests() {
       .order('mat_no').limit(2000)
       .then(({ data }) => setParts(data || []));
   }, []);
+
+  const loadTpls = useCallback(async () => {
+    const { data, error } = await supabaseDR.from('material_request_templates')
+      .select('id, name, kind, move_code, requester_dept, dest_storage_location, order_no, cost_center, plant_code, storage_location, detail, line_name, items, created_by_name, updated_at')
+      .eq('is_active', true).order('name').limit(500);
+    setTpls(error
+      ? { rows: [], failed: error.code === '42P01' ? 'ยังไม่ได้ apply migration ของ template' : `โหลด template ไม่สำเร็จ: ${error.message}` }
+      : { rows: data || [], failed: '' });
+  }, []);
+  useEffect(() => { loadTpls(); }, [loadTpls]);
 
   const load = useCallback(async () => {
     setLoading(true); setWarn('');
@@ -144,8 +162,9 @@ export default function MaterialRequests() {
   };
 
   /* ── เปิดฟอร์ม ── */
-  const openNew = async () => {
+  const openNew = async (tpl = null) => {
     const d = today();
+    const fromTpl = tpl ? editorFromTemplate(tpl) : null;
     const autoNo = await issueReqNo(d);
     if (!autoNo) toast.error('ออกเลขที่ใบอัตโนมัติไม่สำเร็จ — กรอกเลขเองหรือลองเปิดใหม่');
     setEditor({
@@ -158,9 +177,14 @@ export default function MaterialRequests() {
         _autoNo: autoNo || null,   // เลขที่ระบบเสนอ — ตอนบันทึกจะออกใหม่ถ้ายังไม่ถูกแก้ (กันชนกับคนที่เปิดฟอร์มพร้อมกัน)
         made_by_name: fullName || '', made_by_date: d,
         made_by_sig_url: signers.find(s => s.full_name === fullName)?.signature_url || null,
+        ...(fromTpl?.req || {}),
+        _tplName: tpl?.name || null,
       },
-      items: [EMPTY_ITEM()],
+      items: fromTpl?.items.length
+        ? fromTpl.items.map(it => ({ ...EMPTY_ITEM(), ...it, unit: normUom(it.unit, uomIdx) || DEFAULT_UOM }))
+        : [EMPTY_ITEM()],
     });
+    setTplOpen(false);
   };
 
   const openEdit = async (r) => {
@@ -190,7 +214,7 @@ export default function MaterialRequests() {
 
     const payload = { ...req, updated_by_name: fullName || null };
     delete payload.id;
-    delete payload._autoNo;
+    delete payload._autoNo; delete payload._tplName;
     /* ใบใหม่ที่ยังใช้เลขที่ระบบเสนอ → ออกเลขใหม่ ณ ตอนบันทึก (อีกคนอาจบันทึกเลขเดียวกันไปก่อน)
        เปลี่ยนวันที่เบิกข้ามเดือนก็ได้เลขของเดือนใหม่ · คนพิมพ์เลขเองแล้ว = เคารพค่าที่คนกรอก */
     if (!req.id && req._autoNo && req.doc_no === req._autoNo) {
@@ -266,10 +290,10 @@ export default function MaterialRequests() {
     /* 🔴 ใบที่อนุมัติ/จ่ายของแล้ว = บันทึกการเคลื่อนไหวของคลังจริง (ใบ scrap ดึงไปอ้างอิงได้) ⇒ ห้ามลบจริง
        ให้ "ยกเลิก" (status cancelled) แทน — สืบย้อนได้ (QC 05/10 · หลักเดียวกับยกเลิกล็อต) */
     if (isPullable(r)) {
-      if (!window.confirm(`ใบ ${r.doc_no || ''} ${statusMeta(r.status).label} — ลบทิ้งไม่ได้ (เป็นบันทึกการเบิกจริง)\n\nเปลี่ยนสถานะเป็น "ยกเลิก" แทน?`)) return;
+      if (!await askConfirm(`ใบ ${r.doc_no || ''} ${statusMeta(r.status).label} — ลบทิ้งไม่ได้ (เป็นบันทึกการเบิกจริง)\n\nเปลี่ยนสถานะเป็น "ยกเลิก" แทน?`)) return;
       return setStatus(r, 'cancelled');
     }
-    if (!window.confirm(`ลบใบ ${r.doc_no || ''} ?\nรายการในใบจะถูกลบด้วย · ใบรายงานของเสียที่ดึงจากใบนี้ไปแล้วจะยังอยู่ แต่ลิงก์สืบย้อนจะขาด`)) return;
+    if (!await askConfirm(`ลบใบ ${r.doc_no || ''} ?\nรายการในใบจะถูกลบด้วย · ใบรายงานของเสียที่ดึงจากใบนี้ไปแล้วจะยังอยู่ แต่ลิงก์สืบย้อนจะขาด`)) return;
     const { error } = await supabaseDR.from('material_requests').delete().eq('id', r.id);
     if (error) return toast.error(`ลบไม่สำเร็จ: ${error.message}`);
     toast.success('ลบแล้ว'); load();
@@ -291,16 +315,49 @@ export default function MaterialRequests() {
     return src.slice(0, 200);
   }, [parts, pq]);
 
+  /* เลือกชิ้นงาน → เปิดหน้าต่างแตก BOM ให้ติ๊ก ใช้/ไม่ใช้ (ไม่มีลูก/โหลด BOM ไม่ได้ = ยังเพิ่มตัวมันเองได้) */
   const applyPart = (p) => {
-    if (picker?.itemKey) {
-      setItem(picker.itemKey, { mat_no: p.mat_no, description: p.part_name || '', unit: normUom(p.uom, uomIdx) || DEFAULT_UOM });
-    } else {
-      setEditor(e => ({
-        ...e,
-        items: [...e.items, { ...EMPTY_ITEM(), mat_no: p.mat_no, description: p.part_name || '', unit: normUom(p.uom, uomIdx) || DEFAULT_UOM }],
-      }));
-    }
+    setBomPick({ root: p, itemKey: picker?.itemKey || null });
     setPicker(null); setPq('');
+  };
+  const applyBomPick = (picked) => {
+    const add = picked.map(it => ({ ...EMPTY_ITEM(), ...it, unit: normUom(it.unit, uomIdx) || DEFAULT_UOM }));
+    const key = bomPick?.itemKey;
+    setEditor(e => {
+      const isBlank = (it) => !String(it.mat_no || '').trim() && !String(it.description || '').trim();
+      if (key) {
+        const i = e.items.findIndex(it => it._key === key);
+        if (i >= 0) return { ...e, items: [...e.items.slice(0, i), ...add, ...e.items.slice(i + 1)] };
+      }
+      const keep = e.items.filter(it => !isBlank(it));   // แถวเปล่าตั้งต้นไม่ต้องค้างไว้หัวตาราง
+      return { ...e, items: [...keep, ...add] };
+    });
+    setBomPick(null);
+  };
+
+  /* ── 📋 template ── */
+  const saveTemplate = async () => {
+    const name = String(tplSave?.name || '').trim();
+    if (!name) return toast.error('ตั้งชื่อ template ก่อน');
+    const row = templateFromEditor(editor.req, editor.items, name);
+    if (!row.items.length) return toast.error('ใบนี้ยังไม่มีรายการ — ใส่รายการก่อนบันทึกเป็น template');
+    const same = tpls.rows.find(t => t.name.trim().toLowerCase() === name.toLowerCase());
+    if (same && !await askConfirm(`มี template ชื่อ "${same.name}" อยู่แล้ว — บันทึกทับใช่ไหม?`)) return;
+    const res = same
+      ? await supabaseDR.from('material_request_templates')
+        .update({ ...row, updated_by_name: fullName || null, updated_at: new Date().toISOString() }).eq('id', same.id).select('id')
+      : await supabaseDR.from('material_request_templates')
+        .insert({ ...row, created_by_name: fullName || null, updated_by_name: fullName || null }).select('id');
+    if (!checkWriteRows(res, 'บันทึก template')) return;
+    toast.success(`บันทึก template "${name}" แล้ว`);
+    setTplSave(null); loadTpls();
+  };
+  const removeTemplate = async (t) => {
+    if (!await askConfirm(`ลบ template "${t.name}"? (ใบที่ออกไปแล้วไม่กระทบ)`)) return;
+    const res = await supabaseDR.from('material_request_templates')
+      .update({ is_active: false, updated_by_name: fullName || null, updated_at: new Date().toISOString() }).eq('id', t.id).select('id');
+    if (!checkWriteRows(res, 'ลบ template')) return;
+    toast.success('ลบ template แล้ว'); loadTpls();
   };
 
   // ไม่มี padding บน — ระยะแท็บ→แถบกรองเป็นของ PageHeader (16px มาตรฐาน · stdsweep 05/10 เดิมเกิน 4px = 20px)
@@ -327,7 +384,9 @@ export default function MaterialRequests() {
             <option key={s} value={s}>{statusMeta(s).label}</option>)}
         </select>
         <span className="spacer" />
-        {canRecord && <button onClick={openNew} style={btnSt('var(--accent)')}>{tr('＋ ออกใบเบิกใหม่')}</button>}
+        {canRecord && <button onClick={() => setTplOpen(true)} style={btnSt()}
+          title={tr('ออกใบใหม่จาก template งานประจำ')}>📋 {tr('จาก template')}{tpls.rows.length ? ` (${tpls.rows.length})` : ''}</button>}
+        {canRecord && <button onClick={() => openNew()} style={btnSt('var(--accent)')}>{tr('＋ ออกใบเบิกใหม่')}</button>}
       </FilterBar>
 
       <InfoMore style={{ marginBottom: 10 }} id="mr_help"
@@ -392,8 +451,60 @@ export default function MaterialRequests() {
           editor={editor} setReq={setReq} setItem={setItem} addItem={addItem} delItem={delItem} uomIdx={uomIdx} uomState={uomState}
           canRecord={canRecord} role={role} signers={signers} scopedLines={scopedLines} parts={parts} fullName={fullName}
           onPick={(k) => setPicker({ itemKey: k })}
+          onSaveTemplate={() => setTplSave({ name: editor.req._tplName || editor.req.detail || '' })}
           onClose={() => setEditor(null)} onSave={save}
         />
+      )}
+
+      {bomPick && (
+        <BomPickModal root={bomPick.root} replacing={!!bomPick.itemKey} onClose={() => setBomPick(null)} onApply={applyBomPick} />
+      )}
+
+      {tplSave && (
+        <Modal title={tr('💾 บันทึกใบนี้เป็น template งานประจำ')} width={460} onClose={() => setTplSave(null)}>
+          <label style={lblSt}>{tr('ชื่อ template')}</label>
+          <input autoFocus value={tplSave.name} onChange={e => setTplSave({ name: e.target.value })}
+            onKeyDown={e => { if (e.key === 'Enter') saveTemplate(); }}
+            placeholder={tr('เช่น Test ประจำเดือน ไลน์ 060')} style={{ ...inpSt, width: '100%' }} />
+          <div style={{ fontSize: 11.5, color: 'var(--muted)', margin: '8px 0 12px' }}>
+            {tr('เก็บ: ประเภท/การเคลื่อนไหว · หน่วยงาน · คลัง · Order/Cost center · รายละเอียด · ไลน์ · รายการสินค้า+จำนวน')}<br />
+            {tr('ไม่เก็บ: เลขที่ใบ · วันที่ · ผู้ขอ · ลายเซ็น · สถานะ (ของพวกนี้เป็นของแต่ละใบ)')}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <button onClick={() => setTplSave(null)} style={btnSt()}>{tr('ยกเลิก')}</button>
+            <button onClick={saveTemplate} style={btnSt('var(--accent)')}>{tr('💾 บันทึก')}</button>
+          </div>
+        </Modal>
+      )}
+
+      {tplOpen && (
+        <Modal title={tr('📋 ออกใบใหม่จาก template งานประจำ')} width={640} dismissable onClose={() => setTplOpen(false)}>
+          {tpls.failed && <div style={{ fontSize: 12, color: 'var(--amber)', marginBottom: 8 }}>⚠️ {tpls.failed}</div>}
+          {!tpls.failed && !tpls.rows.length && (
+            <div style={{ padding: 18, textAlign: 'center', color: 'var(--muted)', fontSize: 12.5 }}>
+              {tr('ยังไม่มี template — เปิดใบเบิกตามปกติ แล้วกด “💾 บันทึกเป็น template” ในฟอร์ม')}
+            </div>
+          )}
+          <div style={{ maxHeight: 420, overflowY: 'auto' }}>
+            {tpls.rows.map(t => {
+              const n = Array.isArray(t.items) ? t.items.length : 0;
+              const mine = !!fullName && t.created_by_name === fullName;
+              return (
+                <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 6px', borderBottom: '1px solid var(--border)' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13 }}>{t.name}</div>
+                    <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>
+                      {KIND_LABEL[t.kind] || t.kind} · {n} {tr('รายการ')}
+                      {t.line_name ? ` · ${t.line_name}` : ''}{t.created_by_name ? ` · ${tr('สร้างโดย')} ${t.created_by_name}` : ''}
+                    </div>
+                  </div>
+                  <button onClick={() => openNew(t)} style={btnSt('var(--accent)')}>{tr('ใช้')}</button>
+                  {(mine || canManage) && <DeleteButton onClick={() => removeTemplate(t)} title={tr('ลบ template')} />}
+                </div>
+              );
+            })}
+          </div>
+        </Modal>
       )}
 
       {picker && (
@@ -424,7 +535,7 @@ export default function MaterialRequests() {
 }
 
 /* ── ฟอร์มใบเบิก ─────────────────────────────────────────────────────────── */
-function Editor({ editor, setReq, setItem, addItem, delItem, canRecord, role, signers, scopedLines, parts = [], onPick, onClose, onSave, uomIdx, uomState, fullName = '' }) {
+function Editor({ editor, setReq, setItem, addItem, delItem, canRecord, role, signers, scopedLines, parts = [], onPick, onSaveTemplate, onClose, onSave, uomIdx, uomState, fullName = '' }) {
   const { req, items } = editor;
   // 📜 ค่าที่เคยบันทึกใน material_requests (DR) — รหัสคลังที่ยังไม่ลง storage_locations / ผู้ขอที่ไม่มีบัญชี ยังเลือกซ้ำได้ ไม่หายเงียบ (2026-09-07)
   const destHist = useColumnHistory(supabaseDR, 'material_requests', 'dest_storage_location', { upper: true });
@@ -510,8 +621,9 @@ function Editor({ editor, setReq, setItem, addItem, delItem, canRecord, role, si
         <b style={{ fontSize: 13 }}>{tr('รายการสินค้าคงคลัง')}</b>
         <span style={{ flex: 1 }} />
         {canRecord && <>
-          <button onClick={() => onPick(null)} style={btnSt()}>{tr('เลือกจาก Parts Master')}</button>
+          <button onClick={() => onPick(null)} style={btnSt()} title={tr('เลือกชิ้นงาน แล้วระบบแตก BOM ให้ติ๊กใช้/ไม่ใช้')}>{tr('เลือกชิ้นงาน (แตก BOM)')}</button>
           <button onClick={addItem} style={btnSt()}>{tr('＋ เพิ่มแถว')}</button>
+          <button onClick={onSaveTemplate} style={btnSt()} title={tr('เก็บหัวใบ+รายการไว้ใช้ซ้ำกับงานประจำ')}>{tr('💾 บันทึกเป็น template')}</button>
         </>}
       </div>
       <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
@@ -608,6 +720,82 @@ const F = ({ label, children, full }) => (
     {children}
   </div>
 );
+
+/* ── 🌳 แตก BOM ของชิ้นงานที่เลือก ให้ติ๊ก ใช้/ไม่ใช้ (2026-11-18 · คำสั่ง user) ──────────────
+   ลูกผ่าน `useBomChildren` ที่เดียว (ห้ามยิง bom_items เอง) · จำนวน = ชุด × ต่อ 1 ชิ้น (`bomPickRows`)
+   🔴 ไม่มีลูก / โหลด BOM ไม่ได้ = ยังเพิ่มตัวชิ้นงานเองได้ และ **เขียนบอกบนจอ** ไม่ใช่เงียบ */
+function BomPickModal({ root, replacing, onClose, onApply }) {
+  const bom = useBomChildren(root?.mat_no);
+  const [sets, setSets] = useState(1);
+  const [rows, setRows] = useState([]);
+  const kidsSig = bom.rows.map(k => `${k.level}:${k.mat_no}:${k.qtyPerRoot}`).join('|');
+  useEffect(() => {
+    setRows(prev => {
+      const use = new Map(prev.map(r => [r.key, r.use]));
+      return bomPickRows(root, bom.rows, sets).map(r => (use.has(r.key) ? { ...r, use: use.get(r.key) } : r));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kidsSig, sets, root?.mat_no]);
+  const set = (key, patch) => setRows(rs => rs.map(r => (r.key === key ? { ...r, ...patch } : r)));
+  const allKids = rows.slice(1);
+  const nUse = rows.filter(r => r.use).length;
+  const toggleKids = (v) => setRows(rs => rs.map((r, i) => (i === 0 ? r : { ...r, use: v })));
+  return (
+    <Modal title={`🌳 ${tr('แตก BOM')} — ${root?.part_name || root?.mat_no}`} width={720} onClose={onClose}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8, fontSize: 12.5 }}>
+        <span>{tr('จำนวนชุดที่จะเบิก')}</span>
+        <input type="number" min="1" value={sets} onChange={e => setSets(Math.max(1, Number(e.target.value) || 1))}
+          style={{ ...inpSt, width: 80 }} />
+        <span style={{ color: 'var(--muted)' }}>{tr('(จำนวนลูก = ชุด × จำนวนต่อ 1 ชิ้น · แก้ได้ทีละแถว)')}</span>
+        <span style={{ flex: 1 }} />
+        {allKids.length > 0 && <>
+          <button onClick={() => toggleKids(true)} style={miniBtn}>{tr('ใช้ลูกทั้งหมด')}</button>
+          <button onClick={() => toggleKids(false)} style={miniBtn}>{tr('ไม่ใช้ลูกทั้งหมด')}</button>
+        </>}
+      </div>
+      {bom.loading && <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>{tr('กำลังโหลด BOM...')}</div>}
+      {bom.failed && <div style={{ fontSize: 12, color: 'var(--amber)', marginBottom: 6 }}>⚠️ {bom.message} — {tr('ยังเพิ่มตัวชิ้นงานได้ แต่ลูกต้องเพิ่มเอง')}</div>}
+      {!bom.loading && !bom.failed && !allKids.length && (
+        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>{tr('ชิ้นงานนี้ไม่มีพาร์ทลูกใน BOM — จะเพิ่มเฉพาะตัวมันเอง')}</div>
+      )}
+      {bom.sheets.length > 1 && (
+        <div style={{ fontSize: 12, color: 'var(--amber)', marginBottom: 6 }}>⚠️ {tr('พาร์ทนี้มี BOM')} {bom.sheets.length} {tr('ใบ — แสดงใบแรก ตรวจรายการก่อนใช้')}</div>
+      )}
+      <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', maxHeight: '55vh', overflowY: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 560 }}>
+          <thead><tr>
+            {['ใช้', 'ชั้น', 'ชิ้นงาน', 'จำนวน', 'หน่วย'].map(h => <th key={h} style={thSt}>{tr(h)}</th>)}
+          </tr></thead>
+          <tbody>
+            {rows.map(r => (
+              <tr key={r.key} style={{ opacity: r.use ? 1 : 0.45 }}>
+                <td style={{ ...tdSt, textAlign: 'center' }}>
+                  <input type="checkbox" checked={r.use} onChange={e => set(r.key, { use: e.target.checked })} />
+                </td>
+                <td style={{ ...tdSt, color: 'var(--muted)' }}>{r.level === 0 ? tr('ตัวเอง') : `L${r.level}`}</td>
+                <td style={{ ...tdSt, paddingLeft: 8 + r.level * 14 }}>
+                  <b>{r.description || r.mat_no}</b>{' '}
+                  <span style={{ color: 'var(--text2)', fontFamily: 'monospace' }}>MAT {r.mat_no}</span>
+                </td>
+                <td style={tdSt}>
+                  <input type="number" min="0" value={r.qty} onChange={e => set(r.key, { qty: e.target.value })}
+                    placeholder={r.unsure ? tr('กรอก') : ''} style={{ ...inpSt, width: 80 }} />
+                  {r.unsure && <span title={tr('อัตราต่อชิ้นใน BOM เชื่อไม่ได้ (มีหลายบรรทัด) — กรอกเอง')} style={{ marginLeft: 4 }}>⚠️</span>}
+                </td>
+                <td style={tdSt}>{r.unit || '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, marginTop: 12 }}>
+        <span style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('เลือก')} {nUse}/{rows.length} {tr('รายการ')}{replacing ? ` · ${tr('แทนแถวเดิม')}` : ''}</span>
+        <button onClick={onClose} style={btnSt()}>{tr('ยกเลิก')}</button>
+        <button disabled={!nUse} onClick={() => onApply(pickedToItems(rows))} style={btnSt('var(--accent)')}>{tr('เพิ่มลงใบ')}</button>
+      </div>
+    </Modal>
+  );
+}
 
 /* ⚠️ `dismissable` default = false — modal ที่มีฟอร์มกรอก **ห้ามปิดจากการคลิกพื้นหลัง**
    (UI-CONVENTIONS §5 · คำสั่ง user 2026-07-09: เผลอแตะแล้วข้อมูลที่พิมพ์อยู่หายทั้งฟอร์ม)

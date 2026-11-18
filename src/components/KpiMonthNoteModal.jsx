@@ -16,6 +16,7 @@ import { toast } from './Toast';
 import { DeleteButton } from './IconButton';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 export const NOTE_KINDS = [
   { key: 'remark', icon: '💬', label: 'Remark',  hint: 'เกิดอะไรขึ้นเดือนนี้' },
   { key: 'action', icon: '🛠', label: 'Action',  hint: 'ทำอะไรไปแล้ว / จะทำอะไร' },
@@ -60,7 +61,7 @@ export default function KpiMonthNoteModal({ title, icon, monthText, valueText, n
     onChanged?.();
   };
   const remove = async (n) => {
-    if (!window.confirm(`ลบหมายเหตุนี้?\n"${n.text.slice(0, 80)}"`)) return;
+    if (!await askConfirm(`ลบหมายเหตุนี้?\n"${n.text.slice(0, 80)}"`)) return;
     const res = await supabase.from('kpi_month_notes').update({ is_active: false }).eq('id', n.id).select('id');
     if (!checkWrite(res, 'ลบหมายเหตุ')) return;
     if (!res.data?.length) { toast.error('ลบไม่สำเร็จ — ไม่มีสิทธิ์ (ต้องมี kpi:manage)'); return; }

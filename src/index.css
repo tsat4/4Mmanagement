@@ -457,6 +457,12 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
 .seg.seg-sm { height: 28px; }
 .seg.seg-sm > button { font-size: 12px; padding: 0 9px; }
 
+/* ↔️ ขอบจางของแถวเลื่อนแนวนอน (useScrollEdges / ScrollRow / TabBar มือถือ · 18/11 · กฎ Closure)
+   วาดเฉพาะด้านที่ยังมีของซ่อน · สีกลืนกับพื้นที่แถววางอยู่ผ่าน --hs-bg (default พื้นหน้า) · ไม่รับคลิก */
+.hs-fade-l, .hs-fade-r { position: absolute; top: 0; bottom: 0; width: 28px; pointer-events: none; z-index: 1; }
+.hs-fade-l { left: 0;  background: linear-gradient(to right, var(--hs-bg, var(--bg)), transparent); }
+.hs-fade-r { right: 0; background: linear-gradient(to left,  var(--hs-bg, var(--bg)), transparent); }
+
 /* 🔍 SearchInput — ไอคอนในกรอบ + ปุ่มล้าง */
 .search-input { position: relative; display: inline-flex; align-items: center; min-width: 180px; }
 .search-input.grow { flex: 1 1 220px; }
@@ -1226,8 +1232,10 @@ body.esm-tv-shell .tv-hide { display: none !important; }
 .pg-menu-badge { font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: var(--bg3); color: var(--text2); flex-shrink: 0; }
 
 /* การ์ด KPI โครงเดียว (components/KpiTile.jsx) — ชื่อ → ตัวเลข → บรรทัดบริบท · ตัวเลขสีเดียว สีอยู่ที่บรรทัดล่าง */
-.kpi-tile { background: var(--card); border: 1px solid var(--border); border-radius: var(--r-md); padding: 12px 14px;
+.kpi-tile { background: var(--card); border: 1px solid var(--border); border-radius: var(--r-md); padding: 16px 18px;   /* 18/11: 12/14 → 16/18 ที่ว่างในการ์ด (ก๊อป ERP) */
   display: flex; flex-direction: column; gap: 2px; text-align: left; font: inherit; color: var(--text); min-width: 0; }
+.kpi-tile.hero { background: var(--accent-dim); border-color: var(--accent); }   /* ใบพระเอก 1 ใบต่อแถว — token เดิม ไม่เพิ่มสี */
+.kpi-tile-spark { display: block; width: 100%; height: 22px; margin-top: 6px; opacity: 0.9; }
 .kpi-tile-k { color: var(--text2); font-size: 12px; font-weight: 500; }
 .kpi-tile-v { font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; margin-top: 4px; font-variant-numeric: tabular-nums; }
 .kpi-tile-v small { font-size: 12px; color: var(--muted); font-weight: 500; margin-left: 4px; }

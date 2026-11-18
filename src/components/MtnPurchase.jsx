@@ -37,6 +37,7 @@ import { teamKeyOf, teamRowOwner, teamRowLockNote } from '../utils/mtnTeams';
 import { can } from '../utils/permissions';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 const inp = { width: '100%', padding: '7px 9px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 12.5, boxSizing: 'border-box' };
 const btnPri = { background: 'var(--accent)', color: 'var(--accent-ink)', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' };
 const btnGhost = { background: 'var(--bg3)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' };
@@ -82,7 +83,7 @@ async function savePrNo(pr, raw) {
   const dup = await supabaseDR.from('mtn_purchase_requests').select('id, order_id, item_name').eq('pr_no', no).neq('id', pr.id).neq('status', 'cancelled');
   if (dup.error) { toast.error(`ตรวจเลขซ้ำไม่สำเร็จ: ${dup.error.message} — ยังไม่ได้บันทึก`); return false; }
   if ((dup.data || []).length
-    && !confirm(`เลข PR ${no} ผูกกับรายการอื่นอยู่แล้ว ${dup.data.length} รายการ (${dup.data.slice(0, 3).map(d => d.item_name).join(', ')}${dup.data.length > 3 ? ' …' : ''})\n\nPR ใน SAP ใบเดียวมีหลายรายการได้ — ยืนยันผูกเลขนี้ด้วย?`)) return false;
+    && !await askConfirm(`เลข PR ${no} ผูกกับรายการอื่นอยู่แล้ว ${dup.data.length} รายการ (${dup.data.slice(0, 3).map(d => d.item_name).join(', ')}${dup.data.length > 3 ? ' …' : ''})\n\nPR ใน SAP ใบเดียวมีหลายรายการได้ — ยืนยันผูกเลขนี้ด้วย?`)) return false;
   return checkWriteRows(await supabaseDR.from('mtn_purchase_requests')
     .update({ pr_no: no, updated_at: new Date().toISOString() }).eq('id', pr.id).select('id'), 'บันทึกเลข PR');
 }
@@ -372,7 +373,7 @@ export function MtnPrPanel({ order, parts = [], fullName, canEdit = false, canAd
     onOrderChanged?.();
   };
   const resumeRepair = async () => {
-    if (!confirm('จบช่วงหยุด MTTR แล้วเริ่มนับเวลาซ่อมของช่างต่อ?')) return;
+    if (!await askConfirm('จบช่วงหยุด MTTR แล้วเริ่มนับเวลาซ่อมของช่างต่อ?')) return;
     if (checkWriteRows(await supabaseDR.from('mtn_orders').update({ mttr_hold_to: new Date().toISOString() })
       .eq('id', orderId).is('mttr_hold_to', null).select('id'), 'จบช่วงหยุด MTTR', { zeroMsg: 'ช่วงหยุด MTTR ของใบนี้จบไปแล้ว — โหลดใหม่' })) {
       toast.success('เริ่มนับ MTTR ช่างต่อแล้ว'); onOrderChanged?.();
@@ -643,7 +644,7 @@ export function MtnGlMaster({ canEdit = false, fullName }) {
                 <input defaultValue={g.gl_code} disabled={!canEdit} onBlur={e => e.target.value.trim() && e.target.value.trim() !== g.gl_code && upd(g.id, { gl_code: e.target.value.trim() })} style={{ ...inp, width: 140, fontFamily: 'monospace', fontWeight: 700 }} />
                 <input defaultValue={g.name || ''} disabled={!canEdit} onBlur={e => e.target.value !== (g.name || '') && upd(g.id, { name: e.target.value })} style={{ ...inp, flex: 1, minWidth: 160 }} />
                 <button disabled={!canEdit} onClick={() => setDefault(g)} style={{ ...(g.is_default ? btnPri : btnGhost), padding: '5px 10px' }}>{g.is_default ? tr('★ ตั้งต้น') : tr('☆ ตั้งเป็นตั้งต้น')}</button>
-                {canEdit && <button onClick={() => confirm(`ปิดใช้งาน GL ${g.gl_code}?`) && upd(g.id, { is_active: false })} style={{ ...btnGhost, color: 'var(--muted)' }}>{tr('ปิดใช้งาน')}</button>}
+                {canEdit && <button onClick={async () => await askConfirm(`ปิดใช้งาน GL ${g.gl_code}?`) && upd(g.id, { is_active: false })} style={{ ...btnGhost, color: 'var(--muted)' }}>{tr('ปิดใช้งาน')}</button>}
               </div>
             ))}
           </div>

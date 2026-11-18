@@ -15,6 +15,7 @@ import {
 } from '../utils/peExcelImport';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 const nz = (v) => { const s = String(v ?? '').trim(); return s || null; };
 const CHUNK = 400;
 const chunks = (a, n = CHUNK) => Array.from({ length: Math.ceil(a.length / n) }, (_, i) => a.slice(i * n, i * n + n));
@@ -106,7 +107,7 @@ export default function PeExcelImportModal({ sets = [], currentSetId = '', onClo
     const warn = mode === 'fill'
       ? `จะแทนที่รายการ PFMEA / Control Plan / ประวัติแก้ไข ทั้งหมดของชุด "${target?.part_no}" ด้วยข้อมูลจากไฟล์\n(ขั้นงาน OP เดิมที่แก้ไว้จะไม่ถูกลบ)\n\nยืนยัน?`
       : `จะสร้างชุดเอกสารใหม่ "${meta.part_no}" พร้อม ${plan.ops.length} OP\n\nยืนยัน?`;
-    if (!window.confirm(warn)) return;
+    if (!await askConfirm(warn)) return;
 
     setBusy(true);
     try {
