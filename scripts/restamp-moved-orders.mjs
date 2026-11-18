@@ -67,15 +67,23 @@ for (const s of D.sessions) {
   const qRepro = qStamp != null && before.Q != null && Math.abs(before.Q * 100 - qStamp) <= TOL;
   const tag = `${s.work_date} ${s.line_name} ${s.shift}`;
 
+  /* 🔴 ย้ายใบออกหมดแล้วไม่เหลือใบผลิตเลย = **ไม่มี %P/%Q** ต้องเป็น null ไม่ใช่ค่าเดิม
+     (กฎความซื่อสัตย์ของจอ: ข้อมูลไม่พอ ต้องเขียนว่าไม่มี ห้ามโชว์เลขเก่าที่ไม่มีที่มาแล้ว) */
+  const emptied = qtyRepro && after.totalProduced === 0 && (ordAfter[ix] || []).length === 0;
   let pNew = null, qNew = null;
-  if (qtyRepro && pRepro && after.P != null) pNew = r2(clamp(after.P * 100, 0, 100));
-  if (qtyRepro && qRepro && after.Q != null) qNew = r2(clamp(after.Q * 100, 0, 100));
+  if (emptied) { pNew = qNew = 'null'; }
+  else {
+    if (qtyRepro && pRepro && after.P != null) pNew = r2(clamp(after.P * 100, 0, 100));
+    if (qtyRepro && qRepro && after.Q != null) qNew = r2(clamp(after.Q * 100, 0, 100));
+  }
   if (!qtyRepro) notes.push(`${tag}: ยอดก่อนย้ายคิดได้ ${before.totalProduced} แต่ stamp ${qtyOld} — ใบถูกยิงหลังปิดกะ ⇒ ไม่แตะ %P/%Q`);
   else if (pStamp != null && !pRepro) notes.push(`${tag}: %P ก่อนย้ายคิดได้ ${before.P == null ? '—' : r2(before.P * 100)} แต่ stamp ${pStamp} ⇒ ไม่แตะ %P`);
   else if (qStamp != null && !qRepro) notes.push(`${tag}: %Q ก่อนย้ายคิดได้ ${before.Q == null ? '—' : r2(before.Q * 100)} แต่ stamp ${qStamp} ⇒ ไม่แตะ %Q`);
 
-  const pUse = pNew ?? pStamp, qUse = qNew ?? qStamp;
+  const pUse = pNew === 'null' ? null : (pNew ?? pStamp);
+  const qUse = qNew === 'null' ? null : (qNew ?? qStamp);
   const oeeNew = (aStamp != null && pUse != null && qUse != null) ? r2(aStamp * pUse * qUse / 10000) : null;
+  if (emptied) notes.push(`${tag}: ไม่เหลือใบผลิตเลย ⇒ %P/%Q/OEE = ไม่มีข้อมูล (null)`);
   const oeeOld = s.oee == null ? null : Number(s.oee);
   if (qtyNew === qtyOld && pNew == null && qNew == null) continue;
 
@@ -89,7 +97,7 @@ for (const r of rows) {
   const d = r.qtyNew - r.qtyOld;
   console.log(`  ${r.s.work_date} ${String(r.s.line_name).padEnd(25)} ${String(r.s.shift).padEnd(5)} ` +
     `${String(r.qtyOld).padStart(6)} → ${String(r.qtyNew).padStart(6)} (${d > 0 ? '+' : ''}${d})`.padEnd(26) +
-    `${String(r.pStamp ?? '—').padStart(6)} → ${String(r.pNew ?? '(คงเดิม)').padStart(8)}  ` +
+    `${String(r.pStamp ?? '—').padStart(6)} → ${String(r.pNew === 'null' ? 'ไม่มี' : (r.pNew ?? '(คงเดิม)')).padStart(8)}  ` +
     `${String(r.oeeOld ?? '—').padStart(6)} → ${String(r.oeeNew ?? '—').padStart(6)}`);
 }
 const out = rows.filter(r => r.qtyNew < r.qtyOld).reduce((a, r) => a + (r.qtyOld - r.qtyNew), 0);
@@ -108,9 +116,9 @@ if (SQL) {
     `'ย้ายใบที่ลงกะเก่าที่ลืมปิด')`).join(',\n') + ';');
   for (const r of rows) {
     const sets = [`actual_qty = ${q(r.qtyNew)}`];
-    if (r.pNew != null) sets.push(`oee_p = ${q(r.pNew)}`);
-    if (r.qNew != null) sets.push(`oee_q = ${q(r.qNew)}`);
-    if (r.oeeNew != null) sets.push(`oee = ${q(r.oeeNew)}`);
+    if (r.pNew != null) sets.push(`oee_p = ${r.pNew === 'null' ? 'null' : q(r.pNew)}`);
+    if (r.qNew != null) sets.push(`oee_q = ${r.qNew === 'null' ? 'null' : q(r.qNew)}`);
+    if (r.pNew === 'null') sets.push('oee = null'); else if (r.oeeNew != null) sets.push(`oee = ${q(r.oeeNew)}`);
     L.push(`update public.production_sessions set ${sets.join(', ')} where id = '${r.s.id}';`);
   }
   L.push('commit;');
