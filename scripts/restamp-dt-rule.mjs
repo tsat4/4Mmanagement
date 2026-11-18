@@ -6,9 +6,15 @@
    🔴 ใช้ **สูตรจริง** `computeSessionOee` จาก src/utils/oee.js เท่านั้น — ห้ามเขียนสูตรซ้ำที่นี่
       (เคยลองสร้างโมเดลใน SQL แล้ว ตรงกับของจริงแค่ 97/307 กะ ⇒ ทิ้ง)
 
-   🔴 ด่านกันเขียนผิด — **คำนวณกะเดิมให้ได้ค่าเดิมก่อน ถึงจะมีสิทธิ์เขียนทับ**
+   🔴 ด่านกันเขียนผิด (โหมดปกติ) — **คำนวณกะเดิมให้ได้ค่าเดิมก่อน ถึงจะมีสิทธิ์เขียนทับ**
       คิด A ด้วย "หมวดเดิม" แล้วเทียบกับ `oee_a` ที่ stamp ไว้ ต่างเกิน TOL = **ข้ามกะนั้น**
       (กะเก่าที่ทะเบียน CT/พักเปลี่ยนไปแล้ว จะคำนวณย้อนไม่ตรง — ต้องข้าม ไม่ใช่เดา)
+
+   ⚠️ `--force` = **ปิดด่านนั้น แล้วคิด %A ใหม่ด้วยกฎ/ทะเบียน "วันนี้" ทุกกะ**
+      (คำสั่ง user 18/11: *"แก้ได้ทั้งหมดนะ เพราะปีนี้ทุกหน่วยงานยังใช้ OEE กรอกมือเป็น KPI หลัก"*
+       ⇒ เลขที่ stamp ไว้ยังไม่ใช่ KPI ทางการของปีนี้ ⇒ ยอมรีเซ็ตให้ทุกกะอยู่บนนิยามเดียวกัน)
+      🔴 ใช้เมื่อ **user สั่งเท่านั้น** — ปกติห้าม blanket-recompute กะเก่า (กฎเดิมใน docs/modules/oee.md)
+      🔴 ยัง log ค่าเดิมทุกแถวลง `oee_restamp_log` (reason ต่างกัน) ⇒ ย้อนกลับได้ 100%
 
    🔴 แตะเฉพาะ `oee_a` + `oee` — **%P/%Q ไม่เปลี่ยน** (ย้ายหมวดไม่ได้ทำให้เครื่องเดินมากขึ้น/น้อยลง
       เวลาเดินเครื่องเท่าเดิม) · ยอดผลิต/ของเสียไม่แตะ
@@ -19,6 +25,7 @@
      node scripts/restamp-dt-rule.mjs                 # dry-run (ไม่เขียนอะไร)
      node scripts/restamp-dt-rule.mjs --from 2026-11-01 --to 2026-11-17
      node scripts/restamp-dt-rule.mjs --apply         # เขียนจริง
+     node scripts/restamp-dt-rule.mjs --force         # ⚠️ ทุกกะ (ไม่มีด่านคิดย้อน) — user สั่งเท่านั้น
 
    🔌 โหมดออฟไลน์ (คอนเทนเนอร์ของ Claude ต่อ Supabase ไม่ได้ — network policy · 18/11):
      node scripts/restamp-dt-rule.mjs --dump <dump.json> [--sql out.sql]
@@ -35,8 +42,15 @@ const db = createClient(URL, KEY);
 
 const arg = (k, d = null) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
 const APPLY = process.argv.includes('--apply');
+const FORCE = process.argv.includes('--force');   // ⚠️ ปิดด่าน "คิดย้อนต้องตรง" — ดูหัวไฟล์
+const REASON = FORCE ? 'dt-rule-20261116-all' : 'dt-rule-20261116';
+const NOTE = FORCE ? 'คิด %A ใหม่ด้วยกฎ/ทะเบียนวันนี้ทุกกะ (คำสั่ง user 18/11) — %P/%Q ไม่แตะ'
+                   : 'นิยาม downtime ใหม่ 16/11 — %P/%Q ไม่แตะ';
 const DUMP  = arg('--dump');    // โหมดออฟไลน์: อ่าน input จากไฟล์แทน DB
 const SQL   = arg('--sql');     // โหมดออฟไลน์: เขียน SQL ออกไฟล์แทนการยิง DB
+const STAMPS = arg('--stamps'); // โหมดออฟไลน์: CSV id,oee_a,oee_p,oee_q,oee = ค่าที่ stamp "สดวันนี้"
+                                //   (dump ถูกดึงก่อนรอบ restamp ก่อนหน้า ⇒ ต้องทับให้ตรงฐานจริง
+                                //    ไม่งั้น oee_*_before ที่ log ผิด และ oee = A×P×Q ใช้ P/Q เก่า)
 const FROM  = arg('--from', '2026-11-01');
 const TO    = arg('--to', new Date().toISOString().slice(0, 10));
 const TOL   = Number(arg('--tol', '0.05'));   // %A ที่ยอมให้ต่างจากที่ stamp ไว้ (จุดทศนิยม)
@@ -65,7 +79,8 @@ async function all(table, select, build = (q) => q) {
 }
 
 const main = async () => {
-  console.log(`\n🧾 ไล่คำนวณ %A/OEE ใหม่ · ${FROM} → ${TO} · ${APPLY ? '⚠️  เขียนจริง' : 'dry-run (ไม่เขียน)'}\n`);
+  console.log(`\n🧾 ไล่คำนวณ %A/OEE ใหม่ · ${FROM} → ${TO} · ${APPLY ? '⚠️  เขียนจริง' : 'dry-run (ไม่เขียน)'}` +
+    `${FORCE ? ' · ⚠️  --force (ไม่มีด่านคิดย้อน)' : ''}\n`);
 
   const chunk = (a, n) => a.reduce((o, v, i) => ((o[Math.floor(i / n)] ||= []).push(v), o), []);
   let sessions, breaks, prods, kstds, orders = [], dts = [];
@@ -74,6 +89,14 @@ const main = async () => {
     /* 🔌 ออฟไลน์: input ชุดเดียวกับที่โหลดจาก DB — ตรรกะข้างล่างใช้ร่วมกัน ห้ามแยกเป็นสูตรที่ 2 */
     ({ sessions, breaks, prods, kstds, orders, dts } = JSON.parse(readFileSync(DUMP, 'utf8')));
     sessions = (sessions || []).sort((a, b) => String(a.work_date).localeCompare(String(b.work_date)));
+    if (STAMPS) {
+      const num = (v) => (v === '' || v == null ? null : Number(v));
+      const cur = new Map(readFileSync(STAMPS, 'utf8').split('\n').filter(Boolean)
+        .map(l => l.split(',')).map(([id, a, pp, qq, o]) => [id.trim(), { oee_a: num(a), oee_p: num(pp), oee_q: num(qq), oee: num(o) }]));
+      let n = 0;
+      for (const s of sessions) { const c = cur.get(s.id); if (c) { Object.assign(s, c); n++; } }
+      console.log(`ทับค่า stamp ให้ตรงฐานจริง ${n}/${cur.size} กะ`);
+    }
     console.log(`อ่าน dump: กะ ${sessions.length} · นโยบายพัก ${breaks.length} · สินค้า ${prods.length}`);
   } else {
     [sessions, breaks, prods, kstds] = await Promise.all([
@@ -103,12 +126,12 @@ const main = async () => {
     planned_cap_min: null,
   } });
 
-  const stat = { skipLine: 0, skipNoA: 0, skipMismatch: 0, same: 0, changed: 0 };
-  const rows = [], worst = [];
+  const stat = { skipLine: 0, skipNoA: 0, skipMismatch: 0, skipZero: 0, same: 0, changed: 0 };
+  const rows = [], worst = [], zeroed = [];
 
   for (const s of sessions) {
     if (PARALLEL_LINES.has(s.line_name)) { stat.skipLine++; continue; }
-    if (s.oee_a == null || s.shift_min == null) { stat.skipNoA++; continue; }
+    if (s.shift_min == null || (s.oee_a == null && !FORCE)) { stat.skipNoA++; continue; }
     const dl = dtBy[s.id] || [];
     const base = { session: s, orders: ordBy[s.id] || [], defects: [], ngQty: 0,
       products: prods, kanbanStds: kstds, breakPolicies: breaks,
@@ -117,47 +140,63 @@ const main = async () => {
 
     const oldR = computeSessionOee({ ...base, downtimes: dl.map(asOld) });
     const aOldCalc = oldR.A == null ? null : oldR.A * 100;
-    if (aOldCalc == null || Math.abs(aOldCalc - Number(s.oee_a)) > TOL) {
+    const reproduced = s.oee_a != null && aOldCalc != null && Math.abs(aOldCalc - Number(s.oee_a)) <= TOL;
+    if (!reproduced) {
       stat.skipMismatch++;
       if (worst.length < 5) worst.push(`${s.work_date} ${s.line_name} ${s.shift}: stamp ${s.oee_a} vs คิดย้อนได้ ${aOldCalc == null ? '—' : round2(aOldCalc)}`);
-      continue;
+      if (!FORCE) continue;        // โหมดปกติ: คิดย้อนไม่ตรง = ห้ามแตะ
     }
     const newR = computeSessionOee({ ...base, downtimes: dl });
     const aNew = newR.A == null ? null : round2(newR.A * 100);
-    if (aNew == null || Math.abs(aNew - Number(s.oee_a)) < 0.005) { stat.same++; continue; }
+    if (aNew == null || (s.oee_a != null && Math.abs(aNew - Number(s.oee_a)) < 0.005)) { stat.same++; continue; }
+
+    /* 🔴 คิดใหม่ได้ %A = 0 ทั้งที่กะนั้นมียอดผลิต = "คิดไม่ได้" ไม่ใช่ "เครื่องไม่เคยเดิน"
+       (ใบ downtime ตกนอกช่วงพาร์ททุกใบ ⇒ ทางคิดราย MAT กินเวลาเดินหมด)
+       ⇒ fail-closed: ปล่อยค่าเดิมไว้ แล้วรายงานให้คนไปดู ห้ามเขียนเลขที่รู้ว่าโกหก */
+    if (aNew === 0 && (newR.totalProduced || 0) > 0) {
+      stat.skipZero++;
+      if (zeroed.length < 20) zeroed.push(`${s.work_date} ${String(s.line_name).padEnd(24)} ${s.shift.padEnd(5)} stamp ${s.oee_a} · ผลิต ${newR.totalProduced} · DT ${dl.length} ใบ`);
+      continue;
+    }
 
     const p = s.oee_p == null ? null : Number(s.oee_p), q = s.oee_q == null ? null : Number(s.oee_q);
     const oeeNew = (p == null || q == null) ? null : round2(aNew * p * q / 10000);
-    rows.push({ s, aOld: Number(s.oee_a), aNew, oeeOld: s.oee == null ? null : Number(s.oee), oeeNew,
+    rows.push({ s, aOld: s.oee_a == null ? null : Number(s.oee_a), aNew, reproduced,
+      oeeOld: s.oee == null ? null : Number(s.oee), oeeNew,
       movedMin: Math.round((newR.loggedUnplannedDT || 0) - (oldR.loggedUnplannedDT || 0)) });
     stat.changed++;
   }
 
-  rows.sort((a, b) => (a.aNew - a.aOld) - (b.aNew - b.aOld));
+  const d0 = (r) => (r.aOld == null ? 0 : r.aNew - r.aOld);
+  rows.sort((a, b) => d0(a) - d0(b));
   console.log('── กะที่ตัวเลขเปลี่ยน (เรียงจากตกมากสุด) ──');
   rows.slice(0, 20).forEach(r => console.log(
     `  ${r.s.work_date} ${String(r.s.line_name).padEnd(24)} ${r.s.shift.padEnd(5)} ` +
-    `A ${String(r.aOld).padStart(6)} → ${String(r.aNew).padStart(6)} · OEE ${r.oeeOld} → ${r.oeeNew} · ย้าย ${r.movedMin} น.`));
+    `A ${String(r.aOld ?? '—').padStart(6)} → ${String(r.aNew).padStart(6)} · OEE ${r.oeeOld} → ${r.oeeNew}` +
+    `${r.reproduced ? '' : ' · ⚠️คิดย้อนไม่ตรง'}`));
   if (rows.length > 20) console.log(`  … อีก ${rows.length - 20} กะ`);
 
-  const avg = (f) => rows.length ? round2(rows.reduce((a, r) => a + f(r), 0) / rows.length) : 0;
+  const withOld = rows.filter(r => r.aOld != null);
+  const avg = (f) => withOld.length ? round2(withOld.reduce((a, r) => a + f(r), 0) / withOld.length) : 0;
   console.log(`\n── สรุป ──
   กะที่ตรวจ                 ${sessions.length}
   ข้าม: ไลน์เครื่องขนาน      ${stat.skipLine}
   ข้าม: ไม่มี %A / shift_min ${stat.skipNoA}
-  ข้าม: คำนวณย้อนไม่ตรงstamp ${stat.skipMismatch}   ← กะพวกนี้ห้ามแตะ (ทะเบียนเปลี่ยนไปแล้ว)
+  คำนวณย้อนไม่ตรง stamp    ${stat.skipMismatch}   ← ${FORCE ? '⚠️  --force: คิดใหม่ให้ด้วย' : 'ข้าม (ทะเบียนเปลี่ยนไปแล้ว)'}
+  ข้าม: คิดใหม่ได้ 0 ทั้งที่ผลิต ${stat.skipZero}   ← fail-closed (ดูลิสต์ล่าง)
   ตัวเลขเท่าเดิม             ${stat.same}
   ✍️  ต้องแก้                 ${stat.changed}
   %A เฉลี่ย ${avg(r => r.aOld)} → ${avg(r => r.aNew)}  (${avg(r => r.aNew - r.aOld)})`);
-  if (worst.length) console.log('\n  ตัวอย่างกะที่คำนวณย้อนไม่ตรง (ข้าม):\n   ' + worst.join('\n   '));
+  if (worst.length) console.log('\n  ตัวอย่างกะที่คำนวณย้อนไม่ตรง:\n   ' + worst.join('\n   '));
+  if (zeroed.length) console.log('\n  ⚠️  กะที่คิดใหม่ได้ %A = 0 ทั้งที่มียอดผลิต (ไม่แตะ — ต้องให้คนไล่ดูใบ DT):\n   ' + zeroed.join('\n   '));
 
   /* 🔌 ออฟไลน์: ออกเป็น SQL (log ค่าเดิมก่อน แล้วค่อยเขียนทับ — ลำดับเดียวกับทาง DB เป๊ะ) */
   if (SQL) {
     const q = (v) => (v == null ? 'null' : String(v));
     const L = ['begin;', `insert into public.oee_restamp_log
   (session_id, reason, oee_a_before, oee_a_after, oee_before, oee_after, moved_min, note) values`];
-    L.push(rows.map(r => `  ('${r.s.id}', 'dt-rule-20261116', ${q(r.aOld)}, ${q(r.aNew)}, ` +
-      `${q(r.oeeOld)}, ${q(r.oeeNew)}, ${q(r.movedMin)}, 'นิยาม downtime ใหม่ 16/11 — %P/%Q ไม่แตะ')`).join(',\n') + ';');
+    L.push(rows.map(r => `  ('${r.s.id}', '${REASON}', ${q(r.aOld)}, ${q(r.aNew)}, ` +
+      `${q(r.oeeOld)}, ${q(r.oeeNew)}, ${q(r.movedMin)}, '${NOTE}${r.reproduced ? '' : ' · คิดย้อนไม่ตรง'}')`).join(',\n') + ';');
     for (const r of rows) {
       L.push(`update public.production_sessions set oee_a = ${q(r.aNew)}` +
         `${r.oeeNew == null ? '' : `, oee = ${q(r.oeeNew)}`} where id = '${r.s.id}';`);
@@ -172,7 +211,7 @@ const main = async () => {
 
   console.log(`\n✍️  เขียน ${rows.length} กะ …`);
   for (const c of chunk(rows, 50)) {
-    const log = c.map(r => ({ session_id: r.s.id, reason: 'dt-rule-20261116',
+    const log = c.map(r => ({ session_id: r.s.id, reason: REASON, note: NOTE + (r.reproduced ? '' : ' · คิดย้อนไม่ตรง'),
       oee_a_before: r.aOld, oee_before: r.oeeOld, oee_a_after: r.aNew, oee_after: r.oeeNew, moved_min: r.movedMin }));
     const { error: le } = await db.from('oee_restamp_log').insert(log);
     die('บันทึกค่าเดิมลง oee_restamp_log', le);      // 🔴 log ไม่ติด = ห้ามเขียนทับ (ย้อนไม่ได้)
