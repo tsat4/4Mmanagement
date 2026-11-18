@@ -11055,3 +11055,14 @@ test('🚫 no-fg-line-request — ทุกจุดที่ออกใบเ�
     '\n\n❌ ไฟล์นี้ออกใบเบิกเข้าไลน์โดยไม่กันเลข FG 1xx:\n   ' + offenders.join('\n   ')
     + '\n   ใช้ `isFgMat(mat)` + ข้อความ `FG_NO_LINE_REQUEST` จาก src/utils/storeOps.js ก่อน insert\n');
 });
+
+test('🔒 dt-add-needs-canscan — ปุ่ม "+ บันทึก Downtime" และฟังก์ชันบันทึกต้องผ่าน canScan (daily_report:record)', () => {
+  /* 18/11 user ลอง "จำลอง role" (ViewAs) แล้วกดลง Downtime ได้ — เดิมปุ่มแก้/ปิดรายการเช็ค `canScan` แต่ปุ่ม**เพิ่ม**ไม่เช็ค
+     และฟังก์ชันบันทึกก็ไม่เช็ค · ฝั่ง DR เป็น anon (ไม่มี RLS คอยกัน) ⇒ role ดูอย่างเดียวลง DT ลงฐานจริงได้
+     กฎ: "ปุ่ม/ช่องเลือก = ตัวกรอง ไม่ใช่ด่าน" ⇒ ต้องมีด่านในฟังก์ชันที่เขียน DB ด้วย ไม่ใช่แค่ซ่อนปุ่ม */
+  const dr = stripComments(readFileSync(join(ROOT, 'src/pages/DailyReport.jsx'), 'utf8'));
+  assert.match(dr, /\{dtOpen && canScan && \(\s*<button onClick=\{\(\) => \{ setShowDT\(true\)/,
+    '\n\n❌ ปุ่ม "+ บันทึก Downtime" ไม่ได้อยู่หลัง `canScan` — role ดูอย่างเดียว/โหมดจำลอง role เห็นปุ่มลง DT\n');
+  assert.match(dr, /if \(!canScan\) \{ toast\.error\('บัญชีนี้ไม่มีสิทธิ์บันทึก Downtime[^']*'\); return; \}\s*setSavingDT\(true\);/,
+    '\n\n❌ ฟังก์ชันบันทึก Downtime ไม่มีด่าน `canScan` ก่อน `setSavingDT(true)` — ซ่อนปุ่มอย่างเดียวไม่พอ (DR anon ไม่มี RLS)\n');
+});

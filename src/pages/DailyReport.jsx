@@ -1487,6 +1487,11 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
     })();
     if (dtEndChk && !window.confirm(dtEndChk.text + '\n\nยืนยันบันทึกตามนี้?')) return;
 
+    /* 🔒 ด่านชั้น 2 ตอนเขียนจริง (18/11 · user ลอง "จำลอง role" แล้วลง DT ได้) — เดิมปุ่ม "+ บันทึก Downtime"
+       ไม่ได้เช็ค `canScan` เลย (ปุ่มแก้/ปิดรายการเช็ค แต่ปุ่มเพิ่มไม่เช็ค) · ฝั่ง DR เป็น anon ไม่มี RLS คอยกัน
+       ⇒ ต้องกันในฟังก์ชันที่เขียน DB ด้วย ห้ามพึ่งการซ่อนปุ่มอย่างเดียว (กฎ "ช่องเลือก/ปุ่ม = ตัวกรอง ไม่ใช่ด่าน") */
+    if (!canScan) { toast.error('บัญชีนี้ไม่มีสิทธิ์บันทึก Downtime (ต้องมี daily_report:record)'); return; }
+
     setSavingDT(true);
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -4644,7 +4649,8 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                   <span style={{ fontSize: 11, color: 'var(--muted)', transform: dtOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s', display: 'inline-block' }}>▶</span>
                   ⏱ Downtime ({dtLogs.length} รายการ)
                 </div>
-                {dtOpen && (
+                {/* 🔒 ปุ่มเพิ่มต้องผ่าน canScan เหมือนปุ่มแก้/ปิดรายการ (18/11) — เดิมไม่เช็ค ⇒ role ดูอย่างเดียว/โหมดจำลอง role ก็ลง DT ได้ */}
+                {dtOpen && canScan && (
                 <button onClick={() => { setShowDT(true); setDtForm({ id: null, downtime_type_id: '', mode: 'start_end', start_time: '', end_time: '', duration_min: '', machine_no: '', mat_no: '', description: '' }); }}
                   style={{ background: 'var(--red)', color: '#fff', border: 'none', borderRadius: 'var(--r-md)', padding: '6px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                   + บันทึก Downtime

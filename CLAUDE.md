@@ -90,6 +90,7 @@ Realtime + Edge Functions/Deno) · Telegram Bot API · deploy = Render.com (Stat
   ห้ามเช็คแค่ "มีลูกในตารางตัวเองไหม" · ต้นแบบ `src/utils/orgNodeRefs.js` (ผังองค์กร — เช็ค FK + สำเนาชื่อ ·
   ต่างชั้นใช้คีย์ต่างกัน code vs name) · **นับไม่ครบ = ห้ามลบ (fail-closed)** · 📄 `docs/modules/org-hierarchy.md`
 - **ตารางใหม่**: RLS ครบทุก cmd ที่ client ใช้ (`upsert` ต้องมี UPDATE) + 🔴 **GRANT ระดับตารางครบทุก cmd ด้วย** (RLS ผ่านแต่ GRANT ขาด = PostgREST ตอบ **401** · คิวรีตรวจใน `db-write-rules.md`) + `has_perm('<คีย์เดียวกับปุ่มบนจอ>')` + ผูก audit (ดู Traceability) + migration file เสมอ
+  · 🔑 **คีย์สิทธิ์ใหม่ต้อง insert `permission_catalog` ด้วย — seed แค่ `role_permissions` = จอ /permissions ไม่ขึ้น** (ด่าน `permissionCatalogCoverage.test.mjs` · 📄 `role-system.md`)
 
 ---
 

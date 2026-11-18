@@ -198,8 +198,9 @@ export default function PermissionsManagement() {
   const [catalog, setCatalog] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState({}); // { [`${role}:${key}`]: true }
-  /* 🔭 แท็บภาพรวม (matrix) — อ่านอย่างเดียว ใช้ข้อมูลชุดเดียวกับ 2 แท็บที่แก้ได้
-     (ห้ามแยกแหล่ง ไม่งั้นจอเดียวกันตอบคนละเลข) */
+  /* 🔭 แท็บภาพรวม (matrix) — ใช้ข้อมูลชุดเดียวกับ 2 แท็บที่แก้ได้ (ห้ามแยกแหล่ง ไม่งั้นจอเดียวกันตอบคนละเลข)
+     18/11: คลิกช่องสลับค่าได้แล้ว (ผ่าน `toggle` ตัวเดียวกับ 2 แท็บนั้น) — เดิมอ่านอย่างเดียว
+     คนเห็น "–" แล้วกดไม่ติด เข้าใจว่าจอพัง (คำ user "จะตั้งให้ทำได้ก็คลิกไม่ได้") */
   const [q, setQ] = useState('');
   const [kind, setKind] = useState('all');          // all | page | action
   const [onlyDiff, setOnlyDiff] = useState(false);  // ซ่อนแถวที่ทุก role เหมือนกันหมด
@@ -289,6 +290,9 @@ export default function PermissionsManagement() {
     const cellId = `${role}:${permissionKey}`;
     setSaving(prev => ({ ...prev, [cellId]: true }));
     const nextVal = !current;
+    /* จำว่าแถวนี้ "เคยมีในทะเบียน" ไหม — เขียนไม่ติดแล้วต้องคืนเป็น "–" (ไม่เคยตั้ง) ไม่ใช่ "·" (ปิดไว้)
+       ไม่งั้นแท็บภาพรวมโกหก 3 สถานะหลังกดพลาด 1 ครั้ง */
+    const existed = rows.some(r => r.role === role && r.permission_key === permissionKey);
     setRows(prev => {
       const exists = prev.some(r => r.role === role && r.permission_key === permissionKey);
       return exists
@@ -305,7 +309,9 @@ export default function PermissionsManagement() {
       .upsert({ role, permission_key: permissionKey, allowed: nextVal }, { onConflict: 'role,permission_key' })
       .select('role');
     setSaving(prev => { const n = { ...prev }; delete n[cellId]; return n; });
-    const revert = () => setRows(prev => prev.map(r => (r.role === role && r.permission_key === permissionKey) ? { ...r, allowed: current } : r));
+    const revert = () => setRows(prev => existed
+      ? prev.map(r => (r.role === role && r.permission_key === permissionKey) ? { ...r, allowed: current } : r)
+      : prev.filter(r => !(r.role === role && r.permission_key === permissionKey)));
     if (!checkWrite(res, 'บันทึกสิทธิ์')) { revert(); return; }
     if (!(res.data || []).length) {
       toast.error('บันทึกไม่ติด (0 แถว) — ไม่มีสิทธิ์แก้ทะเบียนสิทธิ์ (ต้องมี permissions:manage)');
@@ -383,7 +389,8 @@ export default function PermissionsManagement() {
   );
 
   /* ══ 🔭 แท็บภาพรวม (Matrix) — "ใครทำอะไรได้บ้าง" ในจอเดียว (2026-10-06 · คำสั่ง user) ═══
-     อ่านอย่างเดียว · แหล่งข้อมูลเดียวกับ 2 แท็บที่แก้ได้ (map/rows) — ห้ามอ่านจากที่อื่น
+     แหล่งข้อมูลเดียวกับ 2 แท็บที่แก้ได้ (map/rows) — ห้ามอ่านจากที่อื่น · คลิกช่องสลับค่าได้ (18/11) ผ่าน `toggle`
+     ตัวเดียวกัน (ด่าน permissions:manage · ยืนยันตอนปิดสิทธิ์ · นับแถวหลัง upsert อยู่ในนั้นแล้ว ห้ามเขียน DB เองที่นี่)
      🔴 3 สถานะของช่อง ห้ามยุบเหลือ 2: ✅ เปิด · · ปิด · – **ยังไม่มีแถวในทะเบียน**
         (แท็บที่แก้ได้ใช้ `?? false` = ยุบ "ไม่ได้ seed" ไปรวมกับ "ปิด" ซึ่งโอเคสำหรับการติ๊ก
          แต่จอภาพรวมต้องแยก ไม่งั้นอ่านว่า "ปิดไว้ตั้งใจ" ทั้งที่จริงคือ "ไม่เคยตั้ง") */
@@ -522,7 +529,8 @@ export default function PermissionsManagement() {
         <div style={{ ...s.section, padding: '10px 14px', fontSize: 11.5, color: 'var(--text2)', lineHeight: 1.7 }}>
           <b>{tr('วิธีอ่านช่อง:')}</b> <b style={{ color: 'var(--accent)' }}>✓</b> = ทำได้ ·
           <span style={{ color: 'var(--muted)' }}> · </span> = ปิดไว้ ·
-          <b style={{ color: 'var(--amber)' }}> – </b> = <b>{tr('ยังไม่เคยตั้งค่าในทะเบียน')}</b> (ไม่ใช่ "ปิดไว้ตั้งใจ" — ระบบถือว่าไม่ได้สิทธิ์ แต่ถ้าเป็นฟังก์ชันที่ควรได้ ต้องไปติ๊กให้ชัด)
+          <b style={{ color: 'var(--amber)' }}> – </b> = <b>{tr('ยังไม่เคยตั้งค่าในทะเบียน')}</b> (ไม่ใช่ "ปิดไว้ตั้งใจ" — ระบบถือว่าไม่ได้สิทธิ์ แต่ถ้าเป็นฟังก์ชันที่ควรได้ ต้องติ๊กให้ชัด)
+          {canManage && <> · <b>{tr('คลิกที่ช่องเพื่อสลับค่าได้เลย')}</b> {tr('(ปิดสิทธิ์จะถามยืนยันก่อน · มีผลทุกเครื่องทันที)')}</>}
           {matrixStat.unseeded > 0 && (
             <div style={{ marginTop: 4, color: 'var(--amber)' }}>
               ⚠️ ช่องที่ยังไม่เคยตั้งค่า <b>{matrixStat.unseeded.toLocaleString()}</b> ช่อง จากที่แสดงอยู่
@@ -577,11 +585,26 @@ export default function PermissionsManagement() {
                           const txt = dead ? '✕' : raw === true ? '✓' : raw === false ? '·' : '–';
                           const col = dead ? 'var(--border2)'
                             : raw === true ? 'var(--accent)' : raw === false ? 'var(--muted)' : 'var(--amber)';
+                          const state = dead ? 'เปิดหน้าให้ธงเสริมไม่ได้ (ระบบบล็อกในโค้ด)'
+                            : raw === true ? 'ทำได้' : raw === false ? 'ปิดไว้' : 'ยังไม่เคยตั้งค่าในทะเบียน';
+                          /* admin ล็อกในโค้ด · ช่องตาย · ไม่มี permissions:manage = ดูอย่างเดียว (เหตุผลขึ้นใน ReadOnlyNote บนจอแล้ว) */
+                          const editable = canManage && !dead && r.value !== 'admin';
+                          const isSaving = !!saving[`${r.value}:${it.key}`];
+                          const glyph = { color: col, fontWeight: 800, fontSize: 14 };
                           return (
-                            <td key={r.value} title={dead ? 'เปิดหน้าให้ธงเสริมไม่ได้ (ระบบบล็อกในโค้ด)'
-                              : raw === true ? 'ทำได้' : raw === false ? 'ปิดไว้' : 'ยังไม่เคยตั้งค่าในทะเบียน'}
-                              style={{ textAlign: 'center', padding: '5px 4px', color: col, fontWeight: 800, fontSize: 14 }}>
-                              {txt}
+                            <td key={r.value} style={{ textAlign: 'center', padding: 0 }}>
+                              {editable ? (
+                                <button type="button" className="tbtn" disabled={isSaving}
+                                  onClick={() => toggle(it.key, r.value, raw === true)}
+                                  aria-label={`${it.label} · ${r.label}: ${state}`}
+                                  title={`${state} — คลิกเพื่อ${raw === true ? 'ปิดสิทธิ์' : 'เปิดสิทธิ์'}`}
+                                  style={{ ...glyph, width: '100%', minHeight: 32, padding: '5px 4px', background: 'transparent',
+                                    border: 'none', borderRadius: 'var(--r-sm)', cursor: isSaving ? 'wait' : 'pointer', opacity: isSaving ? 0.4 : 1 }}>
+                                  {isSaving ? '…' : txt}
+                                </button>
+                              ) : (
+                                <span title={state} style={{ ...glyph, display: 'block', padding: '5px 4px' }}>{txt}</span>
+                              )}
                             </td>
                           );
                         })}
