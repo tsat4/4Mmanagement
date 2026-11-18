@@ -109,6 +109,8 @@ const RETIRED_SEEDED = {
   'mtn_repair:close_cost': 'ยุบเข้า stageOf()/mtnStepPerm — ไม่มี can() เรียกตรง (ช่องเซ็นล็อกด้วยตำแหน่ง)',
   'mtn_repair:mtn_head':   'ยุบเข้า stageOf()/mtnStepPerm — ไม่มี can() เรียกตรง',
   'production_plan:start': 'ถอด 20261001 (plan_lot_start_perm_drop) — แผน = กรอบ ไม่สร้างใบผลิต/ไม่เขียนสถานะ',
+  'scope:all_units':       'ยุบเป็นรายคน profiles.all_units (20261113_role_scope_p1 · audit 13/11 "role ≠ ขอบเขต") — โค้ดเลิกอ่านคีย์นี้แล้ว',
+  'employees:edit_all_sections': 'ยุบเข้า canWriteUnit()/ใบผ่านรายคน (20261113_role_scope_p1) — โค้ดเลิกอ่านคีย์นี้แล้ว',
 };
 
 test('permission-catalog-coverage ① คีย์ที่โค้ด can()/canSeeded()/hasPermission() เรียก ต้องมี permission_catalog ใน migration', () => {
