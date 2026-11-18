@@ -69,7 +69,8 @@ if x "cd /work-inet && TGT_URL=$U/tgt OUT=/tmp/w ./30_verify.sh" >/dev/null 2>&1
 echo "   ✅ จับได้"
 x "psql -qX $U/tgt -c \"update public.dr_products set mat_no='MAT1x' where id=1\"" >/dev/null
 echo "════ 6) ด่านปลายทาง: ห้ามเขียนฐานเดิม ════"
-if x "cd /work-inet && TGT_URL='postgresql://u:p@db.ewhdfqwfwofivojtsizn.supabase.co:5432/postgres' OUT=/tmp/w ./20_build_target.sh" 2>&1 | grep -q 'ปลายทางดูเหมือนฐานเดิม'; then
+guard_out=$(x "cd /work-inet && TGT_URL='postgresql://u:p@db.ewhdfqwfwofivojtsizn.supabase.co:5432/postgres' OUT=/tmp/w ./20_build_target.sh" 2>&1 || true)
+if grep -q 'ปลายทางดูเหมือนฐานเดิม' <<<"$guard_out"; then
   echo "   ✅ ปฏิเสธ"; else echo "❌ ด่านไม่ทำงาน"; exit 1; fi
 docker rm -f "$NAME" >/dev/null
 echo "🎉 ซ้อมผ่านทุกข้อ"

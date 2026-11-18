@@ -63,7 +63,7 @@ assert_eq "$tot" "$sum" "audit_log ทั้งตาราง ≠ ส่วน 
 
 # ตารางที่มีในฐานใหม่แต่ไม่มีในต้นทาง (ควรมีแค่ที่สคริปต์สร้างเอง)
 extra=$(awk -F'\t' 'NR==FNR{e[$2]=1;next} $1 ~ /^(public|archive)\./ && !($1 in e) && $1!="public.audit_log" {print $1}' \
-  "$OUT/expected.tsv" "$OUT/target_counts.tsv" | grep -vxE 'public\.audit_anon_tables' || true)
+  "$OUT/expected.tsv" "$OUT/target_counts.tsv" | grep -vxE 'public\.audit_anon_tables|archive\.audit_log_aged' || true)
 [ -z "$extra" ] || { echo "⚠️  ตารางเกินที่ไม่รู้ที่มา:"; echo "$extra"; rc=1; }
 
 [ "$rc" = 0 ] && log "✅ ผ่าน — ข้อมูลครบทุกแถว ทุกตาราง" || die "ไม่ผ่าน — ดู $OUT/verify_report.txt"

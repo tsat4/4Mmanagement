@@ -37,8 +37,13 @@ drop table public.audit_log_dr_import;
 create table public.audit_anon_tables (table_name text primary key);
 comment on table public.audit_anon_tables is
   'ตาราง (เดิมฝั่ง DR) ที่ anon อ่าน audit ได้ — ตั้งตอนรวมฐาน INET · ตาราง DR ใหม่ที่จออ่าน audit ผ่าน supabaseDR ต้องเติมที่นี่';
--- เติมโดยสคริปต์ 20_build_target.sh จากรายชื่อตารางของ DR dump (ดู \copy ข้างล่าง)
-\copy public.audit_anon_tables from :'dr_tables_file'
+-- เติมจากรายชื่อตารางของ DR dump (20_build_target.sh สร้างไฟล์ insert ให้) — ต้องไม่ว่าง
+\i :dr_tables_sql
+do $$ begin
+  if (select count(*) from public.audit_anon_tables) = 0 then raise exception 'รายชื่อตาราง DR ว่าง'; end if;
+  if exists (select 1 from public.audit_anon_tables where table_name in ('profiles','notifications','audit_log')) then
+    raise exception 'ชื่อตารางที่ชนกับ Main หลุดเข้ารายชื่อ anon — audit ของ Main จะรั่ว'; end if;
+end $$;
 alter table public.audit_anon_tables enable row level security;
 grant select on public.audit_anon_tables to anon, authenticated;
 create policy audit_anon_tables_read on public.audit_anon_tables for select to anon, authenticated using (true);

@@ -67,8 +67,8 @@ dump_one() { # $1=main|dr  $2=url
 \o OUTDIR/TAG_publication.txt
 select tablename from pg_publication_tables where pubname='supabase_realtime' and schemaname='public' order by 1;
 \o OUTDIR/TAG_buckets.sql
-select format('insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types) values (%L,%L,%s,%s,%L) on conflict (id) do nothing;',
-  id,name,public,coalesce(file_size_limit::text,'null'),allowed_mime_types) from storage.buckets order by id;
+select format('insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types) values (%L,%L,%L,%L,%L) on conflict (id) do nothing;',
+  id,name,public,file_size_limit,allowed_mime_types) from storage.buckets order by id;
 \o OUTDIR/TAG_storage_policies.sql
 select format('create policy %I on storage.objects as %s for %s to %s%s%s;', policyname, permissive, cmd,
   array_to_string(roles, ','), coalesce(' using ('||qual||')',''), coalesce(' with check ('||with_check||')',''))

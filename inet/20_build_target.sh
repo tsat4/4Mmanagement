@@ -68,7 +68,7 @@ got=$(count_lines '^CREATE TRIGGER .* EXECUTE FUNCTION public\.fn_audit\(\);$' "
 assert_eq "$got" "$expect" "จำนวน trigger audit ของ DR ไม่ตรงกับฐานเดิม"
 sed -i -E 's/^(CREATE TRIGGER .* EXECUTE FUNCTION public\.)fn_audit\(\);$/\1fn_audit_dr();/' "$OUT/dr.sql"
 assert_eq "$(count_lines 'public\.fn_audit\(\)' "$OUT/dr.sql")" 0 "ยังมีที่อ้าง fn_audit() ของเดิมหลงเหลือ"
-tgt_psql "$TGT_URL" -q -f "$OUT/dr.sql"
+tgt_psql "$TGT_URL" -q -f "$OUT/dr.sql" >/dev/null
 
 # ── 6. audit_log ของ DR → ตารางพัก แล้วรวม ──
 log "6. รวม audit_log (DR id +1,000,000,000)"
@@ -78,7 +78,8 @@ pg_restore --data-only -n public -t audit_log -f - "$OUT/dr.dump" \
   | tgt_psql "$TGT_URL" -q
 # ตารางของ DR ที่ anon อ่าน audit ได้ — 🔴 ตัด 3 ชื่อที่ชนออก (ชื่อเดียวกับของ Main = audit ของ Main)
 pg_restore -l "$OUT/dr.dump" | awk '$4=="TABLE" && $5=="public" {print $6}' | grep -vxE "$SKIP_TABLES" | sort -u > "$OUT/dr_tables.txt"
-tgt_psql "$TGT_URL" -q -v dr_tables_file="$OUT/dr_tables.txt" -f sql/merge_audit.sql
+sed "s/.*/insert into public.audit_anon_tables values ('&');/" "$OUT/dr_tables.txt" > "$OUT/dr_tables.sql"
+tgt_psql "$TGT_URL" -q -v dr_tables_sql="$OUT/dr_tables.sql" -f sql/merge_audit.sql >/dev/null
 
 # ── 7. realtime · storage · cron ──
 log "7. realtime publication (รวม 2 ฝั่ง)"
