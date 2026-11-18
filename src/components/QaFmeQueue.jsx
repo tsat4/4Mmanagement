@@ -28,6 +28,7 @@ import { assessFmeReadiness } from '../utils/qaFmeReadiness';
 import QaFmeBoard from './QaFmeBoard';
 
 import { tr } from '../utils/i18n';
+import { getWorkDate, getCurrentShift } from '../utils/workDate';
 const STAGE_META = {
   first:  { label: 'ชิ้นแรก',      icon: '1️⃣', color: '#f59e0b' },
   middle: { label: 'ระหว่างผลิต',  icon: '2️⃣', color: '#4d9fff' },
@@ -56,6 +57,7 @@ export default function QaFmeQueue({ scopedLineNames, onOpen }) {
   const [missing, setMissing] = useState(false);   // ยังไม่ apply migration
   const [showCfg, setShowCfg] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [showStale, setShowStale] = useState(false);
   /* preflight ก่อนเปิดสวิตช์ (2026-09-03): null = ยังไม่ได้ตรวจ · { canEnable, checks, at }
      เหตุ: dry-run จริงพบว่าเปิดตอนพาร์ทยังไม่ผูก = QA ได้คิว 51 รายการที่กดเปิดใบตรวจไม่ได้สักอัน
      และห้อง Telegram ยังไม่เลือก = ข้อความชุดแรกไปห้อง fallback → สวิตช์ต้องกันเอง ห้ามเปิดได้เฉยๆ */
@@ -163,6 +165,12 @@ export default function QaFmeQueue({ scopedLineNames, onOpen }) {
   );
 
   const late = rows.filter(o => new Date(o.due_at).getTime() < now && o.status === 'pending');
+  /* กะปัจจุบัน = วันงาน+กะของตอนนี้ (workDate.js) · acked ของกะอื่น = "ใบเปิดค้าง" ไม่ใช่งานที่ต้องวิ่งไปตอนนี้ */
+  const curWd = getWorkDate(new Date(now)), curSh = getCurrentShift(new Date(now));
+  const isStale = (o) => o.status === 'acked' && !(o.work_date === curWd && o.shift === curSh);
+  const staleRows = rows.filter(isStale);
+  const curRows = rows.filter(o => !isStale(o))
+    .sort((a, b) => (a.status === 'pending' ? 0 : 1) - (b.status === 'pending' ? 0 : 1) || String(a.due_at).localeCompare(String(b.due_at)));
   const disabled = cfg && !cfg.is_enabled;
 
   return (
@@ -291,7 +299,9 @@ export default function QaFmeQueue({ scopedLineNames, onOpen }) {
           {rows.length >= FME_QUEUE_LIMIT && (
             <div style={{ fontSize: 12, color: '#f59e0b' }}>{tr('⚠️ คิวค้างถึงเพดาน')} {FME_QUEUE_LIMIT} {tr('รายการ — อาจแสดงไม่ครบ เคลียร์งานเก่าก่อน')}</div>
           )}
-          {rows.map(o => {
+          {/* 🗂️ ใบที่ QA เปิดไว้แล้วจากกะก่อน (acked ค้าง) พับไว้ท้ายคิว — 18/11 user: คิวเต็มไปด้วย "กำลังตรวจ" ของเมื่อวาน
+              จนงานที่เกินเวลาจริงของกะนี้ถูกดันลงล่าง · ไม่ซ่อนเงียบ: บอกจำนวน + กดกางได้ */}
+          {[...curRows, ...(showStale ? staleRows : [])].map(o => {
             const sm = STAGE_META[o.stage] || STAGE_META.first;
             const isLate = o.status === 'pending' && new Date(o.due_at).getTime() < now;
             const lateMin = Math.round((now - new Date(o.due_at).getTime()) / 60000);
@@ -333,6 +343,12 @@ export default function QaFmeQueue({ scopedLineNames, onOpen }) {
               </div>
             );
           })}
+          {staleRows.length > 0 && (
+            <button type="button" className="tbtn" onClick={() => setShowStale(v => !v)}
+              style={{ alignSelf: 'flex-start', fontSize: 12.5, padding: '5px 12px' }}>
+              {showStale ? '▾' : '▸'} {tr('ใบที่เปิดค้างจากกะก่อน')} {staleRows.length} {tr('รายการ (QA เปิดใบแล้วแต่ยังไม่ปิด)')}
+            </button>
+          )}
         </div>
       )}
     </div>
