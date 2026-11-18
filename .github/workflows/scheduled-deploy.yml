@@ -4,7 +4,8 @@
 #   ไม่งั้นรอให้เงียบ QUIET นาที (push ใหม่ระหว่างรอ = ยกเลิกตัวเก่า เริ่มนับใหม่) แต่ไม่เกินครบ MAX_WAIT
 # - ไม่มีของใหม่ = ไม่ build · มีแค่ .md/.claude = เลื่อนตัวชี้ ไม่ build
 # - cron รายชั่วโมง = ตัวสำรอง (cron ของ GitHub ไม่การันตีเวลา — 13/10 ข้าม 3 รอบติด ห้ามพึ่งอย่างเดียว)
-# - ด่วน: Actions → "Scheduled deploy" → Run workflow = deploy ทันทีเสมอ
+# - ด่วน 2 ทาง: (ก) ใส่ `[deploy-now]` ในข้อความคอมมิท/merge = ข้ามการรอ deploy ทันที
+#               (ข) Actions → "Scheduled deploy" → Run workflow = deploy ทันทีเสมอ (ต้องกดเอง)
 # - จำว่า deploy ถึง commit ไหน/เมื่อไหร่ด้วย annotated tag `render-deployed`
 # - ต้องปิด Auto-Deploy ใน Render (render.yaml autoDeploy: false) ไม่งั้น build ซ้ำ 2 ทาง
 name: Scheduled deploy
@@ -65,10 +66,15 @@ jobs:
 
           if [ "$EVENT" != "workflow_dispatch" ] && [ -n "$LAST" ]; then
             if [ "$LAST" = "$HEAD_SHA" ]; then echo "ไม่มีของใหม่ — ข้าม"; exit 0; fi
-            SITE=$(git diff --name-only "$LAST" "$HEAD_SHA" | grep -vE '\.md$|^\.claude/' || true)
-            if [ -z "$SITE" ]; then echo "มีแค่ .md/.claude — เลื่อนตัวชี้ ไม่ build"; mark "$HEAD_SHA"; exit 0; fi
+            SITE=$(git diff --name-only "$LAST" "$HEAD_SHA" | grep -vE '\.md$|^\.claude/|^\.github/' || true)
+            if [ -z "$SITE" ]; then echo "มีแค่ .md/.claude/.github — เลื่อนตัวชี้ ไม่ build"; mark "$HEAD_SHA"; exit 0; fi
 
-            if [ "$EVENT" = "push" ]; then
+            # 🚀 ป้าย [deploy-now] ในข้อความคอมมิท = ข้ามการรอ deploy ทันที (18/11 · คำสั่ง user
+            #    "ให้ขึ้นเดี๋ยวนี้เลย") — ปุ่ม Run workflow ต้องใช้สิทธิ์ actions:write ซึ่ง token
+            #    ของ Claude ไม่มี ⇒ ทางนี้ใช้แค่ push ธรรมดาที่มีอยู่แล้ว
+            if [ "$EVENT" = "push" ] && git log --format=%B "$LAST..$HEAD_SHA" | grep -qiF '[deploy-now]'; then
+              echo "เจอป้าย [deploy-now] ในคอมมิท — ข้ามการรอ ส่ง deploy ทันที"
+            elif [ "$EVENT" = "push" ]; then
               NOW=$(date +%s)
               DUE=$(( LAST_AT + MAX_WAIT_MIN*60 ))
               if [ "$NOW" -lt "$DUE" ]; then

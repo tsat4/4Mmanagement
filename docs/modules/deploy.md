@@ -48,8 +48,15 @@ push เข้า main วันละถึง 31 ครั้ง (หลาย
 - **cron รายชั่วโมงเหลือเป็นตัวสำรองเท่านั้น** — 13/10 cron ของ GitHub ข้าม 3 รอบติด (11:07/12:07/13:07) ทั้งที่ไฟล์ถูก
   ⇒ 🔴 **ห้ามกลับไปพึ่ง schedule อย่างเดียว**
 - repo เป็น **public** ⇒ นาที GitHub Actions ไม่จำกัด การ `sleep` รอใน job จึงไม่มีค่าใช้จ่าย · **ถ้า repo เปลี่ยนเป็น private ต้องคิดใหม่** (เพดานฟรี 2,000 นาที/เดือน)
-- **ด่วน** (บั๊กหน้างาน): GitHub → Actions → *Scheduled deploy* → **Run workflow** = deploy ทันทีเสมอ
-  · AI session สั่ง Run workflow ไม่ได้ (MCP ได้ 403) — ต้องให้ user กด
+- **ด่วน (บั๊กหน้างาน) มี 2 ทาง:**
+  1. 🚀 **ใส่ `[deploy-now]` ในข้อความคอมมิท/merge** (18/11 · คำสั่ง user "ให้ขึ้นเดี๋ยวนี้เลย")
+     ⇒ workflow ข้ามการรอ ส่ง deploy ทันที · **ทางเดียวที่ AI session ทำเองได้** (ใช้แค่ push ธรรมดา)
+     · มองหาป้ายในคอมมิทช่วง `render-deployed..main` (ไม่สนตัวพิมพ์เล็ก/ใหญ่)
+  2. GitHub → Actions → *Scheduled deploy* → **Run workflow** = deploy ทันทีเสมอ — **ต้องให้ user กด**
+     · 🔴 AI สั่งเองไม่ได้: `workflow_dispatch` ต้องใช้สิทธิ์ **`actions: write`** ซึ่ง token ของ Claude GitHub App
+       ไม่มี (ได้ 403 `Resource not accessible by integration`) · **สิทธิ์นี้เพิ่มเองไม่ได้จากฝั่งโปรเจค**
+       — เป็นชุดสิทธิ์ของ GitHub App ไม่ใช่ setting ของ repo (ยืนยัน 18/11)
+- 🧹 **คอมมิทที่แตะแค่ `.github/`** = เลื่อน tag ไม่ build (เหมือน `.md`/`.claude`) — แก้ CI ไม่ใช่การแก้หน้าเว็บ
 - hook ตอบไม่ใช่ 2xx = งานแดง ไม่เลื่อน tag · secret ไม่มี = push/cron ขึ้น warning / กดมือขึ้น error
 - ⚠️ tag เลื่อนตอน Render **รับคิว** ไม่ใช่ตอน build ผ่าน — build ล้มบน Render ต้องกด Run workflow ซ้ำหลังแก้
 - 🔴 **Render Auto-Deploy ต้องปิด** — service เป็น **Blueprint managed** ⇒ คุมด้วย `autoDeploy: false` ใน `render.yaml` (ปิดใน dashboard อย่างเดียว sync แล้วอาจเปิดกลับ) ไม่งั้น build ซ้ำ 2 ทาง
