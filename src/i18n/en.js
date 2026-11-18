@@ -10389,6 +10389,10 @@ const EN = {
   'เซ็นแล้ว': 'signed',
   'ยังไม่เซ็น (ไม่ล็อกงาน — ปิดใบได้ แต่เอกสารยังไม่ครบ)':
     'not signed yet (does not block work — the MO can close, but the paperwork is incomplete)',
+  'ตัวกรองเพิ่มเติม': 'More filters',
+  'ตั้งไว้': 'Set',
+  'เปิดตัวกรองที่นานๆ ใช้': 'Show the rarely-used filters',
+  'งาน PR รอ': 'PR waiting',
 };
 
 export default EN;

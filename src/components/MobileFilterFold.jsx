@@ -42,7 +42,7 @@ export function splitFilterChildren(children) {
 }
 
 /** ตัวกรองที่ตั้งไว้ (ไม่ใช่ค่า "ทั้งหมด") → ป้ายสั้นๆ ของค่าที่เลือก เช่น ['🔵 ยังไม่ปิด'] */
-function activeLabels(root) {
+export function activeLabels(root) {   // ใช้ร่วมกับ FilterMore (จอคอม) 18/11
   if (!root) return [];
   const out = [];
   root.querySelectorAll('select').forEach(s => { if (s.selectedIndex > 0) out.push((s.options[s.selectedIndex]?.text || '').trim()); });

@@ -61,6 +61,7 @@ import Page from '../components/Page';
 import FilterBar from '../components/FilterBar';
 import TimeRangeBar from '../components/TimeRangeBar';
 import Segmented from '../components/Segmented';
+import FilterMore from '../components/FilterMore';
 import SearchInput from '../components/SearchInput';
 import useTimeRange from '../utils/useTimeRange';
 import fetchAllRows from '../utils/fetchAllRows';
@@ -1127,12 +1128,17 @@ const HANDOFF_CAP = 2000;
             <b> {trI18n('เวลาที่กดแจ้ง')}</b> {trI18n('(เช้า 08:00–19:59 · ดึก 20:00–07:59) — ใบที่แจ้งย้อนหลังจะตกกะตามเวลาที่กด ไม่ใช่กะที่เครื่องเสียจริง')}</InfoMore>}
         >
           <select value={fDept} onChange={e => setFDept(e.target.value)}><option value="">{trI18n(ALL.unit)}</option><TeamOpts list={mtnDepts} /></select>
-          {/* dropdown ไลน์ = <LineSelect> เท่านั้น (UI-CONVENTIONS §5.3 ข้อ 9) — scopedLineObjs กรอง scope ไว้แล้ว · 2026-09-07 */}
-          <LineSelect lines={scopedLineObjs} value={fLine} onChange={setFLine} placeholder={ALL.line} />
           <select value={fStatus} onChange={e => setFStatus(e.target.value)}>
             <option value="all">{trI18n(ALL.status)}</option><option value="open">{trI18n('ยังไม่ปิด')}</option>
             {Object.entries(STATUS_META).map(([k, m]) => <option key={k} value={k}>{stripIcon(trI18n(m.label))}</option>)}
           </select>
+          {/* 🧰 18/11 (audit Choice overload — แถบนี้เคยมี 25 control): ตัวกรองหลักที่ใช้ทุกวัน = หน่วยงาน · สถานะ · ค้นหา
+              ที่เหลือ (ไลน์ · กะ · ประเภท · รอขั้น · งาน PR · เอกสาร MO) อยู่หลัง "ตัวกรองเพิ่มเติม" — กางเองเมื่อเปิดมาโดยตั้งค่าไว้แล้ว
+              (ลิงก์จากกระดิ่ง/คิวงานส่ง ?pr= ?wait= ?doc=) · สัญญาณเหลืองของ PR/เอกสารค้างย้ายไปอยู่ที่ปุ่ม ไม่หายไปกับการพับ */}
+          <FilterMore id="mo-more-filters" defaultOpen={!!(fLine || fShift || fRepairType || fWait || fPr || fDoc)}
+            attention={prCounts.waiting && !fPr ? `${trI18n('งาน PR รอ')} ${prCounts.waiting}` : (docPending.known && docPending.n > 0 && !fDoc ? `${trI18n('รอเพิ่มรายละเอียด')} ${docPending.n}` : null)}>
+          {/* dropdown ไลน์ = <LineSelect> เท่านั้น (UI-CONVENTIONS §5.3 ข้อ 9) — scopedLineObjs กรอง scope ไว้แล้ว · 2026-09-07 */}
+          <LineSelect lines={scopedLineObjs} value={fLine} onChange={setFLine} placeholder={ALL.line} />
           {/* กะ = 3 ตัวเลือก ⇒ <Segmented> ไม่ใช่ dropdown (UI-STANDARD §3) */}
           <Segmented value={fShift} onChange={setFShift} label={trI18n('กะที่แจ้ง')} options={SHIFT_OPTIONS} />
           {/* ประเภทงานซ่อมมาจากทะเบียน `mtn_repair_types` — ห้าม hardcode BM/PM ในหน้า */}
@@ -1165,6 +1171,7 @@ const HANDOFF_CAP = 2000;
               </option>
             </select>
           )}
+          </FilterMore>
           <SearchInput value={fText} onChange={setFText} fields="เลข MO / เครื่อง / ปัญหา / ชื่อผู้แจ้ง / ช่างที่รับงาน" />
           <span className="spacer" />
           <span className="filter-count">{shown.length} {trI18n('รายการ')}</span>
