@@ -19,8 +19,14 @@
      node scripts/restamp-dt-rule.mjs                 # dry-run (ไม่เขียนอะไร)
      node scripts/restamp-dt-rule.mjs --from 2026-11-01 --to 2026-11-17
      node scripts/restamp-dt-rule.mjs --apply         # เขียนจริง
+
+   🔌 โหมดออฟไลน์ (คอนเทนเนอร์ของ Claude ต่อ Supabase ไม่ได้ — network policy · 18/11):
+     node scripts/restamp-dt-rule.mjs --dump <dump.json> [--sql out.sql]
+     dump = { sessions, breaks, prods, kstds, orders, dts } หน้าตาเหมือนที่โหลดจาก DB เป๊ะ
+     (คิวรีที่ผลิต dump อยู่ใน docs/modules/oee.md §ไล่คำนวณ %A ย้อนหลัง)
    ══════════════════════════════════════════════════════════════════════════════════════ */
 import { createClient } from '@supabase/supabase-js';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { computeSessionOee } from '../src/utils/oee.js';
 
 const URL = process.env.VITE_SUPABASE_DR_URL || 'https://eyhclzkifitbhbljgoav.supabase.co';
@@ -29,6 +35,8 @@ const db = createClient(URL, KEY);
 
 const arg = (k, d = null) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
 const APPLY = process.argv.includes('--apply');
+const DUMP  = arg('--dump');    // โหมดออฟไลน์: อ่าน input จากไฟล์แทน DB
+const SQL   = arg('--sql');     // โหมดออฟไลน์: เขียน SQL ออกไฟล์แทนการยิง DB
 const FROM  = arg('--from', '2026-11-01');
 const TO    = arg('--to', new Date().toISOString().slice(0, 10));
 const TOL   = Number(arg('--tol', '0.05'));   // %A ที่ยอมให้ต่างจากที่ stamp ไว้ (จุดทศนิยม)
@@ -59,24 +67,30 @@ async function all(table, select, build = (q) => q) {
 const main = async () => {
   console.log(`\n🧾 ไล่คำนวณ %A/OEE ใหม่ · ${FROM} → ${TO} · ${APPLY ? '⚠️  เขียนจริง' : 'dry-run (ไม่เขียน)'}\n`);
 
-  const [sessions, breaks, prods, kstds] = await Promise.all([
-    all('production_sessions', 'id, line_name, shift, work_date, start_time, end_time, shift_min, oee_a, oee_p, oee_q, oee, ct_snapshot, break_snapshot',
-      q => q.eq('status', 'closed').gte('work_date', FROM).lte('work_date', TO).order('work_date')),
-    all('break_policies', '*', q => q.eq('is_active', true)),
-    all('dr_products', 'mat_no, cycle_time_sec, pair_mat_no, process_type, name, p_no'),
-    all('kanban_standards', 'mat_no, dr_products(cycle_time_sec)', q => q.eq('is_active', true)),
-  ]);
-  console.log(`โหลดกะที่ปิดแล้ว ${sessions.length} กะ · นโยบายพัก ${breaks.length} · สินค้า ${prods.length}`);
-
-  const ids = sessions.map(s => s.id);
   const chunk = (a, n) => a.reduce((o, v, i) => ((o[Math.floor(i / n)] ||= []).push(v), o), []);
-  const orders = [], dts = [];
-  for (const c of chunk(ids, 100)) {
-    const [o, d] = await Promise.all([
-      all('prod_orders', 'id, session_id, status, qty, qty_ok, qty_actual, mat_no, opened_at, confirmed_at', q => q.in('session_id', c)),
-      all('downtime_logs', 'id, session_id, started_at, ended_at, duration_min, downtime_type_id, dr_downtime_types(category, planned_cap_min, name_th)', q => q.in('session_id', c)),
+  let sessions, breaks, prods, kstds, orders = [], dts = [];
+
+  if (DUMP) {
+    /* 🔌 ออฟไลน์: input ชุดเดียวกับที่โหลดจาก DB — ตรรกะข้างล่างใช้ร่วมกัน ห้ามแยกเป็นสูตรที่ 2 */
+    ({ sessions, breaks, prods, kstds, orders, dts } = JSON.parse(readFileSync(DUMP, 'utf8')));
+    sessions = (sessions || []).sort((a, b) => String(a.work_date).localeCompare(String(b.work_date)));
+    console.log(`อ่าน dump: กะ ${sessions.length} · นโยบายพัก ${breaks.length} · สินค้า ${prods.length}`);
+  } else {
+    [sessions, breaks, prods, kstds] = await Promise.all([
+      all('production_sessions', 'id, line_name, shift, work_date, start_time, end_time, shift_min, oee_a, oee_p, oee_q, oee, ct_snapshot, break_snapshot',
+        q => q.eq('status', 'closed').gte('work_date', FROM).lte('work_date', TO).order('work_date')),
+      all('break_policies', '*', q => q.eq('is_active', true)),
+      all('dr_products', 'mat_no, cycle_time_sec, pair_mat_no, process_type, name, p_no'),
+      all('kanban_standards', 'mat_no, dr_products(cycle_time_sec)', q => q.eq('is_active', true)),
     ]);
-    orders.push(...o); dts.push(...d);
+    console.log(`โหลดกะที่ปิดแล้ว ${sessions.length} กะ · นโยบายพัก ${breaks.length} · สินค้า ${prods.length}`);
+    for (const c of chunk(sessions.map(s => s.id), 100)) {
+      const [o, d] = await Promise.all([
+        all('prod_orders', 'id, session_id, status, qty, qty_ok, qty_actual, mat_no, opened_at, confirmed_at', q => q.in('session_id', c)),
+        all('downtime_logs', 'id, session_id, started_at, ended_at, duration_min, downtime_type_id, dr_downtime_types(category, planned_cap_min, name_th)', q => q.in('session_id', c)),
+      ]);
+      orders.push(...o); dts.push(...d);
+    }
   }
   const by = (rows) => rows.reduce((m, r) => ((m[r.session_id] ||= []).push(r), m), {});
   const ordBy = by(orders), dtBy = by(dts);
@@ -136,6 +150,23 @@ const main = async () => {
   ✍️  ต้องแก้                 ${stat.changed}
   %A เฉลี่ย ${avg(r => r.aOld)} → ${avg(r => r.aNew)}  (${avg(r => r.aNew - r.aOld)})`);
   if (worst.length) console.log('\n  ตัวอย่างกะที่คำนวณย้อนไม่ตรง (ข้าม):\n   ' + worst.join('\n   '));
+
+  /* 🔌 ออฟไลน์: ออกเป็น SQL (log ค่าเดิมก่อน แล้วค่อยเขียนทับ — ลำดับเดียวกับทาง DB เป๊ะ) */
+  if (SQL) {
+    const q = (v) => (v == null ? 'null' : String(v));
+    const L = ['begin;', `insert into public.oee_restamp_log
+  (session_id, reason, oee_a_before, oee_a_after, oee_before, oee_after, moved_min, note) values`];
+    L.push(rows.map(r => `  ('${r.s.id}', 'dt-rule-20261116', ${q(r.aOld)}, ${q(r.aNew)}, ` +
+      `${q(r.oeeOld)}, ${q(r.oeeNew)}, ${q(r.movedMin)}, 'นิยาม downtime ใหม่ 16/11 — %P/%Q ไม่แตะ')`).join(',\n') + ';');
+    for (const r of rows) {
+      L.push(`update public.production_sessions set oee_a = ${q(r.aNew)}` +
+        `${r.oeeNew == null ? '' : `, oee = ${q(r.oeeNew)}`} where id = '${r.s.id}';`);
+    }
+    L.push('commit;');
+    writeFileSync(SQL, L.join('\n') + '\n');
+    console.log(`\n📝 SQL → ${SQL} (${rows.length} กะ)\n`);
+    return;
+  }
 
   if (!APPLY) { console.log('\n(dry-run — ยังไม่เขียนอะไรลงฐาน · ใส่ --apply เพื่อเขียนจริง)\n'); return; }
 
