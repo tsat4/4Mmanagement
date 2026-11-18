@@ -16,10 +16,9 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import useIsMobile from '../utils/useIsMobile';
 import useLang from '../utils/useLang';
 import { stripIcon } from './Icon';
+import { prefersReduced } from '../utils/motion';   // 18/11: ของกลางเรื่องขยับ (reduced-motion / perf lite)
 
 const IND_EASE = 'cubic-bezier(.4,1.2,.45,1)';
-const prefersReduced = () => typeof window !== 'undefined' && typeof window.matchMedia === 'function'
-  && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export default function TabBar({ tabs, value, onChange, size, audit = false, className, style, right }) {
   const isMobile = useIsMobile();

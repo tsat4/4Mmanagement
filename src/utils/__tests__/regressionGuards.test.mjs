@@ -490,6 +490,16 @@ const RULES = [
     allow: { 'src/pages/Report.jsx': 'ใบพิมพ์ OT เป็น HTML string ใน template literal (กระดาษไทย ไม่แปล · {tr()} ในสตริงพิมพ์ออกมาตรงตัว — บั๊กรอบ 2 แก้ 13/11)' },
   },
   {
+    id: 'motion-shared-stagger',
+    scan: ['src/pages', 'src/components'], ext: ['.jsx'],
+    /* สูตร fade-up/stagger ประกาศซ้ำในหน้า — จอ TV/reduced-motion จะไม่นิ่งเพราะไม่ได้ผ่าน motionOff() ของกลาง */
+    re: /const\s+(?:FADE_UP|stagger)\s*=/g,
+    why: '18/11 (user: ก๊อป ERP): animation ทั้งระบบต้องนิ่งเองบนจอ TV (data-perf=lite) และเมื่อผู้ใช้ตั้ง reduced-motion — '
+       + 'ทำได้ที่เดียวคือ utils/motion.js · ก๊อปสูตรไว้ในหน้า = หน้านั้นขยับบน TV ทั้งที่กฎ §2 บอกว่านิ่ง',
+    fix: "import { stagger } from '<path>/utils/motion' (UI-CONVENTIONS §6.34b)",
+    allow: {},
+  },
+  {
     id: 'scrim-token-only',
     scan: ['src/pages', 'src/components'], ext: ['.jsx'],
     /* ม่านหลัง modal (fixed เต็มจอ) ที่เขียนสีดำโปร่งเอง — วัดจริง 13/11: 225 modal มีความมืด 8 ค่า (0.5→1.0) ใน 14 หน้ามืดไม่เท่ากันในหน้าเดียว */
