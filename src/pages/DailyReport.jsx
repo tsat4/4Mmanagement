@@ -4270,7 +4270,11 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                           style={{ fontSize: 11, padding: '3px 9px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text2)', cursor: 'pointer', fontWeight: 700 }}>{tr('ไม่เลือกเลย')}</button>
                       </div>
                       {carryOrders.map(o => {
-                        const age = debtAgeDays(o.production_sessions?.work_date, selSession?.work_date);
+                        /* 🔴 17/11 — "ค้างมากี่วัน" ต้องนับจาก **ต้นทางจริง** ไม่ใช่จากกะที่ส่งมา
+                           ใบที่วนมา 5 กะจะขึ้น "1 วัน" ตลอด (กะก่อน = เมื่อวาน) = จอโกหก
+                           ⇒ ใช้ first_opened_at/carry_hops ที่ DB จำไว้ · ไม่มี = ถอยไปแบบเดิมเป๊ะ */
+                        const org = carryAgeOf(o);
+                        const age = org?.days ?? debtAgeDays(o.production_sessions?.work_date, selSession?.work_date);
                         const on  = carryPick.has(o.id);
                         return (
                           <label key={o.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 4px', cursor: 'pointer', borderBottom: '1px solid var(--border2)' }}>
@@ -4282,7 +4286,10 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                             <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 800, color: 'var(--text2)', whiteSpace: 'nowrap', flexShrink: 0 }}>
                               {debtPcs(o).toLocaleString()} {tr('ชิ้น')}
                               {age != null && age > 0 && (
-                                <span style={{ color: age >= 7 ? 'var(--red)' : 'var(--amber)', fontWeight: 700 }}> · {age} {tr('วัน')}</span>
+                                <span title={org?.firstMs ? `เปิดครั้งแรก ${fmtDateTime(org.firstMs)} · ยกข้ามกะมาแล้ว ${org.hops} ครั้ง` : undefined}
+                                  style={{ color: age >= 7 ? 'var(--red)' : 'var(--amber)', fontWeight: 700 }}>
+                                  {' '}· {age} {tr('วัน')}{org?.hops > 1 ? ` (${org.hops} ${tr('กะ')})` : ''}
+                                </span>
                               )}
                             </span>
                           </label>
