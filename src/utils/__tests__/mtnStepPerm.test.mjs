@@ -2,7 +2,7 @@
 // pure module (ไม่ import supabase) → import ตรงได้เลย ไม่ต้อง bundle
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { canDoStep, canSignMtnApproval, lastStep, canSkipQa, canCancelOwnMo, isOrderReporter, orderReporterText, isQaSkipped, isWaitingQa, MTN_STEPS, stepDenyHint, stepLabel, stepMeta } from '../mtnStepPerm.js';
+import { canDoStep, canSignMtnApproval, lastStep, canSkipQa, canCancelOwnMo, isOrderReporter, orderReporterText, isQaSkipped, isWaitingQa, MTN_STEPS, stepDenyHint, stepLabel, stepMeta, moFlow, moPendingAcks } from '../mtnStepPerm.js';
 
 // ผูก role เป็นชุดสิทธิ์ง่ายๆ: keys = คีย์ที่ role นั้นถือ
 const perms = (keys, seededKeys = null) => ({
@@ -827,4 +827,49 @@ test('🙋 canCancelOwnMo — คนอื่นถอนใบเราไม�
         (ขั้น 4/6/7 ข้ามด่านตำแหน่งได้ถ้าเป็นผู้เปิดใบ) ⇒ หลวม = คนชื่อคล้ายเซ็นแทนกันได้ */
   assert.equal(canCancelOwnMo({ status: 'pending', reporter_prod: 'สมชาย ใจดี' },
     { fullName: 'นายสมชาย ใจดี' }), false);
+});
+
+/* ══ ✍️ ลายเซ็น "นอกลำดับขั้น" ต้องมีที่บอกบนจอ (2026-11-18 · หน้างานแจ้ง) ══
+   แถบขั้นบนใบบอกว่า "รอ: ผจก.ฝ่ายที่แจ้ง อนุมัติปิดใบ" เหมือนเหลือขั้นเดียว
+   แต่ใบจริง O-MTN.2026/11-40 ยังค้างลายเซ็นไม่ล็อกงานอีก 2 ช่องที่ไม่โผล่ที่ไหนเลย
+   คำ user: "flow เหมือนขาดแค่ขั้นสุดท้าย แต่ขั้นไม่บล็อกงานไม่มีบอกเลย" */
+const MO40 = {                      // ใบจริงจากฐาน DR (ภาพหน้าจอ 18/11)
+  mo_no: 'O-MTN.2026/11-40', status: 'handover', current_step: 7,
+  mtn_dept: 'maintenance', purpose: 'repair', line_name: 'Line 60',
+  mo_approved_by: 'นายอำพรรณ์ กมลรักษ์', mo_ack_at: null,
+  dept_manager_name: 'ดุลยทรรศน์ ลาภธนสารสมบัติ', dept_manager_at: null, plant_manager_at: null,
+};
+
+test('✍️ ใบจริง O-MTN.2026/11-40 — ต้องรายงานลายเซ็นค้าง 2 ช่อง', () => {
+  const acks = moPendingAcks(MO40);
+  assert.deepEqual(acks.map(a => a.key), ['mtn_mgr', 'dept']);
+  assert.ok(acks.every(a => a.done === false));
+  /* ต้องมากับ moFlow() ด้วย — จอวาดจากตัวนั้นตัวเดียว */
+  assert.deepEqual(moFlow(MO40).acks.map(a => a.key), ['mtn_mgr', 'dept']);
+});
+
+test('🔴 ไม่ได้ select คอลัมน์มา = ไม่รู้ ห้ามเดาว่าค้าง', () => {
+  /* จอที่ดึงคอลัมน์ไม่ครบต้องไม่ขึ้นป้าย "ยังไม่เซ็น" มั่วๆ */
+  assert.deepEqual(moPendingAcks({ status: 'handover', mtn_dept: 'maintenance', purpose: 'repair' }), []);
+  const noAck = moPendingAcks({ ...MO40, mo_ack_at: undefined });
+  assert.deepEqual(noAck.map(a => a.key), ['dept'], 'ขาดเฉพาะช่องที่ไม่รู้ ช่องที่รู้ยังต้องรายงาน');
+  const noDept = moPendingAcks({ ...MO40, dept_manager_at: undefined });
+  assert.deepEqual(noDept.map(a => a.key), ['mtn_mgr']);
+});
+
+test('เซ็นแล้วต้องบอกว่าเซ็นแล้ว · ไม่มีช่องนั้นในใบ = ไม่รายงาน', () => {
+  const signed = moPendingAcks({ ...MO40, mo_ack_at: '2026-11-18T01:00:00Z', dept_manager_at: '2026-11-18T01:00:00Z' });
+  assert.deepEqual(signed.map(a => [a.key, a.done]), [['mtn_mgr', true]], 'ช่องที่เซ็นแล้วยังโชว์ (ให้เห็นว่าครบ) · ช่อง dept หลุดจากลิสต์เพราะไม่ค้างแล้ว');
+  /* ไม่เคยระบุชื่อ ผจก.ส่วนซ่อมบำรุง = ใบนี้ไม่มีช่องนั้น ไม่ใช่ "ค้าง" */
+  assert.deepEqual(moPendingAcks({ ...MO40, mo_approved_by: null }).map(a => a.key), ['dept']);
+});
+
+test('🔴 ใบ JIG/DIE/PD ไม่มีช่องพวกนี้ — ต้องไม่ขึ้นอะไรเลย', () => {
+  assert.deepEqual(moPendingAcks({ status: 'handover', current_step: 6, mtn_dept: 'jig', item_type: 'JIG' }), []);
+});
+
+test('🔴 ใบที่ยังติดด่านอนุมัติจริง (blocked) ไม่ต้องซ้ำที่นี่ — มีแผงของตัวเองแล้ว', () => {
+  /* งานปรับปรุง = ด่านจริง (บล็อกขั้น 2-3) ⇒ ackPending=false ⇒ ไม่เข้าลิสต์นี้ */
+  const improve = { ...MO40, status: 'pending', current_step: 1, purpose: 'improve', mo_approved_by: null };
+  assert.deepEqual(moPendingAcks(improve), []);
 });
