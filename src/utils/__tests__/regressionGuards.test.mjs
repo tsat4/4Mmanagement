@@ -9473,6 +9473,38 @@ test('↩️ mo-list-shows-resubmit — ใบที่ถูกตีกลั�
       + '   ขาด case = ตอบ 400 unknown event ⇒ ทั้ง Telegram และกระดิ่งเงียบสนิท\n');
   }
 });
+test('🧾 pr-quote-purge-on-close — ใบเสนอราคา: ลบไฟล์ตอนปิดใบ แต่ห้ามลบประวัติ', () => {
+  /* why (18/11 · Case ท้าย PDF ทีม MTN): *"ค่าซ่อมหรืออุปกรณ์ที่ซื้อไม่บ่อย สามารถให้แนบใบเสนอราคาได้
+     ****แต่จะทำยังไงให้ใบเสนอราคาไม่ไปเป็นขยะในระบบ"*
+     user ตัดสิน: **"ปิดใบแบบสมบูรณ์ละลบได้เลย"** (ไม่มีช่วงเก็บ — ผมเสนอ 90 วันแล้ว user ยืนยันลบทันที)
+     ⇒ ชดเชยด้วยการเก็บ `quote_file_name` + `quote_deleted_at` ไว้ตลอด
+     🔴 **ลบไฟล์ ≠ ลบประวัติ** — บัญชีถามย้อนกลับต้องยังตอบได้ว่าเคยมีใบเสนอราคาชื่ออะไร ลบเมื่อไหร่
+     🔴 **ลำดับตายตัว: อัปเดตแถวสำเร็จก่อน แล้วค่อยลบไฟล์** (กฎเขียน DB ข้อ 2 — ลบไฟล์ก่อน = ไฟล์หาย
+        ถาวรแต่แถวยังชี้ URL เดิม) */
+  const u = readFileSync(join(ROOT, 'src/utils/prQuote.js'), 'utf8');
+  assert.match(u, /txt\(order\?\.status\) === 'closed'/,
+    '\n\n❌ "ปิดสมบูรณ์" ต้องเป็น closed เท่านั้น — cancelled/rejected/transferred ไม่ใช่การจบงาน\n');
+  const lib = readFileSync(join(ROOT, 'src/lib/moQuotes.js'), 'utf8');
+  const iRows = lib.indexOf('checkWriteRows'), iDel = lib.indexOf('.remove(paths)');
+  assert.ok(iRows > 0 && iDel > iRows,
+    '\n\n❌ ต้องอัปเดตแถว (checkWriteRows) ให้สำเร็จก่อน แล้วค่อย storage.remove()\n'
+    + '   ลบไฟล์ก่อน = ไฟล์หายถาวรแต่แถวยังชี้ URL เดิม ⇒ จอขึ้นรูปเสีย กู้ไม่ได้ ไม่มี error ฟ้อง\n');
+  assert.doesNotMatch(lib, /quote_file_name: null|quote_file_name:\s*''/,
+    '\n\n❌ ห้ามล้าง quote_file_name — ชื่อไฟล์คือหลักฐานเดียวที่เหลือว่าเคยมีใบเสนอราคา\n');
+
+  const c = readFileSync(join(ROOT, 'src/components/MtnPurchase.jsx'), 'utf8');
+  /* 🔴 AttachImage เป็น named export — default ของไฟล์นั้นคือ ImageLightbox (คนละ props)
+     import ผิดตัว = build ผ่านแต่รูปไม่ขึ้นเงียบๆ (พลาดจริงรอบนี้ 18/11) */
+  assert.doesNotMatch(c, /import\s+AttachImage\s+from/,
+    '\n\n❌ AttachImage เป็น named export — `import AttachImage from` ได้ ImageLightbox มาแทน\n'
+    + '   build ผ่าน แต่รูปใบเสนอราคาไม่ขึ้นบนจอเงียบๆ · ต้องเป็น `import { AttachImage }`\n');
+  assert.ok(/export const PR_COLS = '[^']*\bquote_img\b/.test(c),
+    '\n\n❌ quote_img ไม่อยู่ใน PR_COLS — quoteState() จะตอบ unknown ทั้งจอ (รูปไม่ขึ้น ตัวกวาดไม่ทำงาน)\n');
+
+  const page = readFileSync(join(ROOT, 'src/pages/MtnRepair.jsx'), 'utf8');
+  assert.match(page, /purgeMoQuotes\(fresh\)/,
+    '\n\n❌ ขั้นปิดใบไม่ได้เรียก purgeMoQuotes — ไฟล์ใบเสนอราคาจะกองค้างตลอดไป (= "ขยะในระบบ" ที่หน้างานกลัว)\n');
+});
 test('🧾 pr-group-shows-stragglers — ใบ PR ที่มีหลายรายการ ต้องบอกว่ารายการไหนตกหล่น', () => {
   /* why (18/11 · หน้างานแจ้ง ข้อ 1): *"บาง PR เปิดหลายชิ้น ใน Vendor เจ้าเดียว —
      ควรเพิ่มรายการใน 1 PR ได้"* · ของจริง O-MTN.2026/10-47 = **19 แถวใช้เลข PR เดียวกัน**
@@ -11654,7 +11686,7 @@ const UPLOAD_SITES = {
   'src/components/SparePartMaster.jsx': { n: 1, via: 'ImageCropModal 480px (รูปอะไหล่)',       tokens: ['ImageCropModal'] },
 
   /* ── helper กลางของแต่ละสายงาน (รับ File แล้วบีบเองในไฟล์) ───────────────── */
-  'src/utils/mtnImage.js':     { n: 1, via: 'resizeMoImage 1024px webp (รูปใบ MO)',          tokens: ['resizeImg'] },
+  'src/utils/mtnImage.js':     { n: 1, via: 'resizeMoImage 1024px webp (รูปใบ MO) + compressToWebp 2560px (ใบเสนอราคา — ห้ามย่อ/ครอบ ตัวเลขต้องอ่านออก)', tokens: ['resizeImg', 'compressToWebp'] },
   'src/utils/qualityImage.js': { n: 1, via: 'resizeQualityImage 1024px webp (รูปของเสีย)',   tokens: ['resizeImg'] },
   'src/utils/actionImage.js':  { n: 1, via: 'resizeActionImage 1024px webp (รูปปิด action)', tokens: ['resizeImg'] },
   'src/utils/fileAttach.js':   { n: 1, via: 'imageCompression 2560px/2.5MB (ไฟล์แนบ · PDF/Office ส่งดิบ)', tokens: ['imageCompression'] },
