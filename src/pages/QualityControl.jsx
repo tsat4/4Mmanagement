@@ -42,10 +42,11 @@ import ParetoChart from '../components/ParetoChart';
 import { statusColor, toneOf } from '../utils/statusTone';
 import { classifyAbc } from '../utils/pareto';
 import PageHeader from '../components/PageHeader';
-import useTabParam from '../utils/useTabParam';
+import useTabParam, { useMergeParams } from '../utils/useTabParam';
 import MaterialRequests from '../components/MaterialRequests';
 import { nextDocNo } from '../utils/qaDocNo';
 import QaCheckSheet from '../components/QaCheckSheet';
+import QaFmeQueue from '../components/QaFmeQueue';
 import PeChangeRequests from '../components/PeChangeRequests';
 import QaClaims from '../components/QaClaims';
 import QualityBins from '../components/QualityBins';
@@ -2130,6 +2131,8 @@ const TABS = [
   // ใบตรวจ = หน้า "ใช้งาน" ของมาตรฐานที่ตั้งไว้ใน /qa-setup (2026-08-04) — วางถัดจาก Dashboard
   // เพราะเป็นงานประจำวันที่ QC เปิดบ่อยสุด ส่วน SPC/NCR/CAPA เป็นงานตามหลัง
   { key: 'sheet',       icon: '✅', label: 'ใบตรวจ (Check Sheet)' },
+  /* 📅 18/11 แยกจากแท็บใบตรวจ (user "คิวตรวจถีบฟอร์มลงไปข้างล่าง") — กดเปิดใบตรวจ = เด้งไป ?tab=sheet&fme=<id> */
+  { key: 'fme',         icon: '📅', label: 'แผนตรวจ (ผลิตเรียก)' },
   { key: 'spc',         icon: '📐', label: 'SPC / Cp-Cpk' },
   { key: 'ncr',         icon: '🚨', label: 'NCR ของเสีย' },
   // เคลมลูกค้า = ของเสียที่หลุดออกไปถึงลูกค้า — วางคู่ NCR เพราะอ่านด้วยกัน (2026-08-17)
@@ -2152,7 +2155,7 @@ const TABS = [
    งานรอตรวจ = มีคนรอผล QA อยู่ · ของเสีย/ปัญหา = ไล่ย้อนหาสาเหตุ */
 const qcTab = (k) => { const t = TABS.find(x => x.key === k); return { key: t.key, label: `${t.icon} ${t.label}` }; };
 const QC_TAB_GROUPS = [
-  qcTab('dashboard'), qcTab('sheet'),
+  qcTab('dashboard'), qcTab('fme'), qcTab('sheet'),
   { key: 'queue',   label: '🔔 งานรอตรวจ',     children: ['morepair', 'bins', 'matreq'].map(qcTab) },
   { key: 'problem', label: '🚨 ของเสีย / ปัญหา', children: ['ncr', 'claims', 'capa'].map(qcTab) },
   qcTab('spc'), qcTab('instruments'),
@@ -2191,6 +2194,9 @@ export default function QualityControl() {
   // 👁 utils/qaViewScope — ส่วนงานที่ไม่มีไลน์ผลิต (QA/Planning) เห็นทั้งโรงงาน (เดิมได้ 0 ไลน์ = ทุกแท็บว่าง · 19/10)
   const viewScope = useMemo(() => qaViewScope(allLines, { role, lineId, sections, scopeIdx }), [allLines, role, lineId, sections, scopeIdx]);
   const lineObjs = viewScope.lines;
+  // คิวเรียกตรวจกรองตามไลน์ที่ดูได้ (null = ทั้งโรงงาน) — useMemo ให้ array นิ่ง (กฎ deps ข้อ 9)
+  const fmeLineNames = useMemo(() => (viewScope.names ? [...viewScope.names] : null), [viewScope]);
+  const setParams = useMergeParams();
 
   const openCapaFromNcr = useCallback((ncr) => {
     setCapaPrefill(ncr);
@@ -2207,6 +2213,7 @@ export default function QualityControl() {
 
       {tab === 'dashboard' && <QualityDashboard />}
       {tab === 'morepair' && <QaMoPending />}
+      {tab === 'fme' && <QaFmeQueue scopedLineNames={fmeLineNames} onOpen={(ob) => setParams({ tab: 'sheet', fme: ob.id })} />}
       {tab === 'sheet' && <QaCheckSheet canRecord={canRecord} />}
       {tab === 'spc' && <SPCTab lineObjs={lineObjs} canRecord={canRecord} canManage={canManage} canExport={canExport} partOpts={partOpts} instruments={instruments} />}
       {tab === 'ncr' && <NCRTab lineObjs={lineObjs} canRecord={canRecord} canManage={canManage} onOpenCapa={openCapaFromNcr} partOpts={partOpts} />}

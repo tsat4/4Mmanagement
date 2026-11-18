@@ -26,7 +26,6 @@ import { nextDocNo } from '../utils/qaDocNo';
 import CalloutPin from './CalloutPin';
 import PointZoom from './inspect/PointZoom';
 import { qaFileUrl } from '../lib/qaImages';
-import QaFmeQueue from './QaFmeQueue';
 import { QA_STAGES, FME_SHEET_STAGE } from '../utils/qaStages';
 import { notifyEvent } from '../utils/notifyEvent';
 import { checkWrite, checkWriteRows } from '../utils/dbWrite';
@@ -206,6 +205,50 @@ export default function QaCheckSheet({ canRecord }) {
   }, [partParam, parts.length]);
 
   const part = useMemo(() => scopedParts.find(p => p.id === partId) || null, [scopedParts, partId]);
+
+  /* 📅 เปิดใบตรวจจากงานในแท็บ "แผนตรวจ" (18/11 · แยกแท็บ · user "กดเปิดใบตรวจจากแผนงาน ต้องเด้งเข้าใบที่จะตรวจเลย")
+     แท็บแผนตรวจส่ง `?tab=sheet&fme=<obligation id>` มา → โหลดงาน → ตั้งพาร์ท/วัน/กะ/รอบ/ช่วงตรวจ → เลื่อนขึ้นบนสุดของฟอร์ม */
+  const openFromOb = async (ob) => {
+        /* 🔴 เลือกรอบให้ถูก (audit 19/10) — เดิมตั้งรอบ 1 เสมอ ⇒ คิวรอบกลาง/ท้ายเปิดใบรอบ 1 ที่ "ยอมรับ/ปิดแล้ว"
+           จากชิ้นแรก → บันทึกไม่ได้ + คิวไม่ถูกปิด เตือนซ้ำไม่จบ
+           ผูกใบไว้แล้ว = เปิดใบนั้น · ยังไม่ผูก = รอบแรกที่ยังไม่ปิด · ปิดหมด = รอบใหม่ต่อท้าย */
+        if (!scopedParts.some(p => p.id === ob.part_id)) {
+          toast.error('เปิดใบตรวจไม่ได้ — พาร์ทของงานนี้ถูกปิดใช้งานหรืออยู่นอกขอบเขตของคุณ (ตรวจที่ /qa-setup)');
+          return;
+        }
+        const { data: shs, error: eSh } = await supabase.from('qa_inspection_sheets').select('id, round_no, status')
+          .eq('part_id', ob.part_id).eq('work_date', ob.work_date).eq('shift', ob.shift).order('round_no');
+        if (eSh) { toast.error(`อ่านใบตรวจของงานนี้ไม่สำเร็จ: ${eSh.message}`); return; }
+        const linked = ob.sheet_id && (shs || []).find(x => x.id === ob.sheet_id);
+        const open = (shs || []).find(x => x.status !== 'done');
+        const nextRound = linked ? linked.round_no
+          : open ? open.round_no
+            : Math.min(20, ((shs || []).reduce((m, x) => Math.max(m, x.round_no || 0), 0)) + 1);
+        setPartId(ob.part_id);
+        setWorkDate(ob.work_date);
+        setShift(ob.shift);
+        setRoundNo(nextRound);
+        setSheetStage(FME_SHEET_STAGE[ob.stage] || null);
+        setFmeObId(ob.id);
+        fmeKeyRef.current = `${ob.part_id}|${ob.work_date}|${ob.shift}`;
+        toast.info(`เปิดใบตรวจ: ${ob.line_name} · ${ob.mat_no} · ${ob.stage === 'end' ? 'ชิ้นสุดท้าย' : ob.stage === 'middle' ? 'ระหว่างผลิต' : 'ชิ้นแรก'}`);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  const fmeParam = searchParams.get('fme');
+  useEffect(() => {
+    if (!fmeParam || !parts.length) return;
+    let alive = true;
+    (async () => {
+      const { data: ob, error } = await supabase.from('qa_fme_obligations').select('*').eq('id', fmeParam).maybeSingle();
+      if (!alive) return;
+      setParams({ fme: null }, { replace: true });
+      if (error || !ob) { toast.error(`เปิดงานตรวจไม่สำเร็จ${error ? `: ${error.message}` : ' — ไม่พบงานนี้'}`); return; }
+      await openFromOb(ob);
+    })();
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fmeParam, parts.length]);
+
 
   /* ── มาตรฐาน (จุดตรวจ + แบบ) ของพาร์ทที่เลือก ── */
   useEffect(() => {
@@ -789,32 +832,6 @@ export default function QaCheckSheet({ canRecord }) {
         </div>
       )}
 
-      {/* คิว "ฝ่ายผลิตเรียกตรวจ" — กดแล้วตั้งพาร์ท/วัน/กะ/ช่วงตรวจให้ตรงกับรุ่นที่ถูกเรียก */}
-      <QaFmeQueue scopedLineNames={scopedLineNames} onOpen={async (ob) => {
-        /* 🔴 เลือกรอบให้ถูก (audit 19/10) — เดิมตั้งรอบ 1 เสมอ ⇒ คิวรอบกลาง/ท้ายเปิดใบรอบ 1 ที่ "ยอมรับ/ปิดแล้ว"
-           จากชิ้นแรก → บันทึกไม่ได้ + คิวไม่ถูกปิด เตือนซ้ำไม่จบ
-           ผูกใบไว้แล้ว = เปิดใบนั้น · ยังไม่ผูก = รอบแรกที่ยังไม่ปิด · ปิดหมด = รอบใหม่ต่อท้าย */
-        if (!scopedParts.some(p => p.id === ob.part_id)) {
-          toast.error('เปิดใบตรวจไม่ได้ — พาร์ทของงานนี้ถูกปิดใช้งานหรืออยู่นอกขอบเขตของคุณ (ตรวจที่ /qa-setup)');
-          return;
-        }
-        const { data: shs, error: eSh } = await supabase.from('qa_inspection_sheets').select('id, round_no, status')
-          .eq('part_id', ob.part_id).eq('work_date', ob.work_date).eq('shift', ob.shift).order('round_no');
-        if (eSh) { toast.error(`อ่านใบตรวจของงานนี้ไม่สำเร็จ: ${eSh.message}`); return; }
-        const linked = ob.sheet_id && (shs || []).find(x => x.id === ob.sheet_id);
-        const open = (shs || []).find(x => x.status !== 'done');
-        const nextRound = linked ? linked.round_no
-          : open ? open.round_no
-            : Math.min(20, ((shs || []).reduce((m, x) => Math.max(m, x.round_no || 0), 0)) + 1);
-        setPartId(ob.part_id);
-        setWorkDate(ob.work_date);
-        setShift(ob.shift);
-        setRoundNo(nextRound);
-        setSheetStage(FME_SHEET_STAGE[ob.stage] || null);
-        setFmeObId(ob.id);
-        fmeKeyRef.current = `${ob.part_id}|${ob.work_date}|${ob.shift}`;
-        toast.info(`เปิดใบตรวจ: ${ob.line_name} · ${ob.mat_no} · ${ob.stage === 'end' ? 'ชิ้นสุดท้าย' : ob.stage === 'middle' ? 'ระหว่างผลิต' : 'ชิ้นแรก'}`);
-      }} />
 
       {scanOpen && (
         <ScanModal title={tr('สแกนชิ้นงาน → เลือกพาร์ท')} hint={tr('ส่องบาร์โค้ด MAT บนกล่อง/บัตรคัมบัง หรือพิมพ์เลขพาร์ท')}
