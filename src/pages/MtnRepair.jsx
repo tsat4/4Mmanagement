@@ -110,6 +110,7 @@ import MtnOutsourcePanel from '../components/MtnOutsource';
 import MachineRepairHistory from '../components/MachineRepairHistory';
 import { prPlacement, assignedTechsOf, joinTechs, prQueueStateOf, PR_QUEUE_META, PR_QUEUE_COLS } from '../utils/mtnPurchase';
 import { ioNoOf, buildIoIndex } from '../utils/moIoNo';   // 💳 "ใบนี้ลง I/O ไหน" ตอบที่เดียว (18/11)
+import { purgeMoQuotes } from '../lib/moQuotes';          // 🧾 ปิดใบสมบูรณ์ = ลบไฟล์ใบเสนอราคา (18/11)
 import { tr as trI18n } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
 /* ตัวเลือกตัวกรองงาน PR — ลำดับตามขั้นงานจริงที่ทีม MTN เขียนมา (02/11):
@@ -4302,6 +4303,17 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
             toast.error('ปิดใบแล้ว แต่เก็บบันทึกต้นฉบับไม่สำเร็จ — ' + snapRes.reason
               + ' · ใบที่พิมพ์จะเขียนกำกับว่าเป็นข้อมูลปัจจุบัน');
           }
+        }
+        /* 🧾 ปิดใบสมบูรณ์ = ลบไฟล์ใบเสนอราคาทิ้ง (18/11 · คำสั่ง user "ปิดใบแบบสมบูรณ์ละลบได้เลย")
+           🔴 ต้องอยู่**หลัง** `saveMoSnapshot` — snapshot ไม่ได้อ้างไฟล์นี้ (เก็บเฉพาะอะไหล่/ค่าแรง/
+              คอมเมนต์) แต่ถ้าวันหลังมีใครเอา PR เข้า snapshot ลำดับนี้คือที่ที่ต้องกลับมาคิดใหม่
+           🔴 **ล้มเหลวห้ามทำให้การปิดใบเป็นโมฆะ** — ใบปิดไปแล้วจริง · บอกแล้วปล่อย
+              (เรียกซ้ำได้ ไม่มีผลข้างเคียง ⇒ รอบหน้าที่มีคนปิด/แก้ใบนี้ก็กวาดต่อเอง)
+           🔴 เงื่อนไข "ปิดสมบูรณ์" ตัดสินที่ `prQuote.js` ที่เดียว ห้ามเทียบ status เองที่นี่ */
+        if (!editMode && fresh?.status === 'closed') {
+          const q = await purgeMoQuotes(fresh);
+          if (!q.ok) toast.error('ปิดใบแล้ว แต่ลบไฟล์ใบเสนอราคาไม่สำเร็จ — ' + q.reason);
+          else if (q.purged) toast.success(q.reason);
         }
         const ev = skipQa ? 'mtn_qa_skipped' : isReject ? 'mtn_returned' : stepEventOf(step, isMtnForm);
         if (ev) notifyMtn(fresh, ev);
