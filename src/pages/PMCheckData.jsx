@@ -1405,8 +1405,19 @@ export default function PMCheckData({ mode = 'pm' }) {
     return 'pass'
   }
 
+  /* 🔴 ตรวจไม่ครบ = บันทึกไม่ได้ (19/11) — บอกเลขข้อที่ขาด (ลำดับเดียวกับชิป "ยังไม่ตรวจ") + พาไปข้อแรก */
+  const blockIncomplete = () => {
+    const miss = checkpoints.filter(cp => !cpFilled(cp))
+    if (!miss.length) return false
+    const nos = miss.map(cp => checkpoints.indexOf(cp) + 1)
+    toast.error(`บันทึกไม่ได้ — ยังไม่ได้ตรวจ ${miss.length} จุด (ข้อ ${nos.slice(0, 10).join(', ')}${nos.length > 10 ? ' …' : ''}) — ตรวจให้ครบทุกข้อก่อน`)
+    setActiveShimId(null); setActiveCpId(miss[0].id)
+    return true
+  }
+
   const handleSave = async () => {
     if (checkpoints.length === 0) return
+    if (blockIncomplete()) return   // ด่านซ้ำ — ปุ่มเช็คแล้วแต่ห้ามพึ่งปุ่มอย่างเดียว
     // 🔴 จุดตรวจ/ใบตรวจต้องเป็นของเครื่อง+แผนกที่เปิดอยู่จริง (กันคำตอบเก่าทับ — ดู loadReqRef)
     //    checklistId + checkpoints ถูก set คู่กันใน callback เดียวที่ผ่าน live() แล้ว ⇒ เช็ค key พอ
     if (cpLoad.status !== 'ok' || cpLoad.key !== `${selectedJig?.id}|${department}`) {
@@ -2106,24 +2117,19 @@ export default function PMCheckData({ mode = 'pm' }) {
                       })()}
                       <InspectorCodeField value={inspectorCode} onChange={setInspectorCode} required style={{ marginTop: 8 }} />
                       <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder={tr('หมายเหตุ (ถ้ามี)...')} style={{ marginTop: 8 }} />
-                      {/* 🔴 ปุ่มบันทึก "สีต้องตรงกับความจริง" (06/10 · คอมเมนต์ทีม MTN ข้อ 3)
-                          *"ถ้ากรอกรายละเอียดไม่ครบทุกจุด ให้ปุ่มบันทึกขึ้นเป็นสีแดงหรือสีเหลืองไว้ก่อนได้มั้ย
-                            ตอนนี้เป็นสีเขียว ถ้าพนักงานกดข้าม จะสามารถบันทึกได้ถึงข้อมูลจะไม่ครบ"*
-                          ⚠️ **ห้ามบล็อกไม่ให้กด** — ระบบตั้งใจให้บันทึกค้างได้ (ตรวจไม่ครบ = `pending`
-                             ไม่เลื่อนรอบ PM · ดูตอน save) ช่างตรวจค้างแล้วกลับมาทำต่อเป็นงานจริง
-                          ⇒ แก้ที่ "สี + ถามยืนยัน" ไม่ใช่ปิดปุ่ม: ไม่ครบ = เหลือง + confirm บอกจำนวนที่ขาด */}
-                      <button onClick={async () => {
-                        if (!isFormReady && !await askConfirm(
-                          `ยังกรอกไม่ครบ ${nMissing} จุด จาก ${checkpoints.length} จุด\n\n`
-                          + `[ตกลง] = บันทึกค้างไว้ก่อน — ผลตรวจจะเป็น "ยังไม่ครบ" และ**ไม่เลื่อนรอบ PM**\n`
-                          + `[ยกเลิก] = กลับไปกรอกให้ครบ`)) return
+                      {/* 🔴 ตรวจไม่ครบ = บันทึกไม่ได้ (19/11 · คำสั่ง user — มาตรฐานเดียวกับใบตรวจ QA)
+                          เดิม (06/10) "เตือน + ถามยืนยัน แล้วบันทึกค้างเป็น pending" — user เลือกให้ทุกระบบตรวจ (QA/PM/AM) บล็อกเหมือนกัน
+                          · ปุ่มยังกดได้เพื่อบอกเหตุ: ขึ้นเลขข้อที่ยังไม่ตรวจ (เลขเดียวกับชิป "ยังไม่ตรวจ") + พาไปข้อแรกที่ขาด
+                          · ปุ่มยังเหลือง + บอกจำนวนที่ขาด (สีตรงกับความจริง · คอมเมนต์ทีม MTN 06/10) · ด่านซ้ำใน handleSave */}
+                      <button onClick={() => {
+                        if (!isFormReady) { blockIncomplete(); return }
                         handleSave()
                       }} disabled={saving || !canRecord}
                         style={{ ...S.saveBtn,
                           background: isFormReady ? 'var(--accent)' : 'var(--accent2)',
                           color: isFormReady ? 'var(--accent-ink)' : '#1a1a1a',
                           opacity: (saving || !canRecord) ? 0.6 : 1 }}>
-                        {saving ? 'กำลังบันทึก...' : !canRecord ? `ไม่มีสิทธิ์บันทึกผลตรวจ ${isAmTeam(department) ? 'AM' : 'PM'}` : isFormReady ? 'บันทึกผลการตรวจ' : `บันทึก (ยังไม่ครบ ${nMissing} จุด)`}
+                        {saving ? 'กำลังบันทึก...' : !canRecord ? `ไม่มีสิทธิ์บันทึกผลตรวจ ${isAmTeam(department) ? 'AM' : 'PM'}` : isFormReady ? 'บันทึกผลการตรวจ' : `ยังบันทึกไม่ได้ — ยังไม่ตรวจ ${nMissing} จุด`}
                       </button>
                     </>
                   )}
