@@ -337,3 +337,20 @@ test('sheetChildDiff — ไม่รู้ใบ (null) ต้องไม่�
   const d = sheetChildDiff('SUB', () => [], null, null);
   assert.deepEqual(d, { onlyHere: [], onlyOwn: [], same: 0, differs: 0 });
 });
+
+/* 🌳 directSheetRows — "ลูกตรง" แบบ SAP (19/11): 100→200→500 ต้องไม่ทำให้ 500 ถูกนับที่ 100 */
+import { directSheetRows } from '../bomTree.js';
+test('directSheetRows: กันแถวหลานในใบแม่ · คงลูกตรง · ใบไม่รู้จัก = ไม่ทิ้ง', () => {
+  const products = [{ id: 'p100', mat_no: '100' }, { id: 'p200', mat_no: '200' }];
+  const rows = [
+    { product_id: 'p100', mat_no: '200', parent_mat: null },
+    { product_id: 'p100', mat_no: '500', parent_mat: '200' },   // หลานนอนในใบแม่ ⇒ ทิ้ง
+    { product_id: 'p100', mat_no: '301', parent_mat: ' 100 ' }, // ตั้ง parent = ตัวเอง ⇒ ลูกตรง
+    { product_id: 'p200', mat_no: '500', parent_mat: null },
+    { product_id: 'pX',   mat_no: '9',   parent_mat: '8' },     // ใบที่ไม่รู้จัก ⇒ เก็บไว้
+  ];
+  const out = directSheetRows(rows, products).map(r => `${r.product_id}:${r.mat_no}`);
+  assert.deepEqual(out, ['p100:200', 'p100:301', 'p200:500', 'pX:9']);
+  assert.deepEqual(directSheetRows(rows, new Map([['p100', '100']])).length, 4);
+  assert.deepEqual(directSheetRows(null, products), []);
+});

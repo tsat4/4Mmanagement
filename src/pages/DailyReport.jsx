@@ -6,7 +6,7 @@ import { supabase, supabaseDR } from '../supabaseClient';
 import QaFmeLineBanner from '../components/QaFmeLineBanner';
 import { UserContext } from '../App';
 import { canWriteLine, writeBlockText } from '../utils/writeScope';   // 🔐 ชั้นที่ 3 — ทะเบียนสินค้าของไลน์ส่วนงานอื่น (20/10)
-import { fmtDate, fmtDateTime, fmtDateTimeFull, fmtTime } from '../utils/dateFormat';
+import { fmtDate, fmtDateTime, fmtDateTimeFull, fmtTime, fmtTimeOn } from '../utils/dateFormat';
 import { buildMachineKeyMap, snapMachineNo } from '../utils/machineNo';
 import { dtBucketName, buildDtIndex } from '../utils/downtimeCategory';
 import { toast } from '../components/Toast';
@@ -892,6 +892,33 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
     })();
     return () => { alive = false; };
   }, [selSession?.line_name, selSession?.work_date]);
+
+  /* ── 📅 "ใบนี้ยกยอดมาจากกะไหน (วันที่)" (18/11 · หัวหน้าแจ้ง "วันที่ยังไม่มี มีแต่เวลาครับ") ──
+     ใบที่ยกยอดมาจะมี `opened_at` = เวลาเปิดกะ**นี้** (เช่น 08:00) ⇒ การ์ดอ่านเหมือนเพิ่งเปิดเช้านี้
+     ทั้งที่ของจริงวนมาหลายวัน · `first_opened_at` มีเฉพาะใบที่สร้างหลัง deploy 18/11
+     ⇒ ใบเก่าต้องถอยไปใช้ "กะต้นทาง" ที่รู้แน่ๆ จาก `carry_over_from_session_id`
+     🔴 ข้อเท็จจริง 1 ชั้น ไม่ใช่การเดาต้นทาง — จอต้องไม่เงียบเมื่อไม่รู้ว่าค้างมากี่วัน */
+  const [carrySrc, setCarrySrc] = useState({});
+  const carrySrcKey = useMemo(() => [...new Set((prodOrders || [])
+    .map(o => o.carry_over_from_session_id).filter(Boolean))].sort().join(','), [prodOrders]);
+  useEffect(() => {
+    const ids = carrySrcKey ? carrySrcKey.split(',') : [];
+    if (!ids.length) { setCarrySrc({}); return; }
+    let alive = true;
+    (async () => {
+      const { data, error } = await supabaseDR.from('production_sessions')
+        .select('id, work_date, shift').in('id', ids);
+      if (!alive) return;
+      setCarrySrc(error ? {} : Object.fromEntries((data || []).map(r => [r.id, r])));
+    })();
+    return () => { alive = false; };
+  }, [carrySrcKey]);
+  /** ป้ายกะต้นทางของใบยกยอด — `null` = ไม่รู้ (ห้ามเดา) */
+  const carryFromLabel = useCallback((o) => {
+    const src = o?.carry_over_from_session_id ? carrySrc[o.carry_over_from_session_id] : null;
+    if (!src?.work_date) return null;
+    return `${fmtDate(src.work_date)} ${src.shift === 'night' ? tr('กะดึก') : tr('กะเช้า')}`;
+  }, [carrySrc]);
 
   const handover = useMemo(
     () => (selSession ? handoverOf(selSession, [...(sessions || []), ...(lineSessions || [])], Date.now()) : null),
@@ -4409,8 +4436,11 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                       {/* Part No. → ชื่อ → MAT (ของกลาง · ด่าน matOrderSweep) · บรรทัดเดียว ชื่อตัด … เลขไม่ตัด */}
                       <MatLabel mat={o.mat_no} name={o.part_name} oneLine style={{ flex: 1, minWidth: 0, overflow: 'hidden' }} />
                       {o.machine_no && <span style={{ fontSize: 11, padding: '1px 7px', borderRadius: 'var(--r-pill)', background: 'var(--bg3)', color: 'var(--muted)', fontWeight: 700, flexShrink: 0 }}>{o.machine_no}</span>}
-                      {isCarried && <span title={o.carry_over_note || tr('ยกยอดมาจากกะก่อน')} style={{ fontSize: 11, fontWeight: 700, color: 'var(--blue)', flexShrink: 0 }}>{tr('➡ ยกยอดมา')}</span>}
-                      {manualStale && <span title={`อัพเดทยอดล่าสุด ${fmtTime(lastUpd)} — เกิน 2.5 ชม.แล้ว`} style={{ fontSize: 11, fontWeight: 700, color: 'var(--amber)', flexShrink: 0 }}>{tr('⚠ ยอดไม่อัพเดท')}</span>}
+                      {isCarried && (() => { const from = carryFromLabel(o); return (
+                        <span title={from ? `${tr('ยกยอดมาจาก')} ${from}${o.carry_over_note ? ` · ${o.carry_over_note}` : ''}` : (o.carry_over_note || tr('ยกยอดมาจากกะก่อน'))}
+                          style={{ fontSize: 11, fontWeight: 700, color: 'var(--blue)', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                          {tr('➡ ยกยอดมา')}{from ? ` ${from}` : ''}</span>); })()}
+                      {manualStale && <span title={`อัพเดทยอดล่าสุด ${fmtTimeOn(lastUpd, selSession?.work_date)} — เกิน 2.5 ชม.แล้ว`} style={{ fontSize: 11, fontWeight: 700, color: 'var(--amber)', flexShrink: 0 }}>{tr('⚠ ยอดไม่อัพเดท')}</span>}
                       <span style={{ fontSize: 14, fontWeight: 900, color: statusColor, whiteSpace: 'nowrap', flexShrink: 0 }}>
                         {o.qty_actual || 0}<span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)' }}>/{o.qty_target ?? o.qty}</span>
                       </span>
@@ -4444,12 +4474,15 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                               ✍️ manual
                             </span>
                           )}
-                          {isCarried && (
-                            <span style={{ fontSize: 11, padding: '1px 7px', borderRadius: 'var(--r-pill)', background: 'var(--blue-dim)', color: 'var(--blue)', fontWeight: 700 }}
-                              title={o.carry_over_note || tr('ยกยอดมาจากกะก่อน')}>
-                              ➡ ยกยอดมา {o.carry_over_note ? `(${o.carry_over_note.match(/\d+\/\d+/)?.[0] || ''})` : ''}
-                            </span>
-                          )}
+                          {isCarried && (() => {
+                            const from = carryFromLabel(o);
+                            return (
+                              <span style={{ fontSize: 11, padding: '1px 7px', borderRadius: 'var(--r-pill)', background: 'var(--blue-dim)', color: 'var(--blue)', fontWeight: 700 }}
+                                title={`${from ? `${tr('ยกยอดมาจาก')} ${from}` : tr('ยกยอดมาจากกะก่อน (อ่านกะต้นทางไม่ได้)')}${o.carry_over_note ? ` · ${o.carry_over_note}` : ''}`}>
+                                ➡ ยกยอดมา {from ? `${tr('จาก')} ${from}` : ''} {o.carry_over_note ? `(${o.carry_over_note.match(/\d+\/\d+/)?.[0] || ''})` : ''}
+                              </span>
+                            );
+                          })()}
                           <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 'var(--r-pill)', fontWeight: 700, background: toneDim(statusTone), color: statusColor }}>
                             {statusLabel}
                           </span>
@@ -4489,11 +4522,13 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                           )}
                         </div>
                         <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-                          เปิด {fmtTime(new Date(o.opened_at))} {o.opened_by && `· ${o.opened_by}`}
+                          เปิด {fmtTimeOn(o.opened_at, selSession?.work_date)} {o.opened_by && `· ${o.opened_by}`}
                           {(() => { const age = carryAgeOf(o);
-                            return age?.firstMs ? ` · เปิดครั้งแรก ${fmtDateTime(age.firstMs)}` : null; })()}
-                          {confirmed && o.confirmed_at && ` · ปิด ${fmtTime(new Date(o.confirmed_at))} · ${o.confirmed_by}`}
-                          {manualOpen && ` · อัพเดทยอดล่าสุด ${fmtTime(lastUpd)}`}
+                            if (age?.firstMs) return ` · ${tr('เปิดครั้งแรก')} ${fmtDateTime(age.firstMs)}`;
+                            const from = carryFromLabel(o);
+                            return from ? ` · ${tr('ยกยอดมาจาก')} ${from}` : null; })()}
+                          {confirmed && o.confirmed_at && ` · ปิด ${fmtTimeOn(o.confirmed_at, selSession?.work_date)} · ${o.confirmed_by}`}
+                          {manualOpen && ` · อัพเดทยอดล่าสุด ${fmtTimeOn(lastUpd, selSession?.work_date)}`}
                           {manualStale && <span style={{ color: 'var(--amber)', fontWeight: 700 }}> {tr('⚠ เกิน 2.5 ชม.แล้ว — อัพเดทยอดด้วย')}</span>}
                         </div>
                       </div>

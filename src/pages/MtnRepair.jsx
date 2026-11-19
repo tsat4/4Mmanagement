@@ -20,7 +20,7 @@ import { signMapOf, signUrlOf } from '../utils/signResolve';
 import { getActor } from '../utils/actorStamp';   // uid ของคนที่กดเซ็น
 import { loadProfilesPeople } from '../utils/usePeople';   // 🔄 เซ็นเสร็จ = คิวต้องอัพเดททันที
 import { toast } from '../components/Toast';
-import { PURPOSES, CAUSE_CATS, needsPlantManager, needsApprovalFirst, laborAmount, partAmount, sumLabor, sumParts, grandTotal, satScore, mtnApprovalState, purposeOfPrint, qaAppliesTo, isMtnFormRow, QA_SKIP_REASON_PURPOSE, QA_SKIP_REASON_MTN_FORM, needsPlantMgrByCost, orderCostTotal, PLANT_MGR_COST_LIMIT, isToolTeamRow, MO_IO_DIGITS, MO_PR_DIGITS, moGridChars } from '../utils/mtnMoForm';
+import { PURPOSES, CAUSE_CATS, needsPlantManager, needsApprovalFirst, laborAmount, partAmount, sumLabor, sumParts, grandTotal, satScore, mtnApprovalState, purposeOfPrint, qaAppliesTo, isMtnFormRow, QA_SKIP_REASON_PURPOSE, QA_SKIP_REASON_MTN_FORM, needsPlantMgrByCost, orderCostTotal, PLANT_MGR_COST_LIMIT, isToolTeamRow, MO_IO_DIGITS, MO_PR_DIGITS, moGridChars, moTechSignBox } from '../utils/mtnMoForm';
 import AuditLogViewer from '../components/AuditLogViewer';
 import StepFlow from '../components/StepFlow';
 import { can, canDelete, isActionSeeded, isSharedAccount } from '../utils/permissions';
@@ -37,7 +37,7 @@ import { buildMoStaleBoard } from '../utils/mtnStale';
 import { buildMoChaseBoard, PR_CLOSE_STAGES, moCloseGate, moCloseGateText } from '../utils/moChase';
 import { inSectionScope, lineScope } from '../utils/sectionScope';
 import { getLineFamilyNames } from '../utils/lineHierarchy';
-import { teamsForUser, teamForSection, teamForItem, sameTeam, filterByTeam, visibleForTeam, seesEverything, teamKeyOf, deptNameOf, teamOptions, teamRowOwner, teamRowLockNote, canWriteTeam, teamBlockText } from '../utils/mtnTeams';
+import { teamsForUser, teamForSection, teamForItem, sameTeam, filterByTeam, visibleForTeam, seesEverything, teamKeyOf, deptNameOf, teamOptions, teamRowOwner, teamRowLockNote, canWriteTeam, teamBlockText, moCodeOf } from '../utils/mtnTeams';
 import { VENDOR_STATUS, canSendVendor, canReceiveVendor, techRepairMin, grossRepairMin, mttrHoldMin, vendorHoldLabel } from '../utils/mtnVendor';
 import { isAmTeam, loadPmTeams, pmTeamsSync, DEFAULT_TEAMS } from '../utils/pmTeams';
 import { loadDocForms, docFormSync } from '../utils/docForms';
@@ -110,6 +110,8 @@ import MtnOutsourcePanel from '../components/MtnOutsource';
 import MachineRepairHistory from '../components/MachineRepairHistory';
 import { prPlacement, assignedTechsOf, joinTechs, prQueueStateOf, PR_QUEUE_META, PR_QUEUE_COLS } from '../utils/mtnPurchase';
 import { ioNoOf, buildIoIndex } from '../utils/moIoNo';   // 💳 "ใบนี้ลง I/O ไหน" ตอบที่เดียว (18/11)
+import { purgeMoQuotes } from '../lib/moQuotes';          // 🧾 ปิดใบสมบูรณ์ = ลบไฟล์ใบเสนอราคา (18/11)
+import { MACHINE_USABILITY, machineUsability, usabilityNeedsNote, usabilityPatch } from '../utils/machineUsability';   // 🔌 ปุ่มเปิด-ปิดเครื่อง (19/11)
 import { tr as trI18n } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
 /* ตัวเลือกตัวกรองงาน PR — ลำดับตามขั้นงานจริงที่ทีม MTN เขียนมา (02/11):
@@ -2267,7 +2269,13 @@ function printMoReport(o, dparts = [], logo0, dlabor = [], cmt = NO_CMT, costErr
             วัดจริง 21/10: 529 จาก 783 ใบ (68%) เป็นคนเดียวกับผู้เปิดใบ · อีก 254 ใบก็เป็น PD ทั้งหมด
             ⇒ ไม่มีฝั่งช่างเซ็นรับรองงานตัวเองสักช่องบนใบกระดาษ · ชื่อผู้ตรวจรับย้ายไปอยู่ในช่อง 4&5 แทน
          ลายเซ็นทุกช่องดึงสดจากโปรไฟล์ด้วย uid (utils/signResolve.js) — ไฟล์ที่ใบเก็บไว้ถูกลบได้ -->
-    <tr>${sign(moSig[0], o.tech_main, sgn(o.tech_main_uid, null), o.repair_done_at, 0)}${sign(moSig[1], o.qa_checker, sgn(o.qa_checker_uid, o.qa_sign), o.qa_at, 1)}${sign(moSig[2], o.ho_checker, sgn(o.ho_checker_uid, o.ho_sign), o.ho_at, 2)}${sign(moSig[3], o.approver_name, sgn(o.approver_uid, o.approve_sign), o.approve_at, 3)}</tr>
+    <tr>${(() => {
+      /* ✍️ ช่อง 1 = ฝั่งช่าง — ป้ายและคนเซ็นตัดสินที่ `moTechSignBox()` (mtnMoForm.js) ที่เดียว
+         🔴 19/11 หน้างานแจ้ง: ใบ DIE ขึ้นป้าย "JIG APPROVE" + ดึงชื่อช่างที่ซ่อม (ไม่มีลายเซ็นเลย 82/82 ใบ)
+            ⇒ ป้ายมาจากรหัสทีมในทะเบียน · คนเซ็น = หัวหน้าแผนกช่างที่ตรวจรับขั้น 4 (เฉพาะทีมเครื่องมือ) */
+      const t = moTechSignBox(o, moCodeOf(o.mtn_dept || deptForItem(o.item_type)), moSig[0]);
+      return sign(t.label, t.name, sgn(t.uid, null), t.at, 0);
+    })()}${sign(moSig[1], o.qa_checker, sgn(o.qa_checker_uid, o.qa_sign), o.qa_at, 1)}${sign(moSig[2], o.ho_checker, sgn(o.ho_checker_uid, o.ho_sign), o.ho_at, 2)}${sign(moSig[3], o.approver_name, sgn(o.approver_uid, o.approve_sign), o.approve_at, 3)}</tr>
   </table>
   ${note ? `<div style="font-size:7pt;margin:2pt 0 1pt;color:#333">&#9432; ${esc(note)}</div>` : ''}
   <div class="ft"><span>${[dfMo.form_code, dfMo.rev].filter(Boolean).join('-')}${dfMo.footer_note ? ' · ' + dfMo.footer_note : ''}</span><span>${dfMo.effective_date ? 'Effective : ' + dfMo.effective_date : ''}</span></div>
@@ -2549,6 +2557,85 @@ function printMoReportMtn(o, dparts = [], logo0, dlabor = [], cmt = NO_CMT, cost
 }
 
 /* ── Detail drawer ───────────────────────────────────── */
+/* ── 🔌 ปุ่มเปิด-ปิดเครื่อง (19/11 · คำสั่ง user "ทำให้สถานะตรงกับหน้างาน") ──────────────
+   *"บางทีเค้าซ่อมไม่ได้ แต่แก้ไขเบื้องต้นให้ใช้ได้ระหว่างรอของมาเปลี่ยน"*
+   🔴 **สถานะเครื่อง ≠ สถานะใบ** — ใบ MO เดินลูปเอกสารของมัน เครื่องเดินของมัน
+      กดตรงนี้ **ไม่แตะใบ MO เลย** (ไม่ปิดใบ ไม่ขยับขั้น)
+   🔴 เหลือง/แดง **ต้องมีเหตุผล** (บังคับทั้งฝั่งจอและ CHECK ฝั่ง DB) — ปุ่มที่กดดับไฟเตือนเปล่าๆ
+      = สวิตช์โกหก · กติกาอยู่ `utils/machineUsability.js` ที่เดียว ห้ามเขียนเงื่อนไขเองที่นี่ */
+function MachineUsabilityPanel({ order, machines, fullName, canEdit, affectedLines = [], onSaved }) {
+  const mc = useMemo(
+    () => (machines || []).find(x => machineKey(x.machine_no) === machineKey(order?.machine_no)) || null,
+    [machines, order?.machine_no]);
+  const [pick, setPick] = useState(null);     // สถานะที่กำลังจะเลือก (ยังไม่บันทึก)
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  if (!order?.machine_no) return null;
+  /* 🔴 ไม่เจอเครื่องในทะเบียน = เขียนบอก **ห้ามซ่อนแผงเงียบ** (คนพิมพ์เลขเครื่องเองได้) */
+  if (!mc) {
+    return (
+      <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 10 }}>
+        🔌 {trI18n('เครื่อง')} {order.machine_no} {trI18n('ไม่อยู่ในทะเบียนเครื่องจักร — ตั้งสถานะใช้งานไม่ได้')}
+      </div>
+    );
+  }
+  const u = machineUsability(mc, []);   // ในใบนี้สนใจแค่ "ช่างประกาศไว้ว่าอะไร"
+  const save = async () => {
+    const patch = usabilityPatch(pick, note, fullName);
+    if (!patch) return toast.error('เลือกสถานะแล้วพิมพ์เหตุผลด้วย (เหลือง/แดงต้องมีเหตุผล)');
+    setBusy(true);
+    const ok = checkWriteRows(await supabaseDR.from('machines').update(patch).eq('id', mc.id).select('id'),
+      'บันทึกสถานะเครื่อง');
+    setBusy(false);
+    if (!ok) return;
+    toast.success(`ตั้งสถานะ ${order.machine_no} เป็น "${MACHINE_USABILITY.find(x => x.key === pick)?.label}" แล้ว`);
+    setPick(null); setNote(''); onSaved?.();
+  };
+  return (
+    <div style={{ border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '8px 10px', marginBottom: 10, background: 'var(--bg3)' }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', fontSize: 12.5 }}>
+        <b>🔌 {trI18n('สถานะเครื่อง')} {mc.machine_no}</b>
+        <span style={{ fontWeight: 700, color: (MACHINE_USABILITY.find(x => x.key === u.state) || {}).color }}>
+          {trI18n((MACHINE_USABILITY.find(x => x.key === u.state) || {}).label)}
+        </span>
+        {u.source === 'none' && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{trI18n('(ยังไม่มีใครกดยืนยัน)')}</span>}
+        {affectedLines.length > 0 && (
+          <span style={{ fontSize: 11, color: 'var(--amber)' }}>⚡ {trI18n('จ่าย')} {affectedLines.length} {trI18n('ไลน์')}</span>
+        )}
+      </div>
+      {u.text && <div style={{ fontSize: 11.5, color: 'var(--text2)', marginTop: 3, lineHeight: 1.6 }}>{u.text}</div>}
+      {canEdit && (
+        <>
+          <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+            {MACHINE_USABILITY.map(x => (
+              <button key={x.key} type="button" onClick={() => { setPick(x.key); setNote(x.key === u.state ? (mc.usability_note || '') : ''); }}
+                title={trI18n(x.hint || x.label)}
+                style={{ ...(pick === x.key ? btnPri : btnGhost), padding: '5px 10px', fontSize: 12,
+                         ...(pick === x.key ? {} : { color: x.color, borderColor: x.color }) }}>
+                {trI18n(x.label)}
+              </button>
+            ))}
+          </div>
+          {pick && (
+            <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+              <input autoFocus value={note} onChange={e => setNote(e.target.value)}
+                placeholder={usabilityNeedsNote(pick) ? trI18n('เหตุผล (บังคับ) — แก้อะไรไป / รออะไรอยู่') : trI18n('หมายเหตุ (ไม่บังคับ)')}
+                style={{ ...inp, flex: 1, minWidth: 180, borderColor: (usabilityNeedsNote(pick) && !note.trim()) ? 'var(--amber)' : undefined }} />
+              <button type="button" disabled={busy || (usabilityNeedsNote(pick) && !note.trim())} onClick={save} style={btnPri}>
+                {busy ? trI18n('กำลังบันทึก…') : trI18n('บันทึกสถานะ')}
+              </button>
+              <button type="button" onClick={() => { setPick(null); setNote(''); }} style={btnGhost}>{trI18n('ปิด')}</button>
+            </div>
+          )}
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4, lineHeight: 1.6 }}>
+            {trI18n('สถานะนี้เป็นของ "เครื่อง" ไม่ใช่ของใบ — กดแล้วใบ MO ยังเดินตามปกติ ไม่ปิดใบให้')}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function DetailDrawer({ order, role, allUnits = false, parts = [], machines = null, mtnDepts = MTN_DEPTS, fullName, signatureUrl, improvements, supplyByMachineNo, userTeams = [], reporterScope = null, onOpenImprovement, onClose, onStep, onReload, onFillDetails }) {
   const isMobile = useIsMobile();   // 📱 ปุ่ม "ขั้นถัดไป" เกาะล่างของใบ (15/10)
   /* 🔒 ฝั่ง + ระดับตำแหน่งของคนกด — ใช้ล็อกช่องเซ็นในลูป MO (2026-10-04 · คำสั่ง user)
@@ -3357,6 +3444,9 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
           </div>
         </div>
       )}
+      {/* 🔌 ปุ่มเปิด-ปิดเครื่อง (19/11) — ช่างที่ทำงานอยู่ในใบนี้กดได้เลย ไม่ต้องไปหาอีกหน้า */}
+      <MachineUsabilityPanel order={o} machines={machines} fullName={fullName}
+        canEdit={can('mtn_repair', 'repair', role)} affectedLines={affectedLines} onSaved={onReload} />
       {/* ผู้เปิดใบตรวจรับ (ขั้น 4) และรับมอบ (ขั้น 6) ของใบตัวเองได้เสมอ — บอกให้รู้ว่าทำไมกดได้ */}
       {isOrderReporter(o, fullName) && o.status !== 'closed' && (
         <NoticeBar tone="ok" style={{ marginBottom: 10 }}>
@@ -4302,6 +4392,17 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
             toast.error('ปิดใบแล้ว แต่เก็บบันทึกต้นฉบับไม่สำเร็จ — ' + snapRes.reason
               + ' · ใบที่พิมพ์จะเขียนกำกับว่าเป็นข้อมูลปัจจุบัน');
           }
+        }
+        /* 🧾 ปิดใบสมบูรณ์ = ลบไฟล์ใบเสนอราคาทิ้ง (18/11 · คำสั่ง user "ปิดใบแบบสมบูรณ์ละลบได้เลย")
+           🔴 ต้องอยู่**หลัง** `saveMoSnapshot` — snapshot ไม่ได้อ้างไฟล์นี้ (เก็บเฉพาะอะไหล่/ค่าแรง/
+              คอมเมนต์) แต่ถ้าวันหลังมีใครเอา PR เข้า snapshot ลำดับนี้คือที่ที่ต้องกลับมาคิดใหม่
+           🔴 **ล้มเหลวห้ามทำให้การปิดใบเป็นโมฆะ** — ใบปิดไปแล้วจริง · บอกแล้วปล่อย
+              (เรียกซ้ำได้ ไม่มีผลข้างเคียง ⇒ รอบหน้าที่มีคนปิด/แก้ใบนี้ก็กวาดต่อเอง)
+           🔴 เงื่อนไข "ปิดสมบูรณ์" ตัดสินที่ `prQuote.js` ที่เดียว ห้ามเทียบ status เองที่นี่ */
+        if (!editMode && fresh?.status === 'closed') {
+          const q = await purgeMoQuotes(fresh);
+          if (!q.ok) toast.error('ปิดใบแล้ว แต่ลบไฟล์ใบเสนอราคาไม่สำเร็จ — ' + q.reason);
+          else if (q.purged) toast.success(q.reason);
         }
         const ev = skipQa ? 'mtn_qa_skipped' : isReject ? 'mtn_returned' : stepEventOf(step, isMtnForm);
         if (ev) notifyMtn(fresh, ev);

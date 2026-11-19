@@ -29,7 +29,13 @@ import {
   GL_CATEGORIES, glCategoryLabel, glCategoryForPr, defaultGlFor, isBelowMin, suggestReorderQty, openPrQtyByPart,
   normalizePrNo, isAwaitingPrNo, mosNeedingPr, NEEDS_PR_PATHS, prFlow,
 } from '../utils/mtnPurchase';
-import { groupPrs, prGroupDefaults } from '../utils/prGroups';   // 🧾 1 ใบ PR หลายรายการ (18/11)
+import { groupPrs, prGroupDefaults } from '../utils/prGroups';      // 🧾 1 ใบ PR หลายรายการ (18/11)
+import { quoteState, quoteText } from '../utils/prQuote';          // 🧾 ใบเสนอราคา — 3 สถานะ + "ไม่รู้"
+import { uploadPrQuote } from '../utils/mtnImage';                 // บีบ 2560px (ตัวเลขต้องอ่านออก)
+import { acceptImageFile } from '../utils/acceptImageFile';        // ด่านชนิดไฟล์/HEIC (ของกลาง)
+/* 🔴 `AttachImage` เป็น **named export** — default ของไฟล์นี้คือ `ImageLightbox` (คนละ props กันคนละเรื่อง)
+   import ผิดตัว = build ผ่าน แต่รูปไม่ขึ้นบนจอเงียบๆ (พลาดจริงรอบนี้) */
+import { AttachImage } from './ImageLightbox';                     // รูปแนบต้องกดขยายได้ (UI §6.39)
 import StepFlow from './StepFlow';
 import { isMoOpen, MO_DONE_STATUSES } from '../utils/mtnStepPerm';
 import { isMttrHeld, mttrHoldMin } from '../utils/mtnVendor';
@@ -45,7 +51,7 @@ const btnGhost = { background: 'var(--bg3)', color: 'var(--text)', border: '1px 
 const box = { padding: '9px 11px', borderRadius: 8, background: 'var(--bg2)', border: '1px solid var(--border)', marginBottom: 10 };
 
 /** คอลัมน์ที่จอใช้ (egress — ห้าม select('*')) */
-export const PR_COLS = 'id, pr_no, source, order_id, part_id, item_name, qty, unit, unit_price, amount, gl_category, gl_code, supplier, team, section, status, note, requested_at, requested_by, ordered_at, ordered_by, po_no, received_at, received_by, received_qty, invoice_no, cancelled_at, cancelled_by, cancel_reason';
+export const PR_COLS = 'id, pr_no, source, order_id, part_id, item_name, qty, unit, unit_price, amount, gl_category, gl_code, supplier, team, section, status, note, requested_at, requested_by, ordered_at, ordered_by, po_no, received_at, received_by, received_qty, invoice_no, quote_img, quote_file_name, quote_deleted_at, cancelled_at, cancelled_by, cancel_reason';
 
 /** ทะเบียน GL — คืน { rows, error } (ห้ามแกะเป็นอาร์เรย์ลอยๆ · กฎเหล็ก DB ข้อ 12) */
 export async function loadGlCodes() {
@@ -209,6 +215,16 @@ function PrRow({ pr, canEdit, fullName, onChanged, showSource, mo = null, own = 
         {!pr.part_id && pr.status !== 'cancelled' ? ' · ไม่ผูกอะไหล่ในทะเบียน (รับแล้วไม่เข้าสต็อก)' : ''}
         {pr.note ? ` · ${pr.note}` : ''}
       </div>
+      {/* 🧾 ใบเสนอราคา (18/11) — 🔴 "ลบไฟล์แล้ว" ต้องยังเห็นว่าเคยมี ห้ามเงียบเหมือนไม่เคยแนบ
+          (ตัดสินที่ `quoteState()` · คิวรีไม่ได้ select มา = ไม่เขียนอะไร แต่ก็ไม่บอกว่าไม่มี) */}
+      {quoteState(pr) === 'has' && (
+        <div style={{ marginTop: 4 }}>
+          <AttachImage url={pr.quote_img} title={quoteText(pr)} maxHeight={90} />
+        </div>
+      )}
+      {quoteState(pr) === 'purged' && (
+        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>🗑 {tr('ใบเสนอราคา:')} {quoteText(pr)}</div>
+      )}
       {/* 🪜 ถึงขั้นไหน — กฎ prFlow() (utils/mtnPurchase.js) · UI §6.30 */}
       {(() => { const f = prFlow(pr); return <StepFlow compact steps={f.steps} waiting={f.waiting} unknown={!f.known} style={{ marginTop: 4 }} />; })()}
       {/* 🔒 ไม่ใช่ของทีมเรา = เขียนบอกเหตุผล **ห้ามซ่อนปุ่มเงียบ** (กฎความซื่อสัตย์ของจอ) */}
@@ -258,6 +274,8 @@ function NewPrForm({ parts = [], glCodes = [], defaults = {}, fullName, onDone, 
     gl_code: '',
   }));
   const [busy, setBusy] = useState(false);
+  /* 🧾 ใบเสนอราคา (18/11) — ทางที่ ③ ของ Case: ของที่ซื้อไม่บ่อย/ค่าซ่อม ที่ไม่มีในทะเบียนอะไหล่ */
+  const [quoteFile, setQuoteFile] = useState(null);
   const set = (k, v) => setF(p => ({ ...p, [k]: v }));
   // GL ตั้งต้นตามหมวด — เติมเฉพาะตอนช่องยังว่าง (ไม่ทับที่คนเลือก)
   useEffect(() => {
@@ -286,6 +304,14 @@ function NewPrForm({ parts = [], glCodes = [], defaults = {}, fullName, onDone, 
         requested_by: fullName || null, requested_by_uid: uid,
         pr_no: normalizePrNo(f.pr_no),   // เลขจาก SAP — ว่างได้ (แอดมินช่างกรอกทีหลังจากคิว "รอเลข PR")
       };
+      /* 🧾 แนบใบเสนอราคา — อัปก่อน insert (ยังไม่มี id ของแถว ⇒ ตั้งชื่อด้วยเวลา+สุ่ม)
+         🔴 อัปไม่สำเร็จ = **ไม่บันทึกใบ** — บันทึกไปโดยไม่มีไฟล์ที่คนตั้งใจแนบ = เอกสารหายเงียบ */
+      if (quoteFile) {
+        try {
+          const q = await uploadPrQuote(quoteFile, `new-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+          row.quote_img = q.url; row.quote_file_name = q.fileName;
+        } catch (e) { return toast.error(`อัปโหลดใบเสนอราคาไม่สำเร็จ: ${e.message || e}`); }
+      }
       const { error } = await supabaseDR.from('mtn_purchase_requests').insert(row);
       if (error) return toast.error(`บันทึกใบขอซื้อไม่สำเร็จ: ${error.message}`);
       toast.success(row.pr_no ? `บันทึกใบขอซื้อ PR ${row.pr_no} แล้ว` : 'บันทึกใบขอซื้อแล้ว — แจ้งแอดมินช่างกรอกเลข PR จาก SAP');
@@ -299,7 +325,13 @@ function NewPrForm({ parts = [], glCodes = [], defaults = {}, fullName, onDone, 
     <div style={{ ...box, background: 'var(--card)' }}>
       <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 2 }}>{tr('ขอซื้อ (PR) ใหม่')}</div>
       <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 6 }}>{tr('เลข PR มาจาก SAP — รู้แล้วกรอกเลย ไม่รู้เว้นว่าง ใบจะเข้าคิว “⏳ รอเลข PR” ให้แอดมินช่างกรอกทีหลัง')}</div>
-      <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 2 }}>อะไหล่ในทะเบียน (เลือก = รับของแล้วเข้าสต็อกให้เอง · พิมพ์เอง = ของนอกทะเบียน/งานบริการ)</div>
+      {/* 🧾 3 ทางที่หน้างานขอไว้ (PDF 18/11 Case): ①เลือกจากทะเบียน ②พิมพ์รายการเอง ③แนบใบเสนอราคา
+          เขียนให้เห็นตรงนี้เพราะ *"Admin จะไม่รู้ว่าต้องซื้ออะไร"* — ทางเลือกต้องอยู่ตรงหน้า ไม่ใช่ซ่อน */}
+      <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 2 }}>
+        {tr('เลือกได้ 3 ทาง')} — <b>{tr('① อะไหล่ในทะเบียน')}</b> {tr('(รับของแล้วเข้าสต็อกให้เอง)')} ·
+        <b> {tr('② พิมพ์รายการเอง')}</b> {tr('(ของนอกทะเบียน/งานบริการ)')} ·
+        <b> {tr('③ แนบใบเสนอราคา')}</b> {tr('(ของที่ซื้อไม่บ่อย — ช่องล่างสุด)')}
+      </div>
       <SearchSelect value={f.part_id} text={f.item_name} options={partOpts} allowFree freeHint="ไม่เข้าสต็อก"
         placeholder={tr('ค้นอะไหล่ — ชื่อ / รหัส / ชั้นวาง หรือพิมพ์รายการเอง')}
         onChange={({ id, text }) => {
@@ -328,6 +360,26 @@ function NewPrForm({ parts = [], glCodes = [], defaults = {}, fullName, onDone, 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 6, marginTop: 6 }}>
         <label style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('เลข PR จาก SAP (ว่างได้)')}<input value={f.pr_no} onChange={e => set('pr_no', e.target.value)} placeholder={tr('เช่น 10002345')} style={{ ...inp, fontFamily: 'monospace', fontWeight: 700 }} /></label>
         <label style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('หมายเหตุ')}<input value={f.note} onChange={e => set('note', e.target.value)} placeholder={tr('สเปก / ด่วน / เหตุผล')} style={inp} /></label>
+      </div>
+      {/* 🧾 ③ แนบใบเสนอราคา (18/11) — ไม่บังคับ · ของที่ซื้อไม่บ่อย/ค่าซ่อม ที่ไม่มีในทะเบียนอะไหล่
+          🔴 ไฟล์นี้ถูก**ลบทิ้งอัตโนมัติเมื่อใบ MO ปิดสมบูรณ์** (คำสั่ง user 18/11 กัน "ขยะในระบบ")
+             ⇒ ต้องเขียนบอกตรงนี้ ไม่ใช่ลบเงียบแล้วคนมาหาทีหลังไม่เจอ
+          🔴 บีบด้วย compressToWebp 2560px ใน `uploadPrQuote` — **ห้ามใช้ตัวบีบรูปซ่อม** (1024px + ครอบ 16:9
+             = หัวท้ายใบหาย ตัวเลขอ่านไม่ออก) */}
+      <div style={{ marginTop: 8, padding: '7px 9px', borderRadius: 'var(--r-md)', background: 'var(--bg3)', border: '1px solid var(--border)' }}>
+        <div style={{ fontSize: 11.5, fontWeight: 700, marginBottom: 3 }}>{tr('③ ใบเสนอราคา (ถ้ามี)')}</div>
+        <input type="file" accept="image/*"
+          onChange={async e => { const p0 = e.target.files?.[0]; e.target.value = ''; const ok = await acceptImageFile(p0); if (ok) setQuoteFile(ok); }}
+          style={{ fontSize: 12 }} />
+        {quoteFile && (
+          <span style={{ fontSize: 11.5, marginLeft: 8 }}>
+            {quoteFile.name} <button type="button" onClick={() => setQuoteFile(null)} style={{ ...btnGhost, padding: '1px 7px', fontSize: 11 }}>{tr('เอาออก')}</button>
+          </span>
+        )}
+        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3, lineHeight: 1.6 }}>
+          {tr('ถ่ายรูปใบเสนอราคาได้เลย — ระบบเก็บความละเอียดไว้ให้อ่านตัวเลขออก')}
+          <br />{tr('🗑 ไฟล์จะถูกลบทิ้งอัตโนมัติเมื่อใบ MO ปิดสมบูรณ์ (ชื่อไฟล์+วันที่ยังอยู่เป็นประวัติ)')}
+        </div>
       </div>
       <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
         <button onClick={onCancel} style={btnGhost}>{tr('ยกเลิก')}</button>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useContext } from 'react'
 import { lineNameCompare } from '../utils/lineHierarchy';
 import { MoreMark } from '../components/InfoMore';
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { useMergeParams } from '../utils/useTabParam'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase, supabaseDR } from '../supabaseClient'
@@ -28,6 +28,8 @@ import PointZoom, { PointThumb } from '../components/inspect/PointZoom'
 import useImgBox from '../utils/useImgBox'
 import CalloutPin from '../components/CalloutPin'
 import { loadPmTeams, pmTeamsSync, teamKind, recordPermFor, isAmTeam, splitInspByTeam, inspTeamLabel } from '../utils/pmTeams'
+import { carryNgReason, ngReasonCheck, okWhileMoOpen } from '../utils/ngReason'   // 🚩 NG ต้องมีเหตุผล (19/11)
+import { loadNgHistory } from '../lib/ngHistory'
 import { MTN_TEAMS, deptNameOf, teamKeyOf, teamForEquipmentKind, teamsForUser, canWriteTeam, teamBlockText } from '../utils/mtnTeams'
 import { checkWriteRows } from '../utils/dbWrite';
 import NoticeBar from '../components/NoticeBar';
@@ -425,7 +427,9 @@ function VariableRow({ cp, idx, r, onChange, methodIndex, calcText }) {
 }
 
 // ─── Attribute / Note Row ────────────────────────────────────────────────────
-function AttrRow({ cp, idx, value, note, onChangeAttr, onChangeNote, methodIndex }) {
+function AttrRow({ cp, idx, value, note, onChangeAttr, onChangeNote, methodIndex,
+  /* 🚩 19/11 — NG ต้องมีเหตุผล · `carry` = ของเก่าที่ยกมาได้ (null = ไม่มี) */
+  reason = '', onChangeReason, carry = null, accepted = false, onAccept, okWarn = null }) {
   const method = methodIndex?.[cp.checking_method]
   // 📱 มือถือ: แตะปุ่มเดิมซ้ำ (ถุงมือแตะเบิ้ล) = ล้างคำตอบเงียบๆ ⇒ ถามก่อน · จอคอมเหมือนเดิม (2026-10-20)
   const isMobile = useIsMobile()
@@ -463,6 +467,31 @@ function AttrRow({ cp, idx, value, note, onChangeAttr, onChangeNote, methodIndex
         </p>
       )}
       {cp.type === 'note' && <input value={note} onChange={e => onChangeNote(e.target.value)} placeholder={tr('หมายเหตุ (ถ้ามี)...')} />}
+      {/* 🚩 ติ๊ก NG ต้องมีเหตุผล (19/11 · คำสั่ง user "เกิดการกดผิดและพนักงานไม่รู้ตัว")
+          วัดจริง 90 วัน: NG 43 จุด มีเหตุผลแค่ 8 ⇒ 81% ไม่มีเหตุผลเลย
+          🔴 ของที่ยกมา **ต้องกดยืนยัน** ห้ามเติมเงียบ — เติมเงียบ = คนกดผิดได้เหตุผลติดมาเอง
+             ดูเหมือนตั้งใจ ซึ่งแย่กว่าไม่มีเหตุผล (ตัดสินที่ `utils/ngReason.js`) */}
+      {value === 'ng' && (
+        <div style={{ margin: '4px 0 0 24px' }}>
+          {carry && !accepted && !reason.trim() && (
+            <div style={{ fontSize: 11.5, color: 'var(--amber)', marginBottom: 3, lineHeight: 1.6 }}>
+              ↩️ {tr(carry.why)}
+              <button type="button" onClick={onAccept}
+                style={{ marginLeft: 6, padding: '2px 8px', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                         borderRadius: 'var(--r-xs)', border: '1px solid var(--amber)', background: 'var(--amber-dim)', color: 'var(--amber)' }}>
+                {tr('ใช้เหตุผลเดิม')}: {carry.text}
+              </button>
+            </div>
+          )}
+          <input value={reason} onChange={e => onChangeReason(e.target.value)}
+            placeholder={tr('เหตุผลที่ NG (บังคับ) — เจออะไร/ผิดปกติยังไง')}
+            style={{ width: '100%', borderColor: (reason.trim() || accepted) ? undefined : 'var(--amber)' }} />
+        </div>
+      )}
+      {/* 🔴 ติ๊ก OK ทั้งที่ใบซ่อมยังไม่เสร็จ = **เตือน ไม่บล็อก** (ช่างอาจเพิ่งแก้เสร็จแต่ยังไม่ปิดใบ) */}
+      {value === 'ok' && okWarn && (
+        <div data-warn="1" style={{ margin: '4px 0 0 24px', fontSize: 11.5, color: 'var(--amber)', lineHeight: 1.6 }}>⚠ {tr(okWarn)}</div>
+      )}
     </div>
   )
 }
@@ -842,10 +871,19 @@ function HistoryModal({ inspection, checkpoints: cpsFromPage, jig, onClose, user
 const pmHasInput = (results, notes) => !!(notes && String(notes).trim())
   || Object.values(results || {}).some(r => r && ['v1', 'v2', 'v3', 'attr', 'note', 'mval'].some(f => r[f] !== '' && r[f] != null))
 
-export default function PMCheckData() {
+/* 🧭 mode (19/11 · คำสั่ง user "AM ต้องมีหน้าบันทึกของตัวเอง · ปนกับ PM ของช่าง")
+   'pm' (ค่าเริ่ม · /pm?tab=check) = เฉพาะทีมช่าง — เปิดด้วยทีม AM จะถูกพาไป /daily-checker?tab=amcheck
+   'am' (/daily-checker?tab=amcheck) = เฉพาะทีม AM — ?dept= ที่ไม่ใช่ทีม AM ถูกแทนด้วยทีม AM ตัวแรก
+   แยกด้วย `isAmTeam()` (mtn_teams.kind) เท่านั้น ห้าม hardcode 'production' */
+export default function PMCheckData({ mode = 'pm' }) {
+  const amMode = mode === 'am'
   const [searchParams] = useSearchParams()
   const setParams = useMergeParams()
-  const department = searchParams.get('dept') || 'maintenance'
+  const rawDept = searchParams.get('dept')
+  const firstAmTeam = pmTeamsSync().find(t => isAmTeam(t.key))?.key
+  const department = amMode
+    ? ((rawDept && isAmTeam(rawDept)) ? rawDept : (firstAmTeam || rawDept || 'maintenance'))
+    : (rawDept || 'maintenance')
   const equipParam = searchParams.get('equip')
 
   const [userId, setUserId] = useState(null)
@@ -904,6 +942,9 @@ export default function PMCheckData() {
   const loadReqRef = useRef(0)
   const curJigRef = useRef(null)
   const [cpLoad, setCpLoad] = useState({ key: null, status: 'idle', msg: '' }) // status: loading | ok | error
+  /* 🚩 ประวัติ NG รายจุด + ใบซ่อม + สถานะเครื่อง (19/11) — ป้อนให้กฎ `carryNgReason()`
+     🔴 อ่านไม่ได้ = ไม่ยก (fail-closed) แต่ต้องเขียนบนจอ ห้ามกลืนเป็น "ไม่เคย NG" */
+  const [ngHist, setNgHist] = useState({ byCp: {}, machine: null, error: '' })
   const [cpReload, setCpReload] = useState(0)
   const [frames, setFrames] = useState([])          // jig_images (360° spin) ของอุปกรณ์ที่เลือก
   const [activeCpId, setActiveCpId] = useState(null) // จุดที่กำลังโฟกัส (sync รูป ↔ checklist)
@@ -1323,7 +1364,7 @@ export default function PMCheckData() {
       setCheckpoints(cps)
       setCpLoad({ key, status: 'ok', msg: '' })
       const init = {}
-      cps.forEach(c => { init[c.id] = { v1: '', v2: '', v3: '', attr: '', note: '', mval: '' } })
+      cps.forEach(c => { init[c.id] = { v1: '', v2: '', v3: '', attr: '', note: '', mval: '', reason: '', reasonAccepted: false } })
       setResults(init)
       const saved = isMobileView ? loadDraft(`pm:${key}:${userId}`) : null
       setPendingDraft(saved && pmHasInput(saved.data?.results, saved.data?.notes) ? saved : null)
@@ -1397,13 +1438,55 @@ export default function PMCheckData() {
     return 'pass'
   }
 
+  /* 🔴 ตรวจไม่ครบ = บันทึกไม่ได้ (19/11) — บอกเลขข้อที่ขาด (ลำดับเดียวกับชิป "ยังไม่ตรวจ") + พาไปข้อแรก */
+  const blockIncomplete = () => {
+    const miss = checkpoints.filter(cp => !cpFilled(cp))
+    if (!miss.length) return false
+    const nos = miss.map(cp => checkpoints.indexOf(cp) + 1)
+    toast.error(`บันทึกไม่ได้ — ยังไม่ได้ตรวจ ${miss.length} จุด (ข้อ ${nos.slice(0, 10).join(', ')}${nos.length > 10 ? ' …' : ''}) — ตรวจให้ครบทุกข้อก่อน`)
+    setActiveShimId(null); setActiveCpId(miss[0].id)
+    return true
+  }
+
+  /* 🚩 โหลดประวัติ NG ของเครื่องที่เลือก — guard กัน stale (กฎเขียน DB ข้อ 4) */
+  useEffect(() => {
+    let alive = true
+    if (!selectedJig?.id) { setNgHist({ byCp: {}, machine: null, error: '' }); return undefined }
+    loadNgHistory(selectedJig).then(r => { if (alive) setNgHist(r) })
+      .catch(e => { if (alive) setNgHist({ byCp: {}, machine: null, error: String(e?.message || e) }) })
+    return () => { alive = false }
+  }, [selectedJig?.id, selectedJig?.machine_id, selectedJig?.machine_no])   // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* ของเก่าที่ "ยกมาได้" ของจุดนี้ — null = ต้องพิมพ์เอง (กฎทั้งหมดอยู่ utils/ngReason.js) */
+  const ngCarryOf = (cpId) => {
+    const h = ngHist.byCp?.[cpId]
+    return h ? carryNgReason({ prev: h.prev, mo: h.mo, machine: ngHist.machine }) : null
+  }
+  const okWarnOf = (cpId) => {
+    const h = ngHist.byCp?.[cpId]
+    return h ? okWhileMoOpen({ attr: 'ok', mo: h.mo, machine: ngHist.machine }) : null
+  }
+
   const handleSave = async () => {
     if (checkpoints.length === 0) return
+    if (blockIncomplete()) return   // ด่านซ้ำ — ปุ่มเช็คแล้วแต่ห้ามพึ่งปุ่มอย่างเดียว
     // 🔴 จุดตรวจ/ใบตรวจต้องเป็นของเครื่อง+แผนกที่เปิดอยู่จริง (กันคำตอบเก่าทับ — ดู loadReqRef)
     //    checklistId + checkpoints ถูก set คู่กันใน callback เดียวที่ผ่าน live() แล้ว ⇒ เช็ค key พอ
     if (cpLoad.status !== 'ok' || cpLoad.key !== `${selectedJig?.id}|${department}`) {
       toast.error('ข้อมูลจุดตรวจยังโหลดไม่เสร็จหรือไม่ตรงกับเครื่องที่เปิดอยู่ — รอสักครู่แล้วกดบันทึกใหม่')
       return
+    }
+    /* 🚩 ด่าน "NG ต้องมีเหตุผล" (19/11 · คำสั่ง user) — ตัดสินที่ `ngReasonCheck()` ที่เดียว
+       🔴 เช็ค**ตอนกดบันทึกจริง** ไม่ใช่แค่ซ่อนปุ่ม — ช่องเหตุผลเป็นของรายจุด คนเลื่อนข้ามได้ */
+    {
+      const bad = []
+      checkpoints.forEach((cp, i) => {
+        if (cp.type === 'variable' || cp.type === 'measure') return   // ค่าที่วัดมา ตัวเลขคือคำอธิบาย
+        const r = results[cp.id] ?? {}
+        const chk = ngReasonCheck({ attr: r.attr, text: r.reason, carry: ngCarryOf(cp.id), accepted: !!r.reasonAccepted })
+        if (!chk.ok) bad.push(`ข้อ ${i + 1} ${cp.name}: ${chk.blockText}`)
+      })
+      if (bad.length) { toast.error(`ยังบันทึกไม่ได้ — ${bad.length} ข้อที่ติ๊ก NG ไม่มีเหตุผล\n${bad.slice(0, 3).join('\n')}`); return }
     }
     setSaving(true)
     try {
@@ -1457,7 +1540,12 @@ export default function PMCheckData() {
           const mv = r.mval !== '' && r.mval != null ? Number(r.mval) : null
           return { inspection_id: insp.id, checkpoint_id: cp.id, value_1: mv, value_numeric: mv, status: measureStatus(r.mval, cp) }
         }
-        return { inspection_id: insp.id, checkpoint_id: cp.id, value_attribute: r.attr || null, status: r.attr === 'ng' ? 'fail' : r.attr === 'ok' ? 'pass' : null }
+        /* 🚩 เหตุผลที่ NG ลง `action_text` (ช่องนี้มีอยู่แล้ว แต่ถูกใช้ 1 จาก 43 จุด)
+           ยกของเก่ามาแล้วกดยืนยัน = เก็บข้อความเดิมลงไปจริง ไม่ใช่ปล่อยว่างแล้วอ้างว่ายกมา */
+        const ngText = r.attr === 'ng'
+          ? (String(r.reason || '').trim() || (r.reasonAccepted ? (ngCarryOf(cp.id)?.text || '') : ''))
+          : null
+        return { inspection_id: insp.id, checkpoint_id: cp.id, value_attribute: r.attr || null, action_text: ngText || null, status: r.attr === 'ng' ? 'fail' : r.attr === 'ok' ? 'pass' : null }
       })
       const { error: e2 } = await supabaseDR.from('inspection_results').insert(rows)
       if (e2) {
@@ -1549,7 +1637,7 @@ export default function PMCheckData() {
       }
       if (pmDraftKey) clearDraft(pmDraftKey)
       const init = {}
-      checkpoints.forEach(c => { init[c.id] = { v1: '', v2: '', v3: '', attr: '', note: '', mval: '' } })
+      checkpoints.forEach(c => { init[c.id] = { v1: '', v2: '', v3: '', attr: '', note: '', mval: '', reason: '', reasonAccepted: false } })
       setResults(init); setNotes('')
       fetchHistory(selectedJig.id)
       setTab('history')
@@ -1602,10 +1690,20 @@ export default function PMCheckData() {
   const showSidebar = !isNarrow || !selectedJig
   const showMain = !isNarrow || !!selectedJig
 
+  /* 🧭 หน้าช่าง (mode pm) ถูกเปิดด้วยทีม AM (ลิงก์เก่า/ป้าย QR/แจ้งเตือน) → พาไปหน้าบันทึก AM ของตัวเอง */
+  if (!amMode && isAmTeam(department)) {
+    const q = new URLSearchParams({ tab: 'amcheck', dept: department })
+    if (equipParam) q.set('equip', equipParam)
+    if (searchParams.get('line')) q.set('line', searchParams.get('line'))
+    return <Navigate to={`/daily-checker?${q.toString()}`} replace />
+  }
+  /* ปุ่มเลือกทีม = เฉพาะทีมของโหมดนี้ (AM ไม่ปนกับทีมช่าง) */
+  const modeTeams = teams.filter(t => isAmTeam(t.key) === amMode)
+
   return (
     <Page width="full">
-    {/* UI-STANDARD 2026-09-24 — หัวเพจมาตรฐาน (ใน PmHub ชื่อถูกซ่อน เหลือหัวของ hub ชั้นเดียว) */}
-    <PageHeader title={tr('บันทึกผลตรวจ PM')} icon="✅" />
+    {/* UI-STANDARD 2026-09-24 — หัวเพจมาตรฐาน (ใน PmHub/DailyChecker ชื่อถูกซ่อน เหลือหัวของ hub ชั้นเดียว) */}
+    <PageHeader title={tr(amMode ? 'บันทึกผลตรวจ AM' : 'บันทึกผลตรวจ PM')} icon="✅" />
     {/* 🔐 เปิดทีมอื่นอยู่ — ดูได้ แต่ลงผล/อนุมัติ/เลื่อนรอบไม่ได้ (ต้องเขียนบอก ห้ามปุ่มเทาเฉยๆ) */}
     {!deptWrite.ok && (
       <div style={{ margin: '0 0 10px', padding: '8px 10px', borderLeft: '4px solid var(--amber)',
@@ -1617,11 +1715,11 @@ export default function PMCheckData() {
       {/* Sidebar (จอแคบ = เต็มความกว้าง) */}
       {showSidebar && (
       <div style={{ ...S.sidebar, ...(isNarrow ? { width: '100%', borderRight: 'none', position: 'static', height: 'auto' } : null) }}>
-        <div style={{ ...S.deptBar, paddingTop: 12 }}>
-          {teams.map(d => <button key={d.key} onClick={() => setDept(d.key)} style={S.deptBtn(department === d.key, d.color || DEPT_COLORS[d.key] || '#3dd65c')}>{d.icon ? `${d.icon} ` : ''}{tr(d.label)}</button>)}
-        </div>
+        {modeTeams.length > 1 && <div style={{ ...S.deptBar, paddingTop: 12 }}>
+          {modeTeams.map(d => <button key={d.key} onClick={() => setDept(d.key)} style={S.deptBtn(department === d.key, d.color || DEPT_COLORS[d.key] || '#3dd65c')}>{d.icon ? `${d.icon} ` : ''}{tr(d.label)}</button>)}
+        </div>}
         {/* AM (ผลิตตรวจเอง) กับ PM (ช่าง) เป็นคนละงาน — บอกให้ชัดว่าแท็บที่เลือกอยู่คืออะไร */}
-        <div style={{ padding: '0 16px 10px', fontSize: 11, color: 'var(--muted)', lineHeight: 1.5 }}>
+        <div style={{ padding: modeTeams.length > 1 ? '0 16px 10px' : '12px 16px 10px', fontSize: 11, color: 'var(--muted)', lineHeight: 1.5 }}>
           {/* ชื่อแท็บที่เลือกอยู่ต้องเห็นเสมอ · คำอธิบายว่าต่างจาก AM ยังไง → ⓘ (อ่านรอบเดียวพอ) · 19/11 */}
           <b style={{ color: deptColor }}>{teamKind(department).short} · {teamKind(department).full}</b>{' '}
           <MoreMark text={tr(teamKind(department).desc)} />
@@ -1966,6 +2064,14 @@ export default function PMCheckData() {
                           )}
                         </div>
                       )}
+                      {/* 🚩 อ่านประวัติ NG ไม่ได้ = ยกเหตุผลเก่าให้ไม่ได้ → ต้องเขียนบนจอ
+                          (กฎความซื่อสัตย์ของจอ — ห้ามกลืนเป็น "ไม่เคย NG" แล้วให้คนงงว่าทำไมไม่มีปุ่มยก) */}
+                      {ngHist.error && (
+                        <div style={{ margin: '0 0 8px', padding: '6px 10px', borderRadius: 'var(--r-md)', fontSize: 11.5, lineHeight: 1.6,
+                          border: '1px solid var(--amber-line)', background: 'var(--amber-dim)', color: 'var(--amber)' }}>
+                          ⚠ {tr('อ่านประวัติการตรวจครั้งก่อนไม่ได้ — ปุ่ม "ใช้เหตุผลเดิม" จะไม่ขึ้น ต้องพิมพ์เหตุผลเอง')} ({ngHist.error})
+                        </div>
+                      )}
                       {(() => {
                         // เลข Item ต่อกลุ่ม (group_name) — sort_order จาก PM Setup จัดกลุ่มมาให้ต่อเนื่องแล้ว
                         const groupNo = {}
@@ -1995,7 +2101,13 @@ export default function PMCheckData() {
                             <AttrRow cp={cp} idx={idx} methodIndex={methodIndex}
                               value={results[cp.id]?.attr ?? ''} note={results[cp.id]?.note ?? ''}
                               onChangeAttr={v => setResults(prev => ({ ...prev, [cp.id]: { ...prev[cp.id], attr: v } }))}
-                              onChangeNote={v => setResults(prev => ({ ...prev, [cp.id]: { ...prev[cp.id], note: v } }))} />
+                              onChangeNote={v => setResults(prev => ({ ...prev, [cp.id]: { ...prev[cp.id], note: v } }))}
+                              /* 🚩 NG ต้องมีเหตุผล (19/11) — ของเก่ายกมาได้แต่ต้องกดยืนยัน */
+                              reason={results[cp.id]?.reason ?? ''}
+                              onChangeReason={v => setResults(prev => ({ ...prev, [cp.id]: { ...prev[cp.id], reason: v } }))}
+                              carry={ngCarryOf(cp.id)} accepted={!!results[cp.id]?.reasonAccepted}
+                              onAccept={() => setResults(prev => ({ ...prev, [cp.id]: { ...prev[cp.id], reasonAccepted: true, reason: ngCarryOf(cp.id)?.text || '' } }))}
+                              okWarn={okWarnOf(cp.id)} />
                           )
                           return (
                             <div key={cp.id}>
@@ -2090,24 +2202,19 @@ export default function PMCheckData() {
                       })()}
                       <InspectorCodeField value={inspectorCode} onChange={setInspectorCode} required style={{ marginTop: 8 }} />
                       <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder={tr('หมายเหตุ (ถ้ามี)...')} style={{ marginTop: 8 }} />
-                      {/* 🔴 ปุ่มบันทึก "สีต้องตรงกับความจริง" (06/10 · คอมเมนต์ทีม MTN ข้อ 3)
-                          *"ถ้ากรอกรายละเอียดไม่ครบทุกจุด ให้ปุ่มบันทึกขึ้นเป็นสีแดงหรือสีเหลืองไว้ก่อนได้มั้ย
-                            ตอนนี้เป็นสีเขียว ถ้าพนักงานกดข้าม จะสามารถบันทึกได้ถึงข้อมูลจะไม่ครบ"*
-                          ⚠️ **ห้ามบล็อกไม่ให้กด** — ระบบตั้งใจให้บันทึกค้างได้ (ตรวจไม่ครบ = `pending`
-                             ไม่เลื่อนรอบ PM · ดูตอน save) ช่างตรวจค้างแล้วกลับมาทำต่อเป็นงานจริง
-                          ⇒ แก้ที่ "สี + ถามยืนยัน" ไม่ใช่ปิดปุ่ม: ไม่ครบ = เหลือง + confirm บอกจำนวนที่ขาด */}
-                      <button onClick={async () => {
-                        if (!isFormReady && !await askConfirm(
-                          `ยังกรอกไม่ครบ ${nMissing} จุด จาก ${checkpoints.length} จุด\n\n`
-                          + `[ตกลง] = บันทึกค้างไว้ก่อน — ผลตรวจจะเป็น "ยังไม่ครบ" และ**ไม่เลื่อนรอบ PM**\n`
-                          + `[ยกเลิก] = กลับไปกรอกให้ครบ`)) return
+                      {/* 🔴 ตรวจไม่ครบ = บันทึกไม่ได้ (19/11 · คำสั่ง user — มาตรฐานเดียวกับใบตรวจ QA)
+                          เดิม (06/10) "เตือน + ถามยืนยัน แล้วบันทึกค้างเป็น pending" — user เลือกให้ทุกระบบตรวจ (QA/PM/AM) บล็อกเหมือนกัน
+                          · ปุ่มยังกดได้เพื่อบอกเหตุ: ขึ้นเลขข้อที่ยังไม่ตรวจ (เลขเดียวกับชิป "ยังไม่ตรวจ") + พาไปข้อแรกที่ขาด
+                          · ปุ่มยังเหลือง + บอกจำนวนที่ขาด (สีตรงกับความจริง · คอมเมนต์ทีม MTN 06/10) · ด่านซ้ำใน handleSave */}
+                      <button onClick={() => {
+                        if (!isFormReady) { blockIncomplete(); return }
                         handleSave()
                       }} disabled={saving || !canRecord}
                         style={{ ...S.saveBtn,
                           background: isFormReady ? 'var(--accent)' : 'var(--accent2)',
                           color: isFormReady ? 'var(--accent-ink)' : '#1a1a1a',
                           opacity: (saving || !canRecord) ? 0.6 : 1 }}>
-                        {saving ? 'กำลังบันทึก...' : !canRecord ? `ไม่มีสิทธิ์บันทึกผลตรวจ ${isAmTeam(department) ? 'AM' : 'PM'}` : isFormReady ? 'บันทึกผลการตรวจ' : `บันทึก (ยังไม่ครบ ${nMissing} จุด)`}
+                        {saving ? 'กำลังบันทึก...' : !canRecord ? `ไม่มีสิทธิ์บันทึกผลตรวจ ${isAmTeam(department) ? 'AM' : 'PM'}` : isFormReady ? 'บันทึกผลการตรวจ' : `ยังบันทึกไม่ได้ — ยังไม่ตรวจ ${nMissing} จุด`}
                       </button>
                     </>
                   )}
