@@ -12141,3 +12141,20 @@ test('📍 pos-pct-double-suffix — พิกัดหมุด pos_top/pos_lef
   assert.deepEqual(bad, [],
     `\n\n❌ ต่อ "%" ท้าย pos_top/pos_left ดิบ (ค่าในฐานมี % อยู่แล้ว = "x%%" หมุดกองมุมซ้ายบน):\n   ${bad.join('\n   ')}\n   ใช้ \`\${parseFloat(p.pos_top)}%\`\n`);
 });
+
+/* ═══ 🤝 checkin-lent-out-lock — 2026-11-19 · คำสั่ง user "ไลน์ที่ยืมบันทึก · หัวหน้าหลักต้องรู้" ═══════════
+   📄 docs/modules/check-sheet-audit.md §คนยืมข้ามไลน์ · คนที่ถูกยืมออกกะนี้ = ไลน์ที่ยืมบันทึกฝั่งเดียว
+   (เดิม 2 ไลน์บันทึกทับกัน ใครกดทีหลังชนะ) + หัวหน้าต้นสังกัดได้แจ้งเตือนตอนถูกยืม */
+test('🤝 checkin-lent-out-lock — คนถูกยืมออก ห้ามต้นสังกัดเขียนทับ + ต้องแจ้งต้นสังกัด', () => {
+  const bad = [];
+  const ck = stripComments(readFileSync(join(ROOT, 'src/pages/Checkin.jsx'), 'utf8'));
+  const save = ck.slice(ck.indexOf('const handleSave'), ck.indexOf('const handleSave') + 4000);
+  if (!/const savable = displayed\.filter\(emp => !emp\._helperOutTo\)/.test(save)) bad.push('Checkin handleSave ไม่ตัดคนที่ถูกยืมออก (savable)');
+  const writePart = ck.slice(ck.indexOf('const skippedOut'), ck.indexOf('บันทึกเช็คชื่อสำเร็จ'));   // ช่วงที่เขียน DB (สรุป Telegram หลังจากนี้ใช้ displayed ได้)
+  if (/displayed\.(map|filter)\(/.test(writePart)) bad.push('Checkin handleSave ยังใช้ displayed เขียน DB (ต้องใช้ savable)');
+  if (!/notifyBorrowed\(emp, borrowLineId\)/.test(ck)) bad.push('Checkin ยืมคนแล้วไม่แจ้งหัวหน้าต้นสังกัด (notifyBorrowed)');
+  if (!/event: 'line_helper_borrowed'/.test(ck)) bad.push("Checkin ไม่ได้ยิง event 'line_helper_borrowed'");
+  const sl = stripComments(readFileSync(join(ROOT, 'src/pages/ScanLanding.jsx'), 'utf8'));
+  if (!/from\('line_helpers'\)/.test(sl) || !/lentToName \|\| lineById/.test(sl)) bad.push('ScanLanding ไม่ตัดสินขอบเขตที่ไลน์ที่ยืม — ต้นสังกัดยิงบัตรทับได้');
+  assert.deepEqual(bad, [], bad.join('\n'));
+});
