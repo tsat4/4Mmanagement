@@ -91,11 +91,14 @@ export function buildChangePointSheet({ month, logs = [], ranOn = () => null, is
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmtD = (iso) => { const s = String(iso || ''); return s.length >= 10 ? `${s.slice(8, 10)}/${s.slice(5, 7)}/${s.slice(2, 4)}` : ''; };
 
+/* 🔴 ใบเป็นกระดาษขาวทั้งในธีมมืด/สว่าง ⇒ td/th ต้องตั้งสีดำเอง — CSS กลางของแอปตั้ง `td{color:var(--text)}`
+   `th{color:var(--muted)}` ซึ่งธีมมืดเป็นสีอ่อน ⇒ ตัวหนังสือจางบนพื้นขาว (feedback 19/11)
+   ช่องที่มีสีเฉพาะ (.lbl/.day/.mk.hit ฯลฯ) ความเจาะจงสูงกว่าจึงยังชนะ */
 /* CSS ของใบ — scope ใต้ `.cpc` (วางบนจอได้โดยไม่ชนสไตล์แอป) · บนจอฟอนต์ ≥11px · พิมพ์ย่อลง */
 export const CPC_CSS = `
 .cpc{font-family:'Sarabun',sans-serif;color:#000;background:#fff;font-size:11px;min-width:1100px}
 .cpc table{border-collapse:collapse;width:100%}
-.cpc td,.cpc th{border:1px solid #555;padding:2px 3px}
+.cpc td,.cpc th{border:1px solid #555;padding:2px 3px;color:#000}
 .cpc .hd-title{background:#ffff00;text-align:center;font-weight:700;font-size:20px;line-height:1.4}
 .cpc .hd-title small{display:block;font-size:16px}
 .cpc .hd-unit th{background:#a7f3c4;font-size:11px}
