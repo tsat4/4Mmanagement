@@ -110,3 +110,25 @@ export default function useBomChildren(mat, { enabled = true } = {}) {
 
   return { rows, sheets, failed: st.failed, message: st.message, loading: st.loading };
 }
+
+/**
+ * 🌳 "พาร์ทไหนมี BOM บ้าง" — ชุด `product_id` ที่มีบรรทัด BOM ใช้งานอยู่ (2026-11-19 · ใบเบิก FM-STO-003)
+ * ใช้ติดป้าย/เรียงในช่องเลือกแม่ (เลือกแม่เพื่อตัดลูก) · ดึงคอลัมน์เดียว (กฎ egress ข้อ 11)
+ * @returns {Promise<{ ids: Set<any>|null, failed: boolean, message: string }>}
+ *   🔴 อ่านไม่ได้ = `ids:null` + `failed` — จอห้ามสรุปว่า "ไม่มี BOM" (fail-open: ยังเลือกได้ทุกตัว)
+ */
+export async function loadBomParentIds() {
+  const { data, error } = await cachedRows('bom_items:parent_ids:v1', async () => {
+    const out = new Set();
+    for (let from = 0; from < 20000; from += 1000) {
+      const r = await supabaseDR.from('bom_items').select('product_id')
+        .eq('is_active', true).order('id').range(from, from + 999);
+      if (r.error) return { data: null, error: r.error };
+      for (const row of r.data || []) if (row.product_id != null) out.add(row.product_id);
+      if ((r.data || []).length < 1000) break;
+    }
+    return { data: [...out], error: null };
+  });
+  if (error) return { ids: null, failed: true, message: `อ่านทะเบียน BOM ไม่สำเร็จ (${error.message})` };
+  return { ids: new Set(data || []), failed: false, message: '' };
+}
