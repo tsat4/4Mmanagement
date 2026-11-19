@@ -1149,6 +1149,7 @@ const EN = {
   'บันทึกชิม': 'Save shim',
   'บันทึกตำแหน่ง': 'Save position',
   'บันทึกตำแหน่งประจำ': 'Save home position',
+  'ยกเลิกตำแหน่งประจำ': 'Remove home position',
   'บันทึกผล': 'Save result',
   'บันทึกผลซ่อม → ส่ง QA': 'Save repair result → send to QA',
   'บันทึกผลตรวจ': 'Save inspection result',
@@ -10398,6 +10399,16 @@ const EN = {
   'งาน PR รอ': 'PR waiting',
   'ย้อนหลัง…': 'Last…',
   'ตั้งกรอบเวลาเป็น N วันล่าสุด (นับถึงวันทำงานวันนี้) — แก้วันต่อได้': 'Set the range to the last N days (up to today\'s work date) — you can still edit the dates',
+  'ถามข้อมูลในระบบ': 'Ask the system',
+  'กำลังดึงข้อมูล…': 'Fetching data…',
+  'ถามได้: OEE ไลน์ · ไลน์ไหน OEE ต่ำสุด · downtime สูงสุด · เครื่องหยุดตอนนี้ · MO ค้าง · ของเสียสูงสุด · 4M ค้าง · มาทำงานกี่คน · ยอดผลิตของไลน์/พาร์ท': 'You can ask: line OEE · lowest-OEE line · top downtime · machines down now · open MOs · top defects · pending 4M · attendance · output by line/part',
+  'มีเครื่องหยุด': 'Machines down:',
+  'ระบุช่วงได้: วันนี้ · เมื่อวาน · สัปดาห์นี้ · เดือนนี้ · เดือน 10 · ต.ค. 2569': 'Periods: today · yesterday · this week · this month · "เดือน 10" · "ต.ค. 2569"',
+  'รายการ — พิมพ์ให้เจาะจงขึ้น': 'more — type a more specific name',
+  'เครื่อง — แตะเพื่อปิดแชทไปดู': '— tap to close chat and view',
+  'ตอบจากข้อมูลจริงในระบบ · ไม่เข้าใจ = ไม่เดา': 'Answers from live system data · no guessing',
+  'ดูหน้าเต็ม': 'Open full page',
+  'พิมพ์คำถาม เช่น oee HDF1 วันนี้': 'Type a question, e.g. oee HDF1 today',
 };
 
 export default EN;
