@@ -2,7 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   parseQuestion, periodFromText, defaultPeriod, matchSubject, oeeSummary, downtimeTop, productionTotals,
+  rankLinesByOee, openDowntimeList, moOpenSummary, fourMPendingSummary, defectTop, attendanceSummary,
 } from '../askBot.js';
+import { dtOpenKind } from '../downtimeRules.js';
 
 /* 💬 แชทถามข้อมูล ขั้นที่ 1 (19/11) — ล็อกตัวอ่านคำถาม + สูตรรวมผล
    ⚠️ ตรึงวันที่เองทุกเคส ห้ามอ้าง new Date() (รอบ "นาฬิกา +400 วัน") */
@@ -144,4 +146,94 @@ test('ชื่อไทยต้องไม่ถูกตัดกลาง�
   const L = [{ name: 'APRON ชุดที่ 1' }, { name: 'APRON ชุดที่ 10' }, { name: 'APRON ชุดที่ 12' }];
   assert.equal(matchSubject('ชุดที่ 1', { lines: L }).pick.name, 'APRON ชุดที่ 1');
   assert.equal(matchSubject('060', { lines: [{ name: 'APRON 060' }, { name: 'APRON 0601' }] }).pick.name, 'APRON 060');
+});
+
+test('รอบ 2: จับเจตนาใหม่ 6 แบบ · ลำดับความหมาย (ต่ำสุด ก่อน oee · ตอนนี้ ก่อน downtime สูงสุด)', () => {
+  const k = (s) => parseQuestion(s, T).intent;
+  assert.equal(k('oee ต่ำสุด วันนี้'), 'oee_lowest');
+  assert.equal(k('ไลน์ไหน oee แย่ที่สุด เดือนนี้'), 'oee_lowest');
+  assert.equal(k('oee HDF1'), 'oee');
+  assert.equal(k('เครื่องหยุดตอนนี้'), 'down_now');
+  assert.equal(k('ตอนนี้มีเครื่องไหนหยุดอยู่บ้าง'), 'down_now');
+  assert.equal(parseQuestion('ตอนนี้มีเครื่องไหนหยุดอยู่บ้าง', T).subject, '', 'ไม่มีชื่อไลน์ = ทั้งขอบเขต');
+  assert.equal(k('downtime สูงสุด'), 'downtime_top');
+  assert.equal(k('MO ค้าง HDF1'), 'mo_open');
+  assert.equal(k('ใบแจ้งซ่อมค้างกี่ใบ'), 'mo_open');
+  assert.equal(k('moon'), null, '"mo" ต้องเป็นคำเดี่ยว');
+  assert.equal(k('4M ค้าง'), 'fourm_pending');
+  assert.equal(k('ของเสียสูงสุด สัปดาห์นี้'), 'defect_top');
+  assert.equal(k('ng มากสุด hdf1'), 'defect_top');
+  assert.equal(k('มาทำงานกี่คน HDF1'), 'attendance');
+});
+
+test('ตัวย่อเดือนไม่มีจุดต้องไม่ถูกอ่านเป็นเดือน ("ซ่อมค้าง" มี "มค")', () => {
+  assert.equal(parseQuestion('ใบแจ้งซ่อมค้างกี่ใบ', T).period, null);
+  assert.equal(periodFromText('ม.ค.', T).from, '2026-01-01');
+});
+
+test('รอบ 2: ไลน์ OEE ต่ำสุด = ไลน์ละ oeeSummary เรียงต่ำ→สูง · ไลน์ไม่มีค่าแยกออก', () => {
+  const S = (id, line, oee) => ({ id, line_name: line, oee, shift_min: 600 });
+  const r = rankLinesByOee([S(1, 'A', 80), S(2, 'B', 50), S(3, 'B', 70), S(4, 'C', null)]);
+  assert.deepEqual(r.ranked.map(x => [x.line, x.oee]), [['B', 60], ['A', 80]]);
+  assert.deepEqual(r.noValue, ['C']);
+});
+
+test('รอบ 2: เครื่องหยุดตอนนี้ — กะปิดแล้ว = ลืมปิดรายการ (ไม่นับเป็นเครื่องหยุด แต่ไม่ซ่อน)', () => {
+  const now = Date.parse('2026-11-19T03:00:00Z');
+  const row = (st, at) => ({ machine_no: 'SW10', started_at: at, ended_at: null, duration_min: null,
+    production_sessions: { line_name: 'HDF1', status: st }, dr_downtime_types: { name_th: 'แม่พิมพ์เสีย', category: 'unplanned' } });
+  const r = openDowntimeList([row('open', '2026-11-19T02:00:00Z'), row('closed', '2026-11-18T02:00:00Z'),
+    { ...row('open', '2026-11-19T02:30:00Z'), ended_at: '2026-11-19T02:40:00Z', duration_min: 10 }],
+  now, d => dtOpenKind(d, d.production_sessions?.status));
+  assert.equal(r.open.length, 1);
+  assert.equal(Math.round(r.open[0].min), 60);
+  assert.equal(r.forgotten.length, 1);
+});
+
+test('รอบ 2: MO ค้าง นับตามสถานะในชุดเปิด · สถานะที่ไม่รู้จักแยกนับ ห้ามเดา', () => {
+  const now = Date.parse('2026-11-19T00:00:00Z');
+  const r = moOpenSummary([
+    { status: 'pending', created_at: '2026-11-09T00:00:00Z' }, { status: 'pending', created_at: '2026-11-18T00:00:00Z' },
+    { status: 'repairing', created_at: '2026-11-17T00:00:00Z' }, { status: 'แปลก' },
+  ], now);
+  assert.equal(r.total, 3);
+  assert.deepEqual(r.list.map(e => [e.status, e.n, e.oldestDays]), [['pending', 2, 10], ['repairing', 1, 2]]);
+  assert.equal(r.unknown, 1);
+});
+
+test('รอบ 2: 4M ค้าง — แยกรอหัวหน้า/รอ QA และใบระบบ [Auto]', () => {
+  const r = fourMPendingSummary([
+    { status: 'pending', work_date: '2026-11-10', created_by: 'u1', line_name: 'A' },
+    { status: 'pending_qa', work_date: '2026-11-18', created_by: null, description: '[Auto] x', line_name: 'A' },
+    { status: 'approved', work_date: '2026-11-01', created_by: 'u1' },
+  ], T);
+  assert.deepEqual([r.total, r.pending, r.pending_qa, r.auto, r.oldestDays], [2, 1, 1, 1, 9]);
+});
+
+test('รอบ 2: ของเสียสูงสุด — "อื่นๆ/ไม่ระบุ" ไม่ติดอันดับ แต่ยังรวมในยอดและบอกจำนวน', () => {
+  const r = defectTop([
+    { qty_ng: 5, dr_defect_types: { name_th: 'รอยบุบ' } },
+    { qty_ng: 50, dr_defect_types: { name_th: 'อื่นๆ' } },
+    { qty_ng: 3, qty_suspect: 2, dr_defect_types: { name_th: 'Spot หลุด' } },
+    { qty_ng: 4 },
+  ]);
+  assert.deepEqual(r.top.map(e => e.name), ['รอยบุบ', 'Spot หลุด']);
+  assert.equal(r.total, 64);
+  assert.equal(r.vagueQty, 54);
+});
+
+test('รอบ 2: มาทำงาน — แยก มา / แจ้งไม่มา / ยังไม่เช็ค (ห้ามรวมเป็น "ขาด")', () => {
+  const name = { 1: 'HDF1', 2: 'HDF2' };
+  const r = attendanceSummary(
+    [{ id: 'a', line_id: 1 }, { id: 'b', line_id: 1 }, { id: 'c', line_id: 1 }, { id: 'd', line_id: 2 }, { id: 'e', line_id: 9 }],
+    [{ employee_id: 'a', is_present: true }, { employee_id: 'b', is_present: false }],
+    id => name[id] || null);
+  assert.deepEqual([r.head, r.in, r.out, r.none], [4, 1, 1, 2]);
+  assert.equal(r.lines[0].line, 'HDF1');
+});
+
+test('รอบ 2: เครื่องหยุดที่ไม่มีเวลาเริ่ม = ไม่ทราบ (null) ห้ามเป็น 0 นาที', () => {
+  const r = openDowntimeList([{ machine_no: 'X', started_at: null, ended_at: null, duration_min: null,
+    production_sessions: { line_name: 'A', status: 'open' } }], Date.parse('2026-11-19T00:00:00Z'), () => 'open');
+  assert.equal(r.open[0].min, null);
 });

@@ -12129,3 +12129,15 @@ test('🗂️ check-sheet-round1 — ด่านขอบเขต · ห้า
     bad.push('BbsCheck ทิ้งค่าคืนของ checkWriteRows (ปิดข้อตกลง) — ไม่ครบแล้วยังขึ้น "บันทึกแล้ว"');
   assert.deepEqual(bad, [], bad.join('\n'));
 });
+
+test('📍 pos-pct-double-suffix — พิกัดหมุด pos_top/pos_left ต้องผ่าน parseFloat ก่อนต่อ "%"', () => {
+  /* 19/11 หน้างานแจ้ง /manpower-board แท็บผัง LAYOUT "จุดพนักงานกองมุมซ้ายบนหมด" — ฐานเก็บ pos_top/pos_left
+     เป็น text ที่มี % ติดมาแล้ว ("7.47%") · `${pos_top}%` = "7.47%%" ⇒ CSS ทิ้งค่า ⇒ ทุกหมุดตก 0,0 เงียบๆ */
+  const bad = [];
+  for (const file of walk(join(ROOT, 'src'), ['.jsx', '.js'])) {
+    const src = stripComments(readFileSync(file, 'utf8'));
+    if (/\$\{(?!parseFloat)[^}]*pos_(?:top|left)\}%/.test(src)) bad.push(file.replace(ROOT + '/', ''));
+  }
+  assert.deepEqual(bad, [],
+    `\n\n❌ ต่อ "%" ท้าย pos_top/pos_left ดิบ (ค่าในฐานมี % อยู่แล้ว = "x%%" หมุดกองมุมซ้ายบน):\n   ${bad.join('\n   ')}\n   ใช้ \`\${parseFloat(p.pos_top)}%\`\n`);
+});
