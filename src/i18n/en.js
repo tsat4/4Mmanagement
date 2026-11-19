@@ -10398,6 +10398,10 @@ const EN = {
   'งาน PR รอ': 'PR waiting',
   'ย้อนหลัง…': 'Last…',
   'ตั้งกรอบเวลาเป็น N วันล่าสุด (นับถึงวันทำงานวันนี้) — แก้วันต่อได้': 'Set the range to the last N days (up to today\'s work date) — you can still edit the dates',
+  'ถามข้อมูลในระบบ': 'Ask the system',
+  'ตอบจากข้อมูลจริงในระบบ · ไม่เข้าใจ = ไม่เดา': 'Answers from live system data · no guessing',
+  'ดูหน้าเต็ม': 'Open full page',
+  'พิมพ์คำถาม เช่น oee HDF1 วันนี้': 'Type a question, e.g. oee HDF1 today',
 };
 
 export default EN;
