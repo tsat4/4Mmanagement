@@ -12098,3 +12098,24 @@ test('🗂 operator-tab-allowed-complete — `tabAllowed` ใน operator.jsx �
   assert.equal(nAllowed, nKeys,
     `\n\n❌ operator.jsx: TAB_KEYS มี ${nKeys} แท็บ แต่ tabAllowed มี ${nAllowed} ช่อง — แท็บที่เกินมากดแล้วตกกลับแท็บแรกเงียบๆ\n`);
 });
+
+test('📦 line-demand-confirm-awaited — ยกเลิกต้องยกเลิกจริง + เปิดใบผลิตห้ามเด้ง popup บังช่องสแกน', () => {
+  /* 19/11 (คำสั่ง user "เปิดออเดอร์ต่อกันไม่ได้ · ห้ามตัดออก"):
+     ① askConfirm คืน Promise (codemod 18/11) ⇒ `if (!confirmFn(text))` = !Promise = false เสมอ ⇒ กดยกเลิกแล้วยังแจ้งสโตร์
+     ② เปิดใบผลิตแล้วเรียก confirmAndSyncLineDemand ทันที = popup บังช่องสแกน PROD.NO ⇒ ต้องคิดเงียบ (previewLineDemand) แล้วขึ้นแถบ */
+  const bad = [];
+  const L = 'src/lib/lineDemandSync.js';
+  const l = stripComments(readFileSync(join(ROOT, L), 'utf8'));
+  if (/if\s*\(\s*!\s*confirmFn\(/.test(l)) bad.push(`${L}: confirmFn คืน Promise — ต้อง \`!(await confirmFn(text))\``);
+  if (!/export async function previewLineDemand/.test(l)) bad.push(`${L}: ต้องมี previewLineDemand() (คิดอย่างเดียว ไม่ถาม ไม่เขียน)`);
+  const D = 'src/pages/DailyReport.jsx';
+  const d = stripComments(readFileSync(join(ROOT, D), 'utf8'));
+  const m = d.match(/const syncDemandAfterOpen = \([\s\S]*?\n  \};/);
+  if (!m) bad.push(`${D}: หา syncDemandAfterOpen ไม่เจอ — เปลี่ยนชื่อแล้วต้องแก้ด่านนี้`);
+  else {
+    if (/confirmAndSyncLineDemand\(/.test(m[0])) bad.push(`${D}: syncDemandAfterOpen ห้ามเรียก confirmAndSyncLineDemand (popup บังช่องสแกน) — ใช้ previewLineDemand + StoreNotifyBar`);
+    if (!/previewLineDemand\(/.test(m[0])) bad.push(`${D}: syncDemandAfterOpen ต้องคิดผ่าน previewLineDemand`);
+  }
+  if (!/<StoreNotifyBar\b/.test(d)) bad.push(`${D}: ต้องวาด <StoreNotifyBar> ให้คนกดแจ้งสโตร์เองได้ (ห้ามตัดฟีเจอร์ออก)`);
+  assert.deepEqual(bad, []);
+});
