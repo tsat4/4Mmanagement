@@ -367,20 +367,47 @@ user เคาะ 3 ข้อ: **① แยกรายส่วนงาน ②
   · ⚠️ **เตือนเท่านั้น ห้ามบล็อก ห้ามลบให้เอง** — ใบจริงเพิ่มของนอกมาตรฐานได้โดยตั้งใจ
     (เช่น `Air Leak [MTN]` ของ Electric มีข้อมูลจริง 7 เดือน) · ไม่ใช้แล้วให้ **ปิดแถว ไม่ใช่ลบ**
 
-**สภาพใบหลังผูกแบบใหม่ (วัด 19/11 · ข้อบังคับที่ยังไม่ได้หยิบ):**
+### 🪜 ลำดับที่ต้องทำตาม ตอนย้ายใบไปอิงแบบอื่น — **ผูกก่อน แล้วค่อยหยิบ**
 
-| หน่วย | ขาด | หมายเหตุ |
-|---|---|---|
-| **Die MTN** | **6** — Internal Satisfaction · MO Closed on target · Machine Break Down · MTBF · MTTR · Cost Reduction | หนักสุด · ของเดิม 6 ข้อเป็นแบบธุรกิจขายแม่พิมพ์ · มีข้อมูลจริงแค่ Safety 10 เดือน |
-| Maintenance (ส่วนงาน) | 10 | ใบมีแค่ 2 แถว |
-| Electric | 4 | ส่วนงานซ่อมที่ครบที่สุดอยู่แล้ว |
-| Tooling MTN | 4 | 2 ใน 4 เป็น**ชื่อเรียกต่างกันของตัวเดียวกัน** (`DL+OH` = `Direct Labour & Overhead Expenses` · `Cost Reduction (Tooling MTN)` = `Cost Reduction (MTN)`) |
-| Mechanic | 3 | |
-| **JIG MTN** | **0** ✅ | ครบอยู่แล้ว — ใช้เป็นต้นแบบได้ |
+> user 19/11: *"หยิบเลยแต่ต้องไม่มั่วหยิบซ้ำ"* — ทำตามลำดับนี้เท่านั้น
 
-- ⚠️ **"ขาด" บางข้อคือชื่อเรียกต่างกัน ไม่ใช่ไม่มีจริง** — `matchStdItems()` จับคู่ด้วย `std_item_id` ก่อน
-  แล้วค่อยเทียบชื่อแบบตรงตัว ⇒ แถวเก่าที่ import มาก่อนมี `std_item_id` = null จะจับคู่ด้วยชื่อล้วน
-  **ตรวจตาก่อนกดหยิบเพิ่ม ไม่งั้นได้ KPI ซ้ำ 2 แถว**
+1. **ผูกแถวที่มีอยู่แล้วเข้าทะเบียนใหม่** (`std_item_id`) — `matchStdItems()` ดู `std_item_id` ก่อน
+   แล้วค่อยเทียบ **ชื่อแบบตรงตัว** ⇒ ชื่อเพี้ยนนิดเดียวก็ถูกนับว่า "ยังไม่ได้หยิบ" ทั้งที่มีอยู่แล้ว
+   · ตัวอย่างจริงที่เจอ 19/11 (ทั้งหมดคือ KPI ตัวเดียวกัน):
+
+   | ในใบ | ในทะเบียน |
+   |---|---|
+   | `DL+OH (Direct Labor + Overhead)` | `Direct Labour & Overhead Expenses` |
+   | `Cost Reduction (Tooling MTN)` / `(JIG MTN)` | `Cost Reduction (MTN)` |
+   | `Mean Time Between Failure (MTBF)` | `Mean Time Between **to** Failure (MTBF)` |
+   | `Safety (Serious/Absent/Minor/Fire)` | `Safety` |
+   | `Annual Sale**s** Per Head` | `Annual Sale Per Head` |
+
+2. 🔴 **เช็คแถวที่ "ปิดใช้งาน" ก่อนหยิบใหม่เสมอ** — Electric มี 4 ข้อที่ดูเหมือนขาด แต่มีอยู่แล้ว
+   ในสถานะปิด **และยังมีข้อมูลจริงค้างอยู่** (`MO Closed on target` 3 เดือน · `QCC` 7 เดือน)
+   ⇒ **เปิดคืนแถวเดิม ไม่ใช่สร้างใหม่** (จอทำให้แล้วด้วย `findClosedTwin()` · SQL ต้องทำแบบเดียวกัน)
+   ไม่งั้น = แถวซ้ำ + ข้อมูล 10 เดือนกำพร้า
+3. **หยิบเฉพาะที่ไม่มีจริง** · **ไม่ใส่น้ำหนัก/เป้า** (เอกสารกลุ่มให้หน่วยงานถ่วงเอง รวมต้องได้ 50)
+
+**ผลหลังทำครบ (วัด 19/11) — ข้อบังคับขาด 0 · ซ้ำ 0 ทุกหน่วย · ข้อมูลเดิมอยู่ครบ:**
+
+| หน่วย | แถว | นอกมาตรฐาน | เดือนที่มีข้อมูล | ทำอะไรไป |
+|---|---|---|---|---|
+| **Die MTN** | 17 | 5 | 10 | ผูก 6 · หยิบใหม่ 5 (MO Closed · Machine Break Down · MTBF · MTTR · Cost Reduction) |
+| Electric | 12 | 1 | 86 | **เปิดคืน 4** (ไม่ได้หยิบใหม่) |
+| **JIG MTN** | 13 | 1 | 31 | — ครบอยู่แล้ว **ใช้เป็นต้นแบบได้** |
+| Maintenance (ส่วนงาน) | 11 | 0 | 20 | ผูก 2 · หยิบใหม่ 9 |
+| Mechanic | 11 | 0 | 73 | ผูก 8 · หยิบใหม่ 3 |
+| Tooling MTN | 13 | 2 | 103 | ผูก 9 (มี 1 ที่ผูกผิดไป Production) · หยิบใหม่ 2 |
+
+**"นอกมาตรฐาน" ที่เหลือ — ตั้งใจเก็บไว้ ไม่ใช่ของตกค้าง:**
+- Electric `Air Leak [MTN]` (7 เดือน) · Tooling MTN `PM on Plan (DIE HDF)`/`(PRESS Factory)` (10 เดือนทั้งคู่)
+  · JIG MTN `Non NC Major (ISO External Audit)` — **ของจริงที่หน่วยงานวัดเอง** (§6 อนุญาต)
+- 🔴 **Die MTN เหลือ 5 ข้อของแบบธุรกิจขายแม่พิมพ์** (`Keep inventory no more than` ·
+  `Manage project … on time delivery to customer` · `Part quality concern from Dies & Jig MTN` ·
+  `Reduce interuption from mold problems` · `Reduce part rework from DIE & JIG tooling`)
+  — **ข้อมูล 0 เดือนทุกตัว** · ยังไม่ปิดให้ เพราะกฎคือ **เตือนเท่านั้น คนตัดสิน**
+  ไม่ใช้แล้วให้ปิดแถว (`is_active=false`) **ห้ามลบ**
 - **Die MTN · Customer Satisfaction → Internal Satisfaction** สลับ 1:1 แล้ว (น้ำหนัก 5 · ≥95%/100% คงเดิม ·
   ข้อมูลของตัวเอง 0 เดือน ⇒ ไม่มีตัวเลขหาย) · migration `20261119_kpi_tech_teams_use_maintenance_std_main.sql`
 - 🔴 **เป้า/น้ำหนักของข้อที่หยิบเพิ่ม ระบบไม่ตั้งให้** (เอกสารกลุ่มให้หน่วยงานถ่วงเอง) — หยิบที่

@@ -56,6 +56,54 @@ update public.kpi_definitions
  where id = '18c5bcac-5d16-4fff-8927-8d403bc9b029'
    and name = 'Customer Satisfaction (Q&D)';
 
+-- ── ข้อ 2c: ผูกแถวที่มีอยู่แล้วเข้าทะเบียน `Maintenance` (25 แถว) ──────────────────────────
+-- 🔴 **ขั้นนี้ต้องมาก่อนการหยิบข้อที่ขาดเสมอ** — ไม่งั้นได้ KPI ซ้ำ 2 แถว
+--    `matchStdItems()` จับคู่ด้วย `std_item_id` ก่อน แล้วค่อยเทียบ "ชื่อแบบตรงตัว"
+--    ⇒ แถวที่ชื่อเพี้ยนนิดเดียวจะถูกนับว่า "ยังไม่ได้หยิบ" ทั้งที่มีอยู่แล้ว เช่น
+--      `DL+OH (Direct Labor + Overhead)`      = `Direct Labour & Overhead Expenses`
+--      `Cost Reduction (Tooling MTN)`/`(JIG MTN)` = `Cost Reduction (MTN)`
+--      `Mean Time Between Failure (MTBF)`     = `Mean Time Between to Failure (MTBF)`   (ขาดคำว่า to)
+--      `Safety (Serious/Absent/Minor/Fire)`   = `Safety`
+--      `Annual Sales Per Head`                = `Annual Sale Per Head`                  (เกิน s)
+-- · Die MTN 6 แถว + Mechanic·DL&OH เดิมผูกอยู่กับแบบ `Die Maintenance` ⇒ ย้ายมาชี้แบบ Maintenance
+-- · Tooling MTN · Internal Satisfaction เดิมผูกผิดไปที่ **Production / Customer Satisfaction (Q&D)**
+-- · JIG MTN ผูกกับแบบ Maintenance ครบอยู่แล้วทั้ง 12 แถว — ไม่ต้องแตะ (ใช้เป็นต้นแบบได้)
+-- (SQL เต็มดูในประวัติ session 19/11 — เป็น update ... from (values ...) รายคู่ id)
+
+-- ── ข้อ 2d: Electric — **เปิดคืนแถวเดิม ไม่ใช่หยิบใหม่** ──────────────────────────────────
+-- 🔴 กับดักที่เกือบพลาด: 4 ข้อที่ดูเหมือน "ขาด" ของ Electric มีอยู่แล้วแต่ถูก **ปิดใช้งาน** ไว้
+--    และยังมีข้อมูลจริงค้างอยู่ — `MO Closed on target` 3 เดือน · `QCC` 7 เดือน
+--    หยิบใหม่ = ได้แถวซ้ำ + ข้อมูล 10 เดือนกำพร้า (จอ `KpiStandardModal` กัน 23505 ไว้ด้วย
+--    `findClosedTwin()` ⇒ SQL ก็ต้องทำแบบเดียวกัน)
+update public.kpi_definitions d
+   set is_active = true, std_item_id = s.id, updated_at = now()
+  from public.kpi_standard_items s
+ where d.year = 2026 and d.scope_value = 'Electric' and not d.is_active
+   and s.year = 2026 and s.std_unit = 'Maintenance'
+   and lower(trim(s.topic)) = lower(trim(d.name));
+
+-- ── ข้อ 2e: หยิบข้อบังคับที่ขาดจริง (19 แถว) ──────────────────────────────────────────────
+-- Die MTN 5 · Mechanic 3 · Tooling MTN 2 · Maintenance 9 · (JIG MTN/Electric = 0 ไม่ต้องหยิบ)
+-- ⚠️ **ไม่ใส่น้ำหนัก/เป้าโดยตั้งใจ** — เอกสารกลุ่มให้หน่วยงานถ่วงเอง ระบบเดาแทนไม่ได้
+--    (payload ชุดเดียวกับปุ่ม "หยิบข้อบังคับที่ขาด" ใน `KpiStandardModal.pickAllFixed()`)
+with units(u, kind) as (values ('Die MTN','department'),('Tooling MTN','section'),
+                               ('Mechanic','department'),('Maintenance','section')),
+std as (select * from public.kpi_standard_items
+         where year=2026 and std_unit='Maintenance' and requirement='fixed')
+insert into public.kpi_definitions (year, scope_kind, scope_value, category, name, formula_text,
+                                    std_item_id, std_unit, is_active)
+select 2026, units.kind, units.u, s.perspective, s.topic, s.formula_text, s.id, 'Maintenance', true
+  from units cross join std s
+ where not exists (
+   select 1 from public.kpi_definitions d
+    where d.year=2026 and d.scope_value = units.u
+      and (d.std_item_id = s.id or lower(trim(d.name)) = lower(trim(s.topic))));
+
+-- 📊 ผลหลังทำครบ (วัด 19/11) — **ข้อบังคับขาด 0 · ซ้ำ 0 ทุกหน่วย** · ข้อมูลเดิมอยู่ครบ:
+--    Die MTN 17 แถว (นอกมาตรฐาน 5 · 10 เดือน) · Electric 12 (นอก 1 · 86 เดือน)
+--    JIG MTN 13 (นอก 1 · 31) · Maintenance 11 (นอก 0 · 20)
+--    Mechanic 11 (นอก 0 · 73) · Tooling MTN 13 (นอก 2 · 103)
+
 -- ── ตรวจผล (Main "MAIN" · ewhdfqwfwofivojtsizn) ──────────────────────────────────────────
 -- 1) Customer Satisfaction เหลือค่ากลาง 1 แถว + หน่วยที่ดึงไปใช้ (own_rows ต้องเป็น 0 ทุกหน่วย):
 --    select d.scope_kind, coalesce(d.scope_value,'(ทั้งโรงงาน)') as scope, d.std_unit,
