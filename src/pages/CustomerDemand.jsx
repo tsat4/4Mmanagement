@@ -4,6 +4,7 @@ import useIsMobile from '../utils/useIsMobile';
 import { UserContext } from '../App';
 import { toast } from '../components/Toast';
 import { can } from '../utils/permissions';
+import { inflowDestOf } from '../utils/partRefStock';   // 19/11 คลังที่ติดลบเมื่อส่งเกินยอดในระบบ
 import { FRAME_START, frameMin, breaksToFrame } from '../utils/timeFrame';
 import { mergeById } from '../utils/mergeRows';
 import PageHeader from '../components/PageHeader';
@@ -76,6 +77,7 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
   const [busy, setBusy] = useState(null);
   const [fgStock, setFgStock] = useState({});   // **เลข SAP** → { total, fg, lines } — fg = เฉพาะคลัง FG (ส่งได้จริง)
   const [fgDest, setFgDest] = useState(null);   // ชื่อคลัง FG จาก stock_inflow_rules (null = ไม่รู้ → นับรวมแบบเดิม)
+  const [inflowRules, setInflowRules] = useState([]);   // 19/11 — คลังที่ "ติดลบ" ตอนส่งของเกินยอดในระบบ (inflowDestOf)
   // เลขบน order (อาจเป็นเลขลูกค้า) → ผลการจับคู่ MAT SAP · ดู utils/matResolve.js
   const [matMap, setMatMap] = useState({});
   const [cardFilter, setCardFilter] = useState('todo');   // 'todo' | 'overdue' | 'shipped' | 'all'
@@ -243,11 +245,12 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
         .or(`due_date.lt.${day},and(due_date.eq.${day},ship_time.lt.08:00)`),
       // คลังปลายทางของ FG จากกฎรับเข้าอัตโนมัติ — "ของพร้อมส่ง" ต้องเป็นของในคลัง FG เท่านั้น
       // (ของใน STORE/มินิสโตร์ยังไม่ผ่านแพ็ค/รับเข้าคลัง ส่งลูกค้าไม่ได้ — กฎเดียวกับ RundownStock)
-      supabaseDR.from('stock_inflow_rules').select('match_type, match_value, dest_line_name').eq('is_active', true),
+      supabaseDR.from('stock_inflow_rules').select('match_type, match_value, dest_line_name, mode, is_active').eq('is_active', true),
     ]);
     if (stale()) return;   // ผู้ใช้เปลี่ยนวันระหว่างรอผล — ทิ้งทั้งชุด ห้ามเขียนทับของวันที่กำลังดู
     const fgDestName = (inflowRules || []).find(r => r.match_type === 'prefix' && r.match_value === '1')?.dest_line_name || null;
     setFgDest(fgDestName);
+    setInflowRules(inflowRules || []);
     setWfSteps(wfs || []);
     setPastDue(past || []);
     /* 2 คิวรีคนละ due_date (D · D+1 กะดึก) ไม่ใช่ transaction ⇒ ใบที่ถูกอัพโหลดทับ/แก้เวลาส่ง
@@ -504,6 +507,23 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
             ref_shipment_id: o.id,   // ผูกกลับรอบส่งใบนี้ → /order-trace สอบกลับได้ตรงใบ ไม่ต้องเดาจากเวลา
           });
         });
+      /* 🔴 19/11 (คำสั่ง user "ตัดเต็มและติดลบ") — ยอดในระบบไม่พอ ⇒ หักส่วนที่ขาดที่ "คลังรับเข้าของพาร์ท"
+         (`inflowDestOf` · ไม่มีกฎ = คลัง FG) ให้ติดลบ แล้วพอปิดใบผลิต/รับเข้าคลัง ยอดหักล้างเอง
+         เดิม: ส่งไปแต่ไม่ตัด ⇒ ยอดค้างสูงเกินจริงถาวร · ไม่รู้คลังเลย = ไม่ตัด + เตือน (ห้ามเดาคลัง) */
+      let negQty = 0, negLoc = null;
+      if (left > 0 && sap) {
+        negLoc = inflowDestOf(sap, inflowRules) || fgDest || null;
+        if (negLoc) {
+          negQty = left; left = 0;
+          txns.push({
+            line_name: negLoc, mat_no: sap, part_name: o.part_name, qty: negQty,
+            type: 'consume', work_date: workDateStr(),
+            note: `ส่งลูกค้า ${o.customer || ''} · ${o.due_date} ${o.ship_time || ''}${o.order_no ? ` · PO ${o.order_no}` : ''} · ⚠ ในระบบไม่พอ ตัดเกิน ${negQty.toLocaleString()} (ติดลบ รอรับเข้าหักล้าง)`,
+            created_by: fullName || 'Logistic',
+            ref_shipment_id: o.id,
+          });
+        }
+      }
       let cut = want - left;
       let insertFailed = false, insertErrMsg = '';
       if (txns.length) {
@@ -540,6 +560,8 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
           + (why || `ไม่มีข้อมูลสต็อกของ ${sap} ในคลัง (ของยังไม่เคยถูกบันทึกเข้า — เช็คการปิดออเดอร์ผลิต/กฎรับเข้าอัตโนมัติ)`);
       } else if (cut < want) {
         shipMsg = `⚠️ ${at} ${o.mat_no} แล้ว — หักสต็อกได้ ${cut.toLocaleString()}/${want.toLocaleString()} ชิ้น (สต็อกในระบบไม่พอ ขาด ${(want - cut).toLocaleString()})`;
+      } else if (negQty > 0) {
+        shipMsg = `⚠️ ${at} ${o.mat_no} แล้ว — หักครบ ${want.toLocaleString()} ชิ้น แต่ ${negQty.toLocaleString()} ชิ้นทำให้ ${negLoc} ติดลบ (ของในระบบไม่พอ — เช็คการปิดใบผลิต/รับเข้าคลัง)`;
       } else if (cutOffFg > 0) {
         shipMsg = `⚠️ ${at} ${o.mat_no} แล้ว — หักครบ แต่ ${cutOffFg.toLocaleString()} ชิ้นถูกหักจากคลังนอก FG (ของยังไม่ผ่านรับเข้าคลัง FG — เช็คขั้นแพ็ค/รับเข้า)`;
       }

@@ -12213,3 +12213,22 @@ test('📍 pos-pct-double-suffix — พิกัดหมุด pos_top/pos_lef
   assert.deepEqual(bad, [],
     `\n\n❌ ต่อ "%" ท้าย pos_top/pos_left ดิบ (ค่าในฐานมี % อยู่แล้ว = "x%%" หมุดกองมุมซ้ายบน):\n   ${bad.join('\n   ')}\n   ใช้ \`\${parseFloat(p.pos_top)}%\`\n`);
 });
+
+/* ── ตัด-จ่ายสต็อก "ตัดเต็ม ยอมติดลบ" (2026-11-19 · คำสั่ง user ปิดช่องโหว่ inbound→process→outbound) ──
+   เดิม 3 จุด "ตัดเท่าที่มี ส่วนที่ขาดปล่อยไป" ⇒ ยอดค้างสูงเกินจริงสะสม (วัด 30 วัน: ส่งลูกค้า 51 ใบ 8,124 ชิ้นไม่ถูกตัด)
+   ① ตัดวัตถุดิบตอนปิดใบ (DB `fn_take_raw` · migration 20261119c) ② จ่ายจาก STORE ③ ส่งลูกค้า
+   ทั้งหมดต้องหักเต็มแล้วเขียนบนจอว่าติดลบ — ห้ามถอยกลับไป "ไม่มีแถว = ไม่หัก" */
+test('🛡️ ตัด-จ่ายสต็อกต้องหักเต็ม (ติดลบได้) — STORE / ส่งลูกค้า / ตัดวัตถุดิบ', () => {
+  const bad = [];
+  const hk = stripComments(readFileSync(join(ROOT, 'src/pages/HeijunkaKanban.jsx'), 'utf8'));
+  if (/else if \(!st\) note/.test(hk)) bad.push('HeijunkaKanban.jsx deductStockForPick — STORE ไม่มีแถวแล้วไม่หัก');
+  if (/issueRows\.filter\(x => has\.has\(x\.mat_no\)\)/.test(hk)) bad.push('HeijunkaKanban.jsx confirmRound — หัก STORE เฉพาะตัวที่มีแถว');
+  if (!/STORE_NEG_NOTE/.test(hk)) bad.push('HeijunkaKanban.jsx — ไม่เขียนบนจอว่า STORE ติดลบ (STORE_NEG_NOTE)');
+  const cd = stripComments(readFileSync(join(ROOT, 'src/pages/CustomerDemand.jsx'), 'utf8'));
+  if (!/inflowDestOf\(sap, inflowRules\)/.test(cd) || !/negQty/.test(cd)) bad.push('CustomerDemand.jsx — ส่งเกินยอดในระบบแล้วไม่หักส่วนที่ขาด');
+  const mig = readFileSync(join(ROOT, 'supabase/migrations/20261119c_stock_full_deduct_qa_return_dr.sql'), 'utf8');
+  if (!/fn_qbin_return_receipt/.test(mig) || !/ตัดเกิน/.test(mig)) bad.push('migration 20261119c ถูกแก้/หาย');
+  assert.deepEqual(bad, [], `\n\n❌ ตัด-จ่ายสต็อกกลับไป "ตัดเท่าที่มี":\n   ${bad.join('\n   ')}\n`
+    + '   กฎ (user 19/11): ยอดในระบบไม่พอ = หักเต็ม ติดลบ แล้วพอเติม/รับเข้า ยอดหักล้างเอง · ต้องเขียนบนจอว่าติดลบ\n'
+    + '   📄 docs/modules/store-board-workflow.md §ตัดเต็ม ยอมติดลบ\n');
+});

@@ -532,3 +532,6 @@ user: *"feature ถังเหลือง/แดง ควรจะอยู�
   `.filter-bar :is(select, input:not(...)×5)` เพราะ specificity ของ `:is()` = ตัวสูงสุดในวงเล็บ ⇒ select ยืดได้ถึง 100%
   · แก้**เฉพาะหน้านี้**ด้วย `.scrap-page .filter-bar select` (`<Page className="scrap-page">`) · ตัวกลางยังไม่แก้
   (แก้แล้ว select ทุกหน้าที่ใช้แถบกรองแคบลงพร้อมกัน = ต้องตัดสินใจแยก)
+
+
+> 🔻 **2026-11-19 — ตัดเต็ม ยอมติดลบ + QA งานดี/ซ่อมผ่าน → คิวรอรับเข้า** (คำสั่ง user) · ที่เกี่ยวกับโมดูลนี้: QA งานดี/ตรวจรับงานซ่อม → trigger `fn_qbin_return_receipt` ออกใบ `stock_receipts` ให้คลังนับรับ · 📄 กฎเต็ม → `docs/modules/store-board-workflow.md` §ตัดเต็ม ยอมติดลบ
