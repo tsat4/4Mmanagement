@@ -336,7 +336,8 @@ export default function StockReceiptQueue({ banner = null, table = false }) {
                   { k: 'จากไลน์', v: r.source_line },
                   { k: 'ใบผลิต', v: r.prod_no },
                   { k: 'ปิดใบ', v: `${hhmm(r.created_at) || '—'} · ${ageText(age)} ที่แล้ว` },
-                  { k: 'หมายเหตุ', v: r.partial_reason ? `ยอดบางส่วนจาก${r.partial_reason}` : null },
+                  /* 19/11 — ใบคืนจากถังเหลือง (QA งานดี/ซ่อมผ่าน · trigger fn_qbin_return_receipt) เขียนเหตุผลเต็มประโยคมาเอง */
+                  { k: 'หมายเหตุ', v: r.partial_reason ? (String(r.partial_reason).startsWith('คืนจาก') ? r.partial_reason : `ยอดบางส่วนจาก${r.partial_reason}`) : null },
                   { k: 'ผู้รับ', v: pending ? null : `${r.received_by || '—'} · ${hhmm(r.received_at) || ''}` },
                   { k: 'ส่วนต่าง', v: !pending && r.diff_reason ? `${fmt(r.qty_received - r.qty_expected)} — ${r.diff_reason}` : null },
                 ]}

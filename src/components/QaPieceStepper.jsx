@@ -100,19 +100,23 @@ export default function QaPieceStepper({
   const activeGrp = grp ?? (groups.find(g => g.done < g.n)?.t || groups[0]?.t || 'all');
   const shownItems = activeGrp === 'all' ? items : items.filter(i => groupOf[i.id] === activeGrp);
   const rowEls = useRef({});
+  /* 🎯 เลื่อนไปแถวกรอกของจุด + โฟกัสช่อง — ใช้ทั้ง "จิ้มบอลลูน" (focusReq จากหน้าแม่) และ
+     "กดบันทึกแต่ยังตรวจไม่ครบ" (missJump · 19/11 คำสั่ง user: ทุกจุดคือช่อง required ขาดข้อไหนเด้งไปข้อนั้น) */
+  const [missJump, setMissJump] = useState(null);   // { id, n }
+  const jumpReq = (missJump && (!focusReq || missJump.at > (focusReq.at || focusReq.n || 0))) ? missJump : focusReq;
   useEffect(() => {
-    if (!focusReq?.id) return;
-    const g = groupOf[focusReq.id];
+    if (!jumpReq?.id) return;
+    const g = groupOf[jumpReq.id];
     if (g && activeGrp !== 'all' && g !== activeGrp) setGrp(g);
     const t = setTimeout(() => {
-      const el = rowEls.current[focusReq.id];
+      const el = rowEls.current[jumpReq.id];
       if (!el) return;
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       const inp = el.querySelector('input:not([disabled]), button:not([disabled])');
       setTimeout(() => inp?.focus({ preventScroll: true }), 350);
     }, 60);
     return () => clearTimeout(t);
-  }, [focusReq?.n]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [focusReq?.n, missJump?.n]); // eslint-disable-line react-hooks/exhaustive-deps
   const result = pieceResult(items.map(i => judges[i.id]));
   const missing = items.filter(i => !judges[i.id]);
   const ngNoNote = items.filter(i => judges[i.id] === 'ng' && !(draft[i.id]?.note || '').trim());
@@ -133,8 +137,14 @@ export default function QaPieceStepper({
 
   const submitPiece = () => {
     if (!canRecord) { toast.error('ไม่มีสิทธิ์บันทึกผลตรวจ'); return; }
-    if (missing.length) { toast.error(`ยังไม่ได้ตรวจ ${missing.length} จุด (#${missing.slice(0, 5).map(i => i.balloon_no).join(', #')}${missing.length > 5 ? ' …' : ''}) — ต้องครบทุกจุดก่อนบันทึกชิ้น`); return; }
-    if (ngNoNote.length) { toast.error(`จุดที่ไม่ผ่านต้องกรอก "เสียอย่างไร" (#${ngNoNote.map(i => i.balloon_no).join(', #')})`); return; }
+    if (missing.length) {
+      toast.error(`บันทึกไม่ได้ — ยังไม่ได้ตรวจ ${missing.length} จุด (#${missing.slice(0, 10).map(i => i.balloon_no || '?').join(', #')}${missing.length > 10 ? ' …' : ''}) — ต้องครบทุกจุดก่อนบันทึกชิ้น`);
+      setMissJump(j => ({ id: missing[0].id, n: (j?.n || 0) + 1, at: Date.now() })); return;
+    }
+    if (ngNoNote.length) {
+      toast.error(`บันทึกไม่ได้ — จุดที่ไม่ผ่านต้องกรอก "เสียอย่างไร" (#${ngNoNote.map(i => i.balloon_no).join(', #')})`);
+      setMissJump(j => ({ id: ngNoNote[0].id, n: (j?.n || 0) + 1, at: Date.now() })); return;
+    }
     const payload = {
       result,
       judgements: Object.fromEntries(items.map(i => [i.id, { judge: judges[i.id], value: draft[i.id]?.value ?? '', note: (draft[i.id]?.note || '').trim() }])),
@@ -269,7 +279,7 @@ export default function QaPieceStepper({
               return (
                 <div key={i.id} ref={el => { if (el) rowEls.current[i.id] = el; else delete rowEls.current[i.id]; rowRef?.(i.id, el); }} style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', padding: '7px 10px',
                   borderRadius: 'var(--r-md)', background: 'var(--bg3)', borderLeft: `4px solid ${color}`,
-                  outline: focusReq?.id === i.id ? '2px solid var(--accent)' : 'none', outlineOffset: 1 }}>
+                  outline: jumpReq?.id === i.id ? '2px solid var(--accent)' : 'none', outlineOffset: 1 }}>
                   <span style={{ minWidth: 34, height: 22, padding: '0 8px', borderRadius: 'var(--r-pill)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                     fontWeight: 800, fontSize: 12, color: '#fff', background: j ? JUDGE[j].color : '#4d9fff' }}>{i.balloon_no}</span>
                   {/* 🔍 รูปโคลสอัพของจุด (ตั้งที่ /qa-setup) — แตะซูม · แบบเดียวกับใบตรวจ PM */}
@@ -320,9 +330,11 @@ export default function QaPieceStepper({
             <span style={{ fontSize: 12, color: result === 'fail' ? '#ef4444' : result === 'pass' ? '#22c55e' : 'var(--muted)', fontWeight: 700 }}>
               {result === 'fail' ? `ชิ้นนี้ตก ${failedItems.length} จุด` : result === 'pass' ? 'ชิ้นนี้ผ่านทุกจุด' : `เหลืออีก ${missing.length} จุด`}
             </span>
-            <button disabled={busy || !result} onClick={submitPiece}
-              style={btn(result === 'fail' ? '#ef4444' : 'var(--accent)', result === 'fail' ? '#fff' : 'var(--accent-ink)', { fontWeight: 800, opacity: result ? 1 : 0.5 })}>
-              {result === 'fail' ? `✕ บันทึกชิ้นที่ ${seq?.nextPiece} (ตก) →` : `✓ บันทึกชิ้นที่ ${seq?.nextPiece}`}
+            {/* 🔴 ตรวจไม่ครบ = บันทึกไม่ได้ แต่ปุ่มต้องกดได้เพื่อบอกเหตุ (19/11 · คำสั่ง user "กดบันทึกต้องแจ้งว่าบันทึกไม่ได้
+                ขาดข้อไหน และเด้งไปหาข้อนั้น") — เดิม disabled เงียบ ⇒ กดแล้วไม่มีอะไรเกิด · ด่านจริงอยู่ submitPiece */}
+            <button disabled={busy} onClick={submitPiece}
+              style={btn(result === 'fail' ? '#ef4444' : result ? 'var(--accent)' : 'var(--accent2)', result === 'fail' ? '#fff' : 'var(--accent-ink)', { fontWeight: 800 })}>
+              {!result ? `ยังบันทึกไม่ได้ — ยังไม่ตรวจ ${missing.length} จุด` : result === 'fail' ? `✕ บันทึกชิ้นที่ ${seq?.nextPiece} (ตก) →` : `✓ บันทึกชิ้นที่ ${seq?.nextPiece}`}
             </button>
           </div>
         </>

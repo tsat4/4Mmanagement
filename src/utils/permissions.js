@@ -102,6 +102,7 @@ export function canAccessPage(path, role) {
   if (path === '/daily-checker') {
     return hasPermission('page:/daily-checker', role)
         || hasPermission('page:/daily-pm', role)
+        || hasPermission('page:/pm-check', role)   // แท็บ "บันทึกผลตรวจ AM" (19/11)
         || hasPermission('page:/pokayoke', role)
         || hasPermission('page:/lpa', role)
         || hasPermission('page:/bbs', role);

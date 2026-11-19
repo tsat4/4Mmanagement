@@ -9473,6 +9473,82 @@ test('↩️ mo-list-shows-resubmit — ใบที่ถูกตีกลั�
       + '   ขาด case = ตอบ 400 unknown event ⇒ ทั้ง Telegram และกระดิ่งเงียบสนิท\n');
   }
 });
+test('✍️ mo-print-tech-sign-box — ใบ DIE/JIG: ช่องเซ็นฝั่งช่าง = หัวหน้าแผนกช่าง + ป้ายตามทีมจริง', () => {
+  /* why (19/11 · หน้างานแจ้งจากใบจริง DIE-CM-111126-0063-M19):
+     *"มีแก้ใบ MO ของ die maintenance ที่ช่องมุมซ้ายล่าง ยังดึงข้อมูลมั่ว อันนี้ MO die
+       แต่ไปดึงชื่อช่างมา มันต้องดึงหัวหน้า/วิศวกร ช่างส่วนงานนั้น และลายเซ็น"*
+     ① ป้ายเขียน "JIG APPROVE" บนใบของทีม DIE (ป้ายตั้งต้นชุดเดียวใน /doc-forms)
+     ② ชื่อในช่อง = `tech_main` · วัดจริง 90 วัน: ใบ DIE 82 ใบ **tech_main_uid ว่างทั้ง 82**
+        ⇒ ช่องนั้นไม่เคยมีลายเซ็นเลย · ขณะที่ checker_uid (หัวหน้าแผนกช่าง ขั้น 4) มี 53 ใบ
+     🔴 ใบฝ่ายผลิต (AM) ไม่เปลี่ยน — ขั้น 4 ของใบผลิตเป็น "ฝ่ายที่แจ้ง" ไม่ใช่หัวหน้าช่าง */
+  const u = readFileSync(join(ROOT, 'src/utils/mtnMoForm.js'), 'utf8');
+  assert.match(u, /export function moTechSignBox/,
+    '\n\n❌ กฎช่องเซ็นฝั่งช่างต้องอยู่ใน mtnMoForm.js (pure) ที่เดียว\n');
+  assert.match(u, /if \(isToolTeamRow\(order\)\)[\s\S]{0,200}checker_uid/,
+    '\n\n❌ ทีมเครื่องมือต้องใช้ checker (หัวหน้าแผนกช่าง ขั้น 4) ไม่ใช่ tech_main\n');
+
+  const page = readFileSync(join(ROOT, 'src/pages/MtnRepair.jsx'), 'utf8');
+  /* ใบพิมพ์ต้องเรียกกฎ ไม่ใช่หยิบ tech_main มาใส่ช่องแรกเองอีก */
+  assert.match(page, /moTechSignBox\(o, moCodeOf\(/,
+    '\n\n❌ ใบพิมพ์ไม่ได้ใช้ moTechSignBox() — กลับไปหยิบ tech_main ใส่ช่องแรกเองแล้ว\n');
+  assert.doesNotMatch(page, /sign\(moSig\[0\], o\.tech_main/,
+    '\n\n❌ ช่อง 1 กลับไปผูก tech_main ตรงๆ — ใบ DIE จะไม่มีลายเซ็นอีก (82/82 ใบ)\n');
+  /* ป้ายต้องมาจากทะเบียนทีม ห้าม hardcode 'DIE APPROVE' ในหน้า */
+  assert.doesNotMatch(page, /'DIE APPROVE'|"DIE APPROVE"/,
+    '\n\n❌ อย่า hardcode ป้ายช่องเซ็นในหน้า — ต้องมาจาก mtn_teams.mo_code (moCodeOf)\n');
+  const t = readFileSync(join(ROOT, 'src/utils/mtnTeams.js'), 'utf8');
+  assert.match(t, /export function moCodeOf/,
+    '\n\n❌ moCodeOf หายจาก mtnTeams.js — ป้ายช่องเซ็นจะไม่รู้ว่าใบนี้ทีมอะไร\n');
+});
+test('🔌 machine-usability-not-mo-status — "ใบยังเปิด" ≠ "เครื่องใช้ไม่ได้"', () => {
+  /* why (19/11 · คำสั่ง user): *"ใบแจ้งซ่อมเครื่องที่เป็น supply บางทีเค้าซ่อมไม่ได้ แต่แก้ไข
+     เบื้องต้นให้ใช้ได้ระหว่างรอของมาเปลี่ยน · อยากมีปุ่มเปิดปิดเครื่อง ให้สถานะตรงกับหน้างาน"*
+     ผังโรงงานเดิมทา "ไลน์เสี่ยง" จาก **"เครื่อง supply มีใบ MO เปิดไหม"** อย่างเดียว
+     วัดจริง 19/11: CT-03 (จ่าย **13 ไลน์**) ซ่อมเสร็จ 13/11 08:44 · AB-01 13/11 11:38 ·
+     AB-02 13/11 11:42 — ใบยังเปิด (รออะไหล่/รอเซ็น) ⇒ ไลน์ปลายทางแดงอยู่ **7 วัน** ทั้งที่เครื่องเดินปกติ
+     🔴 สถานะเครื่องตัดสินที่ `machineUsability()` ที่เดียว — ชั้น ① ช่างประกาศ ชนะ ชั้น ② เดาจากใบ
+     🔴 ชั้น ② ต้องดู `repair_done_at` ไม่ใช่แค่ "มีใบเปิด" (จุดที่แก้บั๊ก 7 วัน) */
+  const u = readFileSync(join(ROOT, 'src/utils/machineUsability.js'), 'utf8');
+  assert.match(u, /const fixing = live\.filter\(o => !o\.repair_done_at\)/,
+    '\n\n❌ ชั้นเดาจากใบต้องแยก "ซ่อมเสร็จแล้วรอเอกสาร" ออกจาก "ยังซ่อมไม่เสร็จ"\n'
+    + '   ไม่แยก = ใบที่รอเซ็นจะทาไลน์ปลายทางเป็นเสี่ยงไปเรื่อยๆ (อาการเดิม 7 วัน)\n');
+
+  const map = readFileSync(join(ROOT, 'src/pages/FactoryMap.jsx'), 'utf8');
+  assert.match(map, /machineUsability\(/,
+    '\n\n❌ ผังโรงงานไม่ได้ใช้ machineUsability() — กลับไปเทียบ "มีใบเปิด" เองแล้ว\n');
+  assert.doesNotMatch(map, /openNos\.has\(/,
+    '\n\n❌ ผังกลับไปตัดสินด้วย openNos (มีใบเปิด = เสี่ยง) — นั่นคือบั๊กที่หน้างานแจ้ง\n');
+  /* คิวรีต้องดึงของที่กฎใช้จริง ไม่งั้นกฎเดินโดยไม่มีข้อมูล (undefined เงียบๆ) */
+  const moSel = map.match(/from\('mtn_orders'\)\s*\.select\('([^']*)'\)/);
+  assert.ok(moSel, '\n\n❌ หาคิวรี mtn_orders ของผังไม่เจอ\n');
+  for (const [col, why] of [
+    ['repair_done_at', 'กฎชั้น ② แยก "ซ่อมเสร็จรอเอกสาร" ออกจาก "ยังซ่อมไม่เสร็จ" ไม่ได้ (บั๊ก 7 วัน)'],
+    ['id', 'จอคลิกเจาะไปหาใบต้นตอไม่ได้ (19/11 user ทัก "น่าจะคลิกเจาะไปหาต้นตอได้")'],
+    ['mo_no', 'จอบอกไม่ได้ว่าใบไหน — ลิงก์ที่ไม่บอกเลขใบ คนยังต้องไปไล่หาเองอยู่ดี'],
+  ]) {
+    assert.ok(moSel[1].split(',').map(x => x.trim()).includes(col),
+      `\n\n❌ คิวรีใบซ่อมของผังไม่ได้ดึง ${col} — ${why}\n   ตอนนี้ดึง: ${moSel[1]}\n`);
+  }
+
+  /* 🚦 19/11 — "ใช้ได้ชั่วคราว" ต้องเป็นเหลืองจริงบนผัง ห้ามยุบเหลือ เสี่ยง/ไม่เสี่ยง (user ทัก) */
+  assert.match(map, /supTemp/,
+    '\n\n❌ ผังไม่รู้จัก supTemp — "ใช้ได้ชั่วคราว" จะกลายเป็นเขียว "ปกติ" (เงียบกว่าความจริง)\n');
+  assert.match(map, /cat: s => !s\.supList\.length \? 'idle' : s\.supAtRisk \? 'down' : s\.supTemp \? 'ok' : 'good'/,
+    '\n\n❌ แท็บ Supply Route ต้องมี 3 สี: down (แดง) · temp (เหลือง) · good (เขียว)\n');
+  assert.match(map, /mo: srcMoOf\(/,
+    '\n\n❌ รายการเครื่องบนจอไม่ได้แนบใบต้นตอ — กดแล้วเจาะต่อไม่ได้\n');
+  assert.match(map, /'machines:supply:v3'[\s\S]{0,400}usability/,
+    '\n\n❌ คิวรีทะเบียนเครื่องไม่ได้ดึง usability (หรือไม่ได้ bump คีย์ cache)\n');
+
+  /* ปุ่มต้องไม่ไปยุ่งกับใบ MO — สถานะเครื่องคนละเรื่องกับลูปเอกสาร */
+  const page = readFileSync(join(ROOT, 'src/pages/MtnRepair.jsx'), 'utf8');
+  const panel = page.slice(page.indexOf('function MachineUsabilityPanel'), page.indexOf('function DetailDrawer'));
+  assert.ok(panel.length > 200, 'หาแผง MachineUsabilityPanel ไม่เจอ');
+  assert.doesNotMatch(panel, /from\('mtn_orders'\)/,
+    '\n\n❌ ปุ่มสถานะเครื่องไปเขียน mtn_orders — สถานะเครื่อง ≠ สถานะใบ (ห้ามปิดใบให้เอง)\n');
+  assert.match(panel, /usabilityPatch\(pick, note, fullName\)/,
+    '\n\n❌ ต้องประกอบค่าผ่าน usabilityPatch() — มันเป็นตัวบังคับว่าเหลือง/แดงต้องมีเหตุผล\n');
+});
 test('🧾 pr-quote-purge-on-close — ใบเสนอราคา: ลบไฟล์ตอนปิดใบ แต่ห้ามลบประวัติ', () => {
   /* why (18/11 · Case ท้าย PDF ทีม MTN): *"ค่าซ่อมหรืออุปกรณ์ที่ซื้อไม่บ่อย สามารถให้แนบใบเสนอราคาได้
      ****แต่จะทำยังไงให้ใบเสนอราคาไม่ไปเป็นขยะในระบบ"*
@@ -12049,4 +12125,143 @@ test('🔴 carry-order-shows-date — เวลาบนใบผลิตที
     '\n\n❌ ไม่มี carryFromLabel() — ป้าย "ยกยอดมาจาก <วันที่ กะ>" หายไป\n');
   assert.match(page, /if \(!src\?\.work_date\) return null;/,
     '\n\n❌ carryFromLabel ไม่ได้ fail-closed — อ่านกะต้นทางไม่ได้ต้องคืน null ห้ามเดาวันที่\n');
+});
+
+test('🗂 operator-tab-allowed-complete — `tabAllowed` ใน operator.jsx ต้องมีครบเท่า TAB_KEYS', () => {
+  /* 18/11 หน้างานแจ้ง "คลิกเพิ่มพนักงานแล้วไม่ไปไหนเลย" — ยุบ /register เป็นแท็บที่ 4 (13/11) แต่ `tabAllowed`
+     ยังมี 3 ช่อง ⇒ `tabAllowed[3]` = undefined ⇒ `tab` ตกกลับ 0 ทุกครั้ง ทุก role · build/crashsweep ผ่านหมด
+     เพราะแท็บโชว์ (เงื่อนไขโชว์อยู่คนละลิสต์) แค่กดแล้วไม่เปลี่ยน */
+  const src = stripComments(readFileSync(join(ROOT, 'src/pages/operator.jsx'), 'utf8'));
+  const keys = src.match(/const TAB_KEYS = \[([^\]]+)\]/);
+  assert.ok(keys, 'หา TAB_KEYS ใน operator.jsx ไม่เจอ');
+  const nKeys = keys[1].split(',').filter(x => x.trim()).length;
+  const allowed = src.match(/const tabAllowed = \[([\s\S]*?)\n  \];/);
+  assert.ok(allowed, 'หา tabAllowed ใน operator.jsx ไม่เจอ');
+  const nAllowed = allowed[1].split('\n').filter(l => l.trim().length && l.trim() !== ',').length;
+  assert.equal(nAllowed, nKeys,
+    `\n\n❌ operator.jsx: TAB_KEYS มี ${nKeys} แท็บ แต่ tabAllowed มี ${nAllowed} ช่อง — แท็บที่เกินมากดแล้วตกกลับแท็บแรกเงียบๆ\n`);
+});
+
+test('🚩 ng-needs-reason — ติ๊ก NG ในใบตรวจ AM/PM ต้องมีเหตุผล + เตือนเมื่อติ๊ก OK ทั้งที่ใบซ่อมยังค้าง', () => {
+  /* 19/11 (คำสั่ง user): *"ทุกระบบการตรวจเครื่องจักรทั้ง am/pm ในกรณีที่เลือก NG ต้องใส่เหตุผลด้วย
+     เพราะเกิดการกดผิดและพนักงานไม่รู้ตัว … จะใช้การปิด MO ซ่อมแล้ว, แก้ไขเบื้องต้นแล้ว เป็นตัวดึงเหตุผลเก่า"*
+     หลักฐานที่ทำให้ต้องมี: วัด 90 วัน ผลตรวจ AM/PM ที่ NG = 43 จุด **มีเหตุผลแค่ 8** (81% ว่าง)
+     · ช่อง `inspection_results.action_text` มีอยู่เดิมแต่ถูกใช้ 1 จาก 43
+     🔴 กฎทั้งหมดอยู่ `src/utils/ngReason.js` — ห้ามเขียนเงื่อนไข "ยกได้ไหม/พอไหม" ซ้ำในหน้า */
+  const bad = [];
+  const U = 'src/utils/ngReason.js';
+  const u = stripComments(readFileSync(join(ROOT, U), 'utf8'));
+  for (const f of ['carryNgReason', 'ngReasonCheck', 'okWhileMoOpen', 'moUnresolved']) {
+    if (!new RegExp(`export (function|const) ${f}\\b`).test(u)) bad.push(`${U}: ต้องมี ${f}() — กฎมีที่เดียว`);
+  }
+  /* 🔴 "ช่างประกาศว่าเครื่องใช้ได้" = หยุดยก (ไม่งั้นเหตุผลเก่าติดไปทุกรอบตลอดกาล) */
+  if (!/usability/.test(u)) bad.push(`${U}: ต้องดู machines.usability — ช่างประกาศ "ใช้ได้" แล้วต้องหยุดยกของเก่า`);
+  /* 🔴 ยกมาแล้วต้องให้คนกดยืนยัน — เติมเงียบ = คนกดผิดได้เหตุผลติดมาเอง ดูเหมือนตั้งใจ */
+  if (!/accepted/.test(u)) bad.push(`${U}: ngReasonCheck ต้องรับ accepted — ของที่ยกมาต้องกดยืนยันก่อนถือว่าพอ`);
+
+  const H = 'src/lib/ngHistory.js';
+  const h = stripComments(readFileSync(join(ROOT, H), 'utf8'));
+  if (!/out\.error/.test(h)) bad.push(`${H}: อ่านไม่ได้ต้องคืน error ให้จอเขียนบอก ห้ามกลืนเป็น "ไม่เคย NG"`);
+  if (!/byCp/.test(h)) bad.push(`${H}: ต้องคืนรายจุด (byCp) — MO ของจุด A ห้ามไปอธิบาย NG ของจุด B`);
+
+  const P = 'src/pages/PMCheckData.jsx';
+  const p = stripComments(readFileSync(join(ROOT, P), 'utf8'));
+  const fn = p.match(/const\s+handleSave\s*=\s*async[\s\S]*?\n  \}\n/);
+  if (!fn) bad.push(`${P}: หา handleSave ไม่เจอ — เปลี่ยนชื่อแล้วต้องแก้ด่านนี้`);
+  else {
+    const body = fn[0];
+    const iChk = body.indexOf('ngReasonCheck(');
+    const iSav = body.indexOf('setSaving(true)');
+    if (iChk < 0) bad.push(`${P} handleSave: ต้องเช็คผ่าน ngReasonCheck() ก่อนเขียน DB (ซ่อนปุ่มไม่ใช่ด่าน)`);
+    else if (iSav >= 0 && iChk > iSav) bad.push(`${P} handleSave: ngReasonCheck() ต้องมาก่อน setSaving(true) — เช็คหลังเริ่มเขียนไม่ได้กันอะไร`);
+    if (!/action_text/.test(body)) bad.push(`${P} handleSave: ต้องเขียนเหตุผลลง action_text (ช่องนี้มีอยู่แล้ว ห้ามเก็บแต่ในจอ)`);
+    /* 🔴 เรียกแล้วต้อง "หยุดบันทึก" จริง — `if (false)` / เก็บผลทิ้ง = ด่านหลอก */
+    if (iChk >= 0 && !/ngReasonCheck\([\s\S]{0,400}?!\w*\.?ok[\s\S]{0,400}?return/.test(body))
+      bad.push(`${P} handleSave: ผลจาก ngReasonCheck() ต้องนำไป return ออกจากการบันทึก (เรียกแล้วทิ้ง = ไม่มีด่าน)`);
+  }
+  /* 🔴 แถว attribute ต้องมีช่องเหตุผลที่โผล่เฉพาะตอน NG + ปุ่มยืนยันของเก่า + คำเตือน OK */
+  if (!/carry=\{ngCarryOf\(/.test(p)) bad.push(`${P}: <AttrRow> ต้องส่ง carry={ngCarryOf(cp.id)} — ไม่ส่ง = คนต้องพิมพ์ใหม่ทุกรอบ`);
+  if (!/okWarn=\{okWarnOf\(/.test(p)) bad.push(`${P}: <AttrRow> ต้องส่ง okWarn — ติ๊ก OK ทั้งที่ใบซ่อมยังค้างต้องเตือน (ไม่บล็อก)`);
+  if (!/onAccept/.test(p)) bad.push(`${P}: ต้องมีปุ่ม "ใช้เหตุผลเดิม" (onAccept) — ห้ามเติมเหตุผลเก่าให้เงียบๆ`);
+
+  assert.deepEqual(bad, [], `\n\n❌ ${bad.length} จุดผิดกฎ "NG ต้องมีเหตุผล"\n   ${bad.join('\n   ')}\n`);
+});
+
+/* ═══ 🗂️ check-sheet-round1 — 2026-11-19 · ออดิท check sheet (LPA · Poka-Yoke · BBS · PPE) ══════════
+   📄 docs/modules/check-sheet-audit.md · 3 คลาสที่เจอในใบตรวจแบบเอกสาร ห้ามกลับมา:
+   ① ใบตรวจรายไลน์ต้องมีด่านชั้น ③ (`canWriteLine`) — `can()` บอกแค่ "กดเป็นไหม"
+   ② ลบต้นทางที่มีประวัติตรวจ ห้ามลากประวัติหาย (Poka-Yoke นับก่อนลบ · มีประวัติ = ปิดใช้งาน)
+   ③ ใบ BBS = คน × วัน เกิน 1,000 แถวได้จริง ⇒ ต้องดึงครบทุกหน้า · % ความครบต้องผ่าน checkDayState */
+test('🗂️ check-sheet-round1 — ด่านขอบเขต · ห้ามลบประวัติตรวจ · ใบใหญ่ต้องโหลดครบ', () => {
+  const bad = [];
+  const py = stripComments(readFileSync(join(ROOT, 'src/pages/PokaYokeCheck.jsx'), 'utf8'));
+  const bb = stripComments(readFileSync(join(ROOT, 'src/pages/BbsCheck.jsx'), 'utf8'));
+  for (const [name, src] of [['PokaYokeCheck', py], ['BbsCheck', bb]]) {
+    if (!/canWriteLine\(/.test(src)) bad.push(`${name} ไม่มีด่านชั้น ③ (canWriteLine)`);
+  }
+  // Poka-Yoke: ขาเขียนทุกขาต้องผ่าน lineGuard ของ "ไลน์ของตัวอุปกรณ์"
+  for (const fn of ['const saveCheck', 'const saveDevice', 'const deleteDevice']) {
+    const body = py.slice(py.indexOf(fn), py.indexOf(fn) + 900);
+    if (!/lineGuard\(/.test(body)) bad.push(`PokaYokeCheck ${fn} ไม่เรียก lineGuard`);
+  }
+  const del = py.slice(py.indexOf('const deleteDevice'), py.indexOf('const deleteDevice') + 2200);
+  if (del.indexOf("from('pokayoke_checks')") < 0 || del.indexOf("from('pokayoke_checks')") > del.indexOf('.delete()'))
+    bad.push('PokaYokeCheck deleteDevice ไม่นับประวัติผลทดสอบก่อนลบ (FK เดิม cascade = ประวัติหาย)');
+  // BBS: ทุกขาเขียนผ่าน ensureSheet → lineGuard
+  const ens = bb.slice(bb.indexOf('const ensureSheet'), bb.indexOf('const ensureSheet') + 300);
+  if (!/lineGuard\(\)/.test(ens)) bad.push('BbsCheck ensureSheet ไม่ผ่าน lineGuard (ขาเขียนทุกขาพึ่งตัวนี้)');
+  if (/from\('bbs_observations'\)\s*\.select\('\*'\)\.eq\('sheet_id', sh\.id\);/.test(bb.replace(/\n\s*/g, '')))
+    bad.push('BbsCheck โหลดผลสังเกตแบบคิวรีเดียว — เกิน 1,000 ช่องหายเงียบ (ใช้ fetchAllPages)');
+  if (!/checkDayState\(/.test(bb)) bad.push('BbsCheck % ความครบไม่ผ่าน checkDayState — วันหยุด/ไม่ผลิตถูกนับเป็นตัวหาร');
+  if (/^\s*checkWriteRows\(await supabase\.from\('bbs_agreements'\)/m.test(bb))
+    bad.push('BbsCheck ทิ้งค่าคืนของ checkWriteRows (ปิดข้อตกลง) — ไม่ครบแล้วยังขึ้น "บันทึกแล้ว"');
+  assert.deepEqual(bad, [], bad.join('\n'));
+});
+
+test('📍 pos-pct-double-suffix — พิกัดหมุด pos_top/pos_left ต้องผ่าน parseFloat ก่อนต่อ "%"', () => {
+  /* 19/11 หน้างานแจ้ง /manpower-board แท็บผัง LAYOUT "จุดพนักงานกองมุมซ้ายบนหมด" — ฐานเก็บ pos_top/pos_left
+     เป็น text ที่มี % ติดมาแล้ว ("7.47%") · `${pos_top}%` = "7.47%%" ⇒ CSS ทิ้งค่า ⇒ ทุกหมุดตก 0,0 เงียบๆ */
+  const bad = [];
+  for (const file of walk(join(ROOT, 'src'), ['.jsx', '.js'])) {
+    const src = stripComments(readFileSync(file, 'utf8'));
+    if (/\$\{(?!parseFloat)[^}]*pos_(?:top|left)\}%/.test(src)) bad.push(file.replace(ROOT + '/', ''));
+  }
+  assert.deepEqual(bad, [],
+    `\n\n❌ ต่อ "%" ท้าย pos_top/pos_left ดิบ (ค่าในฐานมี % อยู่แล้ว = "x%%" หมุดกองมุมซ้ายบน):\n   ${bad.join('\n   ')}\n   ใช้ \`\${parseFloat(p.pos_top)}%\`\n`);
+});
+
+/* ═══ 🤝 checkin-lent-out-lock — 2026-11-19 · คำสั่ง user "ไลน์ที่ยืมบันทึก · หัวหน้าหลักต้องรู้" ═══════════
+   📄 docs/modules/check-sheet-audit.md §คนยืมข้ามไลน์ · คนที่ถูกยืมออกกะนี้ = ไลน์ที่ยืมบันทึกฝั่งเดียว
+   (เดิม 2 ไลน์บันทึกทับกัน ใครกดทีหลังชนะ) + หัวหน้าต้นสังกัดได้แจ้งเตือนตอนถูกยืม */
+test('🤝 checkin-lent-out-lock — คนถูกยืมออก ห้ามต้นสังกัดเขียนทับ + ต้องแจ้งต้นสังกัด', () => {
+  const bad = [];
+  const ck = stripComments(readFileSync(join(ROOT, 'src/pages/Checkin.jsx'), 'utf8'));
+  const save = ck.slice(ck.indexOf('const handleSave'), ck.indexOf('const handleSave') + 4000);
+  if (!/const savable = displayed\.filter\(emp => !emp\._helperOutTo\)/.test(save)) bad.push('Checkin handleSave ไม่ตัดคนที่ถูกยืมออก (savable)');
+  const writePart = ck.slice(ck.indexOf('const skippedOut'), ck.indexOf('บันทึกเช็คชื่อสำเร็จ'));   // ช่วงที่เขียน DB (สรุป Telegram หลังจากนี้ใช้ displayed ได้)
+  if (/displayed\.(map|filter)\(/.test(writePart)) bad.push('Checkin handleSave ยังใช้ displayed เขียน DB (ต้องใช้ savable)');
+  if (!/notifyBorrowed\(emp, borrowLineId\)/.test(ck)) bad.push('Checkin ยืมคนแล้วไม่แจ้งหัวหน้าต้นสังกัด (notifyBorrowed)');
+  if (!/event: 'line_helper_borrowed'/.test(ck)) bad.push("Checkin ไม่ได้ยิง event 'line_helper_borrowed'");
+  const sl = stripComments(readFileSync(join(ROOT, 'src/pages/ScanLanding.jsx'), 'utf8'));
+  if (!/from\('line_helpers'\)/.test(sl) || !/lentToName \|\| lineById/.test(sl)) bad.push('ScanLanding ไม่ตัดสินขอบเขตที่ไลน์ที่ยืม — ต้นสังกัดยิงบัตรทับได้');
+  assert.deepEqual(bad, [], bad.join('\n'));
+});
+
+/* ── ตัด-จ่ายสต็อก "ตัดเต็ม ยอมติดลบ" (2026-11-19 · คำสั่ง user ปิดช่องโหว่ inbound→process→outbound) ──
+   เดิม 3 จุด "ตัดเท่าที่มี ส่วนที่ขาดปล่อยไป" ⇒ ยอดค้างสูงเกินจริงสะสม (วัด 30 วัน: ส่งลูกค้า 51 ใบ 8,124 ชิ้นไม่ถูกตัด)
+   ① ตัดวัตถุดิบตอนปิดใบ (DB `fn_take_raw` · migration 20261119c) ② จ่ายจาก STORE ③ ส่งลูกค้า
+   ทั้งหมดต้องหักเต็มแล้วเขียนบนจอว่าติดลบ — ห้ามถอยกลับไป "ไม่มีแถว = ไม่หัก" */
+test('🛡️ ตัด-จ่ายสต็อกต้องหักเต็ม (ติดลบได้) — STORE / ส่งลูกค้า / ตัดวัตถุดิบ', () => {
+  const bad = [];
+  const hk = stripComments(readFileSync(join(ROOT, 'src/pages/HeijunkaKanban.jsx'), 'utf8'));
+  if (/else if \(!st\) note/.test(hk)) bad.push('HeijunkaKanban.jsx deductStockForPick — STORE ไม่มีแถวแล้วไม่หัก');
+  if (/issueRows\.filter\(x => has\.has\(x\.mat_no\)\)/.test(hk)) bad.push('HeijunkaKanban.jsx confirmRound — หัก STORE เฉพาะตัวที่มีแถว');
+  if (!/STORE_NEG_NOTE/.test(hk)) bad.push('HeijunkaKanban.jsx — ไม่เขียนบนจอว่า STORE ติดลบ (STORE_NEG_NOTE)');
+  const cd = stripComments(readFileSync(join(ROOT, 'src/pages/CustomerDemand.jsx'), 'utf8'));
+  if (!/inflowDestOf\(sap, inflowRules\)/.test(cd) || !/negQty/.test(cd)) bad.push('CustomerDemand.jsx — ส่งเกินยอดในระบบแล้วไม่หักส่วนที่ขาด');
+  const mig = readFileSync(join(ROOT, 'supabase/migrations/20261119c_stock_full_deduct_qa_return_dr.sql'), 'utf8');
+  if (!/fn_qbin_return_receipt/.test(mig) || !/ตัดเกิน/.test(mig)) bad.push('migration 20261119c ถูกแก้/หาย');
+  assert.deepEqual(bad, [], `\n\n❌ ตัด-จ่ายสต็อกกลับไป "ตัดเท่าที่มี":\n   ${bad.join('\n   ')}\n`
+    + '   กฎ (user 19/11): ยอดในระบบไม่พอ = หักเต็ม ติดลบ แล้วพอเติม/รับเข้า ยอดหักล้างเอง · ต้องเขียนบนจอว่าติดลบ\n'
+    + '   📄 docs/modules/store-board-workflow.md §ตัดเต็ม ยอมติดลบ\n');
 });

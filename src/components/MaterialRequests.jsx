@@ -28,9 +28,12 @@ import { useOrgSections } from '../utils/useOrgSections';
 import { scopedLineNames } from '../utils/sectionScope';
 import {
   movesFor, moveNeeds, moveLabel, KIND_LABEL, statusMeta, nextReqNo, maxReqSeq, reqNoPrefix, isPullable, matReqFlow,
-  bomPickRows, pickedToItems, templateFromEditor, editorFromTemplate,
+  bomPickRows, rescalePickRows, parentPickList, pickedToItems, templateFromEditor, editorFromTemplate,
 } from '../utils/materialRequest';
-import useBomChildren from '../utils/useBomChildren';
+import useBomChildren, { loadBomParentIds } from '../utils/useBomChildren';
+import { loadProductsMaster } from '../utils/useProducts';
+import { useStorageLocationsState } from '../utils/useStorageLocations';
+import { slocCodeOfLine } from '../utils/storageLoc';
 import { checkWriteRows } from '../utils/dbWrite';
 import StepFlow from './StepFlow';
 import { printMaterialRequest } from '../lib/materialRequestPrint';
@@ -85,7 +88,7 @@ export default function MaterialRequests() {
   const [editor, setEditor] = useState(null);   // { req, items }
   const [picker, setPicker] = useState(null);   // { itemKey } | null
   const [pq, setPq] = useState('');
-  const [bomPick, setBomPick] = useState(null);   // { root, itemKey } — 🌳 แตก BOM ให้เลือกใช้/ไม่ใช้ (18/11)
+  const [bomPick, setBomPick] = useState(false);   // 🌳 เลือกแม่ → ตัดลูกตาม BOM (18/11 · ปรับ 19/11)
   const [tpls, setTpls] = useState({ rows: [], failed: '' });   // 📋 template งานประจำ (DR)
   const [tplOpen, setTplOpen] = useState(false);
   const [tplSave, setTplSave] = useState(null);   // { name } | null
@@ -315,24 +318,21 @@ export default function MaterialRequests() {
     return src.slice(0, 200);
   }, [parts, pq]);
 
-  /* เลือกชิ้นงาน → เปิดหน้าต่างแตก BOM ให้ติ๊ก ใช้/ไม่ใช้ (ไม่มีลูก/โหลด BOM ไม่ได้ = ยังเพิ่มตัวมันเองได้) */
+  /* 🗂 รายแถว = เลือกรหัสเดี่ยวจาก Parts Master (ไม่แตก BOM) · แตก BOM อยู่ที่ปุ่มหัวตาราง */
   const applyPart = (p) => {
-    setBomPick({ root: p, itemKey: picker?.itemKey || null });
+    const patch = { mat_no: p.mat_no, description: p.part_name || '', unit: normUom(p.uom, uomIdx) || DEFAULT_UOM };
+    if (picker?.itemKey) setItem(picker.itemKey, patch);
+    else setEditor(e => ({ ...e, items: [...e.items, { ...EMPTY_ITEM(), ...patch }] }));
     setPicker(null); setPq('');
   };
+  /* 🌳 ลูกที่ติ๊กจาก BOM → ต่อท้ายใบ (แถวเปล่าตั้งต้นเก็บทิ้ง) */
   const applyBomPick = (picked) => {
     const add = picked.map(it => ({ ...EMPTY_ITEM(), ...it, unit: normUom(it.unit, uomIdx) || DEFAULT_UOM }));
-    const key = bomPick?.itemKey;
     setEditor(e => {
       const isBlank = (it) => !String(it.mat_no || '').trim() && !String(it.description || '').trim();
-      if (key) {
-        const i = e.items.findIndex(it => it._key === key);
-        if (i >= 0) return { ...e, items: [...e.items.slice(0, i), ...add, ...e.items.slice(i + 1)] };
-      }
-      const keep = e.items.filter(it => !isBlank(it));   // แถวเปล่าตั้งต้นไม่ต้องค้างไว้หัวตาราง
-      return { ...e, items: [...keep, ...add] };
+      return { ...e, items: [...e.items.filter(it => !isBlank(it)), ...add] };
     });
-    setBomPick(null);
+    setBomPick(false);
   };
 
   /* ── 📋 template ── */
@@ -450,14 +450,15 @@ export default function MaterialRequests() {
         <Editor
           editor={editor} setReq={setReq} setItem={setItem} addItem={addItem} delItem={delItem} uomIdx={uomIdx} uomState={uomState}
           canRecord={canRecord} role={role} signers={signers} scopedLines={scopedLines} parts={parts} fullName={fullName}
-          onPick={(k) => setPicker({ itemKey: k })}
+          onPick={(k) => setPicker({ itemKey: k })} onPickBom={() => setBomPick(true)}
           onSaveTemplate={() => setTplSave({ name: editor.req._tplName || editor.req.detail || '' })}
           onClose={() => setEditor(null)} onSave={save}
         />
       )}
 
       {bomPick && (
-        <BomPickModal root={bomPick.root} replacing={!!bomPick.itemKey} onClose={() => setBomPick(null)} onApply={applyBomPick} />
+        <BomPickModal sloc={editor?.req?.storage_location || ''} lines={lines}
+          onClose={() => setBomPick(false)} onApply={applyBomPick} />
       )}
 
       {tplSave && (
@@ -535,7 +536,7 @@ export default function MaterialRequests() {
 }
 
 /* ── ฟอร์มใบเบิก ─────────────────────────────────────────────────────────── */
-function Editor({ editor, setReq, setItem, addItem, delItem, canRecord, role, signers, scopedLines, parts = [], onPick, onSaveTemplate, onClose, onSave, uomIdx, uomState, fullName = '' }) {
+function Editor({ editor, setReq, setItem, addItem, delItem, canRecord, role, signers, scopedLines, parts = [], onPick, onPickBom, onSaveTemplate, onClose, onSave, uomIdx, uomState, fullName = '' }) {
   const { req, items } = editor;
   // 📜 ค่าที่เคยบันทึกใน material_requests (DR) — รหัสคลังที่ยังไม่ลง storage_locations / ผู้ขอที่ไม่มีบัญชี ยังเลือกซ้ำได้ ไม่หายเงียบ (2026-09-07)
   const destHist = useColumnHistory(supabaseDR, 'material_requests', 'dest_storage_location', { upper: true });
@@ -621,7 +622,8 @@ function Editor({ editor, setReq, setItem, addItem, delItem, canRecord, role, si
         <b style={{ fontSize: 13 }}>{tr('รายการสินค้าคงคลัง')}</b>
         <span style={{ flex: 1 }} />
         {canRecord && <>
-          <button onClick={() => onPick(null)} style={btnSt()} title={tr('เลือกชิ้นงาน แล้วระบบแตก BOM ให้ติ๊กใช้/ไม่ใช้')}>{tr('เลือกชิ้นงาน (แตก BOM)')}</button>
+          <button onClick={onPickBom} style={btnSt()} title={tr('เลือกพาร์ทแม่ในพื้นที่นี้ แล้วระบบแตก BOM ให้ติ๊กลูกที่จะเบิก')}>🌳 {tr('เลือกแม่ → แตก BOM')}</button>
+          <button onClick={() => onPick(null)} style={btnSt()}>{tr('เลือกจาก Parts Master')}</button>
           <button onClick={addItem} style={btnSt()}>{tr('＋ เพิ่มแถว')}</button>
           <button onClick={onSaveTemplate} style={btnSt()} title={tr('เก็บหัวใบ+รายการไว้ใช้ซ้ำกับงานประจำ')}>{tr('💾 บันทึกเป็น template')}</button>
         </>}
@@ -721,75 +723,147 @@ const F = ({ label, children, full }) => (
   </div>
 );
 
-/* ── 🌳 แตก BOM ของชิ้นงานที่เลือก ให้ติ๊ก ใช้/ไม่ใช้ (2026-11-18 · คำสั่ง user) ──────────────
-   ลูกผ่าน `useBomChildren` ที่เดียว (ห้ามยิง bom_items เอง) · จำนวน = ชุด × ต่อ 1 ชิ้น (`bomPickRows`)
-   🔴 ไม่มีลูก / โหลด BOM ไม่ได้ = ยังเพิ่มตัวชิ้นงานเองได้ และ **เขียนบอกบนจอ** ไม่ใช่เงียบ */
-function BomPickModal({ root, replacing, onClose, onApply }) {
+/* ── 🌳 เลือกแม่ → แตก BOM → ติ๊กลูกที่จะเบิก (18/11 · ปรับตาม feedback 19/11) ───────────────
+   user 19/11: "เห็นชิ้นงานทั้งโรงงาน · เลือกพื้นที่ P409 แล้วยังเห็นพื้นที่อื่น · เราจะไม่ตัดแม่สิ
+                เลือกแม่เพื่อจะตัดลูก ใส่จำนวนแม่ ลูกคำนวณให้เบื้องต้น และแก้เองได้"
+   · ขั้น ① แม่ = ทะเบียนสินค้า (dr_products) กรองด้วย "รหัสคลัง/สโตร์" ของใบ → ไลน์ที่ผูกพื้นที่นั้น (`slocCodeOfLine`)
+     พาร์ทที่ไลน์ยังไม่ผูกพื้นที่ = ไม่ซ่อน (ไม่รู้ ≠ คนละพื้นที่) แต่เขียนบอกจำนวน · มี BOM ขึ้นก่อน + ป้าย
+   · ขั้น ② ลูกผ่าน `useBomChildren` ที่เดียว · **ไม่มีแถวแม่** · จำนวนลูก = จำนวนแม่ × ต่อ 1 ชิ้น
+     (`bomPickRows`/`rescalePickRows`) แก้รายแถวได้ — แถวที่แก้เองแล้วไม่ถูกทับเมื่อเปลี่ยนจำนวนแม่
+   🔴 BOM ว่าง / อ่านไม่ได้ = เขียนบอก ห้ามสรุปว่า "ไม่มีลูก" เงียบๆ */
+function BomPickModal({ sloc, lines, onClose, onApply }) {
+  const slocState = useStorageLocationsState();
+  const [products, setProducts] = useState({ rows: [], failed: '' });
+  const [bomIds, setBomIds] = useState({ ids: null, failed: false, message: '' });
+  const [allArea, setAllArea] = useState(false);
+  const [q, setQ] = useState('');
+  const [root, setRoot] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    loadProductsMaster()
+      .then(r => { if (alive) setProducts({ rows: r || [], failed: '' }); })
+      .catch(e => { if (alive) setProducts({ rows: [], failed: `โหลดทะเบียนสินค้าไม่สำเร็จ (${e?.message || e})` }); });
+    loadBomParentIds().then(r => { if (alive) setBomIds(r); });
+    return () => { alive = false; };
+  }, []);
+  const area = allArea ? '' : String(sloc || '').trim().toUpperCase();
+  const list = useMemo(() => parentPickList(products.rows, {
+    slocOfLine: (ln) => slocCodeOfLine(slocState.rows, lines, ln), sloc: area, bomIds: bomIds.ids,
+  }), [products.rows, slocState.rows, lines, area, bomIds.ids]);
+  const shown = useMemo(() => {
+    const k = q.trim().toLowerCase();
+    return (k ? list.rows.filter(p => `${p.mat_no} ${p.name} ${p.line_name}`.toLowerCase().includes(k)) : list.rows).slice(0, 300);
+  }, [list.rows, q]);
+
+  if (root) return <BomKidsStep root={root} onBack={() => setRoot(null)} onClose={onClose} onApply={onApply} />;
+  return (
+    <Modal title={`🌳 ${tr('เลือกพาร์ทแม่ที่จะแตก BOM')}`} width={720} dismissable onClose={onClose}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8, fontSize: 12.5 }}>
+        {sloc
+          ? <span>{tr('พื้นที่')} <b>{String(sloc).toUpperCase()}</b>{allArea ? <span style={{ color: 'var(--muted)' }}> ({tr('ปิดกรองอยู่')})</span> : ''}</span>
+          : <span style={{ color: 'var(--amber)' }}>⚠️ {tr('ใบนี้ยังไม่ได้เลือกรหัสคลัง/สโตร์ — แสดงทั้งโรงงาน')}</span>}
+        {sloc && <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
+          <input type="checkbox" checked={allArea} onChange={e => setAllArea(e.target.checked)} />{tr('ดูทั้งโรงงาน')}</label>}
+        <span style={{ flex: 1 }} />
+        <input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder={tr('ค้นด้วย MAT / ชื่อ / ไลน์')}
+          style={{ ...inpSt, width: 220 }} />
+      </div>
+      {products.failed && <div style={{ fontSize: 12, color: 'var(--amber)', marginBottom: 6 }}>⚠️ {products.failed}</div>}
+      {slocState.failed && <div style={{ fontSize: 12, color: 'var(--amber)', marginBottom: 6 }}>⚠️ {tr('อ่านทะเบียนพื้นที่ไม่ได้ — กรองตามพื้นที่ไม่ได้ แสดงทั้งหมด')}</div>}
+      {bomIds.failed && <div style={{ fontSize: 12, color: 'var(--amber)', marginBottom: 6 }}>⚠️ {bomIds.message} — {tr('ยังไม่รู้ว่าตัวไหนมี BOM')}</div>}
+      {area && (list.hiddenOtherArea > 0 || list.noArea > 0) && (
+        <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 6 }}>
+          {list.hiddenOtherArea > 0 && <>{tr('ซ่อน')} {list.hiddenOtherArea} {tr('พาร์ทของพื้นที่อื่น')}</>}
+          {list.hiddenOtherArea > 0 && list.noArea > 0 && ' · '}
+          {list.noArea > 0 && <>{list.noArea} {tr('พาร์ทที่ไลน์ยังไม่ผูกพื้นที่ (แสดงไว้ เพราะไม่รู้ว่าอยู่ไหน)')}</>}
+        </div>
+      )}
+      <div style={{ maxHeight: '58vh', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
+        {shown.map(p => (
+          <div key={p.mat_no} onClick={() => setRoot(p)}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderBottom: '1px solid var(--border)', cursor: 'pointer', fontSize: 12.5 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <b>{p.name || p.mat_no}</b>{' '}<span style={{ color: 'var(--text2)', fontFamily: 'monospace' }}>MAT {p.mat_no}</span>
+              <div style={{ fontSize: 11, color: 'var(--muted)' }}>{p.line_name || tr('ไม่ระบุไลน์')}{p.area ? ` · ${p.area}` : ''}</div>
+            </div>
+            {p.hasBom === true && <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', border: '1px solid var(--accent)', borderRadius: 999, padding: '1px 8px' }}>BOM</span>}
+            {p.hasBom === false && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('ยังไม่มี BOM')}</span>}
+          </div>
+        ))}
+        {!shown.length && (
+          <div style={{ padding: 18, textAlign: 'center', color: 'var(--muted)', fontSize: 12.5 }}>
+            {products.rows.length ? tr('ไม่พบพาร์ทในพื้นที่นี้ที่ตรงกับคำค้น') : tr('กำลังโหลด...')}
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
+function BomKidsStep({ root, onBack, onClose, onApply }) {
   const bom = useBomChildren(root?.mat_no);
-  const [sets, setSets] = useState(1);
+  const [parentQty, setParentQty] = useState(1);
   const [rows, setRows] = useState([]);
   const kidsSig = bom.rows.map(k => `${k.level}:${k.mat_no}:${k.qtyPerRoot}`).join('|');
-  useEffect(() => {
-    setRows(prev => {
-      const use = new Map(prev.map(r => [r.key, r.use]));
-      return bomPickRows(root, bom.rows, sets).map(r => (use.has(r.key) ? { ...r, use: use.get(r.key) } : r));
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kidsSig, sets, root?.mat_no]);
+  useEffect(() => { setRows(bomPickRows(root, bom.rows, 1)); setParentQty(1); }, [kidsSig, root?.mat_no]); // eslint-disable-line react-hooks/exhaustive-deps
+  const changeParent = (v) => { const n = Math.max(1, Number(v) || 1); setParentQty(n); setRows(rs => rescalePickRows(rs, n)); };
   const set = (key, patch) => setRows(rs => rs.map(r => (r.key === key ? { ...r, ...patch } : r)));
-  const allKids = rows.slice(1);
   const nUse = rows.filter(r => r.use).length;
-  const toggleKids = (v) => setRows(rs => rs.map((r, i) => (i === 0 ? r : { ...r, use: v })));
   return (
-    <Modal title={`🌳 ${tr('แตก BOM')} — ${root?.part_name || root?.mat_no}`} width={720} onClose={onClose}>
+    <Modal title={`🌳 ${tr('แตก BOM')} — ${root?.name || root?.mat_no}`} width={760} onClose={onClose}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8, fontSize: 12.5 }}>
-        <span>{tr('จำนวนชุดที่จะเบิก')}</span>
-        <input type="number" min="1" value={sets} onChange={e => setSets(Math.max(1, Number(e.target.value) || 1))}
-          style={{ ...inpSt, width: 80 }} />
-        <span style={{ color: 'var(--muted)' }}>{tr('(จำนวนลูก = ชุด × จำนวนต่อ 1 ชิ้น · แก้ได้ทีละแถว)')}</span>
+        <button onClick={onBack} style={miniBtn}>← {tr('เลือกแม่ใหม่')}</button>
+        <span>{tr('จำนวนแม่')} <span style={{ fontFamily: 'monospace', color: 'var(--text2)' }}>MAT {root?.mat_no}</span></span>
+        <input type="number" min="1" value={parentQty} onChange={e => changeParent(e.target.value)} style={{ ...inpSt, width: 90 }} />
+        <span style={{ color: 'var(--muted)' }}>{tr('ชิ้น → ลูก = จำนวนแม่ × ต่อ 1 ชิ้น (แก้รายแถวได้ · ตัวแม่ไม่ถูกเบิก)')}</span>
         <span style={{ flex: 1 }} />
-        {allKids.length > 0 && <>
-          <button onClick={() => toggleKids(true)} style={miniBtn}>{tr('ใช้ลูกทั้งหมด')}</button>
-          <button onClick={() => toggleKids(false)} style={miniBtn}>{tr('ไม่ใช้ลูกทั้งหมด')}</button>
+        {rows.length > 0 && <>
+          <button onClick={() => setRows(rs => rs.map(r => ({ ...r, use: true })))} style={miniBtn}>{tr('ใช้ทั้งหมด')}</button>
+          <button onClick={() => setRows(rs => rs.map(r => ({ ...r, use: false })))} style={miniBtn}>{tr('ไม่ใช้ทั้งหมด')}</button>
         </>}
       </div>
       {bom.loading && <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>{tr('กำลังโหลด BOM...')}</div>}
-      {bom.failed && <div style={{ fontSize: 12, color: 'var(--amber)', marginBottom: 6 }}>⚠️ {bom.message} — {tr('ยังเพิ่มตัวชิ้นงานได้ แต่ลูกต้องเพิ่มเอง')}</div>}
-      {!bom.loading && !bom.failed && !allKids.length && (
-        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>{tr('ชิ้นงานนี้ไม่มีพาร์ทลูกใน BOM — จะเพิ่มเฉพาะตัวมันเอง')}</div>
+      {bom.failed && <div style={{ fontSize: 12, color: 'var(--amber)', marginBottom: 6 }}>⚠️ {bom.message}</div>}
+      {!bom.loading && !bom.failed && !rows.length && (
+        <div style={{ fontSize: 12.5, color: 'var(--amber)', margin: '10px 0' }}>
+          ⚠️ {tr('พาร์ทนี้ยังไม่มี BOM ในระบบ — ลงทะเบียนที่ Product Master → แท็บ BOM หรือเลือกแม่ตัวอื่น')}
+        </div>
       )}
       {bom.sheets.length > 1 && (
         <div style={{ fontSize: 12, color: 'var(--amber)', marginBottom: 6 }}>⚠️ {tr('พาร์ทนี้มี BOM')} {bom.sheets.length} {tr('ใบ — แสดงใบแรก ตรวจรายการก่อนใช้')}</div>
       )}
-      <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', maxHeight: '55vh', overflowY: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 560 }}>
-          <thead><tr>
-            {['ใช้', 'ชั้น', 'ชิ้นงาน', 'จำนวน', 'หน่วย'].map(h => <th key={h} style={thSt}>{tr(h)}</th>)}
-          </tr></thead>
-          <tbody>
-            {rows.map(r => (
-              <tr key={r.key} style={{ opacity: r.use ? 1 : 0.45 }}>
-                <td style={{ ...tdSt, textAlign: 'center' }}>
-                  <input type="checkbox" checked={r.use} onChange={e => set(r.key, { use: e.target.checked })} />
-                </td>
-                <td style={{ ...tdSt, color: 'var(--muted)' }}>{r.level === 0 ? tr('ตัวเอง') : `L${r.level}`}</td>
-                <td style={{ ...tdSt, paddingLeft: 8 + r.level * 14 }}>
-                  <b>{r.description || r.mat_no}</b>{' '}
-                  <span style={{ color: 'var(--text2)', fontFamily: 'monospace' }}>MAT {r.mat_no}</span>
-                </td>
-                <td style={tdSt}>
-                  <input type="number" min="0" value={r.qty} onChange={e => set(r.key, { qty: e.target.value })}
-                    placeholder={r.unsure ? tr('กรอก') : ''} style={{ ...inpSt, width: 80 }} />
-                  {r.unsure && <span title={tr('อัตราต่อชิ้นใน BOM เชื่อไม่ได้ (มีหลายบรรทัด) — กรอกเอง')} style={{ marginLeft: 4 }}>⚠️</span>}
-                </td>
-                <td style={tdSt}>{r.unit || '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {rows.length > 0 && (
+        <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', maxHeight: '55vh', overflowY: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 600 }}>
+            <thead><tr>
+              {['ใช้', 'ชั้น', 'ลูก', 'ต่อ 1 แม่', 'จำนวนเบิก', 'หน่วย'].map(h => <th key={h} style={thSt}>{tr(h)}</th>)}
+            </tr></thead>
+            <tbody>
+              {rows.map(r => (
+                <tr key={r.key} style={{ opacity: r.use ? 1 : 0.45 }}>
+                  <td style={{ ...tdSt, textAlign: 'center' }}>
+                    <input type="checkbox" checked={r.use} onChange={e => set(r.key, { use: e.target.checked })} />
+                  </td>
+                  <td style={{ ...tdSt, color: 'var(--muted)' }}>L{r.level}</td>
+                  <td style={{ ...tdSt, paddingLeft: 8 + (r.level - 1) * 14 }}>
+                    <b>{r.description || r.mat_no}</b>{' '}
+                    <span style={{ color: 'var(--text2)', fontFamily: 'monospace' }}>MAT {r.mat_no}</span>
+                  </td>
+                  <td style={{ ...tdSt, color: 'var(--muted)' }}>{r.rate != null ? r.rate : '—'}</td>
+                  <td style={tdSt}>
+                    <input type="number" min="0" value={r.qty} onChange={e => set(r.key, { qty: e.target.value, edited: true })}
+                      placeholder={r.unsure ? tr('กรอก') : ''} style={{ ...inpSt, width: 90 }} />
+                    {r.unsure && <span title={tr('อัตราต่อชิ้นใน BOM เชื่อไม่ได้ (มีหลายบรรทัด) — กรอกเอง')} style={{ marginLeft: 4 }}>⚠️</span>}
+                  </td>
+                  <td style={tdSt}>{r.unit || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
       <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, marginTop: 12 }}>
-        <span style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('เลือก')} {nUse}/{rows.length} {tr('รายการ')}{replacing ? ` · ${tr('แทนแถวเดิม')}` : ''}</span>
+        <span style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('เลือก')} {nUse}/{rows.length} {tr('รายการ')}</span>
         <button onClick={onClose} style={btnSt()}>{tr('ยกเลิก')}</button>
         <button disabled={!nUse} onClick={() => onApply(pickedToItems(rows))} style={btnSt('var(--accent)')}>{tr('เพิ่มลงใบ')}</button>
       </div>

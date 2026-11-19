@@ -17,7 +17,7 @@ import SignatureModal from './components/SignatureModal';
 import ChangePasswordModal from './components/ChangePasswordModal';
 const FeedbackModal = lazy(() => import('./components/FeedbackModal'));
 const NotifyPrefsModal = lazy(() => import('./components/NotifyPrefsModal'));  // 🔕 ตั้งค่าแจ้งเตือนของฉัน
-import { loadPermissions, canAccessPage, setDeptAdmin, setSharedAccount, can } from './utils/permissions';
+import { loadPermissions, canAccessPage, setDeptAdmin, setSharedAccount, can, canSeeded } from './utils/permissions';
 /* 🏷️ รุ่นของเว็บ (full / nm) — สลับตอน build ด้วย alias ใน vite.nm.config.js · 📄 src/appEdition.js */
 import { EDITION_LABEL, EDITION_HOME } from './appEdition';
 import { LOGISTIC_GROUPS } from './utils/logisticSide';
@@ -117,6 +117,8 @@ const Improvements = lazy(() => import('./pages/Improvements'));
 const OjtTraining = lazy(() => import('./pages/OjtTraining'));
 const DailyChecker = lazy(() => import('./pages/DailyChecker'));
 const CommandPalette = lazy(() => import('./components/CommandPalette'));
+/* 💬 แชทถามข้อมูล (19/11 · ขั้นที่ 1 ยังไม่มี AI) — lazy: ไม่เพิ่มบันเดิลหลัก · 📄 docs/modules/askbot.md */
+const AskBot = lazy(() => import('./components/AskBot'));
 const DocFormsRegistry = lazy(() => import('./pages/DocFormsRegistry'));
 const MorningMeeting = lazy(() => import('./pages/MorningMeeting'));
 // 🏛️ OBEYA — หน้าเดียว 2 แท็บ: บอร์ด KPI ส่วนงาน (กระดาษผนัง) + จอมอนิเตอร์ SQDCM
@@ -1222,6 +1224,7 @@ const NOTIF_ROUTE = {
   rack_requests: '/rack-center',
   wip_replenish_requests: '/heijunka',
   qa_ncr:        '/qa?tab=ncr',
+  qa_inspection_sheets: '/qa?tab=sheet',   // ✍️ อนุมัติ/ตีกลับใบตรวจ QA + alarm ตกซ้ำ (19/11)
   qa_capa:       '/qa?tab=capa',
   qa_customer_claims: '/qa?tab=claims',
   quality_bin_records: '/qa?tab=bins',
@@ -2096,6 +2099,10 @@ function ProtectedLayout({ session, theme, onToggleTheme, userRole, realRole, vi
         <Suspense fallback={null}>
           <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} role={role} />
         </Suspense>
+        {/* 💬 แชทถามข้อมูล — ไม่ขึ้นบนจอ TV (ไม่มีคนพิมพ์) · คีย์ askbot:use ยังไม่ seed = admin เท่านั้น (เปิดวงแคบก่อน) */}
+        {!tvShell && canSeeded('askbot', 'use', role) && (
+          <Suspense fallback={null}><AskBot /></Suspense>
+        )}
         {/* 📺 จอตาม: รับคำสั่งรีโมท (pointer/คลิก/เลื่อน/เปลี่ยนหน้า) — ทำงานได้ทุกหน้า */}
         {remoteCode && (
           <Suspense fallback={null}>

@@ -26,6 +26,7 @@ import { useLiveBoard } from '../utils/useLiveBoard';
 import { cachedMaster } from '../utils/masterCache';
 import { assessFmeReadiness } from '../utils/qaFmeReadiness';
 import QaFmeBoard from './QaFmeBoard';
+import QaFmePartRules from './QaFmePartRules';
 
 import { tr } from '../utils/i18n';
 import { getWorkDate, getCurrentShift } from '../utils/workDate';
@@ -50,7 +51,7 @@ const FME_QUEUE_LIMIT = 300;   // ถึงเพดาน = เขียนบ�
 
 export default function QaFmeQueue({ scopedLineNames, onOpen }) {
   const [loadErr, setLoadErr] = useState(null);
-  const { role } = useContext(UserContext);
+  const { role, fullName } = useContext(UserContext);
   const canManage = can('qa', 'manage', role);
   const [rows, setRows] = useState([]);
   const [cfg, setCfg] = useState(null);
@@ -269,6 +270,15 @@ export default function QaFmeQueue({ scopedLineNames, onOpen }) {
                 <Num label={tr('รุ่นวิ่งเกินกี่นาทีถึงเรียก')} value={cfg.mid_after_min} onSave={v => saveCfg({ mid_after_min: v })} />
               ) : null}
             </div>
+            {/* 🔴 โหมดเวลา + 0 นาที = ตัวสแกนไม่สร้าง Middle เลย (19/11 · ตั้งค่าแบบนี้ 17/11 แล้ว M หายจากบอร์ดเงียบๆ) */}
+            {String(cfg.mid_mode) === 'min' && !(Number(cfg.mid_after_min) > 0) && (
+              <div style={{ fontSize: 12, color: 'var(--amber)', marginTop: 7, fontWeight: 700 }}>
+                ⚠️ {tr('ตั้ง "ตามเวลา" แต่ 0 นาที = ระบบไม่เรียกตรวจ Middle เลย — ใส่จำนวนนาที หรือเลือก "ตามยอดผลิต (lot size)"')}
+              </div>
+            )}
+            {String(cfg.mid_mode) === 'off' && (
+              <div style={{ fontSize: 12, color: 'var(--amber)', marginTop: 7 }}>⚠️ {tr('ปิดตรวจ Middle อยู่ — บอร์ดจะมีแค่ First (1) กับ End (3)')}</div>
+            )}
             {String(cfg.mid_mode ?? 'lot') === 'lot' && (
               <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 7, lineHeight: 1.7 }}>
                 คาบตรวจคิดจาก <b>{tr('lot size ของพาร์ทเอง')}</b> (ตั้งที่ Product Master → 🎴 Kanban Std) ×
@@ -280,6 +290,7 @@ export default function QaFmeQueue({ scopedLineNames, onOpen }) {
               </div>
             )}
           </div>
+          <QaFmePartRules canEdit={canManage} fullName={fullName} centralMode={String(cfg.mid_mode ?? 'lot')} />
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 8, lineHeight: 1.6 }}>
             ห้อง Telegram ที่รับแจ้ง ตั้งที่ <b>/notification-config</b> → หมวดคุณภาพ
             (<code>qa_fme_call</code> = เรียกตรวจ · <code>qa_fme_overdue</code> = เกินเวลา) ·

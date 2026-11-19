@@ -384,9 +384,8 @@ export default function DailyPM() {
                     </div>
                   )}
                   {(row.missing.length > 0 || row.ng.length > 0) && (
-                    // ต้องพาไปแท็บ "ฝ่ายผลิต" ตรงๆ (?dept=production) — หน้า pm-check เปิดค่าเริ่มต้นเป็นแท็บซ่อมบำรุง
-                    // ถ้าพนักงานบันทึกผลผิดแท็บ ระบบ Daily PM จะไม่นับให้
-                    <Link to={`/pm?tab=check&dept=production&line=${encodeURIComponent(row.line_name)}`} style={{
+                    // ไปหน้าบันทึกผลตรวจ AM ของตัวเอง (19/11) — ล็อกเฉพาะทีม AM ไม่ปนกับทีมช่าง
+                    <Link to={`/daily-checker?tab=amcheck&line=${encodeURIComponent(row.line_name)}`} style={{
                       display: 'inline-block', marginTop: 10, fontSize: 12, fontWeight: 700, textDecoration: 'none',
                       padding: '6px 12px', borderRadius: 8, background: `${tint(meta.color, 'dim')}`, color: meta.color, border: `1px solid ${tint(meta.color, 'line')}`,
                     }}>
@@ -415,7 +414,7 @@ export default function DailyPM() {
               {[
                 { n: '1', title: 'เพิ่มเครื่อง + หัวข้อตรวจ', desc: <>{tr('ที่หน้า')} <Link to="/pm?tab=setup&dept=production" style={{ color: 'var(--accent)', fontWeight: 700 }}>{tr('ตั้งค่า PM → แท็บ ฝ่ายผลิต')}</Link> (กด "+ เพิ่มอุปกรณ์" แล้วใส่ชื่อ/ไลน์/หัวข้อที่ต้องตรวจ)</> },
                 { n: '2', title: 'ลงทะเบียนที่แท็บนี้', desc: 'ติ๊กเครื่องที่ "ต้องตรวจทุกต้นกะ" ของแต่ละไลน์ — ตัวเลข N ของไลน์มาจากตรงนี้' },
-                { n: '3', title: 'พนักงานตรวจต้นกะ', desc: <>{tr('ที่หน้า')} <Link to="/pm?tab=check&dept=production" style={{ color: 'var(--accent)', fontWeight: 700 }}>{tr('ตรวจสอบอุปกรณ์ → แท็บ ฝ่ายผลิต')}</Link> {tr('เลือกเครื่อง ติ๊กผ่าน/NG แล้วบันทึก')}</> },
+                { n: '3', title: 'พนักงานตรวจต้นกะ', desc: <>{tr('ที่หน้า')} <Link to="/daily-checker?tab=amcheck" style={{ color: 'var(--accent)', fontWeight: 700 }}>{tr('แท็บ บันทึกผลตรวจ AM')}</Link> {tr('เลือกเครื่อง ติ๊กผ่าน/NG แล้วบันทึก')}</> },
                 { n: '4', title: 'ระบบเฝ้าเอง', desc: 'เปิดใบผลิตใบแรกของไลน์ → เริ่มนับ 60 นาที · ครบ+ผ่าน = 🟢 แจ้ง Telegram · พบ NG = 🔴 · เกินเวลายังไม่ครบ = 🟠' },
               ].map(s => (
                 <div key={s.n} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
