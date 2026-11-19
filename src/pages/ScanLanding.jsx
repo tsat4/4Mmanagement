@@ -396,7 +396,9 @@ export default function ScanLanding() {
                 {canAccessPage('/line-oee', role) && <ActionLink to={`/line-oee?line=${q}`} icon="📈" label={tr('OEE สดของไลน์')} sub={tr('A × P × Q ของกะนี้')} tone="var(--green)" />}
                 {canAccessPage('/management', role) && <ActionLink to={`/management?line=${q}`} icon="🗓️" label={tr('แผน / สถานะงานของไลน์')} sub={tr('ใบผลิตที่กำลังเดิน + คิวถัดไป')} tone="var(--blue)" />}
                 {canAccessPage('/people-board', role) && <ActionLink to={`/people-board?line=${q}`} icon="🧑‍🤝‍🧑" label={tr('คนในไลน์ / จุดงาน')} sub={tr('ใครอยู่จุดไหน กะนี้')} tone="var(--blue)" />}
-                {canAccessPage('/pm-check', role) && <ActionLink to={`/pm?tab=check&line=${q}`} icon="✅" label={tr('ตรวจ AM / PM ของไลน์')} sub={tr('ใบตรวจของอุปกรณ์ในไลน์นี้')} tone="var(--amber)" />}
+                {/* AM กับ PM ช่างแยกหน้ากันแล้ว (19/11) — ป้ายไลน์ไม่รู้ว่าใครสแกน ⇒ ให้เลือกเอง */}
+                {canAccessPage('/pm-check', role) && <ActionLink to={`/daily-checker?tab=amcheck&line=${q}`} icon="🏭" label={tr('ตรวจ AM ของไลน์ (ผลิตตรวจเอง)')} sub={tr('ใบตรวจ AM ของอุปกรณ์ในไลน์นี้')} tone="var(--green)" />}
+                {canAccessPage('/pm-check', role) && <ActionLink to={`/pm?tab=check&line=${q}`} icon="✅" label={tr('ตรวจ PM ของไลน์ (ช่าง)')} sub={tr('ใบตรวจ PM ของอุปกรณ์ในไลน์นี้')} tone="var(--amber)" />}
                 {canAccessPage('/qr-labels', role) && <ActionLink to={`/qr-labels?kind=sheet&line=${q}`} icon="🗒️" label={tr('พิมพ์ใบสแกนประจำไลน์ (A4)')} sub={tr('QR ประเภท Downtime / งานเสียของไลน์นี้')} tone="var(--muted)" />}
               </div>
             </>);
@@ -636,7 +638,7 @@ export default function ScanLanding() {
             )}
             {hit.jig && canAccessPage('/pm-check', role) && (pmDepts?.length
               ? pmDepts.map(d => (
-                  <ActionLink key={d} to={`/pm?tab=check&equip=${hit.jig.id}&dept=${encodeURIComponent(d)}`} icon={isAm(d) ? '🏭' : '✅'}
+                  <ActionLink key={d} to={isAm(d) ? `/daily-checker?tab=amcheck&equip=${hit.jig.id}&dept=${encodeURIComponent(d)}` : `/pm?tab=check&equip=${hit.jig.id}&dept=${encodeURIComponent(d)}`} icon={isAm(d) ? '🏭' : '✅'}
                     label={isAm(d) ? `ตรวจ AM (ผลิตตรวจเอง)${pmDepts.filter(isAm).length > 1 ? ` — ${teamLabel(d)}` : ''}`
                       : `ตรวจ PM (ช่าง)${pmDepts.filter(x => !isAm(x)).length > 1 ? ` — ${teamLabel(d)}` : ''}`}
                     sub={`${teamLabel(d)} · เปิดใบตรวจตามจุดที่ตั้งไว้`} tone={isAm(d) ? 'var(--green)' : 'var(--accent)'} />

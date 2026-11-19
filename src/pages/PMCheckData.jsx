@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useContext } from 'react'
 import { lineNameCompare } from '../utils/lineHierarchy';
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { useMergeParams } from '../utils/useTabParam'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase, supabaseDR } from '../supabaseClient'
@@ -841,10 +841,19 @@ function HistoryModal({ inspection, checkpoints: cpsFromPage, jig, onClose, user
 const pmHasInput = (results, notes) => !!(notes && String(notes).trim())
   || Object.values(results || {}).some(r => r && ['v1', 'v2', 'v3', 'attr', 'note', 'mval'].some(f => r[f] !== '' && r[f] != null))
 
-export default function PMCheckData() {
+/* 🧭 mode (19/11 · คำสั่ง user "AM ต้องมีหน้าบันทึกของตัวเอง · ปนกับ PM ของช่าง")
+   'pm' (ค่าเริ่ม · /pm?tab=check) = เฉพาะทีมช่าง — เปิดด้วยทีม AM จะถูกพาไป /daily-checker?tab=amcheck
+   'am' (/daily-checker?tab=amcheck) = เฉพาะทีม AM — ?dept= ที่ไม่ใช่ทีม AM ถูกแทนด้วยทีม AM ตัวแรก
+   แยกด้วย `isAmTeam()` (mtn_teams.kind) เท่านั้น ห้าม hardcode 'production' */
+export default function PMCheckData({ mode = 'pm' }) {
+  const amMode = mode === 'am'
   const [searchParams] = useSearchParams()
   const setParams = useMergeParams()
-  const department = searchParams.get('dept') || 'maintenance'
+  const rawDept = searchParams.get('dept')
+  const firstAmTeam = pmTeamsSync().find(t => isAmTeam(t.key))?.key
+  const department = amMode
+    ? ((rawDept && isAmTeam(rawDept)) ? rawDept : (firstAmTeam || rawDept || 'maintenance'))
+    : (rawDept || 'maintenance')
   const equipParam = searchParams.get('equip')
 
   const [userId, setUserId] = useState(null)
@@ -1601,10 +1610,20 @@ export default function PMCheckData() {
   const showSidebar = !isNarrow || !selectedJig
   const showMain = !isNarrow || !!selectedJig
 
+  /* 🧭 หน้าช่าง (mode pm) ถูกเปิดด้วยทีม AM (ลิงก์เก่า/ป้าย QR/แจ้งเตือน) → พาไปหน้าบันทึก AM ของตัวเอง */
+  if (!amMode && isAmTeam(department)) {
+    const q = new URLSearchParams({ tab: 'amcheck', dept: department })
+    if (equipParam) q.set('equip', equipParam)
+    if (searchParams.get('line')) q.set('line', searchParams.get('line'))
+    return <Navigate to={`/daily-checker?${q.toString()}`} replace />
+  }
+  /* ปุ่มเลือกทีม = เฉพาะทีมของโหมดนี้ (AM ไม่ปนกับทีมช่าง) */
+  const modeTeams = teams.filter(t => isAmTeam(t.key) === amMode)
+
   return (
     <Page width="full">
-    {/* UI-STANDARD 2026-09-24 — หัวเพจมาตรฐาน (ใน PmHub ชื่อถูกซ่อน เหลือหัวของ hub ชั้นเดียว) */}
-    <PageHeader title={tr('บันทึกผลตรวจ PM')} icon="✅" />
+    {/* UI-STANDARD 2026-09-24 — หัวเพจมาตรฐาน (ใน PmHub/DailyChecker ชื่อถูกซ่อน เหลือหัวของ hub ชั้นเดียว) */}
+    <PageHeader title={tr(amMode ? 'บันทึกผลตรวจ AM' : 'บันทึกผลตรวจ PM')} icon="✅" />
     {/* 🔐 เปิดทีมอื่นอยู่ — ดูได้ แต่ลงผล/อนุมัติ/เลื่อนรอบไม่ได้ (ต้องเขียนบอก ห้ามปุ่มเทาเฉยๆ) */}
     {!deptWrite.ok && (
       <div style={{ margin: '0 0 10px', padding: '8px 10px', borderLeft: '4px solid var(--amber)',
@@ -1616,11 +1635,11 @@ export default function PMCheckData() {
       {/* Sidebar (จอแคบ = เต็มความกว้าง) */}
       {showSidebar && (
       <div style={{ ...S.sidebar, ...(isNarrow ? { width: '100%', borderRight: 'none', position: 'static', height: 'auto' } : null) }}>
-        <div style={{ ...S.deptBar, paddingTop: 12 }}>
-          {teams.map(d => <button key={d.key} onClick={() => setDept(d.key)} style={S.deptBtn(department === d.key, d.color || DEPT_COLORS[d.key] || '#3dd65c')}>{d.icon ? `${d.icon} ` : ''}{tr(d.label)}</button>)}
-        </div>
+        {modeTeams.length > 1 && <div style={{ ...S.deptBar, paddingTop: 12 }}>
+          {modeTeams.map(d => <button key={d.key} onClick={() => setDept(d.key)} style={S.deptBtn(department === d.key, d.color || DEPT_COLORS[d.key] || '#3dd65c')}>{d.icon ? `${d.icon} ` : ''}{tr(d.label)}</button>)}
+        </div>}
         {/* AM (ผลิตตรวจเอง) กับ PM (ช่าง) เป็นคนละงาน — บอกให้ชัดว่าแท็บที่เลือกอยู่คืออะไร */}
-        <div style={{ padding: '0 16px 10px', fontSize: 11, color: 'var(--muted)', lineHeight: 1.5 }}>
+        <div style={{ padding: modeTeams.length > 1 ? '0 16px 10px' : '12px 16px 10px', fontSize: 11, color: 'var(--muted)', lineHeight: 1.5 }}>
           <b style={{ color: deptColor }}>{teamKind(department).short} · {teamKind(department).full}</b> — {teamKind(department).desc}
         </div>
         <div style={{ padding: '0 16px 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
