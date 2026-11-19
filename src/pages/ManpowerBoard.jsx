@@ -775,7 +775,7 @@ function LayoutMap({ layout, placed, reserve = 12 }) {
         {imgBox && (
           <div style={{ position: 'absolute', left: imgBox.ox, top: imgBox.oy, width: imgBox.rw, height: imgBox.rh, pointerEvents: 'none' }}>
             {placed.filter(x => x.station.pos_top != null && x.station.pos_left != null).map(({ station, people, missing }) => (
-              <div key={station.id} style={{ position: 'absolute', top: `${station.pos_top}%`, left: `${station.pos_left}%`, transform: 'translate(-50%, -50%)', pointerEvents: 'auto' }}>
+              <div key={station.id} style={{ position: 'absolute', top: `${parseFloat(station.pos_top)}%`, left: `${parseFloat(station.pos_left)}%`, transform: 'translate(-50%, -50%)', pointerEvents: 'auto' }}>
                 <div style={{ position: 'relative', display: 'flex', gap: 2 }}>
                   {people.length ? people.map(({ emp, shift, attend, temp, away }) => {
                     const c = shiftMeta(shift).color;
