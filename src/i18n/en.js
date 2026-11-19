@@ -1149,6 +1149,7 @@ const EN = {
   'บันทึกชิม': 'Save shim',
   'บันทึกตำแหน่ง': 'Save position',
   'บันทึกตำแหน่งประจำ': 'Save home position',
+  'ยกเลิกตำแหน่งประจำ': 'Remove home position',
   'บันทึกผล': 'Save result',
   'บันทึกผลซ่อม → ส่ง QA': 'Save repair result → send to QA',
   'บันทึกผลตรวจ': 'Save inspection result',

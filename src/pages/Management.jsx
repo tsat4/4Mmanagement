@@ -40,6 +40,7 @@ import { downtimeBandsIn } from '../utils/downtimeBands';
 import DelayBlameBar from '../components/DelayBlameBar';   // 🔗 สรุปดีเลย์ของวัน + ต้นเหตุ/ผู้ถูกพาล (ทีมปั๊ม 2026-09-30)
 import { liveChannel } from '../utils/liveChannel';
 import { checkWrite, checkWriteRows } from '../utils/dbWrite';
+import { askConfirm } from '../utils/askConfirm';
 import { uploadOpts } from '../utils/storageUpload';
 import { acceptImageFile } from '../utils/acceptImageFile';
 import { tr } from '../utils/i18n';
@@ -1015,6 +1016,27 @@ export default function Management() {
     );
     if (eHome) { toast.error('บันทึกสถานีประจำไม่สำเร็จ: ' + eHome.message); return; }
     setHomePositions(prev => ({ ...prev, [empId]: String(stationId) }));
+  };
+
+  /* ── ยกเลิกตำแหน่งประจำ (2026-11-19 · คำสั่ง user — เดิมบันทึกพลาดแล้วไม่มีทางลบบนจอ) ──
+     ถามยืนยันก่อน · ลบเฉพาะแถวที่ยังชี้จุดนี้ (กันลบจุดใหม่ที่คนอื่นเพิ่งตั้งทับ) · นับแถว (RLS ปฏิเสธ = 0 แถวเงียบ) */
+  const clearHomePosition = async (worker, station) => {
+    const empId = worker.employee_id || worker.employees?.id;
+    if (!empId) return;
+    if (!canAssignManpower) { toast.error('บัญชีของคุณไม่มีสิทธิ์จัดกำลังคน'); return; }
+    const ok = await askConfirm({
+      title: 'ยกเลิกตำแหน่งประจำ?',
+      message: `${worker.employees?.name || ''} (${worker.employees?.employee_id_code || '-'})\nจุด: ${station.station_name || '-'}\n\nการจัดวางคนของวันนี้ไม่เปลี่ยน — แค่ไม่มีตำแหน่งประจำ`,
+      okLabel: 'ยกเลิกตำแหน่งประจำ',
+      cancelLabel: 'ไม่ยกเลิก',
+      danger: true,
+    });
+    if (!ok) return;
+    const res = await supabase.from('employee_home_positions').delete()
+      .eq('employee_id', empId).eq('station_id', station.id).select('employee_id');
+    if (!await checkWriteRows(res, 'ยกเลิกตำแหน่งประจำ')) return;
+    setHomePositions(prev => { const n = { ...prev }; delete n[empId]; return n; });
+    toast.success('ยกเลิกตำแหน่งประจำแล้ว');
   };
 
   const specialEmpIds = new Set(specialTasks.map(t => t.employee_id));
@@ -2881,6 +2903,13 @@ export default function Management() {
                         )}
                         {homePositions[workerHere.employee_id] === String(st.id) && (
                           <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 'var(--r-md)', background: 'rgba(34,197,94,0.12)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.3)', fontWeight: 700 }}>{tr('ตำแหน่งประจำ')}</span>
+                        )}
+                        {canAssignManpower && homePositions[workerHere.employee_id] === String(st.id) && (
+                          <button
+                            onClick={() => clearHomePosition(workerHere, st)}
+                            style={{ fontSize: 11, padding: '3px 8px', borderRadius: 'var(--r-md)', background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)', cursor: 'pointer', fontWeight: 700 }}
+                            title={tr('ยกเลิกตำแหน่งประจำ')}
+                          >{tr('ยกเลิกตำแหน่งประจำ')}</button>
                         )}
                         {canAssignManpower && <button
                           onClick={() => { assignWorker(workerHere.id, 'Pool'); setStationModal(null); }}
