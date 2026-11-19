@@ -367,4 +367,6 @@ user เลือก: **หัวหน้า QA 1 ขั้น** · **ไม่
 - จอ: `src/components/QaSheetApproval.jsx` — แผงใต้สรุปใบ (อนุมัติผ่าน `confirmSign` · ตีกลับต้องพิมพ์เหตุผล ≥5 ตัว) +
   `QaApprovalPendingBar` บนสุดของแท็บใบตรวจ "ใบรออนุมัติ N ใบ" (ขอบเขตไลน์เดียวกับจอ · เพดาน 200 · อ่านไม่ได้ = เขียนบอก)
   · เขียนด้วย `.eq('approval_status','pending')` + `checkWriteRows` (กันกดซ้อน/ RLS 0 แถว) · แจ้งคนตรวจทาง `createNotification`
-- ⚠️ ยังไม่ทำ: map แจ้งเตือน `qa_inspection_sheets` → `/qa?tab=sheet` (ต้องแก้คู่ App.jsx + edge `send-push` + deploy edge · ด่าน `notifRoute.test`)
+- 🔔 แจ้งเตือน (19/11): `qa_inspection_sheets` → `/qa?tab=sheet` ทั้งกระดิ่ง (`NOTIF_ROUTE`) และ Web Push (`send-push` v15 · deploy แล้ว · verify_jwt=false)
+  · แจ้งเตือนอนุมัติ/ตีกลับส่ง `link: /qa?tab=sheet&sheet=<id>` ⇒ กดแล้วเปิดใบนั้นตรง (`QaCheckSheet` อ่าน `?sheet=` → ตั้งพาร์ท/วัน/กะ/รอบ · นอกขอบเขต/ไม่พบ = toast บอกเหตุ)
+  · alarm ตกซ้ำ (`qa_seq_alarm` · ไม่มี link) ได้ปลายทางหน้าใบตรวจจาก map ด้วย · `createNotification()` (`lib/pmNotify.js`) รับ `link` ได้แล้ว
