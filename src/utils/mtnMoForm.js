@@ -177,6 +177,41 @@ export const isToolTeamRow = (order = {}) => {
   return !!it && TOOL_TEAMS.includes(guessTeamFromName(it));
 };
 
+/* ── ✍️ ช่องเซ็นที่ 1 ของ FM-JIG-008 = "ฝั่งช่าง" — ใครเซ็น + ป้ายอะไร ──  2026-11-19
+   หน้างานแจ้ง (ใบจริง DIE-CM-111126-0063-M19): *"มีแก้ใบ MO ของ die maintenance ที่ช่องมุมซ้ายล่าง
+   ยังดึงข้อมูลมั่ว อันนี้ MO die แต่ไปดึงชื่อช่างมา มันต้องดึงหัวหน้า/วิศวกร ช่างส่วนงานนั้น และลายเซ็น"*
+
+   ── 2 อย่างที่ผิดบนใบนั้น ─────────────────────────────────────────────────────
+   ① **ป้ายเขียน "JIG APPROVE" บนใบของทีม DIE** — ป้ายมาจากค่าตั้งต้นชุดเดียวใน `/doc-forms`
+      ⇒ ต้องมาจากรหัสทีมจริง (`mtn_teams.mo_code`) · DIE→"DIE APPROVE" · JIG→"JIG APPROVE"
+   ② **ชื่อในช่อง = `tech_main` (ช่างที่ลงมือซ่อม)** — ของทีมเครื่องมือ คนที่รับรองงานฝั่งช่างคือ
+      **หัวหน้าแผนกช่างที่ตรวจรับขั้น 4** (กฎ 27/10 "ขั้น 4 ของใบทีมเครื่องมือเป็นของหัวหน้าแผนกช่าง")
+      วัดจริง 19/11 (90 วัน): ใบ DIE 82 ใบ **`tech_main_uid` ว่างทั้ง 82** ⇒ ช่องนั้นไม่เคยมีลายเซ็นเลย
+      ขณะที่ `checker_uid` (หัวหน้าแผนกช่าง) มีลายเซ็น 53 ใบ
+
+   🔴 **ใบของฝ่ายผลิต (AM) ไม่เปลี่ยน** — ขั้น 4 ของใบผลิตเป็น "ฝ่ายที่แจ้ง" ไม่ใช่หัวหน้าช่าง
+      ⇒ ช่องนี้ยังเป็นช่างที่ซ่อม (`tech_main`) ตามที่ user เคาะไว้ 21/10
+   🔴 **ห้ามดึงชื่อ "หัวหน้าประจำทีม" จากทะเบียนมาพิมพ์** — คนที่ไม่ได้กดเซ็นจริง ห้ามมีชื่อ+ลายเซ็นบนใบ
+      (กฎเดียวกับที่ห้าม stamp เวลาเซ็นตอนพิมพ์ชื่อผู้จัดการ) · ใบนี้พิมพ์เฉพาะคนที่กดจริงเท่านั้น   */
+
+/**
+ * @param {object} order ใบ MO
+ * @param {string} moCode รหัสทีมจากทะเบียน (`moCodeOf(order.mtn_dept)`) — ว่าง = ใช้ป้ายตั้งต้น
+ * @param {string} fallbackLabel ป้ายตั้งต้นจาก `/doc-forms`
+ * @returns {{ label:string, name:string, uid:string|null, at:string|null, who:'checker'|'tech' }}
+ */
+export function moTechSignBox(order = {}, moCode = '', fallbackLabel = '') {
+  const code = String(moCode || '').trim().toUpperCase();
+  const label = code ? `${code} APPROVE` : (fallbackLabel || '');
+  /* ทีมเครื่องมือ (JIG/DIE): ฝั่งช่างที่รับรองงาน = หัวหน้าแผนกช่างที่ตรวจรับขั้น 4 */
+  if (isToolTeamRow(order)) {
+    return { label, name: order?.checker_name || '', uid: order?.checker_uid || null,
+      at: order?.check_at || null, who: 'checker' };
+  }
+  return { label, name: order?.tech_main || '', uid: order?.tech_main_uid || null,
+    at: order?.repair_done_at || null, who: 'tech' };
+}
+
 /** เหตุผลมาตรฐานเมื่อ QA ไม่อยู่ในลูปของฟอร์มนี้เลย (ไม่ใช่มีคนกดข้าม) — user 2026-09-22 */
 export const QA_SKIP_REASON_MTN_FORM = 'ใบซ่อมของทีม MTN (FM-MTN-006) — ลูปนี้ไม่มีขั้นตรวจคุณภาพโดย QA';
 

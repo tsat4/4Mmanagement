@@ -9473,6 +9473,33 @@ test('↩️ mo-list-shows-resubmit — ใบที่ถูกตีกลั�
       + '   ขาด case = ตอบ 400 unknown event ⇒ ทั้ง Telegram และกระดิ่งเงียบสนิท\n');
   }
 });
+test('✍️ mo-print-tech-sign-box — ใบ DIE/JIG: ช่องเซ็นฝั่งช่าง = หัวหน้าแผนกช่าง + ป้ายตามทีมจริง', () => {
+  /* why (19/11 · หน้างานแจ้งจากใบจริง DIE-CM-111126-0063-M19):
+     *"มีแก้ใบ MO ของ die maintenance ที่ช่องมุมซ้ายล่าง ยังดึงข้อมูลมั่ว อันนี้ MO die
+       แต่ไปดึงชื่อช่างมา มันต้องดึงหัวหน้า/วิศวกร ช่างส่วนงานนั้น และลายเซ็น"*
+     ① ป้ายเขียน "JIG APPROVE" บนใบของทีม DIE (ป้ายตั้งต้นชุดเดียวใน /doc-forms)
+     ② ชื่อในช่อง = `tech_main` · วัดจริง 90 วัน: ใบ DIE 82 ใบ **tech_main_uid ว่างทั้ง 82**
+        ⇒ ช่องนั้นไม่เคยมีลายเซ็นเลย · ขณะที่ checker_uid (หัวหน้าแผนกช่าง ขั้น 4) มี 53 ใบ
+     🔴 ใบฝ่ายผลิต (AM) ไม่เปลี่ยน — ขั้น 4 ของใบผลิตเป็น "ฝ่ายที่แจ้ง" ไม่ใช่หัวหน้าช่าง */
+  const u = readFileSync(join(ROOT, 'src/utils/mtnMoForm.js'), 'utf8');
+  assert.match(u, /export function moTechSignBox/,
+    '\n\n❌ กฎช่องเซ็นฝั่งช่างต้องอยู่ใน mtnMoForm.js (pure) ที่เดียว\n');
+  assert.match(u, /if \(isToolTeamRow\(order\)\)[\s\S]{0,200}checker_uid/,
+    '\n\n❌ ทีมเครื่องมือต้องใช้ checker (หัวหน้าแผนกช่าง ขั้น 4) ไม่ใช่ tech_main\n');
+
+  const page = readFileSync(join(ROOT, 'src/pages/MtnRepair.jsx'), 'utf8');
+  /* ใบพิมพ์ต้องเรียกกฎ ไม่ใช่หยิบ tech_main มาใส่ช่องแรกเองอีก */
+  assert.match(page, /moTechSignBox\(o, moCodeOf\(/,
+    '\n\n❌ ใบพิมพ์ไม่ได้ใช้ moTechSignBox() — กลับไปหยิบ tech_main ใส่ช่องแรกเองแล้ว\n');
+  assert.doesNotMatch(page, /sign\(moSig\[0\], o\.tech_main/,
+    '\n\n❌ ช่อง 1 กลับไปผูก tech_main ตรงๆ — ใบ DIE จะไม่มีลายเซ็นอีก (82/82 ใบ)\n');
+  /* ป้ายต้องมาจากทะเบียนทีม ห้าม hardcode 'DIE APPROVE' ในหน้า */
+  assert.doesNotMatch(page, /'DIE APPROVE'|"DIE APPROVE"/,
+    '\n\n❌ อย่า hardcode ป้ายช่องเซ็นในหน้า — ต้องมาจาก mtn_teams.mo_code (moCodeOf)\n');
+  const t = readFileSync(join(ROOT, 'src/utils/mtnTeams.js'), 'utf8');
+  assert.match(t, /export function moCodeOf/,
+    '\n\n❌ moCodeOf หายจาก mtnTeams.js — ป้ายช่องเซ็นจะไม่รู้ว่าใบนี้ทีมอะไร\n');
+});
 test('🔌 machine-usability-not-mo-status — "ใบยังเปิด" ≠ "เครื่องใช้ไม่ได้"', () => {
   /* why (19/11 · คำสั่ง user): *"ใบแจ้งซ่อมเครื่องที่เป็น supply บางทีเค้าซ่อมไม่ได้ แต่แก้ไข
      เบื้องต้นให้ใช้ได้ระหว่างรอของมาเปลี่ยน · อยากมีปุ่มเปิดปิดเครื่อง ให้สถานะตรงกับหน้างาน"*
@@ -12097,6 +12124,51 @@ test('🗂 operator-tab-allowed-complete — `tabAllowed` ใน operator.jsx �
   const nAllowed = allowed[1].split('\n').filter(l => l.trim().length && l.trim() !== ',').length;
   assert.equal(nAllowed, nKeys,
     `\n\n❌ operator.jsx: TAB_KEYS มี ${nKeys} แท็บ แต่ tabAllowed มี ${nAllowed} ช่อง — แท็บที่เกินมากดแล้วตกกลับแท็บแรกเงียบๆ\n`);
+});
+
+test('🚩 ng-needs-reason — ติ๊ก NG ในใบตรวจ AM/PM ต้องมีเหตุผล + เตือนเมื่อติ๊ก OK ทั้งที่ใบซ่อมยังค้าง', () => {
+  /* 19/11 (คำสั่ง user): *"ทุกระบบการตรวจเครื่องจักรทั้ง am/pm ในกรณีที่เลือก NG ต้องใส่เหตุผลด้วย
+     เพราะเกิดการกดผิดและพนักงานไม่รู้ตัว … จะใช้การปิด MO ซ่อมแล้ว, แก้ไขเบื้องต้นแล้ว เป็นตัวดึงเหตุผลเก่า"*
+     หลักฐานที่ทำให้ต้องมี: วัด 90 วัน ผลตรวจ AM/PM ที่ NG = 43 จุด **มีเหตุผลแค่ 8** (81% ว่าง)
+     · ช่อง `inspection_results.action_text` มีอยู่เดิมแต่ถูกใช้ 1 จาก 43
+     🔴 กฎทั้งหมดอยู่ `src/utils/ngReason.js` — ห้ามเขียนเงื่อนไข "ยกได้ไหม/พอไหม" ซ้ำในหน้า */
+  const bad = [];
+  const U = 'src/utils/ngReason.js';
+  const u = stripComments(readFileSync(join(ROOT, U), 'utf8'));
+  for (const f of ['carryNgReason', 'ngReasonCheck', 'okWhileMoOpen', 'moUnresolved']) {
+    if (!new RegExp(`export (function|const) ${f}\\b`).test(u)) bad.push(`${U}: ต้องมี ${f}() — กฎมีที่เดียว`);
+  }
+  /* 🔴 "ช่างประกาศว่าเครื่องใช้ได้" = หยุดยก (ไม่งั้นเหตุผลเก่าติดไปทุกรอบตลอดกาล) */
+  if (!/usability/.test(u)) bad.push(`${U}: ต้องดู machines.usability — ช่างประกาศ "ใช้ได้" แล้วต้องหยุดยกของเก่า`);
+  /* 🔴 ยกมาแล้วต้องให้คนกดยืนยัน — เติมเงียบ = คนกดผิดได้เหตุผลติดมาเอง ดูเหมือนตั้งใจ */
+  if (!/accepted/.test(u)) bad.push(`${U}: ngReasonCheck ต้องรับ accepted — ของที่ยกมาต้องกดยืนยันก่อนถือว่าพอ`);
+
+  const H = 'src/lib/ngHistory.js';
+  const h = stripComments(readFileSync(join(ROOT, H), 'utf8'));
+  if (!/out\.error/.test(h)) bad.push(`${H}: อ่านไม่ได้ต้องคืน error ให้จอเขียนบอก ห้ามกลืนเป็น "ไม่เคย NG"`);
+  if (!/byCp/.test(h)) bad.push(`${H}: ต้องคืนรายจุด (byCp) — MO ของจุด A ห้ามไปอธิบาย NG ของจุด B`);
+
+  const P = 'src/pages/PMCheckData.jsx';
+  const p = stripComments(readFileSync(join(ROOT, P), 'utf8'));
+  const fn = p.match(/const\s+handleSave\s*=\s*async[\s\S]*?\n  \}\n/);
+  if (!fn) bad.push(`${P}: หา handleSave ไม่เจอ — เปลี่ยนชื่อแล้วต้องแก้ด่านนี้`);
+  else {
+    const body = fn[0];
+    const iChk = body.indexOf('ngReasonCheck(');
+    const iSav = body.indexOf('setSaving(true)');
+    if (iChk < 0) bad.push(`${P} handleSave: ต้องเช็คผ่าน ngReasonCheck() ก่อนเขียน DB (ซ่อนปุ่มไม่ใช่ด่าน)`);
+    else if (iSav >= 0 && iChk > iSav) bad.push(`${P} handleSave: ngReasonCheck() ต้องมาก่อน setSaving(true) — เช็คหลังเริ่มเขียนไม่ได้กันอะไร`);
+    if (!/action_text/.test(body)) bad.push(`${P} handleSave: ต้องเขียนเหตุผลลง action_text (ช่องนี้มีอยู่แล้ว ห้ามเก็บแต่ในจอ)`);
+    /* 🔴 เรียกแล้วต้อง "หยุดบันทึก" จริง — `if (false)` / เก็บผลทิ้ง = ด่านหลอก */
+    if (iChk >= 0 && !/ngReasonCheck\([\s\S]{0,400}?!\w*\.?ok[\s\S]{0,400}?return/.test(body))
+      bad.push(`${P} handleSave: ผลจาก ngReasonCheck() ต้องนำไป return ออกจากการบันทึก (เรียกแล้วทิ้ง = ไม่มีด่าน)`);
+  }
+  /* 🔴 แถว attribute ต้องมีช่องเหตุผลที่โผล่เฉพาะตอน NG + ปุ่มยืนยันของเก่า + คำเตือน OK */
+  if (!/carry=\{ngCarryOf\(/.test(p)) bad.push(`${P}: <AttrRow> ต้องส่ง carry={ngCarryOf(cp.id)} — ไม่ส่ง = คนต้องพิมพ์ใหม่ทุกรอบ`);
+  if (!/okWarn=\{okWarnOf\(/.test(p)) bad.push(`${P}: <AttrRow> ต้องส่ง okWarn — ติ๊ก OK ทั้งที่ใบซ่อมยังค้างต้องเตือน (ไม่บล็อก)`);
+  if (!/onAccept/.test(p)) bad.push(`${P}: ต้องมีปุ่ม "ใช้เหตุผลเดิม" (onAccept) — ห้ามเติมเหตุผลเก่าให้เงียบๆ`);
+
+  assert.deepEqual(bad, [], `\n\n❌ ${bad.length} จุดผิดกฎ "NG ต้องมีเหตุผล"\n   ${bad.join('\n   ')}\n`);
 });
 
 /* ═══ 🗂️ check-sheet-round1 — 2026-11-19 · ออดิท check sheet (LPA · Poka-Yoke · BBS · PPE) ══════════

@@ -40,6 +40,7 @@ import { specLabel, judgeVariable } from '../utils/qaSpec';
 import { evalSequence } from '../utils/qaSequential';
 import { can } from '../utils/permissions';
 import QaPieceStepper from './QaPieceStepper';
+import QaSheetApproval, { QaApprovalPendingBar } from './QaSheetApproval';   // ✍️ ขั้นอนุมัติหัวหน้า QA (19/11)
 import ScanModal from './ScanModal';
 import { useSearchParams } from 'react-router-dom';
 import { useMergeParams } from '../utils/useTabParam';
@@ -129,6 +130,7 @@ export default function QaCheckSheet({ canRecord }) {
   const [pieces, setPieces] = useState([]);          // ผลต่อชิ้น (ตรวจทีละชิ้น · 2026-09-07)
   const [actions, setActions] = useState([]);        // action ที่ปิด alarm แต่ละรอบ
   const [recent, setRecent] = useState([]);          // ใบตรวจล่าสุดของพาร์ทนี้
+  const [approvalTick, setApprovalTick] = useState(0); // ✍️ อนุมัติ/ตีกลับ/ปิดใบ → โหลดแถบใบรออนุมัติใหม่
   const [drafts, setDrafts] = useState({});          // item_id → { values[], note, qty_ng }
   const [selItemId, setSelItemId] = useState(null);  // จุดที่ไฮไลต์ (คลิกหมุด ↔ แถว)
   const [zoomItem, setZoomItem] = useState(null);    // 🔍 จุดที่เปิดรูปโคลสอัพอยู่
@@ -507,7 +509,7 @@ export default function QaCheckSheet({ canRecord }) {
     // 4) เดินกฎใหม่ → เขียน cache บนใบ + ปิดใบ/alarm ตามผล
     const next = evalSequence([...pieces, pc], actions);
     const patch = { seq_round: next.round, seq_state: next.state, alarm_count: next.alarmCount };
-    if (next.state === 'accepted') Object.assign(patch, { status: 'done', result: 'pass', closed_by: fullName || null, closed_at: now });
+    if (next.state === 'accepted') Object.assign(patch, { status: 'done', result: 'pass', closed_by: fullName || null, closed_at: now, approval_status: 'pending' });   // ✍️ เข้าคิวหัวหน้า QA (19/11 · ไม่บล็อก)
     if (!checkWriteRows(await supabase.from('qa_inspection_sheets').update(patch).eq('id', sh.id).select('id'), 'สถานะใบตรวจ')) { setBusy(false); loadSheet(); return; }
     if (next.state === 'accepted') {
       await linkFme(sh.id, 'done_ok');
@@ -806,6 +808,9 @@ export default function QaCheckSheet({ canRecord }) {
   /* ── UI ─────────────────────────────────────────────────────────────── */
   return (
     <div>
+      {/* ✍️ ใบรอหัวหน้า QA อนุมัติ (19/11) — กดแล้วเปิดใบนั้น */}
+      <QaApprovalPendingBar scopedLineNames={scopedLineNames} reloadKey={`${approvalTick}|${sheet?.id || ''}|${sheet?.status || ''}`}
+        onOpen={(r) => { setPartId(r.part_id); setWorkDate(r.work_date); setShift(r.shift); setRoundNo(r.round_no); }} />
       {/* 📄 ดูผลแบบใบ Inspection Data (FM-QA-112) — HTML ชุดเดียวกับที่พิมพ์ · พิมพ์/บันทึก PDF จาก iframe นี้ */}
       {viewHtml && (
         <div role="dialog" aria-modal="true" aria-label={tr('ใบ Inspection Data')}
@@ -940,6 +945,10 @@ export default function QaCheckSheet({ canRecord }) {
             </>
           )}
         </div>
+        {/* ✍️ ขั้นอนุมัติหัวหน้า QA (19/11) — โผล่เฉพาะใบที่ปิดแล้วและอยู่ในสายอนุมัติ · ไม่บล็อกอะไร */}
+        {matchesKey(sheet) && (
+          <QaSheetApproval sheet={sheet} onChanged={(row) => { setSheet(row); loadRecent(); setApprovalTick(t => t + 1); }} />
+        )}
       </div>
 
       {items.length > 0 && (
@@ -1062,6 +1071,8 @@ export default function QaCheckSheet({ canRecord }) {
                   style={{ ...ghostBtn, padding: '6px 10px', borderColor: cur ? 'var(--accent)' : `${color}55`, color, fontWeight: cur ? 800 : 600 }}>
                   {s.work_date} · {s.shift === 'day' ? '☀️' : '🌙'} {tr('รอบ')} {s.round_no}
                   {s.status === 'done' ? (s.result === 'pass' ? ' ✓' : ' ✕') : ' …'}
+                  {s.status === 'done' && s.approval_status === 'pending' ? ` · ${tr('รออนุมัติ')}` : ''}
+                  {s.status === 'done' && s.approval_status === 'rejected' ? ` · ${tr('ตีกลับ')}` : ''}
                 </button>
               );
             })}

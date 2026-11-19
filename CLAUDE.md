@@ -539,7 +539,9 @@ Realtime + Edge Functions/Deno) · Telegram Bot API · deploy = Render.com (Stat
 
 > ### 🕗 **หน้าต่าง deploy — ห้าม deploy ในเวลาทำงาน** (2026-10-26)
 > **08:00–17:30 deploy ได้เฉพาะของที่ "ไม่แก้แล้วหน้างานทำงานไม่ได้"** · ที่เหลือรอหลังเลิกกะ/ก่อนเข้ากะ
-> (deploy = สลับไฟล์ชุดใหม่ ⇒ แท็บที่เปิดค้างพังพร้อมกันทุกเครื่อง) · 📄 `docs/modules/deploy.md`
+> (deploy = สลับไฟล์ชุดใหม่ ⇒ แท็บที่เปิดค้างพังพร้อมกันทุกเครื่อง) · **19/11 ด่านนี้อยู่ใน
+> `scheduled-deploy.yml` แล้ว (พักไว้โดยไม่เลื่อน tag · ข้ามด้วย `[deploy-now]`)** ⇒ merge กลางวันได้
+> ตามปกติ ของจะขึ้นเองหลังเลิกกะ · 📄 `docs/modules/deploy.md`
 
 **build ผ่าน (`npm run build`) ก่อน commit เสมอ** · merge เข้า `main` = **deploy แบบกันถี่** (ห่างรอบก่อน ≥60 น. = ทันที · ไม่งั้นรอเงียบ 30 น. · `.github/workflows/scheduled-deploy.yml` · ด่วนกด Run workflow) · 🔴 **ห้ามเปิด Auto-Deploy ของ Render คืน** (นาที build หมดกลางเดือน · 📄 `docs/modules/deploy.md`)
 📄 **ที่มาของทุกด่าน + เคสจริงที่ทำให้ต้องมี → `docs/modules/build-gates.md`** (อ่านก่อนจะแตะ/ถอดด่านใดๆ)
