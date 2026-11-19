@@ -5,7 +5,8 @@
 # - ไม่มีของใหม่ = ไม่ build · มีแค่ .md/.claude = เลื่อนตัวชี้ ไม่ build
 # - cron รายชั่วโมง = ตัวสำรอง (cron ของ GitHub ไม่การันตีเวลา — 13/10 ข้าม 3 รอบติด ห้ามพึ่งอย่างเดียว)
 # - 🕗 เวลาไทย 08:00-17:30 = พักไว้ ไม่ deploy (ไม่เลื่อน tag) ⇒ cron รอบหลังเลิกกะมาเก็บเอง
-# - ด่วน 2 ทาง: (ก) ใส่ `[deploy-now]` ในข้อความคอมมิท/merge = ข้ามการรอ deploy ทันที
+# - ด่วน 2 ทาง: (ก) ใส่ `[deploy-now]` ใน **บรรทัดหัวเรื่อง** ของคอมมิท/merge = deploy ทันที
+#               (เนื้อความด้านล่างไม่นับ — เขียนอธิบายป้ายนี้ในเนื้อคอมมิทได้ ไม่สั่ง deploy)
 #               (ข) Actions → "Scheduled deploy" → Run workflow = deploy ทันทีเสมอ (ต้องกดเอง)
 # - จำว่า deploy ถึง commit ไหน/เมื่อไหร่ด้วย annotated tag `render-deployed`
 # - ต้องปิด Auto-Deploy ใน Render (render.yaml autoDeploy: false) ไม่งั้น build ซ้ำ 2 ทาง
@@ -79,7 +80,10 @@ jobs:
             #    19/11: ดูป้ายทุก event (ไม่ใช่แค่ push) — รอบ push ที่ถูก concurrency ยกเลิกไป
             #    จะเหลือแต่ cron มาเก็บ ถ้าเช็คแค่ push ป้ายด่วนจะหายไปกับรอบที่ถูกยกเลิก
             DEPLOY_NOW=no
-            git log --format=%B "$LAST..$HEAD_SHA" | grep -qiF '[deploy-now]' && DEPLOY_NOW=yes
+            #    🔴 19/11 เคสจริง: ดูทั้ง body (`%B`) = คอมมิทที่ **อธิบายเรื่องป้ายนี้** ในเนื้อความ
+            #       ก็นับเป็นป้ายด่วนไปด้วย ⇒ deploy ลง 13:19 ทั้งที่ควรพักไว้
+            #       ⇒ ดูเฉพาะ **บรรทัดหัวเรื่อง** (`%s`) ซึ่งเป็นที่ที่คนตั้งใจติดป้ายจริงๆ
+            git log --format=%s "$LAST..$HEAD_SHA" | grep -qiF '[deploy-now]' && DEPLOY_NOW=yes
 
             if [ "$DEPLOY_NOW" = "yes" ]; then
               echo "เจอป้าย [deploy-now] ในคอมมิท — ข้ามหน้าต่างเวลาทำงานและการรอ ส่ง deploy ทันที"
