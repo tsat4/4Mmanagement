@@ -90,7 +90,7 @@ export default function AskBot() {
         <div ref={listRef} style={{ flex: 1, overflowY: 'auto', padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
           {!msgs.length && (
             <div style={{ fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.6 }}>
-              {tr('ถามได้ตอนนี้ 3 แบบ: OEE ของไลน์ · downtime สูงสุด · ยอดผลิตของไลน์หรือพาร์ท')}<br />
+              {tr('ถามได้: OEE ไลน์ · ไลน์ไหน OEE ต่ำสุด · downtime สูงสุด · เครื่องหยุดตอนนี้ · MO ค้าง · ของเสียสูงสุด · 4M ค้าง · มาทำงานกี่คน · ยอดผลิตของไลน์/พาร์ท')}<br />
               {tr('ระบุช่วงได้: วันนี้ · เมื่อวาน · สัปดาห์นี้ · เดือนนี้ · เดือน 10 · ต.ค. 2569')}
             </div>
           )}

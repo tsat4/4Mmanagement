@@ -9,7 +9,10 @@
    · **ยอดผลิต = "ชิ้น"** ห้ามยุบคู่ RH/LH (กฎ "ชิ้น ≠ shot") — ยุบเฉพาะชั้น OP (ขั้นตอนของชิ้นเดียวกัน)
    · ไฟล์นี้ **pure** (ห้าม import supabase) — เทสด้วย `node --test` ตรงๆ · วันที่รับ `today` จากผู้เรียกเสมอ
    📄 docs/modules/askbot.md */
-import { wavg, wLoad, wRun, wProd, orderProducedQty, dtMinBySession, dtPlannedSplit } from './oee.js';
+import { wavg, wLoad, wRun, wProd, orderProducedQty, dtMinBySession, dtPlannedSplit, dtRawMin, defectQtyAll, sumSuspectPending } from './oee.js';
+import { dtTypeName } from './downtimeCategory.js';
+import { isVague } from './unclassified.js';
+import { OPEN_MO_STATUSES, MO_STATUS_LABEL } from './mtnStepPerm.js';
 import { addDaysStr } from './workDate.js';
 import { dtBucketName, buildDtIndex, dtTrashStats } from './downtimeCategory.js';
 import { collapseOps } from './pairTotals.js';
@@ -17,11 +20,13 @@ import { partCoreOf } from './partGroup.js';
 import { weekMonday } from './timeRange.js';
 
 /* ── 1) ช่วงเวลา ─────────────────────────────────────────────────────────── */
+/* 🔴 ไม่รับตัวย่อแบบไม่มีจุด ("มค" "กค") — เป็นข้อความย่อยของคำทั่วไปได้ ("ซ่อมค้าง" มี "มค")
+   เจอจริงตอนลองถาม 19/11: "ใบแจ้งซ่อมค้างกี่ใบ" ถูกอ่านเป็นเดือน ม.ค. */
 const TH_MONTHS = [
-  ['มกราคม', 'ม.ค.', 'มค'], ['กุมภาพันธ์', 'ก.พ.', 'กพ'], ['มีนาคม', 'มี.ค.', 'มีค'],
-  ['เมษายน', 'เม.ย.', 'เมย'], ['พฤษภาคม', 'พ.ค.', 'พค'], ['มิถุนายน', 'มิ.ย.', 'มิย'],
-  ['กรกฎาคม', 'ก.ค.', 'กค'], ['สิงหาคม', 'ส.ค.', 'สค'], ['กันยายน', 'ก.ย.', 'กย'],
-  ['ตุลาคม', 'ต.ค.', 'ตค'], ['พฤศจิกายน', 'พ.ย.', 'พย'], ['ธันวาคม', 'ธ.ค.', 'ธค'],
+  ['มกราคม', 'ม.ค.'], ['กุมภาพันธ์', 'ก.พ.'], ['มีนาคม', 'มี.ค.'],
+  ['เมษายน', 'เม.ย.'], ['พฤษภาคม', 'พ.ค.'], ['มิถุนายน', 'มิ.ย.'],
+  ['กรกฎาคม', 'ก.ค.'], ['สิงหาคม', 'ส.ค.'], ['กันยายน', 'ก.ย.'],
+  ['ตุลาคม', 'ต.ค.'], ['พฤศจิกายน', 'พ.ย.'], ['ธันวาคม', 'ธ.ค.'],
 ];
 export const MONTH_LABEL = TH_MONTHS.map(m => m[1]);
 
@@ -81,8 +86,15 @@ export function periodFromText(text, today) {
 /* ── 2) จับเจตนา ─────────────────────────────────────────────────────────── */
 /* ลำดับสำคัญ: OEE → downtime → ยอดผลิต ("oee ผลิต" = ถาม OEE ไม่ใช่ยอด) */
 export const INTENTS = [
+  /* "ต่ำสุด" มาก่อน "oee" เฉยๆ · "ตอนนี้" มาก่อน "downtime สูงสุด" — ลำดับคือความหมาย ห้ามสลับ */
+  { key: 'oee_lowest', re: /(oee|โออีอี).*(ต่ำ|แย่|น้อย)(สุด|ที่สุด)|(ต่ำ|แย่|น้อย)(สุด|ที่สุด).*(oee|โออีอี)|lowest|worst/, defaultPeriod: 'today', needSubject: null },
   { key: 'oee', re: /oee|โออีอี/, defaultPeriod: 'today', needSubject: 'line' },
+  { key: 'down_now', re: /((down\s*time|ดาว(น์)?\s*ไทม์|หยุด).*(ตอนนี้|ขณะนี้|อยู่ไหม|อยู่มั้ย|อยู่บ้าง|now))|((ตอนนี้|ขณะนี้|now).*(down\s*time|ดาว(น์)?\s*ไทม์|หยุด))/, defaultPeriod: null, needSubject: null },
   { key: 'downtime_top', re: /down\s*time|ดาว(น์)?\s*ไทม์|เครื่องหยุด|หยุดเครื่อง/, defaultPeriod: 'week', needSubject: null },
+  { key: 'mo_open', re: /(^|[^a-z])mo([^a-z]|$)|แจ้งซ่อม|ใบซ่อม/, defaultPeriod: null, needSubject: null },
+  { key: 'fourm_pending', re: /4\s*m|โฟร์เอ็ม/, defaultPeriod: null, needSubject: null },
+  { key: 'defect_top', re: /ของเสีย|defect|(^|[^a-z])ng([^a-z]|$)/, defaultPeriod: 'week', needSubject: null },
+  { key: 'attendance', re: /มาทำงาน|เช็คชื่อ|ขาดงาน|คนขาด|มากี่คน|attendance/, defaultPeriod: 'today', needSubject: null },
   { key: 'production', re: /ยอดผลิต|ผลิต|กี่ชิ้น|output|production/, defaultPeriod: 'month', needSubject: 'any' },
 ];
 
@@ -90,8 +102,8 @@ export const INTENTS = [
    🔴 ภาษาไทยไม่มีเว้นวรรค ("ขอยอดผลิตงาน apron…") ⇒ ฝั่งไทยต้องตัดแบบ "ข้อความย่อย"
       แต่ฝั่งอังกฤษ/ตัวเลขตัดแบบ **ทั้งคำเท่านั้น** — ชื่อไลน์/พาร์ทส่วนใหญ่เป็นอักษรละติน
       ตัดแบบข้อความย่อยฝั่งนั้น = "TOPPER" เหลือ "PER" แล้วค้นผิดตัว */
-const THAI_FILLER = /โออีอี|ดาว(น์)?\s*ไทม์|เครื่องหยุด|หยุดเครื่อง|ยอดผลิต|ผลิต|กี่ชิ้น|สูงสุด|มากที่สุด|มากสุด|อันดับ|อะไร|บ้าง|เท่าไหร่|เท่าไร|ไปแล้ว|แล้ว|ได้|ไป|ของ|ขอ|ยอด|ดู|หน่อย|ครับ|ค่ะ|คะ|นะ|ไลน์|งาน|ชิ้น|กี่|ที/g;
-const LATIN_FILLER = /\b(oee|down\s*time|downtime|top|line|output|production|today|yesterday|this|last|week|month)\b|[?？!]/g;
+const THAI_FILLER = /โออีอี|มีเครื่อง|เครื่อง|หยุด|มี|ใคร|ต่ำที่สุด|ต่ำสุด|แย่ที่สุด|แย่สุด|น้อยที่สุด|น้อยสุด|ตอนนี้|ขณะนี้|อยู่ไหม|อยู่มั้ย|อยู่บ้าง|ไหนบ้าง|แจ้งซ่อม|ใบซ่อม|โฟร์เอ็ม|ของเสีย|มาทำงาน|เช็คชื่อ|ขาดงาน|คนขาด|มากี่คน|กี่คน|กี่ใบ|ค้าง|รออนุมัติ|อนุมัติ|ไหม|มั้ย|ไหน|อยู่|ดาว(น์)?\s*ไทม์|เครื่องหยุด|หยุดเครื่อง|ยอดผลิต|ผลิต|กี่ชิ้น|สูงสุด|มากที่สุด|มากสุด|อันดับ|อะไร|บ้าง|เท่าไหร่|เท่าไร|ไปแล้ว|แล้ว|ได้|ไป|ของ|ขอ|ยอด|ดู|หน่อย|ครับ|ค่ะ|คะ|นะ|ไลน์|งาน|ชิ้น|กี่|ที/g;
+const LATIN_FILLER = /\b(lowest|worst|now|mo|4\s*m|ng|defects?|attendance|oee|down\s*time|downtime|top|line|output|production|today|yesterday|this|last|week|month)\b|[?？!]/g;
 const THAI_RUN = /([฀-๿]+)/;
 /* 🔴 ห้ามตัดคำกลางพยางค์ — "ที" ใน "ชุดที่" ตามด้วยไม้เอก ⇒ ไม่ใช่คำว่า "ที" (เคสจริงตอนลองถาม 19/11)
    ⇒ ตัดได้เฉพาะเมื่อตัวถัดไป **ไม่ใช่** สระบน/ล่าง/วรรณยุกต์ (อักขระประกอบของพยางค์เดียวกัน) */
@@ -243,8 +255,120 @@ export function productionTotals(orders = [], opMap = null) {
   return { total, noMat, rows: rows.filter(r => r.produced > 0).sort((a, b) => b.produced - a.produced) };
 }
 
+/* ── รอบ 2 (19/11) ─────────────────────────────────────────────────────── */
+
+/** จัดอันดับไลน์จาก OEE ต่ำ→สูง — ไลน์ละ `oeeSummary` ชุดเดียวกับคำถาม OEE ไลน์ (ไม่มีสูตรที่ 2) */
+export function rankLinesByOee(sessions = [], downtimes = [], breakPolicies = [], opts = {}) {
+  const byLine = new Map();
+  sessions.forEach(s => { if (s?.line_name) (byLine.get(s.line_name) || byLine.set(s.line_name, []).get(s.line_name)).push(s); });
+  const ids = new Map(); sessions.forEach(s => ids.set(s.id, s.line_name));
+  const dtBy = new Map();
+  downtimes.forEach(d => { const ln = ids.get(d.session_id); if (ln) (dtBy.get(ln) || dtBy.set(ln, []).get(ln)).push(d); });
+  const rows = [...byLine.entries()].map(([line, ss]) => ({ line, ...oeeSummary(ss, dtBy.get(line) || [], breakPolicies, opts) }));
+  const ranked = rows.filter(r => r.oee != null).sort((a, b) => a.oee - b.oee);
+  return { ranked, noValue: rows.filter(r => r.oee == null).map(r => r.line) };
+}
+
+/**
+ * เครื่องหยุดตอนนี้ — แถวเปิดค้าง (ไม่มี ended_at/duration) แยกตามสถานะกะ (`dtOpenKind` ของกลาง)
+ * · กะยังเปิด = ยังหยุดจริง · กะปิดแล้ว = **ลืมปิดรายการ** (ห้ามนับเป็นเครื่องหยุด แต่ห้ามซ่อน)
+ * @param rows  ต้อง embed `production_sessions(line_name, status)` + `dr_downtime_types(name_th, category)`
+ * @param kindOf  `(d) => 'open'|'forgotten'|'unknown'|'done'` (ส่ง `dtOpenKind` เข้ามา — ไฟล์นี้ไม่ import ตัวที่ผูก DB)
+ */
+export function openDowntimeList(rows = [], nowMs, kindOf) {
+  const open = [], forgotten = [];
+  for (const d of rows) {
+    const k = kindOf(d);
+    if (k === 'done') continue;
+    const e = { machine: d.machine_no || 'ไม่ระบุเครื่อง', line: d.production_sessions?.line_name || 'ไม่ระบุไลน์',
+      type: dtTypeName(d) || 'ไม่ระบุประเภท', planned: d?.dr_downtime_types?.category === 'planned',
+      /* ไม่มีเวลาเริ่ม = ไม่รู้ว่าหยุดมานานเท่าไหร่ ⇒ null (จอเขียน "ไม่ทราบเวลาเริ่ม") ห้ามโชว์ 0 นาที */
+      min: d.started_at ? dtRawMin(d, nowMs) : null };
+    (k === 'forgotten' ? forgotten : open).push(e);
+  }
+  open.sort((a, b) => (b.min ?? -1) - (a.min ?? -1));
+  return { open, forgotten };
+}
+
+/** ใบ MO ค้าง — นับตามสถานะ (ลำดับ = ลำดับขั้นใน `OPEN_MO_STATUSES`) + ใบเก่าสุดของแต่ละสถานะ (วัน) */
+export function moOpenSummary(rows = [], nowMs) {
+  const by = new Map(OPEN_MO_STATUSES.map(st => [st, { status: st, label: MO_STATUS_LABEL[st] || st, n: 0, oldestDays: null }]));
+  let unknown = 0;
+  for (const o of rows) {
+    const e = by.get(o.status);
+    if (!e) { unknown++; continue; }
+    e.n++;
+    const t = o.created_at ? Date.parse(o.created_at) : NaN;
+    if (Number.isFinite(t)) { const d = Math.floor((nowMs - t) / 86400000); if (e.oldestDays == null || d > e.oldestDays) e.oldestDays = d; }
+  }
+  const list = [...by.values()].filter(e => e.n);
+  return { total: list.reduce((a, e) => a + e.n, 0), list, unknown };
+}
+
+/** 4M ค้างอนุมัติ — แยกรอหัวหน้า/รอ QA · แยกใบระบบ (`[Auto]`/ไม่มีผู้สร้าง) ออกจากใบคน (กฎ four-m-workflow) */
+export function fourMPendingSummary(rows = [], today) {
+  const isAuto = (r) => r.created_by == null || /^\s*\[auto\]/i.test(String(r.description || ''));
+  const out = { pending: 0, pending_qa: 0, auto: 0, oldest: null, byLine: new Map() };
+  for (const r of rows) {
+    if (r.status !== 'pending' && r.status !== 'pending_qa') continue;
+    out[r.status]++;
+    if (isAuto(r)) out.auto++;
+    if (r.work_date && (!out.oldest || r.work_date < out.oldest)) out.oldest = r.work_date;
+    const ln = r.line_name || 'ไม่ระบุไลน์';
+    out.byLine.set(ln, (out.byLine.get(ln) || 0) + 1);
+  }
+  out.total = out.pending + out.pending_qa;
+  out.oldestDays = out.oldest ? Math.round((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${out.oldest}T00:00:00Z`)) / 86400000) : null;
+  out.topLines = [...out.byLine.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
+  return out;
+}
+
+/**
+ * ของเสียสูงสุด — จำนวน `defectQtyAll` (ตัวเลขชุดของพาเรโต · กฎ %Q vs พาเรโต ห้ามสลับ)
+ * 🔴 หมวด "อื่นๆ/ไม่ระบุ" **ไม่ติดอันดับ** — แยกเป็นบรรทัด "ชี้เป้าไม่ได้" (กฎ อื่นๆ ห้ามขึ้นอันดับ 1)
+ * · ของสงสัยรอ QA ตัดสิน = นับในพาเรโต (ชิ้นที่เกิดเรื่องจริง) แต่ต้องบอกจำนวนที่ยังรอ (`sumSuspectPending`)
+ */
+export function defectTop(rows = [], n = 5) {
+  const by = new Map();
+  let total = 0, vagueQty = 0;
+  for (const d of rows) {
+    const q = defectQtyAll(d);
+    if (!q) continue;
+    total += q;
+    const name = String(d?.dr_defect_types?.name_th || '').trim();
+    if (!name || isVague(name)) { vagueQty += q; continue; }
+    by.set(name, (by.get(name) || 0) + q);
+  }
+  const list = [...by.entries()].map(([name, qty]) => ({ name, qty })).sort((a, b) => b.qty - a.qty);
+  return { total, top: list.slice(0, n), groups: list.length, vagueQty, pending: sumSuspectPending(rows) };
+}
+
+/**
+ * มาทำงานกี่คน — นับจากพนักงาน active ของไลน์ × บันทึกเช็คชื่อของวันนั้น (สูตรเดียวกับ /dept-dashboard)
+ * 🔴 แยก 3 กอง: มา · **แจ้งว่าไม่มา** (is_present=false) · **ยังไม่ได้เช็ค** — ห้ามรวม 2 กองหลังเป็น "ขาด"
+ *    (คนกะดึกที่ยังไม่เข้ากะ = ยังไม่เช็ค ไม่ใช่ขาดงาน)
+ */
+export function attendanceSummary(emps = [], logs = [], lineNameOf = () => null) {
+  const st = new Map();
+  logs.forEach(l => { if (l?.employee_id != null) st.set(l.employee_id, l.is_present ? 'in' : (st.get(l.employee_id) === 'in' ? 'in' : 'out')); });
+  const byLine = new Map();
+  const tot = { head: 0, in: 0, out: 0, none: 0 };
+  for (const e of emps) {
+    const ln = lineNameOf(e.line_id);
+    if (!ln) continue;
+    const k = st.get(e.id) || 'none';
+    const r = byLine.get(ln) || { line: ln, head: 0, in: 0, out: 0, none: 0 };
+    r.head++; r[k]++; tot.head++; tot[k]++;
+    byLine.set(ln, r);
+  }
+  return { ...tot, lines: [...byLine.values()].sort((a, b) => (b.out + b.none) - (a.out + a.none)) };
+}
+
 export const fmtInt = (n) => (n == null ? '—' : Math.round(n).toLocaleString('en-US'));
 export const fmtPct = (n) => (n == null ? '—' : `${(+n).toFixed(1)}%`);
 
 /** ข้อความแนะนำรูปแบบที่ถามได้ — ใช้ทั้งปุ่มลัดและตอนไม่เข้าใจคำถาม */
-export const ASK_HINTS = ['oee HDF1 วันนี้', 'downtime สูงสุด สัปดาห์นี้', 'ยอดผลิต HDF1 เดือนนี้'];
+export const ASK_HINTS = [
+  'oee HDF1 วันนี้', 'oee ต่ำสุด วันนี้', 'downtime สูงสุด สัปดาห์นี้', 'เครื่องหยุดตอนนี้',
+  'MO ค้าง', 'ของเสียสูงสุด สัปดาห์นี้', '4M ค้าง', 'มาทำงานกี่คน HDF1', 'ยอดผลิต HDF1 เดือนนี้',
+];

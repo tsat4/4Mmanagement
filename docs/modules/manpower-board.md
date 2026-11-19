@@ -335,6 +335,12 @@ user ถามให้ไล่ตรวจว่ามีคอลัมน์
 
 ---
 
+## 🐞 19/11 — แท็บผัง LAYOUT: หมุดพนักงานกองมุมซ้ายบนหมด (แก้แล้ว)
+
+`workstations.pos_top/pos_left` เป็น **text ที่มี `%` ติดมาแล้ว** (เช่น `"7.47%"`) · `LayoutMap` เขียน `${pos_top}%`
+= `"7.47%%"` ⇒ CSS ทิ้งค่า ⇒ ทุกหมุดตกพิกัด 0,0 · แก้เป็น `${parseFloat(pos_top)}%` (แบบเดียวกับ `Dashboard.jsx`)
+· 🔴 **ต่อ `%` ท้ายพิกัดหมุดต้องผ่าน `parseFloat` เสมอ** — มีด่าน `pos-pct-double-suffix` ใน `regressionGuards`
+
 ## 📦 ฉบับเต็มเดิมจาก CLAUDE.md — 🧑‍🤝‍🧑 Manpower Control Board — `/manpower-board`
 
 > ย้ายมา 2026-11-12 (รีด CLAUDE.md รอบ 4 · `docs/modules/claude-md-slim.md`) — ยกมาทั้งดุ้น ไม่แก้คำ ·
