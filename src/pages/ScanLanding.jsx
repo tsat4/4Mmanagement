@@ -243,7 +243,21 @@ export default function ScanLanding() {
      · `unknownTarget:'block'` — ระบุเจ้าของไม่ได้ = ไม่เขียน (fail-closed) แล้วบอกบนจอว่าทำไม */
   const ckCtx = { role, section: homeSection, sections: scopeSecs, allUnits, respCostCenters, scopeIdx };
   const canCheckin = canAccessPage('/checkin', role) && can('checkin', 'record', role);
-  const empLineName = emp ? (lineById[String(emp.line_id)]?.name || '') : '';
+  /* 🤝 คนที่ถูกยืมไปไลน์อื่นกะนี้ (19/11 · คำสั่ง user) — **ไลน์ที่ยืมเป็นคนเช็คชื่อฝั่งเดียว**
+     ⇒ ตัดสินขอบเขตที่ "ไลน์ที่ยืม" แทนไลน์ต้นสังกัด (หัวหน้าที่ยืมยิงบัตรได้ · หัวหน้าต้นสังกัดยิงไม่ได้)
+     กติกาเดียวกับ /checkin (แถวคนที่ถูกยืมออกถูกล็อก) · อ่าน line_helpers ไม่ได้ = ยังไม่เขียน (fail-closed) */
+  const [lent, setLent] = useState(null);   // null = กำลังอ่าน · { failed } · { toLineId|null }
+  useEffect(() => {
+    if (!emp?.id) { setLent(null); return; }
+    let alive = true;
+    setLent(null);
+    supabase.from('line_helpers').select('to_line_id')
+      .eq('work_date', getWorkDate()).eq('shift', getCurrentShift()).eq('employee_id', emp.id).limit(1)
+      .then(({ data, error }) => { if (alive) setLent(error ? { failed: true } : { toLineId: data?.[0]?.to_line_id ?? null }); });
+    return () => { alive = false; };
+  }, [emp?.id]);
+  const lentToName = lent?.toLineId ? (lineById[String(lent.toLineId)]?.name || '') : '';
+  const empLineName = emp ? (lentToName || lineById[String(emp.line_id)]?.name || '') : '';
   const ckScope = !emp ? null
     : empLineName
       ? canWriteLine(ckCtx, empLineName, allLines || [], { unknownTarget: 'block' })
@@ -294,8 +308,16 @@ export default function ScanLanding() {
         : 'กำลังโหลดทะเบียนไลน์ — รอสักครู่แล้วกดใหม่' });
       return;
     }
+    if (!lent || lent.failed) {
+      setCkResult({ kind: 'blocked', text: lent?.failed
+        ? 'ยังเช็คชื่อไม่ได้ — อ่านข้อมูลการยืมตัวข้ามไลน์ไม่สำเร็จ จึงบอกไม่ได้ว่าไลน์ไหนเป็นคนเช็คชื่อคนนี้ · โหลดหน้าใหม่อีกครั้ง'
+        : 'กำลังตรวจข้อมูลการยืมตัว — รอสักครู่แล้วกดใหม่' });
+      return;
+    }
     if (!ckScope?.ok) {   // 🔴 ด่านจริงอยู่ตรงนี้ ไม่ใช่แค่ซ่อนปุ่ม (เปิด /scan?c=<รหัส> ตรงได้)
-      setCkResult({ kind: 'blocked', text: writeBlockText(ckScope, { what: 'การเช็คชื่อของคนนี้', unit: empLineName || emp.section || '' }) });
+      setCkResult({ kind: 'blocked', text: lentToName
+        ? `${emp.name} ถูกยืมไปช่วย ${lentToName} กะนี้ — ไลน์ที่ยืมเป็นคนเช็คชื่อ`
+        : writeBlockText(ckScope, { what: 'การเช็คชื่อของคนนี้', unit: empLineName || emp.section || '' }) });
       return;
     }
     setCkResult('busy');
