@@ -1,3 +1,4 @@
+import { createContext, useContext } from 'react';
 import PartThumb from './PartThumb';
 import { useMatIndex } from './MatLabel';
 import { matInfo } from '../utils/matLabel';
@@ -51,6 +52,83 @@ export const partCardGrid = (min = PART_CARD_MIN) => ({
   alignContent: 'start',   // ไม่งั้นการ์ดถูกยืดสูงผิดสัดส่วนเมื่อ grid สูงกว่าเนื้อหา
 });
 
+/* 📋 19/11 (คำสั่ง user "แก้หน้ารับของตาม mockup · ทำแท็บส่งของด้วย") — **แบบแถวตาราง**
+   1 แถว = 1 ใบ · ปุ่มลงมือท้ายแถว · ข้อมูลชุดเดียวกับการ์ดเป๊ะ (พร็อพเดิมทุกตัว) แค่วางแนวนอน
+   เลือกใช้ผ่าน context จาก `<StatusZones layout="table">` / `<RowTable>` เท่านั้น — ไม่ส่ง = การ์ดเหมือนเดิมทุกจอ
+   🔴 MAT ยังต้องอ่านออกชัด (mono ตัวหนา · ห้ามซ่อน) — เหตุผลเดียวกับการ์ด (ด้านล่าง) */
+/* เคลือบแดงจาง (alert) — ใช้ทั้งการ์ดและแถว · แทน color-mix (เพดาน Chromium 94 จอ TV) */
+const ALERT_TINT = 'linear-gradient(rgba(239,68,68,0.07), rgba(239,68,68,0.07))';
+export const CardLayoutContext = createContext('card');
+/** คอลัมน์ของแถว — หัวตาราง (`RowTable`) ใช้ชุดเดียวกัน ห้ามประกาศซ้ำ */
+export const PART_ROW_COLS = 'minmax(240px, 2.2fr) minmax(120px, 1fr) minmax(100px, auto) minmax(200px, 2fr) minmax(100px, auto) minmax(230px, 270px)';
+export const PART_ROW_MIN_W = 1080;
+
+function PartRow({ code, name, sub, img, showImg, status, metric, aside, rows, note, footer, alert, dim, matTone, onClick, style, className, index }) {
+  const st = status || {};
+  const info = matInfo(code, index, { name });
+  const head = info.lead === 'pno' ? info.pNo : info.name;
+  const sub2 = info.lead === 'pno' ? info.name : info.pNo;
+  const metaRows = (rows || []).filter(r => r && r.v != null && String(r.v).trim() !== '');
+  const cell = { minWidth: 0 };
+  return (
+    <div role="row" onClick={onClick} className={className} style={{
+      position: 'relative', display: 'grid', gridTemplateColumns: PART_ROW_COLS, gap: 12, alignItems: 'start',
+      padding: '10px 12px 10px 16px', borderBottom: '1px solid var(--border)', background: 'var(--card)',
+      backgroundImage: alert ? ALERT_TINT : undefined,
+      opacity: dim ? 0.62 : 1, cursor: onClick ? 'pointer' : undefined, ...style,
+    }}>
+      {st.color && <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 5, background: st.color }} />}
+      <div role="cell" style={{ ...cell, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+        {showImg && <PartThumb url={img} alt={[code, name].filter(Boolean).join(' · ')} size={48} />}
+        <div style={{ minWidth: 0 }}>
+          {head && <div style={{ fontSize: 13, fontWeight: 800, color: matTone || 'var(--text)', lineHeight: 1.3,
+            ...(info.lead === 'pno' ? { fontFamily: 'monospace' } : {}), ...PC_NUM }}>{head}</div>}
+          {sub2 && <div title={sub2} style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.35, ...CLAMP2 }}>{sub2}</div>}
+          {info.mat && (
+            <div title={tr('เลข MAT (SAP) — เลขเดียวกับบาร์โค้ดบนกล่อง/บัตรคัมบัง')} style={{ display: 'inline-flex', alignItems: 'baseline', gap: 5, marginTop: 3,
+              padding: '1px 7px', borderRadius: 'var(--radius)', background: 'var(--bg2)', border: '1px solid var(--border)',
+              fontSize: 13.5, fontFamily: 'monospace', fontWeight: 800, color: 'var(--text)', whiteSpace: 'nowrap', ...PC_NUM }}>
+              <span style={{ fontSize: 11, fontFamily: 'var(--font-body)', fontWeight: 700, color: 'var(--muted)' }}>MAT</span>{info.mat}
+            </div>
+          )}
+          {sub && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{sub}</div>}
+        </div>
+      </div>
+      <div role="cell" style={cell}>
+        {aside && <>
+          <div style={PC_LABEL}>{tr(aside.label)}</div>
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text)', lineHeight: 1.3, ...CLAMP2 }} title={String(aside.value ?? '')}>{aside.value}</div>
+        </>}
+      </div>
+      <div role="cell" style={{ ...cell, textAlign: 'right' }}>
+        {metric && <>
+          <div style={PC_LABEL}>{tr(metric.label)}</div>
+          <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', whiteSpace: 'nowrap', ...PC_NUM }}>
+            {metric.value}{metric.unit ? <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', marginLeft: 4 }}>{metric.unit}</span> : null}
+          </div>
+        </>}
+      </div>
+      <div role="cell" style={{ ...cell, display: 'grid', gap: 2 }}>
+        {metaRows.map(r => (
+          <div key={r.k} style={{ display: 'flex', gap: 6, alignItems: 'baseline', fontSize: 11.5, lineHeight: 1.4 }}>
+            <span style={{ ...PC_LABEL, flex: '0 0 auto' }}>{r.k}</span>
+            <span style={{ color: 'var(--text2)', minWidth: 0, ...PC_NUM }}>{r.v}</span>
+          </div>
+        ))}
+        {note && <div style={{ fontSize: 11.5, color: 'var(--text2)', lineHeight: 1.45 }}>{note}</div>}
+      </div>
+      <div role="cell" style={cell}>
+        {st.label && (
+          <span style={{ display: 'inline-block', fontSize: 12, fontWeight: 800, padding: '2px 8px', borderRadius: 'var(--radius)',
+            whiteSpace: 'nowrap', background: st.color || st.bg, border: `1px solid ${st.color || st.border}`,
+            color: st.color ? textOn(st.color) : 'var(--text)' }}>{tr(st.label)}</span>
+        )}
+      </div>
+      <div role="cell" style={cell}>{footer}</div>
+    </div>
+  );
+}
+
 export default function PartCard({
   code, name, sub,                 // รหัส (mat_no) · ชื่องาน · บรรทัดรอง (ซัพพลายเออร์/ลูกค้า)
   img, showImg = true,             // รูปจาก imgOf(code) — showImg=false เมื่อการ์ดไม่ใช่ "ชิ้นงาน"
@@ -68,6 +146,10 @@ export default function PartCard({
 }) {
   const st = status || {};
   const index = useMatIndex();
+  const layout = useContext(CardLayoutContext);
+  if (layout === 'row') {
+    return <PartRow {...{ code, name, sub, img, showImg, status, metric, aside, rows, note, footer, alert, dim, matTone, onClick, style, className, index }} />;
+  }
   const info = matInfo(code, index, { name });
   /* หัวการ์ด / บรรทัดรอง — ลำดับ Part No. → Part Name → MAT SAP แต่สลับได้เมื่อ part_no ไม่ใช่เลขพาร์ท */
   const head = info.lead === 'pno' ? info.pNo : info.name;
@@ -81,7 +163,7 @@ export default function PartCard({
       display: 'flex', flexDirection: 'column', opacity: dim ? 0.62 : 1,
       cursor: onClick ? 'pointer' : undefined,
       // เคลือบแดงจางแทน color-mix (เพดาน Chromium 94 จอ TV — CLAUDE.md)
-      backgroundImage: alert ? 'linear-gradient(rgba(239,68,68,0.07), rgba(239,68,68,0.07))' : undefined,
+      backgroundImage: alert ? ALERT_TINT : undefined,
       ...style,
     }}>
       {/* แถบซ้าย 5px (เดิม 3px — feedback หน้างาน 02/10 "แถบสีบ่งชี้ดูยาก") */}
