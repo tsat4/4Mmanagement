@@ -21,6 +21,7 @@ import { loadAffectsLanes } from '../utils/affectsLanes';
 import { usePolling } from '../utils/usePolling';
 import { RATE, LIVE } from '../utils/refreshRates';
 import { coalesce, makeIdleGate } from '../utils/liveRefresh';
+import { machineUsability } from '../utils/machineUsability';   // 🔌 "เครื่องนี้ใช้งานได้ไหม" ตอบที่เดียว (19/11)
 import { cachedMaster, mrows } from '../utils/masterCache';
 import { fetchAllRows } from '../utils/fetchAllRows';
 import { loadBreakPolicies, loadCtProducts, loadCtKanban, fetchOeeTargets } from '../utils/oeeMasters';
@@ -1413,24 +1414,35 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
       cachedMaster('facility_supply_links:v2', async () =>
         mrows(await fetchAllRows(supabaseDR, 'facility_supply_links', 'machine_id, line_name', q => q.order('machine_id').order('line_name'))))
         .catch((e) => { console.warn('loadSupply links', e); return null; }),
-      cachedMaster('machines:supply:v2', async () =>
-        mrows(await fetchAllRows(supabaseDR, 'machines', 'id, machine_no, machine_name, line_name, equipment_category', q => q.order('id'))))
+      /* 🔌 19/11 — ต้องดึง `usability*` ด้วย (สถานะที่ช่างประกาศ ชนะการเดาจากใบซ่อม)
+         🔴 bump คีย์ cache เป็น v3 ไม่งั้นเครื่องที่เปิดจอค้างอ่าน v2 เดิมที่ไม่มีคอลัมน์นี้ */
+      cachedMaster('machines:supply:v3', async () =>
+        mrows(await fetchAllRows(supabaseDR, 'machines', 'id, machine_no, machine_name, line_name, equipment_category, usability, usability_note, usability_by, usability_at', q => q.order('id'))))
         .catch((e) => { console.warn('loadSupply machines', e); return null; }),
-      supabaseDR.from('mtn_orders').select('machine_no')
+      /* 🔴 ต้องมี `repair_done_at` — "ใบยังเปิด" ≠ "เครื่องเสีย" (ใบที่ซ่อมเสร็จแล้วรอเอกสาร
+         เคยทาไลน์ปลายทางเป็นเสี่ยงอยู่ 7 วัน · ตัดสินที่ `machineUsability()`) */
+      supabaseDR.from('mtn_orders').select('machine_no, repair_done_at')
         .not('status', 'in', '("closed","rejected")').then(r => r, (e) => ({ data: null, error: e })),
     ]);
     if (linkRows == null || machineRows == null || mos?.error) { if (mos?.error) console.warn('loadSupply mtn_orders', mos.error); return; }
     const mcRows = machineRows || [];
     const byId = {}; mcRows.forEach(m => { byId[m.id] = m; });
-    const openNos = new Set((mos?.data || []).map(o => o.machine_no));
+    /* 🔌 ใบที่เปิดอยู่ของแต่ละเครื่อง (ไม่ใช่แค่ "มีไหม") — กฎใหม่ดู `repair_done_at` ด้วย */
+    const mosByNo = {};
+    (mos?.data || []).forEach(o => { (mosByNo[o.machine_no] ||= []).push(o); });
+    /* 🔴 สถานะเครื่องตัดสินที่ `machineUsability()` ที่เดียว ห้ามเทียบ "มีใบเปิด" เองที่นี่
+       (`atRisk` = ใช้งานไม่ได้จริงเท่านั้น · เหลือง "ใช้ได้ชั่วคราว" ไม่นับว่าไลน์เสี่ยง แต่ต้องเห็น) */
+    const usabilityOf = (mc) => machineUsability(mc, mosByNo[mc?.machine_no] || []);
     // (ก) มุมมองไลน์ผลิต: utility จ่ายไลน์นี้ กำลังซ่อม = กระทบ (เดิม)
     const out = {};
     linkRows.forEach(l => {
       const mc = byId[l.machine_id]; if (!mc) return;
-      const atRisk = openNos.has(mc.machine_no);
-      const o = out[l.line_name] || { suppliers: [], atRisk: false };
-      o.suppliers.push({ no: mc.machine_no, name: mc.machine_name, atRisk });
+      const u = usabilityOf(mc);
+      const atRisk = u.state === 'down';
+      const o = out[l.line_name] || { suppliers: [], atRisk: false, temp: false };
+      o.suppliers.push({ no: mc.machine_no, name: mc.machine_name, atRisk, state: u.state, why: u.text });
       if (atRisk) o.atRisk = true;
+      if (u.state === 'temp') o.temp = true;   // ใช้ได้ชั่วคราว = เหลือง ไม่ใช่แดง
       out[l.line_name] = o;
     });
     setSupplyStatus(out);
@@ -1439,11 +1451,13 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
     const fac = {};
     mcRows.forEach(m => {
       if (!m.equipment_category || m.equipment_category === 'production' || !m.line_name) return;
-      const atRisk = openNos.has(m.machine_no);
-      const o = fac[m.line_name] || { machines: [], atRisk: false, feeds: new Set() };
-      o.machines.push({ no: m.machine_no, name: m.machine_name, atRisk });
+      const u = usabilityOf(m);
+      const atRisk = u.state === 'down';
+      const o = fac[m.line_name] || { machines: [], atRisk: false, temp: false, feeds: new Set() };
+      o.machines.push({ no: m.machine_no, name: m.machine_name, atRisk, state: u.state, why: u.text });
       (feedsByMachine[m.id] || []).forEach(ln => o.feeds.add(ln));
       if (atRisk) o.atRisk = true;
+      if (u.state === 'temp') o.temp = true;
       fac[m.line_name] = o;
     });
     Object.values(fac).forEach(o => { o.feeds = [...o.feeds]; });
