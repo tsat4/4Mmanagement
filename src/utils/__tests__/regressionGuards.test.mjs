@@ -12098,3 +12098,15 @@ test('🗂 operator-tab-allowed-complete — `tabAllowed` ใน operator.jsx �
   assert.equal(nAllowed, nKeys,
     `\n\n❌ operator.jsx: TAB_KEYS มี ${nKeys} แท็บ แต่ tabAllowed มี ${nAllowed} ช่อง — แท็บที่เกินมากดแล้วตกกลับแท็บแรกเงียบๆ\n`);
 });
+
+test('📍 pos-pct-double-suffix — พิกัดหมุด pos_top/pos_left ต้องผ่าน parseFloat ก่อนต่อ "%"', () => {
+  /* 19/11 หน้างานแจ้ง /manpower-board แท็บผัง LAYOUT "จุดพนักงานกองมุมซ้ายบนหมด" — ฐานเก็บ pos_top/pos_left
+     เป็น text ที่มี % ติดมาแล้ว ("7.47%") · `${pos_top}%` = "7.47%%" ⇒ CSS ทิ้งค่า ⇒ ทุกหมุดตก 0,0 เงียบๆ */
+  const bad = [];
+  for (const file of walk(join(ROOT, 'src'), ['.jsx', '.js'])) {
+    const src = stripComments(readFileSync(file, 'utf8'));
+    if (/\$\{(?!parseFloat)[^}]*pos_(?:top|left)\}%/.test(src)) bad.push(file.replace(ROOT + '/', ''));
+  }
+  assert.deepEqual(bad, [],
+    `\n\n❌ ต่อ "%" ท้าย pos_top/pos_left ดิบ (ค่าในฐานมี % อยู่แล้ว = "x%%" หมุดกองมุมซ้ายบน):\n   ${bad.join('\n   ')}\n   ใช้ \`\${parseFloat(p.pos_top)}%\`\n`);
+});
