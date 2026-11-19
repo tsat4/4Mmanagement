@@ -9,7 +9,7 @@ import { planBarsOf,
   isStdFixed, isStdParent, checkStdSelection, matchStdItems, guessStdUnit,
   unitOf, decimalsOf, summaryModeOf, summaryShort, summaryModeLabel, fmtKpi, summaryOf, KPI_SUMMARY_MODES,
   planProgress, valueScopeOf, sharedValueDef, yearForecast, boardSlotOf, KPI_BOARD_SLOTS,
-  KPI_STD_UNIT_ALIASES,
+  KPI_STD_UNIT_ALIASES, weightAudit,
 } from '../kpiSetup.js';
 
 /* ── เกณฑ์คะแนน: ตรวจกับ 6 แถวจริงในคู่มือ KPI Online (§8.3) ─────────────────────────── */
@@ -755,4 +755,64 @@ test('🧾 checkStdSelection บอก "ของนอกมาตรฐาน"
 
   /* ไม่ส่งทะเบียนมา = ตรวจแค่น้ำหนัก ห้ามเดาว่าทุกแถวนอกมาตรฐาน */
   assert.deepEqual(checkStdSelection(rows).extras, []);
+});
+
+test('⚖️ weightAudit — สรุปหน่วยที่น้ำหนักยังไม่ครบ 50 (19/11 · คำสั่ง user)', () => {
+  const defs = [
+    { scope_kind: 'section', scope_value: 'Tooling MTN', weight: 50, std_unit: 'Maintenance' },
+    { scope_kind: 'department', scope_value: 'Die MTN', weight: 22, std_unit: 'Maintenance' },
+    { scope_kind: 'department', scope_value: 'Die MTN', weight: null },          // เพิ่งหยิบเข้ามา ยังไม่ถ่วง
+    { scope_kind: 'department', scope_value: 'Die MTN', weight: null },
+    { scope_kind: 'department', scope_value: 'JIG MTN', weight: null },
+    { scope_kind: 'plant', scope_value: null, weight: 55 },                      // เกินเป้า
+    { scope_kind: 'department', scope_value: 'ปิดอยู่', weight: 99, is_active: false },  // แถวปิด ห้ามนับ
+  ];
+  const r = weightAudit(defs);
+  const by = Object.fromEntries(r.map(x => [x.key, x]));
+
+  assert.equal(by['section:Tooling MTN'].diff, 0, 'ครบ 50 = diff 0');
+  assert.equal(by['section:Tooling MTN'].ok, true);
+  assert.equal(by['department:Die MTN'].weight, 22);
+  assert.equal(by['department:Die MTN'].diff, -28, 'ขาดต้องติดลบ');
+  assert.equal(by['department:Die MTN'].noWeight, 2, 'นับแถวที่ยังไม่ใส่น้ำหนัก');
+  assert.equal(by['department:Die MTN'].count, 3);
+  assert.equal(by['department:Die MTN'].stdUnit, 'Maintenance');
+  assert.equal(by['department:JIG MTN'].diff, -50, 'ไม่มีน้ำหนักเลย = ขาดทั้ง 50');
+  assert.equal(by.plant.diff, 5, 'เกินต้องเป็นบวก');
+  assert.ok(!r.some(x => x.key === 'department:ปิดอยู่'), 'แถวที่ปิดใช้งานต้องไม่ถูกนับ');
+
+  /* ห่างเป้ามากสุดขึ้นก่อน */
+  assert.equal(r[0].key, 'department:JIG MTN', 'ขาด 50 ต้องมาก่อน');
+  assert.equal(r.at(-1).key, 'section:Tooling MTN', 'ครบแล้วอยู่ท้ายสุด');
+
+  /* 🔴 โหลดไม่ได้ = null ห้ามคืนลิสต์ว่าง (ลิสต์ว่าง = "ครบทุกหน่วย" ซึ่งตรงข้ามความจริง) */
+  assert.equal(weightAudit(null), null);
+  assert.equal(weightAudit(undefined), null);
+  assert.deepEqual(weightAudit([]), [], 'ไม่มีแถวจริงๆ = ลิสต์ว่าง ไม่ใช่ null');
+
+  /* รับ scopeKeyOf/labelOf จากจอได้ (CC ↔ หน่วยเจ้าของต้องยุบเป็นขอบเขตเดียว) */
+  const r2 = weightAudit(
+    [{ scope_kind: 'cost_center', scope_value: '2140563100', weight: 10 },
+     { scope_kind: 'department', scope_value: 'Electric', weight: 15 }],
+    { scopeOf: () => ({ kind: 'department', value: 'Electric' }), labelOf: () => 'ไฟฟ้า' });
+  assert.equal(r2.length, 1, 'ยุบเป็นขอบเขตเดียว');
+  assert.equal(r2[0].weight, 25);
+  assert.equal(r2[0].label, 'ไฟฟ้า');
+  assert.equal(r2[0].kind, 'department');
+  assert.equal(r2[0].value, 'Electric', '🔴 ปลายทางที่กดแล้วไป ต้องเป็นขอบเขตที่ยุบแล้ว ไม่ใช่ค่าดิบของแถวแรก');
+});
+
+test('⚖️ weightAudit — ป้ายซ้ำต้องแยกออกจากกัน (19/11 · เจอจริงตอนทดสอบ)', () => {
+  /* 2 ใบคนละขอบเขต แต่ labelOf คืนชื่อเดียวกัน ⇒ ถ้าปล่อยไว้ คนอ่านแยกไม่ออกว่าต้องไปแก้ใบไหน */
+  const r = weightAudit(
+    [{ scope_kind: 'plant', scope_value: null, weight: 4 },
+     { scope_kind: 'company', scope_value: 'TSAT', weight: 5 },
+     { scope_kind: 'section', scope_value: 'PD1', weight: 20 }],
+    { labelOf: (k) => (k === 'section' ? 'ส่วนงาน: PD1' : 'ทั้งโรงงาน') });
+  const labels = r.map(x => x.label);
+  assert.equal(new Set(labels).size, labels.length, 'ป้ายต้องไม่ซ้ำกันเลย');
+  assert.ok(labels.some(l => l.includes('ทั้งโรงงาน [plant]')));
+  assert.ok(labels.some(l => l.includes('ทั้งโรงงาน [company:TSAT]')));
+  /* ตัวที่ไม่ซ้ำต้องคงรูปเดิม ไม่ต่อคีย์ให้รก */
+  assert.ok(labels.includes('ส่วนงาน: PD1'));
 });

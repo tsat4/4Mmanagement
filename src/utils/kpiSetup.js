@@ -831,6 +831,63 @@ export function checkStdSelection(rows = [], stdItems = null) {
   return { weight, diff, ok: diff === 0 && missingFixed.length === 0, missingFixed, extras };
 }
 
+/* ══ ⚖️ น้ำหนักรวมของแต่ละหน่วยครบ 50 หรือยัง — ดูข้ามหน่วยในที่เดียว ══════════════════
+   (2026-11-19 · คำสั่ง user "ทำหน้าสรุปน้ำหนักที่ยังไม่ครบเลย")
+
+   เคสต้นเรื่อง: หลังย้ายทีมช่างมาอิงแบบ `Maintenance` แล้วหยิบข้อบังคับที่ขาดเข้าใบ
+   **แถวใหม่ไม่มีน้ำหนัก** (ตั้งใจ — เอกสารกลุ่มให้หน่วยงานถ่วงเอง ระบบเดาแทนไม่ได้)
+   ⇒ วัด 19/11 มีแค่ Tooling MTN ที่ครบ 50 · ที่เหลือ 22 / 11 / 9 / 5 / 0
+   แต่ `checkStdSelection()` ตอบได้ทีละใบ ⇒ ต้องเปิดไล่ทีละหน่วยถึงจะรู้ว่าใครยังไม่ครบ
+
+   🔴 ไม่คิดเกณฑ์ใหม่ — เรียก `checkStdSelection()` ตัวเดิมรายหน่วย (เพดาน 50 มีที่เดียวคือ
+      `KPI_TOTAL_WEIGHT`) · ที่เพิ่มมาคือ "จัดกลุ่มตามขอบเขต แล้วเรียงตัวที่ห่างเป้าที่สุดขึ้นก่อน"
+   🔴 `defs` ไม่ใช่ array (โหลดไม่ได้) = คืน `null` **ห้ามคืนลิสต์ว่าง** — ลิสต์ว่างแปลว่า
+      "ครบทุกหน่วย" ซึ่งตรงข้ามกับความจริง (กฎความซื่อสัตย์ของจอ)
+   ⚠️ เห็นเฉพาะหน่วยที่ **มีแถว KPI อยู่แล้ว** — หน่วยที่ยังไม่มีใบเลยไม่โผล่ที่นี่
+      (คนละอาการ ไม่ใช่ "น้ำหนักขาด") ⇒ จอต้องเขียนกำกับ                                  */
+export function weightAudit(defs, { scopeOf, labelOf } = {}) {
+  if (!Array.isArray(defs)) return null;
+  /* 🔴 ขอบเขตของกลุ่มต้องมาจาก **ชุดเดียว** ทั้งคีย์ · ป้าย · ปลายทางที่กดแล้วไป
+        (19/11 เจอจริง: เคยจัดกลุ่มด้วยขอบเขตที่ยุบแล้ว แต่เก็บ `scope_kind/scope_value` ดิบไว้ทำป้าย
+         ⇒ แถวที่ `scope_kind='plant'` แต่ `section='PD3'` ขึ้นป้าย "ทั้งโรงงาน" **และกดแล้วพาไปผิดใบ**)
+     จอจริงส่ง `scopeOf` ที่ผ่าน `canonicalScope()` มา — CC ↔ หน่วยเจ้าของต้องนับเป็นขอบเขตเดียวกัน */
+  const scOf = typeof scopeOf === 'function'
+    ? scopeOf
+    : (d) => ({ kind: d?.scope_kind || null, value: d?.scope_value ?? null });
+  const keyOf = (sc) => (sc?.kind && sc.kind !== 'plant' ? `${sc.kind}:${sc.value ?? ''}` : 'plant');
+  const groups = new Map();
+  for (const d of defs) {
+    if (!d || d.is_active === false) continue;
+    const sc = scOf(d) || {};
+    const k = keyOf(sc);
+    if (!groups.has(k)) groups.set(k, { key: k, kind: sc.kind || null, value: sc.value ?? null, rows: [] });
+    groups.get(k).rows.push(d);
+  }
+  const out = [];
+  for (const g of groups.values()) {
+    const chk = checkStdSelection(g.rows);
+    out.push({
+      key: g.key, kind: g.kind, value: g.value,
+      label: (typeof labelOf === 'function' ? labelOf(g.kind, g.value) : null) || scopeLabel(g.kind, g.value),
+      weight: chk.weight, diff: chk.diff, ok: chk.diff === 0,
+      count: g.rows.length,
+      /* แถวที่ยังไม่ได้ใส่น้ำหนักเลย — ตัวชี้ว่า "เพิ่งหยิบเข้ามา ยังไม่ได้ถ่วง" */
+      /* ⚠️ `Number(null)` = 0 ซึ่ง finite ⇒ ต้องกัน null/undefined/'' ก่อน ไม่งั้นนับเป็น "ใส่น้ำหนักแล้ว" */
+      noWeight: g.rows.filter(r => r?.weight == null || r.weight === '' || !Number.isFinite(Number(r.weight))).length,
+      stdUnit: g.rows.map(r => r?.std_unit).find(Boolean) || null,
+    });
+  }
+  /* 🔴 ป้ายซ้ำ = จอโกหก — เจอจริง 19/11 ตอนทดสอบ: 2 ใบคนละชุด (1 ข้อ กับ 3 ข้อ) ขึ้นว่า "ทั้งโรงงาน"
+        เหมือนกันทั้งคู่ ⇒ คนอ่านแยกไม่ออกว่าต้องไปแก้ใบไหน (และนึกว่าระบบนับซ้ำ)
+        ต่อคีย์ขอบเขตท้ายป้าย **เฉพาะตัวที่ชนกัน** — ตัวที่ชื่อไม่ซ้ำคงรูปเดิม ไม่ให้รกเปล่าๆ */
+  const seen = new Map();
+  for (const u of out) seen.set(u.label, (seen.get(u.label) || 0) + 1);
+  for (const u of out) if (seen.get(u.label) > 1) u.label = `${u.label} [${u.key}]`;
+
+  /* ห่างเป้ามากสุดขึ้นก่อน · เท่ากันเรียงชื่อ (เรียงคงที่ ไม่สลับไปมาทุกครั้งที่โหลด) */
+  return out.sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff) || String(a.label).localeCompare(String(b.label), 'th'));
+}
+
 /* ── 🧾 "KPI นี้ตัดสินยังไง" เป็นประโยคเดียว + ตรวจเกณฑ์ที่ตั้งขัดกัน (2026-11-16 · user: "หน้ากรอก KPI งงเรื่อง plan และผ่าน/ตก") ──
    เกณฑ์ทุกตัวตั้งได้ต่อ KPI อยู่แล้ว (เป้า · Commit · ทิศทาง · เทียบแผนรายเดือนไหม · วิธีสรุปปี) — ที่ขาดคือ "ประโยคสรุป" ให้คนกรอกเห็น
    · อ่านผ่าน defBars() เท่านั้น (ข้อความเก่าก็แกะให้) · ไม่คิดเกณฑ์ใหม่ · pure มีเทส */
