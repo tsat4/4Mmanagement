@@ -9519,8 +9519,24 @@ test('🔌 machine-usability-not-mo-status — "ใบยังเปิด" ≠
   assert.doesNotMatch(map, /openNos\.has\(/,
     '\n\n❌ ผังกลับไปตัดสินด้วย openNos (มีใบเปิด = เสี่ยง) — นั่นคือบั๊กที่หน้างานแจ้ง\n');
   /* คิวรีต้องดึงของที่กฎใช้จริง ไม่งั้นกฎเดินโดยไม่มีข้อมูล (undefined เงียบๆ) */
-  assert.match(map, /select\('machine_no, repair_done_at'\)/,
-    '\n\n❌ คิวรีใบซ่อมของผังไม่ได้ดึง repair_done_at — กฎใหม่จะตัดสินไม่ได้\n');
+  const moSel = map.match(/from\('mtn_orders'\)\s*\.select\('([^']*)'\)/);
+  assert.ok(moSel, '\n\n❌ หาคิวรี mtn_orders ของผังไม่เจอ\n');
+  for (const [col, why] of [
+    ['repair_done_at', 'กฎชั้น ② แยก "ซ่อมเสร็จรอเอกสาร" ออกจาก "ยังซ่อมไม่เสร็จ" ไม่ได้ (บั๊ก 7 วัน)'],
+    ['id', 'จอคลิกเจาะไปหาใบต้นตอไม่ได้ (19/11 user ทัก "น่าจะคลิกเจาะไปหาต้นตอได้")'],
+    ['mo_no', 'จอบอกไม่ได้ว่าใบไหน — ลิงก์ที่ไม่บอกเลขใบ คนยังต้องไปไล่หาเองอยู่ดี'],
+  ]) {
+    assert.ok(moSel[1].split(',').map(x => x.trim()).includes(col),
+      `\n\n❌ คิวรีใบซ่อมของผังไม่ได้ดึง ${col} — ${why}\n   ตอนนี้ดึง: ${moSel[1]}\n`);
+  }
+
+  /* 🚦 19/11 — "ใช้ได้ชั่วคราว" ต้องเป็นเหลืองจริงบนผัง ห้ามยุบเหลือ เสี่ยง/ไม่เสี่ยง (user ทัก) */
+  assert.match(map, /supTemp/,
+    '\n\n❌ ผังไม่รู้จัก supTemp — "ใช้ได้ชั่วคราว" จะกลายเป็นเขียว "ปกติ" (เงียบกว่าความจริง)\n');
+  assert.match(map, /cat: s => !s\.supList\.length \? 'idle' : s\.supAtRisk \? 'down' : s\.supTemp \? 'ok' : 'good'/,
+    '\n\n❌ แท็บ Supply Route ต้องมี 3 สี: down (แดง) · temp (เหลือง) · good (เขียว)\n');
+  assert.match(map, /mo: srcMoOf\(/,
+    '\n\n❌ รายการเครื่องบนจอไม่ได้แนบใบต้นตอ — กดแล้วเจาะต่อไม่ได้\n');
   assert.match(map, /'machines:supply:v3'[\s\S]{0,400}usability/,
     '\n\n❌ คิวรีทะเบียนเครื่องไม่ได้ดึง usability (หรือไม่ได้ bump คีย์ cache)\n');
 
