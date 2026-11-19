@@ -560,10 +560,22 @@ export default function QualityBins({ mode = 'full' }) {
     if (decChanged || (isY && editing !== 'new' && (payload.return_date || null) !== (editing.return_date || null))) {
       restampQ([editing.defect_log_id]);
     }
+    if (isY && savedId && payload.qa_decision === 'good' && (editing === 'new' || decChanged)) checkReturnReceipt(savedId);
     if (isY && savedId && payload.qa_decision === 'scrap' && !redChildOf.has(savedId)) {
       await toRed({ ...(editing === 'new' ? {} : editing), ...payload, id: savedId });
     }
     load();   // ยกเลิก/ล้มใน toRed ก็ต้องรีเฟรช ให้เห็นใบที่ค้างพร้อมป้าย
+  };
+
+  /* 📥 19/11 (คำสั่ง user "รับกลับไปต้นทาง แล้วให้ต้นทางส่งไปสโตร์") — QA งานดี / ตรวจรับงานซ่อม
+     ⇒ trigger ฝั่ง DB (`fn_qbin_return_receipt`) ออกใบ "รอรับเข้า" ให้คลังนับรับ (คิวเดียวกับงานดีปกติ)
+     พาร์ทไม่มีกฎรับเข้า = ไม่ออกใบ ⇒ ต้องเขียนบนจอ ห้ามเงียบ (ของไม่เข้าสต็อก) */
+  const checkReturnReceipt = async (binId) => {
+    const { data, error } = await supabaseDR.from('stock_receipts').select('id, dest_line_name')
+      .eq('quality_bin_id', binId).in('status', ['pending', 'received']).limit(1);
+    if (error) { toast.error(`เช็คใบรอรับเข้าคลังไม่ได้ (${error.message}) — ดูคิว "รอรับเข้า" ที่สต็อกในไลน์`); return; }
+    if (!data?.length) toast.error('⚠ ไม่ได้ออกใบรอรับเข้าคลัง — พาร์ทนี้ยังไม่มีกฎรับเข้า (ตั้งที่ สต็อกในไลน์ › กฎรับเข้า) · ของที่คืนยังไม่เข้าสต็อก');
+    else toast.info(`📥 ออกใบรอรับเข้า ${data[0].dest_line_name} แล้ว — ไลน์ส่งของเข้าคลัง ให้คลังนับรับ`);
   };
 
   /* 🔁 ผลพิจารณาเปลี่ยน ⇒ %Q ของกะที่ปิดไปแล้วต้องคิดใหม่ (oee.js §7.1/§7.2 · ค่าที่ stamp ตอนปิดกะเป็นค่าชั่วคราว)
@@ -665,6 +677,7 @@ export default function QualityBins({ mode = 'full' }) {
     if (kind === 'good') {
       toast.success(`✅ ${label} ${qty} ชิ้น — ปิดออกจากถังเหลืองแล้ว`);
       restampQ([r.defect_log_id]);
+      checkReturnReceipt(r.id);
     } else {
       toast.success(`🔧 ส่งซ่อม ${qty} ชิ้น — รอฝ่ายผลิตลงผลซ่อม แล้ว QA ตรวจรับ`);
       notifyStep('qbin_repair_needed', r, [`🔧 QA ให้ซ่อม ${qty} ชิ้น — ลงผลซ่อมที่ถังเหลือง (ขั้น 3)`]);
@@ -726,6 +739,7 @@ export default function QualityBins({ mode = 'full' }) {
     setDeciding('');
     if (!ok) return;
     toast.success(`✅ ตรวจรับแล้ว — ดี ${okQ} ชิ้นกลับเข้ากระบวนการ`);
+    if (okQ > 0) checkReturnReceipt(r.id);
     if (ngQ > 0 && !redChildOf.has(r.id)) await toRed({ ...r, return_date: when }, { skipConfirm: true });
     else restampQ([r.defect_log_id]);
     load();

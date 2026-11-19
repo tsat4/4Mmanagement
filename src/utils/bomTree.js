@@ -630,3 +630,28 @@ export function targetAncestorsOf(mat, up, isTarget, maxDepth = 6) {
   }
   return [...out.entries()].map(([m, via]) => ({ mat: m, via }));
 }
+
+/* ═══ 🌳 "ลูกตรงของสินค้า" แบบ SAP — แถวในใบของตัวเองที่ห้อยอยู่ใต้ตัวมันเองเท่านั้น (19/11 · คำสั่ง user) ═══
+   กติกาเดียวกับตัวตัดจ่ายตอน confirm (`fn_bom_direct_demand` → `fn_bom_kid_rows` ฝั่ง DR):
+   confirm 100 ตัด 200 · confirm 200 ตัด 500 ⇒ **ใบผลิตของ 100 ไม่เคยใช้ 500 ตรงๆ**
+   ⇒ จอที่ตอบ "ใบผลิต/ไลน์ของสินค้านี้ใช้อะไร" (ความต้องการของใบที่เปิดอยู่ · เรียกพาร์ทเข้าไลน์ · คัมบัง ·
+     สต็อกหน้าไลน์ · VSM) ต้องเห็นแค่ลูกตรง — ถ้าเอาแถวหลานที่นอนในใบแม่มานับด้วย 500 จะถูกนับ 2 รอบ
+     (รอบใบของ 100 + รอบใบของ 200) และ qty ของหลานเป็น "ต่อ 1 ลูก" ไม่ใช่ "ต่อ 1 แม่" = เลขผิดซ้ำ
+   🔴 จอที่อยากเห็น "ทั้งต้นไม้" (จอ BOM · แผน) ใช้ buildBomIndex + explodeBom เหมือนเดิม ห้ามใช้ตัวนี้
+   @param rows      แถว bom_items (ต้องมี product_id, parent_mat)
+   @param products  [{ id, mat_no }] หรือ Map(id → mat_no)
+   @returns แถวที่ parent_mat ว่าง หรือ = เลข MAT ของใบตัวเอง · ใบที่ไม่รู้จักเลข MAT = เก็บไว้ (ไม่รู้ = ไม่ทิ้ง)
+   pure (เทส `__tests__/bomTree.test.mjs`) */
+export function directSheetRows(rows = [], products = []) {
+  const matOf = products instanceof Map ? products
+    : new Map((products || []).map(p => [p?.id, p?.mat_no]));
+  const up = (s) => norm(s).toUpperCase();
+  return (rows || []).filter(r => {
+    if (!r) return false;
+    const pm = up(r.parent_mat);
+    if (!pm) return true;
+    const own = matOf.get(r.product_id);
+    if (own == null || !up(own)) return true;
+    return pm === up(own);
+  });
+}

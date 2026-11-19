@@ -21,7 +21,7 @@ import { loadAffectsLanes } from '../utils/affectsLanes';
 import { usePolling } from '../utils/usePolling';
 import { RATE, LIVE } from '../utils/refreshRates';
 import { coalesce, makeIdleGate } from '../utils/liveRefresh';
-import { machineUsability } from '../utils/machineUsability';   // 🔌 "เครื่องนี้ใช้งานได้ไหม" ตอบที่เดียว (19/11)
+import { machineUsability, usabilityMeta } from '../utils/machineUsability';   // 🔌 "เครื่องนี้ใช้งานได้ไหม" ตอบที่เดียว (19/11)
 import { cachedMaster, mrows } from '../utils/masterCache';
 import { fetchAllRows } from '../utils/fetchAllRows';
 import { loadBreakPolicies, loadCtProducts, loadCtKanban, fetchOeeTargets } from '../utils/oeeMasters';
@@ -118,13 +118,15 @@ const HEALTH_RANK = { down: 4, bad: 3, ok: 2, good: 1, waiting: 1, idle: 0 };
 const facHealthOf = (st) => {
   if (st.storeZone) return st.storeZone.cat;   // 🏬 โซนคลัง: แดง "นิ่ง" = ต่ำกว่า Min/ล้นความจุ (งานคลังไม่ใช่ alarm เครื่องหยุด — ห้ามกระพริบ)
   if (st.die) return st.die.moPending ? 'down' : st.die.mo ? 'bad' : 'good';   // โซนแม่พิมพ์: MO รอรับงาน = กระพริบ (Andon)
-  return (st.supAtRisk || st.dtActive) ? 'down' : st.pmOverdue ? 'bad' : st.pmDueSoon ? 'ok' : 'good';
+  return (st.supAtRisk || st.dtActive) ? 'down' : st.pmOverdue ? 'bad' : (st.supTemp || st.pmDueSoon) ? 'ok' : 'good';
 };
 const facHealthTextOf = (st) => {
   if (st.storeZone) return st.storeZone.text;
   if (st.die) return st.die.mo ? `⚠ แม่พิมพ์ใบซ่อมค้าง ${st.die.mo} ตัว` : `🔨 แม่พิมพ์ ${st.die.total} ตัว`;
   if (st.supAtRisk) return '⚠ เครื่องซ่อมอยู่';
   if (st.dtActive) return '🔴 หยุด';
+  /* 🟡 แก้เบื้องต้นแล้ว รอของมาเปลี่ยน — ไม่ใช่ "เสี่ยง" แต่ห้ามหายเป็นเขียว (19/11 · user ทัก) */
+  if (st.supTemp) return '🟡 เครื่องใช้ได้ชั่วคราว';
   if (st.pmOverdue) return `⚠ PM เกิน ${st.pmOverdue}`;
   if (st.pmDueSoon) return `PM ใกล้ครบ ${st.pmDueSoon}`;
   return '🔧 ปกติ';
@@ -134,6 +136,7 @@ const prodHealthSignals = (s) => {
   const sig = [];
   if (s.dtActive) sig.push({ cat: 'down', txt: `🔴 หยุด ${fmtDtElapsed(s.dtOpenMin)}` });
   if (s.supAtRisk) sig.push({ cat: 'down', txt: tr('⚠ utility ที่จ่ายไลน์กำลังซ่อม') });
+  else if (s.supTemp) sig.push({ cat: 'ok', txt: tr('🟡 utility ที่จ่ายไลน์ใช้ได้ชั่วคราว (รอของมาเปลี่ยน)') });
   if (s.target > 0 && s.onTimeTarget >= 1) {
     const p = s.actual / s.onTimeTarget * 100;   // เกณฑ์เดียวกับแท็บยอดผลิต (≥95 เขียว / ≥80 เหลือง)
     if (p < 80) sig.push({ cat: 'bad', txt: `ตามหลังจังหวะ ${Math.round(p)}%` });
@@ -358,15 +361,18 @@ const METRICS = {
   supply: {
     // 🔗 Supply route — ไลน์ผลิต: utility จ่ายไลน์นี้ กำลังซ่อม = กระทบ · โซน facility: เครื่องในโซน down = กระทบไลน์ที่จ่าย
     label: 'Supply Route', worstFirst: true, desc: true,
-    value: s => s.supList.length ? (s.supAtRisk ? 1000 + s.supList.length : s.supList.length) : null,
+    /* 🚦 3 สถานะ ตรงกับปุ่มที่ช่างกด (`MACHINE_USABILITY`) — ห้ามยุบเหลือ "เสี่ยง/ไม่เสี่ยง"
+       แดง = ใช้ไม่ได้ · 🟡 เหลือง = ใช้ได้ชั่วคราว (แก้เบื้องต้น รอของ) · เขียว = ปกติ */
+    value: s => s.supList.length ? (s.supAtRisk ? 2000 + s.supList.length : s.supTemp ? 1000 + s.supList.length : s.supList.length) : null,
     text: s => {
       const feeds = s.isFac && s.supFeeds?.length ? ` → ${s.supFeeds.join(', ')}` : '';
       if (!s.supList.length) return '';
       if (s.supAtRisk) return `⚠ ${supNames(s.supList, true).join(', ')} ซ่อมอยู่${feeds}`;
+      if (s.supTemp) return `🟡 ${supNames(s.supList, false, 'temp').join(', ')} ใช้ได้ชั่วคราว · รอของมาเปลี่ยน${feeds}`;
       return s.isFac ? `ปกติ${feeds ? ' · จ่าย' + feeds : ''}` : `จ่ายโดย ${supNames(s.supList).join(', ')}`;
     },
-    cat: s => !s.supList.length ? 'idle' : s.supAtRisk ? 'down' : 'good',
-    short: s => !s.supList.length ? '' : s.supAtRisk ? '⚠ ซ่อมอยู่' : '',
+    cat: s => !s.supList.length ? 'idle' : s.supAtRisk ? 'down' : s.supTemp ? 'ok' : 'good',
+    short: s => !s.supList.length ? '' : s.supAtRisk ? '⚠ ซ่อมอยู่' : s.supTemp ? '🟡 ชั่วคราว' : '',
   },
 };
 
@@ -494,12 +500,13 @@ const EMPTY_ST = { actual: 0, target: 0, onTimeTarget: 0, runN: 0, capN: 0, hasO
   amTotal: 0, amOverdue: 0, amDueSoon: 0, pmBusy: 0, pmBusyText: '',
   amDTotal: 0, amDChecked: 0, amDNg: 0, amDLate: 0, amDWait: 0, amDIdle: 0, amDHasSession: false,
   pmNever: 0, pmNoCycle: 0, pmRunDay: 0, amNever: 0, amNoCycle: 0, amRunDay: 0,
-  supList: [], supAtRisk: false };
+  supList: [], supAtRisk: false, supTemp: false };
 // รวมชื่อ utility ที่จ่ายไลน์นี้ (dedup ตามเลขเครื่อง) เอาที่กำลังซ่อม (atRisk) ก่อน
 // รวมชื่อ utility ที่จ่ายไลน์นี้ — dedup ตามเลขเครื่องก่อน แล้วยุบชื่อที่ซ้ำเป็น "ชื่อ ×N" (กันโชว์ชื่อเดียวซ้ำหลายรอบ)
-const supNames = (list, riskOnly) => {
+const supNames = (list, riskOnly, state) => {
   const byNo = new Map();
-  (list || []).filter(x => !riskOnly || x.atRisk).forEach(x => { if (!byNo.has(x.no)) byNo.set(x.no, x.name || x.no || '—'); });
+  (list || []).filter(x => state ? x.state === state : (!riskOnly || x.atRisk))
+    .forEach(x => { if (!byNo.has(x.no)) byNo.set(x.no, x.name || x.no || '—'); });
   const cnt = new Map();
   [...byNo.values()].forEach(nm => cnt.set(nm, (cnt.get(nm) || 0) + 1));
   return [...cnt.entries()].map(([nm, c]) => c > 1 ? `${nm} ×${c}` : nm);
@@ -1421,7 +1428,9 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
         .catch((e) => { console.warn('loadSupply machines', e); return null; }),
       /* 🔴 ต้องมี `repair_done_at` — "ใบยังเปิด" ≠ "เครื่องเสีย" (ใบที่ซ่อมเสร็จแล้วรอเอกสาร
          เคยทาไลน์ปลายทางเป็นเสี่ยงอยู่ 7 วัน · ตัดสินที่ `machineUsability()`) */
-      supabaseDR.from('mtn_orders').select('machine_no, repair_done_at')
+      /* 🔗 19/11 — ต้องมี `id`/`mo_no` ด้วย: จอต้อง "คลิกเจาะไปหาต้นตอ" ได้ (user ทัก)
+         ไม่มี id = ได้แค่บอกว่าซ่อมอยู่ แล้วให้คนไปไล่หาใบเอง */
+      supabaseDR.from('mtn_orders').select('id, mo_no, machine_no, repair_done_at')
         .not('status', 'in', '("closed","rejected")').then(r => r, (e) => ({ data: null, error: e })),
     ]);
     if (linkRows == null || machineRows == null || mos?.error) { if (mos?.error) console.warn('loadSupply mtn_orders', mos.error); return; }
@@ -1433,6 +1442,12 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
     /* 🔴 สถานะเครื่องตัดสินที่ `machineUsability()` ที่เดียว ห้ามเทียบ "มีใบเปิด" เองที่นี่
        (`atRisk` = ใช้งานไม่ได้จริงเท่านั้น · เหลือง "ใช้ได้ชั่วคราว" ไม่นับว่าไลน์เสี่ยง แต่ต้องเห็น) */
     const usabilityOf = (mc) => machineUsability(mc, mosByNo[mc?.machine_no] || []);
+    /* ใบที่เป็น "ต้นตอ" ของสถานะนี้ — ใบที่ยังซ่อมไม่เสร็จก่อน ไม่มีก็เอาใบที่เปิดอยู่ใบแรก
+       🔴 ช่างประกาศ temp/down เองโดยไม่มีใบ = `null` ⇒ จอต้องไม่ทำลิงก์หลอก */
+    const srcMoOf = (mc) => {
+      const list = mosByNo[mc?.machine_no] || [];
+      return list.find(o => !o.repair_done_at) || list[0] || null;
+    };
     // (ก) มุมมองไลน์ผลิต: utility จ่ายไลน์นี้ กำลังซ่อม = กระทบ (เดิม)
     const out = {};
     linkRows.forEach(l => {
@@ -1440,7 +1455,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
       const u = usabilityOf(mc);
       const atRisk = u.state === 'down';
       const o = out[l.line_name] || { suppliers: [], atRisk: false, temp: false };
-      o.suppliers.push({ no: mc.machine_no, name: mc.machine_name, atRisk, state: u.state, why: u.text });
+      o.suppliers.push({ no: mc.machine_no, name: mc.machine_name, atRisk, state: u.state, why: u.text, mo: srcMoOf(mc) });
       if (atRisk) o.atRisk = true;
       if (u.state === 'temp') o.temp = true;   // ใช้ได้ชั่วคราว = เหลือง ไม่ใช่แดง
       out[l.line_name] = o;
@@ -1454,7 +1469,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
       const u = usabilityOf(m);
       const atRisk = u.state === 'down';
       const o = fac[m.line_name] || { machines: [], atRisk: false, temp: false, feeds: new Set() };
-      o.machines.push({ no: m.machine_no, name: m.machine_name, atRisk, state: u.state, why: u.text });
+      o.machines.push({ no: m.machine_no, name: m.machine_name, atRisk, state: u.state, why: u.text, mo: srcMoOf(m) });
       (feedsByMachine[m.id] || []).forEach(ln => o.feeds.add(ln));
       if (atRisk) o.atRisk = true;
       if (u.state === 'temp') o.temp = true;
@@ -1918,7 +1933,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
     const agg = { ...EMPTY_ST, supList: [], oeeRows: [] };
     familyNames(name).forEach(n => {
       const sp = supplyStatus[n];
-      if (sp) { agg.supList.push(...sp.suppliers); agg.supAtRisk = agg.supAtRisk || sp.atRisk; }
+      if (sp) { agg.supList.push(...sp.suppliers); agg.supAtRisk = agg.supAtRisk || sp.atRisk; agg.supTemp = agg.supTemp || sp.temp; }
       const p = lineStatus[n];
       if (p) { agg.actual += p.actual || 0; agg.target += p.target || 0; agg.onTimeTarget += p.onTimeTarget || 0; agg.runN = Math.max(agg.runN || 0, p.runN || 0); agg.capN = Math.max(agg.capN || 0, p.capN || 0); agg.hasOpen = agg.hasOpen || p.hasOpen; agg.dtMin += p.dtMin || 0; agg.dtMinHour += p.dtMinHour || 0; if (p.dtOpenMin != null) agg.dtOpenMin = Math.max(agg.dtOpenMin ?? 0, p.dtOpenMin); agg.dtOpenUnknown = agg.dtOpenUnknown || p.dtOpenUnknown; agg.dtActive = agg.dtActive || p.dtActive; agg.ng += p.ng || 0; agg.oeeRows.push(...(p.oeeRows || [])); agg.oeeLive = agg.oeeLive || p.oeeLive; agg.oeeNoCt = agg.oeeNoCt || p.oeeNoCt; agg.oeeCtPartial = agg.oeeCtPartial || p.oeeCtPartial; agg.oeePOver = agg.oeePOver || p.oeePOver; agg.oeePRaw = Math.max(agg.oeePRaw || 0, p.oeePRaw || 0); }
       const m = manpower[n];
@@ -1945,7 +1960,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
     // โซน facility เอง: Supply Route = เครื่องในโซนนี้ down (open MO) มั้ย (มุมมองต่างจากไลน์ผลิตที่เป็น "ถูกจ่าย")
     if (isFac(name)) {
       const fs = facilitySupply[name];
-      if (fs) { agg.supList = fs.machines; agg.supAtRisk = fs.atRisk; agg.supFeeds = fs.feeds; agg.isFac = true; }
+      if (fs) { agg.supList = fs.machines; agg.supAtRisk = fs.atRisk; agg.supTemp = fs.temp; agg.supFeeds = fs.feeds; agg.isFac = true; }
       else agg.isFac = true;
       const dz = dieZoneOf(name);
       if (dz) agg.die = dz;    // 🔨 โซนคลังแม่พิมพ์ — health จากใบซ่อม MO ของแม่พิมพ์ที่วางในโซน
@@ -4046,10 +4061,42 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
                             {sec('supply') && (st.supList?.length > 0 ? (
                               <div>
                                 <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--muted)' }}>{tr('ระบบสนับสนุนที่จ่ายให้')}</div>
-                                <div style={{ fontSize: 12, color: st.supAtRisk ? 'var(--red)' : 'var(--text2)', marginTop: 3, fontWeight: st.supAtRisk ? 800 : 500 }}>
-                                  {st.supAtRisk ? '⚠ มีเครื่องกำลังซ่อม: ' : 'ปกติ · '}
-                                  {[...new Set(st.supList.filter(x => !st.supAtRisk || x.atRisk).map(x => x.name || x.no))].slice(0, 4).join(' · ')}
-                                </div>
+                                {/* 🔗 19/11 (user ทัก "กดเข้ามาดู มันน่าจะคลิกเจาะไปหาต้นตอได้")
+                                    เดิมเป็นข้อความตาย — บอกว่าซ่อมอยู่แต่ไม่บอกว่าใบไหน ต้องไปไล่หาเอง
+                                    🔴 ลิงก์เฉพาะเครื่องที่ **มีใบจริง** — ช่างประกาศสถานะเองโดยไม่มีใบ = ไม่ทำลิงก์หลอก
+                                    🔴 3 สีตรงกับปุ่มที่ช่างกด (`usabilityMeta`) ห้ามแต่งสีเอง */}
+                                {(() => {
+                                  const bad = st.supList.filter(x => x.state === 'down' || x.state === 'temp');
+                                  if (!bad.length) return (
+                                    <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 3 }}>
+                                      {tr('ปกติ · ')}{[...new Set(st.supList.map(x => x.name || x.no))].slice(0, 4).join(' · ')}
+                                    </div>
+                                  );
+                                  const seen = new Set();
+                                  return (
+                                    <div style={{ display: 'grid', gap: 4, marginTop: 4 }}>
+                                      {bad.filter(x => { const k = `${x.no}|${x.state}`; if (seen.has(k)) return false; seen.add(k); return true; })
+                                        .slice(0, 6).map(x => {
+                                        const meta = usabilityMeta(x.state);
+                                        const to = x.mo?.id ? `/mtn-repair?mo=${encodeURIComponent(x.mo.id)}&from=factory-map` : null;
+                                        return (
+                                          <div key={`${x.no}|${x.state}`} onClick={to ? () => navigate(to) : undefined}
+                                            title={x.why || ''}
+                                            style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', fontSize: 12,
+                                              cursor: to ? 'pointer' : 'default', color: meta.color, fontWeight: 700 }}>
+                                            <span>{x.state === 'down' ? '⚠' : '🟡'}</span>
+                                            <span>{x.name || x.no}{x.name && x.no ? ` (${x.no})` : ''}</span>
+                                            <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted)' }}>· {tr(meta.label)}</span>
+                                            {to
+                                              ? <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)' }}>· {x.mo.mo_no || tr('เปิดใบซ่อม')} ↗</span>
+                                              : <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted)' }}>· {tr('ไม่มีใบซ่อมผูกไว้')}</span>}
+                                          </div>
+                                        );
+                                      })}
+                                      {bad.length > 6 && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('และอีก')} {bad.length - 6}</div>}
+                                    </div>
+                                  );
+                                })()}
                               </div>
                             ) : metric === 'supply' ? (
                               <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{tr('ไลน์นี้ยังไม่ได้ผูกระบบสนับสนุน (supply route)')}</div>

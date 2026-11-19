@@ -41,13 +41,14 @@ import { slocCodeOfLine } from '../utils/storageLoc';   // 🏬 มุม SAP �
 import { isFgMat, FG_NO_LINE_REQUEST } from '../utils/storeOps';   // 🚫 ไม่มี FG เข้าไลน์ (13/11)
 import ProductSelect from './ProductSelect';
 import { splitLevels, refStockOf, madeHereMats, selfMadeRequestBlock, lineRequestFromBom } from '../utils/partRefStock';
-import { buildBomIndex } from '../utils/bomTree';
+import { buildBomIndex, directSheetRows } from '../utils/bomTree';
 import { shortReceiptRows } from '../utils/stockDiscrepancy';
 import { syncLineOrderDemand, syncSummaryText, confirmAndSyncLineDemand } from '../lib/lineDemandSync';
 import { qtyUnit } from '../utils/coilUom';
 import { tr } from '../utils/i18n';
 import { fetchAllRows } from '../utils/fetchAllRows';   // 🏭 ของที่ไลน์ผลิตเอง อ้างยอดคลัง (2026-10-08) // 📜 MAT ที่เคยตั้งระดับไว้ — ทะเบียนไม่มีก็ยังเลือกซ้ำได้ (2026-09-07)
 import { askConfirm } from '../utils/askConfirm';
+import { STORE_NEG_NOTE } from '../utils/stockReceipt';   // 19/11 ข้อความ "STORE ติดลบ" ชุดเดียวกับฝั่งสโตร์
 
 /* 🙈 05/11 (คำสั่ง user "งงกับตั้งจุดเรียกเติม … เอาออกก่อน user งง") — ซ่อนทางเบิกแบบ MIN/MAX หน้าไลน์ทั้งชุด
    (ปุ่ม ⚙️ · โมดัล · ส่วน "ถึงจุดเรียกเติม" · "ยังไม่ตั้งจุดเรียกเติม" · "ยอดคลังต่ำกว่าขั้นต่ำ ต้องผลิตเติม")
@@ -100,11 +101,12 @@ function useBomChildOptions(famNames, enabled = true) {
       const fam = new Set(famKey.split('|').filter(Boolean));
       const prods = all.filter(p => p.is_active !== false && fam.has(p.line_name));
       if (!prods.length) return;
-      const { data: boms } = await supabaseDR.from('bom_items').select('mat_no, part_no, part_name')
+      const { data: boms } = await supabaseDR.from('bom_items').select('product_id, parent_mat, mat_no, part_no, part_name')
         .in('product_id', prods.map(p => p.id)).eq('is_active', true).limit(1000);
       if (!alive) return;
       const seen = new Set();
-      setRows((boms || []).filter(b => b.mat_no && !seen.has(b.mat_no) && seen.add(b.mat_no))
+      // 🌳 19/11: ไลน์นี้ใช้แค่ "ลูกตรง" ของสินค้าที่ผลิต — หลานถูกใช้ที่ไลน์ของลูก (กติกา SAP · bomTree.directSheetRows)
+      setRows(directSheetRows(boms || [], prods).filter(b => b.mat_no && !seen.has(b.mat_no) && seen.add(b.mat_no))
         .map(b => ({ mat_no: b.mat_no, name: b.part_name, p_no: b.part_no,
                      sub: [b.part_no, b.part_name].filter(Boolean).join(' · '), group: '🧩 พาร์ทลูก BOM ของไลน์นี้' })));
     })();
@@ -561,7 +563,9 @@ export default function LinePartCallPanel({ lineName, lines = [], role, fullName
       + (ledgered
         ? ` · ยอดเข้าไลน์ +${fmtQty(issued)} ตั้งแต่สโตร์เตรียมของแล้ว${short > 0 ? ` (ส่วนที่ไม่ได้รับ ${fmtQty(short)} ย้ายไปคลังพัก รอผลิต+สโตร์เคลียร์)` : ''}`
         : ' · ⚠ ใบนี้ยังไม่ถูกตัดสต็อก — ยอดในไลน์ไม่เปลี่ยน แจ้งสโตร์'));
+    // ใบเก่า (ก่อน 19/11) = "ไม่หัก STORE" · ใบใหม่ = หักเต็มแล้วติดลบ (STORE_NEG_NOTE)
     if (r.stock_txn_note && /ไม่หัก STORE/.test(r.stock_txn_note)) toast.info('ℹ️ ฝั่งสโตร์ยังไม่ถูกหักยอด เพราะ STORE ไม่มียอดตั้งต้นของพาร์ทนี้ — สโตร์ต้องลงรับเข้า STORE ก่อน');
+    else if (r.stock_txn_note && r.stock_txn_note.includes(STORE_NEG_NOTE)) toast.info(`ℹ️ ${STORE_NEG_NOTE}`);
     load();
   };
 
