@@ -743,10 +743,37 @@ const rowTopic = (r) => normTopic(r?.topic ?? r?.name);
  *   ไม่ใช่โชว์ตารางว่าง — กฎความซื่อสัตย์ของจอ · การเลือก KPI ต่อหน่วยงานเป็นการตั้งค่าของคน)
  *  🔴 ตรงเป๊ะเท่านั้น (ไม่สนตัวพิมพ์/ช่องว่าง/เครื่องหมาย) — ไม่ตรง = `null` ห้ามเดาคลุม
  *     เช่น "Tooling MTN" ต้องคืน null ไม่ใช่เดาเป็น "Tooling" (คนละชุด KPI กัน) */
+/* ══ 🔧 ทะเบียน "หน่วยงานจริงในโรงงาน → หน่วยงานมาตรฐาน" (2026-11-19 · คำสั่ง user) ═══════════
+   user 19/11: *"ทีมช่างใช้มาตรฐานเดียวกันคือ KPI Maintenance เพราะในแบบ KPI Die Maintenance
+                 เหมือนเป็นของโรงงานสร้างแม่พิมพ์ใช้"*
+
+   เหตุผลที่ต้องมีทะเบียนนี้ ไม่ใช่ผ่อนเกณฑ์การจับคู่ชื่อ:
+     แบบ `Die Maintenance` ในทะเบียนกลางเป็นของ **ธุรกิจสร้าง-ขายแม่พิมพ์** —
+     มี "Annual Sale Per Head" · "Manage project … on time delivery to customer" ·
+     "Keep inventory no more than" · "Customer Satisfaction (Q&D)"
+     ซึ่งทีมช่างที่ซ่อมแม่พิมพ์ในโรงงานปั๊มของเราไม่มีทางวัดได้ (ไม่มียอดขาย ไม่มีลูกค้าภายนอก)
+     และ**ไม่มี MTBF / MTTR / MO Closed / Machine Break Down เลยสักตัว** ซึ่งคือเนื้องานจริงของช่าง
+     ⇒ ทีมช่างทุกทีมอิงแบบ `Maintenance` (ที่มี Internal Satisfaction + ตัววัดงานซ่อมครบ)
+
+   🔴 นี่คือ "การตั้งค่าของคน" ที่ user เคาะแล้ว **ไม่ใช่การเดาจากชื่อ** —
+      `guessStdUnit` ยังคงกฎเดิมทุกอย่าง (ตรงเป๊ะเท่านั้น · ไม่ตรง = null) เพียงแต่ดูทะเบียนนี้ก่อน
+      และผลลัพธ์ยังเป็น **ข้อเสนอให้คนกดยืนยัน ห้ามตั้งให้เอง** เหมือนเดิม
+   🔴 คีย์เขียนแบบ "แบน" (ตัดช่องว่าง/ขีด/วงเล็บ ตัวพิมพ์เล็ก) ให้ตรงกับ flat() ข้างล่าง            */
+export const KPI_STD_UNIT_ALIASES = Object.freeze({
+  diemtn: 'Maintenance',       // ซ่อมบำรุงแม่พิมพ์ (ทีม die_maintenance)
+  jigmtn: 'Maintenance',       // ซ่อมบำรุงจิ๊ก (ทีม jig_maintenance)
+  toolingmtn: 'Maintenance',   // ซ่อมบำรุง Tooling — คนละตัวกับ std_unit 'Tooling' (ธุรกิจขายแม่พิมพ์)
+  mechanic: 'Maintenance',
+  electric: 'Maintenance',
+});
+
 export function guessStdUnit(name) {
   const flat = (s) => normTopic(s).replace(/[\s\-_.&/()]+/g, '');
   const n = flat(name);
   if (!n) return null;
+  /* ทะเบียนที่คนเคาะมาก่อน แล้วค่อยจับชื่อตรงเป๊ะ */
+  const alias = KPI_STD_UNIT_ALIASES[n];
+  if (alias) return alias;
   return KPI_STD_UNITS.find(u => flat(u.unit) === n)?.unit || null;
 }
 
@@ -785,12 +812,23 @@ export function checkStdSelection(rows = [], stdItems = null) {
   const diff = Math.round((weight - KPI_TOTAL_WEIGHT) * 100) / 100;
 
   let missingFixed = [];
+  /* 🧾 "ของนอกมาตรฐาน" — แถวในใบที่ไม่มีอยู่ในทะเบียนของหน่วยงานนี้เลย (2026-11-19 · คำสั่ง user)
+     เคสต้นเรื่อง: ใบของ **Die MTN** ถือแบบ `Die Maintenance` ซึ่งเป็นของธุรกิจสร้าง-ขายแม่พิมพ์
+     ("Annual Sale Per Head" · "Keep inventory no more than" · "Manage project … delivery to customer")
+     จอเดิมบอกได้แค่ "ข้อบังคับที่ยังไม่ได้หยิบ" ⇒ **ของแปลกปลอมที่ค้างอยู่ในใบมองไม่เห็นเลย**
+     ⚠️ เตือนเท่านั้น ห้ามบล็อก และห้ามลบให้เอง — ใบจริงบางใบเพิ่มของนอกมาตรฐานได้โดยตั้งใจ (§6)
+        คนเป็นคนตัดสินว่าจะเก็บหรือปิด (ปิด = `is_active=false` ไม่ใช่ลบ) */
+  let extras = [];
   if (Array.isArray(stdItems)) {
     missingFixed = matchStdItems(stdItems.filter(isStdFixed), rows)
       .filter(m => !m.row)
       .map(m => m.item);
+
+    const known = new Set();
+    for (const m of matchStdItems(stdItems, rows)) if (m.row) known.add(m.row);
+    extras = (Array.isArray(rows) ? rows : []).filter(r => r && !known.has(r));
   }
-  return { weight, diff, ok: diff === 0 && missingFixed.length === 0, missingFixed };
+  return { weight, diff, ok: diff === 0 && missingFixed.length === 0, missingFixed, extras };
 }
 
 /* ── 🧾 "KPI นี้ตัดสินยังไง" เป็นประโยคเดียว + ตรวจเกณฑ์ที่ตั้งขัดกัน (2026-11-16 · user: "หน้ากรอก KPI งงเรื่อง plan และผ่าน/ตก") ──

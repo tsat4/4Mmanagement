@@ -9,6 +9,7 @@ import { planBarsOf,
   isStdFixed, isStdParent, checkStdSelection, matchStdItems, guessStdUnit,
   unitOf, decimalsOf, summaryModeOf, summaryShort, summaryModeLabel, fmtKpi, summaryOf, KPI_SUMMARY_MODES,
   planProgress, valueScopeOf, sharedValueDef, yearForecast, boardSlotOf, KPI_BOARD_SLOTS,
+  KPI_STD_UNIT_ALIASES,
 } from '../kpiSetup.js';
 
 /* ── เกณฑ์คะแนน: ตรวจกับ 6 แถวจริงในคู่มือ KPI Online (§8.3) ─────────────────────────── */
@@ -675,7 +676,12 @@ test('guessStdUnit — ตรงเป๊ะเท่านั้น (QA ตร�
   assert.equal(guessStdUnit('Logistic & Sales'), 'Logistic & Sales');
   assert.equal(guessStdUnit('logistic and sales'), null);          // "and" ไม่ใช่ "&" ⇒ ไม่เดา
   assert.equal(guessStdUnit('Die Maintenance'), 'Die Maintenance');
-  assert.equal(guessStdUnit('Tooling MTN'), null);                 // คนละชุด KPI กับ Tooling
+  /* 🔄 19/11 · คำสั่ง user — "Tooling MTN" ไม่ได้ null แล้ว แต่**ไม่ใช่เพราะผ่อนเกณฑ์การเดา**
+     user เคาะว่าทีมช่างทุกทีมอิงแบบ `Maintenance` ⇒ ขึ้นทะเบียน `KPI_STD_UNIT_ALIASES`
+     กฎเดิมยังอยู่ครบ: ชื่อที่ไม่อยู่ในทะเบียนและไม่ตรงเป๊ะ = null เหมือนเดิม
+     และยังต้อง **ไม่กลายเป็น `Tooling`** (ธุรกิจขายแม่พิมพ์) ซึ่งเป็นกับดักเดิมของเคสนี้ */
+  assert.equal(guessStdUnit('Tooling MTN'), 'Maintenance');
+  assert.notEqual(guessStdUnit('Tooling MTN'), 'Tooling');
   assert.equal(guessStdUnit('PD3'), null);
   assert.equal(guessStdUnit(''), null);
   assert.equal(guessStdUnit(null), null);
@@ -704,4 +710,49 @@ test('defIssues: Commit ผิดด้าน (เคส QCC PD1 "≤ 0" กั�
   assert.ok(defIssues({ target_value: 5, direction: 'up' }, { plans: { 1: 1, 2: 2 } }).some(i => i.code === 'plan_unused'));
   assert.ok(defIssues({ target_value: 5, direction: 'up', score_by_plan: true }, { plans: {} }).some(i => i.code === 'plan_missing'));
   assert.equal(defIssues({ target_value: 1.017, commit_value: 1.0485, direction: 'down' }, { plans: {} }).length, 0);
+});
+
+test('🔧 ทีมช่างทุกทีมอิงมาตรฐาน Maintenance (19/11 · คำสั่ง user)', () => {
+  /* user 19/11: *"ทีมช่างใช้มาตรฐานเดียวกันคือ KPI Maintenance เพราะในแบบ KPI Die Maintenance
+                   เหมือนเป็นของโรงงานสร้างแม่พิมพ์ใช้"*
+     วัดจากทะเบียนจริง 19/11: แบบ `Die Maintenance` มี Annual Sale Per Head · Customer Satisfaction (Q&D)
+     · Manage project … on time delivery to customer · Keep inventory no more than
+     และ **ไม่มี MTBF/MTTR/MO Closed/Machine Break Down เลย** ⇒ ไม่ใช่แบบของทีมช่างในโรงงานปั๊ม */
+  for (const u of ['Die MTN', 'JIG MTN', 'Tooling MTN', 'Mechanic', 'Electric']) {
+    assert.equal(guessStdUnit(u), 'Maintenance', `${u} ต้องอิงแบบ Maintenance`);
+  }
+  /* เขียนยังไงก็ได้ — ตัวพิมพ์/ช่องว่าง/ขีด ไม่เกี่ยว */
+  assert.equal(guessStdUnit('die-mtn'), 'Maintenance');
+  assert.equal(guessStdUnit('  TOOLING MTN '), 'Maintenance');
+
+  /* 🔴 ห้ามกลืนหน่วยที่ "ชื่อคล้าย แต่คนละชุด KPI" — `Tooling` = ธุรกิจขายแม่พิมพ์ ไม่ใช่ทีมช่าง */
+  assert.equal(guessStdUnit('Tooling'), 'Tooling', 'Tooling เฉยๆ ยังเป็นแบบของตัวเอง');
+  assert.equal(guessStdUnit('Die Maintenance'), 'Die Maintenance', 'ชื่อแบบในทะเบียนยังหยิบตรงๆ ได้');
+  /* 🔴 ไม่รู้จัก = null เหมือนเดิม ห้ามเดาคลุม */
+  assert.equal(guessStdUnit('PD1'), null);
+  assert.equal(guessStdUnit(''), null);
+
+  /* ทะเบียนต้องชี้ไปหาหน่วยที่มีอยู่จริงเท่านั้น */
+  for (const v of Object.values(KPI_STD_UNIT_ALIASES)) {
+    assert.ok(KPI_STD_UNITS.some(u => u.unit === v), `${v} ต้องมีใน KPI_STD_UNITS`);
+  }
+});
+
+test('🧾 checkStdSelection บอก "ของนอกมาตรฐาน" ได้ (19/11)', () => {
+  const std = [
+    { id: 'a', topic: 'MTTR', requirement: 'fixed' },
+    { id: 'b', topic: 'Safety', requirement: 'fixed' },
+  ];
+  const rows = [
+    { std_item_id: 'a', name: 'MTTR', weight: 10 },
+    { name: 'Safety', weight: 10 },
+    { name: 'Annual Sale Per Head', weight: 3 },   // ← ของแบบโรงงานขายแม่พิมพ์ที่ค้างอยู่
+  ];
+  const r = checkStdSelection(rows, std);
+  assert.equal(r.extras.length, 1, 'ต้องเห็นของนอกมาตรฐาน 1 ข้อ');
+  assert.equal(r.extras[0].name, 'Annual Sale Per Head');
+  assert.deepEqual(r.missingFixed, [], 'ข้อบังคับหยิบครบแล้ว (จับคู่ได้ทั้ง std_item_id และชื่อ)');
+
+  /* ไม่ส่งทะเบียนมา = ตรวจแค่น้ำหนัก ห้ามเดาว่าทุกแถวนอกมาตรฐาน */
+  assert.deepEqual(checkStdSelection(rows).extras, []);
 });

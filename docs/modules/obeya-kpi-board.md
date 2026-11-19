@@ -345,6 +345,49 @@ user เคาะ 3 ข้อ: **① แยกรายส่วนงาน ②
 
 ---
 
+## 🔧 ทีมช่างทุกทีมอิงแบบ `Maintenance` — ไม่ใช่ `Die Maintenance` (2026-11-19 · คำสั่ง user)
+
+> user 19/11: *"ทีมช่างใช้มาตรฐานเดียวกันคือ KPI Maintenance เพราะในแบบ KPI Die Maintenance
+> เหมือนเป็นของโรงงานสร้างแม่พิมพ์ใช้"*
+
+**ที่วัดได้จากทะเบียนจริง (19/11):** แบบ `Die Maintenance` เป็น KPI ของ **ธุรกิจสร้าง-ขายแม่พิมพ์** —
+`Annual Sale Per Head` · `Customer Satisfaction (Q&D)` · `Manage project … on time delivery to customer` ·
+`Keep inventory no more than` · `Reduce interuption from mold problems` ·
+`Part quality concern from Dies & Jig MTN` · `Reduce part rework from DIE & JIG tooling`
+และ **ไม่มี MTBF / MTTR / MO Closed on target / Machine Break Down เลยสักตัว**
+⇒ ทีมช่างในโรงงานปั๊มของเราวัดด้วยแบบนี้ไม่ได้ (ไม่มียอดขาย ไม่มีลูกค้าภายนอก) และเนื้องานจริงของช่างหายหมด
+
+- 🔴 **ทะเบียน "หน่วยงานจริง → หน่วยงานมาตรฐาน" = `KPI_STD_UNIT_ALIASES` (`src/utils/kpiSetup.js`) ที่เดียว**
+  `Die MTN` · `JIG MTN` · `Tooling MTN` · `Mechanic` · `Electric` → `Maintenance`
+  · **ไม่ใช่การผ่อนเกณฑ์การเดา** — `guessStdUnit()` ยังตรงเป๊ะเท่านั้น ไม่ตรง = `null` เหมือนเดิม
+  · และยังต้อง **ไม่กลายเป็น `Tooling`** (ธุรกิจขายแม่พิมพ์) ซึ่งเป็นกับดักเดิมของ "Tooling MTN"
+  · ผลลัพธ์ยังเป็น **ข้อเสนอให้คนกดยืนยัน ห้ามตั้งให้เอง**
+- 🧾 **`checkStdSelection()` คืน `extras` ด้วยแล้ว** = แถวในใบที่ไม่มีในทะเบียนของหน่วยงานนั้น
+  จอเดิมบอกได้แค่ "ข้อบังคับที่ยังไม่ได้หยิบ" ⇒ **ของแปลกปลอมที่ค้างในใบมองไม่เห็นเลย** (เคส Die MTN)
+  · ⚠️ **เตือนเท่านั้น ห้ามบล็อก ห้ามลบให้เอง** — ใบจริงเพิ่มของนอกมาตรฐานได้โดยตั้งใจ
+    (เช่น `Air Leak [MTN]` ของ Electric มีข้อมูลจริง 7 เดือน) · ไม่ใช้แล้วให้ **ปิดแถว ไม่ใช่ลบ**
+
+**สภาพใบหลังผูกแบบใหม่ (วัด 19/11 · ข้อบังคับที่ยังไม่ได้หยิบ):**
+
+| หน่วย | ขาด | หมายเหตุ |
+|---|---|---|
+| **Die MTN** | **6** — Internal Satisfaction · MO Closed on target · Machine Break Down · MTBF · MTTR · Cost Reduction | หนักสุด · ของเดิม 6 ข้อเป็นแบบธุรกิจขายแม่พิมพ์ · มีข้อมูลจริงแค่ Safety 10 เดือน |
+| Maintenance (ส่วนงาน) | 10 | ใบมีแค่ 2 แถว |
+| Electric | 4 | ส่วนงานซ่อมที่ครบที่สุดอยู่แล้ว |
+| Tooling MTN | 4 | 2 ใน 4 เป็น**ชื่อเรียกต่างกันของตัวเดียวกัน** (`DL+OH` = `Direct Labour & Overhead Expenses` · `Cost Reduction (Tooling MTN)` = `Cost Reduction (MTN)`) |
+| Mechanic | 3 | |
+| **JIG MTN** | **0** ✅ | ครบอยู่แล้ว — ใช้เป็นต้นแบบได้ |
+
+- ⚠️ **"ขาด" บางข้อคือชื่อเรียกต่างกัน ไม่ใช่ไม่มีจริง** — `matchStdItems()` จับคู่ด้วย `std_item_id` ก่อน
+  แล้วค่อยเทียบชื่อแบบตรงตัว ⇒ แถวเก่าที่ import มาก่อนมี `std_item_id` = null จะจับคู่ด้วยชื่อล้วน
+  **ตรวจตาก่อนกดหยิบเพิ่ม ไม่งั้นได้ KPI ซ้ำ 2 แถว**
+- **Die MTN · Customer Satisfaction → Internal Satisfaction** สลับ 1:1 แล้ว (น้ำหนัก 5 · ≥95%/100% คงเดิม ·
+  ข้อมูลของตัวเอง 0 เดือน ⇒ ไม่มีตัวเลขหาย) · migration `20261119_kpi_tech_teams_use_maintenance_std_main.sql`
+- 🔴 **เป้า/น้ำหนักของข้อที่หยิบเพิ่ม ระบบไม่ตั้งให้** (เอกสารกลุ่มให้หน่วยงานถ่วงเอง) — หยิบที่
+  `/obeya` → ⚙️ → 📘 KPI Standard แล้วกรอกต่อที่ตาราง
+
+---
+
 ## ✅ ทะเบียน KPI Standard 2026 ลงฐานแล้ว — `kpi_standard_items` (Main · 2026-09-21)
 
 migration `20260921_kpi_standard_2026_main.sql` (**apply แล้ว**) · **318 แถว · fixed 189 · choice 90 · แถวแม่ 39 · 20 หน่วยงาน**
