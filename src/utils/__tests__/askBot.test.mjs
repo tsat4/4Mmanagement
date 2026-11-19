@@ -237,3 +237,32 @@ test('รอบ 2: เครื่องหยุดที่ไม่มีเ�
     production_sessions: { line_name: 'A', status: 'open' } }], Date.parse('2026-11-19T00:00:00Z'), () => 'open');
   assert.equal(r.open[0].min, null);
 });
+
+test('ของเสีย: คำที่หน้างานพิมพ์จริง "งานเสีย" ต้องเข้าใจ (user ทัก 19/11)', () => {
+  for (const s of ['วันนี้มีงานเสียอะไรบ้าง', 'งานเสีย', 'ชิ้นงานเสีย สัปดาห์นี้', 'reject เดือนนี้']) {
+    const q = parseQuestion(s, T);
+    assert.equal(q.intent, 'defect_top', s);
+    assert.equal(q.subject, '', `${s} → ต้องไม่เหลือคำค้างไปค้นเป็นชื่อไลน์`);
+  }
+  assert.equal(parseQuestion('งานเสีย HDF1 วันนี้', T).subject, 'hdf1');
+});
+
+test('คำพ้องที่หน้างานพิมพ์ (user สั่ง 19/11 · ทาง ก) — เจตนาถูก และไม่เหลือคำค้างไปค้นเป็นชื่อ', () => {
+  const cases = [
+    ['ประสิทธิภาพ HDF1 วันนี้', 'oee', 'hdf1'], ['ไลน์ไหนประสิทธิภาพต่ำสุด', 'oee_lowest', ''],
+    ['เครื่องเสียตอนนี้', 'down_now', ''], ['ไลน์ไหนหยุด', 'down_now', ''], ['เครื่องไหนดาวน์', 'down_now', ''],
+    ['เครื่องพังอะไรบ่อย สัปดาห์นี้', 'downtime_top', ''], ['สาเหตุหยุดเดือนนี้', 'downtime_top', ''],
+    ['หยุดนานสุด HDF1', 'downtime_top', 'hdf1'],
+    ['งานซ่อมค้าง', 'mo_open', ''], ['รอช่างกี่ใบ', 'mo_open', ''], ['ช่างยังไม่มา', 'mo_open', ''],
+    ['ของไม่ผ่านวันนี้', 'defect_top', ''],
+    ['changing point ค้าง', 'fourm_pending', ''], ['ใบ 4M ค้าง', 'fourm_pending', ''], ['เปลี่ยน 4M รออนุมัติ', 'fourm_pending', ''],
+    ['คนมากี่คน HDF1', 'attendance', 'hdf1'], ['ใครลาวันนี้', 'attendance', ''], ['กำลังคน HDF1', 'attendance', 'hdf1'], ['คนครบไหม', 'attendance', ''],
+    ['ทำได้กี่ชิ้น HDF1', 'production', 'hdf1'], ['ผลิตได้เท่าไหร่ เดือนนี้ HDF1', 'production', 'hdf1'], ['ยอด HDF1 เดือนนี้', 'production', 'hdf1'],
+  ];
+  for (const [s, intent, subject] of cases) {
+    const q = parseQuestion(s, T);
+    assert.equal(q.intent, intent, s);
+    assert.equal(q.subject, subject, s);
+  }
+  assert.equal(parseQuestion('ยอดขายเดือนนี้', T).intent, null, 'ยอดขาย ยังไม่มีเครื่องมือ — ต้องไม่ถูกตีเป็นยอดผลิต');
+});

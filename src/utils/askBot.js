@@ -87,23 +87,25 @@ export function periodFromText(text, today) {
 /* ลำดับสำคัญ: OEE → downtime → ยอดผลิต ("oee ผลิต" = ถาม OEE ไม่ใช่ยอด) */
 export const INTENTS = [
   /* "ต่ำสุด" มาก่อน "oee" เฉยๆ · "ตอนนี้" มาก่อน "downtime สูงสุด" — ลำดับคือความหมาย ห้ามสลับ */
-  { key: 'oee_lowest', re: /(oee|โออีอี).*(ต่ำ|แย่|น้อย)(สุด|ที่สุด)|(ต่ำ|แย่|น้อย)(สุด|ที่สุด).*(oee|โออีอี)|lowest|worst/, defaultPeriod: 'today', needSubject: null },
-  { key: 'oee', re: /oee|โออีอี/, defaultPeriod: 'today', needSubject: 'line' },
-  { key: 'down_now', re: /((down\s*time|ดาว(น์)?\s*ไทม์|หยุด).*(ตอนนี้|ขณะนี้|อยู่ไหม|อยู่มั้ย|อยู่บ้าง|now))|((ตอนนี้|ขณะนี้|now).*(down\s*time|ดาว(น์)?\s*ไทม์|หยุด))/, defaultPeriod: null, needSubject: null },
-  { key: 'downtime_top', re: /down\s*time|ดาว(น์)?\s*ไทม์|เครื่องหยุด|หยุดเครื่อง/, defaultPeriod: 'week', needSubject: null },
-  { key: 'mo_open', re: /(^|[^a-z])mo([^a-z]|$)|แจ้งซ่อม|ใบซ่อม/, defaultPeriod: null, needSubject: null },
-  { key: 'fourm_pending', re: /4\s*m|โฟร์เอ็ม/, defaultPeriod: null, needSubject: null },
-  { key: 'defect_top', re: /ของเสีย|defect|(^|[^a-z])ng([^a-z]|$)/, defaultPeriod: 'week', needSubject: null },
-  { key: 'attendance', re: /มาทำงาน|เช็คชื่อ|ขาดงาน|คนขาด|มากี่คน|attendance/, defaultPeriod: 'today', needSubject: null },
-  { key: 'production', re: /ยอดผลิต|ผลิต|กี่ชิ้น|output|production/, defaultPeriod: 'month', needSubject: 'any' },
+  { key: 'oee_lowest', re: /(oee|โออีอี|ประสิทธิภาพ|เปอร์เซ็นต์เครื่อง).*(ต่ำ|แย่|น้อย)(สุด|ที่สุด)|(ต่ำ|แย่|น้อย)(สุด|ที่สุด).*(oee|โออีอี|ประสิทธิภาพ|เปอร์เซ็นต์เครื่อง)|lowest|worst/, defaultPeriod: 'today', needSubject: null },
+  { key: 'oee', re: /oee|โออีอี|ประสิทธิภาพ|เปอร์เซ็นต์เครื่อง/, defaultPeriod: 'today', needSubject: 'line' },
+  { key: 'down_now', re: /((down\s*time|ดาว(น์)?\s*ไทม์|หยุด|เครื่องเสีย|เครื่องพัง|ดาวน์).*(ตอนนี้|ขณะนี้|อยู่ไหม|อยู่มั้ย|อยู่บ้าง|now))|((ตอนนี้|ขณะนี้|now).*(down\s*time|ดาว(น์)?\s*ไทม์|หยุด|เครื่องเสีย|เครื่องพัง|ดาวน์))|(ไลน์|เครื่อง)ไหน(หยุด|ดาวน์|เสีย|พัง)/, defaultPeriod: null, needSubject: null },
+  { key: 'downtime_top', re: /down\s*time|ดาว(น์)?\s*ไทม์|เครื่องหยุด|หยุดเครื่อง|เครื่องเสีย|เครื่องพัง|หยุดนาน|สาเหตุ(ที่)?หยุด/, defaultPeriod: 'week', needSubject: null },
+  { key: 'mo_open', re: /(^|[^a-z])mo([^a-z]|$)|แจ้งซ่อม|ใบซ่อม|งานซ่อม|รอช่าง|ช่างยังไม่มา/, defaultPeriod: null, needSubject: null },
+  { key: 'fourm_pending', re: /4\s*m|โฟร์เอ็ม|changing\s*point/, defaultPeriod: null, needSubject: null },
+  /* "งานเสีย" = คำที่หน้างานพิมพ์จริง (user ทัก 19/11: "วันนี้มีงานเสียอะไรบ้าง" ตอบไม่ได้) */
+  { key: 'defect_top', re: /ของเสีย|งานเสีย|ชิ้นงานเสีย|เสียอะไร|ของไม่ผ่าน|งานไม่ผ่าน|defect|reject|(^|[^a-z])ng([^a-z]|$)/, defaultPeriod: 'week', needSubject: null },
+  { key: 'attendance', re: /มาทำงาน|เช็คชื่อ|ขาดงาน|คนขาด|มากี่คน|คนมา|ใครลา|กำลังคน|คนครบ|attendance/, defaultPeriod: 'today', needSubject: null },
+  /* "ยอด" เดี่ยวๆ = ยอดผลิต แต่ "ยอดขาย" ไม่ใช่ (ยังไม่มีเครื่องมือ ⇒ ต้องตอบว่าไม่เข้าใจ) */
+  { key: 'production', re: /ยอดผลิต|ผลิต|กี่ชิ้น|ทำได้(กี่|เท่า)|ยอด(?!ขาย)|output|production/, defaultPeriod: 'month', needSubject: 'any' },
 ];
 
 /* คำที่ไม่ใช่ชื่อไลน์/พาร์ท — ตัดทิ้งก่อนเอาส่วนที่เหลือไปค้นชื่อ
    🔴 ภาษาไทยไม่มีเว้นวรรค ("ขอยอดผลิตงาน apron…") ⇒ ฝั่งไทยต้องตัดแบบ "ข้อความย่อย"
       แต่ฝั่งอังกฤษ/ตัวเลขตัดแบบ **ทั้งคำเท่านั้น** — ชื่อไลน์/พาร์ทส่วนใหญ่เป็นอักษรละติน
       ตัดแบบข้อความย่อยฝั่งนั้น = "TOPPER" เหลือ "PER" แล้วค้นผิดตัว */
-const THAI_FILLER = /โออีอี|มีเครื่อง|เครื่อง|หยุด|มี|ใคร|ต่ำที่สุด|ต่ำสุด|แย่ที่สุด|แย่สุด|น้อยที่สุด|น้อยสุด|ตอนนี้|ขณะนี้|อยู่ไหม|อยู่มั้ย|อยู่บ้าง|ไหนบ้าง|แจ้งซ่อม|ใบซ่อม|โฟร์เอ็ม|ของเสีย|มาทำงาน|เช็คชื่อ|ขาดงาน|คนขาด|มากี่คน|กี่คน|กี่ใบ|ค้าง|รออนุมัติ|อนุมัติ|ไหม|มั้ย|ไหน|อยู่|ดาว(น์)?\s*ไทม์|เครื่องหยุด|หยุดเครื่อง|ยอดผลิต|ผลิต|กี่ชิ้น|สูงสุด|มากที่สุด|มากสุด|อันดับ|อะไร|บ้าง|เท่าไหร่|เท่าไร|ไปแล้ว|แล้ว|ได้|ไป|ของ|ขอ|ยอด|ดู|หน่อย|ครับ|ค่ะ|คะ|นะ|ไลน์|งาน|ชิ้น|กี่|ที/g;
-const LATIN_FILLER = /\b(lowest|worst|now|mo|4\s*m|ng|defects?|attendance|oee|down\s*time|downtime|top|line|output|production|today|yesterday|this|last|week|month)\b|[?？!]/g;
+const THAI_FILLER = /โออีอี|ประสิทธิภาพ|เปอร์เซ็นต์เครื่อง|เครื่องเสีย|เครื่องพัง|หยุดนาน|สาเหตุที่|สาเหตุ|ดาวน์|งานซ่อม|ช่างยังไม่มา|รอช่าง|ของไม่ผ่าน|งานไม่ผ่าน|เปลี่ยน|คนมา|ใครลา|กำลังคน|คนครบ|ทำได้|นาน|พัง|บ่อยที่สุด|บ่อยสุด|บ่อย|ชิ้นงานเสีย|งานเสีย|เสีย|มีเครื่อง|เครื่อง|หยุด|มี|ใคร|ต่ำที่สุด|ต่ำสุด|แย่ที่สุด|แย่สุด|น้อยที่สุด|น้อยสุด|ตอนนี้|ขณะนี้|อยู่ไหม|อยู่มั้ย|อยู่บ้าง|ไหนบ้าง|แจ้งซ่อม|ใบซ่อม|โฟร์เอ็ม|ของเสีย|มาทำงาน|เช็คชื่อ|ขาดงาน|คนขาด|มากี่คน|กี่คน|กี่ใบ|ค้าง|รออนุมัติ|อนุมัติ|ไหม|มั้ย|ไหน|อยู่|ดาว(น์)?\s*ไทม์|เครื่องหยุด|หยุดเครื่อง|ยอดผลิต|ผลิต|กี่ชิ้น|สูงสุด|มากที่สุด|มากสุด|อันดับ|อะไร|บ้าง|เท่าไหร่|เท่าไร|ไปแล้ว|แล้ว|ได้|ไป|ของ|ขอ|ยอด|ดู|หน่อย|ครับ|ค่ะ|คะ|นะ|ไลน์|งาน|ชิ้น|กี่|ที|สุด/g;
+const LATIN_FILLER = /\b(changing\s*point|reject|lowest|worst|now|mo|4\s*m|ng|defects?|attendance|oee|down\s*time|downtime|top|line|output|production|today|yesterday|this|last|week|month)\b|[?？!]/g;
 const THAI_RUN = /([฀-๿]+)/;
 /* 🔴 ห้ามตัดคำกลางพยางค์ — "ที" ใน "ชุดที่" ตามด้วยไม้เอก ⇒ ไม่ใช่คำว่า "ที" (เคสจริงตอนลองถาม 19/11)
    ⇒ ตัดได้เฉพาะเมื่อตัวถัดไป **ไม่ใช่** สระบน/ล่าง/วรรณยุกต์ (อักขระประกอบของพยางค์เดียวกัน) */
@@ -120,10 +122,13 @@ function stripPeriodWords(t) {
   return s.replace(/(^|\s)(25|20)\d{2}(?=\s|$)/g, ' ');
 }
 
+/* คำไทยสั้นที่ตัดแบบข้อความย่อยไม่ได้ ("ใบ"/"คน" อยู่ในคำอื่นเยอะ) ⇒ ตัดเฉพาะตอนยืนเดี่ยวเป็นคำ */
+const SOLO_THAI = new Set(['ใบ', 'คน', 'ลา', 'ช่าง', 'ซ่อม', 'ครบ', 'ไม่ผ่าน']);
+
 function subjectOf(t) {
   return stripPeriodWords(t).split(THAI_RUN)
     .map(part => (THAI_RUN.test(part) ? stripThaiFiller(part) : part.replace(LATIN_FILLER, ' ')))
-    .join(' ').replace(/\s+/g, ' ').trim();
+    .join(' ').split(/\s+/).filter(w => w && !SOLO_THAI.has(w)).join(' ').trim();
 }
 
 /**
