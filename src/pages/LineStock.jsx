@@ -60,6 +60,7 @@ import { loadProductsMaster } from '../utils/useProducts';
 import { INFLOW_MODES, inflowModeOf, inflowPatchFor, inflowModesFor } from '../utils/stockReceipts';
 import { IconButton, DeleteButton } from '../components/IconButton';
 import { tr } from '../utils/i18n';
+import { directSheetRows } from '../utils/bomTree';   // 🌳 ลูกตรงแบบ SAP (19/11)
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 import { askConfirm } from '../utils/askConfirm';
 
@@ -210,7 +211,7 @@ function StockTab({ role, scope }) {
       // ⚠️ view นี้โตเกิน 1000 แถวได้ — select เฉยๆ โดนตัดเงียบแล้วยอดสต็อกหายจากจอเขียนหลักของ store (QC flow-audit #30)
       fetchAllPages(() => supabaseDR.from('line_stock_summary').select('*'),
         { orderBy: ['line_name', 'mat_no'] }),
-      fetchAllPages(() => supabaseDR.from('bom_items').select('product_id, mat_no, part_name').eq('is_active', true),
+      fetchAllPages(() => supabaseDR.from('bom_items').select('product_id, parent_mat, mat_no, part_name').eq('is_active', true),
         { orderBy: 'id' }),
       fetchAllPages(() => supabaseDR.from('dr_products').select('id, name, mat_no, line_name, p_no').eq('is_active', true),
         { orderBy: ['line_name', 'name', 'id'] }),
@@ -233,8 +234,10 @@ function StockTab({ role, scope }) {
     setProducts(prods || []);
     const bm = {};
     const pb = {};
-    (boms || []).forEach(b => {
-      if (!bm[b.mat_no]) bm[b.mat_no] = b.part_name;
+    (boms || []).forEach(b => { if (!bm[b.mat_no]) bm[b.mat_no] = b.part_name; });
+    // 🌳 19/11: "สินค้านี้ใช้อะไร" = ลูกตรงเท่านั้น (กติกา SAP) — หลานถูกใช้ที่ไลน์ของลูก
+    //    ไม่กรอง = ข้อเสนอปลายทางของพาร์ทหลานชี้ไปไลน์ของ FG ผิดไลน์
+    directSheetRows(boms || [], prods || []).forEach(b => {
       (pb[b.product_id] = pb[b.product_id] || []).push({ mat_no: b.mat_no, part_name: b.part_name });
     });
     setBomMap(bm);

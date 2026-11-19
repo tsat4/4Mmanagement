@@ -60,6 +60,7 @@ import { loadPartImages, partImageOf, imageCoverage } from '../utils/partImages'
 import { loadDocForms } from '../utils/docForms';
 import { downloadCsvDoc } from '../utils/csvDoc';
 import { tr } from '../utils/i18n';
+import { directSheetRows } from '../utils/bomTree';   // 🌳 ลูกตรงแบบ SAP (19/11)
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 
 /* 🧭 ทะเบียนมุมมองของบอร์ดสโตร์ (2026-09-25 · คำสั่ง user *"สับสนการใช้งาน แต่ละ tab มากๆ"*)
@@ -2590,8 +2591,11 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
       // 3) BOM ของ product ที่เกี่ยวข้อง + kanban standards ของพาร์ทย่อย
       const productIds = [...new Set(dem.map(d => d.product?.id).filter(Boolean))];
       if (productIds.length === 0) { setBomMap({}); setLoading(false); return; }
-      const { data: boms } = await supabaseDR.from('bom_items')
+      const { data: bomsRaw } = await supabaseDR.from('bom_items')
         .select('*').in('product_id', productIds).eq('is_active', true);
+      // 🌳 19/11: ใบผลิตของสินค้าใช้แค่ "ลูกตรง" (กติกาเดียวกับตอน confirm) — หลานให้ใบของลูกเรียกเอง
+      //    ไม่กรอง = 100→200→500 ขอ 500 ตามใบของ 100 อีกรอบ (ซ้ำ + qty ต่อ 1 ลูก ไม่ใช่ต่อ 1 แม่)
+      const boms = directSheetRows(bomsRaw || [], dem.map(d => d.product).filter(Boolean));
       const bm = {};
       (boms || []).forEach(b => { (bm[b.product_id] = bm[b.product_id] || []).push(b); });
       setBomMap(bm);
