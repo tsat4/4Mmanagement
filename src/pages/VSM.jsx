@@ -44,6 +44,7 @@ import { liveChannel } from '../utils/liveChannel';
 import { DeleteButton } from '../components/IconButton';
 import { tr } from '../utils/i18n';
 import InfoMore from '../components/InfoMore';   // ⓘ คำอธิบายพับ (UI §6.10)
+import { directSheetRows } from '../utils/bomTree';   // 🌳 ลูกตรงแบบ SAP (19/11)
 
 const monthKeyNow = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; };
 // วันงานตามกฎระบบ: ก่อน 08:00 = วันก่อนหน้า (กะดึกข้ามวัน) — ห้าม toISOString (UTC เพี้ยน)
@@ -192,10 +193,11 @@ export default function VSM() {
       // BOM ของ FG → รู้ว่าต้องดึง routing/สต๊อกของพาร์ทลูกตัวไหนบ้าง
       // ⚠ error ของ supabase คืน data:null (ไม่ใช่ undefined) — default `= []` ไม่ทำงาน ต้อง throw ให้ toast บอกจริง
       const { data: bomRaw, error: bomErr } = await supabaseDR.from('bom_items')
-        .select('mat_no, part_no, part_name, qty_per_unit, supplier, source_line')
+        .select('product_id, parent_mat, mat_no, part_no, part_name, qty_per_unit, supplier, source_line')
         .eq('product_id', fg.id).eq('is_active', true);
       if (bomErr) throw new Error(`โหลด BOM ไม่สำเร็จ: ${bomErr.message}`);
-      const bomItems = bomRaw || [];
+      // 🌳 19/11: ลูกตรงของ FG เท่านั้น (กติกา SAP) — แถวหลานในใบนี้ไม่ใช่ลูกของ FG (qty เป็นต่อ 1 ลูก)
+      const bomItems = directSheetRows(bomRaw || [], [{ id: fg.id, mat_no: fg.mat_no }]);
 
       const allMats = [fg.mat_no, ...bomItems.map(b => b.mat_no)].filter(Boolean);
       const childLines = bomItems

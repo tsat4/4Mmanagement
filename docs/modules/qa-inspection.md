@@ -82,6 +82,16 @@
 - dry-run 13/11 15:38–16:00: จับเหตุการณ์ได้ 5 งาน (LINE C/D เปลี่ยนรุ่น) แต่ **ผูกพาร์ทในระบบตรวจได้ 0** — พาร์ทที่ผลิตช่วงนั้นยังไม่มีจุดตรวจใน `/qa-setup`
 - user ตัดสิน 13/11: **First ยังไม่ผ่าน = เตือนฝั่งผลิตเฉยๆ ไม่ล็อก** · **Middle ตามยอด lot size** (ตามที่ออกแบบไว้)
 - 🎯 **ต่อ 1 ล็อต = เรียก 3 ครั้ง: First ชิ้นแรก · Middle กลางล็อต · End ครบล็อต** (13/11 คำสั่ง user — "60/61 สแกนใบละ 10 แต่ลอท 500 → เรียก 1/250/500 ไม่ใช่ทุกใบ")
+  · ⚠️ **19/11 M หายจากบอร์ด** — 17/11 07:04 มีคนสลับโหมด Middle เป็น "ตามเวลา" แล้วตั้ง 0 นาที (audit_log) ⇒ ตัวสแกนไม่สร้าง Middle เลย (เงื่อนไข `mid_after_min > 0`) · จอตั้งค่าเตือนแล้วเมื่อ `min`+0 หรือ `off` · **19/11 user สั่งคืนค่ากลางเป็น `lot` แล้ว** (updated_by บันทึกไว้)
+- 🎛️ **กฎรายพาร์ท — ความถี่ Middle + n ต่อรอบ (19/11 · คำสั่ง user "QA setup frequency กับ sampling rate ของแต่ละ product")**
+  · ตาราง **`qa_fme_part_rules`** (Main · คีย์ `mat_no` · migration `20261119_qa_fme_part_rules_freq_sample_main.sql` apply แล้ว) เพิ่ม
+    `mid_mode` (null=ค่ากลาง · `lot` ตามยอดผลิตที่คอนเฟิม · `min` ตามเวลา · `off` ไม่ตรวจ Middle) · `mid_every_min` · `sample_n`
+  · จอ = แผง **🎛️ กฎรายพาร์ท** ใน ⚙️ ตั้งค่าการเรียกตรวจ (`src/components/QaFmePartRules.jsx` · `qa:manage`) · แถวพาร์ทจาก `qa_parts` ที่ผูก MAT
+  · edge `qa-fme-scan`: `mid_mode` รายพาร์ทชนะค่ากลาง · แถวเก่า `is_active=false` = ปิด Middle เหมือนเดิม ·
+    **ตามเวลา = ซ้ำทุก N นาทีนับจากเริ่มรุ่น** จนรุ่นจบ (เดิมเรียกครั้งเดียว) · เพดาน `mid_max_per_run`
+  · **n ต่อรอบ = ขั้นต่ำ** (user เลือก) — `evalSequence(pieces, actions, { minPieces })` (`utils/qaSequential.js`):
+    รอบ 1 ยังไม่ตก = ผ่านติดกัน n · หลังตก/หลัง action = ผ่านติดกัน max(2, n) · ตกสะสม 2 = alarm เหมือนเดิม ·
+    n=1/ไม่มีแถว = พฤติกรรมเดิมเป๊ะ · ใช้ทุกสเตจ · ใบที่ปิดแล้วไม่ถูกตัดสินซ้ำด้วยค่าใหม่ (`QaCheckSheet`)
   · `qa_fme_config.mid_lot_ratio = 0.5` · หลักที่ลงตัวกับขนาดล็อต (500, 1000…) = **End `lot_end`** · หลักอื่น (250, 750…) = Middle · ผลิตเกินล็อต = รอบถัดไปวนต่อ
   · End ตอนเปลี่ยนรุ่น/ปิดกะ (`seq = 0`) **ไม่เรียกซ้ำ** ถ้าจบห่างจาก End ครบล็อตไม่ถึง `mid_min_pcs`
   · 🔴 **รุ่น = สินค้า ไม่ใช่ MAT** — MAT ที่เลขพาร์ทลูกค้าแกนเดียวกัน (`partCoreOf` สำเนาในไฟล์ edge · ต้องตรงกับ `src/utils/partGroup.js`) ยุบเป็นรุ่นเดียว:
@@ -367,4 +377,6 @@ user เลือก: **หัวหน้า QA 1 ขั้น** · **ไม่
 - จอ: `src/components/QaSheetApproval.jsx` — แผงใต้สรุปใบ (อนุมัติผ่าน `confirmSign` · ตีกลับต้องพิมพ์เหตุผล ≥5 ตัว) +
   `QaApprovalPendingBar` บนสุดของแท็บใบตรวจ "ใบรออนุมัติ N ใบ" (ขอบเขตไลน์เดียวกับจอ · เพดาน 200 · อ่านไม่ได้ = เขียนบอก)
   · เขียนด้วย `.eq('approval_status','pending')` + `checkWriteRows` (กันกดซ้อน/ RLS 0 แถว) · แจ้งคนตรวจทาง `createNotification`
-- ⚠️ ยังไม่ทำ: map แจ้งเตือน `qa_inspection_sheets` → `/qa?tab=sheet` (ต้องแก้คู่ App.jsx + edge `send-push` + deploy edge · ด่าน `notifRoute.test`)
+- 🔔 แจ้งเตือน (19/11): `qa_inspection_sheets` → `/qa?tab=sheet` ทั้งกระดิ่ง (`NOTIF_ROUTE`) และ Web Push (`send-push` v15 · deploy แล้ว · verify_jwt=false)
+  · แจ้งเตือนอนุมัติ/ตีกลับส่ง `link: /qa?tab=sheet&sheet=<id>` ⇒ กดแล้วเปิดใบนั้นตรง (`QaCheckSheet` อ่าน `?sheet=` → ตั้งพาร์ท/วัน/กะ/รอบ · นอกขอบเขต/ไม่พบ = toast บอกเหตุ)
+  · alarm ตกซ้ำ (`qa_seq_alarm` · ไม่มี link) ได้ปลายทางหน้าใบตรวจจาก map ด้วย · `createNotification()` (`lib/pmNotify.js`) รับ `link` ได้แล้ว

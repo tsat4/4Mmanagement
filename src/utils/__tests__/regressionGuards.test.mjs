@@ -9519,8 +9519,24 @@ test('🔌 machine-usability-not-mo-status — "ใบยังเปิด" ≠
   assert.doesNotMatch(map, /openNos\.has\(/,
     '\n\n❌ ผังกลับไปตัดสินด้วย openNos (มีใบเปิด = เสี่ยง) — นั่นคือบั๊กที่หน้างานแจ้ง\n');
   /* คิวรีต้องดึงของที่กฎใช้จริง ไม่งั้นกฎเดินโดยไม่มีข้อมูล (undefined เงียบๆ) */
-  assert.match(map, /select\('machine_no, repair_done_at'\)/,
-    '\n\n❌ คิวรีใบซ่อมของผังไม่ได้ดึง repair_done_at — กฎใหม่จะตัดสินไม่ได้\n');
+  const moSel = map.match(/from\('mtn_orders'\)\s*\.select\('([^']*)'\)/);
+  assert.ok(moSel, '\n\n❌ หาคิวรี mtn_orders ของผังไม่เจอ\n');
+  for (const [col, why] of [
+    ['repair_done_at', 'กฎชั้น ② แยก "ซ่อมเสร็จรอเอกสาร" ออกจาก "ยังซ่อมไม่เสร็จ" ไม่ได้ (บั๊ก 7 วัน)'],
+    ['id', 'จอคลิกเจาะไปหาใบต้นตอไม่ได้ (19/11 user ทัก "น่าจะคลิกเจาะไปหาต้นตอได้")'],
+    ['mo_no', 'จอบอกไม่ได้ว่าใบไหน — ลิงก์ที่ไม่บอกเลขใบ คนยังต้องไปไล่หาเองอยู่ดี'],
+  ]) {
+    assert.ok(moSel[1].split(',').map(x => x.trim()).includes(col),
+      `\n\n❌ คิวรีใบซ่อมของผังไม่ได้ดึง ${col} — ${why}\n   ตอนนี้ดึง: ${moSel[1]}\n`);
+  }
+
+  /* 🚦 19/11 — "ใช้ได้ชั่วคราว" ต้องเป็นเหลืองจริงบนผัง ห้ามยุบเหลือ เสี่ยง/ไม่เสี่ยง (user ทัก) */
+  assert.match(map, /supTemp/,
+    '\n\n❌ ผังไม่รู้จัก supTemp — "ใช้ได้ชั่วคราว" จะกลายเป็นเขียว "ปกติ" (เงียบกว่าความจริง)\n');
+  assert.match(map, /cat: s => !s\.supList\.length \? 'idle' : s\.supAtRisk \? 'down' : s\.supTemp \? 'ok' : 'good'/,
+    '\n\n❌ แท็บ Supply Route ต้องมี 3 สี: down (แดง) · temp (เหลือง) · good (เขียว)\n');
+  assert.match(map, /mo: srcMoOf\(/,
+    '\n\n❌ รายการเครื่องบนจอไม่ได้แนบใบต้นตอ — กดแล้วเจาะต่อไม่ได้\n');
   assert.match(map, /'machines:supply:v3'[\s\S]{0,400}usability/,
     '\n\n❌ คิวรีทะเบียนเครื่องไม่ได้ดึง usability (หรือไม่ได้ bump คีย์ cache)\n');
 
@@ -12212,4 +12228,40 @@ test('📍 pos-pct-double-suffix — พิกัดหมุด pos_top/pos_lef
   }
   assert.deepEqual(bad, [],
     `\n\n❌ ต่อ "%" ท้าย pos_top/pos_left ดิบ (ค่าในฐานมี % อยู่แล้ว = "x%%" หมุดกองมุมซ้ายบน):\n   ${bad.join('\n   ')}\n   ใช้ \`\${parseFloat(p.pos_top)}%\`\n`);
+});
+
+/* ═══ 🤝 checkin-lent-out-lock — 2026-11-19 · คำสั่ง user "ไลน์ที่ยืมบันทึก · หัวหน้าหลักต้องรู้" ═══════════
+   📄 docs/modules/check-sheet-audit.md §คนยืมข้ามไลน์ · คนที่ถูกยืมออกกะนี้ = ไลน์ที่ยืมบันทึกฝั่งเดียว
+   (เดิม 2 ไลน์บันทึกทับกัน ใครกดทีหลังชนะ) + หัวหน้าต้นสังกัดได้แจ้งเตือนตอนถูกยืม */
+test('🤝 checkin-lent-out-lock — คนถูกยืมออก ห้ามต้นสังกัดเขียนทับ + ต้องแจ้งต้นสังกัด', () => {
+  const bad = [];
+  const ck = stripComments(readFileSync(join(ROOT, 'src/pages/Checkin.jsx'), 'utf8'));
+  const save = ck.slice(ck.indexOf('const handleSave'), ck.indexOf('const handleSave') + 4000);
+  if (!/const savable = displayed\.filter\(emp => !emp\._helperOutTo\)/.test(save)) bad.push('Checkin handleSave ไม่ตัดคนที่ถูกยืมออก (savable)');
+  const writePart = ck.slice(ck.indexOf('const skippedOut'), ck.indexOf('บันทึกเช็คชื่อสำเร็จ'));   // ช่วงที่เขียน DB (สรุป Telegram หลังจากนี้ใช้ displayed ได้)
+  if (/displayed\.(map|filter)\(/.test(writePart)) bad.push('Checkin handleSave ยังใช้ displayed เขียน DB (ต้องใช้ savable)');
+  if (!/notifyBorrowed\(emp, borrowLineId\)/.test(ck)) bad.push('Checkin ยืมคนแล้วไม่แจ้งหัวหน้าต้นสังกัด (notifyBorrowed)');
+  if (!/event: 'line_helper_borrowed'/.test(ck)) bad.push("Checkin ไม่ได้ยิง event 'line_helper_borrowed'");
+  const sl = stripComments(readFileSync(join(ROOT, 'src/pages/ScanLanding.jsx'), 'utf8'));
+  if (!/from\('line_helpers'\)/.test(sl) || !/lentToName \|\| lineById/.test(sl)) bad.push('ScanLanding ไม่ตัดสินขอบเขตที่ไลน์ที่ยืม — ต้นสังกัดยิงบัตรทับได้');
+  assert.deepEqual(bad, [], bad.join('\n'));
+});
+
+/* ── ตัด-จ่ายสต็อก "ตัดเต็ม ยอมติดลบ" (2026-11-19 · คำสั่ง user ปิดช่องโหว่ inbound→process→outbound) ──
+   เดิม 3 จุด "ตัดเท่าที่มี ส่วนที่ขาดปล่อยไป" ⇒ ยอดค้างสูงเกินจริงสะสม (วัด 30 วัน: ส่งลูกค้า 51 ใบ 8,124 ชิ้นไม่ถูกตัด)
+   ① ตัดวัตถุดิบตอนปิดใบ (DB `fn_take_raw` · migration 20261119c) ② จ่ายจาก STORE ③ ส่งลูกค้า
+   ทั้งหมดต้องหักเต็มแล้วเขียนบนจอว่าติดลบ — ห้ามถอยกลับไป "ไม่มีแถว = ไม่หัก" */
+test('🛡️ ตัด-จ่ายสต็อกต้องหักเต็ม (ติดลบได้) — STORE / ส่งลูกค้า / ตัดวัตถุดิบ', () => {
+  const bad = [];
+  const hk = stripComments(readFileSync(join(ROOT, 'src/pages/HeijunkaKanban.jsx'), 'utf8'));
+  if (/else if \(!st\) note/.test(hk)) bad.push('HeijunkaKanban.jsx deductStockForPick — STORE ไม่มีแถวแล้วไม่หัก');
+  if (/issueRows\.filter\(x => has\.has\(x\.mat_no\)\)/.test(hk)) bad.push('HeijunkaKanban.jsx confirmRound — หัก STORE เฉพาะตัวที่มีแถว');
+  if (!/STORE_NEG_NOTE/.test(hk)) bad.push('HeijunkaKanban.jsx — ไม่เขียนบนจอว่า STORE ติดลบ (STORE_NEG_NOTE)');
+  const cd = stripComments(readFileSync(join(ROOT, 'src/pages/CustomerDemand.jsx'), 'utf8'));
+  if (!/inflowDestOf\(sap, inflowRules\)/.test(cd) || !/negQty/.test(cd)) bad.push('CustomerDemand.jsx — ส่งเกินยอดในระบบแล้วไม่หักส่วนที่ขาด');
+  const mig = readFileSync(join(ROOT, 'supabase/migrations/20261119c_stock_full_deduct_qa_return_dr.sql'), 'utf8');
+  if (!/fn_qbin_return_receipt/.test(mig) || !/ตัดเกิน/.test(mig)) bad.push('migration 20261119c ถูกแก้/หาย');
+  assert.deepEqual(bad, [], `\n\n❌ ตัด-จ่ายสต็อกกลับไป "ตัดเท่าที่มี":\n   ${bad.join('\n   ')}\n`
+    + '   กฎ (user 19/11): ยอดในระบบไม่พอ = หักเต็ม ติดลบ แล้วพอเติม/รับเข้า ยอดหักล้างเอง · ต้องเขียนบนจอว่าติดลบ\n'
+    + '   📄 docs/modules/store-board-workflow.md §ตัดเต็ม ยอมติดลบ\n');
 });

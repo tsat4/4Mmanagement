@@ -117,21 +117,47 @@ export const matReqFlow = (r) => linearFlow({
    🔴 จำนวนที่เสนอ = จำนวนชุด × qtyPerRoot · แถว `flatDupe` (อัตราเชื่อไม่ได้) = เว้นว่างให้คนกรอก **ห้ามเดา** */
 const r3 = (n) => Math.round(n * 1000) / 1000;
 
-/** แถวให้เลือก: ตัวพาร์ทเอง (ชั้น 0) + ลูกทุกชั้น · ค่าเริ่ม = ใช้ทุกแถว */
-export function bomPickRows(root, kids = [], sets = 1) {
-  const n = Number(sets) > 0 ? Number(sets) : 1;
-  const out = [{
-    key: `root:${root?.mat_no || ''}`, level: 0, mat_no: root?.mat_no || '', description: root?.part_name || '',
-    unit: root?.uom || '', qty: n, use: true, rate: 1,
-  }];
-  for (const k of kids || []) {
+/** แถวให้เลือก = **ลูกทุกชั้นเท่านั้น** — เลือกแม่เพื่อตัดลูก ไม่ได้เบิกตัวแม่ (19/11 · user "เราจะไม่ตัดแม่สิ")
+ *  จำนวนลูก = จำนวนแม่ × qtyPerRoot · ค่าเริ่ม = ใช้ทุกแถว · ไม่มีลูก = [] (จอเขียนบอก) */
+export function bomPickRows(root, kids = [], parentQty = 1) {
+  const n = Number(parentQty) > 0 ? Number(parentQty) : 1;
+  return (kids || []).map(k => {
     const rate = !k.flatDupe && Number(k.qtyPerRoot) > 0 ? Number(k.qtyPerRoot) : null;
-    out.push({
+    return {
       key: `${k.level}:${k.mat_no}`, level: k.level || 1, mat_no: k.mat_no, description: k.part_name || '',
       unit: k.uom || '', qty: rate != null ? r3(n * rate) : '', use: true, rate, unsure: rate == null,
-    });
+    };
+  });
+}
+
+/** จำนวนลูกตามจำนวนแม่ใหม่ — แถวที่คนแก้เองแล้ว (`edited`) ไม่ทับ */
+export const rescalePickRows = (rows = [], parentQty = 1) => {
+  const n = Number(parentQty) > 0 ? Number(parentQty) : 1;
+  return rows.map(r => (r.edited || r.rate == null ? r : { ...r, qty: r3(n * r.rate) }));
+};
+
+/**
+ * พาร์ทแม่ให้เลือก — กรองตาม "พื้นที่" (SLoc ของใบ) ผ่านไลน์ผลิตของพาร์ท · มี BOM ขึ้นก่อน
+ * @param {Array} products  dr_products (mat_no, name, line_name, id, is_active)
+ * @param {{ slocOfLine?: (line:string)=>string|null, sloc?: string, bomIds?: Set|null }} o
+ * @returns {{ rows: Array, hiddenOtherArea: number, noArea: number }}
+ *   🔴 พาร์ทที่ไลน์ยังไม่ผูกพื้นที่ = ไม่รู้ ⇒ **ไม่ซ่อน** (นับใน `noArea` ให้จอเขียนบอก)
+ */
+export function parentPickList(products = [], { slocOfLine, sloc, bomIds = null } = {}) {
+  const want = String(sloc || '').trim().toUpperCase();
+  const seen = new Set(); const out = []; let hiddenOtherArea = 0; let noArea = 0;
+  for (const p of products || []) {
+    if (!p?.mat_no || p.is_active === false || seen.has(p.mat_no)) continue;
+    const area = slocOfLine && p.line_name ? slocOfLine(p.line_name) : null;
+    if (want && area && area !== want) { hiddenOtherArea += 1; continue; }
+    if (want && !area) noArea += 1;
+    seen.add(p.mat_no);
+    out.push({ ...p, area, hasBom: bomIds ? bomIds.has(p.id) : null });
   }
-  return out;
+  out.sort((a, b) => (Number(b.hasBom === true) - Number(a.hasBom === true))
+    || String(a.line_name || '').localeCompare(String(b.line_name || ''), 'th', { numeric: true })
+    || String(a.mat_no).localeCompare(String(b.mat_no), 'th', { numeric: true }));
+  return { rows: out, hiddenOtherArea, noArea };
 }
 
 /** แถวที่ติ๊ก "ใช้" → รายการในใบ (ข้ามแถวไม่มี MAT) */
