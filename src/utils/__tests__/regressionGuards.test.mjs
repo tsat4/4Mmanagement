@@ -9473,6 +9473,33 @@ test('↩️ mo-list-shows-resubmit — ใบที่ถูกตีกลั�
       + '   ขาด case = ตอบ 400 unknown event ⇒ ทั้ง Telegram และกระดิ่งเงียบสนิท\n');
   }
 });
+test('✍️ mo-print-tech-sign-box — ใบ DIE/JIG: ช่องเซ็นฝั่งช่าง = หัวหน้าแผนกช่าง + ป้ายตามทีมจริง', () => {
+  /* why (19/11 · หน้างานแจ้งจากใบจริง DIE-CM-111126-0063-M19):
+     *"มีแก้ใบ MO ของ die maintenance ที่ช่องมุมซ้ายล่าง ยังดึงข้อมูลมั่ว อันนี้ MO die
+       แต่ไปดึงชื่อช่างมา มันต้องดึงหัวหน้า/วิศวกร ช่างส่วนงานนั้น และลายเซ็น"*
+     ① ป้ายเขียน "JIG APPROVE" บนใบของทีม DIE (ป้ายตั้งต้นชุดเดียวใน /doc-forms)
+     ② ชื่อในช่อง = `tech_main` · วัดจริง 90 วัน: ใบ DIE 82 ใบ **tech_main_uid ว่างทั้ง 82**
+        ⇒ ช่องนั้นไม่เคยมีลายเซ็นเลย · ขณะที่ checker_uid (หัวหน้าแผนกช่าง ขั้น 4) มี 53 ใบ
+     🔴 ใบฝ่ายผลิต (AM) ไม่เปลี่ยน — ขั้น 4 ของใบผลิตเป็น "ฝ่ายที่แจ้ง" ไม่ใช่หัวหน้าช่าง */
+  const u = readFileSync(join(ROOT, 'src/utils/mtnMoForm.js'), 'utf8');
+  assert.match(u, /export function moTechSignBox/,
+    '\n\n❌ กฎช่องเซ็นฝั่งช่างต้องอยู่ใน mtnMoForm.js (pure) ที่เดียว\n');
+  assert.match(u, /if \(isToolTeamRow\(order\)\)[\s\S]{0,200}checker_uid/,
+    '\n\n❌ ทีมเครื่องมือต้องใช้ checker (หัวหน้าแผนกช่าง ขั้น 4) ไม่ใช่ tech_main\n');
+
+  const page = readFileSync(join(ROOT, 'src/pages/MtnRepair.jsx'), 'utf8');
+  /* ใบพิมพ์ต้องเรียกกฎ ไม่ใช่หยิบ tech_main มาใส่ช่องแรกเองอีก */
+  assert.match(page, /moTechSignBox\(o, moCodeOf\(/,
+    '\n\n❌ ใบพิมพ์ไม่ได้ใช้ moTechSignBox() — กลับไปหยิบ tech_main ใส่ช่องแรกเองแล้ว\n');
+  assert.doesNotMatch(page, /sign\(moSig\[0\], o\.tech_main/,
+    '\n\n❌ ช่อง 1 กลับไปผูก tech_main ตรงๆ — ใบ DIE จะไม่มีลายเซ็นอีก (82/82 ใบ)\n');
+  /* ป้ายต้องมาจากทะเบียนทีม ห้าม hardcode 'DIE APPROVE' ในหน้า */
+  assert.doesNotMatch(page, /'DIE APPROVE'|"DIE APPROVE"/,
+    '\n\n❌ อย่า hardcode ป้ายช่องเซ็นในหน้า — ต้องมาจาก mtn_teams.mo_code (moCodeOf)\n');
+  const t = readFileSync(join(ROOT, 'src/utils/mtnTeams.js'), 'utf8');
+  assert.match(t, /export function moCodeOf/,
+    '\n\n❌ moCodeOf หายจาก mtnTeams.js — ป้ายช่องเซ็นจะไม่รู้ว่าใบนี้ทีมอะไร\n');
+});
 test('🔌 machine-usability-not-mo-status — "ใบยังเปิด" ≠ "เครื่องใช้ไม่ได้"', () => {
   /* why (19/11 · คำสั่ง user): *"ใบแจ้งซ่อมเครื่องที่เป็น supply บางทีเค้าซ่อมไม่ได้ แต่แก้ไข
      เบื้องต้นให้ใช้ได้ระหว่างรอของมาเปลี่ยน · อยากมีปุ่มเปิดปิดเครื่อง ให้สถานะตรงกับหน้างาน"*
