@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useContext } from 'react'
 import { lineNameCompare } from '../utils/lineHierarchy';
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { useMergeParams } from '../utils/useTabParam'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase, supabaseDR } from '../supabaseClient'
@@ -870,10 +870,19 @@ function HistoryModal({ inspection, checkpoints: cpsFromPage, jig, onClose, user
 const pmHasInput = (results, notes) => !!(notes && String(notes).trim())
   || Object.values(results || {}).some(r => r && ['v1', 'v2', 'v3', 'attr', 'note', 'mval'].some(f => r[f] !== '' && r[f] != null))
 
-export default function PMCheckData() {
+/* 🧭 mode (19/11 · คำสั่ง user "AM ต้องมีหน้าบันทึกของตัวเอง · ปนกับ PM ของช่าง")
+   'pm' (ค่าเริ่ม · /pm?tab=check) = เฉพาะทีมช่าง — เปิดด้วยทีม AM จะถูกพาไป /daily-checker?tab=amcheck
+   'am' (/daily-checker?tab=amcheck) = เฉพาะทีม AM — ?dept= ที่ไม่ใช่ทีม AM ถูกแทนด้วยทีม AM ตัวแรก
+   แยกด้วย `isAmTeam()` (mtn_teams.kind) เท่านั้น ห้าม hardcode 'production' */
+export default function PMCheckData({ mode = 'pm' }) {
+  const amMode = mode === 'am'
   const [searchParams] = useSearchParams()
   const setParams = useMergeParams()
-  const department = searchParams.get('dept') || 'maintenance'
+  const rawDept = searchParams.get('dept')
+  const firstAmTeam = pmTeamsSync().find(t => isAmTeam(t.key))?.key
+  const department = amMode
+    ? ((rawDept && isAmTeam(rawDept)) ? rawDept : (firstAmTeam || rawDept || 'maintenance'))
+    : (rawDept || 'maintenance')
   const equipParam = searchParams.get('equip')
 
   const [userId, setUserId] = useState(null)
@@ -1428,6 +1437,16 @@ export default function PMCheckData() {
     return 'pass'
   }
 
+  /* 🔴 ตรวจไม่ครบ = บันทึกไม่ได้ (19/11) — บอกเลขข้อที่ขาด (ลำดับเดียวกับชิป "ยังไม่ตรวจ") + พาไปข้อแรก */
+  const blockIncomplete = () => {
+    const miss = checkpoints.filter(cp => !cpFilled(cp))
+    if (!miss.length) return false
+    const nos = miss.map(cp => checkpoints.indexOf(cp) + 1)
+    toast.error(`บันทึกไม่ได้ — ยังไม่ได้ตรวจ ${miss.length} จุด (ข้อ ${nos.slice(0, 10).join(', ')}${nos.length > 10 ? ' …' : ''}) — ตรวจให้ครบทุกข้อก่อน`)
+    setActiveShimId(null); setActiveCpId(miss[0].id)
+    return true
+  }
+
   /* 🚩 โหลดประวัติ NG ของเครื่องที่เลือก — guard กัน stale (กฎเขียน DB ข้อ 4) */
   useEffect(() => {
     let alive = true
@@ -1449,6 +1468,7 @@ export default function PMCheckData() {
 
   const handleSave = async () => {
     if (checkpoints.length === 0) return
+    if (blockIncomplete()) return   // ด่านซ้ำ — ปุ่มเช็คแล้วแต่ห้ามพึ่งปุ่มอย่างเดียว
     // 🔴 จุดตรวจ/ใบตรวจต้องเป็นของเครื่อง+แผนกที่เปิดอยู่จริง (กันคำตอบเก่าทับ — ดู loadReqRef)
     //    checklistId + checkpoints ถูก set คู่กันใน callback เดียวที่ผ่าน live() แล้ว ⇒ เช็ค key พอ
     if (cpLoad.status !== 'ok' || cpLoad.key !== `${selectedJig?.id}|${department}`) {
@@ -1669,10 +1689,20 @@ export default function PMCheckData() {
   const showSidebar = !isNarrow || !selectedJig
   const showMain = !isNarrow || !!selectedJig
 
+  /* 🧭 หน้าช่าง (mode pm) ถูกเปิดด้วยทีม AM (ลิงก์เก่า/ป้าย QR/แจ้งเตือน) → พาไปหน้าบันทึก AM ของตัวเอง */
+  if (!amMode && isAmTeam(department)) {
+    const q = new URLSearchParams({ tab: 'amcheck', dept: department })
+    if (equipParam) q.set('equip', equipParam)
+    if (searchParams.get('line')) q.set('line', searchParams.get('line'))
+    return <Navigate to={`/daily-checker?${q.toString()}`} replace />
+  }
+  /* ปุ่มเลือกทีม = เฉพาะทีมของโหมดนี้ (AM ไม่ปนกับทีมช่าง) */
+  const modeTeams = teams.filter(t => isAmTeam(t.key) === amMode)
+
   return (
     <Page width="full">
-    {/* UI-STANDARD 2026-09-24 — หัวเพจมาตรฐาน (ใน PmHub ชื่อถูกซ่อน เหลือหัวของ hub ชั้นเดียว) */}
-    <PageHeader title={tr('บันทึกผลตรวจ PM')} icon="✅" />
+    {/* UI-STANDARD 2026-09-24 — หัวเพจมาตรฐาน (ใน PmHub/DailyChecker ชื่อถูกซ่อน เหลือหัวของ hub ชั้นเดียว) */}
+    <PageHeader title={tr(amMode ? 'บันทึกผลตรวจ AM' : 'บันทึกผลตรวจ PM')} icon="✅" />
     {/* 🔐 เปิดทีมอื่นอยู่ — ดูได้ แต่ลงผล/อนุมัติ/เลื่อนรอบไม่ได้ (ต้องเขียนบอก ห้ามปุ่มเทาเฉยๆ) */}
     {!deptWrite.ok && (
       <div style={{ margin: '0 0 10px', padding: '8px 10px', borderLeft: '4px solid var(--amber)',
@@ -1684,11 +1714,11 @@ export default function PMCheckData() {
       {/* Sidebar (จอแคบ = เต็มความกว้าง) */}
       {showSidebar && (
       <div style={{ ...S.sidebar, ...(isNarrow ? { width: '100%', borderRight: 'none', position: 'static', height: 'auto' } : null) }}>
-        <div style={{ ...S.deptBar, paddingTop: 12 }}>
-          {teams.map(d => <button key={d.key} onClick={() => setDept(d.key)} style={S.deptBtn(department === d.key, d.color || DEPT_COLORS[d.key] || '#3dd65c')}>{d.icon ? `${d.icon} ` : ''}{tr(d.label)}</button>)}
-        </div>
+        {modeTeams.length > 1 && <div style={{ ...S.deptBar, paddingTop: 12 }}>
+          {modeTeams.map(d => <button key={d.key} onClick={() => setDept(d.key)} style={S.deptBtn(department === d.key, d.color || DEPT_COLORS[d.key] || '#3dd65c')}>{d.icon ? `${d.icon} ` : ''}{tr(d.label)}</button>)}
+        </div>}
         {/* AM (ผลิตตรวจเอง) กับ PM (ช่าง) เป็นคนละงาน — บอกให้ชัดว่าแท็บที่เลือกอยู่คืออะไร */}
-        <div style={{ padding: '0 16px 10px', fontSize: 11, color: 'var(--muted)', lineHeight: 1.5 }}>
+        <div style={{ padding: modeTeams.length > 1 ? '0 16px 10px' : '12px 16px 10px', fontSize: 11, color: 'var(--muted)', lineHeight: 1.5 }}>
           <b style={{ color: deptColor }}>{teamKind(department).short} · {teamKind(department).full}</b> — {teamKind(department).desc}
         </div>
         <div style={{ padding: '0 16px 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -2169,24 +2199,19 @@ export default function PMCheckData() {
                       })()}
                       <InspectorCodeField value={inspectorCode} onChange={setInspectorCode} required style={{ marginTop: 8 }} />
                       <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder={tr('หมายเหตุ (ถ้ามี)...')} style={{ marginTop: 8 }} />
-                      {/* 🔴 ปุ่มบันทึก "สีต้องตรงกับความจริง" (06/10 · คอมเมนต์ทีม MTN ข้อ 3)
-                          *"ถ้ากรอกรายละเอียดไม่ครบทุกจุด ให้ปุ่มบันทึกขึ้นเป็นสีแดงหรือสีเหลืองไว้ก่อนได้มั้ย
-                            ตอนนี้เป็นสีเขียว ถ้าพนักงานกดข้าม จะสามารถบันทึกได้ถึงข้อมูลจะไม่ครบ"*
-                          ⚠️ **ห้ามบล็อกไม่ให้กด** — ระบบตั้งใจให้บันทึกค้างได้ (ตรวจไม่ครบ = `pending`
-                             ไม่เลื่อนรอบ PM · ดูตอน save) ช่างตรวจค้างแล้วกลับมาทำต่อเป็นงานจริง
-                          ⇒ แก้ที่ "สี + ถามยืนยัน" ไม่ใช่ปิดปุ่ม: ไม่ครบ = เหลือง + confirm บอกจำนวนที่ขาด */}
-                      <button onClick={async () => {
-                        if (!isFormReady && !await askConfirm(
-                          `ยังกรอกไม่ครบ ${nMissing} จุด จาก ${checkpoints.length} จุด\n\n`
-                          + `[ตกลง] = บันทึกค้างไว้ก่อน — ผลตรวจจะเป็น "ยังไม่ครบ" และ**ไม่เลื่อนรอบ PM**\n`
-                          + `[ยกเลิก] = กลับไปกรอกให้ครบ`)) return
+                      {/* 🔴 ตรวจไม่ครบ = บันทึกไม่ได้ (19/11 · คำสั่ง user — มาตรฐานเดียวกับใบตรวจ QA)
+                          เดิม (06/10) "เตือน + ถามยืนยัน แล้วบันทึกค้างเป็น pending" — user เลือกให้ทุกระบบตรวจ (QA/PM/AM) บล็อกเหมือนกัน
+                          · ปุ่มยังกดได้เพื่อบอกเหตุ: ขึ้นเลขข้อที่ยังไม่ตรวจ (เลขเดียวกับชิป "ยังไม่ตรวจ") + พาไปข้อแรกที่ขาด
+                          · ปุ่มยังเหลือง + บอกจำนวนที่ขาด (สีตรงกับความจริง · คอมเมนต์ทีม MTN 06/10) · ด่านซ้ำใน handleSave */}
+                      <button onClick={() => {
+                        if (!isFormReady) { blockIncomplete(); return }
                         handleSave()
                       }} disabled={saving || !canRecord}
                         style={{ ...S.saveBtn,
                           background: isFormReady ? 'var(--accent)' : 'var(--accent2)',
                           color: isFormReady ? 'var(--accent-ink)' : '#1a1a1a',
                           opacity: (saving || !canRecord) ? 0.6 : 1 }}>
-                        {saving ? 'กำลังบันทึก...' : !canRecord ? `ไม่มีสิทธิ์บันทึกผลตรวจ ${isAmTeam(department) ? 'AM' : 'PM'}` : isFormReady ? 'บันทึกผลการตรวจ' : `บันทึก (ยังไม่ครบ ${nMissing} จุด)`}
+                        {saving ? 'กำลังบันทึก...' : !canRecord ? `ไม่มีสิทธิ์บันทึกผลตรวจ ${isAmTeam(department) ? 'AM' : 'PM'}` : isFormReady ? 'บันทึกผลการตรวจ' : `ยังบันทึกไม่ได้ — ยังไม่ตรวจ ${nMissing} จุด`}
                       </button>
                     </>
                   )}

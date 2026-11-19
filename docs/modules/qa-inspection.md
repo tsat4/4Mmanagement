@@ -351,3 +351,20 @@ user: *"หน้า QA พวกการตรวจสอบและทุ�
 **จอที่ยังไม่มี export (ตั้งใจ — ไม่ใช่ "ผลตรวจ"):** NCR · CAPA/8D · เคลมลูกค้า · ถังเหลืองรอตัดสิน ·
 ใบเบิกทดสอบ · ใบซ่อมรอตรวจ (ผลอยู่โมดูล MTN) · ทะเบียนเครื่องมือวัด · Dashboard (ตัวเลขสรุปจากฝั่ง DR)
 · `/qa-setup` = มาตรฐาน ไม่ใช่ผล · LPA/PM เป็นโมดูลอื่น (`/lpa` · `/daily-checker`)
+
+## ✍️ ขั้นอนุมัติใบตรวจ — หัวหน้า QA 1 ขั้น (2026-11-19 · คำสั่ง user)
+
+ที่มา: audit มาตรฐานระบบตรวจ (QA ชิ้นงาน · PM ช่าง · AM พนักงาน) — ใบ QA เป็นระบบเดียวที่ไม่มีคนเซ็นทบทวน
+user เลือก: **หัวหน้า QA 1 ขั้น** · **ไม่บล็อกอะไร** (ใบปิดตามกฎลำดับชิ้นเหมือนเดิม ผลิตเดินต่อได้)
+
+- คอลัมน์ (Main · migration `20261119b_qa_sheet_approval_main.sql` · apply แล้ว 19/11):
+  `qa_inspection_sheets.approval_status` (`pending`/`approved`/`rejected`) · `approved_by_uid` · `approved_by_name` · `approved_at` · `reject_reason`
+- 🔴 **`null` = ใบก่อนมีขั้นนี้ ≠ รออนุมัติ** — ห้ามนับเข้าคิว ห้าม backfill · ใบใหม่ได้ `pending` ตอนปิดใบ (`QaCheckSheet` patch ปิดใบ)
+- กฎคนกด = `src/utils/qaApproval.js` (`qaApproveVerdict`) — **ใช้ `pmConfirmVerdict` ชุดเดียวกับขั้น 2 ของใบ PM ห้ามเขียนชุดที่ 2**
+  · ระดับ ≥ 30 (วิศวกร/หัวหน้าแผนก) · ไม่ต่ำกว่าคนตรวจ (`created_by_uid`) · ห้ามใบตัวเอง · บัญชีกลางกดไม่ได้ · ไม่รู้ตำแหน่ง = ไม่บล็อกแต่จอบอก
+  · ปุ่ม = `qa:manage` (manager/admin/qa) — ไม่ seed คีย์ใหม่ · RLS update = `qa:record` เดิม (ทุก role ที่ถือ `qa:manage` ถือ `qa:record` ด้วย · เช็ค 19/11)
+  · วัดบัญชีจริง 19/11: role qa = QC 15 คน (ระดับ 20 กดไม่ได้) · วิศวกร 3 + หัวหน้าแผนก 1 (กดได้)
+- จอ: `src/components/QaSheetApproval.jsx` — แผงใต้สรุปใบ (อนุมัติผ่าน `confirmSign` · ตีกลับต้องพิมพ์เหตุผล ≥5 ตัว) +
+  `QaApprovalPendingBar` บนสุดของแท็บใบตรวจ "ใบรออนุมัติ N ใบ" (ขอบเขตไลน์เดียวกับจอ · เพดาน 200 · อ่านไม่ได้ = เขียนบอก)
+  · เขียนด้วย `.eq('approval_status','pending')` + `checkWriteRows` (กันกดซ้อน/ RLS 0 แถว) · แจ้งคนตรวจทาง `createNotification`
+- ⚠️ ยังไม่ทำ: map แจ้งเตือน `qa_inspection_sheets` → `/qa?tab=sheet` (ต้องแก้คู่ App.jsx + edge `send-push` + deploy edge · ด่าน `notifRoute.test`)

@@ -18,10 +18,15 @@ const DailyPM           = lazy(() => import('./DailyPM'));
 const LayerProcessAudit = lazy(() => import('./LayerProcessAudit'));
 const PokaYokeCheck     = lazy(() => import('./PokaYokeCheck'));
 const BbsCheck          = lazy(() => import('./BbsCheck'));
+const PMCheckData       = lazy(() => import('./PMCheckData'));
+/* ✅ บันทึกผลตรวจ AM (19/11 · คำสั่ง user) — ตัวบันทึกเดียวกับ PM ช่าง แต่ล็อกเฉพาะทีม AM
+   (หน้า /pm?tab=check เหลือเฉพาะทีมช่าง · เปิดด้วยทีม AM จะถูกพามาที่นี่) · สิทธิ์ piggyback page:/pm-check เดิม */
+const AmCheck = () => <PMCheckData mode="am" />;
 
 // เพิ่มระบบเช็คใหม่ตรงนี้ (key/label/หน้าเดิมที่คุมสิทธิ์/component)
 const TABS = [
   { key: 'pm',       label: 'Autonomous Maintenance (AM)', page: '/daily-pm', Comp: DailyPM },
+  { key: 'amcheck',  label: 'บันทึกผลตรวจ AM',            page: '/pm-check', Comp: AmCheck },
   { key: 'pokayoke', label: 'Poka-Yoke Check',            page: '/pokayoke', Comp: PokaYokeCheck },
   { key: 'lpa',      label: 'Layer Process Audit (LPA)',   page: '/lpa',      Comp: LayerProcessAudit },
   { key: 'bbs',      label: 'สังเกตพฤติกรรมความปลอดภัย (BBS)', page: '/bbs',  Comp: BbsCheck },
