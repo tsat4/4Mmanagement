@@ -237,6 +237,26 @@ export default function QaCheckSheet({ canRecord }) {
         toast.info(`เปิดใบตรวจ: ${ob.line_name} · ${ob.mat_no} · ${ob.stage === 'end' ? 'ชิ้นสุดท้าย' : ob.stage === 'middle' ? 'ระหว่างผลิต' : 'ชิ้นแรก'}`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+  /* 🔔 เปิดใบตรวจตาม id (19/11) — ลิงก์จากกระดิ่งแจ้งเตือน `?tab=sheet&sheet=<id>` (อนุมัติ/ตีกลับ)
+     → อ่านคีย์ใบ (พาร์ท+วัน+กะ+รอบ) แล้วตั้งตัวเลือกให้ · พาร์ทนอกขอบเขต/ไม่พบใบ = บอกเหตุ ห้ามเงียบ */
+  const sheetParam = searchParams.get('sheet');
+  useEffect(() => {
+    if (!sheetParam || !parts.length) return;
+    let alive = true;
+    (async () => {
+      const { data: sh, error } = await supabase.from('qa_inspection_sheets')
+        .select('id, part_id, work_date, shift, round_no').eq('id', sheetParam).maybeSingle();
+      if (!alive) return;
+      setParams({ sheet: null }, { replace: true });
+      if (error || !sh) { toast.error(`เปิดใบตรวจไม่สำเร็จ${error ? `: ${error.message}` : ' — ไม่พบใบนี้'}`); return; }
+      if (!scopedParts.some(p => p.id === sh.part_id)) { toast.error('เปิดใบตรวจไม่ได้ — พาร์ทของใบนี้ถูกปิดใช้งานหรืออยู่นอกขอบเขตของคุณ'); return; }
+      setPartId(sh.part_id); setWorkDate(sh.work_date); setShift(sh.shift); setRoundNo(sh.round_no);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    })();
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sheetParam, parts.length]);
+
   const fmeParam = searchParams.get('fme');
   useEffect(() => {
     if (!fmeParam || !parts.length) return;

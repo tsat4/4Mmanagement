@@ -24,7 +24,7 @@ import { supabase } from '../supabaseClient'
    📄 docs/modules/notify-inapp-audit.md §รอบ 5                                              */
 import notifyEvent from '../utils/notifyEvent'
 
-export async function createNotification(userId, { title, body, type = 'info', refTable, refId }) {
+export async function createNotification(userId, { title, body, type = 'info', refTable, refId, link }) {
   const { error } = await supabase.from('notifications').insert({
     user_id: userId,
     title,
@@ -32,6 +32,7 @@ export async function createNotification(userId, { title, body, type = 'info', r
     type,
     ref_table: refTable ?? null,
     ref_id: refId ?? null,
+    ...(link ? { link } : {}),   // deep-link ถึงตัวใบ (notifLink.js ตรวจความปลอดภัย+สิทธิ์ก่อนพาไป) · ไม่ส่ง = ถอยไป ref_table เหมือนเดิม
   })
   if (error) throw error
 }
