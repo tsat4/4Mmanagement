@@ -27,6 +27,8 @@ import PointZoom, { PointThumb } from '../components/inspect/PointZoom'
 import useImgBox from '../utils/useImgBox'
 import CalloutPin from '../components/CalloutPin'
 import { loadPmTeams, pmTeamsSync, teamKind, recordPermFor, isAmTeam, splitInspByTeam, inspTeamLabel } from '../utils/pmTeams'
+import { carryNgReason, ngReasonCheck, okWhileMoOpen } from '../utils/ngReason'   // 🚩 NG ต้องมีเหตุผล (19/11)
+import { loadNgHistory } from '../lib/ngHistory'
 import { MTN_TEAMS, deptNameOf, teamKeyOf, teamForEquipmentKind, teamsForUser, canWriteTeam, teamBlockText } from '../utils/mtnTeams'
 import { checkWriteRows } from '../utils/dbWrite';
 import NoticeBar from '../components/NoticeBar';
@@ -424,7 +426,9 @@ function VariableRow({ cp, idx, r, onChange, methodIndex, calcText }) {
 }
 
 // ─── Attribute / Note Row ────────────────────────────────────────────────────
-function AttrRow({ cp, idx, value, note, onChangeAttr, onChangeNote, methodIndex }) {
+function AttrRow({ cp, idx, value, note, onChangeAttr, onChangeNote, methodIndex,
+  /* 🚩 19/11 — NG ต้องมีเหตุผล · `carry` = ของเก่าที่ยกมาได้ (null = ไม่มี) */
+  reason = '', onChangeReason, carry = null, accepted = false, onAccept, okWarn = null }) {
   const method = methodIndex?.[cp.checking_method]
   // 📱 มือถือ: แตะปุ่มเดิมซ้ำ (ถุงมือแตะเบิ้ล) = ล้างคำตอบเงียบๆ ⇒ ถามก่อน · จอคอมเหมือนเดิม (2026-10-20)
   const isMobile = useIsMobile()
@@ -462,6 +466,31 @@ function AttrRow({ cp, idx, value, note, onChangeAttr, onChangeNote, methodIndex
         </p>
       )}
       {cp.type === 'note' && <input value={note} onChange={e => onChangeNote(e.target.value)} placeholder={tr('หมายเหตุ (ถ้ามี)...')} />}
+      {/* 🚩 ติ๊ก NG ต้องมีเหตุผล (19/11 · คำสั่ง user "เกิดการกดผิดและพนักงานไม่รู้ตัว")
+          วัดจริง 90 วัน: NG 43 จุด มีเหตุผลแค่ 8 ⇒ 81% ไม่มีเหตุผลเลย
+          🔴 ของที่ยกมา **ต้องกดยืนยัน** ห้ามเติมเงียบ — เติมเงียบ = คนกดผิดได้เหตุผลติดมาเอง
+             ดูเหมือนตั้งใจ ซึ่งแย่กว่าไม่มีเหตุผล (ตัดสินที่ `utils/ngReason.js`) */}
+      {value === 'ng' && (
+        <div style={{ margin: '4px 0 0 24px' }}>
+          {carry && !accepted && !reason.trim() && (
+            <div style={{ fontSize: 11.5, color: 'var(--amber)', marginBottom: 3, lineHeight: 1.6 }}>
+              ↩️ {tr(carry.why)}
+              <button type="button" onClick={onAccept}
+                style={{ marginLeft: 6, padding: '2px 8px', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                         borderRadius: 'var(--r-xs)', border: '1px solid var(--amber)', background: 'var(--amber-dim)', color: 'var(--amber)' }}>
+                {tr('ใช้เหตุผลเดิม')}: {carry.text}
+              </button>
+            </div>
+          )}
+          <input value={reason} onChange={e => onChangeReason(e.target.value)}
+            placeholder={tr('เหตุผลที่ NG (บังคับ) — เจออะไร/ผิดปกติยังไง')}
+            style={{ width: '100%', borderColor: (reason.trim() || accepted) ? undefined : 'var(--amber)' }} />
+        </div>
+      )}
+      {/* 🔴 ติ๊ก OK ทั้งที่ใบซ่อมยังไม่เสร็จ = **เตือน ไม่บล็อก** (ช่างอาจเพิ่งแก้เสร็จแต่ยังไม่ปิดใบ) */}
+      {value === 'ok' && okWarn && (
+        <div data-warn="1" style={{ margin: '4px 0 0 24px', fontSize: 11.5, color: 'var(--amber)', lineHeight: 1.6 }}>⚠ {tr(okWarn)}</div>
+      )}
     </div>
   )
 }
@@ -903,6 +932,9 @@ export default function PMCheckData() {
   const loadReqRef = useRef(0)
   const curJigRef = useRef(null)
   const [cpLoad, setCpLoad] = useState({ key: null, status: 'idle', msg: '' }) // status: loading | ok | error
+  /* 🚩 ประวัติ NG รายจุด + ใบซ่อม + สถานะเครื่อง (19/11) — ป้อนให้กฎ `carryNgReason()`
+     🔴 อ่านไม่ได้ = ไม่ยก (fail-closed) แต่ต้องเขียนบนจอ ห้ามกลืนเป็น "ไม่เคย NG" */
+  const [ngHist, setNgHist] = useState({ byCp: {}, machine: null, error: '' })
   const [cpReload, setCpReload] = useState(0)
   const [frames, setFrames] = useState([])          // jig_images (360° spin) ของอุปกรณ์ที่เลือก
   const [activeCpId, setActiveCpId] = useState(null) // จุดที่กำลังโฟกัส (sync รูป ↔ checklist)
@@ -1322,7 +1354,7 @@ export default function PMCheckData() {
       setCheckpoints(cps)
       setCpLoad({ key, status: 'ok', msg: '' })
       const init = {}
-      cps.forEach(c => { init[c.id] = { v1: '', v2: '', v3: '', attr: '', note: '', mval: '' } })
+      cps.forEach(c => { init[c.id] = { v1: '', v2: '', v3: '', attr: '', note: '', mval: '', reason: '', reasonAccepted: false } })
       setResults(init)
       const saved = isMobileView ? loadDraft(`pm:${key}:${userId}`) : null
       setPendingDraft(saved && pmHasInput(saved.data?.results, saved.data?.notes) ? saved : null)
@@ -1396,6 +1428,25 @@ export default function PMCheckData() {
     return 'pass'
   }
 
+  /* 🚩 โหลดประวัติ NG ของเครื่องที่เลือก — guard กัน stale (กฎเขียน DB ข้อ 4) */
+  useEffect(() => {
+    let alive = true
+    if (!selectedJig?.id) { setNgHist({ byCp: {}, machine: null, error: '' }); return undefined }
+    loadNgHistory(selectedJig).then(r => { if (alive) setNgHist(r) })
+      .catch(e => { if (alive) setNgHist({ byCp: {}, machine: null, error: String(e?.message || e) }) })
+    return () => { alive = false }
+  }, [selectedJig?.id, selectedJig?.machine_id, selectedJig?.machine_no])   // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* ของเก่าที่ "ยกมาได้" ของจุดนี้ — null = ต้องพิมพ์เอง (กฎทั้งหมดอยู่ utils/ngReason.js) */
+  const ngCarryOf = (cpId) => {
+    const h = ngHist.byCp?.[cpId]
+    return h ? carryNgReason({ prev: h.prev, mo: h.mo, machine: ngHist.machine }) : null
+  }
+  const okWarnOf = (cpId) => {
+    const h = ngHist.byCp?.[cpId]
+    return h ? okWhileMoOpen({ attr: 'ok', mo: h.mo, machine: ngHist.machine }) : null
+  }
+
   const handleSave = async () => {
     if (checkpoints.length === 0) return
     // 🔴 จุดตรวจ/ใบตรวจต้องเป็นของเครื่อง+แผนกที่เปิดอยู่จริง (กันคำตอบเก่าทับ — ดู loadReqRef)
@@ -1403,6 +1454,18 @@ export default function PMCheckData() {
     if (cpLoad.status !== 'ok' || cpLoad.key !== `${selectedJig?.id}|${department}`) {
       toast.error('ข้อมูลจุดตรวจยังโหลดไม่เสร็จหรือไม่ตรงกับเครื่องที่เปิดอยู่ — รอสักครู่แล้วกดบันทึกใหม่')
       return
+    }
+    /* 🚩 ด่าน "NG ต้องมีเหตุผล" (19/11 · คำสั่ง user) — ตัดสินที่ `ngReasonCheck()` ที่เดียว
+       🔴 เช็ค**ตอนกดบันทึกจริง** ไม่ใช่แค่ซ่อนปุ่ม — ช่องเหตุผลเป็นของรายจุด คนเลื่อนข้ามได้ */
+    {
+      const bad = []
+      checkpoints.forEach((cp, i) => {
+        if (cp.type === 'variable' || cp.type === 'measure') return   // ค่าที่วัดมา ตัวเลขคือคำอธิบาย
+        const r = results[cp.id] ?? {}
+        const chk = ngReasonCheck({ attr: r.attr, text: r.reason, carry: ngCarryOf(cp.id), accepted: !!r.reasonAccepted })
+        if (!chk.ok) bad.push(`ข้อ ${i + 1} ${cp.name}: ${chk.blockText}`)
+      })
+      if (bad.length) { toast.error(`ยังบันทึกไม่ได้ — ${bad.length} ข้อที่ติ๊ก NG ไม่มีเหตุผล\n${bad.slice(0, 3).join('\n')}`); return }
     }
     setSaving(true)
     try {
@@ -1456,7 +1519,12 @@ export default function PMCheckData() {
           const mv = r.mval !== '' && r.mval != null ? Number(r.mval) : null
           return { inspection_id: insp.id, checkpoint_id: cp.id, value_1: mv, value_numeric: mv, status: measureStatus(r.mval, cp) }
         }
-        return { inspection_id: insp.id, checkpoint_id: cp.id, value_attribute: r.attr || null, status: r.attr === 'ng' ? 'fail' : r.attr === 'ok' ? 'pass' : null }
+        /* 🚩 เหตุผลที่ NG ลง `action_text` (ช่องนี้มีอยู่แล้ว แต่ถูกใช้ 1 จาก 43 จุด)
+           ยกของเก่ามาแล้วกดยืนยัน = เก็บข้อความเดิมลงไปจริง ไม่ใช่ปล่อยว่างแล้วอ้างว่ายกมา */
+        const ngText = r.attr === 'ng'
+          ? (String(r.reason || '').trim() || (r.reasonAccepted ? (ngCarryOf(cp.id)?.text || '') : ''))
+          : null
+        return { inspection_id: insp.id, checkpoint_id: cp.id, value_attribute: r.attr || null, action_text: ngText || null, status: r.attr === 'ng' ? 'fail' : r.attr === 'ok' ? 'pass' : null }
       })
       const { error: e2 } = await supabaseDR.from('inspection_results').insert(rows)
       if (e2) {
@@ -1548,7 +1616,7 @@ export default function PMCheckData() {
       }
       if (pmDraftKey) clearDraft(pmDraftKey)
       const init = {}
-      checkpoints.forEach(c => { init[c.id] = { v1: '', v2: '', v3: '', attr: '', note: '', mval: '' } })
+      checkpoints.forEach(c => { init[c.id] = { v1: '', v2: '', v3: '', attr: '', note: '', mval: '', reason: '', reasonAccepted: false } })
       setResults(init); setNotes('')
       fetchHistory(selectedJig.id)
       setTab('history')
@@ -1963,6 +2031,14 @@ export default function PMCheckData() {
                           )}
                         </div>
                       )}
+                      {/* 🚩 อ่านประวัติ NG ไม่ได้ = ยกเหตุผลเก่าให้ไม่ได้ → ต้องเขียนบนจอ
+                          (กฎความซื่อสัตย์ของจอ — ห้ามกลืนเป็น "ไม่เคย NG" แล้วให้คนงงว่าทำไมไม่มีปุ่มยก) */}
+                      {ngHist.error && (
+                        <div style={{ margin: '0 0 8px', padding: '6px 10px', borderRadius: 'var(--r-md)', fontSize: 11.5, lineHeight: 1.6,
+                          border: '1px solid var(--amber-line)', background: 'var(--amber-dim)', color: 'var(--amber)' }}>
+                          ⚠ {tr('อ่านประวัติการตรวจครั้งก่อนไม่ได้ — ปุ่ม "ใช้เหตุผลเดิม" จะไม่ขึ้น ต้องพิมพ์เหตุผลเอง')} ({ngHist.error})
+                        </div>
+                      )}
                       {(() => {
                         // เลข Item ต่อกลุ่ม (group_name) — sort_order จาก PM Setup จัดกลุ่มมาให้ต่อเนื่องแล้ว
                         const groupNo = {}
@@ -1992,7 +2068,13 @@ export default function PMCheckData() {
                             <AttrRow cp={cp} idx={idx} methodIndex={methodIndex}
                               value={results[cp.id]?.attr ?? ''} note={results[cp.id]?.note ?? ''}
                               onChangeAttr={v => setResults(prev => ({ ...prev, [cp.id]: { ...prev[cp.id], attr: v } }))}
-                              onChangeNote={v => setResults(prev => ({ ...prev, [cp.id]: { ...prev[cp.id], note: v } }))} />
+                              onChangeNote={v => setResults(prev => ({ ...prev, [cp.id]: { ...prev[cp.id], note: v } }))}
+                              /* 🚩 NG ต้องมีเหตุผล (19/11) — ของเก่ายกมาได้แต่ต้องกดยืนยัน */
+                              reason={results[cp.id]?.reason ?? ''}
+                              onChangeReason={v => setResults(prev => ({ ...prev, [cp.id]: { ...prev[cp.id], reason: v } }))}
+                              carry={ngCarryOf(cp.id)} accepted={!!results[cp.id]?.reasonAccepted}
+                              onAccept={() => setResults(prev => ({ ...prev, [cp.id]: { ...prev[cp.id], reasonAccepted: true, reason: ngCarryOf(cp.id)?.text || '' } }))}
+                              okWarn={okWarnOf(cp.id)} />
                           )
                           return (
                             <div key={cp.id}>

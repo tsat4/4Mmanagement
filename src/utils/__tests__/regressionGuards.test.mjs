@@ -12099,6 +12099,51 @@ test('🗂 operator-tab-allowed-complete — `tabAllowed` ใน operator.jsx �
     `\n\n❌ operator.jsx: TAB_KEYS มี ${nKeys} แท็บ แต่ tabAllowed มี ${nAllowed} ช่อง — แท็บที่เกินมากดแล้วตกกลับแท็บแรกเงียบๆ\n`);
 });
 
+test('🚩 ng-needs-reason — ติ๊ก NG ในใบตรวจ AM/PM ต้องมีเหตุผล + เตือนเมื่อติ๊ก OK ทั้งที่ใบซ่อมยังค้าง', () => {
+  /* 19/11 (คำสั่ง user): *"ทุกระบบการตรวจเครื่องจักรทั้ง am/pm ในกรณีที่เลือก NG ต้องใส่เหตุผลด้วย
+     เพราะเกิดการกดผิดและพนักงานไม่รู้ตัว … จะใช้การปิด MO ซ่อมแล้ว, แก้ไขเบื้องต้นแล้ว เป็นตัวดึงเหตุผลเก่า"*
+     หลักฐานที่ทำให้ต้องมี: วัด 90 วัน ผลตรวจ AM/PM ที่ NG = 43 จุด **มีเหตุผลแค่ 8** (81% ว่าง)
+     · ช่อง `inspection_results.action_text` มีอยู่เดิมแต่ถูกใช้ 1 จาก 43
+     🔴 กฎทั้งหมดอยู่ `src/utils/ngReason.js` — ห้ามเขียนเงื่อนไข "ยกได้ไหม/พอไหม" ซ้ำในหน้า */
+  const bad = [];
+  const U = 'src/utils/ngReason.js';
+  const u = stripComments(readFileSync(join(ROOT, U), 'utf8'));
+  for (const f of ['carryNgReason', 'ngReasonCheck', 'okWhileMoOpen', 'moUnresolved']) {
+    if (!new RegExp(`export (function|const) ${f}\\b`).test(u)) bad.push(`${U}: ต้องมี ${f}() — กฎมีที่เดียว`);
+  }
+  /* 🔴 "ช่างประกาศว่าเครื่องใช้ได้" = หยุดยก (ไม่งั้นเหตุผลเก่าติดไปทุกรอบตลอดกาล) */
+  if (!/usability/.test(u)) bad.push(`${U}: ต้องดู machines.usability — ช่างประกาศ "ใช้ได้" แล้วต้องหยุดยกของเก่า`);
+  /* 🔴 ยกมาแล้วต้องให้คนกดยืนยัน — เติมเงียบ = คนกดผิดได้เหตุผลติดมาเอง ดูเหมือนตั้งใจ */
+  if (!/accepted/.test(u)) bad.push(`${U}: ngReasonCheck ต้องรับ accepted — ของที่ยกมาต้องกดยืนยันก่อนถือว่าพอ`);
+
+  const H = 'src/lib/ngHistory.js';
+  const h = stripComments(readFileSync(join(ROOT, H), 'utf8'));
+  if (!/out\.error/.test(h)) bad.push(`${H}: อ่านไม่ได้ต้องคืน error ให้จอเขียนบอก ห้ามกลืนเป็น "ไม่เคย NG"`);
+  if (!/byCp/.test(h)) bad.push(`${H}: ต้องคืนรายจุด (byCp) — MO ของจุด A ห้ามไปอธิบาย NG ของจุด B`);
+
+  const P = 'src/pages/PMCheckData.jsx';
+  const p = stripComments(readFileSync(join(ROOT, P), 'utf8'));
+  const fn = p.match(/const\s+handleSave\s*=\s*async[\s\S]*?\n  \}\n/);
+  if (!fn) bad.push(`${P}: หา handleSave ไม่เจอ — เปลี่ยนชื่อแล้วต้องแก้ด่านนี้`);
+  else {
+    const body = fn[0];
+    const iChk = body.indexOf('ngReasonCheck(');
+    const iSav = body.indexOf('setSaving(true)');
+    if (iChk < 0) bad.push(`${P} handleSave: ต้องเช็คผ่าน ngReasonCheck() ก่อนเขียน DB (ซ่อนปุ่มไม่ใช่ด่าน)`);
+    else if (iSav >= 0 && iChk > iSav) bad.push(`${P} handleSave: ngReasonCheck() ต้องมาก่อน setSaving(true) — เช็คหลังเริ่มเขียนไม่ได้กันอะไร`);
+    if (!/action_text/.test(body)) bad.push(`${P} handleSave: ต้องเขียนเหตุผลลง action_text (ช่องนี้มีอยู่แล้ว ห้ามเก็บแต่ในจอ)`);
+    /* 🔴 เรียกแล้วต้อง "หยุดบันทึก" จริง — `if (false)` / เก็บผลทิ้ง = ด่านหลอก */
+    if (iChk >= 0 && !/ngReasonCheck\([\s\S]{0,400}?!\w*\.?ok[\s\S]{0,400}?return/.test(body))
+      bad.push(`${P} handleSave: ผลจาก ngReasonCheck() ต้องนำไป return ออกจากการบันทึก (เรียกแล้วทิ้ง = ไม่มีด่าน)`);
+  }
+  /* 🔴 แถว attribute ต้องมีช่องเหตุผลที่โผล่เฉพาะตอน NG + ปุ่มยืนยันของเก่า + คำเตือน OK */
+  if (!/carry=\{ngCarryOf\(/.test(p)) bad.push(`${P}: <AttrRow> ต้องส่ง carry={ngCarryOf(cp.id)} — ไม่ส่ง = คนต้องพิมพ์ใหม่ทุกรอบ`);
+  if (!/okWarn=\{okWarnOf\(/.test(p)) bad.push(`${P}: <AttrRow> ต้องส่ง okWarn — ติ๊ก OK ทั้งที่ใบซ่อมยังค้างต้องเตือน (ไม่บล็อก)`);
+  if (!/onAccept/.test(p)) bad.push(`${P}: ต้องมีปุ่ม "ใช้เหตุผลเดิม" (onAccept) — ห้ามเติมเหตุผลเก่าให้เงียบๆ`);
+
+  assert.deepEqual(bad, [], `\n\n❌ ${bad.length} จุดผิดกฎ "NG ต้องมีเหตุผล"\n   ${bad.join('\n   ')}\n`);
+});
+
 /* ═══ 🗂️ check-sheet-round1 — 2026-11-19 · ออดิท check sheet (LPA · Poka-Yoke · BBS · PPE) ══════════
    📄 docs/modules/check-sheet-audit.md · 3 คลาสที่เจอในใบตรวจแบบเอกสาร ห้ามกลับมา:
    ① ใบตรวจรายไลน์ต้องมีด่านชั้น ③ (`canWriteLine`) — `can()` บอกแค่ "กดเป็นไหม"
