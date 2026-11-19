@@ -19,6 +19,7 @@
 | ด่านใน `npm run build` — ที่มาของแต่ละด่าน + เคสจริงที่ทำให้ต้องมี | `docs/modules/build-gates.md` |
 | รีด CLAUDE.md ให้มีที่ว่าง (2026-09-30) — ย้ายอะไรไปไหน | `docs/modules/claude-md-slim.md` |
 | 🔗 ลูปปิด 8D → PFMEA / PFC / Control Plan (2026-08-17 · คำสั่ง user) | `docs/modules/closed-loop-8d-pfmea.md` |
+| 📘 8D ตามเกณฑ์ Ford G8D — สรุป deck "How to write an 8D" + เทียบระบบ + ช่องว่าง (2026-11-19 · วิเคราะห์ ยังไม่ลงมือ) | `docs/modules/8d-ford-g8d-reference.md` |
 | ⏱ ทบทวน Cycle Time — "ระบบเสนอ วิศวกรตัดสิน" | `docs/modules/ct-review.md` |
 | Daily Report — ไลน์ผสมหลาย process (welding + metal forming ในไลน์เดียว · 2026-07-22) | `docs/modules/daily-report-mixed-process.md` |
 | Daily Report — ออเดอร์ manual สำหรับไลน์ไม่มี kanban card (2026-07-12) | `docs/modules/daily-report.md` |

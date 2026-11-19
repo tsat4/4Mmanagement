@@ -26,6 +26,7 @@ import { useLiveBoard } from '../utils/useLiveBoard';
 import { cachedMaster } from '../utils/masterCache';
 import { assessFmeReadiness } from '../utils/qaFmeReadiness';
 import QaFmeBoard from './QaFmeBoard';
+import QaFmePartRules from './QaFmePartRules';
 
 import { tr } from '../utils/i18n';
 import { getWorkDate, getCurrentShift } from '../utils/workDate';
@@ -50,7 +51,7 @@ const FME_QUEUE_LIMIT = 300;   // ถึงเพดาน = เขียนบ�
 
 export default function QaFmeQueue({ scopedLineNames, onOpen }) {
   const [loadErr, setLoadErr] = useState(null);
-  const { role } = useContext(UserContext);
+  const { role, fullName } = useContext(UserContext);
   const canManage = can('qa', 'manage', role);
   const [rows, setRows] = useState([]);
   const [cfg, setCfg] = useState(null);
@@ -289,6 +290,7 @@ export default function QaFmeQueue({ scopedLineNames, onOpen }) {
               </div>
             )}
           </div>
+          <QaFmePartRules canEdit={canManage} fullName={fullName} centralMode={String(cfg.mid_mode ?? 'lot')} />
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 8, lineHeight: 1.6 }}>
             ห้อง Telegram ที่รับแจ้ง ตั้งที่ <b>/notification-config</b> → หมวดคุณภาพ
             (<code>qa_fme_call</code> = เรียกตรวจ · <code>qa_fme_overdue</code> = เกินเวลา) ·
