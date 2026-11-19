@@ -49,12 +49,13 @@ const HEAD = [
   ['item',    ['item']],
   ['mat',     ['obj', 'component no', 'component', 'component material', 'material no']],
   ['desc',    ['object description', 'component material description', 'material description']],
-  ['qty',     ['quantity', 'component quantity', 'qty']],
+  ['qty',     ['quantity', 'component quantity', 'qty', 'comp. qty']],   // CS12 .XLSX: "Comp. Qty (CUn)" (19/11)
   ['uom',     ['un', 'component unit', 'component uom', 'uom']],
   ['plant',   ['plnt', 'plant']],
-  ['spt',     ['spt', 's..']],
-  ['costrel', ['costrelevncy', 'costrel']],
-  ['mstat',   ['matlstatus', 'ms']],
+  ['spt',     ['spt', 's..', 'special procurement']],
+  ['costrel', ['costrelevncy', 'costrel', 'relevancy to costing']],
+  ['mstat',   ['matlstatus', 'ms', 'plant-sp.matl status']],
+  ['backflush', ['backflush']],
   ['partno',  ['part number']],
   ['model',   ['model']],
   ['chgno',   ['change number', 'change no']],
@@ -76,7 +77,7 @@ const headRole = (cell) => {
     if (len > bestLen) { bestLen = len; bestRole = role; }
   }
   if (bestRole) return bestRole;
-  return c.startsWith('sloc') || c.startsWith('prod.sloc') || c.startsWith('stor') ? 'sloc' : null;
+  return c.startsWith('sloc') || c.startsWith('prod.sloc') || c.startsWith('prod. stor') || c.startsWith('stor') ? 'sloc' : null;
 };
 
 /* 🔎 หาคอลัมน์ "ชั้น" จาก **ค่าในข้อมูล** เมื่อหัวตารางบอกไม่ได้ (ชื่อหัวเพี้ยน/ถูกย่อ/ไฟล์ผ่าน Excel มา)
@@ -119,7 +120,9 @@ export function parseSapBom(text, opts = {}) {
   /* ① บล็อกหัวของ Display Multilevel BOM — "Material \t\t\t\t 10101158" */
   for (const ln of lines.slice(0, 12)) {
     const c = ln.split('\t').map(norm).filter(Boolean);
-    if (c.length < 2) continue;
+    /* 🔴 ไฟล์ .XLSX ของ CS12 ไม่มีบล็อกหัวใบ — แถวแรกคือหัวตารางเลย ("Plant · Special procurement · …")
+       เดิมแถวนั้นถูกอ่านเป็น "Plant = Backflush" ⇒ บล็อกหัวใบจริงมีแค่ 2-3 ช่อง ข้ามแถวที่กว้างกว่านั้น */
+    if (c.length < 2 || c.length > 4) continue;
     const k = c[0].toLowerCase();
     if (k.startsWith('material') && !root.mat_no) root.mat_no = c[c.length - 1];
     else if (k.startsWith('description')) root.description = c[c.length - 1];
@@ -202,6 +205,7 @@ export function parseSapBom(text, opts = {}) {
       mat_status: col.mstat !== undefined ? norm(cells[col.mstat]) : '',
       part_no: col.partno !== undefined ? norm(cells[col.partno]) : '',
       change_no: col.chgno !== undefined ? norm(cells[col.chgno]) : '',
+      backflush: col.backflush !== undefined ? norm(cells[col.backflush]) : '',
     });
     stack[depth] = mat;
     stack.length = depth + 1;          // ตัดลูกของพี่คนก่อนทิ้ง ไม่งั้นชั้นลึกไปเกาะผิดตัว
@@ -252,4 +256,43 @@ export function missingInPartsMaster(sapRows, pmMats) {
     out.set(upper(r.mat_no), { mat_no: r.mat_no, part_name: r.part_name, uom: r.uom || 'PC', part_no: r.part_no || null });
   });
   return [...out.values()];
+}
+
+
+/* ═══ 🏛️ แตกไฟล์หลายชั้น → "1 MAT = 1 ใบ · ในใบมีแค่ลูกตรง" แบบ SAP (2026-11-19 · คำสั่ง user) ═══
+   ไฟล์ CS12 กางทุกชั้นมาในไฟล์เดียว แต่ SAP เก็บใบละชั้นเดียว (CS03) ⇒ ตอนลง ESM ต้องแตกกลับ:
+     ชั้น 1           → ใบของหัวใบ (`rootMat`)
+     ชั้น n (n ≥ 2)   → ใบของ "ตัวแม่" ของมัน (`parent_mat`)
+   ทุกแถวที่คืนมา `parent_mat = null` (ลูกตรงของใบนั้น) — ห้ามเอาหลานไปนอนในใบแม่อีก
+   sub-assembly ตัวเดียวกันโผล่หลายที่ในไฟล์ (ใช้หลายจุด) = นิยามซ้ำ ⇒ เก็บครั้งเดียว
+   ถ้า 2 ที่เขียนลูกไม่ตรงกัน = `conflicts` (ห้ามเลือกให้เอง — คนดู)
+   @returns {{ sheets: Array<{mat:string, rows:Array}>, conflicts: Array<{mat:string, detail:string}> }} */
+export function splitSapBySheet(rows = [], rootMat = '') {
+  const root = upper(rootMat);
+  /* ผูกแถวลูกกับ "แถวแม่ตัวจริง" (ไม่ใช่แค่เลข MAT) ด้วย stack ตามชั้น — ตัวแม่ที่โผล่ 2 ที่ = 2 ชุด */
+  const occ = new Map();               // ตำแหน่งแถวแม่ (-1 = หัวใบ) → { mat, rows[] }
+  const stack = [];                    // stack[d] = index ของแถวล่าสุดที่ชั้น d
+  (rows || []).forEach((r, i) => {
+    const d = Number(r.depth) || 1;
+    const pIdx = d > 1 ? stack[d - 1] : -1;
+    stack[d] = i; stack.length = d + 1;
+    if (pIdx === undefined) return;     // ไม่มีแถวแม่ก่อนหน้า (ตัวแกะเตือนไว้แล้ว) — ห้ามเดา
+    const mat = pIdx === -1 ? root : upper(rows[pIdx].mat_no);
+    if (!mat) return;
+    if (!occ.has(pIdx)) occ.set(pIdx, { mat, rows: [] });
+    occ.get(pIdx).rows.push({ ...r, parent_mat: null, sheet_mat: mat });
+  });
+  const sig = (rs) => rs.map(r => `${upper(r.mat_no)}:${r.qty_per_unit}:${r.uom}`).sort().join('|');
+  const byMat = new Map();
+  for (const o of occ.values()) {
+    if (!byMat.has(o.mat)) byMat.set(o.mat, []);
+    byMat.get(o.mat).push(o.rows);
+  }
+  const sheets = [], conflicts = [];
+  for (const [mat, sets] of byMat) {
+    const bad = sets.slice(1).find(rs => sig(rs) !== sig(sets[0]));
+    if (bad) conflicts.push({ mat, detail: `${mat} โผล่ ${sets.length} ที่ในไฟล์ แต่ลูกไม่ตรงกัน — ไม่นำเข้าใบนี้ ให้คนดูใน SAP ก่อน` });
+    else sheets.push({ mat, rows: sets[0] });
+  }
+  return { sheets, conflicts };
 }
