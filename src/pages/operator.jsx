@@ -175,10 +175,14 @@ export default function Operator() {
   // ⚠️ ลำดับใน TAB_KEYS ต้องตรงกับ index เดิม (0 พนักงาน · 1 กำหนดสกิล · 2 Level Up)
   const [tabKey, setTabKey] = useTabParam(TAB_KEYS, TAB_KEYS[0]);
   // ⚠️ URL เปิดแท็บที่ไม่มีสิทธิ์ไม่ได้ — ปุ่มซ่อนอย่างเดียวไม่พอ (คนแปะลิงก์ ?tab=skills ให้กันได้)
+  /* 🔴 ต้องมีครบทุกแท็บใน TAB_KEYS — ขาดช่อง = index นั้นเป็น undefined = ตกกลับแท็บแรกเงียบๆ
+     (บั๊กจริง 18/11: ยุบ "เพิ่มพนักงาน" เข้ามาเป็นแท็บที่ 4 แต่ลิสต์นี้มี 3 ช่อง ⇒ กดแท็บแล้ว "ไม่ไปไหนเลย"
+      ทุก role รวม admin · เงื่อนไขต้องตรงกับที่ใช้โชว์แท็บใน PageHeader ข้างล่าง · มีด่าน `operator-tab-allowed-complete`) */
   const tabAllowed = [
     true,
     can('skills', 'edit', role),
     can('skills', 'approve_levelup', role) || can('skills', 'approve_levelup_100', role),
+    hasPermission('page:/register', role) && can('employees', 'register', role),
   ];
   const tabIdx = TAB_KEYS.indexOf(tabKey);
   const tab = tabAllowed[tabIdx] ? tabIdx : 0;

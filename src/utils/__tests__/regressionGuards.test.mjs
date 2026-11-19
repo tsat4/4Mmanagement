@@ -11113,3 +11113,18 @@ test('🔐 role-not-scope — ตัวตัดสินขอบเขตห�
   if (!/writeUnits: mySections/.test(rd('src/pages/DisplayRotation.jsx'))) bad.push('DisplayRotation.jsx: ยังใช้ sections (ที่เห็น) ตัดสินการตั้งจอ');
   assert.deepEqual(bad, [], '\n' + bad.join('\n'));
 });
+
+test('🗂 operator-tab-allowed-complete — `tabAllowed` ใน operator.jsx ต้องมีครบเท่า TAB_KEYS', () => {
+  /* 18/11 หน้างานแจ้ง "คลิกเพิ่มพนักงานแล้วไม่ไปไหนเลย" — ยุบ /register เป็นแท็บที่ 4 (13/11) แต่ `tabAllowed`
+     ยังมี 3 ช่อง ⇒ `tabAllowed[3]` = undefined ⇒ `tab` ตกกลับ 0 ทุกครั้ง ทุก role · build/crashsweep ผ่านหมด
+     เพราะแท็บโชว์ (เงื่อนไขโชว์อยู่คนละลิสต์) แค่กดแล้วไม่เปลี่ยน */
+  const src = stripComments(readFileSync(join(ROOT, 'src/pages/operator.jsx'), 'utf8'));
+  const keys = src.match(/const TAB_KEYS = \[([^\]]+)\]/);
+  assert.ok(keys, 'หา TAB_KEYS ใน operator.jsx ไม่เจอ');
+  const nKeys = keys[1].split(',').filter(x => x.trim()).length;
+  const allowed = src.match(/const tabAllowed = \[([\s\S]*?)\n  \];/);
+  assert.ok(allowed, 'หา tabAllowed ใน operator.jsx ไม่เจอ');
+  const nAllowed = allowed[1].split('\n').filter(l => l.trim().length && l.trim() !== ',').length;
+  assert.equal(nAllowed, nKeys,
+    `\n\n❌ operator.jsx: TAB_KEYS มี ${nKeys} แท็บ แต่ tabAllowed มี ${nAllowed} ช่อง — แท็บที่เกินมากดแล้วตกกลับแท็บแรกเงียบๆ\n`);
+});
