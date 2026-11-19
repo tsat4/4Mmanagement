@@ -46,7 +46,7 @@
 ## สิทธิ์ + การเปิดใช้
 
 - คีย์ `askbot:use` ผ่าน `canSeeded()` ⇒ **ยังไม่ seed = admin เท่านั้น** (เปิดวงแคบก่อน · ENGINEERING §11)
-- เปิดให้ role อื่น = seed คีย์ลง `role_permissions` (Main) แล้วติ๊กที่ `/permissions` — **ยังไม่ได้ทำ (รอ user สั่ง)**
+- 2026-11-19 (คำสั่ง user) เปิดให้ **ทุก role** — migration `20261119_askbot_use_all_roles_main.sql` (Main) · ปิดราย role ได้ที่ `/permissions` (หมวดภาพรวม · แถว "แชทถามข้อมูล")
 - ไม่ขึ้นบนจอ TV (`tvShell`) · ไม่ขึ้นหน้า `/` (Hub) และ `/tv` (คนละ branch ใน `ProtectedLayout`)
 
 ## ตำแหน่งบนจอ + ไซเรน (แบบ ข · user เคาะ 19/11)
