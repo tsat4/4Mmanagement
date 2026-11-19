@@ -32,7 +32,7 @@ import { DELIVER_GATES, PICK_GATES, reqSourceMeta, unreceivedAge } from '../util
 import { openDemandMatsByLine } from '../lib/lineDemandSync';
 import { slocCodeOfLine, homeSlocOf } from '../utils/storageLoc';
 import { loadHomeSlocs } from '../utils/homeSloc';   // 🏠 ที่จัดเก็บหลักของพาร์ท (05/11)
-import { buildReceiptRows, RECEIPT_LINE } from '../utils/stockReceipt';
+import { buildReceiptRows, RECEIPT_LINE, STORE_NEG_NOTE } from '../utils/stockReceipt';
 import { rawSourceLocOf, splitRawConsume, inflowDestOf } from '../utils/partRefStock';   // 📤 ตัดวัตถุดิบล็อตจากคลังที่ของอยู่จริง (2026-10-12)   // 📥 ของซื้อเข้าคลัง ไม่ใช่เข้าไลน์ (2026-10-01)   // 🏬 ชั้นบัญชี SAP — tag ใบ/ledger ตอนเขียน (2026-09-08)
 import { lotMatsOf, lotOrphanRisk } from '../utils/stockReceipts';   // 🔧 พาร์ทที่ยอดเข้าคลังทางปิดล็อตทางเดียว
 import { releaseDueRows, openLotMats } from '../utils/kanbanReleaseDue';   // 📉 สต็อก ≤ min = ถึงจุดต้องปล่อยคัมบัง (26/10 · feedback สโตร์)
@@ -60,6 +60,7 @@ import { loadPartImages, partImageOf, imageCoverage } from '../utils/partImages'
 import { loadDocForms } from '../utils/docForms';
 import { downloadCsvDoc } from '../utils/csvDoc';
 import { tr } from '../utils/i18n';
+import { directSheetRows } from '../utils/bomTree';   // 🌳 ลูกตรงแบบ SAP (19/11)
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 
 /* 🧭 ทะเบียนมุมมองของบอร์ดสโตร์ (2026-09-25 · คำสั่ง user *"สับสนการใช้งาน แต่ละ tab มากๆ"*)
@@ -2378,7 +2379,8 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
 
   /* 💾 ตัดสต็อกตอนยืนยันเตรียม (ขั้น "Scan for SAP update" ใน Smart Withdraw Kanban · 2026-09-07)
      เขียน ledger ฝั่ง DR 2 แถว: STORE −qty (type consume) · ไลน์ปลายทาง +qty (type issue) — สูตร view line_stock_summary
-     · STORE ไม่มีแถวสต็อกของพาร์ทนี้ = "ไม่รู้" → ไม่หัก (หักแล้วติดลบจากของที่ไม่เคยลงรับ) แต่จดเหตุผลไว้บนใบ + toast ห้ามเงียบ
+     · 🔴 19/11 (คำสั่ง user "ตัดเต็มและติดลบ") — **หัก STORE เต็มจำนวนเสมอ** แม้ STORE ไม่มีแถว/ยอดไม่พอ
+       (เดิมไม่หัก ⇒ ยอดค้าง STORE สูงเกินจริงสะสม) · ติดลบรอลงรับเข้า STORE หักล้าง · จดเหตุผลบนใบ + toast ห้ามเงียบ
      · id แถวเก็บที่ใบ (stock_txn_ids) — มีแล้วไม่ตัดซ้ำ · ledger ล้ม = ใบยังเป็น preparing แต่ stock_txn_note บอกว่ายังไม่ได้ตัด
      ⚠️ เปลี่ยนกฎเหล็ก 5 เดิม (ลูปไม่ตัดสต็อก) — สโตร์ห้ามไปบันทึก "จ่ายพาร์ทเข้าไลน์" ซ้ำสำหรับใบเหล่านี้ */
   /* คืน true = ตัดแล้ว (หรือเคยตัดไปแล้ว) · false = ยังไม่ได้ตัด
@@ -2407,9 +2409,9 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
     const lineSloc  = w.storage_location || slocCodeOfLine(slocs, linesArr, w.line_name);
     const storeSloc = homeSlocOf(homeSloc.map, w.mat_no);   // 🏠 05/11 — ที่จัดเก็บหลักของพาร์ท (ไม่ตั้ง = null ไม่เดา)
     const rows = [{ ...base, line_name: w.line_name, qty, type: 'issue', storage_location: lineSloc }];
-    if (stErr) note = `เช็คสต็อก STORE ไม่ได้: ${stErr.message}`;
-    else if (!st) note = 'STORE ไม่มีแถวสต็อกของพาร์ทนี้ — บวกเข้าไลน์แล้ว แต่ไม่หัก STORE (ลงรับเข้า STORE ก่อน)';
-    else rows.push({ ...base, line_name: 'STORE', qty, type: 'consume', storage_location: storeSloc });
+    rows.push({ ...base, line_name: 'STORE', qty, type: 'consume', storage_location: storeSloc });
+    if (stErr) note = `เช็คสต็อก STORE ไม่ได้ (${stErr.message}) — หัก STORE เต็มจำนวนแล้ว อาจติดลบ`;
+    else if ((parseFloat(st?.qty_on_hand) || 0) < qty) note = `${STORE_NEG_NOTE} (มี ${(parseFloat(st?.qty_on_hand) || 0).toLocaleString()} จ่าย ${Number(qty).toLocaleString()})`;
     if (!lineSloc) note = `${note ? note + ' · ' : ''}ไลน์ ${w.line_name} ยังไม่ผูกรหัสคลัง SAP — ledger ไม่มีมุม SAP (ผูกที่ 📦 Line Stock → แท็บ 🏬 โซนคลัง → ทะเบียนรหัสคลัง)`;
     let { data: ins, error } = await supabaseDR.from('line_stock_transactions').insert(rows).select('id');
     // 42703 = ยังไม่ apply 20260908_storage_locations_line_map (DR) → ตัดสต็อกแบบไม่ tag (ห้ามให้การตัดสต็อกล้มเพราะชั้นบัญชี)
@@ -2589,8 +2591,11 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
       // 3) BOM ของ product ที่เกี่ยวข้อง + kanban standards ของพาร์ทย่อย
       const productIds = [...new Set(dem.map(d => d.product?.id).filter(Boolean))];
       if (productIds.length === 0) { setBomMap({}); setLoading(false); return; }
-      const { data: boms } = await supabaseDR.from('bom_items')
+      const { data: bomsRaw } = await supabaseDR.from('bom_items')
         .select('*').in('product_id', productIds).eq('is_active', true);
+      // 🌳 19/11: ใบผลิตของสินค้าใช้แค่ "ลูกตรง" (กติกาเดียวกับตอน confirm) — หลานให้ใบของลูกเรียกเอง
+      //    ไม่กรอง = 100→200→500 ขอ 500 ตามใบของ 100 อีกรอบ (ซ้ำ + qty ต่อ 1 ลูก ไม่ใช่ต่อ 1 แม่)
+      const boms = directSheetRows(bomsRaw || [], dem.map(d => d.product).filter(Boolean));
       const bm = {};
       (boms || []).forEach(b => { (bm[b.product_id] = bm[b.product_id] || []).push(b); });
       setBomMap(bm);
@@ -2691,17 +2696,19 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
         created_by: fullName || 'Store',
       }));
       /* 🔴 02/11 (feedback ประชุม "ยอดสโตร์-ผลิตยังไม่ถูกหัก"): รอบคัมบังเดิมบวกเข้าไลน์อย่างเดียว ไม่เคยหัก STORE
-         ⇒ ทำแบบเดียวกับใบขอเติม (deductStockForPick): STORE มีแถวสต็อก = หัก · ไม่มี = ไม่หัก (หักแล้วติดลบจากของที่ไม่เคยลงรับ)
-         แต่ต้องบอกบนจอว่าตัวไหนไม่ได้หัก ห้ามเงียบ */
+         ⇒ ทำแบบเดียวกับใบขอเติม (deductStockForPick)
+         🔴 19/11 (คำสั่ง user "ตัดเต็มและติดลบ") — หัก STORE **ทุกรายการ** แม้ไม่มีแถว/ยอดไม่พอ (ติดลบรอลงรับหักล้าง)
+         แต่ต้องบอกบนจอว่าตัวไหนติดลบ ห้ามเงียบ */
       let storeMissing = [];
       if (issueRows.length) {
         const mats = [...new Set(issueRows.map(x => x.mat_no))];
-        const { data: st, error: stErr } = await supabaseDR.from('line_stock_summary').select('mat_no')
+        const { data: st, error: stErr } = await supabaseDR.from('line_stock_summary').select('mat_no, qty_on_hand')
           .eq('line_name', 'STORE').in('mat_no', mats);
-        if (stErr) storeMissing = mats;
-        const has = new Set((st || []).map(x => x.mat_no));
-        if (!stErr) storeMissing = mats.filter(m => !has.has(m));
-        issueRows.filter(x => has.has(x.mat_no)).forEach(x => issueRows.push({
+        const have = new Map((st || []).map(x => [x.mat_no, parseFloat(x.qty_on_hand) || 0]));
+        const need = new Map();
+        issueRows.forEach(x => need.set(x.mat_no, (need.get(x.mat_no) || 0) + (Number(x.qty) || 0)));
+        storeMissing = stErr ? mats : mats.filter(m => (have.get(m) || 0) < need.get(m));
+        issueRows.slice().forEach(x => issueRows.push({
           ...x, line_name: 'STORE', type: 'consume', note: `Kanban ${r.line_name} รอบ ${r.round_no} — จ่ายออกจาก STORE`,
         }));
       }
@@ -2715,7 +2722,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
         }
       }
       toast.success(`✅ ยืนยันส่งแล้ว: ${r.line_name} รอบ ${r.round_no}`);
-      if (storeMissing.length) toast.error(`⚠ ไม่ได้หัก STORE ${storeMissing.length} รายการ เพราะ STORE ไม่มียอดตั้งต้น (ลงรับเข้า STORE ก่อน): ${storeMissing.slice(0, 5).join(', ')}${storeMissing.length > 5 ? ' …' : ''}`);
+      if (storeMissing.length) toast.error(`⚠ STORE ติดลบ ${storeMissing.length} รายการ (ยอดในระบบไม่พอ · หักเต็มแล้ว รอลงรับเข้า STORE หักล้าง): ${storeMissing.slice(0, 5).join(', ')}${storeMissing.length > 5 ? ' …' : ''}`);
       await loadDeliveries();
     } catch (err) { toast.error(err.message); }
     setConfirming(null);
