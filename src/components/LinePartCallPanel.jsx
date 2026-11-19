@@ -48,6 +48,7 @@ import { qtyUnit } from '../utils/coilUom';
 import { tr } from '../utils/i18n';
 import { fetchAllRows } from '../utils/fetchAllRows';   // 🏭 ของที่ไลน์ผลิตเอง อ้างยอดคลัง (2026-10-08) // 📜 MAT ที่เคยตั้งระดับไว้ — ทะเบียนไม่มีก็ยังเลือกซ้ำได้ (2026-09-07)
 import { askConfirm } from '../utils/askConfirm';
+import { STORE_NEG_NOTE } from '../utils/stockReceipt';   // 19/11 ข้อความ "STORE ติดลบ" ชุดเดียวกับฝั่งสโตร์
 
 /* 🙈 05/11 (คำสั่ง user "งงกับตั้งจุดเรียกเติม … เอาออกก่อน user งง") — ซ่อนทางเบิกแบบ MIN/MAX หน้าไลน์ทั้งชุด
    (ปุ่ม ⚙️ · โมดัล · ส่วน "ถึงจุดเรียกเติม" · "ยังไม่ตั้งจุดเรียกเติม" · "ยอดคลังต่ำกว่าขั้นต่ำ ต้องผลิตเติม")
@@ -561,7 +562,9 @@ export default function LinePartCallPanel({ lineName, lines = [], role, fullName
       + (ledgered
         ? ` · ยอดเข้าไลน์ +${fmtQty(issued)} ตั้งแต่สโตร์เตรียมของแล้ว${short > 0 ? ` (ส่วนที่ไม่ได้รับ ${fmtQty(short)} ย้ายไปคลังพัก รอผลิต+สโตร์เคลียร์)` : ''}`
         : ' · ⚠ ใบนี้ยังไม่ถูกตัดสต็อก — ยอดในไลน์ไม่เปลี่ยน แจ้งสโตร์'));
+    // ใบเก่า (ก่อน 19/11) = "ไม่หัก STORE" · ใบใหม่ = หักเต็มแล้วติดลบ (STORE_NEG_NOTE)
     if (r.stock_txn_note && /ไม่หัก STORE/.test(r.stock_txn_note)) toast.info('ℹ️ ฝั่งสโตร์ยังไม่ถูกหักยอด เพราะ STORE ไม่มียอดตั้งต้นของพาร์ทนี้ — สโตร์ต้องลงรับเข้า STORE ก่อน');
+    else if (r.stock_txn_note && r.stock_txn_note.includes(STORE_NEG_NOTE)) toast.info(`ℹ️ ${STORE_NEG_NOTE}`);
     load();
   };
 
