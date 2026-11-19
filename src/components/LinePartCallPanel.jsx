@@ -41,7 +41,7 @@ import { slocCodeOfLine } from '../utils/storageLoc';   // 🏬 มุม SAP �
 import { isFgMat, FG_NO_LINE_REQUEST } from '../utils/storeOps';   // 🚫 ไม่มี FG เข้าไลน์ (13/11)
 import ProductSelect from './ProductSelect';
 import { splitLevels, refStockOf, madeHereMats, selfMadeRequestBlock, lineRequestFromBom } from '../utils/partRefStock';
-import { buildBomIndex } from '../utils/bomTree';
+import { buildBomIndex, directSheetRows } from '../utils/bomTree';
 import { shortReceiptRows } from '../utils/stockDiscrepancy';
 import { syncLineOrderDemand, syncSummaryText, confirmAndSyncLineDemand } from '../lib/lineDemandSync';
 import { qtyUnit } from '../utils/coilUom';
@@ -100,11 +100,12 @@ function useBomChildOptions(famNames, enabled = true) {
       const fam = new Set(famKey.split('|').filter(Boolean));
       const prods = all.filter(p => p.is_active !== false && fam.has(p.line_name));
       if (!prods.length) return;
-      const { data: boms } = await supabaseDR.from('bom_items').select('mat_no, part_no, part_name')
+      const { data: boms } = await supabaseDR.from('bom_items').select('product_id, parent_mat, mat_no, part_no, part_name')
         .in('product_id', prods.map(p => p.id)).eq('is_active', true).limit(1000);
       if (!alive) return;
       const seen = new Set();
-      setRows((boms || []).filter(b => b.mat_no && !seen.has(b.mat_no) && seen.add(b.mat_no))
+      // 🌳 19/11: ไลน์นี้ใช้แค่ "ลูกตรง" ของสินค้าที่ผลิต — หลานถูกใช้ที่ไลน์ของลูก (กติกา SAP · bomTree.directSheetRows)
+      setRows(directSheetRows(boms || [], prods).filter(b => b.mat_no && !seen.has(b.mat_no) && seen.add(b.mat_no))
         .map(b => ({ mat_no: b.mat_no, name: b.part_name, p_no: b.part_no,
                      sub: [b.part_no, b.part_name].filter(Boolean).join(' · '), group: '🧩 พาร์ทลูก BOM ของไลน์นี้' })));
     })();

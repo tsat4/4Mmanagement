@@ -45,3 +45,17 @@ test('ไม่รู้ยอดหน้าไลน์ = null ห้ามเ
   const r2 = openOrderDemand({ orders: [{ id: 'd', mat_no: '2NOBOM', qty: 1, line_name: 'L' }], products: [...products, { id: 'nb', mat_no: '2NOBOM', is_active: true }], bom });
   assert.deepEqual(r2.noBom, ['2NOBOM']);
 });
+
+test('19/11: แถวหลานในใบแม่ไม่ถูกนับเป็นความต้องการของใบแม่ (100→200→500 ไม่เบิ้ล 500)', () => {
+  const r = openOrderDemand({
+    orders: [{ id: 'o1', mat_no: '100', qty: 10, line_name: 'L1' }, { id: 'o2', mat_no: '200', qty: 10, line_name: 'L2' }],
+    products: [{ id: 'p100', mat_no: '100' }, { id: 'p200', mat_no: '200' }],
+    bom: [
+      { product_id: 'p100', mat_no: '200', qty_per_unit: 1 },
+      { product_id: 'p100', mat_no: '500', parent_mat: '200', qty_per_unit: 1 },
+      { product_id: 'p200', mat_no: '500', qty_per_unit: 1 },
+    ],
+  });
+  const need = Object.fromEntries(r.rows.map(x => [`${x.line_name}:${x.mat_no}`, x.need]));
+  assert.deepEqual(need, { 'L1:200': 10, 'L2:500': 10 });
+});
