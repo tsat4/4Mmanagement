@@ -393,7 +393,7 @@ user เคาะ 3 ข้อ: **① แยกรายส่วนงาน ②
 
 | หน่วย | แถว | นอกมาตรฐาน | เดือนที่มีข้อมูล | ทำอะไรไป |
 |---|---|---|---|---|
-| **Die MTN** | 17 | 5 | 10 | ผูก 6 · หยิบใหม่ 5 (MO Closed · Machine Break Down · MTBF · MTTR · Cost Reduction) |
+| **Die MTN** | 12 | **0** | 10 | ผูก 6 · หยิบใหม่ 5 (MO Closed · Machine Break Down · MTBF · MTTR · Cost Reduction) · **ปิด 5 ข้อของแบบเก่า** |
 | Electric | 12 | 1 | 86 | **เปิดคืน 4** (ไม่ได้หยิบใหม่) |
 | **JIG MTN** | 13 | 1 | 31 | — ครบอยู่แล้ว **ใช้เป็นต้นแบบได้** |
 | Maintenance (ส่วนงาน) | 11 | 0 | 20 | ผูก 2 · หยิบใหม่ 9 |
@@ -403,11 +403,12 @@ user เคาะ 3 ข้อ: **① แยกรายส่วนงาน ②
 **"นอกมาตรฐาน" ที่เหลือ — ตั้งใจเก็บไว้ ไม่ใช่ของตกค้าง:**
 - Electric `Air Leak [MTN]` (7 เดือน) · Tooling MTN `PM on Plan (DIE HDF)`/`(PRESS Factory)` (10 เดือนทั้งคู่)
   · JIG MTN `Non NC Major (ISO External Audit)` — **ของจริงที่หน่วยงานวัดเอง** (§6 อนุญาต)
-- 🔴 **Die MTN เหลือ 5 ข้อของแบบธุรกิจขายแม่พิมพ์** (`Keep inventory no more than` ·
+- ✅ **Die MTN 5 ข้อของแบบธุรกิจขายแม่พิมพ์ — user สั่งปิดแล้ว 19/11** (`Keep inventory no more than` ·
   `Manage project … on time delivery to customer` · `Part quality concern from Dies & Jig MTN` ·
   `Reduce interuption from mold problems` · `Reduce part rework from DIE & JIG tooling`)
-  — **ข้อมูล 0 เดือนทุกตัว** · ยังไม่ปิดให้ เพราะกฎคือ **เตือนเท่านั้น คนตัดสิน**
-  ไม่ใช้แล้วให้ปิดแถว (`is_active=false`) **ห้ามลบ**
+  · **ปิด ไม่ใช่ลบ** (`is_active=false` · ยังอยู่ที่แผง "🗄️ ปิดใช้งานอยู่" กดเปิดคืนได้)
+  · 🔴 คิวรีที่ปิดใส่ `not exists (… kpi_manual_entries …)` ไว้ = **fail-closed** ปิดได้เฉพาะแถวที่ไม่มีข้อมูลจริง
+  ⇒ Die MTN เหลือ 12 แถว · ขาด 0 · **นอกมาตรฐาน 0** = ตรงแบบ Maintenance เป๊ะ
 - **Die MTN · Customer Satisfaction → Internal Satisfaction** สลับ 1:1 แล้ว (น้ำหนัก 5 · ≥95%/100% คงเดิม ·
   ข้อมูลของตัวเอง 0 เดือน ⇒ ไม่มีตัวเลขหาย) · migration `20261119_kpi_tech_teams_use_maintenance_std_main.sql`
 - 🔴 **เป้า/น้ำหนักของข้อที่หยิบเพิ่ม ระบบไม่ตั้งให้** (เอกสารกลุ่มให้หน่วยงานถ่วงเอง) — หยิบที่

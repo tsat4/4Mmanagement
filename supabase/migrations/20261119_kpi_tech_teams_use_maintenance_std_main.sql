@@ -100,9 +100,24 @@ select 2026, units.kind, units.u, s.perspective, s.topic, s.formula_text, s.id, 
       and (d.std_item_id = s.id or lower(trim(d.name)) = lower(trim(s.topic))));
 
 -- 📊 ผลหลังทำครบ (วัด 19/11) — **ข้อบังคับขาด 0 · ซ้ำ 0 ทุกหน่วย** · ข้อมูลเดิมอยู่ครบ:
---    Die MTN 17 แถว (นอกมาตรฐาน 5 · 10 เดือน) · Electric 12 (นอก 1 · 86 เดือน)
+--    Die MTN 12 แถว (นอกมาตรฐาน 0 · 10 เดือน) · Electric 12 (นอก 1 · 86 เดือน)
 --    JIG MTN 13 (นอก 1 · 31) · Maintenance 11 (นอก 0 · 20)
 --    Mechanic 11 (นอก 0 · 73) · Tooling MTN 13 (นอก 2 · 103)
+
+-- ── ข้อ 2f: ปิด 5 ข้อของแบบธุรกิจขายแม่พิมพ์ที่ค้างใน Die MTN (user สั่ง 19/11 "ปิด 5 ข้อนั้นเลย") ──
+-- 🔴 **ปิด ไม่ใช่ลบ** (`is_active=false`) — ยังเห็นได้ที่แผง "🗄️ ปิดใช้งานอยู่" และกดเปิดคืนได้
+-- 🔴 fail-closed: `and not exists (... kpi_manual_entries ...)` — ปิดได้เฉพาะแถวที่ไม่มีข้อมูลจริงเลย
+--    (ทั้ง 5 แถวมี 0 เดือน · ถ้าวันหลังมีข้อมูลโผล่มา คิวรีนี้จะไม่แตะให้เอง)
+update public.kpi_definitions d
+   set is_active = false, updated_at = now()
+ where d.year = 2026 and d.scope_value = 'Die MTN'
+   and d.id in ('16746847-2fa9-40f1-8e89-7eacfb45d5b0',   -- Keep inventory no more than
+                'a4a9e75d-a9e4-4b08-8eef-142b4ba4c3cd',   -- Manage project … on time delivery to customer
+                'f8cd8d5f-016a-4d85-ab1b-cb82d0f3f87d',   -- Part quality concern from Dies & Jig MTN
+                '3bcdb9d1-4c69-40ba-9fb4-13092e418a98',   -- Reduce interuption from mold problems
+                '3d27ffe0-1ac0-42e1-883a-aac189f25606')   -- Reduce part rework from DIE & JIG tooling
+   and not exists (select 1 from public.kpi_manual_entries e where e.kpi_id = d.id);
+-- ⇒ Die MTN เหลือ 12 แถว · ขาด 0 · **นอกมาตรฐาน 0** = ตรงแบบ Maintenance เป๊ะ
 
 -- ── ตรวจผล (Main "MAIN" · ewhdfqwfwofivojtsizn) ──────────────────────────────────────────
 -- 1) Customer Satisfaction เหลือค่ากลาง 1 แถว + หน่วยที่ดึงไปใช้ (own_rows ต้องเป็น 0 ทุกหน่วย):
@@ -177,6 +192,12 @@ select 2026, units.kind, units.u, s.perspective, s.topic, s.formula_text, s.id, 
 --     'af3b7ce9-84c1-486a-93b1-b5a07ccb47fc',
 --     '7b61ebed-39f7-4e3e-bf8c-ac585123fe8d',
 --     '3bc2b8f8-6b31-459a-91a9-e2b4debb640b');
+--
+-- -- (ฉ) เปิดคืน 5 ข้อของ Die MTN ที่ปิดไป
+-- update public.kpi_definitions set is_active=true where id in (
+--     '16746847-2fa9-40f1-8e89-7eacfb45d5b0','a4a9e75d-a9e4-4b08-8eef-142b4ba4c3cd',
+--     'f8cd8d5f-016a-4d85-ab1b-cb82d0f3f87d','3bcdb9d1-4c69-40ba-9fb4-13092e418a98',
+--     '3d27ffe0-1ac0-42e1-883a-aac189f25606');
 --
 -- -- (จ) Die MTN · Internal Satisfaction กลับเป็น Customer Satisfaction (Q&D)
 -- update public.kpi_definitions
