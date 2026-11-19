@@ -41,6 +41,7 @@ import DelayBlameBar from '../components/DelayBlameBar';   // 🔗 สรุป�
 import { liveChannel } from '../utils/liveChannel';
 import { checkWrite, checkWriteRows } from '../utils/dbWrite';
 import { askConfirm } from '../utils/askConfirm';
+import { homeSuggestion, HOME_SUGGEST_DAYS } from '../utils/homeSuggest';
 import { uploadOpts } from '../utils/storageUpload';
 import { acceptImageFile } from '../utils/acceptImageFile';
 import { tr } from '../utils/i18n';
@@ -292,6 +293,28 @@ export default function Management() {
     })();
     return () => { alive = false; };
   }, []);
+  /* 🏠 เสนอตำแหน่งประจำ (2026-11-19 · กฎ `utils/homeSuggest.js`) — โหลดประวัติเฉพาะคนที่ยืนจุดที่เปิดอยู่
+     และยังไม่มีตำแหน่งประจำ · deps เป็น primitive ล้วน · alive guard กันผลค้างจากจุดก่อนหน้า */
+  const [homeSug, setHomeSug] = useState(null); // { key, suggest, days } | { key, error }
+  const sugStationId = stationModal ? String(stationModal.id) : '';
+  const sugEmpId = sugStationId ? (workers.find(w => String(w.assigned_line) === sugStationId)?.employee_id || '') : '';
+  const sugHasHome = !!(sugEmpId && homePositions[sugEmpId]);
+  useEffect(() => {
+    if (!sugEmpId || !sugStationId || sugHasHome) { setHomeSug(null); return; }
+    let alive = true;
+    const key = `${sugEmpId}|${sugStationId}`;
+    (async () => {
+      const { data, error } = await supabase.from('daily_production_logs')
+        .select('work_date, is_present, assigned_line')
+        .eq('employee_id', sugEmpId)
+        .order('work_date', { ascending: false })
+        .limit(400);
+      if (!alive) return;
+      if (error) { setHomeSug({ key, error: error.message }); return; }
+      setHomeSug({ key, ...homeSuggestion(data || [], sugStationId, null) });
+    })();
+    return () => { alive = false; };
+  }, [sugEmpId, sugStationId, sugHasHome]);
   useEffect(() => {
     const el = boardSectionRef.current;
     if (el) setBoardSectionH(el.scrollHeight);
@@ -1037,6 +1060,18 @@ export default function Management() {
     if (!await checkWriteRows(res, 'ยกเลิกตำแหน่งประจำ')) return;
     setHomePositions(prev => { const n = { ...prev }; delete n[empId]; return n; });
     toast.success('ยกเลิกตำแหน่งประจำแล้ว');
+  };
+
+  /* รับข้อเสนอตำแหน่งประจำ (ยืน 20 วันทำงานติด) — ถามยืนยันก่อน แล้วใช้ saveHomePosition ตัวเดิม */
+  const acceptHomeSuggestion = async (worker, station, days) => {
+    const ok = await askConfirm({
+      title: 'ตั้งเป็นตำแหน่งประจำ?',
+      message: `${worker.employees?.name || ''} (${worker.employees?.employee_id_code || '-'})\nจุด: ${station.station_name || '-'}\n\nยืนจุดนี้ ${days} วันทำงานติดกัน (ไม่นับวันหยุด · วันที่ไม่มา · วันที่ไม่ได้วางจุด)`,
+      okLabel: 'ตั้งเป็นตำแหน่งประจำ',
+      cancelLabel: 'ไม่ตั้ง',
+    });
+    if (!ok) return;
+    await saveHomePosition(worker, station.id);
   };
 
   const specialEmpIds = new Set(specialTasks.map(t => t.employee_id));
@@ -2918,6 +2953,29 @@ export default function Management() {
                       </div>
                     </div>
                   </div>
+                  {/* 🏠 ข้อเสนอตำแหน่งประจำ — ยังไม่มีตำแหน่งประจำ + ยืนจุดนี้ครบ 20 วันทำงานติด (utils/homeSuggest.js) */}
+                  {(() => {
+                    const key = `${workerHere.employee_id}|${String(st.id)}`;
+                    if (!homeSug || homeSug.key !== key || homePositions[workerHere.employee_id]) return null;
+                    if (homeSug.error) return (
+                      <div style={{ marginTop: 8, fontSize: 11, color: 'var(--muted)' }}>{tr('อ่านประวัติการยืนจุดไม่ได้ — ยังเสนอตำแหน่งประจำไม่ได้')}</div>
+                    );
+                    if (!homeSug.suggest) return null;
+                    return (
+                      <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 'var(--r-md)', background: 'var(--blue-dim)', border: '1px solid var(--blue-line)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <div style={{ flex: 1, minWidth: 160, fontSize: 12, color: 'var(--text2)' }}>
+                          🏠 {tr('ยืนจุดนี้')} <b>{homeSug.days}</b> {tr('วันทำงานติดกัน')} — {tr('เสนอเป็นตำแหน่งประจำ')}
+                          <div style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('เกณฑ์')} {HOME_SUGGEST_DAYS} {tr('วัน · ไม่นับวันหยุด/วันที่ไม่มา/วันที่ไม่ได้วางจุด')}</div>
+                        </div>
+                        {canAssignManpower && (
+                          <button
+                            onClick={() => acceptHomeSuggestion(workerHere, st, homeSug.days)}
+                            style={{ fontSize: 12, padding: '5px 10px', borderRadius: 'var(--r-md)', background: 'var(--blue)', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 700 }}
+                          >{tr('ตั้งเป็นตำแหน่งประจำ')}</button>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 

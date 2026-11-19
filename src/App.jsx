@@ -1224,6 +1224,7 @@ const NOTIF_ROUTE = {
   rack_requests: '/rack-center',
   wip_replenish_requests: '/heijunka',
   qa_ncr:        '/qa?tab=ncr',
+  qa_inspection_sheets: '/qa?tab=sheet',   // ✍️ อนุมัติ/ตีกลับใบตรวจ QA + alarm ตกซ้ำ (19/11)
   qa_capa:       '/qa?tab=capa',
   qa_customer_claims: '/qa?tab=claims',
   quality_bin_records: '/qa?tab=bins',

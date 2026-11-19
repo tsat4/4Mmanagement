@@ -73,7 +73,7 @@ export default function QaSheetApproval({ sheet, onChanged }) {
     if (!row) return;
     toast.success('อนุมัติใบตรวจแล้ว');
     if (row.created_by_uid && row.created_by_uid !== myUid) {
-      createNotification(row.created_by_uid, { title: 'ใบตรวจ QA ได้รับการอนุมัติ', body: sheetLabel(row), type: 'success', refTable: 'qa_inspection_sheets', refId: row.id })
+      createNotification(row.created_by_uid, { title: 'ใบตรวจ QA ได้รับการอนุมัติ', body: sheetLabel(row), type: 'success', refTable: 'qa_inspection_sheets', refId: row.id, link: `/qa?tab=sheet&sheet=${row.id}` })
         .catch(e => toast.info(`อนุมัติแล้ว แต่แจ้งคนตรวจไม่สำเร็จ: ${e.message}`));
     }
     onChanged?.(row);
@@ -85,7 +85,7 @@ export default function QaSheetApproval({ sheet, onChanged }) {
     if (!row) return;
     toast.success('ตีกลับใบตรวจแล้ว');
     if (row.created_by_uid && row.created_by_uid !== myUid) {
-      createNotification(row.created_by_uid, { title: 'ใบตรวจ QA ถูกตีกลับ', body: `${sheetLabel(row)} — ${row.reject_reason}`, type: 'error', refTable: 'qa_inspection_sheets', refId: row.id })
+      createNotification(row.created_by_uid, { title: 'ใบตรวจ QA ถูกตีกลับ', body: `${sheetLabel(row)} — ${row.reject_reason}`, type: 'error', refTable: 'qa_inspection_sheets', refId: row.id, link: `/qa?tab=sheet&sheet=${row.id}` })
         .catch(e => toast.info(`ตีกลับแล้ว แต่แจ้งคนตรวจไม่สำเร็จ: ${e.message}`));
     }
     onChanged?.(row);
