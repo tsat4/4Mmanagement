@@ -1401,7 +1401,7 @@ Promise.all(mats.map(m => supabaseDR.rpc('fn_bom_direct_demand', { p_fg_mat: m }
 - จอที่อยากเห็น **ทั้งต้นไม้** (จอ BOM · แผน) ยังใช้ `buildBomIndex` + `explodeBom` เหมือนเดิม ห้ามสลับ
 - ตัวตัดจ่าย (`fn_bom_direct_demand` / `fn_bom_kid_rows`) **ไม่ได้แก้** — `kid_rows(mat, null)` อ่านใบตัวเองก่อนอยู่แล้ว
 
-### migration `20261119c_bom_sap_one_sheet_per_mat_dr.sql` (DR) — 🟡 ยังไม่ apply (dry-run บนฐานจริงผ่าน 19/11)
+### migration `20261119c_bom_sap_one_sheet_per_mat_dr.sql` (DR) — ✅ apply แล้ว 19/11 (ตรวจกลับตรงกับ dry-run)
 ลงทะเบียน `dr_products` 7 ตัว (ชื่อ/P-No จาก parts_master · user สั่ง "ลงทะเบียนให้เลย") · ลงใบตัวเอง 86 แถว
 (เปิดแถวที่ปิดไว้ 05/11 คืน 31) · ปิดแถวหลานในใบแม่ 195 · ทำ 76 MAT · **ผลตัดจ่ายต่าง 0** · โซ่ขาด 3 ⇒ 2
 · ด่านในตัว: ผลตัดจ่ายเปลี่ยน/โซ่ขาดเพิ่ม = rollback ทั้งก้อน · สำรอง `archive.*_sap_shape_20261119`

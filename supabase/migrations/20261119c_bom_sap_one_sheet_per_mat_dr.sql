@@ -27,7 +27,8 @@
 --      update public.dr_products p set is_active = false from archive.dr_products_sap_shape_20261119 a where p.id = a.id;
 --    ⛔ ห้ามรันซ้ำ (บล็อกด้วย archive table)
 --
---    🟡 สถานะ 19/11: **ยังไม่ apply** — dry-run บนฐานจริงผ่าน (ลงทะเบียน 7 · ลงใบตัวเอง 86 (เปิดคืน 31)
+--    ✅ apply แล้ว 19/11 ผ่าน MCP (ตรวจกลับ: reactivated 31 · created 55 · closed 195 · สินค้าใหม่ 7 · โซ่ขาด 2)
+--    (เดิม) dry-run บนฐานจริงผ่าน (ลงทะเบียน 7 · ลงใบตัวเอง 86 (เปิดคืน 31)
 --       · ปิดแถวหลาน 195 · ทำ 76 MAT · ผลตัดจ่ายต่าง 0 · โซ่ขาด 3 ⇒ 2 · ไม่แตะ 12 ตัวให้ PE)
 --       รอแก้จอที่อ่าน `bom_items` แบบแบนด้วย product_id ก่อน (OpenOrderDemand / LinePartCall /
 --       HeijunkaKanban / VSM / LineStock) — ไม่งั้นพาร์ทหลานหายจากจอเหล่านั้น
