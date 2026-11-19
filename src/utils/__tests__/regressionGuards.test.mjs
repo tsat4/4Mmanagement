@@ -9473,6 +9473,39 @@ test('↩️ mo-list-shows-resubmit — ใบที่ถูกตีกลั�
       + '   ขาด case = ตอบ 400 unknown event ⇒ ทั้ง Telegram และกระดิ่งเงียบสนิท\n');
   }
 });
+test('🔌 machine-usability-not-mo-status — "ใบยังเปิด" ≠ "เครื่องใช้ไม่ได้"', () => {
+  /* why (19/11 · คำสั่ง user): *"ใบแจ้งซ่อมเครื่องที่เป็น supply บางทีเค้าซ่อมไม่ได้ แต่แก้ไข
+     เบื้องต้นให้ใช้ได้ระหว่างรอของมาเปลี่ยน · อยากมีปุ่มเปิดปิดเครื่อง ให้สถานะตรงกับหน้างาน"*
+     ผังโรงงานเดิมทา "ไลน์เสี่ยง" จาก **"เครื่อง supply มีใบ MO เปิดไหม"** อย่างเดียว
+     วัดจริง 19/11: CT-03 (จ่าย **13 ไลน์**) ซ่อมเสร็จ 13/11 08:44 · AB-01 13/11 11:38 ·
+     AB-02 13/11 11:42 — ใบยังเปิด (รออะไหล่/รอเซ็น) ⇒ ไลน์ปลายทางแดงอยู่ **7 วัน** ทั้งที่เครื่องเดินปกติ
+     🔴 สถานะเครื่องตัดสินที่ `machineUsability()` ที่เดียว — ชั้น ① ช่างประกาศ ชนะ ชั้น ② เดาจากใบ
+     🔴 ชั้น ② ต้องดู `repair_done_at` ไม่ใช่แค่ "มีใบเปิด" (จุดที่แก้บั๊ก 7 วัน) */
+  const u = readFileSync(join(ROOT, 'src/utils/machineUsability.js'), 'utf8');
+  assert.match(u, /const fixing = live\.filter\(o => !o\.repair_done_at\)/,
+    '\n\n❌ ชั้นเดาจากใบต้องแยก "ซ่อมเสร็จแล้วรอเอกสาร" ออกจาก "ยังซ่อมไม่เสร็จ"\n'
+    + '   ไม่แยก = ใบที่รอเซ็นจะทาไลน์ปลายทางเป็นเสี่ยงไปเรื่อยๆ (อาการเดิม 7 วัน)\n');
+
+  const map = readFileSync(join(ROOT, 'src/pages/FactoryMap.jsx'), 'utf8');
+  assert.match(map, /machineUsability\(/,
+    '\n\n❌ ผังโรงงานไม่ได้ใช้ machineUsability() — กลับไปเทียบ "มีใบเปิด" เองแล้ว\n');
+  assert.doesNotMatch(map, /openNos\.has\(/,
+    '\n\n❌ ผังกลับไปตัดสินด้วย openNos (มีใบเปิด = เสี่ยง) — นั่นคือบั๊กที่หน้างานแจ้ง\n');
+  /* คิวรีต้องดึงของที่กฎใช้จริง ไม่งั้นกฎเดินโดยไม่มีข้อมูล (undefined เงียบๆ) */
+  assert.match(map, /select\('machine_no, repair_done_at'\)/,
+    '\n\n❌ คิวรีใบซ่อมของผังไม่ได้ดึง repair_done_at — กฎใหม่จะตัดสินไม่ได้\n');
+  assert.match(map, /'machines:supply:v3'[\s\S]{0,400}usability/,
+    '\n\n❌ คิวรีทะเบียนเครื่องไม่ได้ดึง usability (หรือไม่ได้ bump คีย์ cache)\n');
+
+  /* ปุ่มต้องไม่ไปยุ่งกับใบ MO — สถานะเครื่องคนละเรื่องกับลูปเอกสาร */
+  const page = readFileSync(join(ROOT, 'src/pages/MtnRepair.jsx'), 'utf8');
+  const panel = page.slice(page.indexOf('function MachineUsabilityPanel'), page.indexOf('function DetailDrawer'));
+  assert.ok(panel.length > 200, 'หาแผง MachineUsabilityPanel ไม่เจอ');
+  assert.doesNotMatch(panel, /from\('mtn_orders'\)/,
+    '\n\n❌ ปุ่มสถานะเครื่องไปเขียน mtn_orders — สถานะเครื่อง ≠ สถานะใบ (ห้ามปิดใบให้เอง)\n');
+  assert.match(panel, /usabilityPatch\(pick, note, fullName\)/,
+    '\n\n❌ ต้องประกอบค่าผ่าน usabilityPatch() — มันเป็นตัวบังคับว่าเหลือง/แดงต้องมีเหตุผล\n');
+});
 test('🧾 pr-quote-purge-on-close — ใบเสนอราคา: ลบไฟล์ตอนปิดใบ แต่ห้ามลบประวัติ', () => {
   /* why (18/11 · Case ท้าย PDF ทีม MTN): *"ค่าซ่อมหรืออุปกรณ์ที่ซื้อไม่บ่อย สามารถให้แนบใบเสนอราคาได้
      ****แต่จะทำยังไงให้ใบเสนอราคาไม่ไปเป็นขยะในระบบ"*

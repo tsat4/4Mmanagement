@@ -45,6 +45,7 @@ export const KEYS_BY_TABLE = {
     'machines:idline:v2',        // FactoryMap loadPM (05/10 แบ่งหน้า + โยนเมื่อล้ม)
     'machines:idline',           // FactoryMap loadManpower/loadPM
     'machines:kind',             // MtnAndonBoard
+    'machines:supply:v3',        // FactoryMap loadSupply (19/11 + usability* — สถานะเครื่องที่ช่างประกาศ)
     'machines:supply:v2',        // FactoryMap loadSupply (05/10 แบ่งหน้า + โยนเมื่อล้ม)
     'machines:supply',           // FactoryMap loadSupply
     'machines:full',             // DailyReport load() — แถวเต็ม (ตัวหนักสุด 368 KB)
