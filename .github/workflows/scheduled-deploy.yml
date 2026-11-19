@@ -4,6 +4,7 @@
 #   ไม่งั้นรอให้เงียบ QUIET นาที (push ใหม่ระหว่างรอ = ยกเลิกตัวเก่า เริ่มนับใหม่) แต่ไม่เกินครบ MAX_WAIT
 # - ไม่มีของใหม่ = ไม่ build · มีแค่ .md/.claude = เลื่อนตัวชี้ ไม่ build
 # - cron รายชั่วโมง = ตัวสำรอง (cron ของ GitHub ไม่การันตีเวลา — 13/10 ข้าม 3 รอบติด ห้ามพึ่งอย่างเดียว)
+# - 🕗 เวลาไทย 08:00-17:30 = พักไว้ ไม่ deploy (ไม่เลื่อน tag) ⇒ cron รอบหลังเลิกกะมาเก็บเอง
 # - ด่วน 2 ทาง: (ก) ใส่ `[deploy-now]` ในข้อความคอมมิท/merge = ข้ามการรอ deploy ทันที
 #               (ข) Actions → "Scheduled deploy" → Run workflow = deploy ทันทีเสมอ (ต้องกดเอง)
 # - จำว่า deploy ถึง commit ไหน/เมื่อไหร่ด้วย annotated tag `render-deployed`
@@ -28,6 +29,9 @@ concurrency:
 env:
   QUIET_MIN: 30
   MAX_WAIT_MIN: 60
+  # 🕗 หน้าต่างห้าม deploy (เวลาไทย) — กะเช้า 08:00-17:30 · ข้ามได้ด้วย [deploy-now] / Run workflow
+  HOLD_FROM: '0800'
+  HOLD_TO: '1730'
 
 jobs:
   deploy:
@@ -69,21 +73,39 @@ jobs:
             SITE=$(git diff --name-only "$LAST" "$HEAD_SHA" | grep -vE '\.md$|^\.claude/|^\.github/' || true)
             if [ -z "$SITE" ]; then echo "มีแค่ .md/.claude/.github — เลื่อนตัวชี้ ไม่ build"; mark "$HEAD_SHA"; exit 0; fi
 
-            # 🚀 ป้าย [deploy-now] ในข้อความคอมมิท = ข้ามการรอ deploy ทันที (18/11 · คำสั่ง user
-            #    "ให้ขึ้นเดี๋ยวนี้เลย") — ปุ่ม Run workflow ต้องใช้สิทธิ์ actions:write ซึ่ง token
+            # 🚀 ป้าย [deploy-now] ในข้อความคอมมิท = ข้ามทั้งหน้าต่างเวลาทำงานและการรอ (18/11 · คำสั่ง
+            #    user "ให้ขึ้นเดี๋ยวนี้เลย") — ปุ่ม Run workflow ต้องใช้สิทธิ์ actions:write ซึ่ง token
             #    ของ Claude ไม่มี ⇒ ทางนี้ใช้แค่ push ธรรมดาที่มีอยู่แล้ว
-            if [ "$EVENT" = "push" ] && git log --format=%B "$LAST..$HEAD_SHA" | grep -qiF '[deploy-now]'; then
-              echo "เจอป้าย [deploy-now] ในคอมมิท — ข้ามการรอ ส่ง deploy ทันที"
-            elif [ "$EVENT" = "push" ]; then
-              NOW=$(date +%s)
-              DUE=$(( LAST_AT + MAX_WAIT_MIN*60 ))
-              if [ "$NOW" -lt "$DUE" ]; then
-                WAIT=$(( QUIET_MIN*60 ))
-                [ $(( DUE - NOW )) -lt "$WAIT" ] && WAIT=$(( DUE - NOW ))
-                echo "deploy ล่าสุดยังไม่ครบ ${MAX_WAIT_MIN} นาที — รอ ${WAIT}s (push ใหม่ระหว่างนี้จะยกเลิกรอบนี้)"
-                sleep "$WAIT"
-                git fetch -q origin main
-                HEAD_SHA=$(git rev-parse origin/main)
+            #    19/11: ดูป้ายทุก event (ไม่ใช่แค่ push) — รอบ push ที่ถูก concurrency ยกเลิกไป
+            #    จะเหลือแต่ cron มาเก็บ ถ้าเช็คแค่ push ป้ายด่วนจะหายไปกับรอบที่ถูกยกเลิก
+            DEPLOY_NOW=no
+            git log --format=%B "$LAST..$HEAD_SHA" | grep -qiF '[deploy-now]' && DEPLOY_NOW=yes
+
+            if [ "$DEPLOY_NOW" = "yes" ]; then
+              echo "เจอป้าย [deploy-now] ในคอมมิท — ข้ามหน้าต่างเวลาทำงานและการรอ ส่ง deploy ทันที"
+            else
+              # 🕗 หน้าต่าง deploy — ห้าม deploy ในเวลาทำงาน (26/10 · คำสั่ง user · ลงเป็นโค้ด 19/11)
+              #    deploy = สลับไฟล์ชุดใหม่ ⇒ แท็บที่หน้างานเปิดค้างพังพร้อมกันทุกเครื่อง
+              #    🔴 **พักไว้แบบ "ไม่เลื่อน tag"** — tag ยังชี้คอมมิทเก่า ⇒ cron รอบหลังเลิกกะ
+              #       (นาทีที่ 7 ของทุกชั่วโมง) มาเก็บ deploy ให้เอง ไม่มีของตกค้างถาวร
+              #    ด่วนจริง 2 ทาง: ใส่ [deploy-now] ในข้อความคอมมิท/merge · หรือกด Run workflow
+              BKK_HM=$(TZ=Asia/Bangkok date +%H%M)
+              if [ "$((10#$BKK_HM))" -ge "$((10#$HOLD_FROM))" ] && [ "$((10#$BKK_HM))" -lt "$((10#$HOLD_TO))" ]; then
+                echo "เวลาไทย ${BKK_HM} อยู่ในกะทำงาน (${HOLD_FROM}-${HOLD_TO}) — พักไว้ ยังไม่ deploy"
+                echo "   tag render-deployed ไม่ถูกเลื่อน ⇒ cron รอบแรกหลังเลิกกะจะ deploy $HEAD_SHA เอง"
+                exit 0
+              fi
+              if [ "$EVENT" = "push" ]; then
+                NOW=$(date +%s)
+                DUE=$(( LAST_AT + MAX_WAIT_MIN*60 ))
+                if [ "$NOW" -lt "$DUE" ]; then
+                  WAIT=$(( QUIET_MIN*60 ))
+                  [ $(( DUE - NOW )) -lt "$WAIT" ] && WAIT=$(( DUE - NOW ))
+                  echo "deploy ล่าสุดยังไม่ครบ ${MAX_WAIT_MIN} นาที — รอ ${WAIT}s (push ใหม่ระหว่างนี้จะยกเลิกรอบนี้)"
+                  sleep "$WAIT"
+                  git fetch -q origin main
+                  HEAD_SHA=$(git rev-parse origin/main)
+                fi
               fi
             fi
           fi
