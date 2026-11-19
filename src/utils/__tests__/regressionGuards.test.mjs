@@ -12099,6 +12099,37 @@ test('🗂 operator-tab-allowed-complete — `tabAllowed` ใน operator.jsx �
     `\n\n❌ operator.jsx: TAB_KEYS มี ${nKeys} แท็บ แต่ tabAllowed มี ${nAllowed} ช่อง — แท็บที่เกินมากดแล้วตกกลับแท็บแรกเงียบๆ\n`);
 });
 
+/* ═══ 🗂️ check-sheet-round1 — 2026-11-19 · ออดิท check sheet (LPA · Poka-Yoke · BBS · PPE) ══════════
+   📄 docs/modules/check-sheet-audit.md · 3 คลาสที่เจอในใบตรวจแบบเอกสาร ห้ามกลับมา:
+   ① ใบตรวจรายไลน์ต้องมีด่านชั้น ③ (`canWriteLine`) — `can()` บอกแค่ "กดเป็นไหม"
+   ② ลบต้นทางที่มีประวัติตรวจ ห้ามลากประวัติหาย (Poka-Yoke นับก่อนลบ · มีประวัติ = ปิดใช้งาน)
+   ③ ใบ BBS = คน × วัน เกิน 1,000 แถวได้จริง ⇒ ต้องดึงครบทุกหน้า · % ความครบต้องผ่าน checkDayState */
+test('🗂️ check-sheet-round1 — ด่านขอบเขต · ห้ามลบประวัติตรวจ · ใบใหญ่ต้องโหลดครบ', () => {
+  const bad = [];
+  const py = stripComments(readFileSync(join(ROOT, 'src/pages/PokaYokeCheck.jsx'), 'utf8'));
+  const bb = stripComments(readFileSync(join(ROOT, 'src/pages/BbsCheck.jsx'), 'utf8'));
+  for (const [name, src] of [['PokaYokeCheck', py], ['BbsCheck', bb]]) {
+    if (!/canWriteLine\(/.test(src)) bad.push(`${name} ไม่มีด่านชั้น ③ (canWriteLine)`);
+  }
+  // Poka-Yoke: ขาเขียนทุกขาต้องผ่าน lineGuard ของ "ไลน์ของตัวอุปกรณ์"
+  for (const fn of ['const saveCheck', 'const saveDevice', 'const deleteDevice']) {
+    const body = py.slice(py.indexOf(fn), py.indexOf(fn) + 900);
+    if (!/lineGuard\(/.test(body)) bad.push(`PokaYokeCheck ${fn} ไม่เรียก lineGuard`);
+  }
+  const del = py.slice(py.indexOf('const deleteDevice'), py.indexOf('const deleteDevice') + 2200);
+  if (del.indexOf("from('pokayoke_checks')") < 0 || del.indexOf("from('pokayoke_checks')") > del.indexOf('.delete()'))
+    bad.push('PokaYokeCheck deleteDevice ไม่นับประวัติผลทดสอบก่อนลบ (FK เดิม cascade = ประวัติหาย)');
+  // BBS: ทุกขาเขียนผ่าน ensureSheet → lineGuard
+  const ens = bb.slice(bb.indexOf('const ensureSheet'), bb.indexOf('const ensureSheet') + 300);
+  if (!/lineGuard\(\)/.test(ens)) bad.push('BbsCheck ensureSheet ไม่ผ่าน lineGuard (ขาเขียนทุกขาพึ่งตัวนี้)');
+  if (/from\('bbs_observations'\)\s*\.select\('\*'\)\.eq\('sheet_id', sh\.id\);/.test(bb.replace(/\n\s*/g, '')))
+    bad.push('BbsCheck โหลดผลสังเกตแบบคิวรีเดียว — เกิน 1,000 ช่องหายเงียบ (ใช้ fetchAllPages)');
+  if (!/checkDayState\(/.test(bb)) bad.push('BbsCheck % ความครบไม่ผ่าน checkDayState — วันหยุด/ไม่ผลิตถูกนับเป็นตัวหาร');
+  if (/^\s*checkWriteRows\(await supabase\.from\('bbs_agreements'\)/m.test(bb))
+    bad.push('BbsCheck ทิ้งค่าคืนของ checkWriteRows (ปิดข้อตกลง) — ไม่ครบแล้วยังขึ้น "บันทึกแล้ว"');
+  assert.deepEqual(bad, [], bad.join('\n'));
+});
+
 test('📍 pos-pct-double-suffix — พิกัดหมุด pos_top/pos_left ต้องผ่าน parseFloat ก่อนต่อ "%"', () => {
   /* 19/11 หน้างานแจ้ง /manpower-board แท็บผัง LAYOUT "จุดพนักงานกองมุมซ้ายบนหมด" — ฐานเก็บ pos_top/pos_left
      เป็น text ที่มี % ติดมาแล้ว ("7.47%") · `${pos_top}%` = "7.47%%" ⇒ CSS ทิ้งค่า ⇒ ทุกหมุดตก 0,0 เงียบๆ */

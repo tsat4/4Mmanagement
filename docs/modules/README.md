@@ -51,6 +51,7 @@
 | Kanban Auto-Calc — คำนวณ kanban จาก forecast (แท็บ 🎴 คำนวณ Kanban ใน /planner-sales · 2026-07-16..17) | `docs/modules/kanban-auto-calc.md` |
 | Logistic — Planner & Sales / Delivery / Rundown Stock (2026-07-10..11) | `docs/modules/logistic-planner-sales.md` |
 | Layer Process Audit — LPA paperless (2026-07-20) | `docs/modules/lpa-audit.md` |
+| 🗂️ ออดิท Check Sheet แบบเอกสาร — LPA · Poka-Yoke · BBS · PPE (มาตรฐานร่วม + ผลออดิท · 2026-11-19) | `docs/modules/check-sheet-audit.md` |
 | 🧑‍🤝‍🧑 Manpower Control Board — ผังกำลังคน · ผัง LAYOUT · ป้าย 4M (`/manpower-board` · 2026-10-06) | `docs/modules/manpower-board.md` |
 | 📉 Monitoring Boards — `/monitoring` (2026-10-02) | `docs/modules/monitoring-boards.md` |
 | Morning Meeting — ประชุมแถวเช้า (2026-07-13) | `docs/modules/morning-meeting.md` |
