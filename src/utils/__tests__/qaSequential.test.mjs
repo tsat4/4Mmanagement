@@ -138,3 +138,19 @@ test('ลำดับชิ้นไม่เรียงใน input ก็เ�
 test('ค่าคงที่ของกฎถูกล็อกไว้ (เปลี่ยน = ต้องเปลี่ยนเอกสาร + เทสนี้)', () => {
   assert.deepEqual({ ...SEQ_RULE }, { FAILS_TO_ALARM: 2, PASSES_TO_ACCEPT: 2 });
 });
+
+/* 🔢 n ต่อรอบ (sample_n · 19/11) */
+import { evalSequence as ev19, seqLabel as sl19 } from '../qaSequential.js'
+const P19 = (rs) => rs.map((r, i) => ({ round_no: 1, piece_no: i + 1, result: r }))
+test('minPieces=1 = พฤติกรรมเดิม (ชิ้นแรกผ่าน = ยอมรับ)', () => {
+  assert.equal(ev19(P19(['pass']), [], { minPieces: 1 }).acceptedBy, 'first_pass')
+  assert.equal(ev19(P19(['pass'])).acceptedBy, 'first_pass')
+})
+test('minPieces=3: ต้องผ่านครบ 3 ชิ้น · ตก 2 ยัง alarm · หลังตกต้องผ่านติดกัน 3', () => {
+  const a = ev19(P19(['pass', 'pass']), [], { minPieces: 3 })
+  assert.equal(a.state, 'inspecting'); assert.match(sl19(a), /2\/3/)
+  assert.equal(ev19(P19(['pass', 'pass', 'pass']), [], { minPieces: 3 }).acceptedBy, 'n_passes')
+  assert.equal(ev19(P19(['fail', 'pass', 'fail']), [], { minPieces: 3 }).state, 'await_action')
+  assert.equal(ev19(P19(['fail', 'pass', 'pass']), [], { minPieces: 3 }).state, 'inspecting')
+  assert.equal(ev19(P19(['fail', 'pass', 'pass', 'pass']), [], { minPieces: 3 }).state, 'accepted')
+})
