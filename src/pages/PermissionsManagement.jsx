@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useContext, Fragment } from 'react';
+import { MoreMark } from '../components/InfoMore';
 import { LOGISTIC_GROUPS } from '../utils/logisticSide';
 import { supabase } from '../supabaseClient';
 import { loadPermissions, canSeeded } from '../utils/permissions';
@@ -530,7 +531,9 @@ export default function PermissionsManagement() {
             </div>
           )}
           <div style={{ marginTop: 4 }}>
-            🛡️ <b>{tr('ผู้ดูแลระบบ (admin) ติ๊กเต็มเสมอ')}</b> — ล็อกไว้ในโค้ด ไม่ได้มาจากทะเบียน (กันตั้งค่าผิดจนไม่มีใครเข้าได้)
+            {/* ข้อเท็จจริง "admin ติ๊กเต็มเสมอ" ต้องเห็น (กันงงว่าทำไมติ๊กออกไม่ได้) · เหตุผล → ⓘ · 19/11 */}
+            🛡️ <b>{tr('ผู้ดูแลระบบ (admin) ติ๊กเต็มเสมอ')}</b>{' '}
+            <MoreMark text={tr('ล็อกไว้ในโค้ด ไม่ได้มาจากทะเบียน (กันตั้งค่าผิดจนไม่มีใครเข้าได้)')} />
           </div>
         </div>
 

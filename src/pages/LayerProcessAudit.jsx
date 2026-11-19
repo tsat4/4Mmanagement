@@ -1,4 +1,5 @@
 import { useState, useEffect, useContext, useMemo, useRef } from 'react';
+import { MoreMark } from '../components/InfoMore';
 import { LPA_LAYERS } from '../utils/prodRoutine';
 import { canWriteLine, writeBlockText } from '../utils/writeScope';
 /* 🔴 ด่านชั้น 2 ของ stale-response race — กฎ+ข้อความอยู่ใน utils/staleView.js (pure · มีเทส) */
@@ -1276,7 +1277,9 @@ ${issuesHtml}
 
           {draft?.id && (
             <div style={{ fontSize: 12, color: 'var(--green)', marginBottom: 8, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-              ✅ วันนี้บันทึกผลตรวจชั้นนี้ไว้แล้ว — แก้ไขแล้วกดบันทึกทับได้
+              {/* สถานะ "บันทึกแล้ว" ต้องเห็นเสมอ · วิธีแก้ไขพับได้ (ปุ่มลบยืนอยู่ข้างๆ แล้ว) · 19/11 */}
+              ✅ {tr('วันนี้บันทึกผลตรวจชั้นนี้ไว้แล้ว')}{' '}
+              <MoreMark text={tr('แก้ไขแล้วกดบันทึกทับได้')} />
               {mayDelete && <button onClick={deleteAudit} style={{ ...btnGray, color: 'var(--red)', border: '1px solid var(--red-line)', fontSize: 12, padding: '4px 10px' }}>{tr('ลบผลตรวจนี้')}</button>}
             </div>
           )}
