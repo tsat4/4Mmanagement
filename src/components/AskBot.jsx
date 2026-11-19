@@ -14,7 +14,7 @@ import { tr } from '../utils/i18n'
 import { getWorkDate } from '../utils/workDate'
 import { canAccessPage } from '../utils/permissions'
 import { ASK_HINTS } from '../utils/askBot'
-import { answerQuestion } from '../lib/askBotQuery'
+import { answerQuestion, logUnanswered } from '../lib/askBotQuery'
 import { sirenCount, subscribeSiren } from '../utils/sirenBus'
 
 export default function AskBot() {
@@ -42,6 +42,8 @@ export default function AskBot() {
     let ans
     try { ans = await answerQuestion(s, ctx, getWorkDate(), forced) }
     catch (e) { ans = { text: `⚠️ ตอบไม่สำเร็จ — ${String(e?.message || e).slice(0, 120)}` } }
+    /* ตอบไม่ได้ = เก็บคำถามไว้ดูว่าหน้างานพิมพ์อะไรจริง (ไม่รอ · ไม่กวนคนถาม) */
+    if (ans?.unanswered) logUnanswered(s, ans.unanswered, ctx.role)
     if (!alive.current) return
     setMsgs(m => [...m, { from: 'bot', ...ans }])
     setBusy(false)
@@ -90,7 +92,7 @@ export default function AskBot() {
         <div ref={listRef} style={{ flex: 1, overflowY: 'auto', padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
           {!msgs.length && (
             <div style={{ fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.6 }}>
-              {tr('ถามได้ตอนนี้ 3 แบบ: OEE ของไลน์ · downtime สูงสุด · ยอดผลิตของไลน์หรือพาร์ท')}<br />
+              {tr('ถามได้: OEE ไลน์ · ไลน์ไหน OEE ต่ำสุด · downtime สูงสุด · เครื่องหยุดตอนนี้ · MO ค้าง · ของเสียสูงสุด · 4M ค้าง · มาทำงานกี่คน · ยอดผลิตของไลน์/พาร์ท')}<br />
               {tr('ระบุช่วงได้: วันนี้ · เมื่อวาน · สัปดาห์นี้ · เดือนนี้ · เดือน 10 · ต.ค. 2569')}
             </div>
           )}

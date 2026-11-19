@@ -22,6 +22,7 @@ import { fetchByIds, fetchAllPages } from '../utils/fetchByIds';
 import { loadCompanyCalendar, getDayType, isOtHolidayType } from '../utils/companyCalendar';
 import { holidayPeriodsForShift, defaultHolidayPeriod, otPeriodLabel, WEEKDAY_OT_TIME } from '../utils/otPeriods';
 import { getLineFamilyIds } from '../utils/lineHierarchy';
+import { notifyEvent } from '../utils/notifyEvent';   // 🔔 แจ้งหัวหน้าต้นสังกัดเมื่อคนของเขาถูกยืม (19/11)
 import { buildViewScope, empScopeOrFilter, scopeLineIds } from '../utils/viewScope';   // 👁️ ขอบเขตที่เห็นได้ ผ่านผัง (22/10)
 import LineSelect from '../components/LineSelect';
 import LineScopeSelect from '../components/LineScopeSelect';
@@ -396,7 +397,7 @@ export default function Checkin() {
       empQ,
       /* cap-ok: daily_production_logs วัน*เดียว* — วัด 11/11/26 สูงสุด 279 แถว/วัน (ทั้งโรงงาน) */
       supabase.from('daily_production_logs')
-        .select('employee_id, is_present, has_helmet, has_boots, has_gloves, has_ot, has_extended_ot, remark, leave_type, leave_duration, leave_period, leave_hours')
+        .select('employee_id, is_present, has_helmet, has_boots, has_gloves, has_ot, has_extended_ot, remark, leave_type, leave_duration, leave_period, leave_hours, checked_by')
         .eq('work_date', workDateStr),
       /* cap-ok: shift_schedules วัน*เดียว* — วัด 11/11/26 สูงสุด 45 แถว/วัน */
       supabase.from('shift_schedules').select('*').eq('work_date', workDateStr),
@@ -441,7 +442,7 @@ export default function Checkin() {
     const helperByEmp = Object.fromEntries(helperIn.map(h => [h.employee_id, h]));
     const helperOutByEmp = {};
     helperData.forEach(h => {
-      if (!inMyScope(h.to_line_id)) helperOutByEmp[h.employee_id] = lineById[h.to_line_id]?.name || 'ไลน์อื่น';
+      if (!inMyScope(h.to_line_id)) helperOutByEmp[h.employee_id] = { to: lineById[h.to_line_id]?.name || 'ไลน์อื่น', by: h.created_by_name || '' };
     });
 
     // พนักงานที่ถูกยืมเข้ามาแต่อยู่นอก scope query หลัก → ดึงเพิ่มรายตัว
@@ -488,8 +489,24 @@ export default function Checkin() {
           _helperFrom:    lineById[emp.line_id]?.name || emp.section || 'ไม่ระบุไลน์',
         };
       }
-      if (helperOutByEmp[emp.id]) return { ...emp, assignedShift, _helperOutTo: helperOutByEmp[emp.id] };
+      /* 🔒 ถูกยืมออกไปกะนี้ (19/11 · คำสั่ง user) — ไลน์ที่ยืมเป็นคนเช็คชื่อ/PPE **ฝั่งเดียว**
+         จอต้นสังกัดเห็นผลแต่แก้ไม่ได้ และ handleSave ข้ามคนนี้ (เดิม 2 ไลน์บันทึกทับกันได้ ใครกดทีหลังชนะ) */
+      if (helperOutByEmp[emp.id]) return { ...emp, assignedShift, _helperOutTo: helperOutByEmp[emp.id].to, _helperOutBy: helperOutByEmp[emp.id].by };
       return { ...emp, assignedShift };
+    });
+
+    /* 👀 คนที่ถูกยืมออก: บอกหัวหน้าต้นสังกัดว่า "ใครเช็คชื่อให้แล้ว" (ชื่อจาก profiles · ล้ม = ไม่โชว์ชื่อ ไม่บล็อก) */
+    const outIds = enriched.filter(e => e._helperOutTo).map(e => e.id);
+    const checkerIds = [...new Set((logData || []).filter(l => outIds.includes(l.employee_id) && l.checked_by).map(l => l.checked_by))];
+    let checkerName = {};
+    if (checkerIds.length) {
+      const { data: pf } = await supabase.from('profiles').select('id, full_name').in('id', checkerIds);
+      checkerName = Object.fromEntries((pf || []).map(p => [p.id, p.full_name]));
+    }
+    enriched.forEach(e => {
+      if (!e._helperOutTo) return;
+      const log = logData?.find(l => l.employee_id === e.id);
+      e._helperOutChecked = log ? (checkerName[log.checked_by] || 'ไลน์ที่ยืม') : '';
     });
 
     setEmployees(enriched);
@@ -649,6 +666,29 @@ export default function Checkin() {
     setShowBorrowModal(true);
   };
 
+  /* 🔔 หัวหน้าต้นสังกัดต้องรู้เมื่อคนของเขาถูกยืมไปช่วยไลน์อื่น (19/11 · คำสั่ง user)
+     ผู้รับ = ทะเบียน `notification_rules.line_helper_borrowed` (หัวหน้าไลน์ของไลน์ต้นสังกัด · ตั้งที่ /notification-config)
+     · ยืมกันเองในครอบครัวไลน์แม่-ลูก ไม่ถือว่าออก (กติกาเดียวกับ utils/borrowDays.js) = ไม่แจ้ง
+     · fire-and-forget — แจ้งไม่ได้ห้ามลากการยืมล้ม */
+  const notifyBorrowed = (emp, toLineId) => {
+    const home = lines.find(l => l.id === emp.line_id);
+    const to = lines.find(l => l.id === Number(toLineId));
+    if (!home || !to) return;
+    if (getLineFamilyIds(lines, home.id).has(to.id)) return;
+    notifyEvent({
+      event: 'line_helper_borrowed',
+      line_name: home.name, section: home.section || emp.section || undefined,
+      title: `🤝 ${emp.name} ถูกยืมไปช่วย ${to.name}`,
+      lines: [
+        `${emp.name} (${emp.employee_id_code || '-'}) · ไลน์ต้นสังกัด ${home.name}`,
+        `ไปช่วย ${to.name} · ${shiftInfo.label || (shiftInfo.shift === 'night' ? 'กะดึก' : 'กะเช้า')} วันที่ ${shiftInfo.workDateStr}`,
+        `ยืมโดย ${fullName || '-'} — ไลน์ที่ยืมเป็นคนเช็คชื่อ/ตรวจ PPE ให้กะนี้`,
+      ],
+      actor: fullName || undefined,
+      ref_table: 'line_helpers',
+    });
+  };
+
   const borrowEmployee = async (emp) => {
     if (!borrowLineId) { toast.error('เลือกไลน์ปลายทางที่จะให้มาช่วยก่อน'); return; }
     const { error } = await supabase.from('line_helpers').insert({
@@ -665,6 +705,7 @@ export default function Checkin() {
       return;
     }
     toast.success(`🤝 ยืม ${emp.name} มาช่วยกะนี้แล้ว`);
+    notifyBorrowed(emp, borrowLineId);
     setShowBorrowModal(false);
     fetchData();
   };
@@ -694,6 +735,7 @@ export default function Checkin() {
       .eq('id', cur.id).select('id');
     if (mErr || !moved?.length) { toast.error('ย้ายการยืมไม่สำเร็จ: ' + (mErr?.message || 'ไม่มีแถวถูกแก้ (สิทธิ์?)')); return; }
     toast.success(`🤝 ย้าย ${emp.name} จาก ${curLine} มาช่วย ${target} แล้ว`);
+    notifyBorrowed(emp, borrowLineId);
     setShowBorrowModal(false);
     fetchData();
   };
@@ -761,7 +803,10 @@ export default function Checkin() {
     // บันทึกเฉพาะรายชื่อที่แสดงบนจอ (displayed) ไม่ใช่ roster ที่โหลดมาทั้งหมด —
     // ไม่งั้นหัวหน้ากะเช้าเปิดหน้าค้างแล้วกดบันทึกตอนเย็น จะทับเช็คชื่อกะดึก/ส่วนอื่นกลับเป็น "ไม่มา"
     // (สรุปยอด + modal ยืนยัน อ้าง displayed อยู่แล้ว — เขียนให้ตรงกัน)
-    const logs = displayed.map(emp => ckLogRow(emp, attendance[emp.id] || {}, userData.user.id));
+    /* 🔒 คนที่ถูกยืมออกไปไลน์อื่นกะนี้ = ไลน์ที่ยืมบันทึกฝั่งเดียว ⇒ ข้ามทั้งเช็คชื่อและจองรถ OT (19/11 · คำสั่ง user) */
+    const savable = displayed.filter(emp => !emp._helperOutTo);
+    const skippedOut = displayed.length - savable.length;
+    const logs = savable.map(emp => ckLogRow(emp, attendance[emp.id] || {}, userData.user.id));
 
     const { error } = await supabase
       .from('daily_production_logs')
@@ -779,8 +824,8 @@ export default function Checkin() {
       const bookDateIsHoliday = isHolidayDate(bookDate);
       const isBooked = emp => isNightShift ? !!otBookings[emp.id] : !!attendance[emp.id]?.has_ot;
 
-      const toBook   = displayed.filter(isBooked).map(emp => emp.id);
-      const toUnbook = displayed.filter(emp => !isBooked(emp)).map(emp => emp.id);
+      const toBook   = savable.filter(isBooked).map(emp => emp.id);
+      const toUnbook = savable.filter(emp => !isBooked(emp)).map(emp => emp.id);
 
       if (toBook.length) {
         const { error: eBook } = await supabase.from('ot_night_bookings').upsert(
@@ -812,8 +857,8 @@ export default function Checkin() {
       const otShift = shiftInfo.shift;
       for (const d of extraAdvanceDates) {
         const isBookedExtra = emp => !!otExtraBookings[emp.id]?.[d];
-        const toBookExtra   = displayed.filter(isBookedExtra).map(emp => emp.id);
-        const toUnbookExtra = displayed.filter(emp => !isBookedExtra(emp)).map(emp => emp.id);
+        const toBookExtra   = savable.filter(isBookedExtra).map(emp => emp.id);
+        const toUnbookExtra = savable.filter(emp => !isBookedExtra(emp)).map(emp => emp.id);
 
         if (toBookExtra.length) {
           checkWrite(await supabase.from('ot_night_bookings').upsert(
@@ -844,7 +889,8 @@ export default function Checkin() {
        และเหมาทุกไลน์ทั้งโรงงาน) — ดู CLAUDE.md ส่วน "Employee Skills & EXP Farming" */
 
     // เช็คชื่อเสร็จแล้วไม่มีอะไรเด้งต่อ (ถอดออโต้เปิดกะออก 16/09) — บอกทางไปต่อให้ชัด ไม่ปล่อยเงียบ
-    toast.success('บันทึกเช็คชื่อสำเร็จ! · ไลน์ที่ต้องลงข้อมูลผลิต ไปกด “เปิดกะ” ที่หน้า Daily Report');
+    toast.success('บันทึกเช็คชื่อสำเร็จ! · ไลน์ที่ต้องลงข้อมูลผลิต ไปกด “เปิดกะ” ที่หน้า Daily Report'
+      + (skippedOut ? ` · ข้าม ${skippedOut} คนที่ถูกยืมไปไลน์อื่น (ไลน์ที่ยืมเป็นคนบันทึก)` : ''));
     if (ckDraftKey) clearDraft(ckDraftKey);
 
     /* ── สรุปเช็คชื่อเข้า Telegram ──
@@ -1359,6 +1405,8 @@ export default function Checkin() {
     /* 🔴 สแกน = เขียนลงฐาน **ทันทีทีละคน** (10/11 · คำสั่ง user "ควรจะเช็คมาเลย")
        `already` ก็เขียน — เพราะ "มางานอยู่แล้ว" อาจเป็นแค่ติ๊กค้างบนจอที่ยังไม่เคยบันทึก
        ข้ามไป = คนยิงบัตรเชื่อว่าเช็คแล้วแต่ฐานยังว่าง (upsert แถวเดิม = ไม่มีผลข้างเคียง) */
+    const lentOut = employees.find(e => e.id === r.emp.id)?._helperOutTo;
+    if (lentOut) return `${r.emp.name} ถูกยืมไปช่วย ${lentOut} กะนี้ — ไลน์ที่ยืมเป็นคนเช็คชื่อ (จอนี้บันทึกไม่ได้)`;
     const rec = r.record || { ...(attendance[r.emp.id] || {}), is_present: true };
     const { data: userData } = await supabase.auth.getUser();
     if (!userData?.user?.id) return 'ยังไม่ได้เข้าระบบ — บันทึกไม่ได้ ให้ Login ก่อนแล้วยิงใหม่';
@@ -1427,7 +1475,7 @@ export default function Checkin() {
               {hasLeave && rec.leave_type && <div style={{ fontSize: 11, opacity: 0.85 }}>{rec.leave_type}</div>}
             </div>
           </div>
-          <div className="ck-tgs">
+          <div className="ck-tgs" style={emp._helperOutTo ? { pointerEvents: 'none', opacity: 0.5 } : undefined}>
             {tg(rec.is_present, rec.is_present ? '✅ มางาน' : '⬜ มางาน', () => toggle(emp.id, 'is_present'), false, 'var(--accent)')}
             {tg(rec.has_helmet, '⛑️ หมวก', () => toggle(emp.id, 'has_helmet'), !rec.is_present)}
             {tg(rec.has_boots, '🥾 รองเท้า', () => toggle(emp.id, 'has_boots'), !rec.is_present)}
@@ -1436,7 +1484,7 @@ export default function Checkin() {
             {(emp.assignedShift === 'day' || shiftInfo.shift === 'day') && rec.has_ot
               && tg(rec.has_extended_ot, 'OT+23', () => toggle(emp.id, 'has_extended_ot'), false, 'var(--red)')}
           </div>
-          <div className="ck-more">
+          <div className="ck-more" style={emp._helperOutTo ? { pointerEvents: 'none', opacity: 0.5 } : undefined}>
             <div><div className="ck-lbl">{tr('การลา')}</div>{cLeave}</div>
             <div><div className="ck-lbl">{tr('หมายเหตุ')}</div>{cRemark}</div>
             {needBooking && <div><div className="ck-lbl">{tr('จองรถ OT / งานที่ทำ')}</div><div className="ck-book">{cBooking}</div></div>}
@@ -1484,7 +1532,10 @@ export default function Checkin() {
                         )}
                         {emp._helperOutTo && (
                           <div style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 700, marginTop: 2 }}>
-                            → ไปช่วยไลน์ {emp._helperOutTo} (กะนี้)
+                            → ไปช่วยไลน์ {emp._helperOutTo} (กะนี้){emp._helperOutBy ? ` · ยืมโดย ${emp._helperOutBy}` : ''}
+                            <div style={{ fontWeight: 600, color: 'var(--muted)' }}>
+                              🔒 {emp._helperOutChecked ? `เช็คชื่อแล้วโดย ${emp._helperOutChecked}` : 'ยังไม่ได้เช็คชื่อ'} — ไลน์ที่ยืมเป็นคนบันทึก จอนี้แก้ไม่ได้
+                            </div>
                           </div>
                         )}
                       </div>
@@ -1704,7 +1755,7 @@ export default function Checkin() {
                     </td>
                   </tr>
                 )}
-                <tr style={{ background: meta.bg }}>
+                <tr style={{ background: meta.bg, ...(emp._helperOutTo ? { pointerEvents: 'none', opacity: 0.65 } : {}) }} aria-disabled={emp._helperOutTo ? true : undefined}>
                   {/* Employee */}
                   <td>
                     {cEmp}
