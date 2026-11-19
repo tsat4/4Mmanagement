@@ -1,4 +1,5 @@
 import { useState, useEffect, useContext, useCallback, useMemo, useRef, Suspense, lazy } from 'react';
+import { MoreMark } from '../components/InfoMore';
 import { lineNameCompare } from '../utils/lineHierarchy';
 import ReadOnlyNote from '../components/ReadOnlyNote';
 import { supabase, supabaseDR } from '../supabaseClient';
@@ -591,7 +592,8 @@ function StockTab({ role, scope }) {
         )}
       </FilterBar>
       <p style={{ margin:'0 0 12px', fontSize:13, color:'var(--muted)' }}>
-        <b style={{ color:'var(--text2)' }}>{tr('พาร์ทย่อยคงเหลือในไลน์')}</b> — Store จ่ายพาร์ทเข้าไลน์ · ระบบหักอัตโนมัติตอน close กะ (BOM × qty_ok)
+        <b style={{ color:'var(--text2)' }}>{tr('พาร์ทย่อยคงเหลือในไลน์')}</b>{' '}
+        <MoreMark text={tr('Store จ่ายพาร์ทเข้าไลน์ · ระบบหักอัตโนมัติตอน close กะ (BOM × qty_ok)')} />
       </p>
       {/* ── คิวอนุมัติ (store review) ── */}
       {showPending && (
