@@ -196,3 +196,58 @@ test('📏 parseSapBom — หน่วยแม็ปตามทะเบี�
   assert.ok(p.warnings.some(w => w.includes('DRUM') && w.includes('ทะเบียนหน่วยนับ')));
   assert.equal(p.rows.length, parseSapBom(FILE).rows.length);   // ไม่ตัดแถวทิ้ง
 });
+
+/* 🏛️ 19/11: CS12 .XLSX (หัวคอลัมน์คนละชุด · ไม่มีบล็อกหัวใบ) + แตกเป็น "1 MAT = 1 ใบ" แบบ SAP
+   ข้อมูลจากไฟล์จริง FG306.XLSX ที่ user ส่งมา (20070036 · Plant 2140) */
+import { splitSapBySheet } from '../sapBomImport.js';
+const XH = ['Plant', 'Special procurement', 'Item Number', 'Explosion level', 'Component number', 'Object description',
+  'Comp. Qty (CUn)', 'Component unit', 'Relevancy to Costing Indicator', 'Plant-sp.matl status', 'Prod. stor. location',
+  'Storage Location', 'Change Number', 'Changed by', 'Changed on', 'Backflush'].join('\t');
+const xr = (item, lv, mat, desc, qty, un, ps, sl, bf = '') =>
+  ['2140', '', item, lv, mat, desc, qty, un, 'X', 'Z2', ps, sl, 'NEW_MAT_2025', '', '', bf].join('\t');
+const XLSX_TEXT = [XH,
+  xr('0010', '.1', '30044771', 'NUT WELD 6MM', '8', 'PC', '', 'P412'),
+  xr('0090', '.1', '20058490', 'REINF FRT RH', '1', 'PC', 'S406', 'P412', '1'),
+  xr('0010', '..2', '50027085', 'COIL', '0.321', 'KG', '', 'P405', '1'),
+  xr('0100', '.1', '20058491', 'REINF FRT LH', '1', 'PC', 'S406', 'P412', '1'),
+  xr('0010', '..2', '50027085', 'COIL', '0.321', 'KG', '', 'P405', '1'),
+  xr('0110', '.1', '30047580', 'BRKT RH', '1', 'PC', '', 'P412'),
+].join('\n');
+
+test('CS12 .XLSX: อ่านหัวคอลัมน์ชุดใหม่ได้ครบ · ไม่เอาหัวตารางไปเป็น Plant ของหัวใบ', () => {
+  const p = parseSapBom(XLSX_TEXT);
+  assert.equal(p.rows.length, 6);
+  assert.equal(p.root.plant, '');                       // เดิมได้ "Backflush"
+  const r = p.rows.find(x => x.mat_no === '20058490');
+  assert.equal(r.qty_per_unit, 1); assert.equal(r.uom, 'PC');
+  assert.equal(r.prod_sloc, 'S406'); assert.equal(r.storage_location, 'P412'); assert.equal(r.backflush, '1');
+  assert.equal(p.rows.find(x => x.depth === 2).qty_per_unit, 0.321);
+  assert.ok(p.warnings.some(w => w.includes('เลือกใบปลายทางเอง')));
+  assert.ok(!p.warnings.some(w => w.includes('ไม่มีจำนวน')));
+});
+
+test('splitSapBySheet: ชั้น 1 → ใบหัว · ชั้น 2 → ใบของตัวแม่ · ทุกแถวเป็นลูกตรง (parent_mat ว่าง)', () => {
+  const { sheets, conflicts } = splitSapBySheet(parseSapBom(XLSX_TEXT).rows, '20070036');
+  const m = Object.fromEntries(sheets.map(s => [s.mat, s.rows.map(r => `${r.mat_no}x${r.qty_per_unit}`)]));
+  assert.deepEqual(m, {
+    20070036: ['30044771x8', '20058490x1', '20058491x1', '30047580x1'],
+    20058490: ['50027085x0.321'],
+    20058491: ['50027085x0.321'],
+  });
+  assert.ok(sheets.every(s => s.rows.every(r => r.parent_mat === null)));
+  assert.deepEqual(conflicts, []);
+});
+
+test('splitSapBySheet: sub-assy ตัวเดียวกันโผล่ 2 ที่ — ตรงกัน = เก็บครั้งเดียว · ไม่ตรง = conflict ไม่นำเข้า', () => {
+  const rows = (q2) => [
+    { depth: 1, mat_no: 'A', qty_per_unit: 1, uom: 'PC' }, { depth: 2, mat_no: 'X', qty_per_unit: 2, uom: 'PC' },
+    { depth: 1, mat_no: 'B', qty_per_unit: 1, uom: 'PC' }, { depth: 2, mat_no: 'A', qty_per_unit: 1, uom: 'PC' },
+    { depth: 3, mat_no: 'X', qty_per_unit: q2, uom: 'PC' },
+  ];
+  const ok = splitSapBySheet(rows(2), 'FG');
+  assert.equal(ok.sheets.find(s => s.mat === 'A').rows.length, 1);
+  assert.deepEqual(ok.conflicts, []);
+  const bad = splitSapBySheet(rows(3), 'FG');
+  assert.equal(bad.sheets.find(s => s.mat === 'A'), undefined);
+  assert.equal(bad.conflicts[0].mat, 'A');
+});
