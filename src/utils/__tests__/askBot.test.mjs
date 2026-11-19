@@ -237,3 +237,12 @@ test('รอบ 2: เครื่องหยุดที่ไม่มีเ�
     production_sessions: { line_name: 'A', status: 'open' } }], Date.parse('2026-11-19T00:00:00Z'), () => 'open');
   assert.equal(r.open[0].min, null);
 });
+
+test('ของเสีย: คำที่หน้างานพิมพ์จริง "งานเสีย" ต้องเข้าใจ (user ทัก 19/11)', () => {
+  for (const s of ['วันนี้มีงานเสียอะไรบ้าง', 'งานเสีย', 'ชิ้นงานเสีย สัปดาห์นี้', 'reject เดือนนี้']) {
+    const q = parseQuestion(s, T);
+    assert.equal(q.intent, 'defect_top', s);
+    assert.equal(q.subject, '', `${s} → ต้องไม่เหลือคำค้างไปค้นเป็นชื่อไลน์`);
+  }
+  assert.equal(parseQuestion('งานเสีย HDF1 วันนี้', T).subject, 'hdf1');
+});
