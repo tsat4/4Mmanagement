@@ -28,7 +28,8 @@ import {
   fmtInt, fmtPct, ASK_HINTS,
 } from '../utils/askBot';
 
-const NOT_UNDERSTOOD = (extra = '') => ({
+const NOT_UNDERSTOOD = (extra = '', unanswered = 'not_understood') => ({
+  unanswered,
   text: `${extra ? `${extra}\n` : ''}ยังไม่เข้าใจคำถามนี้ — ตอนนี้ถามได้แบบนี้:`,
   hints: ASK_HINTS,
 });
@@ -364,7 +365,7 @@ export async function answerQuestion(text, ctx, today, forced = null) {
     }
     const m = matchSubject(q.subject, { lines: all, products, kinds });
     if (m.choices.length) return { text: `"${q.subject}" ตรงหลายรายการ — เลือกตัวที่หมายถึง:`, choices: m.choices, more: m.more, retext: text };
-    if (!m.pick) return NOT_UNDERSTOOD(`ไม่พบ${kinds.includes('part') ? 'ไลน์หรือพาร์ท' : 'ไลน์'}ชื่อ "${q.subject}"`);
+    if (!m.pick) return NOT_UNDERSTOOD(`ไม่พบ${kinds.includes('part') ? 'ไลน์หรือพาร์ท' : 'ไลน์'}ชื่อ "${q.subject}"`, 'not_found');
     pick = m.pick;
   }
   /* ยอดผลิตต้องมีชื่อพาร์ทกำกับ MAT — กดเลือกจากปุ่ม (forced) จะข้ามขั้นค้นชื่อที่โหลดทะเบียนไว้
@@ -400,4 +401,17 @@ export async function answerQuestion(text, ctx, today, forced = null) {
   const notes = [...(ans.notes || []), periodNote,
     vis.unsure ? '⚠️ ระบบตัดขอบเขตไลน์ของบัญชีนี้ได้ไม่ชัด — ตัวเลขอาจรวมไลน์นอกขอบเขต' : null].filter(Boolean);
   return { ...ans, notes };
+}
+
+/**
+ * 📝 เก็บคำถามที่แชทตอบไม่ได้ (ทาง ข · 19/11) → `askbot_unanswered` (Main)
+ * ไว้ดูว่าหน้างานพิมพ์คำไหนจริง แล้วเพิ่มคำพ้อง/เครื่องมือจากของจริง · 📄 docs/modules/askbot.md
+ * 🔴 การบันทึกเป็นของเสริม — ล้มต้องไม่กวนคนถาม (ไม่ toast) แต่ **ห้ามกลืนเงียบ** ⇒ console.warn
+ *    ไม่ต่อ `.select()` เพราะคนถามส่วนใหญ่ไม่มีสิทธิ์อ่านตาราง (select policy = askbot:review)
+ */
+export async function logUnanswered(question, reason, role) {
+  const q = String(question || '').trim().slice(0, 300);
+  if (!q || !['not_understood', 'not_found'].includes(reason)) return;
+  const { error } = await supabase.from('askbot_unanswered').insert({ question: q, reason, role: role || null });
+  if (error) console.warn('[askbot] บันทึกคำถามที่ตอบไม่ได้ไม่สำเร็จ:', error.message);
 }
