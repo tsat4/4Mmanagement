@@ -12065,3 +12065,20 @@ test('🗂 operator-tab-allowed-complete — `tabAllowed` ใน operator.jsx �
   assert.equal(nAllowed, nKeys,
     `\n\n❌ operator.jsx: TAB_KEYS มี ${nKeys} แท็บ แต่ tabAllowed มี ${nAllowed} ช่อง — แท็บที่เกินมากดแล้วตกกลับแท็บแรกเงียบๆ\n`);
 });
+
+test('🔴 restamp-parallel-lines-guard — สคริปต์ restamp ต้องกันไลน์เครื่องขนานทั้ง 2 ชั้น', () => {
+  /* อุบัติเหตุ 20/11: `PARALLEL_LINES` ตกหล่น LASER-345/LASER-789 (parallel_stations = 3)
+     ⇒ สคริปต์หัก DT รายเครื่องเต็มจำนวน (ไม่มี laneWeightFn) ⇒ เขียน %A ต่ำผิด 12 กะ (-33 จุด)
+     🔴 ลิสต์ที่ copy มาจากทะเบียนจะเก่าเงียบๆ เสมอ ⇒ ต้องมีด่านที่จับจาก "ข้อมูล" ด้วย:
+        DT รวม > shift_min = เป็นไปไม่ได้บนไลน์เครื่องเดียว ⇒ ข้าม ห้ามเดา */
+  const sc = stripComments(readFileSync(join(ROOT, 'scripts/restamp-dt-rule.mjs'), 'utf8'));
+  for (const ln of ['LASER-345', 'LASER-789', 'SUB APRON']) {
+    assert.ok(sc.includes(`'${ln}'`),
+      `\n\n❌ ${ln} หายจาก PARALLEL_LINES — ไลน์นี้ลง DT รายเครื่อง สคริปต์จะเขียน %A ต่ำผิด\n`
+      + '   คิวรีรีเฟรชลิสต์: select name from production_lines where parallel_stations > 1;\n');
+  }
+  assert.match(sc, /dtSum > Number\(s\.shift_min\)/,
+    '\n\n❌ ด่าน "DT รวม > เวลากะ = ข้าม" หายไป — ไลน์เครื่องขนานที่หลุดลิสต์จะถูกเขียนทับเงียบๆ\n');
+  assert.match(sc, /stat\.skipDtOverShift\+\+/,
+    '\n\n❌ ด่าน DT-เกินเวลากะ ไม่ได้นับสถิติ — รันแล้วไม่รู้ว่าข้ามไปกี่กะ\n');
+});
