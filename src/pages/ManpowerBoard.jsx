@@ -52,6 +52,7 @@ import { STATUS_COLOR } from '../utils/statusTone';
 import { cachedMaster } from '../utils/masterCache';
 import Segmented from '../components/Segmented';
 import FactoryMiniMap from '../components/FactoryMiniMap';
+import { labelAnchor } from '../utils/regionGeom';
 import useIsMobile from '../utils/useIsMobile';
 
 import SectionScopeSelect from '../components/SectionScopeSelect';
@@ -725,6 +726,27 @@ function FactoryStaffView({ lines, attendance, maps, stationPlans, skills, emplo
     merge({ lv: 'line', lline: name, ...(l?.section ? { sec: l.section, dept: null } : {}) });
   }, [lines, merge]);
 
+  // 🔢 เลขประจำกลุ่ม (user 20/11 "ทำ index แทน ไม่ใช้ชื่อไลน์ในกรอบ") — 1 เลข/กลุ่ม (กรอบลูกในกลุ่มเลขเดียวกัน)
+  //    เรียงตาม "ตำแหน่งบนผัง" บน→ล่าง ซ้าย→ขวา (แถบละ 10% ของความสูง) ⇒ เลขนิ่ง ไม่สลับตามสถานะ = คนจำได้
+  const groupNo = useMemo(() => {
+    const at = new Map();
+    for (const r of regions) {
+      const s = byRegion.get(r.line_name);
+      if (!s || s.outOfScope || (r.points || []).length < 3) continue;
+      const [x, y] = labelAnchor(r.points);
+      const k = [Math.floor(y / 10), x];
+      const cur = at.get(s.group);
+      if (!cur || k[0] < cur[0] || (k[0] === cur[0] && k[1] < cur[1])) at.set(s.group, k);
+    }
+    const order = [...at.entries()].sort((a, b) => a[1][0] - b[1][0] || a[1][1] - b[1][1]);
+    return new Map(order.map(([g], i) => [g, i + 1]));
+  }, [regions, byRegion]);
+  const badgeOf = useCallback((name) => {
+    const s = byRegion.get(name);
+    const n = s && !s.outOfScope ? groupNo.get(s.group) : null;
+    return n ? { text: String(n), title: s.group !== name ? `${name} (${s.group})` : name } : null;
+  }, [byRegion, groupNo]);
+
   // แผงขวา = 1 แถวต่อกลุ่ม (กรอบลูกหลายกรอบในกลุ่มเดียว = ผลเดียวกัน ห้ามซ้ำแถว) · กด = เปิดผังกรอบแรกของกลุ่ม
   const rows = useMemo(() => {
     const g = new Map();
@@ -753,9 +775,9 @@ function FactoryStaffView({ lines, attendance, maps, stationPlans, skills, emplo
       {err && <div style={{ fontSize: 12, color: 'var(--red)' }}>⚠️ {err}</div>}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'minmax(0,1fr)' : 'minmax(0,1fr) 300px', gap: 10, alignItems: 'start' }}>
         <div className="card" style={{ padding: 8 }}>
-          <FactoryMiniMap stateOf={stateOf} onPick={openLine} bottomReserve={isMobile ? 12 : 24} />
+          <FactoryMiniMap stateOf={stateOf} onPick={openLine} bottomReserve={isMobile ? 12 : 24} badgeOf={badgeOf} />
           <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 6 }}>
-            {trI18n('กดกรอบไลน์ = เข้าผังรายไลน์ · ตัวเลขดูที่แผงขวา (ชื่อกรอบตรงกับบรรทัด "กรอบ:") · สีกรอบ = คนที่มา')}{shift === 'night' ? trI18n('กะดึก') : trI18n('กะเช้า')}{trI18n(' เทียบกำลังคนตามผัง (std ต่อกะ ตั้งที่ /line-setup) · กรอบ/ชื่อไลน์ตั้งที่ /layout-setup')}
+            {trI18n('เลขบนผัง = เลขหน้าแถวในแผงขวา (ชี้เลขเพื่อดูชื่อไลน์) · กดกรอบ/เลข = เข้าผังรายไลน์ · สีกรอบ = คนที่มา')}{shift === 'night' ? trI18n('กะดึก') : trI18n('กะเช้า')}{trI18n(' เทียบกำลังคนตามผัง (std ต่อกะ ตั้งที่ /line-setup) · กรอบ/ชื่อไลน์ตั้งที่ /layout-setup')}
           </div>
         </div>
         <div className="card" style={{ padding: 10, display: 'grid', gap: 6, alignContent: 'start' }}>
@@ -766,7 +788,11 @@ function FactoryStaffView({ lines, attendance, maps, stationPlans, skills, emplo
             <button key={name} type="button" onClick={() => openLine(names.includes(name) ? name : names[0])}
               style={{ display: 'grid', gap: 2, textAlign: 'left', padding: '6px 8px', borderRadius: 'var(--r-md)', cursor: 'pointer',
                 border: '1px solid var(--border)', borderLeft: `4px solid ${STAFF_TONE[s.status]}`, background: 'var(--bg2)', color: 'var(--text)' }}>
-              <span style={{ fontSize: 13, fontWeight: 700 }}>{name}</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700 }}>
+                {groupNo.get(name) && <span style={{ minWidth: 24, height: 24, padding: '0 5px', borderRadius: 12, background: STAFF_TONE[s.status], color: '#fff',
+                  fontSize: 12, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>{groupNo.get(name)}</span>}
+                <span>{name}</span>
+              </span>
               <span style={{ fontSize: 12, color: s.status === 'none' ? 'var(--muted)' : STAFF_TONE[s.status], fontVariantNumeric: 'tabular-nums' }}>{trI18n(lineStaffLabel(s))}</span>
               {(names.length > 1 || names[0] !== name) && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{trI18n('กรอบ:')} {names.join(', ')}</span>}
             </button>

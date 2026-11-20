@@ -41,7 +41,9 @@ const tint = (c, lvl) => {
   return `${c}${lvl === 'line' ? '66' : '2b'}`;
 };
 
-export default function FactoryMiniMap({ stateOf, onPick, bottomReserve = 28 }) {
+/* 🔢 `badgeOf(lineName) → { text, title } | null` (ไม่บังคับ · 20/11 Manpower Board) — วงกลมเลขกลางกรอบ **แทนชื่อไลน์**
+   ใช้เมื่อจอมีแผงรายการคู่กันให้จับคู่ด้วยเลข (ชื่อยาวในกรอบเล็กถูกตัดจนอ่านไม่ออก) · ไม่ส่ง = พฤติกรรมเดิมเป๊ะ */
+export default function FactoryMiniMap({ stateOf, onPick, bottomReserve = 28, badgeOf = null }) {
   const K = useTvShell() ? TV_LBL_K : 1;
   const [map, setMap] = useState(null);      // { image_url }
   const [regions, setRegions] = useState([]);
@@ -134,8 +136,9 @@ export default function FactoryMiniMap({ stateOf, onPick, bottomReserve = 28 }) 
       const below = at[1] - bh * 1.08 < 0;   // ชิดขอบบน = การ์ดลงไปอยู่ในกรอบ (ตรงกับตอนวาด)
       return { x: at[0] - bw / 2, y: below ? at[1] : at[1] - bh * 1.08, w: bw, h: bh };
     }) : [];
+    if (badgeOf) return [];   // โหมดเลข: ไม่วางชื่อไลน์
     return plainLabelLayout(regions, { wrapW: w, wrapH: h, reserved, skip: new Set(marks.map(m => m.r.line_name)), charPx: 7.4 * K, linePx: 18 * K });
-  }, [regions, marks, boxWH, K]);
+  }, [regions, marks, boxWH, K, badgeOf]);
 
   if (err) return <div style={box}>{tr('⚠ โหลดผังโรงงานไม่สำเร็จ —')} {err}</div>;
   if (!map?.image_url) {
@@ -195,6 +198,22 @@ export default function FactoryMiniMap({ stateOf, onPick, bottomReserve = 28 }) 
               pointerEvents: onPick ? 'auto' : 'none', cursor: onPick ? 'pointer' : 'default',
             }}>{n.name}</div>
         ))}
+
+        {/* 🔢 โหมดเลข — วงกลมสีสถานะ เลขขาว ที่จุดยึดเดียวกับป้าย (labelAnchor) · ชื่อเต็มอยู่ใน title */}
+        {badgeOf && regions.map(r => {
+          const b = badgeOf(r.line_name);
+          if (!b || (r.points || []).length < 3) return null;
+          const [x, y] = anchorOf(r.points);
+          const c = stateOf?.(r.line_name)?.color || DIM.color;
+          return (
+            <div key={`bd-${r.id}`} title={b.title || r.line_name} onClick={onPick ? () => onPick(r.line_name) : undefined}
+              style={{ position: 'absolute', left: `${x}%`, top: `${y}%`, transform: 'translate(-50%, -50%)', ...(K !== 1 ? { zoom: K } : {}),
+                minWidth: 26, height: 26, padding: '0 6px', borderRadius: 13, background: c, border: '2px solid #fff',
+                color: '#fff', fontSize: 13, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontVariantNumeric: 'tabular-nums', boxShadow: 'var(--shadow-float)', textShadow: '0 1px 2px rgba(0,0,0,0.6)',
+                pointerEvents: onPick ? 'auto' : 'none', cursor: onPick ? 'pointer' : 'default' }}>{b.text}</div>
+          );
+        })}
 
         {/* ป้าย = HTML (ไม่โดน viewBox ยืดผิดสัดส่วน — กฎเดียวกับ marker บนผังไลน์) */}
         {marks.map(({ r, st, at }) => {
