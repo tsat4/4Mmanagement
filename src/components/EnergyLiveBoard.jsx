@@ -66,7 +66,7 @@ export default function EnergyLiveBoard() {
     try {
       const [m, l, d, r] = await Promise.all([
         supabaseDR.from('energy_live_meters')
-          .select('scope_kind, scope_name, panel, subtitle, limit_kw, limit_a, gauge_max_kw, sort_order')
+          .select('scope_kind, scope_name, panel, parent_name, subtitle, limit_kw, limit_a, gauge_max_kw, sort_order')
           .eq('is_active', true),
         supabaseDR.from('energy_live').select('scope_kind, scope_name, field, value, received_at'),
         supabaseDR.from('energy_daily')
@@ -125,11 +125,14 @@ export default function EnergyLiveBoard() {
 
   const today = bkkDateStr(nowMs);
   const board = useMemo(() => buildLiveBoard({ meters, live, daily, today, nowMs }), [meters, live, daily, today, nowMs]);
+  const byKey = useMemo(() => new Map(board.meters.map(m => [m.key, m])), [board.meters]);
   const series = useMemo(() => liveSeries(readings, meters), [readings, meters]);
   const panelPeaks = useMemo(() => {
     const out = {};
     for (const p of board.panels) {
-      out[p.panel] = liveSeries(readings, meters.filter(m => (m.panel || '—') === p.panel)).panelPeak;
+      // 🌳 peak ตู้ = ผลรวมชั้นบนสุดของตู้ (ลูกอยู่ในยอดแม่แล้ว) — ไม่มีผังแม่-ลูก = เหมือนเดิม
+      const rootNames = new Set(p.roots.map(m => m.name));
+      out[p.panel] = liveSeries(readings, meters.filter(m => rootNames.has(m.scope_name))).panelPeak;
     }
     return out;
   }, [board.panels, readings, meters]);
@@ -195,7 +198,15 @@ export default function EnergyLiveBoard() {
       </div>
 
       {/* ── เส้นทางจ่ายไฟ ── */}
-      {board.panels.map(p => <PanelFlow key={p.panel} panel={p} onOpen={openMeter} />)}
+      {(board.warnings.orphans.length > 0 || board.warnings.cycles.length > 0) && (
+        <NoticeBar tone="warn">
+          ผังจ่ายไฟ: {board.warnings.orphans.map(o => `${o.name} ชี้แม่ "${o.parent}" ที่ไม่มีในทะเบียน`).join(' · ')}
+          {board.warnings.cycles.length > 0 && ` · ตั้งแม่วนกัน: ${board.warnings.cycles.join(', ')}`} — แสดงเป็นชั้นบนสุดของตู้ไว้ก่อน (แก้ parent_name ในทะเบียน)
+        </NoticeBar>
+      )}
+      {board.panels.map(p => (p.nested
+        ? <TreeFlow key={p.panel} panel={p} byKey={byKey} onOpen={openMeter} />
+        : <PanelFlow key={p.panel} panel={p} onOpen={openMeter} />))}
 
       {events && <EventsPanel events={events} />}
 
@@ -322,6 +333,135 @@ function PanelFlow({ panel, onOpen }) {
           );
         })}
       </svg>
+      )}
+    </div>
+  );
+}
+
+/** 🌳 ผังจ่ายไฟหลายชั้น (20/11 · คำสั่ง user "เอาผังวาดให้สมบูรณ์") — ใช้เมื่อตู้มีมิเตอร์ที่ตั้งแม่ (parent_name)
+ *  ข้อมูล/ยอด/ไฟไม่มีมิเตอร์วัด มาจาก buildLiveBoard() เท่านั้น — ไฟล์นี้วาดอย่างเดียว
+ *  ตู้ที่มีรากหลายตัว = กล่องตู้ (ผลรวมราก) เป็นชั้นแรก · รากตัวเดียว = กล่องมิเตอร์รากเป็นชั้นแรก (ค่าที่วัดจริงที่ตู้) */
+const TREE = { colW: 280, boxW: 210, boxH: 72, rowH: 88, top: 16, left: 16 };
+function treeOfPanel(panel, byKey) {
+  const node = (m) => {
+    const kids = m.children.map(k => node(byKey.get(k)));
+    if (m.children.length) kids.push({ kind: 'unmetered', key: `${m.key}#u`, u: m.unmetered });
+    return { kind: 'meter', key: m.key, m, kids };
+  };
+  const roots = panel.roots.map(node);
+  return roots.length === 1 ? roots[0] : { kind: 'panel', key: `panel|${panel.panel}`, panel, kids: roots };
+}
+function layoutTree(root) {
+  let row = 0, maxD = 0;
+  const all = [], pre = [];                     // pre = แม่ก่อนลูก (ลิสต์มือถือ)
+  const walk = (n, d) => {
+    n.d = d; maxD = Math.max(maxD, d); pre.push(n);
+    if (!n.kids?.length) { n.y = TREE.top + row * TREE.rowH + TREE.boxH / 2; row++; }
+    else { n.kids.forEach(k => walk(k, d + 1)); n.y = (n.kids[0].y + n.kids[n.kids.length - 1].y) / 2; }
+    n.x = TREE.left + d * TREE.colW;
+    all.push(n);
+  };
+  walk(root, 0);
+  return { all, pre, W: TREE.left * 2 + maxD * TREE.colW + TREE.boxW, H: TREE.top * 2 + row * TREE.rowH - (TREE.rowH - TREE.boxH) };
+}
+function flowDur(m) {
+  const live = m && m.status === 'online' && m.kw != null && m.kw > 0;
+  if (!live) return null;
+  const ratio = m.gaugeMax ? Math.min(1, m.kw / m.gaugeMax) : 0;
+  return (2.4 - 1.9 * ratio).toFixed(2);
+}
+function TreeFlow({ panel, byKey, onOpen }) {
+  const isMobile = useIsMobile();
+  const root = useMemo(() => treeOfPanel(panel, byKey), [panel, byKey]);
+  const { all, pre, W, H } = useMemo(() => layoutTree(root), [root]);
+  const uText = (u) => (!u || u.kw == null ? '—' : `${fmt(Math.max(0, u.kw))} kW`);
+  const uNote = (u) => (!u || u.state === 'unknown' ? 'รู้เมื่อแม่+ลูกออนไลน์ครบ' : u.state === 'negative' ? 'ลูกรวมเกินแม่ — ตรวจผัง/มิเตอร์' : 'แม่ − ผลรวมลูก');
+  const open = (n) => (n.kind === 'meter' ? () => onOpen(n.m.name) : undefined);
+  return (
+    <div style={{ ...card }}>
+      <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{tr('เส้นทางจ่ายไฟจากตู้')} {panel.panel}</div>
+      <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>
+        ความเร็วเส้นแปรตามกำลังไฟที่ใช้ · ยอดตู้ = ชั้นบนสุดที่ออนไลน์ ({panel.online}/{panel.total}{panel.partial ? ' · ยอดไม่ครบ' : ''}) · ลูกอยู่ในยอดแม่แล้ว ไม่นับซ้ำ · กรอบประ = ไฟที่ไม่มีมิเตอร์วัด
+      </div>
+      {isMobile ? (
+        <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
+          {pre.map(n => {
+            if (n.kind === 'panel') return <div key={n.key} style={{ fontSize: 20, fontWeight: 800, color: ACC }}>{tr('ตู้')} {panel.panel} · {fmt(panel.kw)} kW</div>;
+            if (n.kind === 'unmetered') return (
+              <div key={n.key} style={{ paddingLeft: 8 + n.d * 14, fontSize: 12.5, color: n.u?.state === 'negative' ? BAD : 'var(--muted)' }}>┗ ไม่มีมิเตอร์วัด {uText(n.u)} · {uNote(n.u)}</div>
+            );
+            const sm = statusMeta(n.m);
+            return (
+              <div key={n.key} role="button" tabIndex={0} onClick={open(n)} onKeyDown={(e) => { if (e.key === 'Enter') onOpen(n.m.name); }}
+                style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 13, borderLeft: `3px solid ${sm.color}`, paddingLeft: 8, marginLeft: n.d * 14, cursor: 'pointer' }}>
+                <span style={{ fontWeight: 700, color: 'var(--text)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.m.name}</span>
+                <span style={{ color: sm.color, whiteSpace: 'nowrap' }}>{fmt(n.m.kw)} kW · {fmt(n.m.a)} A</span>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div style={{ overflowX: 'auto' }}>
+          <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', minWidth: Math.min(W, 900), height: 'auto', display: 'block', marginTop: 6 }} role="img"
+            aria-label={`ผังจ่ายไฟตู้ ${panel.panel}`}>
+            {all.filter(n => n.kids?.length).map(n => {
+              const busX = n.x + TREE.boxW + (TREE.colW - TREE.boxW) / 2;
+              const ys = n.kids.map(k => k.y);
+              return (
+                <g key={`e-${n.key}`}>
+                  <line x1={n.x + TREE.boxW} y1={n.y} x2={busX} y2={n.y} stroke={ACC} strokeWidth="4" />
+                  <line x1={busX} y1={Math.min(...ys)} x2={busX} y2={Math.max(...ys)} stroke={ACC} strokeWidth="4" />
+                  {n.kids.map(k => {
+                    const dur = k.kind === 'meter' ? flowDur(k.m) : null;
+                    return (
+                      <g key={`l-${k.key}`}>
+                        <line x1={busX} y1={k.y} x2={k.x} y2={k.y} stroke="var(--border)" strokeWidth="4" />
+                        <line x1={busX} y1={k.y} x2={k.x} y2={k.y} stroke={dur ? ACC : IDLE} strokeWidth="4" strokeDasharray={k.kind === 'unmetered' ? '4 6' : '14 8'}
+                          className={dur ? 'energy-flow' : undefined} style={dur ? { animationDuration: `${dur}s` } : undefined} />
+                      </g>
+                    );
+                  })}
+                </g>
+              );
+            })}
+            {all.map(n => {
+              const top = n.y - TREE.boxH / 2;
+              if (n.kind === 'panel') return (
+                <g key={n.key}>
+                  <rect x={n.x} y={top} width={TREE.boxW} height={TREE.boxH} rx="12" fill={ACC} opacity="0.9" />
+                  <text x={n.x + TREE.boxW / 2} y={top + 24} textAnchor="middle" fill="var(--bg)" fontSize="15" fontWeight="700">{tr('ตู้')} {panel.panel}</text>
+                  <text x={n.x + TREE.boxW / 2} y={top + 54} textAnchor="middle" fill="var(--bg)" fontSize="24" fontWeight="800">{fmt(panel.kw)} kW</text>
+                </g>
+              );
+              if (n.kind === 'unmetered') {
+                const bad = n.u?.state === 'negative';
+                return (
+                  <g key={n.key}>
+                    <title>ไฟที่ไม่มีมิเตอร์วัด = แม่ − ผลรวมลูก</title>
+                    <rect x={n.x} y={top} width={TREE.boxW} height={TREE.boxH} rx="10" fill="var(--card)" stroke={bad ? BAD : IDLE} strokeWidth="2" strokeDasharray="6 5" />
+                    <text x={n.x + 14} y={top + 24} fill="var(--muted)" fontSize="14" fontWeight="700">ไม่มีมิเตอร์วัด</text>
+                    <text x={n.x + 14} y={top + 46} fill={bad ? BAD : 'var(--text)'} fontSize="18" fontWeight="800">{uText(n.u)}</text>
+                    <text x={n.x + 14} y={top + 64} fill={bad ? BAD : 'var(--muted)'} fontSize="12">{uNote(n.u)}</text>
+                  </g>
+                );
+              }
+              const m = n.m, sm = statusMeta(m), isTop = n.d === 0;
+              return (
+                <g key={n.key} role="button" tabIndex={0} style={{ cursor: 'pointer' }} onClick={open(n)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') onOpen(m.name); }}>
+                  <title>{tr('เปิดหน้ารายตู้')} {m.name}</title>
+                  <rect x={n.x} y={top} width={TREE.boxW} height={TREE.boxH} rx="10" fill={isTop ? ACC : 'var(--card)'} opacity={isTop ? 0.9 : 1} stroke={sm.color} strokeWidth="3" />
+                  <circle cx={n.x + 16} cy={top + 19} r="6" fill={sm.color} />
+                  <text x={n.x + 30} y={top + 25} fill={isTop ? 'var(--bg)' : 'var(--text)'} fontSize="16" fontWeight="800">
+                    <title>{m.name}</title>{m.name.length > 18 ? `${m.name.slice(0, 17)}…` : m.name}
+                  </text>
+                  <text x={n.x + 14} y={top + 48} fill={isTop ? 'var(--bg)' : sm.color} fontSize="18" fontWeight="800">{fmt(m.kw)} kW · {fmt(m.a)} A</text>
+                  <text x={n.x + 14} y={top + 65} fill={isTop ? 'var(--bg)' : sm.color} fontSize="12" fontWeight="700">{tr(sm.label)}</text>
+                </g>
+              );
+            })}
+          </svg>
+        </div>
       )}
     </div>
   );

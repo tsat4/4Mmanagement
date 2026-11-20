@@ -360,7 +360,8 @@ const numOrNull = (v) => (v == null || v === '' || !Number.isFinite(Number(v)) ?
  * @param {Array} p.daily    energy_daily ของเดือนนี้ (ทุกวันในเดือน)
  * @param {string} p.today   'YYYY-MM-DD' วันตามปฏิทินไทย (bkkDateStr)
  * @param {number} p.nowMs
- * @returns {{ meters:Array, panels:Array, totals:object }}
+ * @returns {{ meters:Array, panels:Array, totals:object, warnings:{orphans,cycles} }}
+ *   meters[].parent/depth/children/rootKey/feedPanel/unmetered = ผังจ่ายไฟหลายชั้น (parent_name)
  *   ตัวเลขที่ไม่รู้ = null เสมอ (ห้ามเป็น 0 — "ยังไม่ได้รับค่า" ≠ "ไม่ใช้ไฟ")
  */
 export function buildLiveBoard({ meters = [], live = [], daily = [], today, nowMs = Date.now() } = {}) {
@@ -393,6 +394,7 @@ export function buildLiveBoard({ meters = [], live = [], daily = [], today, nowM
       const overA = status === 'online' && a != null && limitA != null && a > limitA
       return {
         key: k, name: m.scope_name, panel: m.panel || '—', subtitle: m.subtitle || '',
+        parentRaw: m.parent_name ? String(m.parent_name).trim() || null : null,
         limitKw, limitA,
         gaugeMax: numOrNull(m.gauge_max_kw) ?? (limitKw != null ? limitKw * 1.5 : null),
         kw, a, v: numOrNull(f.v?.value), kwhTotal: numOrNull(f.kwh_total?.value),
@@ -408,28 +410,72 @@ export function buildLiveBoard({ meters = [], live = [], daily = [], today, nowM
 
   const sumKnown = (arr) => { const xs = arr.filter(x => x != null); return xs.length ? xs.reduce((s, x) => s + x, 0) : null }
 
+  /* 🌳 ผังจ่ายไฟหลายชั้น (20/11) — `parent_name` = มิเตอร์แม่ (ชื่อใน scope_kind เดียวกัน)
+     · แม่ไม่อยู่ในทะเบียน/ชี้ตัวเอง/วนกัน = ถือเป็นชั้นบนสุด + ใส่ใน warnings (จอเขียนบอก ห้ามเงียบ)
+     · 🔴 ยอดตู้/ยอดรวมนับ "ชั้นบนสุด" เท่านั้น — ลูกวัดไฟก้อนเดียวกับแม่ (บวกซ้ำ = เกินจริง)
+     · ลูกอยู่ตู้เดียวกับรากของมัน (ค่า `panel` ของลูกไม่ใช้จัดกลุ่ม) · ไม่มีใครตั้งแม่ = พฤติกรรมเดิมเป๊ะ */
+  const byName = new Map(out.map(m => [m.key, m]))
+  const kindOf = (m) => m.key.slice(0, m.key.indexOf('|'))
+  const warnings = { orphans: [], cycles: [] }
+  for (const m of out) {
+    m.parent = null
+    if (!m.parentRaw) continue
+    const pk = `${kindOf(m)}|${m.parentRaw}`
+    if (pk === m.key || !byName.has(pk)) { warnings.orphans.push({ name: m.name, parent: m.parentRaw }); continue }
+    m.parent = pk
+  }
+  for (const m of out) {                      // ตัดวง: เดินขึ้นจนเจอราก · วนกลับมาที่เดิม = วง
+    const seen = new Set([m.key])
+    let p = m.parent
+    while (p) {
+      if (seen.has(p)) { warnings.cycles.push(m.name); m.parent = null; break }
+      seen.add(p); p = byName.get(p)?.parent || null
+    }
+  }
+  const rootOf = (m) => { let r = m; while (r.parent) r = byName.get(r.parent); return r }
+  for (const m of out) {
+    const r = rootOf(m)
+    m.rootKey = r.key; m.feedPanel = r.panel
+    let d = 0, x = m; while (x.parent) { d++; x = byName.get(x.parent) }
+    m.depth = d
+    m.children = out.filter(c => c.parent === m.key).map(c => c.key)
+  }
+  /* ไฟที่ไม่มีมิเตอร์วัด = แม่ − ผลรวมลูก · รู้ได้เมื่อแม่และลูกทุกตัวออนไลน์ (ไม่ครบ = null ห้ามเดา)
+     ติดลบเกินคลาดเคลื่อน (5% ของแม่ หรือ 1 kW) = ผังหรือมิเตอร์ผิด ⇒ 'negative' ให้จอเตือน */
+  for (const m of out) {
+    if (!m.children.length) { m.unmetered = null; continue }
+    const kids = m.children.map(k => byName.get(k))
+    const ok = m.status === 'online' && m.kw != null && kids.every(c => c.status === 'online' && c.kw != null)
+    if (!ok) { m.unmetered = { kw: null, state: 'unknown' }; continue }
+    const rem = m.kw - kids.reduce((t, c) => t + c.kw, 0)
+    const tol = Math.max(1, Math.abs(m.kw) * 0.05)
+    m.unmetered = { kw: rem, state: rem < -tol ? 'negative' : 'ok' }
+  }
+  const roots = out.filter(m => !m.parent)
+
   const panelMap = new Map()
   for (const m of out) {
-    if (!panelMap.has(m.panel)) panelMap.set(m.panel, [])
-    panelMap.get(m.panel).push(m)
+    if (!panelMap.has(m.feedPanel)) panelMap.set(m.feedPanel, [])
+    panelMap.get(m.feedPanel).push(m)
   }
   const panels = [...panelMap.entries()].map(([panel, ms]) => {
-    const on = ms.filter(m => m.status === 'online')
+    const rs = ms.filter(m => !m.parent)
+    const on = rs.filter(m => m.status === 'online')
     return {
-      panel, meters: ms, online: on.length, total: ms.length,
-      // ยอดตู้ = ผลรวมเครื่องที่ออนไลน์เท่านั้น · ไม่ครบ = partial (จอต้องเขียนว่ากี่/กี่เครื่อง)
-      kw: sumKnown(on.map(m => m.kw)), partial: on.length < ms.length,
-      todayKwh: sumKnown(ms.map(m => m.todayKwh)),
+      panel, meters: ms, roots: rs, nested: ms.some(m => m.parent), online: on.length, total: rs.length,
+      // ยอดตู้ = ผลรวมชั้นบนสุดที่ออนไลน์เท่านั้น · ไม่ครบ = partial (จอต้องเขียนว่ากี่/กี่เครื่อง)
+      kw: sumKnown(on.map(m => m.kw)), partial: on.length < rs.length,
+      todayKwh: sumKnown(rs.map(m => m.todayKwh)),
     }
   })
 
   const allDays = new Set()
   for (const m of out) for (const d of dayBy.get(m.key) || []) allDays.add(d.day)
-  const monthKwh = sumKnown(out.map(m => m.monthKwh))
+  const monthKwh = sumKnown(roots.map(m => m.monthKwh))
   const online = out.filter(m => m.status === 'online').length
   const totals = {
-    kw: sumKnown(out.filter(m => m.status === 'online').map(m => m.kw)),
-    todayKwh: sumKnown(out.map(m => m.todayKwh)),
+    kw: sumKnown(roots.filter(m => m.status === 'online').map(m => m.kw)),
+    todayKwh: sumKnown(roots.map(m => m.todayKwh)),
     monthKwh,
     monthDays: allDays.size,
     avgPerDay: monthKwh != null && allDays.size ? monthKwh / allDays.size : null,
@@ -438,7 +484,7 @@ export function buildLiveBoard({ meters = [], live = [], daily = [], today, nowM
     alerts: out.filter(m => m.overKw || m.overA),
     resets: out.reduce((s, m) => s + m.todayResets, 0),
   }
-  return { meters: out, panels, totals }
+  return { meters: out, panels, totals, warnings }
 }
 
 /**
@@ -488,7 +534,12 @@ export function liveSeries(readings, meters) {
  */
 export function liveForNames(names, boardMeters, meterLines) {
   const set = new Set(names || [])
-  const hit = (boardMeters || []).filter(m => [...(meterLines?.get(m.key) || [])].some(l => set.has(l)))
+  const hit0 = (boardMeters || []).filter(m => [...(meterLines?.get(m.key) || [])].some(l => set.has(l)))
+  // 🌳 แม่กับลูกโดนกรอบเดียวกัน = นับแม่ตัวเดียว (ลูกอยู่ในยอดแม่แล้ว) · ไม่มีผังแม่-ลูก = เหมือนเดิม
+  const inHit = new Set(hit0.map(m => m.key))
+  const byKey = new Map((boardMeters || []).map(m => [m.key, m]))
+  const underHit = (m) => { let p = m.parent; while (p) { if (inHit.has(p)) return true; p = byKey.get(p)?.parent } return false }
+  const hit = hit0.filter(m => !underHit(m))
   if (!hit.length) return null
   const on = hit.filter(m => m.status === 'online' && m.kw != null)
   const shared = new Set()

@@ -685,6 +685,19 @@ const TABLE_ROWS = {
   /* 🏭 ศูนย์เชื่อมต่อ · ข้อมูลจากเครื่อง (2026-11-11 · ห้ามถอด) — เดิม `kinds` ไม่มีในแถว ⇒ แผง
      MachineFactsPanel (/integrations?src=) ไม่เคยถูกวาดใน harness · ต้องมีทั้ง tag ที่ผูกแล้ว/ยังไม่ผูก
      + สถานะทั้งที่จับคู่ได้ (fault/no_plan) และจับคู่ไม่ได้ (idle) + เวลาที่อ่านไม่ออก (isNullish) */
+  /* ⚡ ผังจ่ายไฟหลายชั้น (2026-11-20 · ห้ามถอด) — ต้องมีทั้งตู้ชั้นเดียว (MDB-03 = PanelFlow เดิม)
+     และตู้ที่มีแม่-ลูก 3 ชั้น (MDB → MDB-07 → AIR → AC-*) + แม่ที่ชี้ชื่อไม่มีในทะเบียน (เตือนบนจอ)
+     ⇒ TreeFlow / ไฟไม่มีมิเตอร์วัด / ยอดไม่นับซ้ำ ถูกวาดใน crashsweep */
+  energy_live_meters: (r, i) => {
+    const M = [['DB-CNC', 'MDB-03', null], ['DB-LASER', 'MDB-03', null], ['MDB', 'MDB', null], ['MDB-07', 'MDB', 'MDB'],
+      ['AIR', 'MDB', 'MDB-07'], ['AC-06', 'MDB', 'AIR'], ['AC-07', 'MDB', 'AIR'], ['ORPHAN', 'MDB-03', 'NOPE']][i % 8];
+    return { ...r, scope_kind: 'zone', scope_name: i < 8 ? M[0] : `${M[0]}-${i}`, panel: M[1], parent_name: M[2], is_active: i < 8, sort_order: i, limit_kw: 1000, gauge_max_kw: 1000 };
+  },
+  energy_live: (r, i) => {
+    const N = ['DB-CNC', 'DB-LASER', 'MDB', 'MDB-07', 'AIR', 'AC-06', 'AC-07', 'ORPHAN'];
+    const KW = [40, 25, 900, 60, 56, 20, 30, 5];
+    return { ...r, scope_kind: 'zone', scope_name: N[i % 8], field: i < 8 ? 'kw' : 'a', value: i < 8 ? KW[i] : 50, received_at: new Date().toISOString() };
+  },
   integration_sources: (r, i) => ({
     ...r, kinds: i % 2 ? ['energy_readings', 'energy_events'] : ['machine_state', 'piece_count'],
     legacy_secret: false, key_hint: i % 3 ? 'ab12' : null,
