@@ -204,8 +204,9 @@ export function matchSubject(subject, { lines = [], products = [], kinds = ['lin
   if (!tokens.length) return { pick: null, choices: [], more: 0 };
   const whole = tokens.join('');
   /* ตัวเลขล้วนต้องตรง "ทั้งตัว" — ถาม "ชุดที่ 1" ห้ามได้ 10–15 มาด้วย · ถาม "060" ห้ามได้ "0601" */
+  /* 0 นำหน้าไม่นับ — พิมพ์ "060" ต้องเจอ "Line 60" (user ทัก 20/11 · เดิมหาไลน์ไม่เจอแล้วไปตกที่พาร์ท 16E060 เงียบๆ) */
   const hitAll = (hay) => tokens.every(tk => (/^\d+$/.test(tk)
-    ? new RegExp(`(^|\\D)${tk}(?!\\d)`).test(hay) : hay.includes(tk)));
+    ? new RegExp(`(^|\\D)0*${String(Number(tk))}(?!\\d)`).test(hay) : hay.includes(tk)));
 
   const lineHits = [], lineExact = [];
   if (kinds.includes('line')) for (const l of lines) {
@@ -501,6 +502,9 @@ export const fmtInt = (n) => (n == null ? '—' : Math.round(n).toLocaleString('
 export const fmtPct = (n) => (n == null ? '—' : `${(+n).toFixed(1)}%`);
 
 /** ข้อความแนะนำรูปแบบที่ถามได้ — ใช้ทั้งปุ่มลัดและตอนไม่เข้าใจคำถาม */
+/** ปุ่มลัดใต้กล่องแชท — 3 ปุ่มพอ (user ทัก 20/11 "รกเกินไป") · รายการเต็มอยู่ใน ASK_HINTS ตอนตอบว่าไม่เข้าใจ */
+export const HINT_CHIPS = ['oee HDF1 วันนี้', 'downtime สูงสุด สัปดาห์นี้', 'ยอดผลิต HDF1 วันนี้'];
+
 export const ASK_HINTS = [
   'oee HDF1 วันนี้', 'oee ต่ำสุด วันนี้', 'downtime สูงสุด สัปดาห์นี้', 'เครื่องหยุดตอนนี้',
   'MO ค้าง', 'ของเสียสูงสุด สัปดาห์นี้', 'ใบสแครป เดือนนี้', '4M ค้าง', 'มาทำงานกี่คน HDF1', 'ยอดผลิต HDF1 เดือนนี้',
