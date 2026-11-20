@@ -26,6 +26,7 @@ import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, ReferenceLine, LabelList, Cell,
 } from 'recharts';
+import { chartAnim } from '../utils/motion';
 import { CELL_BAR_FILL } from '../utils/chartAxis';
 import useTvShell, { tvSizer } from '../utils/useTvShell';
 
@@ -398,7 +399,7 @@ export default function LineOeeBoard() {
               <YAxis type="category" dataKey="name" width={290} interval={0} tickLine={false} axisLine={false}
                 tick={{ fontSize: 20, fill: 'var(--text)', fontWeight: 700 }}
                 tickFormatter={n => n.length > 21 ? n.slice(0, 20) + '…' : n} />
-              <Bar dataKey="v" fill={CELL_BAR_FILL} radius={[0, 5, 5, 0]} isAnimationActive={false}>
+              <Bar dataKey="v" fill={CELL_BAR_FILL} radius={[0, 5, 5, 0]} {...chartAnim()}>
                 <LabelList dataKey="v" position="right" style={{ fontSize: 22, fontWeight: 900, fill: 'var(--text)' }} />
                 {items.map((_, i) => <Cell key={i} fill={color} fillOpacity={1 - i * 0.11} />)}
               </Bar>
@@ -411,7 +412,7 @@ export default function LineOeeBoard() {
             <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--text2)' }} interval={0}
               tickFormatter={n => n.length > 9 ? n.slice(0, 8) + '…' : n} angle={-25} height={48} textAnchor="end" />
             <YAxis hide />
-            <Bar dataKey="v" fill={CELL_BAR_FILL} radius={[4, 4, 0, 0]} isAnimationActive={false}>
+            <Bar dataKey="v" fill={CELL_BAR_FILL} radius={[4, 4, 0, 0]} {...chartAnim()}>
               <LabelList dataKey="v" position="top" style={{ fontSize: 11, fontWeight: 800, fill: 'var(--text)' }} />
               {items.map((_, i) => <Cell key={i} fill={color} fillOpacity={1 - i * 0.11} />)}
             </Bar>
@@ -545,7 +546,7 @@ export default function LineOeeBoard() {
                   <YAxis width="auto" domain={[0, 100]} ticks={[0, 50, 100]} tick={{ fontSize: T(11, 20), fill: 'var(--text2)' }} tickFormatter={v => `${v}%`} />
                   <ReferenceLine y={C.tgt} stroke="var(--amber)" strokeDasharray="6 4"
                     label={{ value: `target ${C.tgt.toFixed(0)}%`, position: 'insideTopRight', fill: 'var(--amber)', fontSize: T(11, 22), fontWeight: 800 }} />
-                  <Area type="monotone" dataKey="oee" stroke="var(--green)" strokeWidth={tv ? 4 : 2.2} fill="url(#oeeG)" connectNulls={false} isAnimationActive={false} dot={{ r: tv ? 5 : 2.5 }} />
+                  <Area type="monotone" dataKey="oee" stroke="var(--green)" strokeWidth={tv ? 4 : 2.2} fill="url(#oeeG)" connectNulls={false} {...chartAnim()} dot={{ r: tv ? 5 : 2.5 }} />
                 </AreaChart>
               </ResponsiveContainer>
               </div>

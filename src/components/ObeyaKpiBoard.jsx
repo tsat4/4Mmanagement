@@ -5,6 +5,7 @@ import { urlBool } from '../utils/urlInit';
 import { lineNameCompare } from '../utils/lineHierarchy';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Cell, LabelList } from 'recharts';
+import { chartAnim } from '../utils/motion';
 import { supabase, supabaseDR } from '../supabaseClient';
 import { loadLinesRes } from '../utils/useProductionLines';
 import { UserContext } from '../App';
@@ -1047,7 +1048,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
           {tgtL != null && <ReferenceLine y={tgtL} stroke="var(--red)" strokeDasharray="4 3" label={{ value: zoomed ? `T ${nf(tgtL, decL)}` : 'T', position: 'insideTopRight', fontSize: fs(zoomed ? 10 : 9), fontWeight: 700, fill: 'var(--red)' }} />}
           {cmtL != null && cmtL !== tgtL && <ReferenceLine y={cmtL} stroke="var(--amber)" strokeDasharray="2 3" label={{ value: zoomed ? `C ${nf(cmtL, decL)}` : 'C', position: 'insideTopRight', fontSize: fs(zoomed ? 10 : 9), fontWeight: 700, fill: 'var(--amber)' }} />}
           {/* fill = สีตัวหนังสือใน tooltip เท่านั้น (Cell ทับสีแท่งจริง) — ไม่ใส่ = Recharts ใช้ #000 (user 30/09 "text ดำ") */}
-          <Bar dataKey="v" fill={CELL_BAR_FILL} radius={[2, 2, 0, 0]} onClick={(d) => { const pl = d?.payload ?? d; openMonth(r, pl && pl.vRaw !== undefined ? { ...pl, v: pl.vRaw } : pl); }}>
+          <Bar {...chartAnim()} dataKey="v" fill={CELL_BAR_FILL} radius={[2, 2, 0, 0]} onClick={(d) => { const pl = d?.payload ?? d; openMonth(r, pl && pl.vRaw !== undefined ? { ...pl, v: pl.vRaw } : pl); }}>
             <LabelList dataKey="vLabel" position="top" style={{ fontSize: fs(9.5), fontWeight: 700, fill: 'var(--text)' }} />
             {data.map((p, i) => (
               <Cell key={i} fill={statusColor(r.def ? monthBarScore({ ...p, v: p.vRaw }, r.def) : 'none')}
@@ -1058,18 +1059,18 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
           </Bar>
           {/* 📈 เดือนที่ยังไม่ถึง = แท่งโปร่งเส้นประ (ค่าที่ใช้คาดปลายปี: แผน หรือ สมมติเท่าที่ผ่านมา) — แยกจากผลจริงให้เห็นชัด (16/11) */}
           {data.some(p => p.proj != null) && (
-            <Bar xAxisId="proj" dataKey="proj" fill="var(--text2)" fillOpacity={0.14} stroke="var(--muted)" strokeDasharray="3 2" radius={[2, 2, 0, 0]} isAnimationActive={false}>
+            <Bar xAxisId="proj" dataKey="proj" fill="var(--text2)" fillOpacity={0.14} stroke="var(--muted)" strokeDasharray="3 2" radius={[2, 2, 0, 0]} {...chartAnim()}>
               {zoomed && <LabelList dataKey="projLabel" position="top" style={{ fontSize: fs(9.5), fontWeight: 600, fill: 'var(--muted)' }} />}
             </Bar>
           )}
           {/* ✍️ ค่ากรอกมือที่ถูกค่าระบบทับ = แท่งแคบกว่า/จางกว่า ซ้อนในช่องเดียวกัน (ช่วงเปลี่ยนผ่าน: ทีมคิดเอง vs ระบบ) · กดแล้วเห็นทั้ง 2 ค่าใน popup */}
           {data.some(p => p.man != null) && (
             <Bar xAxisId="man" dataKey="man" barSize={Math.max(4, Math.round(slotW * 0.42))} fill="var(--text2)" fillOpacity={0.32}
-              stroke="var(--text2)" strokeDasharray="2 2" radius={[2, 2, 0, 0]} isAnimationActive={false}
+              stroke="var(--text2)" strokeDasharray="2 2" radius={[2, 2, 0, 0]} {...chartAnim()}
               onClick={(d) => { const pl = d?.payload ?? d; openMonth(r, pl && pl.vRaw !== undefined ? { ...pl, v: pl.vRaw } : pl); }} />
           )}
           {/* 📅 เส้นแผนรายเดือน — KPI แบบสะสมเทียบเป้าทั้งปีตั้งแต่ต้นปีจะดู "ตกตลอด" ต้องเทียบแผนของเดือนนั้น (user 30/09) */}
-          {r.hasPlan && <Line type="monotone" dataKey="plan" stroke="var(--blue)" strokeWidth={1.5} strokeDasharray="5 3" dot={{ r: 2, fill: 'var(--blue)' }} connectNulls isAnimationActive={false} />}
+          {r.hasPlan && <Line type="monotone" dataKey="plan" stroke="var(--blue)" strokeWidth={1.5} strokeDasharray="5 3" dot={{ r: 2, fill: 'var(--blue)' }} connectNulls {...chartAnim()} />}
         </ComposedChart>
       </ResponsiveContainer>
       </div>
@@ -1112,7 +1113,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
                       <Tooltip {...chartTip} formatter={(v, name, item) => [`${nf(v, dec2)}${pt.unit ? ' ' + pt.unit : ''}${item?.payload?.hot ? ' · ▲ สูงกว่าเฉลี่ย (เดือนที่รวมหลุดเป้า)' : ''}`, pt.label]} />
                       {avg != null && <ReferenceLine y={avg} stroke="var(--muted)" strokeDasharray="4 3" label={{ value: `เฉลี่ย ${nf(avg, dec2)}`, position: 'insideTopRight', fontSize: fs(9), fill: 'var(--muted)' }} />}
                       {pBars?.target_value != null && <ReferenceLine y={pBars.target_value} stroke="var(--red)" strokeDasharray="4 3" label={{ value: `T ${nf(pBars.target_value, dec2)}`, position: 'insideTopLeft', fontSize: fs(9), fontWeight: 700, fill: 'var(--red)' }} />}
-                      <Bar dataKey="v" fill={CELL_BAR_FILL} radius={[2, 2, 0, 0]} isAnimationActive={false}>
+                      <Bar dataKey="v" fill={CELL_BAR_FILL} radius={[2, 2, 0, 0]} {...chartAnim()}>
                         <LabelList dataKey="vLabel" position="top" style={{ fontSize: fs(9.5), fontWeight: 700, fill: 'var(--text)' }} />
                         {pd.map((p, i) => <Cell key={i} fill="var(--blue)" fillOpacity={p.hot ? 1 : 0.45} stroke={p.hot ? 'var(--text)' : 'none'} />)}
                       </Bar>

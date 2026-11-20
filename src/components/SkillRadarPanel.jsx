@@ -20,6 +20,7 @@ import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   ResponsiveContainer, Tooltip,
 } from 'recharts';
+import { chartAnim } from '../utils/motion';
 import { supabase } from '../supabaseClient';
 import { toast } from './Toast';
 import useIsMobile from '../utils/useIsMobile';
@@ -233,7 +234,7 @@ export default function SkillRadarPanel({ emp, skillDefs, subItemsByskill = {}, 
                 tick={{ fill: 'var(--text2)', fontSize: 11, fontFamily: 'var(--font-body)' }}
               />
               <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
-              <Radar
+              <Radar {...chartAnim()}
                 dataKey="value"
                 stroke={glowColor}
                 fill={glowColor}

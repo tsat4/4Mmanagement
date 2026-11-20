@@ -12,6 +12,7 @@ import Page from '../components/Page';
 import PageHeader from '../components/PageHeader';
 import Icon from '../components/Icon';
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer } from 'recharts';
+import { chartAnim } from '../utils/motion';
 import { useNavigate } from 'react-router-dom';
 import { can, canAccessPage, canSeeded } from '../utils/permissions';
 import resizeImg from '../utils/resizeImage';
@@ -2758,7 +2759,7 @@ export default function Management() {
                   <RadarChart data={radarDataFiltered}>
                     <PolarGrid stroke="var(--border2)" />
                     <PolarAngleAxis dataKey="subject" tick={{ fill: 'var(--text2)', fontSize: 11 }} />
-                    <Radar name="ทักษะ" dataKey="score" stroke="var(--accent)" fill="var(--accent)" fillOpacity={0.25} strokeWidth={2} />
+                    <Radar {...chartAnim()} name="ทักษะ" dataKey="score" stroke="var(--accent)" fill="var(--accent)" fillOpacity={0.25} strokeWidth={2} />
                   </RadarChart>
                 </ResponsiveContainer>
               );
@@ -3383,9 +3384,9 @@ function WorkerHoverCard({ card, skillDefs }) {
               <RadarChart data={radarData} margin={{ top: 16, right: 70, bottom: 16, left: 70 }}>
                 <PolarGrid stroke="var(--border2)" />
                 <PolarAngleAxis dataKey="skill" tick={{ fontSize: 11, fill: 'var(--muted)', fontWeight: 600 }} />
-                <Radar name="ทักษะ" dataKey="score" stroke="var(--accent)" fill="var(--accent)" fillOpacity={0.22} strokeWidth={1.5} dot={{ r: 2, fill: 'var(--accent)' }} />
+                <Radar {...chartAnim()} name="ทักษะ" dataKey="score" stroke="var(--accent)" fill="var(--accent)" fillOpacity={0.22} strokeWidth={1.5} dot={{ r: 2, fill: 'var(--accent)' }} />
                 {fit && (
-                  <Radar name="required" dataKey={() => null}
+                  <Radar {...chartAnim()} name="required" dataKey={() => null}
                     data={radarData.map(d => {
                       const req = fit.details?.find(r => r.label === d.skill);
                       return { skill: d.skill, score: req?.required ?? 0 };

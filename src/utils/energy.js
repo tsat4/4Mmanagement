@@ -340,6 +340,23 @@ export function outlierVsHistory(qty, history, factor = 3) {
    ⚠️ ห้ามคิดสถานะ/ยอดรวมตู้/แจ้งเตือนเองในหน้า — ใช้ buildLiveBoard() ตัวเดียว
    ═══════════════════════════════════════════════════════════════════════════ */
 
+/**
+ * 🔌 แผง 3 เฟส (หน้ารายตู้ · 20/11) — ค่าล่าสุดรายเฟสจากมิเตอร์
+ * · ความไม่สมดุลกระแส = เบี่ยงจากค่าเฉลี่ยมากสุด ÷ ค่าเฉลี่ย × 100 (นิยาม NEMA · ตรงกับ "กระแสไม่สมดุล" ของ Node-RED)
+ * · kW รายเฟส = **ประมาณ** จากสัดส่วนกระแส (มิเตอร์ไม่ได้ส่ง kW รายเฟส) — จอต้องเขียนว่าประมาณ
+ * · ขาดเฟสไหน = ค่านั้น null · ไม่มีสักค่า = คืน null ทั้งก้อน (ห้ามโชว์ 0)
+ */
+export function phaseInfo(v = [], a = [], kw = null) {
+  const vv = [0, 1, 2].map(i => numOrNull(v[i])), aa = [0, 1, 2].map(i => numOrNull(a[i]))
+  if (![...vv, ...aa].some(x => x != null)) return null
+  const full = aa.every(x => x != null)
+  const avg = full ? (aa[0] + aa[1] + aa[2]) / 3 : null
+  const imbalancePct = avg > 0 ? (Math.max(...aa.map(x => Math.abs(x - avg))) / avg) * 100 : null
+  const sumA = full ? aa[0] + aa[1] + aa[2] : null
+  const kwEst = full && sumA > 0 && kw != null ? aa.map(x => (kw * x) / sumA) : [null, null, null]
+  return { v: vv, a: aa, imbalancePct, kwEst }
+}
+
 /** ไม่มีค่าใหม่เกินกี่นาที = ขาดการติดต่อ (ตัวส่งยิงทุก 1 นาที → เผื่อ 2 รอบหลุด) */
 export const METER_OFFLINE_MIN = 3
 
@@ -398,6 +415,8 @@ export function buildLiveBoard({ meters = [], live = [], daily = [], today, nowM
         limitKw, limitA,
         gaugeMax: numOrNull(m.gauge_max_kw) ?? (limitKw != null ? limitKw * 1.5 : null),
         kw, a, v: numOrNull(f.v?.value), kwhTotal: numOrNull(f.kwh_total?.value),
+        // 🔌 ค่ารายเฟสล่าสุด (v1-3 = แรงดันระหว่างสาย L1-L2/L2-L3/L3-L1 · a1-3 = กระแส L1/L2/L3 · ingest v9) — ไม่มี = null
+        phase: phaseInfo(['v1', 'v2', 'v3'].map(x => numOrNull(f[x]?.value)), ['a1', 'a2', 'a3'].map(x => numOrNull(f[x]?.value)), kw),
         receivedAt: recv, ageMin: liveAgeMin(recv, nowMs), status,
         todayKwh: td ? numOrNull(td.kwh) : null,
         todayResets: td ? (td.resets || 0) : 0,
@@ -669,9 +688,11 @@ export function meterDetailSeries(rows) {
  * @returns {{ total:number|null, rows:Array<{key,name,kw,pct}> }}
  */
 export function loadShare(boardMeters) {
-  const on = (boardMeters || []).filter(m => m.status === 'online' && m.kw != null)
+  // 🌳 ชั้นบนสุดเท่านั้น — มิเตอร์ลูกอยู่ในยอดแม่แล้ว (นับซ้ำ = สัดส่วนรวมเกิน 100%)
+  const tops = (boardMeters || []).filter(m => !m.parent)
+  const on = tops.filter(m => m.status === 'online' && m.kw != null)
   const total = on.length ? on.reduce((s, m) => s + Math.max(0, m.kw), 0) : null
-  const rows = (boardMeters || []).map(m => {
+  const rows = tops.map(m => {
     const ok = m.status === 'online' && m.kw != null
     return { key: m.key, name: m.name, kw: ok ? m.kw : null, pct: ok && total ? (Math.max(0, m.kw) / total) * 100 : null }
   })
@@ -697,4 +718,79 @@ export function energyPointOptions(lines, zones) {
     })),
     ...(zones || []).map(z => ({ kind: 'zone', name: z, section: null, depth: 0, parentName: null })),
   ]
+}
+
+/* ═══ 📈 หน้าประวัติ & Excel (/energy?tab=history · 20/11 · ต้นแบบหน้า "ประวัติการใช้ไฟ" ของ Node-RED) ═══
+   ข้อมูล: energy_readings (รายนาที · เก็บ 7 วัน) + energy_daily (รายวัน · ยาว)
+   · ถังชั่วโมง = จากรายนาที (ส่วนต่างเลขมิเตอร์ · ถอยหลัง = reset ไม่นับ) · ถังวัน/สัปดาห์/เดือน/ปี = จาก energy_daily
+   · ไม่มีข้อมูล = null ห้าม 0 · ⚠️ ห้ามคิดสูตรพวกนี้ในหน้า */
+import { bucketAxis, bucketKey, bucketLabel, bkkHourKey } from './timeRange.js'
+
+/** แถว energy_readings (หลายตู้) → kWh ต่อนาทีจากส่วนต่าง kwh_total ของจุดติดกัน (ห่าง ≤ 5 นาที) · ถอยหลัง = ข้าม */
+export function minuteKwh(readings) {
+  const by = new Map()
+  for (const r of readings || []) {
+    const t = Date.parse(r.bucket_at), k = numOrNull(r.kwh_total)
+    if (!Number.isFinite(t) || k == null) continue
+    if (!by.has(r.scope_name)) by.set(r.scope_name, [])
+    by.get(r.scope_name).push({ t, k })
+  }
+  const out = []
+  for (const [name, pts] of by) {
+    pts.sort((a, b) => a.t - b.t)
+    for (let i = 1; i < pts.length; i++) {
+      const d = pts[i].k - pts[i - 1].k
+      if (pts[i].t - pts[i - 1].t > DETAIL_GAP_MIN * 60000 || d < 0) continue
+      out.push({ name, t: pts[i].t, kwh: d })
+    }
+  }
+  return out
+}
+
+/**
+ * ตัวเลข + แกนของหน้าประวัติ
+ * @param {{ readings, daily, names:string[], scale, from, to, nowMs }} p
+ * @returns {{ axis:{key,label}[], kwh: Record<name, Record<key, number|null>>, totalKwh, kpi:{avgKw, peakKw, peakAt, vAvg, aMax, coverage}, minuteOk }}
+ */
+export function energyHistory({ readings = [], daily = [], names = [], scale = 'day', from, to, nowMs = Date.now() } = {}) {
+  const keys = bucketAxis(from, to, scale)
+  const axis = keys.map(k => ({ key: k, label: bucketLabel(k, scale) }))
+  const kwh = Object.fromEntries(names.map(n => [n, Object.fromEntries(keys.map(k => [k, null]))]))
+  const add = (n, k, v) => { if (kwh[n] && k in kwh[n] && v != null) kwh[n][k] = (kwh[n][k] ?? 0) + v }
+  if (scale === 'hour') for (const x of minuteKwh(readings)) add(x.name, bkkHourKey(x.t), x.kwh)
+  else for (const d of daily || []) add(d.scope_name, bucketKey(String(d.day).slice(0, 10), scale), numOrNull(d.kwh))
+  const all = Object.values(kwh).flatMap(o => Object.values(o)).filter(v => v != null)
+  const totalKwh = all.length ? all.reduce((s, v) => s + v, 0) : null
+
+  const kws = [], vs = [], as = [], minutes = new Set()
+  let peakKw = null, peakAt = null
+  for (const r of readings || []) {
+    const t = Date.parse(r.bucket_at)
+    if (!Number.isFinite(t)) continue
+    minutes.add(`${r.scope_name}|${t}`)
+    const kw = numOrNull(r.kw), v = numOrNull(r.v), a = numOrNull(r.a)
+    if (kw != null) { kws.push(kw); if (peakKw == null || kw > peakKw) { peakKw = kw; peakAt = t } }
+    if (v != null) vs.push(v)
+    if (a != null) as.push(a)
+  }
+  const minuteOk = readings.length > 0
+  if (!minuteOk) {                                       // ไม่มีรายนาที ⇒ peak จากยอดรายวัน
+    for (const d of daily || []) {
+      const p = numOrNull(d.peak_kw)
+      if (p != null && (peakKw == null || p > peakKw)) { peakKw = p; peakAt = d.peak_at ? Date.parse(d.peak_at) : null }
+    }
+  }
+  /* ความครบ = นาทีที่มีข้อมูล ÷ นาทีที่ควรมี (ช่วง 08:00 วันแรก → 08:00 หลังวันสุดท้าย ตัดที่ "ตอนนี้") */
+  const winA = Date.parse(`${from}T08:00:00+07:00`), winB = Math.min(Date.parse(`${to}T08:00:00+07:00`) + 86400000, nowMs)
+  const expect = names.length && winB > winA ? Math.floor((winB - winA) / 60000) * names.length : 0
+  return {
+    axis, kwh, totalKwh, minuteOk,
+    kpi: {
+      avgKw: kws.length ? kws.reduce((s, v) => s + v, 0) / kws.length : null,
+      peakKw, peakAt,
+      vAvg: vs.length ? vs.reduce((s, v) => s + v, 0) / vs.length : null,
+      aMax: as.length ? Math.max(...as) : null,
+      coverage: minuteOk && expect ? Math.min(1, minutes.size / expect) : null,
+    },
+  }
 }

@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useRef, useMemo, lazy, Suspense, useCallback } from 'react';
 import { fmtDateTime } from './utils/dateFormat';
 import { motion } from 'framer-motion';
-import { railPill } from './utils/motion';   // 18/11: pill เมนู "ไหล" ไปตำแหน่งใหม่ (นิ่งเองบน TV / reduced-motion)
+import { railPill, markView } from './utils/motion';   // 18/11: pill เมนู "ไหล" ไปตำแหน่งใหม่ (นิ่งเองบน TV / reduced-motion)
 import tsLogo from './assets/TS logo transparent.png';   // splash: พื้นโปร่งใส (06/11)
 import { BrowserRouter as Router, Routes, Route, Link, Navigate, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { supabase } from './supabaseClient';
@@ -1906,6 +1906,11 @@ function ProtectedLayout({ session, theme, onToggleTheme, userRole, realRole, vi
   const navigate = useNavigate();
   const location = useLocation();
   useEffect(() => { setTvNavOpen(false); }, [location.pathname]);
+  /* 📈 อนิเมชันกราฟเล่นครั้งเดียวต่อ "สิ่งที่ดู" (utils/motion.js chartAnim) — URL เปลี่ยน = เปิดหน้าต่างใหม่ · รีเฟรชข้อมูล = ไม่เล่นซ้ำ
+     ทำระหว่าง render (ไม่ใช่ useEffect) เพื่อให้กราฟที่วาดในรอบเดียวกันเห็นหน้าต่างใหม่ทันที · idempotent ต่อ URL */
+  const viewKeyRef = useRef(null);
+  const viewKey = `${location.pathname}?${location.search}`;
+  if (viewKeyRef.current !== viewKey) { viewKeyRef.current = viewKey; markView(); }
   /* 📺 กรอบจอ TV ชุดเดียวทุกหน้า (16/10) — ตัดสินที่ isTvShell() (utils/displayRotation.js) ที่เดียว
      ⇒ ไม่มี sidebar/rail/กระดิ่ง/ปุ่มเมนู · แถบบนวาดโดย DisplayRotator · หัวเพจทุกหน้าซ่อนด้วย body.esm-tv-shell .ph-chrome */
   const tvShell = isTvShell(userRole, location.search);

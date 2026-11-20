@@ -36,6 +36,7 @@ import {
   ComposedChart, BarChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, LabelList,
   ResponsiveContainer, ReferenceLine, Cell,
 } from 'recharts';
+import { chartAnim } from '../utils/motion';
 import { supabase, supabaseDR } from '../supabaseClient';
 import { UserContext } from '../App';
 import PageHeader from './PageHeader';
@@ -708,13 +709,13 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
           {k.target != null && !stacked && <ReferenceLine y={k.target} stroke="var(--red)" strokeDasharray="4 3" />}
           {stacked ? (
             <>
-              <Bar dataKey="dt" stackId="c" fill="var(--amber)" onClick={onBarClick} cursor="pointer" />
-              <Bar dataKey="ng" stackId="c" fill="var(--blue)" radius={[2, 2, 0, 0]} onClick={onBarClick} cursor="pointer">
+              <Bar {...chartAnim()} dataKey="dt" stackId="c" fill="var(--amber)" onClick={onBarClick} cursor="pointer" />
+              <Bar {...chartAnim()} dataKey="ng" stackId="c" fill="var(--blue)" radius={[2, 2, 0, 0]} onClick={onBarClick} cursor="pointer">
                 {data.map((p, i) => <Cell key={i} fill="var(--blue)" fillOpacity={p.summary ? 0.55 : 1} />)}
               </Bar>
             </>
           ) : (
-            <Bar dataKey="v" fill={CELL_BAR_FILL} radius={[2, 2, 0, 0]} onClick={onBarClick}>
+            <Bar {...chartAnim()} dataKey="v" fill={CELL_BAR_FILL} radius={[2, 2, 0, 0]} onClick={onBarClick}>
               {data.map(cellOf)}
             </Bar>
           )}
@@ -886,7 +887,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
                   <YAxis tickFormatter={fmtAxis} domain={[0, 100]} tick={axisTick} width="auto" />
                   <Tooltip {...chartTip} formatter={v => [`${v}%`, 'PPE ครบ']} />
                   <ReferenceLine y={kS.target} stroke="var(--red)" strokeDasharray="4 3" />
-                  <Bar dataKey="v" fill={CELL_BAR_FILL} radius={[2, 2, 0, 0]}>
+                  <Bar {...chartAnim()} dataKey="v" fill={CELL_BAR_FILL} radius={[2, 2, 0, 0]}>
                     {daySeries(kS.series).map((p, i) => (
                       <Cell key={i} fill={statusColor(statusOf(p.v, kS.target, 'up'))} />
                     ))}
@@ -915,7 +916,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
                   <YAxis tickFormatter={fmtAxis} domain={qDom} ticks={qFocus?.ticks} allowDataOverflow={!!qFocus} tick={axisTick} width="auto" />
                   <Tooltip {...chartTip} formatter={v => [`${v}%`, 'Q']} />
                   <ReferenceLine y={kQ.target} stroke="var(--red)" strokeDasharray="4 3" />
-                  <Line type="monotone" dataKey="v" stroke={axisSheet('Q').color} strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                  <Line {...chartAnim()} type="monotone" dataKey="v" stroke={axisSheet('Q').color} strokeWidth={2} dot={{ r: 2 }} connectNulls />
                 </ComposedChart>
               </ResponsiveContainer>,
             ) : <EmptyChart k={k} text="ยังไม่มีกะที่ปิดแล้วในช่วงนี้" />}
@@ -938,7 +939,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
                   <YAxis tickFormatter={fmtAxis} tick={axisTick} width="auto" />
                   <Tooltip {...chartTip} formatter={v => [`${v}%`, 'ทำได้ตามแผน']} />
                   <ReferenceLine y={100} stroke="var(--red)" strokeDasharray="4 3" />
-                  <Bar dataKey="v" fill={CELL_BAR_FILL} radius={[2, 2, 0, 0]}>
+                  <Bar {...chartAnim()} dataKey="v" fill={CELL_BAR_FILL} radius={[2, 2, 0, 0]}>
                     {daySeries(kD.series).map((p, i) => (
                       <Cell key={i} fill={statusColor(statusOf(p.v, 100, 'up'))} />
                     ))}
@@ -965,8 +966,8 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
                   <XAxis dataKey="label" tick={axisTick} interval="preserveStartEnd" />
                   <YAxis tick={axisTick} width="auto" tickFormatter={v => (v >= 1000 ? `${Math.round(v / 1000)}k` : v)} />
                   <Tooltip {...chartTip} formatter={(v, n) => [fmtBaht(v), n === 'dt' ? 'เครื่องหยุด' : 'ของเสีย']} />
-                  <Bar dataKey="dt" stackId="c" fill="var(--amber)" />
-                  <Bar dataKey="ng" stackId="c" fill="var(--blue)" radius={[2, 2, 0, 0]} />
+                  <Bar {...chartAnim()} dataKey="dt" stackId="c" fill="var(--amber)" />
+                  <Bar {...chartAnim()} dataKey="ng" stackId="c" fill="var(--blue)" radius={[2, 2, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : <EmptyChart k={k} text="ยังไม่มีความสูญเสียที่คิดเป็นเงินได้" />}
@@ -990,7 +991,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
                   <YAxis tickFormatter={fmtAxis} domain={[0, 100]} tick={axisTick} width="auto" />
                   <Tooltip {...chartTip} formatter={(v, n) => (n === 'v' ? [`${v}%`, 'มาทำงาน'] : [v, 'คน'])} />
                   <ReferenceLine y={kM.target} stroke="var(--red)" strokeDasharray="4 3" />
-                  <Bar dataKey="v" fill={axisSheet('M').color} radius={[2, 2, 0, 0]} />
+                  <Bar {...chartAnim()} dataKey="v" fill={axisSheet('M').color} radius={[2, 2, 0, 0]} />
                 </ComposedChart>
               </ResponsiveContainer>
             ) : <EmptyChart k={k} text="ยังไม่มีบันทึกเช็คชื่อในช่วงนี้" />}
@@ -1021,7 +1022,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
                   <Tooltip {...chartTip} formatter={v => [`${v}%`, 'OEE']} />
                   <ReferenceLine y={kOee.target} stroke="var(--red)" strokeDasharray="5 3"
                     label={{ value: `เป้า ${kOee.target}%`, position: 'insideTopRight', fill: 'var(--red)', fontSize: fs(10) }} />
-                  <Bar dataKey="v" fill={CELL_BAR_FILL} radius={[2, 2, 0, 0]}>
+                  <Bar {...chartAnim()} dataKey="v" fill={CELL_BAR_FILL} radius={[2, 2, 0, 0]}>
                     {daySeries(kOee.series).map((p, i) => (
                       <Cell key={i} fill={statusColor(statusOf(p.v, kOee.target, 'up'))} />
                     ))}
@@ -1051,7 +1052,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
                   <YAxis type="category" dataKey="name" tick={{ ...axisTick, fontSize: fs(9.5) }} width={Math.round(cw * 0.42)}
                     tickFormatter={shortTick(Math.max(8, Math.floor((Math.round(cw * 0.42) - 8) / (fs(9.5) * 0.8))))} />
                   <Tooltip {...chartTip} formatter={v => [`${v} นาที`, 'เวลาที่เสีย']} />
-                  <Bar dataKey="min" fill="var(--amber)" radius={[0, 3, 3, 0]}>
+                  <Bar {...chartAnim()} dataKey="min" fill="var(--amber)" radius={[0, 3, 3, 0]}>
                     <LabelList dataKey="min" position="right" formatter={v => `${Math.round(v).toLocaleString()} น.`}
                       style={{ fontSize: fs(10), fill: 'var(--text2)', fontWeight: 700 }} />
                   </Bar>
