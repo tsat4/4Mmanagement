@@ -13,7 +13,6 @@ import useFitHeight from '../utils/useFitHeight';
 import { packPages, clampPage } from '../utils/boardPager';
 import useTabParam, { useMergeParams } from '../utils/useTabParam';
 import { useSearchParams } from 'react-router-dom';
-import { urlParam } from '../utils/urlInit';
 import useProductionLines from '../utils/useProductionLines';
 import { useLiveBoard } from '../utils/useLiveBoard';
 import { LIVE } from '../utils/refreshRates';
@@ -29,7 +28,7 @@ import { fetchAllPages, fetchByIds } from '../utils/fetchByIds';
       dept_head/engineer/officer/clerk/secretary) ตกแถวหัวผังหมด ไม่มีตัวไหนลงแถวพนักงาน
    🔴 **ห้ามใส่ตัวกรอง staff_kind กลับ** — มีด่าน `staffKindGuard.test.mjs` */
 import { inSectionScope, lineScope } from '../utils/sectionScope';
-import { orgNodeCompare, orgKey } from '../utils/listOrder';
+import { orgNodeCompare, orgKey, naturalCompare } from '../utils/listOrder';
 import { loadPositions, positionLabel, loadWorkingPositions, applyWorkingPositions } from '../utils/positions';
 import { buildScheduleMaps, shiftFromTeam, scheduleTeamFor } from '../utils/shiftAssign';
 import { getWorkDate, addDaysStr } from '../utils/workDate';
@@ -46,7 +45,14 @@ import {
   staffingOfDept, summarizeStaffing, rosterOn, stationSkillGaps,
   indexSessions, sessionsOfDeptShift, oeeOfSessions, compareOeeByStaffing, MIN_SHIFTS_TO_COMPARE,
   ATTEND_META, FOUR_M, shiftMeta, SHIFT_META,
+  stationsOfLineFamily, lineStaffStatus, lineStaffLabel, personFitState,
 } from '../utils/manpowerBoard';
+import { skillFit, skillMapOf, pendingMapOf } from '../utils/skillFit';
+import { STATUS_COLOR } from '../utils/statusTone';
+import { cachedMaster } from '../utils/masterCache';
+import Segmented from '../components/Segmented';
+import FactoryMiniMap from '../components/FactoryMiniMap';
+import useIsMobile from '../utils/useIsMobile';
 
 import SectionScopeSelect from '../components/SectionScopeSelect';
 import { tr as trI18n } from '../utils/i18n';
@@ -299,7 +305,8 @@ export default function ManpowerBoard() {
       {loading ? <div style={{ padding: 24, color: 'var(--muted)' }}>{trI18n('กำลังโหลด…')}</div>
         : !board ? <div className="card" style={{ padding: 24 }}>{trI18n('ยังไม่มีส่วนงานในผังองค์กร (ตั้งที่ /org-setup)')}</div>
         : tab === 'org' ? (tv ? <OrgTv board={board} depts={depts} skills={skills} /> : <OrgTab board={board} depts={depts} skills={skills} />)
-        : tab === 'layout' ? <LayoutTab board={board} depts={depts} lines={lines} attendance={attendance} maps={maps} tv={tv} stationPlans={stationPlans} skills={skills} />
+        : tab === 'layout' ? <LayoutTab board={board} depts={depts} lines={lines} attendance={attendance} maps={maps} tv={tv} stationPlans={stationPlans} skills={skills}
+            employees={employees} scopeNames={scopeNames} />
         : tab === 'staffing' ? <StaffingTab section={section} deptParam={deptParam} today={workDate} nodes={nodes} employees={employees} lines={lines}
             slotPlans={slotPlans} lineTechs={lineTechs} stations={stations} stationPlans={stationPlans} homeByEmp={homeByEmp} actingPos={actingPos} />
         : tab === 'history' ? <HistoryTab section={section} dept={deptParam ? (board?.depts || []).find(d => d.key === deptParam) || null : null} deptParam={deptParam} nodes={nodes} lines={lines} stations={stations} employees={employees} />
@@ -622,12 +629,148 @@ function OrgTab({ board, depts, skills }) {
 }
 
 /* ═════════════════════════ 🗺️ ผัง LAYOUT ═════════════════════════ */
-function LayoutTab({ board, depts, lines, attendance, maps, tv, stationPlans, skills }) {
+/* ═════════════════════════ 🗺️ ผัง LAYOUT ═════════════════════════
+   2 มุมมอง (`?lv=factory|line` · 2026-11-20 คำสั่ง user):
+     factory = ผังรวมโรงงาน (กรอบไลน์ชุดเดียวกับ /factory-map) ระบายสีตามกำลังคนวันนี้ → กดกรอบ = เข้าผังไลน์
+     line    = ผังรายไลน์ + แผงสรุปด้านขวา + กดหมุด = modal รายละเอียดจุดงาน
+   📺 จอ TV = ผังรายไลน์วนเหมือนเดิม (ไม่มีเมาส์กดกรอบ) · สูตรต่อจุด = layoutPeople/stationSkillGaps ตัวเดิม */
+const STAFF_TONE = { good: 'var(--green)', warn: 'var(--amber)', bad: 'var(--red)', none: STATUS_COLOR.none };
+const STAFF_TEXT = { good: 'คนครบ', warn: 'ขาด 1–2 ช่อง / ทักษะไม่ถึง', bad: 'ขาด ≥3 ช่อง / จุดว่าง', none: 'ตัดสินไม่ได้' };
+const STAFF_RANK = { bad: 0, warn: 1, none: 2, good: 3 };
+const FIT_DOT = { ok: 'var(--green)', gap: 'var(--amber)', noreq: STATUS_COLOR.none };
+const MARKER_MAX = 3;   // คนต่อจุดเกินนี้ = ยุบเป็น +N (ดูครบใน modal)
+const LV_OPTS = [{ value: 'factory', label: 'ภาพรวมโรงงาน' }, { value: 'line', label: 'ผังรายไลน์' }];
+
+function LayoutTab(props) {
+  const { tv } = props;
+  const [params] = useSearchParams();
+  const merge = useMergeParams();
+  const lv = tv ? 'line' : (params.get('lv') || (params.get('lline') ? 'line' : 'factory'));
+  const viewSwitch = tv ? null : <Segmented value={lv} options={LV_OPTS} label={trI18n('มุมมองผัง')} onChange={v => merge({ lv: v })} />;
+  return lv === 'factory'
+    ? <FactoryStaffView {...props} viewSwitch={viewSwitch} />
+    : <LineLayoutView {...props} viewSwitch={viewSwitch} />;
+}
+
+/* ใช้ร่วมกันทั้ง 2 มุมมอง — ใครเข้ากะไหน (ตารางกะ) */
+function useShiftOfEmp(maps) {
+  return useCallback((e) => (e?.team ? shiftFromTeam(scheduleTeamFor(e, maps), e.team) : null), [maps]);
+}
+
+/* ── 🗺️ ภาพรวมทั้งโรงงาน ── */
+function FactoryStaffView({ lines, attendance, maps, stationPlans, skills, employees, scopeNames, viewSwitch }) {
+  const merge = useMergeParams();
+  const isMobile = useIsMobile();
+  const [ws, setWs] = useState(null);         // workstations ทั้งโรงงาน (มีพิกัด + ทักษะที่จุดต้องการ)
+  const [homes, setHomes] = useState({});
+  const [regions, setRegions] = useState([]);
+  const [err, setErr] = useState('');
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const [w, hp, rg] = await Promise.all([
+        fetchAllPages(() => supabase.from('workstations').select('id, line_name, line_id, station_name, station_requirements(skill_name, min_score)')),
+        fetchAllPages(() => supabase.from('employee_home_positions').select('employee_id, station_id'), { orderBy: 'employee_id' }),
+        // คีย์ cache เดียวกับ <FactoryMiniMap> ⇒ ยิงครั้งเดียว (ห้ามมีข้อมูลกรอบชุดที่ 2)
+        cachedMaster('factory_line_regions', async () => {
+          const { data, error } = await supabase.from('factory_line_regions').select('id, line_name, points');
+          if (error) throw error;
+          return data || [];
+        }).catch(e => { setErr(e?.message || 'โหลดกรอบไลน์ไม่สำเร็จ'); return []; }),
+      ]);
+      if (!alive) return;
+      setWs(w.rows || []);
+      setHomes(Object.fromEntries((hp.rows || []).map(h => [h.employee_id, h.station_id])));
+      setRegions(rg || []);
+      const e = [w.error, hp.error].filter(Boolean);
+      if (e.length) setErr(e.join(' · '));
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  const empById = useMemo(() => Object.fromEntries((employees || []).map(e => [e.id, e])), [employees]);
+  const shiftOfEmp = useShiftOfEmp(maps);
+  // สถานะต่อกรอบ — คิดครั้งเดียวต่อชุดข้อมูล · นอกขอบเขตบัญชี = ไม่คิด (เทาจาง + นับบอกบนจอ)
+  const byRegion = useMemo(() => {
+    const m = new Map();
+    if (!ws) return m;
+    for (const r of regions) {
+      if (scopeNames && !scopeNames.has(r.line_name)) { m.set(r.line_name, { outOfScope: true }); continue; }
+      const st = stationsOfLineFamily(lines, r.line_name, ws);
+      const placed = layoutPeople({ stations: st, homeByEmp: homes, attendance, empById, shiftOfEmp, stationPlans });
+      const fit = stationSkillGaps(placed, { skillsByEmp: skills?.byEmp || {},
+        reqsByStation: Object.fromEntries(st.map(s => [String(s.id), s.station_requirements || []])) });
+      m.set(r.line_name, lineStaffStatus(placed, fit));
+    }
+    return m;
+  }, [ws, regions, scopeNames, lines, homes, attendance, empById, shiftOfEmp, stationPlans, skills]);
+
+  const stateOf = useCallback((name) => {
+    const s = byRegion.get(name);
+    if (!s || s.outOfScope) return null;
+    // ป้ายตัวเลขเฉพาะกรอบแดง/เหลือง (ที่ต้องไปดู) — เขียว/เทา = ชื่อล้วน (วางกันทับให้เอง) · ตัวเลขครบอยู่แผงขวา
+    return { color: STAFF_TONE[s.status], blink: false, label: s.status === 'bad' || s.status === 'warn' ? lineStaffLabel(s) : null };
+  }, [byRegion]);
+  const openLine = useCallback((name) => {
+    const l = (lines || []).find(x => x.name === name);
+    merge({ lv: 'line', lline: name, ...(l?.section ? { sec: l.section, dept: null } : {}) });
+  }, [lines, merge]);
+
+  const rows = useMemo(() => [...byRegion.entries()].filter(([, s]) => !s.outOfScope)
+    .sort((a, b) => STAFF_RANK[a[1].status] - STAFF_RANK[b[1].status] || naturalCompare(a[0], b[0])), [byRegion]);
+  const hidden = [...byRegion.values()].filter(s => s.outOfScope).length;
+  const count = (k) => rows.filter(([, s]) => s.status === k).length;
+
+  return (
+    <div style={{ display: 'grid', gap: 10 }}>
+      <FilterBar bare>
+        {viewSwitch}
+        <span className="spacer" />
+        <span style={{ display: 'flex', gap: 12, fontSize: 12, flexWrap: 'wrap' }}>
+          {['bad', 'warn', 'good', 'none'].map(k => (
+            <span key={k} style={{ color: STAFF_TONE[k], fontWeight: 700 }}>■ {trI18n(STAFF_TEXT[k])} {ws ? count(k) : '…'}</span>
+          ))}
+        </span>
+      </FilterBar>
+      {err && <div style={{ fontSize: 12, color: 'var(--red)' }}>⚠️ {err}</div>}
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'minmax(0,1fr)' : 'minmax(0,1fr) 300px', gap: 10, alignItems: 'start' }}>
+        <div className="card" style={{ padding: 8 }}>
+          <FactoryMiniMap stateOf={stateOf} onPick={openLine} bottomReserve={isMobile ? 12 : 24} />
+          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 6 }}>
+            {trI18n('กดกรอบไลน์ = เข้าผังรายไลน์ · สีกรอบ = กำลังคนวันนี้เทียบช่องประจำจุด (station_slot_plans) · กรอบ/ชื่อไลน์ตั้งที่ /layout-setup')}
+          </div>
+        </div>
+        <div className="card" style={{ padding: 10, display: 'grid', gap: 6, alignContent: 'start' }}>
+          <div style={{ fontWeight: 800 }}>{trI18n('ไลน์บนผัง')} <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--muted)' }}>{trI18n('(แย่สุดอยู่บน)')}</span></div>
+          {!ws && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{trI18n('กำลังโหลด…')}</div>}
+          {ws && !regions.length && <div style={{ fontSize: 12, color: 'var(--amber)' }}>{trI18n('ยังไม่มีกรอบไลน์บนผังรวม — ตีกรอบที่ /layout-setup')}</div>}
+          {rows.map(([name, s]) => (
+            <button key={name} type="button" onClick={() => openLine(name)}
+              style={{ display: 'grid', gap: 2, textAlign: 'left', padding: '6px 8px', borderRadius: 'var(--r-md)', cursor: 'pointer',
+                border: '1px solid var(--border)', borderLeft: `4px solid ${STAFF_TONE[s.status]}`, background: 'var(--bg2)', color: 'var(--text)' }}>
+              <span style={{ fontSize: 13, fontWeight: 700 }}>{name}</span>
+              <span style={{ fontSize: 12, color: s.status === 'none' ? 'var(--muted)' : STAFF_TONE[s.status], fontVariantNumeric: 'tabular-nums' }}>{trI18n(lineStaffLabel(s))}</span>
+            </button>
+          ))}
+          {hidden > 0 && <div style={{ fontSize: 12, color: 'var(--muted)' }}>🔭 {trI18n('นอกขอบเขตบัญชี — ไม่แสดงสถานะ')} {hidden} {trI18n('กรอบ')}</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── 📍 ผังรายไลน์ ── */
+function LineLayoutView({ board, depts, lines, attendance, maps, tv, stationPlans, skills, viewSwitch }) {
+  const [params] = useSearchParams();
+  const merge = useMergeParams();
+  const isMobile = useIsMobile();
   const [layouts, setLayouts] = useState([]);
   const [stations, setStations] = useState([]);
   const [homes, setHomes] = useState({});
-  const [pick, setPick] = useState('');
-  const [seedLine] = useState(() => urlParam('lline') || '');   // ?lline= ชื่อไลน์ของผังที่จะเปิด (จอวนหน้า) · คนเลือกเองแล้ว `pick` ชนะ
+  const [focus, setFocus] = useState(null);     // station id ที่ชี้จากแผงขวา
+  const [openSt, setOpenSt] = useState(null);   // station id ที่เปิด modal
+  const [gapOpen, setGapOpen] = useState(false); // ตารางคนทักษะไม่ถึง (กดเปิด)
+  const lline = params.get('lline') || '';      // ?lline= ชื่อไลน์ของผังที่จะเปิด (จอวน/กดกรอบภาพรวม/เลือกเอง)
   const [err, setErr] = useState('');
 
   const family = useMemo(() => lineFamilyOf(lines, depts.flatMap(d => d.lines.map(l => l.id))), [lines, depts]);
@@ -653,10 +796,13 @@ function LayoutTab({ board, depts, lines, attendance, maps, tv, stationPlans, sk
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [famKey]);
 
-  // 📺 จอ TV: หลายผัง = วนทีละผังเอง (ไม่มีเมาส์ไปเลือก dropdown) · โหมดปกติ = เลือกเอง
+  // 📺 จอ TV: หลายผัง = วนทีละผังเอง (ไม่มีเมาส์ไปเลือก dropdown) · โหมดปกติ = ตาม ?lline= (ไม่ระบุ = ผังแรก)
   const [tvIdx, setTvIdx] = useAutoPage(tv ? layouts.length : 0);
+  const llineKey = lline.trim().toLowerCase();
   const layout = tv ? layouts[clampPage(tvIdx, layouts.length)] || null
-    : layouts.find(l => String(l.id) === pick) || (!pick && seedLine ? layouts.find(l => l.line_name === seedLine) : null) || layouts[0] || null;
+    : (llineKey ? layouts.find(l => String(l.line_name || '').trim().toLowerCase() === llineKey) || null : layouts[0] || null);
+  // 🔴 ไลน์ที่ขอมาไม่มีรูปผัง = บอกตรงๆ ห้ามแอบโชว์ผังไลน์อื่นแทน
+  const llineMissing = !tv && !!llineKey && layouts.length > 0 && !layout;
   useEffect(() => {
     let alive = true;
     if (!layout) { setStations([]); return undefined; }
@@ -673,47 +819,269 @@ function LayoutTab({ board, depts, lines, attendance, maps, tv, stationPlans, sk
     for (const d of board.depts) for (const p of [...d.heads, ...d.techs]) m[p.id] = p;
     return m;
   }, [board]);
-  const shiftOfEmp = useCallback((e) => (e?.team ? shiftFromTeam(scheduleTeamFor(e, maps), e.team) : null), [maps]);
+  const shiftOfEmp = useShiftOfEmp(maps);
   const placed = useMemo(() => layoutPeople({ stations, homeByEmp: homes, attendance, empById, shiftOfEmp, stationPlans }),
     [stations, homes, attendance, empById, shiftOfEmp, stationPlans]);
   const fitGaps = useMemo(() => stationSkillGaps(placed, {
     skillsByEmp: skills?.byEmp || {},
     reqsByStation: Object.fromEntries(stations.map(st => [String(st.id), st.station_requirements || []])),
   }), [placed, skills, stations]);
+  const sum = useMemo(() => lineStaffStatus(placed, fitGaps), [placed, fitGaps]);
 
-  if (!layouts.length) return <div className="card" style={{ padding: 24, color: 'var(--muted)' }}>{trI18n('ไลน์ของแผนกที่เลือกยังไม่มีรูปผัง (อัพโหลดที่ /line-setup)')}{err ? ` · ${err}` : ''}</div>;
+  if (!layouts.length) return <div className="card" style={{ padding: 24, color: 'var(--muted)' }}>{viewSwitch && <div style={{ marginBottom: 10 }}>{viewSwitch}</div>}{trI18n('ไลน์ของแผนกที่เลือกยังไม่มีรูปผัง (อัพโหลดที่ /line-setup)')}{err ? ` · ${err}` : ''}</div>;
   const unplaced = stations.filter(s => s.pos_top == null || s.pos_left == null).length;
-  const emptyStations = placed.filter(x => !x.people.length).length;
-  const shortage = placed.reduce((acc, x) => (x.missing ? { day: acc.day + x.missing.day, night: acc.night + x.missing.night, unknown: acc.unknown + x.missing.unknown,
-    n: acc.n + x.missing.day + x.missing.night + x.missing.unknown } : acc), { day: 0, night: 0, unknown: 0, n: 0 });
+  const legend = (
+    <span style={{ display: 'flex', gap: 12, fontSize: 12, flexWrap: 'wrap' }}>
+      {Object.entries(SHIFT_META).map(([k, m]) => <span key={k} style={{ color: m.color, fontWeight: 700 }}>● {trI18n(m.label)}</span>)}
+      <span style={{ color: 'var(--muted)' }}>จาง = ลา/ขาด · ✳ = ย้ายมาวันนี้ · ↗ = วันนี้ไปจุดอื่น · วงประ + สีกะ = ขาดคนประจำกะนั้น</span>
+      {!tv && <span style={{ color: 'var(--muted)' }}>
+        จุดมุมหมุด = ทักษะ: <b style={{ color: FIT_DOT.ok }}>●</b> ผ่าน · <b style={{ color: FIT_DOT.gap }}>●</b> ไม่ถึง · <b style={{ color: FIT_DOT.noreq }}>●</b> จุดยังไม่ตั้งทักษะ · กดหมุด = รายละเอียด
+      </span>}
+    </span>
+  );
+  const fitLine = (
+    <div style={{ fontSize: 12, color: fitGaps.gaps.length ? 'var(--amber)' : 'var(--muted)' }}>
+      ฝีมือตรงจุดไหม (คนที่มาวันนี้): ตรวจ {fitGaps.checked} {trI18n('คน · ผ่านครบทุกทักษะ')} {fitGaps.ok} คน
+      {fitGaps.gaps.length > 0 && <b> {trI18n('· ยืนจุดที่ทักษะยังไม่ถึง')} {fitGaps.gaps.length} {trI18n('คน')}</b>}
+      {fitGaps.onlyApproval > 0 && <span> {trI18n('(⏳ ในนี้')} {fitGaps.onlyApproval} คนได้ขั้นแล้ว แค่รอหัวหน้าอนุมัติที่ /operator?tab=levelup)</span>}
+      {fitGaps.noReqStations > 0 && <span style={{ color: 'var(--muted)' }}> {trI18n('· ยังไม่ตั้งทักษะที่จุดต้องการ')} {fitGaps.noReqStations} {trI18n('จุด (')}{fitGaps.noReqPeople} คนที่ยืนอยู่ ตรวจไม่ได้ — ตั้งที่ /line-setup)</span>}
+    </div>
+  );
+  const openX = openSt != null ? placed.find(x => String(x.station.id) === String(openSt)) : null;
   return (
     <div style={{ display: 'grid', gap: 10 }}>
       <FilterBar bare>
-        {!tv && layouts.length > 1 && (
-          <select value={String(layout?.id ?? '')} onChange={e => setPick(e.target.value)} aria-label={trI18n('ผังไลน์')}>
-            {layouts.map(l => <option key={l.id} value={String(l.id)}>{trI18n(l.line_name)}</option>)}
+        {viewSwitch}
+        {!tv && (layouts.length > 1 || llineMissing) && (
+          <select value={layout?.line_name ?? ''} onChange={e => merge({ lline: e.target.value || null })} aria-label={trI18n('ผังไลน์')}>
+            {llineMissing && <option value="">{lline} — {trI18n('ไม่มีรูปผัง')}</option>}
+            {layouts.map(l => <option key={l.id} value={l.line_name}>{trI18n(l.line_name)}</option>)}
           </select>
         )}
         <span className="spacer" />
-        <span style={{ display: 'flex', gap: 12, fontSize: 12, flexWrap: 'wrap' }}>
-          {Object.entries(SHIFT_META).map(([k, m]) => <span key={k} style={{ color: m.color, fontWeight: 700 }}>● {trI18n(m.label)}</span>)}
-          <span style={{ color: 'var(--muted)' }}>จาง = ลา/ขาด · ✳ = ย้ายมาวันนี้ · ↗ = วันนี้ไปจุดอื่น · วงประ + สีกะ = ขาดคนประจำกะนั้น</span>
-        </span>
+        {tv && legend}
       </FilterBar>
       {err && <div style={{ fontSize: 12, color: 'var(--red)' }}>⚠️ {err}</div>}
-      <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-        {stations.length} {trI18n('จุดงาน · ยังไม่มีคนประจำ')} {emptyStations} {trI18n('จุด')}{unplaced ? ` · ยังไม่วางพิกัด ${unplaced} จุด` : ''}
-        {shortage.n > 0 && <span style={{ color: 'var(--amber)' }}> {trI18n('· ขาดคนประจำ เช้า')} {shortage.day} {trI18n('· ดึก')} {shortage.night} {trI18n('ช่อง')}{shortage.unknown ? ` · ยังไม่รู้กะ ${shortage.unknown} ช่อง (ตั้งตารางกะที่ /shift-organize)` : ''}</span>} — ตั้งจุดประจำที่ /management
+      {llineMissing ? (
+        <div className="card" style={{ padding: 24, color: 'var(--amber)' }}>
+          ⚠️ {trI18n('ไลน์')} <b>{lline}</b> {trI18n('ยังไม่มีรูปผังในส่วนงานนี้ — อัพโหลดที่ /line-setup หรือเลือกผังอื่นจากช่องด้านบน')}
+        </div>
+      ) : tv ? (
+        <>
+          <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+            {stations.length} {trI18n('จุดงาน · ยังไม่มีคนประจำ')} {sum.emptyStations} {trI18n('จุด')}{unplaced ? ` · ยังไม่วางพิกัด ${unplaced} จุด` : ''}
+            {sum.short.n > 0 && <span style={{ color: 'var(--amber)' }}> {trI18n('· ขาดคนประจำ เช้า')} {sum.short.day} {trI18n('· ดึก')} {sum.short.night} {trI18n('ช่อง')}{sum.short.unknown ? ` · ยังไม่รู้กะ ${sum.short.unknown} ช่อง (ตั้งตารางกะที่ /shift-organize)` : ''}</span>} — ตั้งจุดประจำที่ /management
+          </div>
+          {fitLine}
+          <LayoutMap layout={layout} placed={placed} reserve={48} fit={fitGaps} tv />
+          <BoardPager page={clampPage(tvIdx, layouts.length)} count={layouts.length} onPage={setTvIdx} labels={layouts.map(l => l.line_name)} />
+        </>
+      ) : (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'minmax(0,1fr)' : 'minmax(0,1fr) 300px', gap: 10, alignItems: 'start' }}>
+            {/* 🔴 แผงอยู่ "ก่อน" ผังใน DOM (วางขวาด้วย grid) — useFitHeight นับพี่น้องที่ตามหลังเป็น "ของใต้กล่อง"
+                แผงสูงกว่าจอ = ผังวัดที่ไม่ได้แล้วล้นจอ · มือถือ = order ดันแผงลงใต้ผัง */}
+            <div style={isMobile ? { order: 2 } : { gridColumn: 2, gridRow: 1 }}>
+              <LineSidePanel sum={sum} placed={placed} fit={fitGaps} unplaced={unplaced} focus={focus}
+                onFocus={id => setFocus(f => (String(f) === String(id) ? null : id))} onOpen={setOpenSt} fitLine={fitLine} legend={legend}
+                gapOpen={gapOpen} onGapToggle={() => setGapOpen(v => !v)} />
+            </div>
+            <div style={isMobile ? undefined : { gridColumn: 1, gridRow: 1, minWidth: 0 }}>
+              <LayoutMap layout={layout} placed={placed} reserve={12} fit={fitGaps} focus={focus} onOpen={setOpenSt} />
+            </div>
+          </div>
+          {/* ตารางรายคน = รายละเอียด (จำนวนคนเห็นอยู่แล้วในแผง) ⇒ กดเปิด · เปิดแล้วผังจะเตี้ยลงให้ตารางอยู่ในจอ */}
+          {gapOpen && fitGaps.gaps.length > 0 && <SkillGapTable gaps={fitGaps.gaps} defs={skills?.defs || {}} />}
+        </>
+      )}
+      {openX && <StationModal x={openX} lineName={layout?.line_name} skills={skills} fit={fitGaps} onClose={() => setOpenSt(null)} />}
+    </div>
+  );
+}
+
+function Stat({ label, value, tone }) {
+  return (
+    <div style={{ padding: '6px 8px', borderRadius: 'var(--r-md)', background: 'var(--bg2)' }}>
+      <div style={{ fontSize: 11, color: 'var(--muted)' }}>{trI18n(label)}</div>
+      <div style={{ fontSize: 18, fontWeight: 800, color: tone || 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{value}</div>
+    </div>
+  );
+}
+
+/* แผงขวาของผังรายไลน์ — ตัวเลขสรุป + จุดที่ต้องดู (กด = ชี้หมุดบนผัง) */
+function LineSidePanel({ sum, placed, fit, unplaced, focus, onFocus, onOpen, fitLine, legend, gapOpen, onGapToggle }) {
+  const gapByStation = useMemo(() => {
+    const m = {};
+    for (const g of fit.gaps) m[String(g.station.id)] = (m[String(g.station.id)] || 0) + 1;
+    return m;
+  }, [fit]);
+  const issues = placed.map(x => {
+    const n = x.missing ? x.missing.day + x.missing.night + x.missing.unknown : 0;
+    const g = gapByStation[String(x.station.id)] || 0;
+    const empty = !x.people.length;
+    return { x, n, g, empty, rank: empty ? 0 : n ? 1 : 2 };
+  }).filter(i => i.empty || i.n || i.g).sort((a, b) => a.rank - b.rank || b.n - a.n || naturalCompare(a.x.station.station_name || '', b.x.station.station_name || ''));
+  return (
+    <div className="card" style={{ padding: 10, display: 'grid', gap: 8, alignContent: 'start' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ width: 10, height: 10, borderRadius: '50%', background: STAFF_TONE[sum.status] }} />
+        <b style={{ color: STAFF_TONE[sum.status] }}>{trI18n(sum.status === 'none' ? sum.reason : STAFF_TEXT[sum.status])}</b>
       </div>
-      <div style={{ fontSize: 12, color: fitGaps.gaps.length ? 'var(--amber)' : 'var(--muted)' }}>
-        ฝีมือตรงจุดไหม (คนที่มาวันนี้): ตรวจ {fitGaps.checked} {trI18n('คน · ผ่านครบทุกทักษะ')} {fitGaps.ok} คน
-        {fitGaps.gaps.length > 0 && <b> {trI18n('· ยืนจุดที่ทักษะยังไม่ถึง')} {fitGaps.gaps.length} {trI18n('คน')}</b>}
-        {fitGaps.onlyApproval > 0 && <span> {trI18n('(⏳ ในนี้')} {fitGaps.onlyApproval} คนได้ขั้นแล้ว แค่รอหัวหน้าอนุมัติที่ /operator?tab=levelup)</span>}
-        {fitGaps.noReqStations > 0 && <span style={{ color: 'var(--muted)' }}> {trI18n('· ยังไม่ตั้งทักษะที่จุดต้องการ')} {fitGaps.noReqStations} {trI18n('จุด (')}{fitGaps.noReqPeople} คนที่ยืนอยู่ ตรวจไม่ได้ — ตั้งที่ /line-setup)</span>}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+        <Stat label="มาวันนี้ / คนประจำ" value={`${sum.present}/${sum.own}`} />
+        <Stat label="จุดงาน (ว่าง)" value={`${sum.stations} (${sum.emptyStations})`} tone={sum.emptyStations ? 'var(--red)' : undefined} />
+        <Stat label="ขาด เช้า / ดึก" value={`${sum.short.day} / ${sum.short.night}`} tone={sum.short.n ? 'var(--amber)' : undefined} />
+        <Stat label="ทักษะไม่ถึง" value={`${sum.gapPeople} คน`} tone={sum.gapPeople ? 'var(--amber)' : undefined} />
       </div>
-      <LayoutMap layout={layout} placed={placed} reserve={tv ? 48 : 12} />
-      {!tv && fitGaps.gaps.length > 0 && <SkillGapTable gaps={fitGaps.gaps} defs={skills?.defs || {}} />}
-      {tv && <BoardPager page={clampPage(tvIdx, layouts.length)} count={layouts.length} onPage={setTvIdx} labels={layouts.map(l => l.line_name)} />}
+      {(sum.short.unknown > 0 || sum.noPlan > 0 || unplaced > 0) && (
+        <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+          {sum.short.unknown > 0 && <div style={{ color: 'var(--amber)' }}>{trI18n('ขาด')} {sum.short.unknown} {trI18n('ช่อง ยังไม่รู้กะ (ตั้งตารางกะที่ /shift-organize)')}</div>}
+          {sum.noPlan > 0 && <div>{trI18n('ยังไม่ตั้งช่องประจำ')} {sum.noPlan} {trI18n('จุด')}</div>}
+          {unplaced > 0 && <div>{trI18n('ยังไม่วางพิกัด')} {unplaced} {trI18n('จุด')}</div>}
+        </div>
+      )}
+      <div style={{ fontWeight: 800, fontSize: 13, marginTop: 2 }}>{trI18n('จุดที่ต้องดู')} {issues.length ? `(${issues.length})` : ''}</div>
+      {!issues.length && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{trI18n('ไม่มีจุดว่าง/ขาด/ทักษะไม่ถึง')}</div>}
+      <div style={{ display: 'grid', gap: 4, maxHeight: 320, overflowY: 'auto' }}>
+        {issues.map(({ x, g, empty }) => {
+          const on = String(focus) === String(x.station.id);
+          return (
+            <div key={x.station.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 8px', borderRadius: 'var(--r-md)',
+              border: `1px solid ${on ? 'var(--accent)' : 'var(--border)'}`, background: on ? 'var(--accent-dim)' : 'var(--bg2)' }}>
+              <button type="button" onClick={() => onFocus(x.station.id)} title={trI18n('ชี้ตำแหน่งบนผัง')}
+                style={{ flex: 1, minWidth: 0, textAlign: 'left', background: 'none', border: 'none', color: 'var(--text)', cursor: 'pointer', padding: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{x.station.station_name || '–'}</div>
+                <div style={{ fontSize: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {empty && <span style={{ color: 'var(--red)' }}>{trI18n('ว่างทั้งจุด')}</span>}
+                  {x.missing?.day > 0 && <span style={{ color: shiftMeta('day').color }}>{trI18n('ขาดเช้า')} {x.missing.day}</span>}
+                  {x.missing?.night > 0 && <span style={{ color: shiftMeta('night').color }}>{trI18n('ขาดดึก')} {x.missing.night}</span>}
+                  {x.missing?.unknown > 0 && <span style={{ color: 'var(--muted)' }}>{trI18n('ขาด')} {x.missing.unknown} {trI18n('(ไม่รู้กะ)')}</span>}
+                  {g > 0 && <span style={{ color: 'var(--amber)' }}>{trI18n('ทักษะไม่ถึง')} {g}</span>}
+                </div>
+              </button>
+              <button type="button" className="pg-btn" onClick={() => onOpen(x.station.id)}
+                style={{ fontSize: 12, padding: '3px 8px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--card)', color: 'var(--text2)', cursor: 'pointer' }}>
+                {trI18n('ดู')}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+      {fitLine}
+      {fit.gaps.length > 0 && (
+        <button type="button" className="pg-btn" onClick={onGapToggle} aria-expanded={gapOpen}
+          style={{ fontSize: 12, fontWeight: 700, padding: '5px 10px', borderRadius: 'var(--r-md)', cursor: 'pointer',
+            border: '1px solid var(--amber)', background: 'var(--bg2)', color: 'var(--amber)' }}>
+          {gapOpen ? '▲ ' : '▼ '}{trI18n('ตารางคนที่ทักษะยังไม่ถึง')} ({fit.gaps.length})
+        </button>
+      )}
+      <div style={{ borderTop: '1px solid var(--border)', paddingTop: 6 }}>{legend}</div>
+      <div style={{ fontSize: 12, color: 'var(--muted)' }}>{trI18n('ตั้งจุดประจำที่ /management')}</div>
+    </div>
+  );
+}
+
+/* modal รายละเอียดจุดงาน — อ่านอย่างเดียว · ปิดด้วย ✕ / Esc (ด่าน modal-closes-on-backdrop) */
+function StationModal({ x, lineName, skills, fit, onClose }) {
+  useEffect(() => {
+    const esc = (e) => { if (e.key === 'Escape') onClose?.(); };
+    window.addEventListener('keydown', esc);
+    return () => window.removeEventListener('keydown', esc);
+  }, [onClose]);
+  const reqs = x.station.station_requirements || [];
+  const defs = skills?.defs || {};
+  const groups = ['day', 'night', 'none'].map(sh => ({ sh, people: x.people.filter(p => (p.shift === 'day' || p.shift === 'night' ? p.shift : 'none') === sh) }))
+    .filter(g => g.people.length || (g.sh !== 'none' && x.missing?.[g.sh] > 0));
+  return (
+    <div className="modal-scroll"
+      style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: 16 }}>
+      <div role="dialog" aria-modal="true"
+        style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-lg)',
+          width: 'min(96vw, 760px)', maxHeight: '94vh', overflowY: 'auto', padding: 18 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 12, color: 'var(--muted)' }}>{trI18n('จุดงาน')}{lineName ? ` · ${lineName}` : ''}</div>
+            <h3 style={{ margin: '2px 0 0', fontSize: 17, fontWeight: 800 }}>{x.station.station_name || '–'}</h3>
+            <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>
+              {x.need != null ? `${trI18n('ช่องประจำ')} ${x.need} ${trI18n('คน/กะ')}` : trI18n('ยังไม่ตั้งช่องประจำจุด')}
+              {x.missing?.unknown > 0 && <span style={{ color: 'var(--amber)' }}> · {trI18n('ขาด')} {x.missing.unknown} {trI18n('ช่อง (ยังไม่รู้กะ)')}</span>}
+            </div>
+          </div>
+          <button onClick={onClose} aria-label={trI18n('ปิด')}
+            style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 20, cursor: 'pointer', lineHeight: 1, padding: 4 }}>✕</button>
+        </div>
+
+        <div style={{ fontSize: 12, marginBottom: 10 }}>
+          <span style={{ color: 'var(--muted)' }}>{trI18n('ทักษะที่จุดนี้ต้องการ:')} </span>
+          {reqs.length ? reqs.map(r => (
+            <span key={r.skill_name} style={{ display: 'inline-block', margin: '2px 4px 2px 0', padding: '1px 8px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border2)' }}>
+              {trI18n(defs[r.skill_name]?.label) || r.skill_name} ≥ {r.min_score}
+            </span>
+          )) : <span style={{ color: 'var(--muted)' }}>{trI18n('ยังไม่ตั้ง (ตรวจฝีมือไม่ได้ — ตั้งที่ /line-setup)')}</span>}
+        </div>
+
+        {!groups.length && <div style={{ padding: 12, color: 'var(--muted)', fontSize: 13 }}>{trI18n('ยังไม่มีคนประจำจุดนี้ และวันนี้ไม่มีใครมายืน — ตั้งจุดประจำที่ /management')}</div>}
+        {groups.map(({ sh, people }) => (
+          <div key={sh} style={{ marginBottom: 12 }}>
+            <div style={{ fontWeight: 800, fontSize: 13, color: shiftMeta(sh === 'none' ? null : sh).color, marginBottom: 6 }}>
+              {trI18n(shiftMeta(sh === 'none' ? null : sh).label)} · {people.length} {trI18n('คน')}
+              {sh !== 'none' && x.missing?.[sh] > 0 && <span style={{ color: 'var(--amber)' }}> · {trI18n('ขาด')} {x.missing[sh]} {trI18n('ช่อง')}</span>}
+            </div>
+            <div style={{ display: 'grid', gap: 6 }}>
+              {people.map(p => {
+                const rows = skills?.byEmp?.[p.emp.id];
+                const pf = skillFit(reqs, skillMapOf(rows), pendingMapOf(rows));
+                const fs = personFitState(x, p, fit);
+                const am = ATTEND_META[p.attend] || ATTEND_META.unchecked;
+                return (
+                  <div key={p.emp.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: 8, borderRadius: 'var(--r-md)', background: 'var(--bg2)' }}>
+                    <div style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, background: 'var(--bg3)', border: `2px ${p.temp ? 'dashed' : 'solid'} ${shiftMeta(p.shift).color}` }}>
+                      {p.emp.image_url ? <img src={p.emp.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: shiftMeta(p.shift).color }}>{(p.emp.name || '?').slice(0, 1)}</div>}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'baseline' }}>
+                        <b style={{ fontSize: 13 }}>{p.emp.name}</b>
+                        {p.emp.employee_id_code && <span style={{ fontSize: 12, color: 'var(--muted)' }}>{p.emp.employee_id_code}</span>}
+                        <span style={{ fontSize: 12, fontWeight: 700, color: am.color }}>{trI18n(am.label)}</span>
+                        {p.temp && <span style={{ fontSize: 12, color: 'var(--blue)' }}>{trI18n('✳ ย้ายมาวันนี้')}</span>}
+                        {p.away && <span style={{ fontSize: 12, color: 'var(--muted)' }}>{trI18n('↗ วันนี้ไปยืนจุดอื่น')}</span>}
+                      </div>
+                      {pf ? (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+                          {pf.details.map(d => (
+                            <span key={d.skill_name} style={{ fontSize: 12, padding: '1px 8px', borderRadius: 'var(--r-pill)',
+                              border: `1px ${d.assessed ? 'solid' : 'dashed'} ${d.pass ? 'var(--green)' : 'var(--amber)'}`, color: d.pass ? 'var(--green)' : 'var(--text)' }}>
+                              {trI18n(defs[d.skill_name]?.label) || d.skill_name}{' '}
+                              <b style={{ fontVariantNumeric: 'tabular-nums' }}>{d.assessed ? `${d.actual}/${d.required}` : `${trI18n('ยังไม่ประเมิน')} /${d.required}`}</b>
+                              {d.pending != null && <span style={{ marginLeft: 4, color: d.waitApproval ? 'var(--blue)' : 'var(--muted)' }}>⏳ {d.pending}</span>}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+                      {fs == null && pf && <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{trI18n('วันนี้ไม่ได้ยืนจุดนี้ — ไม่นับในการตรวจฝีมือ')}</div>}
+                    </div>
+                    {fs && <span title={trI18n('ทักษะเทียบจุดนี้')} style={{ fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap', color: FIT_DOT[fs] }}>
+                      {fs === 'ok' ? trI18n('ผ่าน') : fs === 'gap' ? `${pf?.passed ?? 0}/${pf?.total ?? 0}` : trI18n('ตรวจไม่ได้')}
+                    </span>}
+                  </div>
+                );
+              })}
+              {sh !== 'none' && Array.from({ length: x.missing?.[sh] || 0 }, (_, i) => (
+                <div key={`m${i}`} style={{ padding: 8, borderRadius: 'var(--r-md)', border: `1px dashed ${shiftMeta(sh).color}`, fontSize: 12, color: 'var(--muted)' }}>
+                  + {trI18n('ช่องว่าง')} {shiftMeta(sh).label}
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 8 }}>
+          <span style={{ fontSize: 12, color: 'var(--muted)' }}>{trI18n('ตั้ง/ยกเลิกจุดประจำที่ /management · ประเมินทักษะที่ /operator')}</span>
+          <button type="button" className="pg-btn" onClick={onClose}
+            style={{ padding: '7px 14px', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--bg2)', color: 'var(--text2)' }}>{trI18n('ปิด')}</button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -759,7 +1127,7 @@ function SkillGapTable({ gaps, defs }) {
   );
 }
 
-function LayoutMap({ layout, placed, reserve = 12 }) {
+function LayoutMap({ layout, placed, reserve = 12, fit = null, focus = null, onOpen = null, tv = false }) {
   const { imgRef, imgBox, recalc } = useImgBox([layout?.image_url]);
   // ผังต้องจบในจอเดียว (จอ TV ไม่มีเมาส์) — วัดที่เหลือจริง ห้ามเดา vh (UI §6.23 ข้อ 1) · วัดไม่ได้ = สูงตามรูป
   const [fitRef, fitH] = useFitHeight(reserve, 240);
@@ -767,6 +1135,7 @@ function LayoutMap({ layout, placed, reserve = 12 }) {
     .map(x => ({ x: parseFloat(x.station.pos_left), y: parseFloat(x.station.pos_top) }));
   const ms = imgBox ? markerScale(imgBox.rw, { points: pts, mapHeight: imgBox.rh }) : null;
   const sz = ms ? Math.round(ms.MK * 0.62) : 28;
+  const dot = Math.max(7, Math.round(sz * 0.3));
   return (
     <div ref={fitRef} className="card" style={{ padding: 8, position: 'relative' }}>
       <div style={{ position: 'relative' }}>
@@ -774,37 +1143,57 @@ function LayoutMap({ layout, placed, reserve = 12 }) {
           style={{ width: '100%', maxHeight: fitH ? fitH - 16 : undefined, objectFit: 'contain', display: 'block' }} />
         {imgBox && (
           <div style={{ position: 'absolute', left: imgBox.ox, top: imgBox.oy, width: imgBox.rw, height: imgBox.rh, pointerEvents: 'none' }}>
-            {placed.filter(x => x.station.pos_top != null && x.station.pos_left != null).map(({ station, people, missing }) => (
-              <div key={station.id} style={{ position: 'absolute', top: `${parseFloat(station.pos_top)}%`, left: `${parseFloat(station.pos_left)}%`, transform: 'translate(-50%, -50%)', pointerEvents: 'auto' }}>
-                <div style={{ position: 'relative', display: 'flex', gap: 2 }}>
-                  {people.length ? people.map(({ emp, shift, attend, temp, away }) => {
+            {placed.filter(x => x.station.pos_top != null && x.station.pos_left != null).map((x) => {
+              const { station, people, missing } = x;
+              const on = focus != null && String(focus) === String(station.id);
+              // 👥 คนเกิน MARKER_MAX = ยุบเป็น +N (ครบใน modal) · ช่องขาดยังวาดครบ (ความผิดปกติห้ามซ่อน · UI §5.5)
+              const shown = people.slice(0, MARKER_MAX), more = people.length - shown.length;
+              return (
+              <div key={station.id} onClick={onOpen ? () => onOpen(station.id) : undefined}
+                style={{ position: 'absolute', top: `${parseFloat(station.pos_top)}%`, left: `${parseFloat(station.pos_left)}%`,
+                  transform: `translate(-50%, -50%)${on ? ' scale(1.25)' : ''}`, transition: 'transform .2s', zIndex: on ? 2 : undefined,
+                  pointerEvents: 'auto', cursor: onOpen ? 'pointer' : undefined }}>
+                <div style={{ position: 'relative', display: 'flex', gap: 2, borderRadius: 'var(--r-pill)',
+                  boxShadow: on ? '0 0 0 3px var(--accent), 0 0 14px var(--accent)' : undefined }}>
+                  {shown.length ? shown.map((p) => {
+                    const { emp, shift, attend, temp, away } = p;
                     const c = shiftMeta(shift).color;
                     const dim = away || attend === 'leave' || attend === 'absent';
+                    const fs = !tv && fit ? personFitState(x, p, fit) : null;
                     return (
                       <div key={emp.id} title={`${emp.name} · ${shiftMeta(shift).label} · ${ATTEND_META[attend].label}${temp ? ' · ย้ายมาวันนี้' : ''}${away ? ' · วันนี้ไปยืนจุดอื่น' : ''}`}
-                        style={{ position: 'relative', width: sz, height: sz, borderRadius: '50%', overflow: 'hidden', background: '#1a1a1a',
+                        style={{ position: 'relative', width: sz, height: sz }}>
+                        <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', background: '#1a1a1a',
                           border: `${ms?.ring || 2}px ${temp ? 'dashed' : 'solid'} ${c}`, opacity: dim ? 0.4 : 1, filter: dim ? 'grayscale(1)' : undefined }}>
-                        {emp.image_url ? <img src={emp.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: c }}>{(emp.name || '?').slice(0, 1)}</div>}
+                          {emp.image_url ? <img src={emp.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: c }}>{(emp.name || '?').slice(0, 1)}</div>}
+                        </div>
                         {(temp || away) && <span style={{ position: 'absolute', top: 0, right: 0, fontSize: 11, lineHeight: 1, background: 'rgba(0,0,0,.75)', color: '#fff', borderRadius: 'var(--r-md)', padding: '0 2px' }}>{temp ? '✳' : '↗'}</span>}
+                        {/* 🎯 จุดทักษะมุมล่างขวา — เฉพาะคนที่ยืนอยู่จริงวันนี้ (คนลา/ไปจุดอื่น ไม่ตัดสิน) */}
+                        {fs && <span style={{ position: 'absolute', right: -1, bottom: -1, width: dot, height: dot, borderRadius: '50%', background: FIT_DOT[fs], border: '1.5px solid var(--bg)' }} />}
                       </div>
                     );
                   }) : !missing ? (
                     <div title={`${station.station_name} · ยังไม่มีคนประจำ`} style={{ width: sz, height: sz, borderRadius: '50%', border: '2px dashed var(--muted)', background: 'rgba(0,0,0,.35)', color: '#cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800 }}>+</div>
                   ) : null}
+                  {more > 0 && (
+                    <div title={`${station.station_name} · อีก ${more} คน (กดดูทั้งหมด)`} style={{ width: sz, height: sz, borderRadius: '50%', background: 'var(--bg3)', border: '2px solid var(--border2)',
+                      color: 'var(--text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800 }}>+{more}</div>
+                  )}
                   {/* 📍 ช่องที่ขาดต่อกะ (station_slot_plans) — วงประสีของกะ ⇒ เห็นเลยว่าจุดไหนขาดคนกะไหน */}
                   {missing && ['day', 'night', 'unknown'].flatMap(sh => Array.from({ length: missing[sh] || 0 }, (_, i) => (
                     <div key={`${sh}${i}`} title={sh === 'unknown' ? `${station.station_name} · ขาดคนประจำ (ยังไม่รู้กะ — ตารางกะยังไม่ตั้ง)` : `${station.station_name} · ขาดคนประจำ${shiftMeta(sh).label}`}
                       style={{ width: sz, height: sz, borderRadius: '50%', border: `2px dashed ${shiftMeta(sh === 'unknown' ? null : sh).color}`, background: 'rgba(0,0,0,.35)',
                         color: shiftMeta(sh === 'unknown' ? null : sh).color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800 }}>{sh === 'unknown' ? '?' : '+'}</div>
                   )))}
-                  <div style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', marginTop: 2, background: 'rgba(0,0,0,0.78)', color: '#fff', borderRadius: 'var(--r-xs)',
+                  <div style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', marginTop: 2, background: on ? 'var(--accent)' : 'rgba(0,0,0,0.78)', color: '#fff', borderRadius: 'var(--r-xs)',
                     padding: '0 5px', fontSize: ms?.pillFont || 11, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: ms?.pillMaxW || 96 }}>
                     {station.station_name}
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

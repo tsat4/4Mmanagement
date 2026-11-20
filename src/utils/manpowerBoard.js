@@ -20,7 +20,7 @@
 import { positionKeyOf, levelOfPosition } from './positions.js';
 import { shiftFromTeam, scheduleTeamFor } from './shiftAssign.js';
 import { stdCapacityOf } from './stdManpower.js';
-import { getLineFamily } from './lineHierarchy.js';
+import { getLineFamily, lineAncestorIds } from './lineHierarchy.js';
 import { orgNodeCompare, naturalCompare } from './listOrder.js';
 import { wavg, wLoad, wRun } from './oee.js';
 import { skillFit, skillMapOf, pendingMapOf } from './skillFit.js';
@@ -863,4 +863,72 @@ export function stationSkillGaps(placed, { skillsByEmp = {}, reqsByStation = {} 
   }
   gaps.sort((a, b) => a.fit.score - b.fit.score || (b.temp - a.temp) || naturalCompare(a.emp.name || '', b.emp.name || ''));
   return { gaps, checked, ok, noReqPeople, noReqStations, onlyApproval: gaps.filter(g => g.onlyApproval).length };
+}
+
+/* ── 🗺️ ภาพรวมทั้งโรงงาน (แท็บผัง LAYOUT · 2026-11-20 · คำสั่ง user "ภาพรวมทั้งโรงงาน … ทำอะไรเจ๋งๆ") ──
+   กรอบไลน์บนผังรวม (`factory_line_regions` ชุดเดียวกับ /factory-map) ระบายสีตามกำลังคนวันนี้
+   เกณฑ์ (user เคาะ 20/11):
+     🔴 bad  = ขาดคนประจำ ≥ 3 ช่อง **หรือ** มีจุดงานว่างทั้งจุด (ไม่มีคนประจำ + ไม่มีใครมายืนวันนี้)
+     🟡 warn = ขาด 1–2 ช่อง **หรือ** มีคนยืนจุดที่ทักษะยังไม่ถึง
+     🟢 good = ครบตามช่องประจำ
+     ⚪ none = ตัดสินไม่ได้ — ไม่มีจุดงาน / ไม่ได้ตั้งช่องประจำสักจุด (เขียนเหตุผลใน `reason` · ห้ามโชว์ 0)
+   ⇒ สูตรต่อจุดใช้ `layoutPeople()` + `stationSkillGaps()` ตัวเดิม · ฟังก์ชันนี้แค่ "รวม + ตัดสิน" */
+export const LINE_STAFF_SHORT_BAD = 3;
+
+/** จุดงานของกรอบไลน์ (ตัวเอง + ไลน์ลูกลงไป · **ไม่รวมไลน์แม่** — กรอบไลน์ลูกห้ามนับจุดของแม่)
+    จับด้วย line_id ก่อน ถอยไปชื่อ (ws เก่าไม่มี line_id) */
+export function stationsOfLineFamily(lines, lineName, stations) {
+  const self = (lines || []).find(l => l.name === lineName);
+  const up = self ? lineAncestorIds(lines, self.id) : new Set();
+  const fam = self ? getLineFamily(lines, lineName).filter(l => !up.has(l.id)) : [];
+  const ids = new Set(fam.map(l => String(l.id)));
+  const names = new Set((fam.length ? fam.map(l => l.name) : [lineName]).map(n => String(n || '').trim().toLowerCase()));
+  return (stations || []).filter(s => (s.line_id != null && ids.has(String(s.line_id)))
+    || names.has(String(s.line_name || '').trim().toLowerCase()));
+}
+
+/**
+ * @param placed  ผลของ layoutPeople() ของจุดงานในกรอบ
+ * @param fit     ผลของ stationSkillGaps(placed, …)
+ * คืน { status, reason, stations, emptyStations, present, own, short:{day,night,unknown,n}, noPlan, gapPeople }
+ */
+export function lineStaffStatus(placed, fit = null) {
+  const list = placed || [];
+  const short = { day: 0, night: 0, unknown: 0, n: 0 };
+  let emptyStations = 0, present = 0, own = 0, noPlan = 0;
+  for (const x of list) {
+    if (!x.people.length) emptyStations += 1;
+    own += x.people.filter(p => !p.temp).length;
+    present += x.people.filter(p => p.attend === 'present' && !p.away).length;
+    if (!x.missing) { noPlan += 1; continue; }
+    short.day += x.missing.day; short.night += x.missing.night; short.unknown += x.missing.unknown;
+  }
+  short.n = short.day + short.night + short.unknown;
+  const gapPeople = fit?.gaps?.length || 0;
+  const base = { stations: list.length, emptyStations, present, own, short, noPlan, gapPeople };
+  if (!list.length) return { ...base, status: 'none', reason: 'ยังไม่ตั้งจุดงาน' };
+  if (emptyStations > 0 || short.n >= LINE_STAFF_SHORT_BAD) return { ...base, status: 'bad', reason: null };
+  if (short.n > 0 || gapPeople > 0) return { ...base, status: 'warn', reason: null };
+  if (noPlan === list.length) return { ...base, status: 'none', reason: 'ยังไม่ตั้งช่องประจำจุด' };
+  return { ...base, status: 'good', reason: null };
+}
+
+/** ป้ายสั้นบนกรอบ — ตัวเลขล้วน (`มา 12/14 · ขาดเช้า 2`) · none = เหตุผล */
+export function lineStaffLabel(s) {
+  if (!s) return null;
+  if (s.status === 'none') return s.reason;
+  const parts = [`มา ${s.present}/${s.own}`];
+  if (s.short.day) parts.push(`ขาดเช้า ${s.short.day}`);
+  if (s.short.night) parts.push(`ขาดดึก ${s.short.night}`);
+  if (s.short.unknown) parts.push(`ขาด ${s.short.unknown} (ไม่รู้กะ)`);
+  if (s.emptyStations) parts.push(`ว่าง ${s.emptyStations} จุด`);
+  if (!s.short.n && !s.emptyStations && s.gapPeople) parts.push(`ทักษะไม่ถึง ${s.gapPeople}`);
+  return parts.join(' · ');
+}
+
+/** ทักษะของคนที่ยืนจุดนี้วันนี้ — 'ok' | 'gap' | 'noreq' | null (ไม่ได้ยืน = ไม่ตัดสิน) */
+export function personFitState(x, p, fit) {
+  if (p.attend !== 'present' || p.away) return null;
+  if (!(x.station.station_requirements || []).length) return 'noreq';
+  return (fit?.gaps || []).some(g => g.emp.id === p.emp.id && String(g.station.id) === String(x.station.id)) ? 'gap' : 'ok';
 }

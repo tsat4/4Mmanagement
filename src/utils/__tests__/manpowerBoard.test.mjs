@@ -544,3 +544,30 @@ test('แผนกขึ้นตรงฝ่าย: เปิดเป็นบ
   assert.equal(b2.top[0].acting.nodeName, 'PD3');
   assert.equal(b2.depts[0].opsTotal, b.depts[0].opsTotal, 'กำลังคนไม่ขยับ');
 });
+
+test('lineStaffStatus: เกณฑ์สีกรอบภาพรวมโรงงาน (ว่างทั้งจุด/ขาด≥3 = แดง · ขาด1-2/ทักษะ = เหลือง · ไม่ตั้งช่อง = เทา)', () => {
+  const P = (attend = 'present', o = {}) => ({ emp: { id: Math.random() }, shift: 'day', attend, temp: false, away: false, ...o });
+  const st = (people, missing) => ({ station: { id: Math.random() }, people, missing });
+  assert.equal(M.lineStaffStatus([]).status, 'none');
+  assert.equal(M.lineStaffStatus([]).reason, 'ยังไม่ตั้งจุดงาน');
+  // ไม่ตั้งช่องประจำสักจุด + ไม่มีจุดว่าง = ตัดสินไม่ได้ (ห้ามเขียว)
+  assert.equal(M.lineStaffStatus([st([P()], null)]).status, 'none');
+  // จุดว่างทั้งจุด = แดง แม้ไม่ได้ตั้งช่อง
+  assert.equal(M.lineStaffStatus([st([], null)]).status, 'bad');
+  assert.equal(M.lineStaffStatus([st([P()], { day: 0, night: 0, unknown: 0 })]).status, 'good');
+  assert.equal(M.lineStaffStatus([st([P()], { day: 1, night: 1, unknown: 0 })]).status, 'warn');
+  assert.equal(M.lineStaffStatus([st([P()], { day: 2, night: 1, unknown: 0 })]).status, 'bad');
+  assert.equal(M.lineStaffStatus([st([P()], { day: 0, night: 0, unknown: 0 })], { gaps: [{}] }).status, 'warn');
+  // มา = ยืนจริงวันนี้ (ไม่นับลา/ไปจุดอื่น) · own = คนประจำ (ไม่นับย้ายมาชั่วคราว)
+  const s = M.lineStaffStatus([st([P(), P('leave'), P('present', { away: true }), P('present', { temp: true })], { day: 1, night: 0, unknown: 0 })]);
+  assert.equal(s.present, 2); assert.equal(s.own, 3);
+  assert.equal(M.lineStaffLabel(s), 'มา 2/3 · ขาดเช้า 1');
+});
+
+test('stationsOfLineFamily: กรอบไลน์แม่ครอบจุดงานของไลน์ลูก · จับชื่อได้เมื่อ ws ไม่มี line_id', () => {
+  const lines = [{ id: 1, name: 'P703/U704' }, { id: 2, name: 'P703 ลูก', parent_line_name: 'P703/U704' }, { id: 3, name: 'Other' }];
+  const ws = [{ id: 'a', line_id: 1 }, { id: 'b', line_id: 2 }, { id: 'c', line_id: 3 }, { id: 'd', line_id: null, line_name: ' p703/u704 ' }];
+  assert.deepEqual(M.stationsOfLineFamily(lines, 'P703/U704', ws).map(s => s.id), ['a', 'b', 'd']);
+  assert.deepEqual(M.stationsOfLineFamily(lines, 'P703 ลูก', ws).map(s => s.id), ['b']);   // ลูกไม่นับจุดของแม่
+  assert.deepEqual(M.stationsOfLineFamily(lines, 'ไม่มีในทะเบียน', ws).map(s => s.id), []);
+});
