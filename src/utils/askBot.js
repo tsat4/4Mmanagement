@@ -414,10 +414,45 @@ export function makeShiftOf({ schedules = [], overrides = [], merges = [], lines
   const ovr = {}; overrides.forEach(o => { if (o?.employee_id != null) ovr[o.employee_id] = o.shift; });
   const secOf = {}; lines.forEach(l => { secOf[l.id] = l.section; });
   return (emp) => {
+    /* คนที่ถูกยืมไปช่วย = อยู่กะที่ถูกยืมแน่นอน (การยืมผูกกะ) — เหมือน /checkin ห้ามให้ตารางกะไลน์เดิมตัดสิน */
+    if (emp._helperShift) return emp._helperShift;
     const sec = secOf[emp.line_id];
     const m = merges.find(e => e.line_id === emp.line_id) || merges.find(e => e.section && e.section === sec);
     return resolveAssignedShift(emp, { overrideShift: ovr[emp.id], mergeShift: m?.target_shift, maps });
   };
+}
+
+/**
+ * ย้ายคนที่ถูกยืมไปช่วย (`line_helpers`) ไปนับที่ **ไลน์ปลายทาง** — เหมือนจอเช็คชื่อ (20/11 · คำสั่ง user)
+ * · ระบุกะ: ใช้แถวของกะนั้น (คิวรีกรอง shift มาแล้ว) ⇒ ย้ายไลน์ + ตรึงกะ = กะที่ยืม (`_helperShift`)
+ * · ไม่ระบุกะ (ทั้งวัน): ย้ายเฉพาะคนที่ทั้งวันไปไลน์ปลายทาง **ไลน์เดียว** · ไปคนละไลน์ในแต่ละกะ = นับที่ต้นสังกัด
+ *   แล้วคืนจำนวนใน `split` ให้จอเขียนบอก (ห้ามเลือกไลน์ใดไลน์หนึ่งเอง = เดา)
+ * 🔴 ไม่แตะแถวเดิม (คืน object ใหม่) · `_homeLineId` เก็บไลน์ต้นสังกัดไว้
+ * ⚠️ ระบุกะ: คนที่ถูกยืม **เฉพาะอีกกะ** ยังอยู่กะเดิมตามตารางกะ — เหมือน /checkin (โหลดการยืมเฉพาะกะที่ดู)
+ *    ⇒ กะเช้า+กะดึกอาจรวมเกินยอดทั้งวัน · คืน `otherShift` (รายชื่อ id) ให้จอเขียนบอก ห้ามเงียบ
+ * @param helpers แถวของ **ทั้งวัน** (ทุกกะ) — กรองกะในนี้เอง เพื่อรู้ว่าใครถูกยืมอีกกะ
+ * @returns {{ emps:any[], moved:number, split:number, otherShift:Set }}
+ */
+export function applyHelpers(emps = [], helpers = [], { shift = null } = {}) {
+  const by = new Map();
+  const otherShift = new Set();
+  for (const h of helpers) {
+    if (h?.employee_id == null || h.to_line_id == null) continue;
+    if (shift && h.shift && h.shift !== shift) { otherShift.add(h.employee_id); continue; }
+    const e = by.get(h.employee_id) || { lines: new Set(), shift: h.shift || shift };
+    e.lines.add(h.to_line_id); by.set(h.employee_id, e);
+  }
+  let moved = 0, split = 0;
+  const out = emps.map(emp => {
+    const h = by.get(emp.id);
+    if (!h) return emp;
+    if (h.lines.size !== 1) { split++; return emp; }
+    const to = [...h.lines][0];
+    moved++;
+    return { ...emp, line_id: to, _homeLineId: emp.line_id, ...(shift ? { _helperShift: shift } : {}) };
+  });
+  for (const id of by.keys()) otherShift.delete(id);   // ถูกยืมกะนี้ด้วย = ย้ายไปแล้ว ไม่ใช่ "อีกกะ"
+  return { emps: out, moved, split, otherShift };
 }
 
 export const fmtInt = (n) => (n == null ? '—' : Math.round(n).toLocaleString('en-US'));
