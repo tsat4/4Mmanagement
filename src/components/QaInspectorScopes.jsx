@@ -16,6 +16,7 @@ import { supabase } from '../supabaseClient';
 import { toast } from './Toast';
 import { checkWriteRows } from '../utils/dbWrite';
 import { orgNodeCompare } from '../utils/listOrder';
+import { isUpperKind } from '../utils/orgLayers.js';   // 🏢 ชั้นบน (20/11)
 import { positionLabel } from '../utils/positions';
 import PersonSelect from './PersonSelect';
 import { DeleteButton } from './IconButton';
@@ -56,7 +57,7 @@ export default function QaInspectorScopes({ canManage = false }) {
     let cur = n, guard = 0;
     while (cur?.parent_id && guard++ < 8) {
       const p = nodes.find(x => x.id === cur.parent_id);
-      if (!p) break;
+      if (!p || isUpperKind(p.kind)) break;   // 🏢 ป้ายสายหยุดที่ชั้นบน (Plant/Company ไม่ใช่หน่วยในโรงงาน · 20/11)
       seg.unshift(p.code || p.name);
       cur = p;
     }
