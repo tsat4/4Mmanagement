@@ -1767,6 +1767,7 @@ tone = toneOf({ value, zeroIsGood: true, over:'warn' })  // คิวค้า�
    `#e5484d` `#e05c4a`) และเหลือง 2 เฉด ปนกันอยู่ · 🛡️ มีด่าน `status-palette-single-source`
    กันของใหม่แล้ว (ของเดิม 8 จุดขึ้นทะเบียนเป็นหนี้ไว้ใน `allow:` รอกวาด)
 6. 🔴 **ห้ามไล่เฉดที่ผสมสีสถานะ > 1 เฉด** — 🛡️ ด่าน `status-color-gradient-mix`
+   · ✅ **ไล่เฉดในสีเดียวทำได้** (20/11 user: "ไล่สีไม่ได้แปลว่าหลายสี" — เพิ่มมิติ เช่น sidebar `--panel-top/bot` · อักษรย่อ `--avatar-from/to`)
    · เคสจริง: อักษรย่อโปรไฟล์บน sidebar เป็น `linear-gradient(135deg, var(--accent), #ff6b6b)`
      = เขียว→แดง อยู่บนจอเดียวกับไฟ Andon จริง
    · **ลายขีด 45° (`repeating-linear-gradient`) ไม่นับ** — สีเดียวคนละ alpha = บอกสถานะ "พัก/หยุดตามแผน"
