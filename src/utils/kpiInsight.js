@@ -140,11 +140,19 @@ export function buildInsight({
       prio: f.status === 'bad' ? INSIGHT_PRIO.fcBad : f.status === 'good' ? INSIGHT_PRIO.fcGood : INSIGHT_PRIO.fcWarn,
       text: `คาดปลายปี ${f.approx ? '≈ ' : ''}${fmt(f.value)} (จริง ${f.actualMonths} ด. · ถ้า${assume}) → ${verdict}` });
   }
-  if (needed && t != null) {
+  if (needed && t != null && needed.feasible === false) {
+    /* 🧱 20/11 (user): ที่ต้องทำหลุดช่วงที่เป็นไปได้ของทะเบียน (OEE > 100 % · MTTR ติดลบ) = **ไม่คาดการณ์ตัวเลข** บอกตรงๆ ว่าไม่ทันแล้ว */
+    const n = needed;
+    const lim = n.limit?.kind === 'max' ? `เพดาน ${fmt(n.limit.value)}` : `พื้น ${fmt(n.limit?.value)}`;
+    out.push({ icon: '🏁', tone: 'bad', kind: 'needed', prio: INSIGHT_PRIO.needed, data: { ...n, trivially: false, down },
+      text: n.kind === 'reach'
+        ? `ไม่ทัน Target ${fmt(t)} ทั้งปีแล้ว — ต้องไปให้ถึง ${fmt(t)} ซึ่ง${n.limit?.kind === 'max' ? 'เกิน' : 'ต่ำกว่า'}${lim} ที่เป็นไปได้`
+        : `ไม่ทัน Target ${fmt(t)} ทั้งปีแล้ว — ต่อให้ ${n.remaining} เดือนที่เหลือทำได้สุด${lim} ทุกเดือน ทั้งปีดีสุดได้แค่ ${fmt(n.bestCase)}` });
+  } else if (needed && t != null) {
     const n = needed;
     if (n.kind === 'reach') out.push({ icon: '🏁', tone: better(0, n.add) ? 'good' : 'warn', kind: 'needed', prio: better(0, n.add) ? INSIGHT_PRIO.neededOk : INSIGHT_PRIO.needed, data: { ...n, reached: better(0, n.add), down }, text: better(0, n.add) ? `ถึงเป้าทั้งปี ${fmt(t)} แล้ว (ตัวสะสมถอยไม่ได้)` : `ต้องไปให้ถึง ${fmt(t)} ภายใน ${n.remaining} เดือนที่เหลือ (เพิ่มอีก ${fmt(Math.abs(n.add))})` });
     else {
-      const trivially = down ? false : n.perMonth <= 0;   // ตัวยิ่งสูงยิ่งดี: ที่ต้องทำ ≤ 0 = ผ่านแล้วแม้เดือนที่เหลือเป็น 0
+      const trivially = n.trivial === true || (down ? false : n.perMonth <= 0);   // ตัวยิ่งสูงยิ่งดี: ที่ต้องทำ ≤ 0 (หรือ ≤ พื้น/≥ เพดานของทะเบียน) = ผ่านแล้วแม้เดือนที่เหลือเป็น 0
       out.push({ icon: '🏁', tone: trivially ? 'good' : 'warn', kind: 'needed', prio: trivially ? INSIGHT_PRIO.neededOk : INSIGHT_PRIO.needed, data: { ...n, trivially, down },
         text: trivially ? `เป้าทั้งปีถึงแล้ว — เดือนที่เหลือ ${n.remaining} ด. ได้ 0 ก็ยังผ่าน`
           : `เดือนที่เหลือ ${n.remaining} ด. ต้อง${down ? 'ไม่เกิน' : 'ได้อย่างน้อย'}${n.kind === 'sum' ? 'เดือนละ' : 'เฉลี่ยเดือนละ'} ${fmt(n.perMonth)} ถึงจะถึง Target ${fmt(t)} ทั้งปี` });
