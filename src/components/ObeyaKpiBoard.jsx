@@ -130,6 +130,9 @@ const monthEnd = (k, today) => {
 };
 /** ป้ายสถานะ (คำ + เหตุผล) ให้ StatusLamp — คำชุดเดียวกับจอ SQDCM */
 const LAMP_LABEL = { good: 'ตามเป้า', warn: 'ถึง Commitment', bad: 'หลุดเป้า', none: 'ตัดสินไม่ได้' };
+/* 🗂️ ชื่อหน้าปลายทางของ "ข้อมูลต้นทาง" (20/11) — ปุ่มต้องบอกว่าพาไปจอไหน ไม่ใช่ "เจาะดู" ลอยๆ · path ไม่รู้จัก = ชื่อ path ตรงๆ */
+const SRC_PAGE_NAMES = { '/oee-analytics': 'OEE Analytics', '/safety': 'Safety', '/bbs': 'BBS' };
+const srcPageName = (to) => SRC_PAGE_NAMES[String(to || '').split('?')[0]] || String(to || '').split('?')[0].replace(/^\//, '');
 /* ตัวเลขฐานของสูตรบนจอ — บาท ≥ 1 ล้าน = MB · ไม่งั้น บ. · ตัวแปรอื่นตามหน่วยของมัน (ใช้ร่วมบรรทัดรอง 🧮 + insight 🔍) */
 const fmtInVar = (v, x) => { const u = baseVarOf(v)?.unit || ''; if (x == null) return '—'; if (u === 'บาท') return Math.abs(x) >= 1e6 ? `${(x / 1e6).toLocaleString('th-TH', { maximumFractionDigits: 1 })} MB` : `${Math.round(x).toLocaleString('th-TH')} บ.`; return `${Number(x).toLocaleString('th-TH', { maximumFractionDigits: 1 })} ${u}`; };
 const toLamp = (st, why) => ({ status: st === ST.unknown ? 'none' : st, label: st === ST.unknown ? (why?.startsWith('ยังไม่มี') || why?.startsWith('ยังไม่กรอก') ? tr('ยังไม่มีข้อมูล') : tr('ไม่มีเป้า')) : LAMP_LABEL[st], why: why || '' });
@@ -317,7 +320,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
       const actions = (acts.data || []).filter(a => secOk(a.section));
       // 6) นิยาม KPI ของปี + ค่ารายเดือน (กรอกมือ / เป้าของแถว auto)
       let kdRes = await supabase.from('kpi_definitions')
-        .select('*, kpi_catalog(id, name, unit, direction, decimals, summary_mode, value_scope, board_slot, amount_var)').eq('year', year).eq('is_active', true);
+        .select('*, kpi_catalog(id, name, unit, direction, decimals, summary_mode, value_scope, board_slot, amount_var, value_min, value_max)').eq('year', year).eq('is_active', true);
       if (kdRes.error && (kdRes.error.code || '') !== '42P01') {
         kdRes = await supabase.from('kpi_definitions').select('*').eq('year', year).eq('is_active', true);
       }
@@ -957,7 +960,15 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
       tiles.push(tile('คาดปลายปี', `${f.status === 'good' ? '✓' : f.status === 'bad' ? '✗' : f.status === 'warn' ? '△' : '?'} ${f.approx ? '≈ ' : ''}${fmtV(f.value)}`,
         `${String(f.verdict).replace(/^[^ก-๙A-Za-z]+/, '')} · ถ้า${f.assume}`, fc.tone, 'fc'));
     }
-    if (nd?.data) {
+    if (nd?.data && nd.data.feasible === false) {
+      /* 🧱 20/11 (user): ตัวเลขที่เป็นไปไม่ได้ (≥ 126 %/เดือน · MTTR ติดลบ) ไม่ใช่คำแนะนำ ⇒ การ์ดบอก "ไม่ทันแล้ว" + เหตุผลว่าชนขอบไหน */
+      const n = nd.data;
+      const lim = n.limit?.kind === 'max' ? `เพดาน ${fmtV(n.limit.value)}` : `พื้น ${fmtV(n.limit?.value)}`;
+      tiles.push(tile(`เดือนที่เหลือ ${n.remaining} ด.`, '✗ ไม่ทัน Target ปีนี้',
+        n.kind === 'reach'
+          ? `Target ${fmtV(n.perMonth)} ${n.limit?.kind === 'max' ? 'เกิน' : 'ต่ำกว่า'}${lim} ที่เป็นไปได้`
+          : `ต่อให้ทำได้สุด${lim} ทุกเดือนที่เหลือ ทั้งปีดีสุดได้แค่ ${fmtV(n.bestCase)}`, 'bad', 'nd'));
+    } else if (nd?.data) {
       const n = nd.data;
       tiles.push(tile(`เดือนที่เหลือ ${n.remaining} ด.`,
         n.kind === 'reach' ? (n.reached ? 'ถึงเป้าแล้ว' : `ต้องถึง ${fmtV(n.perMonth)}`) : (n.trivially ? 'ผ่านแน่แล้ว' : `${n.down ? '≤' : '≥'} ${fmtV(n.perMonth)} /เดือน`),
@@ -1283,7 +1294,10 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
                   /* 🧹 ท้ายแผ่น ≤ 1 บรรทัด (user 09/10 "note เยอะไป กราฟเล็กลง") — เหลือเฉพาะ (ก) คาดปลายปีที่คำนวณได้ หรือ (ข) เตือนที่ต้องเห็น
                      (ไฟเทา/ค่ากรอกมือถูกทับ/ขอบเขตโรงงานยังไม่มีนิยาม) · Target/Commit/ที่มาเต็มๆ ย้ายไป tooltip ของไฟ + popup 🔍 (`zoomFoot`) */
                   foot={(kk, zoomedCopy) => (zoomedCopy || kk > k * 1.15 ? zoomFoot(r, kk) : (forecastLine(r, kk) || cardWarn(r, kk)))}
-                  link={r.to ? 'เจาะดู' : r.roll ? 'ตั้ง KPI ระดับนี้' : (r.manual ? 'กรอก/ตั้งเป้า' : null)}
+                  /* 🧭 20/11 (user): แว่นขยาย = หน้าที่เดียวกับชิปสถานะ ⇒ ถอดออก · มุมขวาบน = **✏️ กรอก/ตั้งเป้า** (คำสั่งหลักของแผ่น ไปแท็บ 📑)
+                     · ท้ายแผ่น = **🗂️ ข้อมูลต้นทาง** เฉพาะ KPI ที่ระบบคำนวณ (เดิม "เจาะดู" — ฟังเหมือนเปิด insight ทั้งที่พาไปหน้า raw data ของระบบ) */
+                  corner={{ icon: '✏️', title: r.roll ? 'ตั้ง KPI ระดับนี้' : (r.manual ? 'กรอก/ตั้งเป้า' : 'ตั้งเป้า'), onClick: () => onTab?.('table') }}
+                  link={r.to ? `🗂️ ข้อมูลต้นทาง · ${srcPageName(r.to)}` : null}
                   onLink={() => (r.to ? goTo(r.to) : onTab?.('table'))}>
                   {(kk, w, zoomedCopy) => rowChart(r, kk, w, zoomedCopy)}
                 </Sheet>
