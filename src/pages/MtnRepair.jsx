@@ -3445,8 +3445,13 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
         </div>
       )}
       {/* 🔌 ปุ่มเปิด-ปิดเครื่อง (19/11) — ช่างที่ทำงานอยู่ในใบนี้กดได้เลย ไม่ต้องไปหาอีกหน้า */}
+      {/* 🔴 20/11: เดิมเขียน can('mtn_repair','repair') — คีย์นี้ไม่มีในระบบ (ไม่มีแถว/ไม่มี catalog) ⇒ ปุ่มโผล่เฉพาะ admin
+          ด่าน permissionCatalogCoverage จับได้ตอน merge · เกณฑ์ = "ขั้นลงมือซ่อม" ตัวเดียวกับฟอร์ม (canDoStep ผ่าน stageOf —
+          เลขขั้นต่างกันระหว่างฟอร์ม JIG/DIE กับ MTN ห้ามเขียน step === 3) · ผู้ถือ manage_master กดได้เสมอ */}
       <MachineUsabilityPanel order={o} machines={machines} fullName={fullName}
-        canEdit={can('mtn_repair', 'repair', role)} affectedLines={affectedLines} onSaved={onReload} />
+        canEdit={can('mtn_repair', 'manage_master', role)
+          || [2, 3, 4, 5, 6, 7, 8].some(s => stageOf(s, { mtnForm }) === 'service' && canEditStep(s))}
+        affectedLines={affectedLines} onSaved={onReload} />
       {/* ผู้เปิดใบตรวจรับ (ขั้น 4) และรับมอบ (ขั้น 6) ของใบตัวเองได้เสมอ — บอกให้รู้ว่าทำไมกดได้ */}
       {isOrderReporter(o, fullName) && o.status !== 'closed' && (
         <NoticeBar tone="ok" style={{ marginBottom: 10 }}>
