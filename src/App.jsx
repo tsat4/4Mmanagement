@@ -471,6 +471,17 @@ function SplashScreen({ onDone }) {
 
 /* ─── Sidebar ──────────────────────────────────────────────── */
 // export ไว้ให้ audit harness (audit/main.jsx ?p=__sidebar) mount ตรงๆ เพื่อวัด layout — แอปจริงใช้ผ่าน ProtectedLayout เท่านั้น
+/* 👤 ยังไม่มีรูปโปรไฟล์ = เงาคนครึ่งตัว (20/11 · คำสั่ง user "เงาคนดีกว่าตัวย่อชื่อ") — จอคอมเท่านั้น (มือถือคงตัวย่อ · ตกลง 20/11)
+   วาดเต็มวงกลม (ไหล่ตกขอบล่าง) · สี = currentColor ของกล่องแม่ · กล่องแม่ต้องเป็นวงกลม overflow:hidden */
+function AvatarSilhouette() {
+  return (
+    <svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true" focusable="false" style={{ display: 'block' }}>
+      <circle cx="12" cy="9.6" r="4.6" fill="currentColor" />
+      <path d="M2.6 25c0-5.6 4.2-9.6 9.4-9.6s9.4 4 9.4 9.6z" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userRole, userLineId, userEmail, userFullName, userSignatureUrl, userPosition, userAvatarUrl, remoteCode, onToggleRemote, onOpenPalette, pinned, onTogglePin, realRole, onOpenViewAs, onAvatarSaved }) {
   const { lang, toggleLang, tr } = useLang();   // 🌐 ป้ายเมนู/หมวดแปลที่จุดวาด — ข้อมูล NAV_ITEMS ยังเป็นไทย (คีย์)
   // 🔄 ผลการทับขอบเขตด้วย org_assignments — มาจาก UserContext (ProtectedLayout) ไม่เพิ่ม prop
@@ -573,13 +584,13 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
            มาทำของตกแต่ง ทั้งที่ 2 สีนี้ถูกจองไว้แปลว่า "ปกติ/มีปัญหา" ทั้งระบบ (utils/statusTone.js) */
         <div style={{
           width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-          /* 20/11: จอคอม = ไล่เฉดเขียวสีเดียว (ชุดเดียวกับการ์ดท้ายแผง · token --avatar-*) · มือถือคงเดิม (ตกลง 20/11) */
+          /* 20/11: จอคอม = ไล่เฉดเขียวสีเดียว + เงาคน (ชุดเดียวกับการ์ดท้ายแผง · token --avatar-*) · มือถือคงตัวย่อเดิม (ตกลง 20/11) */
           ...(isMobile
             ? { background: 'var(--bg2)', border: '1px solid var(--border2)', color: 'var(--text2)' }
-            : { background: 'linear-gradient(135deg, var(--avatar-from) 0%, var(--avatar-to) 100%)', color: 'var(--accent-ink)' }),
+            : { background: 'linear-gradient(135deg, var(--avatar-from) 0%, var(--avatar-to) 100%)', color: 'var(--accent-ink)', overflow: 'hidden' }),
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 12, fontWeight: 800,
-        }}>{initials}</div>
+        }}>{isMobile ? initials : <AvatarSilhouette />}</div>
       )}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -897,7 +908,8 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
               {userAvatarUrl ? (
                 <img src={userAvatarUrl} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
               ) : (
-                <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)' }}>{initials}</span>
+                /* 👤 20/11: ยังไม่มีรูป = เงาคน (ราง = จอคอมเสมอ) · กล่องในแยก overflow:hidden — badge ข้างนอกยังล้นขอบได้ */
+                <span style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', color: 'var(--text2)', display: 'block' }}><AvatarSilhouette /></span>
               )}
               {remoteCode && (
                 <span title={`รับรีโมทอยู่ · ${remoteCode}`} style={{ position: 'absolute', right: -3, top: -3, fontSize: 12 }}>📺</span>
@@ -1025,7 +1037,7 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
                     <img loading="lazy" src={userAvatarUrl} alt="" style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--border2)' }} />
                   ) : (
                     <span style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg, var(--avatar-from) 0%, var(--avatar-to) 100%)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, color: 'var(--accent-ink)', lineHeight: 1 }}>{initials}</span>
+                      display: 'block', overflow: 'hidden', color: 'var(--accent-ink)' }}><AvatarSilhouette /></span>
                   )}
                   {myQueue.badge > 0 && (
                     <span title={`มีงานรอคุณโดยตรง ${myQueue.badge} รายการ`} style={{
