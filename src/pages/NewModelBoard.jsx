@@ -806,7 +806,7 @@ function LevelPop({ proj, main, go }) {
           {main.note && <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 6 }}>{main.note}</div>}
           {main.panel && (
             <button onClick={() => go({ cust: proj.customer, proj: proj.id, panel: main.panel })}
-              style={{ marginTop: 9, background: 'var(--bg3)', border: '1px solid var(--border)',
+              style={{ marginTop: 9, background: 'var(--bg3-surf)', border: '1px solid var(--border)',
                 color: 'var(--text)', borderRadius: 'var(--r-md)', padding: '6px 12px', cursor: 'pointer', fontSize: 12 }}>
               {tr('เปิดแผงหลักฐาน →')}
             </button>
@@ -1048,7 +1048,7 @@ function PanelNetwork({ p }) {
           <div key={t.tier} style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
             <div style={{ width: 88, fontSize: 11.5, color: 'var(--muted)', flex: '0 0 88px' }}>{t.tier}</div>
             {t.nodes.map(n => (
-              <span key={n.name} style={{ background: 'var(--bg3)', border: '1px solid var(--border)',
+              <span key={n.name} style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)',
                 borderRadius: 'var(--r-md)', padding: '6px 11px', fontSize: 12 }}>
                 <b>{n.name}</b>{n.note && <span style={{ color: 'var(--muted)' }}> · {n.note}</span>}
               </span>
@@ -1214,7 +1214,7 @@ function TvView({ projects, index, onIndex, onExit, openPanelKey, onPick, onClos
             ].filter(([, v]) => v).map(([k, v]) => (
               <span key={k} style={{
                 display: 'inline-flex', alignItems: 'baseline', gap: '0.3vw',
-                background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r-pill)',
+                background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-pill)',
                 padding: '0.25vh 0.7vw', fontSize: F.sub, whiteSpace: 'nowrap',
               }}>
                 <span style={{ color: 'var(--muted)' }}>{k}</span>
@@ -1246,7 +1246,7 @@ function TvView({ projects, index, onIndex, onExit, openPanelKey, onPick, onClos
             <div style={{ fontSize: F.note, color: 'var(--muted)', marginTop: '0.4vh' }}>{tr('ข้อมูลจากบอร์ด')} {SOURCE_DATE}</div>
           </div>
           <button onClick={onExit} title={tr('ออกจากโหมดจอ TV')} style={{
-            background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text2)',
+            background: 'var(--bg3-surf)', border: '1px solid var(--border)', color: 'var(--text2)',
             borderRadius: 'var(--r-md)', width: '2.2vw', height: '2.2vw', minWidth: 30, minHeight: 30,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             cursor: 'pointer', fontSize: F.sub, padding: 0,
@@ -1365,7 +1365,7 @@ function TvView({ projects, index, onIndex, onExit, openPanelKey, onPick, onClos
                 {proj.title} · แผงบนบอร์ด
               </div>
               <button onClick={onClosePanel} style={{
-                marginLeft: 'auto', background: 'var(--bg3)', border: '1px solid var(--border)',
+                marginLeft: 'auto', background: 'var(--bg3-surf)', border: '1px solid var(--border)',
                 color: 'var(--text)', borderRadius: 'var(--r-md)', padding: '6px 12px', cursor: 'pointer', fontSize: 13,
               }}>{tr('ปิด (Esc)')}</button>
             </div>
@@ -1498,7 +1498,7 @@ export default function NewModelBoard() {
       <PageHeader title={tr('บอร์ด New Model (IEC)')} icon="🧭" sub={sub}
         actions={proj && !panel && !popMain && !bucket ? (
           <button type="button" className="pg-btn" onClick={() => { setTvIndex(Math.max(0, data.projects.findIndex(p => p.id === proj.id))); go({ cust: cust.code, proj: proj.id, tv: '1' }); }}
-            style={{ background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)',
+            style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', color: 'var(--text)',
               borderRadius: 8, padding: '7px 13px', cursor: 'pointer', fontSize: 12.5 }}>
             📺 เปิดโหมดจอ TV (70 นิ้ว)
           </button>

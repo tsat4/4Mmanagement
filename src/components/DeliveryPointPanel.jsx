@@ -166,7 +166,7 @@ export default function DeliveryPointPanel({ lineName, lines = [] }) {
               🔴 แต่ "ตั้งไม่ได้" ≠ "ทางตัน" — แร็คเดียวรับของให้ทั้งแผนกมีจริง (Apron Assy)
               ⇒ ให้ปุ่มตั้งจุดเดียวที่ติ๊กไลน์ลูกครบให้เลย (แก้ออกได้) 05/10 */}
           {!isLeaf && !missing && !form && (
-            <div style={{ fontSize: 12.5, color: 'var(--text2)', background: 'var(--bg3)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: '10px 12px' }}>
+            <div style={{ fontSize: 12.5, color: 'var(--text2)', background: 'var(--bg3-surf)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: '10px 12px' }}>
               🏢 <b>{lineName}</b> {tr('เป็นไลน์แม่ (มีไลน์ย่อย')} {kids.length} ไลน์) — ของถูกส่งเข้าไลน์ย่อยเสมอ
               จุดส่งจึงผูกกับ<b>{tr('ไลน์ย่อย')}</b>: <span>{kids.join(' · ')}</span>
               {/* 🔴 14/10: ปุ่มนี้เคยเด่นค้างไว้แม้ไลน์ย่อยมีจุดครบแล้ว = จอชวนกดซ้ำ → ได้จุดซ้ำซ้อน
@@ -260,7 +260,7 @@ export default function DeliveryPointPanel({ lineName, lines = [] }) {
 
           {/* ฟอร์มเพิ่ม/แก้ — draft + ปุ่มบันทึก (§5.4) */}
           {form && (
-            <div style={{ marginTop: 12, border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: 12, background: 'var(--bg3)' }}>
+            <div style={{ marginTop: 12, border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: 12, background: 'var(--bg3-surf)' }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>{form.id ? tr('✏️ แก้จุดส่ง') : tr('+ จุดส่งใหม่')}</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px,100%), 1fr))', gap: 10, alignItems: 'start' }}>
                 <label style={{ fontSize: 12, color: 'var(--text2)' }}>{tr('ชื่อจุด *')}
@@ -283,7 +283,7 @@ export default function DeliveryPointPanel({ lineName, lines = [] }) {
                 <LineSelect lines={leafLines.filter(l => !(form.line_names || []).includes(l.name))} value={addLine}
                   onChange={(v) => { if (v) setForm(f => ({ ...f, line_names: [...(f.line_names || []), v] })); setAddLine(''); }}
                   placeholder={tr('+ เพิ่มไลน์ที่ใช้จุดนี้ร่วม')} role={role} lineId={lineId} sections={sections}
-                  style={{ width: 240, padding: '6px 9px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', fontSize: 12.5 }} />
+                  style={{ width: 240, padding: '6px 9px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)', fontSize: 12.5 }} />
               </div>
               {/* 🏬 มุม SAP ที่จะถูกแปะบนจุด — derive จากไลน์ที่เลือก (ตกทอดจากไลน์แม่) · ยังไม่ผูก = บอก ไม่เดา */}
               {(() => {

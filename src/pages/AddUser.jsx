@@ -907,7 +907,7 @@ export default function AddUser() {
         <SearchInput value={q} onChange={setQ} fields="ชื่อ / อีเมล / ตำแหน่ง" />
         {(q || filterRole || filterSection || onlyFixUsers) && (
           <button onClick={() => { setQ(''); setFilterRole(''); setFilterSection(''); setOnlyFixUsers(false); }}
-            style={{ padding: '8px 12px', borderRadius: 'var(--r-md)', fontSize: 12, border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)', cursor: 'pointer' }}>
+            style={{ padding: '8px 12px', borderRadius: 'var(--r-md)', fontSize: 12, border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)', cursor: 'pointer' }}>
             {tr('ล้างตัวกรอง')}
           </button>
         )}
@@ -921,7 +921,7 @@ export default function AddUser() {
       {/* 🔴 อ่านอีเมล login ไม่ได้ = ช่องอีเมลว่างทุกแถว · ต้องบอกว่า "อ่านไม่ได้" ไม่ใช่ "ไม่มี" (08/10) */}
       {authErr && (
         <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--red)', padding: '8px 10px', marginBottom: 10,
-          borderRadius: 'var(--r-md)', border: '1px solid var(--red-line)', background: 'var(--card)' }}>
+          borderRadius: 'var(--r-md)', border: '1px solid var(--red-line)', background: 'var(--card-surf)' }}>
           ⚠ อ่านอีเมล login ไม่ได้ — ช่องอีเมลในตารางจะว่างทั้งหมด (<b>{tr('ไม่ได้หมายความว่าบัญชีไม่มีอีเมล')}</b>)
           <div style={{ fontWeight: 400, color: 'var(--text2)', marginTop: 2 }}>
             อีเมลอยู่ที่ `auth.users` ซึ่งอ่านได้เฉพาะ role <b>admin</b> {tr('· เหตุผลจากระบบ:')} {authErr}
@@ -933,7 +933,7 @@ export default function AddUser() {
           🔴 ไม่เตือน ≠ ไม่มีปัญหา: อ่านไม่ได้ก็ต้องเขียน (activitySummaryText คุมข้อความให้แล้ว) */}
       {actText && (
         <div style={{ fontSize: 12, padding: '7px 10px', marginBottom: 10, borderRadius: 'var(--r-md)',
-          border: '1px solid var(--border)', background: 'var(--card)', boxShadow: 'var(--shadow-sm)' }}>
+          border: '1px solid var(--border)', background: 'var(--card-surf)', boxShadow: 'var(--shadow-sm)' }}>
           🕵️ <b>{tr('บัญชีที่ยังไม่มีการเข้าใช้')}</b> — {actText}
           <span style={{ color: 'var(--muted)' }}>
             {' '}{tr('· เรียงดูได้ที่คอลัมน์')} <b>{tr('เข้าใช้ล่าสุด')}</b>
@@ -1319,7 +1319,7 @@ export default function AddUser() {
             <span style={{ flex: 1 }} />
             <button type="button" onClick={() => setTableIssue(null)}
               style={{ width: 'auto', fontSize: 11.5, padding: '3px 10px', cursor: 'pointer', borderRadius: 'var(--r-md)',
-                border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)' }}>{tr('แสดงทุกบัญชี')}</button>
+                border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)' }}>{tr('แสดงทุกบัญชี')}</button>
           </div>
         );
       })()}
@@ -1439,7 +1439,7 @@ export default function AddUser() {
                   <td style={{ textAlign: 'center' }}>
                     <button
                       onClick={() => openEdit(u)}
-                      style={{ padding: '5px 12px', borderRadius: 'var(--r-md)', fontSize: 12, fontWeight: 600, border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)', cursor: 'pointer' }}
+                      style={{ padding: '5px 12px', borderRadius: 'var(--r-md)', fontSize: 12, fontWeight: 600, border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)', cursor: 'pointer' }}
                     >
                       {tr('แก้ไข')}
                     </button>
@@ -1463,7 +1463,7 @@ export default function AddUser() {
         {/* 🏷️ ผูกชุดสิทธิ์แกน "ขอบเขต" เข้ากับระดับในรหัส Cost Center (21/10 · คำสั่ง user)
             🔴 เป็นวิธี "อ่านรหัส" ให้คนเข้าใจตรงกัน — ระบบยังตัดสินลำดับชั้นจากผังองค์กรจริงเสมอ */}
         <div style={{ fontSize: 11, lineHeight: 1.7, color: 'var(--muted)', marginBottom: 10,
-          padding: '7px 10px', borderRadius: 'var(--r-md)', background: 'var(--card)', border: '1px solid var(--border2)' }}>
+          padding: '7px 10px', borderRadius: 'var(--r-md)', background: 'var(--card-surf)', border: '1px solid var(--border2)' }}>
           <b style={{ color: 'var(--text2)' }}>{tr('อ่านรหัส Cost Center ยังไง')}</b> {tr('— ตัวอย่าง')} <code>2140462100</code> ·
           {' '}<code>21</code> {tr('กลุ่มธุรกิจ ·')} <code>40</code> {tr('โรงงานเรา (')}<code>2140</code> = ทั้งโรงงาน) ·
           {' '}<b style={{ color: 'var(--text2)' }}>หลักที่ 5 = ระดับในผัง</b> (3 ฝ่าย · 4 ส่วนงาน · 5 แผนก · 6 กลุ่ม/ไลน์) ·
@@ -1676,7 +1676,7 @@ export default function AddUser() {
                     )}
 
                     {newEmp && (
-                      <div style={{ marginTop: 8, padding: 10, background: 'var(--bg3)', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', display: 'grid', gap: 8 }}>
+                      <div style={{ marginTop: 8, padding: 10, background: 'var(--bg3-surf)', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', display: 'grid', gap: 8 }}>
                         <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{tr('➕ เพิ่มคนนี้เข้าฐานพนักงาน')}</div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 8 }}>
                           <div>
@@ -1755,7 +1755,7 @@ export default function AddUser() {
                             {newEmpSaving ? tr('กำลังบันทึก...') : tr('บันทึกเข้าฐานพนักงาน + ผูกกับบัญชีนี้')}
                           </button>
                           <button type="button" onClick={() => setNewEmp(null)}
-                            style={{ width: 'auto', padding: '8px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg2)', color: 'var(--text2)', fontSize: 12, cursor: 'pointer' }}>
+                            style={{ width: 'auto', padding: '8px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg2-surf)', color: 'var(--text2)', fontSize: 12, cursor: 'pointer' }}>
                             {tr('ยกเลิก')}
                           </button>
                         </div>
@@ -1782,12 +1782,12 @@ export default function AddUser() {
                     ))}
                   </select>
                   <button type="button" onClick={() => setNewPos(v => (v ? null : { key: '', label_th: '', level: 'staff' }))}
-                    style={{ whiteSpace: 'nowrap', padding: '0 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                    style={{ whiteSpace: 'nowrap', padding: '0 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                     {newPos ? tr('ยกเลิก') : tr('+ เพิ่มตำแหน่งใหม่')}
                   </button>
                 </div>
                 {newPos && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 1fr auto', gap: 6, marginTop: 6, alignItems: 'center', padding: 8, background: 'var(--bg3)', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 1fr auto', gap: 6, marginTop: 6, alignItems: 'center', padding: 8, background: 'var(--bg3-surf)', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)' }}>
                     <input type="text" autoFocus placeholder={tr('key (a-z/_) เช่น asst_head')} value={newPos.key}
                       onChange={e => setNewPos(p => ({ ...p, key: e.target.value }))} style={{ fontFamily: 'monospace' }} />
                     <input type="text" placeholder={tr('ชื่อตำแหน่ง (ไทย) เช่น ผู้ช่วยหัวหน้าแผนก')} value={newPos.label_th}
@@ -1850,7 +1850,7 @@ export default function AddUser() {
                         {tr('ส่วนงานที่สังกัด')}
                         <span style={{ color: 'var(--muted)', fontWeight: 400 }}> {tr('· จากฐานพนักงาน')}</span>
                       </label>
-                      <div style={{ padding: '8px 12px', background: 'var(--bg3)', borderRadius: 'var(--r-md)', fontSize: 12.5,
+                      <div style={{ padding: '8px 12px', background: 'var(--bg3-surf)', borderRadius: 'var(--r-md)', fontSize: 12.5,
                         color: emp?.section ? 'var(--text)' : 'var(--amber)', border: '1px solid var(--border2)' }}>
                         {!emp ? '— ยังไม่ได้เลือกพนักงาน —'
                               : emp.section
@@ -1946,7 +1946,7 @@ export default function AddUser() {
               {/* 🧭 3 ช่องข้างล่างตอบคนละคำถาม — เขียนไว้ตรงนี้ที่เดียว (15/10 · คำสั่ง user
                   "ตอนตั้งสิทธิ์ก็ดูจะคลุมเครือ สรุปช่องนี้คือสิทธิ์ หรือส่วนงาน") */}
               <div style={{ gridColumn: '1 / -1', fontSize: 11.5, lineHeight: 1.75, color: 'var(--muted)',
-                background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '8px 10px' }}>
+                background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '8px 10px' }}>
                 <div><b style={{ color: 'var(--text2)' }}>{tr('① ชุดสิทธิ์ (Role)')}</b> = <b>{tr('กดอะไรได้')}</b> {tr('— เปิดหน้า/ปุ่มไหนบ้าง ·')} <u>{tr('ไม่ได้บอกว่าสังกัดหน่วยไหน')}</u></div>
                 <div><b style={{ color: 'var(--text2)' }}>{tr('② ขอบเขตการมองเห็น')}</b> = <b>{tr('เห็นข้อมูลของใคร')}</b> {tr('— กว้าง/แคบ')}</div>
                 <div><b style={{ color: 'var(--text2)' }}>{tr('③ หน่วยที่ดูแล (ตามผังองค์กร)')}</b> = <b>{tr('เห็น + แก้ข้อมูลของใครได้')}</b> — ติ๊กที่ต้นไม้ Cost Center ที่เดียว
@@ -2064,7 +2064,7 @@ export default function AddUser() {
                   {form.role === 'supervisor' && <span style={{ color: 'var(--red)' }}> {tr('* จำเป็นอย่างน้อย 1')}</span>}
                 </label>
                 <div style={{ fontSize: 11.5, lineHeight: 1.7, padding: '7px 10px', borderRadius: 'var(--r-md)',
-                  background: 'var(--bg3)', border: '1px solid var(--border2)', color: 'var(--text2)' }}>
+                  background: 'var(--bg3-surf)', border: '1px solid var(--border2)', color: 'var(--text2)' }}>
                   👁️ <b>{tr('เห็นข้อมูลของ:')}</b>{' '}
                   {effSections.length
                     ? effSections.map(sec => (
@@ -2143,7 +2143,7 @@ export default function AddUser() {
                       <div style={{ marginBottom: 5 }}>
                         <SearchInput value={ccSearch} onChange={setCcSearch} placeholder={tr('ค้นรหัส / ชื่อหน่วยงาน…')} />
                       </div>
-                      <div style={{ maxHeight: 260, overflowY: 'auto', padding: '6px 8px', background: 'var(--bg3)',
+                      <div style={{ maxHeight: 260, overflowY: 'auto', padding: '6px 8px', background: 'var(--bg3-surf)',
                         borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', display: 'grid', gap: 3, alignContent: 'start' }}>
                         {shown.length === 0 && <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{tr('ไม่พบรหัสที่ค้น')}</span>}
                         {shown.map((r) => {
@@ -2208,7 +2208,7 @@ export default function AddUser() {
                       {ccUnknown.map(cc => (
                         <button key={cc} type="button" onClick={() => toggleCc(cc)}
                           style={{ marginLeft: 6, padding: '2px 8px', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 700,
-                            cursor: 'pointer', background: 'var(--bg2)', color: 'var(--text2)', border: '1px solid var(--border2)' }}>
+                            cursor: 'pointer', background: 'var(--bg2-surf)', color: 'var(--text2)', border: '1px solid var(--border2)' }}>
                           {tr('ถอด')} {cc}
                         </button>
                       ))}
@@ -2227,7 +2227,7 @@ export default function AddUser() {
                     ติ๊ก = <b>{tr('ฝั่งซ่อมบำรุง')}</b> (กดช่องเซ็น “หัวหน้าแผนกช่าง” / “ผจก.ช่าง” ในใบ MO ได้) ·
                     ไม่ติ๊ก = <b>{tr('ฝั่งผู้แจ้ง')}</b> (กดช่อง “ผจก.ฝ่ายที่แจ้ง อนุมัติปิดใบ” ได้)
                   </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '8px 10px', background: 'var(--bg3)', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '8px 10px', background: 'var(--bg3-surf)', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)' }}>
                     {/* 2026-09-07: วนทีมจาก mtn_teams (pmTeamsSync — data-driven) แทน MTN_TEAMS hardcode · ค่าที่เก็บ = key เสมอ */}
                     {pmTeamsSync().map(team => {
                       const t = team.key;
@@ -2352,7 +2352,7 @@ export default function AddUser() {
                 </button>
                 <button
                   onClick={() => setShowModal(false)}
-                  style={{ flex: 1, padding: 12, background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}
+                  style={{ flex: 1, padding: 12, background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}
                 >
                   {tr('ยกเลิก')}
                 </button>

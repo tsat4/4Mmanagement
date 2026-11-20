@@ -2836,7 +2836,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
       </div>
 
       {editing && (
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '10px 14px', marginBottom: 12 }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '10px 14px', marginBottom: 12 }}>
           <label style={{ ...btn(false), display: 'inline-flex', alignItems: 'center', gap: 6, cursor: uploading ? 'default' : 'pointer' }}>
             {uploading ? '⏳ กำลังอัปโหลด...' : (imageUrl ? '🖼️ เปลี่ยนรูปผัง' : '🖼️ อัปโหลดรูปผังโรงงาน')}
             <input type="file" accept="image/*" onChange={handleUpload} disabled={uploading} style={{ display: 'none' }} />
@@ -2862,7 +2862,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
       {loading ? (
         <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>{tr('กำลังโหลด...')}</div>
       ) : !imageUrl ? (
-        <div style={{ padding: 48, textAlign: 'center', color: 'var(--muted)', background: 'var(--card)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-lg)' }}>
+        <div style={{ padding: 48, textAlign: 'center', color: 'var(--muted)', background: 'var(--card-surf)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-lg)' }}>
           ยังไม่มีรูปผังโรงงาน — {canEdit ? 'กด "✏️ แก้ผัง" แล้วอัปโหลดรูป' : 'ให้ผู้ดูแลอัปโหลดรูปผังก่อน'}
         </div>
       ) : (
@@ -3229,8 +3229,8 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
             /* 📺 จอ TV กดอะไรไม่ได้ (20/10 คำสั่ง user · รูปจอจริง "แผงขวาต้อง scroll") — เดิม zoom 1.45 + เดาความสูง
                ⇒ ล้นขอบล่าง · TvFitBox วัดที่ว่างจริงแล้วย่อให้พอดี (≤1.45×) · ยังล้น = เลื่อนเอง · แท็บแผงซ่อน (เลือกที่ /display-rotation `panel=`) */
             <TvFitBox enabled={tv} maxScale={2}
-              style={{ flex: '0 0 360px', maxWidth: '100%', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px', maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}
-              tvStyle={{ flex: `0 0 ${Math.round(360 * 1.45)}px`, maxWidth: '100%', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12 }}
+              style={{ flex: '0 0 360px', maxWidth: '100%', background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px', maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}
+              tvStyle={{ flex: `0 0 ${Math.round(360 * 1.45)}px`, maxWidth: '100%', background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 12 }}
               innerStyle={{ padding: '14px 16px' }}>
               {/* สลับโหมดแผง */}
               {/* โหมดทบทวน = แผงเป็นสรุปของวันที่เลือกอย่างเดียว (OBEYA/อันดับ เป็นของสด) */}
@@ -3267,7 +3267,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
                         {stats.map(s => (
                           <div key={s.label} onClick={s.explain ? () => setOeeExplain(s.explain) : undefined}
                             title={s.explain ? tr('ดูวิธีคิดค่าเฉลี่ย') : undefined}
-                            style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '7px 10px', cursor: s.explain ? 'pointer' : 'default' }}>
+                            style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '7px 10px', cursor: s.explain ? 'pointer' : 'default' }}>
                             <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>
                               {tr(s.label)}{s.explain && <span style={{ color: 'var(--accent)', fontWeight: 800 }}> ⓘ</span>}
                             </div>
@@ -3376,7 +3376,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
                     </div>
 
                     {/* ไฟรวม — ต้องบอกเสมอว่าตัดสินจากกี่หัวข้อ ไม่งั้นเขียวจาก 2/6 ดูเหมือนเขียวจาก 6/6 */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--bg3)', border: `1px solid ${tint(statusColor(ov.status), 'line')}`, borderLeft: `4px solid ${statusColor(ov.status)}`, borderRadius: 'var(--r-md)', padding: '9px 11px', marginBottom: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--bg3-surf)', border: `1px solid ${tint(statusColor(ov.status), 'line')}`, borderLeft: `4px solid ${statusColor(ov.status)}`, borderRadius: 'var(--r-md)', padding: '9px 11px', marginBottom: 10 }}>
                       {dot(ov.status, 16)}
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <div style={{ fontSize: 14, fontWeight: 800, color: statusColor(ov.status) }}>{statusLabel(ov.status)}</div>
@@ -3507,14 +3507,14 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
           const zm = CAT[z.cat] || CAT.idle;
           const topMats = f.mats.slice().sort((a, b) => (b.short ? 1 : 0) - (a.short ? 1 : 0) || b.qty - a.qty).slice(0, 4);
           const row = (label, val, color) => (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '4px 8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '4px 8px' }}>
               <span style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>{label}</span>
               <span style={{ fontSize: 12.5, fontWeight: 800, color: color || 'var(--text)', textAlign: 'right', overflowWrap: 'anywhere', lineHeight: 1.3 }}>{val}</span>
             </div>
           );
           return (
             <div ref={hoverCardRef} style={{ position: 'fixed', left, top, width: W, zIndex: 1250, pointerEvents: 'none',
-              background: 'var(--card)', border: `1px solid ${tint(zm.color, 'line')}`, borderTop: `3px solid ${zm.color}`, borderRadius: 'var(--r-lg)',
+              background: 'var(--card-surf)', border: `1px solid ${tint(zm.color, 'line')}`, borderTop: `3px solid ${zm.color}`, borderRadius: 'var(--r-lg)',
               boxShadow: 'var(--shadow-lg)', padding: '12px 14px', color: 'var(--text)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
                 <span style={{ width: 11, height: 11, borderRadius: '50%', background: zm.color, flexShrink: 0 }} />
@@ -3551,7 +3551,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
         }
         return (
           <div ref={hoverCardRef} style={{ position: 'fixed', left, top, width: W, zIndex: 1250, pointerEvents: 'none',
-            background: 'var(--card)', border: `1px solid ${tint(meta.color, 'line')}`, borderTop: `3px solid ${meta.color}`, borderRadius: 'var(--r-lg)',
+            background: 'var(--card-surf)', border: `1px solid ${tint(meta.color, 'line')}`, borderTop: `3px solid ${meta.color}`, borderRadius: 'var(--r-lg)',
             boxShadow: 'var(--shadow-lg)', padding: '12px 14px', color: 'var(--text)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
               <span className={meta.blink ? 'dt-alarm-blink' : undefined} style={{ width: 11, height: 11, borderRadius: '50%', background: meta.color, flexShrink: 0 }} />
@@ -3631,7 +3631,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
         const sh = (v) => v === 'day' ? 'เช้า' : v === 'night' ? 'ดึก' : (v || '—');
         return (
           <div onClick={() => setOeeExplain(null)} style={{ position: 'fixed', inset: 0, zIndex: 2100, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-            <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', width: '100%', maxWidth: 660, maxHeight: '90vh', overflowY: 'auto', padding: '20px 22px' }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', width: '100%', maxWidth: 660, maxHeight: '90vh', overflowY: 'auto', padding: '20px 22px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, marginBottom: 4 }}>
                 <div>
                   <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)' }}>{oeeExplain.title}</div>
@@ -3641,7 +3641,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
               </div>
 
               {/* สูตร */}
-              <div style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '10px 12px', margin: '12px 0 14px', fontSize: 12.5, color: 'var(--text2)', lineHeight: 1.7 }}>
+              <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '10px 12px', margin: '12px 0 14px', fontSize: 12.5, color: 'var(--text2)', lineHeight: 1.7 }}>
                 <b style={{ color: 'var(--text)' }}>{tr('สูตร:')}</b> OEE เฉลี่ย = Σ(OEE ของกะ × เวลารับภาระ) ÷ Σ(เวลารับภาระ)<br />
                 <b style={{ color: 'var(--text)' }}>{tr('เวลารับภาระ')}</b> = เวลากะ − เวลาหยุดตามแผน (นาที) · กะที่เดินเครื่องนานกว่า ถ่วงน้ำหนักมากกว่า
               </div>
@@ -3684,7 +3684,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
                   <div style={{ fontSize: 20, fontWeight: 800, color: oeeCol(weighted, rows.map(x => x.line)) }}>{weighted != null ? `${weighted.toFixed(1)}%` : '—'}</div>
                   <div style={{ fontSize: 11, color: 'var(--muted)' }}>{fmtNum(sumWX)} ÷ {fmtNum(sumW)}</div>
                 </div>
-                <div style={{ background: 'var(--bg3)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: '10px 12px' }}>
+                <div style={{ background: 'var(--bg3-surf)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: '10px 12px' }}>
                   <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700 }}>{tr('❌ ถ้าบวกกันหารเฉยๆ')}</div>
                   <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--muted)' }}>{plain != null ? `${plain.toFixed(1)}%` : '—'}</div>
                   <div style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('เฉลี่ย')} {rows.length} {tr('กะเท่าๆ กัน')}</div>
@@ -3713,7 +3713,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
         const showMap = !!lens && !stOf(storyLine).isFac;
         return (
           <div onClick={() => setStoryLine(null)} style={{ position: 'fixed', inset: 0, zIndex: 2000, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-            <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', width: '100%', maxWidth: showMap ? 1440 : 860, maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', width: '100%', maxWidth: showMap ? 1440 : 860, maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}>
               {/* หัว */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, padding: '18px 20px 12px', borderBottom: '1px solid var(--border)' }}>
                 <div style={{ minWidth: 0 }}>
@@ -3773,7 +3773,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
                   {/* ไม่ได้เปิดกะ = บอกแล้วไปต่อ ห้ามจบแค่บรรทัดเดียว — PM/ใบซ่อม/คน/ไฟ ยังมีเรื่องให้ดู
                       (2026-08-26 · user ทัก "คลิกมาไม่เจอข้อมูลอะไรเลย ทั้งที่บอก PM ค้าง") */}
                   {!s.sessionCount && ['summary', 'shifts', 'parts', 'dt', 'ng'].some(sec) && (
-                    <div style={{ background: 'var(--bg3)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: '10px 12px', marginBottom: 16, fontSize: 12.5, color: 'var(--text2)' }}>
+                    <div style={{ background: 'var(--bg3-surf)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: '10px 12px', marginBottom: 16, fontSize: 12.5, color: 'var(--text2)' }}>
                       ⏸ <b>{tr('ไม่มีการเปิดกะของไลน์นี้ใน')}{fmtThaiDate(storyDate)}</b> — ไม่มียอดผลิต/OEE/Downtime ของวันนี้
                       <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>{tr('ด้านล่างคือสถานะปัจจุบันของไลน์ (PM · ใบซ่อม · คน · ไฟฟ้า) ซึ่งไม่ผูกกับวันที่เลือก')}</div>
                     </div>
@@ -3788,7 +3788,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
                       { k: '4M วันนี้', v: fmtNum(s.fourM.length), sub: s.fourM.filter(f => f.status === 'pending' || f.status === 'pending_qa').length ? `ค้าง ${s.fourM.filter(f => f.status === 'pending' || f.status === 'pending_qa').length}` : '', c: 'var(--text)' },
                     ].map(x => (
                       // การ์ดสูงเท่ากันทุกใบ: บรรทัดล่างจองที่ไว้เสมอ (ไม่มี sub ใช้ nbsp) — ไม่งั้นการ์ดเตี้ยไม่เท่ากัน
-                      <div key={x.k} style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '9px 11px', display: 'flex', flexDirection: 'column', gap: 1 }}>
+                      <div key={x.k} style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '9px 11px', display: 'flex', flexDirection: 'column', gap: 1 }}>
                         <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>{x.k}</div>
                         <div style={{ fontSize: 17, fontWeight: 800, color: x.c, fontVariantNumeric: 'tabular-nums', lineHeight: 1.15 }}>{x.v}</div>
                         <div style={{ fontSize: 11, color: 'var(--muted)', minHeight: 15 }}>{x.sub || ' '}</div>
@@ -3804,7 +3804,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
                       {s.shifts.map(x => {
                         const p = x.target > 0 ? Math.round(x.produced / x.target * 100) : null;
                         return (
-                          <div key={x.id} style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '8px 11px' }}>
+                          <div key={x.id} style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '8px 11px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                               <b style={{ fontSize: 12.5, color: 'var(--text)' }}>{sh(x.shift)}</b>
                               {kids.length > 0 && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{x.line}</span>}
@@ -3904,7 +3904,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
                     {s.dtUnplanned.length === 0 ? <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('ไม่มี — ไม่มีเครื่องหยุดนอกแผน 👍')}</div> : (
                       <div style={{ display: 'grid', gap: 5 }}>
                         {s.dtUnplanned.map(d => (
-                          <div key={d.id} style={{ background: 'var(--bg3)', borderLeft: `3px solid ${d.open ? 'var(--red)' : 'var(--amber)'}`, border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '7px 10px' }}>
+                          <div key={d.id} style={{ background: 'var(--bg3-surf)', borderLeft: `3px solid ${d.open ? 'var(--red)' : 'var(--amber)'}`, border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '7px 10px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                               <b style={{ fontSize: 12.5, color: 'var(--text)' }}>{d.type}</b>
                               {d.machine && <span style={{ fontSize: 11, color: 'var(--muted)' }}>· {d.machine}</span>}
@@ -3929,7 +3929,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
                     {s.defects.length === 0 ? <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('ไม่มีของเสีย 👍')}</div> : (
                       <div style={{ display: 'grid', gap: 5 }}>
                         {s.defects.map(d => (
-                          <div key={d.type} style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '7px 10px' }}>
+                          <div key={d.type} style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '7px 10px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                               <b style={{ fontSize: 12.5, color: 'var(--text)', minWidth: 0 }}>{d.type}</b>
                               <span style={{ marginLeft: 'auto', display: 'flex', gap: 5, flexShrink: 0 }}>
@@ -3951,7 +3951,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
                     <StorySection title={`4M วันนี้ (${s.fourM.length})`}>
                       <div style={{ display: 'grid', gap: 5 }}>
                         {s.fourM.map(f => (
-                          <div key={f.id} style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '7px 10px', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                          <div key={f.id} style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '7px 10px', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                             <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--blue)', flexShrink: 0 }}>{f.category}</span>
                             <span style={{ fontSize: 12, color: 'var(--text2)', minWidth: 0, flex: 1 }}>{f.description || '—'}</span>
                             <span style={{ fontSize: 11, flexShrink: 0, color: f.status === 'approved' ? '#22c55e' : f.status === 'rejected' ? '#ef4444' : '#f59e0b' }}>
@@ -4126,7 +4126,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
         const ppct = parent.target > 0 ? Math.round(parent.actual / parent.target * 100) : null;
         return (
           <div onClick={() => setReviewDetail(null)} style={{ position: 'fixed', inset: 0, zIndex: 2000, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-            <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '20px 22px', width: '100%', maxWidth: 620, maxHeight: '90vh', overflowY: 'auto' }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '20px 22px', width: '100%', maxWidth: 620, maxHeight: '90vh', overflowY: 'auto' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
                 <div>
                   <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>{reviewDetail}</div>
@@ -4135,7 +4135,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
                 <button type="button" className="pg-btn sm pg-btn-icon" onClick={() => setReviewDetail(null)} style={{ width: 30 }}>✕</button>
               </div>
               {/* ยอดรวมทั้งกลุ่ม */}
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '10px 12px', margin: '10px 0 14px' }}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '10px 12px', margin: '10px 0 14px' }}>
                 <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 700 }}>{tr('รวมทั้งกลุ่ม')}</div>
                 <div style={{ fontSize: 15, fontWeight: 800, color: pctCol(ppct) }}>{parent.target > 0 ? `${fmtNum(parent.actual)}/${fmtNum(parent.target)} · ${ppct}%` : '—'}</div>
                 <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -4143,7 +4143,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
                   {parent.oeeRows?.length > 1 && (
                     <button onClick={() => setOeeExplain({ title: `OEE เฉลี่ย · ${reviewDetail}`, rows: parent.oeeRows })}
                       title={tr('ทำไมไม่เท่ากับเฉลี่ยเลขธรรมดา?')}
-                      style={{ border: '1px solid var(--border2)', background: 'var(--bg2)', color: 'var(--accent)', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 800, padding: '2px 8px', cursor: 'pointer' }}>{tr('ⓘ วิธีคิด')}</button>
+                      style={{ border: '1px solid var(--border2)', background: 'var(--bg2-surf)', color: 'var(--accent)', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 800, padding: '2px 8px', cursor: 'pointer' }}>{tr('ⓘ วิธีคิด')}</button>
                   )}
                   <Chip label="DT" val={`${fmtNum(parent.dtMin)}น.`} color={parent.dtMin > 0 ? 'var(--amber)' : 'var(--muted)'} />
                   <Chip label="NG" val={fmtNum(parent.ng)} color={parent.ng > 0 ? 'var(--red)' : 'var(--muted)'} />
@@ -4156,7 +4156,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
                   const pct = r.target > 0 ? Math.round(r.actual / r.target * 100) : null;
                   return (
                     <div key={name} onClick={() => { setReviewDetail(null); openLine(name, reviewDate); }}
-                      style={{ padding: '9px 11px', borderRadius: 'var(--r-md)', cursor: 'pointer', background: 'var(--bg3)', border: `1px solid ${self ? 'var(--border)' : 'var(--border2)'}` }}>
+                      style={{ padding: '9px 11px', borderRadius: 'var(--r-md)', cursor: 'pointer', background: 'var(--bg3-surf)', border: `1px solid ${self ? 'var(--border)' : 'var(--border2)'}` }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 6 }}>
                         <div style={{ minWidth: 0, flex: 1, fontSize: 13.5, fontWeight: 700, color: self ? 'var(--accent)' : 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {self ? `${name} (เฉพาะไลน์แม่)` : `↳ ${name}`}
@@ -4183,7 +4183,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
         const st = stOf(detailLine); const kids = childrenOf[detailLine] || [];
         return (
           <div onClick={() => setDetailLine(null)} style={{ position: 'fixed', inset: 0, zIndex: 2000, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-            <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '20px 22px', width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto' }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '20px 22px', width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                 <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>
                   {st.dtActive && <span className="dt-alarm-icon" style={{ color: 'var(--red)' }}>🔴 </span>}{detailLine}
@@ -4200,7 +4200,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
               {Object.entries(METRICS).filter(([k, m]) => !(st.isFac && m.facilityNA) && (metric === 'health' || k === metric)).map(([k, m]) => {
                   const cat = m.cat(st); const meta = CAT[cat]; const txt = m.text(st);
                   return (
-                    <div key={k} style={{ background: 'var(--bg3)', border: `1px solid ${tint(meta.color, 'line')}`, borderLeft: `3px solid ${meta.color}`, borderRadius: 'var(--r-md)', padding: '9px 11px' }}>
+                    <div key={k} style={{ background: 'var(--bg3-surf)', border: `1px solid ${tint(meta.color, 'line')}`, borderLeft: `3px solid ${meta.color}`, borderRadius: 'var(--r-md)', padding: '9px 11px' }}>
                       <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600, marginBottom: 3 }}>{tr(m.label)}</div>
                       <div style={{ fontSize: 15, fontWeight: 800, color: meta.color }}>{txt || '—'}</div>
                     </div>
@@ -4254,7 +4254,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
         const stColor = { good: 'var(--accent)', ok: 'var(--amber)', bad: 'var(--red)', idle: 'var(--muted)' }[z.cat] || 'var(--muted)';
         return (
           <div className="modal-scroll" style={{ position: 'fixed', inset: 0, zIndex: 2000, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={() => setStoreZoneModal(null)}>
-            <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card)', border: `1px solid ${stColor}`, borderRadius: 'var(--r-lg)', padding: '20px 22px', width: '100%', maxWidth: 640, maxHeight: '88vh', overflowY: 'auto' }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: `1px solid ${stColor}`, borderRadius: 'var(--r-lg)', padding: '20px 22px', width: '100%', maxWidth: 640, maxHeight: '88vh', overflowY: 'auto' }}>
               <div style={{ display: 'flex', gap: 10, alignItems: 'baseline', marginBottom: 4 }}>
                 <div style={{ fontSize: 16, fontWeight: 800 }}>{km.icon} {z.name}</div>
                 <span style={{ fontSize: 12, color: 'var(--muted)' }}>{tr(km.label)}</span>
@@ -4292,8 +4292,8 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
                 * ยอด = สต็อกของ MAT ที่ผูกกับโซน จาก ledger คลังกลาง (FG WAREHOUSE / STORE) — ระบบยังไม่บันทึกยอด "รายโซน" จริง (เฟสถัดไป)
               </div>
               <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                <button onClick={() => navigate('/line-stock?tab=settings&set=zones')} style={{ flex: 1, padding: '9px 0', borderRadius: 'var(--r-md)', fontSize: 13, fontWeight: 700, cursor: 'pointer', background: 'var(--bg3)', color: 'var(--text)', border: '1px solid var(--border2)' }}>{tr('จัดการโซน / ผูก MAT')}</button>
-                <button onClick={() => navigate('/rundown-stock')} style={{ flex: 1, padding: '9px 0', borderRadius: 'var(--r-md)', fontSize: 13, fontWeight: 700, cursor: 'pointer', background: 'var(--bg3)', color: 'var(--text)', border: '1px solid var(--border2)' }}>Rundown Stock</button>
+                <button onClick={() => navigate('/line-stock?tab=settings&set=zones')} style={{ flex: 1, padding: '9px 0', borderRadius: 'var(--r-md)', fontSize: 13, fontWeight: 700, cursor: 'pointer', background: 'var(--bg3-surf)', color: 'var(--text)', border: '1px solid var(--border2)' }}>{tr('จัดการโซน / ผูก MAT')}</button>
+                <button onClick={() => navigate('/rundown-stock')} style={{ flex: 1, padding: '9px 0', borderRadius: 'var(--r-md)', fontSize: 13, fontWeight: 700, cursor: 'pointer', background: 'var(--bg3-surf)', color: 'var(--text)', border: '1px solid var(--border2)' }}>Rundown Stock</button>
                 <button onClick={() => setStoreZoneModal(null)} style={{ flex: 1, padding: '9px 0', borderRadius: 'var(--r-md)', fontSize: 13, fontWeight: 800, cursor: 'pointer', background: 'var(--accent)', color: 'var(--accent-ink)', border: 'none' }}>{tr('ปิด')}</button>
               </div>
             </div>
@@ -4303,7 +4303,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
 
       {assignFor && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, zIndex: 2000, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '22px 24px', width: '100%', maxWidth: 360 }}>
+          <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '22px 24px', width: '100%', maxWidth: 360 }}>
             {(() => { const okAssign = assignLine === '__new__' ? !!newZone.trim() : !!assignLine; const prodOpts = assignableLines(); const leafOpts = assignableLeafs(); const facOpts = assignableFacility(); const dieOpts = assignableDie(); const storeOpts = assignableStore(); return <>
             <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>{tr('ตีกรอบให้ไลน์/โซนไหน?')}</div>
             <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>{tr('เลือกไลน์ผลิต หรือโซน MTN/facility ที่จะผูกกับรูปที่วาด (')}{assignFor.length} {tr('จุด) · กลุ่มที่ตีรายไลน์ลูกครบแล้วไม่ขึ้นในลิสต์ (ไม่ต้องตีแม่ซ้ำ)')}</div>
@@ -4344,7 +4344,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
               </div>
             )}
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => { setAssignFor(null); setNewZone(''); }} style={{ flex: 1, padding: '11px 0', borderRadius: 'var(--r-md)', fontSize: 13, fontWeight: 700, cursor: 'pointer', background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)' }}>{tr('ยกเลิก')}</button>
+              <button onClick={() => { setAssignFor(null); setNewZone(''); }} style={{ flex: 1, padding: '11px 0', borderRadius: 'var(--r-md)', fontSize: 13, fontWeight: 700, cursor: 'pointer', background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)' }}>{tr('ยกเลิก')}</button>
               <button onClick={confirmAssign} disabled={!okAssign} style={{ flex: 2, padding: '11px 0', borderRadius: 'var(--r-md)', fontSize: 13, fontWeight: 800, cursor: okAssign ? 'pointer' : 'not-allowed', background: okAssign ? 'var(--accent)' : 'var(--muted)', color: '#fff', border: 'none' }}>{tr('ตีกรอบ')}</button>
             </div>
             </>; })()}

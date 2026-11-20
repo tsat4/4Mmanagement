@@ -550,7 +550,7 @@ function ItemRow({ i, it, n, canEdit, focused, onFocus, pageOptions, defaultSec,
     return (
       <div onClick={onFocus} role="button" tabIndex={0} onKeyDown={e => { if (e.key === 'Enter') onFocus(); }}
         style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 'var(--r-md)', cursor: 'pointer',
-          border: '1px solid var(--border2)', background: 'var(--bg2)', minWidth: 0 }}>
+          border: '1px solid var(--border2)', background: 'var(--bg2-surf)', minWidth: 0 }}>
         <b style={{ width: 22, textAlign: 'center', fontSize: 13 }}>{i + 1}</b>
         <span style={{ fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }}>{meta ? `${meta.icon} ${meta.label}` : (it.path || '— ยังไม่เลือกหน้า —')}</span>
         <span style={{ flex: 1, minWidth: 0, fontSize: 12, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -753,7 +753,7 @@ function PagePreview({ path }) {
           ))}
           {path !== shown && (
             <div style={{ position: 'absolute', right: 8, bottom: 8, padding: '3px 10px', borderRadius: 'var(--r-pill)', fontSize: 11,
-              background: 'var(--card)', border: '1px solid var(--border2)', color: 'var(--muted)' }}>{tr('⏳ กำลังโหลดตัวอย่าง…')}</div>
+              background: 'var(--card-surf)', border: '1px solid var(--border2)', color: 'var(--muted)' }}>{tr('⏳ กำลังโหลดตัวอย่าง…')}</div>
           )}
         </>
       ) : (

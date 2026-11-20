@@ -200,7 +200,7 @@ export default function PeExcelImportModal({ sets = [], currentSetId = '', onClo
         </div>
         <div style={{ display: 'grid', gap: 10 }}>
           {FILES.map((f) => (
-            <div key={f.key} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: 10, background: 'var(--bg2)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)' }}>
+            <div key={f.key} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: 10, background: 'var(--bg2-surf)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)' }}>
               <div style={{ minWidth: 190 }}>
                 <div style={{ fontSize: 13, fontWeight: 700 }}>{tr(f.label)}</div>
                 <div style={{ fontSize: 11, color: 'var(--muted)' }}>{tr(f.hint)}</div>
@@ -219,7 +219,7 @@ export default function PeExcelImportModal({ sets = [], currentSetId = '', onClo
       {step === 'preview' && plan && (<>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
           {[['ขั้นงาน (OP)', plan.ops.length], ['PFMEA', plan.fmea.length], ['Control Plan', plan.cp.length], ['ประวัติแก้ไข', plan.revisions.length]].map(([k, v]) => (
-            <div key={k} style={{ flex: '1 1 150px', padding: 10, background: 'var(--bg2)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)' }}>
+            <div key={k} style={{ flex: '1 1 150px', padding: 10, background: 'var(--bg2-surf)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)' }}>
               <div style={{ fontSize: 11, color: 'var(--muted)' }}>{k}</div>
               <div style={{ fontSize: 22, fontWeight: 800, color: v ? 'var(--accent)' : 'var(--muted)' }}>{v}</div>
             </div>
@@ -270,7 +270,7 @@ export default function PeExcelImportModal({ sets = [], currentSetId = '', onClo
             </table>
           </div>
 
-          <div style={{ padding: 10, background: 'var(--bg2)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)' }}>
+          <div style={{ padding: 10, background: 'var(--bg2-surf)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', gap: 14, marginBottom: 8, fontSize: 12.5 }}>
               <label style={{ display: 'flex', gap: 5, alignItems: 'center', cursor: 'pointer' }}>
                 <input type="radio" checked={mode === 'new'} onChange={() => setMode('new')} /> {tr('สร้างชุดเอกสารใหม่')}

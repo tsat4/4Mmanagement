@@ -89,7 +89,7 @@ export default function OpenOrderDemandPanel({ q = '' }) {
           <br />“ต้องส่งเพิ่ม” = ความต้องการ − ยอดคงเหลือหน้าไลน์ · <b>{tr('จอนี้แจ้งล่วงหน้าอย่างเดียว')}</b> ไม่ออกใบเบิก/ใบขอซื้อ —
           ตอนไลน์ปิดใบ ระบบตัดสต็อกและออกใบตามเดิม
         </div>
-        <button onClick={load} disabled={busy} style={{ padding: '7px 14px', borderRadius: 'var(--r-md)', cursor: busy ? 'wait' : 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-body)', background: 'var(--bg2)', color: 'var(--text2)', border: '1px solid var(--border)' }}>
+        <button onClick={load} disabled={busy} style={{ padding: '7px 14px', borderRadius: 'var(--r-md)', cursor: busy ? 'wait' : 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-body)', background: 'var(--bg2-surf)', color: 'var(--text2)', border: '1px solid var(--border)' }}>
           {busy ? tr('⏳ กำลังโหลด…') : tr('🔄 รีเฟรช')}
         </button>
       </div>

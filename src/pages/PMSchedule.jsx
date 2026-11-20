@@ -407,7 +407,7 @@ export default function PMSchedule() {
       {/* 🏃 แผนที่นับรอบจาก "วันเดินเครื่อง" — จอต้องบอกตรงๆ ว่ากันออกจากคิวกี่รายการเพราะอะไร
           (กฎความซื่อสัตย์ของจอ: ห้ามแค่หายไปเฉยๆ ให้คนเข้าใจว่า "ตรวจครบแล้ว") */}
       {!loading && runDayRows.length > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '10px 14px', marginBottom: 16, borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '10px 14px', marginBottom: 16, borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)' }}>
           <span style={{ fontSize: 13, color: 'var(--text2)', flex: '1 1 320px', lineHeight: 1.6 }}>
             🏃 <b style={{ color: 'var(--text)' }}>{runDayRows.length}</b> {tr('รายการนับรอบจาก')} <b>{tr('วันที่เดินเครื่อง')}</b> —
             วันที่ไลน์ไม่ได้เปิดใบผลิตจะไม่นับและไม่ขึ้นค้าง
@@ -446,9 +446,9 @@ export default function PMSchedule() {
           <button onClick={() => setScanOpen(true)} title={tr('สแกนป้าย QR ที่เครื่อง → ดูเฉพาะแผนของเครื่องนั้น')}
             style={{ ...S.actionBtn(deptColor), fontSize: 13, fontWeight: 800, minHeight: 36 }}>{tr('สแกนเครื่อง')}</button>
           {focusEq && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12.5, padding: '4px 6px 4px 12px', borderRadius: 'var(--r-pill)', border: '1px solid var(--accent)', background: 'var(--bg3)' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12.5, padding: '4px 6px 4px 12px', borderRadius: 'var(--r-pill)', border: '1px solid var(--accent)', background: 'var(--bg3-surf)' }}>
               {focusName ? <>{tr('เฉพาะ')} <b>{focusName}</b> ({shownRows.length} แผน)</> : <b style={{ color: '#f59a3f' }}>{tr('ไม่พบแผนของอุปกรณ์นี้ในทีมนี้')}</b>}
-              <button onClick={() => setParams({ focus: null })} style={{ fontSize: 12, padding: '2px 10px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--card)', color: 'var(--text2)', cursor: 'pointer' }}>{tr('ทั้งหมด')}</button>
+              <button onClick={() => setParams({ focus: null })} style={{ fontSize: 12, padding: '2px 10px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--card-surf)', color: 'var(--text2)', cursor: 'pointer' }}>{tr('ทั้งหมด')}</button>
             </span>
           )}
         </div>
@@ -465,7 +465,7 @@ export default function PMSchedule() {
       ) : loadErr ? (
         /* 🔴 โหลดล้ม ต้องเขียนว่า "โหลดไม่สำเร็จ" ห้ามใช้หน้าตาเดียวกับ "ยังไม่มีแผน" (QC audit 08/10)
               — คนอ่านว่า "แผนกนี้ไม่มีแผน PM" แล้วไปตั้งใหม่ทับ หรือเชื่อว่าไม่มีงานค้าง */
-        <div style={{ background: 'var(--card)', border: '1px solid var(--red-line)', borderRadius: 'var(--radius-lg)', padding: '40px 24px', textAlign: 'center' }}>
+        <div style={{ background: 'var(--card-surf)', border: '1px solid var(--red-line)', borderRadius: 'var(--radius-lg)', padding: '40px 24px', textAlign: 'center' }}>
           <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
           <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--red)', marginBottom: 8 }}>{tr('โหลดแผน PM ไม่สำเร็จ')}</p>
           <p style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 10 }}>
@@ -475,13 +475,13 @@ export default function PMSchedule() {
             background: 'var(--accent)', color: 'var(--accent-ink)', border: '1px solid var(--accent)' }}>{tr('ลองโหลดอีกครั้ง')}</button>
         </div>
       ) : rows.length === 0 ? (
-        <div style={{ background: 'var(--card)', border: '1px dashed var(--border2)', borderRadius: 'var(--radius-lg)', padding: '48px 24px', textAlign: 'center' }}>
+        <div style={{ background: 'var(--card-surf)', border: '1px dashed var(--border2)', borderRadius: 'var(--radius-lg)', padding: '48px 24px', textAlign: 'center' }}>
           <div style={{ fontSize: 36, marginBottom: 12 }}>📅</div>
           <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>{tr('ยังไม่มีแผน PM')}</p>
           <p style={{ fontSize: 13, color: 'var(--muted)' }}>{tr('ตั้งค่าอุปกรณ์ใน PM Setup ก่อน')}</p>
         </div>
       ) : shownRows.length === 0 ? (
-        <div style={{ background: 'var(--card)', border: '1px dashed var(--border2)', borderRadius: 'var(--radius-lg)', padding: '40px 24px', textAlign: 'center' }}>
+        <div style={{ background: 'var(--card-surf)', border: '1px dashed var(--border2)', borderRadius: 'var(--radius-lg)', padding: '40px 24px', textAlign: 'center' }}>
           <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>{tr('ไม่มีแผนที่ตรงกับตัวกรอง')}</p>
           <p style={{ fontSize: 13, color: 'var(--muted)' }}>{tr('ทีมนี้มีทั้งหมด')} {rows.length} {tr('แผน')}{droppedNoLine ? ` (ไม่ระบุไลน์ ${droppedNoLine})` : ''}</p>
           {filtered && <button type="button" onClick={clearFilters} style={{ ...S.actionBtn(deptColor), marginTop: 10 }}>{tr('ล้างตัวกรอง')}</button>}
@@ -541,7 +541,7 @@ export default function PMSchedule() {
                       )}
                       {isUsage && (
                         <div style={{ marginTop: 3, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: 11, fontWeight: 700, color: reason === 'usage' ? '#4aa3e0' : 'var(--muted)', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r-xs)', padding: '1px 5px' }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: reason === 'usage' ? '#4aa3e0' : 'var(--muted)', background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-xs)', padding: '1px 5px' }}>
                             {reason === 'usage' ? '📈 ตามการใช้งาน' : '🗓️ ตามเวลา'}
                           </span>
                           {health != null && (
@@ -674,7 +674,7 @@ function CycleModal({ rows, byName, byUid, deptWrite, onClose, onSaved }) {
   const chip = (on) => ({ padding: '6px 12px', borderRadius: 16, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', border: `1.5px solid ${on ? 'var(--accent)' : 'var(--border2)'}`, background: on ? 'var(--accent-dim)' : 'var(--bg3)', color: on ? 'var(--accent)' : 'var(--text2)' })
   return (
     <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: 16 }}>
-      <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 20, width: 'min(520px,96vw)', maxHeight: '92vh', overflowY: 'auto' }}>
+      <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 20, width: 'min(520px,96vw)', maxHeight: '92vh', overflowY: 'auto' }}>
         <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>{tr('ตั้งรอบ PM / วัน PM ครั้งถัดไป')}</div>
         <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 14 }}>
           {single
@@ -704,7 +704,7 @@ function CycleModal({ rows, byName, byUid, deptWrite, onClose, onSaved }) {
         <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 14, lineHeight: 1.6 }}>{BASIS_HINT[basis]}</div>
 
         {isRunDay && (
-          <div style={{ marginBottom: 14, padding: '10px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg3)' }}>
+          <div style={{ marginBottom: 14, padding: '10px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg3-surf)' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text2)', flexWrap: 'wrap' }}>
               {tr('จอดเกิน')}
               <input type="number" min="1" max="3650" value={maxIdle} onChange={e => setMaxIdle(e.target.value)} style={{ ...inp, width: 80 }} aria-label={tr('เพดานวันจอด (วัน)')} />
@@ -749,7 +749,7 @@ function CycleModal({ rows, byName, byUid, deptWrite, onClose, onSaved }) {
         )}
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
-          <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text2)', cursor: 'pointer', fontSize: 13 }}>{tr('ยกเลิก')}</button>
+          <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg3-surf)', color: 'var(--text2)', cursor: 'pointer', fontSize: 13 }}>{tr('ยกเลิก')}</button>
           <button onClick={save} disabled={saving || !valid} style={{ padding: '8px 16px', borderRadius: 'var(--r-md)', border: 'none', background: valid ? 'var(--accent)' : 'var(--bg3)', color: valid ? 'var(--accent-ink)' : 'var(--muted)', cursor: valid ? 'pointer' : 'not-allowed', fontSize: 13, fontWeight: 700 }}>{saving ? tr('กำลังบันทึก…') : tr('บันทึก')}</button>
         </div>
       </div>
@@ -805,7 +805,7 @@ function DeferModal({ row, byName, byUid, deptWrite, onClose, onSaved }) {
   const inp = { width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', fontSize: 13 }
   return (
     <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: 16 }}>
-      <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 20, width: 'min(440px,96vw)' }}>
+      <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 20, width: 'min(440px,96vw)' }}>
         <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>{tr('⏭ เลื่อนแผน PM')}</div>
         <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 14 }}>{eqName}{row.eq?.line_name ? ` · ${row.eq.line_name}` : ''} {tr('· ครบกำหนดเดิม')} {curDue ? new Date(curDue).toLocaleDateString('th-TH') : '—'}</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -824,7 +824,7 @@ function DeferModal({ row, byName, byUid, deptWrite, onClose, onSaved }) {
           <div style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('* บันทึกประวัติการเลื่อนไว้ · รอบ PM ถัดไปยังนับจากวันที่ทำจริง')}</div>
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
-          <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text2)', cursor: 'pointer', fontSize: 13 }}>{tr('ยกเลิก')}</button>
+          <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg3-surf)', color: 'var(--text2)', cursor: 'pointer', fontSize: 13 }}>{tr('ยกเลิก')}</button>
           <button onClick={save} disabled={saving} style={{ padding: '8px 16px', borderRadius: 'var(--r-md)', border: 'none', background: '#4a90e0', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>{saving ? tr('บันทึก…') : tr('บันทึกการเลื่อน')}</button>
         </div>
       </div>
@@ -858,7 +858,7 @@ function TimelineView({ rows, today, onCheck }) {
   const marks = [0, 30, 60, 90]
   const isMobile = useIsMobile()
   return (
-    <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+    <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
      {/* จอมือถือ: บอร์ด Gantt กว้างเกินจอ → เลื่อนแนวนอนได้ (label 200 + timeline 320 = 520px) desktop เหมือนเดิม */}
      <div style={{ overflowX: isMobile ? 'auto' : undefined, WebkitOverflowScrolling: 'touch' }}>
       <div style={{ minWidth: isMobile ? 540 : undefined }}>
@@ -978,7 +978,7 @@ function CalendarView({ rows, insps = [], today, onCheck }) {
         <button onClick={() => setCursor(new Date(y, mo + 1, 1))} style={navBtn}>▶</button>
         <button onClick={() => setCursor(new Date(today.getFullYear(), today.getMonth(), 1))} style={{ ...navBtn, width: 'auto', padding: '0 14px', fontSize: 12, fontWeight: 700 }}>{tr('วันนี้')}</button>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 6, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 6, background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 10 }}>
         {DOW_TH.map(d => <div key={d} style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'var(--muted)', padding: '2px 0' }}>{d}</div>)}
         {cells.map((date, i) => {
           if (!date) return <div key={i} />
@@ -1025,7 +1025,7 @@ function DayModal({ sel, onClose, onCheck }) {
   return (
     /* DayModal = ดูรายการ PM ของวันนั้นอย่างเดียว ไม่มีช่องกรอก → ปิดจาก backdrop ได้ตามกฎ (UI-CONVENTIONS §5) */
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', width: 'min(94vw, 460px)', maxHeight: '86vh', overflowY: 'auto', padding: 18 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', width: 'min(94vw, 460px)', maxHeight: '86vh', overflowY: 'auto', padding: 18 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{tr(sel.label)}</div>
           <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: 'var(--r-md)', padding: '2px 9px', fontSize: 13, cursor: 'pointer' }}>✕</button>
@@ -1110,7 +1110,7 @@ function BucketView({ rows, today, onCheck }) {
   return (
     <div style={{ display: 'flex', gap: 12, overflowX: 'auto', alignItems: 'stretch', paddingBottom: 8 }}>
       {cols.map(c => (
-        <div key={c.key} style={{ flex: '1 1 240px', minWidth: 240, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', display: 'flex', flexDirection: 'column', maxHeight: 'calc(100vh - 320px)' }}>
+        <div key={c.key} style={{ flex: '1 1 240px', minWidth: 240, background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', display: 'flex', flexDirection: 'column', maxHeight: 'calc(100vh - 320px)' }}>
           <div style={{ padding: '10px 12px', borderBottom: `2px solid ${c.color}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
             <span style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--text)' }}>{tr(c.label)}</span>
             <span style={{ fontSize: 12, fontWeight: 800, color: c.color, background: `${tint(c.color, 'dim')}`, borderRadius: 'var(--r-md)', padding: '1px 8px' }}>{b[c.key].length}</span>

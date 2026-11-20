@@ -110,7 +110,7 @@ function Kpi({ label, value, sub, color }) {
 function ChartTip({ active, payload, label, fmt }) {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 12px', fontSize: 12 }}>
+    <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 12px', fontSize: 12 }}>
       <div style={{ fontWeight: 700, marginBottom: 4, color: 'var(--text)' }}>{label}</div>
       {payload.map(p => (
         <div key={p.dataKey} style={{ color: p.color }}>{p.name}: {fmt ? fmt(p.value) : p.value?.toLocaleString?.() ?? p.value}</div>
@@ -967,7 +967,7 @@ function OtMonthlyTab({ empById, sectionsList, secFilter, setSecFilter, inScope,
                           {r.days.map(d => (
                             <span key={d.date} title={d.tasks.join(' · ') || trI18n('ไม่ระบุงาน')}
                               style={{
-                                fontSize: 11.5, padding: '3px 8px', borderRadius: 'var(--r-md)', background: 'var(--bg3)',
+                                fontSize: 11.5, padding: '3px 8px', borderRadius: 'var(--r-md)', background: 'var(--bg3-surf)',
                                 color: dayChipColor(d.kind), border: '1px solid var(--border)',
                               }}>
                               {d.date.slice(8)}/{d.date.slice(5, 7)}{!d.viaLog ? ' 📋' : ''}

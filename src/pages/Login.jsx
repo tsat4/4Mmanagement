@@ -73,7 +73,7 @@ export default function Login() {
       <div style={{
         width: '100%',
         maxWidth: 400,
-        background: 'var(--card)',
+        background: 'var(--card-surf)',
         border: '1px solid var(--border2)',
         borderRadius: 'var(--radius-lg)',
         padding: '40px 36px',

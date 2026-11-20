@@ -190,7 +190,7 @@ export default function BomDupPanel({ onOpenSheet }) {
       {/* ── ที่มา + สิ่งที่จอนี้ไม่ทำ (คนอ่านครั้งแรกต้องเข้าใจว่าทำไมมีคู่พวกนี้) ──
           คำอธิบายถาวร ไม่ขึ้นกับตัวกรอง ⇒ อยู่เหนือแถบกรองได้ (UI-STANDARD §2.1) */}
       <div data-page-note="1" style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 'var(--r-md)', fontSize: 12, lineHeight: 1.65,
-        color: 'var(--text2)', border: '1px solid var(--border)', background: 'var(--bg2)' }}>
+        color: 'var(--text2)', border: '1px solid var(--border)', background: 'var(--bg2-surf)' }}>
         <div style={{ fontWeight: 800, color: 'var(--text)', marginBottom: 2 }}>
           ของชิ้นเดียวถูกกรอกลูกไว้ 2 ที่ — ใบที่ใช้มัน และใบ BOM ของตัวมันเอง
         </div>
@@ -222,7 +222,7 @@ export default function BomDupPanel({ onOpenSheet }) {
           { k: '⚠️ มีใบที่ 3 ด้วย', v: counts.thirdSheet, c: counts.thirdSheet ? BAD : OK, sub: 'เทียบ 2 ใบแล้วตัดสินไม่ได้' },
           { k: 'ตรวจแล้ว', v: prog.cleared, c: OK, sub: prog.stale ? `⚠️ ${prog.stale} คู่ต้องตรวจซ้ำ (BOM เปลี่ยน)` : 'ข้อมูลยังเหมือนตอนตรวจ' },
         ].map(s => (
-          <div key={s.k} style={{ padding: '9px 12px', borderRadius: 'var(--r-md)', background: 'var(--card)',
+          <div key={s.k} style={{ padding: '9px 12px', borderRadius: 'var(--r-md)', background: 'var(--card-surf)',
             border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
             <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700 }}>{s.k}</div>
             <div style={{ fontSize: 22, fontWeight: 900, color: s.c, lineHeight: 1.2 }}>{s.v}</div>
@@ -393,7 +393,7 @@ export default function BomDupPanel({ onOpenSheet }) {
           .sort((a, b) => a[1].rank - b[1].rank)
           .map(([k, m]) => (
             <div key={k} style={{ padding: '7px 10px', borderRadius: 'var(--r-md)', fontSize: 11, lineHeight: 1.55,
-              color: 'var(--text2)', border: '1px solid var(--border)', background: 'var(--card)' }}>
+              color: 'var(--text2)', border: '1px solid var(--border)', background: 'var(--card-surf)' }}>
               <span style={chip(statusColor(m.tone))}>{tr(m.label)}</span>
               <span style={{ marginLeft: 6, color: 'var(--muted)' }}>({counts[k] ?? 0} คู่)</span>
               <div style={{ marginTop: 3 }}>{m.why}</div>

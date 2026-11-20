@@ -317,7 +317,7 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
             {sendLines.map((l, idx) => {
               const i = lineInfo(l);
               return (
-                <div key={l.key} style={{ display: 'grid', gap: 6, padding: 10, borderRadius: 'var(--radius)', background: 'var(--bg2)', border: '1px solid var(--border)' }}>
+                <div key={l.key} style={{ display: 'grid', gap: 6, padding: 10, borderRadius: 'var(--radius)', background: 'var(--bg2-surf)', border: '1px solid var(--border)' }}>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                     <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--muted)' }}>#{idx + 1}</span>
                     <div style={{ flex: '2 1 260px', minWidth: 0 }}>

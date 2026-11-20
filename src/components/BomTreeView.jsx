@@ -272,7 +272,7 @@ export default function BomTreeView({ rootMat, rootName, bomOf, sheetFor, ownShe
       {rows.length > shown.length && (
         <button onClick={() => setShowAll(true)}
           style={{ marginTop: 8, fontSize: 11.5, fontWeight: 700, padding: '5px 12px', borderRadius: 'var(--r-md)', cursor: 'pointer',
-            background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)', fontFamily: 'var(--font-body)' }}>
+            background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)', fontFamily: 'var(--font-body)' }}>
           {tr('▾ แสดงอีก')} {rows.length - shown.length} {tr('รายการ')}
         </button>
       )}

@@ -934,7 +934,7 @@ export default function GroupOverview() {
               setPickComp(null);
             }} style={{
               width: '100%', textAlign: 'left', padding: '12px 14px', borderRadius: 'var(--r-md)',
-              background: 'var(--bg3)', border: '1px solid var(--accent)', color: 'var(--text)', cursor: 'pointer',
+              background: 'var(--bg3-surf)', border: '1px solid var(--accent)', color: 'var(--text)', cursor: 'pointer',
             }}>
               <div style={{ fontSize: 14.5, fontWeight: 800 }}>{tr('ดูภาพรวมในหน้านี้ (')}{pickComp.lines.length} ไลน์)</div>
               <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 3, lineHeight: 1.6 }}>
@@ -993,7 +993,7 @@ const btn = {
 function Kpi({ label, value, sub, color }) {
   return (
     <div className="kpi-lift" style={{
-      background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)',
+      background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)',
       padding: '11px 13px', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 88,
     }}>
       <div style={{ fontSize: 12, color: 'var(--muted)' }}>{label}</div>

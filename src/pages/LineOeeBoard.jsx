@@ -434,7 +434,7 @@ export default function LineOeeBoard() {
         {/* picker กลาง (UI §5.1.2) — ลำดับชั้นแม่→ลูกครบ · width กัน index.css select width:100% */}
         <LineSelect lines={boardLines} value={line} onChange={setLine} placeholder={null}
           role={role} lineId={lineId} sections={sections} scopeIdx={scopeIdx}
-          style={{ width: 250, padding: '6px 10px', fontSize: 14, fontWeight: 700, borderRadius: 8, background: 'var(--bg2)', border: '1px solid var(--border)', color: 'var(--text)' }} />
+          style={{ width: 250, padding: '6px 10px', fontSize: 14, fontWeight: 700, borderRadius: 8, background: 'var(--bg2-surf)', border: '1px solid var(--border)', color: 'var(--text)' }} />
         <span style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('หน้าต่าง')} {DAYS_KPI} {tr('วันล่าสุด')}{C?.liveInWindow ? ' · รวมกะที่กำลังเปิด (สด)' : ''}</span>
         <span style={{ marginLeft: 'auto', fontSize: 20, fontWeight: 900, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>
           {now.toLocaleTimeString('th-TH', { hour12: false })}

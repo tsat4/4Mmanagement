@@ -173,7 +173,7 @@ export default function DieStatusBoard({
         <span className="filter-count">{tr('แสดง')} {rows.length} {tr('ตัว')}</span>
       </FilterBar>
 
-      <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
+      <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto', maxHeight: 'calc(100vh - 340px)', overflowY: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 980 }}>
             <thead>
@@ -244,7 +244,7 @@ export default function DieStatusBoard({
                     <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
                       {placed ? (
                         <button onClick={() => onShowOnMap(d)} title={tr('ดูตำแหน่งบนผังจัดเก็บ')}
-                          style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '3px 9px', fontSize: 11.5, color: 'var(--text)', cursor: 'pointer' }}>
+                          style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '3px 9px', fontSize: 11.5, color: 'var(--text)', cursor: 'pointer' }}>
                           {areaNameOf(e.area_id) || tr('ดูบนผัง')}
                         </button>
                       ) : (

@@ -101,7 +101,7 @@ export default function AskBot() {
             <div key={i} style={{ alignSelf: 'flex-end', maxWidth: '80%', background: 'var(--accent)',
               color: 'var(--accent-ink)', padding: '7px 11px', borderRadius: 12, fontSize: 13 }}>{m.text}</div>
           ) : (
-            <div key={i} style={{ alignSelf: 'flex-start', maxWidth: '92%', background: 'var(--bg2)',
+            <div key={i} style={{ alignSelf: 'flex-start', maxWidth: '92%', background: 'var(--bg2-surf)',
               border: '1px solid var(--border)', padding: '8px 11px', borderRadius: 12, fontSize: 13 }}>
               {m.source && <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>📎 {m.source}</div>}
               <div style={{ whiteSpace: 'pre-line' }}>{m.text}</div>
@@ -130,7 +130,7 @@ export default function AskBot() {
         </div>
         <form onSubmit={e => { e.preventDefault(); ask(text) }} style={{ display: 'flex', gap: 6, padding: 10, borderTop: '1px solid var(--border)' }}>
           <input value={text} onChange={e => setText(e.target.value)} placeholder={tr('พิมพ์คำถาม เช่น oee HDF1 วันนี้')}
-            style={{ flex: 1, minWidth: 0, background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)',
+            style={{ flex: 1, minWidth: 0, background: 'var(--bg2-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)',
               color: 'var(--text)', padding: '8px 10px', fontSize: 13 }} />
           <button type="submit" disabled={busy || !text.trim()} style={{ background: 'var(--accent)', color: 'var(--accent-ink)', border: 'none',
             borderRadius: 'var(--r-md)', padding: '0 14px', fontWeight: 800, fontSize: 13, cursor: 'pointer', opacity: busy || !text.trim() ? 0.5 : 1 }}>{tr('ส่ง')}</button>

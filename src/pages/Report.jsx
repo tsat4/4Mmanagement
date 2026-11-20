@@ -1882,7 +1882,7 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
                 {trI18n('ยืนยัน Reject')}
               </button>
               <button onClick={() => { setRejectModal(null); setRejectReason(''); }}
-                style={{ flex: 1, padding: 11, background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}>
+                style={{ flex: 1, padding: 11, background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}>
                 {trI18n('ยกเลิก')}
               </button>
             </div>
@@ -1936,7 +1936,7 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
                 {isApprovingSaving ? trI18n('กำลังบันทึก...') : 'QA Approve'}
               </button>
               <button onClick={() => { setQaApproveModal(null); setQaImageFile(null); setQaImagePreview(null); }} disabled={isApprovingSaving}
-                style={{ flex: 1, padding: 11, background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}>
+                style={{ flex: 1, padding: 11, background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}>
                 {trI18n('ยกเลิก')}
               </button>
             </div>
@@ -2050,7 +2050,7 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {pickable.map(n => (
                     <button key={n} type="button" onClick={() => { setLine(n); setFourMSection(''); setFourMUnit({ name: '', lines: [] }); }}
-                      style={{ padding: '6px 12px', borderRadius: 'var(--r-md)', fontSize: 12, cursor: 'pointer', background: 'var(--bg3)', color: 'var(--text)', border: '1px solid var(--border2)' }}>
+                      style={{ padding: '6px 12px', borderRadius: 'var(--r-md)', fontSize: 12, cursor: 'pointer', background: 'var(--bg3-surf)', color: 'var(--text)', border: '1px solid var(--border2)' }}>
                       {n}
                     </button>
                   ))}
@@ -2095,7 +2095,7 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12, padding: '8px 12px', borderRadius: 'var(--r-md)',
             background: 'var(--amber-dim)', border: '1px solid var(--amber-line)', fontSize: 12.5, color: 'var(--text)' }}>
             <span>{trI18n('เน้นใบที่เลือกมา —')} <b>{focusRow.line_name || trI18n('ไม่ระบุไลน์')}</b> · {focusRow.category} · {fmtDate(focusRow.work_date)}</span>
-            <button onClick={() => setFocus('')} style={{ padding: '3px 10px', borderRadius: 'var(--r-md)', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)' }}>
+            <button onClick={() => setFocus('')} style={{ padding: '3px 10px', borderRadius: 'var(--r-md)', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)' }}>
               {trI18n('ล้างการเน้น')}
             </button>
           </div>
@@ -2107,7 +2107,7 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
               style={{ padding: '3px 10px', borderRadius: 'var(--r-md)', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', background: 'var(--amber-dim)', color: 'var(--amber)', border: '1px solid var(--amber-line)' }}>
               {trI18n('ล้างตัวกรอง')}
             </button>
-            <button onClick={() => setFocus('')} style={{ padding: '3px 10px', borderRadius: 'var(--r-md)', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)' }}>
+            <button onClick={() => setFocus('')} style={{ padding: '3px 10px', borderRadius: 'var(--r-md)', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)' }}>
               {trI18n('ปิด')}
             </button>
           </div>
@@ -2218,7 +2218,7 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
                             toast.success('Reset กลับเป็นรออนุมัติแล้ว');
                             load();
                           }}
-                            style={{ padding: '3px 8px', borderRadius: 5, fontSize: 11, cursor: 'pointer', background: 'var(--bg3)', color: 'var(--muted)', border: '1px solid var(--border)' }}>
+                            style={{ padding: '3px 8px', borderRadius: 5, fontSize: 11, cursor: 'pointer', background: 'var(--bg3-surf)', color: 'var(--muted)', border: '1px solid var(--border)' }}>
                             Reset
                           </button>
                         )
@@ -2614,7 +2614,7 @@ ${catHeaderCells}
             {trI18n(lv.label)} ≥{lv.min}
           </span>
         ))}
-        <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 'var(--r-xs)', background: 'var(--bg3)', color: 'var(--muted)', border: '1px solid var(--border)' }}>{trI18n('— ยังไม่ประเมิน')}</span>
+        <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 'var(--r-xs)', background: 'var(--bg3-surf)', color: 'var(--muted)', border: '1px solid var(--border)' }}>{trI18n('— ยังไม่ประเมิน')}</span>
       </div>
 
       {loading ? <Loader /> : (() => {
@@ -3195,7 +3195,7 @@ function MultiSkillFormTab() {
               ].map(({ label, val, set, opts, plain }) => (
                 <div key={label}>
                   <span style={lbSt}>{label}</span>
-                  <select value={val} onChange={e => set(e.target.value)} style={{ width: '100%', padding: '6px 10px', borderRadius: 'var(--ctl-r)', fontSize: 13, background: 'var(--bg3)', border: '1px solid var(--border2)', color: 'var(--text)' }}>
+                  <select value={val} onChange={e => set(e.target.value)} style={{ width: '100%', padding: '6px 10px', borderRadius: 'var(--ctl-r)', fontSize: 13, background: 'var(--bg3-surf)', border: '1px solid var(--border2)', color: 'var(--text)' }}>
                     <option value="">—</option>
                     {val && !opts.includes(val) && <option value={val}>{plain ? val : `${val} ⚠ ไม่มีในผัง`}</option>}
                     {opts.map(o => <option key={o} value={o}>{trI18n(o)}</option>)}
@@ -3216,7 +3216,7 @@ function MultiSkillFormTab() {
                 { label: sigLabelsOf('multi_skill', MS_SIG_DEFAULTS)[1], name: checker, setName: setChecker, sig: checkerSig, setSig: setCheckerSig, autoRole: 'supervisor' },
                 { label: sigLabelsOf('multi_skill', MS_SIG_DEFAULTS)[2], name: approver, setName: setApprover, sig: approverSig, setSig: setApproverSig, autoRole: 'manager/admin' },
               ].map(({ label, name, setName, sig, setSig, autoRole }) => (
-                <div key={label} style={{ border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: 10, background: 'var(--bg2)' }}>
+                <div key={label} style={{ border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: 10, background: 'var(--bg2-surf)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                     <span style={lbSt}>{label}</span>
                     <span style={{ fontSize: 11, color: 'var(--muted)', background: 'var(--bg3)', borderRadius: 'var(--r-xs)', padding: '1px 5px' }}>{autoRole}</span>

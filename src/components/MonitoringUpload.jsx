@@ -524,7 +524,7 @@ function PreviewPanel({ p, canBoard, onCancel, onConfirm, busy, card, warnBox })
           {busy ? tr('กำลังเขียน…') : tr('✔ ยืนยันนำเข้า (ลงให้ครบทุกส่วนในครั้งเดียว)')}
         </button>
         <button onClick={onCancel} disabled={busy}
-                style={{ padding: '8px 16px', fontSize: 13, borderRadius: 'var(--r-md)', background: 'var(--bg3)',
+                style={{ padding: '8px 16px', fontSize: 13, borderRadius: 'var(--r-md)', background: 'var(--bg3-surf)',
                          color: 'var(--text)', border: '1px solid var(--border)', cursor: 'pointer' }}>
           {tr('ยกเลิก')}
         </button>

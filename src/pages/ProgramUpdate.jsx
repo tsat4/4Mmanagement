@@ -134,7 +134,7 @@ export default function ProgramUpdate() {
       />
 
       {err && (
-        <div style={{ background: 'var(--card)', border: '1px solid var(--red)66', borderLeft: '4px solid var(--red)',
+        <div style={{ background: 'var(--card-surf)', border: '1px solid var(--red)66', borderLeft: '4px solid var(--red)',
                       borderRadius: 'var(--r-md)', padding: '10px 14px', fontSize: 13, color: 'var(--text2)', lineHeight: 1.6 }}>
           ❌ <b>{trI18n('โหลดรายการอัพเดทไม่สำเร็จ')}</b> ({err}) — <b>{trI18n('ไม่ได้หมายความว่าไม่มีอัพเดท')}</b>
           <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>
@@ -152,7 +152,7 @@ export default function ProgramUpdate() {
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 12, alignContent: 'start' }}>
             {KINDS.map(k => (
               <div key={k.key} style={{
-                background: 'var(--card)', border: `1px solid ${tint(k.color, 'line')}`, borderLeft: `4px solid ${k.color}`,
+                background: 'var(--card-surf)', border: `1px solid ${tint(k.color, 'line')}`, borderLeft: `4px solid ${k.color}`,
                 borderRadius: 'var(--r-md)', padding: '8px 14px', minWidth: 132, boxShadow: 'var(--shadow-sm)',
               }}>
                 <div style={{ fontSize: 11.5, color: 'var(--text2)', fontWeight: 700 }}>{k.icon} {trI18n(k.label)}</div>
@@ -184,7 +184,7 @@ export default function ProgramUpdate() {
               <button type="button" onClick={() => { setOpenDays({}); setAllOpen(a => !(a == null ? (fewItems || false) : a)); }}
                 title={trI18n('กางทุกวันเพื่ออ่านต่อเนื่อง หรือพับให้เห็นเฉพาะหัววัน')}
                 style={{ padding: '3px 10px', borderRadius: 'var(--r-md)', fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
-                         border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)' }}>
+                         border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)' }}>
                 {(allOpen == null ? fewItems : allOpen) ? 'พับทุกวัน' : 'กางทุกวัน'}
               </button>
             </div>
@@ -207,7 +207,7 @@ export default function ProgramUpdate() {
                 return (
                   <div key={c.h} style={{
                     display: 'flex', gap: 9, alignItems: 'flex-start', padding: '5px 10px',
-                    borderLeft: `3px solid ${k.color}`, background: 'var(--card)',
+                    borderLeft: `3px solid ${k.color}`, background: 'var(--card-surf)',
                     border: '1px solid var(--border)', borderLeftWidth: 3, borderRadius: 'var(--r-md)', marginBottom: 4,
                   }}>
                     <span style={{ fontSize: 13, flexShrink: 0 }} title={trI18n(k.label)}>{k.icon}</span>
@@ -227,7 +227,7 @@ export default function ProgramUpdate() {
                 <button type="button"
                   onClick={() => setDayCap(m => ({ ...m, [day.date]: day.items.length }))}
                   style={{ margin: '2px 0 6px', padding: '3px 10px', borderRadius: 'var(--r-md)', fontSize: 11.5, fontWeight: 700,
-                           cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)' }}>
+                           cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)' }}>
                   {trI18n('ดูอีก')} {(day.items.length - (dayCap[day.date] || DAY_ROWS)).toLocaleString()} {trI18n('รายการของวันนี้')}
                 </button>
               )}
@@ -241,7 +241,7 @@ export default function ProgramUpdate() {
               {' '}
               <button type="button" onClick={() => setCap(c => c + PAGE_ROWS)}
                 style={{ marginLeft: 6, padding: '4px 12px', borderRadius: 'var(--r-md)', fontSize: 12, fontWeight: 700,
-                         cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text)' }}>
+                         cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text)' }}>
                 {trI18n('ดูเพิ่ม')} {Math.min(PAGE_ROWS, view.hidden).toLocaleString()} {trI18n('รายการ')}
               </button>
               <div style={{ fontSize: 11, marginTop: 4 }}>

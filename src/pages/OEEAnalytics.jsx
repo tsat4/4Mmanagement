@@ -187,7 +187,7 @@ const KpiCard = ({ label, value, color, sub, calc, more, primary = false, unit =
   const [open, setOpen] = useState(false);
   return (
     <div style={{
-      background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)',
+      background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)',
       padding: primary ? '16px 22px' : '14px 18px',
       minWidth: primary ? 210 : 110, flex: primary ? '2 1 240px' : '1 1 130px',
     }}>
@@ -204,7 +204,7 @@ const KpiCard = ({ label, value, color, sub, calc, more, primary = false, unit =
             <>
               <button onClick={() => setOpen(o => !o)} style={{
                 marginTop: 5, padding: '2px 7px', borderRadius: 'var(--r-md)', cursor: 'pointer',
-                border: '1px solid var(--border2)', background: 'var(--bg3)',
+                border: '1px solid var(--border2)', background: 'var(--bg3-surf)',
                 color: 'var(--muted)', fontSize: 11, fontWeight: 700,
               }}>{open ? 'ย่อ' : `${MORE_MARK} อ่านเพิ่ม`}</button>
               {open && <div style={{ marginTop: 5 }}>{more}</div>}
@@ -220,7 +220,7 @@ const KpiCard = ({ label, value, color, sub, calc, more, primary = false, unit =
 const OEETooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 12px', fontSize: 12 }}>
+    <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 12px', fontSize: 12 }}>
       <div style={{ fontWeight: 700, marginBottom: 4 }}>{label}</div>
       {payload.map(p => (
         <div key={p.name} style={{ color: p.color }}>{p.name}: {p.value?.toFixed(1)}%</div>
@@ -252,7 +252,7 @@ function MiniTrendTip({ active, payload, label, dataKey, metric }) {
   if (!active || !payload?.length) return null;
   const v = payload.find(p => p.dataKey === dataKey)?.value;
   return (
-    <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '4px 8px', fontSize: 11, boxShadow: 'var(--shadow-float)' }}>
+    <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '4px 8px', fontSize: 11, boxShadow: 'var(--shadow-float)' }}>
       <div style={{ color: 'var(--muted)' }}>{label}</div>
       <div style={{ fontWeight: 800 }}>{metric} {v != null ? `${v}%` : 'ไม่มีข้อมูล'}</div>
     </div>
@@ -299,7 +299,7 @@ function MetricColumn({ label, value, target, color }) {
   return (
     <div style={{ textAlign: 'center', width: 70 }}>
       <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700, marginBottom: 6 }}>{label}</div>
-      <div style={{ position: 'relative', width: 44, height: H, margin: '0 auto', background: 'var(--bg2)', borderRadius: 'var(--r-md)', overflow: 'hidden', border: '1px solid var(--border)' }}>
+      <div style={{ position: 'relative', width: 44, height: H, margin: '0 auto', background: 'var(--bg2-surf)', borderRadius: 'var(--r-md)', overflow: 'hidden', border: '1px solid var(--border)' }}>
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: barH, background: color, transition: 'height .5s ease' }} />
         <div style={{ position: 'absolute', left: -1, right: -1, top: targetTop, borderTop: '2px dashed rgba(255,255,255,0.55)' }} />
       </div>
@@ -1709,7 +1709,7 @@ export default function OEEAnalytics() {
                 const up = v.diff != null && v.diff > 0.05;
                 const dn = v.diff != null && v.diff < -0.05;
                 return (
-                  <div key={k} style={{ flex: '1 1 120px', minWidth: 110, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 11px' }}>
+                  <div key={k} style={{ flex: '1 1 120px', minWidth: 110, background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 11px' }}>
                     <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700 }}>{k === 'oee' ? 'OEE' : k.toUpperCase()}</div>
                     <div style={{ fontSize: 17, fontWeight: 900, color: v.now != null ? (k === 'oee' ? oeeColor(v.now) : METRIC_COLOR[k]) : 'var(--muted)' }}>
                       {v.now ?? '—'}{v.now != null ? '%' : ''}
@@ -1751,7 +1751,7 @@ export default function OEEAnalytics() {
               {/* 2.1 Total — โชว์ "นอกแผน" เป็นตัวเลขหลัก (ความเสียหายจริง) · ในแผน (ไม่มีแผนผลิต/นับสต๊อก)
                   ไม่ใช่ loss ห้ามเอามาคิด % หลัก/โป่งตัวเลข (เคยโชว์รวม 5,512น. · 38.68% ทั้งที่ 4,684น. คือ
                   ไม่มีแผนผลิต — user: "ไม่มีแผนผลิตไม่ควรเป็นอันดับ1 นอกแผนสำคัญกว่า" 2026-07-15) */}
-              <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '14px 16px', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '14px 16px', display: 'flex', flexDirection: 'column' }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', marginBottom: 12 }}>{trI18n('2.1 Downtime นอกแผนของวันนี้')}</div>
                 <div style={{ position: 'relative', width: 130, height: 130, margin: '2px auto 0' }}>
                   <GaugeRing value={tdKpi.totalShiftMin > 0 ? Math.min(100, tdDtByCause.unplannedMin / tdKpi.totalShiftMin * 100) : 0} color="var(--blue)" size={130} stroke={11} />
@@ -1765,11 +1765,11 @@ export default function OEEAnalytics() {
                 </div>
                 {/* บริบท: รวมทั้งหมด + ในแผน (จาง 📅) — ให้เห็นภาพเต็มโดยไม่ให้ในแผนกลบตัวเลขหลัก */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 'auto', paddingTop: 12 }}>
-                  <div style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '7px 10px', textAlign: 'center' }}>
+                  <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '7px 10px', textAlign: 'center' }}>
                     <div style={{ fontSize: 11, color: 'var(--muted)' }}>{trI18n('ในแผน 📅')}</div>
                     <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text2)' }}>{tdDtByCause.plannedMin.toLocaleString()} <span style={{ fontSize: 11, fontWeight: 600 }}>{trI18n('นาที')}</span></div>
                   </div>
-                  <div style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '7px 10px', textAlign: 'center' }}>
+                  <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '7px 10px', textAlign: 'center' }}>
                     <div style={{ fontSize: 11, color: 'var(--muted)' }}>{trI18n('รวมทั้งหมด')}</div>
                     <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text2)' }}>{tdDtByCause.total.toLocaleString()} <span style={{ fontSize: 11, fontWeight: 600 }}>{trI18n('นาที')}</span></div>
                   </div>
@@ -1777,7 +1777,7 @@ export default function OEEAnalytics() {
               </div>
 
               {/* 2.2 Pareto by cause */}
-              <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '14px 16px' }}>
+              <div style={{ background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '14px 16px' }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)' }}>{trI18n('2.2 Downtime แยกตามสาเหตุ')}<span style={{ fontWeight: 600, color: 'var(--muted2)' }}> {trI18n('· นาทีที่ไลน์หยุด')}</span></div>
                   <div style={{ display: 'flex', gap: 10, fontSize: 11, color: 'var(--muted)' }}>
@@ -1835,7 +1835,7 @@ export default function OEEAnalytics() {
               </div>
 
               {/* 2.3 Top 10 by part */}
-              <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '14px 16px' }}>
+              <div style={{ background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '14px 16px' }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', marginBottom: 12 }}>{trI18n('2.3 Top 10 Downtime รายพาร์ท')} <span style={{ fontWeight: 500, fontSize: 11 }}>{trI18n('(เฉพาะนอกแผน)')}</span></div>
                 {tdDtByPart.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: 30, color: 'var(--muted)', fontSize: 13 }}>{trI18n('ไม่มีข้อมูล')}</div>
@@ -1878,7 +1878,7 @@ export default function OEEAnalytics() {
               <div className="modal-scroll" onClick={() => setTdDtDrill(null)}
                 style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: 16 }}>
                 <div onClick={e => e.stopPropagation()}
-                  style={{ background: 'var(--card)', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', width: 'min(96vw, 900px)', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+                  style={{ background: 'var(--card-surf)', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', width: 'min(96vw, 900px)', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '13px 18px', borderBottom: '1px solid var(--border)' }}>
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -1901,7 +1901,7 @@ export default function OEEAnalytics() {
                   <div style={{ flex: 1, overflow: 'auto', padding: '4px 14px 14px' }}>
                     {/* 🔁 เกิดซ้ำแค่ไหน — ย้อนหลัง 30 วันของสาเหตุนี้ (ตอบว่าเป็นปัญหาเรื้อรังหรือเหตุการณ์เดียว) */}
                     {tdDtDrill.kind === 'cause' && tdDrillHist && (
-                      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '9px 12px', margin: '10px 0 4px' }}>
+                      <div style={{ background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '9px 12px', margin: '10px 0 4px' }}>
                         {tdDrillHist.loading ? (
                           <div style={{ fontSize: 12, color: 'var(--muted)' }}>{trI18n('กำลังโหลดย้อนหลัง 30 วัน…')}</div>
                         ) : tdDrillHist.error ? (
@@ -2111,7 +2111,7 @@ export default function OEEAnalytics() {
               </div>
             )}
           </>} />
-        <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '14px 18px', flex: '2 1 320px', minWidth: 260 }}>
+        <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '14px 18px', flex: '2 1 320px', minWidth: 260 }}>
           <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 6 }}>{trI18n('เวลาที่หายไปก่อนถึง OEE (ในกะ)')}</div>
           {kpi.shiftMinTotal > 0 ? (<>
             <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 12.5 }}>
@@ -2223,7 +2223,7 @@ export default function OEEAnalytics() {
         <div style={s.section}>
           <div style={s.title}>{trI18n('มูลค่าดาวไทม์นอกแผน (ช่วงที่เลือก)')}</div>
           <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'stretch' }}>
-            <div style={{ background: 'var(--card)', border: '1px solid var(--red-line)', borderLeft: '4px solid var(--red)', borderRadius: 'var(--r-md)', padding: '10px 14px', minWidth: 210 }}>
+            <div style={{ background: 'var(--card-surf)', border: '1px solid var(--red-line)', borderLeft: '4px solid var(--red)', borderRadius: 'var(--r-md)', padding: '10px 14px', minWidth: 210 }}>
               <div style={{ fontSize: 11.5, color: 'var(--text2)', fontWeight: 700 }}>{trI18n('รวมที่ตีมูลค่าได้')}</div>
               <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--red)', lineHeight: 1.25 }}>
                 {fmtBaht(dtCost.baht)} <span style={{ fontSize: 12, fontWeight: 700 }}>{trI18n('บาท')}</span>
@@ -2278,7 +2278,7 @@ export default function OEEAnalytics() {
                 { k: 'line',  label: 'จากไลน์ผลิต',               sub: 'ตัวที่คิดเข้า %Q (ไม่รวมงานทดลอง/ของรอ QA)', color: 'var(--amber)', qty: defectCost.qtyLine },
                 { k: 'trial', label: 'งานทดลอง (Try-out)',     sub: 'ไม่ถูกนับใน %Q',                    color: 'var(--blue)', qty: defectCost.qtyTrial },
               ].map(c => (
-                <div key={c.k} style={{ background: 'var(--card)', border: `1px solid ${tint(c.color, 'line')}`, borderLeft: `4px solid ${c.color}`, borderRadius: 'var(--r-md)', padding: '10px 14px' }}>
+                <div key={c.k} style={{ background: 'var(--card-surf)', border: `1px solid ${tint(c.color, 'line')}`, borderLeft: `4px solid ${c.color}`, borderRadius: 'var(--r-md)', padding: '10px 14px' }}>
                   <div style={{ fontSize: 11.5, color: 'var(--text2)', fontWeight: 700 }}>{trI18n(c.label)}</div>
                   <div style={{ fontSize: 22, fontWeight: 800, color: c.color, lineHeight: 1.25 }}>
                     {fmtBaht(defectCost[c.k])} <span style={{ fontSize: 12, fontWeight: 700 }}>{trI18n('บาท')}</span>
@@ -2290,7 +2290,7 @@ export default function OEEAnalytics() {
             {/* 🔴 ยอด "ทั้งหมด" กับ "ที่คิดเข้า %Q" ต่างกันตรงไหน ต้องเขียนบนจอ ห้ามให้ไปเดาเอง (กฎ §7.1 oee.js) */}
             {(defectCost.qtyPending > 0 || defectCost.qtyCleared > 0) && (
               <div style={{ marginTop: 8, fontSize: 11.5, color: 'var(--text2)', lineHeight: 1.6,
-                            background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '7px 11px' }}>
+                            background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '7px 11px' }}>
                 {defectCost.qtyPending > 0 && (
                   <div>
                     ⏳ ในยอด "ทั้งหมด" มีของ<b>{trI18n('ต้องสงสัยที่ QA ยังไม่พิจารณา')} {defectCost.qtyPending.toLocaleString()} {trI18n('ชิ้น')}</b>
@@ -2511,7 +2511,7 @@ function OeeTargetModal({ groups, targets, fullName, onClose, onSaved }) {
 
   return (
     <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: 16 }}>
-      <div style={{ background: 'var(--card)', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', width: 'min(96vw, 760px)', maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ background: 'var(--card-surf)', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', width: 'min(96vw, 760px)', maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
           <div>
             <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>ตั้ง Target A / P / Q รายกรุ๊ป — OEE = A×P×Q</div>
@@ -2567,7 +2567,7 @@ function OeeTargetModal({ groups, targets, fullName, onClose, onSaved }) {
         </div>
 
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', padding: '12px 18px', borderTop: '1px solid var(--border)' }}>
-          <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)', cursor: 'pointer', fontSize: 13 }}>{trI18n('ยกเลิก')}</button>
+          <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)', cursor: 'pointer', fontSize: 13 }}>{trI18n('ยกเลิก')}</button>
           <button onClick={handleSave} disabled={saving}
             style={{ padding: '8px 18px', borderRadius: 'var(--r-md)', border: 'none', background: 'var(--accent)', color: 'var(--accent-ink)', fontWeight: 700, fontSize: 13, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
             {saving ? trI18n('กำลังบันทึก...') : trI18n('บันทึก Target')}

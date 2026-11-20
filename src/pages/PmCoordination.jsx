@@ -536,7 +536,7 @@ function PlanModal({ plan, lines, machines, teams, pmPlans = [], scopeLines, ful
       {/* data-align-ok: ฟอร์มกรอก — ช่องกว้างตามชนิดข้อมูล + มีกล่องย่อย (แผนรายวัน) ที่มี padding ของตัวเอง
           ไม่ใช่ลิสต์ทะเบียนที่ต้องอ่านลงมาเป็นคอลัมน์ ⇒ บอก audit/alignsweep.mjs ให้ข้าม (UI §6.28) */}
       <div onClick={e => e.stopPropagation()} data-align-ok="ฟอร์มกรอก — ช่องกว้างตามชนิดข้อมูล ไม่ใช่ลิสต์ทะเบียน"
-        style={{ background: 'var(--card)', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', width: 'min(760px, 100%)', padding: 18 }}>
+        style={{ background: 'var(--card-surf)', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', width: 'min(760px, 100%)', padding: 18 }}>
         <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', marginBottom: 12 }}>{plan._new ? tr('➕ สร้างแผนประสานงาน') : tr('✏️ แก้ไขแผน')}</div>
 
         {plan._new && pmPlans.length > 0 && (

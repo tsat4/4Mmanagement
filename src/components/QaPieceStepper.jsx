@@ -178,7 +178,7 @@ export default function QaPieceStepper({
   const failedInRound = roundPieces.filter(p => p.result === 'fail');
 
   return (
-    <div style={{ background: 'var(--card)', border: `1px solid ${tone}66`, borderRadius: 'var(--r-lg)', padding: 14, marginBottom: 12 }}>
+    <div style={{ background: 'var(--card-surf)', border: `1px solid ${tone}66`, borderRadius: 'var(--r-lg)', padding: 14, marginBottom: 12 }}>
       {/* ป้ายสถานะจากตัวเดินกฎ */}
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
         <span style={{ fontWeight: 800, fontSize: 14 }}>
@@ -351,7 +351,7 @@ export default function QaPieceStepper({
       {/* ── modal disposition ของชิ้นที่ตก — ฟอร์ม: ไม่ปิดจาก backdrop (UI-CONVENTIONS §5) ── */}
       {dispo && (
         <div className="modal-scroll" /* modal-scroll = เลื่อนถึงปุ่มล่างได้เมื่อจอเตี้ย/คีย์บอร์ดเด้ง (UI-CONVENTIONS §4 · index.css) */ style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 12 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card)', border: '1px solid rgba(239,68,68,0.5)', borderRadius: 'var(--r-lg)', padding: 16, width: 'min(560px, 100%)' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: '1px solid rgba(239,68,68,0.5)', borderRadius: 'var(--r-lg)', padding: 16, width: 'min(560px, 100%)' }}>
             <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 6 }}>{tr('✕ ชิ้นที่')} {seq?.nextPiece} {tr('ตก')} {dispo.payload.failedItems.length} {tr('จุด — จะทำอะไรกับชิ้นนี้')}</div>
             <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 10, lineHeight: 1.6 }}>
               {dispo.payload.failedItems.map(f => `#${f.balloon_no} ${f.characteristic}${f.value != null && f.value !== '' ? ` = ${f.value}` : ''} (${f.spec_text})${f.note ? ` — ${f.note}` : ''}`).join(' · ')}

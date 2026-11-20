@@ -69,7 +69,7 @@ const seed = (today) => ([
 function Chip({ children, color = 'var(--muted)', onRemove }) {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 10px', borderRadius: 'var(--r-pill)',
-      border: `1px solid ${color}`, color, fontSize: 12, background: 'var(--card)' }}>
+      border: `1px solid ${color}`, color, fontSize: 12, background: 'var(--card-surf)' }}>
       {children}
       {onRemove && <button type="button" onClick={onRemove} aria-label={tr('เอาออก')}
         style={{ border: 'none', background: 'none', color, cursor: 'pointer', fontSize: 13, padding: 0 }}>✕</button>}

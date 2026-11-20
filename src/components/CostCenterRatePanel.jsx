@@ -270,7 +270,7 @@ export default function CostCenterRatePanel({ nodes, lines }) {
           </table>
         </div>
         {canEdit ? (
-          <button onClick={() => setForm({ ...emptyForm() })} style={{ marginTop: 8, padding: '6px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+          <button onClick={() => setForm({ ...emptyForm() })} style={{ marginTop: 8, padding: '6px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
             {tr('➕ เพิ่ม rate (เลือกรหัสจากผัง/ไลน์)')}
           </button>
         ) : (
@@ -349,7 +349,7 @@ export default function CostCenterRatePanel({ nodes, lines }) {
                   <input value={form.note || ''} onChange={e => setForm({ ...form, note: e.target.value })} placeholder={tr('เช่น rate ปี 2026 จากบัญชี')} style={{ marginTop: 4 }} />
                 </label>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
-                  <button onClick={() => setForm(null)} style={{ padding: '7px 16px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>{tr('ยกเลิก')}</button>
+                  <button onClick={() => setForm(null)} style={{ padding: '7px 16px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>{tr('ยกเลิก')}</button>
                   <button onClick={handleSave} disabled={saving} style={{ padding: '7px 18px', borderRadius: 'var(--r-md)', border: 'none', background: 'var(--accent)', color: 'var(--accent-ink)', fontSize: 12, fontWeight: 800, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>
                     {saving ? tr('กำลังบันทึก...') : tr('💾 บันทึก')}
                   </button>

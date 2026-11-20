@@ -183,14 +183,14 @@ export default function PurchaseBulkModal({ group, next, nextLabel, fullName, wo
     /* ⚠️ ไม่ปิดจากการคลิกพื้นหลัง — กรอกจำนวนค้างแล้วเผลอแตะข้างนอกไม่ควรหาย */
     <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 3000,
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)',
+      <div style={{ background: 'var(--bg2-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)',
         width: 'min(560px, 100%)', maxHeight: '90vh', overflowY: 'auto', padding: 18 }}>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{nextLabel} {tr('— รวมยอดทั้งพาร์ท')}</span>
           <button onClick={onClose} disabled={busy}
             style={{ marginLeft: 'auto', fontSize: 12, padding: '4px 10px', borderRadius: 'var(--r-md)', cursor: busy ? 'not-allowed' : 'pointer',
-              background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)', fontFamily: 'var(--font-body)' }}>✕</button>
+              background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)', fontFamily: 'var(--font-body)' }}>✕</button>
         </div>
         <div style={{ fontSize: 12.5, color: 'var(--text2)', marginBottom: 12 }}>
           <b style={{ color: 'var(--text)' }}>{mat}</b> · {group.part_name || '—'}
@@ -216,10 +216,10 @@ export default function PurchaseBulkModal({ group, next, nextLabel, fullName, wo
               <input type="number" min={1} max={slips.length} value={take}
                 onChange={e => setTake(e.target.value)} placeholder={String(slips.length)} disabled={busy}
                 style={{ width: 110, padding: '5px 9px', fontSize: 13, borderRadius: 'var(--ctl-r)',
-                  background: 'var(--bg3)', color: 'var(--text)', border: '1px solid var(--border2)' }} />
+                  background: 'var(--bg3-surf)', color: 'var(--text)', border: '1px solid var(--border2)' }} />
               <button onClick={() => setTake('')} disabled={busy}
                 style={{ fontSize: 11.5, fontWeight: 700, padding: '5px 10px', borderRadius: 'var(--r-md)', cursor: 'pointer',
-                  background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)', fontFamily: 'var(--font-body)' }}>
+                  background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)', fontFamily: 'var(--font-body)' }}>
                 {tr('ทั้งหมด (')}{fmt(slips.length)})
               </button>
             </div>
@@ -263,7 +263,7 @@ export default function PurchaseBulkModal({ group, next, nextLabel, fullName, wo
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
             <button onClick={onClose} disabled={busy}
               style={{ fontSize: 12.5, fontWeight: 700, padding: '8px 14px', borderRadius: 'var(--r-md)', cursor: busy ? 'not-allowed' : 'pointer',
-                background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)', fontFamily: 'var(--font-body)' }}>{tr('ยกเลิก')}</button>
+                background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)', fontFamily: 'var(--font-body)' }}>{tr('ยกเลิก')}</button>
             <button onClick={run} disabled={busy || !n}
               style={{ fontSize: 12.5, fontWeight: 800, padding: '8px 16px', borderRadius: 'var(--r-md)',
                 cursor: busy || !n ? 'not-allowed' : 'pointer', opacity: busy || !n ? 0.6 : 1,

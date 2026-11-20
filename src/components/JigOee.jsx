@@ -364,7 +364,7 @@ export function DailyCapacityChart({ rows = [], onPick }) {
       </div>
     );
     return (
-      <div style={{ background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 6, padding: '8px 10px', fontSize: 12, color: 'var(--text)', boxShadow: 'var(--shadow-float)', display: 'grid', gap: 2 }}>
+      <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 6, padding: '8px 10px', fontSize: 12, color: 'var(--text)', boxShadow: 'var(--shadow-float)', display: 'grid', gap: 2 }}>
         <div style={{ fontWeight: 700, marginBottom: 2 }}>{d.d}{onPick ? ' · คลิกเพื่อดูทั้งวัน' : ''}</div>
         {line('var(--green)', d.good.toLocaleString(), `ชิ้นดี${d.cap != null ? ` · ควรได้ ${d.cap.toLocaleString()}${d.achieve != null ? ` (${Math.round(d.achieve * 100)}%)` : ''}` : ' · ไม่รู้ CT บางกะ'}`)}
         {d.ng > 0 && line('var(--red)', d.ng.toLocaleString(), 'NG หน้าเครื่อง')}

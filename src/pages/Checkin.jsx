@@ -1854,7 +1854,7 @@ export default function Checkin() {
           🔴 ช่วงเวลาเขียนบนจอเสมอ · "ไม่รู้/ไม่ครบ" ต้องเห็น ห้ามกลายเป็น 0 เงียบ ๆ */}
       {showBorrowSum && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '20px 24px', maxWidth: 680, width: '100%', maxHeight: '86vh', display: 'flex', flexDirection: 'column', boxShadow: 'var(--shadow-lg)' }}>
+          <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '20px 24px', maxWidth: 680, width: '100%', maxHeight: '86vh', display: 'flex', flexDirection: 'column', boxShadow: 'var(--shadow-lg)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
               <div style={{ fontSize: 18, fontWeight: 900, color: 'var(--text)' }}>{tr('คนของเราที่ถูกยืมออกไปช่วยไลน์อื่น')}</div>
               <button onClick={() => setShowBorrowSum(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 18, cursor: 'pointer', padding: 4 }}>✕</button>
@@ -1877,7 +1877,7 @@ export default function Checkin() {
                   </div>
                 ) : (
                   /* 📱 ปัดได้ทั้ง 2 แกน — 4 คอลัมน์บนจอ 390px ต้องไม่ "ล้นแล้วปัดไม่ได้" */
-                  <div style={{ flex: 1, overflow: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--bg2)' }}>
+                  <div style={{ flex: 1, overflow: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 420 }}>
                       <thead>
                         <tr style={{ background: 'var(--bg3)', color: 'var(--text2)' }}>
@@ -1932,7 +1932,7 @@ export default function Checkin() {
       {/* 🤝 Modal ยืมพนักงานข้ามไลน์ */}
       {showBorrowModal && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '20px 24px', maxWidth: 520, width: '100%', maxHeight: '86vh', display: 'flex', flexDirection: 'column', boxShadow: 'var(--shadow-lg)' }}>
+          <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '20px 24px', maxWidth: 520, width: '100%', maxHeight: '86vh', display: 'flex', flexDirection: 'column', boxShadow: 'var(--shadow-lg)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
               <div style={{ fontSize: 18, fontWeight: 900, color: 'var(--text)' }}>{tr('ยืมพนักงานมาช่วยกะนี้')}</div>
               <button onClick={() => setShowBorrowModal(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 18, cursor: 'pointer', padding: 4 }}>✕</button>
@@ -1953,7 +1953,7 @@ export default function Checkin() {
             </div>
             <SearchInput value={borrowSearch} onChange={setBorrowSearch} autoFocus grow={false}
               fields="ชื่อ / รหัสพนักงาน (อย่างน้อย 2 ตัวอักษร)" style={{ marginBottom: 10 }} />
-            <div style={{ flex: 1, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--bg2)', minHeight: 120 }}>
+            <div style={{ flex: 1, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)', minHeight: 120 }}>
               {borrowLoading && <div style={{ padding: 14, fontSize: 13, color: 'var(--muted)' }}>{tr('⏳ กำลังค้นหา...')}</div>}
               {!borrowLoading && borrowSearch.trim().length >= 2 && borrowResults.length === 0 && (
                 <div style={{ padding: 14, fontSize: 13, color: 'var(--muted)' }}>ไม่พบพนักงานที่ตรงกับ "{borrowSearch.trim()}"</div>
@@ -2180,7 +2180,7 @@ export default function Checkin() {
             {noShiftRows.map(([nm, n]) => (
               <span key={nm} style={{
                 padding: '2px 8px', borderRadius: 'var(--r-pill)', fontSize: 11.5, fontWeight: 700,
-                background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--red)',
+                background: 'var(--bg3-surf)', border: '1px solid var(--border)', color: 'var(--red)',
               }}>{nm} · {n} {tr('คน')}</span>
             ))}
           </div>
@@ -2201,7 +2201,7 @@ export default function Checkin() {
           (ถามครั้งเดียวตอนเปิด ไม่ถามรายใบ — ยิงบัตรหน้าประตูต้องไหลต่อเนื่อง) */}
       {confirmScan && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: 16 }}>
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '22px 24px', width: '100%', maxWidth: 380, textAlign: 'center' }}>
+          <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '22px 24px', width: '100%', maxWidth: 380, textAlign: 'center' }}>
             <div style={{ fontSize: 32, marginBottom: 6 }}>🪪</div>
             <div style={{ fontSize: 14, color: 'var(--text2)', marginBottom: 4 }}>{tr('สแกนบัตรเช็คชื่อในนาม')}</div>
             <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--accent)', fontFamily: 'var(--font-display)' }}>{fullName || tr('ไม่ทราบชื่อ')}</div>
@@ -2211,7 +2211,7 @@ export default function Checkin() {
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <button type="button" onClick={() => setConfirmScan(false)}
-                style={{ flex: 1, minHeight: 46, borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text2)', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>{tr('ยกเลิก')}</button>
+                style={{ flex: 1, minHeight: 46, borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg3-surf)', color: 'var(--text2)', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>{tr('ยกเลิก')}</button>
               <button type="button" onClick={() => { setScanSaved([]); setConfirmScan(false); setBadgeScanOpen(true); }}
                 style={{ flex: 1, minHeight: 46, borderRadius: 'var(--r-md)', border: 'none', background: 'var(--accent)', color: 'var(--accent-ink)', fontSize: 15, fontWeight: 800, cursor: 'pointer' }}>{tr('เริ่มสแกน')}</button>
             </div>
@@ -2293,7 +2293,7 @@ export default function Checkin() {
           (ไม่ปิดจากคลิกฉากหลัง ตามกฎ modal ฟอร์ม — ต้องเลือกยืนยัน/สลับผู้ใช้) */}
       {confirmSave && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: 16 }}>
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '22px 24px', width: '100%', maxWidth: 380, textAlign: 'center' }}>
+          <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '22px 24px', width: '100%', maxWidth: 380, textAlign: 'center' }}>
             <div style={{ fontSize: 32, marginBottom: 6 }}>👤</div>
             <div style={{ fontSize: 14, color: 'var(--text2)', marginBottom: 4 }}>{tr('บันทึกเช็คชื่อในนาม')}</div>
             <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--accent)', fontFamily: 'var(--font-display)' }}>{fullName || tr('ไม่ทราบชื่อ')}</div>
@@ -2307,7 +2307,7 @@ export default function Checkin() {
                 ⇒ ไม่เอาออโต้กลับมา แต่ต้องบอกให้ชัดว่าต้องไปกดเองที่ไหน และกดเพื่ออะไร */}
             <div style={{
               textAlign: 'left', fontSize: 11.5, lineHeight: 1.55, color: 'var(--text2)',
-              background: 'var(--bg2)', border: '1px solid var(--border)',
+              background: 'var(--bg2-surf)', border: '1px solid var(--border)',
               borderRadius: 'var(--r-md)', padding: '9px 11px', marginBottom: 14,
             }}>
               <b style={{ color: 'var(--accent2)' }}>{tr('ℹ️ เช็คชื่อไม่ใช่การเปิดกะ')}</b><br />
@@ -2320,7 +2320,7 @@ export default function Checkin() {
               <button
                 onClick={handleSwitchUser}
                 style={{ flex: 1, padding: '11px 0', borderRadius: 'var(--r-md)', fontSize: 13, fontWeight: 700, cursor: 'pointer',
-                  background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)' }}>
+                  background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)' }}>
                 {tr('ไม่ใช่ฉัน')}
               </button>
               <button
@@ -2336,7 +2336,7 @@ export default function Checkin() {
 
       {showOtBookModal && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: 16 }}>
-          <div style={{ background: 'var(--card)', borderRadius: 'var(--r-lg)', padding: 22, width: '100%', maxWidth: 640, maxHeight: '86vh', display: 'flex', flexDirection: 'column', border: '1px solid var(--border)' }}>
+          <div style={{ background: 'var(--card-surf)', borderRadius: 'var(--r-lg)', padding: 22, width: '100%', maxWidth: 640, maxHeight: '86vh', display: 'flex', flexDirection: 'column', border: '1px solid var(--border)' }}>
             <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 6, color: 'var(--text)' }}>{tr('จองรถ OT')}</div>
             <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 14, lineHeight: 1.5 }}>
               เลือกวันที่/กะ/ไลน์/ทีมได้อิสระ ไม่ต้องรอเช็คชื่อกะนั้น — เหมาะกับกรณีทีมที่ต้องจอง OT ไม่ใช่ทีมที่กำลังเช็คชื่ออยู่ (เช่น จันทร์แรกหลังสลับกะ)
@@ -2428,7 +2428,7 @@ export default function Checkin() {
             </div>
 
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowOtBookModal(false)} style={{ padding: '8px 16px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)', cursor: 'pointer' }}>{tr('ยกเลิก')}</button>
+              <button onClick={() => setShowOtBookModal(false)} style={{ padding: '8px 16px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)', cursor: 'pointer' }}>{tr('ยกเลิก')}</button>
               <button onClick={handleSaveOtBookModal} disabled={otBookSaving || !otBookLineId || !canRecord}
                 style={{ padding: '8px 16px', borderRadius: 'var(--r-md)', border: 'none', background: 'var(--accent)', color: 'var(--accent-ink)', fontWeight: 700, cursor: otBookSaving || !otBookLineId ? 'not-allowed' : 'pointer', opacity: otBookSaving || !otBookLineId ? 0.6 : 1 }}>
                 {otBookSaving ? tr('กำลังบันทึก...') : tr('บันทึกการจอง')}
@@ -2441,7 +2441,7 @@ export default function Checkin() {
       {/* Export forms modal */}
       {showExport && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
-          <div style={{ background: 'var(--card)', borderRadius: 'var(--r-lg)', padding: 22, width: 'min(380px, 94vw)', border: '1px solid var(--border)' }}>
+          <div style={{ background: 'var(--card-surf)', borderRadius: 'var(--r-lg)', padding: 22, width: 'min(380px, 94vw)', border: '1px solid var(--border)' }}>
             <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 14, color: 'var(--text)' }}>{tr('ส่งออกฟอร์มกระดาษ (PDF)')}</div>
             <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 14, lineHeight: 1.5 }}>
               สร้างฟอร์ม 2 หน้า ตามฟอร์มกระดาษจริงที่ใช้หน้างาน:<br />
@@ -2464,7 +2464,7 @@ export default function Checkin() {
               width="100%" style={{ marginBottom: 18 }} />
 
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowExport(false)} style={{ padding: '8px 16px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)', cursor: 'pointer' }}>{tr('ยกเลิก')}</button>
+              <button onClick={() => setShowExport(false)} style={{ padding: '8px 16px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)', cursor: 'pointer' }}>{tr('ยกเลิก')}</button>
               <button onClick={handleExportForms} disabled={exporting}
                 style={{ padding: '8px 16px', borderRadius: 'var(--r-md)', border: 'none', background: 'var(--accent)', color: 'var(--accent-ink)', fontWeight: 700, cursor: 'pointer' }}>
                 {exporting ? tr('กำลังสร้าง...') : tr('สร้าง PDF')}

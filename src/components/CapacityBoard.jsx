@@ -314,7 +314,7 @@ export default function CapacityBoard({ role, scope, lines, months, calMap, dema
               <XAxis dataKey="name" tick={{ fontSize:11, fill:'var(--muted)' }} />
               <YAxis tickFormatter={fmtAxis} width="auto" tick={{ fontSize:11, fill:'var(--muted)' }} label={{ value:'ชม.', angle:-90, position:'insideLeft', fontSize:11, fill:'var(--muted)' }} />
               <Tooltip formatter={(v) => `${Number(v).toLocaleString()} ชม.`}
-                contentStyle={{ background:'var(--card)', border:'1px solid var(--border)', borderRadius:8, fontSize:12 }} />
+                contentStyle={{ background: 'var(--card-surf)', border:'1px solid var(--border)', borderRadius:8, fontSize:12 }} />
               <Legend wrapperStyle={{ fontSize:11 }} />
               {refLines.map(p => (
                 <ReferenceLine key={p.key} y={p.hours} stroke={p.color || 'var(--muted)'} strokeDasharray="4 4"

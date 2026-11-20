@@ -1060,7 +1060,7 @@ function UploadTab({ canUpload, fullName, onImported, custLabel }) {
         {batches.length === 0 ? <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('ยังไม่มีการอัพโหลด')}</div> : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {batches.map(b => (
-              <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'var(--bg2)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)' }}>
+              <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'var(--bg2-surf)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)' }}>
                 <div style={{ fontSize: 12, color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {b.kind === 'forecast' ? '📈' : '🚚'} <strong>{b.file_name || tr('(ไม่มีชื่อไฟล์)')}</strong>
                   <span style={{ color: 'var(--muted)' }}> · {b.row_count} {tr('แถว ·')} {b.uploaded_by} · {new Date(b.uploaded_at).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}</span>
@@ -1166,7 +1166,7 @@ function PlannerTab({ refreshKey, custLabel }) {
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'var(--muted)' }} />
                 <YAxis tickFormatter={fmtAxis} width="auto" tick={{ fontSize: 11, fill: 'var(--muted)' }} />
-                <Tooltip contentStyle={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 8, fontSize: 12 }} />
+                <Tooltip contentStyle={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 8, fontSize: 12 }} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 <Bar dataKey="Forecast" fill="var(--blue)" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="Orders" fill="var(--green)" radius={[4, 4, 0, 0]} />
@@ -1193,7 +1193,7 @@ function PlannerTab({ refreshKey, custLabel }) {
             { label: `≈ วันผลิต (${HOURS_PER_DAY} ชม./วัน/ไลน์)`, value: fmt(totalLoadHours / HOURS_PER_DAY), icon: '📅' },
             ...(noCtCount ? [{ label: 'พาร์ทไม่มี cycle time', value: noCtCount, icon: '⚠️', warn: true }] : []),
           ].map(c => (
-            <div key={c.label} style={{ flex: '1 1 150px', background: 'var(--bg2)', border: `1px solid ${c.warn ? 'var(--amber-line)' : 'var(--border)'}`, borderRadius: 'var(--r-md)', padding: '8px 12px' }}>
+            <div key={c.label} style={{ flex: '1 1 150px', background: 'var(--bg2-surf)', border: `1px solid ${c.warn ? 'var(--amber-line)' : 'var(--border)'}`, borderRadius: 'var(--r-md)', padding: '8px 12px' }}>
               <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700 }}>{c.icon} {tr(c.label)}</div>
               <div style={{ fontSize: 20, fontWeight: 900, color: c.warn ? 'var(--amber)' : 'var(--text)', fontFamily: 'var(--font-display)' }}>{c.value}</div>
             </div>
@@ -1643,7 +1643,7 @@ function KanbanCalcTab({ canApply, fullName, custLabel }) {
 
       {/* แยกพาร์ทตามกระบวนการผลิต — โปร่งใส ไม่ปล่อยพาร์ทหายเงียบ
           (คำอธิบายของมุมมองนี้ ไม่ขึ้นกับตัวกรอง ⇒ อยู่เหนือแถบกรองได้) */}
-      <div data-page-note="1" style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 10, padding: '6px 10px', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
+      <div data-page-note="1" style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 10, padding: '6px 10px', background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
         แยกพาร์ทตาม <b style={{ color: 'var(--text2)' }}>{tr('กระบวนการผลิต (process_type)')}</b> — {calcType === 'production'
           ? <>{tr('แท็บนี้แสดงเฉพาะงาน')} <b style={{ color: 'var(--text2)' }}>{tr('ปั๊ม/ผลิตเป็น lot (metal_forming)')}</b> {tr('· งานปั๊มที่ขายตรงเป็น FG ก็อยู่ที่นี่ (ดูกระบวนการ ไม่ดูเลข MAT)')}</>
           : <>{tr('แท็บนี้แสดงงาน')} <b style={{ color: 'var(--text2)' }}>{tr('เบิกถอน/ประกอบ')}</b> {tr('(ไม่ใช่ปั๊ม)')}</>}
@@ -1808,7 +1808,7 @@ function KanbanCalcTab({ canApply, fullName, custLabel }) {
               return (
                 <div key={l.line} style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                   <div style={{ width: 150, fontSize: 12.5, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.line}</div>
-                  <div style={{ flex: 1, height: 22, background: 'var(--bg2)', borderRadius: 'var(--r-md)', overflow: 'hidden', position: 'relative', border: '1px solid var(--border)' }}>
+                  <div style={{ flex: 1, height: 22, background: 'var(--bg2-surf)', borderRadius: 'var(--r-md)', overflow: 'hidden', position: 'relative', border: '1px solid var(--border)' }}>
                     <div style={{ width: `${Math.min(100, l.loadPct)}%`, height: '100%', background: col, transition: 'width .25s' }} />
                     <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', paddingLeft: 8, fontSize: 11.5, fontWeight: 800, color: 'var(--text)' }}>
                       {l.parts} {tr('พาร์ท ·')} {fmt(l.workSec / 3600)} ชม.
@@ -1825,7 +1825,7 @@ function KanbanCalcTab({ canApply, fullName, custLabel }) {
       {/* (#1) Modal จับคู่เลขพาร์ทลูกค้า → เลข SAP ภายใน — ฟอร์มกรอกหลายสิบแถว ไม่ปิดจาก backdrop (UI-CONVENTIONS §5) */}
       {mapModal && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 22, width: 'min(760px,100%)', maxHeight: '88vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 22, width: 'min(760px,100%)', maxHeight: '88vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: 16, fontWeight: 800, fontFamily: 'var(--font-display)', marginBottom: 4 }}>{tr('จับคู่เลขพาร์ทลูกค้า → เลข SAP ภายใน')}</div>
             <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>
               เลือกเลข SAP ภายในให้แต่ละพาร์ท → ระบบเขียน <b>p_no</b> {tr('ให้ Product Master (ใช้ auto-map รอบอัพโหลดถัดไป) และแก้ forecast เดิมให้ชี้เลข SAP ทันที ·')} <b>{Object.values(mapSel).filter(Boolean).length}</b> เลือกแล้ว · 💡 = ระบบแนะนำจาก base part (กดชิปเขียวเพื่อเติม)
@@ -1882,7 +1882,7 @@ function KanbanCalcTab({ canApply, fullName, custLabel }) {
       {/* Preview & Apply (แสดงอย่างเดียว ปิดจากปุ่ม/นอกกรอบได้) */}
       {preview && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={() => setPreview(null)}>
-          <div style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 22, width: 'min(680px,100%)', maxHeight: '88vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 22, width: 'min(680px,100%)', maxHeight: '88vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: 16, fontWeight: 800, fontFamily: 'var(--font-display)', marginBottom: 4 }}>{tr('ยืนยันอัปเดต Kanban —')} {changedRows.length} {tr('รายการ')}</div>
             <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>
               เขียนค่า Min/Max/Total + <b>{tr('ขนาดล็อต')}</b> ใหม่เข้า kanban_standards (ระบบดึงทั้งองค์กรใช้ต่อทันที)

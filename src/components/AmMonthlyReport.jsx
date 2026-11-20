@@ -245,7 +245,7 @@ export default function AmMonthlyReport({ lines = [], scopedLines = [] }) {
         <span className="spacer" />
         {rep && <span className="filter-count">{shown.length} {tr('ไลน์ ·')} {shown.reduce((a, r) => a + r.machines.length, 0)} {tr('เครื่อง')}</span>}
         <button type="button" onClick={exportXlsx} disabled={!rep || exporting || !shown.length}
-          style={{ background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text2)', borderRadius: 'var(--r-md)', padding: '5px 12px', fontSize: 12, fontWeight: 700 }}>
+          style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', color: 'var(--text2)', borderRadius: 'var(--r-md)', padding: '5px 12px', fontSize: 12, fontWeight: 700 }}>
           {exporting ? tr('⏳ กำลังส่งออก…') : '📥 Excel'}
         </button>
       </FilterBar>
@@ -429,7 +429,7 @@ export default function AmMonthlyReport({ lines = [], scopedLines = [] }) {
                         <span style={{ flex: 1 }} />
                         {rv.ok && (
                           <button type="button" onClick={() => { setRevoking(a); setReason('') }}
-                            style={{ background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text2)', borderRadius: 'var(--r-md)', padding: '4px 10px', fontSize: 12 }}>
+                            style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', color: 'var(--text2)', borderRadius: 'var(--r-md)', padding: '4px 10px', fontSize: 12 }}>
                             {tr('↩ เพิกถอน')}
                           </button>
                         )}
@@ -478,7 +478,7 @@ export default function AmMonthlyReport({ lines = [], scopedLines = [] }) {
         return (
           <div className="modal-scroll" onClick={() => { if (!busy && !note.trim()) setSigning(null) }}
             style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14 }}>
-            <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', width: 'min(520px, 100%)', maxHeight: '90vh', overflowY: 'auto', boxShadow: 'var(--shadow-lg)', padding: 16 }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', width: 'min(520px, 100%)', maxHeight: '90vh', overflowY: 'auto', boxShadow: 'var(--shadow-lg)', padding: 16 }}>
               <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{tr('✍️ ลงนามทบทวน AM รายเดือน')}</div>
               <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 4 }}>
                 ไลน์ <b>{signing.line}</b> {tr('· เดือน')} {month} · {shift === 'day' ? 'กะเช้า' : 'กะดึก'}
@@ -500,7 +500,7 @@ export default function AmMonthlyReport({ lines = [], scopedLines = [] }) {
                 style={{ width: '100%', marginTop: 10, fontSize: 12, boxSizing: 'border-box' }} />
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 10 }}>
                 <button type="button" disabled={busy} onClick={() => setSigning(null)}
-                  style={{ background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text2)', borderRadius: 'var(--r-md)', padding: '6px 14px', fontSize: 12 }}>{tr('ยกเลิก')}</button>
+                  style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', color: 'var(--text2)', borderRadius: 'var(--r-md)', padding: '6px 14px', fontSize: 12 }}>{tr('ยกเลิก')}</button>
                 <button type="button" disabled={busy || !row} onClick={doSign}
                   style={{ background: 'var(--accent)', border: 'none', color: 'var(--accent-ink)', borderRadius: 'var(--r-md)', padding: '6px 14px', fontSize: 12, fontWeight: 700 }}>
                   {busy ? tr('⏳ กำลังบันทึก…') : tr('✍️ ยืนยันลงนาม')}
@@ -514,7 +514,7 @@ export default function AmMonthlyReport({ lines = [], scopedLines = [] }) {
       {revoking && (
         <div className="modal-scroll" onClick={() => { if (!busy && !reason.trim()) setRevoking(null) }}
           style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', width: 'min(480px, 100%)', maxHeight: '90vh', overflowY: 'auto', boxShadow: 'var(--shadow-lg)', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', width: 'min(480px, 100%)', maxHeight: '90vh', overflowY: 'auto', boxShadow: 'var(--shadow-lg)', padding: 16 }}>
             <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{tr('↩ เพิกถอนลายเซ็นทบทวนรายเดือน')}</div>
             <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 4 }}>
               ไลน์ <b>{revoking.line_name}</b> · {month} {tr('· ลงนามโดย')} {revoking.signed_by_name || '—'} {tr('เมื่อ')} {fmtWhen(revoking.signed_at)}
@@ -524,7 +524,7 @@ export default function AmMonthlyReport({ lines = [], scopedLines = [] }) {
               style={{ width: '100%', marginTop: 10, fontSize: 12, boxSizing: 'border-box' }} />
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 10 }}>
               <button type="button" disabled={busy} onClick={() => setRevoking(null)}
-                style={{ background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text2)', borderRadius: 'var(--r-md)', padding: '6px 14px', fontSize: 12 }}>{tr('ยกเลิก')}</button>
+                style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', color: 'var(--text2)', borderRadius: 'var(--r-md)', padding: '6px 14px', fontSize: 12 }}>{tr('ยกเลิก')}</button>
               <button type="button" disabled={busy || reason.trim().length < AM_REVOKE_REASON_MIN} onClick={doRevoke}
                 style={{ background: 'var(--red)', border: 'none', color: '#fff', borderRadius: 'var(--r-md)', padding: '6px 14px', fontSize: 12, fontWeight: 700 }}>
                 {busy ? tr('⏳ กำลังบันทึก…') : tr('ยืนยันเพิกถอน')}

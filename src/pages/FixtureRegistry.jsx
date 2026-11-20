@@ -688,7 +688,7 @@ export default function FixtureRegistry() {
       {tpl && (
         <div className="modal-scroll" /* modal-scroll = เลื่อนถึงปุ่มล่างได้เมื่อจอเตี้ย/คีย์บอร์ดเด้ง (UI-CONVENTIONS §4 · index.css) */ style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 3100,
                       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)',
+          <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)',
                         padding: 18, width: 'min(420px,100%)' }}>
             <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 12 }}>{tr('✨ สร้างจุดจากแม่แบบ ·')} {fx?.machine_no}</div>
             <div style={{ display: 'grid', gap: 10 }}>
@@ -717,7 +717,7 @@ export default function FixtureRegistry() {
       {editing && (
         <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 3000,
                       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)',
+          <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)',
                         padding: 18, width: 'min(620px,100%)', maxHeight: '90vh', overflow: 'auto' }}>
             <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 12 }}>
               {editing.id ? `แก้ไขจุด ${editing.point_no}` : 'เพิ่มจุดใหม่'} · {fx?.machine_no}

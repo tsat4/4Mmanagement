@@ -125,7 +125,7 @@ function LineBoardLink({ line }) {
     <button onClick={(e) => { e.stopPropagation(); navigate(`/management?line=${encodeURIComponent(line)}&view=heijunka`); }}
       title={tr('เปิดบอร์ด Heijunka ของไลน์นี้ (จอเดียวกับที่ไลน์ผลิตเห็น)')}
       style={{ padding: '2px 9px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontSize: 11, fontWeight: 700,
-        background: 'var(--bg2)', color: 'var(--text2)', border: '1px solid var(--border)', flexShrink: 0 }}>
+        background: 'var(--bg2-surf)', color: 'var(--text2)', border: '1px solid var(--border)', flexShrink: 0 }}>
       บอร์ดไลน์
     </button>
   );
@@ -145,7 +145,7 @@ function OnDemandStrip({ wipRequests = [], nowMs, onGo }) {
     .map(w => ({ w, min: Math.round((nowMs - new Date(w.requested_at).getTime()) / 60000) }))
     .sort((a, b) => b.min - a.min)[0];
   const tile = (icon, label, val, sub, color) => (
-    <div style={{ flex: '1 1 150px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 12px' }}>
+    <div style={{ flex: '1 1 150px', background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 12px' }}>
       <div style={{ fontSize: 11, color: 'var(--muted)' }}>{icon} {label}</div>
       <div style={{ fontSize: 20, fontWeight: 900, color: color || 'var(--text)', lineHeight: 1.1 }}>{val}</div>
       {sub && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{sub}</div>}
@@ -176,7 +176,7 @@ function OnDemandLineBlock({ lineName, lineMap, wipRequests = [], onGoChart, onG
     <button onClick={fn} style={{ background: 'none', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '4px 10px', cursor: 'pointer', fontSize: 11.5, fontWeight: 700, color: 'var(--accent)', fontFamily: 'var(--font-body)' }}>{label}</button>
   );
   return (
-    <div style={{ padding: '10px 14px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+    <div style={{ padding: '10px 14px', background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
       <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text)' }}>{tr('ส่งตามคำขอ')}</span>
       <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{tr('เบิกตอนไหนส่งตอนนั้น — ไลน์นี้ไม่ใช้รอบ')}</span>
       {tickets.length
@@ -507,7 +507,7 @@ function DeliveryTimelineBoard({ rounds, deliveries, view, kanbanStd, fmt, lineM
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 16 }}>
-      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', padding: '6px 10px', background: 'var(--bg2)', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)' }}>
+      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', padding: '6px 10px', background: 'var(--bg2-surf)', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)' }}>
         {[
           { c: 'var(--border2)', icon: '⬜', label: 'รอ' },
           { c: 'var(--blue)', icon: '⏳', label: 'กำลังเตรียม / ส่งแล้วรอรับ' },
@@ -621,7 +621,7 @@ function DeliveryRoundsPanel({ rounds, deliveries, onConfirm, confirming, onRece
       {!collapsed && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))', gap: 12 }}>
           {Object.keys(byLine).sort(lineNameCompare).map(lineName => (
-            <div key={lineName} style={{ background: 'var(--bg2)', borderRadius: 'var(--r-md)', padding: 12, border: '1px solid var(--border2)' }}>
+            <div key={lineName} style={{ background: 'var(--bg2-surf)', borderRadius: 'var(--r-md)', padding: 12, border: '1px solid var(--border2)' }}>
               <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text)', marginBottom: 8, borderBottom: '1px solid var(--border)', paddingBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
                 {lineName} <LineBoardLink line={lineName} />
               </div>
@@ -635,7 +635,7 @@ function DeliveryRoundsPanel({ rounds, deliveries, onConfirm, confirming, onRece
                   const alloc = roundAlloc?.[r.id] || { parts: [], totalKanban: 0 };
                   const parts = alloc.parts;
                   return (
-                    <div key={r.id} style={{ background: 'var(--card)', borderRadius: 'var(--r-md)', padding: '8px 10px', border: `1px solid ${status.border}`, opacity: isConf ? 0.8 : 1 }}>
+                    <div key={r.id} style={{ background: 'var(--card-surf)', borderRadius: 'var(--r-md)', padding: '8px 10px', border: `1px solid ${status.border}`, opacity: isConf ? 0.8 : 1 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                         <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text)' }}>{r.shift === 'night' ? '🌙' : '☀️'} {tr('รอบ')} {r.round_no}</div>
                         <span style={chip(status.bg, status.color)}>{tr(status.label)}</span>
@@ -772,7 +772,7 @@ function PlannerStrip({ rounds, deliveries, roundAlloc, workDate, breakPolicies,
   });
 
   const tile = (icon, label, value, sub, color) => (
-    <div key={label} style={{ flex: '1 1 150px', minWidth: 150, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '10px 14px' }}>
+    <div key={label} style={{ flex: '1 1 150px', minWidth: 150, background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '10px 14px' }}>
       <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700 }}>{icon} {label}</div>
       <div style={{ fontSize: 20, fontWeight: 900, fontFamily: 'var(--font-display)', color: color || 'var(--text)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</div>
       {sub && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</div>}
@@ -847,7 +847,7 @@ function AccCard({ a, fmt }) {
   const pct = a.pct == null ? null : Math.min(100, a.pct);
   const done = a.pct != null && a.pct >= 100;
   return (
-    <div style={{ background: 'var(--bg2)', border: `1px solid ${done ? 'var(--green-line)' : 'var(--border)'}`, borderRadius: 'var(--r-md)', padding: 12 }}>
+    <div style={{ background: 'var(--bg2-surf)', border: `1px solid ${done ? 'var(--green-line)' : 'var(--border)'}`, borderRadius: 'var(--r-md)', padding: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         <span style={{ fontFamily: 'monospace', fontWeight: 800, color: matColor(a.child_mat_no), fontSize: 13 }}>{a.child_mat_no}</span>
         {/* ค้างนาน = สัญญาณว่าของไม่ไหลแล้ว ห้ามปล่อยให้ดูเหมือนแถวปกติ */}
@@ -900,7 +900,7 @@ function AccGroup({ title, hint, color, rows, fmt, defaultOpen, cap = 0 }) {
       )}
       {open && hidden > 0 && (
         <button className="tbtn" onClick={() => setAll(true)}
-          style={{ marginTop: 8, padding: '5px 12px', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 800, cursor: 'pointer', background: 'var(--bg2)', color: 'var(--text2)', border: '1px solid var(--border)', fontFamily: 'var(--font-body)' }}>
+          style={{ marginTop: 8, padding: '5px 12px', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 800, cursor: 'pointer', background: 'var(--bg2-surf)', color: 'var(--text2)', border: '1px solid var(--border)', fontFamily: 'var(--font-body)' }}>
           {tr('ดูอีก')} {hidden} {tr('รายการที่เหลือ')}
         </button>
       )}
@@ -1079,9 +1079,9 @@ function PullBoard({ lotRequests, rawRequests, accumulator, lotSizeMap, releaseD
                           {canReorder && (
                             <div style={{ display: 'flex', gap: 4 }}>
                               <button className="tbtn" onClick={() => onReorder(queue, lot, 'up')} disabled={busy === lot.id || qIdx === 0}
-                                style={{ minWidth: 36, minHeight: 36, padding: '4px 8px', borderRadius: 'var(--radius)', cursor: qIdx === 0 ? 'default' : 'pointer', fontSize: 13, fontWeight: 800, background: 'var(--bg2)', color: qIdx === 0 ? 'var(--border2)' : 'var(--text)', border: '1px solid var(--border2)' }}>▲</button>
+                                style={{ minWidth: 36, minHeight: 36, padding: '4px 8px', borderRadius: 'var(--radius)', cursor: qIdx === 0 ? 'default' : 'pointer', fontSize: 13, fontWeight: 800, background: 'var(--bg2-surf)', color: qIdx === 0 ? 'var(--border2)' : 'var(--text)', border: '1px solid var(--border2)' }}>▲</button>
                               <button className="tbtn" onClick={() => onReorder(queue, lot, 'down')} disabled={busy === lot.id || qIdx === queue.length - 1}
-                                style={{ minWidth: 36, minHeight: 36, padding: '4px 8px', borderRadius: 'var(--radius)', cursor: qIdx === queue.length - 1 ? 'default' : 'pointer', fontSize: 13, fontWeight: 800, background: 'var(--bg2)', color: qIdx === queue.length - 1 ? 'var(--border2)' : 'var(--text)', border: '1px solid var(--border2)' }}>▼</button>
+                                style={{ minWidth: 36, minHeight: 36, padding: '4px 8px', borderRadius: 'var(--radius)', cursor: qIdx === queue.length - 1 ? 'default' : 'pointer', fontSize: 13, fontWeight: 800, background: 'var(--bg2-surf)', color: qIdx === queue.length - 1 ? 'var(--border2)' : 'var(--text)', border: '1px solid var(--border2)' }}>▼</button>
                             </div>
                           )}
                         </div>
@@ -3188,7 +3188,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
               กำลังดูวันที่ {workDate} (ไม่ใช่วันงานปัจจุบัน)
               <button onClick={() => setWorkDate(liveWorkDate)} style={{
                 padding: '2px 8px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontSize: 11, fontWeight: 700,
-                fontFamily: 'var(--font-body)', background: 'var(--bg2)', border: '1px solid var(--border)', color: 'var(--text2)',
+                fontFamily: 'var(--font-body)', background: 'var(--bg2-surf)', border: '1px solid var(--border)', color: 'var(--text2)',
               }}>{tr('⟳ กลับวันนี้')}</button>
             </div>
           )}
@@ -3234,7 +3234,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
         <span className="spacer" />
         <button onClick={exportCSV} style={{
           padding: '8px 14px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontSize: 12, fontWeight: 700,
-          background: 'var(--bg2)', border: '1px solid var(--border)', color: 'var(--text)', fontFamily: 'var(--font-body)',
+          background: 'var(--bg2-surf)', border: '1px solid var(--border)', color: 'var(--text)', fontFamily: 'var(--font-body)',
         }}>CSV</button>
       </FilterBar>
 
@@ -3289,7 +3289,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
           เหลือไว้ที่นี่แค่บรรทัดบอกว่า "แท็บที่เปิดอยู่ตอบคำถามอะไร" — ป้ายแท็บสั้นเกินกว่าจะอธิบายตัวเอง */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 10,
-        padding: '7px 12px', borderRadius: 'var(--r-md)', background: 'var(--bg2)', border: '1px solid var(--border)',
+        padding: '7px 12px', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)', border: '1px solid var(--border)',
       }}>
         <span style={{
           fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 'var(--r-pill)', whiteSpace: 'nowrap',
@@ -3507,7 +3507,7 @@ function ReceiveModal({ round, parts, mode, fmt, saving, onCancel, onSubmit }) {
 
   return (
     <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 24, width: 'min(440px,100%)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+      <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 24, width: 'min(440px,100%)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
         <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginBottom: 4, fontFamily: 'var(--font-display)' }}>
           {mode === 'full' ? '✔️ ยืนยันรับของครบ' : '⚠️ บันทึกรับของไม่ครบ'}
         </div>
@@ -3529,7 +3529,7 @@ function ReceiveModal({ round, parts, mode, fmt, saving, onCancel, onSubmit }) {
                 <input type="number" min="0" step="any"
                   value={actual[p.mat_no]}
                   onChange={e => setActual(a => ({ ...a, [p.mat_no]: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
-                  style={{ width: 90, padding: '6px 8px', borderRadius: 'var(--ctl-r)', border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', fontSize: 13, fontWeight: 700, textAlign: 'center' }}
+                  style={{ width: 90, padding: '6px 8px', borderRadius: 'var(--ctl-r)', border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)', fontSize: 13, fontWeight: 700, textAlign: 'center' }}
                 />
               </div>
             ))}
@@ -3537,7 +3537,7 @@ function ReceiveModal({ round, parts, mode, fmt, saving, onCancel, onSubmit }) {
         )}
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
-          <button onClick={onCancel} style={{ padding: '8px 16px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', cursor: 'pointer', fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-body)' }}>{tr('ยกเลิก')}</button>
+          <button onClick={onCancel} style={{ padding: '8px 16px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)', cursor: 'pointer', fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-body)' }}>{tr('ยกเลิก')}</button>
           <button onClick={() => onSubmit(actual)} disabled={saving}
             style={{ padding: '8px 16px', borderRadius: 'var(--r-md)', border: 'none', background: mode === 'full' ? '#22c55e' : '#f59e0b', color: '#08130a', cursor: 'pointer', fontSize: 13, fontWeight: 800, fontFamily: 'var(--font-body)', opacity: saving ? 0.6 : 1 }}>
             {saving ? '...' : mode === 'full' ? tr('ยืนยันรับครบ') : tr('บันทึกรับไม่ครบ')}

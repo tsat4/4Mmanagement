@@ -1080,7 +1080,7 @@ export default function LineSetup({ embedded = false } = {}) {
     }}>
       <div style={{
         flex: 1,
-        background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)',
+        background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)',
         position: 'relative', overflow: 'auto',
         display: layoutImage ? 'block' : 'flex',
         alignItems: layoutImage ? undefined : 'center',
@@ -1272,7 +1272,7 @@ export default function LineSetup({ embedded = false } = {}) {
 
       <div style={{
         width: isMobile ? '100%' : 400,
-        background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)',
+        background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)',
         padding: 18, overflowY: 'auto', display: 'flex', flexDirection: 'column', flexShrink: 0
       }}>
         {/* 🏭 แถบ "ไลน์ที่กำลังตั้งค่า" — ตรึงหัวแผงไว้ (05/10)
@@ -1292,7 +1292,7 @@ export default function LineSetup({ embedded = false } = {}) {
                 แต่ "แยกกลุ่มให้เห็น" — ไลน์ผลิตเป็นลิสต์หลัก · หน่วยสนับสนุนเป็นกลุ่ม 🗂️ แยกท้าย ไม่ปนกัน */}
             <LineSelect lines={lines} value={selectedLine} onChange={selectLine} placeholder={tr('เลือกไลน์…')}
               extraGroups={supportGroup} extraAt="end"
-              style={{ width: '100%', fontSize: 13, fontWeight: 700, padding: '7px 10px', borderRadius: 8, border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--accent)' }} />
+              style={{ width: '100%', fontSize: 13, fontWeight: 700, padding: '7px 10px', borderRadius: 8, border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--accent)' }} />
           </div>
         )}
 
@@ -1380,7 +1380,7 @@ export default function LineSetup({ embedded = false } = {}) {
                       <button onClick={e => { e.stopPropagation(); handleRenameLine(l, editingLineName); }}
                         style={{ background: 'var(--accent)', border: 'none', color: 'var(--accent-ink)', fontSize: 11, padding: '2px 7px', borderRadius: 'var(--r-md)', cursor: 'pointer', flexShrink: 0, fontWeight: 700 }}>✓</button>
                       <button onClick={e => { e.stopPropagation(); setEditingLineId(null); }}
-                        style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', color: 'var(--text2)', fontSize: 11, padding: '2px 7px', borderRadius: 'var(--r-md)', cursor: 'pointer', flexShrink: 0 }}>✕</button>
+                        style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', color: 'var(--text2)', fontSize: 11, padding: '2px 7px', borderRadius: 'var(--r-md)', cursor: 'pointer', flexShrink: 0 }}>✕</button>
                     </>
                   ) : canEdit && (
                     <>
@@ -1391,7 +1391,7 @@ export default function LineSetup({ embedded = false } = {}) {
                         value={l.section || ''}
                         onClick={e => e.stopPropagation()}
                         onChange={e => { e.stopPropagation(); handleUpdateSection(l, e.target.value); }}
-                        style={{ fontSize: 11, padding: '1px 3px', borderRadius: 'var(--ctl-r)', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)', cursor: 'pointer', flexShrink: 0, maxWidth: 68 }}
+                        style={{ fontSize: 11, padding: '1px 3px', borderRadius: 'var(--ctl-r)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)', cursor: 'pointer', flexShrink: 0, maxWidth: 68 }}
                       >
                         <option value="">Section</option>
                         {sectionOptsInScope.map(s => <option key={s} value={s}>{tr(s)}</option>)}
@@ -1402,7 +1402,7 @@ export default function LineSetup({ embedded = false } = {}) {
                         <span onClick={e => e.stopPropagation()} title={tr('ไลน์หลัก (parent)')} style={{ display: 'inline-flex', flexShrink: 0 }}>
                           <LineSelect lines={lines.filter(p => p.name !== l.name && !p.parent_line_name)} value={l.parent_line_name || ''} includeSupport
                             onChange={v => handleUpdateParent(l, v)} placeholder={tr('ไม่มีหลัก')}
-                            style={{ fontSize: 11, padding: '1px 3px', borderRadius: 4, border: '1px solid var(--border2)', background: 'var(--bg3)', color: l.parent_line_name ? 'var(--accent)' : 'var(--muted)', cursor: 'pointer', flexShrink: 0, maxWidth: 76 }} />
+                            style={{ fontSize: 11, padding: '1px 3px', borderRadius: 4, border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: l.parent_line_name ? 'var(--accent)' : 'var(--muted)', cursor: 'pointer', flexShrink: 0, maxWidth: 76 }} />
                         </span>
                       )}
                       {canDel && <DeleteButton onClick={(e) => { e.stopPropagation(); handleDeleteLine(l); }}
@@ -1428,7 +1428,7 @@ export default function LineSetup({ embedded = false } = {}) {
                 onKeyDown={e => e.key === 'Enter' && handleAddLine()}
                 style={{ flex: 1, fontSize: 13, padding: '8px 10px' }} />
               <select value={newLineSection} onChange={e => setNewLineSection(e.target.value)}
-                style={{ fontSize: 12, padding: '8px 8px', borderRadius: 'var(--ctl-r)', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)', flexShrink: 0, width: 'auto' }}>
+                style={{ fontSize: 12, padding: '8px 8px', borderRadius: 'var(--ctl-r)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)', flexShrink: 0, width: 'auto' }}>
                 <option value="">Section</option>
                 {sectionOptsInScope.map(s => <option key={s} value={s}>{tr(s)}</option>)}
               </select>
@@ -1436,7 +1436,7 @@ export default function LineSetup({ embedded = false } = {}) {
             {/* 2026-09-07: <LineSelect> ส่งเฉพาะไลน์ราก · cascade: เลือก section แล้วเห็นเฉพาะไลน์แม่ของ section นั้น (2026-07-21) */}
             <LineSelect includeSupport lines={lines.filter(l => !l.parent_line_name && (!newLineSection || l.section === newLineSection))}
               value={newLineParent} onChange={setNewLineParent} placeholder={tr('ไม่มีไลน์หลัก (standalone)')}
-              style={{ fontSize: 12, padding: '7px 10px', borderRadius: 8, border: '1px solid var(--border2)', background: 'var(--bg3)', color: newLineParent ? 'var(--accent)' : 'var(--text2)' }} />
+              style={{ fontSize: 12, padding: '7px 10px', borderRadius: 8, border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: newLineParent ? 'var(--accent)' : 'var(--text2)' }} />
             {/* 🔴 ชนิดหน่วย — ถามตั้งแต่ตอนสร้าง (13/10 · คำสั่ง user) ไม่งั้นสำนักงาน/งานสนับสนุน
                 ถูกสร้างเป็น "ไลน์ผลิต" แล้วไปโผล่ในแผนผลิต/OEE/ใบตรวจรายวันทุกจอ */}
             <div style={{ display: 'flex', gap: 6 }}>
@@ -1567,7 +1567,7 @@ export default function LineSetup({ embedded = false } = {}) {
                     {formData.id ? tr('บันทึก') : tr('เพิ่ม')}
                   </button>
                   <button onClick={() => { setTempPos(null); setFormData({ id: null, name: '', requirements: {}, skill_allowance: false, skill_allowance_type: '' }); }}
-                    style={{ padding: '9px 14px', background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 7 }}>
+                    style={{ padding: '9px 14px', background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 7 }}>
                     ยกเลิก
                   </button>
                 </div>
@@ -1618,7 +1618,7 @@ export default function LineSetup({ embedded = false } = {}) {
               {/* ทะเบียนเครื่องจักร (สร้าง/แก้ไข/กำหนดประเภท) ย้ายไปหน้าฐานข้อมูลเครื่องจักรแล้ว — ที่นี่แค่วางจุดบนผัง */}
               <a href="/equipment?tab=machine" target="_blank" rel="noopener noreferrer"
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, textDecoration: 'none',
-                  background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', marginBottom: 14 }}>
+                  background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', marginBottom: 14 }}>
                 <div>
                   <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text)' }}>{tr('ฐานข้อมูลเครื่องจักร')}</div>
                   <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 1 }}>{drMachines.length} {tr('เครื่องในไลน์นี้ · เพิ่ม/แก้ไข/กำหนดประเภทเครื่องจักรที่นี่')}</div>
@@ -1832,7 +1832,7 @@ export default function LineSetup({ embedded = false } = {}) {
                 กฎทั้งหมดอยู่ใน utils/lineHeads.js (จอใบค่าฝีมือใช้ชุดเดียวกัน) */}
             <div style={{ marginBottom: 14 }}>
               <label style={labelSt}>{tr('หัวหน้างานของไลน์นี้')} <span style={{ fontWeight: 400, color: 'var(--muted)' }}>{tr('· ใช้ในใบค่าฝีมือ')}</span></label>
-              <div style={{ marginTop: 4, padding: '8px 10px', borderRadius: 'var(--r-md)', background: 'var(--bg2)', border: '1px solid var(--border)' }}>
+              <div style={{ marginTop: 4, padding: '8px 10px', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)', border: '1px solid var(--border)' }}>
                 {lineHeads.rows.length ? (
                   <>
                     <div style={{ display: 'grid', gap: 4 }}>
@@ -2022,7 +2022,7 @@ export default function LineSetup({ embedded = false } = {}) {
 
           {/* ผู้เซ็นใบค่าฝีมือ ราย section ย้ายไปตั้งที่ผังองค์กร (OrgSetup) — เป็นข้อมูลราย section ไม่ใช่ราย line */}
           <div style={{ borderTop: '1px solid var(--border)', margin: '14px 0 12px' }} />
-          <div style={{ fontSize: 12, color: 'var(--muted)', background: 'var(--bg3)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: '10px 14px' }}>
+          <div style={{ fontSize: 12, color: 'var(--muted)', background: 'var(--bg3-surf)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: '10px 14px' }}>
             ผู้เซ็น/อนุมัติใบค่าฝีมือ ตั้งที่หน้า <a href="/org-setup" style={{ color: 'var(--accent)', fontWeight: 700 }}>{tr('ผังองค์กร')}</a> แล้ว{' '}
             <MoreMark text={tr('เพราะเป็นข้อมูลราย "ส่วนงาน" ใช้ร่วมกันทุกไลน์ในส่วนนั้น')} />
           </div>
@@ -2048,7 +2048,7 @@ function Hint({ children, label = 'คำอธิบาย' }) {
         {open ? 'ซ่อนคำอธิบาย' : `(?) ${label}`}
       </button>
       {open && (
-        <div style={{ fontSize: 11, lineHeight: 1.45, color: 'var(--muted)', background: 'var(--bg2)',
+        <div style={{ fontSize: 11, lineHeight: 1.45, color: 'var(--muted)', background: 'var(--bg2-surf)',
           border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '6px 8px', marginTop: 5 }}>
           {children}
         </div>

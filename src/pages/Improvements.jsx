@@ -1018,7 +1018,7 @@ export default function Improvements() {
         if (!computed && !earlyCnt && !planCnt) return null;
         const col = (v) => (v > 0 ? 'var(--green)' : v < 0 ? 'var(--red)' : 'var(--muted)');
         return (
-          <div style={{ marginTop: 12, padding: '10px 14px', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
+          <div style={{ marginTop: 12, padding: '10px 14px', background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text)' }}>{tr('Cost Saving รวม (บาท/เดือน)')}</span>
               {computed > 0 && <span style={{ fontSize: 16, fontWeight: 800, color: col(grand) }}>{grand > 0 ? '+' : ''}{fmtBaht(grand)}</span>}
@@ -1069,7 +1069,7 @@ export default function Improvements() {
             const started = doStarted(imp);
             const tgt = started ? null : targetSavingOf(imp, r);
             return (
-              <div key={imp.id} style={{ display: 'flex', flexDirection: 'column', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 16, height: '100%' }}>
+              <div key={imp.id} style={{ display: 'flex', flexDirection: 'column', background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 16, height: '100%' }}>
                 {/* title + status */}
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
                   <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', lineHeight: 1.3 }}>{imp.title}</div>
@@ -1122,7 +1122,7 @@ export default function Improvements() {
                   </div>
                 )}
                 {/* ผลลัพธ์จากข้อมูลจริง */}
-                <div style={{ marginTop: 10, padding: 10, background: 'var(--bg3)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)' }}>
+                <div style={{ marginTop: 10, padding: 10, background: 'var(--bg3-surf)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                     <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text)' }}>
                       {started
@@ -1312,7 +1312,7 @@ export default function Improvements() {
                   const pctOf = (d) => Math.max(0, Math.min(100, ((new Date(`${d}T00:00:00`) - new Date(`${gStart}T00:00:00`)) / spanMs) * 100));
                   const stMeta = { todo: { c: '#8b8b96', l: 'รอเริ่ม' }, doing: { c: '#4d9fff', l: 'กำลังทำ' }, done: { c: '#22c55e', l: 'เสร็จ' } };
                   return (
-                    <div style={{ marginTop: 8, border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--bg3)' }}>
+                    <div style={{ marginTop: 8, border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--bg3-surf)' }}>
                       <div onClick={() => setGanttOpen(p => ({ ...p, [imp.id]: !isOpen }))}
                         style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', cursor: 'pointer', userSelect: 'none' }}>
                         <span style={{ fontSize: 11, transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s', color: 'var(--muted)' }}>▶</span>
@@ -1575,7 +1575,7 @@ export default function Improvements() {
                 </div>
               </div>
               {/* ขวา: Pareto ปัญหา Top — คลิกเลือกเป็นเป้า */}
-              <div style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 12, alignSelf: 'start' }}>
+              <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 12, alignSelf: 'start' }}>
                 <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>
                   ปัญหาที่กระทบมากสุด · {modal.problem_source === 'defect' ? 'ของเสีย' : modal.problem_source === 'mtn' ? 'ใบซ่อม MTN' : 'Downtime'} · {modal.line_name || 'เลือกไลน์ก่อน'}
                 </div>
@@ -1764,7 +1764,7 @@ export default function Improvements() {
               </div>
 
               {/* ใบนี้จะพูดได้แค่ไหน — บอกก่อนพิมพ์ ไม่ใช่ให้ไปเซอร์ไพรส์บนกระดาษ */}
-              <div style={{ fontSize: 11.5, fontWeight: 700, color: MODE_NOTE.c, background: 'var(--bg3)', border: `1px solid ${tint(MODE_NOTE.c, 'line')}`, borderRadius: 'var(--r-md)', padding: '7px 10px', marginBottom: 12, lineHeight: 1.55 }}>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: MODE_NOTE.c, background: 'var(--bg3-surf)', border: `1px solid ${tint(MODE_NOTE.c, 'line')}`, borderRadius: 'var(--r-md)', padding: '7px 10px', marginBottom: 12, lineHeight: 1.55 }}>
                 {r ? `สถานะข้อมูลของใบนี้: ${MODE_NOTE.t}` : 'กำลังคำนวณผลก่อน/หลังของโปรเจคนี้ — รอสักครู่ก่อนกดพิมพ์'}
               </div>
 
@@ -1810,7 +1810,7 @@ export default function Improvements() {
             {/* ── soft gate ขั้น Act (2026-08-19): การแก้วิธีการ/จิ๊ก/พารามิเตอร์ = process change ที่ IATF
                 ต้องทบทวน PFMEA/Control Plan — บังคับให้ "ตอบ" ก่อนปิด แต่ไม่บังคับให้แก้เอกสารเสร็จ
                 (หลักเดียวกับด่านปิด D8 — แข็งเกินไปคนจะเลี่ยงด้วยการไม่เปิดโปรเจคเลย ซึ่งแย่กว่า) ── */}
-            <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 'var(--r-md)', background: 'var(--bg3)', border: '1px solid var(--border)' }}>
+            <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 'var(--r-md)', background: 'var(--bg3-surf)', border: '1px solid var(--border)' }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{tr('การแก้ไขนี้กระทบเอกสาร PE (PFMEA / Control Plan) ไหม?')}</div>
               <div style={{ display: 'flex', gap: 12, marginTop: 6 }}>
                 {[['yes', 'กระทบ — เสนอคำขอแก้เข้ากล่อง PE'], ['no', 'ไม่กระทบ']].map(([v, l]) => (

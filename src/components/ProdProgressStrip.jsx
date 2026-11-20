@@ -124,7 +124,7 @@ export default function ProdProgressStrip({ workDate, scopeNames = null, onOpenL
   const behind = d.lines.filter(l => l.behind).length;
 
   return (
-    <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '10px 12px', marginBottom: 12 }}>
+    <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '10px 12px', marginBottom: 12 }}>
       <div onClick={toggle} style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', cursor: 'pointer', marginBottom: open && d.lines.length ? 8 : 0 }}>
         <span style={{ fontSize: 13, fontWeight: 800, fontFamily: 'var(--font-display)' }}>
           {open ? '▾' : '▸'} 🏭 ยอดผลิตวันนี้ เทียบใบสั่งผลิต
@@ -161,7 +161,7 @@ export default function ProdProgressStrip({ workDate, scopeNames = null, onOpenL
                 : `${l.line} · เปิดกะแล้วแต่ยังไม่มีใบสั่งผลิต`}
               style={{
                 cursor: onOpenLine ? 'pointer' : 'default', minWidth: 150, flex: '0 1 auto',
-                background: 'var(--bg2)', border: `1px solid ${l.pct == null ? 'var(--border)' : `${l.color}55`}`,
+                background: 'var(--bg2-surf)', border: `1px solid ${l.pct == null ? 'var(--border)' : `${l.color}55`}`,
                 borderRadius: 9, padding: '7px 11px',
               }}>
               <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text)' }}>{l.line}</div>

@@ -95,7 +95,7 @@ function Section({ title, sub, children, tone }) {
 function Kpi({ label, value, unit, sub, color, delta }) {
   return (
     <div className="kpi-lift" style={{
-      background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)',
+      background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)',
       padding: '11px 13px', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 92,
     }}>
       <div style={{ fontSize: 12, color: 'var(--muted)' }}>{label}</div>
@@ -120,7 +120,7 @@ function ActionList({ items, empty = '✅ ไม่มีงานค้าง',
       {items.slice(0, max).map((it, i) => (
         <button key={i} onClick={() => onPick && onPick(it)} style={{
           display: 'flex', alignItems: 'center', gap: 9, width: '100%', textAlign: 'left', cursor: onPick ? 'pointer' : 'default',
-          background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '7px 10px', color: 'var(--text)',
+          background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '7px 10px', color: 'var(--text)',
         }}>
           <span style={{ fontSize: 15 }}>{it.icon}</span>
           <span style={{ flex: 1, minWidth: 0, fontSize: 13 }}>

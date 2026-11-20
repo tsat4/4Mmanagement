@@ -560,7 +560,7 @@ export default function BbsCheck() {
 
       {/* ── ผู้ตรวจสอบ + ขอบเขตที่ระบบเติมได้ ── */}
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start', marginBottom: 12 }}>
-        <div style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 12px', display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 12px', display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           <div>
             <label style={lbl}>{tr('ผู้ตรวจสอบ (ลายเซ็น: โปรไฟล์ → ฐานพนักงาน)')}</label>
             <SearchSelect disabled={!canRecord} value={signers.find(s => s.full_name === sheet?.inspector_name)?.id || ''}
@@ -683,7 +683,7 @@ export default function BbsCheck() {
                   const c = cells[cellKey(e.id, day)];
                   const picking = ngPick === e.id;
                   return (
-                    <div key={e.id} style={{ border: `1px solid ${c ? (markColor(c) + '66') : 'var(--border)'}`, borderRadius: 'var(--r-lg)', padding: '10px 12px', background: 'var(--card)' }}>
+                    <div key={e.id} style={{ border: `1px solid ${c ? (markColor(c) + '66') : 'var(--border)'}`, borderRadius: 'var(--r-lg)', padding: '10px 12px', background: 'var(--card-surf)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                         <span style={{ fontSize: 12, color: 'var(--muted)', minWidth: 18 }}>{i + 1}</span>
                         <div style={{ flex: 1, minWidth: 0 }}>
@@ -893,7 +893,7 @@ function AgreementsModal({ agreements, canManage, role, onClose }) {
 
   return (
     <div /* ⚠️ ฟอร์มกรอกข้อมูล — ไม่ปิดจาก backdrop กันเผลอแตะแล้วข้อมูลหาย (UI-CONVENTIONS §5) */  style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', width: 'min(760px,96vw)', maxHeight: '88vh', overflow: 'auto', padding: 18 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', width: 'min(760px,96vw)', maxHeight: '88vh', overflow: 'auto', padding: 18 }}>
         <h3 style={{ margin: '0 0 4px', fontSize: 16 }}>{tr('ข้อตกลงด้านความปลอดภัยในการปฏิบัติงาน')}</h3>
         <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--muted)', lineHeight: 1.6 }}>
           เลขข้อนี้คือตัวเลขที่พิมพ์ลงช่องในใบเมื่อพบพฤติกรรมไม่เหมาะสม ·

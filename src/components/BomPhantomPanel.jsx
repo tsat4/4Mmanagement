@@ -146,7 +146,7 @@ export default function BomPhantomPanel({ onOpenSheet }) {
   };
 
   const Card = ({ n, label, color }) => (
-    <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)',
+    <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)',
                   padding: '8px 12px', minWidth: 104 }}>
       <div style={{ fontSize: 19, fontWeight: 800, color: color || 'var(--text)' }}>{n}</div>
       <div style={{ fontSize: 11, color: 'var(--muted)' }}>{label}</div>
@@ -193,7 +193,7 @@ export default function BomPhantomPanel({ onOpenSheet }) {
 
       {/* 🔴 โซ่ขาด = mat ที่อยู่ใน BOM แต่ไม่มีใบไหนตัดมันเลย — ต้องโชว์ ห้ามซ่อน (กฎความซื่อสัตย์ของจอ) */}
       {gaps.length > 0 && (
-        <div style={{ background: 'var(--card)', border: `1px solid ${BAD}`, borderRadius: 'var(--r-md)',
+        <div style={{ background: 'var(--card-surf)', border: `1px solid ${BAD}`, borderRadius: 'var(--r-md)',
                       padding: '8px 12px', marginBottom: 10, fontSize: 12, lineHeight: 1.6 }}>
           🔴 <b style={{ color: BAD }}>{tr('โซ่ขาด')} {gaps.length} {tr('รายการ')}</b> — อยู่ใน BOM แต่
           <b> {tr('ไม่มีใบผลิตไหนตัดมันไปใช้เลย')}</b> (กฎ: ตัดลูกตรง · ลูกไปตัดหลาน ⇒ โซ่ต้องเดินถึงทุกชั้น)
@@ -288,14 +288,14 @@ export default function BomPhantomPanel({ onOpenSheet }) {
                           {r.verdict === 'seeded' && (
                             <button onClick={() => confirmSeeded(r.mat_no)} disabled={busy === r.mat_no}
                               style={{ fontSize: 11, padding: '2px 8px', borderRadius: 'var(--r-md)',
-                                       border: `1px solid ${OK}`, color: OK, background: 'var(--card)', cursor: 'pointer' }}>
+                                       border: `1px solid ${OK}`, color: OK, background: 'var(--card-surf)', cursor: 'pointer' }}>
                               ✓ ยืนยัน
                             </button>
                           )}
                           <button onClick={() => setPhantom(r.mat_no, !isPhantom)} disabled={busy === r.mat_no}
                             style={{ fontSize: 11, padding: '2px 8px', borderRadius: 'var(--r-md)',
                                      border: '1px solid var(--border)', color: 'var(--text)',
-                                     background: 'var(--card)', cursor: 'pointer' }}>
+                                     background: 'var(--card-surf)', cursor: 'pointer' }}>
                             {isPhantom ? tr('ไม่ใช่ของลม') : tr('ติ๊กเป็นของลม')}
                           </button>
                         </span>

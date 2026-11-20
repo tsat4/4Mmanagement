@@ -895,7 +895,7 @@ export default function QaCheckSheet({ canRecord }) {
                 ))}
               </select>
               <button type="button" onClick={() => setScanOpen(true)} title={tr('สแกนบาร์โค้ด MAT บนกล่อง/คัมบัง')}
-                style={{ flexShrink: 0, minWidth: 44, padding: '0 10px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text)', fontWeight: 700, cursor: 'pointer' }}>📷</button>
+                style={{ flexShrink: 0, minWidth: 44, padding: '0 10px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text)', fontWeight: 700, cursor: 'pointer' }}>📷</button>
             </div>
           </div>
           <div>
@@ -966,7 +966,7 @@ export default function QaCheckSheet({ canRecord }) {
               {!items.length && <span style={{ flex: 1 }} />}
               <span style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 700 }}>{tr('CSV ย้อนหลัง')}</span>
               <select value={csvDays} onChange={e => setCsvDays(Number(e.target.value))} aria-label={tr('ช่วงวันของไฟล์ CSV')}
-                style={{ width: 'auto', height: 28, fontSize: 12, borderRadius: 8, padding: '0 6px', background: 'var(--bg3)', border: '1px solid var(--border2)', color: 'var(--text)' }}>   {/* width:auto กัน trap index.css select{width:100%} ใน flex row — stdsweep 18/11 ยืด 1,510px */}
+                style={{ width: 'auto', height: 28, fontSize: 12, borderRadius: 8, padding: '0 6px', background: 'var(--bg3-surf)', border: '1px solid var(--border2)', color: 'var(--text)' }}>   {/* width:auto กัน trap index.css select{width:100%} ใน flex row — stdsweep 18/11 ยืด 1,510px */}
                 {[7, 30, 60, 90, 180].map(d => <option key={d} value={d}>{d} {tr('วัน')}</option>)}
               </select>
               <button type="button" className="tbtn" disabled={csvBusy || !partId} onClick={exportResultsCsv}
@@ -1014,7 +1014,7 @@ export default function QaCheckSheet({ canRecord }) {
                     </div>
                   ) : activeDwg && (
                     <div ref={boxRef}>
-                      <div style={{ maxHeight: viewH, overflow: 'auto', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg2)' }}>
+                      <div style={{ maxHeight: viewH, overflow: 'auto', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg2-surf)' }}>
                         <div ref={wrapRef} style={{ position: 'relative', width: 'fit-content', margin: '0 auto' }}>
                           <img src={activeDwg.drawing_url} alt={activeDwg.title}
                             ref={el => { if (el?.complete && el.naturalWidth && !natSize.w) setNatSize({ w: el.naturalWidth, h: el.naturalHeight }); }}

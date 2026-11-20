@@ -142,7 +142,7 @@ export default function FixtureClassify({ machines, mapKeys, canEdit, lines = []
           <span className="filter-count">{tr('ซ่อนอยู่')} {hiddenCount} {tr('รายการ (ไม่ตรงตัวกรอง)')}</span>
         )}
         <button onClick={pickAllShown} style={{ padding: '0 12px', borderRadius: 'var(--r-md)', fontSize: 12.5,
-                background: 'var(--bg2)', color: 'var(--text)', border: '1px solid var(--border)', cursor: 'pointer' }}>
+                background: 'var(--bg2-surf)', color: 'var(--text)', border: '1px solid var(--border)', cursor: 'pointer' }}>
           {tr('ติ๊ก/เอาออก ทั้งที่แสดง (')}{shown.length})
         </button>
       </FilterBar>

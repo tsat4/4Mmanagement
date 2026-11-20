@@ -155,7 +155,7 @@ const SheetIconBtn = ({ fs, title, onClick, children, className }) => (
   <button type="button" className={className} onClick={onClick} title={title} aria-label={title} style={{
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     fontSize: fs(11), lineHeight: 1, padding: '3px 6px', borderRadius: 'var(--r-md)', flexShrink: 0, cursor: 'pointer',
-    background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)',
+    background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)',
   }}>{children}</button>
 );
 
@@ -201,7 +201,7 @@ export function Sheet({ k, cw = 0, span = 1, icon, title, sub, big, unit, bigNot
     {link && (
       <button className="tv-hide" onClick={onLink} style={{
         marginTop: 4, fontSize: fs(10.5), fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--r-md)',
-        background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)', cursor: 'pointer',
+        background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)', cursor: 'pointer',
       }}>{link} ↗</button>
     )}
   </>);
@@ -211,7 +211,7 @@ export function Sheet({ k, cw = 0, span = 1, icon, title, sub, big, unit, bigNot
       /* ❌ ไม่มีแถบสีบนหัวแผ่นอีกแล้ว (คำสั่ง user 21/09 "สีสันของเส้นแต่ละ box ไม่เอา")
          สีบนแผ่นเหลือความหมายเดียว = **สถานะ** (ไฟดวงบนหัว + สีแท่งกราฟ) ไม่ใช่ "สีประจำแกน"
          — แถบสีประจำแกนแย่งความสนใจกับไฟสถานะ ทำให้แผ่นที่ปกติกับแผ่นที่มีปัญหาดูเด่นเท่ากัน */
-      background: 'var(--card)', border: '1px solid var(--border)',
+      background: 'var(--card-surf)', border: '1px solid var(--border)',
       borderRadius: 'var(--r-md)', boxShadow: 'var(--shadow-sm)',   // แผ่น KPI = การ์ดแบนบนกริด ไม่ได้ลอย
       display: 'flex', flexDirection: 'column', overflow: 'clip', minWidth: 0, minHeight: 0,
     }}>
@@ -317,7 +317,7 @@ export const FocusAxisNote = ({ k, loText, fixed = false }) => (
     ? 'กราฟนี้ขยายช่วงค่าถาวรให้เห็นความต่าง (ไม่มีปุ่มปิด) — ความสูงแท่ง/เส้นเทียบสัดส่วนกับ 0 ไม่ได้'
     : 'โหมดโฟกัส: ยกพื้นแกนขึ้นเพื่อขยายช่วงที่ค่ากระจุกอยู่ — ความสูงแท่งเทียบสัดส่วนกันไม่ได้ (กดปุ่ม 🎯 บนแถบกรองเพื่อปิด)'}
     style={{ position: 'absolute', top: 0, right: 6, zIndex: 1, fontSize: Math.max(11, Math.round(9.5 * k)), fontWeight: 700, color: 'var(--amber)',
-      background: 'var(--card)', border: '1px solid var(--amber)55', borderRadius: 'var(--r-xs)', padding: '0 5px', lineHeight: 1.5 }}>
+      background: 'var(--card-surf)', border: '1px solid var(--amber)55', borderRadius: 'var(--r-xs)', padding: '0 5px', lineHeight: 1.5 }}>
     แกนเริ่ม {loText} ไม่ใช่ 0
   </div>
 );

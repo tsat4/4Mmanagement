@@ -581,7 +581,7 @@ export default function PEDocs() {
                 {fmeaView.map(it => {
                   const p = procById[it.process_id];
                   return (
-                    <div key={it.id} style={{ background: 'var(--card)', border: `1px solid ${(it.rpn || 0) >= 100 ? 'var(--red-line)' : 'var(--border)'}`, borderRadius: 'var(--r-md)', padding: 12 }}>
+                    <div key={it.id} style={{ background: 'var(--card-surf)', border: `1px solid ${(it.rpn || 0) >= 100 ? 'var(--red-line)' : 'var(--border)'}`, borderRadius: 'var(--r-md)', padding: 12 }}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap' }}>
                         <span style={{ fontSize: 11, fontWeight: 800, background: 'var(--blue-dim)', color: 'var(--blue)', borderRadius: 'var(--r-xs)', padding: '2px 7px' }}>OP {p?.op_no} {p?.name}</span>
                         {it.item_function && <span style={{ fontSize: 11, fontWeight: 700, background: 'var(--bg3)', color: 'var(--text2)', borderRadius: 'var(--r-xs)', padding: '2px 7px' }}>{it.item_function}</span>}

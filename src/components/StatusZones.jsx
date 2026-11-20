@@ -14,7 +14,7 @@ import { tr } from '../utils/i18n';
 const HEAD = ['พาร์ท / รายการ', 'ไป / มาจาก', 'จำนวน', 'รายละเอียด', 'สถานะ', ''];
 export function RowTable({ children, head = HEAD }) {
   return (
-    <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflowX: 'auto', background: 'var(--card)', boxShadow: 'var(--shadow-sm)' }}>
+    <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflowX: 'auto', background: 'var(--card-surf)', boxShadow: 'var(--shadow-sm)' }}>
       <div role="table" style={{ minWidth: PART_ROW_MIN_W }}>
         <div role="row" style={{ display: 'grid', gridTemplateColumns: PART_ROW_COLS, gap: 12, padding: '7px 12px 7px 16px',
           background: 'var(--bg2)', borderBottom: '1px solid var(--border)' }}>
@@ -52,7 +52,7 @@ export default function StatusZones({ rows, zones, statusOf, renderCard, emptyTe
       {groups.map(z => (
         <section key={z.key} aria-label={`${z.label} ${z.rows.length} ใบ`} style={{
           border: `1px solid ${z.color}66`, borderRadius: 'var(--radius-lg)', overflow: 'hidden',
-          background: 'var(--bg2)', boxShadow: 'var(--shadow-sm)',
+          background: 'var(--bg2-surf)', boxShadow: 'var(--shadow-sm)',
         }}>
           <header style={{
             display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',

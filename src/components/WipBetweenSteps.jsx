@@ -274,7 +274,7 @@ export default function WipBetweenSteps() {
                       <td style={{ padding: '7px 8px', textAlign: 'right' }}>
                         {canAdjust && (
                           <button onClick={() => { setCounting({ bufferKey: r.mat, label: `${r.mat}` }); setCountQty(''); setCountNote(''); }}
-                            style={{ fontSize: 11, padding: '4px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', cursor: 'pointer' }}>
+                            style={{ fontSize: 11, padding: '4px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)', cursor: 'pointer' }}>
                             📋 นับจริง
                           </button>
                         )}
@@ -302,7 +302,7 @@ export default function WipBetweenSteps() {
               placeholder={tr('หมายเหตุ (ถ้ามี)')} style={{ padding: '8px 10px', borderRadius: 'var(--ctl-r)', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 13 }} />
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button disabled={saving} onClick={() => setCounting(null)}
-                style={{ padding: '7px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', cursor: 'pointer', fontSize: 13 }}>{tr('ยกเลิก')}</button>
+                style={{ padding: '7px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)', cursor: 'pointer', fontSize: 13 }}>{tr('ยกเลิก')}</button>
               <button disabled={saving} onClick={saveCount}
                 style={{ padding: '7px 16px', borderRadius: 'var(--r-md)', border: 'none', background: '#16a34a', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
                 {saving ? tr('กำลังบันทึก…') : tr('💾 บันทึกยอดนับจริง')}

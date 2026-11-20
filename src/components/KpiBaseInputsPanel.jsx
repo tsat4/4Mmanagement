@@ -31,7 +31,7 @@ function Cell({ value, auto, disabled, onCommit }) {
   return (
     <input value={v} onChange={e => setV(e.target.value)} onBlur={() => onCommit(v.trim())} onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }}
       inputMode="decimal" placeholder={autoTxt} title={autoTxt ? tr('ค่าอัตโนมัติจากทะเบียนพนักงาน — กรอกทับได้ถ้าตัวเลขจริงต่างจากนี้') : undefined}
-      style={{ width: 92, padding: '3px 5px', fontSize: 12, textAlign: 'right', borderRadius: 'var(--ctl-r)', background: 'var(--bg2)', border: '1px solid var(--border)',
+      style={{ width: 92, padding: '3px 5px', fontSize: 12, textAlign: 'right', borderRadius: 'var(--ctl-r)', background: 'var(--bg2-surf)', border: '1px solid var(--border)',
         color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }} />
   );
 }
@@ -147,7 +147,7 @@ export default function KpiBaseInputsPanel({ year, scope, org, rows = [], base: 
   );
 
   return (
-    <details open={defaultOpen} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: '10px 16px' }}>
+    <details open={defaultOpen} style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 12, padding: '10px 16px' }}>
       <summary style={{ cursor: 'pointer', fontSize: 12.5, fontWeight: 800, color: 'var(--text)' }}>
         ตัวเลขฐานจากบัญชี/SAP (กรอกเดือนละครั้ง) — ระบบคำนวณ %DL+OH · %RM · DSI · ยอดขาย/หัว ให้เอง
         <span style={{ marginLeft: 8, fontSize: 11.5, fontWeight: 500, color: 'var(--muted)' }}>

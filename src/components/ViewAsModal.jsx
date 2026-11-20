@@ -156,7 +156,7 @@ export default function ViewAsModal({ current, onClose, onApply }) {
 
         <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
           <button onClick={onClose}
-            style={{ flex: 1, padding: '10px 0', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+            style={{ flex: 1, padding: '10px 0', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
             {tr('ยกเลิก')}
           </button>
           <button onClick={apply}

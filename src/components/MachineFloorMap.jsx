@@ -113,7 +113,7 @@ export default function MachineFloorMap({
   if (!imageUrl) {
     return (
       <div style={{ flex: 1, minHeight: 320, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: 'var(--card)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-lg)', color: 'var(--muted)', textAlign: 'center', padding: 24 }}>
+        background: 'var(--card-surf)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-lg)', color: 'var(--muted)', textAlign: 'center', padding: 24 }}>
         <div>
           <div style={{ fontSize: 34, marginBottom: 10 }}>🗺️</div>
           <div style={{ fontSize: 14, fontWeight: 700 }}>{tr('ยังไม่มีรูปผัง')}</div>

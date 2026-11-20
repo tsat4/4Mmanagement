@@ -172,7 +172,7 @@ function MatSearchField({ value, onChange, options, placeholder, hint }) {
           placeholder={placeholder || tr('พิมพ์เลข MAT หรือชื่อ เพื่อค้นหา…')} style={inputSt} />
       )}
       {open && !sel && (
-        <div style={{ position: 'absolute', zIndex: 30, top: '100%', left: 0, right: 0, marginTop: 4, maxHeight: 260, overflowY: 'auto', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', boxShadow: 'var(--shadow-float)' }}>
+        <div style={{ position: 'absolute', zIndex: 30, top: '100%', left: 0, right: 0, marginTop: 4, maxHeight: 260, overflowY: 'auto', background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', boxShadow: 'var(--shadow-float)' }}>
           {filtered.length === 0 && <div style={{ padding: '10px 12px', fontSize: 12, color: 'var(--muted)' }}>ไม่พบ "{q}" ในลิสต์</div>}
           {filtered.slice(0, 60).map(o => (
             <div key={o.mat_no} onClick={() => { onChange(o.mat_no); setOpen(false); setQ(''); }}
@@ -218,7 +218,7 @@ function PartsPickModal({ parts, onPick, onClose }) {
   }, [parts, q]);
   return (
     <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 20, width: 'min(95vw,540px)', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 20, width: 'min(95vw,540px)', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
         <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{tr('เลือกจากทะเบียนกลาง Material Master')}</div>
         <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 10 }}>ตัวตนสินค้า (MAT/ชื่อ) มาจากทะเบียนกลางที่เดียว — ไม่มีในลิสต์ = ไปเพิ่มที่ แท็บ Material Master ก่อน</div>
         <SearchInput autoFocus value={q} onChange={setQ} fields="MAT / ชื่อ / P.NO / supplier"
@@ -232,7 +232,7 @@ function PartsPickModal({ parts, onPick, onClose }) {
               style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)', cursor: 'pointer', display: 'flex', gap: 10, alignItems: 'center' }}>
               {p.image_url
                 ? <img src={p.image_url} alt="" loading="lazy" style={{ width: 28, height: 28, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border)', flexShrink: 0 }} />
-                : <div style={{ width: 28, height: 28, borderRadius: 'var(--r-md)', background: 'var(--bg2)', border: '1px solid var(--border)', flexShrink: 0 }} />}
+                : <div style={{ width: 28, height: 28, borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)', border: '1px solid var(--border)', flexShrink: 0 }} />}
               {/* ลำดับ ชื่องาน → MAT (UI §6.21 · 2026-09-30) */}
               <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.part_name}</span>
               <span style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--blue)', flexShrink: 0 }}>MAT {p.mat_no}</span>
@@ -1054,7 +1054,7 @@ export default function ProductMaster() {
         );
         return (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '8px 14px', marginBottom: 12,
-            background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
+            background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text2)' }}>{tr('✅ ความครบข้อมูล (')}{rs.length} สินค้าที่ใช้งาน)</span>
             <TabBar size="sm" value={readyFilter || ''} onChange={k => setReadyFilter(k)} style={{ flex: 1, minWidth: 260 }}
               tabs={[{ key: '', label: 'ทั้งหมด' }, { key: 'req', label: 'ยังขาด (บังคับแล้ว)', badge: need }, { key: 'any', label: 'รอ Routing/Packaging', badge: wait }]} />
@@ -1070,7 +1070,7 @@ export default function ProductMaster() {
       {/* ── Name Groups → Family cards ── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {visibleGroups.length === 0 && (
-          <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--muted)', fontSize: 14, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)' }}>
+          <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--muted)', fontSize: 14, background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)' }}>
             ไม่พบ product ที่ตรงเงื่อนไข
           </div>
         )}
@@ -1091,7 +1091,7 @@ export default function ProductMaster() {
             const stds = kanbanStds.filter(s => s.product_id && familyProductIds.has(s.product_id));
             const totalBom = members.reduce((s, m) => s + (bomCounts[m.id] || 0), 0);
             return (
-              <div style={{ background: 'var(--card)', border: `1px solid var(--border)`, borderRadius: indented ? 8 : 12, overflow: 'hidden', marginLeft: indented ? 16 : 0, marginRight: indented ? 16 : 0, marginBottom: indented ? 8 : 0 }}>
+              <div style={{ background: 'var(--card-surf)', border: `1px solid var(--border)`, borderRadius: indented ? 8 : 12, overflow: 'hidden', marginLeft: indented ? 16 : 0, marginRight: indented ? 16 : 0, marginBottom: indented ? 8 : 0 }}>
                 <div style={{ padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
                   {item.image_url && (
                     <img src={item.image_url} alt="" loading="lazy" style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border)', flexShrink: 0 }} />
@@ -1179,7 +1179,7 @@ export default function ProductMaster() {
                         const linkedProd = members.find(m => m.id === std.product_id);
                         const isOldRev   = linkedProd && !linkedProd.is_active;
                         return (
-                          <div key={std.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', opacity: std.is_active ? 1 : 0.5 }}>
+                          <div key={std.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', opacity: std.is_active ? 1 : 0.5 }}>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                                 <span style={{ fontSize: 13, fontWeight: 800, fontFamily: 'monospace', color: isOldRev ? 'var(--muted)' : 'var(--blue)' }}>{std.mat_no}</span>
@@ -1193,7 +1193,7 @@ export default function ProductMaster() {
                             </div>
                             {(canEdit || mayDelete) && (
                               <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                                {canEdit && <button onClick={() => openKanbanEdit(std)} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '3px 8px', fontSize: 11, cursor: 'pointer', color: 'var(--text)' }}>{tr('แก้ไข')}</button>}
+                                {canEdit && <button onClick={() => openKanbanEdit(std)} style={{ background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '3px 8px', fontSize: 11, cursor: 'pointer', color: 'var(--text)' }}>{tr('แก้ไข')}</button>}
                                 {mayDelete && <button className="tbtn" onClick={() => handleKanbanDelete(std.id)} style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontSize: 13 }}>✕</button>}
                               </div>
                             )}
@@ -1228,7 +1228,7 @@ export default function ProductMaster() {
             const isExpandedKanban = expandedFamilies[nameKey] !== false;
             const heroImage = repItem.image_url || allVariants.find(v => v.image_url)?.image_url;
             return (
-              <div key={nameKey} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', overflow: 'hidden' }}>
+              <div key={nameKey} style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', overflow: 'hidden' }}>
                 {/* Compact group header */}
                 <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
                   {heroImage && (
@@ -1266,7 +1266,7 @@ export default function ProductMaster() {
                       <div key={v.family_id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', background: 'var(--bg)', borderRadius: 'var(--r-md)', flexWrap: 'wrap' }}>
                         {v.image_url
                           ? <img src={v.image_url} alt="" loading="lazy" style={{ width: 28, height: 28, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border)', flexShrink: 0 }} />
-                          : <div style={{ width: 28, height: 28, borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2)', flexShrink: 0 }} />}
+                          : <div style={{ width: 28, height: 28, borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2-surf)', flexShrink: 0 }} />}
                         <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 'var(--r-pill)', background: 'var(--blue-dim)', border: '1px solid var(--blue-line)', color: 'var(--blue)', fontWeight: 700, flexShrink: 0 }}>{v.customer || '—'}</span>
                         {/* ลำดับ Part No. → MAT (UI §6.21) */}
                         {v.p_no && <span style={{ fontSize: 13, fontWeight: 800, fontFamily: 'monospace', color: 'var(--blue)' }}>{v.p_no}</span>}
@@ -1299,7 +1299,7 @@ export default function ProductMaster() {
                         {stds.map(std => {
                           const v = variantById.get(std.product_id);
                           return (
-                            <div key={std.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', opacity: std.is_active ? 1 : 0.5 }}>
+                            <div key={std.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', opacity: std.is_active ? 1 : 0.5 }}>
                               {v?.customer && <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 'var(--r-pill)', background: 'var(--blue-dim)', border: '1px solid var(--blue-line)', color: 'var(--blue)', fontWeight: 700, flexShrink: 0 }}>{v.customer}</span>}
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <span style={{ fontSize: 13, fontWeight: 800, fontFamily: 'monospace', color: 'var(--blue)' }}>{std.mat_no}</span>
@@ -1311,7 +1311,7 @@ export default function ProductMaster() {
                               </div>
                               {(canEdit || mayDelete) && (
                                 <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                                  {canEdit && <button onClick={() => openKanbanEdit(std)} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '3px 8px', fontSize: 11, cursor: 'pointer', color: 'var(--text)' }}>{tr('แก้ไข')}</button>}
+                                  {canEdit && <button onClick={() => openKanbanEdit(std)} style={{ background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '3px 8px', fontSize: 11, cursor: 'pointer', color: 'var(--text)' }}>{tr('แก้ไข')}</button>}
                                   {mayDelete && <button className="tbtn" onClick={() => handleKanbanDelete(std.id)} style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer', fontSize: 13 }}>✕</button>}
                                 </div>
                               )}
@@ -1341,7 +1341,7 @@ export default function ProductMaster() {
       {/* ════ Add / Edit / EC modal ════ */}
       {editing && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: 'var(--bg3)', border: `1px solid ${ecSource ? 'var(--blue-line)' : 'var(--border2)'}`, borderRadius: 'var(--r-lg)', padding: 24, width: 'min(95vw,560px)', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div style={{ background: 'var(--bg3-surf)', border: `1px solid ${ecSource ? 'var(--blue-line)' : 'var(--border2)'}`, borderRadius: 'var(--r-lg)', padding: 24, width: 'min(95vw,560px)', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>
               {ecSource ? '🔄 Engineering Change' : editing === 'new' ? '+ เพิ่มสินค้า' : 'แก้ไขสินค้า'}
             </div>
@@ -1567,7 +1567,7 @@ export default function ProductMaster() {
       {/* ════ Kanban Standard modal ════ */}
       {kanbanEditing && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: 'var(--bg3)', border: '1px solid var(--blue-line)', borderRadius: 'var(--r-lg)', padding: 24, width: 'min(95vw,380px)' }}>
+          <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--blue-line)', borderRadius: 'var(--r-lg)', padding: 24, width: 'min(95vw,380px)' }}>
             <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 20, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>
               {kanbanEditing === 'new' ? '+ เพิ่ม Kanban Standard' : 'แก้ไข Kanban Standard'}
             </div>
@@ -1676,7 +1676,7 @@ export default function ProductMaster() {
       {/* ════ CSV Preview / Duplicate Detection Modal ════ */}
       {csvPreview && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', width: 'min(600px,100%)', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', width: 'min(600px,100%)', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
             {/* header */}
             <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
               <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', marginBottom: 8 }}>
@@ -1835,7 +1835,7 @@ function OpStepsPanel({ parent, products, bomIx, parentKids, canEdit, guard, ful
   };
   const fmtQ = (q) => Number(q).toLocaleString('th-TH', { maximumFractionDigits: 3 });
   return (
-    <div style={{ background: 'var(--bg2)', border: '1px solid var(--blue-line)', borderRadius: 'var(--r-md)', padding: '10px 12px', marginBottom: 12 }}>
+    <div style={{ background: 'var(--bg2-surf)', border: '1px solid var(--blue-line)', borderRadius: 'var(--r-md)', padding: '10px 12px', marginBottom: 12 }}>
       <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--text)' }}>{tr('🔩 ขั้น OP ของพาร์ทนี้ (')}{ops.length})
         <span style={{ fontWeight: 400, fontSize: 11.5, color: 'var(--muted)' }}> · ขั้นที่ SAP มองไม่เห็น — เปิดใบขั้นนี้ = เบิกของที่ขั้นกิน · เปิดใบ {parent.mat_no} = ไม่เบิกของที่ขั้นกินไปแล้วซ้ำ · BOM SAP ของแม่ไม่ถูกแก้</span>
       </div>
@@ -1845,7 +1845,7 @@ function OpStepsPanel({ parent, products, bomIx, parentKids, canEdit, guard, ful
         const ownSet = new Set(own.map(x => up(x.mat_no)));
         const choices = parentKids.filter(k => !ownSet.has(up(k.mat_no)));
         return (
-          <div key={op.id} style={{ marginTop: 8, padding: '8px 10px', borderRadius: 'var(--r-md)', background: 'var(--card)', border: '1px solid var(--border)' }}>
+          <div key={op.id} style={{ marginTop: 8, padding: '8px 10px', borderRadius: 'var(--r-md)', background: 'var(--card-surf)', border: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 12.5 }}>
               <b style={{ color: 'var(--blue)' }}>🔩 {op.mat_no}</b>
               <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{op.name || ''}{op.line_name ? ` · ${op.line_name}` : ''}{op._op.seq != null ? ` · ลำดับ ${op._op.seq}` : ''}</span>
@@ -2745,7 +2745,7 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'minmax(0, 1fr)' : 'minmax(240px, 300px) 1fr', gap: 16, alignItems: 'start' }}>
       {/* left: product list */}
-      <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 12 }}>
+      <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 12 }}>
         <SearchInput value={search} onChange={setSearch} fields="product / mat no. / ลูกค้า" />
         {/* ➕ เปิดใบ BOM ให้พาร์ทในทะเบียนที่ยังไม่มีใบของตัวเอง (step 2 → 3) */}
         {canCreate && (
@@ -2796,7 +2796,7 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
           {/* 🔍 พาร์ทที่ไม่มีใบของตัวเอง แต่มีคนกรอกลูกไว้ในใบอื่น — กดแล้วกางเป็นตัวตั้งต้น (อ่านอย่างเดียว) */}
           {noSheetHits.map(h => (
             <div key={h.mat} onClick={() => setPartView({ mat: h.mat, sheetId: h.sheets[0].sheetId, sheets: h.sheets })}
-              style={{ padding: '10px 12px', borderRadius: 'var(--r-md)', cursor: 'pointer', background: 'var(--bg2)', border: '1px dashed var(--blue-line)' }}>
+              style={{ padding: '10px 12px', borderRadius: 'var(--r-md)', cursor: 'pointer', background: 'var(--bg2-surf)', border: '1px dashed var(--blue-line)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {h.name || h.mat}
@@ -2814,7 +2814,7 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
       </div>
 
       {/* right: BOM detail */}
-      <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 16 }}>
+      <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 16 }}>
           {/* 🔍 มุมมองพาร์ทที่ "ยังไม่มีใบของตัวเอง" — กางจากใบที่กรอกลูกของมันไว้
               ⚠️ อ่านอย่างเดียว (ไม่ส่ง onDeleteDupes) — ลบแถวของ *ใบอื่น* จากหน้าต่างนี้ = ลบผิดใบเงียบๆ */}
           {partView && (
@@ -2901,7 +2901,7 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
             {/* 🌳 โครงหลายชั้นแบบ SAP (CS12) — ตารางด้านล่างเป็นชั้น 1 อย่างเดียว
                 ต้องมีตัวกางถึงจะเห็นว่าของตัวไหนถูกนับซ้ำ (BOM ถูกแบนมาจาก SAP) */}
             {!loading && items.length > 0 && selProduct?.mat_no && (
-              <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '10px 12px', marginBottom: 12 }}>
+              <div style={{ background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '10px 12px', marginBottom: 12 }}>
                 <div onClick={() => setShowTree(v => !v)}
                   style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 800, color: 'var(--text)' }}>
                   โครงหลายชั้น (แบบ SAP Display Multilevel BOM)
@@ -2955,7 +2955,7 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
                   </div>
                 );
               })() : (
-                <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--muted)', fontSize: 13, background: 'var(--bg2)', borderRadius: 'var(--r-md)', border: '1px dashed var(--border)' }}>
+                <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--muted)', fontSize: 13, background: 'var(--bg2-surf)', borderRadius: 'var(--r-md)', border: '1px dashed var(--border)' }}>
                   ยังไม่มีพาร์ทย่อยใน BOM นี้{canCreate && ' — กด "+ เพิ่มพาร์ทย่อย" เพื่อเริ่ม'}
                 </div>
               )
@@ -3064,7 +3064,7 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
       {/* ══ PICKER MODAL — เลือกพาร์ทจาก Material Master ══ */}
       {showPicker && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', width: 'min(700px,100%)', maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', width: 'min(700px,100%)', maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}>
             {/* header */}
             <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
               <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', marginBottom: 2 }}>{tr('➕ เพิ่มพาร์ทย่อยใน BOM')}</div>
@@ -3171,7 +3171,7 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
       {/* ══ EDIT MODAL — แก้ QTY ของ BOM row ══ */}
       {showEdit && editItem && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 24, width: 'min(380px,100%)' }}>
+          <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 24, width: 'min(380px,100%)' }}>
             <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', marginBottom: 2 }}>{tr('✏️ แก้ไข BOM')}</div>
             {/* ลำดับ ชื่องาน → MAT (UI §6.21) */}
             <div style={{ fontSize: 12, color: 'var(--blue)', fontFamily: 'monospace', marginBottom: 12 }}>MAT {editItem.mat_no}</div>
@@ -3301,7 +3301,7 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
         return (
           <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: 16 }}
             onClick={() => !sapBusy && setSapImp(null)}>
-            <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(96vw, 880px)', maxHeight: '88vh', overflow: 'auto' }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(96vw, 880px)', maxHeight: '88vh', overflow: 'auto' }}>
               <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{tr('นำเข้า BOM จาก SAP')}</div>
               <div style={{ fontSize: 12, color: 'var(--muted)', margin: '4px 0 12px' }}>
                 หัวใบ <b style={{ color: 'var(--text)', fontFamily: 'monospace' }}>{parsed.root.mat_no || '—'}</b> {parsed.root.description}
@@ -3419,7 +3419,7 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
                                   onChange={e => setSapPn(m => ({ ...m, [key]: { ...m[key], use: e.target.checked } }))} />
                                 <input value={sel.value} onChange={e => setSapPn(m => ({ ...m, [key]: { ...m[key], value: e.target.value, use: true } }))}
                                   style={{ flex: 1, minWidth: 0, fontFamily: 'monospace', fontSize: 11.5, padding: '2px 6px', borderRadius: 'var(--ctl-r)',
-                                    border: `1px solid ${hit?.conflict ? 'var(--red)' : 'var(--border)'}`, background: 'var(--bg2)', color: 'var(--text)' }} />
+                                    border: `1px solid ${hit?.conflict ? 'var(--red)' : 'var(--border)'}`, background: 'var(--bg2-surf)', color: 'var(--text)' }} />
                               </label>
                               <div style={{ fontSize: 11, color: hit?.conflict ? 'var(--red)' : hit?.confidence === 'high' ? 'var(--accent)' : 'var(--amber)', marginTop: 2 }}>
                                 {hit?.conflict ? `⚠ ทะเบียนเดิมคือ ${hit.current}` : hit?.confidence === 'high' ? '✓ ' + hit.reason : '~ ' + hit?.reason}
@@ -3455,7 +3455,7 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
 
       {showCopyBom && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 24, width: 'min(420px,100%)' }}>
+          <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 24, width: 'min(420px,100%)' }}>
             <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', marginBottom: 4 }}>{tr('คัดลอก BOM จาก Product อื่น')}</div>
             <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 16 }}>
               คัดลอกพาร์ทจาก BOM ของ product ที่เลือก เข้ามาใน <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{selProduct?.name}</span>
@@ -3564,7 +3564,7 @@ function ExportPanel() {
           const n = counts[e.key];
           const missing = n === null;   // ตารางยังไม่มี/อ่านไม่ได้ — บอกตรงๆ ห้ามซ่อนปุ่ม
           return (
-            <div key={e.key} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 14,
+            <div key={e.key} style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 14,
               display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--text)' }}>{e.icon} {tr(e.label)}</div>
               <div style={{ fontSize: 11, color: missing ? 'var(--amber)' : 'var(--muted)', fontFamily: 'monospace', flex: 1 }}>
@@ -3791,7 +3791,7 @@ function PartsMasterPanel({ canCreate, canEdit, fullName, setCsvPreview, reloadK
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {/* legend */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', padding: '10px 14px', background: 'var(--bg2)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', fontSize: 11 }}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', padding: '10px 14px', background: 'var(--bg2-surf)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', fontSize: 11 }}>
         {MAT_PREFIXES.map(m => (
           <span key={m.prefix} style={{ padding: '2px 10px', borderRadius: 'var(--r-lg)', background: `${tint(m.color, 'dim')}`, color: m.color, fontWeight: 700, fontFamily: 'monospace' }}>{tr(m.label)}</span>
         ))}
@@ -3857,7 +3857,7 @@ function PartsMasterPanel({ canCreate, canEdit, fullName, setCsvPreview, reloadK
                   <td style={{ padding: '8px 12px', borderTop: '1px solid var(--border)' }}>
                     {p.image_url
                       ? <img src={p.image_url} alt="" loading="lazy" style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border)' }} />
-                      : <div style={{ width: 32, height: 32, borderRadius: 'var(--r-md)', background: 'var(--bg2)', border: '1px solid var(--border)' }} />
+                      : <div style={{ width: 32, height: 32, borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)', border: '1px solid var(--border)' }} />
                     }
                   </td>
                   <td style={{ padding: '8px 12px', borderTop: '1px solid var(--border)' }}>
@@ -3926,7 +3926,7 @@ function PartsMasterPanel({ canCreate, canEdit, fullName, setCsvPreview, reloadK
       {/* ══ ADD / EDIT MODAL ══ */}
       {showModal && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 24, width: 'min(560px,100%)', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 24, width: 'min(560px,100%)', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', marginBottom: 16 }}>
               {editPart ? '✏️ แก้ไขพาร์ท' : '➕ เพิ่มพาร์ทใหม่'}
             </div>
@@ -4199,7 +4199,7 @@ function PackagingPanel({ canCreate, canEdit, mayDelete, fullName }) {
                 {canCreate && <button onClick={openAddLink} style={{ ...btnPrimary }}>{tr('+ ผูก Packaging')}</button>}
               </div>
               {loading ? <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('กำลังโหลด...')}</div>
-                : links.length === 0 ? <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--muted)', fontSize: 13, background: 'var(--bg2)', borderRadius: 'var(--r-md)', border: '1px dashed var(--border)' }}>{tr('ยังไม่ผูก packaging')}{canCreate && ' — กด "+ ผูก Packaging"'}</div>
+                : links.length === 0 ? <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--muted)', fontSize: 13, background: 'var(--bg2-surf)', borderRadius: 'var(--r-md)', border: '1px dashed var(--border)' }}>{tr('ยังไม่ผูก packaging')}{canCreate && ' — กด "+ ผูก Packaging"'}</div>
                 : (
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead><tr style={{ background: 'var(--bg2)' }}><TH>Code</TH><TH>{tr('ชื่อ')}</TH><TH w={140}>{tr('ชิ้น/บรรจุภัณฑ์')}</TH><TH>{tr('หมายเหตุ')}</TH>{(canEdit || mayDelete) && <TH w={90}> </TH>}</tr></thead>
@@ -4227,7 +4227,7 @@ function PackagingPanel({ canCreate, canEdit, mayDelete, fullName }) {
       {/* link modal */}
       {showLink && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 24, width: 'min(420px,100%)' }}>
+          <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 24, width: 'min(420px,100%)' }}>
             <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginBottom: 16, fontFamily: 'var(--font-display)' }}>{editLink ? '✏️ แก้ไข' : '➕ ผูก'} Packaging</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div>
@@ -4260,7 +4260,7 @@ function PackagingPanel({ canCreate, canEdit, mayDelete, fullName }) {
       {/* master manager modal — ภาชนะ (container_types) ฐานเดียวกับ Rack Center */}
       {showMaster && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 24, width: 'min(760px,100%)', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 24, width: 'min(760px,100%)', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginBottom: 4, fontFamily: 'var(--font-display)' }}>{tr('ภาชนะ (Container Types)')}</div>
             <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 12 }}>{tr('ฐานข้อมูลเดียวกับที่ Rack Center ใช้')}</div>
             {canEdit && (
@@ -4407,7 +4407,7 @@ function KanbanStdPanel({ canEdit, fullName }) {
         />
       </div>
 
-      <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 0, overflow: 'hidden' }}>
+      <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 0, overflow: 'hidden' }}>
         <div className="table-sticky" style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
@@ -4471,7 +4471,7 @@ function KanbanStdPanel({ canEdit, fullName }) {
       {/* Modal */}
       {showModal && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 24, width: 'min(420px,100%)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 24, width: 'min(420px,100%)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginBottom: 16, fontFamily: 'var(--font-display)' }}>
               แก้ไข Kanban Std — {form.mat_no}
             </div>

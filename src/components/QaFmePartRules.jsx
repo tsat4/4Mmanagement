@@ -139,7 +139,7 @@ function NumCell({ value, onSave, disabled, placeholder }) {
   return (
     <input type="number" min="1" value={v} disabled={disabled} placeholder={placeholder}
       onChange={e => setV(e.target.value)} onBlur={commit} onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}
-      style={{ width: 80, padding: '4px 6px', fontSize: 12, borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', opacity: disabled ? 0.45 : 1 }} />
+      style={{ width: 80, padding: '4px 6px', fontSize: 12, borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)', opacity: disabled ? 0.45 : 1 }} />
   );
 }
 const th = { padding: '6px 8px', textAlign: 'left', fontSize: 11, color: 'var(--muted)', fontWeight: 700, whiteSpace: 'nowrap', borderBottom: '1px solid var(--border2)', position: 'sticky', top: 0, background: 'var(--bg3)' };

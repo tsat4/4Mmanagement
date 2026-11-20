@@ -651,7 +651,7 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
         <input type="date" value={day} onChange={e => e.target.value && setDay(e.target.value)} />
         <button onClick={() => shiftDay(1)} style={{ ...btn(false), width: 'auto', flexShrink: 0 }}>▶</button>
         {!isToday && <button onClick={() => setDay(workDateStr())} style={{ ...btn(true), width: 'auto', flexShrink: 0 }}>{tr('วันนี้')}</button>}
-        <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 'var(--r-md)', background: 'var(--bg2)', border: '1px solid var(--border)', color: 'var(--muted)', flexShrink: 0 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)', border: '1px solid var(--border)', color: 'var(--muted)', flexShrink: 0 }}>
           วันงาน 08:00 → 08:00
         </span>
         <span style={{ width: 1, height: 22, background: 'var(--border)', flexShrink: 0 }} />
@@ -705,7 +705,7 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
       {/* Modal คีย์ order ด่วน — ปิดได้จากปุ่มเท่านั้น (มีฟอร์ม ห้ามปิดจาก backdrop ตาม UI-CONVENTIONS §5) */}
       {showAdd && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, zIndex: 2000, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', width: 'min(94vw, 460px)', maxHeight: '92vh', overflowY: 'auto', boxShadow: 'var(--shadow-lg)' }}>
+          <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', width: 'min(94vw, 460px)', maxHeight: '92vh', overflowY: 'auto', boxShadow: 'var(--shadow-lg)' }}>
             <div style={{ padding: '12px 18px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: 15, fontWeight: 900, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{tr('➕ เพิ่ม order ด่วน (คีย์มือ)')}</span>
               <button onClick={() => setShowAdd(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 18, cursor: 'pointer', lineHeight: 1 }}>✕</button>
@@ -914,7 +914,7 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
             return (
               <>
                 <div onClick={() => setPopup(null)} style={{ position: 'fixed', inset: 0, zIndex: 998 }} />
-                <div style={{ position: 'fixed', left, top, width: W, zIndex: 1300, background: 'var(--bg3)', border: `1px solid ${tint(od ? 'var(--red)' : st.color, 'line')}`, borderRadius: 'var(--r-lg)', boxShadow: 'var(--shadow-float)', overflow: 'hidden' }}>
+                <div style={{ position: 'fixed', left, top, width: W, zIndex: 1300, background: 'var(--bg3-surf)', border: `1px solid ${tint(od ? 'var(--red)' : st.color, 'line')}`, borderRadius: 'var(--r-lg)', boxShadow: 'var(--shadow-float)', overflow: 'hidden' }}>
                   <div style={{ height: 4, background: od ? 'var(--red)' : st.color }} />
                   <div style={{ padding: '10px 14px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
@@ -977,7 +977,7 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
                         );
                       })()}
                       <button onClick={() => goToCard(o)}
-                        style={{ flex: 1, padding: '7px 8px', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 800, cursor: 'pointer', background: 'var(--bg2)', color: 'var(--text2)', border: '1px solid var(--border)', fontFamily: 'var(--font-body)' }}>
+                        style={{ flex: 1, padding: '7px 8px', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 800, cursor: 'pointer', background: 'var(--bg2-surf)', color: 'var(--text2)', border: '1px solid var(--border)', fontFamily: 'var(--font-body)' }}>
                         {tr('ไปที่การ์ด')}
                       </button>
                       {canAdd && isOpenOrder(o) && (
@@ -1202,7 +1202,7 @@ function WorkflowSection({ canEdit }) {
         · เพิ่ม/ลดจำนวนเฟสได้ตามความเหมาะสมของแต่ละลูกค้า
       </div>
       {/* ⭐ 2 กติกาที่คนตั้งค่าต้องเห็น ไม่งั้นตั้งแล้วไม่รู้ว่าจะเกิดอะไรขึ้นหน้างาน */}
-      <div style={{ fontSize: 12, color: 'var(--text2)', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '9px 12px', marginBottom: 12, lineHeight: 1.65 }}>
+      <div style={{ fontSize: 12, color: 'var(--text2)', background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '9px 12px', marginBottom: 12, lineHeight: 1.65 }}>
         🏁 <strong>เฟสท้ายสุด = จบงาน</strong> — พอกดถึงเฟสล่างสุดของตาราง ระบบปิดรอบส่งให้เลย ไม่มีปุ่มให้กดต่อ
         {lastStep && <> {tr('(ตอนนี้คือ')} <strong style={{ color: 'var(--blue)' }}>{lastStep.name}</strong>)</>}
         {lastStep && lastStep.requires_status !== 'shipped' && <> {tr('· เหมาะกับลูกค้าที่')}<strong>{tr('เอารถ milk run มารับเอง')}</strong> {tr('— ของขึ้นรถแล้วงานของเราจบตรงนั้น')}</>}

@@ -463,7 +463,7 @@ export default function MachineDatabase() {
           {!isCollapsed && (
           <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
             {items.map(item => (
-              <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', opacity: item.is_active ? 1 : 0.5 }}>
+              <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', opacity: item.is_active ? 1 : 0.5 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 14, fontWeight: 800, fontFamily: 'monospace', color: 'var(--text)' }}>{item.machine_no}</span>
@@ -502,7 +502,7 @@ export default function MachineDatabase() {
       {/* Add/Edit machine modal */}
       {editing && (
         <div className="overlay" style={{ zIndex: 2000 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 24, width: 'min(95vw,420px)' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 24, width: 'min(95vw,420px)' }}>
             <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 20, color: 'var(--text)' }}>
               {editing.id ? `แก้ไข${kindLabel(editing.equipment_kind)}` : '+ เพิ่มอุปกรณ์'}
             </div>
@@ -792,7 +792,7 @@ function BrandReviewModal({ proposals, onClose, onDone }) {
   };
   return (
     <div className="overlay" style={{ zIndex: 2100 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 20, width: 'min(95vw,640px)', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 20, width: 'min(95vw,640px)', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
           <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{tr('แยกยี่ห้อจากชื่อเครื่อง')}</div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 18, cursor: 'pointer' }}>✕</button>
@@ -872,7 +872,7 @@ function MachineTypeManager({ types, canEdit, onClose, onChange }) {
 
   return (
     <div className="overlay" style={{ zIndex: 2100 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 24, width: 'min(95vw,460px)', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 24, width: 'min(95vw,460px)', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{tr('ประเภทเครื่องจักร')}</div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 18, cursor: 'pointer' }}>✕</button>

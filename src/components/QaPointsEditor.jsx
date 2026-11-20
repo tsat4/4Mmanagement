@@ -156,7 +156,7 @@ function TitlePicker({ current, used, onPick, onClose }) {
   const [custom, setCustom] = useState(current || '');
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 2100, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', width: 'min(460px, 96vw)', padding: 18, boxShadow: 'var(--shadow-lg)' }}>
+      <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', width: 'min(460px, 96vw)', padding: 18, boxShadow: 'var(--shadow-lg)' }}>
         <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 10 }}>{tr('ตั้งชื่อแผ่น/มุมมอง')}</div>
         <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 12 }}>
           {STANDARD_VIEWS.map(v => {
@@ -177,7 +177,7 @@ function TitlePicker({ current, used, onPick, onClose }) {
             style={{ padding: '8px 14px', borderRadius: 'var(--r-md)', border: 'none', background: 'var(--accent)', color: 'var(--accent-ink)', fontWeight: 700, cursor: 'pointer' }}>{tr('ตกลง')}</button>
         </div>
         <div style={{ textAlign: 'right', marginTop: 10 }}>
-          <button type="button" onClick={onClose} style={{ padding: '6px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)', cursor: 'pointer' }}>{tr('ข้าม')}</button>
+          <button type="button" onClick={onClose} style={{ padding: '6px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)', cursor: 'pointer' }}>{tr('ข้าม')}</button>
         </div>
       </div>
     </div>

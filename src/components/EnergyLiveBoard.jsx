@@ -372,7 +372,7 @@ function MeterCard({ m, pts, machines, onOpen }) {
 
 function Stat({ label, value, unit, color }) {
   return (
-    <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 8px' }}>
+    <div style={{ background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 8px' }}>
       <div style={{ fontSize: 11, color: 'var(--muted)' }}>{label}</div>
       <div style={{ fontSize: 17, fontWeight: 800, color }}>{value} <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>{unit}</span></div>
     </div>

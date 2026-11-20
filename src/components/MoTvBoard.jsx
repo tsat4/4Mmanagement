@@ -155,7 +155,7 @@ export default function MoTvBoard({ inScope, isMobile = false }) {
 
 function Warn({ tv, fz, children }) {
   return (
-    <div role="alert" style={{ background: 'var(--card)', border: '1px solid var(--red)', color: 'var(--red)', borderRadius: 'var(--r-md)', padding: tv ? '10px 16px' : 10, fontSize: fz(13, 24), fontWeight: 700 }}>
+    <div role="alert" style={{ background: 'var(--card-surf)', border: '1px solid var(--red)', color: 'var(--red)', borderRadius: 'var(--r-md)', padding: tv ? '10px 16px' : 10, fontSize: fz(13, 24), fontWeight: 700 }}>
       {children}
     </div>
   );
@@ -168,7 +168,7 @@ function MoCard({ r, tv, fz, showStage }) {
   const reporter = o.reported_by_name || o.reporter_prod || '';
   return (
     <div data-tv-item style={{
-      background: 'var(--card)', border: '1px solid var(--border)', borderLeft: `6px solid ${r.tone === 'none' ? 'var(--border2)' : ink}`,
+      background: 'var(--card-surf)', border: '1px solid var(--border)', borderLeft: `6px solid ${r.tone === 'none' ? 'var(--border2)' : ink}`,
       borderRadius: 'var(--r-lg)', padding: tv ? '14px 18px' : '10px 12px', boxShadow: 'var(--shadow-sm)',
       display: 'flex', flexDirection: 'column', gap: tv ? 6 : 4, minWidth: 0,
     }}>

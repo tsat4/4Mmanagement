@@ -193,7 +193,7 @@ function PrRow({ pr, canEdit, fullName, onChanged, showSource, mo = null, own = 
   });
 
   return (
-    <div style={{ padding: '7px 9px', borderRadius: 'var(--r-md)', background: 'var(--card)', border: '1px solid var(--border)', borderLeft: `4px solid ${st.color}`, marginBottom: 6 }}>
+    <div style={{ padding: '7px 9px', borderRadius: 'var(--r-md)', background: 'var(--card-surf)', border: '1px solid var(--border)', borderLeft: `4px solid ${st.color}`, marginBottom: 6 }}>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', fontSize: 12.5 }}>
         {pr.pr_no
           ? <b style={{ fontFamily: 'monospace', fontSize: 13 }}>PR {pr.pr_no}</b>
@@ -366,7 +366,7 @@ function NewPrForm({ parts = [], glCodes = [], defaults = {}, fullName, onDone, 
              ⇒ ต้องเขียนบอกตรงนี้ ไม่ใช่ลบเงียบแล้วคนมาหาทีหลังไม่เจอ
           🔴 บีบด้วย compressToWebp 2560px ใน `uploadPrQuote` — **ห้ามใช้ตัวบีบรูปซ่อม** (1024px + ครอบ 16:9
              = หัวท้ายใบหาย ตัวเลขอ่านไม่ออก) */}
-      <div style={{ marginTop: 8, padding: '7px 9px', borderRadius: 'var(--r-md)', background: 'var(--bg3)', border: '1px solid var(--border)' }}>
+      <div style={{ marginTop: 8, padding: '7px 9px', borderRadius: 'var(--r-md)', background: 'var(--bg3-surf)', border: '1px solid var(--border)' }}>
         <div style={{ fontSize: 11.5, fontWeight: 700, marginBottom: 3 }}>{tr('③ ใบเสนอราคา (ถ้ามี)')}</div>
         <input type="file" accept="image/*"
           onChange={async e => { const p0 = e.target.files?.[0]; e.target.value = ''; const ok = await acceptImageFile(p0); if (ok) setQuoteFile(ok); }}
@@ -428,7 +428,7 @@ function PrGroupCard({ g, canEdit, mayAdd, fullName, parts, glCodes, orderId, te
     setBulk(false); setInv(''); onChanged?.();
   };
   return (
-    <div style={{ border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '7px 8px', marginBottom: 7, background: 'var(--bg3)' }}>
+    <div style={{ border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '7px 8px', marginBottom: 7, background: 'var(--bg3-surf)' }}>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 5, fontSize: 12 }}>
         <b style={{ fontFamily: 'monospace', fontSize: 13 }}>PR {g.prNo}</b>
         <span style={{ fontWeight: 700 }}>{g.rows.length} {tr('รายการ')}</span>
@@ -573,7 +573,7 @@ export function MtnPrPanel({ order, parts = [], fullName, canEdit = false, canAd
       {loadErr && <div style={{ fontSize: 11, color: '#ef4444', marginBottom: 6 }}>{tr('⚠ โหลดใบขอซื้อไม่สำเร็จ:')} {loadErr}</div>}
       {/* ใบ MO ปิดแล้วแต่ยังทำ PR ต่อได้ — ต้องเขียนบนจอ ไม่งั้นคนไม่กล้ากด (หรือนึกว่าระบบพัง) */}
       {canEdit && !mayAdd && prs.some(isPrOpen) && (
-        <div style={{ fontSize: 11, color: 'var(--text2)', background: 'var(--bg3)', border: '1px solid var(--border2)',
+        <div style={{ fontSize: 11, color: 'var(--text2)', background: 'var(--bg3-surf)', border: '1px solid var(--border2)',
                       borderRadius: 'var(--r-md)', padding: '6px 9px', marginBottom: 6, lineHeight: 1.6 }}>
           ใบ MO นี้ปิดแล้ว — <b>{tr('ใบขอซื้อที่ค้างอยู่ยังทำต่อได้ตามปกติ')}</b> (ลงเลข PR · สั่งซื้อ · รับของเข้าสต็อก · ยกเลิก)
           เพราะของมักมาถึงหลังปิดใบ · แต่<b>{tr('เปิด PR ใบใหม่กับใบที่ปิดแล้วไม่ได้')}</b>
@@ -583,7 +583,7 @@ export function MtnPrPanel({ order, parts = [], fullName, canEdit = false, canAd
           ช่างต้องรู้ว่าใบค้างเพราะ PR ของตัวเอง ไม่ใช่เพราะ ผจก. ไม่ยอมเซ็น
           🔴 เขียนบอกเท่านั้น — ด่านจริงอยู่ที่ขั้นปิดใบ (`moCloseGate()` ใน utils/moChase.js) */}
       {mayAdd && prs.some(isPrOpen) && (
-        <div style={{ fontSize: 11, color: 'var(--text2)', background: 'var(--bg3)', border: '1px solid var(--border2)',
+        <div style={{ fontSize: 11, color: 'var(--text2)', background: 'var(--bg3-surf)', border: '1px solid var(--border2)',
                       borderRadius: 'var(--r-md)', padding: '6px 9px', marginBottom: 6, lineHeight: 1.6 }}>
           🛒 <b>{tr('ใบ MO นี้ปิดไม่ได้จนกว่าลูปใบขอซื้อจะจบ')}</b> — รับของเข้าสต็อก หรือ ยกเลิกใบที่ไม่ใช้
           <div style={{ color: 'var(--muted)' }}>{tr('ผจก.ฝ่ายที่แจ้งเซ็นปิดใบไม่ได้ระหว่างนี้ — ใบจะค้างอยู่ที่ขั้นปิดใบ')}</div>
@@ -719,7 +719,7 @@ export function MtnPrBoard({ parts = [], fullName, canEdit = false, onStockChang
         <div style={{ ...h3, color: noPrMos.length ? '#ef4444' : undefined }}>{tr('ใบ MO ที่ช่างเลือกว่าต้องเปิด PR — ยังไม่มีรายการขอซื้อ (')}{noPrMos.length})</div>
         {noPrMos.length ? <RowFold rows={noPrMos} unit="ใบ">{o => (
           <div key={o.id}>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', fontSize: 12, padding: '5px 9px', borderRadius: 'var(--r-md)', background: 'var(--card)', border: '1px solid var(--border)', borderLeft: '4px solid #ef4444', marginBottom: 6 }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', fontSize: 12, padding: '5px 9px', borderRadius: 'var(--r-md)', background: 'var(--card-surf)', border: '1px solid var(--border)', borderLeft: '4px solid #ef4444', marginBottom: 6 }}>
               <a href={`/mtn-repair?mo=${encodeURIComponent(o.id)}`} style={{ color: 'var(--accent)', fontWeight: 800 }} title={tr('เปิดใบ MO')}>{o.mo_no || tr('ใบ MO (ยังไม่มีเลข)')}</a>
               <span style={{ flex: 1, minWidth: 160 }}>{[o.item_type, o.machine_no, o.line_name].filter(Boolean).join(' · ') || '—'}</span>
               <span style={{ color: 'var(--muted)' }}>{repairPathMeta(o.repair_path)?.label}</span>
@@ -800,7 +800,7 @@ export function MtnGlMaster({ canEdit = false, fullName }) {
             <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 4 }}>{tr(c.label)} ({list.length})</div>
             {!list.length && <div style={{ fontSize: 11.5, color: '#f59e0b' }}>{tr('⚠ ยังไม่มีรหัสในหมวดนี้')}</div>}
             {list.map(g => (
-              <div key={g.id} style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', padding: '5px 8px', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', marginBottom: 4 }}>
+              <div key={g.id} style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', padding: '5px 8px', background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', marginBottom: 4 }}>
                 <input defaultValue={g.gl_code} disabled={!canEdit} onBlur={e => e.target.value.trim() && e.target.value.trim() !== g.gl_code && upd(g.id, { gl_code: e.target.value.trim() })} style={{ ...inp, width: 140, fontFamily: 'monospace', fontWeight: 700 }} />
                 <input defaultValue={g.name || ''} disabled={!canEdit} onBlur={e => e.target.value !== (g.name || '') && upd(g.id, { name: e.target.value })} style={{ ...inp, flex: 1, minWidth: 160 }} />
                 <button disabled={!canEdit} onClick={() => setDefault(g)} style={{ ...(g.is_default ? btnPri : btnGhost), padding: '5px 10px' }}>{g.is_default ? tr('★ ตั้งต้น') : tr('☆ ตั้งเป็นตั้งต้น')}</button>

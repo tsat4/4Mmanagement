@@ -978,7 +978,7 @@ function StockTab({ role, scope }) {
       {/* ── Issue / Adjust modal ── */}
       {showForm && (
         <div style={{ position:'fixed', inset:0, background:'var(--scrim)', WebkitBackdropFilter:'var(--scrim-blur)', backdropFilter:'var(--scrim-blur)', zIndex:2000, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
-          <div style={{ background:'var(--bg3)', border:'1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding:24, width:'min(900px,96vw)', maxHeight:'90vh', overflowY:'auto' }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: 'var(--bg3-surf)', border:'1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding:24, width:'min(900px,96vw)', maxHeight:'90vh', overflowY:'auto' }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize:15, fontWeight:800, color:'var(--text)', marginBottom:16, fontFamily:'var(--font-display)' }}>
               {TYPE_LABEL[form.type]}
             </div>
@@ -1133,7 +1133,7 @@ function StockTab({ role, scope }) {
       {/* ── Reject reason modal ── (ฟอร์มมี input → ไม่ปิดจาก backdrop click ตาม UI-CONVENTIONS §5) */}
       {rejectTx && (
         <div className="modal-scroll" style={{ position:'fixed', inset:0, background:'var(--scrim)', WebkitBackdropFilter:'var(--scrim-blur)', backdropFilter:'var(--scrim-blur)', zIndex:2000, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
-          <div style={{ background:'var(--bg3)', border:'1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding:24, width:'min(420px,100%)' }}>
+          <div style={{ background: 'var(--bg3-surf)', border:'1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding:24, width:'min(420px,100%)' }}>
             <div style={{ fontSize:15, fontWeight:800, color:'var(--text)', marginBottom:6, fontFamily:'var(--font-display)' }}>{tr('❌ ปฏิเสธคำขอ')}</div>
             <div style={{ fontSize:12, color:'var(--muted)', marginBottom:14 }}>
               {TYPE_LABEL[rejectTx.type]} · <span style={{ fontFamily:'monospace', color:'var(--blue)' }}>{rejectTx.mat_no}</span> · {rejectTx.line_name} · {parseFloat(rejectTx.qty).toLocaleString()}
@@ -1391,7 +1391,7 @@ function DeliveryRoundsTab({ canEdit, fullName, scope }) {
       {/* Modal */}
       {showModal && (
         <div style={{ position:'fixed', inset:0, background:'var(--scrim)', WebkitBackdropFilter:'var(--scrim-blur)', backdropFilter:'var(--scrim-blur)', zIndex:2000, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
-          <div style={{ background:'var(--bg3)', border:'1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding:24, width:'min(760px,96vw)', maxHeight:'90vh', overflowY:'auto' }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: 'var(--bg3-surf)', border:'1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding:24, width:'min(760px,96vw)', maxHeight:'90vh', overflowY:'auto' }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize:15, fontWeight:800, color:'var(--text)', marginBottom:16, fontFamily:'var(--font-display)' }}>
               ⏰ {editId ? 'แก้ไขรอบจัดส่ง' : 'เพิ่มรอบจัดส่งใหม่'}
             </div>
@@ -1443,7 +1443,7 @@ function DeliveryRoundsTab({ canEdit, fullName, scope }) {
               </div>
 
               {/* Shipping time chart */}
-              <div style={{ background:'var(--bg2)', borderRadius: 'var(--r-md)', padding:12, border:'1px solid var(--border)', display:'flex', flexDirection:'column', gap:10 }}>
+              <div style={{ background: 'var(--bg2-surf)', borderRadius: 'var(--r-md)', padding:12, border:'1px solid var(--border)', display:'flex', flexDirection:'column', gap:10 }}>
                 <div style={{ fontSize:11, fontWeight:800, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.05em' }}>⏰ Shipping Time Chart</div>
                 <div className="mgrid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
                   <div>
@@ -1617,7 +1617,7 @@ function DeliveryTimeBoardTab() {
         return (
           <>
             <div onClick={() => setPopup(null)} style={{ position: 'fixed', inset: 0, zIndex: 998 }} />
-            <div style={{ position: 'fixed', left, top, width: W, zIndex: 1300, background: 'var(--bg3)', border: `1px solid ${tint(st.color, 'line')}`, borderRadius: 'var(--r-lg)', boxShadow: 'var(--shadow-float)', overflow: 'hidden' }}>
+            <div style={{ position: 'fixed', left, top, width: W, zIndex: 1300, background: 'var(--bg3-surf)', border: `1px solid ${tint(st.color, 'line')}`, borderRadius: 'var(--r-lg)', boxShadow: 'var(--shadow-float)', overflow: 'hidden' }}>
               <div style={{ height: 4, background: st.color }} />
               <div style={{ padding: '10px 14px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>

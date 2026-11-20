@@ -497,7 +497,7 @@ export default function Energy() {
             <button onClick={() => toggleMeter(p, !meteredSet.has(keyOf(p)))} disabled={!canEdit}
               title={meteredSet.has(keyOf(p)) ? tr('มีมิเตอร์ — นับเข้าผลรวมที่วัดได้') : tr('ยังไม่มีมิเตอร์ — กดเพื่อย้ายไปกลุ่มที่วัดได้')}
               style={{ padding: '4px 9px', borderRadius: 'var(--r-md)', fontSize: 11.5, fontWeight: 700, cursor: canEdit ? 'pointer' : 'default',
-                border: '1px solid var(--border2)', background: 'var(--bg3)', color: meteredSet.has(keyOf(p)) ? GOOD : 'var(--muted)' }}>
+                border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: meteredSet.has(keyOf(p)) ? GOOD : 'var(--muted)' }}>
               {meteredSet.has(keyOf(p)) ? tr('มีมิเตอร์') : tr('+ มีมิเตอร์')}
             </button>
           </td>
@@ -632,7 +632,7 @@ export default function Energy() {
             <h3 style={{ ...secTitle, display: 'flex', alignItems: 'center', gap: 8 }}>
               {tr('จุดที่ยังไม่มีมิเตอร์ (')}{otherPts.length})
               <button onClick={() => setShowUnmetered(v => !v)}
-                style={{ padding: '3px 10px', borderRadius: 'var(--r-md)', fontSize: 11.5, fontWeight: 700, border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)', cursor: 'pointer' }}>
+                style={{ padding: '3px 10px', borderRadius: 'var(--r-md)', fontSize: 11.5, fontWeight: 700, border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)', cursor: 'pointer' }}>
                 {showUnmetered ? tr('ซ่อน') : tr('แสดง')}
               </button>
               <span style={{ fontWeight: 400, fontSize: 11.5, color: 'var(--muted)' }}>{tr('— ทุกไลน์ในกลุ่ม + โซน · กรอกได้ถ้ามีตัวเลข แต่ยังไม่นับเข้าผลรวมที่วัดได้ (กด')} <b>{tr('+ มีมิเตอร์')}</b> {tr('เพื่อย้ายขึ้นไป)')}</span>

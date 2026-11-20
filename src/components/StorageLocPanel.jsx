@@ -230,7 +230,7 @@ export default function StorageLocPanel() {
     : 'ledger ทุกแถวมีมุม SAP แล้ว';
 
   return (
-    <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 16, marginBottom: 16 }}>
+    <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 16, marginBottom: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
         <div>
           <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{tr('พื้นที่ SAP · ทะเบียนรหัสคลัง (Storage Location)')}</div>
@@ -303,7 +303,7 @@ export default function StorageLocPanel() {
       {loading ? (
         <div style={{ padding: 20, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('กำลังโหลด...')}</div>
       ) : !missing && rows.length === 0 ? (
-        <div style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--muted)', fontSize: 13, background: 'var(--bg2)', borderRadius: 'var(--r-md)', border: '1px dashed var(--border)' }}>
+        <div style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--muted)', fontSize: 13, background: 'var(--bg2-surf)', borderRadius: 'var(--r-md)', border: '1px dashed var(--border)' }}>
           ยังไม่มีรหัสคลังในทะเบียน{canManage && ' — กด "+ เพิ่มรหัสคลัง"'}
         </div>
       ) : !missing && (
@@ -316,7 +316,7 @@ export default function StorageLocPanel() {
             const inherited = cover.filter(n => !own.includes(n));
             return (
               <div key={r.code} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 'var(--r-md)',
-                background: 'var(--bg2)', border: '1px solid var(--border)', opacity: r.is_active ? 1 : 0.5 }}>
+                background: 'var(--bg2-surf)', border: '1px solid var(--border)', opacity: r.is_active ? 1 : 0.5 }}>
                 <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: 14, padding: '3px 9px', borderRadius: 'var(--r-md)', background: `${meta.color}1f`, color: meta.color, flexShrink: 0 }}>
                   {r.code}
                 </span>
@@ -342,7 +342,7 @@ export default function StorageLocPanel() {
                 {inUse && <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', flexShrink: 0 }}>{tr('มีคนใช้อยู่')}</span>}
                 {canManage && (
                   <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                    <button className="tbtn" onClick={() => setEdit({ ...r, line_names: own })} style={{ padding: '4px 8px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text)', cursor: 'pointer', fontSize: 12 }}>✏️</button>
+                    <button className="tbtn" onClick={() => setEdit({ ...r, line_names: own })} style={{ padding: '4px 8px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg3-surf)', color: 'var(--text)', cursor: 'pointer', fontSize: 12 }}>✏️</button>
                     {/* ลบได้เฉพาะตอน "นับการใช้งานได้ และไม่มีใครใช้" — นอกนั้นปิดไว้ (fail-closed)
                         ปุ่มยังอยู่ (ไม่ซ่อน) + title บอกเหตุผล ไม่งั้นดูเหมือนฟีเจอร์หาย */}
                     <DeleteButton onClick={() => remove(r)} disabled={countFailed || inUse}
@@ -384,7 +384,7 @@ function LocForm({ init, isNew, onSave, onClose, rows, lines, noLineMap, role, l
 
   return (
     <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 24, width: 'min(480px,100%)', maxHeight: '92vh', overflowY: 'auto' }}>
+      <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 24, width: 'min(480px,100%)', maxHeight: '92vh', overflowY: 'auto' }}>
         <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', marginBottom: 14 }}>
           {isNew ? '➕ เพิ่มรหัสคลัง' : `✏️ แก้ไข ${init.code}`}
         </div>
@@ -436,7 +436,7 @@ function LocForm({ init, isNew, onSave, onClose, rows, lines, noLineMap, role, l
                   ))}
                   <LineSelect lines={(lines || []).filter(l => !f.line_names.includes(l.name))} value={addLine} onChange={addName}
                     placeholder={tr('+ เพิ่มไลน์ (ใส่ไลน์แม่ = ครอบทั้งแผนก)')} role={role} lineId={lineId} sections={sections}
-                    style={{ width: 260, padding: '6px 9px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', fontSize: 12.5 }} />
+                    style={{ width: 260, padding: '6px 9px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)', fontSize: 12.5 }} />
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4, lineHeight: 1.5 }}>
                   {isStoreKind(f.kind) && <div style={{ color: 'var(--text2)', fontWeight: 700 }}>รหัสสโตร์/คลัง ไม่ต้องผูกไลน์ — พาร์ทไหนเก็บที่นี่ ให้ตั้ง "ที่จัดเก็บหลัก" ที่ทะเบียนพาร์ท (/products แท็บ Parts)</div>}
@@ -457,7 +457,7 @@ function LocForm({ init, isNew, onSave, onClose, rows, lines, noLineMap, role, l
           </label>
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
-          <button onClick={onClose} style={{ padding: '9px 18px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', cursor: 'pointer', fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-body)' }}>{tr('ยกเลิก')}</button>
+          <button onClick={onClose} style={{ padding: '9px 18px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)', cursor: 'pointer', fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-body)' }}>{tr('ยกเลิก')}</button>
           <button onClick={submit} disabled={busy || badFormat}
             style={{ padding: '9px 18px', borderRadius: 'var(--r-md)', border: 'none', background: 'var(--accent)', color: 'var(--accent-ink)', cursor: busy || badFormat ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 800, fontFamily: 'var(--font-body)', opacity: busy || badFormat ? 0.5 : 1 }}>
             {busy ? '...' : tr('💾 บันทึก')}

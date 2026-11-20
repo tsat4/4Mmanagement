@@ -52,7 +52,7 @@ function RadarTooltipContent({ active, payload }) {
   const { subject, value } = payload[0].payload;
   const lv = getLevel(value);
   return (
-    <div style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '7px 12px', fontSize: 12 }}>
+    <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '7px 12px', fontSize: 12 }}>
       <div style={{ fontWeight: 700, color: 'var(--text)' }}>{subject}</div>
       <div style={{ color: lv.color, fontWeight: 800, fontSize: 15 }}>{value}<span style={{ fontSize: 11, fontWeight: 400, marginLeft: 2 }}>/ 100</span></div>
       <div style={{ fontSize: 11, color: lv.color }}>{tr(lv.label)}</div>
@@ -139,7 +139,7 @@ export default function SkillRadarPanel({ emp, skillDefs, subItemsByskill = {}, 
         width: wide ? 'min(96vw, 1040px)' : 'min(460px, 94vw)',
         maxHeight: '92vh',
         display: 'flex', flexDirection: 'column',
-        background: 'var(--bg2)',
+        background: 'var(--bg2-surf)',
         border: `1px solid ${glowColor}55`,
         borderRadius: 'var(--r-lg)',   /* 09/11: เดิม 20 → ถูกแปลงเป็นแคปซูลผิดในรอบ 4 (user: โมดัลกลายเป็นวงรี) · modal = --r-lg */
         /* 🌑 เงาโมดัล = token (ห้าม rgba ดิบ · ธีมสว่างจะเงาดำทึบ) · glow สีคือสัญญาณระดับทักษะ */
@@ -192,7 +192,7 @@ export default function SkillRadarPanel({ emp, skillDefs, subItemsByskill = {}, 
             <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 17, color: 'var(--text)', lineHeight: 1.2 }}>{emp.name}</div>
             <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{emp.employee_id_code}</div>
             <div style={{ marginTop: 6, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              {emp.group_name && <span style={{ fontSize: 11, background: 'var(--bg3)', color: 'var(--text2)', borderRadius: 'var(--r-xs)', padding: '2px 7px', border: '1px solid var(--border2)' }}>{emp.group_name}</span>}
+              {emp.group_name && <span style={{ fontSize: 11, background: 'var(--bg3-surf)', color: 'var(--text2)', borderRadius: 'var(--r-xs)', padding: '2px 7px', border: '1px solid var(--border2)' }}>{emp.group_name}</span>}
               <span style={{ fontSize: 11, background: `${glowColor}22`, color: glowColor, borderRadius: 'var(--r-xs)', padding: '2px 7px', border: `1px solid ${glowColor}44`, fontWeight: 700 }}>
                 {tr(overall.label)}
               </span>
@@ -210,7 +210,7 @@ export default function SkillRadarPanel({ emp, skillDefs, subItemsByskill = {}, 
           {radarData.slice(0, 4).map(d => {
             const lv = getLevel(d.value);
             return (
-              <div key={d.subject} style={{ background: 'var(--bg3)', borderRadius: 'var(--r-md)', padding: '8px 10px', border: '1px solid var(--border)' }}>
+              <div key={d.subject} style={{ background: 'var(--bg3-surf)', borderRadius: 'var(--r-md)', padding: '8px 10px', border: '1px solid var(--border)' }}>
                 <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.subject}</div>
                 <div style={{ fontSize: 16, fontWeight: 800, color: lv.color, fontFamily: 'var(--font-display)' }}>{d.value}</div>
                 <div style={{ height: 3, background: 'var(--border2)', borderRadius: 'var(--r-xs)', marginTop: 4 }}>

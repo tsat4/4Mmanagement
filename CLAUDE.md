@@ -613,6 +613,8 @@ Realtime + Edge Functions/Deno) · Telegram Bot API · deploy = Render.com (Stat
 - **จอ TV/บอร์ดหน้างาน: ฟอนต์พื้น 11px ห้ามต่ำกว่านี้** (ชิป/ป้าย 11–12 · หัวข้อ 14–15) — **มีด่าน `font-min-11`**
   + `audit/chartsweep.mjs` วัดขนาดที่เห็นจริง · แน่นเกิน = **เว้นป้าย/ซ่อนป้าย ห้ามลดฟอนต์**
   · ยกเว้น `src/lib/**` (ใบพิมพ์/PPTX = pt บนกระดาษ) · ตัวสเกลตามจอใช้ `fs()` ที่มีพื้น `Math.max(11, …)`
+- 🎚️ **ไล่เฉด = สีเดียว ΔL ≤ 5% ผ่าน token เท่านั้น** (20/11 · คำสั่ง user) — แผงใช้ `background:'var(--card-surf)'` (`--bg2-surf`/`--bg3-surf`)
+  ห้ามเขียน `linear-gradient` ของพื้นเองในหน้า · คู่ `--x-top/bot` ใหม่ต้องผ่านด่าน `gradientDeltaCap.test.mjs` (UI §6.17 ข้อ 6)
 - 🌑 **เงา = "ของชิ้นนี้ลอยอยู่" ห้ามเขียน rgba ดิบในหน้า** (ด่าน `card-shadow-via-token`) — การ์ดแบน `var(--shadow-sm)`
   (ธีมมืด = none · ธีมสว่างยังมี) · ของที่ลอยจริง `var(--shadow-float)` · modal `--shadow-md|lg` (UI §6.20)
 

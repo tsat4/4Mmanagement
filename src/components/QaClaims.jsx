@@ -225,7 +225,7 @@ export default function QaClaims({ lines = [], scopeNames = null, role, lineId, 
           ['🔁 เคลมซ้ำ', sureIds.size, sureIds.size ? '#ef4444' : '#22c55e', maybeIds.size ? `+ อาจซ้ำอีก ${maybeIds.size} ใบ (ใน ${REPEAT_MONTHS} เดือน)` : `พาร์ท+อาการเดิมใน ${REPEAT_MONTHS} เดือน`],
           ['🛠 ผูก 8D แล้ว', scoped.filter((c) => c.capa_id).length, undefined, `จากทั้งหมด ${scoped.length} ใบ`],
         ].map(([label, val, color, sub]) => (
-          <div key={label} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '10px 13px' }}>
+          <div key={label} style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '10px 13px' }}>
             <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700 }}>{label}</div>
             <div style={{ fontSize: 22, fontWeight: 800, color: color || 'var(--text)' }}>{val}</div>
             <div style={{ fontSize: 11, color: 'var(--muted)' }}>{sub}</div>
@@ -305,7 +305,7 @@ function ClaimModal({ detail, setDetail, lines, role, lineId, sections, partOpts
   const ro = !canRecord || detail.status === 'closed' || detail.status === QA_CANCELLED;
   return (
     <div /* ⚠️ ฟอร์มกรอกข้อมูล — ไม่ปิดจาก backdrop กันเผลอแตะแล้วข้อมูลหาย (UI-CONVENTIONS §5) */ style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2500, padding: 16 }}>
-      <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(980px, 100%)', maxHeight: '92vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+      <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(980px, 100%)', maxHeight: '92vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
         <h3 style={{ margin: '0 0 14px', fontSize: 16 }}>{detail.id ? detail.claim_no : tr('รับเคลมลูกค้าใหม่')}</h3>
         {/* 🪜 ถึงขั้นไหน — กฎ claimFlow() (utils/qaDocStatus.js) · UI §6.30 */}
         {detail.id && (() => { const f = claimFlow(detail); return <div style={{ marginBottom: 12 }}><StepFlow steps={f.steps} waiting={f.waiting} unknown={!f.known} /></div>; })()}
@@ -378,7 +378,7 @@ function ClaimModal({ detail, setDetail, lines, role, lineId, sections, partOpts
         </div>
 
         {detail.id && (
-          <div style={{ marginTop: 14, padding: '10px 13px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2)', fontSize: 12.5, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ marginTop: 14, padding: '10px 13px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2-surf)', fontSize: 12.5, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
             <b>{tr('งานแก้ไข:')}</b>
             {detail.capa_id
               ? <><Chip label={tr('มี 8D แล้ว')} color="#22c55e" /><button style={ghostBtn} onClick={() => openCapa(detail)}>{tr('เปิดใบ 8D →')}</button></>

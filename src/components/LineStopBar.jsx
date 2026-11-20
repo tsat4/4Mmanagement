@@ -51,7 +51,7 @@ export default function LineStopBar({ total, parts = [], unknownHr = 0, unknownL
       )}
       {/* แถบเดียว แตกเป็นช่วง — ความกว้างรวมกันได้ 100% ของยอดเต็มเสมอ */}
       <div style={{ display: 'flex', width: '100%', height: 22, borderRadius: 'var(--r-xs)',
-                    overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--bg3)' }}>
+                    overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--bg3-surf)' }}>
         {rows.map(r => {
           const w = pct(r.hr);
           if (w <= 0) return null;

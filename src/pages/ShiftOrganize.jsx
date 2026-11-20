@@ -504,7 +504,7 @@ export default function ShiftOrganize() {
         <button type="button" className="pg-btn sm pg-btn-icon" onClick={prevWeek}>‹</button>
         <button type="button" className="pg-btn sm" onClick={goToday} >{tr('วันนี้')}</button>
         <button type="button" className="pg-btn sm pg-btn-icon" onClick={nextWeek}>›</button>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 14px', borderRadius: 'var(--r-md)', background: 'var(--bg3)', border: '1px solid var(--border2)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 14px', borderRadius: 'var(--r-md)', background: 'var(--bg3-surf)', border: '1px solid var(--border2)' }}>
           <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('สัปดาห์')}</span>
           <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>
             จ. {fmtDate(weekDates[0])} {tr('— อา.')} {fmtDate(weekDates[6])}
@@ -545,7 +545,7 @@ export default function ShiftOrganize() {
             {noShiftLines.map(l => (
               <span key={l.id} style={{
                 padding: '2px 8px', borderRadius: 'var(--r-pill)', fontSize: 11.5, fontWeight: 700,
-                background: 'var(--bg3)', border: '1px solid var(--border)',
+                background: 'var(--bg3-surf)', border: '1px solid var(--border)',
                 color: l.n ? 'var(--red)' : 'var(--muted)',
               }}>{l.name}{l.n ? ` · ${l.n} คน` : ' · ไม่มีพนักงาน'}</span>
             ))}

@@ -845,7 +845,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
           <div style={{ flex: 1 }} />
           <button className="tv-hide" onClick={() => goBoard(false)} style={{
             fontSize: 12, padding: '4px 10px', borderRadius: 'var(--r-md)', cursor: 'pointer',
-            background: 'var(--bg3)', color: 'var(--text)', border: '1px solid var(--border2)',
+            background: 'var(--bg3-surf)', color: 'var(--text)', border: '1px solid var(--border2)',
           }}>{tr('ออกจากโหมดจอ')}</button>
         </div>
       )}
@@ -1128,7 +1128,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
                             /* เปิดหน้าต่างปิดงาน (ใส่ผล + รูป) แทนการปิดทันที — ปิดเปล่าๆ ไม่มีหลักฐานว่าแก้อะไร */
                             <button className="tv-hide" onClick={() => setClosing({ a, result: a.result_value || '', file: null })} style={{
                               fontSize: fs(10), fontWeight: 700, padding: '1px 7px', borderRadius: 'var(--r-md)', cursor: 'pointer',
-                              background: 'var(--bg2)', color: 'var(--green)', border: '1px solid var(--green-line)',
+                              background: 'var(--bg2-surf)', color: 'var(--green)', border: '1px solid var(--green-line)',
                             }}>{tr('ปิด')}</button>
                           )}
                         </div>
@@ -1155,7 +1155,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
           display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14,
         }}>
           <div onClick={e => e.stopPropagation()} style={{
-            background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)',
+            background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)',
             padding: 16, width: 'min(460px, 100%)', maxHeight: '90%', overflowY: 'auto',
           }}>
             <h3 style={{ margin: '0 0 4px', fontSize: 17 }}>{tr('✅ ปิดงานติดตาม')}</h3>
@@ -1174,7 +1174,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 14 }}>
               <button onClick={() => setClosing(null)} disabled={closeSaving} style={{
                 fontSize: 13, padding: '7px 14px', borderRadius: 'var(--r-md)', cursor: 'pointer',
-                background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)',
+                background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)',
               }}>{tr('ยกเลิก')}</button>
               <button onClick={doClose} disabled={closeSaving} style={{
                 fontSize: 13, fontWeight: 800, padding: '7px 18px', borderRadius: 'var(--r-md)', cursor: 'pointer',
@@ -1192,7 +1192,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
           display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14,
         }}>
           <div onClick={e => e.stopPropagation()} style={{
-            background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)',
+            background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)',
             padding: 16, width: 'min(520px, 100%)', maxHeight: '90%', overflowY: 'auto',
           }}>
             <h3 style={{ margin: '0 0 10px', fontSize: 17 }}>{tr('➕ ตั้ง Action Item (OBEYA')} {today})</h3>
@@ -1237,7 +1237,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 14 }}>
               <button onClick={() => setModal(null)} disabled={saving} style={{
                 fontSize: 13.5, padding: '7px 14px', borderRadius: 'var(--r-md)', cursor: 'pointer',
-                background: 'var(--bg3)', color: 'var(--text)', border: '1px solid var(--border2)',
+                background: 'var(--bg3-surf)', color: 'var(--text)', border: '1px solid var(--border2)',
               }}>{tr('ยกเลิก')}</button>
               <button onClick={saveAction} disabled={saving} style={{
                 fontSize: 13.5, fontWeight: 800, padding: '7px 16px', borderRadius: 'var(--r-md)', cursor: 'pointer',

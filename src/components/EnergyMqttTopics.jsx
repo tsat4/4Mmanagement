@@ -177,7 +177,7 @@ export default function EnergyMqttTopics({ points, canEdit }) {
               {busy ? '⏳' : editId ? tr('💾 บันทึก') : tr('+ เพิ่ม')}
             </button>
             {editId && <button onClick={() => { setEditId(null); setForm(EMPTY); }}
-              style={{ padding: '8px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)', fontSize: 13, cursor: 'pointer' }}>{tr('ยกเลิก')}</button>}
+              style={{ padding: '8px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)', fontSize: 13, cursor: 'pointer' }}>{tr('ยกเลิก')}</button>}
           </div>
           <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8, lineHeight: 1.6 }}>
             <b>{tr('payload เป็นตัวเลขล้วน')}</b> {tr('(เช่น')} <code>26.2</code>) → เว้นช่อง JSON ว่าง ·
@@ -204,7 +204,7 @@ export default function EnergyMqttTopics({ points, canEdit }) {
                   <td style={{ ...td, color: 'var(--muted)' }}>{liveAgeMin(u.last_seen) != null ? `${liveAgeMin(u.last_seen)} นาทีก่อน` : '—'}</td>
                   <td style={{ ...td, textAlign: 'right' }}>
                     {canEdit && <button onClick={() => adoptTopic(u)}
-                      style={{ padding: '3px 10px', borderRadius: 'var(--r-md)', fontSize: 11.5, fontWeight: 700, border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--accent)', cursor: 'pointer' }}>{tr('+ ผูก')}</button>}
+                      style={{ padding: '3px 10px', borderRadius: 'var(--r-md)', fontSize: 11.5, fontWeight: 700, border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--accent)', cursor: 'pointer' }}>{tr('+ ผูก')}</button>}
                   </td>
                 </tr>
               ))}
@@ -255,10 +255,10 @@ export default function EnergyMqttTopics({ points, canEdit }) {
                     {canEdit && (
                       <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
                         <button onClick={() => toggleActive(r)} title={r.is_active ? tr('ปิดใช้ชั่วคราว (ไม่ลบ)') : tr('เปิดใช้')}
-                          style={{ padding: '3px 8px', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 700, marginRight: 4, border: '1px solid var(--border2)', background: 'var(--bg3)', color: r.is_active ? GOOD : 'var(--muted)', cursor: 'pointer' }}>
+                          style={{ padding: '3px 8px', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 700, marginRight: 4, border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: r.is_active ? GOOD : 'var(--muted)', cursor: 'pointer' }}>
                           {r.is_active ? tr('ใช้อยู่') : tr('ปิด')}
                         </button>
-                        <button onClick={() => editRow(r)} style={{ padding: '3px 8px', borderRadius: 'var(--r-md)', fontSize: 11, marginRight: 4, border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)', cursor: 'pointer' }}>✏️</button>
+                        <button onClick={() => editRow(r)} style={{ padding: '3px 8px', borderRadius: 'var(--r-md)', fontSize: 11, marginRight: 4, border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)', cursor: 'pointer' }}>✏️</button>
                         <DeleteButton onClick={() => del(r)} title={tr('ลบ')} />
                       </td>
                     )}

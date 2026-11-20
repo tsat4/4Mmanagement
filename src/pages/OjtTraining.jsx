@@ -127,7 +127,7 @@ function SignPadModal({ title, onCancel, onDone }) {
   };
   return (
     <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 3200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14 }}>
-      <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(96vw, 620px)' }}>
+      <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(96vw, 620px)' }}>
         <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginBottom: 10 }}>✍️ {title}</div>
         <SignCanvas ref={pad} />
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
@@ -166,7 +166,7 @@ function SignQueueModal({ queue, onCancel, onDone }) {
 
   return (
     <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 3300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 12 }}>
-      <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(96vw, 660px)' }}>
+      <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(96vw, 660px)' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 2 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)' }}>{tr('✍️ ส่งแท็บเล็ตให้เซ็นทีละคน')}</div>
           <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--accent)' }}>{tr('คนที่')} {pos + 1} / {total} {tr('· เซ็นแล้ว')} {done.size}</div>
@@ -900,7 +900,7 @@ ${printImgs.map((f, i) => attachData[i] ? `<div style="page-break-before:always;
               </div>
             )}
             {mayDelete && (
-              <button onClick={() => clearSelfSignOjt(kind)} style={{ alignSelf: 'flex-start', padding: '3px 9px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)', cursor: 'pointer', fontSize: 11 }}>
+              <button onClick={() => clearSelfSignOjt(kind)} style={{ alignSelf: 'flex-start', padding: '3px 9px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)', cursor: 'pointer', fontSize: 11 }}>
                 {tr('ปลดลายเซ็น')}
               </button>
             )}
@@ -934,7 +934,7 @@ ${printImgs.map((f, i) => attachData[i] ? `<div style="page-break-before:always;
       {editing[sigKey] && <img src={editing[sigKey]} alt="" style={{ height: 30, marginTop: 4, background: '#fff', borderRadius: 4, padding: 2 }} />}
       {!editing[sigKey] && editing[nameKey] && (isSelfName(editing[nameKey], fullName)
         ? (mySigOjt
-            ? <button onClick={() => setEditing(prev => ({ ...prev, [sigKey]: mySigOjt }))} style={{ marginTop: 4, padding: '3px 9px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)', cursor: 'pointer', fontSize: 11 }}>✍️ เซ็นเป็น{label}</button>
+            ? <button onClick={() => setEditing(prev => ({ ...prev, [sigKey]: mySigOjt }))} style={{ marginTop: 4, padding: '3px 9px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)', cursor: 'pointer', fontSize: 11 }}>✍️ เซ็นเป็น{label}</button>
             : <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 3 }}>โปรไฟล์ของคุณยังไม่มีลายเซ็น — อัปโหลดที่เมนูโปรไฟล์ก่อน</div>)
         : <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 3 }}>รอ {editing[nameKey]} login มาเซ็นเอง</div>)}
     </div>
@@ -1011,7 +1011,7 @@ ${printImgs.map((f, i) => attachData[i] ? `<div style="page-break-before:always;
                     </button>
                     {canRecord && (
                       <button onClick={() => openEdit(t)}
-                        style={{ padding: '4px 10px', borderRadius: 'var(--r-md)', fontSize: 12, cursor: 'pointer', background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)', marginRight: 6 }}>✏️</button>
+                        style={{ padding: '4px 10px', borderRadius: 'var(--r-md)', fontSize: 12, cursor: 'pointer', background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)', marginRight: 6 }}>✏️</button>
                     )}
                     {canRemoveSheet(t) && (
                       <DeleteButton onClick={() => handleDelete(t)}
@@ -1031,7 +1031,7 @@ ${printImgs.map((f, i) => attachData[i] ? `<div style="page-break-before:always;
       {/* ── modal ฟอร์ม (มี input — ห้ามปิดจาก backdrop ตาม UI-CONVENTIONS §5) ── */}
       {editing && (
         <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 3000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', overflowY: 'auto', padding: '3vh 2vw' }}>
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', width: 'min(96vw, 1150px)' }}>
+          <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', width: 'min(96vw, 1150px)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
               <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{editing.isNew ? 'สร้าง' : 'แก้ไข'}{tr('ใบอบรมสอนงาน OJT')}</div>
               <button onClick={closeEdit} style={{ background: 'none', border: 'none', fontSize: 22, color: 'var(--muted)', cursor: 'pointer', lineHeight: 1 }}>✕</button>
@@ -1131,7 +1131,7 @@ ${printImgs.map((f, i) => attachData[i] ? `<div style="page-break-before:always;
                 ) : (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                     {editing.files.map((f, idx) => (
-                      <div key={f.id || f.file_url} style={{ width: 150, border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: 7, background: 'var(--bg3)', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                      <div key={f.id || f.file_url} style={{ width: 150, border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: 7, background: 'var(--bg3-surf)', display: 'flex', flexDirection: 'column', gap: 5 }}>
                         <a href={f.file_url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
                           {isImageAttachment(f.file_url)
                             ? <img src={f.file_url} alt={f.file_name || ''} style={{ width: '100%', height: 86, objectFit: 'cover', borderRadius: 6, background: '#fff', display: 'block' }} />
@@ -1160,7 +1160,7 @@ ${printImgs.map((f, i) => attachData[i] ? `<div style="page-break-before:always;
                   <input type="text" placeholder={tr('ค้นหาชื่อ/รหัสพนักงาน แล้วคลิกเพื่อเพิ่ม...')} value={empSearch} onChange={e => setEmpSearch(e.target.value)}
                     style={{ width: 'min(100%, 380px)', padding: '7px 10px', borderRadius: 'var(--ctl-r)', fontSize: 13 }} />
                   {searchResults.length > 0 && (
-                    <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 10, background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', width: 'min(100%, 380px)', maxHeight: 220, overflowY: 'auto', boxShadow: 'var(--shadow-float)' }}>
+                    <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 10, background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', width: 'min(100%, 380px)', maxHeight: 220, overflowY: 'auto', boxShadow: 'var(--shadow-float)' }}>
                       {searchResults.map(e => (
                         <div key={e.id} onClick={() => addEmployee(e)}
                           style={{ padding: '7px 10px', cursor: 'pointer', fontSize: 13, color: 'var(--text)', borderBottom: '1px solid var(--border)' }}>
@@ -1255,7 +1255,7 @@ ${printImgs.map((f, i) => attachData[i] ? `<div style="page-break-before:always;
               </div>
 
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: 14 }}>
-                <button onClick={closeEdit} style={{ padding: '9px 18px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)', cursor: 'pointer', fontSize: 13 }}>{tr('ยกเลิก')}</button>
+                <button onClick={closeEdit} style={{ padding: '9px 18px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)', cursor: 'pointer', fontSize: 13 }}>{tr('ยกเลิก')}</button>
                 <button onClick={handleSave} disabled={saving || !canRecord}
                   style={{ padding: '9px 22px', borderRadius: 'var(--r-md)', border: 'none', background: 'var(--accent)', color: 'var(--accent-ink)', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', fontSize: 13, opacity: saving ? 0.6 : 1 }}>
                   {saving ? tr('กำลังบันทึก...') : tr('บันทึกใบอบรม')}

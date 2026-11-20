@@ -177,7 +177,7 @@ function ChartModal({ c, curIdx, onClose }) {
     : null;
   return (
     <div className="modal-scroll" onClick={onClose} /* ดูกราฟอย่างเดียว ไม่ใช่ฟอร์มกรอก → ปิดจาก backdrop ได้ตามกฎ */ style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: '16px 18px', width: 'min(860px, 96vw)' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: '16px 18px', width: 'min(860px, 96vw)' }}>
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
           <b style={{ fontSize: 14.5, color: 'var(--text)' }}>{c.title}</b>
           <button onClick={onClose} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--muted)', fontSize: 16, cursor: 'pointer' }}>✕</button>
@@ -1358,7 +1358,7 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
                   display: 'inline-flex', alignItems: 'baseline', gap: 5, cursor: 'pointer',
                   padding: '3px 9px', borderRadius: 'var(--r-md)', fontSize: 11.5,
                   border: `1px solid ${sameScope({ kind: u.kind, value: u.value }, kpiScope) ? 'var(--amber)' : 'var(--border2)'}`,
-                  background: 'var(--bg3)', color: 'var(--text2)',
+                  background: 'var(--bg3-surf)', color: 'var(--text2)',
                 }}>
                 <b>{u.label}</b>
                 <span style={{ color: 'var(--amber)', fontWeight: 700 }}>
@@ -1441,7 +1441,7 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
               🔴 ยอดเต็มของแท่ง = ชั่วโมงไลน์หยุด ซึ่งเป็น **ตัวตั้งเดียวกับ Machine Break Down/MTTR/MTBF**
                  ⇒ อ่านแท่งนี้แล้วต้องกลับไปอ่านแถว KPI ข้างล่างได้โดยไม่ต้องแปลงอะไร */}
           {mtnTeam && mtnSeg?.known && mtnSeg.totalHr > 0 && (
-            <div style={{ margin: '2px 0 10px', background: 'var(--bg3)', border: '1px solid var(--border2)',
+            <div style={{ margin: '2px 0 10px', background: 'var(--bg3-surf)', border: '1px solid var(--border2)',
                           borderRadius: 'var(--r-md)', padding: '8px 10px' }}>
               <LineStopBar
                 title={`⏱️ ชั่วโมงไลน์หยุดปี ${year} แตกตามช่วง`}
@@ -1464,7 +1464,7 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
               🔴 ยอดเต็มเท่าแท่งบน (ไลน์หยุด) · 🔴 "ยังไม่ระบุ" ต้องเห็น ห้ามนับให้ฝั่งไหน
               🔴 ไม่แตะเลขที่ส่งกลุ่ม — แถว KPI ข้างล่างยังคิดจากไลน์หยุดเต็มเหมือนเดิม */}
           {mtnTeam && mtnOwner?.known && mtnOwner.totalHr > 0 && (
-            <div style={{ margin: '2px 0 10px', background: 'var(--bg3)', border: '1px solid var(--border2)',
+            <div style={{ margin: '2px 0 10px', background: 'var(--bg3-surf)', border: '1px solid var(--border2)',
                           borderRadius: 'var(--r-md)', padding: '8px 10px' }}>
               <LineStopBar
                 title={`🔧 ${tr('ชั่วโมงเดียวกันนี้ เป็นเครื่องเสียของช่างเท่าไหร่')} (${tr('ปี')} ${year + 543})`}
@@ -1489,7 +1489,7 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
               จึงไม่เข้า KPI ทีมใดเลย · 🔴 **ยอดรวมทั้งโรงงาน ไม่ใช่ของทีมที่เปิดดูอยู่** และห้ามเอาไปบวกให้ทีมไหน
               แยก 2 เหตุเพราะคนละทางแก้ · `known:false` = RPC รุ่นเก่ายังไม่ส่งมา ⇒ เขียนว่า "ยังไม่รู้" ห้ามโชว์ 0 */}
           {mtnTeam && mtnGap && (mtnGap.known ? mtnGap.totalHr > 0 : true) && (
-            <details style={{ margin: '2px 0 10px', fontSize: 11.5, color: 'var(--text2)', background: 'var(--bg3)',
+            <details style={{ margin: '2px 0 10px', fontSize: 11.5, color: 'var(--text2)', background: 'var(--bg3-surf)',
                               border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '6px 9px' }}>
               <summary style={{ cursor: 'pointer', color: 'var(--amber)' }}>
                 {!mtnGap.known
@@ -1793,7 +1793,7 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
             </table>
           )}
           {childOnly.length > 0 && (
-            <div style={{ marginTop: 10, border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 10px', background: 'var(--bg2)' }}>
+            <div style={{ marginTop: 10, border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 10px', background: 'var(--bg2-surf)' }}>
               <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--text)' }}>
                 ⬆ KPI ที่หน่วยลูกถือ แต่ {isPlant(scope) ? 'ระดับโรงงาน' : org.labelOf(scope.kind, scope.value)} {tr('ยังไม่ตั้ง — บอร์ด 📋 แสดงค่ารวมจากลูก (')}{childOnly.length} ตัว)
               </div>
@@ -1913,7 +1913,7 @@ function AutoTargetModal({ row, def, year, scopeText, deep, onClose, onSave }) {
   const scope = `ปี ${year + 543} · ${scopeText}`;
   return (
     <div className="modal-scroll" /* modal-scroll = เลื่อนถึงปุ่มล่างได้เมื่อจอเตี้ย/คีย์บอร์ดเด้ง (UI-CONVENTIONS §4 · index.css) */ style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14 }}>
-      <div style={{ background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(560px, 96vw)', maxHeight: '92vh', overflowY: 'auto' }}>
+      <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(560px, 96vw)', maxHeight: '92vh', overflowY: 'auto' }}>
         <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{tr('ตั้งเป้า —')} {f.name}</div>
         <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 3, marginBottom: 12, lineHeight: 1.6 }}>
           {scope}<br />
@@ -2011,7 +2011,7 @@ function CatalogModal({ rows, canManage, usedNames = [], onClose, onChanged, onP
   return (
     /* ⚠️ ไม่ใช่ฟอร์มที่กรอกค้าง — ปิดจาก backdrop ได้ (UI-CONVENTIONS §5) */
     <div className="modal-scroll" /* ไม่ปิดจาก backdrop — UI-CONVENTIONS §5: เผลอแตะพื้นหลังแล้วข้อมูลหายทั้งฟอร์ม (ปิดด้วยปุ่มยกเลิก/✕ เท่านั้น) */ style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(760px, 96vw)', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(760px, 96vw)', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
         <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>{tr('ทะเบียนชื่อ KPI')}</div>
         <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 10, lineHeight: 1.6 }}>
           ชื่อ + <b>{tr('ค่าตั้งต้น')}</b> (หน่วย · ทศนิยม · ทิศทาง · วิธีรวม 12 เดือน) ของ KPI แต่ละตัว —
@@ -2185,7 +2185,7 @@ function DefModal({ init, year, scope, org, orgFailed = '', scopeSet, userSectio
   const lbl = { fontSize: 11.5, fontWeight: 700, color: 'var(--muted)', marginBottom: 3 };
   return (
     <div className="modal-scroll" /* ไม่ปิดจาก backdrop — UI-CONVENTIONS §5: เผลอแตะพื้นหลังแล้วข้อมูลหายทั้งฟอร์ม (ปิดด้วยปุ่มยกเลิก/✕ เท่านั้น) */ style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(680px, 96vw)', maxHeight: '92vh', overflowY: 'auto' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(680px, 96vw)', maxHeight: '92vh', overflowY: 'auto' }}>
         <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginBottom: 12 }}>
           {f.id ? '✏️ แก้นิยาม KPI' : '＋ เพิ่ม KPI กรอกมือ'} {tr('— ปี')} {year + 543}
         </div>
@@ -2224,7 +2224,7 @@ function DefModal({ init, year, scope, org, orgFailed = '', scopeSet, userSectio
                     <span>{nameNote.text}</span>
                     {nameNote.pick && (
                       <button type="button" onClick={() => setF(p => ({ ...p, catalog_id: nameNote.pick.id, name: nameNote.pick.name }))}
-                        style={{ padding: '2px 9px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', cursor: 'pointer', fontSize: 11 }}>
+                        style={{ padding: '2px 9px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)', cursor: 'pointer', fontSize: 11 }}>
                         {tr('ใช้ชื่อนี้แทน')}
                       </button>
                     )}

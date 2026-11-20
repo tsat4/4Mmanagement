@@ -99,7 +99,7 @@ function Modal({ title, onClose, children, width = 560 }) {
       /* ตั้งใจไม่ปิดเมื่อคลิกพื้นหลัง — กันเผลอกดแล้วข้อมูลในฟอร์มหาย ปิดได้จากปุ่ม ✕/ยกเลิกเท่านั้น */
     >
       <div style={{
-        background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)',
+        background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)',
         width: `min(${width}px, 96vw)`, boxShadow: 'var(--shadow-lg)', maxHeight: '90vh',
         display: 'flex', flexDirection: 'column',
       }}>
@@ -415,7 +415,7 @@ export default function QAInspectionSetup() {
                 <AttachImage url={prodImg} alt={sel.part_no} title={sel.part_no}
                   caption={tr('รูปจาก Product Master/BOM')} hint={tr('รูปจาก Product Master/BOM — แตะเพื่อดูรูปขยาย')}
                   style={{ flexShrink: 0 }}
-                  imgStyle={{ width: 72, height: 72, maxHeight: 72, objectFit: 'cover', borderRadius: 10, border: '1px solid var(--border2)', background: 'var(--bg2)' }} />
+                  imgStyle={{ width: 72, height: 72, maxHeight: 72, objectFit: 'cover', borderRadius: 10, border: '1px solid var(--border2)', background: 'var(--bg2-surf)' }} />
               )}
               <div style={{ flex: 1, minWidth: 200 }}>
                 <div style={{ fontWeight: 900, fontSize: 17, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -560,7 +560,7 @@ export default function QAInspectionSetup() {
       {partModal && (
         <Modal title={partModal.id ? `✏️ แก้ไข ${partModal.part_no}` : '➕ เพิ่ม Part'} onClose={() => { setPartModal(null); setBomSearch(''); }}>
           {/* เลือกจากฐานข้อมูล BOM / Product Master → เติมฟอร์มให้ (แก้ทับได้) */}
-          <div style={{ marginBottom: 14, padding: 12, borderRadius: 'var(--r-md)', background: 'var(--bg3)', border: '1px dashed var(--border2)' }}>
+          <div style={{ marginBottom: 14, padding: 12, borderRadius: 'var(--r-md)', background: 'var(--bg3-surf)', border: '1px dashed var(--border2)' }}>
             <Field label={tr('เลือกจากฐานข้อมูล BOM / Product Master')}>
               <input style={inputSt} value={bomSearch} onChange={e => setBomSearch(e.target.value)}
                 placeholder={bomOptions === null ? 'กำลังโหลดฐานข้อมูล…' : `พิมพ์ค้นหา Part No. / ชื่อพาร์ท / MAT.NO (${bomOptions.length.toLocaleString()} รายการ)`} />
@@ -571,7 +571,7 @@ export default function QAInspectionSetup() {
                   <button key={o.key} onClick={() => pickBomOption(o)}
                     style={{
                       textAlign: 'left', padding: '8px 10px', borderRadius: 'var(--r-md)', cursor: 'pointer',
-                      background: 'var(--card)', border: '1px solid var(--border)',
+                      background: 'var(--card-surf)', border: '1px solid var(--border)',
                       display: 'flex', gap: 8, alignItems: 'center',
                     }}>
                     <Chip label={o.tag} color={o.tag === 'BOM' ? 'var(--amber)' : 'var(--blue)'} />

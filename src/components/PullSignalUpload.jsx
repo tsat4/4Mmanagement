@@ -475,7 +475,7 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
     /* ⚠️ ไม่ปิดจาก backdrop — เป็นฟอร์มที่ตั้งค่ารอบ/ลูกค้าไว้แล้ว เผลอแตะแล้วต้องอัพไฟล์ใหม่ทั้งชุด */
     <div className="overlay" style={{ zIndex: 2400 }}>
       <div style={{
-        background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)',
+        background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)',
         padding: 18, width: 'min(96vw, 1100px)', margin: 'auto',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 4 }}>
@@ -499,7 +499,7 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
 
         <label style={{
           display: 'block', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: 14,
-          textAlign: 'center', cursor: 'pointer', background: 'var(--bg2)', marginBottom: 12,
+          textAlign: 'center', cursor: 'pointer', background: 'var(--bg2-surf)', marginBottom: 12,
         }}>
           <input type="file" accept=".csv,.xlsx,.xls" style={{ display: 'none' }}
             onChange={e => onFile(e.target.files?.[0])} />

@@ -311,7 +311,7 @@ export default function ProductHistory() {
             <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700 }}>{pickerOpen ? '▲' : '▼'}</span>
           </div>
           {pickerOpen && (
-          <div style={{ maxHeight: 300, overflowY: 'auto', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', background: 'var(--bg2)' }}>
+          <div style={{ maxHeight: 300, overflowY: 'auto', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)' }}>
             {productGroups.map(([line, items]) => (
               <div key={line}>
                 <div style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--bg3)', padding: '5px 12px',
@@ -369,7 +369,7 @@ export default function ProductHistory() {
                 )}
                 <button onClick={() => { setSelMat(null); setPickerOpen(true); setGroupMode(false); }}
                   style={{ fontSize: 12, fontWeight: 700, padding: '7px 14px', borderRadius: 'var(--r-md)', cursor: 'pointer',
-                    background: 'var(--bg2)', color: 'var(--text)', border: '1px solid var(--border2)' }}>
+                    background: 'var(--bg2-surf)', color: 'var(--text)', border: '1px solid var(--border2)' }}>
                   {trI18n('ปิด — เลือกสินค้าอื่น')}
                 </button>
               </div>
@@ -534,7 +534,7 @@ export default function ProductHistory() {
               {!showAllDays && dayGroups.length > 45 && (
                 <button onClick={() => setShowAllDays(true)}
                   style={{ marginTop: 8, fontSize: 12, fontWeight: 700, padding: '6px 14px', borderRadius: 'var(--r-md)', cursor: 'pointer',
-                    background: 'var(--bg2)', color: 'var(--text)', border: '1px solid var(--border2)' }}>
+                    background: 'var(--bg2-surf)', color: 'var(--text)', border: '1px solid var(--border2)' }}>
                   {trI18n('แสดงอีก')} {(dayGroups.length - 45).toLocaleString()} {trI18n('วัน (ทั้งหมด')} {dayGroups.length.toLocaleString()} {trI18n('วัน)')}
                 </button>
               )}

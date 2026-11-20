@@ -175,13 +175,13 @@ export default function FixtureShimPanel({
               ['ห่างจาก baseline', st.added == null ? '—' : `${st.added > 0 ? '+' : ''}${st.added} mm`, '#94a3b8'],
               ['เพดาน', fmt(n0(point.max_shim_mm)), LV[st.level].c],
             ].map(([k, v, c]) => (
-              <div key={k} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)',
+              <div key={k} style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)',
                                     padding: '8px 14px', minWidth: 128 }}>
                 <div style={{ fontSize: 11, color: 'var(--muted)' }}>{k}</div>
                 <div style={{ fontSize: 17, fontWeight: 800, color: c }}>{v}</div>
               </div>
             ))}
-            <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)',
+            <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)',
                           padding: '8px 14px', minWidth: 150 }}>
               <div style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('อายุชิ้นส่วน (tool life)')}</div>
               <div style={{ fontSize: 17, fontWeight: 800,
@@ -209,7 +209,7 @@ export default function FixtureShimPanel({
 
           {/* ── ฟอร์มบันทึก ── */}
           {canRecord ? (
-            <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 14,
+            <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 14,
                           display: 'grid', gap: 10 }}>
               <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))' }}>
                 <Field label={tr('สิ่งที่ทำ')}>
@@ -317,7 +317,7 @@ export default function FixtureShimPanel({
                             borderRadius: 'var(--r-md)', padding: '8px 12px', fontSize: 12.5 }}>
                 ⚠️ โหลดประวัติไม่สำเร็จ: {loadErr} — <b>{tr('ไม่ใช่ว่าไม่มีประวัติ')}</b>
                 <button onClick={load} style={{ marginLeft: 8, padding: '3px 10px', borderRadius: 'var(--r-md)', fontSize: 12,
-                        background: 'var(--bg2)', color: 'var(--text)', border: '1px solid var(--border)', cursor: 'pointer' }}>
+                        background: 'var(--bg2-surf)', color: 'var(--text)', border: '1px solid var(--border)', cursor: 'pointer' }}>
                   {tr('ลองใหม่')}
                 </button>
               </div>

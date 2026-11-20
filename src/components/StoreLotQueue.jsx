@@ -279,7 +279,7 @@ export default function StoreLotQueue({ lineName, lines = [], role }) {
   const totalPcs = lots.reduce((s, l) => s + (Number(l.lot_qty) || 0), 0);
 
   return (
-    <div style={{ background: 'var(--card)', border: '1px solid rgba(168,85,247,0.35)', borderRadius: 'var(--r-md)', padding: '14px 16px', marginBottom: 16 }}>
+    <div style={{ background: 'var(--card-surf)', border: '1px solid rgba(168,85,247,0.35)', borderRadius: 'var(--r-md)', padding: '14px 16px', marginBottom: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: open ? 12 : 0 }}>
         <div onClick={() => setOpen(o => !o)}
           style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#c084fc', cursor: 'pointer', userSelect: 'none' }}>

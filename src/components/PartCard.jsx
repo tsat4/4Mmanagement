@@ -86,7 +86,7 @@ function PartRow({ code, name, sub, img, showImg, status, metric, aside, rows, n
           {sub2 && <div title={sub2} style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.35, ...CLAMP2 }}>{sub2}</div>}
           {info.mat && (
             <div title={tr('เลข MAT (SAP) — เลขเดียวกับบาร์โค้ดบนกล่อง/บัตรคัมบัง')} style={{ display: 'inline-flex', alignItems: 'baseline', gap: 5, marginTop: 3,
-              padding: '1px 7px', borderRadius: 'var(--radius)', background: 'var(--bg2)', border: '1px solid var(--border)',
+              padding: '1px 7px', borderRadius: 'var(--radius)', background: 'var(--bg2-surf)', border: '1px solid var(--border)',
               fontSize: 13.5, fontFamily: 'monospace', fontWeight: 800, color: 'var(--text)', whiteSpace: 'nowrap', ...PC_NUM }}>
               <span style={{ fontSize: 11, fontFamily: 'var(--font-body)', fontWeight: 700, color: 'var(--muted)' }}>MAT</span>{info.mat}
             </div>
@@ -210,7 +210,7 @@ export default function PartCard({
                   ⇒ 15px ตัวหนา สีข้อความหลัก ในกล่องพื้น bg2 (กวาดตาหาเจอเป็น "ป้ายรหัส" แยกจากชื่องาน) */}
               <div title={tr('เลข MAT (SAP) — เลขเดียวกับบาร์โค้ดบนกล่อง/บัตรคัมบัง · ใช้แยกพาร์ทที่ Part No. ซ้ำกัน')}
                 style={{ display: 'inline-flex', alignItems: 'baseline', gap: 5, marginTop: 5,
-                  padding: '2px 8px', borderRadius: 'var(--radius)', background: 'var(--bg2)', border: '1px solid var(--border)',
+                  padding: '2px 8px', borderRadius: 'var(--radius)', background: 'var(--bg2-surf)', border: '1px solid var(--border)',
                   fontSize: 15, fontFamily: 'monospace', letterSpacing: 0.4, fontWeight: 800,
                   color: head ? 'var(--text)' : (matTone || 'var(--text)'), whiteSpace: 'nowrap', ...PC_NUM }}>
                 <span style={{ fontSize: 11, fontFamily: 'var(--font-body)', fontWeight: 700, color: 'var(--muted)' }}>MAT</span>

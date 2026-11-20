@@ -291,7 +291,7 @@ export default function ManpowerBoard() {
           {canSetup && section && (
             <button type="button" className="pg-btn" onClick={() => setSetupOpen(true)}
               style={{ padding: '7px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
-                border: '1px solid var(--border2)', background: 'var(--bg2)', color: 'var(--text2)' }}
+                border: '1px solid var(--border2)', background: 'var(--bg2-surf)', color: 'var(--text2)' }}
               title={trI18n('ตั้งจำนวนช่องตำแหน่งต่อทีม + ผูกช่างประจำไลน์ (สิทธิ์ manpower_board:edit)')}>{trI18n('ตั้งค่าบอร์ด')}</button>
           )}
           <button type="button" className="pg-btn" onClick={() => merge({ tv: tv ? '0' : '1' })} aria-pressed={tv}
@@ -402,7 +402,7 @@ function ActingNote({ a }) {
 
 function PersonChip({ p }) {
   return (
-    <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: 6, border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--card)', minWidth: 0, maxWidth: '100%' }}>
+    <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: 6, border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--card-surf)', minWidth: 0, maxWidth: '100%' }}>
       <Photo p={p} size={34} />
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
@@ -450,7 +450,7 @@ function SkillCard({ p, skills }) {
   const top = topSkills(skills.byEmp[p.id], 3);
   return (
     <div title={`${p.name}${p.employee_id_code ? ` (${p.employee_id_code})` : ''}`} style={{
-      border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 6, background: 'var(--card)',
+      border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 6, background: 'var(--card-surf)',
       display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
       <div style={{ display: 'flex', gap: 6, minWidth: 0 }}>
         <Photo p={p} size={36} />
@@ -507,7 +507,7 @@ function TeamColumn({ c, skills }) {
   const sm = shiftMeta(c.shift);
   const slots = c.slots || 0;
   return (
-    <div style={{ flex: '1 1 260px', minWidth: 0, maxWidth: '100%', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 8, background: 'var(--bg2)' }}>
+    <div style={{ flex: '1 1 260px', minWidth: 0, maxWidth: '100%', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 8, background: 'var(--bg2-surf)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
         <RoleTag>{trI18n('หัวหน้ากลุ่ม')}</RoleTag>
         <strong style={{ fontSize: 14 }}>{c.team ? `ทีม ${c.team}` : 'ไม่ระบุทีม'}</strong>
@@ -605,7 +605,7 @@ function OrgTab({ board, depts, skills }) {
               {/* 🏃 คนวิ่งข้ามแผนก — ทะเบียนถาวร (employee_flex_units) คนละตัวกับยืมรายวัน
                   🔴 ไม่นับรวมในทะเบียน/ช่องว่างของแผนกนี้ · บ้านจริงนับเขาอยู่แล้ว (นับ 2 ที่ = กำลังคนปลอม)
                   🔴 cost center ยังอยู่ที่บ้านจริง — เขียนบนจอเสมอ ห้ามให้คนเข้าใจผิดว่าย้ายสังกัด */}
-              <span style={{ display: 'inline-block', fontSize: 11.5, fontWeight: 800, padding: '2px 8px', borderRadius: 'var(--r-xs)', border: '1px solid var(--border2)', background: 'var(--bg2)', color: 'var(--text2)' }}>
+              <span style={{ display: 'inline-block', fontSize: 11.5, fontWeight: 800, padding: '2px 8px', borderRadius: 'var(--r-xs)', border: '1px solid var(--border2)', background: 'var(--bg2-surf)', color: 'var(--text2)' }}>
                 วิ่งข้ามมาช่วยประจำ {d.flex.length} {trI18n('คน')}</span>
               <span style={{ fontSize: 12, color: 'var(--muted)', marginLeft: 8 }}>
                 ไม่นับรวมในทะเบียนของแผนก · cost center ยังอยู่ที่หน่วยต้นสังกัด
@@ -1040,7 +1040,7 @@ function LineSidePanel({ sum, stationsN, emptyStations, slotShort, placed, fit, 
                 </div>
               </button>
               <button type="button" className="pg-btn" onClick={() => onOpen(x.station.id)}
-                style={{ fontSize: 12, padding: '3px 8px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--card)', color: 'var(--text2)', cursor: 'pointer' }}>
+                style={{ fontSize: 12, padding: '3px 8px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--card-surf)', color: 'var(--text2)', cursor: 'pointer' }}>
                 {trI18n('ดู')}
               </button>
             </div>
@@ -1051,7 +1051,7 @@ function LineSidePanel({ sum, stationsN, emptyStations, slotShort, placed, fit, 
       {fit.gaps.length > 0 && (
         <button type="button" className="pg-btn" onClick={onGapToggle} aria-expanded={gapOpen}
           style={{ fontSize: 12, fontWeight: 700, padding: '5px 10px', borderRadius: 'var(--r-md)', cursor: 'pointer',
-            border: '1px solid var(--amber)', background: 'var(--bg2)', color: 'var(--amber)' }}>
+            border: '1px solid var(--amber)', background: 'var(--bg2-surf)', color: 'var(--amber)' }}>
           {gapOpen ? '▲ ' : '▼ '}{trI18n('ตารางคนที่ทักษะยังไม่ถึง')} ({fit.gaps.length})
         </button>
       )}
@@ -1077,7 +1077,7 @@ function StationModal({ x, lineName, skills, fit, onClose }) {
       style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: 16 }}>
       <div role="dialog" aria-modal="true"
-        style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-lg)',
+        style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-lg)',
           width: 'min(96vw, 760px)', maxHeight: '94vh', overflowY: 'auto', padding: 18 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -1159,7 +1159,7 @@ function StationModal({ x, lineName, skills, fit, onClose }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 8 }}>
           <span style={{ fontSize: 12, color: 'var(--muted)' }}>{trI18n('ตั้ง/ยกเลิกจุดประจำที่ /management · ประเมินทักษะที่ /operator')}</span>
           <button type="button" className="pg-btn" onClick={onClose}
-            style={{ padding: '7px 14px', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--bg2)', color: 'var(--text2)' }}>{trI18n('ปิด')}</button>
+            style={{ padding: '7px 14px', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--bg2-surf)', color: 'var(--text2)' }}>{trI18n('ปิด')}</button>
         </div>
       </div>
     </div>
@@ -1406,7 +1406,7 @@ function TvCard({ p, skills }) {
   const top = topSkills(skills.byEmp[p.id], 2);
   return (
     <div style={{ width: TV_CARD.w, height: TV_CARD.h, overflow: 'hidden', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 6,
-      background: 'var(--card)', display: 'flex', flexDirection: 'column', gap: 3 }}>
+      background: 'var(--card-surf)', display: 'flex', flexDirection: 'column', gap: 3 }}>
       <div style={{ display: 'flex', gap: 6, minWidth: 0 }}>
         <Photo p={p} size={34} />
         <div style={{ minWidth: 0, flex: 1 }}>
@@ -1492,7 +1492,7 @@ function OrgTv({ board, depts, skills }) {
               {pg.cols.map(({ col: c, items, more }) => {
                 const sm = shiftMeta(c.shift);
                 return (
-                  <div key={c.team || '-'} style={{ flex: '1 1 0', minWidth: 0, border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 8, background: 'var(--bg2)', overflow: 'hidden' }}>
+                  <div key={c.team || '-'} style={{ flex: '1 1 0', minWidth: 0, border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 8, background: 'var(--bg2-surf)', overflow: 'hidden' }}>
                     <div style={{ height: TV_COLHEAD_H, display: 'flex', flexDirection: 'column', justifyContent: 'center', overflow: 'hidden' }}>
                       <div style={{ display: 'flex', gap: 8, alignItems: 'center', whiteSpace: 'nowrap' }}>
                         <strong style={{ fontSize: 15 }}>{c.team ? `ทีม ${c.team}` : 'ไม่ระบุทีม'}</strong>

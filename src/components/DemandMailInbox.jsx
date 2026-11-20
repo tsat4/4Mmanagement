@@ -112,14 +112,14 @@ export default function DemandMailInbox({ refreshKey, onOpen, fullName }) {
     return null;
   };
   return (
-    <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 12, marginBottom: 12, background: 'var(--bg2)' }}>
+    <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 12, marginBottom: 12, background: 'var(--bg2-surf)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: rows.length ? 8 : 0 }}>
         <span style={{ fontWeight: 800, fontSize: 13, color: 'var(--text)' }}>{tr('ไฟล์จากเมลรอนำเข้า')}</span>
         <span style={{ fontSize: 12, color: rows.length ? 'var(--accent2)' : 'var(--muted)', fontWeight: 700 }}>
           {err ? '' : rows.length ? `${rows.length} ไฟล์` : 'ไม่มีไฟล์ค้าง'}
         </span>
         <button type="button" onClick={load} style={{ marginLeft: 'auto', fontSize: 12, padding: '4px 10px', borderRadius: 'var(--r-md)',
-          background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--text2)', cursor: 'pointer' }}>↻</button>
+          background: 'var(--card-surf)', border: '1px solid var(--border)', color: 'var(--text2)', cursor: 'pointer' }}>↻</button>
       </div>
       {err && <div style={{ fontSize: 12, color: '#ef4444' }}>{tr('⚠ โหลดคิวไฟล์จากเมลไม่ได้:')} {err}</div>}
       {doneErr && <div style={{ fontSize: 12, color: '#ef4444', fontWeight: 700 }}>
@@ -127,7 +127,7 @@ export default function DemandMailInbox({ refreshKey, onOpen, fullName }) {
       </div>}
       {missing.map(m => (
         <div key={m.message_id || m.subject} style={{ fontSize: 12, color: '#ef4444', fontWeight: 700, marginTop: 4,
-          padding: '6px 8px', borderRadius: 'var(--r-md)', border: '1px solid rgba(239,68,68,0.5)', background: 'var(--card)' }}>
+          padding: '6px 8px', borderRadius: 'var(--r-md)', border: '1px solid rgba(239,68,68,0.5)', background: 'var(--card-surf)' }}>
           เมล "{m.subject}" ({fmtTime(m.received_at)}) หัวเรื่องบอกว่ามีไฟล์ {m.missing.join(' + ')} แต่ระบบได้รับแค่
           {m.got.length ? ` ${m.got.join(' + ')}` : 'ไม่มีไฟล์'} {tr('— ข้อมูล')} {m.missing.join('/')} ของวันนั้นยังไม่เข้าระบบ ·
           เช็คเมลต้นทางว่าแนบมาครบไหม (ชื่อไฟล์ต้องขึ้นต้น {m.missing.map(k => `${k}_`).join(' / ')}) หรือลากไฟล์มาอัพเองด้านล่าง
@@ -139,7 +139,7 @@ export default function DemandMailInbox({ refreshKey, onOpen, fullName }) {
         const stale = ageH > STALE_H && !newer;
         return (
           <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '6px 8px',
-            borderRadius: 'var(--r-md)', marginTop: 4, background: 'var(--card)',
+            borderRadius: 'var(--r-md)', marginTop: 4, background: 'var(--card-surf)',
             border: `1px solid ${stale ? 'rgba(239,68,68,0.5)' : 'var(--border)'}` }}>
             <div style={{ flex: '1 1 260px', minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{r.file_name}</div>
@@ -160,7 +160,7 @@ export default function DemandMailInbox({ refreshKey, onOpen, fullName }) {
             </button>
             <button type="button" onClick={() => skip(r)}
               style={{ fontSize: 12, padding: '6px 10px', borderRadius: 'var(--r-md)', cursor: 'pointer',
-                background: 'var(--bg2)', color: 'var(--text2)', border: '1px solid var(--border)' }}>{tr('ข้าม')}</button>
+                background: 'var(--bg2-surf)', color: 'var(--text2)', border: '1px solid var(--border)' }}>{tr('ข้าม')}</button>
           </div>
         );
       })}

@@ -124,7 +124,7 @@ export default function KpiMonthNoteModal({ title, icon, monthText, valueText, n
             <QualityPhotoField label={tr('รูปแนบ (ไม่บังคับ)')} file={file} onPick={setFile}
               hint={tr('ถ่ายสิ่งที่เกิดขึ้น/สิ่งที่แก้ไป — เปิดดูตอนนำเสนอได้จากแท่งเดือนนี้')} />
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-              <button onClick={onClose} style={{ fontSize: 13, padding: '6px 12px', borderRadius: 'var(--r-md)', cursor: 'pointer', background: 'var(--bg3)', color: 'var(--text)', border: '1px solid var(--border2)' }}>{tr('ปิด')}</button>
+              <button onClick={onClose} style={{ fontSize: 13, padding: '6px 12px', borderRadius: 'var(--r-md)', cursor: 'pointer', background: 'var(--bg3-surf)', color: 'var(--text)', border: '1px solid var(--border2)' }}>{tr('ปิด')}</button>
               <button onClick={add} disabled={busy} style={{ fontSize: 13, fontWeight: 700, padding: '6px 14px', borderRadius: 'var(--r-md)', cursor: 'pointer', background: 'var(--accent)', color: 'var(--accent-ink)', border: 'none' }}>{busy ? tr('กำลังบันทึก…') : tr('บันทึก')}</button>
             </div>
           </div>

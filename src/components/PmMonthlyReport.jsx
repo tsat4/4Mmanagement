@@ -240,7 +240,7 @@ export default function PmMonthlyReport() {
 
       {revoking && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14 }}>
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(96vw, 460px)', boxShadow: 'var(--shadow-lg)' }}>
+          <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(96vw, 460px)', boxShadow: 'var(--shadow-lg)' }}>
             <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 8 }}>{tr('เพิกถอนลายเซ็น')} — {teamLabel(revoking.team)} {revoking.section ? `· ${revoking.section}` : ''} ({PM_SIGN_STEPS[revoking.step]?.short})</div>
             <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>{tr('ไม่ลบประวัติ — ลายเซ็นเดิมเปลี่ยนเป็น "เพิกถอน" พร้อมเหตุผล')}</div>
             <textarea value={reason} onChange={e => setReason(e.target.value)} rows={3} style={{ width: '100%' }}

@@ -251,7 +251,7 @@ export default function SignatureModal({ open, onClose, currentSignatureUrl, onS
               <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 6 }}>{tr('ลายเซ็นปัจจุบัน')}</div>
               <div style={{
                 border: '1px solid var(--border)', borderRadius: 'var(--r-md)',
-                padding: 8, background: 'var(--bg2)', textAlign: 'center',
+                padding: 8, background: 'var(--bg2-surf)', textAlign: 'center',
               }}>
                 <img src={currentSignatureUrl} alt="signature" style={{ maxHeight: 60, maxWidth: '100%', objectFit: 'contain' }} />
               </div>
@@ -295,7 +295,7 @@ export default function SignatureModal({ open, onClose, currentSignatureUrl, onS
               </div>
               <button onClick={clearCanvas} style={{
                 marginTop: 8, padding: '6px 14px', fontSize: 12, borderRadius: 'var(--r-md)',
-                background: 'var(--bg3)', border: '1px solid var(--border2)',
+                background: 'var(--bg3-surf)', border: '1px solid var(--border2)',
                 color: 'var(--text2)', cursor: 'pointer',
               }}>{tr('ล้าง')}</button>
             </div>
@@ -309,7 +309,7 @@ export default function SignatureModal({ open, onClose, currentSignatureUrl, onS
               {uploadPreview && (
                 <div style={{
                   marginTop: 12, border: '1px solid var(--border)', borderRadius: 'var(--r-md)',
-                  padding: 10, background: 'var(--bg2)', textAlign: 'center',
+                  padding: 10, background: 'var(--bg2-surf)', textAlign: 'center',
                 }}>
                   <img src={uploadPreview} alt="preview" style={{ maxHeight: 120, maxWidth: '100%', objectFit: 'contain' }} />
                 </div>
@@ -327,7 +327,7 @@ export default function SignatureModal({ open, onClose, currentSignatureUrl, onS
               {saving ? tr('กำลังบันทึก...') : tr('💾 บันทึกลายเซ็น')}
             </button>
             <button onClick={onClose} style={{
-              flex: 1, padding: '10px 0', background: 'var(--bg3)',
+              flex: 1, padding: '10px 0', background: 'var(--bg3-surf)',
               border: '1px solid var(--border2)', borderRadius: 'var(--r-md)',
               color: 'var(--text2)', cursor: 'pointer', fontSize: 13,
             }}>{tr('ยกเลิก')}</button>

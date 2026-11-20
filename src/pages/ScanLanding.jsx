@@ -518,7 +518,7 @@ export default function ScanLanding() {
                       {/* ข้าม = ไม่เขียนอะไรเลย ⇒ ค้างเป็น "ยังไม่ได้ตรวจ" ให้หัวหน้าไปติ๊กต่อ */}
                       <button type="button" onClick={() => setPpe(p => ({ ...p, done: 'skipped' }))} disabled={ppe.saving}
                         style={{ flex: 1, minHeight: 46, borderRadius: 'var(--r-md)', border: '1px solid var(--border)',
-                          background: 'var(--bg3)', color: 'var(--text2)', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
+                          background: 'var(--bg3-surf)', color: 'var(--text2)', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
                         {tr('ข้ามไว้ก่อน')}
                       </button>
                     </div>
@@ -680,7 +680,7 @@ export default function ScanLanding() {
             {hit.machine?.machine_no && canAccessPage('/mtn-repair', role) && (
               <button onClick={() => setShowHist(true)} style={{
                 display: 'flex', alignItems: 'center', gap: 12, minHeight: 56, padding: '10px 14px', textAlign: 'left',
-                borderRadius: 'var(--r-md)', border: '1px solid var(--amber)', background: 'var(--bg2)', color: 'var(--text)', cursor: 'pointer',
+                borderRadius: 'var(--r-md)', border: '1px solid var(--amber)', background: 'var(--bg2-surf)', color: 'var(--text)', cursor: 'pointer',
               }}>
                 <span style={{ fontSize: 22 }}>📜</span>
                 <span><div style={{ fontSize: 15, fontWeight: 800, color: 'var(--amber)' }}>{tr('ประวัติซ่อมเครื่องนี้')}</div>

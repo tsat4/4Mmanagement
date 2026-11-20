@@ -403,7 +403,7 @@ export default function OrgSetup() {
            ใช้ CRUD ชุดเดียวกับแท็บจัดการหน่วยงาน (openCreate/openEdit/handleDelete) ไม่ได้ก๊อปตรรกะใหม่ */
         <>
           <div style={{ marginBottom: 12, padding: '9px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)',
-                        background: 'var(--bg3)', fontSize: 12, color: 'var(--text2)', lineHeight: 1.7 }}>
+                        background: 'var(--bg3-surf)', fontSize: 12, color: 'var(--text2)', lineHeight: 1.7 }}>
             👥 <b>{tr('ทีม A/B/C ใช้สำหรับจัดกะการทำงาน — ไม่ใช่ชั้นในผังองค์กร')}</b> จึงไม่ปรากฏในมุมมองผังและใบ export
             <div style={{ color: 'var(--muted)' }}>
               ค่าที่บันทึกคือช่อง <b>Code</b> {tr('(เช่น')} <code>A</code>) ซึ่งตรงกับ <code>employees.team</code> ·
@@ -666,7 +666,7 @@ export default function OrgSetup() {
                    (บทเรียนเดียวกับทะเบียนพนักงานที่เผลอกรองสายสนับสนุนออก 23/09) */
                 const supportUnit = modalParentLabor === 'indirect';
                 if (supportUnit && !formRefLineId) return (
-                  <div style={{ fontSize: 11, color: 'var(--muted)', background: 'var(--bg3)',
+                  <div style={{ fontSize: 11, color: 'var(--muted)', background: 'var(--bg3-surf)',
                                 border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '8px 10px' }}>
                     อยู่ใต้หน่วยงาน <b>{tr('สายสนับสนุน (Indirect)')}</b> — ไม่ต้องผูกไลน์ผลิต
                     <div style={{ marginTop: 2 }}>{tr('ถ้าหน่วยนี้มีไลน์ผลิตจริง ให้แก้ประเภทที่แผนกแม่เป็น Direct ก่อน')}</div>
@@ -728,7 +728,7 @@ function NodeLabel({ node, meta, children }) {
 
 function CostBadge({ code }) {
   return (
-    <span style={{ fontSize: 11, padding: '1px 6px', borderRadius: 'var(--r-xs)', background: 'var(--bg3)', color: 'var(--muted)', border: '1px solid var(--border2)', whiteSpace: 'nowrap' }}>
+    <span style={{ fontSize: 11, padding: '1px 6px', borderRadius: 'var(--r-xs)', background: 'var(--bg3-surf)', color: 'var(--muted)', border: '1px solid var(--border2)', whiteSpace: 'nowrap' }}>
       {code}
     </span>
   );

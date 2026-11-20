@@ -1095,6 +1095,17 @@ const RULES = [
     allow: {},
   },
   {
+    id: 'surf-gradient-token-only',
+    scan: ['src/pages', 'src/components'], ext: ['.jsx', '.js'],
+    // จับการหยิบ token ปลายทางของไล่เฉดพื้น (--card-top/--bg3-bot …) มาประกอบ gradient เองในหน้า
+    re: /var\(--(?:card|bg2|bg3|modal|accent|hero)-(?:top|bot)\)/g,
+    why: 'ไล่เฉดพื้นทั้งระบบต้องออกจาก token `--card-surf` / `--bg2-surf` / `--bg3-surf` ใน index.css ที่เดียว (20/11 · คำสั่ง user '
+       + '"แทบเหมือนสีไม่ต่างกัน แต่ดูผ่านๆ รู้สึกมีมิติ · ทำทุกหน้าให้เป็นมาตรฐาน") — ประกอบเองในหน้าเมื่อไหร่ มุม/ทิศ/ความแรงจะต่างกัน '
+       + 'ทีละหน้า และหลุดด่าน gradientDeltaCap (ด่านนั้นตรวจแค่คู่ token ใน index.css)',
+    fix: "background: 'var(--card-surf)' (แผงพื้น --card) · 'var(--bg2-surf)' · 'var(--bg3-surf)' — อยากได้ผิวชนิดใหม่ = เพิ่มคู่ --x-top/-bot ใน index.css",
+    allow: {},
+  },
+  {
     id: 'status-color-gradient-mix',
     scan: ['src', 'audit'], ext: ['.jsx', '.js', '.css'],
     /* จับไล่เฉดที่ผสม "สีสถานะ" มากกว่า 1 เฉด — ตัด `repeating-linear-gradient` ออกด้วย lookbehind

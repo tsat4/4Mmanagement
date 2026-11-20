@@ -36,7 +36,7 @@ export default function StorageMaintenance() {
 
       {/* ทำไมต้องมีหน้านี้ — เขียนไว้เพราะเป็นเหตุการณ์ที่ทำให้ทั้งโรงงาน login ไม่ได้ */}
       <div style={{
-        background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--radius-lg)',
+        background: 'var(--bg2-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--radius-lg)',
         padding: 12, marginBottom: 12, fontSize: 12, color: 'var(--text2)', lineHeight: 1.7,
       }}>
         <b style={{ color: 'var(--text)' }}>{tr('ทำไมต้องบีบ:')}</b> Supabase คิดค่าบริการตาม

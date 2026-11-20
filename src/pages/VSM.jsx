@@ -597,7 +597,7 @@ export default function VSM() {
                 <textarea rows={rows} value={a3[k] || ''} onChange={e => setA3(v => ({ ...v, [k]: e.target.value }))}
                   placeholder={ph}
                   style={{ width: '100%', fontSize: 12.5, padding: '7px 10px', borderRadius: 'var(--ctl-r)', resize: 'vertical',
-                    border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', fontFamily: 'var(--font-body)' }} />
+                    border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)', fontFamily: 'var(--font-body)' }} />
               </div>
             ))}
           </div>
@@ -607,7 +607,7 @@ export default function VSM() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
               <label style={{ fontSize: 11.5, color: 'var(--muted)' }}>{tr('⑥ แผนดำเนินการ (ใคร / อะไร / เมื่อไหร่)')}</label>
               <button onClick={() => setA3(v => ({ ...v, plan: [...(v.plan || []), { what: '', who: '', when: '', status: '' }] }))}
-                style={{ padding: '4px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text)', cursor: 'pointer', fontSize: 12 }}>
+                style={{ padding: '4px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg3-surf)', color: 'var(--text)', cursor: 'pointer', fontSize: 12 }}>
                 + เพิ่มแถว
               </button>
             </div>
@@ -621,7 +621,7 @@ export default function VSM() {
                         inputStyle={{ fontSize: 12, padding: '5px 26px 5px 8px', borderRadius: 5, background: 'var(--bg2)' }} />
                     : <input key={f} value={r[f] || ''} placeholder={ph}
                         onChange={e => setA3(v => ({ ...v, plan: v.plan.map((x, j) => j === i ? { ...x, [f]: e.target.value } : x) }))}
-                        style={{ fontSize: 12, padding: '5px 8px', borderRadius: 'var(--ctl-r)', border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)' }} />
+                        style={{ fontSize: 12, padding: '5px 8px', borderRadius: 'var(--ctl-r)', border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)' }} />
                 ))}
                 <DeleteButton onClick={() => setA3(v => ({ ...v, plan: v.plan.filter((_, j) => j !== i) }))} title={tr('ลบ')} />
               </div>
@@ -702,7 +702,7 @@ export default function VSM() {
                       placeholder={val == null ? '—' : String(Math.round(val * 10) / 10)}
                       title={src ? `ค่าที่ระบบคำนวณ: ${val ?? '—'} (จาก ${src})` : 'ระบบไม่มีข้อมูล'}
                       style={{
-                        width: 82, fontSize: 12, padding: '4px 6px', borderRadius: 'var(--ctl-r)', background: 'var(--bg2)', color: 'var(--text)',
+                        width: 82, fontSize: 12, padding: '4px 6px', borderRadius: 'var(--ctl-r)', background: 'var(--bg2-surf)', color: 'var(--text)',
                         border: `1px solid ${val == null && !ov[field] ? 'var(--amber)' : 'var(--border)'}`,
                       }} />
                   </td>
@@ -742,7 +742,7 @@ export default function VSM() {
               </label>
               <input value={overrides.__customer_pattern || ''} onChange={e => setTopOv('__customer_pattern', e.target.value)}
                 placeholder={model.customer.roundsPerDay ? `ระบบเห็น ${model.customer.roundsPerDay} รอบ/วัน` : 'เช่น 1:4:2'}
-                style={{ width: '100%', fontSize: 12.5, padding: '6px 10px', borderRadius: 'var(--ctl-r)', border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)' }} />
+                style={{ width: '100%', fontSize: 12.5, padding: '6px 10px', borderRadius: 'var(--ctl-r)', border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)' }} />
             </div>
             {model.suppliers.map(sp => (
               <div key={sp.matNo}>
@@ -751,7 +751,7 @@ export default function VSM() {
                 </label>
                 <input value={(overrides.__supplier_pattern || {})[sp.matNo] || ''} onChange={e => setSupPattern(sp.matNo, e.target.value)}
                   placeholder={tr('เช่น 7:1:1')}
-                  style={{ width: '100%', fontSize: 12.5, padding: '6px 10px', borderRadius: 'var(--ctl-r)', border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)' }} />
+                  style={{ width: '100%', fontSize: 12.5, padding: '6px 10px', borderRadius: 'var(--ctl-r)', border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)' }} />
               </div>
             ))}
             {!model.suppliers.length && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('BOM ของสินค้านี้ยังไม่มีพาร์ทซื้อนอก')}</div>}
@@ -860,7 +860,7 @@ export default function VSM() {
                 <span key={k} className={k === 'down' && nn > 0 ? 'dt-alarm-blink' : undefined}
                   style={{
                     fontSize: 12, fontWeight: 700, padding: '5px 12px', borderRadius: 'var(--r-pill)',
-                    background: 'var(--bg3)', border: '1px solid var(--border)',
+                    background: 'var(--bg3-surf)', border: '1px solid var(--border)',
                     // dt-alarm-blink ทาพื้นแดง — ตัวอักษรต้องขาว ไม่งั้นแดงบนแดงอ่านไม่ออก
                     color: k === 'down' && nn > 0 ? '#fff' : nn > 0 ? LIVE_STATUS[k].color : 'var(--muted)',
                   }}>
@@ -868,14 +868,14 @@ export default function VSM() {
                 </span>
               ))}
               {(liveData?.summary?.plannedOpen || 0) > 0 && (
-                <span style={{ fontSize: 12, padding: '5px 12px', borderRadius: 'var(--r-pill)', background: 'var(--bg3)', color: 'var(--muted)', border: '1px solid var(--border)' }}>
+                <span style={{ fontSize: 12, padding: '5px 12px', borderRadius: 'var(--r-pill)', background: 'var(--bg3-surf)', color: 'var(--muted)', border: '1px solid var(--border)' }}>
                   หยุดตามแผนค้าง {liveData.summary.plannedOpen} รายการ (ไม่นับเป็น Andon)
                 </span>
               )}
               {/* แถวเปิดค้างในกะที่ปิดไปแล้ว = คนลืมปิดรายการ — ไม่ใช่ Andon (กฎ dtOpenKind) แต่ห้ามซ่อน */}
               {(liveData?.summary?.forgottenDt || 0) > 0 && (
                 <span title={tr('กะปิดไปแล้วแต่รายการ Downtime ยังไม่ถูกปิด — นาทีที่หยุดไม่ได้ถูกหักใน %A ของกะนั้น')}
-                  style={{ fontSize: 12, padding: '5px 12px', borderRadius: 'var(--r-pill)', background: 'var(--bg3)', color: 'var(--amber)', border: '1px solid var(--border)', fontWeight: 700 }}>
+                  style={{ fontSize: 12, padding: '5px 12px', borderRadius: 'var(--r-pill)', background: 'var(--bg3-surf)', color: 'var(--amber)', border: '1px solid var(--border)', fontWeight: 700 }}>
                   ⚠️ ไม่ได้ปิดรายการ {liveData.summary.forgottenDt} ใบ (กะปิดแล้ว)
                 </span>
               )}

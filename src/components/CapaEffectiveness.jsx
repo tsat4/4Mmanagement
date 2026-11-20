@@ -221,7 +221,7 @@ export default function CapaEffectiveness({ capa, onChange, canEdit, canWriteRes
   const typeLabel = capa.eff_defect_type_label || types.find((t) => t.id === capa.eff_defect_type_id)?.name_th || '';
 
   return (
-    <div style={{ marginTop: 14, border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--bg2)' }}>
+    <div style={{ marginTop: 14, border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)' }}>
       <div style={{ padding: '9px 12px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <span style={{ fontSize: 12.5, fontWeight: 800 }}>{tr('ประสิทธิผลจากข้อมูลจริง')}</span>
         <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('ของเสียต่อวันผลิต ก่อน/หลังมาตรการมีผล')}</span>

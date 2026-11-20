@@ -878,7 +878,7 @@ function BomKidsStep({ root, onBack, onClose, onApply }) {
 function Modal({ title, onClose, children, width = 620, dismissable = false }) {
   return (
     <div className="modal-scroll" onClick={dismissable ? onClose : undefined} style={{ position: 'fixed', inset: 0, zIndex: 3000, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '3vh 12px', overflowY: 'auto' }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', width: `min(${width}px, 97vw)`, maxHeight: '94vh', overflowY: 'auto', padding: 18 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', width: `min(${width}px, 97vw)`, maxHeight: '94vh', overflowY: 'auto', padding: 18 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <div style={{ fontWeight: 800, fontSize: 15 }}>{title}</div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 18, cursor: 'pointer' }}>✕</button>

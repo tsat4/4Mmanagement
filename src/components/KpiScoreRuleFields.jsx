@@ -72,7 +72,7 @@ export default function KpiScoreRuleFields({ f, set, unit = '', summaryMode = 'a
         <span style={{ color: 'var(--muted)' }}>{tr('⑤ สรุปทั้งปีรวมด้วย')}</span> <b>{summaryModeLabel(summaryMode)}</b>
         <span style={{ color: 'var(--muted)' }}> {tr('(ตั้งที่ 📘 ทะเบียนชื่อ KPI — เป็นของตัวตน KPI ทุกหน่วยเหมือนกัน)')}</span>
       </div>
-      <div style={{ padding: '8px 10px', borderRadius: 'var(--r-sm)', background: 'var(--card)', border: `1px solid ${rule.ok ? 'var(--border2)' : 'var(--amber)'}`, fontSize: 12.5, color: 'var(--text)', lineHeight: 1.5 }}>
+      <div style={{ padding: '8px 10px', borderRadius: 'var(--r-sm)', background: 'var(--card-surf)', border: `1px solid ${rule.ok ? 'var(--border2)' : 'var(--amber)'}`, fontSize: 12.5, color: 'var(--text)', lineHeight: 1.5 }}>
         <span style={{ color: 'var(--muted)' }}>{tr('กติกาที่จะใช้:')}</span> {rule.text}
       </div>
       {issues.length > 0 && (

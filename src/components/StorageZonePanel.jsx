@@ -141,7 +141,7 @@ export default function StorageZonePanel() {
 
       {/* 🗺️ กรอบเดิมบนผังรวมที่ยังไม่มีทะเบียน — หยิบมาลงทะเบียนเป็นโซนคลังได้เลย (อ้างอิงแผนผังที่วาดไว้แล้ว) */}
       {!loading && !missing && canManage && unclaimedFrames.length > 0 && (
-        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '10px 14px', fontSize: 13 }}>
+        <div style={{ background: 'var(--bg2-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '10px 14px', fontSize: 13 }}>
           กรอบบนผังรวมที่<b>{tr('ยังไม่มีทะเบียนโซน')} {unclaimedFrames.length} {tr('กรอบ')}</b> —
           ถ้ากรอบไหนคือพื้นที่คลัง กด ➕ ลงทะเบียนได้เลย (ชื่อตรงกัน = จับคู่กรอบเดิมอัตโนมัติ ไม่ต้องวาดใหม่)
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
@@ -158,7 +158,7 @@ export default function StorageZonePanel() {
       )}
 
       {!loading && !missing && !zones.length && (
-        <div style={{ background: 'var(--bg2)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: 18, fontSize: 13, color: 'var(--text2)' }}>
+        <div style={{ background: 'var(--bg2-surf)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: 18, fontSize: 13, color: 'var(--text2)' }}>
           ยังไม่มีโซนจัดเก็บ — เริ่มจาก ➕ เพิ่มโซน (เช่น "FG OUT LANE 1", "WIP APRON", "STORE SUB PART")
           แล้วผูกว่า MAT ไหนเก็บโซนนั้น · ระบบไม่เดาผังคลังให้ (ตำแหน่งจัดเก็บเป็นความรู้หน้างาน)
         </div>
@@ -172,7 +172,7 @@ export default function StorageZonePanel() {
           const km = zoneKindMeta(z.kind);
           const isFramed = framed.has(String(z.name || '').trim().toLowerCase());
           return (
-            <div key={z.id} style={{ background: 'var(--card)', border: `1px solid ${z.is_active ? CAT_COLOR[cat] : 'var(--border)'}`, borderRadius: 'var(--r-md)', padding: '10px 12px', opacity: z.is_active ? 1 : 0.55, display: 'grid', gap: 6, alignContent: 'start' }}>
+            <div key={z.id} style={{ background: 'var(--card-surf)', border: `1px solid ${z.is_active ? CAT_COLOR[cat] : 'var(--border)'}`, borderRadius: 'var(--r-md)', padding: '10px 12px', opacity: z.is_active ? 1 : 0.55, display: 'grid', gap: 6, alignContent: 'start' }}>
               <div style={{ display: 'flex', gap: 8, alignItems: 'baseline' }}>
                 <b style={{ fontSize: 14 }}>{km.icon} {z.name}</b>
                 <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr(km.label)}</span>
@@ -299,7 +299,7 @@ function ZoneFormModal({ zone, initialName, parts, stockByMat, onClose, onSaved 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       {/* ⚠️ ห้ามเติม onClick={onClose} ที่ backdrop — ฟอร์มมีข้อมูลค้าง เผลอแตะแล้วหาย (UI-CONVENTIONS §5) */}
-      <div style={{ background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', width: 'min(680px, 96vw)', maxHeight: '92vh', overflowY: 'auto', padding: 18, display: 'grid', gap: 10, alignContent: 'start' }}>
+      <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', width: 'min(680px, 96vw)', maxHeight: '92vh', overflowY: 'auto', padding: 18, display: 'grid', gap: 10, alignContent: 'start' }}>
         <b style={{ fontSize: 15 }}>{zone ? `✏️ แก้โซน: ${zone.name}` : '➕ เพิ่มโซนจัดเก็บ'}</b>
         <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <label style={lbl}>ชื่อโซน (= ชื่อกรอบบนผังรวม)
