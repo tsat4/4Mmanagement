@@ -1855,6 +1855,7 @@ function InflowRulesTab({ canEdit }) {
    ฝังหน้าเดิมทั้งดุ้นแบบ /equipment (โหมด ops) — กฎ/ปุ่ม/ด่านเดิมทุกตัว ไม่เขียนใหม่ · `?view=`/`?store=` ไม่ชน `?tab=` */
 const HeijunkaKanban = lazy(() => import('./HeijunkaKanban'));
 const LineIssueGapQueue = lazy(() => import('../components/LineIssueGapQueue'));
+const SapStockCompare = lazy(() => import('../components/SapStockCompare'));   // 📊 เทียบยอด MB52 (20/11)
 /* 📉 16/11 (คำสั่ง user "รวมสต๊อกในไลน์กับ Monitoring แผน-สต๊อกเป็นหน้าเดียว") — ฝังหน้าเดิมทั้งดุ้นใน <Hub>
    หน้าลูกใช้ `?mon=` แทน `?tab=` (UI §6.8 ข้อ 2.4 · Monitoring.jsx อ่าน HubContext) */
 const Monitoring = lazy(() => import('./Monitoring'));
@@ -1882,6 +1883,7 @@ const TABS = [
   { key:'diff',       label: 'คลังพัก/ผลต่าง',          perm: 'page:/line-stock' },   // รับไม่ครบ = ส่วนที่ขาดพักไว้ (05/11)
   { key:'wip',        label: 'WIP ค้างระหว่างขั้น',      perm: 'page:/line-stock' },   // คนละเรื่องกับ 'คิวเติม WIP' ในบอร์ดคัมบัง
   { key:'sapview',    label: 'เทียบตัดแบบ SAP',         perm: 'page:/line-stock' },   // FG×BOM แบบ SAP เทียบที่ ESM ตัดจริง (20/11)
+  { key:'sapstock',   label: 'เทียบยอด SAP (MB52)',     perm: 'page:/line-stock' },   // อัปโหลด MB52 เทียบยอดคงคลังรายสัปดาห์ (20/11)
   { key:'settings',   label: 'ตั้งค่า',                 perm: 'page:/line-stock' },
 ];
 
@@ -1942,6 +1944,7 @@ export default function LineStock() {
       {activeTab === 'count'     && <StockCountSheet role={role} scope={scope} />}
       {activeTab === 'wip'       && <WipBetweenSteps />}
       {activeTab === 'sapview'   && <SapViewConsumption />}
+      {activeTab === 'sapstock'  && <Suspense fallback={null}><SapStockCompare /></Suspense>}
       {activeTab === 'monitoring' && (
         <Hub>
           <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>{tr('กำลังโหลด…')}</div>}>

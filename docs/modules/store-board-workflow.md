@@ -902,3 +902,18 @@ audit ยอดติดลบ 19/11 พบว่าพาร์ทลูกท�
   + cron `store-gap-shift-scan` 19:50 ส่ง `{"only":["F"]}` · ผู้รับ = กฎ `store_abnormal` เดิมที่ `/notification-config` (ไม่ได้เพิ่มผู้รับใหม่)
 - คิวงานของฉัน: บรรทัดสรุปชั้น floor `line_issue_gap` (`MyQueuePanel.jsx`) → `/line-stock?tab=out`
 - migration `20261120b_line_issue_gap_queue_dr.sql` + `20261120c_line_issue_gap_confirm_many_dr.sql` (มี ROLLBACK)
+
+## 📊 เทียบยอดคงคลัง SAP (MB52) รายสัปดาห์ — แท็บ `/line-stock?tab=sapstock` (2026-11-20 · คำสั่ง user)
+user: *"หน้างานจริงกับ SAP ไม่ตรงกัน … แต่ละส่วนจดสมุดลง Excel ไว้เทียบ SAP ปลายสัปดาห์/สิ้นเดือน — อยากให้ระบบแทน manual และแม่นยำ"*
+- **อ่านไฟล์ = `src/utils/mb52Import.js`** (เทส `__tests__/mb52Import.test.mjs`) · ถอดรหัสด้วย `decodeSapExport()`/`sapNum()` ของ `sapBomImport.js` (ห้ามเขียนชุดที่ 2)
+  · 🔴 **layout ต่างกันตามคนที่ export — หาแถวหัวจากชื่อคอลัมน์ ไม่ใช่ตำแหน่ง** · ต้องมี `Material`·`SLoc`·`Unrestr.` · ไม่เจอ = error พร้อมหัวที่เจอ (ห้ามเดา)
+    เจอชื่อหัวแบบใหม่ (เช่น SAP ภาษาไทย) = เพิ่มใน `HEAD` ที่ไฟล์นี้ที่เดียว · รองรับ .xlsx (PK) ผ่าน xlsx → TSV
+  · MAT หลายบรรทัด (batch/ราคา) = รวมราย SLoc×MAT · ข้ามบรรทัดรวม `*` · วันที่หัวไฟล์ → `report_date` (ไม่เจอ = null)
+- **บันทึก = RPC `sap_stock_upload_create` (DR · ธุรกรรมเดียว)** → `sap_stock_uploads` (รอบ) + `sap_stock_compare` (ผลเทียบ **ตรึงยอดระบบ ณ เวลาอัปโหลด** · user เลือก)
+  · ขอบเขต = **รหัสคลังที่อยู่ในไฟล์เท่านั้น** (ไฟล์ทีละคลังได้ · ไม่งั้นคลังที่ไม่อยู่ในไฟล์ขึ้น "ต่าง" เทียม)
+  · ฝั่งระบบ: `P4xx` = ไลน์ใน `storage_locations.line_names` · กอง STORE/FG = แยกตาม `parts_master.home_sloc`
+    ไม่ได้ตั้ง = รหัสเทียม `STORE?`/`FG?` (`esm_basis='pile_unknown'` · จอเขียนเตือน) · เทียบกับ **Unrestr.** (QI/Blocked โชว์ข้าง ไม่รวม)
+  · คำใบ้ต่อแถว (ณ เวลาตรึง): ค้างคิวลงจ่าย (`v_line_issue_gaps`) · รอรับเข้า (`stock_receipts` pending) · ใบสั่งซื้อไม่กดรับ
+- สิทธิ์อัปโหลด/ลบรอบ = `line_stock:issue` · ลบรอบ = cascade ผลเทียบ (ใช้เมื่ออัปไฟล์ผิด)
+- ⚠ ยังไม่มี: export ผลเทียบ (ต้องลงทะเบียน `/doc-forms` ก่อน) · เทียบรายการเคลื่อนไหว MB51 · ไฟล์ตัวเลขแบบยุโรป (`1.480,000`)
+- migration `20261120d_sap_stock_compare_dr.sql` (มี ROLLBACK · ตารางใหม่ล้วน)
