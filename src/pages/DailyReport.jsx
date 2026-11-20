@@ -76,7 +76,7 @@ import Segmented from '../components/Segmented';
 import DieMatLinkButton from '../components/DieMatLinkButton';
 import MoReportFromDowntime from '../components/MoReportFromDowntime';   // ฟอร์มแจ้งซ่อมเต็ม (lazy) — เปิดใบจาก Downtime
 import { isDetailsPending } from '../utils/moDetailsPending';   // ⏳ ใบที่เปิดให้ตอนเรียกช่าง ยังรอรายละเอียด (13/11)
-import { checkDtClosedAtShiftEnd } from '../utils/shiftDataSanity';   // 🔍 จับข้อมูลที่ทำให้ OEE โกหก (13/11)
+import { checkDtClosedAtShiftEnd, checkDtOverCap, checkDtOutsideOrders } from '../utils/shiftDataSanity';   // 🔍 จับข้อมูลที่ทำให้ OEE โกหก (13/11 · +2 กฎ 20/11)
 import { dieCandidatesForMats } from '../utils/dieCandidates';
 import { dtMachineRule, machineFitsDtType, idsForDb } from '../utils/dtMachineFilter';
 import { MB_FLAGS, mbFlagOf, mbFlagMeta, mbValueForDb } from '../utils/dtBreakdownOwner';   // 🔧 ธง "เครื่องเสียของช่างไหม" (13/11)
@@ -1576,7 +1576,29 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
         }),
       });
     })();
-    if (dtEndChk && !await askConfirm(dtEndChk.text + '\n\nยืนยันบันทึกตามนี้?')) return;
+    /* 🔍 อีก 2 กฎที่เพิ่ม 20/11 (คำสั่ง user "ทาง ค" — ไม่แก้สูตร แต่ดักตอนกรอก)
+       ① ยาวเกินเพดานของประเภทมาก  ② ตกนอกช่วงที่มีใบผลิตเปิด
+       🔴 เกณฑ์อยู่ `utils/shiftDataSanity.js` ห้ามคิดเลขเองในหน้า
+       🔴 ถามครั้งเดียวรวมทุกข้อ — "ห้ามถามพร่ำเพรื่อ" (CLAUDE.md §ปุ่มอนุมัติ) */
+    const dtCapChk = checkDtOverCap({
+      durationMin: durMin,
+      capMin: dtTypes.find(t => t.id === dtForm.downtime_type_id)?.planned_cap_min ?? null,
+      typeName: dtTypes.find(t => t.id === dtForm.downtime_type_id)?.name_th || '',
+    });
+    /* หน้าต่างใบผลิตของกะนี้ = [เปิด, ปิด] ของใบที่ปิดแล้ว · ใบที่ยังเปิดอยู่ถือว่า "เปิดถึงตอนนี้"
+       🔴 ไม่มีใบปิดเลย = ส่ง [] ⇒ กฎคืน null = เงียบ (ต้นกะยังไม่มีใบปิดเป็นเรื่องปกติ) */
+    const dtOutChk = checkDtOutsideOrders({
+      startedMs: startedAt?.getTime() ?? null, endedMs: endedAt?.getTime() ?? null,
+      orderWindows: (prodOrders || []).map((o) => {
+        const a = o.opened_at ? Date.parse(o.opened_at) : null;
+        const b = o.status === 'confirmed' && o.confirmed_at ? Date.parse(o.confirmed_at)
+          : o.status === 'open' ? Date.now() : null;
+        return a && b && b > a ? [a, b] : null;
+      }).filter(Boolean),
+    });
+    const dtWarns = [dtEndChk, dtCapChk, dtOutChk].filter(Boolean);
+    if (dtWarns.length && !await askConfirm(
+      dtWarns.map(w => w.text).join('\n\n────────────────\n\n') + '\n\nยืนยันบันทึกตามนี้?')) return;
 
     /* 🔒 ด่านชั้น 2 ตอนเขียนจริง (18/11 · user ลอง "จำลอง role" แล้วลง DT ได้) — เดิมปุ่ม "+ บันทึก Downtime"
        ไม่ได้เช็ค `canScan` เลย (ปุ่มแก้/ปิดรายการเช็ค แต่ปุ่มเพิ่มไม่เช็ค) · ฝั่ง DR เป็น anon ไม่มี RLS คอยกัน
