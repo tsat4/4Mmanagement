@@ -19,6 +19,8 @@
       ตารางถังไม่มีคอลัมน์ส่วนงาน ⇒ ที่นี่เติม `section` จากทะเบียนไลน์ให้ก่อนส่ง
    ═══════════════════════════════════════════════════════════════════════════ */
 import { useCallback, useContext, useEffect, useState } from 'react';
+import Icon, { stripIcon } from './Icon';
+import useIsMobile from '../utils/useIsMobile';
 import { Link } from 'react-router-dom';
 import { UserContext } from '../App';
 import { supabase, supabaseDR } from '../supabaseClient';
@@ -181,11 +183,35 @@ export async function loadMyQueue(me) {
 
 /* ── UI ชิ้นเล็ก ────────────────────────────────────────────────────────── */
 
+/* ✒️ 20/11 (user ดูแผงโปรไฟล์: "อันนี้ก็ควรแก้") — emoji หน้าแถวคิว → ไอคอนเส้นชุดเดียวกับเมนู (UI §6.36)
+   · map เฉพาะแผงนี้ (ไม่เติม ICON_MAP กลาง — กันไอคอนหัวเพจหน้าอื่นเปลี่ยนตาม) · ไม่อยู่ใน map = emoji เดิม
+   · 🟡/🔴 ถังเหลือง/แดง **คง emoji สี** — สีคือความหมาย (สถานะ) ไม่ใช่ของตกแต่ง
+   · จอคอมเท่านั้น (20/11 ตกลง "มือถือคงเดิมไว้ก่อน") */
+const QUEUE_ICON = {
+  '🛠': 'Hammer', '🛠️': 'Hammer', '🔧': 'Wrench', '☑️': 'ClipboardCheck', '🧪': 'FlaskConical', '👔': 'UserRoundCheck',
+  '✍️': 'PenLine', '🔎': 'Search', '🎯': 'Target', '⬆️': 'ArrowUp', '↩️': 'Undo2', '🤝': 'Handshake', '🔒': 'Lock',
+  '📤': 'Upload', '🏁': 'Flag', '🧾': 'Receipt', '📋': 'ClipboardList', '📝': 'FilePenLine', '📐': 'Ruler', '📦': 'Package',
+  '✅': 'CircleCheck', '🙋': 'Hand', '🏭': 'Factory', '🗂': 'FolderOpen', '🗂️': 'FolderOpen',
+};
+function QIcon({ glyph, size = 15 }) {
+  const isMobile = useIsMobile();
+  const nm = !isMobile && QUEUE_ICON[String(glyph || '').trim()];
+  if (nm) return <span style={{ color: 'var(--text2)', display: 'inline-flex', flexShrink: 0 }}><Icon name={nm} size={size} /></span>;
+  return <span style={{ fontSize: 14, flexShrink: 0 }}>{glyph}</span>;
+}
+/** หัวข้อชั้นคิว "🙋 รอคุณโดยตรง" → ไอคอนเส้น + ข้อความ (จอคอม) */
+function TierTitle({ text }) {
+  const isMobile = useIsMobile();
+  const lead = String(text || '').slice(0, String(text || '').length - String(stripIcon(text) || '').length).trim();
+  if (isMobile || !QUEUE_ICON[lead]) return <>{text}</>;
+  return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name={QUEUE_ICON[lead]} size={13} />{stripIcon(text)}</span>;
+}
+
 function Row({ it, onGo }) {
   const old = it.age != null && it.age >= OLD_DAYS;
   const body = (
     <>
-      <span style={{ fontSize: 14, flexShrink: 0 }}>{it.icon}</span>
+      <QIcon glyph={it.icon} />
       <span style={{ flex: 1, minWidth: 0 }}>
         <span style={{ display: 'block', fontSize: 12, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {it.title}
@@ -227,7 +253,7 @@ function Group({ tier, items, onGo }) {
   return (
     <div style={{ marginBottom: 6 }}>
       <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--muted)', padding: '4px 8px 2px', letterSpacing: 0.2 }}>
-        {TIER_TITLE[tier]}{shown.length ? ` · ${items.length}` : ''}
+        <TierTitle text={TIER_TITLE[tier]} />{shown.length ? ` · ${items.length}` : ''}
       </div>
       {shown.length === 0
         ? <div style={{ fontSize: 11.5, color: 'var(--muted)', padding: '2px 8px 6px' }}>{empty}</div>

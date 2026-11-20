@@ -573,9 +573,12 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
            มาทำของตกแต่ง ทั้งที่ 2 สีนี้ถูกจองไว้แปลว่า "ปกติ/มีปัญหา" ทั้งระบบ (utils/statusTone.js) */
         <div style={{
           width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-          background: 'var(--bg2)', border: '1px solid var(--border2)',
+          /* 20/11: จอคอม = ไล่เฉดเขียวสีเดียว (ชุดเดียวกับการ์ดท้ายแผง · token --avatar-*) · มือถือคงเดิม (ตกลง 20/11) */
+          ...(isMobile
+            ? { background: 'var(--bg2)', border: '1px solid var(--border2)', color: 'var(--text2)' }
+            : { background: 'linear-gradient(135deg, var(--avatar-from) 0%, var(--avatar-to) 100%)', color: 'var(--accent-ink)' }),
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 12, fontWeight: 800, color: 'var(--text2)',
+          fontSize: 12, fontWeight: 800,
         }}>{initials}</div>
       )}
       <div style={{ flex: 1, minWidth: 0 }}>
