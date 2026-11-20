@@ -95,7 +95,7 @@ export default function NotifyPrefsModal({ role, onClose }) {
           {state === 'loading' && <div style={{ fontSize: 12.5, color: 'var(--muted)', padding: 10 }}>{tr('กำลังโหลด…')}</div>}
           {state === 'error' && (
             <div role="alert" style={{ fontSize: 12, color: toneVar('bad'), background: toneDim('bad'), border: `1px solid ${toneLine('bad')}`, borderRadius: 'var(--r-md)', padding: '8px 10px', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-              <span style={{ flex: 1, minWidth: 180 }}>{tr('โหลดรายการแจ้งเตือนไม่สำเร็จ (')}{err}) — ยังตั้งค่าไม่ได้</span>
+              <span style={{ flex: 1, minWidth: 180 }}>{tr('โหลดรายการแจ้งเตือนไม่สำเร็จ (')}{err}) — {tr("ยังตั้งค่าไม่ได้")}</span>
               <button onClick={load} style={{ padding: '3px 10px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)', fontSize: 12, cursor: 'pointer' }}>{tr('โหลดใหม่')}</button>
             </div>
           )}
@@ -109,7 +109,7 @@ export default function NotifyPrefsModal({ role, onClose }) {
 
           {state === 'ok' && rows.length > 0 && (<>
             <div style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 700 }}>
-              ปิดอยู่ {sum.muted} {tr('จาก')} {sum.total} {tr('เรื่องที่ปิดได้')}{sum.locked ? ` · ล็อกไว้ ${sum.locked} เรื่อง` : ''}
+              {tr("ปิดอยู่")} {sum.muted} {tr('จาก')} {sum.total} {tr('เรื่องที่ปิดได้')}{sum.locked ? ` · ${tr("ล็อกไว้")} ${sum.locked} ${tr("เรื่อง")}` : ''}
             </div>
             {groups.map(g => (
               <div key={g.category}>

@@ -171,12 +171,12 @@ export default function StoreMonitor() {
 
       {loadErr && (
         <div style={{ ...card, borderColor: 'var(--red-line)', background: 'var(--red-dim)', padding: '10px 14px', marginBottom: 12, fontSize: 13, color: 'var(--red)', fontWeight: 700 }}>
-          ⚠ โหลดข้อมูลเฝ้าระวังไม่สำเร็จ — <b>{tr('ไม่ได้แปลว่าไม่มีเรื่องผิดปกติ')}</b> ({loadErr})
+          ⚠ {tr("โหลดข้อมูลเฝ้าระวังไม่สำเร็จ")} — <b>{tr('ไม่ได้แปลว่าไม่มีเรื่องผิดปกติ')}</b> ({loadErr})
         </div>
       )}
       {cutMsg && (
         <div style={{ ...card, borderColor: 'var(--amber-line)', background: 'var(--amber-dim)', padding: '10px 14px', marginBottom: 12, fontSize: 13, color: 'var(--amber)', fontWeight: 700 }}>
-          ⚠ รายการผิดปกติเกิน {cutMsg} {tr('รายการ — แสดงเฉพาะที่รุนแรงที่สุด')} <b>{tr('ตัวเลขบนจอยังไม่ครบ')}</b>
+          ⚠ {tr("รายการผิดปกติเกิน")} {cutMsg} {tr('รายการ — แสดงเฉพาะที่รุนแรงที่สุด')} <b>{tr('ตัวเลขบนจอยังไม่ครบ')}</b>
         </div>
       )}
       {loading ? (

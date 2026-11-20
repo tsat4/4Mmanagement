@@ -40,7 +40,7 @@ export default function QaInspectorScopes({ canManage = false }) {
     ]);
     if (!alive()) return;
     const bad = [n.error && 'ผังองค์กร', e.error && 'ทะเบียนพนักงาน', r.error && 'ทะเบียน QC ประจำหน่วย'].filter(Boolean);
-    setLoadFail(bad.length ? `อ่าน${bad.join(' · ')}ไม่สำเร็จ — รายการที่เห็นอาจไม่ครบ` : '');
+    setLoadFail(bad.length ? `${tr("อ่าน")}${bad.join(' · ')}${tr("ไม่สำเร็จ — รายการที่เห็นอาจไม่ครบ")}` : '');
     setNodes([...(n.data || [])].sort(orgNodeCompare));
     setEmps(e.data || []);
     setRows(r.data || []);
@@ -98,7 +98,7 @@ export default function QaInspectorScopes({ canManage = false }) {
           QC ที่ไปประจำหน้างาน <b>{tr('ยังสังกัดส่วน QA เหมือนเดิม')}</b> — ตารางนี้บอกแค่ว่ารับตรวจให้หน่วยไหน
           <div style={{ marginTop: 4 }}>
             <b>{tr('ไม่ย้ายสังกัด · cost center ไม่เปลี่ยน · ไม่นับเป็นกำลังคนของไลน์ · ไม่ใช่ด่านสิทธิ์')}</b>
-            {' '}(QA ยังเห็นทั้งโรงงานในเรื่องคุณภาพตามที่ตั้งไว้)
+            {' '}(QA {tr("ยังเห็นทั้งโรงงานในเรื่องคุณภาพตามที่ตั้งไว้")})
           </div>
           <div style={{ marginTop: 4 }}>ตั้งที่ชั้นไหนก็ได้ — ตั้ง "ส่วนงาน" = รับตรวจทุกแผนก/กลุ่มที่อยู่ใต้ลงไป</div>
         </div>
@@ -131,7 +131,7 @@ export default function QaInspectorScopes({ canManage = false }) {
                     <span key={r.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '2px 4px 2px 10px', border: '1px solid var(--border2)', borderRadius: 'var(--r-pill)', background: 'var(--bg2-surf)', fontSize: 13 }}>
                       {e ? e.name : '(ไม่อยู่ในทะเบียน active)'}
                       {e?.position && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{positionLabel(e.position)}</span>}
-                      {canManage && <DeleteButton disabled={busy} onClick={() => remove(r)} title={`เอา ${e?.name || ''} ออกจาก ${u.code || u.name}`} style={{ width: 26, height: 26 }} />}
+                      {canManage && <DeleteButton disabled={busy} onClick={() => remove(r)} title={`${tr("เอา")} ${e?.name || ''} ${tr("ออกจาก")} ${u.code || u.name}`} style={{ width: 26, height: 26 }} />}
                     </span>
                   );
                 })}

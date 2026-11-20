@@ -37,10 +37,10 @@ import { askConfirm } from '../utils/askConfirm';
 /* 🔧 B3 (02/11) — สถานะการติดตามใบซ่อมของผลตรวจ NG หนึ่งใบ · ป้าย MO = moStatusLabel() เท่านั้น */
 function AmMoChip({ follow }) {
   const st = follow?.state
-  const txt = st === 'mo_open' ? `🔧 ${follow.mo.mo_no || '(รอออกเลข)'} · ${moStatusLabel(follow.mo)}`
+  const txt = st === 'mo_open' ? `🔧 ${follow.mo.mo_no || tr('(รอออกเลข)')} · ${moStatusLabel(follow.mo)}`
     : st === 'mo_closed' ? `✅ ${follow.mo.mo_no || ''} · ${moStatusLabel(follow.mo)}`
-    : st === 'mo_void' ? `⚠ ใบซ่อม ${follow.mo.mo_no || ''} · ${moStatusLabel(follow.mo)} — ยังไม่ได้แก้`
-    : st === 'waived' ? `ไม่เปิดใบซ่อม: ${follow.reason}`
+    : st === 'mo_void' ? `⚠ ${tr("ใบซ่อม")} ${follow.mo.mo_no || ''} · ${moStatusLabel(follow.mo)} — ${tr("ยังไม่ได้แก้")}`
+    : st === 'waived' ? `${tr("ไม่เปิดใบซ่อม")}: ${follow.reason}`
     : st === 'no_mo' ? '⚠ ยังไม่เปิดใบแจ้งซ่อม'
     : '❔ ไม่รู้สถานะใบซ่อม'
   return <span style={{ display: 'block', fontSize: 11, fontWeight: 700, marginTop: 2 }}>{txt}</span>
@@ -94,7 +94,7 @@ export default function DailyPM() {
     setLoading(true)
     const res = await loadDailyAm()
     /* 🔴 โหลดล้ม = คงค่าเดิม + บอกคนดู — ล้างเป็นว่างแล้วจอจะเขียน "ยังไม่มีไลน์ที่ลงทะเบียน" ซึ่งเป็นคำตอบผิด */
-    if (!res.ok) { toast.error(`โหลดสถานะ AM ไม่สำเร็จ: ${res.error?.message || res.error}`); setLoading(false); return }
+    if (!res.ok) { toast.error(`${tr("โหลดสถานะ AM ไม่สำเร็จ")}: ${res.error?.message || res.error}`); setLoading(false); return }
     setJigs(res.jigs)
     setTargets(res.targets)
     setProdLines(res.lines)
@@ -191,8 +191,8 @@ export default function DailyPM() {
     const movedRegPreview = targets.some(t => t.jig_id === jig.id)
     const ok = await askConfirm(
       jig.line_name
-        ? `ย้าย "${jig.name}" จากไลน์ ${jig.line_name} → ${line_name} ?${movedRegPreview ? '\n\nรายการลงทะเบียน Daily PM ของอุปกรณ์นี้จะย้ายตามไปด้วย' : ''}`
-        : `กำหนดให้ "${jig.name}" อยู่ไลน์ ${line_name} ?`)
+        ? `${tr("ย้าย")} "${jig.name}" ${tr("จากไลน์")} ${jig.line_name} → ${line_name} ?${movedRegPreview ? '\n\nรายการลงทะเบียน Daily PM ของอุปกรณ์นี้จะย้ายตามไปด้วย' : ''}`
+        : `${tr("กำหนดให้")} "${jig.name}" ${tr("อยู่ไลน์")} ${line_name} ?`)
     if (!ok) { setJigs(prev => [...prev]); return } // re-render → select กลับค่าเดิม
     const { error } = await supabaseDR.from('jigs').update({ line_name }).eq('id', jig.id)
     if (error) return toast.error(error.message)
@@ -206,8 +206,8 @@ export default function DailyPM() {
       setTargets(prev => prev.map(t => (t.jig_id === jig.id ? { ...t, line_name } : t)))
     }
     toast.success(jig.line_name
-      ? `ย้าย ${jig.name}: ${jig.line_name} → ${line_name}${movedReg ? ' (ย้ายรายการลงทะเบียนตามด้วยแล้ว)' : ''}`
-      : `ย้าย ${jig.name} เข้าไลน์ ${line_name} แล้ว — ติ๊กลงทะเบียนได้เลย`)
+      ? `${tr("ย้าย")} ${jig.name}: ${jig.line_name} → ${line_name}${movedReg ? tr(' (ย้ายรายการลงทะเบียนตามด้วยแล้ว)') : ''}`
+      : `${tr("ย้าย")} ${jig.name} ${tr("เข้าไลน์")} ${line_name} ${tr("แล้ว — ติ๊กลงทะเบียนได้เลย")}`)
     setJigs(prev => prev.map(j => (j.id === jig.id ? { ...j, line_name } : j)))
   }
 
@@ -220,7 +220,7 @@ export default function DailyPM() {
          (08/10 audit AM↔PM) · ยืนยันก่อนเพราะมีผลต่อการเตือนทั้งไลน์ · แผน AM ของจิ๊กไม่ถูกแตะ (คนตัดสินเองที่ PM Setup) */
       const rows = targets.filter(t => t.line_name === line_name && t.jig_id === jig.id)
       if (!rows.length) return
-      if (!await askConfirm(`เอา "${jig.name}" ออกจากรายการเช็ค AM รายวันของไลน์ ${line_name} ?${rows.some(t => t.shift) ? '\n\n(รวมแถวที่ตั้งไว้เฉพาะกะด้วย)' : ''}`)) return
+      if (!await askConfirm(`${tr("เอา")} "${jig.name}" ${tr("ออกจากรายการเช็ค AM รายวันของไลน์")} ${line_name} ?${rows.some(t => t.shift) ? '\n\n(รวมแถวที่ตั้งไว้เฉพาะกะด้วย)' : ''}`)) return
       const ok = checkWriteRows(await supabaseDR.from('pm_daily_line_targets').update({ is_active: false })
         .in('id', rows.map(t => t.id)).select('id'), 'เอาออกจากทะเบียน AM')
       if (!ok) return
@@ -231,9 +231,9 @@ export default function DailyPM() {
          (fail-closed · 08/10) · แผน AM ของจิ๊กจะกลายเป็น run_day ให้เองที่ชั้น DB (trigger trg_pm_daily_target_plan_sync) */
       await loadPmTeams().catch(() => {})
       const { data: cls, error: cErr } = await supabaseDR.from('checklists').select('id, department').eq('module', 'mtn').eq('equipment_id', jig.id)
-      if (cErr) return toast.error('ตรวจใบตรวจ AM ของอุปกรณ์ไม่สำเร็จ: ' + cErr.message)
+      if (cErr) return toast.error((tr('ตรวจใบตรวจ AM ของอุปกรณ์ไม่สำเร็จ') + ': ') + cErr.message)
       if (!(cls || []).some(c => isAmTeam(c.department))) {
-        return toast.error(`"${jig.name}" ยังไม่มีใบตรวจ AM — ไปสร้างจุดตรวจที่ ⚙️ PM Setup (แท็บ AM) ก่อน แล้วค่อยลงทะเบียน`)
+        return toast.error(`"${jig.name}" ${tr("ยังไม่มีใบตรวจ AM — ไปสร้างจุดตรวจที่ ⚙️ PM Setup (แท็บ AM) ก่อน แล้วค่อยลงทะเบียน")}`)
       }
       // เคยลงทะเบียนแล้วเอาออก ⇒ เปิดใช้แถวเดิม (unique index ไลน์×จิ๊ก×กะ กัน insert ซ้ำ)
       const { data: old } = await supabaseDR.from('pm_daily_line_targets').select('id').eq('line_name', line_name).eq('jig_id', jig.id).is('shift', null).maybeSingle()
@@ -243,7 +243,7 @@ export default function DailyPM() {
       if (res.error) return toast.error(res.error.message)
       invalidateTable('pm_daily_line_targets')
       setTargets(prev => [...prev, res.data])
-      toast.success(`ลงทะเบียน ${jig.name} แล้ว — แผน AM ของเครื่องนี้นับตามวันเดินเครื่อง (run_day) อัตโนมัติ`)
+      toast.success(`${tr("ลงทะเบียน")} ${jig.name} ${tr("แล้ว — แผน AM ของเครื่องนี้นับตามวันเดินเครื่อง (run_day) อัตโนมัติ")}`)
     }
   }
 
@@ -253,8 +253,8 @@ export default function DailyPM() {
     <Page>
       <PageHeader title="Autonomous Maintenance (AM)" icon="🔧"
         sub={<>
-          AM ตรวจเครื่อง/POKA-YOKE ต้นกะ · {shiftInfo.label} · {shiftInfo.workDateStr}
-          {' · '}{tr('เตือนเมื่อเกิน')} {DAILY_PM_WINDOW_MIN} นาทีหลังเปิดใบผลิตใบแรก
+          AM {tr("ตรวจเครื่อง/POKA-YOKE ต้นกะ")} · {shiftInfo.label} · {shiftInfo.workDateStr}
+          {' · '}{tr('เตือนเมื่อเกิน')} {DAILY_PM_WINDOW_MIN} {tr("นาทีหลังเปิดใบผลิตใบแรก")}
         </>}
         tabs={[{ key: 'status', label: 'สถานะวันนี้' }, { key: 'monthly', label: 'รายงานรายเดือน' }, { key: 'registry', label: 'ลงทะเบียนเครื่องตรวจ' }]}
         tab={tab} onTab={setTab} />
@@ -274,7 +274,7 @@ export default function DailyPM() {
               return (
                 <span key={k} className={k === 'red' ? 'dt-alarm-banner' : undefined}
                   style={{ fontSize: 12, fontWeight: 800, padding: '4px 12px', borderRadius: 'var(--r-pill)', background: `${tint(meta.color, 'dim')}`, color: meta.color, border: `1px solid ${tint(meta.color, 'line')}` }}>
-                  {tr(meta.label)}: {n} ไลน์
+                  {tr(meta.label)}: {n} {tr("ไลน์")}
                 </span>
               )
             })}
@@ -282,7 +282,7 @@ export default function DailyPM() {
           {/* 🔧 B3 — อ่านสถานะใบซ่อมไม่ได้ ≠ "ยังไม่เปิดใบ" ต้องบอกตรงๆ */}
           {moFollow && moFollow.ok === false && (
             <div style={{ marginBottom: 12, fontSize: 12, color: 'var(--amber)' }}>
-              ⚠ อ่านสถานะใบแจ้งซ่อมของผลตรวจ AM ไม่สำเร็จ ({String(moFollow.error?.message || moFollow.error)}) — ป้าย MO บนการ์ดยังไม่แสดง
+              ⚠ {tr("อ่านสถานะใบแจ้งซ่อมของผลตรวจ AM ไม่สำเร็จ")} ({String(moFollow.error?.message || moFollow.error)}) — {tr("ป้าย MO บนการ์ดยังไม่แสดง")}
             </div>
           )}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(300px, 100%), 1fr))', gap: 14 }}>
@@ -316,7 +316,7 @@ export default function DailyPM() {
                     </span>
                   </div>
                   <div style={{ marginTop: 10, fontSize: 13, color: 'var(--text2)' }}>
-                    ตรวจแล้ว <b style={{ color: meta.color }}>{row.checked}/{row.total}</b> เครื่อง
+                    {tr("ตรวจแล้ว")} <b style={{ color: meta.color }}>{row.checked}/{row.total}</b> {tr("เครื่อง")}
                     {/* ⚙️ B1 — ตัวหาร = เครื่องที่มีใบผลิตสแกนกะนี้ ไม่ใช่ทุกเครื่องในทะเบียน ⇒ ต้องบอกว่าลงทะเบียนไว้กี่เครื่อง */}
                     {(row.amMode === 'machine' || row.amMode === 'mixed') && row.registeredN !== row.total && (
                       <span style={{ color: 'var(--muted)', marginLeft: 6 }}>{tr('(ที่เดินกะนี้ · ลงทะเบียน')} {row.registeredN})</span>
@@ -332,12 +332,12 @@ export default function DailyPM() {
                   )}
                   {row.status === 'pending' && dueDiffMin != null && (
                     <div style={{ marginTop: 4, fontSize: 12, fontWeight: 700, color: dueDiffMin <= 15 ? '#f59a3f' : 'var(--muted)' }}>
-                      ⏳ ครบกำหนด {fmtTime(new Date(dueMs))} {tr('— เหลืออีก')} {fmtDur(Math.max(0, dueDiffMin))}
+                      ⏳ {tr("ครบกำหนด")} {fmtTime(new Date(dueMs))} {tr('— เหลืออีก')} {fmtDur(Math.max(0, dueDiffMin))}
                     </div>
                   )}
                   {row.status === 'orange' && dueDiffMin != null && (
                     <div style={{ marginTop: 4, fontSize: 12, fontWeight: 800, color: '#f59a3f' }}>
-                      ⚠ เกินกำหนดมาแล้ว {fmtDur(Math.abs(dueDiffMin))}
+                      ⚠ {tr("เกินกำหนดมาแล้ว")} {fmtDur(Math.abs(dueDiffMin))}
                     </div>
                   )}
                   {row.ng.length > 0 && (
@@ -357,7 +357,7 @@ export default function DailyPM() {
                       <div style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 700 }}>{tr('แจ้งซ่อมแล้ว ยังไม่แก้ไข (')}{row.carry.length})</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 3 }}>
                         {row.carry.map(c => (
-                          <span key={`${c.jig_id}-${c.mo.id}`} title={c.inspected_at ? `พบผิดปกติเมื่อ ${fmtDate(c.inspected_at)}` : undefined}
+                          <span key={`${c.jig_id}-${c.mo.id}`} title={c.inspected_at ? `${tr("พบผิดปกติเมื่อ")} ${fmtDate(c.inspected_at)}` : undefined}
                             style={{ fontSize: 11, padding: '2px 8px', borderRadius: 'var(--r-md)', background: 'var(--amber-dim)', color: 'var(--amber)', border: '1px solid var(--amber-line)' }}>
                             {c.machine_no ? `${c.machine_no} · ` : ''}{c.name} · {c.mo.mo_no || '(รอออกเลข)'} · {moStatusLabel(c.mo)}
                             {c.inspected_at && <> {tr('· ตั้งแต่')} {fmtDate(c.inspected_at)}</>}
@@ -412,7 +412,7 @@ export default function DailyPM() {
             </button>
             {guideOpen && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 8 }}>
               {[
-                { n: '1', title: 'เพิ่มเครื่อง + หัวข้อตรวจ', desc: <>{tr('ที่หน้า')} <Link to="/pm?tab=setup&dept=production" style={{ color: 'var(--accent)', fontWeight: 700 }}>{tr('ตั้งค่า PM → แท็บ ฝ่ายผลิต')}</Link> (กด "+ เพิ่มอุปกรณ์" แล้วใส่ชื่อ/ไลน์/หัวข้อที่ต้องตรวจ)</> },
+                { n: '1', title: 'เพิ่มเครื่อง + หัวข้อตรวจ', desc: <>{tr('ที่หน้า')} <Link to="/pm?tab=setup&dept=production" style={{ color: 'var(--accent)', fontWeight: 700 }}>{tr('ตั้งค่า PM → แท็บ ฝ่ายผลิต')}</Link> ({tr("กด \"+ เพิ่มอุปกรณ์\" แล้วใส่ชื่อ/ไลน์/หัวข้อที่ต้องตรวจ")})</> },
                 { n: '2', title: 'ลงทะเบียนที่แท็บนี้', desc: 'ติ๊กเครื่องที่ "ต้องตรวจทุกต้นกะ" ของแต่ละไลน์ — ตัวเลข N ของไลน์มาจากตรงนี้' },
                 { n: '3', title: 'พนักงานตรวจต้นกะ', desc: <>{tr('ที่หน้า')} <Link to="/daily-checker?tab=amcheck" style={{ color: 'var(--accent)', fontWeight: 700 }}>{tr('แท็บ บันทึกผลตรวจ AM')}</Link> {tr('เลือกเครื่อง ติ๊กผ่าน/NG แล้วบันทึก')}</> },
                 { n: '4', title: 'ระบบเฝ้าเอง', desc: 'เปิดใบผลิตใบแรกของไลน์ → เริ่มนับ 60 นาที · ครบ+ผ่าน = 🟢 แจ้ง Telegram · พบ NG = 🔴 · เกินเวลายังไม่ครบ = 🟠' },
@@ -431,9 +431,9 @@ export default function DailyPM() {
             <LineScopeSelect lines={scopedProdLines} section={regScope.section} line={regScope.line}
               onChange={(section, line, info) => setRegScope({ section, line, names: info?.lines?.length ? info.lines : (section || line ? [line || section] : null) })} />
             <Segmented label={tr('ลงทะเบียน')} value={regState} onChange={setRegState} options={[
-              { value: '', label: `ทั้งหมด (${regView.myN})` },
-              { value: 'on', label: `✓ ลงทะเบียนแล้ว (${regView.regN})` },
-              { value: 'off', label: `ยังไม่ลงทะเบียน (${regView.myN - regView.regN})` },
+              { value: '', label: `${tr("ทั้งหมด")} (${regView.myN})` },
+              { value: 'on', label: `✓ ${tr("ลงทะเบียนแล้ว")} (${regView.regN})` },
+              { value: 'off', label: `${tr("ยังไม่ลงทะเบียน")} (${regView.myN - regView.regN})` },
             ]} />
             <SearchInput value={regQ} onChange={setRegQ} fields="ชื่อเครื่อง / เลขเครื่อง / No. / ไลน์" />
             <span className="spacer" />
@@ -451,7 +451,7 @@ export default function DailyPM() {
           {!canManage && <div style={{ marginBottom: 12, fontSize: 12, color: 'var(--accent2)' }}>{tr('* ดูได้อย่างเดียว — เฉพาะ admin/manager/supervisor แก้ไขได้')}</div>}
           {jigs.length > 0 && regView.groups.length === 0 ? (
             <div style={{ textAlign: 'center', padding: 40, color: 'var(--muted)' }}>
-              ไม่มีเครื่องที่ตรงกับตัวกรอง{regView.outScopeN > 0 ? ` (นอกขอบเขตของคุณ ${regView.outScopeN} เครื่อง)` : ''}
+              {tr("ไม่มีเครื่องที่ตรงกับตัวกรอง")}{regView.outScopeN > 0 ? ` (${tr("นอกขอบเขตของคุณ")} ${regView.outScopeN} ${tr("เครื่อง")})` : ''}
               {regFiltered && <div><button type="button" onClick={clearRegFilters} style={{ marginTop: 10, background: 'var(--bg3-surf)', border: '1px solid var(--border)', color: 'var(--text2)', borderRadius: 'var(--r-md)', padding: '5px 12px', fontSize: 12, cursor: 'pointer' }}>{tr('ล้างตัวกรอง')}</button></div>}
             </div>
           ) : Object.keys(jigsByLine).length === 0 ? (
@@ -476,8 +476,8 @@ export default function DailyPM() {
                     </div>
                     {noLine && (
                       <div style={{ fontSize: 12, color: 'var(--amber)', marginBottom: 10 }}>
-                        อุปกรณ์กลุ่มนี้ยังไม่ถูกระบุว่าอยู่ไลน์ไหน — ระบบจับคู่กับใบผลิตใบแรกของไลน์เพื่อเริ่มนับเวลาไม่ได้ (สถานะจะค้าง "ยังไม่เริ่มผลิต" ตลอด)
-                        {' '}<b>{tr('เลือกไลน์ในการ์ดด้านล่างได้เลย')}</b> {tr('อุปกรณ์จะย้ายเข้ากลุ่มไลน์นั้นแล้วติ๊กลงทะเบียนต่อได้ทันที (หรือแก้ที่หน้า')} <Link to="/pm?tab=setup&dept=production" style={{ color: 'var(--amber)', fontWeight: 700 }}>{tr('ตั้งค่า PM → ฝ่ายผลิต')}</Link> ก็ได้)
+                        {tr("อุปกรณ์กลุ่มนี้ยังไม่ถูกระบุว่าอยู่ไลน์ไหน — ระบบจับคู่กับใบผลิตใบแรกของไลน์เพื่อเริ่มนับเวลาไม่ได้ (สถานะจะค้าง \"ยังไม่เริ่มผลิต\" ตลอด")})
+                        {' '}<b>{tr('เลือกไลน์ในการ์ดด้านล่างได้เลย')}</b> {tr('อุปกรณ์จะย้ายเข้ากลุ่มไลน์นั้นแล้วติ๊กลงทะเบียนต่อได้ทันที (หรือแก้ที่หน้า')} <Link to="/pm?tab=setup&dept=production" style={{ color: 'var(--amber)', fontWeight: 700 }}>{tr('ตั้งค่า PM → ฝ่ายผลิต')}</Link> {tr("ก็ได้")})
                       </div>
                     )}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 8 }}>

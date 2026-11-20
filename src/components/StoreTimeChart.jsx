@@ -249,7 +249,7 @@ export default function StoreTimeChart({
     const diff = ms - nowMs;
     if (diff <= 0) return assumed ? 'ไลน์เริ่มใช้แล้ว' : 'ขาดแล้ว';
     const mn = Math.round(diff / 60000);
-    return mn < 60 ? `อีก ${mn} น.` : `อีก ${Math.floor(mn / 60)} ชม. ${mn % 60} น.`;
+    return mn < 60 ? `${tr("อีก")} ${mn} ${tr("น.")}` : `${tr("อีก")} ${Math.floor(mn / 60)} ${tr("ชม.")} ${mn % 60} ${tr("น.")}`;
   };
   // สีตามความเร่งด่วน — แดง = ขาดแล้ว/กำลังจะขาด (ของหมดคือไลน์หยุด ไม่ใช่เรื่องเล็ก)
   // ⚠️ พาร์ทที่สมมติ WIP=0 ห้ามเป็นแดง — สีแดงคือคำยืนยัน เราแค่ยังไม่รู้ (ส้ม = ต้องไปดู)
@@ -414,19 +414,19 @@ export default function StoreTimeChart({
       {/* ── แถบสรุป (โครงเดียวกับหัว Shipping Chart) ── */}
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
         {hasRoundMode && <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 700 }}>
-          {rounds.length} {tr('รอบส่งเข้าไลน์ · ✅')} {doneN} รับของแล้ว
+          {rounds.length} {tr('รอบส่งเข้าไลน์ · ✅')} {doneN} {tr("รับของแล้ว")}
           {overdueN > 0 && <span style={{ color: '#ef4444' }}> · 🔴 {overdueN} {tr('ค้างส่ง')}</span>}
           {shortN > 0 && <span style={{ color: '#f59e0b' }}> · ⚠️ {shortN} {tr('รอบของในสโตร์ไม่พอ')}</span>}
           {untrackedN > 0 && (
             <span style={{ color: 'var(--muted)' }} title={tr('พาร์ทเหล่านี้ไม่มีแถวสต็อกในคลัง STORE — เช็คไม่ได้ว่ามีของไหม (ไม่ได้แปลว่าไม่มี)')}>
-              {' '}· ❔ {untrackedN} รอบ ยังเช็คของไม่ได้
+              {' '}· ❔ {untrackedN} {tr("รอบ ยังเช็คของไม่ได้")}
             </span>
           )}
         </span>}
         {onDemandLines.length > 0 && (
           <span title={onDemandLines.join(' · ')}
             style={chip('rgba(59,130,246,0.12)', '#60a5fa', { border: '1px solid rgba(59,130,246,0.35)', padding: '4px 10px' })}>
-            ส่งตามคำขอ {onDemandLines.length} ไลน์
+            {tr("ส่งตามคำขอ")} {onDemandLines.length} {tr("ไลน์")}
           </span>
         )}
       </div>
@@ -436,7 +436,7 @@ export default function StoreTimeChart({
       {hasRoundMode && <div style={{ ...card, padding: 0, overflow: 'hidden' }}>
         <div style={{ padding: '8px 14px', borderBottom: '1px solid var(--border2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <span style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>
-            Store Time Chart — สโตร์ ➜ ไลน์ผลิต · วันงาน {workDate}
+            Store Time Chart — {tr("สโตร์ ➜ ไลน์ผลิต · วันงาน")} {workDate}
           </span>
           <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('คลิกที่บล็อกเพื่อดูของที่ต้องเตรียม / ไปที่การ์ดรายรอบ')}</span>
         </div>
@@ -480,7 +480,7 @@ export default function StoreTimeChart({
                       <span style={{ color: 'var(--muted)', marginRight: 4 }}>{isCol ? '▸' : '▾'}</span>{g}
                     </span>
                     <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>
-                      {`${list.length} รอบ · ✅ ${okN}`}
+                      {`${list.length} ${tr("รอบ")} · ✅ ${okN}`}
                       {gd ? ` · 🎴 ${gd.totalKanban}` : ''}
                     </span>
                   </div>
@@ -492,7 +492,7 @@ export default function StoreTimeChart({
                       const l = Math.max(0, ((b.s - tStart) / span) * 100);
                       const w = Math.min(100 - l, ((b.e - b.s) / span) * 100);
                       if (w <= 0) return null;
-                      return <div key={bi} title={`${b.label} — เวลาพัก`} style={{
+                      return <div key={bi} title={`${b.label} — ${tr("เวลาพัก")}`} style={{
                         position: 'absolute', top: 0, bottom: 0, left: `${l}%`, width: `${w}%`, zIndex: 0, pointerEvents: 'none',
                         background: 'repeating-linear-gradient(45deg, rgba(148,163,184,0.18) 0px, rgba(148,163,184,0.18) 4px, transparent 4px, transparent 8px)',
                         borderLeft: '1px dashed rgba(148,163,184,0.6)', borderRight: '1px dashed rgba(148,163,184,0.6)',
@@ -513,7 +513,7 @@ export default function StoreTimeChart({
                       const sel = popup?.r?.id === r.id;
                       if (isCol) return (
                         <div key={r.id} onClick={e => setPopup({ r, x: e.clientX, y: e.clientY })}
-                          title={`${hhmm(r.delivery_time)} · รอบ ${r.round_no} · ${roundAlloc?.[r.id]?.totalKanban || 0} การ์ด`}
+                          title={`${hhmm(r.delivery_time)} · ${tr("รอบ")} ${r.round_no} · ${roundAlloc?.[r.id]?.totalKanban || 0} ${tr("การ์ด")}`}
                           style={{ position: 'absolute', top: 8, width: 9, height: 9, borderRadius: '50%', left: `${Math.min(left, 98.5)}%`, background: color, border: '1.5px solid rgba(0,0,0,0.25)', cursor: 'pointer', zIndex: 1 }} />
                       );
                       return (
@@ -561,7 +561,7 @@ export default function StoreTimeChart({
               </div>
               <div style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 700, marginBottom: 6 }}>{r.line_name}</div>
               <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>
-                {alloc.parts.length} {tr('พาร์ท · 🎴')} <b style={{ color: '#f59e0b' }}>{alloc.totalKanban}</b> การ์ด
+                {alloc.parts.length} {tr('พาร์ท · 🎴')} <b style={{ color: '#f59e0b' }}>{alloc.totalKanban}</b> {tr("การ์ด")}
               </div>
               <StockNote cov={cov} fmt={fmt} />
               <button onClick={() => goToCard(r)}
@@ -576,10 +576,10 @@ export default function StoreTimeChart({
       {/* ── ชิปกรอง + เรียง (ตัวเลขต้องตรงกับจำนวนการ์ดที่เห็น) — ของโหมดรอบเท่านั้น ── */}
       {hasRoundMode && <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
         {[
-          { k: 'todo', label: `⏳ ต้องทำ (${counts.todo})` },
-          { k: 'overdue', label: `🔴 ค้างส่ง (${counts.overdue})` },
-          { k: 'done', label: `✅ รับของแล้ว (${counts.done})` },
-          { k: 'all', label: `ทั้งหมด (${counts.all})` },
+          { k: 'todo', label: `⏳ ${tr("ต้องทำ")} (${counts.todo})` },
+          { k: 'overdue', label: `🔴 ${tr("ค้างส่ง")} (${counts.overdue})` },
+          { k: 'done', label: `✅ ${tr("รับของแล้ว")} (${counts.done})` },
+          { k: 'all', label: `${tr("ทั้งหมด")} (${counts.all})` },
         ].map(f => (
           <button key={f.k} onClick={() => setCardFilter(f.k)} style={{
             padding: '7px 14px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-body)',
@@ -609,7 +609,7 @@ export default function StoreTimeChart({
         <div style={{ ...card, borderColor: 'rgba(59,130,246,0.35)', background: 'rgba(59,130,246,0.04)', padding: '12px 14px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginBottom: 3 }}>
             <span style={{ fontSize: 13, fontWeight: 800, color: '#60a5fa' }}>
-              ส่งตามคำขอ (delivery to order) — {onDemandQueue.length} ไลน์
+              {tr("ส่งตามคำขอ")} (delivery to order) — {onDemandQueue.length} {tr("ไลน์")}
             </span>
             {/* โหมดรอบเป็น opt-in รายไลน์ (§6.1) — ไม่ต้องป้ายบนจอทำงานทุกวัน พับไว้หลัง ⓘ พอ (audit 2026-09-07)
                 🔴 18/11: เดิมเป็น `title=` เพียวๆ ⇒ บนแท็บเล็ตหน้างานกดแล้วเงียบ · ย้ายมาใช้ของกลางที่กดเปิดได้ */}
@@ -696,7 +696,7 @@ export default function StoreTimeChart({
                           const l = Math.max(0, ((b.s - tStart) / span) * 100);
                           const w = Math.min(100 - l, ((b.e - b.s) / span) * 100);
                           if (w <= 0) return null;
-                          return <div key={bi} title={`${b.label} — เวลาพัก`} style={{
+                          return <div key={bi} title={`${b.label} — ${tr("เวลาพัก")}`} style={{
                             position: 'absolute', top: 0, bottom: 0, left: `${l}%`, width: `${w}%`, zIndex: 0, pointerEvents: 'none',
                             background: 'repeating-linear-gradient(45deg, rgba(148,163,184,0.18) 0px, rgba(148,163,184,0.18) 4px, transparent 4px, transparent 8px)',
                           }} />;
@@ -707,8 +707,8 @@ export default function StoreTimeChart({
                         {/* แถบ "ของยังพอ" จากตอนนี้ถึงเวลาที่จะขาดตัวแรก */}
                         {barR != null && barR > barL && (
                           <div title={q.firstAssumed
-                            ? `ไลน์เริ่มต้องใช้ของตอน ${clockOf(first)} — ยังไม่รู้ว่ามีอยู่ที่ไลน์เท่าไหร่`
-                            : `ของพอถึง ${clockOf(first)}`} style={{
+                            ? `${tr("ไลน์เริ่มต้องใช้ของตอน")} ${clockOf(first)} — ${tr("ยังไม่รู้ว่ามีอยู่ที่ไลน์เท่าไหร่")}`
+                            : `${tr("ของพอถึง")} ${clockOf(first)}`} style={{
                             position: 'absolute', top: 12, height: 10, left: `${barL}%`, width: `${barR - barL}%`,
                             background: `${tone}33`, borderLeft: `2px solid ${tone}`, borderRadius: 'var(--r-xs)', zIndex: 1,
                           }} />
@@ -720,8 +720,8 @@ export default function StoreTimeChart({
                           return (
                             <div key={p.mat_no}
                               title={p.assumed
-                                ? `${p.mat_no} — ไลน์เริ่มต้องใช้ ${clockOf(p.runoutMs)} (${inMs(p.runoutMs, true)}) · ต้องส่ง ${fmt(p.netTotal)} · ยังไม่ได้ตั้งยอด WIP ที่ไลน์ ยอดนี้ยังไม่หัก`
-                                : `${p.mat_no} — ของที่ไลน์หมด ${clockOf(p.runoutMs)} (${inMs(p.runoutMs)}) · ต้องส่ง ${fmt(p.netTotal)}`}
+                                ? `${p.mat_no} — ${tr("ไลน์เริ่มต้องใช้")} ${clockOf(p.runoutMs)} (${inMs(p.runoutMs, true)}) · ${tr("ต้องส่ง")} ${fmt(p.netTotal)} · ${tr("ยังไม่ได้ตั้งยอด WIP ที่ไลน์ ยอดนี้ยังไม่หัก")}`
+                                : `${p.mat_no} — ${tr("ของที่ไลน์หมด")} ${clockOf(p.runoutMs)} (${inMs(p.runoutMs)}) · ${tr("ต้องส่ง")} ${fmt(p.netTotal)}`}
                               style={{
                                 position: 'absolute', top: 9, left: `${x}%`, width: 8, height: 8, marginLeft: -4,
                                 borderRadius: '50%', background: urgTone(p.runoutMs, p.assumed), zIndex: 2,
@@ -733,8 +733,8 @@ export default function StoreTimeChart({
                         {/* ไม่มีเวลาให้พลอตเลย = ต้องบอกว่าทำไม ห้ามปล่อยแถวว่าง */}
                         {q.parts.every(p => p.runoutMs == null) && (
                           <div style={{ position: 'absolute', top: 9, left: 8, fontSize: 11, color: 'var(--muted)', zIndex: 2 }}>
-                            {q.counts.unknown > 0 ? `❔ ${q.counts.unknown} พาร์ทยังไม่มียอด WIP ที่ไลน์ — คำนวณไม่ได้`
-                              : q.counts.no_ct > 0 ? `⚠️ ยังไม่ตั้ง cycle time (${q.noCtMats.slice(0, 2).join(' · ')}) — คำนวณเวลาไม่ได้`
+                            {q.counts.unknown > 0 ? `❔ ${q.counts.unknown} ${tr("พาร์ทยังไม่มียอด WIP ที่ไลน์ — คำนวณไม่ได้")}`
+                              : q.counts.no_ct > 0 ? `⚠️ ${tr("ยังไม่ตั้ง")} cycle time (${q.noCtMats.slice(0, 2).join(' · ')}) — ${tr("คำนวณเวลาไม่ได้")}`
                               : q.counts.idle > 0 ? '⏸️ ไลน์ยังไม่มีใบผลิตเปิด'
                               : '✅ ของที่ไลน์พอถึงจบแผนวันนี้'}
                           </div>
@@ -746,10 +746,9 @@ export default function StoreTimeChart({
               </div>
             </div>
             <div style={{ padding: '5px 10px', borderTop: '1px solid var(--border2)', fontSize: 11, color: 'var(--muted)' }}>
-              ⚠️ WIP ที่ใช้คำนวณ = ยอดในระบบ <b>{tr('หักด้วยของที่ผลิตไปแล้ววันนี้')}</b> (คำนวณจากใบผลิต ไม่ได้อ่านจากยอดตัดสต็อก
-              เพราะ backflush ยังไม่ทำงาน) · {assumeWip0
+              ⚠️ WIP {tr("ที่ใช้คำนวณ = ยอดในระบบ")} <b>{tr('หักด้วยของที่ผลิตไปแล้ววันนี้')}</b> ({tr("คำนวณจากใบผลิต ไม่ได้อ่านจากยอดตัดสต็อก เพราะ backflush ยังไม่ทำงาน")}) · {assumeWip0
                 ? <>{tr('พาร์ทที่ยังไม่เคยตั้งยอดที่ไลน์ ถูกมองเป็น')} <b>0</b> {tr('(วงแหวน 📥) — เป็น')}<b>{tr('กำหนดส่ง')}</b> {tr('ไม่ใช่ “ของหมดแล้ว”')}</>
-                : <>พาร์ทที่ยังไม่เคยตั้งยอดที่ไลน์ = <b>{tr('คำนวณไม่ได้')}</b> {tr('ไม่ใช่ “ของหมด”')}</>}
+                : <>{tr("พาร์ทที่ยังไม่เคยตั้งยอดที่ไลน์")} = <b>{tr('คำนวณไม่ได้')}</b> {tr('ไม่ใช่ “ของหมด”')}</>}
             </div>
           </div>
 
@@ -762,7 +761,7 @@ export default function StoreTimeChart({
               border: `${pickGlow ? 2 : 1}px solid ${pickGlow ? 'var(--accent)' : (selItems.length ? 'rgba(34,197,94,0.4)' : 'var(--border)')}`,
               borderRadius: 'var(--radius-lg)', boxShadow: pickGlow ? 'var(--shadow-float)' : undefined, scrollMarginTop: 16 }}>
               <span style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--text)' }}>
-                {selItems.length ? `☑ เลือกแล้ว ${selItems.length} รายการ · ${selItems.reduce((s, it) => s + it.qty, 0).toLocaleString()} ชิ้น` : '① ติ๊กพาร์ทในรายการด้านล่าง → ② กดสร้างใบส่ง'}
+                {selItems.length ? `☑ ${tr("เลือกแล้ว")} ${selItems.length} ${tr("รายการ")} · ${selItems.reduce((s, it) => s + it.qty, 0).toLocaleString()} ${tr("ชิ้น")}` : '① ติ๊กพาร์ทในรายการด้านล่าง → ② กดสร้างใบส่ง'}
               </span>
               <span style={{ fontSize: 12, color: 'var(--muted)', flex: '1 1 200px' }}>
                 ใบจะเข้า 🔄 คิวเติม WIP (คิวเดียวกับที่ไลน์เรียก) → กด "เริ่มเตรียม" สแกนพาร์ท+จำนวน (ตัดสต็อกให้เลย) → ถึงไลน์สแกนจุดส่ง → ผลิตยืนยันรับ
@@ -777,7 +776,7 @@ export default function StoreTimeChart({
                 style={{ minHeight: 44, padding: '10px 20px', borderRadius: 'var(--radius)', border: 'none',
                   background: selItems.length ? 'var(--accent)' : 'var(--bg3)', color: selItems.length ? 'var(--accent-ink)' : 'var(--muted)',
                   fontSize: 14, fontWeight: 800, cursor: selItems.length ? 'pointer' : 'not-allowed', fontFamily: 'var(--font-body)' }}>
-                {creating ? 'กำลังสร้าง…' : `🚚 สร้างใบส่ง (${selItems.length})`}
+                {creating ? 'กำลังสร้าง…' : `🚚 ${tr("สร้างใบส่ง")} (${selItems.length})`}
               </button>
             </div>
           )}
@@ -801,8 +800,8 @@ export default function StoreTimeChart({
                   <div style={{ marginTop: 4, fontSize: 12, fontWeight: 800, color: urgTone(q.firstRunoutMs, q.firstAssumed) }}>
                     {q.firstRunoutMs != null
                       ? (q.firstAssumed
-                        ? `📥 ต้องส่งก่อน ${clockOf(q.firstRunoutMs)} · ${inMs(q.firstRunoutMs, true)}`
-                        : `⏳ ไลน์จะขาดของ ${clockOf(q.firstRunoutMs)} · ${inMs(q.firstRunoutMs)}`)
+                        ? `📥 ${tr("ต้องส่งก่อน")} ${clockOf(q.firstRunoutMs)} · ${inMs(q.firstRunoutMs, true)}`
+                        : `⏳ ${tr("ไลน์จะขาดของ")} ${clockOf(q.firstRunoutMs)} · ${inMs(q.firstRunoutMs)}`)
                       : q.counts.unknown > 0 ? '❔ คำนวณเวลาไม่ได้ — ยังไม่มียอด WIP ที่ไลน์'
                       : q.counts.no_ct > 0   ? '⚠️ คำนวณเวลาไม่ได้ — ยังไม่ตั้ง cycle time'
                       : q.counts.idle > 0    ? '⏸️ ไลน์ยังไม่มีใบผลิตเปิด'
@@ -811,7 +810,7 @@ export default function StoreTimeChart({
                   {q.assumedCount > 0 && (
                     <div style={{ fontSize: 11, color: '#f59e0b', marginTop: 1 }}
                       title={tr('พาร์ทเหล่านี้ยังไม่เคยมีการจ่ายเข้าไลน์ในระบบ — คิดเป็น 0 ยอดที่แสดงจึงยังไม่หักของที่อาจมีอยู่แล้ว')}>
-                      {q.assumedCount} พาร์ทส่งเต็มจำนวน — ยังไม่มียอดที่ไลน์ให้หัก
+                      {q.assumedCount} {tr("พาร์ทส่งเต็มจำนวน — ยังไม่มียอดที่ไลน์ให้หัก")}
                     </div>
                   )}
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, marginTop: 2 }}>
@@ -830,13 +829,13 @@ export default function StoreTimeChart({
                     <button onClick={() => setQOpen(s => ({ ...s, [q.line]: !s[q.line] }))}
                       style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer',
                         fontSize: 11, fontWeight: 700, color: 'var(--muted)', fontFamily: 'var(--font-body)' }}>
-                      {open ? '▾ ซ่อนรายการ' : `▸ ดูรายการที่ต้องหยิบ (${q.parts.length})`}
+                      {open ? '▾ ซ่อนรายการ' : `▸ ${tr("ดูรายการที่ต้องหยิบ")} (${q.parts.length})`}
                     </button>
                     {inQueue > 0 && <span style={{ fontSize: 11, color: '#38bdf8', fontWeight: 700 }} title={tr('มีใบขอเติมค้างอยู่ในคิวเติม WIP แล้ว')}>{tr('ในคิวแล้ว')} {inQueue}</span>}
                     {canPick && pickable > 0 && (
                       <button onClick={() => { selectReady(q); setQOpen(s => ({ ...s, [q.line]: true })); }}
                         style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--accent)', fontFamily: 'var(--font-body)' }}>
-                        ☑ เลือกที่สโตร์มีพร้อม ({pickable})
+                        ☑ {tr("เลือกที่สโตร์มีพร้อม")} ({pickable})
                       </button>
                     )}
                   </div>
@@ -857,40 +856,40 @@ export default function StoreTimeChart({
                             background: picked ? 'rgba(34,197,94,0.10)' : 'transparent', borderRadius: 'var(--r-md)', padding: picked ? '2px 4px' : 0 }}>
                             {canPick && (
                               existing
-                                ? <span style={{ fontSize: 11, color: '#38bdf8', fontWeight: 700, whiteSpace: 'nowrap' }} title={`มีใบค้างอยู่แล้ว → ${existing.line_name}`}>{existing.status === 'pending' ? tr('รอหยิบ') : existing.status === 'preparing' ? tr('กำลังจัด') : tr('ส่งแล้ว')}</span>
+                                ? <span style={{ fontSize: 11, color: '#38bdf8', fontWeight: 700, whiteSpace: 'nowrap' }} title={`${tr("มีใบค้างอยู่แล้ว")} → ${existing.line_name}`}>{existing.status === 'pending' ? tr('รอหยิบ') : existing.status === 'preparing' ? tr('กำลังจัด') : tr('ส่งแล้ว')}</span>
                                 : <input type="checkbox" checked={!!picked} onChange={() => toggleSel(q, p)} disabled={!(p.netTotal > 0)}
                                     title={p.netTotal > 0 ? tr('เลือกไปส่ง') : tr('ไม่มียอดต้องส่ง')} style={{ width: 'auto', cursor: 'pointer', margin: 0 }} />
                             )}
-                            <span style={{ color: m.c }} title={`ของในสโตร์: ${m.t}`}>{m.t}</span>
+                            <span style={{ color: m.c }} title={`${tr("ของในสโตร์")}: ${m.t}`}>{m.t}</span>
                             {/* ลำดับ ชื่องาน → MAT (UI §6.21) */}
                             <span style={{ fontWeight: 700, color: 'var(--text2)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.part_name || ''}</span>
                             <span style={{ color: 'var(--muted)', fontFamily: 'var(--font-display)' }}>MAT {p.mat_no}</span>
                             {/* เวลาที่ "ของที่ไลน์" จะหมด — คนละตัวกับของในสโตร์
                                 📥 = ยังไม่ได้ตั้งยอดที่ไลน์ (มองเป็น 0) → เวลานี้คือกำหนดส่ง ไม่ใช่เวลาที่ของหมดจริง */}
                             <span title={p.assumed
-                              ? `WIP ที่ไลน์: ยังไม่ได้ตั้งยอด — ระบบมองเป็น 0 · เวลานี้คือเวลาที่ไลน์เริ่มต้องใช้ (${rr.label})`
-                              : `WIP ที่ไลน์: ${p.wipNow == null ? 'ไม่มียอด' : fmt(p.wipNow)} · ${rr.label}`}
+                              ? `WIP ${tr("ที่ไลน์: ยังไม่ได้ตั้งยอด — ระบบมองเป็น 0 · เวลานี้คือเวลาที่ไลน์เริ่มต้องใช้")} (${rr.label})`
+                              : `WIP ${tr("ที่ไลน์")}: ${p.wipNow == null ? tr('ไม่มียอด') : fmt(p.wipNow)} · ${rr.label}`}
                               style={{ color: urgTone(p.runoutMs, p.assumed), whiteSpace: 'nowrap', fontSize: 11, fontWeight: 700 }}>
                               {p.runoutMs != null ? `${p.assumed ? '📥' : '⏳'} ${clockOf(p.runoutMs)}` : rr.icon}
                             </span>
                             <span style={{ fontWeight: 800, color: m.c, whiteSpace: 'nowrap' }}>
-                              {fmt(p.netTotal)}{p.cards > 0 ? ` · ${p.cards}ใบ` : ''}
+                              {fmt(p.netTotal)}{p.cards > 0 ? ` · ${p.cards}${tr("ใบ")}` : ''}
                             </span>
                             <span style={{ color: 'var(--muted)', whiteSpace: 'nowrap', fontSize: 11 }}>
-                              {p.have == null ? 'สโตร์ —' : `สโตร์ ${fmt(p.have)}`}
+                              {p.have == null ? 'สโตร์ —' : `${tr("สโตร์")} ${fmt(p.have)}`}
                             </span>
                             {/* ไลน์ย่อยปลายทาง — โชว์เมื่อเลือกแล้ว · กลุ่มที่มีหลายไลน์ย่อยเปิดกะให้คนเลือกเอง (ระบบไม่เดา) */}
                             {picked && (
                               picked.lines.length > 1
                                 ? <select value={picked.line} onChange={e => setSel(s => ({ ...s, [k]: { ...s[k], line: e.target.value, sloc: slocOf(e.target.value) } }))}
                                     title={picked.sameSloc
-                                      ? `ทุกไลน์ในกลุ่มอยู่พื้นที่ SAP ${picked.sloc} เดียวกัน — ระบบเลือกไลน์แรกให้ · เปลี่ยนได้ถ้ารู้ว่าต้องวางหน้าไลน์ไหน`
+                                      ? `${tr("ทุกไลน์ในกลุ่มอยู่พื้นที่")} SAP ${picked.sloc} ${tr("เดียวกัน — ระบบเลือกไลน์แรกให้ · เปลี่ยนได้ถ้ารู้ว่าต้องวางหน้าไลน์ไหน")}`
                                       : 'หลายไลน์ย่อยกินพาร์ทนี้ (คนละพื้นที่ SAP) — เลือกไลน์ที่จะไปวางของ'}
                                     style={{ width: 'auto', fontSize: 11, padding: '1px 4px', borderRadius: 'var(--ctl-r)', border: `1px solid ${picked.sameSloc ? 'rgba(34,197,94,0.5)' : 'rgba(245,158,11,0.7)'}`, background: 'var(--bg2-surf)', color: picked.sameSloc ? 'var(--accent)' : '#f59e0b' }}>
                                     {picked.lines.map(ln => { const c = slocOf(ln); return <option key={ln} value={ln}>➜ {c ? `${c} · ` : ''}{ln}</option>; })}
                                   </select>
                                 : <span style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 700, whiteSpace: 'nowrap' }}
-                                    title={picked.sloc ? `พื้นที่ SAP ${picked.sloc} · ของวางที่ ${picked.line}` : 'ไลน์นี้ยังไม่ผูกรหัสคลัง SAP (ผูกที่ 📦 Stock Management → ตั้งค่า → พื้นที่ SAP / โซนคลัง)'}>
+                                    title={picked.sloc ? `${tr("พื้นที่")} SAP ${picked.sloc} · ${tr("ของวางที่")} ${picked.line}` : 'ไลน์นี้ยังไม่ผูกรหัสคลัง SAP (ผูกที่ 📦 Stock Management → ตั้งค่า → พื้นที่ SAP / โซนคลัง)'}>
                                     ➜ {picked.sloc ? `${picked.sloc} · ` : ''}{picked.line}
                                   </span>
                             )}
@@ -901,7 +900,7 @@ export default function StoreTimeChart({
                   )}
                   {blocked > 0 && (
                     <div style={{ marginTop: 6, fontSize: 11, color: '#f59e0b' }}>
-                      ส่งได้ไม่ครบ — {blocked} พาร์ทของในสโตร์ไม่พอ
+                      {tr("ส่งได้ไม่ครบ")} — {blocked} {tr("พาร์ทของในสโตร์ไม่พอ")}
                     </div>
                   )}
                 </div>
@@ -974,7 +973,7 @@ export default function StoreTimeChart({
 
                   {receivedMap[k]?.received_status && (
                     <div style={{ fontSize: 11, color: receivedMap[k].received_status === 'full' ? '#22c55e' : '#f59e0b', marginTop: 6, fontWeight: 700 }}>
-                      {receivedMap[k].received_status === 'full' ? '✔️' : '⚠️'} {receivedMap[k].received_by} รับของแล้ว
+                      {receivedMap[k].received_status === 'full' ? '✔️' : '⚠️'} {receivedMap[k].received_by} {tr("รับของแล้ว")}
                       {receivedMap[k].received_note ? ` — ${receivedMap[k].received_note}` : ''}
                     </div>
                   )}
@@ -996,7 +995,7 @@ export default function StoreTimeChart({
 
                   <button onClick={() => setExpanded(isOpen ? null : r.id)}
                     style={storeBtn('secondary', { marginTop: 8, width: '100%', fontSize: 12.5, fontWeight: 700, color: 'var(--text2)' })}>
-                    {isOpen ? '▾ ซ่อนรายการของ' : `▸ ดูของที่ต้องเตรียม (${alloc.parts.length})`}
+                    {isOpen ? '▾ ซ่อนรายการของ' : `▸ ${tr("ดูของที่ต้องเตรียม")} (${alloc.parts.length})`}
                   </button>
                 </div>
 
@@ -1013,14 +1012,14 @@ export default function StoreTimeChart({
                           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
                             <span style={{ fontFamily: 'monospace', fontSize: 12, fontWeight: 800, color: '#0ea5e9' }}>{p.mat_no}</span>
                             <span style={{ fontSize: 12, fontWeight: 900, color: p.netTotal > 0 ? '#f59e0b' : '#22c55e' }}>
-                              {p.netTotal <= 0 ? '✓ ในไลน์พอ' : per ? `${p.cards} ใบ` : `${fmt(p.netTotal)} ${p.uom || ''}`}
+                              {p.netTotal <= 0 ? '✓ ในไลน์พอ' : per ? `${p.cards} ${tr("ใบ")}` : `${fmt(p.netTotal)} ${p.uom || ''}`}
                             </span>
                           </div>
                           <div style={{ fontSize: 11, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.part_name}</div>
                           <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                            ผลิตต้องใช้ {fmt(p.qty)}
-                            {p.stockUsed > 0 ? ` · มีในไลน์ ${fmt(p.stockUsed)}` : ''}
-                            {p.netTotal > 0 ? ` · ต้องส่ง ${fmt(p.netTotal)}` : ''}
+                            {tr("ผลิตต้องใช้")} {fmt(p.qty)}
+                            {p.stockUsed > 0 ? ` · ${tr("มีในไลน์")} ${fmt(p.stockUsed)}` : ''}
+                            {p.netTotal > 0 ? ` · ${tr("ต้องส่ง")} ${fmt(p.netTotal)}` : ''}
                             {p.netTotal > 0 && (enough === null
                               ? <span style={{ color: 'var(--muted)' }} title={tr('ไม่มีแถวสต็อกของพาร์ทนี้ในคลัง STORE — เช็คไม่ได้ว่ามีของไหม')}> {tr('· ❔ ยังเช็คของในสโตร์ไม่ได้')}</span>
                               : enough
@@ -1031,8 +1030,8 @@ export default function StoreTimeChart({
                       );
                     })}
                     <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
-                      ตัดยอด {hhmm(r.cutoff_time)} {tr('· เตรียม')} {r.prep_minutes || 60} {tr('น. ·')} {r.points_count || 1} {tr('จุด ×')} {r.time_per_point_min || 10} น.
-                      {r.delivery_time ? ` · เสร็จ ~${addMinutes(hhmm(r.delivery_time), roundDeliveryMin(r))}` : ''}
+                      {tr("ตัดยอด")} {hhmm(r.cutoff_time)} {tr('· เตรียม')} {r.prep_minutes || 60} {tr('น. ·')} {r.points_count || 1} {tr('จุด ×')} {r.time_per_point_min || 10} {tr("น.")}
+                      {r.delivery_time ? ` · ${tr("เสร็จ")} ~${addMinutes(hhmm(r.delivery_time), roundDeliveryMin(r))}` : ''}
                     </div>
                   </div>
                 )}
@@ -1050,13 +1049,13 @@ function StockNote({ cov, fmt }) {
   if (!cov || !cov.need) return null;
   if (cov.short > 0) return (
     <div style={{ fontSize: 11.5, color: '#ef4444', fontWeight: 800, marginTop: 6 }}>
-      ของในสโตร์ไม่พอ {cov.shortMats} {tr('พาร์ท — ขาดรวม')} {fmt(cov.short)} ชิ้น
+      {tr("ของในสโตร์ไม่พอ")} {cov.shortMats} {tr('พาร์ท — ขาดรวม')} {fmt(cov.short)} {tr("ชิ้น")}
     </div>
   );
   if (cov.untracked > 0) return (
     <div style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 700, marginTop: 6 }}
       title={tr('พาร์ทเหล่านี้ไม่มีแถวสต็อกในคลัง STORE — ไม่ได้แปลว่าไม่มีของ แค่ระบบยังเช็คไม่ได้')}>
-      ❔ ยังเช็คของไม่ได้ {cov.untracked} พาร์ท (ไม่มีข้อมูลสต็อกในสโตร์)
+      ❔ {tr("ยังเช็คของไม่ได้")} {cov.untracked} {tr("พาร์ท (ไม่มีข้อมูลสต็อกในสโตร์")})
     </div>
   );
   return <div style={{ fontSize: 11.5, color: '#22c55e', fontWeight: 700, marginTop: 6 }}>{tr('ของในสโตร์พร้อมครบ')}</div>;

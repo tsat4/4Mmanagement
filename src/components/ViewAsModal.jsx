@@ -98,7 +98,7 @@ export default function ViewAsModal({ current, onClose, onApply }) {
         {isLeader ? (
           <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
             <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', flex: 2, minWidth: 200 }}>
-              ไลน์ของหัวหน้ากลุ่ม (scope = ทั้งครอบครัวไลน์)
+              {tr("ไลน์ของหัวหน้ากลุ่ม (scope = ทั้งครอบครัวไลน์")})
               {/* picker กลาง (UI §5.1.2) — ไม่ส่ง role/sections เพราะจอนี้คือ "สวมบทบาท" ต้องเห็นทุกไลน์
                   includeRetired: คงพฤติกรรมเดิม (เดิม map จาก lines ดิบ ไม่กรอง is_active) */}
               <LineSelect lines={lines} value={lineId} onChange={setLineId} valueKey="id"

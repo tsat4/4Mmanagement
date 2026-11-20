@@ -27,7 +27,7 @@ export default function NotFound() {
       {/* `breadcrumb={false}` — ที่อยู่นี้ไม่อยู่ใน NAV_ITEMS จึงไม่มีหมวดให้ไต่ (จะได้ breadcrumb ว่าง) */}
       <PageHeader
         icon="🧭" title={tr('ไม่พบหน้านี้')} breadcrumb={false}
-        sub={`ที่อยู่ที่เปิด: ${pathname}${search}`}
+        sub={`${tr("ที่อยู่ที่เปิด")}: ${pathname}${search}`}
       />
 
       <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderLeft: '4px solid var(--accent2)',

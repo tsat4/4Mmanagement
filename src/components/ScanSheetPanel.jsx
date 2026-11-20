@@ -35,7 +35,7 @@ export default function ScanSheetPanel({ lines, canPrint }) {
       if (!alive) return;
       const err = a.error || b.error || c.error;
       // 🔴 อ่านไม่ได้ต้องบอก — ลิสต์ว่างจะอ่านว่า "ไลน์นี้ไม่มีประเภท" แล้วพิมพ์แผ่นเปล่าไปติดหน้างาน
-      setLoadErr(err ? `โหลดทะเบียนไม่สำเร็จ: ${err.message}` : '');
+      setLoadErr(err ? `${tr("โหลดทะเบียนไม่สำเร็จ")}: ${err.message}` : '');
       setDt(a.data || []); setNg(b.data || []); setMachines(c.data || []);
     })();
     return () => { alive = false; };
@@ -73,7 +73,7 @@ export default function ScanSheetPanel({ lines, canPrint }) {
       w.document.write(withDocFoot(html, 'scan_sheet'));
       w.document.close();
     } catch (e) {
-      toast.error(`สร้างใบสแกนไม่สำเร็จ: ${e?.message || e}`);
+      toast.error(`${tr("สร้างใบสแกนไม่สำเร็จ")}: ${e?.message || e}`);
     } finally { setBusy(false); }
   };
 
@@ -98,7 +98,7 @@ export default function ScanSheetPanel({ lines, canPrint }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 6, alignContent: 'start' }}>{mine.map(box)}</div>
         {others.length > 0 && (
           <details style={{ marginTop: 8 }}>
-            <summary style={{ fontSize: 12, color: 'var(--muted)', cursor: 'pointer' }}>{tr('กระบวนการอื่น (')}{others.length}) — ไม่ได้ติ๊กให้ เลือกเพิ่มได้</summary>
+            <summary style={{ fontSize: 12, color: 'var(--muted)', cursor: 'pointer' }}>{tr('กระบวนการอื่น (')}{others.length}) — {tr("ไม่ได้ติ๊กให้ เลือกเพิ่มได้")}</summary>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 6, marginTop: 6, alignContent: 'start' }}>{others.map(box)}</div>
           </details>
         )}
@@ -109,9 +109,7 @@ export default function ScanSheetPanel({ lines, canPrint }) {
   return (
     <div>
       <div style={{ fontSize: 12.5, color: 'var(--text2)', background: 'var(--bg2-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '9px 12px', marginBottom: 12, lineHeight: 1.7 }}>
-        🗒️ <b>{tr('ใบสแกนประจำไลน์ (A4)')}</b> {tr('— ติดข้างไลน์ แล้วหน้างาน')} <b>{tr('ยิงเหตุผลจากแผ่น')}</b> แทนการไล่หาในลิสต์ยาว
-        (Daily Report → บันทึก Downtime / งานเสีย → แตะ 📷 ข้างช่องประเภท หรือกดปุ่มสแกนข้างเครื่อง)
-        · ระบบติ๊กประเภทที่เป็นของไลน์นี้ไว้ให้ (ตามกระบวนการของเครื่องในไลน์) · แก้ทะเบียนประเภทเมื่อไหร่ ให้พิมพ์แผ่นใหม่ (ประเภทที่ถูกปิดใช้ ยิงแล้วระบบไม่รับ)
+        🗒️ <b>{tr('ใบสแกนประจำไลน์ (A4)')}</b> {tr('— ติดข้างไลน์ แล้วหน้างาน')} <b>{tr('ยิงเหตุผลจากแผ่น')}</b> {tr("แทนการไล่หาในลิสต์ยาว (Daily Report → บันทึก Downtime / งานเสีย → แตะ 📷 ข้างช่องประเภท หรือกดปุ่มสแกนข้างเครื่อง) · ระบบติ๊กประเภทที่เป็นของไลน์นี้ไว้ให้ (ตามกระบวนการของเครื่องในไลน์) · แก้ทะเบียนประเภทเมื่อไหร่ ให้พิมพ์แผ่นใหม่ (ประเภทที่ถูกปิดใช้ ยิงแล้วระบบไม่รับ")})
       </div>
       {loadErr && <div style={{ fontSize: 12.5, color: 'var(--red)', marginBottom: 10 }}>⚠️ {loadErr} {tr('— ยังพิมพ์ไม่ได้')}</div>}
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
@@ -121,7 +119,7 @@ export default function ScanSheetPanel({ lines, canPrint }) {
         {canPrint && (
           <button type="button" onClick={print} disabled={!line || busy || !!loadErr}
             style={{ padding: '8px 18px', borderRadius: 'var(--r-md)', border: 'none', fontSize: 13.5, fontWeight: 800, cursor: line && !busy ? 'pointer' : 'not-allowed', background: line && !loadErr ? 'var(--accent)' : 'var(--bg3)', color: line && !loadErr ? 'var(--accent-ink)' : 'var(--muted)' }}>
-            {busy ? 'กำลังสร้าง…' : `🖨️ พิมพ์ใบสแกน (${pickDt.size + pickNg.size} ช่อง)`}
+            {busy ? 'กำลังสร้าง…' : `🖨️ ${tr("พิมพ์ใบสแกน")} (${pickDt.size + pickNg.size} ${tr("ช่อง")})`}
           </button>
         )}
       </div>

@@ -36,7 +36,7 @@ export default function QaFmePartRules({ canEdit, fullName, centralMode }) {
         .not('mat_no', 'is', null).order('line_name').order('part_no').limit(1000),   // 19/11 วัด 10 พาร์ท
       supabase.from('qa_fme_part_rules').select('mat_no, mid_mode, mid_every_pcs, mid_every_min, sample_n, is_active, updated_by, updated_at').limit(1000),   // 1 แถวต่อพาร์ท QA (ไม่เกินจำนวนพาร์ท)
     ]);
-    if (p.error || r.error) setFail(`โหลดไม่สำเร็จ: ${(p.error || r.error).message}`); else setFail('');
+    if (p.error || r.error) setFail(`${tr("โหลดไม่สำเร็จ")}: ${(p.error || r.error).message}`); else setFail('');
     setParts(p.data || []);
     const m = {}; (r.data || []).forEach(x => { m[x.mat_no] = x; }); setRules(m);
   }, []);

@@ -8,6 +8,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { clearableParams, resetSearch } from '../utils/filterReset';
 import useLang from '../utils/useLang';   // 🌐 ป้ายปุ่มแปลที่จุดวาด
+import { tr } from '../utils/i18n';
 
 export default function ClearFiltersBtn({ keep, onClear, label = 'ล้างตัวกรอง' }) {
   const loc = useLocation();
@@ -24,7 +25,7 @@ export default function ClearFiltersBtn({ keep, onClear, label = 'ล้าง�
         if (hit.length) nav({ pathname: loc.pathname, search: resetSearch(loc.search, keep) }, { replace: true });
         onClear?.();
       }}
-      title={hit.length ? `ล้าง: ${hit.join(' · ')}` : tr(label)}
+      title={hit.length ? `${tr("ล้าง")}: ${hit.join(' · ')}` : tr(label)}
       style={{
         height: 'var(--ctl-h)', padding: '0 10px', fontSize: 'var(--ctl-fs)',
         borderRadius: 'var(--r-md)', border: '1px solid var(--border)',

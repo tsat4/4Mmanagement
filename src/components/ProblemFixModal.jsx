@@ -107,7 +107,7 @@ export default function ProblemFixModal({ kind, row, title, actorName, onClose, 
     if (error) {
       toast.error(error.code === '42703'
         ? 'ยังบันทึกไม่ได้ — ต้อง apply migration 20260819_problem_fix_followup ก่อน (แจ้ง admin)'
-        : `บันทึกไม่สำเร็จ: ${error.message}`);
+        : `${tr("บันทึกไม่สำเร็จ")}: ${error.message}`);
       return;
     }
     if (!data?.length) { toast.error('บันทึกไม่สำเร็จ — ไม่พบรายการนี้แล้ว (อาจถูกลบไป)'); return; }
@@ -150,7 +150,7 @@ export default function ProblemFixModal({ kind, row, title, actorName, onClose, 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {wiHits.map(w => (
                 <button key={w.code} type="button"
-                  onClick={() => setFix(v => (txt(v) ? `${v.replace(/\s+$/, '')} · ` : '') + `ซ่อมตาม ${w.wi_no}`)}
+                  onClick={() => setFix(v => (txt(v) ? `${v.replace(/\s+$/, '')} · ` : '') + `${tr("ซ่อมตาม")} ${w.wi_no}`)}
                   title={`${w.code} — ${w.symptom}\n${w.wi_no}${w.why === 'symptom' ? '\n\n(จับคู่จากคำในอาการ — ตรวจว่าตรงเล่มก่อนใช้)' : ''}`}
                   style={{ maxWidth: 280, textAlign: 'left', fontSize: 11.5, lineHeight: 1.35,
                     padding: '5px 9px', borderRadius: 'var(--r-md)', cursor: 'pointer', color: 'var(--text)',

@@ -114,7 +114,7 @@ export default function RemoteReceiver({ code, onStop }) {
         <span style={{ fontSize: 13 }}>📺</span>
         <div>
           <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700 }}>
-            รับรีโมทอยู่ {connected ? '· 🟢 เชื่อมต่อแล้ว' : '· รอมือถือใส่รหัส'}
+            {tr("รับรีโมทอยู่")} {connected ? '· 🟢 เชื่อมต่อแล้ว' : '· รอมือถือใส่รหัส'}
           </div>
           <div style={{ fontSize: 18, fontWeight: 900, letterSpacing: 4, color: 'var(--accent)', fontFamily: 'var(--font-display)' }}>{code}</div>
         </div>

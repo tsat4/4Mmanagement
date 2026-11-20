@@ -96,7 +96,7 @@ export default function OpenOrderDemandPanel({ q = '' }) {
 
       {loadErr.length > 0 && (
         <div style={{ ...card, padding: '10px 14px', borderColor: 'var(--red)', color: 'var(--red)', fontSize: 12, fontWeight: 700 }}>
-          ⚠ โหลดไม่ครบ: {loadErr.join(' · ')} — ตัวเลขข้างล่างอาจไม่ครบ (กดรีเฟรช)
+          ⚠ {tr("โหลดไม่ครบ")}: {loadErr.join(' · ')} — {tr("ตัวเลขข้างล่างอาจไม่ครบ (กดรีเฟรช")})
         </div>
       )}
       {data && (data.noProduct.length > 0 || data.noBom.length > 0 || data.opOrders > 0) && (
@@ -112,7 +112,7 @@ export default function OpenOrderDemandPanel({ q = '' }) {
       ) : !data ? null : data.rows.length === 0 ? (
         <div style={{ ...card, padding: '30px 16px', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('ตอนนี้ไม่มีใบผลิตที่เปิดอยู่ที่ต้องใช้ชิ้นส่วน')}</div>
       ) : shown === 0 ? (
-        <div style={{ ...card, padding: '30px 16px', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('ไม่มีรายการที่ตรงกับคำค้น “')}{q}{tr('” (ซ่อน')} {data.rows.length} รายการ)</div>
+        <div style={{ ...card, padding: '30px 16px', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('ไม่มีรายการที่ตรงกับคำค้น “')}{q}{tr('” (ซ่อน')} {data.rows.length} {tr("รายการ")})</div>
       ) : (<>
         {shown < data.rows.length && <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{tr('ซ่อนอยู่ · ไม่ตรงคำค้น')} {data.rows.length - shown} {tr('รายการ')}</div>}
         {groups.map(([line, rs]) => (

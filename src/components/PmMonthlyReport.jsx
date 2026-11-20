@@ -99,9 +99,9 @@ export default function PmMonthlyReport() {
     if (!v.ok) { toast.error(pmMonthlySignText(v, { teamLabel: teamLabel(teamKey), section })); return }
     const st = PM_SIGN_STEPS[step]
     const ok0 = await confirmSign({
-      what: `${st.short} — สรุปใบตรวจ PM ${teamLabel(teamKey)}${section ? ` · ส่วนงาน ${section}` : ''}`,
-      orderNo: `เดือน ${month}`, docLabel: 'สรุปรายเดือน',
-      actor: fullName, as: `${st.label}${v.via?.kind === 'acting' ? ' (รักษาการ)' : ''}`,
+      what: `${st.short} — ${tr("สรุปใบตรวจ")} PM ${teamLabel(teamKey)}${section ? ` · ${tr("ส่วนงาน")} ${section}` : ''}`,
+      orderNo: `${tr("เดือน")} ${month}`, docLabel: 'สรุปรายเดือน',
+      actor: fullName, as: `${st.label}${v.via?.kind === 'acting' ? tr(' (รักษาการ)') : ''}`,
       effect: step === 3 ? 'ส่วนงานที่ถูกตรวจจะรับทราบได้ (ขั้น ④)' : 'ปิดสายลงนามของส่วนงานนี้',
       warn: 'แก้ไขภายหลังได้ด้วยการเพิกถอนพร้อมเหตุผล (ไม่ลบ — ประวัติยังอยู่)',
     })
@@ -113,7 +113,7 @@ export default function PmMonthlyReport() {
       position: myPosition, signatureUrl: mySignature,
     })
     setBusy(false)
-    if (ok) { toast.success(`${st.short} ${teamLabel(teamKey)}${section ? ` · ${section}` : ''} เดือน ${month} แล้ว`); setTick(t => t + 1) }
+    if (ok) { toast.success(`${st.short} ${teamLabel(teamKey)}${section ? ` · ${section}` : ''} ${tr("เดือน")} ${month} ${tr("แล้ว")}`); setTick(t => t + 1) }
   }
   const doRevoke = async () => {
     if (!revoking || busy) return
@@ -142,8 +142,8 @@ export default function PmMonthlyReport() {
           aoa.push([teamLabel(t.team), s.section || '(หาส่วนงานไม่เจอ)', s.total, '', '', '', s.ng, s.machines.size,
             s3?.signed_by_name || '', fmtWhen(s3?.signed_at), via(s3), s4?.signed_by_name || '', fmtWhen(s4?.signed_at), via(s4), drift ? 'ใช่' : ''])
         }
-        aoa.push([`${teamLabel(t.team)} (รวมทีม)`, '', t.total, t.confirmed, t.waiting, t.rejected, t.ng, t.machines.size,
-          '', '', '', '', '', '', t.noSection ? `หาส่วนงานไม่เจอ ${t.noSection} ใบ` : ''])
+        aoa.push([`${teamLabel(t.team)} (${tr("รวมทีม")})`, '', t.total, t.confirmed, t.waiting, t.rejected, t.ng, t.machines.size,
+          '', '', '', '', '', '', t.noSection ? `${tr("หาส่วนงานไม่เจอ")} ${t.noSection} ${tr("ใบ")}` : ''])
       }
       const notes = [['รายการ', 'คำอธิบาย'], ['เดือน', month],
         ['ขั้น ②', 'หัวหน้าผู้ตรวจยืนยันทีละใบ — ขั้น ③ อนุมัติได้เมื่อทุกใบผ่าน ② แล้วเท่านั้น'],
@@ -155,7 +155,7 @@ export default function PmMonthlyReport() {
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), 'สรุป PM รายเดือน')
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(notes), 'คำอธิบาย')
       XLSX.writeFile(wb, xlsxDocName('xlsx_pm_monthly', `PM_Monthly_${month}`))
-    } catch (e) { toast.error(`ส่งออก Excel ไม่สำเร็จ: ${e?.message || e}`) }
+    } catch (e) { toast.error(`${tr("ส่งออก Excel ไม่สำเร็จ")}: ${e?.message || e}`) }
   }
 
   const SignCell = ({ teamKey, step, section = null }) => {
@@ -198,10 +198,10 @@ export default function PmMonthlyReport() {
       {lines === null && data && <NoticeBar tone="warn" style={{ marginBottom: 10 }}>{tr('อ่านทะเบียนไลน์ไม่สำเร็จ — แยกส่วนงานที่ถูกตรวจไม่ได้')}</NoticeBar>}
       {org && !org.ok && <NoticeBar tone="warn" style={{ marginBottom: 10 }}>{tr('อ่านผังองค์กร/การมอบหมายไม่สำเร็จ — ยังลงนามไม่ได้')} ({org.error})</NoticeBar>}
       {active.skipped > 0 && <NoticeBar tone="warn" style={{ marginBottom: 10 }}>
-        มีลายเซ็น {active.skipped} รายการที่รูปแบบไม่ตรงกับหน้านี้ (บันทึกแบบเก่า) — ไม่ได้นำมาแสดง
+        {tr("มีลายเซ็น")} {active.skipped} {tr("รายการที่รูปแบบไม่ตรงกับหน้านี้ (บันทึกแบบเก่า) — ไม่ได้นำมาแสดง")}
       </NoticeBar>}
       {unmapped.length > 0 && <NoticeBar tone="warn" style={{ marginBottom: 10 }}>
-        ทีมที่ยังไม่ผูกหน่วยในผังองค์กร (ขั้น ③ ยังเซ็นไม่ได้): {unmapped.map(t => t.label).join(', ')}
+        {tr("ทีมที่ยังไม่ผูกหน่วยในผังองค์กร (ขั้น ③ ยังเซ็นไม่ได้")}): {unmapped.map(t => t.label).join(', ')}
       </NoticeBar>}
 
       {!data ? <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)' }}>{tr('กำลังโหลด...')}</div>
@@ -212,11 +212,11 @@ export default function PmMonthlyReport() {
               <div>
                 <div style={{ fontSize: 15, fontWeight: 800 }}>{teamLabel(t.team)}</div>
                 <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 2 }}>
-                  ใบตรวจ {t.total} · ผ่าน ② {t.confirmed}
-                  {t.waiting > 0 && <b style={{ color: 'var(--amber)' }}> · รอ ② {t.waiting}</b>}
-                  {t.rejected > 0 && <b style={{ color: 'var(--red)' }}> · ตีกลับ {t.rejected}</b>}
-                  {' '}· NG {t.ng} · เครื่อง {t.machines.size}
-                  {t.noSection > 0 && <span style={{ color: 'var(--amber)' }}> · หาส่วนงานไม่เจอ {t.noSection} ใบ</span>}
+                  {tr("ใบตรวจ")} {t.total} · {tr("ผ่าน")} ② {t.confirmed}
+                  {t.waiting > 0 && <b style={{ color: 'var(--amber)' }}> · {tr("รอ")} ② {t.waiting}</b>}
+                  {t.rejected > 0 && <b style={{ color: 'var(--red)' }}> · {tr("ตีกลับ")} {t.rejected}</b>}
+                  {' '}· NG {t.ng} · {tr("เครื่อง")} {t.machines.size}
+                  {t.noSection > 0 && <span style={{ color: 'var(--amber)' }}> · {tr("หาส่วนงานไม่เจอ")} {t.noSection} {tr("ใบ")}</span>}
                 </div>
                 {!teamMonthReady(t) && <div style={{ fontSize: 12, color: 'var(--amber)', marginTop: 2 }}>{tr('ขั้น ③ รอใบทุกใบผ่านขั้น ② ก่อน')}</div>}
               </div>
@@ -244,7 +244,7 @@ export default function PmMonthlyReport() {
             <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 8 }}>{tr('เพิกถอนลายเซ็น')} — {teamLabel(revoking.team)} {revoking.section ? `· ${revoking.section}` : ''} ({PM_SIGN_STEPS[revoking.step]?.short})</div>
             <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>{tr('ไม่ลบประวัติ — ลายเซ็นเดิมเปลี่ยนเป็น "เพิกถอน" พร้อมเหตุผล')}</div>
             <textarea value={reason} onChange={e => setReason(e.target.value)} rows={3} style={{ width: '100%' }}
-              placeholder={`เหตุผล (อย่างน้อย ${PM_REVOKE_REASON_MIN} ตัวอักษร)`} />
+              placeholder={`${tr("เหตุผล (อย่างน้อย")} ${PM_REVOKE_REASON_MIN} ${tr("ตัวอักษร")})`} />
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 10 }}>
               <button type="button" className="pg-btn" onClick={() => setRevoking(null)}>{tr('ยกเลิก')}</button>
               <button type="button" className="pg-btn primary" disabled={busy || reason.trim().length < PM_REVOKE_REASON_MIN} onClick={doRevoke}>{tr('เพิกถอน')}</button>

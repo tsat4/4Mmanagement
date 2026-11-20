@@ -101,10 +101,10 @@ export default function DeliveryPointPanel({ lineName, lines = [] }) {
     if (!name) { toast.error('ใส่ชื่อจุดส่ง (เช่น "จุดรับของหน้า OP10")'); return; }
     if (!lineNames.length) { toast.error('จุดส่งต้องผูกกับไลน์อย่างน้อย 1 ไลน์'); return; }
     const notLeaf = lineNames.filter(n => !isLeafLine(lines, n));
-    if (notLeaf.length) { toast.error(`${notLeaf.join(', ')} เป็นไลน์แม่ (แผนก) — จุดส่งต้องผูกกับไลน์ย่อยที่สุดเท่านั้น`); return; }
+    if (notLeaf.length) { toast.error(`${notLeaf.join(', ')} ${tr("เป็นไลน์แม่ (แผนก) — จุดส่งต้องผูกกับไลน์ย่อยที่สุดเท่านั้น")}`); return; }
     // 🏬 มุม SAP ของจุด — ไลน์ที่เลือกต้องอยู่พื้นที่เดียวกัน (คนละพื้นที่ = แยกจุด ไม่งั้นด่านขั้น 7 เทียบพื้นที่ไม่ได้)
     const codes = [...new Set(lineNames.map(n => slocCodeOfLine(slocs, lines, n)).filter(Boolean))];
-    if (codes.length > 1) { toast.error(`ไลน์ที่เลือกอยู่คนละพื้นที่ SAP (${codes.join(' / ')}) — จุดส่งเดียวรับของให้ 2 พื้นที่ไม่ได้ ให้แยกจุด`); return; }
+    if (codes.length > 1) { toast.error(`${tr("ไลน์ที่เลือกอยู่คนละพื้นที่")} SAP (${codes.join(' / ')}) — ${tr("จุดส่งเดียวรับของให้ 2 พื้นที่ไม่ได้ ให้แยกจุด")}`); return; }
     setSaving(true);
     const payload = { code: code || null, name, line_names: lineNames, note: (form.note || '').trim() || null, is_active: !!form.is_active, storage_location: codes[0] || null };
     const run = (pl) => (form.id
@@ -120,11 +120,11 @@ export default function DeliveryPointPanel({ lineName, lines = [] }) {
     setSaving(false);
     if (error) {
       // 23505 = รหัสสั้นซ้ำ (unique upper(code)) — บอกให้รู้ว่าชนกับใคร ไม่ใช่โยน SQL ใส่หน้า
-      toast.error(error.code === '23505' ? `รหัส "${code}" ถูกใช้กับจุดส่งอื่นแล้ว — ตั้งรหัสอื่น` : error.message);
+      toast.error(error.code === '23505' ? `${tr("รหัส")} "${code}" ${tr("ถูกใช้กับจุดส่งอื่นแล้ว — ตั้งรหัสอื่น")}` : error.message);
       return;
     }
     invalidateTable('line_delivery_points');   // จออื่นอ่านจาก cache — ล้างหลังบันทึกสำเร็จเท่านั้น
-    toast.success(form.id ? 'บันทึกจุดส่งแล้ว' : `เพิ่มจุดส่ง "${name}" แล้ว — อย่าลืมพิมพ์ป้าย QR ไปติดหน้างาน`);
+    toast.success(form.id ? 'บันทึกจุดส่งแล้ว' : `${tr("เพิ่มจุดส่ง")} "${name}" ${tr("แล้ว — อย่าลืมพิมพ์ป้าย QR ไปติดหน้างาน")}`);
     setForm(null);
     load();
   };
@@ -132,7 +132,7 @@ export default function DeliveryPointPanel({ lineName, lines = [] }) {
   const toggleActive = async (r) => {
     const turnOff = r.is_active !== false;
     // ปิดใช้งาน = ป้ายที่ติดอยู่หน้างานจะสแกนไม่ผ่านทันที → ต้องยืนยัน (§5.4) · เปิดกลับ = additive ไม่ถาม
-    if (turnOff && !await askConfirm(`ปิดใช้งานจุดส่ง "${r.name}" ?\n\nป้าย QR ที่ติดอยู่หน้างานจะสแกนแล้วขึ้น "จุดนี้ปิดแล้ว" — สโตร์ส่งของที่จุดนี้ไม่ผ่านด่าน`)) return;
+    if (turnOff && !await askConfirm(`${tr("ปิดใช้งานจุดส่ง")} "${r.name}" ?\n\n${tr("ป้าย QR ที่ติดอยู่หน้างานจะสแกนแล้วขึ้น \"จุดนี้ปิดแล้ว\" — สโตร์ส่งของที่จุดนี้ไม่ผ่านด่าน")}`)) return;
     const { error } = await supabaseDR.from('line_delivery_points').update({ is_active: !turnOff }).eq('id', r.id);
     if (error) { toast.error(error.message); return; }
     invalidateTable('line_delivery_points');   // จออื่นอ่านจาก cache — ไม่ล้าง = เห็นของเก่าถึง 4 ชม.
@@ -144,7 +144,7 @@ export default function DeliveryPointPanel({ lineName, lines = [] }) {
   return (
     /* พับด้วย CollapseCard ของกลาง (05/10) — ปุ่ม "+ เพิ่มจุดส่ง" อยู่หัวการ์ด เห็นแม้พับอยู่ */
     <CollapseCard id="deliveryPoints" storePrefix="ls" defaultOpen={false} onOpenChange={setOpen}
-      title={<>{tr('🎯 จุดส่งงานหน้าไลน์')}{open && rows.length > 0 && <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 400, marginLeft: 8 }}>{active.length} {tr('จุด')}{inactive.length ? ` · ปิดแล้ว ${inactive.length}` : ''}</span>}</>}
+      title={<>{tr('🎯 จุดส่งงานหน้าไลน์')}{open && rows.length > 0 && <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 400, marginLeft: 8 }}>{active.length} {tr('จุด')}{inactive.length ? ` · ${tr("ปิดแล้ว")} ${inactive.length}` : ''}</span>}</>}
       right={open && canManage && isLeaf && !form && !missing && (
         <button onClick={() => setForm(emptyForm(lineName))} style={{ ...btnSt('var(--accent)', 'var(--accent-ink)'), flexShrink: 0 }}>{tr('+ เพิ่มจุดส่ง')}</button>
       )}>
@@ -167,8 +167,7 @@ export default function DeliveryPointPanel({ lineName, lines = [] }) {
               ⇒ ให้ปุ่มตั้งจุดเดียวที่ติ๊กไลน์ลูกครบให้เลย (แก้ออกได้) 05/10 */}
           {!isLeaf && !missing && !form && (
             <div style={{ fontSize: 12.5, color: 'var(--text2)', background: 'var(--bg3-surf)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: '10px 12px' }}>
-              🏢 <b>{lineName}</b> {tr('เป็นไลน์แม่ (มีไลน์ย่อย')} {kids.length} ไลน์) — ของถูกส่งเข้าไลน์ย่อยเสมอ
-              จุดส่งจึงผูกกับ<b>{tr('ไลน์ย่อย')}</b>: <span>{kids.join(' · ')}</span>
+              🏢 <b>{lineName}</b> {tr('เป็นไลน์แม่ (มีไลน์ย่อย')} {kids.length} {tr("ไลน์) — ของถูกส่งเข้าไลน์ย่อยเสมอ จุดส่งจึงผูกกับ")}<b>{tr('ไลน์ย่อย')}</b>: <span>{kids.join(' · ')}</span>
               {/* 🔴 14/10: ปุ่มนี้เคยเด่นค้างไว้แม้ไลน์ย่อยมีจุดครบแล้ว = จอชวนกดซ้ำ → ได้จุดซ้ำซ้อน
                   (เกิดจริงที่ GOR: Assy GOR + Laser GOR มีจุดของตัวเองแล้ว แต่ปุ่มยังเชียร์ให้ตั้งจุดรวม)
                   ⇒ ไลน์ย่อยที่ยังไม่มีจุด = ตัวตัดสินว่าจะเชียร์หรือแค่บอก · **ห้ามซ่อนปุ่มทิ้ง**
@@ -185,10 +184,8 @@ export default function DeliveryPointPanel({ lineName, lines = [] }) {
                     </button>
                     <div style={{ fontSize: 11, color: allSet ? '#22c55e' : 'var(--muted)', marginTop: 6, lineHeight: 1.45 }}>
                       {allSet
-                        ? <>✅ <b>{tr('ไลน์ย่อยมีจุดส่งครบทุกไลน์แล้ว')}</b> {tr('— จะเพิ่ม')}<b>{tr('จุดที่ 2')}</b> ของไลน์ไหน ให้เลือกไลน์นั้นข้างบนแล้วกด “+ เพิ่มจุดส่ง”
-                            · ปุ่มนี้ไว้ใช้ตอนมี<b>{tr('แร็ครวม')}</b>{tr('ที่รับของให้ทุกไลน์พร้อมกันเท่านั้น')}</>
-                        : <>{tr('ใช้เมื่อ')}<b>{tr('แร็ค/จุดวางเดียวรับของให้ทั้งพื้นที่')}</b> — ระบบจะติ๊กไลน์ย่อยให้ครบ แก้ออกได้
-                            · ถ้าแต่ละไลน์มีจุดของตัวเอง ให้ไปตั้งทีละไลน์แทน
+                        ? <>✅ <b>{tr('ไลน์ย่อยมีจุดส่งครบทุกไลน์แล้ว')}</b> {tr('— จะเพิ่ม')}<b>{tr('จุดที่ 2')}</b> {tr("ของไลน์ไหน ให้เลือกไลน์นั้นข้างบนแล้วกด “+ เพิ่มจุดส่ง” · ปุ่มนี้ไว้ใช้ตอนมี")}<b>{tr('แร็ครวม')}</b>{tr('ที่รับของให้ทุกไลน์พร้อมกันเท่านั้น')}</>
+                        : <>{tr('ใช้เมื่อ')}<b>{tr('แร็ค/จุดวางเดียวรับของให้ทั้งพื้นที่')}</b> — {tr("ระบบจะติ๊กไลน์ย่อยให้ครบ แก้ออกได้ · ถ้าแต่ละไลน์มีจุดของตัวเอง ให้ไปตั้งทีละไลน์แทน")}
                             · <b>{tr('ยังไม่มีจุด')} {todo.length} {tr('ไลน์:')}</b> {todo.join(' · ')}</>}
                     </div>
                   </div>
@@ -294,9 +291,9 @@ export default function DeliveryPointPanel({ lineName, lines = [] }) {
                 return (
                   <div style={{ marginTop: 8, fontSize: 11.5, color: codes.length > 1 ? '#ef4444' : 'var(--text2)' }}>
                     {codes.length > 1
-                      ? <>{tr('🔴 ไลน์ที่เลือกอยู่คนละพื้นที่ SAP (')}{codes.join(' / ')}) — แยกเป็นคนละจุด</>
+                      ? <>{tr('🔴 ไลน์ที่เลือกอยู่คนละพื้นที่ SAP (')}{codes.join(' / ')}) — {tr("แยกเป็นคนละจุด")}</>
                       : codes.length === 1
-                        ? <>{tr('🏬 พื้นที่ SAP:')} <b style={{ fontFamily: 'monospace' }}>{codes[0]}</b>{info.find(i => i.s)?.s.via !== info.find(i => i.s)?.n ? ` (ตกทอดจาก ${info.find(i => i.s).s.via})` : ''}</>
+                        ? <>{tr('🏬 พื้นที่ SAP:')} <b style={{ fontFamily: 'monospace' }}>{codes[0]}</b>{info.find(i => i.s)?.s.via !== info.find(i => i.s)?.n ? ` (${tr("ตกทอดจาก")} ${info.find(i => i.s).s.via})` : ''}</>
                         : null}
                     {unmapped.length > 0 && <span style={{ color: '#f59e0b' }}>{codes.length ? ' · ' : ''}⚠ {unmapped.join(', ')} {tr('ยังไม่ผูกรหัสคลัง SAP (ผูกที่ 📦 Stock Management → ตั้งค่า → พื้นที่ SAP / โซนคลัง → “ทะเบียนรหัสคลัง” กด ✏️ ที่รหัสแล้วติ๊กไลน์)')}</span>}
                   </div>

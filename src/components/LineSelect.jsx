@@ -187,7 +187,7 @@ export default function LineSelect({
           onScan={(parsed) => {
             const r = resolveLine(parsed, pickable);
             if (r.error) return r.error.startsWith('ไม่พบไลน์ของป้าย') || r.error.startsWith('ไม่พบไลน์ "')
-              ? `${r.error} — หรือไลน์นี้อยู่นอกขอบเขตที่เลือกได้ในช่องนี้` : r.error;
+              ? `${r.error} — ${tr("หรือไลน์นี้อยู่นอกขอบเขตที่เลือกได้ในช่องนี้")}` : r.error;
             onChange?.(String(r.line[valueKey]));
           }} />
       )}

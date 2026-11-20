@@ -131,9 +131,9 @@ export default function DemandVsProduction({ products, prodByDay, today }) {
       <div style={{ padding: '10px 13px', borderRadius: 'var(--r-md)', border: '1px solid #f59e0b55', background: '#f59e0b14', fontSize: 12, color: '#f59e0b', lineHeight: 1.7 }}>
         ⚠️ <b>{tr('ยังเทียบกับความต้องการลูกค้าไม่ได้')}</b> {tr('— ไม่พบออเดอร์/forecast ที่ผูกกับ')}{group ? 'สินค้าในกลุ่มนี้' : 'สินค้านี้'}
         <div style={{ color: 'var(--muted)', marginTop: 4 }}>
-          ออเดอร์จากลูกค้าอ้าง <b>{tr('เลขพาร์ทลูกค้า')}</b> {tr('แต่ยอดผลิตอ้าง')} <b>{tr('เลข SAP')}</b> {tr('— ต้องมี')} <code>P/N</code> ตรงกับที่ลูกค้าใช้ ระบบถึงจับคู่ได้
+          {tr("ออเดอร์จากลูกค้าอ้าง")} <b>{tr('เลขพาร์ทลูกค้า')}</b> {tr('แต่ยอดผลิตอ้าง')} <b>{tr('เลข SAP')}</b> {tr('— ต้องมี')} <code>P/N</code> {tr("ตรงกับที่ลูกค้าใช้ ระบบถึงจับคู่ได้")}
           {pn ? <> {tr('· ตอนนี้ตั้งไว้เป็น')} <b>{pn}</b></> : <> · <b>{tr('ตอนนี้ยังไม่ได้ตั้ง P/N เลย')}</b></>}
-          <br />{tr('แก้ที่')} <b>{tr('Product Master → ช่อง P/N')}</b> หรือปุ่ม 🔗 จับคู่เลข SAP ในหน้า Planner &amp; Sales
+          <br />{tr('แก้ที่')} <b>{tr('Product Master → ช่อง P/N')}</b> {tr("หรือปุ่ม 🔗 จับคู่เลข SAP ในหน้า")} Planner &amp; Sales
         </div>
       </div>
     );
@@ -160,7 +160,7 @@ export default function DemandVsProduction({ products, prodByDay, today }) {
         <>
           <div style={{ padding: '11px 13px', borderRadius: 'var(--r-md)', border: `1px solid ${shortList.length ? '#ef4444' : '#22c55e'}66`, background: `${shortList.length ? '#ef4444' : '#22c55e'}14` }}>
             <div style={{ fontSize: 13.5, fontWeight: 900, color: shortList.length ? '#ef4444' : '#22c55e' }}>
-              {shortList.length ? `🔴 มี ${shortList.length} เลข SAP ที่ของจะขาด` : '🟢 ทุกเลข SAP ในกลุ่มมีของพอ'}
+              {shortList.length ? `🔴 ${tr("มี")} ${shortList.length} ${tr("เลข SAP ที่ของจะขาด")}` : '🟢 ทุกเลข SAP ในกลุ่มมีของพอ'}
             </div>
             <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 3, lineHeight: 1.7 }}>
               {shortList.length
@@ -169,8 +169,8 @@ export default function DemandVsProduction({ products, prodByDay, today }) {
               {/* ⚠️ ห้ามบอกว่า "รวมกลุ่มแล้วพอ" — สลับขายข้ามเลข SAP ไม่ได้ในทางปฏิบัติ */}
               {shortList.length > 0 && excessList.length > 0 && (
                 <div style={{ marginTop: 5, padding: '6px 9px', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)', border: '1px dashed var(--border2)', color: 'var(--muted)' }}>
-                  ℹ️ ในกลุ่มมีเลขที่ของเหลืออยู่ ({excessList.map((x) => x.p.mat_no).join(' · ')}) —
-                  <b> {tr('โอนมาใช้แทนกันได้เฉพาะกรณีฉุกเฉิน และต้องปรับยอดใน SAP ด้วย')}</b> ระบบจึงไม่นับรวมให้
+                  ℹ️ {tr("ในกลุ่มมีเลขที่ของเหลืออยู่")} ({excessList.map((x) => x.p.mat_no).join(' · ')}) —
+                  <b> {tr('โอนมาใช้แทนกันได้เฉพาะกรณีฉุกเฉิน และต้องปรับยอดใน SAP ด้วย')}</b> {tr("ระบบจึงไม่นับรวมให้")}
                 </div>
               )}
             </div>
@@ -229,18 +229,18 @@ export default function DemandVsProduction({ products, prodByDay, today }) {
       {/* ออเดอร์ที่อ้างเลขลูกค้าล้วน — ไม่เดาว่าเป็นของ mat ไหน แต่ต้องบอก */}
       {unassigned.qty > 0 && (
         <div style={{ padding: '8px 11px', borderRadius: 'var(--r-md)', border: '1px dashed #f59e0b66', fontSize: 11.5, color: '#f59e0b', lineHeight: 1.7 }}>
-          ℹ️ มีออเดอร์อีก {unassigned.n} {tr('รอบ (')}{fmt(unassigned.qty)} ชิ้น) ที่บันทึกด้วยเลข <b>{unassigned.keys.join(', ')}</b> ซึ่งยังไม่ผูกกับเลข SAP ตัวไหน —
-          <b> {tr('ระบบไม่เดาให้ว่าเป็นของเลขไหน')}</b> ตั้ง P/N ให้ตรงที่ Product Master แล้วจะถูกนับเข้าเอง
+          ℹ️ {tr("มีออเดอร์อีก")} {unassigned.n} {tr('รอบ (')}{fmt(unassigned.qty)} {tr("ชิ้น) ที่บันทึกด้วยเลข")} <b>{unassigned.keys.join(', ')}</b> {tr("ซึ่งยังไม่ผูกกับเลข SAP ตัวไหน")} —
+          <b> {tr('ระบบไม่เดาให้ว่าเป็นของเลขไหน')}</b> {tr("ตั้ง P/N ให้ตรงที่ Product Master แล้วจะถูกนับเข้าเอง")}
         </div>
       )}
 
       <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-        <Stat label={group ? `สต็อก ${focus.p.mat_no}` : 'สต็อกตอนนี้'} value={focus.stock == null ? '—' : fmt(focus.stock)} unit="ชิ้น"
+        <Stat label={group ? `${tr("สต็อก")} ${focus.p.mat_no}` : 'สต็อกตอนนี้'} value={focus.stock == null ? '—' : fmt(focus.stock)} unit="ชิ้น"
           sub={focus.stock == null ? tr('ไม่มีข้อมูลสต็อกของเลขนี้') : tr('จากคลัง FG')} color={focus.stock == null ? 'var(--muted)' : undefined} />
         <Stat label={tr('ต้องส่ง (ในช่วงที่ดู)')} value={fmt(focus.sim?.cumDem)} unit="ชิ้น"
-          sub={focus.D.hasOrder ? `ออเดอร์จริง${focus.D.hasForecast ? ' + forecast' : ''}` : 'forecast เท่านั้น (ยังไม่มีออเดอร์)'} color="#f59e0b" />
+          sub={focus.D.hasOrder ? `${tr("ออเดอร์จริง")}${focus.D.hasForecast ? ' + forecast' : ''}` : 'forecast เท่านั้น (ยังไม่มีออเดอร์)'} color="#f59e0b" />
         <Stat label={tr('ผลิตได้ (ในช่วงที่ดู)')} value={fmt(focus.sim?.cumProd)} unit="ชิ้น" color="var(--accent)"
-          sub={focus.rate ? `เฉลี่ย ${fmt(focus.rate)} ชิ้น/วันผลิต` : 'ยังไม่มีการผลิตในช่วงนี้'} />
+          sub={focus.rate ? `${tr("เฉลี่ย")} ${fmt(focus.rate)} ${tr("ชิ้น/วันผลิต")}` : 'ยังไม่มีการผลิตในช่วงนี้'} />
         <Stat label={tr('ปลายช่วงเหลือ')} value={fmt(focus.sim?.endStock)} unit="ชิ้น"
           color={focus.sim?.endStock < 0 ? '#ef4444' : focus.sim?.endStock > 0 ? 'var(--accent)' : undefined}
           sub={(focus.sim?.days || []).some((x) => x.stock < 0) ? tr('⚠️ มีวันที่ของไม่พอ') : tr('ไม่มีวันที่ของขาด')} />
@@ -255,15 +255,15 @@ export default function DemandVsProduction({ products, prodByDay, today }) {
 
       <div>
         <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 6 }}>
-          ผลิตรายวัน เทียบ ความต้องการ{group && <span style={{ color: 'var(--muted)', fontWeight: 600 }}> — {focus.p.mat_no} {tr('(เลขที่มีออเดอร์มากสุดในกลุ่ม)')}</span>}
+          {tr("ผลิตรายวัน เทียบ ความต้องการ")}{group && <span style={{ color: 'var(--muted)', fontWeight: 600 }}> — {focus.p.mat_no} {tr('(เลขที่มีออเดอร์มากสุดในกลุ่ม)')}</span>}
         </div>
         <DailyBars data={rows} height={140} unit=" ชิ้น" />
         <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6, lineHeight: 1.7 }}>
           <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{tr('■ ผลิตได้')}</span> ·
           <span style={{ color: '#f59e0b', fontWeight: 700 }}> {tr('▬ ต้องส่ง (ออเดอร์จริง)')}</span> ·
           <span style={{ color: '#a78bfa', fontWeight: 700 }}> {tr('▬ คาดการณ์ (forecast)')}</span> ·
-          แท่งเทา = วันข้างหน้า (ยังไม่ผลิต — ระบบไม่เดาว่าจะผลิตได้เท่าไหร่)
-          <br />{tr('วันที่มีออเดอร์จริงแล้ว จะ')}<b>{tr('ไม่')}</b>เอา forecast มาบวกทับ (นับซ้ำ)
+          {tr("แท่งเทา = วันข้างหน้า (ยังไม่ผลิต — ระบบไม่เดาว่าจะผลิตได้เท่าไหร่")})
+          <br />{tr('วันที่มีออเดอร์จริงแล้ว จะ')}<b>{tr('ไม่')}</b>{tr("เอา forecast มาบวกทับ (นับซ้ำ")})
         </div>
       </div>
 

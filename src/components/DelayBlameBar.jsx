@@ -35,9 +35,9 @@ export default function DelayBlameBar({ day, chains = [], size = 12, maxChains =
         {lateJobs > 0 && (
           <span title={tr('งานที่หลุดกรอบเวลาของตัวเองในวันงานนี้ — รวมใบที่ช้าแล้วปิดไปได้แล้ว (คนละเลขกับ \'ดีเลย์ N ใบ\' ที่บอกว่าตอนนี้ค้างกี่ใบ)')}
             style={chip('#ef4444')}>
-            วันนี้หลุดกรอบ {lateJobs} งาน
+            {tr("วันนี้หลุดกรอบ")} {lateJobs} {tr("งาน")}
             <span style={{ fontSize: size - 1, fontWeight: 600, color: 'var(--muted)' }}>
-              (ปิดช้า {lateDone} {tr('· ยังค้าง')} {stillLate})
+              ({tr("ปิดช้า")} {lateDone} {tr('· ยังค้าง')} {stillLate})
             </span>
           </span>
         )}
@@ -71,14 +71,14 @@ export default function DelayBlameBar({ day, chains = [], size = 12, maxChains =
           <span style={{ fontWeight: 800, color: c.victimCount > 0 ? '#ef4444' : '#f59e0b' }}>
             {/* 🔴 ยังไม่ปิด = เวลาที่นับได้เป็นเพียง "ถึงตอนนี้/ถึงปลายวัน" ⇒ ต้องมี ≥ กำกับ */}
             {c.victimCount > 0
-              ? `กินเวลาเกิน ${c.rootUnclosed ? '≥ ' : ''}${fmtSlipMin(c.ownLateMin)}`
+              ? `${tr("กินเวลาเกิน")} ${c.rootUnclosed ? '≥ ' : ''}${fmtSlipMin(c.ownLateMin)}`
               : `${c.rootUnclosed ? '≥ ' : ''}${fmtSlipMin(c.ownLateMin)}`}
             {c.rootUnclosed && <span style={{ fontWeight: 600, color: 'var(--muted)' }}> {tr('(ยังไม่ปิด)')}</span>}
           </span>
           {c.victimCount > 0 ? (
-            <span title={`ใบที่ถูกเลื่อนออกไปเพราะใบนี้: ${c.victims.map(v => `${v.o?.prod_no || v.key} (+${v.blameMin} น.)`).join(' · ')}`}
+            <span title={`${tr("ใบที่ถูกเลื่อนออกไปเพราะใบนี้")}: ${c.victims.map(v => `${v.o?.prod_no || v.key} (+${v.blameMin} ${tr("น.")})`).join(' · ')}`}
               style={{ fontWeight: 700, color: '#f97316' }}>
-              → พาลไป {c.victimCount} ใบ
+              → {tr("พาลไป")} {c.victimCount} {tr("ใบ")}
               <span style={{ fontWeight: 600, color: 'var(--muted)' }}>
                 {' '}{tr('(หนักสุด +')}{fmtSlipMin(Math.max(...c.victims.map(v => v.blameMin)))})
               </span>

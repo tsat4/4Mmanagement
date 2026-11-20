@@ -73,7 +73,7 @@ export default function OrgAssignmentsPanel({ nodes = [] }) {
     const ok = checkWriteRows(await supabase.from('org_assignments')
       .update({ ends_on: value || null }).eq('id', row.id).select('id'), 'กำหนดวันสิ้นสุด');
     setBusy(false);
-    if (ok) { toast.success(value ? `กำหนดวันสิ้นสุด ${value}` : 'ล้างวันสิ้นสุดแล้ว'); load(); }
+    if (ok) { toast.success(value ? `${tr("กำหนดวันสิ้นสุด")} ${value}` : 'ล้างวันสิ้นสุดแล้ว'); load(); }
   };
   const confirmRow = async (row) => {
     setBusy(true);
@@ -83,7 +83,7 @@ export default function OrgAssignmentsPanel({ nodes = [] }) {
     if (ok) { toast.success('ยืนยันแล้ว'); load(); }
   };
   const remove = async (row) => {
-    if (!await askConfirm(`ลบ "${nameOf(row.profile_id)} — ${nodeById.get(row.org_node_id)?.name || '?'}" ?`)) return;
+    if (!await askConfirm(`${tr("ลบ")} "${nameOf(row.profile_id)} — ${nodeById.get(row.org_node_id)?.name || '?'}" ?`)) return;
     setBusy(true);
     const ok = checkWriteRows(await supabase.from('org_assignments').delete().eq('id', row.id).select('id'), 'ลบรายการ');
     setBusy(false);
@@ -141,13 +141,13 @@ export default function OrgAssignmentsPanel({ nodes = [] }) {
           borderRadius: 'var(--r-md)', padding: '8px 11px', alignItems: 'center' }}>
           <b style={{ color: '#f59e0b' }}>{tr('ต้องทบทวน')}</b>
           {sum.openEnded.length > 0 && chip('rgba(245,158,11,0.2)', '#f59e0b',
-            `🔄 รักษาการไม่มีวันสิ้นสุด ${sum.openEnded.length}`)}
+            `🔄 ${tr("รักษาการไม่มีวันสิ้นสุด")} ${sum.openEnded.length}`)}
           {sum.expired.length > 0 && chip('rgba(239,68,68,0.2)', '#ef4444',
-            `⌛ หมดอายุแล้ว ${sum.expired.length}`)}
+            `⌛ ${tr("หมดอายุแล้ว")} ${sum.expired.length}`)}
           {sum.expiring.length > 0 && chip('rgba(59,130,246,0.2)', '#3b82f6',
-            `⏳ ใกล้หมดใน 30 วัน ${sum.expiring.length}`)}
+            `⏳ ${tr("ใกล้หมดใน 30 วัน")} ${sum.expiring.length}`)}
           {sum.unconfirmed.length > 0 && chip('rgba(148,163,184,0.25)', 'var(--text2)',
-            `❓ ยังไม่ยืนยัน ${sum.unconfirmed.length}`)}
+            `❓ ${tr("ยังไม่ยืนยัน")} ${sum.unconfirmed.length}`)}
           <span style={{ color: 'var(--muted)', fontSize: 11 }}>
             · รักษาการที่ไม่มีวันจบ = สิทธิ์ชั่วคราวที่กลายเป็นถาวรโดยไม่มีใครรู้
           </span>

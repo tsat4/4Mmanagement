@@ -27,8 +27,8 @@ export default function NpiTemplates({ templates, onChanged }) {
     setSaving(true);
     const { error } = await fn();
     setSaving(false);
-    if (error) return toast.error(`${label}ไม่สำเร็จ: ${error.message}${error.code === '23505' ? ' (code ซ้ำ)' : ''}`);
-    toast.success(`${label}แล้ว`); onChanged();
+    if (error) return toast.error(`${label}${tr("ไม่สำเร็จ")}: ${error.message}${error.code === '23505' ? tr(' (code ซ้ำ)') : ''}`);
+    toast.success(`${label}${tr("แล้ว")}`); onChanged();
     return true;
   };
 
@@ -59,10 +59,10 @@ export default function NpiTemplates({ templates, onChanged }) {
   };
   const delPhase = async (p) => {
     const n = delivs.filter(d => d.phase_code === p.code).length;
-    if (!await askConfirm(`ลบเฟส "${p.label}"? ${n ? `รายการ ${n} รายการในเฟสนี้จะไม่มีเฟส (ไปกลุ่ม "ไม่อยู่ในเฟส")` : ''}\nพาร์ทที่สร้างไปแล้วไม่ถูกแตะ`)) return;
+    if (!await askConfirm(`${tr("ลบเฟส")} "${p.label}"? ${n ? `${tr("รายการ")} ${n} ${tr("รายการในเฟสนี้จะไม่มีเฟส (ไปกลุ่ม \"ไม่อยู่ในเฟส")}")` : ''}\n${tr("พาร์ทที่สร้างไปแล้วไม่ถูกแตะ")}`)) return;
     run('ลบเฟส', () => supabase.from('npi_template_phases').delete().eq('id', p.id));
   };
-  const delDeliv = async (d) => { if (await askConfirm(`ลบรายการ "${d.label}" ออกจากแม่แบบ? (พาร์ทที่สร้างไปแล้วไม่ถูกแตะ)`)) run('ลบรายการ', () => supabase.from('npi_template_deliverables').delete().eq('id', d.id)); };
+  const delDeliv = async (d) => { if (await askConfirm(`${tr("ลบรายการ")} "${d.label}" ${tr("ออกจากแม่แบบ? (พาร์ทที่สร้างไปแล้วไม่ถูกแตะ")})`)) run('ลบรายการ', () => supabase.from('npi_template_deliverables').delete().eq('id', d.id)); };
 
   return (
     <div style={card}>

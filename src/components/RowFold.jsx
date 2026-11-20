@@ -39,8 +39,8 @@ export default function RowFold({ rows = [], max = ROW_FOLD_MAX, unit = 'รา�
       }}
     >
       {all
-        ? `▴ ย่อกลับเหลือ ${max} ${unit}แรก`
-        : `▾ ดูทั้งหมด ${list.length} ${unit} — ซ่อนอยู่ ${hidden}`}
+        ? `▴ ${tr("ย่อกลับเหลือ")} ${max} ${unit}${tr("แรก")}`
+        : `▾ ${tr("ดูทั้งหมด")} ${list.length} ${unit} — ${tr("ซ่อนอยู่")} ${hidden}`}
     </button>
   );
   return (

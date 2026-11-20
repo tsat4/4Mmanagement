@@ -104,7 +104,7 @@ export default function EnergyMeterDetail({ m, machines, boardMeters, totalToday
   const dailyBars = useMemo(() => (daily || []).map(d => ({ day: d.day, kwh: d.kwh == null ? null : Number(d.kwh), peak: d.peak_kw == null ? null : Number(d.peak_kw) })), [daily]);
 
   const st = m.status === 'never' ? { label: 'ยังไม่เคยได้รับค่า', color: IDLE }
-    : m.status === 'offline' ? { label: `ขาดการติดต่อ ${m.ageMin} นาที`, color: WARN }
+    : m.status === 'offline' ? { label: `${tr("ขาดการติดต่อ")} ${m.ageMin} ${tr("นาที")}`, color: WARN }
       : (m.overKw || m.overA) ? { label: 'เกินลิมิต', color: BAD } : { label: 'ออนไลน์', color: GOOD };
   const shown = useMemo(() => {
     const last = series.length ? series[series.length - 1].t : 0;
@@ -171,16 +171,16 @@ export default function EnergyMeterDetail({ m, machines, boardMeters, totalToday
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, alignContent: 'start' }}>
         <Kpi color={m.overKw ? BAD : GOOD} label={tr('กำลังไฟ (สูงสุดในนาทีล่าสุด)')} value={fmt(m.kw, 2)} unit="kW"
-          sub={`สูงสุดวันนี้ ${fmt(m.peakKw)} kW · ลิมิต ${m.limitKw ?? '—'} kW`} />
+          sub={`${tr("สูงสุดวันนี้")} ${fmt(m.peakKw)} kW · ${tr("ลิมิต")} ${m.limitKw ?? '—'} kW`} />
         <Kpi color={INFO} label={tr('ใช้ไฟวันนี้')} value={fmt(m.todayKwh)} unit="kWh"
-          sub={todayPct != null ? `${fmt(todayPct, 0)}% ของไฟทุกตู้วันนี้` : 'ตั้งแต่ 00:00 น.'} />
+          sub={todayPct != null ? `${fmt(todayPct, 0)}% ${tr("ของไฟทุกตู้วันนี้")}` : 'ตั้งแต่ 00:00 น.'} />
         <Kpi color={INFO} label={tr('ใช้ไฟเดือนนี้')} value={fmt(m.monthKwh, 0)} unit="kWh"
-          sub={avgDay != null ? `เฉลี่ยวันละ ${fmt(avgDay)} kWh (${m.monthDays} วันที่มีข้อมูล)` : 'ยังไม่มีข้อมูลของเดือนนี้'} />
+          sub={avgDay != null ? `${tr("เฉลี่ยวันละ")} ${fmt(avgDay)} kWh (${m.monthDays} ${tr("วันที่มีข้อมูล")})` : 'ยังไม่มีข้อมูลของเดือนนี้'} />
         <Kpi color={INFO} label={tr('เลขมิเตอร์สะสม')} value={fmt(m.kwhTotal, 0)} unit="kWh" sub={tr('อ่านตรงจากมิเตอร์ (Active Energy)')} />
         <Kpi color={m.overA ? BAD : ACC} label={tr('แรงดัน · กระแส')} value={<><span style={{ color: INFO }}>{fmt(m.v, 0)}</span><small style={{ fontSize: 13, color: 'var(--muted)' }}> V </small><span style={{ color: m.overA ? BAD : ACC }}>{fmt(m.a)}</span></>} unit="A"
-          sub={`V เฉลี่ย 3 เฟส · A เฟสที่สูงสุด · ลิมิต ${m.limitA ?? '—'} A`} />
+          sub={`V ${tr("เฉลี่ย 3 เฟส · A เฟสที่สูงสุด · ลิมิต")} ${m.limitA ?? '—'} A`} />
         <Kpi color={st.color} label={tr('สถานะมิเตอร์')} value={st.label} unit=""
-          sub={m.ageMin == null ? 'ยังไม่เคยได้รับข้อมูล' : m.ageMin < 1 ? 'ข้อมูลล่าสุดเมื่อสักครู่' : `ข้อมูลล่าสุด ${m.ageMin} นาทีที่แล้ว`} />
+          sub={m.ageMin == null ? 'ยังไม่เคยได้รับข้อมูล' : m.ageMin < 1 ? 'ข้อมูลล่าสุดเมื่อสักครู่' : `${tr("ข้อมูลล่าสุด")} ${m.ageMin} ${tr("นาทีที่แล้ว")}`} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'minmax(0, 1fr)' : 'minmax(0, 1.6fr) minmax(280px, 1fr) minmax(280px, 1fr)', gap: 12, alignContent: 'start' }}>
@@ -285,7 +285,7 @@ export default function EnergyMeterDetail({ m, machines, boardMeters, totalToday
                   <XAxis dataKey="day" tick={axisTick()} tickFormatter={(d) => `${Number(d.slice(8))}/${Number(d.slice(5, 7))}`} minTickGap={8} />
                   <YAxis width="auto" tick={axisTick()} tickFormatter={fmtAxis} />
                   <Tooltip {...tooltipProps()} labelFormatter={(d) => new Date(`${d}T00:00:00+07:00`).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok', weekday: 'short', day: 'numeric', month: 'short' })}
-                    formatter={(v, k, p) => [`${fmt(v)} kWh${p?.payload?.peak != null ? ` · สูงสุด ${fmt(p.payload.peak)} kW` : ''}`, 'ใช้ไฟ']} />
+                    formatter={(v, k, p) => [`${fmt(v)} kWh${p?.payload?.peak != null ? ` · ${tr("สูงสุด")} ${fmt(p.payload.peak)} kW` : ''}`, 'ใช้ไฟ']} />
                   <Bar dataKey="kwh" fill={INFO} {...chartAnim()} />
                 </BarChart>
               </ResponsiveContainer>

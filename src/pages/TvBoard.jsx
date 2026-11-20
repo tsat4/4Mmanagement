@@ -196,10 +196,10 @@ export default function TvBoard({ onOpenMenu = null }) {
         </span>
         <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>
           {cur.sub} {tr('· วันงาน')} {workDate}
-          {secFilter ? ` · เฉพาะ ${secFilter}` : ''}
-          {scopeSet ? ` · ${scopeSet.size} ไลน์` : ' · ทุกไลน์'}
+          {secFilter ? ` · ${tr("เฉพาะ")} ${secFilter}` : ''}
+          {scopeSet ? ` · ${scopeSet.size} ${tr("ไลน์")}` : ' · ทุกไลน์'}
           {/* กรองตามขอบเขตบัญชีแล้วต้องบอกว่าซ่อนกี่ไลน์ · ตัดขอบเขตไม่ได้ต้องบอกว่ากำลังโชว์ทั้งโรงงาน */}
-          {scopeHiddenLines > 0 && ` · ไม่แสดงไลน์นอกขอบเขตบัญชี ${scopeHiddenLines} ไลน์`}
+          {scopeHiddenLines > 0 && ` · ${tr("ไม่แสดงไลน์นอกขอบเขตบัญชี")} ${scopeHiddenLines} ${tr("ไลน์")}`}
         </span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {/* ☰ เมนู (13/10 · feedback user) — เดิมเข้ามาแล้วไปหน้าอื่นไม่ได้ · ไม่ส่ง onOpenMenu (บัญชีจอแขวน) = ไม่วาด */}
@@ -245,14 +245,14 @@ export default function TvBoard({ onOpenMenu = null }) {
       )}
       {err && (
         <div style={{ background: 'var(--card-surf)', border: '1px solid var(--red)', color: 'var(--red)', borderRadius: 'var(--r-md)', padding: 12, fontSize: 13 }}>
-          ⚠ โหลดข้อมูลไม่สำเร็จ — ตัวเลขบนจอยังไม่ใช่ของจริง ({err})
+          ⚠ {tr("โหลดข้อมูลไม่สำเร็จ — ตัวเลขบนจอยังไม่ใช่ของจริง")} ({err})
         </div>
       )}
       {linesState !== 'loading' && linesState !== 'ok' && (
         <div role="alert" style={{ background: 'var(--card-surf)', border: '1px solid var(--red)', color: 'var(--red)', borderRadius: 'var(--r-md)', padding: 12, fontSize: 14, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <span>⚠ {linesState === 'empty'
             ? 'ไม่พบทะเบียนไลน์ผลิต — จอนี้แสดงอะไรไม่ได้ (ตั้งไลน์ที่หน้า ตั้งค่าไลน์ผลิต)'
-            : `โหลดทะเบียนไลน์ไม่สำเร็จ — กำลังลองใหม่อัตโนมัติทุก 30 วินาที (${linesState})`}</span>
+            : `${tr("โหลดทะเบียนไลน์ไม่สำเร็จ — กำลังลองใหม่อัตโนมัติทุก 30 วินาที")} (${linesState})`}</span>
           <button onClick={() => { setLinesState('loading'); setLinesTry(n => n + 1); }}
             style={{ fontSize: 13, padding: '4px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--red)', background: 'transparent', color: 'var(--red)', cursor: 'pointer' }}>{tr('ลองใหม่')}</button>
         </div>

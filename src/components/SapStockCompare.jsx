@@ -85,7 +85,7 @@ export default function SapStockCompare() {
     if (!f) return;
     setFileName(f.name);
     try { setParsed(await readFile(f)); }
-    catch (err) { setParsed({ ok: false, error: `อ่านไฟล์ไม่ได้: ${err.message}`, rows: [] }); }
+    catch (err) { setParsed({ ok: false, error: `${tr("อ่านไฟล์ไม่ได้")}: ${err.message}`, rows: [] }); }
   };
 
   const save = async () => {
@@ -98,8 +98,8 @@ export default function SapStockCompare() {
       p_rows: parsed.rows,
     });
     setBusy(false);
-    if (error) { toast.error(`บันทึกไม่สำเร็จ — ${error.message}`); return; }
-    toast.success(`✅ บันทึกรอบเทียบแล้ว · ${(data?.slocs || []).join(', ')} · ${data?.compare_rows || 0} แถว (ตรึงยอดระบบ ณ ตอนนี้)`);
+    if (error) { toast.error(`${tr("บันทึกไม่สำเร็จ")} — ${error.message}`); return; }
+    toast.success(`✅ ${tr("บันทึกรอบเทียบแล้ว")} · ${(data?.slocs || []).join(', ')} · ${data?.compare_rows || 0} ${tr("แถว (ตรึงยอดระบบ ณ ตอนนี้")})`);
     setParsed(null); setFileName('');
     await loadUploads();
     if (data?.id) setSel(data.id);
@@ -107,7 +107,7 @@ export default function SapStockCompare() {
 
   const remove = async (u) => {
     if (!canUpload) return;
-    if (!await askConfirm(`ลบรอบเทียบ ${u.file_name || ''} (${(u.slocs || []).join(', ')}) ที่อัปโหลด ${when(u.created_at)}?\nใช้เมื่ออัปโหลดไฟล์ผิด — ลบแล้วกู้คืนไม่ได้`)) return;
+    if (!await askConfirm(`${tr("ลบรอบเทียบ")} ${u.file_name || ''} (${(u.slocs || []).join(', ')}) ${tr("ที่อัปโหลด")} ${when(u.created_at)}?\n${tr("ใช้เมื่ออัปโหลดไฟล์ผิด — ลบแล้วกู้คืนไม่ได้")}`)) return;
     const ok = checkWriteRows(await supabaseDR.from('sap_stock_uploads').delete().eq('id', u.id).select('id'), 'ลบรอบเทียบ SAP');
     if (ok) { toast.success('ลบรอบแล้ว'); setSel(null); loadUploads(); }
   };

@@ -171,7 +171,7 @@ function ManpowerTab({ employees, empById, lines, sectionsList, secFilter, setSe
       { orderBy: ['work_date', 'id'] },
     );
     if (!live()) return;
-    if (error) toast.error('โหลดข้อมูลไม่ครบ: ' + error);
+    if (error) toast.error((trI18n('โหลดข้อมูลไม่ครบ') + ': ') + error);
     setPartial(!!error || truncated);
     setRows(data || []);
     setLoading(false);
@@ -256,9 +256,9 @@ function ManpowerTab({ employees, empById, lines, sectionsList, secFilter, setSe
 
       <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
         <Kpi label={trI18n('มาทำงานล่าสุด')} value={latest ? latest.present : '—'}
-          sub={delta != null ? `${delta >= 0 ? '▲' : '▼'} ${Math.abs(delta)} เทียบเฉลี่ยก่อนหน้า` : null}
+          sub={delta != null ? `${delta >= 0 ? '▲' : '▼'} ${Math.abs(delta)} ${trI18n("เทียบเฉลี่ยก่อนหน้า")}` : null}
           color={delta != null ? (delta >= 0 ? 'var(--accent)' : 'var(--red)') : null} />
-        <Kpi label={trI18n('เฉลี่ยมาทำงาน/วัน')} value={avgPresent} sub={`${daily.length} วันในช่วงนี้`} />
+        <Kpi label={trI18n('เฉลี่ยมาทำงาน/วัน')} value={avgPresent} sub={`${daily.length} ${trI18n("วันในช่วงนี้")}`} />
         <Kpi label={trI18n('อัตรามาทำงาน')} value={attendanceRate != null ? `${attendanceRate.toFixed(1)}%` : '—'} sub={trI18n('มา ÷ เช็คชื่อทั้งหมด')} />
         <Kpi label={trI18n('ลารวมช่วงนี้')} value={totalLeave} color="var(--amber)" sub={trI18n('คน-วัน')} />
         <Kpi label={trI18n('ขาด (ไม่ระบุเหตุ)')} value={totalAbsentNoReason} color={totalAbsentNoReason > 0 ? 'var(--red)' : null} sub={trI18n('คน-วัน — ควรตรวจสอบ')} />
@@ -283,10 +283,10 @@ function ManpowerTab({ employees, empById, lines, sectionsList, secFilter, setSe
             </ComposedChart>
           </ResponsiveContainer>
           <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
-            นับจากการเช็คชื่อรายวัน (daily_production_logs){shift !== 'all' && stdTotal == null ? ' · ยังไม่ตั้งกำลังคนมาตรฐานของขอบเขตนี้ (ตั้งที่ LineSetup)' : ''}
+            {trI18n("นับจากการเช็คชื่อรายวัน")} (daily_production_logs){shift !== 'all' && stdTotal == null ? ' · ยังไม่ตั้งกำลังคนมาตรฐานของขอบเขตนี้ (ตั้งที่ LineSetup)' : ''}
             {offLine.people > 0 && (
               <> · <span style={{ color: 'var(--amber)', fontWeight: 700 }}>
-                ไม่นับช่าง/สายสนับสนุน {offLine.people} {trI18n('คน (')}{offLine.logs} แถวเช็คชื่อ)
+                {trI18n("ไม่นับช่าง/สายสนับสนุน")} {offLine.people} {trI18n('คน (')}{offLine.logs} {trI18n("แถวเช็คชื่อ")})
               </span> {trI18n('— จอนี้นับกำลังคนของไลน์เท่านั้น (ใบเช็คชื่อเห็นครบทุกกลุ่ม)')}</>
             )}
           </div>
@@ -337,7 +337,7 @@ function MovesTab({ empById, sectionsList, secFilter, setSecFilter, inScope, org
       { orderBy: ['employee_id', 'work_date', 'started_at'] },
     );
     if (!live()) return;
-    if (error) toast.error('โหลดข้อมูลไม่ครบ: ' + error);
+    if (error) toast.error((trI18n('โหลดข้อมูลไม่ครบ') + ': ') + error);
     setPartial(!!error || truncated);
     setRaw(data || []);
     setLoading(false);
@@ -414,7 +414,7 @@ function MovesTab({ empById, sectionsList, secFilter, setSecFilter, inScope, org
       )}
 
       <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-        <Kpi label={trI18n('ครั้งที่ย้ายจุดงาน')} value={moves.length} sub={`ในช่วง ${daily.length} วัน`} />
+        <Kpi label={trI18n('ครั้งที่ย้ายจุดงาน')} value={moves.length} sub={`${trI18n("ในช่วง")} ${daily.length} ${trI18n("วัน")}`} />
         <Kpi label={trI18n('คนที่ถูกย้าย')} value={totalDistinctPeople} sub={trI18n('คนไม่ซ้ำ')} />
         <Kpi label={trI18n('เฉลี่ย/วัน')} value={daily.length ? (moves.length / daily.length).toFixed(1) : '—'} sub={trI18n('ครั้ง/วัน')} />
       </div>
@@ -500,7 +500,7 @@ function TurnoverTab({ employees, sectionsList, secFilter, setSecFilter, inScope
         .contains('changed_fields', ['is_active']),
       { orderBy: ['changed_at'] },
     );
-    if (error) toast.error('โหลดประวัติการออกงานไม่ครบ: ' + error);
+    if (error) toast.error((trI18n('โหลดประวัติการออกงานไม่ครบ') + ': ') + error);
     setPartial(!!error || truncated);
     // ยึด "ครั้งล่าสุด" ที่พลิกจาก true→false ต่อคน (ทนกรณี toggle ไป-กลับ)
     const lastDeactivate = {};
@@ -595,15 +595,15 @@ function TurnoverTab({ employees, sectionsList, secFilter, setSecFilter, inScope
       )}
 
       <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 'var(--r-md)', background: 'rgba(245,154,63,0.08)', border: '1px solid rgba(245,154,63,0.3)', fontSize: 12, color: 'var(--text2)', lineHeight: 1.7 }}>
-        ⚠️ <b>ระบบเริ่มบันทึกวันที่ "ออกงาน" อัตโนมัติตั้งแต่ 2026-08-07</b> {trI18n('— พนักงานที่ inactive ก่อนหน้านั้นจะ')}<b>{trI18n('ไม่มีวันที่ออกให้ดู')}</b> (ไม่ใช่ว่าไม่เคยออก)
-        {' · '}{trI18n('ในขอบเขตที่เลือกตอนนี้: รู้วันที่ออก')} <b style={{ color: 'var(--text)' }}>{knownExits.length}</b> {trI18n('คน · ไม่ทราบวันที่ออก')} <b style={{ color: 'var(--text)' }}>{unknownExits.length}</b> คน
+        ⚠️ <b>ระบบเริ่มบันทึกวันที่ "ออกงาน" อัตโนมัติตั้งแต่ 2026-08-07</b> {trI18n('— พนักงานที่ inactive ก่อนหน้านั้นจะ')}<b>{trI18n('ไม่มีวันที่ออกให้ดู')}</b> ({trI18n("ไม่ใช่ว่าไม่เคยออก")})
+        {' · '}{trI18n('ในขอบเขตที่เลือกตอนนี้: รู้วันที่ออก')} <b style={{ color: 'var(--text)' }}>{knownExits.length}</b> {trI18n('คน · ไม่ทราบวันที่ออก')} <b style={{ color: 'var(--text)' }}>{unknownExits.length}</b> {trI18n("คน")}
         {anomalousInScope.length > 0 && <><br />{trI18n('⚠️ พบพนักงาน')} <b style={{ color: 'var(--red)' }}>{anomalousInScope.length}</b> {trI18n('คนที่วันที่เริ่มงานผิดปกติ (เช่น กรอกปี พ.ศ. ลงช่องปี ค.ศ.) — ไม่รวมในกราฟ/อายุงานด้านล่าง ไปแก้ที่หน้า')} <a href="/operator" style={{ color: 'var(--blue)' }}>{trI18n('ฐานข้อมูลพนักงาน')}</a></>}
       </div>
 
       <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-        <Kpi label={trI18n('ลาออก (ที่รู้วันที่)')} value={exitsInWindow} sub={`ใน ${monthsBack} เดือนล่าสุด`} color="var(--red)" />
-        <Kpi label={trI18n('อัตราออกเฉลี่ย/เดือน')} value={turnoverRate != null ? `${turnoverRate.toFixed(2)}%` : '—'} sub={`เทียบกำลังคนปัจจุบัน ${currentHeadcount} คน (ประมาณ)`} />
-        <Kpi label={trI18n('อายุงานเฉลี่ยก่อนออก')} value={avgTenureDays != null ? `${avgTenureDays.toLocaleString()} วัน` : '—'} sub={`จาก ${tenureSamples.length} คนที่มีข้อมูลครบ`} />
+        <Kpi label={trI18n('ลาออก (ที่รู้วันที่)')} value={exitsInWindow} sub={`${trI18n("ใน")} ${monthsBack} ${trI18n("เดือนล่าสุด")}`} color="var(--red)" />
+        <Kpi label={trI18n('อัตราออกเฉลี่ย/เดือน')} value={turnoverRate != null ? `${turnoverRate.toFixed(2)}%` : '—'} sub={`${trI18n("เทียบกำลังคนปัจจุบัน")} ${currentHeadcount} ${trI18n("คน (ประมาณ")})`} />
+        <Kpi label={trI18n('อายุงานเฉลี่ยก่อนออก')} value={avgTenureDays != null ? `${avgTenureDays.toLocaleString()} ${trI18n("วัน")}` : '—'} sub={`${trI18n("จาก")} ${tenureSamples.length} ${trI18n("คนที่มีข้อมูลครบ")}`} />
         <Kpi label={trI18n('ออกภายใน 90 วันแรก')} value={tenureSamples.length ? `${earlyLeavers}/${tenureSamples.length}` : '—'} color={earlyLeavers > 0 ? 'var(--amber)' : null} sub="early attrition" />
         <Kpi label={trI18n('ไม่ทราบวันที่ออก')} value={unknownExits.length} color={unknownExits.length > 0 ? 'var(--amber)' : null} sub={trI18n('ก่อนเริ่มมี audit log')} />
       </div>
@@ -627,7 +627,7 @@ function TurnoverTab({ employees, sectionsList, secFilter, setSecFilter, inScope
 
       {bySection.length > 0 && (
         <div className="card" style={{ padding: 16, marginBottom: 16 }}>
-          <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>ส่วนงานที่มีคนออกมากสุด (เฉพาะที่รู้วันที่ออก · N={knownExits.length})</div>
+          <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>{trI18n("ส่วนงานที่มีคนออกมากสุด (เฉพาะที่รู้วันที่ออก")} · N={knownExits.length})</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {bySection.map(s => (
               <div key={s.section} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5 }}>
@@ -659,7 +659,7 @@ function TurnoverTab({ employees, sectionsList, secFilter, setSecFilter, inScope
                     <td style={{ fontSize: 12 }}>{positionLabel(x.emp.position)}</td>
                     <td style={{ fontSize: 12 }}>{isValidStartDate(x.emp.start_date, today) ? x.emp.start_date : (x.emp.start_date ? trI18n('⚠ ผิดปกติ') : '—')}</td>
                     <td style={{ fontSize: 12, color: 'var(--red)' }}>{x.exitAt.slice(0, 10)}</td>
-                    <td style={{ fontSize: 12 }}>{tenure != null ? `${tenure.toLocaleString()} วัน` : '—'}</td>
+                    <td style={{ fontSize: 12 }}>{tenure != null ? `${tenure.toLocaleString()} ${trI18n("วัน")}` : '—'}</td>
                   </tr>
                 );
               })}
@@ -669,7 +669,7 @@ function TurnoverTab({ employees, sectionsList, secFilter, setSecFilter, inScope
 
       {unknownExits.length > 0 && (
         <div className="card" style={{ padding: 16 }}>
-          <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{trI18n('❔ inactive แต่ไม่ทราบวันที่ออก (')}{unknownExits.length} คน)</div>
+          <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{trI18n('❔ inactive แต่ไม่ทราบวันที่ออก (')}{unknownExits.length} {trI18n("คน")})</div>
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 10 }}>{trI18n('คนกลุ่มนี้อาจออกก่อน 2026-08-07 (ก่อนระบบเริ่มบันทึก) — แสดงไว้เพื่อไม่ให้ตกหล่น ไม่ใช่ข้อมูลใหม่')}</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {unknownExits.map(x => (
@@ -727,7 +727,7 @@ function OtMonthlyTab({ empById, sectionsList, secFilter, setSecFilter, inScope,
       ]);
       if (!alive) return;
       const bad = lg.error || bk.error || cal.error || tt.error;
-      if (bad) toast.error('โหลดข้อมูล OT ไม่ครบ: ' + (lg.error || bk.error || cal.error?.message || tt.error?.message));
+      if (bad) toast.error((trI18n('โหลดข้อมูล OT ไม่ครบ') + ': ') + (lg.error || bk.error || cal.error?.message || tt.error?.message));
       setPartial(!!bad || lg.truncated || bk.truncated);
       setLogs(lg.rows || []);
       setBookings(bk.rows || []);
@@ -791,13 +791,13 @@ function OtMonthlyTab({ empById, sectionsList, secFilter, setSecFilter, inScope,
 
   const sourceNote = () => {
     const parts = [
-      `ที่มา: ระบบ ESM — เช็คชื่อรายวัน (ติ๊ก OT)${useBookings ? ' + ใบจอง OT' : ''} · ปฏิทินบริษัทเป็นตัวตัดสินวันทำงาน/วันหยุด`,
-      `นับเป็น "วัน" ที่ทำ OT (ไม่ใช่ชั่วโมง) · ข้อมูล ณ ${today}`,
+      `${trI18n("ที่มา: ระบบ ESM — เช็คชื่อรายวัน (ติ๊ก")} OT)${useBookings ? trI18n(' + ใบจอง OT') : ''} · ${trI18n("ปฏิทินบริษัทเป็นตัวตัดสินวันทำงาน/วันหยุด")}`,
+      `${trI18n("นับเป็น \"วัน\" ที่ทำ OT (ไม่ใช่ชั่วโมง) · ข้อมูล ณ")} ${today}`,
     ];
     if (coverage.missingDays.length) {
-      parts.push(`⚠ เดือนนี้มี ${coverage.missingDays.length} วันที่ไม่มีการเช็คชื่อในระบบเลย (เป็นวันหยุด ${coverage.missingHolidayDays} วัน) — ยอดจริงอาจสูงกว่านี้`);
+      parts.push(`⚠ ${trI18n("เดือนนี้มี")} ${coverage.missingDays.length} ${trI18n("วันที่ไม่มีการเช็คชื่อในระบบเลย (เป็นวันหยุด")} ${coverage.missingHolidayDays} ${trI18n("วัน) — ยอดจริงอาจสูงกว่านี้")}`);
     }
-    if (orphanCount) parts.push(`⚠ มี ${orphanCount} รหัสพนักงานที่ไม่พบในทะเบียน จึงไม่อยู่ในตาราง`);
+    if (orphanCount) parts.push(`⚠ ${trI18n("มี")} ${orphanCount} ${trI18n("รหัสพนักงานที่ไม่พบในทะเบียน จึงไม่อยู่ในตาราง")}`);
     return parts.join('\n');
   };
 
@@ -811,11 +811,11 @@ function OtMonthlyTab({ empById, sectionsList, secFilter, setSecFilter, inScope,
     if (!shown.length) { toast.info('ไม่มีข้อมูลให้ export'); return; }
     try {
       await exportOtMonthlyExcel({ monthKey: month, threshold, rows: exportRows(), note: sourceNote() });
-    } catch (e) { toast.error('สร้างไฟล์ Excel ไม่สำเร็จ: ' + (e?.message || e)); }
+    } catch (e) { toast.error((trI18n('สร้างไฟล์ Excel ไม่สำเร็จ') + ': ') + (e?.message || e)); }
   };
   const doCSV = () => {
     if (!shown.length) { toast.info('ไม่มีข้อมูลให้ export'); return; }
-    downloadCSV('csv_ot_individual', `OT-รายบุคคล-${month}.csv`,
+    downloadCSV('csv_ot_individual', `OT-${trI18n("รายบุคคล")}-${month}.csv`,
       ['ลำดับ', 'รหัสพนักงาน', 'ชื่อ-นามสกุล', 'ตำแหน่ง', 'ส่วน', 'ฝ่าย', 'OT วันทำงาน', 'OT วันหยุด', 'Total (วัน)', 'หมายเหตุ'],
       exportRows().map((r, i) => [i + 1, r.code, r.name, r.position, r.section, r.department, r.working, r.holiday, r.total, r.reason]));
   };
@@ -859,12 +859,12 @@ function OtMonthlyTab({ empById, sectionsList, secFilter, setSecFilter, inScope,
       )}
 
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
-        <Kpi label={`ถึงเกณฑ์ (≥ ${threshold} วัน)`} value={overRows.length} sub={`จากคนที่ทำ OT ${rows.length} คน`} color="var(--red)" />
-        <Kpi label={`ใกล้เกณฑ์ (${Math.max(1, threshold - 3)}–${threshold - 1} วัน)`} value={nearRows.length} sub={trI18n('เฝ้าดูเดือนถัดไป')} color="var(--accent2)" />
+        <Kpi label={`${trI18n("ถึงเกณฑ์")} (≥ ${threshold} ${trI18n("วัน")})`} value={overRows.length} sub={`${trI18n("จากคนที่ทำ")} OT ${rows.length} ${trI18n("คน")}`} color="var(--red)" />
+        <Kpi label={`${trI18n("ใกล้เกณฑ์")} (${Math.max(1, threshold - 3)}–${threshold - 1} ${trI18n("วัน")})`} value={nearRows.length} sub={trI18n('เฝ้าดูเดือนถัดไป')} color="var(--accent2)" />
         <Kpi label={trI18n('สูงสุด')} value={rows[0]?.total ?? '—'} sub={rows[0]?.emp?.name || ''} />
         <Kpi label={trI18n('รวมวัน OT ทั้งเดือน')} value={rows.reduce((s, r) => s + r.total, 0).toLocaleString()} sub={trI18n('วัน-คน')} />
         {isCurrentMonth && (
-          <Kpi label={trI18n('คาดว่าจะเกินเกณฑ์')} value={willExceed.length} sub={`ถ้าทำต่อในอัตราเดิมจนสิ้นเดือน (ผ่านมา ${elapsed}/${totalDaysInMonth} วัน)`} color="var(--accent2)" />
+          <Kpi label={trI18n('คาดว่าจะเกินเกณฑ์')} value={willExceed.length} sub={`${trI18n("ถ้าทำต่อในอัตราเดิมจนสิ้นเดือน (ผ่านมา")} ${elapsed}/${totalDaysInMonth} ${trI18n("วัน")})`} color="var(--accent2)" />
         )}
       </div>
 
@@ -873,8 +873,7 @@ function OtMonthlyTab({ empById, sectionsList, secFilter, setSecFilter, inScope,
           <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>⚠ ช่องโหว่ข้อมูล — ตัวเลขนี้คือ "ขั้นต่ำ" ไม่ใช่ยอดเต็ม</div>
           {coverage.missingDays.length > 0 && (
             <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>
-              {coverage.missingDays.length} {trI18n('วันในเดือนนี้ไม่มีการเช็คชื่อในระบบเลย (วันหยุด')} {coverage.missingHolidayDays} {trI18n('วัน · วันทำงาน')} {coverage.missingWorkingDays} วัน) —
-              คนที่มาทำ OT วันนั้นจะไม่ถูกนับ เว้นแต่มีใบจอง OT ไว้
+              {coverage.missingDays.length} {trI18n('วันในเดือนนี้ไม่มีการเช็คชื่อในระบบเลย (วันหยุด')} {coverage.missingHolidayDays} {trI18n('วัน · วันทำงาน')} {coverage.missingWorkingDays} {trI18n("วัน) — คนที่มาทำ OT วันนั้นจะไม่ถูกนับ เว้นแต่มีใบจอง OT ไว้")}
             </div>
           )}
           {coverage.missingDays.length > 0 && (
@@ -893,7 +892,7 @@ function OtMonthlyTab({ empById, sectionsList, secFilter, setSecFilter, inScope,
           )}
           {orphanCount > 0 && (
             <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-              มี {orphanCount} รหัสพนักงานที่มี OT แต่ไม่พบในทะเบียนพนักงาน (ลบ/ย้ายบริษัทแล้ว) — ไม่อยู่ในตารางด้านล่าง
+              {trI18n("มี")} {orphanCount} {trI18n("รหัสพนักงานที่มี OT แต่ไม่พบในทะเบียนพนักงาน (ลบ/ย้ายบริษัทแล้ว) — ไม่อยู่ในตารางด้านล่าง")}
             </div>
           )}
         </div>
@@ -901,7 +900,7 @@ function OtMonthlyTab({ empById, sectionsList, secFilter, setSecFilter, inScope,
 
       {isCurrentMonth && willExceed.length > 0 && (
         <div className="card" style={{ padding: 14, marginBottom: 14, borderLeft: '4px solid var(--accent2)' }}>
-          <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6 }}>{trI18n('ยังไม่เกิน แต่กำลังจะเกิน (')}{willExceed.length} คน)</div>
+          <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6 }}>{trI18n('ยังไม่เกิน แต่กำลังจะเกิน (')}{willExceed.length} {trI18n("คน")})</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {willExceed.slice(0, 30).map(r => (
               <span key={r.employeeId} style={{ fontSize: 11.5, padding: '3px 8px', borderRadius: 'var(--r-md)', background: 'var(--bg3)' }}>
@@ -914,7 +913,7 @@ function OtMonthlyTab({ empById, sectionsList, secFilter, setSecFilter, inScope,
 
       <div className="card table-sticky" style={{ overflowX: 'auto', marginBottom: 14 }}>
         <div style={{ padding: '10px 14px', fontWeight: 700, fontSize: 13, borderBottom: '1px solid var(--border)' }}>
-          {onlyOver ? `คนที่ทำ OT ตั้งแต่ ${threshold} วันขึ้นไป` : 'คนที่ทำ OT ทั้งหมด'} — {monthLabel(month)} ({shown.length} คน)
+          {onlyOver ? `${trI18n("คนที่ทำ OT ตั้งแต่")} ${threshold} ${trI18n("วันขึ้นไป")}` : 'คนที่ทำ OT ทั้งหมด'} — {monthLabel(month)} ({shown.length} {trI18n("คน")})
           <span style={{ fontWeight: 400, color: 'var(--muted)', marginLeft: 8, fontSize: 11.5 }}>{trI18n('คลิกแถวเพื่อดูรายวัน')}</span>
         </div>
         <table style={{ minWidth: 980 }}>
@@ -947,7 +946,7 @@ function OtMonthlyTab({ empById, sectionsList, secFilter, setSecFilter, inScope,
                     <td style={{ textAlign: 'center' }}>{r.working}</td>
                     <td style={{ textAlign: 'center' }}>
                       {r.holiday + r.shutdown}
-                      {r.shutdown > 0 && <span title={trI18n('ม.75 (หยุดจ่าย 75%)')} style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 4 }}>({r.shutdown} ม.75)</span>}
+                      {r.shutdown > 0 && <span title={trI18n('ม.75 (หยุดจ่าย 75%)')} style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 4 }}>({r.shutdown} {trI18n("ม.")}75)</span>}
                     </td>
                     <td style={{ textAlign: 'center', fontWeight: 900, color: over ? 'var(--red)' : 'var(--text)' }}>{r.total}</td>
                     {isCurrentMonth && (

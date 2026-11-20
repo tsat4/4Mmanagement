@@ -73,7 +73,7 @@ export default function DowntimeSiren({ mode = 'open_15min', team = null, lineNa
     const m = META[mode === 'call_mtn' ? 'call' : mode === 'open_15min' ? 'open' : kindOf(d)]
     if (m !== META.call) return m
     const ct = teamKeyOf(d?.call_mtn_team)
-    return { ...m, label: ct ? `📞 เรียก ${deptNameOf(ct)} เข้าหน้างาน` : '📞 เรียกช่าง MTN เข้าหน้างาน (ไม่ระบุทีม)' }
+    return { ...m, label: ct ? `📞 ${tr("เรียก")} ${deptNameOf(ct)} ${tr("เข้าหน้างาน")}` : '📞 เรียกช่าง MTN เข้าหน้างาน (ไม่ระบุทีม)' }
   }
 
   const fetchAlerts = useCallback(async () => {
@@ -184,7 +184,7 @@ export default function DowntimeSiren({ mode = 'open_15min', team = null, lineNa
         <div style={{ position: 'fixed', bottom: 'calc(12px + var(--mnav-h, 0px))', right: 12, zIndex: 4000,
                       background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)',
                       padding: '7px 11px', fontSize: 11.5, fontWeight: 700, color: 'var(--muted)', boxShadow: 'var(--shadow-sm)' }}>
-          ไม่ดัง {outScope} เครื่องหยุดของไลน์นอกขอบเขตจอนี้
+          {tr("ไม่ดัง")} {outScope} {tr("เครื่องหยุดของไลน์นอกขอบเขตจอนี้")}
         </div>
       )
     }
@@ -228,13 +228,13 @@ export default function DowntimeSiren({ mode = 'open_15min', team = null, lineNa
            แต่ของใหม่ห้ามเพิ่ม */
         <div style={{ pointerEvents: 'auto', background: 'var(--card-surf)', border: '1px solid var(--red-line)',
           borderRadius: 'var(--r-md)', padding: '7px 12px', fontSize: 11.5, fontWeight: 800, color: 'var(--red)', textAlign: 'center' }}>
-          + อีก {alerts.length - 1} เครื่องที่ยังไม่มีใครรับทราบ — กดรับทราบใบบนก่อน แล้วใบถัดไปจะขึ้นแทน
+          + {tr("อีก")} {alerts.length - 1} {tr("เครื่องที่ยังไม่มีใครรับทราบ — กดรับทราบใบบนก่อน แล้วใบถัดไปจะขึ้นแทน")}
         </div>
       )}
       {outScope > 0 && (
         <div style={{ pointerEvents: 'auto', background: 'var(--card-surf)', border: '1px solid var(--border2)',
           borderRadius: 'var(--r-md)', padding: '6px 12px', fontSize: 11.5, fontWeight: 700, color: 'var(--muted)', textAlign: 'center' }}>
-          ไม่ดัง {outScope} เครื่องหยุดของไลน์นอกขอบเขตจอนี้
+          {tr("ไม่ดัง")} {outScope} {tr("เครื่องหยุดของไลน์นอกขอบเขตจอนี้")}
         </div>
       )}
     </div>

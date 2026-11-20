@@ -67,24 +67,24 @@ export default function LineIssueGapQueue() {
     setBusy(keyOf(r));
     const { data, error } = await supabaseDR.rpc('line_issue_gap_confirm', { p_line: r.line_name, p_mat: r.mat_no, ...by() });
     setBusy(null);
-    if (error) { toast.error(`ยืนยันไม่สำเร็จ — ${error.message}`); load(); return; }
+    if (error) { toast.error(`${tr("ยืนยันไม่สำเร็จ")} — ${error.message}`); load(); return; }
     const moved = Number(data) || 0;
-    if (moved < Number(r.gap)) toast.error(`⚠ ย้ายได้ ${fmt(moved)} จากที่ไลน์ขาด ${fmt(r.gap)} — STORE ในระบบไม่พอ ส่วนที่เหลือไลน์ยังติดลบ (ต้องนับ/ลงรับเข้า STORE)`);
-    else toast.success(`✅ ลงจ่าย ${r.mat_no} → ${r.line_name} ${fmt(moved)} ชิ้นแล้ว`);
+    if (moved < Number(r.gap)) toast.error(`⚠ ${tr("ย้ายได้")} ${fmt(moved)} ${tr("จากที่ไลน์ขาด")} ${fmt(r.gap)} — STORE ${tr("ในระบบไม่พอ ส่วนที่เหลือไลน์ยังติดลบ (ต้องนับ/ลงรับเข้า")} STORE)`);
+    else toast.success(`✅ ${tr("ลงจ่าย")} ${r.mat_no} → ${r.line_name} ${fmt(moved)} ${tr("ชิ้นแล้ว")}`);
     load();
   };
 
   const confirmAll = async () => {
     if (!canIssue || !shown.length) return;
-    if (!await askConfirm(`ยืนยันว่าสโตร์จ่ายไปแล้วทั้ง ${shown.length} รายการที่เห็น?\n\nระบบจะหัก STORE และบวกเข้าไลน์ตามยอดที่ไลน์ใช้ไป (ไม่เกินยอด STORE)\nในนาม ${fullName || '(ไม่รู้ชื่อผู้ใช้)'}`)) return;
+    if (!await askConfirm(`${tr("ยืนยันว่าสโตร์จ่ายไปแล้วทั้ง")} ${shown.length} ${tr("รายการที่เห็น?\\n\\nระบบจะหัก STORE และบวกเข้าไลน์ตามยอดที่ไลน์ใช้ไป (ไม่เกินยอด STORE)\\nในนาม")} ${fullName || tr('(ไม่รู้ชื่อผู้ใช้)')}`)) return;
     setBusy('*');
     const { data, error } = await supabaseDR.rpc('line_issue_gap_confirm_many', {
       p_lines: shown.map(r => r.line_name), p_mats: shown.map(r => r.mat_no), ...by(),
     });
     setBusy(null);
-    if (error) { toast.error(`ยืนยันไม่สำเร็จ — ${error.message}`); load(); return; }
+    if (error) { toast.error(`${tr("ยืนยันไม่สำเร็จ")} — ${error.message}`); load(); return; }
     const ok = data?.confirmed || 0, skip = data?.skipped || 0;
-    (skip ? toast.error : toast.success)(`✅ ลงจ่ายแล้ว ${ok} รายการ (${fmt(data?.qty)} ชิ้น)${skip ? ` · ข้าม ${skip} รายการที่ไม่ค้างแล้ว/ทำไม่ได้ — รีเฟรชดู` : ''}`);
+    (skip ? toast.error : toast.success)(`✅ ${tr("ลงจ่ายแล้ว")} ${ok} ${tr("รายการ")} (${fmt(data?.qty)} ${tr("ชิ้น")})${skip ? ` · ${tr("ข้าม")} ${skip} ${tr("รายการที่ไม่ค้างแล้ว/ทำไม่ได้ — รีเฟรชดู")}` : ''}`);
     load();
   };
 
@@ -94,8 +94,8 @@ export default function LineIssueGapQueue() {
     setBusy(keyOf(r));
     const { error } = await supabaseDR.rpc('line_issue_gap_reject', { p_line: r.line_name, p_mat: r.mat_no, p_reason: reason.trim(), ...by() });
     setBusy(null);
-    if (error) { toast.error(`บันทึกไม่สำเร็จ — ${error.message}`); load(); return; }
-    toast.success(`🚫 บันทึกว่าไม่ได้จ่าย ${r.mat_no} — ยอด ${fmt(r.gap)} ย้ายไปคลังพัก เปิดเคสที่แท็บ "คลังพัก/ผลต่าง" แล้ว`);
+    if (error) { toast.error(`${tr("บันทึกไม่สำเร็จ")} — ${error.message}`); load(); return; }
+    toast.success(`🚫 ${tr("บันทึกว่าไม่ได้จ่าย")} ${r.mat_no} — ${tr("ยอด")} ${fmt(r.gap)} ${tr("ย้ายไปคลังพัก เปิดเคสที่แท็บ \"คลังพัก/ผลต่าง\" แล้ว")}`);
     setRejectFor(null); setReason(''); load();
   };
 

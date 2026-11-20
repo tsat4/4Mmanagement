@@ -47,12 +47,12 @@ export default function KpiScoreRuleFields({ f, set, unit = '', summaryMode = 'a
         <div>
           <div style={lbl}>{tr('② Target')} <span style={{ fontWeight: 500 }}>{tr('= ○ ผ่าน')}</span></div>
           <input style={inp} type="number" step="any" value={f.target_value ?? ''} onChange={e => set('target_value', e.target.value)} placeholder={tr('ตัวเลข')} />
-          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{num(f.target_value) != null && dirCmp ? `บนใบ: ${fmtBar(dirCmp, num(f.target_value), unit)}` : ' '}</div>
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{num(f.target_value) != null && dirCmp ? `${tr("บนใบ")}: ${fmtBar(dirCmp, num(f.target_value), unit)}` : ' '}</div>
         </div>
         <div>
           <div style={lbl}>{tr('③ Commitment')} <span style={{ fontWeight: 500 }}>{tr('= △ ขั้นต่ำ')}</span></div>
           <input style={inp} type="number" step="any" value={f.commit_value ?? ''} onChange={e => set('commit_value', e.target.value)} placeholder={tr('เว้นว่าง = ไม่มี △')} />
-          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{num(f.commit_value) != null && dirCmp ? `บนใบ: ${fmtBar(dirCmp, num(f.commit_value), unit)}` : tr('ผ่อนกว่า Target เสมอ')}</div>
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{num(f.commit_value) != null && dirCmp ? `${tr("บนใบ")}: ${fmtBar(dirCmp, num(f.commit_value), unit)}` : tr('ผ่อนกว่า Target เสมอ')}</div>
         </div>
       </div>
       <div>

@@ -144,7 +144,7 @@ export default function DeliverScanModal({ request, points = [], canOverride = f
           ) : (
             <div style={{ marginTop: 14 }}>
               <div style={{ fontSize: 12, color: 'var(--text2)' }}>
-                ใบนี้ต้องวางที่: {serving.map(p => (
+                {tr("ใบนี้ต้องวางที่")}: {serving.map(p => (
                   <span key={p.id} style={{ display: 'inline-block', margin: '2px 4px 0 0', padding: '2px 8px', borderRadius: 'var(--r-md)', background: 'rgba(34,197,94,0.12)', color: '#22c55e', fontWeight: 700, fontSize: 12 }}>{pointLabel(p)}</span>
                 ))}
               </div>
@@ -217,7 +217,7 @@ export default function DeliverScanModal({ request, points = [], canOverride = f
       </div>
 
       {scanOpen && (
-        <ScanModal title={tr('สแกน QR จุดส่งงาน')} hint={`ยิงป้าย 🎯 ที่ติดหน้าไลน์ ${request?.line_name || ''} — หรือพิมพ์รหัสสั้นบนป้าย`}
+        <ScanModal title={tr('สแกน QR จุดส่งงาน')} hint={`${tr("ยิงป้าย 🎯 ที่ติดหน้าไลน์")} ${request?.line_name || ''} — ${tr("หรือพิมพ์รหัสสั้นบนป้าย")}`}
           onScan={onScan} onClose={() => setScanOpen(false)} closeOnHit={false} />
       )}
     </>

@@ -89,7 +89,7 @@ export default function ImageCropModal({
       //    (คำสั่ง user 2026-09-11: "ถ้านามสกุลไม่ตรง ควร alarm แจ้งเตือน")
       //    เดิมไฟล์ที่ไม่ใช่รูปจะไปตายที่ img.onerror ซึ่งขึ้นข้อความเรื่องฟอร์แมตกล้อง = ชี้ผิดทาง
       if (!looksLikeImage(f)) {
-        toast.error(`ไฟล์นี้ไม่ใช่รูปภาพ (.${extOf(f.name) || 'ไม่มีนามสกุล'}) — เลือกได้เฉพาะ JPG · PNG · WEBP`);
+        toast.error(`${tr("ไฟล์นี้ไม่ใช่รูปภาพ")} (.${extOf(f.name) || tr('ไม่มีนามสกุล')}) — ${tr("เลือกได้เฉพาะ")} JPG · PNG · WEBP`);
         onCancel?.();
         return;
       }
@@ -100,7 +100,7 @@ export default function ImageCropModal({
       }
       // เช็คขนาด GIF หลังแปลงเสมอ (ไฟล์ที่แปลงแล้วเป็น JPEG ไม่เข้าเงื่อนไขนี้)
       if (isGifFile(f) && f.size > GIF_MAX_BYTES) {
-        toast.error(`รูปขยับ (GIF) ต้องมีขนาดไม่เกิน 2 MB (ไฟล์นี้ ${(f.size / 1024 / 1024).toFixed(1)} MB) — ลองใช้ GIF ที่สั้นลง/เล็กลง หรือย่อไฟล์ก่อนอัปโหลด`);
+        toast.error(`${tr("รูปขยับ (GIF) ต้องมีขนาดไม่เกิน 2 MB (ไฟล์นี้")} ${(f.size / 1024 / 1024).toFixed(1)} MB) — ${tr("ลองใช้ GIF ที่สั้นลง/เล็กลง หรือย่อไฟล์ก่อนอัปโหลด")}`);
         onCancel?.();
         return;
       }

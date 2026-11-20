@@ -448,7 +448,7 @@ export default function GroupOverview() {
               <div style={{ width: `${clamp(it.target / maxT * 100, 2, 100)}%`, height: '100%', background: 'var(--bg2)', position: 'absolute', inset: 0, borderRight: '1px dashed var(--border2)' }} />
               <div style={{ width: `${clamp(it.actual / maxT * 100, 0, 100)}%`, height: '100%', background: pctCol(it.pct), opacity: 0.85, position: 'relative' }} />
               <span style={{ position: 'absolute', left: 8, top: 0, lineHeight: '22px', fontSize: 11, fontWeight: 700, color: 'var(--text)' }}>
-                {fmtNum(it.actual)} / {fmtNum(it.target)} ชิ้น
+                {fmtNum(it.actual)} / {fmtNum(it.target)} {tr("ชิ้น")}
               </span>
             </div>
             <div style={{ display: 'flex', gap: 10, justifyContent: isMobile ? 'flex-start' : 'flex-end', fontSize: 13 }}>
@@ -481,7 +481,7 @@ export default function GroupOverview() {
       <PageHeader
         icon="🏢"
         title={<>
-          {ORG.code} — ภาพรวมกลุ่มบริษัท
+          {ORG.code} — {tr("ภาพรวมกลุ่มบริษัท")}
           <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--amber)', border: '1px dashed var(--amber)', borderRadius: 'var(--r-pill)', padding: '2px 10px' }}>
             MOCKUP · ตัวอย่างหน้าจอ
           </span>
@@ -516,9 +516,9 @@ export default function GroupOverview() {
       {/* ── จริง vs จำลอง — บรรทัดเดียวที่เห็นตลอด (กันเข้าใจผิดว่ามีหลายบริษัทในระบบแล้ว · ห้ามพับ)
            รายละเอียดวิธีอ่านพับไว้ใน InfoMore (UX audit 05/10: เดิมกล่องเส้นประ 4 บรรทัดดันเนื้อหาลง) ── */}
       <InfoMore id="group_overview_mock" tone="warn" size={12.5}
-        lead={<><b style={{ color: 'var(--green)' }}>TSAT4 = ข้อมูลจริง</b> (กะที่ปิดแล้วของวันที่เลือก) · บริษัทอื่น = <b style={{ color: 'var(--amber)' }}>{tr('ตัวเลขจำลอง')}</b> {tr('· หน้านี้ไม่เขียนข้อมูล')}</>}>
-        โครงองค์กร: <b>{ORG.code}</b> {tr('→ กลุ่มธุรกิจ (')}{ORG.groups.map(g => g.short).join(' / ')}) → บริษัท → ไลน์ผลิต · ดูอีกแกนเป็น <b>{tr('พื้นที่')}</b> ({ZONES.length} โซน/ประเทศ) ได้จากปุ่ม "แกนมอง" — <b>{tr('กดหมุด/การ์ด/ชื่อ เพื่อเจาะลึกลงชั้นถัดไป')}</b>
-        · ตัวเลขจำลองปั้นจากข้อมูลจริงชุดเดียวกัน (สุ่มแบบคงที่ ไม่เปลี่ยนทุกครั้งที่รีเฟรช) · ยังไม่มีทะเบียนบริษัท/โรงงานจริง — ดู "ถ้าจะรองรับหลายบริษัทจริง" ท้ายหน้า
+        lead={<><b style={{ color: 'var(--green)' }}>TSAT4 = ข้อมูลจริง</b> ({tr("กะที่ปิดแล้วของวันที่เลือก) · บริษัทอื่น")} = <b style={{ color: 'var(--amber)' }}>{tr('ตัวเลขจำลอง')}</b> {tr('· หน้านี้ไม่เขียนข้อมูล')}</>}>
+        {tr("โครงองค์กร")}: <b>{ORG.code}</b> {tr('→ กลุ่มธุรกิจ (')}{ORG.groups.map(g => g.short).join(' / ')}) → {tr("บริษัท → ไลน์ผลิต · ดูอีกแกนเป็น")} <b>{tr('พื้นที่')}</b> ({ZONES.length} {tr("โซน/ประเทศ) ได้จากปุ่ม \"แกนมอง")}" — <b>{tr('กดหมุด/การ์ด/ชื่อ เพื่อเจาะลึกลงชั้นถัดไป')}</b>
+        · {tr("ตัวเลขจำลองปั้นจากข้อมูลจริงชุดเดียวกัน (สุ่มแบบคงที่ ไม่เปลี่ยนทุกครั้งที่รีเฟรช) · ยังไม่มีทะเบียนบริษัท/โรงงานจริง — ดู \"ถ้าจะรองรับหลายบริษัทจริง\" ท้ายหน้า")}
       </InfoMore>
 
       {/* ── กรองตามประเภทไลน์ (แกนย่อยใต้กลุ่มธุรกิจ: ปั๊ม / เชื่อมประกอบ / ฉีด / พ่นสี ...) ──
@@ -539,7 +539,7 @@ export default function GroupOverview() {
           </div>
           {ltFilter && (
             <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 7 }}>
-              กำลังดูเฉพาะไลน์ <b style={{ color: 'var(--text)' }}>{ltLabel(ltFilter)}</b> — ตัวเลขทุกช่องในหน้านี้นับเฉพาะไลน์ประเภทนี้
+              {tr("กำลังดูเฉพาะไลน์")} <b style={{ color: 'var(--text)' }}>{ltLabel(ltFilter)}</b> — {tr("ตัวเลขทุกช่องในหน้านี้นับเฉพาะไลน์ประเภทนี้")}
               {tree.hiddenComps > 0 && <> {tr('· ซ่อน')} <b>{tree.hiddenComps}</b> {tr('บริษัทที่ไม่มีไลน์ประเภทนี้')}</>}
             </div>
           )}
@@ -566,20 +566,20 @@ export default function GroupOverview() {
           <Kpi
             label={compNode ? tr('🏭 ไลน์ผลิต') : bizNode ? tr('🏢 บริษัทใน') + (sel.axis === 'map' ? tr('โซนนี้') : tr('กลุ่มธุรกิจ')) : (sel.axis === 'map' ? tr('🗺️ โซนพื้นที่') : tr('🗂️ กลุ่มธุรกิจ'))}
             /* 📏 ใส่หน่วยกำกับเสมอ — เลขนับลอยๆ ตอบไม่ได้ว่านับอะไร (UI §6.18 ข้อ 4) */
-            value={compNode ? `${compNode.lines.length} ไลน์`
-              : bizNode ? `${bizNode.companies.length} บริษัท`
-                : `${axisNodes.length} ${sel.axis === 'map' ? 'โซน' : 'กลุ่ม'}`}
-            sub={compNode ? `บริษัท ${compNode.code}`
-              : bizNode ? `${bizNode.lines.length} ไลน์ผลิตรวม`
-                : `${tree.allComps.length} บริษัท · ${tree.allLines.length} ไลน์`} />
+            value={compNode ? `${compNode.lines.length} ${tr("ไลน์")}`
+              : bizNode ? `${bizNode.companies.length} ${tr("บริษัท")}`
+                : `${axisNodes.length} ${sel.axis === 'map' ? tr('โซน') : tr('กลุ่ม')}`}
+            sub={compNode ? `${tr("บริษัท")} ${compNode.code}`
+              : bizNode ? `${bizNode.lines.length} ${tr("ไลน์ผลิตรวม")}`
+                : `${tree.allComps.length} ${tr("บริษัท")} · ${tree.allLines.length} ${tr("ไลน์")}`} />
           <Kpi label={tr('ผลิตรวม')} value={fmtNum(scope.actual)} color={pctCol(scope.pct)}
-            sub={`เป้า ${fmtNum(scope.target)} · ${scope.pct == null ? '—' : scope.pct + '%'}`} />
+            sub={`${tr("เป้า")} ${fmtNum(scope.target)} · ${scope.pct == null ? '—' : scope.pct + '%'}`} />
           <Kpi label={tr('OEE (ถ่วงน้ำหนัก)')} value={scope.oee == null ? '—' : scope.oee + '%'} color={oeeCol(scope.oee)}
             sub={tr('ถ่วงด้วยเวลารับภาระของแต่ละไลน์')} />
           <Kpi label={tr('Downtime นอกแผน')} value={fmtNum(scope.dtMin)} sub={tr('นาที')} color={scope.dtMin > 0 ? 'var(--amber)' : undefined} />
           <Kpi label={tr('ของเสีย')} value={fmtNum(scope.ng)} sub={tr('ชิ้น (NG + สงสัย)')} color={scope.ng > 0 ? 'var(--red)' : undefined} />
           <Kpi label={tr('คนเข้างาน')} value={pplText(scope.present, scope.head)}
-            sub={scope.head ? `${Math.round(scope.present / scope.head * 100)}% ของกำลังคน` : 'ยังไม่มีรายชื่อพนักงานผูกไลน์'} />
+            sub={scope.head ? `${Math.round(scope.present / scope.head * 100)}% ${tr("ของกำลังคน")}` : 'ยังไม่มีรายชื่อพนักงานผูกไลน์'} />
         </div>
 
         {/* ══ ระดับ 1: TSG ══ (แกนแผนที่ = โซนพื้นที่ · แกนกลุ่มธุรกิจ = การ์ดกลุ่ม) */}
@@ -592,7 +592,7 @@ export default function GroupOverview() {
                 <div style={{ fontSize: 15, fontWeight: 700 }}>{tr('แผนที่โรงงานทั่วโลก')}</div>
                 {lv1Switch}
                 <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-                  {tree.allComps.length} {tr('โรงงาน ·')} {new Set(tree.allComps.map(c => c.cc)).size} ประเทศ · ขนาดวง = ยอดผลิตของวันที่เลือก
+                  {tree.allComps.length} {tr('โรงงาน ·')} {new Set(tree.allComps.map(c => c.cc)).size} {tr("ประเทศ · ขนาดวง = ยอดผลิตของวันที่เลือก")}
                 </span>
               </div>
               <WorldFactoryMap
@@ -655,7 +655,7 @@ export default function GroupOverview() {
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, fontSize: 12 }}>
-                      <Mini label="DT" value={`${fmtNum(g.dtMin)} น.`} color={g.dtMin > 0 ? 'var(--amber)' : undefined} />
+                      <Mini label="DT" value={`${fmtNum(g.dtMin)} ${tr("น.")}`} color={g.dtMin > 0 ? 'var(--amber)' : undefined} />
                       <Mini label="NG" value={fmtNum(g.ng)} color={g.ng > 0 ? 'var(--red)' : undefined} />
                       <Mini label={tr('คน')} value={pplText(g.present, g.head)} />
                     </div>
@@ -694,7 +694,7 @@ export default function GroupOverview() {
           {sel.axis === 'map' && bizNode.thaiMap && (
             <div style={card}>
               <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>
-                {bizNode.icon} {bizNode.name} — แผนที่พื้นที่
+                {bizNode.icon} {bizNode.name} — {tr("แผนที่พื้นที่")}
               </div>
               <ThailandZoneMap
                 zones={[bizNode]}
@@ -756,7 +756,7 @@ export default function GroupOverview() {
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, fontSize: 12 }}>
-                      <Mini label="DT" value={`${fmtNum(c.dtMin)} น.`} color={c.dtMin > 0 ? 'var(--amber)' : undefined} />
+                      <Mini label="DT" value={`${fmtNum(c.dtMin)} ${tr("น.")}`} color={c.dtMin > 0 ? 'var(--amber)' : undefined} />
                       <Mini label="NG" value={fmtNum(c.ng)} color={c.ng > 0 ? 'var(--red)' : undefined} />
                       <Mini label={tr('คน')} value={pplText(c.present, c.head)} />
                     </div>
@@ -819,7 +819,7 @@ export default function GroupOverview() {
             </div>
             {compNode.real && (
               <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 8 }}>
-                ตัวเลขชุดนี้มาจากฐานข้อมูลจริง — ตรงกับที่เห็นใน <b>/oee-analytics</b> {tr('และ')} <b>/factory-map</b> (ใช้สูตรกลางชุดเดียวกัน)
+                {tr("ตัวเลขชุดนี้มาจากฐานข้อมูลจริง — ตรงกับที่เห็นใน")} <b>/oee-analytics</b> {tr('และ')} <b>/factory-map</b> ({tr("ใช้สูตรกลางชุดเดียวกัน")})
               </div>
             )}
           </div>
@@ -828,7 +828,7 @@ export default function GroupOverview() {
         {/* ── ไลน์ที่ต้องดูแลด่วน (ตามขอบเขตที่กำลังดู) ── */}
         <div style={card}>
           <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>
-            ไลน์ที่ต้องดูแลด่วน — {compNode ? compNode.code : bizNode ? bizNode.name : ORG.code}
+            {tr("ไลน์ที่ต้องดูแลด่วน")} — {compNode ? compNode.code : bizNode ? bizNode.name : ORG.code}
             <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--muted)', marginLeft: 8 }}>{tr('เรียงตามจำนวนชิ้นที่ขาดเป้า (ข้ามบริษัท/กลุ่มธุรกิจ)')}</span>
           </div>
           <div style={{ overflowX: 'auto' }}>
@@ -870,7 +870,7 @@ export default function GroupOverview() {
           </div>
           {hotspots.length > 5 && (
             <button onClick={() => setHotAll(v => !v)} style={{ ...btn, marginTop: 8, fontSize: 12.5, padding: '5px 12px' }}>
-              {hotAll ? 'แสดง 5 อันดับแรก' : `แสดงอีก ${hotspots.length - 5} ไลน์`}
+              {hotAll ? 'แสดง 5 อันดับแรก' : `${tr("แสดงอีก")} ${hotspots.length - 5} ${tr("ไลน์")}`}
             </button>
           )}
         </div>
@@ -904,7 +904,7 @@ export default function GroupOverview() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 6, margin: '13px 0 15px' }}>
               <Mini label="OEE" value={pickComp.oee == null ? '—' : pickComp.oee + '%'} color={oeeCol(pickComp.oee)} />
               <Mini label={tr('ผลิต/เป้า')} value={`${pickComp.pct == null ? '—' : pickComp.pct + '%'}`} color={pctCol(pickComp.pct)} />
-              <Mini label="DT" value={`${fmtNum(pickComp.dtMin)} น.`} color={pickComp.dtMin > 0 ? 'var(--amber)' : undefined} />
+              <Mini label="DT" value={`${fmtNum(pickComp.dtMin)} ${tr("น.")}`} color={pickComp.dtMin > 0 ? 'var(--amber)' : undefined} />
               <Mini label="NG" value={fmtNum(pickComp.ng)} color={pickComp.ng > 0 ? 'var(--red)' : undefined} />
             </div>
 
@@ -936,7 +936,7 @@ export default function GroupOverview() {
               width: '100%', textAlign: 'left', padding: '12px 14px', borderRadius: 'var(--r-md)',
               background: 'var(--bg3-surf)', border: '1px solid var(--accent)', color: 'var(--text)', cursor: 'pointer',
             }}>
-              <div style={{ fontSize: 14.5, fontWeight: 800 }}>{tr('ดูภาพรวมในหน้านี้ (')}{pickComp.lines.length} ไลน์)</div>
+              <div style={{ fontSize: 14.5, fontWeight: 800 }}>{tr('ดูภาพรวมในหน้านี้ (')}{pickComp.lines.length} {tr("ไลน์")})</div>
               <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 3, lineHeight: 1.6 }}>
                 อยู่หน้าเดิม — เห็นตารางรายไลน์ (เป้า/ผลิต/OEE/DT/NG/คน) แล้วกดย้อนกลับขึ้นโซนหรือกลุ่มได้ทันที
               </div>

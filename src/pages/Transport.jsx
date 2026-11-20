@@ -163,7 +163,7 @@ export default function Transport() {
       if (oldIds.length) {
         const { data: del, error: eDel } = await supabaseDR.from('transport_round_stops').delete().in('id', oldIds).select('id');
         if (eDel || (del?.length || 0) !== oldIds.length) {
-          toast.error(`บันทึกเส้นทางใหม่แล้ว แต่ล้างจุดจอดเดิมไม่ครบ (${del?.length || 0}/${oldIds.length}) — จุดอาจซ้อนกัน กดบันทึกอีกครั้ง${eDel ? ': ' + eDel.message : ''}`);
+          toast.error(`${tr("บันทึกเส้นทางใหม่แล้ว แต่ล้างจุดจอดเดิมไม่ครบ")} (${del?.length || 0}/${oldIds.length}) — ${tr("จุดอาจซ้อนกัน กดบันทึกอีกครั้ง")}${eDel ? ': ' + eDel.message : ''}`);
         }
       }
       await load();
@@ -183,9 +183,9 @@ export default function Transport() {
         title={tr('มอบหมายขนส่ง (Transport)')} icon="🚚"
         sub={tr('มอบหมายคนขับ/ผู้ขน (carrier) ให้รอบส่งภายในของวันนี้ · ยึดรอบส่งที่ตั้งไว้แล้ว (📦 Line Stock → รอบจัดส่ง) · เฟส 1')}
         tabs={[
-          { key: 'assign', label: `🗓️ มอบหมายวันนี้ (${nAssigned}/${nRounds})` },
-          { key: 'route', label: `🗺️ เส้นทางรอบส่ง (${nRoutes})` },
-          { key: 'carriers', label: `👷 คนขับ/ยานพาหนะ (${carriers.filter(c => c.is_active).length})` },
+          { key: 'assign', label: `🗓️ ${tr("มอบหมายวันนี้")} (${nAssigned}/${nRounds})` },
+          { key: 'route', label: `🗺️ ${tr("เส้นทางรอบส่ง")} (${nRoutes})` },
+          { key: 'carriers', label: `👷 ${tr("คนขับ/ยานพาหนะ")} (${carriers.filter(c => c.is_active).length})` },
         ]}
         tab={tab} onTab={setTab}
       />
@@ -216,7 +216,7 @@ export default function Transport() {
                           <span style={{ fontSize: 11, fontWeight: 700, color: st.color }}>{tr(st.label)}</span>
                         </div>
                         <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-                          ตัดยอด {(r.cutoff_time || '').slice(0, 5) || '—'} {tr('· ส่ง')} {(r.delivery_time || '').slice(0, 5) || '—'} · {r.points_count || 1} จุด
+                          {tr("ตัดยอด")} {(r.cutoff_time || '').slice(0, 5) || '—'} {tr('· ส่ง')} {(r.delivery_time || '').slice(0, 5) || '—'} · {r.points_count || 1} {tr("จุด")}
                         </div>
                         <div style={{ marginTop: 8 }}>
                           {canManage ? (
@@ -396,7 +396,7 @@ function RouteTab({ byLine, stopsByRound, stopNodes, nById, nodes, edges, imageU
     return routePts[routePts.length - 1];
   }, [simDist, routePts, geo]);
   const simMinNow = simTotalMin != null ? (simFrac * simTotalMin) : null;
-  const fmtMin = (m) => m == null ? '—' : (m >= 60 ? `${Math.floor(m / 60)} ชม. ${Math.round(m % 60)} น.` : `${m.toFixed(1)} น.`);
+  const fmtMin = (m) => m == null ? '—' : (m >= 60 ? `${Math.floor(m / 60)} ${tr("ชม.")} ${Math.round(m % 60)} ${tr("น.")}` : `${m.toFixed(1)} ${tr("น.")}`);
 
   // บทบาทจุดจอด: ค่าที่ตั้งไว้ต่อรอบ (transport_round_stops.action) → ไม่ตั้ง = เดาจากชนิดจุด (ท่าโหลด/สโตร์ = รับของ)
   const actionOf = (s) => s?.action || (nById[s?.node_id]?.kind === 'dock' ? 'load' : 'drop');
@@ -415,7 +415,7 @@ function RouteTab({ byLine, stopsByRound, stopNodes, nById, nodes, edges, imageU
     const cur = route.ok ? route.distance : Infinity;
     if (res.order.join() === stopIds.join() || res.distance >= cur - 1e-9) return toast.info('ลำดับปัจจุบันสั้นที่สุดแล้ว ✅');
     setOrder(res.order);
-    toast.success(`✨ เรียงใหม่ให้สั้นสุด: ${cur === Infinity ? '—' : cur.toFixed(1)} → ${res.distance.toFixed(1)} หน่วยผัง`);
+    toast.success(`✨ ${tr("เรียงใหม่ให้สั้นสุด")}: ${cur === Infinity ? '—' : cur.toFixed(1)} → ${res.distance.toFixed(1)} ${tr("หน่วยผัง")}`);
   };
 
   if (!hasGraph) return (
@@ -502,7 +502,7 @@ function RouteTab({ byLine, stopsByRound, stopNodes, nById, nodes, edges, imageU
               return (
                 <>
                   <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', marginBottom: 5 }}>
-                    ➕ เพิ่มจุดจอด{addables.some(isOfLine) ? <span style={{ fontWeight: 400 }}> · 🎯 = จุดที่ผูกไลน์ {round._line}</span> : ''}
+                    ➕ {tr("เพิ่มจุดจอด")}{addables.some(isOfLine) ? <span style={{ fontWeight: 400 }}> · 🎯 = {tr("จุดที่ผูกไลน์")} {round._line}</span> : ''}
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                     {addables.map(n => {
@@ -535,8 +535,8 @@ function RouteTab({ byLine, stopsByRound, stopNodes, nById, nodes, edges, imageU
             {stopIds.length >= 2 && route.ok && (
               <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px dashed var(--border2)', display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={{ fontSize: 12.5, color: 'var(--text2)' }}>
-                  ระยะจริง: {realDist != null
-                    ? <b style={{ color: 'var(--text)' }}>{realDist >= 1000 ? (realDist / 1000).toFixed(2) + ' กม.' : realDist.toFixed(0) + ' ม.'}</b>
+                  {tr("ระยะจริง")}: {realDist != null
+                    ? <b style={{ color: 'var(--text)' }}>{realDist >= 1000 ? (realDist / 1000).toFixed(2) + (' ' + tr('กม.')) : realDist.toFixed(0) + (' ' + tr('ม.'))}</b>
                     : <span style={{ color: 'var(--muted)' }}>{tr('ยังไม่ตั้งมาตราส่วน (ตั้งที่ Store/AMR)')}</span>}
                 </div>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -563,7 +563,7 @@ function RouteTab({ byLine, stopsByRound, stopNodes, nById, nodes, edges, imageU
                 {totalMin != null ? (
                   <div style={{ fontSize: 12.5, color: 'var(--text)' }}>
                     ⏱️ เวลา: <b>{fmtMin(totalMin)}</b>
-                    <span style={{ color: 'var(--muted)' }}> {tr('(วิ่ง')} {fmtMin(moveMin)}{dwellTotal > 0 ? ` + แวะ ${fmtMin(dwellTotal)}` : ''})</span>
+                    <span style={{ color: 'var(--muted)' }}> {tr('(วิ่ง')} {fmtMin(moveMin)}{dwellTotal > 0 ? ` + ${tr("แวะ")} ${fmtMin(dwellTotal)}` : ''})</span>
                   </div>
                 ) : <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('⏱️ ตั้งมาตราส่วน + ความเร็ว เพื่อดูเวลา')}</div>}
                 {canManage && (
@@ -581,7 +581,7 @@ function RouteTab({ byLine, stopsByRound, stopNodes, nById, nodes, edges, imageU
                   <button onClick={() => { setSimRun(false); setSimFrac(0); }} style={{ padding: '6px 10px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontSize: 12.5, background: 'var(--bg2-surf)', color: 'var(--text2)', border: '1px solid var(--border)' }}>↺</button>
                   {simMinNow != null && (
                     <span style={{ fontSize: 12, color: simState.dwellAt ? 'var(--amber)' : 'var(--accent)', fontWeight: 700 }}>
-                      ⏱ {fmtMin(simMinNow)}{simState.dwellAt ? ` · ⏸ แวะจุด ${simState.dwellAt}` : ''}
+                      ⏱ {fmtMin(simMinNow)}{simState.dwellAt ? ` · ⏸ ${tr("แวะจุด")} ${simState.dwellAt}` : ''}
                     </span>
                   )}
                 </div>
@@ -623,7 +623,7 @@ function RouteTab({ byLine, stopsByRound, stopNodes, nById, nodes, edges, imageU
             {nodes.map(n => { const k = nodeKind(n.kind); const idx = stopIds.indexOf(n.id);
               const act = idx >= 0 ? actionOf(stops[idx]) : null;
               return (
-                <div key={n.id} title={idx >= 0 ? `${idx + 1}. ${n.name || n.line_name || ''} · ${act === 'load' ? '⬆ รับของ' : '⬇ ส่งของ'}` : undefined}
+                <div key={n.id} title={idx >= 0 ? `${idx + 1}. ${n.name || n.line_name || ''} · ${act === 'load' ? tr('⬆ รับของ') : tr('⬇ ส่งของ')}` : undefined}
                   style={{ position: 'absolute', left: `${n.x}%`, top: `${n.y}%`, transform: 'translate(-50%,-50%)',
                   width: idx >= 0 ? 22 : 10, height: idx >= 0 ? 22 : 10, borderRadius: '50%', background: idx >= 0 ? k.color : 'var(--muted)',
                   opacity: idx >= 0 ? 1 : 0.55, border: idx >= 0 ? '2px solid #fff' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -641,7 +641,7 @@ function RouteTab({ byLine, stopsByRound, stopNodes, nById, nodes, edges, imageU
             })}
             {/* จุดจำลองการวิ่ง — ไอคอนตามยานพาหนะที่เลือก · แวะจอด = วงส้ม */}
             {simPos && simFrac > 0 && (
-              <div title={simState.dwellAt ? `⏸ แวะจอดจุด ${simState.dwellAt} (${dwellMin} น.)` : undefined}
+              <div title={simState.dwellAt ? `⏸ ${tr("แวะจอดจุด")} ${simState.dwellAt} (${dwellMin} ${tr("น.")})` : undefined}
                 style={{ position: 'absolute', left: `${simPos.x}%`, top: `${simPos.y}%`, transform: 'translate(-50%,-50%)', width: 28, height: 28, borderRadius: '50%',
                   background: simState.dwellAt ? 'var(--amber)' : '#22d3ee', border: '2px solid #fff',
                   boxShadow: simState.dwellAt ? '0 0 12px 3px var(--amber-line)' : '0 0 12px 3px rgba(34,211,238,0.7)',

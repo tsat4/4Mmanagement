@@ -117,7 +117,7 @@ export default function PokaYokeCheck() {
     const w = canWriteLine(wCtx, lineName, lines);
     if (w.ok) return true;
     const sec = lines.find(l => l.name === lineName)?.section || '';
-    toast.error(writeBlockText(w, { what: `${what}ของไลน์ ${lineName}`, unit: sec }));
+    toast.error(writeBlockText(w, { what: `${what}${tr("ของไลน์")} ${lineName}`, unit: sec }));
     return false;
   };
 
@@ -137,7 +137,7 @@ export default function PokaYokeCheck() {
     };
     const { data, error } = await supabase.from('pokayoke_checks')
       .upsert(row, { onConflict: 'device_id,check_date,shift' }).select().single();
-    if (error) { toast.error('บันทึกไม่สำเร็จ: ' + error.message); return; }
+    if (error) { toast.error((tr('บันทึกไม่สำเร็จ') + ': ') + error.message); return; }
     setChecks(m => ({ ...m, [device.id]: data }));
   };
 
@@ -157,7 +157,7 @@ export default function PokaYokeCheck() {
       is_active: dEditing.is_active !== false,
     };
     const { error } = await supabase.from('pokayoke_devices').upsert(row, { onConflict: 'id' });
-    if (error) { toast.error('บันทึกไม่สำเร็จ: ' + error.message); return; }
+    if (error) { toast.error((tr('บันทึกไม่สำเร็จ') + ': ') + error.message); return; }
     toast.success('บันทึกอุปกรณ์แล้ว'); setDEditing(null); load();
   };
   /* 🗑️ ลบอุปกรณ์ (19/11 · ออดิท check sheet ข้อ 3) — เดิม FK `on delete cascade` ⇒ ลบอุปกรณ์ =
@@ -169,14 +169,14 @@ export default function PokaYokeCheck() {
     if (!lineGuard(d.line_name, 'อุปกรณ์ Poka-Yoke ')) return;
     const { count, error: cErr } = await supabase.from('pokayoke_checks')
       .select('id', { count: 'exact', head: true }).eq('device_id', d.id);
-    if (cErr || count == null) { toast.error(`นับประวัติผลทดสอบไม่สำเร็จ — ยังไม่ลบ${cErr ? `: ${cErr.message}` : ''}`); return; }
+    if (cErr || count == null) { toast.error(`${tr("นับประวัติผลทดสอบไม่สำเร็จ — ยังไม่ลบ")}${cErr ? `: ${cErr.message}` : ''}`); return; }
     if (count > 0) {
-      if (!await askConfirm(`"${d.name}" มีผลทดสอบย้อนหลัง ${count} ครั้ง — ลบไม่ได้เพราะจะทำให้ประวัติการตรวจหาย\n\nปิดใช้งานแทนไหม? (หายจากใบตรวจ แต่ผลทดสอบย้อนหลังยังอยู่ครบ)`)) return;
+      if (!await askConfirm(`"${d.name}" ${tr("มีผลทดสอบย้อนหลัง")} ${count} ${tr("ครั้ง — ลบไม่ได้เพราะจะทำให้ประวัติการตรวจหาย\\n\\nปิดใช้งานแทนไหม? (หายจากใบตรวจ แต่ผลทดสอบย้อนหลังยังอยู่ครบ")})`)) return;
       if (!checkWriteRows(await supabase.from('pokayoke_devices').update({ is_active: false })
         .eq('id', d.id).select('id'), 'ปิดใช้งานอุปกรณ์')) return;
-      toast.success(`ปิดใช้งาน "${d.name}" แล้ว`); load(); return;
+      toast.success(`${tr("ปิดใช้งาน")} "${d.name}" ${tr("แล้ว")}`); load(); return;
     }
-    if (!await askConfirm(`ลบอุปกรณ์ "${d.name}"? (ยังไม่มีผลทดสอบ)`)) return;
+    if (!await askConfirm(`${tr("ลบอุปกรณ์")} "${d.name}"? (${tr("ยังไม่มีผลทดสอบ")})`)) return;
     if (!checkWriteRows(await supabase.from('pokayoke_devices').delete().eq('id', d.id).select('id'), 'ลบอุปกรณ์')) return;
     load();
   };
@@ -189,7 +189,7 @@ export default function PokaYokeCheck() {
   return (
     <Page>
       <PageHeader title="Poka-Yoke Check" icon="🛡️"
-        sub={`ทดสอบ error-proofing ด้วยชิ้น master NG ทุกกะ — จับ NG ได้ = ผ่าน · ${SHIFT_LABEL[selShift]}`} />
+        sub={`${tr("ทดสอบ error-proofing ด้วยชิ้น master NG ทุกกะ — จับ NG ได้ = ผ่าน")} · ${SHIFT_LABEL[selShift]}`} />
 
       {/* ตัวเลือก — UI-STANDARD 2026-09-24: FilterBar · กะ 2 ตัวเลือก = Segmented */}
       <FilterBar style={{ marginBottom: 12 }}>
@@ -208,7 +208,7 @@ export default function PokaYokeCheck() {
       </FilterBar>
 
       {(canRecord || canManage) && selLine && !lineWrite.ok && (
-        <NoticeBar tone="warn" style={{ marginBottom: 10 }}>🔒 {writeBlockText(lineWrite, { what: `ใบ Poka-Yoke ของไลน์ ${selLine}`, unit: lines.find(l => l.name === selLine)?.section || '' })}</NoticeBar>
+        <NoticeBar tone="warn" style={{ marginBottom: 10 }}>🔒 {writeBlockText(lineWrite, { what: `${tr("ใบ Poka-Yoke ของไลน์")} ${selLine}`, unit: lines.find(l => l.name === selLine)?.section || '' })}</NoticeBar>
       )}
 
       {/* 🔴 "ยังไม่ทดสอบ" กับ "กะนี้ไม่ได้ผลิต" คนละเรื่อง — ไม่บอก คนอ่านจะนับเป็นขาดตรวจทั้งที่ไลน์ไม่ได้เดิน
@@ -217,7 +217,7 @@ export default function PokaYokeCheck() {
         <div style={{ padding: '9px 13px', borderRadius: 'var(--r-md)', marginBottom: 10, fontSize: 12.5,
           background: 'rgba(148,163,184,0.10)', border: '1px solid var(--border)', color: 'var(--muted)' }}>
           ⚪ <b>{selLine}</b> {tr('ไม่ได้เปิดกะใน')} {SHIFT_LABEL[selShift]} {tr('วันที่')} {selDate} — <b>{tr('ยังไม่ต้องทดสอบ')}</b> ·
-          อุปกรณ์ที่ยังว่างอยู่ไม่นับเป็นขาดตรวจ
+          {tr("อุปกรณ์ที่ยังว่างอยู่ไม่นับเป็นขาดตรวจ")}
         </div>
       )}
       {ran == null && runs && (
@@ -240,7 +240,7 @@ export default function PokaYokeCheck() {
         <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>{tr('กำลังโหลด...')}</div>
       ) : activeDevs.length === 0 ? (
         <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', background: 'var(--card-surf)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-lg)' }}>
-          ยังไม่มีอุปกรณ์ poka-yoke ของไลน์ {selLine} — {canManage ? 'กด "➕ เพิ่มอุปกรณ์"' : 'ให้หัวหน้าลงทะเบียนอุปกรณ์ก่อน'}
+          {tr("ยังไม่มีอุปกรณ์ poka-yoke ของไลน์")} {selLine} — {canManage ? 'กด "➕ เพิ่มอุปกรณ์"' : 'ให้หัวหน้าลงทะเบียนอุปกรณ์ก่อน'}
         </div>
       ) : (
         <div style={{ display: 'grid', gap: 8 }}>
@@ -252,7 +252,7 @@ export default function PokaYokeCheck() {
                   <div style={{ flex: 1, minWidth: 200 }}>
                     <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{d.code ? `${d.code} · ` : ''}{d.name}</div>
                     <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-                      {d.station ? `📍 ${d.station}` : ''}{d.test_method ? ` · วิธี: ${d.test_method}` : ''}{d.master_ref ? ` · master NG: ${d.master_ref}` : ''}
+                      {d.station ? `📍 ${d.station}` : ''}{d.test_method ? ` · ${tr("วิธี")}: ${d.test_method}` : ''}{d.master_ref ? ` · master NG: ${d.master_ref}` : ''}
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 6 }}>

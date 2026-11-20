@@ -56,9 +56,9 @@ function timeAgo(iso) {
   if (!iso) return '—';
   const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
   if (mins < 1) return 'เมื่อสักครู่';
-  if (mins < 60) return `${mins} นาทีที่แล้ว`;
+  if (mins < 60) return `${mins} ${tr("นาทีที่แล้ว")}`;
   const hrs = Math.round(mins / 60);
-  if (hrs < 24) return `${hrs} ชม.ที่แล้ว`;
+  if (hrs < 24) return `${hrs} ${tr("ชม.ที่แล้ว")}`;
   return new Date(iso).toLocaleDateString('th-TH');
 }
 
@@ -123,8 +123,8 @@ export default function RackCenter() {
     setLines(ln || []);
     setContainerTypes(ct || []);
     /* โหลดไม่ครบ = บอก + คงข้อมูลรอบก่อน (เดิมกลืน error แล้วบอร์ดว่าง = "ไม่มีใบค้าง" ทั้งที่คิวรีล่ม) */
-    if (eReq) toast.error(`โหลดใบเรียกภาชนะไม่ได้ — ${eReq.message}`); else setRequests(req || []);
-    if (ePkg) toast.error(`โหลดใบเบิก packaging ไม่ได้ — ${ePkg.message}`); else setPkgReqs(pkg || []);
+    if (eReq) toast.error(`${tr("โหลดใบเรียกภาชนะไม่ได้")} — ${eReq.message}`); else setRequests(req || []);
+    if (ePkg) toast.error(`${tr("โหลดใบเบิก packaging ไม่ได้")} — ${ePkg.message}`); else setPkgReqs(pkg || []);
     if (slaRow) setSla(slaRow);
   }, []);
 
@@ -138,7 +138,7 @@ export default function RackCenter() {
         .update({ status: 'issued' }).eq('id', p.id).eq('status', p.status).select('id');
       if (error) throw error;
       if (!upd?.length) toast.info('ใบนี้ถูกอัปเดตจากเครื่องอื่นแล้ว — โหลดใหม่');
-      else toast.success(`จ่าย packaging ${p.packaging_code} แล้ว`);
+      else toast.success(`${tr("จ่าย")} packaging ${p.packaging_code} ${tr("แล้ว")}`);
       await load();
     } catch (err) { toast.error(err.message); }
     setPkgBusy(null);
@@ -205,7 +205,7 @@ export default function RackCenter() {
     const ln = lines.find(l => l.name.trim().toLowerCase() === p.line.trim().toLowerCase());
     const ct = containerTypes.find(c =>
       String(c.code || '').trim().toLowerCase() === p.ctype.trim().toLowerCase() || c.id === p.ctype);
-    if (!ln || !ct) { toast.error(`QR ไม่ตรงข้อมูลในระบบ (${!ln ? 'ไลน์ ' + p.line : 'ภาชนะ ' + p.ctype})`); return false; }
+    if (!ln || !ct) { toast.error(`QR ${tr("ไม่ตรงข้อมูลในระบบ")} (${!ln ? (tr('ไลน์') + ' ') + p.line : (tr('ภาชนะ') + ' ') + p.ctype})`); return false; }
     setForm({ line_name: ln.name, container_type_id: ct.id, qty: String(parseInt(p.qty) || 1), note: '' });
     setScanOpen(false);
     setShowForm(true);
@@ -283,8 +283,8 @@ export default function RackCenter() {
       event: 'rack_request', type: 'info', ref_table: 'rack_requests',
       line_name: form.line_name, actor: fullName,
       lines: [
-        `🏭 ไลน์: ${form.line_name}`,
-        `📦 ${ctype?.name || '—'} · ${qty} ใบ`,
+        `🏭 ${tr("ไลน์")}: ${form.line_name}`,
+        `📦 ${ctype?.name || '—'} · ${qty} ${tr("ใบ")}`,
         form.note.trim() ? `📝 ${form.note.trim()}` : '',
       ],
     });
@@ -353,16 +353,16 @@ export default function RackCenter() {
         </label>
       </FilterBar>
       {(scopedNames || viewScope.unsure) && (reqScoped.hidden + pkgScoped.hidden > 0 || viewScope.unsure) && (
-        <div title={viewScope.unsure ? 'ตัดขอบเขตของบัญชีนี้ไม่ได้ (ทะเบียนไลน์ยังไม่โหลด/ส่วนงานไม่ตรงผัง)' : `ขอบเขตของบัญชีนี้: ${scopeLabel}`}
+        <div title={viewScope.unsure ? 'ตัดขอบเขตของบัญชีนี้ไม่ได้ (ทะเบียนไลน์ยังไม่โหลด/ส่วนงานไม่ตรงผัง)' : `${tr("ขอบเขตของบัญชีนี้")}: ${scopeLabel}`}
           style={{ display: 'inline-block', margin: '0 0 12px', padding: '4px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700,
             color: viewScope.unsure ? 'var(--amber)' : 'var(--accent)',
             background: viewScope.unsure ? 'var(--amber-dim)' : 'var(--accent-dim)',
             border: `1px solid ${viewScope.unsure ? 'var(--amber-line)' : 'var(--accent)'}` }}>
           {viewScope.unsure
             ? (scopedNames
-              ? `⚠ ขอบเขตไม่ชัด — แสดงเฉพาะ ${scopeLabel} · ซ่อน ${reqScoped.hidden + pkgScoped.hidden} ใบนอกขอบเขต`
+              ? `⚠ ${tr("ขอบเขตไม่ชัด — แสดงเฉพาะ")} ${scopeLabel} · ${tr("ซ่อน")} ${reqScoped.hidden + pkgScoped.hidden} ${tr("ใบนอกขอบเขต")}`
               : '⚠ ตัดขอบเขตไม่ได้ — แสดงทั้งโรงงาน')
-            : `🔭 เฉพาะ ${scopeLabel} · ซ่อน ${reqScoped.hidden} ใบเรียกภาชนะ${pkgScoped.hidden ? ` + ${pkgScoped.hidden} ใบเบิก packaging` : ''} นอกขอบเขต`}
+            : `🔭 ${tr("เฉพาะ")} ${scopeLabel} · ${tr("ซ่อน")} ${reqScoped.hidden} ${tr("ใบเรียกภาชนะ")}${pkgScoped.hidden ? ` + ${pkgScoped.hidden} ${tr("ใบเบิก")} packaging` : ''} ${tr("นอกขอบเขต")}`}
         </div>
       )}
 
@@ -376,7 +376,7 @@ export default function RackCenter() {
         return (
           <div style={{ ...card, marginBottom: 16, borderColor: 'var(--amber-line)' }}>
             <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--amber)', marginBottom: 10, fontFamily: 'var(--font-display)' }}>
-              ใบเบิก Packaging จากการผลิต <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>({pending.length} รายการ)</span>
+              ใบเบิก Packaging จากการผลิต <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>({pending.length} {tr("รายการ")})</span>
             </div>
             <div style={partCardGrid()}>
               {pending.map(p => (
@@ -429,7 +429,7 @@ export default function RackCenter() {
         inFrame.forEach(r => { (byLine[r.line_name] = byLine[r.line_name] || []).push(r); });
         const groups = Object.keys(byLine).sort(lineNameCompare).map(lnName => ({
           key: lnName, label: lnName,
-          sub: `${byLine[lnName].length} รายการ · ✅ ${byLine[lnName].filter(x => x.status === 'received').length}`,
+          sub: `${byLine[lnName].length} ${tr("รายการ")} · ✅ ${byLine[lnName].filter(x => x.status === 'received').length}`,
           items: byLine[lnName].map(r => {
             const tm = frameMinFromIso(r.requested_at);
             const hhmm = new Date(r.requested_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
@@ -441,8 +441,8 @@ export default function RackCenter() {
         const nm = frameMin(`${String(nowD.getHours()).padStart(2, '0')}:${String(nowD.getMinutes()).padStart(2, '0')}`);
         return (
           <InternalTimeBoard
-            title={`บอร์ดเวลาเรียกภาชนะ — วันงานปัจจุบัน`}
-            hint={`SLA: เริ่มเตรียมใน ${sla.prepare_within_min} นาที · ส่งถึงไลน์ใน ${sla.deliver_within_min} นาที (🟠 เลยเตรียม · 🔴 เลยส่ง)`}
+            title={`${tr("บอร์ดเวลาเรียกภาชนะ — วันงานปัจจุบัน")}`}
+            hint={`SLA: ${tr("เริ่มเตรียมใน")} ${sla.prepare_within_min} ${tr("นาที · ส่งถึงไลน์ใน")} ${sla.deliver_within_min} ${tr("นาที (🟠 เลยเตรียม · 🔴 เลยส่ง")})`}
             groups={groups} nowMin={nm} breaks={breaksToFrame(breakPolicies)}
             onItemClick={(r, x, y) => setPopup({ r, x, y })}
           />
@@ -504,7 +504,7 @@ export default function RackCenter() {
                     <div style={{ fontSize: 13, color: 'var(--text2)', marginTop: 2 }}>{r.container_name}</div>
                     {r.note && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{r.note}</div>}
                     <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
-                      {r.requested_by ? `โดย ${r.requested_by} · ` : ''}{timeAgo(r.requested_at)}
+                      {r.requested_by ? `${tr("โดย")} ${r.requested_by} · ` : ''}{timeAgo(r.requested_at)}
                     </div>
                     {canOperate && col.key !== 'received' && (
                       <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
@@ -587,7 +587,7 @@ export default function RackCenter() {
                 <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>{tr('ชนิดภาชนะ *')}</label>
                 <select value={form.container_type_id} onChange={e => setForm(f => ({ ...f, container_type_id: e.target.value }))} style={inputSt}>
                   <option value="">{tr('เลือกภาชนะ...')}</option>
-                  {containerTypes.map(c => <option key={c.id} value={c.id}>{c.name}{c.capacity ? ` (จุ ${c.capacity})` : ''}</option>)}
+                  {containerTypes.map(c => <option key={c.id} value={c.id}>{c.name}{c.capacity ? ` (${tr("จุ")} ${c.capacity})` : ''}</option>)}
                 </select>
               </div>
               <div>
@@ -640,7 +640,7 @@ function QrScanModal({ onClose, onResult }) {
           raf = requestAnimationFrame(tick);
         };
         tick();
-      } catch (e) { setCamErr('เปิดกล้องไม่ได้: ' + e.message); }
+      } catch (e) { setCamErr((tr('เปิดกล้องไม่ได้') + ': ') + e.message); }
     })();
     return () => { stop = true; if (raf) cancelAnimationFrame(raf); stream?.getTracks().forEach(t => t.stop()); };
   }, [onResult]);

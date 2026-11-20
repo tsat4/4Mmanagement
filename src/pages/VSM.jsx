@@ -551,7 +551,7 @@ export default function VSM() {
           </div>}
           {savedHidden > 0 && (
             <div style={{ fontSize: 12, color: 'var(--muted)', padding: '4px 8px' }}>
-              🔭 แสดงเฉพาะใบของไลน์ในขอบเขตของคุณ · ซ่อนใบของไลน์อื่น {savedHidden} ใบ
+              🔭 {tr("แสดงเฉพาะใบของไลน์ในขอบเขตของคุณ · ซ่อนใบของไลน์อื่น")} {savedHidden} {tr("ใบ")}
             </div>
           )}
           {savedVisible.map(m => (
@@ -648,7 +648,7 @@ export default function VSM() {
           return (
             <div style={{ ...S.card, marginBottom: 12, padding: '10px 14px' }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', marginBottom: gaps.length ? 8 : 0 }}>
-                ข้อมูลที่ VSM ยังขาด{gaps.length ? ` · ${gaps.length} รายการ` : ''}
+                {tr("ข้อมูลที่ VSM ยังขาด")}{gaps.length ? ` · ${gaps.length} ${tr("รายการ")}` : ''}
                 {gaps.length > 0 && <span style={{ fontWeight: 400, fontSize: 11, color: 'var(--muted)' }}> {tr('— กดปุ่มท้ายรายการเพื่อไปลงข้อมูลที่ต้นทาง')}</span>}
               </div>
               {!gaps.length && <div style={{ fontSize: 12.5, color: 'var(--accent)', marginTop: 6 }}>{tr('✅ ข้อมูลครบทุกช่องของใบนี้แล้ว')}</div>}
@@ -700,7 +700,7 @@ export default function VSM() {
                   <td style={{ padding: '4px 6px', borderTop: '1px solid var(--border)' }}>
                     <input value={ov[field] ?? ''} onChange={e => setOv(b.key, field, e.target.value)}
                       placeholder={val == null ? '—' : String(Math.round(val * 10) / 10)}
-                      title={src ? `ค่าที่ระบบคำนวณ: ${val ?? '—'} (จาก ${src})` : 'ระบบไม่มีข้อมูล'}
+                      title={src ? `${tr("ค่าที่ระบบคำนวณ")}: ${val ?? '—'} (${tr("จาก")} ${src})` : 'ระบบไม่มีข้อมูล'}
                       style={{
                         width: 82, fontSize: 12, padding: '4px 6px', borderRadius: 'var(--ctl-r)', background: 'var(--bg2-surf)', color: 'var(--text)',
                         border: `1px solid ${val == null && !ov[field] ? 'var(--amber)' : 'var(--border)'}`,
@@ -733,7 +733,7 @@ export default function VSM() {
         <div style={{ ...S.card, marginBottom: 14 }}>
           <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>{tr('รอบส่ง (ระบบยังไม่เก็บ — กรอกเอง)')}</div>
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 10 }}>
-            รูปแบบตามใบเดิมของบริษัท เช่น <b>7:1:1</b> {tr('(ผู้ส่งมอบ) ·')} <b>1:4:2</b> (ลูกค้า)
+            {tr("รูปแบบตามใบเดิมของบริษัท เช่น")} <b>7:1:1</b> {tr('(ผู้ส่งมอบ) ·')} <b>1:4:2</b> ({tr("ลูกค้า")})
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10, alignContent: 'start' }}>
             <div>
@@ -741,7 +741,7 @@ export default function VSM() {
                 {tr('ลูกค้า —')} {model.customer.name || model.header.customer || 'ไม่ระบุ'}
               </label>
               <input value={overrides.__customer_pattern || ''} onChange={e => setTopOv('__customer_pattern', e.target.value)}
-                placeholder={model.customer.roundsPerDay ? `ระบบเห็น ${model.customer.roundsPerDay} รอบ/วัน` : 'เช่น 1:4:2'}
+                placeholder={model.customer.roundsPerDay ? `${tr("ระบบเห็น")} ${model.customer.roundsPerDay} ${tr("รอบ/วัน")}` : 'เช่น 1:4:2'}
                 style={{ width: '100%', fontSize: 12.5, padding: '6px 10px', borderRadius: 'var(--ctl-r)', border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)' }} />
             </div>
             {model.suppliers.map(sp => (
@@ -763,13 +763,13 @@ export default function VSM() {
           <div style={S.card}>
             <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>{tr('สรุปสายธาร')}</div>
             {[
-              ['PLT (Production Lead Time)', model.totals.pltDays == null ? '—' : `${model.totals.pltDays} วัน`],
+              ['PLT (Production Lead Time)', model.totals.pltDays == null ? '—' : `${model.totals.pltDays} ${tr("วัน")}`],
               ['PT (Processing Time)', fmtMinSec(model.totals.ptSec) || '—'],
               // MCT = headline ของใบจริง TSAT (skill: vsm-tsat-reference)
               ['MCT (PLT + PT)', fmtMct(model.totals.pltDays, model.totals.ptSec) || '—'],
               ['%VA (Value Added)', model.totals.vaPct == null ? '—' : `${model.totals.vaPct}%`],
               ['Takt Time', model.info.ttSec == null ? '—' : `${model.info.ttSec} sec`],
-              ['Available Time', model.info.atSec == null ? '—' : `${model.info.atSec.toLocaleString('th-TH')} sec/วัน`],
+              ['Available Time', model.info.atSec == null ? '—' : `${model.info.atSec.toLocaleString('th-TH')} sec/${tr("วัน")}`],
             ].map(([k, v]) => (
               <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid var(--border)', fontSize: 12.5 }}>
                 <span style={{ color: 'var(--muted)' }}>{k}</span>
@@ -799,8 +799,8 @@ export default function VSM() {
           if (lv.status === 'idle') return { v: null, note: 'ยังไม่เปิดกะวันนี้' };
           if (lv.status === 'closed') return { v: lv.closedOee, note: 'กะปิดแล้ว · ค่าที่ stamp' };
           if (!lv.live) return { v: null, note: 'ยังประเมินไม่ได้ — กะต้องเปิดเกิน 10 นาที (และกะต้องมีเวลาเริ่ม)' };
-          if (lv.live.noOutput) return { v: null, note: `ยังไม่ผลิตชิ้นแรก · A ${lv.live.A}%` };
-          if (lv.live.noCt) return { v: null, note: `ชิ้นงานยังไม่ตั้ง CT — ประเมิน P ไม่ได้ · A ${lv.live.A}%` };
+          if (lv.live.noOutput) return { v: null, note: `${tr("ยังไม่ผลิตชิ้นแรก")} · A ${lv.live.A}%` };
+          if (lv.live.noCt) return { v: null, note: `${tr("ชิ้นงานยังไม่ตั้ง CT — ประเมิน P ไม่ได้")} · A ${lv.live.A}%` };
           return {
             v: lv.live.oee,
             note: `A ${lv.live.A} · P ${lv.live.P} · Q ${lv.live.Q}`
@@ -833,7 +833,7 @@ export default function VSM() {
                 ⛔ โหลดโครงสายธารไม่สำเร็จ
               </div>
               <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>
-                {liveErr} — มักเป็นสัญญาณเน็ตสะดุดชั่วคราว ลองใหม่ได้เลย
+                {liveErr} — {tr("มักเป็นสัญญาณเน็ตสะดุดชั่วคราว ลองใหม่ได้เลย")}
               </div>
               <button onClick={() => setLiveTick(t => t + 1)} style={btn('var(--accent)')}>{tr('ลองใหม่')}</button>
             </div>
@@ -848,7 +848,7 @@ export default function VSM() {
               }}>
                 {/* จุดสถานะ live = นิ่ง+เรืองแสง ห้ามกระพริบ (Andon สงวนกระพริบให้แดง) */}
                 <span style={{ width: 8, height: 8, borderRadius: 'var(--r-pill)', background: 'var(--green)', boxShadow: '0 0 6px var(--green)' }} />
-                REALTIME · อัปเดต {liveData?.at ? new Date(liveData.at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'}
+                REALTIME · {tr("อัปเดต")} {liveData?.at ? new Date(liveData.at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'}
                 <span style={{ color: 'var(--muted)', fontWeight: 400 }}>{tr('· วันงาน')} {liveData?.workDate || getWorkDate()}</span>
               </span>
               {liveData?.partial && (
@@ -864,19 +864,19 @@ export default function VSM() {
                     // dt-alarm-blink ทาพื้นแดง — ตัวอักษรต้องขาว ไม่งั้นแดงบนแดงอ่านไม่ออก
                     color: k === 'down' && nn > 0 ? '#fff' : nn > 0 ? LIVE_STATUS[k].color : 'var(--muted)',
                   }}>
-                  {tr(LIVE_STATUS[k].label)} · {nn} ไลน์
+                  {tr(LIVE_STATUS[k].label)} · {nn} {tr("ไลน์")}
                 </span>
               ))}
               {(liveData?.summary?.plannedOpen || 0) > 0 && (
                 <span style={{ fontSize: 12, padding: '5px 12px', borderRadius: 'var(--r-pill)', background: 'var(--bg3-surf)', color: 'var(--muted)', border: '1px solid var(--border)' }}>
-                  หยุดตามแผนค้าง {liveData.summary.plannedOpen} รายการ (ไม่นับเป็น Andon)
+                  {tr("หยุดตามแผนค้าง")} {liveData.summary.plannedOpen} {tr("รายการ (ไม่นับเป็น")} Andon)
                 </span>
               )}
               {/* แถวเปิดค้างในกะที่ปิดไปแล้ว = คนลืมปิดรายการ — ไม่ใช่ Andon (กฎ dtOpenKind) แต่ห้ามซ่อน */}
               {(liveData?.summary?.forgottenDt || 0) > 0 && (
                 <span title={tr('กะปิดไปแล้วแต่รายการ Downtime ยังไม่ถูกปิด — นาทีที่หยุดไม่ได้ถูกหักใน %A ของกะนั้น')}
                   style={{ fontSize: 12, padding: '5px 12px', borderRadius: 'var(--r-pill)', background: 'var(--bg3-surf)', color: 'var(--amber)', border: '1px solid var(--border)', fontWeight: 700 }}>
-                  ⚠️ ไม่ได้ปิดรายการ {liveData.summary.forgottenDt} ใบ (กะปิดแล้ว)
+                  ⚠️ {tr("ไม่ได้ปิดรายการ")} {liveData.summary.forgottenDt} {tr("ใบ (กะปิดแล้ว")})
                 </span>
               )}
             </div>
@@ -942,12 +942,12 @@ export default function VSM() {
                     <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{oee.note}</div>
                     {(lv?.alarms || []).map((a, j) => (
                       <div key={j} style={{ fontSize: 11.5, color: 'var(--red)' }}>
-                        {a.machineNo || 'ไม่ระบุเครื่อง'} · {a.typeName || '—'}{a.openMin != null ? ` · ค้าง ${a.openMin} นาที` : ''}
+                        {a.machineNo || 'ไม่ระบุเครื่อง'} · {a.typeName || '—'}{a.openMin != null ? ` · ${tr("ค้าง")} ${a.openMin} ${tr("นาที")}` : ''}
                       </div>
                     ))}
                     {(lv?.plannedOpen || []).length > 0 && (
                       <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-                        หยุดตามแผนค้าง {lv.plannedOpen.length} รายการ
+                        {tr("หยุดตามแผนค้าง")} {lv.plannedOpen.length} {tr("รายการ")}
                       </div>
                     )}
                   </div>
@@ -959,7 +959,7 @@ export default function VSM() {
             <div style={{ ...S.card, maxWidth: 460, marginBottom: 14 }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>{tr('สรุปสายธาร (จากคงคลังปัจจุบัน)')}</div>
               {[
-                ['PLT (Production Lead Time)', liveModel.totals.pltDays == null ? '—' : `${liveModel.totals.pltDays} วัน`],
+                ['PLT (Production Lead Time)', liveModel.totals.pltDays == null ? '—' : `${liveModel.totals.pltDays} ${tr("วัน")}`],
                 ['PT (Processing Time)', fmtMinSec(liveModel.totals.ptSec) || '—'],
                 ['MCT (PLT + PT)', fmtMct(liveModel.totals.pltDays, liveModel.totals.ptSec) || '—'],
                 ['%VA (Value Added)', liveModel.totals.vaPct == null ? '—' : `${liveModel.totals.vaPct}%`],

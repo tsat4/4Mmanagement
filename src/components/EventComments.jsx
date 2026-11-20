@@ -85,7 +85,7 @@ export default function EventComments({ refKind, refId, contextLabel = 'รา�
       if (targets.length) {
         supabase.from('notifications').insert(targets.map(m => ({
           user_id: m.id, type: 'info',
-          title: `💬 ${fullName || 'เพื่อนร่วมงาน'} กล่าวถึงคุณใน ${contextLabel}`,
+          title: `💬 ${fullName || tr('เพื่อนร่วมงาน')} ${tr("กล่าวถึงคุณใน")} ${contextLabel}`,
           body: text.slice(0, 160),
           ...refTarget(refKind, refId),
         }))).then(({ error: nErr }) => { if (nErr) console.warn('mention notify:', nErr.message); });
@@ -93,7 +93,7 @@ export default function EventComments({ refKind, refId, contextLabel = 'รา�
       setBody(''); setMentions([]); setPickOpen(false);
       load();
     } catch (err) {
-      toast.error(`ส่งคอมเมนต์ไม่สำเร็จ: ${err?.message || 'ลองใหม่อีกครั้ง'}`);
+      toast.error(`${tr("ส่งคอมเมนต์ไม่สำเร็จ")}: ${err?.message || tr('ลองใหม่อีกครั้ง')}`);
     }
     setPosting(false);
   };
@@ -110,7 +110,7 @@ export default function EventComments({ refKind, refId, contextLabel = 'รา�
   return (
     <div style={{ marginTop: 12, border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--bg)', padding: '10px 12px' }}>
       <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text2)', marginBottom: 8 }}>
-        คอมเมนต์{items ? ` (${items.length})` : ''}
+        {tr("คอมเมนต์")}{items ? ` (${items.length})` : ''}
         <span style={{ fontWeight: 500, color: 'var(--muted)', marginLeft: 8, fontSize: 11 }}>{tr('คุยกันใต้ใบงาน — ประวัติติดรายการนี้')}</span>
       </div>
 

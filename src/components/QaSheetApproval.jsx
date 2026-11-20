@@ -19,7 +19,7 @@ import { QA_APPROVAL, QA_REJECT_MIN, qaApprovalState, qaApproveVerdict, qaApprov
 import { tr } from '../utils/i18n';
 
 const fmtAt = (iso) => (iso ? new Date(iso).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' }) : '');
-export const sheetLabel = (s) => `${s.part_no || '—'} · ${s.work_date} ${s.shift === 'day' ? 'กะเช้า' : 'กะดึก'} รอบ ${s.round_no}`;
+export const sheetLabel = (s) => `${s.part_no || '—'} · ${s.work_date} ${s.shift === 'day' ? tr('กะเช้า') : tr('กะดึก')} ${tr("รอบ")} ${s.round_no}`;
 
 export default function QaSheetApproval({ sheet, onChanged }) {
   const { role, fullName, position: myPosition, isSharedAccount } = useContext(UserContext);
@@ -58,7 +58,7 @@ export default function QaSheetApproval({ sheet, onChanged }) {
     const res = await supabase.from('qa_inspection_sheets').update(patch)
       .eq('id', sheet.id).eq('approval_status', 'pending').select('*');
     setBusy(false);
-    if (!checkWriteRows(res, label, { zeroMsg: `${label}ไม่สำเร็จ — ใบนี้อาจถูกอนุมัติ/ตีกลับไปแล้ว หรือไม่มีสิทธิ์แก้ใบตรวจ` })) return null;
+    if (!checkWriteRows(res, label, { zeroMsg: `${label}${tr("ไม่สำเร็จ — ใบนี้อาจถูกอนุมัติ/ตีกลับไปแล้ว หรือไม่มีสิทธิ์แก้ใบตรวจ")}` })) return null;
     return res.data?.[0] || null;
   };
 
@@ -74,19 +74,19 @@ export default function QaSheetApproval({ sheet, onChanged }) {
     toast.success('อนุมัติใบตรวจแล้ว');
     if (row.created_by_uid && row.created_by_uid !== myUid) {
       createNotification(row.created_by_uid, { title: 'ใบตรวจ QA ได้รับการอนุมัติ', body: sheetLabel(row), type: 'success', refTable: 'qa_inspection_sheets', refId: row.id, link: `/qa?tab=sheet&sheet=${row.id}` })
-        .catch(e => toast.info(`อนุมัติแล้ว แต่แจ้งคนตรวจไม่สำเร็จ: ${e.message}`));
+        .catch(e => toast.info(`${tr("อนุมัติแล้ว แต่แจ้งคนตรวจไม่สำเร็จ")}: ${e.message}`));
     }
     onChanged?.(row);
   };
 
   const reject = async () => {
-    if (!qaRejectReasonValid(reason)) { toast.error(`ต้องพิมพ์เหตุผลอย่างน้อย ${QA_REJECT_MIN} ตัวอักษร`); return; }
+    if (!qaRejectReasonValid(reason)) { toast.error(`${tr("ต้องพิมพ์เหตุผลอย่างน้อย")} ${QA_REJECT_MIN} ${tr("ตัวอักษร")}`); return; }
     const row = await write({ approval_status: 'rejected', approved_by_uid: myUid, approved_by_name: fullName || null, approved_at: new Date().toISOString(), reject_reason: reason.trim() }, 'ตีกลับใบตรวจ');
     if (!row) return;
     toast.success('ตีกลับใบตรวจแล้ว');
     if (row.created_by_uid && row.created_by_uid !== myUid) {
       createNotification(row.created_by_uid, { title: 'ใบตรวจ QA ถูกตีกลับ', body: `${sheetLabel(row)} — ${row.reject_reason}`, type: 'error', refTable: 'qa_inspection_sheets', refId: row.id, link: `/qa?tab=sheet&sheet=${row.id}` })
-        .catch(e => toast.info(`ตีกลับแล้ว แต่แจ้งคนตรวจไม่สำเร็จ: ${e.message}`));
+        .catch(e => toast.info(`${tr("ตีกลับแล้ว แต่แจ้งคนตรวจไม่สำเร็จ")}: ${e.message}`));
     }
     onChanged?.(row);
   };

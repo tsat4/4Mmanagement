@@ -456,7 +456,7 @@ export default function LineOeeBoard() {
           {/* แถว 1: Overall + เทรนด์ */}
           <div style={rowSt(1.15)}>
             <div style={{ ...card, flex: tv ? '0 0 380px' : '0 0 250px', display: 'flex', flexDirection: 'column' }}>
-              <div style={capSt}>Overall OEE ({DAYS_KPI} วัน)</div>
+              <div style={capSt}>Overall OEE ({DAYS_KPI} {tr("วัน")})</div>
               <div style={{ fontSize: tv ? 108 : 'clamp(44px,4.5vw,62px)', fontWeight: 900, lineHeight: 1.1, fontVariantNumeric: 'tabular-nums',
                 color: C.overall == null ? 'var(--muted)' : C.overall >= C.tgt ? 'var(--green)' : C.overall >= C.tgt - 10 ? 'var(--amber)' : 'var(--red)' }}>
                 {C.overall == null ? '—' : `${C.overall.toFixed(1)}%`}
@@ -504,7 +504,7 @@ export default function LineOeeBoard() {
                   <div style={{ fontSize: T(11.5, 22), color: tv ? 'var(--text2)' : 'var(--muted)', marginTop: 4 }}>
                     {C.liveNow?.oee != null ? '🟢 กำลังผลิต · OEE กะนี้' : C.liveNow?.noCt ? '⚠ ยังไม่ตั้ง CT — คำนวณไม่ได้' : '🟢 กำลังผลิต · ยังประเมินไม่ได้'}
                     {C.liveLine && C.liveLine !== line ? ` · ${C.liveLine}` : ''}
-                    {C.liveMore > 0 ? ` (+${C.liveMore} ไลน์เปิดอยู่)` : ''}
+                    {C.liveMore > 0 ? ` (+${C.liveMore} ${tr("ไลน์เปิดอยู่")})` : ''}
                   </div>
                   {/* ที่มาของเลข — 100% ต้องอธิบายได้ว่ามาจากขาไหน */}
                   {C.liveNow?.oee != null && (
@@ -514,7 +514,7 @@ export default function LineOeeBoard() {
                   )}
                   {C.liveNow?.pOver && (
                     <div style={{ fontSize: T(11, 20), color: 'var(--amber)', fontWeight: 700, marginTop: 4, lineHeight: 1.5 }}>
-                      ⚠ %P คิดได้ {C.liveNow.pRawPct}% (ถูกตัดเหลือ 100) — งานที่บันทึกใช้เวลามากกว่าเวลาที่เครื่องมี
+                      ⚠ %P {tr("คิดได้")} {C.liveNow.pRawPct}% ({tr("ถูกตัดเหลือ 100) — งานที่บันทึกใช้เวลามากกว่าเวลาที่เครื่องมี")}
                       <span style={{ fontWeight: 400 }}> · เช็คยอดที่ลง / เวลาเปิดใบ / CT ในทะเบียน</span>
                     </div>
                   )}
@@ -532,7 +532,7 @@ export default function LineOeeBoard() {
               )}
             </div>
             <div style={{ ...card, flex: 1, minWidth: tv ? 0 : 'min(380px, 100%)' }}>
-              <div style={capSt}>{tv ? `OEE Trend รายวัน (${DAYS_TREND} วัน)` : `OEE Trend รายวัน (${DAYS_TREND} วัน · เฉลี่ยถ่วงเวลารับภาระ)`}</div>
+              <div style={capSt}>{tv ? `OEE Trend ${tr("รายวัน")} (${DAYS_TREND} ${tr("วัน")})` : `OEE Trend ${tr("รายวัน")} (${DAYS_TREND} ${tr("วัน · เฉลี่ยถ่วงเวลารับภาระ")})`}</div>
               <div style={tv ? { flex: 1, minHeight: 0 } : undefined}>
               <ResponsiveContainer width="100%" height={tv ? '100%' : 168}>
                 <AreaChart data={C.trend} margin={{ top: 8, left: 4, right: 8, bottom: 0 }}>
@@ -556,39 +556,39 @@ export default function LineOeeBoard() {
           {/* แถว 2: A / P / Q + ที่มาตัวเลข (กางให้เห็นตามกฎ "ตัวเลขต้องกางที่มา") */}
           <div style={rowSt(0)}>
             {apqCard('Availability', 'A', C.A, 'good', [
-              ['เวลารับภาระ (กะ − หยุดในแผน)', `${hrs(C.loadMin)} ชม.`],
-              ['เวลาเดินเครื่อง', `${hrs(C.runMin)} ชม.`, undefined, true],
-              ['หยุดนอกแผน', `${hrs(C.unplMin)} ชม.`, C.unplMin > 0 ? 'var(--red)' : undefined, true],
-              ['หยุดตามแผน/พัก', `${hrs(C.plMin)} ชม.`],
+              ['เวลารับภาระ (กะ − หยุดในแผน)', `${hrs(C.loadMin)} ${tr("ชม.")}`],
+              ['เวลาเดินเครื่อง', `${hrs(C.runMin)} ${tr("ชม.")}`, undefined, true],
+              ['หยุดนอกแผน', `${hrs(C.unplMin)} ${tr("ชม.")}`, C.unplMin > 0 ? 'var(--red)' : undefined, true],
+              ['หยุดตามแผน/พัก', `${hrs(C.plMin)} ${tr("ชม.")}`],
             ])}
             {apqCard('Performance', 'P', C.P, 'info', [
-              ['ผลิตจริง', `${nf(C.produced)} ชิ้น`, undefined, true],
-              ['อัตราจริง', C.runMin > 0 ? `${nf(C.produced / (C.runMin / 60), 1)} ชิ้น/ชม.` : '—', undefined, true],
-              ['เทียบมาตรฐาน (CT)', C.P == null ? 'ยังคำนวณไม่ได้' : `${C.P.toFixed(1)}% ของความเร็วมาตรฐาน`],
+              ['ผลิตจริง', `${nf(C.produced)} ${tr("ชิ้น")}`, undefined, true],
+              ['อัตราจริง', C.runMin > 0 ? `${nf(C.produced / (C.runMin / 60), 1)} ${tr("ชิ้น/ชม.")}` : '—', undefined, true],
+              ['เทียบมาตรฐาน (CT)', C.P == null ? 'ยังคำนวณไม่ได้' : `${C.P.toFixed(1)}% ${tr("ของความเร็วมาตรฐาน")}`],
             ])}
             {apqCard('Quality', 'Q', C.Q, 'none', [
-              ['ผลิตทั้งหมด (ดี+เสีย)', `${nf(C.produced + C.ngTotal)} ชิ้น`],
-              ['ของดี (ยอดสแกน)', `${nf(C.produced)} ชิ้น`, undefined, true],
-              ['ของเสีย (ไม่รวมงานทดลอง)', `${nf(C.ngTotal)} ชิ้น`, C.ngTotal > 0 ? 'var(--red)' : undefined, true],
+              ['ผลิตทั้งหมด (ดี+เสีย)', `${nf(C.produced + C.ngTotal)} ${tr("ชิ้น")}`],
+              ['ของดี (ยอดสแกน)', `${nf(C.produced)} ${tr("ชิ้น")}`, undefined, true],
+              ['ของเสีย (ไม่รวมงานทดลอง)', `${nf(C.ngTotal)} ${tr("ชิ้น")}`, C.ngTotal > 0 ? 'var(--red)' : undefined, true],
             ])}
           </div>
 
           {/* แถว 3: Pareto + Alarm history */}
           <div style={rowSt(1.5)}>
-            {barChart(`Alarm Top 6 (นาที · ${DAYS_KPI} วัน)`, C.dtTop6, 'var(--amber)',
-                      `เฉพาะหยุดนอกแผน — หยุดตามแผนไม่ใช่ loss${C.dtTrash?.vague
-                        ? ` · ไม่ได้ระบุสาเหตุ ${C.dtTrash.vague} ใบ (${
-                          C.dtTrash.guessed ? `🔎 เดาจากคำ ${C.dtTrash.guessed} · ` : ''}แตกตามเครื่อง${
-                          C.dtTrash.noMachine ? ` · ${C.dtTrash.noMachine} ใบไม่กรอกเครื่อง = ชี้เป้าไม่ได้` : ''})` : ''}`,
+            {barChart(`Alarm Top 6 (${tr("นาที")} · ${DAYS_KPI} ${tr("วัน")})`, C.dtTop6, 'var(--amber)',
+                      `${tr("เฉพาะหยุดนอกแผน — หยุดตามแผนไม่ใช่")} loss${C.dtTrash?.vague
+                        ? ` · ${tr("ไม่ได้ระบุสาเหตุ")} ${C.dtTrash.vague} ${tr("ใบ")} (${
+                          C.dtTrash.guessed ? `🔎 ${tr("เดาจากคำ")} ${C.dtTrash.guessed} · ` : ''}${tr("แตกตามเครื่อง")}${
+                          C.dtTrash.noMachine ? ` · ${C.dtTrash.noMachine} ${tr("ใบไม่กรอกเครื่อง = ชี้เป้าไม่ได้")}` : ''})` : ''}`,
                       // จอประชุม: เก็บแค่เรื่องที่ทำให้แท่งเชื่อไม่ได้ (ใบไม่ระบุสาเหตุ) — ห้ามหายเงียบ
-                      C.dtTrash?.vague ? `🗑️ ไม่ระบุสาเหตุ ${C.dtTrash.vague} ใบ` : null)}
-            {barChart(`Defect Top 6 (ชิ้น · ${DAYS_KPI} วัน)`, C.defTop6, 'var(--red)', 'รวมทุกรายการ (🧪 = งานทดลอง ไม่ถูกนับใน %Q)')}
+                      C.dtTrash?.vague ? `🗑️ ${tr("ไม่ระบุสาเหตุ")} ${C.dtTrash.vague} ${tr("ใบ")}` : null)}
+            {barChart(`Defect Top 6 (${tr("ชิ้น")} · ${DAYS_KPI} ${tr("วัน")})`, C.defTop6, 'var(--red)', 'รวมทุกรายการ (🧪 = งานทดลอง ไม่ถูกนับใน %Q)')}
             <div style={{ ...card, flex: 1.2, minWidth: tv ? 0 : 340, ...(tv ? { overflow: 'hidden' } : {}) }}>
               <div style={capSt}>{tr('Alarm History (ล่าสุด)')}</div>
               {/* ห้ามซ่อน — แถวที่ลืมปิดทำให้ %A ของกะนั้นสูงกว่าจริง ต้องมีคนไปตามปิด */}
               {C.forgottenDt > 0 && (
                 <div style={{ fontSize: T(11, 20), color: 'var(--amber)', fontWeight: 700, marginTop: 2 }}>
-                  ⚠️ ไม่ได้ปิดรายการ {C.forgottenDt} ใบ (กะปิดไปแล้ว) — %A ของกะนั้นสูงกว่าจริง
+                  ⚠️ {tr("ไม่ได้ปิดรายการ")} {C.forgottenDt} {tr("ใบ (กะปิดไปแล้ว) — %A ของกะนั้นสูงกว่าจริง")}
                 </div>
               )}
               {!C.history.length ? <div style={{ fontSize: T(12.5, 24), color: 'var(--muted)', padding: '26px 0', textAlign: 'center' }}>{tr('ไม่มีรายการหยุดในช่วงนี้')}</div> : (
@@ -626,7 +626,7 @@ export default function LineOeeBoard() {
                             /* 🔴 กะปิดแล้วแต่แถวยังเปิดค้าง = คนลืมปิดรายการ — บอกตรงๆ ห้ามแปลงเป็น
                                "ยังหยุดอยู่" (กระพริบค้างเป็นเดือน) และห้ามแปลงเป็น "กลับมาแล้ว" (ไม่มีใครไปตามปิด) */
                             : kind === 'forgotten'
-                              ? <b style={{ color: meta.color }} title={`กะ ${d2._sessStatus === 'closed' ? 'ปิดแล้ว' : d2._sessStatus} แต่รายการนี้ยังไม่ถูกปิด — นาทีที่หยุดไม่ได้ถูกหักใน %A ของกะนั้น`}>
+                              ? <b style={{ color: meta.color }} title={`${tr("กะ")} ${d2._sessStatus === 'closed' ? tr('ปิดแล้ว') : d2._sessStatus} ${tr("แต่รายการนี้ยังไม่ถูกปิด — นาทีที่หยุดไม่ได้ถูกหักใน %A ของกะนั้น")}`}>
                                   {meta.icon} {tv ? tr(meta.short) : meta.text}
                                 </b>
                               : <span style={{ color: 'var(--green)' }}>{tv ? tr('✓ กลับมา') : tr('✓ กลับมาแล้ว')}</span>}
@@ -652,12 +652,12 @@ export default function LineOeeBoard() {
               </b>
             ) : C.hasOpen ? (
               /* %P ถูก cap = เลขไม่น่าเชื่อ ⇒ แถบท้ายจอต้องเตือนเหมือนการ์ดบน (ห้ามเขียวสนิท) */
-              <b style={{ color: C.liveNow?.pOver ? 'var(--amber)' : 'var(--green)', fontSize: T(14, 28) }}>▶ {line} {tr('กำลังผลิต')}{C.liveNow?.oee != null ? ` · OEE กะนี้ (สด) ${Math.round(C.liveNow.oee)}%` : C.liveNow?.noCt ? ' · ⚠ ยังไม่ตั้ง CT — คำนวณ P ไม่ได้' : ''}{C.liveNow?.pOver ? ` · ⚠ %P คิดได้ ${C.liveNow.pRawPct}% ถูกตัดเหลือ 100` : ''}</b>
+              <b style={{ color: C.liveNow?.pOver ? 'var(--amber)' : 'var(--green)', fontSize: T(14, 28) }}>▶ {line} {tr('กำลังผลิต')}{C.liveNow?.oee != null ? ` · OEE ${tr("กะนี้ (สด")}) ${Math.round(C.liveNow.oee)}%` : C.liveNow?.noCt ? ' · ⚠ ยังไม่ตั้ง CT — คำนวณ P ไม่ได้' : ''}{C.liveNow?.pOver ? ` · ⚠ %P ${tr("คิดได้")} ${C.liveNow.pRawPct}% ${tr("ถูกตัดเหลือ")} 100` : ''}</b>
             ) : (
               <b style={{ color: 'var(--muted)', fontSize: T(14, 28) }}>⏸ {line} {tr('ยังไม่เปิดกะ')}</b>
             )}
             <span className="tv-hide" style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--muted)' }}>
-              จาก {C.kpiN} {tr('กะ · สูตรชุดเดียวกับ Daily Report/OEE Analytics · อัพเดตทุก')} {Math.round(RATE.BOARD / 60000)} นาที
+              {tr("จาก")} {C.kpiN} {tr('กะ · สูตรชุดเดียวกับ Daily Report/OEE Analytics · อัพเดตทุก')} {Math.round(RATE.BOARD / 60000)} {tr("นาที")}
             </span>
           </div>
         </>

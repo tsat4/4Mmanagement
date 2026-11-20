@@ -42,7 +42,7 @@ export default function AskBot() {
     let ans
     /* "กะนี้" ตัดสินจากนาฬิกาตอนกดส่ง — คู่กับวันทำงาน getWorkDate() (กะดึกหลังเที่ยงคืน = วันก่อนหน้า) */
     try { ans = await answerQuestion(s, ctx, getWorkDate(), forced, { shiftNow: getCurrentShift() }) }
-    catch (e) { ans = { text: `⚠️ ตอบไม่สำเร็จ — ${String(e?.message || e).slice(0, 120)}` } }
+    catch (e) { ans = { text: `⚠️ ${tr("ตอบไม่สำเร็จ")} — ${String(e?.message || e).slice(0, 120)}` } }
     /* ตอบไม่ได้ = เก็บคำถามไว้ดูว่าหน้างานพิมพ์อะไรจริง (ไม่รอ · ไม่กวนคนถาม) */
     if (ans?.unanswered) logUnanswered(s, ans.unanswered, ctx.role)
     if (!alive.current) return

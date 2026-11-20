@@ -146,7 +146,7 @@ export default function FixtureRegistry() {
     if (kd.data?.length) setKinds(kd.data);
     setAllPoints(fp.data || []);
     setImgJigIds(new Set((ji.data || []).map(r => r.jig_id)));
-    setDataWarn(warn.length ? `โหลดไม่สำเร็จ: ${warn.join(' · ')} — ตัวเลขบางส่วนอาจไม่ครบ` : '');
+    setDataWarn(warn.length ? `${tr("โหลดไม่สำเร็จ")}: ${warn.join(' · ')} — ${tr("ตัวเลขบางส่วนอาจไม่ครบ")}` : '');
     setLoading(false);
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -219,7 +219,7 @@ export default function FixtureRegistry() {
     if (!armPoint) return;
     const imageId = frames[frameIdx]?._key ?? null;
     const res = await saveShimPointPin(armPoint, { x, y, imageId }, fullName);
-    if (!res.ok) return toast.error(`ปักหมุดไม่สำเร็จ: ${res.error}`);
+    if (!res.ok) return toast.error(`${tr("ปักหมุดไม่สำเร็จ")}: ${res.error}`);
     toast.success('ปักหมุดแล้ว');
     setArmPoint('');
     load();
@@ -227,7 +227,7 @@ export default function FixtureRegistry() {
   const removePin = async (pid) => {
     if (!await askConfirm('ถอนหมุดของจุดนี้ออกจากรูป? (ข้อมูลชิมไม่หาย)')) return;
     const res = await saveShimPointPin(pid, null, fullName);
-    if (!res.ok) return toast.error(`ถอนหมุดไม่สำเร็จ: ${res.error}`);
+    if (!res.ok) return toast.error(`${tr("ถอนหมุดไม่สำเร็จ")}: ${res.error}`);
     load();
   };
 
@@ -250,7 +250,7 @@ export default function FixtureRegistry() {
       );
       if (dead) return;
       if (error) {
-        setShot({ shots: null, assumed: false, note: `นับ shot ไม่ได้: ${error}` });
+        setShot({ shots: null, assumed: false, note: `${tr("นับ shot ไม่ได้")}: ${error}` });
         return;
       }
       const pieces = rows.reduce((s, o) => s + Number(o.qty_ok ?? o.qty ?? 0), 0);
@@ -295,8 +295,8 @@ export default function FixtureRegistry() {
     const { data, error } = await q2;
     if (error) {
       return toast.error(error.code === '23505'
-        ? `เลขจุด "${no}" ซ้ำกับจุดที่มีอยู่แล้วในฟิกเจอร์นี้`
-        : `บันทึกไม่สำเร็จ: ${error.message}`);
+        ? `${tr("เลขจุด")} "${no}" ${tr("ซ้ำกับจุดที่มีอยู่แล้วในฟิกเจอร์นี้")}`
+        : `${tr("บันทึกไม่สำเร็จ")}: ${error.message}`);
     }
     if (!data?.length) return toast.error('บันทึกไม่สำเร็จ — ไม่มีแถวถูกเขียน');
     toast.success('บันทึกจุดแล้ว');
@@ -334,8 +334,8 @@ export default function FixtureRegistry() {
     }
     if (!rows.length) return toast.info('มีจุดเหล่านี้อยู่แล้วทั้งหมด');
     const { data, error } = await supabaseDR.from('fixture_points').insert(rows).select('id');
-    if (error) return toast.error(`สร้างไม่สำเร็จ: ${error.message}`);
-    toast.success(`สร้าง ${data?.length ?? 0} จุด — อย่าลืมกรอก baseline ของแต่ละจุด`);
+    if (error) return toast.error(`${tr("สร้างไม่สำเร็จ")}: ${error.message}`);
+    toast.success(`${tr("สร้าง")} ${data?.length ?? 0} ${tr("จุด — อย่าลืมกรอก baseline ของแต่ละจุด")}`);
     setTpl(null);
     load();
   };
@@ -345,7 +345,7 @@ export default function FixtureRegistry() {
     const others = fixtures.filter(f => f.id !== fx.id && allPoints.some(p => p.machine_id === f.id));
     if (!others.length) return toast.error('ยังไม่มีฟิกเจอร์ตัวอื่นที่ลงจุดไว้');
     const pick = window.prompt(
-      `คัดลอกชุดจุดจากฟิกเจอร์ไหน? (พิมพ์เลขเครื่อง)\n\n${others.map(o => o.machine_no).join(', ')}`,
+      `${tr("คัดลอกชุดจุดจากฟิกเจอร์ไหน? (พิมพ์เลขเครื่อง")})\n\n${others.map(o => o.machine_no).join(', ')}`,
       others[0].machine_no,
     );
     const src = others.find(o => o.machine_no === String(pick || '').trim());
@@ -360,17 +360,17 @@ export default function FixtureRegistry() {
     }));
     if (!rows.length) return toast.info('ไม่มีจุดใหม่ให้คัดลอก');
     const { data, error } = await supabaseDR.from('fixture_points').insert(rows).select('id');
-    if (error) return toast.error(`คัดลอกไม่สำเร็จ: ${error.message}`);
-    toast.success(`คัดลอก ${data?.length ?? 0} จุด (ไม่รวม baseline — ต้องวัดของตัวเอง)`);
+    if (error) return toast.error(`${tr("คัดลอกไม่สำเร็จ")}: ${error.message}`);
+    toast.success(`${tr("คัดลอก")} ${data?.length ?? 0} ${tr("จุด (ไม่รวม baseline — ต้องวัดของตัวเอง")})`);
     load();
   };
 
   const removePoint = async (p) => {
-    if (!await askConfirm(`ปิดใช้งานจุด ${p.point_no}?\nประวัติชิมยังอยู่ครบ`)) return;
+    if (!await askConfirm(`${tr("ปิดใช้งานจุด")} ${p.point_no}?\n${tr("ประวัติชิมยังอยู่ครบ")}`)) return;
     // ⚠️ RLS ปฏิเสธ UPDATE = 0 แถว ไม่มี error (กฎเหล็กข้อ 2) → ต้อง .select() แล้วนับแถว
     const { data, error } = await supabaseDR.from('fixture_points')
       .update({ is_active: false, updated_by_name: fullName || null }).eq('id', p.id).select('id');
-    if (error) return toast.error(`ลบไม่สำเร็จ: ${error.message}`);
+    if (error) return toast.error(`${tr("ลบไม่สำเร็จ")}: ${error.message}`);
     if (!data?.length) return toast.error('ลบไม่สำเร็จ — ไม่มีแถวถูกเขียน (สิทธิ์ไม่พอ?)');
     toast.success('ปิดใช้งานจุดแล้ว');
     load();
@@ -432,7 +432,7 @@ export default function FixtureRegistry() {
             <div style={{ ...card, marginBottom: 12, display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 12, color: 'var(--muted)' }}>
               <span>{tr('พาร์ทที่จับ:')} {shadow?.part_no ? <b style={{ color: 'var(--text)' }}>{shadow.part_no}</b> : <Blank />}</span>
               <span>
-                shot สะสม: {shot.shots == null
+                shot {tr("สะสม")}: {shot.shots == null
                   ? <span style={{ color: 'var(--amber)', fontWeight: 700 }}>{tr('ยังนับไม่ได้')}</span>
                   : <b style={{ color: 'var(--text)' }}>{shot.shots.toLocaleString()}</b>}
                 {shot.note && <span style={{ marginLeft: 6 }}>· {shot.note}</span>}
@@ -469,7 +469,7 @@ export default function FixtureRegistry() {
           {!statusRows.length ? (
             <div style={{ background: 'var(--green-dim)', border: '1px solid var(--green-line)',
                           borderRadius: 'var(--r-md)', padding: '14px 16px', fontSize: 13 }}>
-              ✅ ไม่มีจุดที่ต้องดูแลตอนนี้
+              ✅ {tr("ไม่มีจุดที่ต้องดูแลตอนนี้")}
               {!allPoints.length && (
                 <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 6 }}>
                   (ยังไม่มีจุดในทะเบียนเลย — เริ่มที่แท็บ 📋 ทะเบียนจุด)
@@ -515,7 +515,7 @@ export default function FixtureRegistry() {
         </div>
       ) : !fx ? (
         <div style={{ fontSize: 13, color: 'var(--muted)' }}>
-          เลือกจิ๊ก/ฟิกเจอร์ก่อน
+          {tr("เลือกจิ๊ก/ฟิกเจอร์ก่อน")}
           {!fixtures.length && (
             <div data-warn="1" style={{ marginTop: 8, color: 'var(--amber)' }}>
               ⚠️ ยังไม่มีอุปกรณ์ที่เป็นชนิด “จิ๊ก / ฟิกเจอร์” ในขอบเขตของคุณ —
@@ -565,10 +565,10 @@ export default function FixtureRegistry() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <b style={{ fontSize: 13 }}>{tr('ตำแหน่งจุดชิมบนรูปเครื่อง')}</b>
                   <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-                    ปักแล้ว {points.filter(p => pointPin(p, cpById)).length}/{points.length} จุด · รูปชุดเดียวกับใบตรวจ PM — เปลี่ยนรูปที่ PM Setup
+                    {tr("ปักแล้ว")} {points.filter(p => pointPin(p, cpById)).length}/{points.length} {tr("จุด · รูปชุดเดียวกับใบตรวจ PM — เปลี่ยนรูปที่")} PM Setup
                   </span>
                   {armPoint && <span style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 700 }}>
-                    กำลังวาง {points.find(p => p.id === armPoint)?.point_no} {tr('— คลิกบนรูป ·')} <span onClick={() => setArmPoint('')} style={{ cursor: 'pointer', textDecoration: 'underline' }}>{tr('ยกเลิก')}</span>
+                    {tr("กำลังวาง")} {points.find(p => p.id === armPoint)?.point_no} {tr('— คลิกบนรูป ·')} <span onClick={() => setArmPoint('')} style={{ cursor: 'pointer', textDecoration: 'underline' }}>{tr('ยกเลิก')}</span>
                   </span>}
                 </div>
                 <SpinAnnotator readOnlyFrames
@@ -585,8 +585,7 @@ export default function FixtureRegistry() {
               </div>
             ) : (
               <div style={{ background: 'var(--amber-dim)', border: '1px solid var(--amber-line)', borderRadius: 'var(--r-md)', padding: '10px 14px', fontSize: 12.5, lineHeight: 1.6 }}>
-                ยังไม่มีรูปเครื่องของ <b>{fx.machine_no}</b> จึงยังปักตำแหน่งจุดบนรูปไม่ได้ —
-                อัปโหลดรูป (หลายมุมได้) ที่ <Link to="/pm?tab=setup" style={{ color: 'var(--accent)', fontWeight: 700 }}>{tr('PM Setup → ⚙️ ตั้งค่าจุดตรวจ')}</Link> แล้วกลับมาปักที่นี่
+                {tr("ยังไม่มีรูปเครื่องของ")} <b>{fx.machine_no}</b> {tr("จึงยังปักตำแหน่งจุดบนรูปไม่ได้ — อัปโหลดรูป (หลายมุมได้) ที่")} <Link to="/pm?tab=setup" style={{ color: 'var(--accent)', fontWeight: 700 }}>{tr('PM Setup → ⚙️ ตั้งค่าจุดตรวจ')}</Link> {tr("แล้วกลับมาปักที่นี่")}
                 {!shadow && <div style={{ marginTop: 4, color: 'var(--muted)' }}>{tr('(เครื่องนี้ยังไม่มีแถวลงทะเบียนอุปกรณ์ PM — สร้างที่ PM Setup ก่อน)')}</div>}
               </div>
             )
@@ -594,7 +593,7 @@ export default function FixtureRegistry() {
 
           {!points.length ? (
             <div style={{ fontSize: 13, color: 'var(--muted)' }}>
-              ยังไม่มีจุดในทะเบียนของฟิกเจอร์ตัวนี้
+              {tr("ยังไม่มีจุดในทะเบียนของฟิกเจอร์ตัวนี้")}
               {canManage && ' — กด “สร้างจากแม่แบบ” เพื่อเริ่มเร็วที่สุด'}
             </div>
           ) : (
@@ -620,7 +619,7 @@ export default function FixtureRegistry() {
                         <td style={{ padding: '7px 10px' }}>{kindMeta(p.kind_code).icon} {kindMeta(p.kind_code).label}</td>
                         <td style={{ padding: '7px 10px', whiteSpace: 'nowrap', fontSize: 11.5 }}>
                           {(() => { const pin = pointPin(p, cpById); return pin
-                            ? <span style={{ color: 'var(--blue)', fontWeight: 700 }} title={pin.source === 'checkpoint' ? tr('ยืมหมุดจากจุดตรวจ PM') : tr('หมุดของจุดนี้เอง')}>{pin.source === 'checkpoint' ? 'จาก PM' : `เฟรม ${Math.max(1, frames.findIndex(f => f._key === (pin.imageId ?? frames[0]?._key)) + 1)}`}</span>
+                            ? <span style={{ color: 'var(--blue)', fontWeight: 700 }} title={pin.source === 'checkpoint' ? tr('ยืมหมุดจากจุดตรวจ PM') : tr('หมุดของจุดนี้เอง')}>{pin.source === 'checkpoint' ? 'จาก PM' : `${tr("เฟรม")} ${Math.max(1, frames.findIndex(f => f._key === (pin.imageId ?? frames[0]?._key)) + 1)}`}</span>
                             : <span style={{ color: 'var(--muted)' }}>—</span>; })()}
                           {canManage && frames.length > 0 && (
                             <button onClick={() => setArmPoint(a => a === p.id ? '' : p.id)} title={tr('วางตำแหน่งบนรูป')}
@@ -720,7 +719,7 @@ export default function FixtureRegistry() {
           <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)',
                         padding: 18, width: 'min(620px,100%)', maxHeight: '90vh', overflow: 'auto' }}>
             <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 12 }}>
-              {editing.id ? `แก้ไขจุด ${editing.point_no}` : 'เพิ่มจุดใหม่'} · {fx?.machine_no}
+              {editing.id ? `${tr("แก้ไขจุด")} ${editing.point_no}` : 'เพิ่มจุดใหม่'} · {fx?.machine_no}
             </div>
             <div className="mgrid" style={{ display: 'grid', gap: 10,
                                             gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))' }}>

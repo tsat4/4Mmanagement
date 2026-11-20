@@ -31,8 +31,8 @@ const targetSummary = (rule) => {
   if (rule.can_mute === false) parts.push('🔒 ผู้ใช้ปิดเองไม่ได้')
   if (rule.inapp_match_section) parts.push('เฉพาะส่วนงานที่เกิดเหตุ')
   if (rule.inapp_scope_strict) parts.push('ผู้บริหารก็ถูกกรองตามส่วนงาน')
-  if (rule.inapp_sections?.length) parts.push(`ส่วนงาน: ${rule.inapp_sections.join(', ')}`)
-  if (rule.inapp_depts?.length) parts.push(`แผนก: ${rule.inapp_depts.join(', ')}`)
+  if (rule.inapp_sections?.length) parts.push(`${tr("ส่วนงาน")}: ${rule.inapp_sections.join(', ')}`)
+  if (rule.inapp_depts?.length) parts.push(`${tr("แผนก")}: ${rule.inapp_depts.join(', ')}`)
   return parts.length ? `● ${parts.join(' · ')}` : '○ ทุกส่วนงาน/ทุกแผนก'
 }
 
@@ -199,7 +199,7 @@ export default function NotificationConfig() {
     setBusy(null)
     if (error) return toast.error(error.message)
     setOpenMin(String(n))
-    toast.success(`ตั้งเกณฑ์แจ้งเตือนเครื่องเปิดค้าง = ${n} นาที`)
+    toast.success(`${tr("ตั้งเกณฑ์แจ้งเตือนเครื่องเปิดค้าง")} = ${n} ${tr("นาที")}`)
   }
 
   const saveToken = async () => {
@@ -252,7 +252,7 @@ export default function NotificationConfig() {
   }
 
   const deleteRoom = async (room) => {
-    if (!await askConfirm(`ลบห้อง "${room.name}" ?\n\nรายการแจ้งเตือนที่ชี้ห้องนี้จะกลายเป็น "ไม่ส่ง" จนกว่าจะเลือกห้องใหม่`)) return
+    if (!await askConfirm(`${tr("ลบห้อง")} "${room.name}" ?\n\n${tr("รายการแจ้งเตือนที่ชี้ห้องนี้จะกลายเป็น \"ไม่ส่ง\" จนกว่าจะเลือกห้องใหม่")}`)) return
     const { error } = await supabase.from('telegram_channels').delete().eq('id', room.id)
     if (error) return toast.error(error.message)
     setRooms(prev => prev.filter(r => r.id !== room.id))
@@ -273,7 +273,7 @@ export default function NotificationConfig() {
         body: { event: 'test_channel', chat_id: room.chat_id.trim() },
       })
       if (error) throw error
-      if (data?.sent) toast.success(`ส่งทดสอบไป "${room.name}" แล้ว — เช็คในกลุ่ม`)
+      if (data?.sent) toast.success(`${tr("ส่งทดสอบไป")} "${room.name}" ${tr("แล้ว — เช็คในกลุ่ม")}`)
       else toast.error(data?.reason || 'ส่งไม่สำเร็จ — ตรวจ chat_id / บอทอยู่ในกลุ่มหรือยัง')
     } catch (err) {
       toast.error(err.message || 'ส่งไม่สำเร็จ')
@@ -346,7 +346,7 @@ export default function NotificationConfig() {
       <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginBottom: 10 }}>Bot Token</div>
       <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 14, marginBottom: 26, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
         <div style={{ fontSize: 12, color: tokenStatus.is_set ? 'var(--accent)' : 'var(--accent2)', minWidth: 150 }}>
-          {tokenStatus.is_set ? `✅ ตั้งค่าแล้ว (••••${tokenStatus.last4 ?? ''})` : '⚠️ ยังไม่ได้ตั้ง token'}
+          {tokenStatus.is_set ? `✅ ${tr("ตั้งค่าแล้ว")} (••••${tokenStatus.last4 ?? ''})` : '⚠️ ยังไม่ได้ตั้ง token'}
         </div>
         {canSetToken ? (
           <>
@@ -434,7 +434,7 @@ export default function NotificationConfig() {
 
       {/* ── Rules ── */}
       <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>{tr('รายการแจ้งเตือน — เลือกว่าเรื่องไหนเข้าห้องไหน')}</div>
-      <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 10 }}>{tr('กดเลือกห้องได้')} <b>{tr('หลายห้อง')}</b> ต่อหนึ่งเรื่อง · ไม่เลือกห้องเลย = เข้ากลุ่มเดิม (fallback)</div>
+      <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 10 }}>{tr('กดเลือกห้องได้')} <b>{tr('หลายห้อง')}</b> {tr("ต่อหนึ่งเรื่อง · ไม่เลือกห้องเลย = เข้ากลุ่มเดิม")} (fallback)</div>
       {/* 📏 พับเป็นหมวด (2026-10-13 · ด่าน lengthsweep) — ฐานจริง 13/10: **65 เรื่อง × 8 ห้อง**
           ⇒ กางทุกหมวดพร้อมกัน = หน้ายาว ~12 เท่าของจอ หาเรื่องที่จะแก้ไม่เจอ (ไม่ใช่ของ mock)
           · หัวหมวดโชว์จำนวนเรื่องเสมอ · จำสถานะที่กด/พับไว้ใน localStorage (CollapseCard)
@@ -456,7 +456,7 @@ export default function NotificationConfig() {
                   <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', flex: '1 1 200px', minWidth: 150 }}>
                     <input type="checkbox" checked={rule.is_enabled} onChange={async e => {
                       // ยืนยันเฉพาะตอน "ปิด" การแจ้งเตือนทั้งหมวด (เปิดไม่ต้องถาม)
-                      if (!e.target.checked && !await askConfirm(`ปิดการแจ้งเตือน "${rule.label}" ?\n\nเรื่องนี้จะไม่ส่งเข้า Telegram จนกว่าจะเปิดใหม่`)) return
+                      if (!e.target.checked && !await askConfirm(`${tr("ปิดการแจ้งเตือน")} "${rule.label}" ?\n\n${tr("เรื่องนี้จะไม่ส่งเข้า Telegram จนกว่าจะเปิดใหม่")}`)) return
                       updateRule(rule.event_key, { is_enabled: e.target.checked })
                     }} style={{ flexShrink: 0 }} />
                     <span style={{ fontSize: 13, fontWeight: 600, color: rule.is_enabled ? 'var(--text)' : 'var(--muted)' }}>{tr(rule.label)}</span>
@@ -558,12 +558,9 @@ export default function NotificationConfig() {
                               <span>
                                 <b>{tr('ส่งถึงเจ้าของงานก่อน — ยิงตาม role เฉพาะตอนที่รายการบอกตัวคนไม่ได้')}</b>
                                 <div style={{ color: 'var(--muted)', fontSize: 11, marginTop: 2, lineHeight: 1.6 }}>
-                                  ไม่ติ๊ก = ยิงตาม role ที่เลือกไว้<b>{tr('ทุกครั้ง')}</b> แม้รายการนั้นจะรู้อยู่แล้วว่าใครเกี่ยว (พฤติกรรมเดิม) ·
-                                  ติ๊ก = ส่งให้<b>{tr('คนที่มีชื่ออยู่ในรายการนั้น')}</b> (ผู้แจ้ง / ผู้รับงาน / ผู้ตรวจ) ก่อน
-                                  แล้วจะยิงตาม role <b>{tr('ต่อเมื่อรายการไม่มีชื่อใครเลย')}</b> {tr('— ใบไม่มีทางเดินไปเงียบๆ')}
+                                  {tr("ไม่ติ๊ก = ยิงตาม role ที่เลือกไว้")}<b>{tr('ทุกครั้ง')}</b> {tr("แม้รายการนั้นจะรู้อยู่แล้วว่าใครเกี่ยว (พฤติกรรมเดิม) · ติ๊ก = ส่งให้")}<b>{tr('คนที่มีชื่ออยู่ในรายการนั้น')}</b> ({tr("ผู้แจ้ง / ผู้รับงาน / ผู้ตรวจ) ก่อน แล้วจะยิงตาม")} role <b>{tr('ต่อเมื่อรายการไม่มีชื่อใครเลย')}</b> {tr('— ใบไม่มีทางเดินไปเงียบๆ')}
                                   <div style={{ marginTop: 3 }}>
-                                    {tr('⚠️ เรื่องที่ระบบยัง')}<b>{tr('ไม่ได้ส่งชื่อเจ้าของงานมา')}</b> ติ๊กแล้วจะเหมือนเดิมทุกอย่าง (ไม่เสียหาย)
-                                    — ดูว่าเรื่องไหนส่งมาแล้วบ้างที่ <code>docs/modules/notifications-flood.md</code> §6
+                                    {tr('⚠️ เรื่องที่ระบบยัง')}<b>{tr('ไม่ได้ส่งชื่อเจ้าของงานมา')}</b> {tr("ติ๊กแล้วจะเหมือนเดิมทุกอย่าง (ไม่เสียหาย) — ดูว่าเรื่องไหนส่งมาแล้วบ้างที่")} <code>docs/modules/notifications-flood.md</code> §6
                                   </div>
                                 </div>
                               </span>
@@ -582,8 +579,7 @@ export default function NotificationConfig() {
                               <span>
                                 <b>{tr('ผู้ใช้ปิดแจ้งเตือนเรื่องนี้เองไม่ได้')}</b>
                                 <div style={{ color: 'var(--muted)', fontSize: 11, marginTop: 2, lineHeight: 1.6 }}>
-                                  ไม่ติ๊ก = ใครก็ปิดเรื่องนี้เองได้ที่ <b>{tr('เมนูโปรไฟล์ → 🔕 ตั้งค่าแจ้งเตือนของฉัน')}</b> (ค่าเริ่มต้น) ·
-                                  ติ๊ก = เด้งเสมอ แม้เขาจะกดปิด — ใช้กับ<b>{tr('คิวงานที่มีของรอคนกลุ่มนี้ลงมือ')}</b>
+                                  {tr("ไม่ติ๊ก = ใครก็ปิดเรื่องนี้เองได้ที่")} <b>{tr('เมนูโปรไฟล์ → 🔕 ตั้งค่าแจ้งเตือนของฉัน')}</b> ({tr("ค่าเริ่มต้น) · ติ๊ก = เด้งเสมอ แม้เขาจะกดปิด — ใช้กับ")}<b>{tr('คิวงานที่มีของรอคนกลุ่มนี้ลงมือ')}</b>
                                   {tr('(ใบรออนุมัติ · ใบซ่อมรอรับ · เรียกช่าง) ปิดแล้วงานค้างเงียบ')}
                                 </div>
                               </span>
@@ -722,9 +718,9 @@ export default function NotificationConfig() {
 
       <div style={{ marginTop: 24, background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 16, fontSize: 12, color: 'var(--text2)', lineHeight: 1.7 }}>
         <div style={{ fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>{tr('วิธีเอา chat_id ของกลุ่ม')}</div>
-        1. สร้างบอทที่ <b>@BotFather</b> → <code>/newbot</code> {tr('(บอทตัวเดียวใช้ได้ทุกห้อง — token เก็บเป็น secret ในระบบ)')}<br />
-        2. สร้างกลุ่มแต่ละเรื่อง แล้ว <b>{tr('add บอท')}</b> {tr('เข้ากลุ่ม (เป็นสมาชิกก็พอ)')}<br />
-        3. add <b>@getidsbot</b> {tr('เข้ากลุ่มชั่วคราว → บอก')} <code>Group ID: -100…</code> → copy ใส่ช่อง chat_id → บันทึก → ทดสอบ
+        1. {tr("สร้างบอทที่")} <b>@BotFather</b> → <code>/newbot</code> {tr('(บอทตัวเดียวใช้ได้ทุกห้อง — token เก็บเป็น secret ในระบบ)')}<br />
+        2. {tr("สร้างกลุ่มแต่ละเรื่อง แล้ว")} <b>{tr('add บอท')}</b> {tr('เข้ากลุ่ม (เป็นสมาชิกก็พอ)')}<br />
+        3. add <b>@getidsbot</b> {tr('เข้ากลุ่มชั่วคราว → บอก')} <code>Group ID: -100…</code> → copy {tr("ใส่ช่อง chat_id → บันทึก → ทดสอบ")}
       </div>
     </Page>
   )

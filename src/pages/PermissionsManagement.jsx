@@ -277,7 +277,7 @@ export default function PermissionsManagement() {
     const rank = g => { const i = NAV_GROUP_ORDER.indexOf(g); return i < 0 ? NAV_GROUP_ORDER.length : i; };
     return groups
       .sort((a, b) => rank(a.group) - rank(b.group))
-      .map(g => NAV_GROUP_ORDER.includes(g.group) ? g : { ...g, group: `⚠️ ${g.group} (หมวดไม่อยู่ในเมนู — แก้ group_name ใน permission_catalog)` });
+      .map(g => NAV_GROUP_ORDER.includes(g.group) ? g : { ...g, group: `⚠️ ${g.group} (${tr("หมวดไม่อยู่ในเมนู — แก้ group_name ใน")} permission_catalog)` });
   }, [catalog]);
 
   const toggle = async (permissionKey, role, current) => {
@@ -288,7 +288,7 @@ export default function PermissionsManagement() {
     if (!canManage) { toast.error('ไม่มีสิทธิ์แก้ตารางสิทธิ์ (ต้องมี permissions:manage)'); return; }
     // ยืนยันเฉพาะตอน "ปิดสิทธิ์" (current=true→false) — มีผลทุกเครื่องทันที กันแตะ matrix พลาด
     // (เปิดสิทธิ์ = additive ไม่ต้องถาม ให้แก้ matrix ลื่น)
-    if (current && !await askConfirm(`ปิดสิทธิ์ "${permissionKey}" ของ role "${role}" ?\n\nมีผลทุกเครื่องทันที — ผู้ใช้ role นี้จะเข้า/ทำสิ่งนี้ไม่ได้`)) return;
+    if (current && !await askConfirm(`${tr("ปิดสิทธิ์")} "${permissionKey}" ${tr("ของ")} role "${role}" ?\n\n${tr("มีผลทุกเครื่องทันที — ผู้ใช้ role นี้จะเข้า/ทำสิ่งนี้ไม่ได้")}`)) return;
     const cellId = `${role}:${permissionKey}`;
     setSaving(prev => ({ ...prev, [cellId]: true }));
     const nextVal = !current;
@@ -443,7 +443,7 @@ export default function PermissionsManagement() {
   if (loadErr) return (
     <Page>
       <div style={{ padding: 24, margin: 24, borderRadius: 'var(--r-md)', border: '1px solid var(--red-line)', background: 'var(--red-dim)', color: 'var(--red)', fontSize: 14 }}>
-        ⚠️ โหลดตารางสิทธิ์ไม่ครบ ({loadErr}) — ไม่แสดงตารางเพื่อกันการติ๊กทับค่าจริง ·{' '}
+        ⚠️ {tr("โหลดตารางสิทธิ์ไม่ครบ")} ({loadErr}) — {tr("ไม่แสดงตารางเพื่อกันการติ๊กทับค่าจริง")} ·{' '}
         <button onClick={load} style={{ padding: '4px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--red)', background: 'transparent', color: 'var(--red)', cursor: 'pointer', fontWeight: 700 }}>{tr('ลองใหม่')}</button>
       </div>
     </Page>
@@ -474,9 +474,9 @@ export default function PermissionsManagement() {
         ⚠️ <strong>{tr('Admin เข้าถึงได้ทุกอย่างเสมอ')}</strong> (ล็อกไว้ กันกรณีตั้งค่าผิดจนตัวเองเข้าไม่ได้) —
         การเปลี่ยนแปลงมีผลกับทุกเครื่องที่เปิดระบบอยู่ทันที (sync อัตโนมัติ)
         <div style={{ marginTop: 6 }}>
-          🛡️ <strong style={{ color: 'var(--amber)' }}>{tr('แอดมินหน่วยงาน')}</strong> = คอลัมน์พิเศษ (ไม่ใช่ role ที่เลือกให้ user) — เป็น "สิทธิ์เพิ่ม" ของคนที่ติ๊ก
+          🛡️ <strong style={{ color: 'var(--amber)' }}>{tr('แอดมินหน่วยงาน')}</strong> = {tr("คอลัมน์พิเศษ (ไม่ใช่ role ที่เลือกให้ user) — เป็น \"สิทธิ์เพิ่ม\" ของคนที่ติ๊ก")}
           <strong> "เป็นแอดมินหน่วยงาน"</strong> {tr('ในหน้าจัดการผู้ใช้ · คนนั้นได้')} <strong>{tr('role เดิม + action ที่ติ๊กในคอลัมน์นี้')}</strong>
-          เฉพาะในหน้าที่ role เดิมเข้าถึงได้ (จำกัด scope หน่วยงานตัวเองตามปกติ ไม่ใช่ admin ระบบ) · แนะนำตั้งเฉพาะแท็บ "สิทธิ์การทำงาน"
+          {tr("เฉพาะในหน้าที่ role เดิมเข้าถึงได้ (จำกัด scope หน่วยงานตัวเองตามปกติ ไม่ใช่ admin ระบบ) · แนะนำตั้งเฉพาะแท็บ \"สิทธิ์การทำงาน")}"
         </div>
       </div>
 
@@ -503,7 +503,7 @@ export default function PermissionsManagement() {
           <InfoMore label={tr('ระดับที่ล็อกช่องเซ็น MO')} size={11.5} style={{ padding: '9px 14px', borderTop: '1px solid var(--border)' }}>
             🪪 <b>{tr('ระดับที่ล็อกช่องเซ็น MO:')}</b>{' '}
             {POSITION_LEVELS.filter(l => l.rank >= 40).map(l => `${l.label} (${l.rank})`).join(' · ')}
-            {' '}— ช่องส่งมอบต้อง ≥40 · ผู้ตรวจสอบ/หัวหน้าช่าง ≥50 · อนุมัติ/ปิดค่าใช้จ่าย ≥60
+            {' '}— {tr("ช่องส่งมอบต้อง ≥40 · ผู้ตรวจสอบ/หัวหน้าช่าง ≥50 · อนุมัติ/ปิดค่าใช้จ่าย")} ≥60
           </InfoMore>
         </div>
 
@@ -524,14 +524,14 @@ export default function PermissionsManagement() {
           </label>
           <span className="spacer" />
           <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-            {matrixStat.rowsN.toLocaleString()} {tr('ฟังก์ชัน ·')} {matrixCols.length} ชุดสิทธิ์
+            {matrixStat.rowsN.toLocaleString()} {tr('ฟังก์ชัน ·')} {matrixCols.length} {tr("ชุดสิทธิ์")}
           </span>
         </FilterBar>
 
         <div style={{ ...s.section, padding: '10px 14px', fontSize: 11.5, color: 'var(--text2)', lineHeight: 1.7 }}>
-          <b>{tr('วิธีอ่านช่อง:')}</b> <b style={{ color: 'var(--accent)' }}>✓</b> = ทำได้ ·
-          <span style={{ color: 'var(--muted)' }}> · </span> = ปิดไว้ ·
-          <b style={{ color: 'var(--amber)' }}> – </b> = <b>{tr('ยังไม่เคยตั้งค่าในทะเบียน')}</b> (ไม่ใช่ "ปิดไว้ตั้งใจ" — ระบบถือว่าไม่ได้สิทธิ์ แต่ถ้าเป็นฟังก์ชันที่ควรได้ ต้องติ๊กให้ชัด)
+          <b>{tr('วิธีอ่านช่อง:')}</b> <b style={{ color: 'var(--accent)' }}>✓</b> = {tr("ทำได้")} ·
+          <span style={{ color: 'var(--muted)' }}> · </span> = {tr("ปิดไว้")} ·
+          <b style={{ color: 'var(--amber)' }}> – </b> = <b>{tr('ยังไม่เคยตั้งค่าในทะเบียน')}</b> ({tr("ไม่ใช่ \"ปิดไว้ตั้งใจ\" — ระบบถือว่าไม่ได้สิทธิ์ แต่ถ้าเป็นฟังก์ชันที่ควรได้ ต้องติ๊กให้ชัด")})
           {canManage && <> · <b>{tr('คลิกที่ช่องเพื่อสลับค่าได้เลย')}</b> {tr('(ปิดสิทธิ์จะถามยืนยันก่อน · มีผลทุกเครื่องทันที)')}</>}
           {matrixStat.unseeded > 0 && (
             <div style={{ marginTop: 4, color: 'var(--amber)' }}>
@@ -561,7 +561,7 @@ export default function PermissionsManagement() {
                       <th key={r.value} style={{ textAlign: 'center', padding: '8px 4px', minWidth: 82 }} title={`${r.value}${r.desc ? ' — ' + r.desc : ''}`}>
                         <div style={{ fontSize: 11, fontWeight: 800, color: r.color }}>{r.icon} {tr(r.label)}</div>
                         <div style={{ fontSize: 11, fontWeight: 400, color: 'var(--muted)' }}>
-                          {r.bucket ? 'ธงเสริม' : n == null ? '—' : n > 0 ? `${n} คน` : 'ยังไม่มีใครถือ'}
+                          {r.bucket ? 'ธงเสริม' : n == null ? '—' : n > 0 ? `${n} ${tr("คน")}` : 'ยังไม่มีใครถือ'}
                         </div>
                       </th>
                     );
@@ -601,7 +601,7 @@ export default function PermissionsManagement() {
                                 <button type="button" className="tbtn" disabled={isSaving}
                                   onClick={() => toggle(it.key, r.value, raw === true)}
                                   aria-label={`${it.label} · ${r.label}: ${state}`}
-                                  title={`${state} — คลิกเพื่อ${raw === true ? 'ปิดสิทธิ์' : 'เปิดสิทธิ์'}`}
+                                  title={`${state} — ${tr("คลิกเพื่อ")}${raw === true ? tr('ปิดสิทธิ์') : tr('เปิดสิทธิ์')}`}
                                   style={{ ...glyph, width: '100%', minHeight: 32, padding: '5px 4px', background: 'transparent',
                                     border: 'none', borderRadius: 'var(--r-sm)', cursor: isSaving ? 'wait' : 'pointer', opacity: isSaving ? 0.4 : 1 }}>
                                   {isSaving ? '…' : txt}
@@ -639,8 +639,7 @@ export default function PermissionsManagement() {
         <>
           <div style={{ ...s.section, fontSize: 12, lineHeight: 1.6, borderColor: 'rgba(245,154,63,0.4)', background: 'rgba(245,154,63,0.06)' }}>
             <strong style={{ color: 'var(--accent2)' }}>{tr('หมายเหตุ:')}</strong>{' '}
-            สิทธิ์รายการย่อยเหล่านี้จะมีผลจริงกับแต่ละหน้า <strong>{tr('เมื่อหน้านั้นถูกอัปเดตให้อ่านค่าจากระบบนี้')}</strong> (กำลังทยอยเปิดใช้ทีละหน้า) —
-            ระหว่างนี้หน้าที่ยังไม่อัปเดตจะยึดตามพฤติกรรมเดิม ค่าที่ตั้งไว้ตรงนี้จะถูกใช้ทันทีที่หน้านั้นเปิดใช้ระบบใหม่
+            {tr("สิทธิ์รายการย่อยเหล่านี้จะมีผลจริงกับแต่ละหน้า")} <strong>{tr('เมื่อหน้านั้นถูกอัปเดตให้อ่านค่าจากระบบนี้')}</strong> ({tr("กำลังทยอยเปิดใช้ทีละหน้า) — ระหว่างนี้หน้าที่ยังไม่อัปเดตจะยึดตามพฤติกรรมเดิม ค่าที่ตั้งไว้ตรงนี้จะถูกใช้ทันทีที่หน้านั้นเปิดใช้ระบบใหม่")}
           </div>
           {renderPermTable(actionGroups, 'การทำงาน')}
         </>

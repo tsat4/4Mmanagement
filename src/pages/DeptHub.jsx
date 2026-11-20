@@ -585,8 +585,8 @@ export default function DeptHub({ onLogout, theme, onToggleTheme, userFullName, 
             border: '1px solid var(--border)', color: wholeFactory ? 'var(--muted)' : 'var(--accent)',
           }} title={wholeFactory
               ? (MAINTENANCE_ROLES.includes(userRole) ? 'หน่วยงานช่างดูแลเครื่องจักรทุกไลน์ จึงเห็นทั้งโรงงาน' : 'บัญชีนี้ไม่ได้จำกัดส่วนงาน')
-              : `นับเฉพาะไลน์: ${(scopeNames || []).join(', ')}`}>
-            {wholeFactory ? tr('🏭 ทั้งโรงงาน') : `👥 ส่วนงานของฉัน (${(scopeNames || []).length} ไลน์)`}
+              : `${tr("นับเฉพาะไลน์")}: ${(scopeNames || []).join(', ')}`}>
+            {wholeFactory ? tr('🏭 ทั้งโรงงาน') : `👥 ${tr("ส่วนงานของฉัน")} (${(scopeNames || []).length} ${tr("ไลน์")})`}
           </span>
           <span style={{ flex: 1, height: 1, background: 'var(--border)' }} />
           <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('อัปเดตทุก 60 วินาที')}</span>
@@ -696,7 +696,7 @@ export default function DeptHub({ onLogout, theme, onToggleTheme, userFullName, 
                 const homeShort = NAV_GROUP_META[item.group]?.short || item.group;
                 return (
                   <button key={item.to} type="button" className="dept-chip"
-                    title={guest ? `เปิด ${item.label} — ทางลัด · เมนูนี้อยู่หมวด "${item.group}"` : `เปิด ${item.label}`}
+                    title={guest ? `${tr("เปิด")} ${item.label} — ${tr("ทางลัด · เมนูนี้อยู่หมวด")} "${item.group}"` : `${tr("เปิด")} ${item.label}`}
                     onClick={e => openMenu(e, item.to)}
                     style={guest
                       ? { background: 'transparent', color: 'var(--text2)', border: '1px dashed var(--border2)' }

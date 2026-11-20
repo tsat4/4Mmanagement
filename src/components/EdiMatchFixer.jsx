@@ -56,7 +56,7 @@ export default function EdiMatchFixer({ edi, canEdit, custLabel, onSaved }) {
     /* 🔴 คู่นี้ตอบแค่ "ส่งอะไรให้ลูกค้า" (Delivery · shipping chart) ⇒ ต้องเป็นตัวขาย 1xx เสมอ (user 01/10)
        2xx ได้ความต้องการจาก BOM ของ 1xx ที่เรียกมันอยู่แล้ว · ผูก 2xx ตรงๆ = ใบส่งของเป็นงานระหว่างทาง + ความต้องการนับซ้ำ */
     if (!isFgMat(mat)) {
-      toast.error(`${mat} ไม่ใช่ตัวขาย (1xx) — ของที่ส่งลูกค้าต้องเป็น 1xx · 2xx ได้ความต้องการผ่าน BOM ของ 1xx อยู่แล้ว`);
+      toast.error(`${mat} ${tr("ไม่ใช่ตัวขาย (1xx) — ของที่ส่งลูกค้าต้องเป็น 1xx · 2xx ได้ความต้องการผ่าน BOM ของ 1xx อยู่แล้ว")}`);
       return;
     }
     const key = `${shipTo}|${part}`;
@@ -68,7 +68,7 @@ export default function EdiMatchFixer({ edi, canEdit, custLabel, onSaved }) {
     if (checkWrite(res, 'บันทึกการจับคู่พาร์ท')) {
       if (!res.data?.length) toast.error('บันทึกไม่สำเร็จ (0 แถว)');
       else {
-        toast.success(`✅ จำแล้ว: ${part}${shipTo ? ` (${lbl(shipTo)})` : ''} → ${mat} · อ่านไฟล์ใหม่…`);
+        toast.success(`✅ ${tr("จำแล้ว")}: ${part}${shipTo ? ` (${lbl(shipTo)})` : ''} → ${mat} · ${tr("อ่านไฟล์ใหม่")}…`);
         await onSaved?.();
       }
     }
@@ -78,8 +78,8 @@ export default function EdiMatchFixer({ edi, canEdit, custLabel, onSaved }) {
   /** ปุ่ม "ตัวขาย" ที่ระบบเสนอ (จาก BOM/ชื่อ) — ใส่ไว้หน้าสุดเพราะเป็นคำตอบที่ถูกบ่อยสุดของงานต่างประเทศ */
   const soldButtons = (part, shipTo, note) => (edi.sold?.[part] || []).map(c => (
     <button key={`s-${c.mat_no}`} type="button" disabled={!!busy} style={soldBtn}
-      title={`${c.name || ''}${c.customer ? ` · ลูกค้า ${c.customer}` : ''}\nที่มา: ${c.why}`}
-      onClick={() => save(shipTo, part, c.mat_no, note || `ตัวขาย (${c.why})`)}>
+      title={`${c.name || ''}${c.customer ? ` · ${tr("ลูกค้า")} ${c.customer}` : ''}\n${tr("ที่มา")}: ${c.why}`}
+      onClick={() => save(shipTo, part, c.mat_no, note || `${tr("ตัวขาย")} (${c.why})`)}>
       🏷️ {c.mat_no}{c.customer ? ` · ${c.customer}` : ''}
     </button>
   ));
@@ -89,7 +89,7 @@ export default function EdiMatchFixer({ edi, canEdit, custLabel, onSaved }) {
   const list = (k, arr) => (showAll[k] ? arr : arr.slice(0, LIMIT));
   const more = (k, arr) => arr.length > LIMIT && (
     <button type="button" style={{ ...btn(false), marginTop: 6 }} onClick={() => setShowAll(s => ({ ...s, [k]: !s[k] }))}>
-      {showAll[k] ? 'ย่อ' : `แสดงทั้งหมด (${arr.length})`}
+      {showAll[k] ? 'ย่อ' : `${tr("แสดงทั้งหมด")} (${arr.length})`}
     </button>
   );
   const readOnly = !canEdit && (

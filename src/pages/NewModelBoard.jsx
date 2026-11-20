@@ -196,7 +196,7 @@ function PanelNpiLink({ proj, panel }) {
     <div className="nmb-card" data-eva="G" style={{ ...CARD, marginTop: 12, padding: '10px 12px 10px 16px', borderRadius: 'var(--r-md)',
       '--nmb-color': 'var(--accent)', fontSize: 12.5, lineHeight: 1.55 }}>
       🔗 <b>{tr('ของจริงของแผงนี้อยู่ใน NPI')}</b> — {link.what}
-      {' · '}<a href={link.href} style={{ color: 'var(--accent)' }}>{tr('เปิด')} {tr(link.label)}{ref.code ? ` ของ ${ref.code}` : ''} →</a>
+      {' · '}<a href={link.href} style={{ color: 'var(--accent)' }}>{tr('เปิด')} {tr(link.label)}{ref.code ? ` ${tr("ของ")} ${ref.code}` : ''} →</a>
     </div>
   );
 }
@@ -237,7 +237,7 @@ function NpiLinkCard({ proj, isMobile }) {
       <div className="nmb-card" data-eva="none" style={{ ...CARD, marginBottom: 12, padding: '12px 13px 12px 17px', borderRadius: 'var(--r-md)', fontSize: 12.5, lineHeight: 1.6 }}>
         🔗 <b>{tr('รุ่นนี้ยังไม่ผูกกับโปรเจค NPI')}</b> — บอร์ดจึงแสดงได้แค่สิ่งที่ถอดจากบอร์ดกระดาษ
         <div style={{ color: 'var(--text2)', marginTop: 4 }}>
-          ผูกที่ <a href="/npi" style={{ color: 'var(--accent)' }}>{tr('พาร์ทใหม่ APQP / PPAP')}</a> {tr('→ เลือกโปรเจค →')} <b>{tr('✏️ โปรเจค')}</b> → ช่อง
+          {tr("ผูกที่")} <a href="/npi" style={{ color: 'var(--accent)' }}>{tr('พาร์ทใหม่ APQP / PPAP')}</a> {tr('→ เลือกโปรเจค →')} <b>{tr('✏️ โปรเจค')}</b> → {tr("ช่อง")}
           <b> {tr('“🧭 รุ่นบนบอร์ด New Model”')}</b> {tr('→ เลือก')} <b>{proj.title}</b>
           {linkable > 0 && <> {tr('· ผูกแล้ว')} <b>{linkable}</b> {tr('แผงบนบอร์ดนี้จะกดเข้าไปดูของจริงได้')}</>}
         </div>
@@ -269,7 +269,7 @@ function NpiLinkCard({ proj, isMobile }) {
           tone={sum.sopIn != null && sum.sopIn < 0 ? 'var(--red)' : undefined} />
       </div>
       <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 9, lineHeight: 1.5 }}>
-        ตัวเลขชุดนี้มาจากเอกสารจริงใน NPI · <b>{tr('ไม่ได้เอาไปเปลี่ยนสี EVA บนบอร์ด')}</b> — สีบอร์ดคนตั้งเองตามกติกา IEC
+        {tr("ตัวเลขชุดนี้มาจากเอกสารจริงใน")} NPI · <b>{tr('ไม่ได้เอาไปเปลี่ยนสี EVA บนบอร์ด')}</b> — {tr("สีบอร์ดคนตั้งเองตามกติกา")} IEC
         {sum.docTotal === null && ' · นับเอกสารไม่ครบรอบนี้ จึงยังไม่แสดง %'}
       </div>
     </div>
@@ -378,7 +378,7 @@ function LevelOverview({ data, go }) {
                 <span style={{ fontSize: 14.5, fontWeight: 700 }}>{c.name}</span>
               </div>
               <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-                {c.projects.length ? `${c.projects.length} รุ่นในระบบ` : 'ยังไม่มีโปรเจคในระบบ'}
+                {c.projects.length ? `${c.projects.length} ${tr("รุ่นในระบบ")}` : 'ยังไม่มีโปรเจคในระบบ'}
               </div>
               {!!c.projects.length && (
                 <div style={{ fontSize: 11.5, color: 'var(--text2)' }}>
@@ -432,7 +432,7 @@ function LevelOverview({ data, go }) {
 /* ══ ชั้นที่ 2 — รุ่นของลูกค้า ═══════════════════════════════════════════════ */
 function LevelCustomer({ cust, go }) {
   const isMobile = useIsMobile();
-  if (!cust.projects.length) return <Empty text={`ยังไม่มีโปรเจคของ ${cust.name} ในระบบ`} />;
+  if (!cust.projects.length) return <Empty text={`${tr("ยังไม่มีโปรเจคของ")} ${cust.name} ${tr("ในระบบ")}`} />;
   return (
     <div style={{ display: 'grid', gap: 10, alignContent: 'start',
       gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(320px, 1fr))' }}>
@@ -495,7 +495,7 @@ function BucketBar({ proj, leaves, go, isMobile }) {
   return (
     <div style={{ marginBottom: 14 }}>
       <SectionHead n="①" title={tr('สรุป EVA ของ sub KPI ทั้งใบ POP')}
-        sub={`ประเมินแล้ว ${c.total - c.none} จาก ${c.total} หัวข้อ`} />
+        sub={`${tr("ประเมินแล้ว")} ${c.total - c.none} ${tr("จาก")} ${c.total} ${tr("หัวข้อ")}`} />
       <div style={{ display: 'grid', gap: 9, alignContent: 'start',
         gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(190px, 1fr))' }}>
         {BUCKETS.map(b => {
@@ -529,8 +529,7 @@ function BucketBar({ proj, leaves, go, isMobile }) {
       </div>
       {!!noNote.length && (
         <div style={{ ...CARD, marginTop: 9, borderLeft: '3px solid var(--red)', fontSize: 12, lineHeight: 1.55 }}>
-          ⚠️ <b>{tr('แดงแต่ไม่มีคำอธิบาย')} {noNote.length} {tr('หัวข้อ')}</b> — IEC กำหนดว่าแดงต้องเขียนว่าเกิดอะไร
-          แก้ยังไง ไม่งั้นคนมาดูบอร์ดไม่รู้เรื่อง:{' '}
+          ⚠️ <b>{tr('แดงแต่ไม่มีคำอธิบาย')} {noNote.length} {tr('หัวข้อ')}</b> — IEC {tr("กำหนดว่าแดงต้องเขียนว่าเกิดอะไร แก้ยังไง ไม่งั้นคนมาดูบอร์ดไม่รู้เรื่อง")}:{' '}
           <span style={{ color: 'var(--text2)' }}>{noNote.map(l => `${l.no} ${l.label}`).join(' · ')}</span>
         </div>
       )}
@@ -550,7 +549,7 @@ function PopTable({ proj, go }) {
   }
   return (
     <div style={{ marginBottom: 14 }}>
-      <SectionHead n="②" title="POP STATUS" sub={`Main KPI ${proj.pop.length} หัวข้อ · กดเพื่อกางหัวข้อย่อย`} />
+      <SectionHead n="②" title="POP STATUS" sub={`Main KPI ${proj.pop.length} ${tr("หัวข้อ · กดเพื่อกางหัวข้อย่อย")}`} />
       <div style={CARD}>
         <Scroller>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 520 }}>
@@ -570,7 +569,7 @@ function PopTable({ proj, go }) {
                     <td style={{ ...td, color: 'var(--muted)', fontWeight: 700 }}>{m.no}</td>
                     <td style={{ ...td, fontWeight: 700 }}>{tr(m.label)}</td>
                     <td style={{ ...td, color: 'var(--muted)', fontSize: 11.5 }}>
-                      {kids.length ? `${kids.length} หัวข้อ` : '—'}
+                      {kids.length ? `${kids.length} ${tr("หัวข้อ")}` : '—'}
                     </td>
                     <td style={{ ...td, fontSize: 11.5, color: 'var(--text2)' }}>
                       {kc ? countsLabel(kc) : (m.note || (eva === 'none' ? 'ยังไม่ประเมิน' : evaMeta(eva).label))}
@@ -594,7 +593,7 @@ function LotTable({ proj }) {
   return (
     <div style={{ marginBottom: 14 }}>
       <SectionHead n="③" title="PART DELIVERY / PART QUALITY STATUS"
-        sub={`${rows.length} ล็อต · 2 แกนนี้ใช้เกณฑ์สีคนละชุด`} />
+        sub={`${rows.length} ${tr("ล็อต · 2 แกนนี้ใช้เกณฑ์สีคนละชุด")}`} />
       <div style={CARD}>
         <Scroller>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 460 }}>
@@ -691,7 +690,7 @@ function LevelProject({ proj, go }) {
       </div>
 
       <div style={{ fontSize: 13, fontWeight: 700, margin: '4px 0 8px' }}>
-        แผงบนบอร์ดกระดาษ {proj.panels.length} แผง
+        {tr("แผงบนบอร์ดกระดาษ")} {proj.panels.length} {tr("แผง")}
         <span style={{ fontWeight: 400, color: 'var(--muted)', fontSize: 11.5 }}> · {countsLabel(counts)} {tr('· หลักฐานที่ใบ POP อ้างถึง')}</span>
       </div>
       <div style={{ display: 'grid', gap: 9, alignContent: 'start',
@@ -800,7 +799,7 @@ function LevelPop({ proj, main, go }) {
       {!kids.length ? (
         <div style={CARD}>
           <div style={{ fontSize: 12.5, lineHeight: 1.6 }}>
-            หัวข้อนี้ไม่มีหัวข้อย่อย — ประเมินที่ตัวมันเอง
+            {tr("หัวข้อนี้ไม่มีหัวข้อย่อย — ประเมินที่ตัวมันเอง")}
             {main.panel && <> {tr('· หลักฐานอยู่ที่แผง')} <b>{proj.panels.find(p => p.key === main.panel)?.label}</b></>}
           </div>
           {main.note && <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 6 }}>{main.note}</div>}
@@ -833,11 +832,11 @@ function LevelPop({ proj, main, go }) {
                         {s.owner && <span style={{ fontWeight: 400, color: 'var(--muted)', fontSize: 11 }}> · {s.owner}{tr('อัปเดตเอง')}</span>}
                       </td>
                       <td style={{ ...td, fontSize: 11.5, color: 'var(--muted)' }}>
-                        {s.topics?.length ? `${s.topics.length} หัวข้อ →` : '—'}
+                        {s.topics?.length ? `${s.topics.length} ${tr("หัวข้อ")} →` : '—'}
                       </td>
                       <td style={{ ...td, fontSize: 11.5, color: 'var(--text2)' }}>
-                        {s.fromStage ? `ด่าน ${s.fromStage}`
-                          : s.panel ? `แผง ${proj.panels.find(p => p.key === s.panel)?.label || s.panel}`
+                        {s.fromStage ? `${tr("ด่าน")} ${s.fromStage}`
+                          : s.panel ? `${tr("แผง")} ${proj.panels.find(p => p.key === s.panel)?.label || s.panel}`
                           : 'ยังไม่มีหลักฐานผูกไว้'}
                       </td>
                     </tr>
@@ -862,8 +861,7 @@ function LevelPopSub({ proj, main, sub, go }) {
           <Dot eva={sub.eva} size={17} /><b style={{ fontSize: 14 }}>{sub.no} {tr(sub.label)}</b>
         </div>
         <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 5, lineHeight: 1.5 }}>
-          {sub.owner ? `ทีม${sub.owner}เข้ามาอัปเดตเอง · ` : ''}ทุกหัวข้อต้องประเมินได้หมด ·
-          ของจริงจะแนบไฟล์ + เขียนรายละเอียดได้ในแต่ละแถว
+          {sub.owner ? `${tr("ทีม")}${sub.owner}${tr("เข้ามาอัปเดตเอง")} · ` : ''}{tr("ทุกหัวข้อต้องประเมินได้หมด · ของจริงจะแนบไฟล์ + เขียนรายละเอียดได้ในแต่ละแถว")}
         </div>
         <RuleNote ruleKey="doc" />
       </div>
@@ -882,7 +880,7 @@ function LevelPopSub({ proj, main, sub, go }) {
                     <td style={td}><Dot eva={t.eva} /></td>
                     <td style={{ ...td, fontWeight: 700 }}>{tr(t.label)}</td>
                     <td style={{ ...td, fontSize: 11.5, color: 'var(--muted)' }}>
-                      {t.panel ? `แผง ${proj.panels.find(p => p.key === t.panel)?.label || t.panel} →` : 'ยังไม่ผูก'}
+                      {t.panel ? `${tr("แผง")} ${proj.panels.find(p => p.key === t.panel)?.label || t.panel} →` : 'ยังไม่ผูก'}
                     </td>
                     <td style={{ ...td, fontSize: 11.5, color: 'var(--text2)' }}>{t.note || '—'}</td>
                   </tr>
@@ -1282,7 +1280,7 @@ function TvView({ projects, index, onIndex, onExit, openPanelKey, onPick, onClos
               const hot = p.eva === 'R';
               const hasMetric = !!panelMetric(p);
               return (
-                <button key={p.key} onClick={() => onPick(p)} title={`เปิดแผง ${p.label}`}
+                <button key={p.key} onClick={() => onPick(p)} title={`${tr("เปิดแผง")} ${p.label}`}
                   data-eva={p.eva || 'none'}
                   className={`nmb-card${hot ? ' mo-card-alert' : ''}`}
                   style={{
@@ -1362,7 +1360,7 @@ function TvView({ projects, index, onIndex, onExit, openPanelKey, onPick, onClos
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
               <div style={{ fontSize: 13, color: 'var(--muted)' }}>
-                {proj.title} · แผงบนบอร์ด
+                {proj.title} · {tr("แผงบนบอร์ด")}
               </div>
               <button onClick={onClosePanel} style={{
                 marginLeft: 'auto', background: 'var(--bg3-surf)', border: '1px solid var(--border)',
@@ -1474,12 +1472,12 @@ export default function NewModelBoard() {
   ].filter(Boolean);
 
   const sub = popSub ? `${popSub.no} ${popSub.label} · ${proj.title}`
-    : popMain ? `POP ข้อ ${popMain.no} · ${proj.title}`
+    : popMain ? `POP ${tr("ข้อ")} ${popMain.no} · ${proj.title}`
     : bucket ? `${BUCKETS.find(b => b.key === bucket)?.label} · ${proj.title}`
-    : panel ? `แผงบนบอร์ดของ ${proj.title}`
-    : proj ? `${proj.title} · ด่าน ${proj.stage} · ทีม ${proj.team} · ผู้นำโปรเจค ${proj.leader}`
-    : cust ? `รุ่นของ ${cust.name} ที่อยู่ในระบบ`
-    : `ถอดจากบอร์ดผนังของ IEC เมื่อ ${SOURCE_DATE} · ยังไม่ต่อฐานข้อมูล`;
+    : panel ? `${tr("แผงบนบอร์ดของ")} ${proj.title}`
+    : proj ? `${proj.title} · ${tr("ด่าน")} ${proj.stage} · ${tr("ทีม")} ${proj.team} · ${tr("ผู้นำโปรเจค")} ${proj.leader}`
+    : cust ? `${tr("รุ่นของ")} ${cust.name} ${tr("ที่อยู่ในระบบ")}`
+    : `${tr("ถอดจากบอร์ดผนังของ IEC เมื่อ")} ${SOURCE_DATE} · ${tr("ยังไม่ต่อฐานข้อมูล")}`;
 
   if (tvOn && data.projects.length) {
     const tvProj = data.projects[Math.min(tvIndex, data.projects.length - 1)];
@@ -1506,9 +1504,7 @@ export default function NewModelBoard() {
       <Trail items={trail} />
 
       <div style={{ ...CARD, borderLeft: '3px solid var(--accent2)', marginBottom: 12, fontSize: 12, lineHeight: 1.55 }}>
-        ℹ️ <b>{tr('เฟสดูภาพรวม')}</b> {tr('— ข้อมูลถอดจากรูปบอร์ดกระดาษ (')}{SOURCE_DATE}) ยังแก้ในจอไม่ได้ และยังไม่ต่อฐานข้อมูล ·
-        ลูกค้าที่ไม่มีโปรเจคในระบบขึ้นเป็นสีเทา <b>{tr('ไม่ใช่เขียว')}</b> เพราะยังไม่มีข้อมูลจริง ·
-        รายละเอียดการออกแบบอยู่ใน <code>docs/IEC-NEW-MODEL-OBEYA-DESIGN.md</code>
+        ℹ️ <b>{tr('เฟสดูภาพรวม')}</b> {tr('— ข้อมูลถอดจากรูปบอร์ดกระดาษ (')}{SOURCE_DATE}) {tr("ยังแก้ในจอไม่ได้ และยังไม่ต่อฐานข้อมูล · ลูกค้าที่ไม่มีโปรเจคในระบบขึ้นเป็นสีเทา")} <b>{tr('ไม่ใช่เขียว')}</b> {tr("เพราะยังไม่มีข้อมูลจริง · รายละเอียดการออกแบบอยู่ใน")} <code>docs/IEC-NEW-MODEL-OBEYA-DESIGN.md</code>
       </div>
 
       {panel ? <LevelPanel proj={proj} panel={panel} />

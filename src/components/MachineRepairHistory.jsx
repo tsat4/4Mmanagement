@@ -19,8 +19,8 @@ import { teamKeyOf, deptNameOf } from '../utils/mtnTeams';
 import { toast } from './Toast';
 
 import { tr } from '../utils/i18n';
-const fmtMin = (m) => (m == null ? '—' : m >= 60 ? `${(m / 60).toFixed(1)} ชม.` : `${Math.round(m)} นาที`);
-const fmtBaht = (v) => (v == null ? '—' : `${Number(v).toLocaleString('th-TH', { maximumFractionDigits: 0 })} บาท`);
+const fmtMin = (m) => (m == null ? '—' : m >= 60 ? `${(m / 60).toFixed(1)} ${tr("ชม.")}` : `${Math.round(m)} ${tr("นาที")}`);
+const fmtBaht = (v) => (v == null ? '—' : `${Number(v).toLocaleString('th-TH', { maximumFractionDigits: 0 })} ${tr("บาท")}`);
 
 function Card({ t, v, h }) {
   return (
@@ -116,7 +116,7 @@ export default function MachineRepairHistory({ machineNo, onClose, onOpenOrder }
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 15, fontWeight: 800 }}>{tr('ประวัติการซ่อม —')} <span style={{ fontFamily: 'monospace' }}>{machineNo}</span></div>
             <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-              นับจากใบแจ้งซ่อม (MO) ของเครื่องนี้ · ⬇️ Excel = ฟอร์ม FM-MTN-005 (ใบตีกลับไม่ลงประวัติ)
+              {tr("นับจากใบแจ้งซ่อม (MO) ของเครื่องนี้ · ⬇️ Excel = ฟอร์ม FM-MTN-005 (ใบตีกลับไม่ลงประวัติ")})
               {sum.spellings.length > 1 && <> {tr('· ⚠ เลขเครื่องถูกพิมพ์')} {sum.spellings.length} {tr('แบบ:')} {sum.spellings.join(' / ')} {tr('(รวมให้แล้ว)')}</>}
             </div>
             {/* 🔧 ตัวเลือกทีมช่าง — ค่าเริ่มต้น "ทีม MTN" เพราะฟอร์มนี้คือ FM-MTN-005 ของทีม MTN
@@ -149,9 +149,9 @@ export default function MachineRepairHistory({ machineNo, onClose, onOpenOrder }
               // ⬇️ Excel ออกตาม "ที่เห็นบนจอ" เสมอ — ไม่งั้นใบพิมพ์กับจอตอบคนละชุด
               const rows = machineHistoryRows(shown, { partsBy: state.partsBy || {}, prsBy: state.prsBy, now: Date.now() });
               const r = await exportMachineHistoryExcel({ machine: state.machine, rows });
-              toast.success(`⬇️ FM-MTN-005 · ${r.rows} รายการ · ${r.pages} หน้า`);
-              if (state.subErr) toast.info(`⚠ โหลด ${state.subErr} ไม่ครบ — ช่องนั้นในไฟล์อาจไม่ครบ`);
-            } catch (e) { toast.error(`Export ไม่สำเร็จ: ${e?.message || e}`); }
+              toast.success(`⬇️ FM-MTN-005 · ${r.rows} ${tr("รายการ")} · ${r.pages} ${tr("หน้า")}`);
+              if (state.subErr) toast.info(`⚠ ${tr("โหลด")} ${state.subErr} ${tr("ไม่ครบ — ช่องนั้นในไฟล์อาจไม่ครบ")}`);
+            } catch (e) { toast.error(`Export ${tr("ไม่สำเร็จ")}: ${e?.message || e}`); }
             finally { setExporting(false); }
           }} title={tr('ใบบันทึกประวัติการซ่อมและการทำ PM MACHINE (FM-MTN-005) — A4 แนวนอน หน้าละ 15 แถว')}
             style={{ background: 'var(--accent)', color: 'var(--accent-ink)', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: state.loading || state.err || exporting ? 0.6 : 1 }}>
@@ -171,10 +171,10 @@ export default function MachineRepairHistory({ machineNo, onClose, onOpenOrder }
             {!sum.total && !sum.rejected && <div style={{ color: 'var(--muted)', fontSize: 13 }}>{tr('ยังไม่มีใบแจ้งซ่อมของเครื่องนี้')}</div>}
             {(sum.total > 0 || sum.rejected > 0) && (<>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8, marginBottom: 10, alignContent: 'start' }}>
-                <Card t="ใบแจ้งซ่อมทั้งหมด" v={`${sum.total} ใบ`} h={`${sum.open ? `ยังเปิด ${sum.open} · ` : ''}Breakdown ${sum.bm}${sum.rejected ? ` · ตีกลับ ${sum.rejected} (ไม่นับ)` : ''}`} />
-                <Card t="เวลาซ่อมของช่างเฉลี่ย" v={fmtMin(sum.techMinAvg)} h={sum.techMinN ? `หารจาก ${sum.techMinN} ใบ · หักช่วงอยู่กับ supplier` : 'ยังวัดไม่ได้'} />
-                <Card t="ค่าใช้จ่ายรวม" v={fmtBaht(sum.costTotal)} h={sum.costN ? `จาก ${sum.costN} ใบที่ลงเงิน` : 'ยังไม่มีใบไหนลงเงิน'} />
-                <Card t="ส่งซ่อมภายนอก" v={`${sum.vendor} ใบ`} h={sum.lastAt ? `แจ้งล่าสุด ${fmtDateTime(sum.lastAt)}` : null} />
+                <Card t="ใบแจ้งซ่อมทั้งหมด" v={`${sum.total} ${tr("ใบ")}`} h={`${sum.open ? `${tr("ยังเปิด")} ${sum.open} · ` : ''}Breakdown ${sum.bm}${sum.rejected ? ` · ${tr("ตีกลับ")} ${sum.rejected} (${tr("ไม่นับ")})` : ''}`} />
+                <Card t="เวลาซ่อมของช่างเฉลี่ย" v={fmtMin(sum.techMinAvg)} h={sum.techMinN ? `${tr("หารจาก")} ${sum.techMinN} ${tr("ใบ · หักช่วงอยู่กับ")} supplier` : 'ยังวัดไม่ได้'} />
+                <Card t="ค่าใช้จ่ายรวม" v={fmtBaht(sum.costTotal)} h={sum.costN ? `${tr("จาก")} ${sum.costN} ${tr("ใบที่ลงเงิน")}` : 'ยังไม่มีใบไหนลงเงิน'} />
+                <Card t="ส่งซ่อมภายนอก" v={`${sum.vendor} ${tr("ใบ")}`} h={sum.lastAt ? `${tr("แจ้งล่าสุด")} ${fmtDateTime(sum.lastAt)}` : null} />
               </div>
               <div style={{ fontSize: 12, marginBottom: 10, lineHeight: 1.7 }}>
                 <b>{tr('ปัญหาที่เจอบ่อย:')}</b> {sum.topProblems.slice(0, 6).map(p => `${p.k} (${p.n})`).join(' · ')}

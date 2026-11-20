@@ -124,7 +124,7 @@ export default function LineLensMap({ lineName, family, parentName, lens, dtRows
         <div style={{ ...box, borderColor: '#ef4444', color: '#ef4444' }}>{tr('⚠ โหลดผัง')}{isPeople ? 'จุดงาน/คน' : 'เครื่องจักร'}{tr('ไม่สำเร็จ —')} {state.error}</div>
       ) : !state.image ? (
         <div style={box}>
-          ไลน์นี้ยังไม่มีผังเลย์เอาต์{state.choices?.length ? ' — เลือกไลน์ย่อยด้านบนเพื่อดูผังของมัน' : ' — อัปโหลดผังที่หน้า ตั้งค่าไลน์ (/linesetup)'}
+          {tr("ไลน์นี้ยังไม่มีผังเลย์เอาต์")}{state.choices?.length ? ' — เลือกไลน์ย่อยด้านบนเพื่อดูผังของมัน' : ' — อัปโหลดผังที่หน้า ตั้งค่าไลน์ (/linesetup)'}
         </div>
       ) : (<>
         {/* ป้ายชื่อปิดเป็นค่าเริ่มต้น — หมุดถี่แล้วป้ายทับกันจนอ่านไม่ออก (user 16/10) · ชื่อโผล่เมื่อคลิกหมุด */}
@@ -194,7 +194,7 @@ function StationDetailCard({ m, onClose }) {
         {onClose && <button onClick={onClose} title={tr('ปิด')} style={{ background: 'transparent', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 14, lineHeight: 1 }}>✕</button>}
       </div>
       <div style={{ color: 'var(--muted)' }}>
-        ทักษะที่จุดต้องการ: {st.reqs.length ? st.reqs.map(r => `${r.skill_name} ≥${r.min_score}`).join(' · ') : 'ยังไม่ตั้ง (ตั้งที่ ตั้งค่าไลน์)'}
+        {tr("ทักษะที่จุดต้องการ")}: {st.reqs.length ? st.reqs.map(r => `${r.skill_name} ≥${r.min_score}`).join(' · ') : 'ยังไม่ตั้ง (ตั้งที่ ตั้งค่าไลน์)'}
       </div>
       {!st.people.length && <div style={{ color: 'var(--muted)' }}>{tr('ยังไม่มีคนประจำจุดนี้ และวันนี้ไม่มีใครถูกวางที่จุดนี้')}</div>}
       {st.people.map(p => {

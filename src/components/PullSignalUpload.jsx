@@ -140,7 +140,7 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
         setPattern(res.slot?.round?.pattern || res.patternOptions?.[0]?.key || 'normal');
       }
     } catch (e) {
-      setParsed({ ok: false, error: `อ่านไฟล์ไม่สำเร็จ: ${e.message}`, rows: [], warnings: [] });
+      setParsed({ ok: false, error: `${tr("อ่านไฟล์ไม่สำเร็จ")}: ${e.message}`, rows: [], warnings: [] });
     }
     setLoading(false);
   }, [profiles, ensureRounds, reset]);
@@ -178,7 +178,7 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
       orders: ordRes.data || [],
       dupKeys: new Set((sigRes.data || []).map(r => signalKey({ ...r, pulled_at: new Date(r.pulled_at) }, SOURCE))),
       // ตารางยังไม่ apply (42P01) = ถือว่ายังไม่เคยนำเข้า แต่ต้องบอกบนจอ ห้ามเงียบ
-      err: ordRes.error?.message || (sigRes.error ? `ยังตรวจการนำเข้าซ้ำไม่ได้: ${sigRes.error.message}` : ''),
+      err: ordRes.error?.message || (sigRes.error ? `${tr("ยังตรวจการนำเข้าซ้ำไม่ได้")}: ${sigRes.error.message}` : ''),
     };
   }, [shipTo, legsKey, parsed]);
 
@@ -307,7 +307,7 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
        ระหว่างนั้นอาจมีคนอัพไฟล์เดียวกันไปแล้ว/กดปุ่มรอบสอง (เกิดจริง 2026-09-09 ห่างกัน 4 วินาที)
        เชื่อ plan เก่า = สร้างใบซ้ำทั้งชุด · ตัวกันซ้ำที่ DB เป็นด่านสุดท้าย ไม่ใช่ด่านเดียว */
     const live = await fetchContext();
-    if (live.err) { toast.error(`ตรวจสถานะล่าสุดไม่สำเร็จ: ${live.err}`); setSaving(false); return; }
+    if (live.err) { toast.error(`${tr("ตรวจสถานะล่าสุดไม่สำเร็จ")}: ${live.err}`); setSaving(false); return; }
     const liveLegs = legs.map(l => ({ ...l, groups: aggregateSignals(l.rows.filter(r => !live.dupKeys.has(signalKey(r, SOURCE)))) }));
     const plan = planDockLegs(liveLegs, live.orders, (pn) => resolveMatNo(pn, pnIndex), slotOf);
     const liveWrite = plan.filter(x => x.action === 'update' || x.action === 'create' || x.merge?.length).length;
@@ -347,7 +347,7 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
       }
       if (bRes.error) {
         // ตารางยังไม่ apply = เขียนใบส่งได้อยู่ แต่จะไม่มีร่องรอย → ถามก่อน ห้ามเงียบ
-        const go = await askConfirm(`บันทึกประวัติการนำเข้าไม่ได้ (${bRes.error.message})\nยังจะอัพเดทใบส่งต่อไหม? (จะไม่มีบันทึกว่ามาจากไฟล์ไหน)`);
+        const go = await askConfirm(`${tr("บันทึกประวัติการนำเข้าไม่ได้")} (${bRes.error.message})\n${tr("ยังจะอัพเดทใบส่งต่อไหม? (จะไม่มีบันทึกว่ามาจากไฟล์ไหน")})`);
         if (!go) { setSaving(false); return; }   // ⚠️ เที่ยวก่อนหน้า (ถ้ามี) ลงไปแล้ว — ตัวนับด้านล่างไม่รวม
       }
       const batchId = bRes.data?.id || null;
@@ -410,7 +410,7 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
             if (!res.error) toast.info('ยังไม่ได้ apply migration — อัพเดทยอดให้แล้ว แต่ไม่ได้บันทึกว่ามาจาก e-SMART');
           }
           if (res.error) failed.push(`${x.group.customer_part_no}: ${res.error.message}`);
-          else if (!res.data?.length) failed.push(`${x.group.customer_part_no}: ใบถูกเปลี่ยนสถานะไปแล้ว — โหลดใหม่แล้วลองอีกครั้ง`);
+          else if (!res.data?.length) failed.push(`${x.group.customer_part_no}: ${tr("ใบถูกเปลี่ยนสถานะไปแล้ว — โหลดใหม่แล้วลองอีกครั้ง")}`);
           else { updated++; legUpd++; }
         } else if (x.action === 'create') {
           const rec = {
@@ -427,7 +427,7 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
             const { pull_batch_id, confirm_source, confirmed_at, created_by_name, ...slim } = rec;
             res = await supabaseDR.from('customer_shipping_orders').insert(slim).select('id');
           }
-          if (res.error?.code === '23505') failed.push(`${x.group.customer_part_no}: มีใบของรอบนี้อยู่แล้ว${leg.dock ? ` (dock ${leg.dock})` : ''} — กด ↻ แล้วลองใหม่ · ถ้าเป็นไฟล์คนละ dock แต่ยังชนกัน แปลว่ายังไม่ได้ apply migration dock`);
+          if (res.error?.code === '23505') failed.push(`${x.group.customer_part_no}: ${tr("มีใบของรอบนี้อยู่แล้ว")}${leg.dock ? ` (dock ${leg.dock})` : ''} — ${tr("กด ↻ แล้วลองใหม่ · ถ้าเป็นไฟล์คนละ dock แต่ยังชนกัน แปลว่ายังไม่ได้")} apply migration dock`);
           else if (res.error) failed.push(`${x.group.customer_part_no}: ${res.error.message}`);
           else { created++; legCre++; }
         }
@@ -439,10 +439,10 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
         for (const o of (x.merge || [])) {
           const res = await supabaseDR.from('customer_shipping_orders').update({
             status: 'cancelled', cancelled_at: now, cancelled_by: fullName || 'e-SMART',
-            cancel_reason: `แทนด้วย e-SMART รอบ ${leg.shipTime}${leg.dock ? ` (${leg.dock})` : ''} — แผน 862 ${String(o.ship_time || '').slice(0, 5)} × ${fmt(o.qty)}`,
+            cancel_reason: `${tr("แทนด้วย e-SMART รอบ")} ${leg.shipTime}${leg.dock ? ` (${leg.dock})` : ''} — ${tr("แผน")} 862 ${String(o.ship_time || '').slice(0, 5)} × ${fmt(o.qty)}`,
             pull_batch_id: batchId,
           }).eq('id', o.id).eq('status', 'pending').select('id');
-          if (res.error) failed.push(`${x.group.customer_part_no}: ปิดใบแผน ${String(o.ship_time || '').slice(0, 5)} ไม่สำเร็จ — ${res.error.message}`);
+          if (res.error) failed.push(`${x.group.customer_part_no}: ${tr("ปิดใบแผน")} ${String(o.ship_time || '').slice(0, 5)} ${tr("ไม่สำเร็จ")} — ${res.error.message}`);
           else if (res.data?.length) merged++;
         }
       }
@@ -456,14 +456,14 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
           orders_skipped: legPlan.filter(x => x.action !== 'update' && x.action !== 'create').length,
         }).eq('id', batchId).select('id');
         // แยกจาก `failed` — ใบส่งลงครบแล้ว ห้ามค้างโมดัลชวนให้กดยืนยันซ้ำ แค่บอกว่าประวัติไม่ตรง
-        if (eCnt || !cnt?.length) toast.error(`บันทึกตัวนับลงประวัติไฟล์ไม่สำเร็จ — ใบส่งลงครบแล้ว แต่แท็บประวัติจะโชว์ตัวเลขไม่ตรง: ${eCnt?.message || 'ไม่มีแถวถูกแก้ (สิทธิ์?)'}`);
+        if (eCnt || !cnt?.length) toast.error(`${tr("บันทึกตัวนับลงประวัติไฟล์ไม่สำเร็จ — ใบส่งลงครบแล้ว แต่แท็บประวัติจะโชว์ตัวเลขไม่ตรง")}: ${eCnt?.message || tr('ไม่มีแถวถูกแก้ (สิทธิ์?)')}`);
       }
     }
     setSaving(false);
     // ⚠️ ห้ามขึ้นเขียวล้วนเมื่อมีบางรายการล้ม (หลักเดียวกับ "กดส่งแล้วหักสต็อกไม่ได้ต้องรายงาน")
-    if (sigErr) failed.push(`บันทึกแถวหลักฐานไม่สำเร็จ (แท็บประวัติจะกางดูรายการไม่ได้): ${sigErr}`);
-    if (failed.length) toast.error(`อัพเดท ${updated} · สร้าง ${created} · ล้มเหลว ${failed.length} — ${failed[0]}`);
-    else toast.success(`✅ ยืนยันจากลูกค้าแล้ว — อัพเดท ${updated} ใบ · สร้างใหม่ ${created} ใบ${merged ? ` · ปิดใบแผน 862 ที่ถูกแทน ${merged} ใบ` : ''} (รอบ ${legs.map(l => `${l.dock ? `${l.dock} ` : ''}${l.shipTime}`).join(' · ')})`);
+    if (sigErr) failed.push(`${tr("บันทึกแถวหลักฐานไม่สำเร็จ (แท็บประวัติจะกางดูรายการไม่ได้")}): ${sigErr}`);
+    if (failed.length) toast.error(`${tr("อัพเดท")} ${updated} · ${tr("สร้าง")} ${created} · ${tr("ล้มเหลว")} ${failed.length} — ${failed[0]}`);
+    else toast.success(`✅ ${tr("ยืนยันจากลูกค้าแล้ว — อัพเดท")} ${updated} ${tr("ใบ · สร้างใหม่")} ${created} ${tr("ใบ")}${merged ? ` · ${tr("ปิดใบแผน 862 ที่ถูกแทน")} ${merged} ${tr("ใบ")}` : ''} (${tr("รอบ")} ${legs.map(l => `${l.dock ? `${l.dock} ` : ''}${l.shipTime}`).join(' · ')})`);
     onApplied?.({ workDate, shipTime, updated, created });
     if (!failed.length) { reset(); onClose?.(); }
   };
@@ -486,8 +486,8 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
             style={{ background: 'none', border: 'none', color: 'var(--text2)', fontSize: 18, cursor: 'pointer' }}>✕</button>
         </div>
         <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 12, lineHeight: 1.6 }}>
-          ไฟล์จากพอร์ทัลลูกค้า = <b>{tr('ยอดยืนยันสุดท้ายก่อนส่ง')}</b> {tr('· ระบบอัพเดท')}<b>{tr('เฉพาะพาร์ทที่อยู่ในไฟล์')}</b> ·
-          พาร์ทที่ไม่อยู่ในไฟล์ถือว่า<b>{tr('ตรงกับ 862 อยู่แล้ว ไม่ถูกแตะ')}</b>
+          {tr("ไฟล์จากพอร์ทัลลูกค้า")} = <b>{tr('ยอดยืนยันสุดท้ายก่อนส่ง')}</b> {tr('· ระบบอัพเดท')}<b>{tr('เฉพาะพาร์ทที่อยู่ในไฟล์')}</b> ·
+          {tr("พาร์ทที่ไม่อยู่ในไฟล์ถือว่า")}<b>{tr('ตรงกับ 862 อยู่แล้ว ไม่ถูกแตะ')}</b>
         </div>
 
         {profileMissing && (
@@ -522,7 +522,7 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
             <div style={{ ...noteBox('#0ea5e9'), marginBottom: 10 }}>
               <b>{parsed.profile?.name}</b>{parsed.guessed && ' · ⚠ เดารูปแบบจากคอลัมน์ (ไม่เจอคำสำคัญในหัวไฟล์)'}
               {' · '}{tr('ช่วงเวลา')} {parsed.windowStart ? `${timeStr(parsed.windowStart)}–` : ''}{parsed.windowEnd ? timeStr(parsed.windowEnd) : '—'}
-              {' · '}{rowsInFile} {tr('แถว')}{dupCount > 0 && ` · ⏭ เคยนำเข้าแล้ว ${dupCount} แถว (ไม่นับซ้ำ)`}
+              {' · '}{rowsInFile} {tr('แถว')}{dupCount > 0 && ` · ⏭ ${tr("เคยนำเข้าแล้ว")} ${dupCount} ${tr("แถว (ไม่นับซ้ำ")})`}
               {parsed.meta?.supplier_code && ` · GSDB ${parsed.meta.supplier_code}`}
               {/* ⭐ เวลาที่ลูกค้าออกไฟล์ (จากชื่อไฟล์) — เป็นไม้บรรทัดที่ตัวอ่านใช้ตัดสินวันที่ด้วย
                   โชว์ให้เห็นก่อนกดยืนยัน จะได้ทวนสอบว่าเป็นไฟล์ของรอบไหนจริง */}
@@ -531,7 +531,7 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
                 if (!made) return null;
                 const lag = Math.round((Date.now() - made.getTime()) / 60000);
                 return <div style={{ marginTop: 4 }}>
-                  ไฟล์ออกเมื่อ <b>{dateStr(made)} {timeStr(made)}</b>
+                  {tr("ไฟล์ออกเมื่อ")} <b>{dateStr(made)} {timeStr(made)}</b>
                   {lag >= 0 && <span style={{ color: lag > 120 ? '#f59e0b' : 'var(--muted)' }}> {tr('· ผ่านมาแล้ว')} {lag} {tr('นาที')}{lag > 120 ? ' (ข้อมูลอาจเก่า)' : ''}</span>}
                 </div>;
               })()}
@@ -541,8 +541,8 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
               <div style={{ ...noteBox('#ef4444'), marginBottom: 8 }}>
                 <div style={{ fontWeight: 800, marginBottom: 4 }}>{tr('ตรวจวันที่ให้แน่ก่อนยืนยัน')}</div>
                 <div style={{ fontSize: 12, marginBottom: 6 }}>
-                  วันงานที่ระบบอ่านได้คือ <b>{workDate || '—'}</b> {tr('รอบส่ง')} <b>{shipTime || '—'}</b> —
-                  ถ้าไม่ตรงกับไฟล์ ให้แก้ 2 ช่องด้านบนก่อน · <b>วันที่ผิด = ใบไปโผล่ผิดวันและสต็อกถูกตัดซ้ำ</b>
+                  {tr("วันงานที่ระบบอ่านได้คือ")} <b>{workDate || '—'}</b> {tr('รอบส่ง')} <b>{shipTime || '—'}</b> —
+                  {tr("ถ้าไม่ตรงกับไฟล์ ให้แก้ 2 ช่องด้านบนก่อน")} · <b>วันที่ผิด = ใบไปโผล่ผิดวันและสต็อกถูกตัดซ้ำ</b>
                 </div>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                   <input type="checkbox" checked={dateAck} onChange={e => setDateAck(e.target.checked)} />
@@ -556,14 +556,14 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
             {dupUploads.length > 0 && (
               <div style={{ ...noteBox('#ef4444'), marginBottom: 10 }}>
                 <div style={{ fontWeight: 900, fontSize: 13, marginBottom: 4 }}>
-                  ไฟล์ชุดนี้เคยอัพเข้าระบบไปแล้ว {dupUploads.length > 1 ? `${dupUploads.length} ครั้ง` : ''}
+                  {tr("ไฟล์ชุดนี้เคยอัพเข้าระบบไปแล้ว")} {dupUploads.length > 1 ? `${dupUploads.length} ${tr("ครั้ง")}` : ''}
                 </div>
                 {dupUploads.slice(0, 3).map(({ batch: b, reason }) => (
                   <div key={b.id} style={{ fontSize: 12, marginTop: 3 }}>
                     • {reason === 'same_file' ? 'ชื่อไฟล์เดียวกัน' : 'ช่วงเวลาเดียวกัน (คนละชื่อไฟล์)'}
                     {' — '}{whenText(b.uploaded_at)} {tr('โดย')} {b.uploaded_by || 'ไม่ระบุ'}
-                    {b.ship_time && ` · ลงรอบ ${b.ship_time}`}
-                    {' → '}{tr('อัพเดท')} {fmt(b.orders_updated)} {tr('ใบ · สร้าง')} {fmt(b.orders_created)} ใบ
+                    {b.ship_time && ` · ${tr("ลงรอบ")} ${b.ship_time}`}
+                    {' → '}{tr('อัพเดท')} {fmt(b.orders_updated)} {tr('ใบ · สร้าง')} {fmt(b.orders_created)} {tr("ใบ")}
                   </div>
                 ))}
                 <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 6, lineHeight: 1.6 }}>
@@ -590,8 +590,8 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
                 <input type="date" value={workDate} onChange={e => setWorkDate(e.target.value)} style={inputSt} />
               </Field>
               <Field label={activeRound
-                ? `รอบรถลูกค้ามารับ (ตารางรอบรับ${parsed.dock ? ` · Dock ${parsed.dock}` : ''}${legs.length > 1 ? ' · เที่ยวหลัก' : ''})`
-                : `รอบส่ง (⚠ เดาจากปลายช่วง +${parsed.profile?.lead_min ?? 60} นาที)`}>
+                ? `${tr("รอบรถลูกค้ามารับ (ตารางรอบรับ")}${parsed.dock ? ` · Dock ${parsed.dock}` : ''}${legs.length > 1 ? tr(' · เที่ยวหลัก') : ''})`
+                : `${tr("รอบส่ง (⚠ เดาจากปลายช่วง")} +${parsed.profile?.lead_min ?? 60} ${tr("นาที")})`}>
                 <input type="time" value={shipTime} onChange={e => setShipTime(e.target.value)} style={inputSt} />
               </Field>
             </div>
@@ -623,7 +623,7 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
                 (สูตรเคยเดา 13:00 ทั้งที่ตารางจริงคือ 14:00 — ไม่มีใครรู้จนเทียบใบกระดาษ) */}
             {activeRound && (
               <div style={{ ...noteBox('#22c55e'), marginBottom: 8 }}>
-                ตามตารางรอบรับของลูกค้า — ช่วงดึง <b>{activeRound.period_start}-{activeRound.period_end}</b>
+                {tr("ตามตารางรอบรับของลูกค้า — ช่วงดึง")} <b>{activeRound.period_start}-{activeRound.period_end}</b>
                 {activeRound.dock_code ? <> · Dock <b>{activeRound.dock_code}</b></> : null}
                 {' '}{tr('→ รถมารับ')} <b>{String(activeRound.pickup_time).slice(0, 5)}</b>
                 {activeRound.delivery_time ? <> {tr('· ถึงลูกค้า')} {String(activeRound.delivery_time).slice(0, 5)}</> : null}
@@ -632,7 +632,7 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
             )}
             {roundsMissing && !activeRound && (
               <div style={{ ...noteBox('#f59e0b'), marginBottom: 8 }}>
-                ⚠️ ยังไม่มีตารางรอบรับในระบบ — ใช้สูตร “ปลายช่วง +{parsed.profile?.lead_min ?? 60} นาที” เดารอบให้
+                ⚠️ {tr("ยังไม่มีตารางรอบรับในระบบ — ใช้สูตร “ปลายช่วง")} +{parsed.profile?.lead_min ?? 60} {tr("นาที” เดารอบให้")}
                 <b> {tr('ตรวจเวลารอบก่อนกดยืนยันทุกครั้ง')}</b> {tr('· ตั้งตารางจริงได้ที่แท็บ')} <b>Ship-to Config</b>
               </div>
             )}
@@ -656,7 +656,7 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
                 {legs.map(l => (
                   <div key={l.dock || '-'}>
                     • Dock <b>{l.dock || '—'}</b> {l.rows.length} {tr('แถว → รอบ')} <b>{l.shipTime || '—'}</b> {tr('วันงาน')} <b>{l.workDate || '—'}</b>
-                    {l.primary ? ' (ช่องด้านบน)' : l.fromLead ? ' ⚠ ไม่มีตารางรอบรับ ใช้สูตรปลายช่วง' : ` (ตารางรอบรับ ${String(l.round?.pickup_time || '').slice(0, 5)})`}
+                    {l.primary ? ' (ช่องด้านบน)' : l.fromLead ? ' ⚠ ไม่มีตารางรอบรับ ใช้สูตรปลายช่วง' : ` (${tr("ตารางรอบรับ")} ${String(l.round?.pickup_time || '').slice(0, 5)})`}
                   </div>
                 ))}
               </div>
@@ -700,12 +700,12 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
                           {/* ใบอื่นในช่วงเดียวกันที่ระบบไม่แตะ — ต้องเห็น ไม่ใช่หายเงียบ */}
                           {x.merge?.length > 0 && (
                             <div style={{ fontSize: 11, color: '#a855f7', fontWeight: 700 }}>
-                              ↳ ปิดใบแผน 862 ในช่วงเดียวกันอีก {x.merge.length} {tr('ใบ (')}{x.merge.map(o => `${String(o.ship_time || '').slice(0, 5)} × ${fmt(o.qty)}`).join(' · ')}) — แทนด้วยยอด e-SMART
+                              ↳ {tr("ปิดใบแผน 862 ในช่วงเดียวกันอีก")} {x.merge.length} {tr('ใบ (')}{x.merge.map(o => `${String(o.ship_time || '').slice(0, 5)} × ${fmt(o.qty)}`).join(' · ')}) — {tr("แทนด้วยยอด")} e-SMART
                             </div>
                           )}
                           {x.extras?.length > 0 && (
                             <div style={{ fontSize: 11, color: '#f59e0b', fontWeight: 700 }}>
-                              ⚠ มีใบ 862 อื่นในช่วงนี้อีก {x.extras.length} {tr('ใบ (')}{x.extras.map(o => `${String(o.ship_time || '').slice(0, 5)} × ${fmt(o.qty)}`).join(' · ')}) — ระบบไม่แตะ ต้องตัดสินเอง
+                              ⚠ {tr("มีใบ 862 อื่นในช่วงนี้อีก")} {x.extras.length} {tr('ใบ (')}{x.extras.map(o => `${String(o.ship_time || '').slice(0, 5)} × ${fmt(o.qty)}`).join(' · ')}) — {tr("ระบบไม่แตะ ต้องตัดสินเอง")}
                             </div>
                           )}</td>
                       </tr>
@@ -722,11 +722,10 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
 
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginTop: 12 }}>
               <span style={{ fontSize: 12, color: 'var(--text2)', flex: '1 1 240px' }}>
-                จะเขียน <b style={{ color: 'var(--accent)' }}>{willWrite}</b> ใบ
-                (อัพเดท {tally.update} {tr('· สร้างใหม่')} {tally.create})
-                {tally.same ? ` · ตรงอยู่แล้ว ${tally.same}` : ''}
-                {tally.locked ? ` · ทำไปแล้ว ${tally.locked}` : ''}
-                {tally.unresolved ? ` · ⚠ จับคู่ไม่ได้ ${tally.unresolved}` : ''}
+                {tr("จะเขียน")} <b style={{ color: 'var(--accent)' }}>{willWrite}</b> {tr("ใบ (อัพเดท")} {tally.update} {tr('· สร้างใหม่')} {tally.create})
+                {tally.same ? ` · ${tr("ตรงอยู่แล้ว")} ${tally.same}` : ''}
+                {tally.locked ? ` · ${tr("ทำไปแล้ว")} ${tally.locked}` : ''}
+                {tally.unresolved ? ` · ⚠ ${tr("จับคู่ไม่ได้")} ${tally.unresolved}` : ''}
               </span>
               <button onClick={() => { reset(); onClose?.(); }} style={{ ...inputSt, cursor: 'pointer', fontWeight: 700 }}>{tr('ยกเลิก')}</button>
               <button onClick={apply} disabled={saving || !canImport || !shipTo || !shipTime || legs.some(l => !l.shipTime || !l.workDate) || blockedByDup || blockedByDate}
@@ -738,7 +737,7 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
                 }}>
                 {saving ? 'กำลังบันทึก…'
                   : blockedByDup ? '🚨 ติ๊กรับทราบไฟล์ซ้ำก่อน'
-                  : `✅ ยืนยันอัพเดท (${willWrite})`}
+                  : `✅ ${tr("ยืนยันอัพเดท")} (${willWrite})`}
               </button>
             </div>
           </>

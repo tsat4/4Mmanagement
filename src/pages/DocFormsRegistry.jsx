@@ -140,7 +140,7 @@ export default function DocFormsRegistry() {
     if (error) {
       toast.error(error.code === '42P01'
         ? 'ยังไม่ได้ apply migration doc_form_scopes — ใบพิมพ์ยังใช้ชุดกลางได้ปกติ'
-        : 'บันทึกไม่สำเร็จ: ' + error.message);
+        : (tr('บันทึกไม่สำเร็จ') + ': ') + error.message);
       return;
     }
     toast.success('บันทึกชุดของส่วนงานแล้ว');
@@ -149,7 +149,7 @@ export default function DocFormsRegistry() {
   const removeScope = async (sc) => {
     const w = canWriteUnit(docCtx, sc?.section);
     if (!w.ok) { toast.info(writeBlockText(w, { what: 'ชุดเอกสารของส่วนงานนี้', unit: sc?.section })); return; }
-    if (!await askConfirm(`ลบชุดของส่วนงาน "${sc.section}"? (กลับไปใช้ชุดกลาง)`)) return;
+    if (!await askConfirm(`${tr("ลบชุดของส่วนงาน")} "${sc.section}"? (${tr("กลับไปใช้ชุดกลาง")})`)) return;
     checkWriteRows(await supabase.from('doc_form_scopes').delete().eq('id', sc.id).select('id'), 'ลบขอบเขต');
     loadScopes(sc.doc_key); loadDocForms(true);
   };
@@ -161,12 +161,12 @@ export default function DocFormsRegistry() {
       description: newRev.description.trim() || null, responsible: newRev.responsible.trim() || null,
       approved_name: newRev.approved_name.trim() || null,
     }]);
-    if (error) { toast.error('เกิดข้อผิดพลาด: ' + error.message); return; }
+    if (error) { toast.error((tr('เกิดข้อผิดพลาด') + ': ') + error.message); return; }
     setNewRev(emptyRev);
     loadRevisions(editing.doc_key);
   };
   const removeRevision = async (r) => {
-    if (!await askConfirm(`ลบ Rev "${r.rev}"?`)) return;
+    if (!await askConfirm(`${tr("ลบ")} Rev "${r.rev}"?`)) return;
     checkWriteRows(await supabase.from('doc_form_revisions').delete().eq('id', r.id).select('id'), 'ลบ revision');
     loadRevisions(editing.doc_key);
   };
@@ -199,7 +199,7 @@ export default function DocFormsRegistry() {
       setEditing(null);
       await loadDocForms(true); // refresh cache ให้ฟังก์ชันพิมพ์ในแท็บนี้เห็นค่าใหม่
       load();
-    } catch (e) { toast.error('บันทึกไม่สำเร็จ: ' + e.message); }
+    } catch (e) { toast.error((tr('บันทึกไม่สำเร็จ') + ': ') + e.message); }
     finally { setSaving(false); }
   };
 
@@ -237,7 +237,7 @@ export default function DocFormsRegistry() {
                   <td style={{ textAlign: 'center', fontSize: 12 }}>{r.rev || '—'}</td>
                   <td style={{ textAlign: 'center', fontSize: 12, whiteSpace: 'nowrap' }}>{r.effective_date || '—'}</td>
                   <td style={{ textAlign: 'center', fontSize: 12, whiteSpace: 'nowrap' }}>
-                    {r.paper_size ? `${r.paper_size} ${r.orientation === 'landscape' ? 'แนวนอน' : 'แนวตั้ง'}` : (r.paper || '—')}
+                    {r.paper_size ? `${r.paper_size} ${r.orientation === 'landscape' ? tr('แนวนอน') : tr('แนวตั้ง')}` : (r.paper || '—')}
                     {r.layout_locked === false && <div style={{ fontSize: 11, color: 'var(--accent)' }}>{tr('ปรับแนวได้')}</div>}
                   </td>
                   <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
@@ -339,7 +339,7 @@ export default function DocFormsRegistry() {
                   )}
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--muted)', margin: '3px 0 7px', lineHeight: 1.6 }}>
-                  ส่วนงานที่ไม่ได้ตั้งไว้ = ใช้ช่องเซ็นชุดกลางด้านบน · ตั้งได้เฉพาะ <b>{tr('ข้อความป้าย')}</b> {tr('กับ')} <b>{tr('ชื่อผู้เซ็นประจำ')}</b> (จำนวนช่องเปลี่ยนไม่ได้ — ผูกกับ layout ฟอร์ม)
+                  {tr("ส่วนงานที่ไม่ได้ตั้งไว้ = ใช้ช่องเซ็นชุดกลางด้านบน · ตั้งได้เฉพาะ")} <b>{tr('ข้อความป้าย')}</b> {tr('กับ')} <b>{tr('ชื่อผู้เซ็นประจำ')}</b> ({tr("จำนวนช่องเปลี่ยนไม่ได้ — ผูกกับ layout ฟอร์ม")})
                 </div>
                 {scopes.length === 0 ? (
                   <div style={{ fontSize: 12, color: 'var(--muted)', padding: '8px 0' }}>{tr('ยังไม่มี — ทุกส่วนงานใช้ชุดกลาง')}</div>

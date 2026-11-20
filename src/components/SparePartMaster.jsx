@@ -71,7 +71,7 @@ function RankChip({ rank, overridden, size = 'md' }) {
   const m = RANK_META[rank];
   const pad = size === 'sm' ? '1px 7px' : '2px 9px';
   return (
-    <span title={`Rank ${rank} · ${m.desc}${overridden ? ' (กำหนดเอง)' : ''}`}
+    <span title={`Rank ${rank} · ${m.desc}${overridden ? tr(' (กำหนดเอง)') : ''}`}
       style={{ display: 'inline-block', padding: pad, borderRadius: 'var(--r-xs)', background: m.bg, color: m.color, border: `1px solid ${m.color}`, fontSize: size === 'sm' ? 11 : 12, fontWeight: 800, whiteSpace: 'nowrap' }}>
       {tr(m.label)}{overridden ? ' ✎' : ''}
     </span>
@@ -240,7 +240,7 @@ export default function SparePartMaster({ parts = [], reload, fullName, role, my
   const doDelete = async (p) => {
     // ด่านซ้ำอีกชั้น — ซ่อนปุ่มอย่างเดียวไม่พอ (ฝั่ง DR เป็น anon ไม่มีด่าน server · known gap)
     if (!mayDeleteRow(p)) return toast.error(teamRowLockNote(p, ownOf(p).code));
-    if (!await askConfirm(`ลบอะไหล่ "${p.name}" ออกจากคลัง?\n(ประวัติการเบิก-รับยังอยู่ ไม่ถูกลบ)`)) return;
+    if (!await askConfirm(`${tr("ลบอะไหล่")} "${p.name}" ${tr("ออกจากคลัง?\\n(ประวัติการเบิก-รับยังอยู่ ไม่ถูกลบ")})`)) return;
     // ลบ = soft delete ⇒ RLS ปฏิเสธ UPDATE = "สำเร็จ 0 แถว ไม่มี error" ⇒ ต้องนับแถว (กฎเหล็ก DB ข้อ 2)
     const res = await supabaseDR.from('mtn_spare_parts').update({ is_active: false }).eq('id', p.id).select('id');
     if (!checkWriteRows(res, 'ลบอะไหล่')) return;
@@ -251,7 +251,7 @@ export default function SparePartMaster({ parts = [], reload, fullName, role, my
     const df = docFormSync('spare_part_list', {});
     const code = fullCode(df);
     const teamLabel = fTeam ? (teams.find(t => t.key === fTeam)?.dept_name || fTeam) : ALL.team;
-    const secText = fSection ? `${sectionLabel(fSection, orgSecs)} (รวมของกลาง)` : ALL.unit;
+    const secText = fSection ? `${sectionLabel(fSection, orgSecs)} (${tr("รวมของกลาง")})` : ALL.unit;
     const head = ['ลำดับ', 'หน่วยงาน', 'รหัส', 'ชื่ออะไหล่', 'MAT SAP', 'Part no.', 'หมวด', 'ชั้นวาง', 'คงเหลือ', 'ขั้นต่ำ', 'สูงสุด', 'Rank', 'ใช้เฉลี่ย/เดือน', 'Leadtime (วัน)', 'ผู้ขาย', 'ใช้กับ'];
     const body = filtered.map((p, i) => [
       i + 1, p.section || 'ของกลาง', p.code || '', p.name || '', p.mat_no || '', p.part_no || '',
@@ -344,7 +344,7 @@ export default function SparePartMaster({ parts = [], reload, fullName, role, my
         {!!summary.none && chip('ยังไม่จัด', summary.none, 'var(--muted)')}
         {chip('หมด', summary.out, summary.out ? '#ef4444' : undefined)}
         {chip('ต่ำกว่าขั้นต่ำ', summary.low, summary.low ? '#f59e0b' : undefined)}
-        {chip('มูลค่าคงคลัง', `฿${fmtNum(summary.value)}`)}
+        {chip('มูลค่าคงคลัง', `${tr("฿")}${fmtNum(summary.value)}`)}
       </div>
 
       {/* กรองหน่วยงานแล้วซ่อนอะไรไปบ้าง — ห้ามหายเงียบ (กฎเดียวกับตัวกรองทีมใน ⚙️ ข้อมูลตั้งต้น) */}
@@ -405,7 +405,7 @@ export default function SparePartMaster({ parts = [], reload, fullName, role, my
                       {p.section
                         ? <span title={tr('หน่วยงานเจ้าของ')} style={{ padding: '0 6px', borderRadius: 'var(--r-xs)', background: 'var(--bg3-surf)', border: '1px solid var(--border)', color: 'var(--text2)', fontWeight: 700, whiteSpace: 'nowrap' }}>{sectionKeyOf(p.section)}</span>
                         : <span title={tr('ไม่ได้ระบุหน่วยงาน = ของกลางของทีม ทุกหน่วยงานใช้ร่วม')} style={{ color: 'var(--muted)' }}>🌐</span>}
-                      <span>{p.code ? `${p.code} · ` : ''}{p.used_with ? `ใช้กับ ${p.used_with}` : ''}</span>
+                      <span>{p.code ? `${p.code} · ` : ''}{p.used_with ? `${tr("ใช้กับ")} ${p.used_with}` : ''}</span>
                     </div>
                   </td>
                   <td style={{ ...td, fontSize: 11.5 }}>
@@ -434,7 +434,7 @@ export default function SparePartMaster({ parts = [], reload, fullName, role, my
                   </td>
                   <td style={{ ...td, textAlign: 'right' }}>{p.lead_time_days ?? <span style={{ color: '#f59e0b' }} title={tr('ยังไม่ได้กรอก leadtime — คำนวณ Rank ไม่ได้')}>—</span>}</td>
                   <td style={{ ...td, fontSize: 11.5 }}>{p.supplier || '—'}</td>
-                  <td style={{ ...td, textAlign: 'right' }}>{p.unit_price != null ? `฿${fmtNum(p.unit_price, 2)}` : '—'}</td>
+                  <td style={{ ...td, textAlign: 'right' }}>{p.unit_price != null ? `${tr("฿")}${fmtNum(p.unit_price, 2)}` : '—'}</td>
                   <td style={{ ...td, whiteSpace: 'nowrap' }}>
                     {canMove && <>
                       <button className="tbtn" onClick={() => setMovePart({ part: p, type: 'in' })} title={tr('รับเข้า')} style={{ ...btnGhost, padding: '5px 9px', fontSize: 12, color: '#22c55e' }}>➕</button>
@@ -461,10 +461,10 @@ export default function SparePartMaster({ parts = [], reload, fullName, role, my
       </div>
 
       <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8, lineHeight: 1.7 }}>
-        📘 <b>{tr('Rank ตาม WI-JIG-010')}</b> {tr('(คำนวณอัตโนมัติจากการใช้จริงย้อนหลัง')} {RANK_RULE.windowMonths} เดือน + leadtime · ✎ = กำหนดเอง):
-        <span style={{ color: RANK_META.A.color, fontWeight: 700 }}> A</span> ใช้ &gt;{RANK_RULE.usageHigh} ชิ้น/เดือน หรือ LT &gt;{RANK_RULE.ltLong} {tr('วัน —')} {tr(RANK_META.A.desc)} ·
+        📘 <b>{tr('Rank ตาม WI-JIG-010')}</b> {tr('(คำนวณอัตโนมัติจากการใช้จริงย้อนหลัง')} {RANK_RULE.windowMonths} {tr("เดือน + leadtime · ✎ = กำหนดเอง")}):
+        <span style={{ color: RANK_META.A.color, fontWeight: 700 }}> A</span> {tr("ใช้")} &gt;{RANK_RULE.usageHigh} {tr("ชิ้น/เดือน หรือ")} LT &gt;{RANK_RULE.ltLong} {tr('วัน —')} {tr(RANK_META.A.desc)} ·
         <span style={{ color: RANK_META.B.color, fontWeight: 700 }}> B</span> — {tr(RANK_META.B.desc)} ·
-        <span style={{ color: RANK_META.C.color, fontWeight: 700 }}> C</span> ใช้ &lt;{RANK_RULE.usageLow} ชิ้น/เดือน และ LT &lt;{RANK_RULE.ltShort} {tr('วัน —')} {tr(RANK_META.C.desc)}
+        <span style={{ color: RANK_META.C.color, fontWeight: 700 }}> C</span> {tr("ใช้")} &lt;{RANK_RULE.usageLow} {tr("ชิ้น/เดือน และ")} LT &lt;{RANK_RULE.ltShort} {tr('วัน —')} {tr(RANK_META.C.desc)}
       </div>
 
       {movePart && <StockMoveModal {...movePart} fullName={fullName} onClose={() => setMovePart(null)} onDone={reloadAll} />}
@@ -509,7 +509,7 @@ function StockMoveModal({ part, type, fullName, onClose, onDone }) {
     });
     setSaving(false);
     if (error) return toast.error(error.message);
-    toast.success(`${m.title.replace(/^[^ ]+ /, '')} "${part.name}" → คงเหลือ ${fmtNum(data)}`);
+    toast.success(`${m.title.replace(/^[^ ]+ /, '')} "${part.name}" → ${tr("คงเหลือ")} ${fmtNum(data)}`);
     onDone(); onClose();
   };
 
@@ -520,7 +520,7 @@ function StockMoveModal({ part, type, fullName, onClose, onDone }) {
         <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 2 }}>{part.name}</div>
         <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 12 }}>
           {part.code ? `${part.code} · ` : ''}{tr('คงเหลือปัจจุบัน')} <b style={{ color: 'var(--text)' }}>{fmtNum(cur)} {part.unit || ''}</b>
-          {part.shelf ? ` · ชั้นวาง ${part.shelf}` : ''}
+          {part.shelf ? ` · ${tr("ชั้นวาง")} ${part.shelf}` : ''}
         </div>
         <div style={{ display: 'grid', gap: 10 }}>
           <Field label={tr(m.label)} required hint={m.note}>
@@ -632,7 +632,7 @@ function PartEditModal({ part, cats, teams, shelfOpts, rackCells = [], secOpts =
       const { error } = await supabaseDR.storage.from('mtn-images').upload(path, blob, uploadOpts({ upsert: true, contentType: blob.type }));
       if (error) throw error;
       setImg(supabaseDR.storage.from('mtn-images').getPublicUrl(path).data.publicUrl);
-    } catch (err) { toast.error('อัปโหลดรูปไม่สำเร็จ: ' + err.message); }
+    } catch (err) { toast.error((tr('อัปโหลดรูปไม่สำเร็จ') + ': ') + err.message); }
   };
 
   const save = async () => {
@@ -661,7 +661,7 @@ function PartEditModal({ part, cats, teams, shelfOpts, rackCells = [], secOpts =
         const { error: e2 } = await supabaseDR.rpc('mtn_stock_move', {
           p_part_id: data.id, p_type: 'in', p_qty: opening, p_note: 'ยอดยกมาตอนสร้างรายการ', p_by_name: null, p_ref_order: null,
         });
-        if (e2) toast.error('บันทึกอะไหล่แล้ว แต่ตั้งยอดยกมาไม่สำเร็จ: ' + e2.message);
+        if (e2) toast.error((tr('บันทึกอะไหล่แล้ว แต่ตั้งยอดยกมาไม่สำเร็จ') + ': ') + e2.message);
       }
     } else {
       ({ error: err } = await supabaseDR.from('mtn_spare_parts').update(payload).eq('id', part.id));
@@ -673,13 +673,13 @@ function PartEditModal({ part, cats, teams, shelfOpts, rackCells = [], secOpts =
         const clear = months.filter(k => !(k in manual) || manual[k] === '');
         if (rows.length) {
           const { error: e3 } = await supabaseDR.from('mtn_spare_usage_monthly').upsert(rows, { onConflict: 'part_id,month_key,source' });
-          if (e3) toast.error('บันทึกยอดใช้ย้อนหลังไม่สำเร็จ: ' + e3.message);
+          if (e3) toast.error((tr('บันทึกยอดใช้ย้อนหลังไม่สำเร็จ') + ': ') + e3.message);
         }
         if (clear.length) {
           // เดิมไม่อ่าน error — ล้างยอดเดือนที่ลบออกไม่สำเร็จ = ยอดเก่ายังนับใน Rank A/B/C เงียบๆ (QC 05/10)
           const { error: e4 } = await supabaseDR.from('mtn_spare_usage_monthly')
             .delete().eq('part_id', part.id).eq('source', 'manual').in('month_key', clear);
-          if (e4) toast.error('ล้างยอดใช้ย้อนหลังที่ลบออกไม่สำเร็จ (ยอดเดิมยังถูกนับ): ' + e4.message);
+          if (e4) toast.error((tr('ล้างยอดใช้ย้อนหลังที่ลบออกไม่สำเร็จ (ยอดเดิมยังถูกนับ') + '): ') + e4.message);
         }
       }
     }
@@ -724,7 +724,7 @@ function PartEditModal({ part, cats, teams, shelfOpts, rackCells = [], secOpts =
                   if (!g || sectionKeyOf(f.section) === g) return null;
                   return (
                     <div style={{ fontSize: 11, color: '#f59e0b', marginTop: 4 }}>
-                      รหัสขึ้นต้นด้วย <b>{g}</b> —{' '}
+                      {tr("รหัสขึ้นต้นด้วย")} <b>{g}</b> —{' '}
                       <button type="button" onClick={() => set('section', g)}
                         style={{ background: 'none', border: 'none', color: '#f59e0b', textDecoration: 'underline', cursor: 'pointer', font: 'inherit', padding: 0 }}>
                         {tr('ใช้')} {g} {tr('เป็นหน่วยงานเจ้าของ')}
@@ -777,13 +777,12 @@ function PartEditModal({ part, cats, teams, shelfOpts, rackCells = [], secOpts =
                 {preview.calcRank ? (
                   <>{tr('ระบบคำนวณได้:')} <RankChip rank={preview.calcRank} />
                     <span style={{ color: 'var(--muted)', marginLeft: 8 }}>
-                      จากการใช้เฉลี่ย <b style={{ color: 'var(--text)' }}>{fmtNum(preview.avgPerMonth, 1)}</b> ชิ้น/เดือน
-                      (ใช้จริง {fmtNum(preview.totalUsed)} {tr('ชิ้นใน')} {preview.months} เดือน)
+                      {tr("จากการใช้เฉลี่ย")} <b style={{ color: 'var(--text)' }}>{fmtNum(preview.avgPerMonth, 1)}</b> {tr("ชิ้น/เดือน (ใช้จริง")} {fmtNum(preview.totalUsed)} {tr('ชิ้นใน')} {preview.months} {tr("เดือน")})
                       {preview.leadTimeDays != null && <> · leadtime <b style={{ color: 'var(--text)' }}>{preview.leadTimeDays}</b> {tr('วัน')}</>}
                     </span></>
                 ) : (
                   <span style={{ color: '#f59e0b' }}>
-                    ⚠️ ยังคำนวณ Rank ไม่ได้ — {preview.missing === 'lead_time'
+                    ⚠️ {tr("ยังคำนวณ Rank ไม่ได้")} — {preview.missing === 'lead_time'
                       ? 'ต้องกรอก Leadtime (วัน) ก่อน'
                       : 'ยังไม่มีประวัติการใช้ — คีย์ยอดใช้ย้อนหลังจาก Excel ด้านล่าง หรือรอให้ระบบสะสมเองจากการเบิกใช้'}
                   </span>
@@ -802,7 +801,7 @@ function PartEditModal({ part, cats, teams, shelfOpts, rackCells = [], secOpts =
                         <div key={k} style={{ width: 82 }}>
                           <div style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'center', marginBottom: 2 }}>{k.slice(2)}</div>
                           <input type="number" min="0" value={manual[k] ?? ''} onChange={e => setManualQty(k, e.target.value)}
-                            placeholder={sysOut ? String(sysOut) : '—'} title={sysOut ? `ระบบบันทึกไว้แล้ว ${sysOut} ชิ้น (ยอดที่คีย์จะบวกเพิ่ม)` : 'ยังไม่มียอดในระบบ'}
+                            placeholder={sysOut ? String(sysOut) : '—'} title={sysOut ? `${tr("ระบบบันทึกไว้แล้ว")} ${sysOut} ${tr("ชิ้น (ยอดที่คีย์จะบวกเพิ่ม")})` : 'ยังไม่มียอดในระบบ'}
                             style={{ ...inp, textAlign: 'center', padding: '6px 4px' }} />
                         </div>
                       );
@@ -896,7 +895,7 @@ function HistoryModal({ part, usageRows, onClose }) {
         <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 14 }}>{tr('คงเหลือปัจจุบัน')} {fmtNum(part.stock_qty)} {part.unit || ''}</div>
 
         <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--accent2)', marginBottom: 6 }}>
-          การใช้ย้อนหลัง {RANK_RULE.windowMonths} เดือน (แทนคอลัมน์ PI/PO ในไฟล์เดิม)
+          {tr("การใช้ย้อนหลัง")} {RANK_RULE.windowMonths} {tr("เดือน (แทนคอลัมน์ PI/PO ในไฟล์เดิม")})
         </div>
         <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', height: 90, marginBottom: 14, background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 10px' }}>
           {months.map(k => {
@@ -904,7 +903,7 @@ function HistoryModal({ part, usageRows, onClose }) {
             return (
               <div key={k} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, height: '100%', justifyContent: 'flex-end' }}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: out ? 'var(--text)' : 'var(--muted)' }}>{out || ''}</div>
-                <div title={`${k}: เบิก ${out}`} style={{ width: '100%', height: `${Math.max(2, (out / maxOut) * 52)}px`, background: out ? '#f59e0b' : 'var(--border)', borderRadius: '3px 3px 0 0' }} />
+                <div title={`${k}: ${tr("เบิก")} ${out}`} style={{ width: '100%', height: `${Math.max(2, (out / maxOut) * 52)}px`, background: out ? '#f59e0b' : 'var(--border)', borderRadius: '3px 3px 0 0' }} />
                 <div style={{ fontSize: 11, color: 'var(--muted)' }}>{k.slice(5)}</div>
               </div>
             );
@@ -983,7 +982,7 @@ function ImportModal({ parts, cats, teams, fullName, ownOf = () => ({ ok: true }
         toast.error('อ่านไฟล์ไม่ได้ — ต้องมีหัวคอลัมน์ "ชื่ออะไหล่" หรือ "รหัส" อย่างน้อย 1 คอลัมน์');
         setParsed(null);
       } else setParsed(best);
-    } catch (err) { toast.error('อ่านไฟล์ไม่สำเร็จ: ' + err.message); setParsed(null); }
+    } catch (err) { toast.error((tr('อ่านไฟล์ไม่สำเร็จ') + ': ') + err.message); setParsed(null); }
     setBusy(false);
   };
 
@@ -1007,10 +1006,10 @@ function ImportModal({ parts, cats, teams, fullName, ownOf = () => ({ ok: true }
     const blocked = matched.filter(r => r.action === 'update' && r.existing && !ownOf(r.existing).ok);
     const todo = matched.filter(r => r.action !== 'skip' && !blocked.includes(r));
     if (blocked.length && !await askConfirm(
-      `${blocked.length} แถวเป็นอะไหล่ของทีมอื่น — ข้ามไว้ ไม่อัพเดททับ\n`
+      `${blocked.length} ${tr("แถวเป็นอะไหล่ของทีมอื่น — ข้ามไว้ ไม่อัพเดททับ")}\n`
       + blocked.slice(0, 5).map(r => `· ${r.existing.name}`).join('\n')
-      + (blocked.length > 5 ? `\n· …อีก ${blocked.length - 5} แถว` : '')
-      + `\n\nนำเข้าส่วนที่เหลือ ${todo.length} แถวต่อไหม?`)) return;
+      + (blocked.length > 5 ? `\n· …${tr("อีก")} ${blocked.length - 5} ${tr("แถว")}` : '')
+      + `\n\n${tr("นำเข้าส่วนที่เหลือ")} ${todo.length} ${tr("แถวต่อไหม")}?`)) return;
     if (!todo.length) return toast.error(blocked.length ? 'ทุกแถวเป็นของทีมอื่น — ไม่มีอะไรนำเข้าได้' : 'ไม่มีแถวที่นำเข้าได้');
     setBusy(true);
     let created = 0, updated = 0, failed = 0, stockDone = 0;
@@ -1056,7 +1055,7 @@ function ImportModal({ parts, cats, teams, fullName, ownOf = () => ({ ok: true }
       } catch { failed++; }
     }
     setBusy(false); setProgress(null);
-    toast.success(`นำเข้าเสร็จ — เพิ่ม ${created} · อัพเดท ${updated}${stockDone ? ` · ตั้งยอด ${stockDone}` : ''}${failed ? ` · ไม่สำเร็จ ${failed}` : ''}`);
+    toast.success(`${tr("นำเข้าเสร็จ — เพิ่ม")} ${created} · ${tr("อัพเดท")} ${updated}${stockDone ? ` · ${tr("ตั้งยอด")} ${stockDone}` : ''}${failed ? ` · ${tr("ไม่สำเร็จ")} ${failed}` : ''}`);
     onDone(); onClose();
   };
 
@@ -1122,7 +1121,7 @@ function ImportModal({ parts, cats, teams, fullName, ownOf = () => ({ ok: true }
             </div>
             {!!parsed.unknown.length && (
               <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 8 }}>
-                คอลัมน์ที่ระบบไม่รู้จัก (ข้ามไป): {parsed.unknown.slice(0, 10).join(' · ')}{parsed.unknown.length > 10 ? ' …' : ''}
+                {tr("คอลัมน์ที่ระบบไม่รู้จัก (ข้ามไป")}): {parsed.unknown.slice(0, 10).join(' · ')}{parsed.unknown.length > 10 ? ' …' : ''}
               </div>
             )}
 
@@ -1158,7 +1157,7 @@ function ImportModal({ parts, cats, teams, fullName, ownOf = () => ({ ok: true }
 
         {progress && (
           <div style={{ marginTop: 12, fontSize: 12.5 }}>
-            กำลังนำเข้า {progress.i}/{progress.total}…
+            {tr("กำลังนำเข้า")} {progress.i}/{progress.total}…
             <div style={{ height: 6, background: 'var(--bg3)', borderRadius: 'var(--r-xs)', overflow: 'hidden', marginTop: 4 }}>
               <div style={{ height: '100%', width: `${(progress.i / progress.total) * 100}%`, background: 'var(--accent)' }} />
             </div>
@@ -1169,7 +1168,7 @@ function ImportModal({ parts, cats, teams, fullName, ownOf = () => ({ ok: true }
           <button onClick={onClose} disabled={busy} style={{ ...btnGhost, opacity: busy ? 0.5 : 1 }}>{tr('ปิด')}</button>
           <button onClick={apply} disabled={busy || !parsed || !(stat.create + stat.update)}
             style={{ ...btnPri, opacity: (busy || !parsed || !(stat.create + stat.update)) ? 0.5 : 1 }}>
-            {busy ? 'กำลังทำงาน…' : `นำเข้า ${stat.create + stat.update} รายการ`}
+            {busy ? 'กำลังทำงาน…' : `${tr("นำเข้า")} ${stat.create + stat.update} ${tr("รายการ")}`}
           </button>
         </div>
       </div>
@@ -1220,7 +1219,7 @@ function CategoryModal({ cats, teams = [], onClose, onSaved }) {
                 <option value="">{tr('🌐 ใช้ร่วมทุกทีม')}</option>
                 {teams.map((t, i) => <option key={`${t.key}-${i}`} value={t.key}>{t.icon || ''} {t.dept_name || tr(t.label)}</option>)}
               </select>
-              <DeleteButton onClick={async () => await askConfirm(`ซ่อนหมวด ${c.key}?`) && upd(c.key, { is_active: false })} title={tr('ลบ')} />
+              <DeleteButton onClick={async () => await askConfirm(`${tr("ซ่อนหมวด")} ${c.key}?`) && upd(c.key, { is_active: false })} title={tr('ลบ')} />
             </div>
           ))}
         </div>

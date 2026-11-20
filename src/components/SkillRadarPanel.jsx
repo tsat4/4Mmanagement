@@ -110,7 +110,7 @@ export default function SkillRadarPanel({ emp, skillDefs, subItemsByskill = {}, 
       });
       const w = window.open('', '_blank'); w.document.write(html); w.document.close();
     } catch (e) {
-      toast.error('พิมพ์ใบประเมินไม่สำเร็จ: ' + (e?.message || e));
+      toast.error((tr('พิมพ์ใบประเมินไม่สำเร็จ') + ': ') + (e?.message || e));
     } finally {
       setPrinting(false);
     }

@@ -143,7 +143,7 @@ export default function RoutingPanel({ canEdit, lines = [] }) {
   };
 
   const remove = async (r) => {
-    if (!await askConfirm(`ลบขั้น "${r.step_name}" ?`)) return;
+    if (!await askConfirm(`${tr("ลบขั้น")} "${r.step_name}" ?`)) return;
     const { error } = await supabaseDR.from('part_routings').delete().eq('id', r.id);
     if (error) { toast.error(error.message); return; }
     /* เรียงลำดับที่เหลือให้ต่อเนื่อง 1..n
@@ -156,7 +156,7 @@ export default function RoutingPanel({ canEdit, lines = [] }) {
       const res = await supabaseDR.from('part_routings').update({ seq: i + 1 }).eq('id', rest[i].id).select('id');
       if (res.error || !(res.data || []).length) reseqFail++;
     }
-    if (reseqFail) toast.error(`ลบแล้ว แต่เรียงลำดับขั้นใหม่ไม่สำเร็จ ${reseqFail} ขั้น — ลำดับอาจกระโดด/ซ้ำ`);
+    if (reseqFail) toast.error(`${tr("ลบแล้ว แต่เรียงลำดับขั้นใหม่ไม่สำเร็จ")} ${reseqFail} ${tr("ขั้น — ลำดับอาจกระโดด/ซ้ำ")}`);
     else toast.success('ลบแล้ว');
     loadSteps(sel.mat_no); loadAll();
   };
@@ -198,7 +198,7 @@ export default function RoutingPanel({ canEdit, lines = [] }) {
                     color: sel?.id === p.id ? '#08130a' : 'var(--text)',
                   }}>
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.mat_no} · {p.name}</span>
-                  <span style={{ fontSize: 11, opacity: 0.8, flexShrink: 0 }}>{counts[p.mat_no] ? `${counts[p.mat_no]} ขั้น` : '—'}</span>
+                  <span style={{ fontSize: 11, opacity: 0.8, flexShrink: 0 }}>{counts[p.mat_no] ? `${counts[p.mat_no]} ${tr("ขั้น")}` : '—'}</span>
                 </div>
               ))}
             </div>

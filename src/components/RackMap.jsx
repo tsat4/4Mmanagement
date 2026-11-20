@@ -134,7 +134,7 @@ export default function RackMap({ parts = [], canEdit, myTeams = [], mySection =
       setSelCell(null);
       return true;
     } catch (e) {
-      toast.error('ย้อนกลับไม่สำเร็จ: ' + (e.message || ''));
+      toast.error((tr('ย้อนกลับไม่สำเร็จ') + ': ') + (e.message || ''));
       await loadCells(rid);          // ให้จอตรงกับ DB จริงเสมอ แม้ย้อนไม่สำเร็จ
       return false;
     }
@@ -258,11 +258,11 @@ export default function RackMap({ parts = [], canEdit, myTeams = [], mySection =
       rack_id: rackId, shelf_code,
       x: +rect.x.toFixed(2), y: +rect.y.toFixed(2), w: +rect.w.toFixed(2), h: +rect.h.toFixed(2),
     });
-    if (error) return toast.error(error.code === '23505' ? `รหัส "${shelf_code}" มีช่องอยู่แล้วในผังนี้` : error.message);
+    if (error) return toast.error(error.code === '23505' ? `${tr("รหัส")} "${shelf_code}" ${tr("มีช่องอยู่แล้วในผังนี้")}` : error.message);
     loadCells(rackId);
   };
   const delCell = async (c) => {
-    if (!await askConfirm(`ลบช่อง "${c.shelf_code}" ออกจากผัง?\n(ตัวอะไหล่ไม่ถูกลบ · กด Undo คืนได้)`)) return;
+    if (!await askConfirm(`${tr("ลบช่อง")} "${c.shelf_code}" ${tr("ออกจากผัง?\\n(ตัวอะไหล่ไม่ถูกลบ · กด Undo คืนได้")})`)) return;
     hist.pushHistory();
     checkWriteRows(await supabaseDR.from('mtn_rack_cells').delete().eq('id', c.id).select('id'), 'ลบช่องชั้นวาง');
     setSelCell(null); loadCells(rackId);
@@ -334,7 +334,7 @@ export default function RackMap({ parts = [], canEdit, myTeams = [], mySection =
 
       {edit && (
         <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid #f59e0b', borderRadius: 'var(--r-md)', padding: '8px 12px', marginBottom: 10, fontSize: 12.5 }}>
-          ✏️ <b>{tr('โหมดแก้ผัง')}</b> {tr('— ลากบน')}<b>{tr('พื้นที่ว่าง')}</b>{tr('เพื่อสร้างช่องใหม่ · ลาก')}<b>{tr('ตัวช่อง')}</b>{tr('เพื่อย้าย · ลาก')}<b>{tr('มุมขวาล่าง')}</b>เพื่อปรับขนาด · กดช่องแล้วเปลี่ยนรหัส/ลบได้ที่แผงขวา
+          ✏️ <b>{tr('โหมดแก้ผัง')}</b> {tr('— ลากบน')}<b>{tr('พื้นที่ว่าง')}</b>{tr('เพื่อสร้างช่องใหม่ · ลาก')}<b>{tr('ตัวช่อง')}</b>{tr('เพื่อย้าย · ลาก')}<b>{tr('มุมขวาล่าง')}</b>{tr("เพื่อปรับขนาด · กดช่องแล้วเปลี่ยนรหัส/ลบได้ที่แผงขวา")}
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginTop: 8 }}>
             <button onClick={hist.undo} disabled={!hist.canUndo || hist.busy} style={undoBtnStyle(hist.canUndo && !hist.busy)} title="Ctrl+Z">↩️ Undo</button>
             <button onClick={hist.redo} disabled={!hist.canRedo || hist.busy} style={undoBtnStyle(hist.canRedo && !hist.busy)} title="Ctrl+Y">↪️ Redo</button>
@@ -348,8 +348,8 @@ export default function RackMap({ parts = [], canEdit, myTeams = [], mySection =
           <div style={{ fontSize: 34, marginBottom: 8 }}>🗺️</div>
           <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>{tr('ยังไม่มีผังชั้นวาง')}</div>
           <div style={{ fontSize: 12.5, lineHeight: 1.8 }}>
-            ถ่ายรูป<b>{tr('ด้านหน้า')}</b>{tr('ของชั้นวางอะไหล่ → สร้างผังใหม่ → อัปโหลดรูป → ตีช่องแต่ละชั้น แล้วใส่รหัสชั้นวางให้ตรงกับที่กรอกในอะไหล่')}<br />
-            จากนั้นค้นชื่ออะไหล่แล้วระบบจะบอกว่าอยู่ช่องไหนบนผัง
+            {tr("ถ่ายรูป")}<b>{tr('ด้านหน้า')}</b>{tr('ของชั้นวางอะไหล่ → สร้างผังใหม่ → อัปโหลดรูป → ตีช่องแต่ละชั้น แล้วใส่รหัสชั้นวางให้ตรงกับที่กรอกในอะไหล่')}<br />
+            {tr("จากนั้นค้นชื่ออะไหล่แล้วระบบจะบอกว่าอยู่ช่องไหนบนผัง")}
           </div>
           {canEdit && <button onClick={() => setShowRackForm({ mode: 'new' })} style={{ ...btnPri, marginTop: 14 }}>{tr('➕ สร้างผังชั้นวาง')}</button>}
         </div>
@@ -381,7 +381,7 @@ export default function RackMap({ parts = [], canEdit, myTeams = [], mySection =
                   return (
                     <div key={c.id} data-cell={c.id}
                       onClick={(e) => { e.stopPropagation(); setSelCell(c0); }}
-                      title={edit ? `${c.shelf_code} — ลากเพื่อย้าย · ลากมุมขวาล่างเพื่อปรับขนาด` : `${c.shelf_code} · ${ps.length} รายการ · ${st.label}`}
+                      title={edit ? `${c.shelf_code} — ${tr("ลากเพื่อย้าย · ลากมุมขวาล่างเพื่อปรับขนาด")}` : `${c.shelf_code} · ${ps.length} ${tr("รายการ")} · ${st.label}`}
                       style={{
                         position: 'absolute', left: `${c.x}%`, top: `${c.y}%`, width: `${c.w}%`, height: `${c.h}%`,
                         border: `2px solid ${isHit ? '#facc15' : sel ? 'var(--accent)' : st.color}`,
@@ -456,7 +456,7 @@ export default function RackMap({ parts = [], canEdit, myTeams = [], mySection =
                             {p.code ? `${p.code} · ` : ''}{p.mat_no || ''}
                           </div>
                           <div style={{ fontSize: 12, fontWeight: 800, color: st.color, marginTop: 3 }}>
-                            คงเหลือ {fmtNum(p.stock_qty)} {p.unit || ''} {st.key !== 'ok' && `· ${st.label}`}
+                            {tr("คงเหลือ")} {fmtNum(p.stock_qty)} {p.unit || ''} {st.key !== 'ok' && `· ${st.label}`}
                           </div>
                         </div>
                       );
@@ -539,7 +539,7 @@ function GridModal({ rackId, existing, onClose, onDone, onBeforeSave }) {
     const { error } = await supabaseDR.from('mtn_rack_cells').insert(rowsToAdd);
     setSaving(false);
     if (error) return toast.error(error.message);
-    toast.success(`สร้าง ${rowsToAdd.length} ช่องแล้ว`); onDone();
+    toast.success(`${tr("สร้าง")} ${rowsToAdd.length} ${tr("ช่องแล้ว")}`); onDone();
   };
 
   const nf = (k, v, o = area, set = setArea) => set({ ...o, [k]: Number(v) || 0 });
@@ -562,7 +562,7 @@ function GridModal({ rackId, existing, onClose, onDone, onBeforeSave }) {
         </div>
         <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 10, marginBottom: 12 }}>
           <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>
-            จะสร้าง <b style={{ color: 'var(--text)' }}>{preview.length}</b> {tr('ช่อง — ตัวอย่างรหัส:')} <b style={{ color: 'var(--accent)' }}>{preview[0]?.shelf_code}</b> … <b style={{ color: 'var(--accent)' }}>{preview[preview.length - 1]?.shelf_code}</b>
+            {tr("จะสร้าง")} <b style={{ color: 'var(--text)' }}>{preview.length}</b> {tr('ช่อง — ตัวอย่างรหัส:')} <b style={{ color: 'var(--accent)' }}>{preview[0]?.shelf_code}</b> … <b style={{ color: 'var(--accent)' }}>{preview[preview.length - 1]?.shelf_code}</b>
             {!!dup && <span style={{ color: '#f59e0b' }}> {tr('· ข้าม')} {dup} {tr('ช่องที่รหัสซ้ำของเดิม')}</span>}
           </div>
           {/* พรีวิวสัดส่วนจริง */}
@@ -574,7 +574,7 @@ function GridModal({ rackId, existing, onClose, onDone, onBeforeSave }) {
         </div>
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <button onClick={onClose} style={btnGhost}>{tr('ยกเลิก')}</button>
-          <button onClick={save} disabled={saving} style={{ ...btnPri, opacity: saving ? 0.5 : 1 }}>{saving ? 'กำลังสร้าง…' : `สร้าง ${preview.length - dup} ช่อง`}</button>
+          <button onClick={save} disabled={saving} style={{ ...btnPri, opacity: saving ? 0.5 : 1 }}>{saving ? 'กำลังสร้าง…' : `${tr("สร้าง")} ${preview.length - dup} ${tr("ช่อง")}`}</button>
         </div>
       </div>
     </div>
@@ -607,7 +607,7 @@ function RackFormModal({ mode, rack, teams, myTeams, secOpts = [], defSection = 
     }
   };
   const del = async () => {
-    if (!await askConfirm(`ลบผัง "${rack.name}"?\nช่องทั้งหมดบนผังนี้จะถูกลบด้วย (ตัวอะไหล่ไม่ถูกลบ)`)) return;
+    if (!await askConfirm(`${tr("ลบผัง")} "${rack.name}"?\n${tr("ช่องทั้งหมดบนผังนี้จะถูกลบด้วย (ตัวอะไหล่ไม่ถูกลบ")})`)) return;
     const { error } = await supabaseDR.from('mtn_rack_maps').update({ is_active: false }).eq('id', rack.id);
     if (error) return toast.error(error.message);
     toast.success('ลบผังแล้ว'); onSaved(null);

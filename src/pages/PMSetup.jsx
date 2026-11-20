@@ -518,9 +518,9 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
     if (!copyTo.length) { setError('เลือกเครื่องปลายทางก่อน'); return }
     const nameOf = (id) => { const e = allEquip.find(x => x.id === id); return e ? (e.machine_no || e.jig_no || e.name || id) : id }
     if (!await askConfirm(
-      `คัดลอก ${cur.checkpointCount} จุดตรวจ ไปอีก ${copyTo.length} เครื่อง\n`
-      + `(แผนก ${pmTeamsSync().find(t => t.key === department)?.label ?? department})\n\n`
-      + `⚠️ เครื่องที่ "มีจุดตรวจอยู่แล้ว" จะถูกข้าม ไม่ทับของเดิม\n\nยืนยัน?`)) return
+      `${tr("คัดลอก")} ${cur.checkpointCount} ${tr("จุดตรวจ ไปอีก")} ${copyTo.length} ${tr("เครื่อง")}\n`
+      + `(${tr("แผนก")} ${pmTeamsSync().find(t => t.key === department)?.label ?? department})\n\n`
+      + `⚠️ ${tr("เครื่องที่ \"มีจุดตรวจอยู่แล้ว\" จะถูกข้าม ไม่ทับของเดิม\\n\\nยืนยัน")}?`)) return
     setCopyBusy(true); setError(''); setCopyReport(null)
     try {
       const { results } = await copyChecklistToEquipment(cur.id, copyTo, userId, { replace: false })
@@ -541,7 +541,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
     /* 🔐 ด่านชั้น 2 ก่อนเขียน — **ปลายทางเสมอ** (สร้าง/ทับของทีมนั้น) + **ต้นทางเมื่อย้าย**
        (ย้าย = ยกรายการตรวจ + ประวัติการตรวจของทีมที่เปิดอยู่ออกไปทั้งก้อน) */
     const dstWrite = teamWriteOf?.(moveTo)
-    if (dstWrite && !dstWrite.ok) { setError(teamBlockText(dstWrite, `รายการตรวจของทีม "${toLabel}"`)); return }
+    if (dstWrite && !dstWrite.ok) { setError(teamBlockText(dstWrite, `${tr("รายการตรวจของทีม")} "${toLabel}"`)); return }
     if (mode === 'move' && deptWrite && !deptWrite.ok) {
       setError(teamBlockText(deptWrite, 'รายการตรวจของทีมนี้')); return
     }
@@ -556,18 +556,18 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
         //    ลบ checklist ปลายทาง = รอบเวลา/วันตรวจล่าสุด/วันครบกำหนด/เกณฑ์ยอดผลิต หายตามไปทั้งหมด
         //    (เดิมถามแค่จำนวนจุดตรวจ → คนกดตกลงโดยไม่รู้ว่ากำลังลบแผน PM ทิ้ง)
         const ok = await askConfirm(
-          `${toLabel} มีของอยู่แล้ว: รายการตรวจ ${res.targetCheckpoints} จุด`
-          + (res.targetPlans > 0 ? ` · แผน PM ${res.targetPlans} แผน` : '')
-          + `\nดำเนินการต่อจะ "แทนที่ของเดิม" ทั้งหมด`
+          `${toLabel} ${tr("มีของอยู่แล้ว: รายการตรวจ")} ${res.targetCheckpoints} ${tr("จุด")}`
+          + (res.targetPlans > 0 ? ` · ${tr("แผน")} PM ${res.targetPlans} ${tr("แผน")}` : '')
+          + `\n${tr("ดำเนินการต่อจะ \"แทนที่ของเดิม\" ทั้งหมด")}`
           + (res.targetPlans > 0 ? ' (รวมรอบเวลา/วันครบกำหนดของแผน PM ที่จะหายถาวร)' : '')
-          + ` — ยืนยันหรือไม่?`)
+          + ` — ${tr("ยืนยันหรือไม่")}?`)
         if (!ok) { setMoveBusy(false); return }
         res = await run(true)
       }
       if (res.reason === 'empty') { setError('แผนกนี้ยังไม่มีจุดตรวจให้คัดลอก'); setMoveBusy(false); return }
       toast.success(mode === 'move'
-        ? `ย้ายรายการตรวจไป ${toLabel} แล้ว (ประวัติการตรวจย้ายตามไปด้วย)`
-        : `คัดลอก ${res.count} จุดตรวจไป ${toLabel} แล้ว`)
+        ? `${tr("ย้ายรายการตรวจไป")} ${toLabel} ${tr("แล้ว (ประวัติการตรวจย้ายตามไปด้วย")})`
+        : `${tr("คัดลอก")} ${res.count} ${tr("จุดตรวจไป")} ${toLabel} ${tr("แล้ว")}`)
       setMoveTo('')
       reloadDeptSummary()
       onSaved()   // รีเฟรชลิสต์เครื่องด้านหลัง — ย้ายแล้วเครื่องจะย้ายแท็บ
@@ -723,14 +723,14 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
     {
       const blank = groupCheckpoints(checkpoints).ordered.filter(c => !c.name.trim())
       if (blank.length) {
-        setError(`กรุณาใส่ชื่อทุกจุดตรวจสอบ (ยังว่าง ${blank.length} จุด — พาไปจุดแรกให้แล้ว)`)
+        setError(`${tr("กรุณาใส่ชื่อทุกจุดตรวจสอบ (ยังว่าง")} ${blank.length} ${tr("จุด — พาไปจุดแรกให้แล้ว")})`)
         jumpToCp(blank[0]._key)
         return
       }
     }
     {
       const bad = calcIssueList[0]
-      if (bad) { setError(`จุดตรวจ ${cpLabels[bad.key] || ''} (คำนวณ): ${bad.msg}`); jumpToCp(bad.key); return }
+      if (bad) { setError(`${tr("จุดตรวจ")} ${cpLabels[bad.key] || ''} (${tr("คำนวณ")}): ${bad.msg}`); jumpToCp(bad.key); return }
     }
     /* จุดชนิด "ค่าวัด" ต้องมีเกณฑ์ — ไม่มีเกณฑ์ = measureStatus ไม่มีอะไรให้ fail → **ผ่านตลอดกาล**
        (จุดตรวจที่ตัดสินอะไรไม่ได้เลย แต่หน้าจอขึ้นเขียวว่าตรวจแล้ว = หลอกคนอ่านผลตรวจ) */
@@ -738,8 +738,8 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
     for (const c of checkpoints) {
       if (c.type !== 'measure') continue
       const lo = num(c.lsl), hi = num(c.usl)
-      if (lo == null && hi == null) { setError(`จุดตรวจ "${c.name.trim()}" เป็นชนิดค่าวัด — ต้องกรอกเกณฑ์อย่างน้อย 1 ช่อง (ไม่งั้นจะขึ้น OK ทุกครั้งที่ตรวจ)`); return }
-      if (lo != null && hi != null && lo >= hi) { setError(`จุดตรวจ "${c.name.trim()}" ค่าต่ำสุด (${lo}) ต้องน้อยกว่าค่าสูงสุด (${hi}) — ไม่งั้นจะขึ้น NG ทุกครั้ง`); return }
+      if (lo == null && hi == null) { setError(`${tr("จุดตรวจ")} "${c.name.trim()}" ${tr("เป็นชนิดค่าวัด — ต้องกรอกเกณฑ์อย่างน้อย 1 ช่อง (ไม่งั้นจะขึ้น OK ทุกครั้งที่ตรวจ")})`); return }
+      if (lo != null && hi != null && lo >= hi) { setError(`${tr("จุดตรวจ")} "${c.name.trim()}" ${tr("ค่าต่ำสุด")} (${lo}) ${tr("ต้องน้อยกว่าค่าสูงสุด")} (${hi}) — ${tr("ไม่งั้นจะขึ้น NG ทุกครั้ง")}`); return }
     }
     // รูปหลายมุมได้ตั้งแต่ 1 รูปขึ้นไป ไม่บังคับจำนวน — 2 รูปขึ้นไปปัดดูรอบเครื่องได้ ยิ่งเยอะยิ่งลื่น
     setSaving(true); setError('')
@@ -790,7 +790,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
          (กติกาเดียวกับ assignJigLine ใน DailyPM.jsx) · ล้ม = บอก ไม่เงียบ แต่ไม่ยกเลิกการบันทึกอุปกรณ์ */
       if (editJig?.id && (editJig.line_name || null) !== (lineName || null)) {
         const { error: tgErr } = await supabaseDR.from('pm_daily_line_targets').update({ line_name: lineName || null }).eq('jig_id', editJig.id).eq('is_active', true)
-        if (tgErr) toast.error('ย้ายรายการลงทะเบียน AM ตามไลน์ใหม่ไม่สำเร็จ: ' + tgErr.message + ' — ไปแก้ที่จอ AM รายวัน')
+        if (tgErr) toast.error((tr('ย้ายรายการลงทะเบียน AM ตามไลน์ใหม่ไม่สำเร็จ') + ': ') + tgErr.message + (' — ' + tr('ไปแก้ที่จอ AM รายวัน')))
         else invalidateTable('pm_daily_line_targets')
       }
 
@@ -837,8 +837,8 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
       } catch (e) {
         const constraint = e?.code === '23514' || /check constraint|violates/i.test(e?.message || '')
         freqWarn = constraint
-          ? `บันทึกจุดตรวจเรียบร้อย แต่ตั้งรอบเป็น “${cycleLabel(null, cycleN)}” ไม่ได้ — ฐานข้อมูลยังไม่รับค่านี้ · แจ้ง admin ให้รัน migration 20260821_checklists_frequency_values`
-          : `บันทึกจุดตรวจเรียบร้อย แต่ตั้งรอบไม่ได้: ${e?.message || e}`
+          ? `${tr("บันทึกจุดตรวจเรียบร้อย แต่ตั้งรอบเป็น")} “${cycleLabel(null, cycleN)}” ${tr("ไม่ได้ — ฐานข้อมูลยังไม่รับค่านี้ · แจ้ง admin ให้รัน")} migration 20260821_checklists_frequency_values`
+          : `${tr("บันทึกจุดตรวจเรียบร้อย แต่ตั้งรอบไม่ได้")}: ${e?.message || e}`
       }
 
       // Phase 2 — persist the plan type + usage rule (row exists via trigger; upsert on checklist_id)
@@ -921,8 +921,8 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
           .select('id', { count: 'exact', head: true }).in('checkpoint_id', dropCp.map(r => r.id))
         if (eHist) throw eHist
         if (histN > 0 && !await askConfirm(
-          `จุดตรวจที่ถูกลบ ${dropCp.length} จุด (${dropCp.map(r => r.name).slice(0, 5).join(', ')}${dropCp.length > 5 ? ' …' : ''})\n` +
-          `มีประวัติผลตรวจผูกอยู่ ${histN} รายการ — ลบจุดแล้ว **ประวัติผลตรวจของจุดนั้นจะหายถาวร**\n\nยืนยันลบ?`)) {
+          `${tr("จุดตรวจที่ถูกลบ")} ${dropCp.length} ${tr("จุด")} (${dropCp.map(r => r.name).slice(0, 5).join(', ')}${dropCp.length > 5 ? ' …' : ''})\n` +
+          `${tr("มีประวัติผลตรวจผูกอยู่")} ${histN} ${tr("รายการ — ลบจุดแล้ว **ประวัติผลตรวจของจุดนั้นจะหายถาวร**\\n\\nยืนยันลบ")}?`)) {
           toast.info('ยังไม่บันทึก — จุดตรวจเดิมยังอยู่ครบ'); return
         }
       }
@@ -994,7 +994,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
   })
   const calcOptionsFor = (selfKey) => checkpoints
     .filter(c => c._key !== selfKey && PM_CALC_REF_TYPES.includes(c.type) && !c.calc)
-    .map(c => ({ key: c._key, label: `${cpLabels[c._key] || '?'} ${c.name || ''}${c.axis ? ` (${c.axis})` : ''}${c.type === 'measure' ? ' · ค่าวัด' : ''}`.trim() }))
+    .map(c => ({ key: c._key, label: `${cpLabels[c._key] || '?'} ${c.name || ''}${c.axis ? ` (${c.axis})` : ''}${c.type === 'measure' ? tr(' · ค่าวัด') : ''}`.trim() }))
   const groupHeaderStyle = {
     display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 6,
     background: 'var(--accent-dim)', border: '1px solid var(--border2)',
@@ -1067,7 +1067,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
                 {cur && cur.checkpointCount > 0 && (
                   <div style={{ marginTop: 9, paddingTop: 9, borderTop: '1px dashed var(--border2)', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     {[
-                      ['equip', `📋 คัดลอก ${cur.checkpointCount} จุดตรวจนี้ ไปเครื่องอื่น…`, 'เครื่องชนิดเดียวกัน จุด PM เหมือนกัน — ไม่ต้องพิมพ์ใหม่ทุกเครื่อง'],
+                      ['equip', `📋 ${tr("คัดลอก")} ${cur.checkpointCount} ${tr("จุดตรวจนี้ ไปเครื่องอื่น")}…`, 'เครื่องชนิดเดียวกัน จุด PM เหมือนกัน — ไม่ต้องพิมพ์ใหม่ทุกเครื่อง'],
                       ['dept', '↔ ลงผิดแผนก? ย้าย/คัดลอกไปแผนกอื่น…', 'เปลี่ยนเจ้าของรายการตรวจ หรือทำสำเนาให้อีกแผนก'],
                     ].map(([k, label, tip]) => (
                       <button key={k} type="button" title={tip} aria-expanded={toolOpen === k}
@@ -1133,12 +1133,12 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
                   return (
                     <div style={{ marginTop: 9, paddingTop: 9, borderTop: '1px dashed var(--border2)' }}>
                       <div style={{ fontSize: 11.5, color: 'var(--text2)', marginBottom: 6 }}>
-                        ติ๊กเครื่อง<b>{tr('ปลายทาง')}</b>{tr('ที่จะได้รับ')} {cur.checkpointCount} จุดตรวจของเครื่องนี้ (ตั้งต้นแสดงเฉพาะชนิดเดียวกัน)
+                        {tr("ติ๊กเครื่อง")}<b>{tr('ปลายทาง')}</b>{tr('ที่จะได้รับ')} {cur.checkpointCount} {tr("จุดตรวจของเครื่องนี้ (ตั้งต้นแสดงเฉพาะชนิดเดียวกัน")})
                       </div>
                       {/* 🔴 โหลดรายชื่อเครื่องล้ม = เขียนบนจอ ห้ามปล่อยให้ลิสต์ว่างแล้วอ่านว่า "ไม่มีเครื่อง" (08/10) */}
                       {allEquipErr && (
                         <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--red)', marginBottom: 6 }}>
-                          ⚠ โหลดรายชื่อเครื่องไม่สำเร็จ ({allEquipErr}) — ลิสต์ด้านล่าง<b>{tr('ไม่ครบ')}</b> ยังเลือกปลายทางไม่ได้อย่างมั่นใจ
+                          ⚠ {tr("โหลดรายชื่อเครื่องไม่สำเร็จ")} ({allEquipErr}) — {tr("ลิสต์ด้านล่าง")}<b>{tr('ไม่ครบ')}</b> {tr("ยังเลือกปลายทางไม่ได้อย่างมั่นใจ")}
                         </div>
                       )}
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 6 }}>
@@ -1151,19 +1151,18 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
                         <span className="spacer" style={{ flex: 1 }} />
                         <button type="button" disabled={!copyTo.length || copyBusy} onClick={handleCopyToEquipment}
                           style={{ ...S.btnSm('var(--blue)'), opacity: (!copyTo.length || copyBusy) ? 0.5 : 1, fontWeight: 800 }}>
-                          {copyBusy ? '…' : `⧉ คัดลอกไป ${copyTo.length} เครื่อง`}
+                          {copyBusy ? '…' : `⧉ ${tr("คัดลอกไป")} ${copyTo.length} ${tr("เครื่อง")}`}
                         </button>
                       </div>
                       {/* 🔴 ตัดรายการต้องบอกจำนวนที่ซ่อน **เสมอ** (UI §5.1.1) — ฐานจริง 325 เครื่อง
                            เดิมไม่ค้น = โชว์เฉพาะชนิดเดียวกันโดยไม่บอกว่าซ่อนไปกี่ตัว ⇒ ตัวกรองที่มองไม่เห็น */}
                       <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>
-                        แสดง <b style={{ color: 'var(--text2)' }}>{shown.length}</b> {tr('จาก')} {cands.length}
+                        {tr("แสดง")} <b style={{ color: 'var(--text2)' }}>{shown.length}</b> {tr('จาก')} {cands.length}
                         {!q && cands.length > shown.length
                           ? <> {tr('· ซ่อนเครื่องชนิดอื่น')} {cands.length - shown.length} {tr('ตัว —')} <b>{tr('พิมพ์ค้นเพื่อดูทุกชนิด')}</b></>
                           : q ? ' · กรองด้วยคำค้น (ทุกชนิด)' : ' · ครบทุกเครื่องแล้ว'}
                         {/* 🔴 "ค้นไม่เจอ" กับ "ยังไม่ได้เพิ่มเข้า PM" คนละเรื่อง — ต้องแยกให้เห็น */}
-                        {!!notPmYet.length && <> · <b style={{ color: 'var(--accent2)' }}>{tr('อีก')} {notPmYet.length} เครื่องที่ค้นเจอในทะเบียนเครื่องจักร
-                          ยังไม่ได้เพิ่มเป็นอุปกรณ์ PM</b> {tr('จึงยังคัดลอกไปไม่ได้')}</>}
+                        {!!notPmYet.length && <> · <b style={{ color: 'var(--accent2)' }}>{tr('อีก')} {notPmYet.length} {tr("เครื่องที่ค้นเจอในทะเบียนเครื่องจักร ยังไม่ได้เพิ่มเป็นอุปกรณ์")} PM</b> {tr('จึงยังคัดลอกไปไม่ได้')}</>}
                       </div>
                       <div style={{ maxHeight: 148, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 6,
                         display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(168px, 1fr))', gap: 3, alignContent: 'start' }}>
@@ -1175,7 +1174,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
                                 setCopyTo(p => on ? p.filter(x => x !== e.id) : [...p, e.id])} />
                               {/* 🔴 รหัสเครื่องห้ามถูกตัด (UI §6.21 ข้อ 1) — ตัดได้แค่ชื่อไลน์ */}
                               <span style={{ display: 'flex', minWidth: 0, gap: 3 }}
-                                title={`${e.machine_no || e.jig_no || e.name} · ${e.line_name || 'ไม่ระบุไลน์'}`}>
+                                title={`${e.machine_no || e.jig_no || e.name} · ${e.line_name || tr('ไม่ระบุไลน์')}`}>
                                 <b style={{ whiteSpace: 'nowrap', flexShrink: 0 }}>{e.machine_no || e.jig_no || e.name}</b>
                                 <span style={{ color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>· {e.line_name || '—'}</span>
                               </span>
@@ -1184,10 +1183,8 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
                         })}
                         {!shown.length && <span style={{ fontSize: 11.5, color: 'var(--muted)', padding: 4, lineHeight: 1.7 }}>
                           {!q ? 'ไม่มีเครื่องชนิดเดียวกันตัวอื่น — พิมพ์ค้นเพื่อดูเครื่องชนิดอื่น'
-                            : notPmYet.length ? <>{tr('ไม่พบใน')}<b>{tr('ทะเบียนอุปกรณ์ PM')}</b> {tr('— แต่เจอ')} <b style={{ color: 'var(--accent2)' }}>{notPmYet.length} {tr('เครื่อง')}</b> ใน
-                                ทะเบียนเครื่องจักร ({notPmYet.slice(0, 4).map(m => m.machine_no || m.machine_name).join(' · ')}{notPmYet.length > 4 ? ' …' : ''})
-                                <br />{tr('⇒ เครื่องพวกนี้')}<b>{tr('ยังไม่ได้ถูกเพิ่มเป็นอุปกรณ์ PM')}</b> จึงยังไม่มีให้ติ๊ก —
-                                ปิดหน้าต่างนี้แล้วกด <b>{tr('“+ เพิ่มอุปกรณ์”')}</b> {tr('ให้เครื่องนั้นก่อน แล้วค่อยกลับมาคัดลอก')}</>
+                            : notPmYet.length ? <>{tr('ไม่พบใน')}<b>{tr('ทะเบียนอุปกรณ์ PM')}</b> {tr('— แต่เจอ')} <b style={{ color: 'var(--accent2)' }}>{notPmYet.length} {tr('เครื่อง')}</b> {tr("ใน ทะเบียนเครื่องจักร")} ({notPmYet.slice(0, 4).map(m => m.machine_no || m.machine_name).join(' · ')}{notPmYet.length > 4 ? ' …' : ''})
+                                <br />{tr('⇒ เครื่องพวกนี้')}<b>{tr('ยังไม่ได้ถูกเพิ่มเป็นอุปกรณ์ PM')}</b> {tr("จึงยังไม่มีให้ติ๊ก — ปิดหน้าต่างนี้แล้วกด")} <b>{tr('“+ เพิ่มอุปกรณ์”')}</b> {tr('ให้เครื่องนั้นก่อน แล้วค่อยกลับมาคัดลอก')}</>
                             : <>{tr('ไม่พบ “')}{copyQ.trim()}{tr('” ทั้งใน')}<b>{tr('ทะเบียนอุปกรณ์ PM')}</b>{tr('และ')}<b>{tr('ทะเบียนเครื่องจักร')}</b> {tr('— ตรวจว่าพิมพ์เลขเครื่องถูกไหม')}</>}</span>}
                       </div>
                       <p style={{ fontSize: 11, color: 'var(--muted)', margin: '5px 0 0', lineHeight: 1.6 }}>
@@ -1204,7 +1201,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
                             <b style={{ color: 'var(--accent)' }}>{tr('✅ คัดลอกสำเร็จ')} {ok.length} {tr('เครื่อง')}</b>
                             {!!ok.length && <span style={{ color: 'var(--muted)' }}> — {ok.map(r => r.label).join(' · ')}</span>}
                             {!!skip.length && <div style={{ color: 'var(--accent2)', marginTop: 3 }}>
-                              ⚠️ ข้าม {skip.length} {tr('เครื่อง —')} {skip.map(r => `${r.label} (${why[r.reason] || r.reason}${r.message ? `: ${r.message}` : ''})`).join(' · ')}
+                              ⚠️ {tr("ข้าม")} {skip.length} {tr('เครื่อง —')} {skip.map(r => `${r.label} (${why[r.reason] || r.reason}${r.message ? `: ${r.message}` : ''})`).join(' · ')}
                             </div>}
                           </div>
                         )
@@ -1261,16 +1258,16 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
                   (ของเดิมเป็น <select> ที่ optgroup ตามไลน์อยู่แล้ว — ตอนเปลี่ยนเป็นช่องค้นหาแล้วกลุ่มหายไป)
                   maxRows สูง เพราะจอนี้คน "ไล่ดูตามไลน์" ไม่ได้พิมพ์ค้นอย่างเดียว */}
               <MachineSelect valueKey="id" value={machineId ?? ''} machines={machineOptionsShown} groupByLine maxRows={999}
-                placeholder={kindFilter === 'all' ? '— ค้นหา / เลือกอุปกรณ์ (รหัส · ชื่อ · ไลน์) —' : `— ค้นหา / เลือก${EQUIP_TYPE_LABEL[kindFilter] ?? ''} (รหัส · ชื่อ · ไลน์) —`}
+                placeholder={kindFilter === 'all' ? '— ค้นหา / เลือกอุปกรณ์ (รหัส · ชื่อ · ไลน์) —' : `— ${tr("ค้นหา / เลือก")}${EQUIP_TYPE_LABEL[kindFilter] ?? ''} (${tr("รหัส · ชื่อ · ไลน์")}) —`}
                 onChange={({ id }) => { const v = id || null; if (v !== (machineId ?? null)) handleMachineSelect(v) }} />
               {machineId && (
                 <div style={{ marginTop: 8, padding: '8px 12px', background: 'var(--bg3)', borderRadius: 'var(--r-md)', fontSize: 12, color: 'var(--text2)' }}>
                   ✅ <strong style={{ color: 'var(--text)' }}>{name}</strong>{lineName && <span style={{ color: 'var(--muted)' }}> · {lineName}</span>}
                   {existingNote?.length > 0 && (
                     <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px dashed var(--border2)', fontSize: 11.5, lineHeight: 1.6, color: 'var(--muted)' }}>
-                      ℹ️ เครื่องนี้ขึ้นทะเบียน PM ไว้แล้วโดย{' '}
-                      {existingNote.map(r => `${pmTeamsSync().find(t => t.key === r.department)?.label ?? r.department} (${r.checkpointCount} จุด)`).join(' · ')}
-                      <br />{tr('บันทึกครั้งนี้จะ')}<b style={{ color: 'var(--text2)' }}>{tr('เพิ่มรายการตรวจของ')} {deptLabel}</b> ให้เครื่องเดิม — ไม่สร้างอุปกรณ์ซ้ำ
+                      ℹ️ {tr("เครื่องนี้ขึ้นทะเบียน PM ไว้แล้วโดย")}{' '}
+                      {existingNote.map(r => `${pmTeamsSync().find(t => t.key === r.department)?.label ?? r.department} (${r.checkpointCount} ${tr("จุด")})`).join(' · ')}
+                      <br />{tr('บันทึกครั้งนี้จะ')}<b style={{ color: 'var(--text2)' }}>{tr('เพิ่มรายการตรวจของ')} {deptLabel}</b> {tr("ให้เครื่องเดิม — ไม่สร้างอุปกรณ์ซ้ำ")}
                       {' · '}{tr('อยากได้จุดตรวจชุดเดิม ให้เปิดแก้ไขเครื่องนี้ในแท็บแผนกนั้นแล้วกด')} <b style={{ color: 'var(--text2)' }}>{tr('⧉ คัดลอก')}</b>
                     </div>
                   )}
@@ -1391,8 +1388,8 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
             </div>
             <div style={{ marginTop: 6, fontSize: 11.5, color: Number(cycleDays) > 0 ? 'var(--muted)' : '#f59a3f' }}>
               {Number(cycleDays) > 0
-                ? <>{tr('รอบ:')} <b style={{ color: 'var(--accent)' }}>{cycleLabel(null, Number(cycleDays))}</b> · ครบกำหนด = {nextDue ? 'วันที่กำหนดไว้ แล้วหลังตรวจจริง = วันตรวจ + รอบ' : 'วันตรวจล่าสุด + รอบ (ยังไม่เคยตรวจ = ใส่วัน PM ครั้งถัดไปเพื่อให้ระบบเตือนได้)'}</>
-                : <>⚠️ ยังไม่ตั้งรอบ = ระบบคิดวันครบกำหนดและเตือนล่วงหน้าไม่ได้{planType === 'usage' ? ' (แผนตามการใช้งานอย่างเดียวไม่ต้องมีรอบวันก็ได้)' : ''}</>}
+                ? <>{tr('รอบ:')} <b style={{ color: 'var(--accent)' }}>{cycleLabel(null, Number(cycleDays))}</b> · {tr("ครบกำหนด")} = {nextDue ? 'วันที่กำหนดไว้ แล้วหลังตรวจจริง = วันตรวจ + รอบ' : 'วันตรวจล่าสุด + รอบ (ยังไม่เคยตรวจ = ใส่วัน PM ครั้งถัดไปเพื่อให้ระบบเตือนได้)'}</>
+                : <>⚠️ {tr("ยังไม่ตั้งรอบ = ระบบคิดวันครบกำหนดและเตือนล่วงหน้าไม่ได้")}{planType === 'usage' ? ' (แผนตามการใช้งานอย่างเดียวไม่ต้องมีรอบวันก็ได้)' : ''}</>}
             </div>
           </div>
 
@@ -1424,7 +1421,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
                   {/* <LineSelect> ไม่ส่ง scope (ตั้งใจ — นับ shot อ้างไลน์ข้ามส่วนงานได้) · includeRetired + ค่าเก่าที่ไม่อยู่ในทะเบียน
                       ยังเลือกค้างได้ (guarantee #4 ของ LineSelect) · 2026-09-07 */}
                   <LineSelect lines={lineOptions} value={usageLine} onChange={setUsageLine} includeRetired
-                    placeholder={`— ใช้ไลน์ของอุปกรณ์${lineName ? ` (${lineName})` : ''} —`} style={{ width: '100%' }} />
+                    placeholder={`— ${tr("ใช้ไลน์ของอุปกรณ์")}${lineName ? ` (${lineName})` : ''} —`} style={{ width: '100%' }} />
                 </div>
                 <div style={{ gridColumn: '1 / -1', fontSize: 11, color: 'var(--muted)' }}>
                   ระบบนับ prod_orders.qty ของไลน์นี้ตั้งแต่ PM ครั้งก่อน เทียบ threshold → คำนวณวันครบ + health score · เลือกไลน์จากฐานข้อมูลไลน์ผลิต (เว้นว่าง = ใช้ไลน์ของอุปกรณ์)
@@ -1449,7 +1446,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
           </datalist>
           <PinWorkspace twoCol={twoColSetup} stickyRef={jumpStickyRef}
             boardTitle="รูปอุปกรณ์ (หลายมุม) + จุดตรวจ"
-            boardBadge={frames.length > 0 && pinnedCount > 0 ? `📍 ${pinnedCount}/${checkpoints.length} จุดวางแล้ว` : null}
+            boardBadge={frames.length > 0 && pinnedCount > 0 ? `📍 ${pinnedCount}/${checkpoints.length} ${tr("จุดวางแล้ว")}` : null}
             board={layoutType === 'image_pin' && (
                 <SpinAnnotator
                   frames={frames} frameIdx={frameIdx} setFrameIdx={setFrameIdx}
@@ -1482,13 +1479,13 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
                   file={cropQueue[0]} aspect={4 / 3} outputSize={1200} quality={0.82}
                   /* ไม่ใส่ fullDefault — จอนี้ส่วนใหญ่ครอบเฉพาะจุดตรวจ พฤติกรรมเดิมคือเริ่มที่โหมดครอบ */
                   allowFull fullHint="เก็บทั้งภาพไว้ — สำหรับรูปภาพรวมเครื่องที่จุดตรวจกระจายทั้งภาพ"
-                  title={`จัดกรอบรูป${cropQueue.length > 1 ? ` (เหลืออีก ${cropQueue.length - 1} รูป)` : ''}`}
+                  title={`${tr("จัดกรอบรูป")}${cropQueue.length > 1 ? ` (${tr("เหลืออีก")} ${cropQueue.length - 1} ${tr("รูป")})` : ''}`}
                   onCancel={() => setCropQueue(q => q.slice(1))}
                   onConfirm={pushFrame} />
               )}
               </>
             )}
-            listTitle={`จุดตรวจสอบ (${checkpoints.length})`} onAdd={addCp}
+            listTitle={`${tr("จุดตรวจสอบ")} (${checkpoints.length})`} onAdd={addCp}
             jump={{ points: grouped.ordered, labels: cpLabels, onJump: jumpToCp, flashKey, onTop: scrollTop }}>
               {/* ══ 📋 แพทเทินการสร้างใบตรวจ (2026-11-10 · คำสั่ง user) ══════════════════
                   "เริ่มจากรูปมุมที่ 1 → ปักหมุดทุกจุดของมุมนั้น + ใส่รูปขยาย → แล้วค่อยไปมุมที่ 2"
@@ -1510,12 +1507,11 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
                 )}
                 {!comp.done && (
                   <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.7 }}>
-                    แพทเทินที่แนะนำ: ① เพิ่มรูป<b>{tr('มุมที่ 1')}</b> → ② <b>{tr('+ เพิ่มจุดตรวจ')}</b> แล้วกด 🔘 วางตำแหน่ง แตะบนรูป
-                    → ③ แนบ 📷 <b>{tr('รูปขยาย')}</b>{tr('ของจุดนั้น → ④ ครบมุมนี้แล้วค่อยไป')}<b>{tr('มุมที่ 2')}</b>
+                    {tr("แพทเทินที่แนะนำ: ① เพิ่มรูป")}<b>{tr('มุมที่ 1')}</b> → ② <b>{tr('+ เพิ่มจุดตรวจ')}</b> {tr("แล้วกด 🔘 วางตำแหน่ง แตะบนรูป → ③ แนบ")} 📷 <b>{tr('รูปขยาย')}</b>{tr('ของจุดนั้น → ④ ครบมุมนี้แล้วค่อยไป')}<b>{tr('มุมที่ 2')}</b>
                     {sheetExample && (
                       <> {tr('· ตัวอย่างใบที่ทำครบ:')} <b>{sheetExample.equipment_name}</b>{' '}
-                        ({sheetExample.frames} {tr('มุม ·')} {sheetExample.cps} จุด · ปักครบ · รูปขยายครบ
-                        {sheetExample.same_team ? '' : ` · ใบของ${teamLabel(sheetExample.department)}`})
+                        ({sheetExample.frames} {tr('มุม ·')} {sheetExample.cps} {tr("จุด · ปักครบ · รูปขยายครบ")}
+                        {sheetExample.same_team ? '' : ` · ${tr("ใบของ")}${teamLabel(sheetExample.department)}`})
                       </>
                     )}
                   </div>
@@ -1524,9 +1520,9 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
                 {comp.frames > 0 && (
                   <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
                     <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('ดูเฉพาะ:')}</span>
-                    {[{ k: null, t: `ทุกมุม (${comp.cps})` },
+                    {[{ k: null, t: `${tr("ทุกมุม")} (${comp.cps})` },
                       ...comp.byFrame.map(f => ({ k: f.key, t: `${f.title} (${f.n})`, idx: f.idx })),
-                      ...(comp.unpinned > 0 ? [{ k: UNPINNED, t: `ยังไม่ปักหมุด (${comp.unpinned})`, warn: true }] : []),
+                      ...(comp.unpinned > 0 ? [{ k: UNPINNED, t: `${tr("ยังไม่ปักหมุด")} (${comp.unpinned})`, warn: true }] : []),
                     ].map(ch => {
                       const on = frameFilter === ch.k
                       return (
@@ -1550,7 +1546,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
                 if (!items.length) return null
                 return (
                   <div key={g.name} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <div style={groupHeaderStyle}>Item {gi + 1} — {g.name} <span style={{ fontWeight: 600, color: 'var(--muted)' }}>({items.length}{items.length !== g.items.length ? ` จาก ${g.items.length}` : ''} จุด)</span></div>
+                    <div style={groupHeaderStyle}>Item {gi + 1} — {g.name} <span style={{ fontWeight: 600, color: 'var(--muted)' }}>({items.length}{items.length !== g.items.length ? ` ${tr("จาก")} ${g.items.length}` : ''} {tr("จุด")})</span></div>
                     {items.map(renderCard)}
                   </div>
                 )
@@ -1695,14 +1691,14 @@ export default function PMSetup() {
     const cur = teamKindOf(department)
     const next = cur === 'am' ? 'pm' : 'am'
     const name = teams.find(t => t.key === department)?.label ?? department
-    if (!await askConfirm(`เปลี่ยน "${name}" จาก ${cur.toUpperCase()} → ${next.toUpperCase()}?\n\n`
+    if (!await askConfirm(`${tr("เปลี่ยน")} "${name}" ${tr("จาก")} ${cur.toUpperCase()} → ${next.toUpperCase()}?\n\n`
       + (next === 'am' ? 'AM = พนักงานหน้างานตรวจเองทุกต้นกะ' : 'PM = ช่าง (technician/engineer) ตรวจตามรอบเวลา/ยอดผลิต/เงื่อนไข')
-      + `\nมีผลกับสิทธิ์ที่ใช้บันทึกผลตรวจของทีมนี้ (${next}:record)`)) return
+      + `\n${tr("มีผลกับสิทธิ์ที่ใช้บันทึกผลตรวจของทีมนี้")} (${next}:record)`)) return
     const { error } = await supabaseDR.from('mtn_teams').update({ kind: next }).eq('key', department)
-    if (error) return toast.error('เปลี่ยนไม่สำเร็จ: ' + error.message)
+    if (error) return toast.error((tr('เปลี่ยนไม่สำเร็จ') + ': ') + error.message)
     clearPmTeamsCache()
     setTeams(await loadPmTeams())
-    toast.success(`ตั้งเป็น ${next.toUpperCase()} แล้ว`)
+    toast.success(`${tr("ตั้งเป็น")} ${next.toUpperCase()} ${tr("แล้ว")}`)
   }
   useEffect(() => { loadPmTeams().then(setTeams) }, [])
 
@@ -1730,14 +1726,14 @@ export default function PMSetup() {
         .eq('module', 'mtn')),
       fetchAllPages(() => supabaseDR.from('checklists').select('id, equipment_id').eq('module', 'mtn').eq('department', department)),
     ])
-    if (jr.error || jr.truncated) errs.push(`ทะเบียนอุปกรณ์: ${jr.error || 'เกินเพดาน โหลดไม่ครบ'}`)
-    if (cr.error || cr.truncated) errs.push(`checklist: ${cr.error || 'เกินเพดาน โหลดไม่ครบ'}`)
+    if (jr.error || jr.truncated) errs.push(`${tr("ทะเบียนอุปกรณ์")}: ${jr.error || tr('เกินเพดาน โหลดไม่ครบ')}`)
+    if (cr.error || cr.truncated) errs.push(`checklist: ${cr.error || tr('เกินเพดาน โหลดไม่ครบ')}`)
     const clMap = {}, eqOfCl = {}
     cr.rows.forEach(c => { clMap[c.equipment_id] = c.id; eqOfCl[c.id] = c.equipment_id })
 
     const counts = {}, pins = {}
     const cpr = await fetchByIds(Object.values(clMap), part => supabaseDR.from('jig_checkpoints').select('id, checklist_id, x_pos').in('checklist_id', part))
-    if (cpr.error || cpr.truncated) errs.push(`จำนวนจุดตรวจ: ${cpr.error || 'เกินเพดาน โหลดไม่ครบ'}`)
+    if (cpr.error || cpr.truncated) errs.push(`${tr("จำนวนจุดตรวจ")}: ${cpr.error || tr('เกินเพดาน โหลดไม่ครบ')}`)
     cpr.rows.forEach(c => {
       const eqId = eqOfCl[c.checklist_id]
       if (!eqId) return
@@ -1750,7 +1746,7 @@ export default function PMSetup() {
     let reg = null
     if (isAmTeam(department)) {   // ทีม AM ผ่าน mtn_teams.kind — ห้าม hardcode 'production' (08/10)
       const tg = await fetchAllPages(() => supabaseDR.from('pm_daily_line_targets').select('id, jig_id').eq('is_active', true))
-      if (tg.error) errs.push(`ทะเบียน AM: ${tg.error} — สถานะ "ยังไม่ลงทะเบียน AM" ไม่ได้ตรวจ`)
+      if (tg.error) errs.push(`${tr("ทะเบียน")} AM: ${tg.error} — ${tr("สถานะ \"ยังไม่ลงทะเบียน AM\" ไม่ได้ตรวจ")}`)
       else reg = new Set(tg.rows.map(t => t.jig_id))
     }
     if (req !== reqRef.current) return
@@ -1807,7 +1803,7 @@ export default function PMSetup() {
 
   const handleDelete = async (jig) => {
     if (!deptWrite.ok) { toast.info(teamBlockText(deptWrite, 'อุปกรณ์ของทีมนี้')); return }
-    if (!await askConfirm(`ลบ "${jig.name}" ?`)) return
+    if (!await askConfirm(`${tr("ลบ")} "${jig.name}" ?`)) return
     /* 🔴 นับแถวก่อนแตะ storage (QC audit 06/10) — ไม่นับ = แถว jig ยังอยู่
        แต่รูปทั้งชุด (เฟรม + จุดตรวจ + โมเดล 3D) ถูกลบ ⇒ ทะเบียนจิ๊กเสียรูปถาวร */
     const dres = await supabaseDR.from('jigs').delete().eq('id', jig.id).select('id')
@@ -1836,11 +1832,11 @@ export default function PMSetup() {
             const { error: eRm } = await supabaseDR.storage.from('jig-images').remove(orphan)
             if (eRm) imgNote = ' — แต่ลบไฟล์รูปไม่สำเร็จ (ไฟล์ยังค้างใน storage)'
           }
-          if (stillUsed.length) imgNote = ` — เก็บรูปไว้ ${stillUsed.length} ไฟล์ เพราะเครื่องอื่นที่คัดลอกจุดตรวจไปยังใช้อยู่`
+          if (stillUsed.length) imgNote = ` — ${tr("เก็บรูปไว้")} ${stillUsed.length} ${tr("ไฟล์ เพราะเครื่องอื่นที่คัดลอกจุดตรวจไปยังใช้อยู่")}`
         }
       }
     } catch { imgNote = ' — แต่เก็บกวาดไฟล์รูปไม่สำเร็จ (ไฟล์ยังค้างใน storage)' }
-    toast.success('ลบแล้ว' + imgNote)
+    toast.success(tr('ลบแล้ว') + imgNote)
     fetchData()
   }
 
@@ -1880,7 +1876,7 @@ export default function PMSetup() {
           </select>
           <SearchInput value={fQ} onChange={setFQ} fields="ชื่อ / No. / เลขเครื่อง / ไลน์" />
           <span style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap' }}>
-            แสดง <b style={{ color: 'var(--text)' }}>{shownRows.length}</b> {tr('จาก')} {allRows.length}
+            {tr("แสดง")} <b style={{ color: 'var(--text)' }}>{shownRows.length}</b> {tr('จาก')} {allRows.length}
           </span>
           {filtered && <button type="button" onClick={clearFilters} style={S.jumpBtn}>{tr('ล้างตัวกรอง')}</button>}
         </>}
@@ -1896,7 +1892,7 @@ export default function PMSetup() {
       {/* 🔴 โหลดไม่ครบต้องเขียนบนจอ — ห้ามปล่อยลิสต์ว่างแล้วอ่านว่า "ยังไม่มีอุปกรณ์" */}
       {loadErr && !loading && (
         <div style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--red)', color: 'var(--red)', fontSize: 12.5 }}>
-          ⚠ โหลดข้อมูลไม่ครบ — ตัวเลข/รายการด้านล่างอาจขาด: {loadErr}
+          ⚠ {tr("โหลดข้อมูลไม่ครบ — ตัวเลข/รายการด้านล่างอาจขาด")}: {loadErr}
           <button type="button" onClick={fetchData} style={{ ...S.jumpBtn, marginLeft: 8 }}>{tr('ลองใหม่')}</button>
         </div>
       )}

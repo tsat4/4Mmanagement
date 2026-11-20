@@ -133,7 +133,7 @@ export default function EnergyHistory() {
       for (const r of data.readings) body.push([tLabel(Date.parse(r.bucket_at)), r.scope_name, r.kw ?? '', r.v ?? '', r.a ?? '', r.kwh_total ?? '']);
     }
     downloadCsvDoc('csv_energy_history', `energy-history_${compare ? 'all' : ns[0]}_${from}_${to}.csv`, csvText(headers, body));
-    toast.success(`ส่งออก ${body.length} แถว`);
+    toast.success(`${tr("ส่งออก")} ${body.length} ${tr("แถว")}`);
   };
 
   const single = !compare && data?.names?.length === 1;

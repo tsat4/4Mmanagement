@@ -160,15 +160,15 @@ export async function loadMyQueue(me) {
     const od = gapOdR.error == null ? Number(gapOdR.count) || 0 : null;
     summaries.push({
       key: 'line_issue_gap', icon: '🧾',
-      title: `ไลน์ใช้ของแล้วแต่สโตร์ยังไม่ลงจ่าย ${Number(gapR.count).toLocaleString()} รายการ`,
-      detail: od == null ? 'นับรายการเกิน 1 กะไม่ได้' : (od ? `เกิน 1 กะ ${od.toLocaleString()} รายการ — สโตร์กดยืนยันจ่าย` : 'ยังอยู่ในกะนี้'),
+      title: `${tr("ไลน์ใช้ของแล้วแต่สโตร์ยังไม่ลงจ่าย")} ${Number(gapR.count).toLocaleString()} ${tr("รายการ")}`,
+      detail: od == null ? 'นับรายการเกิน 1 กะไม่ได้' : (od ? `${tr("เกิน 1 กะ")} ${od.toLocaleString()} ${tr("รายการ — สโตร์กดยืนยันจ่าย")}` : 'ยังอยู่ในกะนี้'),
       count: Number(gapR.count), to: '/line-stock?tab=out',
     });
   }
   if (prR.error == null && Number(prR.count) > 0) {
     summaries.push({
       key: 'pr_unordered', icon: '🧾',
-      title: `ใบขอซื้อรอกดสั่งซื้อ ${Number(prR.count).toLocaleString()} รายการ`,
+      title: `${tr("ใบขอซื้อรอกดสั่งซื้อ")} ${Number(prR.count).toLocaleString()} ${tr("รายการ")}`,
       detail: 'ระบบระเบิดความต้องการสร้างให้ — ยังไม่มีเจ้าภาพกดสั่ง',
       count: Number(prR.count), to: '/line-stock',
     });
@@ -223,7 +223,7 @@ function Row({ it, onGo }) {
         )}
       </span>
       {it.age != null && (
-        <span title={`ค้างมา ${it.age} วัน`} style={{
+        <span title={`${tr("ค้างมา")} ${it.age} ${tr("วัน")}`} style={{
           flexShrink: 0, fontSize: 11, fontWeight: 700, padding: '1px 6px', borderRadius: 'var(--r-pill)',
           color: old ? '#ef4444' : 'var(--muted)',
           background: old ? '#ef444418' : 'transparent',
@@ -260,7 +260,7 @@ function Group({ tier, items, onGo }) {
         : shown.map(it => <Row key={it.key} it={it} onGo={onGo} />)}
       {hidden > 0 && (
         <div style={{ fontSize: 11, color: 'var(--muted)', padding: '2px 8px 0' }}>
-          …อีก {hidden} รายการ
+          …{tr("อีก")} {hidden} {tr("รายการ")}
         </div>
       )}
     </div>
@@ -369,8 +369,7 @@ export default function MyQueuePanel({ q, busy, onGo }) {
           ข้อมูลไม่ครบที่ต้นทาง) · วัดจริง 06/10: ใบรอ QA 36 จาก 188 ใบ `dept_section` ว่าง */}
       {q && q.unattributed > 0 && (
         <div style={{ fontSize: 11, color: '#f59e0b', padding: '4px 8px', lineHeight: 1.4 }}>
-          ⚠️ อีก <b>{q.unattributed}</b> {tr('รายการ')}<b>{tr('ระบุส่วนงานไม่ได้')}</b> จึงไม่เข้าคิวของใครเลย —
-          ต้องเติมส่วนงานในใบก่อน ถึงจะโผล่ในคิวของหน่วยงานที่รับผิดชอบ
+          ⚠️ {tr("อีก")} <b>{q.unattributed}</b> {tr('รายการ')}<b>{tr('ระบุส่วนงานไม่ได้')}</b> {tr("จึงไม่เข้าคิวของใครเลย — ต้องเติมส่วนงานในใบก่อน ถึงจะโผล่ในคิวของหน่วยงานที่รับผิดชอบ")}
         </div>
       )}
       {!q && busy && <div style={{ fontSize: 11.5, color: 'var(--muted)', padding: '6px 8px' }}>{tr('กำลังดูคิวงาน…')}</div>}

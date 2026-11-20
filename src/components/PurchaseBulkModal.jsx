@@ -163,11 +163,11 @@ export default function PurchaseBulkModal({ group, next, nextLabel, fullName, wo
       /* รายงานผลตามจริง — สำเร็จไม่ครบ ห้ามขึ้น toast เขียวเฉยๆ */
       const short = done.length < picked.length;
       if (short) {
-        toast.error(`เลื่อนได้ ${done.length} จาก ${picked.length} ใบ — ที่เหลือถูกคนอื่นเลื่อน/ยกเลิกไปแล้ว`);
+        toast.error(`${tr("เลื่อนได้")} ${done.length} ${tr("จาก")} ${picked.length} ${tr("ใบ — ที่เหลือถูกคนอื่นเลื่อน/ยกเลิกไปแล้ว")}`);
       } else {
         toast.success(next === 'ordered'
-          ? `🛒 บันทึกสั่งซื้อ ${mat} · ${done.length} ใบ รวม ${fmt(done.reduce((s, r) => s + (Number(r.qty) || 0), 0))} ชิ้น`
-          : `✅ รับเข้า ${RECEIPT_LINE} · ${mat} · ${posted} ใบ รวม ${fmt(done.reduce((s, r) => s + (Number(r.qty) || 0), 0))} ชิ้น — ไลน์เบิกจากคลังอีกที`);
+          ? `🛒 ${tr("บันทึกสั่งซื้อ")} ${mat} · ${done.length} ${tr("ใบ รวม")} ${fmt(done.reduce((s, r) => s + (Number(r.qty) || 0), 0))} ${tr("ชิ้น")}`
+          : `✅ ${tr("รับเข้า")} ${RECEIPT_LINE} · ${mat} · ${posted} ${tr("ใบ รวม")} ${fmt(done.reduce((s, r) => s + (Number(r.qty) || 0), 0))} ${tr("ชิ้น — ไลน์เบิกจากคลังอีกที")}`);
       }
       await onDone?.();
       onClose?.();
@@ -201,7 +201,7 @@ export default function PurchaseBulkModal({ group, next, nextLabel, fullName, wo
 
         {err && (
           <div style={{ ...box, borderColor: 'rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.07)', color: '#ef4444', fontSize: 12 }}>
-            🔴 อ่านใบสั่งซื้อไม่สำเร็จ — {err}
+            🔴 {tr("อ่านใบสั่งซื้อไม่สำเร็จ")} — {err}
           </div>
         )}
 
@@ -225,13 +225,13 @@ export default function PurchaseBulkModal({ group, next, nextLabel, fullName, wo
             </div>
             {/* ⭐ ยอดจริงจากใบที่จะเลื่อน ไม่ใช่ค่าประมาณจาก min/max */}
             <div style={{ fontSize: 13, marginTop: 8, color: 'var(--text)' }}>
-              จะเลื่อน <b style={{ color: 'var(--accent)' }}>{fmt(n)}</b> {tr('ใบ · รวม')}{' '}
-              <b style={{ color: 'var(--accent)' }}>{fmt(pickedQty)}</b> ชิ้น
+              {tr("จะเลื่อน")} <b style={{ color: 'var(--accent)' }}>{fmt(n)}</b> {tr('ใบ · รวม')}{' '}
+              <b style={{ color: 'var(--accent)' }}>{fmt(pickedQty)}</b> {tr("ชิ้น")}
               <span style={{ color: 'var(--muted)', fontSize: 11.5 }}> {tr('(นับจากใบจริง เรียงเก่าสุดก่อน)')}</span>
             </div>
             {n < slips.length && (
               <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>
-                เหลือค้างในคิว {fmt(slips.length - n)} {tr('ใบ ·')} {fmt(slips.reduce((s, r) => s + (Number(r.qty) || 0), 0) - pickedQty)} ชิ้น
+                {tr("เหลือค้างในคิว")} {fmt(slips.length - n)} {tr('ใบ ·')} {fmt(slips.reduce((s, r) => s + (Number(r.qty) || 0), 0) - pickedQty)} {tr("ชิ้น")}
               </div>
             )}
           </div>
@@ -239,7 +239,7 @@ export default function PurchaseBulkModal({ group, next, nextLabel, fullName, wo
           {/* ปลายทางจริง — กลุ่มนี้อาจกระจายหลายไลน์ทั้งที่การ์ดโชว์ไลน์เดียว */}
           <div style={{ ...box, marginBottom: 10 }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text2)', marginBottom: 6 }}>
-              ปลายทางของใบที่จะเลื่อน ({byDest.length} แห่ง)
+              {tr("ปลายทางของใบที่จะเลื่อน")} ({byDest.length} {tr("แห่ง")})
               {next === 'received' && <span style={{ fontWeight: 400, color: 'var(--muted)' }}> {tr('— สต็อกจะถูกเติมแยกตามนี้')}</span>}
             </div>
             {byDest.map(d => (
@@ -256,7 +256,7 @@ export default function PurchaseBulkModal({ group, next, nextLabel, fullName, wo
             <div style={{ ...box, borderColor: 'rgba(245,158,11,0.4)', background: 'rgba(245,158,11,0.07)',
               fontSize: 12, color: 'var(--text2)', marginBottom: 10 }}>
               ⚠️ <b style={{ color: '#f59e0b' }}>{fmt(noDest.slips)} {tr('ใบ ไม่ได้ระบุปลายทางสโตร์')}</b> — ใบจะถูกเลื่อนเป็นรับเข้า
-              แต่ <b>{tr('สต็อกส่วนนั้น (')}{fmt(noDest.qty)} ชิ้น) จะไม่ถูกเติม</b> ต้องไปบันทึกรับเข้าเองที่ 📦 Line Stock
+              แต่ <b>{tr('สต็อกส่วนนั้น (')}{fmt(noDest.qty)} {tr("ชิ้น) จะไม่ถูกเติม")}</b> ต้องไปบันทึกรับเข้าเองที่ 📦 Line Stock
             </div>
           )}
 
@@ -268,7 +268,7 @@ export default function PurchaseBulkModal({ group, next, nextLabel, fullName, wo
               style={{ fontSize: 12.5, fontWeight: 800, padding: '8px 16px', borderRadius: 'var(--r-md)',
                 cursor: busy || !n ? 'not-allowed' : 'pointer', opacity: busy || !n ? 0.6 : 1,
                 background: 'var(--accent)', color: 'var(--accent-ink)', border: '1px solid var(--accent)', fontFamily: 'var(--font-body)' }}>
-              {busy ? 'กำลังบันทึก…' : `${nextLabel} ${fmt(n)} ใบ`}
+              {busy ? 'กำลังบันทึก…' : `${nextLabel} ${fmt(n)} ${tr("ใบ")}`}
             </button>
           </div>
         </>))}

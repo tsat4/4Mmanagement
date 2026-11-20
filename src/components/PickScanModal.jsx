@@ -140,7 +140,7 @@ export default function PickScanModal({ request, canOverride = false, fullName, 
           )}
 
           <div style={{ marginTop: 12, fontSize: 11.5, color: 'var(--muted)', background: 'var(--bg3)', borderRadius: 'var(--r-md)', padding: '7px 10px' }}>
-            กดยืนยัน = ระบบ<b>{tr('ตัดสต็อกให้เลย')}</b> {tr('(คลัง STORE −')}{fmt(Number(qty) || 0)} {tr('· ไลน์')} {request?.line_name} +{fmt(Number(qty) || 0)}) ตามขั้น "Scan for SAP update" — ไม่ต้องไปบันทึกจ่ายที่ Line Stock ซ้ำ
+            {tr("กดยืนยัน = ระบบ")}<b>{tr('ตัดสต็อกให้เลย')}</b> {tr('(คลัง STORE −')}{fmt(Number(qty) || 0)} {tr('· ไลน์')} {request?.line_name} +{fmt(Number(qty) || 0)}) {tr("ตามขั้น \"Scan for SAP update\" — ไม่ต้องไปบันทึกจ่ายที่ Line Stock ซ้ำ")}
           </div>
 
           {!overriding && (
@@ -190,7 +190,7 @@ export default function PickScanModal({ request, canOverride = false, fullName, 
       </div>
 
       {scanOpen && (
-        <ScanModal title={tr('สแกนพาร์ทที่หยิบ')} hint={`ยิงป้าย/บาร์โค้ดบนกล่องหรือบัตร — ใบนี้ต้องการ ${request?.mat_no || ''}`}
+        <ScanModal title={tr('สแกนพาร์ทที่หยิบ')} hint={`${tr("ยิงป้าย/บาร์โค้ดบนกล่องหรือบัตร — ใบนี้ต้องการ")} ${request?.mat_no || ''}`}
           onScan={onScan} onClose={() => setScanOpen(false)} closeOnHit={false} />
       )}
     </>

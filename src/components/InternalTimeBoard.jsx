@@ -55,7 +55,7 @@ export default function InternalTimeBoard({ title, hint, groups, nowMin, breaks 
     const widthPct = Math.min(100 - leftPct, ((b.e - b.s) / SPAN) * 100);
     if (widthPct <= 0) return null;
     return (
-      <div key={`brk-${i}`} title={`${b.label} — เวลาพัก`}
+      <div key={`brk-${i}`} title={`${b.label} — ${tr("เวลาพัก")}`}
         style={{
           position: 'absolute', top: 0, bottom: 0, left: `${leftPct}%`, width: `${widthPct}%`,
           background: 'repeating-linear-gradient(45deg, rgba(148,163,184,0.18) 0px, rgba(148,163,184,0.18) 4px, transparent 4px, transparent 8px)',

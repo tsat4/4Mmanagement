@@ -329,10 +329,10 @@ export default function LayerProcessAudit() {
     const key = monthKeyRef.current;
     const { list, error } = await fetchStationNames();
     if (monthKeyRef.current !== key) return;   // เปลี่ยนไลน์ระหว่างรอ = จุดงานของไลน์เก่า ห้ามเททับหัวแผนใหม่
-    if (error) { toast.error('ดึงจุดงานไม่สำเร็จ: ' + error.message); return; }
+    if (error) { toast.error((tr('ดึงจุดงานไม่สำเร็จ') + ': ') + error.message); return; }
     if (!list.length) { toast.info('ไลน์นี้ยังไม่มีจุดงานในผัง — ตั้งจุดงานที่หน้า Line Setup ก่อน'); return; }
     setQHeader(prev => ({ ...prev, stations: list.join('\n') }));
-    toast.success(`ดึง ${list.length} จุดงานมาเป็นสถานีตรวจแล้ว — แก้ไข/เพิ่มเองได้`);
+    toast.success(`${tr("ดึง")} ${list.length} ${tr("จุดงานมาเป็นสถานีตรวจแล้ว — แก้ไข/เพิ่มเองได้")}`);
   };
 
   /* ── โหลดแผน + ผลตรวจของเดือน เมื่อเปลี่ยน line/shift/month ── */
@@ -353,8 +353,8 @@ export default function LayerProcessAudit() {
        เดิมแกะแต่ `{ data }` ทิ้ง error** (QC audit 20/10) ⇒ คิวรีล้มครั้งเดียว = ทั้งเดือนขึ้น "ขาดตรวจ"
        และตัวหาร % คิดจากใบ 0 ใบ = **จอกล่าวหาหน้างานว่าไม่ตรวจ** (ทิศที่อันตรายที่สุดของจอนี้) */
     const { data: pl } = plRes, { data: aud } = audRes;
-    setMonthErr(audRes.error ? `โหลดใบตรวจของเดือนไม่สำเร็จ: ${audRes.error.message}`
-      : plRes.error ? `โหลดแผนตรวจของเดือนไม่สำเร็จ: ${plRes.error.message}` : '');
+    setMonthErr(audRes.error ? `${tr("โหลดใบตรวจของเดือนไม่สำเร็จ")}: ${audRes.error.message}`
+      : plRes.error ? `${tr("โหลดแผนตรวจของเดือนไม่สำเร็จ")}: ${plRes.error.message}` : '');
     setRuns(runRes);
     setPlan(pl || null);
     const dm = {};
@@ -421,7 +421,7 @@ export default function LayerProcessAudit() {
       si++;
     }
     setPlanDays(next);
-    toast.success(`เติมแผนอัตโนมัติแล้ว: Leader ${working.length} วัน · SV ${svDays.length} ครั้ง · MGR วันที่ ${mgrDay}`);
+    toast.success(`${tr("เติมแผนอัตโนมัติแล้ว")}: Leader ${working.length} ${tr("วัน")} · SV ${svDays.length} ${tr("ครั้ง · MGR วันที่")} ${mgrDay}`);
   };
 
   /** 🔴 ชั้นที่ 2 ของแผน — ข้อมูลที่กำลังแก้เป็นของ (ไลน์/กะ/เดือน) ที่เลือกอยู่จริงไหม
@@ -460,7 +460,7 @@ export default function LayerProcessAudit() {
       }
       toast.success('บันทึกแผน LPA เรียบร้อย');
       loadMonth();
-    } catch (e) { toast.error('บันทึกแผนไม่สำเร็จ: ' + e.message); }
+    } catch (e) { toast.error((tr('บันทึกแผนไม่สำเร็จ') + ': ') + e.message); }
     finally { setSavingPlan(false); }
   };
 
@@ -469,7 +469,7 @@ export default function LayerProcessAudit() {
     const dstr = dateOf(selMonth, day);
     const planned = planDays[day]?.[planKey];
     const done = auditFor(dstr, layerKey);
-    if (done) return { sym: '●', color: 'var(--green)', title: `ตรวจแล้ว · ${done.auditor_name || ''}` };
+    if (done) return { sym: '●', color: 'var(--green)', title: `${tr("ตรวจแล้ว")} · ${done.auditor_name || ''}` };
     if (planned && dstr < getWorkDate()) return { sym: '⊗', color: 'var(--red)', title: 'เลยกำหนด — ยังไม่ตรวจ' };
     if (planned) return { sym: '○', color: 'var(--text2)', title: 'วางแผนตรวจ' };
     return null;
@@ -489,8 +489,8 @@ export default function LayerProcessAudit() {
     /* 🔴 อ่านไม่สำเร็จ ≠ "ยังไม่ตรวจ" — ใบไตรมาสนี้ถูกพิมพ์ไปเซ็น ⇒ ช่อง ⊗ ที่มาจากคิวรีล่ม
        = กล่าวหาหน้างานบนกระดาษที่ยื่นออกไปแล้ว (คลาสเดียวกับตารางเดือน · QC audit 20/10) */
     const { data: pls } = plsRes, { data: auds } = audsRes;
-    const qe = audsRes.error ? `โหลดผลตรวจของไตรมาสไม่สำเร็จ: ${audsRes.error.message}`
-      : plsRes.error ? `โหลดแผนตรวจของไตรมาสไม่สำเร็จ: ${plsRes.error.message}` : '';
+    const qe = audsRes.error ? `${tr("โหลดผลตรวจของไตรมาสไม่สำเร็จ")}: ${audsRes.error.message}`
+      : plsRes.error ? `${tr("โหลดแผนตรวจของไตรมาสไม่สำเร็จ")}: ${plsRes.error.message}` : '';
     const map = {};
     mks.forEach(mk => {
       const pl = (pls || []).find(p => p.month_key === mk) || null;
@@ -564,7 +564,7 @@ export default function LayerProcessAudit() {
       next[mk] = { ...(next[mk] || { plan: null }), days };
     });
     setQData(next);
-    toast.success(`เติมแผนทั้งไตรมาสแล้ว — ครบ ${stationList.length} จุดงานในทุกเดือน (แก้ไขได้)`);
+    toast.success(`${tr("เติมแผนทั้งไตรมาสแล้ว — ครบ")} ${stationList.length} ${tr("จุดงานในทุกเดือน (แก้ไขได้")})`);
   };
 
   const saveQuarter = async () => {
@@ -588,14 +588,14 @@ export default function LayerProcessAudit() {
         const { data: saved, error } = await supabase.from('lpa_plans').upsert(row, { onConflict: 'line_name,shift,month_key' }).select().single();
         if (error) throw error;
         const { error: wErr432 } = await supabase.from('lpa_plan_days').delete().eq('plan_id', saved.id);
-        if (wErr432) { toast.error('ล้างแผนรายวันเดิม (ยังไม่เขียนชุดใหม่ กันซ้ำ)ไม่สำเร็จ: ' + wErr432.message); return; }
+        if (wErr432) { toast.error((tr('ล้างแผนรายวันเดิม (ยังไม่เขียนชุดใหม่ กันซ้ำ)ไม่สำเร็จ') + ': ') + wErr432.message); return; }
         const rows = Object.values(md.days).filter(d => d.station || d.plan_leader || d.plan_supervisor || d.plan_manager || d.plan_gm)
           .map(d => ({ plan_id: saved.id, day: d.day, station: d.station || null, plan_leader: !!d.plan_leader, plan_supervisor: !!d.plan_supervisor, plan_manager: !!d.plan_manager, plan_gm: !!d.plan_gm }));
         if (rows.length) { const { error: e2 } = await supabase.from('lpa_plan_days').insert(rows); if (e2) throw e2; }
       }
       toast.success('บันทึกแผน LPA ทั้งไตรมาสเรียบร้อย');
       loadQuarter(); loadMonth();
-    } catch (e) { toast.error('บันทึกแผนไม่สำเร็จ: ' + e.message); }
+    } catch (e) { toast.error((tr('บันทึกแผนไม่สำเร็จ') + ': ') + e.message); }
     finally { setSavingPlan(false); }
   };
 
@@ -637,7 +637,7 @@ export default function LayerProcessAudit() {
          = **คำตอบที่ตรวจไปแล้วหายถาวร** — คลาสเดียวกับที่ `savedOnlyAnswers` ตั้งใจกันไว้
          ⇒ fail-closed: ไม่ตั้ง draft เลย (`draftMismatch()` บล็อกการบันทึกให้อยู่แล้ว) + เขียนบนจอว่าทำไม */
       if (exRes.error) {
-        setDraftErr('โหลดใบตรวจเดิมไม่สำเร็จ: ' + exRes.error.message);
+        setDraftErr((tr('โหลดใบตรวจเดิมไม่สำเร็จ') + ': ') + exRes.error.message);
         setDraft(null); return;
       }
       setDraftErr('');
@@ -696,7 +696,7 @@ export default function LayerProcessAudit() {
       if (!user?.id) { toast.error('เซสชันหมดอายุ — กรุณา login ใหม่'); return; }
       const path = `${user.id}/lpa_${Date.now()}.png`;
       const { error } = await supabase.storage.from('signatures').upload(path, blob, uploadOpts({ contentType: 'image/png' }));
-      if (error) { toast.error('อัปโหลดลายเซ็นไม่สำเร็จ: ' + error.message); return; }
+      if (error) { toast.error((tr('อัปโหลดลายเซ็นไม่สำเร็จ') + ': ') + error.message); return; }
       const url = supabase.storage.from('signatures').getPublicUrl(path).data.publicUrl;
       // ลบไฟล์เซ็นเฉพาะกิจอันเก่า (เฉพาะโฟลเดอร์ตัวเอง — ไม่ลบลายเซ็นโปรไฟล์)
       const old = draft?.auditor_sig_url;
@@ -708,7 +708,7 @@ export default function LayerProcessAudit() {
       if (draftKeyRef.current !== keyAtSign) { toast.info('เปลี่ยนใบตรวจระหว่างบันทึกลายเซ็น — เซ็นใหม่ในใบที่ต้องการ'); return; }
       setDraft(prev => ({ ...prev, auditor_sig_url: url }));
       toast.success('บันทึกลายเซ็นแล้ว');
-    } catch (e) { toast.error('เกิดข้อผิดพลาด: ' + e.message); }
+    } catch (e) { toast.error((tr('เกิดข้อผิดพลาด') + ': ') + e.message); }
   };
 
   /* ✍️ ผู้ตรวจเซ็นเอง (13/11 · คำสั่ง user) — ใบที่บันทึกไว้แล้วแต่ช่องลายเซ็นว่าง (คนอื่นบันทึกแทน)
@@ -732,9 +732,9 @@ export default function LayerProcessAudit() {
     const mis = draftMismatch();
     if (mis) { toast.error(mis); return; }
     const unanswered = auditQuestions.filter(q => !draft.answers[q.id]?.answer);
-    if (unanswered.length) { toast.error(`ยังตอบไม่ครบ ${unanswered.length} ข้อ (ข้อแรก: ${unanswered[0].seq}. ${unanswered[0].question.slice(0, 40)}...)`); return; }
+    if (unanswered.length) { toast.error(`${tr("ยังตอบไม่ครบ")} ${unanswered.length} ${tr("ข้อ (ข้อแรก")}: ${unanswered[0].seq}. ${unanswered[0].question.slice(0, 40)}...)`); return; }
     const needNote = auditQuestions.filter(q => ['N', 'T'].includes(draft.answers[q.id]?.answer) && !draft.answers[q.id]?.note?.trim());
-    if (needNote.length) { toast.error(`ข้อที่ตอบ N/T ต้องกรอกรายละเอียดปัญหา (ข้อ ${needNote.map(q => q.seq).join(', ')})`); return; }
+    if (needNote.length) { toast.error(`${tr("ข้อที่ตอบ N/T ต้องกรอกรายละเอียดปัญหา (ข้อ")} ${needNote.map(q => q.seq).join(', ')})`); return; }
     setSavingAudit(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -768,19 +768,19 @@ export default function LayerProcessAudit() {
         event: 'lpa_finding', type: 'error', ref_table: 'lpa_audits', ref_id: saved.id,
         line_name: selLine, actor: draft.auditor_name || fullName,
         lines: [
-          `🏭 ไลน์: ${selLine} · ${SHIFT_META[selShift]} · 📅 ${thDate(auditDate)}`,
-          `🔍 ชั้น ${LAYERS.find(l => l.key === auditLayer)?.label || auditLayer}${draft.station ? ` · จุด ${draft.station}` : ''}`,
-          `❗ พบ ${finds.length} ข้อ จากทั้งหมด ${auditQuestions.length} ข้อ`,
-          ...finds.slice(0, 5).map(q => `  • [${draft.answers[q.id].answer}] ข้อ ${q.seq} ${q.question.slice(0, 70)} — ${draft.answers[q.id].note?.trim() || ''}`),
-          finds.length > 5 ? `  • …และอีก ${finds.length - 5} ข้อ` : '',
+          `🏭 ${tr("ไลน์")}: ${selLine} · ${SHIFT_META[selShift]} · 📅 ${thDate(auditDate)}`,
+          `🔍 ${tr("ชั้น")} ${LAYERS.find(l => l.key === auditLayer)?.label || auditLayer}${draft.station ? ` · ${tr("จุด")} ${draft.station}` : ''}`,
+          `❗ ${tr("พบ")} ${finds.length} ${tr("ข้อ จากทั้งหมด")} ${auditQuestions.length} ${tr("ข้อ")}`,
+          ...finds.slice(0, 5).map(q => `  • [${draft.answers[q.id].answer}] ${tr("ข้อ")} ${q.seq} ${q.question.slice(0, 70)} — ${draft.answers[q.id].note?.trim() || ''}`),
+          finds.length > 5 ? `  • …${tr("และอีก")} ${finds.length - 5} ${tr("ข้อ")}` : '',
         ],
       });
-      toast.success(`บันทึกผลตรวจ LPA ${thDate(auditDate)} เรียบร้อย`);
+      toast.success(`${tr("บันทึกผลตรวจ")} LPA ${thDate(auditDate)} ${tr("เรียบร้อย")}`);
       setDraft(prev => ({ ...prev, id: saved.id }));
       loadedSnapRef.current = lpaSnap(draft.answers, draft.station);   // บันทึกแล้ว = ไม่มีของค้าง ⇒ ร่างถูกล้างเอง
       if (lpaDraftKey) clearDraft(lpaDraftKey);
       loadMonth();
-    } catch (e) { toast.error('บันทึกไม่สำเร็จ: ' + e.message); }
+    } catch (e) { toast.error((tr('บันทึกไม่สำเร็จ') + ': ') + e.message); }
     finally { setSavingAudit(false); }
   };
 
@@ -789,9 +789,9 @@ export default function LayerProcessAudit() {
     if (!lineGuard('ใบตรวจ LPA ของไลน์นี้')) return;
     const mis = draftMismatch();
     if (mis) { toast.error(mis); return; }
-    if (!await askConfirm(`ลบผลตรวจ ${thDate(auditDate)} ${SHIFT_META[selShift]} ชั้น ${LAYERS.find(l => l.key === auditLayer)?.label}?`)) return;
+    if (!await askConfirm(`${tr("ลบผลตรวจ")} ${thDate(auditDate)} ${SHIFT_META[selShift]} ${tr("ชั้น")} ${LAYERS.find(l => l.key === auditLayer)?.label}?`)) return;
     const { error } = await supabase.from('lpa_audits').delete().eq('id', draft.id);
-    if (error) { toast.error('ลบไม่สำเร็จ: ' + error.message); return; }
+    if (error) { toast.error((tr('ลบไม่สำเร็จ') + ': ') + error.message); return; }
     toast.success('ลบแล้ว');
     setDraft(prev => ({ ...prev, id: null, answers: {} }));
     loadMonth();
@@ -810,7 +810,7 @@ export default function LayerProcessAudit() {
       is_active: qEditing.is_active !== false,
     };
     const { error } = await supabase.from('lpa_questions').upsert(row, { onConflict: 'id' });
-    if (error) { toast.error('บันทึกไม่สำเร็จ: ' + error.message); return; }
+    if (error) { toast.error((tr('บันทึกไม่สำเร็จ') + ': ') + error.message); return; }
     toast.success('บันทึกคำถามแล้ว');
     setQEditing(null);
     const { data: qs } = await supabase.from('lpa_questions').select('*').order('seq');
@@ -819,7 +819,7 @@ export default function LayerProcessAudit() {
   const toggleQuestion = async (q) => {
     if (!qGuard(q, 'คำถามของไลน์นี้')) return;
     // ปิดใช้งานข้อ = ถอดออกจาก checklist ทุกใบตรวจถัดไป → ยืนยันก่อน (UI-CONVENTIONS §5.4) · เปิดกลับไม่ต้องถาม
-    if (q.is_active && !await askConfirm(`ปิดใช้งานข้อ "${q.question}" ?\n\nข้อนี้จะไม่ขึ้นในใบตรวจ LPA ครั้งถัดไป (เปิดกลับได้ภายหลัง)`)) return;
+    if (q.is_active && !await askConfirm(`${tr("ปิดใช้งานข้อ")} "${q.question}" ?\n\n${tr("ข้อนี้จะไม่ขึ้นในใบตรวจ LPA ครั้งถัดไป (เปิดกลับได้ภายหลัง")})`)) return;
     const { error } = await supabase.from('lpa_questions').update({ is_active: !q.is_active }).eq('id', q.id);
     if (error) { toast.error(error.message); return; }
     setQuestions(prev => prev.map(x => x.id === q.id ? { ...x, is_active: !q.is_active } : x));
@@ -830,7 +830,7 @@ export default function LayerProcessAudit() {
     const cur = Array.isArray(q.hidden_for_lines) ? q.hidden_for_lines : [];
     const next = cur.includes(line) ? cur.filter(x => x !== line) : [...cur, line];
     const { error } = await supabase.from('lpa_questions').update({ hidden_for_lines: next.length ? next : null }).eq('id', q.id);
-    if (error) { toast.error('บันทึกไม่สำเร็จ (ต้อง apply migration hidden_for_lines ก่อน): ' + error.message); return; }
+    if (error) { toast.error((tr('บันทึกไม่สำเร็จ (ต้อง apply migration hidden_for_lines ก่อน') + '): ') + error.message); return; }
     setQuestions(prev => prev.map(x => x.id === q.id ? { ...x, hidden_for_lines: next } : x));
   };
   const [qBusy, setQBusy] = useState(false);
@@ -1095,7 +1095,7 @@ ${issuesHtml}
   return (
     <Page>
       <PageHeader title="Layer Process Audit (LPA)" icon="📋"
-        sub={`แผนตรวจ + บันทึกผล + รายงาน ${lpaFormNo} — Leader ทุกวัน · Supervisor รายสัปดาห์ · Manager รายเดือน · GM รายไตรมาส`}
+        sub={`${tr("แผนตรวจ + บันทึกผล + รายงาน")} ${lpaFormNo} — Leader ${tr("ทุกวัน · Supervisor รายสัปดาห์ · Manager รายเดือน · GM รายไตรมาส")}`}
         tabs={[
           { key: 'audit', label: 'บันทึกผลตรวจ' },
           { key: 'plan', label: 'แผนตรวจ' },
@@ -1109,7 +1109,7 @@ ${issuesHtml}
       {/* 🔒 ไลน์ที่เลือกอยู่นอกส่วนงานเรา — ดูได้ แต่บันทึกไม่ได้ · ซ่อนปุ่มได้ ห้ามซ่อนเหตุผล (UI §6.9) */}
       {!lineWrite.ok && selLine && (
         <NoticeBar tone="warn" style={{ marginBottom: 10 }}>
-          {writeBlockText(lineWrite, { what: `ใบตรวจ/แผน LPA ของไลน์ "${selLine}"` })}
+          {writeBlockText(lineWrite, { what: `${tr("ใบตรวจ/แผน LPA ของไลน์")} "${selLine}"` })}
         </NoticeBar>
       )}
 
@@ -1133,7 +1133,7 @@ ${issuesHtml}
               <div key={k}>
                 <div style={lb}>{label}</div>
                 {/* 4 ชั้นผู้ตรวจ = user ระบบ (พิมพ์ลง FM-QMR-008) — PersonSelect profiles แทน datalist ที่รับทุกสะกด (2026-09-07) */}
-                <PersonSelect value={qHeader[k] || ''} history={layerHist[k]} onChange={r => setQHeaderF(k, r.name)} disabled={!canManage} placeholder={`เลือก ${label}…`} />
+                <PersonSelect value={qHeader[k] || ''} history={layerHist[k]} onChange={r => setQHeaderF(k, r.name)} disabled={!canManage} placeholder={`${tr("เลือก")} ${label}…`} />
               </div>
             ))}
           </div>
@@ -1148,7 +1148,7 @@ ${issuesHtml}
                 <button onClick={fillStationsFromWorkstations} style={btnTeal} title={tr('ดึงรายชื่อจุดงานทั้งหมดในไลน์นี้ (รวมไลน์ย่อย) มาเป็นสถานีตรวจตั้งต้น — LPA ตรวจกระบวนการที่จุดงาน ไม่ใช่ทุกเครื่องจักร')}>{tr('ดึงจุดงานในไลน์')}</button>
                 <button onClick={autoFillQuarter} style={btnAmber} title={tr('กระจายจุดงานให้ครบทุกจุดภายในแต่ละเดือน (Leader ทุกวัน · SV ต้นสัปดาห์ · MGR รายเดือน · GM รายไตรมาส)')}>{tr('เติมแผนทั้งไตรมาส')}</button>
                 <button onClick={saveQuarter} disabled={savingPlan} style={btnAccent}>{savingPlan ? '...' : tr('บันทึกแผนไตรมาส')}</button>
-                <button onClick={printPlan} disabled={printing} style={btnBlue} title={`พิมพ์ใบแผนของเดือน ${monthLabel(selMonth)} (บันทึกก่อนพิมพ์)`}>{tr('พิมพ์ (')}{monthLabel(selMonth)})</button>
+                <button onClick={printPlan} disabled={printing} style={btnBlue} title={`${tr("พิมพ์ใบแผนของเดือน")} ${monthLabel(selMonth)} (${tr("บันทึกก่อนพิมพ์")})`}>{tr('พิมพ์ (')}{monthLabel(selMonth)})</button>
               </div>
             )}
             {!canManage && <button onClick={printPlan} disabled={printing} style={btnBlue}>{tr('พิมพ์ (')}{monthLabel(selMonth)})</button>}
@@ -1226,7 +1226,7 @@ ${issuesHtml}
           {draftErr && (
             <div style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 'var(--r-md)', fontSize: 12.5,
               background: 'var(--card-surf)', border: '1px solid var(--red)', color: 'var(--red)' }}>
-              ⚠ {draftErr} — <b>{tr('ยังบันทึกไม่ได้')}</b> (ถ้าบันทึกทับตอนนี้ คำตอบที่เคยตรวจไว้จะหาย) · ลองเปลี่ยนวัน/ไลน์แล้วกลับมาใหม่
+              ⚠ {draftErr} — <b>{tr('ยังบันทึกไม่ได้')}</b> ({tr("ถ้าบันทึกทับตอนนี้ คำตอบที่เคยตรวจไว้จะหาย) · ลองเปลี่ยนวัน/ไลน์แล้วกลับมาใหม่")}
             </div>
           )}
           <DraftRestoreBar draft={pendingDraft} what="ใบตรวจ LPA ชุดนี้" onRestore={restoreLpaDraft}
@@ -1265,7 +1265,7 @@ ${issuesHtml}
                 {draft?.auditor_sig_url
                   ? <img src={draft.auditor_sig_url} alt="" style={{ height: 30, background: '#fff', borderRadius: 4, padding: 2 }} />
                   : <span style={{ fontSize: 11, color: draft?.auditor_name && !isSelfName(draft.auditor_name, fullName) ? 'var(--amber)' : 'var(--muted)' }}>
-                      {draft?.auditor_name && !isSelfName(draft.auditor_name, fullName) ? `รอ ${draft.auditor_name} login มาเซ็นเอง` : tr('ยังไม่มี')}
+                      {draft?.auditor_name && !isSelfName(draft.auditor_name, fullName) ? `${tr("รอ")} ${draft.auditor_name} login ${tr("มาเซ็นเอง")}` : tr('ยังไม่มี')}
                     </span>}
                 {/* ✍️ แผ่นเซ็น/ปุ่มเซ็น = เฉพาะเจ้าตัว (ผู้ตรวจที่ระบุ = คนที่ login) */}
                 {canRecord && isSelfName(draft?.auditor_name, fullName) && (draft?.id && !draft?.auditor_sig_url
@@ -1288,7 +1288,7 @@ ${issuesHtml}
             <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
               <button onClick={setAllY} style={btnGray}>{tr('ข้อที่ยังไม่ตอบ = Y ทั้งหมด')}</button>
               <div style={{ fontSize: 12, color: 'var(--muted)', alignSelf: 'center' }}>
-                ตอบแล้ว {auditQuestions.filter(q => draft?.answers[q.id]?.answer).length}/{auditQuestions.length} ข้อ · N/T ต้องกรอกรายละเอียดปัญหา
+                {tr("ตอบแล้ว")} {auditQuestions.filter(q => draft?.answers[q.id]?.answer).length}/{auditQuestions.length} {tr("ข้อ · N/T ต้องกรอกรายละเอียดปัญหา")}
               </div>
             </div>
           )}
@@ -1339,7 +1339,7 @@ ${issuesHtml}
           {removedAnswers.length > 0 && (
             <div style={{ marginBottom: 14 }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--amber)', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
-                ข้อที่ถอดออกจากเช็คลิสต์แล้ว — เก็บไว้จากตอนตรวจ ({removedAnswers.length} ข้อ)
+                {tr("ข้อที่ถอดออกจากเช็คลิสต์แล้ว — เก็บไว้จากตอนตรวจ")} ({removedAnswers.length} {tr("ข้อ")})
               </div>
               <div style={{ fontSize: 11, color: 'var(--muted)', padding: '4px 0' }}>
                 ข้อเหล่านี้ถูกลบ/ปิดใช้งาน/ซ่อนของไลน์นี้ไปหลังวันที่ตรวจ — แสดงไว้ให้ใบตรวจอ่านครบตามที่ตรวจจริง (แก้ไม่ได้)
@@ -1420,7 +1420,7 @@ ${issuesHtml}
           <div className="card" style={{ padding: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
               <div style={{ fontSize: 13, color: 'var(--text2)' }}>
-                ตรวจแล้วเดือนนี้: <b style={{ color: 'var(--text)' }}>{monthAudits.length}</b> ครั้ง
+                {tr("ตรวจแล้วเดือนนี้")}: <b style={{ color: 'var(--text)' }}>{monthAudits.length}</b> {tr("ครั้ง")}
                 (Leader {monthAudits.filter(a => a.layer === 'leader').length} · SV {monthAudits.filter(a => a.layer === 'supervisor').length} · MGR {monthAudits.filter(a => a.layer === 'manager').length} · GM {monthAudits.filter(a => a.layer === 'gm').length})
                 {issues.length > 0 && <span style={{ color: 'var(--red)', fontWeight: 700 }}> {tr('· พบปัญหา N/T')} {issues.length} {tr('รายการ')}</span>}
                 {/* 🔴 "ตรวจแล้ว N ครั้ง" ลอยๆ ตอบไม่ได้ว่าขาดกี่วัน — ต้องมีตัวหาร (ดู utils/dailyCheckDay.js) */}
@@ -1429,17 +1429,16 @@ ${issuesHtml}
                 </div>
                 {monthErr && (
                   <div style={{ marginTop: 3, fontSize: 11.5, color: 'var(--red)', fontWeight: 700 }}>
-                    ⚠ {monthErr} — ตารางเดือนนี้แสดงเป็น "ไม่รู้" ทั้งเดือน (ไม่ได้แปลว่าขาดตรวจ)
+                    ⚠ {monthErr} — {tr("ตารางเดือนนี้แสดงเป็น \"ไม่รู้\" ทั้งเดือน (ไม่ได้แปลว่าขาดตรวจ")})
                   </div>
                 )}
                 {!plan && !monthErr && (
                   <div style={{ marginTop: 3, fontSize: 11.5, color: 'var(--amber)' }}>
-                    ⚠️ เดือนนี้ยังไม่มีแผนตรวจของ {selLine} ({SHIFT_META[selShift]}) — บอกไม่ได้ว่าวันไหนต้องตรวจ
-                    จึงยังไม่นับวันขาดตรวจ · ไปตั้งที่แท็บ <b>{tr('แผนตรวจ')}</b>
+                    ⚠️ {tr("เดือนนี้ยังไม่มีแผนตรวจของ")} {selLine} ({SHIFT_META[selShift]}) — {tr("บอกไม่ได้ว่าวันไหนต้องตรวจ จึงยังไม่นับวันขาดตรวจ · ไปตั้งที่แท็บ")} <b>{tr('แผนตรวจ')}</b>
                   </div>
                 )}
               </div>
-              <button onClick={printReport} disabled={printing} style={btnBlue}>{printing ? '...' : `พิมพ์รายงาน ${lpaFormCode}`}</button>
+              <button onClick={printReport} disabled={printing} style={btnBlue}>{printing ? '...' : `${tr("พิมพ์รายงาน")} ${lpaFormCode}`}</button>
             </div>
             {/* 🔴 คำอธิบายสัญลักษณ์ 2 ชุด แยกให้เห็นว่าเป็นคนละชั้นข้อมูล (คำสั่ง user 13/10)
                 — "คำตอบ" = ไปตรวจแล้วเจออะไร · "สถานะวัน" = วันนั้นต้องตรวจไหม/มีใครไปตรวจไหม */}
@@ -1463,7 +1462,7 @@ ${issuesHtml}
                     </span>
                   );
                 })}
-                · <span style={{ display: 'inline-block', width: 11, height: 11, background: 'rgba(46,125,50,0.25)', border: '1px solid var(--border)', verticalAlign: -1 }} /> วันหยุดโรงงาน
+                · <span style={{ display: 'inline-block', width: 11, height: 11, background: 'rgba(46,125,50,0.25)', border: '1px solid var(--border)', verticalAlign: -1 }} /> {tr("วันหยุดโรงงาน")}
               </span>
             </div>
             <div style={{ overflowX: 'auto' }}>
@@ -1556,7 +1555,7 @@ ${issuesHtml}
             </div>
             <button
               onClick={() => setQEditing({ category: 'safety', seq: (Math.max(0, ...questions.map(q => q.seq)) + 1), question: '', line_name: qScope || '', issue_start: '', issue_end: '', is_active: true })}
-              style={btnAccent}>{tr('เพิ่มคำถาม')}{qScope ? ` (เฉพาะไลน์ ${qScope})` : ' (เข้าทะเบียนกลาง — ทุกไลน์เห็น)'}</button>
+              style={btnAccent}>{tr('เพิ่มคำถาม')}{qScope ? ` (${tr("เฉพาะไลน์")} ${qScope})` : ' (เข้าทะเบียนกลาง — ทุกไลน์เห็น)'}</button>
           </div>
           {/* 🔴 ป้าย "ตอนนี้คุณกำลังแก้ของใคร" — ห้ามถอด (2026-10-12 · feedback user)
               เคสจริง: มีคนกดลบข้อ common 2 ข้อจากมุมมอง "ทุกไลน์" ⇒ หายจากใบตรวจทุกไลน์
@@ -1568,7 +1567,7 @@ ${issuesHtml}
           }}>
             {qScope ? (
               <>
-                <b style={{ fontSize: 13, color: 'var(--accent)' }}>กำลังแก้หัวข้อตรวจของไลน์ "{qScope}"</b>
+                <b style={{ fontSize: 13, color: 'var(--accent)' }}>{tr("กำลังแก้หัวข้อตรวจของไลน์")} "{qScope}"</b>
                 <div style={{ color: 'var(--text2)', marginTop: 2 }}>
                   ข้อที่ติดป้าย <b>{tr('ทะเบียนกลาง')}</b> = ของส่วนรวม แก้เนื้อหา/ลบที่นี่ไม่ได้ —
                   ไม่อยากใช้ข้อไหนที่ไลน์นี้ กด <b>{tr('ไม่ใช้ที่ไลน์นี้')}</b> (ไลน์อื่นไม่กระทบ) ·
@@ -1576,7 +1575,7 @@ ${issuesHtml}
                 </div>
                 {qScopeStats && (
                   <div style={{ marginTop: 5, fontSize: 12, color: 'var(--text)' }}>
-                    เช็คลิสต์ของไลน์นี้ = <b>{tr('ดึงจากทะเบียนกลาง')} {qScopeStats.used}</b>
+                    {tr("เช็คลิสต์ของไลน์นี้")} = <b>{tr('ดึงจากทะเบียนกลาง')} {qScopeStats.used}</b>
                     {qScopeStats.off > 0 && <span style={{ color: 'var(--muted)' }}> {tr('(ปิดไว้')} {qScopeStats.off})</span>}
                     {' '}+ <b>{tr('ของไลน์นี้เอง')} {qScopeStats.own}</b> = <b>{qScopeStats.used + qScopeStats.own} {tr('ข้อ')}</b>
                   </div>
@@ -1621,7 +1620,7 @@ ${issuesHtml}
                         // ข้อ common ในมุมมองรายไลน์ → ซ่อน/แสดงเฉพาะไลน์นี้ (แก้เนื้อหาไปทำที่ "ทุกไลน์")
                         /* ป้ายปุ่มต้องบอก "ผลที่จะเกิด" ไม่ใช่ศัพท์ซ่อน/แสดง — คนอ่านแล้วนึกว่าซ่อนจากทุกคน */
                         <button className="tbtn" onClick={() => toggleHideForLine(q, qScope)}
-                          title={hiddenHere ? `เอาข้อนี้กลับมาใช้ที่ไลน์ ${qScope}` : `เลิกใช้ข้อนี้เฉพาะไลน์ ${qScope} (ไลน์อื่นและทะเบียนกลางไม่กระทบ)`}
+                          title={hiddenHere ? `${tr("เอาข้อนี้กลับมาใช้ที่ไลน์")} ${qScope}` : `${tr("เลิกใช้ข้อนี้เฉพาะไลน์")} ${qScope} (${tr("ไลน์อื่นและทะเบียนกลางไม่กระทบ")})`}
                           style={{ ...btnGray, color: hiddenHere ? 'var(--accent)' : 'var(--red)', padding: '4px 10px', fontSize: 12, whiteSpace: 'nowrap' }}>
                           {hiddenHere ? tr('ใช้ที่ไลน์นี้') : tr('ไม่ใช้ที่ไลน์นี้')}
                         </button>
@@ -1630,7 +1629,7 @@ ${issuesHtml}
                         <>
                           <button className="tbtn" onClick={() => setQEditing({ ...q })} style={{ ...btnGray, padding: '4px 10px', fontSize: 12 }}>✏️</button>
                           <button className="tbtn" onClick={() => toggleQuestion(q)} style={{ ...btnGray, padding: '4px 10px', fontSize: 12 }}>{q.is_active ? '⏸' : '▶'}</button>
-                          <DeleteButton onClick={() => deleteQuestion(q)} disabled={qBusy} title={q.line_name ? `ลบข้อเฉพาะไลน์ ${q.line_name}` : 'ลบข้อของส่วนรวม (ทุกไลน์)'} />
+                          <DeleteButton onClick={() => deleteQuestion(q)} disabled={qBusy} title={q.line_name ? `${tr("ลบข้อเฉพาะไลน์")} ${q.line_name}` : 'ลบข้อของส่วนรวม (ทุกไลน์)'} />
                         </>
                       )}
                     </div>
@@ -1681,7 +1680,7 @@ ${issuesHtml}
         </div>
       )}
 
-      {showSignPad && <SignPadModal title={`${draft?.auditor_name || ''} — เซ็นผู้ตรวจ`} onCancel={() => setShowSignPad(false)} onDone={handleSignDone} />}
+      {showSignPad && <SignPadModal title={`${draft?.auditor_name || ''} — ${tr("เซ็นผู้ตรวจ")}`} onCancel={() => setShowSignPad(false)} onDone={handleSignDone} />}
     </Page>
   );
 }

@@ -76,8 +76,8 @@ export default function BoardPager({ page, count, onPage, labels = [], compact =
       {/* จุดบอกหน้า — กดข้ามไปหน้าไหนก็ได้ · title บอกว่าหน้านั้นมีแผ่นอะไร (จอ TV ไม่มีเมาส์ก็ยังนับจุดได้) */}
       <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginLeft: 3 }}>
         {showDots && Array.from({ length: count }, (_, i) => (
-          <button key={i} type="button" onClick={() => onPage(i)} title={labels[i] || `หน้า ${i + 1}`}
-            aria-label={labels[i] || `หน้า ${i + 1}`} aria-current={i === page ? 'true' : undefined}
+          <button key={i} type="button" onClick={() => onPage(i)} title={labels[i] || `${tr("หน้า")} ${i + 1}`}
+            aria-label={labels[i] || `${tr("หน้า")} ${i + 1}`} aria-current={i === page ? 'true' : undefined}
             style={{
               width: tv ? 16 : 10, height: tv ? 16 : 10, borderRadius: '50%', border: 'none', padding: 0, cursor: 'pointer',
               background: i === page ? 'var(--accent)' : 'var(--border2)',

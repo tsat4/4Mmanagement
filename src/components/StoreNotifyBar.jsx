@@ -1,3 +1,4 @@
+import { tr } from '../utils/i18n';
 /* 📦 แถบ "รอแจ้งสโตร์" — ไม่บังจอ (19/11 · คำสั่ง user)
    user: *"มันทำงานช้าลงเพราะเปิดออเดอร์ต่อกันไม่ได้ · จะแก้ยังไง แต่ไม่ใช่ตัดออก"*
    เดิมเปิดใบผลิตแล้วเด้ง popup ยืนยันทันที ⇒ บังช่องสแกน PROD.NO ต้องกดปิดก่อนยิงใบถัดไป
@@ -16,12 +17,12 @@ export default function StoreNotifyBar({ bar, busy = false, onOpen, onDismiss, o
   const send = res?.sendCount || 0;
   const warn = res?.warnCount || 0;
   const tone = err ? 'red' : 'amber';
-  const matTxt = mats.length ? ` · จากใบผลิตที่เพิ่งเปิด ${mats.slice(0, 4).join(', ')}${mats.length > 4 ? ` +${mats.length - 4}` : ''}` : '';
+  const matTxt = mats.length ? ` · ${tr("จากใบผลิตที่เพิ่งเปิด")} ${mats.slice(0, 4).join(', ')}${mats.length > 4 ? ` +${mats.length - 4}` : ''}` : '';
   let text;
-  if (err) text = `⚠️ คิดรายการแจ้งสโตร์ไม่สำเร็จ — ${err}`;
+  if (err) text = `⚠️ ${tr("คิดรายการแจ้งสโตร์ไม่สำเร็จ")} — ${err}`;
   else if (loading && !res) text = '📦 กำลังคิดของที่ต้องแจ้งสโตร์…';
-  else if (send) text = `📦 รอแจ้งสโตร์ ${send} รายการ${warn ? ` · ⚠️ มีคำเตือน ${warn} รายการ` : ''}${matTxt}`;
-  else text = `⚠️ มีคำเตือน ${warn} รายการ (เช่น ใบผลิตไม่มี BOM) — ยังไม่ได้ขอของให้${matTxt}`;
+  else if (send) text = `📦 ${tr("รอแจ้งสโตร์")} ${send} ${tr("รายการ")}${warn ? ` · ⚠️ ${tr("มีคำเตือน")} ${warn} ${tr("รายการ")}` : ''}${matTxt}`;
+  else text = `⚠️ ${tr("มีคำเตือน")} ${warn} ${tr("รายการ (เช่น ใบผลิตไม่มี BOM) — ยังไม่ได้ขอของให้")}${matTxt}`;
   const btn = (label, onClick, primary) => (
     <button type="button" onClick={onClick} disabled={busy}
       style={{ fontSize: 12, fontWeight: 700, padding: '5px 12px', borderRadius: 'var(--r-md)', cursor: busy ? 'wait' : 'pointer',

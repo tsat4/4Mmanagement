@@ -132,10 +132,10 @@ export default function OrgTreeView({ nodes = [], scopeCtx = {}, canEdit = false
     const why = orgSaveBlockReason({ kind: node.kind, parentId: node.parent_id, editing: node }, scopeCtx);
     if (why) { toast.error(why); return; }
     setBusy(true);
-    const ok = checkWriteRows(await supabase.from('org_nodes').update({ inherit_scope: next }).eq('id', node.id).select('id'), `ตั้งการตกทอดสิทธิ์ของ ${node.name}`);
+    const ok = checkWriteRows(await supabase.from('org_nodes').update({ inherit_scope: next }).eq('id', node.id).select('id'), `${tr("ตั้งการตกทอดสิทธิ์ของ")} ${node.name}`);
     setBusy(false);
     if (!ok) return;
-    toast.success(next ? `${node.name}: สิทธิ์ตกทอดจากหน่วยแม่ตามปกติ` : `${node.name}: หน่วยแม่จะไม่มีสิทธิ์แก้ข้อมูลหน่วยนี้`);
+    toast.success(next ? `${node.name}: ${tr("สิทธิ์ตกทอดจากหน่วยแม่ตามปกติ")}` : `${node.name}: ${tr("หน่วยแม่จะไม่มีสิทธิ์แก้ข้อมูลหน่วยนี้")}`);
     onChanged?.();
   };
 
@@ -143,10 +143,10 @@ export default function OrgTreeView({ nodes = [], scopeCtx = {}, canEdit = false
     const why = orgSaveBlockReason({ kind: node.kind, parentId, editing: node }, scopeCtx);
     if (why) { toast.error(why); return; }
     setBusy(true);
-    const ok = checkWriteRows(await supabase.from('org_nodes').update({ parent_id: parentId || null }).eq('id', node.id).select('id'), `ย้าย ${node.name}`);
+    const ok = checkWriteRows(await supabase.from('org_nodes').update({ parent_id: parentId || null }).eq('id', node.id).select('id'), `${tr("ย้าย")} ${node.name}`);
     setBusy(false);
     if (!ok) return;
-    toast.success(`ย้าย ${node.name} แล้ว`);
+    toast.success(`${tr("ย้าย")} ${node.name} ${tr("แล้ว")}`);
     setMoving(null);
     onChanged?.();
   };
@@ -159,7 +159,7 @@ export default function OrgTreeView({ nodes = [], scopeCtx = {}, canEdit = false
       const ok = await printOrgChart({ ...opts, nodes });
       if (!ok) toast.error('เปิดหน้าต่างพิมพ์ไม่ได้ — เบราว์เซอร์บล็อกป๊อปอัป ให้อนุญาตแล้วลองใหม่');
     } catch (e) {
-      toast.error(`ออกใบผังไม่สำเร็จ: ${e?.message || e}`);
+      toast.error(`${tr("ออกใบผังไม่สำเร็จ")}: ${e?.message || e}`);
     }
     setPrinting(false);
   };
@@ -184,7 +184,7 @@ export default function OrgTreeView({ nodes = [], scopeCtx = {}, canEdit = false
             {/* สีเป็น token (var) ⇒ ต่อท้าย alpha แบบป้ายชั้นหน่วยไม่ได้ — ใช้กรอบเส้นแทน */}
             <span style={{ fontSize: 11, fontWeight: 700, padding: '0 6px', borderRadius: 'var(--r-xs)',
               color: meta.color, border: `1px solid ${meta.color}` }}>
-              {meta.th} · เลเวล {meta.level}
+              {meta.th} · {tr("เลเวล")} {meta.level}
             </span>
             {deepCount === null
               ? <span style={{ fontSize: 11, color: 'var(--muted)' }}>👤 …</span>
@@ -215,10 +215,10 @@ export default function OrgTreeView({ nodes = [], scopeCtx = {}, canEdit = false
           )}
           <span style={{ fontSize: 11, fontWeight: 700, padding: '0 6px', borderRadius: 'var(--r-xs)',
             background: `${meta.color}1f`, color: meta.color, border: `1px solid ${meta.color}55` }}>
-            {meta.th}{meta.level ? ` · เลเวล ${meta.level}` : ''}
+            {meta.th}{meta.level ? ` · ${tr("เลเวล")} ${meta.level}` : ''}
           </span>
           {cc?.cc ? (
-            <span title={inherited ? `ตกทอดจาก ${cc.from?.name || 'หน่วยแม่'}` : 'รหัสของหน่วยนี้เอง'}
+            <span title={inherited ? `${tr("ตกทอดจาก")} ${cc.from?.name || tr('หน่วยแม่')}` : 'รหัสของหน่วยนี้เอง'}
               style={{ fontSize: 11, fontWeight: 700, fontFamily: 'monospace',
                 color: inherited ? 'var(--muted)' : '#22c55e' }}>
               {cc.cc}{inherited ? ' · ตกทอด' : ''}
@@ -299,8 +299,8 @@ export default function OrgTreeView({ nodes = [], scopeCtx = {}, canEdit = false
       {/* 🔴 ห้ามซ่อนเงียบ — บอกตรงๆ ว่าตัดอะไรออกและของนั้นไปอยู่ไหน */}
       {teamCount > 0 && (
         <div style={{ fontSize: 11.5, color: 'var(--text2)', marginBottom: 6 }}>
-          ไม่นับทีม {teamCount} {tr('รายการ —')} <b>{tr('ทีม A/B/C ใช้จัดกะการทำงาน ไม่ใช่ชั้นในผังองค์กร')}</b>
-          {' '}(จัดการที่แท็บ “จัดการหน่วยงาน”)
+          {tr("ไม่นับทีม")} {teamCount} {tr('รายการ —')} <b>{tr('ทีม A/B/C ใช้จัดกะการทำงาน ไม่ใช่ชั้นในผังองค์กร')}</b>
+          {' '}({tr("จัดการที่แท็บ “จัดการหน่วยงาน")}”)
         </div>
       )}
       {empCount === undefined && (
@@ -314,7 +314,7 @@ export default function OrgTreeView({ nodes = [], scopeCtx = {}, canEdit = false
         {roots.floats.length > 0 && (
           <>
             <div style={{ fontSize: 12, fontWeight: 800, color: '#f59e0b', marginTop: 10 }}>
-              หน่วยที่ยังไม่มีหน่วยแม่ ({roots.floats.length})
+              {tr("หน่วยที่ยังไม่มีหน่วยแม่")} ({roots.floats.length})
               <span style={{ fontWeight: 400, color: 'var(--muted)' }}> {tr('— ตกทอดรหัส/ขอบเขตจากใครไม่ได้ ควรย้ายเข้าสาย')}</span>
             </div>
             {roots.floats.map(n => <Row key={n.id} n={n} depth={0} />)}

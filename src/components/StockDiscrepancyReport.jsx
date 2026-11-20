@@ -80,7 +80,7 @@ export default function StockDiscrepancyReport() {
       sap_doc: sapDoc.trim() || null, resolve_note: note.trim() || null,
     }).eq('id', d.id).eq('status', 'open').select('id'), 'เสนอผลเคลียร์', { zeroMsg: 'เคสนี้ถูกเปลี่ยนสถานะไปแล้ว — รีเฟรช' });
     setBusy(null);
-    if (ok) { toast.success(`🤝 เสนอ "${outcomeLabel(outcome, d)}" แล้ว — รออีกฝ่ายยืนยัน`); setForm(null); }
+    if (ok) { toast.success(`🤝 ${tr("เสนอ")} "${outcomeLabel(outcome, d)}" ${tr("แล้ว — รออีกฝ่ายยืนยัน")}`); setForm(null); }
     load();
   };
 
@@ -89,7 +89,7 @@ export default function StockDiscrepancyReport() {
     const { d, side, sapDoc, note } = form;
     const why = confirmBlock(d, { side, sides, by: fullName });
     if (why) { toast.error(why); return; }
-    if (!await askConfirm(`ยืนยัน "${outcomeLabel(d.proposed_outcome, d)}" ในนาม${SIDE_LABEL[side]}?\n\n${d.part_name || ''} MAT ${d.mat_no} × ${fmt(d.short_qty)} (${d.line_name})\nเสนอโดย ${d.proposed_by || '—'} (${SIDE_LABEL[d.proposed_side] || ''})`)) return;
+    if (!await askConfirm(`${tr("ยืนยัน")} "${outcomeLabel(d.proposed_outcome, d)}" ${tr("ในนาม")}${SIDE_LABEL[side]}?\n\n${d.part_name || ''} MAT ${d.mat_no} × ${fmt(d.short_qty)} (${d.line_name})\n${tr("เสนอโดย")} ${d.proposed_by || '—'} (${SIDE_LABEL[d.proposed_side] || ''})`)) return;
     setBusy(d.id);
     const now = new Date().toISOString();
     const claimed = checkWriteRows(await supabaseDR.from('stock_discrepancies').update({
@@ -103,22 +103,22 @@ export default function StockDiscrepancyReport() {
       const { error: eBack } = await supabaseDR.from('stock_discrepancies').update({
         status: 'proposed', confirmed_by: null, confirmed_side: null, resolved_at: null, resolved_by: null,
       }).eq('id', d.id).eq('status', d.proposed_outcome);
-      toast.error(eBack ? `ย้ายยอดออกจากคลังพักไม่สำเร็จ และคืนสถานะไม่ได้ — แจ้ง admin (${eLedger.message})`
-        : `ย้ายยอดออกจากคลังพักไม่สำเร็จ — คืนเป็น "รออีกฝ่ายยืนยัน" แล้ว ลองใหม่ (${eLedger.message})`);
-    } else { toast.success(`✔ เคลียร์แล้ว: ${outcomeLabel(d.proposed_outcome, d)} ${d.mat_no} × ${fmt(d.short_qty)}`); setForm(null); }
+      toast.error(eBack ? `${tr("ย้ายยอดออกจากคลังพักไม่สำเร็จ และคืนสถานะไม่ได้ — แจ้ง")} admin (${eLedger.message})`
+        : `${tr("ย้ายยอดออกจากคลังพักไม่สำเร็จ — คืนเป็น \"รออีกฝ่ายยืนยัน\" แล้ว ลองใหม่")} (${eLedger.message})`);
+    } else { toast.success(`✔ ${tr("เคลียร์แล้ว")}: ${outcomeLabel(d.proposed_outcome, d)} ${d.mat_no} × ${fmt(d.short_qty)}`); setForm(null); }
     setBusy(null); load();
   };
 
   const rejectProposal = async (d) => {
     const side = sides.find(s => s !== d.proposed_side);
     if (!side) { toast.error('ต้องเป็นอีกฝ่ายถึงจะตีกลับได้'); return; }
-    const why = window.prompt(`ไม่เห็นด้วยกับ "${outcomeLabel(d.proposed_outcome, d)}" — เหตุผล (บังคับ)`, '');
+    const why = window.prompt(`${tr("ไม่เห็นด้วยกับ")} "${outcomeLabel(d.proposed_outcome, d)}" — ${tr("เหตุผล (บังคับ")})`, '');
     if (why == null) return;
     if (!why.trim()) { toast.error('ใส่เหตุผลที่ไม่เห็นด้วย'); return; }
     setBusy(d.id);
     const ok = checkWriteRows(await supabaseDR.from('stock_discrepancies').update({
       status: 'open', proposed_outcome: null, proposed_by: null, proposed_side: null, proposed_at: null,
-      resolve_note: `ตีกลับโดย ${fullName || '—'} (${SIDE_LABEL[side]}): ${why.trim()}`,
+      resolve_note: `${tr("ตีกลับโดย")} ${fullName || '—'} (${SIDE_LABEL[side]}): ${why.trim()}`,
     }).eq('id', d.id).eq('status', 'proposed').select('id'), 'ตีกลับข้อเสนอ', { zeroMsg: 'เคสนี้ถูกเปลี่ยนสถานะไปแล้ว — รีเฟรช' });
     setBusy(null);
     if (ok) toast.info('ตีกลับแล้ว — เคสกลับไปรอเคลียร์');
@@ -138,13 +138,13 @@ export default function StockDiscrepancyReport() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ ...card, display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'center' }}>
         <div>
-          <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>ยอดในคลังพัก "{SUSPENSE_LOC}"</div>
+          <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{tr("ยอดในคลังพัก")} "{SUSPENSE_LOC}"</div>
           <div style={{ fontSize: 24, fontWeight: 900, color: suspenseQty ? 'var(--amber)' : 'var(--green)' }}>{fmt(suspenseQty)}</div>
           <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{fmt(rows.filter(r => r.status === 'open' || r.status === 'proposed').length)} {tr('เคสยังไม่เคลียร์')}</div>
         </div>
         <div style={{ fontSize: 12, color: 'var(--text2)', flex: 1, minWidth: 260 }}>
-          ไลน์กด <b>{tr('รับไม่ครบ')}</b> {tr('→ ส่วนที่ขาดย้ายมาพักที่นี่ (ไม่หาย) → ฝ่ายหนึ่ง')} <b>{tr('เสนอ')}</b> คืน STORE / ตัดหาย →
-          <b> {tr('อีกฝ่าย (คนละคน) ยืนยัน')}</b> ยอดจึงออกจากคลังพัก · ใส่เลขเอกสาร SAP ที่ใช้ปรับได้
+          {tr("ไลน์กด")} <b>{tr('รับไม่ครบ')}</b> {tr('→ ส่วนที่ขาดย้ายมาพักที่นี่ (ไม่หาย) → ฝ่ายหนึ่ง')} <b>{tr('เสนอ')}</b> {tr("คืน STORE / ตัดหาย")} →
+          <b> {tr('อีกฝ่าย (คนละคน) ยืนยัน')}</b> {tr("ยอดจึงออกจากคลังพัก · ใส่เลขเอกสาร SAP ที่ใช้ปรับได้")}
           {!sides.length && <div style={{ marginTop: 4, color: 'var(--muted)' }}>{tr('บัญชีนี้ดูได้อย่างเดียว (ไม่มีสิทธิ์ heijunka:operate / wip_request:receive)')}</div>}
         </div>
         <button className="tbtn" onClick={load} style={btn(false)}>{tr('↻ รีเฟรช')}</button>
@@ -166,7 +166,7 @@ export default function StockDiscrepancyReport() {
                   <td style={{ ...td, fontWeight: 800 }}>{m.month}</td>
                   <td style={{ ...td, textAlign: 'right' }}>{fmt(m.cases)}</td>
                   <td style={{ ...td, textAlign: 'right' }}>{fmt(m.qty)}</td>
-                  <td style={{ ...td, textAlign: 'right', fontWeight: 900, color: m.openQty ? 'var(--amber)' : 'var(--muted)' }}>{fmt(m.openQty)} ({fmt(m.openCases)} เคส)</td>
+                  <td style={{ ...td, textAlign: 'right', fontWeight: 900, color: m.openQty ? 'var(--amber)' : 'var(--muted)' }}>{fmt(m.openQty)} ({fmt(m.openCases)} {tr("เคส")})</td>
                   <td style={{ ...td, textAlign: 'right' }}>{fmt(m.returnedQty)}</td>
                   <td style={{ ...td, textAlign: 'right', color: m.writtenOffQty ? 'var(--red)' : 'var(--muted)' }}>{fmt(m.writtenOffQty)}</td>
                   <td style={td}><button className="tbtn" onClick={() => setMonth(month === m.month ? '' : m.month)} style={btn(month === m.month)}>{month === m.month ? tr('✓ กำลังดู') : tr('ดูเดือนนี้')}</button></td>
@@ -188,7 +188,7 @@ export default function StockDiscrepancyReport() {
 
       <div style={card}>
         {loading ? <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{tr('กำลังโหลด…')}</div>
-          : !list.length ? <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{view === 'open' ? 'ไม่มีเคสค้างในคลังพัก' : 'ไม่มีรายการ'}{base.length > list.length ? ` · ซ่อนอยู่ ${base.length - list.length} เคส (ไม่ตรงคำค้น)` : ''}</div>
+          : !list.length ? <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{view === 'open' ? 'ไม่มีเคสค้างในคลังพัก' : 'ไม่มีรายการ'}{base.length > list.length ? ` · ${tr("ซ่อนอยู่")} ${base.length - list.length} ${tr("เคส (ไม่ตรงคำค้น")})` : ''}</div>
           : (
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>

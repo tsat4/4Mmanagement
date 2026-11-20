@@ -82,7 +82,7 @@ export default function Integrations() {
     const e = s.error || h.error;
     if (e) {
       const missing = e.code === '42P01' || e.code === 'PGRST205';
-      setErr(missing ? 'ยังไม่ได้ apply migration 20261111_integration_hub_dr (DR) — แจ้ง admin' : `โหลดทะเบียนต้นทางไม่สำเร็จ: ${e.message}`);
+      setErr(missing ? 'ยังไม่ได้ apply migration 20261111_integration_hub_dr (DR) — แจ้ง admin' : `${tr("โหลดทะเบียนต้นทางไม่สำเร็จ")}: ${e.message}`);
       return;                                          // คงข้อมูลรอบก่อน ห้ามทับด้วยลิสต์ว่าง
     }
     setErr('');
@@ -146,9 +146,9 @@ function SourceList({ sources, hourly, nowMs, onOpen, canManage }) {
     <div style={{ display: 'grid', gap: 14, alignContent: 'start' }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10, alignContent: 'start' }}>
         <Kpi label={tr('แหล่งต้นทาง')} value={sources.length} unit="ระบบ"
-          sub={`ออนไลน์ ${st.filter(x => x === 'online').length} · ขาด ${st.filter(x => x === 'stale').length} · ยังไม่เคยได้รับ ${st.filter(x => x === 'never').length} · พัก ${st.filter(x => x === 'paused').length}`} />
-        <Kpi label={tr('ชนิดข้อมูลที่ใช้อยู่')} value={kindsUsed.size} unit={`/ ${INTEGRATION_KINDS.length} ชนิด`}
-          sub={`ESM รับได้แล้ว ${INTEGRATION_KINDS.filter(k => k.status === 'live').length} ชนิด`} />
+          sub={`${tr("ออนไลน์")} ${st.filter(x => x === 'online').length} · ${tr("ขาด")} ${st.filter(x => x === 'stale').length} · ${tr("ยังไม่เคยได้รับ")} ${st.filter(x => x === 'never').length} · ${tr("พัก")} ${st.filter(x => x === 'paused').length}`} />
+        <Kpi label={tr('ชนิดข้อมูลที่ใช้อยู่')} value={kindsUsed.size} unit={`/ ${INTEGRATION_KINDS.length} ${tr("ชนิด")}`}
+          sub={`ESM ${tr("รับได้แล้ว")} ${INTEGRATION_KINDS.filter(k => k.status === 'live').length} ${tr("ชนิด")}`} />
         <Kpi label={tr('รับสำเร็จ 24 ชม.')} value={okToday.toLocaleString()} unit="ครั้ง" sub={tr('นับทุกต้นทางรวมกัน')} />
       </div>
       {!sources.length ? (
@@ -216,7 +216,7 @@ function SourceDetail({ src, hours, nowMs, canManage, canMap, onBack, onChanged,
       if (r.key) onKey({ code: src.code, key: r.key });
       toast.success(label);
       onChanged();
-    } catch (e) { toast.error(`${label}ไม่สำเร็จ: ${e.message}`); }
+    } catch (e) { toast.error(`${label}${tr("ไม่สำเร็จ")}: ${e.message}`); }
     finally { setBusy(''); }
   };
 
@@ -243,7 +243,7 @@ function SourceDetail({ src, hours, nowMs, canManage, canMap, onBack, onChanged,
           <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)' }}>{src.name}
             <span style={{ marginLeft: 10, fontSize: 12, fontWeight: 700, color: m.color, border: `1px solid ${m.color}`, borderRadius: 999, padding: '1px 10px', verticalAlign: 'middle' }}>● {tr(m.label)}</span>
           </div>
-          <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{src.code}{src.note ? ` · ${src.note}` : ''} {tr('· ไม่มีค่าใหม่เกิน')} {SOURCE_STALE_MIN} นาที = ขาดการติดต่อ</div>
+          <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{src.code}{src.note ? ` · ${src.note}` : ''} {tr('· ไม่มีค่าใหม่เกิน')} {SOURCE_STALE_MIN} {tr("นาที = ขาดการติดต่อ")}</div>
         </div>
       </div>
 
@@ -268,7 +268,7 @@ function SourceDetail({ src, hours, nowMs, canManage, canMap, onBack, onChanged,
         </>}
         <span style={{ fontSize: 12, color: noAuth ? 'var(--red)' : 'var(--muted)' }}>
           {noAuth ? '⚠ ยังไม่ได้ออกรหัส — ต้นทางนี้ส่งข้อมูลเข้าไม่ได้จนกว่าจะออกรหัส'
-            : <>{tr('ยืนยันตัวตนด้วย:')} {usesLegacy ? 'รหัสกลาง (INGEST_SECRET)' : `รหัสของต้นทาง …${src.key_hint}`}{src.legacy_secret && src.key_hint ? ' · ยังรับรหัสกลางอยู่' : ''}</>}
+            : <>{tr('ยืนยันตัวตนด้วย:')} {usesLegacy ? 'รหัสกลาง (INGEST_SECRET)' : `${tr("รหัสของต้นทาง")} …${src.key_hint}`}{src.legacy_secret && src.key_hint ? ' · ยังรับรหัสกลางอยู่' : ''}</>}
         </span>
       </div>
 
@@ -280,9 +280,9 @@ function SourceDetail({ src, hours, nowMs, canManage, canMap, onBack, onChanged,
         <div style={{ ...card, minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{tr('สุขภาพการส่ง · 24 ชม.')}</div>
           <div style={{ display: 'flex', gap: 2, height: 40, alignItems: 'flex-end', marginTop: 10 }} role="img"
-            aria-label={`24 ชั่วโมงล่าสุด รับสำเร็จ ${okSum} ครั้ง ล้ม ${failSum} ครั้ง`}>
+            aria-label={`24 ${tr("ชั่วโมงล่าสุด รับสำเร็จ")} ${okSum} ${tr("ครั้ง ล้ม")} ${failSum} ${tr("ครั้ง")}`}>
             {bars.map(b => (
-              <div key={b.hourMs} title={`${new Date(b.hourMs).toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit' })} · สำเร็จ ${b.ok}/${b.expect}${b.fail ? ` · ล้ม ${b.fail}` : ''}`}
+              <div key={b.hourMs} title={`${new Date(b.hourMs).toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit' })} · ${tr("สำเร็จ")} ${b.ok}/${b.expect}${b.fail ? ` · ${tr("ล้ม")} ${b.fail}` : ''}`}
                 style={{ flex: 1, height: `${Math.max(6, b.ratio * 100)}%`, borderRadius: 2,
                   background: b.fail ? 'var(--red)' : b.ratio >= 0.95 ? 'var(--green)' : b.ok ? 'var(--amber)' : 'var(--border)' }} />
             ))}
@@ -291,12 +291,12 @@ function SourceDetail({ src, hours, nowMs, canManage, canMap, onBack, onChanged,
             1 แท่ง = 1 ชั่วโมง · เต็ม = ได้ครบทุกนาที · ส้ม = ขาดบางนาที · แดง = มีครั้งที่ล้ม · เทา = ไม่ได้รับเลย
           </div>
           <div style={{ fontSize: 13, color: 'var(--text2)', marginTop: 8 }}>
-            สำเร็จ <b>{okSum.toLocaleString()}</b> {tr('· ล้ม')} <b style={{ color: failSum ? 'var(--red)' : 'inherit' }}>{failSum}</b> {tr('ครั้ง · รับสำเร็จล่าสุด')} {fmtTime(src.last_ok_at)}
+            {tr("สำเร็จ")} <b>{okSum.toLocaleString()}</b> {tr('· ล้ม')} <b style={{ color: failSum ? 'var(--red)' : 'inherit' }}>{failSum}</b> {tr('ครั้ง · รับสำเร็จล่าสุด')} {fmtTime(src.last_ok_at)}
           </div>
           {src.last_error && <div style={{ fontSize: 12.5, color: 'var(--red)', marginTop: 4 }}>{tr('ล้มล่าสุด:')} {src.last_error}</div>}
           {src.last_result && (
             <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 6, fontFamily: 'ui-monospace, monospace', overflowWrap: 'anywhere' }}>
-              คำตอบล่าสุด: {JSON.stringify(src.last_result)}
+              {tr("คำตอบล่าสุด")}: {JSON.stringify(src.last_result)}
             </div>
           )}
         </div>
@@ -319,7 +319,7 @@ function SourceDetail({ src, hours, nowMs, canManage, canMap, onBack, onChanged,
             })}
           </div>
           <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>
-            ไฟล์ flow ตั้ง env ของ Node-RED ชื่อ <code>{envVarName(src)}</code>
+            {tr("ไฟล์ flow ตั้ง env ของ Node-RED ชื่อ")} <code>{envVarName(src)}</code>
             {hasEnergy && ' · แม่แบบค่าไฟ = schema TSS Smart Energy'}{hasMachine && ' · แม่แบบเครื่องจักร = Node-RED OEE PD2 (oee_stop / oee_piece)'}
           </div>
         </div>
@@ -387,7 +387,7 @@ function CreateModal({ onClose, onCreated }) {
     try {
       const r = await callAdmin('create', { code, name, note, kinds });
       onCreated(r.source, r.key);
-    } catch (e) { toast.error(`เพิ่มต้นทางไม่สำเร็จ: ${e.message}`); }
+    } catch (e) { toast.error(`${tr("เพิ่มต้นทางไม่สำเร็จ")}: ${e.message}`); }
     finally { setBusy(false); }
   };
   return (
@@ -436,12 +436,12 @@ function KeyModal({ info, onClose }) {
     <div className="overlay">{/* ไม่ปิดจาก backdrop — รหัสแสดงครั้งเดียว */}
       <div className="modal" style={{ width: 'min(560px, 96vw)', display: 'grid', gap: 10 }} onClick={e => e.stopPropagation()}>
         <b style={{ fontSize: 17 }}>{tr('🔑 รหัสลับของต้นทาง')} {info.code}</b>
-        <NoticeBar tone="warn">{tr('แสดง')}<b>{tr('ครั้งเดียว')}</b> — ESM เก็บไว้แค่ค่าที่ย้อนกลับไม่ได้ ปิดหน้าต่างนี้แล้วดูอีกไม่ได้ (ลืม = ออกรหัสใหม่)</NoticeBar>
+        <NoticeBar tone="warn">{tr('แสดง')}<b>{tr('ครั้งเดียว')}</b> — ESM {tr("เก็บไว้แค่ค่าที่ย้อนกลับไม่ได้ ปิดหน้าต่างนี้แล้วดูอีกไม่ได้ (ลืม = ออกรหัสใหม่")})</NoticeBar>
         <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: 14, background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 8, padding: 10, overflowWrap: 'anywhere', userSelect: 'all' }}>
           {info.key}
         </div>
         <ol style={{ margin: 0, paddingLeft: 20, fontSize: 13, display: 'grid', gap: 4, color: 'var(--text2)' }}>
-          <li>{tr('Node-RED › เมนู ☰ › Settings › Environment (หรือไฟล์ settings.js) เพิ่มตัวแปร')} <code>ESM_SOURCE_KEY</code> = รหัสนี้</li>
+          <li>{tr('Node-RED › เมนู ☰ › Settings › Environment (หรือไฟล์ settings.js) เพิ่มตัวแปร')} <code>ESM_SOURCE_KEY</code> = {tr("รหัสนี้")}</li>
           <li>{tr('ดาวน์โหลด flow จากหน้าต้นทาง แล้ว Import · เลือก DB ในโหนด mysql')}</li>
           <li>{tr('Deploy แล้วดูแถบสุขภาพการส่ง — ภายใน 1 นาทีควรเป็นสีเขียว')}</li>
         </ol>

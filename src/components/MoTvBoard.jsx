@@ -122,18 +122,18 @@ export default function MoTvBoard({ inScope, isMobile = false }) {
 
       {/* 🔴 ความซื่อสัตย์ของจอ — ห้ามซ่อนบน TV (ย่อเป็นบรรทัดสั้นตัวใหญ่) */}
       {err && <Warn tv={tv} fz={fz}>{tr('⚠ โหลดใบ MO ไม่สำเร็จ — ตัวเลขบนจอยังไม่ใช่ของจริง (')}{err})</Warn>}
-      {board.badGroup && <Warn tv={tv} fz={fz}>⚠ ค่า mo=&quot;{group}&quot; ไม่รู้จัก — แสดงทุกขั้นแทน (แก้ลิงก์ที่หน้าตั้งค่าจอวน)</Warn>}
+      {board.badGroup && <Warn tv={tv} fz={fz}>⚠ {tr("ค่า")} mo=&quot;{group}&q{tr("ไม่รู้จัก — แสดงทุกขั้นแทน (แก้ลิงก์ที่หน้าตั้งค่าจอวน")}าจอวน)</Warn>}
       {rows && rows.length >= CAP && <Warn tv={tv} fz={fz}>{tr('⚠ ใบเปิดเกิน')} {CAP} {tr('ใบ — จออาจแสดงไม่ครบ')}</Warn>}
 
       {/* ที่ซ่อน/ประมาณ — เขียนให้เห็นเสมอ (กรองแล้วต้องบอกว่าซ่อนกี่รายการ)
           วางก่อนกล่องแบ่งหน้า: useTvPager ตั้งความสูงกล่องถึงขอบล่างจอ ⇒ ของที่อยู่ใต้กล่องตกจอ */}
       {(board.hiddenScope > 0 || board.hiddenTeam > 0 || board.approxAge > 0 || board.unknownAge > 0) && (
         <div style={{ fontSize: fz(11.5, 20), color: 'var(--text2)' }}>
-          {board.hiddenTeam > 0 && `ไม่นับใบของทีมอื่น ${board.hiddenTeam} ใบ · `}
-          {board.hiddenScope > 0 && `ไม่นับใบนอกส่วนงานของจอนี้ ${board.hiddenScope} ใบ · `}
-          {board.approxAge > 0 && `≈ ${board.approxAge} ใบนับจากเวลาแจ้ง (ไม่มีเวลาเข้าขั้น) · `}
-          {board.unknownAge > 0 && `${board.unknownAge} ใบไม่รู้ว่าค้างมานานเท่าไหร่ · `}
-          ค้างมา = นับจากเวลาที่ใบเข้าขั้นปัจจุบัน
+          {board.hiddenTeam > 0 && `${tr("ไม่นับใบของทีมอื่น")} ${board.hiddenTeam} ${tr("ใบ")} · `}
+          {board.hiddenScope > 0 && `${tr("ไม่นับใบนอกส่วนงานของจอนี้")} ${board.hiddenScope} ${tr("ใบ")} · `}
+          {board.approxAge > 0 && `≈ ${board.approxAge} ${tr("ใบนับจากเวลาแจ้ง (ไม่มีเวลาเข้าขั้น")}) · `}
+          {board.unknownAge > 0 && `${board.unknownAge} ${tr("ใบไม่รู้ว่าค้างมานานเท่าไหร่")} · `}
+          {tr("ค้างมา = นับจากเวลาที่ใบเข้าขั้นปัจจุบัน")}
         </div>
       )}
       <div ref={boxRef}>

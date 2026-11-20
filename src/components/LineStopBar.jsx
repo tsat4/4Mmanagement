@@ -16,7 +16,7 @@
 import React from 'react';
 
 import { tr } from '../utils/i18n';
-const fmtHr = (h) => (h == null ? '—' : `${Number(h).toLocaleString('th-TH', { maximumFractionDigits: 1 })} ชม.`);
+const fmtHr = (h) => (h == null ? '—' : `${Number(h).toLocaleString('th-TH', { maximumFractionDigits: 1 })} ${tr("ชม.")}`);
 
 /**
  * @param {object} p
@@ -77,7 +77,7 @@ export default function LineStopBar({ total, parts = [], unknownHr = 0, unknownL
       </div>
       {mismatch && (
         <div style={{ color: 'var(--amber)', marginTop: 3 }}>
-          ⚠ ช่วงย่อยรวมได้ {fmtHr(sum)} {tr('ไม่เท่ากับยอดเต็ม')} {fmtHr(T)} — ข้อมูลขัดกัน ต้องไล่ที่ต้นทาง
+          ⚠ {tr("ช่วงย่อยรวมได้")} {fmtHr(sum)} {tr('ไม่เท่ากับยอดเต็ม')} {fmtHr(T)} — {tr("ข้อมูลขัดกัน ต้องไล่ที่ต้นทาง")}
         </div>
       )}
       {note && <div style={{ color: 'var(--muted)', marginTop: 3 }}>{note}</div>}

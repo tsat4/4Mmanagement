@@ -46,7 +46,7 @@ const COLS_NO_ACK = 'id, line_name, mat_no, part_name, requested_at, requested_b
 const hhmm = (iso) => {
   if (!iso) return '—';
   const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} น.`;
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} ${tr("น.")}`;
 };
 /* 🔴 เพดานจำนวนแถบ — ใบเข้าพร้อมกันหลายใบ (สโตร์เปิดใบตามแผนทีเดียว 10+ ใบได้) แล้วแถบ
    `position:fixed` จะทับจอทั้งใบจนทำงานต่อไม่ได้ · เสียงดังรวมครั้งเดียวพออยู่แล้ว
@@ -178,7 +178,7 @@ export default function StoreCallSiren({ slot = 0, variant = 'float', here = fal
         <span className="andon-bar-msg" style={{ flex: 1, minWidth: 0, color: 'var(--text)' }}>
           🔔 <b>{tr('ไลน์เรียกของ')} {alerts.length} {tr('ใบ')}</b> {tr('ยังไม่มีใครรับทราบ')}
           {here && <> · {tr('เก่าสุด')} <b>{a.line_name || tr('ไม่ระบุไลน์')}</b> · <MatLabel mat={a.mat_no} name={a.part_name} size={12} />
-            {' · '}{tr('ขอ')} {Number(a.request_qty || 0).toLocaleString()} · {tr('รอ')} {wait != null ? `${wait.toLocaleString()} นาที` : '—'}</>}
+            {' · '}{tr('ขอ')} {Number(a.request_qty || 0).toLocaleString()} · {tr('รอ')} {wait != null ? `${wait.toLocaleString()} ${tr("นาที")}` : '—'}</>}
         </span>
         {muted && (
           <button type="button" onClick={unlockNow} style={{ background: 'none', border: 'none', fontSize: 12, fontWeight: 800, color: 'var(--amber)', cursor: 'pointer' }}>
@@ -217,14 +217,14 @@ export default function StoreCallSiren({ slot = 0, variant = 'float', here = fal
             <span style={{ fontSize: 22 }}>📦</span>
             <div className="andon-bar-msg" style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13.5, fontWeight: 800, color: '#fff' }}>
-                ไลน์เรียกของ — {a.line_name || 'ไม่ระบุไลน์'}
+                {tr("ไลน์เรียกของ")} — {a.line_name || 'ไม่ระบุไลน์'}
               </div>
               {/* ชื่อชิ้นงานต้องผ่าน <MatLabel> — Part No. → Part Name → MAT SAP (ด่าน matOrderSweep) */}
               <MatLabel mat={a.mat_no} name={a.part_name} size={12.5} />
               <div style={{ fontSize: 12, color: '#c6efd8' }}>
-                ขอ {Number(a.request_qty || 0).toLocaleString()} ชิ้น
-                {' · '}{tr('แจ้ง')} {hhmm(a.requested_at)}{wait != null ? ` (รอมาแล้ว ${wait.toLocaleString()} นาที)` : ''}
-                {a.requested_by ? ` · โดย ${a.requested_by}` : ''}
+                {tr("ขอ")} {Number(a.request_qty || 0).toLocaleString()} {tr("ชิ้น")}
+                {' · '}{tr('แจ้ง')} {hhmm(a.requested_at)}{wait != null ? ` (${tr("รอมาแล้ว")} ${wait.toLocaleString()} ${tr("นาที")})` : ''}
+                {a.requested_by ? ` · ${tr("โดย")} ${a.requested_by}` : ''}
                 {' · '}{reqSourceMeta(a.source).short}
               </div>
             </div>
@@ -253,7 +253,7 @@ export default function StoreCallSiren({ slot = 0, variant = 'float', here = fal
       {alerts.length > maxBars && (
         <div style={{ pointerEvents: 'auto', background: 'rgba(8,20,14,0.96)', border: '1px solid rgba(34,197,94,0.5)',
           borderRadius: 'var(--r-md)', padding: '7px 12px', fontSize: 11.5, fontWeight: 800, color: '#86efac', textAlign: 'center' }}>
-          + อีก {alerts.length - maxBars} ใบที่ไลน์เรียกแล้วยังไม่มีใครรับทราบ — ทำรายการที่ Stock Management → 📤 ส่งของเข้าไลน์ (ตู้ตามเลขพาร์ท)
+          + {tr("อีก")} {alerts.length - maxBars} {tr("ใบที่ไลน์เรียกแล้วยังไม่มีใครรับทราบ — ทำรายการที่ Stock Management → 📤 ส่งของเข้าไลน์ (ตู้ตามเลขพาร์ท")})
         </div>
       )}
     </div>

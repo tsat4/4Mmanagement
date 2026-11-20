@@ -63,7 +63,7 @@ export default function WorkflowDesigner() {
     ]).then(([d, v]) => {
       if (!alive) return;
       const e = d.error || v.error;
-      setLoadErr(e ? `โหลดใบงานไม่สำเร็จ: ${e.message}` : '');
+      setLoadErr(e ? `${tr("โหลดใบงานไม่สำเร็จ")}: ${e.message}` : '');
       setDefs(d.data || []); setVers(v.data || []);
     });
     return () => { alive = false; };
@@ -136,7 +136,7 @@ function Editor({ def, latest, canDesign, canPublish, mySection, onSaved }) {
     let alive = true;
     supabase.from('permission_catalog').select('resource, action, label').order('sort').then(({ data, error }) => {
       if (!alive) return;
-      if (error) toast.error(`โหลดรายการสิทธิ์ไม่สำเร็จ: ${error.message}`);
+      if (error) toast.error(`${tr("โหลดรายการสิทธิ์ไม่สำเร็จ")}: ${error.message}`);
       setPerms((data || []).filter(p => p.resource !== 'page' && p.resource !== 'wf').map(p => ({ key: `${p.resource}:${p.action}`, label: p.label })));
     });
     return () => { alive = false; };

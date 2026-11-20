@@ -95,7 +95,7 @@ export default function BomDupPanel({ onOpenSheet }) {
     if (fatal) { setLoadErr(fatal.message || 'โหลดข้อมูล BOM ไม่สำเร็จ'); setLoading(false); return; }
     setRows(bomRes.data || []);
     setProds(prodRes.data || []);
-    if (revRes.error) { setReviews([]); setLoadErr(`อ่านผลตรวจไม่สำเร็จ (${revRes.error.message}) — สถานะ "ตรวจแล้ว" อาจไม่ครบ`); }
+    if (revRes.error) { setReviews([]); setLoadErr(`${tr("อ่านผลตรวจไม่สำเร็จ")} (${revRes.error.message}) — ${tr("สถานะ \"ตรวจแล้ว\" อาจไม่ครบ")}`); }
     else setReviews(revRes.data || []);
     setLoading(false);
   }, []);
@@ -158,7 +158,7 @@ export default function BomDupPanel({ onOpenSheet }) {
     setBusyKey('');
     if (!ok) return;
     setNoteFor(''); setNoteText('');
-    toast.success(`บันทึกแล้ว — ${decisionLabel(decision)}`);
+    toast.success(`${tr("บันทึกแล้ว")} — ${decisionLabel(decision)}`);
     await load();
   };
 
@@ -202,10 +202,10 @@ export default function BomDupPanel({ onOpenSheet }) {
 
       <FilterBar style={{ marginBottom: 12 }}>
         <Segmented label={tr('สถานะ')} value={vFilter} onChange={setVFilter} options={[
-          { value: 'open', label: `ยังไม่ตรวจ (${prog.open})` },
-          { value: 'hot', label: `🔥 ของร้อน (${prog.openHot})` },
-          { value: 'cleared', label: `ตรวจแล้ว (${prog.cleared})` },
-          { value: 'all', label: `ทั้งหมด (${prog.total})` },
+          { value: 'open', label: `${tr("ยังไม่ตรวจ")} (${prog.open})` },
+          { value: 'hot', label: `🔥 ${tr("ของร้อน")} (${prog.openHot})` },
+          { value: 'cleared', label: `${tr("ตรวจแล้ว")} (${prog.cleared})` },
+          { value: 'all', label: `${tr("ทั้งหมด")} (${prog.total})` },
         ]} />
         <SearchInput value={search} onChange={setSearch} fields="MAT ใบ / พาร์ท / ชื่อ" />
         <span className="spacer" />
@@ -216,11 +216,11 @@ export default function BomDupPanel({ onOpenSheet }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10,
         alignContent: 'start', marginBottom: 12 }}>
         {[
-          { k: 'เหลือต้องตรวจ', v: prog.open, c: prog.open ? WARN : OK, sub: `จากทั้งหมด ${prog.total} คู่` },
+          { k: 'เหลือต้องตรวจ', v: prog.open, c: prog.open ? WARN : OK, sub: `${tr("จากทั้งหมด")} ${prog.total} ${tr("คู่")}` },
           { k: '🔥 ของร้อนที่ยังไม่แตะ', v: prog.openHot, c: prog.openHot ? BAD : OK, sub: 'ขาดของ / ขัดกัน / มีเกิน' },
           { k: 'MAT ที่หายจากการระเบิด', v: counts.missingMats, c: counts.missingMats ? BAD : OK, sub: 'ความต้องการเป็น 0 ทั้งที่ใช้จริง' },
           { k: '⚠️ มีใบที่ 3 ด้วย', v: counts.thirdSheet, c: counts.thirdSheet ? BAD : OK, sub: 'เทียบ 2 ใบแล้วตัดสินไม่ได้' },
-          { k: 'ตรวจแล้ว', v: prog.cleared, c: OK, sub: prog.stale ? `⚠️ ${prog.stale} คู่ต้องตรวจซ้ำ (BOM เปลี่ยน)` : 'ข้อมูลยังเหมือนตอนตรวจ' },
+          { k: 'ตรวจแล้ว', v: prog.cleared, c: OK, sub: prog.stale ? `⚠️ ${prog.stale} ${tr("คู่ต้องตรวจซ้ำ (BOM เปลี่ยน")})` : 'ข้อมูลยังเหมือนตอนตรวจ' },
         ].map(s => (
           <div key={s.k} style={{ padding: '9px 12px', borderRadius: 'var(--r-md)', background: 'var(--card-surf)',
             border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
@@ -268,21 +268,21 @@ export default function BomDupPanel({ onOpenSheet }) {
                       {/* 🔴 "ขาดของ" ต้องบอกจำนวนให้เห็นขนาด ไม่ใช่แค่ป้าย */}
                       {p.missingFromExplode.length > 0 && (
                         <div style={{ fontSize: 11, color: BAD, fontWeight: 800, marginTop: 3 }}>
-                          หาย {p.missingFromExplode.length} รายการ
+                          {tr("หาย")} {p.missingFromExplode.length} {tr("รายการ")}
                         </div>
                       )}
                       {/* 🔴 มีใบที่ 3 นิยามไว้ด้วย ⇒ "2 ใบนี้ตรงกัน" ไม่พอที่จะยุบ
                           (เคสจริง 14/10: ยุบคู่ที่ตรงกันเป๊ะ แล้วเส้นทางไปอ่านใบที่ 3 ยอดนัทเปลี่ยน 4→1) */}
                       {p.hasThirdSheet && (
                         <div style={{ fontSize: 11, color: BAD, fontWeight: 800, marginTop: 3, lineHeight: 1.5 }}>
-                          ⚠️ มีใบที่ 3: {p.otherSheets.map(o => o.sheetMat || o.sheetId).join(', ')}
+                          ⚠️ {tr("มีใบที่")} 3: {p.otherSheets.map(o => o.sheetMat || o.sheetId).join(', ')}
                           <div style={{ fontWeight: 400, color: 'var(--muted)' }}>{tr('ดูตารางกลุ่มด้านล่างก่อนตัดสิน')}</div>
                         </div>
                       )}
                     </td>
                     <td style={td}>
                       <button type="button" onClick={() => onOpenSheet?.(p.sheetMat)} disabled={!onOpenSheet}
-                        title={`เปิดใบ BOM ของ ${p.sheetMat}`}
+                        title={`${tr("เปิดใบ BOM ของ")} ${p.sheetMat}`}
                         style={{ ...btn, fontFamily: 'monospace', fontWeight: 800, padding: '2px 8px' }}>
                         {p.sheetMat} ↗
                       </button>
@@ -290,7 +290,7 @@ export default function BomDupPanel({ onOpenSheet }) {
                     </td>
                     <td style={td}>
                       <button type="button" onClick={() => onOpenSheet?.(p.mat)} disabled={!onOpenSheet}
-                        title={`เปิดใบ BOM ของ ${p.mat}`}
+                        title={`${tr("เปิดใบ BOM ของ")} ${p.mat}`}
                         style={{ ...btn, fontFamily: 'monospace', fontWeight: 800, padding: '2px 8px' }}>
                         {p.mat} ↗
                       </button>
@@ -395,7 +395,7 @@ export default function BomDupPanel({ onOpenSheet }) {
             <div key={k} style={{ padding: '7px 10px', borderRadius: 'var(--r-md)', fontSize: 11, lineHeight: 1.55,
               color: 'var(--text2)', border: '1px solid var(--border)', background: 'var(--card-surf)' }}>
               <span style={chip(statusColor(m.tone))}>{tr(m.label)}</span>
-              <span style={{ marginLeft: 6, color: 'var(--muted)' }}>({counts[k] ?? 0} คู่)</span>
+              <span style={{ marginLeft: 6, color: 'var(--muted)' }}>({counts[k] ?? 0} {tr("คู่")})</span>
               <div style={{ marginTop: 3 }}>{m.why}</div>
             </div>
           ))}

@@ -31,7 +31,7 @@ export default function StatusZones({ rows, zones, statusOf, renderCard, emptyTe
   if (layout === 'table') return (
     <RowTable>
       {groups.map(z => (
-        <section key={z.key} aria-label={`${z.label} ${z.rows.length} ใบ`}>
+        <section key={z.key} aria-label={`${z.label} ${z.rows.length} ${tr("ใบ")}`}>
           <header style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '7px 12px',
             borderLeft: `6px solid ${z.color}`, borderBottom: '1px solid var(--border)',
             background: 'var(--card)', backgroundImage: `linear-gradient(${z.color}1f, ${z.color}1f)` }}>
@@ -50,7 +50,7 @@ export default function StatusZones({ rows, zones, statusOf, renderCard, emptyTe
   return (
     <div style={{ display: 'grid', gap: 16, alignContent: 'start' }}>
       {groups.map(z => (
-        <section key={z.key} aria-label={`${z.label} ${z.rows.length} ใบ`} style={{
+        <section key={z.key} aria-label={`${z.label} ${z.rows.length} ${tr("ใบ")}`} style={{
           border: `1px solid ${z.color}66`, borderRadius: 'var(--radius-lg)', overflow: 'hidden',
           background: 'var(--bg2-surf)', boxShadow: 'var(--shadow-sm)',
         }}>

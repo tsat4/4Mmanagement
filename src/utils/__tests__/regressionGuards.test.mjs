@@ -8195,7 +8195,7 @@ test('🟡 defect-auto-yellow — ลงงานเสียต้องตั�
     if (!/binErr[\s\S]{0,200}toast\.error/.test(body))
       bad.push(`${DR} handleAddDefectLog: ตั้งแท็กเหลืองล้มเหลวต้องขึ้น toast บอกทางแก้ ห้ามล้มเหลวเงียบ`);
   }
-  if (!/ยังไม่ลงถัง \{pend\.length\}/.test(dr))
+  if (!/ยังไม่ลงถัง(?:"\)\})? \{pend\.length\}/.test(dr))
     bad.push(`${DR}: ต้องมีชิปนับ "🗑️ ยังไม่ลงถัง N" บนหัวข้อบันทึกงานเสีย`);
 
   const Q = 'src/components/QualityBins.jsx';
@@ -8515,8 +8515,8 @@ test('📊 mat-breakdown-default-collapsed — แท็บ Live ต้องข
     if (!/,\s*true/.test(m[1]))
       bad.push(`${DR}: toggleLiveCollapse('mat_breakdown') ต้องส่ง true ด้วย — ไม่งั้นคลิกแรกไม่มีอะไรเกิดขึ้น`);
   }
-  /* 🔴 ยุบแล้วต้องยังบอกจำนวน (ห้ามซ่อนเงียบ) */
-  if (!/แยกตามชิ้นงาน \{productRows\.length\} MAT\.NO/.test(code))
+  /* 🔴 ยุบแล้วต้องยังบอกจำนวน (ห้ามซ่อนเงียบ) · (20/11 i18n รอบ 4: ข้อความไทยอยู่ใน {tr("…")} ได้) */
+  if (!/แยกตามชิ้นงาน(?:"\)\})? \{productRows\.length\} MAT\.NO/.test(code))
     bad.push(`${DR}: หัวข้อที่ยุบต้องเขียนจำนวน MAT.NO เสมอ (กฎความซื่อสัตย์ของจอ)`);
   /* ภาพรวมต้องมาก่อนรายละเอียด — เทียบตำแหน่งในไฟล์ */
   const iOverview = code.indexOf('ภาพรวมทั้งกะ');   // 05/11: หัวข้อไม่มี emoji แล้ว (UI §6.36)
@@ -8573,7 +8573,7 @@ test('🚨 andon-bar-mobile — แถบ Andon ลอยต้องอ่า�
     /* โชว์ทีละใบบนมือถือ + ต้องเขียนว่าเหลืออีกกี่ใบ (ห้ามตัดทิ้งเงียบ) */
     if (!/useIsMobile/.test(code))
       bad.push(`${f}: ต้องจำกัดจำนวนแถบบนมือถือด้วย useIsMobile() — ซ้อนกันหลายใบ = ปุ่มรับทราบตกนอกจอ`);
-    if (!/\+ อีก /.test(src))
+    if (!/\+ (?:\{tr\("อีก"\)\}|อีก) /.test(src))
       bad.push(`${f}: ตัดแถบที่เกินแล้วต้องเขียนบนจอว่า "+ อีก N …" ห้ามหายเงียบ`);
   }
   assert.deepEqual(bad, [], '\n\n❌ ' + bad.join('\n  ')
@@ -9626,7 +9626,7 @@ test('🧾 pr-group-shows-stragglers — ใบ PR ที่มีหลาย�
   assert.match(c, /g\.warns\.map/,
     '\n\n❌ การ์ดกลุ่ม PR ไม่ได้วาดคำเตือนรายการที่ตกหล่น (g.warns) — ใบจะดูเรียบร้อยทั้งที่มีแถวค้าง\n');
   /* รับของทั้งใบ = วน RPC ทีละแถว ⇒ ล้มบางแถวต้องรายงานตามจริง */
-  assert.match(c, /รับของสำเร็จ \$\{ok\} จาก/,
+  assert.match(c, /รับของสำเร็จ(?:"\)\})? \$\{ok\} (?:\$\{tr\("จาก"\)\}|จาก)/,
     '\n\n❌ ปุ่ม "รับของทั้งใบ" ต้องรายงานว่าสำเร็จกี่รายการเมื่อมีแถวล้ม (ห้ามบอกว่าสำเร็จทั้งใบ)\n');
 });
 test('🧾 pr-receive-needs-invoice — กดรับของต้องกรอกเลข Invoice ก่อน', () => {
@@ -9965,7 +9965,7 @@ test('🛡️ row-fold-must-report-hidden — ตัวพับแถวขอ�
   const src = readFileSync(join(ROOT, 'src/components/RowFold.jsx'), 'utf8');
   /* 🔑 ต้องเจอใน **template literal ที่วาดออกจอ** — เทียบแค่คำว่า "ซ่อนอยู่" ลอยๆ
      คอมเมนต์หัวไฟล์ตอบให้เองได้ (ด่านผ่านทั้งที่ปุ่มเลิกบอกจำนวนแล้ว) */
-  assert.ok(/`[^`]*ซ่อนอยู่ \$\{hidden\}[^`]*`/.test(src),
+  assert.ok(/`[^`]*ซ่อนอยู่(?:"\)\})? \$\{hidden\}[^`]*`/.test(src),
     '\n\n❌ `RowFold` เลิกเขียนว่าซ่อนอยู่กี่แถวบนปุ่ม\n'
     + '   ⇒ ตัดแถวออกจากจอแล้วเงียบ = จอโกหก (กฎ "กรองแถวออกแล้วต้องเขียนว่าซ่อนกี่รายการ")\n');
   assert.ok(/hidden\s*=\s*Math\.max\(0,\s*list\.length\s*-\s*max\)/.test(src),

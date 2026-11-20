@@ -187,7 +187,7 @@ export default function MtnAnalysis() {
     } catch (e) {
       if (stale()) return;
       setErr(e?.message || String(e));
-      toast.error('โหลดข้อมูลวิเคราะห์ไม่สำเร็จ: ' + (e?.message || e));
+      toast.error((trI18n('โหลดข้อมูลวิเคราะห์ไม่สำเร็จ') + ': ') + (e?.message || e));
     } finally { if (!stale()) setLoading(false); }
   }, [tr.from, tr.to]);
 
@@ -397,7 +397,7 @@ export default function MtnAnalysis() {
       cat: r.group, value: 1, sub: r.symptom, machine: r.asset, line: r.line, team: r.team, note: r.causeText,
       /* 🔎 ที่มาของหมวด — ใบที่ระบบเดาให้ ต้องตรวจสอบย้อนได้ว่าเดาจากคำไหน
          (กฎความซื่อสัตย์ของจอ: เดาแล้วต้องบอกว่าเดา ห้ามกลืนเป็นข้อมูลที่คนกรอก) */
-      why: r.autoFrom ? `🔎 ระบบเดาจากคำ: ${r.autoFrom.terms.join(' · ')}` : '👷 ช่างเลือกเอง',
+      why: r.autoFrom ? `🔎 ${trI18n("ระบบเดาจากคำ")}: ${r.autoFrom.terms.join(' · ')}` : '👷 ช่างเลือกเอง',
     })), [paretoSplit]);
   const paretoNote = useMemo(() => unclassifiedNote(paretoSplit, { unit: 'ใบ' }), [paretoSplit]);
 
@@ -423,7 +423,7 @@ export default function MtnAnalysis() {
         title={trI18n('วิเคราะห์ปัญหา (ซ่อมบำรุง)')} icon="🔍"
         sub={tab === 'kpi'
           ? 'KPI ทีมช่าง — MTTA / MTTR / MDT · ความพึงพอใจ · ความน่าเชื่อถือรายอุปกรณ์'
-          : `QC 7 Tools แยกตามชนิดสินทรัพย์ · ${srcMeta.note}`}
+          : `QC 7 Tools ${trI18n("แยกตามชนิดสินทรัพย์")} · ${srcMeta.note}`}
         tabs={MAIN_TABS} tab={tab} onTab={setTab}
         actions={
           /* ตัวกรองแหล่งข้อมูล/ช่วงเวลา เป็นของแท็บ QC7 เท่านั้น (อยู่ใน TimeRangeBar ข้างล่าง) — แผง KPI มีตัวกรองของตัวเอง
@@ -459,7 +459,7 @@ export default function MtnAnalysis() {
 
       {err && (
         <NoticeBar tone="bad" style={{ marginBottom: 12 }}>
-          โหลดข้อมูลไม่สำเร็จ — {err} · กด ↻ รีเฟรช อีกครั้ง (ยังไม่ได้แสดงตัวเลขใดๆ เพื่อไม่ให้อ่านผิด)
+          {trI18n("โหลดข้อมูลไม่สำเร็จ")} — {err} · {trI18n("กด ↻ รีเฟรช อีกครั้ง (ยังไม่ได้แสดงตัวเลขใดๆ เพื่อไม่ให้อ่านผิด")})
         </NoticeBar>
       )}
 
@@ -480,35 +480,35 @@ export default function MtnAnalysis() {
           {/* 🔭 ขอบเขตบัญชี — ซ่อนแถวของไลน์อื่นแล้วต้องบอกบนจอ (CLAUDE.md "กรองแถวออกแล้วต้องเขียนบนจอ") */}
           {scopeLines && (
             <NoticeBar tone="info">
-              แสดงเฉพาะไลน์ในขอบเขตของคุณ ({scopeLines.size} ไลน์)
-              {qcScopeHidden ? ` · ซ่อนงานของไลน์อื่น ${fmt(qcScopeHidden)} รายการ` : ''}
-              {' '}· งานที่ไม่รู้ไลน์/ไลน์นอกทะเบียน ยังแสดงอยู่
+              {trI18n("แสดงเฉพาะไลน์ในขอบเขตของคุณ")} ({scopeLines.size} {trI18n("ไลน์")})
+              {qcScopeHidden ? ` · ${trI18n("ซ่อนงานของไลน์อื่น")} ${fmt(qcScopeHidden)} ${trI18n("รายการ")}` : ''}
+              {' '}· {trI18n("งานที่ไม่รู้ไลน์/ไลน์นอกทะเบียน ยังแสดงอยู่")}
             </NoticeBar>
           )}
           {scopeUnsure && (
             <NoticeBar tone="warn">
-              ตัดขอบเขตไลน์ของบัญชีนี้ไม่ได้ (ไลน์/ส่วนงานของบัญชีไม่ตรงทะเบียน) — {scopeLines ? 'แสดงตามส่วนงานที่ตั้งไว้' : 'กำลังแสดงทั้งโรงงาน'}
+              {trI18n("ตัดขอบเขตไลน์ของบัญชีนี้ไม่ได้ (ไลน์/ส่วนงานของบัญชีไม่ตรงทะเบียน")}) — {scopeLines ? 'แสดงตามส่วนงานที่ตั้งไว้' : 'กำลังแสดงทั้งโรงงาน'}
             </NoticeBar>
           )}
 
           {/* ── สรุปปัญหา ─────────────────────────────────────────────── */}
           <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8, alignContent: 'start' }}>
-            <KPI label={`เหตุการณ์ (${days} วัน)`} value={sum.n ? fmt(sum.n) : null} unit={unit} sub={`${sum.assets} อุปกรณ์`} />
+            <KPI label={`${trI18n("เหตุการณ์")} (${days} ${trI18n("วัน")})`} value={sum.n ? fmt(sum.n) : null} unit={unit} sub={`${sum.assets} ${trI18n("อุปกรณ์")}`} />
             <KPI label={trI18n('เวลาสูญเสียรวม')} value={sum.totalMin == null ? null : fmt(sum.totalMin)} unit="นาที"
-              sub={sum.noMin ? `⚠️ ${sum.noMin} รายการยังไม่มีเวลา — ไม่ถูกนับ` : 'ครบทุกรายการ'} warn={!!sum.noMin} />
+              sub={sum.noMin ? `⚠️ ${sum.noMin} ${trI18n("รายการยังไม่มีเวลา — ไม่ถูกนับ")}` : 'ครบทุกรายการ'} warn={!!sum.noMin} />
             <KPI label={src === 'mo' ? trI18n('เวลาซ่อมเฉลี่ย') : trI18n('หยุดเฉลี่ยต่อครั้ง')} value={sum.avgMin == null ? null : fmt(sum.avgMin, 1)} unit="นาที"
-              sub={sum.medMin == null ? '' : `มัธยฐาน ${fmt(sum.medMin, 1)} นาที`} />
+              sub={sum.medMin == null ? '' : `${trI18n("มัธยฐาน")} ${fmt(sum.medMin, 1)} ${trI18n("นาที")}`} />
             <KPI label={trI18n('ค่าใช้จ่ายรวม')} value={sum.cost == null ? null : fmt(sum.cost)} unit="บาท"
-              sub={sum.noCost ? `⚠️ ${sum.noCost} รายการยังไม่ลงค่าใช้จ่าย` : 'ครบทุกรายการ'} warn={!!sum.noCost} />
+              sub={sum.noCost ? `⚠️ ${sum.noCost} ${trI18n("รายการยังไม่ลงค่าใช้จ่าย")}` : 'ครบทุกรายการ'} warn={!!sum.noCost} />
             <KPI label={trI18n('แยกชนิดจากทะเบียน')} value={sum.n ? fmt(sum.n - sum.guessed) : null} unit={`/ ${sum.n}`}
-              sub={sum.guessed ? `⚠️ ${sum.guessed} รายการระบบเดาชนิดให้` : 'ยืนยันจากทะเบียนเครื่องทุกรายการ'} warn={!!sum.guessed} />
+              sub={sum.guessed ? `⚠️ ${sum.guessed} ${trI18n("รายการระบบเดาชนิดให้")}` : 'ยืนยันจากทะเบียนเครื่องทุกรายการ'} warn={!!sum.guessed} />
           </div>
 
           {rows.length === 0 ? (
-            <Panel title={`ยังไม่มีเหตุการณ์ในกลุ่ม “${ASSET_CLASSES.find(a => a.key === asset)?.label}”`}
+            <Panel title={`${trI18n("ยังไม่มีเหตุการณ์ในกลุ่ม")} “${ASSET_CLASSES.find(a => a.key === asset)?.label}”`}
               sub={trI18n('แท็บนี้ยังอยู่เสมอ ไม่ได้ถูกซ่อน — ว่างแปลว่า “ช่วงนี้ไม่มีงานที่ผูกกับสินทรัพย์กลุ่มนี้” ไม่ใช่จอพัง')}>
               <NotEnough
-                reason={`ไม่พบ${srcMeta.label}ของกลุ่มนี้ในช่วง ${days} วันย้อนหลัง`}
+                reason={`${trI18n("ไม่พบ")}${srcMeta.label}${trI18n("ของกลุ่มนี้ในช่วง")} ${days} ${trI18n("วันย้อนหลัง")}`}
                 hint={trI18n('ลองขยายช่วงเวลา หรือสลับแหล่งข้อมูล · ถ้าแน่ใจว่ามีงานจริง มักเป็นเพราะเลขเครื่องในใบไม่ตรงกับทะเบียน (ไปแก้ที่ทะเบียนเครื่องจักร)')} />
             </Panel>
           ) : (
@@ -535,7 +535,7 @@ export default function MtnAnalysis() {
                 </div>
               )}
               <ParetoAbcChart
-                title={`② พาเรโต — ปัญหาไหนกินสัดส่วนมากที่สุด (${unit})`}
+                title={`② ${trI18n("พาเรโต — ปัญหาไหนกินสัดส่วนมากที่สุด")} (${unit})`}
                 records={paretoRecords} dims={PARETO_DIMS} unit={unit}
                 emptyText={trI18n('ไม่มีข้อมูลในช่วงนี้')}
                 sectionStyle={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 12, padding: 14 }}
@@ -545,18 +545,18 @@ export default function MtnAnalysis() {
               <Panel title={trI18n('③ ผังก้างปลา — สาเหตุกองอยู่แกนไหน (4M)')}
                 sub={trI18n('จัดรายการเข้าแกน คน/เครื่อง/วัสดุ/วิธี/การวัด/สภาพแวดล้อม — ใช้หมวดที่ช่างเลือกไว้ก่อน ไม่มีจึงเดาจากข้อความสาเหตุ')}>
                 <Fishbone records={rows} categoryOf={r => r.cause_category} textOf={r => r.causeText} labelOf={r => r.label}
-                  effect={`${ASSET_CLASSES.find(a => a.key === asset)?.label} หยุด/เสียหาย`} />
+                  effect={`${ASSET_CLASSES.find(a => a.key === asset)?.label} ${trI18n("หยุด/เสียหาย")}`} />
               </Panel>
 
               <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(330px, 1fr))', gap: 12, alignContent: 'start' }}>
                 {/* ④ ฮิสโตแกรม */}
-                <Panel title={`④ ฮิสโตแกรม — ${src === 'mo' ? 'เวลาซ่อม' : 'เวลาหยุด'}กระจายยังไง`}
+                <Panel title={`④ ${trI18n("ฮิสโตแกรม")} — ${src === 'mo' ? trI18n('เวลาซ่อม') : trI18n('เวลาหยุด')}${trI18n("กระจายยังไง")}`}
                   sub={trI18n('ดูว่างานส่วนใหญ่ใช้เวลาช่วงไหน และมีหางยาวแค่ไหน (หางยาว = งานที่ต้องรออะไหล่/รอ supplier)')}>
                   <Histogram values={rows} valOf={r => r.minutes} unit="นาที" />
                 </Panel>
 
                 {/* ⑥ กราฟควบคุม */}
-                <Panel title={`⑥ กราฟควบคุม (XmR) — ${bucketWord}นี้ผิดปกติหรือเปล่า`}
+                <Panel title={`⑥ ${trI18n("กราฟควบคุม")} (XmR) — ${bucketWord}${trI18n("นี้ผิดปกติหรือเปล่า")}`}
                   sub={trI18n('เส้นกลาง = ระดับปกติของงานนี้ · จุดแดง = มีสาเหตุเฉพาะให้ไปตามหา ไม่ใช่ความผันแปรธรรมดา')}>
                   <ControlChart
                     points={(() => {
@@ -571,11 +571,11 @@ export default function MtnAnalysis() {
                 <Panel title={trI18n('⑤ ผังกระจาย — ซ่อมบ่อย ↔ เสียเวลามาก ไปด้วยกันไหม')}
                   sub={trI18n('1 จุด = 1 อุปกรณ์ · มุมขวาบน = ทั้งบ่อยทั้งนาน คือเป้าหมายแรกของการปรับปรุง')}>
                   <ScatterPlot records={perAsset} xOf={a => a.times} yOf={a => a.minutes} labelOf={a => a.asset}
-                    xLabel={`จำนวนครั้ง (${unit})`} yLabel="เวลารวม (นาที)" />
+                    xLabel={`${trI18n("จำนวนครั้ง")} (${unit})`} yLabel="เวลารวม (นาที)" />
                 </Panel>
 
                 {/* ⑦ แนวโน้ม */}
-                <Panel title={`⑦ แนวโน้มราย${bucketWord}`} sub={trI18n('ดูว่าดีขึ้นหรือแย่ลง — ใช้คู่กับกราฟควบคุม (แนวโน้มบอกทิศ · กราฟควบคุมบอกว่าผิดปกติไหม)')}>
+                <Panel title={`⑦ ${trI18n("แนวโน้มราย")}${bucketWord}`} sub={trI18n('ดูว่าดีขึ้นหรือแย่ลง — ใช้คู่กับกราฟควบคุม (แนวโน้มบอกทิศ · กราฟควบคุมบอกว่าผิดปกติไหม)')}>
                   <RunChart records={rows} keyOf={r => evKey(r.at, tr.scale)} keys={wKeys} unit={unit} />
                 </Panel>
               </div>
@@ -599,9 +599,8 @@ export default function MtnAnalysis() {
           )}
 
           <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.8 }}>
-            แหล่งข้อมูล: {src === 'mo' ? 'ใบแจ้งซ่อม (MO)' : 'บันทึกเครื่องหยุดจาก Daily Report'} ·
-            ชนิดสินทรัพย์ตัดสินจาก "ชนิดอุปกรณ์" ในทะเบียนเครื่องจักร ไม่ใช่ทีมช่างที่รับงาน ·
-            หน้านี้อ่านอย่างเดียว ไม่แก้ข้อมูล และไม่ดึงซ้ำอัตโนมัติ (กด ↻ เมื่อต้องการข้อมูลล่าสุด)
+            {trI18n("แหล่งข้อมูล")}: {src === 'mo' ? 'ใบแจ้งซ่อม (MO)' : 'บันทึกเครื่องหยุดจาก Daily Report'} ·
+            {trI18n("ชนิดสินทรัพย์ตัดสินจาก \"ชนิดอุปกรณ์\" ในทะเบียนเครื่องจักร ไม่ใช่ทีมช่างที่รับงาน · หน้านี้อ่านอย่างเดียว ไม่แก้ข้อมูล และไม่ดึงซ้ำอัตโนมัติ (กด ↻ เมื่อต้องการข้อมูลล่าสุด")})
           </div>
         </div>
       )}

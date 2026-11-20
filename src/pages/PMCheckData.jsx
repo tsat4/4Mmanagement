@@ -272,7 +272,7 @@ function JigSpinCheck({ frames, checkpoints, results, activeCpId, onPinClick, sh
           <div style={{ position: 'absolute', left: 8, top: 8, display: 'flex', gap: 6, alignItems: 'center', zIndex: 3 }}>
             <span style={{ fontSize: 11, fontWeight: 800, padding: '3px 9px', borderRadius: 999,
                            background: 'var(--accent)', color: 'var(--accent-ink)' }}>
-              🔍 รูปของข้อ {(cpIndex[activeCp.id] ?? 0) + 1}
+              🔍 {tr("รูปของข้อ")} {(cpIndex[activeCp.id] ?? 0) + 1}
             </span>
             {frames.length > 0 && (
               <button type="button" onPointerDown={e => e.stopPropagation()} onClick={() => setShowCpPhoto(false)}
@@ -304,7 +304,7 @@ function JigSpinCheck({ frames, checkpoints, results, activeCpId, onPinClick, sh
                   offX={c.label_dx} offY={c.label_dy}
                   label={cpIndex[c.id] + 1} color={col} selected={active} hollow={!st}
                   badge={c.image_path ? '🔍' : null}
-                  title={`${cpIndex[c.id] + 1}. ${c.name} — ${st ? st.toUpperCase() : 'ยังไม่ตรวจ'}${c.image_path ? ' · แตะเพื่อดูรูปซูมจุดนี้' : ''}`}
+                  title={`${cpIndex[c.id] + 1}. ${c.name} — ${st ? st.toUpperCase() : tr('ยังไม่ตรวจ')}${c.image_path ? tr(' · แตะเพื่อดูรูปซูมจุดนี้') : ''}`}
                   onClick={e => {
                     e.stopPropagation()
                     onPinClick?.(c.id)
@@ -317,7 +317,7 @@ function JigSpinCheck({ frames, checkpoints, results, activeCpId, onPinClick, sh
             {frameShimPins.map(sp => (
               <CalloutPin key={`shim-${sp.point.id}`} xPct={sp.pin.x * 100} yPct={sp.pin.y * 100} layerW={imgBox.rw} layerH={imgBox.rh} size={PK}
                 label={sp.point.point_no} color={SHIM_PIN_COLOR} selected={false} hollow={!sp.done}
-                title={`จุดชิม ${sp.point.point_no}${sp.point.name ? ` · ${sp.point.name}` : ''} — ${sp.done ? 'กรอกค่าแล้ว' : 'ยังไม่วัด'}${sp.point.current_shim_mm != null ? ` · ชิมรวม ${sp.point.current_shim_mm} mm` : ''}`}
+                title={`${tr("จุดชิม")} ${sp.point.point_no}${sp.point.name ? ` · ${sp.point.name}` : ''} — ${sp.done ? tr('กรอกค่าแล้ว') : tr('ยังไม่วัด')}${sp.point.current_shim_mm != null ? ` · ${tr("ชิมรวม")} ${sp.point.current_shim_mm} mm` : ''}`}
                 onClick={e => { e.stopPropagation(); onShimPinClick?.(sp.point.id) }} />
             ))}
           </div>
@@ -334,14 +334,14 @@ function JigSpinCheck({ frames, checkpoints, results, activeCpId, onPinClick, sh
           </button>
           <div style={{ display: 'flex', gap: 5 }}>
             {frames.map((f, i) => (
-              <button key={f.id} onClick={() => { setShowCpPhoto(false); setFrameIdx(i) }} title={`เฟรม ${i + 1}`}
+              <button key={f.id} onClick={() => { setShowCpPhoto(false); setFrameIdx(i) }} title={`${tr("เฟรม")} ${i + 1}`}
                 style={{ width: 10, height: 10, borderRadius: '50%', border: 'none', cursor: 'pointer', padding: 0, background: i === frameIdx ? 'var(--accent)' : 'var(--border2)' }} />
             ))}
           </div>
           <span style={{ fontSize: 11, color: 'var(--muted)' }}>
             {onCpPhoto
               ? 'กำลังดูรูปของข้อที่เลือก — กดจุดด้านบนเพื่อกลับไปรูปเครื่อง'
-              : `${frameIdx + 1}/${frames.length} · ลากซ้าย-ขวาบนรูปเพื่อหมุน`}
+              : `${frameIdx + 1}/${frames.length} · ${tr("ลากซ้าย-ขวาบนรูปเพื่อหมุน")}`}
           </span>
         </div>
       )}
@@ -399,7 +399,7 @@ function VariableRow({ cp, idx, r, onChange, methodIndex, calcText }) {
         {c && <span style={{ fontSize: 11, fontWeight: 700, color: c.text }}>{status === 'pass' ? '●' : status === 'warning' ? '⚠' : '✕'}</span>}
       </div>
       {calcText && (
-        <div style={{ fontSize: 11.5, color: 'var(--blue)', fontWeight: 700 }}>ค่า = {calcText} {tr('· ระบบคิดให้จากค่าที่วัด ไม่ต้องกรอก')}</div>
+        <div style={{ fontSize: 11.5, color: 'var(--blue)', fontWeight: 700 }}>{tr("ค่า")} = {calcText} {tr('· ระบบคิดให้จากค่าที่วัด ไม่ต้องกรอก')}</div>
       )}
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
         {['v1', 'v2', 'v3'].map((k, i) => (
@@ -434,7 +434,7 @@ function AttrRow({ cp, idx, value, note, onChangeAttr, onChangeNote, methodIndex
   // 📱 มือถือ: แตะปุ่มเดิมซ้ำ (ถุงมือแตะเบิ้ล) = ล้างคำตอบเงียบๆ ⇒ ถามก่อน · จอคอมเหมือนเดิม (2026-10-20)
   const isMobile = useIsMobile()
   const pickAttr = async (v) => {
-    if (v === value) { if (isMobile && !await askConfirm(`ล้างคำตอบ ${v.toUpperCase()} ของข้อนี้?`)) return; onChangeAttr(''); return }
+    if (v === value) { if (isMobile && !await askConfirm(`${tr("ล้างคำตอบ")} ${v.toUpperCase()} ${tr("ของข้อนี้")}?`)) return; onChangeAttr(''); return }
     onChangeAttr(v)
   }
   return (
@@ -669,7 +669,7 @@ function HistoryModal({ inspection, checkpoints: cpsFromPage, jig, onClose, user
     const { data, error } = await supabaseDR.from('inspections').update({
       approval_status: 'approved', approved_by: userId, approved_at: new Date().toISOString(), reject_reason: null,
     }).eq('id', insp.id).select().single()
-    if (error) toast.error('อนุมัติไม่สำเร็จ: ' + error.message)
+    if (error) toast.error((tr('อนุมัติไม่สำเร็จ') + ': ') + error.message)
     if (!error && data) {
       setInsp(data)
       if (data.inspector_id !== userId) {
@@ -687,7 +687,7 @@ function HistoryModal({ inspection, checkpoints: cpsFromPage, jig, onClose, user
     const { data, error } = await supabaseDR.from('inspections').update({
       approval_status: 'rejected', approved_by: userId, approved_at: new Date().toISOString(), reject_reason: rejectReason.trim(),
     }).eq('id', insp.id).select().single()
-    if (error) toast.error('ตีกลับไม่สำเร็จ: ' + error.message)
+    if (error) toast.error((tr('ตีกลับไม่สำเร็จ') + ': ') + error.message)
     if (!error && data) {
       setInsp(data); setRejecting(false); setRejectReason('')
       if (data.inspector_id !== userId) {
@@ -715,7 +715,7 @@ function HistoryModal({ inspection, checkpoints: cpsFromPage, jig, onClose, user
     const empSig = {}
     if (needEmp.length) {
       const er = await loadEmployeeSigners(supabase, { ids: needEmp })
-      if (er.error) toast.error(`โหลดลายเซ็นจากฐานพนักงานไม่สำเร็จ — ช่องที่ไม่มีลายเซ็นโปรไฟล์จะเว้นว่าง (${er.error})`)
+      if (er.error) toast.error(`${tr("โหลดลายเซ็นจากฐานพนักงานไม่สำเร็จ — ช่องที่ไม่มีลายเซ็นโปรไฟล์จะเว้นว่าง")} (${er.error})`)
       else if (er.sigColumnMissing) toast.info('ฐานพนักงานยังไม่เปิดช่องลายเซ็น — ผู้ที่ไม่มีลายเซ็นในโปรไฟล์จะเว้นช่องให้เซ็นมือ')
       for (const e of er.rows) empSig[e.id] = e.signature_url || null
     }
@@ -734,7 +734,7 @@ function HistoryModal({ inspection, checkpoints: cpsFromPage, jig, onClose, user
     if (insp.inspector_code) {
       const signer = await resolveEmployeeSigner(supabase, insp.inspector_code)
       const who = inspectorForExport({ code: insp.inspector_code, signer })
-      if (who.note) toast.info(`ผู้ตรวจรหัส ${insp.inspector_code}: ${who.note}`)
+      if (who.note) toast.info(`${tr("ผู้ตรวจรหัส")} ${insp.inspector_code}: ${who.note}`)
       inspector = { email: who.name ?? 'Inspector', signature_data: who.signatureUrl ? await resolveSignatureDataUrl(who.signatureUrl) : null }
     } else {
       inspector = { email: profMap[insp.inspector_id]?.full_name ?? 'Inspector', signature_data: await getSig(insp.inspector_id) }
@@ -802,7 +802,7 @@ function HistoryModal({ inspection, checkpoints: cpsFromPage, jig, onClose, user
                         </p>
                       ) : cp.type === 'measure' ? (
                         <p style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'monospace', margin: '2px 0 0' }}>
-                          อ่านค่า: <strong style={{ color: 'var(--text2)' }}>{fmt(r.value_1)}</strong>{cp.unit ? ` ${cp.unit}` : ''}
+                          {tr("อ่านค่า")}: <strong style={{ color: 'var(--text2)' }}>{fmt(r.value_1)}</strong>{cp.unit ? ` ${cp.unit}` : ''}
                           <span style={{ marginLeft: 6 }}>{tr('เกณฑ์')} {measureStdText(cp)}</span>
                         </p>
                       ) : (
@@ -819,7 +819,7 @@ function HistoryModal({ inspection, checkpoints: cpsFromPage, jig, onClose, user
                   {r.evidence_path && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
                       <PointThumb url={getPublicUrl(r.evidence_path)} height={90} mobileMax={90} label={null} color="var(--red)"
-                        name={`หลักฐานสภาพจริง · ${cp.name}`} />
+                        name={`${tr("หลักฐานสภาพจริง")} · ${cp.name}`} />
                       <span style={{ fontSize: 11, color: 'var(--red)', fontWeight: 700 }}>{tr('หลักฐานสภาพจริง (แตะเพื่อซูม)')}</span>
                     </div>
                   )}
@@ -1035,7 +1035,7 @@ export default function PMCheckData({ mode = 'pm' }) {
   // แผนกของแต่ละ jig จาก checklist ที่มีอยู่ (ยึด department เป็นหลักตามที่ user ยืนยัน)
   useEffect(() => {
     supabaseDR.from('checklists').select('equipment_id, department').eq('module', 'mtn').then(({ data, error }) => {
-      if (error) setListErr(e => e || `รายการตรวจของแต่ละเครื่อง: ${error.message}`)
+      if (error) setListErr(e => e || `${tr("รายการตรวจของแต่ละเครื่อง")}: ${error.message}`)
       const m = {}; (data ?? []).forEach(c => { (m[c.equipment_id] ||= new Set()).add(c.department) }); setClDeptByJig(m)
     })
   }, [])
@@ -1057,7 +1057,7 @@ export default function PMCheckData({ mode = 'pm' }) {
   useEffect(() => {
     // เลือกเฉพาะคอลัมน์ที่จอใช้ (กฎ egress ข้อ 11) · อ่านไม่ได้ต้องบอก ห้ามขึ้น "ยังไม่มีอุปกรณ์"
     supabaseDR.from('jigs').select(JIG_COLS).eq('module', 'mtn').order('name').then(({ data, error }) => {
-      if (error) setListErr(e => e || `ทะเบียนอุปกรณ์: ${error.message}`)
+      if (error) setListErr(e => e || `${tr("ทะเบียนอุปกรณ์")}: ${error.message}`)
       setJigs(data ?? [])
     })
     fetchCategories() // primes the category color cache used by categoryColor()
@@ -1087,7 +1087,7 @@ export default function PMCheckData({ mode = 'pm' }) {
       if (cancelled) return
       // อ่านไม่ได้ = ป้าย "รอตรวจ/ยังไม่ลงทะเบียน" ในลิสต์ไม่จริง — ต้องเขียนบอก
       const eAm = eTg || eCl || eIn
-      if (eAm) setListErr(e => e || `สถานะตรวจกะนี้: ${eAm.message}`)
+      if (eAm) setListErr(e => e || `${tr("สถานะตรวจกะนี้")}: ${eAm.message}`)
       const st = {}
       for (const i of insp ?? []) {
         if (!clIds.has(i.checklist_id)) continue
@@ -1124,7 +1124,7 @@ export default function PMCheckData({ mode = 'pm' }) {
   const selectJigRaw = (jig) => setParams({ equip: jig.id })
   // มือถือ: เปลี่ยนเครื่องกลางฟอร์ม = บอกว่าเก็บร่างไว้แล้ว (เดิมล้างทุกช่องเงียบๆ) · ไม่ถาม/ไม่บล็อก — กลับมาเครื่องเดิมกู้คืนได้
   const selectJig = (jig) => {
-    if (pmDirty && jig?.id !== selectedJig?.id) toast.info(`📝 เก็บร่างผลตรวจ ${selectedJig?.name || ''} ไว้ในเครื่องแล้ว — กลับมาเลือกเครื่องนี้เพื่อกู้คืน`)
+    if (pmDirty && jig?.id !== selectedJig?.id) toast.info(`📝 ${tr("เก็บร่างผลตรวจ")} ${selectedJig?.name || ''} ${tr("ไว้ในเครื่องแล้ว — กลับมาเลือกเครื่องนี้เพื่อกู้คืน")}`)
     selectJigRaw(jig)
   }
   const clearJig = () => setParams({ equip: null })            // กลับไปลิสต์ (จอแคบ)
@@ -1145,7 +1145,7 @@ export default function PMCheckData({ mode = 'pm' }) {
     const clRes = await supabaseDR.from('checklists').select('id, department').eq('equipment_id', jigId).eq('module', 'mtn')
     if (curJigRef.current !== jigId) return // เปลี่ยนเครื่องไปแล้ว — คำตอบนี้เป็นของเครื่องก่อน
     const teamsKnown = !clRes.error
-    if (clRes.error) toast.error(`อ่านทีมของใบตรวจไม่สำเร็จ — ประวัติอาจปนทีมอื่น: ${clRes.error.message}`)
+    if (clRes.error) toast.error(`${tr("อ่านทีมของใบตรวจไม่สำเร็จ — ประวัติอาจปนทีมอื่น")}: ${clRes.error.message}`)
     const clRows = clRes.data ?? []
     setClDeptById(Object.fromEntries(clRows.map(c => [c.id, c.department])))
     const mineIds = clRows.filter(c => c.department === department).map(c => c.id)
@@ -1157,7 +1157,7 @@ export default function PMCheckData({ mode = 'pm' }) {
     if (!teamsKnown) ({ data, error: eH } = await base().eq('jig_id', jigId))
     else if (mineIds.length) ({ data, error: eH } = await base().in('checklist_id', mineIds))
     if (curJigRef.current !== jigId) return
-    if (eH) toast.error(`โหลดประวัติการตรวจไม่สำเร็จ: ${eH.message}`)
+    if (eH) toast.error(`${tr("โหลดประวัติการตรวจไม่สำเร็จ")}: ${eH.message}`)
     setInspections(data ?? [])
 
     /* ③ นับใบของทีมอื่น + ใบที่ชี้ทีมไม่ได้ (ไม่ดึงเนื้อถ้าไม่กดดู) — ตัวเลขต้องขึ้นจอ ห้ามเงียบ
@@ -1190,9 +1190,9 @@ export default function PMCheckData({ mode = 'pm' }) {
       codes.length ? supabase.from('employees').select('id, employee_id_code, position').in('employee_id_code', codes) : Promise.resolve({ data: [] }),
     ])
     if (curJigRef.current !== jigId) return
-    if (pRes.error) toast.error(`อ่านตำแหน่งคนตรวจไม่สำเร็จ — ลำดับขั้นอนุมัติ AM จะไม่ถูกตรวจ: ${pRes.error.message}`)
+    if (pRes.error) toast.error(`${tr("อ่านตำแหน่งคนตรวจไม่สำเร็จ — ลำดับขั้นอนุมัติ AM จะไม่ถูกตรวจ")}: ${pRes.error.message}`)
     setInspPosById(Object.fromEntries((pRes.data ?? []).filter(p => p.position).map(p => [p.id, p.position])))
-    if (eRes.error) toast.error(`อ่านตำแหน่งผู้ตรวจตามบัตรไม่สำเร็จ — ลำดับขั้นอนุมัติ AM จะไม่ถูกตรวจ: ${eRes.error.message}`)
+    if (eRes.error) toast.error(`${tr("อ่านตำแหน่งผู้ตรวจตามบัตรไม่สำเร็จ — ลำดับขั้นอนุมัติ AM จะไม่ถูกตรวจ")}: ${eRes.error.message}`)
     setInspEmpByCode(Object.fromEntries((data ?? []).filter(i => i.inspector_code).map(i => {
       const e = findByBadge(eRes.data ?? [], i.inspector_code)
       return [normBadgeCode(i.inspector_code), e ? { id: e.id, position: e.position || null } : null]
@@ -1221,7 +1221,7 @@ export default function PMCheckData({ mode = 'pm' }) {
     const { data, error } = await supabaseDR.from('inspections').select('*')
       .in('checklist_id', ids).order('inspected_at', { ascending: false }).limit(30)
     if (curJigRef.current !== jigId) return
-    if (error) { toast.error(`โหลดใบของทีมอื่นไม่สำเร็จ: ${error.message}`); return }
+    if (error) { toast.error(`${tr("โหลดใบของทีมอื่นไม่สำเร็จ")}: ${error.message}`); return }
     setHistOther(data ?? [])
     setShowOther(true)
   }
@@ -1241,7 +1241,7 @@ export default function PMCheckData({ mode = 'pm' }) {
   const waiveMo = async () => {
     if (!moPrompt) return
     const reason = moWaiveReason.trim()
-    if (!amWaiverReasonValid(reason)) { toast.error(`เขียนเหตุผลอย่างน้อย ${AM_WAIVER_MIN_LEN} ตัวอักษร`); return }
+    if (!amWaiverReasonValid(reason)) { toast.error(`${tr("เขียนเหตุผลอย่างน้อย")} ${AM_WAIVER_MIN_LEN} ${tr("ตัวอักษร")}`); return }
     setMoSaving(true)
     try {
       const res = await supabaseDR.from('inspections')
@@ -1288,7 +1288,7 @@ export default function PMCheckData({ mode = 'pm' }) {
            มีด่าน regressionGuards กฎ no-hardcoded-other-category */
         problem_characteristic: ngTopics[0] || 'อื่นๆ',
         problem_group: 'ผลตรวจ PM/AM ไม่ผ่าน',
-        report_note: `[จากผลตรวจ ${isAmTeam(department) ? 'AM' : 'PM'}] ${selectedJig.name} — จุดที่ไม่ผ่าน: ${ngTopics.join(', ')}`,
+        report_note: `[${tr("จากผลตรวจ")} ${isAmTeam(department) ? 'AM' : 'PM'}] ${selectedJig.name} — ${tr("จุดที่ไม่ผ่าน")}: ${ngTopics.join(', ')}`,
         // reported_by_uid: ให้ edge แจ้งกลับ "ผู้แจ้ง" ได้ทุกขั้น — เดิมหน้านี้ไม่เคยส่ง ⇒ ใบที่เปิดจากผลตรวจ PM/AM
         //   ไม่มีใครถูกเด้งตอนใบถึงคิวตัวเอง (เหตุผลเดียวกับที่ MtnRepair แก้ไปแล้ว 2026-09-14)
         reporter_prod: fullName || null, reported_by_name: fullName || null, reported_by_uid: userId || null,
@@ -1312,7 +1312,7 @@ export default function PMCheckData({ mode = 'pm' }) {
       }).catch(() => {})
       setMoByInsp(prev => ({ ...prev, [insp.id]: data }))
       setMoPrompt(null)
-      toast.success(`📝 เปิดใบแจ้งซ่อมแล้ว → แจ้งถึงทีม ${deptNameOf(moTeam) || 'MTN'} — ติดตามต่อที่หน้าแจ้งซ่อม MTN`)
+      toast.success(`📝 ${tr("เปิดใบแจ้งซ่อมแล้ว → แจ้งถึงทีม")} ${deptNameOf(moTeam) || 'MTN'} — ${tr("ติดตามต่อที่หน้าแจ้งซ่อม")} MTN`)
     } finally {
       setMoSaving(false)
     }
@@ -1332,12 +1332,12 @@ export default function PMCheckData({ mode = 'pm' }) {
     // จุดชิมของ fixture นี้ (ทะเบียน /fixture) — ไม่มี machine_id = ไม่ใช่ fixture ที่ผูกกับ machines → ไม่มีจุด
     if (selectedJig.machine_id) {
       supabaseDR.from('fixture_points').select('*').eq('machine_id', selectedJig.machine_id).eq('is_active', true).order('sort_order')
-        .then(({ data, error }) => { if (!live()) return; if (error) toast.error(`โหลดจุดชิมไม่สำเร็จ: ${error.message}`); setShimPoints(data ?? []) })
+        .then(({ data, error }) => { if (!live()) return; if (error) toast.error(`${tr("โหลดจุดชิมไม่สำเร็จ")}: ${error.message}`); setShimPoints(data ?? []) })
     } else setShimPoints([])
     // เฟรมรูป 360° (ถ้าไม่มี jig_images → ใช้รูปหลัก image_path เป็นเฟรมเดียว)
     supabaseDR.from('jig_images').select('id, image_path, sort').eq('jig_id', selectedJig.id).order('sort').then(({ data, error }) => {
       if (!live()) return
-      if (error) toast.error(`โหลดรูปเครื่องไม่สำเร็จ: ${error.message}`)
+      if (error) toast.error(`${tr("โหลดรูปเครื่องไม่สำเร็จ")}: ${error.message}`)
       let fr = (data ?? []).map(im => ({ id: im.id, url: getPublicUrl(im.image_path) }))
       if (!fr.length && selectedJig.image_path) fr = [{ id: 'legacy', url: getPublicUrl(selectedJig.image_path) }]
       setFrames(fr)
@@ -1443,7 +1443,7 @@ export default function PMCheckData({ mode = 'pm' }) {
     const miss = checkpoints.filter(cp => !cpFilled(cp))
     if (!miss.length) return false
     const nos = miss.map(cp => checkpoints.indexOf(cp) + 1)
-    toast.error(`บันทึกไม่ได้ — ยังไม่ได้ตรวจ ${miss.length} จุด (ข้อ ${nos.slice(0, 10).join(', ')}${nos.length > 10 ? ' …' : ''}) — ตรวจให้ครบทุกข้อก่อน`)
+    toast.error(`${tr("บันทึกไม่ได้ — ยังไม่ได้ตรวจ")} ${miss.length} ${tr("จุด (ข้อ")} ${nos.slice(0, 10).join(', ')}${nos.length > 10 ? ' …' : ''}) — ${tr("ตรวจให้ครบทุกข้อก่อน")}`)
     setActiveShimId(null); setActiveCpId(miss[0].id)
     return true
   }
@@ -1484,9 +1484,9 @@ export default function PMCheckData({ mode = 'pm' }) {
         if (cp.type === 'variable' || cp.type === 'measure') return   // ค่าที่วัดมา ตัวเลขคือคำอธิบาย
         const r = results[cp.id] ?? {}
         const chk = ngReasonCheck({ attr: r.attr, text: r.reason, carry: ngCarryOf(cp.id), accepted: !!r.reasonAccepted })
-        if (!chk.ok) bad.push(`ข้อ ${i + 1} ${cp.name}: ${chk.blockText}`)
+        if (!chk.ok) bad.push(`${tr("ข้อ")} ${i + 1} ${cp.name}: ${chk.blockText}`)
       })
-      if (bad.length) { toast.error(`ยังบันทึกไม่ได้ — ${bad.length} ข้อที่ติ๊ก NG ไม่มีเหตุผล\n${bad.slice(0, 3).join('\n')}`); return }
+      if (bad.length) { toast.error(`${tr("ยังบันทึกไม่ได้")} — ${bad.length} ${tr("ข้อที่ติ๊ก NG ไม่มีเหตุผล")}\n${bad.slice(0, 3).join('\n')}`); return }
     }
     setSaving(true)
     try {
@@ -1568,8 +1568,8 @@ export default function PMCheckData({ mode = 'pm' }) {
             if (res.ok) okN++; else warns.push(`${pt.point_no}: ${res.error}`)
             if (res.warn) warns.push(res.warn)
           }
-          if (okN) toast.success(`บันทึกค่าชิม ${okN} จุดลงประวัติแล้ว`)
-          if (warns.length) toast.error(`ชิมบางจุดไม่สำเร็จ: ${[...new Set(warns)].join(' · ')}`)
+          if (okN) toast.success(`${tr("บันทึกค่าชิม")} ${okN} ${tr("จุดลงประวัติแล้ว")}`)
+          if (warns.length) toast.error(`${tr("ชิมบางจุดไม่สำเร็จ")}: ${[...new Set(warns)].join(' · ')}`)
         }
       }
 
@@ -1583,7 +1583,7 @@ export default function PMCheckData({ mode = 'pm' }) {
           body: `${selectedJig.name} — ${formatDate(insp.inspected_at)}`,
           type: 'error', refTable: 'inspections', refId: insp.id,
           lineName: selectedJig.line_name || null,
-        }).then(r => { if (r?.ownersCapped) toast.error(`⚠ ทีม ${deptNameOf(department)} มีช่าง ${r.owners} คน — แจ้งเตือนส่งถึงได้ 20 คนแรกเท่านั้น`) })
+        }).then(r => { if (r?.ownersCapped) toast.error(`⚠ ${tr("ทีม")} ${deptNameOf(department)} ${tr("มีช่าง")} ${r.owners} ${tr("คน — แจ้งเตือนส่งถึงได้ 20 คนแรกเท่านั้น")}`) })
           .catch(() => {})
       }
 
@@ -1612,7 +1612,7 @@ export default function PMCheckData({ mode = 'pm' }) {
             if (uErr) throw uErr
           }
         } catch (e) {
-          toast.error('บันทึกผลตรวจสำเร็จ แต่เลื่อนรอบแผน PM ไม่สำเร็จ: ' + (e?.message || e))
+          toast.error((tr('บันทึกผลตรวจสำเร็จ แต่เลื่อนรอบแผน PM ไม่สำเร็จ') + ': ') + (e?.message || e))
         }
       }
 
@@ -1628,11 +1628,11 @@ export default function PMCheckData({ mode = 'pm' }) {
       if (isAmTeam(department)) setCheckedThisShift(prev => ({ ...prev, [selectedJig.id]: overall }))
 
       if (onSite?.approve) {
-        toast.success(`บันทึกแล้ว — ผู้ตรวจ ${badgeEmp?.name || inspectorCode.trim()} · ${fullName || 'คุณ'} ทวนสอบ/รับทราบแล้ว`)
+        toast.success(`${tr("บันทึกแล้ว — ผู้ตรวจ")} ${badgeEmp?.name || inspectorCode.trim()} · ${fullName || tr('คุณ')} ${tr("ทวนสอบ/รับทราบแล้ว")}`)
         const note = amApprovalAssumptionText(onSite.verdict?.assumed)
         if (note) toast.info(note)
       } else {
-        toast.success(badgeEmp ? `บันทึกผลการตรวจสำเร็จ — ผู้ตรวจ ${badgeEmp.name}` : 'บันทึกผลการตรวจสำเร็จ')
+        toast.success(badgeEmp ? `${tr("บันทึกผลการตรวจสำเร็จ — ผู้ตรวจ")} ${badgeEmp.name}` : 'บันทึกผลการตรวจสำเร็จ')
         if (onSite) toast.info(onSite.text)
       }
       if (pmDraftKey) clearDraft(pmDraftKey)
@@ -1708,7 +1708,7 @@ export default function PMCheckData({ mode = 'pm' }) {
     {!deptWrite.ok && (
       <div style={{ margin: '0 0 10px', padding: '8px 10px', borderLeft: '4px solid var(--amber)',
         background: 'var(--card)', borderRadius: 'var(--r-md)', fontSize: 12.5 }}>
-        {teamBlockText(deptWrite, `งานตรวจของทีม "${deptNameOf(department) || department}"`)}
+        {teamBlockText(deptWrite, `${tr("งานตรวจของทีม")} "${deptNameOf(department) || department}"`)}
       </div>
     )}
     <div style={S.page}>
@@ -1742,14 +1742,14 @@ export default function PMCheckData({ mode = 'pm' }) {
         )}
         {!amTab && (qWords.length > 0 || jigScope.names?.length) && (
           <div style={{ padding: '0 16px 6px', fontSize: 11, color: 'var(--muted)' }}>
-            พบ {deptJigs.length} {tr('จาก')} {deptJigsAll.length} เครื่อง
+            {tr("พบ")} {deptJigs.length} {tr('จาก')} {deptJigsAll.length} {tr("เครื่อง")}
             {jigDropped > 0 && <span style={{ color: 'var(--amber)' }}> {tr('· อีก')} {jigDropped} {tr('เครื่องไลน์ไม่ตรงทะเบียน (กรองตามไลน์ไม่ได้)')}</span>}
           </div>
         )}
         {listErr && (
           <div role="alert" style={{ margin: '0 16px 8px', padding: '8px 10px', borderRadius: 'var(--r-md)', fontSize: 12, lineHeight: 1.5,
             background: 'rgba(224,92,74,0.12)', border: '1px solid rgba(224,92,74,0.4)', color: 'var(--text)' }}>
-            ⚠️ โหลดข้อมูลไม่ครบ — รายการ/ป้ายสถานะด้านล่างอาจไม่จริง<br />
+            ⚠️ {tr("โหลดข้อมูลไม่ครบ — รายการ/ป้ายสถานะด้านล่างอาจไม่จริง")}<br />
             <span style={{ color: 'var(--muted)' }}>{listErr}</span>{' '}
             <span onClick={() => window.location.reload()} style={{ color: 'var(--accent)', cursor: 'pointer', fontWeight: 700 }}>{tr('โหลดใหม่')}</span>
           </div>
@@ -1774,7 +1774,7 @@ export default function PMCheckData({ mode = 'pm' }) {
               <div style={{ padding: '0 4px 6px', fontSize: 11, color: amScope.unsure ? 'var(--amber)' : 'var(--muted)', lineHeight: 1.5 }}>
                 {amScope.unsure
                   ? '⚠ ตัดขอบเขตไลน์ของบัญชีนี้ไม่ได้ (ไลน์/ส่วนงานในโปรไฟล์ไม่ตรงทะเบียน) — ตรวจโปรไฟล์ที่ /add-user'
-                  : `เฉพาะไลน์ในขอบเขตของคุณ${hiddenLines.size ? ` · ซ่อนอีก ${hiddenLines.size} ไลน์` : ''}`}
+                  : `${tr("เฉพาะไลน์ในขอบเขตของคุณ")}${hiddenLines.size ? ` · ${tr("ซ่อนอีก")} ${hiddenLines.size} ${tr("ไลน์")}` : ''}`}
               </div>
             )
             const lineNames = Object.keys(byLine).sort(lineNameCompare)
@@ -1800,7 +1800,7 @@ export default function PMCheckData({ mode = 'pm' }) {
             if (!lineNames.length) return (<>
               {scopeNote}
               <p style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'center', marginTop: 20, lineHeight: 1.6 }}>
-                {lineParam ? `ไลน์ ${lineParam} ยังไม่ได้ลงทะเบียนเครื่องตรวจ${amScopeSet && !amScopeSet.has(lineParam) ? ' (หรืออยู่นอกขอบเขตของคุณ)' : ''}`
+                {lineParam ? `${tr("ไลน์")} ${lineParam} ${tr("ยังไม่ได้ลงทะเบียนเครื่องตรวจ")}${amScopeSet && !amScopeSet.has(lineParam) ? tr(' (หรืออยู่นอกขอบเขตของคุณ)') : ''}`
                   : hiddenLines.size ? 'ไลน์ในขอบเขตของคุณยังไม่มีเครื่องที่ลงทะเบียน AM' : 'ยังไม่มีเครื่องที่ลงทะเบียน AM'}<br />
                 <Link to="/daily-checker?tab=pm" style={{ color: 'var(--accent)', fontWeight: 700 }}>{tr('ไปลงทะเบียนที่แท็บ AM →')}</Link>
               </p>
@@ -1810,7 +1810,7 @@ export default function PMCheckData({ mode = 'pm' }) {
               {scopeNote}
               {lineParam && (
                 <div style={{ fontSize: 11, color: 'var(--muted)', padding: '0 4px 6px' }}>
-                  กรองเฉพาะไลน์ {lineParam} · <span onClick={() => setParams({ line: null })} style={{ color: 'var(--accent)', cursor: 'pointer', fontWeight: 700 }}>{tr('ดูทุกไลน์')}</span>
+                  {tr("กรองเฉพาะไลน์")} {lineParam} · <span onClick={() => setParams({ line: null })} style={{ color: 'var(--accent)', cursor: 'pointer', fontWeight: 700 }}>{tr('ดูทุกไลน์')}</span>
                 </div>
               )}
               {lineNames.map(ln => (
@@ -1894,7 +1894,7 @@ export default function PMCheckData({ mode = 'pm' }) {
 
             <div style={{ ...S.body, ...(isNarrow ? { padding: 12 } : null) }}>
               {tab === 'record' && (
-                <DraftRestoreBar draft={pendingDraft} what={`ใบตรวจ ${selectedJig?.name || 'เครื่องนี้'}`} onRestore={restorePmDraft}
+                <DraftRestoreBar draft={pendingDraft} what={`${tr("ใบตรวจ")} ${selectedJig?.name || tr('เครื่องนี้')}`} onRestore={restorePmDraft}
                   onDiscard={() => { if (pmDraftKey) clearDraft(pmDraftKey); setPendingDraft(null) }} />
               )}
               {tab === 'record' && (() => {
@@ -1954,11 +1954,11 @@ export default function PMCheckData({ mode = 'pm' }) {
                     </div>
                   ) : checkpoints.length === 0 ? (
                     <div style={{ textAlign: 'center', color: 'var(--muted)', fontSize: 13, padding: '32px 12px', lineHeight: 1.7 }}>
-                      เครื่องนี้ยังไม่มีรายการตรวจของ <b style={{ color: deptColor }}>{(teams.find(t => t.key === department) || {}).label || department}</b>
+                      {tr("เครื่องนี้ยังไม่มีรายการตรวจของ")} <b style={{ color: deptColor }}>{(teams.find(t => t.key === department) || {}).label || department}</b>
                       <br />
                       <span style={{ fontSize: 12 }}>
-                        1 เครื่องมีรายการตรวจแยกตามแผนกได้ (ผลิตเช็ครายวัน · ช่างเช็คตามรอบ)
-                        <br />{tr('จุดตรวจของแต่ละแผนก')}<b>{tr('ปักอยู่คนละมุมของเครื่องได้')}</b> — จึงยังไม่แสดงรูปหมุนจนกว่าจะมีจุดตรวจของแผนกนี้
+                        1 {tr("เครื่องมีรายการตรวจแยกตามแผนกได้ (ผลิตเช็ครายวัน · ช่างเช็คตามรอบ")})
+                        <br />{tr('จุดตรวจของแต่ละแผนก')}<b>{tr('ปักอยู่คนละมุมของเครื่องได้')}</b> — {tr("จึงยังไม่แสดงรูปหมุนจนกว่าจะมีจุดตรวจของแผนกนี้")}
                       </span>
                       {otherDepts.length > 0 && (
                         <div style={{ marginTop: 16, padding: '12px 14px', display: 'inline-block', textAlign: 'left', background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)' }}>
@@ -1972,7 +1972,7 @@ export default function PMCheckData({ mode = 'pm' }) {
                                 <button key={d.department} onClick={() => setDept(d.department)}
                                   style={{ padding: '6px 12px', borderRadius: 'var(--r-md)', fontSize: 12, fontWeight: 700, cursor: 'pointer',
                                     border: `1.5px solid ${t?.color || 'var(--border2)'}`, background: 'var(--card)', color: t?.color || 'var(--text)' }}>
-                                  {t?.icon || ''} {tr(t?.label) || d.department} · {d.checkpointCount} จุด
+                                  {t?.icon || ''} {tr(t?.label) || d.department} · {d.checkpointCount} {tr("จุด")}
                                 </button>)
                             })}
                           </div>
@@ -1984,9 +1984,9 @@ export default function PMCheckData({ mode = 'pm' }) {
                       {/* จิ๊กที่มีจุดชิมแต่ยังไม่มีจุดตรวจ PM (เช่น JHYD12-01) — ค่าชิมบันทึกที่ /fixture ได้เลย ไม่ต้องรอใบตรวจ */}
                       {shimPoints.length > 0 && (
                         <div style={{ fontSize: 12, marginTop: 10, color: SHIM_PIN_COLOR }}>
-                          เครื่องนี้มีจุดชิม {shimPoints.length} {tr('จุดในทะเบียน — ยังบันทึกค่าชิมได้ที่')}{' '}
+                          {tr("เครื่องนี้มีจุดชิม")} {shimPoints.length} {tr('จุดในทะเบียน — ยังบันทึกค่าชิมได้ที่')}{' '}
                           <Link to="/equipment?tab=jig&fx=shim" style={{ color: SHIM_PIN_COLOR, fontWeight: 700 }}>{tr('ทะเบียนจิ๊ก → 🔧 บันทึกชิม')}</Link>
-                          {' '}(ตั้งจุดตรวจ PM แล้ว จะกรอกค่าชิมพร้อมใบตรวจได้ที่นี่)
+                          {' '}({tr("ตั้งจุดตรวจ PM แล้ว จะกรอกค่าชิมพร้อมใบตรวจได้ที่นี่")})
                         </div>
                       )}
                     </div>
@@ -2002,7 +2002,7 @@ export default function PMCheckData({ mode = 'pm' }) {
                           borderBottom: '1px solid var(--border)', padding: '7px 0 8px', marginBottom: 8,
                           display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
                           <span style={{ fontSize: 12, fontWeight: 800, color: doneN === checkpoints.length ? 'var(--accent)' : 'var(--text2)' }}>
-                            ตรวจแล้ว {doneN}/{checkpoints.length}
+                            {tr("ตรวจแล้ว")} {doneN}/{checkpoints.length}
                             {todo.length > 0 && <span style={{ color: 'var(--amber)', fontWeight: 700 }}> {tr('· เหลือ')} {todo.length}</span>}
                           </span>
                           {!showPhoto ? null : (
@@ -2017,7 +2017,7 @@ export default function PMCheckData({ mode = 'pm' }) {
                               {/* ปักไม่ครบ = ยังใช้โหมดทีละข้อได้ แค่แตะหมุดบนรูปเลือกข้อไม่ได้ — บอกตามจริง ห้ามเงียบ */}
                               {!allPinned && (
                                 <span style={{ fontSize: 11, color: 'var(--muted)' }}>
-                                  (ปักหมุดบนรูปแล้ว {pinnedCps.length}/{checkpoints.length} — ปักครบจะแตะหมุดเลือกข้อได้ · ปักที่ PM Setup)
+                                  ({tr("ปักหมุดบนรูปแล้ว")} {pinnedCps.length}/{checkpoints.length} — {tr("ปักครบจะแตะหมุดเลือกข้อได้ · ปักที่")} PM Setup)
                                 </span>
                               )}
                             </>
@@ -2053,7 +2053,7 @@ export default function PMCheckData({ mode = 'pm' }) {
                           border: '1px dashed var(--border2)', borderRadius: 'var(--r-lg)', background: 'var(--bg3-surf)' }}>
                           {allPinned ? 'แตะหมุดบนรูปเพื่อตรวจจุดนั้น' : 'เลือกข้อที่จะตรวจจากชิปเลขด้านบน'}
                           <div style={{ fontSize: 11.5, marginTop: 2 }}>
-                            ขึ้นทีละข้อ ไม่ต้องเลื่อนหา · อยากเห็นทุกข้อพร้อมกันกดปุ่ม “{allPinned ? 'เฉพาะจุดที่แตะ' : 'ทีละข้อ'}” เพื่อสลับ
+                            {tr("ขึ้นทีละข้อ ไม่ต้องเลื่อนหา · อยากเห็นทุกข้อพร้อมกันกดปุ่ม")} “{allPinned ? 'เฉพาะจุดที่แตะ' : 'ทีละข้อ'}” {tr("เพื่อสลับ")}
                           </div>
                           {todo.length > 0 && (
                             <button onClick={() => setActiveCpId(todo[0].id)}
@@ -2094,7 +2094,7 @@ export default function PMCheckData({ mode = 'pm' }) {
                           ) : null))
                           const row = cp.type === 'variable' ? (
                             <VariableRow cp={cp} idx={idx} r={results[cp.id] ?? { v1: '', v2: '', v3: '' }} onChange={v => setResults(prev => ({ ...prev, [cp.id]: v }))} methodIndex={methodIndex}
-                              calcText={calcOf(cp) ? calcFormula(calcOf(cp), id => { const k = checkpoints.findIndex(c => c.id === id); return k < 0 ? '?' : `ข้อ ${k + 1}` }) : null} />
+                              calcText={calcOf(cp) ? calcFormula(calcOf(cp), id => { const k = checkpoints.findIndex(c => c.id === id); return k < 0 ? '?' : `${tr("ข้อ")} ${k + 1}` }) : null} />
                           ) : cp.type === 'measure' ? (
                             <MeasureRow cp={cp} idx={idx} r={results[cp.id] ?? { mval: '' }} onChange={v => setResults(prev => ({ ...prev, [cp.id]: v }))} methodIndex={methodIndex} />
                           ) : (
@@ -2145,9 +2145,9 @@ export default function PMCheckData({ mode = 'pm' }) {
                         return (
                           <div style={{ marginTop: 12 }}>
                             <div style={{ padding: '7px 12px', borderRadius: 'var(--r-md)', marginBottom: 8, background: 'var(--blue-dim)', border: '1px solid var(--blue-line)', fontSize: 12.5, fontWeight: 800, color: SHIM_PIN_COLOR }}>
-                              จุดชิม (Shim Record) · {shimPoints.length} {tr('จุด')}{dueN ? <span style={{ color: 'var(--red)' }}> {tr('· ถึงรอบ')} {dueN}</span> : null}
+                              {tr("จุดชิม")} (Shim Record) · {shimPoints.length} {tr('จุด')}{dueN ? <span style={{ color: 'var(--red)' }}> {tr('· ถึงรอบ')} {dueN}</span> : null}
                               <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted)', marginTop: 2 }}>
-                                วัดค่าชิมรวมตอนนี้แล้วกรอกเป็น mm — บันทึกพร้อมใบตรวจนี้ลงประวัติชิมของจุด (ไม่บังคับ · จุดที่ไม่กรอก = ไม่แตะ)
+                                {tr("วัดค่าชิมรวมตอนนี้แล้วกรอกเป็น mm — บันทึกพร้อมใบตรวจนี้ลงประวัติชิมของจุด (ไม่บังคับ · จุดที่ไม่กรอก = ไม่แตะ")})
                                 {shimPins.length < shimPoints.length && <span> · {shimPoints.length - shimPins.length} {tr('จุดยังไม่ปักบนรูป — ปักที่ /fixture แท็บทะเบียนจุด')}</span>}
                               </div>
                             </div>
@@ -2172,7 +2172,7 @@ export default function PMCheckData({ mode = 'pm' }) {
                                     <span style={{ minWidth: 22, height: 18, padding: '0 5px', borderRadius: 'var(--r-md)', background: pinned ? SHIM_PIN_COLOR : 'var(--border2)', color: '#fff', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }} title={pinned ? tr('ปักบนรูปแล้ว') : tr('ยังไม่ปักบนรูป')}>{pt.point_no}</span>
                                     <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{k.icon} {tr(k.label)}{pt.name ? <span style={{ fontWeight: 500, color: 'var(--muted)' }}> · {pt.name}</span> : null}</span>
                                     <span style={{ fontSize: 11.5, color: 'var(--muted)', marginLeft: 'auto' }}>
-                                      ชิมรวม <b style={{ color: st.level === 'over' ? 'var(--red)' : st.level === 'warn' ? 'var(--amber)' : 'var(--text)' }}>{st.current ?? '—'}</b> {tr('/ เพดาน')} {pt.max_shim_mm ?? 'ไม่ตั้ง'} mm
+                                      {tr("ชิมรวม")} <b style={{ color: st.level === 'over' ? 'var(--red)' : st.level === 'warn' ? 'var(--amber)' : 'var(--text)' }}>{st.current ?? '—'}</b> {tr('/ เพดาน')} {pt.max_shim_mm ?? 'ไม่ตั้ง'} mm
                                       {due.level !== 'unset' && <span style={{ marginLeft: 8, color: due.due ? 'var(--red)' : due.level === 'soon' ? 'var(--amber)' : 'var(--muted)' }}>· {due.text}</span>}
                                     </span>
                                   </div>
@@ -2189,7 +2189,7 @@ export default function PMCheckData({ mode = 'pm' }) {
                                       style={{ flex: '1 1 160px', minWidth: 120 }} />
                                     {mm != null && (
                                       <span style={{ fontSize: 11.5, fontWeight: 700, color: overMax ? 'var(--red)' : SHIM_PIN_COLOR }}>
-                                        {act === 'check' ? '→ ยืนยันเท่าเดิม' : act === 'add' ? `→ เพิ่ม +${(mm - Number(pt.current_shim_mm)).toFixed(2)} mm` : `→ ลด ${(mm - Number(pt.current_shim_mm)).toFixed(2)} mm`}
+                                        {act === 'check' ? '→ ยืนยันเท่าเดิม' : act === 'add' ? `→ ${tr("เพิ่ม")} +${(mm - Number(pt.current_shim_mm)).toFixed(2)} mm` : `→ ${tr("ลด")} ${(mm - Number(pt.current_shim_mm)).toFixed(2)} mm`}
                                         {overMax && ' · เกินเพดาน — ควรเปิดใบซ่อมเปลี่ยนชิ้นส่วน'}
                                       </span>
                                     )}
@@ -2214,7 +2214,7 @@ export default function PMCheckData({ mode = 'pm' }) {
                           background: isFormReady ? 'var(--accent)' : 'var(--accent2)',
                           color: isFormReady ? 'var(--accent-ink)' : '#1a1a1a',
                           opacity: (saving || !canRecord) ? 0.6 : 1 }}>
-                        {saving ? 'กำลังบันทึก...' : !canRecord ? `ไม่มีสิทธิ์บันทึกผลตรวจ ${isAmTeam(department) ? 'AM' : 'PM'}` : isFormReady ? 'บันทึกผลการตรวจ' : `ยังบันทึกไม่ได้ — ยังไม่ตรวจ ${nMissing} จุด`}
+                        {saving ? 'กำลังบันทึก...' : !canRecord ? `${tr("ไม่มีสิทธิ์บันทึกผลตรวจ")} ${isAmTeam(department) ? 'AM' : 'PM'}` : isFormReady ? 'บันทึกผลการตรวจ' : `${tr("ยังบันทึกไม่ได้ — ยังไม่ตรวจ")} ${nMissing} ${tr("จุด")}`}
                       </button>
                     </>
                   )}
@@ -2309,12 +2309,12 @@ export default function PMCheckData({ mode = 'pm' }) {
                             const am = isAmTeam(clDeptById[insp.checklist_id] ?? department)
                             const nx = am ? amNextApprover(positionRank(inspectorOf(insp).position)) : null
                             // ใบช่าง (PM) = รอหัวหน้าผู้ตรวจยืนยัน (ขั้น 2 · 11/11)
-                            return <span style={{ fontSize: 11, color: 'var(--muted)' }}>{nx ? (nx.step ? `รอ${nx.step.label}` : 'รอผู้จัดการรับทราบ') : `รอ${PM_HEAD_STEP.label}ยืนยัน`}</span>
+                            return <span style={{ fontSize: 11, color: 'var(--muted)' }}>{nx ? (nx.step ? `${tr("รอ")}${nx.step.label}` : 'รอผู้จัดการรับทราบ') : `${tr("รอ")}${PM_HEAD_STEP.label}${tr("ยืนยัน")}`}</span>
                           })()}
                           {/* NG ใบนี้ถูกส่งซ่อมหรือยัง — ตอบคำถาม "ที่เจอเมื่อวาน แก้แล้วรึยัง" ได้จากตรงนี้เลย */}
                           {moByInsp[insp.id] && (
                             <span style={{ fontSize: 11, fontWeight: 700, color: '#fb923c' }}>
-                              ใบซ่อม {moByInsp[insp.id].mo_no || '(รอออกเลข)'} · {moStatusLabel(moByInsp[insp.id])}
+                              {tr("ใบซ่อม")} {moByInsp[insp.id].mo_no || '(รอออกเลข)'} · {moStatusLabel(moByInsp[insp.id])}
                             </span>
                           )}
                           {insp.status === 'fail' && !moByInsp[insp.id] && insp.mo_waived_reason && (
@@ -2453,7 +2453,7 @@ export default function PMCheckData({ mode = 'pm' }) {
         onScan={(parsed) => {
           const j = resolveJig(parsed, jigs)
           if (!j) return 'ไม่พบอุปกรณ์นี้ในทะเบียน PM — ลงทะเบียนที่แท็บ ⚙️ ตั้งค่าจุดตรวจก่อน'
-          if (!deptJigsAll.some(x => x.id === j.id)) return `${j.jig_no || j.name || 'อุปกรณ์นี้'} อยู่คนละแผนกกับแท็บที่เปิดอยู่ — สลับแผนกด้านบนก่อน`
+          if (!deptJigsAll.some(x => x.id === j.id)) return `${j.jig_no || j.name || tr('อุปกรณ์นี้')} ${tr("อยู่คนละแผนกกับแท็บที่เปิดอยู่ — สลับแผนกด้านบนก่อน")}`
           selectJig(j)
           setScanOpen(false)
         }}

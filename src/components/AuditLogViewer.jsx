@@ -92,7 +92,7 @@ export default function AuditLogViewer({ client, tables, limit = 300, intro, fmt
         <SearchInput value={q} onChange={setQ} fields="ชื่อรายการ / คน" />
         <span className="spacer" />
         <span className="filter-count">
-          {shown.length} {tr('รายการ')}{rows.length >= limit ? ` (แสดง ${limit} ล่าสุด — เก่ากว่านี้ยังมีอีก)` : ''}
+          {shown.length} {tr('รายการ')}{rows.length >= limit ? ` (${tr("แสดง")} ${limit} ${tr("ล่าสุด — เก่ากว่านี้ยังมีอีก")})` : ''}
         </span>
         <button onClick={load} style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: 'var(--r-md)', padding: '0 12px', cursor: 'pointer', fontWeight: 700 }}>{tr('↻ รีเฟรช')}</button>
       </FilterBar>
@@ -102,8 +102,8 @@ export default function AuditLogViewer({ client, tables, limit = 300, intro, fmt
       {/* โหลดไม่ได้ ≠ ไม่มีประวัติ — ต้องแยกให้ขาด */}
       {!!err && (
         <div style={{ color: '#f59e0b', padding: 12, fontSize: 12.5, background: 'rgba(245,158,11,0.1)', border: '1px solid #f59e0b', borderRadius: 'var(--r-md)' }}>
-          ⚠️ โหลดประวัติไม่ได้: {err}
-          <br />{tr('(ถ้าเป็นเพราะตาราง')} <code>audit_log</code> {tr('ไม่มี — ต้อง apply migration')} <code>20260724_audit_log_main.sql</code> / <code>_dr.sql</code> ก่อน)
+          ⚠️ {tr("โหลดประวัติไม่ได้")}: {err}
+          <br />{tr('(ถ้าเป็นเพราะตาราง')} <code>audit_log</code> {tr('ไม่มี — ต้อง apply migration')} <code>20260724_audit_log_main.sql</code> / <code>_dr.sql</code> {tr("ก่อน")})
         </div>
       )}
 
@@ -134,9 +134,9 @@ export default function AuditLogViewer({ client, tables, limit = 300, intro, fmt
                 <div>
                   <span style={{ color: 'var(--muted)' }}>{tr('ยอดเข้า:')}</span>{' '}
                   <b>{r.new_data?.owner_line || tr('(ไม่รู้ไลน์)')}</b>
-                  {r.new_data?.shift ? ` · ${r.new_data.shift === 'night' ? '🌙 กะดึก' : '☀️ กะเช้า'}` : ''}
+                  {r.new_data?.shift ? ` · ${r.new_data.shift === 'night' ? tr('🌙 กะดึก') : tr('☀️ กะเช้า')}` : ''}
                   {r.new_data?.work_date ? ` · ${String(r.new_data.work_date).slice(0, 10)}` : ''}
-                  {r.new_data?.qty_ok != null ? ` · ${r.new_data.qty_ok} ชิ้น` : ''}
+                  {r.new_data?.qty_ok != null ? ` · ${r.new_data.qty_ok} ${tr("ชิ้น")}` : ''}
                 </div>
                 <div>
                   <span style={{ color: 'var(--muted)' }}>{tr('ปิดจากจอของไลน์:')}</span>{' '}

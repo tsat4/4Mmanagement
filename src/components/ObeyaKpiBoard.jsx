@@ -135,7 +135,7 @@ const LAMP_LABEL = { good: 'ตามเป้า', warn: 'ถึง Commitment'
 const SRC_PAGE_NAMES = { '/oee-analytics': 'OEE Analytics', '/safety': 'Safety', '/bbs': 'BBS' };
 const srcPageName = (to) => SRC_PAGE_NAMES[String(to || '').split('?')[0]] || String(to || '').split('?')[0].replace(/^\//, '');
 /* ตัวเลขฐานของสูตรบนจอ — บาท ≥ 1 ล้าน = MB · ไม่งั้น บ. · ตัวแปรอื่นตามหน่วยของมัน (ใช้ร่วมบรรทัดรอง 🧮 + insight 🔍) */
-const fmtInVar = (v, x) => { const u = baseVarOf(v)?.unit || ''; if (x == null) return '—'; if (u === 'บาท') return Math.abs(x) >= 1e6 ? `${(x / 1e6).toLocaleString('th-TH', { maximumFractionDigits: 1 })} MB` : `${Math.round(x).toLocaleString('th-TH')} บ.`; return `${Number(x).toLocaleString('th-TH', { maximumFractionDigits: 1 })} ${u}`; };
+const fmtInVar = (v, x) => { const u = baseVarOf(v)?.unit || ''; if (x == null) return '—'; if (u === 'บาท') return Math.abs(x) >= 1e6 ? `${(x / 1e6).toLocaleString('th-TH', { maximumFractionDigits: 1 })} MB` : `${Math.round(x).toLocaleString('th-TH')} ${tr("บ.")}`; return `${Number(x).toLocaleString('th-TH', { maximumFractionDigits: 1 })} ${u}`; };
 const toLamp = (st, why) => ({ status: st === ST.unknown ? 'none' : st, label: st === ST.unknown ? (why?.startsWith('ยังไม่มี') || why?.startsWith('ยังไม่กรอก') ? tr('ยังไม่มีข้อมูล') : tr('ไม่มีเป้า')) : LAMP_LABEL[st], why: why || '' });
 
 /* แผ่น KPI บนมือถือ: หัว (ชื่อ·ตัวเลขใหญ่·ไฟ) ~90px + กราฟ ~200px + ท้าย — อ่านออก ไม่ต้องเลื่อนในแผ่น */
@@ -244,7 +244,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
     if (allowed) return;
     const mine = (sections || []).map(x => scopeOpts.find(o => o.kind === 'section' && o.value === x)).find(Boolean);
     const first = scopeOpts.find(o => o.kind === 'section');
-    if (known) toast.info(`ขอบเขต "${org.labelOf(scope.kind, scope.value)}" อยู่นอกสังกัดของคุณ — สลับไปดูหน่วยของคุณแทน`);
+    if (known) toast.info(`${tr("ขอบเขต")} "${org.labelOf(scope.kind, scope.value)}" ${tr("อยู่นอกสังกัดของคุณ — สลับไปดูหน่วยของคุณแทน")}`);
     setScope(mine || first || PLANT);
   }, [orgReady, lines.length, scope, scopeKeyStr, org, sections, scopeOpts, setScope]);
 
@@ -483,7 +483,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
          ⇒ ไม่มีกะให้คำนวณ แล้วบอร์ดไม่ขึ้นเลย) · เดือนที่มีทั้งคู่ = ค่าระบบ **จอต้องเขียนว่าทับกี่เดือน ห้ามเงียบ** · กติกา = `fillAutoWithManual()` (utils/obeyaYear.js) */
       const overlayManual = (k) => fillAutoWithManual({ autoMonths: autoMonthsOf(k.series), manEntries: man?.entries, year });
       const mixNote = (ov, autoLabel = 'ระบบคำนวณจากกะ') => (ov.fillN || ov.overlapN)
-        ? `⚡ ${autoLabel} ${ov.autoN} เดือน${ov.fillN ? ` · ✍️ เติมค่ากรอกมือ ${ov.fillN} เดือนที่ระบบไม่มีค่า` : ''}${ov.overlapN ? ` · ✍️ แท่งจางซ้อน = ค่ากรอกมือ ${ov.overlapN} เดือน (ทีมคิดเอง) เทียบค่าระบบ` : ''}`
+        ? `⚡ ${autoLabel} ${ov.autoN} ${tr("เดือน")}${ov.fillN ? ` · ✍️ ${tr("เติมค่ากรอกมือ")} ${ov.fillN} ${tr("เดือนที่ระบบไม่มีค่า")}` : ''}${ov.overlapN ? ` · ✍️ ${tr("แท่งจางซ้อน = ค่ากรอกมือ")} ${ov.overlapN} ${tr("เดือน (ทีมคิดเอง) เทียบค่าระบบ")}` : ''}`
         : '';
       let childMix = null;   // ⬆ เดือนที่เติมจากลูก { filled, covered, n, approx } (แม่มี KPI เอง)
       let mix = null;   // ที่มาตัวเลขแบบย่อ { autoN, fillN, overlapN } — ขึ้นบรรทัดรองของแผ่น (ไม่ใช่กล่องเตือน · user 09/10 "remark เยอะไป")
@@ -499,12 +499,12 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
         applyOverlay(k0, ov);
         def = { target_value: oeeTarget, direction: 'up' };
         const mix0 = mixNote(ov);
-        note = mix0 ? `${mix0} · เป้า A×P×Q จากทะเบียนเป้า OEE`
+        note = mix0 ? `${mix0} · ${tr("เป้า A×P×Q จากทะเบียนเป้า")} OEE`
           : !members.groups.length ? 'ขอบเขตนี้ไม่มีไลน์ผลิต — ไม่มี OEE ให้คำนวณ'
           : setGroups === members.groups.length && members.groups.length === 1
-            ? `เป้าจากทะเบียนเป้า OEE (A${tg[members.groups[0]].target_a ?? DEFAULT_APQ.a}×P${tg[members.groups[0]].target_p ?? DEFAULT_APQ.p}×Q${tg[members.groups[0]].target_q ?? DEFAULT_APQ.q})`
-            : setGroups ? `เป้าเฉลี่ย ${members.groups.length} กลุ่มไลน์ (ตั้งแล้ว ${setGroups} กลุ่ม · ที่เหลือใช้ 90×90×99)`
-              : `ยังไม่ตั้งเป้า OEE ของกลุ่มในขอบเขตนี้ — ใช้ค่ามาตรฐาน 90×90×99`;
+            ? `${tr("เป้าจากทะเบียนเป้า")} OEE (A${tg[members.groups[0]].target_a ?? DEFAULT_APQ.a}×P${tg[members.groups[0]].target_p ?? DEFAULT_APQ.p}×Q${tg[members.groups[0]].target_q ?? DEFAULT_APQ.q})`
+            : setGroups ? `${tr("เป้าเฉลี่ย")} ${members.groups.length} ${tr("กลุ่มไลน์ (ตั้งแล้ว")} ${setGroups} ${tr("กลุ่ม · ที่เหลือใช้")} 90×90×99)`
+              : `${tr("ยังไม่ตั้งเป้า OEE ของกลุ่มในขอบเขตนี้ — ใช้ค่ามาตรฐาน")} 90×90×99`;
       } else if (r.auto === 'ppm') {
         const ad = autoDefOf('ppm');
         def = ad ? { ...ad } : null;
@@ -514,7 +514,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
         if (!def && man?.def && (ov.fillN || ov.overlapN)) def = man.def;   // ไม่มีนิยาม auto:ppm ⇒ เป้า/ทิศจากนิยามกรอกมือของหน่วย
         const mixP = mixNote(ov);
         note = mixP ? mixP
-          : k.months ? `ของเสีย ${nf(k.ngQty)} ชิ้น (ไม่รวมงานทดลอง) · บันทึก ${nf(k.defectRows)} รายการ` : '';
+          : k.months ? `${tr("ของเสีย")} ${nf(k.ngQty)} ${tr("ชิ้น (ไม่รวมงานทดลอง) · บันทึก")} ${nf(k.defectRows)} ${tr("รายการ")}` : '';
       } else if (r.auto === 'safety') {
         /* Safety: ⚡ บันทึกเหตุการณ์หน้างาน (นับบาดเจ็บรายเดือน) = ค่าหลัก · ✍️ สรุปจากหน่วยงานความปลอดภัย (กรอกมือ · กลุ่ม→ส่วนงาน)
            เติมเฉพาะเดือนที่หน้างานไม่มีบันทึก (09/10 user: ทุกแถว auto กติกาเดียว "auto ชนะ" — เดิม 07/09 สรุปหน่วยงานชนะทั้งปี)
@@ -540,10 +540,10 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
           series.push({ k: SUMMARY_KEY, v: filled.length ? filled.reduce((a, p) => a + p.v, 0) : null, summary: true, kind: 'sum' });
           months = filled.length; sumKind = 'sum';
           def = manSec?.def || { target_value: 0, direction: 'down' }; unit = manSec?.unit || r.unit;
-          const parts = [`⚡ นับบาดเจ็บจากบันทึกหน้างาน ${fx.autoN} เดือน`];
-          if (fx.fillN) parts.push(`✍️ เติมสรุปจากหน่วยงานความปลอดภัย ${fx.fillN} เดือนที่หน้างานไม่มีบันทึก${manSec?.inherited ? ` (ค่าระดับ ${org.labelOf(manSec.at.kind, manSec.at.value)})` : ''}`);
-          if (fx.overlapN) parts.push(`✍️ แท่งจางซ้อน = สรุปหน่วยงาน ${fx.overlapN} เดือน เทียบบันทึกหน้างาน`);
-          if (!manSec?.def) parts.push(`เป้า 0 ครั้ง${members.names.size ? ' · เหตุที่ไม่ระบุไลน์ไม่ถูกนับในขอบเขตนี้' : ' · นับตามส่วนงานที่บันทึก'}`);
+          const parts = [`⚡ ${tr("นับบาดเจ็บจากบันทึกหน้างาน")} ${fx.autoN} ${tr("เดือน")}`];
+          if (fx.fillN) parts.push(`✍️ ${tr("เติมสรุปจากหน่วยงานความปลอดภัย")} ${fx.fillN} ${tr("เดือนที่หน้างานไม่มีบันทึก")}${manSec?.inherited ? ` (${tr("ค่าระดับ")} ${org.labelOf(manSec.at.kind, manSec.at.value)})` : ''}`);
+          if (fx.overlapN) parts.push(`✍️ ${tr("แท่งจางซ้อน = สรุปหน่วยงาน")} ${fx.overlapN} ${tr("เดือน เทียบบันทึกหน้างาน")}`);
+          if (!manSec?.def) parts.push(`${tr("เป้า 0 ครั้ง")}${members.names.size ? tr(' · เหตุที่ไม่ระบุไลน์ไม่ถูกนับในขอบเขตนี้') : tr(' · นับตามส่วนงานที่บันทึก')}`);
           note = parts.join(' · ');
         } else {
           series = monthKeys(year).map(k => ({ k, v: null, empty: true })).concat([{ k: SUMMARY_KEY, v: null, summary: true }]);
@@ -563,9 +563,9 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
           series = k.series; months = k.months; def = roll.def; unit = unitOf(roll.def) || unit;
           sumKind = k.effMode; sumApprox = k.approx || roll.approx; manual = true;
           const names = roll.children.map(c => c.label).join(' · ');
-          const partial = roll.partial.length ? ` · เดือนที่ลูกกรอกไม่ครบ: ${roll.partial.map(m => monthLabel(`${year}-${String(m).padStart(2, '0')}`)).join(' ')}` : '';
-          note = `⬆ รวมจาก ${roll.n} หน่วยลูก (${roll.combine === 'sum' ? 'ผลรวม' : 'เฉลี่ยไม่ถ่วงน้ำหนัก'}): ${names}${partial}`
-            + (roll.targetNote ? ` · ${roll.targetNote} — อยากตัดสินด้วยเป้าของระดับนี้ ให้ตั้ง KPI นี้ที่ ⚙️ (แผ่นรวมจะเปลี่ยนเป็นของระดับนี้เอง)` : '');
+          const partial = roll.partial.length ? ` · ${tr("เดือนที่ลูกกรอกไม่ครบ")}: ${roll.partial.map(m => monthLabel(`${year}-${String(m).padStart(2, '0')}`)).join(' ')}` : '';
+          note = `⬆ ${tr("รวมจาก")} ${roll.n} ${tr("หน่วยลูก")} (${roll.combine === 'sum' ? tr('ผลรวม') : tr('เฉลี่ยไม่ถ่วงน้ำหนัก')}): ${names}${partial}`
+            + (roll.targetNote ? ` · ${roll.targetNote} — ${tr("อยากตัดสินด้วยเป้าของระดับนี้ ให้ตั้ง KPI นี้ที่ ⚙️ (แผ่นรวมจะเปลี่ยนเป็นของระดับนี้เอง")})` : '');
         } else if (ak) {
           const autoMonths = {};
           const autoDetail = {};   // 🔢 ตัวตั้ง/ตัวหารของเดือนนั้น (ชม.หยุด · ครั้ง · เครื่อง) — user 13/10 "อยากเห็น hrs. ด้วย" ทั้งที่ KPI เป็น %
@@ -583,7 +583,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
           if (ak.key === 'mbd' && autoSeries.machines > 0 && /%/.test(unitOf(man.def) || unit || '%')) hrPerPct = HOURS_PER_MONTH * autoSeries.machines / 100;
           sumKind = k.effMode; sumApprox = k.approx;
           manual = fx.autoN === 0;   // มีค่าระบบสักเดือน = แถวนี้ค่าหลักมาจากระบบ
-          note = `${mixNote(fx, 'ระบบคำนวณ')}${fx.autoN && !fx.fillN && !fx.overlapN ? `⚡ ระบบคำนวณ ${fx.autoN} เดือน` : ''} (ทีม ${mtnTeam.label} · สูตร KPI Guideline 2026 หน้า 10)`;
+          note = `${mixNote(fx, 'ระบบคำนวณ')}${fx.autoN && !fx.fillN && !fx.overlapN ? `⚡ ${tr("ระบบคำนวณ")} ${fx.autoN} ${tr("เดือน")}` : ''} (${tr("ทีม")} ${mtnTeam.label} · ${tr("สูตร KPI Guideline 2026 หน้า")} 10)`;
         } else {
           /* ⬆ แม่มี KPI นี้เอง: **แม่ชนะเป็นรายเดือน** — เดือนที่แม่กรอกใช้ค่าแม่ (ไม่บวกลูกซ้ำ) · เดือนที่แม่ไม่ได้กรอกเติมค่ารวมจากลูก
              (user 12/10 "แม่มี 2 ลูกกรอก 2 ไม่ใช่ 4") · เฉพาะนิยามของระดับนี้เอง — นิยามที่ตกทอดจากแม่ (inherited) ไม่เติม (ค่าเป็นของระดับนั้น) */
@@ -597,8 +597,8 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
             sumKind = k.effMode; sumApprox = k.approx || rollC.approx;
             childMix = { filled: fx.filled.length, covered: fx.covered.length, n: rollC.n, approx: rollC.approx };
             const mon = (m) => monthLabel(`${year}-${String(m).padStart(2, '0')}`);
-            note = `⬆ เดือนที่ระดับนี้ไม่ได้กรอก (${fx.filled.map(mon).join(' ')}) ใช้ค่า${rollC.combine === 'sum' ? 'รวม' : 'เฉลี่ย'}จาก ${rollC.n} หน่วยลูก: ${rollC.children.map(c => c.label).join(' · ')}`
-              + (fx.covered.length ? ` · เดือนที่กรอกเองแล้ว (${fx.covered.map(mon).join(' ')}) ใช้ค่าของระดับนี้ ไม่บวกของลูกซ้ำ` : '');
+            note = `⬆ ${tr("เดือนที่ระดับนี้ไม่ได้กรอก")} (${fx.filled.map(mon).join(' ')}) ${tr("ใช้ค่า")}${rollC.combine === 'sum' ? tr('รวม') : tr('เฉลี่ย')}${tr("จาก")} ${rollC.n} ${tr("หน่วยลูก")}: ${rollC.children.map(c => c.label).join(' · ')}`
+              + (fx.covered.length ? ` · ${tr("เดือนที่กรอกเองแล้ว")} (${fx.covered.map(mon).join(' ')}) ${tr("ใช้ค่าของระดับนี้ ไม่บวกของลูกซ้ำ")}` : '');
           } else {
             const k = manualMonthSeries({ entries: manEntries, year, summary });
             series = k.series; months = k.months; def = man?.def || null;
@@ -610,8 +610,8 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
       const fiB = man?.def ? fInfoB[(man.sharedDef || man.def).id] : null;
       if (fiB && !r.auto) note = note || formulaNoteText(fiB, monthNo, { labelOf: skLabelB, def: man.def });
       if (man?.shared === 'ok' && !r.auto) note = note || (isPlant(scope) ? 'ค่าโรงงาน — ทุกหน่วยที่ถือ KPI นี้ใช้ตัวเลขเดียวกัน' : 'ค่าโรงงาน (ทุกหน่วยใช้ตัวเลขเดียวกัน) · กรอกที่แท็บ ⚙️ ขอบเขต ทั้งโรงงาน');
-      else if (man?.shared === 'missing' && !r.auto) note = note || `KPI นี้ใช้ค่าโรงงาน แต่ยังไม่มีนิยามระดับ ทั้งโรงงาน ปี ${year} — สร้างที่แท็บ ⚙️ ขอบเขต ทั้งโรงงาน แล้วกรอกที่นั่น`;
-      else if (man?.inherited && !r.auto) note = note || `ค่าระดับ ${org.labelOf(man.at.kind, man.at.value)} (ยังไม่ตั้งแยกที่ขอบเขตนี้)`;
+      else if (man?.shared === 'missing' && !r.auto) note = note || `KPI ${tr("นี้ใช้ค่าโรงงาน แต่ยังไม่มีนิยามระดับ ทั้งโรงงาน ปี")} ${year} — ${tr("สร้างที่แท็บ ⚙️ ขอบเขต ทั้งโรงงาน แล้วกรอกที่นั่น")}`;
+      else if (man?.inherited && !r.auto) note = note || `${tr("ค่าระดับ")} ${org.labelOf(man.at.kind, man.at.value)} (${tr("ยังไม่ตั้งแยกที่ขอบเขตนี้")})`;
       const cur = series.find(p => p.k === monthKey) || null;
       /* 🗓️ เดือนที่เลือกยังไม่มีค่า (KPI กรอกมือกรอกหลังปิดเดือน — วันที่ 30 ก.ย. ทั้งบอร์ดจะ "—" หมดทั้งที่ ม.ค.–ส.ค. ครบ ·
          user ทัก 30/09 "ทีมงานกรอกครบแล้ว") ⇒ ใช้ค่าเดือนล่าสุดที่มี ≤ เดือนที่เลือก แล้ว**เขียนบนจอว่าเป็นเดือนไหน** (`valueKey`/`stale`)
@@ -630,7 +630,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
         const ins = fiB.inputs?.[useM] || {};
         const fmtIn = fmtInVar;
         const vars = fiB.formula?.vars || Object.keys(ins);
-        const parts = vars.map(v => `${(baseVarOf(v)?.label || v).split(' (')[0].replace(/^[^\wก-๙]+\s*/, '')} ${fmtIn(v, ins[v])}${fiB.inputSrc?.[useM]?.[v] === 'auto' ? ' ≈ทะเบียน' : ''}`);
+        const parts = vars.map(v => `${(baseVarOf(v)?.label || v).split(' (')[0].replace(/^[^\wก-๙]+\s*/, '')} ${fmtIn(v, ins[v])}${fiB.inputSrc?.[useM]?.[v] === 'auto' ? tr(' ≈ทะเบียน') : ''}`);
         fxSrc = `🧮 ${fiB.label} · ${parts.join(' ÷ ')}${useM !== mNo ? ` (${monthLabel(`${year}-${String(useM).padStart(2, '0')}`)})` : ''}`;
       }
       /* 💰 ยอดเงินคู่กัน (16/11 · user: "ให้ขึ้นยอดเงินคู่กัน") — KPI ที่เป็น % ของยอดขาย (100P) ใบบัญชีมียอดเงินคู่กันเสมอ
@@ -657,19 +657,19 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
         st = sc.status === 'good' ? ST.good : sc.status === 'warn' ? ST.warn : sc.status === 'bad' ? ST.bad : ST.unknown;
         const cb = sc.bars.commit_value != null ? ` · Commit ${fmtBar(sc.bars.commit_compare, sc.bars.commit_value, unit)}` : '';
         why = sc.bars.byPlan
-          ? `เทียบแผนสะสม ${monthLabel(`${year}-${String(mSel).padStart(2, '0')}`)} ${fmtBar(sc.bars.target_compare, sc.bars.target_value, unit)}${cb} (เป้าทั้งปี ${fmtBar(sc.bars.target_compare, sc.bars.annualTarget, unit)})`
-          : def?.score_by_plan ? `เดือนนี้ยังไม่มีแผนสะสม — เทียบเป้าทั้งปี ${fmtBar(sc.bars.target_compare, sc.bars.target_value, unit)}${cb}`
-          : `เทียบ Target ${fmtBar(sc.bars.target_compare, sc.bars.target_value, unit)}${cb}`;
+          ? `${tr("เทียบแผนสะสม")} ${monthLabel(`${year}-${String(mSel).padStart(2, '0')}`)} ${fmtBar(sc.bars.target_compare, sc.bars.target_value, unit)}${cb} (${tr("เป้าทั้งปี")} ${fmtBar(sc.bars.target_compare, sc.bars.annualTarget, unit)})`
+          : def?.score_by_plan ? `${tr("เดือนนี้ยังไม่มีแผนสะสม — เทียบเป้าทั้งปี")} ${fmtBar(sc.bars.target_compare, sc.bars.target_value, unit)}${cb}`
+          : `${tr("เทียบ")} Target ${fmtBar(sc.bars.target_compare, sc.bars.target_value, unit)}${cb}`;
       } else {
         why = r.auto && !fromDept ? 'ยังไม่ตั้งเป้า — ตั้งที่แท็บ ⚙️ ปุ่ม 🎯 ท้ายแถว' : 'ยังไม่ตั้งเป้า — ตั้งที่แท็บ ⚙️ ตอนแก้นิยาม KPI';
       }
-      if (stale) why = `ค่าล่าสุด ${monthLabel(valueKey)} (${monthLabel(monthKey)} ยังไม่กรอก) · ${why}`;
+      if (stale) why = `${tr("ค่าล่าสุด")} ${monthLabel(valueKey)} (${monthLabel(monthKey)} ${tr("ยังไม่กรอก")}) · ${why}`;
       const curFilled = value != null && !!series.find(p => p.k === valueKey)?.manualFill;
       const curDetail = value != null ? (series.find(p => p.k === valueKey)?.detail || null) : null;   // ที่มาของเลขเดือนที่โชว์ (แถว auto ช่าง)
       const curMan = value != null ? (series.find(p => p.k === valueKey)?.man ?? null) : null;   // ✍️ ค่ากรอกมือของเดือนที่โชว์ (ถูกค่าระบบทับ) — โชว์คู่กันให้เห็นความต่าง
       const curChild = value != null && !!series.find(p => p.k === valueKey)?.childFill;
-      if (curChild) why = `⬆ เดือนนี้ระดับนี้ไม่ได้กรอก ใช้ค่ารวมจากหน่วยลูก · ${why}`;
-      if (curFilled) why = `✍️ เดือนนี้ใช้ค่ากรอกมือ (ระบบไม่มีกะให้คำนวณ) · ${why}`;
+      if (curChild) why = `⬆ ${tr("เดือนนี้ระดับนี้ไม่ได้กรอก ใช้ค่ารวมจากหน่วยลูก")} · ${why}`;
+      if (curFilled) why = `✍️ ${tr("เดือนนี้ใช้ค่ากรอกมือ (ระบบไม่มีกะให้คำนวณ")}) · ${why}`;
       const ytd = series[12]?.v ?? null;
       const actualMonths = series.slice(0, 12).filter(p => p.v != null).length;
       /* 📈 คาดปลายปี = ผลจริง + แผนของเดือนที่เหลือ (30/09) — แผนอยู่ที่นิยามของขอบเขตนี้ (แถว auto = นิยาม auto:<key>)
@@ -728,7 +728,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
       return {
         id: `s-${e.id}`, icon: k.unknown ? '🦺' : k.icon, kind: 'safety', ev: e,
         /* ชนิดที่ไม่อยู่ในทะเบียน = safetyKind คืน short '?' ⇒ เดิมขึ้น "? — …" (UX audit 05/10) — เขียนเป็นคำแทน */
-        title: `${k.unknown ? 'ไม่ระบุชนิด' : k.short} — ${(e.description || '').trim() || '(ไม่มีรายละเอียด)'}`,
+        title: `${k.unknown ? tr('ไม่ระบุชนิด') : k.short} — ${(e.description || '').trim() || tr('(ไม่มีรายละเอียด)')}`,
         meta: [e.line_name, e.employee_name].filter(Boolean).join(' · ') || 'ยังไม่ปิดเคส',
         due: null, color: k.color, to: null, warn: !e.countermeasure ? 'ยังไม่ได้ลงมาตรการแก้ไข' : null,
       };
@@ -850,11 +850,11 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
       : f.status === 'warn' ? { t: '🟡 ถึงแค่ Commitment', c: 'var(--amber)' }
       : f.status === 'bad' ? { t: '❌ คาดไม่ถึงเป้า', c: 'var(--red)' } : null;
     const nAs = f.assumedMonths?.length || 0;
-    const assumeTxt = nAs ? (f.assumed?.kind === 'slope' ? `เดือนที่เหลือ ${nAs} ด. สมมติเพิ่มต่อเท่าอัตราเดิม` : `เดือนที่เหลือ ${nAs} ด. สมมติทำได้เท่าค่าเฉลี่ย ${nf(f.assumed?.rate, r.dec)}${r.unit ? ' ' + r.unit : ''}`) : '';
+    const assumeTxt = nAs ? (f.assumed?.kind === 'slope' ? `${tr("เดือนที่เหลือ")} ${nAs} ${tr("ด. สมมติเพิ่มต่อเท่าอัตราเดิม")}` : `${tr("เดือนที่เหลือ")} ${nAs} ${tr("ด. สมมติทำได้เท่าค่าเฉลี่ย")} ${nf(f.assumed?.rate, r.dec)}${r.unit ? ' ' + r.unit : ''}`) : '';
     return (
-      <div style={style} title={`ผลจริง ${f.actualMonths} เดือน${f.planMonths ? ` + แผน ${f.planMonths} เดือน` : ''}${nAs ? ` + ${assumeTxt}` : ''} รวมด้วยวิธี "${summaryShort(f.mode)}"${f.approx ? ' (โดยประมาณ — KPI นี้คิดจากยอดดิบทั้งปี แต่แผนไม่มียอดดิบ)' : ''}`}>
-        ปลายปี {f.approx || nAs ? '≈ ' : ''}<b style={{ color: 'var(--text2)' }}>{nf(f.value, r.dec)}{r.unit ? ' ' + r.unit : ''}</b>
-        {' '}({nAs ? `จริง ${f.actualMonths}+คาด ${nAs}${f.planMonths ? `+แผน ${f.planMonths}` : ''} ด.` : f.planMonths ? `จริง ${f.actualMonths}+แผน ${f.planMonths} ด.` : `จริงครบ ${f.actualMonths} ด.`})
+      <div style={style} title={`${tr("ผลจริง")} ${f.actualMonths} ${tr("เดือน")}${f.planMonths ? ` + ${tr("แผน")} ${f.planMonths} ${tr("เดือน")}` : ''}${nAs ? ` + ${assumeTxt}` : ''} ${tr("รวมด้วยวิธี")} "${summaryShort(f.mode)}"${f.approx ? tr(' (โดยประมาณ — KPI นี้คิดจากยอดดิบทั้งปี แต่แผนไม่มียอดดิบ)') : ''}`}>
+        {tr("ปลายปี")} {f.approx || nAs ? '≈ ' : ''}<b style={{ color: 'var(--text2)' }}>{nf(f.value, r.dec)}{r.unit ? ' ' + r.unit : ''}</b>
+        {' '}({nAs ? `${tr("จริง")} ${f.actualMonths}+${tr("คาด")} ${nAs}${f.planMonths ? `+${tr("แผน")} ${f.planMonths}` : ''} ${tr("ด.")}` : f.planMonths ? `${tr("จริง")} ${f.actualMonths}+${tr("แผน")} ${f.planMonths} ${tr("ด.")}` : `${tr("จริงครบ")} ${f.actualMonths} ${tr("ด.")}`})
         {verdict ? <> · <b style={{ color: verdict.c }}>{verdict.t}</b></> : (f.hasTarget ? '' : ' · ไม่มีเป้า')}
       </div>
     );
@@ -862,18 +862,18 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
   /* 🏷️ บรรทัดรอง = "ที่มาของตัวเลข" แบบย่อ — แทนกล่อง ⚠️ ยาวๆ ใต้แผ่น (09/10) · เต็มความอยู่ใน tooltip ไฟ + popup 🔍
      ⚡ N เดือน = ระบบคำนวณ · ✍️ N เดือน = เติมค่ากรอกมือ · ✍️ ทับ N = กรอกไว้แต่ค่าระบบชนะ · ค่าระดับแม่ติดชื่อระดับ */
   const srcLabel = (r) => {
-    if (r.roll) return `⬆ รวม ${r.roll.n} หน่วยลูก${r.roll.approx ? ' (≈ เฉลี่ย)' : ''}`;
-    if (r.childMix) return `✍️ กรอกมือ · ⬆ เติมจากลูก ${r.childMix.filled} เดือน${r.childMix.approx ? ' (≈)' : ''}`;
+    if (r.roll) return `⬆ ${tr("รวม")} ${r.roll.n} ${tr("หน่วยลูก")}${r.roll.approx ? tr(' (≈ เฉลี่ย)') : ''}`;
+    if (r.childMix) return `✍️ ${tr("กรอกมือ · ⬆ เติมจากลูก")} ${r.childMix.filled} ${tr("เดือน")}${r.childMix.approx ? ' (≈)' : ''}`;
     if (r.fxSrc) return r.fxSrc;   // 🧮 สูตร: บอกตัวตั้ง/ตัวหารจริง (09/11)
-    if (r.manual) return `✍️ กรอกมือ${r.atLabel ? ` (ระดับ ${r.atLabel})` : ''}`;
+    if (r.manual) return `✍️ ${tr("กรอกมือ")}${r.atLabel ? ` (${tr("ระดับ")} ${r.atLabel})` : ''}`;
     const m = r.mix;
-    if (m && (m.fillN || m.overlapN)) return `⚡ ${m.autoN} เดือน · ✍️ ${m.fillN} เดือน${m.overlapN ? ` · ทับ ${m.overlapN}` : ''}`;
+    if (m && (m.fillN || m.overlapN)) return `⚡ ${m.autoN} ${tr("เดือน")} · ✍️ ${m.fillN} ${tr("เดือน")}${m.overlapN ? ` · ${tr("ทับ")} ${m.overlapN}` : ''}`;
     return r.curFilled ? '✍️ กรอกมือ (เดือนนี้ไม่มีค่าระบบ)' : '⚡ ระบบคำนวณ';
   };
   /* ⚠️ เตือนบนแผ่น — เฉพาะเรื่องที่คนต้องลงมือ: ไฟเทา (ไม่มีค่า/ไม่มีเป้า) · ค่าโรงงานยังไม่มีนิยาม · กรอกไว้แต่ถูกค่าระบบทับ */
   const cardWarn = (r, kk) => {
     if (r.st === ST.unknown) return r.note ? <WarnNote k={kk} text={r.note} /> : (r.why || null);   // ไม่มีค่า/ไม่มีเป้า: มีเหตุผลยาว = กล่อง · ไม่มี = ข้อความสั้นตามเดิม
-    if (r.mix?.overlapN) return <WarnNote k={kk} tone="none" tvHide text={`✍️ ค่ากรอกมือซ้อน ${r.mix.overlapN} เดือน — กดแท่งดูทั้ง 2 ค่า`} title={`แท่งจางที่ซ้อนอยู่ = ค่ากรอกมือ ${r.mix.overlapN} เดือน (ทีมคิดเอง) · แท่งเต็ม = ค่าระบบ — กดแท่งเพื่อดูทั้ง 2 ค่า`} />;
+    if (r.mix?.overlapN) return <WarnNote k={kk} tone="none" tvHide text={`✍️ ${tr("ค่ากรอกมือซ้อน")} ${r.mix.overlapN} ${tr("เดือน — กดแท่งดูทั้ง 2 ค่า")}`} title={`${tr("แท่งจางที่ซ้อนอยู่ = ค่ากรอกมือ")} ${r.mix.overlapN} ${tr("เดือน (ทีมคิดเอง) · แท่งเต็ม = ค่าระบบ — กดแท่งเพื่อดูทั้ง 2 ค่า")}`} />;
     return null;
   };
   /* popup 🔍 = ที่ของรายละเอียดเต็ม (ไม่จำกัดบรรทัด): คาดปลายปี · เกณฑ์ที่ใช้ตัดสิน · ที่มา/หมายเหตุเต็ม */
@@ -951,29 +951,29 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
     const tiles = [];
     if (gap?.data) {
       const g = gap.data;
-      tiles.push(tile(`${g.label} เทียบ ${g.refName}`,
-        `${g.ok ? '✓' : '✗'} ${g.down ? (g.ok ? 'ต่ำกว่าเป้า' : 'เกินเป้า') : (g.ok ? 'สูงกว่าเป้า' : 'ต่ำกว่าเป้า')} ${fmtV(Math.abs(g.gap))}`,
-        `${fmtV(g.value)} vs ${g.cmpSym} ${fmtV(g.ref)}${g.gapPct != null ? ` (${Math.abs(g.gapPct).toFixed(1)}%)` : ''}${!g.ok && g.commitHit === true ? ' · ยังถึง Commitment' : ''}${g.commitHit === false ? ' · หลุด Commitment' : ''}`,
+      tiles.push(tile(`${g.label} ${tr("เทียบ")} ${g.refName}`,
+        `${g.ok ? '✓' : '✗'} ${g.down ? (g.ok ? tr('ต่ำกว่าเป้า') : tr('เกินเป้า')) : (g.ok ? tr('สูงกว่าเป้า') : tr('ต่ำกว่าเป้า'))} ${fmtV(Math.abs(g.gap))}`,
+        `${fmtV(g.value)} vs ${g.cmpSym} ${fmtV(g.ref)}${g.gapPct != null ? ` (${Math.abs(g.gapPct).toFixed(1)}%)` : ''}${!g.ok && g.commitHit === true ? tr(' · ยังถึง Commitment') : ''}${g.commitHit === false ? tr(' · หลุด Commitment') : ''}`,
         gap.tone, 'gap'));
     }
     if (fc?.data) {
       const f = fc.data;
       tiles.push(tile('คาดปลายปี', `${f.status === 'good' ? '✓' : f.status === 'bad' ? '✗' : f.status === 'warn' ? '△' : '?'} ${f.approx ? '≈ ' : ''}${fmtV(f.value)}`,
-        `${String(f.verdict).replace(/^[^ก-๙A-Za-z]+/, '')} · ถ้า${f.assume}`, fc.tone, 'fc'));
+        `${String(f.verdict).replace(/^[^ก-๙A-Za-z]+/, '')} · ${tr("ถ้า")}${f.assume}`, fc.tone, 'fc'));
     }
     if (nd?.data && nd.data.feasible === false) {
       /* 🧱 20/11 (user): ตัวเลขที่เป็นไปไม่ได้ (≥ 126 %/เดือน · MTTR ติดลบ) ไม่ใช่คำแนะนำ ⇒ การ์ดบอก "ไม่ทันแล้ว" + เหตุผลว่าชนขอบไหน */
       const n = nd.data;
-      const lim = n.limit?.kind === 'max' ? `เพดาน ${fmtV(n.limit.value)}` : `พื้น ${fmtV(n.limit?.value)}`;
-      tiles.push(tile(`เดือนที่เหลือ ${n.remaining} ด.`, '✗ ไม่ทัน Target ปีนี้',
+      const lim = n.limit?.kind === 'max' ? `${tr("เพดาน")} ${fmtV(n.limit.value)}` : `${tr("พื้น")} ${fmtV(n.limit?.value)}`;
+      tiles.push(tile(`${tr("เดือนที่เหลือ")} ${n.remaining} ${tr("ด.")}`, '✗ ไม่ทัน Target ปีนี้',
         n.kind === 'reach'
-          ? `Target ${fmtV(n.perMonth)} ${n.limit?.kind === 'max' ? 'เกิน' : 'ต่ำกว่า'}${lim} ที่เป็นไปได้`
-          : `ต่อให้ทำได้สุด${lim} ทุกเดือนที่เหลือ ทั้งปีดีสุดได้แค่ ${fmtV(n.bestCase)}`, 'bad', 'nd'));
+          ? `Target ${fmtV(n.perMonth)} ${n.limit?.kind === 'max' ? tr('เกิน') : tr('ต่ำกว่า')}${lim} ${tr("ที่เป็นไปได้")}`
+          : `${tr("ต่อให้ทำได้สุด")}${lim} ${tr("ทุกเดือนที่เหลือ ทั้งปีดีสุดได้แค่")} ${fmtV(n.bestCase)}`, 'bad', 'nd'));
     } else if (nd?.data) {
       const n = nd.data;
-      tiles.push(tile(`เดือนที่เหลือ ${n.remaining} ด.`,
-        n.kind === 'reach' ? (n.reached ? 'ถึงเป้าแล้ว' : `ต้องถึง ${fmtV(n.perMonth)}`) : (n.trivially ? 'ผ่านแน่แล้ว' : `${n.down ? '≤' : '≥'} ${fmtV(n.perMonth)} /เดือน`),
-        n.kind === 'reach' ? (n.reached ? 'ตัวสะสมถอยไม่ได้' : `เพิ่มอีก ${fmtV(Math.abs(n.add))} ภายใน ธ.ค.`) : (n.trivially ? 'เดือนที่เหลือได้ 0 ก็ยังผ่าน' : `${n.kind === 'sum' ? 'เดือนละ' : 'เฉลี่ยต่อเดือน'} ถึงจะถึง Target ทั้งปี`),
+      tiles.push(tile(`${tr("เดือนที่เหลือ")} ${n.remaining} ${tr("ด.")}`,
+        n.kind === 'reach' ? (n.reached ? 'ถึงเป้าแล้ว' : `${tr("ต้องถึง")} ${fmtV(n.perMonth)}`) : (n.trivially ? 'ผ่านแน่แล้ว' : `${n.down ? '≤' : '≥'} ${fmtV(n.perMonth)} /${tr("เดือน")}`),
+        n.kind === 'reach' ? (n.reached ? 'ตัวสะสมถอยไม่ได้' : `${tr("เพิ่มอีก")} ${fmtV(Math.abs(n.add))} ${tr("ภายใน ธ.ค.")}`) : (n.trivially ? 'เดือนที่เหลือได้ 0 ก็ยังผ่าน' : `${n.kind === 'sum' ? tr('เดือนละ') : tr('เฉลี่ยต่อเดือน')} ${tr("ถึงจะถึง Target ทั้งปี")}`),
         nd.tone, 'nd'));
     }
     return (
@@ -1019,7 +1019,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
       return { ...p, v: cv(p.v), vRaw: p.v, man: cv(p.man), manRaw: p.man ?? null, plan: cv(p.plan), proj: cv(p.proj), label: p.summary ? 'สรุป' : String(Number(String(p.k).slice(5, 7))),
         vLabel: `${show ? nf(cv(p.v), decL) : ''}${p.noteMark || ''}`, projLabel: p.proj != null && zoomed ? nf(cv(p.proj), decL) : '' };
     });
-    if (!data.some(p => p.v != null)) return <EmptyChart k={kk} text={`ยังไม่มีค่าสักเดือนในปี ${year}`} />;   // เหตุผลอยู่ที่ไฟ/ท้ายแผ่นแล้ว ไม่พิมพ์ซ้ำ
+    if (!data.some(p => p.v != null)) return <EmptyChart k={kk} text={`${tr("ยังไม่มีค่าสักเดือนในปี")} ${year}`} />;   // เหตุผลอยู่ที่ไฟ/ท้ายแผ่นแล้ว ไม่พิมพ์ซ้ำ
     /* แกน % ตรึง 0–100 เฉพาะเมื่อค่า/เป้าอยู่ในสเกลนั้นจริง — DL+OH 1.3% บนแกน 0–100 = เส้นแบนอ่านไม่ออก (user ทัก 30/09) */
     const peak = Math.max(...data.map(p => (p.v == null ? 0 : Number(p.v))), ...data.map(p => (p.man == null ? 0 : Number(p.man))), ...data.map(p => (p.proj == null ? 0 : Number(p.proj))), tgtL == null ? 0 : Number(tgtL));
     const isPct = unitL === '%' && peak > 25;
@@ -1051,10 +1051,10 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
           <YAxis domain={yDomain} ticks={focus ? focus.ticks : undefined} allowDataOverflow={!!focus} tick={axisTick} width="auto"
             tickFormatter={v => (Math.abs(v) >= 1000 ? `${Math.round(v / 1000)}k` : v)}
             label={axisUnitLabel(unitL, { fontSize: fs(9.5), lift: fs(6) })} />
-          <Tooltip {...chartTip} formatter={(v, name, item) => [`${nf(v, decL)}${unitL ? ' ' + unitL : ''}${name !== 'plan' && item?.payload?.detail ? ` · ${item.payload.detail}` : ''}`, name === 'plan' ? '📅 แผน' : name === 'man' ? '✍️ กรอกมือ (ทีมคิดเอง)' : name === 'proj' ? `📈 คาดการณ์ (${item?.payload?.projSrc === 'plan' ? 'ตามแผน' : 'ถ้าทำได้เท่าที่ผ่านมา'})` : `⚡ ${r.name}`]}
+          <Tooltip {...chartTip} formatter={(v, name, item) => [`${nf(v, decL)}${unitL ? ' ' + unitL : ''}${name !== 'plan' && item?.payload?.detail ? ` · ${item.payload.detail}` : ''}`, name === 'plan' ? '📅 แผน' : name === 'man' ? '✍️ กรอกมือ (ทีมคิดเอง)' : name === 'proj' ? `📈 ${tr("คาดการณ์")} (${item?.payload?.projSrc === 'plan' ? tr('ตามแผน') : tr('ถ้าทำได้เท่าที่ผ่านมา')})` : `⚡ ${r.name}`]}
             labelFormatter={(l, pl) => (pl?.[0]?.payload?.summary
-              ? `สรุปปี ${year} (${r.sumKind === 'sum' ? 'รวม' : 'เฉลี่ย'}${r.auto && !r.fromDept ? 'ถ่วงน้ำหนัก' : ''}ทั้งปี)`
-              : `${monthLabel(pl?.[0]?.payload?.k || '')} ${year}${pl?.[0]?.payload?.notes?.length ? ` · 📝 ${pl[0].payload.notes.length} หมายเหตุ` : ''} · กดเพื่อดูเดือนนี้ + หมายเหตุ`)} />
+              ? `${tr("สรุปปี")} ${year} (${r.sumKind === 'sum' ? tr('รวม') : tr('เฉลี่ย')}${r.auto && !r.fromDept ? tr('ถ่วงน้ำหนัก') : ''}${tr("ทั้งปี")})`
+              : `${monthLabel(pl?.[0]?.payload?.k || '')} ${year}${pl?.[0]?.payload?.notes?.length ? ` · 📝 ${pl[0].payload.notes.length} ${tr("หมายเหตุ")}` : ''} · ${tr("กดเพื่อดูเดือนนี้ + หมายเหตุ")}`)} />
           {/* เส้นเป้า (แดง) + เส้น Commitment (เหลือง) — user 30/09: "มาแต่เส้น target เส้น commitment ไม่เห็น" */}
           {tgtL != null && <ReferenceLine y={tgtL} stroke="var(--red)" strokeDasharray="4 3" label={{ value: zoomed ? `T ${nf(tgtL, decL)}` : 'T', position: 'insideTopRight', fontSize: fs(zoomed ? 10 : 9), fontWeight: 700, fill: 'var(--red)' }} />}
           {cmtL != null && cmtL !== tgtL && <ReferenceLine y={cmtL} stroke="var(--amber)" strokeDasharray="2 3" label={{ value: zoomed ? `C ${nf(cmtL, decL)}` : 'C', position: 'insideTopRight', fontSize: fs(zoomed ? 10 : 9), fontWeight: 700, fill: 'var(--amber)' }} />}
@@ -1112,8 +1112,8 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
             return (
               <div key={pt.key} style={{ minHeight: 0, display: 'flex', flexDirection: 'column' }}>
                 <div style={{ fontSize: fs(10.5), fontWeight: 800, color: 'var(--text2)', padding: '0 4px', whiteSpace: 'nowrap', overflow: 'clip', textOverflow: 'ellipsis' }}
-                  title={`${pt.label} · ${pt.expr}${pBars?.target_value != null ? ` · เป้าของตัวเอง ${fmtBar(pBars.target_compare, pBars.target_value, pt.unit)}` : ' · ยังไม่มีเป้าแยกส่วน (ตั้ง KPI สูตรนี้ในขอบเขตนี้ถึงจะมีเส้น T)'} · ▲ = สูงกว่าค่าเฉลี่ยปีของตัวเอง ในเดือนที่ KPI รวมหลุดเป้า = ตัวที่ดันให้เกิน`}>
-                  🔬 {pt.label} <span style={{ fontWeight: 500, color: 'var(--muted)' }}>· {pt.expr} · เฉลี่ย {avg == null ? '—' : nf(avg, dec2)}{pt.unit ? ' ' + pt.unit : ''}{pBars?.target_value != null ? ` · T ${fmtBar(pBars.target_compare, pBars.target_value, pt.unit)}` : ''} · ▲ ตัวที่ดัน</span>
+                  title={`${pt.label} · ${pt.expr}${pBars?.target_value != null ? ` · ${tr("เป้าของตัวเอง")} ${fmtBar(pBars.target_compare, pBars.target_value, pt.unit)}` : tr(' · ยังไม่มีเป้าแยกส่วน (ตั้ง KPI สูตรนี้ในขอบเขตนี้ถึงจะมีเส้น T)')} · ▲ = ${tr("สูงกว่าค่าเฉลี่ยปีของตัวเอง ในเดือนที่ KPI รวมหลุดเป้า = ตัวที่ดันให้เกิน")}`}>
+                  🔬 {pt.label} <span style={{ fontWeight: 500, color: 'var(--muted)' }}>· {pt.expr} · {tr("เฉลี่ย")} {avg == null ? '—' : nf(avg, dec2)}{pt.unit ? ' ' + pt.unit : ''}{pBars?.target_value != null ? ` · T ${fmtBar(pBars.target_compare, pBars.target_value, pt.unit)}` : ''} · ▲ {tr("ตัวที่ดัน")}</span>
                 </div>
                 <div style={{ flex: 1, minHeight: 0 }}>
                   <ResponsiveContainer width="100%" height="100%">
@@ -1121,7 +1121,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                       <XAxis dataKey="label" tick={axisTick} interval={0} />
                       <YAxis tick={axisTick} width="auto" label={axisUnitLabel(pt.unit, { fontSize: fs(9.5), lift: fs(6) })} />
-                      <Tooltip {...chartTip} formatter={(v, name, item) => [`${nf(v, dec2)}${pt.unit ? ' ' + pt.unit : ''}${item?.payload?.hot ? ' · ▲ สูงกว่าเฉลี่ย (เดือนที่รวมหลุดเป้า)' : ''}`, pt.label]} />
+                      <Tooltip {...chartTip} formatter={(v, name, item) => [`${nf(v, dec2)}${pt.unit ? ' ' + pt.unit : ''}${item?.payload?.hot ? tr(' · ▲ สูงกว่าเฉลี่ย (เดือนที่รวมหลุดเป้า)') : ''}`, pt.label]} />
                       {avg != null && <ReferenceLine y={avg} stroke="var(--muted)" strokeDasharray="4 3" label={{ value: `เฉลี่ย ${nf(avg, dec2)}`, position: 'insideTopRight', fontSize: fs(9), fill: 'var(--muted)' }} />}
                       {pBars?.target_value != null && <ReferenceLine y={pBars.target_value} stroke="var(--red)" strokeDasharray="4 3" label={{ value: `T ${nf(pBars.target_value, dec2)}`, position: 'insideTopLeft', fontSize: fs(9), fontWeight: 700, fill: 'var(--red)' }} />}
                       <Bar dataKey="v" fill={CELL_BAR_FILL} radius={[2, 2, 0, 0]} {...chartAnim()}>
@@ -1143,8 +1143,8 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
     const k = p?.k;
     if (!k || k === SUMMARY_KEY) return;
     setMonth(k);
-    const manTxt = p?.manRaw != null || p?.man != null ? ` · ✍️ กรอกมือ (ทีมคิดเอง) ${nf(p.manRaw ?? p.man, r.dec)}${r.unit ? ' ' + r.unit : ''}` : '';
-    setNoteFor({ rowKey: r.key, title: r.name, icon: r.icon, monthKey: k, valueText: p?.v == null ? '—' : `${manTxt ? '⚡ ระบบ ' : ''}${nf(p.v, r.dec)}${r.unit ? ' ' + r.unit : ''}${manTxt}` });
+    const manTxt = p?.manRaw != null || p?.man != null ? ` · ✍️ ${tr("กรอกมือ (ทีมคิดเอง")}) ${nf(p.manRaw ?? p.man, r.dec)}${r.unit ? ' ' + r.unit : ''}` : '';
+    setNoteFor({ rowKey: r.key, title: r.name, icon: r.icon, monthKey: k, valueText: p?.v == null ? '—' : `${manTxt ? tr('⚡ ระบบ ') : ''}${nf(p.v, r.dec)}${r.unit ? ' ' + r.unit : ''}${manTxt}` });
   };
 
   /* ── หัวแผ่นสรุป ── */
@@ -1159,7 +1159,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
     border: `1px solid ${active ? 'var(--accent)' : 'var(--border2)'}`,
   });
   const navBtn = { fontSize: 12, fontWeight: 800, padding: '4px 8px', borderRadius: 6, cursor: 'pointer', background: 'var(--bg3)', color: 'var(--text)', border: '1px solid var(--border2)' };
-  const overallLamp = toLamp(overall.st, `ประเมินได้ ${overall.known}/${overall.total} ช่อง`);
+  const overallLamp = toLamp(overall.st, `${tr("ประเมินได้")} ${overall.known}/${overall.total} ${tr("ช่อง")}`);
   const rowsUsed = Math.max(1, Math.ceil(cellsUsed(pageItems) / (cols || 1)));
   const sheetsBox = {
     display: 'grid', gap: GAP, alignContent: 'start', justifyContent: 'center',
@@ -1197,14 +1197,14 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
       {/* ขอบเขต = ผังองค์กรทุกมิติ (23/09) — 1 บอร์ดต่อ 1 ขอบเขต (ฝ่าย/ส่วนงาน/แผนก/กลุ่มไลน์/ไลน์/CC) · ชิป = เจาะลง/กลับขึ้นหนึ่งชั้น */}
       <OrgScopePicker ccOnly index={org} value={scope || PLANT} onChange={setScope} scopeSet={scopeSet} sections={sections} failed={orgFailed}
         width={230} title={tr('เลือกขอบเขตตามรหัส cost center (Obeya/KPI สรุปตามรหัส)')} />
-      {parentScope && <button onClick={() => setScope(parentScope)} style={pill(false)} title={`กลับขึ้น ${org.labelOf(parentScope.kind, parentScope.value)}`}>↑</button>}
+      {parentScope && <button onClick={() => setScope(parentScope)} style={pill(false)} title={`${tr("กลับขึ้น")} ${org.labelOf(parentScope.kind, parentScope.value)}`}>↑</button>}
       {childChips.map(c => (
-        <button key={c.key} onClick={() => setScope({ kind: c.kind, value: c.value })} style={pill(false)} title={`เจาะ ${org.labelOf(c.kind, c.value)}`}>{tr(c.label)}</button>
+        <button key={c.key} onClick={() => setScope({ kind: c.kind, value: c.value })} style={pill(false)} title={`${tr("เจาะ")} ${org.labelOf(c.kind, c.value)}`}>{tr(c.label)}</button>
       ))}
       <span className="sep" />
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
         <button onClick={() => shiftMonth(-1)} title={tr('เดือนก่อน')} style={navBtn}>◀</button>
-        <b style={{ fontSize: 13, minWidth: 92, textAlign: 'center' }} title={live ? 'เดือนปัจจุบัน — ตามวันจริง ข้ามเดือนแล้วเลื่อนเอง' : `ปักดูเดือน ${monthText} อยู่ — กด "สด" เพื่อกลับเดือนปัจจุบัน`}>
+        <b style={{ fontSize: 13, minWidth: 92, textAlign: 'center' }} title={live ? 'เดือนปัจจุบัน — ตามวันจริง ข้ามเดือนแล้วเลื่อนเอง' : `${tr("ปักดูเดือน")} ${monthText} ${tr("อยู่ — กด \"สด\" เพื่อกลับเดือนปัจจุบัน")}`}>
           {monthText}{live && <span style={{ marginLeft: 5, fontSize: 11, fontWeight: 800, color: 'var(--green)', verticalAlign: 'middle' }}>{tr('● สด')}</span>}
         </b>
         <button onClick={() => shiftMonth(1)} disabled={live} title={live ? tr('อยู่เดือนปัจจุบันแล้ว') : tr('เดือนถัดไป')} style={navBtn}>▶</button>
@@ -1234,7 +1234,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
         <PageHeader
           tabs={tabs} tab={tab} onTab={onTab}
           title={OBEYA_TITLE} icon={OBEYA_ICON}
-          sub={`KPI ที่ตั้งไว้ของ ${scopeText}${members.ccs.length && members.ccs.length <= 3 ? ` (cost ${members.ccs.join(' · ')})` : ''} · ${monthText} · ประเมินได้ ${overall.known}/${overall.total} ช่อง`}
+          sub={`KPI ${tr("ที่ตั้งไว้ของ")} ${scopeText}${members.ccs.length && members.ccs.length <= 3 ? ` (cost ${members.ccs.join(' · ')})` : ''} · ${monthText} · ${tr("ประเมินได้")} ${overall.known}/${overall.total} ${tr("ช่อง")}`}
           filters={controls}
           actions={(
             <>
@@ -1294,11 +1294,11 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
                 <Sheet k={k} cw={cw} icon={r.icon} title={r.name} statZoom goals={(kk, zoomedCopy) => goalsRow(r, kk, zoomedCopy)} footAside
                   /* 30/09 (user): เลขใหญ่ = ค่าเดือนที่เลือก · บรรทัดรอง = YTD บอกวิธีรวม+จำนวนเดือน · ท้ายแผ่น = คาดปลายปี
                      16/11 (user): กดชิปสถานะ = เปิด popup 🔍 (insight) ไม่ใช่พาไปหน้ากรอก — ปุ่ม "กรอก/ตั้งเป้า" ท้ายแผ่นยังไปหน้ากรอกเหมือนเดิม */
-                  sub={`${r.curChild ? '⬆ ค่ารวมจากหน่วยลูก (เดือนนี้ระดับนี้ไม่ได้กรอก)' : srcLabel(r)}${r.ytd != null
-                    ? ` · YTD ${nf(cvR(r, r.ytd), decR(r))}${unitR(r) ? ' ' + unitR(r) : ''} (${r.sumApprox ? '≈ เฉลี่ย' : summaryShort(r.sumKind)}${r.auto && !r.fromDept && !r.sumApprox && r.sumKind !== 'sum' ? 'ถ่วงน้ำหนัก' : ''} ${r.actualMonths} เดือน)`
+                  sub={`${r.curChild ? tr('⬆ ค่ารวมจากหน่วยลูก (เดือนนี้ระดับนี้ไม่ได้กรอก)') : srcLabel(r)}${r.ytd != null
+                    ? ` · YTD ${nf(cvR(r, r.ytd), decR(r))}${unitR(r) ? ' ' + unitR(r) : ''} (${r.sumApprox ? tr('≈ เฉลี่ย') : summaryShort(r.sumKind)}${r.auto && !r.fromDept && !r.sumApprox && r.sumKind !== 'sum' ? tr('ถ่วงน้ำหนัก') : ''} ${r.actualMonths} ${tr("เดือน")})`
                     : ''}${r.amtText ? ` · ${r.amtText}` : ''}`}
                   big={r.value == null ? '—' : nf(cvR(r, r.value), decR(r))}
-                  unit={r.value != null ? unitR(r) : ''} bigNote={r.value != null ? `เดือน ${monthLabel(r.valueKey)}${r.stale ? ' (ล่าสุด)' : ''}${r.curDetail ? ` · ${r.curDetail}` : ''}${r.curMan != null ? ` · ✍️ กรอกมือ ${nf(cvR(r, r.curMan), decR(r))}${unitR(r) ? ' ' + unitR(r) : ''}` : ''}` : ''} delta={r.delta}
+                  unit={r.value != null ? unitR(r) : ''} bigNote={r.value != null ? `${tr("เดือน")} ${monthLabel(r.valueKey)}${r.stale ? tr(' (ล่าสุด)') : ''}${r.curDetail ? ` · ${r.curDetail}` : ''}${r.curMan != null ? ` · ✍️ ${tr("กรอกมือ")} ${nf(cvR(r, r.curMan), decR(r))}${unitR(r) ? ' ' + unitR(r) : ''}` : ''}` : ''} delta={r.delta}
                   stat={toLamp(r.st, r.note && !(r.st === ST.unknown) ? `${r.why} · ${r.note}` : r.why)}
                   /* 🧹 ท้ายแผ่น ≤ 1 บรรทัด (user 09/10 "note เยอะไป กราฟเล็กลง") — เหลือเฉพาะ (ก) คาดปลายปีที่คำนวณได้ หรือ (ข) เตือนที่ต้องเห็น
                      (ไฟเทา/ค่ากรอกมือถูกทับ/ขอบเขตโรงงานยังไม่มีนิยาม) · Target/Commit/ที่มาเต็มๆ ย้ายไป tooltip ของไฟ + popup 🔍 (`zoomFoot`) */
@@ -1307,7 +1307,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
                      รวมเป็นปุ่มเดียวปลายแถบกรอง (`controls`) · ท้ายแผ่น = **ข้อมูลต้นทาง · <ชื่อหน้า>** เฉพาะ KPI ที่ระบบคำนวณ
                      (เดิม "เจาะดู" — ฟังเหมือนเปิด insight ทั้งที่พาไปหน้า raw data ของระบบ) */
                   zoom={false}
-                  link={r.to ? `ข้อมูลต้นทาง · ${srcPageName(r.to)}` : null}
+                  link={r.to ? `${tr("ข้อมูลต้นทาง")} · ${srcPageName(r.to)}` : null}
                   onLink={() => (r.to ? goTo(r.to) : onTab?.('table'))}>
                   {(kk, w, zoomedCopy) => rowChart(r, kk, w, zoomedCopy)}
                 </Sheet>
@@ -1318,11 +1318,11 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
               {/* ═══ งานที่ต้องตามแก้ — สิ่งที่ทำให้บอร์ดนี้เป็น Obeya ไม่ใช่แค่จอตัวเลข ═══ */}
               {has('todo') && (
               <Sheet k={k} cw={cw} icon="🚨" title={tr('งานที่ต้องตามแก้')}
-                sub={`action จากประชุมเช้า/ห้อง Obeya + เหตุความปลอดภัยที่ยังไม่ปิด${data?.actsMissing ? ' · ⚠ ยังไม่มีตารางติดตาม' : ''}`}
+                sub={`action ${tr("จากประชุมเช้า/ห้อง Obeya + เหตุความปลอดภัยที่ยังไม่ปิด")}${data?.actsMissing ? tr(' · ⚠ ยังไม่มีตารางติดตาม') : ''}`}
                 big={todo.length ? String(overdue || todo.length) : '0'} unit={overdue ? 'รายการเกินกำหนด' : 'รายการค้าง'}
                 stat={todo.length
-                  ? (overdue ? { status: 'bad', label: `เกินกำหนด ${overdue}`, why: `มี ${overdue} รายการเลยวันครบกำหนดแล้วยังไม่ปิด` }
-                    : { status: 'warn', label: `ค้าง ${todo.length}`, why: 'ยังมีงานค้างที่ยังไม่ปิด' })
+                  ? (overdue ? { status: 'bad', label: `${tr("เกินกำหนด")} ${overdue}`, why: `${tr("มี")} ${overdue} ${tr("รายการเลยวันครบกำหนดแล้วยังไม่ปิด")}` }
+                    : { status: 'warn', label: `${tr("ค้าง")} ${todo.length}`, why: 'ยังมีงานค้างที่ยังไม่ปิด' })
                   : { status: 'none', label: 'ไม่มีงานค้าง', why: 'ไม่มี action/เหตุความปลอดภัยที่ค้างในส่วนงานนี้ — ถ้าเพิ่งเปิดใช้ ตรวจว่ามีการบันทึกจริงไหม' }}
                 link="ไปหน้าประชุมเช้า" onLink={() => goTo('/morning-meeting')}>
                 <div style={{ height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 3, padding: '0 4px' }}>
@@ -1341,7 +1341,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
                         <span style={{ fontSize: fs(11), fontWeight: 600, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{x.title}</span>
                         {/* ป้ายท้ายแถวห้ามกินที่ชื่อเรื่องจนหาย (UX audit 05/10: ชื่อไลน์ยาว → หัวข้อกว้าง 0) */}
                         <span style={{ fontSize: fs(10), color: late ? 'var(--red)' : 'var(--muted)', whiteSpace: 'nowrap', maxWidth: '50%', overflow: 'hidden', textOverflow: 'ellipsis', flexShrink: 1 }}>
-                          {x.warn ? `⚠ ${x.warn}` : (x.due ? `ครบ ${x.due}` : x.meta)}
+                          {x.warn ? `⚠ ${x.warn}` : (x.due ? `${tr("ครบ")} ${x.due}` : x.meta)}
                         </span>
                       </div>
                     );
@@ -1367,9 +1367,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
       {!board && (
         <div className="tv-hide" style={{ marginTop: 8 }}>
           <InfoMore id="obeya-kpi-legend" label={tr('ที่มาของตัวเลข · ความหมายสี')} size={11}>
-            ตัวเลข = สะสมเดือนที่เลือก · ⚡ ระบบคำนวณจากกะที่ปิดแล้ว (OEE ถ่วงเวลารับภาระ · PPM = ของเสีย ÷ ยอดที่ผลิตทั้งหมด (สแกนดี + เสีย) × 10⁶ ไม่รวมงานทดลอง)
-            · ✍️ ต้องกรอกที่แท็บ ⚙️ ตั้งค่า KPI / กรอกผล · สีแท่ง/ไฟ = เกณฑ์ทางการ ถึง Target = เขียว · ถึงแค่ Commitment = เหลือง · ไม่ถึง = แดง · ไม่มีเป้าหรือไม่มีค่า = เทา (ไม่ใช่ผ่าน)
-            · แท่ง "สรุป" = {`เฉลี่ยถ่วงน้ำหนักทั้งปี (แถว ⚡) / เฉลี่ยเดือนที่กรอก (แถว ✍️)`} · กดแท่งเดือนเพื่อดูเดือนนั้น
+            {tr("ตัวเลข = สะสมเดือนที่เลือก · ⚡ ระบบคำนวณจากกะที่ปิดแล้ว (OEE ถ่วงเวลารับภาระ · PPM = ของเสีย ÷ ยอดที่ผลิตทั้งหมด (สแกนดี + เสีย) × 10⁶ ไม่รวมงานทดลอง) · ✍️ ต้องกรอกที่แท็บ ⚙️ ตั้งค่า KPI / กรอกผล · สีแท่ง/ไฟ = เกณฑ์ทางการ ถึง Target = เขียว · ถึงแค่ Commitment = เหลือง · ไม่ถึง = แดง · ไม่มีเป้าหรือไม่มีค่า = เทา (ไม่ใช่ผ่าน) · แท่ง \"สรุป")}" = {`${tr("เฉลี่ยถ่วงน้ำหนักทั้งปี (แถว ⚡) / เฉลี่ยเดือนที่กรอก (แถว")} ✍️)`} · {tr("กดแท่งเดือนเพื่อดูเดือนนั้น")}
           </InfoMore>
         </div>
       )}

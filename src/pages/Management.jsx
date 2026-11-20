@@ -508,8 +508,8 @@ export default function Management() {
       })) okRows++;
     }
     /* 🔴 เขียนได้ไม่ครบ = ลำดับบนฐานครึ่งๆ ⇒ ต้องบอก ไม่ใช่โหลดใหม่เงียบแล้วให้คนงงว่าทำไมไม่ขยับ */
-    if (okRows < changed.length) toast.error(`จัดลำดับสำเร็จ ${okRows}/${changed.length} ล็อต — รีเฟรชแล้วลองใหม่`);
-    else toast.success(`🧲 จัดลำดับกรอบแผนกะ${shiftKey === 'night' ? 'ดึก' : 'เช้า'}แล้ว (${changed.length} ล็อตขยับ)`);
+    if (okRows < changed.length) toast.error(`${tr("จัดลำดับสำเร็จ")} ${okRows}/${changed.length} ${tr("ล็อต — รีเฟรชแล้วลองใหม่")}`);
+    else toast.success(`🧲 ${tr("จัดลำดับกรอบแผนกะ")}${shiftKey === 'night' ? tr('ดึก') : tr('เช้า')}${tr("แล้ว")} (${changed.length} ${tr("ล็อตขยับ")})`);
     fetchLineProd(viewLineNames, selectedLine);
   }, [lineProdData, fetchLineProd, viewLineNames, selectedLine]);
 
@@ -693,7 +693,7 @@ export default function Management() {
     // ทำให้ผังโชว์คนอยู่จุดใหม่แต่ DB ยังเป็นจุดเดิม ไม่มีเตือน)
     const { error: eAssign } = await supabase.from('daily_production_logs').update({ assigned_line: finalAssign }).eq('id', logId);
     if (eAssign) {
-      toast.error('ย้ายจุดไม่สำเร็จ: ' + eAssign.message);
+      toast.error((tr('ย้ายจุดไม่สำเร็จ') + ': ') + eAssign.message);
       setWorkers(prev => prev.map(w => w.id === logId ? { ...w, assigned_line: prevAssign } : w));
       return;
     }
@@ -740,7 +740,7 @@ export default function Management() {
     if (finalAssign && droppedWorker?.employee_id) {
       const today = getWorkDate();
       const { error: stErr } = await supabase.from('operator_special_tasks').delete().eq('employee_id', droppedWorker.employee_id).eq('work_date', today);
-      if (stErr) toast.error('เข้าจุดงานแล้ว แต่ล้างงานนอกไลน์เดิมไม่สำเร็จ (จะขึ้นซ้ำ 2 ที่): ' + stErr.message);
+      if (stErr) toast.error((tr('เข้าจุดงานแล้ว แต่ล้างงานนอกไลน์เดิมไม่สำเร็จ (จะขึ้นซ้ำ 2 ที่') + '): ') + stErr.message);
       else setSpecialTasks(prev => prev.filter(t => t.employee_id !== droppedWorker.employee_id));
     }
 
@@ -767,7 +767,7 @@ export default function Management() {
 
           if (manCase === 1) {
             // Silent: log directly as approved, no notification
-            const desc = `${droppedWorker.employees?.name} ย้ายไปจุด ${station.station_name} (ไลน์เดิม / skill ผ่าน / มีประวัติ)`;
+            const desc = `${droppedWorker.employees?.name} ${tr("ย้ายไปจุด")} ${station.station_name} (${tr("ไลน์เดิม / skill ผ่าน / มีประวัติ")})`;
             /* 🔴 เช็คใบซ้ำไม่ได้ = **ไม่สร้างใบ** (fail-closed) — เดิมแกะแค่ `{ data: dup }`
                ⇒ อ่านพลาด = undefined = "ยังไม่มีใบ" ⇒ สร้างซ้ำทุกครั้งที่ย้ายจุดคนเดิม
                ขัดกฎ "ตัวสร้างอัตโนมัติต้องกันใบซ้ำ" (CLAUDE.md §4M ที่ระบบสร้างเอง)
@@ -775,7 +775,7 @@ export default function Management() {
             const dupRes = await supabase.from('four_m_logs')
               .select('id').eq('work_date', today).eq('category', 'Man').eq('description', desc).limit(1);
             if (dupRes.error) {
-              toast.error('เข้าจุดงานแล้ว แต่เช็คใบ 4M Man ซ้ำไม่ได้ จึงยังไม่บันทึกใบ (กันใบซ้ำ): ' + dupRes.error.message);
+              toast.error((tr('เข้าจุดงานแล้ว แต่เช็คใบ 4M Man ซ้ำไม่ได้ จึงยังไม่บันทึกใบ (กันใบซ้ำ') + '): ') + dupRes.error.message);
             } else if (!dupRes.data?.length) {
               // supabase-js ไม่ throw — ไม่เช็ค error = ประวัติย้ายจุด (4M Man) หายเงียบ
               const { error: m4Err } = await supabase.from('four_m_logs').insert([{
@@ -783,11 +783,11 @@ export default function Management() {
                 description: desc, requires_qa: false, status: 'approved',
                 change_subtype: 'same_ok',
               }]);
-              if (m4Err) toast.error('เข้าจุดงานแล้ว แต่บันทึกใบ 4M Man อัตโนมัติไม่สำเร็จ (ประวัติย้ายจุดจะขาด): ' + m4Err.message);
+              if (m4Err) toast.error((tr('เข้าจุดงานแล้ว แต่บันทึกใบ 4M Man อัตโนมัติไม่สำเร็จ (ประวัติย้ายจุดจะขาด') + '): ') + m4Err.message);
               fetchData();
             }
           } else {
-            const desc = `${droppedWorker.employees?.name} ${moveType === 'cross' ? 'ย้ายข้ามไลน์ไปจุด' : 'ย้ายไปจุด'} ${station.station_name}`;
+            const desc = `${droppedWorker.employees?.name} ${moveType === 'cross' ? tr('ย้ายข้ามไลน์ไปจุด') : tr('ย้ายไปจุด')} ${station.station_name}`;
             const mc = MAN_CASE_META[manCase];
             /* 🔴 กันใบซ้ำ (CLAUDE.md §4M ที่ระบบสร้างเอง ห้ามเข้าคิวอนุมัติเงียบๆ · QC 05/10)
                ลากคนเดิมเข้า-ออกจุดเดิมหลายรอบ = ใบรอเอกสารซ้อนในคิวทีละใบ — ใบที่ยังค้าง (คน+จุด+ไลน์เดียวกัน) มีอยู่แล้ว = ไม่ออกใหม่
@@ -797,7 +797,7 @@ export default function Management() {
               .in('status', ['pending_doc', 'pending', 'pending_qa']).limit(1);
             if (dupErr) {
               // เช็คซ้ำไม่ได้ = ไม่ออกใบ (เสี่ยงท่วมคิว) แต่ต้องบอกให้คนเปิดเอง — ห้ามเงียบ
-              toast.error('เข้าตำแหน่งแล้ว แต่ตรวจใบ 4M Man ซ้ำไม่สำเร็จ — ยังไม่ได้เปิดใบ ให้เปิดเองที่หน้า 4M: ' + dupErr.message);
+              toast.error((tr('เข้าตำแหน่งแล้ว แต่ตรวจใบ 4M Man ซ้ำไม่สำเร็จ — ยังไม่ได้เปิดใบ ให้เปิดเองที่หน้า') + ' 4M: ') + dupErr.message);
               return;
             }
             if (dupPend?.length) {
@@ -820,7 +820,7 @@ export default function Management() {
               .not('request_image_url', 'is', null)
               .order('work_date', { ascending: false }).limit(200);
             if (docRes.error) {
-              toast.error('เข้าตำแหน่งแล้ว แต่ตรวจเอกสาร OJT เดิมไม่สำเร็จ — ยังไม่ได้เปิดใบ ให้เปิดเองที่หน้า 4M: ' + docRes.error.message);
+              toast.error((tr('เข้าตำแหน่งแล้ว แต่ตรวจเอกสาร OJT เดิมไม่สำเร็จ — ยังไม่ได้เปิดใบ ให้เปิดเองที่หน้า') + ' 4M: ') + docRes.error.message);
               return;
             }
             const priorDoc = (docRes.data || []).find(l =>
@@ -842,9 +842,9 @@ export default function Management() {
               change_subtype: manCase === 2 ? 'cross_skill_ok' : 'cross_needs_ojt',
               created_by: (await supabase.auth.getUser()).data.user?.id ?? null,
             }]);
-            if (m4Err) toast.error('เข้าตำแหน่งแล้ว แต่เปิดใบ 4M Man ไม่สำเร็จ — ต้องเปิดเองที่หน้า 4M: ' + m4Err.message);
-            else if (req.needDoc) toast.info(`เข้าตำแหน่งแล้ว — ${req.reason}`);
-            else toast.success(`เข้าตำแหน่งแล้ว — ${req.reason} (ใบเข้าคิวอนุมัติแล้ว ไม่ต้องแนบ)`);
+            if (m4Err) toast.error((tr('เข้าตำแหน่งแล้ว แต่เปิดใบ 4M Man ไม่สำเร็จ — ต้องเปิดเองที่หน้า') + ' 4M: ') + m4Err.message);
+            else if (req.needDoc) toast.info(`${tr("เข้าตำแหน่งแล้ว")} — ${req.reason}`);
+            else toast.success(`${tr("เข้าตำแหน่งแล้ว")} — ${req.reason} (${tr("ใบเข้าคิวอนุมัติแล้ว ไม่ต้องแนบ")})`);
             fetchData();
           }
         }
@@ -991,7 +991,7 @@ export default function Management() {
       catch (err) { toast.error(err?.message || 'อ่านไฟล์รูปไม่ได้'); return; }
       const path = `request/${Date.now()}_${user?.id ?? 'anon'}.jpg`;
       const { error: upErr } = await supabase.storage.from('four-m-images').upload(path, resized, uploadOpts({ upsert: false, contentType: 'image/jpeg' }));
-      if (upErr) { toast.error('อัปโหลดรูปไม่สำเร็จ: ' + upErr.message); return; }
+      if (upErr) { toast.error((tr('อัปโหลดรูปไม่สำเร็จ') + ': ') + upErr.message); return; }
       const { data: urlData } = supabase.storage.from('four-m-images').getPublicUrl(path);
       request_image_url = urlData.publicUrl;
     }
@@ -1008,7 +1008,7 @@ export default function Management() {
       ...(autoApprove ? { status: 'approved' } : {}),
     };
     const { error } = await supabase.from('four_m_logs').insert([logData]);
-    if (error) { toast.error('เกิดข้อผิดพลาด: ' + error.message); return; }
+    if (error) { toast.error((tr('เกิดข้อผิดพลาด') + ': ') + error.message); return; }
     setShow4MModal(null);
     setLog4MForm({ category: 'Man', description: '', moveType: 'same', skillOk: false, hasHistory: false, subtype: 'change' });
     setReqImageFile(null); setReqImagePreview(null);
@@ -1038,7 +1038,7 @@ export default function Management() {
       { employee_id: empId, station_id: stationId, line_name: station?.line_name || selectedLine, updated_at: new Date().toISOString() },
       { onConflict: 'employee_id' }
     );
-    if (eHome) { toast.error('บันทึกสถานีประจำไม่สำเร็จ: ' + eHome.message); return; }
+    if (eHome) { toast.error((tr('บันทึกสถานีประจำไม่สำเร็จ') + ': ') + eHome.message); return; }
     setHomePositions(prev => ({ ...prev, [empId]: String(stationId) }));
   };
 
@@ -1050,7 +1050,7 @@ export default function Management() {
     if (!canAssignManpower) { toast.error('บัญชีของคุณไม่มีสิทธิ์จัดกำลังคน'); return; }
     const ok = await askConfirm({
       title: 'ยกเลิกตำแหน่งประจำ?',
-      message: `${worker.employees?.name || ''} (${worker.employees?.employee_id_code || '-'})\nจุด: ${station.station_name || '-'}\n\nการจัดวางคนของวันนี้ไม่เปลี่ยน — แค่ไม่มีตำแหน่งประจำ`,
+      message: `${worker.employees?.name || ''} (${worker.employees?.employee_id_code || '-'})\n${tr("จุด")}: ${station.station_name || '-'}\n\n${tr("การจัดวางคนของวันนี้ไม่เปลี่ยน — แค่ไม่มีตำแหน่งประจำ")}`,
       okLabel: 'ยกเลิกตำแหน่งประจำ',
       cancelLabel: 'ไม่ยกเลิก',
       danger: true,
@@ -1067,7 +1067,7 @@ export default function Management() {
   const acceptHomeSuggestion = async (worker, station, days) => {
     const ok = await askConfirm({
       title: 'ตั้งเป็นตำแหน่งประจำ?',
-      message: `${worker.employees?.name || ''} (${worker.employees?.employee_id_code || '-'})\nจุด: ${station.station_name || '-'}\n\nยืนจุดนี้ ${days} วันทำงานติดกัน (ไม่นับวันหยุด · วันที่ไม่มา · วันที่ไม่ได้วางจุด)`,
+      message: `${worker.employees?.name || ''} (${worker.employees?.employee_id_code || '-'})\n${tr("จุด")}: ${station.station_name || '-'}\n\n${tr("ยืนจุดนี้")} ${days} ${tr("วันทำงานติดกัน (ไม่นับวันหยุด · วันที่ไม่มา · วันที่ไม่ได้วางจุด")})`,
       okLabel: 'ตั้งเป็นตำแหน่งประจำ',
       cancelLabel: 'ไม่ตั้ง',
     });
@@ -1143,7 +1143,7 @@ export default function Management() {
       { employee_id: worker.employee_id, task_type: taskType, work_date: today },
       { onConflict: 'employee_id,work_date' }
     );
-    if (error) { toast.error('กำหนดงานนอกไลน์ไม่สำเร็จ: ' + error.message); return; }
+    if (error) { toast.error((tr('กำหนดงานนอกไลน์ไม่สำเร็จ') + ': ') + error.message); return; }
     setSpecialModal(null);
     fetchData();
   };
@@ -1152,7 +1152,7 @@ export default function Management() {
     const today = getWorkDate();
     const { error } = await supabase.from('operator_special_tasks').delete()
       .eq('employee_id', worker.employee_id).eq('work_date', today);
-    if (error) { toast.error('ยกเลิกงานนอกไลน์ไม่สำเร็จ: ' + error.message); return; }
+    if (error) { toast.error((tr('ยกเลิกงานนอกไลน์ไม่สำเร็จ') + ': ') + error.message); return; }
     fetchData();
   };
 
@@ -1253,7 +1253,7 @@ export default function Management() {
         )}
         {/* 🤝 ยืมตัวมาจากไลน์อื่นกะนี้ (line_helpers) */}
         {helperMap[worker.employee_id] && (
-          <div title={`ยืมตัวจากไลน์ ${allLines.find(l => l.id === worker.employees?.line_id)?.name || 'อื่น'} มาช่วยกะนี้`}
+          <div title={`${tr("ยืมตัวจากไลน์")} ${allLines.find(l => l.id === worker.employees?.line_id)?.name || tr('อื่น')} ${tr("มาช่วยกะนี้")}`}
             style={{ fontSize: 11, fontWeight: 800, color: 'var(--blue)', background: 'var(--blue-dim)', borderRadius: 'var(--r-xs)', padding: '1px 6px', flexShrink: 0, whiteSpace: 'nowrap' }}>
             ยืมตัว
           </div>
@@ -1285,7 +1285,7 @@ export default function Management() {
         onMouseMove={!isMobile ? onHoverMove : undefined}
         onMouseLeave={!isMobile ? onHoverLeave : undefined}
         style={{ position: 'relative', width: size, height: size, cursor: isMobile ? 'pointer' : (isLiveView ? 'grab' : 'default'), userSelect: 'none' }}
-        title={pend4m ? `⏳ รออนุมัติ 4M — ${pend4m.description}` : undefined}
+        title={pend4m ? `⏳ ${tr("รออนุมัติ")} 4M — ${pend4m.description}` : undefined}
       >
         {/* photo only — score & name live in the hover popup card + the fit badge below the pill */}
         {worker.employees?.image_url
@@ -1331,9 +1331,9 @@ export default function Management() {
     { key: 'man',     on: filterMan,     toggle: () => setFilterMan(v => !v),     label: 'MAN',     icon: '👤', color: 'var(--blue)', count: vacantStationCount, title: 'แสดง/ซ่อนจุดงาน (คน) บนผัง — ตัวเลข = จุดที่ยังไม่มีคนประจำ' },
     // Machine กับ Jig/Fixture โชว์ทีละชั้น — เปิดชั้นหนึ่ง = ปิดอีกชั้น (robot ติดจิ๊กปลายแขน วาดพร้อมกันหมุดทับกันจนอ่านไม่ออก)
     { key: 'machine', on: filterMachine, toggle: () => { setFilterMachine(v => !v); setFilterJig(false); }, label: 'MACHINE', icon: '⚙️', color: 'var(--amber)', count: 0,
-      title: `ชั้นเครื่องจักร (ทีม MTN) — ${mcSplit.machine.length} จุด${mcSplit.unknown.length ? `\n⚠️ ${mcSplit.unknown.length} จุดไม่อยู่ในทะเบียนเครื่อง/ไม่ระบุชนิด → วาดในชั้นนี้ (กรอบประ)` : ''}${kindErr ? `\n⚠️ โหลดชนิดอุปกรณ์ไม่ได้ (${kindErr}) — แยกชั้นไม่ได้` : ''}\nเปิดชั้นนี้ = ปิดชั้น Jig/Fixture` },
+      title: `${tr("ชั้นเครื่องจักร (ทีม")} MTN) — ${mcSplit.machine.length} ${tr("จุด")}${mcSplit.unknown.length ? `\n⚠️ ${mcSplit.unknown.length} ${tr("จุดไม่อยู่ในทะเบียนเครื่อง/ไม่ระบุชนิด → วาดในชั้นนี้ (กรอบประ")})` : ''}${kindErr ? `\n⚠️ ${tr("โหลดชนิดอุปกรณ์ไม่ได้")} (${kindErr}) — ${tr("แยกชั้นไม่ได้")}` : ''}\n${tr("เปิดชั้นนี้ = ปิดชั้น")} Jig/Fixture` },
     { key: 'jig',     on: filterJig,     toggle: () => { setFilterJig(v => !v); setFilterMachine(false); },     label: 'JIG',     icon: '🗜️', color: 'var(--blue)', count: 0,
-      title: `ชั้น Jig/Fixture (ทีม JIG MTN) — ${mcSplit.jig.length} จุด\nตัดสินจาก "ชนิดอุปกรณ์" ในทะเบียน (/equipment?tab=jig)\nเปิดชั้นนี้ = ปิดชั้นเครื่องจักร` },
+      title: `${tr("ชั้น Jig/Fixture (ทีม")} JIG MTN) — ${mcSplit.jig.length} ${tr("จุด\\nตัดสินจาก \"ชนิดอุปกรณ์\" ในทะเบียน (/equipment?tab=jig)\\nเปิดชั้นนี้ = ปิดชั้นเครื่องจักร")}` },
   ];
 
   // ปุ่มกรอง MAN/MACHINE + โชว์/ซ่อนป้าย — ใช้ทั้ง rail แนวตั้ง (desktop) และแถบแนวนอน (มือถือ)
@@ -1470,12 +1470,12 @@ export default function Management() {
           )}
           {mergedChildNames.length > 0 && (
             <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-              รวมไลน์ย่อย: {mergedChildNames.join(', ')}
+              {tr("รวมไลน์ย่อย")}: {mergedChildNames.join(', ')}
             </div>
           )}
           {mergedParentNames.length > 0 && (
             <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-              รวมจุดของไลน์หลัก: {mergedParentNames.join(', ')}
+              {tr("รวมจุดของไลน์หลัก")}: {mergedParentNames.join(', ')}
             </div>
           )}
         </div>
@@ -1519,7 +1519,7 @@ export default function Management() {
                 <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--accent)' }}>{familyManpower.total} {tr('คน')}</span>
               </div>
               <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-                ประจำสถานี · บนผังนี้ {familyManpower.onMap}{familyManpower.hiddenTotal ? ` · ไลน์ย่อย(ผังแยก) ${familyManpower.hiddenTotal}` : ''}
+                {tr("ประจำสถานี · บนผังนี้")} {familyManpower.onMap}{familyManpower.hiddenTotal ? ` · ${tr("ไลน์ย่อย(ผังแยก")}) ${familyManpower.hiddenTotal}` : ''}
               </div>
               {familyManpower.hidden.length > 0 && (
                 <div style={{ marginTop: 7, display: 'grid', gap: 4 }}>
@@ -1624,7 +1624,7 @@ export default function Management() {
                 ไม่งั้นบันทึกแล้วไม่โผล่ในลิสต์ที่กำลังดู แล้วเข้าใจว่าบันทึกไม่ติด (ห้ามเงียบ) */}
             {!isLiveView && (
               <div style={{ fontSize: 11, color: 'var(--blue)', marginBottom: 6, lineHeight: 1.5 }}>
-                ⚠️ กำลังดูย้อนหลัง — บันทึกใหม่จะลงวันที่ <b>{tr('วันนี้')}</b> {tr('ไม่โผล่ในรายการของ')} {boardDate}
+                ⚠️ {tr("กำลังดูย้อนหลัง — บันทึกใหม่จะลงวันที่")} <b>{tr('วันนี้')}</b> {tr('ไม่โผล่ในรายการของ')} {boardDate}
               </div>
             )}
             {LINE_4M_CATEGORIES.map(cat => (
@@ -1650,7 +1650,7 @@ export default function Management() {
             {/* ปุ่มคำสั่งมาตรฐาน `.pg-btn` (UI §6.35 · 09/11 feedback user "ปุ่มฝั่งนี้ยังไม่มาตรฐาน" — เดิมกล่องฟ้าวาดเอง)
                 ไอคอนเป็น SVG สีเดียวกับป้าย · ชื่อไลน์ยาวตัด … (เต็มชื่ออยู่ใน title) */}
             <button type="button" className="pg-btn" onClick={() => navigate(`/daily-report?line=${encodeURIComponent(selectedLine)}`)}
-              title={`Daily Report ของ ${selectedLine} — บันทึกผลผลิต / Downtime`}
+              title={`Daily Report ${tr("ของ")} ${selectedLine} — ${tr("บันทึกผลผลิต")} / Downtime`}
               style={{ width: '100%', cursor: 'pointer' }}>
               <Icon glyph="📊" size={15} />
               <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>Daily Report ({selectedLine})</span>
@@ -1672,7 +1672,7 @@ export default function Management() {
         )}
         {autoManAlert && (
           <div style={{ position: 'absolute', top: 14, left: '50%', transform: 'translateX(-50%)', background: 'var(--blue-line)', color: '#fff', padding: '8px 18px', borderRadius: 'var(--r-md)', fontSize: 12, fontWeight: 600, zIndex: 200, boxShadow: 'var(--shadow-float)', whiteSpace: 'nowrap' }}>
-            🆕 Man Change: {autoManAlert.name} {tr('— ประจำ')} {autoManAlert.station} เป็นครั้งแรก
+            🆕 Man Change: {autoManAlert.name} {tr('— ประจำ')} {autoManAlert.station} {tr("เป็นครั้งแรก")}
           </div>
         )}
         {/* มือถือ: ไม่มี rail ขวา → แถบปุ่มกรองแนวนอนชิดขวาบนแทน */}
@@ -1778,11 +1778,11 @@ export default function Management() {
             };
           }).filter(Boolean)).sort((a, b) => a.s - b.s);
           const multiSubLine = new Set(sessions.map(sx => sx.line_name)).size > 1;
-          const dtLabel = (w) => `⛔ ${multiSubLine && w.line_name ? `[${w.line_name}] ` : ''}${w.name}${w.machine ? ` @${w.machine}` : ''} ${fmtMs(w.s)}–${fmtMs(w.e)} (${w.min}น.)${w.desc ? ` — ${w.desc}` : ''}`;
+          const dtLabel = (w) => `⛔ ${multiSubLine && w.line_name ? `[${w.line_name}] ` : ''}${w.name}${w.machine ? ` @${w.machine}` : ''} ${fmtMs(w.s)}–${fmtMs(w.e)} (${w.min}${tr("น.")})${w.desc ? ` — ${w.desc}` : ''}`;
           // สาเหตุดีเลย์ของใบกัมบัง — เฉพาะ downtime ของ sub-line เดียวกับใบนั้น
           const dtTooltip = (a, b, lineName) => {
             const hits = dtWindows.filter(w => w.s < b && w.e > a && (!lineName || w.line_name === lineName));
-            return hits.length ? ` · สาเหตุที่เป็นไปได้: ${hits.map(dtLabel).join(' · ')}` : ' · ไม่มีบันทึก downtime ในช่วงนี้';
+            return hits.length ? ` · ${tr("สาเหตุที่เป็นไปได้")}: ${hits.map(dtLabel).join(' · ')}` : ' · ไม่มีบันทึก downtime ในช่วงนี้';
           };
 
           // แยกแถวตาม mat_no/product — ไม่ให้ product ต่างกัน (เช่น RH/LH) ปนแถวเดียวกัน
@@ -1884,23 +1884,23 @@ export default function Management() {
               if (!remainCards) return;
               const sLabel = shift === 'day' ? '☀️' : '🌙';
               if (isHistorical) {
-                chips.push({ color: 'var(--red)', text: `${sLabel} งานไม่จบในกะ ${remainCards} ใบ (~${remainQty.toLocaleString()} ชิ้น)` });
+                chips.push({ color: 'var(--red)', text: `${sLabel} ${tr("งานไม่จบในกะ")} ${remainCards} ${tr("ใบ")} (~${remainQty.toLocaleString()} ${tr("ชิ้น")})` });
                 return;
               }
               if (isFutureDay || projEndMs == null) return;
               if (noCt === remainCards) {
-                chips.push({ color: 'var(--muted)', text: `${sLabel} คาดการณ์ไม่ได้ — งานค้าง ${remainCards} ใบไม่มี cycle time` });
+                chips.push({ color: 'var(--muted)', text: `${sLabel} ${tr("คาดการณ์ไม่ได้ — งานค้าง")} ${remainCards} ${tr("ใบไม่มี")} cycle time` });
                 return;
               }
               if (shift === 'day') {
                 const projLabel = `~${fmtMs(projEndMs)}`;
                 const otMin = Math.ceil((projEndMs - DAY_REG_END) / 60000);
                 if (projEndMs <= DAY_REG_END) {
-                  chips.push({ color: 'var(--green)', text: `${sLabel} คาดเสร็จ ${projLabel} — จบในเวลาปกติ (ก่อน 17:30) ไม่ต้องเปิด OT` });
+                  chips.push({ color: 'var(--green)', text: `${sLabel} ${tr("คาดเสร็จ")} ${projLabel} — ${tr("จบในเวลาปกติ (ก่อน 17:30) ไม่ต้องเปิด")} OT` });
                 } else if (projEndMs <= DAY_OT_END) {
-                  chips.push({ color: 'var(--amber)', text: `${sLabel} คาดเสร็จ ${projLabel} — ⏰ ต้องเปิด OT ~${otMin} นาที (เลิก 17:30 → ผลิตถึง ${projLabel})` });
+                  chips.push({ color: 'var(--amber)', text: `${sLabel} ${tr("คาดเสร็จ")} ${projLabel} — ⏰ ${tr("ต้องเปิด")} OT ~${otMin} ${tr("นาที (เลิก 17:30 → ผลิตถึง")} ${projLabel})` });
                 } else {
-                  chips.push({ color: 'var(--red)', text: `${sLabel} คาดเสร็จ ${projLabel} — เกินกรอบ OT (20:00) ควรวางแผนยกยอด/เพิ่มกำลังผลิต` });
+                  chips.push({ color: 'var(--red)', text: `${sLabel} ${tr("คาดเสร็จ")} ${projLabel} — ${tr("เกินกรอบ OT (20:00) ควรวางแผนยกยอด/เพิ่มกำลังผลิต")}` });
                 }
                 return;
               }
@@ -1908,22 +1908,22 @@ export default function Management() {
               if (nowMs < NIGHT_REG_IN && !started) {
                 const normalFinish = finishFrom(Math.max(NIGHT_REG_IN, nowMs), workMs);
                 if (normalFinish <= FRAME_END) {
-                  chips.push({ color: 'var(--green)', text: `${sLabel} เข้างานปกติ 22:30 ทัน — คาดเสร็จ ~${fmtMs(normalFinish)} (ก่อน 08:00) ไม่ต้องเปิด OT` });
+                  chips.push({ color: 'var(--green)', text: `${sLabel} ${tr("เข้างานปกติ 22:30 ทัน — คาดเสร็จ")} ~${fmtMs(normalFinish)} (${tr("ก่อน 08:00) ไม่ต้องเปิด")} OT` });
                 } else {
                   const otFinish = finishFrom(Math.max(NIGHT_OT_IN, nowMs), workMs);
                   if (otFinish <= FRAME_END) {
-                    chips.push({ color: 'var(--amber)', text: `${sLabel} ⏰ ต้องเปิด OT เข้า 20:00 — คาดเสร็จ ~${fmtMs(otFinish)} (ถ้าเข้า 22:30 จะจบ ~${fmtMs(normalFinish)} เกิน 08:00)` });
+                    chips.push({ color: 'var(--amber)', text: `${sLabel} ⏰ ${tr("ต้องเปิด OT เข้า 20:00 — คาดเสร็จ")} ~${fmtMs(otFinish)} (${tr("ถ้าเข้า 22:30 จะจบ")} ~${fmtMs(normalFinish)} ${tr("เกิน")} 08:00)` });
                   } else {
-                    chips.push({ color: 'var(--red)', text: `${sLabel} 🚨 เกินกำลังกะดึกแม้เข้า 20:00 (คาดเสร็จ ~${fmtMs(otFinish)}) — ควรวางแผนยกยอด/เพิ่มกำลัง` });
+                    chips.push({ color: 'var(--red)', text: `${sLabel} 🚨 ${tr("เกินกำลังกะดึกแม้เข้า 20:00 (คาดเสร็จ")} ~${fmtMs(otFinish)}) — ${tr("ควรวางแผนยกยอด/เพิ่มกำลัง")}` });
                   }
                 }
                 return;
               }
               const projLabel = `~${fmtMs(projEndMs)}`;
               if (projEndMs <= FRAME_END) {
-                chips.push({ color: 'var(--green)', text: `${sLabel} คาดเสร็จ ${projLabel} — จบภายในกะ (ก่อน 08:00)` });
+                chips.push({ color: 'var(--green)', text: `${sLabel} ${tr("คาดเสร็จ")} ${projLabel} — ${tr("จบภายในกะ (ก่อน")} 08:00)` });
               } else {
-                chips.push({ color: 'var(--red)', text: `${sLabel} คาดเสร็จ ${projLabel} — เกิน 08:00 ควรวางแผนยกยอดไปกะถัดไป` });
+                chips.push({ color: 'var(--red)', text: `${sLabel} ${tr("คาดเสร็จ")} ${projLabel} — ${tr("เกิน 08:00 ควรวางแผนยกยอดไปกะถัดไป")}` });
               }
             });
             return chips;
@@ -2002,7 +2002,7 @@ export default function Management() {
                   <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700 }}>{tr('Kanban เปิดอยู่:')}</span>
                   {matNoChips.map(([matNo, count]) => (
                     <span key={matNo} style={{ fontSize: 11, padding: '2px 9px', borderRadius: 'var(--r-pill)', fontWeight: 700, background: 'var(--blue-dim)', color: 'var(--blue)', fontFamily: 'monospace' }}>
-                      {matNo} · {count} ใบ
+                      {matNo} · {count} {tr("ใบ")}
                     </span>
                   ))}
                 </div>
@@ -2061,7 +2061,7 @@ export default function Management() {
                                 const widthPct = Math.min(100 - leftPct, (be - bs) * pctPerMs);
                                 if (widthPct <= 0) return null;
                                 return (
-                                  <div key={`brk-${pi}`} title={`${breakBandTitle(band, row.line || boardLine)} — ไลน์ไม่รองรับ KANBAN`}
+                                  <div key={`brk-${pi}`} title={`${breakBandTitle(band, row.line || boardLine)} — ${tr("ไลน์ไม่รองรับ")} KANBAN`}
                                     style={{
                                       position: 'absolute', top: 0, bottom: 0, left: `${leftPct}%`, width: `${widthPct}%`,
                                       background: 'repeating-linear-gradient(45deg, rgba(148,163,184,0.18) 0px, rgba(148,163,184,0.18) 4px, transparent 4px, transparent 8px)',
@@ -2113,12 +2113,12 @@ export default function Management() {
                             /* 🔗 "ใบฉันเลื่อนเพราะใคร" — ดู Dashboard.jsx */
                             const blame = blamedBy.get(orderKeyOf(o));
                             const blameText = blame
-                              ? ` · ⏴ ถูกเลื่อนเพราะใบ #${blame.root?.prod_no || blame.root?.mat_no || '—'} ค้าง (โทษได้ ${blame.blameMin} น. จากที่เลื่อนไป ${blame.pushedMin} น.)`
+                              ? ` · ⏴ ${tr("ถูกเลื่อนเพราะใบ")} #${blame.root?.prod_no || blame.root?.mat_no || '—'} ${tr("ค้าง (โทษได้")} ${blame.blameMin} ${tr("น. จากที่เลื่อนไป")} ${blame.pushedMin} ${tr("น.")})`
                               : '';
                             return (
                               <Fragment key={o.prod_no || oi}>
                               <div
-                                title={`${o.prod_no || ''} ${o.mat_no || ''} — ${o.qty}ชิ้น${o.is_backfill ? ' ⏪ยิงย้อนหลัง' : isLateDone ? ` ✓เสร็จ (ช้ากว่ากำหนด${Math.round((new Date(o.confirmed_at).getTime()-realEndMs)/60000)}นาที)` : isDelayed ? ` ⚠️ช้า${Math.round((nowMs - realEndMs) / 60000)}นาที ยังไม่ปิด — ใบถัดไปถูกดันไปต่อท้าย` : o.isDone ? ' ✓เสร็จ' : ` →${fmtMs(realEndMs)}`}${isOverCap ? ` 🔴 เป้าล้นกรอบวันงาน +${(overMs / 3600000).toFixed(1)} ชม. — ต้องยกยอดข้ามกะ/เพิ่มกำลังผลิต` : ''}${blameText}${causeText}`}
+                                title={`${o.prod_no || ''} ${o.mat_no || ''} — ${o.qty}${tr("ชิ้น")}${o.is_backfill ? tr(' ⏪ยิงย้อนหลัง') : isLateDone ? ` ✓${tr("เสร็จ (ช้ากว่ากำหนด")}${Math.round((new Date(o.confirmed_at).getTime()-realEndMs)/60000)}${tr("นาที")})` : isDelayed ? ` ⚠️${tr("ช้า")}${Math.round((nowMs - realEndMs) / 60000)}${tr("นาที ยังไม่ปิด — ใบถัดไปถูกดันไปต่อท้าย")}` : o.isDone ? tr(' ✓เสร็จ') : ` →${fmtMs(realEndMs)}`}${isOverCap ? ` 🔴 ${tr("เป้าล้นกรอบวันงาน")} +${(overMs / 3600000).toFixed(1)} ${tr("ชม. — ต้องยกยอดข้ามกะ/เพิ่มกำลังผลิต")}` : ''}${blameText}${causeText}`}
                                 style={{
                                   position: 'absolute', top: 3, bottom: 3, left: `${leftPct}%`, width: `${widthPct}%`, minWidth: 2,
                                   background: `${tint(sc, 'dim')}`, border: `1.5px solid ${sc}${o.isDone && !isLateDone ? 'cc' : (isDelayed || isLateDone) ? 'dd' : '88'}`,
@@ -2293,7 +2293,7 @@ export default function Management() {
         {ppeAlertsInView.length > 0 && (
           <div className="dt-alarm-banner" style={{ border: '1px solid var(--red-line)', borderRadius: 'var(--r-md)', padding: '8px 12px', marginBottom: 8, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 800, color: 'var(--red)' }}>
-              <span className="dt-alarm-icon">⛑</span> {tr('PPE ไม่ครบ')} {ppeAlertsInView.length} คน — ห้ามเข้าไลน์จนกว่าจะครบ
+              <span className="dt-alarm-icon">⛑</span> {tr('PPE ไม่ครบ')} {ppeAlertsInView.length} {tr("คน — ห้ามเข้าไลน์จนกว่าจะครบ")}
             </span>
             {ppeAlertsInView.map(p => (
               <span key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 8px', borderRadius: 'var(--r-md)', background: 'rgba(0,0,0,0.25)', border: '1px solid var(--red-line)' }}>
@@ -2639,7 +2639,7 @@ export default function Management() {
                             whiteSpace: 'nowrap', maxWidth: SUB_PILL_MAXW, overflow: 'hidden', textOverflow: 'ellipsis',
                           }}>
                             {alarms
-                              ? `${firstAlarm.dr_downtime_types?.name_th || 'Downtime'}${ongoing && elapsed != null ? ` ${elapsed}น.` : ''}`
+                              ? `${firstAlarm.dr_downtime_types?.name_th || 'Downtime'}${ongoing && elapsed != null ? ` ${elapsed}${tr("น.")}` : ''}`
                               : (mc?.machine_name || '')}
                           </div>
                           </div>
@@ -2655,7 +2655,7 @@ export default function Management() {
             <div style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24, padding: 32 }}>
               <div style={{ fontSize: 48, opacity: 0.25 }}>🏭</div>
               <div style={{ fontSize: 13, color: 'var(--muted)', textAlign: 'center' }}>
-                ยังไม่มีผังไลน์ —{' '}
+                {tr("ยังไม่มีผังไลน์")} —{' '}
                 <span style={{ color: 'var(--accent)', fontWeight: 600, cursor: 'default' }}>{tr('ตั้งค่าที่หน้า ตั้งค่าผังไลน์')}</span>
               </div>
               {workers.length > 0 && (
@@ -2678,7 +2678,7 @@ export default function Management() {
                         {s.count}<span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text2)', marginLeft: 3 }}>{tr('คน')}</span>
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-                        {Math.round(s.count / workers.length * 100)}{tr('% ของ')} {workers.length} คนวันนี้
+                        {Math.round(s.count / workers.length * 100)}{tr('% ของ')} {workers.length} {tr("คนวันนี้")}
                       </div>
                     </div>
                   ))}
@@ -2825,7 +2825,7 @@ export default function Management() {
                   )}
                   {detailSheet.worker.employees?.section && (
                     <span style={{ fontSize: 11, fontWeight: 700, color: '#a78bfa', background: 'rgba(167,139,250,0.13)', border: '1px solid rgba(167,139,250,0.35)', borderRadius: 'var(--r-xs)', padding: '2px 8px' }}>
-                      สังกัด: {detailSheet.worker.employees.section}
+                      {tr("สังกัด")}: {detailSheet.worker.employees.section}
                     </span>
                   )}
                   {detailSheet.stationName && (
@@ -2983,7 +2983,7 @@ export default function Management() {
 
               {/* Pool workers sorted by fit */}
               <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
-                พนักงานใน Pool ({sortedPool.length} คน) — เรียงตาม Fit Score
+                {tr("พนักงานใน")} Pool ({sortedPool.length} {tr("คน) — เรียงตาม")} Fit Score
               </div>
               <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {sortedPool.length === 0 && (
@@ -3121,7 +3121,7 @@ export default function Management() {
                   setPendingDocModal(null);
                   fetchData();
                 } catch (err) {
-                  toast.error('เกิดข้อผิดพลาด: ' + err.message);
+                  toast.error((tr('เกิดข้อผิดพลาด') + ': ') + err.message);
                 } finally {
                   setIsSavingDoc(false);
                 }
@@ -3508,7 +3508,7 @@ function PointDetailCard({ detail, alarms, onClose }) {
                 <div key={i} style={{ fontSize: 12, fontWeight: 700, color: '#fca5a5', lineHeight: 1.5 }}>
                   {d.dr_downtime_types?.name_th || 'Downtime'}
                   {d.description ? ` — ${d.description}` : ''}
-                  {ongoing && elapsed != null ? ` · ผ่านมา ${elapsed} นาที` : ''}
+                  {ongoing && elapsed != null ? ` · ${tr("ผ่านมา")} ${elapsed} ${tr("นาที")}` : ''}
                 </div>
               );
             })}

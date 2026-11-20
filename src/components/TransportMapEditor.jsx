@@ -93,7 +93,7 @@ export default function TransportMapEditor() {
       if (insE.length) { const { error } = await supabaseDR.from('transport_edges').insert(insE); if (error) throw error }
       for (const n of updN) { const { error } = await supabaseDR.from('transport_nodes').update({ ...pick(n, NODE_FIELDS), updated_by_name: fullName }).eq('id', n.id); if (error) throw error }
       for (const e of updE) { const { error } = await supabaseDR.from('transport_edges').update({ ...pick(e, EDGE_FIELDS), updated_by_name: fullName }).eq('id', e.id); if (error) throw error }
-    } catch (err) { toast.error('ย้อนไม่สำเร็จ: ' + err.message); await load(); return false }
+    } catch (err) { toast.error((tr('ย้อนไม่สำเร็จ') + ': ') + err.message); await load(); return false }
     nodesRef.current = snap.nodes; edgesRef.current = snap.edges
     setNodes(snap.nodes); setEdges(snap.edges)
     setSel(null); setEdgeFrom(null); setChainLast(null); setDrawHover(null)
@@ -387,8 +387,8 @@ export default function TransportMapEditor() {
           <button onClick={hist.undo} disabled={!hist.canUndo || hist.busy || busy} style={undoBtnStyle(hist.canUndo && !hist.busy && !busy)} title={tr('ย้อนกลับ (Ctrl+Z)')}>↩️ Undo</button>
           <button onClick={hist.redo} disabled={!hist.canRedo || hist.busy || busy} style={undoBtnStyle(hist.canRedo && !hist.busy && !busy)} title={tr('ทำซ้ำ (Ctrl+Y)')}>↪️ Redo</button>
           <span style={{ fontSize: 12, color: 'var(--muted)', marginLeft: 'auto' }}>
-            {nodes.length} {tr('จุด ·')} {edges.length} {tr('เส้น ·')} {graphStat.stops} {tr('จุดจอด')}{graphStat.isolated ? ` · ⚠ ${graphStat.isolated} จุดยังไม่เชื่อมถนน` : ''}
-            {mpu ? ` · 1 หน่วย ≈ ${mpu.toFixed(2)} ม.` : ' · ยังไม่ตั้งมาตราส่วน'}
+            {nodes.length} {tr('จุด ·')} {edges.length} {tr('เส้น ·')} {graphStat.stops} {tr('จุดจอด')}{graphStat.isolated ? ` · ⚠ ${graphStat.isolated} ${tr("จุดยังไม่เชื่อมถนน")}` : ''}
+            {mpu ? ` · 1 ${tr("หน่วย")} ≈ ${mpu.toFixed(2)} ${tr("ม.")}` : ' · ยังไม่ตั้งมาตราส่วน'}
           </span>
         </div>
       ) : (
@@ -396,7 +396,7 @@ export default function TransportMapEditor() {
       )}
       {canEdit && scaleMode && (
         <div style={{ fontSize: 12, color: '#f0abfc', background: 'rgba(217,70,239,0.1)', border: '1px solid rgba(217,70,239,0.4)', borderRadius: 'var(--r-md)', padding: '7px 11px' }}>
-          คลิก 2 จุดบนผังที่รู้ระยะจริง (เช่น ความกว้างช่องจอด/ความยาวไลน์) แล้วกรอกระยะเป็นเมตร — {scalePts.length}/2 จุด
+          {tr("คลิก 2 จุดบนผังที่รู้ระยะจริง (เช่น ความกว้างช่องจอด/ความยาวไลน์) แล้วกรอกระยะเป็นเมตร")} — {scalePts.length}/2 {tr("จุด")}
         </div>
       )}
       {canEdit && !scaleMode && (
@@ -526,7 +526,7 @@ export default function TransportMapEditor() {
               <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>{tr('✏️ แก้ไขถนน')}</div>
               <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>
                 {(nById[selEdge.a_node]?.name || 'จุด')} ↔ {(nById[selEdge.b_node]?.name || 'จุด')}<br />
-                ระยะ (หน่วยผัง) ≈ {edgeWeight(selEdge, nById).toFixed(1)}
+                {tr("ระยะ (หน่วยผัง")}) ≈ {edgeWeight(selEdge, nById).toFixed(1)}
               </div>
               <label style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--text2)', margin: '6px 0', cursor: 'pointer' }}>
                 <input type="checkbox" checked={selEdge.bidir === false} onChange={e => patchEdge(selEdge.id, { bidir: !e.target.checked })} style={{ width: 'auto' }} /> {tr('เดินทางเดียว (one-way')} {(nById[selEdge.a_node]?.name || 'A')}→{(nById[selEdge.b_node]?.name || 'B')})
@@ -549,11 +549,11 @@ export default function TransportMapEditor() {
           <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
             <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 20, width: 'min(94vw, 380px)' }}>
               <h3 style={{ margin: '0 0 10px', fontSize: 16, fontWeight: 900, color: 'var(--text)' }}>{tr('ตั้งมาตราส่วน')}</h3>
-              <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 10 }}>ระยะ 2 จุดที่เลือก = <b style={{ color: 'var(--text2)' }}>{unitDist.toFixed(2)}</b> {tr('หน่วยผัง')}</div>
+              <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 10 }}>{tr("ระยะ 2 จุดที่เลือก")} = <b style={{ color: 'var(--text2)' }}>{unitDist.toFixed(2)}</b> {tr('หน่วยผัง')}</div>
               <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)' }}>{tr('ระยะจริงของ 2 จุดนี้ (เมตร)')}</span>
               <input type="number" min="0" step="0.1" autoFocus value={scaleMeters} onChange={e => setScaleMeters(e.target.value)}
                 placeholder={tr('เช่น 25')} style={inp} />
-              {ok && <div style={{ fontSize: 12.5, color: 'var(--accent)', fontWeight: 700, marginTop: 8 }}>{tr('→ 1 หน่วยผัง ≈')} {(m / unitDist).toFixed(2)} {tr('ม. (ทั้งผังกว้าง ≈')} {(m / unitDist * 100).toFixed(0)} ม.)</div>}
+              {ok && <div style={{ fontSize: 12.5, color: 'var(--accent)', fontWeight: 700, marginTop: 8 }}>{tr('→ 1 หน่วยผัง ≈')} {(m / unitDist).toFixed(2)} {tr('ม. (ทั้งผังกว้าง ≈')} {(m / unitDist * 100).toFixed(0)} {tr("ม.")})</div>}
               <div style={{ display: 'flex', gap: 10, marginTop: 16, justifyContent: 'flex-end' }}>
                 <button onClick={() => setScalePts([])} style={{ padding: '8px 14px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontSize: 13, background: 'var(--bg2-surf)', color: 'var(--text2)', border: '1px solid var(--border)' }}>{tr('เลือกจุดใหม่')}</button>
                 <button onClick={() => ok && saveScale(m / unitDist)} disabled={!ok} style={{ padding: '8px 18px', borderRadius: 'var(--r-md)', cursor: ok ? 'pointer' : 'not-allowed', fontSize: 13, fontWeight: 700, background: ok ? 'var(--accent)' : 'var(--bg2)', color: ok ? 'var(--accent-ink)' : 'var(--muted)', border: 'none' }}>{tr('บันทึก')}</button>

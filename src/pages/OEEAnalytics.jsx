@@ -207,7 +207,7 @@ const KpiCard = ({ label, value, color, sub, calc, more, primary = false, unit =
                 marginTop: 5, padding: '2px 7px', borderRadius: 'var(--r-md)', cursor: 'pointer',
                 border: '1px solid var(--border2)', background: 'var(--bg3-surf)',
                 color: 'var(--muted)', fontSize: 11, fontWeight: 700,
-              }}>{open ? 'ย่อ' : `${MORE_MARK} อ่านเพิ่ม`}</button>
+              }}>{open ? 'ย่อ' : `${MORE_MARK} ${trI18n("อ่านเพิ่ม")}`}</button>
               {open && <div style={{ marginTop: 5 }}>{more}</div>}
             </>
           )}
@@ -443,14 +443,14 @@ export default function OEEAnalytics() {
     const want = urlParams.get('section');
     if (want && !sectionOptions.includes(want)) {
       setTdSection(''); setTdDept(''); setTdLine('');
-      toast.info(`ไม่มีสิทธิ์ดูส่วนงาน "${want}" ที่เจาะมา — แสดงทุกส่วนงานที่คุณเห็นได้แทน`);
+      toast.info(`${trI18n("ไม่มีสิทธิ์ดูส่วนงาน")} "${want}" ${trI18n("ที่เจาะมา — แสดงทุกส่วนงานที่คุณเห็นได้แทน")}`);
       return;
     }
     /* แผนก/ไลน์ที่เจาะมาก็ต้องมีในทะเบียนที่คนนี้เห็น — ไม่มี = เคลียร์แล้วบอก (ไม่ใช่กรองด้วยชื่อที่ไม่มี = จอว่างเงียบ) */
     const names = new Set(linesFull.map(l => l.name));
     const wDept = urlParams.get('dept'), wLine = urlParams.get('line');
-    if (wLine && !names.has(wLine)) { setTdLine(''); setSelLine(wDept && names.has(wDept) ? wDept : ''); toast.info(`ไม่พบไลน์ "${wLine}" ที่เจาะมาในทะเบียนที่คุณเห็นได้`); }
-    if (wDept && !names.has(wDept)) { setTdDept(''); setTdLine(''); setSelLine(''); toast.info(`ไม่พบแผนก/กลุ่มไลน์ "${wDept}" ที่เจาะมาในทะเบียนที่คุณเห็นได้`); }
+    if (wLine && !names.has(wLine)) { setTdLine(''); setSelLine(wDept && names.has(wDept) ? wDept : ''); toast.info(`${trI18n("ไม่พบไลน์")} "${wLine}" ${trI18n("ที่เจาะมาในทะเบียนที่คุณเห็นได้")}`); }
+    if (wDept && !names.has(wDept)) { setTdDept(''); setTdLine(''); setSelLine(''); toast.info(`${trI18n("ไม่พบแผนก/กลุ่มไลน์")} "${wDept}" ${trI18n("ที่เจาะมาในทะเบียนที่คุณเห็นได้")}`); }
   }, [linesFull, linesFull.length, sectionOptions, urlParams]);
 
   const { index: orgIdx } = useOrgScope(linesFull);
@@ -465,7 +465,7 @@ export default function OEEAnalytics() {
     return isScoped ? linesFull.map(l => l.name) : null;
   }, [tdLine, tdUnit, tdUnitLines, tdDept, tdSection, linesFull, parentChildrenMap, isScoped]);
 
-  const tdScopeLabel = tdLine || tdDept || (tdUnit ? `แผนก ${tdUnit}` : '') || tdSection || 'ทุกไลน์';
+  const tdScopeLabel = tdLine || tdDept || (tdUnit ? `${trI18n("แผนก")} ${tdUnit}` : '') || tdSection || 'ทุกไลน์';
 
   /* 🔴 ไลน์ที่ส่งให้แท็บ "เจาะลึก" ต้องเป็น array **ตัวเดิม** ตราบใดที่ค่ายังไม่เปลี่ยน
      เดิมเขียน `linesFull.filter(...)` ตรงใน JSX ⇒ array ใหม่ทุก render ⇒ `run` ในแผงนั้น
@@ -534,7 +534,7 @@ export default function OEEAnalytics() {
       if (!live()) return;
       if (sErr) {
         console.error('[OEEAnalytics] loadToday กะ:', sErr);
-        setTdLoadWarn(`โหลดข้อมูลกะไม่สำเร็จ: ${sErr.message || sErr} — ตัวเลขด้านล่างเป็นของรอบก่อนหน้า`);
+        setTdLoadWarn(`${trI18n("โหลดข้อมูลกะไม่สำเร็จ")}: ${sErr.message || sErr} — ${trI18n("ตัวเลขด้านล่างเป็นของรอบก่อนหน้า")}`);
         return;
       }
 
@@ -571,7 +571,7 @@ export default function OEEAnalytics() {
         ]);
         if (!live()) return;
         // ทะเบียนสินค้าโหลดไม่ได้ = ไม่รู้ CT/คู่ RH-LH ⇒ OEE สดเชื่อไม่ได้ ต้องบอก (เดิมเงียบ)
-        if (pErr) setTdLoadWarn(w => w || `โหลดทะเบียนสินค้า (CT/คู่ RH-LH) ไม่สำเร็จ: ${pErr.message || pErr}`);
+        if (pErr) setTdLoadWarn(w => w || `${trI18n("โหลดทะเบียนสินค้า (CT/คู่ RH-LH) ไม่สำเร็จ")}: ${pErr.message || pErr}`);
         const pm = {}, nm = {};
         (prod || []).forEach(p => {
           if (p.pair_mat_no) pm[p.mat_no] = p.pair_mat_no;
@@ -1454,7 +1454,7 @@ export default function OEEAnalytics() {
         <div style={{ background: 'var(--red-dim)', border: '1px solid var(--red-line)', borderRadius: 'var(--r-md)', padding: '9px 13px', marginBottom: 12, fontSize: 12.5, color: 'var(--red)', lineHeight: 1.6 }}>
           ⚠ <b>{trI18n('ตัวเลขบางส่วนโหลดไม่ครบ')}</b> — Downtime / ของเสีย / ยอดผลิต อาจต่ำกว่าความจริง
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>
-            {viewTab === 'today' ? tdLoadWarn : trLoadWarn} · ลองย่อช่วงวันให้สั้นลงแล้วกดโหลดใหม่
+            {viewTab === 'today' ? tdLoadWarn : trLoadWarn} · {trI18n("ลองย่อช่วงวันให้สั้นลงแล้วกดโหลดใหม่")}
           </div>
         </div>
       )}
@@ -1486,7 +1486,7 @@ export default function OEEAnalytics() {
 
             <span className="spacer" />
             <span className="filter-count">
-              อัปเดตล่าสุด : {lastUpdate ? lastUpdate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'}
+              {trI18n("อัปเดตล่าสุด")} : {lastUpdate ? lastUpdate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'}
             </span>
             <button onClick={() => { loadToday(); loadTdHistory(); }} style={{ ...s.tab(false) }} title={trI18n('โหลดใหม่')}>🔄</button>
             <button onClick={() => setAutoRefresh(v => !v)} style={s.tab(autoRefresh)}>
@@ -1508,7 +1508,7 @@ export default function OEEAnalytics() {
                 style={{ fontSize: 11, color: 'var(--muted)', margin: '-4px 0 8px' }}
                 title={LIVE_MIX_NOTE}
               >
-                🟢 รวมค่าสดของ {tdLiveCount} กะที่ยังไม่ปิด <MoreMark text={LIVE_MIX_NOTE} />
+                🟢 {trI18n("รวมค่าสดของ")} {tdLiveCount} {trI18n("กะที่ยังไม่ปิด")} <MoreMark text={LIVE_MIX_NOTE} />
               </div>
             )}
             <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -1529,7 +1529,7 @@ export default function OEEAnalytics() {
                       เดิมใช้ `METRIC_COLOR_FN` เกณฑ์ตายตัว ⇒ ตัวเลขเขียวทั้งที่ยังไม่ถึงเส้นประข้างๆ */}
                   <div style={{ fontSize: 26, fontWeight: 900, color: statusColor(statusOf(tdKpi[k], tdTarget[k])) }}>{tdKpi[k] ?? '—'}{tdKpi[k] != null ? '%' : ''}</div>
                   <MiniTrend data={tdHistoryGrouped} dataKey={k} color={METRIC_COLOR[k]} target={tdTarget[k]} metric={k.toUpperCase()} />
-                  <div style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'right' }}><span style={{ color: METRIC_COLOR[k] }}>╌╌</span> เส้นประ = เป้า {tdTarget[k]}%</div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'right' }}><span style={{ color: METRIC_COLOR[k] }}>╌╌</span> {trI18n("เส้นประ = เป้า")} {tdTarget[k]}%</div>
                 </div>
               ))}
             </div>
@@ -1541,7 +1541,7 @@ export default function OEEAnalytics() {
                 <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700 }}>{trI18n('OEE จริง — นับหยุดในแผนด้วย')}</div>
                 <div style={{ fontSize: 26, fontWeight: 900, color: tdKpi.strictOee != null ? oeeColor(tdKpi.strictOee) : 'var(--muted)' }}>{tdKpi.strictOee ?? '—'}{tdKpi.strictOee != null ? '%' : ''}</div>
                 <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                  ฐาน = เวลากะ − พัก (นับหยุดในแผนเป็นการสูญเสีย)
+                  {trI18n("ฐาน = เวลากะ − พัก (นับหยุดในแผนเป็นการสูญเสีย")})
                   {tdKpi.strictGapPts != null && tdKpi.strictGapPts > 0.05
                     ? <> · <span style={{ color: 'var(--amber)' }}>{trI18n('ต่ำกว่า OEE')} {tdKpi.strictGapPts.toFixed(1)} {trI18n('จุด')}</span></> : ''}
                 </div>
@@ -1555,7 +1555,7 @@ export default function OEEAnalytics() {
               <div style={{ flex: '1 1 150px', minWidth: 140 }}>
                 <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700 }}>{trI18n('TEEP — ใช้กำลังผลิตที่มีกี่ %')}</div>
                 <div style={{ fontSize: 26, fontWeight: 900, color: 'var(--text)' }}>{tdKpi.teep ?? '—'}{tdKpi.teep != null ? '%' : ''}</div>
-                <div style={{ fontSize: 11, color: 'var(--muted)' }}>ฐาน = ปฏิทิน 24 ชม. · {tdKpi.teepLines} {trI18n('ไลน์ · ยังไม่ได้ตั้งเป้า')}</div>
+                <div style={{ fontSize: 11, color: 'var(--muted)' }}>{trI18n("ฐาน = ปฏิทิน 24 ชม.")} · {tdKpi.teepLines} {trI18n('ไลน์ · ยังไม่ได้ตั้งเป้า')}</div>
               </div>
               <div style={{ flex: '2 1 260px', minWidth: 230 }}>
                 <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700, marginBottom: 4 }}>{trI18n('เวลาที่หายไปก่อนถึง OEE (ในกะ)')}</div>
@@ -1587,12 +1587,12 @@ export default function OEEAnalytics() {
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
                     {tdLiveSession && tdLiveSession.status !== 'closed'
-                      ? (tdLiveCalc?.noOutput ? `เปิดกะแล้ว ${tdLiveCalc.elapsedMin} นาที · ยังไม่ปิดใบงานแรก — ประเมิน P/Q ยังไม่ได้`
+                      ? (tdLiveCalc?.noOutput ? `${trI18n("เปิดกะแล้ว")} ${tdLiveCalc.elapsedMin} ${trI18n("นาที · ยังไม่ปิดใบงานแรก — ประเมิน P/Q ยังไม่ได้")}`
                         /* ผลิตแล้วแต่ชิ้นงานยังไม่ได้ตั้ง CT → ประเมินความเร็วไม่ได้ ห้ามโชว์ OEE 0% */
-                        : tdLiveCalc?.noCt ? `ผลิตแล้ว ${tdLiveCalc.produced} ชิ้น แต่ชิ้นงานยังไม่ได้ตั้ง Cycle Time — ประเมิน %P/OEE ไม่ได้ (ตั้งที่ Product Master: ${(tdLiveCalc.matsNoCt || []).slice(0, 3).join(', ')})`
-                        : tdLiveCalc?.qtyNoCt > 0 ? `ค่าสด — ⚠ มีชิ้นงานที่ยังไม่ตั้ง CT ${tdLiveCalc.qtyNoCt} ชิ้น (${(tdLiveCalc.matsNoCt || []).slice(0, 3).join(', ')}) → %P ต่ำกว่าจริง`
-                        : isLiveCalc ? `ค่าสด — คำนวณจากข้อมูล ณ ตอนนี้ (ยังไม่ปิดกะ) · ตัวเลขจริงยืนยันตอนปิดกะ`
-                                    : `รอข้อมูล — กะเพิ่งเปิด ยังคำนวณไม่ได้ (ต้องเดินอย่างน้อย ${LIVE_MIN_ELAPSED} นาที)`)
+                        : tdLiveCalc?.noCt ? `${trI18n("ผลิตแล้ว")} ${tdLiveCalc.produced} ${trI18n("ชิ้น แต่ชิ้นงานยังไม่ได้ตั้ง Cycle Time — ประเมิน %P/OEE ไม่ได้ (ตั้งที่")} Product Master: ${(tdLiveCalc.matsNoCt || []).slice(0, 3).join(', ')})`
+                        : tdLiveCalc?.qtyNoCt > 0 ? `${trI18n("ค่าสด — ⚠ มีชิ้นงานที่ยังไม่ตั้ง")} CT ${tdLiveCalc.qtyNoCt} ${trI18n("ชิ้น")} (${(tdLiveCalc.matsNoCt || []).slice(0, 3).join(', ')}) → %P ${trI18n("ต่ำกว่าจริง")}`
+                        : isLiveCalc ? `${trI18n("ค่าสด — คำนวณจากข้อมูล ณ ตอนนี้ (ยังไม่ปิดกะ) · ตัวเลขจริงยืนยันตอนปิดกะ")}`
+                                    : `${trI18n("รอข้อมูล — กะเพิ่งเปิด ยังคำนวณไม่ได้ (ต้องเดินอย่างน้อย")} ${LIVE_MIN_ELAPSED} ${trI18n("นาที")})`)
                       : 'ค่าที่บันทึกไว้ตอนปิดกะ'}
                   </div>
                 </div>
@@ -1681,7 +1681,7 @@ export default function OEEAnalytics() {
             <div onClick={() => setTdCmpOpen(o => !o)}
               style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', cursor: 'pointer', userSelect: 'none' }}>
               <span style={{ fontSize: 11, color: 'var(--muted)', transform: tdCmpOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s', display: 'inline-block' }}>▶</span>
-              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)' }}>{trI18n('วันนี้เทียบค่าเฉลี่ย')} {tdVsAvg.days ? `${tdVsAvg.days} วันก่อนหน้า` : ''}</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)' }}>{trI18n('วันนี้เทียบค่าเฉลี่ย')} {tdVsAvg.days ? `${tdVsAvg.days} ${trI18n("วันก่อนหน้า")}` : ''}</span>
               {!tdCmpOpen && (
                 <span style={{ fontSize: 11.5, color: 'var(--text2)', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                   {['oee', 'a', 'p', 'q'].map(k => {
@@ -1716,10 +1716,10 @@ export default function OEEAnalytics() {
                       {v.now ?? '—'}{v.now != null ? '%' : ''}
                     </div>
                     <div style={{ fontSize: 11, fontWeight: 700, color: up ? 'var(--green)' : dn ? 'var(--red)' : 'var(--muted)' }}>
-                      {v.diff == null ? 'เทียบไม่ได้' : `${up ? '▲ +' : dn ? '▼ ' : '● '}${v.diff} จุด`}
+                      {v.diff == null ? 'เทียบไม่ได้' : `${up ? '▲ +' : dn ? '▼ ' : '● '}${v.diff} ${trI18n("จุด")}`}
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                      เฉลี่ย {v.avg ?? '—'}{v.avg != null ? '%' : ''}
+                      {trI18n("เฉลี่ย")} {v.avg ?? '—'}{v.avg != null ? '%' : ''}
                     </div>
                   </div>
                 );
@@ -1790,8 +1790,7 @@ export default function OEEAnalytics() {
                     (เคสจริง 27/10 ทีม MTN: ราง Conveyor เสีย 50 นาที ลง 3 เครื่อง → จอเคยโชว์ 306 นาที = "ไลน์หยุด 5 ชม.") */}
                 {tdHasParallel && (
                   <NoticeBar tone="warn" style={{ marginBottom: 10 }}>
-                    ชุดนี้มี<b>{trI18n('ไลน์เครื่องขนาน')}</b> {trI18n('— เครื่องหยุดพร้อมกันหลายเครื่องนับเป็น')}<b>{trI18n('ไลน์หยุดครั้งเดียว')}</b> (หารจำนวนเลน)
-                    ตรงกับฐานเวลาของ %A ในหัวข้อ 1 · รวมนาทีที่พนักงานลงจริงทุกเครื่อง = <b>{tdDtByCause.rawTotal.toLocaleString()}</b> นาที-เครื่อง
+                    {trI18n("ชุดนี้มี")}<b>{trI18n('ไลน์เครื่องขนาน')}</b> {trI18n('— เครื่องหยุดพร้อมกันหลายเครื่องนับเป็น')}<b>{trI18n('ไลน์หยุดครั้งเดียว')}</b> ({trI18n("หารจำนวนเลน) ตรงกับฐานเวลาของ %A ในหัวข้อ 1 · รวมนาทีที่พนักงานลงจริงทุกเครื่อง")} = <b>{tdDtByCause.rawTotal.toLocaleString()}</b> {trI18n("นาที-เครื่อง")}
                   </NoticeBar>
                 )}
                 {tdDtByCause.rows.length === 0 ? (
@@ -1807,7 +1806,7 @@ export default function OEEAnalytics() {
                       {shown.map(d => {
                         const planned = d.category === 'planned';
                         return (
-                          <div key={d.name} title={`${d.name} — ${d.min} นาที (${d.pct}%) · กดเพื่อดูรายการ`}
+                          <div key={d.name} title={`${d.name} — ${d.min} ${trI18n("นาที")} (${d.pct}%) · ${trI18n("กดเพื่อดูรายการ")}`}
                             onClick={() => setTdDtDrill({ kind: 'cause', key: d.name, label: d.name, typeId: d.typeId })}
                             style={{ cursor: 'pointer' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, fontSize: 12, marginBottom: 3 }}>
@@ -1827,7 +1826,7 @@ export default function OEEAnalytics() {
                       {rest.length > 0 && (
                         <button onClick={() => setTdDtShowAll(v => !v)}
                           style={{ marginTop: 2, padding: '6px 10px', borderRadius: 'var(--r-md)', border: '1px dashed var(--border2)', background: 'transparent', color: 'var(--muted)', fontSize: 11.5, cursor: 'pointer', textAlign: 'center' }}>
-                          {tdDtShowAll ? 'ย่อเหลือ Top 8' : `อื่นๆ อีก ${rest.length} สาเหตุ · ${restMin.toLocaleString()} นาที (${restPct}%)`}
+                          {tdDtShowAll ? 'ย่อเหลือ Top 8' : `${trI18n("อื่นๆ อีก")} ${rest.length} ${trI18n("สาเหตุ")} · ${restMin.toLocaleString()} ${trI18n("นาที")} (${restPct}%)`}
                         </button>
                       )}
                     </div>
@@ -1843,7 +1842,7 @@ export default function OEEAnalytics() {
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {tdDtByPart.map((d, i) => (
-                      <div key={d.mat} title={`${d.part} — ${d.min} นาที (${d.pct}%) · กดเพื่อดูรายการ`}
+                      <div key={d.mat} title={`${d.part} — ${d.min} ${trI18n("นาที")} (${d.pct}%) · ${trI18n("กดเพื่อดูรายการ")}`}
                         onClick={() => setTdDtDrill({ kind: 'part', key: d.mat, label: d.part })}
                         style={{ cursor: 'pointer' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, fontSize: 12, marginBottom: 3 }}>
@@ -1886,14 +1885,13 @@ export default function OEEAnalytics() {
                         {tdDtDrill.kind === 'cause' ? '⏱ ' : '📦 '}{trI18n(tdDtDrill.label)}
                       </div>
                       <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>
-                        {tdDate} · {tdDrillRows.length} {trI18n('รายการ · รวม')} <b style={{ color: 'var(--blue)' }}>{Math.round(totMin).toLocaleString()}</b> นาทีที่ไลน์หยุด
+                        {tdDate} · {tdDrillRows.length} {trI18n('รายการ · รวม')} <b style={{ color: 'var(--blue)' }}>{Math.round(totMin).toLocaleString()}</b> {trI18n("นาทีที่ไลน์หยุด")}
                         {tdDtDrill.kind === 'part' && ' · เฉพาะนอกแผน'}
                       </div>
                       {/* 🔀 ไลน์เครื่องขนาน — ต้องบอกว่าทำไมผลรวมไม่เท่ากับการบวกเลขในคอลัมน์ ไม่งั้นคนอ่านว่าจอคำนวณผิด */}
                       {drillParallel && (
                         <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 3, lineHeight: 1.5 }}>
-                          🔀 <b>{trI18n('ไลน์เครื่องขนาน')}</b> — เครื่องหยุดพร้อมกันหลายเครื่อง = ไลน์หยุดครั้งเดียว ·
-                          นาทีในตารางคือ <b>{trI18n('นาที-เครื่อง')}</b> {trI18n('ที่พนักงานลงไว้ (รวม')} {Math.round(totRawMin).toLocaleString()} นาที)
+                          🔀 <b>{trI18n('ไลน์เครื่องขนาน')}</b> — {trI18n("เครื่องหยุดพร้อมกันหลายเครื่อง = ไลน์หยุดครั้งเดียว · นาทีในตารางคือ")} <b>{trI18n('นาที-เครื่อง')}</b> {trI18n('ที่พนักงานลงไว้ (รวม')} {Math.round(totRawMin).toLocaleString()} {trI18n("นาที")})
                         </div>
                       )}
                     </div>
@@ -1911,14 +1909,13 @@ export default function OEEAnalytics() {
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8, marginBottom: 7 }}>
                             <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text2)' }}>{trI18n('ย้อนหลัง 30 วัน')}</div>
                             <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-                              เกิด <b style={{ color: 'var(--text)' }}>{tdDrillHist.hitDays}</b> {trI18n('วัน ·')} <b style={{ color: 'var(--text)' }}>{tdDrillHist.count}</b> ครั้ง ·
-                              รวม <b style={{ color: 'var(--blue)' }}>{Math.round(tdDrillHist.total).toLocaleString()}</b> นาที
+                              {trI18n("เกิด")} <b style={{ color: 'var(--text)' }}>{tdDrillHist.hitDays}</b> {trI18n('วัน ·')} <b style={{ color: 'var(--text)' }}>{tdDrillHist.count}</b> {trI18n("ครั้ง · รวม")} <b style={{ color: 'var(--blue)' }}>{Math.round(tdDrillHist.total).toLocaleString()}</b> {trI18n("นาที")}
                             </div>
                           </div>
                           {/* แท่งรายวัน — วันที่เลือกอยู่เน้นสี · วันไม่เกิด = ตอเทาเตี้ย (ไม่ปล่อยว่างจนดูเหมือนวันหาย) */}
                           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 44 }}>
                             {tdDrillHist.days.map(d => (
-                              <div key={d.key} title={`${d.key} — ${Math.round(d.min).toLocaleString()} นาที`}
+                              <div key={d.key} title={`${d.key} — ${Math.round(d.min).toLocaleString()} ${trI18n("นาที")}`}
                                 style={{ flex: 1, minWidth: 3, borderRadius: '2px 2px 0 0',
                                   height: `${Math.max(3, (d.min / tdDrillHist.max) * 100)}%`,
                                   background: d.min > 0 ? (d.key === tdDate ? 'var(--amber)' : 'var(--blue)') : 'var(--border)',
@@ -1932,8 +1929,7 @@ export default function OEEAnalytics() {
                           </div>
                           {tdDrillHist.hitDays >= 10 && (
                             <div style={{ fontSize: 11.5, color: 'var(--amber)', marginTop: 7, lineHeight: 1.5 }}>
-                              ⚠ เกิด {tdDrillHist.hitDays} วันจาก 30 วัน = ปัญหาเรื้อรัง ไม่ใช่เหตุการณ์เดียว —
-                              ควรเปิดโปรเจคปรับปรุงที่ <b>/improvements</b> แทนการแก้ซ้ำทุกวัน
+                              ⚠ {trI18n("เกิด")} {tdDrillHist.hitDays} {trI18n("วันจาก 30 วัน = ปัญหาเรื้อรัง ไม่ใช่เหตุการณ์เดียว — ควรเปิดโปรเจคปรับปรุงที่")} <b>/improvements</b> {trI18n("แทนการแก้ซ้ำทุกวัน")}
                             </div>
                           )}
                         </>)}
@@ -2019,7 +2015,7 @@ export default function OEEAnalytics() {
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16, alignItems: 'stretch' }}>
         <KpiCard primary label={trI18n('OEE เฉลี่ย (= A × P × Q)')} value={kpi.oee}
           color={statusColor(statusOf(kpi.oee, trTarget.oee))}
-          sub={`${kpi.sessions} กะ · เป้า ≥ ${trTarget.oee}%`}
+          sub={`${kpi.sessions} ${trI18n("กะ · เป้า")} ≥ ${trTarget.oee}%`}
           calc={<>
             {kpi.a ?? '—'}% <span style={{ color: 'var(--muted)' }}>(A)</span> ×{' '}
             {kpi.p ?? '—'}% <span style={{ color: 'var(--muted)' }}>(P)</span> ×{' '}
@@ -2027,28 +2023,28 @@ export default function OEEAnalytics() {
             <span style={{ color: 'var(--muted)' }}>{trI18n('สามใบขวามือคือตัวประกอบของเลขนี้ ไม่ใช่ตัวเลขคนละเรื่อง')}</span>
           </>} />
         <KpiCard label="Availability (A)" value={kpi.a} color={statusColor(statusOf(kpi.a, trTarget.a))}
-          sub={`เป้า ≥ ${trTarget.a}% · % เวลาที่เครื่องพร้อม`}
+          sub={`${trI18n("เป้า")} ≥ ${trTarget.a}% · % ${trI18n("เวลาที่เครื่องพร้อม")}`}
           calc={<>
-            เวลารับภาระ <b>{kpi.netAvailMin.toLocaleString()}</b> {trI18n('น.')}<br />
-            − หยุดนอกแผน <b style={{ color: 'var(--blue)' }}>{kpi.unplannedMinTotal.toLocaleString()}</b> {trI18n('น.')}<br />
-            = เดินเครื่อง <b>{Math.max(0, kpi.netAvailMin - kpi.unplannedMinTotal).toLocaleString()}</b> น.
+            {trI18n("เวลารับภาระ")} <b>{kpi.netAvailMin.toLocaleString()}</b> {trI18n('น.')}<br />
+            − {trI18n("หยุดนอกแผน")} <b style={{ color: 'var(--blue)' }}>{kpi.unplannedMinTotal.toLocaleString()}</b> {trI18n('น.')}<br />
+            = {trI18n("เดินเครื่อง")} <b>{Math.max(0, kpi.netAvailMin - kpi.unplannedMinTotal).toLocaleString()}</b> {trI18n("น.")}
           </>} />
         <KpiCard label="Performance (P)" value={kpi.p} color={statusColor(statusOf(kpi.p, trTarget.p))}
-          sub={`เป้า ≥ ${trTarget.p}% · % ความเร็วผลิต`}
+          sub={`${trI18n("เป้า")} ≥ ${trTarget.p}% · % ${trI18n("ความเร็วผลิต")}`}
           calc={<>
             เวลาที่ควรใช้ตาม CT ÷ เวลาเดินเครื่อง<br />
             <span style={{ color: 'var(--muted)' }}>{trI18n('ผลิต')} {kpi.total.toLocaleString()} {trI18n('ชิ้น ใน')} {Math.max(0, kpi.netAvailMin - kpi.unplannedMinTotal).toLocaleString()} {trI18n('น.')}</span>
           </>} />
         <KpiCard label="Quality (Q)" value={kpi.q} color={statusColor(statusOf(kpi.q, trTarget.q))}
-          sub={`เป้า ≥ ${trTarget.q}% · % ชิ้นงานดี`}
+          sub={`${trI18n("เป้า")} ≥ ${trTarget.q}% · % ${trI18n("ชิ้นงานดี")}`}
           calc={<>
-            ของดี <b style={{ color: 'var(--green)' }}>{kpi.okQtyTotal.toLocaleString()}</b> {trI18n('ชิ้น')}<br />
-            ของเสีย <b style={{ color: 'var(--red)' }}>{kpi.ngQtyTotal.toLocaleString()}</b> {trI18n('ชิ้น')}<br />
-            = ผลิตจริง <b>{(kpi.okQtyTotal + kpi.ngQtyTotal).toLocaleString()}</b> ชิ้น
+            {trI18n("ของดี")} <b style={{ color: 'var(--green)' }}>{kpi.okQtyTotal.toLocaleString()}</b> {trI18n('ชิ้น')}<br />
+            {trI18n("ของเสีย")} <b style={{ color: 'var(--red)' }}>{kpi.ngQtyTotal.toLocaleString()}</b> {trI18n('ชิ้น')}<br />
+            = {trI18n("ผลิตจริง")} <b>{(kpi.okQtyTotal + kpi.ngQtyTotal).toLocaleString()}</b> {trI18n("ชิ้น")}
           </>} />
         {/* ผลิตรวม = ข้อเท็จจริง ไม่มีเป้าให้เทียบ ⇒ ตัวเลขสีปกติ ห้ามทาเขียว (statusTone กฎ 2) */}
         <KpiCard label={trI18n('ผลิตรวม')} value={kpi.total.toLocaleString()} unit=" ชิ้น"
-          color="var(--text)" sub={`${kpi.sessions} กะ · ยังไม่ตั้งเป้ารายช่วง`} />
+          color="var(--text)" sub={`${kpi.sessions} ${trI18n("กะ · ยังไม่ตั้งเป้ารายช่วง")}`} />
       </div>
 
       {/* ── OOE / TEEP — ต่างจาก OEE ที่ "ฐานเวลา" · เห็นเวลาที่หายไปกับแผน/ไม่ได้เปิดกะ (2026-08-04) ── */}
@@ -2066,18 +2062,18 @@ export default function OEEAnalytics() {
           calc={<>
             {/* ⚠️ ไม่ใช่ "เอา OEE ไปคูณเพิ่ม" — พีชคณิตยุบแล้วเป็น A×P×Q ชุดเดียวกับ OEE
                 เปลี่ยนแค่ตัวหารของ A (user ทัก 2026-08-20 ว่าคำอธิบายเดิมทำให้เข้าใจผิด) */}
-            เป็น <b>A × P × Q</b> {trI18n('ชุดเดียวกับ OEE — เปลี่ยนแค่ตัวหารของ A')}<br />
-            A = เดินเครื่อง ÷ <b>{trI18n('เวลากะทั้งหมด')} {kpi.shiftMinTotal.toLocaleString()}</b> น.
+            {trI18n("เป็น")} <b>A × P × Q</b> {trI18n('ชุดเดียวกับ OEE — เปลี่ยนแค่ตัวหารของ A')}<br />
+            A = {trI18n("เดินเครื่อง")} ÷ <b>{trI18n('เวลากะทั้งหมด')} {kpi.shiftMinTotal.toLocaleString()}</b> {trI18n("น.")}
             → <b>{kpi.a != null && kpi.shiftMinTotal > 0 ? (kpi.a * kpi.netAvailMin / kpi.shiftMinTotal).toFixed(1) : '—'}%</b>
             <span style={{ color: 'var(--muted)' }}> {trI18n('(OEE ใช้')} {kpi.a ?? '—'}%)</span><br />
             <span style={{ color: 'var(--muted)' }}>P {kpi.p ?? '—'}% · Q {kpi.q ?? '—'}{trI18n('% เหมือน OEE ทุกตัว')}</span>
           </>} />
         <KpiCard label="TEEP (Total Effective Equipment Performance)" value={kpi.teep}
           color="var(--text)"
-          sub={`ฐาน = ปฏิทิน 24 ชม. · ${kpi.teepLines} ไลน์ · รวม ${kpi.teepLineDays.toLocaleString()} วัน-ไลน์ · ยังไม่ได้ตั้งเป้า`}
+          sub={`${trI18n("ฐาน = ปฏิทิน 24 ชม.")} · ${kpi.teepLines} ${trI18n("ไลน์ · รวม")} ${kpi.teepLineDays.toLocaleString()} ${trI18n("วัน-ไลน์ · ยังไม่ได้ตั้งเป้า")}`}
           calc={<>
-            เป็น <b>A × P × Q</b> {trI18n('ชุดเดียวกับ OEE — เปลี่ยนแค่ตัวหารของ A')}<br />
-            A = เดินเครื่อง ÷ <b>{trI18n('ปฏิทิน')} {kpi.calMin.toLocaleString()}</b> น.
+            {trI18n("เป็น")} <b>A × P × Q</b> {trI18n('ชุดเดียวกับ OEE — เปลี่ยนแค่ตัวหารของ A')}<br />
+            A = {trI18n("เดินเครื่อง")} ÷ <b>{trI18n('ปฏิทิน')} {kpi.calMin.toLocaleString()}</b> {trI18n("น.")}
             → <b>{kpi.a != null && kpi.calMin > 0 ? (kpi.a * kpi.netAvailMin / kpi.calMin).toFixed(1) : '—'}%</b>
             <span style={{ color: 'var(--muted)' }}> {trI18n('(OEE ใช้')} {kpi.a ?? '—'}%)</span><br />
             <span style={{ color: 'var(--muted)' }}>P {kpi.p ?? '—'}% · Q {kpi.q ?? '—'}{trI18n('% เหมือน OEE ทุกตัว')}</span>
@@ -2091,22 +2087,22 @@ export default function OEEAnalytics() {
             </div>
             {/* ปฏิทินของแต่ละไลน์เริ่มนับวันที่มันเข้าระบบ ไม่ใช่วันเริ่มช่วง — ต้องบอก ไม่งั้นคนคิดว่านับเต็มช่วง */}
             <div style={{ color: 'var(--muted)', marginTop: 3 }}>
-              ปฏิทินเริ่มนับ<b> {trI18n('วันที่แต่ละไลน์เข้าระบบ')}</b> ไม่ใช่วันเริ่มช่วง
+              {trI18n("ปฏิทินเริ่มนับ")}<b> {trI18n('วันที่แต่ละไลน์เข้าระบบ')}</b> {trI18n("ไม่ใช่วันเริ่มช่วง")}
               {kpi.teepFirstDay && <> {trI18n('(ไลน์แรกสุด')} {kpi.teepFirstDay})</>} —
-              ช่วงก่อนหน้านั้นคือ “ยังไม่ได้ใช้ระบบ” ไม่ใช่ “ไลน์ว่าง”
+              {trI18n("ช่วงก่อนหน้านั้นคือ “ยังไม่ได้ใช้ระบบ” ไม่ใช่ “ไลน์ว่าง")}”
             </div>
             {/* ตัดอะไรออกจากตัวหารบ้าง — ต้องเห็น ไม่งั้นคนสงสัยว่าทำไมเลขไลน์ไม่ตรงกับที่เห็นในลิสต์ */}
             {(kpi.teepDupParents.length > 0 || kpi.teepUnreg.length > 0) && (
               <div style={{ color: 'var(--amber)', marginTop: 3 }}>
-                เปิดกะ {kpi.teepRan} {trI18n('ชื่อ → นับเป็นกำลังผลิต')} {kpi.teepLines} ไลน์
+                {trI18n("เปิดกะ")} {kpi.teepRan} {trI18n('ชื่อ → นับเป็นกำลังผลิต')} {kpi.teepLines} {trI18n("ไลน์")}
                 {kpi.teepDupParents.length > 0 && (
                   <div title={kpi.teepDupParents.join(' · ')}>
-                    − {kpi.teepDupParents.length} ไลน์แม่ที่ไลน์ลูกก็เปิดกะ (ของชิ้นเดียวกัน)
+                    − {kpi.teepDupParents.length} {trI18n("ไลน์แม่ที่ไลน์ลูกก็เปิดกะ (ของชิ้นเดียวกัน")})
                   </div>
                 )}
                 {kpi.teepUnreg.length > 0 && (
                   <div title={kpi.teepUnreg.join(' · ')}>
-                    − {kpi.teepUnreg.length} ชื่อที่ไม่อยู่ในทะเบียนไลน์ (เปิดกะด้วยชื่อเครื่อง)
+                    − {kpi.teepUnreg.length} {trI18n("ชื่อที่ไม่อยู่ในทะเบียนไลน์ (เปิดกะด้วยชื่อเครื่อง")})
                   </div>
                 )}
               </div>
@@ -2204,13 +2200,13 @@ export default function OEEAnalytics() {
       <div style={{ display: 'grid', gridTemplateColumns: gcol(hasMoney), gap: 16, alignItems: 'start' }}>
         {/* Downtime Pareto — ABC Analysis (ชื่อบนแกนเฉพาะกลุ่ม A · ที่เหลือดูที่ tooltip/ปุ่มขยาย) */}
         <div style={{ minWidth: 0 }}>
-          <ParetoAbcChart title={`Pareto — Downtime ${dtIncludePlanned ? 'ทุกประเภท' : 'นอกแผน'} รายประเภท (นาที)`}
+          <ParetoAbcChart title={`Pareto — Downtime ${dtIncludePlanned ? trI18n('ทุกประเภท') : trI18n('นอกแผน')} ${trI18n("รายประเภท (นาที")})`}
             records={dtRecords} dims={DT_DIMS} unit="นาที" focus={dtFocus}
             emptyText={dtIncludePlanned ? trI18n('ไม่มีข้อมูล Downtime') : trI18n('ไม่มี Downtime นอกแผนในช่วงนี้')}
             sectionStyle={s.section} titleStyle={s.title} />
           <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--muted)', marginTop: -8, marginBottom: 8, cursor: 'pointer' }}>
             <input type="checkbox" checked={dtIncludePlanned} onChange={e => setDtIncludePlanned(e.target.checked)} style={{ width: 'auto' }} />
-            รวม "หยุดตามแผน" ด้วย ({Math.round(dtPlannedMin).toLocaleString()} {trI18n('นาที)')}
+            {trI18n("รวม \"หยุดตามแผน\" ด้วย")} ({Math.round(dtPlannedMin).toLocaleString()} {trI18n('นาที)')}
             <span style={{ color: 'var(--muted)' }}>{trI18n('— ปกติไม่นับ เพราะไม่ใช่การสูญเสียที่ต้องแก้')}</span>
           </label>
         </div>
@@ -2230,7 +2226,7 @@ export default function OEEAnalytics() {
                 {fmtBaht(dtCost.baht)} <span style={{ fontSize: 12, fontWeight: 700 }}>{trI18n('บาท')}</span>
               </div>
               <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                {Math.round(dtCost.pricedMin).toLocaleString()} นาที · นาที/60 × activity rate (DL+DP+IDP+OH) ของ cost center ไลน์
+                {Math.round(dtCost.pricedMin).toLocaleString()} {trI18n("นาที · นาที/60 × activity rate (DL+DP+IDP+OH) ของ cost center ไลน์")}
               </div>
             </div>
             {dtCost.byType.length > 0 && (
@@ -2242,7 +2238,7 @@ export default function OEEAnalytics() {
                   <div key={t} role="button" tabIndex={0}
                     onClick={() => setDtFocus({ cat: t, measure: 'baht', n: Date.now() })}
                     onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDtFocus({ cat: t, measure: 'baht', n: Date.now() }); } }}
-                    title={`เจาะดู "${t}" — แยกตามเครื่อง/ไลน์/ชิ้นงาน/กะ/วัน`}
+                    title={`${trI18n("เจาะดู")} "${t}" — ${trI18n("แยกตามเครื่อง/ไลน์/ชิ้นงาน/กะ/วัน")}`}
                     style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12, color: 'var(--text2)', padding: '3px 6px', margin: '0 -6px', borderRadius: 6, cursor: 'pointer' }}
                     onMouseEnter={e => { e.currentTarget.style.background = 'var(--red-dim)'; }}
                     onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
@@ -2251,18 +2247,16 @@ export default function OEEAnalytics() {
                   </div>
                 ))}
                 <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 5, lineHeight: 1.55 }}>
-                  🔍 <b>{trI18n('คลิกแถวเพื่อเจาะ')}</b> — แยกตามเครื่อง/ไลน์/ชิ้นงาน/กะ/คนบันทึก/วัน (เห็นบาทรายแถวและรายการดิบ)
-                  · หรือเลื่อนลงไปที่ <b>Pareto</b> {trI18n('แล้วกดปุ่ม')} <b style={{ color: 'var(--accent)' }}>{trI18n('฿ บาท')}</b> เพื่อเรียงทั้งกราฟตามเงิน
+                  🔍 <b>{trI18n('คลิกแถวเพื่อเจาะ')}</b> — {trI18n("แยกตามเครื่อง/ไลน์/ชิ้นงาน/กะ/คนบันทึก/วัน (เห็นบาทรายแถวและรายการดิบ) · หรือเลื่อนลงไปที่")} <b>Pareto</b> {trI18n('แล้วกดปุ่ม')} <b style={{ color: 'var(--accent)' }}>{trI18n('฿ บาท')}</b> {trI18n("เพื่อเรียงทั้งกราฟตามเงิน")}
                 </div>
               </div>
             )}
           </div>
           {dtCost.noRate.length > 0 && (
             <div style={{ marginTop: 10, fontSize: 11.5, color: 'var(--amber)', background: 'var(--amber-dim)', border: '1px solid var(--amber-line)', borderRadius: 'var(--r-md)', padding: '8px 11px', lineHeight: 1.7 }}>
-              ⚠ ตีมูลค่าไม่ได้ {Math.round(dtCost.noRate.reduce((a, x) => a + x[1], 0)).toLocaleString()} นาที — ไลน์ยังไม่มี cost center หรือยังไม่ตั้ง activity rate
-              (ตั้งที่ <b>{trI18n('ผังองค์กร → แผง 💰 Activity Rate')}</b>) · ยอดบาทข้างบนจึงต่ำกว่าความจริง
+              ⚠ {trI18n("ตีมูลค่าไม่ได้")} {Math.round(dtCost.noRate.reduce((a, x) => a + x[1], 0)).toLocaleString()} {trI18n("นาที — ไลน์ยังไม่มี cost center หรือยังไม่ตั้ง activity rate (ตั้งที่")} <b>{trI18n('ผังองค์กร → แผง 💰 Activity Rate')}</b>) · {trI18n("ยอดบาทข้างบนจึงต่ำกว่าความจริง")}
               <div style={{ marginTop: 4, color: 'var(--muted)' }}>
-                {dtCost.noRate.slice(0, 8).map(([l, m]) => `${l} (${Math.round(m).toLocaleString()} น.)`).join(' · ')}{dtCost.noRate.length > 8 ? ' …' : ''}
+                {dtCost.noRate.slice(0, 8).map(([l, m]) => `${l} (${Math.round(m).toLocaleString()} ${trI18n("น.")})`).join(' · ')}{dtCost.noRate.length > 8 ? ' …' : ''}
               </div>
             </div>
           )}
@@ -2294,9 +2288,9 @@ export default function OEEAnalytics() {
                             background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '7px 11px' }}>
                 {defectCost.qtyPending > 0 && (
                   <div>
-                    ⏳ ในยอด "ทั้งหมด" มีของ<b>{trI18n('ต้องสงสัยที่ QA ยังไม่พิจารณา')} {defectCost.qtyPending.toLocaleString()} {trI18n('ชิ้น')}</b>
-                    {defectCost.pendingBaht > 0 && <> (≈ {fmtBaht(defectCost.pendingBaht)} บาท)</>}
-                    {' '}— <b>{trI18n('ยังไม่นับใน %Q')}</b> เพราะยังไม่รู้ว่าดีหรือเสีย · ถ้า QA ตัดสินว่าทำลาย %Q จะต่ำลงกว่าที่เห็นตอนนี้
+                    ⏳ {trI18n("ในยอด \"ทั้งหมด\" มีของ")}<b>{trI18n('ต้องสงสัยที่ QA ยังไม่พิจารณา')} {defectCost.qtyPending.toLocaleString()} {trI18n('ชิ้น')}</b>
+                    {defectCost.pendingBaht > 0 && <> (≈ {fmtBaht(defectCost.pendingBaht)} {trI18n("บาท")})</>}
+                    {' '}— <b>{trI18n('ยังไม่นับใน %Q')}</b> {trI18n("เพราะยังไม่รู้ว่าดีหรือเสีย · ถ้า QA ตัดสินว่าทำลาย %Q จะต่ำลงกว่าที่เห็นตอนนี้")}
                   </div>
                 )}
                 {defectCost.qtyCleared > 0 && (
@@ -2314,7 +2308,7 @@ export default function OEEAnalytics() {
                   <div key={t} role="button" tabIndex={0}
                     onClick={() => setDefFocus({ cat: t, measure: 'baht', n: Date.now() })}
                     onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDefFocus({ cat: t, measure: 'baht', n: Date.now() }); } }}
-                    title={`เจาะดู "${t}" — แยกตามไลน์/ชิ้นงาน/กะ/วัน`}
+                    title={`${trI18n("เจาะดู")} "${t}" — ${trI18n("แยกตามไลน์/ชิ้นงาน/กะ/วัน")}`}
                     style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12, color: 'var(--text2)', padding: '3px 6px', margin: '0 -6px', borderRadius: 6, cursor: 'pointer' }}
                     onMouseEnter={e => { e.currentTarget.style.background = 'var(--red-dim)'; }}
                     onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
@@ -2330,8 +2324,8 @@ export default function OEEAnalytics() {
             )}
             {defectCost.noCost.length > 0 && (
               <div style={{ marginTop: 10, fontSize: 11.5, color: 'var(--amber)', background: 'var(--amber-dim)', border: '1px solid var(--amber-line)', borderRadius: 'var(--r-md)', padding: '8px 11px', lineHeight: 1.7 }}>
-                ⚠ ยังตีมูลค่าไม่ได้ {defectCost.noCost.length} {trI18n('พาร์ท (')}{defectCost.noCost.reduce((a, x) => a + x[1], 0).toLocaleString()} ชิ้น) — ยอดบาทข้างบนจึงต่ำกว่าความจริง
-                <br />{trI18n('กรอกต้นทุน/ชิ้นที่')} <b>Product Master → 🗂 Material Master</b> (standard_cost หรือ material_cost)
+                ⚠ {trI18n("ยังตีมูลค่าไม่ได้")} {defectCost.noCost.length} {trI18n('พาร์ท (')}{defectCost.noCost.reduce((a, x) => a + x[1], 0).toLocaleString()} {trI18n("ชิ้น) — ยอดบาทข้างบนจึงต่ำกว่าความจริง")}
+                <br />{trI18n('กรอกต้นทุน/ชิ้นที่')} <b>Product Master → 🗂 Material Master</b> (standard_cost {trI18n("หรือ")} material_cost)
                 <div style={{ marginTop: 4, color: 'var(--muted)' }}>
                   {defectCost.noCost.slice(0, 8).map(([m, q]) => `${m} (${q})`).join(' · ')}{defectCost.noCost.length > 8 ? ' …' : ''}
                 </div>
@@ -2484,7 +2478,7 @@ function OeeTargetModal({ groups, targets, fullName, onClose, onSaved }) {
           if (isNaN(n) || n < 0 || n > 100) { bad = true; break; }
           nums[m.key] = n; hasAny = true;
         }
-        if (bad) { toast.error(`ค่า target ของ ${g.name} ต้องเป็นตัวเลข 0–100`); setSaving(false); return; }
+        if (bad) { toast.error(`${trI18n("ค่า target ของ")} ${g.name} ${trI18n("ต้องเป็นตัวเลข")} 0–100`); setSaving(false); return; }
         if (hasAny) {
           // target_oee ไม่เก็บแล้ว (คำนวณจาก A×P×Q ในแอปเสมอ) — เขียน null ล้างค่าเก่าที่เคยกรอกไว้
           toUpsert.push({ group_name: g.name, ...nums, target_oee: null, updated_by: userData?.user?.id || null, updated_by_name: fullName || null, updated_at: new Date().toISOString() });
@@ -2503,7 +2497,7 @@ function OeeTargetModal({ groups, targets, fullName, onClose, onSaved }) {
       toast.success('บันทึก Target เรียบร้อย');
       onSaved();
     } catch (e) {
-      toast.error('บันทึกไม่สำเร็จ: ' + e.message);
+      toast.error((trI18n('บันทึกไม่สำเร็จ') + ': ') + e.message);
       setSaving(false);
     }
   };
@@ -2517,7 +2511,7 @@ function OeeTargetModal({ groups, targets, fullName, onClose, onSaved }) {
           <div>
             <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>ตั้ง Target A / P / Q รายกรุ๊ป — OEE = A×P×Q</div>
             <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-              ตั้งเฉพาะ A / P / Q — <strong>{trI18n('เป้า OEE คำนวณจาก A×P×Q ให้อัตโนมัติ')}</strong> · ระดับส่วน (section) ไม่ต้องตั้ง คำนวณเป็นค่าเฉลี่ยของกรุ๊ป · ช่องว่าง = ใช้ค่ามาตรฐาน (A {TARGET.a} / P {TARGET.p} / Q {TARGET.q} → OEE {TARGET.oee})
+              {trI18n("ตั้งเฉพาะ")} A / P / Q — <strong>{trI18n('เป้า OEE คำนวณจาก A×P×Q ให้อัตโนมัติ')}</strong> · {trI18n("ระดับส่วน (section) ไม่ต้องตั้ง คำนวณเป็นค่าเฉลี่ยของกรุ๊ป · ช่องว่าง = ใช้ค่ามาตรฐาน")} (A {TARGET.a} / P {TARGET.p} / Q {TARGET.q} → OEE {TARGET.oee})
             </div>
           </div>
           <button onClick={onClose} style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: 'var(--r-md)', padding: '2px 9px', fontSize: 14, cursor: 'pointer' }}>✕</button>
@@ -2529,7 +2523,7 @@ function OeeTargetModal({ groups, targets, fullName, onClose, onSaved }) {
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', padding: '6px 0', borderBottom: '1px dashed var(--border)' }}>
                 <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--accent)' }}>{sec}</span>
                 <span style={{ fontSize: 11, color: 'var(--muted)' }}>
-                  เป้ารวมของส่วน (เฉลี่ยจากกรุ๊ป): {' '}
+                  {trI18n("เป้ารวมของส่วน (เฉลี่ยจากกรุ๊ป")}): {' '}
                   {METRICS.map(m => `${m.label} ${secAvg(list, m.key) ?? '—'}`).join(' · ')}
                   {' · '}<strong style={{ color: 'var(--green)' }}>OEE {secOee(list) ?? '—'}</strong>
                 </span>

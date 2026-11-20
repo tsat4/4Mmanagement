@@ -46,7 +46,7 @@ export default function TaxonomyManagerModal({ table, title, extraField = 'color
   }
   const teamLabel = (k) => (k ? (teams?.find(t => t.key === k)?.dept_name || k) : '🌐 ใช้ร่วมทุกทีม')
   const lockNote = (r) => (r?.team
-    ? `รายการนี้เป็นของทีม ${teamLabel(r.team)} — แก้ได้เฉพาะทีมนั้นหรือหัวหน้า`
+    ? `${tr("รายการนี้เป็นของทีม")} ${teamLabel(r.team)} — ${tr("แก้ได้เฉพาะทีมนั้นหรือหัวหน้า")}`
     : 'รายการนี้ทุกทีมใช้ร่วมกัน — แก้ได้เฉพาะหัวหน้า (แก้ทีเดียวกระทบทุกทีม)')
 
   const fetchRows = async () => {
@@ -94,7 +94,7 @@ export default function TaxonomyManagerModal({ table, title, extraField = 'color
   }
 
   const remove = async (r) => {
-    if (!await askConfirm(`ลบ "${r.label}" (${r.code}) ?\nจุดตรวจที่ใช้ค่านี้จะยังเก็บ code เดิมไว้`)) return
+    if (!await askConfirm(`${tr("ลบ")} "${r.label}" (${r.code}) ?\n${tr("จุดตรวจที่ใช้ค่านี้จะยังเก็บ code เดิมไว้")}`)) return
     const { error } = await supabaseDR.from(table).delete().eq('id', r.id)
     if (error) { toast.error(error.message); return }
     toast.success('ลบแล้ว')

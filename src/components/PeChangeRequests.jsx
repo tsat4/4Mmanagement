@@ -44,7 +44,7 @@ function CrRow({ cr, canDecide, onDecide, onApply }) {
           <Pill label={tr(st.label)} color={st.color} />
           {isSug && (
             <span style={{ fontSize: 11, color: 'var(--muted)' }}>
-              ระบบเสนอ · ความมั่นใจ {cr.confidence != null ? `${Math.round(cr.confidence * 100)}%` : '—'}
+              {tr("ระบบเสนอ · ความมั่นใจ")} {cr.confidence != null ? `${Math.round(cr.confidence * 100)}%` : '—'}
             </span>
           )}
           {cr.ref_label && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('จาก')} {cr.ref_label}</span>}
@@ -180,13 +180,13 @@ export default function PeChangeRequests({
     notifyEvent({
       event: 'pe_change_request', type: 'info', ref_table: 'pe_change_requests', actor: fullName,
       lines: [
-        `📐 คำขอแก้เอกสาร ${chosen.length} รายการ`,
-        `🔗 ที่มา: ${source.label || source.kind}`,
+        `📐 ${tr("คำขอแก้เอกสาร")} ${chosen.length} ${tr("รายการ")}`,
+        `🔗 ${tr("ที่มา")}: ${source.label || source.kind}`,
         ...chosen.slice(0, 4).map((x) => `  • ${String(x.doc_type).toUpperCase()} — ${String(x.proposal).slice(0, 90)}`),
-        chosen.length > 4 ? `  • …และอีก ${chosen.length - 4} รายการ` : '',
+        chosen.length > 4 ? `  • …${tr("และอีก")} ${chosen.length - 4} ${tr("รายการ")}` : '',
       ],
     });
-    toast.success(`ส่งคำขอแก้เอกสาร ${chosen.length} รายการให้ทีม PE แล้ว`);
+    toast.success(`${tr("ส่งคำขอแก้เอกสาร")} ${chosen.length} ${tr("รายการให้ทีม PE แล้ว")}`);
     setSugs(null); load();
   };
 
@@ -205,8 +205,8 @@ export default function PeChangeRequests({
     notifyEvent({
       event: 'pe_change_request', type: 'info', ref_table: 'pe_change_requests', actor: fullName,
       lines: [
-        `📐 คำขอแก้ ${String(manual.doc_type).toUpperCase()}`,
-        `🔗 ที่มา: ${source.label || source.kind}`,
+        `📐 ${tr("คำขอแก้")} ${String(manual.doc_type).toUpperCase()}`,
+        `🔗 ${tr("ที่มา")}: ${source.label || source.kind}`,
         `📝 ${manual.proposal.trim().slice(0, 300)}`,
       ],
     });
@@ -265,7 +265,7 @@ export default function PeChangeRequests({
     <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 11px', background: 'var(--bg2)', flexWrap: 'wrap' }}>
         <b style={{ fontSize: 12.5 }}>{tr('เอกสารที่ต้องตามแก้')}</b>
-        {pending > 0 && <Pill label={`ค้าง ${pending}`} color="#f59e0b" />}
+        {pending > 0 && <Pill label={`${tr("ค้าง")} ${pending}`} color="#f59e0b" />}
         {rows.length === 0 && !loading && <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{tr('ยังไม่มีรายการ')}</span>}
         <span style={{ flex: 1 }} />
         {mode === 'source' && canPropose && (
@@ -290,7 +290,7 @@ export default function PeChangeRequests({
         <div style={{ padding: 11, borderBottom: '1px solid var(--border)', background: 'rgba(77,159,255,0.06)' }}>
           {setInfo?.set && (
             <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 8 }}>
-              ชุดเอกสารที่จับคู่ได้: <b style={{ color: 'var(--text)' }}>{setInfo.set.part_no}</b> {setInfo.set.part_name || ''}
+              {tr("ชุดเอกสารที่จับคู่ได้")}: <b style={{ color: 'var(--text)' }}>{setInfo.set.part_no}</b> {setInfo.set.part_name || ''}
               {setInfo.how === 'line_name' && <span style={{ color: '#f59e0b' }}> {tr('· จับคู่จากชื่อไลน์ (ไม่ใช่เลขพาร์ท) — ตรวจให้แน่ใจ')}</span>}
             </div>
           )}
@@ -299,7 +299,7 @@ export default function PeChangeRequests({
           ) : (
             <>
               <div style={{ fontSize: 11.5, color: 'var(--text2)', marginBottom: 6 }}>
-                ระบบเสนอ {sugs.length} {tr('รายการ —')} <b>{tr('ติ๊กเฉพาะที่เห็นว่าใช่')}</b> แล้วส่งให้ทีม PE (ยังไม่มีอะไรถูกแก้)
+                {tr("ระบบเสนอ")} {sugs.length} {tr('รายการ —')} <b>{tr('ติ๊กเฉพาะที่เห็นว่าใช่')}</b> {tr("แล้วส่งให้ทีม PE (ยังไม่มีอะไรถูกแก้")})
               </div>
               <div style={{ maxHeight: 260, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--card-surf)' }}>
                 {sugs.map((x) => (
@@ -310,7 +310,7 @@ export default function PeChangeRequests({
                         <Pill label={DOC_LABEL[x.doc_type]} color="#4d9fff" />
                         {LEG_META[x.leg] && <Pill label={tr(LEG_META[x.leg].short)} color={LEG_META[x.leg].color} title={tr(LEG_META[x.leg].hint)} />}
                         <span style={{ fontSize: 11, color: x.confidence >= 0.6 ? '#22c55e' : x.confidence > 0 ? '#f59e0b' : '#ef4444' }}>
-                          {x.confidence > 0 ? `ความมั่นใจ ${Math.round(x.confidence * 100)}%` : 'ไม่พบในเอกสาร'}
+                          {x.confidence > 0 ? `${tr("ความมั่นใจ")} ${Math.round(x.confidence * 100)}%` : 'ไม่พบในเอกสาร'}
                         </span>
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--muted)' }}>{x.match_note}</div>
@@ -357,8 +357,8 @@ export default function PeChangeRequests({
           <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 16, width: 'min(560px, 100%)' }} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ margin: '0 0 4px', fontSize: 15 }}>{tr('✅ ออก revision —')} {DOC_LABEL[applyFor.cr.doc_type]}</h3>
             <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 12, lineHeight: 1.6 }}>
-              บันทึกนี้จะไปอยู่ในประวัติ revision ของชุดเอกสาร <b>{tr('พร้อมที่มา')}</b> ({applyFor.cr.ref_label || applyFor.cr.ref_kind}) ·
-              <b> {tr('แก้เนื้อหาเอกสารจริงที่ /pe-docs เอง')}</b> — ระบบไม่แก้ให้อัตโนมัติ
+              {tr("บันทึกนี้จะไปอยู่ในประวัติ revision ของชุดเอกสาร")} <b>{tr('พร้อมที่มา')}</b> ({applyFor.cr.ref_label || applyFor.cr.ref_kind}) ·
+              <b> {tr('แก้เนื้อหาเอกสารจริงที่ /pe-docs เอง')}</b> — {tr("ระบบไม่แก้ให้อัตโนมัติ")}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9, marginBottom: 9 }}>
               <label style={{ fontSize: 11.5, color: 'var(--muted)' }}>{tr('Rev. (ถ้ามี)')}

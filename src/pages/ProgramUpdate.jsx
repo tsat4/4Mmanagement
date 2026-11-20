@@ -106,8 +106,8 @@ export default function ProgramUpdate() {
 
   const userN = USER_KINDS.reduce((n, k) => n + (counts[k] || 0), 0);
   const segOpts = [
-    { value: 'user', label: `สำหรับผู้ใช้ ${userN}`, title: 'ฟีเจอร์ใหม่ · แก้ปัญหา · ปรับปรุง (ไม่รวมเอกสาร/งานระบบ)' },
-    { value: 'all', label: `ทั้งหมด ${inRange.length}` },
+    { value: 'user', label: `${trI18n("สำหรับผู้ใช้")} ${userN}`, title: 'ฟีเจอร์ใหม่ · แก้ปัญหา · ปรับปรุง (ไม่รวมเอกสาร/งานระบบ)' },
+    { value: 'all', label: `${trI18n("ทั้งหมด")} ${inRange.length}` },
     ...KINDS.map(k => ({ value: k.key, label: `${k.icon} ${k.label}${counts[k.key] ? ` ${counts[k.key]}` : ''}`,
       disabled: !counts[k.key], title: k.hint })),
   ];
@@ -117,14 +117,14 @@ export default function ProgramUpdate() {
       <PageHeader
         icon="📦" title={trI18n('อัพเดทโปรแกรม')}
         sub={data
-          ? `ข้อมูลสดถึง ${fmtStamp(data.generatedAt)} · เก็บจากประวัติการแก้จริงของระบบ`
+          ? `${trI18n("ข้อมูลสดถึง")} ${fmtStamp(data.generatedAt)} · ${trI18n("เก็บจากประวัติการแก้จริงของระบบ")}`
           : 'รายการสิ่งที่เพิ่ม/แก้ไปในระบบ — อ่านจากประวัติการแก้จริง'}
         filters={(
           <TimeRangeBar
             scale={tr.scale} from={from} to={to} today={tr.today} scales={null}
             onFrom={tr.setFrom} onTo={tr.setTo} onPreset={tr.setPreset}
             note={data?.truncated
-              ? `เก็บได้ถึง ${fmtThaiDate(data.from)} · เก่ากว่านั้นอยู่ในประวัติของระบบแต่ไม่อยู่ในไฟล์นี้`
+              ? `${trI18n("เก็บได้ถึง")} ${fmtThaiDate(data.from)} · ${trI18n("เก่ากว่านั้นอยู่ในประวัติของระบบแต่ไม่อยู่ในไฟล์นี้")}`
               : null}
           >
             <Segmented value={kind} onChange={setKind} options={segOpts} label={trI18n('ชนิดการเปลี่ยนแปลง')} />
@@ -165,9 +165,9 @@ export default function ProgramUpdate() {
           </div>
 
           <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>
-            {fmtThaiDate(from)} – {fmtThaiDate(to)} · <b style={{ color: 'var(--text2)' }}>{shown.toLocaleString()}</b> รายการ
+            {fmtThaiDate(from)} – {fmtThaiDate(to)} · <b style={{ color: 'var(--text2)' }}>{shown.toLocaleString()}</b> {trI18n("รายการ")}
             {view.hidden > 0 ? <> {trI18n('จาก')} {view.total.toLocaleString()}</> : null}
-            {' '}{trI18n('ใน')} {view.days.length} วันที่มีการแก้
+            {' '}{trI18n('ใน')} {view.days.length} {trI18n("วันที่มีการแก้")}
             {(kind !== 'all' || q) && inRange.length !== shown
               ? <> {trI18n('· กรองจากทั้งหมด')} {inRange.length.toLocaleString()} {trI18n('รายการในช่วงนี้')}</> : null}
           </div>
@@ -237,7 +237,7 @@ export default function ProgramUpdate() {
 
           {view.hidden > 0 && (
             <div style={{ padding: '4px 2px 10px', fontSize: 12, color: 'var(--muted)' }}>
-              ยังเหลืออีก <b style={{ color: 'var(--text2)' }}>{view.hidden.toLocaleString()}</b> รายการในช่วงนี้
+              {trI18n("ยังเหลืออีก")} <b style={{ color: 'var(--text2)' }}>{view.hidden.toLocaleString()}</b> {trI18n("รายการในช่วงนี้")}
               {' '}
               <button type="button" onClick={() => setCap(c => c + PAGE_ROWS)}
                 style={{ marginLeft: 6, padding: '4px 12px', borderRadius: 'var(--r-md)', fontSize: 12, fontWeight: 700,
@@ -245,7 +245,7 @@ export default function ProgramUpdate() {
                 {trI18n('ดูเพิ่ม')} {Math.min(PAGE_ROWS, view.hidden).toLocaleString()} {trI18n('รายการ')}
               </button>
               <div style={{ fontSize: 11, marginTop: 4 }}>
-                (วาดทีละ {PAGE_ROWS} รายการ — ช่วงกว้างมากแล้ววาดหมดทีเดียวทำจอหน้างานหน่วง)
+                ({trI18n("วาดทีละ")} {PAGE_ROWS} {trI18n("รายการ — ช่วงกว้างมากแล้ววาดหมดทีเดียวทำจอหน้างานหน่วง")})
               </div>
             </div>
           )}

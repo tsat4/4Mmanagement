@@ -55,7 +55,7 @@ const PKEYS = ['main', 'dr'];
 
 const fmtRows = (n) => {
   const v = Number(n) || 0;
-  if (v >= 1_000_000) return `~${(v / 1_000_000).toFixed(1)} ล้าน`;
+  if (v >= 1_000_000) return `~${(v / 1_000_000).toFixed(1)} ${tr("ล้าน")}`;
   if (v >= 1000) return `~${Math.round(v / 1000)},000`;
   return `~${v}`;
 };
@@ -247,7 +247,7 @@ export default function SchemaMap() {
       <PageHeader
         title={tr('โครงสร้างฐานข้อมูล')} icon="🗄️"
         sub={loading ? 'กำลังอ่านโครงสร้างจากฐานข้อมูล…'
-          : `${total} ตาราง/วิว · ${totalFk} เส้นความสัมพันธ์ (FK) · ${USAGE.pages?.length || 0} หน้าในระบบ`}
+          : `${total} ${tr("ตาราง/วิว")} · ${totalFk} ${tr("เส้นความสัมพันธ์")} (FK) · ${USAGE.pages?.length || 0} ${tr("หน้าในระบบ")}`}
         actions={<button type="button" className="pg-btn" onClick={reload}>{tr('อ่านใหม่')}</button>}
         tabs={[
           { key: 'tables', label: 'ตาราง / คีย์ / ความสัมพันธ์' },
@@ -264,10 +264,9 @@ export default function SchemaMap() {
         </>}>
           <div style={{ marginTop: 6, color: 'var(--text2)' }}>
             • <b>{tr('ระบบนี้มีฐานข้อมูล 2 ตัวแยกกัน')}</b> — {tr(PROJ.main.label)} {tr('(จอ Supabase เขียนว่า “')}{PROJ.main.screen}”)
-            และ {PROJ.dr.label} (“{PROJ.dr.screen}”) · ชื่อตารางคล้ายกันหลายตัว เวลาแจ้งให้บอกฝั่งด้วยเสมอ
-            <br />• ตัวเลขแถว = <b>{tr('ค่าประมาณจากสถิติของฐาน')}</b> (ไม่ได้นับจริงทุกครั้ง) ใช้ดูขนาดคร่าวๆ เท่านั้น
-            <br />{tr('• “หน้าไหนใช้ตารางไหน” มาจาก')}<b>{tr('การสแกนซอร์สตอน build')}</b> — จับเฉพาะที่โค้ดเขียนชื่อตารางตรงๆ
-            ถ้าหน้าไหนเรียกผ่านฟังก์ชันกลางที่ส่งชื่อตารางเป็นตัวแปร จะไม่ขึ้นในลิสต์นี้
+            {tr("และ")} {PROJ.dr.label} (“{PROJ.dr.screen}”) · {tr("ชื่อตารางคล้ายกันหลายตัว เวลาแจ้งให้บอกฝั่งด้วยเสมอ")}
+            <br />• {tr("ตัวเลขแถว")} = <b>{tr('ค่าประมาณจากสถิติของฐาน')}</b> ({tr("ไม่ได้นับจริงทุกครั้ง) ใช้ดูขนาดคร่าวๆ เท่านั้น")}
+            <br />{tr('• “หน้าไหนใช้ตารางไหน” มาจาก')}<b>{tr('การสแกนซอร์สตอน build')}</b> — {tr("จับเฉพาะที่โค้ดเขียนชื่อตารางตรงๆ ถ้าหน้าไหนเรียกผ่านฟังก์ชันกลางที่ส่งชื่อตารางเป็นตัวแปร จะไม่ขึ้นในลิสต์นี้")}
             <br />{tr('• ข้อมูลโครงสร้าง cache ไว้ 12 ชม. — เพิ่ง apply migration ให้กด')} <b>{tr('อ่านใหม่')}</b>
           </div>
         </InfoMore>
@@ -294,7 +293,7 @@ export default function SchemaMap() {
               {loading && <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{tr('กำลังโหลด…')}</div>}
               {!loading && !rows.length && (
                 <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>
-                  ไม่พบตารางที่ตรงกับ “{q}” — ลองคำสั้นลง หรือดูแท็บ 🧭 หน้าไหนใช้ตารางไหน
+                  {tr("ไม่พบตารางที่ตรงกับ")} “{q}” — {tr("ลองคำสั้นลง หรือดูแท็บ 🧭 หน้าไหนใช้ตารางไหน")}
                 </div>
               )}
 
@@ -325,7 +324,7 @@ export default function SchemaMap() {
                                 {r.t}{(r.k === 'v' || r.k === 'm') && <span style={{ color: 'var(--muted)' }}> {tr('(วิว)')}</span>}
                               </span>
                               <span style={{ flexShrink: 0, fontSize: 11, color: 'var(--muted)' }}>
-                                {r.cols} {tr('คอลัมน์')}{used ? ` · ${used} หน้า` : ''}
+                                {r.cols} {tr('คอลัมน์')}{used ? ` · ${used} ${tr("หน้า")}` : ''}
                               </span>
                             </button>
                           );
@@ -417,7 +416,7 @@ function TableDetail({ sel, detail, err, isMobile, pages, url, userName, size, o
             <button onClick={() => openFeedback(bugReportText({
               table: sel.table, projectLabel: `${P.label} (${P.screen})`, projectId: P.id,
               detail: d, pages, url,
-            }) + (userName ? `ผู้แจ้ง: ${userName}\n` : ''))} style={{ ...btn(), background: 'var(--red-dim)', borderColor: 'var(--red-line)' }}>
+            }) + (userName ? `${tr("ผู้แจ้ง")}: ${userName}\n` : ''))} style={{ ...btn(), background: 'var(--red-dim)', borderColor: 'var(--red-line)' }}>
               แจ้งบัคเรื่องตารางนี้
             </button>
           </div>
@@ -425,7 +424,7 @@ function TableDetail({ sel, detail, err, isMobile, pages, url, userName, size, o
 
         {err && (
           <div style={{ fontSize: 12.5, color: '#fca5a5' }}>
-            ⚠️ {err} — ถ้าเพิ่งเพิ่มตารางใหม่ ลองกด “🔄 อ่านใหม่” ด้านบน
+            ⚠️ {err} — {tr("ถ้าเพิ่งเพิ่มตารางใหม่ ลองกด “🔄 อ่านใหม่” ด้านบน")}
           </div>
         )}
         {!detail && !err && <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{tr('กำลังโหลดรายละเอียด…')}</div>}
@@ -543,7 +542,7 @@ function TableDetail({ sel, detail, err, isMobile, pages, url, userName, size, o
         <div style={{ ...card(), fontSize: 12, lineHeight: 1.7 }}>
           <InfoMore id="schema_tech" lead={<span style={subTitle()}>{tr('รายละเอียดเชิงเทคนิค (index · RLS policy · trigger)')}</span>}>
             <div style={{ marginTop: 6 }}>
-              <div style={{ color: 'var(--muted)' }}>RLS policy ({(d.policies || []).length}) — ใครทำอะไรกับตารางนี้ได้:</div>
+              <div style={{ color: 'var(--muted)' }}>RLS policy ({(d.policies || []).length}) — {tr("ใครทำอะไรกับตารางนี้ได้")}:</div>
               {(d.policies || []).length ? d.policies.map(p => (
                 <div key={p.name}>· <b>{p.cmd}</b> — {(p.roles || []).join(', ')} <span style={{ color: 'var(--muted)' }}>({p.name})</span></div>
               )) : <div style={{ color: d.rls ? 'var(--amber)' : 'var(--muted)' }}>
@@ -592,8 +591,8 @@ function PagesTab({ q, setQ, isMobile, catalog, ghosts, onPick }) {
       <div style={{ ...card(), display: 'grid', gap: 8 }}>
         <SearchInput value={q} onChange={setQ} fields="ชื่อหน้า / path / ชื่อตาราง" />
         <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.6 }}>
-          แสดง {pages.length} {tr('หน้า จากทั้งหมด')} {(USAGE.pages || []).length} ·
-          สแกนซอร์สเมื่อ {new Date(USAGE.builtAt).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' })} (ตอน build)
+          {tr("แสดง")} {pages.length} {tr('หน้า จากทั้งหมด')} {(USAGE.pages || []).length} ·
+          {tr("สแกนซอร์สเมื่อ")} {new Date(USAGE.builtAt).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' })} ({tr("ตอน")} build)
           {!!ghosts.size && <> · <span style={{ color: 'var(--amber)' }}>{tr('พบชื่อตารางในโค้ด')} {ghosts.size} {tr('ตัวที่ไม่มีอยู่จริงในฐานข้อมูล (ดูท้ายหน้า)')}</span></>}
         </div>
       </div>
@@ -626,7 +625,7 @@ function PagesTab({ q, setQ, isMobile, catalog, ghosts, onPick }) {
                       const k = sideOf(t, guess);
                       return (
                         <button key={`${guess}-${t}`} onClick={() => k && onPick(k, t)} disabled={!k}
-                          title={k ? `${PROJ[k].label} · กดเพื่อดูโครงสร้าง` : 'ไม่พบตารางนี้ในฐานข้อมูล'}
+                          title={k ? `${PROJ[k].label} · ${tr("กดเพื่อดูโครงสร้าง")}` : 'ไม่พบตารางนี้ในฐานข้อมูล'}
                           style={{ ...chip(false), opacity: k ? 1 : 0.55, cursor: k ? 'pointer' : 'default' }}>
                           {k === 'main' ? '🗄️' : k === 'dr' ? '🏭' : '❔'} {t}
                         </button>
@@ -682,14 +681,11 @@ function AuditTab({ audits, isMobile, loading, onPick, onCopy }) {
           ตัวเลขบนแท็บนับเฉพาะข้อที่เป็นปัญหาจริง (🔴/🟡)
         </>}>
           <div style={{ marginTop: 6, color: 'var(--text2)' }}>
-            <b>{tr('ทำความสะอาดรอบแรกไปแล้ว 22/09/2026:')}</b> ตารางสำรองที่ migration เก่าสร้างค้างไว้ใน public
+            <b>{tr('ทำความสะอาดรอบแรกไปแล้ว 22/09/2026:')}</b> {tr("ตารางสำรองที่ migration เก่าสร้างค้างไว้ใน")} public
             <b> {tr('37 ตัว')}</b> {tr('(ข้อมูลผลิต 33 · ระบบหลัก 4) ถูกย้ายเข้า schema')} <code>archive</code> —
-            <b>{tr('ย้ายไม่ได้ลบ')}</b> ข้อมูลอยู่ครบทุกแถว ย้อนกลับได้ด้วยคำสั่งเดียวต่อตาราง ·
-            ตารางในจอนี้จึงลดจาก 313 เหลือ 276
-            <br />{tr('ที่ต้องย้ายเพราะ 35 ใน 37 ตัวนั้น')} <b>{tr('ไม่ได้เปิด RLS')}</b> (สำเนาข้อมูลมา แต่ policy ไม่ได้ตามมาด้วย)
-            — ฝั่งข้อมูลผลิตที่ client วิ่งด้วย anon เสมอ แปลว่าใครมี anon key ก็อ่านสำเนาข้อมูลจริงได้โดยไม่ต้อง login
-            <br /><br />⚠️ <b>{tr('“ไม่มีหน้าไหนเรียกใช้” ไม่ได้แปลว่าลบได้')}</b> — ตัวสแกนเห็นเฉพาะโค้ดฝั่งหน้าเว็บ
-            ตารางอาจถูกใช้โดย trigger/function ฝั่งฐานข้อมูล หรือ Edge Function · ใช้เป็น “รายการที่ต้องไปตรวจ” เท่านั้น
+            <b>{tr('ย้ายไม่ได้ลบ')}</b> {tr("ข้อมูลอยู่ครบทุกแถว ย้อนกลับได้ด้วยคำสั่งเดียวต่อตาราง · ตารางในจอนี้จึงลดจาก 313 เหลือ")} 276
+            <br />{tr('ที่ต้องย้ายเพราะ 35 ใน 37 ตัวนั้น')} <b>{tr('ไม่ได้เปิด RLS')}</b> ({tr("สำเนาข้อมูลมา แต่ policy ไม่ได้ตามมาด้วย) — ฝั่งข้อมูลผลิตที่ client วิ่งด้วย anon เสมอ แปลว่าใครมี anon key ก็อ่านสำเนาข้อมูลจริงได้โดยไม่ต้อง")} login
+            <br /><br />⚠️ <b>{tr('“ไม่มีหน้าไหนเรียกใช้” ไม่ได้แปลว่าลบได้')}</b> — {tr("ตัวสแกนเห็นเฉพาะโค้ดฝั่งหน้าเว็บ ตารางอาจถูกใช้โดย trigger/function ฝั่งฐานข้อมูล หรือ Edge Function · ใช้เป็น “รายการที่ต้องไปตรวจ” เท่านั้น")}
           </div>
         </InfoMore>
       </div>
@@ -724,7 +720,7 @@ function AuditTab({ audits, isMobile, loading, onPick, onCopy }) {
                     <span style={{ flexShrink: 0 }}>{c.rows.length ? lv.icon : '✅'}</span>
                     <span style={{ flex: '1 1 auto', minWidth: 0, fontSize: 13, fontWeight: 700 }}>{c.title}</span>
                     <span style={{ flexShrink: 0, fontSize: 12, color: c.rows.length ? lv.color : 'var(--muted)', fontWeight: 700 }}>
-                      {c.rows.length ? `${c.rows.length} รายการ` : 'ไม่พบ'}
+                      {c.rows.length ? `${c.rows.length} ${tr("รายการ")}` : 'ไม่พบ'}
                     </span>
                     <span style={{ flexShrink: 0, fontSize: 11.5, color: 'var(--muted)' }}>{on ? '▾' : '▸'}</span>
                   </button>

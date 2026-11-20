@@ -14,6 +14,7 @@
  *    ส่วนใบที่ตรงแผนกลับเห็นชัด = สัญญาณกับสิ่งรบกวนสลับที่กัน (เจอ 13/11 จากภาพหน้าจอ user)
  */
 import React from 'react';
+import { tr } from '../utils/i18n';
 
 export default function PlanSlipFrame({
   planLeftPct = 0, planWidthPct = 0, planSlipped = false,
@@ -22,8 +23,8 @@ export default function PlanSlipFrame({
   if (!(planWidthPct > 0)) return null;
   const lateStartMin = Math.max(0, Math.round((startMs - planStartMs) / 60000));
   const lateEndMin = Math.max(0, Math.round((Math.max(realEndMs, occupiedEndMs || realEndMs) - plannedEndMs) / 60000));
-  const tip = `กรอบคิวตามอุดมคติของใบนี้: ${fmtMs(planStartMs)}–${fmtMs(plannedEndMs)}`
-    + (planSlipped ? ` · หลุดกรอบ (เริ่มช้า ${lateStartMin} น. · จบช้า ${lateEndMin} น.)` : ' · อยู่ในกรอบ')
+  const tip = `${tr("กรอบคิวตามอุดมคติของใบนี้")}: ${fmtMs(planStartMs)}–${fmtMs(plannedEndMs)}`
+    + (planSlipped ? ` · ${tr("หลุดกรอบ (เริ่มช้า")} ${lateStartMin} ${tr("น. · จบช้า")} ${lateEndMin} ${tr("น.")})` : ' · อยู่ในกรอบ')
     + '\n— คิวที่ระบบไล่ให้จากใบที่เปิดไว้แล้ว ไม่ใช่แผนของทีมวางแผน';
   return (
     <div title={tip}

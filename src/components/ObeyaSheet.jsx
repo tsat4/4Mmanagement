@@ -87,7 +87,7 @@ export function StatusLamp({ k, w, stat, onGo, forceCompact = false }) {
   return (
     <button
       type="button" onClick={go || undefined} disabled={!go}
-      title={`${stat.label} — ${stat.why}${go ? ' · กดเพื่อดูรายละเอียด' : ''}`}
+      title={`${stat.label} — ${stat.why}${go ? tr(' · กดเพื่อดูรายละเอียด') : ''}`}
       style={{
         display: 'flex', alignItems: 'center', gap: Math.max(4, Math.round(5 * k)),
         padding: `${Math.max(2, Math.round(2.5 * k))}px ${Math.max(6, Math.round(8 * k))}px`,
@@ -319,7 +319,7 @@ export const FocusAxisNote = ({ k, loText, fixed = false }) => (
     : 'โหมดโฟกัส: ยกพื้นแกนขึ้นเพื่อขยายช่วงที่ค่ากระจุกอยู่ — ความสูงแท่งเทียบสัดส่วนกันไม่ได้ (กดปุ่ม 🎯 บนแถบกรองเพื่อปิด)'}
     style={{ position: 'absolute', top: 0, right: 6, zIndex: 1, fontSize: Math.max(11, Math.round(9.5 * k)), fontWeight: 700, color: 'var(--amber)',
       background: 'var(--card-surf)', border: '1px solid var(--amber)55', borderRadius: 'var(--r-xs)', padding: '0 5px', lineHeight: 1.5 }}>
-    แกนเริ่ม {loText} ไม่ใช่ 0
+    {tr("แกนเริ่ม")} {loText} {tr("ไม่ใช่")} 0
   </div>
 );
 

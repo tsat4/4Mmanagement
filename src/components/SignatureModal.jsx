@@ -189,14 +189,14 @@ export default function SignatureModal({ open, onClose, currentSignatureUrl, onS
       const { error: upErr } = await supabase.storage
         .from('signatures')
         .upload(filePath, fileBlob, uploadOpts({ contentType, upsert: true }));
-      if (upErr) { toast.error('อัปโหลดไม่สำเร็จ: ' + upErr.message); setSaving(false); return; }
+      if (upErr) { toast.error((tr('อัปโหลดไม่สำเร็จ') + ': ') + upErr.message); setSaving(false); return; }
 
       const { data: { publicUrl } } = supabase.storage.from('signatures').getPublicUrl(filePath);
 
       // ⚠️ ห้าม update ตรง — RLS ที่บล็อกจะ "สำเร็จ 0 แถว" โดยไม่มี error แล้วลายเซ็นหายหลัง logout
       // (เคสจริงที่หัวหน้าแผนกแจ้ง 2026-08-17) → เขียนผ่าน helper ที่ตรวจว่าเขียนติดจริง
       const res = persist ? await persist(publicUrl) : await saveMyProfileMedia('signature_url', publicUrl);
-      if (!res.ok) { toast.error('บันทึกไม่สำเร็จ: ' + res.message); setSaving(false); return; }
+      if (!res.ok) { toast.error((tr('บันทึกไม่สำเร็จ') + ': ') + res.message); setSaving(false); return; }
 
       /* 🔴 **ห้ามลบไฟล์ลายเซ็นเดิม** (2026-10-24 · คำสั่ง user — เดิมลบทิ้งเพื่อกันไฟล์กำพร้า)
          เอกสารที่เซ็นไปแล้วเก็บ **URL ของไฟล์นั้น** ไว้ในใบ (mtn_orders.*_sign · ใบตรวจ LPA · OJT ฯลฯ)
@@ -210,7 +210,7 @@ export default function SignatureModal({ open, onClose, currentSignatureUrl, onS
       onSaved(publicUrl);
       onClose();
     } catch (err) {
-      toast.error('เกิดข้อผิดพลาด: ' + err.message);
+      toast.error((tr('เกิดข้อผิดพลาด') + ': ') + err.message);
     }
     setSaving(false);
   };
