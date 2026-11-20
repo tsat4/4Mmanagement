@@ -117,7 +117,8 @@ const stripThaiFiller = (run) => run.replace(THAI_FILLER, (m, ...a) => {
 
 function stripPeriodWords(t) {
   let s = t.replace(/เดือน\s*\d{1,2}(\s*[/-]\s*\d{4})?/g, ' ')
-    .replace(/วันนี้|เมื่อวาน|(สัปดาห์|อาทิตย์)(นี้|ที่แล้ว|ก่อน)|เดือน(นี้|ที่แล้ว|ก่อน)/g, ' ');
+    .replace(/วันนี้|เมื่อวาน|(สัปดาห์|อาทิตย์)(นี้|ที่แล้ว|ก่อน)|เดือน(นี้|ที่แล้ว|ก่อน)/g, ' ')
+    .replace(SHIFT_WORDS, ' ');
   for (const names of TH_MONTHS) for (const w of names) s = s.split(w).join(' ');
   return s.replace(/(^|\s)(25|20)\d{2}(?=\s|$)/g, ' ');
 }
@@ -134,15 +135,37 @@ function subjectOf(t) {
 /**
  * @returns {{ intent:string|null, period:object|null, periodDefault:string|null, subject:string, error?:string }}
  */
-export function parseQuestion(text, today) {
+/* ── กะ (20/11 · คำสั่ง user "ใส่คำว่ากะเช้า กะดึก กะนี้") ─────────────────────
+   กะเช้า = 'day' · กะดึก = 'night' (ค่าเดียวกับ `production_sessions.shift`)
+   🔴 "กะนี้" = กะปัจจุบัน **ของวันทำงานนี้** — ผู้เรียกส่ง `shiftNow` (`getCurrentShift()`) เข้ามา
+      ไฟล์นี้ไม่อ่านนาฬิกาเอง (pure + เทสตรึงได้) · ไม่ส่ง = ตัดสินไม่ได้ ⇒ error ห้ามเดา
+   🔴 "กะนี้" ไม่บอกช่วง = วันนี้ (กะนี้ของเมื่อวานไม่มีความหมาย) */
+const SHIFT_WORDS = /กะ\s*(เช้า|ดึก|นี้|ปัจจุบัน)|day\s*shift|night\s*shift/g;
+export const SHIFT_LABEL = { day: 'กะเช้า', night: 'กะดึก' };
+
+export function shiftFromText(t, shiftNow = null) {
+  const s = String(t || '').toLowerCase();
+  if (/กะ\s*เช้า|day\s*shift/.test(s)) return { shift: 'day', label: SHIFT_LABEL.day };
+  if (/กะ\s*ดึก|night\s*shift/.test(s)) return { shift: 'night', label: SHIFT_LABEL.night };
+  if (/กะ\s*(นี้|ปัจจุบัน)/.test(s)) {
+    if (shiftNow !== 'day' && shiftNow !== 'night') return { error: 'ยังบอกไม่ได้ว่าตอนนี้เป็นกะไหน — พิมพ์ "กะเช้า" หรือ "กะดึก" แทน' };
+    return { shift: shiftNow, label: `กะนี้ (${SHIFT_LABEL[shiftNow]})`, isNow: true };
+  }
+  return null;
+}
+
+export function parseQuestion(text, today, { shiftNow = null } = {}) {
   const raw = String(text || '').trim();
   const t = raw.toLowerCase();
   const it = INTENTS.find(i => i.re.test(t)) || null;
-  const p = periodFromText(t, today);
+  const sh = shiftFromText(t, shiftNow);
+  let p = periodFromText(t, today);
+  if (!p && sh?.isNow) p = periodFromText('วันนี้', today);     // กะนี้ = วันนี้
   const subject = subjectOf(t);
-  if (!it) return { intent: null, period: null, periodDefault: null, subject };
-  if (p?.error) return { intent: it.key, period: null, periodDefault: null, subject, error: p.error };
-  return { intent: it.key, period: p, periodDefault: p ? null : it.defaultPeriod, subject };
+  if (!it) return { intent: null, period: null, periodDefault: null, subject, shift: null };
+  if (p?.error || sh?.error) return { intent: it.key, period: null, periodDefault: null, subject, shift: null, error: p?.error || sh.error };
+  return { intent: it.key, period: p, periodDefault: p ? null : it.defaultPeriod, subject,
+    shift: sh ? { key: sh.shift, label: sh.label } : null };
 }
 
 /** ค่าตั้งต้นของช่วง (เมื่อคำถามไม่ได้บอก) — จอต้องเขียนว่า "ไม่ได้ระบุช่วง ใช้…" */
