@@ -1,0 +1,13 @@
+# ทางเลือก: เครือข่ายที่ออกอินเทอร์เน็ตผ่าน proxy (เช่นเครื่องซ้อมของ AI) — edge functions ต้องโหลด library ตอนรัน
+#   CA_BUNDLE=/path/ca.crt docker compose -f docker-compose.yml -f docker-compose.proxy.yml up -d functions
+# บน INET ถ้าออกเน็ตตรงได้ ไม่ต้องใช้ไฟล์นี้
+services:
+  functions:
+    environment:
+      HTTPS_PROXY: ${PROXY_URL:?ตั้ง PROXY_URL เช่น http://host.docker.internal:3128}
+      HTTP_PROXY: ${PROXY_URL}
+      NO_PROXY: gateway,db,auth,rest,realtime,storage,web,localhost
+      DENO_CERT: /certs/ca.crt
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    volumes:
+      - ${CA_BUNDLE:?ตั้ง CA_BUNDLE}:/certs/ca.crt:ro

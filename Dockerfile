@@ -14,8 +14,14 @@ ARG VITE_SUPABASE_URL
 ARG VITE_SUPABASE_ANON_KEY
 RUN test -n "$VITE_SUPABASE_URL" && test -n "$VITE_SUPABASE_ANON_KEY" \
     || (echo "❌ ต้องส่ง build arg VITE_SUPABASE_URL และ VITE_SUPABASE_ANON_KEY" && exit 1)
+# ฝั่ง DR (ไม่บังคับ): ว่าง = ใช้ค่าตั้งต้นใน src/supabaseClient.js (Supabase DR เดิม)
+#   ระบบ INET ที่รวมฐานแล้ว ⇒ ใส่ที่อยู่/กุญแจเดียวกับ Main (docs/modules/inet-migration.md §5.4)
+ARG VITE_SUPABASE_DR_URL=
+ARG VITE_SUPABASE_DR_KEY=
 ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL \
-    VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
+    VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY \
+    VITE_SUPABASE_DR_URL=$VITE_SUPABASE_DR_URL \
+    VITE_SUPABASE_DR_KEY=$VITE_SUPABASE_DR_KEY
 
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund

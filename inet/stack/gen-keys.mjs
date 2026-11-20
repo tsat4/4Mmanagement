@@ -26,6 +26,7 @@ const env = {
   ANON_KEY: jwt({ role: 'anon', iss: 'supabase', iat, exp }, JWT_SECRET),
   SERVICE_ROLE_KEY: jwt({ role: 'service_role', iss: 'supabase', iat, exp }, JWT_SECRET),
   SECRET_KEY_BASE: rand(64),                      // realtime
+  RELEASE_COOKIE: randomBytes(28).toString('hex'), // realtime — 56 ตัว (เกิน 63 = realtime ล้มวน · ชื่อ channel ของ Postgres)
   REALTIME_DB_ENC_KEY: rand(16),                  // realtime — ต้องยาว 16 ตัวพอดี
   PG_META_CRYPTO_KEY: rand(32),
   DASHBOARD_PASSWORD: rand(24),                   // หน้าแอดมิน Studio (ถ้าเปิดใช้)

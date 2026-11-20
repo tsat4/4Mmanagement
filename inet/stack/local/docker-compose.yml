@@ -1,0 +1,166 @@
+# ══ ซ้อมระบบ INET ทั้งชุดในเครื่อง (ไม่ใช่ของจริง · ไม่ต่อฐานเดิม) ══
+#   cd inet/stack/local && node ../gen-keys.mjs > .env && docker compose up -d --build && ./smoke-test.sh
+# 🔴 ทุก container ของแอปรันด้วย user 1000680000:0 = เลียน OpenShift (UID สุ่ม ไม่ใช่ root)
+#    ⇒ ผ่านที่นี่ = ไม่ติดเรื่องสิทธิ์ไฟล์บน INET (ยกเว้น db ซึ่งบน INET อยู่ VM แยก)
+# เวอร์ชัน image = ชุดเดียวกับ supabase/docker/docker-compose.yml ทางการ (20/11/2026)
+x-app: &app
+  user: "1000680000:0"
+  restart: unless-stopped
+
+services:
+  db:
+    image: supabase/postgres:17.6.1.136
+    environment:
+      POSTGRES_HOST: /var/run/postgresql
+      PGPORT: 5432
+      POSTGRES_PORT: 5432
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: postgres
+      POSTGRES_DB: postgres
+      JWT_EXP: 3600
+    volumes:
+      - ../vm/db-init/realtime.sql:/docker-entrypoint-initdb.d/migrations/99-realtime.sql:ro
+      - ../vm/db-init/webhooks.sql:/docker-entrypoint-initdb.d/init-scripts/98-webhooks.sql:ro
+      - ../vm/db-init/roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:ro
+      - ../vm/db-init/jwt.sql:/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql:ro
+      - ../vm/db-init/_supabase.sql:/docker-entrypoint-initdb.d/migrations/97-_supabase.sql:ro
+    ports: ["127.0.0.1:54322:5432"]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-h", "localhost"]
+      interval: 5s
+      retries: 20
+    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf", "-c", "log_min_messages=fatal"]
+
+  auth:
+    <<: *app
+    image: supabase/gotrue:v2.197.0
+    depends_on: { db: { condition: service_healthy } }
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      API_EXTERNAL_URL: http://localhost:8000
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD}@db:5432/postgres
+      GOTRUE_SITE_URL: http://localhost:8000
+      GOTRUE_DISABLE_SIGNUP: "true"            # ESM สร้างบัญชีผ่านหน้า /add-user (edge function) เท่านั้น
+      GOTRUE_JWT_ADMIN_ROLES: service_role
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_JWT_EXP: 3600
+      GOTRUE_JWT_SECRET: ${JWT_SECRET}
+      GOTRUE_JWT_ISSUER: http://localhost:8000/auth/v1
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      GOTRUE_MAILER_AUTOCONFIRM: "true"        # ระบบไม่มีการส่งอีเมลเลย (CLAUDE.md)
+      GOTRUE_EXTERNAL_PHONE_ENABLED: "false"
+
+  rest:
+    <<: *app
+    image: postgrest/postgrest:v14.18
+    depends_on: { db: { condition: service_healthy } }
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD}@db:5432/postgres
+      PGRST_DB_SCHEMAS: public,storage,graphql_public
+      PGRST_DB_MAX_ROWS: 1000                  # เพดาน 1000 แถว/คิวรี เท่ากับ cloud (กฎ db-write ข้อ 5)
+      PGRST_DB_EXTRA_SEARCH_PATH: public,extensions
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+      PGRST_DB_USE_LEGACY_GUCS: "false"
+      PGRST_APP_SETTINGS_JWT_SECRET: ${JWT_SECRET}
+      PGRST_APP_SETTINGS_JWT_EXP: 3600
+
+  realtime:
+    <<: *app
+    image: supabase/realtime:v2.148.3
+    depends_on: { db: { condition: service_healthy } }
+    environment:
+      PORT: 4000
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: supabase_admin
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: postgres
+      DB_AFTER_CONNECT_QUERY: "SET search_path TO _realtime"
+      DB_ENC_KEY: ${REALTIME_DB_ENC_KEY}
+      API_JWT_SECRET: ${JWT_SECRET}
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+      METRICS_JWT_SECRET: ${JWT_SECRET}
+      RELEASE_COOKIE: ${RELEASE_COOKIE}
+      CLUSTER_STRATEGIES: ""                 # node เดียว — ปิด libcluster (เหมือน compose ทางการ)
+      ERL_AFLAGS: -proto_dist inet_tcp
+      GEN_RPC_SOCKET_IP: 127.0.0.1
+      DNS_NODES: "''"
+      RLIMIT_NOFILE: "10000"
+      APP_NAME: realtime
+      SEED_SELF_HOST: "true"
+      RUN_JANITOR: "true"
+      DISABLE_HEALTHCHECK_LOGGING: "true"
+    command: ["/usr/bin/tini", "-s", "-g", "--", "/app/run.sh", "/app/bin/server"]
+    entrypoint: []
+
+  # เลียน OpenShift: volume ที่ mount ให้ pod เขียนได้ด้วย group 0 (fsGroup) — docker เปล่าไม่ทำให้
+  storage-perms:
+    image: nginxinc/nginx-unprivileged:1.27-alpine
+    user: "0:0"
+    entrypoint: ["sh", "-c", "chgrp -R 0 /var/lib/storage && chmod -R g+rwX /var/lib/storage"]
+    volumes: [ "storage-data:/var/lib/storage" ]
+    restart: "no"
+
+  storage:
+    <<: *app
+    image: supabase/storage-api:v1.89.12
+    depends_on: { db: { condition: service_healthy }, rest: { condition: service_started }, storage-perms: { condition: service_completed_successfully } }
+    environment:
+      ANON_KEY: ${ANON_KEY}
+      SERVICE_KEY: ${SERVICE_ROLE_KEY}
+      POSTGREST_URL: http://rest:3000
+      AUTH_JWT_SECRET: ${JWT_SECRET}
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+      DATABASE_URL: postgres://supabase_storage_admin:${POSTGRES_PASSWORD}@db:5432/postgres
+      STORAGE_PUBLIC_URL: http://localhost:8000
+      REQUEST_ALLOW_X_FORWARDED_PATH: "true"
+      FILE_SIZE_LIMIT: 52428800
+      STORAGE_BACKEND: file
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      GLOBAL_S3_BUCKET: stub
+      TENANT_ID: stub
+      REGION: stub
+      ENABLE_IMAGE_TRANSFORMATION: "false"
+    volumes: [ "storage-data:/var/lib/storage" ]
+
+  functions:
+    <<: *app
+    image: esm-functions:local
+    build: { context: ../../.., dockerfile: inet/stack/functions/Dockerfile }
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+      SUPABASE_URL: http://gateway:8080
+      SUPABASE_ANON_KEY: ${ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
+      SUPABASE_DB_URL: postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
+      # ฐานรวมแล้ว ⇒ "DR" คือที่เดียวกัน
+      DR_URL: http://gateway:8080
+      DR_ANON_KEY: ${ANON_KEY}
+      FUNCTIONS_VERIFY_JWT: create-user,delete-user,reset-user-password,integration-admin,demand-mail-file
+
+  gateway:
+    <<: *app
+    image: esm-gateway:local
+    build: ../gateway
+    environment: { WEB_HOST: web }
+    ports: ["127.0.0.1:8000:8080"]
+    depends_on: [auth, rest, realtime, storage, functions, web]
+
+  web:
+    <<: *app
+    image: esm-web:local
+    build:
+      context: ../../..
+      args:
+        VITE_SUPABASE_URL: http://localhost:8000
+        VITE_SUPABASE_ANON_KEY: ${ANON_KEY}
+        VITE_SUPABASE_DR_URL: http://localhost:8000
+        VITE_SUPABASE_DR_KEY: ${ANON_KEY}
+
+volumes:
+  storage-data:
