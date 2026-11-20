@@ -679,6 +679,10 @@ export default function OjtTraining() {
 body{font-family:'Sarabun',sans-serif;font-size:11px;color:#000;background:#fff}
 table{border-collapse:collapse}
 @media print{@page{size:A4 portrait;margin:7mm}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+/* เลขฟอร์มซ้ายล่าง · Issue Date ขวาล่าง ทุกหน้า — ตำแหน่งเดียวกับใบกระดาษ FM-HRM-004 (feedback 20/11)
+   เดิมพิมพ์ 9px ต่อท้ายเนื้อหา คนมองไม่เห็น + ไม่มีวันที่ */
+.docfoot{margin-top:4px;font-size:10px;display:flex;justify-content:space-between}
+@media print{.docfoot{position:fixed;left:0;right:0;bottom:0;margin:0}body{padding-bottom:10mm !important}}
 </style></head><body style="padding:6mm">
 <div style="font-size:9px;text-align:right">หน้า 1 ของ ${1 + printImgs.length} ${tr('หน้า')}</div>
 <table style="width:100%;border:1px solid #000">
@@ -778,7 +782,7 @@ ${attachAll.length ? `<div style="margin-top:4px;border:1px solid #000;padding:3
   <b>เอกสาร/รูปแนบในระบบ ${attachAll.length} {tr('รายการ')}</b>${attachImgs.length > printImgs.length ? ` (${tr("พิมพ์รูปต่อท้าย")} ${printImgs.length} ${tr("รูป · อีก")} ${attachImgs.length - printImgs.length} ${tr("รูปดูในระบบ")})` : ''}
   ${attachDocs.length ? `<div>ไฟล์เอกสาร (ดูในระบบ): ${attachDocs.map((f, i) => `${i + 1}. ${f.file_name || attachFileName(f.file_url)}`).join(' &nbsp;·&nbsp; ')}</div>` : ''}
 </div>` : ''}
-<div style="margin-top:2px;font-size:9px;display:flex;justify-content:space-between"><span>${fullCode(df)}${df.footer_note ? " · " + df.footer_note : ""}</span><span>${df.effective_date ? "Effective Date : " + df.effective_date : ""}</span></div>
+<div class="docfoot"><span>${fullCode(df)}${df.footer_note ? " · " + df.footer_note : ""}</span><span>${df.effective_date ? "Issue Date : " + String(df.effective_date).slice(0, 10).split('-').reverse().join('/') : ""}</span></div>
 ${printImgs.map((f, i) => attachData[i] ? `<div style="page-break-before:always;padding-top:4mm">
   <div style="font-size:10px;margin-bottom:3px"><b>เอกสารแนบ ${i + 1}/${printImgs.length}</b> — ${f.file_name || attachFileName(f.file_url)}
     &nbsp;·&nbsp; ใบอบรม OJT ${thDate(t.train_date)} ${t.topic ? `(${(t.topic || '').split('\n')[0]})` : ''}</div>

@@ -61,9 +61,16 @@ const MOVED_TO_UNPLANNED = new Set([
   '49421914-9ec5-4fde-876f-9c896cfdb91b',   // หยุดไลน์คัดแยกชิ้นงาน
   '036ce39a-0eb5-4107-a315-5b481bbec668',   // เคาะเศษ / ทำความสะอาดสต๊อปเปอร์
 ]);
-/* ไลน์เครื่องขนาน — ข้าม (ต้องใช้ flow_mode/parallel_stations ฝั่ง Main) */
+/* 🔴 ไลน์เครื่องขนาน — ข้าม (สคริปต์นี้ไม่ได้ต่อ Main จึงส่ง lineFlow/machineCount ว่าง
+   ⇒ `laneWeightFn()` ไม่ทำงาน ⇒ DT รายเครื่องถูกหักเต็มจำนวน %A ต่ำผิด)
+   ⚠️ ลิสต์นี้ต้องตรงกับ `production_lines.parallel_stations > 1` ฝั่ง Main (20/11: 9 ไลน์)
+      คิวรีรีเฟรช: select name from production_lines where parallel_stations > 1;
+   🕳️ เคสจริง 20/11: ลิสต์ตกหล่น LASER-345 / LASER-789 (parallel_stations = 3)
+      ⇒ 12 กะถูกเขียน %A ต่ำผิดเฉลี่ย -33 จุด ต้องย้อนคืนทีหลัง (reason `revert-parallel-20261120`)
+      ⇒ จึงเพิ่มด่านอัตโนมัติข้างล่าง (`DT รวม > เวลากะ`) ไว้จับไลน์ที่ตกหล่นในอนาคตด้วย */
 const PARALLEL_LINES = new Set(['Assembly Line D - GWM&RA', 'Line D1 - GWM', 'Line D3 - STAMPED',
-  'Line D4 - BRK FRT BMPR', 'Line D5 - BRK RR BMPR', 'Line D6 - Sub Assembly', 'SUB APRON']);
+  'Line D4 - BRK FRT BMPR', 'Line D5 - BRK RR BMPR', 'Line D6 - Sub Assembly', 'SUB APRON',
+  'LASER-345', 'LASER-789']);
 
 const round2 = (v) => Math.round(v * 100) / 100;
 const die = (label, error) => { if (error) { console.error(`❌ ${label}:`, error.message); process.exit(1); } };
@@ -126,13 +133,23 @@ const main = async () => {
     planned_cap_min: null,
   } });
 
-  const stat = { skipLine: 0, skipNoA: 0, skipMismatch: 0, skipZero: 0, same: 0, changed: 0 };
-  const rows = [], worst = [], zeroed = [];
+  const stat = { skipLine: 0, skipNoA: 0, skipMismatch: 0, skipZero: 0, skipDtOverShift: 0, same: 0, changed: 0 };
+  const rows = [], worst = [], zeroed = [], overShift = [];
 
   for (const s of sessions) {
     if (PARALLEL_LINES.has(s.line_name)) { stat.skipLine++; continue; }
     if (s.shift_min == null || (s.oee_a == null && !FORCE)) { stat.skipNoA++; continue; }
     const dl = dtBy[s.id] || [];
+
+    /* 🔴 ด่านจับ "ไลน์เครื่องขนานที่หลุดลิสต์" โดยไม่ต้องต่อทะเบียน Main:
+       DT รวมเกินความยาวกะ = เป็นไปไม่ได้บนไลน์เครื่องเดียว ⇒ ลงรายเครื่องแน่ๆ
+       สคริปต์นี้หารเลนไม่ได้ ⇒ **ข้าม ห้ามเดา** (เคส LASER-789 12/10: DT 829 น. บนกะ 570 น.) */
+    const dtSum = dl.reduce((a, x) => a + (Number(x.duration_min) || 0), 0);
+    if (dtSum > Number(s.shift_min)) {
+      stat.skipDtOverShift++;
+      if (overShift.length < 20) overShift.push(`${s.work_date} ${String(s.line_name).padEnd(24)} ${s.shift.padEnd(5)} DT ${dtSum} น. > เวลากะ ${s.shift_min} น. (${dl.length} ใบ)`);
+      continue;
+    }
     const base = { session: s, orders: ordBy[s.id] || [], defects: [], ngQty: 0,
       products: prods, kanbanStds: kstds, breakPolicies: breaks,
       processType: s.break_snapshot?.process_type ?? null,
@@ -183,11 +200,13 @@ const main = async () => {
   ข้าม: ไลน์เครื่องขนาน      ${stat.skipLine}
   ข้าม: ไม่มี %A / shift_min ${stat.skipNoA}
   คำนวณย้อนไม่ตรง stamp    ${stat.skipMismatch}   ← ${FORCE ? '⚠️  --force: คิดใหม่ให้ด้วย' : 'ข้าม (ทะเบียนเปลี่ยนไปแล้ว)'}
+  ข้าม: DT รวม > เวลากะ        ${stat.skipDtOverShift}   ← ไลน์เครื่องขนาน (หารเลนไม่ได้)
   ข้าม: คิดใหม่ได้ 0 ทั้งที่ผลิต ${stat.skipZero}   ← fail-closed (ดูลิสต์ล่าง)
   ตัวเลขเท่าเดิม             ${stat.same}
   ✍️  ต้องแก้                 ${stat.changed}
   %A เฉลี่ย ${avg(r => r.aOld)} → ${avg(r => r.aNew)}  (${avg(r => r.aNew - r.aOld)})`);
   if (worst.length) console.log('\n  ตัวอย่างกะที่คำนวณย้อนไม่ตรง:\n   ' + worst.join('\n   '));
+  if (overShift.length) console.log('\n  ⚠️  กะที่ DT รวมเกินเวลากะ (ไม่แตะ — น่าจะเป็นไลน์เครื่องขนานที่หลุดลิสต์):\n   ' + overShift.join('\n   '));
   if (zeroed.length) console.log('\n  ⚠️  กะที่คิดใหม่ได้ %A = 0 ทั้งที่มียอดผลิต (ไม่แตะ — ต้องให้คนไล่ดูใบ DT):\n   ' + zeroed.join('\n   '));
 
   /* 🔌 ออฟไลน์: ออกเป็น SQL (log ค่าเดิมก่อน แล้วค่อยเขียนทับ — ลำดับเดียวกับทาง DB เป๊ะ) */

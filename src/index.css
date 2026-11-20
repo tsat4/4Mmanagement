@@ -457,9 +457,16 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
 .filter-bar :is(select, input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file])),
 .search-input input {
   width: auto; height: var(--ctl-h); font-size: var(--ctl-fs);
-  padding: 0 var(--ctl-pad-x); border-radius: var(--ctl-r); max-width: 100%;
+  padding: 0 var(--ctl-pad-x); border-radius: var(--ctl-r);
 }
-.filter-bar select { max-width: 280px; }
+/* 📏 เพดานความกว้าง (แก้ทั้งระบบ 2026-11-20 · คำสั่ง user) — เดิม `max-width: 100%` อยู่ในกฎ :is() ข้างบน
+   ซึ่ง specificity = 0,6,1 (ตัวสูงสุดในวงเล็บ) ⇒ **ทับ** `.filter-bar select { max-width: 280px }` ทุกหน้า
+   = เพดาน 280 ไม่เคยมีผล select ชื่อไลน์ยาวยืดถึง ~465px ดันแถบกรองตกบรรทัด
+   ⇒ แยก max-width ออก: ช่องพิมพ์ = 100% เหมือนเดิม (กฎนี้ specificity เท่าเดิม พฤติกรรมไม่เปลี่ยน)
+      select = ใช้กฎ `.filter-bar select` ข้างล่าง (จอคอม 280 · มือถือ 100%) */
+.filter-bar :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file])),
+.search-input input { max-width: 100%; }
+.filter-bar select { max-width: min(280px, 100%); }   /* min() = กล่องแคบกว่า 280 ก็ยังไม่ล้น (Cr 79+) */
 .filter-bar input[type=date] { width: 150px; }
 .filter-bar input[type=month] { width: 160px; }
 .filter-bar .grow { flex: 1 1 220px; }
@@ -1289,9 +1296,3 @@ body.esm-tv-shell .tv-hide { display: none !important; }
 @media (hover: hover) {
   .qb-row:hover > td { background: var(--bg2); }
 }
-
-/* 📏 B6 (2026-11-16 · หน้า /scrap-report เท่านั้น) — ช่องเลือกไลน์ในแถบกรองยาว 465px จนแถบตกบรรทัด
-   ต้นเหตุ: `.filter-bar select { max-width: 280px }` ข้างบน **แพ้** `.filter-bar :is(select, input:not(...)×5)`
-   (specificity ของ :is() = ตัวที่สูงสุดในวงเล็บ = 0,6,1) ⇒ เพดาน 280 ไม่เคยมีผลทั้งระบบ
-   ⚠️ แก้เฉพาะหน้านี้ตามที่สั่ง — แก้ตัวกลางจะทำให้ select ทุกหน้าแคบลงพร้อมกัน (ต้องตัดสินใจแยก) */
-.scrap-page .filter-bar select { max-width: 280px !important; }

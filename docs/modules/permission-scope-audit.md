@@ -1176,3 +1176,16 @@ line_id: emp.line_id ?? ident.line_id
 - บัญชีที่ "เสียใบผ่าน" 27 ใบ: manager 5 (ทุกคนมี CC อยู่แล้ว → CC คุมจริงเป็นครั้งแรก · สุรเสนถือ CC 5 ส่วนงาน = เท่าเดิม) · qa 18 (ดู D/E) · document_control 2 (มี CC ของส่วนตัวเอง · ทะเบียนเอกสารเป็นของกลางผ่าน `unknownTarget` อยู่แล้ว)
 
 **ยังเหลือ (ไม่ได้ทำรอบนี้ · ต้องการ user เคาะ):** P3 ยุบคีย์ที่ชื่อฝังขอบเขต (`shift_schedule:edit` vs `edit_dept` · `org:manage_divisions` vs `manage_own_unit` · `mtn_repair:service` vs `service_own_team`) · bucket `dept_admin` สร้างใหม่จาก allow-list · คีย์ "รอเคาะ" (`products:create` · `four_m:reset` · `skills:delete` · `line_stock:approve` · `event_log:approve_*` · `mtn_repair:*` ฝั่งช่าง) · ด่านหน่วยฝั่ง DB ของ `shift_schedules` (ยัง has_perm อย่างเดียว) · DR ทั้งฝั่ง (anon · known gap)
+
+### 16.1 · 20/11 — หลัง deploy: จำลองสิทธิ์จริงในฐาน + hotfix `four_m_insert` (ฝั่ง DB อย่างเดียว)
+
+- **วิธีพิสูจน์** (ทำซ้ำได้ใน SQL Editor ของ MAIN): `set_config('request.jwt.claims', '{"sub":"<uuid>"}', true)` แล้วเรียก
+  `app_can_write_line('<ไลน์>')` — จำลองทุกบัญชี leader/supervisor/manager/qa/mtn
+- **ผล:** หัวหน้าไลน์/หัวหน้าส่วน/ผจก. ฝ่ายผลิต ผ่านบนไลน์ตัวเองทุกคน · **ทุกคู่ (คน × ไลน์) ที่เปิด/ปิด/ขอปิดกะจริงใน 30 วันล่าสุด
+  (DR `production_sessions` 100+ คู่) ผ่านหมด 0 บล็อก** · ชื่อไลน์ `Assy  LWR` (เว้นวรรค 2 ช่อง) ตรงกันทั้ง DR/Main
+- **เจอหลุด 1 จุด:** QA 13 บัญชี · ช่าง 15 · หัวหน้าส่วน QA/Planning&Store/Maintenance · ผจก. QA = `false` บนไลน์ผลิต
+  ⇒ `four_m_insert with check (app_can_write_line)` บล็อก QA check sheet ที่ออกใบ 4M ให้ไลน์ที่ตรวจ (ฝั่งจอผ่านด้วย `qaWriteCtx`)
+  = DB เข้มกว่าจอ ขัด §2 ของ migration เอง · แก้ `20261120_four_m_insert_support_units_main.sql`: `or has_perm('qa:record') or has_perm('mtn_repair:service')`
+  (apply แล้ว 16:45 · ไม่ต้อง deploy) · ขั้น update/delete ไม่แตะ
+- ที่ยังเป็นไปได้แต่ไม่เคยเกิดจริง: หัวหน้าไลน์ที่ถือ CC ระดับไลน์ 8 คน ปิดกะ "ไลน์พี่น้อง" ในส่วนเดียวกันไม่ได้ (ขอบเขตที่ตั้งไว้เอง ·
+  30 วันไม่มีเคส) — ถ้าหน้างานแจ้ง ให้เพิ่ม CC ระดับแผนกที่ /add-user ช่อง ④ ไม่ใช่แก้โค้ด

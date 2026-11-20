@@ -615,8 +615,18 @@ function NgRecheckPanel({ result, cp, onSaved, canRecord = false, deptWrite = nu
 }
 
 // ─── History Detail Modal ─────────────────────────────────────────────────────
+/* 🔔 ลิงก์ของแจ้งเตือนใบตรวจ (20/11 · คำสั่ง user "แจ้งเตือนใบ AM ยังพาไปหน้า PM ช่าง")
+   ใบ AM → หน้าบันทึกผลตรวจ AM ใน Daily Checker · ใบ PM → หน้าตรวจของช่าง · เปิดเครื่องนั้นให้เลย (?equip=)
+   แยกด้วย isAmTeam() (mtn_teams.kind) เท่านั้น · ไม่รู้ทีม = ไม่ส่ง link (ถอยไป map ref_table เดิม) */
+export function inspNotifLink(dept, jigId) {
+  if (!dept) return undefined
+  const q = new URLSearchParams({ dept: String(dept) })
+  if (jigId) q.set('equip', String(jigId))
+  return isAmTeam(dept) ? `/daily-checker?tab=amcheck&${q.toString()}` : `/pm?tab=check&${q.toString()}`
+}
+
 function HistoryModal({ inspection, checkpoints: cpsFromPage, jig, onClose, userId, userRole, deptWrite, canRecord = false,
-  isAm = false, inspectorPosition = null, myPosition = null, inspectorIsSelf = null, isShared = false }) {
+  isAm = false, deptKey = null, inspectorPosition = null, myPosition = null, inspectorIsSelf = null, isShared = false }) {
   const [results, setResults] = useState([])
   const [approving, setApproving] = useState(false)
   const [exporting, setExporting] = useState(false)
@@ -673,7 +683,7 @@ function HistoryModal({ inspection, checkpoints: cpsFromPage, jig, onClose, user
     if (!error && data) {
       setInsp(data)
       if (data.inspector_id !== userId) {
-        createNotification(data.inspector_id, { title: 'ผลการตรวจได้รับการอนุมัติ', body: jig?.name ? `${jig.name} — ${formatDate(data.inspected_at)}` : undefined, type: 'success', refTable: 'inspections', refId: data.id }).catch(() => {})
+        createNotification(data.inspector_id, { title: 'ผลการตรวจได้รับการอนุมัติ', body: jig?.name ? `${jig.name} — ${formatDate(data.inspected_at)}` : undefined, type: 'success', refTable: 'inspections', refId: data.id, link: inspNotifLink(deptKey, jig?.id) }).catch(() => {})
       }
     }
     setApproving(false)
@@ -691,7 +701,7 @@ function HistoryModal({ inspection, checkpoints: cpsFromPage, jig, onClose, user
     if (!error && data) {
       setInsp(data); setRejecting(false); setRejectReason('')
       if (data.inspector_id !== userId) {
-        createNotification(data.inspector_id, { title: 'ผลการตรวจถูกตีกลับ', body: rejectReason.trim(), type: 'error', refTable: 'inspections', refId: data.id }).catch(() => {})
+        createNotification(data.inspector_id, { title: 'ผลการตรวจถูกตีกลับ', body: rejectReason.trim(), type: 'error', refTable: 'inspections', refId: data.id, link: inspNotifLink(deptKey, jig?.id) }).catch(() => {})
       }
     }
     setApproving(false)
@@ -1582,6 +1592,7 @@ export default function PMCheckData({ mode = 'pm' }) {
           title: 'พบผลตรวจไม่ผ่าน (NG)',
           body: `${selectedJig.name} — ${formatDate(insp.inspected_at)}`,
           type: 'error', refTable: 'inspections', refId: insp.id,
+          link: inspNotifLink(department, selectedJig.id),   // 🔔 20/11: ใบ AM → หน้า AM · ใบ PM → หน้าช่าง
           lineName: selectedJig.line_name || null,
         }).then(r => { if (r?.ownersCapped) toast.error(`⚠ ${tr("ทีม")} ${deptNameOf(department)} ${tr("มีช่าง")} ${r.owners} ${tr("คน — แจ้งเตือนส่งถึงได้ 20 คนแรกเท่านั้น")}`) })
           .catch(() => {})
@@ -2351,6 +2362,7 @@ export default function PMCheckData({ mode = 'pm' }) {
           <HistoryModal inspection={viewInspection} checkpoints={checkpoints} jig={selectedJig}
             userId={userId} userRole={userRole} deptWrite={deptWrite} canRecord={canRecord}
             isAm={isAmTeam(clDeptById[viewInspection.checklist_id] ?? department)}
+            deptKey={clDeptById[viewInspection.checklist_id] ?? department}
             inspectorPosition={inspectorOf(viewInspection).position} inspectorIsSelf={inspectorOf(viewInspection).isSelf} myPosition={myPosition}
             isShared={!!isSharedAccount}
             onClose={() => { setViewInspection(null); if (selectedJig) fetchHistory(selectedJig.id) }} />
