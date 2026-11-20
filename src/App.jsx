@@ -568,7 +568,7 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
       {userAvatarUrl ? (
         <img loading="lazy" src={userAvatarUrl} alt="" style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, objectFit: 'cover', border: '1.5px solid var(--accent)' }} />
       ) : (
-        /* 🚦 อักษรย่อแทนรูปโปรไฟล์ — **พื้นเรียบ ห้ามไล่เฉด** (23/09)
+        /* 🚦 อักษรย่อแทนรูปโปรไฟล์ — **ห้ามไล่ข้ามสีสถานะ** (23/09) · ไล่เฉดในสีเดียวได้ (20/11 user: "ไล่สีไม่ได้แปลว่าหลายสี")
            เดิมเป็น `linear-gradient(135deg, var(--accent), #ff6b6b)` = เอาสี Andon เขียว→แดง
            มาทำของตกแต่ง ทั้งที่ 2 สีนี้ถูกจองไว้แปลว่า "ปกติ/มีปัญหา" ทั้งระบบ (utils/statusTone.js) */
         <div style={{
@@ -836,7 +836,8 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
         <nav style={{
           position: 'fixed', top: 0, left: 0, height: '100vh',
           width: isOpen ? 'var(--rail-w)' : '0px',
-          background: 'var(--bg2)', borderRight: isOpen ? '1px solid var(--border)' : 'none',
+          background: 'linear-gradient(180deg, var(--rail-top) 0%, var(--rail-bot) 100%)',   // 🪪 20/11 ไล่เฉดสีเดียว (token)
+          borderRight: isOpen ? '1px solid var(--border)' : 'none',
           display: 'flex', flexDirection: 'column', alignItems: 'center',
           padding: isOpen ? '10px 0 8px' : '10px 0',
           gap: 4, zIndex: 1000, overflow: 'hidden',
@@ -926,7 +927,7 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
             position: 'fixed', top: 0, bottom: 0, left: 'var(--rail-w)', width: 'var(--sidebar-w)',
             /* 🎨 20/11 (sidebar ทาง ข): พื้นไล่เข้มลงล่าง + เงา — ไล่จาก token ล้วน ⇒ ธีมสว่างก็ไล่ขาว→เทาอ่อนเอง
                ปักหมุดเดิมไม่มีเงาเลย ⇒ ใช้ --shadow-float (ของที่ลอย · UI §6.20) ให้แยกจากเนื้อหา */
-            background: 'linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%)', borderRight: '1px solid var(--border)',
+            background: 'linear-gradient(180deg, var(--panel-top) 0%, var(--panel-bot) 100%)', borderRight: '1px solid var(--border)',
             display: 'flex', flexDirection: 'column', padding: '0 10px 12px',
             zIndex: 998,
             boxShadow: pinned ? 'var(--shadow-float)' : '18px 0 40px rgba(0,0,0,0.45)',
@@ -934,7 +935,7 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
             {/* 🪪 20/11 (คำสั่ง user · sidebar ทาง ข + หัวแผงโลโก้): หัวแผง = โลโก้ + ชื่อระบบ · ปุ่มเดิม 📌/✕ คงไว้
                 (ไม่เพิ่มปุ่มหุบแผงชุดที่ 2 — ◀ ท้ายราง = ซ่อนเมนูทั้งหมด · ✕ = ปิดแผง · user ทักเรื่องซ้ำ 20/11)
                 ชื่อหมวดลงไปเป็นป้ายเล็กใต้หัว */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '12px 2px 10px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '12px 0 10px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
               <Link to="/" title="หน้าหลัก (เลือกโมดูล)" style={{ lineHeight: 0, flexShrink: 0 }} onClick={() => { if (!pinned) setPanel(null); }}>
                 <img src={tsLogo} alt="Thai Summit Group" width={30} height={30} style={{ borderRadius: 6 }} />
               </Link>
@@ -942,25 +943,25 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
                 <div style={{ fontSize: 15, fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--text)', letterSpacing: '0.02em' }}>ESM</div>
                 <div style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Shopfloor Management</div>
               </div>
-              {onTogglePin && <button onClick={onTogglePin} title={pinned ? 'เลิกปักหมุด — แผงจะปิดเองหลังเลือกเมนู' : 'ปักหมุดแผงค้างไว้ (เนื้อหาหลักจะแคบลง)'} style={{
-                width: 26, height: 26, borderRadius: 6, flexShrink: 0, cursor: 'pointer', outline: 'none',
+              {/* 20/11: ไอคอนเส้นชุดเดียวกับเมนู แทน emoji 📌/✕ (emoji สีแดงชนพาเลต · UI §6.36) — หน้าที่ปุ่มเดิมทุกอย่าง */}
+              {onTogglePin && <button onClick={onTogglePin} aria-pressed={pinned} title={pinned ? 'เลิกปักหมุด — แผงจะปิดเองหลังเลือกเมนู' : 'ปักหมุดแผงค้างไว้ (เนื้อหาหลักจะแคบลง)'} style={{
+                width: 28, height: 28, borderRadius: 8, flexShrink: 0, cursor: 'pointer', outline: 'none',
                 border: `1px solid ${pinned ? 'var(--accent)' : 'var(--border2)'}`,
                 background: pinned ? 'var(--accent-dim)' : 'transparent',
                 color: pinned ? 'var(--accent)' : 'var(--muted)', fontSize: 12,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>📌</button>}
+              }}><Icon name="Pin" size={15} /></button>}
               {!pinned && (
-                <button onClick={() => setPanel(null)} title="ปิดแผง (Esc)" style={{
-                  width: 26, height: 26, borderRadius: 6, flexShrink: 0, cursor: 'pointer', outline: 'none',
+                <button onClick={() => setPanel(null)} title="ปิดแผง (Esc)" aria-label="ปิดแผง" style={{
+                  width: 28, height: 28, borderRadius: 8, flexShrink: 0, cursor: 'pointer', outline: 'none',
                   border: '1px solid var(--border2)', background: 'transparent',
                   color: 'var(--muted)', fontSize: 12,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>✕</button>
+                }}><Icon name="PanelLeftClose" size={15} /></button>
               )}
             </div>
             {/* ชื่อหมวดของแผงที่เปิด (ย้ายจากหัวแผง · 20/11) */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '12px 8px 6px', fontSize: 12, fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.02em', flexShrink: 0, minWidth: 0 }}>
-              <Icon glyph={panelMeta.icon} size={14} />
               <span style={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{panelMeta.title}</span>
             </div>
 
@@ -1009,7 +1010,7 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
               </>)}
             </div>
             {/* 🪪 การ์ดผู้ใช้ท้ายแผง (20/11 · sidebar ทาง ข) — แทนวงกลมบนรางตอนแผงเปิด · กด = แผงโปรไฟล์ (ที่เดิม)
-                แผงโปรไฟล์มีการ์ดของมันเองอยู่แล้ว ⇒ ไม่วาดซ้ำ · อักษรย่อพื้นเรียบ ห้ามไล่เฉด (กฎ 23/09) */}
+                แผงโปรไฟล์มีการ์ดของมันเองอยู่แล้ว ⇒ ไม่วาดซ้ำ · อักษรย่อไล่เฉดเขียวสีเดียว (20/11 user) — ห้ามไล่ข้ามสีสถานะ (กฎ 23/09) */}
             {panel !== '__me' && (
               <button onClick={() => setPanel('__me')} title={`${displayName} · โปรไฟล์/ลายเซ็น/ธีม/ออกจากระบบ`} style={{
                 marginTop: 8, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left',
@@ -1020,8 +1021,8 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
                   {userAvatarUrl ? (
                     <img loading="lazy" src={userAvatarUrl} alt="" style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--border2)' }} />
                   ) : (
-                    <span style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--bg2)', border: '1px solid var(--border2)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, color: 'var(--text2)', lineHeight: 1 }}>{initials}</span>
+                    <span style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg, var(--avatar-from) 0%, var(--avatar-to) 100%)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, color: 'var(--accent-ink)', lineHeight: 1 }}>{initials}</span>
                   )}
                   {myQueue.badge > 0 && (
                     <span title={`มีงานรอคุณโดยตรง ${myQueue.badge} รายการ`} style={{
