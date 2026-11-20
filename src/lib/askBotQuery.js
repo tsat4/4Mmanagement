@@ -24,7 +24,7 @@ import { dtOpenKind } from '../utils/downtimeRules';
 import { OPEN_MO_STATUSES } from '../utils/mtnStepPerm';
 import {
   INTENTS, parseQuestion, defaultPeriod, matchSubject, oeeSummary, downtimeTop, productionTotals,
-  rankLinesByOee, openDowntimeList, moOpenSummary, fourMPendingSummary, defectTop, attendanceSummary, makeShiftOf,
+  rankLinesByOee, openDowntimeList, moOpenSummary, fourMPendingSummary, defectTop, attendanceSummary, makeShiftOf, applyHelpers,
   fmtInt, fmtPct, ASK_HINTS,
 } from '../utils/askBot';
 
@@ -323,9 +323,11 @@ async function toolAttendance({ lineName, period, all, vis }) {
   const idToName = Object.fromEntries(all.map(l => [l.id, l.name]));
   const d = period.to;
   /* แยกกะ (20/11 · คำสั่ง user): กะของแต่ละคนใช้ข้อมูล 3 ชุดเดียวกับจอเช็คชื่อ — ตารางกะ · สลับกะรายคน · รวมกะ */
-  const [emps, logs, sch, ovr, mrg] = await Promise.all([
+  const [emps, logs, hlp, sch, ovr, mrg] = await Promise.all([
     fetchAllPages(() => supabase.from('employees').select('id, line_id, team, department').eq('is_active', true)),
     fetchAllPages(() => supabase.from('daily_production_logs').select('id, employee_id, is_present').eq('work_date', d)),
+    /* ยืมคนข้ามไลน์ — นับที่ไลน์ปลายทางเหมือน /checkin (20/11) · ระบุกะ = เฉพาะแถวของกะนั้น */
+    supabase.from('line_helpers').select('employee_id, to_line_id, shift').eq('work_date', d),   // ทั้งวัน — applyHelpers กรองกะเอง
     period.shift ? supabase.from('shift_schedules').select('line_id, dept_name, day_team').eq('work_date', d) : null,
     period.shift ? supabase.from('shift_overrides').select('employee_id, shift').eq('work_date', d) : null,
     period.shift ? supabase.from('shift_merge_events').select('line_id, section, target_shift').lte('start_date', d).gte('end_date', d) : null,
@@ -334,21 +336,29 @@ async function toolAttendance({ lineName, period, all, vis }) {
   /* อ่านตารางกะไม่ได้ ≠ "ไม่มีใครเข้ากะนี้" — ห้ามตอบเป็น 0 คน */
   const shErr = period.shift && (sch.error || ovr.error || mrg.error);
   if (shErr) return fail('ตารางกะ', shErr.message || shErr);
+  /* อ่านทะเบียนยืมคนไม่ได้ = นับที่ต้นสังกัดทั้งหมด + เขียนบอก (ห้ามเงียบ · ไม่บล็อกคำตอบ) */
+  const hp = hlp.error ? { emps: emps.rows, moved: 0, split: 0, otherShift: new Set() } : applyHelpers(emps.rows, hlp.data || [], { shift: period.shift || null });
   const shiftOf = period.shift ? makeShiftOf({ schedules: sch.data || [], overrides: ovr.data || [], merges: mrg.data || [], lines: all }) : null;
-  const r = attendanceSummary(emps.rows, logs.rows,
-    (id) => { const n = idToName[id]; return n && (!nameSet || nameSet.has(n)) ? n : null; },
-    { shift: period.shift || null, shiftOf });
+  const lineOf = (id) => { const n = idToName[id]; return n && (!nameSet || nameSet.has(n)) ? n : null; };
+  const r = attendanceSummary(hp.emps, logs.rows, lineOf, { shift: period.shift || null, shiftOf });
+  /* คนที่ถูกยืมเฉพาะอีกกะ แต่ตารางกะต้นสังกัดให้อยู่กะนี้ = ถูกนับในกะนี้ด้วย (เหมือน /checkin) — นับเฉพาะที่อยู่ในคำตอบนี้จริง */
+  const dupOther = period.shift ? hp.emps.filter(e => hp.otherShift.has(e.id) && lineOf(e.line_id) && shiftOf(e) === period.shift).length : 0;
   const source = `เช็คชื่อ · ${whoText(lineName, vis)} · ${period.label}`;
   const shiftNotes = period.shift ? [
     r.unknownShift ? `⚠️ ยังไม่รู้กะของพนักงาน ${r.unknownShift} คน (ไลน์ยังไม่ตั้งตารางกะ/ทีมไม่รู้กติกา) — ไม่นับในกะนี้${r.unknownIn ? ` · ในนี้เช็คชื่อมาแล้ว ${r.unknownIn} คน` : ''}` : null,
-    'นับตามไลน์ต้นสังกัด — คนที่ถูกยืมไปช่วยไลน์อื่นยังนับที่ไลน์เดิม',
   ] : [];
-  if (!r.head) return { source, text: period.shift ? `ไม่พบพนักงานที่เข้า${period.shift === 'day' ? 'กะเช้า' : 'กะดึก'}ในขอบเขตนี้` : 'ไม่พบพนักงานที่ผูกกับไลน์ในขอบเขตนี้', notes: shiftNotes.filter(Boolean), link: '/checkin' };
+  const helperNotes = [
+    hlp.error ? '⚠️ อ่านข้อมูลยืมคนข้ามไลน์ไม่ได้ — คนที่ถูกยืมยังนับที่ไลน์ต้นสังกัด' : null,
+    hp.moved ? `นับคนที่ถูกยืมไปช่วย ${hp.moved} คน ที่ไลน์ปลายทาง (เหมือนหน้าเช็คชื่อ)` : null,
+    hp.split ? `${hp.split} คนถูกยืมไปคนละไลน์ในแต่ละกะ — ทั้งวันนับที่ไลน์ต้นสังกัด (ระบุกะเพื่อดูไลน์ที่ไปช่วย)` : null,
+    dupOther ? `ในนี้มี ${dupOther} คนที่ถูกยืมไปช่วยอีกกะ — ยังนับในกะนี้ตามตารางกะต้นสังกัด (เหมือนหน้าเช็คชื่อ) ⇒ กะเช้า+กะดึกอาจรวมเกินยอดทั้งวัน` : null,
+  ];
+  if (!r.head) return { source, text: period.shift ? `ไม่พบพนักงานที่เข้า${period.shift === 'day' ? 'กะเช้า' : 'กะดึก'}ในขอบเขตนี้` : 'ไม่พบพนักงานที่ผูกกับไลน์ในขอบเขตนี้', notes: [...shiftNotes, ...helperNotes].filter(Boolean), link: '/checkin' };
   return {
     source,
     text: `พนักงาน ${r.head} คน — มา ${r.in} · แจ้งว่าไม่มา ${r.out} · ยังไม่ได้เช็ค ${r.none}`
       + (!lineName && r.lines.length > 1 ? '\n' + r.lines.slice(0, 6).map(l => `· ${l.line} — มา ${l.in}/${l.head}${l.out ? ` · ไม่มา ${l.out}` : ''}${l.none ? ` · ยังไม่เช็ค ${l.none}` : ''}`).join('\n') : ''),
-    notes: [period.shift ? null : '"ยังไม่ได้เช็ค" ≠ ขาดงาน — อาจเป็นคนกะดึกที่ยังไม่เข้ากะ', ...shiftNotes].filter(Boolean),
+    notes: [period.shift ? null : '"ยังไม่ได้เช็ค" ≠ ขาดงาน — อาจเป็นคนกะดึกที่ยังไม่เข้ากะ', ...shiftNotes, ...helperNotes].filter(Boolean),
     link: '/checkin',
   };
 }

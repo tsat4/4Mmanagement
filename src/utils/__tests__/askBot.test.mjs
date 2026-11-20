@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   parseQuestion, periodFromText, defaultPeriod, matchSubject, oeeSummary, downtimeTop, productionTotals,
-  rankLinesByOee, openDowntimeList, moOpenSummary, fourMPendingSummary, defectTop, attendanceSummary, makeShiftOf,
+  rankLinesByOee, openDowntimeList, moOpenSummary, fourMPendingSummary, defectTop, attendanceSummary, makeShiftOf, applyHelpers,
 } from '../askBot.js';
 import { dtOpenKind } from '../downtimeRules.js';
 
@@ -300,4 +300,24 @@ test('มาทำงานแยกกะ (user สั่ง 20/11): กะข�
   assert.deepEqual([night.head, night.in], [2, 1]);
   const all = attendanceSummary(emps, logs, id => name[id]);
   assert.equal(all.head, 6, 'ไม่ระบุกะ = ทั้งวันเหมือนเดิม');
+});
+
+test('ยืมคน (user สั่ง 20/11): นับที่ไลน์ปลายทาง · กะ = กะที่ยืม · ทั้งวันไปคนละไลน์ = ต้นสังกัด ห้ามเดา', () => {
+  const emps = [{ id: 'a', line_id: 1, team: 'A' }, { id: 'b', line_id: 1, team: 'A' }, { id: 'c', line_id: 1, team: 'A' }];
+  const helpers = [
+    { employee_id: 'a', to_line_id: 2, shift: 'night' },
+    { employee_id: 'b', to_line_id: 2, shift: 'day' }, { employee_id: 'b', to_line_id: 3, shift: 'night' },
+  ];
+  const night = applyHelpers(emps, helpers, { shift: 'night' });
+  assert.deepEqual(night.emps.map(e => [e.line_id, e._helperShift ?? null]), [[2, 'night'], [3, 'night'], [1, null]]);
+  assert.equal(night.emps[0]._homeLineId, 1);
+  assert.deepEqual([...night.otherShift], [], 'b ถูกยืมทั้ง 2 กะ = ย้ายแล้ว ไม่ใช่อีกกะ');
+  const day = applyHelpers(emps, helpers, { shift: 'day' });
+  assert.deepEqual([...day.otherShift], ['a'], 'a ถูกยืมเฉพาะกะดึก = อีกกะ ต้องให้จอเขียนบอก');
+  const shiftOf = makeShiftOf({ schedules: [{ line_id: 1, day_team: 'A' }], lines: [{ id: 1, name: 'L1' }, { id: 2, name: 'L2' }, { id: 3, name: 'L3' }] });
+  assert.equal(shiftOf(night.emps[0]), 'night', 'ทีม A เป็นกะเช้าตามตาราง แต่ถูกยืมไปกะดึก = นับกะดึก');
+  const allDay = applyHelpers(emps, helpers);
+  assert.deepEqual([allDay.moved, allDay.split], [1, 1]);
+  assert.deepEqual(allDay.emps.map(e => e.line_id), [2, 1, 1]);
+  assert.equal(emps[0].line_id, 1, 'ห้ามแก้แถวเดิม');
 });
