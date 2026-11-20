@@ -231,11 +231,11 @@ migration `20261013_plating_loop_dr.sql` (DR · apply แล้ว) · `20261013
 
 | คีย์ | role ที่ได้ |
 |---|---|
-| `wip_request:decide` (กดเบิก/พัก) | `manager` · `admin` · `leader` |
+| `wip_request:decide` (กดเบิก/พัก) | `manager` · `admin` · `leader` · **+ `supervisor` (18/11 · คำสั่ง user — migration `20261118_permission_catalog_sync_main.sql`)** |
 | `wip_request:receive` (กดรับของ) | + `supervisor` · `dept_scope` |
 | `line_levels:manage` (ตั้ง min/max) | + `supervisor` · `dept_scope` |
 
-⇒ **พนักงานหน้าไลน์ (operator) ขอเบิกเองไม่ได้เลย** และ **สิทธิ์ระดับส่วน (supervisor) ก็กดเบิกไม่ได้**
+⇒ **พนักงานหน้าไลน์ (operator) ขอเบิกเองไม่ได้เลย** · ~~สิทธิ์ระดับส่วน (supervisor) ก็กดเบิกไม่ได้~~ → **เปิดให้แล้ว 18/11** (user: "การเบิกชิ้นส่วน หัวหน้าแผนก ทำไมไม่ได้") · ขอบเขตไลน์ยังตัดสินด้วยชั้น ③ เหมือนเดิม
 (ข้อความบนจอเขียนว่า "คนตัดสินใจเบิกคือหัวหน้ากลุ่มของไลน์" = role `leader` ซึ่งตรงกับทะเบียน)
 จะเปิดให้ใครเพิ่มเป็นการเปลี่ยนนโยบาย — **ห้าม session ไหนแก้เอง**
 

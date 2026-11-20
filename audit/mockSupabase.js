@@ -377,15 +377,18 @@ const TABLE_ROWS = {
     handed_by: `หัวหน้าทดสอบ ${i}`,
   }),
 
+  /* 🏢 ชั้นบน (20/11 · ห้ามถอด) — ของจริงส่วนงานทุกตัวชี้ plant แล้ว (migration 20261120_org_nodes_upper_layer_rows_main.sql)
+     ⇒ แถว 13 = company (ราก) · 12 = plant ใต้ company · PD1 (แถว 1) ชี้ plant · JIG MTN (6) ยังไม่มีแม่ = เคส "แผนกขึ้นตรง"
+     ชั้นบนไม่มี CC/ฝ่าย ตามของจริง (ใส่ = ไหลลงหน่วยผ่าน divisionOfNode/laborTypeOfNode) · ทีมเหลือ 8–11,15 */
   org_nodes: (r, i) => ({
     ...r,
-    kind: i === 1 ? 'section' : (i === 2 || i === 6) ? 'department' : i <= 5 || i === 7 ? 'line' : 'team',
-    code: i === 1 ? 'PD1' : i <= 5 || i === 7 ? null : i === 6 ? null : r.code,
-    name: i === 6 ? 'JIG MTN' : r.name,   // แผนกช่างชื่อจริง — ให้สาย ⚡ KPI ช่าง (kpi_mtn_rollup → kpiAuto) ถูกรันใน harness
-    parent_id: i === 1 || i === 6 ? null : i === 2 ? 'id-1' : i <= 5 ? 'id-2' : i === 7 ? 'id-6' : 'id-3',
+    kind: i === 13 ? 'company' : i === 12 ? 'plant' : i === 1 ? 'section' : (i === 2 || i === 6) ? 'department' : i <= 5 || i === 7 ? 'line' : 'team',
+    code: i === 13 ? '2100' : i === 12 ? '2140' : i === 1 ? 'PD1' : i <= 5 || i === 7 ? null : i === 6 ? null : r.code,
+    name: i === 13 ? 'TSAT' : i === 12 ? 'TSAT-P4' : i === 6 ? 'JIG MTN' : r.name,   // แผนกช่างชื่อจริง — ให้สาย ⚡ KPI ช่าง (kpi_mtn_rollup → kpiAuto) ถูกรันใน harness
+    parent_id: i === 13 || i === 6 ? null : i === 12 ? 'id-13' : i === 1 ? 'id-12' : i === 2 ? 'id-1' : i <= 5 ? 'id-2' : i === 7 ? 'id-6' : 'id-3',
     ref_line_id: i >= 3 && i <= 5 ? i : null,          // 🔑 เลข — ชี้ production_lines.id (ดูหมายเหตุที่ production_lines)
     division: i === 1 ? 'production' : i === 6 ? 'maintenance' : null,
-    cost_center: isNullish(r) ? null : `21406${String(i).padStart(5, '0')}`,
+    cost_center: isNullish(r) || i === 12 || i === 13 ? null : `21406${String(i).padStart(5, '0')}`,
     sort_order: i,
   }),
   /* 🧑‍🤝‍🧑 Manpower Control Board (2026-10-06) — ผังคนต้องได้ "ตำแหน่ง + หน่วย + ทีม" คละกัน
@@ -682,6 +685,19 @@ const TABLE_ROWS = {
   /* 🏭 ศูนย์เชื่อมต่อ · ข้อมูลจากเครื่อง (2026-11-11 · ห้ามถอด) — เดิม `kinds` ไม่มีในแถว ⇒ แผง
      MachineFactsPanel (/integrations?src=) ไม่เคยถูกวาดใน harness · ต้องมีทั้ง tag ที่ผูกแล้ว/ยังไม่ผูก
      + สถานะทั้งที่จับคู่ได้ (fault/no_plan) และจับคู่ไม่ได้ (idle) + เวลาที่อ่านไม่ออก (isNullish) */
+  /* ⚡ ผังจ่ายไฟหลายชั้น (2026-11-20 · ห้ามถอด) — ต้องมีทั้งตู้ชั้นเดียว (MDB-03 = PanelFlow เดิม)
+     และตู้ที่มีแม่-ลูก 3 ชั้น (MDB → MDB-07 → AIR → AC-*) + แม่ที่ชี้ชื่อไม่มีในทะเบียน (เตือนบนจอ)
+     ⇒ TreeFlow / ไฟไม่มีมิเตอร์วัด / ยอดไม่นับซ้ำ ถูกวาดใน crashsweep */
+  energy_live_meters: (r, i) => {
+    const M = [['DB-CNC', 'MDB-03', null], ['DB-LASER', 'MDB-03', null], ['MDB', 'MDB', null], ['MDB-07', 'MDB', 'MDB'],
+      ['AIR', 'MDB', 'MDB-07'], ['AC-06', 'MDB', 'AIR'], ['AC-07', 'MDB', 'AIR'], ['ORPHAN', 'MDB-03', 'NOPE']][i % 8];
+    return { ...r, scope_kind: 'zone', scope_name: i < 8 ? M[0] : `${M[0]}-${i}`, panel: M[1], parent_name: M[2], is_active: i < 8, sort_order: i, limit_kw: 1000, gauge_max_kw: 1000 };
+  },
+  energy_live: (r, i) => {
+    const N = ['DB-CNC', 'DB-LASER', 'MDB', 'MDB-07', 'AIR', 'AC-06', 'AC-07', 'ORPHAN'];
+    const KW = [40, 25, 900, 60, 56, 20, 30, 5];
+    return { ...r, scope_kind: 'zone', scope_name: N[i % 8], field: i < 8 ? 'kw' : 'a', value: i < 8 ? KW[i] : 50, received_at: new Date().toISOString() };
+  },
   integration_sources: (r, i) => ({
     ...r, kinds: i % 2 ? ['energy_readings', 'energy_events'] : ['machine_state', 'piece_count'],
     legacy_secret: false, key_hint: i % 3 ? 'ab12' : null,
