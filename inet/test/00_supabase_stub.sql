@@ -14,7 +14,8 @@ create table if not exists auth.users (id uuid primary key, email text, encrypte
   instance_id uuid default '00000000-0000-0000-0000-000000000000',
   updated_at timestamptz default now(), raw_app_meta_data jsonb default '{"provider":"email"}', raw_user_meta_data jsonb default '{}',
   confirmation_token varchar default '', recovery_token varchar default '', email_change varchar default '',
-  email_change_token_new varchar default '', email_change_token_current varchar default '', reauthentication_token varchar default '');
+  email_change_token_new varchar default '', email_change_token_current varchar default '', reauthentication_token varchar default '',
+  phone_change text default '', phone_change_token varchar default '');
 -- คอลัมน์ที่ GoTrue จริงบังคับ (not null) ต้องมีครบ — ไม่งั้น restore ลง stack จริงล้ม (เจอตอนซ้อม 20/11)
 create table if not exists auth.identities (id uuid primary key default extensions.gen_random_uuid(), provider_id text not null,
   user_id uuid not null references auth.users(id), identity_data jsonb not null default '{}', provider text not null,
