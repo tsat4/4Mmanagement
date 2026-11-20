@@ -12308,3 +12308,15 @@ test('📅 pm-monthly-signoff — ผู้เซ็นมาจากผัง�
   if (/\.delete\(\)/.test(lib)) bad.push('pmMonthlySignoff ลบลายเซ็น — ต้องเพิกถอนเท่านั้น');
   assert.deepEqual(bad, [], bad.join('\n'));
 });
+
+/* ── คิวไลน์ใช้ของแต่สโตร์ยังไม่ลงจ่าย (2026-11-20 · คำสั่ง user) ──
+   ยืนยันหลายรายการต้องเป็น RPC ก้อนเดียว (ห้ามวนยิงจากจอ) · เคส line_issue_gap คลังพักติดลบ ป้ายต้องผ่าน outcomeLabel */
+test('🛡️ คิวไลน์ใช้ของแต่สโตร์ยังไม่ลงจ่าย — RPC ก้อนเดียว + ป้ายเคลียร์ตามชนิดเคส', () => {
+  const bad = [];
+  const q = stripComments(readFileSync(join(ROOT, 'src/components/LineIssueGapQueue.jsx'), 'utf8'));
+  if (!/rpc\('line_issue_gap_confirm_many'/.test(q)) bad.push('LineIssueGapQueue — ยืนยันทั้งหมดไม่ได้ใช้ line_issue_gap_confirm_many');
+  if (/for\s*\([^)]*of\s+shown[\s\S]{0,200}rpc\('line_issue_gap_confirm'/.test(q)) bad.push('LineIssueGapQueue — วนยิง RPC ทีละรายการจากจอ');
+  const r = stripComments(readFileSync(join(ROOT, 'src/components/StockDiscrepancyReport.jsx'), 'utf8'));
+  if (/OUTCOME_LABEL\[/.test(r)) bad.push('StockDiscrepancyReport — ใช้ OUTCOME_LABEL ตรงๆ (เคส line_issue_gap ความหมายกลับทิศ · ใช้ outcomeLabel)');
+  assert.deepEqual(bad, [], `\n\n❌ ${bad.join('\n   ')}\n   📄 docs/modules/store-board-workflow.md §คิวไลน์ใช้ของแล้ว แต่สโตร์ยังไม่ลงจ่าย\n`);
+});
