@@ -100,6 +100,12 @@ breadcrumb
 2. **ช่องในแถบกรองสูง 34 · ตัว 13 · มุม 8 จาก token** (`--ctl-h` `--ctl-fs` `--ctl-r`) —
    **ห้ามใส่ width/height/padding/fontSize/borderRadius inline ที่ select/input ในแถบ** (inline ชนะ class = เพี้ยนกลับ)
    · อยากให้ช่องยืดใส่ `className="grow"` · select ในแถบ `width:auto` (สูงสุด 280) ให้เอง
+   · 🔴 **เพดาน 280px ของ select เพิ่งมีผลจริงเมื่อ 2026-11-20** — ก่อนหน้านั้น `max-width:100%` อยู่ในกฎ
+     `.filter-bar :is(select, input:not(...)×5)` ที่ specificity 0,6,1 ทับ `.filter-bar select` (0,1,1) ทุกหน้า
+     ⇒ select ชื่อไลน์ยืดถึง ~465px · แก้ที่ `index.css` โดยแยก `max-width` ของช่องพิมพ์ออกจากกฎ :is()
+     · 🔴 **เติม max-width ลงกฎ :is() กลับ = เพดานหายทั้งระบบอีกรอบ** · จอคอม `min(280px, 100%)` · มือถือ 100%
+     · ผลวัด @1500px: 19 หน้าเปลี่ยน (select 300–501px → 280) · ล้นแถบใหม่ 0 · @390px เปลี่ยน 0 หน้า
+       (`OEEAnalytics` แถบจาก 2 บรรทัดเหลือ 1)
    · ฟอร์มบันทึก (modal/ตาราง) **ไม่อยู่ใต้กฎนี้** — ใช้ขนาดตั้งต้นของธีม (~39px = Carbon medium)
 3. **เลือกชนิดตัวควบคุมตามจำนวนตัวเลือก:** 2–5 ตัวเท่ากัน → `<Segmented>` · มากกว่านั้น → dropdown ·
    ทะเบียนยาว → picker กลาง (`LineSelect`/`SearchSelect`… UI-CONVENTIONS §5.1.2) · **กะ = `<Segmented options={SHIFT_OPTIONS}>` ทุกหน้า**

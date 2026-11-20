@@ -757,7 +757,7 @@ export default function ScrapReport() {
     && (!ql || [rep.doc_no, rep.line_name].some(v => String(v || '').toLowerCase().includes(ql))));
 
   return (
-    <Page className="scrap-page">
+    <Page>
       <ReadOnlyNote show={!canRecord} role={role} what="สร้าง/แก้ใบรายงานของเสีย"
         permKey="scrap:record" hint={tr('ยังเปิดดูใบเดิม พิมพ์ และ export Excel ได้ตามปกติ')} />
       <PageHeader title={tr('ของเสีย — ใบรายงาน & ถังเหลือง/แดง')} icon="♻️"
