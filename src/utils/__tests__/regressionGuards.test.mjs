@@ -9268,6 +9268,9 @@ test('🏢 org-upper-layers-ready — รากของชั้นหน่ว
     ['src/components/OrgTreeView.jsx', /unitParentId\(n, byId\) == null/, 'หน่วยลอย = ไม่มีแม่เป็นหน่วย'],
     ['src/pages/ManpowerBoard.jsx', /isOrphanDept\(n, nodes\)/, 'บอร์ดของแผนกขึ้นตรง'],
     ['src/pages/OrgSetup.jsx', /isOrphanDept\(n, nodes\)/, 'ตะกร้า "ขึ้นตรง" ใน /org-setup'],
+    /* 20/11 — มีแถวชั้นบนจริงแล้ว (migration 20261120_org_nodes_upper_layer_rows_main.sql) */
+    ['src/components/OrgTreeView.jsx', /nodes\.filter\(n => n\.kind === 'team'\)\.length/, 'นับทีมด้วย kind — ห้ามใช้ nodes.length - orgNodes.length (นับชั้นบนเป็นทีม)'],
+    ['src/components/QaInspectorScopes.jsx', /isUpperKind\(p\.kind\)\) break/, 'ป้ายสายหน่วยต้องหยุดที่ชั้นบน'],
   ]) {
     const s = stripComments(readFileSync(join(ROOT, f), 'utf8'));
     assert.match(s, pat, `🔴 ${f}: ${why}`);

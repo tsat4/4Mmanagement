@@ -20,7 +20,7 @@
 import { positionKeyOf, levelOfPosition } from './positions.js';
 import { shiftFromTeam, scheduleTeamFor } from './shiftAssign.js';
 import { stdCapacityOf } from './stdManpower.js';
-import { getLineFamily } from './lineHierarchy.js';
+import { getLineFamily, lineAncestorIds, lineChainIds } from './lineHierarchy.js';
 import { orgNodeCompare, naturalCompare } from './listOrder.js';
 import { wavg, wLoad, wRun } from './oee.js';
 import { skillFit, skillMapOf, pendingMapOf } from './skillFit.js';
@@ -863,4 +863,92 @@ export function stationSkillGaps(placed, { skillsByEmp = {}, reqsByStation = {} 
   }
   gaps.sort((a, b) => a.fit.score - b.fit.score || (b.temp - a.temp) || naturalCompare(a.emp.name || '', b.emp.name || ''));
   return { gaps, checked, ok, noReqPeople, noReqStations, onlyApproval: gaps.filter(g => g.onlyApproval).length };
+}
+
+/* ── 🗺️ ภาพรวมทั้งโรงงาน (แท็บผัง LAYOUT · 2026-11-20 · คำสั่ง user "ภาพรวมทั้งโรงงาน … ทำอะไรเจ๋งๆ") ──
+   กรอบไลน์บนผังรวม (`factory_line_regions` ชุดเดียวกับ /factory-map) ระบายสีตามกำลังคน **กะปัจจุบัน**
+   🔴 ฐานเทียบ = **กำลังคนตามผัง (std ต่อกะ · `planOf` → `stdCapacityOf`) ไม่ใช่จำนวนจุดงาน** (user 20/11:
+      "จุดงานส่วนใหญ่เยอะกว่าจำนวนพนักงาน — คนเดียวขึ้นจุด a ครึ่งวัน จุด b ครึ่งวัน")
+   เกณฑ์ (user เคาะ 20/11):
+     🔴 bad  = ขาด (std − มาจริง) ≥ 3 คน
+     🟡 warn = ขาด 1–2 คน **หรือ** มีคนยืนจุดที่ทักษะยังไม่ถึง
+     🟢 good = มาครบ std
+     ⚪ none = ตัดสินไม่ได้ — ไม่รู้ std / กะนี้ยังไม่มีใครเช็คชื่อ (เขียนเหตุผลใน `reason` · ห้ามโชว์ 0) */
+export const LINE_STAFF_SHORT_BAD = 3;
+
+/** ไลน์ของกรอบ = ตัวเอง + ลูกลงไป (**ไม่รวมไลน์แม่** — กรอบไลน์ลูกห้ามนับของแม่) · ไม่อยู่ในทะเบียน = [] */
+export function lineFamilyDown(lines, lineName) {
+  const self = (lines || []).find(l => l.name === lineName);
+  if (!self) return [];
+  const up = lineAncestorIds(lines, self.id);
+  return getLineFamily(lines, lineName).filter(l => !up.has(l.id));
+}
+
+/** 🧺 กลุ่มที่ใช้ตัดสินสีกรอบ = **ไลน์แม่บนสุด** (user 20/11 "ตัดสินทั้งกลุ่ม")
+    เหตุ: std ของกลุ่มอยู่ที่ไลน์แม่ (`stdManpower.js` กฎข้อ 1 — ลูกบางกลุ่มก็อปเลขแม่มา เช่น HYDROFORM 14 ทุกลูก)
+    และพนักงานสังกัดไลน์แม่ ⇒ กรอบไลน์ลูกทุกกรอบในกลุ่มเดียวกัน = สถานะเดียวกัน · ไม่อยู่ในทะเบียน = ชื่อเดิม */
+export function lineGroupRoot(lines, lineName) {
+  const self = (lines || []).find(l => l.name === lineName);
+  if (!self) return lineName;
+  const rootId = lineChainIds(lines, self.id)[0];
+  return (lines.find(l => String(l.id) === String(rootId)) || self).name;
+}
+
+/** จุดงานของกรอบไลน์ — จับด้วย line_id ก่อน ถอยไปชื่อ (ws เก่าไม่มี line_id) */
+export function stationsOfLineFamily(lines, lineName, stations) {
+  const fam = lineFamilyDown(lines, lineName);
+  const ids = new Set(fam.map(l => String(l.id)));
+  const names = new Set((fam.length ? fam.map(l => l.name) : [lineName]).map(n => String(n || '').trim().toLowerCase()));
+  return (stations || []).filter(s => (s.line_id != null && ids.has(String(s.line_id)))
+    || names.has(String(s.line_name || '').trim().toLowerCase()));
+}
+
+/**
+ * คนที่มากะนี้ของกรอบ เทียบ std
+ * @param familyLines   lineFamilyDown()
+ * @param stationIds    Set ของ id จุดงานในกรอบ
+ * @param allStationIds Set ของ id จุดงานทั้งโรงงาน (รู้ว่าวันนี้ไปยืนจุดของไลน์อื่น)
+ * @param attendance    { [employee_id]: log วันนี้ } · empById { [id]: employee }
+ * @param shift         'day' | 'night' (กะปัจจุบัน — `getCurrentShift()`)
+ * นับคนเข้ากรอบ: วางจุดงานวันนี้แล้ว = ตามจุด (ยืมเข้า/ยืมออกถูกเอง) · ยังไม่วางจุด = ตามไลน์สังกัด (`employees.line_id`)
+ * คืน { status, reason, shift, std, onFloor, checked, short, gapPeople }
+ */
+export function lineStaffStatus({ familyLines = [], stationIds = new Set(), allStationIds = new Set(), attendance = {}, empById = {}, shift, fit = null } = {}) {
+  const famIds = new Set(familyLines.map(l => String(l.id)));
+  let onFloor = 0, checked = 0;
+  for (const [empId, log] of Object.entries(attendance || {})) {
+    if (!log || log.shift !== shift) continue;
+    const st = log.assigned_line != null ? String(log.assigned_line) : null;
+    const mine = st && allStationIds.has(st) ? stationIds.has(st) : famIds.has(String(empById[empId]?.line_id ?? ''));
+    if (!mine) continue;
+    checked += 1;
+    if (log.is_present) onFloor += 1;
+  }
+  const std = familyLines.length ? planOf(familyLines, shift) : null;
+  const gapPeople = fit?.gaps?.filter(g => g.shift === shift).length || 0;
+  const base = { shift, std, onFloor, checked, short: null, gapPeople };
+  if (std == null) return { ...base, status: 'none', reason: familyLines.length ? 'ยังไม่ตั้งกำลังคน (std)' : 'ไม่ใช่ไลน์ในทะเบียน' };
+  if (!checked) return { ...base, status: 'none', reason: `${shift === 'night' ? 'กะดึก' : 'กะเช้า'}ยังไม่เช็คชื่อ` };
+  const short = Math.max(0, std - onFloor);
+  const out = { ...base, short };
+  if (short >= LINE_STAFF_SHORT_BAD) return { ...out, status: 'bad', reason: null };
+  if (short > 0 || gapPeople > 0) return { ...out, status: 'warn', reason: null };
+  return { ...out, status: 'good', reason: null };
+}
+
+/** ป้ายสั้นบนกรอบ — ตัวเลขล้วน (`เช้า มา 9/11 · ขาด 2`) · none = เหตุผล */
+export function lineStaffLabel(s) {
+  if (!s) return null;
+  if (s.status === 'none') return s.reason;
+  const parts = [`${s.shift === 'night' ? 'ดึก' : 'เช้า'} มา ${s.onFloor}/${s.std}`];
+  if (s.short) parts.push(`ขาด ${s.short}`);
+  if (s.gapPeople) parts.push(`ทักษะไม่ถึง ${s.gapPeople}`);
+  return parts.join(' · ');
+}
+
+/** ทักษะของคนที่ยืนจุดนี้วันนี้ — 'ok' | 'gap' | 'noreq' | null (ไม่ได้ยืน = ไม่ตัดสิน) */
+export function personFitState(x, p, fit) {
+  if (p.attend !== 'present' || p.away) return null;
+  if (!(x.station.station_requirements || []).length) return 'noreq';
+  return (fit?.gaps || []).some(g => g.emp.id === p.emp.id && String(g.station.id) === String(x.station.id)) ? 'gap' : 'ok';
 }
