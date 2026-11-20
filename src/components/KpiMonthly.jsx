@@ -465,7 +465,7 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
     const seq = ++loadSeq.current;
     const alive = () => seq === loadSeq.current;
         /* 🔴 ต้องดึง `summary_mode` + `decimals` มาด้วย — ขาดไปแถวทุกตัวตกเป็น "เฉลี่ย" / ทศนิยม 2 เงียบๆ */
-    const CAT_EMBED = '*, kpi_catalog(id, name, unit, category, formula_text, scope_text, direction, decimals, summary_mode, value_scope, board_slot, amount_var)';
+    const CAT_EMBED = '*, kpi_catalog(id, name, unit, category, formula_text, scope_text, direction, decimals, summary_mode, value_scope, board_slot, amount_var, value_min, value_max)';
     const run = (cols) => supabase.from('kpi_definitions').select(cols)
       .eq('year', year).eq('is_active', true)
       .order('category').order('seq').order('created_at');
@@ -2093,6 +2093,25 @@ function CatalogModal({ rows, canManage, usedNames = [], onClose, onChanged, onP
                             {KPI_BASE_VARS.filter(v => v.unit === 'บาท').map(v => <option key={v.key} value={v.key}>{v.label}</option>)}
                           </select>
                         </label>
+                        {/* 🧱 20/11 (user: "เดือนที่เหลือ ถ้าเป็นไปไม่ได้ ไม่ควรคาดการณ์ — OEE > 100 % · MTTR ติดลบ") — ช่วงค่าที่เป็นไปได้ของตัวตน KPI
+                            ⇒ `neededRunRate()` ตัดสิน "ไม่ทัน Target ปีนี้" แทนโชว์ตัวเลขที่ทำไม่ได้จริง · ว่าง = ไม่จำกัดด้านนั้น */}
+                        {['value_min', 'value_max'].map((col) => (
+                          <label key={col} style={miniLbl} title={tr('ช่วงค่าที่เป็นไปได้จริงของ KPI นี้ (เช่น % = 0–100 · เวลา ≥ 0) — ที่ต้องทำเดือนที่เหลือหลุดช่วงนี้ = บอร์ดเขียน "ไม่ทัน Target ปีนี้" แทนตัวเลข · ว่าง = ไม่จำกัด')}>
+                            {tr(col === 'value_min' ? 'ค่าต่ำสุดที่เป็นไปได้' : 'ค่าสูงสุดที่เป็นไปได้')}
+                            <input style={{ ...mini, width: 92 }} type="number" step="any" placeholder={tr('ไม่จำกัด')}
+                              defaultValue={r[col] ?? ''} disabled={!canManage || busy === r.id}
+                              onBlur={e => {
+                                const raw = e.target.value.trim();
+                                const v = raw === '' ? null : Number(raw);
+                                if (v != null && !Number.isFinite(v)) { e.target.value = r[col] ?? ''; return; }
+                                const other = col === 'value_min' ? r.value_max : r.value_min;
+                                if (v != null && other != null && (col === 'value_min' ? v > Number(other) : v < Number(other))) {
+                                  toast.error(tr('ค่าต่ำสุดต้องไม่มากกว่าค่าสูงสุด')); e.target.value = r[col] ?? ''; return;
+                                }
+                                if (v !== (r[col] == null ? null : Number(r[col]))) patch(r, col, v, col === 'value_min' ? 'ค่าต่ำสุดที่เป็นไปได้' : 'ค่าสูงสุดที่เป็นไปได้');
+                              }} />
+                          </label>
+                        ))}
                       </div>
                     </td>
                     {canManage && (

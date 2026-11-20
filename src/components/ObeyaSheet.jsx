@@ -87,7 +87,7 @@ export function StatusLamp({ k, w, stat, onGo, forceCompact = false }) {
   return (
     <button
       type="button" onClick={go || undefined} disabled={!go}
-      title={`${stat.label} — ${stat.why}${go ? ' · กดเพื่อเจาะดู' : ''}`}
+      title={`${stat.label} — ${stat.why}${go ? ' · กดเพื่อดูรายละเอียด' : ''}`}
       style={{
         display: 'flex', alignItems: 'center', gap: Math.max(4, Math.round(5 * k)),
         padding: `${Math.max(2, Math.round(2.5 * k))}px ${Math.max(6, Math.round(8 * k))}px`,
@@ -162,6 +162,7 @@ const SheetIconBtn = ({ fs, title, onClick, children, className }) => (
 /* `bigNote` (30/09 · user: "ตัวเลขที่โชว์คืออะไร ไม่มี text บอก") = ป้ายเล็กติดตัวเลขใหญ่ว่าเป็นค่าของอะไร (เช่น "ก.ย." = ค่าเดือนที่เลือก) */
 /* `statZoom` (16/11 · user: ชิปไม่ตามเป้า กดแล้วไปหน้ากรอกเพื่ออะไร ควรเป็นสรุป insight) = กดชิปสถานะแล้วเปิด popup 🔍 ของแผ่นนี้แทน onLink · ใน popup เองชิปไม่มีลิงก์ */
 /* `goals` (16/11 · user: "Target/commitment ไปขึ้นเหมือน note น่าจะไฮไลท์ให้ชัดเหมือนค่า YTD") = แถวเกณฑ์ใต้ตัวเลขใหญ่ · รับ `(k, zoomedCopy) => node` เหมือน foot (คืน null = ไม่วาด) */
+/* 20/11 (user: "แว่นขยายกับป้ายสถานะทำหน้าที่เดียวกัน เอาแว่นขยายออก") — แผ่นที่ใช้ `statZoom` ส่ง `zoom={false}` ด้วย ⇒ มุมขวาบนว่าง popup เปิดจากชิปสถานะอย่างเดียว */
 /* `footAside` (16/11 · user: "insight เยอะจนกราฟหาย") = ท้ายแผ่นของใบใน popup ไปอยู่รางขวา (คนละคอลัมน์กับกราฟ)
    ⇒ ใช้กับแผ่นที่ท้ายแผ่นยาวได้จริง (insight) เท่านั้น · ไม่ส่ง = ชั้นล่างเพดาน 30% เหมือนเดิม */
 export function Sheet({ k, cw = 0, span = 1, icon, title, sub, big, unit, bigNote, delta, stat, foot, link, onLink, zoom = true, onClose, statZoom = false, goals = null, footAside = false, children }) {
