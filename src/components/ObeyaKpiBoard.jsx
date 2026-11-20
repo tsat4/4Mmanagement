@@ -37,7 +37,7 @@ import { mtnAutoSeries, autoKpiOfName, toRowUnit, autoDetailText, HOURS_PER_MONT
 import { GAP, useSheetGrid, StatusLamp, Sheet, WarnNote, EmptyChart, FocusAxisNote, TV_SHEET_GRID } from './ObeyaSheet';
 import useTvShell from '../utils/useTvShell';
 import { balanceGrid } from '../utils/sheetGrid';
-import { applyFormulaEntries, buildBaseIndex, formulaNoteText, amountCompanion, amountText, formulaPartSeries } from '../utils/kpiFormula';
+import { applyFormulaEntries, buildBaseIndex, formulaNoteText, amountCompanion, amountText, formulaPartSeries, formulaOfDef } from '../utils/kpiFormula';
 import { headcountAuto, headcountAutoVar } from '../utils/kpiHeadcount';
 import { boardFlipSec, activeDwellSecOf } from '../utils/displayRotation';
 import BoardPager from './BoardPager';
@@ -682,6 +682,8 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
       /* 🏁 เดือนที่เหลือต้องทำเท่าไหร่ถึงถึง Target ทั้งปี · 🔬 สูตรรวม (DL+OH) แตกเป็นสูตรลูกให้ popup 🔍 */
       const needed = neededRunRate({ actual: series.slice(0, 12).map(p => p.v), target, def: fcDef });
       const parts = fiB && !r.auto ? formulaPartSeries(fiB) : [];
+      /* 🔬 20/11: กราฟลูกมีเส้นเป้าของตัวเองได้ ถ้าหน่วยตั้ง KPI สูตรลูก (dl_pct/oh_pct) ไว้ในขอบเขตนี้ — อ่านจากนิยามจริง ไม่เดา · ไม่มี = วาดแค่ค่าเฉลี่ยของตัวเอง */
+      const partDefs = Object.fromEntries(parts.map(pt => [pt.key, (kdefs || []).find(d => formulaOfDef(d) === pt.key) || null]));
       /* เส้นแผนรายเดือน + เครื่องหมายโน้ต ติดไปกับจุดกราฟ (สเกลเดียวกับผลจริง — ห้ามแกน Y 2 ข้าง) */
       const planMap = planByKpi[planDef?.id] || (man?.sharedDef ? planByKpi[man.sharedDef.id] : null) || {};   // แผ่นที่แชร์ค่าโรงงานใช้แผนของแผ่นโรงงาน
       const notesOfRow = notesBy[r.key] || {};
@@ -697,7 +699,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
         hasTarget: !!(def && (target != null || bars?.commit_value != null)),
       };
       return {
-        ...r, def, unit, dir, series, value, valueKey, stale, target, st, why, note, manual, fxSrc, amtText, fromDept, needed, parts, fxInfo: fiB || null, months, sumKind, sumApprox, ytd, actualMonths, forecast, curFilled, curChild, curDetail, curMan, hrPerPct, childMix, mix, roll,
+        ...r, def, unit, dir, series, value, valueKey, stale, target, st, why, note, manual, fxSrc, amtText, fromDept, needed, parts, partDefs, fxInfo: fiB || null, months, sumKind, sumApprox, ytd, actualMonths, forecast, curFilled, curChild, curDetail, curMan, hrPerPct, childMix, mix, roll,
         atLabel: man?.inherited && man.at ? org.labelOf(man.at.kind, man.at.value) : '',
         commit: bars?.commit_value ?? null, hasPlan: Object.keys(planMap).length > 0,
         dec: decimalsOf(def),
@@ -927,10 +929,51 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
     /* 🔎 ลำดับในราง/ชั้นล่างของ popup (16/11 · user: "insight เป็นส่วนเสริม … กราฟต้องชัด"):
        ① สรุป 3 ข้อสำคัญสุด (ที่เหลือกางดูได้ ใน `<InsightList>`) → ② กติกาที่ใช้ตัดสิน → ③ ที่มา/หมายเหตุ
        **ห้ามเอา ② ③ ขึ้นก่อน ①** — คนกดแว่นขยายเพื่อถาม "ตกเพราะอะไร" ไม่ใช่มาอ่านกติกา */
+    /* 🪪 20/11 (user: "text ขวามือรกเกินไป ย่อก็ยังรก อ่านยาก") — เลิกเป็นลิสต์ประโยคยาวตัดท้าย ⇒ **การ์ดคำตัดสิน 3 ใบ** (เลขใหญ่ + บรรทัดรองสั้น)
+       ① เดือนนี้ vs เป้า ② คาดปลายปี ③ เดือนที่เหลือต้องทำ · ตามด้วย "เหตุหลัก" 1 ประโยค · ที่เหลือ (รายปี/แนวโน้ม/ตัวแปร/หมายเหตุ) พับไว้ กางแล้วไม่ตัดท้าย
+       ตัวเลขทั้งหมดมาจาก `buildInsight()` (data ของแต่ละข้อ) — ไม่คิดซ้ำในหน้า */
+    const byKind = (kd) => ins.find(l => l.kind === kd) || null;
+    const gap = byKind('gap'), fc = byKind('forecast'), nd = byKind('needed'), drv = byKind('driver');
+    const rest = ins.filter(l => !['gap', 'forecast', 'needed', 'driver'].includes(l.kind));
+    const fmtV = (v) => `${nf(cvR(r, v), decR(r))}${unitR(r) ? ' ' + unitR(r) : ''}`;
+    const tile = (lb, big, sub, tone, key) => (
+      <div key={key} style={{ padding: `${Math.round(6 * kk)}px ${Math.round(9 * kk)}px`, borderRadius: 'var(--r-md)', minWidth: 0,
+        background: 'var(--card)', backgroundImage: `linear-gradient(${toneDim(tone)}, ${toneDim(tone)})`, border: `1px solid ${toneLine(tone)}` }}>
+        <div style={{ fontSize: fs(10.5), fontWeight: 700, color: 'var(--muted)' }}>{lb}</div>
+        <div style={{ fontSize: fs(15), fontWeight: 900, color: toneVar(tone), lineHeight: 1.25, overflowWrap: 'anywhere' }}>{big}</div>
+        {sub && <div style={{ fontSize: fs(10.5), color: 'var(--text2)', lineHeight: 1.35, marginTop: 2, overflowWrap: 'anywhere' }}>{sub}</div>}
+      </div>
+    );
+    const tiles = [];
+    if (gap?.data) {
+      const g = gap.data;
+      tiles.push(tile(`${g.label} เทียบ ${g.refName}`,
+        `${g.ok ? '✓' : '✗'} ${g.down ? (g.ok ? 'ต่ำกว่าเป้า' : 'เกินเป้า') : (g.ok ? 'สูงกว่าเป้า' : 'ต่ำกว่าเป้า')} ${fmtV(Math.abs(g.gap))}`,
+        `${fmtV(g.value)} vs ${g.cmpSym} ${fmtV(g.ref)}${g.gapPct != null ? ` (${Math.abs(g.gapPct).toFixed(1)}%)` : ''}${!g.ok && g.commitHit === true ? ' · ยังถึง Commitment' : ''}${g.commitHit === false ? ' · หลุด Commitment' : ''}`,
+        gap.tone, 'gap'));
+    }
+    if (fc?.data) {
+      const f = fc.data;
+      tiles.push(tile('คาดปลายปี', `${f.status === 'good' ? '✓' : f.status === 'bad' ? '✗' : f.status === 'warn' ? '△' : '?'} ${f.approx ? '≈ ' : ''}${fmtV(f.value)}`,
+        `${String(f.verdict).replace(/^[^ก-๙A-Za-z]+/, '')} · ถ้า${f.assume}`, fc.tone, 'fc'));
+    }
+    if (nd?.data) {
+      const n = nd.data;
+      tiles.push(tile(`เดือนที่เหลือ ${n.remaining} ด.`,
+        n.kind === 'reach' ? (n.reached ? 'ถึงเป้าแล้ว' : `ต้องถึง ${fmtV(n.perMonth)}`) : (n.trivially ? 'ผ่านแน่แล้ว' : `${n.down ? '≤' : '≥'} ${fmtV(n.perMonth)} /เดือน`),
+        n.kind === 'reach' ? (n.reached ? 'ตัวสะสมถอยไม่ได้' : `เพิ่มอีก ${fmtV(Math.abs(n.add))} ภายใน ธ.ค.`) : (n.trivially ? 'เดือนที่เหลือได้ 0 ก็ยังผ่าน' : `${n.kind === 'sum' ? 'เดือนละ' : 'เฉลี่ยต่อเดือน'} ถึงจะถึง Target ทั้งปี`),
+        nd.tone, 'nd'));
+    }
     return (
       <>
-        <InsightList k={kk} items={ins} label="🔎 สรุป"
-          empty="ยังไม่มีข้อมูลพอสรุป — ต้องมีค่าอย่างน้อย 1 เดือน + เป้าที่ตั้งไว้" />
+        {tiles.length ? <div style={{ display: 'grid', gap: Math.max(4, Math.round(5 * kk)) }}>{tiles}</div>
+          : <div style={{ fontSize: fs(11), lineHeight: 1.4, color: 'var(--muted)' }}>ยังไม่มีข้อมูลพอสรุป — ต้องมีค่าอย่างน้อย 1 เดือน + เป้าที่ตั้งไว้</div>}
+        {drv && (
+          <div style={{ marginTop: Math.round(6 * kk), padding: `${Math.round(5 * kk)}px ${Math.round(8 * kk)}px`, borderRadius: 'var(--r-md)', background: 'var(--bg3)', borderLeft: `3px solid ${toneVar('warn')}`, fontSize: fs(11.5), lineHeight: 1.45, color: 'var(--text)', overflowWrap: 'anywhere' }}>
+            <b style={{ color: 'var(--muted)', fontSize: fs(10.5) }}>เหตุหลัก</b><br />{drv.text}
+          </div>
+        )}
+        {rest.length > 0 && <div style={{ marginTop: Math.round(6 * kk) }}><InsightList k={kk} items={rest} max={0} lines={4} label="รายละเอียด" /></div>}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, margin: '8px 0 6px' }}>
           {crit.map(([lb, v]) => <span key={lb} style={chip}><span style={{ color: 'var(--muted)', fontWeight: 600 }}>{lb}</span> {v}</span>)}
         </div>
@@ -1038,21 +1081,40 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
         <div style={{ flex: '1 1 58%', minHeight: 0 }}>{chart}</div>
         <div style={{ flex: '0 0 42%', minHeight: 0, display: 'grid', gridTemplateColumns: `repeat(${r.parts.length}, minmax(0, 1fr))`, gap: 8, paddingTop: 4 }}>
           {r.parts.map((pt) => {
-            const pd = Array.from({ length: 12 }, (_, i) => ({ label: String(i + 1), v: pt.months[i + 1] ?? null, vLabel: pt.months[i + 1] == null ? '' : nf(pt.months[i + 1], decL) }));
+            /* 20/11 (user: "กราฟ DL/OH มีแผนไหม · ที่แดงเพราะส่วนไหน · ตัวเลขทับกันเละ · % หรือไม่ %"):
+               · ไม่มี "แผนรายส่วน" ในระบบ — แผน/เป้าตั้งที่ KPI รวม (DL+OH) · ถ้าหน่วยตั้ง KPI สูตรลูก (DL % / OH %) ไว้ ⇒ วาดเส้น T ของมัน (`partDefs`)
+               · ไม่มีเป้าลูก = เทียบ "ค่าเฉลี่ยของตัวเองในปี" (เส้นประ) · ▲ = เดือนที่สูงกว่าเฉลี่ย **และ** KPI รวมเดือนนั้นหลุดเป้า = ตัวที่ดันให้รวมเกิน
+               · ทศนิยม ≤ 2 (ป้ายกับ tooltip ชุดเดียวกัน) · สีน้ำเงินล้วน (ไม่ใช่สีสถานะ — สถานะทางการอยู่ที่กราฟรวม) */
+            const dec2 = Math.min(decL, 2);
+            const vals = Object.values(pt.months).filter(v => v != null);
+            const avg = vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : null;
+            const pDef = r.partDefs?.[pt.key] || null;
+            const pBars = pDef ? defBars(pDef) : null;
+            const badMain = new Set(r.series.slice(0, 12).map((p, i) => (r.def && p.v != null && monthBarScore(p, r.def) === 'bad' ? i + 1 : null)).filter(Boolean));
+            const pd = Array.from({ length: 12 }, (_, i) => {
+              const v = pt.months[i + 1] ?? null;
+              const above = v != null && avg != null && v > avg;
+              const hot = above && badMain.has(i + 1);
+              return { label: String(i + 1), v, hot, vLabel: v == null ? '' : `${nf(v, dec2)}${hot ? '▲' : ''}` };
+            });
             return (
               <div key={pt.key} style={{ minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-                <div style={{ fontSize: fs(10.5), fontWeight: 800, color: 'var(--text2)', padding: '0 4px', whiteSpace: 'nowrap', overflow: 'clip', textOverflow: 'ellipsis' }}>
-                  🔬 {pt.label} <span style={{ fontWeight: 500, color: 'var(--muted)' }}>· {pt.expr}</span>
+                <div style={{ fontSize: fs(10.5), fontWeight: 800, color: 'var(--text2)', padding: '0 4px', whiteSpace: 'nowrap', overflow: 'clip', textOverflow: 'ellipsis' }}
+                  title={`${pt.label} · ${pt.expr}${pBars?.target_value != null ? ` · เป้าของตัวเอง ${fmtBar(pBars.target_compare, pBars.target_value, pt.unit)}` : ' · ยังไม่มีเป้าแยกส่วน (ตั้ง KPI สูตรนี้ในขอบเขตนี้ถึงจะมีเส้น T)'} · ▲ = สูงกว่าค่าเฉลี่ยปีของตัวเอง ในเดือนที่ KPI รวมหลุดเป้า = ตัวที่ดันให้เกิน`}>
+                  🔬 {pt.label} <span style={{ fontWeight: 500, color: 'var(--muted)' }}>· {pt.expr} · เฉลี่ย {avg == null ? '—' : nf(avg, dec2)}{pt.unit ? ' ' + pt.unit : ''}{pBars?.target_value != null ? ` · T ${fmtBar(pBars.target_compare, pBars.target_value, pt.unit)}` : ''} · ▲ ตัวที่ดัน</span>
                 </div>
                 <div style={{ flex: 1, minHeight: 0 }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={pd} margin={{ top: axisUnitTop(fs(9.5), fs(6)), right: 6, left: 4, bottom: 0 }}>
+                    <ComposedChart data={pd} margin={{ top: axisUnitTop(fs(9.5), fs(6)) + fs(6), right: 6, left: 4, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                       <XAxis dataKey="label" tick={axisTick} interval={0} />
                       <YAxis tick={axisTick} width="auto" label={axisUnitLabel(pt.unit, { fontSize: fs(9.5), lift: fs(6) })} />
-                      <Tooltip {...chartTip} formatter={(v) => [`${nf(v, decL)}${pt.unit ? ' ' + pt.unit : ''}`, pt.label]} />
-                      <Bar dataKey="v" fill="var(--blue)" fillOpacity={0.75} radius={[2, 2, 0, 0]} isAnimationActive={false}>
+                      <Tooltip {...chartTip} formatter={(v, name, item) => [`${nf(v, dec2)}${pt.unit ? ' ' + pt.unit : ''}${item?.payload?.hot ? ' · ▲ สูงกว่าเฉลี่ย (เดือนที่รวมหลุดเป้า)' : ''}`, pt.label]} />
+                      {avg != null && <ReferenceLine y={avg} stroke="var(--muted)" strokeDasharray="4 3" label={{ value: `เฉลี่ย ${nf(avg, dec2)}`, position: 'insideTopRight', fontSize: fs(9), fill: 'var(--muted)' }} />}
+                      {pBars?.target_value != null && <ReferenceLine y={pBars.target_value} stroke="var(--red)" strokeDasharray="4 3" label={{ value: `T ${nf(pBars.target_value, dec2)}`, position: 'insideTopLeft', fontSize: fs(9), fontWeight: 700, fill: 'var(--red)' }} />}
+                      <Bar dataKey="v" fill={CELL_BAR_FILL} radius={[2, 2, 0, 0]} isAnimationActive={false}>
                         <LabelList dataKey="vLabel" position="top" style={{ fontSize: fs(9.5), fontWeight: 700, fill: 'var(--text)' }} />
+                        {pd.map((p, i) => <Cell key={i} fill="var(--blue)" fillOpacity={p.hot ? 1 : 0.45} stroke={p.hot ? 'var(--text)' : 'none'} />)}
                       </Bar>
                     </ComposedChart>
                   </ResponsiveContainer>

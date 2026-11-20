@@ -12282,6 +12282,9 @@ test('🛡️ ตัด-จ่ายสต็อกต้องหักเต�
   if (!/inflowDestOf\(sap, inflowRules\)/.test(cd) || !/negQty/.test(cd)) bad.push('CustomerDemand.jsx — ส่งเกินยอดในระบบแล้วไม่หักส่วนที่ขาด');
   const mig = readFileSync(join(ROOT, 'supabase/migrations/20261119c_stock_full_deduct_qa_return_dr.sql'), 'utf8');
   if (!/fn_qbin_return_receipt/.test(mig) || !/ตัดเกิน/.test(mig)) bad.push('migration 20261119c ถูกแก้/หาย');
+  const mig2 = readFileSync(join(ROOT, 'supabase/migrations/20261120_lot_raw_single_owner_dr.sql'), 'utf8');
+  if (!/fn_raw_lot_owned\(NEW\.mat_no, b\.mat_no\)/.test(mig2) || !/fn_child_short/.test(mig2))
+    bad.push('migration 20261120 — ปิดใบผลิตต้องข้ามคู่ที่ล็อตตัดแล้ว แต่ยังส่งยอดขาดให้ fn_child_short (ห้ามตัดวัตถุดิบล็อตซ้ำ)');
   assert.deepEqual(bad, [], `\n\n❌ ตัด-จ่ายสต็อกกลับไป "ตัดเท่าที่มี":\n   ${bad.join('\n   ')}\n`
     + '   กฎ (user 19/11): ยอดในระบบไม่พอ = หักเต็ม ติดลบ แล้วพอเติม/รับเข้า ยอดหักล้างเอง · ต้องเขียนบนจอว่าติดลบ\n'
     + '   📄 docs/modules/store-board-workflow.md §ตัดเต็ม ยอมติดลบ\n');
@@ -12304,4 +12307,16 @@ test('📅 pm-monthly-signoff — ผู้เซ็นมาจากผัง�
   if (!/kind: KIND_OF_STEP\[step\], scope_key: scopeKeyOf\(/.test(lib)) bad.push('pmMonthlySignoff ประกอบ kind/scope_key เอง (ต้องผ่าน KIND_OF_STEP/scopeKeyOf)');
   if (/\.delete\(\)/.test(lib)) bad.push('pmMonthlySignoff ลบลายเซ็น — ต้องเพิกถอนเท่านั้น');
   assert.deepEqual(bad, [], bad.join('\n'));
+});
+
+/* ── คิวไลน์ใช้ของแต่สโตร์ยังไม่ลงจ่าย (2026-11-20 · คำสั่ง user) ──
+   ยืนยันหลายรายการต้องเป็น RPC ก้อนเดียว (ห้ามวนยิงจากจอ) · เคส line_issue_gap คลังพักติดลบ ป้ายต้องผ่าน outcomeLabel */
+test('🛡️ คิวไลน์ใช้ของแต่สโตร์ยังไม่ลงจ่าย — RPC ก้อนเดียว + ป้ายเคลียร์ตามชนิดเคส', () => {
+  const bad = [];
+  const q = stripComments(readFileSync(join(ROOT, 'src/components/LineIssueGapQueue.jsx'), 'utf8'));
+  if (!/rpc\('line_issue_gap_confirm_many'/.test(q)) bad.push('LineIssueGapQueue — ยืนยันทั้งหมดไม่ได้ใช้ line_issue_gap_confirm_many');
+  if (/for\s*\([^)]*of\s+shown[\s\S]{0,200}rpc\('line_issue_gap_confirm'/.test(q)) bad.push('LineIssueGapQueue — วนยิง RPC ทีละรายการจากจอ');
+  const r = stripComments(readFileSync(join(ROOT, 'src/components/StockDiscrepancyReport.jsx'), 'utf8'));
+  if (/OUTCOME_LABEL\[/.test(r)) bad.push('StockDiscrepancyReport — ใช้ OUTCOME_LABEL ตรงๆ (เคส line_issue_gap ความหมายกลับทิศ · ใช้ outcomeLabel)');
+  assert.deepEqual(bad, [], `\n\n❌ ${bad.join('\n   ')}\n   📄 docs/modules/store-board-workflow.md §คิวไลน์ใช้ของแล้ว แต่สโตร์ยังไม่ลงจ่าย\n`);
 });

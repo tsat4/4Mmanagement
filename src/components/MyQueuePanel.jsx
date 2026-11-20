@@ -74,7 +74,7 @@ export async function loadMyQueue(me) {
   const ok = (r) => (r.error ? undefined : (r.data || []));
 
   const canLu = !!(me.canLevelUp || me.canLevelUp100);
-  const [moR, sesR, prR, fourR, actR, lines, luR, binR, binRedR, redPendR, rfqAssessR] = await Promise.all([
+  const [moR, sesR, prR, fourR, actR, lines, luR, binR, binRedR, redPendR, rfqAssessR, gapR, gapOdR] = await Promise.all([
     /* กรองด้วยสถานะที่ยังมีคนต้องทำต่อ — เดิม `.gt('current_step', 1)` ตัดใบ "รอจ่ายงาน" (current_step = 1)
        ทิ้งทั้งหมด และ `.is('approve_at', null)` ตัดใบ MTN ที่อนุมัติแล้วแต่ยังรอปิดใบ (ขั้น 8) */
     supabaseDR.from('mtn_orders').select(MO_COLS)
@@ -116,6 +116,9 @@ export async function loadMyQueue(me) {
       ? supabase.from('mkt_rfq_assessments').select('id, rfq_id, round, requested_at, mkt_rfqs!inner(rfq_no, customer, model, title, due_date, priority)')
         .eq('status', 'draft').order('requested_at', { ascending: true }).limit(200)
       : Promise.resolve({ data: null, error: null }),
+    /* 🧾 20/11 — ไลน์ใช้ของแล้วแต่สโตร์ยังไม่ลงจ่าย (v_line_issue_gaps · DR) · นับอย่างเดียว ไม่ดึงแถว */
+    supabaseDR.from('v_line_issue_gaps').select('mat_no', { count: 'exact', head: true }),
+    supabaseDR.from('v_line_issue_gaps').select('mat_no', { count: 'exact', head: true }).eq('overdue', true),
   ]);
   const rfqAssess = me.canRfqAssess ? ok(rfqAssessR)?.map(r => ({ id: r.id, rfq_id: r.rfq_id, round: r.round, requested_at: r.requested_at, ...(r.mkt_rfqs || {}) })) : undefined;
   const levelUps = canLu ? ok(luR)?.map(r => ({ id: r.id, to_level: r.to_level, requested_at: r.requested_at, section: r.employees?.section })) : undefined;
@@ -151,6 +154,15 @@ export async function loadMyQueue(me) {
   const moTruncated = Array.isArray(moRows) && moRows.length >= LIMIT;
 
   const summaries = [];
+  if (gapR.error == null && Number(gapR.count) > 0) {
+    const od = gapOdR.error == null ? Number(gapOdR.count) || 0 : null;
+    summaries.push({
+      key: 'line_issue_gap', icon: '🧾',
+      title: `ไลน์ใช้ของแล้วแต่สโตร์ยังไม่ลงจ่าย ${Number(gapR.count).toLocaleString()} รายการ`,
+      detail: od == null ? 'นับรายการเกิน 1 กะไม่ได้' : (od ? `เกิน 1 กะ ${od.toLocaleString()} รายการ — สโตร์กดยืนยันจ่าย` : 'ยังอยู่ในกะนี้'),
+      count: Number(gapR.count), to: '/line-stock?tab=out',
+    });
+  }
   if (prR.error == null && Number(prR.count) > 0) {
     summaries.push({
       key: 'pr_unordered', icon: '🧾',

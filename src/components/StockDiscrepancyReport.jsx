@@ -15,7 +15,7 @@ import { getWorkDate } from '../utils/workDate';
 import { fetchAllRows } from '../utils/fetchAllRows';
 import { downloadCsvDoc, csvCell } from '../utils/csvDoc';
 import {
-  SUSPENSE_LOC, SIDE_LABEL, OUTCOME_LABEL, STATUS_LABEL, sidesOf, proposeBlock, confirmBlock, resolveLedgerRows, monthlySummary, discrepancyFlow,
+  SUSPENSE_LOC, SIDE_LABEL, STATUS_LABEL, outcomeLabel, sidesOf, proposeBlock, confirmBlock, resolveLedgerRows, monthlySummary, discrepancyFlow,
 } from '../utils/stockDiscrepancy';
 import StepFlow from './StepFlow';
 import { toast } from './Toast';
@@ -80,7 +80,7 @@ export default function StockDiscrepancyReport() {
       sap_doc: sapDoc.trim() || null, resolve_note: note.trim() || null,
     }).eq('id', d.id).eq('status', 'open').select('id'), 'เสนอผลเคลียร์', { zeroMsg: 'เคสนี้ถูกเปลี่ยนสถานะไปแล้ว — รีเฟรช' });
     setBusy(null);
-    if (ok) { toast.success(`🤝 เสนอ "${OUTCOME_LABEL[outcome]}" แล้ว — รออีกฝ่ายยืนยัน`); setForm(null); }
+    if (ok) { toast.success(`🤝 เสนอ "${outcomeLabel(outcome, d)}" แล้ว — รออีกฝ่ายยืนยัน`); setForm(null); }
     load();
   };
 
@@ -89,7 +89,7 @@ export default function StockDiscrepancyReport() {
     const { d, side, sapDoc, note } = form;
     const why = confirmBlock(d, { side, sides, by: fullName });
     if (why) { toast.error(why); return; }
-    if (!await askConfirm(`ยืนยัน "${OUTCOME_LABEL[d.proposed_outcome]}" ในนาม${SIDE_LABEL[side]}?\n\n${d.part_name || ''} MAT ${d.mat_no} × ${fmt(d.short_qty)} (${d.line_name})\nเสนอโดย ${d.proposed_by || '—'} (${SIDE_LABEL[d.proposed_side] || ''})`)) return;
+    if (!await askConfirm(`ยืนยัน "${outcomeLabel(d.proposed_outcome, d)}" ในนาม${SIDE_LABEL[side]}?\n\n${d.part_name || ''} MAT ${d.mat_no} × ${fmt(d.short_qty)} (${d.line_name})\nเสนอโดย ${d.proposed_by || '—'} (${SIDE_LABEL[d.proposed_side] || ''})`)) return;
     setBusy(d.id);
     const now = new Date().toISOString();
     const claimed = checkWriteRows(await supabaseDR.from('stock_discrepancies').update({
@@ -105,14 +105,14 @@ export default function StockDiscrepancyReport() {
       }).eq('id', d.id).eq('status', d.proposed_outcome);
       toast.error(eBack ? `ย้ายยอดออกจากคลังพักไม่สำเร็จ และคืนสถานะไม่ได้ — แจ้ง admin (${eLedger.message})`
         : `ย้ายยอดออกจากคลังพักไม่สำเร็จ — คืนเป็น "รออีกฝ่ายยืนยัน" แล้ว ลองใหม่ (${eLedger.message})`);
-    } else { toast.success(`✔ เคลียร์แล้ว: ${OUTCOME_LABEL[d.proposed_outcome]} ${d.mat_no} × ${fmt(d.short_qty)}`); setForm(null); }
+    } else { toast.success(`✔ เคลียร์แล้ว: ${outcomeLabel(d.proposed_outcome, d)} ${d.mat_no} × ${fmt(d.short_qty)}`); setForm(null); }
     setBusy(null); load();
   };
 
   const rejectProposal = async (d) => {
     const side = sides.find(s => s !== d.proposed_side);
     if (!side) { toast.error('ต้องเป็นอีกฝ่ายถึงจะตีกลับได้'); return; }
-    const why = window.prompt(`ไม่เห็นด้วยกับ "${OUTCOME_LABEL[d.proposed_outcome]}" — เหตุผล (บังคับ)`, '');
+    const why = window.prompt(`ไม่เห็นด้วยกับ "${outcomeLabel(d.proposed_outcome, d)}" — เหตุผล (บังคับ)`, '');
     if (why == null) return;
     if (!why.trim()) { toast.error('ใส่เหตุผลที่ไม่เห็นด้วย'); return; }
     setBusy(d.id);
@@ -129,7 +129,7 @@ export default function StockDiscrepancyReport() {
     if (!list.length) { toast.info('ไม่มีรายการให้ export'); return; }
     const head = ['วันที่งาน', 'ไลน์', 'Part Name', 'MAT', 'ส่ง', 'รับจริง', 'ขาด', 'สถานะ', 'ผลที่เสนอ', 'เสนอโดย', 'ยืนยันโดย', 'เลข SAP', 'หมายเหตุ', 'แจ้งโดย', 'ที่มา'];
     const body = list.map(r => [r.work_date, r.line_name, r.part_name || '', r.mat_no, r.sent_qty, r.received_qty, r.short_qty,
-      STATUS_LABEL[r.status] || r.status, OUTCOME_LABEL[r.proposed_outcome] || '', r.proposed_by || '', r.confirmed_by || '',
+      STATUS_LABEL[r.status] || r.status, outcomeLabel(r.proposed_outcome, r), r.proposed_by || '', r.confirmed_by || '',
       r.sap_doc || '', r.resolve_note || r.note || '', r.reported_by || '', r.source].map(csvCell).join(','));
     downloadCsvDoc('csv_stock_discrepancy', `stock_discrepancy_${month || 'all'}`, [head.map(csvCell).join(','), ...body].join('\n'));
   };
@@ -214,7 +214,7 @@ export default function StockDiscrepancyReport() {
                           {(() => { const f = discrepancyFlow(r); return <StepFlow compact steps={f.steps} unknown={!f.known} />; })()}
                         </td>
                         <td style={{ ...td, fontSize: 12, color: 'var(--text2)' }}>
-                          {r.status === 'proposed' && <div>{tr('เสนอ')} {OUTCOME_LABEL[r.proposed_outcome]} · {r.proposed_by || '—'} ({SIDE_LABEL[r.proposed_side]}) {dt(r.proposed_at)}</div>}
+                          {r.status === 'proposed' && <div>{tr('เสนอ')} {outcomeLabel(r.proposed_outcome, r)} · {r.proposed_by || '—'} ({SIDE_LABEL[r.proposed_side]}) {dt(r.proposed_at)}</div>}
                           {(r.status === 'returned' || r.status === 'written_off') && <div>{tr('ยืนยัน')} {r.confirmed_by || '—'} ({SIDE_LABEL[r.confirmed_side] || ''}) {dt(r.resolved_at)} {tr('· เสนอ')} {r.proposed_by || '—'}</div>}
                           {r.sap_doc && <div>SAP {r.sap_doc}</div>}
                           {(r.resolve_note || r.note) && <div>{r.resolve_note || r.note}</div>}
@@ -248,7 +248,7 @@ export default function StockDiscrepancyReport() {
             </div>
             <div style={{ fontSize: 12.5, color: 'var(--text2)', marginBottom: 10 }}>
               <MatLabel mat={form.d.mat_no} name={form.d.part_name} /> · {form.d.line_name} {tr('· ขาด')} <b>{fmt(form.d.short_qty)}</b>
-              {form.mode === 'confirm' && <div style={{ marginTop: 4 }}>{tr('เสนอ')} <b>{OUTCOME_LABEL[form.d.proposed_outcome]}</b> {tr('โดย')} {form.d.proposed_by || '—'} ({SIDE_LABEL[form.d.proposed_side]})</div>}
+              {form.mode === 'confirm' && <div style={{ marginTop: 4 }}>{tr('เสนอ')} <b>{outcomeLabel(form.d.proposed_outcome, form.d)}</b> {tr('โดย')} {form.d.proposed_by || '—'} ({SIDE_LABEL[form.d.proposed_side]})</div>}
             </div>
             <div style={{ display: 'grid', gap: 8 }}>
               <label style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('กดในนามฝ่าย')}
@@ -258,7 +258,7 @@ export default function StockDiscrepancyReport() {
               {form.mode === 'propose' && (
                 <label style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('ผล')}
                   <Segmented value={form.outcome} onChange={v => setForm(f => ({ ...f, outcome: v }))} label={tr('ผลเคลียร์')}
-                    options={[{ value: 'returned', label: OUTCOME_LABEL.returned }, { value: 'written_off', label: OUTCOME_LABEL.written_off }]} />
+                    options={[{ value: 'returned', label: outcomeLabel('returned', form.d) }, { value: 'written_off', label: outcomeLabel('written_off', form.d) }]} />
                 </label>
               )}
               <input value={form.sapDoc} onChange={e => setForm(f => ({ ...f, sapDoc: e.target.value }))} placeholder={tr('เลขเอกสาร SAP ที่ใช้ปรับ (ถ้ามี)')}

@@ -443,7 +443,7 @@ const DIMENSIONS = [
         now: 1, full: 2, to: '/org-setup',
         nowTxt: 'วัดเป็น "นาที" และ "ชิ้น" ได้แม่นแล้ว แต่แปลงเป็นบาทไม่ได้ เพราะยังไม่มีใครกรอกค่าแรง/ต้นทุน',
         fullTxt: 'ทุกความสูญเสียขึ้นเป็นบาทอัตโนมัติ → คุยกับผู้บริหารและบัญชีด้วยภาษาเดียวกัน',
-        need: ['กรอก Activity Rate ต่อ cost center', 'กรอกต้นทุนต่อชิ้นใน Parts Master'],
+        need: ['กรอก Activity Rate ต่อ cost center', 'กรอกต้นทุนต่อชิ้นใน Material Master'],
         demo: D => ({
           head: `ความสูญเสียเดือนนี้ = ${D.money('c1', 900000, 1600000).toLocaleString()} บาท (แยกได้ว่ามาจากไหน)`,
           tone: 'bad',
@@ -1225,7 +1225,7 @@ function RoiTab({ c, loss, rates, demoOn, day, navigate, isMobile }) {
         </div>
         {noNgCost && !demoOn && (
           <div style={{ fontSize: 12, color: 'var(--amber)', marginTop: 10 }}>
-            ⚠ ของเสีย {fmtNum(loss.ngQty)} {tr('ชิ้นแปลงเป็นบาทไม่ได้ เพราะยังไม่มีต้นทุนต่อชิ้นใน Parts Master ·')}{' '}
+            ⚠ ของเสีย {fmtNum(loss.ngQty)} {tr('ชิ้นแปลงเป็นบาทไม่ได้ เพราะยังไม่มีต้นทุนต่อชิ้นใน Material Master ·')}{' '}
             <button onClick={() => navigate('/products')} style={{
               background: 'none', border: 'none', padding: 0, cursor: 'pointer',
               color: 'var(--accent)', fontSize: 12, fontWeight: 700, textDecoration: 'underline',

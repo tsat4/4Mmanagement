@@ -98,6 +98,11 @@
   --shadow-float: 0 2px 8px rgba(0,0,0,0.45);
   --shadow-md: 0 4px 20px rgba(0,0,0,0.7);
   --shadow-lg: 0 10px 40px rgba(0,0,0,0.85);
+  /* 🪪 sidebar desktop (20/11 · คำสั่ง user "ไล่สีทำให้ดูมีมิติ · ไล่สีไม่ได้แปลว่าหลายสี")
+     ไล่เฉดใน "สีเดียว" เท่านั้น — ห้ามไล่ข้ามสีสถานะ (ด่าน status-color-gradient-mix · UI §6.x ข้อ 6) */
+  --rail-top:    #141823;  --rail-bot:    #0f1218;
+  --panel-top:   #1a1e29;  --panel-bot:   #11131a;
+  --avatar-from: #2fbf63;  --avatar-to:   #1c7a40;   /* เขียวแบรนด์ อ่อน→เข้ม (ตัวอักษร = --accent-ink) */
 }
 
 /* ─── Light Theme — VX White/Green ──────────────────────────────────── */
@@ -144,6 +149,9 @@
   --shadow-float: 0 2px 8px rgba(0,0,0,0.18);   /* ของที่ลอยจริง — มีเงาทั้ง 2 ธีม (ดู :root) */
   --shadow-md: 0 4px 20px rgba(0,0,0,0.10);
   --shadow-lg: 0 10px 40px rgba(0,0,0,0.14);
+  --rail-top:    #ffffff;  --rail-bot:    #f5f6f8;
+  --panel-top:   #ffffff;  --panel-bot:   #eef0f3;
+  --avatar-from: #1a7a1a;  --avatar-to:   #0d3d14;
 }
 
 /* ─── Reset ────────────────────────────────────────────────── */

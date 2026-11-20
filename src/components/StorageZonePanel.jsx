@@ -329,7 +329,7 @@ function ZoneFormModal({ zone, initialName, parts, stockByMat, onClose, onSaved 
             ))}
             {!mats.length && <span style={{ fontSize: 12, color: 'var(--muted)' }}>ยังไม่ผูก MAT — โซนจะขึ้นสีเทา "ยังไม่ผูก MAT" บนผัง</span>}
           </div>
-          <input value={q} onChange={e => setQ(e.target.value)} placeholder={tr('ค้น MAT / ชื่อพาร์ท จากทะเบียน Parts Master แล้วกดเพิ่ม…')} />
+          <input value={q} onChange={e => setQ(e.target.value)} placeholder={tr('ค้น MAT / ชื่อพาร์ท จากทะเบียน Material Master แล้วกดเพิ่ม…')} />
           {q.trim() !== '' && (
             <div style={{ display: 'grid', gap: 3, maxHeight: 220, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 6 }}>
               {options.map(p => (
@@ -339,7 +339,7 @@ function ZoneFormModal({ zone, initialName, parts, stockByMat, onClose, onSaved 
                   <span style={{ color: 'var(--muted)' }}>{stockByMat[p.mat_no] ? `คงเหลือ ${Number(stockByMat[p.mat_no]).toLocaleString()}` : '—'}</span>
                 </button>
               ))}
-              {!options.length && <span style={{ fontSize: 12, color: 'var(--muted)', padding: 4 }}>{tr('ไม่พบในทะเบียน Parts Master')}</span>}
+              {!options.length && <span style={{ fontSize: 12, color: 'var(--muted)', padding: 4 }}>{tr('ไม่พบในทะเบียน Material Master')}</span>}
             </div>
           )}
         </div>

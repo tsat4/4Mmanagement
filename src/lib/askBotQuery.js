@@ -22,9 +22,11 @@ import { loadAffectsLanes, affectsLanesLoadFail } from '../utils/affectsLanes';
 import { QBIN_EMBED } from '../utils/oee';
 import { dtOpenKind } from '../utils/downtimeRules';
 import { OPEN_MO_STATUSES } from '../utils/mtnStepPerm';
+import { canAccessPage } from '../utils/permissions';
 import {
   INTENTS, parseQuestion, defaultPeriod, matchSubject, oeeSummary, downtimeTop, productionTotals,
   rankLinesByOee, openDowntimeList, moOpenSummary, fourMPendingSummary, defectTop, attendanceSummary, makeShiftOf, applyHelpers,
+  scrapReportSummary, SCRAP_STATUS_LABEL,
   fmtInt, fmtPct, ASK_HINTS,
 } from '../utils/askBot';
 
@@ -363,6 +365,43 @@ async function toolAttendance({ lineName, period, all, vis }) {
   };
 }
 
+/* ── 🧾 ใบรายงานของเสีย ("ใบสแครป" · /scrap-report · 20/11) — ตัวเลขตามใบ ไม่ใช่รายงานผลิต ── */
+async function toolScrapReport({ lineName, period, all, vis, role }) {
+  /* จอนี้มีสิทธิ์ของตัวเอง (page:/scrap-report) — แชทต้องไม่เปิดทางลัดให้คนที่เข้าหน้านั้นไม่ได้ */
+  if (!canAccessPage('/scrap-report', role)) return { text: 'บัญชีนี้ไม่มีสิทธิ์ดูใบรายงานของเสีย (/scrap-report) — ถาม "ของเสียสูงสุด" เพื่อดูของเสียจากรายงานผลิตแทน' };
+  const names = scopeNames(all, vis, lineName);
+  const rep = await fetchAllPages(() => {
+    let q = supabaseDR.from('scrap_reports').select('id, report_date, line_name, status, doc_no')
+      .gte('report_date', period.from).lte('report_date', period.to);
+    if (lineName) q = q.in('line_name', names || []);
+    return q;
+  });
+  if (rep.error || rep.truncated) return fail('ใบรายงานของเสีย', rep.error || 'ใบเยอะเกินเพดาน — ลองช่วงสั้นลง');
+  const rows = rep.rows.filter(r => inNames(names)(r.line_name));
+  const hidden = rep.rows.length - rows.length;
+  const it = await fetchByIds(rows.map(r => r.id), c => supabaseDR.from('scrap_report_items')
+    .select('id, report_id, mat_no, part_no, part_name, qty, confirm_qty').in('report_id', c));
+  if (it.error || it.truncated) return fail('รายการในใบรายงานของเสีย', it.error || 'ข้อมูลเยอะเกินเพดาน');
+  const r = scrapReportSummary(rows, it.rows, 5);
+  /* ใบเป็นรายวัน ไม่แยกกะ ⇒ ป้ายช่วงตัดคำว่า "· กะ…" ออก (answerQuestion เขียนโน้ตบอกแล้ว) */
+  const source = `ใบรายงานของเสีย (FM-PD2-002) · ${whoText(lineName, vis)} · ${period.label.replace(/ · กะ.*$/, '')} · ${r.reports} ใบ`;
+  const st = Object.entries(r.byStatus).map(([k, v]) => `${SCRAP_STATUS_LABEL[k]} ${v}`).join(' · ');
+  const notes = [
+    hidden ? `ซ่อน ${hidden} ใบที่อยู่ไลน์นอกขอบเขต` : null,
+    r.unknownStatus ? `ใบสถานะที่ระบบไม่รู้จัก ${r.unknownStatus} ใบ (รวมในยอดแล้ว)` : null,
+    r.confirmDiffers ? `ยอดช่อง "ยืนยัน" รวม ${fmtInt(r.confirm)} ชิ้น ไม่เท่ากับ Q'TY` : null,
+    'ตัวเลขตามใบ — รวมชิ้นที่ QA เบิกทดสอบ + พาร์ทย่อยที่คีย์เพิ่ม · ไม่ใช่ตัวเลขเดียวกับ "ของเสียสูงสุด" (รายงานผลิต)',
+  ].filter(Boolean);
+  if (!r.reports) return { source, text: 'ยังไม่มีใบรายงานของเสียในช่วงนี้', notes, link: '/scrap-report' };
+  return {
+    source,
+    text: `${r.reports} ใบ (${st || '—'}) · รวม ${fmtInt(r.total)} ชิ้น`
+      + (r.top.length ? '\n' + r.top.map((e, i) => `${i + 1}. ${e.key}${e.name && e.name !== e.key ? ` ${e.name}` : ''} — ${fmtInt(e.qty)} ชิ้น`).join('\n') : '')
+      + (r.parts > r.top.length ? `\n· อีก ${r.parts - r.top.length} พาร์ท` : ''),
+    notes, link: '/scrap-report',
+  };
+}
+
 /**
  * ตอบคำถาม — คืน `{ text, source?, notes?, hints?, choices?, link? }`
  * @param {string} text  ข้อความที่พิมพ์
@@ -426,11 +465,14 @@ export async function answerQuestion(text, ctx, today, forced = null, { shiftNow
       case 'mo_open':       ans = await toolMoOpen({ lineName, all, vis, nowMs }); break;
       case 'fourm_pending': ans = await toolFourM({ lineName, all, vis, today }); break;
       case 'defect_top':    ans = await toolDefect({ lineName, period, all, vis }); break;
+      case 'scrap_report':  ans = await toolScrapReport({ lineName, period, all, vis, role: ctx.role }); break;
       case 'attendance':    ans = await toolAttendance({ lineName, period, all, vis }); break;
       default:              ans = await toolProduction({ pick, period, all, vis, products });
     }
   } catch (e) { return fail('ข้อมูล', e); }
   const notes = [...(ans.notes || []), periodNote,
+    q.viaScrap ? 'ℹ️ "สแครป" = ของเสียจากรายงานผลิต · ตัวเลขตามใบ scrap report พิมพ์ "ใบสแครป"' : null,
+    q.shift && q.intent === 'scrap_report' ? 'ใบรายงานของเสียเป็นรายวัน ไม่แยกกะ — แสดงทั้งวัน' : null,
     vis.unsure ? '⚠️ ระบบตัดขอบเขตไลน์ของบัญชีนี้ได้ไม่ชัด — ตัวเลขอาจรวมไลน์นอกขอบเขต' : null].filter(Boolean);
   return { ...ans, notes };
 }

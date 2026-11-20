@@ -32,6 +32,7 @@ import FilterBar from '../components/FilterBar';
 import { ALL, allOf } from '../utils/filterLabels';
 import useTabParam, { useMergeParams } from '../utils/useTabParam';
 import WipBetweenSteps from '../components/WipBetweenSteps';
+import SapViewConsumption from '../components/SapViewConsumption';
 import StockCountSheet from '../components/StockCountSheet';
 import StorageZonePanel from '../components/StorageZonePanel';
 import StorageLocPanel from '../components/StorageLocPanel';
@@ -351,7 +352,7 @@ function StockTab({ role, scope }) {
     // กันสร้างของผี: MAT ที่ไม่มีในฐาน (Product Master / parts master / BOM) = ค่าที่พิมพ์เองใน picker ต้องยืนยันก่อน
     // (2026-09-07: MAT ที่เลือกจาก Product Master ไม่ต้องยืนยันซ้ำ — picker ยืนยันทะเบียนให้แล้ว)
     if (!knownMats.has(matUpper) && !bomMap[matUpper] && !drMats.has(matUpper)) {
-      if (!await askConfirm(`MAT ${matUpper} ไม่มีในฐานข้อมูล (Parts Master / BOM)\nยืนยันสร้างรายการ stock ใหม่?`)) return;
+      if (!await askConfirm(`MAT ${matUpper} ไม่มีในฐานข้อมูล (Material Master / BOM)\nยืนยันสร้างรายการ stock ใหม่?`)) return;
     }
     // กัน stock ติดลบเงียบๆ สำหรับรายการที่หักออก (คืน Store / ปรับลด)
     if (form.type === 'return' || isAdjustDown) {
@@ -1853,6 +1854,7 @@ function InflowRulesTab({ canEdit }) {
 /* 🏬🛒 04/11 (คำสั่ง user) — งานที่ขยับยอดของสโตร์ย้ายมาที่นี่ · /heijunka เหลือดูสัญญาณ Kanban อย่างเดียว
    ฝังหน้าเดิมทั้งดุ้นแบบ /equipment (โหมด ops) — กฎ/ปุ่ม/ด่านเดิมทุกตัว ไม่เขียนใหม่ · `?view=`/`?store=` ไม่ชน `?tab=` */
 const HeijunkaKanban = lazy(() => import('./HeijunkaKanban'));
+const LineIssueGapQueue = lazy(() => import('../components/LineIssueGapQueue'));
 /* 📉 16/11 (คำสั่ง user "รวมสต๊อกในไลน์กับ Monitoring แผน-สต๊อกเป็นหน้าเดียว") — ฝังหน้าเดิมทั้งดุ้นใน <Hub>
    หน้าลูกใช้ `?mon=` แทน `?tab=` (UI §6.8 ข้อ 2.4 · Monitoring.jsx อ่าน HubContext) */
 const Monitoring = lazy(() => import('./Monitoring'));
@@ -1879,6 +1881,7 @@ const TABS = [
   { key:'sap',        label: 'ค้างตัด SAP',             perm: 'page:/line-stock' },   // ใบที่ส่งถึงไลน์แล้วแต่ตัดจ่ายใน SAP ไม่ได้ (04/11)
   { key:'diff',       label: 'คลังพัก/ผลต่าง',          perm: 'page:/line-stock' },   // รับไม่ครบ = ส่วนที่ขาดพักไว้ (05/11)
   { key:'wip',        label: 'WIP ค้างระหว่างขั้น',      perm: 'page:/line-stock' },   // คนละเรื่องกับ 'คิวเติม WIP' ในบอร์ดคัมบัง
+  { key:'sapview',    label: 'เทียบตัดแบบ SAP',         perm: 'page:/line-stock' },   // FG×BOM แบบ SAP เทียบที่ ESM ตัดจริง (20/11)
   { key:'settings',   label: 'ตั้งค่า',                 perm: 'page:/line-stock' },
 ];
 
@@ -1925,6 +1928,8 @@ export default function LineStock() {
       {(activeTab === 'out' || activeTab === 'in') && (
         <Hub>
           <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>{tr('กำลังโหลด…')}</div>}>
+            {/* 🧾 20/11 — ไลน์ใช้ของแล้วแต่สโตร์ยังไม่ลงจ่าย (ไม่มีรายการ = ไม่แสดง) */}
+            {activeTab === 'out' && <LineIssueGapQueue />}
             {/* key แยก = state ตู้ของ 2 แท็บไม่ปนกัน */}
             <HeijunkaKanban key={activeTab} mode="ops" direction={activeTab}
               opsStores={activeTab === 'out' ? OPS_STORES_OUT : OPS_STORES_IN} />
@@ -1936,6 +1941,7 @@ export default function LineStock() {
       {activeTab === 'stock'     && <StockTab role={role} scope={scope} />}
       {activeTab === 'count'     && <StockCountSheet role={role} scope={scope} />}
       {activeTab === 'wip'       && <WipBetweenSteps />}
+      {activeTab === 'sapview'   && <SapViewConsumption />}
       {activeTab === 'monitoring' && (
         <Hub>
           <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>{tr('กำลังโหลด…')}</div>}>
