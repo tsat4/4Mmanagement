@@ -20,7 +20,6 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 import { useCallback, useContext, useEffect, useState } from 'react';
 import Icon, { stripIcon } from './Icon';
-import useIsMobile from '../utils/useIsMobile';
 import { Link } from 'react-router-dom';
 import { UserContext } from '../App';
 import { supabase, supabaseDR } from '../supabaseClient';
@@ -186,7 +185,7 @@ export async function loadMyQueue(me) {
 /* ✒️ 20/11 (user ดูแผงโปรไฟล์: "อันนี้ก็ควรแก้") — emoji หน้าแถวคิว → ไอคอนเส้นชุดเดียวกับเมนู (UI §6.36)
    · map เฉพาะแผงนี้ (ไม่เติม ICON_MAP กลาง — กันไอคอนหัวเพจหน้าอื่นเปลี่ยนตาม) · ไม่อยู่ใน map = emoji เดิม
    · 🟡/🔴 ถังเหลือง/แดง **คง emoji สี** — สีคือความหมาย (สถานะ) ไม่ใช่ของตกแต่ง
-   · จอคอมเท่านั้น (20/11 ตกลง "มือถือคงเดิมไว้ก่อน") */
+   · ทั้งจอคอมและมือถือ (20/11 · user สั่งให้มือถือตามด้วย) */
 const QUEUE_ICON = {
   '🛠': 'Hammer', '🛠️': 'Hammer', '🔧': 'Wrench', '☑️': 'ClipboardCheck', '🧪': 'FlaskConical', '👔': 'UserRoundCheck',
   '✍️': 'PenLine', '🔎': 'Search', '🎯': 'Target', '⬆️': 'ArrowUp', '↩️': 'Undo2', '🤝': 'Handshake', '🔒': 'Lock',
@@ -194,16 +193,14 @@ const QUEUE_ICON = {
   '✅': 'CircleCheck', '🙋': 'Hand', '🏭': 'Factory', '🗂': 'FolderOpen', '🗂️': 'FolderOpen',
 };
 function QIcon({ glyph, size = 15 }) {
-  const isMobile = useIsMobile();
-  const nm = !isMobile && QUEUE_ICON[String(glyph || '').trim()];
+  const nm = QUEUE_ICON[String(glyph || '').trim()];
   if (nm) return <span style={{ color: 'var(--text2)', display: 'inline-flex', flexShrink: 0 }}><Icon name={nm} size={size} /></span>;
   return <span style={{ fontSize: 14, flexShrink: 0 }}>{glyph}</span>;
 }
 /** หัวข้อชั้นคิว "🙋 รอคุณโดยตรง" → ไอคอนเส้น + ข้อความ (จอคอม) */
 function TierTitle({ text, suffix = '' }) {
-  const isMobile = useIsMobile();
   const lead = String(text || '').slice(0, String(text || '').length - String(stripIcon(text) || '').length).trim();
-  if (isMobile || !QUEUE_ICON[lead]) return <>{text}{suffix}</>;
+  if (!QUEUE_ICON[lead]) return <>{text}{suffix}</>;
   return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name={QUEUE_ICON[lead]} size={13} /><span>{stripIcon(text)}{suffix}</span></span>;
 }
 
