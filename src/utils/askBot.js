@@ -13,6 +13,7 @@ import { wavg, wLoad, wRun, wProd, orderProducedQty, dtMinBySession, dtPlannedSp
 import { dtTypeName } from './downtimeCategory.js';
 import { isVague } from './unclassified.js';
 import { OPEN_MO_STATUSES, MO_STATUS_LABEL } from './mtnStepPerm.js';
+import { buildScheduleMaps, resolveAssignedShift } from './shiftAssign.js';
 import { addDaysStr } from './workDate.js';
 import { dtBucketName, buildDtIndex, dtTrashStats } from './downtimeCategory.js';
 import { collapseOps } from './pairTotals.js';
@@ -376,20 +377,82 @@ export function defectTop(rows = [], n = 5) {
  * 🔴 แยก 3 กอง: มา · **แจ้งว่าไม่มา** (is_present=false) · **ยังไม่ได้เช็ค** — ห้ามรวม 2 กองหลังเป็น "ขาด"
  *    (คนกะดึกที่ยังไม่เข้ากะ = ยังไม่เช็ค ไม่ใช่ขาดงาน)
  */
-export function attendanceSummary(emps = [], logs = [], lineNameOf = () => null) {
+export function attendanceSummary(emps = [], logs = [], lineNameOf = () => null, { shift = null, shiftOf = null } = {}) {
   const st = new Map();
   logs.forEach(l => { if (l?.employee_id != null) st.set(l.employee_id, l.is_present ? 'in' : (st.get(l.employee_id) === 'in' ? 'in' : 'out')); });
   const byLine = new Map();
   const tot = { head: 0, in: 0, out: 0, none: 0 };
+  let otherShift = 0, unknownShift = 0, unknownIn = 0;
   for (const e of emps) {
     const ln = lineNameOf(e.line_id);
     if (!ln) continue;
     const k = st.get(e.id) || 'none';
+    if (shift && shiftOf) {
+      const sh = shiftOf(e);
+      /* 🔴 ไม่รู้กะ (ไลน์ยังไม่ตั้งตารางกะ · ทีมที่ไม่รู้กติกา) = แยกนับ ห้ามโยนเข้ากะไหนเอง (ห้ามเดา) */
+      if (sh == null) { unknownShift++; if (k === 'in') unknownIn++; continue; }
+      if (sh !== shift) { otherShift++; continue; }
+    }
     const r = byLine.get(ln) || { line: ln, head: 0, in: 0, out: 0, none: 0 };
     r.head++; r[k]++; tot.head++; tot[k]++;
     byLine.set(ln, r);
   }
-  return { ...tot, lines: [...byLine.values()].sort((a, b) => (b.out + b.none) - (a.out + a.none)) };
+  return { ...tot, otherShift, unknownShift, unknownIn,
+    lines: [...byLine.values()].sort((a, b) => (b.out + b.none) - (a.out + a.none)) };
+}
+
+/**
+ * "คนนี้เข้ากะไหนในวันนั้น" สำหรับนับคนรายกะ — ลำดับเดียวกับจอเช็คชื่อ (`Checkin.jsx`):
+ *   override รายคน → merge event (ไลน์ชนะส่วนงาน) → ตารางกะไลน์/หน่วยงาน (Team C = กะเช้าตลอด)
+ * ตัวตัดสินจริงคือ `resolveAssignedShift()` (`shiftAssign.js` · ของกลางตามกฎ CLAUDE.md §Shift Logic)
+ * 🔴 `lines` ต้องส่งเสมอ — ไลน์ลูกตกทอดกะจากไลน์แม่ (`buildScheduleMaps(rows, lines)`)
+ * ⚠️ คนที่ถูกยืมไปช่วยไลน์อื่น (`line_helpers`) ยังนับที่ไลน์ต้นสังกัด — จอเช็คชื่อย้ายไปนับที่ไลน์ปลายทาง
+ * @returns {(emp) => 'day'|'night'|null}
+ */
+export function makeShiftOf({ schedules = [], overrides = [], merges = [], lines = [] } = {}) {
+  const maps = buildScheduleMaps(schedules, lines);
+  const ovr = {}; overrides.forEach(o => { if (o?.employee_id != null) ovr[o.employee_id] = o.shift; });
+  const secOf = {}; lines.forEach(l => { secOf[l.id] = l.section; });
+  return (emp) => {
+    /* คนที่ถูกยืมไปช่วย = อยู่กะที่ถูกยืมแน่นอน (การยืมผูกกะ) — เหมือน /checkin ห้ามให้ตารางกะไลน์เดิมตัดสิน */
+    if (emp._helperShift) return emp._helperShift;
+    const sec = secOf[emp.line_id];
+    const m = merges.find(e => e.line_id === emp.line_id) || merges.find(e => e.section && e.section === sec);
+    return resolveAssignedShift(emp, { overrideShift: ovr[emp.id], mergeShift: m?.target_shift, maps });
+  };
+}
+
+/**
+ * ย้ายคนที่ถูกยืมไปช่วย (`line_helpers`) ไปนับที่ **ไลน์ปลายทาง** — เหมือนจอเช็คชื่อ (20/11 · คำสั่ง user)
+ * · ระบุกะ: ใช้แถวของกะนั้น (คิวรีกรอง shift มาแล้ว) ⇒ ย้ายไลน์ + ตรึงกะ = กะที่ยืม (`_helperShift`)
+ * · ไม่ระบุกะ (ทั้งวัน): ย้ายเฉพาะคนที่ทั้งวันไปไลน์ปลายทาง **ไลน์เดียว** · ไปคนละไลน์ในแต่ละกะ = นับที่ต้นสังกัด
+ *   แล้วคืนจำนวนใน `split` ให้จอเขียนบอก (ห้ามเลือกไลน์ใดไลน์หนึ่งเอง = เดา)
+ * 🔴 ไม่แตะแถวเดิม (คืน object ใหม่) · `_homeLineId` เก็บไลน์ต้นสังกัดไว้
+ * ⚠️ ระบุกะ: คนที่ถูกยืม **เฉพาะอีกกะ** ยังอยู่กะเดิมตามตารางกะ — เหมือน /checkin (โหลดการยืมเฉพาะกะที่ดู)
+ *    ⇒ กะเช้า+กะดึกอาจรวมเกินยอดทั้งวัน · คืน `otherShift` (รายชื่อ id) ให้จอเขียนบอก ห้ามเงียบ
+ * @param helpers แถวของ **ทั้งวัน** (ทุกกะ) — กรองกะในนี้เอง เพื่อรู้ว่าใครถูกยืมอีกกะ
+ * @returns {{ emps:any[], moved:number, split:number, otherShift:Set }}
+ */
+export function applyHelpers(emps = [], helpers = [], { shift = null } = {}) {
+  const by = new Map();
+  const otherShift = new Set();
+  for (const h of helpers) {
+    if (h?.employee_id == null || h.to_line_id == null) continue;
+    if (shift && h.shift && h.shift !== shift) { otherShift.add(h.employee_id); continue; }
+    const e = by.get(h.employee_id) || { lines: new Set(), shift: h.shift || shift };
+    e.lines.add(h.to_line_id); by.set(h.employee_id, e);
+  }
+  let moved = 0, split = 0;
+  const out = emps.map(emp => {
+    const h = by.get(emp.id);
+    if (!h) return emp;
+    if (h.lines.size !== 1) { split++; return emp; }
+    const to = [...h.lines][0];
+    moved++;
+    return { ...emp, line_id: to, _homeLineId: emp.line_id, ...(shift ? { _helperShift: shift } : {}) };
+  });
+  for (const id of by.keys()) otherShift.delete(id);   // ถูกยืมกะนี้ด้วย = ย้ายไปแล้ว ไม่ใช่ "อีกกะ"
+  return { emps: out, moved, split, otherShift };
 }
 
 export const fmtInt = (n) => (n == null ? '—' : Math.round(n).toLocaleString('en-US'));

@@ -916,11 +916,12 @@ export default function ProductMaster() {
           <Link to="/heijunka" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Heijunka Kanban</Link> {tr('และ')}{' '}
           <Link to="/oee-analytics" style={{ color: 'var(--accent)', textDecoration: 'none' }}>OEE Analytics</Link>
         </>}
-        tabs={[   /* 🗂 13/11: 13 แท็บ → 5 กลุ่ม (กฎ ≤7 · UI §6.8 ข้อ 6) — คีย์ลูก = ?tab= เดิมทุกตัว */
-          { key:'parts', label:'1️⃣ 🗂 Parts Master' },
-          { key:'bomgrp', label:'2️⃣ 📦 BOM', children: [{ key:'bom', label:'BOM' }, { key:'bomdup', label: 'BOM ซ้ำ 2 ใบ' }, { key:'phantom', label: 'ของลม (phantom)' }] },
-          { key:'prodgrp', label:'3️⃣ 🔩 Product', children: [{ key:'products', label:'Product' }, { key:'routing', label: 'Routing' }, { key:'packaging', label: 'Packaging' }, { key:'kanban', label: 'Kanban Std' }, { key:'ct', label: 'ทบทวน CT' }] },
-          { key:'refgrp', label:'📇 ทะเบียนอ้างอิง', children: [{ key:'customers', label: 'ลูกค้า' }, { key:'suppliers', label: 'Supplier' }, { key:'uom', label: 'หน่วยนับ' }] },
+        tabs={[   /* 🗂 13/11: 13 แท็บ → 5 กลุ่ม (กฎ ≤7 · UI §6.8 ข้อ 6) — คีย์ลูก = ?tab= เดิมทุกตัว
+                     20/11: ถอด 1️⃣/emoji — stripIcon() ตัดได้แค่ emoji นำหน้า เลข keycap ขวางไว้ ⇒ ไอคอนหลุดมาโชว์ (UI §6.36 ข้อ 2) */
+          { key:'parts', label:'Parts Master' },
+          { key:'bomgrp', label:'BOM', children: [{ key:'bom', label:'BOM' }, { key:'bomdup', label: 'BOM ซ้ำ 2 ใบ' }, { key:'phantom', label: 'ของลม (phantom)' }] },
+          { key:'prodgrp', label:'Product', children: [{ key:'products', label:'Product' }, { key:'routing', label: 'Routing' }, { key:'packaging', label: 'Packaging' }, { key:'kanban', label: 'Kanban Std' }, { key:'ct', label: 'ทบทวน CT' }] },
+          { key:'refgrp', label:'ทะเบียนอ้างอิง', children: [{ key:'customers', label: 'ลูกค้า' }, { key:'suppliers', label: 'Supplier' }, { key:'uom', label: 'หน่วยนับ' }] },
           { key:'export', label: 'Export' }]}
         tab={mainTab} onTab={setMainTab} />
 

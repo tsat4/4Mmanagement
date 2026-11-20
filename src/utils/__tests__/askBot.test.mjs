@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   parseQuestion, periodFromText, defaultPeriod, matchSubject, oeeSummary, downtimeTop, productionTotals,
-  rankLinesByOee, openDowntimeList, moOpenSummary, fourMPendingSummary, defectTop, attendanceSummary,
+  rankLinesByOee, openDowntimeList, moOpenSummary, fourMPendingSummary, defectTop, attendanceSummary, makeShiftOf, applyHelpers,
 } from '../askBot.js';
 import { dtOpenKind } from '../downtimeRules.js';
 
@@ -277,4 +277,47 @@ test('กะ (user สั่ง 20/11): กะเช้า/กะดึก/ก�
   assert.ok(parseQuestion('oee HDF1 กะนี้', T).error, 'ไม่รู้กะปัจจุบัน = ตอบไม่ได้ ห้ามเดา');
   assert.equal(parseQuestion('oee HDF1 วันนี้', T).shift, null, 'ไม่พูดถึงกะ = ทั้งวันเหมือนเดิม');
   assert.equal(parseQuestion('downtime กะเช้า เดือนนี้', T).subject, '');
+});
+
+test('มาทำงานแยกกะ (user สั่ง 20/11): กะของคนตามลำดับเดียวกับจอเช็คชื่อ · ไม่รู้กะ = แยกนับ ห้ามเดา', () => {
+  const lines = [{ id: 1, name: 'HDF1', section: 'PD1' }, { id: 2, name: 'HDF1-A', parent_line_name: 'HDF1', section: 'PD1' }, { id: 3, name: 'X', section: 'PD9' }];
+  const shiftOf = makeShiftOf({
+    schedules: [{ line_id: 1, day_team: 'A' }],                 // HDF1 ทีม A เช้า · ไลน์ลูกตกทอด
+    overrides: [{ employee_id: 'o', shift: 'day' }],             // คน B ที่สลับมาเช้ารายคน
+    merges: [],
+    lines,
+  });
+  const emps = [
+    { id: 'a', line_id: 1, team: 'A' }, { id: 'b', line_id: 1, team: 'B' }, { id: 'c', line_id: 2, team: 'C' },
+    { id: 'kid', line_id: 2, team: 'B' }, { id: 'o', line_id: 1, team: 'B' }, { id: 'u', line_id: 3, team: 'A' },
+  ];
+  assert.deepEqual(emps.map(shiftOf), ['day', 'night', 'day', 'night', 'day', null]);
+  const name = Object.fromEntries(lines.map(l => [l.id, l.name]));
+  const logs = [{ employee_id: 'a', is_present: true }, { employee_id: 'b', is_present: true }, { employee_id: 'u', is_present: true }];
+  const day = attendanceSummary(emps, logs, id => name[id], { shift: 'day', shiftOf });
+  assert.deepEqual([day.head, day.in, day.none, day.otherShift, day.unknownShift, day.unknownIn], [3, 1, 2, 2, 1, 1]);
+  const night = attendanceSummary(emps, logs, id => name[id], { shift: 'night', shiftOf });
+  assert.deepEqual([night.head, night.in], [2, 1]);
+  const all = attendanceSummary(emps, logs, id => name[id]);
+  assert.equal(all.head, 6, 'ไม่ระบุกะ = ทั้งวันเหมือนเดิม');
+});
+
+test('ยืมคน (user สั่ง 20/11): นับที่ไลน์ปลายทาง · กะ = กะที่ยืม · ทั้งวันไปคนละไลน์ = ต้นสังกัด ห้ามเดา', () => {
+  const emps = [{ id: 'a', line_id: 1, team: 'A' }, { id: 'b', line_id: 1, team: 'A' }, { id: 'c', line_id: 1, team: 'A' }];
+  const helpers = [
+    { employee_id: 'a', to_line_id: 2, shift: 'night' },
+    { employee_id: 'b', to_line_id: 2, shift: 'day' }, { employee_id: 'b', to_line_id: 3, shift: 'night' },
+  ];
+  const night = applyHelpers(emps, helpers, { shift: 'night' });
+  assert.deepEqual(night.emps.map(e => [e.line_id, e._helperShift ?? null]), [[2, 'night'], [3, 'night'], [1, null]]);
+  assert.equal(night.emps[0]._homeLineId, 1);
+  assert.deepEqual([...night.otherShift], [], 'b ถูกยืมทั้ง 2 กะ = ย้ายแล้ว ไม่ใช่อีกกะ');
+  const day = applyHelpers(emps, helpers, { shift: 'day' });
+  assert.deepEqual([...day.otherShift], ['a'], 'a ถูกยืมเฉพาะกะดึก = อีกกะ ต้องให้จอเขียนบอก');
+  const shiftOf = makeShiftOf({ schedules: [{ line_id: 1, day_team: 'A' }], lines: [{ id: 1, name: 'L1' }, { id: 2, name: 'L2' }, { id: 3, name: 'L3' }] });
+  assert.equal(shiftOf(night.emps[0]), 'night', 'ทีม A เป็นกะเช้าตามตาราง แต่ถูกยืมไปกะดึก = นับกะดึก');
+  const allDay = applyHelpers(emps, helpers);
+  assert.deepEqual([allDay.moved, allDay.split], [1, 1]);
+  assert.deepEqual(allDay.emps.map(e => e.line_id), [2, 1, 1]);
+  assert.equal(emps[0].line_id, 1, 'ห้ามแก้แถวเดิม');
 });
