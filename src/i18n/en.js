@@ -10409,7 +10409,7 @@ const EN = {
   'กำลังดึงข้อมูล…': 'Fetching data…',
   'ถามได้: OEE ไลน์ · ไลน์ไหน OEE ต่ำสุด · downtime สูงสุด · เครื่องหยุดตอนนี้ · MO ค้าง · ของเสียสูงสุด · ใบสแครป · 4M ค้าง · มาทำงานกี่คน · ยอดผลิตของไลน์/พาร์ท': 'You can ask: line OEE · lowest-OEE line · top downtime · machines down now · open MOs · top defects · scrap reports · pending 4M · attendance · output by line/part',
   'มีเครื่องหยุด': 'Machines down:',
-  'ระบุช่วงได้: วันนี้ · เมื่อวาน · สัปดาห์นี้ · เดือนนี้ · เดือน 10 · ต.ค. 2569 · กะเช้า · กะดึก · กะนี้': 'Periods: today · yesterday · this week · this month · "เดือน 10" · "ต.ค. 2569" · day shift · night shift · this shift',
+  'ระบุช่วงได้: วันนี้ · เมื่อวาน · สัปดาห์นี้ · เดือนนี้ · เดือน 10 · ต.ค. 2569 · กะเช้า · กะดึก · กะนี้ · เมื่อกี้': 'Periods: today · yesterday · this week · this month · "เดือน 10" · "ต.ค. 2569" · day shift · night shift · this shift · previous shift',
   'รายการ — พิมพ์ให้เจาะจงขึ้น': 'more — type a more specific name',
   'เครื่อง — แตะเพื่อปิดแชทไปดู': '— tap to close chat and view',
   'ตอบจากข้อมูลจริงในระบบ · ไม่เข้าใจ = ไม่เดา': 'Answers from live system data · no guessing',

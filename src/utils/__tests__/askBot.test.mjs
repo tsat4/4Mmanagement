@@ -343,3 +343,13 @@ test('สรุปใบสแครป: นับตามสถานะ · �
   assert.deepEqual(r.top.map(e => [e.key, e.qty]), [['NUT-6', 10], ['M1', 8], ['สกรู', 1]]);
   assert.equal(r.confirmDiffers, true);
 });
+
+test('"เมื่อกี้" (user สั่ง 20/11) = กะก่อนหน้ากะปัจจุบัน · ไม่รู้กะปัจจุบัน = ตอบไม่ได้ ห้ามเดา', () => {
+  const a = parseQuestion('ของเสียเมื่อกี้', T, { shiftNow: 'day' });
+  assert.deepEqual([a.intent, a.subject, a.shift?.key, a.period.from], ['defect_top', '', 'night', '2026-11-18'], 'ตอนนี้กะเช้า ⇒ กะดึกเมื่อวาน');
+  const b = parseQuestion('oee HDF1 เมื่อกี้', T, { shiftNow: 'night' });
+  assert.deepEqual([b.subject, b.shift?.key, b.period.from], ['hdf1', 'day', T], 'ตอนนี้กะดึก ⇒ กะเช้าวันเดียวกัน');
+  assert.match(b.shift.label, /กะก่อนหน้า/, 'ป้ายต้องบอกว่าตีความเป็นกะไหน');
+  assert.equal(parseQuestion('ยอดผลิต HDF1 กะที่แล้ว', T, { shiftNow: 'day' }).shift.key, 'night');
+  assert.ok(parseQuestion('oee HDF1 เมื่อกี้', T).error, 'ไม่รู้กะปัจจุบัน = ตอบไม่ได้');
+});
