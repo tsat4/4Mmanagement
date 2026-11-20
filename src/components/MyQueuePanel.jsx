@@ -200,11 +200,11 @@ function QIcon({ glyph, size = 15 }) {
   return <span style={{ fontSize: 14, flexShrink: 0 }}>{glyph}</span>;
 }
 /** หัวข้อชั้นคิว "🙋 รอคุณโดยตรง" → ไอคอนเส้น + ข้อความ (จอคอม) */
-function TierTitle({ text }) {
+function TierTitle({ text, suffix = '' }) {
   const isMobile = useIsMobile();
   const lead = String(text || '').slice(0, String(text || '').length - String(stripIcon(text) || '').length).trim();
-  if (isMobile || !QUEUE_ICON[lead]) return <>{text}</>;
-  return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name={QUEUE_ICON[lead]} size={13} />{stripIcon(text)}</span>;
+  if (isMobile || !QUEUE_ICON[lead]) return <>{text}{suffix}</>;
+  return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name={QUEUE_ICON[lead]} size={13} /><span>{stripIcon(text)}{suffix}</span></span>;
 }
 
 function Row({ it, onGo }) {
@@ -253,7 +253,7 @@ function Group({ tier, items, onGo }) {
   return (
     <div style={{ marginBottom: 6 }}>
       <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--muted)', padding: '4px 8px 2px', letterSpacing: 0.2 }}>
-        <TierTitle text={TIER_TITLE[tier]} />{shown.length ? ` · ${items.length}` : ''}
+        <TierTitle text={TIER_TITLE[tier]} suffix={shown.length ? ` · ${items.length}` : ''} />
       </div>
       {shown.length === 0
         ? <div style={{ fontSize: 11.5, color: 'var(--muted)', padding: '2px 8px 6px' }}>{empty}</div>
