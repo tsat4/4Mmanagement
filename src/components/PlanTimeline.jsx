@@ -236,7 +236,7 @@ export default function PlanTimeline({
       {preview?.box && cursor && (
         <div style={{
           position: 'fixed', left: cursor.x + 16, top: cursor.y + 16, zIndex: 60, pointerEvents: 'none',
-          background: 'var(--card)', border: '1px solid var(--accent)', borderRadius: 'var(--r-md)',
+          background: 'var(--card-surf)', border: '1px solid var(--accent)', borderRadius: 'var(--r-md)',
           boxShadow: 'var(--shadow-float)', padding: '6px 9px', maxWidth: 280,
         }}>
           <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>

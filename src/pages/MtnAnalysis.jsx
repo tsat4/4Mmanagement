@@ -102,7 +102,7 @@ const evKey = (iso, scale) => {
 };
 
 const KPI = ({ label, value, unit, sub, warn }) => (
-  <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '9px 11px', minWidth: 0 }}>
+  <div style={{ background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '9px 11px', minWidth: 0 }}>
     <div style={{ fontSize: 11.5, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</div>
     <div style={{ fontSize: 19, fontWeight: 800, color: value == null ? 'var(--muted)' : warn ? 'var(--amber)' : 'var(--text)', lineHeight: 1.25 }}>
       {value == null ? '—' : value}{value != null && unit ? <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)' }}> {unit}</span> : null}
@@ -538,7 +538,7 @@ export default function MtnAnalysis() {
                 title={`② พาเรโต — ปัญหาไหนกินสัดส่วนมากที่สุด (${unit})`}
                 records={paretoRecords} dims={PARETO_DIMS} unit={unit}
                 emptyText={trI18n('ไม่มีข้อมูลในช่วงนี้')}
-                sectionStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: 14 }}
+                sectionStyle={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 12, padding: 14 }}
                 titleStyle={{ fontSize: 14, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }} />
 
               {/* ③ ก้างปลา */}

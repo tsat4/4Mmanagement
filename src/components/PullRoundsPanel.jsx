@@ -131,7 +131,7 @@ export default function PullRoundsPanel({ canEdit, shipToMap, fullName }) {
   const btn = (c) => ({ background: c, border: 'none', color: '#0b1220', fontWeight: 800, fontSize: 11, borderRadius: 6, padding: '4px 9px', cursor: 'pointer' });
 
   return (
-    <div style={{ marginTop: 18, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 12 }}>
+    <div style={{ marginTop: 18, background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
         <div style={{ fontSize: 14, fontWeight: 800 }}>{tr('ตารางรอบรับของลูกค้า (milk-run)')}</div>
         {shipTos.length > 1 && (
@@ -166,7 +166,7 @@ export default function PullRoundsPanel({ canEdit, shipToMap, fullName }) {
       )}
 
       {adding && (
-        <div style={{ background: 'var(--bg2)', border: '1px dashed var(--accent)', borderRadius: 'var(--r-md)', padding: 10, marginBottom: 10 }}>
+        <div style={{ background: 'var(--bg2-surf)', border: '1px dashed var(--accent)', borderRadius: 'var(--r-md)', padding: 10, marginBottom: 10 }}>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
             {[['ship_to', 'ลูกค้า (code)', 'text'], ['dock_code', 'Dock', 'text'], ['supplier_code', 'รหัสผู้ส่ง', 'text']].map(([k, l]) => (
               <label key={k} style={{ fontSize: 11, color: 'var(--muted)' }}>{l}<br />

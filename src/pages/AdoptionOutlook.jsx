@@ -1035,7 +1035,7 @@ function LadderTab({ c, navigate, isMobile }) {
               {list.map((x, i) => (
                 <div key={i} style={{
                   display: 'flex', gap: 9, alignItems: 'center',
-                  background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '7px 11px',
+                  background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '7px 11px',
                 }}>
                   <span style={{
                     fontSize: 13, fontWeight: 800, color: x.n >= 3 ? 'var(--red)' : x.n === 2 ? 'var(--amber)' : 'var(--muted)',
@@ -1073,7 +1073,7 @@ function DeptTab({ c, navigate, isMobile }) {
             const col = r.ready == null ? 'var(--muted)' : r.ready >= 80 ? '#22c55e' : r.ready >= 40 ? '#f59e0b' : '#ef4444';
             return (
               <button key={r.key} onClick={() => navigate(r.to)} style={{
-                textAlign: 'left', cursor: 'pointer', background: 'var(--bg3)',
+                textAlign: 'left', cursor: 'pointer', background: 'var(--bg3-surf)',
                 border: `1px solid var(--border2)`, borderLeft: `4px solid ${col}`, borderRadius: 'var(--r-md)', padding: '9px 11px', color: 'var(--text)',
               }}>
                 <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{r.icon} {tr(r.label)}</div>
@@ -1097,7 +1097,7 @@ function DeptTab({ c, navigate, isMobile }) {
             <span style={{ fontSize: 15.5, fontWeight: 700 }}>{r.icon} {tr(r.label)}</span>
             <button onClick={() => navigate(r.to)} style={{
               fontSize: 11.5, fontWeight: 700, padding: '3px 10px', borderRadius: 'var(--r-md)', cursor: 'pointer',
-              background: 'var(--bg3)', border: '1px solid var(--border2)', color: 'var(--text)',
+              background: 'var(--bg3-surf)', border: '1px solid var(--border2)', color: 'var(--text)',
             }}>{tr('เปิด Dashboard →')}</button>
           </div>
           <div style={{ display: 'grid', gap: 14, gridTemplateColumns: isMobile ? 'minmax(0, 1fr)' : '1fr 1fr', alignContent: 'start' }}>
@@ -1141,7 +1141,7 @@ function RoiTab({ c, loss, rates, demoOn, day, navigate, isMobile }) {
   const noNgCost = !c.partsWithCost;          // ไม่มีต้นทุน/ชิ้น = คิดเงินของเสียไม่ได้
 
   const Fact = ({ label, value, unit, sub }) => (
-    <div style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '10px 12px' }}>
+    <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '10px 12px' }}>
       <div style={{ fontSize: 12, color: 'var(--muted)' }}>{label}</div>
       <div style={{ fontSize: 23, fontWeight: 800, lineHeight: 1.2, fontVariantNumeric: 'tabular-nums' }}>
         {value}{unit && <span style={{ fontSize: 13, fontWeight: 700 }}> {unit}</span>}
@@ -1249,7 +1249,7 @@ function RoiTab({ c, loss, rates, demoOn, day, navigate, isMobile }) {
           ].map((x, i) => (
             <button key={i} onClick={() => navigate(x.to)} style={{
               display: 'flex', gap: 9, alignItems: 'flex-start', textAlign: 'left', cursor: 'pointer', width: '100%',
-              background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '8px 11px', color: 'var(--text)',
+              background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '8px 11px', color: 'var(--text)',
             }}>
               <span style={{ fontSize: 15 }}>{x.icon}</span>
               <span style={{ flex: 1, minWidth: 0 }}>
@@ -1514,7 +1514,7 @@ function DeepDiveTab({ dd, err, demoOn, navigate, isMobile }) {
         {/* ยังไม่จัดหมวด — ห้ามซ่อน ถ้าก้อนนี้ใหญ่ แปลว่าภาพข้างบนยังไม่ครบ */}
         {unknownLoss && (
           <div style={{
-            marginTop: 9, fontSize: 11.5, lineHeight: 1.6, background: 'var(--bg3)',
+            marginTop: 9, fontSize: 11.5, lineHeight: 1.6, background: 'var(--bg3-surf)',
             border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: '8px 10px', color: 'var(--muted)',
           }}>
             ⚪ <b style={{ color: 'var(--text2)' }}>{tr('ยังไม่จัดหมวด')} {fmtNum(unknownLoss.min)} {tr('นาที')}</b> ({unknownLoss.count} {tr('รายการ:')}{' '}
@@ -1639,7 +1639,7 @@ function DeepDiveTab({ dd, err, demoOn, navigate, isMobile }) {
             </div>
             <button onClick={() => navigate('/pe-docs')} style={{
               marginTop: 8, fontSize: 11.5, fontWeight: 700, padding: '5px 12px', borderRadius: 'var(--r-md)',
-              cursor: 'pointer', background: 'var(--bg2)', color: 'var(--text)', border: '1px solid var(--border2)',
+              cursor: 'pointer', background: 'var(--bg2-surf)', color: 'var(--text)', border: '1px solid var(--border2)',
             }}>{tr('ไปลงเอกสารพาร์ทนี้')}</button>
           </div>
         )}
@@ -1728,7 +1728,7 @@ function DeepDiveTab({ dd, err, demoOn, navigate, isMobile }) {
           ].map(b => (
             <button key={b.to} onClick={() => navigate(b.to)} style={{
               fontSize: 12, fontWeight: 700, padding: '7px 12px', borderRadius: 'var(--r-md)', cursor: 'pointer',
-              background: 'var(--bg3)', color: 'var(--text)', border: '1px solid var(--border2)',
+              background: 'var(--bg3-surf)', color: 'var(--text)', border: '1px solid var(--border2)',
             }}>{b.l}</button>
           ))}
         </div>

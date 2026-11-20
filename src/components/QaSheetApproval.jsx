@@ -119,7 +119,7 @@ export default function QaSheetApproval({ sheet, onChanged }) {
         <div style={{ flexBasis: '100%', display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
           <input id="qa-reject-reason" value={reason} onChange={e => setReason(e.target.value)} autoFocus
             placeholder={tr(`เหตุผลที่ตีกลับ (อย่างน้อย ${QA_REJECT_MIN} ตัวอักษร)`)}
-            style={{ flex: 1, minWidth: 200, padding: '7px 10px', borderRadius: 8, fontSize: 13, background: 'var(--bg3)', border: '1px solid var(--border2)', color: 'var(--text)' }} />
+            style={{ flex: 1, minWidth: 200, padding: '7px 10px', borderRadius: 8, fontSize: 13, background: 'var(--bg3-surf)', border: '1px solid var(--border2)', color: 'var(--text)' }} />
           <button type="button" className="tbtn" disabled={busy || !qaRejectReasonValid(reason)} onClick={reject}
             style={{ padding: '6px 14px', fontSize: 12.5, fontWeight: 800, color: 'var(--red)', borderColor: 'var(--red-line)' }}>{tr('ยืนยันตีกลับ')}</button>
           <button type="button" className="tbtn" disabled={busy} onClick={() => { setRejecting(false); setReason(''); }}

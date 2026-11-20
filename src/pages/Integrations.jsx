@@ -437,7 +437,7 @@ function KeyModal({ info, onClose }) {
       <div className="modal" style={{ width: 'min(560px, 96vw)', display: 'grid', gap: 10 }} onClick={e => e.stopPropagation()}>
         <b style={{ fontSize: 17 }}>{tr('🔑 รหัสลับของต้นทาง')} {info.code}</b>
         <NoticeBar tone="warn">{tr('แสดง')}<b>{tr('ครั้งเดียว')}</b> — ESM เก็บไว้แค่ค่าที่ย้อนกลับไม่ได้ ปิดหน้าต่างนี้แล้วดูอีกไม่ได้ (ลืม = ออกรหัสใหม่)</NoticeBar>
-        <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: 14, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, padding: 10, overflowWrap: 'anywhere', userSelect: 'all' }}>
+        <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: 14, background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 8, padding: 10, overflowWrap: 'anywhere', userSelect: 'all' }}>
           {info.key}
         </div>
         <ol style={{ margin: 0, paddingLeft: 20, fontSize: 13, display: 'grid', gap: 4, color: 'var(--text2)' }}>

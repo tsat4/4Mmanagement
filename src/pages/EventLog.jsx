@@ -40,7 +40,7 @@ function TimeInput24({ value = '', onChange, style = {} }) {
           borderRadius: 'var(--ctl-r)', padding: '5px 8px', ...style }} />
       <button type="button" title={tr('ใช้เวลาปัจจุบัน')}
         onClick={() => onChange?.({ target: { value: new Date().toTimeString().slice(0,5) } })}
-        style={{ fontSize: 12, fontWeight: 700, padding: '5px 8px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+        style={{ fontSize: 12, fontWeight: 700, padding: '5px 8px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
         ตอนนี้
       </button>
     </div>
@@ -1160,7 +1160,7 @@ function EventDetailModal({ log, matrix, checkItems, eventDefs, role: roleProp, 
   return (
     <div className="overlay" style={{ zIndex: 2000, alignItems: 'flex-start', overflowY: 'auto', padding: '24px 16px' }}>
       <div onClick={e => e.stopPropagation()}
-        style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 28,
+        style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 28,
           width: 'min(95vw,860px)', boxShadow: 'var(--shadow-lg)', marginTop: 20, marginBottom: 20 }}>
 
         {/* Modal Header */}
@@ -1206,7 +1206,7 @@ function EventDetailModal({ log, matrix, checkItems, eventDefs, role: roleProp, 
                   {deleting ? '...' : tr('ยืนยัน')}
                 </button>
                 <button onClick={() => setConfirmDelete(false)}
-                  style={{ background: 'var(--bg2)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '5px 10px', fontSize: 12, cursor: 'pointer' }}>
+                  style={{ background: 'var(--bg2-surf)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '5px 10px', fontSize: 12, cursor: 'pointer' }}>
                   {tr('ยกเลิก')}
                 </button>
               </div>
@@ -1224,7 +1224,7 @@ function EventDetailModal({ log, matrix, checkItems, eventDefs, role: roleProp, 
             { label: 'Rework',      value: log.qty_rework, color: 'var(--amber)' },
             { label: 'Scrap',       value: log.qty_scrap, color: 'var(--blue)' },
           ].map(q => (
-            <div key={q.label} style={{ background: 'var(--card)', borderRadius: 'var(--r-md)', padding: '10px 14px', textAlign: 'center', border: `1px solid ${tint(q.color, 'dim')}` }}>
+            <div key={q.label} style={{ background: 'var(--card-surf)', borderRadius: 'var(--r-md)', padding: '10px 14px', textAlign: 'center', border: `1px solid ${tint(q.color, 'dim')}` }}>
               <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase' }}>{tr(q.label)}</div>
               <div style={{ fontSize: 22, fontWeight: 800, color: q.color, fontFamily: 'var(--font-display)' }}>{q.value}</div>
             </div>
@@ -1254,7 +1254,7 @@ function EventDetailModal({ log, matrix, checkItems, eventDefs, role: roleProp, 
                 return comp && comp.result !== 'pending';
               }).length;
               return (
-                <div key={appr.role_key} style={{ background: 'var(--card)', borderRadius: 'var(--r-md)', padding: '14px 16px', border: `1px solid ${appr.status === 'approved' ? rm.color + '40' : appr.status === 'rejected' ? 'var(--red)40' : 'var(--border)'}` }}>
+                <div key={appr.role_key} style={{ background: 'var(--card-surf)', borderRadius: 'var(--r-md)', padding: '14px 16px', border: `1px solid ${appr.status === 'approved' ? rm.color + '40' : appr.status === 'rejected' ? 'var(--red)40' : 'var(--border)'}` }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                     <span style={{ fontSize: 11, fontWeight: 800, color: rm.color }}>{appr.role_key}</span>
                     <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--r-pill)',

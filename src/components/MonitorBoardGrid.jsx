@@ -350,7 +350,7 @@ export default function MonitorBoardGrid({
                         style={{
                           marginLeft: 6, fontSize: FS - 1.5, fontWeight: 800, padding: '0 5px',
                           borderRadius: 'var(--r-xs)', border: '1px solid var(--border2)',
-                          background: 'var(--bg2)', color: 'var(--muted)', whiteSpace: 'nowrap',
+                          background: 'var(--bg2-surf)', color: 'var(--muted)', whiteSpace: 'nowrap',
                         }}>{tr('ƒ สูตร')}</span>
                     ) : null}
                   </td>

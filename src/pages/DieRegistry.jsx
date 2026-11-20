@@ -703,7 +703,7 @@ export default function DieRegistry() {
           { t: 'ชุดที่ข้อมูลไม่ครบ', v: stat.todo, warn: stat.todo > 0 },
         ].map(c => (
           <div key={c.t} title={tr(c.hint) || undefined} style={{
-            background: 'var(--card)', border: `1px solid ${c.warn ? 'var(--amber-line)' : 'var(--border)'}`,
+            background: 'var(--card-surf)', border: `1px solid ${c.warn ? 'var(--amber-line)' : 'var(--border)'}`,
             borderRadius: 'var(--r-md)', padding: '8px 14px', minWidth: 110,
           }}>
             <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>{c.t}</div>
@@ -763,7 +763,7 @@ export default function DieRegistry() {
               const open = expanded.has(s.id);
               return (
                 <div key={s.id} style={{
-                  background: 'var(--card)', borderRadius: 'var(--r-md)',
+                  background: 'var(--card-surf)', borderRadius: 'var(--r-md)',
                   border: `1px solid ${s.issues.length ? 'var(--amber-line)' : 'var(--border)'}`,
                   overflow: 'hidden',
                 }}>
@@ -1192,7 +1192,7 @@ function Modal({ title, onClose, children }) {
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
     }}>
       <div onClick={e => e.stopPropagation()} style={{
-        background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)',
+        background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)',
         padding: 18, width: 'min(720px, 100%)', maxHeight: '90vh', overflowY: 'auto',
       }}>
         <h3 style={{ margin: '0 0 14px', fontSize: 16, fontWeight: 800 }}>{title}</h3>

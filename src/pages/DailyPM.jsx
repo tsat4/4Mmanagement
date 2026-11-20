@@ -294,7 +294,7 @@ export default function DailyPM() {
               return (
                 <div key={row.line_name}
                   className={row.status === 'red' ? 'person-alarm-red' : row.status === 'orange' ? 'person-alarm-amber' : undefined}
-                  style={{ background: 'var(--card)', border: `1px solid ${tint(meta.color, 'line')}`, borderLeft: `4px solid ${meta.color}`, borderRadius: 'var(--r-lg)', padding: 16 }}>
+                  style={{ background: 'var(--card-surf)', border: `1px solid ${tint(meta.color, 'line')}`, borderLeft: `4px solid ${meta.color}`, borderRadius: 'var(--r-lg)', padding: 16 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                     <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{row.line_name === '—' ? tr('⚠ ยังไม่ระบุไลน์') : row.line_name}</div>
                     <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 'var(--r-pill)', background: `${tint(meta.color, 'dim')}`, color: meta.color, border: `1px solid ${tint(meta.color, 'line')}` }}
@@ -405,7 +405,7 @@ export default function DailyPM() {
         <div>
           {/* คู่มือ 4 ขั้น — ระบบนี้ต่อกัน 3 หน้า มือใหม่หลงง่าย ต้องเห็นภาพรวมก่อน */}
           {/* พับไว้เป็นค่าเริ่มต้น (20/10) — คนใช้ประจำไม่ต้องเลื่อนผ่านทุกครั้ง · จำต่อเครื่อง */}
-          <div data-page-note="1" style={{ marginBottom: 14, padding: guideOpen ? '12px 16px' : '8px 16px', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)' }}>
+          <div data-page-note="1" style={{ marginBottom: 14, padding: guideOpen ? '12px 16px' : '8px 16px', background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)' }}>
             <button type="button" onClick={toggleGuide} aria-expanded={guideOpen}
               style={{ all: 'unset', cursor: 'pointer', fontSize: 12, fontWeight: 800, color: 'var(--text)', display: 'block', width: '100%', marginBottom: guideOpen ? 8 : 0 }}>
               {guideOpen ? '▾' : '▸'} {tr('วิธีใช้งาน Autonomous Maintenance (AM) — 4 ขั้น')}
@@ -438,7 +438,7 @@ export default function DailyPM() {
             <SearchInput value={regQ} onChange={setRegQ} fields="ชื่อเครื่อง / เลขเครื่อง / No. / ไลน์" />
             <span className="spacer" />
             <span className="filter-count">{tr('แสดง')} {regView.shownN} {tr('จาก')} {regView.myN} {tr('เครื่อง')}</span>
-            {regFiltered && <button type="button" onClick={clearRegFilters} style={{ background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text2)', borderRadius: 'var(--r-md)', padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}>{tr('ล้างตัวกรอง')}</button>}
+            {regFiltered && <button type="button" onClick={clearRegFilters} style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', color: 'var(--text2)', borderRadius: 'var(--r-md)', padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}>{tr('ล้างตัวกรอง')}</button>}
           </FilterBar>
           {/* 🔴 ซ่อนแล้วต้องบอก — "ไม่มีเครื่อง" ทั้งที่มีแต่อยู่นอกขอบเขต = จอโกหก */}
           {(regView.outScopeN > 0 || regView.droppedNoLine > 0) && (
@@ -452,7 +452,7 @@ export default function DailyPM() {
           {jigs.length > 0 && regView.groups.length === 0 ? (
             <div style={{ textAlign: 'center', padding: 40, color: 'var(--muted)' }}>
               ไม่มีเครื่องที่ตรงกับตัวกรอง{regView.outScopeN > 0 ? ` (นอกขอบเขตของคุณ ${regView.outScopeN} เครื่อง)` : ''}
-              {regFiltered && <div><button type="button" onClick={clearRegFilters} style={{ marginTop: 10, background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text2)', borderRadius: 'var(--r-md)', padding: '5px 12px', fontSize: 12, cursor: 'pointer' }}>{tr('ล้างตัวกรอง')}</button></div>}
+              {regFiltered && <div><button type="button" onClick={clearRegFilters} style={{ marginTop: 10, background: 'var(--bg3-surf)', border: '1px solid var(--border)', color: 'var(--text2)', borderRadius: 'var(--r-md)', padding: '5px 12px', fontSize: 12, cursor: 'pointer' }}>{tr('ล้างตัวกรอง')}</button></div>}
             </div>
           ) : Object.keys(jigsByLine).length === 0 ? (
             <div style={{ textAlign: 'center', padding: 40, color: 'var(--muted)' }}>
@@ -470,7 +470,7 @@ export default function DailyPM() {
                 // ห้ามลงทะเบียนจนกว่าจะไปกำหนดไลน์ให้อุปกรณ์ก่อน (กันข้อมูลตายเงียบ)
                 const noLine = !g.name
                 return (
-                  <div key={g.key} style={{ background: 'var(--card)', border: `1px solid ${noLine ? 'var(--amber-line)' : 'var(--border)'}`, borderRadius: 'var(--r-lg)', padding: 16 }}>
+                  <div key={g.key} style={{ background: 'var(--card-surf)', border: `1px solid ${noLine ? 'var(--amber-line)' : 'var(--border)'}`, borderRadius: 'var(--r-lg)', padding: 16 }}>
                     <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)', marginBottom: noLine ? 4 : 10 }}>
                       {noLine ? '⚠ ยังไม่ระบุไลน์' : line} <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)' }}>{tr('· ลงทะเบียน')} {regCount}/{lineJigs.length}</span>
                     </div>

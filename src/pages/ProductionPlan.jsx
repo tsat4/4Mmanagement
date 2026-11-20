@@ -846,7 +846,7 @@ export default function ProductionPlan() {
       {/* 🌑 ไลน์ที่ไม่มีความต้องการในระบบเลย — เดิมถูกกรองทิ้งทั้งไลน์ ⇒ จอว่างอ่านได้ว่า "ไลน์ว่าง"
            ทั้งที่ความจริงคือ "ยังไม่มีทางรับ order ของลูกค้าเจ้านั้นเข้าระบบ" (วัดจริง 22/09: 10 จาก 22 ไลน์) */}
       {!loading && tab === 'plan' && cap === 'day' && mode === 'chart' && silentLines.length > 0 && (
-        <div style={{ background: 'var(--bg3)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: '9px 12px', fontSize: 12.5, color: 'var(--text2)' }}>
+        <div style={{ background: 'var(--bg3-surf)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: '9px 12px', fontSize: 12.5, color: 'var(--text2)' }}>
           🌑 <b>{silentLines.length} {tr('ไลน์ยังไม่มีข้อมูลความต้องการ')}</b> — ไม่ใช่ "ไลน์ว่าง" แต่คือยังไม่มี order/forecast ของพาร์ทในไลน์นี้เข้าระบบ
           <div style={{ marginTop: 5, display: 'flex', flexWrap: 'wrap', gap: '4px 10px', fontSize: 11.5 }}>
             {silentLines.slice(0, 12).map(l => (

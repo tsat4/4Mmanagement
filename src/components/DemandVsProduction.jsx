@@ -168,7 +168,7 @@ export default function DemandVsProduction({ products, prodByDay, today }) {
                 : 'ไม่มีเลขไหนที่สต็อกจะติดลบในช่วงที่ดู'}
               {/* ⚠️ ห้ามบอกว่า "รวมกลุ่มแล้วพอ" — สลับขายข้ามเลข SAP ไม่ได้ในทางปฏิบัติ */}
               {shortList.length > 0 && excessList.length > 0 && (
-                <div style={{ marginTop: 5, padding: '6px 9px', borderRadius: 'var(--r-md)', background: 'var(--bg2)', border: '1px dashed var(--border2)', color: 'var(--muted)' }}>
+                <div style={{ marginTop: 5, padding: '6px 9px', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)', border: '1px dashed var(--border2)', color: 'var(--muted)' }}>
                   ℹ️ ในกลุ่มมีเลขที่ของเหลืออยู่ ({excessList.map((x) => x.p.mat_no).join(' · ')}) —
                   <b> {tr('โอนมาใช้แทนกันได้เฉพาะกรณีฉุกเฉิน และต้องปรับยอดใน SAP ด้วย')}</b> ระบบจึงไม่นับรวมให้
                 </div>
@@ -247,7 +247,7 @@ export default function DemandVsProduction({ products, prodByDay, today }) {
         <div style={{ flex: '0 0 auto' }}>
           <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700, marginBottom: 4 }}>{tr('มองไปข้างหน้า')}</div>
           <select value={horizon} onChange={(e) => setHorizon(Number(e.target.value))}
-            style={{ width: 110, padding: '6px 9px', borderRadius: 'var(--ctl-r)', border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', fontSize: 12 }}>
+            style={{ width: 110, padding: '6px 9px', borderRadius: 'var(--ctl-r)', border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)', fontSize: 12 }}>
             {[14, 30, 60, 90].map((d) => <option key={d} value={d}>{d} {tr('วัน')}</option>)}
           </select>
         </div>

@@ -291,7 +291,7 @@ export default function FeedbackModal({ onClose }) {
 
   return (
     <div /* ⚠️ ฟอร์มกรอกข้อมูล — ไม่ปิดจาก backdrop กันเผลอแตะแล้วข้อมูลหาย (UI-CONVENTIONS §5) */  style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', width: '100%', maxWidth: 620, maxHeight: '86vh', display: 'flex', flexDirection: 'column' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg2-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', width: '100%', maxWidth: 620, maxHeight: '86vh', display: 'flex', flexDirection: 'column' }}>
 
         <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ fontSize: 15, fontWeight: 800, flex: 1 }}>{tr('แจ้งปัญหา / ข้อเสนอแนะ')}</div>
@@ -324,7 +324,7 @@ export default function FeedbackModal({ onClose }) {
 
               <textarea value={msg} onChange={e => setMsg(e.target.value)} rows={6} autoFocus
                 placeholder={'เล่าให้ฟังได้เลยครับ เช่น\n• เลเซอร์ลงดาวน์ไทม์ ไม่มีให้เลือกชิ้นงาน\n• ชื่อสินค้า 2 ตัวเหมือนกัน เลือกผิดใบได้\n• อยากให้เพิ่ม...'}
-                style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--ctl-r)', padding: 10, color: 'var(--text)', fontSize: 13, fontFamily: 'inherit', resize: 'vertical' }} />
+                style={{ width: '100%', background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--ctl-r)', padding: 10, color: 'var(--text)', fontSize: 13, fontFamily: 'inherit', resize: 'vertical' }} />
 
               {/* 📎 แนบรูปหน้าจอ — วางไว้ "ติดใต้ช่องพิมพ์" ให้เห็นตอนกำลังเล่าปัญหา
                   ไม่ใช่ท้ายฟอร์ม (บทเรียนจากรูปก่อนซ่อมใน /mtn-repair: ช่องอยู่ล่างสุด คนใส่แค่ 25%) */}
@@ -339,7 +339,7 @@ export default function FeedbackModal({ onClose }) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <button type="button" onClick={() => fileRef.current?.click()} disabled={shots.length >= MAX_SHOTS}
                     style={{ fontSize: 12, fontWeight: 700, padding: '6px 12px', borderRadius: 'var(--r-md)',
-                      border: '1px dashed var(--border2)', background: 'var(--bg3)', color: 'var(--text2)',
+                      border: '1px dashed var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)',
                       cursor: shots.length >= MAX_SHOTS ? 'default' : 'pointer', opacity: shots.length >= MAX_SHOTS ? 0.5 : 1 }}>
                     {tr('แนบรูปหน้าจอ')}
                   </button>
@@ -385,7 +385,7 @@ export default function FeedbackModal({ onClose }) {
                   style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 'var(--r-md)', border: '1px solid var(--accent)', background: 'var(--accent-dim)', color: 'var(--accent)', cursor: 'pointer' }}>
                   {tr('คัดลอกให้ Claude')}
                 </button>
-                <button onClick={load} style={{ fontSize: 11, padding: '3px 9px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text2)', cursor: 'pointer' }}>{tr('↻ รีเฟรช')}</button>
+                <button onClick={load} style={{ fontSize: 11, padding: '3px 9px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg3-surf)', color: 'var(--text2)', cursor: 'pointer' }}>{tr('↻ รีเฟรช')}</button>
               </div>
 
               {loading ? <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('กำลังโหลด...')}</div>
@@ -430,7 +430,7 @@ export default function FeedbackModal({ onClose }) {
                           <textarea rows={2} value={noteDraft[r.id] ?? r.admin_note ?? ''}
                             onChange={e => setNoteDraft(d => ({ ...d, [r.id]: e.target.value }))}
                             placeholder={tr('ตอบผู้แจ้ง (เขาจะเห็นในกล่องนี้ + เด้งกระดิ่งให้)')}
-                            style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--ctl-r)',
+                            style={{ width: '100%', background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--ctl-r)',
                               padding: '6px 8px', color: 'var(--text)', fontSize: 12, fontFamily: 'inherit', resize: 'vertical' }} />
                           <button onClick={() => saveNote(r)} disabled={savingNote === r.id || !(noteDraft[r.id] ?? r.admin_note ?? '').trim()}
                             style={{ marginTop: 4, fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 'var(--r-md)', border: 'none',

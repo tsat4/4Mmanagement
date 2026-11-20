@@ -244,7 +244,7 @@ export default function CompanyCalendar() {
         <div style={{
           position: 'sticky', bottom: 16, marginTop: 18,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
-          background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 'var(--r-md)',
+          background: 'var(--bg3-surf)', border: '1px solid var(--accent)', borderRadius: 'var(--r-md)',
           padding: '12px 16px', boxShadow: 'var(--shadow-float)',
         }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>

@@ -119,7 +119,7 @@ export default function CustomerFileFormats({ canManage, onChanged }) {
   const editing = adding || !!draft;
 
   return (
-    <div style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 12 }}>
+    <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
         <b style={{ fontSize: 13 }}>{tr('ฟอร์แมตไฟล์ความต้องการของลูกค้า')}</b>
         <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>
@@ -135,7 +135,7 @@ export default function CustomerFileFormats({ canManage, onChanged }) {
           {rows.map(r => (
             <div key={r.code} style={{
               display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', padding: '6px 8px',
-              borderRadius: 'var(--r-md)', background: 'var(--card)', border: '1px solid var(--border)',
+              borderRadius: 'var(--r-md)', background: 'var(--card-surf)', border: '1px solid var(--border)',
               opacity: r.is_active ? 1 : 0.55,
             }}>
               <span style={{ fontSize: 11.5, fontFamily: 'monospace', color: 'var(--muted)', minWidth: 90 }}>{r.code}</span>
@@ -164,7 +164,7 @@ export default function CustomerFileFormats({ canManage, onChanged }) {
       )}
 
       {editing && (
-        <div style={{ marginTop: 10, padding: 10, borderRadius: 'var(--r-md)', background: 'var(--card)', border: '1px solid var(--accent)' }}>
+        <div style={{ marginTop: 10, padding: 10, borderRadius: 'var(--r-md)', background: 'var(--card-surf)', border: '1px solid var(--accent)' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8, marginBottom: 8 }}>
             <label style={{ fontSize: 11.5, color: 'var(--muted)' }}>{tr('รหัส (ห้ามซ้ำ)')}
               <input value={D.code || ''} disabled={D._edit} placeholder="tsra_order"

@@ -250,7 +250,7 @@ export default function PmForecast() {
         <SearchInput value={fQ} onChange={setFQ} fields="ไลน์ / อุปกรณ์" />
         <span className="filter-count">{tr('แสดง')} {shown.length} {tr('จาก')} {rows.length}</span>
         {droppedNoLine > 0 && <span className="filter-count" style={{ color: '#f59a3f' }} title={tr('ชื่อไลน์ของแผนไม่ตรงทะเบียนไลน์ผลิต — กรองตามไลน์ไม่ได้')}>{tr('⚠ อีก')} {droppedNoLine} {tr('แผนไลน์ไม่ตรงทะเบียน')}</span>}
-        {filtered && <button type="button" onClick={clearFilters} style={{ background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text2)', borderRadius: 'var(--r-md)', padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}>{tr('ล้างตัวกรอง')}</button>}
+        {filtered && <button type="button" onClick={clearFilters} style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', color: 'var(--text2)', borderRadius: 'var(--r-md)', padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}>{tr('ล้างตัวกรอง')}</button>}
         <span className="spacer" />
         {noLineN > 0 && <span className="filter-count" title={tr('แผนที่ทั้งตัวแผน (usage_source_line) และเครื่อง (line_name) ไม่มีไลน์ — คิดยอดผลิต/วัน PM ไม่ได้ ไปตั้งไลน์ให้เครื่องที่ทะเบียนอุปกรณ์')} style={{ color: '#f59a3f', fontWeight: 700 }}>⚠ {noLineN} {tr('แผนไม่มีไลน์ — ไม่แสดง')}</span>}
         {totalBuffer > 0 && <span className="filter-count" style={{ color: 'var(--accent2)', fontWeight: 700 }}>{tr('Σ buffer ที่ต้องเตรียม ≈')} {totalBuffer.toLocaleString()} {tr('ชิ้น')}</span>}
@@ -287,7 +287,7 @@ export default function PmForecast() {
                       <td style={{ padding: '8px 10px' }}>{canManage ? <input type="number" defaultValue={p.lead_time_days ?? 10} onBlur={e => { const v = Number(e.target.value) || 0; if (v !== (p.lead_time_days ?? 10)) saveCfg(p.id, { lead_time_days: v }) }} style={inp} /> : (p.lead_time_days ?? 10)}</td>
                       <td style={{ padding: '8px 10px' }}>{canManage ? <input type="number" defaultValue={p.buffer_margin_pct ?? 15} onBlur={e => { const v = Number(e.target.value) || 0; if (v !== (p.buffer_margin_pct ?? 15)) saveCfg(p.id, { buffer_margin_pct: v }) }} style={inp} /> : (p.buffer_margin_pct ?? 15)}</td>
                       <td style={{ padding: '8px 10px', fontWeight: 800, color: r.inWindow && r.buffer ? 'var(--accent2)' : 'var(--muted)', whiteSpace: 'nowrap' }}>{r.buffer ? r.buffer.toLocaleString() : (p.pm_duration_hours ? '0' : tr('ตั้งระยะ PM'))}</td>
-                      {canCoord && <td style={{ padding: '8px 10px', whiteSpace: 'nowrap' }}><button onClick={() => toCoordination(r)} title={tr('สร้างแผนประสานงาน PM (แจ้ง Production)')} style={{ background: 'var(--bg3)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '5px 10px', fontSize: 11.5, fontWeight: 600, cursor: 'pointer' }}>{tr('แผนประสานงาน')}</button></td>}
+                      {canCoord && <td style={{ padding: '8px 10px', whiteSpace: 'nowrap' }}><button onClick={() => toCoordination(r)} title={tr('สร้างแผนประสานงาน PM (แจ้ง Production)')} style={{ background: 'var(--bg3-surf)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '5px 10px', fontSize: 11.5, fontWeight: 600, cursor: 'pointer' }}>{tr('แผนประสานงาน')}</button></td>}
                     </tr>
                   )
                 })}

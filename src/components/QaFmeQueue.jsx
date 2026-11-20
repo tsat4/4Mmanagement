@@ -176,7 +176,7 @@ export default function QaFmeQueue({ scopedLineNames, onOpen }) {
 
   return (
     <div style={{
-      background: 'var(--card)', border: `1px solid ${late.length ? 'rgba(239,68,68,0.5)' : 'var(--border)'}`,
+      background: 'var(--card-surf)', border: `1px solid ${late.length ? 'rgba(239,68,68,0.5)' : 'var(--border)'}`,
       borderRadius: 'var(--radius-lg)', padding: 12, marginBottom: 14,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: rows.length || disabled ? 9 : 0 }}>
@@ -191,7 +191,7 @@ export default function QaFmeQueue({ scopedLineNames, onOpen }) {
           </span>
         )}
         <span style={{ flex: 1 }} />
-        <div style={{ display: 'flex', gap: 4, background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-pill)', padding: 2 }}>
+        <div style={{ display: 'flex', gap: 4, background: 'var(--bg2-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-pill)', padding: 2 }}>
           {[{ k: 'list', t: 'รายการ' }, { k: 'board', t: 'ไทม์ไลน์' }].map(v => (
             <button key={v.k} onClick={() => setViewSaved(v.k)}
               title={v.k === 'board' ? tr('เห็นทั้งวันว่าต้องไปตรวจไลน์ไหน กี่โมง') : tr('คิวที่ต้องทำตอนนี้')}
@@ -218,7 +218,7 @@ export default function QaFmeQueue({ scopedLineNames, onOpen }) {
       )}
 
       {showCfg && cfg && canManage && (
-        <div style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: 11, margin: '9px 0' }}>
+        <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: 11, margin: '9px 0' }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, marginBottom: 9,
             opacity: !cfg.is_enabled && readiness && !readiness.canEnable ? 0.6 : 1 }}>
             <input type="checkbox" checked={!!cfg.is_enabled}
@@ -372,7 +372,7 @@ function ReadinessList({ readiness, enabled, onRecheck }) {
   const [busy, setBusy] = useState(false);
   const recheck = async () => { setBusy(true); try { await onRecheck(); } finally { setBusy(false); } };
   return (
-    <div style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '8px 10px', marginBottom: 9 }}>
+    <div style={{ background: 'var(--bg2-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '8px 10px', marginBottom: 9 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
         <span style={{ fontSize: 12, fontWeight: 700 }}>
           ความพร้อมก่อนเปิด{readiness ? (readiness.canEnable ? ' — พร้อม' : ' — ยังไม่พร้อม') : ' — กำลังตรวจ…'}

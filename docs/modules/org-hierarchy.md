@@ -558,7 +558,20 @@
 - **ห้ามเขียน "ราก = parent_id ว่าง" / "ขึ้นตรง = `!parent_id`" ใหม่** — ถาม `unitRoots()` / `isOrphanDept()` / `unitParentId()` (ด่าน `org-upper-layers-ready`)
 - **การตกทอดทุกชนิด (CC · ส่วนงาน · ขอบเขต) หยุดที่ชั้นบน** — รหัส/ขอบเขตของ plant/company ไม่ไหลลงหน่วย (`unitChain()` · `ccOfNode` ใช้ `unitParentId`)
 - `orphanDepts(deptNodes, allNodes)` — ไม่ส่ง `allNodes` = แม่ที่หาไม่เจอถือว่าเป็นหน่วย (พฤติกรรมเดิม) ⇒ จอที่โหลดแค่ department ต้องส่งผังทั้งต้นก่อนจะมีโหนด plant
-- DB `org_nodes_kind_check` รับ 8 kind แล้ว (`20261104_org_nodes_upper_kinds_main.sql` apply แล้ว) · **ยังไม่มีแถวชั้นบน** — เงื่อนไขก่อนเติม → `docs/ORG-SCALE-GLOBAL-DESIGN.md` §4 ขั้น 0
+- DB `org_nodes_kind_check` รับ 8 kind แล้ว (`20261104_org_nodes_upper_kinds_main.sql` apply แล้ว)
+- 🏷️ **เลเวลชั้นบน (user เคาะ 20/11): Group 0 · SPG 1 · Company 2 · Plant 3** ต่อบันไดกับส่วนงาน 4 / แผนก 5 / กลุ่ม 6 —
+  ป้าย+เลเวลอยู่ `UPPER_META` (`orgLayers.js`) ที่เดียว · ป้ายอ่านอย่างเดียว ห้ามตัดสินอะไรจากเลข
+  ⚠️ **เลข 3 ชนกับ `ORG_LEVELS[3]` = 'ฝ่าย / ผู้บริหาร'** (`utils/roleMeta.js` · หลักที่ 5 ของรหัส CC · โชว์ข้างชื่อ role `manager` ใน /add-user)
+  — ใน P4 ไม่มีรหัส CC หลักที่ 5 = 3 เลย (วัด 20/11: 4=12 · 5=29 · 6=29 · 9=1) · **ยังไม่ได้แก้ป้ายนี้ รอ user เคาะ**
+- ✅ **แถวจริงสาย P4 ลงแล้ว (20/11 · `20261120_org_nodes_upper_layer_rows_main.sql`)** TSG → AMF (2000) → TSAT (2100) → TSAT-P4 (2140)
+  แล้วส่วนงานทั้ง 10 ตัว `parent_id` → plant · id ตายตัว `a0000000-0000-4000-8000-00000000xxxx` (ย้อนกลับอยู่หัวไฟล์)
+  · 🔴 **ชั้นบนห้ามใส่ `cost_center`/`division`/`labor_type`** — `divisionOfNode()` / `laborTypeOfNode()` ยังไต่ `parent_id` ตรงๆ
+    (ไม่ผ่าน `unitChain`) ⇒ ใส่ค่าที่ plant = ไหลลงทุกหน่วยที่ไม่ได้ติดเอง
+  · พิสูจน์ก่อนลง: จำลองผังจริง 88 โหนด ก่อน/หลัง ผ่านกฎกลาง 155 ผลลัพธ์ = ต่าง 0 (control: ใส่ kind ผิดที่ plant = ต่าง 93)
+  · จอที่ต้องแก้ตาม (ทำแล้ว): `OrgTreeView` วาดชั้นบนเป็นหัวสาย + นับทีมด้วย `kind==='team'` (เดิม `nodes.length - orgNodes.length`
+    = นับชั้นบนเป็นทีม) · `QaInspectorScopes` ป้ายสายหยุดที่ชั้นบน · `/org-setup` ➕ ส่วนงานใหม่ผูก plant ให้เมื่อมี plant เดียว
+  · ยังไม่มี UI แก้/เพิ่มชั้นบน (แก้ผ่าน migration) · ใบพิมพ์ผัง (`orgChartPrint`) ยังวาดแค่ชั้นหน่วย (หัวใบ = ทั้งโรงงาน)
+  · แผนต่อ (ขั้น 1–4) + การคิดเรื่องตัวกรองผู้ใช้/การยืนยันตัวตนตอนขยายหลายโรงงาน → `docs/ORG-SCALE-GLOBAL-DESIGN.md` §7
 
 ## 🏭 ทะเบียน `cost_centers` ครบทุกโรงงานในเครือ — จากไฟล์บัญชี "Activity Rate 2027" (2026-11-03)
 

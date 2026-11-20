@@ -239,7 +239,7 @@ export default function PokaYokeCheck() {
       {loading ? (
         <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>{tr('กำลังโหลด...')}</div>
       ) : activeDevs.length === 0 ? (
-        <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', background: 'var(--card)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-lg)' }}>
+        <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', background: 'var(--card-surf)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-lg)' }}>
           ยังไม่มีอุปกรณ์ poka-yoke ของไลน์ {selLine} — {canManage ? 'กด "➕ เพิ่มอุปกรณ์"' : 'ให้หัวหน้าลงทะเบียนอุปกรณ์ก่อน'}
         </div>
       ) : (
@@ -247,7 +247,7 @@ export default function PokaYokeCheck() {
           {activeDevs.map(d => {
             const c = checks[d.id]; const res = c?.result;
             return (
-              <div key={d.id} style={{ background: 'var(--card)', border: `1px solid ${res === 'fail' ? 'var(--red)' : res === 'pass' ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 'var(--r-md)', padding: '10px 14px' }}>
+              <div key={d.id} style={{ background: 'var(--card-surf)', border: `1px solid ${res === 'fail' ? 'var(--red)' : res === 'pass' ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 'var(--r-md)', padding: '10px 14px' }}>
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
                   <div style={{ flex: 1, minWidth: 200 }}>
                     <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{d.code ? `${d.code} · ` : ''}{d.name}</div>
@@ -285,7 +285,7 @@ export default function PokaYokeCheck() {
       {/* modal ทะเบียนอุปกรณ์ */}
       {dEditing && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14 }}>
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(96vw, 560px)' }}>
+          <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(96vw, 560px)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
               <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{dEditing.id ? '✏️ แก้ไข' : '➕ เพิ่ม'}{tr('อุปกรณ์ Poka-Yoke —')} {dEditing.line_name}</div>
               <button onClick={() => setDEditing(null)} style={{ background: 'none', border: 'none', fontSize: 20, color: 'var(--muted)', cursor: 'pointer' }}>✕</button>

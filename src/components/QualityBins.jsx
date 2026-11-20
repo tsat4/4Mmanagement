@@ -867,7 +867,7 @@ export default function QualityBins({ mode = 'full' }) {
         const over = pend.filter(r => binTagAge(r, todayWd)?.over).length;
         const show = pendAll ? pend : pend.slice(0, 8);
         return (
-          <div style={{ background: 'var(--card)', border: '1px solid var(--amber-line)', borderRadius: 'var(--r-md)',
+          <div style={{ background: 'var(--card-surf)', border: '1px solid var(--amber-line)', borderRadius: 'var(--r-md)',
             padding: '12px 14px', marginBottom: 14 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: pend.length ? 10 : 0 }}>
               <span style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--amber)' }}>
@@ -944,7 +944,7 @@ export default function QualityBins({ mode = 'full' }) {
             </div>
             {pend.length > 8 && (
               <button onClick={() => setPendAll(v => !v)}
-                style={{ marginTop: 8, background: 'var(--bg3)', border: '1px solid var(--border2)', color: 'var(--text2)',
+                style={{ marginTop: 8, background: 'var(--bg3-surf)', border: '1px solid var(--border2)', color: 'var(--text2)',
                   borderRadius: 'var(--r-md)', padding: '5px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                 {pendAll ? 'ย่อกลับ' : `แสดงอีก ${pend.length - 8} (ทั้งหมด ${pend.length})`}
               </button>
@@ -984,7 +984,7 @@ export default function QualityBins({ mode = 'full' }) {
   const renderRejectModal = () => rejecting && (
     <div className="overlay" /* ไม่ปิดจาก backdrop — มีช่องกรอก (UI-CONVENTIONS §5) */
       style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2100, padding: 16 }}>
-      <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 20, width: 'min(96vw, 460px)' }}>
+      <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 20, width: 'min(96vw, 460px)' }}>
         <h3 style={{ margin: '0 0 4px', fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{trI18n('↩️ ตีกลับงานซ่อม (ขั้น 4)')}</h3>
         <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>
           {binDocLabel(rejecting.row)} · {trI18n('ซ่อมดี')} {rejecting.row.qty_ok ?? 0} · {trI18n('ไม่ได้')} {rejecting.row.qty_ng ?? 0}
@@ -1014,7 +1014,7 @@ export default function QualityBins({ mode = 'full' }) {
     /* ห้ามปิดด้วยคลิกพื้นหลัง — มีช่องกรอก (ด่าน backdrop-close-form-modal) */
     <div className="overlay"
       style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: 16 }}>
-      <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 20, width: 'min(96vw, 460px)' }}>
+      <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 20, width: 'min(96vw, 460px)' }}>
         <h3 style={{ margin: '0 0 4px', fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{trI18n('🔧 ลงผลซ่อม (ขั้น 3)')}</h3>
         <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>
           {binDocLabel(repairing.row)} · {Number(repairing.row.qty) || 0} ชิ้น — บันทึกแล้วส่งให้ QA ตรวจรับ (ขั้น 4)
@@ -1044,7 +1044,7 @@ export default function QualityBins({ mode = 'full' }) {
   const renderEditModal = () => editing && (
         <div className="modal-scroll" /* ไม่ปิดจาก backdrop — UI-CONVENTIONS §5: เผลอแตะพื้นหลังแล้วข้อมูลหายทั้งฟอร์ม (ปิดด้วยปุ่มยกเลิก/✕ เท่านั้น) */
           style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: 16 }}>
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 20, width: 'min(96vw, 720px)', maxHeight: '92vh', overflowY: 'auto' }}>
+          <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 20, width: 'min(96vw, 720px)', maxHeight: '92vh', overflowY: 'auto' }}>
             <h3 style={{ margin: '0 0 14px', fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>
               {editing === 'new' ? 'บันทึกรายการ' : 'แก้ไขรายการ'} — {trI18n(B.short)}
             </h3>
@@ -1266,7 +1266,7 @@ export default function QualityBins({ mode = 'full' }) {
         {overdueOnly && <span> {trI18n('· แสดงเฉพาะของค้าง (ทุกวันที่ ไม่ขึ้นกับช่วงที่เลือก)')} <button onClick={() => setOverdueOnly(false)} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: 12.5, textDecoration: 'underline', padding: 0 }}>{trI18n('แสดงทั้งหมด')}</button></span>}
         <span> · {trI18n('แตะแถวเพื่อดูรูป · ที่มา · ประวัติ')}</span>
       </div>
-        <button onClick={doPrint} className="tbtn" style={{ padding: '6px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text)', cursor: 'pointer', fontSize: 12.5, fontWeight: 600 }}>🖨 {trI18n('พิมพ์ใบ')} {trI18n(B.short)}</button>
+        <button onClick={doPrint} className="tbtn" style={{ padding: '6px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text)', cursor: 'pointer', fontSize: 12.5, fontWeight: 600 }}>🖨 {trI18n('พิมพ์ใบ')} {trI18n(B.short)}</button>
         <button onClick={() => setShowWiReg(v => !v)} className="tbtn"
           title={trI18n('ทะเบียน QRs ↔ WI การซ่อม ตาม WI-PD3-069 §6 — อาการไหนซ่อมตาม WI เล่มไหน')}
           style={{ padding: '6px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: showWiReg ? 'var(--bg2)' : 'var(--bg3)', color: 'var(--text)', cursor: 'pointer', fontSize: 12.5, fontWeight: 600 }}>
@@ -1303,7 +1303,7 @@ export default function QualityBins({ mode = 'full' }) {
       )}
 
       {/* ── ตาราง ── B2/B4 (16/11): 2 ถังมีคอลัมน์ไลน์เหมือนกัน · รายละเอียดการซ่อม/QA/DOA ย้ายเข้าโมดัล (แตะแถว) */}
-      <div style={{ overflowX: 'auto', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
+      <div style={{ overflowX: 'auto', background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1000 }}>
           <thead><tr style={{ background: 'var(--bg2)' }}>
             {(isY

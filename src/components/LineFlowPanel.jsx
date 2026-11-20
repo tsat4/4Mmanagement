@@ -160,7 +160,7 @@ export default function LineFlowPanel({ lineName, lines = [], canEdit = false })
               )}
 
               {canEdit && form && (
-                <div style={{ marginTop: 12, padding: 10, background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', display: 'grid', gap: 8 }}>
+                <div style={{ marginTop: 12, padding: 10, background: 'var(--bg2-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', display: 'grid', gap: 8 }}>
                   <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text)' }}>
                     {form.dir === 'down' ? `${lineName} ➡️ ป้อนให้` : `⬅️ รับของจาก … ➡️ ${lineName}`}
                   </div>

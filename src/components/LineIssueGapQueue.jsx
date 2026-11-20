@@ -107,7 +107,7 @@ export default function LineIssueGapQueue() {
   const btn = (kind) => storeBtn(kind === 'go' ? 'primary' : 'secondary', { whiteSpace: 'nowrap', ...(kind === 'danger' ? { color: 'var(--red)', borderColor: 'var(--red-line)' } : {}) });
 
   return (
-    <div style={{ background: 'var(--card)', border: `1px solid ${overdueN ? 'var(--red)' : 'var(--border)'}`, borderRadius: 10, padding: 12, marginBottom: 12, boxShadow: 'var(--shadow-sm)' }}>
+    <div style={{ background: 'var(--card-surf)', border: `1px solid ${overdueN ? 'var(--red)' : 'var(--border)'}`, borderRadius: 10, padding: 12, marginBottom: 12, boxShadow: 'var(--shadow-sm)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', cursor: 'pointer' }} onClick={() => setOpen(o => !o)}>
         <b style={{ fontSize: 15 }}>🧾 {tr('ไลน์ใช้ของแล้ว แต่สโตร์ยังไม่ลงจ่าย')}</b>
         <span style={{ fontSize: 12, padding: '2px 8px', borderRadius: 10, background: 'var(--amber-dim)', color: 'var(--amber)' }}>{rows.length} {tr('รายการ')}</span>

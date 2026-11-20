@@ -101,7 +101,7 @@ const REF_LABEL = {
   'wip_buffer_points.updated_by':          'จุด WIP เดิม (ผู้แก้)',
 };
 
-const emptyForm = { email: '', password: '', fullName: '', role: 'supervisor', position: '', sections: [], homeSection: '', respCcs: [], mtnTeams: [], deptAdmin: false, lineId: '', team: '', notifyEmail: '', scopeDepth: 'unit',
+const emptyForm = { email: '', password: '', fullName: '', role: 'supervisor', position: '', sections: [], homeSection: '', respCcs: [], allUnits: false, mtnTeams: [], deptAdmin: false, lineId: '', team: '', notifyEmail: '', scopeDepth: 'unit',
   // ⚠️ บัญชีของคน ต้องผูกกับตัวตนใน `employees` — ทีม/ไลน์/ส่วนงาน อ่านจากที่นั่น ห้ามให้ admin กรอกเอง
   //    (เคสจริง: หัวหน้า 2 คนทีมสลับกัน เพราะ admin เดาตอนสร้างบัญชี → เช็คชื่อมองไม่เห็นกะตัวเอง)
   // บัญชีของหน่วยงาน/อุปกรณ์ (maintenance/warehouse1/Display) ไม่มีตัวตนใน employees และไม่ควรมี
@@ -210,7 +210,7 @@ export default function AddUser() {
     setFetchingUsers(true);
     const { data: profiles } = await supabase
       .from('profiles')
-      .select('id, full_name, role, position, line_id, section, sections, resp_cost_centers, team, notify_email, employee_id, account_kind, scope_depth, scope_depth_src, org_node_id');   // 🪪 org_node_id ต้องมา ไม่งั้น identityDiff() เทียบช่องนั้นไม่ได้แล้วเงียบ
+      .select('id, full_name, role, position, line_id, section, sections, resp_cost_centers, all_units, team, notify_email, employee_id, account_kind, scope_depth, scope_depth_src, org_node_id');   // 🪪 org_node_id ต้องมา ไม่งั้น identityDiff() เทียบช่องนั้นไม่ได้แล้วเงียบ
     /* 🔴 get_auth_users() เป็น admin-only ฝั่ง DB (raise 'forbidden: admin only')
        ⇒ คนที่ /permissions ให้สิทธิ์เข้าหน้านี้แต่ไม่ใช่ role admin จะได้ลิสต์ที่ **ไม่มีอีเมลเลย**
        เดิมกลืน error ⇒ จอโกหกว่า "บัญชีพวกนี้ไม่มีอีเมล" · ต้องเขียนบนจอ (QC audit 08/10) */
@@ -530,6 +530,18 @@ export default function AddUser() {
     return subStepErr('Cost Center ที่รับผิดชอบ', res);
   };
 
+  /* 🌐 ใบผ่านข้ามหน่วย **รายคน** (`profiles.all_units` · 13/11 audit role↔scope · คำสั่ง user)
+     เดิมเป็นคีย์ `scope:all_units` ของ role ⇒ "manager/qa ทั้ง role แก้ได้ทั้งโรงงาน" — ถอดแล้ว ตั้งรายคนที่นี่แทน
+     · ฝั่งจอ `UserContext.allUnits` · ฝั่ง DB `app_all_units()` อ่านช่องเดียวกัน · admin ไม่ต้องตั้ง
+     🔴 trigger `protect_profile_role` กันคนตั้งให้ตัวเอง — เปลี่ยนได้เฉพาะ admin */
+  const saveAllUnits = async (id) => {
+    if (!id) return null;
+    const res = await supabase.from('profiles')
+      .update({ all_units: form.allUnits === true }).eq('id', id).select('id');
+    if (res.error?.code === '42703') return 'ใบผ่านข้ามหน่วย: ยังไม่ได้ apply migration 20261113_role_scope_p1';
+    return subStepErr('ใบผ่านข้ามหน่วย', res);
+  };
+
   // เขียน is_dept_admin แยก best-effort (คอลัมน์เพิ่งเพิ่ม 20260803 · create-user edge ยังไม่รู้จัก field นี้)
   //   role ที่ไม่เข้าเกณฑ์ (admin/display) → false เสมอ · error (ยังไม่ apply migration) = เงียบ
   const saveDeptAdmin = async (id) => {
@@ -644,6 +656,7 @@ export default function AddUser() {
       sections:    (u.sections?.length ? u.sections : (u.section ? [u.section] : [])),
       homeSection: u.section || '',      // บ้านจริงที่เก็บไว้ (บัญชีของคน: ทะเบียนพนักงานชนะตอนบันทึก)
       respCcs:     Array.isArray(u.resp_cost_centers) ? u.resp_cost_centers : [],
+      allUnits:    u.all_units === true,
       scopeDepth:  u.scope_depth || 'unit',
       mtnTeams:    Array.isArray(u.mtn_teams) ? u.mtn_teams : [],
       deptAdmin:   u.is_dept_admin === true,
@@ -706,6 +719,7 @@ export default function AddUser() {
         await saveEmpLink(data.user?.id),
         await saveScopeDepth(data.user?.id),
         await saveRespCcs(data.user?.id),
+        await saveAllUnits(data.user?.id),
       ];
       reportSubSteps(`สร้าง user "${form.email}" (${form.role}) สำเร็จ`, subErrs);
       setShowModal(false);
@@ -814,6 +828,7 @@ export default function AddUser() {
         await saveDeptAdmin(editingId),  // (migration 20260803)
         await saveEmpLink(editingId),    // (migration 20260821)
         await saveRespCcs(editingId),    // (migration 20261016)
+        await saveAllUnits(editingId),   // (migration 20261113 · ใบผ่านข้ามหน่วยรายคน)
       ];
       reportSubSteps('อัปเดตข้อมูลผู้ใช้สำเร็จ', subErrs);
       setShowModal(false);
@@ -907,7 +922,7 @@ export default function AddUser() {
         <SearchInput value={q} onChange={setQ} fields="ชื่อ / อีเมล / ตำแหน่ง" />
         {(q || filterRole || filterSection || onlyFixUsers) && (
           <button onClick={() => { setQ(''); setFilterRole(''); setFilterSection(''); setOnlyFixUsers(false); }}
-            style={{ padding: '8px 12px', borderRadius: 'var(--r-md)', fontSize: 12, border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)', cursor: 'pointer' }}>
+            style={{ padding: '8px 12px', borderRadius: 'var(--r-md)', fontSize: 12, border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)', cursor: 'pointer' }}>
             {tr('ล้างตัวกรอง')}
           </button>
         )}
@@ -921,7 +936,7 @@ export default function AddUser() {
       {/* 🔴 อ่านอีเมล login ไม่ได้ = ช่องอีเมลว่างทุกแถว · ต้องบอกว่า "อ่านไม่ได้" ไม่ใช่ "ไม่มี" (08/10) */}
       {authErr && (
         <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--red)', padding: '8px 10px', marginBottom: 10,
-          borderRadius: 'var(--r-md)', border: '1px solid var(--red-line)', background: 'var(--card)' }}>
+          borderRadius: 'var(--r-md)', border: '1px solid var(--red-line)', background: 'var(--card-surf)' }}>
           ⚠ อ่านอีเมล login ไม่ได้ — ช่องอีเมลในตารางจะว่างทั้งหมด (<b>{tr('ไม่ได้หมายความว่าบัญชีไม่มีอีเมล')}</b>)
           <div style={{ fontWeight: 400, color: 'var(--text2)', marginTop: 2 }}>
             อีเมลอยู่ที่ `auth.users` ซึ่งอ่านได้เฉพาะ role <b>admin</b> {tr('· เหตุผลจากระบบ:')} {authErr}
@@ -933,7 +948,7 @@ export default function AddUser() {
           🔴 ไม่เตือน ≠ ไม่มีปัญหา: อ่านไม่ได้ก็ต้องเขียน (activitySummaryText คุมข้อความให้แล้ว) */}
       {actText && (
         <div style={{ fontSize: 12, padding: '7px 10px', marginBottom: 10, borderRadius: 'var(--r-md)',
-          border: '1px solid var(--border)', background: 'var(--card)', boxShadow: 'var(--shadow-sm)' }}>
+          border: '1px solid var(--border)', background: 'var(--card-surf)', boxShadow: 'var(--shadow-sm)' }}>
           🕵️ <b>{tr('บัญชีที่ยังไม่มีการเข้าใช้')}</b> — {actText}
           <span style={{ color: 'var(--muted)' }}>
             {' '}{tr('· เรียงดูได้ที่คอลัมน์')} <b>{tr('เข้าใช้ล่าสุด')}</b>
@@ -1319,7 +1334,7 @@ export default function AddUser() {
             <span style={{ flex: 1 }} />
             <button type="button" onClick={() => setTableIssue(null)}
               style={{ width: 'auto', fontSize: 11.5, padding: '3px 10px', cursor: 'pointer', borderRadius: 'var(--r-md)',
-                border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)' }}>{tr('แสดงทุกบัญชี')}</button>
+                border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)' }}>{tr('แสดงทุกบัญชี')}</button>
           </div>
         );
       })()}
@@ -1394,6 +1409,12 @@ export default function AddUser() {
                     {u.sections?.length ? u.sections.join(', ') : (u.section || '—')}
                     {/* 💰 ชั้นสิทธิ์ที่ 3 แกน CC — บัญชีที่ตั้งแล้ว "ชนะ" ส่วนงานข้างบน ⇒ ต้องเห็นจากลิสต์
                         ไม่งั้นแอดมินอ่านคอลัมน์นี้แล้วเข้าใจผิดว่าขอบเขตที่แก้ได้คือส่วนงานที่เขียนอยู่ */}
+                    {u.all_units === true && (
+                      <div title="ใบผ่านข้ามหน่วย (profiles.all_units) — แก้ข้อมูลได้ทั้งโรงงาน ไม่ว่าส่วนงาน/CC จะตั้งอะไรไว้"
+                        style={{ fontSize: 11, fontWeight: 700, color: 'var(--amber)', marginTop: 2 }}>
+                        🌐 ใบผ่านข้ามหน่วย
+                      </div>
+                    )}
                     {(() => {
                       const own = (u.resp_cost_centers || []).filter(Boolean);
                       if (own.length) return (
@@ -1439,7 +1460,7 @@ export default function AddUser() {
                   <td style={{ textAlign: 'center' }}>
                     <button
                       onClick={() => openEdit(u)}
-                      style={{ padding: '5px 12px', borderRadius: 'var(--r-md)', fontSize: 12, fontWeight: 600, border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)', cursor: 'pointer' }}
+                      style={{ padding: '5px 12px', borderRadius: 'var(--r-md)', fontSize: 12, fontWeight: 600, border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)', cursor: 'pointer' }}
                     >
                       {tr('แก้ไข')}
                     </button>
@@ -1463,7 +1484,7 @@ export default function AddUser() {
         {/* 🏷️ ผูกชุดสิทธิ์แกน "ขอบเขต" เข้ากับระดับในรหัส Cost Center (21/10 · คำสั่ง user)
             🔴 เป็นวิธี "อ่านรหัส" ให้คนเข้าใจตรงกัน — ระบบยังตัดสินลำดับชั้นจากผังองค์กรจริงเสมอ */}
         <div style={{ fontSize: 11, lineHeight: 1.7, color: 'var(--muted)', marginBottom: 10,
-          padding: '7px 10px', borderRadius: 'var(--r-md)', background: 'var(--card)', border: '1px solid var(--border2)' }}>
+          padding: '7px 10px', borderRadius: 'var(--r-md)', background: 'var(--card-surf)', border: '1px solid var(--border2)' }}>
           <b style={{ color: 'var(--text2)' }}>{tr('อ่านรหัส Cost Center ยังไง')}</b> {tr('— ตัวอย่าง')} <code>2140462100</code> ·
           {' '}<code>21</code> {tr('กลุ่มธุรกิจ ·')} <code>40</code> {tr('โรงงานเรา (')}<code>2140</code> = ทั้งโรงงาน) ·
           {' '}<b style={{ color: 'var(--text2)' }}>หลักที่ 5 = ระดับในผัง</b> (3 ฝ่าย · 4 ส่วนงาน · 5 แผนก · 6 กลุ่ม/ไลน์) ·
@@ -1507,12 +1528,9 @@ export default function AddUser() {
                       <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 2 }}>
                         {sum.all ? '✅ เข้าได้ทุกหน้า' : sum.total === 0 ? '— ยังไม่เปิดสิทธิ์หน้าไหน' : `เข้าได้ ${sum.total} หน้า: ${sum.groups.join(' · ')}`}
                       </div>
-                      {/* 🌐 ใบผ่านข้ามหน่วยงาน — อ่านสดจากตารางสิทธิ์ (ห้ามเขียนเป็นข้อความตายใน roleMeta
-                          ไม่งั้นคำอธิบายกับของจริงเพี้ยนคนละทาง) · ข้อความชุดเดียวกับในโมดัลแก้บัญชี */}
-                      <div style={{ fontSize: 11, marginTop: 1, color: can('scope', 'all_units', r.value) ? 'var(--amber)' : 'var(--muted)' }}>
-                        {can('scope', 'all_units', r.value)
-                          ? '🌐 แก้ข้อมูลข้ามส่วนงานได้ทั้งโรงงาน'
-                          : '🔒 แก้ได้เฉพาะส่วนงานของตัวเอง (ตั้งที่ช่องขอบเขตส่วนงาน)'}
+                      {/* 13/11: role ไม่มีใบผ่านข้ามหน่วยอีกแล้ว — "แก้ของหน่วยไหนได้" ตั้งรายคนที่ช่อง ④/🌐 ของแต่ละบัญชี */}
+                      <div style={{ fontSize: 11, marginTop: 1, color: 'var(--muted)' }}>
+                        🔒 role = ชุดปุ่ม · แก้ได้เฉพาะหน่วยที่บัญชีนั้นดูแล (ตั้งรายคนที่ช่องขอบเขต / ใบผ่าน 🌐)
                       </div>
                     </div>
                   </div>
@@ -1676,7 +1694,7 @@ export default function AddUser() {
                     )}
 
                     {newEmp && (
-                      <div style={{ marginTop: 8, padding: 10, background: 'var(--bg3)', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', display: 'grid', gap: 8 }}>
+                      <div style={{ marginTop: 8, padding: 10, background: 'var(--bg3-surf)', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', display: 'grid', gap: 8 }}>
                         <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{tr('➕ เพิ่มคนนี้เข้าฐานพนักงาน')}</div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 8 }}>
                           <div>
@@ -1755,7 +1773,7 @@ export default function AddUser() {
                             {newEmpSaving ? tr('กำลังบันทึก...') : tr('บันทึกเข้าฐานพนักงาน + ผูกกับบัญชีนี้')}
                           </button>
                           <button type="button" onClick={() => setNewEmp(null)}
-                            style={{ width: 'auto', padding: '8px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg2)', color: 'var(--text2)', fontSize: 12, cursor: 'pointer' }}>
+                            style={{ width: 'auto', padding: '8px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg2-surf)', color: 'var(--text2)', fontSize: 12, cursor: 'pointer' }}>
                             {tr('ยกเลิก')}
                           </button>
                         </div>
@@ -1782,12 +1800,12 @@ export default function AddUser() {
                     ))}
                   </select>
                   <button type="button" onClick={() => setNewPos(v => (v ? null : { key: '', label_th: '', level: 'staff' }))}
-                    style={{ whiteSpace: 'nowrap', padding: '0 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                    style={{ whiteSpace: 'nowrap', padding: '0 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                     {newPos ? tr('ยกเลิก') : tr('+ เพิ่มตำแหน่งใหม่')}
                   </button>
                 </div>
                 {newPos && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 1fr auto', gap: 6, marginTop: 6, alignItems: 'center', padding: 8, background: 'var(--bg3)', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 1fr auto', gap: 6, marginTop: 6, alignItems: 'center', padding: 8, background: 'var(--bg3-surf)', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)' }}>
                     <input type="text" autoFocus placeholder={tr('key (a-z/_) เช่น asst_head')} value={newPos.key}
                       onChange={e => setNewPos(p => ({ ...p, key: e.target.value }))} style={{ fontFamily: 'monospace' }} />
                     <input type="text" placeholder={tr('ชื่อตำแหน่ง (ไทย) เช่น ผู้ช่วยหัวหน้าแผนก')} value={newPos.label_th}
@@ -1850,7 +1868,7 @@ export default function AddUser() {
                         {tr('ส่วนงานที่สังกัด')}
                         <span style={{ color: 'var(--muted)', fontWeight: 400 }}> {tr('· จากฐานพนักงาน')}</span>
                       </label>
-                      <div style={{ padding: '8px 12px', background: 'var(--bg3)', borderRadius: 'var(--r-md)', fontSize: 12.5,
+                      <div style={{ padding: '8px 12px', background: 'var(--bg3-surf)', borderRadius: 'var(--r-md)', fontSize: 12.5,
                         color: emp?.section ? 'var(--text)' : 'var(--amber)', border: '1px solid var(--border2)' }}>
                         {!emp ? '— ยังไม่ได้เลือกพนักงาน —'
                               : emp.section
@@ -1946,7 +1964,7 @@ export default function AddUser() {
               {/* 🧭 3 ช่องข้างล่างตอบคนละคำถาม — เขียนไว้ตรงนี้ที่เดียว (15/10 · คำสั่ง user
                   "ตอนตั้งสิทธิ์ก็ดูจะคลุมเครือ สรุปช่องนี้คือสิทธิ์ หรือส่วนงาน") */}
               <div style={{ gridColumn: '1 / -1', fontSize: 11.5, lineHeight: 1.75, color: 'var(--muted)',
-                background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '8px 10px' }}>
+                background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '8px 10px' }}>
                 <div><b style={{ color: 'var(--text2)' }}>{tr('① ชุดสิทธิ์ (Role)')}</b> = <b>{tr('กดอะไรได้')}</b> {tr('— เปิดหน้า/ปุ่มไหนบ้าง ·')} <u>{tr('ไม่ได้บอกว่าสังกัดหน่วยไหน')}</u></div>
                 <div><b style={{ color: 'var(--text2)' }}>{tr('② ขอบเขตการมองเห็น')}</b> = <b>{tr('เห็นข้อมูลของใคร')}</b> {tr('— กว้าง/แคบ')}</div>
                 <div><b style={{ color: 'var(--text2)' }}>{tr('③ หน่วยที่ดูแล (ตามผังองค์กร)')}</b> = <b>{tr('เห็น + แก้ข้อมูลของใครได้')}</b> — ติ๊กที่ต้นไม้ Cost Center ที่เดียว
@@ -1972,12 +1990,9 @@ export default function AddUser() {
                     </div>
                   );
                 })()}
-                {/* 🔐 ใบผ่านข้ามหน่วยงาน — แอดมินต้องเห็นว่า role นี้แก้ของส่วนงานอื่นได้ไหม (15/10) */}
-                <div style={{ fontSize: 11, marginTop: 4, lineHeight: 1.5,
-                  color: can('scope', 'all_units', form.role) ? 'var(--amber)' : 'var(--muted)' }}>
-                  {can('scope', 'all_units', form.role)
-                    ? '🌐 role นี้ถือใบผ่าน scope:all_units — แก้ข้อมูลข้ามส่วนงานได้ทั้งโรงงาน'
-                    : '🔒 role นี้แก้ได้เฉพาะหน่วยที่ดูแล (ข้อ ③ ข้างล่าง) — ของหน่วยอื่นดูได้ แต่แก้ไม่ได้'}
+                {/* 13/11: ใบผ่านข้ามหน่วยเป็นของ "บัญชี" ไม่ใช่ของ role — ดูช่อง 🌐 ใต้ Cost Center */}
+                <div style={{ fontSize: 11, marginTop: 4, lineHeight: 1.5, color: 'var(--muted)' }}>
+                  🔒 role นี้แก้ได้เฉพาะหน่วยที่บัญชีดูแล (ช่อง ④ ข้างล่าง) — ของหน่วยอื่นดูได้ แต่แก้ไม่ได้ · ยกเว้นติ๊กใบผ่าน 🌐
                 </div>
               </div>
 
@@ -2064,7 +2079,7 @@ export default function AddUser() {
                   {form.role === 'supervisor' && <span style={{ color: 'var(--red)' }}> {tr('* จำเป็นอย่างน้อย 1')}</span>}
                 </label>
                 <div style={{ fontSize: 11.5, lineHeight: 1.7, padding: '7px 10px', borderRadius: 'var(--r-md)',
-                  background: 'var(--bg3)', border: '1px solid var(--border2)', color: 'var(--text2)' }}>
+                  background: 'var(--bg3-surf)', border: '1px solid var(--border2)', color: 'var(--text2)' }}>
                   👁️ <b>{tr('เห็นข้อมูลของ:')}</b>{' '}
                   {effSections.length
                     ? effSections.map(sec => (
@@ -2143,7 +2158,7 @@ export default function AddUser() {
                       <div style={{ marginBottom: 5 }}>
                         <SearchInput value={ccSearch} onChange={setCcSearch} placeholder={tr('ค้นรหัส / ชื่อหน่วยงาน…')} />
                       </div>
-                      <div style={{ maxHeight: 260, overflowY: 'auto', padding: '6px 8px', background: 'var(--bg3)',
+                      <div style={{ maxHeight: 260, overflowY: 'auto', padding: '6px 8px', background: 'var(--bg3-surf)',
                         borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', display: 'grid', gap: 3, alignContent: 'start' }}>
                         {shown.length === 0 && <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{tr('ไม่พบรหัสที่ค้น')}</span>}
                         {shown.map((r) => {
@@ -2194,10 +2209,21 @@ export default function AddUser() {
                   {form.respCcs.length === 0
                     ? <>{tr('ยังไม่ติ๊ก —')} {form.sections.length ? <>{tr('ใช้ค่าเดิม:')} <b>{form.sections.join(' · ')}</b></> : <>{tr('เห็นทุกส่วนงาน · แก้ได้แค่ส่วนงานที่สังกัด')}</>}</>
                     : <>{tr('ติ๊กไว้')} <b style={{ color: 'var(--green)' }}>{form.respCcs.length} {tr('หน่วย')}</b> {tr('— เห็น')} {effSections.length} {tr('ส่วนงาน · แก้ได้ตามลำดับชั้นของหน่วยที่ติ๊ก')}</>}
-                  {can('scope', 'all_units', form.role) && (
-                    <><br />{tr('🌐 role นี้ถือ')} <code>scope:all_units</code> {tr('อยู่แล้ว — แก้ได้ทั้งโรงงานไม่ว่าติ๊กอะไรไว้ (ค่าที่ติ๊กยังถูกเก็บไว้ เผื่อถอดใบผ่านทีหลัง)')}</>
-                  )}
                 </div>
+                {/* 🌐 ใบผ่านข้ามหน่วย รายคน (13/11) — แทนคีย์ scope:all_units ของ role ที่ถอดไปแล้ว */}
+                {form.role !== 'admin' && (
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', marginTop: 8, padding: '10px 12px', borderRadius: 8,
+                    background: form.allUnits ? 'var(--amber-dim)' : 'var(--bg3)', border: `1px solid ${form.allUnits ? 'var(--amber-line)' : 'var(--border2)'}` }}>
+                    <input type="checkbox" checked={!!form.allUnits} onChange={e => setF('allUnits', e.target.checked)} style={{ margin: '3px 0 0', width: 'auto' }} />
+                    <div style={{ fontSize: 12, lineHeight: 1.55 }}>
+                      <b style={{ color: form.allUnits ? 'var(--amber)' : 'var(--text)' }}>🌐 ใบผ่านข้ามหน่วย — แก้ข้อมูลได้ทั้งโรงงาน</b>
+                      <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+                        ให้เฉพาะคนที่งานเป็นงานทั้งโรงงานจริง (คลัง/จัดส่ง · วางแผน · วิศวกรรม) · ไม่ติ๊ก = แก้ได้ตาม Cost Center ที่ติ๊ก / ส่วนงานที่สังกัด
+                        · <b>role ไม่ได้ให้สิทธิ์นี้อีกแล้ว</b> (manager ≠ แก้ข้ามแผนก) · ค่าที่ติ๊กข้างบนยังเก็บไว้ เผื่อถอดใบผ่านทีหลัง
+                      </div>
+                    </div>
+                  </label>
+                )}
                 {ccUnknown.length > 0 && (
                   <div style={{ fontSize: 11, marginTop: 4, padding: '6px 9px', borderRadius: 'var(--r-md)', lineHeight: 1.6,
                     background: 'var(--amber-dim)', border: '1px solid var(--amber-line)', color: 'var(--text)' }}>
@@ -2208,7 +2234,7 @@ export default function AddUser() {
                       {ccUnknown.map(cc => (
                         <button key={cc} type="button" onClick={() => toggleCc(cc)}
                           style={{ marginLeft: 6, padding: '2px 8px', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 700,
-                            cursor: 'pointer', background: 'var(--bg2)', color: 'var(--text2)', border: '1px solid var(--border2)' }}>
+                            cursor: 'pointer', background: 'var(--bg2-surf)', color: 'var(--text2)', border: '1px solid var(--border2)' }}>
                           {tr('ถอด')} {cc}
                         </button>
                       ))}
@@ -2227,7 +2253,7 @@ export default function AddUser() {
                     ติ๊ก = <b>{tr('ฝั่งซ่อมบำรุง')}</b> (กดช่องเซ็น “หัวหน้าแผนกช่าง” / “ผจก.ช่าง” ในใบ MO ได้) ·
                     ไม่ติ๊ก = <b>{tr('ฝั่งผู้แจ้ง')}</b> (กดช่อง “ผจก.ฝ่ายที่แจ้ง อนุมัติปิดใบ” ได้)
                   </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '8px 10px', background: 'var(--bg3)', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '8px 10px', background: 'var(--bg3-surf)', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)' }}>
                     {/* 2026-09-07: วนทีมจาก mtn_teams (pmTeamsSync — data-driven) แทน MTN_TEAMS hardcode · ค่าที่เก็บ = key เสมอ */}
                     {pmTeamsSync().map(team => {
                       const t = team.key;
@@ -2352,7 +2378,7 @@ export default function AddUser() {
                 </button>
                 <button
                   onClick={() => setShowModal(false)}
-                  style={{ flex: 1, padding: 12, background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}
+                  style={{ flex: 1, padding: 12, background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}
                 >
                   {tr('ยกเลิก')}
                 </button>

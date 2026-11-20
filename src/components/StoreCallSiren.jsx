@@ -173,7 +173,7 @@ export default function StoreCallSiren({ slot = 0, variant = 'float', here = fal
     const wait = agoMin(a.requested_at);
     return (
       <div role="status" className="andon-bar" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 10,
-        background: 'var(--card)', border: '1px solid var(--border)', borderLeft: '4px solid var(--amber)', borderRadius: 'var(--r-md)',
+        background: 'var(--card-surf)', border: '1px solid var(--border)', borderLeft: '4px solid var(--amber)', borderRadius: 'var(--r-md)',
         padding: '8px 12px', fontSize: 12.5 }}>
         <span className="andon-bar-msg" style={{ flex: 1, minWidth: 0, color: 'var(--text)' }}>
           🔔 <b>{tr('ไลน์เรียกของ')} {alerts.length} {tr('ใบ')}</b> {tr('ยังไม่มีใครรับทราบ')}
@@ -190,7 +190,7 @@ export default function StoreCallSiren({ slot = 0, variant = 'float', here = fal
             padding: '5px 12px', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>{tr('ไปเตรียมงาน')}</button>
           <button type="button" onClick={() => ack(a)}
             title={canAck ? 'หยุดเสียงเท่านั้น — ใบยังรอหยิบอยู่ในคิวสโตร์เหมือนเดิม' : 'บัญชีนี้ไม่มีสิทธิ์บันทึกรับทราบ (heijunka:operate) — ปิดได้เฉพาะเสียงบนจอนี้'}
-            style={{ background: 'var(--bg2)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)',
+            style={{ background: 'var(--bg2-surf)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)',
               padding: '5px 12px', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
             {canAck ? tr('รับทราบ · หยุดเสียง') : tr('🔇 ปิดเสียงเฉพาะจอนี้')}
           </button>

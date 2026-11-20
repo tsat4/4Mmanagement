@@ -12,6 +12,7 @@ import Page from '../components/Page';
 import PageHeader from '../components/PageHeader';
 import Icon from '../components/Icon';
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer } from 'recharts';
+import { chartAnim } from '../utils/motion';
 import { useNavigate } from 'react-router-dom';
 import { can, canAccessPage, canSeeded } from '../utils/permissions';
 import resizeImg from '../utils/resizeImage';
@@ -1450,7 +1451,7 @@ export default function Management() {
           <button
             onClick={() => setPanelCollapsed(true)}
             title={tr('ย่อแถบไลน์ผลิต')}
-            style={{ alignSelf: 'flex-end', marginBottom: 6, flexShrink: 0, width: 32, height: 32, borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', outline: 'none' }}>
+            style={{ alignSelf: 'flex-end', marginBottom: 6, flexShrink: 0, width: 32, height: 32, borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', outline: 'none' }}>
             ◀
           </button>
         )}
@@ -1462,7 +1463,7 @@ export default function Management() {
               ⚠️ อ่านทะเบียนไลน์ผลิตไม่สำเร็จ — รายการที่เห็นอาจไม่ครบ (ไม่ใช่ว่าไลน์ถูกลบ)
               <button onClick={() => retryLinesRef.current?.()}
                 style={{ marginLeft: 6, fontSize: 11, padding: '1px 8px', borderRadius: 'var(--r-md)', cursor: 'pointer',
-                         background: 'var(--bg3)', color: 'var(--text)', border: '1px solid var(--border2)' }}>
+                         background: 'var(--bg3-surf)', color: 'var(--text)', border: '1px solid var(--border2)' }}>
                 {tr('ลองใหม่')}
               </button>
             </div>
@@ -1512,7 +1513,7 @@ export default function Management() {
 
           {/* ── กำลังคนทั้งกลุ่มไลน์ (รวมไลน์ย่อย) + รายชื่อคนไลน์ย่อยที่มีผังแยก (2026-08-03) ── */}
           {!isMobile && selectedLine && (familyManpower.total > 0 || familyManpower.hidden.length > 0) && (
-            <div style={{ marginBottom: 8, padding: '8px 10px', background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', flexShrink: 0 }}>
+            <div style={{ marginBottom: 8, padding: '8px 10px', background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', flexShrink: 0 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{tr('กำลังคนกลุ่มนี้')}</span>
                 <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--accent)' }}>{familyManpower.total} {tr('คน')}</span>
@@ -1528,7 +1529,7 @@ export default function Management() {
                     return (
                       <div key={h.lineName}>
                         <div onClick={() => setOpenSubLine(open ? null : h.lineName)}
-                          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '4px 7px', borderRadius: 'var(--r-md)', background: 'var(--bg2)', border: '1px solid var(--border2)' }}>
+                          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '4px 7px', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)', border: '1px solid var(--border2)' }}>
                           <span style={{ minWidth: 0, fontSize: 11.5, fontWeight: 700, color: 'var(--text2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{open ? '▾' : '▸'} {h.lineName}</span>
                           <span style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--blue)', flexShrink: 0, marginLeft: 6 }}>{h.workers.length} {tr('คน')}</span>
                         </div>
@@ -1665,7 +1666,7 @@ export default function Management() {
         {/* ปุ่มขยายแถบไลน์ผลิตกลับ (โผล่เฉพาะตอนย่อ pool — pool กว้าง 0) · สไตล์เดียวกับ ☰/▶ อื่น */}
         {!isMobile && panelCollapsed && (
           <button onClick={() => setPanelCollapsed(false)} title={tr('ขยายแถบไลน์ผลิต')}
-            style={{ alignSelf: 'flex-start', marginBottom: 8, width: 36, height: 36, borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', outline: 'none', flexShrink: 0, boxShadow: 'var(--shadow-sm)' }}>
+            style={{ alignSelf: 'flex-start', marginBottom: 8, width: 36, height: 36, borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', outline: 'none', flexShrink: 0, boxShadow: 'var(--shadow-sm)' }}>
             ▶
           </button>
         )}
@@ -1937,7 +1938,7 @@ export default function Management() {
           return (
             <div style={{
               marginBottom: 10,
-              background: 'var(--card)',
+              background: 'var(--card-surf)',
               border: `1px solid ${totalDelayed > 0 ? 'var(--red-line)' : hasOpen ? 'var(--green-line)' : 'var(--border2)'}`,
               borderRadius: 'var(--r-md)', overflow: 'hidden',
             }}>
@@ -2030,7 +2031,7 @@ export default function Management() {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, padding: '7px 14px', borderBottom: '1px solid var(--border2)', background: 'var(--bg2)' }}>
                   <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--muted)', alignSelf: 'center' }}>PLANNER</span>
                   {plannerChips.map((c, i) => (
-                    <span key={i} style={{ fontSize: 12, fontWeight: 700, padding: '3px 11px', borderRadius: 'var(--r-md)', background: 'var(--card)', color: c.color, border: `1px solid ${c.color}` }}>{/* สีจาก token ธีม (--green/--amber/--red) — เดิม hex สว่าง + พื้นโปร่ง 1f ⇒ ธีมสว่างมองไม่เห็น (02/10) */}
+                    <span key={i} style={{ fontSize: 12, fontWeight: 700, padding: '3px 11px', borderRadius: 'var(--r-md)', background: 'var(--card-surf)', color: c.color, border: `1px solid ${c.color}` }}>{/* สีจาก token ธีม (--green/--amber/--red) — เดิม hex สว่าง + พื้นโปร่ง 1f ⇒ ธีมสว่างมองไม่เห็น (02/10) */}
                       {c.text}
                     </span>
                   ))}
@@ -2671,7 +2672,7 @@ export default function Management() {
                     { label: 'ประจำสถานี', count: workers.filter(w => w.assigned_line).length },
                     { label: 'งานนอกไลน์', count: specialWorkers.length },
                   ].map(s => (
-                    <div key={s.label} style={{ background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: '14px 18px', textAlign: 'center' }}>
+                    <div key={s.label} style={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: '14px 18px', textAlign: 'center' }}>
                       <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700 }}>{tr(s.label)}</div>
                       <div style={{ fontSize: 30, fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--text)', lineHeight: 1.1, marginTop: 3 }}>
                         {s.count}<span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text2)', marginLeft: 3 }}>{tr('คน')}</span>
@@ -2688,7 +2689,7 @@ export default function Management() {
                   <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>{tr('รายชื่อพนักงานวันนี้')}</div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8 }}>
                     {workers.map(w => (
-                      <div key={w.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 10px' }}>
+                      <div key={w.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 10px' }}>
                         {w.employees?.image_url
                           ? <img loading="lazy" src={w.employees.image_url} style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover', objectPosition: 'top', flexShrink: 0 }} />
                           : <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--bg3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>👤</div>
@@ -2727,7 +2728,7 @@ export default function Management() {
       {/* ── Radar skill modal (portal → renders at body to escape stacking context) ── */}
       {radarWorker && createPortal(
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)' }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: '20px 24px', width: 'min(90vw, 380px)', boxShadow: 'var(--shadow-lg)' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: '20px 24px', width: 'min(90vw, 380px)', boxShadow: 'var(--shadow-lg)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
               {radarWorker.employees?.image_url
                 ? <img loading="lazy" src={radarWorker.employees.image_url} style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', objectPosition: 'top', border: '2px solid var(--border2)', flexShrink: 0 }} />
@@ -2758,7 +2759,7 @@ export default function Management() {
                   <RadarChart data={radarDataFiltered}>
                     <PolarGrid stroke="var(--border2)" />
                     <PolarAngleAxis dataKey="subject" tick={{ fill: 'var(--text2)', fontSize: 11 }} />
-                    <Radar name="ทักษะ" dataKey="score" stroke="var(--accent)" fill="var(--accent)" fillOpacity={0.25} strokeWidth={2} />
+                    <Radar {...chartAnim()} name="ทักษะ" dataKey="score" stroke="var(--accent)" fill="var(--accent)" fillOpacity={0.25} strokeWidth={2} />
                   </RadarChart>
                 </ResponsiveContainer>
               );
@@ -2882,7 +2883,7 @@ export default function Management() {
               </button>
               <button
                 onClick={() => setDetailSheet(null)}
-                style={{ flex: 1, padding: '13px', background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
+                style={{ flex: 1, padding: '13px', background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
               >
                 {tr('ปิด')}
               </button>
@@ -2943,7 +2944,7 @@ export default function Management() {
                         {canAssignManpower && homePositions[workerHere.employee_id] === String(st.id) && (
                           <button
                             onClick={() => clearHomePosition(workerHere, st)}
-                            style={{ fontSize: 11, padding: '3px 8px', borderRadius: 'var(--r-md)', background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)', cursor: 'pointer', fontWeight: 700 }}
+                            style={{ fontSize: 11, padding: '3px 8px', borderRadius: 'var(--r-md)', background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)', cursor: 'pointer', fontWeight: 700 }}
                             title={tr('ยกเลิกตำแหน่งประจำ')}
                           >{tr('ยกเลิกตำแหน่งประจำ')}</button>
                         )}
@@ -3041,7 +3042,7 @@ export default function Management() {
                 {tr('ยืนยัน')}
               </button>
               <button onClick={() => setSpecialModal(null)}
-                style={{ flex: 1, padding: 12, background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}>
+                style={{ flex: 1, padding: 12, background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}>
                 {tr('ยกเลิก')}
               </button>
             </div>
@@ -3128,7 +3129,7 @@ export default function Management() {
                 {isSavingDoc ? 'กำลังบันทึก...' : 'ส่งอนุมัติ'}
               </button>
               <button onClick={() => { if (!isSavingDoc) { setPendingDocModal(null); setDocImageFile(null); setDocImagePreview(null); } }}
-                style={{ flex: 1, padding: 12, background: 'var(--bg3)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
+                style={{ flex: 1, padding: 12, background: 'var(--bg3-surf)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
                 ยกเลิก
               </button>
             </div>
@@ -3258,7 +3259,7 @@ export default function Management() {
                   {isSaving4M ? tr('กำลังบันทึก...') : tr('บันทึก 4M Log')}
                 </button>
                 <button onClick={() => { if (!isSaving4M) { setShow4MModal(null); setLog4MForm({ category: 'Man', description: '' }); setReqImageFile(null); setReqImagePreview(null); } }}
-                  style={{ flex: 1, padding: 12, background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 8, cursor: isSaving4M ? 'not-allowed' : 'pointer' }}>
+                  style={{ flex: 1, padding: 12, background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 8, cursor: isSaving4M ? 'not-allowed' : 'pointer' }}>
                   ยกเลิก
                 </button>
               </div>
@@ -3316,7 +3317,7 @@ function WorkerHoverCard({ card, skillDefs }) {
   const hiddenCount = allStatRows.length - statRows.length;
 
   return (
-    <div ref={elRef} style={{ position: 'fixed', top: pos ? pos.top : -9999, left: pos ? pos.left : -9999, width: tooltipW, maxHeight: 'calc(100vh - 16px)', overflowY: 'hidden', zIndex: 3000, pointerEvents: 'none', visibility: pos ? 'visible' : 'hidden', background: 'var(--card)', border: `1px solid ${tint(fc, 'line')}`, borderRadius: 'var(--r-lg)', boxShadow: 'var(--shadow-lg)', padding: 14, animation: pos ? 'hoverIn 0.18s ease' : 'none' }}>
+    <div ref={elRef} style={{ position: 'fixed', top: pos ? pos.top : -9999, left: pos ? pos.left : -9999, width: tooltipW, maxHeight: 'calc(100vh - 16px)', overflowY: 'hidden', zIndex: 3000, pointerEvents: 'none', visibility: pos ? 'visible' : 'hidden', background: 'var(--card-surf)', border: `1px solid ${tint(fc, 'line')}`, borderRadius: 'var(--r-lg)', boxShadow: 'var(--shadow-lg)', padding: 14, animation: pos ? 'hoverIn 0.18s ease' : 'none' }}>
       <style>{`@keyframes hoverIn { from { opacity:0; transform:scale(0.93) translateY(4px); } to { opacity:1; transform:scale(1) translateY(0); } }`}</style>
 
       {/* Header — portrait photo + name/badges/station stacked in the left column,
@@ -3357,7 +3358,7 @@ function WorkerHoverCard({ card, skillDefs }) {
                 const pass = s.req ? s.req.pass : null;
                 const sc = pass === false ? '#ef4444' : pass === true ? 'var(--accent)' : 'var(--text2)';
                 return (
-                  <div key={s.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg3)', border: `1px solid ${tint(sc, 'dim')}`, borderRadius: 'var(--r-xs)', padding: '4px 6px' }}>
+                  <div key={s.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg3-surf)', border: `1px solid ${tint(sc, 'dim')}`, borderRadius: 'var(--r-xs)', padding: '4px 6px' }}>
                     <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: 4 }}>{tr(s.label)}</span>
                     <span style={{ fontSize: 11, fontWeight: 900, color: sc, fontFamily: 'var(--font-display)', flexShrink: 0 }}>
                       {s.score > 0 ? s.score : '—'}{s.req ? <span style={{ fontSize: 11, opacity: 0.6 }}>/{s.req.required}</span> : ''}
@@ -3383,9 +3384,9 @@ function WorkerHoverCard({ card, skillDefs }) {
               <RadarChart data={radarData} margin={{ top: 16, right: 70, bottom: 16, left: 70 }}>
                 <PolarGrid stroke="var(--border2)" />
                 <PolarAngleAxis dataKey="skill" tick={{ fontSize: 11, fill: 'var(--muted)', fontWeight: 600 }} />
-                <Radar name="ทักษะ" dataKey="score" stroke="var(--accent)" fill="var(--accent)" fillOpacity={0.22} strokeWidth={1.5} dot={{ r: 2, fill: 'var(--accent)' }} />
+                <Radar {...chartAnim()} name="ทักษะ" dataKey="score" stroke="var(--accent)" fill="var(--accent)" fillOpacity={0.22} strokeWidth={1.5} dot={{ r: 2, fill: 'var(--accent)' }} />
                 {fit && (
-                  <Radar name="required" dataKey={() => null}
+                  <Radar {...chartAnim()} name="required" dataKey={() => null}
                     data={radarData.map(d => {
                       const req = fit.details?.find(r => r.label === d.skill);
                       return { skill: d.skill, score: req?.required ?? 0 };
@@ -3452,7 +3453,7 @@ function PointDetailCard({ detail, alarms, onClose }) {
     border: `1px solid ${tint(color, 'line')}`, borderRadius: 5, padding: '2px 8px', whiteSpace: 'nowrap',
   });
   const InfoRow = ({ label, value }) => (value == null || value === '') ? null : (
-    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '5px 9px' }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '5px 9px' }}>
       <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', flexShrink: 0 }}>{label}</span>
       <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', textAlign: 'right', overflowWrap: 'anywhere' }}>{value}</span>
     </div>
@@ -3474,7 +3475,7 @@ function PointDetailCard({ detail, alarms, onClose }) {
     <div onClick={onClose}
       style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', padding: 16 }}>
       <div onClick={e => e.stopPropagation()}
-        style={{ background: 'var(--card)', border: `1px solid ${tint(accent, 'line')}`, borderRadius: 'var(--r-lg)', padding: '16px 18px', width: 'min(92vw, 400px)', maxHeight: 'calc(100vh - 32px)', overflowY: 'auto', boxShadow: 'var(--shadow-lg)', animation: 'pdIn 0.18s ease' }}>
+        style={{ background: 'var(--card-surf)', border: `1px solid ${tint(accent, 'line')}`, borderRadius: 'var(--r-lg)', padding: '16px 18px', width: 'min(92vw, 400px)', maxHeight: 'calc(100vh - 32px)', overflowY: 'auto', boxShadow: 'var(--shadow-lg)', animation: 'pdIn 0.18s ease' }}>
         <style>{`@keyframes pdIn { from { opacity:0; transform:scale(0.93) translateY(4px); } to { opacity:1; transform:scale(1) translateY(0); } }`}</style>
 
         {/* Header */}
@@ -3530,7 +3531,7 @@ function PointDetailCard({ detail, alarms, onClose }) {
           <div style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'center', padding: '8px 0 2px' }}>{tr('กำลังโหลดข้อมูล...')}</div>
         )}
         {notRegistered && (
-          <div style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'center', background: 'var(--bg3)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: '10px 12px', marginTop: infoRows.length ? 8 : 0 }}>
+          <div style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'center', background: 'var(--bg3-surf)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: '10px 12px', marginTop: infoRows.length ? 8 : 0 }}>
             ยังไม่ลงทะเบียนในฐานข้อมูล
           </div>
         )}

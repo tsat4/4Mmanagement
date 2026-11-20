@@ -77,7 +77,7 @@ export default function PickScanModal({ request, canOverride = false, fullName, 
       {/* ไม่ปิดจาก backdrop — มีช่องกรอกจำนวน/เหตุผล (UI-CONVENTIONS §5) */}
       <div style={{ position: 'fixed', inset: 0, zIndex: 2300, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
         <div onClick={e => e.stopPropagation()} className="modal-scroll"
-          style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(520px, 96vw)', maxHeight: '92vh', overflowY: 'auto' }}>
+          style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(520px, 96vw)', maxHeight: '92vh', overflowY: 'auto' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3 style={{ margin: 0, fontSize: 16, color: 'var(--text)' }}>{tr('เริ่มเตรียม — สแกนยืนยันของที่หยิบ')}</h3>
             <button onClick={onClose} className="tbtn" style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 22, cursor: 'pointer', lineHeight: 1 }}>✕</button>

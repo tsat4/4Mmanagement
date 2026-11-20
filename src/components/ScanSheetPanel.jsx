@@ -92,8 +92,8 @@ export default function ScanSheetPanel({ lines, canPrint }) {
           <b style={{ fontSize: 14 }}>{title}</b>
           <span style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('เลือก')} {picks.size} {tr('รายการ')}</span>
           <span className="spacer" style={{ marginLeft: 'auto' }} />
-          <button type="button" className="tbtn" onClick={() => setPicks(defaultSheetPicks(rows, pts))} style={{ fontSize: 12, padding: '4px 10px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text)', cursor: 'pointer' }}>{tr('↺ ของไลน์นี้')}</button>
-          <button type="button" className="tbtn" onClick={() => setPicks(new Set())} style={{ fontSize: 12, padding: '4px 10px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text)', cursor: 'pointer' }}>{tr('ล้าง')}</button>
+          <button type="button" className="tbtn" onClick={() => setPicks(defaultSheetPicks(rows, pts))} style={{ fontSize: 12, padding: '4px 10px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text)', cursor: 'pointer' }}>{tr('↺ ของไลน์นี้')}</button>
+          <button type="button" className="tbtn" onClick={() => setPicks(new Set())} style={{ fontSize: 12, padding: '4px 10px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text)', cursor: 'pointer' }}>{tr('ล้าง')}</button>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 6, alignContent: 'start' }}>{mine.map(box)}</div>
         {others.length > 0 && (
@@ -108,7 +108,7 @@ export default function ScanSheetPanel({ lines, canPrint }) {
 
   return (
     <div>
-      <div style={{ fontSize: 12.5, color: 'var(--text2)', background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '9px 12px', marginBottom: 12, lineHeight: 1.7 }}>
+      <div style={{ fontSize: 12.5, color: 'var(--text2)', background: 'var(--bg2-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '9px 12px', marginBottom: 12, lineHeight: 1.7 }}>
         🗒️ <b>{tr('ใบสแกนประจำไลน์ (A4)')}</b> {tr('— ติดข้างไลน์ แล้วหน้างาน')} <b>{tr('ยิงเหตุผลจากแผ่น')}</b> แทนการไล่หาในลิสต์ยาว
         (Daily Report → บันทึก Downtime / งานเสีย → แตะ 📷 ข้างช่องประเภท หรือกดปุ่มสแกนข้างเครื่อง)
         · ระบบติ๊กประเภทที่เป็นของไลน์นี้ไว้ให้ (ตามกระบวนการของเครื่องในไลน์) · แก้ทะเบียนประเภทเมื่อไหร่ ให้พิมพ์แผ่นใหม่ (ประเภทที่ถูกปิดใช้ ยิงแล้วระบบไม่รับ)

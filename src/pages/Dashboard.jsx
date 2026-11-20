@@ -1044,7 +1044,7 @@ export default function Dashboard({ view = 'timeline' }) {
           {/* Date picker */}
           <div style={{
             display: 'flex', alignItems: 'center', gap: 8,
-            background: 'var(--card)', border: '1px solid var(--border2)',
+            background: 'var(--card-surf)', border: '1px solid var(--border2)',
             padding: '8px 14px', borderRadius: 'var(--r-md)',
           }}>
             <span style={{ fontSize: 15, color: 'var(--muted)' }}>📅</span>
@@ -1054,7 +1054,7 @@ export default function Dashboard({ view = 'timeline' }) {
           </div>
           {tvScroll && !isMobile && (
             <button type="button" onClick={() => setScrollMode(false)}
-              style={{ padding: '7px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+              style={{ padding: '7px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
               {tr('กลับเป็นหมุนหน้า')}
             </button>
           )}
@@ -1173,7 +1173,7 @@ export default function Dashboard({ view = 'timeline' }) {
           <motion.div key={kpi.label} {...stagger(i + 2)}
             style={{ height: '100%', gridColumn: isWide && kpi.primary ? 'span 2' : 'auto' }}>
             <div className="kpi-lift" style={{
-              background: 'var(--card)', border: '1px solid var(--border2)',
+              background: 'var(--card-surf)', border: '1px solid var(--border2)',
               borderRadius: 'var(--r-lg)', padding: isMobile ? '13px 14px' : isWide ? '20px 24px' : '16px 18px',
               boxShadow: 'var(--shadow-sm)',
               borderTop: `3px solid ${statusColor(kpi.tone)}`,
@@ -1305,7 +1305,7 @@ export default function Dashboard({ view = 'timeline' }) {
                   <motion.div key={line.id} data-tv-item {...stagger(8 + i)} style={{ height: '100%' }}>
                     <div
                       style={{
-                        background: 'var(--card)',
+                        background: 'var(--card-surf)',
                         border: '1px solid var(--border2)',
                         borderLeft: line._hasChildren ? '4px solid var(--accent)' : '1px solid var(--border2)',
                         borderRadius: 'var(--r-lg)', padding: isWide ? '18px 20px' : '14px 16px',
@@ -1385,7 +1385,7 @@ export default function Dashboard({ view = 'timeline' }) {
                 const nested = (
                   <motion.div key={`${line.id}-children`} data-tv-item {...stagger(8 + i)} style={{ gridColumn: '1 / -1' }}>
                     <div style={{
-                      background: 'var(--bg2)',
+                      background: 'var(--bg2-surf)',
                       border: '1px dashed var(--border2)',
                       borderLeft: '4px solid var(--accent)',
                       borderRadius: 'var(--r-lg)', padding: isWide ? '14px 16px' : '12px 14px',
@@ -1406,7 +1406,7 @@ export default function Dashboard({ view = 'timeline' }) {
                           const csDT     = dtAlarmByLine[cs.name] || [];
                           const csFMPending = fourMLogs.some(f => f.line_name === cs.name && f.status !== 'approved' && f.status !== 'rejected');
                           return (
-                            <div key={cs.id} style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: isWide ? '12px 14px' : '10px 12px' }}>
+                            <div key={cs.id} style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: isWide ? '12px 14px' : '10px 12px' }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                 <div>
                                   <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--blue)', background: 'var(--blue-dim)', border: '1px solid var(--blue-line)', borderRadius: 'var(--r-xs)', padding: '1px 5px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{tr('ไลน์ย่อย')}</span>
@@ -1542,14 +1542,14 @@ export default function Dashboard({ view = 'timeline' }) {
                 <button onClick={() => shiftDate(-1)} style={dateBtn}>◀</button>
                 {/* width ต้องกำหนดเอง — index.css ตั้ง input width:100% ทั้งแอป ถ้าปล่อยไว้ช่องวันที่จะกินเต็มแถวจนปุ่มแตกบรรทัด */}
                 <input type="date" value={boardDate} max={todayStr} onChange={e => e.target.value && setBoardDate(e.target.value)}
-                  style={{ width: 148, padding: '4px 8px', borderRadius: 'var(--ctl-r)', fontSize: 13, background: 'var(--bg2)', border: '1px solid var(--border)', color: 'var(--text)', fontFamily: 'var(--font-body)' }} />
+                  style={{ width: 148, padding: '4px 8px', borderRadius: 'var(--ctl-r)', fontSize: 13, background: 'var(--bg2-surf)', border: '1px solid var(--border)', color: 'var(--text)', fontFamily: 'var(--font-body)' }} />
                 <button onClick={() => shiftDate(1)} disabled={boardDate >= todayStr} style={{ ...dateBtn, opacity: boardDate >= todayStr ? 0.4 : 1, cursor: boardDate >= todayStr ? 'default' : 'pointer' }}>▶</button>
                 {boardDate !== todayStr && (
                   <button onClick={() => setBoardDate(todayStr)} style={{ ...dateBtn, background: 'var(--accent)', color: 'var(--accent-ink)', border: '1px solid var(--accent)' }}>{tr('วันนี้')}</button>
                 )}
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 12, padding: '6px 10px', background: 'var(--bg2)', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)' }}>
+            <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 12, padding: '6px 10px', background: 'var(--bg2-surf)', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)' }}>
               {[
                 /* 🎨 พาเลต 5 สี (05/11): "เสร็จช้า" = เขียวเหมือนเสร็จ แยกด้วยไอคอน ✓! (เดิมส้ม — เฉดที่ 6) */
                 { t: 'info', icon: '▶', label: 'กำลังผลิต' },
@@ -1645,7 +1645,7 @@ export default function Dashboard({ view = 'timeline' }) {
               return (
                 <div key={lineName} data-tv-item style={{
                   marginBottom: 16,
-                  background: 'var(--card)',
+                  background: 'var(--card-surf)',
                   border: `1px solid ${totalDelayed > 0 ? 'var(--red-line)' : hasOpen ? 'var(--green-line)' : 'var(--border2)'}`,
                   borderRadius: 'var(--r-lg)', overflow: 'hidden',
                   boxShadow: totalDelayed > 0 ? '0 0 0 1px var(--red-dim)' : hasOpen ? '0 0 0 1px var(--green-dim)' : 'none',
@@ -2101,7 +2101,7 @@ export default function Dashboard({ view = 'timeline' }) {
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '6px 10px', borderBottom: '1px solid var(--border2)', background: 'var(--bg2)' }}>
                         <span style={{ fontSize: T(11, 17), fontWeight: 800, color: 'var(--muted)', alignSelf: 'center' }}>PLANNER</span>
                         {plannerChips.map((c, i) => (
-                          <span key={i} style={{ fontSize: 12, fontWeight: 700, padding: '3px 9px', borderRadius: 'var(--r-md)', background: 'var(--card)', color: c.color, border: `1px solid ${c.color}` }}>{/* สีจาก token ธีม — เดิม hex สว่าง+พื้นโปร่ง ธีมสว่างมองไม่เห็น (02/10) */}
+                          <span key={i} style={{ fontSize: 12, fontWeight: 700, padding: '3px 9px', borderRadius: 'var(--r-md)', background: 'var(--card-surf)', color: c.color, border: `1px solid ${c.color}` }}>{/* สีจาก token ธีม — เดิม hex สว่าง+พื้นโปร่ง ธีมสว่างมองไม่เห็น (02/10) */}
                             {c.text}
                           </span>
                         ))}
@@ -2338,7 +2338,7 @@ export default function Dashboard({ view = 'timeline' }) {
       {/* จอชื่อ "ไทม์ไลน์" ห้ามว่างเงียบ — ไม่มีกะของวันนั้น = เขียนบอก */}
       {visibleProdStatus.length === 0 && !loading && (
         <div style={{ marginBottom: 24, padding: '18px 20px', borderRadius: 'var(--r-lg)', border: '1px dashed var(--border2)',
-          background: 'var(--card)', color: 'var(--muted)', fontSize: 15, fontWeight: 600 }}>
+          background: 'var(--card-surf)', color: 'var(--muted)', fontSize: 15, fontWeight: 600 }}>
           ยังไม่มีไลน์ไหนเปิดกะของวันที่ {boardDate}{!passAll ? ' (ในขอบเขต/ส่วนงานที่เลือก)' : ''}
         </div>
       )}
@@ -2563,7 +2563,7 @@ export default function Dashboard({ view = 'timeline' }) {
                       {planned.map(d => {
                         const el = dtElapsedMin(d, now.getTime());
                         return (
-                          <div key={d.id} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 9, padding: '8px 12px', borderRadius: 'var(--r-md)', background: 'var(--bg3)', border: '1px solid var(--border2)' }}>
+                          <div key={d.id} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 9, padding: '8px 12px', borderRadius: 'var(--r-md)', background: 'var(--bg3-surf)', border: '1px solid var(--border2)' }}>
                             <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--text2)' }}>{d.machine_no || '—'}</span>
                             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--muted)' }}>{d.dr_downtime_types?.name_th || tr('หยุดตามแผน')}</span>
                             <span style={{ fontSize: 12, color: 'var(--muted)' }}>{d.line_name}</span>
@@ -2625,7 +2625,7 @@ export default function Dashboard({ view = 'timeline' }) {
                     <div key={f.id} style={{
                       display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10,
                       padding: '10px 14px', borderRadius: 'var(--r-md)',
-                      background: 'var(--bg3)', border: '1px solid var(--border2)',
+                      background: 'var(--bg3-surf)', border: '1px solid var(--border2)',
                       borderLeft: `3px solid ${f.status === 'approved' ? 'var(--green)' : f.status === 'rejected' ? 'var(--red)' : 'var(--amber)'}`,
                     }}>
                       <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{CAT_ICON[f.category] || '🔧'} {f.category}</span>

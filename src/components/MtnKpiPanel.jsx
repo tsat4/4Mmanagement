@@ -108,7 +108,7 @@ export default function MtnKpiPanel({ orders = [], scopeLines = null, lineObjs =
        `def` = นิยามศัพท์ภาษาอังกฤษ (Mean Time To …) — อ่านรอบเดียวพอ ⇒ พับหลัง ⓘ ได้
      ปนกัน 2 อย่างในช่องเดียวแบบเดิม = ต้องเลือกว่าพับทั้งก้อนหรือไม่พับเลย ซึ่งผิดทั้งคู่ */
   const Card = ({ t, v, c, h, def }) => (
-    <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 14, flex: 1, minWidth: 170 }}>
+    <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 14, flex: 1, minWidth: 170 }}>
       <div style={{ fontSize: 12, color: 'var(--muted)' }}>{t}</div>
       <div style={{ fontSize: 26, fontWeight: 800, color: c || 'var(--text)', marginTop: 2 }}>{v}</div>
       {(h || def) && (
@@ -187,7 +187,7 @@ export default function MtnKpiPanel({ orders = [], scopeLines = null, lineObjs =
           c={stat.satOverall == null ? 'var(--muted)' : stat.satOverall >= 2.5 ? '#22c55e' : stat.satOverall >= 2 ? '#f59e0b' : '#ef4444'} />
       </div>
       {stat.satN > 0 && (
-        <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 14, marginBottom: 16 }}>
+        <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 14, marginBottom: 16 }}>
           <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>{trI18n('ความพึงพอใจบริการซ่อม รายด้าน (KPI หน่วยงานซ่อม)')}</div>
           {stat.satByDim.map(d => {
             const pct = d.avg != null ? Math.round(d.avg / 3 * 100) : 0;

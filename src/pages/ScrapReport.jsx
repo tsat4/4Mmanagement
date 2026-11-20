@@ -107,7 +107,7 @@ function Modal({ title, onClose, children, width = 560 }) {
   const isMobile = useIsMobile();
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 3000, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '4vh 12px', overflowY: 'auto' }}>
-      <div style={{ background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', width: `min(${width}px, 96vw)`, boxShadow: 'var(--shadow-lg)', maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', width: `min(${width}px, 96vw)`, boxShadow: 'var(--shadow-lg)', maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ fontWeight: 800, fontSize: 15 }}>{title}</div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 18, cursor: 'pointer' }}>✕</button>
@@ -1213,7 +1213,7 @@ export default function ScrapReport() {
             placeholder={sapOptions === null ? 'กำลังโหลด…' : `พิมพ์ค้นหา MAT SAP / Part No / ชื่อ (${sapOptions.length})`} />
           <div style={{ marginTop: 10, maxHeight: 340, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
             {sapMatches.map((o, i) => (
-              <button key={i} onClick={() => applySap(o)} style={{ textAlign: 'left', padding: '8px 10px', borderRadius: 'var(--r-md)', cursor: 'pointer', background: 'var(--card)', border: '1px solid var(--border)', display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button key={i} onClick={() => applySap(o)} style={{ textAlign: 'left', padding: '8px 10px', borderRadius: 'var(--r-md)', cursor: 'pointer', background: 'var(--card-surf)', border: '1px solid var(--border)', display: 'flex', gap: 8, alignItems: 'center' }}>
                 <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 'var(--r-pill)', color: o.source === 'sub' ? 'var(--amber)' : 'var(--blue)', background: o.source === 'sub' ? 'var(--amber)1f' : 'var(--blue)1f' }}>{o.source === 'sub' ? tr('ย่อย') : tr('หลัก')}</span>
                 <div style={{ minWidth: 0 }}>
                   {/* ลำดับ Part No. → ชื่องาน → MAT (UI §6.21) */}
@@ -1242,7 +1242,7 @@ export default function ScrapReport() {
               return (
                 <button key={r.id} onClick={() => applyRequest(r)} style={{
                   textAlign: 'left', padding: '8px 10px', borderRadius: 'var(--r-md)', cursor: 'pointer',
-                  background: 'var(--card)', border: `1px solid ${mine ? 'var(--blue)' : 'var(--border)'}`,
+                  background: 'var(--card-surf)', border: `1px solid ${mine ? 'var(--blue)' : 'var(--border)'}`,
                 }}>
                   <div style={{ fontSize: 12.5, fontWeight: 700 }}>
                     {r.doc_no || '(ไม่มีเลขที่)'}

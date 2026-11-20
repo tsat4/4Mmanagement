@@ -269,7 +269,7 @@ export default function MoStalePanel({
             {rows.length > rowsShown.length && (
               <button type="button" onClick={() => setAll(true)}
                 style={{ justifySelf: 'start', marginTop: 2, fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
-                  background: 'var(--bg2)', color: 'var(--text)', border: '1px solid var(--border2)',
+                  background: 'var(--bg2-surf)', color: 'var(--text)', border: '1px solid var(--border2)',
                   borderRadius: 'var(--ctl-r)', padding: '4px 11px' }}>
                 {tr('▼ แสดงอีก')} {rows.length - rowsShown.length} {tr('ใบ')}
               </button>
@@ -277,7 +277,7 @@ export default function MoStalePanel({
             {all && rows.length > FIRST_ROWS && (
               <button type="button" onClick={() => setAll(false)}
                 style={{ justifySelf: 'start', marginTop: 2, fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
-                  background: 'var(--bg2)', color: 'var(--text)', border: '1px solid var(--border2)',
+                  background: 'var(--bg2-surf)', color: 'var(--text)', border: '1px solid var(--border2)',
                   borderRadius: 'var(--ctl-r)', padding: '4px 11px' }}>
                 {tr('▲ ย่อเหลือ')} {FIRST_ROWS} {tr('ใบ')}
               </button>
@@ -293,7 +293,7 @@ export default function MoStalePanel({
           · โหลดล้ม/ชนเพดาน = เขียนบนจอ ห้ามโชว์ 0 (กฎความซื่อสัตย์ของจอ) */}
       {gapsErr ? (
         <div role="alert" style={{ marginTop: 10, fontSize: 12, fontWeight: 700,
-          color: statusColor('bad'), background: 'var(--card)',
+          color: statusColor('bad'), background: 'var(--card-surf)',
           border: `1px solid ${statusColor('bad')}55`, borderRadius: 'var(--r-md)', padding: '7px 10px' }}>
           ⚠️ อ่านโซ่การส่งต่อไม่สำเร็จ — ยังไม่รู้ว่ามีใบที่ส่งต่อแล้วปลายทางหายไปหรือเปล่า
           <div style={{ fontWeight: 400, color: 'var(--text2)', marginTop: 2 }}>{gapsErr}</div>
@@ -341,7 +341,7 @@ export default function MoStalePanel({
                     );
                     const sty = {
                       textAlign: 'left', fontSize: 11.5, lineHeight: 1.5, padding: '5px 9px',
-                      background: 'var(--bg2)', color: 'var(--text)',
+                      background: 'var(--bg2-surf)', color: 'var(--text)',
                       border: `1px solid ${statusColor(meta.tone)}55`, borderRadius: 'var(--r-md)',
                     };
                     return (r.fromOrderId && onOpenId) ? (

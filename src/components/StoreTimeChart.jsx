@@ -552,7 +552,7 @@ export default function StoreTimeChart({
         return (
           <>
             <div onClick={() => setPopup(null)} style={{ position: 'fixed', inset: 0, zIndex: 1400 }} />
-            <div style={{ position: 'fixed', left, top, width: W, zIndex: 1401, background: 'var(--bg3)', border: `1px solid ${st.border}`, borderRadius: 'var(--r-lg)', boxShadow: 'var(--shadow-float)', padding: 12 }}>
+            <div style={{ position: 'fixed', left, top, width: W, zIndex: 1401, background: 'var(--bg3-surf)', border: `1px solid ${st.border}`, borderRadius: 'var(--r-lg)', boxShadow: 'var(--shadow-float)', padding: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                 <span style={{ fontSize: 14, fontWeight: 900, color: 'var(--text)' }}>
                   {r.shift === 'night' ? '🌙' : '☀️'} {tr('รอบ')} {r.round_no} · {hhmm(r.delivery_time)}
@@ -639,7 +639,7 @@ export default function StoreTimeChart({
                 </div>
               </div>
               <button onClick={toggleAssume} title={tr('ซ่อนพาร์ทที่ยังไม่มียอด WIP ออกจากไทม์ไลน์ (เหลือเฉพาะพาร์ทที่มีข้อมูลจริง)')}
-                style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)',
+                style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)',
                 padding: '5px 10px', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--text2)', fontFamily: 'var(--font-body)', whiteSpace: 'nowrap' }}>
                 {tr('ดูเฉพาะที่มียอดจริง')}
               </button>
@@ -788,7 +788,7 @@ export default function StoreTimeChart({
               const pickable = q.parts.filter(p => p.netTotal > 0 && ['ok', 'split'].includes(p.store) && !openByKey[selKey(q.line, p.mat_no)]).length;
               const inQueue = q.parts.filter(p => openByKey[selKey(q.line, p.mat_no)]).length;
               return (
-                <div key={q.line} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '9px 12px' }}>
+                <div key={q.line} style={{ background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '9px 12px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                     <span style={chip('rgba(96,165,250,0.15)', '#60a5fa', { minWidth: 20, textAlign: 'center' })}>{i + 1}</span>
                     <button onClick={() => onOpenLine?.(q.line)} title={tr('เปิดบอร์ดของไลน์นี้')}
@@ -886,7 +886,7 @@ export default function StoreTimeChart({
                                     title={picked.sameSloc
                                       ? `ทุกไลน์ในกลุ่มอยู่พื้นที่ SAP ${picked.sloc} เดียวกัน — ระบบเลือกไลน์แรกให้ · เปลี่ยนได้ถ้ารู้ว่าต้องวางหน้าไลน์ไหน`
                                       : 'หลายไลน์ย่อยกินพาร์ทนี้ (คนละพื้นที่ SAP) — เลือกไลน์ที่จะไปวางของ'}
-                                    style={{ width: 'auto', fontSize: 11, padding: '1px 4px', borderRadius: 'var(--ctl-r)', border: `1px solid ${picked.sameSloc ? 'rgba(34,197,94,0.5)' : 'rgba(245,158,11,0.7)'}`, background: 'var(--bg2)', color: picked.sameSloc ? 'var(--accent)' : '#f59e0b' }}>
+                                    style={{ width: 'auto', fontSize: 11, padding: '1px 4px', borderRadius: 'var(--ctl-r)', border: `1px solid ${picked.sameSloc ? 'rgba(34,197,94,0.5)' : 'rgba(245,158,11,0.7)'}`, background: 'var(--bg2-surf)', color: picked.sameSloc ? 'var(--accent)' : '#f59e0b' }}>
                                     {picked.lines.map(ln => { const c = slocOf(ln); return <option key={ln} value={ln}>➜ {c ? `${c} · ` : ''}{ln}</option>; })}
                                   </select>
                                 : <span style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 700, whiteSpace: 'nowrap' }}

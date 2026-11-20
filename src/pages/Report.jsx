@@ -7,6 +7,7 @@ import { onlyShopfloorStaff } from '../utils/staffKind';   // 👥 นับค�
 import { lineHeadsOf, headScopeLineIds } from '../utils/lineHeads';   // 👨‍🔧 หัวหน้างานของไลน์ (หลายคน/หลายกะ)
 import { buildScheduleMaps } from '../utils/shiftAssign';
 import { UserContext } from '../App';
+import { canWriteLine, writeBlockText } from '../utils/writeScope';   // 🔐 ชั้น ③ ของใบ 4M (13/11)
 import { confirmSign } from '../utils/signConfirm';
 import { toast } from '../components/Toast';
 import ToggleDot from '../components/ToggleDot';
@@ -1503,7 +1504,10 @@ const STATUS_META = {
 /* deep-link: focusId = ใบที่ถูกคลิกมาจากหน้าอื่น (เน้นแถว + เลื่อนไปหา) · initStatus/initFrom =
    ตั้งตัวกรองตั้งต้นให้ใบนั้นอยู่ในรายการ (ใบค้างมักเก่ากว่าช่วง 7 วัน default — ไม่ตั้งจะเปิดมาเจอจอว่าง) */
 function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
-  const { role, lineId: userLineId, sections: scopeSecs = [], fullName = '', scopeIdx } = useContext(UserContext);
+  const { role, lineId: userLineId, sections: scopeSecs = [], fullName = '', section: homeSection, allUnits, respCostCenters, scopeIdx, writeUnits } = useContext(UserContext);
+  /* 🔐 ชั้น ③ ของใบ 4M (13/11 · audit role↔scope): ขอบเขตการ "อนุมัติ/reset" มาจากขอบเขตรายคน
+     (บ้าน · CC · มอบหมาย · ใบผ่าน) ผ่าน `canWriteLine` — เดิมใช้ `sections` (ที่เห็น) + ทางลัด role==='manager' */
+  const wCtx = { role, section: homeSection, sections: scopeSecs, allUnits, respCostCenters, scopeIdx, writeUnits };
   const orgSectionList = useOrgSections();
 
   // Determine if the current user can act on this log at its current stage
@@ -1512,23 +1516,17 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
     // QA step — action gate ผ่านตาราง permission (admin/manager/qa ไม่ scope เหมือนเดิม)
     if (log.status === 'pending_qa') return can('four_m', 'approve_qa', role);
     if (log.status !== 'pending') return false;
-    // SV step — สิทธิ์ action มาจาก can() ส่วน scoping ยังเป็นตาม role เดิมทุกประการ
+    // SV step — สิทธิ์ action มาจาก can() · ขอบเขต = ชั้น ③ รายคน (canWriteLine) ไม่ใช่ role/sections
     if (!can('four_m', 'approve_sv', role)) return false;
-    if (role === 'admin') return true;
     if (role === 'leader') {
       const myLine = lines.find(l => l.id === userLineId);
       if (!myLine) return false;
       // ครอบครัวไลน์ (ตัวเอง + ไลน์หลัก + ไลน์ย่อย) — leader ไลน์ย่อยต้องอนุมัติ log ที่เกิดจาก
-      // การจัดคนลงจุดของไลน์หลัก (พื้นที่เดียวกัน) ได้ด้วย ไม่ใช่แค่สายลงอย่างเดียว
+      // การจัดคนลงจุดของไลน์หลัก (พื้นที่เดียวกัน) ได้ด้วย · ไลน์ที่ผูก = ขอบเขตรายคนของหัวหน้ากลุ่ม
       return lineFamilyOf(myLine.name).includes(log.line_name);
     }
-    // role ที่ถูกจำกัดขอบเขตส่วนงาน (supervisor เดิม + manager/qa ที่กำหนด sections) — อนุมัติได้เฉพาะใน scope
-    if (scopeSecs.length) {
-      const logLine = lines.find(l => l.name === log.line_name);
-      return inSectionScope(scopeSecs, logLine?.section);
-    }
-    if (role === 'manager') return true; // manager ไม่กำหนด scope = ไม่จำกัด เหมือนเดิม
-    return false; // supervisor ที่ไม่มี section = fail-closed เหมือนเดิม
+    // 🔴 ไม่รู้ไลน์ของใบ = ไม่ให้อนุมัติ (ใบ 4M ทุกใบผูกไลน์) · ของหน่วยอื่น = เห็นได้ แต่กดไม่ได้
+    return canWriteLine(wCtx, log.line_name, lines, { unknownTarget: 'block' }).ok;
   };
 
   const today = getWorkDate();
@@ -1882,7 +1880,7 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
                 {trI18n('ยืนยัน Reject')}
               </button>
               <button onClick={() => { setRejectModal(null); setRejectReason(''); }}
-                style={{ flex: 1, padding: 11, background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}>
+                style={{ flex: 1, padding: 11, background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}>
                 {trI18n('ยกเลิก')}
               </button>
             </div>
@@ -1936,7 +1934,7 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
                 {isApprovingSaving ? trI18n('กำลังบันทึก...') : 'QA Approve'}
               </button>
               <button onClick={() => { setQaApproveModal(null); setQaImageFile(null); setQaImagePreview(null); }} disabled={isApprovingSaving}
-                style={{ flex: 1, padding: 11, background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}>
+                style={{ flex: 1, padding: 11, background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}>
                 {trI18n('ยกเลิก')}
               </button>
             </div>
@@ -2050,7 +2048,7 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {pickable.map(n => (
                     <button key={n} type="button" onClick={() => { setLine(n); setFourMSection(''); setFourMUnit({ name: '', lines: [] }); }}
-                      style={{ padding: '6px 12px', borderRadius: 'var(--r-md)', fontSize: 12, cursor: 'pointer', background: 'var(--bg3)', color: 'var(--text)', border: '1px solid var(--border2)' }}>
+                      style={{ padding: '6px 12px', borderRadius: 'var(--r-md)', fontSize: 12, cursor: 'pointer', background: 'var(--bg3-surf)', color: 'var(--text)', border: '1px solid var(--border2)' }}>
                       {n}
                     </button>
                   ))}
@@ -2095,7 +2093,7 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12, padding: '8px 12px', borderRadius: 'var(--r-md)',
             background: 'var(--amber-dim)', border: '1px solid var(--amber-line)', fontSize: 12.5, color: 'var(--text)' }}>
             <span>{trI18n('เน้นใบที่เลือกมา —')} <b>{focusRow.line_name || trI18n('ไม่ระบุไลน์')}</b> · {focusRow.category} · {fmtDate(focusRow.work_date)}</span>
-            <button onClick={() => setFocus('')} style={{ padding: '3px 10px', borderRadius: 'var(--r-md)', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)' }}>
+            <button onClick={() => setFocus('')} style={{ padding: '3px 10px', borderRadius: 'var(--r-md)', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)' }}>
               {trI18n('ล้างการเน้น')}
             </button>
           </div>
@@ -2107,7 +2105,7 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
               style={{ padding: '3px 10px', borderRadius: 'var(--r-md)', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', background: 'var(--amber-dim)', color: 'var(--amber)', border: '1px solid var(--amber-line)' }}>
               {trI18n('ล้างตัวกรอง')}
             </button>
-            <button onClick={() => setFocus('')} style={{ padding: '3px 10px', borderRadius: 'var(--r-md)', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)' }}>
+            <button onClick={() => setFocus('')} style={{ padding: '3px 10px', borderRadius: 'var(--r-md)', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)' }}>
               {trI18n('ปิด')}
             </button>
           </div>
@@ -2201,6 +2199,9 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
                       ) : (
                         can('four_m', 'reset', role) && (
                           <button onClick={async () => {
+                            /* 🔐 ชั้น ③ (13/11): reset ใบของไลน์นอกขอบเขตไม่ได้ — คีย์ reset บอกแค่ "กดปุ่มเป็น" */
+                            const wr = canWriteLine(wCtx, l.line_name, lines, { unknownTarget: 'block' });
+                            if (!wr.ok) { toast.error(writeBlockText(wr, { what: `ใบ 4M ของไลน์ ${l.line_name}` })); return; }
                             // Reset = status change → ต้องเคลียร์รูป QA เดิม (ลบไฟล์ด้วย) + แจ้ง Telegram + เช็ค error
                             const oldQaUrl = l.qa_image_url;
                             /* 🔴 นับแถว ไม่ใช่ดูแค่ error — RLS ปฏิเสธ UPDATE = 0 แถว ไม่มี error
@@ -2218,7 +2219,7 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
                             toast.success('Reset กลับเป็นรออนุมัติแล้ว');
                             load();
                           }}
-                            style={{ padding: '3px 8px', borderRadius: 5, fontSize: 11, cursor: 'pointer', background: 'var(--bg3)', color: 'var(--muted)', border: '1px solid var(--border)' }}>
+                            style={{ padding: '3px 8px', borderRadius: 5, fontSize: 11, cursor: 'pointer', background: 'var(--bg3-surf)', color: 'var(--muted)', border: '1px solid var(--border)' }}>
                             Reset
                           </button>
                         )
@@ -2614,7 +2615,7 @@ ${catHeaderCells}
             {trI18n(lv.label)} ≥{lv.min}
           </span>
         ))}
-        <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 'var(--r-xs)', background: 'var(--bg3)', color: 'var(--muted)', border: '1px solid var(--border)' }}>{trI18n('— ยังไม่ประเมิน')}</span>
+        <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 'var(--r-xs)', background: 'var(--bg3-surf)', color: 'var(--muted)', border: '1px solid var(--border)' }}>{trI18n('— ยังไม่ประเมิน')}</span>
       </div>
 
       {loading ? <Loader /> : (() => {
@@ -3195,7 +3196,7 @@ function MultiSkillFormTab() {
               ].map(({ label, val, set, opts, plain }) => (
                 <div key={label}>
                   <span style={lbSt}>{label}</span>
-                  <select value={val} onChange={e => set(e.target.value)} style={{ width: '100%', padding: '6px 10px', borderRadius: 'var(--ctl-r)', fontSize: 13, background: 'var(--bg3)', border: '1px solid var(--border2)', color: 'var(--text)' }}>
+                  <select value={val} onChange={e => set(e.target.value)} style={{ width: '100%', padding: '6px 10px', borderRadius: 'var(--ctl-r)', fontSize: 13, background: 'var(--bg3-surf)', border: '1px solid var(--border2)', color: 'var(--text)' }}>
                     <option value="">—</option>
                     {val && !opts.includes(val) && <option value={val}>{plain ? val : `${val} ⚠ ไม่มีในผัง`}</option>}
                     {opts.map(o => <option key={o} value={o}>{trI18n(o)}</option>)}
@@ -3216,7 +3217,7 @@ function MultiSkillFormTab() {
                 { label: sigLabelsOf('multi_skill', MS_SIG_DEFAULTS)[1], name: checker, setName: setChecker, sig: checkerSig, setSig: setCheckerSig, autoRole: 'supervisor' },
                 { label: sigLabelsOf('multi_skill', MS_SIG_DEFAULTS)[2], name: approver, setName: setApprover, sig: approverSig, setSig: setApproverSig, autoRole: 'manager/admin' },
               ].map(({ label, name, setName, sig, setSig, autoRole }) => (
-                <div key={label} style={{ border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: 10, background: 'var(--bg2)' }}>
+                <div key={label} style={{ border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: 10, background: 'var(--bg2-surf)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                     <span style={lbSt}>{label}</span>
                     <span style={{ fontSize: 11, color: 'var(--muted)', background: 'var(--bg3)', borderRadius: 'var(--r-xs)', padding: '1px 5px' }}>{autoRole}</span>

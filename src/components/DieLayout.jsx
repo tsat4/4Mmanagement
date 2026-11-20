@@ -347,7 +347,7 @@ export default function DieLayout({
 
       {/* ผลค้นหา */}
       {!!hits && (
-        <div style={{ background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 'var(--r-md)', padding: '8px 12px', marginBottom: 10, fontSize: 12.5 }}>
+        <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--accent)', borderRadius: 'var(--r-md)', padding: '8px 12px', marginBottom: 10, fontSize: 12.5 }}>
           {hits.length ? <>
             พบ <b>{hits.length}</b> {tr('ตัว ·')}{' '}
             {hits.slice(0, 6).map(d => {
@@ -379,7 +379,7 @@ export default function DieLayout({
       )}
 
       {!areas.length ? (
-        <div style={{ background: 'var(--card)', border: '1px dashed var(--border)', borderRadius: 'var(--r-md)', padding: 40, textAlign: 'center', color: 'var(--muted)' }}>
+        <div style={{ background: 'var(--card-surf)', border: '1px dashed var(--border)', borderRadius: 'var(--r-md)', padding: 40, textAlign: 'center', color: 'var(--muted)' }}>
           <div style={{ fontSize: 34, marginBottom: 8 }}>🗺️</div>
           <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>{tr('ยังไม่มีผังจัดเก็บแม่พิมพ์')}</div>
           <div style={{ fontSize: 12.5, lineHeight: 1.8 }}>
@@ -391,7 +391,7 @@ export default function DieLayout({
       ) : (
         <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 330px', gap: 12, alignItems: 'start' }}>
           {/* ── ผัง ── */}
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 10 }}>
+          <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 10 }}>
             {!area?.image_url ? (
               <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', border: '1px dashed var(--border)', borderRadius: 'var(--r-md)' }}>
                 <div style={{ fontSize: 13, marginBottom: 10 }}>{tr('ยังไม่มีรูปผัง — อัปโหลดรูปคลัง/พื้นที่วางแม่พิมพ์')}</div>
@@ -471,7 +471,7 @@ export default function DieLayout({
           {/* ── แผงขวา ── */}
           <div style={{ display: 'grid', gap: 10 }}>
             {selDie ? (
-              <div ref={panelRef} style={{ background: 'var(--card)', border: '1px solid var(--accent)', borderRadius: 'var(--r-md)', padding: 12 }}>
+              <div ref={panelRef} style={{ background: 'var(--card-surf)', border: '1px solid var(--accent)', borderRadius: 'var(--r-md)', padding: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 6 }}>
                   <div style={{ fontSize: 13.5, fontWeight: 800, wordBreak: 'break-word', flex: 1 }}>{selDie.machine_no}</div>
                   <button onClick={() => setSelId(null)} style={{ ...btnGhost, padding: '3px 8px', fontSize: 12 }}>✕</button>
@@ -536,14 +536,14 @@ export default function DieLayout({
                 })()}
               </div>
             ) : (
-              <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 12, fontSize: 12.5, color: 'var(--muted)' }}>
+              <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 12, fontSize: 12.5, color: 'var(--muted)' }}>
                 แตะหมุดบนผังเพื่อดูรายละเอียด/เปลี่ยนสถานะแม่พิมพ์ · หรือพิมพ์เลขแม่พิมพ์ในช่องค้นหา แล้วหมุดที่ตรงจะไฮไลต์สีเหลือง
               </div>
             )}
 
             {/* worklist — แม่พิมพ์ที่ยังไม่ได้วางบนผังไหนเลย ห้ามซ่อน */}
             {unplaced.length > 0 && (
-              <div style={{ background: 'var(--card)', border: '1px solid #f59e0b', borderRadius: 'var(--r-md)', padding: 12 }}>
+              <div style={{ background: 'var(--card-surf)', border: '1px solid #f59e0b', borderRadius: 'var(--r-md)', padding: 12 }}>
                 <div style={{ fontSize: 12.5, fontWeight: 800, color: '#f59e0b', marginBottom: 6 }}>
                   ⚠️ ยังไม่ได้วางบนผัง {unplaced.length} ตัว
                 </div>
@@ -555,7 +555,7 @@ export default function DieLayout({
                     .filter(d => !hitIds || hitIds.has(d.id))
                     .slice(0, 60)
                     .map(d => (
-                      <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '4px 8px' }}>
+                      <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '4px 8px' }}>
                         <span onClick={() => setSelId(d.id)} title={d.machine_no}
                           style={{ flex: 1, fontSize: 11.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}>
                           {d.machine_no}
@@ -646,7 +646,7 @@ function AreaFormModal({ mode, area, onClose, onSaved }) {
   const lbl = { display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text2)', marginBottom: 4 };
   return (
     <div className="modal-scroll" /* ⚠️ ฟอร์มกรอกข้อมูล — ไม่ปิดจาก backdrop กันเผลอแตะแล้วข้อมูลหาย (UI-CONVENTIONS §5) */ /* modal-scroll = เลื่อนถึงปุ่มล่างได้เมื่อจอเตี้ย/คีย์บอร์ดเด้ง (UI-CONVENTIONS §4 · index.css) */ style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'grid', placeItems: 'center', zIndex: 2000, padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(440px, 96vw)' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(440px, 96vw)' }}>
         <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 14 }}>{mode === 'new' ? tr('➕ สร้างผังจัดเก็บแม่พิมพ์') : tr('⚙️ แก้ไขผังจัดเก็บ')}</div>
         <div style={{ display: 'grid', gap: 10 }}>
           <div><label style={lbl}>{tr('ชื่อผัง')} <span style={{ color: '#ef4444' }}>*</span></label>

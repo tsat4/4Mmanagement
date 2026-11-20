@@ -115,7 +115,7 @@ export default function LineOrderBoard({ lineName, family, date, lines, onSelect
               const made = r.cards.reduce((a, c) => a + c._made, 0);
               const target = r.cards.reduce((a, c) => a + (Number(c.qty_target ?? c.qty) || 0), 0);
               return (
-                <div key={r.key} style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '8px 10px' }}>
+                <div key={r.key} style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '8px 10px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                     {r.img ? <img src={r.img} alt="" loading="lazy" style={{ width: 36, height: 36, objectFit: 'contain', borderRadius: 6, background: 'var(--bg2)', flexShrink: 0 }} />
                       : <span style={{ width: 36, height: 36, borderRadius: 'var(--r-md)', background: 'var(--bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>📦</span>}
@@ -158,7 +158,7 @@ export function OrderDetailCard({ c }) {
   const m = CARD_STATE_META[c._state] || CARD_STATE_META.waiting;
   const row = (k, v) => <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}><span style={{ color: 'var(--muted)' }}>{k}</span><b style={{ color: 'var(--text)', textAlign: 'right' }}>{v}</b></div>;
   return (
-    <div style={{ background: 'var(--bg3)', border: `1px solid ${m.color}66`, borderLeft: `4px solid ${m.color}`, borderRadius: 'var(--r-md)', padding: '8px 10px', fontSize: 12, display: 'grid', gap: 3 }}>
+    <div style={{ background: 'var(--bg3-surf)', border: `1px solid ${m.color}66`, borderLeft: `4px solid ${m.color}`, borderRadius: 'var(--r-md)', padding: '8px 10px', fontSize: 12, display: 'grid', gap: 3 }}>
       <div style={{ fontWeight: 800, color: 'var(--text)' }}>{c.prod_no || 'ใบไม่มีเลข'} — <span style={{ color: m.color }}>{tr(m.label)}</span></div>
       <div style={{ color: 'var(--text2)' }}>{c.productLabel} · {c.mat_no}{c.line_name ? ` · ${c.line_name}` : ''}</div>
       {row('ทำได้ / สั่ง', `${c._made} / ${c.qty ?? '—'}`)}

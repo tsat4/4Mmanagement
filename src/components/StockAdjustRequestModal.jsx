@@ -90,7 +90,7 @@ export default function StockAdjustRequestModal({ req, by, onClose }) {
         )}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
           <button type="button" onClick={onClose} disabled={busy}
-            style={{ padding: '8px 16px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)', fontSize: 13, cursor: 'pointer' }}>
+            style={{ padding: '8px 16px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)', fontSize: 13, cursor: 'pointer' }}>
             {tr('ยกเลิก')}
           </button>
           <button type="button" onClick={submit} disabled={!canSend}

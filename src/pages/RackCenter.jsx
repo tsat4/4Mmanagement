@@ -496,7 +496,7 @@ export default function RackCenter() {
                 <div style={{ padding: '16px 8px', textAlign: 'center', color: 'var(--muted)', fontSize: 12 }}>—</div>
               ) : (
                 (byStatus[col.key] || []).map(r => (
-                  <div key={r.id} style={{ background: 'var(--bg2)', border: `1px solid ${tint(col.color, 'dim')}`, borderRadius: 'var(--r-md)', padding: '10px 12px' }}>
+                  <div key={r.id} style={{ background: 'var(--bg2-surf)', border: `1px solid ${tint(col.color, 'dim')}`, borderRadius: 'var(--r-md)', padding: '10px 12px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                       <div style={{ fontWeight: 800, fontSize: 13, color: 'var(--text)' }}>{r.line_name}</div>
                       <span style={{ fontSize: 11, fontWeight: 800, color: col.color }}>×{r.qty}</span>
@@ -539,7 +539,7 @@ export default function RackCenter() {
         return (
           <>
             <div onClick={() => setPopup(null)} style={{ position: 'fixed', inset: 0, zIndex: 998 }} />
-            <div style={{ position: 'fixed', left, top, width: W, zIndex: 1300, background: 'var(--bg3)', border: `1px solid ${tint(col.color, 'line')}`, borderRadius: 'var(--r-lg)', boxShadow: 'var(--shadow-float)', overflow: 'hidden' }}>
+            <div style={{ position: 'fixed', left, top, width: W, zIndex: 1300, background: 'var(--bg3-surf)', border: `1px solid ${tint(col.color, 'line')}`, borderRadius: 'var(--r-lg)', boxShadow: 'var(--shadow-float)', overflow: 'hidden' }}>
               <div style={{ height: 4, background: col.color }} />
               <div style={{ padding: '10px 14px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
@@ -573,7 +573,7 @@ export default function RackCenter() {
       {/* Request modal */}
       {showForm && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 24, width: 'min(420px,100%)' }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 24, width: 'min(420px,100%)' }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginBottom: 16, fontFamily: 'var(--font-display)' }}>
               เรียกภาชนะ
             </div>

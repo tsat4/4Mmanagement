@@ -217,7 +217,7 @@ export default function StockReceiptQueue({ banner = null, table = false }) {
           { k: 'รับแล้ว 24 ชม.', v: `${fmt(recv24.length)} ใบ` },
           { k: 'รับไม่ครบ 24 ชม.', v: `${fmt(short24)} ใบ`, link: short24 > 0 },
         ].map(c => (
-          <div key={c.k} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '8px 12px', boxShadow: 'var(--shadow-sm)' }}>
+          <div key={c.k} style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '8px 12px', boxShadow: 'var(--shadow-sm)' }}>
             <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--muted)' }}>{tr(c.k)}</div>
             <div style={{ fontSize: 21, fontWeight: 800, color: c.bad ? 'var(--red)' : 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{c.v}</div>
             {c.sub && <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{tr(c.sub)}</div>}
@@ -261,7 +261,7 @@ export default function StockReceiptQueue({ banner = null, table = false }) {
                           <input type="number" min="0" inputMode="numeric" value={form.qty} autoFocus
                             onChange={e => setForm(f => ({ ...f, qty: e.target.value }))}
                             style={{ display: 'block', width: '100%', marginTop: 4, padding: '8px 10px', fontSize: 15, fontWeight: 800,
-                              borderRadius: 'var(--radius)', border: '1px solid var(--border2)', background: 'var(--bg2)', color: 'var(--text)', boxSizing: 'border-box' }} />
+                              borderRadius: 'var(--radius)', border: '1px solid var(--border2)', background: 'var(--bg2-surf)', color: 'var(--text)', boxSizing: 'border-box' }} />
                         </label>
                         {prev && prev.diff !== 0 && (
                           <div style={{ fontSize: 11.5, color: 'var(--text2)', lineHeight: 1.6 }}>
@@ -271,7 +271,7 @@ export default function StockReceiptQueue({ banner = null, table = false }) {
                         )}
                         <input placeholder={tr('เหตุผล (บังคับเมื่อยอดไม่ตรง) เช่น ของเสีย 24 / ยังมาไม่ครบ')} value={form.reason}
                           onChange={e => setForm(f => ({ ...f, reason: e.target.value }))}
-                          style={{ padding: '8px 10px', fontSize: 13, borderRadius: 'var(--radius)', border: '1px solid var(--border2)', background: 'var(--bg2)', color: 'var(--text)' }} />
+                          style={{ padding: '8px 10px', fontSize: 13, borderRadius: 'var(--radius)', border: '1px solid var(--border2)', background: 'var(--bg2-surf)', color: 'var(--text)' }} />
                         <div style={{ display: 'flex', gap: 8 }}>
                           <button type="button" disabled={busy === g.key} style={storeBtn('primary', { flex: 1 })}
                             onClick={async () => { if (await receiveGroup(g, form.qty, form.reason.trim())) setDiffFor(null); }}>
@@ -348,11 +348,11 @@ export default function StockReceiptQueue({ banner = null, table = false }) {
                       <input type="number" min="0" inputMode="numeric" value={form.qty} autoFocus
                         onChange={e => setForm(f => ({ ...f, qty: e.target.value }))}
                         style={{ display: 'block', width: '100%', marginTop: 4, padding: '8px 10px', fontSize: 15, fontWeight: 800,
-                          borderRadius: 'var(--ctl-r)', border: '1px solid var(--border2)', background: 'var(--bg2)', color: 'var(--text)', boxSizing: 'border-box' }} />
+                          borderRadius: 'var(--ctl-r)', border: '1px solid var(--border2)', background: 'var(--bg2-surf)', color: 'var(--text)', boxSizing: 'border-box' }} />
                     </label>
                     <input placeholder={tr('เหตุผล (บังคับเมื่อยอดไม่ตรง) เช่น ของเสีย 5 / ยังมาไม่ครบ')} value={form.reason}
                       onChange={e => setForm(f => ({ ...f, reason: e.target.value }))}
-                      style={{ padding: '8px 10px', fontSize: 13, borderRadius: 'var(--ctl-r)', border: '1px solid var(--border2)', background: 'var(--bg2)', color: 'var(--text)' }} />
+                      style={{ padding: '8px 10px', fontSize: 13, borderRadius: 'var(--ctl-r)', border: '1px solid var(--border2)', background: 'var(--bg2-surf)', color: 'var(--text)' }} />
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button type="button" disabled={busy === r.id} style={storeBtn('primary', { flex: 1 })}
                         onClick={async () => { if (await receive(r, form.qty, form.reason.trim())) setDiffFor(null); }}>

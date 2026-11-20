@@ -265,7 +265,7 @@ export default function WorldFactoryMap({
           return (
             <div style={{
               position: 'absolute', left, top, transform: 'translate(-50%, calc(-100% - 22px))',
-              pointerEvents: 'none', zIndex: 5, background: 'var(--card)', border: `1px solid ${col}`,
+              pointerEvents: 'none', zIndex: 5, background: 'var(--card-surf)', border: `1px solid ${col}`,
               borderRadius: 'var(--r-md)', padding: '8px 11px', minWidth: 196, boxShadow: 'var(--shadow-float)',
             }}>
               <div style={{ fontSize: 14, fontWeight: 800 }}>

@@ -191,7 +191,7 @@ export default function ChangePasswordModal({ open, onClose, userEmail }) {
               disabled={loading}
               style={{
                 flex: 1, padding: '10px 0', borderRadius: 'var(--r-md)',
-                border: '1px solid var(--border2)', background: 'var(--bg3)',
+                border: '1px solid var(--border2)', background: 'var(--bg3-surf)',
                 color: 'var(--text2)', fontWeight: 600, fontSize: 13,
               }}
             >{tr('ยกเลิก')}</button>

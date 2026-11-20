@@ -31,6 +31,7 @@ import {
   ResponsiveContainer, ComposedChart, BarChart, Bar, Line, XAxis, YAxis,
   CartesianGrid, ReferenceLine, Tooltip, Legend, Cell,
 } from 'recharts';
+import { chartAnim } from '../utils/motion';
 
 import SectionScopeSelect from '../components/SectionScopeSelect';
 import useOrgScope from '../utils/useOrgScope';
@@ -110,7 +111,7 @@ function Kpi({ label, value, sub, color }) {
 function ChartTip({ active, payload, label, fmt }) {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 12px', fontSize: 12 }}>
+    <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 12px', fontSize: 12 }}>
       <div style={{ fontWeight: 700, marginBottom: 4, color: 'var(--text)' }}>{label}</div>
       {payload.map(p => (
         <div key={p.dataKey} style={{ color: p.color }}>{p.name}: {fmt ? fmt(p.value) : p.value?.toLocaleString?.() ?? p.value}</div>
@@ -276,9 +277,9 @@ function ManpowerTab({ employees, empById, lines, sectionsList, secFilter, setSe
                 <ReferenceLine y={stdTotal} stroke="var(--amber)" strokeDasharray="6 4"
                   label={{ value: `มาตรฐาน ${stdTotal} คน`, position: 'insideTopRight', fill: 'var(--amber)', fontSize: 11, fontWeight: 800 }} />
               )}
-              <Bar dataKey="present" name="มาทำงาน" fill="var(--accent)" radius={[3, 3, 0, 0]} isAnimationActive={false} />
-              <Bar dataKey="leave" name="ลา" fill="var(--amber)" radius={[3, 3, 0, 0]} isAnimationActive={false} />
-              <Bar dataKey="absent" name="ขาด" fill="var(--red)" radius={[3, 3, 0, 0]} isAnimationActive={false} />
+              <Bar dataKey="present" name="มาทำงาน" fill="var(--accent)" radius={[3, 3, 0, 0]} {...chartAnim()} />
+              <Bar dataKey="leave" name="ลา" fill="var(--amber)" radius={[3, 3, 0, 0]} {...chartAnim()} />
+              <Bar dataKey="absent" name="ขาด" fill="var(--red)" radius={[3, 3, 0, 0]} {...chartAnim()} />
             </ComposedChart>
           </ResponsiveContainer>
           <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
@@ -426,7 +427,7 @@ function MovesTab({ empById, sectionsList, secFilter, setSecFilter, inScope, org
               <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--text2)' }} tickFormatter={d => d.slice(5)} />
               <YAxis tickFormatter={fmtAxis} tick={{ fontSize: 11.5, fill: 'var(--text2)' }} width="auto" allowDecimals={false} />
               <Tooltip content={<ChartTip />} />
-              <Bar dataKey="moves" name="ครั้งที่ย้าย" fill="var(--blue)" radius={[3, 3, 0, 0]} isAnimationActive={false} />
+              <Bar dataKey="moves" name="ครั้งที่ย้าย" fill="var(--blue)" radius={[3, 3, 0, 0]} {...chartAnim()} />
             </BarChart>
           </ResponsiveContainer>
           <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
@@ -615,8 +616,8 @@ function TurnoverTab({ employees, sectionsList, secFilter, setSecFilter, inScope
             <YAxis tickFormatter={fmtAxis} tick={{ fontSize: 11.5, fill: 'var(--text2)' }} width="auto" allowDecimals={false} />
             <Tooltip content={<ChartTip />} />
             <Legend wrapperStyle={{ fontSize: 12 }} />
-            <Bar dataKey="hires" name="เข้าใหม่" fill="var(--accent)" radius={[3, 3, 0, 0]} isAnimationActive={false} />
-            <Bar dataKey="exits" name="ออก" fill="var(--red)" radius={[3, 3, 0, 0]} isAnimationActive={false} />
+            <Bar dataKey="hires" name="เข้าใหม่" fill="var(--accent)" radius={[3, 3, 0, 0]} {...chartAnim()} />
+            <Bar dataKey="exits" name="ออก" fill="var(--red)" radius={[3, 3, 0, 0]} {...chartAnim()} />
           </BarChart>
         </ResponsiveContainer>
         <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
@@ -967,7 +968,7 @@ function OtMonthlyTab({ empById, sectionsList, secFilter, setSecFilter, inScope,
                           {r.days.map(d => (
                             <span key={d.date} title={d.tasks.join(' · ') || trI18n('ไม่ระบุงาน')}
                               style={{
-                                fontSize: 11.5, padding: '3px 8px', borderRadius: 'var(--r-md)', background: 'var(--bg3)',
+                                fontSize: 11.5, padding: '3px 8px', borderRadius: 'var(--r-md)', background: 'var(--bg3-surf)',
                                 color: dayChipColor(d.kind), border: '1px solid var(--border)',
                               }}>
                               {d.date.slice(8)}/{d.date.slice(5, 7)}{!d.viaLog ? ' 📋' : ''}

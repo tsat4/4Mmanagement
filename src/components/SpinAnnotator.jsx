@@ -234,7 +234,7 @@ export default function SpinAnnotator({
       </div>}
       {/* ⚠️ วิธีใช้ที่ถูก (feedback หน้างาน 2026-08-21) — รูปมุมแคบอย่าอัปเป็นเฟรมแยก
          เพราะคนตรวจจะไม่รู้ว่ามันอยู่ตรงไหนของเครื่อง */}
-      {!readOnlyFrames && <div style={{ fontSize: 11, color: 'var(--text2)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '7px 10px', lineHeight: 1.65 }}>
+      {!readOnlyFrames && <div style={{ fontSize: 11, color: 'var(--text2)', background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '7px 10px', lineHeight: 1.65 }}>
         💡 <b>รูปตรงนี้ = “แผนที่” ให้เห็น{subject === 'part' ? 'ทั้งชิ้นงาน' : 'ทั้งเครื่อง'}{tr('แล้วปักหมุด')}</b> — ส่วนรูปโคลสอัพของแต่ละจุด
         ให้แนบที่ช่อง <b>{tr('รูปจุด')}</b> ในการ์ดจุดตรวจ (หมุดจะขึ้น 🔍 · คนตรวจแตะหมุดแล้วซูมเข้าไปดูจุดนั้นได้)
         {subject !== 'part' && <div style={{ marginTop: 3, opacity: 0.85 }}>อัปรูปโคลสอัพเป็นเฟรมแยกตรงนี้ = คนตรวจไม่รู้ว่าอยู่ตรงไหนของเครื่อง</div>}

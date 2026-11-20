@@ -77,7 +77,7 @@ export default function LiveOeeStrip({ workDate, scopeNames = null, onOpenLine }
   const below = judged.filter(r => statusOf(r.oee, d.tgOf(r.line)) === 'bad').length;
 
   return (
-    <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '10px 12px', marginBottom: 12 }}>
+    <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '10px 12px', marginBottom: 12 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginBottom: d.rows.length ? 8 : 0 }}>
         <span style={{ fontSize: 13, fontWeight: 800, fontFamily: 'var(--font-display)' }}>{tr('🟢 OEE สด — กะที่กำลังเดิน')}</span>
         {d.rows.length > 0 && (
@@ -100,7 +100,7 @@ export default function LiveOeeStrip({ workDate, scopeNames = null, onOpenLine }
             return (
               <div key={r.sessionId} onClick={() => onOpenLine?.(r.line)}
                 title={r.oee != null ? `${r.line} · A ${r.A}% · P ${r.P}% · Q ${r.Q}%${tg != null ? ` · เป้า ${tg.toFixed(1)}%` : ''}` : `${r.line} · ${LIVE_OEE_REASON[r.reason] || ''}`}
-                style={{ cursor: onOpenLine ? 'pointer' : 'default', minWidth: 130, flex: '0 1 auto', background: 'var(--bg2)',
+                style={{ cursor: onOpenLine ? 'pointer' : 'default', minWidth: 130, flex: '0 1 auto', background: 'var(--bg2-surf)',
                   border: `1px solid ${r.oee == null ? 'var(--border)' : toneLine(st)}`, borderRadius: 9, padding: '7px 11px' }}>
                 <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text)' }}>
                   {r.line}{r.shift === 'night' ? ' 🌙' : ''}

@@ -286,7 +286,7 @@ export default function MachineReliability({ machines = [], lineObjs = [], scope
             { k: 'restartMin', icon: '▶️', label: 'กลับมารัน', color: 'var(--blue)', tip: 'ตั้งแต่ซ่อมเสร็จ จนไลน์เดินต่อ — ตรวจชิ้นแรก/warm-up' },
             { k: 'totalMin', icon: '🛑', label: 'รวม (Downtime)', color: 'var(--text)', tip: 'ผลรวมทั้ง 3 ท่อน = MTTR แบบ Restore ที่ตารางข้างล่างโชว์' },
           ].map(c => (
-            <div key={c.k} title={c.tip} style={{ flex: 1, minWidth: 140, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 12px' }}>
+            <div key={c.k} title={c.tip} style={{ flex: 1, minWidth: 140, background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 12px' }}>
               <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{c.icon} {trI18n(c.label)}</div>
               <div style={{ fontSize: 19, fontWeight: 800, color: c.color }}>{fmtDur(ph[c.k])}</div>
               {ph.n > 0 && ph.totalMin > 0 && c.k !== 'totalMin' && (

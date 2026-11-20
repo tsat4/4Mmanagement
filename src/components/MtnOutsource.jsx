@@ -116,7 +116,7 @@ export default function MtnOutsourcePanel({ order, parts = [], fullName = '', ca
   if (!orderId) return null;
 
   return (
-    <div style={{ marginBottom: 10, padding: '9px 11px', borderRadius: 'var(--r-md)', background: 'var(--bg2)', border: '1px solid var(--border)' }}>
+    <div style={{ marginBottom: 10, padding: '9px 11px', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)', border: '1px solid var(--border)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
         <b style={{ fontSize: 12.5 }}>{tr('🔧 ของที่ถอดออกมา ส่งซ่อมนอก')}</b>
         <span style={{ fontSize: 11.5, fontWeight: 600, color: pending.length ? 'var(--amber)' : 'var(--muted)' }}>
@@ -141,7 +141,7 @@ export default function MtnOutsourcePanel({ order, parts = [], fullName = '', ca
       {rows.map(r => {
         const state = outsourceState(r);
         return (
-          <div key={r.id} style={{ padding: '6px 9px', borderRadius: 8, background: 'var(--card)', border: '1px solid var(--border)', borderLeft: `3px solid ${state.color}`, marginBottom: 5 }}>
+          <div key={r.id} style={{ padding: '6px 9px', borderRadius: 8, background: 'var(--card-surf)', border: '1px solid var(--border)', borderLeft: `3px solid ${state.color}`, marginBottom: 5 }}>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', fontSize: 12 }}>
               <b style={{ flex: 1, minWidth: 150 }}>{r.part_name}</b>
               <span style={{ color: 'var(--muted)' }}>× {r.qty}</span>
@@ -178,7 +178,7 @@ function BackForm({ row, busy, onCancel, onConfirm }) {
   const [note, setNote] = useState('');
   const short = num(q) != null && num(q) < Number(row.qty || 0);
   return (
-    <div style={{ marginTop: 6, padding: '7px 9px', borderRadius: 7, background: 'var(--bg2)', border: '1px solid var(--border)' }}>
+    <div style={{ marginTop: 6, padding: '7px 9px', borderRadius: 7, background: 'var(--bg2-surf)', border: '1px solid var(--border)' }}>
       <div style={{ fontSize: 11.5, fontWeight: 700, marginBottom: 4 }}>{tr('รับกลับเข้าสต็อก —')} {row.part_name}</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 6 }}>
         <label style={lbl}>{tr('จำนวนที่รับกลับ')}<input type="number" min="0" value={q} onChange={e => setQ(e.target.value)} style={inp} /></label>
@@ -228,7 +228,7 @@ function AddForm({ parts, fullName, orderId, onCancel, onDone }) {
   };
 
   return (
-    <div style={{ padding: '8px 10px', borderRadius: 8, background: 'var(--card)', border: '1px solid var(--border)', marginBottom: 7 }}>
+    <div style={{ padding: '8px 10px', borderRadius: 8, background: 'var(--card-surf)', border: '1px solid var(--border)', marginBottom: 7 }}>
       <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 3 }}>
         อะไหล่ในทะเบียน (เลือก = รับกลับแล้วเข้าสต็อกให้เอง · พิมพ์เอง = ของนอกทะเบียน ไม่เข้าสต็อก)
       </div>

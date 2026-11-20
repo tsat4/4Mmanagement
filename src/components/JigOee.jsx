@@ -10,6 +10,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, ReferenceLine,
 } from 'recharts';
+import { chartAnim, animClass } from '../utils/motion';
 import ParetoChart from './ParetoChart';
 import { classifyAbc } from '../utils/pareto';
 import { axisTick, tooltipProps, CHART_MARGIN, alignedYWidth } from '../utils/chartAxis';
@@ -51,7 +52,7 @@ function Bar1({ label, v, target = 0.85 }) {
     <div style={{ display: 'grid', gridTemplateColumns: '16px 1fr 52px', gap: 6, alignItems: 'center', fontSize: 12 }}>
       <span style={{ color: 'var(--muted)', fontWeight: 700 }}>{label}</span>
       <div style={{ height: 6, background: 'var(--bg3)', borderRadius: 3, overflow: 'hidden' }}>
-        <div style={{ width: `${v == null ? 0 : Math.min(100, v * 100)}%`, height: '100%', background: toneOfPct(v, target) }} />
+        <div className={animClass('grow')} style={{ width: `${v == null ? 0 : Math.min(100, v * 100)}%`, height: '100%', background: toneOfPct(v, target) }} />
       </div>
       <span style={{ textAlign: 'right', fontWeight: 700, color: 'var(--text)' }}>{fmtPct(v)}</span>
     </div>
@@ -66,7 +67,7 @@ export function JigStateStrip({ segments = [], startMs, endMs, height = 12, show
   if (showTicks) for (let t = startMs; t <= endMs; t += 2 * 3600000) ticks.push(t);
   return (
     <div>
-      <div style={{ position: 'relative', height, background: 'var(--bg3)', borderRadius: 4, overflow: 'hidden' }}
+      <div className={animClass('sweep')} style={{ position: 'relative', height, background: 'var(--bg3)', borderRadius: 4, overflow: 'hidden' }}
         role="img" aria-label="แถบสถานะเครื่องตลอดกะ">
         {segments.map((s, i) => (
           <div key={i} title={`${kindMeta(s.kind).label} ${hm(s.startMs)}–${hm(s.endMs)} (${Math.max(1, Math.round((s.endMs - s.startMs) / 60000))} น.)${s.reason ? ` · ${s.reason}` : ''}`}
@@ -117,7 +118,7 @@ export function ZoomStateStrip({ segments = [], startMs, endMs, nowMs = Date.now
         <span>{view ? `ซูม ${hm(a)}–${hm(b)}` : 'ทั้งช่วง'} · ลากเพื่อเลือกช่วง หรือคลิกเพื่อซูม</span>
         {view && <button type="button" className="pg-btn" style={{ marginLeft: 'auto' }} onClick={() => setView(null)}>⤢ ย่อกลับทั้งช่วง</button>}
       </div>
-      <div ref={ref} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={() => setDrag(null)}
+      <div ref={ref} className={animClass('sweep')} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={() => setDrag(null)}
         style={{ position: 'relative', height, background: 'var(--bg3)', borderRadius: 4, overflow: 'hidden', cursor: 'zoom-in', touchAction: 'none', userSelect: 'none' }}
         role="img" aria-label={`แถบสถานะเครื่อง ${hm(a)}–${hm(b)}`}>
         {segments.filter(sg => sg.endMs > a && sg.startMs < b).map((sg, i) => {
@@ -262,7 +263,7 @@ export function LossWaterfall({ o }) {
         <div key={r.label} style={{ display: 'grid', gridTemplateColumns: 'minmax(150px, 210px) 1fr 108px', gap: 8, alignItems: 'center', fontSize: 12 }}>
           <span style={{ color: r.main ? 'var(--text)' : 'var(--muted)', fontWeight: r.main ? 700 : 400 }}>{r.label}</span>
           <div style={{ height: r.main ? 14 : 8, background: 'var(--bg3)', borderRadius: 3, overflow: 'hidden' }}>
-            {r.sec != null && base > 0 && <div style={{ width: `${Math.min(100, (r.sec / base) * 100)}%`, height: '100%', background: r.loss ? 'var(--red)' : 'var(--blue)', opacity: r.loss ? 0.75 : 1 }} />}
+            {r.sec != null && base > 0 && <div className={animClass('grow')} style={{ width: `${Math.min(100, (r.sec / base) * 100)}%`, height: '100%', background: r.loss ? 'var(--red)' : 'var(--blue)', opacity: r.loss ? 0.75 : 1 }} />}
           </div>
           <span style={{ textAlign: 'right', color: 'var(--text)' }}>
             {r.sec == null ? '– (ไม่รู้ CT)' : `${fmtHM(r.sec)} · ${base > 0 ? Math.round((r.sec / base) * 100) : 0}%`}
@@ -320,9 +321,9 @@ export function HourlyChart({ buckets = [], segments = null }) {
             <XAxis dataKey="h" tick={stateMin ? false : axisTick()} height={stateMin ? 4 : undefined} />
             <YAxis width={yW} tick={axisTick()} allowDecimals={false} />
             <Tooltip {...tooltipProps()} />
-            <Bar dataKey="good" name="ชิ้นดี (เครื่อง)" stackId="q" fill="var(--green)" isAnimationActive={false} />
-            <Bar dataKey="ng" name="NG (หน้าเครื่อง)" stackId="q" fill="var(--red)" isAnimationActive={false} />
-            <Line dataKey="target" name="เป้า (เวลาแผน ÷ CT)" stroke="var(--text)" strokeDasharray="4 3" dot={false} type="stepAfter" isAnimationActive={false} />
+            <Bar dataKey="good" name="ชิ้นดี (เครื่อง)" stackId="q" fill="var(--green)" {...chartAnim()} />
+            <Bar dataKey="ng" name="NG (หน้าเครื่อง)" stackId="q" fill="var(--red)" {...chartAnim()} />
+            <Line dataKey="target" name="เป้า (เวลาแผน ÷ CT)" stroke="var(--text)" strokeDasharray="4 3" dot={false} type="stepAfter" {...chartAnim()} />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
@@ -335,7 +336,7 @@ export function HourlyChart({ buckets = [], segments = null }) {
               <XAxis dataKey="h" tick={axisTick()} />
               <YAxis width={yW} tick={axisTick()} allowDecimals={false} domain={[0, 60]} ticks={[0, 30, 60]} />
               <Tooltip {...tooltipProps()} formatter={(v) => [`${v} นาที`]} />
-              {kinds.map(k => <Bar key={k} dataKey={`m_${k}`} name={kindMeta(k).label} stackId="s" fill={kindMeta(k).color} isAnimationActive={false} />)}
+              {kinds.map(k => <Bar key={k} dataKey={`m_${k}`} name={kindMeta(k).label} stackId="s" fill={kindMeta(k).color} {...chartAnim()} />)}
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -364,7 +365,7 @@ export function DailyCapacityChart({ rows = [], onPick }) {
       </div>
     );
     return (
-      <div style={{ background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 6, padding: '8px 10px', fontSize: 12, color: 'var(--text)', boxShadow: 'var(--shadow-float)', display: 'grid', gap: 2 }}>
+      <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 6, padding: '8px 10px', fontSize: 12, color: 'var(--text)', boxShadow: 'var(--shadow-float)', display: 'grid', gap: 2 }}>
         <div style={{ fontWeight: 700, marginBottom: 2 }}>{d.d}{onPick ? ' · คลิกเพื่อดูทั้งวัน' : ''}</div>
         {line('var(--green)', d.good.toLocaleString(), `ชิ้นดี${d.cap != null ? ` · ควรได้ ${d.cap.toLocaleString()}${d.achieve != null ? ` (${Math.round(d.achieve * 100)}%)` : ''}` : ' · ไม่รู้ CT บางกะ'}`)}
         {d.ng > 0 && line('var(--red)', d.ng.toLocaleString(), 'NG หน้าเครื่อง')}
@@ -389,9 +390,9 @@ export function DailyCapacityChart({ rows = [], onPick }) {
           <XAxis dataKey="label" tick={axisTick()} />
           <YAxis width="auto" tick={axisTick()} allowDecimals={false} />
           <Tooltip content={<Tip />} cursor={tooltipProps().cursor} />
-          <Bar dataKey="good" name="ชิ้นดี (เครื่อง)" stackId="q" fill="var(--green)" isAnimationActive={false} onClick={click} maxBarSize={56} />
-          <Bar dataKey="ng" name="NG (หน้าเครื่อง)" stackId="q" fill="var(--red)" isAnimationActive={false} onClick={click} maxBarSize={56} />
-          <Bar dataKey="ghost" name="ยังขาดจากที่ควรได้" stackId="q" fill="var(--border2)" fillOpacity={0.55} isAnimationActive={false} onClick={click} maxBarSize={56} />
+          <Bar dataKey="good" name="ชิ้นดี (เครื่อง)" stackId="q" fill="var(--green)" {...chartAnim()} onClick={click} maxBarSize={56} />
+          <Bar dataKey="ng" name="NG (หน้าเครื่อง)" stackId="q" fill="var(--red)" {...chartAnim()} onClick={click} maxBarSize={56} />
+          <Bar dataKey="ghost" name="ยังขาดจากที่ควรได้" stackId="q" fill="var(--border2)" fillOpacity={0.55} {...chartAnim()} onClick={click} maxBarSize={56} />
         </ComposedChart>
       </ResponsiveContainer>
     </div>
@@ -413,10 +414,10 @@ export function ShiftTrendChart({ rows = [], target = 0.85 }) {
           <YAxis width="auto" tick={axisTick()} domain={[0, 100]} />
           <Tooltip {...tooltipProps()} />
           <ReferenceLine y={target * 100} stroke="var(--green)" strokeDasharray="4 3" label={{ value: `เป้า ${Math.round(target * 100)}%`, fill: 'var(--green)', fontSize: 11, position: 'insideTopLeft' }} />
-          <Line dataKey="OEE" stroke="var(--green)" strokeWidth={2.5} dot={{ r: 2 }} connectNulls={false} isAnimationActive={false} />
-          <Line dataKey="A" stroke="var(--blue)" dot={false} connectNulls={false} isAnimationActive={false} />
-          <Line dataKey="P" stroke="var(--amber)" dot={false} connectNulls={false} isAnimationActive={false} />
-          <Line dataKey="Q" stroke="var(--muted)" dot={false} connectNulls={false} isAnimationActive={false} />
+          <Line dataKey="OEE" stroke="var(--green)" strokeWidth={2.5} dot={{ r: 2 }} connectNulls={false} {...chartAnim()} />
+          <Line dataKey="A" stroke="var(--blue)" dot={false} connectNulls={false} {...chartAnim()} />
+          <Line dataKey="P" stroke="var(--amber)" dot={false} connectNulls={false} {...chartAnim()} />
+          <Line dataKey="Q" stroke="var(--muted)" dot={false} connectNulls={false} {...chartAnim()} />
         </LineChart>
       </ResponsiveContainer>
     </div>

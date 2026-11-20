@@ -239,7 +239,7 @@ export default function SymptomSearch({ inScope, onOpenOrder, machine = null, on
           </span>
           {onClearMachine && (
             <button onClick={() => { onClearMachine(); setRes(null); }}
-              style={{ fontSize: 12, fontWeight: 700, padding: '5px 12px', borderRadius: 'var(--r-md)', background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)', cursor: 'pointer' }}>
+              style={{ fontSize: 12, fontWeight: 700, padding: '5px 12px', borderRadius: 'var(--r-md)', background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)', cursor: 'pointer' }}>
               {trI18n('✕ ทุกเครื่อง')}
             </button>
           )}
@@ -289,7 +289,7 @@ export default function SymptomSearch({ inScope, onOpenOrder, machine = null, on
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {sum.clusters.map((c, i) => (
                   <span key={i} title={c.samples.length ? `เขียนแบบอื่น: ${c.samples.join(' · ')}` : undefined}
-                    style={{ fontSize: 11.5, fontWeight: 700, background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-pill)', padding: '3px 10px' }}>
+                    style={{ fontSize: 11.5, fontWeight: 700, background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-pill)', padding: '3px 10px' }}>
                     {c.name} <b>×{c.count}</b>{c.variants > 1 ? <span style={{ color: 'var(--muted)' }}> ({c.variants} สำนวน)</span> : null}
                   </span>
                 ))}
@@ -334,7 +334,7 @@ export default function SymptomSearch({ inScope, onOpenOrder, machine = null, on
                         {!isDt && prodNo && onOpenOrder && (
                           <button onClick={() => onOpenOrder(prodNo)}
                             style={{ fontSize: 11.5, fontWeight: 700, padding: '4px 9px', borderRadius: 'var(--r-md)', cursor: 'pointer',
-                                     background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)', whiteSpace: 'nowrap' }}>
+                                     background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)', whiteSpace: 'nowrap' }}>
                             {trI18n('→ สอบกลับใบนี้')}
                           </button>
                         )}

@@ -17,6 +17,7 @@ import {
   ResponsiveContainer, LineChart, BarChart, Line, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, ReferenceLine, Cell, LabelList,
 } from 'recharts';
+import { chartAnim } from '../utils/motion';
 import { supabase, supabaseDR } from '../supabaseClient';
 import { fetchByIds, fetchAllPages } from '../utils/fetchByIds';
 import { toast } from '../components/Toast';
@@ -267,7 +268,7 @@ function Modal({ title, onClose, children, width = 560 }) {
       /* ตั้งใจไม่ปิดเมื่อคลิกพื้นหลัง — กันเผลอกดแล้วข้อมูลในฟอร์มหาย ปิดได้จากปุ่ม ✕/ยกเลิกเท่านั้น */
     >
       <div style={{
-        background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)',
+        background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)',
         width: `min(${width}px, 96vw)`, boxShadow: 'var(--shadow-lg)', maxHeight: '90vh',
         display: 'flex', flexDirection: 'column',
       }}>
@@ -582,8 +583,8 @@ function QualityDashboard() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--muted)' }} />
               <YAxis tickFormatter={fmtAxis} width="auto" tick={{ fontSize: 11, fill: 'var(--muted)' }} />
-              <Tooltip contentStyle={{ background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 8, fontSize: 12 }} />
-              <Line type="monotone" dataKey="ppm" name="PPM" stroke="var(--red)" strokeWidth={2} dot={{ r: 2.5 }} connectNulls />
+              <Tooltip contentStyle={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 8, fontSize: 12 }} />
+              <Line {...chartAnim()} type="monotone" dataKey="ppm" name="PPM" stroke="var(--red)" strokeWidth={2} dot={{ r: 2.5 }} connectNulls />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -598,9 +599,9 @@ function QualityDashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis dataKey="line" tick={{ fontSize: 11, fill: 'var(--muted)' }} interval={0} angle={-35} textAnchor="end" height={64} tickFormatter={shortTick(12)} />
                 <YAxis tickFormatter={fmtAxis} width="auto" tick={{ fontSize: 11, fill: 'var(--muted)' }} />
-                <Tooltip contentStyle={{ background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 8, fontSize: 12 }}
+                <Tooltip contentStyle={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 8, fontSize: 12 }}
                   formatter={(v, name) => [name === 'PPM' ? Number(v).toLocaleString() : v, name]} />
-                <Bar dataKey="ng" name="NG (ชิ้น)" fill="var(--red)" opacity={0.85} radius={[3, 3, 0, 0]}>
+                <Bar {...chartAnim()} dataKey="ng" name="NG (ชิ้น)" fill="var(--red)" opacity={0.85} radius={[3, 3, 0, 0]}>
                   <LabelList dataKey="ppm" position="top" formatter={v => v ? `${Number(v).toLocaleString()} ppm` : ''} style={{ fontSize: 11, fill: 'var(--muted)' }} />
                 </Bar>
               </BarChart>
@@ -1105,14 +1106,14 @@ function SPCTab({ lineObjs, canRecord, canManage, canExport = false, partOpts = 
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                     <XAxis dataKey="idx" tick={{ fontSize: 11, fill: 'var(--muted)' }} />
                     <YAxis width="auto" domain={['auto', 'auto']} tick={{ fontSize: 11, fill: 'var(--muted)' }} tickFormatter={v => Number(v).toFixed(2)} />
-                    <Tooltip contentStyle={{ background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 8, fontSize: 12 }}
+                    <Tooltip contentStyle={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 8, fontSize: 12 }}
                       labelFormatter={i => `กลุ่ม #${i}`} />
                     <ReferenceLine y={spc.uclX} stroke="var(--red)" strokeDasharray="5 3" label={{ value: `UCL ${fmtNum(spc.uclX)}`, fontSize: 11, fill: 'var(--red)', position: 'right' }} />
                     <ReferenceLine y={spc.xbarbar} stroke="var(--green)" label={{ value: `CL ${fmtNum(spc.xbarbar)}`, fontSize: 11, fill: 'var(--green)', position: 'right' }} />
                     <ReferenceLine y={spc.lclX} stroke="var(--red)" strokeDasharray="5 3" label={{ value: `LCL ${fmtNum(spc.lclX)}`, fontSize: 11, fill: 'var(--red)', position: 'right' }} />
                     {spc.usl != null && <ReferenceLine y={spc.usl} stroke="var(--amber)" strokeDasharray="2 3" label={{ value: 'USL', fontSize: 11, fill: 'var(--amber)', position: 'right' }} />}
                     {spc.lsl != null && <ReferenceLine y={spc.lsl} stroke="var(--amber)" strokeDasharray="2 3" label={{ value: 'LSL', fontSize: 11, fill: 'var(--amber)', position: 'right' }} />}
-                    <Line type="linear" dataKey="xbar" name={sel.subgroup_size === 1 ? 'X' : 'X̄'} stroke="var(--blue)" strokeWidth={2} dot={dot('xbar')} isAnimationActive={false} />
+                    <Line type="linear" dataKey="xbar" name={sel.subgroup_size === 1 ? 'X' : 'X̄'} stroke="var(--blue)" strokeWidth={2} dot={dot('xbar')} {...chartAnim()} />
                   </LineChart>
                 </ResponsiveContainer>
               ) : <div style={{ color: 'var(--muted)', fontSize: 12, padding: 30, textAlign: 'center' }}>{viewLoading ? trI18n('กำลังโหลด…') : trI18n('ยังไม่มีผลวัด')}</div>}
@@ -1127,11 +1128,11 @@ function SPCTab({ lineObjs, canRecord, canManage, canExport = false, partOpts = 
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                     <XAxis dataKey="idx" tick={{ fontSize: 11, fill: 'var(--muted)' }} />
                     <YAxis width="auto" domain={[0, 'auto']} tick={{ fontSize: 11, fill: 'var(--muted)' }} tickFormatter={v => Number(v).toFixed(2)} />
-                    <Tooltip contentStyle={{ background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 8, fontSize: 12 }}
+                    <Tooltip contentStyle={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 8, fontSize: 12 }}
                       labelFormatter={i => `กลุ่ม #${i}`} />
                     {spc.uclR != null && <ReferenceLine y={spc.uclR} stroke="var(--red)" strokeDasharray="5 3" label={{ value: `UCL ${fmtNum(spc.uclR)}`, fontSize: 11, fill: 'var(--red)', position: 'right' }} />}
                     {spc.rbar != null && <ReferenceLine y={spc.rbar} stroke="var(--green)" label={{ value: `CL ${fmtNum(spc.rbar)}`, fontSize: 11, fill: 'var(--green)', position: 'right' }} />}
-                    <Line type="linear" dataKey="range" name="R" stroke="var(--blue)" strokeWidth={2} dot={dot('range')} isAnimationActive={false} connectNulls />
+                    <Line type="linear" dataKey="range" name="R" stroke="var(--blue)" strokeWidth={2} dot={dot('range')} {...chartAnim()} connectNulls />
                   </LineChart>
                 </ResponsiveContainer>
               ) : <div style={{ color: 'var(--muted)', fontSize: 12, padding: 30, textAlign: 'center' }}>—</div>}
@@ -1146,10 +1147,10 @@ function SPCTab({ lineObjs, canRecord, canManage, canExport = false, partOpts = 
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                     <XAxis dataKey="x" tick={{ fontSize: 11, fill: 'var(--muted)' }} />
                     <YAxis tickFormatter={fmtAxis} width="auto" allowDecimals={false} tick={{ fontSize: 11, fill: 'var(--muted)' }} />
-                    <Tooltip contentStyle={{ background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 8, fontSize: 12 }}
+                    <Tooltip contentStyle={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 8, fontSize: 12 }}
                       formatter={(v) => [v, 'จำนวนค่า']}
                       labelFormatter={(x, p) => p?.[0] ? `${fmtNum(p[0].payload.from, 3)} – ${fmtNum(p[0].payload.to, 3)}` : x} />
-                    <Bar dataKey="count" name="จำนวนค่า" fill={CELL_BAR_FILL} radius={[3, 3, 0, 0]}>
+                    <Bar {...chartAnim()} dataKey="count" name="จำนวนค่า" fill={CELL_BAR_FILL} radius={[3, 3, 0, 0]}>
                       {hist.map((b, i) => {
                         const bad = (spc.usl != null && b.from >= spc.usl) || (spc.lsl != null && b.to <= spc.lsl);
                         return <Cell key={i} fill={bad ? 'var(--red)' : 'var(--blue)'} opacity={0.85} />;

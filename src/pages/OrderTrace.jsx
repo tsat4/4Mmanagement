@@ -1051,7 +1051,7 @@ export default function OrderTrace() {
             {searching ? '⏳' : trI18n('ค้นหา')}
           </button>
           <button onClick={() => setScanOpen(true)} title={trI18n('สแกนคัมบัง / ใบผลิต / ป้ายเครื่องด้วยกล้อง')}
-            style={{ height: 'var(--ctl-h)', padding: '0 12px', flexShrink: 0, borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text)', fontWeight: 700, cursor: 'pointer' }}>
+            style={{ height: 'var(--ctl-h)', padding: '0 12px', flexShrink: 0, borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text)', fontWeight: 700, cursor: 'pointer' }}>
             📷
           </button>
         </div>
@@ -1243,7 +1243,7 @@ export default function OrderTrace() {
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
                       <select value={claimFm} onChange={e => setClaimFm(e.target.value)}
-                        style={{ flex: '2 1 320px', minWidth: 0, padding: '7px 10px', fontSize: 13, background: 'var(--bg3)', color: 'var(--text)', border: '1px solid var(--border2)', borderRadius: 'var(--ctl-r)' }}>
+                        style={{ flex: '2 1 320px', minWidth: 0, padding: '7px 10px', fontSize: 13, background: 'var(--bg3-surf)', color: 'var(--text)', border: '1px solid var(--border2)', borderRadius: 'var(--ctl-r)' }}>
                         <option value="">{trI18n('— เลือกอาการที่ลูกค้าแจ้ง (จาก PFMEA')} {trace.pe.fmea.length} {trI18n('รายการ) —')}</option>
                         {trace.pe.fmea.slice().sort((a, b) =>
                           ((b.severity || 0) * (b.occurrence || 0) * (b.detection || 0)) - ((a.severity || 0) * (a.occurrence || 0) * (a.detection || 0))
@@ -1257,7 +1257,7 @@ export default function OrderTrace() {
                       </select>
                       <input value={claimNote} onChange={e => setClaimNote(e.target.value)}
                         placeholder={trI18n('รายละเอียดที่ลูกค้าแจ้ง เช่น ตำแหน่ง M8 ด้านซ้าย')}
-                        style={{ flex: '1 1 220px', minWidth: 0, padding: '7px 10px', fontSize: 13, background: 'var(--bg3)', color: 'var(--text)', border: '1px solid var(--border2)', borderRadius: 'var(--ctl-r)' }} />
+                        style={{ flex: '1 1 220px', minWidth: 0, padding: '7px 10px', fontSize: 13, background: 'var(--bg3-surf)', color: 'var(--text)', border: '1px solid var(--border2)', borderRadius: 'var(--ctl-r)' }} />
                     </div>
 
                     {!claim ? (
@@ -1487,7 +1487,7 @@ export default function OrderTrace() {
 
                   {/* ระดับกลุ่ม = คำตอบหลักเมื่อมีใบวิ่งทับ/สแกนเป็นชุด */}
                   {orderAnalysis.groupMode && orderAnalysis.group && (
-                    <div style={{ marginBottom: 12, padding: '10px 12px', borderRadius: 'var(--r-md)', background: 'var(--bg3)', border: '1px solid var(--accent)' }}>
+                    <div style={{ marginBottom: 12, padding: '10px 12px', borderRadius: 'var(--r-md)', background: 'var(--bg3-surf)', border: '1px solid var(--accent)' }}>
                       <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--accent)', marginBottom: 8 }}>
                         ภาพรวมกลุ่มใบที่วิ่งต่อเนื่องช่วงเดียวกัน ({orderAnalysis.group.orders} ใบ
                         {orderAnalysis.group.mats.length > 1 ? ` · ${orderAnalysis.group.mats.length} ชิ้นงาน` : ''}) — ตัวเลขที่เชื่อถือได้

@@ -51,7 +51,7 @@ export default function BoardPager({ page, count, onPage, labels = [], compact =
   const btn = (disabled) => ({
     fontSize: tv ? 22 : compact ? 14 : 16, fontWeight: 800, lineHeight: 1,
     padding: tv ? '6px 14px' : compact ? '4px 9px' : '6px 12px', borderRadius: 8, cursor: disabled ? 'default' : 'pointer',
-    background: 'var(--bg3)', color: 'var(--text)', border: '1px solid var(--border2)',
+    background: 'var(--bg3-surf)', color: 'var(--text)', border: '1px solid var(--border2)',
     opacity: disabled ? 0.4 : 1,
   });
 

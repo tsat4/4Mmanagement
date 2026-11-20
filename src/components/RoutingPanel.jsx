@@ -183,7 +183,7 @@ export default function RoutingPanel({ canEdit, lines = [] }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'minmax(0, 1fr)' : 'minmax(260px, 340px) 1fr', gap: 16, alignItems: 'start' }}>
       {/* ── ซ้าย: เลือกพาร์ท ── */}
-      <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 12 }}>
+      <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 12 }}>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder={tr('ค้นหา MAT / ชื่อ / P/N…')} style={{ ...inp, marginBottom: 10 }} />
         <div style={{ maxHeight: isMobile ? 260 : 560, overflowY: 'auto' }}>
           {byLine.map(([ln, ps]) => (
@@ -207,7 +207,7 @@ export default function RoutingPanel({ canEdit, lines = [] }) {
       </div>
 
       {/* ── ขวา: ขั้นตอน ── */}
-      <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 14 }}>
+      <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 14 }}>
         {!sel && <div style={{ color: 'var(--muted)', fontSize: 13, padding: 28, textAlign: 'center' }}>{tr('เลือกพาร์ททางซ้ายเพื่อกำหนดลำดับกระบวนการ')}</div>}
         {sel && <>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
@@ -217,7 +217,7 @@ export default function RoutingPanel({ canEdit, lines = [] }) {
             </div>
             {canEdit && <div style={{ display: 'flex', gap: 8 }}>
               {!steps.length && sel.line_name && (
-                <button onClick={seedFromProduct} style={{ padding: '7px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text)', cursor: 'pointer', fontSize: 12.5, fontWeight: 600 }}>
+                <button onClick={seedFromProduct} style={{ padding: '7px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg3-surf)', color: 'var(--text)', cursor: 'pointer', fontSize: 12.5, fontWeight: 600 }}>
                   {tr('⚡ สร้างขั้นตั้งต้นจากไลน์')}
                 </button>
               )}
@@ -289,7 +289,7 @@ export default function RoutingPanel({ canEdit, lines = [] }) {
       {editing && (
         <div className="modal-scroll" /* ไม่ปิดจาก backdrop — UI-CONVENTIONS §5: เผลอแตะพื้นหลังแล้วข้อมูลหายทั้งฟอร์ม (ปิดด้วยปุ่มยกเลิก/✕ เท่านั้น) */
           style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: 16 }}>
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 20, width: 'min(96vw, 620px)', maxHeight: '92vh', overflowY: 'auto' }}>
+          <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 20, width: 'min(96vw, 620px)', maxHeight: '92vh', overflowY: 'auto' }}>
             <h3 style={{ margin: '0 0 14px', fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>
               {editing === 'new' ? 'เพิ่มขั้นกระบวนการ' : 'แก้ไขขั้นกระบวนการ'}
             </h3>

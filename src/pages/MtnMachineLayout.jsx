@@ -484,7 +484,7 @@ export default function MtnMachineLayout({ setupMode = false }) {
       </div>
 
       {view === 'facility' && (armedJig || armedMachine) && (
-        <div style={{ fontSize: 12, color: 'var(--accent2)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '6px 10px' }}>
+        <div style={{ fontSize: 12, color: 'var(--accent2)', background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '6px 10px' }}>
           คลิกบนผังเพื่อวาง <b>{armedJig ? (jigInfo[armedJig]?.jig_no || jigInfo[armedJig]?.name) : (facMachines.find(m => m.id === armedMachine)?.machine_no)}</b>{armedMachine ? ' (ดึงจากฐานเครื่องจักร)' : ''} · <span onClick={() => { setArmedJig(null); setArmedMachine(null) }} style={{ cursor: 'pointer', textDecoration: 'underline' }}>{tr('ยกเลิก')}</span>
         </div>
       )}
@@ -492,7 +492,7 @@ export default function MtnMachineLayout({ setupMode = false }) {
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'stretch' }}>
         <div style={{ flex: '1 1 560px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
           {loading
-            ? <div style={{ flex: 1, minHeight: 320, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)' }}>
+            ? <div style={{ flex: 1, minHeight: 320, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)' }}>
                 <div style={{ width: 30, height: 30, border: '2px solid var(--accent)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
               </div>
             : <MachineFloorMap
@@ -505,7 +505,7 @@ export default function MtnMachineLayout({ setupMode = false }) {
           {sel && selInfo && (
             /* ⚠️ ผังสูงเกือบเต็มจอ → แผงรายละเอียดอยู่ใต้ fold: คลิกหมุดแล้ว "เหมือนคลิกได้เฉยๆ ไม่มีอะไรขึ้น"
                (user ทัก 2026-08-26) → เลื่อนมาให้เห็นเองทุกครั้งที่เลือกหมุด */
-            <div ref={detailRef} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 14 }}>
+            <div ref={detailRef} style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 14 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{selLabel}{selInfo.name && selInfo.name !== selLabel ? ` · ${selInfo.name}` : ''}</div>
                 <button onClick={() => setSelId(null)} style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: 'var(--r-md)', padding: '2px 8px', fontSize: 12, cursor: 'pointer' }}>✕</button>
@@ -521,7 +521,7 @@ export default function MtnMachineLayout({ setupMode = false }) {
                       <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 12, borderTop: i ? '1px dashed var(--border)' : 'none', paddingTop: i ? 6 : 0 }}>
                         <span style={{ width: 9, height: 9, borderRadius: '50%', background: m.color, flexShrink: 0 }} />
                         <span style={{ fontWeight: 700, color: 'var(--text)' }}>{c.eqName ?? selInfo.name}</span>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--blue)', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r-xs)', padding: '1px 5px' }}>{deptIconOf(c.dept)} {deptLabelOf(c.dept)}</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--blue)', background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-xs)', padding: '1px 5px' }}>{deptIconOf(c.dept)} {deptLabelOf(c.dept)}</span>
                         <span style={{ color: m.color, fontWeight: 700 }}>{tr(m.label)}</span>
                         <span style={{ color: 'var(--muted)' }}>{c.nextDue ? `ครบ ${c.nextDue.toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' })}${dd != null ? (dd < 0 ? ` (เกิน ${Math.abs(dd)} วัน)` : ` (อีก ${dd} วัน)`) : ''}` : 'ยังไม่มีวัน PM ครั้งถัดไป'}</span>
                       </div>
@@ -575,7 +575,7 @@ export default function MtnMachineLayout({ setupMode = false }) {
               const d = zoneEnergy?.prev != null ? deltaPct(zoneEnergy.qty, zoneEnergy.prev) : null
               const dCol = d == null ? 'var(--muted)' : d <= -5 ? 'var(--green)' : d > 10 ? 'var(--red)' : 'var(--text2)'
               return (
-                <div style={{ border: '1px solid var(--border)', borderLeft: '3px solid var(--accent)', borderRadius: 'var(--r-md)', padding: '10px 12px', background: 'var(--bg2)', display: 'flex', flexDirection: 'column', gap: 11 }}>
+                <div style={{ border: '1px solid var(--border)', borderLeft: '3px solid var(--accent)', borderRadius: 'var(--r-md)', padding: '10px 12px', background: 'var(--bg2-surf)', display: 'flex', flexDirection: 'column', gap: 11 }}>
                   <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text)' }}>{tr('สถานะโซนนี้')}</div>
                   {/* 🛠️ PM — นับจากอุปกรณ์ที่สังกัดโซน (เกณฑ์เดียวกับผังรวมโรงงาน) ไม่ใช่แค่หมุดบนผัง */}
                   {(() => {
@@ -678,7 +678,7 @@ export default function MtnMachineLayout({ setupMode = false }) {
                 {editMode && (
                   <label style={{ display: 'block', marginBottom: 12 }}>
                     <input ref={fileRef} type="file" accept="image/*" hidden onChange={uploadImage} disabled={busy} />
-                    <span style={{ display: 'block', textAlign: 'center', background: 'var(--bg3)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: '8px', fontSize: 12, color: 'var(--text2)', cursor: 'pointer' }}>
+                    <span style={{ display: 'block', textAlign: 'center', background: 'var(--bg3-surf)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: '8px', fontSize: 12, color: 'var(--text2)', cursor: 'pointer' }}>
                       {busy ? 'อัปโหลด...' : facImage ? '🖼️ เปลี่ยนรูปผังโซน' : '📷 อัปโหลดรูปผังโซน'}
                     </span>
                   </label>
@@ -686,7 +686,7 @@ export default function MtnMachineLayout({ setupMode = false }) {
                 <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', marginBottom: 4 }}>{tr('อุปกรณ์ที่ยังไม่วาง (')}{unplacedJigs.length + facMachines.length})</div>
                 {/* บอกวิธีวางให้เห็นชัด — เดิมมีแต่ tooltip คนหาไม่เจอว่าต้องกดยังไง (2026-08-03) */}
                 {canEdit && (unplacedJigs.length + facMachines.length) > 0 && (
-                  <div style={{ fontSize: 11, color: facImage ? 'var(--accent)' : 'var(--accent2)', background: 'var(--bg3)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: '5px 8px', marginBottom: 7, lineHeight: 1.5 }}>
+                  <div style={{ fontSize: 11, color: facImage ? 'var(--accent)' : 'var(--accent2)', background: 'var(--bg3-surf)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: '5px 8px', marginBottom: 7, lineHeight: 1.5 }}>
                     {facImage
                       ? <>{tr('วิธีวาง:')} <b>{tr('① กดปุ่ม 📍 วาง')}</b> {tr('ที่อุปกรณ์ →')} <b>{tr('② คลิกตำแหน่งบนผัง')}</b></>
                       : <>{tr('⚠️ ต้อง')} <b>{tr('อัปโหลดรูปผังโซน')}</b> {tr('ก่อน ถึงจะวางอุปกรณ์ได้')}</>}

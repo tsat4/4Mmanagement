@@ -114,7 +114,7 @@ function SignPadModal({ title, onCancel, onDone }) {
   const done = () => { if (!dirty.current) { toast.error('ยังไม่ได้เซ็น'); return; } cvRef.current.toBlob(b => b && onDone(b), 'image/png'); };
   return (
     <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 3200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14 }}>
-      <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(96vw, 620px)' }}>
+      <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(96vw, 620px)' }}>
         <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginBottom: 10 }}>✍️ {title}</div>
         <canvas ref={cvRef} width={560} height={180} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerLeave={up}
           style={{ width: '100%', height: 160, border: '1px dashed var(--border2)', borderRadius: 10, background: '#fff', touchAction: 'none', cursor: 'crosshair', display: 'block' }} />
@@ -1124,7 +1124,7 @@ ${issuesHtml}
           </div>
           {qErr && (
             <div style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 'var(--r-md)', fontSize: 12.5,
-              background: 'var(--card)', border: '1px solid var(--red)', color: 'var(--red)' }}>
+              background: 'var(--card-surf)', border: '1px solid var(--red)', color: 'var(--red)' }}>
               ⚠ {qErr} {tr('— ช่องที่วางแผนไว้แสดงเป็น')} <b>?</b> {tr('(ยังบอกไม่ได้ว่าตรวจแล้วหรือยัง)')} <b>{tr('อย่าเพิ่งพิมพ์ใบนี้ไปเซ็น')}</b>
             </div>
           )}
@@ -1225,7 +1225,7 @@ ${issuesHtml}
           {/* 🔴 โหลดใบเดิมไม่ได้ = บอกตรงๆ + ห้ามให้ฟอร์มเปล่าเดินต่อ (ห้ามเงียบ · กฎความซื่อสัตย์ของจอ) */}
           {draftErr && (
             <div style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 'var(--r-md)', fontSize: 12.5,
-              background: 'var(--card)', border: '1px solid var(--red)', color: 'var(--red)' }}>
+              background: 'var(--card-surf)', border: '1px solid var(--red)', color: 'var(--red)' }}>
               ⚠ {draftErr} — <b>{tr('ยังบันทึกไม่ได้')}</b> (ถ้าบันทึกทับตอนนี้ คำตอบที่เคยตรวจไว้จะหาย) · ลองเปลี่ยนวัน/ไลน์แล้วกลับมาใหม่
             </div>
           )}
@@ -1645,7 +1645,7 @@ ${issuesHtml}
       {/* modal แก้คำถาม (มีฟอร์ม — ไม่ปิดจาก backdrop) */}
       {qEditing && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14 }}>
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(96vw, 640px)' }}>
+          <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(96vw, 640px)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
               <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{qEditing.id ? '✏️ แก้ไข' : '➕ เพิ่ม'}{tr('คำถาม')}</div>
               <button onClick={() => setQEditing(null)} style={{ background: 'none', border: 'none', fontSize: 20, color: 'var(--muted)', cursor: 'pointer' }}>✕</button>

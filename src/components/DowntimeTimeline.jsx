@@ -189,7 +189,7 @@ export default function DowntimeTimeline({ sessions = [], downtimes = [], workDa
                   )}
                 </div>
 
-                <div style={{ position: 'relative', flex: 1, height: 26, background: 'var(--bg2)', borderRadius: 'var(--r-xs)', border: '1px solid var(--border)', overflow: 'hidden' }}>
+                <div style={{ position: 'relative', flex: 1, height: 26, background: 'var(--bg2-surf)', borderRadius: 'var(--r-xs)', border: '1px solid var(--border)', overflow: 'hidden' }}>
                   {/* เส้นตารางรายชั่วโมง */}
                   {ticks.map(t => (
                     <div key={t} style={{ position: 'absolute', left: `${pct(t)}%`, top: 0, bottom: 0, width: 1, background: 'var(--border)', opacity: 0.5 }} />
@@ -227,7 +227,7 @@ export default function DowntimeTimeline({ sessions = [], downtimes = [], workDa
       </div>
 
       {sel && (
-        <div style={{ marginTop: 8, padding: '8px 11px', background: 'var(--bg2)', border: `1px solid ${sel.color}`, borderRadius: 'var(--r-md)', fontSize: 11.5, lineHeight: 1.65 }}>
+        <div style={{ marginTop: 8, padding: '8px 11px', background: 'var(--bg2-surf)', border: `1px solid ${sel.color}`, borderRadius: 'var(--r-md)', fontSize: 11.5, lineHeight: 1.65 }}>
           <b style={{ color: sel.planned ? PLANNED_COLOR : sel.color }}>{sel.planned ? '🗓️ หยุดตามแผน' : '🔴 หยุดนอกแผน'} · {sel.name}</b>
           {' '}<span style={{ color: 'var(--muted)' }}>{sel.line}</span>
           {sel.machine && <> {tr('· เครื่อง')} <b>{sel.machine}</b></>}

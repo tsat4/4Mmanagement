@@ -33,7 +33,7 @@ export default function LineRegistryAlert() {
   return (
     <div role="status" style={{
       margin: '0 16px 10px', padding: '8px 11px', borderRadius: 'var(--r-md)', fontSize: 12.5, fontWeight: 700,
-      color: stale ? '#f59e0b' : '#ef4444', background: 'var(--card)',
+      color: stale ? '#f59e0b' : '#ef4444', background: 'var(--card-surf)',
       border: `1px solid ${stale ? 'rgba(245,158,11,0.5)' : 'rgba(239,68,68,0.5)'}`,
       display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
     }}>
@@ -46,7 +46,7 @@ export default function LineRegistryAlert() {
       </span>
       <button onClick={onReload} disabled={busy} style={{
         padding: '5px 11px', borderRadius: 'var(--r-md)', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap',
-        border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)',
+        border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)',
         cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1,
       }}>{busy ? tr('กำลังโหลด…') : tr('🔄 โหลดทะเบียนไลน์ใหม่')}</button>
     </div>

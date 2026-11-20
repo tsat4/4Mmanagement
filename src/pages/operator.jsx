@@ -44,7 +44,7 @@ import SkillEditHistory from '../components/SkillEditHistory';
 import { loadPmTeams, pmTeamsSync, DEFAULT_TEAMS } from '../utils/pmTeams';
 import { teamKeyOf } from '../utils/mtnTeams';
 import { uploadOpts } from '../utils/storageUpload';
-import { checkWrite } from '../utils/dbWrite';
+import { checkWrite, checkWriteRows } from '../utils/dbWrite';
 import { fetchByIds } from '../utils/fetchByIds';
 import SkillEvidencePanel from '../components/SkillEvidencePanel';
 import { DeleteButton } from '../components/IconButton';
@@ -96,7 +96,7 @@ const TAB_KEYS = ['employees', 'skills', 'levelup', 'add'];
 
 export default function Operator() {
   const { role, lineId: userLineId, section: userSection, sections: scopeSecs = [], fullName,
-          allUnits, respCostCenters, scopeIdx } = useContext(UserContext);
+          allUnits, respCostCenters, scopeIdx, writeUnits } = useContext(UserContext);
   const isLeader = role === 'leader';
   const isSupervisor = role === 'supervisor';
   // ถ้าขอบเขตเหลือ section เดียว → ล็อกฟิลด์ Section ตอนแก้ไขพนักงาน (พฤติกรรม supervisor เดิม)
@@ -135,8 +135,9 @@ export default function Operator() {
   //   ไม่มี → แก้ได้เฉพาะแถวที่ section ตรงกับส่วนงานของตัวเอง
   //   ยังไม่ seed key นี้ → ทุก role แก้ได้หมดเหมือนเดิม (ดู canDelete() ใน permissions.js)
   // หมายเหตุ: เป็นการกันพลาดฝั่ง UI — RLS ระดับ DB ยังไม่รู้จัก section ของพนักงาน
-  const editAllSections = !isActionSeeded('employees', 'edit_all_sections')
-    || can('employees', 'edit_all_sections', role);
+  /* 🔴 13/11 (audit role↔scope): เลิกคีย์ `employees:edit_all_sections` (ชื่อฝังขอบเขต · leader/supervisor/mtn ~70 บัญชี
+     แก้พนักงานทุกแผนกได้) — "แก้คนของหน่วยไหนได้" ตัดสินที่ `canWriteUnit` (บ้าน · CC · มอบหมาย · ใบผ่านรายคน) ที่เดียว
+     ฝั่ง DB: policy employees UPDATE/DELETE ผ่าน `app_can_write_unit(section)` (migration 20261113_role_scope_p1) */
   const homeSection = userSection || scopeSecs[0] || null;
   /* 🔐 ชั้นที่ 3 ของ **ทะเบียนนิยามสกิล** (`skill_definitions.scope_section`) — audit §14 · 20/10
      เดิมมีแค่ชั้น ② (`skills:edit`) ⇒ หัวหน้า PD1 แก้/ลบนิยามสกิลของ PD4 ได้ และ "ลบสกิล"
@@ -146,7 +147,7 @@ export default function Operator() {
         เพราะวัดจริง 20/10: หัวหน้า/leader 4 คนที่ไม่มีใบผ่านข้ามหน่วย แก้สกิลกลางไป 63 ครั้ง
         (สกิลกลาง 23 จาก 70 ตัว = 5ส/ความปลอดภัย/งานทั่วไป) ⇒ บล็อกทันทีคือหยุดงานที่ทำกันอยู่
         **แต่จอต้องเตือนว่ากระทบทุกส่วนงาน** — จะปิดจริงให้ส่ง `{ unknownTarget: 'block' }` ทีเดียวที่ `sdWrite` */
-  const sdCtx = { role, section: homeSection, sections: scopeSecs, allUnits, respCostCenters, scopeIdx };
+  const sdCtx = { role, section: homeSection, sections: scopeSecs, allUnits, respCostCenters, scopeIdx, writeUnits };
   const sdWrite = (scopeSec) => canWriteUnit(sdCtx, scopeSec);
   const sdGuard = (scopeSec, what) => {
     const w = sdWrite(scopeSec);
@@ -155,8 +156,9 @@ export default function Operator() {
     return false;
   };
   /** แก้แถวนี้ได้ไหม — ต้องมีสิทธิ์ employees:edit และอยู่ในส่วนงานที่ตัวเองดูแล */
+  /* พนักงานที่ไม่ระบุส่วนงาน (สายสนับสนุนขึ้นตรงฝ่าย) = ของกลาง ⇒ เฉพาะผู้ถือใบผ่าน (`unknownTarget:'block'`) */
   const canEditEmp = (emp) => can('employees', 'edit', role)
-    && (editAllSections || (!!homeSection && inSectionScope([homeSection], emp?.section)));
+    && canWriteUnit(sdCtx, emp?.section, { unknownTarget: 'block' }).ok;
   /** สิทธิ์แก้ "สกิล" ของแถวนี้ — แยกจากสิทธิ์แก้ประวัติพนักงาน (feedback หน้างาน 2026-08-19:
    *  ช่างเพิ่มสกิลให้ทีมตัวเองไม่ได้ ทั้งที่ RLS employee_skills เปิด skills:edit ให้แล้ว —
    *  เดิมแผงสกิลไปมัดกับ employees:edit + เทียบ section ซึ่งพนักงานสนับสนุนเป็น null ไม่ตรงกับใครเลย)
@@ -164,8 +166,7 @@ export default function Operator() {
    *  พนักงานสนับสนุนขึ้นตรงฝ่าย (section null) ให้ role หน่วยงานช่างแก้ได้ — MAINTENANCE_ROLES
    *  เห็นทั้งโรงงานตามกฎ scopedLineNames อยู่แล้ว) · RLS ฝั่ง DB ยังคุมชั้นสุดท้ายเสมอ */
   const canEditSkillsFor = (emp) => canEditSkills
-    && (editAllSections
-        || (!!homeSection && inSectionScope([homeSection], emp?.section))
+    && (canWriteUnit(sdCtx, emp?.section, { unknownTarget: 'block' }).ok
         || (!emp?.section && MAINTENANCE_ROLES.includes(role))
         /* 🤝 คนที่ "ยืมตัว" มาช่วยไลน์ใน scope กะนี้ — คนที่เห็นเขาทำงานจริงวันนี้คือหัวหน้าไลน์ปลายทาง
            จึงเป็นคนเดียวที่ให้คะแนนทักษะได้ตรงความจริง · จำกัดเวลาในตัวอยู่แล้ว (การยืมหมดอายุเมื่อจบกะ)
@@ -802,8 +803,10 @@ export default function Operator() {
     if (e1) { toast.error('ลบคะแนนสกิลไม่สำเร็จ: ' + e1.message); return; }
     const e2 = (await supabase.from('station_requirements').delete().eq('skill_name', sd.name)).error;
     if (e2) { toast.error('ลบ requirement ไม่สำเร็จ: ' + e2.message); return; }
-    const e3 = (await supabase.from('skill_definitions').delete().eq('id', sd.id)).error;
-    if (e3) { toast.error('ลบสกิลไม่สำเร็จ: ' + e3.message); return; }
+    /* 🔴 นับแถว — RLS ปฏิเสธ DELETE = 0 แถวไม่มี error (กฎเขียน DB ข้อ 2) · เคส 13/11: ถือ `skills:delete`
+       อย่างเดียว ลบคะแนน/requirement ไปแล้วแต่นิยามยังอยู่เงียบๆ = ลบครึ่งเดียว */
+    if (!checkWriteRows(await supabase.from('skill_definitions').delete().eq('id', sd.id).select('id'),
+      `ลบสกิล "${sd.label}" (คะแนน/requirement ถูกลบไปแล้ว — ให้ admin ลบนิยามที่เหลือ)`)) return;
     fetchSkillDefs();
     fetchEmployees();
   };
@@ -1216,7 +1219,7 @@ export default function Operator() {
             )}
             {(filterSection || filterDept || filterGroup || filterTeam || filterGrade || filterLabor || filterStaffKind || empSearch) && (
               <button onClick={() => { setFilterSection(''); setFilterDept(''); setFilterGroup(''); setFilterTeam(''); setFilterGrade(''); setFilterLabor(''); setFilterStaffKind(''); setEmpSearch(''); }}
-                style={{ fontSize: 11, padding: '5px 10px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--muted)', cursor: 'pointer' }}>
+                style={{ fontSize: 11, padding: '5px 10px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--muted)', cursor: 'pointer' }}>
                 {tr('ล้าง')}
               </button>
             )}
@@ -1654,7 +1657,7 @@ export default function Operator() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <input type="color" value={newSkill.color}
                       onChange={e => { skillColorTouched.current = true; setNewSkill({ ...newSkill, color: e.target.value }); }}
-                      style={{ width: 44, height: 36, padding: 2, borderRadius: 'var(--ctl-r)', border: '1px solid var(--border2)', background: 'var(--bg3)', cursor: 'pointer' }} />
+                      style={{ width: 44, height: 36, padding: 2, borderRadius: 'var(--ctl-r)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', cursor: 'pointer' }} />
                     <span style={{ fontSize: 12, color: newSkill.color, fontWeight: 700 }}>{tr('● ตัวอย่าง')}</span>
                   </div>
                 </div>
@@ -1736,7 +1739,7 @@ export default function Operator() {
                       <label style={{ ...labelSt, marginBottom: 0 }}>{tr('สีแสดงผล')}</label>
                       <input type="color" value={editingSkill.color}
                         onChange={e => setEditingSkill({ ...editingSkill, color: e.target.value })}
-                        style={{ width: 44, height: 36, padding: 2, borderRadius: 'var(--ctl-r)', border: '1px solid var(--border2)', background: 'var(--bg3)', cursor: 'pointer' }} />
+                        style={{ width: 44, height: 36, padding: 2, borderRadius: 'var(--ctl-r)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', cursor: 'pointer' }} />
                       <span style={{ fontSize: 13, color: editingSkill.color, fontWeight: 700 }}>● {tr(editingSkill.label) || 'ตัวอย่าง'}</span>
                     </div>
                   </div>
@@ -1746,7 +1749,7 @@ export default function Operator() {
                       {tr('บันทึก')}
                     </button>
                     <button onClick={() => setEditingSkill(null)}
-                      style={{ flex: 1, padding: 11, background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}>
+                      style={{ flex: 1, padding: 11, background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}>
                       {tr('ยกเลิก')}
                     </button>
                   </div>
@@ -1801,7 +1804,7 @@ export default function Operator() {
           {/* 🔴 โหมดทดลอง = คะแนนบนจออื่นยังมาจากสูตรเดิม — ต้องเขียนให้ชัด ห้ามให้คนเข้าใจผิด */}
           {expCfg && !expCfg.is_enabled && (
             <div style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 'var(--r-md)', fontSize: 12,
-                          background: 'var(--bg2)', border: '1px solid var(--border2)', color: 'var(--text2)' }}>
+                          background: 'var(--bg2-surf)', border: '1px solid var(--border2)', color: 'var(--text2)' }}>
               ℹ️ <strong>{tr('โหมดทดลอง (shadow)')}</strong> — สูตร EXP v2 คำนวณหลักฐานให้ดูเทียบได้
               แต่ <strong>{tr('คะแนนจริงยังมาจากสูตรเดิม')}</strong> (+1/วัน · +2/สัปดาห์) · กดปุ่ม ⚪ ด้านบนเพื่อเริ่มใช้จริง
             </div>
@@ -1955,7 +1958,7 @@ export default function Operator() {
                     {tr('ยืนยัน')}
                   </button>
                   <button onClick={() => { setRejectLuModal(null); setRejectLuReason(''); }}
-                    style={{ flex: 1, padding: 10, background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}>
+                    style={{ flex: 1, padding: 10, background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}>
                     {tr('ยกเลิก')}
                   </button>
                 </div>
@@ -2106,7 +2109,7 @@ export default function Operator() {
                 const home = orgAllNodes.find(n => n.id === editingEmp.org_node_id);
                 return (
                   <div style={{ gridColumn: '1 / -1', fontSize: 11, color: 'var(--muted)', lineHeight: 1.6,
-                    background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '6px 9px' }}>
+                    background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '6px 9px' }}>
                     💰 <b>{tr('สังกัดทางบัญชี')}</b> {tr('— หน่วยงาน')}{' '}
                     <b style={{ color: 'var(--text)' }}>{home?.code || home?.name || tr('(ยังไม่ผูกหน่วยในผัง)')}</b>
                     {' · '}Cost Center{' '}
@@ -2440,7 +2443,7 @@ export default function Operator() {
                   {canEditEmp(editingEmp) && editingEmp.id && (
                     <button type="button" onClick={() => setEmpSigOpen(true)}
                       style={{ width: 'auto', padding: '6px 12px', fontSize: 12, borderRadius: 'var(--r-md)', cursor: 'pointer',
-                        background: 'var(--bg3)', border: '1px solid var(--border2)', color: 'var(--text2)' }}>
+                        background: 'var(--bg3-surf)', border: '1px solid var(--border2)', color: 'var(--text2)' }}>
                       {editingEmp.signature_url ? tr('เปลี่ยนลายเซ็น') : tr('＋ เพิ่มลายเซ็น')}
                     </button>
                   )}
@@ -2465,7 +2468,7 @@ export default function Operator() {
                   {isSaving ? tr('กำลังบันทึก...') : tr('บันทึกข้อมูล')}
                 </button>
                 <button type="button" onClick={() => setEditingEmp(null)}
-                  style={{ flex: 1, padding: 12, background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)' }}>
+                  style={{ flex: 1, padding: 12, background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)' }}>
                   {tr('ยกเลิก')}
                 </button>
               </div>
@@ -2589,7 +2592,7 @@ function SkillSubItemsModal({ skill, onClose }) {
             )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
               {rows.map((r, i) => (
-                <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg3)', borderRadius: 'var(--r-md)', padding: '7px 10px', border: '1px solid var(--border)' }}>
+                <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg3-surf)', borderRadius: 'var(--r-md)', padding: '7px 10px', border: '1px solid var(--border)' }}>
                   <span style={{ fontSize: 12, color: 'var(--muted)', width: 18, textAlign: 'center' }}>{i + 1}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13 }}>{tr(r.label)}</div>

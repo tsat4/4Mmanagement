@@ -703,7 +703,7 @@ export default function Monitoring() {
             <button type="button" className="pg-btn" onClick={() => setShowFgSync(true)}
               title={tr('สร้าง/อัพเดทบอร์ด FG ต่อลูกค้า จากออเดอร์ EDI 862/830 ที่นำเข้าไว้แล้ว')}
               style={{ fontSize: 13, fontWeight: 700, padding: '7px 14px', borderRadius: 8, cursor: 'pointer',
-                background: 'var(--bg3)', color: 'var(--text)', border: '1px solid var(--border2)' }}>
+                background: 'var(--bg3-surf)', color: 'var(--text)', border: '1px solid var(--border2)' }}>
               {tr('สร้างบอร์ด FG จากออเดอร์')}
             </button>
             <button type="button" className="pg-btn" onClick={() => setShowImport(true)}

@@ -500,6 +500,16 @@ const RULES = [
     allow: {},
   },
   {
+    id: 'chart-anim-shared',
+    scan: ['src/pages', 'src/components'], ext: ['.jsx'],
+    /* ตั้งอนิเมชันกราฟเองในหน้า — ต้องผ่าน chartAnim() ของกลางเท่านั้น */
+    re: /isAnimationActive\s*=/g,
+    why: '20/11 (user: "อนิเมชั่นกราฟสวยๆ … ต้องมีมาตรฐานและใช้เหมือนกันทั้งหมด"): เดิมบางหน้าปิด บางหน้าปล่อยค่าเริ่มต้นของ Recharts '
+       + 'ซึ่งเล่นซ้ำทุกครั้งที่ข้อมูลรีเฟรช = จอกระตุกทุกนาที · มาตรฐาน = เล่นครั้งเดียวต่อสิ่งที่ดู + นิ่งบนจอ TV',
+    fix: "<Bar {...chartAnim()} …> · import { chartAnim } from '<path>/utils/motion' (UI-CONVENTIONS §6.34c)",
+    allow: {},
+  },
+  {
     id: 'no-native-confirm',
     scan: ['src/pages', 'src/components', 'src/lib', 'src/utils', 'src/App.jsx'], ext: ['.jsx', '.js'],
     /* window.confirm / confirm( ตรงๆ — หน้าตาเบราว์เซอร์ ไม่ตามธีม ไม่หรี่ฉากหลัง ไม่แปล · บน iPhone ตัดข้อความยาว · บล็อก thread */
@@ -1092,6 +1102,17 @@ const RULES = [
        + '(22/09: ลูกค้าสั่งพาร์ท 2xxxxxxx ตรงๆ อยู่แล้ว 687 แถว/18 mat) ③ หน่วย PC/KG ห้ามปนกัน',
     fix: 'ใช้ explodeDemand(demand, ix, explodeBom) จาก src/utils/demandExplode.js '
        + '(คืน needByMat + flatDupes + cycles ให้ครบ) แล้วกรองเฉพาะ mat ที่มีไลน์ผลิตจริง',
+    allow: {},
+  },
+  {
+    id: 'surf-gradient-token-only',
+    scan: ['src/pages', 'src/components'], ext: ['.jsx', '.js'],
+    // จับการหยิบ token ปลายทางของไล่เฉดพื้น (--card-top/--bg3-bot …) มาประกอบ gradient เองในหน้า
+    re: /var\(--(?:card|bg2|bg3|modal|accent|hero)-(?:top|bot)\)/g,
+    why: 'ไล่เฉดพื้นทั้งระบบต้องออกจาก token `--card-surf` / `--bg2-surf` / `--bg3-surf` ใน index.css ที่เดียว (20/11 · คำสั่ง user '
+       + '"แทบเหมือนสีไม่ต่างกัน แต่ดูผ่านๆ รู้สึกมีมิติ · ทำทุกหน้าให้เป็นมาตรฐาน") — ประกอบเองในหน้าเมื่อไหร่ มุม/ทิศ/ความแรงจะต่างกัน '
+       + 'ทีละหน้า และหลุดด่าน gradientDeltaCap (ด่านนั้นตรวจแค่คู่ token ใน index.css)',
+    fix: "background: 'var(--card-surf)' (แผงพื้น --card) · 'var(--bg2-surf)' · 'var(--bg3-surf)' — อยากได้ผิวชนิดใหม่ = เพิ่มคู่ --x-top/-bot ใน index.css",
     allow: {},
   },
   {
@@ -5818,8 +5839,13 @@ test('🛡️ write-scope-layer — ด่าน "แก้ข้ามหน่
 
   /* ชั้น context — ถ้า `allUnits` หลุดจาก UserContext ทุกจอจะเห็นเป็น undefined = บล็อกหมด/เปิดหมดแล้วแต่จุด */
   const app = stripComments(readFileSync(join(ROOT, 'src/App.jsx'), 'utf8'));
-  if (!/allUnits:\s*can\('scope',\s*'all_units'/.test(app))
-    bad.push("src/App.jsx (UserContext ไม่ได้ส่ง allUnits)");
+  /* 13/11: ใบผ่านข้ามหน่วยเป็น **รายคน** (profiles.all_units ∪ มอบหมาย scope_depth='all') — ห้ามกลับไปอ่านจากคีย์ของ role */
+  if (!/allUnits:\s*userRole === 'admin' \|\| userAllUnits === true/.test(app))
+    bad.push("src/App.jsx (UserContext ไม่ได้ส่ง allUnits จาก profiles.all_units)");
+  if (/allUnits:\s*can\('scope',\s*'all_units'/.test(app))
+    bad.push("src/App.jsx (allUnits กลับไปอ่านจากคีย์ role scope:all_units — ขัดกฎ role ≠ ขอบเขต 13/11)");
+  if (!/writeUnits:\s*userWriteUnits/.test(app))
+    bad.push("src/App.jsx (UserContext ไม่ได้ส่ง writeUnits — writeUnitsOf จะเหลือแค่บ้าน มอบหมายไม่ขยายการแก้)");
 
   /* 💰 19/10 — สลับ 20 จอมาใช้แกน Cost Center: สลับที่ `writeScope.js` ที่เดียว
      ⇒ จอที่เรียกด่านต้อง **ส่ง `respCostCenters` + `scopeIdx` มาใน ctx** ไม่งั้นจอนั้นค้างอยู่
@@ -9088,7 +9114,8 @@ test('🔄 assignment-overlay-widen-only — รักษาการทับ�
   const app = stripComments(readFileSync(join(ROOT, 'src/App.jsx'), 'utf8'));
   assert.match(app, /from\('org_assignments'\)[\s\S]{0,200}\.eq\('profile_id',\s*user\.id\)/,
     '🔴 fetchProfile ต้องอ่าน org_assignments ของบัญชีนี้ (กรอง profile_id)');
-  assert.match(app, /applyAssignments\(\{\s*sections:\s*baseSections/, 'ผล effectiveSections ต้องผ่าน applyAssignments ก่อน setUserSections');
+  assert.match(app, /applyAssignments\(\{[^)]*sections:\s*baseSections/, 'ผล effectiveSections ต้องผ่าน applyAssignments ก่อน setUserSections');
+  assert.match(app, /applyAssignments\(\{\s*section:\s*ident\.section/, '13/11: overlay ต้องได้บ้านจริงไปประกอบ writeUnits (บ้าน ∪ มอบหมาย)');
   assert.match(app, /setUserSections\(finalSections\)/, 'setUserSections ต้องใช้ค่าหลังทับ');
   assert.doesNotMatch(app, /starts_on\s*<=|ends_on\s*>=/, '🔴 ห้ามเขียนกฎวันที่ของมอบหมายเองใน App.jsx — ใช้ isGranting()');
 
@@ -9268,6 +9295,9 @@ test('🏢 org-upper-layers-ready — รากของชั้นหน่ว
     ['src/components/OrgTreeView.jsx', /unitParentId\(n, byId\) == null/, 'หน่วยลอย = ไม่มีแม่เป็นหน่วย'],
     ['src/pages/ManpowerBoard.jsx', /isOrphanDept\(n, nodes\)/, 'บอร์ดของแผนกขึ้นตรง'],
     ['src/pages/OrgSetup.jsx', /isOrphanDept\(n, nodes\)/, 'ตะกร้า "ขึ้นตรง" ใน /org-setup'],
+    /* 20/11 — มีแถวชั้นบนจริงแล้ว (migration 20261120_org_nodes_upper_layer_rows_main.sql) */
+    ['src/components/OrgTreeView.jsx', /nodes\.filter\(n => n\.kind === 'team'\)\.length/, 'นับทีมด้วย kind — ห้ามใช้ nodes.length - orgNodes.length (นับชั้นบนเป็นทีม)'],
+    ['src/components/QaInspectorScopes.jsx', /isUpperKind\(p\.kind\)\) break/, 'ป้ายสายหน่วยต้องหยุดที่ชั้นบน'],
   ]) {
     const s = stripComments(readFileSync(join(ROOT, f), 'utf8'));
     assert.match(s, pat, `🔴 ${f}: ${why}`);
@@ -11459,6 +11489,58 @@ test('🚫 no-fg-line-request — ทุกจุดที่ออกใบเ�
   assert.deepEqual(offenders, [],
     '\n\n❌ ไฟล์นี้ออกใบเบิกเข้าไลน์โดยไม่กันเลข FG 1xx:\n   ' + offenders.join('\n   ')
     + '\n   ใช้ `isFgMat(mat)` + ข้อความ `FG_NO_LINE_REQUEST` จาก src/utils/storeOps.js ก่อน insert\n');
+});
+
+test('🔒 dt-add-needs-canscan — ปุ่ม "+ บันทึก Downtime" และฟังก์ชันบันทึกต้องผ่าน canScan (daily_report:record)', () => {
+  /* 18/11 user ลอง "จำลอง role" (ViewAs) แล้วกดลง Downtime ได้ — เดิมปุ่มแก้/ปิดรายการเช็ค `canScan` แต่ปุ่ม**เพิ่ม**ไม่เช็ค
+     และฟังก์ชันบันทึกก็ไม่เช็ค · ฝั่ง DR เป็น anon (ไม่มี RLS คอยกัน) ⇒ role ดูอย่างเดียวลง DT ลงฐานจริงได้
+     กฎ: "ปุ่ม/ช่องเลือก = ตัวกรอง ไม่ใช่ด่าน" ⇒ ต้องมีด่านในฟังก์ชันที่เขียน DB ด้วย ไม่ใช่แค่ซ่อนปุ่ม */
+  const dr = stripComments(readFileSync(join(ROOT, 'src/pages/DailyReport.jsx'), 'utf8'));
+  assert.match(dr, /\{dtOpen && canScan && \(\s*<button onClick=\{\(\) => \{ setShowDT\(true\)/,
+    '\n\n❌ ปุ่ม "+ บันทึก Downtime" ไม่ได้อยู่หลัง `canScan` — role ดูอย่างเดียว/โหมดจำลอง role เห็นปุ่มลง DT\n');
+  assert.match(dr, /if \(!canScan\) \{ toast\.error\('บัญชีนี้ไม่มีสิทธิ์บันทึก Downtime[^']*'\); return; \}\s*setSavingDT\(true\);/,
+    '\n\n❌ ฟังก์ชันบันทึก Downtime ไม่มีด่าน `canScan` ก่อน `setSavingDT(true)` — ซ่อนปุ่มอย่างเดียวไม่พอ (DR anon ไม่มี RLS)\n');
+});
+
+/* ═══ 🔐 role-not-scope — "role ≠ ขอบเขต" (2026-11-13 · audit docs/ROLE-SCOPE-AUDIT-2026-11-13.md · คำสั่ง user) ═══
+   "manager ไม่ได้แปลว่าแก้ข้ามแผนกได้" — ความกว้างของการแก้มาจากขอบเขตรายคนเท่านั้น (บ้าน · CC · มอบหมาย · ใบผ่าน
+   profiles.all_units) · ห้ามมาจากชื่อ role หรือชื่อคีย์ · เคสจริง: scope:all_units แจก 8 role = 37 บัญชีแก้ได้ทั้งโรงงาน ·
+   role==='manager' เป็นทางลัดข้ามทีมใน 4 ไฟล์ · employees:edit_all_sections ให้ ~70 บัญชีแก้พนักงานทุกแผนก */
+test('🔐 role-not-scope — ตัวตัดสินขอบเขตห้ามอ่านชื่อ role · ใบผ่านข้ามหน่วยเป็นรายคน · คีย์ชื่อฝังขอบเขตห้ามกลับมา', () => {
+  const bad = [];
+  const rd = (f) => stripComments(readFileSync(join(ROOT, f), 'utf8'));
+  // ตัวตัดสินขอบเขต/เจ้าของแถว — ห้ามมี role === 'manager' (admin เป็นตาข่ายกันตายตัวเดียวที่อนุญาต)
+  for (const f of ['src/utils/writeScope.js', 'src/utils/ccScope.js', 'src/utils/mtnTeams.js', 'src/utils/mtnTeamOwn.js',
+                   'src/utils/displayRotation.js', 'src/components/TaxonomyManagerModal.jsx']) {
+    if (/role\s*===?\s*'manager'/.test(rd(f))) bad.push(`${f}: มี role === 'manager' ในตัวตัดสินขอบเขต`);
+  }
+  if (/isBoss\s*=\s*role === 'admin' \|\| role === 'manager'/.test(rd('src/pages/MtnRepair.jsx'))) bad.push('MtnRepair.jsx: isBoss ยังผูกกับ role manager');
+  if (/if \(role === 'manager'\) return true/.test(rd('src/pages/Report.jsx'))) bad.push('Report.jsx: อนุมัติ 4M ยังมีทางลัด manager');
+  if (!/canWriteLine\(wCtx, log\.line_name, lines, \{ unknownTarget: 'block' \}\)/.test(rd('src/pages/Report.jsx'))) bad.push('Report.jsx: อนุมัติ 4M ขั้น SV ต้องผ่าน canWriteLine');
+  // ใบผ่านข้ามหน่วย = รายคน — ห้ามมีใครอ่านจากคีย์ role อีก
+  for (const f of walk(join(ROOT, 'src'), ['.jsx', '.js'])) {
+    if (/__tests__/.test(f)) continue;
+    const src = stripComments(readFileSync(f, 'utf8'));
+    const rel = f.replace(ROOT, '').replace(/^\/+/, '');
+    if (/can\('scope',\s*'all_units'/.test(src)) bad.push(`${rel}: อ่าน scope:all_units จาก role (ต้องใช้ UserContext.allUnits / profiles.all_units)`);
+    if (/edit_all_sections/.test(src)) bad.push(`${rel}: คีย์ employees:edit_all_sections ถูกถอดแล้ว 13/11`);
+  }
+  // ตัวกลางต้องมีช่อง writeUnits (บ้าน ∪ มอบหมาย) และ overlay ต้องคืน allUnits/writeUnits
+  if (!/writeUnits/.test(rd('src/utils/writeScope.js'))) bad.push('writeScope.js: writeUnitsOf ไม่อ่าน writeUnits');
+  if (/Array\.isArray\(sections\)/.test(rd('src/utils/writeScope.js'))) bad.push('writeScope.js: writeUnitsOf กลับไปอ่าน sections (ที่เห็น) — ขัดกฎ 13/11');
+  const ov = rd('src/utils/assignmentOverlay.js');
+  if (!/writeUnits,\s*\n?\s*allUnits,/.test(ov) && !/writeUnits/.test(ov)) bad.push('assignmentOverlay.js: ไม่คืน writeUnits');
+  if (!/allUnits = true/.test(ov)) bad.push('assignmentOverlay.js: มอบหมาย scope_depth=all ต้องให้ allUnits');
+  // DB: migration ต้องมีแหล่งเดียวฝั่ง SQL
+  const mig = readFileSync(join(ROOT, 'supabase/migrations/20261113_role_scope_p1_main.sql'), 'utf8');
+  for (const fn of ['app_all_units', 'app_write_units', 'app_cc_covers', 'app_can_write_unit', 'app_can_write_line']) {
+    if (!mig.includes(`function public.${fn}(`)) bad.push(`migration 20261113_role_scope_p1: ไม่มี ${fn}()`);
+  }
+  if (!/drop policy if exists "Allow authenticated full access four_m"/.test(mig)) bad.push('migration: ยังไม่ปิด policy four_m_logs เปิดโล่ง');
+  // จอวนหน้า: ใบผ่าน + หน่วยที่แก้ได้ (ไม่ใช่ที่เห็น)
+  if (!/canManageDisplay\(managerUnits, targetSections, \{ allUnits = false \} = \{\}\)/.test(rd('src/utils/displayRotation.js'))) bad.push('displayRotation.js: canManageDisplay ไม่รับ allUnits');
+  if (!/writeUnits: mySections/.test(rd('src/pages/DisplayRotation.jsx'))) bad.push('DisplayRotation.jsx: ยังใช้ sections (ที่เห็น) ตัดสินการตั้งจอ');
+  assert.deepEqual(bad, [], '\n' + bad.join('\n'));
 });
 
 /* ═══ 🗑️ "อื่นๆ" ต้องใส่เหตุผลจริง — ห้ามพิมพ์ "อื่นๆ" ลงช่องพิมพ์ (2026-11-16 · คำสั่ง user) ══

@@ -188,7 +188,7 @@ function CheckpointCard({ cp, label, onChange, onDelete, onDuplicate, onCpImage,
       closeup={{ preview: cp._imgPreview, onPick: onCpImage, onClear: () => onChange({ _imgFile: null, _imgPreview: null, image_path: null }) }}
       extra={isVar && (
         <button type="button" onClick={onDuplicate} title={tr('ทำสำเนาจุดนี้เป็นอีกแกน (X↔Y) — copy ชื่อ/tool ให้ กรอกแค่ spec')}
-          style={{ padding: '3px 8px', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--muted)' }}>
+          style={{ padding: '3px 8px', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--muted)' }}>
           {tr('⧉ อีกแกน')}
         </button>
       )}>
@@ -289,7 +289,7 @@ function CheckpointCard({ cp, label, onChange, onDelete, onDuplicate, onCpImage,
           <div style={{ display: 'flex', gap: 8 }}>
             <span style={{ padding: '3px 10px', borderRadius: 'var(--r-md)', background: 'var(--accent-dim)', color: 'var(--accent)', fontSize: 11, fontWeight: 700, border: '1px solid var(--accent)' }}>OK</span>
             <span style={{ padding: '3px 10px', borderRadius: 'var(--r-md)', background: 'var(--red-dim)', color: 'var(--red)', fontSize: 11, fontWeight: 700, border: '1px solid var(--red-line)' }}>NG</span>
-            {cp.type === 'note' && <span style={{ padding: '3px 10px', borderRadius: 'var(--r-md)', background: 'var(--bg3)', color: 'var(--muted)', fontSize: 11, border: '1px solid var(--border)' }}>{tr('+ ข้อความ')}</span>}
+            {cp.type === 'note' && <span style={{ padding: '3px 10px', borderRadius: 'var(--r-md)', background: 'var(--bg3-surf)', color: 'var(--muted)', fontSize: 11, border: '1px solid var(--border)' }}>{tr('+ ข้อความ')}</span>}
           </div>
           <div>
             <label style={S.label}>{tr('เกณฑ์ตัดสิน (Standard) — ขึ้นบรรทัดใหม่ได้')}</label>
@@ -1045,7 +1045,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
               )
             }
             return (
-              <div style={{ padding: '10px 12px', background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)' }}>
+              <div style={{ padding: '10px 12px', background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)' }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text2)', marginBottom: 6 }}>
                   รายการตรวจของเครื่องนี้ (แยกตามแผนก)
                 </div>
@@ -1200,7 +1200,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
                         const skip = copyReport.filter(r => !r.copied)
                         const why = { target_has_checkpoints: 'มีจุดตรวจอยู่แล้ว', target_has_history: 'มีประวัติผลตรวจแล้ว', same: 'เครื่องต้นทาง', empty: 'ต้นทางไม่มีจุดตรวจ', error: 'ผิดพลาด' }
                         return (
-                          <div style={{ marginTop: 7, fontSize: 11.5, lineHeight: 1.7, background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '7px 9px' }}>
+                          <div style={{ marginTop: 7, fontSize: 11.5, lineHeight: 1.7, background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '7px 9px' }}>
                             <b style={{ color: 'var(--accent)' }}>{tr('✅ คัดลอกสำเร็จ')} {ok.length} {tr('เครื่อง')}</b>
                             {!!ok.length && <span style={{ color: 'var(--muted)' }}> — {ok.map(r => r.label).join(' · ')}</span>}
                             {!!skip.length && <div style={{ color: 'var(--accent2)', marginTop: 3 }}>
@@ -1495,7 +1495,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
                   🔴 แถบนี้เป็น **ตัวบอก ไม่ใช่ด่าน** — ใบที่ยังไม่ครบก็ยังบันทึก/ใช้ตรวจได้
                      (จอตรวจไม่ได้บังคับว่าต้องปักหมุดครบแล้ว · ดู docs/modules/pm-hub-check-setup.md) */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '8px 10px', marginBottom: 2,
-                            borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3)' }}>
+                            borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)' }}>
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', fontSize: 11.5, color: 'var(--text2)' }}>
                   <b style={{ color: comp.done ? 'var(--accent)' : 'var(--text)' }}>
                     {comp.done ? '✅ ใบนี้ครบตามแพทเทินแล้ว' : '📋 ความครบของใบนี้'}
@@ -1572,7 +1572,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
                         <div style={{ marginTop: 8 }}>
                           <button type="button" onClick={() => setFrameFilter(null)}
                             style={{ padding: '4px 12px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontSize: 11.5, fontWeight: 700,
-                                     border: '1px solid var(--border2)', background: 'var(--card)', color: 'var(--text2)' }}>
+                                     border: '1px solid var(--border2)', background: 'var(--card-surf)', color: 'var(--text2)' }}>
                             {tr('ดูทุกมุม')}
                           </button>
                         </div>
@@ -1595,7 +1595,7 @@ function EquipmentTable({ groups, canSetup, onEdit, onDelete }) {
   const typeColor = { jig: '#3dd65c', die: '#4d9fff', machine: '#f59a3f', fixture: '#9b8de8', tool: 'var(--red)' }
   const cols = canSetup ? 8 : 7   // ต้องเท่าจำนวน <th> — ขาด 1 = แถบหัวกลุ่มไลน์ไม่เต็มแถว
   return (
-    <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'auto', maxHeight: 'calc(100vh - 230px)' }}>
+    <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'auto', maxHeight: 'calc(100vh - 230px)' }}>
       <table className="rec-list" style={{ minWidth: 760 }}>
         <thead><tr>
           <th style={{ width: 44 }} aria-label={tr('รูป')}></th><th>{tr('อุปกรณ์')}</th><th>No.</th><th>{tr('ชนิด')}</th><th>{tr('เครื่อง')}</th>
@@ -1933,11 +1933,11 @@ export default function PMSetup() {
       <AnimatePresence>
         {showModal && <EquipmentModal onClose={() => setShowModal(false)} onSaved={handleSaved} editJig={editJig} department={department} categories={categories} methods={methods} deptWrite={deptWrite} teamWriteOf={teamWriteOf} />}
         {taxModal === 'category' && (
-          <TaxonomyManagerModal teams={pmTeamsSync()} role={role} myTeams={pmUserTeams} table="pm_checkpoint_categories" title={tr('จัดการประเภทจุดตรวจ (Category)')} extraField="color" withEquipTypes
+          <TaxonomyManagerModal teams={pmTeamsSync()} role={role} allUnits={allUnits} myTeams={pmUserTeams} table="pm_checkpoint_categories" title={tr('จัดการประเภทจุดตรวจ (Category)')} extraField="color" withEquipTypes
             onClose={() => setTaxModal(null)} onChanged={loadTaxonomy} />
         )}
         {taxModal === 'method' && (
-          <TaxonomyManagerModal teams={pmTeamsSync()} role={role} myTeams={pmUserTeams} table="pm_checking_methods" title={tr('จัดการวิธีการตรวจสอบ')} extraField="icon"
+          <TaxonomyManagerModal teams={pmTeamsSync()} role={role} allUnits={allUnits} myTeams={pmUserTeams} table="pm_checking_methods" title={tr('จัดการวิธีการตรวจสอบ')} extraField="icon"
             onClose={() => setTaxModal(null)} onChanged={loadTaxonomy} />
         )}
       </AnimatePresence>

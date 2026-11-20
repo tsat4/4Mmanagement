@@ -355,7 +355,7 @@ export default function TransportMapEditor() {
 
   if (loading) return <div style={{ padding: 30, color: 'var(--muted)' }}>{tr('กำลังโหลดผัง…')}</div>
   if (!imageUrl) return (
-    <div style={{ padding: 30, borderRadius: 'var(--r-lg)', border: '1px dashed var(--border2)', background: 'var(--card)', color: 'var(--muted)', maxWidth: 640 }}>
+    <div style={{ padding: 30, borderRadius: 'var(--r-lg)', border: '1px dashed var(--border2)', background: 'var(--card-surf)', color: 'var(--muted)', maxWidth: 640 }}>
       ยังไม่มีรูปผังโรงงาน — อัปโหลดที่แท็บ <b style={{ color: 'var(--text2)' }}>{tr('ภาพรวมโรงงาน')}</b> ก่อน แล้วกลับมาวาดถนนทับผังเดียวกัน
     </div>
   )
@@ -377,7 +377,7 @@ export default function TransportMapEditor() {
           {mode === 'node' && (
             <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--text2)' }}>
               {tr('ชนิดจุด:')}
-              <select value={addKind} onChange={e => setAddKind(e.target.value)} style={{ width: 150, padding: '5px 8px', borderRadius: 'var(--ctl-r)', fontSize: 12.5, background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--text)' }}>
+              <select value={addKind} onChange={e => setAddKind(e.target.value)} style={{ width: 150, padding: '5px 8px', borderRadius: 'var(--ctl-r)', fontSize: 12.5, background: 'var(--card-surf)', border: '1px solid var(--border)', color: 'var(--text)' }}>
                 {NODE_KINDS.map(n => <option key={n.key} value={n.key}>{n.icon} {tr(n.label)}</option>)}
               </select>
             </label>
@@ -400,7 +400,7 @@ export default function TransportMapEditor() {
         </div>
       )}
       {canEdit && !scaleMode && (
-        <div style={{ fontSize: 12, color: 'var(--text2)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '7px 11px' }}>
+        <div style={{ fontSize: 12, color: 'var(--text2)', background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '7px 11px' }}>
           {mode === 'draw' && (chainLast
             ? '✏️ คลิกจุดถัดไปตามแนวถนน — ทางเลี้ยว/หัวโค้งให้คลิกตรงมุมทุกจุด เส้นจะหักตาม (ไม่ตัดทะลุ) · คลิกใกล้จุดเดิม = บรรจบ/สี่แยก · กด "✓ จบเส้น" หรือ Esc เพื่อขึ้นเส้นใหม่'
             : '✏️ คลิกจุดเริ่มต้นบนแนวถนน แล้วคลิกไล่ไปตามถนน (คลิกทุกมุมที่เลี้ยว) ระบบวางจุด+ต่อเส้นให้อัตโนมัติ')}
@@ -488,7 +488,7 @@ export default function TransportMapEditor() {
 
         {/* side editor */}
         <div style={{ flex: '0 0 250px', minWidth: 230, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 12 }}>
+          <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 12 }}>
             <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--text2)', marginBottom: 8 }}>{tr('สัญลักษณ์')}</div>
             {NODE_KINDS.map(k => (
               <div key={k.key} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>
@@ -498,7 +498,7 @@ export default function TransportMapEditor() {
           </div>
 
           {canEdit && selNode && (
-            <div style={{ background: 'var(--card)', border: '1px solid var(--accent)', borderRadius: 'var(--r-md)', padding: 12 }}>
+            <div style={{ background: 'var(--card-surf)', border: '1px solid var(--accent)', borderRadius: 'var(--r-md)', padding: 12 }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>{tr('✏️ แก้ไขจุด')}</div>
               <FieldLbl t="ชื่อจุด">
                 <input value={selNode.name || ''} onChange={e => patchNode(selNode.id, { name: e.target.value })} placeholder={tr('เช่น STORE-IN, แยก A')} style={inp} />
@@ -522,7 +522,7 @@ export default function TransportMapEditor() {
             </div>
           )}
           {canEdit && selEdge && (
-            <div style={{ background: 'var(--card)', border: '1px solid var(--accent)', borderRadius: 'var(--r-md)', padding: 12 }}>
+            <div style={{ background: 'var(--card-surf)', border: '1px solid var(--accent)', borderRadius: 'var(--r-md)', padding: 12 }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>{tr('✏️ แก้ไขถนน')}</div>
               <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>
                 {(nById[selEdge.a_node]?.name || 'จุด')} ↔ {(nById[selEdge.b_node]?.name || 'จุด')}<br />
@@ -547,7 +547,7 @@ export default function TransportMapEditor() {
         const ok = m > 0 && unitDist > 1e-6
         return (
           <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-            <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 20, width: 'min(94vw, 380px)' }}>
+            <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 20, width: 'min(94vw, 380px)' }}>
               <h3 style={{ margin: '0 0 10px', fontSize: 16, fontWeight: 900, color: 'var(--text)' }}>{tr('ตั้งมาตราส่วน')}</h3>
               <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 10 }}>ระยะ 2 จุดที่เลือก = <b style={{ color: 'var(--text2)' }}>{unitDist.toFixed(2)}</b> {tr('หน่วยผัง')}</div>
               <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)' }}>{tr('ระยะจริงของ 2 จุดนี้ (เมตร)')}</span>
@@ -555,7 +555,7 @@ export default function TransportMapEditor() {
                 placeholder={tr('เช่น 25')} style={inp} />
               {ok && <div style={{ fontSize: 12.5, color: 'var(--accent)', fontWeight: 700, marginTop: 8 }}>{tr('→ 1 หน่วยผัง ≈')} {(m / unitDist).toFixed(2)} {tr('ม. (ทั้งผังกว้าง ≈')} {(m / unitDist * 100).toFixed(0)} ม.)</div>}
               <div style={{ display: 'flex', gap: 10, marginTop: 16, justifyContent: 'flex-end' }}>
-                <button onClick={() => setScalePts([])} style={{ padding: '8px 14px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontSize: 13, background: 'var(--bg2)', color: 'var(--text2)', border: '1px solid var(--border)' }}>{tr('เลือกจุดใหม่')}</button>
+                <button onClick={() => setScalePts([])} style={{ padding: '8px 14px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontSize: 13, background: 'var(--bg2-surf)', color: 'var(--text2)', border: '1px solid var(--border)' }}>{tr('เลือกจุดใหม่')}</button>
                 <button onClick={() => ok && saveScale(m / unitDist)} disabled={!ok} style={{ padding: '8px 18px', borderRadius: 'var(--r-md)', cursor: ok ? 'pointer' : 'not-allowed', fontSize: 13, fontWeight: 700, background: ok ? 'var(--accent)' : 'var(--bg2)', color: ok ? 'var(--accent-ink)' : 'var(--muted)', border: 'none' }}>{tr('บันทึก')}</button>
               </div>
             </div>
@@ -566,7 +566,7 @@ export default function TransportMapEditor() {
   )
 }
 
-const inp = { width: '100%', padding: '6px 9px', borderRadius: 7, fontSize: 12.5, background: 'var(--bg2)', border: '1px solid var(--border)', color: 'var(--text)', marginTop: 3 }
+const inp = { width: '100%', padding: '6px 9px', borderRadius: 7, fontSize: 12.5, background: 'var(--bg2-surf)', border: '1px solid var(--border)', color: 'var(--text)', marginTop: 3 }
 const delBtn = { marginTop: 8, width: '100%', padding: '7px', borderRadius: 8, cursor: 'pointer', fontSize: 12.5, fontWeight: 700, background: 'rgba(239,68,68,0.12)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.4)' }
 function FieldLbl({ t, children }) {
   return <div style={{ marginBottom: 7 }}><span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--muted)' }}>{t}</span>{children}</div>

@@ -230,7 +230,7 @@ export default function MonitorFgSync({ onClose, fullName, onSynced }) {
 
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
               <button type="button" onClick={onClose} disabled={busy}
-                style={{ padding: '8px 16px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)', fontSize: 13, cursor: 'pointer' }}>
+                style={{ padding: '8px 16px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)', fontSize: 13, cursor: 'pointer' }}>
                 {tr('ยกเลิก')}
               </button>
               <button type="button" onClick={apply} disabled={busy || !preview.groups.length}

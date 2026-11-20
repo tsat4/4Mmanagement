@@ -39,7 +39,7 @@ function Row({ k, v, strong, color }) {
 
 function Section({ title, children }) {
   return (
-    <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '10px 12px' }}>
+    <div style={{ background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '10px 12px' }}>
       <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--text2)', marginBottom: 4 }}>{tr(title)}</div>
       {children}
     </div>
@@ -108,7 +108,7 @@ export default function QualityBinDetailModal({ row, hasRedChild = false, scrapD
       style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: 16 }}>
       <div role="dialog" aria-modal="true"
-        style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-lg)',
+        style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-lg)',
           width: 'min(96vw, 1100px)', maxHeight: '94vh', overflowY: 'auto', padding: 18 }}>
         {/* ── หัว ── */}
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
@@ -229,7 +229,7 @@ export default function QualityBinDetailModal({ row, hasRedChild = false, scrapD
           <span style={{ flex: 1 }} />
           {onEdit && (
             <button onClick={onEdit}
-              style={{ padding: '7px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text)', cursor: 'pointer', fontSize: 12.5, fontWeight: 700 }}>
+              style={{ padding: '7px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text)', cursor: 'pointer', fontSize: 12.5, fontWeight: 700 }}>
               ✏️ {tr('แก้ไขรายการ')}
             </button>
           )}

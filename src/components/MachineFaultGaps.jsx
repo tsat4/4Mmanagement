@@ -77,7 +77,7 @@ export default function MachineFaultGaps({ session, orders = [], downtimes = [],
     );
   }
   return (
-    <div style={{ border: '1px solid var(--amber)', borderRadius: 'var(--r-md)', padding: '10px 12px', background: 'var(--card)', display: 'grid', gap: 8, ...style }}>
+    <div style={{ border: '1px solid var(--amber)', borderRadius: 'var(--r-md)', padding: '10px 12px', background: 'var(--card-surf)', display: 'grid', gap: 8, ...style }}>
       <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
         ⚠️ เครื่องเสียแต่ยังไม่ลง downtime ({gaps.length})
         <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--muted)' }}>

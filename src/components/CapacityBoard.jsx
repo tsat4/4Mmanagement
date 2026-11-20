@@ -1,6 +1,7 @@
 import { fmtAxis } from '../utils/chartAxis';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine, ResponsiveContainer, LabelList } from 'recharts';
+import { chartAnim } from '../utils/motion';
 import { supabaseDR } from '../supabaseClient';
 import { toast } from '../components/Toast';
 import { can } from '../utils/permissions';
@@ -314,18 +315,18 @@ export default function CapacityBoard({ role, scope, lines, months, calMap, dema
               <XAxis dataKey="name" tick={{ fontSize:11, fill:'var(--muted)' }} />
               <YAxis tickFormatter={fmtAxis} width="auto" tick={{ fontSize:11, fill:'var(--muted)' }} label={{ value:'ชม.', angle:-90, position:'insideLeft', fontSize:11, fill:'var(--muted)' }} />
               <Tooltip formatter={(v) => `${Number(v).toLocaleString()} ชม.`}
-                contentStyle={{ background:'var(--card)', border:'1px solid var(--border)', borderRadius:8, fontSize:12 }} />
+                contentStyle={{ background: 'var(--card-surf)', border:'1px solid var(--border)', borderRadius:8, fontSize:12 }} />
               <Legend wrapperStyle={{ fontSize:11 }} />
               {refLines.map(p => (
                 <ReferenceLine key={p.key} y={p.hours} stroke={p.color || 'var(--muted)'} strokeDasharray="4 4"
                   label={{ value: p.label, position:'right', fontSize:11, fill:p.color || 'var(--muted)' }} />
               ))}
               {/* ป้ายชั่วโมงบนหัวแท่ง (คำขอ user 25/09) — จอ TV อ่านตัวเลขจากแท่งเองไม่ได้ */}
-              <Bar dataKey="ActWorkload" name="ภาระงาน (ActWorkload)" fill="#3b82f6">
+              <Bar {...chartAnim()} dataKey="ActWorkload" name="ภาระงาน (ActWorkload)" fill="#3b82f6">
                 <LabelList dataKey="ActWorkload" position="top" fontSize={11} fill="#3b82f6"
                   formatter={(v) => (v > 0 ? Math.round(v).toLocaleString() : '')} />
               </Bar>
-              <Bar dataKey="RworkOEE"    name="ต้องใช้จริงเมื่อคิด OEE (RworkOEE)" fill="#ef4444">
+              <Bar {...chartAnim()} dataKey="RworkOEE"    name="ต้องใช้จริงเมื่อคิด OEE (RworkOEE)" fill="#ef4444">
                 <LabelList dataKey="RworkOEE" position="top" fontSize={11} fill="#ef4444"
                   formatter={(v) => (v > 0 ? Math.round(v).toLocaleString() : '')} />
               </Bar>

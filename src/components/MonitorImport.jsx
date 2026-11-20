@@ -186,7 +186,7 @@ export function BoardPlanPreview({ made = [], skipped = [] }) {
         {made.map((sh) => (
           <div key={sh.name} style={{
             border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '7px 10px',
-            background: 'var(--bg2)', fontSize: FS,
+            background: 'var(--bg2-surf)', fontSize: FS,
           }}>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'baseline' }}>
               <b style={{ fontSize: FS + 1 }}>{sh.name}</b>

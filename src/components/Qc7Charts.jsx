@@ -25,7 +25,7 @@ const fmt = (n, d = 0) => (n == null ? '—' : Number(n).toLocaleString('en-US',
 export function NotEnough({ reason, hint }) {
   return (
     <div style={{
-      fontSize: 12, color: 'var(--muted)', background: 'var(--bg2)', border: '1px dashed var(--border2)',
+      fontSize: 12, color: 'var(--muted)', background: 'var(--bg2-surf)', border: '1px dashed var(--border2)',
       borderRadius: 'var(--r-md)', padding: '14px 12px', textAlign: 'center', lineHeight: 1.7,
     }}>
       📭 <b style={{ color: 'var(--text2)' }}>{tr('ยังวิเคราะห์ไม่ได้')}</b>
@@ -143,7 +143,7 @@ export function ScatterPlot({ records, xOf, yOf, labelOf, xLabel, yLabel, minN =
   const py = (v) => (s.yMax === s.yMin ? 50 : 96 - ((v - s.yMin) / (s.yMax - s.yMin)) * 92);
   return (
     <>
-      <div style={{ height: 190, border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--bg2)', marginTop: 4 }}>
+      <div style={{ height: 190, border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)', marginTop: 4 }}>
         <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ width: '100%', height: '100%' }}>
           {s.points.map((p, i) => (
             <circle key={i} cx={px(p.x)} cy={py(p.y)} r="2" fill="#3b82f6" fillOpacity="0.75" vectorEffect="non-scaling-stroke">

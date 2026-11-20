@@ -377,15 +377,18 @@ const TABLE_ROWS = {
     handed_by: `หัวหน้าทดสอบ ${i}`,
   }),
 
+  /* 🏢 ชั้นบน (20/11 · ห้ามถอด) — ของจริงส่วนงานทุกตัวชี้ plant แล้ว (migration 20261120_org_nodes_upper_layer_rows_main.sql)
+     ⇒ แถว 13 = company (ราก) · 12 = plant ใต้ company · PD1 (แถว 1) ชี้ plant · JIG MTN (6) ยังไม่มีแม่ = เคส "แผนกขึ้นตรง"
+     ชั้นบนไม่มี CC/ฝ่าย ตามของจริง (ใส่ = ไหลลงหน่วยผ่าน divisionOfNode/laborTypeOfNode) · ทีมเหลือ 8–11,15 */
   org_nodes: (r, i) => ({
     ...r,
-    kind: i === 1 ? 'section' : (i === 2 || i === 6) ? 'department' : i <= 5 || i === 7 ? 'line' : 'team',
-    code: i === 1 ? 'PD1' : i <= 5 || i === 7 ? null : i === 6 ? null : r.code,
-    name: i === 6 ? 'JIG MTN' : r.name,   // แผนกช่างชื่อจริง — ให้สาย ⚡ KPI ช่าง (kpi_mtn_rollup → kpiAuto) ถูกรันใน harness
-    parent_id: i === 1 || i === 6 ? null : i === 2 ? 'id-1' : i <= 5 ? 'id-2' : i === 7 ? 'id-6' : 'id-3',
+    kind: i === 13 ? 'company' : i === 12 ? 'plant' : i === 1 ? 'section' : (i === 2 || i === 6) ? 'department' : i <= 5 || i === 7 ? 'line' : 'team',
+    code: i === 13 ? '2100' : i === 12 ? '2140' : i === 1 ? 'PD1' : i <= 5 || i === 7 ? null : i === 6 ? null : r.code,
+    name: i === 13 ? 'TSAT' : i === 12 ? 'TSAT-P4' : i === 6 ? 'JIG MTN' : r.name,   // แผนกช่างชื่อจริง — ให้สาย ⚡ KPI ช่าง (kpi_mtn_rollup → kpiAuto) ถูกรันใน harness
+    parent_id: i === 13 || i === 6 ? null : i === 12 ? 'id-13' : i === 1 ? 'id-12' : i === 2 ? 'id-1' : i <= 5 ? 'id-2' : i === 7 ? 'id-6' : 'id-3',
     ref_line_id: i >= 3 && i <= 5 ? i : null,          // 🔑 เลข — ชี้ production_lines.id (ดูหมายเหตุที่ production_lines)
     division: i === 1 ? 'production' : i === 6 ? 'maintenance' : null,
-    cost_center: isNullish(r) ? null : `21406${String(i).padStart(5, '0')}`,
+    cost_center: isNullish(r) || i === 12 || i === 13 ? null : `21406${String(i).padStart(5, '0')}`,
     sort_order: i,
   }),
   /* 🧑‍🤝‍🧑 Manpower Control Board (2026-10-06) — ผังคนต้องได้ "ตำแหน่ง + หน่วย + ทีม" คละกัน
@@ -682,6 +685,22 @@ const TABLE_ROWS = {
   /* 🏭 ศูนย์เชื่อมต่อ · ข้อมูลจากเครื่อง (2026-11-11 · ห้ามถอด) — เดิม `kinds` ไม่มีในแถว ⇒ แผง
      MachineFactsPanel (/integrations?src=) ไม่เคยถูกวาดใน harness · ต้องมีทั้ง tag ที่ผูกแล้ว/ยังไม่ผูก
      + สถานะทั้งที่จับคู่ได้ (fault/no_plan) และจับคู่ไม่ได้ (idle) + เวลาที่อ่านไม่ออก (isNullish) */
+  /* ⚡ ผังจ่ายไฟหลายชั้น (2026-11-20 · ห้ามถอด) — ต้องมีทั้งตู้ชั้นเดียว (MDB-03 = PanelFlow เดิม)
+     และตู้ที่มีแม่-ลูก 3 ชั้น (MDB → MDB-07 → AIR → AC-*) + แม่ที่ชี้ชื่อไม่มีในทะเบียน (เตือนบนจอ)
+     ⇒ TreeFlow / ไฟไม่มีมิเตอร์วัด / ยอดไม่นับซ้ำ ถูกวาดใน crashsweep */
+  energy_live_meters: (r, i) => {
+    const M = [['DB-CNC', 'MDB-03', null], ['DB-LASER', 'MDB-03', null], ['MDB', 'MDB', null], ['MDB-07', 'MDB', 'MDB'],
+      ['AIR', 'MDB', 'MDB-07'], ['AC-06', 'MDB', 'AIR'], ['AC-07', 'MDB', 'AIR'], ['ORPHAN', 'MDB-03', 'NOPE']][i % 8];
+    return { ...r, scope_kind: 'zone', scope_name: i < 8 ? M[0] : `${M[0]}-${i}`, panel: M[1], parent_name: M[2], is_active: i < 8, sort_order: i, limit_kw: 1000, gauge_max_kw: 1000 };
+  },
+  energy_live: (r, i) => {
+    const N = ['DB-CNC', 'DB-LASER', 'MDB', 'MDB-07', 'AIR', 'AC-06', 'AC-07', 'ORPHAN'];
+    const KW = [40, 25, 900, 60, 56, 20, 30, 5];
+    /* แถว 8+ = ค่ารายเฟสของ DB-LASER (แผง 3 เฟสหน้ารายตู้) · 14+ = กระแสรวม */
+    const PH = [['v1', 392], ['v2', 391], ['v3', 393], ['a1', 58.6], ['a2', 45.7], ['a3', 45.4]];
+    if (i >= 8 && i < 14) return { ...r, scope_kind: 'zone', scope_name: 'DB-LASER', field: PH[i - 8][0], value: PH[i - 8][1], received_at: new Date().toISOString() };
+    return { ...r, scope_kind: 'zone', scope_name: N[i % 8], field: i < 8 ? 'kw' : 'a', value: i < 8 ? KW[i] : 50, received_at: new Date().toISOString() };
+  },
   integration_sources: (r, i) => ({
     ...r, kinds: i % 2 ? ['energy_readings', 'energy_events'] : ['machine_state', 'piece_count'],
     legacy_secret: false, key_hint: i % 3 ? 'ab12' : null,
@@ -872,14 +891,14 @@ const TABLE_FIXED = {
     { id: 'kd-6', year: 2026, section: 'JIG MTN', scope_kind: 'department', scope_value: 'JIG MTN', line_group: null, category: 'customer', seq: 6, name: 'MO Closed on target', source: 'manual', unit: '%', target_compare: '>=', target_value: 99, commit_compare: '>=', commit_value: 95, direction: 'up', weight: 6, is_active: true, catalog_id: null, std_unit: 'Maintenance', std_item_id: null, kpi_catalog: null },
     /* ✍️ OEE กรอกมือของ PD1 (09/10 · เคสจริง PD2 คีย์ OEE ม.ค.–ส.ค. แล้วไม่ขึ้น) — เปิดสาขา overlay บนแถว auto:
        เดือนที่กรอก = ค่าทางการ (ทึบ) · เดือนที่ไม่กรอก = ค่าระบบ (computed ลายประ) · ห้ามถอด */
-    { id: 'kd-8', year: 2026, section: 'PD1', scope_kind: 'section', scope_value: 'PD1', line_group: null, category: 'internal', seq: 8, name: 'OEE', source: 'manual', target_value: 85, direction: 'up', weight: 5, is_active: true, catalog_id: 'kc-oee', std_unit: 'Production', std_item_id: null, kpi_catalog: { id: 'kc-oee', name: 'OEE', unit: '%', category: 'internal', direction: 'up', decimals: 2, summary_mode: 'average', value_scope: 'own', board_slot: 'oee' } },
+    { id: 'kd-8', year: 2026, section: 'PD1', scope_kind: 'section', scope_value: 'PD1', line_group: null, category: 'internal', seq: 8, name: 'OEE', source: 'manual', target_value: 85, direction: 'up', weight: 5, is_active: true, catalog_id: 'kc-oee', std_unit: 'Production', std_item_id: null, kpi_catalog: { id: 'kc-oee', name: 'OEE', unit: '%', category: 'internal', direction: 'up', decimals: 2, summary_mode: 'average', value_scope: 'own', board_slot: 'oee', value_min: 0, value_max: 100 } },
     { id: 'kd-9', year: 2026, section: 'PD1', scope_kind: 'section', scope_value: 'PD1', line_group: null, category: 'internal', seq: 9, name: 'Safety', source: 'manual', target_value: 0, direction: 'down', weight: 5, is_active: true, catalog_id: 'kc-safe', std_unit: 'Production', std_item_id: null, kpi_catalog: { id: 'kc-safe', name: 'Safety', unit: 'ครั้ง', category: 'internal', direction: 'down', decimals: 0, summary_mode: 'sum', value_scope: 'own', board_slot: 'safe' } },
     // ⬆ 12/10 นิยามของ "หน่วยลูก" (แผนก id-2 ใต้ PD1) ที่ PD1 ไม่มี ⇒ บอร์ด PD1 ต้องรวมขึ้นเป็นแผ่น roll:… (sum · เป้ารวม) — ห้ามถอด
     { id: 'kd-10', year: 2026, section: 'PD1', scope_kind: 'department', scope_value: LINE_NAME(2), line_group: null, category: 'internal', seq: 10, name: 'Scrap Cost', source: 'manual', target_value: 50, direction: 'down', weight: 5, is_active: true, catalog_id: 'kc-scrap', std_unit: 'Production', std_item_id: null, kpi_catalog: { id: 'kc-scrap', name: 'Scrap Cost', unit: 'พันบาท', category: 'internal', direction: 'down', decimals: 1, summary_mode: 'sum', value_scope: 'own', board_slot: null } },
     // ⬆ 12/10 แม่ PD1 (kd-12) กับลูกแผนก id-2 (kd-11) ถือ KPI ทะเบียนเดียวกัน kc-rw (own · ไม่ใช่ค่าโรงงานร่วม): PD1 กรอกเอง ก.พ. · ลูกกรอก ม.ค.+ก.พ.
     //    ⇒ ม.ค. เติมจากลูก · ก.พ. ใช้ของ PD1 ไม่บวกซ้ำ (user: "แม่มี 2 ลูกกรอก 2 ไม่ใช่ 4") — ห้ามถอด
-    { id: 'kd-12', year: 2026, section: 'PD1', scope_kind: 'section', scope_value: 'PD1', line_group: null, category: 'internal', seq: 12, name: 'Rework Rate', source: 'manual', target_value: 3, direction: 'down', weight: 5, is_active: true, catalog_id: 'kc-rw', std_unit: 'Production', std_item_id: null, kpi_catalog: { id: 'kc-rw', name: 'Rework Rate', unit: '%', category: 'internal', direction: 'down', decimals: 2, summary_mode: 'average', value_scope: 'own', board_slot: null } },
-    { id: 'kd-11', year: 2026, section: 'PD1', scope_kind: 'department', scope_value: LINE_NAME(2), line_group: null, category: 'internal', seq: 11, name: 'Rework Rate', source: 'manual', target_value: 3, direction: 'down', weight: 5, is_active: true, catalog_id: 'kc-rw', std_unit: 'Production', std_item_id: null, kpi_catalog: { id: 'kc-rw', name: 'Rework Rate', unit: '%', category: 'internal', direction: 'down', decimals: 2, summary_mode: 'average', value_scope: 'own', board_slot: null } },
+    { id: 'kd-12', year: 2026, section: 'PD1', scope_kind: 'section', scope_value: 'PD1', line_group: null, category: 'internal', seq: 12, name: 'Rework Rate', source: 'manual', target_value: 3, direction: 'down', weight: 5, is_active: true, catalog_id: 'kc-rw', std_unit: 'Production', std_item_id: null, kpi_catalog: { id: 'kc-rw', name: 'Rework Rate', unit: '%', category: 'internal', direction: 'down', decimals: 2, summary_mode: 'average', value_scope: 'own', board_slot: null, value_min: 0, value_max: 100 } },
+    { id: 'kd-11', year: 2026, section: 'PD1', scope_kind: 'department', scope_value: LINE_NAME(2), line_group: null, category: 'internal', seq: 11, name: 'Rework Rate', source: 'manual', target_value: 3, direction: 'down', weight: 5, is_active: true, catalog_id: 'kc-rw', std_unit: 'Production', std_item_id: null, kpi_catalog: { id: 'kc-rw', name: 'Rework Rate', unit: '%', category: 'internal', direction: 'down', decimals: 2, summary_mode: 'average', value_scope: 'own', board_slot: null, value_min: 0, value_max: 100 } },
   ],
   /* ค่าจริง + แผนรายเดือนของ KPI กรอกมือ (2026-09-25) — ไม่มี 2 ตารางนี้ใน mock แปลว่า
      ทั้งตารางกรอกมือ · คอลัมน์สรุปทั้งปี · มินิกราฟ · แถว 📅 แผน **ไม่เคยถูกรันด้วยข้อมูลจริงใน harness**
@@ -896,7 +915,9 @@ const TABLE_FIXED = {
     ...[12.5, 9.8, 14.1].map((v, i) => ({ id: `ke-10-${i}`, kpi_id: 'kd-10', month: i + 1, value: v })),   // ⬆ ค่าของหน่วยลูก (roll-up ขึ้น PD1)
     { id: 'ke-12-feb', kpi_id: 'kd-12', month: 2, value: 2.2 },   // แม่ PD1 กรอกเอง ก.พ. (ชนะของลูก)
     { id: 'ke-11-0', kpi_id: 'kd-11', month: 1, value: 4.5 }, { id: 'ke-11-1', kpi_id: 'kd-11', month: 2, value: 9 },   // ลูก: ม.ค. ถูกเติมขึ้นแม่ · ก.พ. ถูกของแม่ทับ   // Safety สรุปหน่วยงาน ⇒ เติมเดือนที่หน้างานไม่มีบันทึก (ROWS ทั่วไปไม่มี event_date/kind ⇒ นับได้ 0)
-    { id: 'ke-8-aug', kpi_id: 'kd-8', month: 8, value: 90.5 },   // เดือนที่ระบบมีค่าจากกะ (sessions 2026-08-04) ⇒ ต้องถูกค่าระบบทับ + จอเขียนบอก
+    { id: 'ke-8-aug', kpi_id: 'kd-8', month: 8, value: 90.5 },
+    /* 🧱 20/11 Rework Rate PD1 (kd-12 · ≤ 3 % · ยิ่งต่ำยิ่งดี) สูงทั้งปี ⇒ "เดือนที่เหลือต้องติดลบ" = การ์ด "ไม่ทัน Target ปีนี้" (ห้ามถอด — ด่านภาพ feasibility) */
+    ...[[1, 8.2], [3, 7.8], [4, 9.6], [5, 8.9], [6, 9.3], [7, 8.4], [8, 9.9], [9, 9.2], [10, 8.7]].map(([m, v]) => ({ id: `ke-12-m${m}`, kpi_id: 'kd-12', month: m, value: v })),   // ก.พ. มีแถว ke-12-feb อยู่แล้ว   // เดือนที่ระบบมีค่าจากกะ (sessions 2026-08-04) ⇒ ต้องถูกค่าระบบทับ + จอเขียนบอก
   ],
   /* 🧩 ลำดับแผ่นที่คนจัด (09/10) — PD1 เอา OEE ขึ้นก่อน %RM · คีย์ 'gone' = แผ่นที่ไม่มีแล้ว ต้องถูกข้ามไม่พัง (ห้ามถอด) */
   kpi_board_layouts: [

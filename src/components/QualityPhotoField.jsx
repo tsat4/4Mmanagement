@@ -50,7 +50,7 @@ export default function QualityPhotoField({
         /* 🔴 ว่างต้องเขียนว่าว่าง ห้ามปล่อยเป็นช่องเปล่าให้เดาเอง */
         <div style={{
           fontSize: 11.5, color: 'var(--muted)', padding: '10px 12px', marginBottom: 6,
-          border: '1px dashed var(--border)', borderRadius: 'var(--r-md)', background: 'var(--bg2)',
+          border: '1px dashed var(--border)', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)',
         }}>{tr('ยังไม่มีรูป')}</div>
       )}
 
@@ -69,7 +69,7 @@ export default function QualityPhotoField({
             <button type="button" onClick={() => onPick(null)}
               style={{
                 fontSize: 11.5, padding: '4px 10px', borderRadius: 'var(--r-md)', cursor: 'pointer',
-                border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text2)',
+                border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text2)',
               }}>{tr('เอารูปออก')}</button>
           )}
         </div>

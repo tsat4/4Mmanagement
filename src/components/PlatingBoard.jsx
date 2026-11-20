@@ -16,7 +16,7 @@ import useSuppliers from '../utils/useSuppliers';
 import ProductSelect from './ProductSelect';
 import SupplierSelect from './SupplierSelect';
 import PartCard, { partCardGrid } from './PartCard';
-import StatusZones from './StatusZones';
+import StatusZones, { RowTable } from './StatusZones';
 import {
   platingProducts, platingRoutes, beforeCandidatesOf, autoBeforeOf, outstandingByVendor, toWhTargets,
   sendBlockReason, sendStockWarn, openQtyOf, receiveBlockReason, orderZone, OUTSOURCE_LINE_TYPE,
@@ -65,7 +65,9 @@ const blankLine = () => ({ key: Math.random().toString(36).slice(2), after: '', 
 /* readOnly (04/11) — ฝังใน /heijunka (monitor) = ดูอย่างเดียว · ทำรายการที่ /line-stock?tab=out (ส่ง) · ?tab=in (รับกลับ) */
 /* part (05/11 · คำสั่ง user แยกขาออก/ขาเข้า): 'send' = ยอดที่ร้าน + ส่งไปชุบ + ส่งเข้า W/H + ตั้งค่า (ขาออก)
    · 'receive' = การ์ดรอรับกลับจากร้าน (ขาเข้า) · 'all' = ทั้งหมด (จอดู /heijunka) */
-export default function PlatingBoard({ q = '', showDone = false, readOnly = false, part = 'all' }) {
+/* 📋 20/11 (คำสั่ง user "ทำแท็บงานชุบเป็นตาราง") — `table` = 1 แถว = 1 ใบ (UI §6.23.1 แบบตาราง)
+   ส่งมาจาก Stock Management เฉพาะจอคอม · มือถือ/จอเดิมไม่ส่ง = การ์ดเหมือนเดิม · ข้อมูล/ปุ่มชุดเดิมทุกตัว */
+export default function PlatingBoard({ q = '', showDone = false, readOnly = false, part = 'all', table = false }) {
   const { role, fullName } = useContext(UserContext);
   const canSend = !readOnly && canSeeded('plating', 'send', role);
   const canReceive = !readOnly && canSeeded('plating', 'receive', role);
@@ -317,7 +319,7 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
             {sendLines.map((l, idx) => {
               const i = lineInfo(l);
               return (
-                <div key={l.key} style={{ display: 'grid', gap: 6, padding: 10, borderRadius: 'var(--radius)', background: 'var(--bg2)', border: '1px solid var(--border)' }}>
+                <div key={l.key} style={{ display: 'grid', gap: 6, padding: 10, borderRadius: 'var(--radius)', background: 'var(--bg2-surf)', border: '1px solid var(--border)' }}>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                     <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--muted)' }}>#{idx + 1}</span>
                     <div style={{ flex: '2 1 260px', minWidth: 0 }}>
@@ -377,7 +379,7 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
           {orders.length === 0 && !s ? 'ไม่มีงานรอรับกลับจากร้านชุบ' : `ไม่มีใบที่ตรงคำค้น${s ? ` "${q}"` : ''}`}
         </div>
       ) : (
-        <StatusZones rows={cards} zones={ZONES(showDone)} statusOf={zoneOf} renderCard={o => {
+        <StatusZones layout={table ? 'table' : 'cards'} rows={cards} zones={ZONES(showDone)} statusOf={zoneOf} renderCard={o => {
           const open = openQtyOf(o);
           const isOpen = o.status === 'open';
           const editing = diffFor === o.id;
@@ -442,8 +444,7 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
           <h3 style={h3}>{tr('งานหลังชุบในคลัง → ส่งเข้า W/H')}</h3>
           {!canToWh && <div style={warnTxt}>{tr('บัญชีนี้ไม่มีสิทธิ์ส่งเข้า W/H (plating:to_wh) — ดูได้อย่างเดียว')}</div>}
           <div style={muted}>{tr('ระบบแปลงเป็นเบอร์ 1xx ตาม BOM ให้เอง — เฉพาะ FG ที่มีลูกเป็นงานหลังชุบตัวเดียว · FG ที่ต้องประกอบต่อ ส่งไปไลน์ตามใบผลิตปกติ')}</div>
-          <div style={{ ...partCardGrid(), marginTop: 8 }}>
-            {afterStock.map(a => {
+          {(() => { const items = afterStock.map(a => {
               const direct = a.targets.filter(t => t.direct);
               const asm = a.targets.filter(t => !t.direct);
               const fg = whFg[a.after] || (direct.length === 1 ? direct[0].fg : '');
@@ -469,8 +470,11 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
                     </div>
                   ) : null} />
               );
-            })}
-          </div>
+            });
+            return table
+              ? <div style={{ marginTop: 8 }}><RowTable>{items}</RowTable></div>
+              : <div style={{ ...partCardGrid(), marginTop: 8 }}>{items}</div>;
+          })()}
         </div>
       )}
 

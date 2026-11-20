@@ -112,7 +112,7 @@ function DieMatLinkNote({ lot, dies, role, mayWrite, onDone }) {
   return (
     <button type="button" onClick={link} disabled={busy}
       style={{ marginTop: 2, fontSize: 11, padding: '1px 6px', borderRadius: 'var(--r-md)', cursor: busy ? 'default' : 'pointer',
-        background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--accent)' }}>
+        background: 'var(--card-surf)', border: '1px solid var(--border)', color: 'var(--accent)' }}>
       {busy ? 'กำลังผูก…' : `🔗 ผูก MAT นี้กับ ${set.set_code}`}
     </button>
   );

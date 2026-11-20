@@ -1148,7 +1148,7 @@ export default function MorningMeeting() {
           </div>
           {/* 📷 Gesture Mode — mount เฉพาะตอนเปิด (unmount = ดับกล้องทันที) */}
           {gestureOn && (
-            <Suspense fallback={<div style={{ position: 'absolute', right: 16, bottom: 16, zIndex: 30, fontSize: 12, color: 'var(--muted)', background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '8px 12px' }}>{tr('⏳ กำลังโหลด Gesture Mode…')}</div>}>
+            <Suspense fallback={<div style={{ position: 'absolute', right: 16, bottom: 16, zIndex: 30, fontSize: 12, color: 'var(--muted)', background: 'var(--bg2-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '8px 12px' }}>{tr('⏳ กำลังโหลด Gesture Mode…')}</div>}>
               <GestureCam onGesture={handleGesture} onError={handleGestureError} />
             </Suspense>
           )}
@@ -1159,7 +1159,7 @@ export default function MorningMeeting() {
       {actModal && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div style={{ position: 'absolute', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)' }} />
-          <div style={{ position: 'relative', zIndex: 10, width: '100%', maxWidth: 460, borderRadius: 'var(--r-lg)', background: 'var(--bg2)', border: '1px solid var(--border2)', boxShadow: 'var(--shadow-lg)', padding: 18 }}>
+          <div style={{ position: 'relative', zIndex: 10, width: '100%', maxWidth: 460, borderRadius: 'var(--r-lg)', background: 'var(--bg2-surf)', border: '1px solid var(--border2)', boxShadow: 'var(--shadow-lg)', padding: 18 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{tr('➕ Action Item — ประชุม')} {fmtDate(meetingDate)}</h3>
               <button onClick={() => setActModal(null)} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 20, cursor: 'pointer' }}>×</button>

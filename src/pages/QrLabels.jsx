@@ -280,7 +280,7 @@ export default function QrLabels() {
       <div data-page-note="1" style={{
         display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', marginBottom: 10,
         borderRadius: 'var(--r-md)', fontSize: 12.5, lineHeight: 1.7,
-        background: 'var(--bg2)', border: `1px solid ${linkLabels ? 'var(--border2)' : 'var(--amber)'}`,
+        background: 'var(--bg2-surf)', border: `1px solid ${linkLabels ? 'var(--border2)' : 'var(--amber)'}`,
       }}>
         {linkLabels ? (
           <span>{tr('ป้ายที่พิมพ์จะเป็น')} <b>{tr('ลิงก์')}</b> <code style={{ background: 'var(--bg3)', padding: '1px 5px', borderRadius: 4 }}>{origin}/scan</code>
@@ -317,12 +317,12 @@ export default function QrLabels() {
         )}
       </FilterBar>
       {kind === 'delivery' && (
-        <div style={{ fontSize: 12.5, color: 'var(--text2)', background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '9px 12px', marginBottom: 12 }}>
+        <div style={{ fontSize: 12.5, color: 'var(--text2)', background: 'var(--bg2-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '9px 12px', marginBottom: 12 }}>
           ป้ายที่สโตร์สแกนตอนวางของถึงไลน์ (ลูปเรียกชิ้นส่วนขั้น 7) — ติดที่จุดวางของจริงหน้าไลน์ · ตั้ง/แก้จุดที่ ⚙️ ตั้งค่าผังไลน์ → 🎯 จุดส่งงาน · แนะนำขนาด <b>{tr('ใหญ่ 90×60')}</b> (สแกนจากระยะแร็ค)
         </div>
       )}
       {kind === 'part' && (
-        <div style={{ fontSize: 12.5, color: 'var(--text2)', background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '9px 12px', marginBottom: 12, lineHeight: 1.7 }}>
+        <div style={{ fontSize: 12.5, color: 'var(--text2)', background: 'var(--bg2-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '9px 12px', marginBottom: 12, lineHeight: 1.7 }}>
           ป้ายติดกล่อง/บัตรคัมบัง/ชั้นวางของพาร์ท — ส่องด้วยกล้องมือถือแล้วเปิดเมนูของพาร์ทนั้น:
           <b> {tr('✅ ตรวจชิ้นงาน (ใบตรวจ QA)')}</b> · ใบผลิตของพาร์ท · สโตร์ยิงป้ายนี้ตอนหยิบของได้เหมือนบาร์โค้ด MAT เดิม
           {' '}· <b>{tr('ไม่ต้องรื้อบาร์โค้ดเดิม')}</b> (ยังสแกนในแอปได้) — ติดเพิ่มเฉพาะจุดที่อยากส่องด้วยกล้องมือถือ
@@ -337,13 +337,13 @@ export default function QrLabels() {
 
 
       {kind === 'jig' && shadowCount > 0 && (
-        <div style={{ fontSize: 12.5, color: 'var(--text2)', background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '9px 12px', marginBottom: 12 }}>
+        <div style={{ fontSize: 12.5, color: 'var(--text2)', background: 'var(--bg2-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '9px 12px', marginBottom: 12 }}>
           ℹ️ ซ่อน {shadowCount} {tr('รายการในทะเบียน PM ที่เป็น')}<b>{tr('เงา')}</b>ของเครื่อง/จิ๊ก/แม่พิมพ์ในทะเบียนอุปกรณ์ (มีแผนตรวจ) —
           ป้ายของตัวจริงพิมพ์จากแถวหลักทางเดียว ไม่งั้นจะได้ QR 2 ใบคนละรหัสติดของชิ้นเดียวกัน
         </div>
       )}
       {kind === 'jig' && (
-        <div style={{ fontSize: 12.5, color: 'var(--text2)', background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '9px 12px', marginBottom: 12 }}>
+        <div style={{ fontSize: 12.5, color: 'var(--text2)', background: 'var(--bg2-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '9px 12px', marginBottom: 12 }}>
           แท็บนี้ = <b>{tr('จิ๊กในทะเบียนอุปกรณ์')}</b> {tr('+ อุปกรณ์ที่มีแต่แผนตรวจ PM (ป้ายชิป')} <b>{tr('ทะเบียน PM')}</b>) ·
           🔨 <b>{tr('ป้ายแม่พิมพ์อยู่แท็บ 🔨 แม่พิมพ์')}</b> (สแกนแล้วเด้งเข้าผังจัดเก็บได้)
           {dupJigs.length > 0 && <><br />{tr('⚠️ ข้าม')} {dupJigs.length} รายการในทะเบียน PM ที่เลขซ้ำกับจิ๊กในทะเบียนอุปกรณ์
@@ -366,7 +366,7 @@ export default function QrLabels() {
         </NoticeBar>
       )}
 
-      <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', overflow: 'hidden' }}>
+      <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>

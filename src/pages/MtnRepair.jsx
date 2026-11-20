@@ -403,7 +403,7 @@ export function MoReportFromDowntime({ downtime, lineName, initial, defaultDept,
     <ModalShell title={trI18n('เปิดใบแจ้งซ่อมจาก Downtime')} onClose={onClose}>
       {st.err
         ? <div style={{ color: 'var(--red)', fontSize: 13 }}>{trI18n('⚠️ โหลดทะเบียนของฟอร์มแจ้งซ่อมไม่สำเร็จ (')}{st.err}) — ยังเปิดใบไม่ได้
-            <div><button type="button" onClick={load} style={{ marginTop: 8, fontSize: 12, padding: '4px 12px', borderRadius: 'var(--r-md)', cursor: 'pointer', background: 'var(--bg3)', color: 'var(--text)', border: '1px solid var(--border2)' }}>{trI18n('ลองใหม่')}</button></div></div>
+            <div><button type="button" onClick={load} style={{ marginTop: 8, fontSize: 12, padding: '4px 12px', borderRadius: 'var(--r-md)', cursor: 'pointer', background: 'var(--bg3-surf)', color: 'var(--text)', border: '1px solid var(--border2)' }}>{trI18n('ลองใหม่')}</button></div></div>
         : <div style={{ color: 'var(--muted)', fontSize: 13 }}>{trI18n('กำลังโหลดฟอร์มแจ้งซ่อม…')}</div>}
     </ModalShell>
   );
@@ -447,7 +447,7 @@ function ModalShell({ title, onClose, children, wide, dirty }) {
   const askClose = async () => { if (dirty && !await confirmDiscard()) return; onClose(); };
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 3000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', overflowY: 'auto', padding: '4vh 2vw' }}>
-      <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', width: wide ? 'min(96vw, 1200px)' : 'min(96vw, 640px)', maxHeight: '92vh', overflowY: 'auto' }}>
+      <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', width: wide ? 'min(96vw, 1200px)' : 'min(96vw, 640px)', maxHeight: '92vh', overflowY: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, background: 'var(--card)', zIndex: 1 }}>
           <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{title}</div>
           <button onClick={askClose} aria-label={trI18n('ปิด')} style={{ background: 'none', border: 'none', fontSize: 22, color: 'var(--muted)', cursor: 'pointer', lineHeight: 1 }}>✕</button>
@@ -1286,7 +1286,7 @@ const HANDOFF_CAP = 2000;
                   <button key={c.key} onClick={() => clearFilterBy(c.key)}
                     title={`ปลดตัวกรอง "${c.label}" แล้วจะเห็น ${c.n} ใบ`}
                     style={{ height: 'var(--ctl-h)', padding: '0 11px', borderRadius: 'var(--ctl-r)', fontSize: 'var(--ctl-fs)',
-                      fontWeight: 700, cursor: 'pointer', background: 'var(--bg2)', color: 'var(--text)', border: '1px solid var(--border2)' }}>
+                      fontWeight: 700, cursor: 'pointer', background: 'var(--bg2-surf)', color: 'var(--text)', border: '1px solid var(--border2)' }}>
                     {trI18n(c.label)}{c.value ? `: ${c.value}` : ''} → {c.n.toLocaleString()} {trI18n('ใบ')}
                   </button>
                 ) : (
@@ -1313,7 +1313,7 @@ const HANDOFF_CAP = 2000;
             {!shown.length && <div style={{ color: 'var(--muted)', padding: 24, textAlign: 'center' }}>{trI18n('ไม่มีรายการ')}</div>}
           </div>
         ) : (
-        <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'auto', maxHeight: 'calc(100vh - 170px)' }}>
+        <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'auto', maxHeight: 'calc(100vh - 170px)' }}>
           {/* กรอบเลื่อนเอง (สูงไม่เกินจอ) ⇒ หัวตาราง sticky ค้างอยู่ตอนเลื่อนลง 300 ใบ */}
           <table className="mo-list">
             <thead><tr>
@@ -1915,7 +1915,7 @@ function ReportModal({ lines, lineLoadErr = '', onReloadLines, machines, machine
                 <button type="button"
                   onClick={() => onReloadLines?.()}
                   style={{ marginLeft: 6, fontSize: 11.5, padding: '2px 10px', borderRadius: 'var(--r-md)', cursor: 'pointer',
-                           background: 'var(--bg3)', color: 'var(--text)', border: '1px solid var(--border2)' }}>
+                           background: 'var(--bg3-surf)', color: 'var(--text)', border: '1px solid var(--border2)' }}>
                   {trI18n('โหลดทะเบียนไลน์ใหม่')}
                 </button>
               </div>
@@ -1981,7 +1981,7 @@ function ReportModal({ lines, lineLoadErr = '', onReloadLines, machines, machine
                   </span>
                   <button type="button" className="tbtn" onClick={() => setAllMachines(v => !v)}
                     title={trI18n('เครื่องย้ายไลน์ / ลงทะเบียนไว้ผิดไลน์ — กดดูทั้งโรงงานได้เสมอ')}
-                    style={{ padding: '1px 9px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)', fontSize: 11, cursor: 'pointer' }}>
+                    style={{ padding: '1px 9px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)', fontSize: 11, cursor: 'pointer' }}>
                     {machineStrict ? trI18n('ดูทุกไลน์') : trI18n('กรองตามไลน์')}
                   </button>
                 </>
@@ -2592,7 +2592,7 @@ function MachineUsabilityPanel({ order, machines, fullName, canEdit, affectedLin
     setPick(null); setNote(''); onSaved?.();
   };
   return (
-    <div style={{ border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '8px 10px', marginBottom: 10, background: 'var(--bg3)' }}>
+    <div style={{ border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '8px 10px', marginBottom: 10, background: 'var(--bg3-surf)' }}>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', fontSize: 12.5 }}>
         <b>🔌 {trI18n('สถานะเครื่อง')} {mc.machine_no}</b>
         <span style={{ fontWeight: 700, color: (MACHINE_USABILITY.find(x => x.key === u.state) || {}).color }}>
@@ -2641,7 +2641,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
   /* 🔒 ฝั่ง + ระดับตำแหน่งของคนกด — ใช้ล็อกช่องเซ็นในลูป MO (2026-10-04 · คำสั่ง user)
      🔴 ตัดสินจากข้อมูลที่บันทึกไว้จริงเท่านั้น (mtn_teams / role / sections / position)
         ไม่รู้ = ไม่บล็อก แต่จอต้องเขียนบอก (stepAssumptions) — ห้ามเดาแทนคน */
-  const { mtnTeams: myTeams, sections: mySections, position: myPosition } = useContext(UserContext);
+  const { mtnTeams: myTeams, sections: mySections, position: myPosition } = useContext(UserContext);   // allUnits มาจาก prop แล้ว
   const actorSide = actorSideOf({ mtnTeams: myTeams, role, sections: mySections, isAm: isAmTeam });
   const posRank = positionRank(myPosition);
   const [showHist, setShowHist] = useState(false);   // 📜 ประวัติการซ่อมของเครื่องในใบนี้ (19/10)
@@ -3212,7 +3212,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
         </div>
       )}
       {o.status !== 'returned' && o.bounce_count > 0 && (
-        <div style={{ marginBottom: 10, padding: '6px 10px', borderRadius: 'var(--r-md)', background: 'var(--bg2)', border: '1px solid var(--border)', fontSize: 11.5, color: 'var(--amber)' }}>
+        <div style={{ marginBottom: 10, padding: '6px 10px', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)', border: '1px solid var(--border)', fontSize: 11.5, color: 'var(--amber)' }}>
           ↩️ ใบนี้เคยถูกตีกลับ {o.bounce_count} {trI18n('ครั้ง')}{o.first_report_at ? ` · เปิดครั้งแรก ${fmtDateTime(o.first_report_at)}` : ''} — เวลา KPI นับจากรอบล่าสุด
         </div>
       )}
@@ -3237,7 +3237,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
       )}
       {/* ใบนี้ส่งต่อ**ไป** แล้ว — ใบนี้จบที่ทีมนี้ ให้ตามงานต่อที่ใบใหม่ */}
       {handoffOut.length > 0 && (
-        <div style={{ marginBottom: 10, padding: '8px 11px', borderRadius: 'var(--r-md)', background: 'var(--bg2)', border: '1px solid var(--border)' }}>
+        <div style={{ marginBottom: 10, padding: '8px 11px', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)', border: '1px solid var(--border)' }}>
           {handoffOut.map(h => (
             <div key={h.id} style={{ fontSize: 11.5, lineHeight: 1.7 }}>
               <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--amber)' }}>{trI18n('➡️ ใบนี้ส่งต่อให้ทีม')} {deptNameOf(h.to_dept)} {trI18n('แล้ว — จบที่ทีมนี้')}</div>
@@ -3302,7 +3302,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
           canEdit={canEditStep(2) || canEditStep(3)} onStockChanged={onReload} />
       )}
       {canSendVendor(o) && canEditStep(3) && (
-        <div style={{ marginBottom: 10, padding: '8px 11px', borderRadius: 'var(--r-md)', background: 'var(--bg2)', border: '1px solid var(--border)' }}>
+        <div style={{ marginBottom: 10, padding: '8px 11px', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)', border: '1px solid var(--border)' }}>
           {!showVendor ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <div style={{ fontSize: 11.5, color: 'var(--muted)', flex: 1, minWidth: 190 }}>
@@ -3341,7 +3341,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
       )}
       {/* ➡️ ปุ่มส่งต่อ — ทีมที่ถือใบอยู่ (ขั้น 2-3) เท่านั้น · เกณฑ์ = canHandoff() + สิทธิ์ขั้น 3 */}
       {canHandoff(o) && canEditStep(3) && (
-        <div style={{ marginBottom: 10, padding: '8px 11px', borderRadius: 'var(--r-md)', background: 'var(--bg2)', border: '1px solid var(--border)' }}>
+        <div style={{ marginBottom: 10, padding: '8px 11px', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)', border: '1px solid var(--border)' }}>
           {!showHandoff ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <div style={{ fontSize: 11.5, color: 'var(--muted)', flex: 1, minWidth: 190 }}>
@@ -3382,7 +3382,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
       {mtnForm && (o.mo_approved_by || o.mo_ack_at) && (() => {
         const ack = canSignMtnApproval('mtn_mgr', stepCtx);
         return (
-          <div style={{ marginBottom: 10, padding: '8px 11px', borderRadius: 'var(--r-md)', background: 'var(--bg2)', border: '1px solid var(--border)' }}>
+          <div style={{ marginBottom: 10, padding: '8px 11px', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)', border: '1px solid var(--border)' }}>
             <div style={{ fontSize: 12, fontWeight: 800 }}>
               {o.mo_ack_at ? '✅ ผจก.ส่วนซ่อมบำรุง รับทราบแล้ว' : '✍️ รอ ผจก.ส่วนซ่อมบำรุง รับทราบ (ไม่บล็อกงาน)'}
             </div>
@@ -3445,8 +3445,13 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
         </div>
       )}
       {/* 🔌 ปุ่มเปิด-ปิดเครื่อง (19/11) — ช่างที่ทำงานอยู่ในใบนี้กดได้เลย ไม่ต้องไปหาอีกหน้า */}
+      {/* 🔴 20/11: เดิมเขียน can('mtn_repair','repair') — คีย์นี้ไม่มีในระบบ (ไม่มีแถว/ไม่มี catalog) ⇒ ปุ่มโผล่เฉพาะ admin
+          ด่าน permissionCatalogCoverage จับได้ตอน merge · เกณฑ์ = "ขั้นลงมือซ่อม" ตัวเดียวกับฟอร์ม (canDoStep ผ่าน stageOf —
+          เลขขั้นต่างกันระหว่างฟอร์ม JIG/DIE กับ MTN ห้ามเขียน step === 3) · ผู้ถือ manage_master กดได้เสมอ */}
       <MachineUsabilityPanel order={o} machines={machines} fullName={fullName}
-        canEdit={can('mtn_repair', 'repair', role)} affectedLines={affectedLines} onSaved={onReload} />
+        canEdit={can('mtn_repair', 'manage_master', role)
+          || [2, 3, 4, 5, 6, 7, 8].some(s => stageOf(s, { mtnForm }) === 'service' && canEditStep(s))}
+        affectedLines={affectedLines} onSaved={onReload} />
       {/* ผู้เปิดใบตรวจรับ (ขั้น 4) และรับมอบ (ขั้น 6) ของใบตัวเองได้เสมอ — บอกให้รู้ว่าทำไมกดได้ */}
       {isOrderReporter(o, fullName) && o.status !== 'closed' && (
         <NoticeBar tone="ok" style={{ marginBottom: 10 }}>
@@ -3476,7 +3481,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
       })()}
       {/* 🪜 ตอนนี้ถึงขั้นไหน — กฎอยู่ moFlow() (mtnStepPerm.js) ห้ามตัดสินในหน้า · UI §6.30 */}
       {(() => { const f = moFlow(o); return (
-        <div style={{ marginBottom: 12, padding: '10px 12px 8px', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--bg2)' }}>
+        <div style={{ marginBottom: 12, padding: '10px 12px 8px', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)' }}>
           <StepFlow steps={f.steps} waiting={f.waiting} unknown={!f.known} />
           {/* ✍️ ลายเซ็นที่อยู่ "นอกลำดับขั้น" (18/11 · หน้างานแจ้ง)
               🔴 แถบขั้นบอกว่าเหลือขั้นเดียว แต่ยังค้างลายเซ็นไม่ล็อกงานอีก 2 ช่องที่ไม่โผล่ที่ไหนเลย
@@ -3552,7 +3557,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
               <Row k="ความพึงพอใจเฉลี่ย" v={`${satAvg(o.satisfaction).toFixed(2)}/3 (${Math.round(satAvg(o.satisfaction) / 3 * 100)}%)`} />
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 2 }}>
                 {SAT_DIMS.filter(d => o.satisfaction?.[d.key]).map(d => { const lv = SAT_LEVELS.find(l => l.v === Number(o.satisfaction[d.key])); return (
-                  <span key={d.key} style={{ fontSize: 11, padding: '2px 6px', borderRadius: 'var(--r-md)', background: 'var(--bg3)', border: `1px solid ${lv?.color || 'var(--border)'}`, color: 'var(--text2)' }}>{trI18n(d.label)}: <b style={{ color: lv?.color }}>{lv?.t}</b></span>
+                  <span key={d.key} style={{ fontSize: 11, padding: '2px 6px', borderRadius: 'var(--r-md)', background: 'var(--bg3-surf)', border: `1px solid ${lv?.color || 'var(--border)'}`, color: 'var(--text2)' }}>{trI18n(d.label)}: <b style={{ color: lv?.color }}>{lv?.t}</b></span>
                 ); })}
               </div>
             </div>}
@@ -3762,7 +3767,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
   /* 🔒 ฝั่ง + ระดับตำแหน่งของคนกด — ใช้ล็อกช่องเซ็นในลูป MO (2026-10-04 · คำสั่ง user)
      🔴 ตัดสินจากข้อมูลที่บันทึกไว้จริงเท่านั้น (mtn_teams / role / sections / position)
         ไม่รู้ = ไม่บล็อก แต่จอต้องเขียนบอก (stepAssumptions) — ห้ามเดาแทนคน */
-  const { mtnTeams: myTeams, sections: mySections, position: myPosition } = useContext(UserContext);
+  const { mtnTeams: myTeams, sections: mySections, position: myPosition, allUnits } = useContext(UserContext);
   const isMobile = useIsMobile();   // 📱 ปุ่มบันทึกเกาะล่างของฟอร์มขั้น (15/10)
   const actorSide = actorSideOf({ mtnTeams: myTeams, role, sections: mySections, isAm: isAmTeam });
   const posRank = positionRank(myPosition);
@@ -4432,13 +4437,13 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
           </NoticeBar>
         )}
         {stepMeta(step, { mtnForm: isMtnForm, toolTeam: isToolTeam }) && !skipQa && (
-          <div style={{ fontSize: 11.5, color: 'var(--muted)', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '6px 10px' }}>
+          <div style={{ fontSize: 11.5, color: 'var(--muted)', background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '6px 10px' }}>
             ขั้นนี้เป็นหน้าที่ของ <b style={{ color: 'var(--text2)' }}>{stepMeta(step, { mtnForm: isMtnForm, toolTeam: isToolTeam }).who}</b>
             {stepMeta(step, { mtnForm: isMtnForm, toolTeam: isToolTeam }).byReporter && (o.reported_by_name || o.reporter_prod) ? <> {trI18n('· ใบนี้เปิดโดย')} <b style={{ color: 'var(--text2)' }}>{o.reported_by_name || o.reporter_prod}</b></> : null}
           </div>
         )}
         {modalStage === 'report' && <>
-          <div style={{ fontSize: 12, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 11px', lineHeight: 1.6 }}>
+          <div style={{ fontSize: 12, background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 11px', lineHeight: 1.6 }}>
             ✏️ <b>{trI18n('แก้ได้เฉพาะ 3 ช่องนี้')}</b> — รูปปัญหา · รายละเอียดปัญหา · ระบุเพิ่มเติม
             <div style={{ color: 'var(--muted)', marginTop: 2 }}>
               ไลน์ · เครื่อง · ลักษณะปัญหา · ผู้แจ้ง · ทีมช่าง <b style={{ color: 'var(--text2)' }}>{trI18n('ล็อกไว้')}</b> —
@@ -4565,7 +4570,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
               const master = parts.find(x => x.id === p.part_id);
               const over = master && Number(p.qty) > (Number(master.stock_qty) || 0);
               return (
-                <div key={i} style={{ marginBottom: 6, background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 7 }}>
+                <div key={i} style={{ marginBottom: 6, background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 7 }}>
                   <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
                     <SearchSelect
                       style={{ flex: 1, minWidth: 0 }}
@@ -4613,7 +4618,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
               ตอนนี้ทุกใบจอดรอ QA และ **QA เท่านั้น** ที่ตัดสินว่าเกี่ยว/ไม่เกี่ยวกับคุณภาพ (ขั้น 5) */}
           {/* 🔴 ใบที่ QA ไม่อยู่ในลูป (ฟอร์ม MTN · งานสร้าง/ปรับปรุง) ห้ามบอกว่า "จะถูกส่งให้ QA"
                  — คนเซ็นขั้น 4 จะรอ QA ที่ไม่มีวันมา · ขั้นถัดไปจริงอ่านจาก stepLabel() ห้ามพิมพ์ชื่อขั้นเอง */}
-          <div style={{ fontSize: 12, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 12px', lineHeight: 1.55 }}>
+          <div style={{ fontSize: 12, background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 12px', lineHeight: 1.55 }}>
             {qaAppliesTo(o) ? <>
               🧪 <b>{trI18n('ใบนี้จะถูกส่งให้ QA ตรวจรับ (ขั้น 5) ทุกใบ')}</b>
               <div style={{ color: 'var(--muted)', marginTop: 2 }}>
@@ -4705,7 +4710,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
                เดิมโมดัลขั้นปิดใบมีแค่ช่องชื่อ+ความคิดเห็น ⇒ คนเซ็นอนุมัติค่าใช้จ่ายโดยไม่เห็นค่าใช้จ่าย
                🔴 โหลดไม่ติดต้องเขียนบนจอ ห้ามโชว์ยอดว่างเฉยๆ (ลิสต์ว่าง 2 ความหมาย) */}
         {CLOSE_STAGES.includes(modalStage) && (
-          <div style={{ fontSize: 12.5, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 10px', lineHeight: 1.6 }}>
+          <div style={{ fontSize: 12.5, background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 10px', lineHeight: 1.6 }}>
             <div style={{ fontWeight: 800, marginBottom: 4 }}>{trI18n('ค่าใช้จ่ายของใบนี้')}</div>
             {partsState === 'loading' && <div style={{ color: 'var(--muted)' }}>{trI18n('กำลังโหลดรายการอะไหล่…')}</div>}
             {partsState === 'error' && <div style={{ color: 'var(--red)' }}>{trI18n('โหลดรายการอะไหล่ไม่สำเร็จ (')}{partsErr}) — ยอดอะไหล่ข้างล่างอาจไม่ครบ</div>}
@@ -4776,7 +4781,7 @@ function MasterTab({ techs, parts, problemTypes, itemTypes, repairTypes = [], la
     const label = DEPT_OWNED[table];
     if (!label) return true;
     const row = (table === 'mtn_technicians' ? techs : laborRates).find(x => x.id === id);
-    const own = teamRowOwner({ team: row?.dept }, { myTeams: userTeams, role });
+    const own = teamRowOwner({ team: row?.dept }, { myTeams: userTeams, role, allUnits });
     if (own.ok) return true;
     toast.info(teamRowLockNote({ team: row?.dept }, own.code));
     return false;
@@ -4844,7 +4849,7 @@ function MasterTab({ techs, parts, problemTypes, itemTypes, repairTypes = [], la
         <div key={dep} style={{ marginBottom: 10 }}>
           <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--accent2)', marginBottom: 4 }}>{dep} ({list.length})</div>
           <div style={{ display: 'grid', gap: 6 }}>{list.map(it => it.from_employee ? (
-            <div key={it.id} style={{ ...techRowGrid, background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 10px', opacity: 0.9 }}>
+            <div key={it.id} style={{ ...techRowGrid, background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 10px', opacity: 0.9 }}>
               <span style={{ fontSize: 13, minWidth: 0 }}>{it.name}{it.emp_code ? <span style={{ color: 'var(--muted)', fontSize: 11 }}> · {it.emp_code}</span> : null}</span>
               <span />
               <span style={{ fontSize: 11, padding: '1px 7px', borderRadius: 'var(--r-xs)', background: 'var(--blue-dim)', color: 'var(--blue)', border: '1px solid var(--blue-line)', fontWeight: 700, justifySelf: 'start' }}>{trI18n('จากฐานพนักงาน')}</span>
@@ -4852,7 +4857,7 @@ function MasterTab({ techs, parts, problemTypes, itemTypes, repairTypes = [], la
               <span />
             </div>
           ) : (
-            <div key={it.id} style={{ ...techRowGrid, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 10px' }}>
+            <div key={it.id} style={{ ...techRowGrid, background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 10px' }}>
               <input defaultValue={it.name} onBlur={e => e.target.value !== it.name && updRow('mtn_technicians', it.id, { name: e.target.value })} style={{ ...inp, width: '100%', minWidth: 0 }} />
               <select defaultValue={teamKeyOf(it.dept) || 'maintenance'} onChange={e => updRow('mtn_technicians', it.id, { dept: e.target.value })} style={{ ...inp, width: '100%', minWidth: 0 }}><TeamOpts list={mtnDepts} /></select>
               <span style={{ fontSize: 11, color: 'var(--muted)' }}>{trI18n('เฉพาะกิจ')}</span>
@@ -4890,7 +4895,7 @@ function MasterTab({ techs, parts, problemTypes, itemTypes, repairTypes = [], la
       </div>
       <div style={{ display: 'grid', gap: 6 }}>
         {laborRates.map(r => (
-          <div key={r.id} style={{ ...laborRowGrid, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 10px' }}>
+          <div key={r.id} style={{ ...laborRowGrid, background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 10px' }}>
             <input defaultValue={r.name} onBlur={e => e.target.value !== r.name && updRow('mtn_labor_rates', r.id, { name: e.target.value })} style={{ ...inp, width: '100%', minWidth: 0 }} />
             <input type="number" defaultValue={r.price} onBlur={e => Number(e.target.value) !== Number(r.price) && updRow('mtn_labor_rates', r.id, { price: Number(e.target.value) || 0 })} style={{ ...inp, width: '100%', minWidth: 0 }} />
             <input defaultValue={r.unit || ''} onBlur={e => e.target.value !== (r.unit || '') && updRow('mtn_labor_rates', r.id, { unit: e.target.value })} style={{ ...inp, width: '100%', minWidth: 0 }} />
@@ -4925,13 +4930,13 @@ function MasterTab({ techs, parts, problemTypes, itemTypes, repairTypes = [], la
          · แถว 🌐 ใช้ร่วมทุกทีม   → เฉพาะ admin/manager (แก้ทีเดียวกระทบทุกทีม)
        ⚠️ fallback สำคัญ: user ที่ยังไม่ได้ตั้ง `profiles.mtn_teams` = ไม่ล็อก
           ไม่งั้นวันที่ deploy ช่างที่ยังไม่ถูกตั้งทีมจะแก้อะไรไม่ได้ทั้งระบบ */
-    const isBoss = role === 'admin' || role === 'manager';
+    const isBoss = role === 'admin' || allUnits === true;   // 13/11: บอส = ใบผ่านรายคน ไม่ใช่ชื่อ role
     const myKeys = (userTeams || []).map(teamKeyOf).filter(Boolean);
     const unscoped = myKeys.length === 0;   // ยังไม่ตั้งทีม = ไม่ล็อก (ใช้ต่อในแถวเพิ่ม/ช่องเลือกทีม)
     const teamNameOf = (k) => (k ? (teamOpts.find(t => teamKeyOf(t.key) === teamKeyOf(k))?.dept_name || deptNameOf(k) || k) : '🌐 ใช้ร่วมทุกทีม');
     /* ตรรกะย้ายไปของกลาง `utils/mtnTeamOwn.js` แล้ว (2026-10-14) — คลังอะไหล่ใช้ตัวเดียวกัน
        ห้ามก๊อปเงื่อนไขกลับมาเขียนในหน้า (กฎ "แก้กฎที่เดียว") */
-    const canEditRow = (r) => !teamed || teamRowOwner(r, { myTeams: userTeams, role }).ok;
+    const canEditRow = (r) => !teamed || teamRowOwner(r, { myTeams: userTeams, role, allUnits }).ok;
     const lockNote = (r) => {
       const t = teamKeyOf(r?.team);
       return t ? `รายการนี้เป็นของทีม ${teamNameOf(t)} — แก้ได้เฉพาะทีมนั้นหรือหัวหน้า`
@@ -4998,7 +5003,7 @@ function MasterTab({ techs, parts, problemTypes, itemTypes, repairTypes = [], la
           </FilterBar>
         )}
         {teamed && !isBoss && (
-          <div style={{ fontSize: 11.5, color: 'var(--muted)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '7px 10px', marginBottom: 10 }}>
+          <div style={{ fontSize: 11.5, color: 'var(--muted)', background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '7px 10px', marginBottom: 10 }}>
             {unscoped
               ? '⚠️ บัญชีนี้ยังไม่ได้ตั้ง "ทีมช่างซ่อม" ที่หน้าจัดการผู้ใช้งาน — ตอนนี้จึงยังแก้ได้ทุกรายการ · ตั้งทีมแล้วระบบจะล็อกให้แก้ได้เฉพาะของทีมตัวเอง'
               : <>{trI18n('🔒 แก้ได้เฉพาะรายการของทีม')} <b>{myKeys.map(teamNameOf).join(' · ')}</b> {trI18n('— ของทีมอื่นและรายการ 🌐 ใช้ร่วมทุกทีม ดูได้อย่างเดียว (แก้ทีเดียวกระทบทุกทีม ต้องให้หัวหน้าแก้)')}</>}
@@ -5044,10 +5049,10 @@ function MasterTab({ techs, parts, problemTypes, itemTypes, repairTypes = [], la
         </div>
         <div style={{ display: 'grid', gap: 6 }}>{shown.map(it => {
           const ok = canEditRow(it);
-          const ro = { background: 'var(--bg2)', color: 'var(--text2)', cursor: 'default' };
+          const ro = { background: 'var(--bg2-surf)', color: 'var(--text2)', cursor: 'default' };
           return (
           <div key={it.id} title={ok ? undefined : lockNote(it)}
-            style={{ ...rowGrid, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 10px', opacity: ok ? 1 : 0.72 }}>
+            style={{ ...rowGrid, background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 10px', opacity: ok ? 1 : 0.72 }}>
             {fields.map(fl => <input key={fl.k} defaultValue={it[fl.k] || ''} readOnly={!ok} onBlur={ok ? async e => {
               const nv = e.target.value, ov = it[fl.k] || '';
               if (nv === ov) return;
@@ -5165,7 +5170,7 @@ function MasterTab({ techs, parts, problemTypes, itemTypes, repairTypes = [], la
       {moErr ? <div style={{ color: 'var(--muted)', padding: 16, background: 'var(--bg2)', borderRadius: 'var(--r-md)' }}>{trI18n('⚠️ ยังไม่ได้ apply migration เลข MO ต่อทีม (')}<code>20260724_mtn_mo_per_team.sql</code>) — apply ก่อนถึงจะตั้งค่าได้</div> :
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {moRows.map(t => (
-            <div key={t.id} style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '10px 12px' }}>
+            <div key={t.id} style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '10px 12px' }}>
               <div style={{ flex: '1 1 150px', minWidth: 0 }}>
                 <b style={{ fontSize: 13 }}>{t.dept_name}</b>
                 {/* รูปแบบของทีมนี้มาจาก moFormatHint() — ห้ามพิมพ์รูปแบบซ้ำในหน้า */}

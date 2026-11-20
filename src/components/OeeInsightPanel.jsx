@@ -367,7 +367,7 @@ export default function OeeInsightPanel({ lines, ccRates = [], initLine = '', se
         {/* picker กลาง (UI §5.1.2) — `lines` ถูกกรอง scope มาจากหน้าแม่แล้ว จึงไม่ส่ง role/sections ซ้ำ */}
         {sectionHint && (
           <span title={trI18n('ขอบเขตที่เจาะมา — เปลี่ยนได้ที่ตัวกรองส่วนงานในแท็บ ⚡ ภาพรวมวันนี้')}
-            style={{ fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 'var(--r-pill)', background: 'var(--bg3)', border: '1px solid var(--border2)', color: 'var(--text2)' }}>
+            style={{ fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 'var(--r-pill)', background: 'var(--bg3-surf)', border: '1px solid var(--border2)', color: 'var(--text2)' }}>
             {sectionHint}
           </span>
         )}
@@ -401,7 +401,7 @@ export default function OeeInsightPanel({ lines, ccRates = [], initLine = '', se
         const baht = (min) => (perHr == null ? null : (min / 60) * perHr);
         const fmtB = (v) => Math.round(v).toLocaleString('en-US');
         return (
-          <div style={{ marginBottom: 14, padding: '12px 14px', borderRadius: 'var(--r-md)', background: 'var(--bg2)', border: '1px solid var(--border)' }}>
+          <div style={{ marginBottom: 14, padding: '12px 14px', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)', border: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 10 }}>
               <div style={{ fontSize: 13, fontWeight: 800 }}>{trI18n('วิเคราะห์ความสูญเปล่าแบบ Lean')}</div>
               <div style={{ display: 'flex', gap: 4, marginLeft: 'auto' }}>
