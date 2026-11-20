@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useContext, useCallback } from 'react';
+import { MoreMark } from '../components/InfoMore';
 import { orIlike } from '../utils/pgrstFilter';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useMergeParams } from '../utils/useTabParam';
@@ -1190,7 +1191,11 @@ export default function OrderTrace() {
         </>
       )}
       {!sel && !results.length && !searching && (
-        <div style={{ ...card, color: 'var(--muted)', fontSize: 13 }}>{trI18n('สแกนบาร์โค้ด kanban (PROD.NO) หรือพิมพ์เลข MAT/ชื่อชิ้นงาน แล้วกดค้นหา — เว้นว่างเพื่อดูใบทั้งหมดในช่วงวัน')}</div>
+        <div style={{ ...card, color: 'var(--muted)', fontSize: 13 }}>
+          {/* จอว่าง — วิธีใช้หลักต้องอยู่บนจอ (ไม่มีอย่างอื่นให้อ่าน) · ทางลัดพับได้ · 19/11 */}
+          {trI18n('สแกนบาร์โค้ด kanban (PROD.NO) หรือพิมพ์เลข MAT/ชื่อชิ้นงาน แล้วกดค้นหา')}{' '}
+          <MoreMark text={trI18n('เว้นว่างเพื่อดูใบทั้งหมดในช่วงวัน')} />
+        </div>
       )}
 
       {/* ── รายละเอียดใบ ── */}

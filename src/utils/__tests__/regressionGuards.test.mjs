@@ -9519,8 +9519,24 @@ test('🔌 machine-usability-not-mo-status — "ใบยังเปิด" ≠
   assert.doesNotMatch(map, /openNos\.has\(/,
     '\n\n❌ ผังกลับไปตัดสินด้วย openNos (มีใบเปิด = เสี่ยง) — นั่นคือบั๊กที่หน้างานแจ้ง\n');
   /* คิวรีต้องดึงของที่กฎใช้จริง ไม่งั้นกฎเดินโดยไม่มีข้อมูล (undefined เงียบๆ) */
-  assert.match(map, /select\('machine_no, repair_done_at'\)/,
-    '\n\n❌ คิวรีใบซ่อมของผังไม่ได้ดึง repair_done_at — กฎใหม่จะตัดสินไม่ได้\n');
+  const moSel = map.match(/from\('mtn_orders'\)\s*\.select\('([^']*)'\)/);
+  assert.ok(moSel, '\n\n❌ หาคิวรี mtn_orders ของผังไม่เจอ\n');
+  for (const [col, why] of [
+    ['repair_done_at', 'กฎชั้น ② แยก "ซ่อมเสร็จรอเอกสาร" ออกจาก "ยังซ่อมไม่เสร็จ" ไม่ได้ (บั๊ก 7 วัน)'],
+    ['id', 'จอคลิกเจาะไปหาใบต้นตอไม่ได้ (19/11 user ทัก "น่าจะคลิกเจาะไปหาต้นตอได้")'],
+    ['mo_no', 'จอบอกไม่ได้ว่าใบไหน — ลิงก์ที่ไม่บอกเลขใบ คนยังต้องไปไล่หาเองอยู่ดี'],
+  ]) {
+    assert.ok(moSel[1].split(',').map(x => x.trim()).includes(col),
+      `\n\n❌ คิวรีใบซ่อมของผังไม่ได้ดึง ${col} — ${why}\n   ตอนนี้ดึง: ${moSel[1]}\n`);
+  }
+
+  /* 🚦 19/11 — "ใช้ได้ชั่วคราว" ต้องเป็นเหลืองจริงบนผัง ห้ามยุบเหลือ เสี่ยง/ไม่เสี่ยง (user ทัก) */
+  assert.match(map, /supTemp/,
+    '\n\n❌ ผังไม่รู้จัก supTemp — "ใช้ได้ชั่วคราว" จะกลายเป็นเขียว "ปกติ" (เงียบกว่าความจริง)\n');
+  assert.match(map, /cat: s => !s\.supList\.length \? 'idle' : s\.supAtRisk \? 'down' : s\.supTemp \? 'ok' : 'good'/,
+    '\n\n❌ แท็บ Supply Route ต้องมี 3 สี: down (แดง) · temp (เหลือง) · good (เขียว)\n');
+  assert.match(map, /mo: srcMoOf\(/,
+    '\n\n❌ รายการเครื่องบนจอไม่ได้แนบใบต้นตอ — กดแล้วเจาะต่อไม่ได้\n');
   assert.match(map, /'machines:supply:v3'[\s\S]{0,400}usability/,
     '\n\n❌ คิวรีทะเบียนเครื่องไม่ได้ดึง usability (หรือไม่ได้ bump คีย์ cache)\n');
 
@@ -12124,6 +12140,27 @@ test('🗂 operator-tab-allowed-complete — `tabAllowed` ใน operator.jsx �
   const nAllowed = allowed[1].split('\n').filter(l => l.trim().length && l.trim() !== ',').length;
   assert.equal(nAllowed, nKeys,
     `\n\n❌ operator.jsx: TAB_KEYS มี ${nKeys} แท็บ แต่ tabAllowed มี ${nAllowed} ช่อง — แท็บที่เกินมากดแล้วตกกลับแท็บแรกเงียบๆ\n`);
+});
+
+test('📦 line-demand-confirm-awaited — ยกเลิกต้องยกเลิกจริง + เปิดใบผลิตห้ามเด้ง popup บังช่องสแกน', () => {
+  /* 19/11 (คำสั่ง user "เปิดออเดอร์ต่อกันไม่ได้ · ห้ามตัดออก"):
+     ① askConfirm คืน Promise (codemod 18/11) ⇒ `if (!confirmFn(text))` = !Promise = false เสมอ ⇒ กดยกเลิกแล้วยังแจ้งสโตร์
+     ② เปิดใบผลิตแล้วเรียก confirmAndSyncLineDemand ทันที = popup บังช่องสแกน PROD.NO ⇒ ต้องคิดเงียบ (previewLineDemand) แล้วขึ้นแถบ */
+  const bad = [];
+  const L = 'src/lib/lineDemandSync.js';
+  const l = stripComments(readFileSync(join(ROOT, L), 'utf8'));
+  if (/if\s*\(\s*!\s*confirmFn\(/.test(l)) bad.push(`${L}: confirmFn คืน Promise — ต้อง \`!(await confirmFn(text))\``);
+  if (!/export async function previewLineDemand/.test(l)) bad.push(`${L}: ต้องมี previewLineDemand() (คิดอย่างเดียว ไม่ถาม ไม่เขียน)`);
+  const D = 'src/pages/DailyReport.jsx';
+  const d = stripComments(readFileSync(join(ROOT, D), 'utf8'));
+  const m = d.match(/const syncDemandAfterOpen = \([\s\S]*?\n  \};/);
+  if (!m) bad.push(`${D}: หา syncDemandAfterOpen ไม่เจอ — เปลี่ยนชื่อแล้วต้องแก้ด่านนี้`);
+  else {
+    if (/confirmAndSyncLineDemand\(/.test(m[0])) bad.push(`${D}: syncDemandAfterOpen ห้ามเรียก confirmAndSyncLineDemand (popup บังช่องสแกน) — ใช้ previewLineDemand + StoreNotifyBar`);
+    if (!/previewLineDemand\(/.test(m[0])) bad.push(`${D}: syncDemandAfterOpen ต้องคิดผ่าน previewLineDemand`);
+  }
+  if (!/<StoreNotifyBar\b/.test(d)) bad.push(`${D}: ต้องวาด <StoreNotifyBar> ให้คนกดแจ้งสโตร์เองได้ (ห้ามตัดฟีเจอร์ออก)`);
+  assert.deepEqual(bad, []);
 });
 
 test('🚩 ng-needs-reason — ติ๊ก NG ในใบตรวจ AM/PM ต้องมีเหตุผล + เตือนเมื่อติ๊ก OK ทั้งที่ใบซ่อมยังค้าง', () => {

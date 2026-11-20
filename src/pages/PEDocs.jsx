@@ -1,4 +1,5 @@
 import { useState, useEffect, useContext, useMemo, useCallback, useRef } from 'react';
+import { MoreMark } from '../components/InfoMore';
 import { useObjectUrl } from '../utils/useObjectUrl';
 import resizeImg from '../utils/resizeImage';
 import { todayLocal as localToday } from '../utils/dateFormat';
@@ -422,7 +423,9 @@ export default function PEDocs() {
           onOpenSet={(id) => { pickSet(id); setTab('fmea'); }} />
       ) : !curSet ? (
         <div style={{ textAlign: 'center', padding: 48, color: 'var(--muted)', fontSize: 13 }}>
-          เลือกพาร์ทด้านบน{canEdit ? ' หรือกด "➕ ชุดเอกสารใหม่" เพื่อเริ่มพาร์ทแรก' : ''} — 1 ชุด = PFC + PFMEA + Control Plan ของพาร์ทนั้น
+          {/* จอว่าง — สิ่งที่ต้องลงมืออยู่บนจอ · นิยาม "1 ชุด" พับได้ · 19/11 */}
+          เลือกพาร์ทด้านบน{canEdit ? ' หรือกด "➕ ชุดเอกสารใหม่" เพื่อเริ่มพาร์ทแรก' : ''}{' '}
+          <MoreMark text={tr('1 ชุด = PFC + PFMEA + Control Plan ของพาร์ทนั้น')} />
         </div>
       ) : detailLoading ? (
         <div style={{ color: 'var(--muted)', textAlign: 'center', padding: 30 }}>{tr('กำลังโหลด...')}</div>

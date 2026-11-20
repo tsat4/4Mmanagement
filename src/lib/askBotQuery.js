@@ -28,7 +28,8 @@ import {
   fmtInt, fmtPct, ASK_HINTS,
 } from '../utils/askBot';
 
-const NOT_UNDERSTOOD = (extra = '') => ({
+const NOT_UNDERSTOOD = (extra = '', unanswered = 'not_understood') => ({
+  unanswered,
   text: `${extra ? `${extra}\n` : ''}ยังไม่เข้าใจคำถามนี้ — ตอนนี้ถามได้แบบนี้:`,
   hints: ASK_HINTS,
 });
@@ -48,9 +49,10 @@ function visibleSet(ctx, lines) {
 
 async function closedAndOpen(period, lineNames, cols) {
   const run = (statusFilter) => fetchAllPages(() => {
-    let q = supabaseDR.from('production_sessions').select(cols)
+    let q = supabaseDR.from('production_sessions').select(period.shift && !/\bshift\b/.test(cols) ? `${cols}, shift` : cols)
       .gte('work_date', period.from).lte('work_date', period.to);
     q = statusFilter(q);
+    if (period.shift) q = q.eq('shift', period.shift);      // กะเช้า/กะดึก/กะนี้ (20/11)
     if (lineNames) q = q.in('line_name', lineNames);
     return q;
   }, { orderBy: ['work_date', 'id'] });
@@ -64,6 +66,7 @@ async function closedAndOpen(period, lineNames, cols) {
     const ok = new Set(lineNames);
     for (const r of [closed, open]) r.rows = r.rows.filter(x => !('line_name' in x) || ok.has(x.line_name));
   }
+  if (period.shift) for (const r of [closed, open]) r.rows = r.rows.filter(x => !('shift' in x) || x.shift === period.shift);
   return { closed, open };
 }
 
@@ -153,9 +156,10 @@ async function toolProduction({ pick, period, all, vis, products }) {
   const mats = pick.mats;
   const base = (st) => fetchAllPages(() => {
     let q = supabaseDR.from('prod_orders')
-      .select('id, mat_no, status, qty, qty_ok, qty_actual, production_sessions!inner(work_date, status, line_name)')
+      .select('id, mat_no, status, qty, qty_ok, qty_actual, production_sessions!inner(work_date, status, line_name, shift)')
       .in('mat_no', mats)
       .gte('production_sessions.work_date', period.from).lte('production_sessions.work_date', period.to);
+    if (period.shift) q = q.eq('production_sessions.shift', period.shift);
     return st(q);
   });
   const [cl, op] = await Promise.all([
@@ -163,7 +167,8 @@ async function toolProduction({ pick, period, all, vis, products }) {
     base(q => q.in('production_sessions.status', SESSION_STATUSES_LIVE)),
   ]);
   if (cl.error || op.error || cl.truncated) return fail('ใบผลิต', cl.error || op.error || 'ข้อมูลเยอะเกินเพดาน');
-  const inScope = (o) => !vis.names || vis.names.has(o.production_sessions?.line_name);
+  const inScope = (o) => (!vis.names || vis.names.has(o.production_sessions?.line_name))
+    && (!period.shift || o.production_sessions?.shift === period.shift);
   const rows = cl.rows.filter(inScope);
   const hidden = cl.rows.length - rows.length;
   const byMat = {}; let total = 0;
@@ -312,6 +317,9 @@ async function toolDefect({ lineName, period, all, vis }) {
 
 /* ── มาทำงานกี่คน (สูตรเดียวกับ /dept-dashboard: พนักงาน active × บันทึกเช็คชื่อของวันนั้น) ── */
 async function toolAttendance({ lineName, period, all, vis }) {
+  /* 🔴 ยังแยกกะไม่ได้: ฐานคน (พนักงาน active ของไลน์) ไม่ได้ผูกกะ ⇒ กรองแค่บันทึกเช็คชื่อ
+     จะทำให้คนอีกกะกลายเป็น "ยังไม่เช็ค" ทั้งหมด = ตัวเลขโกหก · บอกตรงๆ แล้วตอบทั้งวัน */
+  if (period.shift) period = { ...period, shift: null, label: period.label.replace(/ · กะ.*$/, ''), shiftIgnored: true };
   if (period.from !== period.to) return { text: `ถามจำนวนคนได้ทีละวัน — เช่น "มาทำงานกี่คน วันนี้" หรือ "เมื่อวาน"` };
   const names = scopeNames(all, vis, lineName);
   const nameSet = names ? new Set(names) : null;
@@ -328,7 +336,8 @@ async function toolAttendance({ lineName, period, all, vis }) {
     source,
     text: `พนักงาน ${r.head} คน — มา ${r.in} · แจ้งว่าไม่มา ${r.out} · ยังไม่ได้เช็ค ${r.none}`
       + (!lineName && r.lines.length > 1 ? '\n' + r.lines.slice(0, 6).map(l => `· ${l.line} — มา ${l.in}/${l.head}${l.out ? ` · ไม่มา ${l.out}` : ''}${l.none ? ` · ยังไม่เช็ค ${l.none}` : ''}`).join('\n') : ''),
-    notes: ['"ยังไม่ได้เช็ค" ≠ ขาดงาน — อาจเป็นคนกะดึกที่ยังไม่เข้ากะ'],
+    notes: ['"ยังไม่ได้เช็ค" ≠ ขาดงาน — อาจเป็นคนกะดึกที่ยังไม่เข้ากะ',
+      period.shiftIgnored ? 'คำถามจำนวนคนยังแยกกะไม่ได้ — แสดงทั้งวัน' : null].filter(Boolean),
     link: '/checkin',
   };
 }
@@ -340,16 +349,19 @@ async function toolAttendance({ lineName, period, all, vis }) {
  * @param {string} today วันทำงาน (`getWorkDate()`) — ส่งเข้ามาเพื่อให้เทสตรึงได้
  * @param {object} [forced] ตัวเลือกที่คนกดเลือกจากรอบก่อน (ไลน์/พาร์ท) — ข้ามขั้นค้นชื่อ
  */
-export async function answerQuestion(text, ctx, today, forced = null) {
-  const q = parseQuestion(text, today);
+export async function answerQuestion(text, ctx, today, forced = null, { shiftNow = null } = {}) {
+  const q = parseQuestion(text, today, { shiftNow });
   if (!q.intent) return NOT_UNDERSTOOD();
   if (q.error) return { text: q.error };
   const meta = INTENTS.find(i => i.key === q.intent);
   /* คำถาม "สถานะตอนนี้" (เครื่องหยุด/MO/4M) ไม่มีช่วงเวลา — พิมพ์ช่วงมาก็ไม่ใช้ แต่ต้องบอก */
   const timeless = !meta.defaultPeriod;
-  const period = timeless ? null : (q.period || defaultPeriod(q.periodDefault, today));
-  const periodNote = timeless ? (q.period ? 'คำถามนี้ดูสถานะ ณ ตอนนี้ — ไม่ได้ใช้ช่วงเวลาที่ระบุ' : null)
-    : (q.period ? null : `ไม่ได้ระบุช่วงเวลา — ใช้ "${period.label}"`);
+  const basePeriod = timeless ? null : (q.period || defaultPeriod(q.periodDefault, today));
+  /* กะติดไปกับช่วง: ป้ายบอก "· กะเช้า" ทุกคำตอบ + closedAndOpen กรอง shift ให้ */
+  const period = basePeriod && q.shift
+    ? { ...basePeriod, label: `${basePeriod.label} · ${q.shift.label}`, shift: q.shift.key } : basePeriod;
+  const periodNote = timeless ? ((q.period || q.shift) ? 'คำถามนี้ดูสถานะ ณ ตอนนี้ — ไม่ได้ใช้ช่วงเวลา/กะที่ระบุ' : null)
+    : (q.period ? null : `ไม่ได้ระบุช่วงเวลา — ใช้ "${basePeriod.label}"`);
 
   let all, products = [];
   try { all = await loadProductionLines(); } catch (e) { return fail('ทะเบียนไลน์', e); }
@@ -364,7 +376,7 @@ export async function answerQuestion(text, ctx, today, forced = null) {
     }
     const m = matchSubject(q.subject, { lines: all, products, kinds });
     if (m.choices.length) return { text: `"${q.subject}" ตรงหลายรายการ — เลือกตัวที่หมายถึง:`, choices: m.choices, more: m.more, retext: text };
-    if (!m.pick) return NOT_UNDERSTOOD(`ไม่พบ${kinds.includes('part') ? 'ไลน์หรือพาร์ท' : 'ไลน์'}ชื่อ "${q.subject}"`);
+    if (!m.pick) return NOT_UNDERSTOOD(`ไม่พบ${kinds.includes('part') ? 'ไลน์หรือพาร์ท' : 'ไลน์'}ชื่อ "${q.subject}"`, 'not_found');
     pick = m.pick;
   }
   /* ยอดผลิตต้องมีชื่อพาร์ทกำกับ MAT — กดเลือกจากปุ่ม (forced) จะข้ามขั้นค้นชื่อที่โหลดทะเบียนไว้
@@ -400,4 +412,17 @@ export async function answerQuestion(text, ctx, today, forced = null) {
   const notes = [...(ans.notes || []), periodNote,
     vis.unsure ? '⚠️ ระบบตัดขอบเขตไลน์ของบัญชีนี้ได้ไม่ชัด — ตัวเลขอาจรวมไลน์นอกขอบเขต' : null].filter(Boolean);
   return { ...ans, notes };
+}
+
+/**
+ * 📝 เก็บคำถามที่แชทตอบไม่ได้ (ทาง ข · 19/11) → `askbot_unanswered` (Main)
+ * ไว้ดูว่าหน้างานพิมพ์คำไหนจริง แล้วเพิ่มคำพ้อง/เครื่องมือจากของจริง · 📄 docs/modules/askbot.md
+ * 🔴 การบันทึกเป็นของเสริม — ล้มต้องไม่กวนคนถาม (ไม่ toast) แต่ **ห้ามกลืนเงียบ** ⇒ console.warn
+ *    ไม่ต่อ `.select()` เพราะคนถามส่วนใหญ่ไม่มีสิทธิ์อ่านตาราง (select policy = askbot:review)
+ */
+export async function logUnanswered(question, reason, role) {
+  const q = String(question || '').trim().slice(0, 300);
+  if (!q || !['not_understood', 'not_found'].includes(reason)) return;
+  const { error } = await supabase.from('askbot_unanswered').insert({ question: q, reason, role: role || null });
+  if (error) console.warn('[askbot] บันทึกคำถามที่ตอบไม่ได้ไม่สำเร็จ:', error.message);
 }

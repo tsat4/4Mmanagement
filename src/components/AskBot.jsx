@@ -11,10 +11,10 @@ import { useNavigate } from 'react-router-dom'
 import { UserContext } from '../App'
 import useIsMobile from '../utils/useIsMobile'
 import { tr } from '../utils/i18n'
-import { getWorkDate } from '../utils/workDate'
+import { getWorkDate, getCurrentShift } from '../utils/workDate'
 import { canAccessPage } from '../utils/permissions'
 import { ASK_HINTS } from '../utils/askBot'
-import { answerQuestion } from '../lib/askBotQuery'
+import { answerQuestion, logUnanswered } from '../lib/askBotQuery'
 import { sirenCount, subscribeSiren } from '../utils/sirenBus'
 
 export default function AskBot() {
@@ -40,8 +40,11 @@ export default function AskBot() {
     setText('')
     setBusy(true)
     let ans
-    try { ans = await answerQuestion(s, ctx, getWorkDate(), forced) }
+    /* "กะนี้" ตัดสินจากนาฬิกาตอนกดส่ง — คู่กับวันทำงาน getWorkDate() (กะดึกหลังเที่ยงคืน = วันก่อนหน้า) */
+    try { ans = await answerQuestion(s, ctx, getWorkDate(), forced, { shiftNow: getCurrentShift() }) }
     catch (e) { ans = { text: `⚠️ ตอบไม่สำเร็จ — ${String(e?.message || e).slice(0, 120)}` } }
+    /* ตอบไม่ได้ = เก็บคำถามไว้ดูว่าหน้างานพิมพ์อะไรจริง (ไม่รอ · ไม่กวนคนถาม) */
+    if (ans?.unanswered) logUnanswered(s, ans.unanswered, ctx.role)
     if (!alive.current) return
     setMsgs(m => [...m, { from: 'bot', ...ans }])
     setBusy(false)
@@ -91,7 +94,7 @@ export default function AskBot() {
           {!msgs.length && (
             <div style={{ fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.6 }}>
               {tr('ถามได้: OEE ไลน์ · ไลน์ไหน OEE ต่ำสุด · downtime สูงสุด · เครื่องหยุดตอนนี้ · MO ค้าง · ของเสียสูงสุด · 4M ค้าง · มาทำงานกี่คน · ยอดผลิตของไลน์/พาร์ท')}<br />
-              {tr('ระบุช่วงได้: วันนี้ · เมื่อวาน · สัปดาห์นี้ · เดือนนี้ · เดือน 10 · ต.ค. 2569')}
+              {tr('ระบุช่วงได้: วันนี้ · เมื่อวาน · สัปดาห์นี้ · เดือนนี้ · เดือน 10 · ต.ค. 2569 · กะเช้า · กะดึก · กะนี้')}
             </div>
           )}
           {msgs.map((m, i) => m.from === 'me' ? (

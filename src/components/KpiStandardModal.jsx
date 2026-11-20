@@ -24,6 +24,7 @@ import {
 
 import { tr } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
+import { MoreMark } from './InfoMore';
 /* 23/09: รับ `scope`/`scopeCols` จาก OrgScopePicker (แทน section+group) — แถวที่หยิบเขียน scope_kind/scope_value ตรง */
 export default function KpiStandardModal({ year, scopeCols = {}, scopeText = '', defs = [], canManage, onClose, onChanged, closedDefs = [], onRestore }) {
   /* หน่วยงานมาตรฐานที่ใบนี้อิงอยู่ — จำไว้ที่ `kpi_definitions.std_unit` ของแถวในใบ
@@ -182,6 +183,15 @@ export default function KpiStandardModal({ year, scopeCols = {}, scopeText = '',
                 <span style={{ color: 'var(--muted)' }}> / {KPI_TOTAL_WEIGHT}</span>
                 {check.diff !== 0 && <b style={{ color: '#f59e0b' }}> ({check.diff > 0 ? `เกิน ${check.diff}` : `ขาด ${-check.diff}`})</b>}
               </span>
+              {/* 🧾 ของนอกมาตรฐาน — เตือนให้เห็น ห้ามลบให้เอง (คนตัดสินว่าจะเก็บหรือปิด)
+                  เคส Die MTN 19/11: ใบถือแบบของธุรกิจขายแม่พิมพ์ค้างอยู่ จอเดิมมองไม่เห็นเลย */}
+              {check.extras?.length > 0 && (
+                <span style={{ color: 'var(--amber)', fontWeight: 700 }}
+                  title={check.extras.map(r => r?.name || r?.topic || '—').join(' · ')}>
+                  {tr('นอกมาตรฐาน')} {check.extras.length} {tr('ข้อ')}{' '}
+                  <MoreMark text={`${tr('ไม่มีในทะเบียนของหน่วยงานนี้')}: ${check.extras.map(r => r?.name || r?.topic || '—').join(' · ')} — ${tr('เก็บไว้ก็ได้ถ้าตั้งใจ · ไม่ใช้แล้วให้ปิดแถวนั้น (ไม่ต้องลบ)')}`} />
+                </span>
+              )}
               {canManage && nPickedFixed < nFixed && (
                 <button onClick={pickAllFixed} disabled={!!busy} style={{ ...btn, opacity: busy ? 0.6 : 1 }}>
                   {tr('＋ หยิบข้อบังคับที่ขาด (')}{nFixed - nPickedFixed})

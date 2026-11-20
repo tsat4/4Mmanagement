@@ -1,5 +1,6 @@
 import { useState, useEffect, useContext, useCallback, useRef, useMemo } from 'react';
-import { confirmAndSyncLineDemand, syncSummaryText } from '../lib/lineDemandSync';   // 🔁 เปิดใบผลิต → แจ้งสโตร์ (05/11)
+import { confirmAndSyncLineDemand, previewLineDemand, syncSummaryText } from '../lib/lineDemandSync';   // 🔁 เปิดใบผลิต → แจ้งสโตร์ (05/11)
+import StoreNotifyBar from '../components/StoreNotifyBar';   // 📦 แถบรอแจ้งสโตร์ ไม่บังจอ (19/11)
 import InfoMore from '../components/InfoMore';   // ⓘ คำอธิบายยาวพับไว้ (UI §6.10)
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase, supabaseDR } from '../supabaseClient';
@@ -572,6 +573,10 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
 
   // Scan Open modal
   const [showScanOpen, setShowScanOpen]   = useState(false);
+  /* 📦 19/11 — แถบ "รอแจ้งสโตร์" หลังเปิดใบผลิต (แทน popup ที่บังช่องสแกน) · ดู StoreNotifyBar.jsx */
+  const [storeBar, setStoreBar] = useState(null);       // { lineName, mats, loading, res, err }
+  const [storeBarBusy, setStoreBarBusy] = useState(false);
+  const storeBarReq = useRef(0);                         // กันผลคำนวณรอบเก่าทับรอบใหม่ (กฎเหล็กข้อ 4)
   const [openProdForm, setOpenProdForm]   = useState({ prod_no: '', mat_no: '', qty: '', is_backfill: false, backfill_time: '' });
   const [openProdStd, setOpenProdStd]     = useState(null);
   const openProdInputRef = useRef(null);
@@ -1933,16 +1938,46 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
      ตัวเดียวกับช่อง "ขอเบิกพาร์ทนี้เลย" (lib/lineDemandSync.js) · ไม่บล็อกการเปิดใบ แต่ผลต้องขึ้นบนจอ ห้ามเงียบ */
   /* 💬 05/11 (คำสั่ง user) — เปิดใบผลิตแล้วขึ้น popup ให้เห็นก่อนว่าจะแจ้งสโตร์อะไร (หน่วย · ของหน้าไลน์ · สะสมอีกเท่าไหร่)
      ตกลง = แจ้ง · ยกเลิก = ใบผลิตยังเปิดอยู่ ไปกด 🔁 ที่แผงเรียกชิ้นส่วนทีหลังได้ */
-  const syncDemandAfterOpen = (lineName, matNo, qty) => {
+  /* 🚦 19/11 (คำสั่ง user "เปิดออเดอร์ต่อกันไม่ได้ · ห้ามตัดออก") — ไม่เด้ง popup ตอนเปิดใบแล้ว
+     คิดเงียบๆ → ขึ้นแถบ `StoreNotifyBar` (ไม่บังช่องสแกน) · เปิดหลายใบติดกัน = รวมในแถบเดียว (คิดทั้งพื้นที่ใหม่ทุกรอบ)
+     คนกดแถบ ⇒ `confirmAndSyncLineDemand` คิดสดแล้วถาม (popup เดิม) — การแจ้งสโตร์ยังต้องผ่านคนกด (มีด่าน) */
+  const syncDemandAfterOpen = (lineName, matNo) => {
     if (!lineName) return;
-    confirmAndSyncLineDemand({ lineName, role, title: `📦 เปิดใบผลิต ${matNo || ''}${qty ? ` × ${Number(qty).toLocaleString()} ชิ้น` : ''} ที่ ${lineName} — ต้องเบิกจากสโตร์ตาม BOM:` }).then(r => {
+    const id = ++storeBarReq.current;
+    setStoreBar(prev => {
+      const keep = prev && prev.lineName === lineName;
+      const mats = [...new Set([...(keep ? prev.mats : []), matNo].filter(Boolean))];
+      return { lineName, mats, loading: true, res: keep ? prev.res : null, err: null };
+    });
+    previewLineDemand({ lineName, role }).then(res => {
+      if (id !== storeBarReq.current) return;
+      if (res.error) { setStoreBar(b => b && { ...b, loading: false, err: res.error }); return; }
+      if (!res.sendCount && !res.warnCount) { setStoreBar(null); return; }   // ไม่มีอะไรต้องแจ้ง = ไม่ขึ้นแถบ
+      setStoreBar(b => b && { ...b, loading: false, res, err: null });
+    }).catch(e => { if (id === storeBarReq.current) setStoreBar(b => b && { ...b, loading: false, err: e?.message || String(e) }); });
+  };
+  const openStoreBar = async () => {
+    const b = storeBar; if (!b || storeBarBusy) return;
+    setStoreBarBusy(true);
+    try {
+      const r = await confirmAndSyncLineDemand({ lineName: b.lineName, role, focus: b.mats,
+        title: `📦 เปิดใบผลิต ${b.mats.join(', ')} ที่ ${b.lineName} — ต้องเบิกจากสโตร์ตาม BOM:` });
+      storeBarReq.current++;          // ผลคำนวณที่ค้างอยู่ห้ามทับหลังกดแล้ว
+      setStoreBar(null);
       if (r.cancelled) { toast.info('ยังไม่แจ้งสโตร์ — กด 🔁 คำนวณ + แจ้งสโตร์ ที่แผงเรียกชิ้นส่วนได้ภายหลัง'); return; }
       if (r.nothingToSend) return;
       const t = syncSummaryText(r);
-      if (r.error || r.writeErrors.length) toast.error(`แจ้งสโตร์อัตโนมัติไม่สำเร็จ — ${t}`);
-      else if (r.inserted || r.raised || r.rows.some(x => x.action === 'no_pkg' || x.action === 'wait')) toast.info(`📦 แจ้งสโตร์อัตโนมัติ: ${t}`);
-    }).catch(e => toast.error(`แจ้งสโตร์อัตโนมัติไม่สำเร็จ — ${e?.message || e}`));
+      if (r.error || r.writeErrors?.length) toast.error(`แจ้งสโตร์ไม่สำเร็จ — ${t}`);
+      else toast.info(`📦 แจ้งสโตร์: ${t}`);
+    } catch (e) { toast.error(`แจ้งสโตร์ไม่สำเร็จ — ${e?.message || e}`); }
+    finally { setStoreBarBusy(false); setTimeout(() => openProdInputRef.current?.focus(), 30); }
   };
+  const dismissStoreBar = () => { storeBarReq.current++; setStoreBar(null); };
+  const storeBarEl = (
+    <StoreNotifyBar bar={storeBar && storeBar.lineName === selSession?.line_name ? storeBar : null} busy={storeBarBusy}
+      onOpen={openStoreBar} onDismiss={dismissStoreBar}
+      onRetry={() => storeBar && syncDemandAfterOpen(storeBar.lineName, null)} />
+  );
 
   // insert จริง (ใช้ทั้งจาก handleScanOpen และ handleOverflowForce)
   const doInsertProdOrder = async (prodNo, matNo, qty, std, status = 'open') => {
@@ -1971,7 +2006,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
     if (error?.code === '23505') {
       return { error: { ...error, message: `PROD.NO ${prodNo} ถูกเปิดโดยเครื่องอื่นแล้วในกะนี้ — รีเฟรชรายการก่อน` }, data: null };
     }
-    if (!error && status === 'open' && data?.id) { await attachMachine(data.id); syncDemandAfterOpen(selSession?.line_name, matNo, qty); }
+    if (!error && status === 'open' && data?.id) { await attachMachine(data.id); syncDemandAfterOpen(selSession?.line_name, matNo); }
     return { error, data };
   };
 
@@ -2406,7 +2441,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
     }).select().single();
     setSavingManual(false);
     if (error) { toast.error(error.message); return; }
-    if (created?.id) { await attachMachine(created.id); syncDemandAfterOpen(selSession?.line_name, matNo, qty); }
+    if (created?.id) { await attachMachine(created.id); syncDemandAfterOpen(selSession?.line_name, matNo); }
     toast.success(manualForm.is_backfill
       ? `เปิดเป้า ${matNo} · ${qty} ชิ้น ✓ (ย้อนหลังตั้งแต่ ${manualForm.backfill_time}) — อัพเดทยอดสะสมได้เลย`
       : `เปิดเป้า ${matNo} · ${qty} ชิ้น ✓ — ให้พนักงานอัพเดทยอดสะสมทุกช่วงเบรค`);
@@ -4995,6 +5030,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                    (จึงต้องให้ .dr-partbox เป็นลูกตรงๆ ของ grid ห้ามมี div ครอบอีกชั้น) */}
             <div className="dr-partbox">
             <StoreLotQueue lineName={selSession.line_name} lines={lines} role={role} />
+            {!showScanOpen && storeBarEl}
             <LinePartCallPanel lineName={selSession.line_name} lines={lines} role={role} fullName={fullName} />
 
             {/* 📦 WIP ที่ไลน์ — สโตร์ส่งมาเท่าไหร่ · ตัดเป็น FG เท่าไหร่ · ค้างเท่าไหร่ (user 2026-09-01)
@@ -6817,6 +6853,8 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                     style={inputStyle} />
                 </Field>
               )}
+
+              {storeBarEl}
 
               {/* Running count */}
               {prodOrders.filter(o => o.status === 'open').length > 0 && (

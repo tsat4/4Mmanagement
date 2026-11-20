@@ -1,4 +1,5 @@
 import { useState, useEffect, useContext, useMemo } from 'react';
+import { MoreMark } from '../components/InfoMore';
 import { supabase } from '../supabaseClient';
 import { UserContext } from '../App';
 import { canWriteUnit, writeBlockText } from '../utils/writeScope';
@@ -206,7 +207,9 @@ export default function DocFormsRegistry() {
     <Page>
       <PageHeader title={tr('ทะเบียนเอกสาร & ฟอร์ม')} icon="📄"
         sub={<>
-          ทะเบียนเลขฟอร์ม / Rev / วันมีผล ของฟอร์มพิมพ์ทุกตัว — แก้ที่นี่ ใบพิมพ์เปลี่ยนตามทันที
+          {/* "ดูอย่างเดียว" = ป้ายกันเข้าใจผิดว่าแก้ได้ ⇒ อยู่บนจอเสมอ · ผลของการแก้ → ⓘ · user 19/11 */}
+          {tr('ทะเบียนเลขฟอร์ม / Rev / วันมีผล ของฟอร์มพิมพ์ทุกตัว')}{' '}
+          <MoreMark text={tr('แก้ที่นี่ ใบพิมพ์เปลี่ยนตามทันที')} />
           {!canManage && ' · คุณมีสิทธิ์ดูอย่างเดียว'}
         </>} />
 
