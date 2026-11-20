@@ -713,23 +713,13 @@ function FactoryStaffView({ lines, attendance, maps, stationPlans, skills, emplo
     return m;
   }, [ws, regions, scopeNames, lines, homes, attendance, empById, shiftOfEmp, stationPlans, skills, allStationIds, shift]);
 
-  // ป้ายตัวเลข 1 ใบต่อกลุ่ม (กรอบแรกตามลำดับชื่อ) — กรอบลูกอื่นในกลุ่มได้สีเดียวกันแต่ชื่อล้วน (กันการ์ดซ้ำซ้อนทับกัน)
-  const labelAt = useMemo(() => {
-    const m = new Map();
-    for (const name of [...byRegion.keys()].sort(naturalCompare)) {
-      const s = byRegion.get(name);
-      if (!s?.outOfScope && !m.has(s.group)) m.set(s.group, name);
-    }
-    return new Set(m.values());
-  }, [byRegion]);
+  // บนผัง = สีกรอบ + ชื่อไลน์ล้วน (user 20/11 "เอากรอบ text ในผังออก · มีแค่ชื่อไลน์เป็น index")
+  //   ตัวเลขอยู่แผงขวาที่เดียว (ป้ายการ์ดบนผังซ้ำกับแผงและทับกันเองตรงไลน์ที่อยู่ชิดกัน) · ชื่อล้วนวางกันทับให้เอง
   const stateOf = useCallback((name) => {
     const s = byRegion.get(name);
     if (!s || s.outOfScope) return null;
-    // ป้ายตัวเลขเฉพาะกรอบแดง/เหลือง (ที่ต้องไปดู) — เขียว/เทา = ชื่อล้วน (วางกันทับให้เอง) · ตัวเลขครบอยู่แผงขวา
-    const show = (s.status === 'bad' || s.status === 'warn') && labelAt.has(name);
-    return { color: STAFF_TONE[s.status], blink: false,
-      label: show ? `${s.group !== name ? `${s.group} · ` : ''}${lineStaffLabel(s)}` : null };
-  }, [byRegion, labelAt]);
+    return { color: STAFF_TONE[s.status], blink: false, label: null };
+  }, [byRegion]);
   const openLine = useCallback((name) => {
     const l = (lines || []).find(x => x.name === name);
     merge({ lv: 'line', lline: name, ...(l?.section ? { sec: l.section, dept: null } : {}) });
@@ -765,7 +755,7 @@ function FactoryStaffView({ lines, attendance, maps, stationPlans, skills, emplo
         <div className="card" style={{ padding: 8 }}>
           <FactoryMiniMap stateOf={stateOf} onPick={openLine} bottomReserve={isMobile ? 12 : 24} />
           <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 6 }}>
-            {trI18n('กดกรอบไลน์ = เข้าผังรายไลน์ · สีกรอบ = คนที่มา')}{shift === 'night' ? trI18n('กะดึก') : trI18n('กะเช้า')}{trI18n(' เทียบกำลังคนตามผัง (std ต่อกะ ตั้งที่ /line-setup) · กรอบ/ชื่อไลน์ตั้งที่ /layout-setup')}
+            {trI18n('กดกรอบไลน์ = เข้าผังรายไลน์ · ตัวเลขดูที่แผงขวา (ชื่อกรอบตรงกับบรรทัด "กรอบ:") · สีกรอบ = คนที่มา')}{shift === 'night' ? trI18n('กะดึก') : trI18n('กะเช้า')}{trI18n(' เทียบกำลังคนตามผัง (std ต่อกะ ตั้งที่ /line-setup) · กรอบ/ชื่อไลน์ตั้งที่ /layout-setup')}
           </div>
         </div>
         <div className="card" style={{ padding: 10, display: 'grid', gap: 6, alignContent: 'start' }}>
