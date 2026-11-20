@@ -26,7 +26,7 @@ import { parallelUnitsOf, flowModeOf } from '../utils/lineTypes';
 import { lazy, Suspense } from 'react';
 import { defectUnitCost, fmtBaht, lineCostCenter, rateFor, ratePerHour, RATE_COMPONENTS } from '../utils/costSaving';
 import { loadAffectsLanes } from '../utils/affectsLanes';
-import { computeLiveOee, shiftStartDate, LIVE_MIN_ELAPSED, strictOee, wavg, wLoad, wRun, wProd, policyBreakForShift, breakIntervalsIn, dtMinOutsideBreaks, laneWeightFn, parallelNBySession, dtLineMin, laneBySessionId, buildCtMap, sumDefectQty, splitDefectQty, ngByMatFrom, isTrialDefect, avgOeeTarget, QBIN_EMBED, defectQty, defectQtyAll, suspectPendingQty } from '../utils/oee';
+import { computeSessionOee, computeLiveOee, shiftStartDate, LIVE_MIN_ELAPSED, strictOee, wavg, wLoad, wRun, wProd, policyBreakForShift, breakIntervalsIn, dtMinOutsideBreaks, laneWeightFn, parallelNBySession, dtLineMin, laneBySessionId, buildCtMap, sumDefectQty, splitDefectQty, ngByMatFrom, isTrialDefect, avgOeeTarget, QBIN_EMBED, defectQty, defectQtyAll, suspectPendingQty } from '../utils/oee';
 import { statusColor, statusOf } from '../utils/statusTone';
 import PageHeader from '../components/PageHeader';
 import Page from '../components/Page';
@@ -54,6 +54,7 @@ import { MORE_MARK } from '../components/InfoMore';   // เครื่อง�
 import { BREAK_POLICY_COLS } from '../utils/oeeMasters';
 import NoticeBar from '../components/NoticeBar';
 import { tr as trI18n } from '../utils/i18n';
+import MatLabel from '../components/MatLabel';   // 📦 ป้าย MAT→ชื่อ/Part No. ของกลาง (ตาราง OEE รายพาร์ท)
 
 /* ข้อความขยายของแถบ "ค่าสด" — ใช้ทั้งที่ title= ของบรรทัด (hover ทั้งบรรทัดบนจอคอม)
    และที่ <MoreMark> (กดเปิดได้บนจอสัมผัส) ⇒ เขียนที่เดียว ไม่ให้ 2 ที่เพี้ยนกัน · 18/11 */
@@ -319,7 +320,7 @@ const STATUS_BADGE = {
 export default function OEEAnalytics() {
   const { role, lineId: userLineId, sections: scopeSecs = [], fullName, scopeIdx } = useContext(UserContext);
   const isMobile = useIsMobile(); // ≤768px: grid วิเคราะห์ยุบเป็นคอลัมน์เดียว กันกราฟถูกตัด (desktop ไม่เปลี่ยน)
-  const [viewTab, setViewTab] = useTabParam(['today', 'trend', 'insight', 'machine'], 'today');
+  const [viewTab, setViewTab] = useTabParam(['today', 'part', 'trend', 'insight', 'machine'], 'today');
   // break_policies — ใช้คิดเวลาพักนโยบายสำหรับ OOE/TEEP (ต้องประกาศก่อน tdKpi/kpi ที่เรียกใช้)
   const [breakPols, setBreakPols] = useState([]);
   /* 🔀 "เครื่องไหนหยุดแล้วครอบกี่เลน" (machines.affects_lanes · utils/affectsLanes.js)
@@ -419,6 +420,8 @@ export default function OEEAnalytics() {
   const [tdHistory,   setTdHistory]   = useState([]); // last 10 days, closed sessions, lightweight
   const [tdProductsByMat, setTdProductsByMat] = useState({}); // mat_no -> part name
   const [tdCtMap, setTdCtMap] = useState({});                 // mat_no -> cycle_time_sec (คำนวณ OEE สดของกะที่ยังไม่ปิด)
+  const [tdProdRows, setTdProdRows] = useState([]);           // แถว dr_products ดิบ — ส่งให้ computeSessionOee (OEE รายพาร์ท)
+  const [tdKanbanStds, setTdKanbanStds] = useState([]);
   const [tdOrdersBySession, setTdOrdersBySession] = useState({}); // session_id -> prod_orders[] (สำหรับนับงานคู่ RH/LH เป็น 1 คู่)
   const [tdPairMat, setTdPairMat] = useState({}); // mat_no -> pair_mat_no
   const [shiftSchedMap, setShiftSchedMap] = useState({}); // ผลของ buildScheduleMaps (byLine + parentOf)
@@ -565,7 +568,8 @@ export default function OEEAnalytics() {
         // + cycle_time_sec/name: ใช้คำนวณ OEE สดของกะที่ยังไม่ปิด (computeLiveOee) และแสดงชื่อพาร์ทในการ์ดกำลังผลิต
         // CT ผ่าน buildCtMap — fallback chain เดียวกับตอนปิดกะ (kanban_standards → dr_products)
         const [{ data: prod, error: pErr }, kstd] = await Promise.all([
-          supabaseDR.from('dr_products').select('mat_no, pair_mat_no, cycle_time_sec, name').in('mat_no', mats),
+          // + p_no: แกนจับกลุ่ม "พาร์ทจริง" ของ OEE รายพาร์ท (CLAUDE.md §พาร์ทจริง — ห้ามจับด้วยชื่อ)
+          supabaseDR.from('dr_products').select('mat_no, pair_mat_no, cycle_time_sec, name, p_no').in('mat_no', mats),
           supabaseDR.from('kanban_standards').select('mat_no, dr_products(cycle_time_sec)').in('mat_no', mats).then(r => r, () => ({ data: [] })),
           loadOpInfo(), // map รายการขั้นตอน (OP) — ให้ opInfoSync พร้อมก่อนคำนวณ tdKpi
         ]);
@@ -578,9 +582,11 @@ export default function OEEAnalytics() {
           if (p.name) nm[p.mat_no] = p.name;
         });
         setTdPairMat(pm);
+        setTdProdRows(prod || []);
+        setTdKanbanStds(kstd?.data || []);
         setTdCtMap(buildCtMap({ kanbanStds: kstd?.data || [], products: prod || [] }));
         if (Object.keys(nm).length) setTdProductsByMat(prev => ({ ...prev, ...nm }));
-      } else { setTdPairMat({}); setTdCtMap({}); }
+      } else { setTdPairMat({}); setTdCtMap({}); setTdProdRows([]); setTdKanbanStds([]); }
       setLastUpdate(new Date());
 
       // เก็บ mat_no → part name ไว้ map ให้ downtime_logs.mat_no (free text, ไม่ใช่ FK)
@@ -695,6 +701,58 @@ export default function OEEAnalytics() {
     return out;
   }, [tdRows, liveCalcOf]);
   const tdLiveCount = Object.keys(tdLiveRows).length;
+
+  /* ── 📦 OEE รายพาร์ท (2026-11-20 · คำสั่ง user "oee by part/product ต้องการให้มีนะ") ────────
+     🔴 **ไม่มีสูตรในหน้านี้** — `computeSessionOee()` คืน `byProduct` มาให้แล้ว (oee.js §OEE รายพาร์ท)
+     🔴 รวมหลายกะด้วย **ตัวตั้งรวม ÷ ตัวหารรวม** ห้ามเฉลี่ย % ของแต่ละกะ (กฎ KPI รวม)
+     🔴 กะที่ปิดแล้วก็คิดสดใหม่ที่นี่ ⇒ อาจไม่ตรงกับ %A ที่ประทับตอนปิดกะ (ทะเบียนเปลี่ยนทีหลังได้)
+        จอต้องเขียนบอก ห้ามเงียบ
+     🔴 `overlap` = ไลน์เดินหลายพาร์ทพร้อมกัน ⇒ นาทีหยุดเดียวถูกคิดให้หลายพาร์ท
+        ⇒ **เทียบพาร์ทต่อพาร์ทได้ บวกเป็นภาพรวมไลน์ไม่ได้** */
+  const tdByProduct = useMemo(() => {
+    if (!tdProdRows.length) return { rows: [], overlap: false, sessions: 0, unknownQty: 0, failed: 0 };
+    const acc = new Map();
+    let overlap = false, sessions = 0, unknownQty = 0, failed = 0;
+    for (const sess of tdSessionsTeamFiltered) {
+      const os = tdOrdersBySession[sess.id] || [];
+      if (!os.length) continue;
+      let R;
+      try {
+        R = computeSessionOee({
+          session: sess, orders: os,
+          downtimes: tdDowntimes.filter(d => d.session_id === sess.id),
+          defects: tdDefects.filter(d => d.session_id === sess.id),
+          products: tdProdRows, kanbanStds: tdKanbanStds, breakPolicies: breakPols || [],
+          processType: sess.dr_products?.process_type || null,
+          lineFlow: flowByLine?.[sess.line_name] || {}, affectsLanes: affectsLn,
+          endTime: sess.end_time || null,
+        });
+      } catch { failed++; continue; }
+      if (!R?.byProduct?.length) continue;
+      sessions++; unknownQty += Number(R.unknownQty) || 0;
+      if (R.byProductOverlap) overlap = true;
+      for (const g of R.byProduct) {
+        const cur = acc.get(g.key) || { key: g.key, name: g.name, pNo: g.pNo, matNos: new Set(),
+          netAvailMin: 0, runMin: 0, stdMin: 0, pcs: 0, good: 0, ngQty: 0, shifts: 0, overlap: false, lines: new Set() };
+        g.matNos.forEach(m => cur.matNos.add(m));
+        cur.name ||= g.name; cur.pNo ||= g.pNo;
+        cur.netAvailMin += g.netAvailMin; cur.runMin += g.runMin; cur.stdMin += g.stdMin;
+        cur.pcs += g.pcs; cur.good += g.good; cur.ngQty += g.ngQty;
+        cur.shifts += 1; cur.overlap = cur.overlap || g.overlap;
+        cur.lines.add(sess.line_name);
+        acc.set(g.key, cur);
+      }
+    }
+    const rows = [...acc.values()].map(r => {
+      const A = r.netAvailMin > 0 ? Math.min(1, r.runMin / r.netAvailMin) : null;
+      const P = r.runMin > 0 ? Math.min(1, r.stdMin / r.runMin) : null;
+      const Q = (r.good + r.ngQty) > 0 ? r.good / (r.good + r.ngQty) : null;
+      return { ...r, matNos: [...r.matNos], lines: [...r.lines], A, P, Q,
+        oee: (A != null && P != null && Q != null) ? A * P * Q : null };
+    }).sort((a, b) => (a.oee == null) - (b.oee == null) || (a.oee ?? 0) - (b.oee ?? 0));
+    return { rows, overlap, sessions, unknownQty, failed };
+  }, [tdSessionsTeamFiltered, tdOrdersBySession, tdDowntimes, tdDefects, tdProdRows,
+      tdKanbanStds, breakPols, flowByLine, affectsLn]);
 
   const tdKpi = useMemo(() => {
     // งานคู่ RH/LH (pair_mat_no) นับเป็น 1 คู่/stroke — เฉพาะกะที่มีคู่จริงถึงคำนวณจาก prod_orders ที่เหลือใช้ค่า stamped เดิม
@@ -1428,6 +1486,7 @@ export default function OEEAnalytics() {
         sub={trI18n('วิเคราะห์ประสิทธิภาพการผลิต — Availability · Performance · Quality')}
         tabs={[
           { key: 'today', label: 'ภาพรวมวันนี้' },
+          { key: 'part', label: 'รายพาร์ท' },
           { key: 'trend', label: 'แนวโน้ม/ประวัติ' },
           { key: 'insight', label: 'วิเคราะห์สาเหตุ' },
           { key: 'machine', label: 'รายเครื่อง (จากเครื่องจักร)' },
@@ -1985,6 +2044,85 @@ export default function OEEAnalytics() {
             );
           })()}
         </>
+      ) : viewTab === 'part' ? (
+        /* 📦 OEE รายพาร์ท — ตัวเลขมาจาก `computeSessionOee().byProduct` (ห้ามคิดในหน้า) */
+        <div className="card" style={{ padding: 14, display: 'grid', gap: 10, alignContent: 'start' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+            <b style={{ fontSize: 15 }}>{trI18n('OEE รายพาร์ท')}</b>
+            <span style={{ fontSize: 12, color: 'var(--muted)' }}>
+              {tdDate} · {trI18n('คิดจาก')} {tdByProduct.sessions} {trI18n('กะ')} · {tdByProduct.rows.length} {trI18n('พาร์ท')}
+            </span>
+          </div>
+
+          {/* 🔴 กฎจอซื่อสัตย์ — บอกข้อจำกัดก่อนให้ดูเลข ห้ามให้คนเข้าใจผิดเงียบๆ */}
+          <div style={{ fontSize: 12, lineHeight: 1.6, padding: '8px 10px', borderRadius: 'var(--r-md)',
+            background: 'var(--amber-dim)', color: 'var(--amber)', border: '1px solid var(--amber-line)' }}>
+            {tdByProduct.overlap && (
+              <div><b>{trI18n('⚠️ ไลน์เดินหลายพาร์ทพร้อมกัน')}</b> — {trI18n('นาทีที่เครื่องหยุด 1 นาที ถูกคิดให้ทุกพาร์ทที่ช่วงเวลาคาบกัน')}
+                {' '}<b>{trI18n('เทียบพาร์ทต่อพาร์ทได้ แต่บวกเป็นภาพรวมไลน์ไม่ได้')}</b></div>
+            )}
+            <div>{trI18n('ตัวเลขนี้คิดสดจากใบผลิต/ใบหยุดของแต่ละกะ — อาจไม่ตรงกับ %A ที่ประทับตอนปิดกะ (ทะเบียน CT/หมวดหยุด/เวลาพัก เปลี่ยนหลังปิดกะได้)')}</div>
+            {tdByProduct.unknownQty > 0 && (
+              <div><b>{trI18n('ชี้ CT ไม่ได้')} {Math.round(tdByProduct.unknownQty).toLocaleString()} {trI18n('ชิ้น')}</b> — {trI18n('พาร์ทพวกนี้ไม่อยู่ในตาราง (ไม่รู้ CT = คิด %P ไม่ได้)')}</div>
+            )}
+            {tdByProduct.failed > 0 && <div>{trI18n('คิดไม่สำเร็จ')} {tdByProduct.failed} {trI18n('กะ')}</div>}
+          </div>
+
+          {tdByProduct.rows.length === 0 ? (
+            <div style={{ fontSize: 13, color: 'var(--muted)', padding: '20px 0', textAlign: 'center' }}>
+              {tdProdRows.length === 0 ? trI18n('ยังไม่มีข้อมูลใบผลิตของวันที่เลือก') : trI18n('ไม่มีพาร์ทที่คิด OEE ได้ในวันที่เลือก')}
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                <thead>
+                  <tr style={{ textAlign: 'right', color: 'var(--muted)', borderBottom: '1px solid var(--line)' }}>
+                    <th style={{ textAlign: 'left', padding: '6px 8px' }}>{trI18n('พาร์ท')}</th>
+                    <th style={{ textAlign: 'left', padding: '6px 8px' }}>{trI18n('ไลน์')}</th>
+                    <th style={{ padding: '6px 8px' }}>%A</th>
+                    <th style={{ padding: '6px 8px' }}>%P</th>
+                    <th style={{ padding: '6px 8px' }}>%Q</th>
+                    <th style={{ padding: '6px 8px' }}>OEE</th>
+                    <th style={{ padding: '6px 8px' }}>{trI18n('เดิน (น.)')}</th>
+                    <th style={{ padding: '6px 8px' }}>{trI18n('ชิ้น')}</th>
+                    <th style={{ padding: '6px 8px' }}>{trI18n('เสีย')}</th>
+                    <th style={{ padding: '6px 8px' }}>{trI18n('กะ')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tdByProduct.rows.map(r => {
+                    const cell = (v) => v == null ? <span style={{ color: 'var(--muted)' }}>—</span> : `${(v * 100).toFixed(1)}`;
+                    return (
+                      <tr key={r.key} style={{ borderBottom: '1px solid var(--line)', textAlign: 'right' }}>
+                        <td style={{ textAlign: 'left', padding: '6px 8px', maxWidth: 260 }}>
+                          <MatLabel mat={r.matNos[0]} name={r.name} oneLine />
+                          {r.matNos.length > 1 && <span style={{ fontSize: 11, color: 'var(--muted)' }}> +{r.matNos.length - 1} MAT</span>}
+                          {r.overlap && <span title={trI18n('ช่วงเวลาคาบกับพาร์ทอื่น — ห้ามเอาไปบวกรวม')} style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 700 }}> ⚠️</span>}
+                        </td>
+                        <td title={r.lines.join('\n')}
+                          style={{ textAlign: 'left', padding: '6px 8px', fontSize: 11, color: 'var(--muted)',
+                            maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {r.lines[0]}{r.lines.length > 1 ? ` +${r.lines.length - 1} ${trI18n('ไลน์')}` : ''}
+                        </td>
+                        <td style={{ padding: '6px 8px' }}>{cell(r.A)}</td>
+                        <td style={{ padding: '6px 8px' }}>{cell(r.P)}</td>
+                        <td style={{ padding: '6px 8px' }}>{cell(r.Q)}</td>
+                        <td style={{ padding: '6px 8px', fontWeight: 800,
+                          color: r.oee == null ? 'var(--muted)' : r.oee >= 0.85 ? 'var(--green)' : r.oee >= 0.6 ? 'var(--amber)' : 'var(--red)' }}>
+                          {cell(r.oee)}
+                        </td>
+                        <td style={{ padding: '6px 8px' }}>{Math.round(r.runMin).toLocaleString()}</td>
+                        <td style={{ padding: '6px 8px' }}>{Math.round(r.pcs).toLocaleString()}</td>
+                        <td style={{ padding: '6px 8px' }}>{r.ngQty ? Math.round(r.ngQty).toLocaleString() : "—"}</td>
+                        <td style={{ padding: '6px 8px' }}>{r.shifts}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       ) : viewTab === 'machine' ? (
         /* 🏭 OEE รายจิ๊กจากข้อมูลเครื่อง (Node-RED) — สูตร ESM · คนละชุดกับ OEE ไลน์ที่ประทับ (13/11 · คำสั่ง user) */
         <JigOeeAnalytics />
