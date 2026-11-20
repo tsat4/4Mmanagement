@@ -2641,7 +2641,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
   /* 🔒 ฝั่ง + ระดับตำแหน่งของคนกด — ใช้ล็อกช่องเซ็นในลูป MO (2026-10-04 · คำสั่ง user)
      🔴 ตัดสินจากข้อมูลที่บันทึกไว้จริงเท่านั้น (mtn_teams / role / sections / position)
         ไม่รู้ = ไม่บล็อก แต่จอต้องเขียนบอก (stepAssumptions) — ห้ามเดาแทนคน */
-  const { mtnTeams: myTeams, sections: mySections, position: myPosition } = useContext(UserContext);
+  const { mtnTeams: myTeams, sections: mySections, position: myPosition } = useContext(UserContext);   // allUnits มาจาก prop แล้ว
   const actorSide = actorSideOf({ mtnTeams: myTeams, role, sections: mySections, isAm: isAmTeam });
   const posRank = positionRank(myPosition);
   const [showHist, setShowHist] = useState(false);   // 📜 ประวัติการซ่อมของเครื่องในใบนี้ (19/10)
@@ -3445,8 +3445,13 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
         </div>
       )}
       {/* 🔌 ปุ่มเปิด-ปิดเครื่อง (19/11) — ช่างที่ทำงานอยู่ในใบนี้กดได้เลย ไม่ต้องไปหาอีกหน้า */}
+      {/* 🔴 20/11: เดิมเขียน can('mtn_repair','repair') — คีย์นี้ไม่มีในระบบ (ไม่มีแถว/ไม่มี catalog) ⇒ ปุ่มโผล่เฉพาะ admin
+          ด่าน permissionCatalogCoverage จับได้ตอน merge · เกณฑ์ = "ขั้นลงมือซ่อม" ตัวเดียวกับฟอร์ม (canDoStep ผ่าน stageOf —
+          เลขขั้นต่างกันระหว่างฟอร์ม JIG/DIE กับ MTN ห้ามเขียน step === 3) · ผู้ถือ manage_master กดได้เสมอ */}
       <MachineUsabilityPanel order={o} machines={machines} fullName={fullName}
-        canEdit={can('mtn_repair', 'repair', role)} affectedLines={affectedLines} onSaved={onReload} />
+        canEdit={can('mtn_repair', 'manage_master', role)
+          || [2, 3, 4, 5, 6, 7, 8].some(s => stageOf(s, { mtnForm }) === 'service' && canEditStep(s))}
+        affectedLines={affectedLines} onSaved={onReload} />
       {/* ผู้เปิดใบตรวจรับ (ขั้น 4) และรับมอบ (ขั้น 6) ของใบตัวเองได้เสมอ — บอกให้รู้ว่าทำไมกดได้ */}
       {isOrderReporter(o, fullName) && o.status !== 'closed' && (
         <NoticeBar tone="ok" style={{ marginBottom: 10 }}>
@@ -3762,7 +3767,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
   /* 🔒 ฝั่ง + ระดับตำแหน่งของคนกด — ใช้ล็อกช่องเซ็นในลูป MO (2026-10-04 · คำสั่ง user)
      🔴 ตัดสินจากข้อมูลที่บันทึกไว้จริงเท่านั้น (mtn_teams / role / sections / position)
         ไม่รู้ = ไม่บล็อก แต่จอต้องเขียนบอก (stepAssumptions) — ห้ามเดาแทนคน */
-  const { mtnTeams: myTeams, sections: mySections, position: myPosition } = useContext(UserContext);
+  const { mtnTeams: myTeams, sections: mySections, position: myPosition, allUnits } = useContext(UserContext);
   const isMobile = useIsMobile();   // 📱 ปุ่มบันทึกเกาะล่างของฟอร์มขั้น (15/10)
   const actorSide = actorSideOf({ mtnTeams: myTeams, role, sections: mySections, isAm: isAmTeam });
   const posRank = positionRank(myPosition);
@@ -4776,7 +4781,7 @@ function MasterTab({ techs, parts, problemTypes, itemTypes, repairTypes = [], la
     const label = DEPT_OWNED[table];
     if (!label) return true;
     const row = (table === 'mtn_technicians' ? techs : laborRates).find(x => x.id === id);
-    const own = teamRowOwner({ team: row?.dept }, { myTeams: userTeams, role });
+    const own = teamRowOwner({ team: row?.dept }, { myTeams: userTeams, role, allUnits });
     if (own.ok) return true;
     toast.info(teamRowLockNote({ team: row?.dept }, own.code));
     return false;
@@ -4925,13 +4930,13 @@ function MasterTab({ techs, parts, problemTypes, itemTypes, repairTypes = [], la
          · แถว 🌐 ใช้ร่วมทุกทีม   → เฉพาะ admin/manager (แก้ทีเดียวกระทบทุกทีม)
        ⚠️ fallback สำคัญ: user ที่ยังไม่ได้ตั้ง `profiles.mtn_teams` = ไม่ล็อก
           ไม่งั้นวันที่ deploy ช่างที่ยังไม่ถูกตั้งทีมจะแก้อะไรไม่ได้ทั้งระบบ */
-    const isBoss = role === 'admin' || role === 'manager';
+    const isBoss = role === 'admin' || allUnits === true;   // 13/11: บอส = ใบผ่านรายคน ไม่ใช่ชื่อ role
     const myKeys = (userTeams || []).map(teamKeyOf).filter(Boolean);
     const unscoped = myKeys.length === 0;   // ยังไม่ตั้งทีม = ไม่ล็อก (ใช้ต่อในแถวเพิ่ม/ช่องเลือกทีม)
     const teamNameOf = (k) => (k ? (teamOpts.find(t => teamKeyOf(t.key) === teamKeyOf(k))?.dept_name || deptNameOf(k) || k) : '🌐 ใช้ร่วมทุกทีม');
     /* ตรรกะย้ายไปของกลาง `utils/mtnTeamOwn.js` แล้ว (2026-10-14) — คลังอะไหล่ใช้ตัวเดียวกัน
        ห้ามก๊อปเงื่อนไขกลับมาเขียนในหน้า (กฎ "แก้กฎที่เดียว") */
-    const canEditRow = (r) => !teamed || teamRowOwner(r, { myTeams: userTeams, role }).ok;
+    const canEditRow = (r) => !teamed || teamRowOwner(r, { myTeams: userTeams, role, allUnits }).ok;
     const lockNote = (r) => {
       const t = teamKeyOf(r?.team);
       return t ? `รายการนี้เป็นของทีม ${teamNameOf(t)} — แก้ได้เฉพาะทีมนั้นหรือหัวหน้า`

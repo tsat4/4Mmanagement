@@ -143,16 +143,25 @@ function subjectOf(t) {
    🔴 "กะนี้" = กะปัจจุบัน **ของวันทำงานนี้** — ผู้เรียกส่ง `shiftNow` (`getCurrentShift()`) เข้ามา
       ไฟล์นี้ไม่อ่านนาฬิกาเอง (pure + เทสตรึงได้) · ไม่ส่ง = ตัดสินไม่ได้ ⇒ error ห้ามเดา
    🔴 "กะนี้" ไม่บอกช่วง = วันนี้ (กะนี้ของเมื่อวานไม่มีความหมาย) */
-const SHIFT_WORDS = /กะ\s*(เช้า|ดึก|นี้|ปัจจุบัน)|day\s*shift|night\s*shift/g;
+/* 🕐 "เมื่อกี้" (20/11 · คำสั่ง user) = **กะก่อนหน้ากะปัจจุบัน** (กะล่าสุดที่จบไปแล้ว)
+   ตีความแบบนี้เพราะคำตอบนับเฉพาะกะที่ปิดแล้ว — "กะนี้" ส่วนใหญ่ยังไม่ปิด
+   🔴 คำตอบต้องเขียนบอกเสมอว่าตีความเป็นกะไหน วันไหน (ป้ายช่วง) — ไม่ใช่ความหมายที่ชัดในตัว */
+const SHIFT_WORDS = /กะ\s*(เช้า|ดึก|นี้|ปัจจุบัน|ที่แล้ว|ก่อน)|เมื่อกี้|เมื่อกี๊|day\s*shift|night\s*shift/g;
 export const SHIFT_LABEL = { day: 'กะเช้า', night: 'กะดึก' };
 
-export function shiftFromText(t, shiftNow = null) {
+export function shiftFromText(t, shiftNow = null, today = null) {
   const s = String(t || '').toLowerCase();
   if (/กะ\s*เช้า|day\s*shift/.test(s)) return { shift: 'day', label: SHIFT_LABEL.day };
   if (/กะ\s*ดึก|night\s*shift/.test(s)) return { shift: 'night', label: SHIFT_LABEL.night };
   if (/กะ\s*(นี้|ปัจจุบัน)/.test(s)) {
     if (shiftNow !== 'day' && shiftNow !== 'night') return { error: 'ยังบอกไม่ได้ว่าตอนนี้เป็นกะไหน — พิมพ์ "กะเช้า" หรือ "กะดึก" แทน' };
     return { shift: shiftNow, label: `กะนี้ (${SHIFT_LABEL[shiftNow]})`, isNow: true };
+  }
+  if (/เมื่อกี้|เมื่อกี๊|กะ\s*(ที่แล้ว|ก่อน)/.test(s)) {
+    if ((shiftNow !== 'day' && shiftNow !== 'night') || !today) return { error: 'ยังบอกไม่ได้ว่ากะก่อนหน้าคือกะไหน — พิมพ์ "กะเช้า" หรือ "กะดึก" พร้อมวัน เช่น "กะดึก เมื่อวาน"' };
+    /* กะเช้าตอนนี้ ⇒ ก่อนหน้า = กะดึกของวันทำงานเมื่อวาน · กะดึกตอนนี้ ⇒ กะเช้าของวันทำงานเดียวกัน */
+    const prev = shiftNow === 'day' ? { shift: 'night', date: addDay(today, -1) } : { shift: 'day', date: today };
+    return { shift: prev.shift, prevDate: prev.date, label: `เมื่อกี้ = กะก่อนหน้า (${SHIFT_LABEL[prev.shift]} ${prev.date})` };
   }
   return null;
 }
@@ -161,9 +170,10 @@ export function parseQuestion(text, today, { shiftNow = null } = {}) {
   const raw = String(text || '').trim();
   const t = raw.toLowerCase();
   const it = INTENTS.find(i => i.re.test(t)) || null;
-  const sh = shiftFromText(t, shiftNow);
+  const sh = shiftFromText(t, shiftNow, today);
   let p = periodFromText(t, today);
   if (!p && sh?.isNow) p = periodFromText('วันนี้', today);     // กะนี้ = วันนี้
+  if (!p && sh?.prevDate) p = { from: sh.prevDate, to: sh.prevDate, label: sh.prevDate, explicit: true };   // เมื่อกี้ = วันของกะก่อนหน้า
   const subject = subjectOf(t);
   if (!it) return { intent: null, period: null, periodDefault: null, subject, shift: null };
   if (p?.error || sh?.error) return { intent: it.key, period: null, periodDefault: null, subject, shift: null, error: p?.error || sh.error };
@@ -194,8 +204,9 @@ export function matchSubject(subject, { lines = [], products = [], kinds = ['lin
   if (!tokens.length) return { pick: null, choices: [], more: 0 };
   const whole = tokens.join('');
   /* ตัวเลขล้วนต้องตรง "ทั้งตัว" — ถาม "ชุดที่ 1" ห้ามได้ 10–15 มาด้วย · ถาม "060" ห้ามได้ "0601" */
+  /* 0 นำหน้าไม่นับ — พิมพ์ "060" ต้องเจอ "Line 60" (user ทัก 20/11 · เดิมหาไลน์ไม่เจอแล้วไปตกที่พาร์ท 16E060 เงียบๆ) */
   const hitAll = (hay) => tokens.every(tk => (/^\d+$/.test(tk)
-    ? new RegExp(`(^|\\D)${tk}(?!\\d)`).test(hay) : hay.includes(tk)));
+    ? new RegExp(`(^|\\D)0*${String(Number(tk))}(?!\\d)`).test(hay) : hay.includes(tk)));
 
   const lineHits = [], lineExact = [];
   if (kinds.includes('line')) for (const l of lines) {
@@ -491,6 +502,9 @@ export const fmtInt = (n) => (n == null ? '—' : Math.round(n).toLocaleString('
 export const fmtPct = (n) => (n == null ? '—' : `${(+n).toFixed(1)}%`);
 
 /** ข้อความแนะนำรูปแบบที่ถามได้ — ใช้ทั้งปุ่มลัดและตอนไม่เข้าใจคำถาม */
+/** ปุ่มลัดใต้กล่องแชท — 3 ปุ่มพอ (user ทัก 20/11 "รกเกินไป") · รายการเต็มอยู่ใน ASK_HINTS ตอนตอบว่าไม่เข้าใจ */
+export const HINT_CHIPS = ['oee HDF1 วันนี้', 'downtime สูงสุด สัปดาห์นี้', 'ยอดผลิต HDF1 วันนี้'];
+
 export const ASK_HINTS = [
   'oee HDF1 วันนี้', 'oee ต่ำสุด วันนี้', 'downtime สูงสุด สัปดาห์นี้', 'เครื่องหยุดตอนนี้',
   'MO ค้าง', 'ของเสียสูงสุด สัปดาห์นี้', 'ใบสแครป เดือนนี้', '4M ค้าง', 'มาทำงานกี่คน HDF1', 'ยอดผลิต HDF1 เดือนนี้',

@@ -152,3 +152,46 @@ test('กราฟจิ๋วบนผัง: เฉลี่ยราย 15 �
   assert.deepEqual(sparkForNames(['HDF1'], b, ml), [15, 30, 40]);
   assert.deepEqual(sparkForNames(['Line 60'], b, ml), []);
 });
+
+test('🌳 ผังหลายชั้น: ยอดตู้/ยอดรวมนับชั้นบนสุด (ไม่นับซ้ำ) · ไฟไม่มีมิเตอร์วัด = แม่ − ลูก', async () => {
+  const b = buildLiveBoard({
+    meters: [
+      M('MDB', { panel: 'MDB' }), M('MDB-07', { panel: 'X', parent_name: 'MDB' }), M('AIR', { panel: 'Y', parent_name: 'MDB-07' }),
+      M('AC-06', { parent_name: 'AIR' }), M('AC-07', { parent_name: 'AIR' }), M('DB-CNC'),
+    ],
+    live: [L('MDB', 'kw', 900), L('MDB-07', 'kw', 60), L('AIR', 'kw', 56), L('AC-06', 'kw', 20), L('AC-07', 'kw', 30), L('DB-CNC', 'kw', 10)],
+    daily: [{ scope_kind: 'zone', scope_name: 'MDB', day: '2026-11-09', kwh: 100 }, { scope_kind: 'zone', scope_name: 'AC-06', day: '2026-11-09', kwh: 40 }],
+    today: '2026-11-09', nowMs: NOW,
+  });
+  assert.equal(b.totals.kw, 910);                          // MDB + DB-CNC (ลูกอยู่ในยอด MDB แล้ว)
+  assert.equal(b.totals.todayKwh, 100);
+  const mdb = b.panels.find(p => p.panel === 'MDB');
+  assert.equal(mdb.kw, 900); assert.equal(mdb.total, 1); assert.equal(mdb.nested, true);
+  assert.equal(mdb.meters.length, 5);                       // ลูกตามรากมาอยู่ตู้ MDB แม้ panel ของลูกเขียนอื่น
+  const by = Object.fromEntries(b.meters.map(m => [m.name, m]));
+  assert.equal(by['AC-06'].depth, 3);
+  assert.deepEqual(by.AIR.unmetered, { kw: 6, state: 'ok' });
+  assert.equal(by.MDB.unmetered.kw, 840);
+  assert.equal(by['DB-CNC'].unmetered, null);
+  assert.equal(b.panels.find(p => p.panel === 'MDB-03').nested, false);   // ตู้เดิมไม่ตั้งแม่ = เหมือนเดิม
+});
+
+test('🌳 แม่หาย/วน = ถือเป็นชั้นบนสุด + เตือน · ลูกออฟไลน์ = ไม่รู้ไฟที่ไม่มีมิเตอร์ (ห้ามเดา) · ลูกเกินแม่ = negative', () => {
+  const b = buildLiveBoard({
+    meters: [M('P'), M('C1', { parent_name: 'P' }), M('C2', { parent_name: 'P' }), M('O', { parent_name: 'NOPE' }), M('X', { parent_name: 'Y' }), M('Y', { parent_name: 'X' })],
+    live: [L('P', 'kw', 10), L('C1', 'kw', 8), L('C2', 'kw', 1, 10)],
+    today: '2026-11-09', nowMs: NOW,
+  });
+  assert.deepEqual(b.warnings.orphans, [{ name: 'O', parent: 'NOPE' }]);
+  assert.ok(b.warnings.cycles.length >= 1);
+  assert.equal(b.meters.find(m => m.name === 'P').unmetered.state, 'unknown');
+  const b2 = buildLiveBoard({ meters: [M('P'), M('C1', { parent_name: 'P' })], live: [L('P', 'kw', 10), L('C1', 'kw', 20)], today: '2026-11-09', nowMs: NOW });
+  assert.equal(b2.meters.find(m => m.name === 'P').unmetered.state, 'negative');
+});
+
+test('🌳 liveForNames: แม่กับลูกอยู่กรอบเดียวกัน = นับแม่ตัวเดียว', async () => {
+  const { liveForNames } = await import('../energy.js');
+  const b = buildLiveBoard({ meters: [M('P'), M('C', { parent_name: 'P' })], live: [L('P', 'kw', 10), L('C', 'kw', 4)], today: '2026-11-09', nowMs: NOW });
+  const ml = new Map([['zone|P', new Set(['L1'])], ['zone|C', new Set(['L1'])]]);
+  assert.equal(liveForNames(['L1'], b.meters, ml).kw, 10);
+});

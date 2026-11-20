@@ -1702,8 +1702,8 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
       )}
 
       {/* 🧪 งานชุบ — โหลดข้อมูลเอง (ใบส่งชุบ/ยอดคลัง) · ใช้คำค้น + "เฉพาะงานค้าง" ชุดเดียวกับแท็บอื่น */}
-      {store === 'plating' && <PlatingBoard q={q} showDone={showDone} readOnly={readOnly} part={direction === 'out' ? 'send' : 'all'} />}
-      {store === 'plating_in' && <PlatingBoard q={q} showDone={showDone} readOnly={readOnly} part="receive" />}
+      {store === 'plating' && <PlatingBoard q={q} showDone={showDone} readOnly={readOnly} part={direction === 'out' ? 'send' : 'all'} table={zl === 'table'} />}
+      {store === 'plating_in' && <PlatingBoard q={q} showDone={showDone} readOnly={readOnly} part="receive" table={zl === 'table'} />}
       {store === 'receipts' && <StockReceiptQueue banner={pro ? <StoreCallSiren variant="inline" here={direction === 'out'} /> : null} table={zl === 'table'} />}
 
       {store === 'open' && <OpenOrderDemandPanel q={q} />}

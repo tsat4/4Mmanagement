@@ -18,7 +18,7 @@ export function RowTable({ children, head = HEAD }) {
       <div role="table" style={{ minWidth: PART_ROW_MIN_W }}>
         <div role="row" style={{ display: 'grid', gridTemplateColumns: PART_ROW_COLS, gap: 12, padding: '7px 12px 7px 16px',
           background: 'var(--bg2)', borderBottom: '1px solid var(--border)' }}>
-          {head.map((h, i) => <span key={i} role="columnheader" style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--muted)', whiteSpace: 'nowrap', textAlign: i === 2 ? 'right' : 'left' }}>{tr(h)}</span>)}
+          {head.map((h, i) => <span key={i} role="columnheader" style={{ fontSize: 13, fontWeight: 700, color: 'var(--muted)', whiteSpace: 'nowrap', textAlign: i === 2 ? 'right' : 'left' }}>{tr(h)}</span>)}
         </div>
         <CardLayoutContext.Provider value="row">{children}</CardLayoutContext.Provider>
       </div>
@@ -35,10 +35,10 @@ export default function StatusZones({ rows, zones, statusOf, renderCard, emptyTe
           <header style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '7px 12px',
             borderLeft: `6px solid ${z.color}`, borderBottom: '1px solid var(--border)',
             background: 'var(--card)', backgroundImage: `linear-gradient(${z.color}1f, ${z.color}1f)` }}>
-            <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', whiteSpace: 'nowrap' }}>{tr(z.label)}</span>
+            <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', whiteSpace: 'nowrap' }}>{tr(z.label)}</span>
             <span style={{ minWidth: 26, textAlign: 'center', padding: '0 8px', borderRadius: 'var(--r-pill)', background: z.color,
-              color: textOn(z.color), fontSize: 12.5, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{z.rows.length}</span>
-            {z.hint && <span style={{ fontSize: 12, color: 'var(--text2)' }}>{tr(z.hint)}</span>}
+              color: textOn(z.color), fontSize: 14, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{z.rows.length}</span>
+            {z.hint && <span style={{ fontSize: 13.5, color: 'var(--text2)' }}>{tr(z.hint)}</span>}
           </header>
           {z.rows.length === 0
             ? <div style={{ fontSize: 12, color: 'var(--muted)', padding: '8px 16px', borderBottom: '1px solid var(--border)' }}>{emptyText}</div>

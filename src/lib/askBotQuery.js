@@ -75,6 +75,8 @@ async function closedAndOpen(period, lineNames, cols) {
 /* คอลัมน์ downtime ชุดเดียวของแชท — `started_at/ended_at` ให้ตัดช่วงพักได้ · `planned_cap_min` ให้เพดานหยุดตามแผนทำงาน */
 const DT_COLS = 'id, session_id, started_at, ended_at, duration_min, machine_no, description, dr_downtime_types(name_th, category, planned_cap_min)';
 
+/* ยอดผลิต: กะที่ยังเปิดถูกรวมแล้ว แต่ยอดยังขยับได้ — ต้องบอก */
+const liveNote = (n) => (n ? `🟢 รวมกะที่กำลังเดิน ${n} กะ — ยอดยังเพิ่มได้` : null);
 const openNote = (n) => (n ? `⏳ มีกะที่ยังไม่ปิด ${n} กะในช่วงนี้ — ยังไม่นับ` : null);
 
 /* ── เครื่องมือ 1: OEE ไลน์ ───────────────────────────────────────────── */
@@ -138,17 +140,19 @@ async function toolProduction({ pick, period, all, vis, products }) {
     const names = selfAndDescendants(all, pick.name).filter(n => !vis.names || vis.names.has(n));
     const { closed, open } = await closedAndOpen(period, names, 'id, line_name');
     if (closed.error || open.error) return fail('กะผลิต', closed.error || open.error);
-    const od = await fetchByIds(closed.rows.map(s => s.id), c => supabaseDR.from('prod_orders')
+    /* 🔴 ยอดผลิต = ยอดสะสม ⇒ รวมกะที่กำลังเดินด้วย (user ทัก 20/11: "daily report มียอดเพิ่มเรื่อยๆ แต่แชทตอบ 0")
+       ต่างจาก OEE/downtime/ของเสียที่เป็นอัตรา/ค่าตอนปิดกะ — ยังนับเฉพาะกะที่ปิดแล้วเหมือนเดิม */
+    const od = await fetchByIds([...closed.rows, ...open.rows].map(s => s.id), c => supabaseDR.from('prod_orders')
       .select('id, session_id, mat_no, status, qty, qty_ok, qty_actual').in('session_id', c));
     if (od.error || od.truncated) return fail('ใบผลิต', od.error || 'ข้อมูลเยอะเกินเพดาน — ลองช่วงสั้นลง');
     const t = productionTotals(od.rows, opMap);
     const kids = names.length > 1 ? ` (รวมไลน์ลูก ${names.length - 1} ไลน์)` : '';
     return {
-      source: `ยอดผลิต ไลน์ ${pick.name}${kids} · ${period.label} · กะที่ปิดแล้ว ${closed.rows.length} กะ`,
+      source: `ยอดผลิต ไลน์ ${pick.name}${kids} · ${period.label} · ${closed.rows.length + open.rows.length} กะ`,
       text: `รวม ${fmtInt(t.total)} ชิ้น` + (t.rows.length ? '\n' + t.rows.slice(0, 5)
         .map(r => `· ${r.mat_no}${nameOf[r.mat_no] ? ` ${nameOf[r.mat_no]}` : ''} — ${fmtInt(r.produced)} ชิ้น`).join('\n') : '')
         + (t.rows.length > 5 ? `\n· อีก ${t.rows.length - 5} พาร์ท` : ''),
-      notes: [openNote(open.rows.length), t.noMat ? `ใบผลิตไม่ระบุ MAT ${fmtInt(t.noMat)} ชิ้น (รวมในยอดแล้ว)` : null,
+      notes: [liveNote(open.rows.length), t.noMat ? `ใบผลิตไม่ระบุ MAT ${fmtInt(t.noMat)} ชิ้น (รวมในยอดแล้ว)` : null,
         'นับเป็น "ชิ้น" — งานคู่ RH/LH นับแยกทั้ง 2 ข้าง'].filter(Boolean),
       link: '/oee-analytics',
     };
@@ -171,18 +175,21 @@ async function toolProduction({ pick, period, all, vis, products }) {
   if (cl.error || op.error || cl.truncated) return fail('ใบผลิต', cl.error || op.error || 'ข้อมูลเยอะเกินเพดาน');
   const inScope = (o) => (!vis.names || vis.names.has(o.production_sessions?.line_name))
     && (!period.shift || o.production_sessions?.shift === period.shift);
-  const rows = cl.rows.filter(inScope);
-  const hidden = cl.rows.length - rows.length;
+  /* รวมกะที่กำลังเดิน (ยอดสะสม · 20/11) */
+  const all2 = [...cl.rows, ...op.rows];
+  const rows = all2.filter(inScope);
+  const hidden = all2.length - rows.length;
   const byMat = {}; let total = 0;
   rows.forEach(o => { const q = productionTotals([o]).total; byMat[o.mat_no] = (byMat[o.mat_no] || 0) + q; total += q; });
   const lineSet = new Set(rows.map(o => o.production_sessions?.line_name).filter(Boolean));
   const openSess = new Set(op.rows.filter(inScope).map(o => `${o.production_sessions?.line_name}|${o.production_sessions?.work_date}`));
+  const madeMats = mats.filter(m => byMat[m]);   // MAT ที่ไม่มียอดในช่วงนี้ = ไม่ต้องโชว์ทีละบรรทัด (รก) แต่บอกจำนวน
   return {
     source: `ยอดผลิต พาร์ท ${pick.label}${pick.p_no ? ` (${pick.p_no})` : ''} · ${period.label} · ${lineSet.size} ไลน์`,
-    text: `รวม ${fmtInt(total)} ชิ้น` + (mats.length > 1 ? '\n' + mats.map(m => `· ${m} — ${fmtInt(byMat[m] || 0)} ชิ้น`).join('\n') : ''),
-    notes: [openSess.size ? `⏳ มีใบผลิตของพาร์ทนี้ในกะที่ยังไม่ปิด — ยังไม่นับ` : null,
+    text: `รวม ${fmtInt(total)} ชิ้น` + (madeMats.length > 1 ? '\n' + madeMats.map(m => `· ${m} — ${fmtInt(byMat[m])} ชิ้น`).join('\n') : ''),
+    notes: [liveNote(openSess.size),
       hidden ? `ซ่อน ${hidden} ใบผลิตที่อยู่ไลน์นอกขอบเขตของคุณ` : null,
-      mats.length > 1 ? `สินค้าเดียวกัน ${mats.length} MAT (คนละลูกค้า) รวมให้แล้ว` : null].filter(Boolean),
+      mats.length > 1 ? `สินค้าเดียวกัน ${mats.length} MAT (คนละลูกค้า) รวมให้แล้ว${madeMats.length < mats.length ? ` · ไม่มียอดในช่วงนี้ ${mats.length - madeMats.length} MAT` : ''}` : null].filter(Boolean),
     link: '/product-history',
   };
 }

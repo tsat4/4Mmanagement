@@ -13,7 +13,7 @@ import useIsMobile from '../utils/useIsMobile'
 import { tr } from '../utils/i18n'
 import { getWorkDate, getCurrentShift } from '../utils/workDate'
 import { canAccessPage } from '../utils/permissions'
-import { ASK_HINTS } from '../utils/askBot'
+import { HINT_CHIPS } from '../utils/askBot'
 import { answerQuestion, logUnanswered } from '../lib/askBotQuery'
 import { sirenCount, subscribeSiren } from '../utils/sirenBus'
 
@@ -94,7 +94,7 @@ export default function AskBot() {
           {!msgs.length && (
             <div style={{ fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.6 }}>
               {tr('ถามได้: OEE ไลน์ · ไลน์ไหน OEE ต่ำสุด · downtime สูงสุด · เครื่องหยุดตอนนี้ · MO ค้าง · ของเสียสูงสุด · ใบสแครป · 4M ค้าง · มาทำงานกี่คน · ยอดผลิตของไลน์/พาร์ท')}<br />
-              {tr('ระบุช่วงได้: วันนี้ · เมื่อวาน · สัปดาห์นี้ · เดือนนี้ · เดือน 10 · ต.ค. 2569 · กะเช้า · กะดึก · กะนี้')}
+              {tr('ระบุช่วงได้: วันนี้ · เมื่อวาน · สัปดาห์นี้ · เดือนนี้ · เดือน 10 · ต.ค. 2569 · กะเช้า · กะดึก · กะนี้ · เมื่อกี้')}
             </div>
           )}
           {msgs.map((m, i) => m.from === 'me' ? (
@@ -126,7 +126,7 @@ export default function AskBot() {
         </div>
 
         <div style={{ padding: '8px 10px 4px', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {ASK_HINTS.map(h => <button key={h} onClick={() => setText(h)} style={chipBtn}>{h}</button>)}
+          {HINT_CHIPS.map(h => <button key={h} onClick={() => setText(h)} style={chipBtn}>{h}</button>)}
         </div>
         <form onSubmit={e => { e.preventDefault(); ask(text) }} style={{ display: 'flex', gap: 6, padding: 10, borderTop: '1px solid var(--border)' }}>
           <input value={text} onChange={e => setText(e.target.value)} placeholder={tr('พิมพ์คำถาม เช่น oee HDF1 วันนี้')}
