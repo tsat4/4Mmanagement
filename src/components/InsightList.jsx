@@ -47,7 +47,7 @@ export default function InsightList({ k = 1, items = [], max = INSIGHT_SHOWN, li
     <div style={{ display: 'grid', gap: Math.max(2, Math.round(3 * k)), alignContent: 'start', minWidth: 0 }}>
       {label && (
         <div style={{ fontSize: fs(10.5), fontWeight: 800, color: 'var(--muted)', letterSpacing: .2 }}>
-          {label} {items.length > max && <span style={{ fontWeight: 700 }}>({open ? items.length : `${max}/${items.length}`})</span>}
+          {label} {items.length > max && <span style={{ fontWeight: 700 }}>({open || max === 0 ? items.length : `${max}/${items.length}`})</span>}
         </div>
       )}
       <div ref={boxRef} style={{ display: 'grid', gap: Math.max(2, Math.round(3 * k)), alignContent: 'start', minWidth: 0 }}>
