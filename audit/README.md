@@ -522,3 +522,11 @@ UI §6.14.3 *"เปลี่ยน layout = ต้องเปิดดูจ�
 **ยังไม่มีรอบ `role=leader` ใน `crashsweep.mjs`** (ตอนนี้มี `admin` + `supervisor`+ขอบเขต)
 แกน "รายไลน์" จึงยังตรวจด้วยมือ (คำสั่งข้างบน) · เพิ่มรอบที่ 3 ได้ แต่ **เป็นต้นทุนถาวร
 ของทุกครั้งที่รัน sweep** ⇒ ให้ user เคาะก่อน
+
+## 🏢 `org_nodes` มีชั้นบน (company → plant) เหนือส่วนงาน — 2026-11-20 · ห้ามถอด
+
+ของจริงส่วนงานทุกตัวชี้ `plant` แล้ว (`supabase/migrations/20261120_org_nodes_upper_layer_rows_main.sql`)
+⇒ mock: แถว 13 = `company` TSAT (ราก) · แถว 12 = `plant` TSAT-P4 · PD1 (แถว 1) ชี้ plant · JIG MTN (แถว 6) ยังไม่มีแม่
+(= เคส "แผนกขึ้นตรง" ยังถูกรัน) · ทีมเหลือแถว 8–11, 14, 15
+· ชั้นบน **ไม่มี `cost_center`/`division`** เหมือนของจริง — ใส่ = ค่าไหลลงหน่วยผ่าน `divisionOfNode`/`laborTypeOfNode`
+· ไม่มีแถวพวกนี้ = กิ่ง "ส่วนงานมีแม่เป็นชั้นบน" (`unitParentId` · `unitRoots` · หัวสายใน `OrgTreeView`) ไม่เคยถูกรันใน harness

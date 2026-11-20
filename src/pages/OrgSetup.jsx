@@ -91,6 +91,12 @@ export default function OrgSetup() {
   };
 
   const ORPHAN = '__ORPHAN__';
+  /* 🏢 ส่วนงานใหม่เกิดใต้ Plant (20/11) — มี plant ที่เปิดใช้ "ตัวเดียว" เท่านั้น ⇒ ผูกให้
+     หลายตัว/ไม่มี = ค่าเดิม (parent ว่าง) ห้ามเดาว่าเป็นโรงงานไหน · ส่วนงานยังเป็นรากของชั้นหน่วยเหมือนเดิม (orgLayers) */
+  const soloPlantId = useMemo(() => {
+    const ps = nodes.filter(n => n.kind === 'plant' && n.is_active !== false);
+    return ps.length === 1 ? ps[0].id : null;
+  }, [nodes]);
   const sections = useMemo(() => nodes.filter(n => n.kind === 'section'), [nodes]);
   const allDepts = useMemo(() => nodes.filter(n => n.kind === 'department'), [nodes]);
   const orphanDepts = useMemo(() => nodes.filter(n => isOrphanDept(n, nodes)), [nodes]);
@@ -449,7 +455,7 @@ export default function OrgSetup() {
           <div style={colStyle} className="card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
               <strong style={{ fontSize: 13, color: 'var(--text2)' }}>{tr('SECTION / ส่วน (')}{sections.length})</strong>
-              {isAdmin && <button className="tbtn" onClick={() => openCreate('section', null)} style={addBtnSt}>➕</button>}
+              {isAdmin && <button className="tbtn" onClick={() => openCreate('section', soloPlantId)} style={addBtnSt}>➕</button>}
             </div>
             <div style={{ maxHeight: 'calc(100vh - 280px)', overflowY: 'auto' }}>
             {sections.map(s => (
@@ -648,7 +654,8 @@ export default function OrgSetup() {
                   </select>
                   <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
                     ใช้แยก “สกิลของฝ่ายไหน” — ติดที่ตัวบนสุดพอ ตัวลูกตกทอดเอง
-                    {modal.parentId ? ' (ตัวนี้มีแม่อยู่แล้ว ปล่อยว่างได้)' : ''}
+                    {/* ส่วนงานมีแม่เป็น Plant แล้ว (20/11) แต่ชั้นบนไม่มีป้ายฝ่ายให้ตกทอด ⇒ ไม่ใช่ "ปล่อยว่างได้" */}
+                    {modal.kind !== 'section' && modal.parentId ? ' (ตัวนี้มีแม่อยู่แล้ว ปล่อยว่างได้)' : ''}
                     {!canDivisions && ' · ต้องมีสิทธิ์ org:manage_divisions ถึงแก้ได้'}
                   </div>
                 </div>

@@ -1143,7 +1143,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
     const rdP = fetchReadingsSince(rdFrom, newDay).then(rows => ({ rows }), () => null);
     const [m, l, mm] = await Promise.all([
       supabaseDR.from('energy_live_meters')
-        .select('scope_kind, scope_name, panel, subtitle, limit_kw, limit_a, gauge_max_kw, sort_order').eq('is_active', true),
+        .select('scope_kind, scope_name, panel, parent_name, subtitle, limit_kw, limit_a, gauge_max_kw, sort_order').eq('is_active', true),
       supabaseDR.from('energy_live').select('scope_kind, scope_name, field, value, received_at'),
       supabaseDR.from('energy_meter_machines').select('scope_kind, scope_name, machines(line_name)'),
     ]);

@@ -16,7 +16,7 @@ import {
   Lock, KeyRound, Bell, Link, Wrench, Bolt, Sparkles, Archive, Database, CalendarDays, Anvil, Map, Rocket, Truck,
   Siren, Hammer, UsersRound, Compass, Toolbox, Gamepad2, Camera, FolderOpen, Shield, ShieldCheck, PenLine, Globe,
   Drama, MessageSquare, BellOff, LogOut, Folder, Menu, QrCode, ClipboardCheck, Star, UserRound, Plug,
-  Pin, PanelLeftClose,
+  Pin, PanelLeftClose, FlaskConical, UserRoundCheck, Target, ArrowUp, Undo2, Handshake, Upload, Flag, Receipt, Hand,
 } from 'lucide-react';
 
 export const ICON_MAP = {
@@ -38,6 +38,7 @@ const LUCIDE = {
   Link, Wrench, Bolt, Sparkles, Archive, Database, CalendarDays, Anvil, Map, Rocket, Truck, Siren, Hammer, UsersRound,
   Compass, Toolbox, Gamepad2, Camera, FolderOpen, Shield, ShieldCheck, PenLine, Globe, Drama, MessageSquare, BellOff,
   LogOut, Folder, Menu, QrCode, ClipboardCheck, Star, UserRound, Pin, PanelLeftClose,
+  FlaskConical, UserRoundCheck, Target, ArrowUp, Undo2, Handshake, Upload, Flag, Receipt, Hand,
 };
 
 // emoji นำหน้าป้าย (ชุดเดียวกับ LEAD_RE ใน utils/i18n.js — รวม variation selector / ZWJ / ช่องว่าง)

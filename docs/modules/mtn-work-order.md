@@ -3363,3 +3363,10 @@ foreign key (to_order_id) references public.mtn_orders(id) on delete restrict
   🔴 **ล็อกเต็ม `manage_master` ก็ข้ามไม่ได้** (ห้ามย้ายบรรทัดนั้นขึ้นก่อนด่าน) · ฝั่ง = `actorSideOf()`
   **ห้ามเดาจากชื่อ** · **ไม่รู้ = ไม่บล็อก แต่จอต้องเขียนว่าไม่ได้ตรวจ** · คีย์แยก `mtn_head`/`close_cost`
 > 📄 รายละเอียดเต็ม → `docs/modules/mtn-work-order.md`
+
+## 🔌 ปุ่มเปิด-ปิดเครื่องในใบ MO — สิทธิ์ = ขั้น "ลงมือซ่อม" (2026-11-20 · แก้คีย์ผี)
+
+- 19/11 ใส่ `can('mtn_repair','repair')` ซึ่ง**ไม่มีคีย์นี้ในระบบ** (ไม่มีแถว role_permissions · ไม่มี catalog) ⇒ `can()` คืน false ทุก role
+  ยกเว้น admin — ปุ่มเปิด-ปิดเครื่องใช้ได้แค่ admin ตั้งแต่ deploy 19/11 · ด่าน `permissionCatalogCoverage.test.mjs` (18/11) จับได้ตอน merge 20/11
+- แก้: `canEdit` = ถือ `mtn_repair:manage_master` **หรือ** ทำขั้น `service` ของใบนี้ได้ (`canDoStep` ผ่าน `stageOf(s,{mtnForm})` —
+  ไล่ทุกเลขขั้นเพราะ JIG/DIE กับ MTN เลขไม่ตรงกัน) ⇒ เกณฑ์เดียวกับปุ่มบันทึกขั้นซ่อมในฟอร์ม · ไม่มี can() ตัวเดียวที่ตอบ "ช่างที่รับงานใบนี้" ได้
