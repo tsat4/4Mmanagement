@@ -46,6 +46,7 @@ import {
   ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis,
   CartesianGrid, ReferenceLine, LabelList, Cell,
 } from 'recharts';
+import { chartAnim } from '../utils/motion';
 
 import { tr } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
@@ -195,18 +196,18 @@ function ChartModal({ c, curIdx, onClose }) {
                 label={{ value: `เป้า ${c.dir === 'down' ? '≤' : '≥'} ${Number(c.target).toLocaleString(undefined, { maximumFractionDigits: 1 })}`, position: 'insideTopRight', fill: '#f59e0b', fontSize: 12, fontWeight: 800 }} />
             )}
             {c.kind === 'bar' ? (
-              <Bar dataKey="v" fill={CELL_BAR_FILL} radius={[4, 4, 0, 0]} isAnimationActive={false}>
+              <Bar dataKey="v" fill={CELL_BAR_FILL} radius={[4, 4, 0, 0]} {...chartAnim()}>
                 <LabelList dataKey="v" position="top" formatter={v => (v == null ? '' : Number(v).toLocaleString())} style={{ fontSize: 11, fontWeight: 700, fill: 'var(--text2)' }} />
                 {data.map(d => <Cell key={d.i} fill={levelColor(d.v, sdef)} fillOpacity={d.i === curIdx ? 0.4 : 0.9} />)}
               </Bar>
             ) : (
               <Line dataKey="v" type="monotone" stroke="var(--accent)" strokeWidth={2.4} connectNulls
-                isAnimationActive={false} dot={{ r: 3.5 }} label={{ position: 'top', fontSize: 11, fill: 'var(--text2)' }} />
+                {...chartAnim()} dot={{ r: 3.5 }} label={{ position: 'top', fontSize: 11, fill: 'var(--text2)' }} />
             )}
             {/* 🤝 ขา Q/D = เส้นประบาง ไม่มีป้ายตัวเลข — เป็นรายละเอียดของค่ารวม ไม่ใช่ตัวตัดสินคะแนน */}
             {extra.map((s, k) => (
               <Line key={s.key} dataKey={`x_${s.key}`} name={s.label} type="monotone" stroke={EXTRA_COLORS[k % EXTRA_COLORS.length]}
-                strokeWidth={1.6} strokeDasharray="5 3" connectNulls isAnimationActive={false} dot={{ r: 2.4 }} />
+                strokeWidth={1.6} strokeDasharray="5 3" connectNulls {...chartAnim()} dot={{ r: 2.4 }} />
             ))}
           </ComposedChart>
         </ResponsiveContainer>

@@ -696,6 +696,9 @@ const TABLE_ROWS = {
   energy_live: (r, i) => {
     const N = ['DB-CNC', 'DB-LASER', 'MDB', 'MDB-07', 'AIR', 'AC-06', 'AC-07', 'ORPHAN'];
     const KW = [40, 25, 900, 60, 56, 20, 30, 5];
+    /* แถว 8+ = ค่ารายเฟสของ DB-LASER (แผง 3 เฟสหน้ารายตู้) · 14+ = กระแสรวม */
+    const PH = [['v1', 392], ['v2', 391], ['v3', 393], ['a1', 58.6], ['a2', 45.7], ['a3', 45.4]];
+    if (i >= 8 && i < 14) return { ...r, scope_kind: 'zone', scope_name: 'DB-LASER', field: PH[i - 8][0], value: PH[i - 8][1], received_at: new Date().toISOString() };
     return { ...r, scope_kind: 'zone', scope_name: N[i % 8], field: i < 8 ? 'kw' : 'a', value: i < 8 ? KW[i] : 50, received_at: new Date().toISOString() };
   },
   integration_sources: (r, i) => ({

@@ -55,6 +55,11 @@ export default function EnergyLiveBoard() {
     setParams(prev => { const n = new URLSearchParams(prev); if (name) n.set('meter', name); else n.delete('meter'); return n; });
     try { window.scrollTo({ top: 0 }); } catch { /* ไม่มี window (เทส) */ }
   }, [setParams]);
+  /* 📈 หน้าประวัติ & Excel = แท็บ history ของ /energy (`?hm=<ตู้>` · คนละ param กับ ?meter=) */
+  const openHistory = useCallback((name) => {
+    setParams(prev => { const n = new URLSearchParams(prev); n.set('tab', 'history'); n.delete('meter'); if (name) n.set('hm', name); else n.delete('hm'); return n; });
+    try { window.scrollTo({ top: 0 }); } catch { /* ไม่มี window (เทส) */ }
+  }, [setParams]);
 
   const load = useCallback(async () => {
     const id = ++reqId.current;
@@ -152,7 +157,7 @@ export default function EnergyLiveBoard() {
       </div>
     );
     return <EnergyMeterDetail key={dm.key} m={dm} machines={machinesOf[dm.key] || []} boardMeters={board.meters}
-      totalTodayKwh={board.totals.todayKwh} onBack={() => openMeter(null)} />;
+      totalTodayKwh={board.totals.todayKwh} onBack={() => openMeter(null)} onOpenMeter={openMeter} onHistory={openHistory} />;
   }
 
   const t = board.totals;
@@ -179,6 +184,7 @@ export default function EnergyLiveBoard() {
         <div style={{ fontSize: 12.5, color: 'var(--text2)' }}>
           ค่าจากมิเตอร์ทุกเครื่อง · ตัวส่งยิงทุก 1 นาที · จอดึงใหม่ทุก 1 นาที · ไม่มีค่าใหม่เกิน {METER_OFFLINE_MIN} นาที = ขาดการติดต่อ
         </div>
+        <button type="button" className="pg-btn" style={{ marginLeft: 'auto' }} onClick={() => openHistory(null)}>📈 {tr('ประวัติ & Excel')}</button>
         <div style={{ ...card, padding: '6px 12px', fontSize: 12.5, color: 'var(--text2)' }}>
           รับข้อมูลล่าสุด {lastRecv ? new Date(lastRecv).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'}
         </div>
@@ -208,8 +214,6 @@ export default function EnergyLiveBoard() {
         ? <TreeFlow key={p.panel} panel={p} byKey={byKey} onOpen={openMeter} />
         : <PanelFlow key={p.panel} panel={p} onOpen={openMeter} />))}
 
-      {events && <EventsPanel events={events} />}
-
       {/* ── การ์ดรายเครื่อง ── */}
       {board.meters.length > 0 && (
         <div>
@@ -219,6 +223,9 @@ export default function EnergyLiveBoard() {
           </div>
         </div>
       )}
+
+      {/* ลำดับแบบ Node-RED: KPI → ผังจ่ายไฟ → การ์ดรายเครื่อง → เหตุการณ์ */}
+      {events && <EventsPanel events={events} />}
     </div>
   );
 }

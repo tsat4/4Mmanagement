@@ -6,6 +6,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   ReferenceLine, LabelList,
 } from 'recharts';
+import { chartAnim } from '../utils/motion';
 import { supabase, supabaseDR } from '../supabaseClient';
 import { buildScheduleMaps, lineScheduleTeam } from '../utils/shiftAssign';
 import { UserContext } from '../App';
@@ -278,8 +279,8 @@ function MiniTrend({ data, dataKey, color, target, metric }) {
           <YAxis domain={[0, 100]} width="auto" ticks={[0, 50, 100]} tickFormatter={(v) => `${v}%`}
             tick={{ fontSize: 11, fill: 'var(--muted)' }} axisLine={false} tickLine={false} />
           <Tooltip cursor={{ fill: 'var(--bg3)', opacity: 0.4 }} content={<MiniTrendTip dataKey={dataKey} metric={metric} />} />
-          <Bar dataKey="_stub" stackId="v" fill="var(--border)" radius={[2, 2, 0, 0]} isAnimationActive={false} />
-          <Bar dataKey={dataKey} stackId="v" fill={color} radius={[2, 2, 0, 0]} opacity={0.85}>
+          <Bar dataKey="_stub" stackId="v" fill="var(--border)" radius={[2, 2, 0, 0]} {...chartAnim()} />
+          <Bar {...chartAnim()} dataKey={dataKey} stackId="v" fill={color} radius={[2, 2, 0, 0]} opacity={0.85}>
             <LabelList dataKey={dataKey} position="top" offset={4}
               formatter={(v) => (v == null ? '' : Math.round(v))}
               style={{ fontSize: 11, fontWeight: 700, fill: 'var(--text2)' }} />
@@ -2146,10 +2147,10 @@ export default function OEEAnalytics() {
                 <Tooltip content={<OEETooltip />} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 <ReferenceLine y={trTarget.oee} stroke="var(--green)" strokeDasharray="4 4" strokeWidth={1} label={{ value: `TARGET ${trTarget.oee}%`, fill: 'var(--green)', fontSize: 11 }} />
-                <Line type="monotone" dataKey="oee" name="OEE" stroke="var(--blue)" strokeWidth={2.5} dot={{ r: 3 }} connectNulls />
-                <Line type="monotone" dataKey="a"   name="A%"  stroke="var(--green)" strokeWidth={1.5} dot={false} strokeDasharray="5 3" connectNulls />
-                <Line type="monotone" dataKey="p"   name="P%"  stroke="var(--amber)" strokeWidth={1.5} dot={false} strokeDasharray="5 3" connectNulls />
-                <Line type="monotone" dataKey="q"   name="Q%"  stroke="var(--blue)" strokeWidth={1.5} dot={false} strokeDasharray="5 3" connectNulls />
+                <Line {...chartAnim()} type="monotone" dataKey="oee" name="OEE" stroke="var(--blue)" strokeWidth={2.5} dot={{ r: 3 }} connectNulls />
+                <Line {...chartAnim()} type="monotone" dataKey="a"   name="A%"  stroke="var(--green)" strokeWidth={1.5} dot={false} strokeDasharray="5 3" connectNulls />
+                <Line {...chartAnim()} type="monotone" dataKey="p"   name="P%"  stroke="var(--amber)" strokeWidth={1.5} dot={false} strokeDasharray="5 3" connectNulls />
+                <Line {...chartAnim()} type="monotone" dataKey="q"   name="Q%"  stroke="var(--blue)" strokeWidth={1.5} dot={false} strokeDasharray="5 3" connectNulls />
               </LineChart>
             </ResponsiveContainer>
           )
@@ -2189,9 +2190,9 @@ export default function OEEAnalytics() {
                   <YAxis width="auto" domain={[0, 100]} tick={{ fontSize: 11, fill: 'var(--muted)' }} unit="%" />
                   <Tooltip content={<OEETooltip />} />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Bar dataKey="a" name="A%" fill="var(--green)" opacity={0.8} radius={[2, 2, 0, 0]} />
-                  <Bar dataKey="p" name="P%" fill="var(--amber)" opacity={0.8} radius={[2, 2, 0, 0]} />
-                  <Bar dataKey="q" name="Q%" fill="var(--blue)" opacity={0.8} radius={[2, 2, 0, 0]} />
+                  <Bar {...chartAnim()} dataKey="a" name="A%" fill="var(--green)" opacity={0.8} radius={[2, 2, 0, 0]} />
+                  <Bar {...chartAnim()} dataKey="p" name="P%" fill="var(--amber)" opacity={0.8} radius={[2, 2, 0, 0]} />
+                  <Bar {...chartAnim()} dataKey="q" name="Q%" fill="var(--blue)" opacity={0.8} radius={[2, 2, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )

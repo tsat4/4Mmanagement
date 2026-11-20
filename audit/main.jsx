@@ -2,6 +2,9 @@ import React, { Suspense, useState, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import { MemoryRouter } from 'react-router-dom'
 import { UserContext, Sidebar, NAV_ITEMS, NotificationBell } from '../src/App'
+import { markView } from '../src/utils/motion'
+/* 📈 harness ไม่ได้ผ่าน App.jsx (ตัวเรียก markView ตอนเปลี่ยน URL) ⇒ เปิดหน้าต่างอนิเมชันกราฟตอนโหลด ให้เห็นเหมือนแอปจริง */
+markView()
 /* เปิดทะเบียนเมนูให้ `audit/stdsweep.mjs` อ่าน — ตรวจว่า "คุณอยู่ตรงนี้" บนรางตรงกับหมวดจริงไหม
    (`alsoIn` = หน้าที่อยู่ 2 หมวดจริงๆ ต้องถูกไฮไลต์ทั้งคู่) */
 window.__NAV = NAV_ITEMS.map(i => ({ to: i.to, group: i.group, alsoIn: i.alsoIn || null }))
