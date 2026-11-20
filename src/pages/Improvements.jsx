@@ -595,7 +595,7 @@ export default function Improvements() {
         }
       });
       if (!defectParts.length) computable = false;
-      if (defectNoCost.size) missing.push(`พาร์ทยังไม่ตั้งต้นทุน/ชิ้น (${[...defectNoCost].join(', ')}) — กรอก standard/material cost ที่ Product Master → 🗂 Parts Master`);
+      if (defectNoCost.size) missing.push(`พาร์ทยังไม่ตั้งต้นทุน/ชิ้น (${[...defectNoCost].join(', ')}) — กรอก standard/material cost ที่ Product Master → 🗂 Material Master`);
     }
 
     // ค่าซ่อมจริงเข้ายอดรวมเฉพาะเมื่อ toggle 'repair' เปิด (อาจทับซ้อนกับ IDP ของ SAP — ให้ผู้ใช้เลือกตามนโยบายบัญชี)

@@ -351,7 +351,7 @@ function StockTab({ role, scope }) {
     // กันสร้างของผี: MAT ที่ไม่มีในฐาน (Product Master / parts master / BOM) = ค่าที่พิมพ์เองใน picker ต้องยืนยันก่อน
     // (2026-09-07: MAT ที่เลือกจาก Product Master ไม่ต้องยืนยันซ้ำ — picker ยืนยันทะเบียนให้แล้ว)
     if (!knownMats.has(matUpper) && !bomMap[matUpper] && !drMats.has(matUpper)) {
-      if (!await askConfirm(`MAT ${matUpper} ไม่มีในฐานข้อมูล (Parts Master / BOM)\nยืนยันสร้างรายการ stock ใหม่?`)) return;
+      if (!await askConfirm(`MAT ${matUpper} ไม่มีในฐานข้อมูล (Material Master / BOM)\nยืนยันสร้างรายการ stock ใหม่?`)) return;
     }
     // กัน stock ติดลบเงียบๆ สำหรับรายการที่หักออก (คืน Store / ปรับลด)
     if (form.type === 'return' || isAdjustDown) {

@@ -1427,3 +1427,11 @@ Promise.all(mats.map(m => supabaseDR.rpc('fn_bom_direct_demand', { p_fg_mat: m }
 - 🔴 unique index ไม่สนใจ `is_active` ⇒ แถว "เพิ่ม" ที่มีแถวปิดค้างคีย์เดียวกันในใบ = เปิดแถวเดิมคืน (ห้าม insert ชน 23505)
 - จำลองไฟล์จริง `FG306.XLSX` (20070036) กับฐาน 19/11: จำนวนตรง SAP ทุกบรรทัด · ต่างแค่คลัง (ESM ว่าง) 14 แถว + ITEM 3 แถว ·
   `20066630` ขึ้นเป็น "ESM มี SAP ไม่มี"
+
+### 🏷️ ชื่อแท็บ/คำเรียกแบบ SAP (2026-11-20 · คำสั่ง user "ใช้ชื่อตามตาราง เปลี่ยนทั้งระบบ")
+คนโรงงานรู้จักคำจาก SAP แค่ **material · BOM · routing** ⇒ `/products` = `Material Master · BOM · Routing · Production · Reference · Export`
+- **Parts Master → Material Master** ทุกข้อความบนจอ + คีย์/คำแปลใน `i18n/en.js` เปลี่ยนคู่กัน (ตาราง `parts_master` ไม่แตะ)
+- **Routing** ยกเป็นแท็บหลัก (`?tab=routing` เดิม) · กลุ่ม **Production** (เดิม Product) ลูก = `Production Data` (`?tab=products` เดิม) · Packaging · Kanban Std · ทบทวน CT
+- **ทะเบียนอ้างอิง → Reference** · คีย์ `?tab=` ทุกตัวเดิม ⇒ ลิงก์/บุ๊กมาร์กเก่าไม่เสีย
+- ห้ามใส่เลข keycap/emoji หน้าชื่อแท็บ (`1️⃣ 🗂 …`) — `stripIcon()` ตัดไม่ผ่านเลข ⇒ ไอคอนหลุดมาโชว์ (UI §6.36)
+- ชื่อหน้า "Product Master" ยังคงเดิม (user ยังไม่ได้สั่งเปลี่ยน)
