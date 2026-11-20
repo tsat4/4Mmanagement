@@ -12282,7 +12282,29 @@ test('🛡️ ตัด-จ่ายสต็อกต้องหักเต�
   if (!/inflowDestOf\(sap, inflowRules\)/.test(cd) || !/negQty/.test(cd)) bad.push('CustomerDemand.jsx — ส่งเกินยอดในระบบแล้วไม่หักส่วนที่ขาด');
   const mig = readFileSync(join(ROOT, 'supabase/migrations/20261119c_stock_full_deduct_qa_return_dr.sql'), 'utf8');
   if (!/fn_qbin_return_receipt/.test(mig) || !/ตัดเกิน/.test(mig)) bad.push('migration 20261119c ถูกแก้/หาย');
+  const mig2 = readFileSync(join(ROOT, 'supabase/migrations/20261120_lot_raw_single_owner_dr.sql'), 'utf8');
+  if (!/fn_raw_lot_owned\(NEW\.mat_no, b\.mat_no\)/.test(mig2) || !/fn_child_short/.test(mig2))
+    bad.push('migration 20261120 — ปิดใบผลิตต้องข้ามคู่ที่ล็อตตัดแล้ว แต่ยังส่งยอดขาดให้ fn_child_short (ห้ามตัดวัตถุดิบล็อตซ้ำ)');
   assert.deepEqual(bad, [], `\n\n❌ ตัด-จ่ายสต็อกกลับไป "ตัดเท่าที่มี":\n   ${bad.join('\n   ')}\n`
     + '   กฎ (user 19/11): ยอดในระบบไม่พอ = หักเต็ม ติดลบ แล้วพอเติม/รับเข้า ยอดหักล้างเอง · ต้องเขียนบนจอว่าติดลบ\n'
     + '   📄 docs/modules/store-board-workflow.md §ตัดเต็ม ยอมติดลบ\n');
+});
+
+/* ═══ 📅 pm-monthly-signoff — 2026-11-20 · ใบ PM ③④ รายเดือน (คำสั่ง user 19/11) ═════════════════
+   📄 docs/modules/pm-hub-check-setup.md §รอบ 2 · ห้ามกลับไปตัดสินผู้เซ็นจากตำแหน่ง/role · ห้ามประกอบ kind/scope_key เอง */
+test('📅 pm-monthly-signoff — ผู้เซ็นมาจากผังองค์กร · ③ บล็อกจนผ่าน ② · คิดด่านใหม่ตอนกด', () => {
+  const bad = [];
+  const ui = stripComments(readFileSync(join(ROOT, 'src/components/PmMonthlyReport.jsx'), 'utf8'));
+  const lib = stripComments(readFileSync(join(ROOT, 'src/lib/pmMonthlySignoff.js'), 'utf8'));
+  const u = stripComments(readFileSync(join(ROOT, 'src/utils/pmMonthly.js'), 'utf8'));
+  if (!/coversNode\(/.test(ui)) bad.push('PmMonthlyReport ไม่ตัดสินผู้เซ็นด้วย coversNode (มอบหมายในผัง)');
+  const ds = ui.slice(ui.indexOf('const doSign'), ui.indexOf('const doSign') + 900);
+  if (!/verdictFor\(teamKey, step, section\)/.test(ds)) bad.push('doSign ไม่คิดด่านใหม่ตอนกด');
+  if (!/isStale\(/.test(ds)) bad.push('doSign ไม่มีด่าน stale (ข้อมูลคนละเดือน)');
+  if (!/confirmSign\(/.test(ds)) bad.push('doSign ไม่ถามยืนยันผ่าน confirmSign');
+  if (!/step === 3 && !teamMonthReady\(team\)/.test(u)) bad.push('pmMonthlySignVerdict ไม่บล็อก ③ จนผ่าน ② ครบ');
+  if (/positionRank|position_rank/.test(u)) bad.push('pmMonthly.js กลับไปใช้ระดับตำแหน่งตัดสินผู้เซ็น (user 19/11: ใช้ผังองค์กร)');
+  if (!/kind: KIND_OF_STEP\[step\], scope_key: scopeKeyOf\(/.test(lib)) bad.push('pmMonthlySignoff ประกอบ kind/scope_key เอง (ต้องผ่าน KIND_OF_STEP/scopeKeyOf)');
+  if (/\.delete\(\)/.test(lib)) bad.push('pmMonthlySignoff ลบลายเซ็น — ต้องเพิกถอนเท่านั้น');
+  assert.deepEqual(bad, [], bad.join('\n'));
 });

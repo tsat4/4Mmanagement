@@ -879,7 +879,7 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
         ${rows}
         ${manRows ? `<tr><td colspan="14" style="${td};text-align:left;background:#f4f4f4;font-weight:bold">KPI กรอกมือ (นอกระบบ)${!isPlant(scope) ? ' — รวมนิยามที่ตกทอดจากระดับแม่ (ติดป้ายในวงเล็บ)' : ''}</td></tr>${manRows}` : ''}
       </table>
-      ${months.tot.costMissQty > 0 ? `<div style="font-size:11px;color:#b45309;margin-top:6px">⚠ ของเสีย ${months.tot.costMissQty.toLocaleString()} ชิ้นยังตีมูลค่าไม่ได้ (พาร์ทไม่มีต้นทุน/ชิ้นใน Parts Master) — Cost of defect จึงต่ำกว่าจริง</div>` : ''}
+      ${months.tot.costMissQty > 0 ? `<div style="font-size:11px;color:#b45309;margin-top:6px">⚠ ของเสีย ${months.tot.costMissQty.toLocaleString()} ชิ้นยังตีมูลค่าไม่ได้ (พาร์ทไม่มีต้นทุน/ชิ้นใน Material Master) — Cost of defect จึงต่ำกว่าจริง</div>` : ''}
       <table style="margin-top:26px;width:60%"><tr>${(Array.isArray(df?.sig_blocks) && df.sig_blocks.length ? df.sig_blocks : ['Issued', 'Checked', 'Approved']).map(s2 => `<td style="text-align:center;font-size:11px;padding-top:30px;border-top:1px solid #999">${typeof s2 === 'string' ? s2 : s2?.label || ''}</td>`).join('')}</tr></table>`;
     const w = window.open('', '_blank');
     if (!w) { toast.error('เบราว์เซอร์บล็อก popup — อนุญาต popup ก่อนพิมพ์'); return; }
@@ -1251,7 +1251,7 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
             จากกะที่ปิดแล้ว {months.tot.n.toLocaleString()} กะ
             {months.tot.costMissQty > 0 && (
               <span data-warn="1" style={{ color: '#f59e0b' }}> {tr('· ⚠ ของเสีย')} {months.tot.costMissQty.toLocaleString()} ชิ้นยังตีมูลค่าไม่ได้
-                (กรอกต้นทุน/ชิ้นที่ Product Master → 🗂 Parts Master) — Cost of defect ต่ำกว่าจริง</span>
+                (กรอกต้นทุน/ชิ้นที่ Product Master → 🗂 Material Master) — Cost of defect ต่ำกว่าจริง</span>
             )}
           </div>
         </div>

@@ -11,7 +11,7 @@ import { useNavigate } from 'react-router-dom'
 import { UserContext } from '../App'
 import useIsMobile from '../utils/useIsMobile'
 import { tr } from '../utils/i18n'
-import { getWorkDate } from '../utils/workDate'
+import { getWorkDate, getCurrentShift } from '../utils/workDate'
 import { canAccessPage } from '../utils/permissions'
 import { ASK_HINTS } from '../utils/askBot'
 import { answerQuestion, logUnanswered } from '../lib/askBotQuery'
@@ -40,7 +40,8 @@ export default function AskBot() {
     setText('')
     setBusy(true)
     let ans
-    try { ans = await answerQuestion(s, ctx, getWorkDate(), forced) }
+    /* "กะนี้" ตัดสินจากนาฬิกาตอนกดส่ง — คู่กับวันทำงาน getWorkDate() (กะดึกหลังเที่ยงคืน = วันก่อนหน้า) */
+    try { ans = await answerQuestion(s, ctx, getWorkDate(), forced, { shiftNow: getCurrentShift() }) }
     catch (e) { ans = { text: `⚠️ ตอบไม่สำเร็จ — ${String(e?.message || e).slice(0, 120)}` } }
     /* ตอบไม่ได้ = เก็บคำถามไว้ดูว่าหน้างานพิมพ์อะไรจริง (ไม่รอ · ไม่กวนคนถาม) */
     if (ans?.unanswered) logUnanswered(s, ans.unanswered, ctx.role)
@@ -92,8 +93,8 @@ export default function AskBot() {
         <div ref={listRef} style={{ flex: 1, overflowY: 'auto', padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
           {!msgs.length && (
             <div style={{ fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.6 }}>
-              {tr('ถามได้: OEE ไลน์ · ไลน์ไหน OEE ต่ำสุด · downtime สูงสุด · เครื่องหยุดตอนนี้ · MO ค้าง · ของเสียสูงสุด · 4M ค้าง · มาทำงานกี่คน · ยอดผลิตของไลน์/พาร์ท')}<br />
-              {tr('ระบุช่วงได้: วันนี้ · เมื่อวาน · สัปดาห์นี้ · เดือนนี้ · เดือน 10 · ต.ค. 2569')}
+              {tr('ถามได้: OEE ไลน์ · ไลน์ไหน OEE ต่ำสุด · downtime สูงสุด · เครื่องหยุดตอนนี้ · MO ค้าง · ของเสียสูงสุด · ใบสแครป · 4M ค้าง · มาทำงานกี่คน · ยอดผลิตของไลน์/พาร์ท')}<br />
+              {tr('ระบุช่วงได้: วันนี้ · เมื่อวาน · สัปดาห์นี้ · เดือนนี้ · เดือน 10 · ต.ค. 2569 · กะเช้า · กะดึก · กะนี้')}
             </div>
           )}
           {msgs.map((m, i) => m.from === 'me' ? (

@@ -1464,3 +1464,11 @@ RPC `fn_sap_view_consumption(p_from, p_to, p_lines)` (DR · read-only · migrati
   (ลูกที่เป็นรหัสขั้น OP ไม่นับ) · ESM = Σ `consume` อัตโนมัติที่ `ref_order_id` อยู่ในใบช่วงเดียวกัน · `op_eaten` = ขั้น OP กิน (ต่างรายวันได้)
 · 🔴 **ใช้ BOM วันนี้ ไม่ใช่ BOM ณ วันผลิต** (ไม่มีประวัติ BOM) — จอเขียนบอก · ตรวจ 20/11: วันที่ 20 ตรงกันทุกตัว ·
   ก่อน 19/11 ต่างเพราะยุบใบ BOM แบบ SAP วันที่ 19 · 50031601 วันที่ 19: ESM 5,680 > SAP 3,573 = ตัดท่อซ้ำก่อนแก้ข้อ 1
+
+### 🏷️ ชื่อแท็บ/คำเรียกแบบ SAP (2026-11-20 · คำสั่ง user "ใช้ชื่อตามตาราง เปลี่ยนทั้งระบบ")
+คนโรงงานรู้จักคำจาก SAP แค่ **material · BOM · routing** ⇒ `/products` = `Material Master · BOM · Routing · Production · Reference · Export`
+- **Parts Master → Material Master** ทุกข้อความบนจอ + คีย์/คำแปลใน `i18n/en.js` เปลี่ยนคู่กัน (ตาราง `parts_master` ไม่แตะ)
+- **Routing** ยกเป็นแท็บหลัก (`?tab=routing` เดิม) · กลุ่ม **Production** (เดิม Product) ลูก = `Production Data` (`?tab=products` เดิม) · Packaging · Kanban Std · ทบทวน CT
+- **ทะเบียนอ้างอิง → Reference** · คีย์ `?tab=` ทุกตัวเดิม ⇒ ลิงก์/บุ๊กมาร์กเก่าไม่เสีย
+- ห้ามใส่เลข keycap/emoji หน้าชื่อแท็บ (`1️⃣ 🗂 …`) — `stripIcon()` ตัดไม่ผ่านเลข ⇒ ไอคอนหลุดมาโชว์ (UI §6.36)
+- ชื่อหน้า "Product Master" ยังคงเดิม (user ยังไม่ได้สั่งเปลี่ยน)

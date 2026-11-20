@@ -1412,7 +1412,8 @@ export default function Management() {
         filters={<>
           {/* เลือกได้ทั้งไลน์หลัก (view รวมไลน์ย่อยทั้งหมด) และไลน์ย่อย — รายการใน `lines` ถูก scope ไว้แล้วตอน fetch
               <LineSelect> = ลำดับชั้น/ปลดระวาง/ค่าไม่รู้จัก · ไม่มี option ว่าง */}
-          <LineSelect lines={lines} value={selectedLine} placeholder={null} onChange={setSelectedLine} />
+          {/* includeSupport (2026-11-20 · คำสั่ง user): หน่วยสนับสนุนที่มีผังจุดงาน (เช่น Office PD4) ยังต้องวางคน/ตั้งตำแหน่งประจำที่นี่ได้ */}
+          <LineSelect lines={lines} value={selectedLine} placeholder={null} onChange={setSelectedLine} includeSupport />
           {selectedLine && (
             <Segmented value={viewShift} onChange={setViewShift} label={tr('กะที่ดู')}
               options={[{ value: 'day', label: 'กะเช้า' }, { value: 'night', label: 'กะดึก' }]} />
