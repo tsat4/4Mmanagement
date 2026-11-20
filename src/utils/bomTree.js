@@ -144,6 +144,10 @@ export function explodeBom(root, bomOf, opt = {}) {
         id: k.id ?? null,
         mat_no: m,
         part_name: k.part_name || '',
+        /* Part No. ของบรรทัด (16/11) — ป้าย MAT ทั้งระบบเรียง Part No. → ชื่อ → MAT (`<MatLabel>`)
+           ⚠️ ของวัตถุดิบ 5xx ช่องนี้มักเป็น "คำบรรยาย" ไม่ใช่เลขพาร์ท ⇒ จอต้องกรองด้วย
+              `looksLikePartNo()` ก่อนเอาขึ้นหัว **ห้ามตัด/ซ่อมค่าที่คนกรอก** */
+        part_no: k.part_no || '',
         uom: k.uom || '',
         supplier: k.supplier || '',
         // 📍 เลขรายการ/คลัง ของบรรทัดนั้นใน BOM ของตัวแม่ (null = ยังไม่ตั้ง ห้ามเดา)
@@ -215,6 +219,57 @@ export function explodeBom(root, bomOf, opt = {}) {
   });
 
   return { rows, flatDupes, cycles, truncated, maxLevel };
+}
+
+/* ═══ 🧩 "FG ตัวนี้มีพาร์ทลูกอะไรให้เลือก" — ตัวเลือกของช่องพาร์ทลูก (2026-11-16) ═════════
+   ที่มา (user 2026-11-16): *"จาก daily report การลงของเสีย ต้องเลือก child part ได้
+   บางทีไม่เสียทั้ง FG"* ⇒ ฟอร์มบันทึกงานเสียต้องมีลิสต์ "ลูกของ MAT ที่กำลังผลิต"
+
+   ทำไมต้องอยู่ที่นี่ ไม่ใช่ในหน้า:
+   - กฎ "ต้นไม้ BOM ผ่าน `buildBomIndex`/`explodeBom` เท่านั้น" (ด่าน `bom-tree-via-buildBomIndex`)
+   - กฎ **"ห้ามรวมหลายใบเป็นชุดเดียว"** (= นับซ้ำ) ⇒ ต้องเลือก "ใบ" ให้ชัดก่อนกาง
+     ① ใบของ FG เองถ้ามีบรรทัด ② ไม่มี → ใบแรกที่มีคนกรอกลูกของ FG ไว้ (`sheetsWithKidsOf`)
+     ("ใบนี้ว่าง ≠ พาร์ทไม่มีลูก" — เคสจริง 14/10 ใน §buildBomIndex)
+
+   🔴 ตัวนี้ **ไม่ตัดสินอะไรเกี่ยวกับตัวเลข** — คืนรายการให้คนเลือกเท่านั้น
+      ของเสียที่เลือกลูกแล้วยังนับเข้า %Q/%P ของ MAT แม่ 1 ชิ้น = 1 ชิ้น (ดู `utils/defectPart.js`)
+   🔴 แถวที่ `flatDupe` (ถูกใส่ซ้ำทั้งชั้น 1 และชั้นลึก) **ยังเลือกได้** แต่ `qtyPerRoot` ของมัน
+      เชื่อไม่ได้ ⇒ ตัวเรียกต้องไม่บันทึกอัตราของแถวนั้น (ห้ามเดา) · แถว `cycle` = ข้อมูลพัง ตัดออก
+
+   @param {string} mat  MAT แม่ (FG/พาร์ทที่กำลังผลิต)
+   @param {object} ix   ผลจาก `buildBomIndex(rows, matOfProduct)`
+   @returns {{ rows: Array, sheetId: (string|null), sheets: Array, truncated: boolean }}
+            rows = ลูกทุกชั้นของใบที่เลือก **ยุบ mat ซ้ำให้เหลือชั้นตื้นสุด** (เรียงชั้น → ลำดับในใบ)
+            sheets = ใบที่มีลูกของ mat ทั้งหมด (ไว้ให้จอเขียนบอกว่ามีหลายใบ · ห้ามเอามารวมกัน)
+*/
+export function bomChildCandidates(mat, ix, { maxDepth = 4, startSheet } = {}) {
+  const root = norm(mat);
+  const empty = { rows: [], sheetId: null, sheets: [], truncated: false };
+  if (!root || typeof ix?.bomOf !== 'function') return empty;
+  const sheets = typeof ix.sheetsWithKidsOf === 'function' ? ix.sheetsWithKidsOf(root) : [];
+  const pick = startSheet !== undefined
+    ? startSheet
+    : (sheets.find(s => s.isOwn) || sheets[0] || {}).sheetId;
+  const t = explodeBom(root, ix.bomOf, {
+    maxDepth,
+    sheetFor: typeof ix.sheetFor === 'function' ? ix.sheetFor : undefined,
+    ...(pick !== undefined ? { startSheet: pick } : {}),
+  });
+  /* ยุบ mat ซ้ำ: เรียง "ชั้นตื้นก่อน" แล้วค่อยลำดับที่เจอในใบ — ของชิ้นเดียวกันที่โผล่ 2 ชั้น
+     ต้องตอบแบบเดียวกันทุกครั้ง (ไม่ขึ้นกับว่า DFS เดินเจอตัวไหนก่อน) */
+  const ordered = t.rows
+    .map((r, i) => ({ r, i }))
+    .filter(({ r }) => !r.cycle && norm(r.mat_no) && key(r.mat_no) !== key(root))
+    .sort((a, b) => (a.r.level - b.r.level) || (a.i - b.i));
+  const seen = new Set();
+  const rows = [];
+  for (const { r } of ordered) {
+    const k = key(r.mat_no);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    rows.push(r);
+  }
+  return { rows, sheetId: pick ?? null, sheets, truncated: !!t.truncated };
 }
 
 /* ═══ 🔎 "ของชิ้นเดียวกันถูกนิยามไว้ 2 ใบ — ตรงกันไหม" ═══════════════════════════
@@ -574,4 +629,29 @@ export function targetAncestorsOf(mat, up, isTarget, maxDepth = 6) {
     frontier = next;
   }
   return [...out.entries()].map(([m, via]) => ({ mat: m, via }));
+}
+
+/* ═══ 🌳 "ลูกตรงของสินค้า" แบบ SAP — แถวในใบของตัวเองที่ห้อยอยู่ใต้ตัวมันเองเท่านั้น (19/11 · คำสั่ง user) ═══
+   กติกาเดียวกับตัวตัดจ่ายตอน confirm (`fn_bom_direct_demand` → `fn_bom_kid_rows` ฝั่ง DR):
+   confirm 100 ตัด 200 · confirm 200 ตัด 500 ⇒ **ใบผลิตของ 100 ไม่เคยใช้ 500 ตรงๆ**
+   ⇒ จอที่ตอบ "ใบผลิต/ไลน์ของสินค้านี้ใช้อะไร" (ความต้องการของใบที่เปิดอยู่ · เรียกพาร์ทเข้าไลน์ · คัมบัง ·
+     สต็อกหน้าไลน์ · VSM) ต้องเห็นแค่ลูกตรง — ถ้าเอาแถวหลานที่นอนในใบแม่มานับด้วย 500 จะถูกนับ 2 รอบ
+     (รอบใบของ 100 + รอบใบของ 200) และ qty ของหลานเป็น "ต่อ 1 ลูก" ไม่ใช่ "ต่อ 1 แม่" = เลขผิดซ้ำ
+   🔴 จอที่อยากเห็น "ทั้งต้นไม้" (จอ BOM · แผน) ใช้ buildBomIndex + explodeBom เหมือนเดิม ห้ามใช้ตัวนี้
+   @param rows      แถว bom_items (ต้องมี product_id, parent_mat)
+   @param products  [{ id, mat_no }] หรือ Map(id → mat_no)
+   @returns แถวที่ parent_mat ว่าง หรือ = เลข MAT ของใบตัวเอง · ใบที่ไม่รู้จักเลข MAT = เก็บไว้ (ไม่รู้ = ไม่ทิ้ง)
+   pure (เทส `__tests__/bomTree.test.mjs`) */
+export function directSheetRows(rows = [], products = []) {
+  const matOf = products instanceof Map ? products
+    : new Map((products || []).map(p => [p?.id, p?.mat_no]));
+  const up = (s) => norm(s).toUpperCase();
+  return (rows || []).filter(r => {
+    if (!r) return false;
+    const pm = up(r.parent_mat);
+    if (!pm) return true;
+    const own = matOf.get(r.product_id);
+    if (own == null || !up(own)) return true;
+    return pm === up(own);
+  });
 }

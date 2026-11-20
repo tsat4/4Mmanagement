@@ -37,7 +37,7 @@ export default function LiveOeeStrip({ workDate, scopeNames = null, onOpenLine }
         fetchByIds(ids, c => supabaseDR.from('prod_orders')
           .select('id, session_id, status, qty, qty_ok, qty_actual, qty_target, mat_no, opened_at').in('session_id', c)),
         fetchByIds(ids, c => supabaseDR.from('downtime_logs')
-          .select('id, session_id, duration_min, started_at, ended_at, machine_no, dr_downtime_types(category)').in('session_id', c)),
+          .select('id, session_id, duration_min, started_at, ended_at, machine_no, dr_downtime_types(category, planned_cap_min)').in('session_id', c)),
         fetchByIds(ids, c => supabaseDR.from('defect_logs')
           // prod_orders(mat_no) = ชี้ CT ของ NG เข้าตัวเศษ %P · QBIN_EMBED = ของสงสัยที่ QA ยังไม่ตัดสินไม่เข้า %Q
           .select(`id, session_id, qty_ng, qty_suspect, is_trial, prod_orders(mat_no), dr_defect_types(excl_from_q), ${QBIN_EMBED}`).in('session_id', c)),

@@ -34,6 +34,7 @@ import useIsMobile from '../utils/useIsMobile';
 import StepFlow from '../components/StepFlow';
 import { tr } from '../utils/i18n';
 import { pmCoordinationFlow } from '../utils/stepFlow';   // 🔴 เพดาน 1000 แถว + URL ยาว (กฎเหล็ก DB ข้อ 5)
+import { askConfirm } from '../utils/askConfirm';
 loadDocForms(); // ทะเบียนเอกสาร — แถบเลขฟอร์มท้ายใบพิมพ์ (ตั้งที่ /doc-forms · 2026-07-30)
 
 /* ── แผนประสานงาน PM ข้ามวัน (MTN แจ้ง Production) — 2026-07-23 ──────────────
@@ -315,7 +316,7 @@ function PlanRow({ plan: p, sum, open, onToggle, tasks, canManage, pmPlan, fullN
     if (wErr215) { toast.error('เปลี่ยนสถานะแผนไม่สำเร็จ: ' + wErr215.message); return; }
     // ผูกแผน PM เดิม + ปิดเป็น "เสร็จ" → ถามว่าจะ stamp วันทำล่าสุดในระบบแผน PM ด้วยไหม (เลื่อนรอบถัดไป)
     if (status === 'done' && p.pm_plan_id && pmPlan) {
-      if (confirm('PM ของเครื่องนี้ทำเสร็จจริงแล้ว?\nกด OK เพื่ออัพเดท "วันทำล่าสุด" ในระบบแผน PM (เลื่อนรอบถัดไปให้อัตโนมัติ)')) {
+      if (await askConfirm('PM ของเครื่องนี้ทำเสร็จจริงแล้ว?\nกด OK เพื่ออัพเดท "วันทำล่าสุด" ในระบบแผน PM (เลื่อนรอบถัดไปให้อัตโนมัติ)')) {
         // วันทำ PM = "วันทำงาน" (ก่อน 08:00 = วันก่อนหน้า) — ชุดเดียวกับ PMCheckData (QC 05/10)
         const done = getWorkDate();
         const patch = { last_done_at: done };
@@ -342,7 +343,7 @@ function PlanRow({ plan: p, sum, open, onToggle, tasks, canManage, pmPlan, fullN
   };
   const del = async () => {
     if (!planWrite.ok) { toast.info(writeBlockText(planWrite, { what: 'แผน PM ของไลน์นี้' })); return; }
-    if (!confirm('ลบแผนนี้?')) return;
+    if (!await askConfirm('ลบแผนนี้?')) return;
     // RLS DELETE ปฏิเสธ = 0 แถวไม่มี error ⇒ นับแถวก่อนขึ้น "ลบแล้ว" (กฎเขียน DB ข้อ 2)
     const res = await supabaseDR.from('pm_coordination_plans').delete().eq('id', p.id).select('id');
     if (checkWrite(res, 'ลบแผน')) {
@@ -486,7 +487,7 @@ function PlanModal({ plan, lines, machines, teams, pmPlans = [], scopeLines, ful
     // เลขเครื่องที่ไม่ผูกทะเบียน = ผังเครื่อง/Andon หาไม่เจอ — ถามเฉพาะแผนใหม่หรือเมื่อเพิ่งเปลี่ยนเลข (แผนเก่าที่ค้างมาก่อนยังแก้ส่วนอื่นได้)
     // 2026-09-07 เปลี่ยนจากบล็อกแข็งเป็นยืนยัน — เก็บเป็น text (machine_id null) ไม่ทำข้อมูลอื่นเสีย
     if (f.machine_no && !f.machine_id && (plan._new || f.machine_no !== (plan.machine_no || ''))
-      && !window.confirm(`เครื่อง ${f.machine_no} ไม่มีในทะเบียน /machines — ผังเครื่อง/Andon จะหาแผนนี้ไม่เจอ · ใช้ค่านี้ต่อหรือไม่?`)) return;
+      && !await askConfirm(`เครื่อง ${f.machine_no} ไม่มีในทะเบียน /machines — ผังเครื่อง/Andon จะหาแผนนี้ไม่เจอ · ใช้ค่านี้ต่อหรือไม่?`)) return;
     setBusy(true);
     const nowIso = new Date().toISOString();
     const head = { title: f.title.trim(), machine_id: f.machine_id || null, machine_no: f.machine_no || null,
@@ -648,10 +649,10 @@ function printPlan(p, tasks) {
     .sign{margin-top:40px;display:flex;justify-content:flex-end;gap:60px;font-size:14px;text-align:center;}
     .sign div{border-top:1px solid #444;padding-top:4px;min-width:180px;}
   </style></head><body>
-  <div class="hd"><img src="${logoSrc}" alt=""><div><h1>{tr('แผนประสานงาน PM / งานเครื่องจักร')}</h1>
+  <div class="hd"><img src="${logoSrc}" alt=""><div><h1>${tr('แผนประสานงาน PM / งานเครื่องจักร')}</h1>
     <div style="font-size:13px;color:#666;">Thai Summit — Maintenance</div></div></div>
   <div style="font-size:17px;font-weight:700;">${p.title || ''}</div>
-  <div class="meta">{tr('เครื่อง:')} <b>${[p.machine_name, p.machine_no].filter(Boolean).join(' ') || '—'}</b>${p.line_name ? ` &nbsp;·&nbsp; 🏭 ไลน์: <b>${p.line_name}</b>` : ''}</div>
+  <div class="meta">${tr('เครื่อง:')} <b>${[p.machine_name, p.machine_no].filter(Boolean).join(' ') || '—'}</b>${p.line_name ? ` &nbsp;·&nbsp; 🏭 ไลน์: <b>${p.line_name}</b>` : ''}</div>
   <div class="sec">แผนงาน &amp; รายละเอียด</div>
   <ul>${rows || '<li>—</li>'}</ul>
   ${p.remark ? `<div class="remark">Remark : ${p.remark}</div>` : ''}

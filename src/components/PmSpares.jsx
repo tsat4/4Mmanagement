@@ -22,6 +22,7 @@ import { planReadiness, SPARE_HORIZON_DAYS } from '../utils/pmSpares'
 import { loadSpareParts, loadPmSpareDemand } from '../lib/pmSpareData'
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 const fmtN = (n) => (n == null ? '—' : Number(n).toLocaleString('th-TH', { maximumFractionDigits: 2 }))
 const fmtYmd = (ymd) => {
   if (!ymd) return '—'
@@ -118,7 +119,7 @@ export function PlanSparesModal({ row, canEdit, canIssue, byName, byUid, onClose
   }
   const delLine = async (l) => {
     const p = partById.get(l.part_id)
-    if (!confirm(`เอา "${p?.name || 'อะไหล่'}" ออกจากแผน PM นี้?`)) return
+    if (!await askConfirm(`เอา "${p?.name || 'อะไหล่'}" ออกจากแผน PM นี้?`)) return
     const { data, error } = await supabaseDR.from('pm_plan_spares').delete().eq('id', l.id).select('id')
     if (error || !data?.length) return toast.error(`ลบไม่สำเร็จ${error ? `: ${error.message}` : ' (0 แถว)'}`)
     await load(); onChanged?.()
@@ -127,7 +128,7 @@ export function PlanSparesModal({ row, canEdit, canIssue, byName, byUid, onClose
     const items = ready.items.filter(i => i.part && i.qty > 0).map(i => ({ part_id: i.part.id, qty: i.qty }))
     if (!items.length) return
     const txt = ready.items.map(i => `• ${i.part?.name || '?'} × ${fmtN(i.qty)} ${i.part?.unit || ''}`).join('\n')
-    if (!confirm(`เบิกอะไหล่ตามแผน PM "${eqLabel}"\n\n${txt}\n\nตัดสต็อกทั้งชุด (ถ้าตัวใดไม่พอ จะไม่ตัดเลยสักตัว)`)) return
+    if (!await askConfirm(`เบิกอะไหล่ตามแผน PM "${eqLabel}"\n\n${txt}\n\nตัดสต็อกทั้งชุด (ถ้าตัวใดไม่พอ จะไม่ตัดเลยสักตัว)`)) return
     setBusy(true)
     const { error } = await supabaseDR.rpc('pm_issue_spares', {
       p_checklist_id: clId, p_items: items, p_by_name: byName || null, p_note: `เบิกตามแผน PM · ${eqLabel}`.slice(0, 200),

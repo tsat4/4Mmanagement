@@ -17,6 +17,7 @@ import SearchInput from './SearchInput';
 import { toast } from './Toast';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 const partLabel = (p) => p?.part_no || p?.part_name || 'ชิ้นงาน';
 const rowSt = (on, dim) => ({
   display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8, cursor: dim ? 'not-allowed' : 'pointer',
@@ -68,7 +69,7 @@ export default function QaCopyPointsModal({ part, itemCount, parts, lines, wctx,
     // 🔐 ด่านซ้ำตอนกดจริง — คัดเฉพาะพาร์ทที่ยังแก้ได้ ณ ตอนนี้
     const targets = others.filter(p => picked.includes(p.id) && writeOf(p).ok);
     if (!targets.length) { toast.info('เลือกพาร์ทปลายทางก่อน'); return; }
-    if (!window.confirm(
+    if (!await askConfirm(
       `คัดลอก ${itemCount} จุดตรวจของ ${partLabel(part)} ไปอีก ${targets.length} พาร์ท\n`
       + (withDrawings ? '+ แผ่นแบบ (เฉพาะพาร์ทที่ยังไม่มีแบบ — หมุดอยู่ตำแหน่งเดิม)\n' : '(ไม่คัดลอกแบบ — ต้องปักหมุดใหม่บนแบบของพาร์ทนั้น)\n')
       + '\n⚠️ พาร์ทที่ "มีจุดตรวจอยู่แล้ว" จะถูกข้าม ไม่ทับของเดิม\n\nยืนยัน?')) return;

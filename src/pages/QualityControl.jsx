@@ -22,7 +22,7 @@ import { fetchByIds, fetchAllPages } from '../utils/fetchByIds';
 import { toast } from '../components/Toast';
 import { UserContext } from '../App';
 import { usePerms } from '../utils/usePerms';
-import { isTrialDefect, defectQty, isSuspectPending, orderProducedQty, QBIN_EMBED } from '../utils/oee';
+import { isTrialDefect, defectQty, isSuspectPending, orderProducedQty, ppmOf, fmtPpm, QBIN_EMBED } from '../utils/oee';
 import { qaViewScope, qaWriteCtx } from '../utils/qaViewScope';
 import { checkWriteRows } from '../utils/dbWrite';
 import { isOpenQaDoc, QA_DONE_IN, qaDocInFilter, ncrFlow, capaFlow } from '../utils/qaDocStatus';
@@ -42,10 +42,11 @@ import ParetoChart from '../components/ParetoChart';
 import { statusColor, toneOf } from '../utils/statusTone';
 import { classifyAbc } from '../utils/pareto';
 import PageHeader from '../components/PageHeader';
-import useTabParam from '../utils/useTabParam';
+import useTabParam, { useMergeParams } from '../utils/useTabParam';
 import MaterialRequests from '../components/MaterialRequests';
 import { nextDocNo } from '../utils/qaDocNo';
 import QaCheckSheet from '../components/QaCheckSheet';
+import QaFmeQueue from '../components/QaFmeQueue';
 import PeChangeRequests from '../components/PeChangeRequests';
 import QaClaims from '../components/QaClaims';
 import QualityBins from '../components/QualityBins';
@@ -66,6 +67,14 @@ import { DeleteButton } from '../components/IconButton';
 import { tr as trI18n } from '../utils/i18n';
 import { tint } from '../utils/statusTone';
 import { itemAsChar, itemLabel, matchCharToItem, groupRowsByItem, POINT_FILTERS, pointPasses, sortPoints, CPK_OK } from '../utils/qaSpcSource';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
+/* 📥 CSV ค่าวัด SPC + สรุป Cp-Cpk (16/11) — CSV = เอกสาร ⇒ ชื่อไฟล์ผ่านทะเบียน /doc-forms */
+import { downloadCsvDoc, csvText } from '../utils/csvDoc';
+import { loadDocForms } from '../utils/docForms';
+import {
+  QA_SPC_VALUE_HEADERS, qaSpcValueRows, spcValuesFrom,
+  QA_SPC_SUMMARY_HEADERS, qaSpcSummaryRows, csvStamp,
+} from '../utils/qaCsvRows';
+import { askConfirm } from '../utils/askConfirm';
 
 /* ตัวกรองสถานะใบ NCR / CAPA (UI-STANDARD 2026-09-24) — ค่า state เดิม 'all'/'active'/'closed' */
 const STATUS_SEG = [
@@ -482,9 +491,9 @@ function QualityDashboard() {
     }
 
     const ppmTrend = [...byDate.entries()].sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([date, v]) => ({ date: fmtD(date), ppm: (v.total + v.ng) ? Math.round(v.ng / (v.total + v.ng) * 1e6) : null, ng: v.ng }));
+      .map(([date, v]) => ({ date: fmtD(date), ppm: ppmOf(v.ng, v.total), ng: v.ng }));
     const lineRows = [...byLine.entries()]
-      .map(([line, v]) => ({ line, ng: v.ng, ppm: (v.total + v.ng) ? Math.round(v.ng / (v.total + v.ng) * 1e6) : 0 }))
+      .map(([line, v]) => ({ line, ng: v.ng, ppm: ppmOf(v.ng, v.total) }))
       .sort((a, b) => b.ng - a.ng).slice(0, 12);
     /* 📊 Pareto — ผ่าน `classifyAbc` + `<ParetoChart>` เหมือนทุกพาเรโตในระบบ (23/09 ก้อน C)
        เดิมหน้านี้ประกอบเอง (Recharts ComposedChart + เรียง + คิด % สะสมเอง) ⇒ 2 ปัญหา:
@@ -502,7 +511,7 @@ function QualityDashboard() {
       total, ng, pendingSuspect,
       // total = ยอดสแกน = "ของดี" ล้วน · ผลิตจริงทั้งหมด = total + ng → PPM/FTT ต้องหารด้วยผลิตจริง ไม่ใช่ของดี
       // (กฎ Q "การ์ดที่สแกน=ของดีล้วน" 2026-08-02 · เดิม ng/total ทำ PPM สูงเกินจริง, (total−ng)/total ทำ FTT ต่ำเกินจริง)
-      ppm: (total + ng) ? Math.round(ng / (total + ng) * 1e6) : null,
+      ppm: ppmOf(ng, total),
       ftt: (total + ng) ? +(total / (total + ng) * 100).toFixed(2) : null,
       ppmTrend, lineRows, pareto,
     };
@@ -547,10 +556,14 @@ function QualityDashboard() {
         <KpiCard label={trI18n('ของเสียรวม (NG)')} value={stat.ng.toLocaleString()} unit="ชิ้น"
           color={statusColor(toneOf({ value: stat.ng, zeroIsGood: true }))}
           sub={`${stat.total + stat.ng > 0 ? `จากผลิตจริง ${(stat.total + stat.ng).toLocaleString()} ชิ้น` : 'ยังไม่มีข้อมูล'}${stat.pendingSuspect ? ` · ⏳ ของสงสัยรอ QA ${stat.pendingSuspect.toLocaleString()} ชิ้น (ยังไม่นับ — PPM/FTT ยังไม่สรุป)` : ''}`} />
-        <KpiCard primary label={trI18n('PPM — ของเสียต่อล้านชิ้น')} value={stat.ppm != null ? stat.ppm.toLocaleString() : null}
+        {/* 🔢 PPM = ชิ้นต่อล้าน ⇒ จำนวนเต็มเสมอ (`fmtPpm` · oee.js §7.3 · feedback 16/11)
+            ยอดผลิตยังไม่ถูกบันทึกแต่มีของเสีย = คิดไม่ได้ ⇒ ขีด **พร้อมเขียนเหตุบนจอ** ห้ามโชว์ 1,000,000 */}
+        <KpiCard primary label={trI18n('PPM — ของเสียต่อล้านชิ้น')} value={stat.ppm != null ? fmtPpm(stat.ppm) : null}
           color={stat.ppm == null ? 'var(--text)'
             : statusColor(stat.ppm <= 500 ? 'good' : stat.ppm <= 3000 ? 'warn' : 'bad')}
-          sub={trI18n('เกณฑ์จอนี้: เขียว ≤ 500 · เหลือง ≤ 3,000')} />
+          sub={stat.ppm == null && stat.ng > 0
+            ? trI18n('คิดไม่ได้ — มีของเสียแต่ยังไม่มียอดผลิตในช่วงนี้')
+            : trI18n('เกณฑ์จอนี้: เขียว ≤ 500 · เหลือง ≤ 3,000')} />
         <KpiCard label="FTT (First Time Through)" value={stat.ftt != null ? `${stat.ftt}%` : null}
           color={stat.ftt == null ? 'var(--text)'
             : statusColor(stat.ftt >= 99 ? 'good' : stat.ftt >= 97 ? 'warn' : 'bad')}
@@ -622,7 +635,7 @@ const SPC_SRC_SEG = [
 ];
 const EMPTY_CHAR = { part_no: '', part_name: '', line_name: '', characteristic: '', unit: 'mm', nominal: '', usl: '', lsl: '', subgroup_size: 5, gauge: '', control_method: '' };
 
-function SPCTab({ lineObjs, canRecord, canManage, partOpts = [], instruments = [] }) {
+function SPCTab({ lineObjs, canRecord, canManage, canExport = false, partOpts = [], instruments = [] }) {
   const { fullName, role, section: homeSection, sections: mySections, allUnits, respCostCenters, scopeIdx } = useContext(UserContext);
   /* 🔐 จุดควบคุม SPC ผูกไลน์ ⇒ ลงค่าวัด/ลบค่าวัด/แก้ spec ได้เฉพาะไลน์ส่วนงานตัวเอง (audit 15/10)
      เดิม `loadChars()` ดึงทุกไลน์ ⇒ เลือกจุดของไลน์อื่นแล้วลงค่าทับ Cpk ของเขาได้
@@ -652,7 +665,6 @@ function SPCTab({ lineObjs, canRecord, canManage, partOpts = [], instruments = [
   const [pointQ, setPointQ] = useState('');
   const [pointFilter, setPointFilter] = useState('all');
   const [partLine, setPartLine] = useState('');      // กรองชิ้นงานตามไลน์ ('' = ทุกไลน์)
-  const [partQ, setPartQ] = useState('');            // ค้นชิ้นงาน
   const [manualPart, setManualPart] = useState('');  // โหมดตั้งเอง: กรองจุดควบคุมตามพาร์ท
 
   const selItem = items.find(i => i.id === itemId) || null;
@@ -716,15 +728,16 @@ function SPCTab({ lineObjs, canRecord, canManage, partOpts = [], instruments = [
       id: x.id, label: x.p.part_no, name: x.p.part_name || '', line: x.p.line_name || '', n: x.n,
     })).sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
   }, [items]);
-  /* 🧩 แผงเลือกชิ้นงาน (15/11 · user "ควรมีฟิลเตอร์รายพาร์ท ตอนนี้มันเลือกยาก") — โชว์ทุกพาร์ทเป็นปุ่มให้เห็นเลย
-     ไม่ซ่อนในช่องค้นหา · กรองด้วยไลน์ + คำค้น */
+  /* 🔽 เลือกชิ้นงาน (15/11 "เลือกยาก" → 16/11 "ไม่ใช่การ์ดรกๆ เอาเป็นดรอปดาวเลือก") — ไลน์ → ดรอปดาวน์ค้นหาได้ในแถบกรอง */
   const partLineSet = useMemo(() => new Set(partOpts2.map(p => p.line).filter(Boolean)), [partOpts2]);
   const partLineObjs = useMemo(() => lineObjs.filter(l => partLineSet.has(l.name)), [lineObjs, partLineSet]);
-  const shownParts = useMemo(() => {
-    const q = partQ.trim().toLowerCase();
-    return partOpts2.filter(p => (!partLine || p.line === partLine)
-      && (!q || `${p.label} ${p.name} ${p.line}`.toLowerCase().includes(q)));
-  }, [partOpts2, partLine, partQ]);
+  const partSelOpts = useMemo(() => partOpts2
+    .filter(p => !partLine || p.line === partLine || p.id === partId)
+    .map(p => ({
+      id: p.id, label: p.label, lead: p.label, title: p.name || '—',
+      sub: `${p.line || trI18n('ไม่ระบุไลน์')} · ${p.n} ${trI18n('จุดวัดค่า')}`,
+      keywords: `${p.name} ${p.line}`,
+    })), [partOpts2, partLine, partId]);
   const pickPart = (id) => { setPartId(id); setItemId(null); setPointQ(''); };
   // โหมดตั้งเอง: พาร์ทของจุดควบคุม + จุดที่ผ่านตัวกรองพาร์ท
   const manualParts = useMemo(() => [...new Set(chars.map(c => c.part_no).filter(Boolean))]
@@ -751,7 +764,11 @@ function SPCTab({ lineObjs, canRecord, canManage, partOpts = [], instruments = [
     const r = rws.length ? computeSPC(rws, itemAsChar(it)) : null;
     const last = rws.length ? rws[rws.length - 1] : null;
     return { it, balloon: it.balloon_no, n: rws.length, mean: r?.xbarbar ?? null, cpk: r?.cpk ?? null,
-      oos: r?.oos || 0, last: last?.readings?.[0] ?? null, lastDate: last?.work_date || null };
+      oos: r?.oos || 0, last: last?.readings?.[0] ?? null, lastDate: last?.work_date || null,
+      /* 📥 ช่องเพิ่มสำหรับไฟล์ CSV สรุป (16/11) — จอยังโชว์แค่ 4 ช่องเดิม แต่ไฟล์เอาไปทำรายงาน
+         ⇒ ค่าที่คิดไม่ได้ต้องเป็น null (ไฟล์เขียนช่องว่าง) ห้าม 0 */
+      cp: r?.cp ?? null, pp: r?.pp ?? null, ppk: r?.ppk ?? null,
+      sigmaWithin: r?.sigmaWithin ?? null, sigmaOverall: r?.sigmaOverall ?? null };
   })), [partItems, partRes, limitN]);
   const pointCounts = useMemo(() => Object.fromEntries(POINT_FILTERS.map(f => [f.value, pointStats.filter(s => pointPasses(s, f.value)).length])), [pointStats]);
   const shownPoints = useMemo(() => {
@@ -848,7 +865,7 @@ function SPCTab({ lineObjs, canRecord, canManage, partOpts = [], instruments = [
 
   const delMeasurement = async (id) => {
     if (!selWrite.ok) { toast.info(writeBlockText(selWrite, { what: 'ผลวัดของไลน์นี้' })); return; }
-    if (!window.confirm('ลบผลวัดชุดนี้?')) return;
+    if (!await askConfirm('ลบผลวัดชุดนี้?')) return;
     const { error } = await supabase.from('qa_measurements').delete().eq('id', id);
     if (error) { toast.error(error.message); return; }
     toast.success('ลบแล้ว');
@@ -863,6 +880,49 @@ function SPCTab({ lineObjs, canRecord, canManage, partOpts = [], instruments = [
 
   const violations = spc ? spc.points.filter(p => p.oocX || p.oocR || p.run) : [];
 
+  /* ── 📥 CSV ค่าวัด + สรุป Cp-Cpk (16/11 · feedback ประชุม "export ผลตรวจเป็น CSV … และ SPC") ──
+     🔴 egress = 0 คิวรีเพิ่ม — ใช้ชุดข้อมูลเดียวกับที่กราฟ/ตารางบนจอคิดอยู่แล้ว
+        (โหมดใบตรวจ = `partRes.byItem` ที่ `fetchAllPages` ดึงมา · โหมดตั้งเอง = `rows`)
+     🔴 ไฟล์ = หน้าต่างเดียวกับจอ (ล่าสุด N ค่า/จุด) ⇒ ติด `lastN` ไว้ที่ชื่อไฟล์ ไม่ให้เข้าใจว่าเป็นทั้งหมด
+     🔴 โหลดมาไม่ครบ (error/ชนเพดาน) = ถามก่อนดาวน์โหลด + ติด "ไม่ครบ" ที่ชื่อไฟล์ ห้ามส่งไฟล์ขาดเงียบๆ */
+  useEffect(() => { loadDocForms().catch(() => { /* ไม่ได้เลขฟอร์ม = ชื่อไฟล์เดิม ไม่ล้ม */ }); }, []);
+  const partLabel = partOpts2.find(o => o.id === partId)?.label || '';
+  const askIfPartial = async () => {
+    if (!isSheet || !partRes.err) return true;
+    toast.error(`ข้อมูลไม่ครบ: ${partRes.err}`);
+    return await askConfirm(`⚠️ ${partRes.err}\n\nไฟล์ที่ได้จะไม่ครบ (ชื่อไฟล์จะติดคำว่า "ไม่ครบ")\nดาวน์โหลดต่อไหม?`);
+  };
+  const partialTag = () => (isSheet && partRes.err ? 'ไม่ครบ' : '');
+
+  const exportSpcValues = async () => {
+    const groups = isSheet
+      ? partItems
+        .map(it => ({ point: itemAsChar(it), values: spcValuesFrom((partRes.byItem.get(it.id) || []).slice(-limitN)) }))
+        .filter(g => g.values.length)
+      : (sel ? [{ point: sel, values: spcValuesFrom(rows) }] : []);
+    const csvRows = qaSpcValueRows(groups);
+    if (!csvRows.length) { toast.info(trI18n('ยังไม่มีค่าวัดให้ส่งออก')); return; }
+    if (!await askIfPartial()) return;
+    const name = isSheet
+      ? csvStamp(['qa_spc_values', partLabel, `last${limitN}`, partialTag()])
+      : csvStamp(['qa_spc_values', sel?.part_no, sel?.characteristic, `last${limitN}`]);
+    downloadCsvDoc('csv_qa_spc_values', name, csvText(QA_SPC_VALUE_HEADERS, csvRows));
+    toast.success(`ส่งออก ${csvRows.length.toLocaleString()} ค่าวัด จาก ${groups.length} จุด ✓`);
+  };
+
+  const exportSpcSummary = async () => {
+    const stats = pointStats.map(st => ({
+      point: itemAsChar(st.it),
+      n: st.n, mean: st.mean, sigmaWithin: st.sigmaWithin, sigmaOverall: st.sigmaOverall,
+      cp: st.cp, cpk: st.cpk, pp: st.pp, ppk: st.ppk, oos: st.oos, last: st.last, lastDate: st.lastDate,
+    }));
+    if (!stats.length) { toast.info(trI18n('ชิ้นงานนี้ยังไม่มีจุดวัดค่าแบบตัวเลข')); return; }
+    if (!await askIfPartial()) return;
+    downloadCsvDoc('csv_qa_spc_summary', csvStamp(['qa_spc_summary', partLabel, `last${limitN}`, partialTag()]),
+      csvText(QA_SPC_SUMMARY_HEADERS, qaSpcSummaryRows(stats)));
+    toast.success(`ส่งออกสรุป ${stats.length} จุด ✓`);
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {/* 🎛️ แถบกรอง (13/11) — แหล่งค่าวัด → ชิ้นงาน → แสดงจุดแบบไหน → ค้นจุด · ตารางสรุปจุดอยู่ข้างล่าง */}
@@ -871,6 +931,11 @@ function SPCTab({ lineObjs, canRecord, canManage, partOpts = [], instruments = [
         {isSheet ? (
           <>
             <LineSelect lines={partLineObjs} value={partLine} onChange={setPartLine} placeholder={ALL.line} includeSupport />
+            {/* 🔽 เลือกชิ้นงาน = ดรอปดาวน์ค้นหาได้ (16/11 · user "ไม่ใช่การ์ดรกๆ เอาเป็นดรอปดาวเลือก") — กรองตามไลน์ที่เลือกข้างหน้า */}
+            <SearchSelect value={partId || ''} options={partSelOpts} style={{ minWidth: 'min(300px, 100%)' }}
+              placeholder={trI18n('— เลือกชิ้นงาน (พิมพ์ค้นเลขพาร์ท/ชื่อ) —')}
+              emptyText={partOpts2.length ? trI18n('ไม่มีพาร์ทที่ตรงตัวกรอง') : trI18n('ยังไม่มีพาร์ทที่ตั้งจุดวัดค่าไว้ (ตั้งที่ /qa-setup)')}
+              onChange={({ id }) => { if (id) pickPart(id); }} />
             <Segmented label={trI18n('แสดง')} value={pointFilter} onChange={setPointFilter}
               options={POINT_FILTERS.map(f => ({ ...f, label: `${trI18n(f.label)} ${pointCounts[f.value] ?? 0}` }))} />
             <SearchInput value={pointQ} onChange={setPointQ} fields="เลขบอลลูน / ชื่อจุด" />
@@ -899,6 +964,21 @@ function SPCTab({ lineObjs, canRecord, canManage, partOpts = [], instruments = [
           {(isSheet ? [25, 50, 100, 200] : [25, 50, 100]).map(n => <option key={n} value={n}>{trI18n('ล่าสุด')} {n} {isSheet ? trI18n('ค่า') : trI18n('กลุ่ม')}</option>)}
         </select>
         <span className="spacer" />
+        {/* 📥 ปุ่ม export อยู่หลัง spacer ตามลำดับมาตรฐานของแถบกรอง (UI-STANDARD §3 ข้อ 1) */}
+        {canExport && (
+          <>
+            <button style={ghostBtn} onClick={exportSpcValues}
+              title={trI18n('ค่าวัดทุกค่า 1 แถว = 1 ค่า (วันงาน/กะ/รอบ/ชิ้น + LSL-USL) — เอาไปทำกราฟควบคุมใน Excel ได้ตรงๆ')}>
+              {trI18n('📥 CSV ค่าวัด')}
+            </button>
+            {isSheet && (
+              <button style={ghostBtn} onClick={exportSpcSummary}
+                title={trI18n('สรุปทุกจุดวัดของชิ้นงานนี้ (n / Mean / σ / Cp / Cpk / Pp / Ppk / ค่าหลุด spec) — ช่องว่าง = คิดไม่ได้ ไม่ใช่ 0')}>
+                {trI18n('📥 CSV สรุป Cpk')}
+              </button>
+            )}
+          </>
+        )}
         {canManage && !isSheet && (
           <>
             <button style={btnSt()} onClick={() => setCharModal({ ...EMPTY_CHAR })}>{trI18n('+ เพิ่มจุดควบคุม')}</button>
@@ -912,31 +992,9 @@ function SPCTab({ lineObjs, canRecord, canManage, partOpts = [], instruments = [
         )}
       </FilterBar>
 
-      {/* 🧩 เลือกชิ้นงาน — เห็นทุกพาร์ท กดเลือกได้เลย */}
-      {isSheet && (
-        <div style={{ ...cardSt, padding: '12px 14px' }}>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
-            <span style={{ fontWeight: 800, fontSize: 13.5 }}>🧩 {trI18n('เลือกชิ้นงาน')}</span>
-            <span style={{ fontSize: 12, color: 'var(--muted)' }}>{trI18n('แสดง')} {shownParts.length}/{partOpts2.length} {trI18n('พาร์ท')}{partLine ? ` · ${partLine}` : ''}</span>
-            <SearchInput value={partQ} onChange={setPartQ} fields="เลขพาร์ท / ชื่อ" grow={false} style={{ marginLeft: 'auto', minWidth: 'min(240px, 100%)' }} />
-          </div>
-          {itemsErr && <div style={{ fontSize: 12, color: 'var(--red)', marginBottom: 8 }}>⚠️ {itemsErr}</div>}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, maxHeight: 220, overflowY: 'auto' }}>
-            {shownParts.map(p => {
-              const on = p.id === partId;
-              return (
-                <button key={p.id} type="button" onClick={() => pickPart(p.id)} aria-pressed={on}
-                  style={{ textAlign: 'left', cursor: 'pointer', padding: '8px 12px', borderRadius: 10, minWidth: 200, maxWidth: 320,
-                    border: `1px solid ${on ? 'var(--accent)' : 'var(--border2)'}`, background: on ? 'var(--accent-dim)' : 'var(--bg3)', color: 'var(--text)' }}>
-                  <div style={{ fontWeight: 800, fontSize: 13, fontFamily: 'monospace' }}>{p.label}</div>
-                  <div style={{ fontSize: 11.5, color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={p.name}>{p.name || '—'}</div>
-                  <div style={{ fontSize: 11, color: 'var(--muted)' }}>{p.line || trI18n('ไม่ระบุไลน์')} · {p.n} {trI18n('จุดวัดค่า')}</div>
-                </button>
-              );
-            })}
-            {!shownParts.length && <span style={{ fontSize: 12, color: 'var(--muted)' }}>{partOpts2.length ? trI18n('ไม่มีพาร์ทที่ตรงตัวกรอง') : trI18n('ยังไม่มีพาร์ทที่ตั้งจุดวัดค่าไว้ (ตั้งที่ /qa-setup)')}</span>}
-          </div>
-        </div>
+      {isSheet && itemsErr && <div style={{ fontSize: 12, color: 'var(--red)' }}>⚠️ {itemsErr}</div>}
+      {isSheet && !itemsErr && items.length > 0 && !partOpts2.length && (
+        <div style={{ fontSize: 12, color: 'var(--muted)' }}>{trI18n('ยังไม่มีพาร์ทที่ตั้งจุดวัดค่าไว้ (ตั้งที่ /qa-setup)')}</div>
       )}
 
       {/* 📋 ตารางสรุปทุกจุดของชิ้นงาน — เรียงแย่สุดก่อน · กดแถว = ดูกราฟจุดนั้น */}
@@ -1855,7 +1913,7 @@ function CAPATab({ canRecord, canManage, prefill, onPrefillDone, lineObjs = [], 
                 }}>{trI18n('ส่งตรวจประสิทธิผล')}</button>
               )}
               {canManage && detail.id && (
-                <button style={btnSt('var(--green)')} onClick={() => {
+                <button style={btnSt('var(--green)')} onClick={async () => {
                   if (!detail.effectiveness?.trim()) { toast.error('กรอกผลตรวจประสิทธิผลก่อนปิด'); return; }
                   /* ด่านเรื่องเอกสาร PE — IATF §10.2.3/10.2.4 บังคับให้ทบทวน PFMEA/Control Plan
                      ⚠️ soft gate โดยตั้งใจ: บังคับให้ "ตอบ" ไม่ได้บังคับให้ "แก้เสร็จ"
@@ -1868,16 +1926,16 @@ function CAPATab({ canRecord, canManage, prefill, onPrefillDone, lineObjs = [], 
                      ตัวเลขบอกว่ายังไม่ลด = ปิดได้ถ้าคนยืนยัน แต่ต้อง stamp ไว้ให้เห็นตลอดไป
                      (บล็อกแข็ง คนจะเลี่ยงด้วยการไม่ตั้งค่าการวัดเลย ซึ่งแย่กว่า) */
                   const { j, m, busy } = effRef.current || {};
-                  if (busy && !window.confirm('ตัวเลขประสิทธิผลยังคำนวณไม่เสร็จ — ปิดใบเลยไหม? (ผลที่บันทึกอาจไม่ใช่ค่าล่าสุด)')) return;
+                  if (busy && !await askConfirm('ตัวเลขประสิทธิผลยังคำนวณไม่เสร็จ — ปิดใบเลยไหม? (ผลที่บันทึกอาจไม่ใช่ค่าล่าสุด)')) return;
                   const n = (v) => (Math.round((v || 0) * 10) / 10).toFixed(1);
                   if (j && (j.verdict === 'not_effective' || j.verdict === 'worse')) {
-                    if (!window.confirm(
+                    if (!await askConfirm(
                       `⚠️ ตัวเลขจริงบอกว่าของเสียยังไม่ลด\n\n`
                       + `ก่อนแก้ ${n(m?.beforePerDay)} ชิ้น/วัน → หลังแก้ ${n(m?.afterPerDay)} ชิ้น/วัน\n`
                       + `${j.reason}\n\nปกติควรกลับไปทบทวน D4 (สาเหตุราก) ก่อน\nยืนยันจะปิดใบนี้เลยไหม? (ผลนี้จะถูกบันทึกไว้ในใบ)`
                     )) return;
                   } else if (j && (j.verdict === 'too_early' || j.verdict === 'no_pivot' || j.verdict === 'no_data' || j.verdict === 'no_baseline')) {
-                    if (!window.confirm(
+                    if (!await askConfirm(
                       `ℹ️ ระบบยังวัดประสิทธิผลจากข้อมูลจริงไม่ได้\n(${j.reason})\n\n`
                       + `ปิดใบโดยอ้างอิงแค่ข้อความที่กรอกไว้ ใช่ไหม?`
                     )) return;
@@ -2074,6 +2132,8 @@ const TABS = [
   // ใบตรวจ = หน้า "ใช้งาน" ของมาตรฐานที่ตั้งไว้ใน /qa-setup (2026-08-04) — วางถัดจาก Dashboard
   // เพราะเป็นงานประจำวันที่ QC เปิดบ่อยสุด ส่วน SPC/NCR/CAPA เป็นงานตามหลัง
   { key: 'sheet',       icon: '✅', label: 'ใบตรวจ (Check Sheet)' },
+  /* 📅 18/11 แยกจากแท็บใบตรวจ (user "คิวตรวจถีบฟอร์มลงไปข้างล่าง") — กดเปิดใบตรวจ = เด้งไป ?tab=sheet&fme=<id> */
+  { key: 'fme',         icon: '📅', label: 'แผนตรวจ (ผลิตเรียก)' },
   { key: 'spc',         icon: '📐', label: 'SPC / Cp-Cpk' },
   { key: 'ncr',         icon: '🚨', label: 'NCR ของเสีย' },
   // เคลมลูกค้า = ของเสียที่หลุดออกไปถึงลูกค้า — วางคู่ NCR เพราะอ่านด้วยกัน (2026-08-17)
@@ -2096,7 +2156,7 @@ const TABS = [
    งานรอตรวจ = มีคนรอผล QA อยู่ · ของเสีย/ปัญหา = ไล่ย้อนหาสาเหตุ */
 const qcTab = (k) => { const t = TABS.find(x => x.key === k); return { key: t.key, label: `${t.icon} ${t.label}` }; };
 const QC_TAB_GROUPS = [
-  qcTab('dashboard'), qcTab('sheet'),
+  qcTab('dashboard'), qcTab('fme'), qcTab('sheet'),
   { key: 'queue',   label: '🔔 งานรอตรวจ',     children: ['morepair', 'bins', 'matreq'].map(qcTab) },
   { key: 'problem', label: '🚨 ของเสีย / ปัญหา', children: ['ncr', 'claims', 'capa'].map(qcTab) },
   qcTab('spc'), qcTab('instruments'),
@@ -2107,6 +2167,9 @@ export default function QualityControl() {
   const { role, lineId, sections, scopeIdx } = useContext(UserContext);
   const canRecord = can('qa', 'record');
   const canManage = can('qa', 'manage');
+  /* 📥 ดาวน์โหลด CSV = คีย์เดียวกับปุ่ม export ทั้งระบบ (`report:export` — "Export รายงาน (PDF/CSV)")
+     ไม่ผูกกับ qa:record เพราะไฟล์เป็นการ "อ่าน" ไม่ได้เขียนอะไร · ห้าม hardcode role array */
+  const canExport = can('report', 'export');
   const [tab, setTab] = useTabParam(TABS.map(t => t.key), 'dashboard');
   const [allLines, setAllLines] = useState([]);
   const [capaPrefill, setCapaPrefill] = useState(null); // NCR → เปิด 8D
@@ -2132,6 +2195,9 @@ export default function QualityControl() {
   // 👁 utils/qaViewScope — ส่วนงานที่ไม่มีไลน์ผลิต (QA/Planning) เห็นทั้งโรงงาน (เดิมได้ 0 ไลน์ = ทุกแท็บว่าง · 19/10)
   const viewScope = useMemo(() => qaViewScope(allLines, { role, lineId, sections, scopeIdx }), [allLines, role, lineId, sections, scopeIdx]);
   const lineObjs = viewScope.lines;
+  // คิวเรียกตรวจกรองตามไลน์ที่ดูได้ (null = ทั้งโรงงาน) — useMemo ให้ array นิ่ง (กฎ deps ข้อ 9)
+  const fmeLineNames = useMemo(() => (viewScope.names ? [...viewScope.names] : null), [viewScope]);
+  const setParams = useMergeParams();
 
   const openCapaFromNcr = useCallback((ncr) => {
     setCapaPrefill(ncr);
@@ -2148,8 +2214,9 @@ export default function QualityControl() {
 
       {tab === 'dashboard' && <QualityDashboard />}
       {tab === 'morepair' && <QaMoPending />}
+      {tab === 'fme' && <QaFmeQueue scopedLineNames={fmeLineNames} onOpen={(ob) => setParams({ tab: 'sheet', fme: ob.id })} />}
       {tab === 'sheet' && <QaCheckSheet canRecord={canRecord} />}
-      {tab === 'spc' && <SPCTab lineObjs={lineObjs} canRecord={canRecord} canManage={canManage} partOpts={partOpts} instruments={instruments} />}
+      {tab === 'spc' && <SPCTab lineObjs={lineObjs} canRecord={canRecord} canManage={canManage} canExport={canExport} partOpts={partOpts} instruments={instruments} />}
       {tab === 'ncr' && <NCRTab lineObjs={lineObjs} canRecord={canRecord} canManage={canManage} onOpenCapa={openCapaFromNcr} partOpts={partOpts} />}
       {tab === 'capa' && <CAPATab canRecord={canRecord} canManage={canManage} prefill={capaPrefill} onPrefillDone={() => setCapaPrefill(null)} lineObjs={lineObjs} partOpts={partOpts} />}
       {/* 🗑️ ชิ้นเดียวกับแท็บถังเหลือง/แดงใน /scrap-report (ฝ่ายผลิต) — ข้อมูลชุดเดียว ไม่ได้ก๊อป

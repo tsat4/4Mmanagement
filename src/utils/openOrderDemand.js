@@ -16,6 +16,8 @@
    · หน่วย (`uom`) ติดมาด้วย — BOM มีทั้ง PC และ KG ห้ามบวกต่างหน่วยเงียบ (ธง `uomConflict`)
    ═══════════════════════════════════════════════════════════════════════════════ */
 
+import { directSheetRows } from './bomTree.js';
+
 const key = (s) => String(s ?? '').trim();
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 
@@ -23,7 +25,7 @@ const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
  * @param {object} a
  * @param {Array} a.orders    ใบผลิตสถานะ open: { id, mat_no, qty, prod_no, line_name }
  * @param {Array} a.products  `dr_products` (id, mat_no, name, is_active, is_operation)
- * @param {Array} a.bom       `bom_items` (product_id, mat_no, part_name, qty_per_unit, uom, is_active)
+ * @param {Array} a.bom       `bom_items` (product_id, parent_mat, mat_no, part_name, qty_per_unit, uom, is_active)
  * @param {(line:string, mat:string) => number|null} a.stockAt  ยอดคงเหลือ (null = ไม่มีแถว)
  * @returns {{ rows:Array, noProduct:string[], noBom:string[], opOrders:number, orders:number }}
  */
@@ -35,7 +37,9 @@ export function openOrderDemand({ orders = [], products = [], bom = [], stockAt 
     prodByMat.set(m, p);
   }
   const bomByProduct = new Map();
-  for (const b of bom || []) {
+  /* 🌳 19/11: เฉพาะ "ลูกตรง" ของใบตัวเอง (กติกาเดียวกับ fn_bom_direct_demand) — แถวหลานที่นอนในใบแม่
+     ไม่ใช่ของที่ใบผลิตของแม่ใช้ (ใบของลูกตัดเอง) · ไม่กรอง = 100→200→500 นับ 500 สองรอบ */
+  for (const b of directSheetRows(bom || [], products || [])) {
     if (!b || b.is_active === false || !b.product_id) continue;
     if (!bomByProduct.has(b.product_id)) bomByProduct.set(b.product_id, []);
     bomByProduct.get(b.product_id).push(b);

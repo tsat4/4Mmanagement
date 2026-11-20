@@ -1,4 +1,5 @@
 import { useState, useEffect, useContext, useCallback, useMemo, useRef, Suspense, lazy } from 'react';
+import { MoreMark } from '../components/InfoMore';
 import { lineNameCompare } from '../utils/lineHierarchy';
 import ReadOnlyNote from '../components/ReadOnlyNote';
 import { supabase, supabaseDR } from '../supabaseClient';
@@ -12,7 +13,7 @@ import { isFgMat } from '../utils/matPrefix';
 import { splitBySide, sideMatches } from '../utils/logisticSide';
 import SideFilterChips from '../components/SideFilterChips';
 import ToggleDot from '../components/ToggleDot';
-import { can } from '../utils/permissions';
+import { can, hasPermission } from '../utils/permissions';
 import InternalTimeBoard from '../components/InternalTimeBoard';
 import { frameMin, breaksToFrame } from '../utils/timeFrame';
 import { getRoundStatus } from '../utils/deliveryRounds';
@@ -29,12 +30,14 @@ import { downloadCsvDoc, csvCell } from '../utils/csvDoc';
 import { rangeDays } from '../utils/timeRange';
 import FilterBar from '../components/FilterBar';
 import { ALL, allOf } from '../utils/filterLabels';
-import useTabParam from '../utils/useTabParam';
+import useTabParam, { useMergeParams } from '../utils/useTabParam';
 import WipBetweenSteps from '../components/WipBetweenSteps';
+import SapViewConsumption from '../components/SapViewConsumption';
 import StockCountSheet from '../components/StockCountSheet';
 import StorageZonePanel from '../components/StorageZonePanel';
 import StorageLocPanel from '../components/StorageLocPanel';
 import LineSelect from '../components/LineSelect';
+import LineScopeSelect from '../components/LineScopeSelect';
 import MatLabel from '../components/MatLabel';
 import ProductSelect from '../components/ProductSelect';
 import useProducts from '../utils/useProducts';
@@ -52,15 +55,16 @@ import Segmented from '../components/Segmented';
 import PartThumb from '../components/PartThumb';
 import usePartImages from '../utils/usePartImages';
 import { useStorageLocationsState } from '../utils/useStorageLocations';
-import { groupStockBySloc, slocGroupTitle } from '../utils/slocStockView';
+import { groupStockBySloc, slocGroupTitle, slocKindLabel } from '../utils/slocStockView';
 import { loadHomeSlocs } from '../utils/homeSloc';   // 🏠 ที่จัดเก็บหลักของพาร์ท (05/11)
 import { sapEquivalent } from '../utils/sapView';   // 🔩 มุม SAP (09/11)
 import { loadProductsMaster } from '../utils/useProducts';
 import { INFLOW_MODES, inflowModeOf, inflowPatchFor, inflowModesFor } from '../utils/stockReceipts';
 import { IconButton, DeleteButton } from '../components/IconButton';
 import { tr } from '../utils/i18n';
+import { directSheetRows } from '../utils/bomTree';   // 🌳 ลูกตรงแบบ SAP (19/11)
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
-import InfoMore from '../components/InfoMore';   // ⓘ คำอธิบายพับ (UI §6.10)
+import { askConfirm } from '../utils/askConfirm';
 
 /* ─── LINE STOCK — Stock พาร์ทย่อยคงเหลือในแต่ละไลน์ผลิต ─────────────────
    Store จ่ายพาร์ทเข้าไลน์ → บันทึก transaction type='issue'
@@ -144,6 +148,11 @@ function StockTab({ role, scope }) {
   const [bomProduct, setBomProduct] = useState(''); // product_id ที่เลือกในฟอร์ม (เพื่อดึง MAT จาก BOM)
 
   const [lineFilter, setLineFilter] = useState('');
+  /* 🌳 16/11 (คำถาม user "อยากดูสต๊อกของ PD3 ที่มีทั้ง P409+P411 ได้มั้ย") — ช่องขอบเขตแบบต้นไม้ (<LineScopeSelect>)
+     เลือก ส่วนงาน/กลุ่มไลน์ = กรองด้วยชุดไลน์ (`scopePickLines`) · เลือกไลน์เดียว = `lineFilter` เหมือนเดิม
+     null = ทั้งโรงงาน · [] = ขอบเขตที่เลือกไม่มีไลน์ (ต้องเขียนบนจอ ห้ามโชว์ทั้งโรงงาน) */
+  const [scopePick, setScopePick] = useState({ section: '', line: '', label: '' });
+  const [scopePickLines, setScopePickLines] = useState(null);
   /* 🔎 09/11 (คำสั่ง user "แยกพื้นที่แบบกางทุกกลุ่มมันรก — ควรมี dropdown เลือกพื้นที่ + ค้นหา MAT / Part No / ชื่อ")
      areaFilter = key ของกลุ่มพื้นที่ SAP ('' = ทุกพื้นที่) · stockQ = คำค้น */
   const [areaFilter, setAreaFilter] = useState('');
@@ -204,7 +213,7 @@ function StockTab({ role, scope }) {
       // ⚠️ view นี้โตเกิน 1000 แถวได้ — select เฉยๆ โดนตัดเงียบแล้วยอดสต็อกหายจากจอเขียนหลักของ store (QC flow-audit #30)
       fetchAllPages(() => supabaseDR.from('line_stock_summary').select('*'),
         { orderBy: ['line_name', 'mat_no'] }),
-      fetchAllPages(() => supabaseDR.from('bom_items').select('product_id, mat_no, part_name').eq('is_active', true),
+      fetchAllPages(() => supabaseDR.from('bom_items').select('product_id, parent_mat, mat_no, part_name').eq('is_active', true),
         { orderBy: 'id' }),
       fetchAllPages(() => supabaseDR.from('dr_products').select('id, name, mat_no, line_name, p_no').eq('is_active', true),
         { orderBy: ['line_name', 'name', 'id'] }),
@@ -227,8 +236,10 @@ function StockTab({ role, scope }) {
     setProducts(prods || []);
     const bm = {};
     const pb = {};
-    (boms || []).forEach(b => {
-      if (!bm[b.mat_no]) bm[b.mat_no] = b.part_name;
+    (boms || []).forEach(b => { if (!bm[b.mat_no]) bm[b.mat_no] = b.part_name; });
+    // 🌳 19/11: "สินค้านี้ใช้อะไร" = ลูกตรงเท่านั้น (กติกา SAP) — หลานถูกใช้ที่ไลน์ของลูก
+    //    ไม่กรอง = ข้อเสนอปลายทางของพาร์ทหลานชี้ไปไลน์ของ FG ผิดไลน์
+    directSheetRows(boms || [], prods || []).forEach(b => {
       (pb[b.product_id] = pb[b.product_id] || []).push({ mat_no: b.mat_no, part_name: b.part_name });
     });
     setBomMap(bm);
@@ -341,13 +352,13 @@ function StockTab({ role, scope }) {
     // กันสร้างของผี: MAT ที่ไม่มีในฐาน (Product Master / parts master / BOM) = ค่าที่พิมพ์เองใน picker ต้องยืนยันก่อน
     // (2026-09-07: MAT ที่เลือกจาก Product Master ไม่ต้องยืนยันซ้ำ — picker ยืนยันทะเบียนให้แล้ว)
     if (!knownMats.has(matUpper) && !bomMap[matUpper] && !drMats.has(matUpper)) {
-      if (!window.confirm(`MAT ${matUpper} ไม่มีในฐานข้อมูล (Parts Master / BOM)\nยืนยันสร้างรายการ stock ใหม่?`)) return;
+      if (!await askConfirm(`MAT ${matUpper} ไม่มีในฐานข้อมูล (Material Master / BOM)\nยืนยันสร้างรายการ stock ใหม่?`)) return;
     }
     // กัน stock ติดลบเงียบๆ สำหรับรายการที่หักออก (คืน Store / ปรับลด)
     if (form.type === 'return' || isAdjustDown) {
       const cur = onHandOf(form.line_name, matUpper);
       const after = cur - qty;
-      if (after < 0 && !window.confirm(`คงเหลือปัจจุบัน ${cur.toLocaleString()} ชิ้น — ทำรายการนี้แล้วจะติดลบ (${after.toLocaleString()})\nยืนยันดำเนินการ?`)) return;
+      if (after < 0 && !await askConfirm(`คงเหลือปัจจุบัน ${cur.toLocaleString()} ชิ้น — ทำรายการนี้แล้วจะติดลบ (${after.toLocaleString()})\nยืนยันดำเนินการ?`)) return;
     }
     // ประเภทที่ต้อง review → บันทึกเป็น pending (ยังไม่มีผลต่อ on-hand จนกว่าจะอนุมัติ)
     const needsReview = REVIEW_TYPES.includes(form.type);
@@ -428,9 +439,11 @@ function StockTab({ role, scope }) {
 
   /* กรอง 2 ชั้น: ไลน์/คลัง → ฝั่งงาน (ขาเข้า Store 2xx/3xx/5xx · ขาออก Warehouse FG 1xx)
      ตัวนับบนชิปต้องนับ "หลังกรองไลน์แล้ว" เพื่อให้เลขตรงกับที่ตาข้างล่างเห็นจริง */
-  const lineStock = useMemo(() => (
-    lineFilter ? stockScoped.rows.filter(s => s.line_name === lineFilter) : stockScoped.rows
-  ), [stockScoped, lineFilter]);
+  const lineStock = useMemo(() => {
+    if (lineFilter) return stockScoped.rows.filter(s => s.line_name === lineFilter);
+    if (scopePickLines) { const set = new Set(scopePickLines); return stockScoped.rows.filter(s => set.has(s.line_name)); }
+    return stockScoped.rows;
+  }, [stockScoped, lineFilter, scopePickLines]);
 
   const sideCounts = useMemo(() => {
     const g = splitBySide(lineStock);
@@ -462,7 +475,8 @@ function StockTab({ role, scope }) {
      เพื่อให้ตารางมีตัววาดชุดเดียว (เดิมโหมดไลน์วาดจาก row ดิบ — ก๊อป 2 ชุด = ดริฟต์แน่นอน) */
   const groups = useMemo(() => {
     if (groupMode === 'sloc') {
-      return groupStockBySloc(filteredStock, { slocs: slocReg.rows || [], lines, homeOf: homeSloc.map })
+      /* 16/11 — สโตร์ขึ้นก่อนพื้นที่ผลิต + หัวหมวด (kindFirst) */
+      return groupStockBySloc(filteredStock, { slocs: slocReg.rows || [], lines, homeOf: homeSloc.map, kindFirst: true })
         .map(g => ({ ...g, title: slocGroupTitle(g) }));
     }
     return Object.entries(stockByLine).map(([lineName, rows]) => ({
@@ -533,14 +547,20 @@ function StockTab({ role, scope }) {
         permKey="line_stock:issue" hint={tr('ยังดูยอดคงเหลือ/ประวัติได้ตามปกติ')} />
       {/* UI-STANDARD 2026-09-24 — แถบกรองเดียว ใต้แท็บทันที: ไลน์/คลัง (ขอบเขต) → ฝั่งงาน → ปุ่มคำสั่งชิดขวา (UI-STANDARD §2.1) */}
       <FilterBar>
-        {/* คลังปลายทางที่ไม่ใช่ไลน์ผลิต (FG WAREHOUSE / STORE) แยก optgroup ให้ชัด
-            ไม่กองปนกับไลน์ผลิต — ของ 2 ชนิดนี้คนละความหมายกันคนละเรื่อง */}
-        <LineSelect
-          lines={lines} value={lineFilter} onChange={setLineFilter} {...scope}
-          placeholder={allOf('ไลน์/คลัง')}
-          extraGroups={[{ label: 'คลัง', options: warehouseNames.map(n => ({ value: n })) }]}
-        />
-        <SideFilterChips value={sideFilter} onChange={setSideFilter} counts={sideCounts} unit="รายการ" />
+        {/* 🌳 16/11 — ขอบเขตแบบต้นไม้ ทั้งโรงงาน › ส่วนงาน › กลุ่มไลน์ › ไลน์ (ตัวเดียวกับ Report/OEE/เช็คชื่อ)
+            `includeSupport` = STORE (หน่วยสนับสนุน · Planning&Store) เลือกได้ด้วย · คลังที่ไม่อยู่ในทะเบียนไลน์
+            (FG WAREHOUSE ฯลฯ) ดูได้ที่ "ทั้งโรงงาน" + ช่องพื้นที่ SAP */}
+        <LineScopeSelect lines={lines} includeSupport
+          section={scopePick.section} line={scopePick.line}
+          onChange={(sec, ln, info) => {
+            const kind = info?.kind || 'all';
+            setScopePick({ section: sec, line: ln, label: ln || sec || '' });
+            if (kind === 'line') { setLineFilter(ln); setScopePickLines(null); return; }
+            setLineFilter('');
+            setScopePickLines(kind === 'all' ? null : (info?.lines || []));
+          }} />
+        <SideFilterChips value={sideFilter} onChange={setSideFilter} counts={sideCounts} unit="รายการ"
+          labels={{ inbound: 'ของป้อนไลน์ (2xx·3xx·5xx)', outbound: 'FG รอส่ง (1xx)' }} />
         {!showTxn && groupMode === 'sloc' && (
           <select value={areaActive} onChange={e => setAreaFilter(e.target.value)} aria-label={tr('เลือกพื้นที่ SAP')}>
             <option value="">{allOf('พื้นที่ SAP')}</option>
@@ -568,12 +588,16 @@ function StockTab({ role, scope }) {
             + จ่ายพาร์ทเข้าไลน์
           </button>
         )}
-        <InfoMore label={tr('สโตร์ กับ จัดส่ง ต่างกันยังไง')} size={11.5} style={{ flexBasis: '100%' }}>
-          🏬 สโตร์ = Store ป้อนของเข้าไลน์ (3xx ซื้อนอก · 5xx raw · 2xx ผลิตเอง) · จัดส่ง = Warehouse + Delivery ส่งลูกค้า (FG 1xx)
-        </InfoMore>
+        {/* 16/11 — ถอดป้าย "สโตร์ กับ จัดส่ง ต่างกันยังไง" · ชื่อชิปบอกเองแล้วว่านับเลข MAT กลุ่มไหน */}
+        {scopePickLines && !scopePickLines.length && (
+          <span style={{ flexBasis: '100%', fontSize: 12, color: 'var(--amber)' }}>
+            {tr('ขอบเขตที่เลือกไม่มีไลน์ในทะเบียน')} ({scopePick.label}) — {tr('จึงไม่มีรายการ ไม่ใช่สต๊อกเป็น 0')}
+          </span>
+        )}
       </FilterBar>
       <p style={{ margin:'0 0 12px', fontSize:13, color:'var(--muted)' }}>
-        <b style={{ color:'var(--text2)' }}>{tr('พาร์ทย่อยคงเหลือในไลน์')}</b> — Store จ่ายพาร์ทเข้าไลน์ · ระบบหักอัตโนมัติตอน close กะ (BOM × qty_ok)
+        <b style={{ color:'var(--text2)' }}>{tr('พาร์ทย่อยคงเหลือในไลน์')}</b>{' '}
+        <MoreMark text={tr('Store จ่ายพาร์ทเข้าไลน์ · ระบบหักอัตโนมัติตอน close กะ (BOM × qty_ok)')} />
       </p>
       {/* ── คิวอนุมัติ (store review) ── */}
       {showPending && (
@@ -651,6 +675,7 @@ function StockTab({ role, scope }) {
           { label:'ไลน์ที่มี stock', value: Object.keys(stockByLine).length, unit:'ไลน์', icon:'🏭' },
           { label:'รายการพาร์ท', value: filteredStock.length, unit:'รายการ', icon:'🔩',
             sub: lineFilter ? `เฉพาะ ${lineFilter}`
+                 : scopePickLines ? `${scopePick.label} · ${scopePickLines.length} ไลน์`
                  : scopeNames ? `${scopeNames.length} ไลน์ในขอบเขตของคุณ + คลัง` : 'ทุกไลน์/คลัง' },
           { label:'Stock หมด / ติดลบ', value: totalLow, unit:'รายการ', icon:'⚠️', warn: totalLow > 0,
             sub: filteredStock.length > 0 ? `${Math.round(totalLow / filteredStock.length * 100)}% ของ ${filteredStock.length} รายการ` : 'ยังไม่มีรายการ' },
@@ -734,15 +759,20 @@ function StockTab({ role, scope }) {
               ยังไม่มีข้อมูล Stock{lineFilter ? ` ในไลน์ ${lineFilter}` : ''} — กด "+ จ่ายพาร์ทเข้าไลน์" เพื่อเริ่ม
             </div>
           ) : (
-            shownGroups.map(g => {
+            shownGroups.map((g, gi) => {
               const lowParts = g.parts.filter(p => p.qty <= 0);
+              /* 🏷️ หัวหมวด (สโตร์ / วัตถุดิบ / พื้นที่ผลิต / คลัง FG) — เฉพาะโหมดพื้นที่ · ขึ้นเมื่อหมวดเปลี่ยน */
+              const kindHead = groupMode === 'sloc' ? slocKindLabel(g.kind, g.code) : null;
+              const showKindHead = kindHead && (gi === 0 || slocKindLabel(shownGroups[gi - 1].kind, shownGroups[gi - 1].code) !== kindHead);
               /* 🧾 ใบ Monitor Stock ของทีมวางแผนตัดสินด้วย MIN/MAX — พาร์ทที่ยังไม่ตั้งจะขึ้น "—" ทั้งแถว
                  แล้วสถานะถอยไปใช้เกณฑ์สำรอง (< 10 ชิ้น) ⇒ ต้องเขียนบนจอว่ามีกี่รายการที่ยังตัดสินไม่ได้จริง
                  (กฎความซื่อสัตย์ของจอ: ข้อมูลไม่พอ ต้องบอก ห้ามปล่อยให้ดูเหมือนตั้งครบ) */
               const noLvParts = g.parts.filter(p => ksMap[p.mat_no]?.min == null || ksMap[p.mat_no]?.max == null);
               const folded  = !forceOpen && collapsedGroups.has(g.key);
               return (
-                <div key={g.key} style={{ ...card, padding:0, overflow:'hidden' }}>
+                <div key={g.key} style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                {showKindHead && <div style={{ fontSize:12, fontWeight:800, color:'var(--muted)', padding:'4px 2px 0' }}>{tr(kindHead)}</div>}
+                <div style={{ ...card, padding:0, overflow:'hidden' }}>
                   <div onClick={() => toggleGroup(g.key)}
                        style={{ padding:'12px 16px', display:'flex', justifyContent:'space-between', alignItems:'center', gap:10, flexWrap:'wrap', background:'var(--bg2)', borderBottom: folded ? 'none' : '1px solid var(--border)', cursor:'pointer', userSelect:'none' }}>
                     <div style={{ fontWeight:800, fontSize:15, fontFamily:'var(--font-display)', color:'var(--text)', display:'flex', alignItems:'center', gap:8 }}>
@@ -864,6 +894,7 @@ function StockTab({ role, scope }) {
                       </div>
                     );
                   })()}
+                </div>
                 </div>
               );
             })
@@ -1101,7 +1132,7 @@ function StockTab({ role, scope }) {
 
       {/* ── Reject reason modal ── (ฟอร์มมี input → ไม่ปิดจาก backdrop click ตาม UI-CONVENTIONS §5) */}
       {rejectTx && (
-        <div className="modal-scroll" style={{ position:'fixed', inset:0, background:'var(--scrim)', WebkitBackdropFilter:'var(--scrim-blur)', backdropFilter:'var(--scrim-blur)', zIndex:1001, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
+        <div className="modal-scroll" style={{ position:'fixed', inset:0, background:'var(--scrim)', WebkitBackdropFilter:'var(--scrim-blur)', backdropFilter:'var(--scrim-blur)', zIndex:2000, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
           <div style={{ background:'var(--bg3)', border:'1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding:24, width:'min(420px,100%)' }}>
             <div style={{ fontSize:15, fontWeight:800, color:'var(--text)', marginBottom:6, fontFamily:'var(--font-display)' }}>{tr('❌ ปฏิเสธคำขอ')}</div>
             <div style={{ fontSize:12, color:'var(--muted)', marginBottom:14 }}>
@@ -1262,7 +1293,7 @@ function DeliveryRoundsTab({ canEdit, fullName, scope }) {
     const row = rounds.find(r => r.id === id);
     const wd = canWriteLine(rndCtx, row?.line_name, lines);
     if (!wd.ok) { toast.info(writeBlockText(wd, { what: 'รอบจัดส่งของไลน์นี้' })); return; }
-    if (!window.confirm('ยืนยันลบรอบจัดส่งนี้?')) return;
+    if (!await askConfirm('ยืนยันลบรอบจัดส่งนี้?')) return;
     const { error } = await supabaseDR.from('kanban_delivery_rounds').update({ is_active: false }).eq('id', id);
     if (error) { toast.error(error.message); return; }
     toast.success('ลบรอบจัดส่งแล้ว');
@@ -1660,7 +1691,7 @@ function InflowRulesTab({ canEdit }) {
     if (!mv) { toast.error(form.match_type === 'prefix' ? 'กรอกเลขขึ้นต้น MAT เช่น 1 หรือ 2' : 'กรอก MAT No.'); return; }
     // MAT ตรงตัวนอก Product Master → ถามยืนยัน (2026-09-07 เดิมบล็อกแข็ง) — trigger เทียบตรงตัว พิมพ์ผิดตัวเดียวของไปกองผิดคลังเงียบๆ จึงเตือนชัด
     if (form.match_type === 'mat' && !products.some(p => String(p.mat_no || '').toUpperCase() === mv)
-      && !window.confirm(`MAT ${mv} ไม่มีใน Product Master — กฎจะ match เฉพาะเลขนี้ตรงตัว · ใช้ค่านี้ต่อหรือไม่?`)) return;
+      && !await askConfirm(`MAT ${mv} ไม่มีใน Product Master — กฎจะ match เฉพาะเลขนี้ตรงตัว · ใช้ค่านี้ต่อหรือไม่?`)) return;
     if (!dest) { toast.error('เลือกปลายทาง เช่น FG WAREHOUSE / STORE'); return; }
     setSaving(true);
     const ok = checkWriteRows(await supabaseDR.from('stock_inflow_rules').upsert({ match_type: form.match_type, match_value: mv, dest_line_name: dest, is_active: true, updated_at: new Date().toISOString() }, { onConflict: 'match_type,match_value' }).select('id'), 'บันทึกกฎ');
@@ -1676,7 +1707,7 @@ function InflowRulesTab({ canEdit }) {
   const setRuleMode = async (r, modeKey) => {
     if (noPerm()) return;
     if (modeKey === inflowModeOf(r)) return;
-    if (modeKey === 'off' && !window.confirm(
+    if (modeKey === 'off' && !await askConfirm(
       `ปิดกฎ "${r.match_type === 'prefix' ? `MAT ขึ้นต้น ${r.match_value}` : r.match_value} → ${r.dest_line_name}"?\n\n`
       + '⚠️ ปิดแล้ว ใบผลิตที่ปิดต่อจากนี้จะ "ไม่เข้าคลังนี้เลย" และไม่มีคิวให้ใครกดรับ\n'
       + 'ถ้าต้องการให้คนนับของก่อนรับ ให้เลือก 🟡 ต้องยืนยันรับ แทน')) return;
@@ -1691,7 +1722,7 @@ function InflowRulesTab({ canEdit }) {
         .select('id', { count: 'exact', head: true })
         .eq('child_mat_no', String(r.match_value ?? '').trim()).eq('status', 'producing');
       if (eLot) { toast.error(`เช็คใบล็อตค้างไม่ได้ (${eLot.message}) — ยังไม่สลับโหมด`); return; }
-      if (count && !window.confirm(
+      if (count && !await askConfirm(
         `${r.match_value} ยังมีใบล็อตค้างที่ไลน์ผลิต ${count} ใบ\n\n`
         + '⚠️ สลับโหมดตอนนี้ = ของบนใบพวกนั้น "ไม่เข้าคลังเลย"\n'
         + '(ปุ่มปิดล็อตจะเลิกลงสต็อก และใบผลิตเก่าก็ไม่มีใบ "รอรับเข้า" รองรับ)\n\n'
@@ -1707,7 +1738,7 @@ function InflowRulesTab({ canEdit }) {
 
   const deleteRule = async (r) => {
     if (noPerm()) return;
-    if (!window.confirm(`ลบกฎ "${r.match_type === 'prefix' ? `MAT ขึ้นต้น ${r.match_value}` : r.match_value} → ${r.dest_line_name}"?`)) return;
+    if (!await askConfirm(`ลบกฎ "${r.match_type === 'prefix' ? `MAT ขึ้นต้น ${r.match_value}` : r.match_value} → ${r.dest_line_name}"?`)) return;
     if (!checkWriteRows(await supabaseDR.from('stock_inflow_rules').delete().eq('id', r.id).select('id'), 'ลบกฎ')) return;
     toast.success('ลบกฎแล้ว');
     load();
@@ -1823,45 +1854,64 @@ function InflowRulesTab({ canEdit }) {
 /* 🏬🛒 04/11 (คำสั่ง user) — งานที่ขยับยอดของสโตร์ย้ายมาที่นี่ · /heijunka เหลือดูสัญญาณ Kanban อย่างเดียว
    ฝังหน้าเดิมทั้งดุ้นแบบ /equipment (โหมด ops) — กฎ/ปุ่ม/ด่านเดิมทุกตัว ไม่เขียนใหม่ · `?view=`/`?store=` ไม่ชน `?tab=` */
 const HeijunkaKanban = lazy(() => import('./HeijunkaKanban'));
+const LineIssueGapQueue = lazy(() => import('../components/LineIssueGapQueue'));
+/* 📉 16/11 (คำสั่ง user "รวมสต๊อกในไลน์กับ Monitoring แผน-สต๊อกเป็นหน้าเดียว") — ฝังหน้าเดิมทั้งดุ้นใน <Hub>
+   หน้าลูกใช้ `?mon=` แทน `?tab=` (UI §6.8 ข้อ 2.4 · Monitoring.jsx อ่าน HubContext) */
+const Monitoring = lazy(() => import('./Monitoring'));
 const LEGACY_TABS = { store: 'out', purchase: 'in', receipts: 'in' };
-const TABS = [
-  /* 05/11 (คำสั่ง user) — แยกตามทิศของ: ขาออก = สโตร์ → พื้นที่ผลิต · ขาเข้า = supplier/พื้นที่ผลิต → สโตร์ */
-  { key:'out',       label: 'ขาออก (สโตร์ → ผลิต)' },
-  { key:'in',        label: 'ขาเข้า (→ สโตร์)' },
-  { key:'sap',       label: 'ค้างตัด SAP' },    // ใบที่ส่งถึงไลน์แล้วแต่ตัดจ่ายใน SAP ไม่ได้ (04/11)
-  { key:'diff',      label: 'คลังพัก/ผลต่าง' },  // รับไม่ครบ = ส่วนที่ขาดพักไว้ รอผลิต+สโตร์ยืนยันคู่ (05/11)
-  { key:'stock',     label: 'Stock' },
-  { key:'count',     label: 'ตรวจนับ/เฟิร์มยอด' },   // กระทบยอดขาออกที่หลุด + ตรวจนับทั้งคลัง (2026-09-23)
-  { key:'wip',       label: 'WIP ค้างระหว่างขั้น' },   // ยอดค้าง — คนละเรื่องกับ 'คิวเติม WIP' ในบอร์ดคัมบัง
-  /* 📍 20/10 — ลูป "ผลิตเรียก → สโตร์เห็น" ตายที่ขั้น "ถึง min แล้วเสนอให้เบิก" เพราะไม่มีใครตั้งจุดเรียกเติม
-     เดิมเห็นทีละไลน์ (แผงใน /layout-setup) ⇒ ไม่มีจอไหนตอบว่าทั้งโรงงานขาดกี่จุด */
+/* ⚙️ 16/11 — แท็บตั้งค่า 5 แท็บยุบเป็น "ตั้งค่า" แท็บเดียว (แท็บย่อย `?set=`) · ลิงก์เก่า `?tab=zones` ฯลฯ พาเข้าแท็บย่อยให้ */
+const SETTING_TABS = [
+  /* 📍 20/10 — ลูป "ผลิตเรียก → สโตร์เห็น" ตายที่ขั้น "ถึง min แล้วเสนอให้เบิก" เพราะไม่มีใครตั้งจุดเรียกเติม */
   { key:'levels',    label: 'จุดเรียกเติม (ทั้งโรงงาน)' },
-  /* 🔴 13/10 feedback: ชื่อแท็บเดิมเขียนแต่ "โซนคลัง (ผัง)" = ชื่อของแผงล่าง
-     แต่คนมาหา "พื้นที่ SAP / รหัสคลัง" ซึ่งเป็นแผงบนของแท็บนี้ แล้วหาไม่เจอ (user: "ยังหาไม่เจอ")
-     ⇒ ชื่อแท็บต้องบอกของที่อยู่ข้างในทั้ง 2 ชั้น */
+  /* 🔴 13/10 feedback: ชื่อต้องบอกของที่อยู่ข้างในทั้ง 2 ชั้น (รหัสคลัง SAP + โซนบนผัง) */
   { key:'zones',     label: 'พื้นที่ SAP / โซนคลัง' },
   { key:'delivery',  label: 'รอบจัดส่ง' },
   { key:'timeboard', label: 'บอร์ดเวลา (ดูอย่างเดียว)' },   // กดยืนยันส่ง/รับที่บอร์ดคัมบัง
   { key:'inflow',    label: 'กฎรับเข้า' },
 ];
-/* 🗂 13/11: 12 แท็บ → 6 ช่องบน (กฎ ≤7 · UI §6.8 ข้อ 6) — คีย์ลูก = ?tab= เดิม (TABS/LEGACY_TABS ไม่เปลี่ยน)
-   ขาออก/ขาเข้า/Stock = งานรายวัน อยู่หน้าสุด · ติดตาม/กระทบยอด = ของที่ค้างหลังส่ง · ตั้งค่าคลัง = ทะเบียน/กฎ */
-const lsTab = (k) => TABS.find(t => t.key === k);
-const LS_TAB_GROUPS = [
-  lsTab('out'), lsTab('in'), lsTab('stock'),
-  { key: 'recon', label: '📋 ติดตาม / กระทบยอด', children: ['sap', 'diff', 'count', 'wip'].map(lsTab) },
-  { key: 'setup', label: '⚙️ ตั้งค่าคลัง',        children: ['levels', 'zones', 'delivery', 'inflow'].map(lsTab) },
-  lsTab('timeboard'),
+/* แท็บหลัก — 16/11: Stock ขึ้นแท็บแรก + เปิดหน้ามาเจอ (user "default อยู่ tab ที่ 4 แปลกๆ")
+   `perm` = สิทธิ์หน้าเดิมของแท็บนั้น (หน้ารวม piggyback 2 คีย์ใน canAccessPage) */
+const TABS = [
+  { key:'stock',      label: 'Stock',                  perm: 'page:/line-stock' },
+  /* 16/11 (คำสั่ง user) เลิกคำ ขาออก/ขาเข้า — คน W/H อ่านกลับด้าน · key out/in คงเดิม */
+  { key:'out',        label: 'ส่งของเข้าไลน์',          perm: 'page:/line-stock' },
+  { key:'in',         label: 'รับของเข้าคลัง',          perm: 'page:/line-stock' },
+  { key:'monitoring', label: 'Monitoring แผน-สต๊อก',    perm: 'page:/monitoring' },
+  { key:'count',      label: 'ตรวจนับ/เฟิร์มยอด',       perm: 'page:/line-stock' },   // กระทบยอดขาออกที่หลุด + ตรวจนับทั้งคลัง (2026-09-23)
+  { key:'sap',        label: 'ค้างตัด SAP',             perm: 'page:/line-stock' },   // ใบที่ส่งถึงไลน์แล้วแต่ตัดจ่ายใน SAP ไม่ได้ (04/11)
+  { key:'diff',       label: 'คลังพัก/ผลต่าง',          perm: 'page:/line-stock' },   // รับไม่ครบ = ส่วนที่ขาดพักไว้ (05/11)
+  { key:'wip',        label: 'WIP ค้างระหว่างขั้น',      perm: 'page:/line-stock' },   // คนละเรื่องกับ 'คิวเติม WIP' ในบอร์ดคัมบัง
+  { key:'sapview',    label: 'เทียบตัดแบบ SAP',         perm: 'page:/line-stock' },   // FG×BOM แบบ SAP เทียบที่ ESM ตัดจริง (20/11)
+  { key:'settings',   label: 'ตั้งค่า',                 perm: 'page:/line-stock' },
 ];
+
+function SettingsTab({ canEdit, fullName, scope }) {
+  const [sub, setSub] = useTabParam(SETTING_TABS.map(t => t.key), SETTING_TABS[0].key, 'set');
+  return (
+    <Hub>
+      <PageHeader tabs={SETTING_TABS} tab={sub} onTab={setSub} />
+      {sub === 'levels'    && <PartLevelCoveragePanel />}
+      {/* 🏬 2 ทะเบียนคนละชั้น: รหัสคลัง (SAP SLoc — อ้างใน BOM) เหนือ โซนกองของบนผัง · ห้ามยุบรวม */}
+      {sub === 'zones'     && <><StorageLocPanel /><StorageZonePanel /></>}
+      {sub === 'delivery'  && <DeliveryRoundsTab canEdit={canEdit} fullName={fullName} scope={scope} />}
+      {sub === 'timeboard' && <DeliveryTimeBoardTab />}
+      {sub === 'inflow'    && <InflowRulesTab canEdit={canEdit} />}
+    </Hub>
+  );
+}
 
 export default function LineStock() {
   const { role, fullName, lineId, sections } = useContext(UserContext);
   const canEdit = can('line_stock', 'manage_rounds', role);
-  const [activeTab, setActiveTab] = useTabParam(TABS.map(t => t.key), 'stock');
-  /* ลิงก์เก่าก่อน 05/11 (`?tab=store|purchase|receipts`) → แท็บใหม่ · ใช้ได้เพราะ useTabParam ตกกลับ default ก่อน */
+  /* แท็บที่เห็น = ตามสิทธิ์หน้าเดิม (ไม่มีใครเห็นมากกว่าเดิม) · ไม่มีสิทธิ์สต๊อก = เปิดมาเจอ Monitoring */
+  const tabs = useMemo(() => TABS.filter(t => hasPermission(t.perm, role)), [role]);
+  const [activeTab, setActiveTab] = useTabParam(tabs.map(t => t.key), tabs[0]?.key || 'stock');
+  const mergeParams = useMergeParams();
+  /* ลิงก์เก่า: ก่อน 05/11 (`?tab=store|purchase|receipts`) · ก่อน 16/11 (`?tab=levels|zones|delivery|timeboard|inflow`) */
   useEffect(() => {
     const t = new URLSearchParams(window.location.search).get('tab');
     if (LEGACY_TABS[t]) setActiveTab(LEGACY_TABS[t]);
+    else if (SETTING_TABS.some(s => s.key === t)) mergeParams({ tab: 'settings', set: t }, { replace: true });
   // eslint-disable-next-line react-hooks/exhaustive-deps -- ทำครั้งเดียวตอนเปิดหน้า
   }, []);
   // scope มาตรฐานส่งต่อให้ทุกแท็บ — dropdown ไลน์ต้องกรองด้วย ไม่ใช่แค่ query (CLAUDE.md)
@@ -1871,13 +1921,15 @@ export default function LineStock() {
     <Page>
       <PageHeader
         title={tr('Stock Management')} icon="📦"
-        sub={tr('ยอดคงเหลือ mini-store ของไลน์ · รอบจัดส่งภายใน · กฎรับเข้าอัตโนมัติเมื่อปิดใบผลิต')}
-        tabs={LS_TAB_GROUPS} tab={activeTab} onTab={setActiveTab}
+        sub={tr('ยอดคงเหลือ · ส่งของเข้าไลน์ · รับของเข้าคลัง · แผน-สต๊อก · ตรวจนับเทียบ SAP')}
+        tabs={tabs} tab={activeTab} onTab={setActiveTab}
       />
 
       {(activeTab === 'out' || activeTab === 'in') && (
         <Hub>
           <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>{tr('กำลังโหลด…')}</div>}>
+            {/* 🧾 20/11 — ไลน์ใช้ของแล้วแต่สโตร์ยังไม่ลงจ่าย (ไม่มีรายการ = ไม่แสดง) */}
+            {activeTab === 'out' && <LineIssueGapQueue />}
             {/* key แยก = state ตู้ของ 2 แท็บไม่ปนกัน */}
             <HeijunkaKanban key={activeTab} mode="ops" direction={activeTab}
               opsStores={activeTab === 'out' ? OPS_STORES_OUT : OPS_STORES_IN} />
@@ -1889,12 +1941,15 @@ export default function LineStock() {
       {activeTab === 'stock'     && <StockTab role={role} scope={scope} />}
       {activeTab === 'count'     && <StockCountSheet role={role} scope={scope} />}
       {activeTab === 'wip'       && <WipBetweenSteps />}
-      {activeTab === 'levels'    && <PartLevelCoveragePanel />}
-      {/* 🏬 2 ทะเบียนคนละชั้น: รหัสคลัง (SAP SLoc — อ้างใน BOM) เหนือ โซนกองของบนผัง · ห้ามยุบรวม */}
-      {activeTab === 'zones'     && <><StorageLocPanel /><StorageZonePanel /></>}
-      {activeTab === 'delivery'  && <DeliveryRoundsTab canEdit={canEdit} fullName={fullName} scope={scope} />}
-      {activeTab === 'timeboard' && <DeliveryTimeBoardTab />}
-      {activeTab === 'inflow'    && <InflowRulesTab canEdit={canEdit} />}
+      {activeTab === 'sapview'   && <SapViewConsumption />}
+      {activeTab === 'monitoring' && (
+        <Hub>
+          <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>{tr('กำลังโหลด…')}</div>}>
+            <Monitoring />
+          </Suspense>
+        </Hub>
+      )}
+      {activeTab === 'settings'  && <SettingsTab canEdit={canEdit} fullName={fullName} scope={scope} />}
     </Page>
   );
 }

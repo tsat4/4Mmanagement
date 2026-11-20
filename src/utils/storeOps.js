@@ -7,7 +7,7 @@
      ลิงก์เก่า `?tab=store`/`purchase`/`receipts` พาไปแท็บใหม่ให้ (LineStock LEGACY_TABS)
    ไฟล์นี้แยกจาก HeijunkaKanban เพื่อให้ LineStock lazy-load หน้านั้นได้โดยไม่ดึงทั้งก้อนมาตั้งแต่แรก */
 export const OPS_STORES_OUT = ['child', 'ext', 'raw', 'fg', 'open', 'plating', 'rack', 'other'];   // 04/11 เลิกแท็บ 'wip' — ใบไปอยู่ตู้ตามเลขพาร์ท (storeOfMat)   // 'open' = แจ้งล่วงหน้าจากใบที่ไลน์เปิด (อ่านอย่างเดียว · 04/11)
-export const OPS_STORES_IN = ['purchase', 'lots', 'receipts', 'plating_in'];
+export const OPS_STORES_IN = ['receipts', 'purchase', 'lots', 'plating_in'];   // 19/11 mockup ที่ user เคาะ: รอรับจากไลน์ขึ้นก่อน (= แท็บย่อยที่เปิดมาเจอ)
 
 /* 🗂️ ใบเบิก-ส่งพาร์ทเข้าไลน์ ไปอยู่ตู้ไหน — ตามเลขพาร์ท (2026-11-04 · คำสั่ง user)
    user: *"tab คิวเติม WIP ยกเลิกเลย ให้ย้ายไปเข้าแต่ละสโตร์ 2xx ก็ store child part เปลี่ยนคำเป็น store semi part,

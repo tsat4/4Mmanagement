@@ -31,6 +31,7 @@ import PartCard, { partCardGrid } from '../components/PartCard';
 import { storeBtn } from '../utils/storeUi';
 import { tr } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
+import { askConfirm } from '../utils/askConfirm';
 
 /* ─── RACK CENTER — เรียกภาชนะ/แร็คเปล่าคืนกลับมาใช้ ──────────────────────
    ไลน์ผลิตส่งกล่อง/ถาด/แร็คเปล่ากลับ rack center → ขอภาชนะชุดใหม่กลับมาใช้
@@ -242,7 +243,7 @@ export default function RackCenter() {
         <img src="${dataUrl}" />
         <div class="ln">${c.line}</div>
         <div class="ct">${c.ct.code ? c.ct.code + ' · ' : ''}${c.ct.name}</div>
-        <div class="hint">{tr('สแกนเพื่อเรียกภาชนะ')}</div>
+        <div class="hint">${tr('สแกนเพื่อเรียกภาชนะ')}</div>
       </div>`);
     }
     const html = `<style>
@@ -312,7 +313,7 @@ export default function RackCenter() {
 
   const cancel = async (r) => {
     if (!canOperate) { toast.error('บัญชีนี้ไม่มีสิทธิ์ยกเลิกใบเรียกภาชนะ (rack_center:operate)'); return; }
-    if (!window.confirm('ยืนยันยกเลิกการเรียกภาชนะนี้?')) return;
+    if (!await askConfirm('ยืนยันยกเลิกการเรียกภาชนะนี้?')) return;
     setBusyId(r.id);
     const { data: upd, error } = await supabaseDR.from('rack_requests').update({
       status: 'cancelled', cancelled_by: fullName, cancelled_at: new Date().toISOString(),

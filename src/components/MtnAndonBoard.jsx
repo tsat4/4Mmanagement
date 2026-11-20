@@ -40,6 +40,7 @@
      · **อ่านอย่างเดียว** ทุกอย่างที่กดได้ = ลิงก์ไปหน้าที่ทำงานจริง
    ══════════════════════════════════════════════════════════════════════════ */
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { MoreMark } from './InfoMore';
 import { useSearchParams } from 'react-router-dom';
 import { supabaseDR } from '../supabaseClient';
 import { UserContext } from '../App';
@@ -182,7 +183,7 @@ export default function MtnAndonBoard({ d, ctx, cards = 'maintenance' }) {
        ⚠️ คอลัมน์ชื่อประเภทคือ `name_th` (dr_*_types ทุกตัว) — ใส่ `name` = 42703 คิวรีล้มทั้งก้อนเงียบ */
     const [dtRes, sessRes] = await Promise.all([
       supabaseDR.from('downtime_logs')
-        .select('id, machine_no, description, started_at, call_mtn, call_mtn_at, call_mtn_ack_at, call_mtn_team, open_alerted_at, open_ack_at, duration_min, ended_at, dr_downtime_types(name_th, category), production_sessions(line_name, status, shift)')
+        .select('id, machine_no, description, started_at, call_mtn, call_mtn_at, call_mtn_ack_at, call_mtn_team, open_alerted_at, open_ack_at, duration_min, ended_at, dr_downtime_types(name_th, category, planned_cap_min), production_sessions(line_name, status, shift)')
         .is('duration_min', null).is('ended_at', null),
       supabaseDR.from('production_sessions').select('line_name, status').eq('work_date', workDate),
     ]);
@@ -560,7 +561,14 @@ export default function MtnAndonBoard({ d, ctx, cards = 'maintenance' }) {
             <span><b style={{ color: 'var(--muted)' }}>■</b> {tr('ไม่ได้เปิดกะ')}</span>
             {showStore && <span><b style={{ color: 'var(--blue)' }}>■</b> ไลน์เรียกของ · ป้าย 📦 = รอบส่งค้าง/รอของ (เครื่องหยุดชนะเสมอ)</span>}
             {showRoutine && <span><b style={{ color: ROUTINE_MAP_COLOR }}>■</b> งานประจำกะค้าง (📋 AM · PY = Poka-Yoke · LPA · ! = เลยกรอบ AM · เครื่องหยุดชนะเสมอ)</span>}
-            {showPm && <span>{tr('· ผัง')}<b>{tr('ไม่กรองทีม')}</b> {tr('— ไลน์หยุดคือเรื่องของทุกคน (ชิปทีมกรองเฉพาะคิวใบซ่อม/แผน PM)')}</span>}
+            {/* 🔴 แผงนี้ขึ้นบน `/tv-board` ด้วย = จอไม่มีเมาส์ ⇒ ท่อนที่เหลือบนจอต้องอ่านรู้เรื่องเอง
+                เก็บข้อเท็จจริง "ผังไม่กรองทีม" ไว้ · เหตุผล/ขอบเขตของชิป → tooltip · user 18/11 */}
+            {showPm && (
+              <span title={tr('— ไลน์หยุดคือเรื่องของทุกคน (ชิปทีมกรองเฉพาะคิวใบซ่อม/แผน PM)')}>
+                {tr('· ผัง')}<b>{tr('ไม่กรองทีม')}</b>{' '}
+                <MoreMark text={tr('— ไลน์หยุดคือเรื่องของทุกคน (ชิปทีมกรองเฉพาะคิวใบซ่อม/แผน PM)')} />
+              </span>
+            )}
             <span>{tr('· สีมาจาก')} <b>{tr('กะที่เปิด + downtime ที่คนลงไว้')}</b> {tr('ยังไม่มีสัญญาณรายเครื่อง (ต้องต่อ SCADA/มิเตอร์ก่อน)')}</span>
           </div>
         </div>

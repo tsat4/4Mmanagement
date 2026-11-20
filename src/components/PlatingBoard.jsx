@@ -23,6 +23,7 @@ import {
 } from '../utils/plating';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 /* ═══ 🧪 งานชุบภายนอก — แท็บในตู้ Kanban รวม (/heijunka) · 2026-10-13 คำสั่ง user
 
    ลำดับงานจริง (user 13/10 · ตัวอย่าง GOR 297):
@@ -143,7 +144,7 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
   const [busy, setBusy] = useState(null);
   const rpc = async (key, fn, args, okMsg) => {
     // ด่านชั้นเขียนจริง — ไม่พึ่งการซ่อนปุ่ม (monitor = ห้ามขยับยอดเด็ดขาด)
-    if (readOnly) { toast.error('หน้านี้ดูอย่างเดียว — ทำรายการที่ Line Stock › 📤 ขาออก / 📥 ขาเข้า'); return null; }
+    if (readOnly) { toast.error('หน้านี้ดูอย่างเดียว — ทำรายการที่ Stock Management › 📤 ส่งของเข้าไลน์ / 📥 รับของเข้าคลัง'); return null; }
     setBusy(key);
     const { data, error } = await supabaseDR.rpc(fn, args);
     setBusy(null);
@@ -202,7 +203,7 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
   const receive = async (o, qty, reason, close) => {
     const open = openQtyOf(o);
     const toLoc = locOf(o.after_mat);
-    if (!toLoc) { toast.error(`ยังไม่มีกฎรับเข้าคลังของ ${o.after_mat} — ตั้งที่ /line-stock?tab=inflow ก่อน`); return false; }
+    if (!toLoc) { toast.error(`ยังไม่มีกฎรับเข้าคลังของ ${o.after_mat} — ตั้งที่ /line-stock?tab=settings&set=inflow ก่อน`); return false; }
     const why = receiveBlockReason({ open, qty, reason, close });
     if (why) { toast.error(why); return false; }
     const res = await rpc(`recv|${o.id}`, 'plating_receive_order', {
@@ -218,7 +219,7 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
   const [woReason, setWoReason] = useState('');
   const doWriteoff = async (g) => {
     if (!woReason.trim()) { toast.error('ต้องใส่เหตุผลการตัดยอด'); return; }
-    if (!window.confirm(`ตัดยอดค้างที่ ${g.vendor} ทั้งหมด ${fmt(g.open)} ชิ้น (${g.orders} ใบ)?\nย้อนไม่ได้ — ใบจะถูกปิด`)) return;
+    if (!await askConfirm(`ตัดยอดค้างที่ ${g.vendor} ทั้งหมด ${fmt(g.open)} ชิ้น (${g.orders} ใบ)?\nย้อนไม่ได้ — ใบจะถูกปิด`)) return;
     const ok = await rpc(`wo|${g.vendor}`, 'plating_writeoff', { p_vendor: g.vendor, p_order_ids: null, p_reason: woReason.trim(), p_by: by() },
       (d) => `✂️ ตัดยอดค้าง ${g.vendor} ${fmt(d?.qty)} ชิ้น (${d?.orders} ใบ)`);
     if (ok) { setWoFor(null); setWoReason(''); }
@@ -239,7 +240,7 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
     const qv = Number(whQty[a.after]);
     const toLoc = t ? locOf(t.fg) : null;
     if (!t) { toast.error('เลือก FG ที่จะแปลงเข้า'); return; }
-    if (!toLoc) { toast.error(`ยังไม่มีกฎรับเข้าคลังของ ${t.fg} — ตั้งที่ /line-stock?tab=inflow ก่อน`); return; }
+    if (!toLoc) { toast.error(`ยังไม่มีกฎรับเข้าคลังของ ${t.fg} — ตั้งที่ /line-stock?tab=settings&set=inflow ก่อน`); return; }
     if (!(qv > 0)) { toast.error('ใส่จำนวน'); return; }
     const ok = await rpc(`wh|${a.after}`, 'plating_to_wh', {
       p_after: a.after, p_fg: t.fg, p_qty: qv, p_from_loc: a.loc, p_to_loc: toLoc, p_note: null, p_by: by(),

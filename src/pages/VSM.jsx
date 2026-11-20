@@ -44,6 +44,7 @@ import { liveChannel } from '../utils/liveChannel';
 import { DeleteButton } from '../components/IconButton';
 import { tr } from '../utils/i18n';
 import InfoMore from '../components/InfoMore';   // ⓘ คำอธิบายพับ (UI §6.10)
+import { directSheetRows } from '../utils/bomTree';   // 🌳 ลูกตรงแบบ SAP (19/11)
 
 const monthKeyNow = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; };
 // วันงานตามกฎระบบ: ก่อน 08:00 = วันก่อนหน้า (กะดึกข้ามวัน) — ห้าม toISOString (UTC เพี้ยน)
@@ -192,10 +193,11 @@ export default function VSM() {
       // BOM ของ FG → รู้ว่าต้องดึง routing/สต๊อกของพาร์ทลูกตัวไหนบ้าง
       // ⚠ error ของ supabase คืน data:null (ไม่ใช่ undefined) — default `= []` ไม่ทำงาน ต้อง throw ให้ toast บอกจริง
       const { data: bomRaw, error: bomErr } = await supabaseDR.from('bom_items')
-        .select('mat_no, part_no, part_name, qty_per_unit, supplier, source_line')
+        .select('product_id, parent_mat, mat_no, part_no, part_name, qty_per_unit, supplier, source_line')
         .eq('product_id', fg.id).eq('is_active', true);
       if (bomErr) throw new Error(`โหลด BOM ไม่สำเร็จ: ${bomErr.message}`);
-      const bomItems = bomRaw || [];
+      // 🌳 19/11: ลูกตรงของ FG เท่านั้น (กติกา SAP) — แถวหลานในใบนี้ไม่ใช่ลูกของ FG (qty เป็นต่อ 1 ลูก)
+      const bomItems = directSheetRows(bomRaw || [], [{ id: fg.id, mat_no: fg.mat_no }]);
 
       const allMats = [fg.mat_no, ...bomItems.map(b => b.mat_no)].filter(Boolean);
       const childLines = bomItems
@@ -229,7 +231,7 @@ export default function VSM() {
       //    + `const { data }` กลืน error ⇒ C/O (setup) กับเวลาหยุดตามแผน ต่ำกว่าจริง/เป็น 0
       //    แล้ว **ค้างอยู่ใน snapshot ที่พิมพ์ออกไปแล้ว** (VSM เก็บถาวร แก้ย้อนหลังไม่ได้)
       const dtRes = await fetchByIds(sessionIds, (c) => supabaseDR.from('downtime_logs')
-        .select('session_id, duration_min, started_at, ended_at, dr_downtime_types(category, six_big_loss)')
+        .select('session_id, duration_min, started_at, ended_at, dr_downtime_types(category, planned_cap_min, six_big_loss)')
         .in('session_id', c));
       const dtRaw = dtRes.rows;
       if (dtRes.error || dtRes.truncated) setLoadWarn('โหลด downtime ไม่ครบ — ค่า C/O และเวลาหยุดตามแผนอาจต่ำกว่าจริง (อย่าเพิ่งบันทึกเป็นเอกสาร)');
@@ -374,7 +376,7 @@ export default function VSM() {
           .select('session_id, mat_no, status, qty, qty_ok, qty_actual, qty_target, machine_no, opened_at, confirmed_at')
           .in('session_id', ids),
         supabaseDR.from('downtime_logs')
-          .select('session_id, machine_no, description, started_at, ended_at, duration_min, created_at, dr_downtime_types(name_th, category)')
+          .select('session_id, machine_no, description, started_at, ended_at, duration_min, created_at, dr_downtime_types(name_th, category, planned_cap_min)')
           .in('session_id', ids),
         // excl_from_q ต้อง join มาด้วย ไม่งั้นงานทดลองตกหล่นเงียบ (กฎ %Q)
         supabaseDR.from('defect_logs')

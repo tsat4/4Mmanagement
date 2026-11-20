@@ -235,7 +235,7 @@ export default function MoStalePanel({
                           {t.whoShort && t.kind !== 'role' && <span style={{ color: 'var(--muted)' }}>{tr('· ต้องกดโดย')} {t.whoShort}</span>}
                           <span>· {t.n} {tr('ใบ')}</span>
                           {t.hard > 0 && <span style={{ color: statusColor('bad'), fontWeight: 700 }}>{tr('· เกิน')} {hardDays} {tr('วัน')} {t.hard} {tr('ใบ')}</span>}
-                          {t.kind === 'no_target' && <span style={{ color: 'var(--muted)' }}>{tr('· ⓘ ใบไม่มีข้อมูลให้ชี้ตัวคน')}</span>}
+                          {t.kind === 'no_target' && <span style={{ color: 'var(--muted)' }}>{tr('· ใบไม่มีข้อมูลให้ชี้ตัวคน')}</span>}
                         </div>
                       );
                     })}
@@ -263,7 +263,7 @@ export default function MoStalePanel({
                 {o.machine_no && <span>· {o.machine_no}</span>}
                 {o.problem_characteristic && <span style={{ color: 'var(--muted)' }}>· {o.problem_characteristic}</span>}
                 {statusLabel(o) && <span style={{ color: 'var(--muted)' }}>· {statusLabel(o)}</span>}
-                {!o._stale.exact && <span style={{ color: 'var(--muted)' }}>{tr('· ⓘ นับจากวันแจ้ง (ไม่มีเวลาเข้าขั้น)')}</span>}
+                {!o._stale.exact && <span style={{ color: 'var(--muted)' }}>{tr('· นับจากวันแจ้ง (ไม่มีเวลาเข้าขั้น)')}</span>}
               </div>
             ))}
             {rows.length > rowsShown.length && (

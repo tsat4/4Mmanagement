@@ -47,7 +47,7 @@ async function loadOrdersAndNg(jigs, { fromDate, toDate, workDate = null, shift 
   const nos = [...new Set(jigs.map(j => j.machineNo).filter(Boolean))];
   if (!nos.length) return { orders: [], defects: [], errors };
   const o = await fetchAllRows(supabaseDR, 'prod_orders',
-    'id, mat_no, machine_no, qty, qty_ok, status, opened_at, confirmed_at, production_sessions!inner(work_date, shift, line_name, status, end_time)',
+    'id, session_id, mat_no, machine_no, qty, qty_ok, status, opened_at, confirmed_at, production_sessions!inner(work_date, shift, line_name, status, end_time)',
     (q0) => {
       let q = q0.in('machine_no', nos).in('production_sessions.status', SESSION_STATUSES_REAL);
       q = workDate ? q.eq('production_sessions.work_date', workDate) : q.gte('production_sessions.work_date', fromDate).lte('production_sessions.work_date', toDate);
@@ -98,6 +98,19 @@ function policyBreaksFor(policies, jig, workDate, shift, startMs, endMs, orders 
   const usable = shiftEndMs ? policies : policies.filter(p => p?.anchor !== 'shift_end');
   return breakIntervalsIn({ policies: usable, startMs, endMs, workDate, shift, shiftEndMs, lineName: jig.lineName || null });
 }
+/** ช่วงพักนโยบายของกรอบที่ดู — ทั้งวัน (`all`) = พักกะเช้า + พักกะดึก (แต่ละกะใช้เวลาเลิกกะของใบกะนั้น) · ไม่รู้นโยบาย = null */
+function jigBreaks(policies, jig, workDate, shift, endMs, orders) {
+  const shifts = shift === 'all' ? ['day', 'night'] : [shift];
+  const out = [];
+  for (const sh of shifts) {
+    const w = shiftBounds(workDate, sh);
+    if (!w || w.startMs >= endMs) continue;
+    const iv = policyBreaksFor(policies, jig, workDate, sh, w.startMs, Math.min(w.endMs, endMs), orders.filter(o => o.production_sessions?.shift === sh));
+    if (iv == null) return null;
+    out.push(...iv);
+  }
+  return out;
+}
 const ivSec = (iv) => (iv ? iv.reduce((t, [a, b]) => t + Math.max(0, b - a) / 1000, 0) : null);
 
 const ordersOfJig = (orders, jig, workDate, shift) => orders.filter(o =>
@@ -112,7 +125,7 @@ function ngPeopleOf(orders, defects) {
 }
 
 /**
- * 1 กะ ละเอียด (การ์ดจอหน้าไลน์ + ดูลึกรายเครื่อง)
+ * 1 กะ ละเอียด (การ์ดจอหน้าไลน์ + ดูลึกรายเครื่อง) · `shift='all'` = ทั้งวัน 08:00→08:00 (เช้า+ดึก รวมเป็นกรอบเดียว)
  * @returns `{ jigs: [{ ...jig, win, events, hourly, orders, ctInfo, oee, segments, buckets, stops, pareto }], errors }`
  */
 export async function loadJigShift({ lineNames = null, workDate, shift, nowMs = Date.now(), jigFilter = null }) {
@@ -133,7 +146,7 @@ export async function loadJigShift({ lineNames = null, workDate, shift, nowMs = 
     Promise.all(srcIds.map(sid => supabaseDR.rpc('fn_machine_counter_hourly', {
       p_source: sid, p_from: new Date(win.startMs).toISOString(), p_to: new Date(win.endMs).toISOString(),
     }).then(r => ({ sid, ...r })))),
-    loadOrdersAndNg(jigs, { workDate, shift }),
+    loadOrdersAndNg(jigs, { workDate, shift: shift === 'all' ? null : shift }),
     loadCtMapSafe(),
     // สถานะสด — มีความหมายเฉพาะกะที่กำลังเดิน · ตารางยังไม่มี/อ่านไม่ได้ = ไม่โชว์สถานะสด (การ์ดถอยไปสถานะล่าสุดที่รู้ + บอก)
     isNow ? supabaseDR.from('machine_live_state').select('source_id, machine_tag, state_code, state_text, since, alarm_text, onplan_text, unplan_text, production_enable, received_at')
@@ -157,7 +170,7 @@ export async function loadJigShift({ lineNames = null, workDate, shift, nowMs = 
     const ngMachine = hourly.reduce((s, h) => s + (Number(h.ng) || 0), 0);
     const w = { startMs: win.startMs, endMs: end };
     const breakCodes = bk.breakCodesBy.get(j.sourceId) || null;
-    const brkIv = policyBreaksFor(bk.policies, j, workDate, shift, win.startMs, end, orders);
+    const brkIv = jigBreaks(bk.policies, j, workDate, shift, end, orders);
     const oee = machineShiftOee({ agg: aggregateStops(events, w, breakCodes), pieces, ngMachine, ngPeople, elapsedSec: Math.max(0, (end - win.startMs) / 1000), ct: ctInfo.ct, policyBreakSec: ivSec(brkIv) });
     if (ctInfo.why && !oee.why.includes(ctInfo.why)) oee.why.unshift(ctInfo.why);
     const last = events.length ? events[events.length - 1] : null;
@@ -265,4 +278,31 @@ export function combineJigRows(rows = []) {
     partialP: !s.hasP && P != null, partialQ: !s.hasQ,
     mttrMin: s.faultN ? s.faultSec / 60 / s.faultN : null, mtbfMin: s.faultN ? s.operatingSec / 60 / s.faultN : null,
   };
+}
+
+/**
+ * 🔗 ข้อมูล ESM ที่ใช้ผูกรายครั้งของการหยุด (กดแท่ง Pareto) — โหลดตอนกดเท่านั้น (egress)
+ *  · downtime ที่คนลง = ของกะที่จิ๊กมีใบผลิต (session_id ของใบ — ผูกตรง ไม่เดาจากชื่อไลน์)
+ *  · ใบแจ้งซ่อม = เวลาเกิด/แจ้งอยู่ในช่วงที่ดู ± 1 ชม. + ใบที่เปิดจาก downtime ข้างบน · เทียบเครื่องที่ linkStops()
+ * @returns `{ downtimes, repairs, typeName: Map, errors }` — อ่านไม่ได้ = errors (จอเขียนบอก ห้ามโชว์ "ไม่มี")
+ */
+export async function loadStopLinks({ orders = [], fromMs, toMs }) {
+  const errors = [];
+  const sids = [...new Set((orders || []).map(o => o.session_id).filter(Boolean))];
+  const dtR = sids.length ? await fetchByIds(sids, part => supabaseDR.from('downtime_logs')
+    .select('id, session_id, downtime_type_id, started_at, ended_at, duration_min, machine_no, description, reported_by_name, call_mtn').in('session_id', part))
+    : { rows: [], error: null };
+  if (dtR.error || dtR.truncated) errors.push('downtime ที่คนลง');
+  const downtimes = dtR.rows || [];
+  const a = new Date(fromMs - 3600000).toISOString(), b = new Date(toMs + 3600000).toISOString();
+  const MO_COLS = 'id, mo_no, status, machine_no, occurred_at, report_at, problem_detail, root_cause, source_downtime_id';
+  const [moT, moD, ty] = await Promise.all([
+    fetchAllRows(supabaseDR, 'mtn_orders', MO_COLS, q => q.or(`and(occurred_at.gte.${a},occurred_at.lte.${b}),and(report_at.gte.${a},report_at.lte.${b})`).order('id')),
+    downtimes.length ? fetchByIds(downtimes.map(d => d.id), part => supabaseDR.from('mtn_orders').select(MO_COLS).in('source_downtime_id', part)) : Promise.resolve({ rows: [], error: null }),
+    downtimes.length ? fetchByIds([...new Set(downtimes.map(d => d.downtime_type_id).filter(Boolean))], part => supabaseDR.from('dr_downtime_types').select('id, name_th').in('id', part)) : Promise.resolve({ rows: [], error: null }),
+  ]);
+  if (moT.error || moD.error || moD.truncated) errors.push('ใบแจ้งซ่อม');
+  if (ty.error) errors.push('ชื่อประเภท downtime');
+  const repairs = [...new Map([...(moT.data || []), ...(moD.rows || [])].map(r => [r.id, r])).values()];
+  return { downtimes, repairs, typeName: new Map((ty.rows || []).map(t => [t.id, t.name_th])), errors };
 }

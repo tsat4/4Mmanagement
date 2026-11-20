@@ -1,4 +1,5 @@
 import { useState, useEffect, useContext, useMemo } from 'react';
+import { MoreMark } from '../components/InfoMore';
 import { supabase } from '../supabaseClient';
 import { UserContext } from '../App';
 import { canWriteUnit, writeBlockText } from '../utils/writeScope';
@@ -15,6 +16,7 @@ import Page from '../components/Page';
 import { DeleteButton } from '../components/IconButton';
 import { tr } from '../utils/i18n';
 import InfoMore from '../components/InfoMore';   // ⓘ คำอธิบายพับ (UI §6.10)
+import { askConfirm } from '../utils/askConfirm';
 
 /* ══════════════════════════════════════════════════════════════
    📄 ทะเบียนเอกสาร & ฟอร์ม (Document Master) — หน้า /doc-forms
@@ -147,7 +149,7 @@ export default function DocFormsRegistry() {
   const removeScope = async (sc) => {
     const w = canWriteUnit(docCtx, sc?.section);
     if (!w.ok) { toast.info(writeBlockText(w, { what: 'ชุดเอกสารของส่วนงานนี้', unit: sc?.section })); return; }
-    if (!window.confirm(`ลบชุดของส่วนงาน "${sc.section}"? (กลับไปใช้ชุดกลาง)`)) return;
+    if (!await askConfirm(`ลบชุดของส่วนงาน "${sc.section}"? (กลับไปใช้ชุดกลาง)`)) return;
     checkWriteRows(await supabase.from('doc_form_scopes').delete().eq('id', sc.id).select('id'), 'ลบขอบเขต');
     loadScopes(sc.doc_key); loadDocForms(true);
   };
@@ -164,7 +166,7 @@ export default function DocFormsRegistry() {
     loadRevisions(editing.doc_key);
   };
   const removeRevision = async (r) => {
-    if (!window.confirm(`ลบ Rev "${r.rev}"?`)) return;
+    if (!await askConfirm(`ลบ Rev "${r.rev}"?`)) return;
     checkWriteRows(await supabase.from('doc_form_revisions').delete().eq('id', r.id).select('id'), 'ลบ revision');
     loadRevisions(editing.doc_key);
   };
@@ -205,7 +207,9 @@ export default function DocFormsRegistry() {
     <Page>
       <PageHeader title={tr('ทะเบียนเอกสาร & ฟอร์ม')} icon="📄"
         sub={<>
-          ทะเบียนเลขฟอร์ม / Rev / วันมีผล ของฟอร์มพิมพ์ทุกตัว — แก้ที่นี่ ใบพิมพ์เปลี่ยนตามทันที
+          {/* "ดูอย่างเดียว" = ป้ายกันเข้าใจผิดว่าแก้ได้ ⇒ อยู่บนจอเสมอ · ผลของการแก้ → ⓘ · user 19/11 */}
+          {tr('ทะเบียนเลขฟอร์ม / Rev / วันมีผล ของฟอร์มพิมพ์ทุกตัว')}{' '}
+          <MoreMark text={tr('แก้ที่นี่ ใบพิมพ์เปลี่ยนตามทันที')} />
           {!canManage && ' · คุณมีสิทธิ์ดูอย่างเดียว'}
         </>} />
 

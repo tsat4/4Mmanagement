@@ -26,6 +26,8 @@ import usePointJump from './inspect/usePointJump';
 import { QA_STAGES } from '../utils/qaStages';
 import { specLabel } from '../utils/qaSpec';
 import { uploadOpts } from '../utils/storageUpload';
+/* 🗜️ รูปโคลสอัพต่อจุดตรวจ — บีบด้วยสเปคเดียวกับรูปจุดตรวจ PM (ของกลาง ห้ามตั้งเลขเองในหน้า) */
+import { compressPhotoImage } from '../utils/layoutImage';
 import { checkWrite, checkWriteRows } from '../utils/dbWrite';
 import { QA_RANK, balloonSort, nextBalloonOf } from '../utils/qaPoints';
 import { writeBlockText } from '../utils/writeScope';
@@ -34,6 +36,7 @@ import CalcFormulaField from './inspect/CalcFormulaField';
 import { calcOf, calcProblems } from '../utils/inspectCalc';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 const BUCKET = QA_BUCKET;
 const PIN_DEFAULT = '#4d9fff';
 /* ชื่อ view มาตรฐานของแบบ 2D orthographic — ให้ทุกคนตั้งชื่อแผ่นสม่ำเสมอ */
@@ -76,7 +79,9 @@ function QaPointCard({ p, onChange, onDelete, isPinning, onPinToggle, onUnpin, h
     <PointCardShell label={p.balloon_no || '?'} caption="จุดตรวจชิ้นงาน" pinned={p.pos_x != null}
       isPinning={isPinning} canPin={hasImage} onPinToggle={onPinToggle} onUnpin={onUnpin} onDelete={onDelete}
       inactive={!p.is_active}
-      closeup={{ preview: p._imgPreview, onPick: f => onChange({ _imgFile: f }), onClear: () => onChange({ _imgFile: null, _imgPreview: null, image_path: null }) }}>
+      /* 🔴 แนบรูปแล้วต้องเห็นพรีวิวทันที — เดิมเก็บแต่ `_imgFile` ⇒ จอยังเขียน "แนบรูปจุดนี้"
+         เหมือนไม่มีอะไรเกิดขึ้น แล้วคนแนบซ้ำหลายรอบ (audit รูปภาพ 16/11) */
+      closeup={{ preview: p._imgPreview, onPick: f => onChange({ _imgFile: f, _imgPreview: URL.createObjectURL(f) }), onClear: () => onChange({ _imgFile: null, _imgPreview: null, image_path: null }) }}>
       <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: '90px 1fr', gap: 8, marginBottom: 8 }}>
         <input value={p.balloon_no} onChange={e => onChange({ balloon_no: e.target.value })} placeholder="No." aria-label={tr('เลข balloon')} title={tr('เลข balloon ตามแบบ เช่น H35, A1, 7')} />
         <input value={p.characteristic} onChange={e => onChange({ characteristic: e.target.value })} placeholder={tr('ชื่อจุดตรวจ เช่น ความกว้างร่อง A')} />
@@ -294,10 +299,10 @@ export default function QaPointsEditor({ part, focusItemId, methodHist, writeChe
     setFrameIdx(frames.length);
     setTitleFor(added[0]._key);
   };
-  const removeFrame = (key) => {
+  const removeFrame = async (key) => {
     const f = frames.find(x => x._key === key);
     const cnt = points.filter(p => p._frameKey === key && p.pos_x != null).length;
-    if (!window.confirm(`เอาแผ่น "${f?.title || ''}" ออก?${cnt ? `\nหมุด ${cnt} จุดบนแผ่นนี้จะถูกถอด (ตัวจุดตรวจไม่หาย)` : ''}\n(มีผลเมื่อกดบันทึก)`)) return;
+    if (!await askConfirm(`เอาแผ่น "${f?.title || ''}" ออก?${cnt ? `\nหมุด ${cnt} จุดบนแผ่นนี้จะถูกถอด (ตัวจุดตรวจไม่หาย)` : ''}\n(มีผลเมื่อกดบันทึก)`)) return;
     setFrames(prev => prev.filter(x => x._key !== key));
     setPoints(prev => prev.map(p => (p._frameKey === key ? { ...p, pos_x: null, pos_y: null, _frameKey: null, label_dx: null, label_dy: null } : p)));
     setFrameIdx(0);
@@ -313,11 +318,25 @@ export default function QaPointsEditor({ part, focusItemId, methodHist, writeChe
   };
 
   /* ── บันทึกทั้งหมดครั้งเดียว ── */
+  /* แผ่น Drawing — บีบไปแล้วตอนเลือกไฟล์ (2560px/2.5MB/q0.9 · tier เดียวกับผัง) · PDF ส่งดิบ ≤20MB */
   const upload = async (file, prefix) => {
     const ext = file.type === 'application/pdf' ? 'pdf' : 'jpg';
     const path = `parts/${part.id}/${prefix}${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
     const { error: e } = await supabase.storage.from(BUCKET).upload(path, file, uploadOpts());
     if (e) throw new Error(`อัปโหลดรูปไม่สำเร็จ: ${e.message}`);
+    return path;
+  };
+
+  /* 📷 รูปโคลสอัพต่อจุดตรวจ — 🔴 **ต้องบีบก่อนอัปเสมอ** (audit รูปภาพ 16/11)
+     บั๊กที่แก้: เดิมส่ง `p._imgFile` (ไฟล์ดิบจากกล้องมือถือ ผ่านแค่ `acceptImageFile`) เข้า `upload()`
+     ตรงๆ ⇒ รูป 3-8 MB ขึ้น `qa-drawings` ทั้งใบ แล้วใบตรวจที่โชว์หมุด 🔍 ต้องโหลดทั้งก้อน
+     (ฝั่ง PM จุดเดียวกันบีบอยู่แล้ว — จุดนี้คือจุดที่ "ลืมบีบ" เพราะใช้ `upload()` ร่วมกับแผ่น Drawing)
+     🔴 นามสกุลต้องมาจาก `ext` ที่ตัวบีบคืนมา ห้าม hardcode '.jpg' (Safari เก่าคืน JPEG/PNG เอง) */
+  const uploadCloseup = async (file) => {
+    const { blob, ext } = await compressPhotoImage(file);
+    const path = `parts/${part.id}/cp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
+    const { error: e } = await supabase.storage.from(BUCKET).upload(path, blob, uploadOpts());
+    if (e) throw new Error(`อัปโหลดรูปจุดตรวจไม่สำเร็จ: ${e.message}`);
     return path;
   };
 
@@ -365,7 +384,7 @@ export default function QaPointsEditor({ part, focusItemId, methodHist, writeChe
         const p = pts[i];
         let imagePath = p.image_path;
         if (p._imgFile) {
-          imagePath = await upload(p._imgFile, 'cp-');
+          imagePath = await uploadCloseup(p._imgFile);
           if (p.id && initial.itemImgs[p.id]) stale.push(initial.itemImgs[p.id]);
         } else if (!imagePath && p.id && initial.itemImgs[p.id]) {
           stale.push(initial.itemImgs[p.id]);   // กด "ลบรูป"

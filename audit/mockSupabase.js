@@ -377,15 +377,18 @@ const TABLE_ROWS = {
     handed_by: `หัวหน้าทดสอบ ${i}`,
   }),
 
+  /* 🏢 ชั้นบน (20/11 · ห้ามถอด) — ของจริงส่วนงานทุกตัวชี้ plant แล้ว (migration 20261120_org_nodes_upper_layer_rows_main.sql)
+     ⇒ แถว 13 = company (ราก) · 12 = plant ใต้ company · PD1 (แถว 1) ชี้ plant · JIG MTN (6) ยังไม่มีแม่ = เคส "แผนกขึ้นตรง"
+     ชั้นบนไม่มี CC/ฝ่าย ตามของจริง (ใส่ = ไหลลงหน่วยผ่าน divisionOfNode/laborTypeOfNode) · ทีมเหลือ 8–11,15 */
   org_nodes: (r, i) => ({
     ...r,
-    kind: i === 1 ? 'section' : (i === 2 || i === 6) ? 'department' : i <= 5 || i === 7 ? 'line' : 'team',
-    code: i === 1 ? 'PD1' : i <= 5 || i === 7 ? null : i === 6 ? null : r.code,
-    name: i === 6 ? 'JIG MTN' : r.name,   // แผนกช่างชื่อจริง — ให้สาย ⚡ KPI ช่าง (kpi_mtn_rollup → kpiAuto) ถูกรันใน harness
-    parent_id: i === 1 || i === 6 ? null : i === 2 ? 'id-1' : i <= 5 ? 'id-2' : i === 7 ? 'id-6' : 'id-3',
+    kind: i === 13 ? 'company' : i === 12 ? 'plant' : i === 1 ? 'section' : (i === 2 || i === 6) ? 'department' : i <= 5 || i === 7 ? 'line' : 'team',
+    code: i === 13 ? '2100' : i === 12 ? '2140' : i === 1 ? 'PD1' : i <= 5 || i === 7 ? null : i === 6 ? null : r.code,
+    name: i === 13 ? 'TSAT' : i === 12 ? 'TSAT-P4' : i === 6 ? 'JIG MTN' : r.name,   // แผนกช่างชื่อจริง — ให้สาย ⚡ KPI ช่าง (kpi_mtn_rollup → kpiAuto) ถูกรันใน harness
+    parent_id: i === 13 || i === 6 ? null : i === 12 ? 'id-13' : i === 1 ? 'id-12' : i === 2 ? 'id-1' : i <= 5 ? 'id-2' : i === 7 ? 'id-6' : 'id-3',
     ref_line_id: i >= 3 && i <= 5 ? i : null,          // 🔑 เลข — ชี้ production_lines.id (ดูหมายเหตุที่ production_lines)
     division: i === 1 ? 'production' : i === 6 ? 'maintenance' : null,
-    cost_center: isNullish(r) ? null : `21406${String(i).padStart(5, '0')}`,
+    cost_center: isNullish(r) || i === 12 || i === 13 ? null : `21406${String(i).padStart(5, '0')}`,
     sort_order: i,
   }),
   /* 🧑‍🤝‍🧑 Manpower Control Board (2026-10-06) — ผังคนต้องได้ "ตำแหน่ง + หน่วย + ทีม" คละกัน
@@ -999,6 +1002,17 @@ const TABLE_FIXED = {
         { key: 'from_vendor', label: 'รับคืนจากชุบ', kind: 'input' },
         { key: 'at_vendor', label: 'ค้างที่ร้านชุบ', kind: 'recur', recur: 'สูตรที่ยังไม่มี' },
       ] },
+    /* 🏬 บอร์ดสโตร์ (16/11) — start_date ว่าง = หน้าต่างเลื่อนตามวันนี้ · ไม่มี FC/SL · แถว รับ/จ่าย/คงเหลือ/SAP/Diff */
+    { id: 'mon-store', board_key: 'store-s407', name: 'S407 · พื้นที่สโตร์ภายนอก (Purchase part)', kind: 'st_purchase',
+      line_name: 'STORE', customer: null, period_kind: 'day', period_count: 22,
+      start_date: null, sl_row: 'out', sl_includes_seed: false, sort_order: 2, note: null,
+      rows: [
+        { key: 'in', label: 'รับ', kind: 'system' },
+        { key: 'out', label: 'จ่าย', kind: 'system' },
+        { key: 'balance', label: 'คงเหลือ', kind: 'recur', recur: 'stock_run' },
+        { key: 'sap', label: 'SAP', kind: 'input' },
+        { key: 'diff', label: 'Diff (SAP − คงเหลือ)', kind: 'recur', recur: 'sap_diff' },
+      ] },
   ],
   /* พาร์ท: mp-1 ใส่ยอดยกมาครบ · mp-2 **ไม่ใส่** (ต้องขึ้นแถบ "ยังไม่ใส่ยอดยกมา") ·
      mp-3 ไม่มีเลข MAT ในทะเบียนสินค้า (ต้องขึ้นป้าย "ยังไม่อยู่ในทะเบียนสินค้า") */
@@ -1027,6 +1041,12 @@ const TABLE_FIXED = {
       model: null, raw_mat: null, process: null, rack: null, lot_qty: null, packing: null, cost: null,
       ct_sec: null, fc: null, pieces_per_shot: 2, kg_per_piece: 0.148, spec: 'WSS-M1A365-A11 1.40 X 187 X COIL',
       semi_part: 'GST FRT FNDR APR LH', sort_order: 1, note: null, is_active: true },
+    { id: 'mp-st1', board_id: 'mon-store', mat_no: '30047784', part_no: null, part_name: 'N1WB-E286F72-AC',
+      model: null, raw_mat: null, process: null, rack: null, lot_qty: null, packing: 300, cost: null,
+      ct_sec: null, fc: null, pieces_per_shot: null, kg_per_piece: null, spec: null, semi_part: null, sort_order: 1, note: null, is_active: true },
+    { id: 'mp-st2', board_id: 'mon-store', mat_no: '30047785', part_no: null, part_name: 'N1WB-E286F73-AC',
+      model: null, raw_mat: null, process: null, rack: null, lot_qty: null, packing: 300, cost: null,
+      ct_sec: null, fc: null, pieces_per_shot: null, kg_per_piece: null, spec: null, semi_part: null, sort_order: 2, note: null, is_active: true },
     { id: 'mp-6', board_id: 'mon-bad', mat_no: '20066542', part_no: 'R1WB-17K824-AAW', part_name: null,
       model: null, raw_mat: null, process: null, rack: null, lot_qty: null, packing: null, cost: null,
       ct_sec: null, fc: 3383.6, pieces_per_shot: null, kg_per_piece: null, spec: null, semi_part: null,

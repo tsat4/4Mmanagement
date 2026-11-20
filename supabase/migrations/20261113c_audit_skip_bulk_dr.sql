@@ -2,10 +2,13 @@
 -- หยุด audit "การนำเข้าเป็นชุด" — เก็บสรุป 1 แถว แทน N แถว
 -- DR ("Product DB" · eyhclzkifitbhbljgoav)                             2026-11-13
 --
--- ⏳🔴 **ยังไม่ได้ apply** (13/11 · รออนุมัติจาก user) — เช็คของจริงก่อนเชื่อไฟล์นี้:
---      select to_regprocedure('public.fn_monitoring_orders_replace(jsonb,text)') is not null;
---   ⇒ `src/components/MonitoringUpload.jsx` **ยังเป็นของเดิม (delete + insert แยกคำขอ)**
---     apply เสร็จเมื่อไหร่ ต้องตามไปสลับหน้านั้นให้เรียก RPC ในคอมมิทเดียวกัน
+-- ✅ **apply แล้ว 16/11** · พิสูจน์ด่าน `app.audit` ด้วยตารางทดสอบ (สร้าง-ทดสอบ-ลบทิ้ง):
+--    ไม่ตั้งค่า = มี audit ปกติ · ตั้ง 'off' = INSERT/UPDATE/DELETE ได้ 0 แถว ·
+--    transaction ใหม่ค่าคืนเป็นว่างเอง (ไม่รั่วแม้ connection ถูก pool ใช้ซ้ำ)
+--
+-- ⚠️ **ห้ามทดสอบ RPC ด้วยของจริง** — `delete` ไม่ขึ้นกับ `p_rows` ⇒ เรียกเปล่าก็ล้างออเดอร์ทั้งชุด
+--    และ `shipping_phase_alerts` ผูก FK `on delete cascade` = หายตามไปด้วย
+--    (`line_stock_transactions.ref_shipment_id` = `on delete set null`)
 --
 -- ที่มา: `customer_shipping_orders` = **28.2% ของ audit_log ทั้งตาราง**
 --   (INSERT 17,640 ≈ DELETE 14,933 — เกือบเท่ากัน = ลบทั้งชุดแล้วเขียนใหม่)

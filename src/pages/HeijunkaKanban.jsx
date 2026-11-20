@@ -32,7 +32,7 @@ import { DELIVER_GATES, PICK_GATES, reqSourceMeta, unreceivedAge } from '../util
 import { openDemandMatsByLine } from '../lib/lineDemandSync';
 import { slocCodeOfLine, homeSlocOf } from '../utils/storageLoc';
 import { loadHomeSlocs } from '../utils/homeSloc';   // 🏠 ที่จัดเก็บหลักของพาร์ท (05/11)
-import { buildReceiptRows, RECEIPT_LINE } from '../utils/stockReceipt';
+import { buildReceiptRows, RECEIPT_LINE, STORE_NEG_NOTE } from '../utils/stockReceipt';
 import { rawSourceLocOf, splitRawConsume, inflowDestOf } from '../utils/partRefStock';   // 📤 ตัดวัตถุดิบล็อตจากคลังที่ของอยู่จริง (2026-10-12)   // 📥 ของซื้อเข้าคลัง ไม่ใช่เข้าไลน์ (2026-10-01)   // 🏬 ชั้นบัญชี SAP — tag ใบ/ledger ตอนเขียน (2026-09-08)
 import { lotMatsOf, lotOrphanRisk } from '../utils/stockReceipts';   // 🔧 พาร์ทที่ยอดเข้าคลังทางปิดล็อตทางเดียว
 import { releaseDueRows, openLotMats } from '../utils/kanbanReleaseDue';   // 📉 สต็อก ≤ min = ถึงจุดต้องปล่อยคัมบัง (26/10 · feedback สโตร์)
@@ -41,11 +41,14 @@ import { notifyEvent } from '../utils/notifyEvent';
 import PageHeader from '../components/PageHeader';
 import Page from '../components/Page';
 import FilterBar from '../components/FilterBar';
+import FilterMore from '../components/FilterMore';
 import LineScopeSelect from '../components/LineScopeSelect';
 import Segmented from '../components/Segmented';
 import SearchInput from '../components/SearchInput';
 import { ALL } from '../utils/filterLabels';
 import useTabParam from '../utils/useTabParam';
+import { useLiveBoard } from '../utils/useLiveBoard';
+import InfoMore from '../components/InfoMore';
 import { groupAccumulator, STALE_DAYS } from '../utils/pullAccumulator';
 import { storeBtn } from '../utils/storeUi';
 import MatLabel from '../components/MatLabel';
@@ -53,12 +56,13 @@ import { fetchByIds, openPlusHistory } from '../utils/fetchByIds';
 import { halfDayBreakIntervals, halfDayBreakBands, breakBandName, breakBandTitle } from '../utils/oee';
 import { SPENT_STATUSES } from '../utils/shiftCapacity';
 import PartCard, { partCardGrid } from '../components/PartCard';
-import StatusZones from '../components/StatusZones';
+import StatusZones, { RowTable } from '../components/StatusZones';
 import PartThumb from '../components/PartThumb';
 import { loadPartImages, partImageOf, imageCoverage } from '../utils/partImages';
 import { loadDocForms } from '../utils/docForms';
 import { downloadCsvDoc } from '../utils/csvDoc';
 import { tr } from '../utils/i18n';
+import { directSheetRows } from '../utils/bomTree';   // 🌳 ลูกตรงแบบ SAP (19/11)
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 
 /* 🧭 ทะเบียนมุมมองของบอร์ดสโตร์ (2026-09-25 · คำสั่ง user *"สับสนการใช้งาน แต่ละ tab มากๆ"*)
@@ -1133,7 +1137,8 @@ function PullBoard({ lotRequests, rawRequests, accumulator, lotSizeMap, releaseD
    🛒 จัดซื้อ (300/500 ซื้อ supplier) → รับเข้าสโตร์ · Rack Center (ภาชนะ+packaging) → ทุกไลน์
    ทุกสโตร์ใช้การ์ดหน้าตาเดียวกัน: สถานะ → ปลายทาง → ปุ่มขยับสถานะ ────────────── */
 const STORE_TABS = [
-  { key: 'fg',       icon: '🏭', label: 'Store FG',      desc: 'งาน FG 1xx → ไลน์ประกอบ · รอบส่งคัมบัง' },
+  /* 16/11 (คำสั่ง user "ไม่มี FG เข้าไลน์") — ตู้นี้จริงๆ คือรอบส่งคัมบังเข้าไลน์ ไม่ใช่ FG · key 'fg' คงเดิม (identifier/URL ?store=fg) */
+  { key: 'fg',       icon: '🚚', label: 'รอบส่งคัมบังเข้าไลน์', desc: 'รอบส่งชิ้นส่วนเข้าไลน์ตามคัมบัง (ไม่มี FG เข้าไลน์)' },
   // คำอธิบายต้องบอกว่า "สโตร์ทำอะไร" ไม่ใช่ "ไลน์ทำอะไร" — คนอ่านคือสโตร์
   /* 🗂️ 04/11 (คำสั่ง user) — เลิกแท็บ "คิวเติม WIP" · ใบเบิก-ส่งเข้าไลน์ไปอยู่ตู้ตามเลขพาร์ท (`storeOfMat`)
      1xx → Store FG · 2xx → Store Semi Part (เดิม Store Child) · 3xx → สโตร์ภายนอก (ใหม่) · 5xx → Raw Mat · อื่นๆ → ไม่เข้ากลุ่ม */
@@ -1259,10 +1264,33 @@ const matchQ = (q, ...fields) => {
   return fields.some(f => String(f ?? '').toLowerCase().includes(s));
 };
 
+/* การ์ดกริดเดิม หรือแถวตาราง (pro · 19/11) — ลูกเป็น QueueCard ชุดเดิม เปลี่ยนแค่การวาง */
+function CardsOrRows({ table, style, children }) {
+  if (table) return <div style={style}><RowTable>{children}</RowTable></div>;
+  return <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(min(330px, 100%), 1fr))', gap: 12, ...style }}>{children}</div>;
+}
+
 function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false, focus = null, direction = null, areaOf = () => null, homeOf = () => null, rounds, deliveries, view, onConfirm, confirming, onReceive, imgOf,
-  lotRequests, rawRequests, rackRequests, pkgRequests, wipRequests, purchaseRequests, purchaseErr, busy, onAdvanceLot, onIssueRaw, onAdvanceWip, onCancelWip, onAdvancePurchase, setBulkBuy, fmt, workDate, nowMs, canOperate, lotMats = null, inflowRules = null }) {
+  lotRequests, rawRequests, rackRequests, pkgRequests, wipRequests, purchaseRequests, purchaseErr, busy, onAdvanceLot, onIssueRaw, onAdvanceWip, onCancelWip, onAdvancePurchase, setBulkBuy, fmt, workDate, nowMs, canOperate, lotMats = null, inflowRules = null,
+  leadFilters = null, kpiSlot = null, purpose = null }) {
 
   const { roundAlloc } = view;
+  /* 📋 19/11 (mockup รับ/ส่งของที่ user เคาะ) — ฝังใน Stock Management (`direction`) = หน้าตา "1 หน้า 1 งาน":
+     แท็บย่อยจริง (ตัวเลขค้างบนแท็บ) → แถบกรองเดียว → แถบไลน์เรียกของ → ตัวเลขสรุป → ตาราง 1 แถว = 1 ใบ
+     /heijunka (ไม่มี direction) = หน้าตาเดิมเป๊ะ · มือถือ = การ์ดเหมือนเดิม (แถวกว้างอ่านไม่ได้บนจอแคบ) */
+  const pro = !!direction;
+  const isMobileBoard = useIsMobile();
+  const zl = pro && !isMobileBoard ? 'table' : 'cards';
+  /* ตัวเลขบนแท็บ "รอรับเข้า" — คิวโหลดในคอมโพเนนต์ของมันเองซึ่ง mount เฉพาะตอนเปิดแท็บ
+     ⇒ นับหัว (head) แยก · อ่านไม่ได้ = ไม่ขึ้นตัวเลข (ไม่รู้ ≠ 0) */
+  const wantReceiptCount = !!opsStores?.includes('receipts');
+  const [receiptCount, setReceiptCount] = useState(null);
+  const loadReceiptCount = useCallback(async () => {
+    if (!wantReceiptCount) return;
+    const { count, error } = await supabaseDR.from('stock_receipts').select('id', { count: 'exact', head: true }).eq('status', 'pending');
+    setReceiptCount(error ? null : count);
+  }, [wantReceiptCount]);
+  useLiveBoard(loadReceiptCount, { tables: ['stock_receipts'], topic: 'stock-receipts-count', enabled: wantReceiptCount });
   const [buyFilter, setBuyFilter] = useState(() => urlPick('buy', ['3', '5'], ''));   // '' | '3' | '5' · ?buy= (จอวนหน้า)
   const [q, setQ] = useState(() => focus?.q || '');   // ค้นหา: รหัส / ชื่อ / ไลน์ปลายทาง
   /* 🧾 05/11 (คำสั่ง user ข้อ B) — ใบเบิกจากใบผลิต (`line_order`) ที่ยังรอหยิบ แต่ไลน์ไม่มีใบผลิตเปิดอยู่ที่ใช้พาร์ทนั้นแล้ว
@@ -1371,7 +1399,7 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
       <div style={{ marginBottom: 18 }}>
         <div style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--text)', margin: '0 0 8px' }}>{tr('ใบเบิก-ส่งเข้าไลน์')} <span style={{ fontWeight: 500, color: 'var(--muted)', fontSize: 12 }}>{tr('· ไลน์เรียก/เปิดใบผลิต → สโตร์หยิบ → ส่งถึงไลน์')}</span></div>
         {rows.length === 0 ? <div style={{ padding: 18, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('ไม่มีใบเบิกที่ค้างอยู่')}{q ? ` และตรงกับคำค้น "${q}"` : ''}</div> : (
-        <StatusZones rows={rows} zones={WIP_ZONES(showDone)} renderCard={w => {
+        <StatusZones layout={zl} rows={rows} zones={WIP_ZONES(showDone)} renderCard={w => {
             const st = WIP_STATUS[w.status] || WIP_STATUS.pending;
             /* 🔴 2026-10-01 — ใบขอเติมมีรูปแบบเดียว: "ส่งพาร์ทเข้าไลน์" (ชั้น พื้นที่→ไลน์→พาร์ท)
                เลิกใบแบบ "เติมจุด WIP จุดใดจุดหนึ่ง" แล้ว (ไม่เคยถูกใช้จริงสักใบ — ทุกใบในฐานเป็นใบระดับไลน์)
@@ -1426,54 +1454,19 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
     );
   };
 
-  return (
-    <div style={{ padding: 16 }}>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-        {/* แท็บ Store FG = รอบส่ง — ไม่มีรอบ active = ไม่มีอะไรให้ทำ ซ่อนไปเลย (โผล่เองเมื่อไลน์ตั้งรอบ) · audit 2026-09-07 */}
-        {STORE_TABS.filter(t => (opsStores ? opsStores.includes(t.key) : !t.inOnly)
-          && (t.key !== 'fg' || rounds.length > 0 || wipAllBy.fg > 0)
-          && (t.key !== 'other' || wipAllBy.other > 0)).map(t => (
-          <button key={t.key} onClick={() => setStore(t.key)} title={tr(t.desc)}
-            style={{ padding: '10px 16px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-body)',
-              background: store === t.key ? 'var(--accent)' : 'var(--bg2)', color: store === t.key ? 'var(--accent-ink)' : 'var(--text2)',
-              border: `1px solid ${store === t.key ? 'var(--accent)' : 'var(--border)'}`, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, minWidth: 150 }}>
-            <span>{t.icon} {tr(t.label)} {counts[t.key] > 0 && <span style={{ opacity: 0.8 }}>({counts[t.key]})</span>}</span>
-            <span style={{ fontSize: 11, fontWeight: 500, opacity: 0.75 }}>{tr(t.desc)}</span>
-          </button>
-        ))}
-      </div>
+  /* 🗂️ ตู้ที่โชว์ (เงื่อนไขเดิมทั้งหมด) — ใช้ทั้งแบบปุ่มการ์ด (/heijunka) และแท็บย่อย (pro) */
+  const visibleStores = STORE_TABS.filter(t => (opsStores ? opsStores.includes(t.key) : !t.inOnly)
+    && (t.key !== 'fg' || rounds.length > 0 || wipAllBy.fg > 0)
+    && (t.key !== 'other' || wipAllBy.other > 0));
+  if (opsStores) visibleStores.sort((a, b) => opsStores.indexOf(a.key) - opsStores.indexOf(b.key));
+  /* ตัวกรองพื้นที่/สโตร์มีผลกับใบเบิก-ส่งเข้าไลน์ + ใบล็อต/ใบเบิกวัตถุดิบเท่านั้น ⇒ แท็บอื่นไม่โชว์ (ช่องที่กดแล้วไม่มีผล = จอโกหก) */
+  const areaApplies = ['child', 'ext', 'raw', 'fg', 'other', 'lots'].includes(store);
+  const ownBar = store === 'receipts';   // คิวรอรับเข้ามีแถบกรองของตัวเอง (คลังปลายทาง/ต้นทาง/รวมกอง) — แถบเดียวต่อแท็บ
+  const anyFilter = !!q || !!areaSel || !!storeSel || showDone;
+  const clearFilters = () => { setQ(''); setAreaSel(''); setStoreSel(''); setShowDone(false); };
+  const countOf = (k) => (k === 'receipts' ? receiptCount : counts[k]);
 
-      {/* ── ค้นหา + สลับงานค้าง/ทั้งหมด (ใช้ได้ทุกแท็บ) ── */}
-      <FilterBar bare style={{ marginBottom: 14 }}>
-        <SearchInput value={q} onChange={setQ} fields="รหัส / ชื่อพาร์ท / ไลน์" grow={false} />
-        {direction && (() => {
-          const lines = direction === 'out'
-            ? [...wipRequests.map(r => r.line_name), ...rounds.map(r => r.line_name), ...lotRequests.map(l => l.source_line)]
-            : lotRequests.map(l => l.source_line);
-          const opts = [...new Set(lines.filter(Boolean).map(areaKey))].sort();
-          const mats = direction === 'out'
-            ? [...wipRequests.map(r => r.mat_no), ...lotRequests.map(l => l.child_mat_no)]
-            : lotRequests.map(l => l.child_mat_no);
-          const storeOpts = [...new Set(mats.filter(Boolean).map(storeKey))].sort();
-          const sideLbl = direction === 'out' ? 'ต้นทาง' : 'ปลายทาง';
-          return (<>
-            <select value={storeSel} onChange={e => setStoreSel(e.target.value)} aria-label={`พื้นที่สโตร์${sideLbl}`}>
-              <option value="">{sideLbl}{tr(': ทุกพื้นที่สโตร์')}</option>
-              {storeOpts.map(a => <option key={a} value={a}>{sideLbl}: 🏬 {a === '—' ? 'พาร์ทที่ยังไม่ตั้งที่จัดเก็บหลัก' : a}</option>)}
-            </select>
-            <select value={areaSel} onChange={e => setAreaSel(e.target.value)} aria-label={direction === 'out' ? tr('พื้นที่ปลายทาง') : tr('พื้นที่ต้นทาง')}>
-              <option value="">{direction === 'out' ? tr('ปลายทาง: ทุกพื้นที่ผลิต') : tr('ต้นทาง: ทุกพื้นที่ผลิต')}</option>
-              {opts.map(a => <option key={a} value={a}>{direction === 'out' ? 'ปลายทาง' : 'ต้นทาง'}: {a === '—' ? 'ไลน์ที่ยังไม่ผูกพื้นที่ SAP' : a}</option>)}
-            </select>
-          </>);
-        })()}
-        <button onClick={() => setShowDone(v => !v)} style={{
-          padding: '7px 14px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-body)',
-          background: showDone ? 'var(--bg2)' : 'var(--accent)', color: showDone ? 'var(--text2)' : '#08130a',
-          border: `1px solid ${showDone ? 'var(--border)' : 'var(--accent)'}`,
-        }}>{showDone ? tr('ทั้งหมด (รวมที่เสร็จแล้ว)') : tr('เฉพาะงานค้าง')}</button>
-      </FilterBar>
-
+  const body = (<>
       {store === 'fg' && (<>
         {hiddenNote}
         {wipSection('fg')}
@@ -1481,7 +1474,7 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
           ทุกไลน์ใช้โหมด "ส่งตามคำขอ" (เบิกตอนไหนส่งตอนนั้น) — ไม่มีรอบให้ยืนยัน · ใบเบิก-ส่งงาน FG (1xx) อยู่ด้านบนของตู้นี้ · ชิ้นส่วนอื่นอยู่ตู้ตามเลขพาร์ท
         </div> :
         vRounds.length === 0 ? <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>ไม่มีรอบที่ตรงกับคำค้น "{q}"</div> :
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(min(330px, 100%), 1fr))', gap: 12 }}>
+        <CardsOrRows table={zl === 'table'}>
           {vRounds.map(r => {
             const key = `${r.line_name}|${r.shift}|${r.round_no}`;
             const status = getRoundStatus(r, confirmedSet, receivedMap, workDate, nowMs);
@@ -1503,18 +1496,20 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
                 ]} />
             );
           })}
-        </div>}
+        </CardsOrRows>}
       </>)}
 
       {store === 'child' && (<>
         {hiddenNote}
-        {wipSection('child')}
+        {wipSection('child') || (direction === 'out' && <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
+          {tr('ยังไม่มีใบเบิกชิ้นส่วน Semi Part (2xx) — ใบเกิดจากไลน์กด "📦 เบิก" ใน Daily Report')}
+        </div>)}
         {/* ขาออก (/line-stock?tab=out) = เฉพาะใบเบิก-ส่งเข้าไลน์ · ใบล็อตย้ายไปขาเข้า (แท็บ 'lots') */}
         {direction !== 'out' && (<>
         {wipAllBy.child > 0 && <div style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--text)', margin: '6px 0 8px' }}>{tr('ใบล็อตผลิต Semi Part')}</div>}
         {lotRequests.length === 0 ? <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('ยังไม่มีใบสั่งผลิตพาร์ทย่อย')}</div> :
         vLots.length === 0 ? <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('ไม่มีใบสั่งผลิตที่ค้างอยู่')}{q ? ` และตรงกับคำค้น "${q}"` : ''}</div> :
-        <StatusZones rows={vLots} zones={LOT_ZONES(showDone)} renderCard={lot => {
+        <StatusZones layout={zl} rows={vLots} zones={LOT_ZONES(showDone)} renderCard={lot => {
             const st = LOT_STATUS[lot.status] || LOT_STATUS.pending;
             /* 🔴 27/10 (feedback สโตร์ ข้อ A2): *"ปุ่ม รับของเข้าสโตร์ ให้เอาออก ... ถ้าสโตร์มีการกดรับงาน
                จากหน้า สต็อกในไลน์ > รอรับเข้า"* ⇒ ขั้นสุดท้ายของล็อตมี 2 ความหมาย แล้วแต่ "ของเข้าทางไหน":
@@ -1555,7 +1550,7 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
         {hiddenNote}
         {lotRequests.length === 0 ? <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('ยังไม่มีใบสั่งผลิตพาร์ทย่อย')}</div> :
         vLots.length === 0 ? <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('ไม่มีใบสั่งผลิตที่ค้างอยู่')}{q ? ` และตรงกับคำค้น "${q}"` : ''}</div> :
-        <StatusZones rows={vLots} zones={LOT_ZONES(showDone)} renderCard={lot => {
+        <StatusZones layout={zl} rows={vLots} zones={LOT_ZONES(showDone)} renderCard={lot => {
             const st = LOT_STATUS[lot.status] || LOT_STATUS.pending;
             /* 🔴 27/10 (feedback สโตร์ ข้อ A2): *"ปุ่ม รับของเข้าสโตร์ ให้เอาออก ... ถ้าสโตร์มีการกดรับงาน
                จากหน้า สต็อกในไลน์ > รอรับเข้า"* ⇒ ขั้นสุดท้ายของล็อตมี 2 ความหมาย แล้วแต่ "ของเข้าทางไหน":
@@ -1607,7 +1602,7 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
               {purGroups.some(g => g.slips > 1) && ' — ใบซ้ำพาร์ทเดียวกันเกิดจากระบบออกใบละล็อต · กดปุ่มบนการ์ดเพื่อเลื่อนสถานะรวมทีเดียว'}
             </div>
             {hiddenNote}
-            <StatusZones rows={purGroups} zones={PUR_ZONES(showDone)} renderCard={g => {
+            <StatusZones layout={zl} rows={purGroups} zones={PUR_ZONES(showDone)} renderCard={g => {
                 const st = PURCHASE_STATUS[g.status] || PURCHASE_STATUS.pending;
                 const many = g.slips > 1;
                 const lot = Number(g.min_lot) === Number(g.max_lot)
@@ -1646,7 +1641,7 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
         {wipAllBy.raw > 0 && <div style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--text)', margin: '6px 0 8px' }}>{tr('ใบเบิกวัตถุดิบของใบล็อต')}</div>}
         {rawRequests.length === 0 ? <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('ยังไม่มีใบเบิกวัตถุดิบ')}</div> :
         vRaws.length === 0 ? <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('ไม่มีใบเบิกที่ค้างอยู่')}{q ? ` และตรงกับคำค้น "${q}"` : ''}</div> :
-        <StatusZones rows={vRaws} zones={RAW_ZONES(showDone)} statusOf={r => (r.status === 'issued' ? 'issued' : 'pending')} renderCard={r => {
+        <StatusZones layout={zl} rows={vRaws} zones={RAW_ZONES(showDone)} statusOf={r => (r.status === 'issued' ? 'issued' : 'pending')} renderCard={r => {
             const parentLot = lotRequests.find(l => l.id === r.lot_request_id);
             const issued = r.status === 'issued';
             return (
@@ -1671,7 +1666,7 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
           </div>
           <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--muted)', marginBottom: 8 }}>{tr('ภาชนะ (แร็ค/ถาด)')}</div>
           {vRacks.length === 0 ? <div style={{ padding: '10px 0 20px', color: 'var(--muted)', fontSize: 13 }}>{rackRequests.length === 0 ? tr('ยังไม่มีการเรียกภาชนะ') : tr('ไม่มีการเรียกภาชนะที่ค้างอยู่')}</div> : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(min(330px, 100%), 1fr))', gap: 12, marginBottom: 20 }}>
+            <CardsOrRows table={zl === 'table'} style={{ marginBottom: 20 }}>
               {vRacks.map(r => {
                 const st = RACK_STATUS[r.status] || RACK_STATUS.requested;
                 return (
@@ -1682,11 +1677,11 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
                     meta={r.note || ''} />
                 );
               })}
-            </div>
+            </CardsOrRows>
           )}
           <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--muted)', marginBottom: 8 }}>{tr('Packaging (จากการผลิต)')}</div>
           {vPkgs.length === 0 ? <div style={{ padding: '10px 0', color: 'var(--muted)', fontSize: 13 }}>{pkgRequests.length === 0 ? tr('ยังไม่มีใบเบิก packaging') : tr('ไม่มีใบเบิก packaging ที่ค้างอยู่')}</div> : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(min(330px, 100%), 1fr))', gap: 12 }}>
+            <CardsOrRows table={zl === 'table'}>
               {vPkgs.map(p => {
                 const issued = p.status === 'issued';
                 return (
@@ -1701,7 +1696,7 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
                     ]} />
                 );
               })}
-            </div>
+            </CardsOrRows>
           )}
         </>
       )}
@@ -1709,7 +1704,7 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
       {/* 🧪 งานชุบ — โหลดข้อมูลเอง (ใบส่งชุบ/ยอดคลัง) · ใช้คำค้น + "เฉพาะงานค้าง" ชุดเดียวกับแท็บอื่น */}
       {store === 'plating' && <PlatingBoard q={q} showDone={showDone} readOnly={readOnly} part={direction === 'out' ? 'send' : 'all'} />}
       {store === 'plating_in' && <PlatingBoard q={q} showDone={showDone} readOnly={readOnly} part="receive" />}
-      {store === 'receipts' && <StockReceiptQueue />}
+      {store === 'receipts' && <StockReceiptQueue banner={pro ? <StoreCallSiren variant="inline" here={direction === 'out'} /> : null} table={zl === 'table'} />}
 
       {store === 'open' && <OpenOrderDemandPanel q={q} />}
 
@@ -1719,6 +1714,105 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
           ยังไม่มีใบเบิก{store === 'ext' ? 'ชิ้นส่วนซื้อ (3xx)' : 'ที่เลขพาร์ทไม่เข้ากลุ่ม'} — ใบเกิดจากไลน์กด "📦 เบิก" ใน Daily Report
         </div>}
       </>)}
+  </>);
+
+  if (pro) return (
+    <div>
+      <PageHeader
+        tabs={visibleStores.map(t => ({ key: t.key, label: `${t.icon} ${tr(t.label)}`, title: tr(t.desc),
+          badge: countOf(t.key) > 0 ? String(countOf(t.key)) : undefined }))}
+        tab={store} onTab={setStore}
+      />
+      {/* แถบกรองเดียว · ปุ่มล้างตัวกรอง = ของกลางใน FilterBar (ตัวกรองอยู่ใน state ⇒ ส่ง onClear เมื่อมีค่าค้าง) */}
+      {!ownBar && (
+        <FilterBar onClear={anyFilter ? clearFilters : undefined} clearKeep={['store']}>
+
+          {leadFilters}
+          <SearchInput value={q} onChange={setQ} fields="รหัส / ชื่อพาร์ท / ไลน์" grow={false} />
+          {areaApplies && (() => {
+          const lines = direction === 'out'
+            ? [...wipRequests.map(r => r.line_name), ...rounds.map(r => r.line_name), ...lotRequests.map(l => l.source_line)]
+            : lotRequests.map(l => l.source_line);
+          const opts = [...new Set(lines.filter(Boolean).map(areaKey))].sort();
+          const mats = direction === 'out'
+            ? [...wipRequests.map(r => r.mat_no), ...lotRequests.map(l => l.child_mat_no)]
+            : lotRequests.map(l => l.child_mat_no);
+          const storeOpts = [...new Set(mats.filter(Boolean).map(storeKey))].sort();
+          const sideLbl = direction === 'out' ? 'ต้นทาง' : 'ปลายทาง';
+          return (<>
+            <select value={storeSel} onChange={e => setStoreSel(e.target.value)} aria-label={`พื้นที่สโตร์${sideLbl}`}>
+              <option value="">{sideLbl}{tr(': ทุกพื้นที่สโตร์')}</option>
+              {storeOpts.map(a => <option key={a} value={a}>{sideLbl}: 🏬 {a === '—' ? 'พาร์ทที่ยังไม่ตั้งที่จัดเก็บหลัก' : a}</option>)}
+            </select>
+            <select value={areaSel} onChange={e => setAreaSel(e.target.value)} aria-label={direction === 'out' ? tr('พื้นที่ปลายทาง') : tr('พื้นที่ต้นทาง')}>
+              <option value="">{direction === 'out' ? tr('ปลายทาง: ทุกพื้นที่ผลิต') : tr('ต้นทาง: ทุกพื้นที่ผลิต')}</option>
+              {opts.map(a => <option key={a} value={a}>{direction === 'out' ? 'ปลายทาง' : 'ต้นทาง'}: {a === '—' ? 'ไลน์ที่ยังไม่ผูกพื้นที่ SAP' : a}</option>)}
+            </select>
+          </>);
+        })()}
+          <button type="button" aria-pressed={!showDone} onClick={() => setShowDone(v => !v)} style={{
+            padding: '7px 14px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-body)',
+            background: showDone ? 'var(--bg2)' : 'var(--accent)', color: showDone ? 'var(--text2)' : 'var(--accent-ink)',
+            border: `1px solid ${showDone ? 'var(--border)' : 'var(--accent)'}`,
+          }}>{showDone ? tr('ทั้งหมด (รวมที่เสร็จแล้ว)') : tr('เฉพาะงานค้าง')}</button>
+          {purpose && <><span className="spacer" /><InfoMore label={tr('หน้านี้ทำอะไร')}>{tr(purpose)}</InfoMore></>}
+        </FilterBar>
+      )}
+      {!ownBar && <StoreCallSiren variant="inline" here={direction === 'out'} />}
+      {kpiSlot}
+      {body}
+    </div>
+  );
+
+  return (
+    <div style={{ padding: 16 }}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+        {/* แท็บ Store FG = รอบส่ง — ไม่มีรอบ active = ไม่มีอะไรให้ทำ ซ่อนไปเลย (โผล่เองเมื่อไลน์ตั้งรอบ) · audit 2026-09-07 */}
+        {STORE_TABS.filter(t => (opsStores ? opsStores.includes(t.key) : !t.inOnly)
+          && (t.key !== 'fg' || rounds.length > 0 || wipAllBy.fg > 0)
+          && (t.key !== 'other' || wipAllBy.other > 0)).map(t => (
+          <button key={t.key} onClick={() => setStore(t.key)} title={tr(t.desc)}
+            style={{ padding: '10px 16px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-body)',
+              background: store === t.key ? 'var(--accent)' : 'var(--bg2)', color: store === t.key ? 'var(--accent-ink)' : 'var(--text2)',
+              border: `1px solid ${store === t.key ? 'var(--accent)' : 'var(--border)'}`, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, minWidth: 150 }}>
+            <span>{t.icon} {tr(t.label)} {counts[t.key] > 0 && <span style={{ opacity: 0.8 }}>({counts[t.key]})</span>}</span>
+            <span style={{ fontSize: 11, fontWeight: 500, opacity: 0.75 }}>{tr(t.desc)}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* ── ค้นหา + สลับงานค้าง/ทั้งหมด (ใช้ได้ทุกแท็บ) ── */}
+      <FilterBar bare style={{ marginBottom: 14 }}>
+        <SearchInput value={q} onChange={setQ} fields="รหัส / ชื่อพาร์ท / ไลน์" grow={false} />
+        {direction && (() => {
+          const lines = direction === 'out'
+            ? [...wipRequests.map(r => r.line_name), ...rounds.map(r => r.line_name), ...lotRequests.map(l => l.source_line)]
+            : lotRequests.map(l => l.source_line);
+          const opts = [...new Set(lines.filter(Boolean).map(areaKey))].sort();
+          const mats = direction === 'out'
+            ? [...wipRequests.map(r => r.mat_no), ...lotRequests.map(l => l.child_mat_no)]
+            : lotRequests.map(l => l.child_mat_no);
+          const storeOpts = [...new Set(mats.filter(Boolean).map(storeKey))].sort();
+          const sideLbl = direction === 'out' ? 'ต้นทาง' : 'ปลายทาง';
+          return (<>
+            <select value={storeSel} onChange={e => setStoreSel(e.target.value)} aria-label={`พื้นที่สโตร์${sideLbl}`}>
+              <option value="">{sideLbl}{tr(': ทุกพื้นที่สโตร์')}</option>
+              {storeOpts.map(a => <option key={a} value={a}>{sideLbl}: 🏬 {a === '—' ? 'พาร์ทที่ยังไม่ตั้งที่จัดเก็บหลัก' : a}</option>)}
+            </select>
+            <select value={areaSel} onChange={e => setAreaSel(e.target.value)} aria-label={direction === 'out' ? tr('พื้นที่ปลายทาง') : tr('พื้นที่ต้นทาง')}>
+              <option value="">{direction === 'out' ? tr('ปลายทาง: ทุกพื้นที่ผลิต') : tr('ต้นทาง: ทุกพื้นที่ผลิต')}</option>
+              {opts.map(a => <option key={a} value={a}>{direction === 'out' ? 'ปลายทาง' : 'ต้นทาง'}: {a === '—' ? 'ไลน์ที่ยังไม่ผูกพื้นที่ SAP' : a}</option>)}
+            </select>
+          </>);
+        })()}
+        <button onClick={() => setShowDone(v => !v)} style={{
+          padding: '7px 14px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-body)',
+          background: showDone ? 'var(--bg2)' : 'var(--accent)', color: showDone ? 'var(--text2)' : '#08130a',
+          border: `1px solid ${showDone ? 'var(--border)' : 'var(--accent)'}`,
+        }}>{showDone ? tr('ทั้งหมด (รวมที่เสร็จแล้ว)') : tr('เฉพาะงานค้าง')}</button>
+      </FilterBar>
+
+      {body}
 
     </div>
   );
@@ -1743,7 +1837,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
   /* ด่านชั้นเขียนจริง (ไม่พึ่งการซ่อนปุ่ม) — ทุกฟังก์ชันที่ขยับสถานะ/ยอดในหน้านี้เรียกตัวนี้ก่อน (มีด่าน heijunka-monitor-only) */
   const opsGuard = () => {
     if (isOps) return true;
-    toast.error('หน้านี้ดูสัญญาณอย่างเดียว — ทำรายการที่ Line Stock › 📤 ขาออก / 📥 ขาเข้า');
+    toast.error('หน้านี้ดูสัญญาณอย่างเดียว — ทำรายการที่ Stock Management › 📤 ส่งของเข้าไลน์ / 📥 รับของเข้าคลัง');
     return false;
   };   // ปลดบล็อกสแกนจุดส่ง — "ระดับหัวหน้า ไม่ใช่คนที่ถูกบล็อก" (§4.6 ข้อ 5)
   const [workDate, setWorkDate]   = useState(getWorkDate());
@@ -2376,7 +2470,8 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
 
   /* 💾 ตัดสต็อกตอนยืนยันเตรียม (ขั้น "Scan for SAP update" ใน Smart Withdraw Kanban · 2026-09-07)
      เขียน ledger ฝั่ง DR 2 แถว: STORE −qty (type consume) · ไลน์ปลายทาง +qty (type issue) — สูตร view line_stock_summary
-     · STORE ไม่มีแถวสต็อกของพาร์ทนี้ = "ไม่รู้" → ไม่หัก (หักแล้วติดลบจากของที่ไม่เคยลงรับ) แต่จดเหตุผลไว้บนใบ + toast ห้ามเงียบ
+     · 🔴 19/11 (คำสั่ง user "ตัดเต็มและติดลบ") — **หัก STORE เต็มจำนวนเสมอ** แม้ STORE ไม่มีแถว/ยอดไม่พอ
+       (เดิมไม่หัก ⇒ ยอดค้าง STORE สูงเกินจริงสะสม) · ติดลบรอลงรับเข้า STORE หักล้าง · จดเหตุผลบนใบ + toast ห้ามเงียบ
      · id แถวเก็บที่ใบ (stock_txn_ids) — มีแล้วไม่ตัดซ้ำ · ledger ล้ม = ใบยังเป็น preparing แต่ stock_txn_note บอกว่ายังไม่ได้ตัด
      ⚠️ เปลี่ยนกฎเหล็ก 5 เดิม (ลูปไม่ตัดสต็อก) — สโตร์ห้ามไปบันทึก "จ่ายพาร์ทเข้าไลน์" ซ้ำสำหรับใบเหล่านี้ */
   /* คืน true = ตัดแล้ว (หรือเคยตัดไปแล้ว) · false = ยังไม่ได้ตัด
@@ -2405,9 +2500,9 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
     const lineSloc  = w.storage_location || slocCodeOfLine(slocs, linesArr, w.line_name);
     const storeSloc = homeSlocOf(homeSloc.map, w.mat_no);   // 🏠 05/11 — ที่จัดเก็บหลักของพาร์ท (ไม่ตั้ง = null ไม่เดา)
     const rows = [{ ...base, line_name: w.line_name, qty, type: 'issue', storage_location: lineSloc }];
-    if (stErr) note = `เช็คสต็อก STORE ไม่ได้: ${stErr.message}`;
-    else if (!st) note = 'STORE ไม่มีแถวสต็อกของพาร์ทนี้ — บวกเข้าไลน์แล้ว แต่ไม่หัก STORE (ลงรับเข้า STORE ก่อน)';
-    else rows.push({ ...base, line_name: 'STORE', qty, type: 'consume', storage_location: storeSloc });
+    rows.push({ ...base, line_name: 'STORE', qty, type: 'consume', storage_location: storeSloc });
+    if (stErr) note = `เช็คสต็อก STORE ไม่ได้ (${stErr.message}) — หัก STORE เต็มจำนวนแล้ว อาจติดลบ`;
+    else if ((parseFloat(st?.qty_on_hand) || 0) < qty) note = `${STORE_NEG_NOTE} (มี ${(parseFloat(st?.qty_on_hand) || 0).toLocaleString()} จ่าย ${Number(qty).toLocaleString()})`;
     if (!lineSloc) note = `${note ? note + ' · ' : ''}ไลน์ ${w.line_name} ยังไม่ผูกรหัสคลัง SAP — ledger ไม่มีมุม SAP (ผูกที่ 📦 Line Stock → แท็บ 🏬 โซนคลัง → ทะเบียนรหัสคลัง)`;
     let { data: ins, error } = await supabaseDR.from('line_stock_transactions').insert(rows).select('id');
     // 42703 = ยังไม่ apply 20260908_storage_locations_line_map (DR) → ตัดสต็อกแบบไม่ tag (ห้ามให้การตัดสต็อกล้มเพราะชั้นบัญชี)
@@ -2587,8 +2682,11 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
       // 3) BOM ของ product ที่เกี่ยวข้อง + kanban standards ของพาร์ทย่อย
       const productIds = [...new Set(dem.map(d => d.product?.id).filter(Boolean))];
       if (productIds.length === 0) { setBomMap({}); setLoading(false); return; }
-      const { data: boms } = await supabaseDR.from('bom_items')
+      const { data: bomsRaw } = await supabaseDR.from('bom_items')
         .select('*').in('product_id', productIds).eq('is_active', true);
+      // 🌳 19/11: ใบผลิตของสินค้าใช้แค่ "ลูกตรง" (กติกาเดียวกับตอน confirm) — หลานให้ใบของลูกเรียกเอง
+      //    ไม่กรอง = 100→200→500 ขอ 500 ตามใบของ 100 อีกรอบ (ซ้ำ + qty ต่อ 1 ลูก ไม่ใช่ต่อ 1 แม่)
+      const boms = directSheetRows(bomsRaw || [], dem.map(d => d.product).filter(Boolean));
       const bm = {};
       (boms || []).forEach(b => { (bm[b.product_id] = bm[b.product_id] || []).push(b); });
       setBomMap(bm);
@@ -2689,17 +2787,19 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
         created_by: fullName || 'Store',
       }));
       /* 🔴 02/11 (feedback ประชุม "ยอดสโตร์-ผลิตยังไม่ถูกหัก"): รอบคัมบังเดิมบวกเข้าไลน์อย่างเดียว ไม่เคยหัก STORE
-         ⇒ ทำแบบเดียวกับใบขอเติม (deductStockForPick): STORE มีแถวสต็อก = หัก · ไม่มี = ไม่หัก (หักแล้วติดลบจากของที่ไม่เคยลงรับ)
-         แต่ต้องบอกบนจอว่าตัวไหนไม่ได้หัก ห้ามเงียบ */
+         ⇒ ทำแบบเดียวกับใบขอเติม (deductStockForPick)
+         🔴 19/11 (คำสั่ง user "ตัดเต็มและติดลบ") — หัก STORE **ทุกรายการ** แม้ไม่มีแถว/ยอดไม่พอ (ติดลบรอลงรับหักล้าง)
+         แต่ต้องบอกบนจอว่าตัวไหนติดลบ ห้ามเงียบ */
       let storeMissing = [];
       if (issueRows.length) {
         const mats = [...new Set(issueRows.map(x => x.mat_no))];
-        const { data: st, error: stErr } = await supabaseDR.from('line_stock_summary').select('mat_no')
+        const { data: st, error: stErr } = await supabaseDR.from('line_stock_summary').select('mat_no, qty_on_hand')
           .eq('line_name', 'STORE').in('mat_no', mats);
-        if (stErr) storeMissing = mats;
-        const has = new Set((st || []).map(x => x.mat_no));
-        if (!stErr) storeMissing = mats.filter(m => !has.has(m));
-        issueRows.filter(x => has.has(x.mat_no)).forEach(x => issueRows.push({
+        const have = new Map((st || []).map(x => [x.mat_no, parseFloat(x.qty_on_hand) || 0]));
+        const need = new Map();
+        issueRows.forEach(x => need.set(x.mat_no, (need.get(x.mat_no) || 0) + (Number(x.qty) || 0)));
+        storeMissing = stErr ? mats : mats.filter(m => (have.get(m) || 0) < need.get(m));
+        issueRows.slice().forEach(x => issueRows.push({
           ...x, line_name: 'STORE', type: 'consume', note: `Kanban ${r.line_name} รอบ ${r.round_no} — จ่ายออกจาก STORE`,
         }));
       }
@@ -2713,7 +2813,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
         }
       }
       toast.success(`✅ ยืนยันส่งแล้ว: ${r.line_name} รอบ ${r.round_no}`);
-      if (storeMissing.length) toast.error(`⚠ ไม่ได้หัก STORE ${storeMissing.length} รายการ เพราะ STORE ไม่มียอดตั้งต้น (ลงรับเข้า STORE ก่อน): ${storeMissing.slice(0, 5).join(', ')}${storeMissing.length > 5 ? ' …' : ''}`);
+      if (storeMissing.length) toast.error(`⚠ STORE ติดลบ ${storeMissing.length} รายการ (ยอดในระบบไม่พอ · หักเต็มแล้ว รอลงรับเข้า STORE หักล้าง): ${storeMissing.slice(0, 5).join(', ')}${storeMissing.length > 5 ? ' …' : ''}`);
       await loadDeliveries();
     } catch (err) { toast.error(err.message); }
     setConfirming(null);
@@ -3067,7 +3167,8 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
       {/* 🔊📦 ไซเรน "ไลน์เรียกของ" — บอร์ดนี้คือจอทำงานของสโตร์ (24/10 · คำสั่ง user)
           ดังเฉพาะใบที่ "ไลน์เรียก" และยังไม่มีใครรับทราบ · ใบที่สโตร์สร้างเองไม่ดัง (ไม่เตือนตัวเอง)
           🔴 หน้านี้ไม่มี <DowntimeSiren> ⇒ slot=0 ได้ · ถ้าวันหลังเพิ่มไซเรนอื่นในหน้านี้ ต้องแยก slot */}
-      <StoreCallSiren />
+      {/* 19/11 ops (Stock Management) = แถบในเนื้อหน้า ไม่ลอยทับ — วาดใน UnifiedStoreBoard ใต้แถบกรอง */}
+      {!isOps && <StoreCallSiren />}
       {/* ⚠️ heijunka:operate seed ตั้งแต่ 2026-07-08 = ทุก role ณ ตอนนั้น — mtn/dept_admin ที่เพิ่มทีหลังไม่มีแถว */}
       <ReadOnlyNote show={isOps && !canOperate} role={role} what="สั่งงาน/จัดคิวบนบอร์ด"
         permKey="heijunka:operate" />
@@ -3092,6 +3193,10 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
             </div>
           )}
         </>} />
+      {/* 📋 19/11 (mockup รับ/ส่งของที่ user เคาะ) — ops = "1 หน้า 1 งาน": แถบกรองแผน/สรุป demand/คำอธิบาย
+          ไม่วาดที่นี่ · ตัวกรองที่มีผลกับคิวจริง (วันที่/กะ — รอบส่ง) ย้ายไปแถบเดียวใน UnifiedStoreBoard
+          ขอบเขตไลน์/ชิปประเภท/CSV มีผลกับตาราง demand เท่านั้น ⇒ อยู่ที่ /heijunka (จอดูสัญญาณ) */}
+      {!isOps && (<>
       <FilterBar>
         <LineScopeSelect lines={Object.values(lineMap)} section={scopeSec} line={scopeLine}
           onChange={(sec, ln, meta) => {
@@ -3109,6 +3214,8 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
         <Segmented value={shiftFilter} onChange={setShiftFilter} label={tr('กะ')}
           options={[{ value: 'all', label: ALL.shift }, { value: 'day', label: SHIFT_LABEL.day }, { value: 'night', label: SHIFT_LABEL.night }]} />
         <span className="sep" />
+        {/* 🧰 18/11 (audit Choice overload): ชิปประเภทพาร์ท 5 ตัวพับหลัง "ตัวกรองเพิ่มเติม" — ตั้งค่าไว้ = กางเอง + ปุ่มบอกค่า */}
+        <FilterMore id="hk-more-filters" defaultOpen={!!matFilter}>
         <button onClick={() => setMatFilter('')} style={{
           padding: '8px 14px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-body)',
           background: matFilter === '' ? 'var(--accent)' : 'var(--bg2)',
@@ -3116,13 +3223,14 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
           border: `1px solid ${matFilter === '' ? 'var(--accent)' : 'var(--border)'}`,
         }}>{ALL.type}</button>
         {MAT_PREFIXES.map(m => (
-          <button key={m.prefix} onClick={() => setMatFilter(matFilter === m.prefix ? '' : m.prefix)} style={{
+          <button key={m.prefix} aria-pressed={matFilter === m.prefix} onClick={() => setMatFilter(matFilter === m.prefix ? '' : m.prefix)} style={{
             padding: '8px 14px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-body)',
             background: matFilter === m.prefix ? `${tint(m.color, 'dim')}` : 'var(--bg2)',
             color: matFilter === m.prefix ? m.color : 'var(--text2)',
             border: `1px solid ${matFilter === m.prefix ? m.color : 'var(--border)'}`,
           }}>{tr(m.label)}</button>
         ))}
+        </FilterMore>
         <span className="spacer" />
         <button onClick={exportCSV} style={{
           padding: '8px 14px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontSize: 12, fontWeight: 700,
@@ -3164,7 +3272,10 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
         </div>
       )}
 
+      </>)}
+
       {/* Smart Scheduling Planner */}
+      {!isOps && (<>
       <PlannerStrip rounds={rounds} deliveries={deliveries} roundAlloc={view.roundAlloc} workDate={workDate} breakPolicies={breakPolicies} nowMs={nowMs} />
       {/* ไม่มีรอบ = แถบสถานการณ์ของโหมดส่งตามคำขอ (PlannerStrip ซ่อนตัวเอง) — งานค้างตามสถานะ + ใบที่รอนานสุด · audit 2026-09-07 */}
       {!rounds.length && <OnDemandStrip wipRequests={wipRequests} nowMs={nowMs} onGo={() => { setViewMode('unified'); setUnifiedStore('child'); }} />}
@@ -3191,7 +3302,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
         {/* 👁 04/11 — /heijunka ดูสัญญาณอย่างเดียว · บอกทางไปจอทำรายการทุกมุมมอง */}
         {!isOps && (
           <span style={{ fontSize: 12, color: 'var(--text2)' }}>
-            → ทำรายการที่ <Link to="/line-stock?tab=out">{tr('📤 ขาออก')}</Link> · <Link to="/line-stock?tab=in">{tr('📥 ขาเข้า')}</Link>
+            → ทำรายการที่ <Link to="/line-stock?tab=out">{tr('📤 ส่งของเข้าไลน์')}</Link> · <Link to="/line-stock?tab=in">{tr('📥 รับของเข้าคลัง')}</Link>
           </span>
         )}
         {viewMode === 'demand' && (
@@ -3201,9 +3312,10 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
           </span>
         )}
       </div>
+      </>)}
 
-      {/* Demand board */}
-      <div style={{ ...card, padding: 0, overflow: 'hidden' }}>
+      {/* Demand board — ops ไม่มีกรอบการ์ดครอบ (ตู้งานมีหัวแท็บย่อย/แถบกรอง/ตารางของตัวเอง) */}
+      <div style={isOps ? undefined : { ...card, padding: 0, overflow: 'hidden' }}>
         {loading ? (
           <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('กำลังโหลด...')}</div>
         ) : viewMode === 'unified' ? (
@@ -3216,6 +3328,25 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
             busy={pullBusy} onAdvanceLot={advanceLot} onIssueRaw={issueRaw} onAdvanceWip={advanceWip} onCancelWip={cancelWip} onAdvancePurchase={advancePurchase}
             lotMats={lotMats}
             inflowRules={inflowRules}
+            leadFilters={isOps && direction === 'out' ? (<>
+              <input type="date" value={workDate} onChange={e => setWorkDate(e.target.value)} aria-label={tr('วันที่ (รอบส่ง)')} />
+              <Segmented value={shiftFilter} onChange={setShiftFilter} label={tr('กะ')}
+                options={[{ value: 'all', label: ALL.shift }, { value: 'day', label: SHIFT_LABEL.day }, { value: 'night', label: SHIFT_LABEL.night }]} />
+              {isBackDate && (
+                <button type="button" onClick={() => setWorkDate(liveWorkDate)} title={tr('กำลังดูวันที่ไม่ใช่วันงานปัจจุบัน')}
+                  style={{ fontSize: 12, fontWeight: 700, color: 'var(--amber)', background: 'var(--amber-dim)', border: '1px solid var(--amber-line)',
+                    borderRadius: 999, padding: '4px 10px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                  ⚠ ดูวันที่ {workDate} · ⟳ กลับวันนี้
+                </button>
+              )}
+            </>) : null}
+            kpiSlot={isOps && direction === 'out' ? (<>
+              <PlannerStrip rounds={rounds} deliveries={deliveries} roundAlloc={view.roundAlloc} workDate={workDate} breakPolicies={breakPolicies} nowMs={nowMs} />
+              {!rounds.length && <OnDemandStrip wipRequests={wipRequests} nowMs={nowMs} onGo={() => setUnifiedStore('child')} />}
+              <ProdProgressStrip workDate={workDate}
+                onOpenLine={(ln) => navigate(`/management?line=${encodeURIComponent(ln)}&view=heijunka`)} />
+            </>) : null}
+            purpose={isOps ? VIEW_META.unified?.purpose : null}
             fmt={fmt} workDate={workDate} nowMs={nowMs} canOperate={canOperate} imgOf={imgOf}
           />
         ) : viewMode === 'chart' ? (

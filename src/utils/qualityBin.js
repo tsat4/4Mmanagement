@@ -152,8 +152,16 @@ export function yellowRowFromDefect(defect, session, { actorName = '', partNo = 
     part_no:   partNo || null,
     qty,
     /* สาเหตุ = ประเภท + รายละเอียดที่คนกรอก · งานทดลองต้องติดป้ายไว้ (ของจริงยังต้องกำจัด
-       แต่ไม่นับ %Q) ไม่งั้น QA อ่านใบแล้วไม่รู้ว่ามาจากการลองเครื่อง */
-    cause: [typeName, defect?.description, defect?.is_trial ? '🧪 งานทดลอง' : '']
+       แต่ไม่นับ %Q) ไม่งั้น QA อ่านใบแล้วไม่รู้ว่ามาจากการลองเครื่อง
+       🧩 16/11 — เสียที่ "พาร์ทลูก" ต้องเขียนลงเหตุด้วย: ของที่อยู่ในถังจริงคือชิ้นส่วนลูก
+          ไม่ใช่ FG ทั้งชุด ⇒ QA เปิดถังแล้วต้องรู้ว่ากำลังตัดสินของชิ้นไหน
+       ⚠️ `mat_no`/`part_name` ของใบถังยังเป็น **ของ MAT แม่** โดยเจตนา (ใบถัง/ใบ scrap/คิว QA
+          ทั้งสายจับคู่ด้วยคีย์นี้) — จะเปลี่ยนเป็นพาร์ทลูกต้องเป็นงานแยกที่ user เคาะก่อน */
+    cause: [typeName, defect?.description,
+      defect?.child_mat_no
+        ? `🧩 เสียที่พาร์ทลูก ${[String(defect.child_mat_no).trim(), String(defect.child_part_name || '').trim()].filter(Boolean).join(' · ')} (ไม่เสียทั้งชุด)`
+        : '',
+      defect?.is_trial ? '🧪 งานทดลอง' : '']
       .map(x => String(x || '').trim()).filter(Boolean).join(' — '),
     reported_by: defect?.reported_by_name || actorName || null,
     defect_log_id: defect.id,

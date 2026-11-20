@@ -43,7 +43,7 @@ export default function OpenOrderDemandPanel({ q = '' }) {
     const fgIds = products.filter(p => fgMats.has(String(p.mat_no || '').trim()) && p.is_active !== false).map(p => p.id);
     const bomRes = fgIds.length
       ? await fetchByIds(fgIds, ids => supabaseDR.from('bom_items')
-          .select('id, product_id, mat_no, part_name, qty_per_unit, uom, is_active').in('product_id', ids).eq('is_active', true))
+          .select('id, product_id, parent_mat, mat_no, part_name, qty_per_unit, uom, is_active').in('product_id', ids).eq('is_active', true))
       : { rows: [] };
     if (bomRes.error || bomRes.truncated) errs.push('BOM');
     const childMats = [...new Set((bomRes.rows || []).map(b => String(b.mat_no || '').trim()).filter(Boolean))];

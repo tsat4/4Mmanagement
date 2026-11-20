@@ -99,6 +99,14 @@ export const KPI_BASE_VARS = [
   { key: 'inventory_baht', label: 'มูลค่าสต็อกสิ้นเดือน (ตาม storage location)', unit: 'บาท', level: 'unit' },
   { key: 'manpower',       label: 'กำลังคนทั้งโรงงาน (Total Head count All)', unit: 'คน',  level: 'plant' },   // 09/11 user: ยอดขาย/หัว = ค่ากลาง ⇒ ตัวหาร = คนทั้งโรงงานจากใบ 5.Manpower (เดิม level unit)
   { key: 'cost_100p',      label: '100P + CR (มูลค่าที่ลดได้)',              unit: 'บาท', level: 'unit' },
+  /* 🤝 แบบสอบถามความพึงพอใจลูกค้า (16/11 · user: "customer satisfaction ต้อง single source of truth
+     และยิ่งค่าของโรงงาน ต้องมีค่าเดียว ดึงไปใช้เอา") — คะแนนดิบของ "แบบสอบถามใบเดียวของโรงงาน"
+     ⇒ `level:'plant'` = กรอกครั้งเดียวที่ขอบเขต ทั้งโรงงาน · ทุกหน่วยที่มี KPI ข้อนี้อ่านตัวเดียวกัน
+     🔴 ห้ามเพิ่มที่กรอกชุดที่ 2 ต่อหน่วย (ตารางของตัวเอง/ช่องกรอกในหน้า) — มี 2 ที่กรอก = ไม่มีค่าเดียว */
+  { key: 'csat_q_actual', label: 'ความพึงพอใจ — คะแนนที่ได้ ด้านคุณภาพ (Q)',     unit: 'คะแนน', level: 'plant' },
+  { key: 'csat_q_total',  label: 'ความพึงพอใจ — คะแนนเต็ม ด้านคุณภาพ (Q)',       unit: 'คะแนน', level: 'plant' },
+  { key: 'csat_d_actual', label: 'ความพึงพอใจ — คะแนนที่ได้ ด้านการส่งมอบ (D)',  unit: 'คะแนน', level: 'plant' },
+  { key: 'csat_d_total',  label: 'ความพึงพอใจ — คะแนนเต็ม ด้านการส่งมอบ (D)',    unit: 'คะแนน', level: 'plant' },
 ];
 
 export const baseVarOf = (key) => KPI_BASE_VARS.find(v => v.key === key) || null;
@@ -120,7 +128,8 @@ export const baseVarOf = (key) => KPI_BASE_VARS.find(v => v.key === key) || null
 export const KPI_FORMULAS = [
   { key: 'dl_pct',        label: 'DL %',        expr: 'dl ÷ sale_product × 100',                  vars: ['dl', 'sale_product'],             unit: '%' },
   { key: 'oh_pct',        label: 'OH %',        expr: 'oh ÷ sale_product × 100',                  vars: ['oh', 'sale_product'],             unit: '%' },
-  { key: 'dloh_pct',      label: 'DL&OH %',     expr: '(dl + oh) ÷ sale_product × 100',           vars: ['dl', 'oh', 'sale_product'],       unit: '%' },
+  /* `parts` (16/11 · user: "dl+oh พอเจาะเข้าไปควรแตกเป็น 2 กราฟ dl กับ oh") = สูตรลูกที่ใช้ตัวแปรชุดเดียวกัน — จอ 🔍 วาดให้เองผ่าน `formulaPartSeries()` */
+  { key: 'dloh_pct',      label: 'DL&OH %',     expr: '(dl + oh) ÷ sale_product × 100',           vars: ['dl', 'oh', 'sale_product'],       unit: '%', parts: ['dl_pct', 'oh_pct'] },
   { key: 'rm_pct',        label: '%RM',         expr: 'raw_material ÷ sale_product × 100',        vars: ['raw_material', 'sale_product'],   unit: '%' },
   { key: 'p100_pct',      label: '100P %',      expr: 'cost_100p ÷ sale_product × 100',           vars: ['cost_100p', 'sale_product'],      unit: '%' },
   { key: 'inventory_day', label: 'DSI (วัน)',   expr: '(inventory_baht ÷ cogs) × days_in_month',      vars: ['inventory_baht', 'cogs', 'days_in_month'], unit: 'วัน' },
@@ -129,6 +138,22 @@ export const KPI_FORMULAS = [
   /* 09/11 user: "sales/head ต้องเท่ากันทุกส่วนงาน เป็นค่ากลาง ยอดขายรวม ÷ ยอดคนทั้งโรงงาน จากไฟล์บัญชี" ⇒ `scope:'plant'` = ทุกตัวแปรอ่านจาก ทั้งโรงงาน
      ไม่ว่านิยามจะอยู่หน่วยไหน (เคส PD1: Σ ยอดขายโรงงาน ÷ กำลังคน PD1 32 คน = 47.951 ทั้งที่ค่ากลาง ~4) · catalog `value_scope='plant'` ให้ทุกหน่วยอ่านแผ่นโรงงาน */
   { key: 'sale_per_head', label: 'ยอดขาย/หัว (MB)', expr: 'Σ sale_total (ม.ค.→เดือนนี้) ÷ manpower ทั้งโรงงาน ÷ 1,000,000', vars: ['sale_total', 'manpower'], cum: ['sale_total'], unit: 'MB', scope: 'plant' },
+  /* ── 🤝 ความพึงพอใจลูกค้า (Q&D) · 16/11 ─────────────────────────────────────────────────────
+     ทะเบียนกลางของกลุ่ม (`kpi_standard_items` 2026) เขียนหัวข้อนี้เป็น **1 แถว 1 คะแนน** สูตร
+     `(Actual Score / Total Score) x 100` · **ทะเบียนไม่มีข้อย่อย Q และ D** — `(Q&D)` คือ *ขอบเขตของ
+     แบบสอบถาม* (คุณภาพ + การส่งมอบ) ไม่ใช่ KPI 2 ตัว ⇒ ห้ามแตกเป็น 2 แถว KPI / 2 คะแนน / 2 น้ำหนัก
+     ⇒ แตกที่ **ตัวแปรฐาน** แทน: 4 ช่อง (ได้/เต็ม × Q/D) ที่ขอบเขต ทั้งโรงงาน
+     🔴 ค่ารวม = (Σคะแนนที่ได้ ÷ Σคะแนนเต็ม) × 100 — **ห้ามเฉลี่ย % ของ 2 ขา** (ตัวหารแต่ละขาไม่เท่ากัน
+        เฉลี่ยแล้วได้เลขที่ไม่มีอยู่ในใบจริง) · `parts` = % ของขานั้นเทียบคะแนนเต็มของขาเอง (คนละคำถาม
+        กับค่ารวม) จอ 🔍 วาดแยกคนละกราฟ พร้อมสูตรของตัวเอง ไม่ได้ซ้อนทับให้บวกกัน
+     🔴 `scope:'plant'` = ทุกตัวแปรอ่านจากขอบเขต ทั้งโรงงาน ไม่ว่านิยามจะอยู่หน่วยไหน (QA · PD1-4 ·
+        Die MTN เห็นเลขเดียวกับโรงงาน) — นี่คือ "ค่าเดียว ดึงไปใช้" ที่ user สั่ง 16/11
+     ℹ️ `Internal Satisfaction` ของหน่วยสนับสนุน = **แบบสอบถามคนละใบ รายหน่วย** ยังกรอกมือที่หน่วยนั้น
+        ห้ามเอามารวมสูตรนี้ (Tooling MTN มีค่าจริงของตัวเอง 7 เดือน) */
+  { key: 'csat_q_pct',    label: 'ความพึงพอใจ — คุณภาพ (Q) %',   expr: 'csat_q_actual ÷ csat_q_total × 100', vars: ['csat_q_actual', 'csat_q_total'], unit: '%', scope: 'plant' },
+  { key: 'csat_d_pct',    label: 'ความพึงพอใจ — ส่งมอบ (D) %',   expr: 'csat_d_actual ÷ csat_d_total × 100', vars: ['csat_d_actual', 'csat_d_total'], unit: '%', scope: 'plant' },
+  { key: 'csat_qd_pct',   label: 'Customer Satisfaction (Q&D) %', expr: '(csat_q_actual + csat_d_actual) ÷ (csat_q_total + csat_d_total) × 100',
+    vars: ['csat_q_actual', 'csat_q_total', 'csat_d_actual', 'csat_d_total'], unit: '%', scope: 'plant', parts: ['csat_q_pct', 'csat_d_pct'] },
 ];
 
 export const formulaOf = (key) => KPI_FORMULAS.find(f => f.key === key) || null;
@@ -151,6 +176,10 @@ export function evalFormula(formulaKey, vars = {}) {
     case 'rm_pct':        value = div(v.raw_material, v.sale_product); break;
     case 'p100_pct':      value = div(v.cost_100p, v.sale_product); break;
     case 'inventory_day': { const r = div(v.inventory_baht, v.cogs); value = r == null ? null : r * Number(v.days_in_month); break; }
+    case 'csat_q_pct':    value = div(v.csat_q_actual, v.csat_q_total); break;
+    case 'csat_d_pct':    value = div(v.csat_d_actual, v.csat_d_total); break;
+    /* 🔴 ตัวตั้งรวม ÷ ตัวหารรวม — ห้ามเฉลี่ย (csat_q_pct + csat_d_pct) ÷ 2 */
+    case 'csat_qd_pct':   value = div(v.csat_q_actual + v.csat_d_actual, v.csat_q_total + v.csat_d_total); break;
     case 'sale_per_head': { const per = div(v.sale_total, v.manpower); return { value: per == null ? null : per / 1e6, missing: [], error: null }; }
     default: return { value: null, missing: [], error: 'ยังไม่ได้ทำสูตรนี้' };
   }
@@ -371,23 +400,70 @@ export const boardSlotOf = (d) => {
    · 🔴 เดือนที่ไม่มีทั้งผลและแผน = **คาดการณ์ไม่ได้** (`value:null` + `missing`) — ห้ามเดา ห้ามเติม 0 ห้ามลากค่าเฉลี่ยไปแทน
    · `rate` ไม่มียอดดิบของแผนให้หาร ⇒ เฉลี่ย + `approx` (กฎเดียวกับ summaryOf/planProgress)
    · ตัดสิน "รอด/ร่วง" ที่ผู้เรียกด้วย `scoreDef(value, def)` — ที่นี่ไม่ตัดสิน (สูตรสีมีที่เดียว) */
-export function yearForecast({ actual = [], plan = [], def = null } = {}) {
+export function yearForecast({ actual = [], plan = [], def = null, fallback = false } = {}) {
   const num = (v) => (v == null || v === '' || Number.isNaN(Number(v)) ? null : Number(v));
   const a = Array.from({ length: 12 }, (_, i) => num(actual[i]));
   const p = Array.from({ length: 12 }, (_, i) => num(plan[i]));
-  const used = []; const missing = [];
-  let actualMonths = 0, planMonths = 0;
-  for (let m = 1; m <= 12; m++) {
-    if (a[m - 1] != null) { used.push(a[m - 1]); actualMonths += 1; }
-    else if (p[m - 1] != null) { used.push(p[m - 1]); planMonths += 1; }
-    else missing.push(m);
-  }
   const mode0 = summaryModeOf(def);
   const approx = mode0 === 'rate';
   const mode = approx ? 'average' : mode0;
-  if (!actualMonths) return { value: null, reason: 'no_actual', mode, approx, actualMonths, planMonths, missing };
-  if (missing.length) return { value: null, reason: 'no_plan', mode, approx, actualMonths, planMonths, missing };
-  return { value: summarizeMonths(used, mode), reason: null, mode, approx, actualMonths, planMonths, missing: [] };
+  /* 📈 16/11 (user: "ทุกกราฟตอบไม่ได้ว่าจบปีจะผ่านไหม เดือนที่ยังไม่ถึงเหมือนไม่มีค่า") — `fallback: true` =
+     เดือนที่ไม่มีทั้งผลและแผน **สมมติว่าทำได้เท่าเดิม** แล้วบอกบนจอว่าสมมติอะไร (ห้ามเนียนเป็นแผน):
+     · ตัวไม่สะสม (average/sum/rate≈average) = เท่าค่าเฉลี่ยของเดือนที่มีผลจริง
+     · ตัวสะสม (max/as_of) = เพิ่มต่อด้วยอัตราเดิม (ค่าล่าสุด ÷ จำนวนเดือนที่เดินมา) — ค่าสะสมถอยหลังไม่ได้
+     ค่าเริ่มต้น (ไม่ส่ง fallback) = พฤติกรรมเดิมเป๊ะ: ขาดเดือนไหน = คาดไม่ได้ */
+  const have = a.filter(x => x != null);
+  const cumulative = mode === 'max' || mode === 'as_of';
+  const lastIdx = a.map((x, i) => (x != null ? i : -1)).reduce((m, i) => Math.max(m, i), -1);
+  const firstIdx = a.findIndex(x => x != null);
+  let assumed = null;
+  if (fallback && have.length) {
+    if (cumulative) {
+      const last = a[lastIdx];
+      const slope = lastIdx > firstIdx ? (last - a[firstIdx]) / (lastIdx - firstIdx) : last / (lastIdx + 1);
+      assumed = { kind: 'slope', rate: slope, from: last, fromIdx: lastIdx };
+    } else {
+      assumed = { kind: 'average', rate: have.reduce((s, x) => s + x, 0) / have.length };
+    }
+  }
+  const used = []; const missing = []; const months = []; const src = []; const assumedMonths = [];
+  let actualMonths = 0, planMonths = 0;
+  for (let m = 1; m <= 12; m++) {
+    const i = m - 1;
+    if (a[i] != null) { used.push(a[i]); months.push(a[i]); src.push('actual'); actualMonths += 1; }
+    else if (p[i] != null) { used.push(p[i]); months.push(p[i]); src.push('plan'); planMonths += 1; }
+    else if (assumed) {
+      const v = assumed.kind === 'slope' ? assumed.from + assumed.rate * Math.max(0, i - assumed.fromIdx) : assumed.rate;
+      used.push(v); months.push(v); src.push('assumed'); assumedMonths.push(m);
+    } else { missing.push(m); months.push(null); src.push(null); }
+  }
+  const basis = assumedMonths.length ? (planMonths ? 'mixed' : 'runrate') : planMonths ? 'plan' : 'actual';
+  const base = { mode, approx, actualMonths, planMonths, assumedMonths, assumed, basis, months, src };
+  if (!actualMonths) return { ...base, value: null, reason: 'no_actual', missing };
+  if (missing.length) return { ...base, value: null, reason: 'no_plan', missing };
+  return { ...base, value: summarizeMonths(used, mode), reason: null, missing: [] };
+}
+
+/** 🎯 "เดือนที่เหลือต้องทำได้เท่าไหร่ถึงจะถึงเป้าทั้งปี" (16/11) — คู่กับ yearForecast · pure
+ *  · average: (เป้า × 12 − Σ จริง) ÷ เดือนที่เหลือ · sum: (เป้า − Σ จริง) ÷ เดือนที่เหลือ
+ *  · ตัวสะสม (max/as_of): ต้อง "ไปถึง" เป้าภายใน ธ.ค. ⇒ คืนส่วนที่ต้องเพิ่มจากค่าล่าสุด · rate: คำนวณไม่ได้ (ต้องรู้ยอดดิบ)
+ *  @returns null เมื่อไม่มีเป้า/ไม่มีผลจริง/ครบ 12 เดือนแล้ว · ไม่งั้น { kind:'avg'|'sum'|'reach', perMonth, remaining, add? } */
+export function neededRunRate({ actual = [], target = null, def = null } = {}) {
+  const num = (v) => (v == null || v === '' || Number.isNaN(Number(v)) ? null : Number(v));
+  const t = num(target);
+  const a = Array.from({ length: 12 }, (_, i) => num(actual[i]));
+  const have = a.filter(x => x != null);
+  const remaining = 12 - have.length;
+  if (t == null || !have.length || remaining <= 0) return null;
+  const mode0 = summaryModeOf(def);
+  const sum = have.reduce((s, x) => s + x, 0);
+  if (mode0 === 'rate') return null;
+  if (mode0 === 'max' || mode0 === 'as_of') {
+    const last = a[a.map((x, i) => (x != null ? i : -1)).reduce((m, i) => Math.max(m, i), -1)];
+    return { kind: 'reach', perMonth: t, remaining, add: t - last };
+  }
+  if (mode0 === 'sum') return { kind: 'sum', perMonth: (t - sum) / remaining, remaining };
+  return { kind: 'avg', perMonth: (t * 12 - sum) / remaining, remaining };
 }
 
 /** จัดรูปตัวเลขตามทศนิยมของแถว — `null`/ไม่ใช่ตัวเลข = สตริงว่าง **ห้ามคืน 0** */
@@ -662,6 +738,45 @@ export const stdUnitLabel = (unit) => {
 export const normTopic = (s) => String(s == null ? '' : s).trim().toLowerCase();
 const rowTopic = (r) => normTopic(r?.topic ?? r?.name);
 
+/** เดา "หน่วยงานมาตรฐาน" จากชื่อขอบเขต — **เป็นข้อเสนอให้คนกดยืนยันเท่านั้น ห้ามตั้งให้เอง**
+ *  (16/11 · เคส QA: ขอบเขตชื่อตรงกับหน่วยงานในทะเบียนเป๊ะ แต่ยังไม่มีแถว KPI เลยสักข้อ ⇒ จอต้องชี้ทางได้
+ *   ไม่ใช่โชว์ตารางว่าง — กฎความซื่อสัตย์ของจอ · การเลือก KPI ต่อหน่วยงานเป็นการตั้งค่าของคน)
+ *  🔴 ตรงเป๊ะเท่านั้น (ไม่สนตัวพิมพ์/ช่องว่าง/เครื่องหมาย) — ไม่ตรง = `null` ห้ามเดาคลุม
+ *     เช่น "Tooling MTN" ต้องคืน null ไม่ใช่เดาเป็น "Tooling" (คนละชุด KPI กัน) */
+/* ══ 🔧 ทะเบียน "หน่วยงานจริงในโรงงาน → หน่วยงานมาตรฐาน" (2026-11-19 · คำสั่ง user) ═══════════
+   user 19/11: *"ทีมช่างใช้มาตรฐานเดียวกันคือ KPI Maintenance เพราะในแบบ KPI Die Maintenance
+                 เหมือนเป็นของโรงงานสร้างแม่พิมพ์ใช้"*
+
+   เหตุผลที่ต้องมีทะเบียนนี้ ไม่ใช่ผ่อนเกณฑ์การจับคู่ชื่อ:
+     แบบ `Die Maintenance` ในทะเบียนกลางเป็นของ **ธุรกิจสร้าง-ขายแม่พิมพ์** —
+     มี "Annual Sale Per Head" · "Manage project … on time delivery to customer" ·
+     "Keep inventory no more than" · "Customer Satisfaction (Q&D)"
+     ซึ่งทีมช่างที่ซ่อมแม่พิมพ์ในโรงงานปั๊มของเราไม่มีทางวัดได้ (ไม่มียอดขาย ไม่มีลูกค้าภายนอก)
+     และ**ไม่มี MTBF / MTTR / MO Closed / Machine Break Down เลยสักตัว** ซึ่งคือเนื้องานจริงของช่าง
+     ⇒ ทีมช่างทุกทีมอิงแบบ `Maintenance` (ที่มี Internal Satisfaction + ตัววัดงานซ่อมครบ)
+
+   🔴 นี่คือ "การตั้งค่าของคน" ที่ user เคาะแล้ว **ไม่ใช่การเดาจากชื่อ** —
+      `guessStdUnit` ยังคงกฎเดิมทุกอย่าง (ตรงเป๊ะเท่านั้น · ไม่ตรง = null) เพียงแต่ดูทะเบียนนี้ก่อน
+      และผลลัพธ์ยังเป็น **ข้อเสนอให้คนกดยืนยัน ห้ามตั้งให้เอง** เหมือนเดิม
+   🔴 คีย์เขียนแบบ "แบน" (ตัดช่องว่าง/ขีด/วงเล็บ ตัวพิมพ์เล็ก) ให้ตรงกับ flat() ข้างล่าง            */
+export const KPI_STD_UNIT_ALIASES = Object.freeze({
+  diemtn: 'Maintenance',       // ซ่อมบำรุงแม่พิมพ์ (ทีม die_maintenance)
+  jigmtn: 'Maintenance',       // ซ่อมบำรุงจิ๊ก (ทีม jig_maintenance)
+  toolingmtn: 'Maintenance',   // ซ่อมบำรุง Tooling — คนละตัวกับ std_unit 'Tooling' (ธุรกิจขายแม่พิมพ์)
+  mechanic: 'Maintenance',
+  electric: 'Maintenance',
+});
+
+export function guessStdUnit(name) {
+  const flat = (s) => normTopic(s).replace(/[\s\-_.&/()]+/g, '');
+  const n = flat(name);
+  if (!n) return null;
+  /* ทะเบียนที่คนเคาะมาก่อน แล้วค่อยจับชื่อตรงเป๊ะ */
+  const alias = KPI_STD_UNIT_ALIASES[n];
+  if (alias) return alias;
+  return KPI_STD_UNITS.find(u => flat(u.unit) === n)?.unit || null;
+}
+
 /**
  * จับคู่ "ทะเบียนมาตรฐาน" กับ "แถวที่อยู่ในใบจริงแล้ว"
  * @param stdItems แถวจาก `kpi_standard_items` ของหน่วยงาน+ปีนั้น
@@ -697,10 +812,128 @@ export function checkStdSelection(rows = [], stdItems = null) {
   const diff = Math.round((weight - KPI_TOTAL_WEIGHT) * 100) / 100;
 
   let missingFixed = [];
+  /* 🧾 "ของนอกมาตรฐาน" — แถวในใบที่ไม่มีอยู่ในทะเบียนของหน่วยงานนี้เลย (2026-11-19 · คำสั่ง user)
+     เคสต้นเรื่อง: ใบของ **Die MTN** ถือแบบ `Die Maintenance` ซึ่งเป็นของธุรกิจสร้าง-ขายแม่พิมพ์
+     ("Annual Sale Per Head" · "Keep inventory no more than" · "Manage project … delivery to customer")
+     จอเดิมบอกได้แค่ "ข้อบังคับที่ยังไม่ได้หยิบ" ⇒ **ของแปลกปลอมที่ค้างอยู่ในใบมองไม่เห็นเลย**
+     ⚠️ เตือนเท่านั้น ห้ามบล็อก และห้ามลบให้เอง — ใบจริงบางใบเพิ่มของนอกมาตรฐานได้โดยตั้งใจ (§6)
+        คนเป็นคนตัดสินว่าจะเก็บหรือปิด (ปิด = `is_active=false` ไม่ใช่ลบ) */
+  let extras = [];
   if (Array.isArray(stdItems)) {
     missingFixed = matchStdItems(stdItems.filter(isStdFixed), rows)
       .filter(m => !m.row)
       .map(m => m.item);
+
+    const known = new Set();
+    for (const m of matchStdItems(stdItems, rows)) if (m.row) known.add(m.row);
+    extras = (Array.isArray(rows) ? rows : []).filter(r => r && !known.has(r));
   }
-  return { weight, diff, ok: diff === 0 && missingFixed.length === 0, missingFixed };
+  return { weight, diff, ok: diff === 0 && missingFixed.length === 0, missingFixed, extras };
+}
+
+/* ══ ⚖️ น้ำหนักรวมของแต่ละหน่วยครบ 50 หรือยัง — ดูข้ามหน่วยในที่เดียว ══════════════════
+   (2026-11-19 · คำสั่ง user "ทำหน้าสรุปน้ำหนักที่ยังไม่ครบเลย")
+
+   เคสต้นเรื่อง: หลังย้ายทีมช่างมาอิงแบบ `Maintenance` แล้วหยิบข้อบังคับที่ขาดเข้าใบ
+   **แถวใหม่ไม่มีน้ำหนัก** (ตั้งใจ — เอกสารกลุ่มให้หน่วยงานถ่วงเอง ระบบเดาแทนไม่ได้)
+   ⇒ วัด 19/11 มีแค่ Tooling MTN ที่ครบ 50 · ที่เหลือ 22 / 11 / 9 / 5 / 0
+   แต่ `checkStdSelection()` ตอบได้ทีละใบ ⇒ ต้องเปิดไล่ทีละหน่วยถึงจะรู้ว่าใครยังไม่ครบ
+
+   🔴 ไม่คิดเกณฑ์ใหม่ — เรียก `checkStdSelection()` ตัวเดิมรายหน่วย (เพดาน 50 มีที่เดียวคือ
+      `KPI_TOTAL_WEIGHT`) · ที่เพิ่มมาคือ "จัดกลุ่มตามขอบเขต แล้วเรียงตัวที่ห่างเป้าที่สุดขึ้นก่อน"
+   🔴 `defs` ไม่ใช่ array (โหลดไม่ได้) = คืน `null` **ห้ามคืนลิสต์ว่าง** — ลิสต์ว่างแปลว่า
+      "ครบทุกหน่วย" ซึ่งตรงข้ามกับความจริง (กฎความซื่อสัตย์ของจอ)
+   ⚠️ เห็นเฉพาะหน่วยที่ **มีแถว KPI อยู่แล้ว** — หน่วยที่ยังไม่มีใบเลยไม่โผล่ที่นี่
+      (คนละอาการ ไม่ใช่ "น้ำหนักขาด") ⇒ จอต้องเขียนกำกับ                                  */
+export function weightAudit(defs, { scopeOf, labelOf } = {}) {
+  if (!Array.isArray(defs)) return null;
+  /* 🔴 ขอบเขตของกลุ่มต้องมาจาก **ชุดเดียว** ทั้งคีย์ · ป้าย · ปลายทางที่กดแล้วไป
+        (19/11 เจอจริง: เคยจัดกลุ่มด้วยขอบเขตที่ยุบแล้ว แต่เก็บ `scope_kind/scope_value` ดิบไว้ทำป้าย
+         ⇒ แถวที่ `scope_kind='plant'` แต่ `section='PD3'` ขึ้นป้าย "ทั้งโรงงาน" **และกดแล้วพาไปผิดใบ**)
+     จอจริงส่ง `scopeOf` ที่ผ่าน `canonicalScope()` มา — CC ↔ หน่วยเจ้าของต้องนับเป็นขอบเขตเดียวกัน */
+  const scOf = typeof scopeOf === 'function'
+    ? scopeOf
+    : (d) => ({ kind: d?.scope_kind || null, value: d?.scope_value ?? null });
+  const keyOf = (sc) => (sc?.kind && sc.kind !== 'plant' ? `${sc.kind}:${sc.value ?? ''}` : 'plant');
+  const groups = new Map();
+  for (const d of defs) {
+    if (!d || d.is_active === false) continue;
+    const sc = scOf(d) || {};
+    const k = keyOf(sc);
+    if (!groups.has(k)) groups.set(k, { key: k, kind: sc.kind || null, value: sc.value ?? null, rows: [] });
+    groups.get(k).rows.push(d);
+  }
+  const out = [];
+  for (const g of groups.values()) {
+    const chk = checkStdSelection(g.rows);
+    out.push({
+      key: g.key, kind: g.kind, value: g.value,
+      label: (typeof labelOf === 'function' ? labelOf(g.kind, g.value) : null) || scopeLabel(g.kind, g.value),
+      weight: chk.weight, diff: chk.diff, ok: chk.diff === 0,
+      count: g.rows.length,
+      /* แถวที่ยังไม่ได้ใส่น้ำหนักเลย — ตัวชี้ว่า "เพิ่งหยิบเข้ามา ยังไม่ได้ถ่วง" */
+      /* ⚠️ `Number(null)` = 0 ซึ่ง finite ⇒ ต้องกัน null/undefined/'' ก่อน ไม่งั้นนับเป็น "ใส่น้ำหนักแล้ว" */
+      noWeight: g.rows.filter(r => r?.weight == null || r.weight === '' || !Number.isFinite(Number(r.weight))).length,
+      stdUnit: g.rows.map(r => r?.std_unit).find(Boolean) || null,
+    });
+  }
+  /* 🔴 ป้ายซ้ำ = จอโกหก — เจอจริง 19/11 ตอนทดสอบ: 2 ใบคนละชุด (1 ข้อ กับ 3 ข้อ) ขึ้นว่า "ทั้งโรงงาน"
+        เหมือนกันทั้งคู่ ⇒ คนอ่านแยกไม่ออกว่าต้องไปแก้ใบไหน (และนึกว่าระบบนับซ้ำ)
+        ต่อคีย์ขอบเขตท้ายป้าย **เฉพาะตัวที่ชนกัน** — ตัวที่ชื่อไม่ซ้ำคงรูปเดิม ไม่ให้รกเปล่าๆ */
+  const seen = new Map();
+  for (const u of out) seen.set(u.label, (seen.get(u.label) || 0) + 1);
+  for (const u of out) if (seen.get(u.label) > 1) u.label = `${u.label} [${u.key}]`;
+
+  /* ห่างเป้ามากสุดขึ้นก่อน · เท่ากันเรียงชื่อ (เรียงคงที่ ไม่สลับไปมาทุกครั้งที่โหลด) */
+  return out.sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff) || String(a.label).localeCompare(String(b.label), 'th'));
+}
+
+/* ── 🧾 "KPI นี้ตัดสินยังไง" เป็นประโยคเดียว + ตรวจเกณฑ์ที่ตั้งขัดกัน (2026-11-16 · user: "หน้ากรอก KPI งงเรื่อง plan และผ่าน/ตก") ──
+   เกณฑ์ทุกตัวตั้งได้ต่อ KPI อยู่แล้ว (เป้า · Commit · ทิศทาง · เทียบแผนรายเดือนไหม · วิธีสรุปปี) — ที่ขาดคือ "ประโยคสรุป" ให้คนกรอกเห็น
+   · อ่านผ่าน defBars() เท่านั้น (ข้อความเก่าก็แกะให้) · ไม่คิดเกณฑ์ใหม่ · pure มีเทส */
+export const CMP_SYM = { '<=': '≤', '>=': '≥', '<': '<', '>': '>', '=': '=' };
+export function scoreRuleText(def = {}, { unit = null, fmt = (v) => String(v), summaryLabel = null } = {}) {
+  const b = defBars(def);
+  const u = unit != null ? unit : unitOf(def);
+  const f = (v) => `${fmt(v)}${u ? ' ' + u : ''}`;
+  const mode = summaryLabel || summaryModeLabel(summaryModeOf(def));
+  if (b.target_value == null && b.commit_value == null) return { text: `ยังไม่ตั้งเป้า — ไม่ตัดสิน ○△✗ (เห็นแค่ตัวเลข) · สรุปปี = ${mode}`, ok: false, mode };
+  const cmp = b.target_compare || b.commit_compare;
+  if (!cmp) return { text: 'ตั้งเป้าไว้แต่ไม่ได้บอกทิศทาง (≥ หรือ ≤) — ตัดสิน ○△✗ ไม่ได้', ok: false, mode };
+  const sym = CMP_SYM[cmp] || cmp;
+  const down = String(cmp).startsWith('<');
+  const parts = [];
+  if (b.target_value != null) parts.push(`○ ${sym} ${f(b.target_value)}`);
+  if (b.commit_value != null) parts.push(`△ ${sym} ${f(b.commit_value)}`);
+  parts.push(`✗ ${down ? 'เกิน' : 'ต่ำกว่า'}นั้น`);
+  const head = def.score_by_plan
+    ? 'รายเดือนเทียบ "แผนของเดือนนั้น" (ช่องแผน = เป้าเดือน · △ = แผน×สัดส่วน Commit/Target · เดือนไม่มีแผน = เทียบเป้าปี) · เป้าปี: '
+    : 'ทุกเดือนเทียบเป้าเดียวกัน: ';
+  return { text: `${head}${parts.join(' · ')} · สรุปปี = ${mode}`, ok: true, mode, down, bars: b };
+}
+
+/** เกณฑ์ที่ตั้งขัดกัน/ไม่ครบ — จอขึ้นเตือนแดงที่แถวทันที ไม่รอให้บอร์ดสีเพี้ยน · `plans` = {เดือน: ค่า} ของแถว (ไม่ส่ง = ไม่ตรวจเรื่องแผน) */
+export function defIssues(def = {}, { plans = null } = {}) {
+  const out = [];
+  const b = defBars(def);
+  const hasNum = b.target_value != null || b.commit_value != null;
+  if (hasNum && !(b.target_compare || b.commit_compare)) out.push({ code: 'no_direction', text: 'ตั้งเป้าแล้วแต่ไม่ได้เลือกทิศทาง ≥/≤ — ตัดสิน ○△✗ ไม่ได้' });
+  const cmp = b.target_compare || b.commit_compare;
+  const dirOf = (c) => (c == null ? null : String(c).startsWith('<') ? 'down' : String(c).startsWith('>') ? 'up' : null);
+  if (b.target_compare && b.commit_compare && dirOf(b.target_compare) && dirOf(b.commit_compare) && dirOf(b.target_compare) !== dirOf(b.commit_compare)) {
+    out.push({ code: 'commit_dir_conflict', text: `เครื่องหมายของ Commitment (${CMP_SYM[b.commit_compare] || b.commit_compare}) สวนทางกับ Target (${CMP_SYM[b.target_compare] || b.target_compare}) — น่าจะพิมพ์ผิดด้าน (เคส "≤ 0" กับเป้า ≥ 30)` });
+  } else if (cmp && b.target_value != null && b.commit_value != null) {
+    const down = String(cmp).startsWith('<');
+    if (down ? b.commit_value < b.target_value : b.commit_value > b.target_value) {
+      out.push({ code: 'commit_wrong_side', text: `Commitment (${b.commit_value}) เข้มกว่า Target (${b.target_value}) ทั้งที่ทิศทาง "${down ? 'ยิ่งน้อยยิ่งดี' : 'ยิ่งมากยิ่งดี'}" — △ จะไม่มีวันเกิด (น่าจะใส่เครื่องหมายผิดด้าน)` });
+    }
+  }
+  const ct = def.commitment == null ? '' : String(def.commitment).trim();
+  if (b.commit_value == null && ct && ct !== '-' && !/\d/.test(ct)) out.push({ code: 'commit_text_unparsed', text: `Commitment เป็นข้อความที่อ่านตัวเลขไม่ได้ ("${ct}") — ไม่ถูกใช้ตัดสิน` });
+  if (plans && typeof plans === 'object') {
+    const n = Object.values(plans).filter(v => v != null && v !== '' && !Number.isNaN(Number(v))).length;
+    if (n && !def.score_by_plan) out.push({ code: 'plan_unused', text: `กรอกแผนไว้ ${n} เดือน แต่ตั้งให้เทียบเป้าปี — แผนเป็นแค่เส้นประกอบ ไม่มีผลกับ ○△✗ (ถ้าต้องการให้มีผล เลือก "เทียบแผนของเดือนนั้น" ในนิยาม)` });
+    if (!n && def.score_by_plan) out.push({ code: 'plan_missing', text: 'ตั้งให้เทียบแผนของเดือนนั้น แต่ยังไม่กรอกแผนสักเดือน — ทุกเดือนจะถอยไปเทียบเป้าปี' });
+  }
+  return out;
 }

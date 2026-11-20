@@ -23,6 +23,9 @@ import { invalidateMaster } from './masterCache.js';   // ใส่ .js ให�
 
 /** ตาราง → คีย์ cache ทุกตัวที่ "เนื้อมาจากตารางนั้น" (ตารางเดียวมีได้หลายคีย์คนละ shape) */
 export const KEYS_BY_TABLE = {
+  bom_items: [
+    'bom_items:parent_ids:v1',   // loadBomParentIds (useBomChildren) — ป้าย "มี BOM" ในใบเบิก FM-STO-003 (19/11)
+  ],
   dr_products: [
     'dr_products:picker:v2',     // useProducts (picker กลาง) · :v2 = รอบที่เพิ่ม pair_mat_no + op_seq (25/09)
     'dr_products:picker',        // คีย์เก่า — คงไว้เพื่อล้างของค้างบนเครื่องที่ยังไม่ได้ build ใหม่
@@ -45,6 +48,7 @@ export const KEYS_BY_TABLE = {
     'machines:idline:v2',        // FactoryMap loadPM (05/10 แบ่งหน้า + โยนเมื่อล้ม)
     'machines:idline',           // FactoryMap loadManpower/loadPM
     'machines:kind',             // MtnAndonBoard
+    'machines:supply:v3',        // FactoryMap loadSupply (19/11 + usability* — สถานะเครื่องที่ช่างประกาศ)
     'machines:supply:v2',        // FactoryMap loadSupply (05/10 แบ่งหน้า + โยนเมื่อล้ม)
     'machines:supply',           // FactoryMap loadSupply
     'machines:full',             // DailyReport load() — แถวเต็ม (ตัวหนักสุด 368 KB)

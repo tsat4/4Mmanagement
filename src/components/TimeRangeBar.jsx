@@ -17,7 +17,7 @@ import { tr } from '../utils/i18n';
  *   รายวัน สัปดาห์ เดือน ปี และกรอบเวลา และ scope 30วันย้อนหลัง 60 90 120"*
  *
  * เรียงซ้าย→ขวาตามลำดับที่คนคิด: **ดูช่วงไหน → ย้อนหลังเท่าไหร่ → วันเป๊ะๆ → ของเฉพาะหน้า → โหลด**
- *   [วันนี้|สัปดาห์นี้|เดือนนี้|ปีนี้|หลายปี] [30|60|90|120 ย้อนหลัง] [จาก]–[ถึง] {children} [🔄]
+ *   [วันนี้|สัปดาห์นี้|เดือนนี้|ปีนี้|หลายปี] [ย้อนหลัง… ▾] [จาก]–[ถึง] {children   (18/11: 30|60|90|120 ยุบเป็นช่องเดียว · 10 → 7 control)} [🔄]
  *   แถวล่าง: แท่งละ [− ละเอียดขึ้น] «1 วัน» [หยาบลง +]   + คำเตือน/เพดานของจอนี้
  *
  * ── 🪜 บันไดความละเอียด (23/09) ────────────────────────────────────────────────────
@@ -128,22 +128,18 @@ export default function TimeRangeBar({
           </div>
         )}
 
+        {/* ↩️ ย้อนหลัง N วัน = ช่องเดียว (18/11 · audit กฎ Choice overload: แถบนี้กิน 10 control ทุกหน้า → 7)
+            เดิมเป็นปุ่ม 30|60|90|120 — ความหมายเดิมเป๊ะ: เลือกแล้ว "เติมวัน" ลงช่อง ไม่ใช่โหมด (กติกาข้อ 1)
+            · ค่าที่โชว์ = ตัวที่ช่วงตรงเป๊ะ (`matchPreset`) · แก้วันเอง ⇒ กลับเป็น "ย้อนหลัง…" เอง
+            · ปุ่มย้อนหลังก็ไล่บันไดเหมือนกัน (90 วัน → แท่งรายสัปดาห์) ⇒ period=null ให้ `autoBucket` ตัดสินจากจำนวนวัน */}
         {presets?.length > 0 && (
-          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }} role="group" aria-label={tr('ช่วงย้อนหลัง')}>
-            <span className="filter-label">{tr('ย้อนหลัง')}</span>
-            {presets.map(d => (
-              <button key={d}
-                onClick={() => {
-                  /* ปุ่มย้อนหลังก็ไล่บันไดเหมือนกัน (90 วัน → แท่งรายสัปดาห์ 13 แท่ง)
-                     แต่ไม่มี "ชื่อช่วง" ⇒ ส่ง period=null ให้ `autoBucket` ตัดสินจากจำนวนวัน */
-                  const r = presetRange(d, today);
-                  if (r && onView) applyRange(r.from, r.to); else onPreset?.(d);
-                }}
-                style={{ ...on(active === d), padding: '5px 9px' }}
-                title={`ตั้งกรอบเวลาเป็น ${d} วันล่าสุด (นับถึงวันทำงานวันนี้) — แก้วันต่อเองได้`}>{d}</button>
-            ))}
-            <span className="filter-label">{unitDays(2)}</span>
-          </div>
+          <select value={presets.includes(active) ? String(active) : ''} aria-label={tr('ช่วงย้อนหลัง')} data-lookback="1"
+            title={tr('ตั้งกรอบเวลาเป็น N วันล่าสุด (นับถึงวันทำงานวันนี้) — แก้วันต่อได้')}
+            onChange={e => { const d = Number(e.target.value); if (!d) return; const r = presetRange(d, today); if (r && onView) applyRange(r.from, r.to); else onPreset?.(d); }}
+            style={{ width: 'auto', ...(presets.includes(active) ? { borderColor: 'var(--accent)', color: 'var(--accent)', fontWeight: 700 } : null) }}>
+            <option value="">{tr('ย้อนหลัง…')}</option>
+            {presets.map(d => <option key={d} value={d}>{tr('ย้อนหลัง')} {d} {unitDays(d)}</option>)}
+          </select>
         )}
 
         {/* flexWrap: วันที่ 2 ช่อง (150px) + ป้าย + "(30 วัน)" ≈ 388px > จอ handheld 360px ⇒ ตัวนับวันโดนตัดขอบ (15/10) */}

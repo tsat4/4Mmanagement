@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
+import { MoreMark } from './InfoMore';
 import { lineNameCompare } from '../utils/lineHierarchy';
 import useIsMobile from '../utils/useIsMobile';
 import { FRAME_START, frameMin, breaksToFrame } from '../utils/timeFrame';
@@ -610,8 +611,11 @@ export default function StoreTimeChart({
             <span style={{ fontSize: 13, fontWeight: 800, color: '#60a5fa' }}>
               ส่งตามคำขอ (delivery to order) — {onDemandQueue.length} ไลน์
             </span>
-            {/* โหมดรอบเป็น opt-in รายไลน์ (§6.1) — ไม่ต้องป้ายบนจอทำงานทุกวัน แค่ tooltip พอ (audit 2026-09-07) */}
-            <span title={tr('ถ้าวันหน้าไลน์ไหนอยากเดินเป็นรอบ ตั้งได้ที่ Line Stock → รอบจัดส่ง (opt-in รายไลน์)')} style={{ fontSize: 11, color: 'var(--muted)', cursor: 'help' }}>ⓘ</span>
+            {/* โหมดรอบเป็น opt-in รายไลน์ (§6.1) — ไม่ต้องป้ายบนจอทำงานทุกวัน พับไว้หลัง ⓘ พอ (audit 2026-09-07)
+                🔴 18/11: เดิมเป็น `title=` เพียวๆ ⇒ บนแท็บเล็ตหน้างานกดแล้วเงียบ · ย้ายมาใช้ของกลางที่กดเปิดได้ */}
+            <span style={{ fontSize: 11, color: 'var(--muted)' }}>
+              <MoreMark text={tr('ถ้าวันหน้าไลน์ไหนอยากเดินเป็นรอบ ตั้งได้ที่ Line Stock → รอบจัดส่ง (opt-in รายไลน์)')} />
+            </span>
           </div>
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 10 }}>
             ไม่ได้นัดเวลาไว้ — เวลาบนไทม์ไลน์มาจาก <b>{tr('การคำนวณ')}</b>: หัก WIP ด้วยของที่ผลิตไปแล้ววันนี้
@@ -886,7 +890,7 @@ export default function StoreTimeChart({
                                     {picked.lines.map(ln => { const c = slocOf(ln); return <option key={ln} value={ln}>➜ {c ? `${c} · ` : ''}{ln}</option>; })}
                                   </select>
                                 : <span style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 700, whiteSpace: 'nowrap' }}
-                                    title={picked.sloc ? `พื้นที่ SAP ${picked.sloc} · ของวางที่ ${picked.line}` : 'ไลน์นี้ยังไม่ผูกรหัสคลัง SAP (ผูกที่ 📦 สต๊อกในไลน์ → 🏬 พื้นที่ SAP / โซนคลัง)'}>
+                                    title={picked.sloc ? `พื้นที่ SAP ${picked.sloc} · ของวางที่ ${picked.line}` : 'ไลน์นี้ยังไม่ผูกรหัสคลัง SAP (ผูกที่ 📦 Stock Management → ตั้งค่า → พื้นที่ SAP / โซนคลัง)'}>
                                     ➜ {picked.sloc ? `${picked.sloc} · ` : ''}{picked.line}
                                   </span>
                             )}

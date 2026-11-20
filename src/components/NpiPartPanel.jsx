@@ -22,6 +22,7 @@ import { DeleteButton } from './IconButton';
 import { npiBlock } from '../utils/npiScope';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 export default function NpiPartPanel({ part, project, template, phases, delivs, drawings, tooling, peSets, qaParts, canEdit, canApprove, fullName, today, onChanged, partWriteOf }) {
   /* 🔐 ชั้นที่ 3 — ทุกแถวในแผงนี้เป็นของ `part` ตัวเดียว ⇒ ถามกฎครั้งเดียว (src/utils/npiScope.js)
      ไม่ได้รับ `partWriteOf` / พาร์ทไม่ระบุไลน์ = ตัดสินไม่ได้ ⇒ ไม่บล็อก (คงพฤติกรรมเดิม) */
@@ -57,7 +58,7 @@ export default function NpiPartPanel({ part, project, template, phases, delivs, 
     const { phaseRows, delivRows } = buildPartRows({ partId: part.id, templatePhases: template.phases, templateDelivs: template.delivs,
       existingPhases: phases, existingDelivs: delivs, sopDate: project.sop_date, kickoffDate: project.kickoff_date });
     if (!phaseRows.length && !delivRows.length) return toast.info('ครบตามแม่แบบแล้ว ไม่มีรายการเพิ่ม');
-    if (!window.confirm(`เติมจากแม่แบบ: เฟส ${phaseRows.length} · รายการเอกสาร ${delivRows.length} (ของเดิมไม่ถูกแตะ) ?`)) return;
+    if (!await askConfirm(`เติมจากแม่แบบ: เฟส ${phaseRows.length} · รายการเอกสาร ${delivRows.length} (ของเดิมไม่ถูกแตะ) ?`)) return;
     setSaving(true);
     const e1 = phaseRows.length ? (await supabase.from('npi_part_phases').insert(phaseRows)).error : null;
     const e2 = delivRows.length ? (await supabase.from('npi_deliverables').insert(delivRows)).error : null;
@@ -115,7 +116,7 @@ export default function NpiPartPanel({ part, project, template, phases, delivs, 
   };
   const delDeliv = async (d) => {
     if (blocked()) return;
-    if (!window.confirm(`ลบรายการ "${d.label}" ?`)) return;
+    if (!await askConfirm(`ลบรายการ "${d.label}" ?`)) return;
     const { error } = await supabase.from('npi_deliverables').delete().eq('id', d.id);
     if (error) return toast.error(error.message);
     if (d.file_url) removeNpiFile(d.file_url);

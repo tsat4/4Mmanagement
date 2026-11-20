@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { MoreMark } from './InfoMore';
 import LineSelect from './LineSelect';
 import MachineReliability from './MachineReliability';
 import { getLineFamilyNames } from '../utils/lineHierarchy';
@@ -102,11 +103,19 @@ export default function MtnKpiPanel({ orders = [], scopeLines = null, lineObjs =
   }, [rows]);
 
   // h = คำแปลของชื่อย่อสากล — ต้องอ่านได้บนจอเลย ห้ามซ่อนใน tooltip อย่างเดียว (จอ TV ไม่มี hover)
-  const Card = ({ t, v, c, h }) => (
+  /* 🔴 แยก 2 ช่องโดยตั้งใจ (19/11 · รอบพับข้อความ):
+       `h`   = **ตัวเลข/ที่มาของสูตร** (เฉลี่ย · ช้าสุด 10%) — อยู่บนจอเสมอ ห้ามพับ (UI §6.10)
+       `def` = นิยามศัพท์ภาษาอังกฤษ (Mean Time To …) — อ่านรอบเดียวพอ ⇒ พับหลัง ⓘ ได้
+     ปนกัน 2 อย่างในช่องเดียวแบบเดิม = ต้องเลือกว่าพับทั้งก้อนหรือไม่พับเลย ซึ่งผิดทั้งคู่ */
+  const Card = ({ t, v, c, h, def }) => (
     <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 14, flex: 1, minWidth: 170 }}>
       <div style={{ fontSize: 12, color: 'var(--muted)' }}>{t}</div>
       <div style={{ fontSize: 26, fontWeight: 800, color: c || 'var(--text)', marginTop: 2 }}>{v}</div>
-      {h && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3, lineHeight: 1.45 }}>{h}</div>}
+      {(h || def) && (
+        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3, lineHeight: 1.45 }}>
+          {h}{def ? ' ' : ''}{def && <MoreMark text={def} />}
+        </div>
+      )}
     </div>
   );
 
@@ -166,11 +175,14 @@ export default function MtnKpiPanel({ orders = [], scopeLines = null, lineObjs =
         {/* 📐 ค่ากลางเป็นตัวหลัก เฉลี่ยอยู่ในบรรทัดคำอธิบาย (11/11 · คำสั่ง user)
             ใบที่กดปุ่มย้อนหลังดันค่าเฉลี่ยพุ่ง แต่ไม่สะเทือนค่ากลาง ⇒ 2 ตัวห่างกันมาก = สัญญาณ */}
         <Card t="MTTA — เข้าดำเนินการ (ค่ากลาง)" v={fmtMin(stat.respBox.p50)} c="#3b82f6"
-          h={`Mean Time To Acknowledge = แจ้ง → ช่างรับงาน · เฉลี่ย ${fmtMin(stat.respBox.avg)} · ช้าสุด 10% เกิน ${fmtMin(stat.respBox.p90)}`} />
+          h={`เฉลี่ย ${fmtMin(stat.respBox.avg)} · ช้าสุด 10% เกิน ${fmtMin(stat.respBox.p90)}`}
+          def={trI18n('Mean Time To Acknowledge = แจ้ง → ช่างรับงาน')} />
         <Card t="MTTR — เวลาซ่อม (ค่ากลาง)" v={fmtMin(stat.ttrBox.p50)} c="#f59e0b"
-          h={`Mean Time To Repair = รับงาน → ซ่อมเสร็จ (ไม่รวมเวลารอช่าง · หักช่วงส่งซ่อมนอกแล้ว) · เฉลี่ย ${fmtMin(stat.ttrBox.avg)} · ช้าสุด 10% เกิน ${fmtMin(stat.ttrBox.p90)}`} />
+          h={`เฉลี่ย ${fmtMin(stat.ttrBox.avg)} · ช้าสุด 10% เกิน ${fmtMin(stat.ttrBox.p90)}`}
+          def={trI18n('Mean Time To Repair = รับงาน → ซ่อมเสร็จ (ไม่รวมเวลารอช่าง · หักช่วงส่งซ่อมนอกแล้ว)')} />
         <Card t="MDT — หยุดรวม (ค่ากลาง)" v={fmtMin(stat.bdBox.p50)} c="#ef4444"
-          h={`Mean Down Time = แจ้ง → ซ่อมเสร็จ (MTTA + MTTR) · เฉลี่ย ${fmtMin(stat.bdBox.avg)} · ช้าสุด 10% เกิน ${fmtMin(stat.bdBox.p90)}`} />
+          h={`เฉลี่ย ${fmtMin(stat.bdBox.avg)} · ช้าสุด 10% เกิน ${fmtMin(stat.bdBox.p90)}`}
+          def={trI18n('Mean Down Time = แจ้ง → ซ่อมเสร็จ (MTTA + MTTR)')} />
         <Card t={`ความพึงพอใจเฉลี่ย (${stat.satN} ใบ)`} v={stat.satOverall != null ? `${Math.round(stat.satOverall / 3 * 100)}%` : '—'}
           c={stat.satOverall == null ? 'var(--muted)' : stat.satOverall >= 2.5 ? '#22c55e' : stat.satOverall >= 2 ? '#f59e0b' : '#ef4444'} />
       </div>
@@ -202,7 +214,9 @@ export default function MtnKpiPanel({ orders = [], scopeLines = null, lineObjs =
           ความน่าเชื่อถือรายอุปกรณ์ — MTTR / MTBF
         </div>
         <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 10 }}>
-          นับจาก <b style={{ color: 'var(--text2)' }}>{trI18n('downtime จริงของเครื่อง')}</b> ไม่ใช่ใบแจ้งซ่อม — มีตัวกรองของตัวเองด้านล่าง
+          {/* 🔴 ป้ายที่มาของตัวเลข (คนละฐานกับการ์ดข้างบน) ห้ามพับ — พับแล้วกลายเป็น "จอเดียวกันตอบคนละเลข" */}
+          นับจาก <b style={{ color: 'var(--text2)' }}>{trI18n('downtime จริงของเครื่อง')}</b> {trI18n('ไม่ใช่ใบแจ้งซ่อม')}{' '}
+          <MoreMark text={trI18n('มีตัวกรองของตัวเองด้านล่าง')} />
         </div>
         <MachineReliability machines={machines} lineObjs={lineObjs} scopeLines={scopeLines} />
       </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useContext, useCallback } from 'react';
+import { MoreMark } from '../components/InfoMore';
 import { orIlike } from '../utils/pgrstFilter';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useMergeParams } from '../utils/useTabParam';
@@ -267,7 +268,7 @@ export default function OrderTrace() {
         supabaseDR.from('prod_order_qty_updates').select('qty_accum, qty_delta, is_final, logged_at, logged_by').eq('order_id', sel.id).order('logged_at'),
         supabaseDR.from('defect_logs').select('qty_ng, qty_suspect, qty_repair, description, reported_by_name, logged_at, prod_order_id, dr_defect_types(name_th)').eq('session_id', sess.id).order('logged_at'),
         supabaseDR.from('prod_orders').select('id, prod_no, mat_no, part_name, status, qty, qty_target, qty_actual, qty_ok, opened_at, confirmed_at').eq('session_id', sess.id).order('opened_at'),
-        supabaseDR.from('downtime_logs').select('id, machine_no, description, duration_min, started_at, ended_at, carry_over, dr_downtime_types(name_th, category)').eq('session_id', sess.id).order('started_at'),
+        supabaseDR.from('downtime_logs').select('id, machine_no, description, duration_min, started_at, ended_at, carry_over, dr_downtime_types(name_th, category, planned_cap_min)').eq('session_id', sess.id).order('started_at'),
       ]);
       t.qtyUpdates = qu.data || []; t.defects = df.data || []; t.sessionOrders = so.data || []; t.downtimes = dt.data || [];
 
@@ -1190,7 +1191,11 @@ export default function OrderTrace() {
         </>
       )}
       {!sel && !results.length && !searching && (
-        <div style={{ ...card, color: 'var(--muted)', fontSize: 13 }}>{trI18n('สแกนบาร์โค้ด kanban (PROD.NO) หรือพิมพ์เลข MAT/ชื่อชิ้นงาน แล้วกดค้นหา — เว้นว่างเพื่อดูใบทั้งหมดในช่วงวัน')}</div>
+        <div style={{ ...card, color: 'var(--muted)', fontSize: 13 }}>
+          {/* จอว่าง — วิธีใช้หลักต้องอยู่บนจอ (ไม่มีอย่างอื่นให้อ่าน) · ทางลัดพับได้ · 19/11 */}
+          {trI18n('สแกนบาร์โค้ด kanban (PROD.NO) หรือพิมพ์เลข MAT/ชื่อชิ้นงาน แล้วกดค้นหา')}{' '}
+          <MoreMark text={trI18n('เว้นว่างเพื่อดูใบทั้งหมดในช่วงวัน')} />
+        </div>
       )}
 
       {/* ── รายละเอียดใบ ── */}

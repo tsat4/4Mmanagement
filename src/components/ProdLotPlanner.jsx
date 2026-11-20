@@ -23,6 +23,7 @@
          เดาแทนคนแล้วงานจะไปโผล่ผิดกะบนจอหน้างาน — คงกะเดิมไว้แล้วเขียนบนจอว่าจัดให้ไม่ได้
    ══════════════════════════════════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useMemo, useCallback, useContext, useRef } from 'react';
+import { MoreMark } from './InfoMore';
 import { supabaseDR } from '../supabaseClient';
 import { UserContext } from '../App';
 import { can, canSeeded } from '../utils/permissions';
@@ -51,6 +52,7 @@ import TrialBookingModal from './TrialBookingModal';
 import { dieSetMats, dieSetsForMat, matSlotFor } from '../utils/dieSetMats';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 const card = { background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, padding: 12, boxShadow: 'var(--shadow-sm)' };
 const th = { padding: '5px 8px', borderBottom: '1px solid var(--border)', fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' };
 const td = { padding: '5px 8px', fontSize: 12, whiteSpace: 'nowrap' };
@@ -89,7 +91,7 @@ function DieMatLinkNote({ lot, dies, role, mayWrite, onDone }) {
   if (slot !== 'mat_no' || !mayWrite) return null;
 
   async function link() {
-    if (!window.confirm(`ผูก MAT ${lot.mat_no} เข้ากับชุดแม่พิมพ์ ${set.set_code}?\n\n`
+    if (!await askConfirm(`ผูก MAT ${lot.mat_no} เข้ากับชุดแม่พิมพ์ ${set.set_code}?\n\n`
       + 'ทะเบียนแม่พิมพ์จะจำว่าชุดนี้ทำพาร์ทนี้ ⇒ ล็อตถัดไปของพาร์ทนี้ระบบเลือกชุดให้เอง\n'
       + 'แก้ได้ภายหลังที่ /equipment?tab=die')) return;
     setBusy(true);
@@ -143,7 +145,18 @@ export default function ProdLotPlanner({
   const [trialOpen, setTrialOpen] = useState(false);
   const [dirty, setDirty]     = useState(false);
 
-  useEffect(() => { if (!lineName && lines.length) setLineName(lines[0].name); }, [lines, lineName]);
+  /* 🔴 ค่าที่เลือกไว้ต้องไม่ค้างอยู่นอกลิสต์ที่เลือกได้ (13/11 · user: เลือก PD1 แล้วจอโชว์ไลน์ PD2)
+     หน้าแม่กรอง `lines` ตามส่วนงาน ⇒ สลับตัวกรองแล้วไลน์เดิมหลุดลิสต์ แต่ state ยังค้าง
+     ⇒ แผนที่กำลังดู/กำลังแก้ เป็นของไลน์ที่ไม่ได้เลือกอยู่ **โดยไม่มีอะไรบอก**
+     🔴 เปลี่ยนให้แล้วต้องบอก ห้ามสลับเงียบ (คนกำลังแก้แผนอยู่) · `lines` ว่าง = ยังโหลดไม่เสร็จ ห้ามแตะ */
+  useEffect(() => {
+    if (!lines.length) return;
+    if (!lineName) { setLineName(lines[0].name); return; }
+    if (lines.some(l => l.name === lineName)) return;
+    const prev = lineName;
+    setLineName(lines[0].name);
+    toast.info(`ไลน์ "${prev}" ไม่อยู่ในขอบเขตที่เลือก — สลับไป "${lines[0].name}" ให้แล้ว`);
+  }, [lines, lineName]);
 
   /* 🔔 ของถึง min แล้ว — ตัวป้อนงานให้แพลนนิ่ง (คำสั่ง user 13/11)
      กฎการตัดสินอยู่ utils/replenish.js · โหลดผ่าน lib/minDemandOps.js — ห้ามคิดเองที่นี่ */
@@ -492,9 +505,12 @@ export default function ProdLotPlanner({
               งานยังไม่มีที่ลงจริง · ยืด "ไหลต่อได้" ให้ยาวขึ้น หรือลดงาน/เพิ่มกำลังผลิต
               <b> {tr('ระบบไม่ยัดลงกะสุดท้ายให้')}</b></div>
           )}
+          {/* 18/11 · user "ข้อความสีเทาแบบนั้นอยากให้เป็น tooltip มากกว่าโชว์มาเยอะๆ"
+              🔴 หัวคำเตือน + ผลที่ตามมา อยู่บนจอ · **เหตุผล**ย้ายไป title (ขาดไปก็ยังลงมือถูก) */}
           {unsureCount > 0 && (
-            <div>⚠️ <b>{unsureCount} {tr('ล็อตยังจัดกะให้ไม่ได้')}</b> — เวลาเชื่อไม่ได้ (ไม่มี cycle time
-              หรือมีล็อตที่ไม่มี CT อยู่ก่อนหน้า) · <b>{tr('ล็อตพวกนี้จะคงกะเดิมไว้ตอนบันทึก ไม่ถูกย้าย')}</b></div>
+            <div title={tr('เวลาเชื่อไม่ได้ เพราะไม่มี cycle time หรือมีล็อตที่ไม่มี CT อยู่ก่อนหน้า')}>
+              ⚠️ <b>{unsureCount} {tr('ล็อตยังจัดกะให้ไม่ได้')}</b> · <b>{tr('คงกะเดิมตอนบันทึก ไม่ถูกย้าย')}</b>{' '}
+              <MoreMark text={tr('เวลาเชื่อไม่ได้ เพราะไม่มี cycle time หรือมีล็อตที่ไม่มี CT อยู่ก่อนหน้า')} /></div>
           )}
         </div>
       )}
@@ -506,8 +522,11 @@ export default function ProdLotPlanner({
             <div>🧪 <b>{summary.noTimeLots} {tr('ใบทดลองยังไม่ได้ระบุเวลาที่ขอ')}</b> — วางบนไทม์ไลน์ไม่ได้
               และทำให้เวลาของใบที่อยู่หลังจากนั้น<b>{tr('เชื่อไม่ได้ทั้งหมด')}</b> · แก้ที่ช่อง "ขอใช้เครื่อง"</div>
           )}
+          {/* รายชื่อ MAT ไป title — บนจอเหลือ "กี่ตัว + กระทบอะไร" ซึ่งพอให้ตัดสินใจได้แล้ว */}
           {summary.noCtMats.length > 0 && (
-            <div>⚠️ <b>{summary.noCtMats.length} {tr('พาร์ทยังไม่มี cycle time')}</b> ({summary.noCtMats.slice(0, 4).join(' · ')}{summary.noCtMats.length > 4 ? ' …' : ''})
+            <div title={`${tr('พาร์ทที่ยังไม่มี cycle time')}: ${summary.noCtMats.join(' · ')}`}>
+              ⚠️ <b>{summary.noCtMats.length} {tr('พาร์ทยังไม่มี cycle time')}</b>{' '}
+              <MoreMark text={`${tr('พาร์ทที่ยังไม่มี cycle time')}: ${summary.noCtMats.join(' · ')}`} />
               — เวลาผลิตข้างบน<b>{tr('ต่ำกว่าจริง')}</b> {tr('· ไปกรอกที่ Product Master')}</div>
           )}
           {summary.setupUnknown && (
@@ -527,8 +546,10 @@ export default function ProdLotPlanner({
       {rec.rows.length > 0 && frame.startMs && (
         <div style={card}>
           <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8 }}>
-            ไทม์ไลน์ — 1 บรรทัด = 1 กะ <span style={{ color: 'var(--muted)', fontWeight: 600, fontSize: 11.5 }}>
-              (ความยาวกล่อง = เวลาที่ต้องใช้จริง · งานล้นกะไหลลงบรรทัดถัดไปเอง · ลากเพื่อสลับลำดับ)</span>
+            ไทม์ไลน์ — 1 บรรทัด = 1 กะ <span
+              title={tr('ความยาวกล่อง = เวลาที่ต้องใช้จริง · งานล้นกะไหลลงบรรทัดถัดไปเอง · ดูทั้งสัปดาห์ = ตั้ง "ไหลต่อได้" เป็น 7 วัน')}
+              style={{ color: 'var(--muted)', fontWeight: 600, fontSize: 11.5 }}>(ลากเพื่อสลับลำดับ){' '}
+              <MoreMark text={tr('ความยาวกล่อง = เวลาที่ต้องใช้จริง · งานล้นกะไหลลงบรรทัดถัดไปเอง · ดูทั้งสัปดาห์ = ตั้ง "ไหลต่อได้" เป็น 7 วัน')} /></span>
           </div>
           <PlanTimeline
             lots={lots} ctOf={ctOf} pairOf={pairOf} dieOf={dieOf} rule={rule}
@@ -549,8 +570,9 @@ export default function ProdLotPlanner({
       {/* ── ตารางแผน ── */}
       <div style={{ ...card, overflowX: 'auto' }}>
         <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 6 }}>
+          {/* คำอธิบายคอลัมน์ล้วน — ไม่มีตัวเลข ไม่มีคำเตือน ⇒ พับได้ทั้งก้อน · user 18/11 */}
           คิวงาน <span style={{ color: 'var(--muted)', fontWeight: 600, fontSize: 11.5 }}>
-            (คอลัมน์ "ลงกะ" = กะที่ระบบคำนวณว่างานใบนี้ตกไปอยู่ — บันทึกแล้วหน้างานกะนั้นจะเห็น)</span>
+            <MoreMark text={tr('คอลัมน์ "ลงกะ" = กะที่ระบบคำนวณว่างานใบนี้ตกไปอยู่ — บันทึกแล้วหน้างานกะนั้นจะเห็น')} /></span>
         </div>
         {loading ? <div style={{ color: 'var(--muted)', fontSize: 12.5, padding: 12 }}>{tr('กำลังโหลด…')}</div>
           : rec.rows.length === 0 ? <div style={{ color: 'var(--muted)', fontSize: 12.5, padding: 12 }}>{tr('ยังไม่มีแผนของกะนี้ — เพิ่มจากรายการความต้องการด้านล่าง')}</div>
@@ -704,8 +726,11 @@ export default function ProdLotPlanner({
               </span>
             ))}
           </div>
-          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-            ➕ ทำเกินยอดที่วางไว้ · 🆕 พาร์ทที่ผลิตจริงแต่ไม่มีในแผน — <b>{tr('ไม่ใช่ความผิดของหน้างาน')}</b> แต่วางแผนต้องรู้
+          {/* ป้าย ➕/🆕 ต้องแปลได้บนจอ (ไม่งั้นอ่านชิปข้างบนไม่ออก) · ประโยคตีความ → tooltip · user 18/11 */}
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}
+            title={tr('ไม่ใช่ความผิดของหน้างาน แต่วางแผนต้องรู้')}>
+            ➕ {tr('ทำเกินยอดที่วางไว้')} · 🆕 {tr('ไม่มีในแผน')}{' '}
+            <MoreMark text={tr('ไม่ใช่ความผิดของหน้างาน แต่วางแผนต้องรู้')} />
           </div>
         </div>
       )}

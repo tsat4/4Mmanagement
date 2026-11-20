@@ -10,6 +10,7 @@ import SearchInput from './SearchInput';
 import { ALL } from '../utils/filterLabels';
 import { tr } from '../utils/i18n';
 import LineSelect from './LineSelect'; // dropdown ไลน์ = <LineSelect> เท่านั้น (single-source audit 2026-09-07)
+import { askConfirm } from '../utils/askConfirm';
 
 /* ═══════════════════════════════════════════════════════════════
    ⚙️ จัดชนิดอุปกรณ์เป็นชุด — เฟส 0 ของโมดูล Fixture Shim
@@ -74,7 +75,7 @@ export default function FixtureClassify({ machines, mapKeys, canEdit, lines = []
     if (!picked.size) return;
     const ids = [...picked];
     const label = EQUIPMENT_KINDS.find(k => k.key === kind)?.label || kind;
-    if (!window.confirm(`ตั้ง ${ids.length} รายการเป็น "${label}" ?\n\nการเปลี่ยนชนิดมีผลกับทะเบียน/ผัง/ตัวกรองทุกหน้า`)) return;
+    if (!await askConfirm(`ตั้ง ${ids.length} รายการเป็น "${label}" ?\n\nการเปลี่ยนชนิดมีผลกับทะเบียน/ผัง/ตัวกรองทุกหน้า`)) return;
 
     setSaving(true);
     try {

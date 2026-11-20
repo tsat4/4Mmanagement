@@ -60,6 +60,13 @@ model: inherit
   · payload ไหนที่เขียน `oee_a` ลง `production_sessions` **ต้องเขียน `actual_qty`/`qty_ok` ด้วย**
     (ด่าน `oee-restamp-needs-qty`) — ไม่งั้นแถวเดียวกันขัดแย้งกันเอง: ยอด 1,000 แต่ %P คิดจาก 1,100
     (วัดจริง ก.ย. 2026: 26 กะ · 885 ชิ้น) · ยอดขยับ = ต้องขึ้น toast บอกก่อน-หลัง ห้ามแก้เงียบ
+- **A5.3** 🧩 **ของเสียระดับ "พาร์ทลูก" ห้ามเข้าสูตร %Q/%P** (2026-11-16 · คำสั่ง user)
+  · `defect_logs.child_mat_no/child_part_name/child_qty_per_fg` = ข้อมูลเพิ่มเพื่อพาเรโต/ใบรายงาน
+    **ไม่ใช่ตัวแปรของสูตร** — ของเสียยังหักที่ MAT แม่ 1 ชิ้น = 1 ชิ้น · ตัวหาร %Q ไม่เปลี่ยน
+  · grep: `child_qty_per_fg` นอก `utils/defectPart.js` / `pages/DailyReport.jsx` = **ผิด**
+    (ด่าน `defect-child-qty-not-in-oee`) · เอาไปคูณ = OEE เพี้ยนย้อนหลังทั้งโรงงาน
+  · ลิสต์พาร์ทลูกต้องมาจาก `useBomChildren` → `bomChildCandidates` (ใบเดียว ห้ามรวมหลายใบ = นับซ้ำ)
+    และ **ไม่มีลูก/อ่าน BOM ไม่ได้ ต้องยังลงของเสียได้** (fail-open · ช่องนี้ห้ามเป็นช่องบังคับ)
 - **A6** ห้ามสร้างช่วงเวลาพักเอง — `break_policies` → ช่วงเวลา ต้องผ่าน `breakIntervalsIn()` /
   `policyBreakOverlapMin()` / `policyBreakForShift()` เท่านั้น (เคยมีสูตรซ้ำ 4 ชุด ให้ผลต่างกัน
   · ชุดที่เขียนเองมักตก `process_type = null` และ `ot_scope` → นับพักเกิน 20 นาทีทุกกะเช้าที่ทำโอ)
@@ -452,6 +459,18 @@ model: inherit
   · grep: `domain=\{\[(dataMin|\(?\w+\)? =>|[1-9])` · `domain:\s*\[(dataMin|\w+ =>)` · ด่าน `chart-yaxis-domain-hand-made`
 - **F-KPILEVEL** ช่องตัดสิน KPI (`yn`/`ynTotal`/สีจุดกราฟ) ต้องเป็นระดับ 1/0.5/0 จาก `scoreDef` — ห้าม `v >= target` / `v < target` เอง (2 สีไม่รู้จัก Commitment)
   · grep: `yn(Total)?:\s*[^,]*(>=|<=)` · `const \w*(miss|hit|pass)Target\w* =` · ด่าน `kpi-yn-boolean-compare`
+- **F-CSATQD** 🤝 **ความพึงพอใจลูกค้า = ค่าเดียวของโรงงาน ทุกหน่วยดึงไปใช้** (คำสั่ง user 16/11
+  "ต้อง single source of truth · ค่าของโรงงานต้องมีค่าเดียว ดึงไปใช้เอา") ⇒ คะแนนดิบเป็น **ตัวแปรฐาน
+  `level:'plant'`** ใน `kpi_base_inputs` (`csat_q_actual`/`csat_q_total`/`csat_d_actual`/`csat_d_total`)
+  · ค่ารวม = สูตร `csat_qd_pct` (`scope:'plant'`) · ขาย่อย = `parts: ['csat_q_pct','csat_d_pct']`
+  — ⛔ **ห้ามมีตาราง/ช่องกรอกคะแนนรายขาชุดที่ 2** (เคยทำแล้วถอน: `kpi_customer_sat_parts` คีย์ `kpi_id`
+  ⇒ นิยาม 7 แถวถือคะแนนคนละชุดของแบบสอบถามใบเดียวกัน) · 🔴 **ค่ารวม = ตัวตั้งรวม ÷ ตัวหารรวม
+  ห้ามเฉลี่ย % ของ 2 ขา** (ตัวหารไม่เท่ากัน: Q 21/24 + D 6/8 ⇒ 84.375 ไม่ใช่ 81.25) · ขาไม่ครบ = `null`
+  **ห้ามนับ 0** · ทะเบียนมีหัวข้อนี้ **1 ข้อ 1 คะแนน** ⇒ ห้ามแตกเป็น KPI 2 ตัว/2 น้ำหนัก
+  · `Internal Satisfaction` (`value_scope='own'`) = ใบคนละใบรายหน่วย **ห้ามเอามารวมค่ากลาง**
+  · grep: `kpi_customer_sat_parts` · `actual_score` · `total_score` · ด่าน `csat-no-second-entry-point`
+- **F-KPIDUP** 👯 จอที่ตั้ง/กรอก KPI ต้องฟ้องเมื่อมี KPI ซ้ำในขอบเขตเดียวกัน (`findDupDefs` · `utils/kpiDupDefs.js`)
+  — **ห้ามลบ/ปิด/ย้ายค่าให้เอง** (ค่าที่กรอกไว้กำพร้า) · เคสจริง: ระดับโรงงานมี `Customer Satisfaction` 2 แถว ต่างกันแค่ `(Q&D)`
 - **F-SHADOW** 💥 `const <ชื่อ>` ที่**ชนกับ named import ในไฟล์เดียวกัน** แล้วมีการเรียก `<ชื่อ>()` ข้างใน
   = **TDZ จอขาวทั้งหน้า** (เคสจริง 25-26/10 · 4 หน้า: /energy /morning-meeting die/jig registry)
   · lint `no-use-before-define` จับไม่ได้เพราะการอ่านอยู่ใน callback (คนละ scope)
@@ -539,3 +558,7 @@ model: inherit
 ### ด่านที่เพิ่ม 2026-11-13
 > 🚫 **ไม่มี FG เข้าไลน์** — ทุกจุดที่ insert `wip_replenish_requests` ต้องกันเลข 1xx ผ่าน `isFgMat()` (`src/utils/storeOps.js`) ·
 > ห้ามเทียบ `charAt(0) === '1'` เองในหน้า (ด่าน `no-fg-line-request`)
+
+### ด่านที่เพิ่ม 2026-11-19
+> 🔻 **ตัด-จ่ายสต็อกต้องหักเต็ม ยอมติดลบ** — จ่ายจาก STORE / ส่งลูกค้า / ตัดวัตถุดิบตอนปิดใบ ห้าม "ยอดในระบบไม่พอ = ไม่หัก/หักเท่าที่มี"
+> ต้องหักเต็มแล้วเขียนบนจอว่าติดลบ (`STORE_NEG_NOTE` · `inflowDestOf` ใน CustomerDemand · DB `fn_take_raw`) — ด่าน "ตัด-จ่ายสต็อกต้องหักเต็ม"

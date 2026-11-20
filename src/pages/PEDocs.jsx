@@ -1,4 +1,5 @@
 import { useState, useEffect, useContext, useMemo, useCallback, useRef } from 'react';
+import { MoreMark } from '../components/InfoMore';
 import { useObjectUrl } from '../utils/useObjectUrl';
 import resizeImg from '../utils/resizeImage';
 import { todayLocal as localToday } from '../utils/dateFormat';
@@ -43,6 +44,7 @@ import { tr } from '../utils/i18n';
 import { isGifFile, GIF_MAX_BYTES, GIF_TOO_BIG_MSG } from '../utils/imageFileKind';   // ตัวตรวจชนิดไฟล์ + เพดาน GIF = จุดเดียว
 import { checkWriteRows } from '../utils/dbWrite';   // 🔴 ลบ/เปลี่ยนไฟล์ storage ได้หลัง "นับแถวที่โดนจริง" เท่านั้น
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
+import { askConfirm } from '../utils/askConfirm';
 
 /* ═══ PE Core Tools — Process Flow / PFMEA / Control Plan (2026-08-13) ═══
    โมดูลของทีม Process Engineering — โครงถอดจากเอกสารจริง TSAT (PFC/FMEA/CNP-P703-01):
@@ -263,7 +265,7 @@ export default function PEDocs() {
   };
   const deleteRow = async (table, id, label, after, imgUrl) => {
     if (!setWrite.ok) { toast.info(writeBlockText(setWrite, { what: 'เอกสาร PE ของชุดนี้' })); return; }
-    if (!window.confirm(`ลบ${label}?`)) return;
+    if (!await askConfirm(`ลบ${label}?`)) return;
     /* 🔴 RLS ปฏิเสธ DELETE = "0 แถว ไม่มี error" ⇒ เช็คแค่ error แล้วลบไฟล์ = แถวยังอยู่ แต่รูปหายถาวร
        (กฎเหล็ก DB ข้อ 2) ⇒ ต้อง `.select()` นับแถวให้ได้ > 0 ก่อนแตะ storage */
     const res = await supabase.from(table).delete().eq('id', id).select('id');
@@ -421,7 +423,9 @@ export default function PEDocs() {
           onOpenSet={(id) => { pickSet(id); setTab('fmea'); }} />
       ) : !curSet ? (
         <div style={{ textAlign: 'center', padding: 48, color: 'var(--muted)', fontSize: 13 }}>
-          เลือกพาร์ทด้านบน{canEdit ? ' หรือกด "➕ ชุดเอกสารใหม่" เพื่อเริ่มพาร์ทแรก' : ''} — 1 ชุด = PFC + PFMEA + Control Plan ของพาร์ทนั้น
+          {/* จอว่าง — สิ่งที่ต้องลงมืออยู่บนจอ · นิยาม "1 ชุด" พับได้ · 19/11 */}
+          เลือกพาร์ทด้านบน{canEdit ? ' หรือกด "➕ ชุดเอกสารใหม่" เพื่อเริ่มพาร์ทแรก' : ''}{' '}
+          <MoreMark text={tr('1 ชุด = PFC + PFMEA + Control Plan ของพาร์ทนั้น')} />
         </div>
       ) : detailLoading ? (
         <div style={{ color: 'var(--muted)', textAlign: 'center', padding: 30 }}>{tr('กำลังโหลด...')}</div>
@@ -777,7 +781,7 @@ export default function PEDocs() {
               // 2026-09-07 เปลี่ยนจากบล็อกแข็งเป็น confirm (คำสั่ง user: ทะเบียนไม่มี → ยังใช้ค่าที่เคยบันทึก/พาร์ทที่ยังไม่ขึ้น master ได้ ห้ามบล็อกเงียบ)
               const matIn = setModal.mat_no?.trim().toUpperCase();
               if (matIn && prodMaster.length && !prodMaster.some(p => String(p.mat_no || '').trim().toUpperCase() === matIn)) {
-                if (!window.confirm(`MAT SAP ${matIn} ไม่มีใน Product Master — ข้อมูลผลิต/VSM/สอบกลับจะยังโยงไม่ได้จนกว่าจะเพิ่มสินค้าที่ /products\nใช้ค่านี้ต่อหรือไม่?`)) return;
+                if (!await askConfirm(`MAT SAP ${matIn} ไม่มีใน Product Master — ข้อมูลผลิต/VSM/สอบกลับจะยังโยงไม่ได้จนกว่าจะเพิ่มสินค้าที่ /products\nใช้ค่านี้ต่อหรือไม่?`)) return;
               }
               const patch = {
                 part_no: setModal.part_no.trim(), mat_no: setModal.mat_no?.trim() || null,

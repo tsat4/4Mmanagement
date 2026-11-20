@@ -1,4 +1,5 @@
 import { useState, useEffect, useContext, useMemo, useRef } from 'react';
+import { MoreMark } from '../components/InfoMore';
 import { LPA_LAYERS } from '../utils/prodRoutine';
 import { canWriteLine, writeBlockText } from '../utils/writeScope';
 /* 🔴 ด่านชั้น 2 ของ stale-response race — กฎ+ข้อความอยู่ใน utils/staleView.js (pure · มีเทส) */
@@ -40,6 +41,7 @@ import NoticeBar from '../components/NoticeBar';
 import { tr } from '../utils/i18n';
 import { pickSignerPatch, isSelfName } from '../utils/selfSign';
 import { checkWriteRows } from '../utils/dbWrite';
+import { askConfirm } from '../utils/askConfirm';
 /* ══════════════════════════════════════════════════════════════
    📋 Layer Process Audit (LPA) — paperless แทนฟอร์มกระดาษ 2 ใบ:
    1) Layer Process Audit Plan   — แผนตรวจรายเดือน ต่อไลน์+กะ (สถานีรายวัน + ชั้นผู้ตรวจ ○●⊗)
@@ -787,7 +789,7 @@ export default function LayerProcessAudit() {
     if (!lineGuard('ใบตรวจ LPA ของไลน์นี้')) return;
     const mis = draftMismatch();
     if (mis) { toast.error(mis); return; }
-    if (!window.confirm(`ลบผลตรวจ ${thDate(auditDate)} ${SHIFT_META[selShift]} ชั้น ${LAYERS.find(l => l.key === auditLayer)?.label}?`)) return;
+    if (!await askConfirm(`ลบผลตรวจ ${thDate(auditDate)} ${SHIFT_META[selShift]} ชั้น ${LAYERS.find(l => l.key === auditLayer)?.label}?`)) return;
     const { error } = await supabase.from('lpa_audits').delete().eq('id', draft.id);
     if (error) { toast.error('ลบไม่สำเร็จ: ' + error.message); return; }
     toast.success('ลบแล้ว');
@@ -817,7 +819,7 @@ export default function LayerProcessAudit() {
   const toggleQuestion = async (q) => {
     if (!qGuard(q, 'คำถามของไลน์นี้')) return;
     // ปิดใช้งานข้อ = ถอดออกจาก checklist ทุกใบตรวจถัดไป → ยืนยันก่อน (UI-CONVENTIONS §5.4) · เปิดกลับไม่ต้องถาม
-    if (q.is_active && !window.confirm(`ปิดใช้งานข้อ "${q.question}" ?\n\nข้อนี้จะไม่ขึ้นในใบตรวจ LPA ครั้งถัดไป (เปิดกลับได้ภายหลัง)`)) return;
+    if (q.is_active && !await askConfirm(`ปิดใช้งานข้อ "${q.question}" ?\n\nข้อนี้จะไม่ขึ้นในใบตรวจ LPA ครั้งถัดไป (เปิดกลับได้ภายหลัง)`)) return;
     const { error } = await supabase.from('lpa_questions').update({ is_active: !q.is_active }).eq('id', q.id);
     if (error) { toast.error(error.message); return; }
     setQuestions(prev => prev.map(x => x.id === q.id ? { ...x, is_active: !q.is_active } : x));
@@ -843,7 +845,7 @@ export default function LayerProcessAudit() {
     const block = lpaQuestionBlockMessage(q, refs);
     if (block) { toast.error(block); return; }
     // ยืนยันต้องบอกขอบเขตเสมอ (common = กระทบทุกไลน์ · คนกดมักไม่รู้ตัว — คำสั่ง user 12/10)
-    if (!window.confirm(lpaDeleteConfirmText(q))) return;
+    if (!await askConfirm(lpaDeleteConfirmText(q))) return;
     const { error } = await supabase.from('lpa_questions').delete().eq('id', q.id);
     if (error) { toast.error(error.message); return; }
     setQuestions(prev => prev.filter(x => x.id !== q.id));
@@ -1012,7 +1014,7 @@ table{border-collapse:collapse;width:100%}
   <tr>
     <td rowspan="3" style="border:1px solid #000;text-align:center;font-size:9px;font-weight:bold;width:26px">Description</td>
     <td rowspan="3" colspan="2" style="border:1px solid #000;text-align:center;font-size:9px;font-weight:bold">Audit Checklist / Question</td>
-    <td colspan="${nDays}" style="border:1px solid #000;text-align:center;font-size:9px;font-weight:bold">{tr('Audit Result (ผลการตรวจสอบ Y, N, T, N/A)')}</td>
+    <td colspan="${nDays}" style="border:1px solid #000;text-align:center;font-size:9px;font-weight:bold">${tr('Audit Result (ผลการตรวจสอบ Y, N, T, N/A)')}</td>
     <td colspan="4" style="border:1px solid #000;text-align:center;font-size:8px;font-weight:bold;background:#c9e4c5">Weekly</td>
     <td rowspan="2" style="border:1px solid #000;text-align:center;vertical-align:middle;width:20px;background:#e0e0e0"><div style="writing-mode:vertical-rl;transform:rotate(180deg);font-size:8px;font-weight:bold;margin:0 auto">Monthly</div></td>
     <td rowspan="2" style="border:1px solid #000;text-align:center;vertical-align:middle;width:20px;background:#f3e8a0"><div style="writing-mode:vertical-rl;transform:rotate(180deg);font-size:8px;font-weight:bold;margin:0 auto">Quarterly</div></td>
@@ -1025,14 +1027,14 @@ table{border-collapse:collapse;width:100%}
   </tr>
   ${catRows.join('')}
   <tr>
-    <td colspan="3" style="border:1px solid #000;text-align:right;padding:1px 6px;font-size:8px;font-weight:bold;height:74px;vertical-align:middle">{tr('Work Station (ระบุ Station ที่ทำการตรวจ)')}</td>
+    <td colspan="3" style="border:1px solid #000;text-align:right;padding:1px 6px;font-size:8px;font-weight:bold;height:74px;vertical-align:middle">${tr('Work Station (ระบุ Station ที่ทำการตรวจ)')}</td>
     ${stationRow}
     ${svAud.map(a => `<td style="border:1px solid #000;text-align:center;vertical-align:bottom;background:#c9e4c5"><div style="writing-mode:vertical-rl;transform:rotate(180deg);font-size:7px;margin:0 auto;white-space:nowrap;max-height:70px;overflow:hidden">${a?.station || ''}</div></td>`).join('')}
     <td style="border:1px solid #000;text-align:center;vertical-align:bottom;background:#e0e0e0"><div style="writing-mode:vertical-rl;transform:rotate(180deg);font-size:7px;margin:0 auto;white-space:nowrap;max-height:70px;overflow:hidden">${mgrAud?.station || ''}</div></td>
     <td style="border:1px solid #000;text-align:center;vertical-align:bottom;background:#f3e8a0"><div style="writing-mode:vertical-rl;transform:rotate(180deg);font-size:7px;margin:0 auto;white-space:nowrap;max-height:70px;overflow:hidden">${gmAud?.station || ''}</div></td>
   </tr>
   <tr>
-    <td colspan="3" style="border:1px solid #000;text-align:right;padding:1px 6px;font-size:8px;font-weight:bold;height:56px;vertical-align:middle">{tr('ลงชื่อ ผู้ตรวจสอบ')}</td>
+    <td colspan="3" style="border:1px solid #000;text-align:right;padding:1px 6px;font-size:8px;font-weight:bold;height:56px;vertical-align:middle">${tr('ลงชื่อ ผู้ตรวจสอบ')}</td>
     ${sigRow}
     ${svAud.map(a => sigCell(a, 'background:#c9e4c5;')).join('')}
     ${sigCell(mgrAud, 'background:#e0e0e0;')}
@@ -1053,9 +1055,9 @@ table{border-collapse:collapse;width:100%}
   <div>{tr('N/A หมายถึง ไม่เกี่ยวข้อง')}</div>
 </div>
 <div style="display:flex;gap:18px;margin-top:2px;font-size:8px;flex-wrap:wrap">
-  <div><span style="display:inline-block;width:24px;height:9px;background:#c9e4c5;border:1px solid #999;vertical-align:middle"></span> {tr('Weekly : Cross-Functional ทำการตรวจทุกสัปดาห์ โดยทำการสุ่มตรวจ')}</div>
-  <div><span style="display:inline-block;width:24px;height:9px;background:#e0e0e0;border:1px solid #999;vertical-align:middle"></span> {tr('Monthly : Manager ทำการตรวจทุกเดือน โดยทำการสุ่มตรวจ')}</div>
-  <div><span style="display:inline-block;width:24px;height:9px;background:#f3e8a0;border:1px solid #999;vertical-align:middle"></span> {tr('Quarterly : GM Plant ทำการตรวจทุก 3 เดือน โดยสุ่มตรวจ')}</div>
+  <div><span style="display:inline-block;width:24px;height:9px;background:#c9e4c5;border:1px solid #999;vertical-align:middle"></span> ${tr('Weekly : Cross-Functional ทำการตรวจทุกสัปดาห์ โดยทำการสุ่มตรวจ')}</div>
+  <div><span style="display:inline-block;width:24px;height:9px;background:#e0e0e0;border:1px solid #999;vertical-align:middle"></span> ${tr('Monthly : Manager ทำการตรวจทุกเดือน โดยทำการสุ่มตรวจ')}</div>
+  <div><span style="display:inline-block;width:24px;height:9px;background:#f3e8a0;border:1px solid #999;vertical-align:middle"></span> ${tr('Quarterly : GM Plant ทำการตรวจทุก 3 เดือน โดยสุ่มตรวจ')}</div>
 </div>
 ${issuesHtml}
 <div style="display:flex;justify-content:space-between;margin-top:3px;font-size:9px"><div>${fullCode(df)}${df.footer_note ? ' · ' + df.footer_note : ''}</div><div>${df.effective_date ? 'Effective Date : ' + df.effective_date : ''}</div></div>
@@ -1275,7 +1277,9 @@ ${issuesHtml}
 
           {draft?.id && (
             <div style={{ fontSize: 12, color: 'var(--green)', marginBottom: 8, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-              ✅ วันนี้บันทึกผลตรวจชั้นนี้ไว้แล้ว — แก้ไขแล้วกดบันทึกทับได้
+              {/* สถานะ "บันทึกแล้ว" ต้องเห็นเสมอ · วิธีแก้ไขพับได้ (ปุ่มลบยืนอยู่ข้างๆ แล้ว) · 19/11 */}
+              ✅ {tr('วันนี้บันทึกผลตรวจชั้นนี้ไว้แล้ว')}{' '}
+              <MoreMark text={tr('แก้ไขแล้วกดบันทึกทับได้')} />
               {mayDelete && <button onClick={deleteAudit} style={{ ...btnGray, color: 'var(--red)', border: '1px solid var(--red-line)', fontSize: 12, padding: '4px 10px' }}>{tr('ลบผลตรวจนี้')}</button>}
             </div>
           )}

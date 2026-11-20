@@ -189,8 +189,21 @@ export function mtnCloseStage(order = {}) {
   return 8;
 }
 
-/** สถานะใบที่ยัง "มีคนต้องทำต่อ" — ตัวโหลดคิวงานใช้กรอง (ปิด/ตีกลับ/โอน/ปฏิเสธ = ไม่อยู่ในคิว) */
-export const OPEN_MO_STATUSES = ['pending', 'assigned', 'repairing', 'repaired', 'checked', 'qa', 'handover'];
+/** สถานะใบที่ยัง "มีคนต้องทำต่อ" — ตัวโหลดคิวงานใช้กรอง · **allowlist** (สถานะจบตัวใหม่จึงไม่หลุดมาเอง)
+ *
+ *  🔴 **กลับคำตัดสินเดิม 2026-11-16 (คำสั่ง user):** เดิมลิสต์นี้ตัด `returned` + `waiting_vendor` ออก
+ *     ด้วยเหตุผล "ตีกลับ = ไม่อยู่ในคิว" — **ผิด** เพราะทั้ง 2 สถานะคือ "ใบยังเปิด และรอคนจริง"
+ *     (ตีกลับ = รอผู้แจ้งแก้แผนกแล้วส่งใหม่ · ส่งซ่อมนอก = รอช่างตามของกับ supplier)
+ *     วัดจริง 13/11: ใบ `returned` 9 ใบ **เก่าสุด 52 วัน** · กระดิ่ง `mtn_returned` ยิงถึงผู้แจ้งครั้งเดียว
+ *     แล้ว **ไม่อ่าน 13/15 ใบ** · ตัวโหลดคิวไม่เคย `select` ใบพวกนี้มาเลย ⇒ ใบหลุดจากทั้ง 3 ชั้น + badge
+ *     ⇒ ใครต้องลงมือ = ทะเบียน `OFF_LOOP_WAIT` ข้างล่าง (ใบนอกลูปขั้น ไม่มีเลขขั้นให้อ้าง)
+ *  🔴 ลิสต์นี้เป็น **ชุดเดียวของระบบ** — `dieStatus.js` re-export ตัวนี้ ห้ามประกาศลิสต์ที่ 2 อีก
+ *     (เคยมี 2 ชุดที่เนื้อหาไม่เท่ากัน: ฝั่ง dieStatus มี `returned` ฝั่งนี้ไม่มี ⇒ Andon/ผังโรงงาน
+ *      นับใบตีกลับว่าค้าง แต่คิวงานมองไม่เห็นเลย — เถียงกันเองอยู่ ~2 เดือนโดยไม่มีใครรู้)
+ *  🛡️ ด่าน `mo-status-must-be-classified` (regressionGuards): ทุกคีย์ใน `MO_STATUS_LABEL`
+ *     ต้องอยู่ใน `OPEN_MO_STATUSES` หรือ `MO_DONE_STATUSES` **อย่างใดอย่างหนึ่ง ห้ามตกหล่น ห้ามซ้ำ**
+ *     ⇒ เพิ่มสถานะใหม่แล้วไม่จัดประเภท = build ไม่ผ่าน (เดิมหลุดเงียบมาแล้ว 2 ตัว) */
+export const OPEN_MO_STATUSES = ['pending', 'assigned', 'repairing', 'repaired', 'checked', 'qa', 'handover', 'returned', 'waiting_vendor'];
 
 /**
  * 🔴 ขั้น "ถัดไปที่ต้องทำ" ของใบ — ตัดสินจาก `status` ไม่ใช่ `current_step`   (2026-10-05 · workflow audit)
@@ -254,7 +267,41 @@ export function moFlow(order = {}) {
   let waiting = null;
   if (vendor) waiting = 'ผู้รับจ้างภายนอก (supplier) — ส่งของกลับ แล้วช่างอัพเดทผลซ่อม';
   else if (next) { const m = next === 1 ? { whoShort: 'ผู้แจ้ง', title: 'แจ้งซ่อม' } : stepMeta(next, { mtnForm, toolTeam }); waiting = m ? `${m.whoShort} — ${m.title}` : null; }
-  return { steps, waiting, closed: closed || !!stop, known };
+  return { steps, waiting, closed: closed || !!stop, known, acks: moPendingAcks(order) };
+}
+
+/**
+ * ✍️ **ลายเซ็นที่อยู่ "นอกลำดับขั้น" และยังไม่ถูกเซ็น** — 2026-11-18 (หน้างานแจ้ง)
+ *
+ * 🔴 ที่มา: แถบขั้นบนใบบอกว่า *"รอ: ผจก.ฝ่ายที่แจ้ง อนุมัติปิดใบ"* เหมือนเหลือขั้นเดียว
+ *    แต่ของจริงยังค้างลายเซ็น **ไม่ล็อกงาน** อีก 2 ช่อง (ผจก.ส่วนซ่อมบำรุงรับทราบ ·
+ *    ผจก.ต้นสังกัดเซ็นรับทราบ) ที่ไม่โผล่ในแถบเลย ⇒ คนอ่านแถบคิดว่าใบใกล้จบแล้ว
+ *    คำ user: *"flow เหมือนขาดแค่ขั้นสุดท้าย แต่ขั้นไม่บล็อกงานไม่มีบอกเลย"*
+ *
+ * 🔴 **ช่องพวกนี้ไม่ใช่ "ขั้น" — ห้ามยัดเป็นขั้นในแถบ** (หลักเดียวกับด่านอนุมัติ 13/10:
+ *    ยัดเป็นขั้น = ทุกจอที่ไล่คิวด้วยเลขขั้นเพี้ยนตาม) ⇒ คืนเป็นลิสต์แยกให้จอเขียนใต้แถบ
+ * 🔴 **`undefined` = ไม่ได้ select คอลัมน์มา = ไม่รู้ ห้ามเดาว่าค้าง** (จะได้ไม่ขึ้นป้ายผิดบนจอ
+ *    ที่ดึงคอลัมน์ไม่ครบ) · ช่อง ผจก.ส่วนซ่อมบำรุงมีจริงเฉพาะใบที่ระบุชื่อไว้/เซ็นแล้ว
+ *    (เงื่อนไขเดียวกับแผงบนจอ) — ไม่มีชื่อ = ไม่มีช่องนั้น ไม่ใช่ "ค้าง"
+ * @returns {Array<{key,label,done}>} เฉพาะช่องที่ "มีจริงในใบนี้"
+ */
+export function moPendingAcks(order = {}) {
+  const out = [];
+  if (!isMtnFormRow(order)) return out;              // ช่องพวกนี้มีเฉพาะฟอร์ม FM-MTN-006
+  /* ① ผจก.ส่วนซ่อมบำรุง (ทีมที่รับใบ) รับทราบ */
+  if (order?.mo_ack_at !== undefined && (order?.mo_approved_by || order?.mo_ack_at)) {
+    out.push({ key: 'mtn_mgr', label: 'ผจก.ส่วนซ่อมบำรุง รับทราบ', done: !!order.mo_ack_at });
+  }
+  /* ② ผจก.ต้นสังกัด (+ ผจก.โรงงาน เมื่อเป็นงานสร้าง) — เฉพาะตอนที่ "ไม่ล็อกงาน"
+        ถ้ายัง `blocked` อยู่ = เป็นด่านจริง มีแผงของตัวเองบนจอแล้ว ไม่ต้องซ้ำที่นี่ */
+  if (order?.dept_manager_at !== undefined) {
+    const ap = mtnApprovalState(order);
+    if (ap.ackPending) {
+      if (ap.missing.includes('dept')) out.push({ key: 'dept', label: 'ผจก.ต้นสังกัด เซ็นรับทราบ', done: false });
+      if (ap.missing.includes('plant')) out.push({ key: 'plant', label: 'ผจก.โรงงาน เซ็นรับทราบ', done: false });
+    }
+  }
+  return out;
 }
 
 /** meta ของขั้น — `mtnForm` = ใบนี้ใช้ฟอร์ม FM-MTN-006 (ผู้เรียกคำนวณจากทีมช่างมาให้) */
@@ -883,6 +930,29 @@ export function moRemoveMode(order = {}) {
   return { mode: MO_REMOVE_CANCEL, why: 'ออกเลข MO ไปแล้ว — ยกเลิกได้ แต่ลบไม่ได้ (เลขและประวัติต้องอยู่)' };
 }
 
+/* ── 🙋 ผู้เปิดใบถอนใบของตัวเองได้ ────────────────────────────────  2026-11-16 · คำสั่ง user
+   *"MO กรณี owner รู้ว่าเปิดผิดและยังไม่ถูกรับงานหรือ reject สามารถเข้าไปยกเลิกเองได้"*
+
+   เดิมเมนู "ยกเลิกใบ" ซ่อนไว้หลัง `canDelete('mtn_repair','manage_master')` = **แอดมินเท่านั้น**
+   ⇒ ผู้แจ้งที่รู้ตัวว่าเปิดผิด ทำได้แค่ปล่อยค้างหรือไปขอให้คนอื่นกด ⇒ ใบผิดนอนในคิวช่าง
+
+   🔴 **จำกัดแค่ 2 สถานะ** — `pending` (ยังไม่มีช่างกดรับ) · `returned` (ถูกตีกลับมาอยู่ที่ผู้แจ้งแล้ว)
+      เลยจากนี้ช่างลงมือแล้ว/มีผลงานในใบ ⇒ เป็นเรื่องของทีมช่าง ไม่ใช่ของผู้แจ้งฝ่ายเดียว
+      (`rejected`/`cancelled`/`transferred`/`closed` อยู่ใน `MO_DONE_STATUSES` → `moRemoveMode` บล็อกอยู่แล้ว)
+   🔴 **ตัวนี้ให้สิทธิ์ "ยกเลิก" เท่านั้น ไม่ใช่ "ลบ"** — หน้าจอต้องบีบโหมดเป็น `MO_REMOVE_CANCEL`
+      แม้ใบยังไม่มีเลข MO (ซึ่ง `moRemoveMode` จะคืน DELETE) · เหตุผล: 11/11 พบใบถูก DELETE
+      ตอนยัง `pending` ไป 4 ใบ แล้ว**ปัญหาหายจากระบบทั้งหมด** ⇒ ของผู้แจ้งต้องเหลือร่องรอยเสมอ
+   🔴 **ไม่ใช่ใบผ่านข้ามทีม** — ตอบแค่ว่า "คนนี้เป็นเจ้าของใบนี้ไหม" ไม่แตะด่านทีมช่าง (`canWriteTeam`)
+      หน้าจอเป็นคนตัดสินว่าจะยกด่านทีมให้เฉพาะเส้นทางนี้ (ใบของตัวเอง ≠ ลบใบทีมอื่น) */
+export const OWNER_CANCEL_STATUSES = Object.freeze(['pending', 'returned']);
+
+/** ผู้ใช้คนนี้ "ถอนใบของตัวเอง" ได้ไหม — ไม่รู้ชื่อ = false (ไม่รู้ ≠ ใช่) */
+export function canCancelOwnMo(order = {}, { fullName = '' } = {}) {
+  if (!isMoOpen(order)) return false;
+  if (!OWNER_CANCEL_STATUSES.includes(String(order?.status || '').trim())) return false;
+  return isOrderReporter(order, fullName);
+}
+
 /** ใบ MTN งานปรับปรุง/สร้างที่ยังไม่ได้อนุมัติ — ไม่ใช่ "รอรับงาน" (ช่างกดรับไม่ได้จนกว่าจะเซ็น) */
 export const MO_LABEL_WAIT_APPROVAL = '🔒 รอผู้จัดการอนุมัติ (ก่อนเริ่มงาน)';
 export const MO_LABEL_WAIT_QA = '🧪 รอตรวจคุณภาพ (ขั้น 5)';
@@ -956,6 +1026,48 @@ export function moWaitMeta(order) {
   if (!step) return { stage: null, step: null, meta: null };
   // `stage` ไม่เปลี่ยนตามทีม (ยังเป็น accept_work) — เปลี่ยนแค่ "ใครเซ็น" ⇒ ส่ง toolTeam เฉพาะ meta
   return { stage: stageOf(step, { mtnForm }), step, meta: stepMeta(step, { mtnForm, toolTeam }) };
+}
+
+/* ── ↩️📤 ใบที่อยู่ "นอกลูปขั้น" — ไม่มีเลขขั้น แต่มีคนที่ต้องลงมือ ──────────  2026-11-16 · คำสั่ง user
+   🔴 **`moWaitMeta()` คืน `stage: null` ให้ 2 สถานะนี้โดยเจตนา และห้ามเปลี่ยน** — มี 3 จอพึ่งความว่างนั้น:
+      บอร์ด TV ทิ้งลงตะกร้า "นอกลำดับขั้น" (`moTvBoard.moTvGroupOf`) · แผงไล่ MO ตอบ `outside`
+      (`moChase.chaseSideOf`) · แผงใบค้างแยกถัง `status:<สถานะ>` (`mtnStale.STATUS_SINCE`)
+      ⇒ ยัดลง `moWaitMeta` = 3 จอเปลี่ยนพฤติกรรมพร้อมกันโดยไม่มีใครขอ
+   ⚠️ แต่ **"ไม่มีขั้น" ≠ "ไม่มีใครต้องทำ"** — ทะเบียนนี้ตอบคำถามที่ 2 แยกกันชัดเจน: *แล้วใครต้องลงมือ*
+      (ผู้เรียกวันนี้มีรายเดียว = `myQueue.moWaitingOn` ตอนที่ `moWaitMeta` คืน meta ว่าง)
+   🔑 เพิ่มสถานะใหม่ที่นี่ = ต้องเติม `STATUS_SINCE` ใน `mtnStale.js` ด้วย (คอลัมน์ "เข้าสถานะนี้เมื่อไหร่")
+      — มีด่าน `off-loop-registry-in-sync` เทียบคีย์ 2 ฝั่ง ไม่ครบ = build ไม่ผ่าน
+   🔴 `stage` ขึ้นต้น `status:` เพื่อ **กันชนกับ stage ของลูปขั้น** และกันไม่ให้ใครเอาไปยัดใน
+      `MO_TV_GROUPS[].stages` / ตัวกรอง `?wait=` ของหน้า MO (ซึ่งรู้จักแต่ stage ของลูปขั้น) */
+export const OFF_LOOP_WAIT = Object.freeze({
+  returned: Object.freeze({
+    stage: 'status:returned', offLoop: true, byReporter: true, side: 'reporter',
+    icon: '↩️', title: 'ตีกลับ — แก้แผนกแล้วส่งใหม่',
+    who: 'ผู้เปิดใบแจ้งซ่อม (ฝ่ายที่แจ้ง)', whoShort: 'ผู้เปิดใบ',
+  }),
+  /* 📤 ของอยู่กับ supplier — "นาฬิกาไม่ได้อยู่ที่เรา" แต่ยังต้องมีคนตามของ
+     ⚠️ ไม่ผูกตัวบุคคล (`byReporter: false`) ⇒ เข้าชั้น `unit` ของคิว ไม่ใช่ `mine`
+        เพราะใบพวกนี้ไม่มีช่องชื่อ "คนตามของ" ให้ยึด — ทีมช่างเจ้าของใบตามกันเอง */
+  waiting_vendor: Object.freeze({
+    stage: 'status:waiting_vendor', offLoop: true, byReporter: false, side: 'mtn',
+    icon: '📤', title: 'ส่งซ่อมภายนอก — รอของกลับจาก supplier',
+    who: 'ทีมช่างเจ้าของใบ (ตามของกับ supplier)', whoShort: 'ทีมช่าง',
+  }),
+});
+export const OFF_LOOP_STATUSES = Object.freeze(Object.keys(OFF_LOOP_WAIT));
+
+/**
+ * ใบนี้อยู่นอกลูปขั้นและรอใครอยู่ — `{ status, meta }` · **`null` = ไม่ใช่ใบนอกลูปขั้น**
+ * (ให้ผู้เรียกไปใช้คำตอบของ `moWaitMeta` ตามปกติ — ที่นี่ไม่ตอบแทน)
+ *
+ * 🔴 ใบที่จบแล้วคืน `null` เสมอ (`isMoOpen`) — ใบที่ถูกยกเลิก/ปฏิเสธไม่ได้ "รอ" ใคร
+ *    และห้ามเขียนลิสต์สถานะจบซ้ำที่นี่ (`transferred` เคยตกหล่นมาแล้ว)
+ */
+export function offLoopWaitOf(order = {}) {
+  if (!isMoOpen(order)) return null;
+  const st = String(order?.status || '').trim();
+  const meta = OFF_LOOP_WAIT[st] || null;
+  return meta ? { status: st, meta } : null;
 }
 
 /**

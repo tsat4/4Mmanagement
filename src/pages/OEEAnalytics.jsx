@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useContext, useRef } from 'react';
+import { MoreMark } from '../components/InfoMore';
 import { naturalCompare } from '../utils/listOrder';
 import {
   LineChart, Line, BarChart, Bar, ComposedChart,
@@ -52,6 +53,10 @@ import { MORE_MARK } from '../components/InfoMore';   // เครื่อง�
 import { BREAK_POLICY_COLS } from '../utils/oeeMasters';
 import NoticeBar from '../components/NoticeBar';
 import { tr as trI18n } from '../utils/i18n';
+
+/* ข้อความขยายของแถบ "ค่าสด" — ใช้ทั้งที่ title= ของบรรทัด (hover ทั้งบรรทัดบนจอคอม)
+   และที่ <MoreMark> (กดเปิดได้บนจอสัมผัส) ⇒ เขียนที่เดียว ไม่ให้ 2 ที่เพี้ยนกัน · 18/11 */
+const LIVE_MIX_NOTE = 'ค่าสด = คิดถึงเวลานี้ ตัวเลขจริงยืนยันตอนปิดกะ · OOE / TEEP / OEE จริง ด้านล่างนับเฉพาะกะที่ปิดแล้ว';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 const MonthlyReviewExport = lazy(() => import('../components/MonthlyReviewExport'));
 
@@ -537,7 +542,7 @@ export default function OEEAnalytics() {
       // และได้เช็ค error ในตัว (เดิมรับแค่ data → ล้มเหลวแล้วโชว์ 0 เหมือนไม่มีข้อมูลจริง)
       const [dtRes, defRes, ordRes] = await Promise.all([
         fetchByIds(sessionIds, c => supabaseDR.from('downtime_logs')
-          .select('*, dr_downtime_types(name_th, category, color)').in('session_id', c)),
+          .select('*, dr_downtime_types(name_th, category, planned_cap_min, color)').in('session_id', c)),
         fetchByIds(sessionIds, c => supabaseDR.from('defect_logs')
           .select(`*, dr_defect_types(name_th, color, excl_from_q), prod_orders(mat_no, part_name), ${QBIN_EMBED}`).in('session_id', c)),
         fetchByIds(sessionIds, c => supabaseDR.from('prod_orders')
@@ -1040,7 +1045,7 @@ export default function OEEAnalytics() {
       //    ยังโชว์ค่าจริง = จอขัดแย้งกันเอง (บั๊กจริงที่ user จับได้ 2026-08-20)
       const [dtRes, defRes, { data: dtt }, { data: deft }, lineRes] = await Promise.all([
         fetchByIds(sessionIds, c => supabaseDR.from('downtime_logs')
-          .select('*, dr_downtime_types(name_th, category, color)').in('session_id', c)),
+          .select('*, dr_downtime_types(name_th, category, planned_cap_min, color)').in('session_id', c)),
         fetchByIds(sessionIds, c => supabaseDR.from('defect_logs')
           .select(`*, dr_defect_types(name_th, color, excl_from_q), prod_orders(mat_no, part_name), ${QBIN_EMBED}`).in('session_id', c)),
         supabaseDR.from('dr_downtime_types').select('*').eq('is_active', true).order('sort_order'),
@@ -1339,7 +1344,7 @@ export default function OEEAnalytics() {
     return {
       cat: d.dr_defect_types?.name_th || 'ไม่ระบุ',
       value: qty,
-      // พาร์ทที่ยังไม่กรอกต้นทุนใน Parts Master = null (ตีมูลค่าไม่ได้) ห้ามเดาเป็น 0
+      // พาร์ทที่ยังไม่กรอกต้นทุนใน Material Master = null (ตีมูลค่าไม่ได้) ห้ามเดาเป็น 0
       baht: unitCost == null ? null : qty * unitCost,
       product: d.prod_orders?.mat_no || '', line: s.line_name || '',
       shift: s.shift === 'day' ? 'กะเช้า' : s.shift === 'night' ? 'กะดึก' : '',
@@ -1349,7 +1354,7 @@ export default function OEEAnalytics() {
   }), [defects, sessById, partCost]);
   /* 💰 มูลค่าของเสีย — แยก "ทั้งหมด" กับ "เฉพาะไลน์ผลิต (ไม่รวมงานทดลอง)" (2026-08-17 · คำสั่ง user)
      ตัวหลัง = ก้อนเดียวกับที่ถูกนับใน %Q ของ OEE · ต้นทุน/ชิ้นใช้ util กลาง defectUnitCost
-     ⚠️ พาร์ทที่ยังไม่กรอกต้นทุนใน Parts Master → ไม่เดาราคา แต่รายงานจำนวนให้เห็นบนจอ */
+     ⚠️ พาร์ทที่ยังไม่กรอกต้นทุนใน Material Master → ไม่เดาราคา แต่รายงานจำนวนให้เห็นบนจอ */
   const defectCost = useMemo(() => {
     /* 🔴 4 ถังต้องกระทบยอดกันได้: qtyAll = qtyTrial + qtyLine + qtyPending + qtyCleared
        · qtyLine  = ตัวที่คิดเข้า %Q จริง (NG + ของสงสัยที่ QA ตัดสินว่าเสีย)
@@ -1494,9 +1499,15 @@ export default function OEEAnalytics() {
           {/* 1. OEE Overview */}
           <div style={s.section}>
             <div style={s.title}>OEE OVERVIEW — {tdScopeLabel}</div>
+            {/* ย่อรูปแบบ ไม่ย่อความจริง — "มีค่าสดผสมอยู่ N กะ" ต้องอยู่บนจอ (ไม่งั้นอ่านเลขผิดว่าเป็นของปิดกะแล้ว)
+                ส่วนขยาย (ค่าจริงยืนยันตอนปิดกะ · OOE/TEEP นับเฉพาะกะปิด) พับไป tooltip · user 18/11
+                🔴 คอมเมนต์ต้องอยู่ "ก่อน" `{cond && (` — วางข้างในกลายเป็น 2 node = จอขาว (พลาดมาแล้ว 3 รอบ) */}
             {tdLiveCount > 0 && (
-              <div style={{ fontSize: 11, color: 'var(--muted)', margin: '-4px 0 8px' }}>
-                🟢 รวมค่าสดของ {tdLiveCount} กะที่ยังไม่ปิด (คิดถึงตอนนี้ · ตัวเลขจริงยืนยันตอนปิดกะ) · OOE / TEEP / OEE จริง ด้านล่างนับเฉพาะกะที่ปิดแล้ว
+              <div
+                style={{ fontSize: 11, color: 'var(--muted)', margin: '-4px 0 8px' }}
+                title={LIVE_MIX_NOTE}
+              >
+                🟢 รวมค่าสดของ {tdLiveCount} กะที่ยังไม่ปิด <MoreMark text={LIVE_MIX_NOTE} />
               </div>
             )}
             <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -2319,7 +2330,7 @@ export default function OEEAnalytics() {
             {defectCost.noCost.length > 0 && (
               <div style={{ marginTop: 10, fontSize: 11.5, color: 'var(--amber)', background: 'var(--amber-dim)', border: '1px solid var(--amber-line)', borderRadius: 'var(--r-md)', padding: '8px 11px', lineHeight: 1.7 }}>
                 ⚠ ยังตีมูลค่าไม่ได้ {defectCost.noCost.length} {trI18n('พาร์ท (')}{defectCost.noCost.reduce((a, x) => a + x[1], 0).toLocaleString()} ชิ้น) — ยอดบาทข้างบนจึงต่ำกว่าความจริง
-                <br />{trI18n('กรอกต้นทุน/ชิ้นที่')} <b>Product Master → 🗂 Parts Master</b> (standard_cost หรือ material_cost)
+                <br />{trI18n('กรอกต้นทุน/ชิ้นที่')} <b>Product Master → 🗂 Material Master</b> (standard_cost หรือ material_cost)
                 <div style={{ marginTop: 4, color: 'var(--muted)' }}>
                   {defectCost.noCost.slice(0, 8).map(([m, q]) => `${m} (${q})`).join(' · ')}{defectCost.noCost.length > 8 ? ' …' : ''}
                 </div>

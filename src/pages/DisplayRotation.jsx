@@ -27,6 +27,7 @@ import {
 
 import SectionScopeSelect from '../components/SectionScopeSelect';
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 /* ══ 🔁 ตั้งค่าจอวนหน้า — /display-rotation ══════════════════════════════════════════
    2026-10-09 · คำสั่ง user: "แบบมีหน้า config ได้ ว่าจอ user นี้จะเปิดอะไรวนบ้าง"
    2026-10-14 · รอบ 2 (feedback หลังติดทีวี 13 จอ):
@@ -138,9 +139,9 @@ export default function DisplayRotation() {
   const targetRole = selAcc?.role || null;
   const tvSections = useMemo(() => (selAcc ? sectionsOfProfile(selAcc) : []), [selAcc]);
 
-  const pick = useCallback((id) => {
+  const pick = useCallback(async (id) => {
     if (id === selId) return;
-    if (dirty && !window.confirm('มีการแก้ที่ยังไม่บันทึก — ทิ้งการแก้แล้วเปลี่ยนจอ?')) return;
+    if (dirty && !await askConfirm('มีการแก้ที่ยังไม่บันทึก — ทิ้งการแก้แล้วเปลี่ยนจอ?')) return;
     setSelId(id || '');
     const row = id ? plans[id] : null;
     setForm(row ? { ...EMPTY, ...row, items: Array.isArray(row.items) ? row.items : [], note: row.note || '' } : EMPTY);
@@ -244,7 +245,7 @@ export default function DisplayRotation() {
 
   const removePlan = async () => {
     if (!selId || !plans[selId] || !canEdit) return;
-    if (!window.confirm('ลบรอบของจอนี้? จอจะหยุดวนและค้างที่หน้าปัจจุบัน')) return;
+    if (!await askConfirm('ลบรอบของจอนี้? จอจะหยุดวนและค้างที่หน้าปัจจุบัน')) return;
     const res = await supabase.from('display_rotations').delete().eq('user_id', selId).select('user_id');
     if (!checkWriteRows(res, 'ลบรอบจอ')) return;
     toast.success('ลบรอบแล้ว');

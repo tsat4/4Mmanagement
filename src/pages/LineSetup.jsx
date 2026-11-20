@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useContext } from 'react';
+import { MoreMark } from '../components/InfoMore';
 import { orgValues } from '../utils/listOrder';
 import { toDecodableImage } from '../utils/heicToJpeg';
 import { compressLayoutImage } from '../utils/layoutImage';
@@ -37,6 +38,7 @@ import { DeleteButton } from '../components/IconButton';
 import { tr } from '../utils/i18n';
 import { isGifFile, GIF_MAX_BYTES, GIF_TOO_BIG_MSG } from '../utils/imageFileKind';   // ตัวตรวจชนิดไฟล์ + เพดาน GIF = จุดเดียว
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
+import { askConfirm } from '../utils/askConfirm';
 
 /* ลำดับแท็บมาตรฐานทั้งระบบ: คน → เครื่องจักร (ตามลำดับ 4M: Man, Machine) ให้ตรงกับปุ่ม filter
    MAN/MACHINE ที่หน้า Management — UI-CONVENTIONS §1
@@ -253,9 +255,9 @@ export default function LineSetup({ embedded = false } = {}) {
   );
 
   /* เลือกไลน์จากลิสต์ — ทางเดียวที่ใช้สลับไลน์ ห้าม setSelectedLine ตรงจากแถว (ด่านค่าค้างจะถูกข้าม) */
-  const selectLine = (name) => {
+  const selectLine = async (name) => {
     if (name === selectedLine) return;
-    if (mpDirty && !window.confirm(
+    if (mpDirty && !await askConfirm(
       `⚙️ "ตั้งค่าไลน์" ของ ${selectedLine} ยังมีการแก้ไขที่ยังไม่ได้กด 💾 บันทึก\n\nเปลี่ยนไปไลน์ ${name} ตอนนี้ = ค่าที่แก้ไว้หายไป\n\nเปลี่ยนไลน์ต่อไหม?`
     )) return;
     setSelectedLine(name); setTempPos(null); setFormData({ id: null, name: '', requirements: {} });
@@ -364,7 +366,7 @@ export default function LineSetup({ embedded = false } = {}) {
   const handleToggleRetire = async (retire) => {
     const lineObj = lines.find(l => l.name === selectedLine);
     if (!lineObj) return;
-    if (retire && !window.confirm(`ปลดระวางไลน์ "${lineObj.name}" ?\n\nไลน์จะไม่โผล่ใน dropdown ให้เลือกใหม่ทุกหน้า\nแต่ข้อมูลเก่าที่อ้างชื่อไลน์นี้ยังอ่านได้ครบ (ไม่ใช่การลบ)`)) return;
+    if (retire && !await askConfirm(`ปลดระวางไลน์ "${lineObj.name}" ?\n\nไลน์จะไม่โผล่ใน dropdown ให้เลือกใหม่ทุกหน้า\nแต่ข้อมูลเก่าที่อ้างชื่อไลน์นี้ยังอ่านได้ครบ (ไม่ใช่การลบ)`)) return;
     const { data, error } = await supabase.from('production_lines')
       .update({ is_active: !retire }).eq('id', lineObj.id).select('id');
     if (error) {
@@ -424,7 +426,7 @@ export default function LineSetup({ embedded = false } = {}) {
 
   const handleUpdateParent = async (line, parentName) => {
     // เปลี่ยนโครงสร้าง master (ไลน์แม่) — ยืนยันก่อน กันแตะ dropdown พลาด · ยกเลิก = revert หน้าจอ
-    if (!confirm(`เปลี่ยน "ไลน์แม่" ของ ${line.name} เป็น "${parentName || '(ไม่มี — เป็นไลน์หลัก)'}" ?\n\nกระทบการรวมเครื่อง/ผัง/กำลังผลิตของทั้งกลุ่ม`)) { await fetchLines(); return; }
+    if (!await askConfirm(`เปลี่ยน "ไลน์แม่" ของ ${line.name} เป็น "${parentName || '(ไม่มี — เป็นไลน์หลัก)'}" ?\n\nกระทบการรวมเครื่อง/ผัง/กำลังผลิตของทั้งกลุ่ม`)) { await fetchLines(); return; }
     /* นับแถว — ไม่มีสิทธิ์/แถวหาย = 0 แถวไม่มี error แล้ว fetchLines() วาดค่าเดิมกลับมาเหมือนจอค้าง
        (เปลี่ยนโครงสร้างไลน์กระทบการรวมเครื่อง/ผัง/กำลังผลิตทั้งกลุ่ม · กฎเขียน DB ข้อ 2) */
     checkWriteRows(await supabase.from('production_lines').update({ parent_line_name: parentName || null }).eq('id', line.id).select('id'), 'ตั้งไลน์แม่');
@@ -462,7 +464,7 @@ export default function LineSetup({ embedded = false } = {}) {
     if (!wDel.ok) { toast.error(writeBlockText(wDel, { what: `ไลน์ ${line.name}`, unit: line.section || '' })); return; }
     const childCount = lines.filter(l => l.parent_line_name === line.name).length;
     const warn = childCount > 0 ? `\n\nไลน์นี้เป็นไลน์หลักของ ${childCount} ไลน์ลูก — ลูกจะถูกเปลี่ยนเป็น standalone อัตโนมัติ` : '';
-    if (!window.confirm(`ลบไลน์ "${line.name}" ?\n\nจุดงานและผังไลน์ทั้งหมดในไลน์นี้จะถูกลบด้วย${warn}`)) return;
+    if (!await askConfirm(`ลบไลน์ "${line.name}" ?\n\nจุดงานและผังไลน์ทั้งหมดในไลน์นี้จะถูกลบด้วย${warn}`)) return;
     /* 🔗 ทะเบียน AM รายวัน (DR · จับคู่ด้วยชื่อไลน์ ไม่มี FK) — มีจุดตรวจ active อยู่ = ห้ามลบ ให้เอาออกที่จอ AM ก่อน
        (กฎ "ทะเบียนที่จับคู่ด้วยข้อความ นับไม่ครบ = ห้ามลบ" · 08/10 audit: เดิมลบไลน์แล้วทะเบียนค้าง บอร์ด AM สร้างการ์ดให้ไลน์ที่ไม่มีแล้ว) */
     const { count: amCount, error: amErr } = await supabaseDR.from('pm_daily_line_targets').select('id', { count: 'exact', head: true }).eq('line_name', line.name).eq('is_active', true);
@@ -519,7 +521,7 @@ export default function LineSetup({ embedded = false } = {}) {
 
   const handleUpdateSection = async (line, section) => {
     // เปลี่ยน Section ของไลน์ = กระทบ scope/สิทธิ์การมองเห็น — ยืนยันก่อน · ยกเลิก = revert หน้าจอ
-    if (!confirm(`เปลี่ยน "Section" ของ ${line.name} เป็น "${section || '(ไม่มี)'}" ?\n\nกระทบขอบเขตการมองเห็น (scope) และการผูกใบค่าฝีมือ`)) { await fetchLines(); return; }
+    if (!await askConfirm(`เปลี่ยน "Section" ของ ${line.name} เป็น "${section || '(ไม่มี)'}" ?\n\nกระทบขอบเขตการมองเห็น (scope) และการผูกใบค่าฝีมือ`)) { await fetchLines(); return; }
     checkWriteRows(await supabase.from('production_lines').update({ section: section || null }).eq('id', line.id).select('id'), 'ตั้ง section ของไลน์');
     await fetchLines();
   };
@@ -679,7 +681,7 @@ export default function LineSetup({ embedded = false } = {}) {
     const backTo = lineObj?.parent_line_name
       ? `จะกลับไปใช้รูปผังของไลน์แม่ "${lineObj.parent_line_name}" แทน`
       : 'ไลน์นี้จะไม่มีรูปผัง (ไม่มีไลน์แม่ให้ยืม) — จุดงาน/เครื่องจักร ที่วางไว้ยังอยู่ครบ';
-    if (!window.confirm(`ลบรูปผังของ "${selectedLine}" ?\n${backTo}`)) return;
+    if (!await askConfirm(`ลบรูปผังของ "${selectedLine}" ?\n${backTo}`)) return;
     try {
       /* 🔴 นับแถวก่อนแตะ storage (QC audit 06/10) — RLS ปฏิเสธ DELETE = 0 แถว ไม่มี error
          เดิมรอดมาได้เพราะด่าน `sharers` ข้างล่าง (แถวที่ลบไม่ออกยังถือ image_url เดิม ⇒ นับเป็นคนแชร์
@@ -924,7 +926,7 @@ export default function LineSetup({ embedded = false } = {}) {
   };
 
   const deleteStation = async (id) => {
-    if (!window.confirm('ยืนยันการลบจุดงานนี้?')) return;
+    if (!await askConfirm('ยืนยันการลบจุดงานนี้?')) return;
     hist.pushHistory();
     // ล้างทักษะไม่สำเร็จ = หยุด (FK ทำให้ลบจุดต่อไม่ได้อยู่แล้ว) · ลบจุดต้องนับแถว — เดิม error/0 แถวเงียบ (QC 05/10)
     /* ⚠️ checkWrite (ไม่นับแถว) โดยตั้งใจ — จุดงานที่ยังไม่ได้ตั้งทักษะเลยก็มีจริง 0 แถว = ปกติ
@@ -972,7 +974,7 @@ export default function LineSetup({ embedded = false } = {}) {
   };
 
   const deleteMachinePoint = async (id) => {
-    if (!window.confirm('ยืนยันการลบจุดเครื่องจักรนี้?')) return;
+    if (!await askConfirm('ยืนยันการลบจุดเครื่องจักรนี้?')) return;
     hist.pushHistory();
     const { data: gone, error } = await supabase.from('machine_points').delete().eq('id', id).select('id');
     if (error) return toast.error('ลบไม่สำเร็จ: ' + error.message);
@@ -999,7 +1001,7 @@ export default function LineSetup({ embedded = false } = {}) {
   };
 
   const deleteFlowLink = async (id) => {
-    if (!window.confirm('ยืนยันการลบเส้นเชื่อมต่อนี้?')) return;
+    if (!await askConfirm('ยืนยันการลบเส้นเชื่อมต่อนี้?')) return;
     hist.pushHistory();
     const { data: gone, error } = await supabase.from('machine_flow_links').delete().eq('id', id).select('id');
     if (error) return toast.error('ลบไม่สำเร็จ: ' + error.message);
@@ -1346,7 +1348,7 @@ export default function LineSetup({ embedded = false } = {}) {
                     border: `1px solid ${selectedLine === l.name ? 'var(--accent)' : l._isChild ? 'var(--border)' : 'var(--border)'}`,
                     transition: 'background 0.15s, border-color 0.15s',
                   }}
-                  onClick={() => selectLine(l.name)}
+                  onClick={async () => await selectLine(l.name)}
                 >
                   {l._isChild && <span style={{ fontSize: 11, color: 'var(--muted)', flexShrink: 0 }}>└</span>}
                   {l._isParent && (() => {
@@ -2027,7 +2029,8 @@ export default function LineSetup({ embedded = false } = {}) {
           {/* ผู้เซ็นใบค่าฝีมือ ราย section ย้ายไปตั้งที่ผังองค์กร (OrgSetup) — เป็นข้อมูลราย section ไม่ใช่ราย line */}
           <div style={{ borderTop: '1px solid var(--border)', margin: '14px 0 12px' }} />
           <div style={{ fontSize: 12, color: 'var(--muted)', background: 'var(--bg3)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: '10px 14px' }}>
-            ผู้เซ็น/อนุมัติใบค่าฝีมือ ตั้งที่หน้า <a href="/org-setup" style={{ color: 'var(--accent)', fontWeight: 700 }}>{tr('ผังองค์กร')}</a> แล้ว — เพราะเป็นข้อมูลราย "ส่วนงาน" ใช้ร่วมกันทุกไลน์ในส่วนนั้น
+            ผู้เซ็น/อนุมัติใบค่าฝีมือ ตั้งที่หน้า <a href="/org-setup" style={{ color: 'var(--accent)', fontWeight: 700 }}>{tr('ผังองค์กร')}</a> แล้ว{' '}
+            <MoreMark text={tr('เพราะเป็นข้อมูลราย "ส่วนงาน" ใช้ร่วมกันทุกไลน์ในส่วนนั้น')} />
           </div>
 
         </>}

@@ -3,8 +3,9 @@ import { getWorkDate } from '../utils/workDate';
 import {
   buildGrid, cellAt, valueAt, slSummary, gridSummary, minBreaches, firstShortDate,
   rackCount, rawPieces, rawCoverage,
+  levelState,
 } from '../utils/monitorGrid';
-import { rowDefs, balanceRowKey, minRowKey } from '../utils/monitorBoards';
+import { rowDefs, balanceRowKey, minRowKey, isStoreBoard } from '../utils/monitorBoards';
 import { matText } from '../utils/matLabel';
 import { supabaseDR } from '../supabaseClient';
 import PartThumb from './PartThumb';
@@ -49,6 +50,8 @@ export default function MonitorBoardGrid({
   board, parts = [], periods = [], manualMap, systemMap, anchorMap, lockMap,
   onEditCell, onLockedCell, editable = false, truncated = false, loadWarn = '',
   windowSize = 14,
+  /* 🏬 บอร์ดสโตร์: (part) → { min, max } จาก kanban_standards — ตีสีช่องคงเหลือ · null = ไม่ตีสี */
+  levelOf = null,
 }) {
   const rows = useMemo(() => rowDefs(board), [board]);
   const [winStart, setWinStart] = useState(0);
@@ -168,7 +171,8 @@ export default function MonitorBoardGrid({
   const body = periods.slice(1);
   const canPage = periods.length > windowSize;
   /* FC / Total SL / %SL มีความหมายเฉพาะบอร์ดที่เป็น "การไหล" — บอร์ดวัตถุดิบเป็นภาพ ณ วัน (1 คอลัมน์) ⇒ ไม่โชว์ */
-  const showSl = board.kind !== 'raw';
+  /* 🏬 บอร์ดสโตร์ไม่มี FC/Total SL/%SL (สโตร์ขอตัดออก 16/11) */
+  const showSl = board.kind !== 'raw' && !isStoreBoard(board);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -256,7 +260,9 @@ export default function MonitorBoardGrid({
 
       {/* ── ตาราง ───────────────────────────────────────────────────────────────── */}
       <div style={{ ...card, padding: 0, overflowX: 'auto' }}>
-        <table style={{ borderCollapse: 'separate', borderSpacing: 0, fontSize: FS, width: 'max-content', minWidth: '100%' }}>
+        {/* 18/11 — บอร์ดคอลัมน์น้อย (เหล็ก coil = ภาพ ณ วันเดียว 1 คอลัมน์) ห้ามยืดเต็มจอ: เดิม minWidth 100%
+           ทำให้ช่อง "แถว" กว้างครึ่งจอ ตัวเลขไปชิดขอบขวา (user: "ทำไมไม่เหมือน tab อื่น") */}
+        <table style={{ borderCollapse: 'separate', borderSpacing: 0, fontSize: FS, width: 'max-content', minWidth: win.length >= 6 ? '100%' : undefined }}>
           <thead>
             <tr>
               <th style={{ ...thSticky, width: HEAD_W, minWidth: HEAD_W, textAlign: 'left' }}>
@@ -329,7 +335,7 @@ export default function MonitorBoardGrid({
                     <td rowSpan={rows.length} style={{ ...tdSticky, width: HEAD_W, verticalAlign: 'top', background: pi % 2 ? 'var(--bg2)' : 'var(--card)' }}>
                       <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                         <PartThumb url={partImageOf(imgMap, part.mat_no)} alt={part.part_name || part.mat_no || ''} size={44} />
-                        <PartHead part={part} board={board} shortAt={shortAt} racks={racks} raw={raw} />
+                        <PartHead part={part} board={board} shortAt={shortAt} racks={racks} raw={raw} level={levelOf ? levelOf(part) : null} />
                       </div>
                     </td>
                   ) : null}
@@ -355,6 +361,11 @@ export default function MonitorBoardGrid({
                     const editing = edit && edit.partId === part.id && edit.rowKey === row.key && edit.periodKey === p.key;
                     const br = balKey === row.key ? breachBy.get(`${part.id}|${p.date}`) : null;
                     const neg = balKey === row.key && c?.v !== null && c?.v < 0;
+                    /* 🏬 บอร์ดสโตร์: คงเหลือเทียบ MIN/MAX (`levelState` · ไม่ตั้ง = ไม่ตีสี) · Diff ≠ 0 = แดง */
+                    const lvSt = levelOf && balKey === row.key ? levelState(c?.v, levelOf(part)) : null;
+                    const lvBg = lvSt === 'low' ? 'var(--red-dim)' : lvSt === 'high' ? 'var(--amber-dim)' : lvSt === 'ok' ? 'var(--green-dim)' : undefined;
+                    const lvFg = lvSt === 'low' ? 'var(--red)' : lvSt === 'high' ? 'var(--amber)' : lvSt === 'ok' ? 'var(--green)' : undefined;
+                    const diffBad = row.key === 'diff' && c?.v !== null && c?.v !== undefined && c.v !== 0;
                     return (
                       <td key={p.key}
                         /* คลาสนี้ให้ hover + เส้นประใต้ตัวเลข = "ช่องนี้กดแก้ได้" (index.css · เฉพาะเครื่องที่มีเมาส์) */
@@ -364,7 +375,8 @@ export default function MonitorBoardGrid({
                           if (c?.src === 'locked') { if (onLockedCell) onLockedCell({ partId: part.id, rowKey: row.key, periodKey: p.key }); return; }
                           if (c?.editable && !editing) startEdit(part.id, row.key, p.key, c.v);
                         }}
-                        title={br ? `ต่ำกว่า MIN ${fmtN(br.short)} ชิ้น (MIN ${fmtN(br.min)})` : (c?.src === 'system' ? 'ระบบดึงจากใบผลิต/สต๊อก — กดเพื่อกรอกทับ'
+                        title={lvSt ? `${lvSt === 'low' ? 'ต่ำกว่า MIN' : lvSt === 'high' ? 'เกิน MAX' : 'อยู่ในช่วง MIN–MAX'} (MIN ${fmtN(levelOf(part)?.min)} · MAX ${fmtN(levelOf(part)?.max)})`
+                          : br ? `ต่ำกว่า MIN ${fmtN(br.short)} ชิ้น (MIN ${fmtN(br.min)})` : (c?.src === 'system' ? 'ระบบดึงจากใบผลิต/สต๊อก — กดเพื่อกรอกทับ'
                           : c?.src === 'locked' ? `🔒 ระบบเป็นเจ้าของ (คลังกดรับแล้ว) — แก้บนบอร์ดไม่ได้${onLockedCell ? ' · กดเพื่อขอปรับยอดคลัง' : ''}`
                           : c?.src === 'ledger' ? '🔗 ยอดคงเหลือจริงในคลัง (ledger) ณ ตอนนี้ — ไม่ใช่สูตร · ยอดไม่ตรงของจริงให้ตรวจนับที่ /line-stock?tab=count' : undefined)}
                         style={{
@@ -373,12 +385,12 @@ export default function MonitorBoardGrid({
                           borderLeft: isToday ? '2px solid var(--accent)'
                             : (isSeed || ci === 1 ? '2px solid var(--border2)' : tdBase.borderLeft),
                           borderRight: isToday ? '2px solid var(--accent)' : undefined,
-                          background: isToday ? 'var(--accent-dim)' : (isSeed ? 'var(--bg3)' : undefined),
-                          color: neg || br ? '#f87171' : (c?.src === 'system' || c?.src === 'locked' ? 'var(--text2)' : (isCalc ? 'var(--muted)' : 'var(--text)')),
+                          background: lvBg || (isToday ? 'var(--accent-dim)' : (isSeed ? 'var(--bg3)' : undefined)),
+                          color: lvFg || (neg || br || diffBad ? '#f87171' : (c?.src === 'system' || c?.src === 'locked' ? 'var(--text2)' : (isCalc ? 'var(--muted)' : 'var(--text)'))),
                           /* ตัวเลขของแถวสูตร = เอียง ⇒ มองผ่านๆ ก็รู้ว่า "เครื่องคิดให้" ไม่ใช่ของที่ใครพิมพ์
                              (สีจางอย่างเดียวไม่พอ — ตัวเลขที่ระบบดึงมา `system` ก็จางเหมือนกัน แต่กรอกทับได้) */
                           fontStyle: isCalc && c?.src !== 'ledger' ? 'italic' : undefined,
-                          fontWeight: br || neg || c?.src === 'ledger' ? 700 : (c?.src === 'input' ? 600 : 400),
+                          fontWeight: br || neg || lvSt || diffBad || c?.src === 'ledger' ? 700 : (c?.src === 'input' ? 600 : 400),
                         }}>
                         {editing ? (
                           <input ref={inputRef} autoFocus
@@ -442,12 +454,14 @@ export default function MonitorBoardGrid({
 }
 
 /* หัวแถวพาร์ท — เลขที่ยาวต้อง clamp ไม่ให้ดันตารางบาน (ไฟล์จริงมีชื่อยาว 72 ตัวอักษร) */
-function PartHead({ part, board, shortAt, racks = null, raw = null }) {
+function PartHead({ part, board, shortAt, racks = null, raw = null, level = null }) {
   const sub = [];
   if (part.model) sub.push(part.model);
   if (part.rack) sub.push(`แร็ค ${part.rack}`);
   if (part.lot_qty) sub.push(`LOT ${fmtN(part.lot_qty)}`);
-  if (part.packing) sub.push(`บรรจุ ${fmtN(part.packing)}`);
+  if (part.packing) sub.push(isStoreBoard(board) ? `STD/PC ${fmtN(part.packing)}` : `บรรจุ ${fmtN(part.packing)}`);
+  /* 🏬 บอร์ดสโตร์: MIN/MAX จาก kanban_standards · ยังไม่ตั้ง = บอกตรงๆ */
+  if (isStoreBoard(board)) sub.push(level && (level.min != null || level.max != null) ? `MIN ${fmtN(level.min)} · MAX ${fmtN(level.max)}` : 'ยังไม่ตั้ง MIN/MAX');
   if (part.ct_sec) sub.push(`CT ${part.ct_sec}s`);
   if (part.pieces_per_shot > 1) sub.push(`${part.pieces_per_shot} ชิ้น/จังหวะ`);
   return (

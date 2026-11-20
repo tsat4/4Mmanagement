@@ -1,4 +1,5 @@
 import { getLineFamilyNames } from './lineHierarchy.js';
+import { isSupportUnit } from './unitKind.js';   // 🏭 หน่วยสนับสนุน ≠ ไลน์ผลิต (ตัดสินที่เดียว)
 import { buildViewScope } from './viewScope.js';   // 👁️ ขยายขอบเขตผ่านผัง (แผนก/ไลน์ ไม่ใช่แค่ส่วนงาน)
 import { orgNodeCompare } from './listOrder.js';
 import { unitParentId } from './orgLayers.js';   // 🏢 แผนกขึ้นตรง = ไม่มีแม่เป็นหน่วย (ผู้เรียกกรอง kind มาแล้ว · 04/11)
@@ -188,6 +189,19 @@ export function lineScope({ role, lineId, sections = [], lines = [], scopeIdx = 
   /* ส่วนงานที่ผังไม่รู้จักเลย ⇒ กรองแล้วเหลือ 0 = ตัดขอบเขตไม่ได้ ไม่ใช่ "ไม่มีไลน์"
      ⇒ ไม่จำกัด + unsure (พฤติกรรมเดิมของ scopedLineNames ที่คืน null — คงไว้ แต่เลิกเงียบ) */
   if (!sel.length) return out([], { unlimited: true, unsure: true, reason: 'sections_unmatched' });
+  /* 🔴🔴 ส่วนงานที่เป็น **หน่วยสนับสนุนล้วน** (QA · Store · Maintenance · Tooling/JIG MTN)
+       ⇒ แกน "ไลน์" ไม่ใช่ขอบเขตของเขา — คนพวกนี้ทำงานข้ามไลน์ทั้งโรงงานเป็นปกติ
+     เคสจริง 17/11 (หน้างานแจ้ง): เสมียน Tooling MTN เปิด `/mtn-repair` ได้ **0 ใบ จาก 2,072 ใบ**
+       — ใบ MO เก็บ `line_name` เป็นไลน์ผลิต แต่ขอบเขตเธอคืนมาเป็น
+         Electric/Mechanic/Preventive/Maintenance/Die MTN/Tooling MTN (หน่วยสนับสนุน) ⇒ ไม่ตรงสักใบ
+     🔴 **นี่คือผลข้างเคียงของการเอาหน่วยสนับสนุนเข้าทะเบียนไลน์ (05/11)** — ก่อนหน้านั้น
+       `scopedBySections` หาไม่เจอ ⇒ ตกเข้า `sections_unmatched` ⇒ ไม่จำกัด (ถูกต้องมาตลอด)
+       พอหน่วยพวกนี้กลายเป็น "ไลน์" ขึ้นมา ตัวกรองเลยเริ่มตัด **เงียบๆ ทั้ง 26 บัญชี**
+       (QA · Planning&Store · Maintenance · JIG/Tooling MTN + จอ TV ของหน่วยพวกนี้)
+     🔴 **ไม่ใช่การขยายสิทธิ์** — `writeScope.js` ไม่ได้ใช้ `lineScope()` เลย (ตรวจแล้ว)
+       ของนี้คือ "ขอบเขตที่เห็น" ล้วน · ใครแก้อะไรได้ยังตัดสินที่เดิมทุกประการ
+     🔴 ตั้ง `unsure` ไว้ด้วย — จอที่เขียน "ขอบเขตไม่ชัด" จะได้บอกผู้ใช้ตรงๆ */
+  if (sel.every(isSupportUnit)) return out([], { unlimited: true, unsure: true, reason: 'support_only' });
   return out(sel, { reason: 'sections' });
 }
 

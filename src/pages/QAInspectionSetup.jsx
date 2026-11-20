@@ -28,6 +28,7 @@ import { loadLinesRes, LINE_COLUMNS } from '../utils/useProductionLines';
 import { specLabel } from '../utils/qaSpec';
 import { checkWrite } from '../utils/dbWrite';
 // 🧩 ตั้งค่าจุดตรวจ = ตัวกลางชุดเดียวกับ PM (15/10 · docs/modules/inspection-point-setup.md)
+import { AttachImage } from '../components/ImageLightbox';   // 🔍 รูปแนบกดขยายในแอป (ห้ามเปิดแท็บใหม่)
 import SpinAnnotator from '../components/SpinAnnotator';
 import QaPointsEditor from '../components/QaPointsEditor';
 import QaCopyPointsModal from '../components/QaCopyPointsModal';
@@ -40,6 +41,7 @@ import Page from '../components/Page';
 import SearchInput from '../components/SearchInput';
 import { tr } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
+import { askConfirm } from '../utils/askConfirm';
 
 /* 📐 แท็บของหน้านี้ — `?tab=` (UI-CONVENTIONS §6.8: ห้ามวาดแถบแท็บเอง ใช้ PageHeader+useTabParam) */
 const MAIN_TABS = [
@@ -324,7 +326,7 @@ export default function QAInspectionSetup() {
       toast.error(`${sel.part_no} มีใบตรวจแล้ว ${nSheets} ใบ — ลบไม่ได้ (ประวัติตรวจจะหายถาวร) ให้แก้พาร์ทเป็น "ปิดใช้งาน" แทน`);
       return;
     }
-    if (!window.confirm(`ลบ ${sel.part_no} พร้อมจุดตรวจทั้งหมด ${items.length} จุด?`)) return;
+    if (!await askConfirm(`ลบ ${sel.part_no} พร้อมจุดตรวจทั้งหมด ${items.length} จุด?`)) return;
     const partId = sel.id;
     /* 🔴 ต้อง `.select('id')` แล้ว**นับแถว** ก่อนแตะ storage (QC audit 2026-10-06)
        RLS ปฏิเสธ DELETE = "สำเร็จ 0 แถว ไม่มี error" (กฎเหล็ก DB ข้อ 2) — เดิมเช็คแค่ `error`
@@ -408,13 +410,12 @@ export default function QAInspectionSetup() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
             {/* header */}
             <div style={{ ...cardSt, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+              {/* 🔍 กดขยายในแอป (16/11) — รูปชิ้นงาน 72px ดูไม่ออก · ห้ามเปิดแท็บใหม่ (ของกลาง ImageLightbox) */}
               {prodImg && (
-                <a href={prodImg} target="_blank" rel="noreferrer" title={tr('รูปจาก Product Master/BOM — คลิกเปิดเต็มจอ')} style={{ flexShrink: 0 }}>
-                  <img src={prodImg} alt={sel.part_no} style={{
-                    width: 72, height: 72, objectFit: 'cover', borderRadius: 10,
-                    border: '1px solid var(--border2)', background: 'var(--bg2)', display: 'block',
-                  }} />
-                </a>
+                <AttachImage url={prodImg} alt={sel.part_no} title={sel.part_no}
+                  caption={tr('รูปจาก Product Master/BOM')} hint={tr('รูปจาก Product Master/BOM — แตะเพื่อดูรูปขยาย')}
+                  style={{ flexShrink: 0 }}
+                  imgStyle={{ width: 72, height: 72, maxHeight: 72, objectFit: 'cover', borderRadius: 10, border: '1px solid var(--border2)', background: 'var(--bg2)' }} />
               )}
               <div style={{ flex: 1, minWidth: 200 }}>
                 <div style={{ fontWeight: 900, fontSize: 17, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>

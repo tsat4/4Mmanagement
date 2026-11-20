@@ -27,6 +27,15 @@ export function deptNameOf(v) {
   const hit = teamRows().find(t => String(t.key || '').toLowerCase() === low || String(t.dept_name || '').toLowerCase() === low)
   return hit ? (hit.dept_name || hit.key) : s
 }
+// ค่าใดๆ → รหัสสั้นของทีม (mtn_teams.mo_code เช่น JIG/DIE/PRO/MTN) — ใช้เป็นป้ายช่องเซ็นบนใบพิมพ์
+// 🔴 ป้ายช่องเซ็นต้องมาจากทะเบียนนี้ ห้าม hardcode 'JIG APPROVE' ลงใบ (ใบ DIE เคยขึ้น JIG · 19/11)
+export function moCodeOf(v) {
+  const s = String(v || '').trim(); if (!s) return ''
+  const low = s.toLowerCase()
+  const hit = teamRows().find(t => String(t.key || '').toLowerCase() === low || String(t.dept_name || '').toLowerCase() === low)
+  return hit ? String(hit.mo_code || '').trim() : ''
+}
+
 // เทียบ 2 ค่าว่าเป็นทีมเดียวกันไหม (ไม่สน encoding key/label)
 export function sameTeam(a, b) { return teamKeyOf(a) === teamKeyOf(b) }
 

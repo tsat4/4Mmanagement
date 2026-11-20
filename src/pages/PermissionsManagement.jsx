@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useContext, Fragment } from 'react';
+import { MoreMark } from '../components/InfoMore';
 import { LOGISTIC_GROUPS } from '../utils/logisticSide';
 import { supabase } from '../supabaseClient';
 import { loadPermissions, canSeeded } from '../utils/permissions';
@@ -19,6 +20,7 @@ import useTabParam from '../utils/useTabParam';
 import { NAV_GROUP_ORDER } from '../App';
 import { tr } from '../utils/i18n';
 import InfoMore from '../components/InfoMore';   // ⓘ คำอธิบายพับ (UI §6.10)
+import { askConfirm } from '../utils/askConfirm';
 
 // ชื่อ/สีชุดสิทธิ์อ่านจาก src/utils/roleMeta.js ที่เดียว (ห้ามนิยามซ้ำในหน้า)
 // PERMISSION_COLUMN_ROLES = base roles + คอลัมน์ 🛡️ แอดมินหน่วยงาน (bucket ของ flag is_dept_admin)
@@ -100,7 +102,7 @@ const PAGE_GROUPS = [
   {
     group: LOGISTIC_GROUPS.inbound,
     pages: [
-      { key: 'page:/line-stock',   label: 'สต๊อกในไลน์' },
+      { key: 'page:/line-stock',   label: 'Stock Management (แท็บสต๊อก/ส่ง/รับ/ตรวจนับ/ตั้งค่า)' },
       { key: 'page:/heijunka',     label: 'บอร์ดคัมบัง (ทุกสโตร์)' },
       { key: 'page:/transport',    label: 'มอบหมายขนส่ง (Transport)' },
       // ทำงานคาบ 2 ฝั่ง (sidebar โชว์ทั้งหมวด Store และ Warehouse & Delivery ผ่าน alsoIn) แต่สิทธิ์มีชุดเดียว → ติ๊กที่นี่ที่เดียว
@@ -108,7 +110,7 @@ const PAGE_GROUPS = [
       // หมวดแผนงานยุบเข้ามาแล้ว (30/09) — คีย์สิทธิ์เดิมทุกตัว ไม่มีใครเสียสิทธิ์
       { key: 'page:/planner-sales', label: 'Planner & Sales' },
       // คาบ 2 หมวด (บ้าน = Store/แผนงาน · ทางลัดในฝ่ายผลิต ผ่าน alsoIn) — สิทธิ์ชุดเดียว (seed 20261002)
-      { key: 'page:/monitoring',    label: 'Monitoring แผน-สต๊อก · คาบ 2 หมวด' },
+      { key: 'page:/monitoring',    label: 'Stock Management › แท็บ Monitoring แผน-สต๊อก' },
     ],
   },
   {
@@ -286,7 +288,7 @@ export default function PermissionsManagement() {
     if (!canManage) { toast.error('ไม่มีสิทธิ์แก้ตารางสิทธิ์ (ต้องมี permissions:manage)'); return; }
     // ยืนยันเฉพาะตอน "ปิดสิทธิ์" (current=true→false) — มีผลทุกเครื่องทันที กันแตะ matrix พลาด
     // (เปิดสิทธิ์ = additive ไม่ต้องถาม ให้แก้ matrix ลื่น)
-    if (current && !confirm(`ปิดสิทธิ์ "${permissionKey}" ของ role "${role}" ?\n\nมีผลทุกเครื่องทันที — ผู้ใช้ role นี้จะเข้า/ทำสิ่งนี้ไม่ได้`)) return;
+    if (current && !await askConfirm(`ปิดสิทธิ์ "${permissionKey}" ของ role "${role}" ?\n\nมีผลทุกเครื่องทันที — ผู้ใช้ role นี้จะเข้า/ทำสิ่งนี้ไม่ได้`)) return;
     const cellId = `${role}:${permissionKey}`;
     setSaving(prev => ({ ...prev, [cellId]: true }));
     const nextVal = !current;
@@ -537,7 +539,9 @@ export default function PermissionsManagement() {
             </div>
           )}
           <div style={{ marginTop: 4 }}>
-            🛡️ <b>{tr('ผู้ดูแลระบบ (admin) ติ๊กเต็มเสมอ')}</b> — ล็อกไว้ในโค้ด ไม่ได้มาจากทะเบียน (กันตั้งค่าผิดจนไม่มีใครเข้าได้)
+            {/* ข้อเท็จจริง "admin ติ๊กเต็มเสมอ" ต้องเห็น (กันงงว่าทำไมติ๊กออกไม่ได้) · เหตุผล → ⓘ · 19/11 */}
+            🛡️ <b>{tr('ผู้ดูแลระบบ (admin) ติ๊กเต็มเสมอ')}</b>{' '}
+            <MoreMark text={tr('ล็อกไว้ในโค้ด ไม่ได้มาจากทะเบียน (กันตั้งค่าผิดจนไม่มีใครเข้าได้)')} />
           </div>
         </div>
 

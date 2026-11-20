@@ -21,6 +21,9 @@ import { loadRunDays, ranOn } from '../utils/runDays';
 import NoticeBar from '../components/NoticeBar';
 import { tr } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
+import { askConfirm } from '../utils/askConfirm';
+import { checkWriteRows } from '../utils/dbWrite';
+import { canWriteLine, writeBlockText } from '../utils/writeScope';   // 🔐 ชั้น ③ (19/11 · ออดิท check sheet)
 const NO_LINES = [];
 
 /* ── Poka-Yoke Check — ทดสอบอุปกรณ์ error-proofing รายวัน/กะ (TPM · 2026-07-23) ──────
@@ -34,7 +37,8 @@ const getCurrentShift = () => { const h = new Date().getHours(); return h >= 8 &
 const SHIFT_LABEL = { day: 'กะเช้า (Shift 01)', night: 'กะดึก (Shift 02)' };
 
 export default function PokaYokeCheck() {
-  const { role, lineId: userLineId, sections: scopeSecs, fullName, scopeIdx } = useContext(UserContext);
+  const { role, lineId: userLineId, sections: scopeSecs, fullName,
+          section: homeSection, allUnits, respCostCenters, scopeIdx } = useContext(UserContext);
   const canRecord = can('pokayoke', 'record', role);
   const canManage = can('pokayoke', 'manage', role);
   // 📜 ชื่อผู้ตรวจที่เคยบันทึก (Main pokayoke_checks) — คนนอกทะเบียนยังเลือกซ้ำได้ ไม่หายเงียบ (2026-09-07)
@@ -103,9 +107,24 @@ export default function PokaYokeCheck() {
   }, [selLine, selDate, selShift]);
   useEffect(() => { load(); }, [load]);
 
+  /* 🔐 ชั้น ③ (19/11 · ออดิท check sheet) — `pokayoke:record/manage` บอกแค่ "กดเป็นไหม"
+     ไม่ได้บอกว่า "อุปกรณ์ของไลน์นี้เป็นของหน่วยงานเราไหม" ⇒ เดิมเลือกไลน์ส่วนงานอื่นแล้วลงผล/แก้ทะเบียนได้
+     · ต้นแบบเดียวกับ LPA · ตรวจข้อมูลจริงก่อนใส่ด่าน: 13 คู่ (ผู้บันทึก × ไลน์) ของ 1,296 ผลทดสอบ ผ่านหมด
+     · เช็คที่ไลน์ของ "ตัวอุปกรณ์" ไม่ใช่ไลน์ที่เลือกบนจอ (ตัวเลือกบนจอเป็นตัวกรองการดู ไม่ใช่ด่าน) */
+  const wCtx = { role, section: homeSection, sections: scopeSecs, allUnits, respCostCenters, scopeIdx };
+  const lineWrite = canWriteLine(wCtx, selLine, lines);
+  const lineGuard = (lineName, what) => {
+    const w = canWriteLine(wCtx, lineName, lines);
+    if (w.ok) return true;
+    const sec = lines.find(l => l.name === lineName)?.section || '';
+    toast.error(writeBlockText(w, { what: `${what}ของไลน์ ${lineName}`, unit: sec }));
+    return false;
+  };
+
   // บันทึกผลทดสอบ 1 อุปกรณ์ (upsert)
   const saveCheck = async (device, patch) => {
     if (!canRecord) { toast.error('ไม่มีสิทธิ์บันทึก'); return; }
+    if (!lineGuard(device.line_name, 'ผลทดสอบ Poka-Yoke ')) return;
     const prev = checks[device.id] || {};
     const { data: { user } } = await supabase.auth.getUser();
     const row = {
@@ -125,6 +144,10 @@ export default function PokaYokeCheck() {
   // ── ทะเบียนอุปกรณ์ ──
   const saveDevice = async () => {
     if (!dEditing.name?.trim()) { toast.error('กรอกชื่ออุปกรณ์'); return; }
+    // ย้ายของต้องเช็ค 2 ฝั่ง: ไลน์เดิมของแถว (ต้นทาง) + ไลน์ที่กำลังจะเขียน (ปลายทาง)
+    const orig = dEditing.id ? devices.find(x => x.id === dEditing.id) : null;
+    if (orig && !lineGuard(orig.line_name, 'อุปกรณ์ Poka-Yoke ')) return;
+    if (!lineGuard(dEditing.line_name || selLine, 'อุปกรณ์ Poka-Yoke ')) return;
     const row = {
       ...(dEditing.id ? { id: dEditing.id } : {}),
       line_name: dEditing.line_name || selLine,
@@ -137,10 +160,24 @@ export default function PokaYokeCheck() {
     if (error) { toast.error('บันทึกไม่สำเร็จ: ' + error.message); return; }
     toast.success('บันทึกอุปกรณ์แล้ว'); setDEditing(null); load();
   };
+  /* 🗑️ ลบอุปกรณ์ (19/11 · ออดิท check sheet ข้อ 3) — เดิม FK `on delete cascade` ⇒ ลบอุปกรณ์ =
+     **ผลทดสอบย้อนหลังทั้งหมดหายถาวร** (หลักฐานการตรวจ error-proofing) ⇒
+     · มีประวัติ = ห้ามลบ เสนอ "ปิดใช้งาน" แทน (`is_active=false` · หายจากใบตรวจ แต่ประวัติยังอยู่)
+     · ไม่มีประวัติ (เพิ่มผิด) = ลบได้ · นับประวัติไม่ได้ = ห้ามลบ (fail-closed)
+     · ฝั่ง DB เปลี่ยน FK เป็น `restrict` แล้ว (migration 20261119_pokayoke_checks_fk_restrict) = ตาข่ายชั้นสุดท้าย */
   const deleteDevice = async (d) => {
-    if (!window.confirm(`ลบอุปกรณ์ "${d.name}"? (ผลทดสอบที่ผูกอยู่จะถูกลบด้วย)`)) return;
-    const { error } = await supabase.from('pokayoke_devices').delete().eq('id', d.id);
-    if (error) { toast.error(error.message); return; }
+    if (!lineGuard(d.line_name, 'อุปกรณ์ Poka-Yoke ')) return;
+    const { count, error: cErr } = await supabase.from('pokayoke_checks')
+      .select('id', { count: 'exact', head: true }).eq('device_id', d.id);
+    if (cErr || count == null) { toast.error(`นับประวัติผลทดสอบไม่สำเร็จ — ยังไม่ลบ${cErr ? `: ${cErr.message}` : ''}`); return; }
+    if (count > 0) {
+      if (!await askConfirm(`"${d.name}" มีผลทดสอบย้อนหลัง ${count} ครั้ง — ลบไม่ได้เพราะจะทำให้ประวัติการตรวจหาย\n\nปิดใช้งานแทนไหม? (หายจากใบตรวจ แต่ผลทดสอบย้อนหลังยังอยู่ครบ)`)) return;
+      if (!checkWriteRows(await supabase.from('pokayoke_devices').update({ is_active: false })
+        .eq('id', d.id).select('id'), 'ปิดใช้งานอุปกรณ์')) return;
+      toast.success(`ปิดใช้งาน "${d.name}" แล้ว`); load(); return;
+    }
+    if (!await askConfirm(`ลบอุปกรณ์ "${d.name}"? (ยังไม่มีผลทดสอบ)`)) return;
+    if (!checkWriteRows(await supabase.from('pokayoke_devices').delete().eq('id', d.id).select('id'), 'ลบอุปกรณ์')) return;
     load();
   };
 
@@ -169,6 +206,10 @@ export default function PokaYokeCheck() {
         <span className="spacer" />
         {canManage && <button onClick={() => setDEditing({ line_name: selLine, name: '', is_active: true, sort: (Math.max(0, ...devices.map(d => d.sort || 0)) + 1) })} style={btnAccent}>{tr('เพิ่มอุปกรณ์')}</button>}
       </FilterBar>
+
+      {(canRecord || canManage) && selLine && !lineWrite.ok && (
+        <NoticeBar tone="warn" style={{ marginBottom: 10 }}>🔒 {writeBlockText(lineWrite, { what: `ใบ Poka-Yoke ของไลน์ ${selLine}`, unit: lines.find(l => l.name === selLine)?.section || '' })}</NoticeBar>
+      )}
 
       {/* 🔴 "ยังไม่ทดสอบ" กับ "กะนี้ไม่ได้ผลิต" คนละเรื่อง — ไม่บอก คนอ่านจะนับเป็นขาดตรวจทั้งที่ไลน์ไม่ได้เดิน
           (หลักเดียวกับ AM ที่แยก notStarted ออกจาก late มาตั้งแต่ 08/10 · utils/dailyCheckDay.js) */}

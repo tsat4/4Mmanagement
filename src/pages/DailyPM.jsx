@@ -32,6 +32,7 @@ import { lineKnownSet, groupEquipRowsByLine } from '../utils/pmEquipList'
 import { filterPlanRows } from '../utils/pmPlanFilter'
 import AmMonthlyReport from '../components/AmMonthlyReport'
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
+import { askConfirm } from '../utils/askConfirm';
 
 /* 🔧 B3 (02/11) — สถานะการติดตามใบซ่อมของผลตรวจ NG หนึ่งใบ · ป้าย MO = moStatusLabel() เท่านั้น */
 function AmMoChip({ follow }) {
@@ -188,7 +189,7 @@ export default function DailyPM() {
     if (!canManage || !line_name || line_name === jig.line_name) return
     // เขียน master ทันที → ต้องยืนยันก่อน (UI-CONVENTIONS §5.4) · ยกเลิก = ไม่แตะ DB, select กลับค่าเดิมจาก state
     const movedRegPreview = targets.some(t => t.jig_id === jig.id)
-    const ok = window.confirm(
+    const ok = await askConfirm(
       jig.line_name
         ? `ย้าย "${jig.name}" จากไลน์ ${jig.line_name} → ${line_name} ?${movedRegPreview ? '\n\nรายการลงทะเบียน Daily PM ของอุปกรณ์นี้จะย้ายตามไปด้วย' : ''}`
         : `กำหนดให้ "${jig.name}" อยู่ไลน์ ${line_name} ?`)
@@ -219,7 +220,7 @@ export default function DailyPM() {
          (08/10 audit AM↔PM) · ยืนยันก่อนเพราะมีผลต่อการเตือนทั้งไลน์ · แผน AM ของจิ๊กไม่ถูกแตะ (คนตัดสินเองที่ PM Setup) */
       const rows = targets.filter(t => t.line_name === line_name && t.jig_id === jig.id)
       if (!rows.length) return
-      if (!window.confirm(`เอา "${jig.name}" ออกจากรายการเช็ค AM รายวันของไลน์ ${line_name} ?${rows.some(t => t.shift) ? '\n\n(รวมแถวที่ตั้งไว้เฉพาะกะด้วย)' : ''}`)) return
+      if (!await askConfirm(`เอา "${jig.name}" ออกจากรายการเช็ค AM รายวันของไลน์ ${line_name} ?${rows.some(t => t.shift) ? '\n\n(รวมแถวที่ตั้งไว้เฉพาะกะด้วย)' : ''}`)) return
       const ok = checkWriteRows(await supabaseDR.from('pm_daily_line_targets').update({ is_active: false })
         .in('id', rows.map(t => t.id)).select('id'), 'เอาออกจากทะเบียน AM')
       if (!ok) return
@@ -323,8 +324,11 @@ export default function DailyPM() {
                     {row.firstOrderAt && <span style={{ color: 'var(--muted)', marginLeft: 8 }}>{tr('· เริ่มผลิต')} {fmtTime(row.firstOrderAt)}</span>}
                   </div>
                   {/* 🔴 ไม่ได้ตัดสินรายเครื่อง = ต้องเขียนบอก (ใบผลิตไม่ลงเลขเครื่อง ⇒ ถอยไปตัดสินทั้งไลน์) */}
+                  {/* ⓘ นำหน้าถูกตัดออก 18/11 — ข้อความนี้โชว์เต็มอยู่แล้ว ไม่มีอะไรให้กดอ่านเพิ่ม
+                      และในระบบนี้ ⓘ แปลว่า "กดแล้วมีของให้อ่าน" ค่าเดียว (UI §6.10)
+                      🔴 คอมเมนต์ต้องอยู่ "ก่อน" `{cond && (` — วางข้างใน = 2 node = จอขาว */}
                   {amModeNote(row) && (
-                    <div style={{ marginTop: 4, fontSize: 11, color: 'var(--amber)' }}>ⓘ {amModeNote(row)}</div>
+                    <div style={{ marginTop: 4, fontSize: 11, color: 'var(--amber)' }}>{amModeNote(row)}</div>
                   )}
                   {row.status === 'pending' && dueDiffMin != null && (
                     <div style={{ marginTop: 4, fontSize: 12, fontWeight: 700, color: dueDiffMin <= 15 ? '#f59a3f' : 'var(--muted)' }}>
@@ -380,9 +384,8 @@ export default function DailyPM() {
                     </div>
                   )}
                   {(row.missing.length > 0 || row.ng.length > 0) && (
-                    // ต้องพาไปแท็บ "ฝ่ายผลิต" ตรงๆ (?dept=production) — หน้า pm-check เปิดค่าเริ่มต้นเป็นแท็บซ่อมบำรุง
-                    // ถ้าพนักงานบันทึกผลผิดแท็บ ระบบ Daily PM จะไม่นับให้
-                    <Link to={`/pm?tab=check&dept=production&line=${encodeURIComponent(row.line_name)}`} style={{
+                    // ไปหน้าบันทึกผลตรวจ AM ของตัวเอง (19/11) — ล็อกเฉพาะทีม AM ไม่ปนกับทีมช่าง
+                    <Link to={`/daily-checker?tab=amcheck&line=${encodeURIComponent(row.line_name)}`} style={{
                       display: 'inline-block', marginTop: 10, fontSize: 12, fontWeight: 700, textDecoration: 'none',
                       padding: '6px 12px', borderRadius: 8, background: `${tint(meta.color, 'dim')}`, color: meta.color, border: `1px solid ${tint(meta.color, 'line')}`,
                     }}>
@@ -411,7 +414,7 @@ export default function DailyPM() {
               {[
                 { n: '1', title: 'เพิ่มเครื่อง + หัวข้อตรวจ', desc: <>{tr('ที่หน้า')} <Link to="/pm?tab=setup&dept=production" style={{ color: 'var(--accent)', fontWeight: 700 }}>{tr('ตั้งค่า PM → แท็บ ฝ่ายผลิต')}</Link> (กด "+ เพิ่มอุปกรณ์" แล้วใส่ชื่อ/ไลน์/หัวข้อที่ต้องตรวจ)</> },
                 { n: '2', title: 'ลงทะเบียนที่แท็บนี้', desc: 'ติ๊กเครื่องที่ "ต้องตรวจทุกต้นกะ" ของแต่ละไลน์ — ตัวเลข N ของไลน์มาจากตรงนี้' },
-                { n: '3', title: 'พนักงานตรวจต้นกะ', desc: <>{tr('ที่หน้า')} <Link to="/pm?tab=check&dept=production" style={{ color: 'var(--accent)', fontWeight: 700 }}>{tr('ตรวจสอบอุปกรณ์ → แท็บ ฝ่ายผลิต')}</Link> {tr('เลือกเครื่อง ติ๊กผ่าน/NG แล้วบันทึก')}</> },
+                { n: '3', title: 'พนักงานตรวจต้นกะ', desc: <>{tr('ที่หน้า')} <Link to="/daily-checker?tab=amcheck" style={{ color: 'var(--accent)', fontWeight: 700 }}>{tr('แท็บ บันทึกผลตรวจ AM')}</Link> {tr('เลือกเครื่อง ติ๊กผ่าน/NG แล้วบันทึก')}</> },
                 { n: '4', title: 'ระบบเฝ้าเอง', desc: 'เปิดใบผลิตใบแรกของไลน์ → เริ่มนับ 60 นาที · ครบ+ผ่าน = 🟢 แจ้ง Telegram · พบ NG = 🔴 · เกินเวลายังไม่ครบ = 🟠' },
               ].map(s => (
                 <div key={s.n} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>

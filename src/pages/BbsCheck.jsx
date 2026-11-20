@@ -23,7 +23,7 @@ import { UserContext } from '../App';
 import { usePerms } from '../utils/usePerms';
 import { toast } from '../components/Toast';
 import ReadOnlyNote from '../components/ReadOnlyNote';
-import { getLineFamilyIds } from '../utils/lineHierarchy';
+import { getLineFamilyIds, getLineFamilyNames } from '../utils/lineHierarchy';
 import LineSelect, { scopeLines as pickerLines } from '../components/LineSelect';
 import { loadLinesRes } from '../utils/useProductionLines';
 import usePeople from '../utils/usePeople';
@@ -33,6 +33,10 @@ import { getWorkDate } from '../utils/workDate';
 import { printBbsSheet } from '../lib/bbsPrint';
 import { resolveEmployeeSigner, signatureOfPerson } from '../utils/employeeSignature';   // ✍️ รหัสพนักงาน → ลายเซ็น (C1 · 03/11)
 import { checkWriteRows } from '../utils/dbWrite';
+import { canWriteLine, writeBlockText } from '../utils/writeScope';   // 🔐 ชั้น ③ "ใบของไลน์นี้เป็นของหน่วยงานเราไหม" (19/11)
+import { loadRunDays, ranOn } from '../utils/runDays';
+import { loadCompanyCalendar, getDayType } from '../utils/companyCalendar';
+import { checkDayState, CHECK_DAY } from '../utils/dailyCheckDay';
 import SearchSelect from '../components/SearchSelect';
 import useIsMobile from '../utils/useIsMobile';
 import Page from '../components/Page';
@@ -43,6 +47,7 @@ import FilterBar from '../components/FilterBar';
 import { DeleteButton } from '../components/IconButton';
 import { tr } from '../utils/i18n';
 import { pickSignerPatch } from '../utils/selfSign';
+import { askConfirm } from '../utils/askConfirm';
 /* ⚠️ ห้าม import SHIFT_OPTIONS มาใช้ที่นี่ (เคยพลาดมาแล้ว — ดูหัวข้อ SHEET_SHIFT_OPTIONS ด้านล่าง) */
 
 const thisMonth = () => {
@@ -74,7 +79,8 @@ const MOBILE_LABEL = { ok: 'เหมาะสม', ng: 'ไม่เหมา�
    · **ห้าม import `SHIFT_OPTIONS` จาก `utils/filterLabels` มาใส่หน้านี้** — ตัวนั้นสำหรับจอที่
      `''` = "แสดงทุกกะจริงๆ" (/report · /oee-analytics · /mtn-repair · /workforce-insight) */
 export default function BbsCheck() {
-  const { role, lineId, sections = [], fullName, scopeIdx } = useContext(UserContext);
+  const { role, lineId, sections = [], fullName,
+          section: homeSection, allUnits, respCostCenters, scopeIdx } = useContext(UserContext);
   const { can } = usePerms();
   const canRecord = can('bbs', 'record');
   const canManage = can('bbs', 'manage');
@@ -190,11 +196,15 @@ export default function BbsCheck() {
       setSheet(sh);
 
       if (sh) {
-        const { data: obs, error: obErr } = await supabase.from('bbs_observations')
-          .select('*').eq('sheet_id', sh.id);
-        if (obErr) setLoadWarn(`โหลดผลสังเกตไม่สำเร็จ: ${obErr.message}`);
+        /* 🔴 เพดาน 1,000 แถว/คิวรี (19/11 · ออดิท check sheet) — ใบเดียว = คน × วัน
+           ไลน์ 36 คน × 31 วัน ≈ 1,116 ช่อง ⇒ ช่องที่เกินเพดานหายเงียบ แล้วจออ่านว่า "ยังไม่กรอก"
+           ⇒ ดึงครบทุกหน้า + โหลดไม่ครบต้องเขียนบนจอ (กฎเขียน DB ข้อ 5) */
+        const obRes = await fetchAllPages(() => supabase.from('bbs_observations')
+          .select('*').eq('sheet_id', sh.id));
+        if (obRes.error) setLoadWarn(`โหลดผลสังเกตไม่สำเร็จ: ${obRes.error}`);
+        else if (obRes.truncated) setLoadWarn('ผลสังเกตของใบนี้เยอะเกินกว่าจะโหลดครบ — ช่องที่ว่างอาจมีข้อมูลอยู่จริง');
         const map = {};
-        (obs || []).forEach(o => { map[cellKey(o.employee_id, o.day)] = o; });
+        obRes.rows.forEach(o => { map[cellKey(o.employee_id, o.day)] = o; });
 
         const { data: rn } = await supabase.from('bbs_row_notes')
           .select('employee_id, note').eq('sheet_id', sh.id);
@@ -225,8 +235,20 @@ export default function BbsCheck() {
   }, [inspCode]);
   const shownSig = signatureOfPerson({ profileSig: sheet?.inspector_sig_url, employeeSig: codeSigner?.signatureUrl });
 
+  /* 🔐 ชั้น ③ (19/11 · ออดิท check sheet) — สิทธิ์ `bbs:record` บอกแค่ "กดบันทึกเป็นไหม"
+     ไม่ได้บอกว่า "ใบของไลน์นี้เป็นของหน่วยงานเราไหม" ⇒ เดิมเลือกไลน์ส่วนงานอื่นแล้วทาช่องได้
+     · ต้นแบบเดียวกับ LPA (`lineGuard`) · ตรวจข้อมูลจริงก่อนใส่ด่าน: 46 คู่ (ผู้บันทึก × ไลน์) ผ่านหมด */
+  const wCtx = { role, section: homeSection, sections, allUnits, respCostCenters, scopeIdx };
+  const lineWrite = canWriteLine(wCtx, lineObj?.name, lines);
+  const lineGuard = () => {
+    if (lineWrite.ok) return true;
+    toast.error(writeBlockText(lineWrite, { what: `ใบ BBS ของไลน์ ${lineObj?.name || ''}`, unit: lineObj?.section || '' }));
+    return false;
+  };
+
   /* ── หัวใบ: สร้างตอนบันทึกจริงเท่านั้น (ห้ามสร้างตอนเปิดดู) ── */
   const ensureSheet = useCallback(async () => {
+    if (!lineGuard()) return null;   // ทุกขาเขียน (ทาช่อง · หมายเหตุ · เติม PPE · ผู้ตรวจ) ผ่านตรงนี้
     // ⚠️ ด่านสุดท้ายของขาเขียน — เช็คแค่ `sheet` ไม่พอ ใบของเดือน/ไลน์ก่อนก็ truthy เหมือนกัน
     if (matchesKey(sheet)) return sheet;
     if (!lineObj) return null;
@@ -263,7 +285,7 @@ export default function BbsCheck() {
     }
     setSheet(data);
     return data;
-  }, [sheet, lineObj, month, fullName, signers]);
+  }, [sheet, lineObj, month, fullName, signers, lineWrite.ok]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── ทาช่อง ── */
   // markOverride/seqOverride: โหมดมือถือกดชิปตรงๆ ไม่ผ่านแปรง (desktop ส่ง 2 ตัวแรกเหมือนเดิม)
@@ -281,7 +303,7 @@ export default function BbsCheck() {
       && (brush !== 'ng' || cur.agreement_seq === brushSeq);
     if (same) {
       // 📱 มือถือ: แตะเบิ้ลด้วยถุงมือ = ลบช่องที่เพิ่งทาไปเงียบๆ ⇒ ถามก่อน (จอคอมคลิกซ้ำล้างทันทีเหมือนเดิม · 2026-10-20)
-      if (isMobile && !window.confirm('ล้างเครื่องหมายช่องนี้?')) return;
+      if (isMobile && !await askConfirm('ล้างเครื่องหมายช่องนี้?')) return;
       const { error } = await supabase.from('bbs_observations').delete().eq('id', cur.id);
       if (error) return toast.error(`ล้างช่องไม่สำเร็จ: ${error.message}`);
       setCells(c => { const n = { ...c }; delete n[key]; return n; });
@@ -416,6 +438,7 @@ export default function BbsCheck() {
 
   const setInspectorCode = async (code) => {
     const sh = sheet; if (!sh) return;
+    if (!canRecord || !lineGuard()) return;
     if ((code || null) === (sh.inspector_code || null)) return;
     const { data, error } = await supabase.from('bbs_sheets')
       .update({ inspector_code: code || null, updated_by_name: fullName || null })
@@ -424,6 +447,25 @@ export default function BbsCheck() {
     // ต้องอัปเดต state ด้วย — ไม่งั้นลายเซ็นจากรหัสใหม่ไม่ถูกโหลด (ใบพิมพ์ใช้รหัสเก่า)
     setSheet(s => (s && s.id === sh.id ? { ...s, inspector_code: code || null } : s));
   };
+
+  /* ── วันไหน "ต้องสังเกต" (19/11 · ออดิท check sheet ข้อ 5) ──────────────────────────────
+     เดิมตัวหาร = วันที่ผ่านมา × คน ⇒ วันหยุด/วันที่ไลน์ไม่เดิน ถูกนับเป็น "ยังไม่กรอก" = กล่าวหาหน้างานผิด
+     ⇒ ตัดสินรายวันด้วย `checkDayState()` ของกลาง (utils/dailyCheckDay.js) เหมือน LPA/AM
+     · ไลน์เดินไหม = มีกะเปิดในครอบครัวไลน์ (BBS ไม่แยกกะ · คนทั้งครอบครัวอยู่ใบเดียว)
+     · อ่านตารางกะไม่ได้ = `unknown` **ห้ามแปลว่าไม่ได้ผลิต** (ไม่นับเป็นตัวหาร แล้วเขียนบนจอ) */
+  const [runs, setRuns] = useState(null);
+  const [calMap, setCalMap] = useState(null);
+  const famNamesKey = useMemo(
+    () => (lineObj ? getLineFamilyNames(lines, lineObj.name).join('|') : ''), [lines, lineObj]);
+  useEffect(() => { let alive = true; loadCompanyCalendar().then(m => { if (alive) setCalMap(m); }); return () => { alive = false; }; }, []);
+  useEffect(() => {
+    if (!famNamesKey) { setRuns(null); return; }
+    let alive = true;
+    setRuns(null);
+    loadRunDays({ lineNames: famNamesKey.split('|'), from: `${month}-01`, to: `${month}-${String(days).padStart(2, '0')}` })
+      .then(r => { if (alive) setRuns(r); });
+    return () => { alive = false; };
+  }, [famNamesKey, month, days]);
 
   /* ── สรุปเดือน (นับเฉพาะช่องที่มีข้อมูล — ไม่เดาช่องว่าง) ──
      🔴 ต้องมี "ตัวหาร" ด้วย (13/10 · กฎเดียวกับ utils/dailyCheckDay.js ข้อ 2):
@@ -440,12 +482,31 @@ export default function BbsCheck() {
     const today = getWorkDate();
     const elapsed = today.slice(0, 7) === month ? Math.min(days, Number(today.slice(8, 10)))
       : (month < today.slice(0, 7) ? days : 0);   // เดือนอนาคต = ยังไม่ถึงคิวเลย
-    s.due = elapsed * emps.length;
-    s.filled = s.ok + s.ng + s.fixed + s.na;
+    /* รายวัน → สถานะกลาง · วันหยุดใช้กติกาเดียวกับ LPA (ปฏิทินบริษัท · ไม่มีแถว = ส-อา หยุด) */
+    const daysWithCell = new Set(Object.values(cells).map(c => c.day));
+    const isOff = (ds) => {
+      const t = calMap?.get(ds);
+      if (t) return t !== 'working';
+      const dow = new Date(`${ds}T00:00:00Z`).getUTCDay();
+      return dow === 0 || dow === 6;
+    };
+    const dueDays = new Set();
+    s.offDays = 0; s.noRunDays = 0; s.unknownDays = 0;
+    for (let d = 1; d <= elapsed; d++) {
+      const ds = `${month}-${String(d).padStart(2, '0')}`;
+      const st = checkDayState({ hasResult: daysWithCell.has(d), isOff: isOff(ds), ran: ranOn(runs, ds) });
+      if (st === CHECK_DAY.done || st === CHECK_DAY.missed) dueDays.add(d);
+      else if (st === CHECK_DAY.off) s.offDays++;
+      else if (st === CHECK_DAY.no_run) s.noRunDays++;
+      else if (st === CHECK_DAY.unknown) s.unknownDays++;
+    }
+    s.due = dueDays.size * emps.length;
+    s.filled = Object.values(cells).filter(c => dueDays.has(c.day)).length;
     s.blank = Math.max(0, s.due - s.filled);
     s.elapsed = elapsed;
+    s.runsFailed = runs != null && runs.days == null;
     return s;
-  }, [cells, month, days, emps.length]);
+  }, [cells, month, days, emps.length, runs, calMap]);
 
   const doPrint = async () => {
     if (!sheet) return toast.error('ยังไม่มีใบของเดือน/ไลน์นี้ — บันทึกอย่างน้อย 1 ช่องก่อน');
@@ -467,6 +528,9 @@ export default function BbsCheck() {
     <Page width="full">
       <ReadOnlyNote show={!canRecord} role={role} what="บันทึกผลสังเกต BBS" permKey="bbs:record" />
 
+      {canRecord && lineObj && !lineWrite.ok && (
+        <NoticeBar tone="warn" style={{ marginBottom: 12 }}>🔒 {writeBlockText(lineWrite, { what: `ใบ BBS ของไลน์ ${lineObj.name}`, unit: lineObj.section || '' })}</NoticeBar>
+      )}
       {loadWarn && (
         <NoticeBar tone="bad" style={{ marginBottom: 12 }}>{loadWarn} {tr('— ตัวเลขบนหน้านี้อาจไม่ครบ')}</NoticeBar>
       )}
@@ -733,6 +797,13 @@ export default function BbsCheck() {
               {' '}{tr('(ถึงวันที่')} {stat.elapsed} · {emps.length} คน)
             </>
           )}
+          {/* 🔴 วันที่ไม่นับเป็นตัวหาร ต้องบอกบนจอ — ไม่บอก คนอ่านจะนึกว่าตัวหารหายไปเฉยๆ */}
+          {(stat.offDays > 0 || stat.noRunDays > 0) && (
+            <>{' · '}{tr('ไม่นับ')}{stat.offDays > 0 && <> {tr('วันหยุด')} {stat.offDays}</>}{stat.noRunDays > 0 && <> {tr('ไม่ได้ผลิต')} {stat.noRunDays}</>} {tr('วัน')}</>
+          )}
+          {stat.unknownDays > 0 && runs != null && (   /* ระหว่างโหลดตารางกะ ยังไม่ประกาศว่า "ไม่รู้" */
+            <b style={{ color: 'var(--amber)' }}>{' · '}❔ {tr('ไม่รู้ว่าไลน์เดินหรือไม่')} {stat.unknownDays} {tr('วัน')}{stat.runsFailed ? ` (${tr('อ่านตารางกะไม่สำเร็จ')})` : ''}</b>
+          )}
         </span>
       </div>
 
@@ -809,8 +880,11 @@ function AgreementsModal({ agreements, canManage, role, onClose }) {
       if (gone.length) {
         /* นับแถวแบบ "ต้องครบทุกใบ" — ปิดไม่ครบแล้วขึ้น "บันทึกข้อตกลงแล้ว" + ปิดหน้าต่าง
            = ข้อที่เอาออกกลับมาโผล่ในใบ BBS รอบหน้า (กฎเขียน DB ข้อ 2) */
-        checkWriteRows(await supabase.from('bbs_agreements').update({ is_active: false })
+        /* 🔴 ต้องอ่านผลที่คืนมา (19/11) — เดิมทิ้งผล ⇒ ปิดไม่ครบก็ยังขึ้น "บันทึกแล้ว" ต่อท้าย toast แดง
+           แล้วปิดหน้าต่าง · ไม่ครบ = ค้างหน้าต่างไว้ให้กดบันทึกซ้ำ (ข้อที่ upsert ไปแล้วซ้ำได้ไม่เสียหาย) */
+        const closed = checkWriteRows(await supabase.from('bbs_agreements').update({ is_active: false })
           .in('id', gone.map(g => g.id)).select('id'), 'ปิดข้อตกลงเดิม', { min: gone.length });
+        if (!closed) return;
       }
       toast.success('บันทึกข้อตกลงแล้ว');
       onClose();
@@ -818,7 +892,7 @@ function AgreementsModal({ agreements, canManage, role, onClose }) {
   };
 
   return (
-    <div /* ⚠️ ฟอร์มกรอกข้อมูล — ไม่ปิดจาก backdrop กันเผลอแตะแล้วข้อมูลหาย (UI-CONVENTIONS §5) */  style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+    <div /* ⚠️ ฟอร์มกรอกข้อมูล — ไม่ปิดจาก backdrop กันเผลอแตะแล้วข้อมูลหาย (UI-CONVENTIONS §5) */  style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', width: 'min(760px,96vw)', maxHeight: '88vh', overflow: 'auto', padding: 18 }}>
         <h3 style={{ margin: '0 0 4px', fontSize: 16 }}>{tr('ข้อตกลงด้านความปลอดภัยในการปฏิบัติงาน')}</h3>
         <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--muted)', lineHeight: 1.6 }}>

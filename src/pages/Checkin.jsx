@@ -9,14 +9,20 @@ import { onlyShopfloorStaff, staffGroupOf, STAFF_KINDS, STAFF_SHOPFLOOR } from '
 
 /* ลำดับกลุ่มคน (หน้างาน → ช่าง → สนับสนุน) — ใช้ทั้งบนจอและในใบ export ให้ตรงกัน */
 const GROUP_ORDER = STAFF_KINDS.map(k => k.key);
+/* 🧭 ตัวกรองไลน์ซ่อนได้เฉพาะคนที่ "แกนไลน์อธิบายได้" (16/11 · regression จาก defaultLineFilter 13/11)
+   — สายสนับสนุน/ช่าง/คนที่ยังไม่ผูกไลน์ ไม่ได้สังกัดไลน์โดยธรรมชาติ ⇒ ห้ามถูกช่องเลือกไลน์ซ่อน */
+import { lineAxisVerdict, familySectionsOf, AXIS_OTHER, AXIS_OFF } from '../utils/lineAxisFilter';
+/* 🤝 มุมมองสะสม "คนของไลน์เราถูกยืมออกไปกี่วัน" — สูตรนับอยู่ไฟล์นั้นที่เดียว ห้ามนับในหน้า */
+import { borrowWindow, summarizeBorrowOut, BORROW_WINDOW_DAYS } from '../utils/borrowDays';
 import { UserContext } from '../App';
 import { can } from '../utils/permissions';
 import useIsMobile from '../utils/useIsMobile';
 import { toast } from '../components/Toast';
-import { fetchByIds } from '../utils/fetchByIds';
+import { fetchByIds, fetchAllPages } from '../utils/fetchByIds';
 import { loadCompanyCalendar, getDayType, isOtHolidayType } from '../utils/companyCalendar';
 import { holidayPeriodsForShift, defaultHolidayPeriod, otPeriodLabel, WEEKDAY_OT_TIME } from '../utils/otPeriods';
 import { getLineFamilyIds } from '../utils/lineHierarchy';
+import { notifyEvent } from '../utils/notifyEvent';   // 🔔 แจ้งหัวหน้าต้นสังกัดเมื่อคนของเขาถูกยืม (19/11)
 import { buildViewScope, empScopeOrFilter, scopeLineIds } from '../utils/viewScope';   // 👁️ ขอบเขตที่เห็นได้ ผ่านผัง (22/10)
 import LineSelect from '../components/LineSelect';
 import LineScopeSelect from '../components/LineScopeSelect';
@@ -47,6 +53,7 @@ import { SCAN_EVENT } from '../utils/scanWedge';
 
 import SectionScopeSelect from '../components/SectionScopeSelect';
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 // fallback เมื่อ master ยังว่าง/ยังไม่ apply migration 20260819 — ตัวจริงอยู่ตาราง leave_types
 // (จัดการที่ /report แผงจองรถ OT · เลิก hardcode ตาม QC audit 2026-08-19)
 const DEFAULT_LEAVE_TYPES = ['ลากิจ', 'ลาป่วย', 'ลาพักร้อน', 'อื่นๆ'];
@@ -179,6 +186,16 @@ export default function Checkin() {
   const [borrowResults,   setBorrowResults]   = useState([]);
   const [borrowLoading,   setBorrowLoading]   = useState(false);
   const [borrowLineId,    setBorrowLineId]    = useState('');
+
+  /* 📊 มุมมองสะสม "คนของไลน์เราถูกยืมออกไปกี่วัน" (16/11 · หน้างาน: *"ยืมตัวพนักงาน ยืมแล้ว
+     ไม่ยอมคืน เจ้าของจะมองไม่เห็นรึป่าว"*) — ป้าย `→ ไปช่วยไลน์ X (กะนี้)` ตอบได้แค่กะนี้
+     การยืมผูก work_date+shift ⇒ ไม่มีการค้างข้ามวันเชิงโครงสร้าง แต่ **ยืมซ้ำทุกวันได้** ·
+     วัดจริง 60 วัน: 123 แถว 36 คน (9 คนเข้า LINE APRON ASSY 5–9 วัน ในช่วง 2–5 สัปดาห์)
+     🔴 สูตรนับอยู่ `utils/borrowDays.js` ที่เดียว · `null` = ยังไม่โหลด (ห้ามโชว์ 0 แทน "ไม่รู้") */
+  const [showBorrowSum,    setShowBorrowSum]    = useState(false);
+  const [borrowSum,        setBorrowSum]        = useState(null);
+  const [borrowSumErr,     setBorrowSumErr]     = useState('');
+  const [borrowSumLoading, setBorrowSumLoading] = useState(false);
 
   /* ── สถานะตั้งต้นตอนโหลด — ใช้เทียบว่าการกดบันทึกแต่ละครั้งเป็น "เช็คชื่อครั้งแรก" /
      "อัพเดทกำลังคน" / "จองรถ OT" เพื่อยิงแจ้งเตือน Telegram แยกประเภท (กันหัวหน้าแผนกงง
@@ -380,7 +397,7 @@ export default function Checkin() {
       empQ,
       /* cap-ok: daily_production_logs วัน*เดียว* — วัด 11/11/26 สูงสุด 279 แถว/วัน (ทั้งโรงงาน) */
       supabase.from('daily_production_logs')
-        .select('employee_id, is_present, has_helmet, has_boots, has_gloves, has_ot, has_extended_ot, remark, leave_type, leave_duration, leave_period, leave_hours')
+        .select('employee_id, is_present, has_helmet, has_boots, has_gloves, has_ot, has_extended_ot, remark, leave_type, leave_duration, leave_period, leave_hours, checked_by')
         .eq('work_date', workDateStr),
       /* cap-ok: shift_schedules วัน*เดียว* — วัด 11/11/26 สูงสุด 45 แถว/วัน */
       supabase.from('shift_schedules').select('*').eq('work_date', workDateStr),
@@ -425,7 +442,7 @@ export default function Checkin() {
     const helperByEmp = Object.fromEntries(helperIn.map(h => [h.employee_id, h]));
     const helperOutByEmp = {};
     helperData.forEach(h => {
-      if (!inMyScope(h.to_line_id)) helperOutByEmp[h.employee_id] = lineById[h.to_line_id]?.name || 'ไลน์อื่น';
+      if (!inMyScope(h.to_line_id)) helperOutByEmp[h.employee_id] = { to: lineById[h.to_line_id]?.name || 'ไลน์อื่น', by: h.created_by_name || '' };
     });
 
     // พนักงานที่ถูกยืมเข้ามาแต่อยู่นอก scope query หลัก → ดึงเพิ่มรายตัว
@@ -472,8 +489,24 @@ export default function Checkin() {
           _helperFrom:    lineById[emp.line_id]?.name || emp.section || 'ไม่ระบุไลน์',
         };
       }
-      if (helperOutByEmp[emp.id]) return { ...emp, assignedShift, _helperOutTo: helperOutByEmp[emp.id] };
+      /* 🔒 ถูกยืมออกไปกะนี้ (19/11 · คำสั่ง user) — ไลน์ที่ยืมเป็นคนเช็คชื่อ/PPE **ฝั่งเดียว**
+         จอต้นสังกัดเห็นผลแต่แก้ไม่ได้ และ handleSave ข้ามคนนี้ (เดิม 2 ไลน์บันทึกทับกันได้ ใครกดทีหลังชนะ) */
+      if (helperOutByEmp[emp.id]) return { ...emp, assignedShift, _helperOutTo: helperOutByEmp[emp.id].to, _helperOutBy: helperOutByEmp[emp.id].by };
       return { ...emp, assignedShift };
+    });
+
+    /* 👀 คนที่ถูกยืมออก: บอกหัวหน้าต้นสังกัดว่า "ใครเช็คชื่อให้แล้ว" (ชื่อจาก profiles · ล้ม = ไม่โชว์ชื่อ ไม่บล็อก) */
+    const outIds = enriched.filter(e => e._helperOutTo).map(e => e.id);
+    const checkerIds = [...new Set((logData || []).filter(l => outIds.includes(l.employee_id) && l.checked_by).map(l => l.checked_by))];
+    let checkerName = {};
+    if (checkerIds.length) {
+      const { data: pf } = await supabase.from('profiles').select('id, full_name').in('id', checkerIds);
+      checkerName = Object.fromEntries((pf || []).map(p => [p.id, p.full_name]));
+    }
+    enriched.forEach(e => {
+      if (!e._helperOutTo) return;
+      const log = logData?.find(l => l.employee_id === e.id);
+      e._helperOutChecked = log ? (checkerName[log.checked_by] || 'ไลน์ที่ยืม') : '';
     });
 
     setEmployees(enriched);
@@ -633,6 +666,29 @@ export default function Checkin() {
     setShowBorrowModal(true);
   };
 
+  /* 🔔 หัวหน้าต้นสังกัดต้องรู้เมื่อคนของเขาถูกยืมไปช่วยไลน์อื่น (19/11 · คำสั่ง user)
+     ผู้รับ = ทะเบียน `notification_rules.line_helper_borrowed` (หัวหน้าไลน์ของไลน์ต้นสังกัด · ตั้งที่ /notification-config)
+     · ยืมกันเองในครอบครัวไลน์แม่-ลูก ไม่ถือว่าออก (กติกาเดียวกับ utils/borrowDays.js) = ไม่แจ้ง
+     · fire-and-forget — แจ้งไม่ได้ห้ามลากการยืมล้ม */
+  const notifyBorrowed = (emp, toLineId) => {
+    const home = lines.find(l => l.id === emp.line_id);
+    const to = lines.find(l => l.id === Number(toLineId));
+    if (!home || !to) return;
+    if (getLineFamilyIds(lines, home.id).has(to.id)) return;
+    notifyEvent({
+      event: 'line_helper_borrowed',
+      line_name: home.name, section: home.section || emp.section || undefined,
+      title: `🤝 ${emp.name} ถูกยืมไปช่วย ${to.name}`,
+      lines: [
+        `${emp.name} (${emp.employee_id_code || '-'}) · ไลน์ต้นสังกัด ${home.name}`,
+        `ไปช่วย ${to.name} · ${shiftInfo.label || (shiftInfo.shift === 'night' ? 'กะดึก' : 'กะเช้า')} วันที่ ${shiftInfo.workDateStr}`,
+        `ยืมโดย ${fullName || '-'} — ไลน์ที่ยืมเป็นคนเช็คชื่อ/ตรวจ PPE ให้กะนี้`,
+      ],
+      actor: fullName || undefined,
+      ref_table: 'line_helpers',
+    });
+  };
+
   const borrowEmployee = async (emp) => {
     if (!borrowLineId) { toast.error('เลือกไลน์ปลายทางที่จะให้มาช่วยก่อน'); return; }
     const { error } = await supabase.from('line_helpers').insert({
@@ -649,6 +705,7 @@ export default function Checkin() {
       return;
     }
     toast.success(`🤝 ยืม ${emp.name} มาช่วยกะนี้แล้ว`);
+    notifyBorrowed(emp, borrowLineId);
     setShowBorrowModal(false);
     fetchData();
   };
@@ -672,19 +729,58 @@ export default function Checkin() {
       toast.error(`${emp.name} ถูกยืมไป ${curLine}${by} แล้วในกะนี้ — ให้ไลน์นั้นกด ✕ คืนก่อน หรือรอกะถัดไป (การยืมหมดอายุเองเมื่อเปลี่ยนกะ ไม่ต้องกดคืน)`);
       return;
     }
-    if (!window.confirm(`${emp.name} ถูกยืมไป ${curLine}${by} แล้วในกะนี้\nย้ายมาช่วย ${target} แทน?`)) return;
+    if (!await askConfirm(`${emp.name} ถูกยืมไป ${curLine}${by} แล้วในกะนี้\nย้ายมาช่วย ${target} แทน?`)) return;
     const { data: moved, error: mErr } = await supabase.from('line_helpers')
       .update({ to_line_id: Number(borrowLineId), created_by_name: fullName || null })
       .eq('id', cur.id).select('id');
     if (mErr || !moved?.length) { toast.error('ย้ายการยืมไม่สำเร็จ: ' + (mErr?.message || 'ไม่มีแถวถูกแก้ (สิทธิ์?)')); return; }
     toast.success(`🤝 ย้าย ${emp.name} จาก ${curLine} มาช่วย ${target} แล้ว`);
+    notifyBorrowed(emp, borrowLineId);
     setShowBorrowModal(false);
     fetchData();
   };
 
+  /* 📊 เปิดแผงสะสม "คนของเราถูกยืมออกไปกี่วัน" — ช่วง 30 วันทำงานล่าสุด (คงที่ · หน้านี้ไม่มี
+     ตัวกรองช่วงเวลา และกฎ CLAUDE.md ห้ามยัด <TimeRangeBar> ลงหน้าที่ไม่มีแกนเวลาจริง)
+     🔴 เลือกคอลัมน์เท่าที่ใช้ (กฎ egress) · อ่านไม่ได้/ไม่ครบ = เขียนบนจอ ห้ามโชว์ 0 เงียบ ๆ
+     🔴 "ของเรา" = คนในรายชื่อที่จอโหลดมา (= ขอบเขตบัญชีเดิมเป๊ะ ไม่ได้ขยายสิทธิ์)
+        **ตัดคนที่ถูกยืมเข้ามาออก** — เขาไม่ใช่คนของเรา แค่มายืนกะนี้ */
+  const openBorrowSummary = async () => {
+    setShowBorrowSum(true);
+    if (borrowSumLoading) return;
+    setBorrowSumLoading(true);
+    setBorrowSumErr('');
+    const win = borrowWindow(BORROW_WINDOW_DAYS);
+    if (!win.from) {                       // แกะวันไม่ออก = ไม่คิดเอง (ห้ามเดาเป็นช่วงอื่น)
+      setBorrowSumErr('คำนวณช่วงวันไม่ได้ — ลองเปิดใหม่อีกครั้ง');
+      setBorrowSum(null); setBorrowSumLoading(false);
+      return;
+    }
+    const { rows, error, truncated } = await fetchAllPages(() => supabase.from('line_helpers')
+      .select('employee_id, to_line_id, work_date, shift, emp_name, to_line_name')
+      .gte('work_date', win.from).lte('work_date', win.to));
+    if (error) {
+      setBorrowSumErr(error.includes('does not exist')
+        ? 'ยังไม่ได้ apply migration 20260819_line_helpers_main (แจ้ง admin)'
+        : 'อ่านประวัติการยืมตัวไม่สำเร็จ: ' + error);
+      setBorrowSum(null); setBorrowSumLoading(false);
+      return;
+    }
+    const empById = new Map(employees.map(e => [e.id, e]));
+    const sum = summarizeBorrowOut(rows, {
+      homeLineOf: (id) => empById.get(id)?.line_id ?? null,
+      familyOf:   (id) => getLineFamilyIds(lines, Number(id)),
+      nameOf:     (id) => empById.get(id)?.name,
+      lineNameOf: (id) => lines.find(l => l.id === Number(id))?.name,
+      mine:       (id) => { const e = empById.get(id); return !!e && !e._helperRowId; },
+    });
+    setBorrowSum({ ...sum, ...win, truncated, scanned: rows.length });
+    setBorrowSumLoading(false);
+  };
+
   const unborrowEmployee = async (emp) => {
     if (!emp._helperRowId) return;
-    if (!window.confirm(`คืน ${emp.name} กลับไลน์เดิม (${emp._helperFrom})?`)) return;
+    if (!await askConfirm(`คืน ${emp.name} กลับไลน์เดิม (${emp._helperFrom})?`)) return;
     const { error } = await supabase.from('line_helpers').delete().eq('id', emp._helperRowId);
     if (error) { toast.error('ยกเลิกยืมตัวไม่สำเร็จ: ' + error.message); return; }
     toast.success(`คืน ${emp.name} กลับไลน์เดิมแล้ว`);
@@ -707,7 +803,10 @@ export default function Checkin() {
     // บันทึกเฉพาะรายชื่อที่แสดงบนจอ (displayed) ไม่ใช่ roster ที่โหลดมาทั้งหมด —
     // ไม่งั้นหัวหน้ากะเช้าเปิดหน้าค้างแล้วกดบันทึกตอนเย็น จะทับเช็คชื่อกะดึก/ส่วนอื่นกลับเป็น "ไม่มา"
     // (สรุปยอด + modal ยืนยัน อ้าง displayed อยู่แล้ว — เขียนให้ตรงกัน)
-    const logs = displayed.map(emp => ckLogRow(emp, attendance[emp.id] || {}, userData.user.id));
+    /* 🔒 คนที่ถูกยืมออกไปไลน์อื่นกะนี้ = ไลน์ที่ยืมบันทึกฝั่งเดียว ⇒ ข้ามทั้งเช็คชื่อและจองรถ OT (19/11 · คำสั่ง user) */
+    const savable = displayed.filter(emp => !emp._helperOutTo);
+    const skippedOut = displayed.length - savable.length;
+    const logs = savable.map(emp => ckLogRow(emp, attendance[emp.id] || {}, userData.user.id));
 
     const { error } = await supabase
       .from('daily_production_logs')
@@ -725,8 +824,8 @@ export default function Checkin() {
       const bookDateIsHoliday = isHolidayDate(bookDate);
       const isBooked = emp => isNightShift ? !!otBookings[emp.id] : !!attendance[emp.id]?.has_ot;
 
-      const toBook   = displayed.filter(isBooked).map(emp => emp.id);
-      const toUnbook = displayed.filter(emp => !isBooked(emp)).map(emp => emp.id);
+      const toBook   = savable.filter(isBooked).map(emp => emp.id);
+      const toUnbook = savable.filter(emp => !isBooked(emp)).map(emp => emp.id);
 
       if (toBook.length) {
         const { error: eBook } = await supabase.from('ot_night_bookings').upsert(
@@ -758,8 +857,8 @@ export default function Checkin() {
       const otShift = shiftInfo.shift;
       for (const d of extraAdvanceDates) {
         const isBookedExtra = emp => !!otExtraBookings[emp.id]?.[d];
-        const toBookExtra   = displayed.filter(isBookedExtra).map(emp => emp.id);
-        const toUnbookExtra = displayed.filter(emp => !isBookedExtra(emp)).map(emp => emp.id);
+        const toBookExtra   = savable.filter(isBookedExtra).map(emp => emp.id);
+        const toUnbookExtra = savable.filter(emp => !isBookedExtra(emp)).map(emp => emp.id);
 
         if (toBookExtra.length) {
           checkWrite(await supabase.from('ot_night_bookings').upsert(
@@ -790,7 +889,8 @@ export default function Checkin() {
        และเหมาทุกไลน์ทั้งโรงงาน) — ดู CLAUDE.md ส่วน "Employee Skills & EXP Farming" */
 
     // เช็คชื่อเสร็จแล้วไม่มีอะไรเด้งต่อ (ถอดออโต้เปิดกะออก 16/09) — บอกทางไปต่อให้ชัด ไม่ปล่อยเงียบ
-    toast.success('บันทึกเช็คชื่อสำเร็จ! · ไลน์ที่ต้องลงข้อมูลผลิต ไปกด “เปิดกะ” ที่หน้า Daily Report');
+    toast.success('บันทึกเช็คชื่อสำเร็จ! · ไลน์ที่ต้องลงข้อมูลผลิต ไปกด “เปิดกะ” ที่หน้า Daily Report'
+      + (skippedOut ? ` · ข้าม ${skippedOut} คนที่ถูกยืมไปไลน์อื่น (ไลน์ที่ยืมเป็นคนบันทึก)` : ''));
     if (ckDraftKey) clearDraft(ckDraftKey);
 
     /* ── สรุปเช็คชื่อเข้า Telegram ──
@@ -1228,6 +1328,25 @@ export default function Checkin() {
   // 🤝 คนที่ถูกยืมตัวมา ให้ตัวกรองไลน์/section มองเป็น "ไลน์ปลายทาง" ไม่ใช่ไลน์เดิม
   const effLineIdOf = (emp) => emp._helperToLineId || emp.line_id;
 
+  /* ── 🧭 "ตัวกรองไลน์ซ่อนใครได้" = ของกลาง `utils/lineAxisFilter.js` (2026-11-16) ─────────
+     เดิมถาม `selLineFamilyIds.has(line_id)` ตรงๆ ⇒ พอค่าตั้งต้น "ไลน์ตัวเอง" (13/11) ทำงาน
+     **สายสนับสนุน/ช่าง/คนที่ยังไม่ผูกไลน์ หายทั้งกองอย่างเงียบ ๆ** — หน้างานแจ้ง 16/11
+     *"พนักงานออฟฟิศ บางทีก็โชว์ บางทีก็ไม่โชว์ ตอนนี้ไม่โชว์เลย"* (วัดจริง: support 64 คน /
+     13 คนไม่มี line_id · technician 22 · shopfloor ยังไม่ผูกไลน์ 4) ⇒ ขัดกฎของหน้านี้เอง
+     (บรรทัด ~338 "จอเช็คชื่อต้องเห็นครบทุกกลุ่ม แยกหัวข้อตอนวาดแทน")
+     🔴 ไม่ได้ถอด `defaultLineFilter` และไม่ได้ขยายขอบเขตสิทธิ์ — คนหน้างานไลน์อื่นยังถูกซ่อน
+        เหมือนเดิมเป๊ะ · คนที่แกนไลน์อธิบายไม่ได้ ตัดด้วย "ส่วนงาน" ของครอบครัวไลน์ที่เลือกแทน
+     🔴 ครอบครัวว่าง (ไลน์ไม่อยู่ในทะเบียน) = ถอยไปเทียบ id ตรงตัว (พฤติกรรมเดิมของบรรทัดนี้) */
+  const axisFamilyIds = selLine
+    ? (selLineFamilyIds?.size ? selLineFamilyIds : new Set([Number(selLine)]))
+    : null;
+  const axisOpts = {
+    familyIds:      axisFamilyIds,
+    familySections: familySectionsOf(lines, axisFamilyIds),
+    lineSections:   Object.fromEntries(lines.map(l => [l.id, l.section])),
+  };
+  const axisOf = (emp) => lineAxisVerdict(emp, { ...axisOpts, lineId: effLineIdOf(emp) });
+
   /* 🛡️ ไลน์ตัวเองไม่อยู่ในทะเบียนแล้ว (ถูกลบ/เปลี่ยนชื่อ) ⇒ ค่าตั้งต้นจะทำให้จอว่างทั้งที่มีคน
      = "ลิสต์ว่าง 2 ความหมาย" ⇒ ล้างค่าตั้งต้น ถอยไปเห็นทั้งขอบเขต (fail-open เหมือนที่หน้านี้ใช้อยู่)
      ⚠️ เช็คหลังทะเบียนโหลดเท่านั้น — เช็คตอน lines ว่างจะล้างทิ้งทุกครั้งที่เปิดจอ */
@@ -1240,7 +1359,9 @@ export default function Checkin() {
   const displayed = employees.filter(emp => {
     if (filterShift && emp.assignedShift && emp.assignedShift !== shiftInfo.shift) return false;
     const el = effLineIdOf(emp);
-    if (selLine)    return selLineFamilyIds?.size ? selLineFamilyIds.has(el) : el === Number(selLine);
+    /* 🔴 เลือก "ไลน์" = เข้มเหมือนเดิมกับคนหน้างาน แต่ซ่อนคนที่แกนไลน์อธิบายไม่ได้ไม่ได้
+       (กฎ + เหตุผลเต็มอยู่ `utils/lineAxisFilter.js` · ตัวนับขึ้นจอใต้แถบกรอง) */
+    if (selLine)    return axisOf(emp) !== AXIS_OTHER;
     /* 🔴 กรองด้วย "ส่วนงาน" ต้องไม่ทิ้งคนที่ยังไม่ผูกไลน์ (2026-10-05 · หัวหน้า PD2 แจ้ง "หายไปหมดเลย")
        เดิมเช็ค `sectionFamilyIds.has(el)` อย่างเดียว = ถามว่า "อยู่ไลน์ไหน" ทั้งที่ผู้ใช้เลือก "ส่วนงาน"
        ⇒ คนที่ `line_id` ยัง null **หายทั้งหมดอย่างเงียบ ๆ** · วัดจริง: PD2 มีคนหน้างาน 35 คน
@@ -1255,12 +1376,16 @@ export default function Checkin() {
 
   /* 🔢 คนที่ "ดูได้แต่ถูกตัวกรองไลน์ซ่อนไว้" — กฎจอซื่อสัตย์: กรองแถวออกแล้วต้องบอกว่ากี่คน
      (ไม่บอก = หัวหน้าคิดว่าส่วนงานมีแค่นี้ แล้วหา "ยืมคน" ไม่เจอ) */
-  const hiddenOtherLines = (selLine && selLineFamilyIds?.size)
+  const hiddenOtherLines = selLine
     ? employees.filter(emp => {
         if (filterShift && emp.assignedShift && emp.assignedShift !== shiftInfo.shift) return false;
-        return !selLineFamilyIds.has(effLineIdOf(emp));
+        return axisOf(emp) === AXIS_OTHER;
       }).length
     : 0;
+
+  /* 🔢 คนที่ "โชว์อยู่เพราะแกนไลน์อธิบายเขาไม่ได้" (สายสนับสนุน/ช่าง/ยังไม่ผูกไลน์ ของส่วนงานนี้)
+     — กฎจอซื่อสัตย์ 2 ทาง: ซ่อนแล้วต้องบอก **และ** แสดงเกินตัวกรองก็ต้องบอกว่าทำไมเขาขึ้นมา */
+  const offAxisShown = selLine ? displayed.filter(emp => axisOf(emp) === AXIS_OFF).length : 0;
 
   /* 🧭 แถบกรองขอบเขต — เดิมซ่อนจาก leader ด้วยเหตุผล "หัวหน้าไลน์มีไลน์เดียว ไม่ต้องกรอง"
      13/11: สมมติฐานนั้นผิด — ขอบเขตของหัวหน้าไลน์คือ **ไลน์ตัวเอง ∪ ไลน์ในส่วนงาน** (lineScope)
@@ -1280,6 +1405,8 @@ export default function Checkin() {
     /* 🔴 สแกน = เขียนลงฐาน **ทันทีทีละคน** (10/11 · คำสั่ง user "ควรจะเช็คมาเลย")
        `already` ก็เขียน — เพราะ "มางานอยู่แล้ว" อาจเป็นแค่ติ๊กค้างบนจอที่ยังไม่เคยบันทึก
        ข้ามไป = คนยิงบัตรเชื่อว่าเช็คแล้วแต่ฐานยังว่าง (upsert แถวเดิม = ไม่มีผลข้างเคียง) */
+    const lentOut = employees.find(e => e.id === r.emp.id)?._helperOutTo;
+    if (lentOut) return `${r.emp.name} ถูกยืมไปช่วย ${lentOut} กะนี้ — ไลน์ที่ยืมเป็นคนเช็คชื่อ (จอนี้บันทึกไม่ได้)`;
     const rec = r.record || { ...(attendance[r.emp.id] || {}), is_present: true };
     const { data: userData } = await supabase.auth.getUser();
     if (!userData?.user?.id) return 'ยังไม่ได้เข้าระบบ — บันทึกไม่ได้ ให้ Login ก่อนแล้วยิงใหม่';
@@ -1348,7 +1475,7 @@ export default function Checkin() {
               {hasLeave && rec.leave_type && <div style={{ fontSize: 11, opacity: 0.85 }}>{rec.leave_type}</div>}
             </div>
           </div>
-          <div className="ck-tgs">
+          <div className="ck-tgs" style={emp._helperOutTo ? { pointerEvents: 'none', opacity: 0.5 } : undefined}>
             {tg(rec.is_present, rec.is_present ? '✅ มางาน' : '⬜ มางาน', () => toggle(emp.id, 'is_present'), false, 'var(--accent)')}
             {tg(rec.has_helmet, '⛑️ หมวก', () => toggle(emp.id, 'has_helmet'), !rec.is_present)}
             {tg(rec.has_boots, '🥾 รองเท้า', () => toggle(emp.id, 'has_boots'), !rec.is_present)}
@@ -1357,7 +1484,7 @@ export default function Checkin() {
             {(emp.assignedShift === 'day' || shiftInfo.shift === 'day') && rec.has_ot
               && tg(rec.has_extended_ot, 'OT+23', () => toggle(emp.id, 'has_extended_ot'), false, 'var(--red)')}
           </div>
-          <div className="ck-more">
+          <div className="ck-more" style={emp._helperOutTo ? { pointerEvents: 'none', opacity: 0.5 } : undefined}>
             <div><div className="ck-lbl">{tr('การลา')}</div>{cLeave}</div>
             <div><div className="ck-lbl">{tr('หมายเหตุ')}</div>{cRemark}</div>
             {needBooking && <div><div className="ck-lbl">{tr('จองรถ OT / งานที่ทำ')}</div><div className="ck-book">{cBooking}</div></div>}
@@ -1405,7 +1532,10 @@ export default function Checkin() {
                         )}
                         {emp._helperOutTo && (
                           <div style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 700, marginTop: 2 }}>
-                            → ไปช่วยไลน์ {emp._helperOutTo} (กะนี้)
+                            → ไปช่วยไลน์ {emp._helperOutTo} (กะนี้){emp._helperOutBy ? ` · ยืมโดย ${emp._helperOutBy}` : ''}
+                            <div style={{ fontWeight: 600, color: 'var(--muted)' }}>
+                              🔒 {emp._helperOutChecked ? `เช็คชื่อแล้วโดย ${emp._helperOutChecked}` : 'ยังไม่ได้เช็คชื่อ'} — ไลน์ที่ยืมเป็นคนบันทึก จอนี้แก้ไม่ได้
+                            </div>
                           </div>
                         )}
                       </div>
@@ -1625,7 +1755,7 @@ export default function Checkin() {
                     </td>
                   </tr>
                 )}
-                <tr style={{ background: meta.bg }}>
+                <tr style={{ background: meta.bg, ...(emp._helperOutTo ? { pointerEvents: 'none', opacity: 0.65 } : {}) }} aria-disabled={emp._helperOutTo ? true : undefined}>
                   {/* Employee */}
                   <td>
                     {cEmp}
@@ -1720,6 +1850,85 @@ export default function Checkin() {
 
   return (
     <Page>
+      {/* 📊 Modal สะสม "คนของเราถูกยืมออกไปกี่วัน" (16/11) — ตัวเลขทุกตัวมาจาก utils/borrowDays.js
+          🔴 ช่วงเวลาเขียนบนจอเสมอ · "ไม่รู้/ไม่ครบ" ต้องเห็น ห้ามกลายเป็น 0 เงียบ ๆ */}
+      {showBorrowSum && (
+        <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '20px 24px', maxWidth: 680, width: '100%', maxHeight: '86vh', display: 'flex', flexDirection: 'column', boxShadow: 'var(--shadow-lg)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+              <div style={{ fontSize: 18, fontWeight: 900, color: 'var(--text)' }}>{tr('คนของเราที่ถูกยืมออกไปช่วยไลน์อื่น')}</div>
+              <button onClick={() => setShowBorrowSum(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 18, cursor: 'pointer', padding: 4 }}>✕</button>
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>
+              {borrowSum
+                ? <>นับจาก<b> วันงาน {borrowSum.from} → {borrowSum.to}</b> ({borrowSum.days} {tr('วัน')}) · 1 วัน = 1 วัน ไม่ว่าถูกยืมกี่กะ · <b>{tr('ยืมข้ามไลน์แม่-ไลน์ลูกของตัวเองไม่นับว่าออก')}</b></>
+                : <>{tr('ช่วง')} {BORROW_WINDOW_DAYS} {tr('วันทำงานล่าสุด')} — {tr('การยืมผูกกับวัน+กะ หมดกะหลุดเอง · แผงนี้ตอบว่า "ถูกยืมซ้ำกี่วัน" ซึ่งป้ายบนรายชื่อตอบไม่ได้')}</>}
+            </div>
+
+            {borrowSumErr && <NoticeBar tone="bad" style={{ marginBottom: 10 }}>{borrowSumErr}</NoticeBar>}
+            {borrowSumLoading && <div style={{ padding: 14, fontSize: 13, color: 'var(--muted)' }}>{tr('⏳ กำลังรวบรวม...')}</div>}
+
+            {!borrowSumLoading && !borrowSumErr && borrowSum && (
+              <>
+                {borrowSum.people.length === 0 ? (
+                  <div style={{ padding: 14, fontSize: 13, color: 'var(--muted)' }}>
+                    {tr('ไม่มีคนในรายชื่อนี้ถูกยืมออกไปไลน์อื่นในช่วงที่นับ')}
+                    <span style={{ fontSize: 11.5 }}> {tr('(อ่านแถวการยืมทั้งโรงงาน')} {borrowSum.scanned} {tr('แถว)')}</span>
+                  </div>
+                ) : (
+                  /* 📱 ปัดได้ทั้ง 2 แกน — 4 คอลัมน์บนจอ 390px ต้องไม่ "ล้นแล้วปัดไม่ได้" */
+                  <div style={{ flex: 1, overflow: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--bg2)' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 420 }}>
+                      <thead>
+                        <tr style={{ background: 'var(--bg3)', color: 'var(--text2)' }}>
+                          <th style={{ textAlign: 'left',   padding: '6px 10px', fontSize: 11.5, fontWeight: 700 }}>{tr('พนักงาน')}</th>
+                          <th style={{ textAlign: 'left',   padding: '6px 10px', fontSize: 11.5, fontWeight: 700 }}>{tr('ไลน์ต้นสังกัด')}</th>
+                          <th style={{ textAlign: 'center', padding: '6px 10px', fontSize: 11.5, fontWeight: 700 }}>{tr('ถูกยืมออก')}</th>
+                          <th style={{ textAlign: 'left',   padding: '6px 10px', fontSize: 11.5, fontWeight: 700 }}>{tr('ไปไลน์')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {borrowSum.people.map(p => (
+                          <tr key={p.id} style={{ borderTop: '1px solid var(--border)' }}>
+                            <td style={{ padding: '6px 10px', fontWeight: 700, color: 'var(--text)' }}>{p.name}</td>
+                            <td style={{ padding: '6px 10px', color: 'var(--muted)', fontSize: 11.5 }}>{p.homeLineName || '—'}</td>
+                            <td style={{ padding: '6px 10px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                              <b style={{ color: 'var(--text)', fontSize: 13 }}>{p.days}</b> {tr('วัน')}
+                              <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+                                {p.shifts} {tr('กะ')}{p.span ? ` · ${tr('ในช่วง')} ${p.span} ${tr('วัน')}` : ''}
+                              </div>
+                            </td>
+                            <td style={{ padding: '6px 10px', fontSize: 11.5, color: 'var(--text2)' }}>
+                              {p.toLines.map(t => `${t.name} (${t.days})`).join(' · ')}
+                              <div style={{ fontSize: 11, color: 'var(--muted)' }}>{p.firstDate} → {p.lastDate}</div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                <div style={{ marginTop: 10, fontSize: 11.5, color: 'var(--muted)', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  <span>{tr('รวม')} <b style={{ color: 'var(--text)' }}>{borrowSum.people.length}</b> {tr('คน')} · <b style={{ color: 'var(--text)' }}>{borrowSum.totalDays}</b> {tr('คน-วัน')}</span>
+                  {borrowSum.unknownHome > 0 && (
+                    <span data-warn="1" style={{ color: 'var(--amber)' }}>
+                      ⚠ {borrowSum.unknownHome} {tr('แถวไม่รู้ไลน์ต้นสังกัด จึงไม่ถูกนับ — คนที่ยังไม่ผูกไลน์ (ไปผูกที่ ฐานข้อมูลพนักงาน)')}
+                    </span>
+                  )}
+                  {borrowSum.skipped > 0 && (
+                    <span>{borrowSum.skipped} {tr('แถวเป็นของคนนอกรายชื่อที่จอนี้โหลด (คนละขอบเขต/คนละทีม/ถูกยืมเข้ามา) — ไม่นับ')}</span>
+                  )}
+                  {borrowSum.truncated && (
+                    <span data-warn="1" style={{ color: 'var(--amber)' }}>⚠ {tr('ข้อมูลมากเกินกว่าจะอ่านครบในรอบเดียว — ตัวเลขนี้ยังไม่ครบ')}</span>
+                  )}
+                  <span>{tr('การยืมหมดอายุเองเมื่อเปลี่ยนกะ — ตัวเลขนี้คือ "ถูกยืมซ้ำ" ไม่ใช่ "ค้างคืนไม่ยอมคืน" · ถ้าคนเดิมถูกยืมบ่อยจนเหมือนย้ายสังกัด ให้คุยกันแล้วตั้งที่')} <strong>{tr('ผังกำลังคน')}</strong> ({tr('คนวิ่งข้ามแผนก')})</span>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* 🤝 Modal ยืมพนักงานข้ามไลน์ */}
       {showBorrowModal && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
@@ -1810,6 +2019,8 @@ export default function Checkin() {
             { key: 'preview', icon: '🌙', label: previewNight ? 'ออกจาก Preview กะดึก' : 'Preview กะดึก', onClick: () => setPreviewNight(p => !p),
               hidden: realShiftInfo.shift !== 'day', badge: previewNight ? 'เปิดอยู่' : undefined,
               title: 'ดูตัวอย่างหน้าจอกะดึก (รวมคอลัมน์ OT พรุ่งนี้) — ปิดปุ่มบันทึกอัตโนมัติระหว่าง preview' },
+            { key: 'borrowsum', icon: '📊', label: `คนของเราที่ถูกยืมออก (${BORROW_WINDOW_DAYS} วัน)`, onClick: openBorrowSummary,
+              title: 'สรุปสะสมว่าคนของไลน์เราถูกยืมไปช่วยไลน์อื่นกี่วัน / ไลน์ไหน ในช่วง 30 วันทำงานล่าสุด (ป้ายบนรายชื่อบอกได้แค่กะนี้)' },
             { key: 'export', icon: '📄', label: 'ส่งออกฟอร์ม', onClick: () => { setExportSection(selSection || ''); setShowExport(true); } },
             { key: 'otbook', icon: '🚚', label: 'จองรถ OT', onClick: openOtBookModal, title: 'จองรถ OT วันที่/ไลน์/ทีมใดก็ได้ ไม่ต้องรอเช็คชื่อกะนั้น' },
           ]} />
@@ -1874,10 +2085,19 @@ export default function Checkin() {
           {/* Employee count badge */}
           <span className="filter-count">
             แสดง <span style={{ color: 'var(--text)', fontWeight: 700 }}>{displayed.length}</span> คน
+            {/* 16/11 แก้ข้อความ tooltip: ตั้งแต่ลง lineAxisFilter คนกลุ่มนี้ **ขึ้นแม้กรองรายไลน์**
+                (ข้อความเดิมบอกว่า "จะไม่ขึ้นเมื่อกรองรายไลน์" = จอโกหกหลังเปลี่ยนพฤติกรรม) */}
             {noLineCount > 0 && (
               <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--amber)', fontWeight: 700 }}
-                title={tr('คนเหล่านี้อยู่ส่วนงานนี้แต่ยังไม่ได้ผูกไลน์ — จะไม่ขึ้นเมื่อกรองรายไลน์ ไปผูกที่ ฐานข้อมูลพนักงาน (ช่อง Group / กลุ่ม)')}>
+                title={tr('คนเหล่านี้อยู่ส่วนงานนี้แต่ยังไม่ได้ผูกไลน์ — ยังขึ้นให้เช็คชื่อได้ตามปกติ (ตัวกรองไลน์ไม่ซ่อนคนที่ไม่สังกัดไลน์) แต่กำลังคนของไลน์จะไม่นับเขา · ไปผูกที่ ฐานข้อมูลพนักงาน (ช่อง Group / กลุ่ม)')}>
                 ⚠ {noLineCount} คนยังไม่ผูกไลน์
+              </span>
+            )}
+            {/* 🧭 ทำไมคนที่ไม่ได้อยู่ไลน์นี้ยังขึ้นมา — ต้องเขียนบนจอ ไม่ใช่ให้หัวหน้าเดา */}
+            {offAxisShown > 0 && (
+              <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--muted)' }}
+                title={tr('สายสนับสนุน / ช่าง / คนที่ยังไม่ผูกไลน์ ของส่วนงานนี้ — เขาไม่ได้สังกัดไลน์โดยธรรมชาติ ตัวกรองไลน์จึงไม่ซ่อนเขา (ดูหัวข้อกลุ่มในรายชื่อ) · เช็คชื่อได้ แต่ไม่ถูกนับเป็นกำลังคนของไลน์ผลิต')}>
+                🗂️ {offAxisShown} {tr('คนไม่สังกัดไลน์')}
               </span>
             )}
             {hiddenOtherLines > 0 && (
@@ -1900,7 +2120,17 @@ export default function Checkin() {
             {tr(m.label)} {counts[key]}
           </span>
         ) : null)}
-        {role === 'leader' && !showScopeFilter && <span style={{ fontSize: 12, color: 'var(--muted)', padding: '3px 0' }}>{tr('รวม')} {displayed.length} {tr('คน')}</span>}
+        {/* ขอบเขตมีไลน์เดียว = ไม่มีแถบกรองให้ติดตัวนับ ⇒ บอกที่นี่แทน (กฎจอซื่อสัตย์ ห้ามเงียบ) */}
+        {role === 'leader' && !showScopeFilter && (
+          <span style={{ fontSize: 12, color: 'var(--muted)', padding: '3px 0' }}>
+            {tr('รวม')} {displayed.length} {tr('คน')}
+            {offAxisShown > 0 && (
+              <span title={tr('สายสนับสนุน / ช่าง / คนที่ยังไม่ผูกไลน์ ของส่วนงานนี้ — ไม่ได้สังกัดไลน์ จึงไม่ถูกตัวกรองไลน์ซ่อน')}>
+                {' '}· 🗂️ {offAxisShown} {tr('คนไม่สังกัดไลน์')}
+              </span>
+            )}
+          </span>
+        )}
       </div>
 
       <DraftRestoreBar draft={ckPending} what="การเช็คชื่อกะนี้" onRestore={restoreCkDraft}

@@ -58,8 +58,12 @@ const agoMin = (iso) => (iso ? Math.max(0, Math.round((Date.now() - new Date(iso
 /**
  * @param {object} p
  * @param {number} [p.slot=0]  ช่องวางแถบ/ชิป (0 = บนสุด) — ต้องต่างกันเมื่อ mount คู่กับไซเรนอื่น
+ * @param {'float'|'inline'} [p.variant='float']  19/11 (mockup รับของเข้าคลัง ที่ user เคาะ) — `inline` = แถบเดียว
+ *        อยู่ในเนื้อหน้า **ไม่ลอยทับ** (Stock Management › ส่ง/รับของ) · เสียงยังดังเหมือนเดิมทุกแบบ
+ * @param {boolean} [p.here=false]  inline บนแท็บ "ส่งของเข้าไลน์" เอง = มีปุ่มรับทราบ/ไปเตรียมงาน ·
+ *        แท็บอื่น = ลิงก์ไปแท็บส่งของอย่างเดียว (งานของแท็บนั้น)
  */
-export default function StoreCallSiren({ slot = 0 }) {
+export default function StoreCallSiren({ slot = 0, variant = 'float', here = false }) {
   /* 📱 มือถือโชว์ทีละใบ (05/11) — แถบขึ้นบรรทัดใหม่แล้วสูง ~270px/ใบ
      3 ใบ = 894px บนจอ 844px ⇒ ปุ่ม "รับทราบ" ของใบล่างสุดตกนอกจอ กดไม่ได้เลย
      (แถบเป็น `position: fixed` เลื่อนหน้าตามไม่ได้) · ที่เหลือไปอยู่บรรทัด "+ อีก N ใบ" ข้างล่าง
@@ -75,8 +79,8 @@ export default function StoreCallSiren({ slot = 0 }) {
   /* 🔍 04/11 (user: "มีปุ่มกดจากแจ้งเตือนเข้าไปหาหน้าที่ต้องเตรียมงานเลยได้มั้ย")
      พาไปจอทำรายการ (/line-stock › 🏬 งานสโตร์ › ตู้ตามเลขพาร์ท) + กรองให้เหลือพาร์ทใบนี้ · state = ส่งต่อแม้อยู่หน้าเดิมแล้ว */
   const navigate = useNavigate();
-  const goPrep = (a) => {
-    if (canAck) ack(a);
+  const goPrep = (a, { noAck = false } = {}) => {
+    if (canAck && !noAck) ack(a);
     const st = storeOfMat(a.mat_no);   // ตู้ตามเลขพาร์ท (04/11 เลิกแท็บคิวเติม WIP)
     navigate(`/line-stock?tab=out&store=${st}`, { state: { storeFocus: { store: st, q: a.mat_no || '', at: Date.now() } } });
   };
@@ -136,7 +140,11 @@ export default function StoreCallSiren({ slot = 0 }) {
       .eq('id', a.id).select('id'), 'บันทึกรับทราบเสียงเตือนใบขอเบิก');
   };
 
-  const fixed = (extra = {}) => ({ position: 'fixed', zIndex: 4000, ...extra });
+  const inline = variant === 'inline';
+  /* inline: ป้าย fixed ทุกตัวกลายเป็นของในเนื้อหน้า (ตำแหน่งทิ้ง · สี/ข้อความเดิม) */
+  const fixed = (extra = {}) => (inline
+    ? { position: 'static', alignSelf: 'flex-start', marginBottom: 10, ...Object.fromEntries(Object.entries(extra).filter(([k]) => !['top', 'bottom', 'left', 'right', 'transform'].includes(k))) }
+    : { position: 'fixed', zIndex: 4000, ...extra });
   const chipBottom = `calc(${12 + slot * 46}px + var(--mnav-h, 0px))`;
 
   if (!alerts.length) {
@@ -156,6 +164,42 @@ export default function StoreCallSiren({ slot = 0 }) {
           background: 'rgba(20,16,6,0.94)', border: '1px solid rgba(251,191,36,0.5)', borderRadius: 'var(--r-md)',
           padding: '7px 11px', fontSize: 11.5, fontWeight: 800, color: '#fbbf24', boxShadow: 'var(--shadow-lg)' })}>
         เสียงเตือน "ไลน์เรียกของ" ยังไม่พร้อม — แตะที่นี่ 1 ครั้ง
+      </div>
+    );
+  }
+
+  if (inline) {
+    const a = alerts[0];
+    const wait = agoMin(a.requested_at);
+    return (
+      <div role="status" className="andon-bar" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 10,
+        background: 'var(--card)', border: '1px solid var(--border)', borderLeft: '4px solid var(--amber)', borderRadius: 'var(--r-md)',
+        padding: '8px 12px', fontSize: 12.5 }}>
+        <span className="andon-bar-msg" style={{ flex: 1, minWidth: 0, color: 'var(--text)' }}>
+          🔔 <b>{tr('ไลน์เรียกของ')} {alerts.length} {tr('ใบ')}</b> {tr('ยังไม่มีใครรับทราบ')}
+          {here && <> · {tr('เก่าสุด')} <b>{a.line_name || tr('ไม่ระบุไลน์')}</b> · <MatLabel mat={a.mat_no} name={a.part_name} size={12} />
+            {' · '}{tr('ขอ')} {Number(a.request_qty || 0).toLocaleString()} · {tr('รอ')} {wait != null ? `${wait.toLocaleString()} นาที` : '—'}</>}
+        </span>
+        {muted && (
+          <button type="button" onClick={unlockNow} style={{ background: 'none', border: 'none', fontSize: 12, fontWeight: 800, color: 'var(--amber)', cursor: 'pointer' }}>
+            {tr('แตะเพื่อเปิดเสียง')}
+          </button>
+        )}
+        {here ? (<>
+          <button type="button" onClick={() => goPrep(a)} style={{ background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 'var(--r-md)',
+            padding: '5px 12px', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>{tr('ไปเตรียมงาน')}</button>
+          <button type="button" onClick={() => ack(a)}
+            title={canAck ? 'หยุดเสียงเท่านั้น — ใบยังรอหยิบอยู่ในคิวสโตร์เหมือนเดิม' : 'บัญชีนี้ไม่มีสิทธิ์บันทึกรับทราบ (heijunka:operate) — ปิดได้เฉพาะเสียงบนจอนี้'}
+            style={{ background: 'var(--bg2)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)',
+              padding: '5px 12px', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
+            {canAck ? tr('รับทราบ · หยุดเสียง') : tr('🔇 ปิดเสียงเฉพาะจอนี้')}
+          </button>
+        </>) : (
+          /* แท็บอื่น = พาไปเฉยๆ ไม่ถือว่ารับทราบ (คนกดยังไม่ได้เห็นใบ) */
+          <button type="button" onClick={() => goPrep(a, { noAck: true })} style={{ background: 'none', border: 'none', color: 'var(--blue)', fontSize: 12.5, fontWeight: 800, cursor: 'pointer' }}>
+            {tr('ไปที่ ส่งของเข้าไลน์ →')}
+          </button>
+        )}
       </div>
     );
   }
@@ -190,7 +234,7 @@ export default function StoreCallSiren({ slot = 0 }) {
                 แตะเพื่อเปิดเสียง
               </span>
             )}
-            <button onClick={() => goPrep(a)} title={tr('ไปหน้าเตรียมงาน — Line Stock › 📤 ขาออก › ตู้ตามเลขพาร์ท (กรองเฉพาะพาร์ทนี้)')}
+            <button onClick={() => goPrep(a)} title={tr('ไปหน้าเตรียมงาน — Stock Management › 📤 ส่งของเข้าไลน์ › ตู้ตามเลขพาร์ท (กรองเฉพาะพาร์ทนี้)')}
               style={{ flexShrink: 0, background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 'var(--r-md)',
                 padding: '7px 14px', fontSize: 12.5, fontWeight: 800, cursor: 'pointer' }}>
               {tr('ไปเตรียมงาน')}
@@ -209,7 +253,7 @@ export default function StoreCallSiren({ slot = 0 }) {
       {alerts.length > maxBars && (
         <div style={{ pointerEvents: 'auto', background: 'rgba(8,20,14,0.96)', border: '1px solid rgba(34,197,94,0.5)',
           borderRadius: 'var(--r-md)', padding: '7px 12px', fontSize: 11.5, fontWeight: 800, color: '#86efac', textAlign: 'center' }}>
-          + อีก {alerts.length - maxBars} ใบที่ไลน์เรียกแล้วยังไม่มีใครรับทราบ — ทำรายการที่ Line Stock → 📤 ขาออก (ตู้ตามเลขพาร์ท)
+          + อีก {alerts.length - maxBars} ใบที่ไลน์เรียกแล้วยังไม่มีใครรับทราบ — ทำรายการที่ Stock Management → 📤 ส่งของเข้าไลน์ (ตู้ตามเลขพาร์ท)
         </div>
       )}
     </div>

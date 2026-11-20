@@ -15,6 +15,7 @@ import { teamKeyOf, deptNameOf } from '../utils/mtnTeams'
 import useIsMobile from '../utils/useIsMobile';
 
 import { tr } from '../utils/i18n';
+import { publishSirenCount } from '../utils/sirenBus';   // 💬 แชท AskBot บนมือถือบังแถบนี้ ⇒ ประกาศจำนวนให้หัวกล่องแชทเขียนแทน (19/11)
 /* เสียง+แถบเตือน downtime บนเว็บ — แยกตามหน้า (คำสั่ง user 2026-07-14):
      mode='call_mtn'   → ดังหน้า Maintenance (มีคนกดปุ่ม "เรียกช่าง")
      mode='open_15min' → ดังหน้า Production  (เครื่องเปิดค้างเกินเกณฑ์นาที · scanner mark open_alerted_at)
@@ -77,7 +78,7 @@ export default function DowntimeSiren({ mode = 'open_15min', team = null, lineNa
 
   const fetchAlerts = useCallback(async () => {
     let q = supabaseDR.from('downtime_logs')
-      .select('id, machine_no, description, started_at, call_mtn, call_mtn_at, call_mtn_ack_at, call_mtn_team, open_alerted_at, open_ack_at, dr_downtime_types(name_th, category), production_sessions(line_name, status)')
+      .select('id, machine_no, description, started_at, call_mtn, call_mtn_at, call_mtn_ack_at, call_mtn_team, open_alerted_at, open_ack_at, dr_downtime_types(name_th, category, planned_cap_min), production_sessions(line_name, status)')
       .is('duration_min', null).is('ended_at', null)
     // โหมด 'all' กรอง ack รายแถวตอนจัดชนิด (แถวเดียวมี 2 ช่อง ack) — downtime ที่เปิดค้างพร้อมกันมีไม่กี่แถว
     if (mode === 'call_mtn') q = q.eq('call_mtn', true).is('call_mtn_ack_at', null)
@@ -152,6 +153,9 @@ export default function DowntimeSiren({ mode = 'open_15min', team = null, lineNa
 
   /* 🔊 เสียง + สถานะ "เบราว์เซอร์บล็อกเสียงอยู่ไหม" = ของกลาง (ลายเสียงเดิม: คู่โน้ตตก 880→660) */
   const { muted, unlockNow } = useSiren(alerts.length > 0, { pattern: SIREN_PATTERN_ALARM })
+  /* ประกาศจำนวนเครื่องที่เตือนอยู่ให้ของลอยอื่น (แชท AskBot) — ถอดไซเรนออกจากหน้า = กลับเป็น 0 */
+  useEffect(() => { publishSirenCount(alerts.length) }, [alerts.length])
+  useEffect(() => () => publishSirenCount(0), [])
 
   const ack = async (a) => {
     setRaw(prev => prev.filter(x => x.id !== a.id))

@@ -12,6 +12,7 @@ import { writeBlockText } from '../utils/writeScope';
 import { useOrgTeams } from '../utils/useOrgSections';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 /* ═══════════════════════════════════════════════════════════════════════════════════════
    ⚙️ ตั้งค่า Manpower Control Board ของส่วนงาน (2026-10-06 · คำสั่ง user "ทำส่วนที่ยังไม่ได้ทำต่อ")
    2 เรื่อง — ตาราง Main (migration 20261006b) · สิทธิ์ `manpower_board:edit` (RLS has_perm คีย์เดียวกัน)
@@ -153,7 +154,7 @@ export default function ManpowerBoardSetup({ section, nodes, lines, employees, s
   const removeTech = async (row) => {
     if (blocked()) return;
     const e = empById.get(row.employee_id);
-    if (!window.confirm(`เอา ${e?.name || 'ช่างคนนี้'} ออกจากช่างประจำไลน์?`)) return;
+    if (!await askConfirm(`เอา ${e?.name || 'ช่างคนนี้'} ออกจากช่างประจำไลน์?`)) return;
     setBusy(true);
     try {
       const res = await supabase.from('line_technicians').delete().eq('id', row.id).select('id');
@@ -183,7 +184,7 @@ export default function ManpowerBoardSetup({ section, nodes, lines, employees, s
   const removeFlex = async (row) => {
     if (blocked()) return;
     const e = empById.get(row.employee_id);
-    if (!window.confirm(`เอา ${e?.name || 'คนนี้'} ออกจากคนวิ่งข้ามแผนก?\n(สังกัดจริงและ cost center ไม่เปลี่ยนอยู่แล้ว)`)) return;
+    if (!await askConfirm(`เอา ${e?.name || 'คนนี้'} ออกจากคนวิ่งข้ามแผนก?\n(สังกัดจริงและ cost center ไม่เปลี่ยนอยู่แล้ว)`)) return;
     setBusy(true);
     try {
       const res = await supabase.from('employee_flex_units').delete().eq('id', row.id).select('id');
@@ -213,7 +214,7 @@ export default function ManpowerBoardSetup({ section, nodes, lines, employees, s
   const removeActing = async (row) => {
     if (blocked()) return;
     const e = empById.get(row.employee_id);
-    if (!window.confirm(`ยกเลิกรักษาการของ ${e?.name || 'คนนี้'}?\n(สังกัดจริงและ cost center ไม่เคยเปลี่ยนอยู่แล้ว)`)) return;
+    if (!await askConfirm(`ยกเลิกรักษาการของ ${e?.name || 'คนนี้'}?\n(สังกัดจริงและ cost center ไม่เคยเปลี่ยนอยู่แล้ว)`)) return;
     setBusy(true);
     try {
       const res = await supabase.from('employee_flex_units').delete().eq('id', row.id).select('id');
@@ -226,7 +227,7 @@ export default function ManpowerBoardSetup({ section, nodes, lines, employees, s
   const th = { textAlign: 'center', fontSize: 12, padding: '6px 8px', color: 'var(--muted)' };
   return (
     /* ไม่ปิดจาก backdrop (UI §5) — ปิดได้จากปุ่ม ✕ / ปิด เท่านั้น */
-    <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       <div className="card" onClick={e => e.stopPropagation()}
         style={{ width: 'min(960px, 100%)', maxHeight: '92vh', overflow: 'auto', padding: 18, boxShadow: 'var(--shadow-lg)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>

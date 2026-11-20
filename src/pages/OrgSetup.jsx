@@ -29,6 +29,7 @@ import { IconButton, DeleteButton } from '../components/IconButton';
 import NoticeBar from '../components/NoticeBar';
 import { tr } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
+import { askConfirm } from '../utils/askConfirm';
 /* 🔴 ชั้นไหนมีพาเนล/ปุ่มเพิ่มบนจอ ต้องมีป้ายครบทุกชั้น — ขาดตัวไหน หัวโมดัลขึ้น "เพิ่ม undefined"
    (เกิดจริง 05/10 ตอนเพิ่มชั้นทีมแล้วลืมเติมที่นี่ · มีด่าน regressionGuards) */
 const KIND_LABEL = { section: 'Section / ส่วน', department: 'Department / แผนก', line: 'Group / กลุ่ม', team: 'Team / ทีม' };
@@ -90,6 +91,12 @@ export default function OrgSetup() {
   };
 
   const ORPHAN = '__ORPHAN__';
+  /* 🏢 ส่วนงานใหม่เกิดใต้ Plant (20/11) — มี plant ที่เปิดใช้ "ตัวเดียว" เท่านั้น ⇒ ผูกให้
+     หลายตัว/ไม่มี = ค่าเดิม (parent ว่าง) ห้ามเดาว่าเป็นโรงงานไหน · ส่วนงานยังเป็นรากของชั้นหน่วยเหมือนเดิม (orgLayers) */
+  const soloPlantId = useMemo(() => {
+    const ps = nodes.filter(n => n.kind === 'plant' && n.is_active !== false);
+    return ps.length === 1 ? ps[0].id : null;
+  }, [nodes]);
   const sections = useMemo(() => nodes.filter(n => n.kind === 'section'), [nodes]);
   const allDepts = useMemo(() => nodes.filter(n => n.kind === 'department'), [nodes]);
   const orphanDepts = useMemo(() => nodes.filter(n => isOrphanDept(n, nodes)), [nodes]);
@@ -254,7 +261,7 @@ export default function OrgSetup() {
       if (refs.partial) return toast.error('ยังไม่บันทึก — ตรวจไม่ครบว่ามีใครอ้างชื่อเดิมอยู่ · ลองใหม่อีกครั้ง');
       const affected = (refs.textEmp || 0) + (refs.textProf || 0);
       if (affected) {
-        if (!confirm(`เปลี่ยน "${keyChg.from}" → "${keyChg.to}" ?\n\n`
+        if (!await askConfirm(`เปลี่ยน "${keyChg.from}" → "${keyChg.to}" ?\n\n`
           + `ทะเบียนที่ยังอ้างชื่อเดิม ${affected} รายการจะถูกเปลี่ยนตามให้ด้วย\n`
           + '(ถ้าไม่เปลี่ยนตาม คนเหล่านั้นจะหลุดจากหน่วยงานนี้เงียบๆ)')) return;
         cascade = keyChg;
@@ -305,7 +312,7 @@ export default function OrgSetup() {
        (เคสจริง 05/10: กลุ่มที่คนผูกอยู่ 35 คนหายจาก dropdown แล้วหน้าเช็คชื่อว่างเปล่า) */
     if (node.is_active) {
       const refs = await loadOrgNodeRefs(supabase, node, nodes);
-      if (!confirm(`ปิดใช้งาน "${node.name}" ?\n\nจะหายจาก dropdown/การเลือกในหน้าอื่น (ข้อมูลเดิมยังอยู่ เปิดกลับได้)`
+      if (!await askConfirm(`ปิดใช้งาน "${node.name}" ?\n\nจะหายจาก dropdown/การเลือกในหน้าอื่น (ข้อมูลเดิมยังอยู่ เปิดกลับได้)`
         + orgRefDeactivateNote(refs))) return;
     }
     const { data: wrote, error } = await supabase.from('org_nodes')
@@ -338,7 +345,7 @@ export default function OrgSetup() {
     const refs = await loadOrgNodeRefs(supabase, node, nodes);
     const blocked = orgRefBlockMessage(node, refs);
     if (blocked) return toast.error(blocked);
-    if (!confirm(`ลบ "${node.name}" ?` + orgRefDeleteNote(refs)
+    if (!await askConfirm(`ลบ "${node.name}" ?` + orgRefDeleteNote(refs)
       + '\n\n(ถ้าเคยผูกกับข้อมูลอื่นแนะนำ "ปิดใช้งาน" แทนการลบ)')) return;
     const { data: gone, error } = await supabase.from('org_nodes').delete().eq('id', node.id).select('id');
     // FK ฝั่ง DB เป็น restrict แล้ว (migration 20261005) — ด่านชั้นสองกันกรณีมีคนผูกเพิ่มระหว่างที่เปิดจอค้าง
@@ -448,7 +455,7 @@ export default function OrgSetup() {
           <div style={colStyle} className="card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
               <strong style={{ fontSize: 13, color: 'var(--text2)' }}>{tr('SECTION / ส่วน (')}{sections.length})</strong>
-              {isAdmin && <button className="tbtn" onClick={() => openCreate('section', null)} style={addBtnSt}>➕</button>}
+              {isAdmin && <button className="tbtn" onClick={() => openCreate('section', soloPlantId)} style={addBtnSt}>➕</button>}
             </div>
             <div style={{ maxHeight: 'calc(100vh - 280px)', overflowY: 'auto' }}>
             {sections.map(s => (
@@ -647,7 +654,8 @@ export default function OrgSetup() {
                   </select>
                   <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
                     ใช้แยก “สกิลของฝ่ายไหน” — ติดที่ตัวบนสุดพอ ตัวลูกตกทอดเอง
-                    {modal.parentId ? ' (ตัวนี้มีแม่อยู่แล้ว ปล่อยว่างได้)' : ''}
+                    {/* ส่วนงานมีแม่เป็น Plant แล้ว (20/11) แต่ชั้นบนไม่มีป้ายฝ่ายให้ตกทอด ⇒ ไม่ใช่ "ปล่อยว่างได้" */}
+                    {modal.kind !== 'section' && modal.parentId ? ' (ตัวนี้มีแม่อยู่แล้ว ปล่อยว่างได้)' : ''}
                     {!canDivisions && ' · ต้องมีสิทธิ์ org:manage_divisions ถึงแก้ได้'}
                   </div>
                 </div>

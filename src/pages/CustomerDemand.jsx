@@ -4,6 +4,7 @@ import useIsMobile from '../utils/useIsMobile';
 import { UserContext } from '../App';
 import { toast } from '../components/Toast';
 import { can } from '../utils/permissions';
+import { inflowDestOf } from '../utils/partRefStock';   // 19/11 คลังที่ติดลบเมื่อส่งเกินยอดในระบบ
 import { FRAME_START, frameMin, breaksToFrame } from '../utils/timeFrame';
 import { mergeById } from '../utils/mergeRows';
 import PageHeader from '../components/PageHeader';
@@ -30,6 +31,7 @@ import usePartImages from '../utils/usePartImages';
 import { tr } from '../utils/i18n';
 import { storeBtn } from '../utils/storeUi'; // วันงาน + รอบ → due_date ตามปฏิทิน (16/10)
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
+import { askConfirm } from '../utils/askConfirm';
 
 /* ─── DELIVERY — Shipping Time Chart + Ship-to Config (Logistic) ──────────
    ติดตามรอบส่งงานลูกค้ารายวัน (walkback 4 activity, FG stock, ranking ดิว)
@@ -75,6 +77,7 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
   const [busy, setBusy] = useState(null);
   const [fgStock, setFgStock] = useState({});   // **เลข SAP** → { total, fg, lines } — fg = เฉพาะคลัง FG (ส่งได้จริง)
   const [fgDest, setFgDest] = useState(null);   // ชื่อคลัง FG จาก stock_inflow_rules (null = ไม่รู้ → นับรวมแบบเดิม)
+  const [inflowRules, setInflowRules] = useState([]);   // 19/11 — คลังที่ "ติดลบ" ตอนส่งของเกินยอดในระบบ (inflowDestOf)
   // เลขบน order (อาจเป็นเลขลูกค้า) → ผลการจับคู่ MAT SAP · ดู utils/matResolve.js
   const [matMap, setMatMap] = useState({});
   const [cardFilter, setCardFilter] = useState('todo');   // 'todo' | 'overdue' | 'shipped' | 'all'
@@ -130,12 +133,12 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
     if (!mat) { toast.error('กรอก MAT No.'); return; }
     // MAT เป็นกุญแจ join (dr_products / line_stock / kanban / Rundown) — นอก Product Master ให้ถามยืนยัน ไม่บล็อกเงียบ
     // (2026-09-07 เดิมบล็อกแข็ง — user สั่ง: ทะเบียนไม่มีต้องยังใช้ค่าที่เคยบันทึกได้ · ใบจาก EDI ก็เก็บ MAT นอกทะเบียนอยู่แล้ว)
-    if (!prodNames[mat] && !window.confirm(`MAT ${mat} ไม่มีใน Product Master — Rundown/สต็อกจะจับคู่ไม่ได้จนกว่าจะเพิ่มที่ /products · ใช้ค่านี้ต่อหรือไม่?`)) return;
+    if (!prodNames[mat] && !await askConfirm(`MAT ${mat} ไม่มีใน Product Master — Rundown/สต็อกจะจับคู่ไม่ได้จนกว่าจะเพิ่มที่ /products · ใช้ค่านี้ต่อหรือไม่?`)) return;
     if (!qty || qty <= 0) { toast.error('จำนวนต้องมากกว่า 0'); return; }
     if (!addForm.due_date) { toast.error('เลือกวันที่ส่ง'); return; }
     // ship-to นอกทะเบียน ship_to_plants (active) → ถามยืนยัน (2026-09-07 เดิมบล็อกแข็ง) — ป้าย/workflow ต่อลูกค้าจะไม่ครบจนกว่าจะตั้งที่แท็บ ⚙️ Ship-to Config
     if (addForm.customer && !(shipToCodes || []).includes(addForm.customer)
-      && !window.confirm(`Ship-to ${addForm.customer} ไม่มีในทะเบียน — ชาร์ต/workflow ต่อลูกค้าจะไม่ครบจนกว่าจะตั้งค่าที่แท็บ ⚙️ Ship-to Config · ใช้ค่านี้ต่อหรือไม่?`)) return;
+      && !await askConfirm(`Ship-to ${addForm.customer} ไม่มีในทะเบียน — ชาร์ต/workflow ต่อลูกค้าจะไม่ครบจนกว่าจะตั้งค่าที่แท็บ ⚙️ Ship-to Config · ใช้ค่านี้ต่อหรือไม่?`)) return;
     setAddSaving(true);
     const rec = {
       customer: addForm.customer.trim() || null,
@@ -167,7 +170,7 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
 
   // ลบได้เฉพาะใบที่คีย์มือและยังไม่เริ่ม workflow — ใบจาก EDI ให้จัดการด้วยการอัพโหลดแทนที่ตามปกติ
   const deleteManualOrder = async (o) => {
-    if (!window.confirm(`ลบ order ${o.mat_no} × ${fmt(o.qty)} (คีย์มือ)?`)) return;
+    if (!await askConfirm(`ลบ order ${o.mat_no} × ${fmt(o.qty)} (คีย์มือ)?`)) return;
     // นับแถวที่ลบจริง — เงื่อนไข source/status ไม่ตรง (ใบเริ่ม workflow ไปแล้ว) = ลบ 0 แถว
     // ห้ามขึ้น "ลบแล้ว" ทั้งที่ใบยังอยู่ (กฎ RLS-เงียบ: สำเร็จ 0 แถว ≠ สำเร็จ)
     const { data: del, error } = await supabaseDR.from('customer_shipping_orders')
@@ -242,11 +245,12 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
         .or(`due_date.lt.${day},and(due_date.eq.${day},ship_time.lt.08:00)`),
       // คลังปลายทางของ FG จากกฎรับเข้าอัตโนมัติ — "ของพร้อมส่ง" ต้องเป็นของในคลัง FG เท่านั้น
       // (ของใน STORE/มินิสโตร์ยังไม่ผ่านแพ็ค/รับเข้าคลัง ส่งลูกค้าไม่ได้ — กฎเดียวกับ RundownStock)
-      supabaseDR.from('stock_inflow_rules').select('match_type, match_value, dest_line_name').eq('is_active', true),
+      supabaseDR.from('stock_inflow_rules').select('match_type, match_value, dest_line_name, mode, is_active').eq('is_active', true),
     ]);
     if (stale()) return;   // ผู้ใช้เปลี่ยนวันระหว่างรอผล — ทิ้งทั้งชุด ห้ามเขียนทับของวันที่กำลังดู
     const fgDestName = (inflowRules || []).find(r => r.match_type === 'prefix' && r.match_value === '1')?.dest_line_name || null;
     setFgDest(fgDestName);
+    setInflowRules(inflowRules || []);
     setWfSteps(wfs || []);
     setPastDue(past || []);
     /* 2 คิวรีคนละ due_date (D · D+1 กะดึก) ไม่ใช่ transaction ⇒ ใบที่ถูกอัพโหลดทับ/แก้เวลาส่ง
@@ -503,6 +507,23 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
             ref_shipment_id: o.id,   // ผูกกลับรอบส่งใบนี้ → /order-trace สอบกลับได้ตรงใบ ไม่ต้องเดาจากเวลา
           });
         });
+      /* 🔴 19/11 (คำสั่ง user "ตัดเต็มและติดลบ") — ยอดในระบบไม่พอ ⇒ หักส่วนที่ขาดที่ "คลังรับเข้าของพาร์ท"
+         (`inflowDestOf` · ไม่มีกฎ = คลัง FG) ให้ติดลบ แล้วพอปิดใบผลิต/รับเข้าคลัง ยอดหักล้างเอง
+         เดิม: ส่งไปแต่ไม่ตัด ⇒ ยอดค้างสูงเกินจริงถาวร · ไม่รู้คลังเลย = ไม่ตัด + เตือน (ห้ามเดาคลัง) */
+      let negQty = 0, negLoc = null;
+      if (left > 0 && sap) {
+        negLoc = inflowDestOf(sap, inflowRules) || fgDest || null;
+        if (negLoc) {
+          negQty = left; left = 0;
+          txns.push({
+            line_name: negLoc, mat_no: sap, part_name: o.part_name, qty: negQty,
+            type: 'consume', work_date: workDateStr(),
+            note: `ส่งลูกค้า ${o.customer || ''} · ${o.due_date} ${o.ship_time || ''}${o.order_no ? ` · PO ${o.order_no}` : ''} · ⚠ ในระบบไม่พอ ตัดเกิน ${negQty.toLocaleString()} (ติดลบ รอรับเข้าหักล้าง)`,
+            created_by: fullName || 'Logistic',
+            ref_shipment_id: o.id,
+          });
+        }
+      }
       let cut = want - left;
       let insertFailed = false, insertErrMsg = '';
       if (txns.length) {
@@ -539,6 +560,8 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
           + (why || `ไม่มีข้อมูลสต็อกของ ${sap} ในคลัง (ของยังไม่เคยถูกบันทึกเข้า — เช็คการปิดออเดอร์ผลิต/กฎรับเข้าอัตโนมัติ)`);
       } else if (cut < want) {
         shipMsg = `⚠️ ${at} ${o.mat_no} แล้ว — หักสต็อกได้ ${cut.toLocaleString()}/${want.toLocaleString()} ชิ้น (สต็อกในระบบไม่พอ ขาด ${(want - cut).toLocaleString()})`;
+      } else if (negQty > 0) {
+        shipMsg = `⚠️ ${at} ${o.mat_no} แล้ว — หักครบ ${want.toLocaleString()} ชิ้น แต่ ${negQty.toLocaleString()} ชิ้นทำให้ ${negLoc} ติดลบ (ของในระบบไม่พอ — เช็คการปิดใบผลิต/รับเข้าคลัง)`;
       } else if (cutOffFg > 0) {
         shipMsg = `⚠️ ${at} ${o.mat_no} แล้ว — หักครบ แต่ ${cutOffFg.toLocaleString()} ชิ้นถูกหักจากคลังนอก FG (ของยังไม่ผ่านรับเข้าคลัง FG — เช็คขั้นแพ็ค/รับเข้า)`;
       }
@@ -1146,7 +1169,7 @@ function WorkflowSection({ canEdit }) {
     setBusy(null);
   };
   const remove = async (r) => {
-    if (!window.confirm(`ลบเฟส "${r.name}"? การแจ้งเตือนของเฟสนี้จะหยุดทันที`)) return;
+    if (!await askConfirm(`ลบเฟส "${r.name}"? การแจ้งเตือนของเฟสนี้จะหยุดทันที`)) return;
     setBusy(r.id);
     const { error } = await supabaseDR.from('shipping_workflow_steps').update({ is_active: false }).eq('id', r.id);
     if (error) toast.error(error.message);
@@ -1310,7 +1333,7 @@ function ShipToTab({ canEdit, onChanged, fullName }) {
     await load();
   };
   const removeCode = async (r) => {
-    if (!window.confirm(`ลบ code "${r.code}"${r.customer_name !== r.code ? ` (${r.customer_name})` : ''}?\n\nข้อมูล order/forecast ที่อ้าง code นี้ยังอยู่ครบ (จะแสดงเป็น code ดิบแทนชื่อ) และถ้า code นี้โผล่ในไฟล์ EDI ครั้งหน้า ระบบจะเพิ่มกลับมาให้อัตโนมัติ`)) return;
+    if (!await askConfirm(`ลบ code "${r.code}"${r.customer_name !== r.code ? ` (${r.customer_name})` : ''}?\n\nข้อมูล order/forecast ที่อ้าง code นี้ยังอยู่ครบ (จะแสดงเป็น code ดิบแทนชื่อ) และถ้า code นี้โผล่ในไฟล์ EDI ครั้งหน้า ระบบจะเพิ่มกลับมาให้อัตโนมัติ`)) return;
     setBusy(r.code);
     const { error } = await supabaseDR.from('ship_to_plants').delete().eq('code', r.code);
     if (error) toast.error(error.message);

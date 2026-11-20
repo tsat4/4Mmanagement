@@ -42,18 +42,20 @@ import BomTreeView from '../components/BomTreeView';
 import BomDupPanel from '../components/BomDupPanel';
 import BomPhantomPanel from '../components/BomPhantomPanel';
 import { opDoubleCountRisk, opLinkIssues } from '../utils/opLink';
-import { parseSapBom, diffSapBom, missingInPartsMaster, decodeSapExport } from '../utils/sapBomImport';
+import { parseSapBom, diffSapBom, missingInPartsMaster, decodeSapExport, splitSapBySheet } from '../utils/sapBomImport';
 import { learnPartNoVocab, proposePartNos } from '../utils/partNoExtract';
 import { buildEcIndex, ecOf, countSuperseded } from '../utils/ecRevisions';
 
 /** คีย์ MAT มาตรฐานของหน้านี้ — ตัดช่องว่าง + ตัวพิมพ์ใหญ่ (ใช้ร่วมหลายฟังก์ชัน) */
 const upMat = (m) => String(m ?? '').trim().toUpperCase();
 import { productReadiness, READINESS_COLOR } from '../utils/productReadiness';
-import { uomLabel, itemNoLabel, nextItemNo, byItemNo, buildBomIndex, moveBomLine, explodeBom } from '../utils/bomTree';
+import { uomLabel, itemNoLabel, nextItemNo, byItemNo, buildBomIndex, moveBomLine, explodeBom, directSheetRows } from '../utils/bomTree';
 import { slocLabel, slocValid, slocKindMeta, SLOC_FORMAT_HINT, STORE_SLOC_KINDS } from '../utils/storageLoc';
 import StorageLocSelect from '../components/StorageLocSelect';   // 🏠 ที่จัดเก็บหลักของพาร์ท (05/11)
 import { checkWrite, checkWriteRows } from '../utils/dbWrite';
-import { opInputsOf, isFirstOpInChain } from '../utils/opInputs';   // 🔩 ขั้น OP กินอะไร (08/11)
+import { opInputsOf, isFirstOpInChain, opDriftAgainstSap } from '../utils/opInputs';   // 🔩 ขั้น OP กินอะไร (08/11)
+import { opFamilyKey } from '../utils/partGroup';
+import { bomKidsOf } from '../lib/lineDemandSync';
 import { uploadOpts } from '../utils/storageUpload';
 import Page from '../components/Page';
 import PageHeader from '../components/PageHeader';
@@ -72,6 +74,7 @@ import { fetchAllRows } from '../utils/fetchAllRows';          // ทะเบ�
 import { fetchAllPages } from '../utils/fetchByIds';            // คิวรีที่ต้องการ shape เอง (bom_items)
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 import TabBar from '../components/TabBar';   // แถบเลือกมุมมอง = แท็บเส้นใต้มาตรฐาน (UI §6.36 ข้อ 0)
+import { askConfirm } from '../utils/askConfirm';
 // วันที่ local (ห้าม toISOString — UTC เพี้ยนก่อน 07:00 ไทย)
 const localDateStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
 
@@ -199,7 +202,7 @@ function RelatedLinks({ matNo, productId }) {
   );
 }
 
-/* ── Picker เลือกจากทะเบียนกลาง Parts Master ──
+/* ── Picker เลือกจากทะเบียนกลาง Material Master ──
    โมเดล material master: parts_master = ทะเบียนตัวตนทุก mat (1/2/3/5)
    มุมมองอื่น (Product = มุมผลิต · Kanban = มุมการดึง) เลือกจากทะเบียนนี้ ไม่พิมพ์เลขใหม่เอง */
 function PartsPickModal({ parts, onPick, onClose }) {
@@ -216,13 +219,13 @@ function PartsPickModal({ parts, onPick, onClose }) {
   return (
     <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       <div style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 20, width: 'min(95vw,540px)', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{tr('เลือกจากทะเบียนกลาง Parts Master')}</div>
-        <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 10 }}>ตัวตนสินค้า (MAT/ชื่อ) มาจากทะเบียนกลางที่เดียว — ไม่มีในลิสต์ = ไปเพิ่มที่ tab 🗂 Parts Master ก่อน</div>
+        <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{tr('เลือกจากทะเบียนกลาง Material Master')}</div>
+        <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 10 }}>ตัวตนสินค้า (MAT/ชื่อ) มาจากทะเบียนกลางที่เดียว — ไม่มีในลิสต์ = ไปเพิ่มที่ แท็บ Material Master ก่อน</div>
         <SearchInput autoFocus value={q} onChange={setQ} fields="MAT / ชื่อ / P.NO / supplier"
           style={{ marginBottom: 10 }} inputStyle={inputSt} />
         <div style={{ overflowY: 'auto', flex: 1, minHeight: 120, border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
           {filtered.length === 0 && (
-            <div style={{ padding: 16, fontSize: 12, color: 'var(--muted)', textAlign: 'center' }}>{tr('ไม่พบพาร์ทที่ตรงเงื่อนไข — เพิ่มได้ที่ tab 🗂 Parts Master')}</div>
+            <div style={{ padding: 16, fontSize: 12, color: 'var(--muted)', textAlign: 'center' }}>{tr('ไม่พบพาร์ทที่ตรงเงื่อนไข — เพิ่มได้ที่ แท็บ Material Master')}</div>
           )}
           {filtered.map(p => (
             <div key={p.id} onClick={() => onPick(p)}
@@ -350,7 +353,7 @@ export default function ProductMaster() {
   const [kanbanForm,    setKanbanForm]    = useState({ product_id: '', mat_no: '', qty_per_kanban: 1, is_active: true });
   const [kanbanSaving,  setKanbanSaving]  = useState(false);
 
-  // ทะเบียนกลาง Parts Master — โมเดล material master: ตัวตนสินค้า (mat_no/ชื่อ/UOM) อยู่ parts_master ที่เดียว
+  // ทะเบียนกลาง Material Master — โมเดล material master: ตัวตนสินค้า (mat_no/ชื่อ/UOM) อยู่ parts_master ที่เดียว
   // ฟอร์มมุมมองอื่น (Product/Kanban) "เลือก" จากทะเบียน ไม่พิมพ์เลขใหม่เอง
   const [pmParts, setPmParts] = useState([]);
   const [partsPickFor, setPartsPickFor] = useState(null); // 'product' | 'kanban' | null
@@ -386,7 +389,7 @@ export default function ProductMaster() {
          ติดเพดาน 1,000 แถว (วัด 15/10 = 1,675 แถว) **และ** join ด้วย `product_id`
          ที่เป็น NULL ทั้งตาราง ⇒ ยอดเป็น {} ตลอด แล้วชิปถูกซ่อนเงียบ */
       loadFamilyQtyTotals(),
-      // ทะเบียนกลาง Parts Master (material master) — ใช้เป็น picker + เช็คเลขหลุดทะเบียนในฟอร์มสินค้า/kanban
+      // ทะเบียนกลาง Material Master (material master) — ใช้เป็น picker + เช็คเลขหลุดทะเบียนในฟอร์มสินค้า/kanban
       fetchAllRows(supabaseDR, 'parts_master', 'id, mat_no, part_name, part_no, uom, qty_per_pkg, supplier, image_url', q => q.eq('is_active', true).order('mat_no')),
       // ✅ แถบความครบ — เอาแค่คีย์พอ (มี/ไม่มี) ไม่ดึงรายละเอียดขั้นตอน/กล่อง
       supabaseDR.from('part_routings').select('mat_no').eq('is_active', true),
@@ -411,7 +414,7 @@ export default function ProductMaster() {
     setFamTotalsFail(!!famRes?.fail);
   }, []);
 
-  useEffect(() => { load(); }, [load, partsReloadKey]); // เพิ่มพาร์ทใน tab Parts Master แล้ว picker เห็นทันที
+  useEffect(() => { load(); }, [load, partsReloadKey]); // เพิ่มพาร์ทใน tab Material Master แล้ว picker เห็นทันที
 
   /* ── ทะเบียนกลาง: เช็ค mat อยู่ใน parts_master มั้ย + เลือกจากทะเบียนมาเติมฟอร์ม ── */
   const pmMatSet = useMemo(() => new Set(pmParts.map(p => (p.mat_no || '').trim().toUpperCase())), [pmParts]);
@@ -552,7 +555,7 @@ export default function ProductMaster() {
                 oldPm = oldRes.data?.[0] || null;
                 if (oldPmUnread) {
                   toast.error(`อ่านทะเบียนของเลขเดิม ${ecSource.mat_no} ไม่สำเร็จ — MAT ใหม่จะไม่สืบทอด uom/จำนวนต่อกล่อง/supplier `
-                    + `และแถวของเลขเดิมจะไม่ถูกติดหมายเหตุ EC · ไปทำมือที่ tab 🗂 (${oldRes.error.message})`);
+                    + `และแถวของเลขเดิมจะไม่ถูกติดหมายเหตุ EC · ไปทำมือที่ แท็บ Material Master (${oldRes.error.message})`);
                 }
               }
               if (!exist?.length) {
@@ -562,9 +565,9 @@ export default function ProductMaster() {
                   image_url: imageUrl || oldPm?.image_url || null, is_active: true,
                   note: `EC ต่อจาก ${ecSource.mat_no || ecSource.name} · มีผล ${effDate}` + (oldPm ? ' · สืบทอด uom/จำนวนต่อกล่อง/supplier จากเลขเดิม — ต้นทุนให้บัญชีเติม' : ''),
                 });
-                if (pmErr) toast.error('ลงทะเบียน Parts Master ไม่สำเร็จ: ' + pmErr.message + ' — ไปเพิ่มเองที่ tab 🗂');
-                else if (oldPm) toast.info('🗂 ลงทะเบียน MAT ใหม่ใน Parts Master แล้ว (สืบทอดข้อมูลจากเลขเดิม · ต้นทุนให้บัญชีเติม)');
-                else if (!oldPmUnread) toast.info('🗂 ลงทะเบียน MAT ใหม่ใน Parts Master แล้ว — เลขเดิมไม่มีในทะเบียน ไปเติม จำนวนต่อกล่อง/supplier/ต้นทุน ที่ tab 🗂');
+                if (pmErr) toast.error('ลงทะเบียน Material Master ไม่สำเร็จ: ' + pmErr.message + ' — ไปเพิ่มเองที่ แท็บ Material Master');
+                else if (oldPm) toast.info('🗂 ลงทะเบียน MAT ใหม่ใน Material Master แล้ว (สืบทอดข้อมูลจากเลขเดิม · ต้นทุนให้บัญชีเติม)');
+                else if (!oldPmUnread) toast.info('🗂 ลงทะเบียน MAT ใหม่ใน Material Master แล้ว — เลขเดิมไม่มีในทะเบียน ไปเติม จำนวนต่อกล่อง/supplier/ต้นทุน ที่ แท็บ Material Master');
               }
               /* ฝากรอยไว้ที่แถวทะเบียนของเลขเดิม (นอกเงื่อนไขข้างบน — ดูคอมเมนต์ 🔴)
                  ไม่ปิด `is_active`: ของ rev เก่ายังไหลอยู่ในคลัง/รอบส่งช่วงเปลี่ยนผ่าน การเลิกใช้เป็นการตัดสินใจของคน
@@ -650,7 +653,7 @@ export default function ProductMaster() {
   const handleDelete = async (id) => {
     const row = items.find(i => i.id === id);
     if (!pGuard(row?.line_name, `สินค้า ${row?.mat_no || row?.name || ''}`)) return;   // ชั้นที่ 3
-    if (!window.confirm('ปิดใช้งานสินค้านี้?\n\nสินค้าจะถูกซ่อนจากรายการ แต่เก็บประวัติไว้ (เปิดกลับได้จากปุ่ม "แสดงประวัติ")')) return;
+    if (!await askConfirm('ปิดใช้งานสินค้านี้?\n\nสินค้าจะถูกซ่อนจากรายการ แต่เก็บประวัติไว้ (เปิดกลับได้จากปุ่ม "แสดงประวัติ")')) return;
     const { error } = await supabaseDR.from('dr_products').update({ is_active: false }).eq('id', id);
     if (error) { toast.error(error.message); return; }
     toast.success('ปิดใช้งานสินค้าแล้ว');
@@ -693,7 +696,7 @@ export default function ProductMaster() {
     load();
   };
   const handleKanbanDelete = async (id) => {
-    if (!window.confirm('ลบ Kanban Standard นี้?')) return;
+    if (!await askConfirm('ลบ Kanban Standard นี้?')) return;
     const { error } = await supabaseDR.from('kanban_standards').delete().eq('id', id);
     if (error) { toast.error(error.message); return; }
     if (!error) invalidateTable('kanban_standards');   // ล้าง cache master (2026-09-15)
@@ -915,25 +918,29 @@ export default function ProductMaster() {
           <Link to="/heijunka" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Heijunka Kanban</Link> {tr('และ')}{' '}
           <Link to="/oee-analytics" style={{ color: 'var(--accent)', textDecoration: 'none' }}>OEE Analytics</Link>
         </>}
-        tabs={[   /* 🗂 13/11: 13 แท็บ → 5 กลุ่ม (กฎ ≤7 · UI §6.8 ข้อ 6) — คีย์ลูก = ?tab= เดิมทุกตัว */
-          { key:'parts', label:'1️⃣ 🗂 Parts Master' },
-          { key:'bomgrp', label:'2️⃣ 📦 BOM', children: [{ key:'bom', label:'BOM' }, { key:'bomdup', label: 'BOM ซ้ำ 2 ใบ' }, { key:'phantom', label: 'ของลม (phantom)' }] },
-          { key:'prodgrp', label:'3️⃣ 🔩 Product', children: [{ key:'products', label:'Product' }, { key:'routing', label: 'Routing' }, { key:'packaging', label: 'Packaging' }, { key:'kanban', label: 'Kanban Std' }, { key:'ct', label: 'ทบทวน CT' }] },
-          { key:'refgrp', label:'📇 ทะเบียนอ้างอิง', children: [{ key:'customers', label: 'ลูกค้า' }, { key:'suppliers', label: 'Supplier' }, { key:'uom', label: 'หน่วยนับ' }] },
+        tabs={[   /* 🗂 13/11: 13 แท็บ → 5 กลุ่ม (กฎ ≤7 · UI §6.8 ข้อ 6) — คีย์ลูก = ?tab= เดิมทุกตัว
+                     20/11: ถอด 1️⃣/emoji — stripIcon() ตัดได้แค่ emoji นำหน้า เลข keycap ขวางไว้ ⇒ ไอคอนหลุดมาโชว์ (UI §6.36 ข้อ 2)
+                     20/11: ชื่อแบบ SAP (คำสั่ง user) — Material Master · BOM · Routing (ยกขึ้นหลัก) · Production · Reference
+                            คำที่คนโรงงานรู้จักจาก SAP คือ material / BOM / routing · "Product" กำกวม (คนอ่านเป็น FG ที่ขาย) */
+          { key:'parts', label:'Material Master' },
+          { key:'bomgrp', label:'BOM', children: [{ key:'bom', label:'BOM' }, { key:'bomdup', label: 'BOM ซ้ำ 2 ใบ' }, { key:'phantom', label: 'ของลม (phantom)' }] },
+          { key:'routing', label: 'Routing' },
+          { key:'prodgrp', label:'Production', children: [{ key:'products', label:'Production Data' }, { key:'packaging', label: 'Packaging' }, { key:'kanban', label: 'Kanban Std' }, { key:'ct', label: 'ทบทวน CT' }] },
+          { key:'refgrp', label:'Reference', children: [{ key:'customers', label: 'ลูกค้า' }, { key:'suppliers', label: 'Supplier' }, { key:'uom', label: 'หน่วยนับ' }] },
           { key:'export', label: 'Export' }]}
         tab={mainTab} onTab={setMainTab} />
 
       {mainTab === 'products' && (<>
-      {/* ── Callout: แนะนำ Parts Master สำหรับ 300/500 ── */}
+      {/* ── Callout: แนะนำ Material Master สำหรับ 300/500 ── */}
       <div data-page-note="1" style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 'var(--r-md)', background: 'var(--amber-dim)', border: '1px solid var(--amber-line)', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <div style={{ fontSize: 13, color: 'var(--text2)', flex: 1 }}>
           <span style={{ fontWeight: 700, color: 'var(--amber)' }}>{tr('ชิ้นส่วนที่ซื้อจาก Supplier')}</span>
           {' '}{tr('(ขึ้นต้น')} <strong>3</strong> · <strong>5</strong>) เพิ่มได้ที่ tab{' '}
-          <strong style={{ color: 'var(--text)' }}>Parts Master</strong>
+          <strong style={{ color: 'var(--text)' }}>Material Master</strong>
           {' '}{tr('— หน้านี้รองรับเฉพาะเลขขึ้นต้น')} <strong>1</strong> {tr('(FG ส่งลูกค้า) และ')} <strong>2</strong> (Child Part ผลิตเอง)
         </div>
         <button onClick={() => setMainTab('parts')} style={{ ...btnPrimary, background: 'var(--amber)', fontSize: 12, padding: '6px 14px', whiteSpace: 'nowrap' }}>
-          {tr('ไปที่ Parts Master →')}
+          {tr('ไปที่ Material Master →')}
         </button>
       </div>
 
@@ -1053,7 +1060,7 @@ export default function ProductMaster() {
               tabs={[{ key: '', label: 'ทั้งหมด' }, { key: 'req', label: 'ยังขาด (บังคับแล้ว)', badge: need }, { key: 'any', label: 'รอ Routing/Packaging', badge: wait }]} />
             <span style={{ fontSize: 12, color: 'var(--green)', fontWeight: 700 }}>{tr('ครบ')} {full}</span>
             <InfoMore label={tr('ลำดับที่ต้องทำ')} size={11.5}>
-              ลำดับที่ต้องทำ: 🗂 Parts Master → 📦 BOM → 🔩 Products → 🔀 Routing → 🧳 Packaging → 🎴 Kanban
+              ลำดับที่ต้องทำ: Material Master → BOM → Production → Routing → Packaging → Kanban
               {' '}· <b>{tr('Routing / 🧳 Packaging ยังไม่บังคับวันนี้')}</b> (อนาคตบังคับ) · กดชิปบนการ์ดเพื่อไปเติมได้เลย
             </InfoMore>
           </div>
@@ -1341,7 +1348,7 @@ export default function ProductMaster() {
             {ecSource && (
               <div style={{ fontSize: 12, color: 'var(--blue)', marginBottom: 16, padding: '8px 12px', background: 'var(--blue-dim)', borderRadius: 'var(--r-md)', border: '1px solid var(--blue-dim)' }}>
                 ต่อจาก: <strong>{ecSource.p_no || ecSource.mat_no}</strong> {ecSource.p_no && `/ MAT ${ecSource.mat_no}`}<br />
-                <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('MAT.NO เดิมถูก mark เป็น superseded อัตโนมัติ · MAT ใหม่ถูกลงทะเบียน Parts Master ให้เอง (สืบทอด uom/จำนวนต่อกล่อง/supplier — ต้นทุนให้บัญชีเติม)')}</span>
+                <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('MAT.NO เดิมถูก mark เป็น superseded อัตโนมัติ · MAT ใหม่ถูกลงทะเบียน Material Master ให้เอง (สืบทอด uom/จำนวนต่อกล่อง/supplier — ต้นทุนให้บัญชีเติม)')}</span>
               </div>
             )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -1352,7 +1359,7 @@ export default function ProductMaster() {
                 <Field label={ecSource ? tr('MAT.NO ใหม่ (SAP) *') : form.is_operation ? tr('เลข/ชื่อของขั้น (ตั้งเอง — ไม่ใช่เลข SAP)') : 'MAT.NO (SAP)'}>
                   <div style={{ display: 'flex', gap: 6 }}>
                     <input value={form.mat_no} onChange={e => setForm(f => ({ ...f, mat_no: e.target.value.toUpperCase() }))} placeholder={form.is_operation ? tr('เช่น 332 ขับนัท M6') : tr('เช่น 10100399')} style={{ ...inputSt, flex: 1, minWidth: 0, fontFamily: 'monospace', fontWeight: 700, borderColor: ecSource ? 'var(--blue-line)' : undefined }} />
-                    <button type="button" onClick={() => setPartsPickFor('product')} title={tr('เลือกจากทะเบียนกลาง Parts Master')}
+                    <button type="button" onClick={() => setPartsPickFor('product')} title={tr('เลือกจากทะเบียนกลาง Material Master')}
                       style={{ ...btnSecondary, padding: '6px 10px', flexShrink: 0 }}>🗂</button>
                   </div>
                   {/* คำใบ้เคส OP (user ขอ 2026-08-17): SAP ไม่มีตัวตนของขั้น — ตั้งชื่อเอง ห้ามใช้เลขพาร์ทจริงซ้ำ */}
@@ -1370,11 +1377,11 @@ export default function ProductMaster() {
                   {form.mat_no && !form.is_operation && pmParts.length > 0 && !matInRegistry(form.mat_no) && (
                     ecSource ? (
                       <div style={{ fontSize: 11, color: 'var(--blue)', marginTop: 4 }}>
-                        MAT ใหม่ — ระบบจะลงทะเบียน Parts Master ให้อัตโนมัติตอนบันทึก EC
+                        MAT ใหม่ — ระบบจะลงทะเบียน Material Master ให้อัตโนมัติตอนบันทึก EC
                       </div>
                     ) : (
                       <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 4 }}>
-                        ⚠ MAT นี้ยังไม่มีในทะเบียนกลาง Parts Master — แนะนำเพิ่มที่ tab 🗂 ก่อน กันเลขหลุดทะเบียน
+                        ⚠ MAT นี้ยังไม่มีในทะเบียนกลาง Material Master — แนะนำเพิ่มที่ แท็บ Material Master ก่อน กันเลขหลุดทะเบียน
                       </div>
                     )
                   )}
@@ -1452,7 +1459,7 @@ export default function ProductMaster() {
                         options={(() => {
                           // จัดอันดับจากข้อมูลที่ระบบรู้ (user ขอ 2026-08-17 "ควรดูจาก BOM"):
                           // ① พาร์ทจริงในไลน์เดียวกับ OP ตัวนี้ ② พาร์ทใน BOM ของสินค้าไลน์นี้ (ของที่ถูกส่งเข้าไลน์)
-                          // ③ พาร์ทจริงไลน์อื่น ④ ทะเบียน Parts Master (ซื้อนอก) ที่เหลือ
+                          // ③ พาร์ทจริงไลน์อื่น ④ ทะเบียน Material Master (ซื้อนอก) ที่เหลือ
                           const norm = (m) => (m || '').trim().toUpperCase();
                           const lineProdIds = new Set(items.filter(i => i.line_name && i.line_name === form.line_name).map(i => i.id));
                           const bomMats = new Set(bomRows.filter(b => lineProdIds.has(b.product_id)).map(b => norm(b.mat_no)));
@@ -1568,7 +1575,7 @@ export default function ProductMaster() {
               <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <Field label="MAT.NO *">
                   {/* 2026-09-07: เลือกจาก Product Master ผ่าน <ProductSelect> (ไม่ allowFree — Kanban Std ของสินค้าที่ไม่มีจริงไม่มีความหมาย)
-                      เดิมพิมพ์เอง + ปุ่ม 🗂 parts_master · เลือกแล้วเติม qty ตั้งต้นจาก qty_per_pkg ของ Parts Master เหมือนเดิม */}
+                      เดิมพิมพ์เอง + ปุ่ม 🗂 parts_master · เลือกแล้วเติม qty ตั้งต้นจาก qty_per_pkg ของ Material Master เหมือนเดิม */}
                   <ProductSelect value={kanbanForm.mat_no} products={items} placeholder={tr('ค้น MAT / ชื่อ / P/N…')} history={kanbanMatHist}
                     inputStyle={{ background: 'var(--bg)', fontWeight: 700 }}
                     onChange={({ mat_no }) => setKanbanForm(f => {
@@ -1578,7 +1585,7 @@ export default function ProductMaster() {
                       return { ...f, mat_no, qty_per_kanban: qty };
                     })} />
                   {kanbanForm.mat_no && pmParts.length > 0 && !matInRegistry(kanbanForm.mat_no) && (
-                    <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 4 }}>{tr('⚠ ยังไม่มีในทะเบียนกลาง Parts Master')}</div>
+                    <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 4 }}>{tr('⚠ ยังไม่มีในทะเบียนกลาง Material Master')}</div>
                   )}
                 </Field>
                 <Field label="Qty / Kanban Card *">
@@ -1638,7 +1645,7 @@ export default function ProductMaster() {
           onBeforeDelete={masterDeleteGuard(supabaseDR, 'suppliers')}
           stampCol="updated_by_name" stampName={fullName} onChanged={invalidateSuppliers}
           title={tr('ทะเบียน Supplier / ผู้รับจ้าง')}
-          help={tr('ใช้กับช่อง Supplier ใน Parts Master · Packaging · Routing (จ้างนอก) · คลังอะไหล่ · NPI Tooling — คอลัมน์ปลายทางเก็บชื่อเป็น text · ชนิด (kind) ช่วยจัดลำดับตัวเลือกให้ตรงงาน · ปิดใช้ = ไม่โผล่ให้เลือกใหม่')}
+          help={tr('ใช้กับช่อง Supplier ใน Material Master · Packaging · Routing (จ้างนอก) · คลังอะไหล่ · NPI Tooling — คอลัมน์ปลายทางเก็บชื่อเป็น text · ชนิด (kind) ช่วยจัดลำดับตัวเลือกให้ตรงงาน · ปิดใช้ = ไม่โผล่ให้เลือกใหม่')}
           keyFrom={r => String(r.name || '').trim().toUpperCase().replace(/\s+/g, ' ')}
           fields={[
             { key: 'name', label: 'ชื่อ Supplier', required: true },
@@ -1656,7 +1663,7 @@ export default function ProductMaster() {
           onBeforeDelete={masterDeleteGuard(supabaseDR, 'uom_units')}
           stampCol="updated_by_name" stampName={fullName} onChanged={invalidateUomUnits}
           title={tr('ทะเบียนหน่วยนับ (UOM)')}
-          help={tr('ใช้กับช่องหน่วยใน Parts Master · นำเข้า BOM จาก SAP · ใบเบิกวัสดุ — คอลัมน์ปลายทางเก็บรหัสนี้เป็น text · สะกดอื่น (เช่น EA, PCS ของ PC) ถูกแม็ปเข้ารหัสหลักตอนบันทึก/นำเข้า')}
+          help={tr('ใช้กับช่องหน่วยใน Material Master · นำเข้า BOM จาก SAP · ใบเบิกวัสดุ — คอลัมน์ปลายทางเก็บรหัสนี้เป็น text · สะกดอื่น (เช่น EA, PCS ของ PC) ถูกแม็ปเข้ารหัสหลักตอนบันทึก/นำเข้า')}
           /* รหัสกรอกเอง (PC/KG…) — DB บังคับตัวพิมพ์ใหญ่ไม่มีช่องว่าง (CHECK uom_units_code_upper) */
           fields={[
             { key: 'name', label: 'ชื่อหน่วย', required: true },
@@ -1819,7 +1826,7 @@ function OpStepsPanel({ parent, products, bomIx, parentKids, canEdit, guard, ful
   };
   const remove = async (op, row) => {
     if (!guard?.(`ของที่ขั้น ${op.mat_no} กิน`)) return;
-    if (!window.confirm(`เอา ${row.mat_no} ออกจาก "ของที่ขั้น ${op.mat_no} กิน"?\n\n(ไม่แตะ BOM ของแม่ ${parent.mat_no})`)) return;
+    if (!await askConfirm(`เอา ${row.mat_no} ออกจาก "ของที่ขั้น ${op.mat_no} กิน"?\n\n(ไม่แตะ BOM ของแม่ ${parent.mat_no})`)) return;
     setBusy(true);
     const res = await supabaseDR.from('bom_items').delete().eq('id', row.id).select('id');
     setBusy(false);
@@ -1945,6 +1952,9 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
      user 05/10: SAP ไม่มีคอลัมน์ part no. เบอร์ลูกค้าถูกพิมพ์ปนอยู่ใน Object description
      🔴 เป็นแค่ข้อเสนอ — ไม่ติ๊ก = ไม่เขียน · แก้ค่าในช่องได้ (กฎ "ระบบเสนอ คนตัดสิน") */
   const [sapPn, setSapPn] = useState({});
+  /* ✅ 19/11: ติ๊กเลือกทีละบรรทัด (user: "PE ไล่ตัดสินทีละบรรทัด") — { [`${sheet_id}|${MAT}`]: bool }
+     แถวใหม่ = ติ๊กให้ · แถวที่ ESM เขียนไม่ตรง SAP = **ไม่ติ๊ก** ต้องมีคนเลือกเอง */
+  const [sapPick, setSapPick] = useState({});
   /* 🧩 มาจากปุ่มลัด/worklist ฝั่งแท็บสินค้า (?tab=bom&mat=…) — เลือกแถวให้เลย ไม่ต้องไล่หาในลิสต์ 100+ แถว
      ใช้ mat_no เป็นคีย์ (ไม่ใช่ id) เพราะ mat คือสิ่งที่คนเห็นบนใบของเสีย/หน้าจออื่น */
   const [sp, setSp] = useSearchParams();
@@ -2125,7 +2135,7 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
     if (exist) { setSelProduct(exist); setSearch(exist.mat_no); toast.info(`${mat} มีใบ BOM อยู่แล้ว — เลือกให้แล้ว`); return; }
     /* 🔴 ชื่อว่าง = ไม่เปิดใบให้ ห้ามเอาเลข MAT มาเป็นชื่อ (เคสจริง 02/10 — ชื่อเป็นเลขแล้วดูเหมือนปกติ) */
     const headName = String(part?.part_name ?? '').trim();
-    if (!headName) { toast.error(`${mat} ยังไม่มีชื่อพาร์ทในทะเบียน — ใส่ชื่อที่แท็บ 1️⃣ Parts Master ก่อน`); return; }
+    if (!headName) { toast.error(`${mat} ยังไม่มีชื่อพาร์ทในทะเบียน — ใส่ชื่อที่แท็บ Material Master ก่อน`); return; }
     setHeadBusy(true);
     const { data, error } = await supabaseDR.from('dr_products')
       .insert({ mat_no: mat, name: headName, p_no: part.part_no || null, is_active: true })
@@ -2134,7 +2144,7 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
       .select('id, name, code, mat_no, p_no, customer, line_name').single();
     setHeadBusy(false);
     if (error) { toast.error(`เปิดใบ BOM ไม่สำเร็จ: ${error.message}`); return; }
-    toast.success(`เปิดใบ BOM ของ ${mat} แล้ว — ใส่ค่าการผลิต (ไลน์/CT/เป้า) ที่แท็บ 3️⃣ Products`);
+    toast.success(`เปิดใบ BOM ของ ${mat} แล้ว — ใส่ค่าการผลิต (ไลน์/CT/เป้า) ที่แท็บ Production`);
     await loadAll();
     setSelProduct(data); setSearch(mat);
   };
@@ -2149,7 +2159,19 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
     if (!f) return;
     setSapBusy(true);
     let parsed;
-    try { parsed = parseSapBom(decodeSapExport(await f.arrayBuffer()), { uomIndex: uomIdx }); }
+    try {
+      const buf = await f.arrayBuffer();
+      const b = new Uint8Array(buf);
+      /* 📗 CS12 → "Spreadsheet" ได้ .XLSX จริง (zip ขึ้นต้น "PK") — ส่วน "Local file" ได้ TSV UTF-16 ที่ตั้งชื่อ .xls
+         แปลง .XLSX เป็นข้อความคั่น tab แล้วเข้าตัวแกะตัวเดียวกัน (กฎอยู่ที่ sapBomImport.js ที่เดียว) */
+      let text;
+      if (b.length > 3 && b[0] === 0x50 && b[1] === 0x4b) {
+        const XLSX = await import('xlsx');
+        const wb = XLSX.read(buf, { type: 'array' });
+        text = XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]], { FS: '\t', blankrows: false });
+      } else text = decodeSapExport(buf);
+      parsed = parseSapBom(text, { uomIndex: uomIdx });
+    }
     catch (err) { setSapBusy(false); toast.error(`อ่านไฟล์ไม่สำเร็จ: ${err?.message || err}`); return; }
     if (!parsed.rows.length) { setSapBusy(false); toast.error(parsed.warnings[0] || 'ไม่พบบรรทัด component ในไฟล์นี้'); return; }
 
@@ -2163,16 +2185,52 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
         : 'ไฟล์ไม่ได้บอกเลข Material ของหัวใบ — เลือกใบ BOM ปลายทางจากลิสต์ซ้ายก่อน แล้วนำเข้าใหม่');
       return;
     }
-    /* แถวปัจจุบันของ "ใบปลายทาง" (ไม่ใช่ใบที่เลือกค้างอยู่ — ไฟล์อาจเป็นของใบอื่น) */
+    /* 🏛️ 19/11 แบบ SAP: แตกไฟล์หลายชั้นเป็น "1 MAT = 1 ใบ" — ชั้น 1 ลงใบหัว · ชั้นลึกลงใบของตัวแม่
+       ใบที่ยังไม่มีในทะเบียนสินค้า = ข้าม แล้วบอกบนจอ (ห้ามเปิดใบให้เองเงียบๆ) */
+    const split = splitSapBySheet(parsed.rows, target.mat_no);
+    const prodByMat = new Map(products.map(pr => [up(pr.mat_no), pr]));
+    const sheets = [], noSheet = [];
+    for (const sh of split.sheets) {
+      const pr = up(sh.mat) === up(target.mat_no) ? target : prodByMat.get(up(sh.mat));
+      if (pr) sheets.push({ ...sh, product: pr }); else noSheet.push(sh);
+    }
     const { data: curRows, error } = await supabaseDR.from('bom_items')
-      .select('id, mat_no, parent_mat, qty_per_unit, uom, item_no, storage_location')
-      .eq('product_id', target.id).eq('is_active', true);
+      .select('id, product_id, mat_no, parent_mat, qty_per_unit, uom, item_no, storage_location')
+      .in('product_id', sheets.map(sh => sh.product.id)).eq('is_active', true);
     setSapBusy(false);
     if (error) { toast.error(`อ่าน BOM เดิมไม่สำเร็จ: ${error.message}`); return; }
 
     const opMap = opInfoSync();
-    const diff = diffSapBom(parsed.rows, curRows || [], { isOpMat: (m) => !!opMap[m], uomIndex: uomIdx });
-    const miss = missingInPartsMaster(parsed.rows, partsMaster.map(x => x.mat_no));
+    const diff = { add: [], update: [], same: [], extra: [] };
+    for (const sh of sheets) {
+      const pr = sh.product;
+      /* เทียบกับ "ลูกตรง" ของใบนั้นเท่านั้น (ตัวกลาง directSheetRows) — แถวหลานที่ยังนอนอยู่ไม่ใช่คู่เทียบ */
+      const own = directSheetRows((curRows || []).filter(r => r.product_id === pr.id), [pr])
+        .map(r => ({ ...r, parent_mat: null }));
+      const d = diffSapBom(sh.rows, own, { isOpMat: (m) => !!opMap[m], uomIndex: uomIdx });
+      const tag = (r) => ({ ...r, sheet_id: pr.id, sheet_mat: pr.mat_no });
+      diff.add.push(...d.add.map(tag)); diff.update.push(...d.update.map(tag));
+      diff.same.push(...d.same.map(tag)); diff.extra.push(...d.extra.map(tag));
+    }
+    /* ⚠️ 20/11 — ขั้น OP กินของที่ BOM SAP ใหม่ไม่มีแล้ว (SAP เปลี่ยนเบอร์ แต่ BOM ขั้น OP ยังกินเบอร์เก่า) · อ่านไม่ได้ = บอกบนจอ */
+    const opsOf = new Map();
+    products.forEach(p => {
+      if (p?.is_active === false || !p?.is_operation || !up(p.op_parent_mat)) return;
+      opsOf.set(up(p.op_parent_mat), [...(opsOf.get(up(p.op_parent_mat)) || []), up(p.mat_no)]);
+    });
+    let opDrift = [], opDriftErr = null;
+    const opMats = [...new Set([...opsOf.values()].flat())];
+    if (opMats.length) {
+      const { kidsOf, error: kErr } = await bomKidsOf(opMats);
+      if (kErr) opDriftErr = kErr;
+      else opDrift = opDriftAgainstSap({ sheets, opsOf, opKidsOf: kidsOf,
+        familyOf: (m) => opFamilyKey(prodByMat.get(up(m))?.p_no), isOpMat: (m) => !!opMap[m] || !!prodByMat.get(up(m))?.is_operation });
+    }
+    const miss = missingInPartsMaster(sheets.flatMap(sh => sh.rows), partsMaster.map(x => x.mat_no));
+    setSapPick(Object.fromEntries([
+      ...diff.add.map(r => [`${r.sheet_id}|${up(r.mat_no)}`, true]),
+      ...diff.update.map(r => [`${r.sheet_id}|${up(r.mat_no)}`, false]),
+    ]));
 
     /* 🏷️ เสนอ Part No. จากข้อความชื่อ — เรียนคำนำหน้าจากทะเบียนจริงทั้ง 2 ฝั่ง ไม่ hardcode
        ค่าตั้งต้นของช่องติ๊ก: **ตรงทะเบียน = ติ๊กให้ · ถอดด้วยรูปแบบ = ไม่ติ๊ก (ให้คนดูก่อน)**
@@ -2190,12 +2248,17 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
       seed[mat] = { value: hit.partNo, use: hit.confidence === 'high' && !hit.conflict, hit };
     }
     setSapPn(seed);
-    setSapImp({ parsed, diff, miss, target, curRows: curRows || [], prop, pmPn });
+    setSapImp({ parsed, diff, miss, target, curRows: curRows || [], prop, pmPn,
+      sheets: sheets.map(sh => ({ mat: sh.mat, name: sh.product.name, n: sh.rows.length })),
+      noSheet: noSheet.map(sh => ({ mat: sh.mat, n: sh.rows.length })), conflicts: split.conflicts, opDrift, opDriftErr });
   };
 
   const applySapImport = async () => {
     if (!sapImp) return;
-    const { parsed, diff, miss, target } = sapImp;
+    const { parsed, miss, target } = sapImp;
+    /* ✅ เฉพาะบรรทัดที่ติ๊ก (PE ตัดสินทีละบรรทัด · 19/11) */
+    const picked = (r) => !!sapPick[`${r.sheet_id}|${upMat(r.mat_no)}`];
+    const diff = { ...sapImp.diff, add: sapImp.diff.add.filter(picked), update: sapImp.diff.update.filter(picked) };
     setSapBusy(true);
 
     /* 🔴 ชื่อพาร์ทห้ามตกเป็นเลข MAT (บั๊กจริง 02/10 — ตัวแกะอ่านคอลัมน์ชื่อไม่ออก แล้วโค้ดนี้
@@ -2207,16 +2270,16 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
     const noName = [...diff.add, ...diff.update, ...miss].filter(r => !nameOf(r));
     if (noName.length) {
       setSapBusy(false);
-      toast.error(`ไม่นำเข้าให้ — ${noName.length} แถวไม่มีชื่อพาร์ททั้งในไฟล์และในทะเบียน (${noName.slice(0, 3).map(r => r.mat_no).join(', ')}${noName.length > 3 ? ' …' : ''}) · ลงชื่อในแท็บ Parts Master ก่อน แล้วนำเข้าใหม่`);
+      toast.error(`ไม่นำเข้าให้ — ${noName.length} แถวไม่มีชื่อพาร์ททั้งในไฟล์และในทะเบียน (${noName.slice(0, 3).map(r => r.mat_no).join(', ')}${noName.length > 3 ? ' …' : ''}) · ลงชื่อในแท็บ Material Master ก่อน แล้วนำเข้าใหม่`);
       return;
     }
 
-    /* ① ลงทะเบียนพาร์ทที่ยังไม่มีใน Parts Master ก่อน (step 1 ของ workflow — BOM หยิบจากทะเบียน) */
+    /* ① ลงทะเบียนพาร์ทที่ยังไม่มีใน Material Master ก่อน (step 1 ของ workflow — BOM หยิบจากทะเบียน) */
     if (miss.length) {
       const pmErr = (await supabaseDR.from('parts_master').upsert(
         miss.map(m => ({ mat_no: m.mat_no, part_name: nameOf(m), part_no: pnOf(m) ?? m.part_no, uom: m.uom || 'PC', is_active: true, created_by: fullName })),
         { onConflict: 'mat_no', ignoreDuplicates: true })).error;
-      if (pmErr) { setSapBusy(false); toast.error(`ลงทะเบียน Parts Master ไม่สำเร็จ: ${pmErr.message} — ยังไม่ได้แตะ BOM`); return; }
+      if (pmErr) { setSapBusy(false); toast.error(`ลงทะเบียน Material Master ไม่สำเร็จ: ${pmErr.message} — ยังไม่ได้แตะ BOM`); return; }
     }
 
     /* 🏷️ Part No. = **เฉพาะที่คนติ๊กยืนยัน** → ถ้าไม่ติ๊ก ใช้ค่าในทะเบียน → ไม่มีเลย = ไม่แตะ
@@ -2252,8 +2315,25 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
     const strip = (o) => { const { prod_sloc, ...rest } = o; void prod_sloc; return rest; };
 
     let added = 0, changed = 0;
+    /* 🔴 unique index (ใบ, ตัวแม่, mat) ไม่สนใจ is_active — ใบที่เคยปิดแถวไว้ (05/11) insert ซ้ำ = 23505
+       ⇒ แถว "เพิ่ม" ที่มีแถวปิดค้างคีย์เดียวกัน = เปิดแถวเดิมคืนด้วยค่าจาก SAP แทน (นับเป็น "เพิ่ม") */
     if (diff.add.length) {
-      const rows = diff.add.map(r => ({ ...payload(r, { fresh: true }), product_id: target.id, is_active: true, created_by: fullName }));
+      const { data: closed, error: cErr } = await supabaseDR.from('bom_items').select('id, product_id, mat_no')
+        .in('product_id', [...new Set(diff.add.map(r => r.sheet_id))]).eq('is_active', false).is('parent_mat', null);
+      if (cErr) { setSapBusy(false); toast.error(`อ่านแถวที่ปิดไว้ไม่สำเร็จ: ${cErr.message} — ยังไม่ได้นำเข้า`); return; }
+      const closedBy = new Map((closed || []).map(c => [`${c.product_id}|${upMat(c.mat_no)}`, c.id]));
+      const reopen = diff.add.filter(r => closedBy.has(`${r.sheet_id}|${upMat(r.mat_no)}`));
+      for (const r of reopen) {
+        const res = await retry((legacy) => supabaseDR.from('bom_items')
+          .update({ ...(legacy ? strip(payload(r)) : payload(r)), is_active: true })
+          .eq('id', closedBy.get(`${r.sheet_id}|${upMat(r.mat_no)}`)).select('id'));
+        if (!checkWrite(res, `เปิดแถว ${r.mat_no} คืน`)) { setSapBusy(false); return; }
+        added += (res.data || []).length;
+      }
+      diff.add = diff.add.filter(r => !closedBy.has(`${r.sheet_id}|${upMat(r.mat_no)}`));
+    }
+    if (diff.add.length) {
+      const rows = diff.add.map(r => ({ ...payload(r, { fresh: true }), product_id: r.sheet_id, is_active: true, created_by: fullName }));
       const res = await retry((legacy) => supabaseDR.from('bom_items').insert(legacy ? rows.map(strip) : rows).select('id'));
       /* ชน unique index = ข้อความ postgres ดิบอ่านไม่รู้เรื่องสำหรับคนหน้างาน → แปลเป็นสิ่งที่ทำต่อได้
          (เคสจริง 01/10: index เก่าเป็น (product_id,item_no) ไม่มีมิติตัวแม่ · แก้ด้วย migration 20261001b แล้ว) */
@@ -2265,7 +2345,7 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
         return;
       }
       if (!checkWrite(res, 'นำเข้าแถว BOM ใหม่')) { setSapBusy(false); return; }
-      added = (res.data || []).length;
+      added += (res.data || []).length;
     }
     for (const r of diff.update) {
       const res = await retry((legacy) => supabaseDR.from('bom_items')
@@ -2476,7 +2556,7 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
     if (!pickerParent) {
       const willDup = rows.map(r => ({ mat: r.mat_no, under: deepMats.get((r.mat_no || '').trim().toUpperCase()) }))
         .filter(x => x.under);
-      if (willDup.length && !window.confirm(
+      if (willDup.length && !await askConfirm(
         `⚠️ ${willDup.length} รายการนี้อยู่ในชั้นลึกของใบนี้อยู่แล้ว:\n\n` +
         willDup.map(x => `• ${x.mat} — อยู่ใต้ ${x.under}`).join('\n') +
         `\n\nใส่ที่ชั้น 1 อีก = ยอดต่อ 1 FG ถูกนับ 2 รอบ\n` +
@@ -2495,7 +2575,7 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
     if (newToRegister.length) {
       const { error: pmErr } = await supabaseDR.from('parts_master')
         .upsert(newToRegister, { onConflict: 'mat_no', ignoreDuplicates: true });
-      if (pmErr) toast.info(`เพิ่มใน BOM ได้ แต่ลงทะเบียนชิ้นส่วนไม่สำเร็จ (${pmErr.message}) — ไปเพิ่มเองที่ tab 🗂`);
+      if (pmErr) toast.info(`เพิ่มใน BOM ได้ แต่ลงทะเบียนชิ้นส่วนไม่สำเร็จ (${pmErr.message}) — ไปเพิ่มเองที่ แท็บ Material Master`);
       else toast.info(`🗂 ลงทะเบียนชิ้นส่วนให้ ${newToRegister.length} รายการ (พาร์ทผลิตเองที่ยังไม่อยู่ในทะเบียน)`);
     }
     let { error } = await supabaseDR.from('bom_items').insert(rows);
@@ -2563,7 +2643,7 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
 
   const handleDelete = async (it) => {
     if (!bomGuard()) return;
-    if (!window.confirm(`ลบ ${it.part_name || ''} · MAT ${it.mat_no} ออกจาก BOM?`)) return;
+    if (!await askConfirm(`ลบ ${it.part_name || ''} · MAT ${it.mat_no} ออกจาก BOM?`)) return;
     const { error } = await supabaseDR.from('bom_items').delete().eq('id', it.id);
     if (error) { toast.error(error.message); return; }
     toast.success('ลบพาร์ทแล้ว');
@@ -2584,7 +2664,7 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
     const ids = [...new Set(rows.map(r => r.id).filter(Boolean))];
     if (!ids.length) return;
     const list = rows.map(r => `• ${r.part_name || ''} — MAT ${r.mat_no} ×${r.qty} ${uomLabel(r.uom) || ''}`).join('\n');
-    if (!window.confirm(
+    if (!await askConfirm(
       `ลบแถวชั้น 1 ที่นับซ้ำ ${ids.length} รายการ ออกจาก BOM ของ ${selProduct?.mat_no}?\n\n${list}\n\n` +
       `ของพวกนี้ยังอยู่ในชั้นลึก — ยอด "ต่อ 1 FG" จะไม่หาย แค่เลิกนับซ้ำ\n(ปิดใช้งานเท่านั้น ไม่ลบทิ้งถาวร)`
     )) return;
@@ -2679,12 +2759,12 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
             ไฟล์ที่ SAP คายมาเป็น .xls แต่เนื้อเป็น TSV UTF-16LE (รับ .txt/.tsv/.csv ด้วย) */}
         {canCreate && (
           <button type="button" className="pg-btn sm" onClick={() => sapFileRef.current?.click()} disabled={sapBusy}
-            title={tr('Display Multilevel BOM (CS12) หรือ BOM & Routing Report ที่ export จาก SAP — ระบบหาใบปลายทางจากเลข Material ในไฟล์เอง')}
+            title={tr('Display Multilevel BOM (CS12 · .xls หรือ .XLSX) หรือ BOM & Routing Report ที่ export จาก SAP — แตกลงใบละชั้นแบบ SAP · ไฟล์ .XLSX ไม่มีเลขหัวใบ ให้เลือกใบจากลิสต์ซ้ายก่อน')}
             style={{ marginTop: 6, width: '100%' }}>
             {sapBusy ? tr('กำลังอ่าน…') : tr('นำเข้า BOM จาก SAP')}
           </button>
         )}
-        <input ref={sapFileRef} type="file" accept=".xls,.txt,.tsv,.csv" style={{ display: 'none' }} onChange={handleSapFile} />
+        <input ref={sapFileRef} type="file" accept=".xls,.xlsx,.txt,.tsv,.csv" style={{ display: 'none' }} onChange={handleSapFile} />
         {/* 🔩 ชิปแยกพาร์ทจริง / ขั้นตอน (OP) — ไม่ปนกันในลิสต์เดียว */}
         {/* UI-STANDARD 2026-09-24: 3 ตัวเลือกเท่ากัน → Segmented · "ทุก…" ซ้ายสุด */}
         <Segmented size="sm" label={tr('ชนิด')} value={kind} onChange={setKind} style={{ marginTop: 8 }}
@@ -2981,7 +3061,7 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
           onPick={(pt) => { setHeadPick(false); makeBomHead(pt); }} />
       )}
 
-      {/* ══ PICKER MODAL — เลือกพาร์ทจาก Parts Master ══ */}
+      {/* ══ PICKER MODAL — เลือกพาร์ทจาก Material Master ══ */}
       {showPicker && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', width: 'min(700px,100%)', maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}>
@@ -3018,7 +3098,7 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
             <div style={{ flex: 1, overflowY: 'auto', padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
               {pickerFiltered.length === 0 && (
                 <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
-                  {pickerSource.length === 0 ? 'ยังไม่มีพาร์ทในทะเบียน — ไปเพิ่มที่ tab 🗂 Parts Master ก่อน' : 'ไม่พบพาร์ทที่ตรงเงื่อนไข'}
+                  {pickerSource.length === 0 ? 'ยังไม่มีพาร์ทในทะเบียน — ไปเพิ่มที่ แท็บ Material Master ก่อน' : 'ไม่พบพาร์ทที่ตรงเงื่อนไข'}
                 </div>
               )}
               {pickerFiltered.map(p => {
@@ -3210,6 +3290,10 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
       {sapImp && (() => {
         const { parsed, diff, miss, target } = sapImp;
         const cell = { padding: '4px 8px', borderBottom: '1px solid var(--border)', fontSize: 11.5 };
+        const pickKey = (r) => `${r.sheet_id}|${upMat(r.mat_no)}`;
+        const nAdd = diff.add.filter(r => sapPick[pickKey(r)]).length;
+        const nUpd = diff.update.filter(r => sapPick[pickKey(r)]).length;
+        const setAllPick = (v) => setSapPick(m => Object.fromEntries(Object.keys(m).map(k => [k, v])));
         const pnPicked = Object.values(sapPn).filter(v => v.use && String(v.value || '').trim()).length;
         const pkgOf = (mat) => partsMaster.find(x => upMat(x.mat_no) === upMat(mat))?.qty_per_pkg || null;
         const pkgMissing = [...diff.add, ...diff.update].filter(r => !pkgOf(r.mat_no)).length;
@@ -3222,8 +3306,36 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
               <div style={{ fontSize: 12, color: 'var(--muted)', margin: '4px 0 12px' }}>
                 หัวใบ <b style={{ color: 'var(--text)', fontFamily: 'monospace' }}>{parsed.root.mat_no || '—'}</b> {parsed.root.description}
                 {parsed.root.plant && ` · Plant ${parsed.root.plant}`} {tr('· รูปแบบไฟล์')} {parsed.layout === 'multilevel' ? 'Display Multilevel BOM' : 'BOM & Routing Report'}
-                <br />{tr('ลงที่ใบ')} <b style={{ color: 'var(--accent)' }}>{target.mat_no} {target.name}</b> {tr('· ไฟล์มี')} {parsed.rows.length} {tr('บรรทัด · ลึกสุด')} {Math.max(...parsed.rows.map(r => r.depth))} ชั้น
+                <br />{tr('ใบหัว')} <b style={{ color: 'var(--accent)' }}>{target.mat_no} {target.name}</b> {tr('· ไฟล์มี')} {parsed.rows.length} {tr('บรรทัด · ลึกสุด')} {Math.max(...parsed.rows.map(r => r.depth))} ชั้น
+                {/* 🏛️ 19/11 แบบ SAP: 1 MAT = 1 ใบ — ไฟล์หลายชั้นถูกแตกลงใบของตัวแม่แต่ละตัว */}
+                <br />{tr('แตกเป็นใบละชั้นแบบ SAP')} {sapImp.sheets?.length || 0} {tr('ใบ')}:{' '}
+                <span style={{ fontFamily: 'monospace', color: 'var(--text2)' }}>{(sapImp.sheets || []).map(sh => `${sh.mat} (${sh.n})`).join(' · ')}</span>
               </div>
+              {(sapImp.noSheet?.length > 0 || sapImp.conflicts?.length > 0) && (
+                <NoticeBar tone="warn" style={{ marginBottom: 10 }}>
+                  {sapImp.noSheet?.length > 0 && <div>
+                    <b style={{ color: 'var(--amber)' }}>{tr('ข้าม')} {sapImp.noSheet.length} {tr('ใบ — ยังไม่มีในทะเบียนสินค้า')}</b>{' '}
+                    <span style={{ fontFamily: 'monospace' }}>{sapImp.noSheet.map(x => `${x.mat} (${x.n})`).join(' · ')}</span>
+                    {' '}{tr('· กด "➕ เปิดใบ BOM ให้พาร์ทจากทะเบียน" ก่อน แล้วนำเข้าไฟล์นี้ใหม่')}
+                  </div>}
+                  {(sapImp.conflicts || []).map(c => <div key={c.mat}>⚠️ {c.detail}</div>)}
+                </NoticeBar>
+              )}
+              {(sapImp.opDrift?.length > 0 || sapImp.opDriftErr) && (
+                <NoticeBar tone="warn" style={{ marginBottom: 10 }}>
+                  {sapImp.opDriftErr
+                    ? <div>⚠️ {tr('ตรวจขั้น OP เทียบ BOM ใหม่ไม่ได้')} — {sapImp.opDriftErr}</div>
+                    : <>
+                        <b style={{ color: 'var(--amber)' }}>🔩 {tr('ขั้น OP กินของที่ BOM SAP ใหม่ไม่มีแล้ว')} {sapImp.opDrift.length} {tr('รายการ')}</b>
+                        {sapImp.opDrift.map(d => (
+                          <div key={`${d.sheet}|${d.op}|${d.mat}`} style={{ fontFamily: 'monospace' }}>
+                            {d.sheet}{d.parent !== d.sheet ? ` (OP ของ ${d.parent})` : ''}: {tr('ขั้น')} {d.op} {tr('กิน')} {d.mat}
+                          </div>
+                        ))}
+                        <div>{tr('· นำเข้าได้ แต่ต้องแก้ BOM ของขั้น OP ให้กินเบอร์ใหม่ (แท็บ BOM ของรหัสขั้น) ไม่งั้นขั้น OP จะตัดเบอร์เก่าต่อ')}</div>
+                      </>}
+                </NoticeBar>
+              )}
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
                 {pill('rgba(61,214,92,0.10)', 'var(--accent)', `➕ เพิ่ม ${diff.add.length}`)}
                 {pill('var(--amber-dim)', 'var(--amber)', `✏️ แก้ ${diff.update.length}`)}
@@ -3251,7 +3363,7 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
                 <NoticeBar tone="warn" style={{ marginBottom: 10 }}>
                   <b style={{ color: 'var(--amber)' }}>{tr('QTY/PKG ยังไม่มีค่า')} {pkgMissing} {tr('แถว')}</b> — จำนวนต่อกล่อง
                   <b> {tr('ไม่มีอยู่ในไฟล์ SAP เลย')}</b> เป็นข้อมูลของทะเบียนพาร์ท ต้องมีคนกรอก
-                  (แถวที่ทะเบียนมีค่าแล้ว ระบบเติมให้เอง) · กรอกได้ที่แท็บ 1️⃣ Parts Master หรือปุ่มดินสอของแต่ละแถว
+                  (แถวที่ทะเบียนมีค่าแล้ว ระบบเติมให้เอง) · กรอกได้ที่แท็บ Material Master หรือปุ่มดินสอของแต่ละแถว
                 </NoticeBar>
               )}
               {parsed.warnings.length > 0 && (
@@ -3262,20 +3374,33 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
               {diff.extra.length > 0 && (
                 <div style={{ fontSize: 11.5, color: 'var(--text2)', background: 'var(--red-dim)', border: '1px solid var(--red-line)', borderRadius: 'var(--r-md)', padding: '8px 10px', marginBottom: 10 }}>
                   <b style={{ color: 'var(--red)' }}>{tr('ไม่ลบให้')}</b> {tr('— แถวที่ SAP ไม่มี อาจเป็นของที่หน้างานเพิ่มเอง ให้คนตัดสิน:')}{' '}
-                  <span style={{ fontFamily: 'monospace' }}>{diff.extra.map(r => r.mat_no).join(' · ')}</span>
+                  <span style={{ fontFamily: 'monospace' }}>{diff.extra.map(r => `${r.sheet_mat} → ${r.mat_no}`).join(' · ')}</span>
                 </div>
               )}
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', fontSize: 11.5, color: 'var(--text2)', marginBottom: 6 }}>
+                <span><b>{tr('ติ๊กเลือกทีละบรรทัด')}</b> {tr('— แถวใหม่ติ๊กให้ · แถวที่ ESM เขียนไม่ตรง SAP (✏️) ไม่ติ๊ก ต้องเลือกเอง')}</span>
+                <span style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
+                  <button type="button" onClick={() => setAllPick(true)} style={{ ...btnSecondary, padding: '3px 10px', fontSize: 11 }}>{tr('เลือกทุกบรรทัด')}</button>
+                  <button type="button" onClick={() => setAllPick(false)} style={{ ...btnSecondary, padding: '3px 10px', fontSize: 11 }}>{tr('ไม่เลือกเลย')}</button>
+                </span>
+              </div>
               <div style={{ maxHeight: '38vh', overflow: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead><tr style={{ position: 'sticky', top: 0, background: 'var(--bg2)' }}>
                     {/* ลำดับคอลัมน์ตามกฎ 30/09: Part Name ก่อน MAT SAP (เลข MAT เป็นรหัสภายใน) */}
-                    {['', 'ชั้น', 'ITEM', 'รายละเอียด', 'Part No. (เสนอ)', 'MAT SAP', 'จำนวน', 'หน่วย', 'QTY/PKG', 'ใต้', 'Prod.SLoc', 'Stor.Loc'].map(h =>
+                    {['', 'ชั้น', 'ITEM', 'รายละเอียด', 'Part No. (เสนอ)', 'MAT SAP', 'จำนวน', 'หน่วย', 'QTY/PKG', 'ลงใบ', 'Prod.SLoc', 'Stor.Loc'].map(h =>
                       <th key={h} style={{ ...cell, textAlign: 'left', fontWeight: 700, color: 'var(--muted)' }}>{tr(h)}</th>)}
                   </tr></thead>
                   <tbody>
                     {[...diff.add.map(r => ({ ...r, _k: '➕' })), ...diff.update.map(r => ({ ...r, _k: '✏️' }))].map((r, i) => (
-                      <tr key={i}>
-                        <td style={cell}>{r._k}</td>
+                      <tr key={i} style={{ opacity: sapPick[pickKey(r)] ? 1 : 0.55 }}>
+                        <td style={{ ...cell, whiteSpace: 'nowrap' }}>
+                          <label style={{ display: 'inline-flex', gap: 4, alignItems: 'center', cursor: 'pointer' }}>
+                            <input type="checkbox" checked={!!sapPick[pickKey(r)]} style={{ accentColor: 'var(--accent)' }}
+                              onChange={e => setSapPick(m => ({ ...m, [pickKey(r)]: e.target.checked }))} />
+                            {r._k}
+                          </label>
+                        </td>
                         <td style={{ ...cell, color: 'var(--muted)' }}>{'·'.repeat(r.depth - 1)}{r.depth}</td>
                         <td style={{ ...cell, fontFamily: 'monospace' }}>{r.item_no ?? '—'}</td>
                         <td style={cell}>{r.part_name}{r.diffs?.length ? <span style={{ color: 'var(--amber)' }}> · {r.diffs.join(' · ')}</span> : null}</td>
@@ -3308,7 +3433,7 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
                         <td style={{ ...cell, textAlign: 'right', color: pkgOf(r.mat_no) ? 'var(--amber)' : 'var(--muted)', fontWeight: pkgOf(r.mat_no) ? 700 : 400 }}>
                           {pkgOf(r.mat_no) || <span title={tr('ทะเบียนยังไม่ได้ตั้งจำนวนต่อกล่อง — ไฟล์ SAP ไม่มีข้อมูลนี้')}>{tr('ยังไม่ตั้ง')}</span>}
                         </td>
-                        <td style={{ ...cell, fontFamily: 'monospace', color: 'var(--muted)' }}>{r.parent_mat || tr('หัวใบ')}</td>
+                        <td style={{ ...cell, fontFamily: 'monospace', color: 'var(--muted)' }}>{r.sheet_mat || '—'}</td>
                         <td style={{ ...cell, fontFamily: 'monospace', color: 'var(--blue)' }}>{r.prod_sloc || '—'}</td>
                         <td style={{ ...cell, fontFamily: 'monospace', color: 'var(--blue)' }}>{r.storage_location || '—'}</td>
                       </tr>
@@ -3318,9 +3443,9 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
               </div>
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 14 }}>
                 <button onClick={() => setSapImp(null)} disabled={sapBusy} style={{ ...btnSecondary, padding: '8px 16px' }}>{tr('ยกเลิก')}</button>
-                <button type="button" className="pg-btn sm primary" onClick={applySapImport} disabled={sapBusy || (!diff.add.length && !diff.update.length && !miss.length)}
+                <button type="button" className="pg-btn sm primary" onClick={applySapImport} disabled={sapBusy || (!nAdd && !nUpd && !miss.length)}
                   style={{ opacity: sapBusy ? 0.6 : 1 }}>
-                  {sapBusy ? 'กำลังนำเข้า…' : `นำเข้า (เพิ่ม ${diff.add.length} · แก้ ${diff.update.length})`}
+                  {sapBusy ? 'กำลังนำเข้า…' : `นำเข้าที่ติ๊ก (เพิ่ม ${nAdd} · แก้ ${nUpd})`}
                 </button>
               </div>
             </div>
@@ -3375,11 +3500,11 @@ function downloadCsv(docKey, filename, headers, rows) {
    · `cols` ว่าง = ดึงทุกคอลัมน์ที่ตารางมี (อ่านจากคีย์ของแถวแรก) — ตารางเพิ่มคอลัมน์แล้วไม่ต้องตามแก้
    · ⚠️ `select('*')` ที่นี่ **ยอมได้เฉพาะตอนกดปุ่ม export** (กฎ egress ข้อ 11 ห้ามใน "จอรายการ") */
 const EXPORTS = [
-  { key: 'parts_master',     icon: '🗂', label: 'Parts Master',  order: 'mat_no',
+  { key: 'parts_master',     icon: '🗂', label: 'Material Master',  order: 'mat_no',
     cols: ['mat_no','part_name','part_no','uom','qty_per_pkg','supplier','note','material_cost','standard_cost','is_active'] },
   { key: 'bom_items',        icon: '📦', label: 'BOM',           order: 'product_id',
     cols: ['product_id','parent_mat','item_no','mat_no','part_name','part_no','qty_per_unit','uom','qty_per_pkg','op_no','storage_location','source_line','supplier','is_active'] },
-  { key: 'dr_products',      icon: '🔩', label: 'Products',      order: 'mat_no',
+  { key: 'dr_products',      icon: '🔩', label: 'Production Data',      order: 'mat_no',
     cols: ['mat_no','name','code','p_no','customer','line_name','process_type','cycle_time_sec','target_per_shift','pair_mat_no','posting_mode','lot_accumulate_threshold','is_operation','op_parent_mat','op_seq','is_active'] },
   { key: 'part_routings',    icon: '🔀', label: 'Routing',       order: 'mat_no',  cols: [] },
   { key: 'product_packaging', icon: '📦', label: 'Packaging',    order: 'product_id', cols: [] },
@@ -3459,7 +3584,7 @@ function ExportPanel() {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   PARTS MASTER PANEL — ฐานข้อมูลกลางของพาร์ทย่อย
+   MATERIAL MASTER PANEL — ฐานข้อมูลกลางของพาร์ทย่อย
    ประเภทพาร์ทแยกด้วย "เลขตัวแรก" ของ MAT SAP — นิยามอยู่ที่ src/utils/matPrefix.js
    (1=FG · 2=Child ผลิตเอง · 3=Child ซื้อนอก · 5=Raw · 9=เลขภายใน)
    ⚠️ ห้ามกลับไปเทียบ 3 ตัวแรก — เลข FG รันทะลุ 100xxxxx ไปเป็น 101xxxxx แล้ว
@@ -3657,7 +3782,7 @@ function PartsMasterPanel({ canCreate, canEdit, fullName, setCsvPreview, reloadK
 
   async function toggleActive(p) {
     // ยืนยันเฉพาะตอน "ปิดใช้งาน" พาร์ท — เปิดกลับไม่ต้องถาม
-    if (p.is_active && !confirm(`ปิดใช้งานพาร์ท "${p.part_no || p.mat_no || ''}" ?\n\nจะหายจากการเลือกใช้ (ข้อมูลเดิมยังอยู่ เปิดกลับได้)`)) return;
+    if (p.is_active && !await askConfirm(`ปิดใช้งานพาร์ท "${p.part_no || p.mat_no || ''}" ?\n\nจะหายจากการเลือกใช้ (ข้อมูลเดิมยังอยู่ เปิดกลับได้)`)) return;
     /* นับแถว — ปุ่มสลับสถานะ: 0 แถวแล้ว load() จะวาดค่าเดิมกลับมา = ดูเหมือนปุ่มกดไม่ติดโดยไม่มีคำอธิบาย */
     checkWriteRows(await supabaseDR.from('parts_master').update({ is_active: !p.is_active }).eq('id', p.id).select('id'), 'เปิด/ปิดใช้งานพาร์ท');
     load();
@@ -3676,7 +3801,7 @@ function PartsMasterPanel({ canCreate, canEdit, fullName, setCsvPreview, reloadK
       <FilterBar>
         {supersededCount > 0 && (
           <button type="button" onClick={() => setHideOld(v => !v)}
-            title={tr('rev เก่าที่ถูก EC แทนแล้ว — ของจริงอยู่ที่แท็บ 3️⃣ Products')}
+            title={tr('rev เก่าที่ถูก EC แทนแล้ว — ของจริงอยู่ที่แท็บ Production')}
             style={{ ...btnSecondary, padding: '6px 12px', fontSize: 12, whiteSpace: 'nowrap',
               borderColor: hideOld ? 'var(--accent)' : 'var(--border)', color: hideOld ? 'var(--accent)' : 'var(--text2)' }}>
             {hideOld ? '☑' : '☐'} {tr('ซ่อน rev ที่ถูกแทนแล้ว (')}{supersededCount})
@@ -3747,7 +3872,7 @@ function PartsMasterPanel({ canCreate, canEdit, fullName, setCsvPreview, reloadK
                       if (!e) return null;
                       if (e.supersededByMat) return (
                         <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 2, fontWeight: 700 }}
-                          title={`ทำ EC ที่แท็บ 3️⃣ Products${e.supersededAt ? ` · มีผล ${e.supersededAt}` : ''}`}>
+                          title={`ทำ EC ที่แท็บ Production${e.supersededAt ? ` · มีผล ${e.supersededAt}` : ''}`}>
                           🔄 ถูกแทนโดย <span style={{ fontFamily: 'monospace' }}>{e.supersededByMat}</span>
                           {e.supersededAt && ` · ${e.supersededAt}`}
                           {e.latestMat && e.latestMat !== e.supersededByMat &&
@@ -4001,7 +4126,7 @@ function PackagingPanel({ canCreate, canEdit, mayDelete, fullName }) {
      เดิมทิ้งผลทั้งก้อน ⇒ กดลบแล้ว `loadLinks()` วาดแถวเดิมกลับมา โดยไม่มีอะไรบอกว่าทำไม
      ⇒ ผู้ใช้กดซ้ำ/คิดว่าจอค้าง (pattern ที่ถูก: SimpleMasterPanel.remove) */
   const delLink = async (it) => {
-    if (!window.confirm(`ลบ ${it.packaging_code} ออกจาก product นี้?`)) return;
+    if (!await askConfirm(`ลบ ${it.packaging_code} ออกจาก product นี้?`)) return;
     const res = await supabaseDR.from('product_packaging').update({ is_active: false }).eq('id', it.id).select('id');
     if (!checkWrite(res, 'ลบบรรจุภัณฑ์ออกจากสินค้า')) return;
     if (!(res.data || []).length) { toast.error('ลบไม่สำเร็จ (0 แถว) — สิทธิ์เขียนไม่พอ'); return; }
@@ -4023,7 +4148,7 @@ function PackagingPanel({ canCreate, canEdit, mayDelete, fullName }) {
     toast.success('บันทึกภาชนะแล้ว'); setMasterForm(EMPTY_PKG_MASTER); setEditMaster(null); loadAll();
   };
   const delMaster = async (m) => {
-    if (!window.confirm(`ลบ ${m.code}?`)) return;
+    if (!await askConfirm(`ลบ ${m.code}?`)) return;
     const res = await supabaseDR.from('container_types').update({ is_active: false }).eq('id', m.id).select('id');
     if (!checkWrite(res, 'ปิดใช้งานภาชนะ')) return;
     if (!(res.data || []).length) { toast.error('ลบไม่สำเร็จ (0 แถว) — สิทธิ์เขียนไม่พอ'); return; }
@@ -4271,7 +4396,7 @@ function KanbanStdPanel({ canEdit, fullName }) {
             {tr('Kanban Std — มาตรฐาน Qty/Kanban รายพาร์ท')}
           </h3>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--muted)' }}>
-            UOM และข้อมูลพาร์ทดึงจาก 🗂 Parts Master โดยตรง (ไม่เก็บซ้ำ) · Qty/Kanban ตั้งต้นจาก Qty/Pkg (1 ใบ Kanban = 1 packaging)
+            UOM และข้อมูลพาร์ทดึงจาก 🗂 Material Master โดยตรง (ไม่เก็บซ้ำ) · Qty/Kanban ตั้งต้นจาก Qty/Pkg (1 ใบ Kanban = 1 packaging)
           </p>
         </div>
         <input
@@ -4296,7 +4421,7 @@ function KanbanStdPanel({ canEdit, fullName }) {
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={canEdit ? 10 : 9} style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('ไม่พบข้อมูล — เพิ่มพาร์ทใน Parts Master ก่อน')}</td></tr>
+                <tr><td colSpan={canEdit ? 10 : 9} style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('ไม่พบข้อมูล — เพิ่มพาร์ทใน Material Master ก่อน')}</td></tr>
               )}
               {filtered.map(row => {
                 // ⚠️ ต้องเช็ค qty_per_kanban ด้วย — แถวที่ค่าว่างเทียบไม่ได้ (Number(undefined)=NaN ขึ้น ⚠️ มั่ว)
@@ -4314,7 +4439,7 @@ function KanbanStdPanel({ canEdit, fullName }) {
                       {/* ⚠️ `kanban_standards.qty_per_kanban` เป็น nullable (default 0 แต่ไม่ NOT NULL)
                           แถวเดียวที่เป็น null เคยทำให้ทั้งแท็บพัง (undefined.toLocaleString) — guard เหมือนเซลล์อื่นในแถว */}
                       {row.ks?.qty_per_kanban != null ? row.ks.qty_per_kanban.toLocaleString() : '—'}
-                      {mismatch && <span title={tr('ไม่ตรงกับ Qty/Pkg ใน Parts Master')} style={{ marginLeft: 4 }}>⚠️</span>}
+                      {mismatch && <span title={tr('ไม่ตรงกับ Qty/Pkg ใน Material Master')} style={{ marginLeft: 4 }}>⚠️</span>}
                     </td>
                     <td style={{ padding: '9px 14px', borderTop: '1px solid var(--border)', fontSize: 13, color: row.ks?.min_qty != null ? 'var(--text2)' : 'var(--muted)' }}>{row.ks?.min_qty != null ? row.ks.min_qty.toLocaleString() : '—'}</td>
                     <td style={{ padding: '9px 14px', borderTop: '1px solid var(--border)', fontSize: 13, color: row.ks?.max_qty != null ? 'var(--text2)' : 'var(--muted)' }}>{row.ks?.max_qty != null ? row.ks.max_qty.toLocaleString() : '—'}</td>
@@ -4394,7 +4519,7 @@ function KanbanStdPanel({ canEdit, fullName }) {
                 )}
               </div>
               <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                UOM: <strong style={{ color: 'var(--text)' }}>{parts.find(p => p.mat_no === form.mat_no)?.uom || '—'}</strong> (จาก Parts Master)
+                UOM: <strong style={{ color: 'var(--text)' }}>{parts.find(p => p.mat_no === form.mat_no)?.uom || '—'}</strong> (จาก Material Master)
                 · Min-Max คุมการเติมที่สโตร์ (ชิ้น) · Lot size = เกณฑ์ยิงใบสั่งผลิตพาร์ทย่อย (ชิ้น)
               </div>
             </div>

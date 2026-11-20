@@ -71,6 +71,7 @@ import Segmented from './Segmented';
 /* 📷 ปิด action ต้องแนบรูปหลักฐานได้ (12/10 · คำสั่ง user) — อัปโหลดผ่าน utils/actionImage.js เท่านั้น
    `<QualityPhotoField>` เป็นช่องกรอกล้วน (คืน File ให้หน้าแม่) ใช้ซ้ำได้ สัดส่วน 4:3 ชุดเดียวกัน */
 import QualityPhotoField from './QualityPhotoField';
+import ImageLightbox from './ImageLightbox';   // 🔍 ฉากดูรูปของกลาง (ห้ามเปิดแท็บใหม่ ห้ามเขียนโมดัลเอง)
 import { uploadActionPhoto, removeActionImg } from '../utils/actionImage';
 import { LOOKBACK_DAYS, presetRange, addDays, rangeDays, normalizeRange } from '../utils/timeRange';
 import {
@@ -93,6 +94,22 @@ const getWorkDate = () => {
 const dayLabel = (k) => { const [, m, d] = String(k).split('-'); return `${+d}/${+m}`; };
 /* แผ่นบนมือถือสูงคงที่ — เท่ากับแท็บบอร์ด KPI (ObeyaKpiBoard) ให้ 2 แท็บหน้าตาเดียวกัน */
 const MOBILE_SHEET_H = 330;
+
+/* 📷 รูปหลักฐานของ action — แตะแล้วขยายในแอป (16/11 · คำสั่ง user "รูปที่แนบต้องกดขยายดูได้")
+   เดิมเป็น `<a target="_blank">` ⇒ กลางประชุมแล้วเด้งออกจากบอร์ด (และตัวบล็อกป็อปอัปกินได้เงียบๆ)
+   🔴 ฉากขยายใช้ของกลาง `ImageLightbox` เท่านั้น ห้ามวาดโมดัลดูรูปในไฟล์นี้ */
+function ActionImgBtn({ url, label, result, fs }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" className="tbtn" onClick={() => setOpen(true)}
+        title={tr('รูปหลักฐานที่แนบไว้ — แตะเพื่อดูรูปขยาย')} aria-label={tr('ดูรูปหลักฐาน')}
+        style={{ fontSize: fs(11), background: 'none', border: 'none', padding: 0, cursor: 'zoom-in', lineHeight: 1 }}>📷</button>
+      {open && <ImageLightbox onClose={() => setOpen(false)}
+        items={[{ url, title: (label || '').trim() || tr('รูปหลักฐาน'), caption: result || null }]} />}
+    </>
+  );
+}
 
 export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
   const { role, lineId, sections, fullName, section: homeSection, allUnits, respCostCenters, scopeIdx } = useContext(UserContext);
@@ -227,7 +244,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
              เขียนผิดมาตั้งแต่สร้างบอร์ด ⇒ คิวรีนี้ล้มทั้งก้อน แผง "ทำไมถึงหลุดเป้า" กับครึ่งหนึ่งของ C
              ว่างเปล่ามาตลอด (จอขึ้นเหมือน "ไม่มีเครื่องหยุด" ทั้งที่จริงคือโหลดไม่ได้)
              · ทุก component อื่นในรีโปใช้ `description` หมด — ดู OeeInsightPanel / MachineReliability */
-          .select('session_id, duration_min, description, machine_no, dr_downtime_types(name_th, category)').in('session_id', c)),
+          .select('session_id, duration_min, description, machine_no, dr_downtime_types(name_th, category, planned_cap_min)').in('session_id', c)),
         fetchByIds(ids, c => supabaseDR.from('defect_logs')
           .select(`session_id, qty_ng, qty_suspect, is_trial, dr_defect_types(name_th, excl_from_q), prod_orders(mat_no), ${QBIN_EMBED}`).in('session_id', c)),
         fetchByIds(ids, c => supabaseDR.from('prod_orders')
@@ -1103,9 +1120,9 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
                           <span style={{ fontSize: fs(10), color: 'var(--muted)', whiteSpace: 'nowrap' }}>
                             {a.line_name || '—'} · {(a.assignee || '').trim() || 'ยังไม่ระบุผู้รับผิดชอบ'} · {a.due_date || 'ไม่มีกำหนด'}
                           </span>
+                          {/* 🔍 กดขยายในแอป (16/11) — เดิมเปิดแท็บใหม่ = ออกจากบอร์ดที่กำลังประชุมอยู่ */}
                           {a.result_img && (
-                            <a href={a.result_img} target="_blank" rel="noreferrer" title={tr('รูปหลักฐานที่แนบไว้')}
-                              style={{ fontSize: fs(11), textDecoration: 'none' }}>📷</a>
+                            <ActionImgBtn url={a.result_img} label={a.problem} result={a.result_value} fs={fs} />
                           )}
                           {canRecord && (
                             /* เปิดหน้าต่างปิดงาน (ใส่ผล + รูป) แทนการปิดทันที — ปิดเปล่าๆ ไม่มีหลักฐานว่าแก้อะไร */

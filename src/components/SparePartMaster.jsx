@@ -38,6 +38,7 @@ import { DeleteButton } from './IconButton';
 import { SpareDemandBanner } from './PmSpares';
 import { tr } from '../utils/i18n';
 import { localDateStr } from '../utils/workDate'; // วันปฏิทินเดียวกับแท็บแผน PM (ymd(new Date())) — ไม่ใช่วันทำงานตัด 08:00
+import { askConfirm } from '../utils/askConfirm';
 
 // ต่อท้ายลิสต์คั่นด้วย , โดยไม่ซ้ำ (used_with ยังเก็บเป็น text — คอลัมน์ id ยังไม่มี)
 const appendCsv = (cur, v) => {
@@ -239,7 +240,7 @@ export default function SparePartMaster({ parts = [], reload, fullName, role, my
   const doDelete = async (p) => {
     // ด่านซ้ำอีกชั้น — ซ่อนปุ่มอย่างเดียวไม่พอ (ฝั่ง DR เป็น anon ไม่มีด่าน server · known gap)
     if (!mayDeleteRow(p)) return toast.error(teamRowLockNote(p, ownOf(p).code));
-    if (!confirm(`ลบอะไหล่ "${p.name}" ออกจากคลัง?\n(ประวัติการเบิก-รับยังอยู่ ไม่ถูกลบ)`)) return;
+    if (!await askConfirm(`ลบอะไหล่ "${p.name}" ออกจากคลัง?\n(ประวัติการเบิก-รับยังอยู่ ไม่ถูกลบ)`)) return;
     // ลบ = soft delete ⇒ RLS ปฏิเสธ UPDATE = "สำเร็จ 0 แถว ไม่มี error" ⇒ ต้องนับแถว (กฎเหล็ก DB ข้อ 2)
     const res = await supabaseDR.from('mtn_spare_parts').update({ is_active: false }).eq('id', p.id).select('id');
     if (!checkWriteRows(res, 'ลบอะไหล่')) return;
@@ -1005,7 +1006,7 @@ function ImportModal({ parts, cats, teams, fullName, ownOf = () => ({ ok: true }
        แถวที่กันไว้ **ต้องนับให้เห็น** ห้ามข้ามเงียบ — คนนำเข้าต้องรู้ว่าทำไมยอดไม่ตรงไฟล์ */
     const blocked = matched.filter(r => r.action === 'update' && r.existing && !ownOf(r.existing).ok);
     const todo = matched.filter(r => r.action !== 'skip' && !blocked.includes(r));
-    if (blocked.length && !confirm(
+    if (blocked.length && !await askConfirm(
       `${blocked.length} แถวเป็นอะไหล่ของทีมอื่น — ข้ามไว้ ไม่อัพเดททับ\n`
       + blocked.slice(0, 5).map(r => `· ${r.existing.name}`).join('\n')
       + (blocked.length > 5 ? `\n· …อีก ${blocked.length - 5} แถว` : '')
@@ -1219,7 +1220,7 @@ function CategoryModal({ cats, teams = [], onClose, onSaved }) {
                 <option value="">{tr('🌐 ใช้ร่วมทุกทีม')}</option>
                 {teams.map((t, i) => <option key={`${t.key}-${i}`} value={t.key}>{t.icon || ''} {t.dept_name || tr(t.label)}</option>)}
               </select>
-              <DeleteButton onClick={() => confirm(`ซ่อนหมวด ${c.key}?`) && upd(c.key, { is_active: false })} title={tr('ลบ')} />
+              <DeleteButton onClick={async () => await askConfirm(`ซ่อนหมวด ${c.key}?`) && upd(c.key, { is_active: false })} title={tr('ลบ')} />
             </div>
           ))}
         </div>

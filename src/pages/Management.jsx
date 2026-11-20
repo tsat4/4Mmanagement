@@ -40,6 +40,8 @@ import { downtimeBandsIn } from '../utils/downtimeBands';
 import DelayBlameBar from '../components/DelayBlameBar';   // 🔗 สรุปดีเลย์ของวัน + ต้นเหตุ/ผู้ถูกพาล (ทีมปั๊ม 2026-09-30)
 import { liveChannel } from '../utils/liveChannel';
 import { checkWrite, checkWriteRows } from '../utils/dbWrite';
+import { askConfirm } from '../utils/askConfirm';
+import { homeSuggestion, HOME_SUGGEST_DAYS } from '../utils/homeSuggest';
 import { uploadOpts } from '../utils/storageUpload';
 import { acceptImageFile } from '../utils/acceptImageFile';
 import { tr } from '../utils/i18n';
@@ -291,6 +293,28 @@ export default function Management() {
     })();
     return () => { alive = false; };
   }, []);
+  /* 🏠 เสนอตำแหน่งประจำ (2026-11-19 · กฎ `utils/homeSuggest.js`) — โหลดประวัติเฉพาะคนที่ยืนจุดที่เปิดอยู่
+     และยังไม่มีตำแหน่งประจำ · deps เป็น primitive ล้วน · alive guard กันผลค้างจากจุดก่อนหน้า */
+  const [homeSug, setHomeSug] = useState(null); // { key, suggest, days } | { key, error }
+  const sugStationId = stationModal ? String(stationModal.id) : '';
+  const sugEmpId = sugStationId ? (workers.find(w => String(w.assigned_line) === sugStationId)?.employee_id || '') : '';
+  const sugHasHome = !!(sugEmpId && homePositions[sugEmpId]);
+  useEffect(() => {
+    if (!sugEmpId || !sugStationId || sugHasHome) { setHomeSug(null); return; }
+    let alive = true;
+    const key = `${sugEmpId}|${sugStationId}`;
+    (async () => {
+      const { data, error } = await supabase.from('daily_production_logs')
+        .select('work_date, is_present, assigned_line')
+        .eq('employee_id', sugEmpId)
+        .order('work_date', { ascending: false })
+        .limit(400);
+      if (!alive) return;
+      if (error) { setHomeSug({ key, error: error.message }); return; }
+      setHomeSug({ key, ...homeSuggestion(data || [], sugStationId, null) });
+    })();
+    return () => { alive = false; };
+  }, [sugEmpId, sugStationId, sugHasHome]);
   useEffect(() => {
     const el = boardSectionRef.current;
     if (el) setBoardSectionH(el.scrollHeight);
@@ -449,7 +473,7 @@ export default function Management() {
     (orders || []).forEach(o => { (ordersBySession[o.session_id] ||= []).push(o); });
     // downtime ของ session เหล่านี้ — ใช้วาดแถบ ⛔ บนไทม์ไลน์ และบอกสาเหตุใน tooltip ของใบที่ดีเลย์
     const { data: dtLogs } = await supabaseDR.from('downtime_logs')
-      .select('session_id, duration_min, started_at, ended_at, machine_no, description, dr_downtime_types(category, name_th)')
+      .select('session_id, duration_min, started_at, ended_at, machine_no, description, dr_downtime_types(category, planned_cap_min, name_th)')
       .in('session_id', sessionIds);
     const dtBySession = {};
     (dtLogs || []).forEach(d => { (dtBySession[d.session_id] ||= []).push(d); });
@@ -1017,6 +1041,39 @@ export default function Management() {
     setHomePositions(prev => ({ ...prev, [empId]: String(stationId) }));
   };
 
+  /* ── ยกเลิกตำแหน่งประจำ (2026-11-19 · คำสั่ง user — เดิมบันทึกพลาดแล้วไม่มีทางลบบนจอ) ──
+     ถามยืนยันก่อน · ลบเฉพาะแถวที่ยังชี้จุดนี้ (กันลบจุดใหม่ที่คนอื่นเพิ่งตั้งทับ) · นับแถว (RLS ปฏิเสธ = 0 แถวเงียบ) */
+  const clearHomePosition = async (worker, station) => {
+    const empId = worker.employee_id || worker.employees?.id;
+    if (!empId) return;
+    if (!canAssignManpower) { toast.error('บัญชีของคุณไม่มีสิทธิ์จัดกำลังคน'); return; }
+    const ok = await askConfirm({
+      title: 'ยกเลิกตำแหน่งประจำ?',
+      message: `${worker.employees?.name || ''} (${worker.employees?.employee_id_code || '-'})\nจุด: ${station.station_name || '-'}\n\nการจัดวางคนของวันนี้ไม่เปลี่ยน — แค่ไม่มีตำแหน่งประจำ`,
+      okLabel: 'ยกเลิกตำแหน่งประจำ',
+      cancelLabel: 'ไม่ยกเลิก',
+      danger: true,
+    });
+    if (!ok) return;
+    const res = await supabase.from('employee_home_positions').delete()
+      .eq('employee_id', empId).eq('station_id', station.id).select('employee_id');
+    if (!await checkWriteRows(res, 'ยกเลิกตำแหน่งประจำ')) return;
+    setHomePositions(prev => { const n = { ...prev }; delete n[empId]; return n; });
+    toast.success('ยกเลิกตำแหน่งประจำแล้ว');
+  };
+
+  /* รับข้อเสนอตำแหน่งประจำ (ยืน 20 วันทำงานติด) — ถามยืนยันก่อน แล้วใช้ saveHomePosition ตัวเดิม */
+  const acceptHomeSuggestion = async (worker, station, days) => {
+    const ok = await askConfirm({
+      title: 'ตั้งเป็นตำแหน่งประจำ?',
+      message: `${worker.employees?.name || ''} (${worker.employees?.employee_id_code || '-'})\nจุด: ${station.station_name || '-'}\n\nยืนจุดนี้ ${days} วันทำงานติดกัน (ไม่นับวันหยุด · วันที่ไม่มา · วันที่ไม่ได้วางจุด)`,
+      okLabel: 'ตั้งเป็นตำแหน่งประจำ',
+      cancelLabel: 'ไม่ตั้ง',
+    });
+    if (!ok) return;
+    await saveHomePosition(worker, station.id);
+  };
+
   const specialEmpIds = new Set(specialTasks.map(t => t.employee_id));
 
   // Leader เห็นพนักงานทั้งครอบครัวไลน์ตัวเอง (ไลน์ตัวเอง + ไลน์หลัก + ไลน์ย่อย) —
@@ -1355,7 +1412,8 @@ export default function Management() {
         filters={<>
           {/* เลือกได้ทั้งไลน์หลัก (view รวมไลน์ย่อยทั้งหมด) และไลน์ย่อย — รายการใน `lines` ถูก scope ไว้แล้วตอน fetch
               <LineSelect> = ลำดับชั้น/ปลดระวาง/ค่าไม่รู้จัก · ไม่มี option ว่าง */}
-          <LineSelect lines={lines} value={selectedLine} placeholder={null} onChange={setSelectedLine} />
+          {/* includeSupport (2026-11-20 · คำสั่ง user): หน่วยสนับสนุนที่มีผังจุดงาน (เช่น Office PD4) ยังต้องวางคน/ตั้งตำแหน่งประจำที่นี่ได้ */}
+          <LineSelect lines={lines} value={selectedLine} placeholder={null} onChange={setSelectedLine} includeSupport />
           {selectedLine && (
             <Segmented value={viewShift} onChange={setViewShift} label={tr('กะที่ดู')}
               options={[{ value: 'day', label: 'กะเช้า' }, { value: 'night', label: 'กะดึก' }]} />
@@ -2882,6 +2940,13 @@ export default function Management() {
                         {homePositions[workerHere.employee_id] === String(st.id) && (
                           <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 'var(--r-md)', background: 'rgba(34,197,94,0.12)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.3)', fontWeight: 700 }}>{tr('ตำแหน่งประจำ')}</span>
                         )}
+                        {canAssignManpower && homePositions[workerHere.employee_id] === String(st.id) && (
+                          <button
+                            onClick={() => clearHomePosition(workerHere, st)}
+                            style={{ fontSize: 11, padding: '3px 8px', borderRadius: 'var(--r-md)', background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)', cursor: 'pointer', fontWeight: 700 }}
+                            title={tr('ยกเลิกตำแหน่งประจำ')}
+                          >{tr('ยกเลิกตำแหน่งประจำ')}</button>
+                        )}
                         {canAssignManpower && <button
                           onClick={() => { assignWorker(workerHere.id, 'Pool'); setStationModal(null); }}
                           style={{ fontSize: 11, padding: '3px 8px', borderRadius: 'var(--r-md)', background: 'rgba(231,76,60,0.1)', color: 'var(--red)', border: '1px solid rgba(231,76,60,0.3)', cursor: 'pointer', fontWeight: 700 }}
@@ -2889,6 +2954,29 @@ export default function Management() {
                       </div>
                     </div>
                   </div>
+                  {/* 🏠 ข้อเสนอตำแหน่งประจำ — ยังไม่มีตำแหน่งประจำ + ยืนจุดนี้ครบ 20 วันทำงานติด (utils/homeSuggest.js) */}
+                  {(() => {
+                    const key = `${workerHere.employee_id}|${String(st.id)}`;
+                    if (!homeSug || homeSug.key !== key || homePositions[workerHere.employee_id]) return null;
+                    if (homeSug.error) return (
+                      <div style={{ marginTop: 8, fontSize: 11, color: 'var(--muted)' }}>{tr('อ่านประวัติการยืนจุดไม่ได้ — ยังเสนอตำแหน่งประจำไม่ได้')}</div>
+                    );
+                    if (!homeSug.suggest) return null;
+                    return (
+                      <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 'var(--r-md)', background: 'var(--blue-dim)', border: '1px solid var(--blue-line)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <div style={{ flex: 1, minWidth: 160, fontSize: 12, color: 'var(--text2)' }}>
+                          🏠 {tr('ยืนจุดนี้')} <b>{homeSug.days}</b> {tr('วันทำงานติดกัน')} — {tr('เสนอเป็นตำแหน่งประจำ')}
+                          <div style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('เกณฑ์')} {HOME_SUGGEST_DAYS} {tr('วัน · ไม่นับวันหยุด/วันที่ไม่มา/วันที่ไม่ได้วางจุด')}</div>
+                        </div>
+                        {canAssignManpower && (
+                          <button
+                            onClick={() => acceptHomeSuggestion(workerHere, st, homeSug.days)}
+                            style={{ fontSize: 12, padding: '5px 10px', borderRadius: 'var(--r-md)', background: 'var(--blue)', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 700 }}
+                          >{tr('ตั้งเป็นตำแหน่งประจำ')}</button>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 

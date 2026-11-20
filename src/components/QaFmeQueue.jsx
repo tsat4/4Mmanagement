@@ -26,8 +26,10 @@ import { useLiveBoard } from '../utils/useLiveBoard';
 import { cachedMaster } from '../utils/masterCache';
 import { assessFmeReadiness } from '../utils/qaFmeReadiness';
 import QaFmeBoard from './QaFmeBoard';
+import QaFmePartRules from './QaFmePartRules';
 
 import { tr } from '../utils/i18n';
+import { getWorkDate, getCurrentShift } from '../utils/workDate';
 const STAGE_META = {
   first:  { label: 'ชิ้นแรก',      icon: '1️⃣', color: '#f59e0b' },
   middle: { label: 'ระหว่างผลิต',  icon: '2️⃣', color: '#4d9fff' },
@@ -49,13 +51,14 @@ const FME_QUEUE_LIMIT = 300;   // ถึงเพดาน = เขียนบ�
 
 export default function QaFmeQueue({ scopedLineNames, onOpen }) {
   const [loadErr, setLoadErr] = useState(null);
-  const { role } = useContext(UserContext);
+  const { role, fullName } = useContext(UserContext);
   const canManage = can('qa', 'manage', role);
   const [rows, setRows] = useState([]);
   const [cfg, setCfg] = useState(null);
   const [missing, setMissing] = useState(false);   // ยังไม่ apply migration
   const [showCfg, setShowCfg] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [showStale, setShowStale] = useState(false);
   /* preflight ก่อนเปิดสวิตช์ (2026-09-03): null = ยังไม่ได้ตรวจ · { canEnable, checks, at }
      เหตุ: dry-run จริงพบว่าเปิดตอนพาร์ทยังไม่ผูก = QA ได้คิว 51 รายการที่กดเปิดใบตรวจไม่ได้สักอัน
      และห้อง Telegram ยังไม่เลือก = ข้อความชุดแรกไปห้อง fallback → สวิตช์ต้องกันเอง ห้ามเปิดได้เฉยๆ */
@@ -116,7 +119,7 @@ export default function QaFmeQueue({ scopedLineNames, onOpen }) {
         }
         return out;
       }).then(d => (Array.isArray(d) ? d : null)),
-      supabase.from('notification_rules').select('event_key, channel_ids, is_enabled')
+      supabase.from('notification_rules').select('event_key, channel_ids, inapp_roles, is_enabled')
         .in('event_key', ['qa_fme_call', 'qa_fme_overdue'])
         .then(r => (r.error ? null : (r.data || []))),
     ]);
@@ -163,6 +166,12 @@ export default function QaFmeQueue({ scopedLineNames, onOpen }) {
   );
 
   const late = rows.filter(o => new Date(o.due_at).getTime() < now && o.status === 'pending');
+  /* กะปัจจุบัน = วันงาน+กะของตอนนี้ (workDate.js) · acked ของกะอื่น = "ใบเปิดค้าง" ไม่ใช่งานที่ต้องวิ่งไปตอนนี้ */
+  const curWd = getWorkDate(new Date(now)), curSh = getCurrentShift(new Date(now));
+  const isStale = (o) => o.status === 'acked' && !(o.work_date === curWd && o.shift === curSh);
+  const staleRows = rows.filter(isStale);
+  const curRows = rows.filter(o => !isStale(o))
+    .sort((a, b) => (a.status === 'pending' ? 0 : 1) - (b.status === 'pending' ? 0 : 1) || String(a.due_at).localeCompare(String(b.due_at)));
   const disabled = cfg && !cfg.is_enabled;
 
   return (
@@ -261,6 +270,15 @@ export default function QaFmeQueue({ scopedLineNames, onOpen }) {
                 <Num label={tr('รุ่นวิ่งเกินกี่นาทีถึงเรียก')} value={cfg.mid_after_min} onSave={v => saveCfg({ mid_after_min: v })} />
               ) : null}
             </div>
+            {/* 🔴 โหมดเวลา + 0 นาที = ตัวสแกนไม่สร้าง Middle เลย (19/11 · ตั้งค่าแบบนี้ 17/11 แล้ว M หายจากบอร์ดเงียบๆ) */}
+            {String(cfg.mid_mode) === 'min' && !(Number(cfg.mid_after_min) > 0) && (
+              <div style={{ fontSize: 12, color: 'var(--amber)', marginTop: 7, fontWeight: 700 }}>
+                ⚠️ {tr('ตั้ง "ตามเวลา" แต่ 0 นาที = ระบบไม่เรียกตรวจ Middle เลย — ใส่จำนวนนาที หรือเลือก "ตามยอดผลิต (lot size)"')}
+              </div>
+            )}
+            {String(cfg.mid_mode) === 'off' && (
+              <div style={{ fontSize: 12, color: 'var(--amber)', marginTop: 7 }}>⚠️ {tr('ปิดตรวจ Middle อยู่ — บอร์ดจะมีแค่ First (1) กับ End (3)')}</div>
+            )}
             {String(cfg.mid_mode ?? 'lot') === 'lot' && (
               <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 7, lineHeight: 1.7 }}>
                 คาบตรวจคิดจาก <b>{tr('lot size ของพาร์ทเอง')}</b> (ตั้งที่ Product Master → 🎴 Kanban Std) ×
@@ -272,6 +290,7 @@ export default function QaFmeQueue({ scopedLineNames, onOpen }) {
               </div>
             )}
           </div>
+          <QaFmePartRules canEdit={canManage} fullName={fullName} centralMode={String(cfg.mid_mode ?? 'lot')} />
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 8, lineHeight: 1.6 }}>
             ห้อง Telegram ที่รับแจ้ง ตั้งที่ <b>/notification-config</b> → หมวดคุณภาพ
             (<code>qa_fme_call</code> = เรียกตรวจ · <code>qa_fme_overdue</code> = เกินเวลา) ·
@@ -291,7 +310,9 @@ export default function QaFmeQueue({ scopedLineNames, onOpen }) {
           {rows.length >= FME_QUEUE_LIMIT && (
             <div style={{ fontSize: 12, color: '#f59e0b' }}>{tr('⚠️ คิวค้างถึงเพดาน')} {FME_QUEUE_LIMIT} {tr('รายการ — อาจแสดงไม่ครบ เคลียร์งานเก่าก่อน')}</div>
           )}
-          {rows.map(o => {
+          {/* 🗂️ ใบที่ QA เปิดไว้แล้วจากกะก่อน (acked ค้าง) พับไว้ท้ายคิว — 18/11 user: คิวเต็มไปด้วย "กำลังตรวจ" ของเมื่อวาน
+              จนงานที่เกินเวลาจริงของกะนี้ถูกดันลงล่าง · ไม่ซ่อนเงียบ: บอกจำนวน + กดกางได้ */}
+          {[...curRows, ...(showStale ? staleRows : [])].map(o => {
             const sm = STAGE_META[o.stage] || STAGE_META.first;
             const isLate = o.status === 'pending' && new Date(o.due_at).getTime() < now;
             const lateMin = Math.round((now - new Date(o.due_at).getTime()) / 60000);
@@ -333,6 +354,12 @@ export default function QaFmeQueue({ scopedLineNames, onOpen }) {
               </div>
             );
           })}
+          {staleRows.length > 0 && (
+            <button type="button" className="tbtn" onClick={() => setShowStale(v => !v)}
+              style={{ alignSelf: 'flex-start', fontSize: 12.5, padding: '5px 12px' }}>
+              {showStale ? '▾' : '▸'} {tr('ใบที่เปิดค้างจากกะก่อน')} {staleRows.length} {tr('รายการ (QA เปิดใบแล้วแต่ยังไม่ปิด)')}
+            </button>
+          )}
         </div>
       )}
     </div>

@@ -2,6 +2,7 @@ import { useState, useEffect, useContext, useMemo, useCallback } from 'react';
 import { useObjectUrl } from '../utils/useObjectUrl';
 import resizeImg from '../utils/resizeImage';
 import ReadOnlyNote from '../components/ReadOnlyNote';
+import { AttachImage } from '../components/ImageLightbox';   // 🔍 รูปแนบกดขยายในแอป (ห้าม window.open)
 import { supabase, supabaseDR } from '../supabaseClient';
 import { UserContext } from '../App';
 import { toast } from '../components/Toast';
@@ -37,6 +38,7 @@ import { DeleteButton } from '../components/IconButton';
 import { MO_VOID_NOT_IN } from '../utils/mtnStepPerm';
 import { tr } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
+import { askConfirm } from '../utils/askConfirm';
 
 /* ── เฟส PDCA ของขั้นงาน (คำสั่ง user 2026-08-19: แผนงานต้องเห็นชัดว่าขั้นไหนคือ P-D-C-A) ──
    เก็บเป็นคอลัมน์ `improvement_milestones.phase` (migration 20260819_improvement_milestone_phase_dr)
@@ -345,7 +347,7 @@ export default function Improvements() {
     reloadMilestones(m.improvement_id);
   };
   const deleteMilestone = async (m) => {
-    if (!window.confirm(`ลบขั้นงาน "${m.title}"?`)) return;
+    if (!await askConfirm(`ลบขั้นงาน "${m.title}"?`)) return;
     const { error } = await supabaseDR.from('improvement_milestones').delete().eq('id', m.id);
     if (error) { toast.error(error.message); return; }
     reloadMilestones(m.improvement_id);
@@ -469,7 +471,7 @@ export default function Improvements() {
       //    คิวรีล้มเหลวเงียบ แล้วผลก่อน/หลังจะเป็น 0 ทั้งคู่ = โปรเจคดูเหมือน "แก้หายสนิท" ทั้งที่วัดไม่ได้
       const dtRes = await fetchByIds(allIds, c => {
         let q = supabaseDR.from('downtime_logs')
-          .select('session_id, duration_min, machine_no, mat_no, dr_downtime_types(category)')
+          .select('session_id, duration_min, machine_no, mat_no, dr_downtime_types(category, planned_cap_min)')
           .in('session_id', c);
         if (imp.problem_type_id) q = q.eq('downtime_type_id', imp.problem_type_id);
         if (imp.mat_no) q = q.eq('mat_no', imp.mat_no);
@@ -593,7 +595,7 @@ export default function Improvements() {
         }
       });
       if (!defectParts.length) computable = false;
-      if (defectNoCost.size) missing.push(`พาร์ทยังไม่ตั้งต้นทุน/ชิ้น (${[...defectNoCost].join(', ')}) — กรอก standard/material cost ที่ Product Master → 🗂 Parts Master`);
+      if (defectNoCost.size) missing.push(`พาร์ทยังไม่ตั้งต้นทุน/ชิ้น (${[...defectNoCost].join(', ')}) — กรอก standard/material cost ที่ Product Master → 🗂 Material Master`);
     }
 
     // ค่าซ่อมจริงเข้ายอดรวมเฉพาะเมื่อ toggle 'repair' เปิด (อาจทับซ้อนกับ IDP ของ SAP — ให้ผู้ใช้เลือกตามนโยบายบัญชี)
@@ -690,7 +692,7 @@ export default function Improvements() {
       //    (บรรทัด 379/404 ในไฟล์นี้ใช้ fetchByIds อยู่แล้ว ตัวนี้ตกสำรวจ)
       const { rows: data, error: pErr, truncated: pTrunc } = await fetchByIds(ids, (c) =>
         supabaseDR.from('downtime_logs')
-          .select('downtime_type_id, machine_no, duration_min, description, dr_downtime_types(category)')
+          .select('downtime_type_id, machine_no, duration_min, description, dr_downtime_types(category, planned_cap_min)')
           .in('session_id', c));
       if (pErr || pTrunc) toast.error('โหลด downtime ไม่ครบ — พาเรโต้อาจชี้เป้าไม่ตรง');
       (data || []).forEach(r => {
@@ -826,7 +828,7 @@ export default function Improvements() {
   };
 
   const handleDelete = async (imp) => {
-    if (!window.confirm(`ลบโปรเจค "${imp.title}"?`)) return;
+    if (!await askConfirm(`ลบโปรเจค "${imp.title}"?`)) return;
     const { error } = await supabaseDR.from('improvements').delete().eq('id', imp.id);
     if (error) { toast.error(error.message); return; }
     // ลบรูปหลัง DB สำเร็จ (กติกา CLAUDE.md — กันไฟล์กำพร้า)
@@ -1102,11 +1104,18 @@ export default function Improvements() {
                 {/* before/after images */}
                 {(imp.image_before_url || imp.image_after_url) && (
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 10 }}>
-                    {[['image_before_url', 'ก่อนแก้ไข'], ['image_after_url', 'หลังแก้ไข']].map(([f, label]) => (
+                    {/* 🔍 กดขยายในแอป + เลื่อน ← → เทียบก่อน/หลังได้ (16/11 · ของกลาง ImageLightbox)
+                        เดิม `window.open(url, '_blank')` = เด้งออกจากหน้า + ตัวบล็อกป็อปอัปกินได้เงียบๆ */}
+                    {[['image_before_url', 'ก่อนแก้ไข'], ['image_after_url', 'หลังแก้ไข']].map(([f, label], iImg) => (
                       <div key={f}>
                         <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', marginBottom: 3 }}>{label}</div>
                         {imp[f]
-                          ? <img src={imp[f]} alt={label} loading="lazy" style={{ width: '100%', height: 110, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border)', cursor: 'pointer' }} onClick={() => window.open(imp[f], '_blank')} />
+                          ? <AttachImage url={imp[f]} alt={label} title={tr(label)} caption={imp.title || null}
+                              items={[[imp.image_before_url, 'ก่อนแก้ไข'], [imp.image_after_url, 'หลังแก้ไข']]
+                                .filter(([u]) => u).map(([url, t]) => ({ url, title: tr(t), caption: imp.title || null }))}
+                              index={iImg && imp.image_before_url ? 1 : 0}
+                              style={{ width: '100%' }}
+                              imgStyle={{ width: '100%', height: 110, maxHeight: 110, objectFit: 'cover', borderRadius: 8 }} />
                           : <div style={{ width: '100%', height: 110, borderRadius: 'var(--r-md)', border: '1px dashed var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--muted)' }}>{tr('ยังไม่มีรูป')}</div>}
                       </div>
                     ))}
@@ -1553,8 +1562,11 @@ export default function Improvements() {
                     ['after', 'รูปหลังแก้ไข', afterPreview, setAfterFile, modal.image_after_url]].map(([key, label, preview, setFile, existing]) => (
                     <div key={key}>
                       <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', marginBottom: 4 }}>{label}</div>
+                      {/* 🔍 รูปที่แนบอยู่กดขยายดูได้ก่อนตัดสินใจเปลี่ยน (16/11) */}
                       {(preview || existing) && (
-                        <img src={preview || existing} alt={label} style={{ width: '100%', height: 100, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border)', marginBottom: 4 }} />
+                        <AttachImage url={preview || existing} alt={label} title={tr(label)} lazy={false}
+                          style={{ width: '100%', marginBottom: 4 }}
+                          imgStyle={{ width: '100%', height: 100, maxHeight: 100, objectFit: 'cover', borderRadius: 8 }} />
                       )}
                       {/* reset value เสมอ — เลือกไฟล์เดิมซ้ำแล้ว change ไม่ยิง (เคสหน้างาน: ลองแนบรูปเดิมหลังล้มแล้วเงียบ) */}
                       <input type="file" accept="image/*" onChange={async e => { const p = e.target.files?.[0]; e.target.value = ''; const f = await acceptImageFile(p); if (f) setFile(f); }} style={{ fontSize: 11 }} />

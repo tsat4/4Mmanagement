@@ -13,6 +13,7 @@ import { checkWrite } from '../utils/dbWrite';
 import { ALL } from '../utils/filterLabels';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 const PATTERNS = [
   { key: 'normal',   label: 'ปกติ' },
   { key: 'ot_day',   label: 'OT กลางวัน' },
@@ -115,7 +116,7 @@ export default function PullRoundsPanel({ canEdit, shipToMap, fullName }) {
   };
 
   const removeRow = async (r) => {
-    if (!window.confirm(`ลบรอบ ${r.ship_to}${r.dock_code ? ` · ${r.dock_code}` : ''} · ${patLabel(r.pattern)}\n${r.period_start}-${r.period_end} → รับ ${r.pickup_time} ?\n\nไฟล์ e-SMART ช่วงนี้จะกลับไปใช้สูตรเดา (ปลายช่วง + lead_min)`)) return;
+    if (!await askConfirm(`ลบรอบ ${r.ship_to}${r.dock_code ? ` · ${r.dock_code}` : ''} · ${patLabel(r.pattern)}\n${r.period_start}-${r.period_end} → รับ ${r.pickup_time} ?\n\nไฟล์ e-SMART ช่วงนี้จะกลับไปใช้สูตรเดา (ปลายช่วง + lead_min)`)) return;
     setBusy(r.id);
     const res = await supabaseDR.from('customer_pull_rounds').delete().eq('id', r.id).select('id');
     setBusy(null);

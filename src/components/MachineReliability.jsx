@@ -90,7 +90,7 @@ export default function MachineReliability({ machines = [], lineObjs = [], scope
         fetchAllRows(supabaseDR, 'downtime_logs',
           /* call_mtn_ack_at/fix_at = จังหวะ "ช่างรับงาน" และ "ซ่อมเสร็จ" — ใช้แยก MTTA ออกจากเวลาซ่อมจริง
              (ใบ MO ส่งค่ากลับมาให้ตั้งแต่ 2026-09-14 + backfill ของเก่าแล้ว) */
-          'id, session_id, machine_no, started_at, ended_at, duration_min, description, call_mtn_ack_at, fix_at, dr_downtime_types(name_th, category)',
+          'id, session_id, machine_no, started_at, ended_at, duration_min, description, call_mtn_ack_at, fix_at, dr_downtime_types(name_th, category, planned_cap_min)',
           qq => qq.gte('started_at', since).lt('started_at', untilIso).order('started_at').order('id')),
         fetchAllRows(supabaseDR, 'production_sessions',
           'id, line_name, work_date, shift, shift_min, start_time, end_time',

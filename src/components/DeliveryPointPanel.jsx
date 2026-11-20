@@ -31,6 +31,7 @@ import ReadOnlyNote from './ReadOnlyNote';
 import LineSelect from './LineSelect';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 const inputSt = {
   width: '100%', padding: '8px 11px', borderRadius: 8, border: '1px solid var(--border)',
   background: 'var(--bg2)', color: 'var(--text)', fontSize: 13, fontFamily: 'var(--font-body)',
@@ -131,7 +132,7 @@ export default function DeliveryPointPanel({ lineName, lines = [] }) {
   const toggleActive = async (r) => {
     const turnOff = r.is_active !== false;
     // ปิดใช้งาน = ป้ายที่ติดอยู่หน้างานจะสแกนไม่ผ่านทันที → ต้องยืนยัน (§5.4) · เปิดกลับ = additive ไม่ถาม
-    if (turnOff && !window.confirm(`ปิดใช้งานจุดส่ง "${r.name}" ?\n\nป้าย QR ที่ติดอยู่หน้างานจะสแกนแล้วขึ้น "จุดนี้ปิดแล้ว" — สโตร์ส่งของที่จุดนี้ไม่ผ่านด่าน`)) return;
+    if (turnOff && !await askConfirm(`ปิดใช้งานจุดส่ง "${r.name}" ?\n\nป้าย QR ที่ติดอยู่หน้างานจะสแกนแล้วขึ้น "จุดนี้ปิดแล้ว" — สโตร์ส่งของที่จุดนี้ไม่ผ่านด่าน`)) return;
     const { error } = await supabaseDR.from('line_delivery_points').update({ is_active: !turnOff }).eq('id', r.id);
     if (error) { toast.error(error.message); return; }
     invalidateTable('line_delivery_points');   // จออื่นอ่านจาก cache — ไม่ล้าง = เห็นของเก่าถึง 4 ชม.
@@ -227,7 +228,7 @@ export default function DeliveryPointPanel({ lineName, lines = [] }) {
                     {!r.storage_location && (
                       <div style={{ fontSize: 11, color: '#f59e0b', marginTop: 3, lineHeight: 1.45 }}>
                         ด่าน "ส่งถูกพื้นที่ไหม" ยังไม่ทำงานกับจุดนี้ — ลงทะเบียนพื้นที่ของไลน์ที่
-                        <Link to="/line-stock?tab=zones" style={{ color: '#f59e0b', fontWeight: 800 }}> {tr('📦 สต๊อกในไลน์ → 🏬 พื้นที่ SAP / โซนคลัง → “ทะเบียนรหัสคลัง”')}</Link> แล้วกด ✏️ แก้ + บันทึกจุดนี้ซ้ำ
+                        <Link to="/line-stock?tab=settings&set=zones" style={{ color: '#f59e0b', fontWeight: 800 }}> {tr('📦 Stock Management → ตั้งค่า → พื้นที่ SAP / โซนคลัง → “ทะเบียนรหัสคลัง”')}</Link> แล้วกด ✏️ แก้ + บันทึกจุดนี้ซ้ำ
                       </div>
                     )}
                     {others.length > 0 && (
@@ -297,7 +298,7 @@ export default function DeliveryPointPanel({ lineName, lines = [] }) {
                       : codes.length === 1
                         ? <>{tr('🏬 พื้นที่ SAP:')} <b style={{ fontFamily: 'monospace' }}>{codes[0]}</b>{info.find(i => i.s)?.s.via !== info.find(i => i.s)?.n ? ` (ตกทอดจาก ${info.find(i => i.s).s.via})` : ''}</>
                         : null}
-                    {unmapped.length > 0 && <span style={{ color: '#f59e0b' }}>{codes.length ? ' · ' : ''}⚠ {unmapped.join(', ')} {tr('ยังไม่ผูกรหัสคลัง SAP (ผูกที่ 📦 สต๊อกในไลน์ → 🏬 พื้นที่ SAP / โซนคลัง → “ทะเบียนรหัสคลัง” กด ✏️ ที่รหัสแล้วติ๊กไลน์)')}</span>}
+                    {unmapped.length > 0 && <span style={{ color: '#f59e0b' }}>{codes.length ? ' · ' : ''}⚠ {unmapped.join(', ')} {tr('ยังไม่ผูกรหัสคลัง SAP (ผูกที่ 📦 Stock Management → ตั้งค่า → พื้นที่ SAP / โซนคลัง → “ทะเบียนรหัสคลัง” กด ✏️ ที่รหัสแล้วติ๊กไลน์)')}</span>}
                   </div>
                 );
               })()}

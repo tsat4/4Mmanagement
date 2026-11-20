@@ -170,3 +170,19 @@ test('boardPeriods(date) + horizon — เติมวันนี้และ�
   assert.ok(bp2(b, { dates: [], horizon: 2, now }).length >= 2);
   assert.equal(bp2(b, { dates: [] }).length, 0, 'ไม่ส่ง horizon = พฤติกรรมเดิม');
 });
+
+/* 🐞 16/11 — ปุ่ม "สร้างบอร์ด FG จากออเดอร์" ล้มทุกครั้งเพราะ CHECK `monitor_boards_kind_chk` (DR) ไม่มี 'fg'
+   (migration 06/10 เพิ่มชนิดในโค้ดแต่ลืม CHECK) ⇒ ล็อกว่า BOARD_KINDS ทุกตัวต้องอยู่ใน CHECK ของ migration ล่าสุด */
+import { readdirSync } from 'node:fs';
+test('BOARD_KINDS ทุกตัวต้องอยู่ใน CHECK monitor_boards_kind_chk ของ migration ล่าสุด', () => {
+  const dir = new URL('../../../supabase/migrations/', import.meta.url).pathname;
+  const files = readdirSync(dir).filter(f => f.endsWith('.sql')).sort()
+    .filter(f => /add constraint monitor_boards_kind_chk/i.test(readFileSync(dir + f, 'utf8')));
+  assert.ok(files.length, 'หา migration ที่ตั้ง monitor_boards_kind_chk ไม่เจอ');
+  const sql = readFileSync(dir + files[files.length - 1], 'utf8');
+  const m = sql.match(/add constraint monitor_boards_kind_chk check \(kind = any \(array\[([\s\S]*?)\]\)\)/i);
+  assert.ok(m, `แกะ CHECK ใน ${files[files.length - 1]} ไม่ได้`);
+  const allowed = new Set([...m[1].matchAll(/'([^']+)'/g)].map(x => x[1]));
+  const missing = BOARD_KINDS.filter(k => !allowed.has(k));
+  assert.deepEqual(missing, [], `ชนิดบอร์ดที่ DB ไม่รับ (เขียนแล้ว upsert ล้ม): ${missing.join(', ')} — เพิ่มใน CHECK ด้วย migration ใหม่`);
+});

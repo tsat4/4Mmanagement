@@ -44,6 +44,7 @@ import NoticeBar from '../components/NoticeBar';
 import SectionScopeSelect from '../components/SectionScopeSelect';
 import { tr } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
+import { askConfirm } from '../utils/askConfirm';
 /* ทีมช่างซ่อม (profiles.mtn_teams) — เดิมมีหน้าที่เดียวคือ "แยกคิวใบแจ้งซ่อม MO ให้ถูกทีม"
    🔴 ตั้งแต่ 2026-10-04 ช่องนี้ยังเป็นตัวบอก **"อยู่ฝั่งช่าง หรือ ฝั่งผู้แจ้ง"** ของด่านล็อกช่องเซ็น
       ขั้น 6/7/8 ด้วย (`actorSideOf()` ใน `utils/mtnStepPerm.js`)
@@ -585,7 +586,7 @@ export default function AddUser() {
   /** ติดป้าย "บัญชีกลาง" — ใช้ได้เฉพาะใบที่**ยังไม่ผูกตัวตน** (ผูกแล้วแปลว่าเป็นคน ต้องไปแก้ในโมดัล) */
   const markShared = async (u) => {
     if (!u?.id || u.employee_id) return;
-    if (!window.confirm(`ตั้ง "${u.full_name || u.email}" เป็นบัญชีกลาง (จอ TV / ประจำเครื่อง) ?\n`
+    if (!await askConfirm(`ตั้ง "${u.full_name || u.email}" เป็นบัญชีกลาง (จอ TV / ประจำเครื่อง) ?\n`
       + 'บัญชีกลางไม่ผูกตัวตนพนักงาน และจะไม่ขึ้นในคิวนี้อีก')) return;
     setTriBusy(u.id);
     const ok = checkWriteRows(await supabase.from('profiles')
@@ -735,7 +736,7 @@ export default function AddUser() {
   const handleResetPassword = async () => {
     const who = form.fullName || form.email;
     if (resetPw.length < 6) return setError('รหัสผ่านใหม่ต้องยาวอย่างน้อย 6 ตัวอักษร');
-    if (!window.confirm(`ตั้งรหัสผ่านใหม่ให้ "${who}" ?\n\nรหัสเดิมจะใช้ไม่ได้ทันที — อย่าลืมแจ้งรหัสใหม่ให้เจ้าตัว`)) return;
+    if (!await askConfirm(`ตั้งรหัสผ่านใหม่ให้ "${who}" ?\n\nรหัสเดิมจะใช้ไม่ได้ทันที — อย่าลืมแจ้งรหัสใหม่ให้เจ้าตัว`)) return;
     setResetPwBusy(true); setError(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -765,7 +766,7 @@ export default function AddUser() {
     const ask = moveTo
       ? `โอนประวัติทั้งหมดของ "${who}" ให้บัญชี "${dest?.full_name || dest?.email || moveTo}" แล้วลบ "${who}" ถาวร?\n\nใช้เฉพาะกรณีเป็นคนเดียวกัน — ประวัติ (ใครตรวจ/ใครสร้าง) จะกลายเป็นชื่อบัญชีปลายทาง กู้คืนไม่ได้`
       : `ลบผู้ใช้ "${who}" ถาวร?\n\nบัญชี login และสิทธิ์ทั้งหมดจะถูกลบ กู้คืนไม่ได้`;
-    if (!window.confirm(ask)) return;
+    if (!await askConfirm(ask)) return;
     setLoading(true); setError(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();

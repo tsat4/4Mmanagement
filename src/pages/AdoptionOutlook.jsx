@@ -443,7 +443,7 @@ const DIMENSIONS = [
         now: 1, full: 2, to: '/org-setup',
         nowTxt: 'วัดเป็น "นาที" และ "ชิ้น" ได้แม่นแล้ว แต่แปลงเป็นบาทไม่ได้ เพราะยังไม่มีใครกรอกค่าแรง/ต้นทุน',
         fullTxt: 'ทุกความสูญเสียขึ้นเป็นบาทอัตโนมัติ → คุยกับผู้บริหารและบัญชีด้วยภาษาเดียวกัน',
-        need: ['กรอก Activity Rate ต่อ cost center', 'กรอกต้นทุนต่อชิ้นใน Parts Master'],
+        need: ['กรอก Activity Rate ต่อ cost center', 'กรอกต้นทุนต่อชิ้นใน Material Master'],
         demo: D => ({
           head: `ความสูญเสียเดือนนี้ = ${D.money('c1', 900000, 1600000).toLocaleString()} บาท (แยกได้ว่ามาจากไหน)`,
           tone: 'bad',
@@ -586,7 +586,7 @@ async function loadAll() {
 
   const [dts, defs, rates] = await Promise.all([
     ids.length ? inChunks(ids, c => supabaseDR.from('downtime_logs')
-      .select('session_id, duration_min, started_at, ended_at, dr_downtime_types(category)').in('session_id', c)) : [],
+      .select('session_id, duration_min, started_at, ended_at, dr_downtime_types(category, planned_cap_min)').in('session_id', c)) : [],
     ids.length ? inChunks(ids, c => supabaseDR.from('defect_logs')
       .select('session_id, qty_ng, qty_suspect').in('session_id', c)) : [],
     supabase.from('cost_center_rates').select('*')   // ก้อน rate มาจาก RATE_COMPONENTS — เพิ่มก้อนใหม่แล้วไม่ต้องมาแก้ select
@@ -702,7 +702,7 @@ async function loadDeepDive() {
   const ids = cands.map(s => s.id);
   const [dtRaw, defRaw] = await Promise.all([
     inChunks(ids, c => supabaseDR.from('downtime_logs')
-      .select('session_id, duration_min, started_at, ended_at, machine_no, description, dr_downtime_types(name_th, category, six_big_loss, waste_type)')
+      .select('session_id, duration_min, started_at, ended_at, machine_no, description, dr_downtime_types(name_th, category, planned_cap_min, six_big_loss, waste_type)')
       .in('session_id', c)),
     inChunks(ids, c => supabaseDR.from('defect_logs')
       .select('session_id, qty_ng, qty_suspect, description, dr_defect_types(name_th, six_big_loss)')
@@ -1225,7 +1225,7 @@ function RoiTab({ c, loss, rates, demoOn, day, navigate, isMobile }) {
         </div>
         {noNgCost && !demoOn && (
           <div style={{ fontSize: 12, color: 'var(--amber)', marginTop: 10 }}>
-            ⚠ ของเสีย {fmtNum(loss.ngQty)} {tr('ชิ้นแปลงเป็นบาทไม่ได้ เพราะยังไม่มีต้นทุนต่อชิ้นใน Parts Master ·')}{' '}
+            ⚠ ของเสีย {fmtNum(loss.ngQty)} {tr('ชิ้นแปลงเป็นบาทไม่ได้ เพราะยังไม่มีต้นทุนต่อชิ้นใน Material Master ·')}{' '}
             <button onClick={() => navigate('/products')} style={{
               background: 'none', border: 'none', padding: 0, cursor: 'pointer',
               color: 'var(--accent)', fontSize: 12, fontWeight: 700, textDecoration: 'underline',
