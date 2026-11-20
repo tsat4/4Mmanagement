@@ -12249,3 +12249,22 @@ test('🛡️ ตัด-จ่ายสต็อกต้องหักเต�
     + '   กฎ (user 19/11): ยอดในระบบไม่พอ = หักเต็ม ติดลบ แล้วพอเติม/รับเข้า ยอดหักล้างเอง · ต้องเขียนบนจอว่าติดลบ\n'
     + '   📄 docs/modules/store-board-workflow.md §ตัดเต็ม ยอมติดลบ\n');
 });
+
+/* ═══ 📅 pm-monthly-signoff — 2026-11-20 · ใบ PM ③④ รายเดือน (คำสั่ง user 19/11) ═════════════════
+   📄 docs/modules/pm-hub-check-setup.md §รอบ 2 · ห้ามกลับไปตัดสินผู้เซ็นจากตำแหน่ง/role · ห้ามประกอบ kind/scope_key เอง */
+test('📅 pm-monthly-signoff — ผู้เซ็นมาจากผังองค์กร · ③ บล็อกจนผ่าน ② · คิดด่านใหม่ตอนกด', () => {
+  const bad = [];
+  const ui = stripComments(readFileSync(join(ROOT, 'src/components/PmMonthlyReport.jsx'), 'utf8'));
+  const lib = stripComments(readFileSync(join(ROOT, 'src/lib/pmMonthlySignoff.js'), 'utf8'));
+  const u = stripComments(readFileSync(join(ROOT, 'src/utils/pmMonthly.js'), 'utf8'));
+  if (!/coversNode\(/.test(ui)) bad.push('PmMonthlyReport ไม่ตัดสินผู้เซ็นด้วย coversNode (มอบหมายในผัง)');
+  const ds = ui.slice(ui.indexOf('const doSign'), ui.indexOf('const doSign') + 900);
+  if (!/verdictFor\(teamKey, step, section\)/.test(ds)) bad.push('doSign ไม่คิดด่านใหม่ตอนกด');
+  if (!/isStale\(/.test(ds)) bad.push('doSign ไม่มีด่าน stale (ข้อมูลคนละเดือน)');
+  if (!/confirmSign\(/.test(ds)) bad.push('doSign ไม่ถามยืนยันผ่าน confirmSign');
+  if (!/step === 3 && !teamMonthReady\(team\)/.test(u)) bad.push('pmMonthlySignVerdict ไม่บล็อก ③ จนผ่าน ② ครบ');
+  if (/positionRank|position_rank/.test(u)) bad.push('pmMonthly.js กลับไปใช้ระดับตำแหน่งตัดสินผู้เซ็น (user 19/11: ใช้ผังองค์กร)');
+  if (!/kind: KIND_OF_STEP\[step\], scope_key: scopeKeyOf\(/.test(lib)) bad.push('pmMonthlySignoff ประกอบ kind/scope_key เอง (ต้องผ่าน KIND_OF_STEP/scopeKeyOf)');
+  if (/\.delete\(\)/.test(lib)) bad.push('pmMonthlySignoff ลบลายเซ็น — ต้องเพิกถอนเท่านั้น');
+  assert.deepEqual(bad, [], bad.join('\n'));
+});
