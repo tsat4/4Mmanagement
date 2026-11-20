@@ -1696,6 +1696,9 @@ const RULES = [
        + '· ค่าที่ไม่ได้ขึ้นหัว **ห้ามตัดทิ้ง** ให้ตกไปเป็นบรรทัดรอง (clamp + title)',
     allow: {
       'src/utils/matLabel.js': 'เจ้าของกฎ — เป็นที่คำนวณ pNoIsCode/lead เอง',
+      // 20/11: §OEE รายพาร์ท **พก** p_no ไปเป็นข้อมูลของกลุ่ม (ใช้จับกลุ่ม/ส่งต่อให้จอ)
+      //        ไม่ได้ตัดสินว่าใครขึ้นหัว — จอยังวาดผ่าน <MatLabel> ตัวเดิม
+      'src/utils/oee.js': 'พก p_no เป็นข้อมูลของกลุ่มพาร์ท ไม่ได้ตัดสินการแสดงผล (จอใช้ <MatLabel>)',
     },
   },
   {
@@ -11321,7 +11324,11 @@ test('🔍 dt-closed-at-shift-end — ใบที่ปิดตรงเวล
   /* ① ด่านรายใบต้องเป็น confirm ไม่ใช่ toast.error + return */
   assert.match(dr, /checkDtClosedAtShiftEnd\(/,
     '\n\n❌ หน้ารายงานผลิตไม่เรียก checkDtClosedAtShiftEnd() แล้ว — ใบที่ปิดตรงเลิกกะไม่ถูกถาม\n');
-  assert.match(dr, /dtEndChk && !(?:window\.confirm|await askConfirm)\(/,   // 18/11: กล่องในแอป askConfirm แทน window.confirm
+  /* 18/11: กล่องในแอป askConfirm แทน window.confirm
+     20/11: รวมกับอีก 2 กฎเป็นก้อนเดียว `dtWarns` — ผลลัพธ์ต้องยังเป็น "เตือนแล้วไปต่อได้" เหมือนเดิม */
+  assert.match(dr, /\[dtEndChk, [^\]]*\]\.filter\(Boolean\)/,
+    '\n\n❌ dtEndChk หลุดจากก้อนคำเตือน — ใบปิดตรงเลิกกะจะไม่ถูกถามอีก\n');
+  assert.match(dr, /dtWarns\.length && !(?:window\.confirm|await askConfirm)\(/,
     '\n\n❌ ด่านใบปิดตรงเลิกกะต้องเป็นกล่องยืนยัน (askConfirm — เตือนแล้วไปต่อได้)\n'
     + '   ใช้ toast.error + return = บล็อกการบันทึก ซึ่ง user สั่งว่าห้าม\n');
   assert.match(dr, /dtClosedAtShiftEnd:/,
@@ -12081,4 +12088,39 @@ test('🔴 restamp-parallel-lines-guard — สคริปต์ restamp ต้
     '\n\n❌ ด่าน "DT รวม > เวลากะ = ข้าม" หายไป — ไลน์เครื่องขนานที่หลุดลิสต์จะถูกเขียนทับเงียบๆ\n');
   assert.match(sc, /stat\.skipDtOverShift\+\+/,
     '\n\n❌ ด่าน DT-เกินเวลากะ ไม่ได้นับสถิติ — รันแล้วไม่รู้ว่าข้ามไปกี่กะ\n');
+});
+
+test('🔴 dt-entry-sanity-warns — ช่องลง downtime ต้องเตือน 3 กรณีที่ทำให้ %A โกหก', async () => {
+  /* คำสั่ง user 20/11 (เลือก "ทาง ค"): ไม่แก้สูตร %A แต่ดักตอนกรอก
+     3 กรณีที่ไล่เจอจริงจาก 7 กะที่คิด %A ไม่ได้:
+       ① ใบปิดตรงเวลาเลิกกะ (ของเดิม 13/11)        — LINE A 06/11 Set up 345 น. ชนเลิกกะ
+       ② ยาวเกินเพดานของประเภทมาก (ใหม่)           — เปลี่ยนตะกร้า เพดาน 10 → ลง 70
+       ③ ตกนอกช่วงที่มีใบผลิตเปิด (ใหม่)            — BENDING EXPORT DT 250 น. ก่อนเปิดใบผลิต
+     🔴 เตือน ไม่บล็อก · ถามครั้งเดียวรวมทุกข้อ · ไม่รู้ = เงียบ (ห้ามเดา) */
+  const m = await import('../shiftDataSanity.js');
+  for (const fn of ['checkDtOverCap', 'checkDtOutsideOrders', 'checkDtClosedAtShiftEnd']) {
+    assert.equal(typeof m[fn], 'function', `\n\n❌ ${fn}() หายจาก shiftDataSanity — กฎเตือนหน้างานหายไป\n`);
+  }
+  /* 🔴 ไม่รู้ = เงียบ */
+  assert.equal(m.checkDtOverCap({ durationMin: 300, capMin: null }), null,
+    '\n\n❌ ไม่รู้เพดานแล้วยังเตือน — ประเภทที่ตั้งใจไม่มีเพดานมีจริง (เช่น "ไม่มีแผนผลิต")\n');
+  assert.equal(m.checkDtOutsideOrders({ startedMs: 1, endedMs: 2, orderWindows: [] }), null,
+    '\n\n❌ ไม่มีหน้าต่างใบผลิตแล้วยังเตือน — ต้นกะยังไม่มีใบปิดเป็นเรื่องปกติ\n');
+  /* 🔴 เกินเกณฑ์ = ต้องเตือน และต้องบอก "ผลที่ตามมา" ไม่ใช่แค่ว่าผิด */
+  const cap = m.checkDtOverCap({ durationMin: 70, capMin: 10, typeName: 'เปลี่ยนตะกร้าใส่งาน' });
+  assert.ok(cap && cap.overMin === 60 && /%A/.test(cap.text),
+    '\n\n❌ เตือนเกินเพดานแล้วไม่บอกว่ากระทบ %A — คนหน้างานแก้ไม่ถูก\n');
+  const H = 3600000;
+  const out = m.checkDtOutsideOrders({ startedMs: 0, endedMs: 4 * H, orderWindows: [[5 * H, 9 * H]] });
+  assert.ok(out && out.outsideMin === 240 && /%A/.test(out.text),
+    '\n\n❌ เตือน DT นอกช่วงใบผลิตไม่ถูกต้อง — นี่คือต้นเหตุที่ %A กลายเป็น 0\n');
+
+  /* 🔴 หน้าต้องเรียกจริง และถามครั้งเดียวรวมกัน */
+  const page = stripComments(readFileSync(join(ROOT, 'src/pages/DailyReport.jsx'), 'utf8'));
+  assert.match(page, /checkDtOverCap\(\{/, '\n\n❌ จอลง downtime ไม่ได้เรียก checkDtOverCap\n');
+  assert.match(page, /checkDtOutsideOrders\(\{/, '\n\n❌ จอลง downtime ไม่ได้เรียก checkDtOutsideOrders\n');
+  assert.match(page, /const dtWarns = \[dtEndChk, dtCapChk, dtOutChk\]\.filter\(Boolean\)/,
+    '\n\n❌ ไม่ได้รวมคำเตือนเป็นก้อนเดียว — ถามทีละข้อ = ถามพร่ำเพรื่อ คนจะกดผ่านโดยไม่อ่าน\n');
+  assert.ok(!/planned_cap_min \* 3|durMin > 3 \*/.test(page),
+    '\n\n❌ มีเกณฑ์ตัวเลขเขียนในหน้า — เกณฑ์ต้องอยู่ shiftDataSanity.js ที่เดียว\n');
 });
