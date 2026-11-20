@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   parseQuestion, periodFromText, defaultPeriod, matchSubject, oeeSummary, downtimeTop, productionTotals,
-  rankLinesByOee, openDowntimeList, moOpenSummary, fourMPendingSummary, defectTop, attendanceSummary, makeShiftOf, applyHelpers,
+  rankLinesByOee, openDowntimeList, moOpenSummary, fourMPendingSummary, defectTop, attendanceSummary, makeShiftOf, applyHelpers, scrapReportSummary,
 } from '../askBot.js';
 import { dtOpenKind } from '../downtimeRules.js';
 
@@ -320,4 +320,26 @@ test('ยืมคน (user สั่ง 20/11): นับที่ไลน์�
   assert.deepEqual([allDay.moved, allDay.split], [1, 1]);
   assert.deepEqual(allDay.emps.map(e => e.line_id), [2, 1, 1]);
   assert.equal(emps[0].line_id, 1, 'ห้ามแก้แถวเดิม');
+});
+
+test('สแครป (user สั่ง 20/11 · ทำทั้ง 2): "สแครป" = ของเสียรายงานผลิต + ธงบอก · "ใบสแครป" = ใบรายงานของเสีย', () => {
+  const a = parseQuestion('สแครปเดือนนี้ HDF1', T);
+  assert.deepEqual([a.intent, a.subject, a.viaScrap], ['defect_top', 'hdf1', true]);
+  assert.equal(parseQuestion('ของเสียสูงสุด', T).viaScrap, false);
+  for (const s of ['ใบสแครป เดือนนี้', 'ใบ scrap HDF1', 'scrap report เดือน 10', 'ใบรายงานของเสีย สัปดาห์นี้']) {
+    const q = parseQuestion(s, T);
+    assert.equal(q.intent, 'scrap_report', s);
+  }
+  assert.equal(parseQuestion('ใบ scrap HDF1', T).subject, 'hdf1');
+  assert.equal(parseQuestion('ใบสแครป เดือนนี้', T).subject, '');
+});
+
+test('สรุปใบสแครป: นับตามสถานะ · จับพาร์ทด้วย mat→part_no→ชื่อ · ยืนยันไม่เท่ายอด = บอก', () => {
+  const r = scrapReportSummary(
+    [{ id: 1, status: 'draft' }, { id: 2, status: 'approved' }, { id: 3, status: 'แปลก' }],
+    [{ mat_no: 'M1', part_name: 'A', qty: 5, confirm_qty: 5 }, { mat_no: 'M1', qty: 3, confirm_qty: 2 },
+     { part_no: 'NUT-6', part_name: 'นัต', qty: 10 }, { part_name: 'สกรู', qty: 1 }]);
+  assert.deepEqual([r.reports, r.byStatus.draft, r.byStatus.approved, r.unknownStatus, r.total], [3, 1, 1, 1, 19]);
+  assert.deepEqual(r.top.map(e => [e.key, e.qty]), [['NUT-6', 10], ['M1', 8], ['สกรู', 1]]);
+  assert.equal(r.confirmDiffers, true);
 });

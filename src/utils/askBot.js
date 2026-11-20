@@ -94,8 +94,10 @@ export const INTENTS = [
   { key: 'downtime_top', re: /down\s*time|ดาว(น์)?\s*ไทม์|เครื่องหยุด|หยุดเครื่อง|เครื่องเสีย|เครื่องพัง|หยุดนาน|สาเหตุ(ที่)?หยุด/, defaultPeriod: 'week', needSubject: null },
   { key: 'mo_open', re: /(^|[^a-z])mo([^a-z]|$)|แจ้งซ่อม|ใบซ่อม|งานซ่อม|รอช่าง|ช่างยังไม่มา/, defaultPeriod: null, needSubject: null },
   { key: 'fourm_pending', re: /4\s*m|โฟร์เอ็ม|changing\s*point/, defaultPeriod: null, needSubject: null },
+  /* 🧾 "ใบสแครป" = ใบรายงานของเสีย FM-PD2-002 (`/scrap-report`) — ต้องมาก่อน defect_top ("ใบรายงานของเสีย" มีคำว่า ของเสีย) */
+  { key: 'scrap_report', re: /ใบ\s*(สแครป|scrap)|scrap\s*report|ใบ\s*รายงาน\s*ของเสีย/, defaultPeriod: 'month', needSubject: null },
   /* "งานเสีย" = คำที่หน้างานพิมพ์จริง (user ทัก 19/11: "วันนี้มีงานเสียอะไรบ้าง" ตอบไม่ได้) */
-  { key: 'defect_top', re: /ของเสีย|งานเสีย|ชิ้นงานเสีย|เสียอะไร|ของไม่ผ่าน|งานไม่ผ่าน|defect|reject|(^|[^a-z])ng([^a-z]|$)/, defaultPeriod: 'week', needSubject: null },
+  { key: 'defect_top', re: /ของเสีย|งานเสีย|ชิ้นงานเสีย|เสียอะไร|ของไม่ผ่าน|งานไม่ผ่าน|สแครป|defect|reject|scrap|(^|[^a-z])ng([^a-z]|$)/, defaultPeriod: 'week', needSubject: null },
   { key: 'attendance', re: /มาทำงาน|เช็คชื่อ|ขาดงาน|คนขาด|มากี่คน|คนมา|ใครลา|กำลังคน|คนครบ|attendance/, defaultPeriod: 'today', needSubject: null },
   /* "ยอด" เดี่ยวๆ = ยอดผลิต แต่ "ยอดขาย" ไม่ใช่ (ยังไม่มีเครื่องมือ ⇒ ต้องตอบว่าไม่เข้าใจ) */
   { key: 'production', re: /ยอดผลิต|ผลิต|กี่ชิ้น|ทำได้(กี่|เท่า)|ยอด(?!ขาย)|output|production/, defaultPeriod: 'month', needSubject: 'any' },
@@ -105,8 +107,8 @@ export const INTENTS = [
    🔴 ภาษาไทยไม่มีเว้นวรรค ("ขอยอดผลิตงาน apron…") ⇒ ฝั่งไทยต้องตัดแบบ "ข้อความย่อย"
       แต่ฝั่งอังกฤษ/ตัวเลขตัดแบบ **ทั้งคำเท่านั้น** — ชื่อไลน์/พาร์ทส่วนใหญ่เป็นอักษรละติน
       ตัดแบบข้อความย่อยฝั่งนั้น = "TOPPER" เหลือ "PER" แล้วค้นผิดตัว */
-const THAI_FILLER = /โออีอี|ประสิทธิภาพ|เปอร์เซ็นต์เครื่อง|เครื่องเสีย|เครื่องพัง|หยุดนาน|สาเหตุที่|สาเหตุ|ดาวน์|งานซ่อม|ช่างยังไม่มา|รอช่าง|ของไม่ผ่าน|งานไม่ผ่าน|เปลี่ยน|คนมา|ใครลา|กำลังคน|คนครบ|ทำได้|นาน|พัง|บ่อยที่สุด|บ่อยสุด|บ่อย|ชิ้นงานเสีย|งานเสีย|เสีย|มีเครื่อง|เครื่อง|หยุด|มี|ใคร|ต่ำที่สุด|ต่ำสุด|แย่ที่สุด|แย่สุด|น้อยที่สุด|น้อยสุด|ตอนนี้|ขณะนี้|อยู่ไหม|อยู่มั้ย|อยู่บ้าง|ไหนบ้าง|แจ้งซ่อม|ใบซ่อม|โฟร์เอ็ม|ของเสีย|มาทำงาน|เช็คชื่อ|ขาดงาน|คนขาด|มากี่คน|กี่คน|กี่ใบ|ค้าง|รออนุมัติ|อนุมัติ|ไหม|มั้ย|ไหน|อยู่|ดาว(น์)?\s*ไทม์|เครื่องหยุด|หยุดเครื่อง|ยอดผลิต|ผลิต|กี่ชิ้น|สูงสุด|มากที่สุด|มากสุด|อันดับ|อะไร|บ้าง|เท่าไหร่|เท่าไร|ไปแล้ว|แล้ว|ได้|ไป|ของ|ขอ|ยอด|ดู|หน่อย|ครับ|ค่ะ|คะ|นะ|ไลน์|งาน|ชิ้น|กี่|ที|สุด/g;
-const LATIN_FILLER = /\b(changing\s*point|reject|lowest|worst|now|mo|4\s*m|ng|defects?|attendance|oee|down\s*time|downtime|top|line|output|production|today|yesterday|this|last|week|month)\b|[?？!]/g;
+const THAI_FILLER = /โออีอี|ใบรายงานของเสีย|ใบสแครป|สแครป|ประสิทธิภาพ|เปอร์เซ็นต์เครื่อง|เครื่องเสีย|เครื่องพัง|หยุดนาน|สาเหตุที่|สาเหตุ|ดาวน์|งานซ่อม|ช่างยังไม่มา|รอช่าง|ของไม่ผ่าน|งานไม่ผ่าน|เปลี่ยน|คนมา|ใครลา|กำลังคน|คนครบ|ทำได้|นาน|พัง|บ่อยที่สุด|บ่อยสุด|บ่อย|ชิ้นงานเสีย|งานเสีย|เสีย|มีเครื่อง|เครื่อง|หยุด|มี|ใคร|ต่ำที่สุด|ต่ำสุด|แย่ที่สุด|แย่สุด|น้อยที่สุด|น้อยสุด|ตอนนี้|ขณะนี้|อยู่ไหม|อยู่มั้ย|อยู่บ้าง|ไหนบ้าง|แจ้งซ่อม|ใบซ่อม|โฟร์เอ็ม|ของเสีย|มาทำงาน|เช็คชื่อ|ขาดงาน|คนขาด|มากี่คน|กี่คน|กี่ใบ|ค้าง|รออนุมัติ|อนุมัติ|ไหม|มั้ย|ไหน|อยู่|ดาว(น์)?\s*ไทม์|เครื่องหยุด|หยุดเครื่อง|ยอดผลิต|ผลิต|กี่ชิ้น|สูงสุด|มากที่สุด|มากสุด|อันดับ|อะไร|บ้าง|เท่าไหร่|เท่าไร|ไปแล้ว|แล้ว|ได้|ไป|ของ|ขอ|ยอด|ดู|หน่อย|ครับ|ค่ะ|คะ|นะ|ไลน์|งาน|ชิ้น|กี่|ที|สุด/g;
+const LATIN_FILLER = /\b(scrap\s*report|scrap|changing\s*point|reject|lowest|worst|now|mo|4\s*m|ng|defects?|attendance|oee|down\s*time|downtime|top|line|output|production|today|yesterday|this|last|week|month)\b|[?？!]/g;
 const THAI_RUN = /([฀-๿]+)/;
 /* 🔴 ห้ามตัดคำกลางพยางค์ — "ที" ใน "ชุดที่" ตามด้วยไม้เอก ⇒ ไม่ใช่คำว่า "ที" (เคสจริงตอนลองถาม 19/11)
    ⇒ ตัดได้เฉพาะเมื่อตัวถัดไป **ไม่ใช่** สระบน/ล่าง/วรรณยุกต์ (อักขระประกอบของพยางค์เดียวกัน) */
@@ -166,7 +168,9 @@ export function parseQuestion(text, today, { shiftNow = null } = {}) {
   if (!it) return { intent: null, period: null, periodDefault: null, subject, shift: null };
   if (p?.error || sh?.error) return { intent: it.key, period: null, periodDefault: null, subject, shift: null, error: p?.error || sh.error };
   return { intent: it.key, period: p, periodDefault: p ? null : it.defaultPeriod, subject,
-    shift: sh ? { key: sh.shift, label: sh.label } : null };
+    shift: sh ? { key: sh.shift, label: sh.label } : null,
+    /* ถามว่า "สแครป" แต่ได้ของเสียจากรายงานผลิต — จอต้องบอกว่าไม่ใช่ตัวเลขตามใบ scrap report (user เลือก 20/11) */
+    viaScrap: it.key === 'defect_top' && /สแครป|scrap/.test(t) };
 }
 
 /** ค่าตั้งต้นของช่วง (เมื่อคำถามไม่ได้บอก) — จอต้องเขียนว่า "ไม่ได้ระบุช่วง ใช้…" */
@@ -455,11 +459,39 @@ export function applyHelpers(emps = [], helpers = [], { shift = null } = {}) {
   return { emps: out, moved, split, otherShift };
 }
 
+/**
+ * 🧾 สรุปใบรายงานของเสีย (`scrap_reports` + `scrap_report_items` · DR) — ตัวเลข **ตามใบ** ไม่ใช่รายงานผลิต
+ * · ยอด = `qty` (ช่อง Q'TY ของฟอร์ม) · `confirm_qty` ต่างจากยอดเมื่อไหร่ = คืนให้จอเขียนบอก
+ * · พาร์ทจับกลุ่มด้วย mat_no → part_no → part_name (ใบมีพาร์ทย่อยที่คีย์เองซึ่งอาจไม่มี mat_no)
+ */
+export const SCRAP_STATUS_LABEL = { draft: 'ร่าง', submitted: 'ส่งอนุมัติ', approved: 'อนุมัติแล้ว' };
+export function scrapReportSummary(reports = [], items = [], n = 5) {
+  const byStatus = {};
+  let unknownStatus = 0;
+  for (const r of reports) {
+    if (SCRAP_STATUS_LABEL[r.status]) byStatus[r.status] = (byStatus[r.status] || 0) + 1;
+    else unknownStatus++;
+  }
+  const byPart = new Map();
+  let total = 0, confirm = 0, confirmKnown = 0;
+  for (const it of items) {
+    const q = Number(it.qty) || 0;
+    total += q;
+    if (it.confirm_qty != null && it.confirm_qty !== '') { confirm += Number(it.confirm_qty) || 0; confirmKnown++; }
+    const key = it.mat_no || it.part_no || it.part_name || 'ไม่ระบุพาร์ท';
+    const e = byPart.get(key) || { key, name: it.part_name || '', qty: 0 };
+    e.qty += q; byPart.set(key, e);
+  }
+  const parts = [...byPart.values()].filter(e => e.qty > 0).sort((a, b) => b.qty - a.qty);
+  return { reports: reports.length, byStatus, unknownStatus, total, confirm, confirmKnown,
+    confirmDiffers: confirmKnown > 0 && confirm !== total, top: parts.slice(0, n), parts: parts.length };
+}
+
 export const fmtInt = (n) => (n == null ? '—' : Math.round(n).toLocaleString('en-US'));
 export const fmtPct = (n) => (n == null ? '—' : `${(+n).toFixed(1)}%`);
 
 /** ข้อความแนะนำรูปแบบที่ถามได้ — ใช้ทั้งปุ่มลัดและตอนไม่เข้าใจคำถาม */
 export const ASK_HINTS = [
   'oee HDF1 วันนี้', 'oee ต่ำสุด วันนี้', 'downtime สูงสุด สัปดาห์นี้', 'เครื่องหยุดตอนนี้',
-  'MO ค้าง', 'ของเสียสูงสุด สัปดาห์นี้', '4M ค้าง', 'มาทำงานกี่คน HDF1', 'ยอดผลิต HDF1 เดือนนี้',
+  'MO ค้าง', 'ของเสียสูงสุด สัปดาห์นี้', 'ใบสแครป เดือนนี้', '4M ค้าง', 'มาทำงานกี่คน HDF1', 'ยอดผลิต HDF1 เดือนนี้',
 ];
