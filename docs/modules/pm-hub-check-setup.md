@@ -101,7 +101,9 @@
 - 🔴 **หน้าช่างถูกเปิดด้วยทีม AM (`/pm?tab=check&dept=<ทีม AM>` จากลิงก์เก่า/ป้าย QR/บุ๊กมาร์ก) = `<Navigate>` ไป `/daily-checker?tab=amcheck` ให้เอง** (คง `equip`/`line`) — ห้ามถอด
 - ลิงก์ที่แก้ตรง: บอร์ด AM (`DailyPM` ปุ่ม "ไปตรวจเครื่องของไลน์นี้" + คู่มือ) · `/scan` ป้ายเครื่อง (ทีม AM) · `/scan` ป้ายไลน์ = แยก 2 ปุ่ม AM / PM
 - สิทธิ์: แท็บใหม่ piggyback `page:/pm-check` เดิม ⇒ `/daily-checker` รับ `page:/pm-check` เพิ่มในรายการ piggyback (`permissions.js`) · บันทึกยังใช้ `am:record` เหมือนเดิม
-- ⚠️ ยังเหมือนเดิม: แจ้งเตือน `ref_table='inspections'` ทุกใบพาไป `/pm?tab=check` (ไม่มี dept) · ตั้งค่าจุดตรวจ AM ยังอยู่ `/pm?tab=setup&dept=production`
+- 🔔 แจ้งเตือนใบตรวจ (อนุมัติ/ตีกลับ/NG) ส่ง `link` จาก `inspNotifLink(dept, jigId)` (PMCheckData.jsx · 20/11) — ใบ AM → `/daily-checker?tab=amcheck&dept=&equip=` · ใบ PM → `/pm?tab=check&dept=&equip=` · `notifyDepartment()` รับ `link` แล้ว
+  · แจ้งเตือนเก่าก่อน 20/11 ไม่มี link = ยังถอยไป `/pm?tab=check` (ใบ AM ถูก `<Navigate>` พาไปหน้า AM ไม่ได้เพราะไม่รู้ dept)
+- ⚠️ ยังเหมือนเดิม: ตั้งค่าจุดตรวจ AM ยังอยู่ `/pm?tab=setup&dept=production`
 
 ## 🔒 แท็บ AM (ตรวจอุปกรณ์) เห็นเฉพาะไลน์ของตัวเอง (2026-11-11 · คำสั่ง user "ล็อกเห็นเฉพาะไลน์ตัวเอง")
 อาการ: แท็บ AM ไม่มีตัวกรองไลน์เลย (แท็บช่างมี `<LineScopeSelect>`) ⇒ ทุกคนเห็นเครื่องที่ลงทะเบียน AM ทั้งโรงงาน 15 ไลน์
