@@ -197,8 +197,24 @@ export async function confirmAndSyncLineDemand({ lineName, role, extra = [], tit
   if (!dry.rows.length && !dry.noBom?.length && !dry.opUnset?.length && !dry.fgSkipped?.length) return dry;
   const { text, sendCount } = planConfirmText(dry.rows, { title, focus, area: dry.area, noBom: dry.noBom, opUnset: dry.opUnset, fgSkipped: dry.fgSkipped });
   if (!sendCount) { alertFn(text); return { ...dry, nothingToSend: true }; }
-  if (!confirmFn(text)) return { ...dry, cancelled: true };
+  /* 🔴 19/11 — ต้อง await: askConfirm คืน Promise (codemod 18/11) · เดิม `!confirmFn(text)` = !Promise = false เสมอ
+     ⇒ กด "ยกเลิก" แล้วยังแจ้งสโตร์อยู่ดี (มีด่าน `line-demand-confirm-awaited`) */
+  if (!(await confirmFn(text))) return { ...dry, cancelled: true };
   return syncLineOrderDemand({ lineName, role, extra });
+}
+
+/**
+ * 📦 คิดอย่างเดียว ไม่ถาม ไม่เขียน — ใช้ตอน "เปิดใบผลิต" (19/11 · คำสั่ง user "เปิดออเดอร์ต่อกันไม่ได้ · ห้ามตัดออก")
+ * จอเอาผลไปขึ้น **แถบไม่บังจอ** (`StoreNotifyBar`) แทน popup · คนกดแถบ ⇒ `confirmAndSyncLineDemand()` คิดใหม่สดแล้วค่อยถาม
+ * @returns ผลแบบ dryRun + `sendCount` (รายการที่จะแจ้ง/เพิ่มยอด) + `warnCount` (noBom/opUnset/fgSkipped — ต้องบอก ห้ามเงียบ)
+ */
+export async function previewLineDemand({ lineName, role, extra = [] }) {
+  if (!canNotifyStore(role)) return { rows: [], error: NO_PERM, sendCount: 0, warnCount: 0 };
+  const dry = await syncLineOrderDemand({ lineName, role, extra, dryRun: true });
+  if (dry.error) return { ...dry, sendCount: 0, warnCount: 0 };
+  const sendCount = (dry.rows || []).filter(r => r.action === 'insert' || r.action === 'raise').length;
+  const warnCount = (dry.noBom?.length || 0) + (dry.opUnset?.length || 0) + (dry.fgSkipped?.length || 0);
+  return { ...dry, sendCount, warnCount };
 }
 
 /**

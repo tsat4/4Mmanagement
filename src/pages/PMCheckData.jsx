@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useContext } from 'react'
 import { lineNameCompare } from '../utils/lineHierarchy';
+import { MoreMark } from '../components/InfoMore';
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { useMergeParams } from '../utils/useTabParam'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -1719,7 +1720,9 @@ export default function PMCheckData({ mode = 'pm' }) {
         </div>}
         {/* AM (ผลิตตรวจเอง) กับ PM (ช่าง) เป็นคนละงาน — บอกให้ชัดว่าแท็บที่เลือกอยู่คืออะไร */}
         <div style={{ padding: modeTeams.length > 1 ? '0 16px 10px' : '12px 16px 10px', fontSize: 11, color: 'var(--muted)', lineHeight: 1.5 }}>
-          <b style={{ color: deptColor }}>{teamKind(department).short} · {teamKind(department).full}</b> — {teamKind(department).desc}
+          {/* ชื่อแท็บที่เลือกอยู่ต้องเห็นเสมอ · คำอธิบายว่าต่างจาก AM ยังไง → ⓘ (อ่านรอบเดียวพอ) · 19/11 */}
+          <b style={{ color: deptColor }}>{teamKind(department).short} · {teamKind(department).full}</b>{' '}
+          <MoreMark text={tr(teamKind(department).desc)} />
         </div>
         <div style={{ padding: '0 16px 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
           <SearchInput value={jigQuery} onChange={setJigQuery} fields="เลขเครื่อง / ชื่อ / ไลน์" ariaLabel="ค้นหาเครื่อง"

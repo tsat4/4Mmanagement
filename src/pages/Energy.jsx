@@ -14,6 +14,7 @@
    ⚠️ ไฟฟ้าอย่างเดียว · ค่ากรอกมือต้องติดป้ายที่มาเสมอ
    ⚠️ สูตรทั้งหมดอยู่ src/utils/energy.js — ห้ามคำนวณเองในไฟล์นี้ */
 import { useState, useEffect, useMemo, useContext, useCallback } from 'react';
+import { MoreMark } from '../components/InfoMore';
 import {
   ResponsiveContainer, ComposedChart, BarChart, LineChart, Bar, Line, XAxis, YAxis,
   CartesianGrid, Tooltip, Legend, Cell, ReferenceLine,
@@ -598,8 +599,10 @@ export default function Energy() {
                   {cover.unmetered == null ? '—' : fmtKwh(cover.unmetered)}
                   {cover.coverPct != null && <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--muted)' }}> · {Math.round(100 - cover.coverPct)}{tr('% ของบิล')}</span>}
                 </div>
+                {/* ใจความคือ "ไม่ใช่ข้อผิดพลาด" (กันคนไล่หาว่ามิเตอร์พัง) ⇒ อยู่บนจอ · ตัวอย่างจุด → ⓘ · 19/11 */}
                 <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-                  สำนักงาน · แสงสว่าง · ส่วนกลาง · จุดที่ยังไม่มีมิเตอร์ — <b>{tr('ไม่ใช่ข้อผิดพลาด')}</b>
+                  {tr('ส่วนที่ยังไม่มีมิเตอร์')} — <b>{tr('ไม่ใช่ข้อผิดพลาด')}</b>{' '}
+                  <MoreMark text={tr('สำนักงาน · แสงสว่าง · ส่วนกลาง · จุดที่ยังไม่มีมิเตอร์')} />
                 </div>
               </div>
             </div>
