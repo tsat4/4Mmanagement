@@ -33,7 +33,10 @@ grant select on public.employees to authenticated;
 create table archive.profiles_section_20261006b (id uuid, section text);
 
 insert into auth.users(id,email,encrypted_password) select ('00000000-0000-0000-0000-'||lpad(g::text,12,'0'))::uuid, 'u'||g||'@x.test', '$2a$10$hash'||g from generate_series(1,132) g;
-insert into auth.identities(user_id,provider) select id,'email' from auth.users;
+-- ผู้ใช้ #1 มีรหัสผ่านจริง (bcrypt แบบเดียวกับ Supabase) — ใช้พิสูจน์ "login ด้วยรหัสเดิมได้หลังย้าย"
+update auth.users set encrypted_password = extensions.crypt('Esm-Old-Pass-1', extensions.gen_salt('bf', 10)),
+  email_confirmed_at = now(), aud = 'authenticated', role = 'authenticated';
+insert into auth.identities(provider_id,user_id,identity_data,provider) select id::text, id, jsonb_build_object('sub',id::text,'email',email), 'email' from auth.users;
 insert into public.profiles select id, 'ผู้ใช้ '||right(id::text,3), 'operator' from auth.users;
 insert into public.notifications(user_id,title) select id, 'แจ้งเตือน ทดสอบ' from auth.users, generate_series(1,3);
 insert into public.employees(name) select 'พนักงาน '||g from generate_series(1,500) g;

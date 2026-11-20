@@ -94,7 +94,7 @@
 | 2 | วิเคราะห์ของชน + ออกแบบการรวม (ไฟล์นี้) | ✅ 18/11 |
 | 3 | สคริปต์ dump (อ่านอย่างเดียว) · รวม · นับเทียบ — `inet/` | ✅ 18/11 ซ้อมผ่านบนฐานจำลอง (`inet/test/run-local-test.sh`) |
 | 4 | ซ้อมรวมด้วย**ข้อมูลจริง** (รันบน INET เป็น Job · รหัสฐานเดิมเก็บใน Secret ห้ามแปะแชท) | ⬜ |
-| 5 | ตั้ง Supabase stack บน INET (ในรั้ว vFW · §6.1) | ⬜ รอ INET เตรียม VM + ย้ายโซน container |
+| 5 | ตั้ง Supabase stack บน INET (ในรั้ว vFW · §6.1) | 🟡 ชุดติดตั้งพร้อม + ซ้อมในเครื่องผ่าน (20/11 · §9) — รอ INET ส่ง VM + โซน container |
 | 6 | ยกข้อมูลรอบซ้อม + นับเทียบ 100% + ไฟล์ทุก bucket | ⬜ |
 | 7 | build หน้าเว็บชุด INET ชี้ฐาน INET · ลองใช้ · ให้ผู้บริหารดู | ⬜ |
 | 8 | วันสลับ (ถ้าอนุมัติ): หยุดบันทึก → ยกรอบสุดท้าย → นับเทียบ → ย้ายตัวส่งข้อมูลภายนอก | ⬜ |
@@ -147,3 +147,26 @@ anon เห็น audit DR แต่ไม่เห็นของ Main · แ�
 
 **ยังไม่ทำ:** ย้ายตัวไฟล์ storage (ต้องใช้ service key ของเดิม — ใส่เป็น Secret บน INET) ·
 cron 20 งานใหม่ด้วยที่อยู่ INET · deploy edge function 25 ตัว · ตั้ง Supabase stack บน INET (รอ §7)
+
+## 9. ชุดติดตั้งระบบบน INET (`inet/stack/` · 20/11/2026)
+
+คู่มือติดตั้ง → `inet/stack/README.md` · เวอร์ชันโปรแกรมตามชุดทางการของ Supabase self-host ณ 20/11
+(Postgres **17.6.1.136** = รุ่นเดียวกับของเดิม · GoTrue v2.197.0 · PostgREST v14.18 · Realtime v2.148.3 ·
+Storage v1.89.12 · Edge runtime v1.77.9) · ประตูใช้ nginx แทน Envoy (ไม่ใช้ root บน OpenShift)
+
+**ผลซ้อมในเครื่อง 20/11** (ทุก container ของแอปรันด้วย UID สุ่มเหมือน OpenShift):
+- smoke test **15/15**: login · REST + RLS · ภาษาไทย · realtime · storage · functions (JWT รายฟังก์ชัน) · หน้าเว็บ + F5
+- ยกข้อมูล (ฐานจำลอง) ลง Supabase Postgres จริง → `30_verify.sh` ผ่าน → **ผู้ใช้เดิม login ด้วยรหัสเดิมได้** ·
+  สิทธิ์ authenticated/anon เหมือนเดิม · trigger audit ฝั่ง DR ทำงาน → smoke ซ้ำหลังย้ายผ่านหมด
+
+**ข้อมูลจริงที่วัดเพื่อยืนยันว่าการย้าย login ใช้ได้ (อ่านอย่างเดียว 20/11):** `auth.users` 133 คน
+ทุกคน `instance_id=0000…` · ยืนยันอีเมลแล้ว · รหัส bcrypt · คอลัมน์ token/เวลา **NULL = 0** · `auth.identities` 133 แถวครบ
+
+**edge functions — `verify_jwt` บน cloud (ใช้เป็นต้นฉบับของ `FUNCTIONS_VERIFY_JWT`):**
+ตรวจ JWT = `create-user` `delete-user` `reset-user-password` `integration-admin` `demand-mail-file` · ที่เหลือไม่ตรวจ
+· `telegram-webhook` มีในรีโปแต่**ไม่เคย deploy** · `send-notification-router-probe` อยู่บน cloud แต่**ไม่มีในรีโป** (ตัวทดสอบ — ไม่ยก)
+· ⚠️ ยังไม่ได้เทียบว่าโค้ดในรีโป = ตัวที่ deploy อยู่บน cloud ทุกตัว (ทำก่อนวันสลับ)
+· ฟังก์ชันโหลด library จาก esm.sh/jsr/npm ตอนรัน ⇒ **container ต้องออกอินเทอร์เน็ตได้** (ถาม INET)
+
+**ยังไม่ได้ทำ:** รันบน OpenShift จริง (`openshift/esm-stack.yaml` ตรวจแค่รูปแบบ) · ย้ายตัวไฟล์ storage ·
+cron 20 งานด้วยที่อยู่ใหม่ · ความลับของ functions (Telegram ฯลฯ) · Studio/SQL Editor สำหรับแอดมิน

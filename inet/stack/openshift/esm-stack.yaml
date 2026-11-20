@@ -1,0 +1,343 @@
+# ══ ระบบ ESM ทั้งชุดบน INET Container Platform (ในรั้ว vFW Dedicate · ทาง 2 — 20/11/2026) ══
+# ลำดับ: ① VM ฐานข้อมูลขึ้นแล้ว (inet/stack/vm) ② วาง esm-secret.template.yaml (กรอกแล้ว) ③ แก้ 3 จุด "แก้ตรงนี้" ข้างล่าง ④ วางไฟล์นี้ที่ ⊕ → Import YAML
+# ค่าทุกตัวลอกจาก inet/stack/local/docker-compose.yml ที่ซ้อมผ่าน 15/15 (inet/stack/local/smoke-test.mjs)
+# ชื่อทุกชิ้นขึ้นต้น esm- · หน้าเว็บ+API อยู่ลิงก์เดียวผ่าน esm-gateway
+#
+# 🔴 ยังไม่เคยรันบน OpenShift จริง — ตรวจแค่รูปแบบ YAML · ครั้งแรกให้ดู log ทุกตัว
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: esm-stack-config
+data:
+  DB_HOST: "10.0.0.10"                                   # ← แก้ตรงนี้ ①: IP ภายในของ VM ฐานข้อมูล
+  PUBLIC_URL: "https://esm.example.inet.co.th"            # ← แก้ตรงนี้ ②: ลิงก์ที่ผู้ใช้เปิด (ตรงกับ Route)
+  FUNCTIONS_VERIFY_JWT: "create-user,delete-user,reset-user-password,integration-admin,demand-mail-file"
+---
+# ───────────── build: ประตู · functions · หน้าเว็บ (ดึงจาก GitHub) ─────────────
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata: { name: esm-gateway }
+spec: { lookupPolicy: { local: true } }
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata: { name: esm-functions }
+spec: { lookupPolicy: { local: true } }
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata: { name: esm-web }
+spec: { lookupPolicy: { local: true } }
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata: { name: esm-gateway }
+spec:
+  source: { type: Git, git: { uri: "https://github.com/tsat4pd3-sketch/4Mmanagement.git", ref: claude/quirky-allen-yt4gsi }, contextDir: inet/stack/gateway }
+  strategy: { type: Docker, dockerStrategy: { dockerfilePath: Dockerfile } }
+  output: { to: { kind: ImageStreamTag, name: "esm-gateway:latest" } }
+  triggers: [ { type: ConfigChange } ]
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata: { name: esm-functions }
+spec:
+  source: { type: Git, git: { uri: "https://github.com/tsat4pd3-sketch/4Mmanagement.git", ref: claude/quirky-allen-yt4gsi } }
+  strategy: { type: Docker, dockerStrategy: { dockerfilePath: inet/stack/functions/Dockerfile } }
+  output: { to: { kind: ImageStreamTag, name: "esm-functions:latest" } }
+  triggers: [ { type: ConfigChange } ]
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata: { name: esm-web }
+spec:
+  source: { type: Git, git: { uri: "https://github.com/tsat4pd3-sketch/4Mmanagement.git", ref: claude/quirky-allen-yt4gsi } }
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Dockerfile
+      # ← แก้ตรงนี้ ③: ลิงก์เดียวกับ PUBLIC_URL + ANON_KEY ชุดใหม่ (ไม่ใช่ของ Supabase เดิม)
+      #   DR ชี้ที่เดียวกับ Main เพราะรวมฐานแล้ว (docs/modules/inet-migration.md §5.4)
+      buildArgs:
+        - { name: VITE_SUPABASE_URL,      value: "https://esm.example.inet.co.th" }
+        - { name: VITE_SUPABASE_ANON_KEY, value: "ใส่ ANON_KEY ชุดใหม่" }
+        - { name: VITE_SUPABASE_DR_URL,   value: "https://esm.example.inet.co.th" }
+        - { name: VITE_SUPABASE_DR_KEY,   value: "ใส่ ANON_KEY ชุดใหม่" }
+  output: { to: { kind: ImageStreamTag, name: "esm-web:latest" } }
+  triggers: [ { type: ConfigChange } ]
+---
+# ───────────── ที่เก็บไฟล์ (รูป/ไฟล์แนบ) ─────────────
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: { name: esm-storage-data }
+spec:
+  accessModes: [ ReadWriteOnce ]
+  resources: { requests: { storage: 20Gi } }      # วันนี้ ~400 MB โตเดือนละ ~150 MB
+---
+# ───────────── login (GoTrue) ─────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: esm-auth }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: esm-auth } }
+  template:
+    metadata: { labels: { app: esm-auth } }
+    spec:
+      containers:
+        - name: auth
+          image: docker.io/supabase/gotrue:v2.197.0
+          ports: [ { containerPort: 9999 } ]
+          env:
+            - { name: DB_HOST, valueFrom: { configMapKeyRef: { name: esm-stack-config, key: DB_HOST } } }
+            - { name: PUBLIC_URL, valueFrom: { configMapKeyRef: { name: esm-stack-config, key: PUBLIC_URL } } }
+            - { name: POSTGRES_PASSWORD, valueFrom: { secretKeyRef: { name: esm-stack, key: POSTGRES_PASSWORD } } }
+            - { name: GOTRUE_JWT_SECRET, valueFrom: { secretKeyRef: { name: esm-stack, key: JWT_SECRET } } }
+            - { name: GOTRUE_API_HOST, value: "0.0.0.0" }
+            - { name: GOTRUE_API_PORT, value: "9999" }
+            - { name: API_EXTERNAL_URL, value: "$(PUBLIC_URL)" }
+            - { name: GOTRUE_DB_DRIVER, value: postgres }
+            - { name: GOTRUE_DB_DATABASE_URL, value: "postgres://supabase_auth_admin:$(POSTGRES_PASSWORD)@$(DB_HOST):5432/postgres" }
+            - { name: GOTRUE_SITE_URL, value: "$(PUBLIC_URL)" }
+            - { name: GOTRUE_DISABLE_SIGNUP, value: "true" }
+            - { name: GOTRUE_JWT_ADMIN_ROLES, value: service_role }
+            - { name: GOTRUE_JWT_AUD, value: authenticated }
+            - { name: GOTRUE_JWT_DEFAULT_GROUP_NAME, value: authenticated }
+            - { name: GOTRUE_JWT_EXP, value: "3600" }
+            - { name: GOTRUE_JWT_ISSUER, value: "$(PUBLIC_URL)/auth/v1" }
+            - { name: GOTRUE_EXTERNAL_EMAIL_ENABLED, value: "true" }
+            - { name: GOTRUE_MAILER_AUTOCONFIRM, value: "true" }
+            - { name: GOTRUE_EXTERNAL_PHONE_ENABLED, value: "false" }
+          readinessProbe: { httpGet: { path: /health, port: 9999 } }
+          resources: { requests: { cpu: 50m, memory: 64Mi }, limits: { memory: 256Mi } }
+---
+# ───────────── API ตาราง (PostgREST) ─────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: esm-rest }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: esm-rest } }
+  template:
+    metadata: { labels: { app: esm-rest } }
+    spec:
+      containers:
+        - name: rest
+          image: docker.io/postgrest/postgrest:v14.18
+          ports: [ { containerPort: 3000 } ]
+          env:
+            - { name: DB_HOST, valueFrom: { configMapKeyRef: { name: esm-stack-config, key: DB_HOST } } }
+            - { name: POSTGRES_PASSWORD, valueFrom: { secretKeyRef: { name: esm-stack, key: POSTGRES_PASSWORD } } }
+            - { name: PGRST_JWT_SECRET, valueFrom: { secretKeyRef: { name: esm-stack, key: JWT_SECRET } } }
+            - { name: PGRST_APP_SETTINGS_JWT_SECRET, valueFrom: { secretKeyRef: { name: esm-stack, key: JWT_SECRET } } }
+            - { name: PGRST_DB_URI, value: "postgres://authenticator:$(POSTGRES_PASSWORD)@$(DB_HOST):5432/postgres" }
+            - { name: PGRST_DB_SCHEMAS, value: "public,storage,graphql_public" }
+            - { name: PGRST_DB_MAX_ROWS, value: "1000" }
+            - { name: PGRST_DB_EXTRA_SEARCH_PATH, value: "public,extensions" }
+            - { name: PGRST_DB_ANON_ROLE, value: anon }
+            - { name: PGRST_DB_USE_LEGACY_GUCS, value: "false" }
+            - { name: PGRST_APP_SETTINGS_JWT_EXP, value: "3600" }
+          resources: { requests: { cpu: 100m, memory: 128Mi }, limits: { memory: 512Mi } }
+---
+# ───────────── จอสด (Realtime) ─────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: esm-realtime }
+spec:
+  replicas: 1                     # 🔴 ห้ามเพิ่มเป็น 2 — ตั้งให้ทำงานเครื่องเดียว (CLUSTER_STRATEGIES ว่าง)
+  selector: { matchLabels: { app: esm-realtime } }
+  template:
+    metadata: { labels: { app: esm-realtime } }
+    spec:
+      containers:
+        - name: realtime
+          image: docker.io/supabase/realtime:v2.148.3
+          command: ["/usr/bin/tini", "-s", "-g", "--", "/app/run.sh", "/app/bin/server"]
+          ports: [ { containerPort: 4000 } ]
+          env:
+            - { name: DB_HOST, valueFrom: { configMapKeyRef: { name: esm-stack-config, key: DB_HOST } } }
+            - { name: DB_PASSWORD, valueFrom: { secretKeyRef: { name: esm-stack, key: POSTGRES_PASSWORD } } }
+            - { name: API_JWT_SECRET, valueFrom: { secretKeyRef: { name: esm-stack, key: JWT_SECRET } } }
+            - { name: METRICS_JWT_SECRET, valueFrom: { secretKeyRef: { name: esm-stack, key: JWT_SECRET } } }
+            - { name: SECRET_KEY_BASE, valueFrom: { secretKeyRef: { name: esm-stack, key: SECRET_KEY_BASE } } }
+            - { name: RELEASE_COOKIE, valueFrom: { secretKeyRef: { name: esm-stack, key: RELEASE_COOKIE } } }
+            - { name: DB_ENC_KEY, valueFrom: { secretKeyRef: { name: esm-stack, key: REALTIME_DB_ENC_KEY } } }
+            - { name: PORT, value: "4000" }
+            - { name: DB_PORT, value: "5432" }
+            - { name: DB_USER, value: supabase_admin }
+            - { name: DB_NAME, value: postgres }
+            - { name: DB_AFTER_CONNECT_QUERY, value: "SET search_path TO _realtime" }
+            - { name: ERL_AFLAGS, value: "-proto_dist inet_tcp" }
+            - { name: GEN_RPC_SOCKET_IP, value: "127.0.0.1" }
+            - { name: CLUSTER_STRATEGIES, value: "" }
+            - { name: DNS_NODES, value: "''" }
+            - { name: RLIMIT_NOFILE, value: "10000" }
+            - { name: APP_NAME, value: realtime }
+            - { name: SEED_SELF_HOST, value: "true" }
+            - { name: RUN_JANITOR, value: "true" }
+            - { name: DISABLE_HEALTHCHECK_LOGGING, value: "true" }
+          resources: { requests: { cpu: 100m, memory: 256Mi }, limits: { memory: 1Gi } }
+---
+# ───────────── ไฟล์ (Storage API) ─────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: esm-storage }
+spec:
+  replicas: 1                     # ใช้ดิสก์ RWO ⇒ ตัวเดียว
+  strategy: { type: Recreate }
+  selector: { matchLabels: { app: esm-storage } }
+  template:
+    metadata: { labels: { app: esm-storage } }
+    spec:
+      containers:
+        - name: storage
+          image: docker.io/supabase/storage-api:v1.89.12
+          ports: [ { containerPort: 5000 } ]
+          env:
+            - { name: DB_HOST, valueFrom: { configMapKeyRef: { name: esm-stack-config, key: DB_HOST } } }
+            - { name: PUBLIC_URL, valueFrom: { configMapKeyRef: { name: esm-stack-config, key: PUBLIC_URL } } }
+            - { name: POSTGRES_PASSWORD, valueFrom: { secretKeyRef: { name: esm-stack, key: POSTGRES_PASSWORD } } }
+            - { name: ANON_KEY, valueFrom: { secretKeyRef: { name: esm-stack, key: ANON_KEY } } }
+            - { name: SERVICE_KEY, valueFrom: { secretKeyRef: { name: esm-stack, key: SERVICE_ROLE_KEY } } }
+            - { name: AUTH_JWT_SECRET, valueFrom: { secretKeyRef: { name: esm-stack, key: JWT_SECRET } } }
+            - { name: PGRST_JWT_SECRET, valueFrom: { secretKeyRef: { name: esm-stack, key: JWT_SECRET } } }
+            - { name: DATABASE_URL, value: "postgres://supabase_storage_admin:$(POSTGRES_PASSWORD)@$(DB_HOST):5432/postgres" }
+            - { name: POSTGREST_URL, value: "http://esm-rest:3000" }
+            - { name: STORAGE_PUBLIC_URL, value: "$(PUBLIC_URL)" }
+            - { name: REQUEST_ALLOW_X_FORWARDED_PATH, value: "true" }
+            - { name: FILE_SIZE_LIMIT, value: "52428800" }
+            - { name: STORAGE_BACKEND, value: file }
+            - { name: FILE_STORAGE_BACKEND_PATH, value: /var/lib/storage }
+            - { name: GLOBAL_S3_BUCKET, value: stub }
+            - { name: TENANT_ID, value: stub }
+            - { name: REGION, value: stub }
+            - { name: ENABLE_IMAGE_TRANSFORMATION, value: "false" }
+          volumeMounts: [ { name: data, mountPath: /var/lib/storage } ]
+          resources: { requests: { cpu: 50m, memory: 128Mi }, limits: { memory: 512Mi } }
+      volumes: [ { name: data, persistentVolumeClaim: { claimName: esm-storage-data } } ]
+---
+# ───────────── edge functions ─────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: esm-functions
+  annotations:
+    image.openshift.io/triggers: '[{"from":{"kind":"ImageStreamTag","name":"esm-functions:latest"},"fieldPath":"spec.template.spec.containers[?(@.name==\"functions\")].image"}]'
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: esm-functions } }
+  template:
+    metadata: { labels: { app: esm-functions } }
+    spec:
+      containers:
+        - name: functions
+          image: esm-functions:latest
+          ports: [ { containerPort: 9000 } ]
+          envFrom: [ { secretRef: { name: esm-functions, optional: true } } ]
+          env:
+            - { name: DB_HOST, valueFrom: { configMapKeyRef: { name: esm-stack-config, key: DB_HOST } } }
+            - { name: POSTGRES_PASSWORD, valueFrom: { secretKeyRef: { name: esm-stack, key: POSTGRES_PASSWORD } } }
+            - { name: JWT_SECRET, valueFrom: { secretKeyRef: { name: esm-stack, key: JWT_SECRET } } }
+            - { name: SUPABASE_ANON_KEY, valueFrom: { secretKeyRef: { name: esm-stack, key: ANON_KEY } } }
+            - { name: SUPABASE_SERVICE_ROLE_KEY, valueFrom: { secretKeyRef: { name: esm-stack, key: SERVICE_ROLE_KEY } } }
+            - { name: DR_ANON_KEY, valueFrom: { secretKeyRef: { name: esm-stack, key: ANON_KEY } } }
+            - { name: FUNCTIONS_VERIFY_JWT, valueFrom: { configMapKeyRef: { name: esm-stack-config, key: FUNCTIONS_VERIFY_JWT } } }
+            - { name: SUPABASE_URL, value: "http://esm-gateway:8080" }
+            - { name: DR_URL, value: "http://esm-gateway:8080" }
+            - { name: SUPABASE_DB_URL, value: "postgresql://postgres:$(POSTGRES_PASSWORD)@$(DB_HOST):5432/postgres" }
+          resources: { requests: { cpu: 100m, memory: 256Mi }, limits: { memory: 2Gi } }
+---
+# ───────────── หน้าเว็บ ─────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: esm-web
+  annotations:
+    image.openshift.io/triggers: '[{"from":{"kind":"ImageStreamTag","name":"esm-web:latest"},"fieldPath":"spec.template.spec.containers[?(@.name==\"web\")].image"}]'
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: esm-web } }
+  template:
+    metadata: { labels: { app: esm-web } }
+    spec:
+      containers:
+        - name: web
+          image: esm-web:latest
+          ports: [ { containerPort: 8080 } ]
+          readinessProbe: { httpGet: { path: /, port: 8080 } }
+          resources: { requests: { cpu: 20m, memory: 32Mi }, limits: { memory: 128Mi } }
+---
+# ───────────── ประตูทางเข้า ─────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: esm-gateway
+  annotations:
+    image.openshift.io/triggers: '[{"from":{"kind":"ImageStreamTag","name":"esm-gateway:latest"},"fieldPath":"spec.template.spec.containers[?(@.name==\"gateway\")].image"}]'
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: esm-gateway } }
+  template:
+    metadata: { labels: { app: esm-gateway } }
+    spec:
+      containers:
+        - name: gateway
+          image: esm-gateway:latest
+          ports: [ { containerPort: 8080 } ]
+          env:
+            - { name: AUTH_HOST, value: esm-auth }
+            - { name: REST_HOST, value: esm-rest }
+            - { name: REALTIME_HOST, value: esm-realtime }
+            - { name: STORAGE_HOST, value: esm-storage }
+            - { name: FUNCTIONS_HOST, value: esm-functions }
+            - { name: WEB_HOST, value: esm-web }
+          readinessProbe: { httpGet: { path: /gw-health, port: 8080 } }
+          resources: { requests: { cpu: 50m, memory: 32Mi }, limits: { memory: 128Mi } }
+---
+# ───────────── Service ภายใน (ชื่อตรงกับที่ประตูเรียก) ─────────────
+apiVersion: v1
+kind: Service
+metadata: { name: esm-auth }
+spec: { selector: { app: esm-auth }, ports: [ { port: 9999, targetPort: 9999 } ] }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: esm-rest }
+spec: { selector: { app: esm-rest }, ports: [ { port: 3000, targetPort: 3000 } ] }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: esm-realtime }
+spec: { selector: { app: esm-realtime }, ports: [ { port: 4000, targetPort: 4000 } ] }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: esm-storage }
+spec: { selector: { app: esm-storage }, ports: [ { port: 5000, targetPort: 5000 } ] }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: esm-functions }
+spec: { selector: { app: esm-functions }, ports: [ { port: 9000, targetPort: 9000 } ] }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: esm-web }
+spec: { selector: { app: esm-web }, ports: [ { port: 8080, targetPort: 8080 } ] }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: esm-gateway }
+spec: { selector: { app: esm-gateway }, ports: [ { port: 8080, targetPort: 8080 } ] }
+---
+# ───────────── ลิงก์เดียวที่เปิดออกอินเทอร์เน็ต ─────────────
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: esm-gateway
+  annotations:
+    haproxy.router.openshift.io/timeout: 1h   # realtime เป็น websocket ค้างนาน — ค่าเริ่ม 30 วิ ตัดจอสดทิ้ง
+spec:
+  to: { kind: Service, name: esm-gateway }
+  port: { targetPort: 8080 }
+  tls: { termination: edge, insecureEdgeTerminationPolicy: Redirect }

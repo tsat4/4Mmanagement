@@ -27,6 +27,18 @@ tgt_psql "$TGT_URL" -q -c "create extension if not exists pg_trgm with schema pu
 # ── 1. ข้อมูล login ก่อน (profiles ฯลฯ มี FK ไป auth.users) ──
 log "1. auth.users + auth.identities ของ Main (รหัสผ่านเดิมใช้ต่อได้ — เก็บแบบเข้ารหัส)"
 pg_restore --data-only --no-owner -d "$TGT_URL" --exit-on-error "$OUT/main_auth.dump"
+# GoTrue อ่านคอลัมน์ token เป็น string — NULL = login ไม่ได้ ("Database error querying schema") (เจอตอนซ้อม 20/11)
+# ของจริงบน cloud เป็น '' ทั้งหมดอยู่แล้ว (วัด 20/11: 133 คน NULL = 0) ⇒ ตัวนี้เป็นตาข่าย ไม่เปลี่ยนค่าที่มี
+tgt_psql "$TGT_URL" -q -c "update auth.users set
+  confirmation_token = coalesce(confirmation_token,''), recovery_token = coalesce(recovery_token,''),
+  email_change = coalesce(email_change,''), email_change_token_new = coalesce(email_change_token_new,''),
+  email_change_token_current = coalesce(email_change_token_current,''), phone_change = coalesce(phone_change,''),
+  phone_change_token = coalesce(phone_change_token,''), reauthentication_token = coalesce(reauthentication_token,''),
+  updated_at = coalesce(updated_at, created_at, now())
+  where updated_at is null or confirmation_token is null or recovery_token is null or email_change is null or email_change_token_new is null
+     or email_change_token_current is null or phone_change is null or phone_change_token is null or reauthentication_token is null;
+  update auth.identities set created_at = coalesce(created_at, now()), updated_at = coalesce(updated_at, created_at, now())
+  where created_at is null or updated_at is null;"
 
 # ── 2. Main ทั้งก้อน (ข้ามแค่คำสั่งสร้าง schema ที่มีอยู่แล้ว) ──
 log "2. restore Main"
