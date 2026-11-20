@@ -500,6 +500,16 @@ const RULES = [
     allow: {},
   },
   {
+    id: 'chart-anim-shared',
+    scan: ['src/pages', 'src/components'], ext: ['.jsx'],
+    /* ตั้งอนิเมชันกราฟเองในหน้า — ต้องผ่าน chartAnim() ของกลางเท่านั้น */
+    re: /isAnimationActive\s*=/g,
+    why: '20/11 (user: "อนิเมชั่นกราฟสวยๆ … ต้องมีมาตรฐานและใช้เหมือนกันทั้งหมด"): เดิมบางหน้าปิด บางหน้าปล่อยค่าเริ่มต้นของ Recharts '
+       + 'ซึ่งเล่นซ้ำทุกครั้งที่ข้อมูลรีเฟรช = จอกระตุกทุกนาที · มาตรฐาน = เล่นครั้งเดียวต่อสิ่งที่ดู + นิ่งบนจอ TV',
+    fix: "<Bar {...chartAnim()} …> · import { chartAnim } from '<path>/utils/motion' (UI-CONVENTIONS §6.34c)",
+    allow: {},
+  },
+  {
     id: 'no-native-confirm',
     scan: ['src/pages', 'src/components', 'src/lib', 'src/utils', 'src/App.jsx'], ext: ['.jsx', '.js'],
     /* window.confirm / confirm( ตรงๆ — หน้าตาเบราว์เซอร์ ไม่ตามธีม ไม่หรี่ฉากหลัง ไม่แปล · บน iPhone ตัดข้อความยาว · บล็อก thread */

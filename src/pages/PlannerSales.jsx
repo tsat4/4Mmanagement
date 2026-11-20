@@ -20,6 +20,7 @@ import { calcWithdrawalKanban, calcProductionKanban, nextMonthKey } from '../uti
 import { wavg, wLoad } from '../utils/oee';
 import { loadCompanyCalendar, countWorkingDaysInMonth } from '../utils/companyCalendar';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
+import { chartAnim } from '../utils/motion';
 import PageHeader from '../components/PageHeader';
 import Page from '../components/Page';
 import FilterBar from '../components/FilterBar';
@@ -1168,8 +1169,8 @@ function PlannerTab({ refreshKey, custLabel }) {
                 <YAxis tickFormatter={fmtAxis} width="auto" tick={{ fontSize: 11, fill: 'var(--muted)' }} />
                 <Tooltip contentStyle={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 8, fontSize: 12 }} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="Forecast" fill="var(--blue)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Orders" fill="var(--green)" radius={[4, 4, 0, 0]} />
+                <Bar {...chartAnim()} dataKey="Forecast" fill="var(--blue)" radius={[4, 4, 0, 0]} />
+                <Bar {...chartAnim()} dataKey="Orders" fill="var(--green)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

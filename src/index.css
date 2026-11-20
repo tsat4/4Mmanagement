@@ -736,6 +736,14 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
 @keyframes energyFlow { to { stroke-dashoffset: -28; } }
 .energy-flow { animation: energyFlow 1.2s linear infinite; }
 @media (prefers-reduced-motion: reduce) { .energy-flow { animation: none; } }
+/* 📈 อนิเมชันตอนเปิดหน้าของแถบที่วาดเอง (utils/motion.js animClass · คู่กับ chartAnim ของ Recharts · 20/11)
+   เล่นครั้งเดียว · จอ TV (data-perf lite) / reduced-motion = นิ่ง · clip-path/transform = ไม่ทำให้ layout ขยับ (Chromium 94 ได้) */
+@keyframes animSweep { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes animGrow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.anim-sweep { animation: animSweep 0.9s ease-out both; }
+.anim-grow { animation: animGrow 0.8s ease-out both; transform-origin: left center; }
+@media (prefers-reduced-motion: reduce) { .anim-sweep, .anim-grow { animation: none; } }
+html[data-perf="lite"] .anim-sweep, html[data-perf="lite"] .anim-grow { animation: none; }
 
 /* ─── Downtime alarm — จุดเครื่องจักรกระพริบสีแดงเมื่อมี downtime ค้างอยู่ ── */
 @keyframes dtAlarmBlink {

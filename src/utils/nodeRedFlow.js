@@ -76,7 +76,13 @@ SELECT machine,
        MAX(power) AS w_max,
        SUBSTRING_INDEX(GROUP_CONCAT(energy ORDER BY log_time DESC), ',', 1) AS kwh_last,
        AVG((voltageA + voltageB + voltageC) / 3) AS v_avg,
-       MAX(GREATEST(currentA, currentB, currentC)) AS a_max
+       MAX(GREATEST(currentA, currentB, currentC)) AS a_max,
+       SUBSTRING_INDEX(GROUP_CONCAT(voltageA ORDER BY log_time DESC), ',', 1) AS v1,
+       SUBSTRING_INDEX(GROUP_CONCAT(voltageB ORDER BY log_time DESC), ',', 1) AS v2,
+       SUBSTRING_INDEX(GROUP_CONCAT(voltageC ORDER BY log_time DESC), ',', 1) AS v3,
+       SUBSTRING_INDEX(GROUP_CONCAT(currentA ORDER BY log_time DESC), ',', 1) AS a1,
+       SUBSTRING_INDEX(GROUP_CONCAT(currentB ORDER BY log_time DESC), ',', 1) AS a2,
+       SUBSTRING_INDEX(GROUP_CONCAT(currentC ORDER BY log_time DESC), ',', 1) AS a3
 FROM energy_sec
 WHERE log_time >= NOW() - INTERVAL 60 SECOND
 GROUP BY machine\`;
@@ -98,6 +104,8 @@ for (const r of rows) {
   add('kwh_total', r.kwh_last);
   add('v', r.v_avg);
   add('a', r.a_max);
+  // ค่ารายเฟสล่าสุด (แผง 3 เฟสหน้ารายตู้ · ESM ผูกตู้ให้เองจาก topic พี่น้อง ไม่ต้องผูกใหม่)
+  for (const f of ['v1', 'v2', 'v3', 'a1', 'a2', 'a3']) add(f, r[f]);
 }
 if (!readings.length) { node.warn('energy_sec ไม่มีข้อมูลใน 1 นาทีล่าสุด — ไม่ส่ง'); return null; }
 ${hdr}

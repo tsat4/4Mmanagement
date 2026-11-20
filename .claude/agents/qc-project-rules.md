@@ -563,3 +563,7 @@ model: inherit
 ### ด่านที่เพิ่ม 2026-11-19
 > 🔻 **ตัด-จ่ายสต็อกต้องหักเต็ม ยอมติดลบ** — จ่ายจาก STORE / ส่งลูกค้า / ตัดวัตถุดิบตอนปิดใบ ห้าม "ยอดในระบบไม่พอ = ไม่หัก/หักเท่าที่มี"
 > ต้องหักเต็มแล้วเขียนบนจอว่าติดลบ (`STORE_NEG_NOTE` · `inflowDestOf` ใน CustomerDemand · DB `fn_take_raw`) — ด่าน "ตัด-จ่ายสต็อกต้องหักเต็ม"
+
+### ด่านที่เพิ่ม 2026-11-20
+- **📈 อนิเมชันกราฟ** (UI-CONVENTIONS §6.34c · ด่าน `chart-anim-shared` + `src/utils/__tests__/chartAnim.test.mjs`): ทุก series ของ Recharts (`<Bar|Line|Area|Pie|Radar|Scatter>`) ต้องมี `{...chartAnim()}` จาก `src/utils/motion.js` · เจอ `isAnimationActive=` ในหน้า = ขัดกฎ · แถบที่วาดเองด้วย div ใช้ `animClass('sweep'|'grow')` ห้ามเขียน `@keyframes` ใหม่สำหรับกราฟในหน้า
+- **⚡ ค่าไฟหลายชั้น** (`docs/ENERGY_MONITORING_DESIGN.md` §15.3.5–6): ยอดรวมตู้/ทั้งหน้า/สัดส่วนโหลด นับเฉพาะมิเตอร์ชั้นบนสุด (`!m.parent`) — ผลรวมที่บวกทุกมิเตอร์ใน `buildLiveBoard().meters` ตรงๆ = นับซ้ำ (ใช้ `totals`/`panels`/`loadShare()` ของกลาง)

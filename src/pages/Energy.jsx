@@ -19,6 +19,7 @@ import {
   ResponsiveContainer, ComposedChart, BarChart, LineChart, Bar, Line, XAxis, YAxis,
   CartesianGrid, Tooltip, Legend, Cell, ReferenceLine,
 } from 'recharts';
+import { chartAnim } from '../utils/motion';
 import { supabase, supabaseDR } from '../supabaseClient';
 import { loadLinesRes } from '../utils/useProductionLines';
 import { UserContext } from '../App';
@@ -46,6 +47,7 @@ import {
 import { collapseOps } from '../utils/pairTotals';
 import { loadOpInfo, opInfoSync } from '../utils/opItems';
 import EnergyLiveBoard from '../components/EnergyLiveBoard';
+import EnergyHistory from '../components/EnergyHistory';
 import { shortTick, fmtAxis, alignedYWidth, CELL_BAR_FILL } from '../utils/chartAxis';
 import { useLatestRequest } from '../utils/useLatestRequest';
 import { tr } from '../utils/i18n';
@@ -66,13 +68,14 @@ const GOOD = '#22c55e', BAD = '#ef4444', NEUTRAL = '#6b7f8c', ACCENT = '#38bdf8'
 export default function Energy() {
   const { role, lineId, sections: scopeSecs, scopeIdx } = useContext(UserContext);
   const canEdit = can('energy', 'record', role);
-  const [tab, setTab] = useTabParam(['input', 'summary', 'setup', 'live'], 'input');
+  const [tab, setTab] = useTabParam(['input', 'summary', 'setup', 'live', 'history'], 'input');
   /* 🔌 แท็บ "มิเตอร์ / MQTT" ย้ายไปอยู่ /integrations ที่เดียวแล้ว (11/11 · user "ย้ายละก็ให้มันมีที่เดียว")
      ลิงก์/บุ๊กมาร์กเก่า ?tab=mqtt = ส่งต่อไปบ้านใหม่ ห้ามตกไปแท็บอื่นเงียบๆ */
   const [sp] = useSearchParams();
   const movedToHub = sp.get('tab') === 'mqtt';
   /* ⚡ แท็บค่าไฟสด (2026-11-09) — คนละแกนเวลากับแท็บอื่น (นาที vs เดือน) ⇒ ซ่อนแถบเดือน/KPI รายเดือน */
   const isLive = tab === 'live';
+  const isHistory = tab === 'history';
   const [month, setMonth] = useState(() => monthKeyOf());
   const [lines, setLines] = useState([]);
   const [zones, setZones] = useState([]);
@@ -518,11 +521,11 @@ export default function Energy() {
   if (movedToHub) return <Navigate to="/integrations" replace />;
   return (
     <Page>
-      <PageHeader title={tr('พลังงานไฟฟ้า')} icon="⚡" sub={isLive ? 'ค่าไฟสดจากมิเตอร์ · อัปเดตทุก 1 นาที' : `${monthLabel(month)} · เฟส 1 กรอกรายเดือน`}
-        tabs={[{ key: 'live', label: 'ค่าไฟสด' }, { key: 'input', label: 'กรอกรายเดือน' }, { key: 'summary', label: 'สรุป & วิเคราะห์' }, { key: 'setup', label: 'ค่าการปล่อย' }]}
+      <PageHeader title={tr('พลังงานไฟฟ้า')} icon="⚡" sub={isLive ? 'ค่าไฟสดจากมิเตอร์ · อัปเดตทุก 1 นาที' : isHistory ? 'ประวัติการใช้ไฟจากมิเตอร์ · เทียบตู้ · ส่งออก Excel' : `${monthLabel(month)} · เฟส 1 กรอกรายเดือน`}
+        tabs={[{ key: 'live', label: 'ค่าไฟสด' }, { key: 'history', label: 'ประวัติ & Excel' }, { key: 'input', label: 'กรอกรายเดือน' }, { key: 'summary', label: 'สรุป & วิเคราะห์' }, { key: 'setup', label: 'ค่าการปล่อย' }]}
         tab={tab} onTab={setTab}
       />
-      {isLive ? <EnergyLiveBoard /> : (<>
+      {isLive ? <EnergyLiveBoard /> : isHistory ? <EnergyHistory /> : (<>
       {/* แถบเดือน = FilterBar มาตรฐาน (UI-STANDARD 2026-09-24 — เดิมอยู่ในช่องปุ่มหัวเพจ ช่องสูง 31/33 มุม 7) */}
       <FilterBar>
         <span className="filter-label">{tr('เดือน')}</span>
@@ -660,9 +663,9 @@ export default function Energy() {
                     <YAxis width="auto" tick={{ fontSize: 11, fill: 'var(--muted)' }} tickFormatter={fmtKwh} />
                     <Tooltip contentStyle={tipStyle} formatter={(v, n) => [v == null ? '—' : Math.round(v).toLocaleString(), n]} />
                     <Legend wrapperStyle={{ fontSize: 11.5 }} />
-                    <Bar dataKey="bill" name="บิลทั้งโรงงาน" fill={ACCENT} radius={[3, 3, 0, 0]} />
-                    <Bar dataKey="metered" name="ที่วัดได้จากมิเตอร์" fill={GOOD} radius={[3, 3, 0, 0]} />
-                    {hasYoy && <Line type="monotone" dataKey="lastYear" name="ปีก่อน (เดือนเดียวกัน)" stroke="var(--amber)" strokeDasharray="5 4" dot={false} strokeWidth={2} />}
+                    <Bar {...chartAnim()} dataKey="bill" name="บิลทั้งโรงงาน" fill={ACCENT} radius={[3, 3, 0, 0]} />
+                    <Bar {...chartAnim()} dataKey="metered" name="ที่วัดได้จากมิเตอร์" fill={GOOD} radius={[3, 3, 0, 0]} />
+                    {hasYoy && <Line {...chartAnim()} type="monotone" dataKey="lastYear" name="ปีก่อน (เดือนเดียวกัน)" stroke="var(--amber)" strokeDasharray="5 4" dot={false} strokeWidth={2} />}
                   </ComposedChart>
                 </ResponsiveContainer>
               )}
@@ -704,7 +707,7 @@ export default function Energy() {
                         <YAxis width={alignedYWidth([...trend.map(t => fmtPieces(t.pieces)), ...trend.map(t => fmtAxis(t.sec))])} tick={{ fontSize: 11, fill: 'var(--muted)' }}
                           tickFormatter={fmtPieces} />
                         <Tooltip contentStyle={tipStyle} formatter={(v) => [v == null ? '—' : Math.round(v).toLocaleString(), 'ผลิตได้ (ชิ้น)']} />
-                        <Bar dataKey="pieces" name="ผลิตได้ (ชิ้น)" fill={NEUTRAL} radius={[3, 3, 0, 0]} />
+                        <Bar {...chartAnim()} dataKey="pieces" name="ผลิตได้ (ชิ้น)" fill={NEUTRAL} radius={[3, 3, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                     <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--amber)', marginTop: 6, marginBottom: 2 }}>{tr('kWh ต่อชิ้น (SEC)')}</div>
@@ -714,7 +717,7 @@ export default function Energy() {
                         <XAxis dataKey="label" tick={{ fontSize: 11, fill: 'var(--muted)' }} />
                         <YAxis tickFormatter={fmtAxis} width={alignedYWidth([...trend.map(t => fmtPieces(t.pieces)), ...trend.map(t => fmtAxis(t.sec))])} tick={{ fontSize: 11, fill: 'var(--amber)' }} />
                         <Tooltip contentStyle={tipStyle} formatter={(v) => [v == null ? '—' : v, 'kWh ต่อชิ้น (SEC)']} />
-                        <Line type="monotone" dataKey="sec" name="kWh ต่อชิ้น (SEC)" stroke="var(--amber)" strokeWidth={2} dot={{ r: 3 }} connectNulls={false} />
+                        <Line {...chartAnim()} type="monotone" dataKey="sec" name="kWh ต่อชิ้น (SEC)" stroke="var(--amber)" strokeWidth={2} dot={{ r: 3 }} connectNulls={false} />
                       </LineChart>
                     </ResponsiveContainer>
                     <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 12, color: 'var(--muted)', marginTop: 6 }}>
@@ -757,7 +760,7 @@ export default function Energy() {
                       <Tooltip contentStyle={tipStyle}
                         formatter={(v, n, o) => [`${v > 0 ? '+' : ''}${Math.round(v).toLocaleString()} kWh (${o.payload.pct == null ? 'จุดใหม่' : `${o.payload.pct > 0 ? '+' : ''}${o.payload.pct}%`})`, 'ส่วนต่าง']} />
                       <ReferenceLine x={0} stroke="var(--border2)" />
-                      <Bar dataKey="delta" fill={CELL_BAR_FILL} radius={[0, 3, 3, 0]}>
+                      <Bar {...chartAnim()} dataKey="delta" fill={CELL_BAR_FILL} radius={[0, 3, 3, 0]}>
                         {contribRows.map((r, i) => <Cell key={i} fill={r.isNew || r.isGone ? NEUTRAL : r.delta > 0 ? BAD : GOOD} />)}
                       </Bar>
                     </BarChart>
@@ -783,7 +786,7 @@ export default function Energy() {
                     <Tooltip contentStyle={tipStyle} formatter={v => Math.round(v).toLocaleString()} />
                     <Legend wrapperStyle={{ fontSize: 11.5 }} />
                     {compPts.map((p, i) => (
-                      <Bar key={keyOf(p)} dataKey={p.name} stackId="a"
+                      <Bar {...chartAnim()} key={keyOf(p)} dataKey={p.name} stackId="a"
                         fill={['#38bdf8', '#22c55e', '#f59e0b', '#a78bfa', '#f472b6', '#2dd4bf'][i % 6]} />
                     ))}
                   </BarChart>

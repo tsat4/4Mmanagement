@@ -195,3 +195,40 @@ test('🌳 liveForNames: แม่กับลูกอยู่กรอบเ�
   const ml = new Map([['zone|P', new Set(['L1'])], ['zone|C', new Set(['L1'])]]);
   assert.equal(liveForNames(['L1'], b.meters, ml).kw, 10);
 });
+
+test('🔌 รายเฟส: ไม่สมดุล = เบี่ยงมากสุด/เฉลี่ย · kW รายเฟสประมาณจากสัดส่วนกระแส · ไม่มีค่า = null', async () => {
+  const { phaseInfo, loadShare } = await import('../energy.js');
+  const p = phaseInfo([392, 391, 393], [58.6, 45.7, 45.4], 28.21);
+  assert.ok(Math.abs(p.imbalancePct - 17.5) < 0.2);                     // จอ Node-RED "ไม่สมดุล 17.5%" (ค่าในภาพปัดทศนิยมแล้ว ⇒ 17.4)
+  assert.equal(Math.round(p.kwEst[0] * 100) / 100, 11.04);                // L1 11.04 kW (Node-RED)
+  assert.equal(phaseInfo([null, null, null], [null, null, null], 10), null);
+  const part = phaseInfo([392, null, null], [10, null, 12], 5);
+  assert.equal(part.imbalancePct, null); assert.deepEqual(part.kwEst, [null, null, null]);
+  const b = buildLiveBoard({
+    meters: [M('A'), M('B'), M('C', { parent_name: 'A' })],
+    live: [L('A', 'kw', 30), L('B', 'kw', 10), L('C', 'kw', 20), L('A', 'a1', 10), L('A', 'a2', 10), L('A', 'a3', 10)],
+    today: '2026-11-09', nowMs: NOW,
+  });
+  assert.equal(b.meters.find(m => m.name === 'A').phase.imbalancePct, 0);
+  assert.equal(b.meters.find(m => m.name === 'B').phase, null);
+  const sh = loadShare(b.meters);
+  assert.equal(sh.total, 40); assert.equal(sh.rows.length, 2);            // ลูก C ไม่นับซ้ำ
+});
+
+test('📈 ประวัติ: kWh ต่อชั่วโมงจากส่วนต่างเลขมิเตอร์ (reset ไม่นับ) · ต่อวันจาก energy_daily · ไม่มีข้อมูล = null · ความครบ', async () => {
+  const { energyHistory, minuteKwh } = await import('../energy.js');
+  const at = (hm) => new Date(Date.parse(`2026-11-20T${hm}:00+07:00`)).toISOString();
+  const R = (hm, k, kw = 10) => ({ scope_name: 'A', bucket_at: at(hm), kwh_total: k, kw, v: 395, a: 40 });
+  const readings = [R('09:00', 100), R('09:01', 101), R('09:02', 103, 30), R('09:03', 50), R('09:04', 51), R('10:00', 60)];
+  const mk = minuteKwh(readings);
+  assert.deepEqual(mk.map(x => x.kwh), [1, 2, 1]);                       // ถอยหลัง (reset) และห่าง > 5 นาที = ข้าม
+  const h = energyHistory({ readings, names: ['A'], scale: 'hour', from: '2026-11-20', to: '2026-11-20', nowMs: Date.parse(at('10:00')) });
+  assert.equal(h.kwh.A['2026-11-20 09'], 4);
+  assert.equal(h.kwh.A['2026-11-20 10'], null);                           // ไม่มีส่วนต่าง = null ไม่ใช่ 0
+  assert.equal(h.totalKwh, 4);
+  assert.equal(h.kpi.peakKw, 30); assert.equal(h.kpi.aMax, 40);
+  assert.ok(h.kpi.coverage > 0 && h.kpi.coverage < 0.1);                 // 6 นาทีจาก 120 นาที
+  const d = energyHistory({ daily: [{ scope_name: 'A', day: '2026-11-18', kwh: 400, peak_kw: 70, peak_at: at('13:00') }, { scope_name: 'A', day: '2026-11-19', kwh: 500 }],
+    names: ['A'], scale: 'month', from: '2026-11-01', to: '2026-11-20', nowMs: Date.parse(at('10:00')) });
+  assert.equal(d.kwh.A['2026-11'], 900); assert.equal(d.kpi.peakKw, 70); assert.equal(d.kpi.coverage, null);
+});
