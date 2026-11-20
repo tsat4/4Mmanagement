@@ -53,7 +53,9 @@ import { uomLabel, itemNoLabel, nextItemNo, byItemNo, buildBomIndex, moveBomLine
 import { slocLabel, slocValid, slocKindMeta, SLOC_FORMAT_HINT, STORE_SLOC_KINDS } from '../utils/storageLoc';
 import StorageLocSelect from '../components/StorageLocSelect';   // 🏠 ที่จัดเก็บหลักของพาร์ท (05/11)
 import { checkWrite, checkWriteRows } from '../utils/dbWrite';
-import { opInputsOf, isFirstOpInChain } from '../utils/opInputs';   // 🔩 ขั้น OP กินอะไร (08/11)
+import { opInputsOf, isFirstOpInChain, opDriftAgainstSap } from '../utils/opInputs';   // 🔩 ขั้น OP กินอะไร (08/11)
+import { opFamilyKey } from '../utils/partGroup';
+import { bomKidsOf } from '../lib/lineDemandSync';
 import { uploadOpts } from '../utils/storageUpload';
 import Page from '../components/Page';
 import PageHeader from '../components/PageHeader';
@@ -2206,6 +2208,20 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
       diff.add.push(...d.add.map(tag)); diff.update.push(...d.update.map(tag));
       diff.same.push(...d.same.map(tag)); diff.extra.push(...d.extra.map(tag));
     }
+    /* ⚠️ 20/11 — ขั้น OP กินของที่ BOM SAP ใหม่ไม่มีแล้ว (SAP เปลี่ยนเบอร์ แต่ BOM ขั้น OP ยังกินเบอร์เก่า) · อ่านไม่ได้ = บอกบนจอ */
+    const opsOf = new Map();
+    products.forEach(p => {
+      if (p?.is_active === false || !p?.is_operation || !up(p.op_parent_mat)) return;
+      opsOf.set(up(p.op_parent_mat), [...(opsOf.get(up(p.op_parent_mat)) || []), up(p.mat_no)]);
+    });
+    let opDrift = [], opDriftErr = null;
+    const opMats = [...new Set([...opsOf.values()].flat())];
+    if (opMats.length) {
+      const { kidsOf, error: kErr } = await bomKidsOf(opMats);
+      if (kErr) opDriftErr = kErr;
+      else opDrift = opDriftAgainstSap({ sheets, opsOf, opKidsOf: kidsOf,
+        familyOf: (m) => opFamilyKey(prodByMat.get(up(m))?.p_no), isOpMat: (m) => !!opMap[m] || !!prodByMat.get(up(m))?.is_operation });
+    }
     const miss = missingInPartsMaster(sheets.flatMap(sh => sh.rows), partsMaster.map(x => x.mat_no));
     setSapPick(Object.fromEntries([
       ...diff.add.map(r => [`${r.sheet_id}|${up(r.mat_no)}`, true]),
@@ -2230,7 +2246,7 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
     setSapPn(seed);
     setSapImp({ parsed, diff, miss, target, curRows: curRows || [], prop, pmPn,
       sheets: sheets.map(sh => ({ mat: sh.mat, name: sh.product.name, n: sh.rows.length })),
-      noSheet: noSheet.map(sh => ({ mat: sh.mat, n: sh.rows.length })), conflicts: split.conflicts });
+      noSheet: noSheet.map(sh => ({ mat: sh.mat, n: sh.rows.length })), conflicts: split.conflicts, opDrift, opDriftErr });
   };
 
   const applySapImport = async () => {
@@ -3299,6 +3315,21 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
                     {' '}{tr('· กด "➕ เปิดใบ BOM ให้พาร์ทจากทะเบียน" ก่อน แล้วนำเข้าไฟล์นี้ใหม่')}
                   </div>}
                   {(sapImp.conflicts || []).map(c => <div key={c.mat}>⚠️ {c.detail}</div>)}
+                </NoticeBar>
+              )}
+              {(sapImp.opDrift?.length > 0 || sapImp.opDriftErr) && (
+                <NoticeBar tone="warn" style={{ marginBottom: 10 }}>
+                  {sapImp.opDriftErr
+                    ? <div>⚠️ {tr('ตรวจขั้น OP เทียบ BOM ใหม่ไม่ได้')} — {sapImp.opDriftErr}</div>
+                    : <>
+                        <b style={{ color: 'var(--amber)' }}>🔩 {tr('ขั้น OP กินของที่ BOM SAP ใหม่ไม่มีแล้ว')} {sapImp.opDrift.length} {tr('รายการ')}</b>
+                        {sapImp.opDrift.map(d => (
+                          <div key={`${d.sheet}|${d.op}|${d.mat}`} style={{ fontFamily: 'monospace' }}>
+                            {d.sheet}{d.parent !== d.sheet ? ` (OP ของ ${d.parent})` : ''}: {tr('ขั้น')} {d.op} {tr('กิน')} {d.mat}
+                          </div>
+                        ))}
+                        <div>{tr('· นำเข้าได้ แต่ต้องแก้ BOM ของขั้น OP ให้กินเบอร์ใหม่ (แท็บ BOM ของรหัสขั้น) ไม่งั้นขั้น OP จะตัดเบอร์เก่าต่อ')}</div>
+                      </>}
                 </NoticeBar>
               )}
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>

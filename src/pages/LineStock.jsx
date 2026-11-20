@@ -32,6 +32,7 @@ import FilterBar from '../components/FilterBar';
 import { ALL, allOf } from '../utils/filterLabels';
 import useTabParam, { useMergeParams } from '../utils/useTabParam';
 import WipBetweenSteps from '../components/WipBetweenSteps';
+import SapViewConsumption from '../components/SapViewConsumption';
 import StockCountSheet from '../components/StockCountSheet';
 import StorageZonePanel from '../components/StorageZonePanel';
 import StorageLocPanel from '../components/StorageLocPanel';
@@ -1879,6 +1880,7 @@ const TABS = [
   { key:'sap',        label: 'ค้างตัด SAP',             perm: 'page:/line-stock' },   // ใบที่ส่งถึงไลน์แล้วแต่ตัดจ่ายใน SAP ไม่ได้ (04/11)
   { key:'diff',       label: 'คลังพัก/ผลต่าง',          perm: 'page:/line-stock' },   // รับไม่ครบ = ส่วนที่ขาดพักไว้ (05/11)
   { key:'wip',        label: 'WIP ค้างระหว่างขั้น',      perm: 'page:/line-stock' },   // คนละเรื่องกับ 'คิวเติม WIP' ในบอร์ดคัมบัง
+  { key:'sapview',    label: 'เทียบตัดแบบ SAP',         perm: 'page:/line-stock' },   // FG×BOM แบบ SAP เทียบที่ ESM ตัดจริง (20/11)
   { key:'settings',   label: 'ตั้งค่า',                 perm: 'page:/line-stock' },
 ];
 
@@ -1936,6 +1938,7 @@ export default function LineStock() {
       {activeTab === 'stock'     && <StockTab role={role} scope={scope} />}
       {activeTab === 'count'     && <StockCountSheet role={role} scope={scope} />}
       {activeTab === 'wip'       && <WipBetweenSteps />}
+      {activeTab === 'sapview'   && <SapViewConsumption />}
       {activeTab === 'monitoring' && (
         <Hub>
           <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>{tr('กำลังโหลด…')}</div>}>

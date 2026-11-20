@@ -1427,3 +1427,40 @@ Promise.all(mats.map(m => supabaseDR.rpc('fn_bom_direct_demand', { p_fg_mat: m }
 - 🔴 unique index ไม่สนใจ `is_active` ⇒ แถว "เพิ่ม" ที่มีแถวปิดค้างคีย์เดียวกันในใบ = เปิดแถวเดิมคืน (ห้าม insert ชน 23505)
 - จำลองไฟล์จริง `FG306.XLSX` (20070036) กับฐาน 19/11: จำนวนตรง SAP ทุกบรรทัด · ต่างแค่คลัง (ESM ว่าง) 14 แถว + ITEM 3 แถว ·
   `20066630` ขึ้นเป็น "ESM มี SAP ไม่มี"
+
+## 🔩 ชั้น OP ใช้ข้ามลูกค้า + ตัดชิ้น OP ข้ามพื้นที่ SAP (2026-11-20 · คำสั่ง user "แก้ทั้ง 2 จุด ทำ Assy LWR พร้อมกันเลย")
+migration `20261120_op_family_cross_area_dr.sql` (DR) — ✅ apply แล้ว 20/11 (จำลองใน transaction ที่ rollback ก่อน แล้วตรวจกลับหลัง apply ได้ผลตรงกัน)
+
+**แนวคิด (ตกลงกับ user 20/11):** BOM SAP เก็บเหมือน SAP เป๊ะ (101 ตัด 501) · ขั้น OP = ชั้นเสริมของ ESM
+(OP กิน 501 · 101 กินชิ้นจาก OP ขั้นสุดท้าย) · นำเข้า CS12 เขียนทับเฉพาะใบของรหัสในไฟล์ ⇒ ใบ/การผูก OP ไม่หาย
+
+1. **FG ต่างลูกค้าของพาร์ทเดียวกัน** — `fn_op_parent_resolve(fg)`: มี OP ของตัวเอง = ตัวเอง (เหมือนเดิม) ·
+   ไม่มีเลย = แม่ "ตัวเดียว" ในกลุ่มที่มีขั้นแบบก่อนประกอบ · 0 หรือ >1 ตัว = ตัวเอง (ห้ามเดา)
+   · กลุ่ม = `fn_op_family_key(p_no)` (SQL) ↔ `opFamilyKey()` (`utils/partGroup.js`) — **ตรรกะต้องตรงกัน**
+   · 🔴 **เข้มกว่า `partCoreOf`**: token ท้ายต้องเป็นตัวอักษรล้วน ≤3 ตัว (เรฟ) ไม่งั้นใช้เลขเต็ม —
+     `N1WB-17E850R-PIA02/03/05` ห้ามไปใช้ชิ้นของ PIA04 (จำลองแล้วจะแทนเหล็ก 30042566/30048968 ผิดๆ ถ้าใช้ partCoreOf)
+   · แทนเฉพาะลูกที่อยู่ใน BOM ของ FG ตัวนั้นจริง · ฝั่ง JS (`loadOpenOrderDemand` ใน `lib/lineDemandSync.js`) ใช้ `resolveOpParent()` (`utils/opInputs.js`)
+   · ผลวันนี้: Apron 10100384/10106790/20066636 → 90031603 · 10100335/10106791/20066622 → 90031604 ·
+     LWR 10105770/20070036 → BENDING LWR BAR 306
+2. **ข้ามพื้นที่** — `fn_take_op_output`: ไม่พอในพื้นที่ของไลน์ที่ปิดใบ → ตัดต่อจากพื้นที่ของ `dr_products.line_name` ของขั้น OP
+   (90031603 อยู่ LASER-345 = พื้นที่ HYDROFORM · Line 60 = P411) · โน้ตธุรกรรมเขียน "ข้ามพื้นที่" ให้เห็น ·
+   ยังไม่พอ = ตัดลูกเดิมแทน/ติดลบเหมือนเดิม
+3. **Assy LWR** — ใส่ BOM ขั้น `BENDING LWR BAR 306` = ท่อ 50031625 ×1 (เดิมไม่มี BOM + แม่มีลูกหลายตัว = unset)
+   · ⚠️ หน้างานยังเปิดเบอร์ FG ที่ไลน์ LWR BAR ⇒ ตัดท่อซ้ำยังเกิดได้จนกว่าหน้างานจะเปิดรหัสขั้น OP แทน (เรื่อง WI)
+
+ย้อนกลับ: `create or replace` 2 ฟังก์ชัน (`fn_op_parent_replace` จาก `20261109b_…` · `fn_take_op_output` ฉบับ 19/11 —
+เอา block "ข้ามพื้นที่" ออก) แล้ว `drop function fn_op_parent_resolve(text), fn_op_family_key(text)` ·
+แถว BOM: `update bom_items set is_active=false where note like 'ขั้น BENDING กินท่อ 1:1 (20/11%'`
+
+### ⚠️ นำเข้า CS12 แล้วเตือน "ขั้น OP กินของที่ BOM SAP ใหม่ไม่มีแล้ว" (20/11)
+`opDriftAgainstSap()` (`utils/opInputs.js` · มีเทส) → แถบเหลืองในหน้าตัวอย่างนำเข้า (`/products` แท็บ BOM · `ProductMaster.jsx` handleSapFile)
+· เคส: SAP เปลี่ยนเบอร์ท่อ แต่ BOM ของรหัสขั้น OP ยังกินเบอร์เก่า ⇒ ไม่เตือน = ขั้น OP ตัดเบอร์เก่าต่อเงียบๆ
+· ตรวจเฉพาะขั้นที่ผูก BOM เอง (auto_single ตามแม่อยู่แล้ว) · FG ต่างลูกค้าตรวจผ่านแม่ในกลุ่ม (`resolveOpParent`) ·
+  อ่าน BOM ขั้นไม่ได้ = เขียนบนจอ · **ไม่บล็อกการนำเข้า** (คนแก้ BOM ขั้นเอง) · ตัวเทียบ เพิ่ม/แก้/เหมือน/ESM มีแต่ SAP ไม่มี = ของเดิม 19/11
+
+## 📊 รายงาน "เทียบตัดแบบ SAP" — `/line-stock?tab=sapview` (20/11 · คำสั่ง user)
+RPC `fn_sap_view_consumption(p_from, p_to, p_lines)` (DR · read-only · migration `20261120b_…`) · จอ `components/SapViewConsumption.jsx`
+· แบบ SAP = Σ ยอด FG (ไม่รวมใบขั้น OP · กฎยอดเดียวกับ trigger: confirmed=qty · carry_over/cancelled=qty_actual) × `fn_bom_direct_demand`
+  (ลูกที่เป็นรหัสขั้น OP ไม่นับ) · ESM = Σ `consume` อัตโนมัติที่ `ref_order_id` อยู่ในใบช่วงเดียวกัน · `op_eaten` = ขั้น OP กิน (ต่างรายวันได้)
+· 🔴 **ใช้ BOM วันนี้ ไม่ใช่ BOM ณ วันผลิต** (ไม่มีประวัติ BOM) — จอเขียนบอก · ตรวจ 20/11: วันที่ 20 ตรงกันทุกตัว ·
+  ก่อน 19/11 ต่างเพราะยุบใบ BOM แบบ SAP วันที่ 19 · 50031601 วันที่ 19: ESM 5,680 > SAP 3,573 = ตัดท่อซ้ำก่อนแก้ข้อ 1
