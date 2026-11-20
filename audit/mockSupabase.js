@@ -377,15 +377,18 @@ const TABLE_ROWS = {
     handed_by: `หัวหน้าทดสอบ ${i}`,
   }),
 
+  /* 🏢 ชั้นบน (20/11 · ห้ามถอด) — ของจริงส่วนงานทุกตัวชี้ plant แล้ว (migration 20261120_org_nodes_upper_layer_rows_main.sql)
+     ⇒ แถว 13 = company (ราก) · 12 = plant ใต้ company · PD1 (แถว 1) ชี้ plant · JIG MTN (6) ยังไม่มีแม่ = เคส "แผนกขึ้นตรง"
+     ชั้นบนไม่มี CC/ฝ่าย ตามของจริง (ใส่ = ไหลลงหน่วยผ่าน divisionOfNode/laborTypeOfNode) · ทีมเหลือ 8–11,15 */
   org_nodes: (r, i) => ({
     ...r,
-    kind: i === 1 ? 'section' : (i === 2 || i === 6) ? 'department' : i <= 5 || i === 7 ? 'line' : 'team',
-    code: i === 1 ? 'PD1' : i <= 5 || i === 7 ? null : i === 6 ? null : r.code,
-    name: i === 6 ? 'JIG MTN' : r.name,   // แผนกช่างชื่อจริง — ให้สาย ⚡ KPI ช่าง (kpi_mtn_rollup → kpiAuto) ถูกรันใน harness
-    parent_id: i === 1 || i === 6 ? null : i === 2 ? 'id-1' : i <= 5 ? 'id-2' : i === 7 ? 'id-6' : 'id-3',
+    kind: i === 13 ? 'company' : i === 12 ? 'plant' : i === 1 ? 'section' : (i === 2 || i === 6) ? 'department' : i <= 5 || i === 7 ? 'line' : 'team',
+    code: i === 13 ? '2100' : i === 12 ? '2140' : i === 1 ? 'PD1' : i <= 5 || i === 7 ? null : i === 6 ? null : r.code,
+    name: i === 13 ? 'TSAT' : i === 12 ? 'TSAT-P4' : i === 6 ? 'JIG MTN' : r.name,   // แผนกช่างชื่อจริง — ให้สาย ⚡ KPI ช่าง (kpi_mtn_rollup → kpiAuto) ถูกรันใน harness
+    parent_id: i === 13 || i === 6 ? null : i === 12 ? 'id-13' : i === 1 ? 'id-12' : i === 2 ? 'id-1' : i <= 5 ? 'id-2' : i === 7 ? 'id-6' : 'id-3',
     ref_line_id: i >= 3 && i <= 5 ? i : null,          // 🔑 เลข — ชี้ production_lines.id (ดูหมายเหตุที่ production_lines)
     division: i === 1 ? 'production' : i === 6 ? 'maintenance' : null,
-    cost_center: isNullish(r) ? null : `21406${String(i).padStart(5, '0')}`,
+    cost_center: isNullish(r) || i === 12 || i === 13 ? null : `21406${String(i).padStart(5, '0')}`,
     sort_order: i,
   }),
   /* 🧑‍🤝‍🧑 Manpower Control Board (2026-10-06) — ผังคนต้องได้ "ตำแหน่ง + หน่วย + ทีม" คละกัน
