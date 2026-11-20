@@ -1,6 +1,6 @@
 # 🔐 Audit — "เข้าหน้าได้ ≠ แก้ของหน่วยงานอื่นได้" (2026-10-15 · คำสั่ง user)
 
-> 🆕 **รอบ 13/11 (role ↔ scope ซ้ำซ้อน · `manager` ไม่ได้แปลว่าข้ามแผนก · `scope:all_units` แจกราย role · bucket `dept_admin`)** → `docs/ROLE-SCOPE-AUDIT-2026-11-13.md` (ยังไม่แก้ · รอ session ที่รับผิดชอบ)
+> 🆕 **รอบ 13/11 (role ↔ scope ซ้ำซ้อน · `manager` ไม่ได้แปลว่าข้ามแผนก · `scope:all_units` → รายคน · bucket `dept_admin`)** → audit `docs/ROLE-SCOPE-AUDIT-2026-11-13.md` · สิ่งที่แก้แล้ว + ผลพิสูจน์กับทะเบียนจริง → **§16 ท้ายไฟล์นี้**
 
 > *"ปัญหาหลักเลยเรื่องสิทธิ์ ตอนนี้มั่วเลย ... user เป็น mtn ที่เป็นแค่แอดมินส่วนงาน
 >  แต่เข้าไปแก้ KPI ของแผนกอื่นได้ มั่วเลย"* → *"ต้องไม่เกิดเคสนี้อีก ที่ user บางรole
@@ -105,11 +105,10 @@
 |---|---|---|
 | ของกลาง | `effectiveSections()` (`sectionScope.js`) | **`writeScope.js`** (ใหม่) · ฝั่งช่าง = **`canWriteTeam()`** (`mtnTeams.js`) |
 | อ่านจาก | `profiles.sections` — **ว่าง = เห็นทั้งโรงงาน** | **`profiles.section` (บ้านจริง)** — ว่าง = **บล็อก** + บอกทางแก้ |
-| ใบผ่าน | — | คีย์ **`scope:all_units`** (ปรับที่ `/permissions`) |
+| ใบผ่าน | — | ~~คีย์ `scope:all_units` (ราย role)~~ → **13/11: รายคน `profiles.all_units`** (ติ๊กที่ `/add-user` ช่อง 🌐) · ดู §16 |
 
 🔴 **ห้ามเอา `sections` มาตัดสินการแก้** — 31/122 บัญชีว่างโดยตั้งใจ (ช่าง 16 คนต้องเห็นทุกไลน์)
-· คีย์ `scope:all_units` = true: admin·manager·qa·planner_store·engineer·engineer_nm·document_control·warehouse_delivery
-· = false: supervisor·leader·mtn·**dept_admin**·sale·display
+· ~~คีย์ `scope:all_units` = true: admin·manager·qa·planner_store·engineer·engineer_nm·document_control·warehouse_delivery~~ (ประวัติ 15/10–13/11 · ถอดแล้ว ดู §16)
 
 ### ปิดครบ 10 จุดระดับ A
 | จุด | ทำอะไร |
@@ -1148,3 +1147,32 @@ line_id: emp.line_id ?? ident.line_id
 (supervisor+PD1) รายงาน **พัง 0** ขณะที่รอบ 3 จับได้ `🔭 [leader] Checkin` — คือภาพของคลาสบั๊ก
 ที่หลุดถึงหน้างานมาตลอด · 📄 `audit/README.md` §`CTX.lineId` · `docs/modules/build-gates.md` §รอบที่ 3
 · ด่าน `harness-lineid-matches-mock` ผูก 2 เรื่องนี้ไว้ด้วยกัน
+
+## 16. 🔐 13/11 — role ≠ ขอบเขต: ใบผ่านข้ามหน่วยเป็นรายคน · `sections` เลิกตัดสินการแก้ (audit `docs/ROLE-SCOPE-AUDIT-2026-11-13.md`)
+
+**คำสั่ง user:** *role = ชุดสิทธิ์ใช้ระบบ ไม่ใช่ตำแหน่ง · "manager ไม่ได้แปลว่าแก้ข้ามแผนกได้" · ความกว้างของ "การแก้" มาจากขอบเขตรายคนเท่านั้น
+(profiles.section · resp_cost_centers · org_assignments) ห้ามมาจากชื่อ role หรือชื่อคีย์* → เคาะรายชื่อ 13/11: *"โอเคตามตาราง ชัยยุทธให้ทั้งโรงงาน ลุยเลย"*
+
+**ที่เปลี่ยน (branch `claude/exciting-faraday-g7gu9v` · migration `20261113_role_scope_p1_main.sql` · apply พร้อม deploy เท่านั้น):**
+| ข้อ | เดิม | ใหม่ |
+|---|---|---|
+| P1-1 ใบผ่านข้ามหน่วย | คีย์ `scope:all_units` ของ **8 role** (37 บัญชีที่ไม่ใช่ admin) | **`profiles.all_units` รายคน** 12 ใบ (warehouse_delivery 6 · planner_store 3 · engineer · engineer_nm · ชัยยุทธ) + มอบหมาย `scope_depth='all'` · คีย์/catalog ถอดออก (สำรอง `archive.bk_role_scope_20261113`) |
+| P1-6 "แก้หน่วยไหนได้" | จอ: `sections` ก่อนแล้วถอยบ้าน · DB: บ้านอย่างเดียว + มี CC = true | **แหล่งเดียว**: จอ `writeUnitsOf({section, writeUnits})` = บ้าน ∪ หน่วยที่ได้รับมอบ (`assignmentOverlay` ประกอบ · `UserContext.writeUnits`) · DB `app_write_units()` + `app_cc_covers()` (เช็ค CC จริงตามผัง รวม partial_unit) · `app_can_write_unit()`/`app_can_write_line()` ตรรกะเดียวกับ `writeScope.js` (ยัง fail-open ที่ DB ตามกติกา 20/10) |
+| P1-2 ทางลัด `role === 'manager'` | `mtnTeamOwn` · `MtnRepair isBoss` · `TaxonomyManagerModal` · `Report canApproveLog` | ทุกจุดใช้ `allUnits` รายคน · ด่าน `role-not-scope` |
+| P1-3 `four_m_logs` | policy `ALL · true` | `four_m_select/insert/update/delete` — insert ต้อง `app_can_write_line(line_name)` · update = (approve_sv ∧ ไลน์ในขอบเขต) ∨ approve_qa ∨ manage_docs ∨ reset ∨ เจ้าของใบที่ยัง pending · จอ: อนุมัติ SV + reset ผ่าน `canWriteLine` |
+| P1-4 `employees:edit_all_sections` | ถือโดย leader/supervisor/mtn/manager (~70 บัญชี) | **ถอดคีย์ทิ้ง** · จอ `canEditEmp`/`canEditSkillsFor` → `canWriteUnit(…, {unknownTarget:'block'})` · DB policy UPDATE/DELETE `employees` + `app_can_write_unit(section)` · storage `emp_signature_*` เหลือ `employees:edit` |
+| P1-5 จัดกะ / จอวนหน้า | เขียนตาม `lineScope` (ที่เห็น) · `fn_can_manage_display` ใช้ `sections`/`scope_depth` | `handleSave` กรองด้วย `canWriteLine` + เขียนบนจอว่าตัดกี่ไลน์ · `canManageDisplay(writeUnits, tv, {allUnits})` + `fn_can_manage_display` ใช้ `app_write_units()` (ไม่มีหน่วย = ตั้งไม่ได้ · เดิม fail-open) |
+| P1-7 ด่านชั้น ③ ที่หาย | close_shift / approve_close / four_m:reset / line_setup:delete ไม่มีด่านหน่วย | `closeScopeOk()` ใน DailyReport · reset ใน Report · `handleDeleteLine` ใน LineSetup |
+| P1-8 `document_controls` | policy hardcode `role = ANY(admin,manager)` | `has_perm('doc_forms:manage')` (ตารางเก่า 1 แถว ไม่มีจอเขียน) |
+| P2 role `dept_scope` | 189 แถวสิทธิ์ · 0 คนถือ · รับคีย์ใหม่ทุก seed | ลบแถวสิทธิ์ทั้งหมด (enum คงไว้ · ห้ามตั้งให้ user) |
+| บั๊ก | `skills:delete` ลบครึ่งเดียวเงียบ · `line_setup:delete` ลบจุดงานไม่ได้ · `fn_weekly_skill_update` เช็คชื่อ role | นับแถวตอนลบนิยามสกิล + policy `skill_definitions` รับ `skills:delete` · policy `workstations`/`station_requirements`/`line_layouts` รับ `line_setup:delete` · guard เป็น `has_perm('skills:run_weekly_update')` |
+| ป้าย | `roleMeta.manager.desc` บอกว่า role จำกัดการแก้ไม่ได้ | เขียนใหม่: "แก้ของหน่วยไหนได้" มาจากขอบเขตรายคน |
+
+**พิสูจน์กับทะเบียนจริง (`src/utils/__tests__/writeScopeRegistryGate.test.mjs` · fixture `fixtures/writeScopeRegistry.json` · 131 บัญชี · ไม่มีชื่อคน):**
+- A ผู้ถือใบผ่านที่ไม่ใช่ admin = 12 ใบที่เคาะเป๊ะ · ไม่มี role ไหนได้เป็นชุด
+- B ทุกบัญชีที่มีบ้านยังแก้บ้านตัวเองได้ (0 ราย ถูกล็อกออก)
+- C "แก้อะไรไม่ได้เลย" (ไม่มีบ้าน/CC/ใบผ่าน) = marketing 1 ใบ (รู้ตัว · งาน RFQ ไม่ผูกหน่วยผลิต)
+- D ที่แคบลงจากการเลิกใช้ `sections`: **qa 13** (บ้าน QA · sections = ส่วนงานที่ไปตรวจ — จอคุณภาพไม่กระทบเพราะ `qaWriteCtx` ด่าน E) · **mtn 2** → migration §6 ย้ายส่วนงานเหล่านั้นเป็น CC ให้แล้ว (ไม่แคบลงจริง)
+- บัญชีที่ "เสียใบผ่าน" 27 ใบ: manager 5 (ทุกคนมี CC อยู่แล้ว → CC คุมจริงเป็นครั้งแรก · สุรเสนถือ CC 5 ส่วนงาน = เท่าเดิม) · qa 18 (ดู D/E) · document_control 2 (มี CC ของส่วนตัวเอง · ทะเบียนเอกสารเป็นของกลางผ่าน `unknownTarget` อยู่แล้ว)
+
+**ยังเหลือ (ไม่ได้ทำรอบนี้ · ต้องการ user เคาะ):** P3 ยุบคีย์ที่ชื่อฝังขอบเขต (`shift_schedule:edit` vs `edit_dept` · `org:manage_divisions` vs `manage_own_unit` · `mtn_repair:service` vs `service_own_team`) · bucket `dept_admin` สร้างใหม่จาก allow-list · คีย์ "รอเคาะ" (`products:create` · `four_m:reset` · `skills:delete` · `line_stock:approve` · `event_log:approve_*` · `mtn_repair:*` ฝั่งช่าง) · ด่านหน่วยฝั่ง DB ของ `shift_schedules` (ยัง has_perm อย่างเดียว) · DR ทั้งฝั่ง (anon · known gap)
