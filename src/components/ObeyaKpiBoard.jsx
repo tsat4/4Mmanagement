@@ -1216,6 +1216,14 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
           : 'โฟกัสช่วงค่า: ตัดที่ว่างใต้กราฟ ยกพื้นแกน Y ขึ้นใกล้ค่าต่ำสุด ให้เห็นระยะห่าง Target/Commitment ชัดขึ้น (แผ่นจะเขียนบอกว่าแกนไม่เริ่ม 0)'}>
         {yFocus ? tr('โฟกัสช่วงค่า') : tr('แกนเริ่ม 0')}
       </button>
+      {/* ✒️ 20/11 (user: "กรอก/ตั้งเป้า ทุกการ์ดกดแล้วเด้งไปหน้าเดียวกัน ⇒ รวมเป็นปุ่มเดียวปลายแถบ") — แผ่น KPI ไม่มีปุ่มมุม/ปุ่มกรอกแล้ว
+          · ปุ่มหัวเพจตายตัวเต็ม 2 ตัวแล้ว (บันทึกเหตุการณ์ · โหมดจอ TV · UI §6.35) จึงอยู่ปลายแถบกรองแทน · ไม่มี emoji ในป้าย (§6.35 ข้อ 5) */}
+      {onTab && (
+        <button type="button" className="pg-btn" onClick={() => onTab('table')} style={{ marginLeft: 'auto' }}
+          title={tr('ไปหน้ากรอกค่า / ตั้ง Target-Commitment ของ KPI ขอบเขตนี้ (แท็บ ตั้งค่า KPI / กรอกผล)')}>
+          {tr('กรอก / ตั้งเป้า KPI')} ↗
+        </button>
+      )}
     </>
   );
 
@@ -1294,10 +1302,11 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
                   /* 🧹 ท้ายแผ่น ≤ 1 บรรทัด (user 09/10 "note เยอะไป กราฟเล็กลง") — เหลือเฉพาะ (ก) คาดปลายปีที่คำนวณได้ หรือ (ข) เตือนที่ต้องเห็น
                      (ไฟเทา/ค่ากรอกมือถูกทับ/ขอบเขตโรงงานยังไม่มีนิยาม) · Target/Commit/ที่มาเต็มๆ ย้ายไป tooltip ของไฟ + popup 🔍 (`zoomFoot`) */
                   foot={(kk, zoomedCopy) => (zoomedCopy || kk > k * 1.15 ? zoomFoot(r, kk) : (forecastLine(r, kk) || cardWarn(r, kk)))}
-                  /* 🧭 20/11 (user): แว่นขยาย = หน้าที่เดียวกับชิปสถานะ ⇒ ถอดออก · มุมขวาบน = **✏️ กรอก/ตั้งเป้า** (คำสั่งหลักของแผ่น ไปแท็บ 📑)
-                     · ท้ายแผ่น = **🗂️ ข้อมูลต้นทาง** เฉพาะ KPI ที่ระบบคำนวณ (เดิม "เจาะดู" — ฟังเหมือนเปิด insight ทั้งที่พาไปหน้า raw data ของระบบ) */
-                  corner={{ icon: '✏️', title: r.roll ? 'ตั้ง KPI ระดับนี้' : (r.manual ? 'กรอก/ตั้งเป้า' : 'ตั้งเป้า'), onClick: () => onTab?.('table') }}
-                  link={r.to ? `🗂️ ข้อมูลต้นทาง · ${srcPageName(r.to)}` : null}
+                  /* 🧭 20/11 (user): แว่นขยาย = หน้าที่เดียวกับชิปสถานะ ⇒ ถอดออก (`zoom={false}` · popup เปิดจากชิป) · ปุ่ม "กรอก/ตั้งเป้า" ของทุกแผ่น
+                     รวมเป็นปุ่มเดียวปลายแถบกรอง (`controls`) · ท้ายแผ่น = **ข้อมูลต้นทาง · <ชื่อหน้า>** เฉพาะ KPI ที่ระบบคำนวณ
+                     (เดิม "เจาะดู" — ฟังเหมือนเปิด insight ทั้งที่พาไปหน้า raw data ของระบบ) */
+                  zoom={false}
+                  link={r.to ? `ข้อมูลต้นทาง · ${srcPageName(r.to)}` : null}
                   onLink={() => (r.to ? goTo(r.to) : onTab?.('table'))}>
                   {(kk, w, zoomedCopy) => rowChart(r, kk, w, zoomedCopy)}
                 </Sheet>

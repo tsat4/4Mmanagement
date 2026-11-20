@@ -162,11 +162,10 @@ const SheetIconBtn = ({ fs, title, onClick, children, className }) => (
 /* `bigNote` (30/09 · user: "ตัวเลขที่โชว์คืออะไร ไม่มี text บอก") = ป้ายเล็กติดตัวเลขใหญ่ว่าเป็นค่าของอะไร (เช่น "ก.ย." = ค่าเดือนที่เลือก) */
 /* `statZoom` (16/11 · user: ชิปไม่ตามเป้า กดแล้วไปหน้ากรอกเพื่ออะไร ควรเป็นสรุป insight) = กดชิปสถานะแล้วเปิด popup 🔍 ของแผ่นนี้แทน onLink · ใน popup เองชิปไม่มีลิงก์ */
 /* `goals` (16/11 · user: "Target/commitment ไปขึ้นเหมือน note น่าจะไฮไลท์ให้ชัดเหมือนค่า YTD") = แถวเกณฑ์ใต้ตัวเลขใหญ่ · รับ `(k, zoomedCopy) => node` เหมือน foot (คืน null = ไม่วาด) */
-/* `corner` (20/11 · user: "แว่นขยายกับป้ายสถานะทำหน้าที่เดียวกัน เอาแว่นขยายออก · เอา กรอก/ตั้งเป้า ไปแทน") = ปุ่มมุมขวาบน **แทน** 🔍
-   `{ icon, title, onClick }` — ใช้คู่กับ `statZoom` (popup เปิดจากชิปสถานะแล้ว ปุ่มมุมจึงว่างให้คำสั่งหลักของแผ่น) · ใบใน popup ไม่วาด (มีแต่ ✕) */
+/* 20/11 (user: "แว่นขยายกับป้ายสถานะทำหน้าที่เดียวกัน เอาแว่นขยายออก") — แผ่นที่ใช้ `statZoom` ส่ง `zoom={false}` ด้วย ⇒ มุมขวาบนว่าง popup เปิดจากชิปสถานะอย่างเดียว */
 /* `footAside` (16/11 · user: "insight เยอะจนกราฟหาย") = ท้ายแผ่นของใบใน popup ไปอยู่รางขวา (คนละคอลัมน์กับกราฟ)
    ⇒ ใช้กับแผ่นที่ท้ายแผ่นยาวได้จริง (insight) เท่านั้น · ไม่ส่ง = ชั้นล่างเพดาน 30% เหมือนเดิม */
-export function Sheet({ k, cw = 0, span = 1, icon, title, sub, big, unit, bigNote, delta, stat, foot, link, onLink, zoom = true, onClose, statZoom = false, goals = null, footAside = false, corner = null, children }) {
+export function Sheet({ k, cw = 0, span = 1, icon, title, sub, big, unit, bigNote, delta, stat, foot, link, onLink, zoom = true, onClose, statZoom = false, goals = null, footAside = false, children }) {
   const fs = (n) => Math.max(11, Math.round(n * k));
   const status = stat?.status;
   /* 📱 มือถือ: กริดเหลือ 1 คอลัมน์ ⇒ แผ่นกว้าง 2 ช่อง (OEE · ACTION BOARD) ต้องเป็น 1 ช่อง
@@ -227,9 +226,7 @@ export function Sheet({ k, cw = 0, span = 1, icon, title, sub, big, unit, bigNot
           </div>
           {onClose
             ? <SheetIconBtn fs={fs} title={tr('ปิด (Esc)')} onClick={onClose}>✕</SheetIconBtn>
-            : corner
-              ? <SheetIconBtn className="tv-hide" fs={fs} title={tr(corner.title)} onClick={corner.onClick}>{corner.icon} <span style={{ fontSize: fs(10.5), fontWeight: 700 }}>{tr(corner.title)}</span></SheetIconBtn>
-              : (zoom && <SheetIconBtn className="tv-hide" fs={fs} title={tr('ขยายดูใหญ่')} onClick={() => setZoomed(true)}>🔍</SheetIconBtn>)}
+            : (zoom && <SheetIconBtn className="tv-hide" fs={fs} title={tr('ขยายดูใหญ่')} onClick={() => setZoomed(true)}>🔍</SheetIconBtn>)}
         </div>
         {sub && <div style={{ fontSize: fs(10.5), color: 'var(--muted)', marginTop: 1 }}>{sub}</div>}
         {/* 📱 มือถือ: ขึ้นบรรทัดใหม่ได้ — "14.1 พันบาท เดือน มี.ค. (ล่าสุด) ▲ 35.9 ตามเป้า" กว้าง 371px ในแผ่น 346px (mobilesweep 15/10) */}
