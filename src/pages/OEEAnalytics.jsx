@@ -2093,12 +2093,16 @@ export default function OEEAnalytics() {
                     const cell = (v) => v == null ? <span style={{ color: 'var(--muted)' }}>—</span> : `${(v * 100).toFixed(1)}`;
                     return (
                       <tr key={r.key} style={{ borderBottom: '1px solid var(--line)', textAlign: 'right' }}>
-                        <td style={{ textAlign: 'left', padding: '6px 8px' }}>
+                        <td style={{ textAlign: 'left', padding: '6px 8px', maxWidth: 260 }}>
                           <MatLabel mat={r.matNos[0]} name={r.name} oneLine />
                           {r.matNos.length > 1 && <span style={{ fontSize: 11, color: 'var(--muted)' }}> +{r.matNos.length - 1} MAT</span>}
                           {r.overlap && <span title={trI18n('ช่วงเวลาคาบกับพาร์ทอื่น — ห้ามเอาไปบวกรวม')} style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 700 }}> ⚠️</span>}
                         </td>
-                        <td style={{ textAlign: 'left', padding: '6px 8px', fontSize: 11, color: 'var(--muted)' }}>{r.lines.join(', ')}</td>
+                        <td title={r.lines.join('\n')}
+                          style={{ textAlign: 'left', padding: '6px 8px', fontSize: 11, color: 'var(--muted)',
+                            maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {r.lines[0]}{r.lines.length > 1 ? ` +${r.lines.length - 1} ${trI18n('ไลน์')}` : ''}
+                        </td>
                         <td style={{ padding: '6px 8px' }}>{cell(r.A)}</td>
                         <td style={{ padding: '6px 8px' }}>{cell(r.P)}</td>
                         <td style={{ padding: '6px 8px' }}>{cell(r.Q)}</td>
