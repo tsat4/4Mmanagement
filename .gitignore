@@ -13,3 +13,8 @@ supabase/.temp/
 
 # ผลสวีป handheld (สร้างใหม่ทุกรอบ)
 audit/handheld-report.json
+
+# ระบบบน INET — กุญแจ/รหัสผ่านจริง ห้าม commit
+inet/stack/.env
+inet/stack/**/.env
+inet/work/

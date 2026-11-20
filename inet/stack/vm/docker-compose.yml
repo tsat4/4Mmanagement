@@ -1,0 +1,44 @@
+# ══ VM ฐานข้อมูล ESM บน INET (ในรั้ว vFW Dedicate · ตกลงทาง 2 — 20/11/2026) ══
+# รัน PostgreSQL 17.6 ตัวเดียวกับ Supabase เดิมใช้ (image ทางการ มี pg_cron/pg_net/vault/pg_trgm ครบ)
+# 📄 docs/modules/inet-migration.md §6.1 · inet/stack/README.md
+#
+# ใช้บน VM:   cp ../.env .env   (จาก gen-keys.mjs)   แล้ว   docker compose up -d
+#
+# 🔴 พอร์ต 5432 ผูกกับ IP ภายในรั้วเท่านั้น (DB_BIND_IP) — ห้ามเปิดออกอินเทอร์เน็ต
+#    กันชั้นที่ 2 ด้วย firewall ของ VM/vFW: อนุญาตเฉพาะช่วง IP ของ container ในรั้ว
+# 🔴 ข้อมูลอยู่ที่ ./data — ต้องอยู่บนดิสก์ถาวรของ VM และอยู่ในรอบ backup ของ INET
+services:
+  db:
+    image: supabase/postgres:17.6.1.136
+    container_name: esm-db
+    restart: unless-stopped
+    ports:
+      - "${DB_BIND_IP:?ตั้ง IP ภายในของ VM}:5432:5432"
+    environment:
+      POSTGRES_HOST: /var/run/postgresql
+      PGPORT: 5432
+      POSTGRES_PORT: 5432
+      PGPASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      PGDATABASE: postgres
+      POSTGRES_DB: postgres
+      JWT_EXP: ${JWT_EXPIRY:-3600}
+      TZ: UTC
+    volumes:
+      # init ทางการของ Supabase self-host (ลอกมาจาก github.com/supabase/supabase/docker — Apache-2.0)
+      - ./db-init/realtime.sql:/docker-entrypoint-initdb.d/migrations/99-realtime.sql:ro
+      - ./db-init/webhooks.sql:/docker-entrypoint-initdb.d/init-scripts/98-webhooks.sql:ro
+      - ./db-init/roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:ro
+      - ./db-init/jwt.sql:/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql:ro
+      - ./db-init/_supabase.sql:/docker-entrypoint-initdb.d/migrations/97-_supabase.sql:ro
+      - ./data:/var/lib/postgresql/data
+      - db-config:/etc/postgresql-custom
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf", "-c", "log_min_messages=fatal"]
+    shm_size: 256m
+volumes:
+  db-config:
