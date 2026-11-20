@@ -744,8 +744,16 @@ function FactoryStaffView({ lines, attendance, maps, stationPlans, skills, emplo
   const badgeOf = useCallback((name) => {
     const s = byRegion.get(name);
     const n = s && !s.outOfScope ? groupNo.get(s.group) : null;
-    return n ? { text: String(n), title: s.group !== name ? `${name} (${s.group})` : name } : null;
+    // วงแหวน = มา ÷ std ของกะนี้ (ตัดสินไม่ได้ = null → วงประ)
+    const pct = s && s.status !== 'none' && s.std ? s.onFloor / s.std : null;
+    return n ? { text: String(n), pct, title: `${s.group !== name ? `${name} (${s.group})` : name}${s.std ? ` · มา ${s.onFloor}/${s.std}` : ''}` } : null;
   }, [byRegion, groupNo]);
+
+  // 🔗 ชี้ร่วม (linked hover): ชี้แถวแผงขวา ⇄ กรอบ/เลขบนผัง ของกลุ่มเดียวกันสว่าง ที่เหลือจาง
+  const [hoverGroup, setHoverGroup] = useState(null);
+  const onMapHover = useCallback((name) => setHoverGroup(name ? byRegion.get(name)?.group || null : null), [byRegion]);
+  const focusNames = useMemo(() => (hoverGroup
+    ? new Set([...byRegion.entries()].filter(([, s]) => s.group === hoverGroup).map(([n]) => n)) : null), [hoverGroup, byRegion]);
 
   // แผงขวา = 1 แถวต่อกลุ่ม (กรอบลูกหลายกรอบในกลุ่มเดียว = ผลเดียวกัน ห้ามซ้ำแถว) · กด = เปิดผังกรอบแรกของกลุ่ม
   const rows = useMemo(() => {
@@ -775,9 +783,10 @@ function FactoryStaffView({ lines, attendance, maps, stationPlans, skills, emplo
       {err && <div style={{ fontSize: 12, color: 'var(--red)' }}>⚠️ {err}</div>}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'minmax(0,1fr)' : 'minmax(0,1fr) 300px', gap: 10, alignItems: 'start' }}>
         <div className="card" style={{ padding: 8 }}>
-          <FactoryMiniMap stateOf={stateOf} onPick={openLine} bottomReserve={isMobile ? 12 : 24} badgeOf={badgeOf} />
+          <FactoryMiniMap stateOf={stateOf} onPick={openLine} bottomReserve={isMobile ? 12 : 24} badgeOf={badgeOf}
+            dimMap focusNames={focusNames} onHover={onMapHover} />
           <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 6 }}>
-            {trI18n('เลขบนผัง = เลขหน้าแถวในแผงขวา (ชี้เลขเพื่อดูชื่อไลน์) · กดกรอบ/เลข = เข้าผังรายไลน์ · สีกรอบ = คนที่มา')}{shift === 'night' ? trI18n('กะดึก') : trI18n('กะเช้า')}{trI18n(' เทียบกำลังคนตามผัง (std ต่อกะ ตั้งที่ /line-setup) · กรอบ/ชื่อไลน์ตั้งที่ /layout-setup')}
+            {trI18n('เลขบนผัง = เลขหน้าแถวในแผงขวา (ชี้แถว/เลข = ไฮไลต์คู่กัน) · วงแหวนรอบเลข = มา ÷ std · กดกรอบ/เลข = เข้าผังรายไลน์ · สีกรอบ = คนที่มา')}{shift === 'night' ? trI18n('กะดึก') : trI18n('กะเช้า')}{trI18n(' เทียบกำลังคนตามผัง (std ต่อกะ ตั้งที่ /line-setup) · กรอบ/ชื่อไลน์ตั้งที่ /layout-setup')}
           </div>
         </div>
         <div className="card" style={{ padding: 10, display: 'grid', gap: 6, alignContent: 'start' }}>
@@ -786,8 +795,10 @@ function FactoryStaffView({ lines, attendance, maps, stationPlans, skills, emplo
           {ws && !regions.length && <div style={{ fontSize: 12, color: 'var(--amber)' }}>{trI18n('ยังไม่มีกรอบไลน์บนผังรวม — ตีกรอบที่ /layout-setup')}</div>}
           {rows.map(([name, s, names]) => (
             <button key={name} type="button" onClick={() => openLine(names.includes(name) ? name : names[0])}
-              style={{ display: 'grid', gap: 2, textAlign: 'left', padding: '6px 8px', borderRadius: 'var(--r-md)', cursor: 'pointer',
-                border: '1px solid var(--border)', borderLeft: `4px solid ${STAFF_TONE[s.status]}`, background: 'var(--bg2)', color: 'var(--text)' }}>
+              onMouseEnter={() => setHoverGroup(name)} onMouseLeave={() => setHoverGroup(null)} onFocus={() => setHoverGroup(name)} onBlur={() => setHoverGroup(null)}
+              style={{ display: 'grid', gap: 2, textAlign: 'left', padding: '6px 8px', borderRadius: 'var(--r-md)', cursor: 'pointer', transition: 'background .15s',
+                border: `1px solid ${hoverGroup === name ? STAFF_TONE[s.status] : 'var(--border)'}`, borderLeft: `4px solid ${STAFF_TONE[s.status]}`,
+                background: hoverGroup === name ? 'var(--bg3)' : 'var(--bg2)', color: 'var(--text)' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700 }}>
                 {groupNo.get(name) && <span style={{ minWidth: 24, height: 24, padding: '0 5px', borderRadius: 12, background: STAFF_TONE[s.status], color: '#fff',
                   fontSize: 12, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>{groupNo.get(name)}</span>}
