@@ -122,7 +122,7 @@ export default function MoTvBoard({ inScope, isMobile = false }) {
 
       {/* 🔴 ความซื่อสัตย์ของจอ — ห้ามซ่อนบน TV (ย่อเป็นบรรทัดสั้นตัวใหญ่) */}
       {err && <Warn tv={tv} fz={fz}>{tr('⚠ โหลดใบ MO ไม่สำเร็จ — ตัวเลขบนจอยังไม่ใช่ของจริง (')}{err})</Warn>}
-      {board.badGroup && <Warn tv={tv} fz={fz}>⚠ {tr("ค่า")} mo=&quot;{group}&q{tr("ไม่รู้จัก — แสดงทุกขั้นแทน (แก้ลิงก์ที่หน้าตั้งค่าจอวน")}าจอวน)</Warn>}
+      {board.badGroup && <Warn tv={tv} fz={fz}>⚠ {tr("ค่า")} mo=&quot;{group}&quot; {tr("ไม่รู้จัก — แสดงทุกขั้นแทน (แก้ลิงก์ที่หน้าตั้งค่าจอวน")})</Warn>}
       {rows && rows.length >= CAP && <Warn tv={tv} fz={fz}>{tr('⚠ ใบเปิดเกิน')} {CAP} {tr('ใบ — จออาจแสดงไม่ครบ')}</Warn>}
 
       {/* ที่ซ่อน/ประมาณ — เขียนให้เห็นเสมอ (กรองแล้วต้องบอกว่าซ่อนกี่รายการ)

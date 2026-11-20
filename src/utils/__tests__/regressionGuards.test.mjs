@@ -1105,6 +1105,17 @@ const RULES = [
     allow: {},
   },
   {
+    id: 'i18n-entity-fragment',
+    scan: ['src/pages', 'src/components'], ext: ['.jsx'],
+    // จับ HTML entity ที่ถูกตัดครึ่งเพราะ codemod วัด offset จาก node.value (decode entity แล้ว) แต่เขียนทับ raw — เช่น `&q{tr("…")}` / `")}uot;`
+    re: /&[a-z]{1,5}\{(?:tr|trI18n)\(|["']\)\}[a-z]{1,5};/g,
+    why: 'i18n รอบ 4 (20/11): JSXText ที่มี `&quot;`/`&gt;` — babel ให้ `node.value` แบบ decode แล้ว แต่ `node.start` ชี้ raw '
+       + '⇒ ตำแหน่งที่ครอบ tr() เพี้ยนเท่าความยาว entity · เจอจริง 5 จุด (MoTvBoard `mo=&q{tr(` · MachineDatabase `")}&quot; ที่`) '
+       + 'ซึ่งวาดออกจอเป็นตัวอักษรขยะ',
+    fix: 'ครอบ tr() ให้ขอบอยู่นอก entity: `mo=&quot;{group}&quot; {tr("ไม่รู้จัก…")}` · codemod ต้องใช้ node.extra.raw ไม่ใช่ node.value',
+    allow: {},
+  },
+  {
     id: 'surf-gradient-token-only',
     scan: ['src/pages', 'src/components'], ext: ['.jsx', '.js'],
     // จับการหยิบ token ปลายทางของไล่เฉดพื้น (--card-top/--bg3-bot …) มาประกอบ gradient เองในหน้า

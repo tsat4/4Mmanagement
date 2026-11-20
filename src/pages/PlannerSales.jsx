@@ -1800,7 +1800,7 @@ function KanbanCalcTab({ canApply, fullName, custLabel }) {
         <div style={{ ...card, marginTop: 14 }}>
           <div style={{ fontSize: 14, fontWeight: 800, fontFamily: 'var(--font-display)', marginBottom: 2 }}>{tr('สรุปภาระการผลิต (Capacity Load)')}</div>
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 12 }}>
-            {tr("เวลาที่ต้องใช้ = Σ (setup + lot×CT) × (order/lot) ต่อไลน์")} · Available = {fmt(settings.hours_per_day)} {tr('ชม./วัน ×')} {fmt(settings.working_days)} {tr("วัน")} = {fmt(capacity.availSec / 3600)} {tr("ชม./เดือน · สี <85% เขียว · 85–100% เหลือง · >100% แดง (เกิน")} (เกิน capacity)
+            {tr("เวลาที่ต้องใช้ = Σ (setup + lot×CT) × (order/lot) ต่อไลน์")} · Available = {fmt(settings.hours_per_day)} {tr('ชม./วัน ×')} {fmt(settings.working_days)} {tr("วัน")} = {fmt(capacity.availSec / 3600)} {tr("ชม./เดือน · สี <85% เขียว · 85–100% เหลือง · >100% แดง (เกิน")} capacity)
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {capacity.list.map(l => {
