@@ -66,7 +66,11 @@ function SubLine({ text = '', marginTop = 3 }) {
   const full = text;
   if (full.length <= SUB_HEAD_MAX) return <div style={st}>{full}</div>;
 
-  const parts = full.split(' · ').map(x => x.trim()).filter(Boolean);
+  /* คั่นด้วย ` · ` เป็นหลัก — แต่หลายหน้าเขียนยาวโดยใช้ ` — ` คั่นแทน (เช่น /pe-docs)
+     ซึ่งเดิมหลุดด่านนี้ไปทั้งก้อน ⇒ ถ้าแยกด้วย ` · ` แล้วยังได้ท่อนเดียว ให้ลอง ` — ` ต่อ
+     🔴 ลองตามลำดับ ไม่ใช่แยกพร้อมกัน — บรรทัดที่มีทั้งคู่ (`A · B — C`) ต้องคงโครงเดิมไว้ */
+  let parts = full.split(' · ').map(x => x.trim()).filter(Boolean);
+  if (parts.length === 1) parts = full.split(' — ').map(x => x.trim()).filter(Boolean);
   const warns = parts.filter(x => /^[⚠🔴]/.test(x));
   const plain = parts.filter(x => !/^[⚠🔴]/.test(x));
   /* เก็บท่อนแรกๆ ไว้บนจอจนกว่าจะเต็มครึ่งบรรทัด — อย่างน้อย 1 ท่อนเสมอ */

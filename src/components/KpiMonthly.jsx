@@ -24,6 +24,7 @@ import { findClosedTwin, restoreQuestion } from '../utils/kpiClosed';
 import { scoreDef, KPI_LEVELS, KPI_PERSPECTIVES, perspectiveLabel, KPI_SUMMARY_MODES,
   unitOf, decimalsOf, summaryModeOf, summaryShort, summaryModeLabel, fmtKpi, summaryOf, planProgress, valueScopeOf, sharedValueDef, KPI_VALUE_SCOPES, KPI_BOARD_SLOTS, boardSlotOf, missingPlantValueDefs, plantDefPayloadFrom,
   KPI_FORMULAS, formulaOf, baseVarOf, KPI_BASE_VARS, checkStdSelection, guessStdUnit, stdUnitLabel,
+  weightAudit, KPI_TOTAL_WEIGHT,
   defBars, fmtBar, scoreRuleText, defIssues } from '../utils/kpiSetup';
 import { findDupDefs, dupGroupFacts, dupReasonLabel, DUP_REASONS } from '../utils/kpiDupDefs';
 /* 🔬 ขาย่อยของสูตร (DL/OH · ความพึงพอใจ Q/D) มาจาก `KPI_FORMULAS[].parts` ที่เดียว — ห้ามประกอบในหน้า */
@@ -38,6 +39,7 @@ import ReadOnlyNote from './ReadOnlyNote';
 import PersonSelect from './PersonSelect';
 import SearchSelect, { normSearch } from './SearchSelect';
 import KpiStandardModal from './KpiStandardModal';
+import { MoreMark } from './InfoMore';
 import { DeleteButton } from './IconButton';
 import { BREAK_POLICY_COLS } from '../utils/oeeMasters';
 import {
@@ -272,6 +274,9 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
   const [data, setData] = useState(null); // { key, sessions, dtBySession, dtUnpBySession, defects, partCost, targets }
   // ── KPI กรอกมือ (เฟส 2) ──
   const [allDefs, setAllDefs] = useState(null);          // null = ยังโหลด
+  /* ชุด "ทุกขอบเขตของปีนี้" (ยังไม่กรองขอบเขตที่เปิดอยู่) — ใช้เฉพาะแผงสรุปข้ามหน่วย ⚖ น้ำหนัก (19/11)
+     🔴 ห้ามเอาไปวาดตาราง/บอร์ด — ใบ KPI เป็นของหน่วยงาน ตารางต้องเห็นเฉพาะขอบเขตที่เลือก (+ ที่ตกทอดมา) */
+  const [yearDefs, setYearDefs] = useState(null);
   const [belowDefs, setBelowDefs] = useState([]);         // ⬆ นิยามของหน่วยลูก (12/10) — ไว้โชว์ค่าที่บอร์ดเติมจากลูก · ไม่แก้ที่นี่
   const [closedDefs, setClosedDefs] = useState([]);      // 🗄️ นิยามที่ปิดใช้งานอยู่ (is_active=false) ในขอบเขตที่ดู — ให้เปิดคืนได้จากจอ (07/10)
   const [entries, setEntries] = useState({});      // kpi_id -> { month: value }
@@ -471,7 +476,7 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
     if (!alive()) return;
     if (error) {
       setKpiMissing((error.code || '') === '42P01');
-      setAllDefs([]); setBelowDefs([]); setEntries({}); setPlans({});
+      setAllDefs([]); setYearDefs(null); setBelowDefs([]); setEntries({}); setPlans({});
       return;
     }
     setKpiMissing(false);
@@ -480,6 +485,7 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
     /* 💰 15/10: นิยามที่ยังค้างที่รหัส CC (ก่อน trigger / รหัสเพิ่งผูกหน่วย) = นิยามของหน่วยเจ้าของ — ทำให้ตรงก่อนกรอง ไม่งั้นโผล่เป็น "ตกทอด/ลูก" ของตัวเอง */
     const canonDef = (x) => { const sc = scopeOfDef(x); const c = canonicalScope(org, sc); return c === sc ? x : { ...x, scope_kind: c.kind, scope_value: c.value }; };
     const dAll = (d || []).map(canonDef);
+    setYearDefs(dAll);                                   // ⚖ แผงสรุปน้ำหนักข้ามหน่วย — ก่อนกรองขอบเขต
     const rows = dAll.filter(x => scopeCovers(org, scopeOfDef(x), scope));
     setAllDefs(rows);
     /* ⬆ นิยามของหน่วยลูก (12/10 · กติกาเดียวกับบอร์ด: แม่ชนะรายเดือน · เดือนที่แม่ว่างบอร์ดเติมค่ารวมจากลูก) — ตารางนี้ต้องเห็นเลขชุดเดียวกับบอร์ด */
@@ -760,6 +766,19 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
     return chk.missingFixed.length ? chk : null;
   }, [stdItems, defsForStd]);
 
+  /* ── ⚖️ น้ำหนักรวมของทุกหน่วยในที่เดียว (19/11 · คำสั่ง user "ทำหน้าสรุปน้ำหนักที่ยังไม่ครบเลย") ──
+     เดิมรู้ได้ทีละใบ (แถบน้ำหนักในโมดัล 📘 KPI Standard) ⇒ ต้องเปิดไล่ทีละหน่วยถึงจะรู้ว่าใครยังไม่ครบ
+     🔴 เกณฑ์อยู่ที่ `weightAudit()` (`utils/kpiSetup.js`) — ห้ามคิดเองในหน้า · เพดาน 50 = `KPI_TOTAL_WEIGHT`
+     🔴 ขอบเขตยุบผ่าน `canonicalScope()` เหมือนทุกที่ (CC ↔ หน่วยเจ้าของ = ขอบเขตเดียวกัน · กฎ kpi-scope-write-raw) */
+  const wAudit = useMemo(() => {
+    if (!orgReady) return null;                      // ยังอ่านผังไม่ได้ = ยังตอบไม่ได้ ห้ามบอกว่าครบ
+    return weightAudit(yearDefs, {
+      scopeOf: (d) => canonicalScope(org, scopeOfDef(d)),
+      labelOf: (kind, value) => org.labelOf?.(kind, value) || null,
+    });
+  }, [yearDefs, org, orgReady]);
+  const wBad = useMemo(() => (wAudit || []).filter(u => !u.ok), [wAudit]);
+
   /* นิยามของแถวอัตโนมัติ — เก็บ "เป้า/ทิศทาง/commitment" ไว้ที่ kpi_definitions (source='auto:<key>')
      ⚠️ ค่าไม่ได้มาจากที่นี่ (ระบบคำนวณเอง) แถวนิยามเก็บแค่เกณฑ์ตัดสิน                       */
   const autoDefBy = useMemo(() => {
@@ -860,7 +879,7 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
         ${rows}
         ${manRows ? `<tr><td colspan="14" style="${td};text-align:left;background:#f4f4f4;font-weight:bold">KPI กรอกมือ (นอกระบบ)${!isPlant(scope) ? ' — รวมนิยามที่ตกทอดจากระดับแม่ (ติดป้ายในวงเล็บ)' : ''}</td></tr>${manRows}` : ''}
       </table>
-      ${months.tot.costMissQty > 0 ? `<div style="font-size:11px;color:#b45309;margin-top:6px">⚠ ของเสีย ${months.tot.costMissQty.toLocaleString()} ชิ้นยังตีมูลค่าไม่ได้ (พาร์ทไม่มีต้นทุน/ชิ้นใน Parts Master) — Cost of defect จึงต่ำกว่าจริง</div>` : ''}
+      ${months.tot.costMissQty > 0 ? `<div style="font-size:11px;color:#b45309;margin-top:6px">⚠ ของเสีย ${months.tot.costMissQty.toLocaleString()} ชิ้นยังตีมูลค่าไม่ได้ (พาร์ทไม่มีต้นทุน/ชิ้นใน Material Master) — Cost of defect จึงต่ำกว่าจริง</div>` : ''}
       <table style="margin-top:26px;width:60%"><tr>${(Array.isArray(df?.sig_blocks) && df.sig_blocks.length ? df.sig_blocks : ['Issued', 'Checked', 'Approved']).map(s2 => `<td style="text-align:center;font-size:11px;padding-top:30px;border-top:1px solid #999">${typeof s2 === 'string' ? s2 : s2?.label || ''}</td>`).join('')}</tr></table>`;
     const w = window.open('', '_blank');
     if (!w) { toast.error('เบราว์เซอร์บล็อก popup — อนุญาต popup ก่อนพิมพ์'); return; }
@@ -1232,7 +1251,7 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
             จากกะที่ปิดแล้ว {months.tot.n.toLocaleString()} กะ
             {months.tot.costMissQty > 0 && (
               <span data-warn="1" style={{ color: '#f59e0b' }}> {tr('· ⚠ ของเสีย')} {months.tot.costMissQty.toLocaleString()} ชิ้นยังตีมูลค่าไม่ได้
-                (กรอกต้นทุน/ชิ้นที่ Product Master → 🗂 Parts Master) — Cost of defect ต่ำกว่าจริง</span>
+                (กรอกต้นทุน/ชิ้นที่ Product Master → 🗂 Material Master) — Cost of defect ต่ำกว่าจริง</span>
             )}
           </div>
         </div>
@@ -1319,6 +1338,41 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
             {canManage
               ? <button onClick={() => setShowStd(true)} style={{ ...btnSt, marginLeft: 8, padding: '2px 8px', fontSize: 11.5 }}>{tr('📘 เปิด KPI Standard เพื่อหยิบข้อ')}</button>
               : <span> · {tr('ต้องมีสิทธิ์ kpi:manage')}</span>}
+          </div>
+        </div>
+      )}
+      {/* ── ⚖️ สรุป "น้ำหนักยังไม่ครบ 50" ข้ามหน่วยในที่เดียว (19/11 · คำสั่ง user) ──────────
+          🔴 ระบบใส่น้ำหนักให้เองไม่ได้ — เอกสารกลุ่มให้หน่วยงานถ่วงเอง (เหตุผลเดียวกับที่ไม่หยิบ KPI ให้เอง)
+             จอทำได้แค่ "บอกว่าใครยังไม่ครบ + พาไปที่ใบนั้น"
+          🔴 อ่านผังไม่ได้ = ไม่โชว์แถบนี้เลย ห้ามขึ้นว่า "ครบทุกหน่วย" (จะกลายเป็นจอโกหก) */}
+      {!kpiMissing && wAudit && wBad.length > 0 && (
+        <div style={{ ...card, borderColor: 'var(--amber)', fontSize: 12.5 }}>
+          <b style={{ color: 'var(--amber)' }}>⚖ {tr('น้ำหนัก KPI ยังไม่ครบ')} {KPI_TOTAL_WEIGHT} — {wBad.length} {tr('หน่วยงาน')}</b>
+          <span style={{ color: 'var(--muted)' }}> ({tr('ครบแล้ว')} {wAudit.length - wBad.length}/{wAudit.length})</span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 5 }}>
+            {wBad.map(u => (
+              <button key={u.key} type="button"
+                onClick={() => setScope(u.kind && u.kind !== 'plant' ? { kind: u.kind, value: u.value } : { ...PLANT })}
+                title={`${tr('KPI ในใบ')} ${u.count} ${tr('ข้อ')}${u.noWeight ? ` · ${tr('ยังไม่ใส่น้ำหนัก')} ${u.noWeight} ${tr('ข้อ')}` : ''}${u.stdUnit ? ` · ${tr('อิงแบบ')} ${u.stdUnit}` : ''} — ${tr('กดเพื่อเปิดใบนี้')}`}
+                style={{
+                  display: 'inline-flex', alignItems: 'baseline', gap: 5, cursor: 'pointer',
+                  padding: '3px 9px', borderRadius: 'var(--r-md)', fontSize: 11.5,
+                  border: `1px solid ${sameScope({ kind: u.kind, value: u.value }, kpiScope) ? 'var(--amber)' : 'var(--border2)'}`,
+                  background: 'var(--bg3)', color: 'var(--text2)',
+                }}>
+                <b>{u.label}</b>
+                <span style={{ color: 'var(--amber)', fontWeight: 700 }}>
+                  {u.weight}/{KPI_TOTAL_WEIGHT}
+                </span>
+                <span style={{ color: 'var(--muted)' }}>
+                  ({u.diff > 0 ? `${tr('เกิน')} ${u.diff}` : `${tr('ขาด')} ${-u.diff}`})
+                </span>
+              </button>
+            ))}
+          </div>
+          <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 5 }}>
+            {tr('ระบบใส่น้ำหนักแทนไม่ได้ — เอกสารกลุ่มให้หน่วยงานถ่วงเอง · กดชื่อหน่วยเพื่อเปิดใบนั้นแล้วกรอกที่คอลัมน์ "น้ำหนัก"')}{' '}
+            <MoreMark text={tr('นับเฉพาะหน่วยที่มีแถว KPI อยู่แล้ว — หน่วยที่ยังไม่มีใบเลยไม่โผล่ที่นี่ (คนละอาการ ไม่ใช่ "น้ำหนักขาด") · แถวที่ปิดใช้งานไม่ถูกนับ')} />
           </div>
         </div>
       )}

@@ -318,7 +318,7 @@ export default function MaterialRequests() {
     return src.slice(0, 200);
   }, [parts, pq]);
 
-  /* 🗂 รายแถว = เลือกรหัสเดี่ยวจาก Parts Master (ไม่แตก BOM) · แตก BOM อยู่ที่ปุ่มหัวตาราง */
+  /* 🗂 รายแถว = เลือกรหัสเดี่ยวจาก Material Master (ไม่แตก BOM) · แตก BOM อยู่ที่ปุ่มหัวตาราง */
   const applyPart = (p) => {
     const patch = { mat_no: p.mat_no, description: p.part_name || '', unit: normUom(p.uom, uomIdx) || DEFAULT_UOM };
     if (picker?.itemKey) setItem(picker.itemKey, patch);
@@ -509,12 +509,12 @@ export default function MaterialRequests() {
       )}
 
       {picker && (
-        <Modal title={tr('เลือกรหัสสินค้าคงคลัง (จากทะเบียนกลาง Parts Master)')} dismissable onClose={() => { setPicker(null); setPq(''); }}>
+        <Modal title={tr('เลือกรหัสสินค้าคงคลัง (จากทะเบียนกลาง Material Master)')} dismissable onClose={() => { setPicker(null); setPq(''); }}>
           <input autoFocus value={pq} onChange={e => setPq(e.target.value)}
             placeholder={tr('ค้นด้วยรหัส MAT หรือชื่อพาร์ท')} style={{ ...inpSt, width: '100%', marginBottom: 8 }} />
           {!parts.length && (
             <div style={{ fontSize: 12, color: '#f59e0b', marginBottom: 8 }}>
-              ⚠️ ยังไม่มีข้อมูลใน Parts Master — กรอกรหัส/ชื่อเองได้ในตาราง แล้วไปลงทะเบียนที่ Product Master → 🗂 Parts Master
+              ⚠️ ยังไม่มีข้อมูลใน Material Master — กรอกรหัส/ชื่อเองได้ในตาราง แล้วไปลงทะเบียนที่ Product Master → 🗂 Material Master
             </div>
           )}
           <div style={{ maxHeight: 380, overflowY: 'auto' }}>
@@ -623,7 +623,7 @@ function Editor({ editor, setReq, setItem, addItem, delItem, canRecord, role, si
         <span style={{ flex: 1 }} />
         {canRecord && <>
           <button onClick={onPickBom} style={btnSt()} title={tr('เลือกพาร์ทแม่ในพื้นที่นี้ แล้วระบบแตก BOM ให้ติ๊กลูกที่จะเบิก')}>🌳 {tr('เลือกแม่ → แตก BOM')}</button>
-          <button onClick={() => onPick(null)} style={btnSt()}>{tr('เลือกจาก Parts Master')}</button>
+          <button onClick={() => onPick(null)} style={btnSt()}>{tr('เลือกจาก Material Master')}</button>
           <button onClick={addItem} style={btnSt()}>{tr('＋ เพิ่มแถว')}</button>
           <button onClick={onSaveTemplate} style={btnSt()} title={tr('เก็บหัวใบ+รายการไว้ใช้ซ้ำกับงานประจำ')}>{tr('💾 บันทึกเป็น template')}</button>
         </>}
@@ -647,7 +647,7 @@ function Editor({ editor, setReq, setItem, addItem, delItem, canRecord, role, si
                 </td>
                 <td style={tdSt}><input value={it.description || ''} readOnly={ro} onChange={e => setItem(it._key, { description: e.target.value })} style={{ ...inpSt, width: 230 }} /></td>
                 <td style={tdSt}><input type="number" min="0" value={it.qty ?? ''} readOnly={ro} onChange={e => setItem(it._key, { qty: e.target.value })} style={{ ...inpSt, width: 72 }} /></td>
-                {/* 📏 หน่วยจากทะเบียน `uom_units` + ✏️ ระบุเอง (หน่วยนอกทะเบียน) · ล็อกตาม Parts Master เมื่อ MAT อยู่ในทะเบียน (เหมือนเดิม) */}
+                {/* 📏 หน่วยจากทะเบียน `uom_units` + ✏️ ระบุเอง (หน่วยนอกทะเบียน) · ล็อกตาม Material Master เมื่อ MAT อยู่ในทะเบียน (เหมือนเดิม) */}
                 <td style={tdSt}><SelectOrFree compact value={it.unit || ''} readOnly={ro || !!uomOf(it.mat_no)} disabled={ro || !!uomOf(it.mat_no)}
                   options={uomOptions(uomIdx).map(o => o.value)} onChange={v => setItem(it._key, { unit: v })}
                   style={{ width: 96, ...(uomOf(it.mat_no) ? { opacity: 0.8 } : {}) }} selectStyle={{ ...inpSt, width: '100%' }} inputStyle={inpSt} />
