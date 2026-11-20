@@ -353,3 +353,12 @@ test('"เมื่อกี้" (user สั่ง 20/11) = กะก่อน�
   assert.equal(parseQuestion('ยอดผลิต HDF1 กะที่แล้ว', T, { shiftNow: 'day' }).shift.key, 'night');
   assert.ok(parseQuestion('oee HDF1 เมื่อกี้', T).error, 'ไม่รู้กะปัจจุบัน = ตอบไม่ได้');
 });
+
+test('เลข 0 นำหน้าไม่นับ: "060" ต้องเจอ "Line 60" (user ทัก 20/11) · ไลน์ชนเลขพาร์ท = ให้เลือก ห้ามเดา', () => {
+  const lines = [{ name: 'Line 60' }, { name: 'Line 61' }, { name: 'Line 600' }];
+  assert.equal(matchSubject('060', { lines }).pick.name, 'Line 60');
+  const products = [{ mat_no: '10100385', name: 'REINF ASY', p_no: 'RB3B-16E060-BA' }];
+  const m = matchSubject('060', { lines, products });
+  assert.equal(m.pick, null);
+  assert.deepEqual(m.choices.map(c => c.kind).sort(), ['line', 'part']);
+});
