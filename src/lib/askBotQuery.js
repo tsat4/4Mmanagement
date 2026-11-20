@@ -24,7 +24,7 @@ import { dtOpenKind } from '../utils/downtimeRules';
 import { OPEN_MO_STATUSES } from '../utils/mtnStepPerm';
 import {
   INTENTS, parseQuestion, defaultPeriod, matchSubject, oeeSummary, downtimeTop, productionTotals,
-  rankLinesByOee, openDowntimeList, moOpenSummary, fourMPendingSummary, defectTop, attendanceSummary,
+  rankLinesByOee, openDowntimeList, moOpenSummary, fourMPendingSummary, defectTop, attendanceSummary, makeShiftOf,
   fmtInt, fmtPct, ASK_HINTS,
 } from '../utils/askBot';
 
@@ -317,27 +317,38 @@ async function toolDefect({ lineName, period, all, vis }) {
 
 /* ── มาทำงานกี่คน (สูตรเดียวกับ /dept-dashboard: พนักงาน active × บันทึกเช็คชื่อของวันนั้น) ── */
 async function toolAttendance({ lineName, period, all, vis }) {
-  /* 🔴 ยังแยกกะไม่ได้: ฐานคน (พนักงาน active ของไลน์) ไม่ได้ผูกกะ ⇒ กรองแค่บันทึกเช็คชื่อ
-     จะทำให้คนอีกกะกลายเป็น "ยังไม่เช็ค" ทั้งหมด = ตัวเลขโกหก · บอกตรงๆ แล้วตอบทั้งวัน */
-  if (period.shift) period = { ...period, shift: null, label: period.label.replace(/ · กะ.*$/, ''), shiftIgnored: true };
   if (period.from !== period.to) return { text: `ถามจำนวนคนได้ทีละวัน — เช่น "มาทำงานกี่คน วันนี้" หรือ "เมื่อวาน"` };
   const names = scopeNames(all, vis, lineName);
   const nameSet = names ? new Set(names) : null;
   const idToName = Object.fromEntries(all.map(l => [l.id, l.name]));
-  const [emps, logs] = await Promise.all([
-    fetchAllPages(() => supabase.from('employees').select('id, line_id').eq('is_active', true)),
-    fetchAllPages(() => supabase.from('daily_production_logs').select('id, employee_id, is_present').eq('work_date', period.to)),
+  const d = period.to;
+  /* แยกกะ (20/11 · คำสั่ง user): กะของแต่ละคนใช้ข้อมูล 3 ชุดเดียวกับจอเช็คชื่อ — ตารางกะ · สลับกะรายคน · รวมกะ */
+  const [emps, logs, sch, ovr, mrg] = await Promise.all([
+    fetchAllPages(() => supabase.from('employees').select('id, line_id, team, department').eq('is_active', true)),
+    fetchAllPages(() => supabase.from('daily_production_logs').select('id, employee_id, is_present').eq('work_date', d)),
+    period.shift ? supabase.from('shift_schedules').select('line_id, dept_name, day_team').eq('work_date', d) : null,
+    period.shift ? supabase.from('shift_overrides').select('employee_id, shift').eq('work_date', d) : null,
+    period.shift ? supabase.from('shift_merge_events').select('line_id, section, target_shift').lte('start_date', d).gte('end_date', d) : null,
   ]);
   if (emps.error || logs.error || emps.truncated || logs.truncated) return fail('ข้อมูลพนักงาน/เช็คชื่อ', emps.error || logs.error || 'ข้อมูลเยอะเกินเพดาน');
-  const r = attendanceSummary(emps.rows, logs.rows, (id) => { const n = idToName[id]; return n && (!nameSet || nameSet.has(n)) ? n : null; });
+  /* อ่านตารางกะไม่ได้ ≠ "ไม่มีใครเข้ากะนี้" — ห้ามตอบเป็น 0 คน */
+  const shErr = period.shift && (sch.error || ovr.error || mrg.error);
+  if (shErr) return fail('ตารางกะ', shErr.message || shErr);
+  const shiftOf = period.shift ? makeShiftOf({ schedules: sch.data || [], overrides: ovr.data || [], merges: mrg.data || [], lines: all }) : null;
+  const r = attendanceSummary(emps.rows, logs.rows,
+    (id) => { const n = idToName[id]; return n && (!nameSet || nameSet.has(n)) ? n : null; },
+    { shift: period.shift || null, shiftOf });
   const source = `เช็คชื่อ · ${whoText(lineName, vis)} · ${period.label}`;
-  if (!r.head) return { source, text: 'ไม่พบพนักงานที่ผูกกับไลน์ในขอบเขตนี้', link: '/checkin' };
+  const shiftNotes = period.shift ? [
+    r.unknownShift ? `⚠️ ยังไม่รู้กะของพนักงาน ${r.unknownShift} คน (ไลน์ยังไม่ตั้งตารางกะ/ทีมไม่รู้กติกา) — ไม่นับในกะนี้${r.unknownIn ? ` · ในนี้เช็คชื่อมาแล้ว ${r.unknownIn} คน` : ''}` : null,
+    'นับตามไลน์ต้นสังกัด — คนที่ถูกยืมไปช่วยไลน์อื่นยังนับที่ไลน์เดิม',
+  ] : [];
+  if (!r.head) return { source, text: period.shift ? `ไม่พบพนักงานที่เข้า${period.shift === 'day' ? 'กะเช้า' : 'กะดึก'}ในขอบเขตนี้` : 'ไม่พบพนักงานที่ผูกกับไลน์ในขอบเขตนี้', notes: shiftNotes.filter(Boolean), link: '/checkin' };
   return {
     source,
     text: `พนักงาน ${r.head} คน — มา ${r.in} · แจ้งว่าไม่มา ${r.out} · ยังไม่ได้เช็ค ${r.none}`
       + (!lineName && r.lines.length > 1 ? '\n' + r.lines.slice(0, 6).map(l => `· ${l.line} — มา ${l.in}/${l.head}${l.out ? ` · ไม่มา ${l.out}` : ''}${l.none ? ` · ยังไม่เช็ค ${l.none}` : ''}`).join('\n') : ''),
-    notes: ['"ยังไม่ได้เช็ค" ≠ ขาดงาน — อาจเป็นคนกะดึกที่ยังไม่เข้ากะ',
-      period.shiftIgnored ? 'คำถามจำนวนคนยังแยกกะไม่ได้ — แสดงทั้งวัน' : null].filter(Boolean),
+    notes: [period.shift ? null : '"ยังไม่ได้เช็ค" ≠ ขาดงาน — อาจเป็นคนกะดึกที่ยังไม่เข้ากะ', ...shiftNotes].filter(Boolean),
     link: '/checkin',
   };
 }

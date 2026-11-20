@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   parseQuestion, periodFromText, defaultPeriod, matchSubject, oeeSummary, downtimeTop, productionTotals,
-  rankLinesByOee, openDowntimeList, moOpenSummary, fourMPendingSummary, defectTop, attendanceSummary,
+  rankLinesByOee, openDowntimeList, moOpenSummary, fourMPendingSummary, defectTop, attendanceSummary, makeShiftOf,
 } from '../askBot.js';
 import { dtOpenKind } from '../downtimeRules.js';
 
@@ -277,4 +277,27 @@ test('กะ (user สั่ง 20/11): กะเช้า/กะดึก/ก�
   assert.ok(parseQuestion('oee HDF1 กะนี้', T).error, 'ไม่รู้กะปัจจุบัน = ตอบไม่ได้ ห้ามเดา');
   assert.equal(parseQuestion('oee HDF1 วันนี้', T).shift, null, 'ไม่พูดถึงกะ = ทั้งวันเหมือนเดิม');
   assert.equal(parseQuestion('downtime กะเช้า เดือนนี้', T).subject, '');
+});
+
+test('มาทำงานแยกกะ (user สั่ง 20/11): กะของคนตามลำดับเดียวกับจอเช็คชื่อ · ไม่รู้กะ = แยกนับ ห้ามเดา', () => {
+  const lines = [{ id: 1, name: 'HDF1', section: 'PD1' }, { id: 2, name: 'HDF1-A', parent_line_name: 'HDF1', section: 'PD1' }, { id: 3, name: 'X', section: 'PD9' }];
+  const shiftOf = makeShiftOf({
+    schedules: [{ line_id: 1, day_team: 'A' }],                 // HDF1 ทีม A เช้า · ไลน์ลูกตกทอด
+    overrides: [{ employee_id: 'o', shift: 'day' }],             // คน B ที่สลับมาเช้ารายคน
+    merges: [],
+    lines,
+  });
+  const emps = [
+    { id: 'a', line_id: 1, team: 'A' }, { id: 'b', line_id: 1, team: 'B' }, { id: 'c', line_id: 2, team: 'C' },
+    { id: 'kid', line_id: 2, team: 'B' }, { id: 'o', line_id: 1, team: 'B' }, { id: 'u', line_id: 3, team: 'A' },
+  ];
+  assert.deepEqual(emps.map(shiftOf), ['day', 'night', 'day', 'night', 'day', null]);
+  const name = Object.fromEntries(lines.map(l => [l.id, l.name]));
+  const logs = [{ employee_id: 'a', is_present: true }, { employee_id: 'b', is_present: true }, { employee_id: 'u', is_present: true }];
+  const day = attendanceSummary(emps, logs, id => name[id], { shift: 'day', shiftOf });
+  assert.deepEqual([day.head, day.in, day.none, day.otherShift, day.unknownShift, day.unknownIn], [3, 1, 2, 2, 1, 1]);
+  const night = attendanceSummary(emps, logs, id => name[id], { shift: 'night', shiftOf });
+  assert.deepEqual([night.head, night.in], [2, 1]);
+  const all = attendanceSummary(emps, logs, id => name[id]);
+  assert.equal(all.head, 6, 'ไม่ระบุกะ = ทั้งวันเหมือนเดิม');
 });
