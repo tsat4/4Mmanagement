@@ -12,6 +12,7 @@
 --     ถ้าใส่ = กฎตัวเก่าที่ยังไต่ parent_id ตรงๆ (divisionOfNode · laborTypeOfNode) จะเห็นค่าของ plant ไหลลงหน่วย
 --   · เฉพาะสาย P4 ของเรา — plant อื่นในเครือยังไม่มีหน่วยงานในระบบ (ไม่เติมโหนดเปล่า)
 --   · id ตายตัว ⇒ รันซ้ำได้ (on conflict do nothing) · ย้อนกลับได้ตรงตัว
+-- ✅ apply แล้วผ่าน MCP 2026-11-20 ~19:00 (หลัง deploy e350bfe ที่รวมโค้ดจอ) · ตรวจกลับ: ชั้นบนอย่างละ 1 · ส่วนงาน 10/10 ชี้ TSAT-P4 · ชั้นบนไม่มี CC/ฝ่าย/แรงงาน
 --
 -- พิสูจน์ก่อน apply (20/11): จำลองผังจริง 88 โหนด ก่อน/หลัง ผ่านกฎกลางทุกตัว
 --   (orgScope · ccScope · scopePicker · sectionScope.orphanDepts/deptOptionsFor · derivedScope · laborType ·
