@@ -1819,10 +1819,15 @@ function ReportModal({ lines, lineLoadErr = '', onReloadLines, machines, machine
           reported_by_name: _rn, reported_by_uid: _ru, source_downtime_id: _sd,    // eslint-disable-line no-unused-vars
           ...fill } = payload;
         const done = canClearDetailsFlag(fill, beforeFile ? { before_img: 'pending-upload' } : {});
-        const okFill = checkWriteRows(await supabaseDR.from('mtn_orders')
+        /* 🔔 20/11 (หน้างาน MTN แจ้ง): ต้องได้ **แถวจริง** กลับมา ไม่ใช่แค่ `id`
+           — ใบที่เติมรายละเอียดครบ = "ใบแจ้งซ่อมใหม่" ของทีมปลายทาง ต้องยิงแจ้งเตือน
+             และ payload ต้องเป็นค่าหลังเติม (ทีมปลายทางอาจไม่ใช่ทีมที่ถูกเรียกตอนกด "เรียกช่าง") */
+        const fillRes = await supabaseDR.from('mtn_orders')
           .update({ ...fill, details_pending: done ? false : true })
-          .eq('id', fillOrderId).select('id'), 'เพิ่มรายละเอียดใบ MO');
+          .eq('id', fillOrderId).select('*');
+        const okFill = checkWriteRows(fillRes, 'เพิ่มรายละเอียดใบ MO');
         if (!okFill) { setSaving(false); return; }
+        const fresh = fillRes?.data?.[0] || null;
         if (beforeFile) {
           try {
             const blob = await resizeMoImage(beforeFile);
@@ -1830,7 +1835,17 @@ function ReportModal({ lines, lineLoadErr = '', onReloadLines, machines, machine
             checkWrite(await supabaseDR.from('mtn_orders').update({ before_img: url }).eq('id', fillOrderId), 'ผูกรูปเข้าใบ');
           } catch (e) { toast.error('อัปโหลดรูปไม่สำเร็จ: ' + e.message + ' — ใบยังติดธงรอรายละเอียด แนบรูปใหม่ได้'); }
         }
-        toast.success(done ? 'เพิ่มรายละเอียดครบแล้ว — ใบหลุดจากคิวรอเอกสาร' : 'บันทึกแล้ว แต่ยังไม่ครบ — ใบยังอยู่ในคิวรอเพิ่มรายละเอียด');
+        /* 🔔 ใบจาก Downtime เคยเงียบสนิท (วัดจริง 20/11 · 14 วัน):
+           ① เส้นทางนี้ไม่เคยยิง `mtn_reported` เลย — ฐานเปิดใบให้ตอนกด "เรียกช่าง" (trigger
+              `trg_dt_call_mtn_opens_mo`) แล้วคนมาเติมรายละเอียดทีหลัง ⇒ ไม่มีจังหวะไหนบอกช่างว่า
+              "มีใบใหม่" · มีแต่ `downtime_call_mtn` ตอนเรียก ซึ่งเป็นคนละเรื่อง (เรียกเข้าหน้างาน)
+           ② **12 ใบ/14 วัน ทีมปลายทางไม่ใช่ทีมที่ถูกเรียก** (production→jig 5 · production→maintenance 5
+              · jig→production 1 · maintenance→production 1) ⇒ ทีมที่ได้ใบ **ไม่เคยได้ alarm เลยสักครั้ง**
+              ใบไปโผล่ในลิสต์เฉยๆ (หน้างาน: "มันไม่มี alarm แจ้ง มันมาแต่ MO")
+           🔴 ยิงเฉพาะตอน `done` (รายละเอียดครบ = ใบพร้อมให้ช่างลงมือ) — ยังไม่ครบแล้วยิง
+              = ช่างเปิดมาเจอใบเปล่า · และยิงครั้งเดียวเพราะเส้นทางนี้เข้าได้เฉพาะใบที่ยังติดธงรอรายละเอียด */
+        if (done && fresh) notifyMtn(fresh, 'mtn_reported');
+        toast.success(done ? 'เพิ่มรายละเอียดครบแล้ว — ใบหลุดจากคิวรอเอกสาร · แจ้งทีมช่างแล้ว' : 'บันทึกแล้ว แต่ยังไม่ครบ — ใบยังอยู่ในคิวรอเพิ่มรายละเอียด (ยังไม่แจ้งช่าง)');
         onSaved();
         return;
       }
