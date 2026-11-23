@@ -71,7 +71,7 @@ export default function EnergyLiveBoard() {
     try {
       const [m, l, d, r] = await Promise.all([
         supabaseDR.from('energy_live_meters')
-          .select('scope_kind, scope_name, panel, parent_name, subtitle, limit_kw, limit_a, gauge_max_kw, sort_order')
+          .select('scope_kind, scope_name, display_name, panel, parent_name, subtitle, limit_kw, limit_a, gauge_max_kw, sort_order')
           .eq('is_active', true),
         supabaseDR.from('energy_live').select('scope_kind, scope_name, field, value, received_at'),
         supabaseDR.from('energy_daily')
@@ -205,7 +205,7 @@ export default function EnergyLiveBoard() {
         <Kpi color={t.offline || t.never ? WARN : GOOD} label={tr('สถานะมิเตอร์')} value={t.online} unit={`/ ${t.total} ${tr("ออนไลน์")}`}
           sub={<><span style={{ color: WARN }}>{tr('ขาดการติดต่อ')} {t.offline}</span> · <span style={{ color: 'var(--muted)' }}>{tr('ยังไม่เคยส่ง')} {t.never}</span></>} />
         <Kpi color={t.alerts.length ? BAD : GOOD} label={tr('เกินลิมิตตอนนี้')} value={t.alerts.length} unit="เครื่อง"
-          sub={t.alerts.length ? `${tr("ที่")} ${t.alerts.map(m => m.name).join(', ')}` : 'ทุกเครื่องอยู่ในลิมิต (นับเฉพาะเครื่องที่ออนไลน์)'} />
+          sub={t.alerts.length ? `${tr("ที่")} ${t.alerts.map(m => m.label).join(', ')}` : 'ทุกเครื่องอยู่ในลิมิต (นับเฉพาะเครื่องที่ออนไลน์)'} />
       </div>
 
       {/* ── เส้นทางจ่ายไฟ ── */}
@@ -355,7 +355,7 @@ function TreeFlow({ panel, byKey, onOpen }) {
             return (
               <div key={n.key} role="button" tabIndex={0} onClick={open(n)} onKeyDown={(e) => { if (e.key === 'Enter') onOpen(n.m.name); }}
                 style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 13, borderLeft: `3px solid ${sm.color}`, paddingLeft: 8, marginLeft: n.d * 14, cursor: 'pointer' }}>
-                <span style={{ fontWeight: 700, color: 'var(--text)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.m.name}</span>
+                <span style={{ fontWeight: 700, color: 'var(--text)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.m.label}</span>
                 <span style={{ color: sm.color, whiteSpace: 'nowrap' }}>{fmt(n.m.kw)} kW · {fmt(n.m.a)} A</span>
               </div>
             );
@@ -410,11 +410,11 @@ function TreeFlow({ panel, byKey, onOpen }) {
               return (
                 <g key={n.key} role="button" tabIndex={0} style={{ cursor: 'pointer' }} onClick={open(n)}
                   onKeyDown={(e) => { if (e.key === 'Enter') onOpen(m.name); }}>
-                  <title>{tr('เปิดหน้ารายตู้')} {m.name}</title>
+                  <title>{tr('เปิดหน้ารายตู้')} {m.label}</title>
                   <rect x={n.x} y={top} width={TREE.boxW} height={TREE.boxH} rx="10" fill={isTop ? ACC : 'var(--card)'} opacity={isTop ? 0.9 : 1} stroke={sm.color} strokeWidth="3" />
                   <circle cx={n.x + 16} cy={top + 19} r="6" fill={sm.color} />
                   <text x={n.x + 30} y={top + 25} fill={isTop ? 'var(--bg)' : 'var(--text)'} fontSize="16" fontWeight="800">
-                    <title>{m.name}</title>{m.name.length > 18 ? `${m.name.slice(0, 17)}…` : m.name}
+                    <title>{m.label}</title>{m.label.length > 18 ? `${m.label.slice(0, 17)}…` : m.label}
                   </text>
                   <text x={n.x + 14} y={top + 48} fill={isTop ? 'var(--bg)' : sm.color} fontSize="18" fontWeight="800">{fmt(m.kw)} kW · {fmt(m.a)} A</text>
                   <text x={n.x + 14} y={top + 65} fill={isTop ? 'var(--bg)' : sm.color} fontSize="12" fontWeight="700">{tr(sm.label)}</text>
@@ -431,12 +431,12 @@ function TreeFlow({ panel, byKey, onOpen }) {
 function MeterCard({ m, pts, machines, onOpen }) {
   const sm = statusMeta(m);
   return (
-    <div role="button" tabIndex={0} title={`${tr("เปิดหน้ารายตู้")} ${m.name}`} onClick={() => onOpen(m.name)}
+    <div role="button" tabIndex={0} title={`${tr("เปิดหน้ารายตู้")} ${m.label}`} onClick={() => onOpen(m.name)}
       onKeyDown={(e) => { if (e.key === 'Enter') onOpen(m.name); }}
       style={{ ...card, borderColor: sm.color === GOOD ? 'var(--border)' : sm.color, cursor: 'pointer' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
         <div>
-          <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>{m.name}</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>{m.label}</div>
           <div style={{ fontSize: 12, color: 'var(--muted)' }}>{m.subtitle}</div>
           {machines.length > 0 && (
             <div style={{ fontSize: 11.5, color: 'var(--text2)' }} title={machines.map(x => `${x.no} (${x.line})`).join(', ')}>
