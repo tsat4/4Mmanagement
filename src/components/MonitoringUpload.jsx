@@ -22,6 +22,8 @@ import { parseMonitoringWorkbook, monitoringToRecords, sheetReport, stockAdjustP
 import { refStockOf, inflowDestOf } from '../utils/partRefStock';
 import { buildBoardPlan, writeBoardPlan, BoardPlanPreview } from './MonitorImport';
 import MatLabel from './MatLabel';
+import { ImportInfo, WrongFileNote } from './ImportKit';
+import { importLabel, whichImport } from '../utils/importRegistry';
 
 import { tr } from '../utils/i18n';
 /* วันที่งาน (ตัด 08:00 — งานกะดึกข้ามวันนับเป็นวันก่อนหน้า)
@@ -49,13 +51,14 @@ async function insertChunked(table, rows, label) {
 
 export default function MonitoringUpload({ canUpload, canBoard = true, fullName, onImported, asModal = false, onClose }) {
   const [busy, setBusy] = useState(false);
+  const [wrong, setWrong] = useState(null);       // 📥 ไฟล์ของจุดนำเข้าอื่น (importRegistry) · null = ไม่รู้/ไม่ผิดช่อง
   const [preview, setPreview] = useState(null);   // { fileName, month, rec, parsed, stockPlan, kbDiff, board }
   const fileRef = useRef(null);
 
   /* ── อ่านไฟล์ → แกะ → เตรียมสิ่งที่จะเขียน (ยังไม่เขียน) ─────────────────── */
   const handleFile = useCallback(async (file) => {
     if (!file) return;
-    setBusy(true); setPreview(null);
+    setBusy(true); setPreview(null); setWrong(null);
     try {
       const XLSX = await import('xlsx');
       const wb = XLSX.read(await file.arrayBuffer(), { cellDates: true });
@@ -66,7 +69,11 @@ export default function MonitoringUpload({ canUpload, canBoard = true, fullName,
       const today = getWorkDate();
       const parsed = parseMonitoringWorkbook(sheets, { asOf: today });
       if (!parsed.press.length && !parsed.customer.length) {
-        toast.error('แกะไฟล์นี้ไม่ได้ — ไม่พบชีทแบบ Monitoring (ไลน์ปั๊ม / ชีทลูกค้า)');
+        /* 📥 ไฟล์ของจุดนำเข้าอื่น (เช่น Stock_Store ของสโตร์) = บอกว่าต้องไปนำเข้าที่ไหน · ไม่รู้จัก = ข้อความเดิม */
+        const other = whichImport(sheets, 'planner_monitoring');
+        if (other) setWrong(other);
+        else toast.error('แกะไฟล์นี้ไม่ได้ — ไม่พบชีทแบบ Monitoring (ไลน์ปั๊ม / ชีทลูกค้า)');
+        if (fileRef.current) fileRef.current.value = '';
         setBusy(false); return;
       }
 
@@ -296,7 +303,8 @@ export default function MonitoringUpload({ canUpload, canBoard = true, fullName,
   const body = (
     <div style={{ display: 'grid', gap: 14 }}>
       <div style={card}>
-        <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>{tr('ไฟล์ Monitoring ของแพลนนิ่ง')}</div>
+        <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>📥 {tr(importLabel('planner_monitoring'))}</div>
+        <div style={{ marginBottom: 10 }}><ImportInfo k="planner_monitoring" /></div>
         <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.7 }}>
           {tr("ไฟล์")} <b>1.Monitoring-&lt;เดือน&gt;.xlsx</b> {tr('— ลูกค้าที่ไม่ได้ส่ง EDI (TSPK · TSESA · TSLA · TSRA · GWM · Argen)')}<br />
           {tr("ระบบจะอ่าน")}: <b>{tr('ตารางบอร์ดของทุกชีท')}</b> · <b>{tr('FC รายเดือน')}</b> · <b>MIN/MAX</b> ·
@@ -321,6 +329,7 @@ export default function MonitoringUpload({ canUpload, canBoard = true, fullName,
                  style={{ width: 'auto', fontSize: 13 }} />
           {busy && <span style={{ marginLeft: 10, fontSize: 12, color: 'var(--muted)' }}>{tr('กำลังอ่าน…')}</span>}
         </div>
+        {wrong && <div style={{ marginTop: 10 }}><WrongFileNote k={wrong} here="planner_monitoring" onGo={onClose} /></div>}
       </div>
 
       {preview && <PreviewPanel p={preview} canBoard={canBoard}

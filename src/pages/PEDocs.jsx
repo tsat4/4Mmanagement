@@ -1,3 +1,4 @@
+import { ImportButton } from '../components/ImportKit';   // 📥 ปุ่มนำเข้ามาตรฐาน (UI §6.44)
 import { useState, useEffect, useContext, useMemo, useCallback, useRef } from 'react';
 import { MoreMark } from '../components/InfoMore';
 import { useObjectUrl } from '../utils/useObjectUrl';
@@ -399,7 +400,8 @@ export default function PEDocs() {
             {exporting ? 'กำลังสร้างไฟล์...' : `${tr("ดาวน์โหลด")} Excel (${tab === 'fmea' ? 'PFMEA' : 'Control Plan'})`}
           </button>
         )}
-        {canEdit && <button style={btnSm} onClick={() => setImportOpen(true)} title={tr('อัพโหลดไฟล์ Excel ฟอร์ม TSAT ที่มีอยู่แล้ว ไม่ต้องพิมพ์ใหม่')}>{tr('นำเข้า Excel')}</button>}
+        {canEdit && <ImportButton k="pe_form" tone="quiet" onClick={() => setImportOpen(true)} title={tr('อัพโหลดไฟล์ Excel ฟอร์ม TSAT ที่มีอยู่แล้ว ไม่ต้องพิมพ์ใหม่')}
+          style={{ padding: '3px 9px', borderRadius: 6, fontSize: 11 }} />}
         {canEdit && curSet && <button style={btnSm} onClick={() => { setSetImgFile(null); setSetModal({ ...curSet }); }}>{tr('แก้ข้อมูลชุด')}</button>}
         {canEdit && <button style={btnSm} onClick={() => setFromMasterOpen(true)} title={tr('เลือกกระบวนการมาตรฐานตามลำดับผลิต → ได้ OP + PFMEA ร่างทันที')}>{tr('ชุดใหม่จาก master')}</button>}
         {canEdit && <button style={btnPrim} onClick={() => { setSetImgFile(null); setSetModal({ part_no: '', part_name: '', mat_no: '', model: '', customer: '', line_name: '', doc_no_pfc: '', doc_no_fmea: '', doc_no_cp: '', status: 'active', remark: '' }); }}>{tr('ชุดเอกสารใหม่')}</button>}

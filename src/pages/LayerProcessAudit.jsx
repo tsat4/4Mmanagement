@@ -9,6 +9,7 @@ import { supabase } from '../supabaseClient';
 import { UserContext } from '../App';
 import { can, canDelete as canDeleteUtil } from '../utils/permissions';
 import { toast } from '../components/Toast';
+import { ngReasonCheck } from '../utils/ngReason';   // 🚩 "ตอบ N ต้องมีเหตุผล" — กฎเดียวกับใบตรวจ AM/PM (23/11)
 import { inSectionScope } from '../utils/sectionScope';
 import { getLineFamilyNames } from '../utils/lineHierarchy';
 import LineSelect, { scopeLines as pickerLines } from '../components/LineSelect';
@@ -733,6 +734,20 @@ export default function LayerProcessAudit() {
     if (mis) { toast.error(mis); return; }
     const unanswered = auditQuestions.filter(q => !draft.answers[q.id]?.answer);
     if (unanswered.length) { toast.error(`${tr("ยังตอบไม่ครบ")} ${unanswered.length} ${tr("ข้อ (ข้อแรก")}: ${unanswered[0].seq}. ${unanswered[0].question.slice(0, 40)}...)`); return; }
+    /* 🚩 ตอบ "N" (ไม่ตรงตามมาตรฐาน) ต้องมีเหตุผล (23/11 · คำสั่ง user — ขยายจากใบตรวจ AM/PM)
+       ใบ LPA เป็นหลักฐานให้ผู้ตรวจภายนอก — ข้อที่ตก N แล้วไม่มีคำอธิบาย = เอาไปทำอะไรต่อไม่ได้
+       🔴 ตัดสินด้วย `ngReasonCheck()` ตัวเดียวกับใบตรวจ AM/PM และ Poka-Yoke (`N` = `ng`)
+          ห้ามเขียนเกณฑ์ชุดที่ 2 · `T`/`NA` ไม่บังคับ (ยังไม่มีคำสั่ง — ถ้าจะบังคับต้องสั่งเพิ่ม) */
+    {
+      const noWhy = auditQuestions.filter(q => !ngReasonCheck({
+        attr: draft.answers[q.id]?.answer === 'N' ? 'ng' : 'ok',
+        text: draft.answers[q.id]?.note,
+      }).ok);
+      if (noWhy.length) {
+        toast.error(`${tr("ข้อที่ตอบ N ต้องเขียนเหตุผล")} ${noWhy.length} ${tr("ข้อ (ข้อแรก")}: ${noWhy[0].seq}. ${noWhy[0].question.slice(0, 40)}...)`);
+        return;
+      }
+    }
     const needNote = auditQuestions.filter(q => ['N', 'T'].includes(draft.answers[q.id]?.answer) && !draft.answers[q.id]?.note?.trim());
     if (needNote.length) { toast.error(`${tr("ข้อที่ตอบ N/T ต้องกรอกรายละเอียดปัญหา (ข้อ")} ${needNote.map(q => q.seq).join(', ')})`); return; }
     setSavingAudit(true);

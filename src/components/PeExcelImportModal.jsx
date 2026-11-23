@@ -15,6 +15,8 @@ import {
 } from '../utils/peExcelImport';
 
 import { tr } from '../utils/i18n';
+import { ImportInfo, WrongFileNote } from './ImportKit';
+import { importLabel, whichImport } from '../utils/importRegistry';
 import { askConfirm } from '../utils/askConfirm';
 const nz = (v) => { const s = String(v ?? '').trim(); return s || null; };
 const CHUNK = 400;
@@ -35,11 +37,12 @@ const FILES = [
 async function readWorkbook(file, kind) {
   const XLSX = await import('xlsx');
   const wb = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: true });
-  const sheets = {}; const revs = []; const unreadable = [];
+  const sheets = {}; const revs = []; const unreadable = []; const raw = [];
   let header = null;
 
   for (const name of wb.SheetNames) {
     const { rows, merges } = sheetToGrid(XLSX, wb.Sheets[name]);
+    raw.push({ name, rows });
     const key = normSheetKey(name);
     // หัวเอกสารซ้ำอยู่ทุกชีท — เอาใบแรกที่อ่านได้พอสมควรมาใช้กรอกข้อมูลชุดให้อัตโนมัติ
     if (!header) { const h = parseFormHeader(rows); if (Object.keys(h.fields).length >= 2) header = h; }
@@ -51,7 +54,8 @@ async function readWorkbook(file, kind) {
     if (cover.length) revs.push(...cover.map((r) => ({ ...r, doc_type: kind })));
     else if (isDataSheet(key)) unreadable.push(name);
   }
-  return { sheets, revs, unreadable, header };
+  /* 📥 ฟอร์ม PE อ่านตามตำแหน่ง (ไม่มีหัวคอลัมน์ให้จำ) ⇒ ตรวจได้แค่ "เป็นไฟล์ของจุดนำเข้าอื่นไหม" (importRegistry) */
+  return { sheets, revs, unreadable, header, wrong: whichImport(raw, 'pe_form') };
 }
 
 export default function PeExcelImportModal({ sets = [], currentSetId = '', onClose, onDone }) {
@@ -94,6 +98,7 @@ export default function PeExcelImportModal({ sets = [], currentSetId = '', onClo
       /* พาร์ทนี้มีชุดเอกสารอยู่แล้ว → เดาว่าอยากเติมทับ (ยังเปลี่ยนเองได้) */
       const hit = auto.part_no && sets.find((x) => String(x.part_no).replace(/\s/g, '') === auto.part_no.replace(/\s/g, ''));
       if (hit) { setMode('fill'); setTargetId(hit.id); } else if (auto.part_no) setMode('new');
+      p.wrong = p.ops.length ? null : (['fmea', 'cp', 'pfc'].map((k) => parts[k]?.wrong).find(Boolean) || null);
       setPlan(p);
       setStep('preview');
     } catch (e) {
@@ -189,11 +194,12 @@ export default function PeExcelImportModal({ sets = [], currentSetId = '', onClo
   return (
     <div className="overlay"><div className="modal" style={{ width: 'min(920px, 96vw)', maxHeight: '92vh', overflowY: 'auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>{tr('นำเข้าจากไฟล์ Excel')}</h3>
+        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>📥 {tr(importLabel('pe_form'))}</h3>
         <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 20, cursor: 'pointer' }}>×</button>
       </div>
 
       {step === 'pick' && (<>
+        <div style={{ marginBottom: 12 }}><ImportInfo k="pe_form" /></div>
         <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12, lineHeight: 1.6 }}>
           {tr("ใช้ไฟล์ฟอร์ม TSAT ได้เลยไม่ต้องจัดใหม่ — ระบบอ่านทุกชีท OP แล้วประกอบเป็นชุดเอกสารให้")}<br />
           <b style={{ color: 'var(--text2)' }}>{tr('จะให้ดูสรุปก่อนเสมอ ยังไม่เขียนฐานข้อมูลจนกว่าจะกดยืนยัน')}</b>
@@ -241,7 +247,9 @@ export default function PeExcelImportModal({ sets = [], currentSetId = '', onClo
           </div>
         ))}
 
-        {nothing ? (
+        {nothing && plan.wrong ? (
+          <div style={{ marginBottom: 12 }}><WrongFileNote k={plan.wrong} here="pe_form" onGo={onClose} /></div>
+        ) : nothing ? (
           <div style={{ padding: 20, textAlign: 'center', fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.7 }}>
             {tr("อ่านไฟล์ไม่ออก — layout ต่างจากฟอร์มที่ระบบรู้จัก")}<br />
             {tr("ระบบคาดว่า")} <b>PFMEA</b> {tr('ข้อมูลเริ่มแถว 10 คอลัมน์ B–S ·')} <b>Control Plan</b> {tr('เริ่มแถว 12 มีเลข Char No. ที่คอลัมน์ D')}<br />

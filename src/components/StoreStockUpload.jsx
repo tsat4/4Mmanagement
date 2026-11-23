@@ -5,7 +5,9 @@ import { checkWrite, checkWriteRows } from '../utils/dbWrite';
 import { fetchAllPages, fetchByIds } from '../utils/fetchByIds';
 import { invalidateTable } from '../utils/masterInvalidate';
 import { storeBtn } from '../utils/storeUi';
-import { buildStoreStockPlan, parseStoreStockSheet } from '../utils/storeStockSheet';
+import { buildStoreStockPlan, parseStoreStockSheet, storeSheetHeader } from '../utils/storeStockSheet';
+import { ImportInfo, WrongFileNote } from './ImportKit';
+import { importLabel, whichImport } from '../utils/importRegistry';
 import { tr } from '../utils/i18n';
 
 /* ══ 📥 StoreStockUpload — อัพโหลดไฟล์ทะเบียนพาร์ทของสโตร์ (Stock_Store.xlsm) (2026-11-23 · คำสั่ง user)
@@ -64,14 +66,18 @@ export default function StoreStockUpload({ canEdit, fullName, onClose, onImporte
   const [plan, setPlan] = useState(null);
   const [fileName, setFileName] = useState('');
   const [loadErr, setLoadErr] = useState([]);
+  const [wrong, setWrong] = useState(null);   // 📥 ไฟล์ของจุดนำเข้าอื่น (importRegistry)
 
   const pick = async (file) => {
     if (!file) return;
-    setBusy(true); setPlan(null); setLoadErr([]); setFileName(file.name);
+    setBusy(true); setPlan(null); setLoadErr([]); setWrong(null); setFileName(file.name);
     try {
       const XLSX = await import('xlsx');
       const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
       const sheets = wb.SheetNames.map(name => ({ name, rows: XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: null, raw: true }) }));
+      /* 📥 ไม่มีชีทหน้าตา Stock_Store เลย + เป็นไฟล์ของจุดอื่น = บอกทางไป ไม่ขึ้นแผนว่างๆ */
+      const other = sheets.some(sh => storeSheetHeader(sh.rows)) ? null : whichImport(sheets, 'store_stock');
+      if (other) { setWrong(other); setBusy(false); if (fileRef.current) fileRef.current.value = ''; return; }
       const mats = [...new Set(sheets.flatMap(sh => parseStoreStockSheet(sh.name, sh.rows).parts.map(x => x.mat)))];
       const cur = await loadCurrent(mats);
       setLoadErr(cur.errs);
@@ -130,7 +136,8 @@ export default function StoreStockUpload({ canEdit, fullName, onClose, onImporte
   const t = plan?.totals;
   const body = (
     <div style={{ display: 'grid', gap: 12 }}>
-      <h3 style={{ margin: 0, fontSize: 17 }}>{tr('📥 อัพโหลดไฟล์ทะเบียนพาร์ทสโตร์')}</h3>
+      <h3 style={{ margin: 0, fontSize: 17 }}>📥 {tr(importLabel('store_stock'))}</h3>
+      <ImportInfo k="store_stock" />
       <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.6 }}>
         {tr('ไฟล์ Stock_Store.xlsm — 1 ชีท = 1 พื้นที่ (R401 · R402 · S401…S408) · คอลัมน์ Mat\'l SAP / Part Name / STD/PC / MAX / MIN')}<br />
         {tr('ไฟล์ = รายชื่อปัจจุบันของบอร์ด (พาร์ทที่ไม่อยู่ในไฟล์จะถูกถอดออก) · MAX/MIN ในไฟล์ทับค่าเดิม · ช่องว่างไม่แตะค่าเดิม · ดูรายการก่อนกดยืนยันทุกครั้ง')}
@@ -141,6 +148,7 @@ export default function StoreStockUpload({ canEdit, fullName, onClose, onImporte
         {busy && <span style={{ fontSize: 13, color: 'var(--muted)' }}>{tr('กำลังอ่าน…')}</span>}
         {fileName && !busy && <span style={{ fontSize: 13, color: 'var(--muted)' }}>{fileName}</span>}
       </div>
+      {wrong && <WrongFileNote k={wrong} here="store_stock" onGo={onClose} />}
 
       {loadErr.length > 0 && (
         <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--red)' }}>

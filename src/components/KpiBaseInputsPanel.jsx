@@ -5,6 +5,7 @@
    · ตาราง `kpi_base_inputs` unique index มี `coalesce(scope_value,'')` = expression ⇒ **ห้าม upsert** (42P10 · กฎ DB ข้อ 3) → หาแถวเดิมจาก
      ดัชนีแล้ว update ตาม id ไม่มีค่อย insert · ทุกการเขียนนับแถว (RLS ปฏิเสธ = 0 แถวเงียบ · กฎ DB ข้อ 2)
    · สูตร/ตัวแปรอยู่ `utils/kpiSetup.js` + `utils/kpiFormula.js` — แผงนี้ไม่คำนวณอะไรเอง */
+import { ImportButton } from './ImportKit';   // 📥 ปุ่มนำเข้ามาตรฐาน (UI §6.44)
 import { useState, useEffect, useContext } from 'react';
 import InfoMore from './InfoMore';   // ⓘ คำอธิบายยาวพับไว้ (UI §6.10)
 import { UserContext } from '../App';
@@ -155,11 +156,9 @@ export default function KpiBaseInputsPanel({ year, scope, org, rows = [], base: 
         </span>
         {/* 📥 อยู่บนหัวแผง (19/10 · user: "หาที่อัพไฟล์ไม่เจอ") — แผงพับอยู่ก็ยังเห็น · กันไม่ให้คลิกไปสลับพับ/กาง */}
         {canManage && (
-          <button type="button" onClick={e => { e.preventDefault(); e.stopPropagation(); setImporting(true); }}
+          <ImportButton k="kpi_acct" onClick={e => { e.preventDefault(); e.stopPropagation(); setImporting(true); }}
             title={tr('อัพโหลด monthly report ของบัญชี (.xlsx/.xlsb) แล้วให้ระบบอ่านแถว/เดือนให้ ตรวจก่อนบันทึก')}
-            style={{ marginLeft: 10, padding: '4px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--accent)', background: 'var(--accent)', color: 'var(--accent-ink)', cursor: 'pointer', fontSize: 12, fontWeight: 700, verticalAlign: 'middle' }}>
-            {tr('นำเข้าจาก Excel บัญชี')}
-          </button>
+            style={{ marginLeft: 10, padding: '4px 12px', fontSize: 12, verticalAlign: 'middle' }} />
         )}
       </summary>
       <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap', marginTop: 6 }}>

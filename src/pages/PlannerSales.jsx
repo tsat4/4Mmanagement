@@ -38,6 +38,8 @@ import { downloadCsvDoc } from '../utils/csvDoc';
 import NoticeBar from '../components/NoticeBar';
 import { tr } from '../utils/i18n';
 import InfoMore from '../components/InfoMore';   // ⓘ คำอธิบายพับ (UI §6.10)
+import { ImportButton, ImportInfo, WrongFileNote } from '../components/ImportKit';
+import { whichImport } from '../utils/importRegistry';
 import { askConfirm } from '../utils/askConfirm';
 
 /* ─── PLANNER & SALES — Forecast Planner + อัพโหลดไฟล์จากลูกค้า ──────────────
@@ -158,6 +160,8 @@ function UploadTab({ canUpload, fullName, onImported, custLabel }) {
   /* 📬 ไฟล์ที่เปิดจากคิวเมล (2026-09-30) — นำเข้าสำเร็จแล้วต้องปิดแถวคิวพร้อม batch_id
      เลือกไฟล์เองจากเครื่องเมื่อไหร่ = ล้างทิ้ง (ไม่งั้นไปปิดคิวผิดใบ) */
   const mailRowsRef = useRef([]);
+  const ediFileRef = useRef(null);
+  const [wrongFile, setWrongFile] = useState(null);   // 📥 ไฟล์ของจุดนำเข้าอื่น (importRegistry)
   const [mailKey, setMailKey] = useState(0);
   const markMailImported = async (batchId) => {
     const ids = mailRowsRef.current.map(r => r.id);
@@ -264,6 +268,7 @@ function UploadTab({ canUpload, fullName, onImported, custLabel }) {
     const files = Array.from(fileList || []);
     if (!files.length) return;
     lastFilesRef.current = { files, kind: kindNow };
+    setWrongFile(null);
     try {
       const XLSX = await import('xlsx');
       const ediFiles = [];
@@ -498,6 +503,10 @@ function UploadTab({ canUpload, fullName, onImported, custLabel }) {
         const n = findEdiSheets.near;
         toast.error(`${tr("ไฟล์นี้เหมือนเป็น EDI แต่หัวตารางไม่ครบ — ชีต")} "${n.sheet}" ${tr("ขาดคอลัมน์")}: ${n.missing.join(', ')} · ${tr("ถ้าลูกค้าเปลี่ยนชื่อคอลัมน์ ให้แจ้งทีมระบบ (ตอนนี้จะให้ map เองก่อน")})`);
       }
+      /* 📥 ไฟล์ของจุดนำเข้าอื่น (Stock_Store · MB52 · e-SMART …) = บอกทางไป ไม่เปิดจอ map มือ */
+      const other = whichImport(manual.wb.SheetNames.map(name => ({
+        name, rows: XLSX.utils.sheet_to_json(manual.wb.Sheets[name], { header: 1, raw: true, defval: '' }) })), 'edi');
+      if (other) { setEdi(null); setHeaders([]); setRows([]); setFileName(''); setWrongFile(other); return; }
       setEdi(null);
       parseManual(XLSX, manual.wb, manual.name, kindNow);
     } catch (err) { toast.error((tr('อ่านไฟล์ไม่สำเร็จ') + ': ') + err.message); }
@@ -890,22 +899,23 @@ function UploadTab({ canUpload, fullName, onImported, custLabel }) {
       )}
       {canUpload && (
         <div style={card}>
-          <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--text)', marginBottom: 12, fontFamily: 'var(--font-display)' }}>{tr('อัพโหลดไฟล์จากลูกค้า')}</div>
+          <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--text)', marginBottom: 8, fontFamily: 'var(--font-display)' }}>{tr('ไฟล์จากลูกค้า')}</div>
+          <div style={{ marginBottom: 12 }}><ImportInfo k="edi" /></div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
             {[{ k: 'forecast', label: 'Forecast ล่วงหน้า' }, { k: 'orders', label: 'Order + รอบส่งงาน' }].map(t => (
               <button key={t.k} onClick={() => { setKind(t.k); setHeaders([]); setRows([]); setFileName(''); }} style={btn(kind === t.k)}>{tr(t.label)}</button>
             ))}
-            <label style={{ ...btn(false), display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              {tr('เลือกไฟล์ Excel/CSV (เลือกหลายไฟล์ได้)')}
-              <input type="file" accept=".xlsx,.xlsm,.xlsb,.xls,.csv" multiple style={{ display: 'none' }}
-                onChange={e => { mailRowsRef.current = []; handleFiles(e.target.files, kind); e.target.value = ''; }} />
-            </label>
+            <ImportButton k="edi" onClick={() => ediFileRef.current?.click()}
+              title={tr('เลือกไฟล์ Excel/CSV (เลือกหลายไฟล์ได้)')} />
+            <input ref={ediFileRef} type="file" accept=".xlsx,.xlsm,.xlsb,.xls,.csv" multiple style={{ display: 'none' }}
+              onChange={e => { mailRowsRef.current = []; handleFiles(e.target.files, kind); e.target.value = ''; }} />
             {fileName && <span style={{ alignSelf: 'center', fontSize: 12, color: 'var(--muted)' }}>{fileName} · {rows.length} {tr('แถว')}</span>}
             <button type="button" onClick={() => setShowFmt(v => !v)} style={{ ...btn(false), marginLeft: 'auto' }}>
               {tr('ฟอร์แมตไฟล์ลูกค้า')}{fmtRows.length ? ` (${fmtRows.length})` : ''}
             </button>
           </div>
 
+          {wrongFile && <div style={{ marginBottom: 12 }}><WrongFileNote k={wrongFile} here="edi" /></div>}
           {/* ⚠️ ทะเบียนโหลดไม่ได้ = ยังอ่านไฟล์ Ford ได้ด้วยค่าสำรองในโค้ด แต่ห้ามเงียบ
               (ลูกค้าที่เพิ่มไว้ในทะเบียนจะอ่านไม่ออกจนกว่าจะโหลดได้) */}
           {fmtErr && (

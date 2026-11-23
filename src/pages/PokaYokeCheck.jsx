@@ -3,6 +3,7 @@ import { supabase } from '../supabaseClient';
 import { UserContext } from '../App';
 import { can } from '../utils/permissions';
 import { toast } from '../components/Toast';
+import { ngReasonCheck } from '../utils/ngReason';   // 🚩 "ไม่ผ่านต้องมีเหตุผล" — กฎเดียวกับใบตรวจ AM/PM (23/11)
 import { inSectionScope, scopedLines } from '../utils/sectionScope';
 import { getLineFamilyNames } from '../utils/lineHierarchy';
 // picker กลาง (single-source audit 2026-09-07) — ไลน์/คน อ่านจากทะเบียน · สถานีจาก workstations ของไลน์
@@ -121,11 +122,32 @@ export default function PokaYokeCheck() {
     return false;
   };
 
+  /* 🚩 "ไม่ผ่าน" ต้องมีเหตุผล (23/11 · คำสั่ง user — ขยายจากใบตรวจ AM/PM)
+     ทำไม: ปุ่มนี้ **กดครั้งเดียวเขียนฐานทันที** (upsert) ⇒ กดพลาดคือบันทึกไปแล้ว
+     เคสเดียวกับที่หน้างานเจอกับใบตรวจ AM/PM (*"เกิดการกดผิดและพนักงานไม่รู้ตัว"*)
+     🔴 กด "ไม่ผ่าน" แล้ว **ยังไม่เขียน** — เปิดช่องเหตุผลก่อน ต้องกดยืนยันถึงบันทึก
+     🔴 ตัดสินด้วย `ngReasonCheck()` ตัวเดียวกับใบตรวจ ห้ามเขียนเกณฑ์ชุดที่ 2
+        (`fail` ของจอนี้ = `ng` ของกฎนั้น) · "ผ่าน" ไม่บังคับเหมือนเดิม */
+  const [pendFail, setPendFail] = useState({});   // deviceId → ข้อความเหตุผลที่กำลังพิมพ์
+  const askFail = (d) => setPendFail(m => ({ ...m, [d.id]: checks[d.id]?.note || '' }));
+  const dropFail = (id) => setPendFail(m => { const n = { ...m }; delete n[id]; return n; });
+
   // บันทึกผลทดสอบ 1 อุปกรณ์ (upsert)
   const saveCheck = async (device, patch) => {
     if (!canRecord) { toast.error('ไม่มีสิทธิ์บันทึก'); return; }
     if (!lineGuard(device.line_name, 'ผลทดสอบ Poka-Yoke ')) return;
     const prev = checks[device.id] || {};
+    /* 🔴 ด่านตอนเขียนจริง ไม่ใช่แค่ซ่อนปุ่ม — ช่องหมายเหตุเดิมลบข้อความทิ้งได้ */
+    {
+      const willResult = patch.result ?? prev.result ?? 'pass';
+      const willNote = patch.note ?? prev.note ?? '';
+      const chk = ngReasonCheck({ attr: willResult === 'fail' ? 'ng' : 'ok', text: willNote });
+      if (!chk.ok) {
+        toast.error(`${device.code ? `${device.code} · ` : ''}${device.name}: ${chk.blockText}`);
+        askFail(device);
+        return;
+      }
+    }
     const { data: { user } } = await supabase.auth.getUser();
     const row = {
       device_id: device.id, check_date: selDate, shift: selShift,
@@ -139,6 +161,7 @@ export default function PokaYokeCheck() {
       .upsert(row, { onConflict: 'device_id,check_date,shift' }).select().single();
     if (error) { toast.error((tr('บันทึกไม่สำเร็จ') + ': ') + error.message); return; }
     setChecks(m => ({ ...m, [device.id]: data }));
+    dropFail(device.id);
   };
 
   // ── ทะเบียนอุปกรณ์ ──
@@ -258,7 +281,8 @@ export default function PokaYokeCheck() {
                   <div style={{ display: 'flex', gap: 6 }}>
                     <button disabled={!canRecord} onClick={() => saveCheck(d, { result: 'pass', detected: true })}
                       style={resBtn(res === 'pass', 'var(--green)', canRecord)}>{tr('ผ่าน (จับ NG ได้)')}</button>
-                    <button disabled={!canRecord} onClick={() => saveCheck(d, { result: 'fail', detected: false })}
+                    {/* 🚩 ไม่เขียนทันที — เปิดช่องเหตุผลก่อน (กดพลาด = ยังไม่บันทึก) */}
+                    <button disabled={!canRecord} onClick={() => askFail(d)}
                       style={resBtn(res === 'fail', 'var(--red)', canRecord)}>{tr('ไม่ผ่าน')}</button>
                   </div>
                   {canManage && (
@@ -268,6 +292,23 @@ export default function PokaYokeCheck() {
                     </div>
                   )}
                 </div>
+                {/* 🚩 แถว "ยืนยันไม่ผ่าน" — โผล่หลังกดปุ่มไม่ผ่าน · ยังไม่เขียนฐานจนกว่าจะกดยืนยัน (23/11) */}
+                {pendFail[d.id] != null && (
+                  <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <input autoFocus value={pendFail[d.id]}
+                      onChange={e => setPendFail(m => ({ ...m, [d.id]: e.target.value }))}
+                      placeholder={tr('เหตุผลที่ไม่ผ่าน (บังคับ) — เจออะไร / ทำอะไรต่อ')}
+                      disabled={!canRecord}
+                      style={{ flex: 1, minWidth: 220, fontSize: 12, borderColor: pendFail[d.id].trim() ? undefined : 'var(--amber)' }} />
+                    <button type="button" disabled={!canRecord || !pendFail[d.id].trim()}
+                      onClick={() => saveCheck(d, { result: 'fail', detected: false, note: pendFail[d.id].trim() })}
+                      style={{ ...btnAccent, padding: '5px 12px', fontSize: 12,
+                               ...(pendFail[d.id].trim() ? null : { opacity: 0.5, cursor: 'not-allowed' }) }}>
+                      {tr('ยืนยันไม่ผ่าน')}
+                    </button>
+                    <button type="button" onClick={() => dropFail(d.id)} style={{ ...btnGray, padding: '5px 12px', fontSize: 12 }}>{tr('ยกเลิก')}</button>
+                  </div>
+                )}
                 {res && (
                   <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                     <input placeholder={tr('หมายเหตุ / การแก้ไข (ถ้าไม่ผ่าน)')} defaultValue={c?.note || ''}
