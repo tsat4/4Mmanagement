@@ -771,9 +771,12 @@ export function energyHistory({ readings = [], daily = [], names = [], scale = '
     if (!Number.isFinite(t)) continue
     minutes.add(`${r.scope_name}|${t}`)
     const kw = numOrNull(r.kw), v = numOrNull(r.v), a = numOrNull(r.a)
-    if (kw != null) { kws.push(kw); if (peakKw == null || kw > peakKw) { peakKw = kw; peakAt = t } }
+    // ⚡ peak/กระแสสูงสุด ใช้ค่าสูงสุดของนาที (kw_max/a_max · ingest v10 23/11) — ไม่มี = ค่าที่โชว์ (พฤติกรรมเดิม)
+    const pk = numOrNull(r.kw_max) ?? kw, am = numOrNull(r.a_max) ?? a
+    if (kw != null) kws.push(kw)
+    if (pk != null && (peakKw == null || pk > peakKw)) { peakKw = pk; peakAt = t }
     if (v != null) vs.push(v)
-    if (a != null) as.push(a)
+    if (am != null) as.push(am)
   }
   const minuteOk = readings.length > 0
   if (!minuteOk) {                                       // ไม่มีรายนาที ⇒ peak จากยอดรายวัน

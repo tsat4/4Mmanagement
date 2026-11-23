@@ -190,3 +190,8 @@ user เลือกจาก 4 ทาง: ① เทียบอย่างเ
 - `src/components/IntegrationGuide.jsx` · 6 ขั้น (สร้างต้นทาง → รหัสลับ → import flow → env + เลือกฐาน + Deploy → ตรวจสุขภาพ → ผูก topic/เครื่อง/เหตุผล) + ปัญหาที่เจอบ่อย
 - 🔴 **เนื้อหาต้องตรงพฤติกรรมจริง** — แก้ flow (`nodeRedFlow.js`) / edge (`ingest-energy`, `integration-admin`) / หน้าต้นทาง แล้วต้องตามแก้ WI ในคอมมิทเดียวกัน
 - แสดงอย่างเดียว ไม่ใช่เอกสาร export — ถ้าเพิ่มปุ่มพิมพ์ต้องลง `/doc-forms` ก่อน
+
+## 📏 flow ค่าไฟ: ค่าล่าสุด + ค่าสูงสุดแยก (23/11 · คำสั่ง user)
+- `buildNodeRedFlow` (energy_readings): kW = `power` ล่าสุด · A = (A+B+C)/3 ล่าสุด · แต่ละตัวแนบ `max` ของนาที (MAX power / MAX เฟสสูงสุด)
+- ingest-energy v10 โชว์ `last` · เก็บ `max` ที่ `energy_readings.kw_max/a_max` · ต้นทางที่ไม่ส่ง max = พฤติกรรมเดิม
+- ต้องให้หน้างาน **import flow ใหม่** ทุกต้นทางค่าไฟ (hdf · dieshop) ถึงจะเห็นค่าตรงจอ Node-RED · 📄 `docs/ENERGY_MONITORING_DESIGN.md`
