@@ -33,6 +33,7 @@ import { loadProductionLines } from '../utils/useProductionLines';
 import { UserContext } from '../App';
 import MtnAndonBoard from '../components/MtnAndonBoard';
 import MoTvBoard from '../components/MoTvBoard';
+import StoreTvBoard from '../components/StoreTvBoard';   // 🏬 สโตร์ส่ง/รับของ (24/11)
 import { MO_TV_GROUPS } from '../utils/moTvBoard';
 import useIsMobile from '../utils/useIsMobile';
 import { lineScope, inSectionScope } from '../utils/sectionScope';
@@ -54,6 +55,9 @@ const DEPTS = [
   /* 🧾 ใบแจ้งซ่อม MO ตามขั้น (03/11 · ประชุม 02/11 ข้อ B6 "จอ TV ทีม MTN วนหน้า MO") — `?mo=<กอง>` `?team=`
      เนื้อใน = `<MoTvBoard>` (โหลดเอง + realtime เอง) · ตั้งรอบวนหลายกองที่ /display-rotation */
   { key: 'mo', icon: '🧾', label: 'ใบแจ้งซ่อม MO', sub: 'ใบค้างตามขั้น · รอรับงาน · กำลังซ่อม · รอตรวจรับ' },
+  /* 🏬 24/11 (คำสั่ง user · mockup เคาะแล้ว) — สโตร์ส่งของเข้าไลน์ ↔ รับของเข้าคลัง สลับเองทุก 20 วิ · `?dest=` = เฉพาะคลังนั้น
+     เนื้อใน = `<StoreTvBoard>` (โหลดเอง + realtime เอง · กฎ `utils/storeTvBoard.js`) */
+  { key: 'storeq', icon: '🏬', label: 'สโตร์ ส่ง/รับของ', sub: 'ไลน์เรียกของ · รอรับเข้าคลัง · สลับเองทุก 20 วิ' },
 ];
 
 export default function TvBoard({ onOpenMenu = null }) {
@@ -141,7 +145,7 @@ export default function TvBoard({ onOpenMenu = null }) {
      (downtime สด + กะที่เปิด บอร์ดโหลดเองพร้อม realtime อยู่แล้ว — ห้ามโหลดซ้ำที่นี่)
      ⚠️ กรองสถานะใบซ่อมฝั่ง server (`OPEN_MO_STATUSES`) แทนดึง 500 ใบล่าสุดมากรองในเบราว์เซอร์ */
   const load = useCallback(async () => {
-    if (!lines.length || dept === 'mo') return;   // มุมมอง MO โหลดเองใน <MoTvBoard>
+    if (!lines.length || dept === 'mo' || dept === 'storeq') return;   // มุมมอง MO / สโตร์ส่ง-รับ โหลดเองในบอร์ดของตัวเอง
     try {
       const needPm = dept === 'maintenance';
       const needMo = dept !== 'store';
@@ -225,9 +229,12 @@ export default function TvBoard({ onOpenMenu = null }) {
           <span style={{ width: 1, height: 20, background: 'var(--border2)' }} />
           {/* 🔊 ขอบเขตเสียง — ตัว <DowntimeSiren> ในบอร์ดอ่าน `?sound=` ตัวเดียวกัน */}
           {/* จอสโตร์เงียบเป็นค่าเริ่มต้น (เสียงเรียกช่างไม่ใช่งานสโตร์ · 12/10) — เปิดได้ด้วย `?sound=all` */}
-          <button onClick={() => setParam('sound', sp.get('sound') === 'all' ? '' : 'all')} style={btn(sp.get('sound') === 'all')}>
+          {/* มุมมองสโตร์ส่ง/รับ: ไม่มีเสียงเครื่องหยุด (ไม่ mount <DowntimeSiren>) · เสียงเดียวคือ "ไลน์เรียกของ" ⇒ ปุ่มนี้ไม่มีผล ไม่โชว์ */}
+          {dept === 'storeq'
+            ? <span style={{ fontSize: 12, color: 'var(--text2)' }}>{tr('🔔 ดังเมื่อไลน์เรียกของ (ยังไม่มีใครรับทราบ)')}</span>
+            : <button onClick={() => setParam('sound', sp.get('sound') === 'all' ? '' : 'all')} style={btn(sp.get('sound') === 'all')}>
             {sp.get('sound') === 'all' ? tr('ดังทุกเครื่องหยุด') : dept === 'store' ? tr('ไม่มีเสียง') : tr('ดังเฉพาะเรียกช่าง')}
-          </button>
+          </button>}
           <span style={{ fontSize: 11, color: 'var(--muted)' }}>
             ตั้งเสร็จแล้ว <b>{tr('บุ๊กมาร์กหน้านี้ไว้ที่ทีวี')}</b> — ค่าอยู่ใน URL จอจะจำเอง ไม่ต้องมากดทุกเช้า
           </span>
@@ -257,10 +264,12 @@ export default function TvBoard({ onOpenMenu = null }) {
             style={{ fontSize: 13, padding: '4px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--red)', background: 'transparent', color: 'var(--red)', cursor: 'pointer' }}>{tr('ลองใหม่')}</button>
         </div>
       )}
-      {dept !== 'mo' && !d && !err && (linesState === 'loading' || linesState === 'ok') && (
+      {dept !== 'mo' && dept !== 'storeq' && !d && !err && (linesState === 'loading' || linesState === 'ok') && (
         <div style={{ textAlign: 'center', color: 'var(--muted)', fontSize: 14, padding: 40 }}>{tr('กำลังโหลด...')}</div>
       )}
-      {dept === 'mo'
+      {dept === 'storeq'
+        ? (linesState === 'ok' && <StoreTvBoard inScope={inScope} />)
+        : dept === 'mo'
         ? (linesState === 'ok' && <MoTvBoard inScope={inScope} isMobile={isMobile} />)
         : (d && <MtnAndonBoard d={d} ctx={ctx} cards={dept} />)}
     </div>

@@ -526,6 +526,14 @@ const TABLE_ROWS = {
     qty_received: i % 4 === 0 ? 55 : null, diff_reason: i % 4 === 0 ? 'ของเสีย 5' : null,
     received_by: i % 4 === 0 ? 'สมชาย ใจดี' : null, received_at: i % 4 === 0 ? new Date().toISOString() : null,
   }),
+  /* ใบไลน์เรียกของ (24/11) — สถานะจริงของตาราง (pending/preparing/delivered) + เวลาเรียกคละ 5–45 นาที
+     ให้จอทีวีสโตร์ (`/tv?dept=storeq`) ได้รันทั้ง ปกติ/เหลือง >15/แดง >30 · ส่งแล้วรอไลน์รับ
+     (เดิมได้ `status: 'open'` จาก ROW() ซึ่งไม่ใช่สถานะของตารางนี้ = บอร์ดว่างตลอด) */
+  wip_replenish_requests: (r, i) => ({
+    ...r, status: ['pending', 'pending', 'preparing', 'delivered'][i % 4], request_qty: 40 + i * 10, uom: null,
+    requested_at: new Date(Date.now() - [5, 20, 45, 12, 33][i % 5] * 60e3).toISOString(),
+    delivered_at: i % 4 === 3 ? new Date(Date.now() - 8 * 60e3).toISOString() : null, source: 'line_adhoc', store_ack_at: null,
+  }),
   child_lot_requests: (r, i) => ({
     ...r, source_line: FAM_LINE, child_mat_no: `1010${1001 + (i % 3)}`, seq_no: i,
     lot_qty: isNullish(r) ? null : 14,
