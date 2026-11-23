@@ -14,6 +14,7 @@ import PageHeader from '../components/PageHeader';
 import NoticeBar from '../components/NoticeBar';
 import EnergyMqttTopics from '../components/EnergyMqttTopics';
 import MachineFactsPanel from '../components/MachineFactsPanel';
+import IntegrationGuide from '../components/IntegrationGuide';
 import { toast } from '../components/Toast';
 import { supabase, supabaseDR, DR_BASE_URL } from '../supabaseClient';
 import useTabParam from '../utils/useTabParam';
@@ -60,7 +61,7 @@ export default function Integrations() {
   const { role } = useContext(UserContext);
   const canManage = can('integration', 'manage', role);
   const canMap = can('energy', 'record', role);
-  const [tab, setTab] = useTabParam(['sources', 'kinds'], 'sources');
+  const [tab, setTab] = useTabParam(['sources', 'kinds', 'guide'], 'sources');
   const [params, setParams] = useSearchParams();
   const srcCode = params.get('src') || '';
   const [sources, setSources] = useState(null);       // null = ยังไม่โหลด/อ่านไม่ได้
@@ -102,7 +103,7 @@ export default function Integrations() {
   const header = (
     <PageHeader icon="🔌" title={tr('การเชื่อมต่อ Node-RED / เครื่องจักร')}
       sub={tr('ที่เดียวสำหรับทุกระบบที่ส่งข้อมูลเข้า ESM · ต้นทางส่งข้อเท็จจริง สูตรและการตัดสินอยู่ที่ ESM')}
-      tabs={[{ key: 'sources', label: 'แหล่งต้นทาง' }, { key: 'kinds', label: 'ชนิดข้อมูล' }]}
+      tabs={[{ key: 'sources', label: 'แหล่งต้นทาง' }, { key: 'kinds', label: 'ชนิดข้อมูล' }, { key: 'guide', label: 'คู่มือ (WI)' }]}
       tab={tab} onTab={(k) => { openSrc(null); setTab(k); }}
       actions={canManage && !srcCode && tab === 'sources'
         ? <button type="button" className="pg-btn primary" onClick={() => setCreating(true)}>{tr('+ เพิ่มการเชื่อมต่อ')}</button> : null} />
@@ -114,6 +115,7 @@ export default function Integrations() {
       {err && <NoticeBar tone="bad">{err}{sources ? ' — ตัวเลขบนจอเป็นของรอบก่อนหน้า' : ''}</NoticeBar>}
       {!sources && !err && <div style={{ color: 'var(--muted)', padding: 20 }}>{tr('กำลังโหลด…')}</div>}
 
+      {tab === 'guide' && <IntegrationGuide />}
       {sources && tab === 'kinds' && <KindsTab sources={sources} />}
 
       {sources && tab === 'sources' && (srcCode ? (
@@ -184,6 +186,9 @@ function SourceList({ sources, hourly, nowMs, onOpen, canManage }) {
 /* ── ② หน้าต้นทาง ── */
 function SourceDetail({ src, hours, nowMs, canManage, canMap, onBack, onChanged, onKey }) {
   const [busy, setBusy] = useState('');
+  /* ✏️ แก้ชื่อ/หมายเหตุ (23/11 · คำสั่ง user) — edge integration-admin action 'update' · 🔴 รหัส (code) แก้ไม่ได้
+     เพราะอยู่ในชื่อ topic ของมิเตอร์ (`<code>/<ตู้>/kw`) + Node-RED ตัวเดิมส่ง x-source = code ⇒ เปลี่ยน = ข้อมูลหลุด */
+  const [edit, setEdit] = useState(null);           // null = ไม่ได้แก้ · { name, note }
   const [points, setPoints] = useState(null);
   const hasEnergy = (src.kinds || []).includes('energy_readings');
   const hasMachine = (src.kinds || []).some(k => k === 'machine_state' || k === 'piece_count');
@@ -220,6 +225,19 @@ function SourceDetail({ src, hours, nowMs, canManage, canMap, onBack, onChanged,
     finally { setBusy(''); }
   };
 
+  const saveEdit = async () => {
+    const name = (edit?.name || '').trim();
+    if (!name) { toast.error(tr('ต้องมีชื่อต้นทาง')); return; }
+    setBusy('update');
+    try {
+      await callAdmin('update', { id: src.id, name, note: (edit.note || '').trim() || null });
+      toast.success(tr('บันทึกชื่อ/หมายเหตุแล้ว'));
+      setEdit(null);
+      onChanged();
+    } catch (e) { toast.error(`${tr('บันทึกไม่สำเร็จ')}: ${e.message}`); }
+    finally { setBusy(''); }
+  };
+
   const download = () => {
     const blob = new Blob([JSON.stringify(flow.nodes, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
@@ -239,12 +257,32 @@ function SourceDetail({ src, hours, nowMs, canManage, canMap, onBack, onChanged,
     <div style={{ display: 'grid', gap: 14, alignContent: 'start' }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
         <button type="button" className="pg-btn" onClick={onBack}>{tr('← การเชื่อมต่อทั้งหมด')}</button>
+        {edit ? (
+          <div style={{ display: 'grid', gap: 6, minWidth: 0, flex: '1 1 420px' }}>
+            <label style={{ display: 'grid', gap: 2, fontSize: 12, color: 'var(--muted)' }}>{tr('ชื่อต้นทาง')}
+              <input value={edit.name} maxLength={120} autoFocus onChange={e => setEdit(v => ({ ...v, name: e.target.value }))} />
+            </label>
+            <label style={{ display: 'grid', gap: 2, fontSize: 12, color: 'var(--muted)' }}>{tr('หมายเหตุ (เช่น IP · PLC · ฐานข้อมูล)')}
+              <input value={edit.note} maxLength={300} onChange={e => setEdit(v => ({ ...v, note: e.target.value }))} />
+            </label>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <button type="button" className="pg-btn primary" disabled={busy === 'update'} onClick={saveEdit}>{tr('บันทึก')}</button>
+              <button type="button" className="pg-btn" disabled={busy === 'update'} onClick={() => setEdit(null)}>{tr('ยกเลิก')}</button>
+              <span style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('รหัส')} <code>{src.code}</code> {tr('แก้ไม่ได้ — อยู่ในชื่อ topic ของมิเตอร์ เปลี่ยนแล้วข้อมูลจะหลุด')}</span>
+            </div>
+          </div>
+        ) : (
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)' }}>{src.name}
             <span style={{ marginLeft: 10, fontSize: 12, fontWeight: 700, color: m.color, border: `1px solid ${m.color}`, borderRadius: 999, padding: '1px 10px', verticalAlign: 'middle' }}>● {tr(m.label)}</span>
+            {canManage && (
+              <button type="button" className="pg-btn" style={{ marginLeft: 8, verticalAlign: 'middle' }} disabled={!!busy}
+                onClick={() => setEdit({ name: src.name || '', note: src.note || '' })}>✏️ {tr('แก้ชื่อ / หมายเหตุ')}</button>
+            )}
           </div>
           <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{src.code}{src.note ? ` · ${src.note}` : ''} {tr('· ไม่มีค่าใหม่เกิน')} {SOURCE_STALE_MIN} {tr("นาที = ขาดการติดต่อ")}</div>
         </div>
+        )}
       </div>
 
       <div style={{ ...card, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>

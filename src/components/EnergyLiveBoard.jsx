@@ -409,7 +409,7 @@ function TreeFlow({ panel, byKey, onOpen }) {
         </div>
       ) : (
         <div style={{ overflowX: 'auto' }}>
-          <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', minWidth: Math.min(W, 900), height: 'auto', display: 'block', marginTop: 6 }} role="img"
+          <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', maxWidth: W, minWidth: Math.min(W, 700), height: 'auto', display: 'block', marginTop: 6 }} role="img"
             aria-label={`${tr("ผังจ่ายไฟตู้")} ${panel.panel}`}>
             {all.filter(n => n.kids?.length).map(n => {
               const busX = n.x + TREE.boxW + (TREE.colW - TREE.boxW) / 2;
