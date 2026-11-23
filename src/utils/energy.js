@@ -411,6 +411,8 @@ export function buildLiveBoard({ meters = [], live = [], daily = [], today, nowM
       const overA = status === 'online' && a != null && limitA != null && a > limitA
       return {
         key: k, name: m.scope_name, panel: m.panel || '—', subtitle: m.subtitle || '',
+        // 🏷️ ชื่อบนจอ (display_name · ตั้งที่แท็บ "ตั้งค่าตู้" 23/11) — `name` ยังเป็นคีย์ข้อมูล/แม่-ลูก/URL ห้ามสลับ
+        label: (m.display_name && String(m.display_name).trim()) || m.scope_name,
         parentRaw: m.parent_name ? String(m.parent_name).trim() || null : null,
         limitKw, limitA,
         gaugeMax: numOrNull(m.gauge_max_kw) ?? (limitKw != null ? limitKw * 1.5 : null),
@@ -694,7 +696,7 @@ export function loadShare(boardMeters) {
   const total = on.length ? on.reduce((s, m) => s + Math.max(0, m.kw), 0) : null
   const rows = tops.map(m => {
     const ok = m.status === 'online' && m.kw != null
-    return { key: m.key, name: m.name, kw: ok ? m.kw : null, pct: ok && total ? (Math.max(0, m.kw) / total) * 100 : null }
+    return { key: m.key, name: m.name, label: m.label || m.name, kw: ok ? m.kw : null, pct: ok && total ? (Math.max(0, m.kw) / total) * 100 : null }
   })
   return { total, rows }
 }
