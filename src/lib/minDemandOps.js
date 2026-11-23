@@ -33,7 +33,13 @@ export async function loadMinAlerts() {
   const mats = [...new Set(levels.map(l => l.mat_no).filter(Boolean))];
   /* `.in()` ยาว = URL เกินเพดาน proxy แล้วคืนค่าว่างเงียบ ⇒ ผ่าน fetchByIds เสมอ */
   const [stock, prods, moves] = await Promise.all([
-    fetchByIds(mats, part => supabaseDR.from('line_stock_summary').select('line_name, mat_no, qty_on_hand, part_name').in('mat_no', part)),
+    /* 🔴 `line_stock_summary` เป็น **วิว ไม่มีคอลัมน์ `id`** ⇒ ต้องส่ง `orderBy` เองเสมอ
+       ไม่ส่ง = `fetchByIds` ใช้ดีฟอลต์ `'id'` แล้วล้มทั้งก้อนด้วย 42703
+       (เกิดจริง 18/11: แผง "ของถึง min แล้ว" ขึ้น "โหลดไม่ครบ — column line_stock_summary.id does not exist")
+       🔴 คีย์ที่ unique จริงของวิวนี้คือ **(line_name, mat_no)** — order ด้วย `mat_no` เดี่ยวมีค่าซ้ำได้
+       ⇒ `range()` ข้ามหน้าแล้วแถวหลุด/ซ้ำเงียบๆ (กฎ DB ข้อ 5) */
+    fetchByIds(mats, part => supabaseDR.from('line_stock_summary').select('line_name, mat_no, qty_on_hand, part_name').in('mat_no', part),
+      { orderBy: ['line_name', 'mat_no'] }),
     /* 🔴 `dr_products` ไม่มีคอลัมน์ `part_name` — ชื่อคือ `name` (มีด่าน dr-products-has-no-part-name) */
     fetchByIds(mats, part => supabaseDR.from('dr_products').select('mat_no, line_name, name').in('mat_no', part)),
     /* 🔴 เวลาขยับล่าสุดของบัญชี — ตัวตัดสินว่า "0" คือของหมดจริง หรือแค่ไม่มีใครนับ

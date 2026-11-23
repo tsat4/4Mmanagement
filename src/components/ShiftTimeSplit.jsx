@@ -45,13 +45,13 @@ export default function ShiftTimeSplit({ split, compact = false }) {
           const v = Number(split[s.k]) || 0;
           if (v <= 0) return null;
           return (
-            <div key={s.k} title={`${s.label} ${Math.round(v)} นาที`}
+            <div key={s.k} title={`${s.label} ${Math.round(v)} ${tr("นาที")}`}
               style={{ width: `${(v / total) * 100}%`, background: s.c, transition: 'width 0.7s ease' }} />
           );
         })}
         {/* เวลาพักตามนโยบาย — ถูกกันออกจากฐานไปแล้ว ไม่ใช่เวลาที่เสีย จึงวาดจางไว้ท้ายแถบ */}
         {split.breakMin > 0 && (
-          <div title={`พักตามนโยบาย ${Math.round(split.breakMin)} นาที (ไม่นับเป็นเวลาที่เสีย)`}
+          <div title={`${tr("พักตามนโยบาย")} ${Math.round(split.breakMin)} ${tr("นาที (ไม่นับเป็นเวลาที่เสีย")})`}
             style={{ width: `${(split.breakMin / total) * 100}%`, background: 'var(--border)' }} />
         )}
       </div>
@@ -63,12 +63,12 @@ export default function ShiftTimeSplit({ split, compact = false }) {
           const hot = s.k === 'unknownMin' && v > 0;
           return (
             <span key={s.k} title={tr(s.label)} style={{ fontSize: fs, color: hot ? 'var(--text)' : 'var(--muted)', fontWeight: hot ? 800 : 600 }}>
-              {s.icon} {tr(s.label)} <span style={{ color: s.c, fontWeight: 800 }}>{v}</span> น.
+              {s.icon} {tr(s.label)} <span style={{ color: s.c, fontWeight: 800 }}>{v}</span> {tr("น.")}
             </span>
           );
         })}
         {split.unit === 'machine' && (
-          <span style={{ fontSize: fs, color: 'var(--muted)' }}>· ฐาน = เวลาเครื่อง ×{split.parallelCap}</span>
+          <span style={{ fontSize: fs, color: 'var(--muted)' }}>· {tr("ฐาน = เวลาเครื่อง")} ×{split.parallelCap}</span>
         )}
       </div>
 
@@ -77,7 +77,7 @@ export default function ShiftTimeSplit({ split, compact = false }) {
       )}
       {split.startTimeOutOfFrame && (
         <div style={{ fontSize: fs, color: '#ef4444', fontWeight: 700, marginTop: 2 }}>
-          ⚠️ เวลาเริ่มกะที่บันทึกไว้อยู่นอกกรอบกะนี้ — ระบบใช้ต้นกะแทนให้ชั่วคราว ให้แก้เวลาเริ่มกะที่ Daily Report
+          ⚠️ {tr("เวลาเริ่มกะที่บันทึกไว้อยู่นอกกรอบกะนี้ — ระบบใช้ต้นกะแทนให้ชั่วคราว ให้แก้เวลาเริ่มกะที่")} Daily Report
         </div>
       )}
       {split.noBreakPolicy && (

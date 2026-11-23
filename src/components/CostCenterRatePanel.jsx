@@ -13,6 +13,7 @@ import { loadCostCenterRefs, costCenterBlockMessage } from '../utils/costCenterR
 import { DeleteButton } from './IconButton';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 /* ═══ 💰 Activity Rate ต่อ Cost Center — แผงใน /org-setup (2026-08-11) ═══
    rate ที่บัญชีคำนวณ ต่อ cost center (ก้อนตาม RATE_COMPONENTS) — ใช้แปลงผล Improvement เป็น cost saving
    ลิสต์ cost center = union จากผังองค์กร (org_nodes.cost_center) + ไลน์ผลิต (production_lines.cost_center)
@@ -67,7 +68,7 @@ export default function CostCenterRatePanel({ nodes, lines }) {
     (nodes || []).filter(n => n.is_active && n.cost_center).forEach(n => {
       const e = put(n.cost_center); if (!e) return;
       if (n.kind === 'line') e.orgGroup.push(n.name);
-      else e.orgOther.push(`${n.kind === 'section' ? 'ส่วน' : n.kind === 'department' ? 'แผนก' : n.kind} ${n.name}`);
+      else e.orgOther.push(`${n.kind === 'section' ? tr('ส่วน') : n.kind === 'department' ? tr('แผนก') : n.kind} ${n.name}`);
     });
     (lines || []).filter(l => l.cost_center).forEach(l => { put(l.cost_center)?.lines.push(l.name); });
     rates.forEach(r => put(r.cost_center));
@@ -101,7 +102,7 @@ export default function CostCenterRatePanel({ nodes, lines }) {
     const { data: wrote, error } = await q;
     setSaving(false);
     if (error) {
-      toast.error(error.code === '23505' ? `มี rate ของ ${cc} วันที่ ${form.effective_from} อยู่แล้ว — แก้แถวเดิมแทน`
+      toast.error(error.code === '23505' ? `${tr("มี rate ของ")} ${cc} ${tr("วันที่")} ${form.effective_from} ${tr("อยู่แล้ว — แก้แถวเดิมแทน")}`
         : error.code === '42501' ? 'ไม่มีสิทธิ์แก้ Activity Rate (ต้องมีคีย์ cost_rate:manage)' : error.message);
       return;
     }
@@ -113,7 +114,7 @@ export default function CostCenterRatePanel({ nodes, lines }) {
 
   const handleDelete = async (r) => {
     if (!canEdit) { toast.error('ไม่มีสิทธิ์ลบ Activity Rate'); return; }
-    if (!window.confirm(`ลบ rate ${r.cost_center} (effective ${r.effective_from})?`)) return;
+    if (!await askConfirm(`${tr("ลบ")} rate ${r.cost_center} (effective ${r.effective_from})?`)) return;
     // นับแถวที่ลบจริงเช่นกัน — RLS ปฏิเสธ DELETE ก็เงียบแบบเดียวกับ UPDATE
     const { data: gone, error } = await supabase.from('cost_center_rates').delete().eq('id', r.id).select('id');
     if (error) { toast.error(error.code === '42501' ? 'ไม่มีสิทธิ์ลบ Activity Rate' : error.message); return; }
@@ -124,8 +125,8 @@ export default function CostCenterRatePanel({ nodes, lines }) {
   /* วัน Effective ตอนแก้แถวเดิม = ล็อกกันแก้พลาด แต่ปลดล็อกได้ (แถว seed เป็น 2000-01-01 ต้องแก้เป็นวันจริงได้)
      `_unlockDate` เป็นคีย์ client-only ขึ้นต้น `_` — handleSave เลือกฟิลด์เองอยู่แล้ว ไม่มีทางหลุดลง DB */
   const dateLocked = !!form?.id && !form._unlockDate;
-  const unlockDate = () => {
-    if (!window.confirm(
+  const unlockDate = async () => {
+    if (!await askConfirm(
       'ปลดล็อกวัน Effective?\n\n'
       + 'วันนี้บอกว่า rate แถวนี้เริ่มมีผลเมื่อไหร่ — เปลี่ยนแล้ว cost saving ของโปรเจคปรับปรุงที่คิดด้วย rate ช่วงนี้จะขยับตาม\n\n'
       + 'ถ้าเป็นการ "ปรับ rate รอบใหม่" ให้กดยกเลิก แล้วใช้ปุ่ม ＋ rate ในตารางแทน (rate เดิมเก็บไว้เป็นประวัติ)'
@@ -159,10 +160,10 @@ export default function CostCenterRatePanel({ nodes, lines }) {
           emptyText={tr('ยังไม่มีรหัสในทะเบียน — กด + เพิ่ม (รหัสที่ไลน์/ผังใช้อยู่แล้วยังเลือกได้จากกลุ่ม 📜)')} />
       </CollapseCard>
       <CollapseCard id="cc_rates" storePrefix="orgsetup" count={groupList.length}
-        title={<span>{tr('Activity Rate ต่อ Cost Center')} <span style={{ fontWeight: 600, color: 'var(--muted)' }}>({RATE_COMPONENTS.map(c => c.label).join('/')} บาท/ชม. — ใช้คิด cost saving ในโปรเจคปรับปรุง)</span></span>}>
+        title={<span>{tr('Activity Rate ต่อ Cost Center')} <span style={{ fontWeight: 600, color: 'var(--muted)' }}>({RATE_COMPONENTS.map(c => c.label).join('/')} {tr("บาท/ชม. — ใช้คิด cost saving ในโปรเจคปรับปรุง")})</span></span>}>
         <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8 }}>
-          rate เป็นของ <b>{tr('รหัส Cost Center')}</b> {tr('(ไม่ได้ผูกกับไลน์) — ปกติบัญชีตั้งที่')} <b>{tr('ชั้นกลุ่ม')}</b> แล้วชั้นแผนก/ส่วนรวมขึ้นเองตามลำดับชั้นในผัง
-          · <b>บัญชีส่ง rate รอบใหม่ = กด “＋ rate ใหม่”</b> (ประวัติเดิมคงไว้ โปรเจคเก่าคำนวณด้วย rate ณ ช่วงนั้น) — ปุ่ม ✏️ ไว้แก้เฉพาะตอนกรอกตัวเลขผิด
+          rate {tr("เป็นของ")} <b>{tr('รหัส Cost Center')}</b> {tr('(ไม่ได้ผูกกับไลน์) — ปกติบัญชีตั้งที่')} <b>{tr('ชั้นกลุ่ม')}</b> {tr("แล้วชั้นแผนก/ส่วนรวมขึ้นเองตามลำดับชั้นในผัง")}
+          · <b>{tr("บัญชีส่ง rate รอบใหม่ = กด “＋ rate ใหม่")}”</b> ({tr("ประวัติเดิมคงไว้ โปรเจคเก่าคำนวณด้วย rate ณ ช่วงนั้น) — ปุ่ม ✏️ ไว้แก้เฉพาะตอนกรอกตัวเลขผิด")}
           {noRateUsed > 0 && <span style={{ color: '#f59e0b', fontWeight: 700 }}> {tr('· ⚠ มี')} {noRateUsed} {tr('รหัสที่ไลน์ใช้อยู่แต่ยังไม่ตั้ง rate')}</span>}
           {otherCount > 0 && (
             <span> {tr('· ซ่อนรหัสระดับส่วน/แผนก')} {otherCount} {tr('รหัส')}{' '}
@@ -269,7 +270,7 @@ export default function CostCenterRatePanel({ nodes, lines }) {
           </table>
         </div>
         {canEdit ? (
-          <button onClick={() => setForm({ ...emptyForm() })} style={{ marginTop: 8, padding: '6px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+          <button onClick={() => setForm({ ...emptyForm() })} style={{ marginTop: 8, padding: '6px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
             {tr('➕ เพิ่ม rate (เลือกรหัสจากผัง/ไลน์)')}
           </button>
         ) : (
@@ -323,14 +324,14 @@ export default function CostCenterRatePanel({ nodes, lines }) {
                   <div style={{ fontSize: 11, color: 'var(--muted)', background: 'var(--bg3)', borderRadius: 'var(--r-md)', padding: '6px 9px', lineHeight: 1.6 }}>
                     {dateLocked ? (
                       <>
-                        🔒 วัน Effective ล็อกกันแก้พลาด — <b>{tr('ปรับ rate รอบใหม่ให้กด ＋ rate ในตาราง')}</b> (แถวเดิมเก็บเป็นประวัติ โปรเจคที่เริ่มก่อนหน้ายังคิดด้วย rate เดิม)
+                        🔒 {tr("วัน Effective ล็อกกันแก้พลาด")} — <b>{tr('ปรับ rate รอบใหม่ให้กด ＋ rate ในตาราง')}</b> ({tr("แถวเดิมเก็บเป็นประวัติ โปรเจคที่เริ่มก่อนหน้ายังคิดด้วย rate เดิม")})
                         <button onClick={unlockDate} style={{ marginLeft: 6, background: 'none', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', color: 'var(--accent)', fontSize: 11, fontWeight: 800, cursor: 'pointer', padding: '1px 7px' }}>{tr('แก้วันที่')}</button>
                       </>
                     ) : (
-                      <span style={{ color: '#f59e0b', fontWeight: 700 }}>ปลดล็อกวันที่แล้ว — เปลี่ยนวันนี้ = เปลี่ยนย้อนหลังว่า rate นี้ครอบช่วงไหน cost saving ของโปรเจคที่คำนวณด้วย rate ช่วงนี้จะขยับตาม</span>
+                      <span style={{ color: '#f59e0b', fontWeight: 700 }}>{tr("ปลดล็อกวันที่แล้ว — เปลี่ยนวันนี้ = เปลี่ยนย้อนหลังว่า rate นี้ครอบช่วงไหน cost saving ของโปรเจคที่คำนวณด้วย rate ช่วงนี้จะขยับตาม")}</span>
                     )}
                     <div style={{ marginTop: 3, opacity: 0.85 }}>
-                      เวลาที่แก้ระบบบันทึกเอง: สร้าง {fmtStamp(form.created_at)} {tr('· แก้ล่าสุด')} {fmtStamp(form.updated_at)} (ใครแก้ดูได้ที่ audit log)
+                      {tr("เวลาที่แก้ระบบบันทึกเอง: สร้าง")} {fmtStamp(form.created_at)} {tr('· แก้ล่าสุด')} {fmtStamp(form.updated_at)} ({tr("ใครแก้ดูได้ที่")} audit log)
                     </div>
                   </div>
                 )}
@@ -342,13 +343,13 @@ export default function CostCenterRatePanel({ nodes, lines }) {
                   ))}
                 </div>
                 <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--accent)', textAlign: 'right' }}>
-                  รวม {fmtBaht(RATE_COMPONENTS.reduce((a, c) => a + (Number(form[c.field]) || 0), 0))} บาท/ชม.
+                  {tr("รวม")} {fmtBaht(RATE_COMPONENTS.reduce((a, c) => a + (Number(form[c.field]) || 0), 0))} {tr("บาท/ชม.")}
                 </div>
                 <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)' }}>{tr('หมายเหตุ')}
                   <input value={form.note || ''} onChange={e => setForm({ ...form, note: e.target.value })} placeholder={tr('เช่น rate ปี 2026 จากบัญชี')} style={{ marginTop: 4 }} />
                 </label>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
-                  <button onClick={() => setForm(null)} style={{ padding: '7px 16px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>{tr('ยกเลิก')}</button>
+                  <button onClick={() => setForm(null)} style={{ padding: '7px 16px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>{tr('ยกเลิก')}</button>
                   <button onClick={handleSave} disabled={saving} style={{ padding: '7px 18px', borderRadius: 'var(--r-md)', border: 'none', background: 'var(--accent)', color: 'var(--accent-ink)', fontSize: 12, fontWeight: 800, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>
                     {saving ? tr('กำลังบันทึก...') : tr('💾 บันทึก')}
                   </button>

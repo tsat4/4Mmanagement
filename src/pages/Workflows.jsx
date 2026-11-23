@@ -79,7 +79,7 @@ export default function Workflows() {
       ]);
       if (!alive) return;
       const err = d.error || t.error || m.error;
-      if (err) { setLoadErr(`โหลดใบงานไม่สำเร็จ: ${err.message}`); setLoading(false); return; }
+      if (err) { setLoadErr(`${tr("โหลดใบงานไม่สำเร็จ")}: ${err.message}`); setLoading(false); return; }
       setLoadErr('');
       setDefs(d.data || []);
       const ids = [...new Set((t.data || []).map(x => x.instance_id))];
@@ -87,7 +87,7 @@ export default function Workflows() {
       if (ids.length) {
         const r = await supabase.from('wf_instances').select('id, def_id, version_id, doc_no, title, status, current_step, step_rev, blocked_reason, created_by_name, created_at').in('id', ids);
         if (!alive) return;
-        if (r.error) { setLoadErr(`โหลดใบที่รอคุณไม่สำเร็จ: ${r.error.message}`); }
+        if (r.error) { setLoadErr(`${tr("โหลดใบที่รอคุณไม่สำเร็จ")}: ${r.error.message}`); }
         insts = r.data || [];
       }
       const byId = Object.fromEntries(insts.map(x => [x.id, x]));
@@ -97,7 +97,7 @@ export default function Workflows() {
       if (vIds.length) {
         const v = await supabase.from('wf_versions').select('id, def_id, version_no, form_schema, flow_schema').in('id', vIds);
         if (!alive) return;
-        if (v.error) setLoadErr(`โหลดแบบฟอร์มไม่สำเร็จ: ${v.error.message}`);
+        if (v.error) setLoadErr(`${tr("โหลดแบบฟอร์มไม่สำเร็จ")}: ${v.error.message}`);
         setVersions(Object.fromEntries((v.data || []).map(x => [x.id, x])));
       }
       setLoading(false);
@@ -230,7 +230,7 @@ function InstanceModal({ id, me, defById, onClose, onChanged }) {
     (async () => {
       const i = await supabase.from('wf_instances').select('*').eq('id', id).maybeSingle();
       if (!alive) return;
-      if (i.error || !i.data) { setErr(i.error ? `โหลดใบไม่สำเร็จ: ${i.error.message}` : 'ไม่พบใบนี้ หรือคุณไม่มีสิทธิ์เห็น'); return; }
+      if (i.error || !i.data) { setErr(i.error ? `${tr("โหลดใบไม่สำเร็จ")}: ${i.error.message}` : 'ไม่พบใบนี้ หรือคุณไม่มีสิทธิ์เห็น'); return; }
       const [v, t, a] = await Promise.all([
         supabase.from('wf_versions').select('id, version_no, form_schema, flow_schema').eq('id', i.data.version_id).maybeSingle(),
         supabase.from('wf_tasks').select('id, step_index, assignee_id, status').eq('instance_id', id),
@@ -238,7 +238,7 @@ function InstanceModal({ id, me, defById, onClose, onChanged }) {
       ]);
       if (!alive) return;
       const e2 = v.error || t.error || a.error;
-      if (e2) { setErr(`โหลดรายละเอียดไม่สำเร็จ: ${e2.message}`); return; }
+      if (e2) { setErr(`${tr("โหลดรายละเอียดไม่สำเร็จ")}: ${e2.message}`); return; }
       setErr('');
       setState({ inst: i.data, version: v.data, tasks: t.data || [], actions: a.data || [] });
     })();
@@ -266,7 +266,7 @@ function InstanceModal({ id, me, defById, onClose, onChanged }) {
     setBusy(false);
     if (!checkWrite(res, label)) { setTick(x => x + 1); return; }
     fireNotify(res.data, inst.id);
-    toast.success(`${label}แล้ว`);
+    toast.success(`${label}${tr("แล้ว")}`);
     reloadAll();
   };
   const approve = () => {

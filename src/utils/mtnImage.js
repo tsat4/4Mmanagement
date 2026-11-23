@@ -8,6 +8,7 @@
    🔴 **จุดแนบรูปใหม่ในใบ MO ทุกจุด ต้องเรียกผ่านไฟล์นี้เท่านั้น** — มีด่าน regressionGuards
    ═══════════════════════════════════════════════════════════════════════════════════ */
 import resizeImg, { imgExt } from './resizeImage';
+import { compressToWebp } from './layoutImage';   // 🧾 ใบเสนอราคา — คงความละเอียด (ตัวเลขต้องอ่านออก)
 import { uploadOpts } from './storageUpload';
 import { supabaseDR } from '../supabaseClient';
 
@@ -44,4 +45,22 @@ export async function uploadMoBeforeImg(file, orderId) {
   if (!file) return null;
   const blob = await resizeMoImage(file);
   return uploadMtnImg(blob, `before/${orderId}-${Date.now()}.${imgExt(blob)}`);
+}
+
+/* ══ 🧾 ใบเสนอราคาแนบในใบขอซื้อ (PR) — 2026-11-18 ═══════════════════════════════
+   🔴 **ห้ามบีบแบบรูปซ่อม** — `resizeMoImage` ย่อเหลือ 1024px **แล้วครอบ 16:9**
+      ใบเสนอราคาเป็นกระดาษแนวตั้ง: ครอบ 16:9 = หัว/ท้ายใบหาย · 1024px = ตัวเลขราคาอ่านไม่ออก
+   ⇒ ใช้สเปคเดียวกับ "รูปผัง": WebP **2560px q0.9 คงความละเอียด ไม่ครอบ**
+      (เหตุผลเดียวกับที่ผังห้ามลดความละเอียด — ต้องซูมอ่านตัวเลขได้ · `layoutImage.js`)
+   🔴 ไฟล์พวกนี้ **ถูกลบตอนปิดใบ** (คำสั่ง user 18/11) ⇒ อยู่ใต้ `quotes/` แยกจาก `before/`
+      ให้กวาดง่ายและไม่ปนกับรูปที่ต้องเก็บถาวร                                            */
+export const QUOTE_DIR = 'quotes';
+
+/** บีบ + อัปโหลดใบเสนอราคา → `{ url, fileName }` · null = ไม่มีไฟล์ · โยน error ถ้าอัปล้ม */
+export async function uploadPrQuote(file, prId) {
+  if (!file) return null;
+  const blob = await compressToWebp(file);
+  const url = await uploadMtnImg(blob, `${QUOTE_DIR}/${prId}-${Date.now()}.${imgExt(blob)}`);
+  /* เก็บชื่อไฟล์ที่คนเลือกมา — หลังลบไฟล์แล้ว ชื่อนี้คือหลักฐานเดียวที่เหลือว่าเคยมีใบเสนอราคา */
+  return { url, fileName: String(file.name || '').slice(0, 120) || 'ใบเสนอราคา' };
 }

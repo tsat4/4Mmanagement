@@ -26,13 +26,12 @@ import { nextDocNo } from '../utils/qaDocNo';
 import CalloutPin from './CalloutPin';
 import PointZoom from './inspect/PointZoom';
 import { qaFileUrl } from '../lib/qaImages';
-import QaFmeQueue from './QaFmeQueue';
 import { QA_STAGES, FME_SHEET_STAGE } from '../utils/qaStages';
 import { notifyEvent } from '../utils/notifyEvent';
 import { checkWrite, checkWriteRows } from '../utils/dbWrite';
 import InspectorCodeField from './InspectorCodeField';   // ✍️ รหัสผู้ตรวจจริง (C1 · 05/11)
 import { prepareQaSheetHtml } from '../lib/qaSheetPrint';   // 📄 ใบ Inspection Data FM-QA-112 (05/11 · หน้าตาใบจริง 16/11)
-import { buildDataSheet, dataSheetCsvRows } from '../utils/qaDataSheet';
+import { buildDataSheet, dataSheetCsvRows, mergeShiftResults } from '../utils/qaDataSheet';
 import { downloadCsvDoc, csvText } from '../utils/csvDoc';
 import { loadDocForms } from '../utils/docForms';
 import { resolveEmployeeSigner, inspectorForExport, loadEmployeeSigners, signatureOfPerson } from '../utils/employeeSignature';
@@ -41,12 +40,19 @@ import { specLabel, judgeVariable } from '../utils/qaSpec';
 import { evalSequence } from '../utils/qaSequential';
 import { can } from '../utils/permissions';
 import QaPieceStepper from './QaPieceStepper';
+import QaSheetApproval, { QaApprovalPendingBar } from './QaSheetApproval';   // ✍️ ขั้นอนุมัติหัวหน้า QA (19/11)
 import ScanModal from './ScanModal';
 import { useSearchParams } from 'react-router-dom';
 import { useMergeParams } from '../utils/useTabParam';
 import { parseQrPayload, findQaPartByScan } from '../utils/qrCode';
+/* 📥 CSV ผลตรวจรายพาร์ท (16/11) — CSV = เอกสาร ⇒ ชื่อไฟล์ผ่านทะเบียน /doc-forms (csv_qa_inspection_results)
+   ใช้ `downloadCsvDoc`/`csvText`/`loadDocForms` ที่ import ไว้ด้านบนร่วมกับใบ Inspection Data */
+import { QA_RESULT_HEADERS, qaResultCsvRows, csvStamp } from '../utils/qaCsvRows';
+import { fetchByIds, fetchAllPages } from '../utils/fetchByIds';
+import { addDaysStr } from '../utils/workDate';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 /* ── helpers เวลา/วันงาน (กฎเดียวกับทั้งระบบ) ───────────────────────────── */
 const getWorkDate = () => {
   const d = new Date();
@@ -94,6 +100,9 @@ export default function QaCheckSheet({ canRecord }) {
   const { role, lineId, sections, fullName } = useContext(UserContext);
   // ฝ่ายผลิต/หัวหน้าไลน์บันทึก action หลัง alarm (cross-function กับ QA) — คีย์แยกจาก qa:record
   const canAction = can('qa', 'record_action', role);
+  /* 📥 ดาวน์โหลดผลตรวจ = คีย์เดียวกับปุ่ม export ทั้งระบบ (`report:export` — "Export รายงาน (PDF/CSV)")
+     ไม่ใช่ qa:record: อ่าน/ดาวน์โหลดไม่ได้เขียนอะไร · ห้าม hardcode role array (UI §can()) */
+  const canExport = can('report', 'export', role);
   const isMobile = useIsMobile();
 
   const [allLines, setAllLines] = useState([]);
@@ -121,6 +130,7 @@ export default function QaCheckSheet({ canRecord }) {
   const [pieces, setPieces] = useState([]);          // ผลต่อชิ้น (ตรวจทีละชิ้น · 2026-09-07)
   const [actions, setActions] = useState([]);        // action ที่ปิด alarm แต่ละรอบ
   const [recent, setRecent] = useState([]);          // ใบตรวจล่าสุดของพาร์ทนี้
+  const [approvalTick, setApprovalTick] = useState(0); // ✍️ อนุมัติ/ตีกลับ/ปิดใบ → โหลดแถบใบรออนุมัติใหม่
   const [drafts, setDrafts] = useState({});          // item_id → { values[], note, qty_ng }
   const [selItemId, setSelItemId] = useState(null);  // จุดที่ไฮไลต์ (คลิกหมุด ↔ แถว)
   const [zoomItem, setZoomItem] = useState(null);    // 🔍 จุดที่เปิดรูปโคลสอัพอยู่
@@ -134,6 +144,9 @@ export default function QaCheckSheet({ canRecord }) {
   const boxRef = useRef(null);
   const wrapRef = useRef(null);
   const rowRefs = useRef({});
+  const stepRowRefs = useRef({});   // แถวกรอกค่าในแผงตรวจทีละชิ้น (มีเมื่อกำลังตรวจ)
+  const [focusReq, setFocusReq] = useState(null);   // 🎯 { id, n } — สั่งแผงกรอกเลื่อนไปจุดนั้น (สลับกลุ่มให้เอง)
+  const [showSummary, setShowSummary] = useState(false);   // สรุปต่อจุด — พับไว้ (16/11 user: ยาวจนเมื่อยมือ ดูรีพอร์ตแทน)
   const [boxW, setBoxW] = useState(0);
   const [natSize, setNatSize] = useState({ w: 0, h: 0 });
   const [imgBox, setImgBox] = useState({ w: 0, h: 0 });
@@ -182,7 +195,7 @@ export default function QaCheckSheet({ canRecord }) {
     const r = findQaPartByScan(parsed, parts, scopedLineNames ? scopedParts : null);
     if (r.error) return r.error;
     setPartId(r.part.id);
-    toast.success(`เลือกพาร์ท ${r.part.part_no || r.part.mat_no}`);
+    toast.success(`${tr("เลือกพาร์ท")} ${r.part.part_no || r.part.mat_no}`);
     return undefined;
   }, [parts, scopedParts, scopedLineNames]);
   const partParam = searchParams.get('part');
@@ -195,6 +208,70 @@ export default function QaCheckSheet({ canRecord }) {
   }, [partParam, parts.length]);
 
   const part = useMemo(() => scopedParts.find(p => p.id === partId) || null, [scopedParts, partId]);
+
+  /* 📅 เปิดใบตรวจจากงานในแท็บ "แผนตรวจ" (18/11 · แยกแท็บ · user "กดเปิดใบตรวจจากแผนงาน ต้องเด้งเข้าใบที่จะตรวจเลย")
+     แท็บแผนตรวจส่ง `?tab=sheet&fme=<obligation id>` มา → โหลดงาน → ตั้งพาร์ท/วัน/กะ/รอบ/ช่วงตรวจ → เลื่อนขึ้นบนสุดของฟอร์ม */
+  const openFromOb = async (ob) => {
+        /* 🔴 เลือกรอบให้ถูก (audit 19/10) — เดิมตั้งรอบ 1 เสมอ ⇒ คิวรอบกลาง/ท้ายเปิดใบรอบ 1 ที่ "ยอมรับ/ปิดแล้ว"
+           จากชิ้นแรก → บันทึกไม่ได้ + คิวไม่ถูกปิด เตือนซ้ำไม่จบ
+           ผูกใบไว้แล้ว = เปิดใบนั้น · ยังไม่ผูก = รอบแรกที่ยังไม่ปิด · ปิดหมด = รอบใหม่ต่อท้าย */
+        if (!scopedParts.some(p => p.id === ob.part_id)) {
+          toast.error('เปิดใบตรวจไม่ได้ — พาร์ทของงานนี้ถูกปิดใช้งานหรืออยู่นอกขอบเขตของคุณ (ตรวจที่ /qa-setup)');
+          return;
+        }
+        const { data: shs, error: eSh } = await supabase.from('qa_inspection_sheets').select('id, round_no, status')
+          .eq('part_id', ob.part_id).eq('work_date', ob.work_date).eq('shift', ob.shift).order('round_no');
+        if (eSh) { toast.error(`${tr("อ่านใบตรวจของงานนี้ไม่สำเร็จ")}: ${eSh.message}`); return; }
+        const linked = ob.sheet_id && (shs || []).find(x => x.id === ob.sheet_id);
+        const open = (shs || []).find(x => x.status !== 'done');
+        const nextRound = linked ? linked.round_no
+          : open ? open.round_no
+            : Math.min(20, ((shs || []).reduce((m, x) => Math.max(m, x.round_no || 0), 0)) + 1);
+        setPartId(ob.part_id);
+        setWorkDate(ob.work_date);
+        setShift(ob.shift);
+        setRoundNo(nextRound);
+        setSheetStage(FME_SHEET_STAGE[ob.stage] || null);
+        setFmeObId(ob.id);
+        fmeKeyRef.current = `${ob.part_id}|${ob.work_date}|${ob.shift}`;
+        toast.info(`${tr("เปิดใบตรวจ")}: ${ob.line_name} · ${ob.mat_no} · ${ob.stage === 'end' ? tr('ชิ้นสุดท้าย') : ob.stage === 'middle' ? tr('ระหว่างผลิต') : tr('ชิ้นแรก')}`);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  /* 🔔 เปิดใบตรวจตาม id (19/11) — ลิงก์จากกระดิ่งแจ้งเตือน `?tab=sheet&sheet=<id>` (อนุมัติ/ตีกลับ)
+     → อ่านคีย์ใบ (พาร์ท+วัน+กะ+รอบ) แล้วตั้งตัวเลือกให้ · พาร์ทนอกขอบเขต/ไม่พบใบ = บอกเหตุ ห้ามเงียบ */
+  const sheetParam = searchParams.get('sheet');
+  useEffect(() => {
+    if (!sheetParam || !parts.length) return;
+    let alive = true;
+    (async () => {
+      const { data: sh, error } = await supabase.from('qa_inspection_sheets')
+        .select('id, part_id, work_date, shift, round_no').eq('id', sheetParam).maybeSingle();
+      if (!alive) return;
+      setParams({ sheet: null }, { replace: true });
+      if (error || !sh) { toast.error(`${tr("เปิดใบตรวจไม่สำเร็จ")}${error ? `: ${error.message}` : tr(' — ไม่พบใบนี้')}`); return; }
+      if (!scopedParts.some(p => p.id === sh.part_id)) { toast.error('เปิดใบตรวจไม่ได้ — พาร์ทของใบนี้ถูกปิดใช้งานหรืออยู่นอกขอบเขตของคุณ'); return; }
+      setPartId(sh.part_id); setWorkDate(sh.work_date); setShift(sh.shift); setRoundNo(sh.round_no);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    })();
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sheetParam, parts.length]);
+
+  const fmeParam = searchParams.get('fme');
+  useEffect(() => {
+    if (!fmeParam || !parts.length) return;
+    let alive = true;
+    (async () => {
+      const { data: ob, error } = await supabase.from('qa_fme_obligations').select('*').eq('id', fmeParam).maybeSingle();
+      if (!alive) return;
+      setParams({ fme: null }, { replace: true });
+      if (error || !ob) { toast.error(`${tr("เปิดงานตรวจไม่สำเร็จ")}${error ? `: ${error.message}` : tr(' — ไม่พบงานนี้')}`); return; }
+      await openFromOb(ob);
+    })();
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fmeParam, parts.length]);
+
 
   /* ── มาตรฐาน (จุดตรวจ + แบบ) ของพาร์ทที่เลือก ── */
   useEffect(() => {
@@ -326,7 +403,7 @@ export default function QaCheckSheet({ canRecord }) {
       const { data: again } = await supabase.from('qa_inspection_sheets').select('*')
         .eq('part_id', part.id).eq('work_date', workDate).eq('shift', shift).eq('round_no', roundNo).maybeSingle();
       if (again) { setSheet(again); return again; }
-      toast.error(`เปิดใบตรวจไม่สำเร็จ: ${error.message}`);
+      toast.error(`${tr("เปิดใบตรวจไม่สำเร็จ")}: ${error.message}`);
       return null;
     }
     setSheet(data);
@@ -365,7 +442,7 @@ export default function QaCheckSheet({ canRecord }) {
     const { error } = await supabase.from('qa_inspection_results')
       .upsert(payload, { onConflict: 'sheet_id,item_id' });
     setBusy(false);
-    if (error) { toast.error(`บันทึกไม่สำเร็จ: ${error.message}`); return; }
+    if (error) { toast.error(`${tr("บันทึกไม่สำเร็จ")}: ${error.message}`); return; }
     setDrafts(p => { const n = { ...p }; delete n[item.id]; return n; });
     const { data } = await supabase.from('qa_inspection_results').select('*').eq('sheet_id', sh.id);
     setResults(data || []);
@@ -374,7 +451,19 @@ export default function QaCheckSheet({ canRecord }) {
   /* ── ตรวจทีละชิ้น (sequential acceptance · 2026-09-07) ─────────────────────
      ตัวเดินกฎ = utils/qaSequential (จุดเดียว) · ใบปิดเองเมื่อ "ยอมรับ" — ไม่มีปุ่มปิดใบ/ผ่านทั้งหมดอีก
      ค่าต่อจุดต่อชิ้นยังลง qa_inspection_results.values_json (index = ชิ้นที่-1) ให้ pin/NCR/ประวัติเดิมอ่านได้ */
-  const seq = useMemo(() => evalSequence(pieces, actions), [pieces, actions]);
+  /* 🔢 n ต่อรอบรายพาร์ท (qa_fme_part_rules.sample_n · 19/11) — ไม่มีแถว/อ่านไม่ได้ = 1 (พฤติกรรมเดิม)
+     ใบที่ปิดแล้วไม่เอากฎวันนี้ไปตัดสินซ้ำ (QA แก้ n ทีหลัง ใบเก่าห้ามกลายเป็น "ยังไม่ครบ") */
+  const [sampleN, setSampleN] = useState({ n: 1, failed: false });
+  const partMat = part?.mat_no || '';
+  useEffect(() => {
+    if (!partMat) { setSampleN({ n: 1, failed: false }); return undefined; }
+    let alive = true;
+    supabase.from('qa_fme_part_rules').select('sample_n').eq('mat_no', partMat).maybeSingle()
+      .then(({ data, error }) => { if (alive) setSampleN({ n: Number(data?.sample_n) > 0 ? Number(data.sample_n) : 1, failed: !!error }); });
+    return () => { alive = false; };
+  }, [partMat]);
+  const minPieces = sheet?.status === 'done' ? 1 : sampleN.n;
+  const seq = useMemo(() => evalSequence(pieces, actions, { minPieces }), [pieces, actions, minPieces]);
   const shiftLabel = shift === 'day' ? 'กะเช้า' : 'กะดึก';
 
   const savePiece = useCallback(async (p) => {
@@ -400,8 +489,8 @@ export default function QaCheckSheet({ canRecord }) {
     if (pcErr) {
       setBusy(false);
       // อีกเครื่องบันทึกชิ้นเลขนี้ไปก่อน (unique sheet_id+piece_no) ⇒ โหลดใบใหม่ ไม่เขียนผลทับของเครื่องนั้น
-      if (pcErr.code === '23505') { toast.error(`ชิ้นที่ ${pieceNo} ถูกบันทึกจากอีกเครื่องแล้ว — โหลดใบล่าสุดให้ (ค่าที่กรอกยังอยู่ ตรวจแล้วบันทึกเป็นชิ้นถัดไป)`); loadSheet(); return; }
-      toast.error(`บันทึกชิ้นที่ ${pieceNo} ไม่สำเร็จ: ${pcErr.message}`); return;
+      if (pcErr.code === '23505') { toast.error(`${tr("ชิ้นที่")} ${pieceNo} ${tr("ถูกบันทึกจากอีกเครื่องแล้ว — โหลดใบล่าสุดให้ (ค่าที่กรอกยังอยู่ ตรวจแล้วบันทึกเป็นชิ้นถัดไป")})`); loadSheet(); return; }
+      toast.error(`${tr("บันทึกชิ้นที่")} ${pieceNo} ${tr("ไม่สำเร็จ")}: ${pcErr.message}`); return;
     }
     // 2) ผลต่อจุด — merge ค่าของชิ้นนี้เข้า array เดิม · judgement รวม: มี ng ชิ้นไหน = ng
     const rows = items.map(i => {
@@ -425,7 +514,7 @@ export default function QaCheckSheet({ canRecord }) {
     if (!checkWrite(await supabase.from('qa_inspection_results').upsert(rows, { onConflict: 'sheet_id,item_id' }), 'ผลต่อจุด')) {
       // ผลต่อจุดล้ม ⇒ ถอนแถวชิ้นที่เพิ่งจอง (นับแถว) ให้กดบันทึกซ้ำได้โดยไม่ข้ามเลขชิ้น
       const undo = await supabase.from('qa_inspection_pieces').delete().eq('id', pc.id).select('id');
-      if (undo.error || !(undo.data || []).length) toast.error(`ถอนชิ้นที่ ${pieceNo} คืนไม่สำเร็จ — แจ้ง QA manager ลบชิ้นนี้ (ผลต่อจุดยังไม่ถูกบันทึก)`);
+      if (undo.error || !(undo.data || []).length) toast.error(`${tr("ถอนชิ้นที่")} ${pieceNo} ${tr("คืนไม่สำเร็จ — แจ้ง QA manager ลบชิ้นนี้ (ผลต่อจุดยังไม่ถูกบันทึก")})`);
       setBusy(false); loadSheet(); return;
     }
 
@@ -435,24 +524,24 @@ export default function QaCheckSheet({ canRecord }) {
       const { data: rb, error: rbErr } = await supabaseDR.from('quality_bin_records').insert({
         bin: 'red', work_date: workDate, line_name: part?.line_name || null,
         mat_no: part?.mat_no || null, part_name: part?.part_name || null, part_no: part?.part_no || null,
-        qty: 1, cause: `ใบตรวจ QA ${workDate} ${shiftLabel} รอบ ${roundNo} · ชิ้นที่ ${pieceNo} ตก ${failedTxt}${p.remark ? ` — ${p.remark}` : ''}`,
+        qty: 1, cause: `${tr("ใบตรวจ")} QA ${workDate} ${shiftLabel} ${tr("รอบ")} ${roundNo} · ${tr("ชิ้นที่")} ${pieceNo} ${tr("ตก")} ${failedTxt}${p.remark ? ` — ${p.remark}` : ''}`,
         reported_by: fullName || null, qa_by: fullName || null,
       }).select('id').single();
-      if (rbErr) toast.error(`บันทึกชิ้นแล้ว แต่ลงถังแดงไม่สำเร็จ: ${rbErr.message} — ไปลงที่แท็บถังแดงเอง`);
+      if (rbErr) toast.error(`${tr("บันทึกชิ้นแล้ว แต่ลงถังแดงไม่สำเร็จ")}: ${rbErr.message} — ${tr("ไปลงที่แท็บถังแดงเอง")}`);
       else {
         /* นับแถว — แถวถังแดงถูกสร้างแล้ว ผูกกลับไม่ติด = ชิ้นที่ตกไม่รู้ว่าอยู่ถังไหน (กฎเขียน DB ข้อ 2) */
         checkWriteRows(await supabase.from('qa_inspection_pieces').update({ red_bin_id: rb.id }).eq('id', pc.id).select('id'), 'ผูกถังแดงเข้าชิ้น',
           { zeroMsg: 'ลงถังแดงแล้ว แต่ผูกกลับเข้าชิ้นที่ตรวจไม่ได้ (0 แถว) — ตัวเลขถังแดงยังถูก แต่สอบกลับจากใบตรวจจะไม่เจอ' });
         notifyEvent({ event: 'quality_bin_added', type: 'error', ref_table: 'quality_bin_records', ref_id: rb.id,
           line_name: part?.line_name || null, actor: fullName,
-          lines: ['🔴 ถังแดง (ของเสียยืนยันแล้ว — จากใบตรวจ QA)', `🏭 ไลน์: ${part?.line_name || '—'} · ${part?.part_no || '—'}`, `🔢 1 ชิ้น · ${failedTxt}`] });
+          lines: ['🔴 ถังแดง (ของเสียยืนยันแล้ว — จากใบตรวจ QA)', `🏭 ${tr("ไลน์")}: ${part?.line_name || '—'} · ${part?.part_no || '—'}`, `🔢 1 ${tr("ชิ้น")} · ${failedTxt}`] });
       }
     }
 
     // 4) เดินกฎใหม่ → เขียน cache บนใบ + ปิดใบ/alarm ตามผล
-    const next = evalSequence([...pieces, pc], actions);
+    const next = evalSequence([...pieces, pc], actions, { minPieces });
     const patch = { seq_round: next.round, seq_state: next.state, alarm_count: next.alarmCount };
-    if (next.state === 'accepted') Object.assign(patch, { status: 'done', result: 'pass', closed_by: fullName || null, closed_at: now });
+    if (next.state === 'accepted') Object.assign(patch, { status: 'done', result: 'pass', closed_by: fullName || null, closed_at: now, approval_status: 'pending' });   // ✍️ เข้าคิวหัวหน้า QA (19/11 · ไม่บล็อก)
     if (!checkWriteRows(await supabase.from('qa_inspection_sheets').update(patch).eq('id', sh.id).select('id'), 'สถานะใบตรวจ')) { setBusy(false); loadSheet(); return; }
     if (next.state === 'accepted') {
       await linkFme(sh.id, 'done_ok');
@@ -463,20 +552,20 @@ export default function QaCheckSheet({ canRecord }) {
         event: 'qa_seq_alarm', type: 'error', ref_table: 'qa_inspection_sheets', ref_id: sh.id,
         line_name: part?.line_name || null, actor: fullName,
         lines: [
-          `🚨 ใบตรวจตกซ้ำ — ต้องแก้ไขก่อน QA ตรวจต่อ (alarm ครั้งที่ ${next.alarmCount})`,
-          `🏭 ไลน์: ${part?.line_name || '—'} · พาร์ท: ${part?.part_no || '—'}${part?.part_name ? ` ${part.part_name}` : ''}`,
-          `📅 ${workDate} ${shiftLabel} รอบ ${roundNo}${sheetStage ? ` · ${sheetStage}` : ''}`,
-          `✕ ชิ้นที่ตก: ${failedPieces.map(x => `${x.piece_no} (${(x.failed_items || []).map(f => `#${f.balloon_no}`).join(',') || '—'})`).join(' · ')}`,
+          `🚨 ${tr("ใบตรวจตกซ้ำ — ต้องแก้ไขก่อน QA ตรวจต่อ (alarm ครั้งที่")} ${next.alarmCount})`,
+          `🏭 ${tr("ไลน์")}: ${part?.line_name || '—'} · ${tr("พาร์ท")}: ${part?.part_no || '—'}${part?.part_name ? ` ${part.part_name}` : ''}`,
+          `📅 ${workDate} ${shiftLabel} ${tr("รอบ")} ${roundNo}${sheetStage ? ` · ${sheetStage}` : ''}`,
+          `✕ ${tr("ชิ้นที่ตก")}: ${failedPieces.map(x => `${x.piece_no} (${(x.failed_items || []).map(f => `#${f.balloon_no}`).join(',') || '—'})`).join(' · ')}`,
           'ฝ่ายผลิตบันทึก action ที่ /qa แท็บใบตรวจ แล้ว QA ตรวจต่อ 2 ชิ้นติดกัน',
         ],
       });
-      toast.error(`ชิ้นที่ ${pieceNo} ตก — ครบเงื่อนไข alarm แล้ว ต้องมี action ก่อนตรวจต่อ`);
+      toast.error(`${tr("ชิ้นที่")} ${pieceNo} ${tr("ตก — ครบเงื่อนไข alarm แล้ว ต้องมี action ก่อนตรวจต่อ")}`);
     } else {
-      toast.success(p.result === 'fail' ? `บันทึกชิ้นที่ ${pieceNo} (ตก) — ต้องตรวจชิ้นที่ ${next.nextPiece} ต่อ` : `บันทึกชิ้นที่ ${pieceNo} ผ่าน — ต้องผ่านอีก 1 ชิ้นติดกัน`);
+      toast.success(p.result === 'fail' ? `${tr("บันทึกชิ้นที่")} ${pieceNo} (${tr("ตก) — ต้องตรวจชิ้นที่")} ${next.nextPiece} ${tr("ต่อ")}` : `${tr("บันทึกชิ้นที่")} ${pieceNo} ${tr("ผ่าน — ต้องผ่านอีก 1 ชิ้นติดกัน")}`);
     }
     setBusy(false);
     loadSheet(); loadRecent();
-  }, [canRecord, seq, ensureSheet, items, resById, fullName, pieces, actions, workDate, shiftLabel, part, sheetStage, linkFme, loadSheet, loadRecent]);
+  }, [canRecord, seq, ensureSheet, items, resById, fullName, pieces, actions, workDate, shiftLabel, part, sheetStage, linkFme, loadSheet, loadRecent, minPieces]);
 
   const saveAction = useCallback(async (a) => {
     if (!canAction) { toast.error('ไม่มีสิทธิ์บันทึก action'); return; }
@@ -491,31 +580,31 @@ export default function QaCheckSheet({ canRecord }) {
       const { data: u } = await supabase.auth.getUser();
       const logData = {
         work_date: workDate, line_name: part?.line_name || null, category: a.fourM.category,
-        description: `[ใบตรวจ QA ${part?.part_no || ''} · ${workDate} ${shiftLabel} รอบ ${roundNo}] ตกจุด ${failedTxt || '—'} — แก้ไข: ${a.text} (โดย ${a.by})`,
+        description: `[${tr("ใบตรวจ")} QA ${part?.part_no || ''} · ${workDate} ${shiftLabel} ${tr("รอบ")} ${roundNo}] ${tr("ตกจุด")} ${failedTxt || '—'} — ${tr("แก้ไข")}: ${a.text} (${tr("โดย")} ${a.by})`,
         requires_qa: true, created_by: u?.user?.id ?? null,
       };
       const { data: m4, error: m4Err } = await supabase.from('four_m_logs').insert(logData).select('id').single();
-      if (m4Err) { setBusy(false); toast.error(`เปิดใบ 4M ไม่สำเร็จ: ${m4Err.message} — ยังไม่บันทึก action`); return; }
+      if (m4Err) { setBusy(false); toast.error(`${tr("เปิดใบ 4M ไม่สำเร็จ")}: ${m4Err.message} — ${tr("ยังไม่บันทึก")} action`); return; }
       four_m_log_id = m4.id;
       supabase.functions.invoke('send-notification', { body: { event: 'new_4m', log: logData } }).catch(() => {});
     }
     const { error } = await supabase.from('qa_inspection_actions').insert({
       sheet_id: sheet.id, round_no: roundNo, action_text: a.text, action_by: a.by, four_m_log_id, recorded_by: fullName || null,
     });
-    if (error) { setBusy(false); toast.error(`บันทึก action ไม่สำเร็จ: ${error.message}`); return; }
+    if (error) { setBusy(false); toast.error(`${tr("บันทึก action ไม่สำเร็จ")}: ${error.message}`); return; }
     checkWriteRows(await supabase.from('qa_inspection_sheets').update({ seq_state: 'inspecting', seq_round: roundNo + 1 }).eq('id', sheet.id).select('id'), 'สถานะใบตรวจ');
     notifyEvent({
       event: 'qa_seq_action', type: 'info', ref_table: 'qa_inspection_sheets', ref_id: sheet.id,
       line_name: part?.line_name || null, actor: a.by,
       lines: [
-        `🛠 ผลิตแก้ไขแล้ว — QA กลับมาตรวจต่อ (ต้องผ่านติดกัน 2 ชิ้น)`,
-        `🏭 ไลน์: ${part?.line_name || '—'} · พาร์ท: ${part?.part_no || '—'}`,
-        `📅 ${workDate} ${shiftLabel} รอบ ${roundNo} → รอบ ${roundNo + 1}`,
-        `📝 ${a.text} (${a.by})${four_m_log_id ? ' · เปิดใบ 4M แล้ว' : ''}`,
+        `🛠 ${tr("ผลิตแก้ไขแล้ว — QA กลับมาตรวจต่อ (ต้องผ่านติดกัน 2 ชิ้น")})`,
+        `🏭 ${tr("ไลน์")}: ${part?.line_name || '—'} · ${tr("พาร์ท")}: ${part?.part_no || '—'}`,
+        `📅 ${workDate} ${shiftLabel} ${tr("รอบ")} ${roundNo} → ${tr("รอบ")} ${roundNo + 1}`,
+        `📝 ${a.text} (${a.by})${four_m_log_id ? tr(' · เปิดใบ 4M แล้ว') : ''}`,
       ],
     });
     setBusy(false);
-    toast.success(`บันทึก action แล้ว — QA ตรวจต่อรอบที่ ${roundNo + 1}`);
+    toast.success(`${tr("บันทึก action แล้ว — QA ตรวจต่อรอบที่")} ${roundNo + 1}`);
     loadSheet();
   }, [canAction, seq, sheet, pieces, workDate, shiftLabel, part, fullName, loadSheet]);
 
@@ -523,7 +612,7 @@ export default function QaCheckSheet({ canRecord }) {
   const openNcr = async (item, res) => {
     if (!canRecord) { toast.error('ไม่มีสิทธิ์เปิด NCR'); return; }
     if (res.ncr_id) { toast.info('จุดนี้เปิด NCR ไปแล้ว — ดูต่อที่แท็บ NCR ของเสีย'); return; }
-    if (!window.confirm(`เปิดใบ NCR จากจุด #${item.balloon_no} ${item.characteristic}?`)) return;
+    if (!await askConfirm(`${tr("เปิดใบ NCR จากจุด")} #${item.balloon_no} ${item.characteristic}?`)) return;
     setBusy(true);
     const ncr_no = await nextDocNo('qa_ncr', 'ncr_no', 'NCR');
     if (!ncr_no) { setBusy(false); toast.error('ออกเลขที่ NCR ไม่สำเร็จ — ลองใหม่อีกครั้ง'); return; }
@@ -531,27 +620,27 @@ export default function QaCheckSheet({ canRecord }) {
       ncr_no, report_date: workDate,
       line_name: part?.line_name || null, part_no: part?.part_no || null, part_name: part?.part_name || null,
       source: 'inprocess', severity: item.rank === 'SC' ? 'critical' : (item.rank === 'M' ? 'major' : 'minor'),
-      defect_desc: `[ใบตรวจ ${workDate} ${shift === 'day' ? 'กะเช้า' : 'กะดึก'} รอบ ${roundNo}] จุด #${item.balloon_no} ${item.characteristic}`
-        + (res.note ? ` — ${res.note}` : '') + (res.spec_text ? ` (สเปค: ${res.spec_text})` : ''),
+      defect_desc: `[${tr("ใบตรวจ")} ${workDate} ${shift === 'day' ? tr('กะเช้า') : tr('กะดึก')} ${tr("รอบ")} ${roundNo}] ${tr("จุด")} #${item.balloon_no} ${item.characteristic}`
+        + (res.note ? ` — ${res.note}` : '') + (res.spec_text ? ` (${tr("สเปค")}: ${res.spec_text})` : ''),
       qty_found: res.qty_checked || 0, qty_ng: res.qty_ng || 0,
       created_by: fullName || null,
     }).select().single();
-    if (error) { setBusy(false); toast.error(`เปิด NCR ไม่สำเร็จ: ${error.message}`); return; }
+    if (error) { setBusy(false); toast.error(`${tr("เปิด NCR ไม่สำเร็จ")}: ${error.message}`); return; }
     /* นับแถว — NCR ถูกเปิดแล้ว ผูกกลับไม่ติด = ผลตรวจไม่รู้ว่ามี NCR แล้ว กดเปิดซ้ำได้อีก */
     checkWriteRows(await supabase.from('qa_inspection_results').update({ ncr_id: data.id }).eq('id', res.id).select('id'), 'ผูก NCR เข้าผลตรวจ',
-      { zeroMsg: `เปิด NCR ${ncr_no} แล้ว แต่ผูกกลับเข้าผลตรวจไม่ได้ (0 แถว) — อย่ากดเปิด NCR ซ้ำ ไปดูที่หน้า NCR` });
+      { zeroMsg: `${tr("เปิด")} NCR ${ncr_no} ${tr("แล้ว แต่ผูกกลับเข้าผลตรวจไม่ได้ (0 แถว) — อย่ากดเปิด NCR ซ้ำ ไปดูที่หน้า")} NCR` });
     notifyEvent({
       event: 'qa_ncr_opened', type: 'error', ref_table: 'qa_ncr', ref_id: data.id,
       line_name: part?.line_name || null, actor: fullName,
       lines: [
         `📄 ${ncr_no} · ${data.severity === 'critical' ? '🔴 critical' : data.severity === 'major' ? '🟠 major' : '🟡 minor'}`,
-        `🏭 ไลน์: ${part?.line_name || '—'} · พาร์ท: ${part?.part_no || '—'}`,
-        `🔍 จุด #${item.balloon_no} ${item.characteristic}`,
-        `🚫 NG ${res.qty_ng || 0} / ตรวจ ${res.qty_checked || 0}`,
+        `🏭 ${tr("ไลน์")}: ${part?.line_name || '—'} · ${tr("พาร์ท")}: ${part?.part_no || '—'}`,
+        `🔍 ${tr("จุด")} #${item.balloon_no} ${item.characteristic}`,
+        `🚫 NG ${res.qty_ng || 0} / ${tr("ตรวจ")} ${res.qty_checked || 0}`,
       ],
     });
     setBusy(false);
-    toast.success(`เปิด ${ncr_no} แล้ว — ติดตามต่อที่แท็บ NCR ของเสีย ✓`);
+    toast.success(`${tr("เปิด")} ${ncr_no} ${tr("แล้ว — ติดตามต่อที่แท็บ NCR ของเสีย")} ✓`);
     const { data: rs } = await supabase.from('qa_inspection_results').select('*').eq('sheet_id', sheet.id);
     setResults(rs || []);
   };
@@ -604,9 +693,17 @@ export default function QaCheckSheet({ canRecord }) {
   const focusItem = (id) => {
     setSelItemId(id);
     const it = items.find(x => x.id === id);
+    /* 🎯 16/11 user: "จิ้มบอลลูนแล้วเด้งไปค่าที่ตรวจแล้ว ไม่ควร — ยังไม่ตรวจต้องวิ่งไปช่องให้พนักงานใส่ค่า"
+       ⇒ แผงตรวจทีละชิ้นเปิดอยู่ (กำลังตรวจ) = ไปที่ช่องกรอกของจุดนั้น + โฟกัสช่อง (ไม่เปิดซูมทับ — รูปกดดูได้ที่แถว)
+          ไม่มีแผงกรอก (ใบปิด/ไม่มีสิทธิ์) = ไปแถวสรุปต่อจุดเหมือนเดิม */
+    if (Object.keys(stepRowRefs.current).length) {   // แผงกรอกกำลังแสดงอยู่ (กำลังตรวจ) — แผงจัดการสลับกลุ่ม/เลื่อน/โฟกัสเอง
+      setFocusReq({ id, n: Date.now() });
+      return;
+    }
     if (it?.image_path) setZoomItem(it);
-    // คลิกหมุด → เลื่อนไปแถวของจุดนั้น (จอเล็กจะได้ไม่ต้องไล่หา)
-    rowRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // ไม่มีแผงกรอก (ใบปิด/ดูอย่างเดียว) → กางสรุปต่อจุดแล้วเลื่อนไปแถวนั้น
+    setShowSummary(true);
+    setTimeout(() => rowRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60);
   };
   const selectRow = (i) => {
     setSelItemId(i.id);
@@ -626,11 +723,11 @@ export default function QaCheckSheet({ canRecord }) {
     let accountName = sh.inspector_name || null, accountSig = null;
     if (!sh.inspector_code && sh.inspector_uid) {
       const { data: prof, error } = await supabase.from('profiles').select('full_name, signature_url, employee_id').eq('id', sh.inspector_uid).maybeSingle();
-      if (error) toast.error(`โหลดลายเซ็นผู้ตรวจไม่สำเร็จ — ใบจะเว้นช่องลายเซ็น (${error.message})`);
+      if (error) toast.error(`${tr("โหลดลายเซ็นผู้ตรวจไม่สำเร็จ — ใบจะเว้นช่องลายเซ็น")} (${error.message})`);
       let empSig = null;
       if (prof && !prof.signature_url && prof.employee_id) {
         const er = await loadEmployeeSigners(supabase, { ids: [prof.employee_id] });
-        if (er.error) toast.error(`โหลดลายเซ็นจากฐานพนักงานไม่สำเร็จ (${er.error})`);
+        if (er.error) toast.error(`${tr("โหลดลายเซ็นจากฐานพนักงานไม่สำเร็จ")} (${er.error})`);
         empSig = er.rows?.[0]?.signature_url || null;
       }
       accountName = prof?.full_name || accountName;
@@ -638,7 +735,32 @@ export default function QaCheckSheet({ canRecord }) {
     }
     const signer = sh.inspector_code ? await resolveEmployeeSigner(supabase, sh.inspector_code) : null;
     const who = inspectorForExport({ code: sh.inspector_code, signer, accountName, accountSig });
-    return { sheet: sh, part: part || {}, items, results, pieces, actions, drawings,
+    /* 📑 รีพอร์ต = ทั้งกะ ไม่ใช่ทีละรอบ (16/11 · user "ใบนึงต้องโชว์ของกะนั้น 3 ตัว 5 ตัว ไม่ใช่ตัวละใบ")
+       รวมทุกใบของ พาร์ท+วันงาน+กะ (ทุกรอบ) → คอลัมน์ No.k = ชิ้นที่ตรวจทั้งกะ · utils/qaDataSheet `mergeShiftResults`
+       🔴 โหลดทีละใบ (ใบละ ~200 จุด) — ห้าม .in(ids) รวด (เพดาน 1000 แถว/คิวรี = ตัดเงียบ) · อ่านไม่ได้ = หยุด ไม่พิมพ์ใบขาด */
+    const { data: shiftSheets, error: sErr } = await supabase.from('qa_inspection_sheets').select('*')
+      .eq('part_id', sh.part_id).eq('work_date', sh.work_date).eq('shift', sh.shift).order('round_no');
+    if (sErr) throw new Error(`โหลดใบตรวจทั้งกะไม่สำเร็จ: ${sErr.message}`);
+    const shs = shiftSheets?.length ? shiftSheets : [sh];
+    const per = await Promise.all(shs.map(x => Promise.all([
+      supabase.from('qa_inspection_results').select('*').eq('sheet_id', x.id),
+      supabase.from('qa_inspection_pieces').select('*').eq('sheet_id', x.id).order('piece_no'),
+      supabase.from('qa_inspection_actions').select('*').eq('sheet_id', x.id).order('round_no'),
+    ])));
+    const bad = per.flat().find(r => r.error);
+    if (bad) throw new Error(`โหลดผลตรวจทั้งกะไม่สำเร็จ: ${bad.error.message}`);
+    const allRes = per.flatMap(([r]) => r.data || []);
+    const merged = mergeShiftResults(shs, allRes);
+    const rounds = merged.rounds.filter(r => r != null);
+    const shiftSheet = {
+      ...sh,
+      rounds_label: rounds.length > 1 ? `${Math.min(...rounds)}–${Math.max(...rounds)} (${shs.length} ${tr("ใบ")})` : (rounds[0] ?? sh.round_no),
+      status: shs.every(x => x.status === 'done') ? 'done' : 'open',
+      result: shs.some(x => x.result === 'fail') ? 'fail' : shs.every(x => x.status === 'done' && x.result === 'pass') ? 'pass' : null,
+    };
+    return { sheet: shiftSheet, part: part || {}, items, results: merged.results, colLabels: merged.colLabels,
+      pieces: per.flatMap(([, p]) => (p.data || []).map(x => ({ ...x, round_no: x.round_no ?? shs.find(y => y.id === x.sheet_id)?.round_no }))),
+      actions: per.flatMap(([, , a]) => a.data || []), drawings,
       inspector: { ...who, code: sh.inspector_code || '' }, stageLabel: sh.stage ? stageLabel(sh.stage) : '' };
   };
   const curSheet = () => {
@@ -651,10 +773,10 @@ export default function QaCheckSheet({ canRecord }) {
     setPrinting(true);
     try {
       const p = await exportParams(sh);
-      if (p.inspector.note) toast.info(`ผู้ตรวจรหัส ${sh.inspector_code}: ${p.inspector.note}`);
+      if (p.inspector.note) toast.info(`${tr("ผู้ตรวจรหัส")} ${sh.inspector_code}: ${p.inspector.note}`);
       setViewHtml(await prepareQaSheetHtml(p));
     } catch (e) {
-      toast.error(`เตรียมใบ Inspection Data ไม่สำเร็จ: ${e?.message || e}`);
+      toast.error(`${tr("เตรียมใบ Inspection Data ไม่สำเร็จ")}: ${e?.message || e}`);
     } finally { setPrinting(false); }
   };
   const handlePrintView = () => {
@@ -664,22 +786,70 @@ export default function QaCheckSheet({ canRecord }) {
   };
   const handleCsv = async () => {
     const sh = curSheet(); if (!sh) return;
+    let p;
+    try { p = await exportParams(sh); } catch (e) { toast.error(String(e?.message || e)); return; }
     await loadDocForms();   // ชื่อไฟล์ตามทะเบียน (csvDoc ต้องโหลดก่อน)
-    const rows = dataSheetCsvRows({ sheet: sh, part: part || {}, data: buildDataSheet({ items, results }) });
-    const name = `InspectionData_${String(sh.part_no || '').replace(/\s+/g, '-')}_${sh.work_date}_${sh.shift}_R${sh.round_no ?? ''}`;
+    // CSV = ทุกชิ้นของกะ ไม่ตัดคอลัมน์ (ใบพิมพ์ตัดที่ 10 แล้วบอกบนใบ)
+    const rows = dataSheetCsvRows({ sheet: p.sheet, part: part || {}, data: buildDataSheet({ items, results: p.results, colLabels: p.colLabels, maxCols: Infinity }) });
+    const name = `InspectionData_${String(sh.part_no || '').replace(/\s+/g, '-')}_${sh.work_date}_${sh.shift}`;
     downloadCsvDoc('csv_qa_inspection_data', name, csvText(rows[0], rows.slice(1)));
+  };
+
+  /* ── 📥 CSV ผลตรวจของพาร์ทนี้ (16/11 · feedback ประชุม "export data พวกผลตรวจ เป็น CSV รายพาร์ท") ──
+     ช่วง = ย้อนหลัง N วันถึงวันงานที่เลือกอยู่ (พารามิเตอร์ของปุ่ม ไม่ใช่ตัวกรองมุมมอง · UI-STANDARD §3 ข้อ 5)
+     🔴 egress: เลือกเฉพาะคอลัมน์ที่ไฟล์ใช้ · ใบ > 1000 แถว ⇒ `fetchAllPages` · ผลรายจุดผ่าน `fetchByIds`
+        (`.in()` ยาว = URL เกินเพดาน proxy → คืนค่าว่างเงียบ · กฎเหล็ก DB ข้อ 5/11)
+     🔴 โหลดไม่ครบ ห้ามส่งไฟล์ที่ขาดเงียบๆ — ถามก่อน แล้วติด "ไม่ครบ" ไว้ที่ **ชื่อไฟล์**
+        (ห้ามแทรกบรรทัดเตือนในเนื้อ CSV — แถวแรกต้องเป็นหัวตาราง) */
+  const [csvDays, setCsvDays] = useState(30);
+  const [csvBusy, setCsvBusy] = useState(false);
+  useEffect(() => { loadDocForms().catch(() => { /* ไม่ได้ชื่อจากทะเบียน = ชื่อไฟล์เดิม ไม่ล้ม */ }); }, []);
+
+  const exportResultsCsv = async () => {
+    if (!partId) { toast.error('เลือกพาร์ทก่อน'); return; }
+    const from = addDaysStr(workDate, -(csvDays - 1));
+    if (!from) { toast.error('อ่านวันงานไม่ออก — เลือกวันใหม่'); return; }
+    setCsvBusy(true);
+    try {
+      const sh = await fetchAllPages(() => supabase.from('qa_inspection_sheets')
+        .select('id, part_no, part_name, line_name, work_date, shift, round_no, stage, lot_no, machine_no, inspector_name, inspector_code, status, result')
+        .eq('part_id', partId).gte('work_date', from).lte('work_date', workDate));
+      if (sh.error) { toast.error(`${tr("โหลดใบตรวจไม่สำเร็จ")}: ${sh.error} — ${tr("ยังไม่ได้ไฟล์")}`); return; }
+      if (!sh.rows.length) { toast.info(`${tr("ช่วง")} ${from} – ${workDate} ${tr("ยังไม่มีใบตรวจของพาร์ทนี้")}`); return; }
+      const rs = await fetchByIds(sh.rows.map(s => s.id), (ids) => supabase.from('qa_inspection_results')
+        .select('id, sheet_id, balloon_no, characteristic, item_type, spec_text, judgement, values_json, qty_checked, qty_ng, note, ncr_id, recorded_by, recorded_at')
+        .in('sheet_id', ids));
+      if (rs.error && !rs.rows.length) { toast.error(`${tr("โหลดผลตรวจไม่สำเร็จ")}: ${rs.error} — ${tr("ยังไม่ได้ไฟล์")}`); return; }
+      const rows = qaResultCsvRows(sh.rows, rs.rows);
+      if (!rows.length) { toast.info(`${tr("ช่วงนี้มีใบตรวจ")} ${sh.rows.length} ${tr("ใบ แต่ยังไม่มีผลรายจุดที่บันทึกไว้")}`); return; }
+      const miss = [sh.truncated && 'ใบตรวจเกินเพดานที่ดึงได้', rs.truncated && 'ผลรายจุดเกินเพดานที่ดึงได้',
+        rs.failed > 0 && `ผลรายจุดบางก้อนโหลดไม่สำเร็จ (${rs.error})`].filter(Boolean);
+      if (miss.length) {
+        toast.error(`${tr("ข้อมูลไม่ครบ")}: ${miss.join(' · ')}`);
+        if (!await askConfirm(`⚠️ ${tr("ข้อมูลไม่ครบ")}\n${miss.join('\n')}\n\n${tr("ไฟล์ที่ได้จะไม่ครบ (ชื่อไฟล์จะติดคำว่า \"ไม่ครบ\")\\nดาวน์โหลดต่อไหม")}?`)) return;
+      }
+      downloadCsvDoc('csv_qa_inspection_results',
+        csvStamp(['qa_results', part?.part_no || partId, from, workDate, miss.length ? 'ไม่ครบ' : '']),
+        csvText(QA_RESULT_HEADERS, rows));
+      toast.success(`${tr("ส่งออก")} ${rows.length.toLocaleString()} ${tr("แถว จาก")} ${sh.rows.length} ${tr("ใบตรวจ")} ✓`);
+    } catch (e) {
+      toast.error(`${tr("ส่งออก CSV ไม่สำเร็จ")}: ${e?.message || e}`);
+    } finally { setCsvBusy(false); }
   };
 
   /* ── UI ─────────────────────────────────────────────────────────────── */
   return (
     <div>
+      {/* ✍️ ใบรอหัวหน้า QA อนุมัติ (19/11) — กดแล้วเปิดใบนั้น */}
+      <QaApprovalPendingBar scopedLineNames={scopedLineNames} reloadKey={`${approvalTick}|${sheet?.id || ''}|${sheet?.status || ''}`}
+        onOpen={(r) => { setPartId(r.part_id); setWorkDate(r.work_date); setShift(r.shift); setRoundNo(r.round_no); }} />
       {/* 📄 ดูผลแบบใบ Inspection Data (FM-QA-112) — HTML ชุดเดียวกับที่พิมพ์ · พิมพ์/บันทึก PDF จาก iframe นี้ */}
       {viewHtml && (
         <div role="dialog" aria-modal="true" aria-label={tr('ใบ Inspection Data')}
-          style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', flexDirection: 'column', padding: isMobile ? 0 : 16 }}>
+          style={{ position: 'fixed', inset: 0, zIndex: 2000, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', flexDirection: 'column', padding: isMobile ? 0 : 16 }}>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', padding: '8px 12px', background: 'var(--card)', borderBottom: '1px solid var(--border)' }}>
             <b style={{ fontSize: 14 }}>📄 {tr('ใบ Inspection Data')}</b>
-            <span style={{ fontSize: 12, color: 'var(--muted)' }}>{sheet?.part_no} · {sheet?.work_date} · {tr('รอบ')} {sheet?.round_no}</span>
+            <span style={{ fontSize: 12, color: 'var(--muted)' }}>{sheet?.part_no} · {sheet?.work_date} · {sheet?.shift === 'night' ? tr('กะดึก') : tr('กะเช้า')} · {tr('รวมทุกรอบของกะ')}</span>
             <span style={{ flex: 1 }} />
             <button type="button" className="tbtn" onClick={handlePrintView} style={{ fontWeight: 700 }}>{tr('🖨️ พิมพ์ / บันทึก PDF')}</button>
             <button type="button" className="tbtn" onClick={handleCsv}>{tr('⬇ CSV')}</button>
@@ -694,38 +864,10 @@ export default function QaCheckSheet({ canRecord }) {
           ...cardSt, marginBottom: 12, borderColor: '#f59e0b',
           background: 'rgba(245,158,11,0.10)', color: 'var(--text2)', fontSize: 12.5,
         }}>
-          ⚠️ <b>{tr('ยังใช้บันทึกผลไม่ได้')}</b> — ตารางใบตรวจยังไม่ถูกสร้างในฐานข้อมูล
-          (ต้อง apply migration <code>20260804_qa_inspection_check_sheet.sql</code> ที่ Supabase project หลักก่อน)
-          · ระหว่างนี้ยังดูมาตรฐาน/จุดตรวจของแต่ละพาร์ทได้ตามปกติ
+          ⚠️ <b>{tr('ยังใช้บันทึกผลไม่ได้')}</b> — {tr("ตารางใบตรวจยังไม่ถูกสร้างในฐานข้อมูล (ต้อง")} apply migration <code>20260804_qa_inspection_check_sheet.sql</code> {tr("ที่ Supabase project หลักก่อน) · ระหว่างนี้ยังดูมาตรฐาน/จุดตรวจของแต่ละพาร์ทได้ตามปกติ")}
         </div>
       )}
 
-      {/* คิว "ฝ่ายผลิตเรียกตรวจ" — กดแล้วตั้งพาร์ท/วัน/กะ/ช่วงตรวจให้ตรงกับรุ่นที่ถูกเรียก */}
-      <QaFmeQueue scopedLineNames={scopedLineNames} onOpen={async (ob) => {
-        /* 🔴 เลือกรอบให้ถูก (audit 19/10) — เดิมตั้งรอบ 1 เสมอ ⇒ คิวรอบกลาง/ท้ายเปิดใบรอบ 1 ที่ "ยอมรับ/ปิดแล้ว"
-           จากชิ้นแรก → บันทึกไม่ได้ + คิวไม่ถูกปิด เตือนซ้ำไม่จบ
-           ผูกใบไว้แล้ว = เปิดใบนั้น · ยังไม่ผูก = รอบแรกที่ยังไม่ปิด · ปิดหมด = รอบใหม่ต่อท้าย */
-        if (!scopedParts.some(p => p.id === ob.part_id)) {
-          toast.error('เปิดใบตรวจไม่ได้ — พาร์ทของงานนี้ถูกปิดใช้งานหรืออยู่นอกขอบเขตของคุณ (ตรวจที่ /qa-setup)');
-          return;
-        }
-        const { data: shs, error: eSh } = await supabase.from('qa_inspection_sheets').select('id, round_no, status')
-          .eq('part_id', ob.part_id).eq('work_date', ob.work_date).eq('shift', ob.shift).order('round_no');
-        if (eSh) { toast.error(`อ่านใบตรวจของงานนี้ไม่สำเร็จ: ${eSh.message}`); return; }
-        const linked = ob.sheet_id && (shs || []).find(x => x.id === ob.sheet_id);
-        const open = (shs || []).find(x => x.status !== 'done');
-        const nextRound = linked ? linked.round_no
-          : open ? open.round_no
-            : Math.min(20, ((shs || []).reduce((m, x) => Math.max(m, x.round_no || 0), 0)) + 1);
-        setPartId(ob.part_id);
-        setWorkDate(ob.work_date);
-        setShift(ob.shift);
-        setRoundNo(nextRound);
-        setSheetStage(FME_SHEET_STAGE[ob.stage] || null);
-        setFmeObId(ob.id);
-        fmeKeyRef.current = `${ob.part_id}|${ob.work_date}|${ob.shift}`;
-        toast.info(`เปิดใบตรวจ: ${ob.line_name} · ${ob.mat_no} · ${ob.stage === 'end' ? 'ชิ้นสุดท้าย' : ob.stage === 'middle' ? 'ระหว่างผลิต' : 'ชิ้นแรก'}`);
-      }} />
 
       {scanOpen && (
         <ScanModal title={tr('สแกนชิ้นงาน → เลือกพาร์ท')} hint={tr('ส่องบาร์โค้ด MAT บนกล่อง/บัตรคัมบัง หรือพิมพ์เลขพาร์ท')}
@@ -751,7 +893,7 @@ export default function QaCheckSheet({ canRecord }) {
                 ))}
               </select>
               <button type="button" onClick={() => setScanOpen(true)} title={tr('สแกนบาร์โค้ด MAT บนกล่อง/คัมบัง')}
-                style={{ flexShrink: 0, minWidth: 44, padding: '0 10px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text)', fontWeight: 700, cursor: 'pointer' }}>📷</button>
+                style={{ flexShrink: 0, minWidth: 44, padding: '0 10px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text)', fontWeight: 700, cursor: 'pointer' }}>📷</button>
             </div>
           </div>
           <div>
@@ -772,7 +914,7 @@ export default function QaCheckSheet({ canRecord }) {
               onChange={e => setRoundNo(Math.min(20, Math.max(1, parseInt(e.target.value, 10) || 1)))} />
           </div>
           <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-            ผู้ตรวจ (บัญชี): <b style={{ color: 'var(--text2)' }}>{sheet?.inspector_name || fullName || '—'}</b>
+            {tr("ผู้ตรวจ (บัญชี")}): <b style={{ color: 'var(--text2)' }}>{sheet?.inspector_name || fullName || '—'}</b>
             {part?.line_name && <div>{tr('ไลน์:')} <b style={{ color: 'var(--text2)' }}>{part.line_name}</b></div>}
           </div>
           <InspectorCodeField disabled={!canRecord} value={matchesKey(sheet) ? (sheet.inspector_code || '') : pendingCode}
@@ -793,29 +935,50 @@ export default function QaCheckSheet({ canRecord }) {
             </span>
           ) : (
             <>
-              <Chip label={`ตรวจแล้ว ${summary.done}/${summary.total}`} color={summary.left ? '#f59e0b' : '#22c55e'} />
-              <Chip label={`ผ่าน ${summary.ok}`} color={JUDGE.ok.color} />
-              {summary.ng > 0 && <Chip label={`ไม่ผ่าน ${summary.ng}`} color={JUDGE.ng.color} />}
-              {summary.na > 0 && <Chip label={`ข้าม ${summary.na}`} color={JUDGE.na.color} />}
+              <Chip label={`${tr("ตรวจแล้ว")} ${summary.done}/${summary.total}`} color={summary.left ? '#f59e0b' : '#22c55e'} />
+              <Chip label={`${tr("ผ่าน")} ${summary.ok}`} color={JUDGE.ok.color} />
+              {summary.ng > 0 && <Chip label={`${tr("ไม่ผ่าน")} ${summary.ng}`} color={JUDGE.ng.color} />}
+              {summary.na > 0 && <Chip label={`${tr("ข้าม")} ${summary.na}`} color={JUDGE.na.color} />}
               {sheet?.status === 'done'
                 ? <Chip label={sheet.result === 'pass' ? tr('✅ ปิดใบแล้ว — ผ่าน') : tr('⛔ ปิดใบแล้ว — ไม่ผ่าน')} color={sheet.result === 'pass' ? '#22c55e' : '#ef4444'} />
                 : <Chip label={sheet ? tr('📝 กำลังตรวจ') : tr('○ ยังไม่เริ่มตรวจ')} color={sheet ? '#4d9fff' : '#6b7280'} />}
               <span style={{ flex: 1 }} />
               {/* ใบปิดเองเมื่อตัวเดินกฎบอก "ยอมรับ" — ไม่มีปุ่มปิดใบ/ผ่านทั้งหมด (ตรวจทีละชิ้น 2026-09-07) */}
-              <Chip label={`ชิ้นที่ตรวจแล้ว ${pieces.length}`} color="#6b7280" />
+              <Chip label={`${tr("ชิ้นที่ตรวจแล้ว")} ${pieces.length}`} color="#6b7280" />
               <button type="button" className="tbtn" disabled={printing || !matchesKey(sheet)} onClick={handleView}
-                title={matchesKey(sheet) ? tr('ดูผลแบบใบ Inspection Data — พิมพ์/บันทึก PDF ได้จากหน้าที่เปิด') : tr('ยังไม่มีใบตรวจของรอบนี้')}
+                title={matchesKey(sheet) ? tr('ดูผลทั้งกะแบบใบ Inspection Data (ทุกรอบ/ทุกชิ้น) — พิมพ์/บันทึก PDF ได้จากหน้าที่เปิด') : tr('ยังไม่มีใบตรวจของรอบนี้')}
                 style={{ padding: '5px 12px', fontSize: 12, fontWeight: 700 }}>
                 {printing ? tr('กำลังเตรียม…') : tr('📄 ใบ Inspection Data')}
               </button>
               <button type="button" className="tbtn" disabled={!matchesKey(sheet)} onClick={handleCsv}
-                title={tr('ดาวน์โหลดผลตรวจรอบนี้เป็น CSV (คอลัมน์เดียวกับใบ Inspection Data)')}
+                title={tr('ดาวน์โหลดผลตรวจทั้งกะเป็น CSV (คอลัมน์เดียวกับใบ Inspection Data)')}
                 style={{ padding: '5px 12px', fontSize: 12, fontWeight: 700 }}>
                 {tr('⬇ CSV')}
               </button>
             </>
           )}
+          {/* 📥 CSV ผลตรวจรายพาร์ท (16/11) — ช่อง "ย้อนหลัง" = พารามิเตอร์ของปุ่มนี้ ไม่ใช่ตัวกรองมุมมอง
+              (UI-STANDARD §3 ข้อ 5 · วางชิดปุ่มพร้อมป้ายบอกว่าเป็นของปุ่มไหน) */}
+          {canExport && (
+            <>
+              {!items.length && <span style={{ flex: 1 }} />}
+              <span style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 700 }}>{tr('CSV ย้อนหลัง')}</span>
+              <select value={csvDays} onChange={e => setCsvDays(Number(e.target.value))} aria-label={tr('ช่วงวันของไฟล์ CSV')}
+                style={{ width: 'auto', height: 28, fontSize: 12, borderRadius: 8, padding: '0 6px', background: 'var(--bg3-surf)', border: '1px solid var(--border2)', color: 'var(--text)' }}>   {/* width:auto กัน trap index.css select{width:100%} ใน flex row — stdsweep 18/11 ยืด 1,510px */}
+                {[7, 30, 60, 90, 180].map(d => <option key={d} value={d}>{d} {tr('วัน')}</option>)}
+              </select>
+              <button type="button" className="tbtn" disabled={csvBusy || !partId} onClick={exportResultsCsv}
+                title={tr('ผลตรวจทุกจุด ทุกรอบ ของพาร์ทนี้ในช่วงที่เลือก — เปิดใน Excel ได้ (ช่องว่าง = ไม่มีค่า ไม่ใช่ 0)')}
+                style={{ padding: '5px 12px', fontSize: 12, fontWeight: 700 }}>
+                {csvBusy ? tr('กำลังรวบรวม…') : tr('📥 CSV ผลตรวจ')}
+              </button>
+            </>
+          )}
         </div>
+        {/* ✍️ ขั้นอนุมัติหัวหน้า QA (19/11) — โผล่เฉพาะใบที่ปิดแล้วและอยู่ในสายอนุมัติ · ไม่บล็อกอะไร */}
+        {matchesKey(sheet) && (
+          <QaSheetApproval sheet={sheet} onChanged={(row) => { setSheet(row); loadRecent(); setApprovalTick(t => t + 1); }} />
+        )}
       </div>
 
       {items.length > 0 && (
@@ -844,12 +1007,12 @@ export default function QaCheckSheet({ canRecord }) {
                   )}
                   {isPdf ? (
                     <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-                      แผ่นนี้เป็น PDF — ดูจุดตรวจได้จากรายการด้านขวา ·{' '}
+                      {tr("แผ่นนี้เป็น PDF — ดูจุดตรวจได้จากรายการด้านขวา")} ·{' '}
                       <a href={activeDwg.drawing_url} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>{tr('เปิดแบบ ↗')}</a>
                     </div>
                   ) : activeDwg && (
                     <div ref={boxRef}>
-                      <div style={{ maxHeight: viewH, overflow: 'auto', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg2)' }}>
+                      <div style={{ maxHeight: viewH, overflow: 'auto', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg2-surf)' }}>
                         <div ref={wrapRef} style={{ position: 'relative', width: 'fit-content', margin: '0 auto' }}>
                           <img src={activeDwg.drawing_url} alt={activeDwg.title}
                             ref={el => { if (el?.complete && el.naturalWidth && !natSize.w) setNatSize({ w: el.naturalWidth, h: el.naturalHeight }); }}
@@ -865,7 +1028,7 @@ export default function QaCheckSheet({ canRecord }) {
                               size={BK} label={i.balloon_no} color={pinColor(i)} selected={selItemId === i.id}
                               hollow={!pinJudged(i)}
                               offX={i.label_dx} offY={i.label_dy} badge={i.image_path ? '🔍' : null}
-                              title={`#${i.balloon_no} ${i.characteristic}${i.rank ? ` · ${i.rank}` : ''} — ${pinJudged(i) ? (JUDGE[resById.get(i.id).judgement]?.label || '') : 'ยังไม่ตรวจ'}${i.image_path ? ' · แตะเพื่อดูรูปซูมจุดนี้' : ''}`}
+                              title={`#${i.balloon_no} ${i.characteristic}${i.rank ? ` · ${i.rank}` : ''} — ${pinJudged(i) ? (JUDGE[resById.get(i.id).judgement]?.label || '') : tr('ยังไม่ตรวจ')}${i.image_path ? tr(' · แตะเพื่อดูรูปซูมจุดนี้') : ''}`}
                               onClick={() => focusItem(i.id)} />
                           ))}
                         </div>
@@ -874,11 +1037,11 @@ export default function QaCheckSheet({ canRecord }) {
                         {/* legend ต้องบอก "ทรง" ด้วย ไม่ใช่แค่สี — สี rank กับสีผลตรวจใช้สีเดียวกันได้ */}
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                           <span style={{ width: 12, height: 12, borderRadius: '50%', background: 'rgba(12,18,15,0.82)', border: '2px dashed #4d9fff' }} />
-                          วงโปร่ง = ยังไม่ตรวจ (สีขอบ = rank)
+                          {tr("วงโปร่ง = ยังไม่ตรวจ (สีขอบ")} = rank)
                         </span>
-                        <span>🟢 ทึบเขียว = ผ่าน</span><span>🔴 ทึบแดง = ไม่ผ่าน</span><span>⚪ ทึบเทา = ข้าม</span>
+                        <span>🟢 {tr("ทึบเขียว = ผ่าน")}</span><span>🔴 {tr("ทึบแดง = ไม่ผ่าน")}</span><span>⚪ {tr("ทึบเทา = ข้าม")}</span>
                         <span>{tr('· แตะหมุดเพื่อไปที่จุดนั้น')}</span>
-                        {pinItems.some(i => i.image_path) && <span>· 🔍 = มีรูปซูมของจุด แตะหมุดเพื่อดู</span>}
+                        {pinItems.some(i => i.image_path) && <span>· 🔍 = {tr("มีรูปซูมของจุด แตะหมุดเพื่อดู")}</span>}
                       </div>
                     </div>
                   )}
@@ -893,19 +1056,23 @@ export default function QaCheckSheet({ canRecord }) {
             <QaPieceStepper items={items} results={results} pieces={pieces} actions={actions} seq={seq}
               sheet={sheet} part={part} workDate={workDate} shift={shift}
               canRecord={canRecord && !loading} canAction={canAction} busy={busy} isMobile={isMobile} fullName={fullName}
-              onSavePiece={savePiece} onSaveAction={saveAction} />
+              onSavePiece={savePiece} onSaveAction={saveAction}
+              focusReq={focusReq} rowRef={(id, el) => { if (el) stepRowRefs.current[id] = el; else delete stepRowRefs.current[id]; }} />
           )}
 
           {/* สรุปต่อจุด (อ่านอย่างเดียว — ค่าทุกชิ้นที่วัดแล้ว · เปิด NCR จากจุดที่ตกได้ที่นี่) */}
           <div style={{ ...cardSt, padding: 0 }}>
-            <div style={{ padding: '12px 16px', fontWeight: 800, fontSize: 13.5, borderBottom: '1px solid var(--border)' }}>
-              สรุปต่อจุด ({items.length})
+            <div role="button" tabIndex={0} onClick={() => setShowSummary(v => !v)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowSummary(v => !v); } }}
+              aria-expanded={showSummary}
+              style={{ padding: '12px 16px', fontWeight: 800, fontSize: 13.5, borderBottom: showSummary ? '1px solid var(--border)' : 'none', cursor: 'pointer' }}>
+              {showSummary ? '▾' : '▸'} {tr("สรุปต่อจุด")} ({items.length})
+              {(() => { const ng = results.filter(r => r.judgement === 'ng').length; return ng ? <span style={{ color: 'var(--red)', fontSize: 12 }}> · {tr('ไม่ผ่าน')} {ng} {tr('จุด (เปิด NCR ได้ในนี้)')}</span> : null; })()}
               {loading && <span style={{ fontWeight: 400, color: 'var(--muted)', fontSize: 12 }}> {tr('· กำลังโหลด…')}</span>}
               <span style={{ fontWeight: 400, color: 'var(--muted)', fontSize: 12 }}>
                 {' '}· {readOnly && canRecord ? 'ใบปิดแล้ว' : !canRecord ? 'ไม่มีสิทธิ์บันทึก — ดูอย่างเดียว' : 'บันทึกที่แผงตรวจทีละชิ้นด้านบน'}
               </span>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {showSummary && <div style={{ display: 'flex', flexDirection: 'column' }}>
               {items.map(i => (
                 <ItemRow key={i.id} item={i} res={resById.get(i.id)} draft={drafts[i.id]}
                   selected={selItemId === i.id} readOnly canRecord={canRecord} busy={busy} isMobile={isMobile}
@@ -915,7 +1082,7 @@ export default function QaCheckSheet({ canRecord }) {
                   onSave={(judgement, extra) => saveResult(i, judgement, extra)}
                   onOpenNcr={res => openNcr(i, res)} />
               ))}
-            </div>
+            </div>}
           </div>
           </div>
         </div>
@@ -934,6 +1101,8 @@ export default function QaCheckSheet({ canRecord }) {
                   style={{ ...ghostBtn, padding: '6px 10px', borderColor: cur ? 'var(--accent)' : `${color}55`, color, fontWeight: cur ? 800 : 600 }}>
                   {s.work_date} · {s.shift === 'day' ? '☀️' : '🌙'} {tr('รอบ')} {s.round_no}
                   {s.status === 'done' ? (s.result === 'pass' ? ' ✓' : ' ✕') : ' …'}
+                  {s.status === 'done' && s.approval_status === 'pending' ? ` · ${tr('รออนุมัติ')}` : ''}
+                  {s.status === 'done' && s.approval_status === 'rejected' ? ` · ${tr('ตีกลับ')}` : ''}
                 </button>
               );
             })}
@@ -942,7 +1111,7 @@ export default function QaCheckSheet({ canRecord }) {
       )}
       {zoomItem && (
         <PointZoom url={qaFileUrl(zoomItem.image_path)} label={zoomItem.balloon_no} color={pinColor(zoomItem)}
-          name={zoomItem.characteristic} description={`สเปค: ${specLabel(zoomItem)}${zoomItem.method ? ` · ${zoomItem.method}` : ''}`}
+          name={zoomItem.characteristic} description={`${tr("สเปค")}: ${specLabel(zoomItem)}${zoomItem.method ? ` · ${zoomItem.method}` : ''}`}
           onClose={() => setZoomItem(null)} />
       )}
     </div>
@@ -1010,7 +1179,7 @@ function ItemRow({ item, res, draft, selected, readOnly, canRecord, busy, isMobi
             </div>
             {auto && (
               <div style={{ fontSize: 11.5, marginTop: 3, color: JUDGE[auto].color, fontWeight: 700 }}>
-                ตัดสินอัตโนมัติ: {JUDGE[auto].label}
+                {tr("ตัดสินอัตโนมัติ")}: {JUDGE[auto].label}
               </div>
             )}
           </div>
@@ -1030,7 +1199,7 @@ function ItemRow({ item, res, draft, selected, readOnly, canRecord, busy, isMobi
                 onSave('ok', { values: values.filter(v => v !== '') });
               }}
               style={{ ...ghostBtn, padding: isMobile ? '10px 14px' : '7px 12px', background: judged === 'ok' ? JUDGE.ok.color : 'var(--bg3)', color: judged === 'ok' ? '#fff' : JUDGE.ok.color, borderColor: JUDGE.ok.color, fontWeight: 800 }}>
-              ✓ ผ่าน
+              ✓ {tr("ผ่าน")}
             </button>
             <button className="tbtn" disabled={busy}
               onClick={() => onDraft({ judgement: 'ng', values })}

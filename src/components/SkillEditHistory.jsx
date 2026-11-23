@@ -47,14 +47,14 @@ export default function SkillEditHistory({ employeeId, limit = 30 }) {
   const describe = r => {
     const d = r.new_data || r.old_data || {};
     const skill = d.skill_name || '(ไม่ระบุสกิล)';
-    if (r.action === 'INSERT') return { skill, text: `เพิ่มสกิล · ตั้งคะแนน ${d.score ?? '—'}` };
-    if (r.action === 'DELETE') return { skill, text: `ลบสกิลออก (คะแนนเดิม ${d.score ?? '—'})` };
+    if (r.action === 'INSERT') return { skill, text: `${tr("เพิ่มสกิล · ตั้งคะแนน")} ${d.score ?? '—'}` };
+    if (r.action === 'DELETE') return { skill, text: `${tr("ลบสกิลออก (คะแนนเดิม")} ${d.score ?? '—'})` };
     const parts = [];
     const ch = r.changed_fields || [];
-    if (ch.includes('score')) parts.push(`คะแนน ${r.old_data?.score ?? '—'} → ${r.new_data?.score ?? '—'}`);
+    if (ch.includes('score')) parts.push(`${tr("คะแนน")} ${r.old_data?.score ?? '—'} → ${r.new_data?.score ?? '—'}`);
     if (ch.includes('pending_level')) {
       const p = r.new_data?.pending_level;
-      parts.push(p ? `ตั้งรออนุมัติ Lv.${p}` : 'เคลียร์สถานะรออนุมัติ');
+      parts.push(p ? `${tr("ตั้งรออนุมัติ")} Lv.${p}` : 'เคลียร์สถานะรออนุมัติ');
     }
     // ฟิลด์อื่นที่ไม่ได้แปลเป็นภาษาคน — แสดงชื่อดิบไว้ ดีกว่าเงียบ
     const rest = ch.filter(k => !['score', 'pending_level', 'last_daily_farm_date'].includes(k));
@@ -77,14 +77,14 @@ export default function SkillEditHistory({ employeeId, limit = 30 }) {
       {open && (
         <div style={{ marginTop: 8 }}>
           <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8, lineHeight: 1.5 }}>
-            แสดงเฉพาะการแก้ด้วยมือในระบบ — การสะสม EXP อัตโนมัติรายวัน/รายสัปดาห์ไม่ถูกบันทึกที่นี่
+            {tr("แสดงเฉพาะการแก้ด้วยมือในระบบ — การสะสม EXP อัตโนมัติรายวัน/รายสัปดาห์ไม่ถูกบันทึกที่นี่")}
           </div>
 
           {loading && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('กำลังโหลด…')}</div>}
 
           {err && (
             <div style={{ fontSize: 12, color: '#ef4444', background: '#ef444415', border: '1px solid #ef444440', borderRadius: 'var(--r-md)', padding: '7px 9px' }}>
-              ⚠️ โหลดประวัติไม่สำเร็จ — {err}
+              ⚠️ {tr("โหลดประวัติไม่สำเร็จ")} — {err}
               <button type="button" onClick={load}
                 style={{ marginLeft: 8, fontSize: 11, padding: '2px 8px', width: 'auto', cursor: 'pointer' }}>{tr('ลองใหม่')}</button>
             </div>
@@ -112,7 +112,7 @@ export default function SkillEditHistory({ employeeId, limit = 30 }) {
               })}
               {rows.length === limit && (
                 <div style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'center', padding: '2px 0' }}>
-                  แสดง {limit} รายการล่าสุด (อาจมีเก่ากว่านี้)
+                  {tr("แสดง")} {limit} {tr("รายการล่าสุด (อาจมีเก่ากว่านี้")})
                 </div>
               )}
             </div>

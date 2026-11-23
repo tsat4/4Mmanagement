@@ -12,12 +12,14 @@
 |---|---|
 | 🪜 แถบขั้นตอน StepFlow (ใบไหนใส่แล้ว/ไม่ใส่ + กฎ) | `step-flow.md` |
 | Adoption Outlook — 🔮 ภาพเมื่อข้อมูลเชื่อมกันทั้งองค์กร (`/adoption-outlook` · 2026-08-13) | `docs/modules/adoption-outlook.md` |
+| 💬 AskBot — แชทถามข้อมูลในระบบ (ปุ่มลอยขวาล่าง · ขั้นที่ 1 ยังไม่มี AI · 2026-11-19) | `docs/modules/askbot.md` |
 | 🔗 Audit AM↔PM ทั้งโปรเจค — 2 ระบบ AM ไม่ sync · null due = "ปกติ" · ลำดับแก้ 3 รอบ (2026-10-08 · ยังไม่แก้) | `docs/modules/am-pm-linkage-audit.md` |
 | 🦺 BBS — สังเกตพฤติกรรมความปลอดภัย (Behavior-Based Safety · paperless · 2026-08-21) | `docs/modules/bbs-safety.md` |
 | 🌳 ชั้น BOM ที่แก้ได้ + ผูกขั้นตอน (PFC/OP) — `/products` แท็บ BOM (2026-09-16) | `docs/modules/bom-levels.md` |
 | ด่านใน `npm run build` — ที่มาของแต่ละด่าน + เคสจริงที่ทำให้ต้องมี | `docs/modules/build-gates.md` |
 | รีด CLAUDE.md ให้มีที่ว่าง (2026-09-30) — ย้ายอะไรไปไหน | `docs/modules/claude-md-slim.md` |
 | 🔗 ลูปปิด 8D → PFMEA / PFC / Control Plan (2026-08-17 · คำสั่ง user) | `docs/modules/closed-loop-8d-pfmea.md` |
+| 📘 8D ตามเกณฑ์ Ford G8D — สรุป deck "How to write an 8D" + เทียบระบบ + ช่องว่าง (2026-11-19 · วิเคราะห์ ยังไม่ลงมือ) | `docs/modules/8d-ford-g8d-reference.md` |
 | ⏱ ทบทวน Cycle Time — "ระบบเสนอ วิศวกรตัดสิน" | `docs/modules/ct-review.md` |
 | Daily Report — ไลน์ผสมหลาย process (welding + metal forming ในไลน์เดียว · 2026-07-22) | `docs/modules/daily-report-mixed-process.md` |
 | Daily Report — ออเดอร์ manual สำหรับไลน์ไม่มี kanban card (2026-07-12) | `docs/modules/daily-report.md` |
@@ -51,6 +53,7 @@
 | Kanban Auto-Calc — คำนวณ kanban จาก forecast (แท็บ 🎴 คำนวณ Kanban ใน /planner-sales · 2026-07-16..17) | `docs/modules/kanban-auto-calc.md` |
 | Logistic — Planner & Sales / Delivery / Rundown Stock (2026-07-10..11) | `docs/modules/logistic-planner-sales.md` |
 | Layer Process Audit — LPA paperless (2026-07-20) | `docs/modules/lpa-audit.md` |
+| 🗂️ ออดิท Check Sheet แบบเอกสาร — LPA · Poka-Yoke · BBS · PPE (มาตรฐานร่วม + ผลออดิท · 2026-11-19) | `docs/modules/check-sheet-audit.md` |
 | 🧑‍🤝‍🧑 Manpower Control Board — ผังกำลังคน · ผัง LAYOUT · ป้าย 4M (`/manpower-board` · 2026-10-06) | `docs/modules/manpower-board.md` |
 | 📉 Monitoring Boards — `/monitoring` (2026-10-02) | `docs/modules/monitoring-boards.md` |
 | Morning Meeting — ประชุมแถวเช้า (2026-07-13) | `docs/modules/morning-meeting.md` |

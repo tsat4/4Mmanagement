@@ -87,7 +87,7 @@ export function StatusLamp({ k, w, stat, onGo, forceCompact = false }) {
   return (
     <button
       type="button" onClick={go || undefined} disabled={!go}
-      title={`${stat.label} — ${stat.why}${go ? ' · กดเพื่อเจาะดู' : ''}`}
+      title={`${stat.label} — ${stat.why}${go ? tr(' · กดเพื่อดูรายละเอียด') : ''}`}
       style={{
         display: 'flex', alignItems: 'center', gap: Math.max(4, Math.round(5 * k)),
         padding: `${Math.max(2, Math.round(2.5 * k))}px ${Math.max(6, Math.round(8 * k))}px`,
@@ -111,8 +111,11 @@ export function StatusLamp({ k, w, stat, onGo, forceCompact = false }) {
 /* ── 🔍 ขยายแผ่น (2026-09-30 · user: "แต่ละกล่องของกราฟน่าจะมีปุ่มซักมุมเพื่อกดดู popup ขยายใหญ่ จะได้เห็นชัดๆ") ──
    ปุ่ม 🔍 มุมขวาบนของ**ทุกแผ่น** (ปิดได้ด้วย `zoom={false}`) → เปิดแผ่นใบเดิมซ้ำใน popup ขนาดเกือบเต็มจอ
    ด้วย `k` ที่ใหญ่ขึ้น (`zoomScale()`) ⇒ หัว/ตัวเลข/ไฟ/ท้ายแผ่นโตตาม ส่วน**กราฟ**:
-   · children เป็น **ฟังก์ชัน `(k) => node`** = วาดใหม่ด้วย k ใหญ่ (ฟอนต์แกน/ป้ายโตด้วย — แท็บ KPI ใช้แบบนี้)
+   · children เป็น **ฟังก์ชัน `(k, w, zoomedCopy) => node`** = วาดใหม่ด้วย k ใหญ่ (ฟอนต์แกน/ป้ายโตด้วย — แท็บ KPI ใช้แบบนี้)
+     `zoomedCopy` = ใบนี้อยู่ใน popup (เชื่อตัวนี้ ห้ามเดาจาก k · `foot`/`goals` ได้ตัวเดียวกันเป็นอาร์กิวเมนต์ที่ 2)
    · children เป็น node ธรรมดา = วาดซ้ำในกล่องที่ใหญ่ขึ้น (ResponsiveContainer ยืดให้ · ฟอนต์แกนเท่าเดิม — SQDCM ยังเป็นแบบนี้)
+   🔍 `footAside` (16/11 · user: "insight เยอะจนกราฟหาย") = ใน popup ให้ท้ายแผ่นไปอยู่ **รางขวา** คนละคอลัมน์กับกราฟ
+   ⇒ ความยาว insight ไม่มีผลกับความสูงกราฟอีก (จอ < 1024px ถอยไปชั้นล่างเพดาน 30% + เลื่อนในตัวเอง)
    🔴 modal อยู่ใต้ `document.body` ผ่าน portal (บอร์ด TV มี ancestor ที่ clip/transform) · zIndex 1900 =
    **เหนือเปลือก TV (1010) แต่ใต้ modal หมายเหตุ (2000)** ⇒ กดแท่งในกราฟที่ขยายแล้ว หมายเหตุยังลอยขึ้นมาบนสุดได้ */
 export function zoomScale(vw = window.innerWidth, vh = window.innerHeight) {
@@ -152,14 +155,17 @@ const SheetIconBtn = ({ fs, title, onClick, children, className }) => (
   <button type="button" className={className} onClick={onClick} title={title} aria-label={title} style={{
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     fontSize: fs(11), lineHeight: 1, padding: '3px 6px', borderRadius: 'var(--r-md)', flexShrink: 0, cursor: 'pointer',
-    background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)',
+    background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)',
   }}>{children}</button>
 );
 
 /* `bigNote` (30/09 · user: "ตัวเลขที่โชว์คืออะไร ไม่มี text บอก") = ป้ายเล็กติดตัวเลขใหญ่ว่าเป็นค่าของอะไร (เช่น "ก.ย." = ค่าเดือนที่เลือก) */
 /* `statZoom` (16/11 · user: ชิปไม่ตามเป้า กดแล้วไปหน้ากรอกเพื่ออะไร ควรเป็นสรุป insight) = กดชิปสถานะแล้วเปิด popup 🔍 ของแผ่นนี้แทน onLink · ใน popup เองชิปไม่มีลิงก์ */
-/* `goals` (16/11 · user: "Target/commitment ไปขึ้นเหมือน note น่าจะไฮไลท์ให้ชัดเหมือนค่า YTD") = แถวเกณฑ์ใต้ตัวเลขใหญ่ · รับ `(k) => node` เหมือน foot (คืน null = ไม่วาด) */
-export function Sheet({ k, cw = 0, span = 1, icon, title, sub, big, unit, bigNote, delta, stat, foot, link, onLink, zoom = true, onClose, statZoom = false, goals = null, children }) {
+/* `goals` (16/11 · user: "Target/commitment ไปขึ้นเหมือน note น่าจะไฮไลท์ให้ชัดเหมือนค่า YTD") = แถวเกณฑ์ใต้ตัวเลขใหญ่ · รับ `(k, zoomedCopy) => node` เหมือน foot (คืน null = ไม่วาด) */
+/* 20/11 (user: "แว่นขยายกับป้ายสถานะทำหน้าที่เดียวกัน เอาแว่นขยายออก") — แผ่นที่ใช้ `statZoom` ส่ง `zoom={false}` ด้วย ⇒ มุมขวาบนว่าง popup เปิดจากชิปสถานะอย่างเดียว */
+/* `footAside` (16/11 · user: "insight เยอะจนกราฟหาย") = ท้ายแผ่นของใบใน popup ไปอยู่รางขวา (คนละคอลัมน์กับกราฟ)
+   ⇒ ใช้กับแผ่นที่ท้ายแผ่นยาวได้จริง (insight) เท่านั้น · ไม่ส่ง = ชั้นล่างเพดาน 30% เหมือนเดิม */
+export function Sheet({ k, cw = 0, span = 1, icon, title, sub, big, unit, bigNote, delta, stat, foot, link, onLink, zoom = true, onClose, statZoom = false, goals = null, footAside = false, children }) {
   const fs = (n) => Math.max(11, Math.round(n * k));
   const status = stat?.status;
   /* 📱 มือถือ: กริดเหลือ 1 คอลัมน์ ⇒ แผ่นกว้าง 2 ช่อง (OEE · ACTION BOARD) ต้องเป็น 1 ช่อง
@@ -169,25 +175,44 @@ export function Sheet({ k, cw = 0, span = 1, icon, title, sub, big, unit, bigNot
   const sheetW = cw * span + GAP * (span - 1);          // ความกว้างจริงของแผ่นใบนี้
   const [zoomed, setZoomed] = useState(false);
   const zk = useMemo(() => (zoomed ? zoomScale() : 1), [zoomed]);
+  /* 🔍 รางขวาใน popup เอาเฉพาะจอที่กว้างพอจริง (วัดตอนเปิด เหมือน `zk`) — แคบกว่านี้แบ่ง 2 คอลัมน์แล้วกราฟผอมกว่าเดิม */
+  const zAside = useMemo(() => !!(zoomed && footAside && typeof window !== 'undefined' && window.innerWidth >= 1024), [zoomed, footAside]);
   const headRef = useRef(null);
   const fit = useHeadFit(headRef, `${big}|${unit}|${bigNote}|${delta}|${stat?.label}|${sheetW}|${k}`);
   const bigScale = headFitBigScale(fit);
-  const body = typeof children === 'function' ? children(k, cw) : children;   // cw = ความกว้างแผ่น (popup = 1200) ให้กราฟตัดสินความหนาแน่นของป้าย
-  const footRaw = typeof foot === 'function' ? foot(k) : foot;     // foot ก็รับ `(k) => node` ได้ (ให้บรรทัดท้ายโตตามใน popup)
-  const goalsNode = typeof goals === 'function' ? goals(k) : goals;
+  /* รางขวา = เฉพาะใบใน popup (ที่มีปุ่มปิด) · มือถือกริดเหลือคอลัมน์เดียวอยู่แล้ว ⇒ ไม่แบ่งราง */
+  const aside = !!onClose && footAside && !isMobile;
+  /* 🔴 "ใบนี้คือใบใน popup ไหม" = `!!onClose` **ห้ามให้หน้าเดาเองจาก k ที่ใหญ่ขึ้น** (16/11)
+     เดิมหน้าเทียบ `kk > k × 1.15` ⇒ บอร์ดที่แผ่นน้อย/แผ่นใหญ่ (k ของกริดสูงอยู่แล้ว) `zoomScale()` ไม่ชนะ
+     = กดแว่นขยายแล้ว **ไม่ได้ insight เลย** ได้ท้ายแผ่นแบบกริด (วัดจริงใน harness 1500×900) */
+  const zoomedCopy = !!onClose;
+  /* 🔴 กราฟต้องรู้ความกว้าง "ของช่องตัวเอง" ไม่ใช่ของแผ่น — มีรางขวาแล้วกราฟเหลือ ~70%
+     ส่งค่าเดิม (1200) = กราฟคิดว่าที่เหลือเยอะ แล้วยัดป้ายทุกแท่งจนทับกัน (`slotW` ใน rowChart) */
+  const body = typeof children === 'function' ? children(k, aside ? Math.round(cw * 0.7) : cw, zoomedCopy) : children;   // cw = ความกว้างแผ่น (popup = 1200) ให้กราฟตัดสินความหนาแน่นของป้าย
+  const footRaw = typeof foot === 'function' ? foot(k, zoomedCopy) : foot;     // foot ก็รับ `(k, zoomedCopy) => node` ได้ (ให้บรรทัดท้ายโตตามใน popup)
+  const goalsNode = typeof goals === 'function' ? goals(k, zoomedCopy) : goals;
   /* 📺 จอประชุม: ท้ายแผ่นเหลือเฉพาะ "คำเตือนข้อมูลไม่ครบ" (`<WarnNote>`) — คำอธิบาย/คาดปลายปี/เป้า ซ่อน (อ่านไม่ออกที่ 2-3 ม. · กินที่กราฟ)
      🔴 คำเตือนห้ามหาย (กฎความซื่อสัตย์ของจอ) · WarnNote ที่เป็นแค่คำอธิบายให้ส่ง `tvHide` */
   const tv = useTvShell();
   const footNode = tv && !onClose
     ? (footRaw && footRaw.type === WarnNote && !footRaw.props?.tvHide ? footRaw : null)
     : footRaw;
+  const footInner = (<>
+    {footNode && <div style={{ fontSize: fs(10.5), lineHeight: 1.35, color: 'var(--muted)' }}>{footNode}</div>}
+    {link && (
+      <button className="tv-hide" onClick={onLink} style={{
+        marginTop: 4, fontSize: fs(10.5), fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--r-md)',
+        background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)', cursor: 'pointer',
+      }}>{link} ↗</button>
+    )}
+  </>);
   return (<>
     <div style={{
       gridColumn: `span ${span}`,
       /* ❌ ไม่มีแถบสีบนหัวแผ่นอีกแล้ว (คำสั่ง user 21/09 "สีสันของเส้นแต่ละ box ไม่เอา")
          สีบนแผ่นเหลือความหมายเดียว = **สถานะ** (ไฟดวงบนหัว + สีแท่งกราฟ) ไม่ใช่ "สีประจำแกน"
          — แถบสีประจำแกนแย่งความสนใจกับไฟสถานะ ทำให้แผ่นที่ปกติกับแผ่นที่มีปัญหาดูเด่นเท่ากัน */
-      background: 'var(--card)', border: '1px solid var(--border)',
+      background: 'var(--card-surf)', border: '1px solid var(--border)',
       borderRadius: 'var(--r-md)', boxShadow: 'var(--shadow-sm)',   // แผ่น KPI = การ์ดแบนบนกริด ไม่ได้ลอย
       display: 'flex', flexDirection: 'column', overflow: 'clip', minWidth: 0, minHeight: 0,
     }}>
@@ -231,26 +256,38 @@ export function Sheet({ k, cw = 0, span = 1, icon, title, sub, big, unit, bigNot
         </div>
         {goalsNode && <div style={{ marginTop: Math.round(4 * k) }}>{goalsNode}</div>}
       </div>
-      <div style={{ flex: 1, minHeight: 0, padding: `${Math.round(4 * k)}px ${Math.round(4 * k)}px 0` }}>{body}</div>
-      {/* 🔍 ใน popup ท้ายแผ่นยาวได้ (insight หลายบรรทัด) แต่ **ห้ามกินกราฟจนหาย** (16/11 · user: "บางกราฟ insight เยอะจนกราฟหาย")
-          ⇒ เพดาน 38% ของ popup แล้วเลื่อนในตัวเอง · กราฟ (body flex:1) จึงได้อย่างน้อย ~55% เสมอ · แผ่นในกริดไม่เปลี่ยน (foot ≤ 1 บรรทัดอยู่แล้ว) */}
-      {(footNode || (link && !tv)) && (
-        <div style={{ padding: `${Math.round(5 * k)}px ${Math.round(9 * k)}px ${Math.round(7 * k)}px`, flexShrink: 0,
-          ...(onClose ? { maxHeight: '38%', minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain' } : null) }}>
-          {footNode && <div style={{ fontSize: fs(10.5), lineHeight: 1.35, color: 'var(--muted)' }}>{footNode}</div>}
-          {link && (
-            <button className="tv-hide" onClick={onLink} style={{
-              marginTop: 4, fontSize: fs(10.5), fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--r-md)',
-              background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)', cursor: 'pointer',
-            }}>{link} ↗</button>
+      {/* 🔍 ใน popup "ท้ายแผ่น" คือที่ของ insight — **ห้ามกินกราฟจนหาย** (16/11 · user: "บางหน้า insight เยอะจนกราฟหาย
+          ต้องรักษาความชัดเจนของกราฟไห้ได้ insight เป็นส่วนเสริม") ⇒ 2 แบบ:
+          · จอกว้าง (≥1024px) + `footAside` = **รางขวา 30%** คนละคอลัมน์กับกราฟ ⇒ insight ยาวแค่ไหน
+            **ความสูงกราฟไม่เปลี่ยนเลย** (เลื่อนในรางของมันเอง) · กราฟได้ ~70% กว้าง × เต็มความสูง
+          · จอแคบ/ไม่ขอราง = ชั้นล่างเหมือนเดิม เพดาน 30% + เลื่อนในตัวเอง ⇒ กราฟได้ ≥ ~55%
+          แผ่นในกริด (ไม่ใช่ popup) ไม่เปลี่ยน — foot ที่นั่น ≤ 1 บรรทัดอยู่แล้ว */}
+      {aside ? (
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', minWidth: 0 }}>
+          <div style={{ flex: '1 1 0', minWidth: 0, minHeight: 0,
+            padding: `${Math.round(4 * k)}px ${footNode || link ? 0 : Math.round(4 * k)}px 0 ${Math.round(4 * k)}px` }}>{body}</div>
+          {(footNode || link) && (
+            <div style={{
+              flex: '0 0 30%', minWidth: 240, maxWidth: 420, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain',
+              borderLeft: '1px solid var(--border)', margin: `${Math.round(4 * k)}px 0`, padding: `0 ${Math.round(10 * k)}px`,
+            }}>{footInner}</div>
           )}
         </div>
-      )}
+      ) : (<>
+        <div style={{ flex: 1, minHeight: 0, padding: `${Math.round(4 * k)}px ${Math.round(4 * k)}px 0` }}>{body}</div>
+        {(footNode || (link && !tv)) && (
+          <div style={{ padding: `${Math.round(5 * k)}px ${Math.round(9 * k)}px ${Math.round(7 * k)}px`, flexShrink: 0,
+            ...(onClose ? { maxHeight: '30%', minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain' } : null) }}>
+            {footInner}
+          </div>
+        )}
+      </>)}
     </div>
     {zoomed && (
       <SheetZoom onClose={() => setZoomed(false)}>
         <Sheet k={zk} cw={1200} icon={icon} title={title} sub={sub} big={big} unit={unit} bigNote={bigNote}
-          delta={delta} stat={stat} foot={foot} link={link} onLink={onLink} zoom={false} statZoom={statZoom} goals={goals} onClose={() => setZoomed(false)}>
+          delta={delta} stat={stat} foot={foot} link={link} onLink={onLink} zoom={false} statZoom={statZoom} goals={goals}
+          footAside={zAside} onClose={() => setZoomed(false)}>
           {children}
         </Sheet>
       </SheetZoom>
@@ -281,8 +318,8 @@ export const FocusAxisNote = ({ k, loText, fixed = false }) => (
     ? 'กราฟนี้ขยายช่วงค่าถาวรให้เห็นความต่าง (ไม่มีปุ่มปิด) — ความสูงแท่ง/เส้นเทียบสัดส่วนกับ 0 ไม่ได้'
     : 'โหมดโฟกัส: ยกพื้นแกนขึ้นเพื่อขยายช่วงที่ค่ากระจุกอยู่ — ความสูงแท่งเทียบสัดส่วนกันไม่ได้ (กดปุ่ม 🎯 บนแถบกรองเพื่อปิด)'}
     style={{ position: 'absolute', top: 0, right: 6, zIndex: 1, fontSize: Math.max(11, Math.round(9.5 * k)), fontWeight: 700, color: 'var(--amber)',
-      background: 'var(--card)', border: '1px solid var(--amber)55', borderRadius: 'var(--r-xs)', padding: '0 5px', lineHeight: 1.5 }}>
-    แกนเริ่ม {loText} ไม่ใช่ 0
+      background: 'var(--card-surf)', border: '1px solid var(--amber)55', borderRadius: 'var(--r-xs)', padding: '0 5px', lineHeight: 1.5 }}>
+    {tr("แกนเริ่ม")} {loText} {tr("ไม่ใช่")} 0
   </div>
 );
 

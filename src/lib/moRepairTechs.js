@@ -21,7 +21,11 @@
 import { supabaseDR } from '../supabaseClient';
 import { fetchByIds } from '../utils/fetchByIds';
 
-const COLS = 'id, tech_main, tech_secondary';
+/* 🔧 18/11 (หน้างานแจ้ง: *"ใน Excel ที่ Export ไม่มีวิธีการแก้ไข ควรเอาวิธีการแก้ไขใส่เพิ่ม"*)
+   เพิ่มช่องของ **ขั้น 3 (ลงมือซ่อม)** เข้าคิวรีเดิม — ไม่ยิงคิวรีรอบที่ 2
+   🔴 ช่องพวกนี้ห้ามเข้า `MO_LIST_COLS` เหมือนกัน (เป็น textarea ยาว · มีแต่ปุ่ม export อ่าน)
+      จอรายการยิง ~1,389 ครั้ง/วัน ที่เพดาน 1000 ใบ ⇒ ลากเข้าไป = จ่าย egress ให้คนที่ไม่ได้ export */
+const COLS = 'id, tech_main, tech_secondary, root_cause, solution, cause_category, cause_other';
 
 /** ชื่อช่างที่ซ่อมจริงของใบนี้ — เรียงหลักก่อนรอง · ไม่ซ้ำ · ว่าง = [] */
 export function repairTechsOf(row) {
@@ -34,7 +38,7 @@ export function repairTechsOf(row) {
 }
 
 /**
- * โหลด "ช่างซ่อมจริง" ของใบ MO หลายใบ — chunk `.in()` ให้เอง (กฎเขียน DB ข้อ 5)
+ * โหลด "ช่างซ่อมจริง" + ช่องขั้นซ่อม (สาเหตุ/วิธีแก้) ของใบ MO หลายใบ — chunk `.in()` ให้เอง (กฎเขียน DB ข้อ 5)
  * @returns `{ byOrder: { [id]: { main, secondary, names } }, error, failed }`
  *          `error` ไม่เป็น null = ข้อมูลไม่ครบ **ผู้เรียกต้องเขียนกำกับในไฟล์**
  */
@@ -51,11 +55,16 @@ export async function loadRepairTechsFor(orderIds) {
       main: String(r.tech_main || '').trim() || null,
       secondary: String(r.tech_secondary || '').trim() || null,
       names: repairTechsOf(r),
+      /* ขั้น 3 — เก็บดิบ ไม่ตัด ไม่ย่อ (รายงานรายเดือนเอาไปอ่านเป็นข้อความ) */
+      rootCause: String(r.root_cause || '').trim() || null,
+      solution: String(r.solution || '').trim() || null,
+      causeCategory: String(r.cause_category || '').trim() || null,
+      causeOther: String(r.cause_other || '').trim() || null,
     };
   });
   return {
     byOrder,
-    error: error || (truncated ? 'ใบเยอะเกินเพดาน — โหลดชื่อช่างซ่อมได้ไม่ครบ' : null),
+    error: error || (truncated ? 'ใบเยอะเกินเพดาน — โหลดข้อมูลขั้นซ่อมได้ไม่ครบ' : null),
     failed: failed || 0,
   };
 }

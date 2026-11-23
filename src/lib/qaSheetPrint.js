@@ -81,7 +81,7 @@ function headerHtml({ df, logo, sheet, part, shiftOn, sigs, sigImg, inspector })
   <tr>
     <td class="hk">Customer:</td><td class="hv">${esc(part?.customer || '')}<span class="sub">Model: <b>${esc(part?.model || '-')}</b></span></td>
     <td>${box(rank === 'general')} General part</td><td>${box(kind === 'raw')} Raw material</td>
-    <td class="hk">Round: <b>${esc(sheet?.round_no ?? '')}</b>${sheet?.stage ? ` · ${esc(sheet.stage)}` : ''}</td>
+    <td class="hk">Round: <b>${esc(sheet?.rounds_label ?? sheet?.round_no ?? '')}</b>${sheet?.stage ? ` · ${esc(sheet.stage)}` : ''}</td>
     <td colspan="${sigs.length}" class="hk">INSPECTION DATE: <b>${esc(sheet?.work_date || '')}</b></td>
   </tr></tbody></table>`;
 }
@@ -108,13 +108,14 @@ const footHtml = (code, eff) => `<div class="foot"><span>${esc(code)}</span><spa
  * HTML ใบเต็ม (sync · pure — ผู้เรียกเตรียมรูปเป็น data URL มาแล้ว) — ใช้ทั้งหน้าต่างพิมพ์และ iframe บนจอ
  */
 export function buildQaSheetHtml({ df = FALLBACK, logo = '', sheet = {}, part = {}, items = [], results = [], pieces = [], actions = [],
-  drawings = [], dwgImgs = {}, inspector = {}, sigImg = '', stageLabel = '' }) {
-  const data = buildDataSheet({ items, results });
+  drawings = [], dwgImgs = {}, inspector = {}, sigImg = '', stageLabel = '', colLabels = null }) {
+  // colLabels = ใบรวมทั้งกะ (mergeShiftResults) — คอลัมน์ No.k = ชิ้นที่ k ของกะ พร้อมป้ายรอบ
+  const data = buildDataSheet({ items, results, colLabels });
   const resById = new Map(results.map(r => [r.item_id, r]));
   const sigs = (df.sig_blocks?.length ? df.sig_blocks : FALLBACK.sig_blocks).map((_, i) => sigAt(df, i));
   const hd = headerHtml({ df, logo, sheet, part, shiftOn: sheet?.shift, sigs, sigImg, inspector });
   const n = data.pieceCols;
-  const closed = sheet?.status === 'done';
+  const closed = sheet?.status === 'done';   // ใบรวมทั้งกะ: ผู้เรียกตั้ง done เมื่อทุกรอบปิดแล้วเท่านั้น
   const code = fullCode(df);
 
   const sumRows = data.summary.map(t => `<tr><td rowspan="2">${esc(t.type)}</td><td>OK</td><td>${t.ok}</td><td rowspan="2">${t.pist ?? '-'}${t.pist != null ? '%' : ''}</td></tr>
@@ -156,6 +157,7 @@ export function buildQaSheetHtml({ df = FALLBACK, logo = '', sheet = {}, part = 
   const warn = [
     closed ? '' : 'ใบนี้ยังไม่ปิด — ผลตรวจอาจยังเปลี่ยนได้ ใบนี้เป็นภาพ ณ เวลาที่พิมพ์',
     data.totals.unchecked ? `มีจุดที่ยังไม่ได้ตรวจ ${data.totals.unchecked} จุด (แถวสีเทา "ยังไม่ตรวจ")` : '',
+    data.hiddenCols ? `กะนี้ตรวจ ${data.pieceCols + data.hiddenCols} ชิ้น — ใบแสดง ${data.pieceCols} ชิ้นแรก · ค่าครบทุกชิ้นอยู่ใน CSV` : '',
     inspector?.note && !sigImg ? `ลายเซ็นผู้ตรวจ: ${inspector.note}` : '',
   ].filter(Boolean).map(t => `<div class="warn">⚠ ${esc(t)}</div>`).join('');
 
@@ -221,6 +223,7 @@ export function buildQaSheetHtml({ df = FALLBACK, logo = '', sheet = {}, part = 
   table.g > thead > tr > th, table.g > tbody > tr > td { border: 1px solid #000; padding: 2px 3px; text-align: center; vertical-align: middle; height: 17px; }
   table.g > thead > tr > th { font-size: 8.5px; font-weight: 700; } table.g > * > tr > .no { width: 42px; font-weight: 700; }
   table.g > tbody > tr > td.it { width: 150px; } table.g > tbody > tr > td.st { width: 92px; white-space: nowrap; } table.g > tbody > tr > td.eq { width: 120px; }
+  table.g .cl { font-size: 7px; font-weight: 400; color: #555; }
   table.g > * > tr > .rk { width: 16px; font-weight: 700; } table.g > * > tr > .v { width: 48px; } table.g > tbody > tr > td.j { width: 34px; font-weight: 700; }
   .ng { color: #b91c1c; font-weight: 700; } tr.nc td { color: #777; } .pend { color: #b45309; font-weight: 700; font-size: 7.5px; }
   .muted { color: #777; }
@@ -238,7 +241,7 @@ ${tablePage}
 }
 
 /** เตรียมทุกอย่าง (ทะเบียน · โลโก้ · ลายเซ็น · รูปแบบ) แล้วคืน HTML — ใช้ทั้งปุ่มพิมพ์และหน้าดูผลบนจอ */
-export async function prepareQaSheetHtml({ sheet, part = {}, items = [], results = [], pieces = [], actions = [], drawings = [], inspector = {}, stageLabel = '' }) {
+export async function prepareQaSheetHtml({ sheet, part = {}, items = [], results = [], pieces = [], actions = [], drawings = [], inspector = {}, stageLabel = '', colLabels = null }) {
   const df = await getDocForm(QA_SHEET_DOC_KEY, FALLBACK);
   const [logo, sigImg, ...imgs] = await Promise.all([
     urlToDataUrl(df.logo_url || tsLogoUrl),
@@ -246,7 +249,7 @@ export async function prepareQaSheetHtml({ sheet, part = {}, items = [], results
     ...drawings.map(d => (isPdfUrl(d.drawing_url) ? Promise.resolve('') : urlToDataUrl(d.drawing_url))),
   ]);
   const dwgImgs = Object.fromEntries(drawings.map((d, i) => [d.id, imgs[i]]));
-  return buildQaSheetHtml({ df, logo, sheet, part, items, results, pieces, actions, drawings, dwgImgs, inspector, sigImg, stageLabel });
+  return buildQaSheetHtml({ df, logo, sheet, part, items, results, pieces, actions, drawings, dwgImgs, inspector, sigImg, stageLabel, colLabels });
 }
 
 /**

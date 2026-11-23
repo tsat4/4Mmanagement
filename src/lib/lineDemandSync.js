@@ -21,7 +21,9 @@ import { can } from '../utils/permissions';
 import { loadStorageLocations } from '../utils/useStorageLocations';
 import { loadProductionLines } from '../utils/useProductionLines';
 import { areaLinesOf } from '../utils/storageLoc';
-import { opInputsOf, parentKidsAfterOps, isFirstOpInChain } from '../utils/opInputs';
+import { opInputsOf, parentKidsAfterOps, isFirstOpInChain, resolveOpParent } from '../utils/opInputs';
+import { opFamilyKey } from '../utils/partGroup';
+import { askConfirm } from '../utils/askConfirm';
 
 const key = (s) => String(s ?? '').trim();
 
@@ -120,9 +122,16 @@ export async function loadOpenOrderDemand(lineNames, products = null) {
   });
   const fgs = [...qtyByFg.keys()];
   const want = new Set(fgs);
+  /* 🔩 20/11 — FG ต่างลูกค้าของพาร์ทเดียวกัน (ไม่มี OP ของตัวเอง) ใช้โซ่ OP ของแม่ในกลุ่ม · กฎเดียวกับ SQL `fn_op_parent_resolve` */
+  const familyOf = (m) => opFamilyKey(prodOf.get(key(m))?.p_no);
+  const famCands = (fg) => (opsOf.get(fg) || []).length || !familyOf(fg) ? []
+    : [...opsOf.keys()].filter(p => p !== fg && familyOf(p) === familyOf(fg));
   fgs.forEach(fg => {
     if (isOp(fg)) { const par = key(prodOf.get(fg)?.op_parent_mat); if (par) want.add(par); }
-    else (opsOf.get(fg) || []).forEach(op => want.add(op));
+    else {
+      (opsOf.get(fg) || []).forEach(op => want.add(op));
+      famCands(fg).forEach(p => { want.add(p); (opsOf.get(p) || []).forEach(op => want.add(op)); });
+    }
   });
   const mats = [...want];
   const { kidsOf, error: bomErr } = await bomKidsOf(mats);
@@ -144,8 +153,11 @@ export async function loadOpenOrderDemand(lineNames, products = null) {
     } else {
       const own = kidsOf.get(fg) || [];
       if (!own.length) { noBom.push({ mat_no: fg, qty }); return; }
-      const sibs = (opsOf.get(fg) || []).map(m => prodOf.get(m)).filter(Boolean);
-      const eaten = (opsOf.get(fg) || []).map(op => opInputsOf({ ownKids: kidsOf.get(op) || [], parentKids: own,
+      const isPre = (op, p) => !(kidsOf.get(op) || []).some(x => key(x.mat_no) === p);
+      const par = resolveOpParent(fg, { opsOf, familyOf, isPre });
+      const ops = par === fg ? (opsOf.get(fg) || []) : (opsOf.get(par) || []).filter(op => isPre(op, par));
+      const sibs = ops.map(m => prodOf.get(m)).filter(Boolean);
+      const eaten = ops.map(op => opInputsOf({ ownKids: kidsOf.get(op) || [], parentKids: par === fg ? own : (kidsOf.get(par) || []),
         firstInChain: isFirstOpInChain(prodOf.get(op), sibs) }).kids);
       kids = parentKidsAfterOps(own, eaten);
     }
@@ -187,7 +199,7 @@ export const canNotifyStore = (role) => can('wip_request', 'decide', role) || ca
  * @returns ผลแบบ syncLineOrderDemand + `cancelled` (คนกดยกเลิก) / `nothingToSend` (ไม่มีอะไรต้องแจ้ง แสดงให้ดูแล้ว)
  */
 export async function confirmAndSyncLineDemand({ lineName, role, extra = [], title = '', focus = [],
-  confirmFn = (t) => window.confirm(t), alertFn = (t) => window.alert(t) }) {
+  confirmFn = async (t) => await askConfirm(t), alertFn = (t) => window.alert(t) }) {
   const empty = { rows: [], inserted: 0, raised: 0, dup: 0, writeErrors: [] };
   if (!canNotifyStore(role)) return { ...empty, error: NO_PERM };
   const dry = await syncLineOrderDemand({ lineName, role, extra, dryRun: true });
@@ -196,8 +208,24 @@ export async function confirmAndSyncLineDemand({ lineName, role, extra = [], tit
   if (!dry.rows.length && !dry.noBom?.length && !dry.opUnset?.length && !dry.fgSkipped?.length) return dry;
   const { text, sendCount } = planConfirmText(dry.rows, { title, focus, area: dry.area, noBom: dry.noBom, opUnset: dry.opUnset, fgSkipped: dry.fgSkipped });
   if (!sendCount) { alertFn(text); return { ...dry, nothingToSend: true }; }
-  if (!confirmFn(text)) return { ...dry, cancelled: true };
+  /* 🔴 19/11 — ต้อง await: askConfirm คืน Promise (codemod 18/11) · เดิม `!confirmFn(text)` = !Promise = false เสมอ
+     ⇒ กด "ยกเลิก" แล้วยังแจ้งสโตร์อยู่ดี (มีด่าน `line-demand-confirm-awaited`) */
+  if (!(await confirmFn(text))) return { ...dry, cancelled: true };
   return syncLineOrderDemand({ lineName, role, extra });
+}
+
+/**
+ * 📦 คิดอย่างเดียว ไม่ถาม ไม่เขียน — ใช้ตอน "เปิดใบผลิต" (19/11 · คำสั่ง user "เปิดออเดอร์ต่อกันไม่ได้ · ห้ามตัดออก")
+ * จอเอาผลไปขึ้น **แถบไม่บังจอ** (`StoreNotifyBar`) แทน popup · คนกดแถบ ⇒ `confirmAndSyncLineDemand()` คิดใหม่สดแล้วค่อยถาม
+ * @returns ผลแบบ dryRun + `sendCount` (รายการที่จะแจ้ง/เพิ่มยอด) + `warnCount` (noBom/opUnset/fgSkipped — ต้องบอก ห้ามเงียบ)
+ */
+export async function previewLineDemand({ lineName, role, extra = [] }) {
+  if (!canNotifyStore(role)) return { rows: [], error: NO_PERM, sendCount: 0, warnCount: 0 };
+  const dry = await syncLineOrderDemand({ lineName, role, extra, dryRun: true });
+  if (dry.error) return { ...dry, sendCount: 0, warnCount: 0 };
+  const sendCount = (dry.rows || []).filter(r => r.action === 'insert' || r.action === 'raise').length;
+  const warnCount = (dry.noBom?.length || 0) + (dry.opUnset?.length || 0) + (dry.fgSkipped?.length || 0);
+  return { ...dry, sendCount, warnCount };
 }
 
 /**

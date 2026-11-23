@@ -7,6 +7,7 @@ import LineSelect from './LineSelect';
 import { DeleteButton } from './IconButton';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 /* ═══ 🔗 สายการไหลระหว่างไลน์ — แผงใน /linesetup (2026-08-19) ═══
    ตอบ "ไลน์นี้ป้อนงานให้ใคร / รับของมาจากใคร" ซึ่งระบบเดิมไม่เคยเก็บไว้ที่ไหนเลย
    (machine_flow_links = ในไลน์เดียวกัน · part_routings = รายพาร์ท ยังลงไม่ครบ)
@@ -14,7 +15,7 @@ import { tr } from '../utils/i18n';
    ⚠️ buffer ระหว่างกลางคือหัวใจ — ต้นน้ำหยุด ไม่ได้แปลว่าปลายน้ำหยุดทันที
       ไม่กรอก buffer = ระบบบอกแค่ "เชื่อมกัน" ไม่เดาเวลา (ห้ามเดาเป็น 0) */
 
-const fmtMin = (m) => (m >= 60 ? `${Math.floor(m / 60)} ชม. ${Math.round(m % 60)} น.` : `${Math.round(m)} นาที`);
+const fmtMin = (m) => (m >= 60 ? `${Math.floor(m / 60)} ${tr("ชม.")} ${Math.round(m % 60)} ${tr("น.")}` : `${Math.round(m)} ${tr("นาที")}`);
 
 export default function LineFlowPanel({ lineName, lines = [], canEdit = false }) {
   const [open, setOpen] = useState(false);     // กระจกสถานะของ CollapseCard — ใช้กันโหลดข้อมูลก่อนมีคนกาง
@@ -80,7 +81,7 @@ export default function LineFlowPanel({ lineName, lines = [], canEdit = false })
   };
 
   const remove = async (l) => {
-    if (!window.confirm(`ลบเส้น ${l.from_line} → ${l.to_line}?`)) return;
+    if (!await askConfirm(`${tr("ลบเส้น")} ${l.from_line} → ${l.to_line}?`)) return;
     const { error } = await supabaseDR.from('line_flow_links').delete().eq('id', l.id);
     if (error) { toast.error(error.message); return; }
     load();
@@ -109,11 +110,11 @@ export default function LineFlowPanel({ lineName, lines = [], canEdit = false })
             style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)' }}>{tr('≈ กันได้')} {fmtMin(cover)}</span>
         )}
         {ctMissing && (
-          <span title={`${consumer} ยังไม่มีสินค้าที่ตั้ง Cycle Time — ประเมิน "กันได้กี่นาที" ไม่ได้`}
+          <span title={`${consumer} ${tr("ยังไม่มีสินค้าที่ตั้ง Cycle Time — ประเมิน \"กันได้กี่นาที\" ไม่ได้")}`}
             style={{ fontSize: 11, color: '#f59e0b' }}>{tr('⚠ ไม่มี CT ของ')} {consumer} {tr('— ประเมินเวลาไม่ได้')}</span>
         )}
         {otherKids.length > 0 && (
-          <span title={`${other} เป็นระดับแผนก (มีไลน์ย่อย ${otherKids.join(', ')}) — งานจริงเกิดที่ไลน์ย่อย ตั้งเส้นที่ไลน์ย่อยแทน`}
+          <span title={`${other} ${tr("เป็นระดับแผนก (มีไลน์ย่อย")} ${otherKids.join(', ')}) — ${tr("งานจริงเกิดที่ไลน์ย่อย ตั้งเส้นที่ไลน์ย่อยแทน")}`}
             style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b' }}>⚠ {other} {tr('เป็นแผนก ไม่ใช่ไลน์')}</span>
         )}
         {canEdit && (
@@ -131,14 +132,13 @@ export default function LineFlowPanel({ lineName, lines = [], canEdit = false })
         <div>
           {missing ? (
             <div style={{ fontSize: 12, color: '#f59e0b', lineHeight: 1.6 }}>
-              ⚠️ ยังไม่ได้ apply migration <code>20260819_line_flow_links.sql</code> — แจ้ง admin ให้รันก่อน แล้วแผงนี้จะใช้งานได้
+              ⚠️ {tr("ยังไม่ได้")} apply migration <code>20260819_line_flow_links.sql</code> — {tr("แจ้ง admin ให้รันก่อน แล้วแผงนี้จะใช้งานได้")}
             </div>
           ) : (
             <>
               <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.6, marginBottom: 10 }}>
-                ใช้ตอบว่า <b>{tr('“หยุดที่ไลน์นี้ กระทบไลน์ไหนบ้าง”')}</b> — ระบบไม่เดาให้ ต้องตั้งเอง
-                · <b>buffer</b> คือจุดพักระหว่างกลาง ยิ่งมีมาก ปลายน้ำยิ่งทนต้นน้ำหยุดได้นาน
-                (ไม่กรอก = ระบบบอกแค่ว่าเชื่อมกัน ไม่ประเมินเวลา)
+                {tr("ใช้ตอบว่า")} <b>{tr('“หยุดที่ไลน์นี้ กระทบไลน์ไหนบ้าง”')}</b> — {tr("ระบบไม่เดาให้ ต้องตั้งเอง")}
+                · <b>buffer</b> {tr("คือจุดพักระหว่างกลาง ยิ่งมีมาก ปลายน้ำยิ่งทนต้นน้ำหยุดได้นาน (ไม่กรอก = ระบบบอกแค่ว่าเชื่อมกัน ไม่ประเมินเวลา")})
               </div>
 
               <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text)', marginBottom: 2 }}>{tr('➡️ ไลน์นี้ป้อนงานให้ (')}{down.length})</div>
@@ -159,9 +159,9 @@ export default function LineFlowPanel({ lineName, lines = [], canEdit = false })
               )}
 
               {canEdit && form && (
-                <div style={{ marginTop: 12, padding: 10, background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', display: 'grid', gap: 8 }}>
+                <div style={{ marginTop: 12, padding: 10, background: 'var(--bg2-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', display: 'grid', gap: 8 }}>
                   <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text)' }}>
-                    {form.dir === 'down' ? `${lineName} ➡️ ป้อนให้` : `⬅️ รับของจาก … ➡️ ${lineName}`}
+                    {form.dir === 'down' ? `${lineName} ➡️ ${tr("ป้อนให้")}` : `⬅️ ${tr("รับของจาก")} … ➡️ ${lineName}`}
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8 }}>
                     <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)' }}>{tr('ไลน์')}
@@ -180,8 +180,7 @@ export default function LineFlowPanel({ lineName, lines = [], canEdit = false })
                   {(childrenOf[form.other] || []).length > 0 && (
                     /* เตือน ไม่บล็อก — แต่ต้องบอกผลที่ตามมา + เสนอไลน์ย่อยให้กดได้เลย (ห้ามเป็นทางตัน) */
                     <div style={{ fontSize: 11, color: '#f59e0b', lineHeight: 1.7, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 'var(--r-md)', padding: '7px 9px' }}>
-                      <b>⚠ {form.other} {tr('เป็นระดับแผนก ไม่ใช่ไลน์ผลิต')}</b> — งานจริงเกิดที่ไลน์ย่อย
-                      และไลน์แม่ไม่มีสินค้า/CT ของตัวเอง ⇒ ระบบจะประเมิน <b>{tr('“กันได้กี่นาที”')}</b> ให้เส้นนี้ไม่ได้เลย
+                      <b>⚠ {form.other} {tr('เป็นระดับแผนก ไม่ใช่ไลน์ผลิต')}</b> — {tr("งานจริงเกิดที่ไลน์ย่อย และไลน์แม่ไม่มีสินค้า/CT ของตัวเอง ⇒ ระบบจะประเมิน")} <b>{tr('“กันได้กี่นาที”')}</b> {tr("ให้เส้นนี้ไม่ได้เลย")}
                       <div style={{ marginTop: 5, display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
                         <span style={{ color: 'var(--muted)' }}>{tr('เลือกไลน์ย่อยแทน:')}</span>
                         {(childrenOf[form.other] || []).map(k => (
@@ -190,7 +189,7 @@ export default function LineFlowPanel({ lineName, lines = [], canEdit = false })
                         ))}
                       </div>
                       <div style={{ marginTop: 4, color: 'var(--muted)' }}>
-                        ป้อนให้หลายไลน์ = บันทึกทีละเส้น (เช่น LASER ➡️ Line 60 แล้วเพิ่ม LASER ➡️ Line 61 อีกเส้น)
+                        {tr("ป้อนให้หลายไลน์ = บันทึกทีละเส้น (เช่น LASER ➡️ Line 60 แล้วเพิ่ม LASER ➡️ Line 61 อีกเส้น")})
                       </div>
                     </div>
                   )}

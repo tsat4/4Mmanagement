@@ -2,7 +2,10 @@
    เทสแต่ละข้อผูกกับ feedback หน้างานจริงที่เคยทำให้ยอดค้างหาย — ห้ามลบข้อไหนออก */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { carryOffers, debtPcs, debtAgeDays, debtByPart } from '../carryDebt.js';
+import { carryOffers, debtPcs, debtAgeDays, debtByPart, carryAgeOf } from '../carryDebt.js';
+
+/** นาฬิกาตรึง — ห้ามพึ่งเวลาเครื่อง (รอบเทส "นาฬิกา +400 วัน") */
+const NOW = Date.parse('2026-11-17T10:00:00Z');
 
 const R = (prod_no, status, { rank = 0, qty = 100, qty_actual = 0, mat_no = 'M1', work_date = '2026-10-01' } = {}) =>
   ({ prod_no, status, qty, qty_actual, mat_no, work_date, _rank: rank });
@@ -84,4 +87,33 @@ test('ข้อมูลพัง/ว่าง ต้องไม่ระเบ
   assert.deepEqual(carryOffers({ rows: [null, {}, { prod_no: '' }] }), []);
   assert.deepEqual(debtByPart(null, null), []);
   assert.equal(debtPcs(null), 0);
+});
+
+/* ═══ 📅 อายุของใบที่วนข้ามกะ — carryAgeOf (2026-11-17 · หัวหน้าแจ้ง) ═══════════════════
+   "แท็กนี้เปิดวันที่เท่าไร … บางอันมันค้างนานแล้ว จะได้เคลียร์ก่อน"
+   🔴 ค่ามาจาก DB (`first_opened_at`/`carry_hops`) ห้ามไล่หาเองจาก prod_no (การ์ดคัมบังใช้เลขซ้ำ) */
+test('carryAgeOf — ใบเปิดใหม่ในกะนี้ = null (ไม่ใช่ 0)', () => {
+  assert.equal(carryAgeOf({ carry_hops: 0, first_opened_at: null }, NOW), null);
+  assert.equal(carryAgeOf(null, NOW), null);
+  assert.equal(carryAgeOf({}, NOW), null);
+});
+
+test('carryAgeOf — วนมาแล้วนับวันจาก "เปิดครั้งแรก" ไม่ใช่จากกะนี้', () => {
+  const a = carryAgeOf({ carry_hops: 3, first_opened_at: '2026-11-14T02:08:00Z' }, NOW);
+  assert.equal(a.hops, 3);
+  assert.equal(a.days, 3);
+  assert.ok(a.firstMs > 0);
+});
+
+test('carryAgeOf — รู้ว่าวนมาแต่ไม่รู้วันแรก = days:null ห้ามเดา 0', () => {
+  const a = carryAgeOf({ carry_hops: 2, first_opened_at: null }, NOW);
+  assert.equal(a.hops, 2);
+  assert.equal(a.days, null);
+  assert.equal(a.firstMs, null);
+  // วันที่อ่านไม่ออกก็ต้องไม่เดา
+  assert.equal(carryAgeOf({ carry_hops: 2, first_opened_at: 'ไม่ใช่วันที่' }, NOW).days, null);
+});
+
+test('carryAgeOf — เวลาในอนาคต (นาฬิกาเครื่องเพี้ยน) ต้องไม่ติดลบ', () => {
+  assert.equal(carryAgeOf({ carry_hops: 1, first_opened_at: '2027-01-01T00:00:00Z' }, NOW).days, 0);
 });

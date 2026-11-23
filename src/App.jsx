@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, useEffect, useRef, useMemo, lazy, Suspense, useCallback } from 'react';
 import { fmtDateTime } from './utils/dateFormat';
+import { motion } from 'framer-motion';
+import { railPill, markView } from './utils/motion';   // 18/11: pill เมนู "ไหล" ไปตำแหน่งใหม่ (นิ่งเองบน TV / reduced-motion)
 import tsLogo from './assets/TS logo transparent.png';   // splash: พื้นโปร่งใส (06/11)
 import { BrowserRouter as Router, Routes, Route, Link, Navigate, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { supabase } from './supabaseClient';
@@ -8,15 +10,16 @@ import { loadProfilesPeople } from './utils/usePeople';
 import MyQueuePanel, { useMyQueue } from './components/MyQueuePanel';
 import { OLD_DAYS } from './utils/myQueue';
 import { ToastContainer, toast } from './components/Toast';
+import ConfirmHost from './components/ConfirmHost';
 import ConnBanner from './components/ConnBanner';
 import Login from './pages/Login';
 import SignatureModal from './components/SignatureModal';
 import ChangePasswordModal from './components/ChangePasswordModal';
 const FeedbackModal = lazy(() => import('./components/FeedbackModal'));
 const NotifyPrefsModal = lazy(() => import('./components/NotifyPrefsModal'));  // 🔕 ตั้งค่าแจ้งเตือนของฉัน
-import { loadPermissions, canAccessPage, setDeptAdmin, setSharedAccount, can } from './utils/permissions';
+import { loadPermissions, canAccessPage, setDeptAdmin, setSharedAccount, can, canSeeded } from './utils/permissions';
 /* 🏷️ รุ่นของเว็บ (full / nm) — สลับตอน build ด้วย alias ใน vite.nm.config.js · 📄 src/appEdition.js */
-import { EDITION_LABEL, EDITION_HOME } from './appEdition';
+import { EDITION, EDITION_LABEL, EDITION_HOME } from './appEdition';
 import { LOGISTIC_GROUPS } from './utils/logisticSide';
 import { trackVisit, topPaths } from './utils/navRecent';
 import { effectiveSections } from './utils/sectionScope';
@@ -114,6 +117,8 @@ const Improvements = lazy(() => import('./pages/Improvements'));
 const OjtTraining = lazy(() => import('./pages/OjtTraining'));
 const DailyChecker = lazy(() => import('./pages/DailyChecker'));
 const CommandPalette = lazy(() => import('./components/CommandPalette'));
+/* 💬 แชทถามข้อมูล (19/11 · ขั้นที่ 1 ยังไม่มี AI) — lazy: ไม่เพิ่มบันเดิลหลัก · 📄 docs/modules/askbot.md */
+const AskBot = lazy(() => import('./components/AskBot'));
 const DocFormsRegistry = lazy(() => import('./pages/DocFormsRegistry'));
 const MorningMeeting = lazy(() => import('./pages/MorningMeeting'));
 // 🏛️ OBEYA — หน้าเดียว 2 แท็บ: บอร์ด KPI ส่วนงาน (กระดาษผนัง) + จอมอนิเตอร์ SQDCM
@@ -466,6 +471,34 @@ function SplashScreen({ onDone }) {
 
 /* ─── Sidebar ──────────────────────────────────────────────── */
 // export ไว้ให้ audit harness (audit/main.jsx ?p=__sidebar) mount ตรงๆ เพื่อวัด layout — แอปจริงใช้ผ่าน ProtectedLayout เท่านั้น
+/* 👤 ยังไม่มีรูปโปรไฟล์ = เงาคนครึ่งตัว (20/11 · คำสั่ง user "เงาคนดีกว่าตัวย่อชื่อ") — จอคอมเท่านั้น (มือถือคงตัวย่อ · ตกลง 20/11)
+   วาดเต็มวงกลม (ไหล่ตกขอบล่าง) · สี = currentColor ของกล่องแม่ · กล่องแม่ต้องเป็นวงกลม overflow:hidden */
+function AvatarSilhouette() {
+  return (
+    <svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true" focusable="false" style={{ display: 'block' }}>
+      <circle cx="12" cy="9.6" r="4.6" fill="currentColor" />
+      <path d="M2.6 25c0-5.6 4.2-9.6 9.4-9.6s9.4 4 9.4 9.6z" fill="currentColor" />
+    </svg>
+  );
+}
+
+/* 🏷️ ชื่อระบบบนหัวแผงเมนู — ตาม edition (20/11 · กันเว็บ New Model ขึ้น "ESM") · ESM เต็ม = ESM / Shopfloor Management */
+const BRAND = EDITION === 'full'
+  ? { title: 'ESM', sub: 'Shopfloor Management' }
+  : { title: String(EDITION_LABEL).split(' · ')[0], sub: String(EDITION_LABEL).split(' · ')[1] || '' };
+/** หัวแผงเมนู: โลโก้ + ชื่อระบบ (ใช้ทั้งแผง desktop และ drawer มือถือ — หน้าตาเดียวกัน) */
+function SidebarBrand({ onGo }) {
+  return (<>
+    <Link to={EDITION_HOME} title="หน้าหลัก (เลือกโมดูล)" style={{ lineHeight: 0, flexShrink: 0 }} onClick={onGo}>
+      <img src={tsLogo} alt="Thai Summit Group" width={30} height={30} style={{ borderRadius: 6 }} />
+    </Link>
+    <div style={{ flex: 1, minWidth: 0, lineHeight: 1.15 }}>
+      <div style={{ fontSize: 15, fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--text)', letterSpacing: '0.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{BRAND.title}</div>
+      {BRAND.sub && <div style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{BRAND.sub}</div>}
+    </div>
+  </>);
+}
+
 export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userRole, userLineId, userEmail, userFullName, userSignatureUrl, userPosition, userAvatarUrl, remoteCode, onToggleRemote, onOpenPalette, pinned, onTogglePin, realRole, onOpenViewAs, onAvatarSaved }) {
   const { lang, toggleLang, tr } = useLang();   // 🌐 ป้ายเมนู/หมวดแปลที่จุดวาด — ข้อมูล NAV_ITEMS ยังเป็นไทย (คีย์)
   // 🔄 ผลการทับขอบเขตด้วย org_assignments — มาจาก UserContext (ProtectedLayout) ไม่เพิ่ม prop
@@ -531,9 +564,6 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
     .map(g => ({ group: g, items: visibleItems.filter(i => inNavGroup(i, [g])) }))
     .filter(g => g.items.length > 0);
   const displayName = userFullName || userEmail || '';
-  const initials = displayName
-    ? displayName.split(/[\s@]/)[0].slice(0, 2).toUpperCase()
-    : '?';
 
   /* `isHomeHere` = "หน้าที่เปิดอยู่ **มีบ้านจริง** อยู่หมวดนี้ไหม" — ตัวตัดสินไฮไลต์ "อยู่ตรงนี้"
      ทุกชั้น (ราง · แผงลอย · accordion มือถือ) · หน้าที่มาเป็น *ทางลัด* (`alsoIn`) ไม่นับ
@@ -563,15 +593,15 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
       {userAvatarUrl ? (
         <img loading="lazy" src={userAvatarUrl} alt="" style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, objectFit: 'cover', border: '1.5px solid var(--accent)' }} />
       ) : (
-        /* 🚦 อักษรย่อแทนรูปโปรไฟล์ — **พื้นเรียบ ห้ามไล่เฉด** (23/09)
+        /* 🚦 อักษรย่อแทนรูปโปรไฟล์ — **ห้ามไล่ข้ามสีสถานะ** (23/09) · ไล่เฉดในสีเดียวได้ (20/11 user: "ไล่สีไม่ได้แปลว่าหลายสี")
            เดิมเป็น `linear-gradient(135deg, var(--accent), #ff6b6b)` = เอาสี Andon เขียว→แดง
            มาทำของตกแต่ง ทั้งที่ 2 สีนี้ถูกจองไว้แปลว่า "ปกติ/มีปัญหา" ทั้งระบบ (utils/statusTone.js) */
         <div style={{
           width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-          background: 'var(--bg2)', border: '1px solid var(--border2)',
+          /* 20/11: ไล่เฉดเขียวสีเดียว + เงาคน ทั้งจอคอมและมือถือ (ชุดเดียวกับการ์ดท้ายแผง · token --avatar-*) */
+          background: 'linear-gradient(135deg, var(--avatar-from) 0%, var(--avatar-to) 100%)', color: 'var(--accent-ink)', overflow: 'hidden',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 12, fontWeight: 800, color: 'var(--text2)',
-        }}>{initials}</div>
+        }}><AvatarSilhouette /></div>
       )}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -745,7 +775,7 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
               /* ทางลัดที่เป็นหน้าปัจจุบัน: บอกแค่ "หน้านี้เปิดอยู่" ด้วยสีตัวอักษร
                  **ไม่ใส่พื้น/แถบซ้าย** — 2 อย่างนั้นสงวนให้ "บ้านจริง" ของหน้า */
               ? { color: 'var(--accent)' }
-              : { background: 'var(--accent-dim)', color: 'var(--accent)', borderLeft: '2px solid var(--accent)' })
+              : { color: 'var(--accent)', position: 'relative' })   // พื้น+แถบซ้ายย้ายไป pill (motion.span) ให้ไหลได้
             : (guest ? { color: 'var(--text2)' } : null)),
           /* บีบช่องไฟคืนให้ชื่อเมนู — แผงกว้างแค่ 210px ป้ายบ้านจริงเลยเบียดชื่อยาวๆ จนตัดคำ
              🔴 คืนที่ด้วยการลด gap/padding เท่านั้น **ห้ามลดฟอนต์ต่ำกว่า 11px** (UI-STANDARD §5) */
@@ -753,8 +783,13 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
         }}
         onClick={onClick}
       >
-        <Icon glyph={item.icon} size={17} style={{ opacity: guest ? 0.7 : 1 }} />
-        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tr(item.label)}</span>
+        {cur && !guest && (
+          <motion.span layoutId="nav-active" transition={railPill()} aria-hidden="true" style={{
+            position: 'absolute', inset: 0, borderRadius: 'inherit', background: 'var(--accent-dim)', borderLeft: '2px solid var(--accent)', pointerEvents: 'none',
+          }} />
+        )}
+        <Icon glyph={item.icon} size={17} style={{ opacity: guest ? 0.7 : 1, position: 'relative', zIndex: 1 }} />
+        <span style={{ position: 'relative', zIndex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tr(item.label)}</span>
         {/* ป้าย "บ้านจริง" — บีบ gap/ฟอนต์ให้แคบที่สุดเท่าที่ยังอ่านออก เพราะเมนูชื่อยาวจะโดนเบียดจนตัดคำ
             (`title` มีชื่อเต็ม + บอกหมวดบ้านเสมอ จึงไม่มีข้อมูลหาย) */}
         {guest && (
@@ -799,21 +834,25 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
           position: 'relative',
           width: 56, flexShrink: 0, borderRadius: 10, cursor: 'pointer', outline: 'none',
           border: `1px solid ${isOpenPanel ? 'var(--border2)' : 'transparent'}`,
-          background: isCurrent ? 'var(--accent-dim)' : 'transparent',
+          background: 'transparent',   // พื้นไฮไลต์ย้ายไปอยู่ที่ pill (motion.span ข้างล่าง) เพื่อให้ "ไหล" ได้
           color: isCurrent ? 'var(--accent)' : 'var(--text2)',
           fontWeight: isCurrent ? 800 : 400,
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
           padding: '6px 2px 4px',
         }}>
+        {/* 🎞 18/11 (ก๊อป ERP): pill ไฮไลต์เป็น element เดียวที่ใช้ `layoutId` ร่วมกันทุกปุ่มบนราง ⇒ เปลี่ยนหน้าแล้ว
+            pill ไหลจากปุ่มเก่าไปปุ่มใหม่ (framer layout animation) · หน้าตาเหมือนเดิมเป๊ะ: พื้น --accent-dim + แถบซ้าย 3px
+            · นิ่งเมื่อ reduced-motion / จอ TV (`railPill()` คืน duration 0) · ตัวตรวจ "คุณอยู่ตรงนี้" ดู aria-current ไม่ใช่สี */}
         {isCurrent && (
-          <span aria-hidden="true" style={{
-            position: 'absolute', left: 0, top: 6, bottom: 6, width: 3,
-            borderRadius: '0 3px 3px 0', background: 'var(--accent)',
-          }} />
+          <motion.span layoutId="rail-active" transition={railPill()} aria-hidden="true" style={{
+            position: 'absolute', inset: 0, borderRadius: 10, background: 'var(--accent-dim)', pointerEvents: 'none',
+          }}>
+            <span style={{ position: 'absolute', left: 0, top: 6, bottom: 6, width: 3, borderRadius: '0 3px 3px 0', background: 'var(--accent)' }} />
+          </motion.span>
         )}
-        <Icon glyph={icon} size={19} />
+        <Icon glyph={icon} size={19} style={{ position: 'relative', zIndex: 1 }} />
         {/* 11px = ฟอนต์ขั้นต่ำตาม UI-CONVENTIONS — ชื่อย่อจาก NAV_GROUP_META ถูกเลือกให้พอดี 56px */}
-        <span style={{ fontSize: 11, lineHeight: 1.2, maxWidth: 56, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+        <span style={{ position: 'relative', zIndex: 1, fontSize: 11, lineHeight: 1.2, maxWidth: 56, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
       </button>
     );
 
@@ -822,13 +861,17 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
         <nav style={{
           position: 'fixed', top: 0, left: 0, height: '100vh',
           width: isOpen ? 'var(--rail-w)' : '0px',
-          background: 'var(--bg2)', borderRight: isOpen ? '1px solid var(--border)' : 'none',
+          background: 'linear-gradient(180deg, var(--rail-top) 0%, var(--rail-bot) 100%)',   // 🪪 20/11 ไล่เฉดสีเดียว (token)
+          borderRight: isOpen ? '1px solid var(--border)' : 'none',
           display: 'flex', flexDirection: 'column', alignItems: 'center',
           padding: isOpen ? '10px 0 8px' : '10px 0',
           gap: 4, zIndex: 1000, overflow: 'hidden',
           transition: 'width 0.25s cubic-bezier(0.4,0,0.2,1)',
         }}>
-            <Link to="/" title="หน้าหลัก (เลือกโมดูล)" style={{ flexShrink: 0, lineHeight: 0, marginBottom: 2 }}>
+            {/* 🪪 20/11 (คำสั่ง user · sidebar ทาง ข): แผงเปิด = โลโก้ย้ายไปหัวแผง ⇒ ซ่อนบนรางแต่ "คงที่ว่าง" (visibility)
+                ไม่งั้นไอคอนทั้งรางกระโดดขึ้นทุกครั้งที่เปิด/ปิดแผง · แผงหุบ = กลับมาเหมือนเดิม */}
+            <Link to="/" title="หน้าหลัก (เลือกโมดูล)" aria-hidden={panelOpen ? 'true' : undefined} tabIndex={panelOpen ? -1 : undefined}
+              style={{ flexShrink: 0, lineHeight: 0, marginBottom: 2, visibility: panelOpen ? 'hidden' : 'visible' }}>
               <img src={tsLogo} alt="Thai Summit Group" width={30} height={30} style={{ borderRadius: 4 }} />
             </Link>
             {railBtn({
@@ -865,7 +908,9 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
             <button
               onClick={() => setPanel(p => (p === '__me' && !pinned) ? null : '__me')}
               title={`${displayName} · โปรไฟล์/ลายเซ็น/ธีม/ออกจากระบบ`}
+              aria-hidden={panelOpen ? 'true' : undefined} tabIndex={panelOpen ? -1 : undefined}
               style={{
+                visibility: panelOpen ? 'hidden' : 'visible',   // 🪪 20/11: แผงเปิด = การ์ดผู้ใช้อยู่ท้ายแผงแทน (คงที่ว่างกันรางกระโดด)
                 width: 44, height: 44, borderRadius: '50%', flexShrink: 0, cursor: 'pointer', outline: 'none',
                 border: `2px solid ${panel === '__me' ? 'var(--accent)' : 'var(--border2)'}`,
                 background: 'var(--bg3)', padding: 0, position: 'relative',
@@ -874,7 +919,8 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
               {userAvatarUrl ? (
                 <img src={userAvatarUrl} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
               ) : (
-                <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)' }}>{initials}</span>
+                /* 👤 20/11: ยังไม่มีรูป = เงาคน (ราง = จอคอมเสมอ) · กล่องในแยก overflow:hidden — badge ข้างนอกยังล้นขอบได้ */
+                <span style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', color: 'var(--text2)', display: 'block' }}><AvatarSilhouette /></span>
               )}
               {remoteCode && (
                 <span title={`รับรีโมทอยู่ · ${remoteCode}`} style={{ position: 'absolute', right: -3, top: -3, fontSize: 12 }}>📺</span>
@@ -905,29 +951,38 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
           )}
           <div style={{
             position: 'fixed', top: 0, bottom: 0, left: 'var(--rail-w)', width: 'var(--sidebar-w)',
-            background: 'var(--bg2)', borderRight: '1px solid var(--border)',
-            display: 'flex', flexDirection: 'column', padding: '0 10px 14px',
+            /* 🎨 20/11 (sidebar ทาง ข): พื้นไล่เข้มลงล่าง + เงา — ไล่จาก token ล้วน ⇒ ธีมสว่างก็ไล่ขาว→เทาอ่อนเอง
+               ปักหมุดเดิมไม่มีเงาเลย ⇒ ใช้ --shadow-float (ของที่ลอย · UI §6.20) ให้แยกจากเนื้อหา */
+            background: 'linear-gradient(180deg, var(--panel-top) 0%, var(--panel-bot) 100%)', borderRight: '1px solid var(--border)',
+            display: 'flex', flexDirection: 'column', padding: '0 10px 12px',
             zIndex: 998,
-            boxShadow: pinned ? 'none' : '18px 0 40px rgba(0,0,0,0.45)',
+            boxShadow: pinned ? 'var(--shadow-float)' : '18px 0 40px rgba(0,0,0,0.45)',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 2px 10px', borderBottom: '1px solid var(--border)', marginBottom: 8, flexShrink: 0 }}>
-              <Icon glyph={panelMeta.icon} size={17} />
-              <span style={{ fontSize: 13.5, fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--text)', flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{panelMeta.title}</span>
-              {onTogglePin && <button onClick={onTogglePin} title={pinned ? 'เลิกปักหมุด — แผงจะปิดเองหลังเลือกเมนู' : 'ปักหมุดแผงค้างไว้ (เนื้อหาหลักจะแคบลง)'} style={{
-                width: 26, height: 26, borderRadius: 6, flexShrink: 0, cursor: 'pointer', outline: 'none',
+            {/* 🪪 20/11 (คำสั่ง user · sidebar ทาง ข + หัวแผงโลโก้): หัวแผง = โลโก้ + ชื่อระบบ · ปุ่มเดิม 📌/✕ คงไว้
+                (ไม่เพิ่มปุ่มหุบแผงชุดที่ 2 — ◀ ท้ายราง = ซ่อนเมนูทั้งหมด · ✕ = ปิดแผง · user ทักเรื่องซ้ำ 20/11)
+                ชื่อหมวดลงไปเป็นป้ายเล็กใต้หัว */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '12px 0 10px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+              <SidebarBrand onGo={() => { if (!pinned) setPanel(null); }} />
+              {/* 20/11: ไอคอนเส้นชุดเดียวกับเมนู แทน emoji 📌/✕ (emoji สีแดงชนพาเลต · UI §6.36) — หน้าที่ปุ่มเดิมทุกอย่าง */}
+              {onTogglePin && <button onClick={onTogglePin} aria-pressed={pinned} title={pinned ? 'เลิกปักหมุด — แผงจะปิดเองหลังเลือกเมนู' : 'ปักหมุดแผงค้างไว้ (เนื้อหาหลักจะแคบลง)'} style={{
+                width: 28, height: 28, borderRadius: 8, flexShrink: 0, cursor: 'pointer', outline: 'none',
                 border: `1px solid ${pinned ? 'var(--accent)' : 'var(--border2)'}`,
                 background: pinned ? 'var(--accent-dim)' : 'transparent',
                 color: pinned ? 'var(--accent)' : 'var(--muted)', fontSize: 12,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>📌</button>}
+              }}><Icon name="Pin" size={15} /></button>}
               {!pinned && (
-                <button onClick={() => setPanel(null)} title="ปิดแผง (Esc)" style={{
-                  width: 26, height: 26, borderRadius: 6, flexShrink: 0, cursor: 'pointer', outline: 'none',
+                <button onClick={() => setPanel(null)} title="ปิดแผง (Esc)" aria-label="ปิดแผง" style={{
+                  width: 28, height: 28, borderRadius: 8, flexShrink: 0, cursor: 'pointer', outline: 'none',
                   border: '1px solid var(--border2)', background: 'transparent',
                   color: 'var(--muted)', fontSize: 12,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>✕</button>
+                }}><Icon name="PanelLeftClose" size={15} /></button>
               )}
+            </div>
+            {/* ชื่อหมวดของแผงที่เปิด (ย้ายจากหัวแผง · 20/11) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '12px 8px 6px', fontSize: 12, fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.02em', flexShrink: 0, minWidth: 0 }}>
+              <span style={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{panelMeta.title}</span>
             </div>
 
             <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -974,6 +1029,38 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
                 {profileActions(() => { if (!pinned) setPanel(null); })}
               </>)}
             </div>
+            {/* 🪪 การ์ดผู้ใช้ท้ายแผง (20/11 · sidebar ทาง ข) — แทนวงกลมบนรางตอนแผงเปิด · กด = แผงโปรไฟล์ (ที่เดิม)
+                แผงโปรไฟล์มีการ์ดของมันเองอยู่แล้ว ⇒ ไม่วาดซ้ำ · อักษรย่อไล่เฉดเขียวสีเดียว (20/11 user) — ห้ามไล่ข้ามสีสถานะ (กฎ 23/09) */}
+            {panel !== '__me' && (
+              <button onClick={() => setPanel('__me')} title={`${displayName} · โปรไฟล์/ลายเซ็น/ธีม/ออกจากระบบ`} style={{
+                marginTop: 8, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left',
+                padding: '9px 10px', borderRadius: 10, cursor: 'pointer', outline: 'none',
+                background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)',
+              }}>
+                <span style={{ position: 'relative', flexShrink: 0, lineHeight: 0 }}>
+                  {userAvatarUrl ? (
+                    <img loading="lazy" src={userAvatarUrl} alt="" style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--border2)' }} />
+                  ) : (
+                    <span style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg, var(--avatar-from) 0%, var(--avatar-to) 100%)',
+                      display: 'block', overflow: 'hidden', color: 'var(--accent-ink)' }}><AvatarSilhouette /></span>
+                  )}
+                  {myQueue.badge > 0 && (
+                    <span title={`มีงานรอคุณโดยตรง ${myQueue.badge} รายการ`} style={{
+                      position: 'absolute', right: -5, top: -4, minWidth: 17, height: 17, padding: '0 4px',
+                      borderRadius: 999, background: 'var(--red)', color: '#fff',
+                      fontSize: 11, fontWeight: 800, lineHeight: '13px', textAlign: 'center', border: '2px solid var(--bg3)',
+                    }}>{myQueue.badge > 99 ? '99+' : myQueue.badge}</span>
+                  )}
+                </span>
+                <span style={{ flex: 1, minWidth: 0, lineHeight: 1.25 }}>
+                  <span style={{ display: 'block', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName || 'Unknown'}</span>
+                  <span style={{ display: 'block', fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {positionLabel(userPosition) || tr('โปรไฟล์ & อุปกรณ์')}{remoteCode ? ' · 📺' : ''}
+                  </span>
+                </span>
+                <span aria-hidden="true" style={{ color: 'var(--muted)', fontSize: 15, flexShrink: 0 }}>⋯</span>
+              </button>
+            )}
           </div>
         </>)}
         {modals}
@@ -990,7 +1077,7 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
       <nav style={{
         position: 'fixed', top: 0, left: 0, height: '100vh',
         width: isOpen ? 'var(--sidebar-w)' : '0px',
-        background: 'var(--bg2)',
+        background: 'linear-gradient(180deg, var(--panel-top) 0%, var(--panel-bot) 100%)',   // 🪪 20/11 ชุดเดียวกับแผง desktop
         borderRight: isOpen ? '1px solid var(--border)' : 'none',
         display: 'flex', flexDirection: 'column',
         padding: isOpen ? '0 10px 20px' : '0',
@@ -999,26 +1086,19 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
         zIndex: 1000,
         boxShadow: isOpen ? '4px 0 30px rgba(0,0,0,0.3)' : 'none',
       }}>
-        {/* Logo + ปุ่มพับ sidebar (อยู่ในหัวแถบ ไม่ลอยทับเนื้อหา) */}
-        <div style={{ padding: '18px 6px 16px', borderBottom: '1px solid var(--border)', marginBottom: 10, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-            <img src={tsLogo} alt="Thai Summit Group" width={28} height={28} style={{ borderRadius: 3, flexShrink: 0 }} />
-            <div>
-              <div style={{ fontSize: 11, letterSpacing: '2px', color: 'var(--accent)', textTransform: 'uppercase', fontWeight: 700, fontFamily: 'var(--font-display)' }}>Thai Summit</div>
-              <div style={{ fontSize: 11, letterSpacing: '1.5px', color: 'var(--muted)', textTransform: 'uppercase', fontFamily: 'var(--font-display)' }}>{EDITION_LABEL}</div>
-            </div>
-          </div>
+        {/* หัวแถบ = โลโก้ + ชื่อระบบ (หน้าตาเดียวกับแผง desktop · 20/11) + ปุ่มพับ (ไอคอนเส้น) */}
+        <div style={{ padding: '14px 4px 12px', borderBottom: '1px solid var(--border)', marginBottom: 10, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 9 }}>
+          <SidebarBrand onGo={onClose} />
           <button
             onClick={onClose}
-            title="พับเมนู"
+            title="พับเมนู" aria-label="พับเมนู"
             style={{
-              // สัญลักษณ์ show/hide เหมือนกันทั้งระบบ: 32×32 radius8 bg3 border2 · ◀ = พับ
               width: 32, height: 32, borderRadius: 8, flexShrink: 0,
               background: 'var(--bg3)', border: '1px solid var(--border2)',
-              color: 'var(--text2)', fontSize: 14, cursor: 'pointer', outline: 'none',
+              color: 'var(--text2)', cursor: 'pointer', outline: 'none',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
-          >◀</button>
+          ><Icon name="PanelLeftClose" size={16} /></button>
         </div>
 
         {/* ค้นหาเมนู — 51 รายการ 8 หมวด ถ้าไม่มีช่องค้นต้องจำว่าอยู่หมวดไหน (NAVIGATION-REVIEW §2.5) */}
@@ -1210,6 +1290,7 @@ const NOTIF_ROUTE = {
   rack_requests: '/rack-center',
   wip_replenish_requests: '/heijunka',
   qa_ncr:        '/qa?tab=ncr',
+  qa_inspection_sheets: '/qa?tab=sheet',   // ✍️ อนุมัติ/ตีกลับใบตรวจ QA + alarm ตกซ้ำ (19/11)
   qa_capa:       '/qa?tab=capa',
   qa_customer_claims: '/qa?tab=claims',
   quality_bin_records: '/qa?tab=bins',
@@ -1812,7 +1893,7 @@ function AutoLogoutWarning({ secsLeft, onStay, onLogout }) {
 /* ─── Protected Layout ─────────────────────────────────────────────── */
 // permsVersion — ทำให้ layout re-render เมื่อสิทธิ์เปลี่ยน · และเป็น dep ของ `allUnits` ใน userCtx
 // (RoleRoute/Sidebar อ่าน permission cache แบบ sync ผ่าน canAccessPage ระหว่าง render)
-function ProtectedLayout({ session, theme, onToggleTheme, userRole, realRole, viewAs, onApplyViewAs, userLineId, userTeam, userSection, userSections, userRespCcs, userScopeIdx, userAssignOverlay, userMtnTeams, userIsDeptAdmin, userAccountKind, userPosition, userEmail, userFullName, userNotifyEmail, userSignatureUrl, userAvatarUrl, onAvatarSaved, onSignatureSaved, permsVersion }) {
+function ProtectedLayout({ session, theme, onToggleTheme, userRole, realRole, viewAs, onApplyViewAs, userLineId, userTeam, userSection, userSections, userRespCcs, userAllUnits, userWriteUnits, userScopeIdx, userAssignOverlay, userMtnTeams, userIsDeptAdmin, userAccountKind, userPosition, userEmail, userFullName, userNotifyEmail, userSignatureUrl, userAvatarUrl, onAvatarSaved, onSignatureSaved, permsVersion }) {
   const isMobile = useIsMobile();
   const isTV     = !useIsMobile(1919);   // จอ ≥1920 (TV) — reactive แทน innerWidth ครั้งเดียว
   useEffect(() => { purgeOldDrafts(); }, []);   // 📝 ร่างฟอร์มหมดอายุ (utils/formDraft.js)
@@ -1823,6 +1904,11 @@ function ProtectedLayout({ session, theme, onToggleTheme, userRole, realRole, vi
   const navigate = useNavigate();
   const location = useLocation();
   useEffect(() => { setTvNavOpen(false); }, [location.pathname]);
+  /* 📈 อนิเมชันกราฟเล่นครั้งเดียวต่อ "สิ่งที่ดู" (utils/motion.js chartAnim) — URL เปลี่ยน = เปิดหน้าต่างใหม่ · รีเฟรชข้อมูล = ไม่เล่นซ้ำ
+     ทำระหว่าง render (ไม่ใช่ useEffect) เพื่อให้กราฟที่วาดในรอบเดียวกันเห็นหน้าต่างใหม่ทันที · idempotent ต่อ URL */
+  const viewKeyRef = useRef(null);
+  const viewKey = `${location.pathname}?${location.search}`;
+  if (viewKeyRef.current !== viewKey) { viewKeyRef.current = viewKey; markView(); }
   /* 📺 กรอบจอ TV ชุดเดียวทุกหน้า (16/10) — ตัดสินที่ isTvShell() (utils/displayRotation.js) ที่เดียว
      ⇒ ไม่มี sidebar/rail/กระดิ่ง/ปุ่มเมนู · แถบบนวาดโดย DisplayRotator · หัวเพจทุกหน้าซ่อนด้วย body.esm-tv-shell .ph-chrome */
   const tvShell = isTvShell(userRole, location.search);
@@ -1946,7 +2032,9 @@ function ProtectedLayout({ session, theme, onToggleTheme, userRole, realRole, vi
     /* 🔐 ชั้นที่ 3 ของสิทธิ์ — "แก้ข้ามหน่วยงานได้ไหม" (15/10 · คำสั่ง user)
        🔴 คนละแกนกับ `sections` (= ขอบเขตที่ **เห็น**) — ตัวตัดสินอยู่ที่ `utils/writeScope.js`
        ⚠️ ต้องมี `permsVersion` ใน deps ไม่งั้นแก้สิทธิ์ที่ /permissions แล้วค่านี้ค้างทั้ง session */
-    allUnits: can('scope', 'all_units', userRole),
+    allUnits: userRole === 'admin' || userAllUnits === true,
+    /* หน่วยที่แก้ได้ (บ้าน ∪ มอบหมาย) — `writeScope.writeUnitsOf()` อ่านช่องนี้ · ว่าง = ถอยไป `section` */
+    writeUnits: userWriteUnits || EMPTY_ARR,
     /* 💰 แกน Cost Center ของชั้นที่ 3 (16/10 · คำสั่ง user "response กับ cost center ไหน ตามลำดับชั้น")
        ตัวตัดสิน = `canWriteScope()` (`utils/ccScope.js`) · ตั้งค่าที่ /add-user ช่อง ④
        🔴 ว่าง = ถอยไปใช้ `section` เหมือนเดิม **ไม่ใช่** "แก้อะไรไม่ได้" */
@@ -1956,7 +2044,7 @@ function ProtectedLayout({ session, theme, onToggleTheme, userRole, realRole, vi
     /* 🔄 ผลการทับด้วยมอบหมาย (`org_assignments`) — จอที่โชว์ "ขอบเขตของฉัน" ต้องเขียนบอกว่ามาจากรักษาการ
        และถ้า `failed` ต้องเขียนว่าอ่านทะเบียน/ผังไม่ได้ (ขอบเขตที่เห็นอยู่ = จาก profiles ล้วน) */
     assignOverlay: userAssignOverlay,
-  }), [userRole, userLineId, userTeam, userSection, userSections, userRespCcs, userScopeIdx, userAssignOverlay, userMtnTeams, userPosition,
+  }), [userRole, userLineId, userTeam, userSection, userSections, userRespCcs, userAllUnits, userWriteUnits, userScopeIdx, userAssignOverlay, userMtnTeams, userPosition,
        userNotifyEmail, userSignatureUrl, userAvatarUrl, userFullName, userIsDeptAdmin, realRole,
        userAccountKind, permsVersion]);
   /* layout ปกติต้องรู้ว่า sidebar เปิดอยู่ไหมด้วย — แยก memo เพื่อไม่ให้ `isOpen` ไปสั่น context ของจอ /tv */
@@ -2084,6 +2172,10 @@ function ProtectedLayout({ session, theme, onToggleTheme, userRole, realRole, vi
         <Suspense fallback={null}>
           <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} role={role} />
         </Suspense>
+        {/* 💬 แชทถามข้อมูล — ไม่ขึ้นบนจอ TV (ไม่มีคนพิมพ์) · คีย์ askbot:use ยังไม่ seed = admin เท่านั้น (เปิดวงแคบก่อน) */}
+        {!tvShell && canSeeded('askbot', 'use', role) && (
+          <Suspense fallback={null}><AskBot /></Suspense>
+        )}
         {/* 📺 จอตาม: รับคำสั่งรีโมท (pointer/คลิก/เลื่อน/เปลี่ยนหน้า) — ทำงานได้ทุกหน้า */}
         {remoteCode && (
           <Suspense fallback={null}>
@@ -2420,6 +2512,11 @@ export default function App() {
      🔴 ต้องเป็น array ตัวเดิมตราบใดที่ค่าไม่เปลี่ยน — ไม่งั้น UserContext เป็นตัวใหม่ทุก render
         แล้วทุกหน้าที่มี effect ผูกกับ context ยิง DB ซ้ำ (กฎเหล็กการเขียน DB ข้อ 9) */
   const [userRespCcs, setUserRespCcs] = useState(EMPTY_ARR);
+  /* 🌐 ใบผ่านข้ามหน่วย **รายคน** (`profiles.all_units` ∪ มอบหมาย scope_depth='all' · 13/11 คำสั่ง user)
+     — เดิมอ่านจากคีย์ `scope:all_units` ของ role ⇒ "manager = แก้ได้ทั้งโรงงาน" ซึ่งขัดกฎ role ≠ ขอบเขต
+     🔴 `writeUnits` = หน่วยที่ **แก้ได้** (บ้าน ∪ ส่วนงานที่ได้รับมอบ) คนละแกนกับ `sections` (เห็น) · array ตัวเดิมถ้าค่าไม่เปลี่ยน (กฎข้อ 9) */
+  const [userAllUnits, setUserAllUnits] = useState(false);
+  const [userWriteUnits, setUserWriteUnits] = useState(EMPTY_ARR);
   /* 💰 ดัชนีผังของแกน CC — `null` = ไม่ได้ใช้แกนนี้ · `{ failed:true }` = ตั้ง CC ไว้แต่อ่านผังไม่ได้
      🔴 `failed` ต้องแยกจาก `null` ให้ได้ — "อ่านไม่ได้" ต้อง fail-closed ไม่ใช่ถอยไปใช้ส่วนงาน
         (ถอย = คนที่ขอบเขต `sections` เคยกว้างกว่า CC จะได้สิทธิ์คืนมาเงียบๆ) */
@@ -2503,7 +2600,7 @@ export default function App() {
 
   const fetchProfile = async (user) => {
     setUserEmail(user.email ?? null);
-    const COLS = 'role, line_id, full_name, team, section, sections, resp_cost_centers, position, notify_email, signature_url, is_dept_admin, scope_depth';
+    const COLS = 'role, line_id, full_name, team, section, sections, resp_cost_centers, all_units, position, notify_email, signature_url, is_dept_admin, scope_depth';
     // ⚠️ egress: **คิวรีเดียวต่อการโหลดโปรไฟล์** — เดิมยิง 3 ครั้งไปที่แถวเดียวกัน (ชุดหลัก +
     //    mtn_teams + avatar_url แยกกันคนละ round trip) วัดจาก log จริง 11 ก.ย. 2026 = 6,760 req/วัน
     //    บนตาราง profiles ทั้งที่เป็นข้อมูลของ user คนเดียว ~188 ครั้ง/วัน/คน (ทุกครั้งที่เปิด/รีเฟรชแอป)
@@ -2627,14 +2724,22 @@ export default function App() {
     }
 
     /* ทับขอบเขต — pure · ผังอ่านไม่ได้ = คืนค่าเดิม + failed (ไม่เดา) */
+    const baseAll = data?.all_units === true;
     const overlay = liveAssign.length
-      ? applyAssignments({ sections: baseSections, respCostCenters: baseCcs }, liveAssign,
+      ? applyAssignments({ section: ident.section, sections: baseSections, respCostCenters: baseCcs, allUnits: baseAll }, liveAssign,
           { nodes: nodes || [], ccIdx: nodes ? buildCcIndex(nodes) : null, today })
       : null;
     setUserAssignOverlay(assignErr ? { failed: true, reason: 'registry_unreadable', applied: [] }
       : (overlay && overlay.reason !== 'none' ? { failed: overlay.failed, reason: overlay.reason, applied: overlay.applied } : null));
     const finalSections = overlay ? overlay.sections : baseSections;
     const ccList = overlay ? overlay.respCostCenters : baseCcs;
+    const homeUnit = String(ident.section ?? '').trim();
+    const writeList = overlay ? overlay.writeUnits : (homeUnit ? [homeUnit] : []);
+    setUserAllUnits(overlay ? overlay.allUnits : baseAll);
+    setUserWriteUnits(prev => {
+      if (!writeList.length) return EMPTY_ARR;
+      return prev.length === writeList.length && prev.every((v, i) => v === writeList[i]) ? prev : writeList;
+    });
 
     setUserSections(finalSections);
     setUserRespCcs(prev => {
@@ -2692,7 +2797,7 @@ export default function App() {
         loadPermissions().then(() => setPermsLoaded(true));
       } else {
         try { localStorage.removeItem(SESSION_START_KEY); } catch { /* private mode */ }
-        setUserRole(null); setUserLineId(null); setUserTeam(null); setUserSection(null); setUserSections([]); setUserRespCcs(EMPTY_ARR); setUserScopeIdx(null); setUserAssignOverlay(null); setUserPosition(null); setUserEmail(null); setUserFullName(null); setUserNotifyEmail(null); setUserSignatureUrl(null); setUserAvatarUrl(null);
+        setUserRole(null); setUserLineId(null); setUserTeam(null); setUserSection(null); setUserSections([]); setUserRespCcs(EMPTY_ARR); setUserAllUnits(false); setUserWriteUnits(EMPTY_ARR); setUserScopeIdx(null); setUserAssignOverlay(null); setUserPosition(null); setUserEmail(null); setUserFullName(null); setUserNotifyEmail(null); setUserSignatureUrl(null); setUserAvatarUrl(null);
         setProfileLoaded(false); setPermsLoaded(false);
       }
     });
@@ -2774,6 +2879,8 @@ export default function App() {
                 userSection={effSection}
                 userSections={effSections}
                 userRespCcs={userRespCcs}
+                userAllUnits={impersonating ? false : userAllUnits}
+                userWriteUnits={impersonating ? EMPTY_ARR : userWriteUnits}
                 userScopeIdx={userScopeIdx}
                 userAssignOverlay={impersonating ? null : userAssignOverlay}
                 userMtnTeams={effMtnTeams}
@@ -2793,6 +2900,7 @@ export default function App() {
         </Router>
       )}
       <ToastContainer />
+      <ConfirmHost />   {/* ❓ กล่องยืนยันกลาง (แทน window.confirm ทั้งระบบ · 18/11) */}
       {/* ⚠️ ต่อฐานข้อมูลไม่ได้ต้องเขียนบนจอ ห้ามปล่อยให้หมุนค้างเงียบ (21/10 · utils/connGuard.js) */}
       <ConnBanner />
     </>

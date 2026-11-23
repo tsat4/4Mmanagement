@@ -31,7 +31,7 @@ const timeTh = (ms) => (ms == null ? '—'
   : new Date(ms).toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit' }));
 const statusMeta = (m) => (
   m.status === 'never' ? { label: 'ยังไม่เคยได้รับค่า', color: IDLE }
-    : m.status === 'offline' ? { label: `ขาดการติดต่อ ${m.ageMin} นาที`, color: WARN }
+    : m.status === 'offline' ? { label: `${tr("ขาดการติดต่อ")} ${m.ageMin} ${tr("นาที")}`, color: WARN }
       : (m.overKw || m.overA) ? { label: 'เกินลิมิต', color: BAD }
         : { label: 'ออนไลน์', color: GOOD });
 
@@ -55,6 +55,11 @@ export default function EnergyLiveBoard() {
     setParams(prev => { const n = new URLSearchParams(prev); if (name) n.set('meter', name); else n.delete('meter'); return n; });
     try { window.scrollTo({ top: 0 }); } catch { /* ไม่มี window (เทส) */ }
   }, [setParams]);
+  /* 📈 หน้าประวัติ & Excel = แท็บ history ของ /energy (`?hm=<ตู้>` · คนละ param กับ ?meter=) */
+  const openHistory = useCallback((name) => {
+    setParams(prev => { const n = new URLSearchParams(prev); n.set('tab', 'history'); n.delete('meter'); if (name) n.set('hm', name); else n.delete('hm'); return n; });
+    try { window.scrollTo({ top: 0 }); } catch { /* ไม่มี window (เทส) */ }
+  }, [setParams]);
 
   const load = useCallback(async () => {
     const id = ++reqId.current;
@@ -66,7 +71,7 @@ export default function EnergyLiveBoard() {
     try {
       const [m, l, d, r] = await Promise.all([
         supabaseDR.from('energy_live_meters')
-          .select('scope_kind, scope_name, panel, subtitle, limit_kw, limit_a, gauge_max_kw, sort_order')
+          .select('scope_kind, scope_name, display_name, panel, parent_name, subtitle, limit_kw, limit_a, gauge_max_kw, sort_order')
           .eq('is_active', true),
         supabaseDR.from('energy_live').select('scope_kind, scope_name, field, value, received_at'),
         supabaseDR.from('energy_daily')
@@ -125,11 +130,19 @@ export default function EnergyLiveBoard() {
 
   const today = bkkDateStr(nowMs);
   const board = useMemo(() => buildLiveBoard({ meters, live, daily, today, nowMs }), [meters, live, daily, today, nowMs]);
+  const byKey = useMemo(() => new Map(board.meters.map(m => [m.key, m])), [board.meters]);
+  const panelParam = params.get('panel') || '';
+  const shownPanel = board.panels.find(p => p.panel === panelParam) || board.panels[0] || null;
+  const pickPanel = useCallback((name) => {
+    setParams(prev => { const n = new URLSearchParams(prev); n.set('panel', name); return n; }, { replace: true });
+  }, [setParams]);
   const series = useMemo(() => liveSeries(readings, meters), [readings, meters]);
   const panelPeaks = useMemo(() => {
     const out = {};
     for (const p of board.panels) {
-      out[p.panel] = liveSeries(readings, meters.filter(m => (m.panel || '—') === p.panel)).panelPeak;
+      // 🌳 peak ตู้ = ผลรวมชั้นบนสุดของตู้ (ลูกอยู่ในยอดแม่แล้ว) — ไม่มีผังแม่-ลูก = เหมือนเดิม
+      const rootNames = new Set(p.roots.map(m => m.name));
+      out[p.panel] = liveSeries(readings, meters.filter(m => rootNames.has(m.scope_name))).panelPeak;
     }
     return out;
   }, [board.panels, readings, meters]);
@@ -149,7 +162,7 @@ export default function EnergyLiveBoard() {
       </div>
     );
     return <EnergyMeterDetail key={dm.key} m={dm} machines={machinesOf[dm.key] || []} boardMeters={board.meters}
-      totalTodayKwh={board.totals.todayKwh} onBack={() => openMeter(null)} />;
+      totalTodayKwh={board.totals.todayKwh} onBack={() => openMeter(null)} onOpenMeter={openMeter} onHistory={openHistory} />;
   }
 
   const t = board.totals;
@@ -164,8 +177,7 @@ export default function EnergyLiveBoard() {
       )}
       {board.meters.length > 0 && t.never === t.total && (
         <NoticeBar tone="warn">
-          <b>{tr('ยังไม่เคยได้รับค่าจากมิเตอร์เลย')}</b> — ตัวส่ง (Node-RED) ต้อง POST ชื่อ topic ให้ตรงกับที่ผูกไว้ใน ตั้งค่า › การเชื่อมต่อ Node-RED / เครื่องจักร (/integrations)
-          เช่น <code>dieshop/DB-ROBOT/kw</code> · ช่องทั้งหมดจึงขึ้น "—" (ไม่ใช่ 0)
+          <b>{tr('ยังไม่เคยได้รับค่าจากมิเตอร์เลย')}</b> — {tr("ตัวส่ง (Node-RED) ต้อง POST ชื่อ topic ให้ตรงกับที่ผูกไว้ใน ตั้งค่า › การเชื่อมต่อ Node-RED / เครื่องจักร (/integrations) เช่น")} <code>dieshop/DB-ROBOT/kw</code> · {tr("ช่องทั้งหมดจึงขึ้น \"—\" (ไม่ใช่")} 0)
         </NoticeBar>
       )}
       {t.resets > 0 && (
@@ -174,10 +186,11 @@ export default function EnergyLiveBoard() {
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
         <div style={{ fontSize: 12.5, color: 'var(--text2)' }}>
-          ค่าจากมิเตอร์ทุกเครื่อง · ตัวส่งยิงทุก 1 นาที · จอดึงใหม่ทุก 1 นาที · ไม่มีค่าใหม่เกิน {METER_OFFLINE_MIN} นาที = ขาดการติดต่อ
+          {tr("ค่าจากมิเตอร์ทุกเครื่อง · ตัวส่งยิงทุก 1 นาที · จอดึงใหม่ทุก 1 นาที · ไม่มีค่าใหม่เกิน")} {METER_OFFLINE_MIN} {tr("นาที = ขาดการติดต่อ")}
         </div>
+        <button type="button" className="pg-btn" style={{ marginLeft: 'auto' }} onClick={() => openHistory(null)}>📈 {tr('ประวัติ & Excel')}</button>
         <div style={{ ...card, padding: '6px 12px', fontSize: 12.5, color: 'var(--text2)' }}>
-          รับข้อมูลล่าสุด {lastRecv ? new Date(lastRecv).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'}
+          {tr("รับข้อมูลล่าสุด")} {lastRecv ? new Date(lastRecv).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'}
         </div>
       </div>
 
@@ -187,17 +200,42 @@ export default function EnergyLiveBoard() {
           sub={<>{tr('ออนไลน์')} {t.online}/{t.total} {tr('เครื่อง')}{allPeak.length > 0 && <> {tr('· สูงสุดวันนี้')} {fmt(Math.max(...allPeak.map(p => p.kw)))} kW ({timeTh(allPeak.reduce((a, b) => (b.kw > a.kw ? b : a)).at)})</>}</>} />
         <Kpi color={INFO} label={tr('ใช้ไฟวันนี้')} value={fmt(t.todayKwh)} unit="kWh" sub={tr('นับจากเลขมิเตอร์ ตั้งแต่ 00:00 น.')} />
         <Kpi color={INFO} label={tr('ใช้ไฟเดือนนี้')} value={fmt(t.monthKwh, 0)} unit="kWh"
-          sub={t.avgPerDay != null ? `เฉลี่ยวันละ ${fmt(t.avgPerDay)} kWh (${t.monthDays} วันที่มีข้อมูล)` : 'ยังไม่มีข้อมูลของเดือนนี้'} />
-        <Kpi color={t.offline || t.never ? WARN : GOOD} label={tr('สถานะมิเตอร์')} value={t.online} unit={`/ ${t.total} ออนไลน์`}
+          sub={t.avgPerDay != null ? `${tr("เฉลี่ยวันละ")} ${fmt(t.avgPerDay)} kWh (${t.monthDays} ${tr("วันที่มีข้อมูล")})` : 'ยังไม่มีข้อมูลของเดือนนี้'} />
+        <Kpi color={t.offline || t.never ? WARN : GOOD} label={tr('สถานะมิเตอร์')} value={t.online} unit={`/ ${t.total} ${tr("ออนไลน์")}`}
           sub={<><span style={{ color: WARN }}>{tr('ขาดการติดต่อ')} {t.offline}</span> · <span style={{ color: 'var(--muted)' }}>{tr('ยังไม่เคยส่ง')} {t.never}</span></>} />
-        <Kpi color={t.alerts.length ? BAD : GOOD} label={tr('เกินลิมิตตอนนี้')} value={t.alerts.length} unit="เครื่อง"
-          sub={t.alerts.length ? `ที่ ${t.alerts.map(m => m.name).join(', ')}` : 'ทุกเครื่องอยู่ในลิมิต (นับเฉพาะเครื่องที่ออนไลน์)'} />
+        <Kpi color={t.alerts.length ? BAD : GOOD} label={tr('เกินลิมิตตอนนี้')} value={t.alerts.length} unit={tr("เครื่อง")}
+          sub={t.alerts.length ? `${tr("ที่")} ${t.alerts.map(m => m.label).join(', ')}` : 'ทุกเครื่องอยู่ในลิมิต (นับเฉพาะเครื่องที่ออนไลน์)'} />
       </div>
 
       {/* ── เส้นทางจ่ายไฟ ── */}
-      {board.panels.map(p => <PanelFlow key={p.panel} panel={p} onOpen={openMeter} />)}
-
-      {events && <EventsPanel events={events} />}
+      {(board.warnings.orphans.length > 0 || board.warnings.cycles.length > 0) && (
+        <NoticeBar tone="warn">
+          {tr("ผังจ่ายไฟ")}: {board.warnings.orphans.map(o => `${o.name} ${tr("ชี้แม่")} "${o.parent}" ${tr("ที่ไม่มีในทะเบียน")}`).join(' · ')}
+          {board.warnings.cycles.length > 0 && ` · ${tr("ตั้งแม่วนกัน")}: ${board.warnings.cycles.join(', ')}`} — {tr("แสดงเป็นชั้นบนสุดของตู้ไว้ก่อน (แก้ parent_name ในทะเบียน")})
+        </NoticeBar>
+      )}
+      {/* 🗂️ เลือกดูทีละตู้ (23/11 · คำสั่ง user "10 ตู้ จอล้นลงไปยาว ไม่เอา") — `?panel=` (คนละ param กับ ?tab=/?meter=)
+          ตู้ที่ไม่ได้เลือกต้องยังเห็นว่ามีเครื่องเกินลิมิต/ขาดการติดต่อ — ปุ่มเปลี่ยนสีตาม ห้ามซ่อนเงียบ */}
+      {board.panels.length > 1 && (
+        <div role="tablist" aria-label={tr('เลือกตู้')} style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {board.panels.map(p => {
+            const on = p.panel === shownPanel?.panel;
+            const alert = p.meters.some(m => m.overKw || m.overA);
+            const tone = alert ? BAD : p.partial ? WARN : GOOD;
+            return (
+              <button key={p.panel} type="button" role="tab" aria-selected={on} onClick={() => pickPanel(p.panel)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 'var(--r-md)', cursor: 'pointer',
+                  border: `1px solid ${on ? ACC : 'var(--border)'}`, background: on ? 'var(--accent-dim)' : 'var(--card)', color: 'var(--text)', fontSize: 13 }}>
+                <span aria-hidden style={{ width: 8, height: 8, borderRadius: '50%', background: tone, flexShrink: 0 }} />
+                <b style={{ whiteSpace: 'nowrap' }}>{tr('ตู้')} {p.panel}</b>
+                <span style={{ color: tone, fontWeight: 700, whiteSpace: 'nowrap' }}>{fmt(p.kw)} kW</span>
+                <span style={{ color: 'var(--muted)', fontSize: 12, whiteSpace: 'nowrap' }}>{p.online}/{p.total}{alert ? ` · ${tr('เกินลิมิต')}` : ''}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {shownPanel && <TreeFlow key={shownPanel.panel} panel={shownPanel} byKey={byKey} onOpen={openMeter} />}
 
       {/* ── การ์ดรายเครื่อง ── */}
       {board.meters.length > 0 && (
@@ -208,6 +246,9 @@ export default function EnergyLiveBoard() {
           </div>
         </div>
       )}
+
+      {/* ลำดับแบบ Node-RED: KPI → ผังจ่ายไฟ → การ์ดรายเครื่อง → เหตุการณ์ */}
+      {events && <EventsPanel events={events} />}
     </div>
   );
 }
@@ -220,7 +261,7 @@ function EventsPanel({ events }) {
     <div style={{ ...card }}>
       <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{tr('เหตุการณ์ล่าสุด')}</div>
       <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 8 }}>
-        จากระบบไฟ Node-RED (เกณฑ์/ลิมิตตั้งที่ Node-RED) · {EVENTS_SHOW} รายการล่าสุด · ใหม่อยู่บน · เก็บย้อนหลัง 30 วัน
+        {tr("จากระบบไฟ Node-RED (เกณฑ์/ลิมิตตั้งที่")} Node-RED) · {EVENTS_SHOW} {tr("รายการล่าสุด · ใหม่อยู่บน · เก็บย้อนหลัง 30 วัน")}
       </div>
       {!events.length ? (
         <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{tr('ยังไม่มีเหตุการณ์ที่ส่งมา')}</div>
@@ -257,71 +298,130 @@ function Kpi({ color, label, value, unit, sub }) {
   );
 }
 
-/** ตู้ → เส้นประวิ่งไปแต่ละเครื่อง · ความเร็วเส้นแปรตามกำลังไฟ (เทียบสเกลเกจของเครื่องนั้น) */
-function PanelFlow({ panel, onOpen }) {
+/** 🌳 ผังจ่ายไฟหลายชั้น (20/11 · คำสั่ง user "เอาผังวาดให้สมบูรณ์") — ใช้เมื่อตู้มีมิเตอร์ที่ตั้งแม่ (parent_name)
+ *  ข้อมูล/ยอด/ไฟไม่มีมิเตอร์วัด มาจาก buildLiveBoard() เท่านั้น — ไฟล์นี้วาดอย่างเดียว
+ *  ตู้ที่มีรากหลายตัว = กล่องตู้ (ผลรวมราก) เป็นชั้นแรก · รากตัวเดียว = กล่องมิเตอร์รากเป็นชั้นแรก (ค่าที่วัดจริงที่ตู้) */
+const TREE = { colW: 280, boxW: 210, boxH: 72, rowH: 88, top: 16, left: 16 };
+function treeOfPanel(panel, byKey) {
+  const node = (m) => {
+    const kids = m.children.map(k => node(byKey.get(k)));
+    if (m.children.length) kids.push({ kind: 'unmetered', key: `${m.key}#u`, u: m.unmetered });
+    return { kind: 'meter', key: m.key, m, kids };
+  };
+  const roots = panel.roots.map(node);
+  return roots.length === 1 ? roots[0] : { kind: 'panel', key: `panel|${panel.panel}`, panel, kids: roots };
+}
+function layoutTree(root) {
+  let row = 0, maxD = 0;
+  const all = [], pre = [];                     // pre = แม่ก่อนลูก (ลิสต์มือถือ)
+  const walk = (n, d) => {
+    n.d = d; maxD = Math.max(maxD, d); pre.push(n);
+    if (!n.kids?.length) { n.y = TREE.top + row * TREE.rowH + TREE.boxH / 2; row++; }
+    else { n.kids.forEach(k => walk(k, d + 1)); n.y = (n.kids[0].y + n.kids[n.kids.length - 1].y) / 2; }
+    n.x = TREE.left + d * TREE.colW;
+    all.push(n);
+  };
+  walk(root, 0);
+  return { all, pre, W: TREE.left * 2 + maxD * TREE.colW + TREE.boxW, H: TREE.top * 2 + row * TREE.rowH - (TREE.rowH - TREE.boxH) };
+}
+function flowDur(m) {
+  const live = m && m.status === 'online' && m.kw != null && m.kw > 0;
+  if (!live) return null;
+  const ratio = m.gaugeMax ? Math.min(1, m.kw / m.gaugeMax) : 0;
+  return (2.4 - 1.9 * ratio).toFixed(2);
+}
+function TreeFlow({ panel, byKey, onOpen }) {
   const isMobile = useIsMobile();
-  const n = panel.meters.length;
-  const rowH = 78, top = 40, H = top + n * rowH;
-  const busX = 330, boxX = 680, midY = top + (n * rowH) / 2 - rowH / 2 + 26;
+  const root = useMemo(() => treeOfPanel(panel, byKey), [panel, byKey]);
+  const { all, pre, W, H } = useMemo(() => layoutTree(root), [root]);
+  const uText = (u) => (!u || u.kw == null ? '—' : `${fmt(Math.max(0, u.kw))} kW`);
+  const uNote = (u) => (!u || u.state === 'unknown' ? 'รู้เมื่อแม่+ลูกออนไลน์ครบ' : u.state === 'negative' ? 'ลูกรวมเกินแม่ — ตรวจผัง/มิเตอร์' : 'แม่ − ผลรวมลูก');
+  const open = (n) => (n.kind === 'meter' ? () => onOpen(n.m.name) : undefined);
   return (
     <div style={{ ...card }}>
       <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{tr('เส้นทางจ่ายไฟจากตู้')} {panel.panel}</div>
-      <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>ความเร็วเส้นแปรตามกำลังไฟที่ใช้ · ยอดตู้ = ผลรวมเครื่องที่ออนไลน์</div>
-      {/* 📱 มือถือ: SVG กว้าง 1000 ถูกย่อจนตัวหนังสือ < 11px ⇒ แสดงเป็นรายการแทน (จอคอมไม่เปลี่ยน) */}
+      <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>
+        {tr("ความเร็วเส้นแปรตามกำลังไฟที่ใช้ · ยอดตู้ = ชั้นบนสุดที่ออนไลน์")} ({panel.online}/{panel.total}{panel.partial ? ' · ยอดไม่ครบ' : ''}) · {tr("ลูกอยู่ในยอดแม่แล้ว ไม่นับซ้ำ · กรอบประ = ไฟที่ไม่มีมิเตอร์วัด")}
+      </div>
       {isMobile ? (
         <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
-          <div style={{ fontSize: 22, fontWeight: 800, color: ACC }}>{fmt(panel.kw)} kW
-            <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted)' }}> {tr('· ออนไลน์')} {panel.online}/{panel.total}{panel.partial ? ' (ยอดไม่ครบ)' : ''}</span></div>
-          {panel.meters.map(m => {
-            const sm = statusMeta(m);
+          {pre.map(n => {
+            if (n.kind === 'panel') return <div key={n.key} style={{ fontSize: 20, fontWeight: 800, color: ACC }}>{tr('ตู้')} {panel.panel} · {fmt(panel.kw)} kW</div>;
+            if (n.kind === 'unmetered') return (
+              <div key={n.key} style={{ paddingLeft: 8 + n.d * 14, fontSize: 12.5, color: n.u?.state === 'negative' ? BAD : 'var(--muted)' }}>┗ {tr("ไม่มีมิเตอร์วัด")} {uText(n.u)} · {uNote(n.u)}</div>
+            );
+            const sm = statusMeta(n.m);
             return (
-              <div key={m.key} role="button" tabIndex={0} onClick={() => onOpen(m.name)} onKeyDown={(e) => { if (e.key === 'Enter') onOpen(m.name); }}
-                style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 13, borderLeft: `3px solid ${sm.color}`, paddingLeft: 8, cursor: 'pointer' }}>
-                <span style={{ fontWeight: 700, color: 'var(--text)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name}</span>
-                <span style={{ color: sm.color, whiteSpace: 'nowrap' }}>{fmt(m.kw)} kW · {fmt(m.a)} A</span>
+              <div key={n.key} role="button" tabIndex={0} onClick={open(n)} onKeyDown={(e) => { if (e.key === 'Enter') onOpen(n.m.name); }}
+                style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 13, borderLeft: `3px solid ${sm.color}`, paddingLeft: 8, marginLeft: n.d * 14, cursor: 'pointer' }}>
+                <span style={{ fontWeight: 700, color: 'var(--text)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.m.label}</span>
+                <span style={{ color: sm.color, whiteSpace: 'nowrap' }}>{fmt(n.m.kw)} kW · {fmt(n.m.a)} A</span>
               </div>
             );
           })}
         </div>
       ) : (
-      <svg viewBox={`0 0 1000 ${H}`} style={{ width: '100%', height: 'auto', display: 'block', marginTop: 6 }} role="img"
-        aria-label={`ตู้ ${panel.panel} ${fmt(panel.kw)} kW`}>
-        <rect x="40" y={midY - 46} width="230" height="92" rx="12" fill={ACC} opacity="0.9" />
-        <text x="155" y={midY - 18} textAnchor="middle" fill="var(--bg)" fontSize="15" fontWeight="700">{tr('ตู้')} {panel.panel}</text>
-        <text x="155" y={midY + 12} textAnchor="middle" fill="var(--bg)" fontSize="28" fontWeight="800">{fmt(panel.kw)} kW</text>
-        <text x="155" y={midY + 34} textAnchor="middle" fill="var(--bg)" fontSize="13">
-          ออนไลน์ {panel.online}/{panel.total} {tr('เครื่อง')}{panel.partial ? ' (ยอดไม่ครบ)' : ''}
-        </text>
-        <line x1="270" y1={midY} x2={busX} y2={midY} stroke={ACC} strokeWidth="5" />
-        <line x1={busX} y1={top + 26} x2={busX} y2={top + (n - 1) * rowH + 26} stroke={ACC} strokeWidth="5" />
-        {panel.meters.map((m, i) => {
-          const y = top + i * rowH + 26;
-          const sm = statusMeta(m);
-          const live = m.status === 'online' && m.kw != null && m.kw > 0;
-          const ratio = live && m.gaugeMax ? Math.min(1, m.kw / m.gaugeMax) : 0;
-          const dur = live ? (2.4 - 1.9 * ratio).toFixed(2) : null;   // 2.4 วิ (เบา) → 0.5 วิ (เต็มสเกล)
-          return (
-            <g key={m.key} role="button" tabIndex={0} style={{ cursor: 'pointer' }} onClick={() => onOpen(m.name)}
-              onKeyDown={(e) => { if (e.key === 'Enter') onOpen(m.name); }}>
-              <title>{tr('เปิดหน้ารายตู้')} {m.name}</title>
-              <circle cx={busX} cy={y} r="6" fill={ACC} />
-              <line x1={busX} y1={y} x2={boxX} y2={y} stroke="var(--border)" strokeWidth="5" />
-              <line x1={busX} y1={y} x2={boxX} y2={y} stroke={live ? ACC : IDLE} strokeWidth="5" strokeDasharray="18 10"
-                className={live ? 'energy-flow' : undefined} style={live ? { animationDuration: `${dur}s` } : undefined} />
-              <text x={(busX + boxX) / 2} y={y - 12} textAnchor="middle" fill={sm.color} fontSize="18" fontWeight="700">
-                {fmt(m.kw)} kW · {fmt(m.a)} A
-              </text>
-              <rect x={boxX} y={y - 26} width="290" height="52" rx="10" fill="var(--card)" stroke={sm.color} strokeWidth="3" />
-              <circle cx={boxX + 24} cy={y} r="7" fill={sm.color} />
-              {/* ชื่อบรรทัดบน · สถานะบรรทัดล่าง — ชื่อยาวเกินกล่องตัดด้วย … (ชื่อเต็มอยู่ใน title) */}
-              <text x={boxX + 42} y={y - 2} fill="var(--text)" fontSize="19" fontWeight="800">
-                <title>{m.name}</title>{m.name.length > 20 ? `${m.name.slice(0, 19)}…` : m.name}
-              </text>
-              <text x={boxX + 42} y={y + 17} fill={sm.color} fontSize="13" fontWeight="700">{tr(sm.label)}</text>
-            </g>
-          );
-        })}
-      </svg>
+        <div style={{ overflowX: 'auto' }}>
+          <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', maxWidth: W, minWidth: Math.min(W, 700), height: 'auto', display: 'block', marginTop: 6 }} role="img"
+            aria-label={`${tr("ผังจ่ายไฟตู้")} ${panel.panel}`}>
+            {all.filter(n => n.kids?.length).map(n => {
+              const busX = n.x + TREE.boxW + (TREE.colW - TREE.boxW) / 2;
+              const ys = n.kids.map(k => k.y);
+              return (
+                <g key={`e-${n.key}`}>
+                  <line x1={n.x + TREE.boxW} y1={n.y} x2={busX} y2={n.y} stroke={ACC} strokeWidth="4" />
+                  <line x1={busX} y1={Math.min(...ys)} x2={busX} y2={Math.max(...ys)} stroke={ACC} strokeWidth="4" />
+                  {n.kids.map(k => {
+                    const dur = k.kind === 'meter' ? flowDur(k.m) : null;
+                    return (
+                      <g key={`l-${k.key}`}>
+                        <line x1={busX} y1={k.y} x2={k.x} y2={k.y} stroke="var(--border)" strokeWidth="4" />
+                        <line x1={busX} y1={k.y} x2={k.x} y2={k.y} stroke={dur ? ACC : IDLE} strokeWidth="4" strokeDasharray={k.kind === 'unmetered' ? '4 6' : '14 8'}
+                          className={dur ? 'energy-flow' : undefined} style={dur ? { animationDuration: `${dur}s` } : undefined} />
+                      </g>
+                    );
+                  })}
+                </g>
+              );
+            })}
+            {all.map(n => {
+              const top = n.y - TREE.boxH / 2;
+              if (n.kind === 'panel') return (
+                <g key={n.key}>
+                  <rect x={n.x} y={top} width={TREE.boxW} height={TREE.boxH} rx="12" fill={ACC} opacity="0.9" />
+                  <text x={n.x + TREE.boxW / 2} y={top + 24} textAnchor="middle" fill="var(--bg)" fontSize="15" fontWeight="700">{tr('ตู้')} {panel.panel}</text>
+                  <text x={n.x + TREE.boxW / 2} y={top + 54} textAnchor="middle" fill="var(--bg)" fontSize="24" fontWeight="800">{fmt(panel.kw)} kW</text>
+                </g>
+              );
+              if (n.kind === 'unmetered') {
+                const bad = n.u?.state === 'negative';
+                return (
+                  <g key={n.key}>
+                    <title>{tr("ไฟที่ไม่มีมิเตอร์วัด = แม่ − ผลรวมลูก")}</title>
+                    <rect x={n.x} y={top} width={TREE.boxW} height={TREE.boxH} rx="10" fill="var(--card)" stroke={bad ? BAD : IDLE} strokeWidth="2" strokeDasharray="6 5" />
+                    <text x={n.x + 14} y={top + 24} fill="var(--muted)" fontSize="14" fontWeight="700">{tr("ไม่มีมิเตอร์วัด")}</text>
+                    <text x={n.x + 14} y={top + 46} fill={bad ? BAD : 'var(--text)'} fontSize="18" fontWeight="800">{uText(n.u)}</text>
+                    <text x={n.x + 14} y={top + 64} fill={bad ? BAD : 'var(--muted)'} fontSize="12">{uNote(n.u)}</text>
+                  </g>
+                );
+              }
+              const m = n.m, sm = statusMeta(m), isTop = n.d === 0;
+              return (
+                <g key={n.key} role="button" tabIndex={0} style={{ cursor: 'pointer' }} onClick={open(n)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') onOpen(m.name); }}>
+                  <title>{tr('เปิดหน้ารายตู้')} {m.label}</title>
+                  <rect x={n.x} y={top} width={TREE.boxW} height={TREE.boxH} rx="10" fill={isTop ? ACC : 'var(--card)'} opacity={isTop ? 0.9 : 1} stroke={sm.color} strokeWidth="3" />
+                  <circle cx={n.x + 16} cy={top + 19} r="6" fill={sm.color} />
+                  <text x={n.x + 30} y={top + 25} fill={isTop ? 'var(--bg)' : 'var(--text)'} fontSize="16" fontWeight="800">
+                    <title>{m.label}</title>{m.label.length > 18 ? `${m.label.slice(0, 17)}…` : m.label}
+                  </text>
+                  <text x={n.x + 14} y={top + 48} fill={isTop ? 'var(--bg)' : sm.color} fontSize="18" fontWeight="800">{fmt(m.kw)} kW · {fmt(m.a)} A</text>
+                  <text x={n.x + 14} y={top + 65} fill={isTop ? 'var(--bg)' : sm.color} fontSize="12" fontWeight="700">{tr(sm.label)}</text>
+                </g>
+              );
+            })}
+          </svg>
+        </div>
       )}
     </div>
   );
@@ -330,20 +430,20 @@ function PanelFlow({ panel, onOpen }) {
 function MeterCard({ m, pts, machines, onOpen }) {
   const sm = statusMeta(m);
   return (
-    <div role="button" tabIndex={0} title={`เปิดหน้ารายตู้ ${m.name}`} onClick={() => onOpen(m.name)}
+    <div role="button" tabIndex={0} title={`${tr("เปิดหน้ารายตู้")} ${m.label}`} onClick={() => onOpen(m.name)}
       onKeyDown={(e) => { if (e.key === 'Enter') onOpen(m.name); }}
       style={{ ...card, borderColor: sm.color === GOOD ? 'var(--border)' : sm.color, cursor: 'pointer' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
         <div>
-          <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>{m.name}</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>{m.label}</div>
           <div style={{ fontSize: 12, color: 'var(--muted)' }}>{m.subtitle}</div>
           {machines.length > 0 && (
             <div style={{ fontSize: 11.5, color: 'var(--text2)' }} title={machines.map(x => `${x.no} (${x.line})`).join(', ')}>
-              จ่ายให้ {machines.length} {tr('เครื่อง:')} {machines.map(x => x.no).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })).join(', ')}
+              {tr("จ่ายให้")} {machines.length} {tr('เครื่อง:')} {machines.map(x => x.no).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })).join(', ')}
             </div>
           )}
           <div style={{ fontSize: 12, color: 'var(--text2)' }}>
-            ลิมิต <b style={{ color: GOOD }}>{m.limitKw ?? '—'} kW</b> · <b style={{ color: ACC }}>{m.limitA ?? '—'} A</b>
+            {tr("ลิมิต")} <b style={{ color: GOOD }}>{m.limitKw ?? '—'} kW</b> · <b style={{ color: ACC }}>{m.limitA ?? '—'} A</b>
           </div>
         </div>
         <span style={{ alignSelf: 'flex-start', fontSize: 11.5, fontWeight: 700, color: sm.color, border: `1px solid ${sm.color}`, borderRadius: 999, padding: '2px 10px', whiteSpace: 'nowrap' }}>
@@ -363,8 +463,8 @@ function MeterCard({ m, pts, machines, onOpen }) {
 
       <Spark pts={pts} limit={m.limitKw} />
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, color: 'var(--muted)', marginTop: 4, gap: 8 }}>
-        <span>{m.ageMin == null ? 'ยังไม่เคยได้รับค่า' : m.ageMin < 1 ? 'อัปเดตเมื่อสักครู่' : `อัปเดต ${m.ageMin} นาทีที่แล้ว`}</span>
-        <span>{m.peakKw != null ? `สูงสุดวันนี้ ${fmt(m.peakKw)} kW (${timeTh(Date.parse(m.peakAt))})` : ''}</span>
+        <span>{m.ageMin == null ? 'ยังไม่เคยได้รับค่า' : m.ageMin < 1 ? 'อัปเดตเมื่อสักครู่' : `${tr("อัปเดต")} ${m.ageMin} ${tr("นาทีที่แล้ว")}`}</span>
+        <span>{m.peakKw != null ? `${tr("สูงสุดวันนี้")} ${fmt(m.peakKw)} kW (${timeTh(Date.parse(m.peakAt))})` : ''}</span>
       </div>
     </div>
   );
@@ -372,7 +472,7 @@ function MeterCard({ m, pts, machines, onOpen }) {
 
 function Stat({ label, value, unit, color }) {
   return (
-    <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 8px' }}>
+    <div style={{ background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 8px' }}>
       <div style={{ fontSize: 11, color: 'var(--muted)' }}>{label}</div>
       <div style={{ fontSize: 17, fontWeight: 800, color }}>{value} <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>{unit}</span></div>
     </div>
@@ -405,7 +505,7 @@ function Gauge({ kw, max, color }) {
 function Spark({ pts, limit }) {
   if (pts.length < 2) {
     return <div style={{ height: 56, marginTop: 10, display: 'grid', placeItems: 'center', fontSize: 11.5, color: 'var(--muted)', border: '1px dashed var(--border)', borderRadius: 8 }}>
-      ยังไม่มีค่ารายนาทีของวันนี้
+      {tr("ยังไม่มีค่ารายนาทีของวันนี้")}
     </div>;
   }
   const W = 600, H = 56;

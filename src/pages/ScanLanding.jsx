@@ -243,7 +243,21 @@ export default function ScanLanding() {
      · `unknownTarget:'block'` — ระบุเจ้าของไม่ได้ = ไม่เขียน (fail-closed) แล้วบอกบนจอว่าทำไม */
   const ckCtx = { role, section: homeSection, sections: scopeSecs, allUnits, respCostCenters, scopeIdx };
   const canCheckin = canAccessPage('/checkin', role) && can('checkin', 'record', role);
-  const empLineName = emp ? (lineById[String(emp.line_id)]?.name || '') : '';
+  /* 🤝 คนที่ถูกยืมไปไลน์อื่นกะนี้ (19/11 · คำสั่ง user) — **ไลน์ที่ยืมเป็นคนเช็คชื่อฝั่งเดียว**
+     ⇒ ตัดสินขอบเขตที่ "ไลน์ที่ยืม" แทนไลน์ต้นสังกัด (หัวหน้าที่ยืมยิงบัตรได้ · หัวหน้าต้นสังกัดยิงไม่ได้)
+     กติกาเดียวกับ /checkin (แถวคนที่ถูกยืมออกถูกล็อก) · อ่าน line_helpers ไม่ได้ = ยังไม่เขียน (fail-closed) */
+  const [lent, setLent] = useState(null);   // null = กำลังอ่าน · { failed } · { toLineId|null }
+  useEffect(() => {
+    if (!emp?.id) { setLent(null); return; }
+    let alive = true;
+    setLent(null);
+    supabase.from('line_helpers').select('to_line_id')
+      .eq('work_date', getWorkDate()).eq('shift', getCurrentShift()).eq('employee_id', emp.id).limit(1)
+      .then(({ data, error }) => { if (alive) setLent(error ? { failed: true } : { toLineId: data?.[0]?.to_line_id ?? null }); });
+    return () => { alive = false; };
+  }, [emp?.id]);
+  const lentToName = lent?.toLineId ? (lineById[String(lent.toLineId)]?.name || '') : '';
+  const empLineName = emp ? (lentToName || lineById[String(emp.line_id)]?.name || '') : '';
   const ckScope = !emp ? null
     : empLineName
       ? canWriteLine(ckCtx, empLineName, allLines || [], { unknownTarget: 'block' })
@@ -279,7 +293,7 @@ export default function ScanLanding() {
     if (!r.ok) { setPpe(p => ({ ...p, saving: false })); return; }   // toast แดงขึ้นให้แล้ว
     if (!r.legacySynced) toast.error('บันทึกผลตรวจ PPE แล้ว แต่ซิงก์กับใบเช็คชื่อไม่สำเร็จ — ตรวจซ้ำที่หน้าเช็คชื่อ');
     const miss = ppe.required.filter(i => !ppe.okBy[String(i.id)]);
-    toast.success(miss.length ? `บันทึกแล้ว — ขาด ${miss.length} ชิ้น` : '✓ PPE ครบ');
+    toast.success(miss.length ? `${tr("บันทึกแล้ว — ขาด")} ${miss.length} ${tr("ชิ้น")}` : '✓ PPE ครบ');
     setPpe(p => ({ ...p, saving: false, done: miss.length ? 'missing' : 'ok', missN: miss.length }));
   };
 
@@ -294,8 +308,16 @@ export default function ScanLanding() {
         : 'กำลังโหลดทะเบียนไลน์ — รอสักครู่แล้วกดใหม่' });
       return;
     }
+    if (!lent || lent.failed) {
+      setCkResult({ kind: 'blocked', text: lent?.failed
+        ? 'ยังเช็คชื่อไม่ได้ — อ่านข้อมูลการยืมตัวข้ามไลน์ไม่สำเร็จ จึงบอกไม่ได้ว่าไลน์ไหนเป็นคนเช็คชื่อคนนี้ · โหลดหน้าใหม่อีกครั้ง'
+        : 'กำลังตรวจข้อมูลการยืมตัว — รอสักครู่แล้วกดใหม่' });
+      return;
+    }
     if (!ckScope?.ok) {   // 🔴 ด่านจริงอยู่ตรงนี้ ไม่ใช่แค่ซ่อนปุ่ม (เปิด /scan?c=<รหัส> ตรงได้)
-      setCkResult({ kind: 'blocked', text: writeBlockText(ckScope, { what: 'การเช็คชื่อของคนนี้', unit: empLineName || emp.section || '' }) });
+      setCkResult({ kind: 'blocked', text: lentToName
+        ? `${emp.name} ${tr("ถูกยืมไปช่วย")} ${lentToName} ${tr("กะนี้ — ไลน์ที่ยืมเป็นคนเช็คชื่อ")}`
+        : writeBlockText(ckScope, { what: 'การเช็คชื่อของคนนี้', unit: empLineName || emp.section || '' }) });
       return;
     }
     setCkResult('busy');
@@ -304,11 +326,11 @@ export default function ScanLanding() {
     const workDateStr = getWorkDate();
     const r = await checkinByBadge(supabase, { emp, workDateStr, shift: getCurrentShift(), userId: userData.user.id });
     const where = [empLineName || emp.section, r.shift === 'night' ? 'กะดึก' : 'กะเช้า', workDateStr].filter(Boolean).join(' · ');
-    if (r.kind === 'saved')  { toast.success(`✓ เช็คชื่อสำเร็จ — ${emp.name}`); setCkResult({ kind: 'saved', text: where }); openPpeStep(workDateStr); return; }
+    if (r.kind === 'saved')  { toast.success(`✓ ${tr("เช็คชื่อสำเร็จ")} — ${emp.name}`); setCkResult({ kind: 'saved', text: where }); openPpeStep(workDateStr); return; }
     if (r.kind === 'already') { setCkResult({ kind: 'already', text: where }); openPpeStep(workDateStr); return; }
     // ❌ ล้ม = ต้องเห็นว่ายังไม่ได้เช็ค ห้ามขึ้น ✓ (read_failed = ไม่รู้ของเดิม จึงไม่เขียนทับ PPE/ลา)
     setCkResult({ kind: 'failed', text: r.kind === 'read_failed'
-      ? `อ่านข้อมูลเช็คชื่อเดิมไม่สำเร็จ จึงยังไม่บันทึก (กันทับ PPE/การลา ที่กรอกไว้แล้ว) — ลองใหม่อีกครั้ง · ${r.msg || ''}`
+      ? `${tr("อ่านข้อมูลเช็คชื่อเดิมไม่สำเร็จ จึงยังไม่บันทึก (กันทับ PPE/การลา ที่กรอกไว้แล้ว) — ลองใหม่อีกครั้ง")} · ${r.msg || ''}`
       : 'บันทึกไม่สำเร็จ — ยังไม่ได้เช็คชื่อ (ดูข้อความแดงที่มุมจอ) · ลองใหม่อีกครั้ง' });
   };
 
@@ -345,7 +367,7 @@ export default function ScanLanding() {
           <div style={{ fontSize: 40, marginBottom: 6 }}>📷</div>
           <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{tr('ยังไม่มีรหัสจากป้าย')}</div>
           <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: '0 0 12px' }}>
-            ส่อง QR ที่ติดเครื่องด้วยกล้องมือถือ หรือกดสแกนจากในแอป
+            {tr("ส่อง QR ที่ติดเครื่องด้วยกล้องมือถือ หรือกดสแกนจากในแอป")}
           </p>
           <button onClick={() => setRescan(true)} style={{ minHeight: 44, padding: '0 20px', fontSize: 14, fontWeight: 800 }}>
             {tr('สแกนเลย')}
@@ -365,7 +387,7 @@ export default function ScanLanding() {
               {pointHit.is_active === false && <b style={{ color: 'var(--red, var(--red))' }}> {tr('· ปิดใช้งานแล้ว')}</b>}
             </div>
             <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: '10px 0 0', lineHeight: 1.7 }}>
-              ป้ายนี้ใช้ยืนยันตอน <b>{tr('สโตร์ส่งของถึงไลน์')}</b> — สแกนจากปุ่ม 📍 ในใบเติม WIP (หน้า Heijunka) ไม่ใช่ป้ายเครื่องจักร
+              {tr("ป้ายนี้ใช้ยืนยันตอน")} <b>{tr('สโตร์ส่งของถึงไลน์')}</b> — {tr("สแกนจากปุ่ม 📍 ในใบเติม WIP (หน้า Heijunka) ไม่ใช่ป้ายเครื่องจักร")}
             </p>
           </div>
           {canAccessPage('/heijunka', role) && (
@@ -396,7 +418,9 @@ export default function ScanLanding() {
                 {canAccessPage('/line-oee', role) && <ActionLink to={`/line-oee?line=${q}`} icon="📈" label={tr('OEE สดของไลน์')} sub={tr('A × P × Q ของกะนี้')} tone="var(--green)" />}
                 {canAccessPage('/management', role) && <ActionLink to={`/management?line=${q}`} icon="🗓️" label={tr('แผน / สถานะงานของไลน์')} sub={tr('ใบผลิตที่กำลังเดิน + คิวถัดไป')} tone="var(--blue)" />}
                 {canAccessPage('/people-board', role) && <ActionLink to={`/people-board?line=${q}`} icon="🧑‍🤝‍🧑" label={tr('คนในไลน์ / จุดงาน')} sub={tr('ใครอยู่จุดไหน กะนี้')} tone="var(--blue)" />}
-                {canAccessPage('/pm-check', role) && <ActionLink to={`/pm?tab=check&line=${q}`} icon="✅" label={tr('ตรวจ AM / PM ของไลน์')} sub={tr('ใบตรวจของอุปกรณ์ในไลน์นี้')} tone="var(--amber)" />}
+                {/* AM กับ PM ช่างแยกหน้ากันแล้ว (19/11) — ป้ายไลน์ไม่รู้ว่าใครสแกน ⇒ ให้เลือกเอง */}
+                {canAccessPage('/pm-check', role) && <ActionLink to={`/daily-checker?tab=amcheck&line=${q}`} icon="🏭" label={tr('ตรวจ AM ของไลน์ (ผลิตตรวจเอง)')} sub={tr('ใบตรวจ AM ของอุปกรณ์ในไลน์นี้')} tone="var(--green)" />}
+                {canAccessPage('/pm-check', role) && <ActionLink to={`/pm?tab=check&line=${q}`} icon="✅" label={tr('ตรวจ PM ของไลน์ (ช่าง)')} sub={tr('ใบตรวจ PM ของอุปกรณ์ในไลน์นี้')} tone="var(--amber)" />}
                 {canAccessPage('/qr-labels', role) && <ActionLink to={`/qr-labels?kind=sheet&line=${q}`} icon="🗒️" label={tr('พิมพ์ใบสแกนประจำไลน์ (A4)')} sub={tr('QR ประเภท Downtime / งานเสียของไลน์นี้')} tone="var(--muted)" />}
               </div>
             </>);
@@ -439,9 +463,9 @@ export default function ScanLanding() {
               {ckResult && ckResult !== 'busy' && (() => {
                 const tone = ckResult.kind === 'saved' ? 'var(--green)'
                   : ckResult.kind === 'already' ? 'var(--blue)' : 'var(--red)';
-                const head = ckResult.kind === 'saved' ? `✓ เช็คชื่อสำเร็จ — ${emp.name}`
-                  : ckResult.kind === 'already' ? `✓ ${emp.name} — เช็คมางานไว้แล้ว`
-                  : `✕ ยังไม่ได้เช็คชื่อ — ${emp.name}`;
+                const head = ckResult.kind === 'saved' ? `✓ ${tr("เช็คชื่อสำเร็จ")} — ${emp.name}`
+                  : ckResult.kind === 'already' ? `✓ ${emp.name} — ${tr("เช็คมางานไว้แล้ว")}`
+                  : `✕ ${tr("ยังไม่ได้เช็คชื่อ")} — ${emp.name}`;
                 return (
                   <div style={{ borderRadius: 10, border: `1px solid ${tone}`, background: 'var(--bg2)',
                     backgroundImage: `linear-gradient(${tone}14, ${tone}14)`, padding: '12px 14px' }}>
@@ -460,12 +484,12 @@ export default function ScanLanding() {
                   {ppe.unknown ? (
                     /* 🔴 อ่านทะเบียนไม่ได้ ≠ "ไม่ต้องใส่อะไร" — เขียนบนจอ ห้ามข้ามเงียบ */
                     <div style={{ fontSize: 13, color: 'var(--red)', lineHeight: 1.6 }}>
-                      <b>{tr('อ่านทะเบียน PPE ไม่สำเร็จ')}</b> — เช็คชื่อบันทึกแล้ว แต่ยังถาม PPE ไม่ได้
+                      <b>{tr('อ่านทะเบียน PPE ไม่สำเร็จ')}</b> — {tr("เช็คชื่อบันทึกแล้ว แต่ยังถาม PPE ไม่ได้")}
                       <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 3 }}>{tr('ไปติ๊กที่หน้าเช็คชื่อแทน')}</div>
                     </div>
                   ) : (<>
                     <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--amber)' }}>
-                      🦺 ไลน์นี้บังคับ {ppe.required.length} ชิ้น — ติ๊กเฉพาะที่ใส่จริง
+                      🦺 {tr("ไลน์นี้บังคับ")} {ppe.required.length} {tr("ชิ้น — ติ๊กเฉพาะที่ใส่จริง")}
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, margin: '10px 0' }}>
                       {ppe.required.map(it => {
@@ -494,7 +518,7 @@ export default function ScanLanding() {
                       {/* ข้าม = ไม่เขียนอะไรเลย ⇒ ค้างเป็น "ยังไม่ได้ตรวจ" ให้หัวหน้าไปติ๊กต่อ */}
                       <button type="button" onClick={() => setPpe(p => ({ ...p, done: 'skipped' }))} disabled={ppe.saving}
                         style={{ flex: 1, minHeight: 46, borderRadius: 'var(--r-md)', border: '1px solid var(--border)',
-                          background: 'var(--bg3)', color: 'var(--text2)', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
+                          background: 'var(--bg3-surf)', color: 'var(--text2)', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
                         {tr('ข้ามไว้ก่อน')}
                       </button>
                     </div>
@@ -504,7 +528,7 @@ export default function ScanLanding() {
               {ppe?.done && (
                 <div style={{ fontSize: 13, color: ppe.done === 'ok' ? 'var(--green)' : 'var(--muted)', lineHeight: 1.6 }}>
                   {ppe.done === 'ok' ? '🦺 PPE ครบตามที่ไลน์นี้บังคับ'
-                    : ppe.done === 'missing' ? `🦺 บันทึกแล้ว — ขาด ${ppe.missN} ชิ้น (หัวหน้าเห็นที่หน้าเช็คชื่อ)`
+                    : ppe.done === 'missing' ? `🦺 ${tr("บันทึกแล้ว — ขาด")} ${ppe.missN} ${tr("ชิ้น (หัวหน้าเห็นที่หน้าเช็คชื่อ")})`
                     : '🦺 ยังไม่ได้ตรวจ PPE — ค้างไว้ให้หัวหน้าติ๊กที่หน้าเช็คชื่อ'}
                 </div>
               )}
@@ -524,7 +548,7 @@ export default function ScanLanding() {
                 {storageHit.is_active === false && <b style={{ color: 'var(--red, var(--red))' }}> {tr('· ปิดใช้งานแล้ว')}</b>}
               </div>
               <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: '10px 0 0', lineHeight: 1.7 }}>
-                ป้ายนี้ใช้ <b>{tr('ยิงในช่องรหัสคลัง')}</b> (ช่องที่มีปุ่ม 📷) แทนการเลือกจากรายการ
+                {tr("ป้ายนี้ใช้")} <b>{tr('ยิงในช่องรหัสคลัง')}</b> ({tr("ช่องที่มีปุ่ม 📷) แทนการเลือกจากรายการ")}
               </p>
             </div>
           )}
@@ -541,10 +565,10 @@ export default function ScanLanding() {
                   {t.is_active === false && <b style={{ color: 'var(--red, var(--red))' }}> {tr('· ปิดใช้งานแล้ว — ยิงลงใบไม่ได้ พิมพ์แผ่นใหม่')}</b>}
                 </div>
                 <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: '10px 0 0', lineHeight: 1.7 }}>
-                  ป้ายนี้มาจาก <b>{tr('ใบสแกนประจำไลน์')}</b> {tr('— ใช้ยิงตอนบันทึก')} {isDt ? 'Downtime' : 'งานเสีย'} ใน Daily Report (ปุ่ม 📷 ข้างช่องประเภท หรือกดปุ่มสแกนข้างเครื่องตอนฟอร์มเปิดอยู่)
+                  {tr("ป้ายนี้มาจาก")} <b>{tr('ใบสแกนประจำไลน์')}</b> {tr('— ใช้ยิงตอนบันทึก')} {isDt ? 'Downtime' : 'งานเสีย'} {tr("ใน Daily Report (ปุ่ม 📷 ข้างช่องประเภท หรือกดปุ่มสแกนข้างเครื่องตอนฟอร์มเปิดอยู่")})
                 </p>
               </div>
-              {canAccessPage('/daily-report', role) && <ActionLink to="/daily-report" icon="📋" label={tr('ไป Daily Report')} sub={`เปิดฟอร์มบันทึก${isDt ? ' Downtime' : 'งานเสีย'} แล้วยิงป้ายนี้`} />}
+              {canAccessPage('/daily-report', role) && <ActionLink to="/daily-report" icon="📋" label={tr('ไป Daily Report')} sub={`${tr("เปิดฟอร์มบันทึก")}${isDt ? ' Downtime' : tr('งานเสีย')} ${tr("แล้วยิงป้ายนี้")}`} />}
             </>);
           })()}
 
@@ -580,7 +604,7 @@ export default function ScanLanding() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {canAccessPage('/qa', role) && (qaPart
                 ? <ActionLink to={`/qa?tab=sheet&part=${encodeURIComponent(qaPart.mat_no || qaPart.part_no)}`} icon="✅"
-                    label={tr('ตรวจชิ้นงาน (ใบตรวจ QA)')} sub={`เปิดใบตรวจของ ${qaPart.part_no || qaPart.mat_no} — วันงาน/กะปัจจุบัน`} tone="var(--green)" />
+                    label={tr('ตรวจชิ้นงาน (ใบตรวจ QA)')} sub={`${tr("เปิดใบตรวจของ")} ${qaPart.part_no || qaPart.mat_no} — ${tr("วันงาน/กะปัจจุบัน")}`} tone="var(--green)" />
                 : <ActionLink to="/qa-setup" icon="📐" label={tr('ยังไม่มีมาตรฐานการตรวจของพาร์ทนี้')}
                     sub={tr('ตั้งจุดตรวจที่ มาตรฐานการตรวจ & Drawing ก่อน จึงจะเปิดใบตรวจได้')} tone="var(--muted)" />)}
               {canAccessPage('/order-trace', role) && (order
@@ -602,8 +626,8 @@ export default function ScanLanding() {
         <div style={{ ...card, borderColor: 'var(--amber, var(--amber))' }}>
           <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 6 }}>{tr('⚠️ ไม่พบสิ่งที่ตรงกับป้ายนี้')}</div>
           <div style={{ fontSize: 12.5, color: 'var(--text2)', lineHeight: 1.8 }}>
-            รหัสที่อ่านได้: <code style={{ background: 'var(--bg3)', padding: '1px 6px', borderRadius: 4 }}>{scan?.raw || raw}</code><br />
-            ชนิดป้าย: {scan?.typed ? `${QR_KINDS[scan.kind]?.icon ?? ''} ${QR_KINDS[scan.kind]?.label ?? scan.kind}` : 'เลขเปล่า (ไม่ใช่ป้ายของระบบ)'}
+            {tr("รหัสที่อ่านได้")}: <code style={{ background: 'var(--bg3)', padding: '1px 6px', borderRadius: 4 }}>{scan?.raw || raw}</code><br />
+            {tr("ชนิดป้าย")}: {scan?.typed ? `${QR_KINDS[scan.kind]?.icon ?? ''} ${QR_KINDS[scan.kind]?.label ?? scan.kind}` : 'เลขเปล่า (ไม่ใช่ป้ายของระบบ)'}
             {/* 🗒️ ป้ายเฟส 2 ที่หาแถวไม่เจอ (ถูกลบ/ปิด) — บอกว่าป้ายใช้ที่ไหน ไม่ปล่อยให้คิดว่าป้ายเสีย (28/10) */}
             {['line', 'downtime_type', 'defect_type', 'storage'].includes(scan?.kind) && (
               <><br />{tr('ป้ายชนิดนี้ถูกต้อง แต่')}<b>{tr('ไม่พบแถวในทะเบียน')}</b> {tr('(อาจถูกลบ/เปลี่ยนรหัส) — พิมพ์ป้ายใหม่จากหน้า QR Labels')}</>
@@ -636,10 +660,10 @@ export default function ScanLanding() {
             )}
             {hit.jig && canAccessPage('/pm-check', role) && (pmDepts?.length
               ? pmDepts.map(d => (
-                  <ActionLink key={d} to={`/pm?tab=check&equip=${hit.jig.id}&dept=${encodeURIComponent(d)}`} icon={isAm(d) ? '🏭' : '✅'}
-                    label={isAm(d) ? `ตรวจ AM (ผลิตตรวจเอง)${pmDepts.filter(isAm).length > 1 ? ` — ${teamLabel(d)}` : ''}`
-                      : `ตรวจ PM (ช่าง)${pmDepts.filter(x => !isAm(x)).length > 1 ? ` — ${teamLabel(d)}` : ''}`}
-                    sub={`${teamLabel(d)} · เปิดใบตรวจตามจุดที่ตั้งไว้`} tone={isAm(d) ? 'var(--green)' : 'var(--accent)'} />
+                  <ActionLink key={d} to={isAm(d) ? `/daily-checker?tab=amcheck&equip=${hit.jig.id}&dept=${encodeURIComponent(d)}` : `/pm?tab=check&equip=${hit.jig.id}&dept=${encodeURIComponent(d)}`} icon={isAm(d) ? '🏭' : '✅'}
+                    label={isAm(d) ? `${tr("ตรวจ AM (ผลิตตรวจเอง")})${pmDepts.filter(isAm).length > 1 ? ` — ${teamLabel(d)}` : ''}`
+                      : `${tr("ตรวจ PM (ช่าง")})${pmDepts.filter(x => !isAm(x)).length > 1 ? ` — ${teamLabel(d)}` : ''}`}
+                    sub={`${teamLabel(d)} · ${tr("เปิดใบตรวจตามจุดที่ตั้งไว้")}`} tone={isAm(d) ? 'var(--green)' : 'var(--accent)'} />
                 ))
               : (
                 <ActionLink to={`/pm?tab=check&equip=${hit.jig.id}`} icon="✅" label={tr('ตรวจ PM เครื่องนี้')}
@@ -656,7 +680,7 @@ export default function ScanLanding() {
             {hit.machine?.machine_no && canAccessPage('/mtn-repair', role) && (
               <button onClick={() => setShowHist(true)} style={{
                 display: 'flex', alignItems: 'center', gap: 12, minHeight: 56, padding: '10px 14px', textAlign: 'left',
-                borderRadius: 'var(--r-md)', border: '1px solid var(--amber)', background: 'var(--bg2)', color: 'var(--text)', cursor: 'pointer',
+                borderRadius: 'var(--r-md)', border: '1px solid var(--amber)', background: 'var(--bg2-surf)', color: 'var(--text)', cursor: 'pointer',
               }}>
                 <span style={{ fontSize: 22 }}>📜</span>
                 <span><div style={{ fontSize: 15, fontWeight: 800, color: 'var(--amber)' }}>{tr('ประวัติซ่อมเครื่องนี้')}</div>

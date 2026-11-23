@@ -25,10 +25,14 @@
    (เลขขั้นคนละความหมายระหว่างฟอร์ม JIG/DIE กับ MTN — กฎเหล็กใน CLAUDE.md)
    ═══════════════════════════════════════════════════════════════════════════ */
 import { personKey, normPersonName } from './actorStamp.js';
+import { moPrBlocked } from './moChase.js';
 import {
-  canDoStep, moWaitMeta, approvalWaitsOnMe, sideAllows, STAGE_APPROVE_FIRST,
+  canDoStep, moWaitMeta, offLoopWaitOf, approvalWaitsOnMe, sideAllows, STAGE_APPROVE_FIRST,
   canSignMtnApproval,
 } from './mtnStepPerm.js';
+/* 👥 ชื่อช่างที่มอบหมาย — ของกลางตัวเดียว รองรับทั้ง `assigned_techs` (array) และ `assigned_to`
+   (สตริงคั่นจุลภาคที่ทำไว้ให้ใบพิมพ์/Excel/edge อ่าน) · **ห้ามเขียน `.split(',')` ซ้ำที่นี่** */
+import { assignedTechsOf } from './mtnPurchase.js';
 import { isMtnFormRow, isApprovalBlocked } from './mtnMoForm.js';
 import { bkkDateStr } from './workDate.js';
 import { binTagAge, ncStep } from './qualityBin.js';   // อายุแท็กถังเหลือง/แดง (WI-PD3-087 §5.6) — ห้ามเขียนเลขวันซ้ำที่นี่
@@ -73,9 +77,37 @@ export function isMe({ uid, name }, me) {
 }
 
 /**
- * ใบ MO ใบนี้กำลังรอใคร — คืน `{ step, meta, who, byName }`
+ * ใบนี้ "รอเรา" ไหม เมื่อขั้นนั้นอาจมีคนรอหลายคน — OR รายคนผ่าน `isMe`
+ *
+ * 🔴 **ห้ามยุบเป็นสตริงเดียวแล้วเทียบ** — `assigned_to` เก็บชื่อต่อกันด้วยจุลภาคไว้ให้ใบพิมพ์อ่าน
+ *    เทียบชื่อเดี่ยวกับ `"ก, ข"` ไม่เคยตรงกับใครเลย · วัดจริง 13/11: ใบขั้น 3 ที่เปิดอยู่ 32 ใบ
+ *    **มอบหมาย ≥2 คน 21 ใบ (66%)** และ `tech_main_uid` ว่างทั้ง 32 ใบ ⇒ ทางเทียบ uid ตายด้วย
+ *    ⇒ ใบไม่ขึ้นในคิว "รอคุณ" ของช่างคนไหนเลย (ค้าง ≥7 วัน 15 ใบ · เก่าสุด 66 วัน)
+ * 🔴 **ห้ามแก้ `isMe` ให้ชื่อสู้ uid ได้** — กฎ "uid ชนะชื่อ" ถูกแล้วในระดับ *คนคนหนึ่ง*
+ *    (ชื่อซ้ำกัน 2 คนในโรงงานเป็นเรื่องปกติ) ⇒ ความเป็น "หลายคน" ต้องอยู่ที่ชั้นนี้เท่านั้น
+ * ไม่มีรายชื่อเลย = ถอยไปใช้ `who` ตัวเดียว (พฤติกรรมเดิมเป๊ะ)
+ */
+export function isMeAmong(w, me) {
+  const list = Array.isArray(w?.people) && w.people.length
+    ? w.people
+    : (w?.who ? [w.who] : []);
+  return list.some(p => p && isMe(p, me));
+}
+
+/** คนที่ "ฝั่งผู้แจ้ง" ของใบนี้ยึดเป็นเจ้าภาพ — ใช้ร่วมกันระหว่างขั้น byReporter กับใบนอกลูปขั้น */
+const reporterWho = (o) => ({
+  uid: o?.reporter_prod_uid || o?.reported_by_uid || null,
+  name: o?.reporter_prod || o?.reported_by_name || null,
+});
+
+/**
+ * ใบ MO ใบนี้กำลังรอใคร — คืน `{ step, meta, who, byName, people? }`
  *   who    = { uid, name } ของคนที่ขั้นนี้รอ (รู้ตัวคน) · `null` = รอ "ตำแหน่ง" ไม่ใช่ตัวคน
+ *            **ตัวที่เอาไปโชว์/ทำป้าย** — ใบที่มอบหมายหลายคนจะเป็นชื่อต่อกันเหมือนที่เก็บใน DB
+ *   people = ทุกคนที่ขั้นนี้รอ (ใบมอบหมายหลายช่าง) — **ใช้เทียบตัวตนเท่านั้น** ผ่าน `isMeAmong()`
+ *            ไม่มี key นี้ = ถอยไปเทียบ `who` ตัวเดียว (พฤติกรรมเดิม)
  *   byName = true แปลว่าขั้นนี้ผูกกับตัวบุคคลจริง (ผู้เปิดใบ / ช่างที่รับงาน)
+ *   step   = `null` สำหรับใบนอกลูปขั้น (ตีกลับ/ส่งซ่อมนอก) — **ห้ามแปลงเป็น 0** (0 = ขั้นจริง)
  *
  * 🔴 ไม่เดาเลขขั้นเอง — `stepMeta()` เป็นคนบอกว่าขั้นนี้ `byReporter` หรือ `stage === 'service'`
  * 🔴 ขั้นที่ "รอ" มาจาก `nextStepOf()` (ตัดสินจาก status) — **ห้ามอ่าน `current_step` ตรงๆ**
@@ -87,22 +119,29 @@ export function moWaitingOn(o = {}) {
      ด่านอนุมัติก่อนเริ่มงานไม่มีเลขขั้น (step = null) ถ้าถามจากเลขขั้นจะได้ "รอช่างรับงาน"
      ทั้งที่ช่างกดรับไม่ได้ ⇒ ใบหายเข้ากองของคนอื่น (13/10 · คำสั่ง user) */
   const { step, meta } = moWaitMeta(o);
-  if (!meta) return { step: step ?? 0, meta: null, who: null, byName: false };
-
-  if (meta.byReporter) {
-    return {
-      step, meta, byName: true,
-      who: {
-        uid: o.reporter_prod_uid || o.reported_by_uid || null,
-        name: o.reporter_prod || o.reported_by_name || null,
-      },
-    };
+  /* ↩️📤 ใบนอกลูปขั้น (ตีกลับ / ส่งซ่อมนอก) — `moWaitMeta` คืน meta ว่างโดยเจตนา (ดู `OFF_LOOP_WAIT`)
+     🔴 เดิมบรรทัดนี้ตัดทิ้งพร้อมคอมเมนต์ "ใบยังไม่เข้าลูป (ขั้น 1)" ซึ่ง **ไม่จริงสำหรับใบตีกลับ**
+        — ใบตีกลับรอผู้แจ้งแก้แผนกแล้วส่งใหม่ (status ขั้น 1 แต่เป็น "งานที่รอคนจริง")
+        ⇒ ใบหลุดจากทั้ง 3 ชั้น + badge · วัดจริง 13/11: 9 ใบ เก่าสุด 52 วัน ไม่โผล่ในคิวใครเลย */
+  if (!meta) {
+    const off = offLoopWaitOf(o);
+    if (!off) return { step: step ?? 0, meta: null, who: null, byName: false };
+    return off.meta.byReporter
+      ? { step: null, meta: off.meta, byName: true, who: reporterWho(o) }
+      : { step: null, meta: off.meta, byName: false, who: null };
   }
+
+  if (meta.byReporter) return { step, meta, byName: true, who: reporterWho(o) };
   if (meta.stage === 'service') {
-    return {
-      step, meta, byName: true,
-      who: { uid: o.tech_main_uid || null, name: o.assigned_to || o.tech_main || null },
-    };
+    /* 👥 มอบหมายช่างได้หลายคน (14/10) ⇒ "รอเรา" ต้องเทียบ **ทุกคนในชุด** ไม่ใช่สตริงที่ต่อกันแล้ว
+       🔴 `who` คงรูปเดิมเป๊ะ (ตัวที่เอาไปโชว์/ทำป้าย) — เพิ่มแค่ `people` ที่ใช้เทียบตัวตน
+          ⇒ **หน้าจอไม่เปลี่ยนแม้พิกเซลเดียว** เปลี่ยนแค่ว่าใบตกถึงใคร (เหตุผลเต็มที่ `isMeAmong`) */
+    const who = { uid: o.tech_main_uid || null, name: o.assigned_to || o.tech_main || null };
+    const people = [];
+    // uid ของช่างหลัก (ถ้ามี) เป็นรายการของตัวเอง — ไม่ผูกกับชื่อลำดับใดในลิสต์ (ไม่มีอะไรรับประกันลำดับ)
+    if (o.tech_main_uid) people.push({ uid: o.tech_main_uid, name: o.tech_main || null });
+    for (const name of assignedTechsOf(o)) people.push({ uid: null, name });
+    return { step, meta, byName: true, who, people: people.length ? people : [who] };
   }
   // ขั้นที่รอ "ตำแหน่ง" (จ่ายงาน / QA / หัวหน้าแผนก / ผจก.) — ไม่มีชื่อเจาะจง
   return { step, meta, who: null, byName: false };
@@ -125,6 +164,25 @@ export function scopeStateOf(row, me) {
 /** แถวนี้อยู่ในขอบเขตของเราไหม — `sections: []` = ไม่จำกัด (เห็นทุกส่วนงาน)
  *  ⚠️ พฤติกรรมเหมือนเดิมเป๊ะ (แถวไม่ระบุส่วนงาน = false) — แค่ยืมคำตอบจาก `scopeStateOf` จุดเดียว */
 export const inMyScope = (row, me) => scopeStateOf(row, me) === 'in';
+
+/**
+ * ✍️ **"ใบนี้รอ *เรา* เซ็นรับทราบ (ผจก.ต้นสังกัด) ไหม"** — เจ้าของกฎที่เดียว
+ *
+ * 🔴 23/11 (หน้างานแจ้ง): *"แจ้งเตือนที่ 2 บอกมีรอ 1 ใบ กดเข้ามาเจอ 4 ใบ และเป็นใบถูกตีกลับ/รอยกเลิก"*
+ *    ต้นเหตุ: ป้ายในคิวนับด้วยกฎ 5 ข้อ (ฟอร์ม MTN · ยังไม่เซ็น · ไม่ใช่ใบที่ลายเซ็นบล็อกงาน ·
+ *    อยู่ในขอบเขตเรา · เราเซ็นได้จริง) แต่ **ตัวกรอง `?ack=pending` ในหน้า MO เช็คแค่ 2 ข้อแรก**
+ *    ⇒ กดจากป้ายแล้วเจอใบที่ไม่ใช่ของเรา/เซ็นไม่ได้/ใบตีกลับ ปนมาด้วย
+ *    **ป้ายกับลิสต์ที่ป้ายพาไป ต้องใช้กฎเดียวกันเสมอ** — ไม่งั้นเลขไม่ตรงและคนเลิกเชื่อป้าย
+ * 🔴 ห้ามเขียนเงื่อนไขชุดนี้ซ้ำในหน้า (มีด่าน `ack-queue-single-rule`)
+ */
+export function ackWaitsOnMe(o, me = {}) {
+  if (!o || !isMtnFormRow(o) || o.dept_manager_at) return false;
+  if (isApprovalBlocked(o)) return false;          // ใบที่ลายเซ็นนี้บล็อกงานจริง = ขึ้นเป็นรายการของตัวเองแล้ว
+  if (scopeStateOf(o, me) !== 'in') return false;  // ผจก.เห็นเฉพาะใบของส่วนงานตัวเอง
+  return canSignMtnApproval('dept', {
+    order: o, fullName: me.name || '', can: me.can || (() => false), isShared: !!me.isShared,
+  }).ok;
+}
 
 /* ── ขั้นที่ "ตำแหน่งเดียวเซ็นได้" — นับเป็นงานรอคุณ (2026-10-13 · คำสั่ง user) ──────────────
    *"อย่างอนุมัติ MO สำหรับช่องที่คนเซ็นคือ ผู้จัดการฝ่ายผู้แจ้ง ต้องอนุมัติและอนุมัติได้คนเดียว
@@ -245,7 +303,11 @@ export function buildQueue(src = {}, me = {}, now = new Date()) {
 
   for (const o of moForCount) {
     const w = moWaitingOn(o);
-    if (!w.meta || w.byName) continue;          // รอคนระบุชื่อ = ไม่ใช่กองของ "ตำแหน่ง"
+    /* รอคนระบุชื่อ = ไม่ใช่กองของ "ตำแหน่ง"
+       🔴 ใบนอกลูปขั้นก็ไม่เข้ากองนี้ — บรรทัดสรุปชั้น `floor` ลิงก์ไป `?wait=<stage>` ของหน้า MO
+          ซึ่งรู้จักแต่ stage ของลูปขั้น ⇒ ยัดเข้ามา = กดแล้วได้ลิสต์ว่าง = จอโกหก (ใบพวกนี้
+          ขึ้นรายตัวในชั้น `mine`/`unit` อยู่แล้ว) */
+    if (!w.meta || w.byName || w.meta.offLoop) continue;
     const sk = w.meta.stage || `step${w.step}`;
     const cur = byPos.get(sk) || { stage: sk, step: w.step, meta: w.meta, count: 0, oldest: null };
     cur.count += 1;
@@ -262,17 +324,23 @@ export function buildQueue(src = {}, me = {}, now = new Date()) {
     /* 🔴 ใบที่ลายเซ็นนี้ **บล็อกงานจริง** (งานปรับปรุง/สร้าง) ไม่เข้าป้ายนี้ — มันขึ้นเป็นรายการ
        ของตัวเองอยู่แล้วผ่าน moWaitMeta/approvalWaitsOnMe · นับซ้ำ = badge เกินจริง
        และป้ายนี้เขียนว่า "ไม่บล็อกงาน" ซึ่งจะกลายเป็นคำโกหกสำหรับใบที่บล็อกอยู่ */
-    if (isMtnFormRow(o) && !o.dept_manager_at && !isApprovalBlocked(o) && scopeStateOf(o, me) === 'in'
-        && canSignMtnApproval('dept', { order: o, fullName: me.name || '', can: me.can || (() => false), isShared: !!me.isShared }).ok) {
+    if (ackWaitsOnMe(o, me)) {
       ackCount += 1;
       const aAge = ageDays(o.work_date, now);
       if (aAge != null && (ackOldest == null || aAge > ackOldest)) ackOldest = aAge;
     }
     const w = moWaitingOn(o);
-    if (!w.meta) continue;                                  // ใบยังไม่เข้าลูป (ขั้น 1) — ไม่ใช่งานค้างของใคร
-    if (w.byName && w.who && isMe(w.who, me)) { mine.push(moItem(o, w, TIER.MINE)); continue; }
+    // ไม่มี meta = ไม่มีใครต้องทำต่อจริงๆ (ใบปิด/ยกเลิก) — ใบนอกลูปขั้นมี meta ของตัวเองแล้ว (16/11)
+    if (!w.meta) continue;
+    if (w.byName && isMeAmong(w, me)) { mine.push(moItem(o, w, TIER.MINE)); continue; }
     // ขั้นล็อกตำแหน่งที่เราเซ็นได้คนเดียว (ในขอบเขตเรา) ⇒ รอคุณ + ขึ้นก่อน (soleSignerFor ข้างบน)
-    if (!w.byName && soleSignerFor(o, w, me) && scopeStateOf(o, me) === 'in') {
+    /* 🛒 23/11 (หน้างาน: *"รอเรา 7 ใบ แต่เป็นใบอยู่ loop pr ซึ่งมันไม่ได้รอเราไง"*)
+       ใบที่ลูปจัดซื้อยังไม่จบ = **กดอนุมัติไม่ได้จริง** (ด่าน `moCloseGate` บล็อกตอนกด)
+       ⇒ ห้ามนับเป็น "รอคุณเซ็น" · คนที่ต้องลงมือคือช่าง/จัดซื้อ ไม่ใช่ ผจก.
+       🔴 ใช้ `moPrBlocked()` ตัวเดียวกับป้ายสถานะในหน้า MO — ห้ามเทียบ PR เองที่นี่
+       🔴 ไม่ได้ส่ง `prOf` มา (ผู้เรียกไม่มีข้อมูล PR) = พฤติกรรมเดิมเป๊ะ ไม่ตัดอะไรทิ้ง */
+    if (!w.byName && soleSignerFor(o, w, me) && scopeStateOf(o, me) === 'in'
+        && !moPrBlocked(o, src.prOf ? src.prOf(o) : null)) {
       mine.push({ ...moItem(o, w, TIER.MINE), sign: true, tag: '✍️ รอคุณเซ็น' });
       /* สะสมไว้ทำ "ป้ายคาไว้" บรรทัดเดียวต่อขั้น (คำสั่ง user 22/10) — ดู signRollup ข้างล่าง */
       const sk = w.meta.stage || `step${w.step}`;

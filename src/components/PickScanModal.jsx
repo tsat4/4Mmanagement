@@ -77,7 +77,7 @@ export default function PickScanModal({ request, canOverride = false, fullName, 
       {/* ไม่ปิดจาก backdrop — มีช่องกรอกจำนวน/เหตุผล (UI-CONVENTIONS §5) */}
       <div style={{ position: 'fixed', inset: 0, zIndex: 2300, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
         <div onClick={e => e.stopPropagation()} className="modal-scroll"
-          style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(520px, 96vw)', maxHeight: '92vh', overflowY: 'auto' }}>
+          style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(520px, 96vw)', maxHeight: '92vh', overflowY: 'auto' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3 style={{ margin: 0, fontSize: 16, color: 'var(--text)' }}>{tr('เริ่มเตรียม — สแกนยืนยันของที่หยิบ')}</h3>
             <button onClick={onClose} className="tbtn" style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 22, cursor: 'pointer', lineHeight: 1 }}>✕</button>
@@ -140,7 +140,7 @@ export default function PickScanModal({ request, canOverride = false, fullName, 
           )}
 
           <div style={{ marginTop: 12, fontSize: 11.5, color: 'var(--muted)', background: 'var(--bg3)', borderRadius: 'var(--r-md)', padding: '7px 10px' }}>
-            กดยืนยัน = ระบบ<b>{tr('ตัดสต็อกให้เลย')}</b> {tr('(คลัง STORE −')}{fmt(Number(qty) || 0)} {tr('· ไลน์')} {request?.line_name} +{fmt(Number(qty) || 0)}) ตามขั้น "Scan for SAP update" — ไม่ต้องไปบันทึกจ่ายที่ Line Stock ซ้ำ
+            {tr("กดยืนยัน = ระบบ")}<b>{tr('ตัดสต็อกให้เลย')}</b> {tr('(คลัง STORE −')}{fmt(Number(qty) || 0)} {tr('· ไลน์')} {request?.line_name} +{fmt(Number(qty) || 0)}) {tr("ตามขั้น \"Scan for SAP update\" — ไม่ต้องไปบันทึกจ่ายที่ Line Stock ซ้ำ")}
           </div>
 
           {!overriding && (
@@ -181,7 +181,7 @@ export default function PickScanModal({ request, canOverride = false, fullName, 
                 )
               ) : (
                 <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-                  สแกนไม่ได้/ป้ายหาย → ให้หัวหน้าที่มีสิทธิ์ <code>wip_request:override</code> มาปลดบล็อก
+                  {tr("สแกนไม่ได้/ป้ายหาย → ให้หัวหน้าที่มีสิทธิ์")} <code>wip_request:override</code> {tr("มาปลดบล็อก")}
                 </div>
               )}
             </div>
@@ -190,7 +190,7 @@ export default function PickScanModal({ request, canOverride = false, fullName, 
       </div>
 
       {scanOpen && (
-        <ScanModal title={tr('สแกนพาร์ทที่หยิบ')} hint={`ยิงป้าย/บาร์โค้ดบนกล่องหรือบัตร — ใบนี้ต้องการ ${request?.mat_no || ''}`}
+        <ScanModal title={tr('สแกนพาร์ทที่หยิบ')} hint={`${tr("ยิงป้าย/บาร์โค้ดบนกล่องหรือบัตร — ใบนี้ต้องการ")} ${request?.mat_no || ''}`}
           onScan={onScan} onClose={() => setScanOpen(false)} closeOnHit={false} />
       )}
     </>

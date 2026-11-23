@@ -282,7 +282,7 @@ export default function ProductHistory() {
           ห้ามปล่อยให้ดูเหมือนข้อมูลครบ — กฎ "ห้ามล้มเหลวเงียบ" */}
       {loadWarn && (
         <NoticeBar tone="bad" style={{ marginBottom: 12 }}>
-          {loadWarn} — ตัวเลขในหน้านี้ต่ำกว่าความจริง อย่าเพิ่งใช้ตัดสินใจ (ลองแคบช่วงวันที่ลง แล้วโหลดใหม่)
+          {loadWarn} — {trI18n("ตัวเลขในหน้านี้ต่ำกว่าความจริง อย่าเพิ่งใช้ตัดสินใจ (ลองแคบช่วงวันที่ลง แล้วโหลดใหม่")})
         </NoticeBar>
       )}
 
@@ -305,13 +305,13 @@ export default function ProductHistory() {
           <div onClick={() => setPickerOpen(o => !o)}
             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none', marginBottom: 6 }}>
             <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-              พบ <b>{filteredProducts.length.toLocaleString()}</b> {trI18n('รายการ')}{filteredProducts.length > 300 ? ' · แสดง 300 แรก — พิมพ์ค้นหา/เลือกไลน์เพื่อกรองเพิ่ม' : ''}
-              {pickerOpen ? ' · คลิกสินค้าเพื่อดูประวัติ' : selMat ? ` · เลือกอยู่: ${selMat.mat_no} — กดเพื่อเปลี่ยนสินค้า` : ' · กดเพื่อแสดงรายการ'}
+              {trI18n("พบ")} <b>{filteredProducts.length.toLocaleString()}</b> {trI18n('รายการ')}{filteredProducts.length > 300 ? ' · แสดง 300 แรก — พิมพ์ค้นหา/เลือกไลน์เพื่อกรองเพิ่ม' : ''}
+              {pickerOpen ? ' · คลิกสินค้าเพื่อดูประวัติ' : selMat ? ` · ${trI18n("เลือกอยู่")}: ${selMat.mat_no} — ${trI18n("กดเพื่อเปลี่ยนสินค้า")}` : ' · กดเพื่อแสดงรายการ'}
             </div>
             <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700 }}>{pickerOpen ? '▲' : '▼'}</span>
           </div>
           {pickerOpen && (
-          <div style={{ maxHeight: 300, overflowY: 'auto', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', background: 'var(--bg2)' }}>
+          <div style={{ maxHeight: 300, overflowY: 'auto', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)' }}>
             {productGroups.map(([line, items]) => (
               <div key={line}>
                 <div style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--bg3)', padding: '5px 12px',
@@ -360,16 +360,16 @@ export default function ProductHistory() {
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {canGroup && (
                   <button onClick={() => setGroupMode(g => !g)}
-                    title={`สินค้าที่ใช้เลขลูกค้า ${selMat.p_no} เหมือนกัน — ต่างกันที่ปลายทางส่งลูกค้า`}
+                    title={`${trI18n("สินค้าที่ใช้เลขลูกค้า")} ${selMat.p_no} ${trI18n("เหมือนกัน — ต่างกันที่ปลายทางส่งลูกค้า")}`}
                     style={{ fontSize: 12, fontWeight: 700, padding: '7px 14px', borderRadius: 'var(--r-md)', cursor: 'pointer',
                       background: groupMode ? 'var(--blue)' : 'var(--bg2)', color: groupMode ? '#fff' : 'var(--text)',
                       border: `1px solid ${groupMode ? 'var(--blue)' : 'var(--border2)'}` }}>
-                    {groupMode ? `ดูรวมทั้งกลุ่ม (${groupMats.length}) — กดเพื่อดูเฉพาะตัวนี้` : `ดูรวมทั้งกลุ่ม (${groupMats.length} MAT SAP)`}
+                    {groupMode ? `${trI18n("ดูรวมทั้งกลุ่ม")} (${groupMats.length}) — ${trI18n("กดเพื่อดูเฉพาะตัวนี้")}` : `${trI18n("ดูรวมทั้งกลุ่ม")} (${groupMats.length} MAT SAP)`}
                   </button>
                 )}
                 <button onClick={() => { setSelMat(null); setPickerOpen(true); setGroupMode(false); }}
                   style={{ fontSize: 12, fontWeight: 700, padding: '7px 14px', borderRadius: 'var(--r-md)', cursor: 'pointer',
-                    background: 'var(--bg2)', color: 'var(--text)', border: '1px solid var(--border2)' }}>
+                    background: 'var(--bg2-surf)', color: 'var(--text)', border: '1px solid var(--border2)' }}>
                   {trI18n('ปิด — เลือกสินค้าอื่น')}
                 </button>
               </div>
@@ -378,7 +378,7 @@ export default function ProductHistory() {
 
           {/* โหมดกลุ่ม: เห็นว่าแต่ละเลข SAP ผลิตไปเท่าไหร่ (ไลน์เดียวกัน แต่คนละปลายทางลูกค้า) */}
           {groupMode && canGroup && byMat.length > 1 && (
-            <CollapseCard id="bymat" title={trI18n('ผลิตแยกตาม MAT SAP')} count={`${byMat.length} เลข`}>
+            <CollapseCard id="bymat" title={trI18n('ผลิตแยกตาม MAT SAP')} count={`${byMat.length} ${trI18n("เลข")}`}>
               <div style={{ display: 'grid', gap: 7 }}>
                 {byMat.map(r => {
                   const meta = groupMats.find(g => g.mat_no === r.mat);
@@ -406,11 +406,11 @@ export default function ProductHistory() {
           {canGroup && !groupMode && (
             <div style={{ ...card, marginBottom: 16, borderColor: 'var(--blue)66', background: 'var(--blue)14', padding: '10px 14px' }}>
               <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--blue)' }}>
-                สินค้านี้มีอีก {groupMats.length - 1} {trI18n('MAT SAP ที่เป็น product เดียวกัน (P/N')} {selMat.p_no})
+                {trI18n("สินค้านี้มีอีก")} {groupMats.length - 1} {trI18n('MAT SAP ที่เป็น product เดียวกัน (P/N')} {selMat.p_no})
               </div>
               <div style={{ fontSize: 11.5, color: 'var(--text2)', marginTop: 3, lineHeight: 1.7 }}>
-                แยกเลขกันที่ <b>{trI18n('ปลายทางที่ส่งลูกค้า')}</b> — {groupMats.filter(g => g.mat_no !== selMat.mat_no).map(g => g.mat_no).join(' · ')}
-                <br />{trI18n('ออเดอร์ลูกค้ามักถูกบันทึกใต้เลขเดียวของกลุ่ม →')} <b>ดูทีละตัวจะเห็นยอด "ขาด/เกิน" ที่ไม่ใช่ภาพจริง</b> กดปุ่ม 🔗 ด้านบนเพื่อดูรวม
+                {trI18n("แยกเลขกันที่")} <b>{trI18n('ปลายทางที่ส่งลูกค้า')}</b> — {groupMats.filter(g => g.mat_no !== selMat.mat_no).map(g => g.mat_no).join(' · ')}
+                <br />{trI18n('ออเดอร์ลูกค้ามักถูกบันทึกใต้เลขเดียวของกลุ่ม →')} <b>{trI18n("ดูทีละตัวจะเห็นยอด \"ขาด/เกิน\" ที่ไม่ใช่ภาพจริง")}</b> {trI18n("กดปุ่ม 🔗 ด้านบนเพื่อดูรวม")}
               </div>
             </div>
           )}
@@ -457,25 +457,25 @@ export default function ProductHistory() {
 
           {/* trend รายวัน */}
           {daily.length > 0 && (
-            <CollapseCard id="daily" title={trI18n('ผลิตรายวัน')} count={`${daily.length} วัน`}>
+            <CollapseCard id="daily" title={trI18n('ผลิตรายวัน')} count={`${daily.length} ${trI18n("วัน")}`}>
               {/* component กลาง — มีแกน Y + เส้น grid + ตัวเลขบนแท่ง (UI-CONVENTIONS §5.2) */}
-              <DailyBars height={150} unit=" ชิ้น"
+              <DailyBars height={150} unit={trI18n(" ชิ้น")}
                 data={daily.map(d => ({
                   key: d.d, label: fmtDate(d.d), empty: d.empty,
                   segs: [{ v: d.produced, color: 'var(--accent)', name: 'ผลิตดี' },
                     { v: d.ng, color: 'var(--red)', name: 'NG' }],
                 }))} />
               <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
-                <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{trI18n('■ ผลิตดี')}</span> · <span style={{ color: 'var(--red)', fontWeight: 700 }}>■ NG</span> · แท่งเตี้ยสีเทา = วันนั้นไม่มีการผลิต (แกนวันต่อเนื่อง ไม่ข้ามวัน) · สูงสุดในช่วง = {dailyMax.toLocaleString()} ชิ้น · ตัวเลขบนแท่ง = ผลิตดี+NG รวม
+                <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{trI18n('■ ผลิตดี')}</span> · <span style={{ color: 'var(--red)', fontWeight: 700 }}>■ NG</span> · {trI18n("แท่งเตี้ยสีเทา = วันนั้นไม่มีการผลิต (แกนวันต่อเนื่อง ไม่ข้ามวัน) · สูงสุดในช่วง")} = {dailyMax.toLocaleString()} {trI18n("ชิ้น · ตัวเลขบนแท่ง = ผลิตดี+NG รวม")}
               </div>
             </CollapseCard>
           )}
 
           {/* ตารางใบผลิต — drill-down วัน → ไลน์·กะ → รายใบ (รายวันคือระดับหลัก รายใบดูเมื่อต้องเจาะ) */}
-          <CollapseCard id="orders" title={trI18n('รายการใบผลิต')} count={`${dayGroups.length} วัน · ${rows.length.toLocaleString()} ใบ`}>
+          <CollapseCard id="orders" title={trI18n('รายการใบผลิต')} count={`${dayGroups.length} ${trI18n("วัน")} · ${rows.length.toLocaleString()} ${trI18n("ใบ")}`}>
             {loading ? <div style={{ color: 'var(--muted)', fontSize: 12 }}>{trI18n('กำลังโหลด...')}</div> : rows.length === 0 ? <div style={{ color: 'var(--muted)', fontSize: 12 }}>{trI18n('ไม่มีการผลิตในช่วงนี้')}</div> : (
             <div style={{ overflowX: 'auto' }}>
-              <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 6 }}>คลิกวันเพื่อแตกราย "ไลน์·กะ" · คลิกกะเพื่อแตกรายใบ</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 6 }}>{trI18n("คลิกวันเพื่อแตกราย \"ไลน์·กะ\" · คลิกกะเพื่อแตกรายใบ")}</div>
               <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 760 }}>
                 <thead><tr>
                   <th style={th}>{trI18n('วัน → ไลน์·กะ → ใบ')}</th>
@@ -534,7 +534,7 @@ export default function ProductHistory() {
               {!showAllDays && dayGroups.length > 45 && (
                 <button onClick={() => setShowAllDays(true)}
                   style={{ marginTop: 8, fontSize: 12, fontWeight: 700, padding: '6px 14px', borderRadius: 'var(--r-md)', cursor: 'pointer',
-                    background: 'var(--bg2)', color: 'var(--text)', border: '1px solid var(--border2)' }}>
+                    background: 'var(--bg2-surf)', color: 'var(--text)', border: '1px solid var(--border2)' }}>
                   {trI18n('แสดงอีก')} {(dayGroups.length - 45).toLocaleString()} {trI18n('วัน (ทั้งหมด')} {dayGroups.length.toLocaleString()} {trI18n('วัน)')}
                 </button>
               )}
@@ -546,7 +546,7 @@ export default function ProductHistory() {
           <CollapseCard id="audit" title={trI18n('ประวัติการแก้ไขข้อมูลสินค้า (ใครแก้อะไรเมื่อไหร่)')} count={audit.length} defaultOpen={audit.length > 0}>
             {audit.length === 0 ? (
               <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-                ยังไม่มีประวัติ — ระบบ audit เริ่มเก็บหลัง apply migration <code>20260724_audit_log_dr.sql</code> (การแก้ไขก่อนหน้านั้นไม่ถูกบันทึก)
+                {trI18n("ยังไม่มีประวัติ — ระบบ audit เริ่มเก็บหลัง")} apply migration <code>20260724_audit_log_dr.sql</code> ({trI18n("การแก้ไขก่อนหน้านั้นไม่ถูกบันทึก")})
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

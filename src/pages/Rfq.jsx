@@ -34,6 +34,7 @@ import { inp, card, btn, ghost, thSt, tdSt, Field, Pill, Modal, WarnBar } from '
 import { DeleteButton } from '../components/IconButton';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 /* ═══════════════════════════════════════════════════════════════════════════
    💼 RFQ / เสนอราคา — Marketing (Q-neX เฟส 1) — /rfq · 2026-10-30
    แบบเต็ม: docs/MARKETING-QNEX-DESIGN.md · กฎโมดูล: docs/modules/mkt-rfq.md
@@ -82,7 +83,7 @@ export default function Rfq() {
   const mktPeople = usePeople();
   const mktPeopleCount = mktPeople.failed ? null : mktPeople.profiles.filter(p => MKT_PEOPLE_ROLES.includes(String(p.role))).length;
   const mktPeopleHint = mktPeople.failed ? 'โหลดทะเบียนบัญชีไม่สำเร็จ'
-    : `ลิสต์ = บัญชี role การตลาด ${mktPeopleCount} คน (ตั้งที่ /add-user) · ชื่ออื่นพิมพ์เองได้`;
+    : `${tr("ลิสต์ = บัญชี role การตลาด")} ${mktPeopleCount} ${tr("คน (ตั้งที่ /add-user) · ชื่ออื่นพิมพ์เองได้")}`;
 
   const [rfqs, setRfqs] = useState([]);
   const [awards, setAwards] = useState([]);
@@ -116,8 +117,8 @@ export default function Rfq() {
       supabase.from('npi_template_phases').select('*').order('seq'),
       supabase.from('npi_template_deliverables').select('*').eq('is_active', true).order('seq'),
     ]);
-    if (r.error) w.push(`โหลดทะเบียน RFQ ไม่ได้ (${r.error.message}) — ยังไม่ apply migration 20261030b_mkt_rfq_phase1_main (MAIN) ?`);
-    if (a.error) w.push(`โหลดผลได้งาน/ไม่ได้งานไม่ได้ (${a.error.message})`);
+    if (r.error) w.push(`${tr("โหลดทะเบียน RFQ ไม่ได้")} (${r.error.message}) — ${tr("ยังไม่")} apply migration 20261030b_mkt_rfq_phase1_main (MAIN) ?`);
+    if (a.error) w.push(`${tr("โหลดผลได้งาน/ไม่ได้งานไม่ได้")} (${a.error.message})`);
     if (pj.error || t.error) w.push('โหลดทะเบียน NPI ไม่ได้ — ผูก/สร้างโปรเจค NPI จากหน้านี้ไม่ได้');
     setRfqs(r.data || []); setAwards(a.data || []); setNpiProjects(pj.data || []);
     setTemplates((t.data || []).map(x => ({ ...x, phases: (tp.data || []).filter(p => p.template_id === x.id), delivs: (td.data || []).filter(d => d.template_id === x.id) })));
@@ -134,9 +135,9 @@ export default function Rfq() {
       supabase.from('mkt_rfq_files').select('id, rfq_id, kind, file_url, file_name, size_bytes, note, uploaded_by_name, created_at').eq('rfq_id', id).order('created_at'),
       supabase.from('mkt_rfq_assessments').select('*').eq('rfq_id', id).order('round'),
     ]);
-    if (p.error) toast.error(`โหลดพาร์ทไม่ได้: ${p.error.message}`);
-    if (f.error) toast.error(`โหลดเอกสารแนบไม่ได้: ${f.error.message} — ยังไม่ apply migration 20261113a (MAIN)?`);
-    if (a.error) toast.error(`โหลดใบประเมินไม่ได้: ${a.error.message}`);
+    if (p.error) toast.error(`${tr("โหลดพาร์ทไม่ได้")}: ${p.error.message}`);
+    if (f.error) toast.error(`${tr("โหลดเอกสารแนบไม่ได้")}: ${f.error.message} — ${tr("ยังไม่")} apply migration 20261113a (MAIN)?`);
+    if (a.error) toast.error(`${tr("โหลดใบประเมินไม่ได้")}: ${a.error.message}`);
     setParts(p.data || []); setFiles(f.data || []); setAssessments(a.data || []);
   }, []);
   useEffect(() => { let alive = true; (async () => { if (!alive) return; await loadParts(rfqId); })(); return () => { alive = false; }; }, [rfqId, loadParts]);
@@ -181,7 +182,7 @@ export default function Rfq() {
   };
   const delRfq = async (r) => {
     if (awardOf[r.id]) return toast.info('RFQ นี้มีผลตัดสินแล้ว — ลบไม่ได้ ให้เปลี่ยนสถานะเป็น "ยกเลิก" แทน');
-    if (!window.confirm(`ลบ ${r.rfq_no} (${r.customer || '—'}) พร้อมพาร์ททั้งหมด?`)) return;
+    if (!await askConfirm(`${tr("ลบ")} ${r.rfq_no} (${r.customer || '—'}) ${tr("พร้อมพาร์ททั้งหมด")}?`)) return;
     if (!checkWriteRows(await supabase.from('mkt_rfqs').delete().eq('id', r.id).select('id'), 'ลบ RFQ')) return;
     toast.success('ลบแล้ว'); setRfq(''); loadAll();
   };
@@ -213,7 +214,7 @@ export default function Rfq() {
     toast.success('บันทึกพาร์ทแล้ว'); setPartModal(null); loadParts(rfq.id);
   };
   const delPart = async (p) => {
-    if (!window.confirm(`ลบพาร์ท ${p.part_no}?`)) return;
+    if (!await askConfirm(`${tr("ลบพาร์ท")} ${p.part_no}?`)) return;
     if (!checkWriteRows(await supabase.from('mkt_rfq_parts').delete().eq('id', p.id).select('id'), 'ลบพาร์ท')) return;
     toast.success('ลบแล้ว'); loadParts(rfq.id);
   };
@@ -245,13 +246,13 @@ export default function Rfq() {
       const fails = [];
       for (const p of m.parts.filter(x => x.on)) {
         const r1 = await supabase.from('npi_parts').insert({ project_id: projectId, part_no: p.part_no, part_name: p.part_name || null }).select('id');
-        if (r1.error || !r1.data?.length) { fails.push(`${p.part_no}: ${r1.error?.message || '0 แถว'}`); continue; }
+        if (r1.error || !r1.data?.length) { fails.push(`${p.part_no}: ${r1.error?.message || tr('0 แถว')}`); continue; }
         const { phaseRows, delivRows } = buildPartRows({ partId: r1.data[0].id, templatePhases: tpl.phases, templateDelivs: tpl.delivs, sopDate: m.sop_date || null, kickoffDate: m.kickoff_date || null });
         const e1 = phaseRows.length ? (await supabase.from('npi_part_phases').insert(phaseRows)).error : null;
         const e2 = delivRows.length ? (await supabase.from('npi_deliverables').insert(delivRows)).error : null;
-        if (e1 || e2) fails.push(`${p.part_no}: เฟส/เอกสาร ${(e1 || e2).message}`);
+        if (e1 || e2) fails.push(`${p.part_no}: ${tr("เฟส/เอกสาร")} ${(e1 || e2).message}`);
       }
-      if (fails.length) toast.error(`สร้างโปรเจคแล้ว แต่พาร์ทไม่ครบ: ${fails.join(' · ')} — ไปเติมที่ /npi`);
+      if (fails.length) toast.error(`${tr("สร้างโปรเจคแล้ว แต่พาร์ทไม่ครบ")}: ${fails.join(' · ')} — ${tr("ไปเติมที่")} /npi`);
     }
     if (!projectId) { setSaving(false); return toast.error('เลือกโปรเจค NPI ที่จะผูก'); }
     const res = await supabase.from('mkt_rfqs').update({
@@ -302,7 +303,7 @@ export default function Rfq() {
   };
 
   const mainParts = parts.filter(p => !p.parent_part_id);
-  const sub = rfq ? `${rfq.rfq_no} · ${rfq.customer || '—'} · ${rfqStatusMeta(rfq.status).label}` : `${rfqs.length} RFQ · เลือกรายการเพื่อเปิดใบงาน`;
+  const sub = rfq ? `${rfq.rfq_no} · ${rfq.customer || '—'} · ${rfqStatusMeta(rfq.status).label}` : `${rfqs.length} RFQ · ${tr("เลือกรายการเพื่อเปิดใบงาน")}`;
   const statusOptions = useMemo(() => {
     const keys = [...RFQ_STATUS_PHASE1];
     if (rfq && !keys.includes(rfq.status)) keys.push(rfq.status);
@@ -335,10 +336,7 @@ export default function Rfq() {
       <ReadOnlyNote show={!canEdit} role={role} what="สร้าง/แก้ RFQ · พาร์ท · ส่ง CRD / ผูกโปรเจค NPI" permKey="rfq:edit" />
       {canEdit && !canAward && <ReadOnlyNote role={role} what="บันทึกผลได้งาน/ไม่ได้งาน · ออกใบแจ้งจัดทำ" permKey="rfq:award" compact />}
       <InfoMore id="rfq_help" lead="ต้นน้ำของสายธาร Marketing → New Model → โรงงาน (Q-neX เฟส 1)">
-        รับ RFQ จากลูกค้า → บันทึกพาร์ท/volume → <b>{tr('ส่ง CRD')}</b> ให้ IEC = สร้างโปรเจค NPI จากหน้านี้ (ระบบเสนอชื่อ/พาร์ท คนยืนยัน) →
-        ลูกค้าตัดสิน → <b>{tr('ได้งาน')}</b> = ออก <b>{tr('ใบแจ้งจัดทำ F-MKT-001/002')}</b> ให้ฝ่ายโรงงาน (ออกเลขแล้วพิมพ์ซ้ำได้ ใบเดิมเสมอ) ·
-        ยอดขาย/ปี = volume × ราคาชิ้น (ขาดตัวใดตัวหนึ่ง = ไม่คิด ไม่ใช่ 0) · volume ต้องบอกที่มาเสมอ (RFQ มี 3 ชุดคนละค่า) ·
-        เฟส 2a (13/11): แนบเอกสาร RFQ · model life · job type · <b>ส่งให้ IEC ประเมิน</b> → IEC ตอบ ผลิตได้ไหม/process flow/ราคาเป้าหมาย → สถานะเดินต่อได้ · ยังไม่ทำ (เฟส 2b-3): มอบงานแผนกอื่น · checklist gate · คำนวณต้นทุน ①–⑤ · ใบเสนอราคา 2 ชั้นอนุมัติ
+        {tr("รับ RFQ จากลูกค้า → บันทึกพาร์ท")}/volume → <b>{tr('ส่ง CRD')}</b> {tr("ให้ IEC = สร้างโปรเจค NPI จากหน้านี้ (ระบบเสนอชื่อ/พาร์ท คนยืนยัน) → ลูกค้าตัดสิน")} → <b>{tr('ได้งาน')}</b> = {tr("ออก")} <b>{tr('ใบแจ้งจัดทำ F-MKT-001/002')}</b> {tr("ให้ฝ่ายโรงงาน (ออกเลขแล้วพิมพ์ซ้ำได้ ใบเดิมเสมอ) · ยอดขาย/ปี = volume × ราคาชิ้น (ขาดตัวใดตัวหนึ่ง = ไม่คิด ไม่ใช่ 0) · volume ต้องบอกที่มาเสมอ (RFQ มี 3 ชุดคนละค่า) · เฟส 2a (13/11): แนบเอกสาร")} RFQ · model life · job type · <b>{tr("ส่งให้ IEC ประเมิน")}</b> → IEC {tr("ตอบ ผลิตได้ไหม/process flow/ราคาเป้าหมาย → สถานะเดินต่อได้ · ยังไม่ทำ (เฟส 2b-3): มอบงานแผนกอื่น · checklist gate · คำนวณต้นทุน ①–⑤ · ใบเสนอราคา 2 ชั้นอนุมัติ")}
       </InfoMore>
 
       {loading ? <div style={{ color: 'var(--muted)', padding: 30 }}>{tr('กำลังโหลด…')}</div> : tab === 'report' ? (
@@ -367,7 +365,7 @@ export default function Rfq() {
             <Field label={tr('ชนิดงาน')}><select style={inp} value={rfqModal.process_type} onChange={e => setRfqModal({ ...rfqModal, process_type: e.target.value })}>{Object.entries(PROCESS_TYPES).map(([k, v]) => <option key={k} value={k}>{tr(v)}</option>)}</select></Field>
             <Field label={tr('ความเร่งด่วน')}><select style={inp} value={rfqModal.priority} onChange={e => setRfqModal({ ...rfqModal, priority: e.target.value })}>{Object.entries(PRIORITIES).map(([k, v]) => <option key={k} value={k}>{tr(v)}</option>)}</select></Field>
             <Field label="Make-to-print / Co-design" hint="Q-neX job type"><select style={inp} value={rfqModal.job_type || ''} onChange={e => setRfqModal({ ...rfqModal, job_type: e.target.value })}><option value="">{tr('— ยังไม่ระบุ —')}</option>{Object.entries(JOB_TYPES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></Field>
-            <Field label="Model life (ปี)" hint="ยอดรวมตลอดอายุ = volume/ปี × ปี"><input type="number" step="0.5" style={inp} value={rfqModal.model_life_years ?? ''} onChange={e => setRfqModal({ ...rfqModal, model_life_years: e.target.value })} /></Field>
+            <Field label={tr("Model life (ปี)")} hint={tr("ยอดรวมตลอดอายุ = volume/ปี × ปี")}><input type="number" step="0.5" style={inp} value={rfqModal.model_life_years ?? ''} onChange={e => setRfqModal({ ...rfqModal, model_life_years: e.target.value })} /></Field>
             <Field label={tr('ผู้รับผิดชอบ (MKT Engineer)')} hint={mktPeopleHint}>
               <PersonSelect value={rfqModal.owner_name} onChange={(v) => setRfqModal({ ...rfqModal, owner_name: typeof v === 'string' ? v : (v?.name || '') })}
                 history={ownerHist} roles={MKT_PEOPLE_ROLES} strict placeholder={tr('ค้นชื่อทีม Marketing…')}
@@ -450,13 +448,13 @@ export default function Rfq() {
             </>)}
           </div>
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 10 }}>
-            สร้างแล้วเฟส/รายการเอกสารมาจากแม่แบบที่เลือก (snapshot) · สถานะ RFQ จะเลื่อนเป็น "IEC กำลังประเมิน" · ระบบ<b>{tr('ไม่')}</b>เขียนทับสิ่งที่ IEC ทำไว้ใน NPI
+            {tr("สร้างแล้วเฟส/รายการเอกสารมาจากแม่แบบที่เลือก (snapshot) · สถานะ RFQ จะเลื่อนเป็น \"IEC กำลังประเมิน\" · ระบบ")}<b>{tr('ไม่')}</b>{tr("เขียนทับสิ่งที่ IEC ทำไว้ใน")} NPI
           </div>
         </Modal>
       )}
 
       {awardModal && rfq && (
-        <Modal title={`ผลของ ${rfq.rfq_no}`} onClose={() => setAwardModal(null)} width={700}
+        <Modal title={`${tr("ผลของ")} ${rfq.rfq_no}`} onClose={() => setAwardModal(null)} width={700}
           footer={<><button style={ghost} onClick={() => setAwardModal(null)}>{tr('ยกเลิก')}</button><button style={btn()} disabled={saving} onClick={saveAward}>{tr('บันทึกผล')}</button></>}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 10, alignItems: 'start' }}>
             <Field label={tr('ผล')}>
@@ -510,7 +508,7 @@ function RfqTable({ rows, hidden, awardOf, npiOf, onPick, today }) {
                 </tr>
               );
             })}
-            {!rows.length && <tr><td colSpan={9} style={{ ...tdSt, textAlign: 'center', color: 'var(--muted)', padding: 24 }}>{hidden ? `ไม่มีรายการที่ตรงตัวกรอง (ซ่อนอยู่ ${hidden} รายการ)` : 'ยังไม่มี RFQ — กด + RFQ เพื่อเริ่ม'}</td></tr>}
+            {!rows.length && <tr><td colSpan={9} style={{ ...tdSt, textAlign: 'center', color: 'var(--muted)', padding: 24 }}>{hidden ? `${tr("ไม่มีรายการที่ตรงตัวกรอง (ซ่อนอยู่")} ${hidden} ${tr("รายการ")})` : 'ยังไม่มี RFQ — กด + RFQ เพื่อเริ่ม'}</td></tr>}
           </tbody>
         </table>
       </div>
@@ -551,7 +549,7 @@ function RfqSheet({ rfq, award, parts, mainParts, npi, canEdit, canAward, canAss
         {row('ชนิดงาน', PROCESS_TYPES[rfq.process_type])}
         {row('Make-to-print / Co-design', JOB_TYPES[rfq.job_type] || <span style={{ color: statusColor('warn') }}>{tr('ยังไม่ระบุ — ตัวนี้บอกว่า IEC ต้องออกแบบก่อนคิดราคาไหม')}</span>)}
         {row('ความเร่งด่วน', PRIORITIES[rfq.priority])}
-        {row('รับ RFQ / กำหนดส่ง', `${rfq.received_date ? fmtDate(rfq.received_date) : '—'} → ${rfq.due_date ? fmtDate(rfq.due_date) : '—'}${rfq.due_date && !isClosed(rfq.status) && rfq.due_date < today ? ' (เลยกำหนด)' : ''}`)}
+        {row('รับ RFQ / กำหนดส่ง', `${rfq.received_date ? fmtDate(rfq.received_date) : '—'} → ${rfq.due_date ? fmtDate(rfq.due_date) : '—'}${rfq.due_date && !isClosed(rfq.status) && rfq.due_date < today ? tr(' (เลยกำหนด)') : ''}`)}
         {row('SOP ลูกค้า', rfq.sop_date_customer ? fmtDate(rfq.sop_date_customer) : '—')}
         {row('Volume/ปี', rfq.annual_volume != null ? <>{fmtN(rfq.annual_volume)} {tr('ชิ้น · ที่มา:')} {VOLUME_SOURCES[rfq.volume_source] || <span style={{ color: statusColor('warn') }}>{tr('ไม่ได้ระบุ')}</span>}</> : 'ยังไม่ระบุ')}
         {row('อายุรุ่น / ยอดรวมตลอดอายุ', rfq.model_life_years != null
@@ -617,13 +615,13 @@ function RfqSheet({ rfq, award, parts, mainParts, npi, canEdit, canAward, canAss
             {award?.production_order_no && <button style={ghost} onClick={onReprint}>{tr('พิมพ์ซ้ำ')} {award.production_order_no}</button>}
           </div>
         </div>
-        {!award ? <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>ยังไม่มีผล — ลูกค้าตัดสินแล้วมาบันทึกที่นี่ (ได้งาน = ออกใบแจ้งจัดทำให้โรงงานได้ทันที)</div> : (
+        {!award ? <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{tr("ยังไม่มีผล — ลูกค้าตัดสินแล้วมาบันทึกที่นี่ (ได้งาน = ออกใบแจ้งจัดทำให้โรงงานได้ทันที")})</div> : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: '0 16px', alignItems: 'start' }}>
             <div>
               {row('วันที่ตัดสิน', award.decided_at ? fmtDate(award.decided_at) : '—')}
               {row('ราคาชิ้น', award.unit_price != null ? `${fmtN(award.unit_price, 2)} THB/pc` : '—')}
               {row('ราคาแม่พิมพ์/JIG', award.tooling_price != null ? `${fmtN(award.tooling_price, 2)} THB` : '—')}
-              {row('Volume ที่ใช้คิด', award.annual_volume != null ? `${fmtN(award.annual_volume)} ชิ้น/ปี` : '—')}
+              {row('Volume ที่ใช้คิด', award.annual_volume != null ? `${fmtN(award.annual_volume)} ${tr("ชิ้น/ปี")}` : '—')}
               {row('ยอดขาย/ปี', sales == null ? <span style={{ color: statusColor('warn') }}>{tr('คิดไม่ได้ — ขาด volume หรือราคา')}</span> : `${fmtN(sales, 2)} THB`)}
               {award.outcome === 'lost' && row('เหตุผล', award.loss_reason)}
               {award.outcome === 'awarded' && row('PO / TO', `${award.po_no || '—'} / ${award.to_no || '—'}`)}
@@ -631,7 +629,7 @@ function RfqSheet({ rfq, award, parts, mainParts, npi, canEdit, canAward, canAss
             <div>
               {award.production_order_no ? (<>
                 {row('ใบแจ้งจัดทำ', <b>{award.production_order_no}</b>)}
-                {row('ออกเมื่อ / โดย', `${award.production_order_issued_at ? fmtDate(award.production_order_issued_at) : '—'} · ${award.production_order_issued_by || '—'}${award.reprint_count ? ` · พิมพ์ซ้ำ ${award.reprint_count} ครั้ง` : ''}`)}
+                {row('ออกเมื่อ / โดย', `${award.production_order_issued_at ? fmtDate(award.production_order_issued_at) : '—'} · ${award.production_order_issued_by || '—'}${award.reprint_count ? ` · ${tr("พิมพ์ซ้ำ")} ${award.reprint_count} ${tr("ครั้ง")}` : ''}`)}
                 {drift.length > 0 && <div style={{ fontSize: 12, color: statusColor('warn'), fontWeight: 700, marginTop: 4 }}>{tr('⚠️ ข้อมูลปัจจุบันต่างจากใบที่ออกไปแล้ว:')} {drift.join(' · ')} {tr('— พิมพ์ซ้ำจะได้ใบเดิม (เลขเดียวกันต้องเนื้อเดียวกัน)')}</div>}
               </>) : award.outcome === 'awarded'
                 ? <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{tr('ยังไม่ออกใบแจ้งจัดทำ — ออกแล้วระบบจดเลขที่ + เนื้อใบไว้ (รอยต่อไปโรงงาน · เลข SAP Material ออกทีหลังโดยคนเปิดใน SAP)')}</div>
@@ -664,12 +662,12 @@ function ReportTab({ rfqs, awards, onOpen }) {
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
         <span className="filter-label">{tr('ปีที่ตัดสิน')}</span>
         <select value={year} onChange={e => setYear(e.target.value)} style={{ width: 'auto', minWidth: 120 }}><option value="">{allOf('ปี')}</option>{years.map(y => <option key={y} value={y}>{tr(y)}</option>)}</select>
-        <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{awards.length - rows.length > 0 ? `ซ่อน ${awards.length - rows.length} รายการจากปีอื่น` : ''}</span>
+        <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{awards.length - rows.length > 0 ? `${tr("ซ่อน")} ${awards.length - rows.length} ${tr("รายการจากปีอื่น")}` : ''}</span>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 10, alignItems: 'start', marginBottom: 12 }}>
         <Kpi label={tr('ตัดสินแล้ว (ใบ)')} value={s.total} />
-        <Kpi label={tr('ได้งาน')} value={`${s.awarded} ใบ · ${fmtN(s.sales.awarded, 0)} THB/ปี`} tone="good" />
-        <Kpi label={tr('ไม่ได้งาน')} value={`${s.lost} ใบ · ${fmtN(s.sales.lost, 0)} THB/ปี`} tone="bad" />
+        <Kpi label={tr('ได้งาน')} value={`${s.awarded} ${tr("ใบ")} · ${fmtN(s.sales.awarded, 0)} THB/${tr("ปี")}`} tone="good" />
+        <Kpi label={tr('ไม่ได้งาน')} value={`${s.lost} ${tr("ใบ")} · ${fmtN(s.sales.lost, 0)} THB/${tr("ปี")}`} tone="bad" />
         <Kpi label={tr('แม่พิมพ์ (ได้ / เสีย)')} value={`${fmtN(s.tooling.awarded, 0)} / ${fmtN(s.tooling.lost, 0)}`} />
       </div>
       {s.unknownSales > 0 && <WarnBar color="var(--amber)">{s.unknownSales} {tr('ใบคิดยอดขายไม่ได้ (ขาด volume หรือราคา) — ยอดรวมข้างบนไม่รวมใบเหล่านี้')}</WarnBar>}

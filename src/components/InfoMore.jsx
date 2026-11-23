@@ -72,7 +72,7 @@ export default function InfoMore({
         aria-expanded={open}
         style={{
           marginLeft: lead ? 6 : 0, padding: '1px 7px', borderRadius: 'var(--r-md)', cursor: 'pointer',
-          border: `1px solid var(--border2)`, background: 'var(--bg3)',
+          border: `1px solid var(--border2)`, background: 'var(--bg3-surf)',
           color: 'var(--muted)', fontSize: Math.max(11, size - 1.5), fontWeight: 700,
           whiteSpace: 'nowrap', verticalAlign: 'middle',
         }}>
@@ -111,5 +111,35 @@ export function Why({ msg, what, how, tone = 'warn', size = 11, style }) {
         style={{ marginLeft: 5, padding: 0, border: 'none', background: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: size, lineHeight: 1 }}>{MORE_MARK}</button>}
       {open && h && <div style={{ color: 'var(--text2)', marginTop: 2 }}>{h}</div>}
     </div>
+  );
+}
+
+/* ── ⓘ MoreMark — เครื่องหมาย "มีของให้อ่านต่อ" ตัวจิ๋ว ใช้แทรกกลางบรรทัดได้
+   (2026-11-18 · คำสั่ง user *"ข้อความสีเทาแบบนั้นอยากให้เป็น tooltip เพื่ออ่านมากกว่าโชว์มาเยอะๆแบบนี้"*)
+
+   ต่างจาก `InfoMore` (กล่องกาง มีหัวข้อ) และ `Why` (บรรทัดสถานะ สีเตือน) —
+   ตัวนี้คือ **ⓘ ตัวเดียวต่อท้ายข้อความที่ย่อแล้ว** สำหรับจุดที่ของเดิมเป็นย่อหน้าเทาลอยๆ
+
+   🔴 ทำไมไม่ใช้ `title=` เปล่าๆ: UI-CONVENTIONS §6.10 — **จอสัมผัส/จอ TV ไม่มีเมาส์**
+      ⇒ ต้องมี "ทางกดเปิด" ควบคู่ไปกับ tooltip เสมอ ไม่งั้นบนแท็บเล็ตหน้างาน = ข้อความหายไปเลย
+   🔴 ของที่ห้ามพับยังห้ามเหมือนเดิม (ตัวเลข/ที่มาสูตร · คำเตือนสถานะจริง · ป้ายกันอ้างเกินจริง)
+      — ดูตารางใน §6.10 · ตัวนี้ไม่ได้ผ่อนกฎข้อนั้น
+
+   ใช้:  <span title={rest}>หัวข้อสั้น <MoreMark text={rest} /></span>   // title ที่พ่อ = hover ได้ทั้งบรรทัด
+         ...หรือปล่อยให้ MoreMark ถือ title เองก็ได้ (ไม่ส่ง title ที่พ่อ) */
+export function MoreMark({ text = '', size = 11 }) {
+  const [open, setOpen] = useState(false);
+  const t = String(text || '');
+  if (!t) return null;
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open}
+        title={t} aria-label={tr('อ่านเพิ่ม')}
+        style={{
+          padding: 0, border: 'none', background: 'none', color: 'inherit', opacity: 0.75,
+          cursor: 'pointer', fontSize: Math.max(11, size), lineHeight: 1, verticalAlign: 'baseline',
+        }}>{open ? '▴' : MORE_MARK}</button>
+      {open && <span style={{ color: 'var(--text2)' }}> {t}</span>}
+    </>
   );
 }

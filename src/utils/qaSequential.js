@@ -46,7 +46,11 @@ export function pieceResult(judgements) {
  *   code: string             รหัสเหตุผลสำหรับป้ายบนจอ (ดู seqLabel)
  * }}
  */
-export function evalSequence(pieces = [], actions = []) {
+export function evalSequence(pieces = [], actions = [], { minPieces = 1 } = {}) {
+  /* 🔢 n ต่อรอบ (qa_fme_part_rules.sample_n · 19/11 คำสั่ง user · เลือก "n = ขั้นต่ำ")
+     · รอบ 1 ยังไม่เคยตก: ต้องผ่านติดกัน n ชิ้น (n=1 = ชิ้นแรกผ่าน = ยอมรับ = พฤติกรรมเดิมเป๊ะ)
+     · หลังตก/หลัง action: ต้องผ่านติดกัน max(2, n) · กฎตกสะสม 2 = alarm ไม่เปลี่ยน */
+  const n = Math.max(1, Math.min(50, Math.floor(Number(minPieces) || 1)));
   const ps = [...(pieces || [])].filter(p => p && (p.result === 'pass' || p.result === 'fail'))
     .sort((a, b) => (a.piece_no ?? 0) - (b.piece_no ?? 0));
   const actionRounds = new Set((actions || []).map(a => Number(a.round_no)).filter(Number.isFinite));
@@ -54,9 +58,11 @@ export function evalSequence(pieces = [], actions = []) {
 
   let round = 1, fails = 0, streak = 0, inRound = 0, alarmCount = 0;
   let code = 'start';
+  const needNow = () => (round === 1 && fails === 0 ? n : Math.max(SEQ_RULE.PASSES_TO_ACCEPT, n));
   const out = (state, extra = {}) => ({
     state, round, nextPiece: maxPiece + 1, piecesInRound: inRound, failsInRound: fails, passStreak: streak,
-    alarmCount, alarmRound: state === 'await_action' ? round : null, acceptedBy: null, code, ...extra,
+    alarmCount, alarmRound: state === 'await_action' ? round : null, acceptedBy: null, code,
+    minPieces: n, need: needNow(), ...extra,
   });
 
   // ด่านความสอดคล้อง: ชิ้นของรอบ r (>1) ต้องมี action ปิดทุกรอบก่อนหน้า ไม่งั้นถือว่าข้อมูลผิด
@@ -76,9 +82,16 @@ export function evalSequence(pieces = [], actions = []) {
     inRound++;
     if (p.result === 'pass') {
       streak++;
-      if (round === 1 && inRound === 1) { code = 'first_pass'; return out('accepted', { acceptedBy: 'first_pass', nextPiece: maxPiece + 1 }); }
-      if (streak >= SEQ_RULE.PASSES_TO_ACCEPT) { code = 'two_passes'; return out('accepted', { acceptedBy: 'two_passes' }); }
-      code = round === 1 ? 'pass_need_one_more' : 'after_action_pass_need_one_more';
+      if (round === 1 && fails === 0) {
+        if (streak >= n) {
+          code = n === 1 ? 'first_pass' : 'n_passes';
+          return out('accepted', { acceptedBy: n === 1 ? 'first_pass' : 'n_passes', nextPiece: maxPiece + 1 });
+        }
+        code = 'pass_need_n'; continue;
+      }
+      if (streak >= Math.max(SEQ_RULE.PASSES_TO_ACCEPT, n)) { code = 'two_passes'; return out('accepted', { acceptedBy: 'two_passes' }); }
+      code = n > SEQ_RULE.PASSES_TO_ACCEPT ? 'pass_need_n'
+        : (round === 1 ? 'pass_need_one_more' : 'after_action_pass_need_one_more');
     } else {
       fails++; streak = 0;
       const alarm = round === 1 ? fails >= SEQ_RULE.FAILS_TO_ALARM : true;
@@ -102,15 +115,20 @@ export function evalSequence(pieces = [], actions = []) {
 export function seqLabel(seq) {
   if (!seq) return '';
   const n = seq.nextPiece;
+  const need = seq.need ?? SEQ_RULE.PASSES_TO_ACCEPT;
   switch (seq.code) {
-    case 'start': return `หยิบชิ้นที่ 1 ไล่ตรวจทุกจุด — ผ่านหมด = ยอมรับได้เลย`;
+    case 'start': return (seq.minPieces ?? 1) > 1
+      ? `รอบนี้ต้องตรวจอย่างน้อย ${seq.minPieces} ชิ้น — หยิบชิ้นที่ 1 ไล่ตรวจทุกจุด`
+      : `หยิบชิ้นที่ 1 ไล่ตรวจทุกจุด — ผ่านหมด = ยอมรับได้เลย`;
     case 'first_pass': return 'ชิ้นแรกผ่านทุกจุด = ยอมรับ ✅';
-    case 'two_passes': return `ผ่านติดกัน ${SEQ_RULE.PASSES_TO_ACCEPT} ชิ้น = ยอมรับ ✅`;
+    case 'n_passes': return `ผ่านครบ ${seq.minPieces} ชิ้น = ยอมรับ ✅`;
+    case 'pass_need_n': return `ชิ้นที่ ${n - 1} ผ่าน — ผ่านติดกันแล้ว ${seq.passStreak}/${need} ชิ้น ต่อด้วยชิ้นที่ ${n}`;
+    case 'two_passes': return `ผ่านติดกัน ${need} ชิ้น = ยอมรับ ✅`;
     case 'fail_need_next': return `ชิ้นที่ ${n - 1} ตก — ต้องตรวจชิ้นที่ ${n} (ตกอีก = ต้องแก้ไข)`;
     case 'pass_need_one_more': return `ชิ้นที่ ${n - 1} ผ่าน — ต้องผ่านอีก 1 ชิ้นติดกันถึงยอมรับ (ชิ้นที่ ${n})`;
     case 'alarm_two_fails': return `🚨 ตกสะสม ${SEQ_RULE.FAILS_TO_ALARM} ชิ้นในรอบนี้ — ต้องแก้ไข (action) ก่อนตรวจต่อ`;
     case 'alarm_after_action': return `🚨 แก้ไขแล้วยังตกอีก (alarm ครั้งที่ ${seq.alarmCount}) — ต้องแก้ไขใหม่ก่อนตรวจต่อ`;
-    case 'after_action_start': return `แก้ไขแล้ว (รอบที่ ${seq.round}) — ต้องผ่านติดกัน ${SEQ_RULE.PASSES_TO_ACCEPT} ชิ้น เริ่มที่ชิ้นที่ ${n}`;
+    case 'after_action_start': return `แก้ไขแล้ว (รอบที่ ${seq.round}) — ต้องผ่านติดกัน ${need} ชิ้น เริ่มที่ชิ้นที่ ${n}`;
     case 'after_action_pass_need_one_more': return `ชิ้นที่ ${n - 1} ผ่าน — ต้องผ่านอีก 1 ชิ้น (ชิ้นที่ ${n}) ถึงยอมรับ`;
     case 'inconsistent_round': return '⚠️ ข้อมูลรอบไม่สอดคล้อง (มีชิ้นของรอบถัดไปก่อนบันทึก action) — แจ้ง admin';
     default: return '';

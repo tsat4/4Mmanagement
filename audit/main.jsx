@@ -2,6 +2,9 @@ import React, { Suspense, useState, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import { MemoryRouter } from 'react-router-dom'
 import { UserContext, Sidebar, NAV_ITEMS, NotificationBell } from '../src/App'
+import { markView } from '../src/utils/motion'
+/* 📈 harness ไม่ได้ผ่าน App.jsx (ตัวเรียก markView ตอนเปลี่ยน URL) ⇒ เปิดหน้าต่างอนิเมชันกราฟตอนโหลด ให้เห็นเหมือนแอปจริง */
+markView()
 /* เปิดทะเบียนเมนูให้ `audit/stdsweep.mjs` อ่าน — ตรวจว่า "คุณอยู่ตรงนี้" บนรางตรงกับหมวดจริงไหม
    (`alsoIn` = หน้าที่อยู่ 2 หมวดจริงๆ ต้องถูกไฮไลต์ทั้งคู่) */
 window.__NAV = NAV_ITEMS.map(i => ({ to: i.to, group: i.group, alsoIn: i.alsoIn || null }))
@@ -9,6 +12,7 @@ import ScrollHint from '../src/components/ScrollHint'
 import MobileNavBar from '../src/components/MobileNavBar'
 import ScanWedgeGuard from '../src/components/ScanWedgeGuard'
 import { ToastContainer } from '../src/components/Toast'
+import ConfirmHost from '../src/components/ConfirmHost'   // ❓ กล่องยืนยันกลาง (18/11) — ไม่มี = askConfirm ถอยไป window.confirm แล้ว sweep วัดกล่องในแอปไม่ได้
 import '../src/index.css'
 
 const mods = import.meta.glob('../src/pages/*.jsx')
@@ -17,6 +21,15 @@ const NAMES = Object.keys(mods).map(p => p.split('/').pop().replace('.jsx',''))
    /people-board = Dashboard view="people" · ไม่ใส่ไว้ = สวีปทุกตัวไม่เคยเห็นจอคนเลย */
 const VARIANTS = { 'Dashboard@people': { view: 'people' } }
 NAMES.push(...Object.keys(VARIANTS))
+
+/* 🛡️ หน้าที่ "โค้ดจริงอยู่หลังแท็บ/ปุ่มในเนื้อหน้า" — crashsweep กดได้แค่ปุ่ม**หัวเพจ** ⇒ เข้าไม่ถึง
+   (audit/README §โค้ดที่อยู่ในโมดัล/สาขาที่ต้องกดถึง · ถ้าสวีปกดไม่ถึง = ไม่มีด่านเลย)
+   ⇒ ใส่ "ที่อยู่เต็ม" เป็นชื่อหน้าไปเลย: `?p=` ตัดที่ `&` ให้เองตอนหา component
+      ส่วน query ที่เหลือ `ENTRY` ส่งเข้า MemoryRouter ⇒ `useTabParam` อ่านได้จริง
+   🔴 เพิ่มมุมมอง/แท็บใหม่ที่มีโค้ดเป็นของตัวเอง = เติมที่นี่ในคอมมิทเดียวกัน */
+NAMES.push(
+  'ProductionPlan&tab=lots',              // 🧲 แผนสั่งงานล็อต + ไทม์ไลน์ราง (PlanTimeline)
+)
 
 class EB extends React.Component {
   constructor(p){ super(p); this.state={e:null} }
@@ -109,7 +122,7 @@ function App(){
           ...(TV_SHELL ? { overflowX:'clip' } : { overflowY:'auto', overflowX:'hidden' }), minWidth:0 }}>
           <ScrollHint/><EB><Suspense fallback={<div>loading</div>}>{C ? <C {...(VARIANTS[name] || {})}/> : null}</Suspense></EB>
           {/* ToastContainer ต้องมีในหน้าปกติด้วย (05/10) — เดิมมีแค่ใน FeedbackLab ⇒ toast จากหน้าอื่น (เช่น "ขอบเขตนอกสังกัด" ของบอร์ด KPI) ไม่โผล่ ตรวจอัตโนมัติไม่ได้ */}
-          <ToastContainer/>
+          <ToastContainer/><ConfirmHost/>
         </main>
         {/* 📺 ?tvshell=1 — กรอบจอ TV (16/10) · แถบบน + body.esm-tv-shell เหมือนบัญชี display ในแอปจริง */}
         {TV_SHELL && <Suspense fallback={null}><TvShellHarness/></Suspense>}
@@ -133,7 +146,7 @@ const FeedbackLab = () => (
       {/* ⚠️ ต้องมี ToastContainer ใน harness ด้วย — ไม่งั้น `toast.error(...)` ไม่โผล่ที่ไหนเลย
           แล้วกฎ "ปฏิเสธไฟล์ต้องขึ้น toast บอกเหตุผล ห้ามเงียบ" จะตรวจอัตโนมัติไม่ได้
           (เจอ 22/09: เทสรายงานว่า 'ไม่มีข้อความเตือน' ทั้งที่โค้ดเรียก toast ถูกแล้ว) */}
-      <ToastContainer/>
+      <ToastContainer/><ConfirmHost/>
     </UserContext.Provider>
   </MemoryRouter>
 )
@@ -148,7 +161,7 @@ function BellLab(){
     <MemoryRouter initialEntries={[ENTRY]}>
       <UserContext.Provider value={{ ...CTX, role:'admin', sections:['PD1'], mtnTeams:[] }}>
         <EB><NotificationBell userId="x" role="admin" /></EB>
-        <ToastContainer/>
+        <ToastContainer/><ConfirmHost/>
       </UserContext.Provider>
     </MemoryRouter>
   )

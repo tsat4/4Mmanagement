@@ -27,6 +27,7 @@ import ScanModal from './ScanModal';   // 📷 สแกนป้ายแม่
 import { uploadOpts } from '../utils/storageUpload';
 import { tr } from '../utils/i18n';
 import { dieSetMats } from '../utils/dieSetMats'; // 🔨 ชุดแม่พิมพ์ทำได้ 2 MAT (งานคู่ RH/LH)
+import { askConfirm } from '../utils/askConfirm';
 
 const inp = { width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 13, boxSizing: 'border-box' };
 const btnPri = { background: 'var(--accent)', color: 'var(--accent-ink)', border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' };
@@ -172,7 +173,7 @@ export default function DieLayout({
       }
       return true;
     } catch (e) {
-      toast.error('ย้อนกลับไม่สำเร็จ: ' + (e.message || ''));
+      toast.error((tr('ย้อนกลับไม่สำเร็จ') + ': ') + (e.message || ''));
       await reload();          // ให้จอตรงกับ DB จริงเสมอ
       return false;
     }
@@ -186,7 +187,7 @@ export default function DieLayout({
     if (d) {
       setSelId(d.id);
       if (d.ext?.area_id && d.ext?.pos_x != null) setAreaId(d.ext.area_id);
-      else toast.info(`${d.machine_no} ยังไม่ได้วางบนผัง` + (canEdit ? ' — ✏️ แก้ผัง แล้ว 📍 วาง' : ''));
+      else toast.info(`${d.machine_no} ${tr("ยังไม่ได้วางบนผัง")}` + (canEdit ? ' — ✏️ แก้ผัง แล้ว 📍 วาง' : ''));
       // รอให้แผงวาดก่อนค่อยเลื่อน (เปลี่ยนผัง = รูปใหม่ · layout ขยับ)
       setTimeout(() => panelRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' }), 150);
     } else {
@@ -201,7 +202,7 @@ export default function DieLayout({
     if (snapForHist) hist.pushSnapshot(snapForHist); else hist.pushHistory();
     const { error } = await supabaseDR.from('equipment_die')
       .upsert({ machine_id: dieId, ...patch }, { onConflict: 'machine_id' });
-    if (error) { toast.error(missErr(error) ? MIGRATION_HINT : 'บันทึกตำแหน่งไม่สำเร็จ: ' + error.message); await reload(); return false; }
+    if (error) { toast.error(missErr(error) ? MIGRATION_HINT : (tr('บันทึกตำแหน่งไม่สำเร็จ') + ': ') + error.message); await reload(); return false; }
     patchDieExt(dieId, patch);
     return true;
   };
@@ -251,7 +252,7 @@ export default function DieLayout({
   };
 
   const removeFromMap = async (d) => {
-    if (!confirm(`เอา "${d.machine_no}" ออกจากผัง?\n(ตัวแม่พิมพ์/สถานะไม่ถูกลบ · กด Undo คืนได้)`)) return;
+    if (!await askConfirm(`${tr("เอา")} "${d.machine_no}" ${tr("ออกจากผัง?\\n(ตัวแม่พิมพ์/สถานะไม่ถูกลบ · กด Undo คืนได้")})`)) return;
     const ok = await writePlacement(d.id, { area_id: null, pos_x: null, pos_y: null });
     if (ok) toast.success('เอาออกจากผังแล้ว');
   };
@@ -289,7 +290,7 @@ export default function DieLayout({
         <b>{tr('⚠️ ยังใช้ผังจัดเก็บแม่พิมพ์ไม่ได้')}</b>
         <div style={{ marginTop: 4, lineHeight: 1.8 }}>
           {MIGRATION_HINT}<br />
-          หลัง apply แล้ว refresh หน้านี้ — จะสร้างผัง (ถ่ายรูปคลัง/พื้นที่วางแม่พิมพ์) แล้ววางหมุดแม่พิมพ์รายตัวได้ทันที
+          {tr("หลัง apply แล้ว refresh หน้านี้ — จะสร้างผัง (ถ่ายรูปคลัง/พื้นที่วางแม่พิมพ์) แล้ววางหมุดแม่พิมพ์รายตัวได้ทันที")}
         </div>
       </div>
     );
@@ -297,7 +298,7 @@ export default function DieLayout({
 
   const legendItems = [
     ...DIE_STATUSES.map(s => [s.color, `${s.icon} ${s.label}`]),
-    [DIE_STATUS_UNSET.color, `${DIE_STATUS_UNSET.icon} ยังไม่ระบุ`],
+    [DIE_STATUS_UNSET.color, `${DIE_STATUS_UNSET.icon} ${tr("ยังไม่ระบุ")}`],
     ['#ef4444', '🔧 มีใบซ่อม MO ค้าง (รอรับงาน = กระพริบ)'],
     ['#facc15', '🔍 ผลการค้นหา'],
   ];
@@ -339,16 +340,16 @@ export default function DieLayout({
       {/* บอกสถานะ link กับผังรวม — ห้ามเงียบ: ตีกรอบแล้วโซนบนผังรวมจะโชว์สถานะแม่พิมพ์ + คลิกเด้งมาหน้านี้ */}
       {area && mapZoneNames && !onFactoryMap && (
         <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 10 }}>
-          ผังนี้ยังไม่ถูกตีกรอบบนผังรวมโรงงาน — ไปที่ <b>{tr('ผังรวมโรงงาน → โหมดแก้ผัง')}</b> แล้วตีกรอบเลือกโซน
-          "🔨 <b>{area.name}</b>" (โซนบนผังรวมจะโชว์จำนวน/ใบซ่อมค้างของแม่พิมพ์ และคลิกเด้งเข้าผังนี้)
+          {tr("ผังนี้ยังไม่ถูกตีกรอบบนผังรวมโรงงาน — ไปที่")} <b>{tr('ผังรวมโรงงาน → โหมดแก้ผัง')}</b> {tr("แล้วตีกรอบเลือกโซน")}
+          "🔨 <b>{area.name}</b>" ({tr("โซนบนผังรวมจะโชว์จำนวน/ใบซ่อมค้างของแม่พิมพ์ และคลิกเด้งเข้าผังนี้")})
         </div>
       )}
 
       {/* ผลค้นหา */}
       {!!hits && (
-        <div style={{ background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 'var(--r-md)', padding: '8px 12px', marginBottom: 10, fontSize: 12.5 }}>
+        <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--accent)', borderRadius: 'var(--r-md)', padding: '8px 12px', marginBottom: 10, fontSize: 12.5 }}>
           {hits.length ? <>
-            พบ <b>{hits.length}</b> {tr('ตัว ·')}{' '}
+            {tr("พบ")} <b>{hits.length}</b> {tr('ตัว ·')}{' '}
             {hits.slice(0, 6).map(d => {
               const placed = d.ext?.area_id && d.ext?.pos_x != null;
               return (
@@ -369,7 +370,7 @@ export default function DieLayout({
         <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid #f59e0b', borderRadius: 'var(--r-md)', padding: '8px 12px', marginBottom: 10, fontSize: 12.5 }}>
           ✏️ <b>{tr('โหมดแก้ผัง')}</b> — {placingDie
             ? <>{tr('คลิกตำแหน่งบนรูปเพื่อวาง')} <b style={{ color: 'var(--accent)' }}>{placingDie.machine_no}</b> <button onClick={() => setPlacingId(null)} style={{ ...btnGhost, padding: '2px 8px', fontSize: 11.5, marginLeft: 6 }}>{tr('ยกเลิก')}</button></>
-            : <>เลือกแม่พิมพ์จากลิสต์ "ยังไม่ได้วางบนผัง" แล้วกด 📍 วาง · ลากหมุดเพื่อย้ายตำแหน่ง</>}
+            : <>{tr("เลือกแม่พิมพ์จากลิสต์ \"ยังไม่ได้วางบนผัง\" แล้วกด 📍 วาง · ลากหมุดเพื่อย้ายตำแหน่ง")}</>}
           <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
             <button onClick={hist.undo} disabled={!hist.canUndo || hist.busy} style={undoBtnStyle(hist.canUndo && !hist.busy)} title="Ctrl+Z">↩️ Undo</button>
             <button onClick={hist.redo} disabled={!hist.canRedo || hist.busy} style={undoBtnStyle(hist.canRedo && !hist.busy)} title="Ctrl+Y">↪️ Redo</button>
@@ -378,19 +379,19 @@ export default function DieLayout({
       )}
 
       {!areas.length ? (
-        <div style={{ background: 'var(--card)', border: '1px dashed var(--border)', borderRadius: 'var(--r-md)', padding: 40, textAlign: 'center', color: 'var(--muted)' }}>
+        <div style={{ background: 'var(--card-surf)', border: '1px dashed var(--border)', borderRadius: 'var(--r-md)', padding: 40, textAlign: 'center', color: 'var(--muted)' }}>
           <div style={{ fontSize: 34, marginBottom: 8 }}>🗺️</div>
           <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>{tr('ยังไม่มีผังจัดเก็บแม่พิมพ์')}</div>
           <div style={{ fontSize: 12.5, lineHeight: 1.8 }}>
-            ถ่ายรูปคลัง/พื้นที่วางแม่พิมพ์ (มุมสูงหรือมุมที่เห็นช่องวางชัด) → สร้างผังใหม่ → อัปโหลดรูป → วางหมุดแม่พิมพ์รายตัว<br />
-            จากนั้นค้นเลขแม่พิมพ์แล้วระบบจะชี้ว่าอยู่ตรงไหน + สีหมุดบอกสถานะ/ใบซ่อมค้าง
+            {tr("ถ่ายรูปคลัง/พื้นที่วางแม่พิมพ์ (มุมสูงหรือมุมที่เห็นช่องวางชัด) → สร้างผังใหม่ → อัปโหลดรูป → วางหมุดแม่พิมพ์รายตัว")}<br />
+            {tr("จากนั้นค้นเลขแม่พิมพ์แล้วระบบจะชี้ว่าอยู่ตรงไหน + สีหมุดบอกสถานะ/ใบซ่อมค้าง")}
           </div>
           {canEdit && <button onClick={() => setAreaForm({ mode: 'new' })} style={{ ...btnPri, marginTop: 14 }}>{tr('➕ สร้างผังจัดเก็บ')}</button>}
         </div>
       ) : (
         <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 330px', gap: 12, alignItems: 'start' }}>
           {/* ── ผัง ── */}
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 10 }}>
+          <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 10 }}>
             {!area?.image_url ? (
               <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', border: '1px dashed var(--border)', borderRadius: 'var(--r-md)' }}>
                 <div style={{ fontSize: 13, marginBottom: 10 }}>{tr('ยังไม่มีรูปผัง — อัปโหลดรูปคลัง/พื้นที่วางแม่พิมพ์')}</div>
@@ -470,7 +471,7 @@ export default function DieLayout({
           {/* ── แผงขวา ── */}
           <div style={{ display: 'grid', gap: 10 }}>
             {selDie ? (
-              <div ref={panelRef} style={{ background: 'var(--card)', border: '1px solid var(--accent)', borderRadius: 'var(--r-md)', padding: 12 }}>
+              <div ref={panelRef} style={{ background: 'var(--card-surf)', border: '1px solid var(--accent)', borderRadius: 'var(--r-md)', padding: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 6 }}>
                   <div style={{ fontSize: 13.5, fontWeight: 800, wordBreak: 'break-word', flex: 1 }}>{selDie.machine_no}</div>
                   <button onClick={() => setSelId(null)} style={{ ...btnGhost, padding: '3px 8px', fontSize: 12 }}>✕</button>
@@ -490,8 +491,8 @@ export default function DieLayout({
                         {setName && <>{tr('ชุด')} <b style={{ color: 'var(--text)' }}>{setName}</b>{e.op_seq != null && <> · OP{e.op_seq}</>}<br /></>}
                         {feedLine && <>{tr('🏭 ป้อนไลน์ผลิต')} <b style={{ color: 'var(--text)' }}>{feedLine}</b>{dieSet?.mat_no ? ` (MAT ${dieSet.mat_no})` : ''}<br /></>}
                         {selDie.line_name && <>{tr('เครื่องปั๊ม')} {selDie.line_name} · </>}
-                        ตัน {e.tonnage_ton ?? '—'} · shot {Number(e.shot_total || 0).toLocaleString()} ·
-                        เจียร {e.regrind_count || 0}{e.regrind_limit ? `/${e.regrind_limit}` : ''}
+                        {tr("ตัน")} {e.tonnage_ton ?? '—'} · shot {Number(e.shot_total || 0).toLocaleString()} ·
+                        {tr("เจียร")} {e.regrind_count || 0}{e.regrind_limit ? `/${e.regrind_limit}` : ''}
                         {regrindOver(e) && <b style={{ color: '#ef4444' }}> {tr('⚠️ เจียรครบเกณฑ์แล้ว')}</b>}
                       </div>
 
@@ -535,16 +536,16 @@ export default function DieLayout({
                 })()}
               </div>
             ) : (
-              <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 12, fontSize: 12.5, color: 'var(--muted)' }}>
-                แตะหมุดบนผังเพื่อดูรายละเอียด/เปลี่ยนสถานะแม่พิมพ์ · หรือพิมพ์เลขแม่พิมพ์ในช่องค้นหา แล้วหมุดที่ตรงจะไฮไลต์สีเหลือง
+              <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 12, fontSize: 12.5, color: 'var(--muted)' }}>
+                {tr("แตะหมุดบนผังเพื่อดูรายละเอียด/เปลี่ยนสถานะแม่พิมพ์ · หรือพิมพ์เลขแม่พิมพ์ในช่องค้นหา แล้วหมุดที่ตรงจะไฮไลต์สีเหลือง")}
               </div>
             )}
 
             {/* worklist — แม่พิมพ์ที่ยังไม่ได้วางบนผังไหนเลย ห้ามซ่อน */}
             {unplaced.length > 0 && (
-              <div style={{ background: 'var(--card)', border: '1px solid #f59e0b', borderRadius: 'var(--r-md)', padding: 12 }}>
+              <div style={{ background: 'var(--card-surf)', border: '1px solid #f59e0b', borderRadius: 'var(--r-md)', padding: 12 }}>
                 <div style={{ fontSize: 12.5, fontWeight: 800, color: '#f59e0b', marginBottom: 6 }}>
-                  ⚠️ ยังไม่ได้วางบนผัง {unplaced.length} ตัว
+                  ⚠️ {tr("ยังไม่ได้วางบนผัง")} {unplaced.length} {tr("ตัว")}
                 </div>
                 <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 6 }}>
                   {canEdit ? (edit ? 'กด 📍 แล้วคลิกตำแหน่งบนรูป' : 'กด "✏️ แก้ผัง" ก่อน แล้วไล่วางทีละตัว') : 'ให้ผู้มีสิทธิ์แก้ไขเครื่องจักรเป็นคนวาง'}
@@ -554,7 +555,7 @@ export default function DieLayout({
                     .filter(d => !hitIds || hitIds.has(d.id))
                     .slice(0, 60)
                     .map(d => (
-                      <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '4px 8px' }}>
+                      <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '4px 8px' }}>
                         <span onClick={() => setSelId(d.id)} title={d.machine_no}
                           style={{ flex: 1, fontSize: 11.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}>
                           {d.machine_no}
@@ -620,7 +621,7 @@ function AreaFormModal({ mode, area, onClose, onSaved }) {
         if (hit) {
           const { error: uerr } = await supabase.from('factory_line_regions')
             .update({ line_name: name.trim() }).eq('id', hit.id);
-          if (uerr) toast.error('เปลี่ยนชื่อผังแล้ว แต่กรอบบนผังรวมโรงงานยังเป็นชื่อเดิม — ไปแก้ที่ผังรวมเอง (' + uerr.message + ')');
+          if (uerr) toast.error((tr('เปลี่ยนชื่อผังแล้ว แต่กรอบบนผังรวมโรงงานยังเป็นชื่อเดิม — ไปแก้ที่ผังรวมเอง') + ' (') + uerr.message + ')');
           else toast.info('เปลี่ยนชื่อกรอบบนผังรวมโรงงานตามให้แล้ว');
         } else if (rerr) {
           toast.error('เปลี่ยนชื่อผังแล้ว แต่เช็คกรอบบนผังรวมโรงงานไม่สำเร็จ — ถ้าเคยตีกรอบไว้ให้ไปแก้ชื่อที่ผังรวมด้วย');
@@ -631,13 +632,13 @@ function AreaFormModal({ mode, area, onClose, onSaved }) {
     }
   };
   const del = async () => {
-    if (!confirm(`ลบผัง "${area.name}"?\nหมุดแม่พิมพ์บนผังนี้จะกลายเป็น "ยังไม่ได้วาง" (ตัวแม่พิมพ์ไม่ถูกลบ)`)) return;
+    if (!await askConfirm(`${tr("ลบผัง")} "${area.name}"?\n${tr("หมุดแม่พิมพ์บนผังนี้จะกลายเป็น \"ยังไม่ได้วาง\" (ตัวแม่พิมพ์ไม่ถูกลบ")})`)) return;
     // soft delete ผัง + ปลดหมุดของแม่พิมพ์ที่ผูกอยู่ (ไม่งั้นค้างชี้ผังที่มองไม่เห็น)
     const { error } = await supabaseDR.from('die_storage_areas').update({ is_active: false }).eq('id', area.id);
     if (error) return toast.error(error.message);
     const { error: e2 } = await supabaseDR.from('equipment_die')
       .update({ area_id: null, pos_x: null, pos_y: null }).eq('area_id', area.id);
-    if (e2) toast.error('ลบผังแล้ว แต่ปลดหมุดไม่สำเร็จ: ' + e2.message);   // ห้ามเงียบ
+    if (e2) toast.error((tr('ลบผังแล้ว แต่ปลดหมุดไม่สำเร็จ') + ': ') + e2.message);   // ห้ามเงียบ
     else toast.success('ลบผังแล้ว');
     onSaved(null);
   };
@@ -645,7 +646,7 @@ function AreaFormModal({ mode, area, onClose, onSaved }) {
   const lbl = { display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text2)', marginBottom: 4 };
   return (
     <div className="modal-scroll" /* ⚠️ ฟอร์มกรอกข้อมูล — ไม่ปิดจาก backdrop กันเผลอแตะแล้วข้อมูลหาย (UI-CONVENTIONS §5) */ /* modal-scroll = เลื่อนถึงปุ่มล่างได้เมื่อจอเตี้ย/คีย์บอร์ดเด้ง (UI-CONVENTIONS §4 · index.css) */ style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'grid', placeItems: 'center', zIndex: 2000, padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(440px, 96vw)' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(440px, 96vw)' }}>
         <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 14 }}>{mode === 'new' ? tr('➕ สร้างผังจัดเก็บแม่พิมพ์') : tr('⚙️ แก้ไขผังจัดเก็บ')}</div>
         <div style={{ display: 'grid', gap: 10 }}>
           <div><label style={lbl}>{tr('ชื่อผัง')} <span style={{ color: '#ef4444' }}>*</span></label>

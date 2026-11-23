@@ -1414,5 +1414,53 @@ Run │ ① ก่อนเรียกช่าง │ ② MTTA │ ③ TTR │
   · ฝั่งสรุป `mtnOwnerSeries()` (`utils/kpiAuto.js`) · RPC `kpi_mtn_rollup` ส่ง `mb_yes_min`/`mb_no_min`/`mb_unset_min`
   · ด่าน `dt-mb-flag-three-state` + เทส "ธงไม่แตะเลขทางการ" ใน `kpiAuto.test.mjs`
 
+---
+
+## 16. 🤝 **Customer Satisfaction (Q&D)** — ทะเบียนบอกอะไรเรื่อง "แยก Quality / Delivery" (2026-11-16)
+
+> งานที่ user สั่ง: *"customer sat ถ้าแยก Quality-Delivery ได้ ตอนกดเข้าไป รวมถึงตรงหน้าการกรอกข้อมูล"*
+> วิธีหา: อ่าน **ทะเบียน `kpi_standard_items` ปี 2026 สดจาก Main** (`ewhdfqwfwofivojtsizn`) ไม่ใช่เดาจากชื่อ
+
+### 16.1 ที่ทะเบียนเขียนไว้ (ทุกแถวที่มีคำ satisfaction · 17 แถว)
+| std_unit | seq | topic | Formula | Fixed/Choice |
+|---|---|---|---|---|
+| Head of SPG · GM Plant · GM Plant (Tooling) · **Production** · Engineering · **QA** · Logistic & Sales · **Die Maintenance** · Tooling · Marketing | 2–4 | **`Customer Satisfaction (Q&D)`** | `(Actual Score/Total Score) x 100` | `fixed` |
+| Maintenance · RDPP · CSC · Accounting · Purchase · QSM | 2–3 | **`Internal Satisfaction`** (QSM พิมพ์ `Internal satisfaction`) | สูตรเดียวกัน | `fixed` |
+| HRM | 2.4 | `General Affair satisfaction` | สูตรเดียวกัน | – (ข้อย่อย) |
+
+**🔴 ข้อสรุปที่ชี้ขาดงานนี้: ทะเบียน "ไม่มีข้อย่อย" ของ Q และ D**
+ต่างจาก Safety ที่มีข้อย่อย 4.1–4.5 จริง (§13.1) — `(Q&D)` คือ *ขอบเขตของแบบสอบถาม* (คุณภาพ + การส่งมอบ)
+**1 หัวข้อ · 1 คะแนน · 1 น้ำหนัก** · เป้าใบ P4 = Commit ≥95.00 / Target 100.00 % (§13.1 ข้อ 3)
+⇒ ที่ทำได้โดยไม่ขัดทะเบียน = **แยก "ตัวตั้ง-ตัวหาร" ของสูตรเดิมเป็น 2 ขา** แล้วค่ารวม = `(ΣActual ÷ ΣTotal) × 100`
+**ห้ามเฉลี่ย % ของ 2 ขา** (ตัวหารไม่เท่ากัน) · **ห้ามแตกเป็น KPI 2 ตัว/2 คะแนน**
+📄 โครงที่ลง + กฎรายข้อ → `docs/modules/obeya-kpi-board.md §Customer / Internal Satisfaction — แยก 2 ขา`
+
+### 16.2 2 เรื่องที่ไล่เจอในฐานพร้อมกัน (ข้อมูล ไม่ใช่กฎ — เก็บไว้เป็นหลักฐาน)
+1. **ระดับ ทั้งโรงงาน มี Customer Satisfaction 2 แถว active ซ้อนกัน** (ชื่อต่างกันแค่ `(Q&D)`)
+   `11300685…` (ผูก std item `477be2fb` · 14/10 · กรอก 10 เดือน) และ `5c5a7e3d…` (19/10 ตาม migration §ของ board doc · กรอก 9 เดือน)
+   ม.ค.–ส.ค. ค่าเท่ากัน · **ก.ย. ขัดกัน 100 vs 93.75** · ต.ค. มีแค่แถวแรก
+   ⇒ ลงด่านจับคลาสนี้แล้ว (`utils/kpiDupDefs.js` + แถบเตือนบน 📑 KPI รายเดือน) · **ยังไม่ลบแถวไหน — รอ user ตัดสิน**
+2. **QA ไม่มีแถว KPI ในระบบเลยสักข้อ** ทั้งที่ทะเบียนบังคับ `Customer Satisfaction (Q&D)` + `Customer Claim`
+   + `Incoming Quality Rate` + `Warranty claim` (§15.2) ⇒ ไม่ใช่บั๊กการแสดงผล แต่คือ**ยังไม่มีใครตั้ง**
+   ⇒ จอเขียนบอกแล้วว่า "ยังไม่ได้ผูกหน่วยงานมาตรฐาน / ข้อบังคับที่ยังไม่ได้หยิบมีข้อไหน" + พาไป 📘 KPI Standard
+   **ระบบไม่สร้างแถวให้เอง** (การเลือก KPI ต่อหน่วยงานเป็นการตั้งค่าของคน)
+
+---
+
 **สิ่งที่เอกสารนี้ "ไม่มี" จริงๆ (ตรวจซ้ำแล้ว):** เกณฑ์ Safety รายชั้น (`*Refer to safety announcement` ทุกหน่วย) · เกณฑ์ QCC/Engineering Day/Kaizen
 (`*Refer to activity announcement`) · นิยาม "ผ่านอบรม" ของ TS Academy · ตัวหารวัน (Days) ของ DSI — 4 อย่างนี้อยู่ในประกาศแยกที่ยังไม่ได้รับ
+
+### 16.3 ✅ โครงที่ลงจริง (16/11 · หลังคำสั่ง user "ต้อง single source of truth · ค่าของโรงงานต้องมีค่าเดียว ดึงไปใช้เอา")
+
+**ไม่มีกลไกใหม่** — ใช้รางเดียวกับ KPI การเงิน (DL&OH):
+- ค่าผลลัพธ์: `kpi_catalog.value_scope='plant'` ของ catalog `9a7e3d90` (มีอยู่แล้วก่อน 16/11)
+  ⇒ นิยาม 7 แถว (โรงงาน · QA · PD1-4 · Die MTN) อ่านค่าจาก **แถวระดับโรงงานแถวเดียว**
+- ตัวเลขดิบ: ตัวแปรฐาน `level:'plant'` 4 ช่อง `csat_q_actual` · `csat_q_total` · `csat_d_actual` · `csat_d_total`
+  (`kpi_base_inputs` · ขอบเขต ทั้งโรงงาน · กรอกที่แผง 💰 ตัวเลขฐาน)
+- ค่ารวม: สูตร `csat_qd_pct` = `(Σคะแนนที่ได้ ÷ Σคะแนนเต็ม) × 100` = **สูตรทางการของทะเบียนเป๊ะ**
+  🔴 **ห้ามเฉลี่ย % ของ 2 ขา** (Q 21/24 = 87.5% · D 6/8 = 75% ⇒ ทางการ 84.375% · เฉลี่ยได้ 81.25 = เลขที่ไม่มีอยู่จริง)
+- ขา Q/D: `parts: ['csat_q_pct','csat_d_pct']` → `formulaPartSeries()` วาดคนละกราฟ พร้อมสูตรของตัวเอง
+- **ไม่ backfill**: 87.50% ของเดือนที่กรอกไว้ แกะไม่ได้ว่ามาจาก 21/24 หรือ 7/8 ⇒ เดือนเก่ายังเป็นค่ากรอกมือ (ป้าย ✍️)
+- `Internal Satisfaction` (`value_scope='own'`) = ใบคนละใบรายหน่วย **ยังกรอกมือรายหน่วย ห้ามรวมค่ากลาง**
+
+📄 กฎเต็ม + กลไกที่ถอนออก → `docs/modules/obeya-kpi-board.md` §โครงที่ลง

@@ -16,10 +16,10 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import useIsMobile from '../utils/useIsMobile';
 import useLang from '../utils/useLang';
 import { stripIcon } from './Icon';
+import { prefersReduced } from '../utils/motion';
+import useScrollEdges from '../utils/useScrollEdges';   // ↔️ 18/11: มือถือ แถบที่เลื่อนได้ต้องบอกว่ายังมีต่อ (กฎ Closure)   // 18/11: ของกลางเรื่องขยับ (reduced-motion / perf lite)
 
 const IND_EASE = 'cubic-bezier(.4,1.2,.45,1)';
-const prefersReduced = () => typeof window !== 'undefined' && typeof window.matchMedia === 'function'
-  && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export default function TabBar({ tabs, value, onChange, size, audit = false, className, style, right }) {
   const isMobile = useIsMobile();
@@ -62,14 +62,19 @@ export default function TabBar({ tabs, value, onChange, size, audit = false, cla
     if (Math.abs(sc.scrollLeft - want) > 2) sc.scrollTo({ left: want, behavior: animOn && !prefersReduced() ? 'smooth' : 'auto' });
   }, [value, sig, animOn]);
 
+  const edges = useScrollEdges(scrollRef, [sig, isMobile]);
   const moving = animOn && !prefersReduced();
   const slide = moving ? `transform .28s ${IND_EASE}, width .28s ${IND_EASE}, height .28s ${IND_EASE}` : 'none';
   const fs = size === 'sm' ? 12.5 : 13.5;
   const pad = size === 'sm' ? '6px 10px' : '8px 12px';
   const barAttr = audit ? { 'data-tabbar': '1' } : { 'data-tabbar-inpage': '1' };
 
-  return (
-    <div ref={scrollRef} className={className} style={{ overflowX: isMobile ? 'auto' : 'visible', paddingTop: 2, paddingBottom: 2, ...style }}>
+  /* 📱 ขอบจางซ้าย/ขวาเมื่อแถบล้นจอ (วัดจริง 390px: แท็บสุดท้ายที่เห็นโผล่แค่ 5% ⇒ ไม่มีอะไรบอกว่าปัดต่อได้)
+     🔴 โครง DOM ต้องนิ่ง: มือถือ = wrapper เสมอ (ไม่ใช่ "มี wrapper เฉพาะตอนล้น") — ไม่งั้นกล่องเลื่อนถูกสร้างใหม่ตอนสลับ
+     แล้ว listener/ResizeObserver ค้างอยู่กับ element เก่าที่ถูกถอด (วัดได้ 0 ⇒ ขอบจางหายทันทีที่เริ่มเลื่อน · เจอจริง 18/11)
+     จอคอม overflow visible ⇒ คืน root เดิมเป๊ะ ไม่มี wrapper (desktopdiff 0) */
+  const bar = (
+    <div ref={scrollRef} className={isMobile ? undefined : className} style={{ overflowX: isMobile ? 'auto' : 'visible', paddingTop: 2, paddingBottom: 2, ...(isMobile ? null : style) }}>
       <div ref={rowRef} {...barAttr} style={{
         position: 'relative', display: 'flex', gap: 2, borderBottom: '1px solid var(--border)', alignItems: 'center',
         flexWrap: isMobile ? 'nowrap' : 'wrap', width: isMobile ? 'max-content' : 'auto',
@@ -99,6 +104,14 @@ export default function TabBar({ tabs, value, onChange, size, audit = false, cla
         })}
         {right && <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>{right}</span>}
       </div>
+    </div>
+  );
+  if (!isMobile) return bar;
+  return (
+    <div className={className} style={{ position: 'relative', minWidth: 0, ...style }}>
+      {bar}
+      {edges.left && <span aria-hidden="true" className="hs-fade-l" />}
+      {edges.right && <span aria-hidden="true" className="hs-fade-r" />}
     </div>
   );
 }

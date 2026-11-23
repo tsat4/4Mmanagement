@@ -34,6 +34,7 @@ import { resolveLine } from '../utils/qrCode';
 import { toHierarchicalOptions, getLineFamilyNames } from '../utils/lineHierarchy';
 import { inSectionScope, scopedLines } from '../utils/sectionScope';
 import { isSupportUnit } from '../utils/unitKind';
+import { useProductionLinesState } from '../utils/useProductionLines';
 
 import { tr } from '../utils/i18n';
 /** กรองไลน์ตาม scope มาตรฐาน — leader = ครอบครัวไลน์ตัวเอง · อื่น = ตาม sections
@@ -64,7 +65,13 @@ export function scopeLines(lines, { role, lineId, sections, scopeIdx = null } = 
 
 /** ตัวเลือกไลน์แบบพร้อมใช้ — [{ value, label, depth, retired }] เรียงตามลำดับชั้น
  *  @param current ค่าที่เลือกอยู่ (ชื่อไลน์) — ถ้าไม่อยู่ในลิสต์จะถูกเติมกลับเข้าไป */
-export function lineOptions(lines, { role, lineId, sections, scopeIdx = null, current, includeRetired = false, includeSupport = false, valueKey = 'name' } = {}) {
+export function lineOptions(lines, { role, lineId, sections, scopeIdx = null, current, includeRetired = false, includeSupport = false, valueKey = 'name',
+  /* 🔴 ทะเบียน**เต็ม** + สถานะการโหลด — ใช้ตัดสิน "เหตุผลที่ค่าเดิมไม่อยู่ในลิสต์" เท่านั้น
+     หน้าที่ส่ง `lines` ที่กรองมาแล้ว (เช่นจอวางแผนกรองตามส่วนงาน) ทำให้หาไม่เจอ
+     แล้วเดิมสรุปว่า "⚠ ไม่มีในทะเบียนไลน์" ทั้งที่ไลน์มีอยู่จริง — คนไปตามหาทะเบียนผิดที่
+     (เจอจริง 13/11: เลือก PD1 แล้วช่องโชว์ "Assembly Line B - FORD ⚠ ไม่มีในทะเบียนไลน์"
+      ทั้งที่ไลน์นั้นอยู่ในทะเบียน ส่วนงาน PD2 ใช้งานปกติ) */
+  allLines = null, registryReady = true } = {}) {
   // `scopeIdx` (ดัชนีผังจาก UserContext · 09/11) — ไม่ส่ง = พฤติกรรมเดิมเป๊ะ
   const scoped = scopeLines(lines || [], { role, lineId, sections, scopeIdx });
   const live = includeRetired ? scoped : scoped.filter(l => l.is_active !== false);
@@ -75,13 +82,16 @@ export function lineOptions(lines, { role, lineId, sections, scopeIdx = null, cu
   const cur = current == null || current === '' ? '' : String(current);
   if (cur && !out.some(o => o.value === cur)) {
     // ค่าที่เลือกไว้แล้วต้องไม่หายจาก dropdown — ไลน์อาจถูกปลดระวาง/นอก scope/ข้อมูลเก่า
-    const known = (lines || []).find(l => String(l[valueKey]) === cur);
+    /* หาในทะเบียนเต็มก่อน แล้วค่อยถอยมาลิสต์ที่ได้รับ (ไม่ส่ง allLines = พฤติกรรมเดิมเป๊ะ) */
+    const pool = (allLines && allLines.length) ? allLines : (lines || []);
+    const known = pool.find(l => String(l[valueKey]) === cur);
     const nm = known?.name || cur;
     /* ค่าเดิมที่เป็นหน่วยสนับสนุนต้องบอกให้รู้ว่า "ไม่ใช่ไลน์ผลิต" ไม่ใช่ "นอกขอบเขตของคุณ"
        (คนละเหตุผล — บอกผิดแล้วคนไปตามหาสิทธิ์ทั้งที่เป็นเรื่องชนิดหน่วย) */
+    /* 🔴 ยังโหลดทะเบียนไม่เสร็จ = **ยังไม่รู้** ห้ามฟันว่า "ไม่มีในทะเบียน" (จอโกหก) */
     const why = known
       ? (known.is_active === false ? '⏸ ปลดระวาง' : isSupportUnit(known) ? '🗂️ หน่วยสนับสนุน' : '(นอกขอบเขตของคุณ)')
-      : '⚠ ไม่มีในทะเบียนไลน์';
+      : registryReady ? '⚠ ไม่มีในทะเบียนไลน์' : '(ยังโหลดทะเบียนไม่เสร็จ)';
     out.unshift({
       value: cur, depth: 0, retired: known?.is_active === false, pinned: true,
       label: `${nm} ${why}`,
@@ -131,12 +141,16 @@ export default function LineSelect({
   scan = false,
 }) {
   const isMobile = useIsMobile();
+  /* 🔴 ทะเบียนไลน์อ่านผ่านตัวกลางเท่านั้น (cache ร่วม — ไม่ได้ยิงคิวรีเพิ่มต่อช่อง)
+     ใช้เพื่อบอก "เหตุผล" ของค่าที่ไม่อยู่ในลิสต์ให้ถูก ไม่ได้เอามาขยายตัวเลือก */
+  const reg = useProductionLinesState();
   const [scanOpen, setScanOpen] = useState(false);
   // ค่าที่เลือกอยู่ในกลุ่มพิเศษ (คลัง / ชื่อนอกทะเบียน) = มี option อยู่แล้ว ห้ามปักซ้ำเป็น "⚠ ไม่มีในทะเบียน"
   const inExtra = extraGroups.some(g => g.options?.some(o => String(o.value) === String(value)));
   const opts = useMemo(
-    () => lineOptions(lines, { role, lineId, sections, scopeIdx, current: inExtra ? '' : value, includeRetired, includeSupport, valueKey }),
-    [lines, role, lineId, sections, scopeIdx, value, inExtra, includeRetired, includeSupport, valueKey],
+    () => lineOptions(lines, { role, lineId, sections, scopeIdx, current: inExtra ? '' : value, includeRetired, includeSupport, valueKey,
+      allLines: reg.rows, registryReady: !reg.loading && !reg.failed }),
+    [lines, role, lineId, sections, scopeIdx, value, inExtra, includeRetired, includeSupport, valueKey, reg.rows, reg.loading, reg.failed],
   );
   const grouped = useMemo(() => groupLineOptions(opts), [opts]);
   const hasExtra = extraGroups.some(g => g.options?.length);
@@ -166,14 +180,14 @@ export default function LineSelect({
     <div style={{ display: 'flex', gap: 6, alignItems: 'stretch', width: style?.width || '100%' }}>
       {selectEl}
       <button type="button" onClick={() => setScanOpen(true)} aria-label={tr('สแกนป้ายไลน์')} title={tr('สแกนป้ายไลน์')}
-        style={{ flexShrink: 0, minWidth: 48, borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text)', fontSize: 18, cursor: 'pointer' }}>📷</button>
+        style={{ flexShrink: 0, minWidth: 48, borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text)', fontSize: 18, cursor: 'pointer' }}>📷</button>
       {scanOpen && (
         <ScanModal title={tr('สแกนป้ายไลน์')} hint={tr('ยิง QR ไลน์ที่หัวใบสแกนประจำไลน์ หรือป้ายชื่อไลน์')}
           onClose={() => setScanOpen(false)}
           onScan={(parsed) => {
             const r = resolveLine(parsed, pickable);
             if (r.error) return r.error.startsWith('ไม่พบไลน์ของป้าย') || r.error.startsWith('ไม่พบไลน์ "')
-              ? `${r.error} — หรือไลน์นี้อยู่นอกขอบเขตที่เลือกได้ในช่องนี้` : r.error;
+              ? `${r.error} — ${tr("หรือไลน์นี้อยู่นอกขอบเขตที่เลือกได้ในช่องนี้")}` : r.error;
             onChange?.(String(r.line[valueKey]));
           }} />
       )}

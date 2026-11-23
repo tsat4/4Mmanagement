@@ -19,6 +19,7 @@
       ตารางถังไม่มีคอลัมน์ส่วนงาน ⇒ ที่นี่เติม `section` จากทะเบียนไลน์ให้ก่อนส่ง
    ═══════════════════════════════════════════════════════════════════════════ */
 import { useCallback, useContext, useEffect, useState } from 'react';
+import Icon, { stripIcon } from './Icon';
 import { Link } from 'react-router-dom';
 import { UserContext } from '../App';
 import { supabase, supabaseDR } from '../supabaseClient';
@@ -52,7 +53,10 @@ const LIMIT = 1000;
 const MO_COLS = [
   'id', 'mo_no', 'work_date', 'current_step', 'status', 'dept_section', 'line_name',
   'machine_no', 'mtn_dept', 'item_type',
-  'assigned_to', 'tech_main', 'tech_main_uid',
+  /* 👥 `assigned_techs` = ตัวจริงของ "ช่างที่มอบหมาย" (array) · `assigned_to` คือสำเนาที่ต่อกันด้วย
+     จุลภาคไว้ให้ใบพิมพ์อ่าน — ขาดคอลัมน์นี้ = `isMeAmong` ถอยไปแกะสตริง (ยังทำงาน แต่แม่นน้อยกว่า
+     เมื่อชื่อมีจุลภาค) ⇒ select มาด้วยเสมอ (16/11) */
+  'assigned_to', 'assigned_techs', 'tech_main', 'tech_main_uid',
   'reporter_prod', 'reporter_prod_uid', 'reported_by_name', 'reported_by_uid',
   // nextStepOf() ต้องใช้ตัดสินขั้นถัดไป (รอ QA หรือข้ามแล้ว · ช่วงเซ็นปิดของใบ MTN) — 05/10
   'qa_skipped_at', 'purpose', 'mtn_head_at', 'approve_at',
@@ -71,7 +75,7 @@ export async function loadMyQueue(me) {
   const ok = (r) => (r.error ? undefined : (r.data || []));
 
   const canLu = !!(me.canLevelUp || me.canLevelUp100);
-  const [moR, sesR, prR, fourR, actR, lines, luR, binR, binRedR, redPendR, rfqAssessR] = await Promise.all([
+  const [moR, sesR, prR, moPrR, fourR, actR, lines, luR, binR, binRedR, redPendR, rfqAssessR, gapR, gapOdR] = await Promise.all([
     /* กรองด้วยสถานะที่ยังมีคนต้องทำต่อ — เดิม `.gt('current_step', 1)` ตัดใบ "รอจ่ายงาน" (current_step = 1)
        ทิ้งทั้งหมด และ `.is('approve_at', null)` ตัดใบ MTN ที่อนุมัติแล้วแต่ยังรอปิดใบ (ขั้น 8) */
     supabaseDR.from('mtn_orders').select(MO_COLS)
@@ -81,6 +85,14 @@ export async function loadMyQueue(me) {
       .eq('status', 'pending_close').order('work_date', { ascending: true }).limit(100),
     supabaseDR.from('purchase_requests').select('id', { count: 'exact', head: true })
       .is('ordered_at', null),
+    /* 🛒 23/11 — ใบขอซื้อของใบ MO (คนละตารางกับ `purchase_requests` ข้างบน)
+       ใช้ตอบว่า "ใบนี้ติดลูป PR อยู่ไหม" ⇒ ใบที่ติดอยู่ **ห้ามนับเป็น "รอคุณเซ็น"**
+       (หน้างาน 23/11: *"รอเรา 7 ใบ แต่เป็นใบอยู่ loop pr ซึ่งมันไม่ได้รอเราไง"*)
+       🔴 เลือก 3 คอลัมน์พอ · ล้ม = ส่ง undefined ⇒ `prOf` เป็น null = พฤติกรรมเดิม ไม่ตัดใบทิ้งมั่ว */
+    /* cap-ok: mtn_purchase_requests ทั้งตาราง 32 แถว · เข้าเงื่อนไขคิวรีนี้ 26 แถว (วัด 23/11)
+       โตเกิน 1000 เมื่อไหร่ต้องเปลี่ยนเป็น fetchAllRows */
+    supabaseDR.from('mtn_purchase_requests').select('order_id, status, po_no')
+      .neq('status', 'cancelled').not('order_id', 'is', null).limit(1000),
     supabase.from('four_m_logs').select('id, work_date, line_name, category, description, status')
       .in('status', ['pending', 'pending_qa']).order('work_date', { ascending: true }).limit(200),
     supabase.from('meeting_action_items').select('id, problem, section, line_name, assignee, due_date, meeting_date, status')
@@ -113,6 +125,9 @@ export async function loadMyQueue(me) {
       ? supabase.from('mkt_rfq_assessments').select('id, rfq_id, round, requested_at, mkt_rfqs!inner(rfq_no, customer, model, title, due_date, priority)')
         .eq('status', 'draft').order('requested_at', { ascending: true }).limit(200)
       : Promise.resolve({ data: null, error: null }),
+    /* 🧾 20/11 — ไลน์ใช้ของแล้วแต่สโตร์ยังไม่ลงจ่าย (v_line_issue_gaps · DR) · นับอย่างเดียว ไม่ดึงแถว */
+    supabaseDR.from('v_line_issue_gaps').select('mat_no', { count: 'exact', head: true }),
+    supabaseDR.from('v_line_issue_gaps').select('mat_no', { count: 'exact', head: true }).eq('overdue', true),
   ]);
   const rfqAssess = me.canRfqAssess ? ok(rfqAssessR)?.map(r => ({ id: r.id, rfq_id: r.rfq_id, round: r.round, requested_at: r.requested_at, ...(r.mkt_rfqs || {}) })) : undefined;
   const levelUps = canLu ? ok(luR)?.map(r => ({ id: r.id, to_level: r.to_level, requested_at: r.requested_at, section: r.employees?.section })) : undefined;
@@ -148,10 +163,19 @@ export async function loadMyQueue(me) {
   const moTruncated = Array.isArray(moRows) && moRows.length >= LIMIT;
 
   const summaries = [];
+  if (gapR.error == null && Number(gapR.count) > 0) {
+    const od = gapOdR.error == null ? Number(gapOdR.count) || 0 : null;
+    summaries.push({
+      key: 'line_issue_gap', icon: '🧾',
+      title: `${tr("ไลน์ใช้ของแล้วแต่สโตร์ยังไม่ลงจ่าย")} ${Number(gapR.count).toLocaleString()} ${tr("รายการ")}`,
+      detail: od == null ? 'นับรายการเกิน 1 กะไม่ได้' : (od ? `${tr("เกิน 1 กะ")} ${od.toLocaleString()} ${tr("รายการ — สโตร์กดยืนยันจ่าย")}` : 'ยังอยู่ในกะนี้'),
+      count: Number(gapR.count), to: '/line-stock?tab=out',
+    });
+  }
   if (prR.error == null && Number(prR.count) > 0) {
     summaries.push({
       key: 'pr_unordered', icon: '🧾',
-      title: `ใบขอซื้อรอกดสั่งซื้อ ${Number(prR.count).toLocaleString()} รายการ`,
+      title: `${tr("ใบขอซื้อรอกดสั่งซื้อ")} ${Number(prR.count).toLocaleString()} ${tr("รายการ")}`,
       detail: 'ระบบระเบิดความต้องการสร้างให้ — ยังไม่มีเจ้าภาพกดสั่ง',
       count: Number(prR.count), to: '/line-stock',
     });
@@ -160,17 +184,46 @@ export async function loadMyQueue(me) {
   /* `moAll` = ชุดนับยอดกอง · ตอนนี้เป็นชุดเดียวกับรายการ (เพดาน 1000 ครอบใบเปิดค้างทั้งหมดแล้ว)
      🔴 คิวรีล่ม = `mo` เป็น undefined ⇒ **ไม่ส่ง** `moAll` เพื่อให้ `countsCapped` ติดธง
         ห้ามส่ง [] (จะกลายเป็น "ทุกกองมี 0 ใบ" ทั้งที่ไม่รู้ · ลิสต์ว่าง 2 ความหมาย · กฎข้อ 12) */
+  /* 🛒 ใบขอซื้อรายใบ — อ่านไม่ได้ = `null` (ไม่รู้ ≠ ไม่มี) ⇒ กฎถอยไปพฤติกรรมเดิม */
+  const moPrByOrder = moPrR?.error ? null : (() => {
+    const by = {};
+    (moPrR?.data || []).forEach(r => { (by[r.order_id] || (by[r.order_id] = [])).push(r); });
+    return by;
+  })();
   return buildQueue({ mo, moAll: mo, moAllCapped: moTruncated, moTruncated,
+    prOf: moPrByOrder ? (o) => (moPrByOrder[o.id] || []) : null,
     sessions: ok(sesR), fourM, actions: ok(actR), summaries, levelUps, bins, binsTruncated, redBins, redBinsTruncated, rfqAssess }, me);
 }
 
 /* ── UI ชิ้นเล็ก ────────────────────────────────────────────────────────── */
 
+/* ✒️ 20/11 (user ดูแผงโปรไฟล์: "อันนี้ก็ควรแก้") — emoji หน้าแถวคิว → ไอคอนเส้นชุดเดียวกับเมนู (UI §6.36)
+   · map เฉพาะแผงนี้ (ไม่เติม ICON_MAP กลาง — กันไอคอนหัวเพจหน้าอื่นเปลี่ยนตาม) · ไม่อยู่ใน map = emoji เดิม
+   · 🟡/🔴 ถังเหลือง/แดง **คง emoji สี** — สีคือความหมาย (สถานะ) ไม่ใช่ของตกแต่ง
+   · ทั้งจอคอมและมือถือ (20/11 · user สั่งให้มือถือตามด้วย) */
+const QUEUE_ICON = {
+  '🛠': 'Hammer', '🛠️': 'Hammer', '🔧': 'Wrench', '☑️': 'ClipboardCheck', '🧪': 'FlaskConical', '👔': 'UserRoundCheck',
+  '✍️': 'PenLine', '🔎': 'Search', '🎯': 'Target', '⬆️': 'ArrowUp', '↩️': 'Undo2', '🤝': 'Handshake', '🔒': 'Lock',
+  '📤': 'Upload', '🏁': 'Flag', '🧾': 'Receipt', '📋': 'ClipboardList', '📝': 'FilePenLine', '📐': 'Ruler', '📦': 'Package',
+  '✅': 'CircleCheck', '🙋': 'Hand', '🏭': 'Factory', '🗂': 'FolderOpen', '🗂️': 'FolderOpen',
+};
+function QIcon({ glyph, size = 15 }) {
+  const nm = QUEUE_ICON[String(glyph || '').trim()];
+  if (nm) return <span style={{ color: 'var(--text2)', display: 'inline-flex', flexShrink: 0 }}><Icon name={nm} size={size} /></span>;
+  return <span style={{ fontSize: 14, flexShrink: 0 }}>{glyph}</span>;
+}
+/** หัวข้อชั้นคิว "🙋 รอคุณโดยตรง" → ไอคอนเส้น + ข้อความ (จอคอม) */
+function TierTitle({ text, suffix = '' }) {
+  const lead = String(text || '').slice(0, String(text || '').length - String(stripIcon(text) || '').length).trim();
+  if (!QUEUE_ICON[lead]) return <>{text}{suffix}</>;
+  return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name={QUEUE_ICON[lead]} size={13} /><span>{stripIcon(text)}{suffix}</span></span>;
+}
+
 function Row({ it, onGo }) {
   const old = it.age != null && it.age >= OLD_DAYS;
   const body = (
     <>
-      <span style={{ fontSize: 14, flexShrink: 0 }}>{it.icon}</span>
+      <QIcon glyph={it.icon} />
       <span style={{ flex: 1, minWidth: 0 }}>
         <span style={{ display: 'block', fontSize: 12, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {it.title}
@@ -182,7 +235,7 @@ function Row({ it, onGo }) {
         )}
       </span>
       {it.age != null && (
-        <span title={`ค้างมา ${it.age} วัน`} style={{
+        <span title={`${tr("ค้างมา")} ${it.age} ${tr("วัน")}`} style={{
           flexShrink: 0, fontSize: 11, fontWeight: 700, padding: '1px 6px', borderRadius: 'var(--r-pill)',
           color: old ? '#ef4444' : 'var(--muted)',
           background: old ? '#ef444418' : 'transparent',
@@ -212,14 +265,14 @@ function Group({ tier, items, onGo }) {
   return (
     <div style={{ marginBottom: 6 }}>
       <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--muted)', padding: '4px 8px 2px', letterSpacing: 0.2 }}>
-        {TIER_TITLE[tier]}{shown.length ? ` · ${items.length}` : ''}
+        <TierTitle text={TIER_TITLE[tier]} suffix={shown.length ? ` · ${items.length}` : ''} />
       </div>
       {shown.length === 0
         ? <div style={{ fontSize: 11.5, color: 'var(--muted)', padding: '2px 8px 6px' }}>{empty}</div>
         : shown.map(it => <Row key={it.key} it={it} onGo={onGo} />)}
       {hidden > 0 && (
         <div style={{ fontSize: 11, color: 'var(--muted)', padding: '2px 8px 0' }}>
-          …อีก {hidden} รายการ
+          …{tr("อีก")} {hidden} {tr("รายการ")}
         </div>
       )}
     </div>
@@ -321,15 +374,14 @@ export default function MyQueuePanel({ q, busy, onGo }) {
     <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: 6, marginBottom: 6 }}>
       {q?.partial && (
         <div style={{ fontSize: 11, color: '#f59e0b', padding: '4px 8px', lineHeight: 1.4 }}>
-          ⚠️ โหลดข้อมูลไม่ครบ — รายการด้านล่าง<b>{tr('ไม่ใช่ทั้งหมด')}</b> อย่าเพิ่งสรุปว่าไม่มีงานค้าง
+          ⚠️ {tr("โหลดข้อมูลไม่ครบ — รายการด้านล่าง")}<b>{tr('ไม่ใช่ทั้งหมด')}</b> {tr("อย่าเพิ่งสรุปว่าไม่มีงานค้าง")}
         </div>
       )}
       {/* 🔴 แถวที่ระบุส่วนงานไม่ได้ = ตกจากคิวของ**ทุกคน** ⇒ ต้องเขียนบอก ไม่ใช่ `partial` (คิวรีไม่ได้ล่ม
           ข้อมูลไม่ครบที่ต้นทาง) · วัดจริง 06/10: ใบรอ QA 36 จาก 188 ใบ `dept_section` ว่าง */}
       {q && q.unattributed > 0 && (
         <div style={{ fontSize: 11, color: '#f59e0b', padding: '4px 8px', lineHeight: 1.4 }}>
-          ⚠️ อีก <b>{q.unattributed}</b> {tr('รายการ')}<b>{tr('ระบุส่วนงานไม่ได้')}</b> จึงไม่เข้าคิวของใครเลย —
-          ต้องเติมส่วนงานในใบก่อน ถึงจะโผล่ในคิวของหน่วยงานที่รับผิดชอบ
+          ⚠️ {tr("อีก")} <b>{q.unattributed}</b> {tr('รายการ')}<b>{tr('ระบุส่วนงานไม่ได้')}</b> {tr("จึงไม่เข้าคิวของใครเลย — ต้องเติมส่วนงานในใบก่อน ถึงจะโผล่ในคิวของหน่วยงานที่รับผิดชอบ")}
         </div>
       )}
       {!q && busy && <div style={{ fontSize: 11.5, color: 'var(--muted)', padding: '6px 8px' }}>{tr('กำลังดูคิวงาน…')}</div>}

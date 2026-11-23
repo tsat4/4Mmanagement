@@ -1,7 +1,7 @@
 /* 🔎 insight ของแผ่น KPI (16/11) — เรียบเรียงจากตัวเลขที่ตัดสินแล้ว ไม่คิดเกณฑ์เอง · ไม่มีข้อมูล = ไม่เขียนข้อนั้น */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildInsight, formulaDrivers } from '../kpiInsight.js';
+import { buildInsight, formulaDrivers, INSIGHT_PRIO } from '../kpiInsight.js';
 import { yearForecast, neededRunRate } from '../kpiSetup.js';
 
 const M = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
@@ -53,4 +53,52 @@ test('buildInsight: ตัวสะสม (max) — ถึงเป้าแล�
   const n2 = neededRunRate({ actual: cum.map(p => p.v), target: 20, def: defSum });   // Σ = 45 ≥ 20 แล้ว
   const l2 = buildInsight({ series: cum, valueIdx: 8, value: 9, target: 20, dir: 'up', fmt: (v) => String(v), monthOf: (i) => M[i], needed: n2 });
   assert.match(l2.map(l => l.text).join('\n'), /ได้ 0 ก็ยังผ่าน/);
+});
+
+test('buildInsight: เรียงตามความสำคัญ — ตกเป้า/จบปีไม่ถึง/ต้องทำเท่าไหร่ มาก่อน · ตัวแปรดิบ (🧮) ไปท้ายสุด', () => {
+  /* 🔴 16/11 คำสั่ง user: popup โชว์แค่ 3-4 ข้อ ⇒ "3 ข้อแรก" ต้องเป็นข้อที่ต้องลงมือก่อน ไม่ใช่ลำดับที่เขียนโค้ด */
+  const info = { key: 'dloh_pct', inputs: { 9: { dl: 900000, oh: 480000, sale_product: 147816190 }, 10: { dl: 856655, oh: 478507, sale_product: 113207777 } } };
+  const actual = series.map(p => p.v);
+  const def = { kpi_catalog: { summary_mode: 'average' } };
+  const needed = neededRunRate({ actual, target: 1.017, def });
+  const base = { series, valueIdx: 9, value: 1.1794, target: 1.017, commit: 1.0485, dir: 'down', targetCompare: '≤',
+    monthStatus: statusOf, fmt, monthOf: (i) => M[i], info, needed };
+  const good = buildInsight({ ...base, forecast: { ...yearForecast({ actual, plan: [], def, fallback: true }), status: 'good' } });
+  assert.deepEqual(good.map(l => l.kind), ['gap', 'needed', 'driver', 'note', 'year', 'trend', 'forecast', 'vars']);
+  assert.equal(good[0].icon, '❌');                                  // เดือนนี้หลุดเป้า = พาดหัว
+  assert.ok(good.every((l, i) => i === 0 || l.prio >= good[i - 1].prio));
+  assert.ok(good.slice(0, 3).every(l => l.kind !== 'vars'));         // 🧮 ห้ามแย่งที่ 3 ข้อแรก
+  /* จบปีไม่ถึงเป้า = ขึ้นเป็นข้อที่ 2 (แซงอัตราที่ต้องทำ/เหตุหลัก) */
+  const bad = buildInsight({ ...base, forecast: { ...yearForecast({ actual, plan: [], def, fallback: true }), status: 'bad' } });
+  assert.deepEqual(bad.slice(0, 3).map(l => l.kind), ['gap', 'forecast', 'needed']);
+  assert.ok(INSIGHT_PRIO.gapBad < INSIGHT_PRIO.fcBad && INSIGHT_PRIO.fcBad < INSIGHT_PRIO.vars);
+});
+
+/* 🧱 20/11 (user): "เดือนที่เหลือ" ที่เป็นไปไม่ได้ (OEE > 100 % · MTTR ติดลบ) ต้องบอก "ไม่ทัน" ไม่ใช่โชว์ตัวเลข — ขอบจากทะเบียน kpi_catalog.value_min/max เท่านั้น */
+test('neededRunRate: หลุดช่วงที่เป็นไปได้ของทะเบียน = feasible:false · ไม่มีขอบ = ตัดสินไม่ได้ (ยังโชว์ตัวเลข)', () => {
+  const oee = { direction: 'up', kpi_catalog: { summary_mode: 'average', value_min: 0, value_max: 100 } };
+  const a = [6.1, 38.8, 52.9, 40, 30, 35, 20, 6.1, 38.8, 52.9, null, null];   // เฉลี่ย 10 ด. ต่ำ ⇒ ต้องได้ > 100 %/เดือน
+  const n = neededRunRate({ actual: a, target: 77.2, def: oee });
+  assert.equal(n.feasible, false);
+  assert.equal(n.limit.kind, 'max'); assert.equal(n.limit.value, 100);
+  assert.ok(n.perMonth > 100);
+  /* ทะเบียนไม่มีเพดาน (เช่น % เติบโต) = ไม่ตัดสินว่าเป็นไปไม่ได้ */
+  const open = neededRunRate({ actual: a, target: 77.2, def: { direction: 'up', kpi_catalog: { summary_mode: 'average' } } });
+  assert.equal(open.feasible, true); assert.equal(open.trivial, false);
+  /* MTTR ยิ่งต่ำยิ่งดี: ต้องไม่เกินติดลบ = ต่ำกว่าพื้น 0 */
+  const mttr = { direction: 'down', kpi_catalog: { summary_mode: 'average', value_min: 0 } };
+  const m = neededRunRate({ actual: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, null, null], target: 5, def: mttr });
+  assert.equal(m.feasible, false); assert.equal(m.limit.kind, 'min');
+  /* ยิ่งต่ำยิ่งดี แต่ "ต้องไม่เกิน" ≥ เพดาน = ผ่านแน่ */
+  const easy = neededRunRate({ actual: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, null, null], target: 30, def: { direction: 'down', kpi_catalog: { summary_mode: 'average', value_min: 0, value_max: 100 } } });
+  assert.equal(easy.feasible, true); assert.equal(easy.trivial, true);
+  /* insight: ข้อ 🏁 กลายเป็นโทนแดง "ไม่ทัน Target" ไม่มีประโยค "ต้องได้อย่างน้อย … ถึงจะถึง" */
+  const lines = buildInsight({ series: a.map((v, i) => ({ k: `2026-${String(i + 1).padStart(2, '0')}`, v, notes: [] })), valueIdx: 9, value: 52.9, target: 77.2, commit: null, dir: 'up', targetCompare: '≥',
+    monthStatus: (p) => (p.v >= 77.2 ? 'good' : 'bad'), fmt: (v) => `${Number(v).toFixed(1)} %`, monthOf: (i) => M[i], info: null, forecast: null, needed: n });
+  const nd = lines.find(l => l.kind === 'needed');
+  assert.equal(nd.tone, 'bad'); assert.equal(nd.data.feasible, false);
+  assert.match(nd.text, /ไม่ทัน Target 77\.2 % ทั้งปีแล้ว/); assert.match(nd.text, /สุดเพดาน 100\.0 % ทุกเดือน ทั้งปีดีสุดได้แค่ 43\.4 %/);   // (Σ10 ด. 320.6 + 2×100)/12
+  assert.ok(Math.abs(n.bestCase - (a.slice(0, 10).reduce((x, y) => x + y, 0) + 200) / 12) < 1e-9);
+  assert.equal(m.bestCase, (5 + 6 + 7 + 8 + 9 + 10 + 11 + 12 + 13 + 14) / 12);   // MTTR: 2 เดือนที่เหลือ = พื้น 0
+  assert.doesNotMatch(nd.text, /ถึงจะถึง Target/);
 });

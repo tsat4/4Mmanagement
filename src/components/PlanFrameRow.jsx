@@ -141,7 +141,7 @@ export default function PlanFrameRow({
       }}>
         <div style={{ fontSize: 11, fontWeight: 800, color: FRAME, lineHeight: 1.25 }}>{tr('กรอบแผน')}</div>
         <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.3 }}>
-          แพลนนิ่งตีไว้ {totalLots} ล็อต
+          {tr("แพลนนิ่งตีไว้")} {totalLots} {tr("ล็อต")}
         </div>
         <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.3 }}>
           {canDrag ? tr('🧲 ลากสลับลำดับได้') : tr('ยังไม่ใช่ใบผลิต')}

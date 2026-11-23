@@ -12,6 +12,7 @@ import { NAV_ITEMS, UserContext } from '../App';
 import { getCurrentShift, getWorkDate } from '../utils/workDate';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 /* ══ 📺 DisplayRotator — จอวนหน้าเอง ตามแผนของบัญชีที่ login ══════════════════════════
    2026-10-09 · คำสั่ง user: "ตั้งว่าจอ user นี้จะเปิดอะไรวนบ้าง" · ตั้งค่าที่ /display-rotation
    ฝังที่ ProtectedLayout ทุก branch (/tv · หน้า Home · หน้าปกติ) — บัญชีที่ไม่มีแถว = ไม่ทำอะไรเลย (1 คิวรีตอนเข้า)
@@ -325,7 +326,7 @@ export default function DisplayRotator({ userId, role, disabled, shell = false, 
   useEffect(() => { setChangedAt(Date.now()); }, [pathKey]);
 
   const pausedLeft = Math.max(0, Math.ceil((pausedUntil - now) / 1000));
-  const skipTitle = skipped.map(s => `${s.path || '(ว่าง)'} — ${SKIP_REASON_LABEL[s.reason]}`).join('\n');
+  const skipTitle = skipped.map(s => `${s.path || tr('(ว่าง)')} — ${SKIP_REASON_LABEL[s.reason]}`).join('\n');
   // ปุ่มไม่นับเป็น "มีคนใช้จอ" — ตัวฟัง (capture ที่ window) ตั้งหยุดชั่วคราวไปก่อน แล้ว onClick ล้างทิ้ง
   const btn = (label, onClick, title, st = btnStyle) => (
     <button type="button" title={title}
@@ -360,9 +361,9 @@ export default function DisplayRotator({ userId, role, disabled, shell = false, 
   if (!active || !cur) return null;
 
   const status = held ? '⏸ หยุดอยู่'
-    : pausedLeft > 0 ? `⏸ มีคนใช้จอ · วนต่อใน ${fmtSec(pausedLeft)}`
-      : subWait ? `รอหน้าย่อย ${subWait.page}/${subWait.count}`
-        : `ถัดไปใน ${fmtSec(Math.max(0, cur.sec - elapsed))}`;
+    : pausedLeft > 0 ? `⏸ ${tr("มีคนใช้จอ · วนต่อใน")} ${fmtSec(pausedLeft)}`
+      : subWait ? `${tr("รอหน้าย่อย")} ${subWait.page}/${subWait.count}`
+        : `${tr("ถัดไปใน")} ${fmtSec(Math.max(0, cur.sec - elapsed))}`;
 
   const compact = !held && pausedLeft === 0 && skipped.length === 0 && now - changedAt > 6000;
   if (compact) {
@@ -380,7 +381,7 @@ export default function DisplayRotator({ userId, role, disabled, shell = false, 
       <span style={{ color: 'var(--muted)' }}>{status}</span>
       {skipped.length > 0 && (
         <span title={skipTitle} style={{ color: 'var(--amber)', fontWeight: 700 }}>
-          ⚠ ข้าม {skipped.length} หน้า
+          ⚠ {tr("ข้าม")} {skipped.length} {tr("หน้า")}
         </span>
       )}
       {btn('◀', () => goTo(stepIndex(idx, n, -1)), 'หน้าก่อนหน้า')}
@@ -408,9 +409,9 @@ function TvShellBar({ pathname, search, now, loadErr, active, idx, n, sec, elaps
   const wd = getWorkDate(d);
   const status = !active ? null
     : held ? '⏸ หยุดค้าง'
-      : pausedLeft > 0 ? `⏸ มีคนใช้จอ · วนต่อใน ${fmtSec(pausedLeft)}`
-        : subWait ? `รอหน้าย่อย ${subWait.page}/${subWait.count}`
-          : `ถัดไปใน ${fmtSec(Math.max(0, sec - elapsed))}`;
+      : pausedLeft > 0 ? `⏸ ${tr("มีคนใช้จอ · วนต่อใน")} ${fmtSec(pausedLeft)}`
+        : subWait ? `${tr("รอหน้าย่อย")} ${subWait.page}/${subWait.count}`
+          : `${tr("ถัดไปใน")} ${fmtSec(Math.max(0, sec - elapsed))}`;
   return (
     <div role="banner" style={barStyle}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1, overflow: 'hidden' }}>
@@ -422,7 +423,7 @@ function TvShellBar({ pathname, search, now, loadErr, active, idx, n, sec, elaps
         {/* 📐 หน้ายาวเกินจอ ⇒ แบ่งส่วนหมุน (fit) — data-tv-subpage ให้ตัววนรอจนครบทุกส่วน */}
         {fitPage && (
           <span {...{ [SUBPAGE_ATTR]: `${fitPage.page}/${fitPage.count}` }} style={{ ...barChip, color: 'var(--accent)', borderColor: 'var(--accent)' }}>
-            ส่วน {fitPage.page}/{fitPage.count}
+            {tr("ส่วน")} {fitPage.page}/{fitPage.count}
           </span>
         )}
       </div>
@@ -452,7 +453,7 @@ function TvShellBar({ pathname, search, now, loadErr, active, idx, n, sec, elaps
         )}
         {onLogout && (
           <button type="button" title={tr('ออกจากระบบ (บัญชีจอนี้)')} aria-label={tr('ออกจากระบบ')} style={barBtn}
-            onClick={() => { if (window.confirm('ออกจากระบบบัญชีจอนี้?\nจอจะกลับไปหน้าเข้าสู่ระบบ')) onLogout(); }}>🚪</button>
+            onClick={async () => { if (await askConfirm('ออกจากระบบบัญชีจอนี้?\nจอจะกลับไปหน้าเข้าสู่ระบบ')) onLogout(); }}>🚪</button>
         )}
       </div>
       {active && n > 1 && (

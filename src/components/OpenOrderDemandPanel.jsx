@@ -43,7 +43,7 @@ export default function OpenOrderDemandPanel({ q = '' }) {
     const fgIds = products.filter(p => fgMats.has(String(p.mat_no || '').trim()) && p.is_active !== false).map(p => p.id);
     const bomRes = fgIds.length
       ? await fetchByIds(fgIds, ids => supabaseDR.from('bom_items')
-          .select('id, product_id, mat_no, part_name, qty_per_unit, uom, is_active').in('product_id', ids).eq('is_active', true))
+          .select('id, product_id, parent_mat, mat_no, part_name, qty_per_unit, uom, is_active').in('product_id', ids).eq('is_active', true))
       : { rows: [] };
     if (bomRes.error || bomRes.truncated) errs.push('BOM');
     const childMats = [...new Set((bomRes.rows || []).map(b => String(b.mat_no || '').trim()).filter(Boolean))];
@@ -85,18 +85,17 @@ export default function OpenOrderDemandPanel({ q = '' }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ ...card, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', alignItems: 'flex-start' }}>
         <div style={{ fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.65, flex: '1 1 420px' }}>
-          📋 <b style={{ color: 'var(--text)' }}>{tr('ไลน์เปิดใบผลิตแล้ว → ชิ้นส่วนที่ต้องเตรียมส่ง')}</b> (คิดจาก BOM ชั้นแรกของใบ · ยอดใบ × จำนวนต่อชิ้น)
-          <br />“ต้องส่งเพิ่ม” = ความต้องการ − ยอดคงเหลือหน้าไลน์ · <b>{tr('จอนี้แจ้งล่วงหน้าอย่างเดียว')}</b> ไม่ออกใบเบิก/ใบขอซื้อ —
-          ตอนไลน์ปิดใบ ระบบตัดสต็อกและออกใบตามเดิม
+          📋 <b style={{ color: 'var(--text)' }}>{tr('ไลน์เปิดใบผลิตแล้ว → ชิ้นส่วนที่ต้องเตรียมส่ง')}</b> ({tr("คิดจาก BOM ชั้นแรกของใบ · ยอดใบ × จำนวนต่อชิ้น")})
+          <br />“{tr("ต้องส่งเพิ่ม” = ความต้องการ − ยอดคงเหลือหน้าไลน์")} · <b>{tr('จอนี้แจ้งล่วงหน้าอย่างเดียว')}</b> {tr("ไม่ออกใบเบิก/ใบขอซื้อ — ตอนไลน์ปิดใบ ระบบตัดสต็อกและออกใบตามเดิม")}
         </div>
-        <button onClick={load} disabled={busy} style={{ padding: '7px 14px', borderRadius: 'var(--r-md)', cursor: busy ? 'wait' : 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-body)', background: 'var(--bg2)', color: 'var(--text2)', border: '1px solid var(--border)' }}>
+        <button onClick={load} disabled={busy} style={{ padding: '7px 14px', borderRadius: 'var(--r-md)', cursor: busy ? 'wait' : 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-body)', background: 'var(--bg2-surf)', color: 'var(--text2)', border: '1px solid var(--border)' }}>
           {busy ? tr('⏳ กำลังโหลด…') : tr('🔄 รีเฟรช')}
         </button>
       </div>
 
       {loadErr.length > 0 && (
         <div style={{ ...card, padding: '10px 14px', borderColor: 'var(--red)', color: 'var(--red)', fontSize: 12, fontWeight: 700 }}>
-          ⚠ โหลดไม่ครบ: {loadErr.join(' · ')} — ตัวเลขข้างล่างอาจไม่ครบ (กดรีเฟรช)
+          ⚠ {tr("โหลดไม่ครบ")}: {loadErr.join(' · ')} — {tr("ตัวเลขข้างล่างอาจไม่ครบ (กดรีเฟรช")})
         </div>
       )}
       {data && (data.noProduct.length > 0 || data.noBom.length > 0 || data.opOrders > 0) && (
@@ -112,7 +111,7 @@ export default function OpenOrderDemandPanel({ q = '' }) {
       ) : !data ? null : data.rows.length === 0 ? (
         <div style={{ ...card, padding: '30px 16px', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('ตอนนี้ไม่มีใบผลิตที่เปิดอยู่ที่ต้องใช้ชิ้นส่วน')}</div>
       ) : shown === 0 ? (
-        <div style={{ ...card, padding: '30px 16px', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('ไม่มีรายการที่ตรงกับคำค้น “')}{q}{tr('” (ซ่อน')} {data.rows.length} รายการ)</div>
+        <div style={{ ...card, padding: '30px 16px', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('ไม่มีรายการที่ตรงกับคำค้น “')}{q}{tr('” (ซ่อน')} {data.rows.length} {tr("รายการ")})</div>
       ) : (<>
         {shown < data.rows.length && <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{tr('ซ่อนอยู่ · ไม่ตรงคำค้น')} {data.rows.length - shown} {tr('รายการ')}</div>}
         {groups.map(([line, rs]) => (

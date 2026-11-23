@@ -59,7 +59,7 @@ export async function fetchActiveDowntimes(lineNames = null) {
 
   const sessById = Object.fromEntries(sessions.map(s => [s.id, s]));
   const { data: dts, error: dErr } = await supabaseDR.from('downtime_logs')
-    .select('id, session_id, machine_no, mat_no, description, started_at, ended_at, duration_min, created_at, dr_downtime_types(name_th, category, color)')
+    .select('id, session_id, machine_no, mat_no, description, started_at, ended_at, duration_min, created_at, dr_downtime_types(name_th, category, planned_cap_min, color)')
     .in('session_id', sessions.map(s => s.id));
   if (dErr) return { ...empty, error: dErr.message };
 
