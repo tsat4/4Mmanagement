@@ -16757,6 +16757,10 @@ const EN = {
   "ต้องมีจุดวัดเป็นตัวเลขอย่างน้อย 2 จุดก่อน (จุดคำนวณอ้างจุดคำนวณด้วยกันไม่ได้": "Needs at least 2 numeric measuring points first (a calculated point cannot reference another calculated point",
   "ตัดสินด้วย LSL/USL ของจุดนี้": "Judged by this point's LSL/USL",
 
+  "เปิดหน้าให้ธงเสริมไม่ได้ (ระบบบล็อกในโค้ด)": "Cannot open a page via a supplementary flag (blocked in code)",
+  "คลิกเพื่อปิดสิทธิ์": "click to revoke",
+  "คลิกเพื่อเปิดสิทธิ์": "click to grant",
+
 };
 
 export default EN;

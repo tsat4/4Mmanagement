@@ -588,7 +588,7 @@ export default function PermissionsManagement() {
                           const txt = dead ? '✕' : raw === true ? '✓' : raw === false ? '·' : '–';
                           const col = dead ? 'var(--border2)'
                             : raw === true ? 'var(--accent)' : raw === false ? 'var(--muted)' : 'var(--amber)';
-                          const state = dead ? 'เปิดหน้าให้ธงเสริมไม่ได้ (ระบบบล็อกในโค้ด)'
+                          const state = dead ? tr('เปิดหน้าให้ธงเสริมไม่ได้ (ระบบบล็อกในโค้ด)')
                             : raw === true ? 'ทำได้' : raw === false ? 'ปิดไว้' : 'ยังไม่เคยตั้งค่าในทะเบียน';
                           /* admin ล็อกในโค้ด · ช่องตาย · ไม่มี permissions:manage = ดูอย่างเดียว (เหตุผลขึ้นใน ReadOnlyNote บนจอแล้ว) */
                           const editable = canManage && !dead && r.value !== 'admin';
@@ -600,7 +600,7 @@ export default function PermissionsManagement() {
                                 <button type="button" className="tbtn" disabled={isSaving}
                                   onClick={() => toggle(it.key, r.value, raw === true)}
                                   aria-label={`${it.label} · ${r.label}: ${state}`}
-                                  title={`${state} — ${tr("คลิกเพื่อ")}${raw === true ? tr('ปิดสิทธิ์') : tr('เปิดสิทธิ์')}`}
+                                  title={`${state} — ${raw === true ? tr('คลิกเพื่อปิดสิทธิ์') : tr('คลิกเพื่อเปิดสิทธิ์')}`}
                                   style={{ ...glyph, width: '100%', minHeight: 32, padding: '5px 4px', background: 'transparent',
                                     border: 'none', borderRadius: 'var(--r-sm)', cursor: isSaving ? 'wait' : 'pointer', opacity: isSaving ? 0.4 : 1 }}>
                                   {isSaving ? '…' : txt}
