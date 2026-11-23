@@ -14,6 +14,9 @@ import SearchInput from './SearchInput';
 import MatLabel from './MatLabel';
 import InfoMore from './InfoMore';
 import { tr } from '../utils/i18n';
+import { ImportButton, ImportInfo, WrongFileNote } from './ImportKit';
+import { importLabel, whichImport, rowsFromText } from '../utils/importRegistry';
+import { decodeSapExport } from '../utils/sapBomImport';
 
 /* ═══ 📊 เทียบยอดคงคลัง SAP (MB52) กับระบบ — รายสัปดาห์ (2026-11-20 · คำสั่ง user)
    user: *"หน้างานจริงกับ SAP ไม่ตรงกัน … แต่ละส่วนงานจดสมุดลง Excel เอาไว้เทียบกับ SAP ปลายสัปดาห์/สิ้นเดือน
@@ -28,15 +31,21 @@ const CMP_COLS = 'id, sloc, mat_no, part_name, bun, sap_qty, sap_qi, sap_blocked
 const fmt = (n) => (n == null ? '—' : Number(n).toLocaleString(undefined, { maximumFractionDigits: 3 }));
 const when = (iso) => (iso ? new Date(iso).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—');
 
+/* 📥 แกะไม่ผ่าน ⇒ ถามทะเบียนกลางว่าเป็นไฟล์ของจุดนำเข้าอื่นไหม (`wrong` · ไม่รู้จัก = null) */
 async function readFile(file) {
   const buf = await file.arrayBuffer();
   const b = new Uint8Array(buf);
   if (b[0] === 0x50 && b[1] === 0x4b) {           // PK = .xlsx จริง (บางคน export เป็น Spreadsheet)
     const XLSX = await import('xlsx');
     const wb = XLSX.read(buf);
-    return parseMb52(XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]], { FS: '\t', RS: '\n' }));
+    const r = parseMb52(XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]], { FS: '\t', RS: '\n' }));
+    if (r.ok) return r;
+    const sheets = wb.SheetNames.map(name => ({ name, rows: XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: '' }) }));
+    return { ...r, wrong: whichImport(sheets, 'sap_mb52') };
   }
-  return parseMb52File(buf);                       // TSV UTF-16 แบบที่ SAP คาย (.xls)
+  const r = parseMb52File(buf);                    // TSV UTF-16 แบบที่ SAP คาย (.xls)
+  if (r.ok) return r;
+  return { ...r, wrong: whichImport([{ name: file.name, rows: rowsFromText(decodeSapExport(buf)) }], 'sap_mb52') };
 }
 
 export default function SapStockCompare() {
@@ -156,12 +165,12 @@ export default function SapStockCompare() {
         <InfoMore label={tr('วิธีใช้')}>
           {tr('อัปโหลดไฟล์ MB52 ที่ SAP export (.xls หรือ .xlsx) ทีละคลังหรือหลายคลังก็ได้ — ระบบเทียบเฉพาะรหัสคลังที่อยู่ในไฟล์ · ยอดฝั่งระบบตรึง ณ เวลาที่กดบันทึก (ดูย้อนหลังได้ ตัวเลขไม่ขยับ) · ต่าง = ระบบเรา − SAP · เทียบกับ Unrestr. (QI/Blocked โชว์ข้าง)')}
         </InfoMore>
-        {canUpload && <button type="button" style={storeBtn('primary', { minHeight: 36, padding: '6px 14px', fontSize: 13 })} onClick={() => setShowUp(true)}>📤 {tr('อัปโหลด MB52')}</button>}
+        {canUpload && <ImportButton k="sap_mb52" onClick={() => setShowUp(true)} />}
       </FilterBar>
 
       {!canUpload && <div style={{ color: 'var(--amber)', fontSize: 13 }}>🔒 {tr('ดูอย่างเดียว — อัปโหลด/ลบรอบต้องมีสิทธิ์ line_stock:issue')}</div>}
       {upErr && <div style={{ color: 'var(--red)', fontSize: 13 }}>⚠ {tr('โหลดรายการรอบไม่สำเร็จ')}: {upErr}</div>}
-      {!upErr && !uploads.length && <div style={{ padding: 30, textAlign: 'center', fontSize: 13, color: 'var(--muted)' }}>{tr('ยังไม่มีรอบเทียบ — กด 📤 อัปโหลด MB52')}</div>}
+      {!upErr && !uploads.length && <div style={{ padding: 30, textAlign: 'center', fontSize: 13, color: 'var(--muted)' }}>{tr('ยังไม่มีรอบเทียบ — กด')} 📥 {tr(importLabel('sap_mb52'))}</div>}
 
       {cur && <>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', fontSize: 13, color: 'var(--text2)' }}>
@@ -222,10 +231,11 @@ export default function SapStockCompare() {
         <div className="overlay">
           <div className="modal" onClick={e => e.stopPropagation()} style={{ width: 'min(640px, 96vw)', maxHeight: '92vh', overflowY: 'auto', display: 'grid', gap: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center' }}>
-              <b style={{ fontSize: 16 }}>📤 {tr('อัปโหลด MB52 จาก SAP')}</b>
+              <b style={{ fontSize: 16 }}>📥 {tr(importLabel('sap_mb52'))}</b>
               <button type="button" onClick={() => { setShowUp(false); setParsed(null); }} aria-label={tr('ปิด')}
                 style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--muted)', fontSize: 18, cursor: 'pointer' }}>✕</button>
             </div>
+            <ImportInfo k="sap_mb52" />
             <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.6 }}>
               {tr('ไฟล์ .xls ที่ SAP export (หรือ .xlsx) · ไฟล์ทีละคลังหรือหลายคลังก็ได้ — ระบบเทียบเฉพาะรหัสคลังที่อยู่ในไฟล์ · ยอดฝั่งระบบตัด ณ เวลาที่กดบันทึก')}
               <br />{tr('ต้องมีคอลัมน์ Material · SLoc · Unrestr. (ลำดับคอลัมน์ไม่สำคัญ) · แนะนำบันทึก layout กลางใน SAP ให้ทุกคน export แบบเดียวกัน')}
@@ -244,7 +254,9 @@ export default function SapStockCompare() {
                     <button type="button" style={storeBtn('secondary')} disabled={busy} onClick={() => setParsed(null)}>{tr('ยกเลิก')}</button>
                   </div>
                 </> : <>
-                  <div style={{ fontSize: 13, color: 'var(--red)' }}>⚠ {parsed.error}</div>
+                  {parsed.wrong
+                    ? <WrongFileNote k={parsed.wrong} here="sap_mb52" onGo={() => { setShowUp(false); setParsed(null); }} />
+                    : <div style={{ fontSize: 13, color: 'var(--red)' }}>⚠ {parsed.error}</div>}
                   {parsed.headers?.length > 0 && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('หัวคอลัมน์ที่เจอ')}: {parsed.headers.join(' · ')}</div>}
                 </>}
               </div>

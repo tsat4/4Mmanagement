@@ -1,3 +1,5 @@
+import { ImportButton, wrongFileText } from '../components/ImportKit';   // 📥 ปุ่มนำเข้ามาตรฐาน (UI §6.44)
+import { whichImport, rowsFromText, importLabel } from '../utils/importRegistry';
 import { useState, useEffect, useContext, useCallback, useMemo, useRef } from 'react';
 import { lineNameCompare } from '../utils/lineHierarchy';
 import { useObjectUrl } from '../utils/useObjectUrl';
@@ -805,6 +807,9 @@ export default function ProductMaster() {
     const text = await file.text();
     const rawLines = text.replace(/\r/g, '').split('\n').filter(l => l.trim());
     const header = rawLines[0].split(',').map(h => h.trim().replace(/^﻿/, ''));
+    /* 📥 ไม่ใช่หัวแม่แบบสินค้า + เป็นไฟล์ของจุดนำเข้าอื่น = บอกทางไป (importRegistry) */
+    const otherP = header.includes('mat_no') && header.includes('name') ? null : whichImport([{ name: file.name, rows: rowsFromText(text) }], 'product_csv');
+    if (otherP) { setCsvImporting(false); toast.error(wrongFileText(otherP, 'product_csv')); return; }
     const allRows = rawLines.slice(1).map(line => {
       const vals = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
       const obj = {};
@@ -968,10 +973,7 @@ export default function ProductMaster() {
         <span className="filter-count">{visibleGroups.length} part · {visibleFamilies.length} variant · {activeCount} {tr('ใช้งาน')}</span>
         {canCreate && <>
           <button onClick={downloadProductTemplate} style={{ ...btnSecondary, fontSize: 12 }}>CSV Template</button>
-          <button onClick={() => csvInputRef.current?.click()} disabled={csvImporting}
-            style={{ ...btnSecondary, fontSize: 12, opacity: csvImporting ? 0.6 : 1 }}>
-            {csvImporting ? tr('กำลังนำเข้า...') : tr('นำเข้า CSV')}
-          </button>
+          <ImportButton k="product_csv" tone="quiet" busy={csvImporting} onClick={() => csvInputRef.current?.click()} style={{ fontSize: 12 }} />
           <input ref={csvInputRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleProductCsvUpload} />
         </>}
         {canCreate && <button onClick={() => openEdit()} style={btnPrimary}>{tr('+ เพิ่มสินค้า')}</button>}
@@ -2158,7 +2160,7 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
     if (e.target) e.target.value = '';
     if (!f) return;
     setSapBusy(true);
-    let parsed;
+    let parsed, sapSheets = [];
     try {
       const buf = await f.arrayBuffer();
       const b = new Uint8Array(buf);
@@ -2169,11 +2171,17 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
         const XLSX = await import('xlsx');
         const wb = XLSX.read(buf, { type: 'array' });
         text = XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]], { FS: '\t', blankrows: false });
-      } else text = decodeSapExport(buf);
+        sapSheets = wb.SheetNames.map(name => ({ name, rows: XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: '' }) }));
+      } else { text = decodeSapExport(buf); sapSheets = [{ name: f.name, rows: rowsFromText(text) }]; }
       parsed = parseSapBom(text, { uomIndex: uomIdx });
     }
     catch (err) { setSapBusy(false); toast.error(`${tr("อ่านไฟล์ไม่สำเร็จ")}: ${err?.message || err}`); return; }
-    if (!parsed.rows.length) { setSapBusy(false); toast.error(parsed.warnings[0] || 'ไม่พบบรรทัด component ในไฟล์นี้'); return; }
+    if (!parsed.rows.length) {
+      setSapBusy(false);
+      const other = whichImport(sapSheets, 'sap_bom');   // 📥 ไฟล์ของจุดนำเข้าอื่น = บอกทางไป
+      toast.error(other ? wrongFileText(other, 'sap_bom') : (parsed.warnings[0] || 'ไม่พบบรรทัด component ในไฟล์นี้'));
+      return;
+    }
 
     const up = upMat;
     const fileMat = up(parsed.root.mat_no);
@@ -2758,11 +2766,9 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
             ใบปลายทางมาจากเลข Material ในไฟล์อยู่แล้ว ⇒ ไม่ต้องเลือกพาร์ทก่อน
             ไฟล์ที่ SAP คายมาเป็น .xls แต่เนื้อเป็น TSV UTF-16LE (รับ .txt/.tsv/.csv ด้วย) */}
         {canCreate && (
-          <button type="button" className="pg-btn sm" onClick={() => sapFileRef.current?.click()} disabled={sapBusy}
+          <ImportButton k="sap_bom" onClick={() => sapFileRef.current?.click()} busy={sapBusy} tone="quiet"
             title={tr('Display Multilevel BOM (CS12 · .xls หรือ .XLSX) หรือ BOM & Routing Report ที่ export จาก SAP — แตกลงใบละชั้นแบบ SAP · ไฟล์ .XLSX ไม่มีเลขหัวใบ ให้เลือกใบจากลิสต์ซ้ายก่อน')}
-            style={{ marginTop: 6, width: '100%' }}>
-            {sapBusy ? tr('กำลังอ่าน…') : tr('นำเข้า BOM จาก SAP')}
-          </button>
+            style={{ marginTop: 6, width: '100%', justifyContent: 'center', fontSize: 12, padding: '5px 10px' }} />
         )}
         <input ref={sapFileRef} type="file" accept=".xls,.xlsx,.txt,.tsv,.csv" style={{ display: 'none' }} onChange={handleSapFile} />
         {/* 🔩 ชิปแยกพาร์ทจริง / ขั้นตอน (OP) — ไม่ปนกันในลิสต์เดียว */}
@@ -3302,7 +3308,7 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
           <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: 16 }}
             onClick={() => !sapBusy && setSapImp(null)}>
             <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(96vw, 880px)', maxHeight: '88vh', overflow: 'auto' }}>
-              <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{tr('นำเข้า BOM จาก SAP')}</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>📥 {tr(importLabel('sap_bom'))}</div>
               <div style={{ fontSize: 12, color: 'var(--muted)', margin: '4px 0 12px' }}>
                 {tr("หัวใบ")} <b style={{ color: 'var(--text)', fontFamily: 'monospace' }}>{parsed.root.mat_no || '—'}</b> {parsed.root.description}
                 {parsed.root.plant && ` · Plant ${parsed.root.plant}`} {tr('· รูปแบบไฟล์')} {parsed.layout === 'multilevel' ? 'Display Multilevel BOM' : 'BOM & Routing Report'}
@@ -3641,6 +3647,9 @@ function PartsMasterPanel({ canCreate, canEdit, fullName, setCsvPreview, reloadK
     const text = await file.text();
     const lines = text.replace(/\r/g, '').split('\n').filter(l => l.trim());
     const header = lines[0].split(',').map(h => h.trim().replace(/^﻿/, ''));
+    /* 📥 ไม่ใช่หัวแม่แบบพาร์ท + เป็นไฟล์ของจุดนำเข้าอื่น = บอกทางไป (importRegistry) */
+    const otherM = header.includes('mat_no') && header.includes('part_name') ? null : whichImport([{ name: file.name, rows: rowsFromText(text) }], 'parts_csv');
+    if (otherM) { setCsvImporting(false); toast.error(wrongFileText(otherM, 'parts_csv')); return; }
     const allRows = lines.slice(1).map(line => {
       const vals = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
       const obj = {};
@@ -3814,10 +3823,7 @@ function PartsMasterPanel({ canCreate, canEdit, fullName, setCsvPreview, reloadK
         <span className="spacer" />
         {canCreate && <>
           <button onClick={downloadPartsTemplate} style={{ ...btnSecondary, fontSize: 12 }}>CSV Template</button>
-          <button onClick={() => csvRef.current?.click()} disabled={csvImporting}
-            style={{ ...btnSecondary, fontSize: 12, opacity: csvImporting ? 0.6 : 1 }}>
-            {csvImporting ? tr('กำลังนำเข้า...') : tr('นำเข้า CSV')}
-          </button>
+          <ImportButton k="parts_csv" tone="quiet" busy={csvImporting} onClick={() => csvRef.current?.click()} style={{ fontSize: 12 }} />
           <input ref={csvRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handlePartsCsvUpload} />
           <button onClick={openNew} style={btnPrimary}>{tr('เพิ่มพาร์ท')}</button>
         </>}
