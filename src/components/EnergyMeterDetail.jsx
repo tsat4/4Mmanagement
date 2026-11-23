@@ -139,7 +139,7 @@ export default function EnergyMeterDetail({ m, machines, boardMeters, totalToday
         <button type="button" onClick={onBack} className="pg-btn" style={{ whiteSpace: 'nowrap' }}>{tr('← กลับบอร์ดรวม')}</button>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.08em', color: ACC }}>{tr('รายละเอียดตู้')}</div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>{m.name}{m.subtitle ? <span style={{ fontWeight: 600 }}> · {m.subtitle}</span> : null}</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>{m.label}{m.subtitle ? <span style={{ fontWeight: 600 }}> · {m.subtitle}</span> : null}</div>
           <div style={{ width: 40, height: 3, background: ACC, borderRadius: 2, margin: '4px 0' }} />
           <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{tr('ตู้')} {m.panel}{m.parent ? ` · ${tr('ต่อจาก')} ${m.parent.split('|')[1]}` : ''} · {tr('ค่าสรุปรายนาที')}</div>
         </div>
@@ -160,7 +160,7 @@ export default function EnergyMeterDetail({ m, machines, boardMeters, totalToday
             return (
               <button key={x.key} type="button" role="tab" aria-selected={on} className={`pg-btn${on ? ' primary' : ''}`} onClick={() => !on && onOpenMeter(x.name)}
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ width: 8, height: 8, borderRadius: 999, background: c }} />{x.name}
+                <span style={{ width: 8, height: 8, borderRadius: 999, background: c }} />{x.label}
               </button>
             );
           })}
@@ -186,7 +186,7 @@ export default function EnergyMeterDetail({ m, machines, boardMeters, totalToday
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'minmax(0, 1fr)' : 'minmax(0, 1.6fr) minmax(280px, 1fr) minmax(280px, 1fr)', gap: 12, alignContent: 'start' }}>
         <div style={{ ...card, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{tr('กราฟสด ·')} {m.name}</div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{tr('กราฟสด ·')} {m.label}</div>
             <div role="radiogroup" aria-label={tr('ช่วงกราฟ')} style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
               {[[60, '60 นาที'], [1440, '24 ชม.']].map(([v, l]) => (
                 <button key={v} type="button" role="radio" aria-checked={win === v} className={`pg-btn${win === v ? ' primary' : ''}`} onClick={() => setWin(v)}>{tr(l)}</button>
@@ -253,7 +253,7 @@ export default function EnergyMeterDetail({ m, machines, boardMeters, totalToday
                 <div key={r.key} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 12.5, fontWeight: r.key === m.key ? 800 : 500, color: r.key === m.key ? 'var(--text)' : 'var(--text2)' }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                     <span style={{ width: 9, height: 9, borderRadius: 2, flex: 'none', background: r.key === m.key ? ACC : (donut.find(d => d.key === r.key)?.fill || IDLE) }} />
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</span>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.label}</span>
                   </span>
                   <span style={{ whiteSpace: 'nowrap' }}>{r.pct == null ? tr('ไม่ออนไลน์') : `${fmt(r.pct, 0)}%`}</span>
                 </div>
@@ -261,7 +261,7 @@ export default function EnergyMeterDetail({ m, machines, boardMeters, totalToday
             </div>
           </div>
           {m.parent && <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 6 }}>{tr('ตู้นี้เป็นมิเตอร์ลูก — อยู่ในยอดของตู้แม่ ไม่ได้นับแยกในวงนี้')}</div>}
-          <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)', marginTop: 14 }}>{tr('แจ้งเตือนของ')} {m.name}</div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)', marginTop: 14 }}>{tr('แจ้งเตือนของ')} {m.label}</div>
           {events == null ? <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{loaded ? tr('อ่านเหตุการณ์ไม่ได้') : tr('กำลังโหลด…')}</div>
             : !openAlerts.length ? <div style={{ fontSize: 12.5, color: GOOD, border: `1px solid ${GOOD}`, borderRadius: 6, padding: '6px 10px', marginTop: 6 }}>✓ {tr('ไม่มีการแจ้งเตือน')}</div>
               : openAlerts.map(e => (
@@ -304,7 +304,7 @@ export default function EnergyMeterDetail({ m, machines, boardMeters, totalToday
       </div>
 
       <div style={{ ...card }}>
-        <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{tr('เหตุการณ์ของ')} {m.name}</div>
+        <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{tr('เหตุการณ์ของ')} {m.label}</div>
         <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 8 }}>{tr('จาก Node-RED (เกณฑ์ตั้งที่ Node-RED) ·')} {EVENTS_SHOW} {tr('รายการล่าสุด · ใหม่อยู่บน')}</div>
         {events == null ? <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{loaded ? tr('อ่านเหตุการณ์ไม่ได้') : tr('กำลังโหลด…')}</div>
           : !events.length ? <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{tr('ยังไม่มีเหตุการณ์ของตู้นี้')}</div>
