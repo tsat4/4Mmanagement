@@ -204,6 +204,14 @@ export default function LayerProcessAudit() {
   const [qAudits, setQAudits] = useState([]); // audits ทั้งไตรมาส (ใช้ทำสถานะ ● ตรวจแล้ว)
   /* 🔴 อ่านใบ/แผนไตรมาสไม่สำเร็จ = ห้ามทำเป็น "⊗ เลยกำหนด ยังไม่ตรวจ" (ใบนี้พิมพ์ไปเซ็น FM-QMR-008) */
   const [qErr, setQErr] = useState('');
+  /* 🔴 P2 (23/11): อ่าน "แผน" ไม่สำเร็จ (แยกจากอ่านผลตรวจไม่สำเร็จ) ⇒ ห้ามบันทึกแผนไตรมาส
+     ไม่งั้น qData/qHeader ว่าง → upsert ชื่อผู้ตรวจเป็น null + ลบแผนรายวันเดิมทิ้ง (DB rule 12 fail-closed) */
+  const [qPlanErr, setQPlanErr] = useState('');
+  /* 🔴 P1 (23/11): แผนไตรมาสที่แก้บนจอแล้วยังไม่บันทึก — เปลี่ยนไลน์/กะ/ไตรมาส ต้องถามก่อนทิ้ง
+     ref คู่กัน = ให้ effect/ตัวถามอ่านค่าล่าสุดได้โดยไม่ต้องใส่ใน deps */
+  const [qDirty, setQDirtyState] = useState(false);
+  const qDirtyRef = useRef(false);
+  const setQDirty = (v) => { qDirtyRef.current = v; setQDirtyState(v); };
   const [qHeader, setQHeader] = useState({ leader_name: '', supervisor_name: '', manager_name: '', gm_name: '', stations: '' });
 
   /* audit record */
@@ -236,6 +244,10 @@ export default function LayerProcessAudit() {
        ① ทุกจุดที่ `setState` หลัง `await` เทียบ "คีย์ที่ยิงไป" กับ "คีย์ที่จออยู่ตอนนี้" — ไม่ตรง = ทิ้ง
        ② `draft` พก `key` ของตัวเองมาด้วย · `saveAudit`/`deleteAudit` **ปฏิเสธถ้าคีย์ไม่ตรงจอ** (fail-closed) */
   const monthKey = viewKey(selLine, selShift, selMonth);
+  /* แผนไตรมาสผูกกับ "ไตรมาส" ไม่ใช่เดือนที่โฟกัส — กด "เลือกเดือนนี้" ในไตรมาสเดียวกันต้องไม่โหลดทับ (P1 · 23/11) */
+  const quarterKey = viewKey(selLine, selShift, quarterMonths(selMonth)[0]);
+  const quarterKeyRef = useRef(quarterKey);
+  quarterKeyRef.current = quarterKey;
   const draftKey = viewKey(selLine, selShift, auditDate, auditLayer);
   const monthKeyRef = useRef(monthKey);
   const draftKeyRef = useRef(draftKey);
@@ -333,6 +345,7 @@ export default function LayerProcessAudit() {
     if (error) { toast.error((tr('ดึงจุดงานไม่สำเร็จ') + ': ') + error.message); return; }
     if (!list.length) { toast.info('ไลน์นี้ยังไม่มีจุดงานในผัง — ตั้งจุดงานที่หน้า Line Setup ก่อน'); return; }
     setQHeader(prev => ({ ...prev, stations: list.join('\n') }));
+    setQDirty(true);
     toast.success(`${tr("ดึง")} ${list.length} ${tr("จุดงานมาเป็นสถานีตรวจแล้ว — แก้ไข/เพิ่มเองได้")}`);
   };
 
@@ -480,7 +493,7 @@ export default function LayerProcessAudit() {
   const qMonths = useMemo(() => quarterMonths(selMonth), [selMonth]);
   const loadQuarter = async () => {
     if (!selLine) return;
-    const key = monthKey;
+    const key = quarterKey;
     const mks = quarterMonths(selMonth);
     const first = dateOf(mks[0], 1), last = dateOf(mks[2], daysInMonth(mks[2]));
     const [plsRes, audsRes] = await Promise.all([
@@ -490,8 +503,8 @@ export default function LayerProcessAudit() {
     /* 🔴 อ่านไม่สำเร็จ ≠ "ยังไม่ตรวจ" — ใบไตรมาสนี้ถูกพิมพ์ไปเซ็น ⇒ ช่อง ⊗ ที่มาจากคิวรีล่ม
        = กล่าวหาหน้างานบนกระดาษที่ยื่นออกไปแล้ว (คลาสเดียวกับตารางเดือน · QC audit 20/10) */
     const { data: pls } = plsRes, { data: auds } = audsRes;
-    const qe = audsRes.error ? `${tr("โหลดผลตรวจของไตรมาสไม่สำเร็จ")}: ${audsRes.error.message}`
-      : plsRes.error ? `${tr("โหลดแผนตรวจของไตรมาสไม่สำเร็จ")}: ${plsRes.error.message}` : '';
+    const qpe = plsRes.error ? `${tr("โหลดแผนตรวจของไตรมาสไม่สำเร็จ")}: ${plsRes.error.message}` : '';
+    const qe = [audsRes.error ? `${tr("โหลดผลตรวจของไตรมาสไม่สำเร็จ")}: ${audsRes.error.message}` : '', qpe].filter(Boolean).join(' · ');
     const map = {};
     mks.forEach(mk => {
       const pl = (pls || []).find(p => p.month_key === mk) || null;
@@ -499,28 +512,47 @@ export default function LayerProcessAudit() {
       (pl?.lpa_plan_days || []).forEach(d => { days[d.day] = d; });
       map[mk] = { plan: pl, days };
     });
-    if (monthKeyRef.current !== key) return;   // 🔴 ทิ้งคำตอบที่มาช้า (ไม่งั้นแผนไตรมาสของไลน์เก่าค้างบนจอไลน์ใหม่)
+    if (quarterKeyRef.current !== key) return;   // 🔴 ทิ้งคำตอบที่มาช้า (ไม่งั้นแผนไตรมาสของไลน์เก่าค้างบนจอไลน์ใหม่)
     setQLoadedKey(key);
     setQErr(qe);
+    setQPlanErr(qpe);
     setQData(map);
+    setQDirty(false);
     setQAudits(auds || []);
     const firstPl = mks.map(mk => map[mk].plan).find(Boolean);
     let stations = firstPl?.stations || '';
-    if (!stations && canManage) { const { list } = await fetchStationNames(); stations = list.join('\n'); }
-    if (monthKeyRef.current !== key) return;   // await รอบที่ 2 (ดึงจุดงาน) ⇒ ต้องเทียบอีกครั้ง
+    if (!stations && canManage && !qpe) { const { list } = await fetchStationNames(); stations = list.join('\n'); }
+    if (quarterKeyRef.current !== key) return;   // await รอบที่ 2 (ดึงจุดงาน) ⇒ ต้องเทียบอีกครั้ง
     setQHeader({
       leader_name: firstPl?.leader_name || '', supervisor_name: firstPl?.supervisor_name || '',
       manager_name: firstPl?.manager_name || '', gm_name: firstPl?.gm_name || '', stations,
     });
   };
-  useEffect(() => { if (tab === 'plan') loadQuarter(); }, [selLine, selShift, selMonth, tab]); // eslint-disable-line react-hooks/exhaustive-deps
+  /* โหลดเมื่อไตรมาส/ไลน์/กะเปลี่ยน หรือเข้าแท็บแผน — แต่ถ้ากลับเข้าแท็บแผนของไตรมาสเดิมที่ยังแก้ค้าง ห้ามโหลดทับ (P1) */
+  useEffect(() => {
+    if (tab !== 'plan') return;
+    if (qDirtyRef.current && qLoadedKey === quarterKey) return;
+    loadQuarter();
+  }, [quarterKey, tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const setQHeaderF = (k, v) => setQHeader(prev => ({ ...prev, [k]: v }));
-  const setQDay = (mk, day, patch) => setQData(prev => {
+  /** P1: จะเปลี่ยนไลน์/กะ/ไตรมาส ทั้งที่แผนไตรมาสแก้ค้างอยู่ ⇒ ถามก่อนทิ้ง (ไตรมาสเดิม = ไม่ต้องถาม) */
+  const confirmLeaveQuarter = async (nextQuarterKey) => {
+    if (!qDirtyRef.current || nextQuarterKey === quarterKey) return true;
+    const ok = await askConfirm(tr('แผนไตรมาสที่แก้ไว้ (แท็บแผนตรวจ) ยังไม่ได้บันทึก') + '\n\n'
+      + tr('เปลี่ยนไลน์/กะ/ไตรมาสตอนนี้ = ทิ้งการแก้ไขทั้งหมด') + '\n' + tr('ทิ้งแล้วเปลี่ยนเลยไหม?'));
+    if (ok) setQDirty(false);
+    return ok;
+  };
+  const changeLine = async (v) => { if (await confirmLeaveQuarter(viewKey(v, selShift, quarterMonths(selMonth)[0]))) setSelLine(v); };
+  const changeShift = async (v) => { if (await confirmLeaveQuarter(viewKey(selLine, v, quarterMonths(selMonth)[0]))) setSelShift(v); };
+  const changeMonth = async (mk) => { if (await confirmLeaveQuarter(viewKey(selLine, selShift, quarterMonths(mk)[0]))) setSelMonth(mk); };
+
+  const setQHeaderF = (k, v) => { setQDirty(true); setQHeader(prev => ({ ...prev, [k]: v })); };
+  const setQDay = (mk, day, patch) => { setQDirty(true); setQData(prev => {
     const md = prev[mk] || { plan: null, days: {} };
     const pd = md.days[day] || { day, station: '', plan_leader: false, plan_supervisor: false, plan_manager: false, plan_gm: false };
     return { ...prev, [mk]: { ...md, days: { ...md.days, [day]: { ...pd, ...patch } } } };
-  });
+  }); };
   const qAuditFor = (dstr, layer) => qAudits.find(a => a.audit_date === dstr && a.layer === layer);
   const qStatus = (mk, day, layerKey, planKey) => {
     const dstr = dateOf(mk, day);
@@ -565,14 +597,15 @@ export default function LayerProcessAudit() {
       next[mk] = { ...(next[mk] || { plan: null }), days };
     });
     setQData(next);
+    setQDirty(true);
     toast.success(`${tr("เติมแผนทั้งไตรมาสแล้ว — ครบ")} ${stationList.length} ${tr("จุดงานในทุกเดือน (แก้ไขได้")})`);
   };
 
   const saveQuarter = async () => {
     if (!lineGuard('แผนตรวจรายไตรมาสของไลน์นี้')) return;
-    const misQ = monthMismatch(qLoadedKey);
-    if (misQ) { toast.error(misQ); return; }
+    if (isStale(qLoadedKey, quarterKey)) { toast.error(staleBlockText({ what: tr('แผนที่แสดงอยู่'), unitWord: tr('ไลน์/กะ/ไตรมาส') })); return; }
     if (!canManage) return;
+    if (qPlanErr) { toast.error(tr('อ่านแผนเดิมของไตรมาสนี้ไม่สำเร็จ — ปิดการบันทึกไว้ กันแผนเดิมถูกเขียนทับ/ลบ · กดโหลดใหม่ก่อน')); return; }
     setSavingPlan(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -869,6 +902,8 @@ export default function LayerProcessAudit() {
 
   /* ═════════ PRINT: ใบแผน (Layer Process Audit Plan) ═════════ */
   const printPlan = async () => {
+    /* P1: ใบพิมพ์อ่านแผนจาก DB ⇒ แก้ค้างอยู่ = ใบจะไม่ตรงจอ · ต้องบันทึกก่อน (ห้ามพิมพ์ใบที่ไม่ตรงจอเงียบๆ) */
+    if (qDirtyRef.current) { toast.error(tr('แผนไตรมาสที่แก้ไว้ยังไม่ได้บันทึก — กด "บันทึกแผนไตรมาส" ก่อนพิมพ์')); return; }
     setPrinting(true);
     try {
       const dfp = await getDocForm('lpa_plan', {});
@@ -1091,11 +1126,11 @@ ${issuesHtml}
     <FilterBar style={{ marginBottom: 14 }}>
       <span className="filter-label">{tr('ไลน์ / พื้นที่ตรวจ')}</span>
       {/* <LineSelect> — ลำดับชั้น/ตัดไลน์ปลดระวาง/ค่าเดิมไม่หายเงียบ (visibleLines กรอง scope ไว้แล้ว · 2026-09-07) */}
-      <LineSelect lines={visibleLines} value={selLine} placeholder={null} onChange={setSelLine} />
-      <Segmented value={selShift} onChange={setSelShift} label={tr('กะ')}
+      <LineSelect lines={visibleLines} value={selLine} placeholder={null} onChange={changeLine} />
+      <Segmented value={selShift} onChange={changeShift} label={tr('กะ')}
         options={[{ value: 'day', label: SHIFT_META.day }, { value: 'night', label: SHIFT_META.night }]} />
       <span className="filter-label">{tr('เดือน')}</span>
-      <input type="month" value={selMonth} onChange={e => e.target.value && setSelMonth(e.target.value)} />
+      <input type="month" value={selMonth} onChange={e => e.target.value && changeMonth(e.target.value)} />
     </FilterBar>
   );
 
@@ -1133,14 +1168,21 @@ ${issuesHtml}
         <div className="card" style={{ padding: 16 }}>
           {/* หัวไตรมาส + ปุ่มเลื่อนไตรมาส */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
-            <button onClick={() => setSelMonth(shiftMonth(qMonths[0], -3))} style={btnGhost}>{tr('ไตรมาสก่อน')}</button>
+            <button onClick={() => changeMonth(shiftMonth(qMonths[0], -3))} style={btnGhost}>{tr('ไตรมาสก่อน')}</button>
             <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--text)' }}>{tr('ไตรมาส Q')}{quarterOf(selMonth)} · {monthLabel(qMonths[0])} – {monthLabel(qMonths[2])}</div>
-            <button onClick={() => setSelMonth(shiftMonth(qMonths[0], 3))} style={btnGhost}>{tr('ไตรมาสถัดไป ▶')}</button>
+            <button onClick={() => changeMonth(shiftMonth(qMonths[0], 3))} style={btnGhost}>{tr('ไตรมาสถัดไป ▶')}</button>
           </div>
           {qErr && (
             <div style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 'var(--r-md)', fontSize: 12.5,
               background: 'var(--card-surf)', border: '1px solid var(--red)', color: 'var(--red)' }}>
               ⚠ {qErr} {tr('— ช่องที่วางแผนไว้แสดงเป็น')} <b>?</b> {tr('(ยังบอกไม่ได้ว่าตรวจแล้วหรือยัง)')} <b>{tr('อย่าเพิ่งพิมพ์ใบนี้ไปเซ็น')}</b>
+              {qPlanErr && <> · <b>{tr('ปิดปุ่มบันทึกแผนไว้ (กันแผนเดิมถูกลบ)')}</b> <button onClick={loadQuarter} style={{ ...btnGhost, padding: '2px 8px', fontSize: 11 }}>{tr('โหลดใหม่')}</button></>}
+            </div>
+          )}
+          {qDirty && (
+            <div style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 'var(--r-md)', fontSize: 12.5,
+              background: 'var(--card-surf)', border: '1px solid var(--amber)', color: 'var(--amber)' }}>
+              ✎ {tr('มีการแก้แผนไตรมาสที่ยังไม่ได้บันทึก — กด')} <b>{tr('บันทึกแผนไตรมาส')}</b> {tr('ก่อนพิมพ์หรือเปลี่ยนไลน์/กะ/ไตรมาส')}
             </div>
           )}
           <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 10, marginBottom: 12 }}>
@@ -1162,7 +1204,7 @@ ${issuesHtml}
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <button onClick={fillStationsFromWorkstations} style={btnTeal} title={tr('ดึงรายชื่อจุดงานทั้งหมดในไลน์นี้ (รวมไลน์ย่อย) มาเป็นสถานีตรวจตั้งต้น — LPA ตรวจกระบวนการที่จุดงาน ไม่ใช่ทุกเครื่องจักร')}>{tr('ดึงจุดงานในไลน์')}</button>
                 <button onClick={autoFillQuarter} style={btnAmber} title={tr('กระจายจุดงานให้ครบทุกจุดภายในแต่ละเดือน (Leader ทุกวัน · SV ต้นสัปดาห์ · MGR รายเดือน · GM รายไตรมาส)')}>{tr('เติมแผนทั้งไตรมาส')}</button>
-                <button onClick={saveQuarter} disabled={savingPlan} style={btnAccent}>{savingPlan ? '...' : tr('บันทึกแผนไตรมาส')}</button>
+                <button onClick={saveQuarter} disabled={savingPlan || !!qPlanErr} title={qPlanErr ? tr('อ่านแผนเดิมไม่สำเร็จ — โหลดใหม่ก่อนบันทึก') : undefined} style={btnAccent}>{savingPlan ? '...' : tr('บันทึกแผนไตรมาส')}</button>
                 <button onClick={printPlan} disabled={printing} style={btnBlue} title={`${tr("พิมพ์ใบแผนของเดือน")} ${monthLabel(selMonth)} (${tr("บันทึกก่อนพิมพ์")})`}>{tr('พิมพ์ (')}{monthLabel(selMonth)})</button>
               </div>
             )}
