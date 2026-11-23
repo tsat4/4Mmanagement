@@ -31,6 +31,8 @@ import LineScopeSelect from '../components/LineScopeSelect'
 import { lineKnownSet, groupEquipRowsByLine } from '../utils/pmEquipList'
 import { filterPlanRows } from '../utils/pmPlanFilter'
 import AmMonthlyReport from '../components/AmMonthlyReport'
+import AmStationSetup from '../components/AmStationSetup'
+import { buildStationIndex, groupLineUnits } from '../utils/amStations'   // 🧩 สถานี AM (ใบรวมของอุปกรณ์ที่ติดตั้งคู่กัน · 23/11)
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 import { askConfirm } from '../utils/askConfirm';
 
@@ -49,12 +51,12 @@ function AmMoChip({ follow }) {
 /* ⏱️ กะ/เวลาเริ่มกะ + data-flow ทั้งชุด ย้ายไป `src/lib/dailyAmBoard.js` (2026-10-08) — ผังรวมโรงงานใช้ตัวเดียวกัน
    ห้ามเขียน getShiftInfo/คิวรี inspections ซ้ำในหน้า (สองจอจะตอบคนละสี) */
 export default function DailyPM() {
-  const { role, lineId: userLineId, sections: scopeSecs, scopeIdx } = useContext(UserContext)
+  const { role, lineId: userLineId, sections: scopeSecs, scopeIdx, fullName } = useContext(UserContext)
   const canManage = can('pm', 'setup', role)
 
   // ⚠️ param `sub` ไม่ใช่ `tab` — หน้านี้ถูกฝังในแท็บ AM ของ /daily-checker ซึ่งจอง ?tab= ไปแล้ว
   // 📅 monthly = รายงานรายเดือนแบบตาราง LPA (ประชุม 02/11 ข้อ C2 · 03/11)
-  const [tab, setTab] = useTabParam(['status', 'monthly', 'registry'], 'status', 'sub')
+  const [tab, setTab] = useTabParam(['status', 'monthly', 'registry', 'stations'], 'status', 'sub')
   const [userId, setUserId] = useState(null)
   const [jigs, setJigs] = useState([])
   const [prodLines, setProdLines] = useState([]) // รายชื่อไลน์ผลิต — ใช้กำหนดไลน์ให้อุปกรณ์ที่ยังไม่ระบุ
@@ -108,6 +110,28 @@ export default function DailyPM() {
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- standard fetch-on-mount (load is useCallback([]))
   useEffect(() => { load() }, [load])
+
+  /* 🧩 สถานี AM (23/11) — บอร์ดนับเป็น "ชุด" · อ่านไม่ได้ = นับรายเครื่องเหมือนเดิม + บอกบนจอ (ไม่ซ่อนแผง) */
+  const [amSt, setAmSt] = useState({ stations: [], members: [], err: '' })
+  useEffect(() => {
+    let alive = true
+    Promise.all([
+      supabaseDR.from('am_stations').select('id, name, line_name, is_active, sort_order').eq('is_active', true),
+      supabaseDR.from('am_station_members').select('station_id, jig_id, sort_order'),
+    ]).then(([a, b]) => {
+      if (!alive) return
+      if (a.error || b.error) { setAmSt(p => ({ ...p, err: (a.error || b.error).message })); return }
+      setAmSt({ stations: a.data || [], members: b.data || [], err: '' })
+    })
+    return () => { alive = false }
+  }, [tab])   // กลับจากแท็บตั้งค่าสถานี = อ่านใหม่
+  const stationIx = useMemo(() => buildStationIndex(amSt.stations, amSt.members), [amSt])
+  const jigNameOf = useCallback((id) => { const j = jigs.find(x => x.id === id); return j ? (j.machine_no || j.jig_no || j.name) : '?' }, [jigs])
+  /** หน่วยนับของไลน์ (สถานี = 1 ชุด) — ชุดเครื่องที่ต้องตรวจ = `row.requiredIds` ตัวเดียวกับตัวหาร "ตรวจแล้ว x/N เครื่อง"
+   *  (เดิมเดาจากทะเบียนเอง ⇒ ไลน์ที่ตัดสินรายเครื่อง ได้ "0/0 เครื่อง · ครบ 3/3 ชุด" ขัดกันเอง · 23/11) */
+  const unitsOf = useCallback((row) => groupLineUnits({
+    neededIds: row.requiredIds || [], missingIds: row.missing.map(m => m.jig_id), ngIds: row.ng.map(m => m.jig_id), ix: stationIx,
+  }), [stationIx])
 
   // สถานะต้องขยับเองแบบจอ TV: ตรวจเสร็จ (inspections) / เปิดใบผลิตใบแรก (prod_orders) /
   // เปิด-ปิดกะ (production_sessions) → refresh ทันที + interval 5 นาทีกัน event หลุด
@@ -256,9 +280,12 @@ export default function DailyPM() {
           AM {tr("ตรวจเครื่อง/POKA-YOKE ต้นกะ")} · {shiftInfo.label} · {shiftInfo.workDateStr}
           {' · '}{tr('เตือนเมื่อเกิน')} {DAILY_PM_WINDOW_MIN} {tr("นาทีหลังเปิดใบผลิตใบแรก")}
         </>}
-        tabs={[{ key: 'status', label: 'สถานะวันนี้' }, { key: 'monthly', label: 'รายงานรายเดือน' }, { key: 'registry', label: 'ลงทะเบียนเครื่องตรวจ' }]}
+        tabs={[{ key: 'status', label: 'สถานะวันนี้' }, { key: 'monthly', label: 'รายงานรายเดือน' }, { key: 'registry', label: 'ลงทะเบียนเครื่องตรวจ' }, { key: 'stations', label: 'สถานี (ใบรวม)' }]}
         tab={tab} onTab={setTab} />
 
+      {tab === 'status' && amSt.err && (
+        <div style={{ marginBottom: 8, fontSize: 12, color: 'var(--amber)' }}>{tr('อ่านรายการสถานี AM ไม่ได้ — บอร์ดนับรายเครื่องตามปกติ')} ({amSt.err})</div>
+      )}
       {tab === 'status' && (
         dashboard.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--muted)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-lg)' }}>
@@ -317,6 +344,10 @@ export default function DailyPM() {
                   </div>
                   <div style={{ marginTop: 10, fontSize: 13, color: 'var(--text2)' }}>
                     {tr("ตรวจแล้ว")} <b style={{ color: meta.color }}>{row.checked}/{row.total}</b> {tr("เครื่อง")}
+                    {/* 🧩 ไลน์ที่มีสถานี = นับเป็นชุดด้วย (สถานี = 1 ชุด · ครบเมื่อทุกตัวในสถานีตรวจแล้ว · 23/11) */}
+                    {(() => { const u = unitsOf(row); return u.stationN > 0 ? (
+                      <span style={{ marginLeft: 6 }}>· {tr('ครบ')} <b style={{ color: meta.color }}>{u.doneN}/{u.total}</b> {tr('ชุด')} <span style={{ color: 'var(--muted)' }}>({tr('มีสถานี')} {u.stationN})</span></span>
+                    ) : null })()}
                     {/* ⚙️ B1 — ตัวหาร = เครื่องที่มีใบผลิตสแกนกะนี้ ไม่ใช่ทุกเครื่องในทะเบียน ⇒ ต้องบอกว่าลงทะเบียนไว้กี่เครื่อง */}
                     {(row.amMode === 'machine' || row.amMode === 'mixed') && row.registeredN !== row.total && (
                       <span style={{ color: 'var(--muted)', marginLeft: 6 }}>{tr('(ที่เดินกะนี้ · ลงทะเบียน')} {row.registeredN})</span>
@@ -370,7 +401,19 @@ export default function DailyPM() {
                     <div style={{ marginTop: 8 }}>
                       <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700 }}>{tr('ยังไม่ตรวจ (')}{row.missing.length})</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 3 }}>
-                        {row.missing.map(m => <span key={m.jig_id} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 'var(--r-md)', background: 'var(--bg3)', color: 'var(--muted)' }}>{m.machine_no ? `${m.machine_no} · ` : ''}{m.name}</span>)}
+                        {/* 🧩 เครื่องในสถานีเดียวกัน = ชิปเดียว บอกว่าขาดตัวไหน (23/11) · เครื่องเดี่ยว = ชิปเดิม */}
+                        {(() => {
+                          const u = unitsOf(row)
+                          const inSt = new Set(u.units.filter(x => x.station).flatMap(x => x.jigIds))
+                          return (<>
+                            {u.units.filter(x => x.station && x.missing.length).map(x => (
+                              <span key={x.station.id} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 'var(--r-md)', background: 'var(--bg3)', color: 'var(--text2)' }}>
+                                🧩 {x.station.name} — {tr('ขาด')} {x.missing.map(jigNameOf).join(', ')}
+                              </span>
+                            ))}
+                            {row.missing.filter(m => !inSt.has(m.jig_id)).map(m => <span key={m.jig_id} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 'var(--r-md)', background: 'var(--bg3)', color: 'var(--muted)' }}>{m.machine_no ? `${m.machine_no} · ` : ''}{m.name}</span>)}
+                          </>)
+                        })()}
                       </div>
                     </div>
                   )}
@@ -400,6 +443,10 @@ export default function DailyPM() {
       )}
 
       {tab === 'monthly' && <AmMonthlyReport lines={prodLines} scopedLines={scopedProdLines} />}
+
+      {tab === 'stations' && (
+        <AmStationSetup jigs={jigs} targets={targets} lines={scopedProdLines} canManage={canManage} userId={userId} actorName={fullName || ''} />
+      )}
 
       {tab === 'registry' && (
         <div>

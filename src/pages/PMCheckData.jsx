@@ -30,6 +30,7 @@ import CalloutPin from '../components/CalloutPin'
 import { loadPmTeams, pmTeamsSync, teamKind, recordPermFor, isAmTeam, splitInspByTeam, inspTeamLabel } from '../utils/pmTeams'
 import { carryNgReason, ngReasonCheck, okWhileMoOpen } from '../utils/ngReason'   // 🚩 NG ต้องมีเหตุผล (19/11)
 import { loadNgHistory } from '../lib/ngHistory'
+import { buildStationIndex } from '../utils/amStations'   // 🧩 สถานี AM (23/11)
 import { MTN_TEAMS, deptNameOf, teamKeyOf, teamForEquipmentKind, teamsForUser, canWriteTeam, teamBlockText } from '../utils/mtnTeams'
 import { checkWriteRows } from '../utils/dbWrite';
 import NoticeBar from '../components/NoticeBar';
@@ -615,6 +616,94 @@ function NgRecheckPanel({ result, cp, onSaved, canRecord = false, deptWrite = nu
 }
 
 // ─── History Detail Modal ─────────────────────────────────────────────────────
+/* ═══ ของกลางของการบันทึกใบตรวจ (23/11 · ยกออกจาก handleSave ให้ "ใบรวมสถานี AM" ใช้สูตรเดียวกัน) ═══
+   🔴 ห้ามแตกสูตรชุดที่ 2 ในใบสถานี — ใบเดี่ยวกับใบรวมต้องตัดสิน/เขียนแถวเหมือนกันเป๊ะ */
+/** ข้อนี้กรอกครบหรือยัง (เกณฑ์เดียวกับปุ่มบันทึก + แถบความคืบหน้า) */
+/** ตัวอักษรบนปุ่มบันทึกสีเหลือง (ยังไม่ครบ) — ใช้ร่วมใบเดี่ยว/ใบสถานี */
+const SAVE_WARN_INK = '#1a1a1a'
+function cpFilledOf(cp, r) {
+  if (cp.type === 'variable') return r?.v1 !== '' && r?.v2 !== '' && r?.v3 !== '' && r?.v1 != null
+  if (cp.type === 'measure') return r?.mval !== '' && r?.mval != null
+  return !!r?.attr
+}
+/** ผลรวมของใบ: 'fail' (มี NG) · 'pending' (ไม่ครบ) · 'pass' */
+function overallOf(checkpoints, results) {
+  let hasFail = false, hasEmpty = false
+  for (const cp of checkpoints) {
+    const r = results[cp.id]
+    if (!r) { hasEmpty = true; continue }
+    if (cp.type === 'variable') {
+      if (r.v1 === '' || r.v2 === '' || r.v3 === '') { hasEmpty = true; continue }
+      if (getSpcStatus(computeAvg(r.v1, r.v2, r.v3), cp) === 'fail') hasFail = true
+    } else if (cp.type === 'measure') {
+      const st = measureStatus(r.mval, cp)
+      if (st == null) { hasEmpty = true; continue }
+      if (st === 'fail') hasFail = true
+    } else {
+      if (!r.attr) { hasEmpty = true; continue }
+      if (r.attr === 'ng') hasFail = true
+    }
+  }
+  if (hasFail) return 'fail'
+  if (hasEmpty) return 'pending'
+  return 'pass'
+}
+/** แถว inspection_results ของใบ · carryTextOf(cpId) = เหตุผลเดิมที่ยกมา (กดยืนยันแล้ว) */
+function buildResultRows(inspectionId, checkpoints, results, carryTextOf = () => '') {
+  return checkpoints.map(cp => {
+    const r = results[cp.id] ?? {}
+    if (cp.type === 'variable') {
+      const v1 = r.v1 !== '' ? Number(r.v1) : null
+      const v2 = r.v2 !== '' ? Number(r.v2) : null
+      const v3 = r.v3 !== '' ? Number(r.v3) : null
+      const avg = computeAvg(r.v1, r.v2, r.v3)
+      return { inspection_id: inspectionId, checkpoint_id: cp.id, value_1: v1, value_2: v2, value_3: v3, avg_value: avg, value_numeric: avg, status: getSpcStatus(avg, cp) ?? (avg != null ? 'pass' : null) }
+    }
+    if (cp.type === 'measure') {
+      const mv = r.mval !== '' && r.mval != null ? Number(r.mval) : null
+      return { inspection_id: inspectionId, checkpoint_id: cp.id, value_1: mv, value_numeric: mv, status: measureStatus(r.mval, cp) }
+    }
+    /* 🚩 เหตุผลที่ NG ลง `action_text` · ยกของเก่ามาแล้วกดยืนยัน = เก็บข้อความเดิมลงไปจริง */
+    const ngText = r.attr === 'ng'
+      ? (String(r.reason || '').trim() || (r.reasonAccepted ? (carryTextOf(cp.id) || '') : ''))
+      : null
+    return { inspection_id: inspectionId, checkpoint_id: cp.id, value_attribute: r.attr || null, action_text: ngText || null, status: r.attr === 'ng' ? 'fail' : r.attr === 'ok' ? 'pass' : null }
+  })
+}
+/** ชื่อจุดที่ไม่ผ่าน (ใช้เปิดใบซ่อม/แจ้งเตือน) */
+function ngTopicsOf(checkpoints, results) {
+  return checkpoints.filter(cp => {
+    const r = results[cp.id]
+    if (!r) return false
+    return cp.type === 'variable' ? getSpcStatus(computeAvg(r.v1, r.v2, r.v3), cp) === 'fail'
+      : cp.type === 'measure' ? measureStatus(r.mval, cp) === 'fail' : r.attr === 'ng'
+  }).map(cp => cp.name)
+}
+
+/** ⭐ แผน PM "วิ่งตามผลตรวจ" (2026-08-17) — ตรวจครบ (pass/fail) = ทำจริงแล้ว ⇒ stamp last_done_at + เลื่อน next_due_date
+ *  run_day ข้าม (trigger pm_refresh_plan ดูแล · 08/10) · วันนี้ stamp แล้วข้าม · วันที่ = วันทำงาน (getWorkDate)
+ *  @returns {Promise<string|null>} ข้อความผิด (best-effort — ผู้เรียกต้องบอกบนจอ ห้ามเงียบ) */
+async function stampPlansAfterCheck(checklistId) {
+  try {
+    const { data: plans, error: pErr } = await supabaseDR.from('pm_plans')
+      .select('id, plan_type, interval_days, last_done_at, cycle_basis').eq('checklist_id', checklistId).eq('is_active', true)
+    if (pErr) throw pErr
+    const done = getWorkDate()
+    for (const pl of (plans || [])) {
+      if (pl.cycle_basis === 'run_day') continue
+      if (pl.last_done_at && String(pl.last_done_at).slice(0, 10) >= done) continue
+      const patch = { last_done_at: done }
+      if (pl.plan_type !== 'usage' && Number(pl.interval_days) > 0) {
+        const d = new Date(done + 'T00:00:00'); d.setDate(d.getDate() + Number(pl.interval_days))
+        patch.next_due_date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      }
+      const { error: uErr } = await supabaseDR.from('pm_plans').update(patch).eq('id', pl.id)
+      if (uErr) throw uErr
+    }
+    return null
+  } catch (e) { return e?.message || String(e) }
+}
+
 /* 🔔 ลิงก์ของแจ้งเตือนใบตรวจ (20/11 · คำสั่ง user "แจ้งเตือนใบ AM ยังพาไปหน้า PM ช่าง")
    ใบ AM → หน้าบันทึกผลตรวจ AM ใน Daily Checker · ใบ PM → หน้าตรวจของช่าง · เปิดเครื่องนั้นให้เลย (?equip=)
    แยกด้วย isAmTeam() (mtn_teams.kind) เท่านั้น · ไม่รู้ทีม = ไม่ส่ง link (ถอยไป map ref_table เดิม) */
@@ -880,6 +969,240 @@ function HistoryModal({ inspection, checkpoints: cpsFromPage, jig, onClose, user
 /** มีช่องไหนในใบตรวจถูกกรอกไหม (ร่างในเครื่อง) — ค่าว่างทั้งใบ = ไม่ต้องเก็บ/ไม่ต้องถามกู้คืน */
 const pmHasInput = (results, notes) => !!(notes && String(notes).trim())
   || Object.values(results || {}).some(r => r && ['v1', 'v2', 'v3', 'attr', 'note', 'mval'].some(f => r[f] !== '' && r[f] != null))
+
+/* ═══ 🧩 ใบตรวจ AM แบบสถานี — อุปกรณ์ที่ติดตั้งคู่กันตรวจในใบเดียว กดบันทึกครั้งเดียว (2026-11-23 · คำสั่ง user) ═══
+   user: "robot + gripper (+ stationary + nut feeder) PM แยกทีม แต่ AM ที่ผลิตดูทั้งชุด — ไม่อยากเปิดทีละใบ"
+   · จุดตรวจ = ใบ AM รายอุปกรณ์เดิม (ตั้งที่ PM Setup แท็บฝ่ายผลิต) ดึงมาเรียงเป็นหัวข้อต่ออุปกรณ์
+   · บันทึก = 1 แถว inspections ต่ออุปกรณ์ (ตารางเดิม) ⇒ ประวัติ/รายงานรายเดือน/บอร์ด ใช้ของเดิมทั้งหมด
+   · กฎเดียวกับใบเดี่ยวทุกข้อ: ตรวจไม่ครบ = บันทึกไม่ได้ + เด้งไปข้อที่ขาด · NG ต้องมีเหตุผล · บัตรผู้ตรวจ (สแกนครั้งเดียว) ·
+     หัวหน้าบันทึกเอง = รับทราบรายวัน (B4) · NG → คิวเปิดใบซ่อมไป "ทีมเจ้าของ PM ของตัวนั้น" (B3)
+   · สูตรตัดสิน/เขียนแถวใช้ของกลางชุดเดียวกับใบเดี่ยว (overallOf · buildResultRows · ngTopicsOf · stampPlansAfterCheck)
+   · บันทึกล้มกลางทาง = ตัวที่บันทึกแล้วไม่บันทึกซ้ำ (savedIds) + บอกบนจอว่าล้มที่ตัวไหน
+   📄 docs/modules/pm-hub-check-setup.md §🧩 สถานี AM */
+function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, deptWrite, userId, userRole, fullName, myPosition,
+  myEmployeeId, isSharedAccount, inspectorCode, setInspectorCode, checkedThisShift, ownerTeamOf, onSavedJig, onQueueMo, onOpenSingle }) {
+  const [sec, setSec] = useState({ key: '', status: 'loading', list: [], err: '' })   // list: [{ jig, checklistId, cps, ngHist }]
+  const [results, setResults] = useState({})
+  const [notes, setNotes] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [savedIds, setSavedIds] = useState(() => new Set())
+  const rowRefs = useRef({})
+  const memberKey = memberJigs.map(j => j.id).join(',')
+  const loadKey = `${station.id}|${memberKey}|${amDept}`
+
+  useEffect(() => {
+    let alive = true
+    setSec({ key: loadKey, status: 'loading', list: [], err: '' }); setResults({}); setSavedIds(new Set())
+    ;(async () => {
+      try {
+        const list = []
+        for (const jig of memberJigs) {
+          const cl = await findChecklist(jig.id, 'mtn', amDept)
+          const { data, error } = cl
+            ? await supabaseDR.from('jig_checkpoints').select('*').eq('checklist_id', cl.id).order('sort_order')
+            : { data: [], error: null }
+          if (error) throw error
+          const ngHist = await loadNgHistory(jig).catch(e => ({ byCp: {}, machine: null, error: String(e?.message || e) }))
+          list.push({ jig, checklistId: cl?.id ?? null, cps: data ?? [], ngHist })
+        }
+        if (!alive) return
+        const init = {}
+        list.forEach(m => m.cps.forEach(c => { init[c.id] = { v1: '', v2: '', v3: '', attr: '', note: '', mval: '', reason: '', reasonAccepted: false } }))
+        setResults(init)
+        setSec({ key: loadKey, status: 'ok', list, err: '' })
+      } catch (e) {
+        if (alive) setSec({ key: loadKey, status: 'error', list: [], err: e?.message || String(e) })   // อ่านไม่ได้ ≠ ไม่มีจุดตรวจ
+      }
+    })()
+    return () => { alive = false }
+  }, [loadKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const carryOf = (m, cpId) => { const h = m.ngHist?.byCp?.[cpId]; return h ? carryNgReason({ prev: h.prev, mo: h.mo, machine: m.ngHist.machine }) : null }
+  const okWarnOf = (m, cpId) => { const h = m.ngHist?.byCp?.[cpId]; return h ? okWhileMoOpen({ attr: 'ok', mo: h.mo, machine: m.ngHist.machine }) : null }
+  const pending = sec.list.filter(m => !savedIds.has(m.jig.id))
+  const allCps = pending.flatMap(m => m.cps)
+  const calcRes = pmCalcResults(allCps, results)
+  const missingList = pending.flatMap(m => m.cps.map((cp, i) => (!cpFilledOf(cp, calcRes[cp.id]) ? { m, cp, no: i + 1 } : null)).filter(Boolean))
+  const noCl = pending.filter(m => !m.cps.length)
+
+  const jumpTo = (cpId) => { const el = rowRefs.current[cpId]; if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }) }
+  const shortName = (jig) => jig.machine_no || jig.jig_no || jig.name
+
+  const save = async () => {
+    if (sec.status !== 'ok' || sec.key !== loadKey) { toast.error('ข้อมูลจุดตรวจยังโหลดไม่เสร็จ — รอสักครู่แล้วกดบันทึกใหม่'); return }
+    if (!canRecord) { toast.error('ไม่มีสิทธิ์บันทึกผลตรวจ AM'); return }
+    if (deptWrite && !deptWrite.ok) { toast.info(teamBlockText(deptWrite, 'งานตรวจของทีมนี้')); return }
+    if (noCl.length) { toast.error(`บันทึกไม่ได้ — ${noCl.map(m => m.jig.name).join(', ')} ยังไม่มีจุดตรวจ AM (ตั้งที่ PM Setup แท็บฝ่ายผลิต)`); return }
+    if (missingList.length) {
+      const txt = missingList.slice(0, 8).map(x => `${shortName(x.m.jig)} ข้อ ${x.no}`).join(', ')
+      toast.error(`บันทึกไม่ได้ — ยังไม่ได้ตรวจ ${missingList.length} จุด (${txt}${missingList.length > 8 ? ' …' : ''}) — ตรวจให้ครบทุกข้อก่อน`)
+      jumpTo(missingList[0].cp.id); return
+    }
+    {
+      const bad = []
+      pending.forEach(m => m.cps.forEach((cp, i) => {
+        if (cp.type === 'variable' || cp.type === 'measure') return
+        const r = calcRes[cp.id] ?? {}
+        const chk = ngReasonCheck({ attr: r.attr, text: r.reason, carry: carryOf(m, cp.id), accepted: !!r.reasonAccepted })
+        if (!chk.ok) bad.push({ cp, txt: `${shortName(m.jig)} ข้อ ${i + 1} ${cp.name}: ${chk.blockText}` })
+      }))
+      if (bad.length) { toast.error(`${tr('ยังบันทึกไม่ได้')} — ${bad.length} ${tr('ข้อที่ติ๊ก NG ไม่มีเหตุผล')}\n${bad.slice(0, 3).map(b => b.txt).join('\n')}`); jumpTo(bad[0].cp.id); return }
+    }
+    setSaving(true)
+    try {
+      // 🪪 บัตรผู้ตรวจ — สแกนครั้งเดียวใช้ทั้งใบ (กฎตัดสินชุดเดียวกับใบเดี่ยว `amBadgeGate`)
+      const raw = inspectorCode.trim()
+      let hits = 0, loadError = false, badgeEmp = null
+      if (normBadgeCode(raw)) {
+        const { data: rows, error: eEmp } = await supabase.from('employees')
+          .select('id, employee_id_code, name, position').in('employee_id_code', [...new Set([raw, normBadgeCode(raw)])])
+        loadError = !!eEmp
+        hits = (rows ?? []).filter(e => normBadgeCode(e.employee_id_code) === normBadgeCode(raw)).length
+        badgeEmp = findByBadge(rows ?? [], raw)
+      }
+      const gate = amBadgeGate({ code: raw, employee: badgeEmp, hits, loadError, kind: 'AM' })
+      if (!gate.ok) { toast.error(gate.text); return }
+      const onSite = amOnSiteApproval({
+        inspectorRank: positionRank(badgeEmp.position), approverRank: positionRank(myPosition),
+        isSelf: myEmployeeId === undefined ? null : (!!myEmployeeId && badgeEmp.id === myEmployeeId),
+        canApprove: amApproveAllowed({ can: (r, a) => can(r, a, userRole), isSeeded: isActionSeeded }) && deptWrite?.ok !== false,
+        isShared: !!isSharedAccount,
+      })
+      const approvalPatch = onSite.approve ? { approval_status: 'approved', approved_by: userId, approved_at: new Date().toISOString() } : {}
+
+      const done = []          // [{ m, insp, overall, ngTopics }]
+      let failMsg = ''
+      for (const m of pending) {
+        const overall = overallOf(m.cps, calcRes)
+        const { data: insp, error: e1 } = await supabaseDR.from('inspections').insert({
+          jig_id: m.jig.id, checklist_id: m.checklistId, inspector_id: userId, status: overall,
+          notes: [notes.trim(), `[สถานี AM: ${station.name}]`].filter(Boolean).join(' '),
+          inspector_code: raw || null, ...approvalPatch,
+        }).select().single()
+        if (e1) { failMsg = `${m.jig.name}: ${e1.message}`; break }
+        const { error: e2 } = await supabaseDR.from('inspection_results').insert(buildResultRows(insp.id, m.cps, calcRes, (id) => carryOf(m, id)?.text || ''))
+        if (e2) {
+          const { data: gone, error: eDel } = await supabaseDR.from('inspections').delete().eq('id', insp.id).select('id')
+          failMsg = `${m.jig.name}: บันทึกผลรายจุดไม่สำเร็จ ${e2.message}${(eDel || !gone?.length) ? ' — ⚠️ และลบหัวใบค้างไม่สำเร็จ แจ้ง admin' : ''}`
+          break
+        }
+        done.push({ m, insp, overall, ngTopics: ngTopicsOf(m.cps, calcRes) })
+      }
+
+      // ผลข้างเคียงรายอุปกรณ์ที่บันทึกสำเร็จ (ชุดเดียวกับใบเดี่ยว)
+      const planErrs = []
+      for (const d of done) {
+        if (d.overall === 'fail') {
+          notifyDepartment(amDept, {
+            event: 'pm_inspection_ng', title: 'พบผลตรวจไม่ผ่าน (NG)', body: `${d.m.jig.name} — ${formatDate(d.insp.inspected_at)} · สถานี ${station.name}`,
+            type: 'error', refTable: 'inspections', refId: d.insp.id, link: inspNotifLink(amDept, d.m.jig.id), lineName: d.m.jig.line_name || null,
+          }).catch(() => {})
+        }
+        if (d.overall !== 'pending' && d.m.checklistId) {
+          const pe = await stampPlansAfterCheck(d.m.checklistId)
+          if (pe) planErrs.push(`${shortName(d.m.jig)}: ${pe}`)
+        }
+        handleDailyPmSave({ jig: d.m.jig, department: amDept, overall: d.overall, ngTopics: d.ngTopics }).catch(() => {})
+        onSavedJig?.(d.m.jig.id, d.overall)
+      }
+      if (planErrs.length) toast.error(`${tr('บันทึกผลตรวจสำเร็จ แต่เลื่อนรอบแผนไม่สำเร็จ')}: ${planErrs.join(' · ')}`)
+      setSavedIds(prev => { const n = new Set(prev); done.forEach(d => n.add(d.m.jig.id)); return n })
+
+      if (failMsg) {
+        toast.error(`${tr('บันทึกแล้ว')} ${done.length}/${pending.length} ${tr('เครื่อง · ล้มที่')} ${failMsg} — ${tr('กดบันทึกอีกครั้งเพื่อบันทึกตัวที่เหลือ (ตัวที่บันทึกแล้วไม่ซ้ำ)')}`)
+      } else {
+        toast.success(onSite.approve
+          ? `${tr('บันทึกสถานี')} ${station.name} ${tr('ครบ')} ${done.length} ${tr('เครื่อง — ผู้ตรวจ')} ${badgeEmp?.name || raw} · ${fullName || tr('คุณ')} ${tr('ทวนสอบ/รับทราบแล้ว')}`
+          : `${tr('บันทึกสถานี')} ${station.name} ${tr('ครบ')} ${done.length} ${tr('เครื่อง — ผู้ตรวจ')} ${badgeEmp?.name || raw}`)
+        if (!onSite.approve && onSite.text) toast.info(onSite.text)
+        setNotes('')
+      }
+      // 🔧 B3 — NG ทุกตัว ⇒ คิวเปิดใบซ่อม (หรือเขียนเหตุผล) ไปทีมเจ้าของ PM ของตัวนั้น
+      const ngItems = done.filter(d => d.overall === 'fail' && d.ngTopics.length)
+        .map(d => ({ insp: d.insp, ngTopics: d.ngTopics, jig: d.m.jig, team: ownerTeamOf(d.m.jig) }))
+      if (ngItems.length) onQueueMo?.(ngItems)
+    } catch (err) {
+      toast.error(err?.message || String(err))
+    } finally { setSaving(false) }
+  }
+
+  if (sec.status === 'loading' || sec.key !== loadKey) return <div style={{ padding: 24, color: 'var(--muted)', textAlign: 'center' }}>{tr('กำลังโหลดจุดตรวจของสถานี…')}</div>
+  if (sec.status === 'error') return <div style={{ padding: 16, color: 'var(--amber)' }}>{tr('อ่านจุดตรวจของสถานีไม่ได้')}: {sec.err}</div>
+
+  const totalCps = allCps.length
+  const doneCps = totalCps - missingList.length
+  const allSaved = sec.list.length > 0 && pending.length === 0
+  return (
+    <div>
+      <div style={{ marginBottom: 12, padding: '10px 12px', borderRadius: 'var(--r-md)', background: 'var(--accent-dim)', border: '1px solid var(--border2)' }}>
+        <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>🧩 {tr('สถานี')} {station.name}</div>
+        <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 2 }}>
+          {station.line_name} · {sec.list.length} {tr('เครื่อง ตรวจในใบเดียว กดบันทึกครั้งเดียว — ระบบแยกเก็บผลรายเครื่อง')}
+        </div>
+      </div>
+      {!allSaved && (
+        <div style={{ position: 'sticky', top: 0, zIndex: 3, background: 'var(--card)', padding: '6px 0', marginBottom: 8, fontSize: 12.5, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <b>{tr('ตรวจแล้ว')} {doneCps}/{totalCps}</b>
+          {missingList.length > 0 && <span style={{ color: 'var(--amber)' }}>· {tr('เหลือ')} {missingList.length}</span>}
+          {missingList.slice(0, 10).map(x => (
+            <button key={x.cp.id} type="button" onClick={() => jumpTo(x.cp.id)} title={x.cp.name}
+              style={{ height: 22, padding: '0 8px', borderRadius: 11, border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+              {shortName(x.m.jig)} · {x.no}
+            </button>
+          ))}
+        </div>
+      )}
+      {sec.list.map((m, mi) => {
+        const saved = savedIds.has(m.jig.id)
+        const shift = checkedThisShift?.[m.jig.id]
+        const owner = ownerTeamOf(m.jig)
+        return (
+          <section key={m.jig.id} style={{ marginBottom: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 'var(--r-md)', background: 'var(--bg3-surf)', border: '1px solid var(--border)', marginBottom: 8, flexWrap: 'wrap' }}>
+              <b style={{ fontSize: 13.5, color: 'var(--text)' }}>{mi + 1}. {m.jig.name}</b>
+              {owner && <span style={{ fontSize: 11, color: 'var(--muted)' }}>· {tr('PM โดย')} {deptNameOf(owner) || owner}</span>}
+              {shift && <span style={{ fontSize: 11, fontWeight: 700, color: shift === 'fail' ? 'var(--red)' : shift === 'pass' ? 'var(--green)' : 'var(--amber)' }}>· {tr('กะนี้')} {shift === 'fail' ? 'NG' : shift === 'pass' ? tr('ตรวจแล้ว') : tr('ไม่ครบ')}</span>}
+              <span style={{ flex: 1 }} />
+              {saved && <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--green)' }}>✓ {tr('บันทึกแล้ว')}</span>}
+              <button type="button" onClick={() => onOpenSingle?.(m.jig.id)} style={{ fontSize: 11.5, padding: '3px 9px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'transparent', color: 'var(--text2)', cursor: 'pointer' }}>{tr('ประวัติเครื่องนี้')}</button>
+            </div>
+            {m.ngHist?.error && <div style={{ fontSize: 11.5, color: 'var(--amber)', margin: '0 0 6px' }}>⚠ {tr('อ่านประวัติการตรวจครั้งก่อนไม่ได้ — ต้องพิมพ์เหตุผล NG เอง')}</div>}
+            {!saved && !m.cps.length && <div style={{ fontSize: 12.5, color: 'var(--amber)' }}>{tr('เครื่องนี้ยังไม่มีจุดตรวจ AM — ตั้งที่ PM Setup แท็บฝ่ายผลิต')}</div>}
+            {!saved && m.cps.map((cp, idx) => {
+              const r = results[cp.id] ?? {}
+              const row = cp.type === 'variable' ? (
+                <VariableRow cp={cp} idx={idx} r={calcRes[cp.id] ?? { v1: '', v2: '', v3: '' }} onChange={v => setResults(p => ({ ...p, [cp.id]: v }))} methodIndex={methodIndex}
+                  calcText={calcOf(cp) ? calcFormula(calcOf(cp), id => { const k = m.cps.findIndex(c => c.id === id); return k < 0 ? '?' : `${tr('ข้อ')} ${k + 1}` }) : null} />
+              ) : cp.type === 'measure' ? (
+                <MeasureRow cp={cp} idx={idx} r={r.mval !== undefined ? r : { mval: '' }} onChange={v => setResults(p => ({ ...p, [cp.id]: v }))} methodIndex={methodIndex} />
+              ) : (
+                <AttrRow cp={cp} idx={idx} methodIndex={methodIndex} value={r.attr ?? ''} note={r.note ?? ''}
+                  onChangeAttr={v => setResults(p => ({ ...p, [cp.id]: { ...p[cp.id], attr: v } }))}
+                  onChangeNote={v => setResults(p => ({ ...p, [cp.id]: { ...p[cp.id], note: v } }))}
+                  reason={r.reason ?? ''} onChangeReason={v => setResults(p => ({ ...p, [cp.id]: { ...p[cp.id], reason: v } }))}
+                  carry={carryOf(m, cp.id)} accepted={!!r.reasonAccepted}
+                  onAccept={() => setResults(p => ({ ...p, [cp.id]: { ...p[cp.id], reasonAccepted: true, reason: carryOf(m, cp.id)?.text || '' } }))}
+                  okWarn={okWarnOf(m, cp.id)} />
+              )
+              return <div key={cp.id} ref={el => { rowRefs.current[cp.id] = el }} style={{ scrollMarginTop: 60 }}>{row}</div>
+            })}
+          </section>
+        )
+      })}
+      {allSaved ? (
+        <div style={{ padding: 14, textAlign: 'center', color: 'var(--green)', fontWeight: 800 }}>✓ {tr('บันทึกครบทุกเครื่องในสถานีแล้ว')}</div>
+      ) : (<>
+        <InspectorCodeField value={inspectorCode} onChange={setInspectorCode} required style={{ marginTop: 8 }} />
+        <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder={tr('หมายเหตุ (ถ้ามี)...')} style={{ marginTop: 8 }} />
+        <button onClick={save} disabled={saving || !canRecord}
+          style={{ ...S.saveBtn, background: missingList.length ? 'var(--accent2)' : 'var(--accent)', color: missingList.length ? SAVE_WARN_INK : 'var(--accent-ink)', opacity: (saving || !canRecord) ? 0.6 : 1 }}>
+          {saving ? tr('กำลังบันทึก...') : !canRecord ? tr('ไม่มีสิทธิ์บันทึกผลตรวจ AM')
+            : missingList.length ? `${tr('ยังบันทึกไม่ได้ — ยังไม่ตรวจ')} ${missingList.length} ${tr('จุด')}` : `${tr('บันทึกทั้งสถานี')} (${pending.length} ${tr('เครื่อง')})`}
+        </button>
+      </>)}
+    </div>
+  )
+}
 
 /* 🧭 mode (19/11 · คำสั่ง user "AM ต้องมีหน้าบันทึกของตัวเอง · ปนกับ PM ของช่าง")
    'pm' (ค่าเริ่ม · /pm?tab=check) = เฉพาะทีมช่าง — เปิดด้วยทีม AM จะถูกพาไป /daily-checker?tab=amcheck
@@ -1243,7 +1566,42 @@ export default function PMCheckData({ mode = 'pm' }) {
     ? (teamForEquipmentKind(selectedJig?.equipment_type) || 'maintenance')
     : (teamKeyOf(department) || 'maintenance'))
 
-  const openMoPrompt = (insp, ngTopics) => { setMoTeam(defaultMoTeam()); setMoWaiving(false); setMoWaiveReason(''); setMoPrompt({ insp, ngTopics }) }
+  /* 🧩 23/11 สถานี AM: ใบรวมบันทึกหลายอุปกรณ์ทีเดียว ⇒ prompt ต้องรู้ "อุปกรณ์ของใบนี้" (ไม่ใช่ selectedJig เสมอ)
+     + ทีมเจ้าของ PM ของตัวนั้น (gripper → JIG MTN · robot → MTN) · NG หลายตัว = ต่อคิวเปิดทีละใบ */
+  const [moQueue, setMoQueue] = useState([])
+  /* 🧩 สถานี AM (23/11) — โหมด AM เท่านั้น · อ่านไม่ได้ = ใช้ใบเดี่ยวเหมือนเดิม + บอกบนจอ (ไม่บล็อกการตรวจ) */
+  const [amSt, setAmSt] = useState({ stations: [], members: [], err: '' })
+  const [singleJigId, setSingleJigId] = useState(null)   // กด "ประวัติเครื่องนี้" จากใบสถานี = ดูใบเดี่ยวของเครื่องนั้น
+  useEffect(() => {
+    if (!amMode) return undefined
+    let alive = true
+    Promise.all([
+      supabaseDR.from('am_stations').select('id, name, line_name, is_active, sort_order').eq('is_active', true),
+      supabaseDR.from('am_station_members').select('station_id, jig_id, sort_order'),
+    ]).then(([a, b]) => {
+      if (!alive) return
+      if (a.error || b.error) { setAmSt(p => ({ ...p, err: (a.error || b.error).message })); return }
+      setAmSt({ stations: a.data || [], members: b.data || [], err: '' })
+    })
+    return () => { alive = false }
+  }, [amMode])
+  const stationIx = useMemo(() => buildStationIndex(amSt.stations, amSt.members), [amSt])
+  const station = (amMode && selectedJig && singleJigId !== selectedJig.id) ? (stationIx.byJig.get(selectedJig.id) || null) : null
+  const stationJigs = useMemo(() => (station ? stationIx.membersOf(station.id).map(id => jigs.find(j => j.id === id)).filter(Boolean) : []),
+    [station, stationIx, jigs])
+  /** ทีมเจ้าของ PM ของอุปกรณ์ (ทีมช่างที่มีใบตรวจของตัวนี้) — ใบซ่อมจาก NG ในใบสถานีวิ่งไปทีมนี้ (gripper → JIG MTN) */
+  const ownerTeamOf = (jig) => [...(clDeptByJig[jig?.id] || [])].find(d => !isAmTeam(d))
+    || teamForEquipmentKind(jig?.equipment_type) || 'maintenance'
+  const openMoPrompt = (insp, ngTopics, jig = null, team = null) => {
+    setMoTeam(team || defaultMoTeam()); setMoWaiving(false); setMoWaiveReason('')
+    setMoPrompt({ insp, ngTopics, jig: jig || selectedJig })
+  }
+  useEffect(() => {
+    if (moPrompt || !moQueue.length) return
+    const [next, ...rest] = moQueue
+    setMoQueue(rest)
+    openMoPrompt(next.insp, next.ngTopics, next.jig, next.team)
+  }, [moPrompt, moQueue]) // eslint-disable-line react-hooks/exhaustive-deps
 
   /* 🔧 B3 (02/11) — AM เจอผิดปกติ ⇒ ต้องเปิด MO **หรือ** เขียนเหตุผลว่าทำไมไม่เปิด (บอร์ด AM เห็นทั้งคู่)
      🔴 ยังไม่ apply migration (ไม่มีคอลัมน์ mo_waived_reason) = ข้ามไม่ได้ ต้องเปิด MO (fail-closed + บอกบนจอ) */
@@ -1278,7 +1636,8 @@ export default function PMCheckData({ mode = 'pm' }) {
   }
 
   const createMoFromInspection = async () => {
-    if (!moPrompt || !selectedJig) return
+    const moJig = moPrompt?.jig || selectedJig   // 🧩 ใบสถานี: อุปกรณ์ของใบนี้ ไม่ใช่ตัวที่เปิดอยู่
+    if (!moPrompt || !moJig) return
     const { insp, ngTopics } = moPrompt
     setMoSaving(true)
     try {
@@ -1289,16 +1648,16 @@ export default function PMCheckData({ mode = 'pm' }) {
       const payload = {
         status: 'pending', current_step: 1, report_at: now.toISOString(), work_date: workDate,
         repair_scope: 'in_line',
-        line_name: selectedJig.line_name || null,
+        line_name: moJig.line_name || null,
         mtn_dept: teamKeyOf(moTeam) || 'maintenance',
-        machine_no: selectedJig.machine_no || selectedJig.jig_no || null,
+        machine_no: moJig.machine_no || moJig.jig_no || null,
         /* 🔴 อาการ/กลุ่ม = หัวข้อที่ตรวจไม่ผ่านจริง **ห้าม hardcode 'อื่นๆ'** (แก้ 2026-09-23)
            บั๊กคลาสเดียวกับใบที่เปิดจากดาวน์ไทม์ — เขียน 'อื่นๆ' ทับทั้งที่ `ngTopics`
            บอกอยู่แล้วว่าไม่ผ่านข้อไหน ⇒ ใบพวกนี้ไปกองรวมในถังขยะของพาเรโต
            มีด่าน regressionGuards กฎ no-hardcoded-other-category */
         problem_characteristic: ngTopics[0] || 'อื่นๆ',
         problem_group: 'ผลตรวจ PM/AM ไม่ผ่าน',
-        report_note: `[${tr("จากผลตรวจ")} ${isAmTeam(department) ? 'AM' : 'PM'}] ${selectedJig.name} — ${tr("จุดที่ไม่ผ่าน")}: ${ngTopics.join(', ')}`,
+        report_note: `[${tr("จากผลตรวจ")} ${isAmTeam(department) ? 'AM' : 'PM'}] ${moJig.name} — ${tr("จุดที่ไม่ผ่าน")}: ${ngTopics.join(', ')}`,
         // reported_by_uid: ให้ edge แจ้งกลับ "ผู้แจ้ง" ได้ทุกขั้น — เดิมหน้านี้ไม่เคยส่ง ⇒ ใบที่เปิดจากผลตรวจ PM/AM
         //   ไม่มีใครถูกเด้งตอนใบถึงคิวตัวเอง (เหตุผลเดียวกับที่ MtnRepair แก้ไปแล้ว 2026-09-14)
         reporter_prod: fullName || null, reported_by_name: fullName || null, reported_by_uid: userId || null,
@@ -1419,34 +1778,9 @@ export default function PMCheckData({ mode = 'pm' }) {
 
   /* ข้อนี้กรอกครบหรือยัง — เกณฑ์เดียวกับที่ปุ่มบันทึกใช้นับ "ยังไม่ครบกี่จุด"
      ⚠️ แก้ที่นี่ต้องแก้ปุ่มบันทึกด้วย ไม่งั้นแถบความคืบหน้ากับปุ่มตอบคนละเลข */
-  const cpFilled = (cp) => {
-    const r = results[cp.id]
-    if (cp.type === 'variable') return r?.v1 !== '' && r?.v2 !== '' && r?.v3 !== '' && r?.v1 != null
-    if (cp.type === 'measure') return r?.mval !== '' && r?.mval != null
-    return !!r?.attr
-  }
+  const cpFilled = (cp) => cpFilledOf(cp, results[cp.id])
 
-  const computeOverall = () => {
-    let hasFail = false, hasEmpty = false
-    for (const cp of checkpoints) {
-      const r = results[cp.id]
-      if (!r) { hasEmpty = true; continue }
-      if (cp.type === 'variable') {
-        if (r.v1 === '' || r.v2 === '' || r.v3 === '') { hasEmpty = true; continue }
-        if (getSpcStatus(computeAvg(r.v1, r.v2, r.v3), cp) === 'fail') hasFail = true
-      } else if (cp.type === 'measure') {
-        const s = measureStatus(r.mval, cp)
-        if (s == null) { hasEmpty = true; continue }
-        if (s === 'fail') hasFail = true
-      } else {
-        if (!r.attr) { hasEmpty = true; continue }
-        if (r.attr === 'ng') hasFail = true
-      }
-    }
-    if (hasFail) return 'fail'
-    if (hasEmpty) return 'pending'
-    return 'pass'
-  }
+  const computeOverall = () => overallOf(checkpoints, results)
 
   /* 🔴 ตรวจไม่ครบ = บันทึกไม่ได้ (19/11) — บอกเลขข้อที่ขาด (ลำดับเดียวกับชิป "ยังไม่ตรวจ") + พาไปข้อแรก */
   const blockIncomplete = () => {
@@ -1537,26 +1871,7 @@ export default function PMCheckData({ mode = 'pm' }) {
       }).select().single()
       if (e1) throw e1
 
-      const rows = checkpoints.map(cp => {
-        const r = results[cp.id] ?? {}
-        if (cp.type === 'variable') {
-          const v1 = r.v1 !== '' ? Number(r.v1) : null
-          const v2 = r.v2 !== '' ? Number(r.v2) : null
-          const v3 = r.v3 !== '' ? Number(r.v3) : null
-          const avg = computeAvg(r.v1, r.v2, r.v3)
-          return { inspection_id: insp.id, checkpoint_id: cp.id, value_1: v1, value_2: v2, value_3: v3, avg_value: avg, value_numeric: avg, status: getSpcStatus(avg, cp) ?? (avg != null ? 'pass' : null) }
-        }
-        if (cp.type === 'measure') {
-          const mv = r.mval !== '' && r.mval != null ? Number(r.mval) : null
-          return { inspection_id: insp.id, checkpoint_id: cp.id, value_1: mv, value_numeric: mv, status: measureStatus(r.mval, cp) }
-        }
-        /* 🚩 เหตุผลที่ NG ลง `action_text` (ช่องนี้มีอยู่แล้ว แต่ถูกใช้ 1 จาก 43 จุด)
-           ยกของเก่ามาแล้วกดยืนยัน = เก็บข้อความเดิมลงไปจริง ไม่ใช่ปล่อยว่างแล้วอ้างว่ายกมา */
-        const ngText = r.attr === 'ng'
-          ? (String(r.reason || '').trim() || (r.reasonAccepted ? (ngCarryOf(cp.id)?.text || '') : ''))
-          : null
-        return { inspection_id: insp.id, checkpoint_id: cp.id, value_attribute: r.attr || null, action_text: ngText || null, status: r.attr === 'ng' ? 'fail' : r.attr === 'ok' ? 'pass' : null }
-      })
+      const rows = buildResultRows(insp.id, checkpoints, results, (id) => ngCarryOf(id)?.text || '')
       const { error: e2 } = await supabaseDR.from('inspection_results').insert(rows)
       if (e2) {
         /* 🔴 หัวใบตรวจถูกสร้างไปแล้วแต่ผลรายจุดเข้าไม่ได้ ⇒ ลบหัวใบทิ้ง (QC 05/10)
@@ -1603,37 +1918,12 @@ export default function PMCheckData({ mode = 'pm' }) {
       //   ที่ stamp ให้ ทำให้ PM Forecast/ผังเครื่องจักร/Dashboard เห็นแผนค้างทั้งที่ตรวจไปแล้ว
       //   'pending' (ตรวจไม่ครบ) ไม่นับว่าทำ PM จบ — ไม่เลื่อนรอบ · best-effort ห้ามทำ save หลักพัง แต่ห้ามเงียบ
       if (overall !== 'pending' && checklistId) {
-        try {
-          const { data: plans, error: pErr } = await supabaseDR.from('pm_plans')
-            .select('id, plan_type, interval_days, last_done_at, cycle_basis').eq('checklist_id', checklistId).eq('is_active', true)
-          if (pErr) throw pErr
-          // วันที่ทำ PM = "วันทำงาน" (ก่อน 08:00 = วันก่อนหน้า) — เดิมใช้วันปฏิทินเครื่อง ⇒ กะดึกตรวจตี 2
-          // ได้วันถัดไป แผนเลื่อนรอบเกินจริง 1 วัน + ข้ามด่าน "วันนี้ stamp แล้ว" (QC 05/10)
-          const done = getWorkDate()
-          for (const pl of (plans || [])) {
-            if (pl.cycle_basis === 'run_day') continue   // 🔴 run_day ไม่มีวันครบกำหนดแบบปฏิทิน — trigger pm_refresh_plan ดูแลเอง ห้ามเขียน next_due_date ทับ (08/10)
-            if (pl.last_done_at && String(pl.last_done_at).slice(0, 10) >= done) continue // วันนี้ stamp ไปแล้ว (ตรวจซ้ำ/AM รายกะ) — ไม่เขียนซ้ำ
-            const patch = { last_done_at: done }
-            // ตามรอบเวลา (time/hybrid) → เลื่อน next_due = วันทำ + interval_days · usage → forecast คำนวณเองจาก last_done_at
-            if (pl.plan_type !== 'usage' && Number(pl.interval_days) > 0) {
-              const d = new Date(done + 'T00:00:00'); d.setDate(d.getDate() + Number(pl.interval_days))
-              patch.next_due_date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-            }
-            const { error: uErr } = await supabaseDR.from('pm_plans').update(patch).eq('id', pl.id)
-            if (uErr) throw uErr
-          }
-        } catch (e) {
-          toast.error((tr('บันทึกผลตรวจสำเร็จ แต่เลื่อนรอบแผน PM ไม่สำเร็จ') + ': ') + (e?.message || e))
-        }
+        const pErr = await stampPlansAfterCheck(checklistId)
+        if (pErr) toast.error((tr('บันทึกผลตรวจสำเร็จ แต่เลื่อนรอบแผน PM ไม่สำเร็จ') + ': ') + pErr)
       }
 
       // Daily PM line alarm (green when the line is complete & all pass, red on NG).
-      const ngTopics = checkpoints.filter(cp => {
-        const r = results[cp.id]
-        if (!r) return false
-        return cp.type === 'variable' ? getSpcStatus(computeAvg(r.v1, r.v2, r.v3), cp) === 'fail'
-          : cp.type === 'measure' ? measureStatus(r.mval, cp) === 'fail' : r.attr === 'ng'
-      }).map(cp => cp.name)
+      const ngTopics = ngTopicsOf(checkpoints, results)
       handleDailyPmSave({ jig: selectedJig, department, overall, ngTopics }).catch(() => {})
       // อัปเดตป้าย "ตรวจแล้ว/รอตรวจ" ในรายการซ้ายทันที ไม่ต้องรอโหลดใหม่
       if (isAmTeam(department)) setCheckedThisShift(prev => ({ ...prev, [selectedJig.id]: overall }))
@@ -1842,6 +2132,10 @@ export default function PMCheckData({ mode = 'pm' }) {
                           </span>
                         </div>
                         {jig.machine_no && <p style={{ fontSize: 11, color: 'var(--muted)', margin: '2px 0 0' }}>{jig.machine_no}</p>}
+                        {/* 🧩 อยู่สถานี AM — กดตัวไหนก็ได้ = ใบรวมทั้งชุด (23/11) */}
+                        {stationIx.byJig.get(jig.id) && (
+                          <p style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 700, margin: '2px 0 0' }}>🧩 {tr('สถานี')} {stationIx.byJig.get(jig.id).name}</p>
+                        )}
                         {/* ลงทะเบียนไว้แต่ยังไม่มีจุดตรวจ AM — เปิดเข้าไปจะเจอฟอร์มเปล่า บอกไว้ตั้งแต่ในลิสต์ */}
                         {!hasAmChecklist(jig.id) && (
                           <p style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 700, margin: '2px 0 0' }}>{tr('⚠ ยังไม่มีจุดตรวจ AM')}</p>
@@ -1904,11 +2198,30 @@ export default function PMCheckData({ mode = 'pm' }) {
             </div>
 
             <div style={{ ...S.body, ...(isNarrow ? { padding: 12 } : null) }}>
-              {tab === 'record' && (
+              {/* 🧩 สถานี AM — อุปกรณ์นี้อยู่ในสถานี ⇒ ใบรวมทั้งชุด (23/11) */}
+              {tab === 'record' && station && (
+                <AmStationSheet station={station} memberJigs={stationJigs} amDept={department} methodIndex={methodIndex}
+                  canRecord={canRecord} deptWrite={deptWrite} userId={userId} userRole={userRole} fullName={fullName}
+                  myPosition={myPosition} myEmployeeId={myEmployeeId} isSharedAccount={isSharedAccount}
+                  inspectorCode={inspectorCode} setInspectorCode={setInspectorCode} checkedThisShift={checkedThisShift}
+                  ownerTeamOf={ownerTeamOf}
+                  onSavedJig={(id, overall) => setCheckedThisShift(prev => ({ ...prev, [id]: overall }))}
+                  onQueueMo={(items) => setMoQueue(prev => [...prev, ...items])}
+                  onOpenSingle={(id) => { setSingleJigId(id); setParams({ equip: id }); setTab('history') }} />
+              )}
+              {/* ดูใบเดี่ยวของเครื่องในสถานีอยู่ — บอกทางกลับ */}
+              {amMode && selectedJig && singleJigId === selectedJig.id && stationIx.byJig.get(selectedJig.id) && (
+                <div style={{ marginBottom: 10, fontSize: 12.5, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span style={{ color: 'var(--muted)' }}>{tr('เครื่องนี้อยู่สถานี')} "{stationIx.byJig.get(selectedJig.id).name}"</span>
+                  <button type="button" className="tbtn" onClick={() => { setSingleJigId(null); setTab('record') }} style={{ padding: '3px 10px', fontSize: 12 }}>🧩 {tr('กลับไปใบสถานี')}</button>
+                </div>
+              )}
+              {amMode && amSt.err && <div style={{ marginBottom: 8, fontSize: 12, color: 'var(--amber)' }}>{tr('อ่านรายการสถานี AM ไม่ได้ — ตรวจทีละเครื่องตามปกติ')} ({amSt.err})</div>}
+              {tab === 'record' && !station && (
                 <DraftRestoreBar draft={pendingDraft} what={`${tr("ใบตรวจ")} ${selectedJig?.name || tr('เครื่องนี้')}`} onRestore={restorePmDraft}
                   onDiscard={() => { if (pmDraftKey) clearDraft(pmDraftKey); setPendingDraft(null) }} />
               )}
-              {tab === 'record' && (() => {
+              {tab === 'record' && !station && (() => {
                 /* ⚠️ ไม่มีจุดตรวจของแผนกนี้ = ห้ามโชว์รูปหมุน (2026-08-11 · user ทัก "ทำไมรูปยังค้างอยู่")
                    รูปหลายมุมเป็นของ "ตัวเครื่อง" (ของกลางทุกแผนก) แต่ "หมุดจุดตรวจ" ผูกกับ
                    checklist ของแต่ละแผนก และ**ปักอยู่คนละมุม (frame) กัน** — AM อาจตรวจด้านหน้า
@@ -2223,7 +2536,7 @@ export default function PMCheckData({ mode = 'pm' }) {
                       }} disabled={saving || !canRecord}
                         style={{ ...S.saveBtn,
                           background: isFormReady ? 'var(--accent)' : 'var(--accent2)',
-                          color: isFormReady ? 'var(--accent-ink)' : '#1a1a1a',
+                          color: isFormReady ? 'var(--accent-ink)' : SAVE_WARN_INK,
                           opacity: (saving || !canRecord) ? 0.6 : 1 }}>
                         {saving ? 'กำลังบันทึก...' : !canRecord ? `${tr("ไม่มีสิทธิ์บันทึกผลตรวจ")} ${isAmTeam(department) ? 'AM' : 'PM'}` : isFormReady ? 'บันทึกผลการตรวจ' : `${tr("ยังบันทึกไม่ได้ — ยังไม่ตรวจ")} ${nMissing} ${tr("จุด")}`}
                       </button>
@@ -2377,7 +2690,7 @@ export default function PMCheckData({ mode = 'pm' }) {
           <div style={{ width: '100%', maxWidth: 460, background: 'var(--bg2-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
               <div style={{ fontSize: 16, fontWeight: 800, color: '#e05c4a' }}>{tr('⚠ พบผลตรวจไม่ผ่าน')} {moPrompt.ngTopics.length} {tr('จุด')}</div>
-              <div style={{ fontSize: 12.5, color: 'var(--text2)', marginTop: 4 }}>{selectedJig?.name}</div>
+              <div style={{ fontSize: 12.5, color: 'var(--text2)', marginTop: 4 }}>{(moPrompt.jig || selectedJig)?.name}{moQueue.length ? ` · ${tr('ต่อคิวอีก')} ${moQueue.length} ${tr('เครื่อง')}` : ''}</div>
             </div>
             <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '9px 12px', fontSize: 12, color: 'var(--text2)', lineHeight: 1.7, maxHeight: 130, overflowY: 'auto' }}>
               {moPrompt.ngTopics.map((n, i) => <div key={i}>• {n}</div>)}
