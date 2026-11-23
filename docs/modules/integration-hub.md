@@ -175,3 +175,13 @@ user เลือกจาก 4 ทาง: ① เทียบอย่างเ
   - กดพัก < โควตา (พักแต่ไม่ได้กด เครื่องขึ้น Idle) ⇒ โควตาที่เหลือหักจาก Idle ≥ 2 นาทีก่อน — จอเขียนบอก
   - อ่านนโยบายไม่ได้ ⇒ ถอยไปใช้เวลาที่กดพักหน้าเครื่อง + เขียน `no_break_policy`
 - ไฟล์: `supabase/migrations/20261116_machine_reason_is_break_dr.sql` (apply แล้ว) · `20261116b_machine_shift_facts_reason_dr.sql` (rpc + reason_code · ดูสถานะ apply ในคอมมิท)
+
+## ✏️ แก้ชื่อ / หมายเหตุต้นทาง (23/11 · คำสั่ง user "ไม่อยากได้ Die Shop")
+- ปุ่ม "✏️ แก้ชื่อ / หมายเหตุ" ข้างชื่อในหน้าต้นทาง (`SourceDetail` · สิทธิ์ `integration:manage` เดียวกับปุ่มอื่น) → edge `integration-admin` action `update` (มีอยู่แล้วตั้งแต่ v3)
+- 🔴 **รหัส (`code`) แก้ไม่ได้** — อยู่ในชื่อ topic มิเตอร์ (`<code>/<ตู้>/kw`) และ Node-RED ตัวเดิมส่ง `x-source` = code ⇒ เปลี่ยน = ค่าหลุดจากตู้ทันที
+
+
+## ⚡ ต้นทาง `hdf` (Node-RED HDF · Smart Energy TSAT-P4) — ผูก topic + ลงทะเบียนตู้ (23/11 · คำสั่ง user "ทำให้ที")
+- ผูก `hdf/<ตู้>/{kw,kwh_total,v,a,pf}` → `zone/<ตู้>` 24 แถว (AC-08 ไม่ส่ง pf) · ค่ารายเฟส v1-3/a1-3 เข้าเองผ่าน topic พี่น้อง (ingest v9)
+- ทะเบียนบอร์ด `energy_live_meters`: ตู้ `MDB (HDF)` — MDB-07 → Aircomp-HDF → AC-06 / AC-07 / AC-08 (ผังอ่านจากจอ Node-RED · แก้ `parent_name` ได้)
+- 🔴 **MDB-06 ไม่ได้แตะ** — มีคนผูกไว้ก่อนแล้วกับโซน `Utility Hydrofroming` (ข้อมูลรายเดือนใช้โซนนั้น) · ยังไม่ขึ้นบอร์ดสด รอ user ตัดสิน
