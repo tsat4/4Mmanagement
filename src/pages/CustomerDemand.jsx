@@ -17,6 +17,7 @@ import { buildPnIndex, pickStockMat, stockLookupKeys, matIssueText } from '../ut
 import CustomerSelect from '../components/CustomerSelect';
 import ProductSelect from '../components/ProductSelect';
 import useProducts from '../utils/useProducts';
+import { ImportButton } from '../components/ImportKit';
 const PullSignalUpload = lazy(() => import('../components/PullSignalUpload'));   // 📥 อัพโหลด e-SMART (ตัวอ่าน xlsx โหลดตอนเปิดเท่านั้น)
 const OrderIntakeLog = lazy(() => import('../components/OrderIntakeLog'));       // 📜 ประวัติ order เข้าระบบ (3 ทางเข้า)
 const PullRoundsPanel = lazy(() => import('../components/PullRoundsPanel'));
@@ -673,11 +674,9 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
         {canAdd && (
           /* 📥 e-SMART = ยอดยืนยันสุดท้ายก่อนส่งจากลูกค้า (ดู PullSignalUpload.jsx) — วางคู่ "เพิ่ม order ด่วน"
              เพราะเป็นทางเข้าของ order เหมือนกัน ต่างกันแค่ "คนคีย์" กับ "ลูกค้ายืนยันมาเป็นไฟล์" */
-          <button onClick={() => setShowPull(true)}
+          <ImportButton k="esmart" onClick={() => setShowPull(true)} tone="quiet"
             title={tr('ลูกค้าส่งไฟล์ยอดเรียกงานจริง (e-SMART) มาเป็นช่วงเวลา — อัพเข้าระบบเพื่อยืนยัน/แก้ยอดของรอบนั้น · พาร์ทที่ไม่อยู่ในไฟล์ถือว่าตรงกับ 862')}
-            style={{ padding: '4px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--blue)', background: 'var(--blue-dim)', color: 'var(--blue)', fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: 'var(--font-body)', flexShrink: 0, marginLeft: 'auto' }}>
-            {tr('อัพโหลด e-SMART')}
-          </button>
+            style={{ padding: '4px 12px', fontSize: 12, flexShrink: 0, marginLeft: 'auto' }} />
         )}
         {canAdd && (
           <button onClick={() => { setAddForm({ ...emptyAdd, due_date: day >= workDateStr() ? day : workDateStr() }); setShowAdd(true); }}

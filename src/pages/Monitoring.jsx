@@ -1,3 +1,5 @@
+import { ImportButton } from '../components/ImportKit';
+import { importLabel } from '../utils/importRegistry';
 import { useState, useEffect, useCallback, useMemo, useRef, useContext, lazy, Suspense } from 'react';
 import { MoreMark } from '../components/InfoMore';
 import { supabaseDR } from '../supabaseClient';
@@ -706,12 +708,7 @@ export default function Monitoring() {
             {/* 🏬 23/11 — กลุ่มสโตร์: ปุ่มหลักคือไฟล์ของสโตร์ (Stock_Store.xlsm · คนละไฟล์กับทีมวางแผน)
                 ปุ่มบอร์ด FG ย้ายเข้า ⋯ เฉพาะกลุ่มนี้ (ปุ่มตายตัว ≤ 2 · UI §6.35) · กลุ่มอื่นเหมือนเดิมเป๊ะ */}
             {groupDef.key === 'store' ? (
-              <button type="button" className="pg-btn" onClick={() => setShowStoreUp(true)}
-                title={tr('อัพโหลด Stock_Store.xlsm — รายชื่อพาร์ทแต่ละพื้นที่ + STD/PC + MAX/MIN (ดูก่อนยืนยัน)')}
-                style={{ fontSize: 13, fontWeight: 700, padding: '7px 14px', borderRadius: 8, cursor: 'pointer',
-                  background: 'var(--accent)', color: 'var(--accent-ink)', border: 'none' }}>
-                {tr('📥 อัพโหลดไฟล์สโตร์')}
-              </button>
+              <ImportButton k="store_stock" onClick={() => setShowStoreUp(true)} />
             ) : (
               <button type="button" className="pg-btn" onClick={() => setShowFgSync(true)}
                 title={tr('สร้าง/อัพเดทบอร์ด FG ต่อลูกค้า จากออเดอร์ EDI 862/830 ที่นำเข้าไว้แล้ว')}
@@ -720,13 +717,8 @@ export default function Monitoring() {
                 {tr('สร้างบอร์ด FG จากออเดอร์')}
               </button>
             )}
-            <button type="button" className="pg-btn" onClick={() => setShowImport(true)}
-              style={{ fontSize: 13, fontWeight: 700, padding: '7px 14px', borderRadius: 8, cursor: 'pointer',
-                ...(groupDef.key === 'store'
-                  ? { background: 'var(--bg3-surf)', color: 'var(--text)', border: '1px solid var(--border2)' }
-                  : { background: 'var(--accent)', color: 'var(--accent-ink)', border: 'none' }) }}>
-              {tr('นำเข้าจากไฟล์ Excel')}
-            </button>
+            <ImportButton k="planner_monitoring" onClick={() => setShowImport(true)}
+              tone={groupDef.key === 'store' ? 'quiet' : 'primary'} />
             <OverflowMenu items={[{ key: 'fg-sync', icon: '📦', label: tr('สร้างบอร์ด FG จากออเดอร์'),
               onClick: () => setShowFgSync(true), hidden: groupDef.key !== 'store' }]} />
           </div>
@@ -808,7 +800,7 @@ export default function Monitoring() {
         <div style={{ ...card, fontSize: FS + 1, lineHeight: 1.9 }}>
           {tr("ยังไม่มีบอร์ดในหมวดนี้")} ({subDef.kinds.map(k => BOARD_TABS.find(t => t.key === k)?.sheets).filter(Boolean).join(' · ')})
           {canEdit
-            ? <> {tr('— กด')} <b>{tr('นำเข้าจากไฟล์ Excel')}</b> {tr('แล้วเลือกไฟล์')} <code>1.Monitoring-&lt;เดือน&gt;.xlsx</code> {tr('ระบบจะสร้างบอร์ดให้ตามชีทในไฟล์')}</>
+            ? <> {tr('— กด')} <b>📥 {tr(importLabel('planner_monitoring'))}</b> {tr('แล้วเลือกไฟล์')} <code>1.Monitoring-&lt;เดือน&gt;.xlsx</code> {tr('ระบบจะสร้างบอร์ดให้ตามชีทในไฟล์')}</>
             : ' — ต้องมีสิทธิ์จัดการบอร์ดจึงจะนำเข้าได้'}
         </div>
       ) : loading && !parts.length ? (
