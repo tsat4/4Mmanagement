@@ -172,13 +172,24 @@ export default function FixtureRegistry() {
   );
   const shadowByMachine = useMemo(() => Object.fromEntries(jigsShadow.map(j => [j.machine_id, j])), [jigsShadow]);
   const hasImg = useCallback((f) => { const sh = shadowByMachine[f.id]; return !!(sh && imgJigIds.has(sh.id)); }, [shadowByMachine, imgJigIds]);
+  /* 📍 "ฟิกเจอร์ตัวไหนลงจุดชิมแล้ว" (20/11 · user ทัก "ทำไม jig/fixture ข้อมูลไม่ขึ้นเลย")
+     วัดจริงตอนนั้น: ฟิกเจอร์ 217 ตัว **ลงจุดแล้วแค่ 6 ตัว** (จุดที่เปิดใช้ 18 จุด)
+     ⇒ คนเปิดมาเจอ "ยังไม่มีจุด" เกือบทุกตัว แล้วนึกว่าจอพัง ทั้งที่จอบอกความจริง
+     🔴 จอต้องบอก **ความครบของทะเบียนทั้งระบบ** ไม่ใช่ปล่อยให้ไล่เลือกทีละตัวเอง
+        (กฎความซื่อสัตย์ของจอ — "ว่าง" 2 ความหมาย: ยังไม่ลง vs เลือกผิดตัว) */
+  const ptsCountOf = useCallback((f) => allPoints.filter(p => p.machine_id === f.id).length, [allPoints]);
+  const hasPts = useCallback((f) => ptsCountOf(f) > 0, [ptsCountOf]);
+  const withPtsCount = useMemo(() => fixtures.filter(hasPts).length, [fixtures, hasPts]);
+  const [onlyWithPts, setOnlyWithPts] = useState(false);   // 📍 กรองเฉพาะตัวที่ลงจุดชิมแล้ว (20/11)
   const shownFixtures = useMemo(() => {
     const kw = q.trim().toLowerCase();
     let out = kw ? fixtures.filter(f => `${f.machine_no} ${f.machine_name} ${f.line_name || ''}`.toLowerCase().includes(kw)) : fixtures;
     if (onlyWithImg) out = out.filter(hasImg);
-    // ตัวที่มีรูปขึ้นก่อน — ปักหมุดได้ทันที (ไม่ตัดตัวอื่นทิ้ง)
-    return [...out].sort((a, b) => (hasImg(b) - hasImg(a)) || String(a.machine_no).localeCompare(String(b.machine_no)));
-  }, [fixtures, q, onlyWithImg, hasImg]);
+    if (onlyWithPts) out = out.filter(hasPts);
+    /* ตัวที่ลงจุดแล้วขึ้นก่อน → แล้วตัวที่มีรูป (ปักหมุดได้ทันที) — ไม่ตัดตัวอื่นทิ้ง */
+    return [...out].sort((a, b) => (hasPts(b) - hasPts(a)) || (hasImg(b) - hasImg(a))
+      || String(a.machine_no).localeCompare(String(b.machine_no)));
+  }, [fixtures, q, onlyWithImg, onlyWithPts, hasImg, hasPts]);
   const withImgCount = useMemo(() => fixtures.filter(hasImg).length, [fixtures, hasImg]);
 
   const fx = useMemo(() => fixtures.find(f => f.id === fxId) || null, [fixtures, fxId]);
@@ -417,7 +428,7 @@ export default function FixtureRegistry() {
               <option value="">{tr('— เลือกจิ๊ก / ฟิกเจอร์ (')}{shownFixtures.length}) —</option>
               {shownFixtures.map(f => (
                 <option key={f.id} value={f.id}>
-                  {hasImg(f) ? '📷 ' : ''}{f.machine_no} · {f.machine_name || '—'}{f.line_name ? ` (${f.line_name})` : ''}
+                  {hasPts(f) ? `📍${ptsCountOf(f)} ` : ''}{hasImg(f) ? '📷 ' : ''}{f.machine_no} · {f.machine_name || '—'}{f.line_name ? ` (${f.line_name})` : ''}
                 </option>
               ))}
             </select>
@@ -425,6 +436,14 @@ export default function FixtureRegistry() {
               <input type="checkbox" checked={onlyWithImg} onChange={e => setOnlyWithImg(e.target.checked)} />
               {tr('📷 เฉพาะที่มีรูป (')}{withImgCount})
             </label>
+            {/* 📍 20/11 — กรอง + บอกความครบทั้งระบบ ไม่ต้องไล่เลือกทีละตัวว่าตัวไหนมีข้อมูล */}
+            <label style={{ fontSize: 12, color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer' }} title={tr('ลงจุดชิมในทะเบียนแล้ว')}>
+              <input type="checkbox" checked={onlyWithPts} onChange={e => setOnlyWithPts(e.target.checked)} />
+              {tr('📍 เฉพาะที่ลงจุดแล้ว (')}{withPtsCount})
+            </label>
+            <span style={{ fontSize: 11.5, color: withPtsCount ? 'var(--muted)' : 'var(--amber)' }}>
+              {tr('ลงจุดชิมแล้ว')} <b style={{ color: withPtsCount ? 'var(--text2)' : 'var(--amber)' }}>{withPtsCount}</b> {tr('จาก')} {fixtures.length} {tr('ตัว')}
+            </span>
             {scopeOn && <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{tr('เห็นเฉพาะส่วนงานของคุณ')}</span>}
           </FilterBar>
 
