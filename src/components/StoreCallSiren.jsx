@@ -63,7 +63,8 @@ const agoMin = (iso) => (iso ? Math.max(0, Math.round((Date.now() - new Date(iso
  * @param {boolean} [p.here=false]  inline บนแท็บ "ส่งของเข้าไลน์" เอง = มีปุ่มรับทราบ/ไปเตรียมงาน ·
  *        แท็บอื่น = ลิงก์ไปแท็บส่งของอย่างเดียว (งานของแท็บนั้น)
  */
-export default function StoreCallSiren({ slot = 0, variant = 'float', here = false }) {
+/* `size` = ขนาดตัวอักษรของแถบ inline (จอทีวีสโตร์ส่ง 24 · ไม่ส่ง = 12.5 เดิม) */
+export default function StoreCallSiren({ slot = 0, variant = 'float', here = false, size }) {
   /* 📱 มือถือโชว์ทีละใบ (05/11) — แถบขึ้นบรรทัดใหม่แล้วสูง ~270px/ใบ
      3 ใบ = 894px บนจอ 844px ⇒ ปุ่ม "รับทราบ" ของใบล่างสุดตกนอกจอ กดไม่ได้เลย
      (แถบเป็น `position: fixed` เลื่อนหน้าตามไม่ได้) · ที่เหลือไปอยู่บรรทัด "+ อีก N ใบ" ข้างล่าง
@@ -174,14 +175,14 @@ export default function StoreCallSiren({ slot = 0, variant = 'float', here = fal
     return (
       <div role="status" className="andon-bar" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 10,
         background: 'var(--card-surf)', border: '1px solid var(--border)', borderLeft: '4px solid var(--amber)', borderRadius: 'var(--r-md)',
-        padding: '8px 12px', fontSize: 12.5 }}>
+        padding: size ? '10px 16px' : '8px 12px', fontSize: size || 12.5 }}>
         <span className="andon-bar-msg" style={{ flex: 1, minWidth: 0, color: 'var(--text)' }}>
           🔔 <b>{tr('ไลน์เรียกของ')} {alerts.length} {tr('ใบ')}</b> {tr('ยังไม่มีใครรับทราบ')}
           {here && <> · {tr('เก่าสุด')} <b>{a.line_name || tr('ไม่ระบุไลน์')}</b> · <MatLabel mat={a.mat_no} name={a.part_name} size={12} />
             {' · '}{tr('ขอ')} {Number(a.request_qty || 0).toLocaleString()} · {tr('รอ')} {wait != null ? `${wait.toLocaleString()} ${tr("นาที")}` : '—'}</>}
         </span>
         {muted && (
-          <button type="button" onClick={unlockNow} style={{ background: 'none', border: 'none', fontSize: 12, fontWeight: 800, color: 'var(--amber)', cursor: 'pointer' }}>
+          <button type="button" onClick={unlockNow} style={{ background: 'none', border: 'none', fontSize: size || 12, fontWeight: 800, color: 'var(--amber)', cursor: 'pointer' }}>
             {tr('แตะเพื่อเปิดเสียง')}
           </button>
         )}
@@ -196,7 +197,7 @@ export default function StoreCallSiren({ slot = 0, variant = 'float', here = fal
           </button>
         </>) : (
           /* แท็บอื่น = พาไปเฉยๆ ไม่ถือว่ารับทราบ (คนกดยังไม่ได้เห็นใบ) */
-          <button type="button" onClick={() => goPrep(a, { noAck: true })} style={{ background: 'none', border: 'none', color: 'var(--blue)', fontSize: 12.5, fontWeight: 800, cursor: 'pointer' }}>
+          <button type="button" onClick={() => goPrep(a, { noAck: true })} style={{ background: 'none', border: 'none', color: 'var(--blue)', fontSize: size || 12.5, fontWeight: 800, cursor: 'pointer' }}>
             {tr('ไปที่ ส่งของเข้าไลน์ →')}
           </button>
         )}
