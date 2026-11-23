@@ -14,6 +14,7 @@ import PageHeader from '../components/PageHeader';
 import NoticeBar from '../components/NoticeBar';
 import EnergyMqttTopics from '../components/EnergyMqttTopics';
 import MachineFactsPanel from '../components/MachineFactsPanel';
+import IntegrationGuide from '../components/IntegrationGuide';
 import { toast } from '../components/Toast';
 import { supabase, supabaseDR, DR_BASE_URL } from '../supabaseClient';
 import useTabParam from '../utils/useTabParam';
@@ -60,7 +61,7 @@ export default function Integrations() {
   const { role } = useContext(UserContext);
   const canManage = can('integration', 'manage', role);
   const canMap = can('energy', 'record', role);
-  const [tab, setTab] = useTabParam(['sources', 'kinds'], 'sources');
+  const [tab, setTab] = useTabParam(['sources', 'kinds', 'guide'], 'sources');
   const [params, setParams] = useSearchParams();
   const srcCode = params.get('src') || '';
   const [sources, setSources] = useState(null);       // null = ยังไม่โหลด/อ่านไม่ได้
@@ -102,7 +103,7 @@ export default function Integrations() {
   const header = (
     <PageHeader icon="🔌" title={tr('การเชื่อมต่อ Node-RED / เครื่องจักร')}
       sub={tr('ที่เดียวสำหรับทุกระบบที่ส่งข้อมูลเข้า ESM · ต้นทางส่งข้อเท็จจริง สูตรและการตัดสินอยู่ที่ ESM')}
-      tabs={[{ key: 'sources', label: 'แหล่งต้นทาง' }, { key: 'kinds', label: 'ชนิดข้อมูล' }]}
+      tabs={[{ key: 'sources', label: 'แหล่งต้นทาง' }, { key: 'kinds', label: 'ชนิดข้อมูล' }, { key: 'guide', label: 'คู่มือ (WI)' }]}
       tab={tab} onTab={(k) => { openSrc(null); setTab(k); }}
       actions={canManage && !srcCode && tab === 'sources'
         ? <button type="button" className="pg-btn primary" onClick={() => setCreating(true)}>{tr('+ เพิ่มการเชื่อมต่อ')}</button> : null} />
@@ -114,6 +115,7 @@ export default function Integrations() {
       {err && <NoticeBar tone="bad">{err}{sources ? ' — ตัวเลขบนจอเป็นของรอบก่อนหน้า' : ''}</NoticeBar>}
       {!sources && !err && <div style={{ color: 'var(--muted)', padding: 20 }}>{tr('กำลังโหลด…')}</div>}
 
+      {tab === 'guide' && <IntegrationGuide />}
       {sources && tab === 'kinds' && <KindsTab sources={sources} />}
 
       {sources && tab === 'sources' && (srcCode ? (
