@@ -182,3 +182,12 @@ test('รายเครื่อง: ทุกเครื่องในทะ
   })
   assert.equal(rep.rows[0].cells[0].state, 'no_run')
 })
+
+import { amModeDaysShort, amModeDaysNote } from '../amMonthly.js'
+test('ป้ายโหมดใต้ชื่อไลน์: สั้นบนจอ · เต็มใน tooltip/Excel · ไม่มีวันเปิดกะ = null', () => {
+  const md = { machine: 14, mixed: 2, line_no_mno: 3, line: 1 }
+  assert.equal(amModeDaysShort(md), 'รายเครื่อง 14 · ไม่ครบ 2 · ทั้งไลน์ 4 วัน')
+  assert.equal(amModeDaysShort({ line_no_mno: 5 }), 'ทั้งไลน์ 5 วัน')
+  assert.equal(amModeDaysShort({}), null); assert.equal(amModeDaysShort(null), null)
+  assert.match(amModeDaysNote(md), /ใบผลิตลงเลขเครื่องไม่ครบ 2 วัน/)
+})

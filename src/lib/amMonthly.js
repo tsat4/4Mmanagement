@@ -235,6 +235,18 @@ export function amModeDaysNote(md) {
   return parts.join(' · ')
 }
 
+/** ป้ายสั้นใต้ชื่อไลน์บนจอ (คอลัมน์แคบ) — คำเต็มอยู่ `amModeDaysNote()` (tooltip + Excel) · null = ไม่มีวันเปิดกะ */
+export function amModeDaysShort(md) {
+  if (!md) return null
+  const mc = md.machine || 0, mx = md.mixed || 0, ln = (md.line_no_mno || 0) + (md.line || 0)
+  if (!mc && !mx && !ln) return null
+  const parts = []
+  if (mc) parts.push(`รายเครื่อง ${mc}`)
+  if (mx) parts.push(`ไม่ครบ ${mx}`)
+  if (ln) parts.push(`ทั้งไลน์ ${ln}`)
+  return `${parts.join(' · ')} วัน`
+}
+
 /** สรุปรวมของหลายไลน์ (เช่น หลังกรอง) — ระดับเครื่อง-วัน · ตัวหารจาก `summarizeCheckDays` ที่เดียว */
 export function amRowsSummary(rows) {
   return summarizeCheckDays((rows || []).flatMap(r => r.machines.flatMap(m => m.cells.map(c => c.state))))

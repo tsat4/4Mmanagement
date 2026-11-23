@@ -27,7 +27,7 @@ import FilterBar from './FilterBar'
 import Segmented from './Segmented'
 import LineScopeSelect from './LineScopeSelect'
 import { loadMonthlyAm } from '../lib/dailyAmBoard'
-import { buildAmMonthly, amMonthlyAoa, amRowsSummary, AM_RESULT_META, amModeDaysNote } from '../lib/amMonthly'
+import { buildAmMonthly, amMonthlyAoa, amRowsSummary, AM_RESULT_META, amModeDaysNote, amModeDaysShort } from '../lib/amMonthly'
 import { CHECK_DAY, CHECK_DAY_META, CHECK_DAY_LEGEND, checkDaysNote } from '../utils/dailyCheckDay'
 import { loadCompanyCalendar } from '../utils/companyCalendar'
 import { isWorkingDayFrom } from '../utils/workingDay'
@@ -282,7 +282,7 @@ export default function AmMonthlyReport({ lines = [], scopedLines = [] }) {
               <div style={{ marginTop: 3, fontSize: 11.5, color: 'var(--amber)' }}>{tr('❔ ไม่รู้ว่าผลิตหรือไม่')} {unknownN} {tr('เครื่อง-วัน')}</div>
             )}
             <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>
-              {tr('ไลน์เปิดกะแล้ว — เครื่องไหนต้องตรวจ: ใบผลิตลงเลขเครื่องครบ = ตัดสินรายเครื่อง (เครื่องที่ไม่มีใบผลิต และเพื่อนร่วมสถานี AM ก็ไม่มี = NP) · ใบผลิตไม่ลงเลขเครื่อง = ทั้งไลน์ (ทุกเครื่องต้องตรวจ) — ดูป้ายใต้ชื่อไลน์')}
+              {tr('ไลน์เปิดกะแล้ว — เครื่องไหนต้องตรวจ: ใบผลิตลงเลขเครื่องครบ = ตัดสินรายเครื่อง (เครื่องที่ไม่มีใบผลิต และเพื่อนร่วมสถานี AM ก็ไม่มี = NP) · ใบผลิตไม่ลงเลขเครื่อง = ทั้งไลน์ (ทุกเครื่องต้องตรวจ) · ไม่ครบ = ใบผลิตลงเลขเครื่องบางใบ (เครื่องที่ไม่อยู่บนใบยังนับต้องตรวจ) — ป้ายใต้ชื่อไลน์ = นับกี่วันแบบไหน')}
             </div>
             {raw?.ordersError && (
               <div style={{ marginTop: 3, fontSize: 11.5, color: 'var(--amber)', fontWeight: 700 }}>
@@ -343,7 +343,7 @@ export default function AmMonthlyReport({ lines = [], scopedLines = [] }) {
                         <td style={{ ...cell, ...stickyCol, fontWeight: 800, fontSize: 12, color: 'var(--text)', background: view === 'machine' ? 'var(--bg3)' : 'var(--card)' }}>
                           {r.line_name === '—' ? '⚠ ยังไม่ระบุไลน์' : r.line_name}
                           <span style={{ fontWeight: 500, color: 'var(--muted)', fontSize: 11 }}> · {r.machines.length} {tr('เครื่อง')}</span>
-                          {amModeDaysNote(r.modeDays) && <div style={{ fontWeight: 500, color: 'var(--muted)', fontSize: 11, lineHeight: 1.35, whiteSpace: 'normal' }}>{tr(amModeDaysNote(r.modeDays))}</div>}
+                          {amModeDaysShort(r.modeDays) && <div title={tr(amModeDaysNote(r.modeDays))} style={{ fontWeight: 500, color: 'var(--muted)', fontSize: 11, lineHeight: 1.35 }}>{tr(amModeDaysShort(r.modeDays))}</div>}
                         </td>
                         {r.cells.map(c => {
                           const m = CHECK_DAY_META[c.state]
