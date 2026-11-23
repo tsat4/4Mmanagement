@@ -123,7 +123,7 @@ export default function ParetoChart({
                 วาดก่อนแท่งและ fill โปร่งใส เพื่อไม่บังสีแท่ง */}
             {onPick && !b.row._tail && (
               <rect x={b.x} y={g.padTop} width={b.w} height={g.plotH} fill="transparent">
-                <title>{`${b.row.name} — ${fmtV(b.value)} ${unit} · คลิกเพื่อเจาะลึก`}</title>
+                <title>{`${b.row.name} — ${fmtV(b.value)} ${unit} · ${tr("คลิกเพื่อเจาะลึก")}`}</title>
               </rect>
             )}
             <rect x={b.x} y={b.y} width={b.w} height={Math.max(b.h, b.value > 0 ? 2 : 0)}
@@ -197,7 +197,7 @@ export default function ParetoChart({
             (เดิมอยู่ใน ParetoAbcChart แล้วเขียนว่า "แสดง 11 อันดับแรกจาก 46" ทั้งที่จอกางครบ 46 แท่งแล้ว) */}
         {tail && (
           <span style={{ color: 'var(--muted)' }}>
-            แสดง {shown.length - 1} {tr('อันดับแรกจาก')} {rows.length} · ที่เหลือยุบเป็นแท่ง “หางยาว”
+            {tr("แสดง")} {shown.length - 1} {tr('อันดับแรกจาก')} {rows.length} · {tr("ที่เหลือยุบเป็นแท่ง “หางยาว")}”
           </span>
         )}
         {showAll && (

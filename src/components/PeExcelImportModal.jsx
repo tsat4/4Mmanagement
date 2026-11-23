@@ -82,7 +82,7 @@ export default function PeExcelImportModal({ sets = [], currentSetId = '', onClo
         cpSheets: parts.cp?.sheets || {},
         revisions: [...(parts.fmea?.revs || []), ...(parts.cp?.revs || []), ...(parts.pfc?.revs || [])],
       });
-      if (unread.length) p.warnings.push({ level: 'warn', text: `มี ${unread.length} ชีทที่ดูเหมือนชีท OP แต่แกะไม่ได้ (layout ไม่ตรงฟอร์ม) — ถูกข้าม`, rows: unread.map((t) => ({ sheet: t })) });
+      if (unread.length) p.warnings.push({ level: 'warn', text: `${tr("มี")} ${unread.length} ${tr("ชีทที่ดูเหมือนชีท OP แต่แกะไม่ได้ (layout ไม่ตรงฟอร์ม) — ถูกข้าม")}`, rows: unread.map((t) => ({ sheet: t })) });
       /* กรอกข้อมูลชุดให้อัตโนมัติจากหัวเอกสาร (FMEA → CP → PFC ตามลำดับความครบ) */
       const hf = [parts.fmea?.header, parts.cp?.header, parts.pfc?.header].map((h) => h?.fields || {});
       const pick = (k) => hf.find((h) => h[k])?.[k] || '';
@@ -97,7 +97,7 @@ export default function PeExcelImportModal({ sets = [], currentSetId = '', onClo
       setPlan(p);
       setStep('preview');
     } catch (e) {
-      toast.error(`อ่านไฟล์ไม่สำเร็จ: ${e.message || e}`);
+      toast.error(`${tr("อ่านไฟล์ไม่สำเร็จ")}: ${e.message || e}`);
     } finally { setBusy(false); }
   }
 
@@ -105,8 +105,8 @@ export default function PeExcelImportModal({ sets = [], currentSetId = '', onClo
     if (mode === 'new' && !meta.part_no.trim()) { toast.error('กรอก Part No. ของชุดใหม่ก่อน'); return; }
     if (mode === 'fill' && !targetId) { toast.error('เลือกชุดเอกสารปลายทางก่อน'); return; }
     const warn = mode === 'fill'
-      ? `จะแทนที่รายการ PFMEA / Control Plan / ประวัติแก้ไข ทั้งหมดของชุด "${target?.part_no}" ด้วยข้อมูลจากไฟล์\n(ขั้นงาน OP เดิมที่แก้ไว้จะไม่ถูกลบ)\n\nยืนยัน?`
-      : `จะสร้างชุดเอกสารใหม่ "${meta.part_no}" พร้อม ${plan.ops.length} OP\n\nยืนยัน?`;
+      ? `${tr("จะแทนที่รายการ PFMEA / Control Plan / ประวัติแก้ไข ทั้งหมดของชุด")} "${target?.part_no}" ${tr("ด้วยข้อมูลจากไฟล์\\n(ขั้นงาน OP เดิมที่แก้ไว้จะไม่ถูกลบ)\\n\\nยืนยัน")}?`
+      : `${tr("จะสร้างชุดเอกสารใหม่")} "${meta.part_no}" ${tr("พร้อม")} ${plan.ops.length} OP\n\n${tr("ยืนยัน")}?`;
     if (!await askConfirm(warn)) return;
 
     setBusy(true);
@@ -174,10 +174,10 @@ export default function PeExcelImportModal({ sets = [], currentSetId = '', onClo
         for (const c of chunks(rows)) { const { error: e2 } = await supabase.from('pe_doc_revisions').insert(c); if (e2) throw e2; }
       }
 
-      toast.success(`นำเข้าสำเร็จ · ${plan.ops.length} OP · PFMEA ${fRows.length} · Control Plan ${cRows.length} · ประวัติ ${plan.revisions.length}`);
+      toast.success(`${tr("นำเข้าสำเร็จ")} · ${plan.ops.length} OP · PFMEA ${fRows.length} · Control Plan ${cRows.length} · ${tr("ประวัติ")} ${plan.revisions.length}`);
       onDone?.(sid);
     } catch (e) {
-      toast.error(`นำเข้าไม่สำเร็จ: ${e.message || e}`);
+      toast.error(`${tr("นำเข้าไม่สำเร็จ")}: ${e.message || e}`);
     } finally { setBusy(false); }
   }
 
@@ -200,7 +200,7 @@ export default function PeExcelImportModal({ sets = [], currentSetId = '', onClo
         </div>
         <div style={{ display: 'grid', gap: 10 }}>
           {FILES.map((f) => (
-            <div key={f.key} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: 10, background: 'var(--bg2)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)' }}>
+            <div key={f.key} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: 10, background: 'var(--bg2-surf)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)' }}>
               <div style={{ minWidth: 190 }}>
                 <div style={{ fontSize: 13, fontWeight: 700 }}>{tr(f.label)}</div>
                 <div style={{ fontSize: 11, color: 'var(--muted)' }}>{tr(f.hint)}</div>
@@ -219,7 +219,7 @@ export default function PeExcelImportModal({ sets = [], currentSetId = '', onClo
       {step === 'preview' && plan && (<>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
           {[['ขั้นงาน (OP)', plan.ops.length], ['PFMEA', plan.fmea.length], ['Control Plan', plan.cp.length], ['ประวัติแก้ไข', plan.revisions.length]].map(([k, v]) => (
-            <div key={k} style={{ flex: '1 1 150px', padding: 10, background: 'var(--bg2)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)' }}>
+            <div key={k} style={{ flex: '1 1 150px', padding: 10, background: 'var(--bg2-surf)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)' }}>
               <div style={{ fontSize: 11, color: 'var(--muted)' }}>{k}</div>
               <div style={{ fontSize: 22, fontWeight: 800, color: v ? 'var(--accent)' : 'var(--muted)' }}>{v}</div>
             </div>
@@ -243,9 +243,9 @@ export default function PeExcelImportModal({ sets = [], currentSetId = '', onClo
 
         {nothing ? (
           <div style={{ padding: 20, textAlign: 'center', fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.7 }}>
-            อ่านไฟล์ไม่ออก — layout ต่างจากฟอร์มที่ระบบรู้จัก<br />
-            ระบบคาดว่า <b>PFMEA</b> {tr('ข้อมูลเริ่มแถว 10 คอลัมน์ B–S ·')} <b>Control Plan</b> {tr('เริ่มแถว 12 มีเลข Char No. ที่คอลัมน์ D')}<br />
-            ถ้าไฟล์เป็นฟอร์มคนละแบบ ให้ส่งไฟล์ให้ผู้ดูแลระบบเพิ่มรูปแบบใหม่ให้
+            {tr("อ่านไฟล์ไม่ออก — layout ต่างจากฟอร์มที่ระบบรู้จัก")}<br />
+            {tr("ระบบคาดว่า")} <b>PFMEA</b> {tr('ข้อมูลเริ่มแถว 10 คอลัมน์ B–S ·')} <b>Control Plan</b> {tr('เริ่มแถว 12 มีเลข Char No. ที่คอลัมน์ D')}<br />
+            {tr("ถ้าไฟล์เป็นฟอร์มคนละแบบ ให้ส่งไฟล์ให้ผู้ดูแลระบบเพิ่มรูปแบบใหม่ให้")}
           </div>
         ) : (<>
           <div style={{ maxHeight: 230, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', marginBottom: 12 }}>
@@ -270,7 +270,7 @@ export default function PeExcelImportModal({ sets = [], currentSetId = '', onClo
             </table>
           </div>
 
-          <div style={{ padding: 10, background: 'var(--bg2)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)' }}>
+          <div style={{ padding: 10, background: 'var(--bg2-surf)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', gap: 14, marginBottom: 8, fontSize: 12.5 }}>
               <label style={{ display: 'flex', gap: 5, alignItems: 'center', cursor: 'pointer' }}>
                 <input type="radio" checked={mode === 'new'} onChange={() => setMode('new')} /> {tr('สร้างชุดเอกสารใหม่')}

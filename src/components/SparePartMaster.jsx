@@ -8,7 +8,8 @@
      ไม่กรอก Rank เอง (แต่ override ได้พร้อมเหตุผล)
    - ตำแหน่งชั้นวาง (shelf) ใช้ "รหัสเดียวกันทั้งคลัง" — เลือกช่องจากผังคลัง mtn_rack_cells ผ่าน <SearchSelect> (2026-09-07)
      — เป็นกุญแจที่แผนผังคลัง (rack map) จะใช้จับคู่ในเฟสถัดไป */
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, useContext } from 'react';
+import { UserContext } from '../App';
 import ReadOnlyNote from './ReadOnlyNote';
 import { supabaseDR } from '../supabaseClient';
 import { toast } from './Toast';
@@ -70,7 +71,7 @@ function RankChip({ rank, overridden, size = 'md' }) {
   const m = RANK_META[rank];
   const pad = size === 'sm' ? '1px 7px' : '2px 9px';
   return (
-    <span title={`Rank ${rank} · ${m.desc}${overridden ? ' (กำหนดเอง)' : ''}`}
+    <span title={`Rank ${rank} · ${m.desc}${overridden ? tr(' (กำหนดเอง)') : ''}`}
       style={{ display: 'inline-block', padding: pad, borderRadius: 'var(--r-xs)', background: m.bg, color: m.color, border: `1px solid ${m.color}`, fontSize: size === 'sm' ? 11 : 12, fontWeight: 800, whiteSpace: 'nowrap' }}>
       {tr(m.label)}{overridden ? ' ✎' : ''}
     </span>
@@ -118,7 +119,8 @@ export default function SparePartMaster({ parts = [], reload, fullName, role, my
             user: *"ให้เพิ่มได้ แต่จะลบมั่วไม่ได้ … เห็นข้ามกันหมด แต่ลบข้ามกันไม่ได้"*
      ⇒ **เห็นทุกทีมเหมือนเดิม** (ตั้งใจ — ช่างต้องค้นของข้ามทีมได้) แต่ ✏️/🗑 เฉพาะของทีมตัวเอง
      กฎเดียวกับทะเบียนข้อมูลหลักใน `/mtn-repair?tab=master` เป๊ะ (`utils/mtnTeamOwn.js`) */
-  const ownOf = useCallback((p) => teamRowOwner(p, { myTeams, role, strict: strictOwn }), [myTeams, role, strictOwn]);
+  const { allUnits } = useContext(UserContext);   // 🌐 ใบผ่านข้ามหน่วยรายคน (13/11 — เลิกถือว่า manager = บอส)
+  const ownOf = useCallback((p) => teamRowOwner(p, { myTeams, role, strict: strictOwn, allUnits }), [myTeams, role, strictOwn, allUnits]);
   /* ทีมตั้งต้นตอน "เพิ่มอะไหล่" = ทีมของ user ถ้าสังกัดทีมเดียว · ไม่งั้นใช้ทีมที่กรองอยู่
      (เดิม default เป็น 'maintenance' เสมอ ⇒ หัวหน้าผลิตเพิ่มของแล้วไปโผล่คลัง MTN เงียบๆ) */
   const defTeam = (myTeams.length === 1 ? teamKeyOf(myTeams[0]) : '') || fTeam || 'maintenance';
@@ -238,7 +240,7 @@ export default function SparePartMaster({ parts = [], reload, fullName, role, my
   const doDelete = async (p) => {
     // ด่านซ้ำอีกชั้น — ซ่อนปุ่มอย่างเดียวไม่พอ (ฝั่ง DR เป็น anon ไม่มีด่าน server · known gap)
     if (!mayDeleteRow(p)) return toast.error(teamRowLockNote(p, ownOf(p).code));
-    if (!await askConfirm(`ลบอะไหล่ "${p.name}" ออกจากคลัง?\n(ประวัติการเบิก-รับยังอยู่ ไม่ถูกลบ)`)) return;
+    if (!await askConfirm(`${tr("ลบอะไหล่")} "${p.name}" ${tr("ออกจากคลัง?\\n(ประวัติการเบิก-รับยังอยู่ ไม่ถูกลบ")})`)) return;
     // ลบ = soft delete ⇒ RLS ปฏิเสธ UPDATE = "สำเร็จ 0 แถว ไม่มี error" ⇒ ต้องนับแถว (กฎเหล็ก DB ข้อ 2)
     const res = await supabaseDR.from('mtn_spare_parts').update({ is_active: false }).eq('id', p.id).select('id');
     if (!checkWriteRows(res, 'ลบอะไหล่')) return;
@@ -249,7 +251,7 @@ export default function SparePartMaster({ parts = [], reload, fullName, role, my
     const df = docFormSync('spare_part_list', {});
     const code = fullCode(df);
     const teamLabel = fTeam ? (teams.find(t => t.key === fTeam)?.dept_name || fTeam) : ALL.team;
-    const secText = fSection ? `${sectionLabel(fSection, orgSecs)} (รวมของกลาง)` : ALL.unit;
+    const secText = fSection ? `${sectionLabel(fSection, orgSecs)} (${tr("รวมของกลาง")})` : ALL.unit;
     const head = ['ลำดับ', 'หน่วยงาน', 'รหัส', 'ชื่ออะไหล่', 'MAT SAP', 'Part no.', 'หมวด', 'ชั้นวาง', 'คงเหลือ', 'ขั้นต่ำ', 'สูงสุด', 'Rank', 'ใช้เฉลี่ย/เดือน', 'Leadtime (วัน)', 'ผู้ขาย', 'ใช้กับ'];
     const body = filtered.map((p, i) => [
       i + 1, p.section || 'ของกลาง', p.code || '', p.name || '', p.mat_no || '', p.part_no || '',
@@ -281,7 +283,7 @@ export default function SparePartMaster({ parts = [], reload, fullName, role, my
   };
 
   const chip = (label, val, color) => (
-    <div style={{ background: 'var(--bg3)', border: `1px solid ${color || 'var(--border)'}`, borderRadius: 'var(--r-md)', padding: '6px 11px', minWidth: 78 }}>
+    <div style={{ background: 'var(--bg3-surf)', border: `1px solid ${color || 'var(--border)'}`, borderRadius: 'var(--r-md)', padding: '6px 11px', minWidth: 78 }}>
       <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700 }}>{label}</div>
       <div style={{ fontSize: 16, fontWeight: 800, color: color || 'var(--text)' }}>{val}</div>
     </div>
@@ -342,12 +344,12 @@ export default function SparePartMaster({ parts = [], reload, fullName, role, my
         {!!summary.none && chip('ยังไม่จัด', summary.none, 'var(--muted)')}
         {chip('หมด', summary.out, summary.out ? '#ef4444' : undefined)}
         {chip('ต่ำกว่าขั้นต่ำ', summary.low, summary.low ? '#f59e0b' : undefined)}
-        {chip('มูลค่าคงคลัง', `฿${fmtNum(summary.value)}`)}
+        {chip('มูลค่าคงคลัง', `${tr("฿")}${fmtNum(summary.value)}`)}
       </div>
 
       {/* กรองหน่วยงานแล้วซ่อนอะไรไปบ้าง — ห้ามหายเงียบ (กฎเดียวกับตัวกรองทีมใน ⚙️ ข้อมูลตั้งต้น) */}
       {!!hiddenBySection && (
-        <div style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '7px 12px', marginBottom: 10, fontSize: 12.5, color: 'var(--text2)' }}>
+        <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '7px 12px', marginBottom: 10, fontSize: 12.5, color: 'var(--text2)' }}>
           กำลังดูคลังของ <b style={{ color: 'var(--text)' }}>{sectionLabel(fSection, orgSecs)}</b> (รวมของกลาง) ·
           ซ่อนอยู่ <b>{hiddenBySection}</b> รายการของหน่วยงานอื่น
           <button onClick={() => setFSection('')} style={{ ...btnGhost, padding: '3px 10px', fontSize: 11.5, marginLeft: 8 }}>{tr('ดูทุกหน่วยงาน')}</button>
@@ -365,7 +367,7 @@ export default function SparePartMaster({ parts = [], reload, fullName, role, my
       {loading && <div style={{ color: 'var(--muted)', fontSize: 13, padding: 10 }}>{tr('กำลังโหลด…')}</div>}
 
       {/* ── ตาราง ── */}
-      <div className="table-sticky card" style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
+      <div className="table-sticky card" style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1080 }}>
           <thead><tr>
             <th style={{ ...th, width: 44 }}></th>
@@ -394,16 +396,16 @@ export default function SparePartMaster({ parts = [], reload, fullName, role, my
                   <td style={td}>
                     {p.image_url
                       ? <img loading="lazy" src={p.image_url} alt="" style={{ width: 34, height: 34, objectFit: 'cover', borderRadius: 5, border: '1px solid var(--border)', cursor: 'pointer' }} onClick={() => window.open(p.image_url, '_blank')} />
-                      : <div style={{ width: 34, height: 34, borderRadius: 'var(--r-xs)', background: 'var(--bg3)', border: '1px dashed var(--border)', display: 'grid', placeItems: 'center', fontSize: 13, color: 'var(--muted)' }}>🔩</div>}
+                      : <div style={{ width: 34, height: 34, borderRadius: 'var(--r-xs)', background: 'var(--bg3-surf)', border: '1px dashed var(--border)', display: 'grid', placeItems: 'center', fontSize: 13, color: 'var(--muted)' }}>🔩</div>}
                   </td>
                   <td style={td}>
                     <div style={{ fontWeight: 700 }}>{p.name}</div>
                     <div style={{ fontSize: 11, color: 'var(--muted)', display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap' }}>
                       {/* หน่วยงานเจ้าของ — ตอบ "ของใคร/ใครดูแล" ซึ่งเป็นโจทย์ของ feedback ต้องเห็นทุกแถว */}
                       {p.section
-                        ? <span title={tr('หน่วยงานเจ้าของ')} style={{ padding: '0 6px', borderRadius: 'var(--r-xs)', background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text2)', fontWeight: 700, whiteSpace: 'nowrap' }}>{sectionKeyOf(p.section)}</span>
+                        ? <span title={tr('หน่วยงานเจ้าของ')} style={{ padding: '0 6px', borderRadius: 'var(--r-xs)', background: 'var(--bg3-surf)', border: '1px solid var(--border)', color: 'var(--text2)', fontWeight: 700, whiteSpace: 'nowrap' }}>{sectionKeyOf(p.section)}</span>
                         : <span title={tr('ไม่ได้ระบุหน่วยงาน = ของกลางของทีม ทุกหน่วยงานใช้ร่วม')} style={{ color: 'var(--muted)' }}>🌐</span>}
-                      <span>{p.code ? `${p.code} · ` : ''}{p.used_with ? `ใช้กับ ${p.used_with}` : ''}</span>
+                      <span>{p.code ? `${p.code} · ` : ''}{p.used_with ? `${tr("ใช้กับ")} ${p.used_with}` : ''}</span>
                     </div>
                   </td>
                   <td style={{ ...td, fontSize: 11.5 }}>
@@ -412,7 +414,7 @@ export default function SparePartMaster({ parts = [], reload, fullName, role, my
                     <div style={{ color: 'var(--muted)' }}>{p.mat_no ? `MAT ${p.mat_no}` : ''}</div>
                   </td>
                   <td style={td}>
-                    {c ? <span style={{ fontSize: 11.5, padding: '1px 7px', borderRadius: 'var(--r-xs)', background: 'var(--bg3)', border: `1px solid ${c.color || 'var(--border)'}`, color: c.color || 'var(--text)', fontWeight: 700, whiteSpace: 'nowrap' }}>{c.icon || ''} {c.key}</span>
+                    {c ? <span style={{ fontSize: 11.5, padding: '1px 7px', borderRadius: 'var(--r-xs)', background: 'var(--bg3-surf)', border: `1px solid ${c.color || 'var(--border)'}`, color: c.color || 'var(--text)', fontWeight: 700, whiteSpace: 'nowrap' }}>{c.icon || ''} {c.key}</span>
                       : <span style={{ color: 'var(--muted)', fontSize: 11.5 }}>—</span>}
                   </td>
                   <td style={{ ...td, fontWeight: 700, whiteSpace: 'nowrap' }}>{p.shelf || <span style={{ color: 'var(--muted)', fontWeight: 400 }}>—</span>}</td>
@@ -432,7 +434,7 @@ export default function SparePartMaster({ parts = [], reload, fullName, role, my
                   </td>
                   <td style={{ ...td, textAlign: 'right' }}>{p.lead_time_days ?? <span style={{ color: '#f59e0b' }} title={tr('ยังไม่ได้กรอก leadtime — คำนวณ Rank ไม่ได้')}>—</span>}</td>
                   <td style={{ ...td, fontSize: 11.5 }}>{p.supplier || '—'}</td>
-                  <td style={{ ...td, textAlign: 'right' }}>{p.unit_price != null ? `฿${fmtNum(p.unit_price, 2)}` : '—'}</td>
+                  <td style={{ ...td, textAlign: 'right' }}>{p.unit_price != null ? `${tr("฿")}${fmtNum(p.unit_price, 2)}` : '—'}</td>
                   <td style={{ ...td, whiteSpace: 'nowrap' }}>
                     {canMove && <>
                       <button className="tbtn" onClick={() => setMovePart({ part: p, type: 'in' })} title={tr('รับเข้า')} style={{ ...btnGhost, padding: '5px 9px', fontSize: 12, color: '#22c55e' }}>➕</button>
@@ -459,10 +461,10 @@ export default function SparePartMaster({ parts = [], reload, fullName, role, my
       </div>
 
       <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8, lineHeight: 1.7 }}>
-        📘 <b>{tr('Rank ตาม WI-JIG-010')}</b> {tr('(คำนวณอัตโนมัติจากการใช้จริงย้อนหลัง')} {RANK_RULE.windowMonths} เดือน + leadtime · ✎ = กำหนดเอง):
-        <span style={{ color: RANK_META.A.color, fontWeight: 700 }}> A</span> ใช้ &gt;{RANK_RULE.usageHigh} ชิ้น/เดือน หรือ LT &gt;{RANK_RULE.ltLong} {tr('วัน —')} {tr(RANK_META.A.desc)} ·
+        📘 <b>{tr('Rank ตาม WI-JIG-010')}</b> {tr('(คำนวณอัตโนมัติจากการใช้จริงย้อนหลัง')} {RANK_RULE.windowMonths} {tr("เดือน + leadtime · ✎ = กำหนดเอง")}):
+        <span style={{ color: RANK_META.A.color, fontWeight: 700 }}> A</span> {tr("ใช้")} &gt;{RANK_RULE.usageHigh} {tr("ชิ้น/เดือน หรือ")} LT &gt;{RANK_RULE.ltLong} {tr('วัน —')} {tr(RANK_META.A.desc)} ·
         <span style={{ color: RANK_META.B.color, fontWeight: 700 }}> B</span> — {tr(RANK_META.B.desc)} ·
-        <span style={{ color: RANK_META.C.color, fontWeight: 700 }}> C</span> ใช้ &lt;{RANK_RULE.usageLow} ชิ้น/เดือน และ LT &lt;{RANK_RULE.ltShort} {tr('วัน —')} {tr(RANK_META.C.desc)}
+        <span style={{ color: RANK_META.C.color, fontWeight: 700 }}> C</span> {tr("ใช้")} &lt;{RANK_RULE.usageLow} {tr("ชิ้น/เดือน และ")} LT &lt;{RANK_RULE.ltShort} {tr('วัน —')} {tr(RANK_META.C.desc)}
       </div>
 
       {movePart && <StockMoveModal {...movePart} fullName={fullName} onClose={() => setMovePart(null)} onDone={reloadAll} />}
@@ -507,18 +509,18 @@ function StockMoveModal({ part, type, fullName, onClose, onDone }) {
     });
     setSaving(false);
     if (error) return toast.error(error.message);
-    toast.success(`${m.title.replace(/^[^ ]+ /, '')} "${part.name}" → คงเหลือ ${fmtNum(data)}`);
+    toast.success(`${m.title.replace(/^[^ ]+ /, '')} "${part.name}" → ${tr("คงเหลือ")} ${fmtNum(data)}`);
     onDone(); onClose();
   };
 
   return (
     <div className="modal-scroll" /* ⚠️ ฟอร์มกรอกข้อมูล — ไม่ปิดจาก backdrop กันเผลอแตะแล้วข้อมูลหาย (UI-CONVENTIONS §5) */ /* modal-scroll = เลื่อนถึงปุ่มล่างได้เมื่อจอเตี้ย/คีย์บอร์ดเด้ง (UI-CONVENTIONS §4 · index.css) */ style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'grid', placeItems: 'center', zIndex: 2000, padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(420px, 96vw)' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(420px, 96vw)' }}>
         <div style={{ fontSize: 15, fontWeight: 800, color: m.color, marginBottom: 3 }}>{m.title}</div>
         <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 2 }}>{part.name}</div>
         <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 12 }}>
           {part.code ? `${part.code} · ` : ''}{tr('คงเหลือปัจจุบัน')} <b style={{ color: 'var(--text)' }}>{fmtNum(cur)} {part.unit || ''}</b>
-          {part.shelf ? ` · ชั้นวาง ${part.shelf}` : ''}
+          {part.shelf ? ` · ${tr("ชั้นวาง")} ${part.shelf}` : ''}
         </div>
         <div style={{ display: 'grid', gap: 10 }}>
           <Field label={tr(m.label)} required hint={m.note}>
@@ -527,7 +529,7 @@ function StockMoveModal({ part, type, fullName, onClose, onDone }) {
           </Field>
           <Field label={tr('หมายเหตุ')}><input value={note} onChange={e => setNote(e.target.value)} placeholder={tr('ไม่บังคับ')} style={inp} /></Field>
           {valid && (
-            <div style={{ fontSize: 12.5, background: 'var(--bg3)', border: `1px solid ${notEnough ? '#ef4444' : 'var(--border)'}`, borderRadius: 'var(--r-md)', padding: '8px 11px' }}>
+            <div style={{ fontSize: 12.5, background: 'var(--bg3-surf)', border: `1px solid ${notEnough ? '#ef4444' : 'var(--border)'}`, borderRadius: 'var(--r-md)', padding: '8px 11px' }}>
               {notEnough
                 ? <span style={{ color: '#ef4444', fontWeight: 700 }}>{tr('❌ สต๊อกไม่พอ — คงเหลือ')} {fmtNum(cur)} {tr('เบิก')} {fmtNum(n)} {tr('ไม่ได้')}</span>
                 : <>{tr('คงเหลือหลังทำรายการ:')} <b style={{ color: 'var(--accent)', fontSize: 14 }}>{fmtNum(after)} {part.unit || ''}</b>
@@ -630,7 +632,7 @@ function PartEditModal({ part, cats, teams, shelfOpts, rackCells = [], secOpts =
       const { error } = await supabaseDR.storage.from('mtn-images').upload(path, blob, uploadOpts({ upsert: true, contentType: blob.type }));
       if (error) throw error;
       setImg(supabaseDR.storage.from('mtn-images').getPublicUrl(path).data.publicUrl);
-    } catch (err) { toast.error('อัปโหลดรูปไม่สำเร็จ: ' + err.message); }
+    } catch (err) { toast.error((tr('อัปโหลดรูปไม่สำเร็จ') + ': ') + err.message); }
   };
 
   const save = async () => {
@@ -659,7 +661,7 @@ function PartEditModal({ part, cats, teams, shelfOpts, rackCells = [], secOpts =
         const { error: e2 } = await supabaseDR.rpc('mtn_stock_move', {
           p_part_id: data.id, p_type: 'in', p_qty: opening, p_note: 'ยอดยกมาตอนสร้างรายการ', p_by_name: null, p_ref_order: null,
         });
-        if (e2) toast.error('บันทึกอะไหล่แล้ว แต่ตั้งยอดยกมาไม่สำเร็จ: ' + e2.message);
+        if (e2) toast.error((tr('บันทึกอะไหล่แล้ว แต่ตั้งยอดยกมาไม่สำเร็จ') + ': ') + e2.message);
       }
     } else {
       ({ error: err } = await supabaseDR.from('mtn_spare_parts').update(payload).eq('id', part.id));
@@ -671,13 +673,13 @@ function PartEditModal({ part, cats, teams, shelfOpts, rackCells = [], secOpts =
         const clear = months.filter(k => !(k in manual) || manual[k] === '');
         if (rows.length) {
           const { error: e3 } = await supabaseDR.from('mtn_spare_usage_monthly').upsert(rows, { onConflict: 'part_id,month_key,source' });
-          if (e3) toast.error('บันทึกยอดใช้ย้อนหลังไม่สำเร็จ: ' + e3.message);
+          if (e3) toast.error((tr('บันทึกยอดใช้ย้อนหลังไม่สำเร็จ') + ': ') + e3.message);
         }
         if (clear.length) {
           // เดิมไม่อ่าน error — ล้างยอดเดือนที่ลบออกไม่สำเร็จ = ยอดเก่ายังนับใน Rank A/B/C เงียบๆ (QC 05/10)
           const { error: e4 } = await supabaseDR.from('mtn_spare_usage_monthly')
             .delete().eq('part_id', part.id).eq('source', 'manual').in('month_key', clear);
-          if (e4) toast.error('ล้างยอดใช้ย้อนหลังที่ลบออกไม่สำเร็จ (ยอดเดิมยังถูกนับ): ' + e4.message);
+          if (e4) toast.error((tr('ล้างยอดใช้ย้อนหลังที่ลบออกไม่สำเร็จ (ยอดเดิมยังถูกนับ') + '): ') + e4.message);
         }
       }
     }
@@ -693,7 +695,7 @@ function PartEditModal({ part, cats, teams, shelfOpts, rackCells = [], secOpts =
   return (
     <>
       <div /* ⚠️ ฟอร์มกรอกข้อมูล — ไม่ปิดจาก backdrop กันเผลอแตะแล้วข้อมูลหาย (UI-CONVENTIONS §5) */  style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'grid', placeItems: 'center', zIndex: 2000, padding: 16, overflow: 'auto' }}>
-        <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(760px, 96vw)', maxHeight: '92vh', overflow: 'auto' }}>
+        <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(760px, 96vw)', maxHeight: '92vh', overflow: 'auto' }}>
           <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 2 }}>{isNew ? tr('➕ เพิ่มอะไหล่เข้าคลัง') : tr('✏️ แก้ไขอะไหล่')}</div>
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 14 }}>{tr('ตามฟอร์ม FM-JIG-009 Spare part list · Rank จัดอัตโนมัติตาม WI-JIG-010')}</div>
 
@@ -722,7 +724,7 @@ function PartEditModal({ part, cats, teams, shelfOpts, rackCells = [], secOpts =
                   if (!g || sectionKeyOf(f.section) === g) return null;
                   return (
                     <div style={{ fontSize: 11, color: '#f59e0b', marginTop: 4 }}>
-                      รหัสขึ้นต้นด้วย <b>{g}</b> —{' '}
+                      {tr("รหัสขึ้นต้นด้วย")} <b>{g}</b> —{' '}
                       <button type="button" onClick={() => set('section', g)}
                         style={{ background: 'none', border: 'none', color: '#f59e0b', textDecoration: 'underline', cursor: 'pointer', font: 'inherit', padding: 0 }}>
                         {tr('ใช้')} {g} {tr('เป็นหน่วยงานเจ้าของ')}
@@ -771,17 +773,16 @@ function PartEditModal({ part, cats, teams, shelfOpts, rackCells = [], secOpts =
             {/* Rank */}
             <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
               <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--accent2)', marginBottom: 8 }}>{tr('Rank ความสำคัญ (WI-JIG-010)')}</div>
-              <div style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '10px 12px', fontSize: 12.5, marginBottom: 10 }}>
+              <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '10px 12px', fontSize: 12.5, marginBottom: 10 }}>
                 {preview.calcRank ? (
                   <>{tr('ระบบคำนวณได้:')} <RankChip rank={preview.calcRank} />
                     <span style={{ color: 'var(--muted)', marginLeft: 8 }}>
-                      จากการใช้เฉลี่ย <b style={{ color: 'var(--text)' }}>{fmtNum(preview.avgPerMonth, 1)}</b> ชิ้น/เดือน
-                      (ใช้จริง {fmtNum(preview.totalUsed)} {tr('ชิ้นใน')} {preview.months} เดือน)
+                      {tr("จากการใช้เฉลี่ย")} <b style={{ color: 'var(--text)' }}>{fmtNum(preview.avgPerMonth, 1)}</b> {tr("ชิ้น/เดือน (ใช้จริง")} {fmtNum(preview.totalUsed)} {tr('ชิ้นใน')} {preview.months} {tr("เดือน")})
                       {preview.leadTimeDays != null && <> · leadtime <b style={{ color: 'var(--text)' }}>{preview.leadTimeDays}</b> {tr('วัน')}</>}
                     </span></>
                 ) : (
                   <span style={{ color: '#f59e0b' }}>
-                    ⚠️ ยังคำนวณ Rank ไม่ได้ — {preview.missing === 'lead_time'
+                    ⚠️ {tr("ยังคำนวณ Rank ไม่ได้")} — {preview.missing === 'lead_time'
                       ? 'ต้องกรอก Leadtime (วัน) ก่อน'
                       : 'ยังไม่มีประวัติการใช้ — คีย์ยอดใช้ย้อนหลังจาก Excel ด้านล่าง หรือรอให้ระบบสะสมเองจากการเบิกใช้'}
                   </span>
@@ -800,7 +801,7 @@ function PartEditModal({ part, cats, teams, shelfOpts, rackCells = [], secOpts =
                         <div key={k} style={{ width: 82 }}>
                           <div style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'center', marginBottom: 2 }}>{k.slice(2)}</div>
                           <input type="number" min="0" value={manual[k] ?? ''} onChange={e => setManualQty(k, e.target.value)}
-                            placeholder={sysOut ? String(sysOut) : '—'} title={sysOut ? `ระบบบันทึกไว้แล้ว ${sysOut} ชิ้น (ยอดที่คีย์จะบวกเพิ่ม)` : 'ยังไม่มียอดในระบบ'}
+                            placeholder={sysOut ? String(sysOut) : '—'} title={sysOut ? `${tr("ระบบบันทึกไว้แล้ว")} ${sysOut} ${tr("ชิ้น (ยอดที่คีย์จะบวกเพิ่ม")})` : 'ยังไม่มียอดในระบบ'}
                             style={{ ...inp, textAlign: 'center', padding: '6px 4px' }} />
                         </div>
                       );
@@ -889,20 +890,20 @@ function HistoryModal({ part, usageRows, onClose }) {
   return (
     /* ประวัติอะไหล่ = popup แสดงผลอย่างเดียว ไม่มีช่องกรอก → ปิดจาก backdrop ได้ตามกฎ (UI-CONVENTIONS §5) */
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'grid', placeItems: 'center', zIndex: 2000, padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(660px, 96vw)', maxHeight: '90vh', overflow: 'auto' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(660px, 96vw)', maxHeight: '90vh', overflow: 'auto' }}>
         <div style={{ fontSize: 15, fontWeight: 800 }}>{tr('ประวัติ ·')} {part.name}</div>
         <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 14 }}>{tr('คงเหลือปัจจุบัน')} {fmtNum(part.stock_qty)} {part.unit || ''}</div>
 
         <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--accent2)', marginBottom: 6 }}>
-          การใช้ย้อนหลัง {RANK_RULE.windowMonths} เดือน (แทนคอลัมน์ PI/PO ในไฟล์เดิม)
+          {tr("การใช้ย้อนหลัง")} {RANK_RULE.windowMonths} {tr("เดือน (แทนคอลัมน์ PI/PO ในไฟล์เดิม")})
         </div>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', height: 90, marginBottom: 14, background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 10px' }}>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', height: 90, marginBottom: 14, background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 10px' }}>
           {months.map(k => {
             const out = byMonth[k]?.out || 0;
             return (
               <div key={k} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, height: '100%', justifyContent: 'flex-end' }}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: out ? 'var(--text)' : 'var(--muted)' }}>{out || ''}</div>
-                <div title={`${k}: เบิก ${out}`} style={{ width: '100%', height: `${Math.max(2, (out / maxOut) * 52)}px`, background: out ? '#f59e0b' : 'var(--border)', borderRadius: '3px 3px 0 0' }} />
+                <div title={`${k}: ${tr("เบิก")} ${out}`} style={{ width: '100%', height: `${Math.max(2, (out / maxOut) * 52)}px`, background: out ? '#f59e0b' : 'var(--border)', borderRadius: '3px 3px 0 0' }} />
                 <div style={{ fontSize: 11, color: 'var(--muted)' }}>{k.slice(5)}</div>
               </div>
             );
@@ -981,7 +982,7 @@ function ImportModal({ parts, cats, teams, fullName, ownOf = () => ({ ok: true }
         toast.error('อ่านไฟล์ไม่ได้ — ต้องมีหัวคอลัมน์ "ชื่ออะไหล่" หรือ "รหัส" อย่างน้อย 1 คอลัมน์');
         setParsed(null);
       } else setParsed(best);
-    } catch (err) { toast.error('อ่านไฟล์ไม่สำเร็จ: ' + err.message); setParsed(null); }
+    } catch (err) { toast.error((tr('อ่านไฟล์ไม่สำเร็จ') + ': ') + err.message); setParsed(null); }
     setBusy(false);
   };
 
@@ -1005,10 +1006,10 @@ function ImportModal({ parts, cats, teams, fullName, ownOf = () => ({ ok: true }
     const blocked = matched.filter(r => r.action === 'update' && r.existing && !ownOf(r.existing).ok);
     const todo = matched.filter(r => r.action !== 'skip' && !blocked.includes(r));
     if (blocked.length && !await askConfirm(
-      `${blocked.length} แถวเป็นอะไหล่ของทีมอื่น — ข้ามไว้ ไม่อัพเดททับ\n`
+      `${blocked.length} ${tr("แถวเป็นอะไหล่ของทีมอื่น — ข้ามไว้ ไม่อัพเดททับ")}\n`
       + blocked.slice(0, 5).map(r => `· ${r.existing.name}`).join('\n')
-      + (blocked.length > 5 ? `\n· …อีก ${blocked.length - 5} แถว` : '')
-      + `\n\nนำเข้าส่วนที่เหลือ ${todo.length} แถวต่อไหม?`)) return;
+      + (blocked.length > 5 ? `\n· …${tr("อีก")} ${blocked.length - 5} ${tr("แถว")}` : '')
+      + `\n\n${tr("นำเข้าส่วนที่เหลือ")} ${todo.length} ${tr("แถวต่อไหม")}?`)) return;
     if (!todo.length) return toast.error(blocked.length ? 'ทุกแถวเป็นของทีมอื่น — ไม่มีอะไรนำเข้าได้' : 'ไม่มีแถวที่นำเข้าได้');
     setBusy(true);
     let created = 0, updated = 0, failed = 0, stockDone = 0;
@@ -1054,7 +1055,7 @@ function ImportModal({ parts, cats, teams, fullName, ownOf = () => ({ ok: true }
       } catch { failed++; }
     }
     setBusy(false); setProgress(null);
-    toast.success(`นำเข้าเสร็จ — เพิ่ม ${created} · อัพเดท ${updated}${stockDone ? ` · ตั้งยอด ${stockDone}` : ''}${failed ? ` · ไม่สำเร็จ ${failed}` : ''}`);
+    toast.success(`${tr("นำเข้าเสร็จ — เพิ่ม")} ${created} · ${tr("อัพเดท")} ${updated}${stockDone ? ` · ${tr("ตั้งยอด")} ${stockDone}` : ''}${failed ? ` · ${tr("ไม่สำเร็จ")} ${failed}` : ''}`);
     onDone(); onClose();
   };
 
@@ -1064,7 +1065,7 @@ function ImportModal({ parts, cats, teams, fullName, ownOf = () => ({ ok: true }
 
   return (
     <div /* ⚠️ ฟอร์มกรอกข้อมูล — ไม่ปิดจาก backdrop กันเผลอแตะแล้วข้อมูลหาย (UI-CONVENTIONS §5) */  style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'grid', placeItems: 'center', zIndex: 2000, padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(820px, 96vw)', maxHeight: '92vh', overflow: 'auto' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(820px, 96vw)', maxHeight: '92vh', overflow: 'auto' }}>
         <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 2 }}>{tr('นำเข้า / อัพเดทคลังอะไหล่จากไฟล์')}</div>
         <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 14 }}>
           รองรับ .xlsx / .csv · หัวคอลัมน์ไทยหรืออังกฤษก็ได้ · <b>{tr('อัพโหลดไฟล์เดิมซ้ำได้เรื่อยๆ')}</b> ระบบจะอัพเดททับตามคีย์ ไม่สร้างรายการซ้ำ
@@ -1106,13 +1107,13 @@ function ImportModal({ parts, cats, teams, fullName, ownOf = () => ({ ok: true }
           <>
             <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 10 }}>
               {[['เพิ่มใหม่', stat.create, '#22c55e'], ['อัพเดท', stat.update, '#38bdf8'], ['ข้าม', stat.skip, stat.skip ? '#ef4444' : undefined], ['ต้องดู', stat.warn, stat.warn ? '#f59e0b' : undefined]].map(([t, v, c]) => (
-                <div key={t} style={{ background: 'var(--bg3)', border: `1px solid ${c || 'var(--border)'}`, borderRadius: 'var(--r-md)', padding: '6px 12px' }}>
+                <div key={t} style={{ background: 'var(--bg3-surf)', border: `1px solid ${c || 'var(--border)'}`, borderRadius: 'var(--r-md)', padding: '6px 12px' }}>
                   <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700 }}>{t}</div>
                   <div style={{ fontSize: 16, fontWeight: 800, color: c || 'var(--text)' }}>{v}</div>
                 </div>
               ))}
               {!!Object.keys(parsed.monthCols).length && (
-                <div style={{ background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 'var(--r-md)', padding: '6px 12px' }}>
+                <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--accent)', borderRadius: 'var(--r-md)', padding: '6px 12px' }}>
                   <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700 }}>{tr('ยอดใช้ย้อนหลัง')}</div>
                   <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--accent)' }}>{Object.keys(parsed.monthCols).join(', ')}</div>
                 </div>
@@ -1120,7 +1121,7 @@ function ImportModal({ parts, cats, teams, fullName, ownOf = () => ({ ok: true }
             </div>
             {!!parsed.unknown.length && (
               <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 8 }}>
-                คอลัมน์ที่ระบบไม่รู้จัก (ข้ามไป): {parsed.unknown.slice(0, 10).join(' · ')}{parsed.unknown.length > 10 ? ' …' : ''}
+                {tr("คอลัมน์ที่ระบบไม่รู้จัก (ข้ามไป")}): {parsed.unknown.slice(0, 10).join(' · ')}{parsed.unknown.length > 10 ? ' …' : ''}
               </div>
             )}
 
@@ -1156,7 +1157,7 @@ function ImportModal({ parts, cats, teams, fullName, ownOf = () => ({ ok: true }
 
         {progress && (
           <div style={{ marginTop: 12, fontSize: 12.5 }}>
-            กำลังนำเข้า {progress.i}/{progress.total}…
+            {tr("กำลังนำเข้า")} {progress.i}/{progress.total}…
             <div style={{ height: 6, background: 'var(--bg3)', borderRadius: 'var(--r-xs)', overflow: 'hidden', marginTop: 4 }}>
               <div style={{ height: '100%', width: `${(progress.i / progress.total) * 100}%`, background: 'var(--accent)' }} />
             </div>
@@ -1167,7 +1168,7 @@ function ImportModal({ parts, cats, teams, fullName, ownOf = () => ({ ok: true }
           <button onClick={onClose} disabled={busy} style={{ ...btnGhost, opacity: busy ? 0.5 : 1 }}>{tr('ปิด')}</button>
           <button onClick={apply} disabled={busy || !parsed || !(stat.create + stat.update)}
             style={{ ...btnPri, opacity: (busy || !parsed || !(stat.create + stat.update)) ? 0.5 : 1 }}>
-            {busy ? 'กำลังทำงาน…' : `นำเข้า ${stat.create + stat.update} รายการ`}
+            {busy ? 'กำลังทำงาน…' : `${tr("นำเข้า")} ${stat.create + stat.update} ${tr("รายการ")}`}
           </button>
         </div>
       </div>
@@ -1196,7 +1197,7 @@ function CategoryModal({ cats, teams = [], onClose, onSaved }) {
   };
   return (
     <div /* ⚠️ ฟอร์มกรอกข้อมูล — ไม่ปิดจาก backdrop กันเผลอแตะแล้วข้อมูลหาย (UI-CONVENTIONS §5) */  style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'grid', placeItems: 'center', zIndex: 2000, padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(560px, 96vw)', maxHeight: '90vh', overflow: 'auto' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(560px, 96vw)', maxHeight: '90vh', overflow: 'auto' }}>
         <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 2 }}>{tr('หมวดอะไหล่')}</div>
         <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 12 }}>รหัสหมวดใช้จัดกลุ่มในคลัง — เพิ่ม/แก้ได้เอง ไม่ต้องแก้โค้ด · ตั้งทีมได้ถ้าหมวดนั้นใช้เฉพาะบางทีม (เช่น LP = Locating Pin ของ JIG)</div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
@@ -1208,7 +1209,7 @@ function CategoryModal({ cats, teams = [], onClose, onSaved }) {
         </div>
         <div style={{ display: 'grid', gap: 6 }}>
           {cats.map(c => (
-            <div key={c.key} style={{ display: 'flex', gap: 8, alignItems: 'center', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '7px 10px' }}>
+            <div key={c.key} style={{ display: 'flex', gap: 8, alignItems: 'center', background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '7px 10px' }}>
               <span style={{ fontWeight: 800, minWidth: 34, color: c.color }}>{c.key}</span>
               <input defaultValue={c.icon || ''} onBlur={e => e.target.value !== (c.icon || '') && upd(c.key, { icon: e.target.value || null })} style={{ ...inp, width: 60 }} />
               <input defaultValue={c.label} onBlur={e => e.target.value !== c.label && upd(c.key, { label: e.target.value })} style={{ ...inp, flex: 1 }} />
@@ -1218,7 +1219,7 @@ function CategoryModal({ cats, teams = [], onClose, onSaved }) {
                 <option value="">{tr('🌐 ใช้ร่วมทุกทีม')}</option>
                 {teams.map((t, i) => <option key={`${t.key}-${i}`} value={t.key}>{t.icon || ''} {t.dept_name || tr(t.label)}</option>)}
               </select>
-              <DeleteButton onClick={async () => await askConfirm(`ซ่อนหมวด ${c.key}?`) && upd(c.key, { is_active: false })} title={tr('ลบ')} />
+              <DeleteButton onClick={async () => await askConfirm(`${tr("ซ่อนหมวด")} ${c.key}?`) && upd(c.key, { is_active: false })} title={tr('ลบ')} />
             </div>
           ))}
         </div>

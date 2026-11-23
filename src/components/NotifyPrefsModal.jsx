@@ -71,7 +71,7 @@ export default function NotifyPrefsModal({ role, onClose }) {
        ⚠️ ห้ามใส่ max-height/overflow ที่ตัวกล่อง · ไม่ปิดจากการคลิก backdrop */
     <div className="modal-scroll"
       style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 3200, display: 'flex', padding: '4vh 3vw' }}>
-      <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', width: 'min(96vw, 560px)', boxShadow: 'var(--shadow-lg)' }}>
+      <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', width: 'min(96vw, 560px)', boxShadow: 'var(--shadow-lg)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '13px 16px', borderBottom: '1px solid var(--border)' }}>
           <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{tr('ตั้งค่าแจ้งเตือนของฉัน')}</div>
           <button onClick={onClose} aria-label={tr('ปิด')} style={{ background: 'none', border: 'none', fontSize: 21, color: 'var(--muted)', cursor: 'pointer', lineHeight: 1 }}>✕</button>
@@ -95,8 +95,8 @@ export default function NotifyPrefsModal({ role, onClose }) {
           {state === 'loading' && <div style={{ fontSize: 12.5, color: 'var(--muted)', padding: 10 }}>{tr('กำลังโหลด…')}</div>}
           {state === 'error' && (
             <div role="alert" style={{ fontSize: 12, color: toneVar('bad'), background: toneDim('bad'), border: `1px solid ${toneLine('bad')}`, borderRadius: 'var(--r-md)', padding: '8px 10px', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-              <span style={{ flex: 1, minWidth: 180 }}>{tr('โหลดรายการแจ้งเตือนไม่สำเร็จ (')}{err}) — ยังตั้งค่าไม่ได้</span>
-              <button onClick={load} style={{ padding: '3px 10px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)', fontSize: 12, cursor: 'pointer' }}>{tr('โหลดใหม่')}</button>
+              <span style={{ flex: 1, minWidth: 180 }}>{tr('โหลดรายการแจ้งเตือนไม่สำเร็จ (')}{err}) — {tr("ยังตั้งค่าไม่ได้")}</span>
+              <button onClick={load} style={{ padding: '3px 10px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)', fontSize: 12, cursor: 'pointer' }}>{tr('โหลดใหม่')}</button>
             </div>
           )}
 
@@ -109,7 +109,7 @@ export default function NotifyPrefsModal({ role, onClose }) {
 
           {state === 'ok' && rows.length > 0 && (<>
             <div style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 700 }}>
-              ปิดอยู่ {sum.muted} {tr('จาก')} {sum.total} {tr('เรื่องที่ปิดได้')}{sum.locked ? ` · ล็อกไว้ ${sum.locked} เรื่อง` : ''}
+              {tr("ปิดอยู่")} {sum.muted} {tr('จาก')} {sum.total} {tr('เรื่องที่ปิดได้')}{sum.locked ? ` · ${tr("ล็อกไว้")} ${sum.locked} ${tr("เรื่อง")}` : ''}
             </div>
             {groups.map(g => (
               <div key={g.category}>
@@ -121,7 +121,7 @@ export default function NotifyPrefsModal({ role, onClose }) {
                     return (
                       <label key={r.event_key} title={r.locked ? tr('เรื่องนี้เป็นงานที่รอคุณ — ปิดไม่ได้') : undefined}
                         style={{ display: 'flex', gap: 9, alignItems: 'flex-start', padding: '6px 9px', borderRadius: 'var(--r-md)',
-                          background: 'var(--bg3)', border: '1px solid var(--border)', cursor: r.locked || working ? 'default' : 'pointer', opacity: working ? 0.6 : 1 }}>
+                          background: 'var(--bg3-surf)', border: '1px solid var(--border)', cursor: r.locked || working ? 'default' : 'pointer', opacity: working ? 0.6 : 1 }}>
                         <input type="checkbox" checked={!r.locked && !off} disabled={r.locked || working}
                           onChange={e => toggle(r.event_key, !e.target.checked)}
                           style={{ width: 'auto', marginTop: 2, flexShrink: 0 }} />

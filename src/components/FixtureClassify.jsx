@@ -75,7 +75,7 @@ export default function FixtureClassify({ machines, mapKeys, canEdit, lines = []
     if (!picked.size) return;
     const ids = [...picked];
     const label = EQUIPMENT_KINDS.find(k => k.key === kind)?.label || kind;
-    if (!await askConfirm(`ตั้ง ${ids.length} รายการเป็น "${label}" ?\n\nการเปลี่ยนชนิดมีผลกับทะเบียน/ผัง/ตัวกรองทุกหน้า`)) return;
+    if (!await askConfirm(`${tr("ตั้ง")} ${ids.length} ${tr("รายการเป็น")} "${label}" ?\n\n${tr("การเปลี่ยนชนิดมีผลกับทะเบียน/ผัง/ตัวกรองทุกหน้า")}`)) return;
 
     setSaving(true);
     try {
@@ -92,14 +92,14 @@ export default function FixtureClassify({ machines, mapKeys, canEdit, lines = []
       else invalidateTable('jigs');   // ทะเบียนเข้า cache แล้ว (13/10 · คีย์ 'jigs:am')
 
       if (okN < ids.length) {
-        toast.error(`บันทึกได้ ${okN}/${ids.length} รายการ — ที่เหลือไม่ถูกเขียน (เช็คสิทธิ์/การเชื่อมต่อ)`);
+        toast.error(`${tr("บันทึกได้")} ${okN}/${ids.length} ${tr("รายการ — ที่เหลือไม่ถูกเขียน (เช็คสิทธิ์/การเชื่อมต่อ")})`);
       } else {
-        toast.success(`ตั้งเป็น "${label}" แล้ว ${okN} รายการ${shadowWarn}`);
+        toast.success(`${tr("ตั้งเป็น")} "${label}" ${tr("แล้ว")} ${okN} ${tr("รายการ")}${shadowWarn}`);
       }
       setPicked(new Set());
       onSaved?.();
     } catch (e) {
-      toast.error(`บันทึกไม่สำเร็จ: ${e.message}`);
+      toast.error(`${tr("บันทึกไม่สำเร็จ")}: ${e.message}`);
     } finally {
       setSaving(false);
     }
@@ -142,7 +142,7 @@ export default function FixtureClassify({ machines, mapKeys, canEdit, lines = []
           <span className="filter-count">{tr('ซ่อนอยู่')} {hiddenCount} {tr('รายการ (ไม่ตรงตัวกรอง)')}</span>
         )}
         <button onClick={pickAllShown} style={{ padding: '0 12px', borderRadius: 'var(--r-md)', fontSize: 12.5,
-                background: 'var(--bg2)', color: 'var(--text)', border: '1px solid var(--border)', cursor: 'pointer' }}>
+                background: 'var(--bg2-surf)', color: 'var(--text)', border: '1px solid var(--border)', cursor: 'pointer' }}>
           {tr('ติ๊ก/เอาออก ทั้งที่แสดง (')}{shown.length})
         </button>
       </FilterBar>
@@ -194,7 +194,7 @@ export default function FixtureClassify({ machines, mapKeys, canEdit, lines = []
                   style={{ background: picked.size ? '#16a34a' : 'var(--bg2)', color: picked.size ? '#fff' : 'var(--muted)',
                            border: 'none', borderRadius: 'var(--r-md)', padding: '8px 18px', fontSize: 13, fontWeight: 700,
                            cursor: picked.size && !saving ? 'pointer' : 'not-allowed' }}>
-            {saving ? 'กำลังบันทึก…' : `บันทึก ${picked.size} รายการ`}
+            {saving ? 'กำลังบันทึก…' : `${tr("บันทึก")} ${picked.size} ${tr("รายการ")}`}
           </button>
         </div>
       )}

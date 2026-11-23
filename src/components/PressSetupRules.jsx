@@ -23,7 +23,7 @@ const SCOPES = [
   { key: 'line', label: 'เฉพาะไลน์' },
   { key: 'machine', label: 'เฉพาะเครื่อง' },
 ];
-const scopeLabel = (r) => (r.scope_kind === 'global' ? 'ทั้งโรงงาน' : `${r.scope_kind === 'line' ? 'ไลน์' : 'เครื่อง'} ${r.scope_value || '—'}`);
+const scopeLabel = (r) => (r.scope_kind === 'global' ? 'ทั้งโรงงาน' : `${r.scope_kind === 'line' ? tr('ไลน์') : tr('เครื่อง')} ${r.scope_value || '—'}`);
 
 const inp = { padding: '5px 8px', borderRadius: 6, fontSize: 12, border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text)', width: '100%', boxSizing: 'border-box' };
 const btn = (bg, color = '#fff') => ({ padding: '5px 10px', borderRadius: 6, fontSize: 11.5, fontWeight: 700, cursor: 'pointer', background: bg, color, border: '1px solid var(--border)', whiteSpace: 'nowrap' });
@@ -37,8 +37,8 @@ function heightRuleText(rule) {
   const per = rule?.per_mm_sec;
   const list = Array.isArray(rule?.height_steps) ? rule.height_steps : [];
   const parts = [];
-  if (per != null && per !== '') parts.push(`ต่างกัน 1 มม. = ${per} วินาที`);
-  if (list.length) parts.push(list.map(s => (s.max_mm == null ? `เกินนั้น +${s.add_min ?? 0} น.` : `≤${s.max_mm} มม. +${s.add_min ?? 0} น.`)).join(' · '));
+  if (per != null && per !== '') parts.push(`${tr("ต่างกัน 1 มม.")} = ${per} ${tr("วินาที")}`);
+  if (list.length) parts.push(list.map(s => (s.max_mm == null ? `${tr("เกินนั้น")} +${s.add_min ?? 0} ${tr("น.")}` : `≤${s.max_mm} ${tr("มม.")} +${s.add_min ?? 0} ${tr("น.")}`)).join(' · '));
   return parts.length ? parts.join(' + ') : '🔴 ยังไม่ได้บอกผลของความสูง — จัดลำดับให้ไม่ได้ (ทุกลำดับจะเท่ากันหมด)';
 }
 
@@ -129,7 +129,7 @@ export default function PressSetupRules({ dies = [], lineNames = [], canEdit = f
     setBusy(true);
     const res = await supabaseDR.from('press_setup_rules').update(payload).eq('id', r.id).select('id');
     setBusy(false);
-    if (!checkWrite(res, `บันทึกกฎ ${scopeLabel(r)}`)) return;
+    if (!checkWrite(res, `${tr("บันทึกกฎ")} ${scopeLabel(r)}`)) return;
     // 🔴 RLS ปฏิเสธ UPDATE = "สำเร็จ 0 แถว ไม่มี error" → ต้องนับแถว ห้ามขึ้นเขียวจาก !error
     if (!res.data?.length) { toast.error('บันทึกไม่ติด (0 แถว) — อาจไม่มีสิทธิ์แก้กฎนี้'); return; }
     toast.success('บันทึกแล้ว');
@@ -160,7 +160,7 @@ export default function PressSetupRules({ dies = [], lineNames = [], canEdit = f
 
   const toggle = async (r) => {
     const on = r.is_active !== false;
-    if (on && !await askConfirm(`ปิดใช้กฎ "${scopeLabel(r)}" ?\n\nจอที่ใช้กฎนี้จะกลับไปเป็น "ยังไม่มีกฎ" (ตอบเวลา setup ไม่ได้) จนกว่าจะเปิดกลับ`)) return;
+    if (on && !await askConfirm(`${tr("ปิดใช้กฎ")} "${scopeLabel(r)}" ?\n\n${tr("จอที่ใช้กฎนี้จะกลับไปเป็น \"ยังไม่มีกฎ\" (ตอบเวลา setup ไม่ได้) จนกว่าจะเปิดกลับ")}`)) return;
     const res = await supabaseDR.from('press_setup_rules').update({ is_active: !on }).eq('id', r.id).select('id');
     if (!checkWrite(res, 'เปลี่ยนสถานะกฎ')) return;
     if (!res.data?.length) { toast.error('เปลี่ยนสถานะไม่ติด (0 แถว) — อาจไม่มีสิทธิ์'); return; }
@@ -170,9 +170,8 @@ export default function PressSetupRules({ dies = [], lineNames = [], canEdit = f
   return (
     <div style={{ display: 'grid', gap: 12 }}>
       <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.7 }}>
-        เวลาเปลี่ยนรุ่นของงานปั๊ม <b>{tr('ขึ้นกับลำดับที่ผลิต')}</b> — เปลี่ยนจากแม่พิมพ์ที่ความสูงใกล้กัน
-        ปรับ shut height น้อย เสียเวลาน้อย · ตัวเลขทั้งหมดในหน้านี้ <b>{tr('มาจากช่างปั๊ม')}</b> ไม่ใช่ค่าที่ระบบเดา
-        {' '}(โค้ดไม่มีเวลา setup ฝังไว้เลย — ตารางว่าง = ทุกจอจะเขียนว่า "ยังตอบไม่ได้")
+        {tr("เวลาเปลี่ยนรุ่นของงานปั๊ม")} <b>{tr('ขึ้นกับลำดับที่ผลิต')}</b> — {tr("เปลี่ยนจากแม่พิมพ์ที่ความสูงใกล้กัน ปรับ shut height น้อย เสียเวลาน้อย · ตัวเลขทั้งหมดในหน้านี้")} <b>{tr('มาจากช่างปั๊ม')}</b> {tr("ไม่ใช่ค่าที่ระบบเดา")}
+        {' '}({tr("โค้ดไม่มีเวลา setup ฝังไว้เลย — ตารางว่าง = ทุกจอจะเขียนว่า \"ยังตอบไม่ได้")}")
       </div>
 
       {state === 'loading' && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('กำลังโหลด…')}</div>}
@@ -186,10 +185,9 @@ export default function PressSetupRules({ dies = [], lineNames = [], canEdit = f
       )}
 
       {/* ความพร้อมของข้อมูล — บอกตรงๆ ว่ายังขาดอะไร */}
-      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '9px 12px', fontSize: 12, lineHeight: 1.8 }}>
+      <div style={{ background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '9px 12px', fontSize: 12, lineHeight: 1.8 }}>
         <b>{tr('ความพร้อมของข้อมูล')}</b><br />
-        กฎที่ใช้งานอยู่ <b>{ready.ruleCount}</b> ข้อ ·
-        แม่พิมพ์ในขอบเขตนี้ <b>{ready.dieTotal}</b> {tr('ตัว — กรอกความสูงแล้ว')} <b>{ready.dieWithHeight}</b>
+        {tr("กฎที่ใช้งานอยู่")} <b>{ready.ruleCount}</b> {tr("ข้อ · แม่พิมพ์ในขอบเขตนี้")} <b>{ready.dieTotal}</b> {tr('ตัว — กรอกความสูงแล้ว')} <b>{ready.dieWithHeight}</b>
         {ready.dieMissing > 0 && <span style={{ color: '#f59e0b' }}> {tr('· ยังไม่กรอก')} <b>{ready.dieMissing}</b> {tr('ตัว')}</span>}
         <br />
         {ready.canPlan
@@ -208,7 +206,7 @@ export default function PressSetupRules({ dies = [], lineNames = [], canEdit = f
         <div style={{ display: 'grid', gap: 8 }}>
           {rows.length === 0 && (
             <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-              ยังไม่มีกฎในทะเบียน — {canEdit ? 'กด "+ เพิ่มกฎ" เพื่อกรอกตัวเลขที่ช่างปั๊มให้มา' : 'ให้ผู้มีสิทธิ์แก้ทะเบียนเป็นคนกรอก'}
+              {tr("ยังไม่มีกฎในทะเบียน")} — {canEdit ? 'กด "+ เพิ่มกฎ" เพื่อกรอกตัวเลขที่ช่างปั๊มให้มา' : 'ให้ผู้มีสิทธิ์แก้ทะเบียนเป็นคนกรอก'}
             </div>
           )}
           {rows.map(r => {
@@ -216,7 +214,7 @@ export default function PressSetupRules({ dies = [], lineNames = [], canEdit = f
             const dirty = !!draft[r.id];
             return (
               <div key={r.id} style={{
-                background: 'var(--card)', border: `1px solid ${dirty ? 'rgba(245,158,11,0.5)' : 'var(--border)'}`,
+                background: 'var(--card-surf)', border: `1px solid ${dirty ? 'rgba(245,158,11,0.5)' : 'var(--border)'}`,
                 borderRadius: 'var(--r-md)', padding: '10px 12px', opacity: off ? 0.55 : 1,
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
@@ -272,7 +270,7 @@ export default function PressSetupRules({ dies = [], lineNames = [], canEdit = f
           })}
 
           {canEdit && (adding ? (
-            <div style={{ background: 'var(--bg2)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: '10px 12px', display: 'grid', gap: 8 }}>
+            <div style={{ background: 'var(--bg2-surf)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: '10px 12px', display: 'grid', gap: 8 }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8 }}>
                 <label style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('ขอบเขต')}
                   <select value={adding.scope_kind || 'global'} onChange={e => setAdding(a => ({ ...a, scope_kind: e.target.value, scope_value: '' }))} style={{ ...inp, marginTop: 3 }}>
@@ -321,7 +319,7 @@ export default function PressSetupRules({ dies = [], lineNames = [], canEdit = f
 
       {/* ตัวอย่างผลของการจัดลำดับ — ข้อเสนอ ไม่ใช่คำสั่ง */}
       {state === 'ok' && lineNames.length > 0 && (
-        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '10px 12px', fontSize: 12 }}>
+        <div style={{ background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '10px 12px', fontSize: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
             <b>{tr('ลองเทียบลำดับ')}</b>
             <select value={previewLine} onChange={e => setPreviewLine(e.target.value)} style={{ ...inp, width: 'auto' }}>
@@ -339,23 +337,21 @@ export default function PressSetupRules({ dies = [], lineNames = [], canEdit = f
             const tot = preview.sortedSeq.totalMin;
             return (
               <div style={{ lineHeight: 1.9 }}>
-                เวลาปรับ shut height ตามลำดับทะเบียนตอนนี้ ({preview.list.length} ตัว) = <b>{fmtMin(a)}</b> นาที ·
-                เรียงตามความสูง = <b>{fmtMin(b)}</b> นาที
+                {tr("เวลาปรับ shut height ตามลำดับทะเบียนตอนนี้")} ({preview.list.length} {tr("ตัว")}) = <b>{fmtMin(a)}</b> {tr("นาที · เรียงตามความสูง")} = <b>{fmtMin(b)}</b> {tr("นาที")}
                 {save != null && (
                   <div style={{ color: save > 0.05 ? 'var(--accent)' : 'var(--muted)', fontWeight: 700 }}>
-                    {save > 0.05 ? `⇒ จัดลำดับใหม่ประหยัดได้ ~${fmtMin(save)} นาที/รอบ` : '⇒ ลำดับที่เป็นอยู่ดีอยู่แล้ว (เรียงใหม่ไม่ช่วย)'}
+                    {save > 0.05 ? `⇒ ${tr("จัดลำดับใหม่ประหยัดได้")} ~${fmtMin(save)} ${tr("นาที/รอบ")}` : '⇒ ลำดับที่เป็นอยู่ดีอยู่แล้ว (เรียงใหม่ไม่ช่วย)'}
                   </div>
                 )}
                 {preview.sortedSeq.baseUnknown && (
                   <div style={{ color: 'var(--muted)' }}>
-                    ℹ️ ยังไม่รู้ <b>{tr('เวลาฐาน')}</b> (ยกแม่พิมพ์ลง-ขึ้น-จูน) จึงบอก "เวลารวมทั้งรอบ" ไม่ได้ —
-                    แต่เทียบลำดับได้ เพราะทุกลำดับเปลี่ยนแม่พิมพ์ {preview.sortedSeq.changeCount} ครั้งเท่ากัน เวลาฐานจึงหักกลบ
+                    ℹ️ {tr("ยังไม่รู้")} <b>{tr('เวลาฐาน')}</b> ({tr("ยกแม่พิมพ์ลง-ขึ้น-จูน) จึงบอก \"เวลารวมทั้งรอบ\" ไม่ได้ — แต่เทียบลำดับได้ เพราะทุกลำดับเปลี่ยนแม่พิมพ์")} {preview.sortedSeq.changeCount} {tr("ครั้งเท่ากัน เวลาฐานจึงหักกลบ")}
                   </div>
                 )}
-                {tot != null && <div style={{ color: 'var(--text2)' }}>เวลารวมทั้งรอบ (รวมเวลาฐาน) = <b>{fmtMin(tot)}</b> {tr('นาที')}</div>}
+                {tot != null && <div style={{ color: 'var(--text2)' }}>{tr("เวลารวมทั้งรอบ (รวมเวลาฐาน")}) = <b>{fmtMin(tot)}</b> {tr('นาที')}</div>}
                 {preview.sortedSeq.unknownCount > 0 && (
                   <div style={{ color: '#f59e0b' }}>
-                    ⚠️ มี {preview.sortedSeq.unknownCount} {tr('ช่วงที่ประเมินผลความสูงไม่ได้ (ยังไม่กรอกความสูง) — ตัวเลขนี้')} <b>{tr('ต่ำกว่าความจริง')}</b>
+                    ⚠️ {tr("มี")} {preview.sortedSeq.unknownCount} {tr('ช่วงที่ประเมินผลความสูงไม่ได้ (ยังไม่กรอกความสูง) — ตัวเลขนี้')} <b>{tr('ต่ำกว่าความจริง')}</b>
                   </div>
                 )}
                 <div style={{ fontSize: 11, color: 'var(--muted)' }}>

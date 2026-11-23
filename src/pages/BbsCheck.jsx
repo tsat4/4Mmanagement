@@ -152,7 +152,7 @@ export default function BbsCheck() {
       supabase.from('profiles').select('id, full_name, position, signature_url')
         .not('signature_url', 'is', null),
     ]);
-    if (ag.error) setLoadWarn(`โหลดข้อตกลงไม่สำเร็จ: ${ag.error.message}`);
+    if (ag.error) setLoadWarn(`${tr("โหลดข้อตกลงไม่สำเร็จ")}: ${ag.error.message}`);
     setAgreements(ag.data || []);
     setSigners(pf.data || []);
   }, []);
@@ -180,7 +180,7 @@ export default function BbsCheck() {
         .eq('is_active', true);
       q = fam.size ? q.in('line_id', [...fam]) : q.eq('line_id', lineObj.id);
       const { data: empData, error: empErr } = await q.order('employee_id_code');
-      if (empErr) setLoadWarn(`โหลดรายชื่อพนักงานไม่สำเร็จ: ${empErr.message}`);
+      if (empErr) setLoadWarn(`${tr("โหลดรายชื่อพนักงานไม่สำเร็จ")}: ${empErr.message}`);
       if (sheetKeyRef.current !== myKey) return;   // เปลี่ยนไลน์/เดือน/กะ ระหว่างรอ → ทิ้งผลรอบนี้
       setEmps(empData || []);
 
@@ -190,7 +190,7 @@ export default function BbsCheck() {
       const { data: shRows, error: shErr } = await supabase.from('bbs_sheets').select('*')
         .eq('month_key', month).eq('line_name', lineObj.name)
         .order('created_at', { ascending: true }).limit(1);
-      if (shErr) setLoadWarn(`โหลดหัวใบไม่สำเร็จ: ${shErr.message}`);
+      if (shErr) setLoadWarn(`${tr("โหลดหัวใบไม่สำเร็จ")}: ${shErr.message}`);
       const sh = (shRows || [])[0] || null;
       if (sheetKeyRef.current !== myKey) return;
       setSheet(sh);
@@ -201,7 +201,7 @@ export default function BbsCheck() {
            ⇒ ดึงครบทุกหน้า + โหลดไม่ครบต้องเขียนบนจอ (กฎเขียน DB ข้อ 5) */
         const obRes = await fetchAllPages(() => supabase.from('bbs_observations')
           .select('*').eq('sheet_id', sh.id));
-        if (obRes.error) setLoadWarn(`โหลดผลสังเกตไม่สำเร็จ: ${obRes.error}`);
+        if (obRes.error) setLoadWarn(`${tr("โหลดผลสังเกตไม่สำเร็จ")}: ${obRes.error}`);
         else if (obRes.truncated) setLoadWarn('ผลสังเกตของใบนี้เยอะเกินกว่าจะโหลดครบ — ช่องที่ว่างอาจมีข้อมูลอยู่จริง');
         const map = {};
         obRes.rows.forEach(o => { map[cellKey(o.employee_id, o.day)] = o; });
@@ -242,7 +242,7 @@ export default function BbsCheck() {
   const lineWrite = canWriteLine(wCtx, lineObj?.name, lines);
   const lineGuard = () => {
     if (lineWrite.ok) return true;
-    toast.error(writeBlockText(lineWrite, { what: `ใบ BBS ของไลน์ ${lineObj?.name || ''}`, unit: lineObj?.section || '' }));
+    toast.error(writeBlockText(lineWrite, { what: `${tr("ใบ BBS ของไลน์")} ${lineObj?.name || ''}`, unit: lineObj?.section || '' }));
     return false;
   };
 
@@ -280,7 +280,7 @@ export default function BbsCheck() {
         ? 'ยังไม่ได้ apply migration ของ BBS — แจ้งผู้ดูแลระบบ'
         : error.code === '42P10'
           ? 'ยังไม่ได้รัน migration ยุบใบ BBS ตามกะ (20261002) — แจ้งผู้ดูแลระบบ ยังบันทึกไม่ได้'
-          : `สร้างใบไม่สำเร็จ: ${error.message}`);
+          : `${tr("สร้างใบไม่สำเร็จ")}: ${error.message}`);
       return null;
     }
     setSheet(data);
@@ -305,7 +305,7 @@ export default function BbsCheck() {
       // 📱 มือถือ: แตะเบิ้ลด้วยถุงมือ = ลบช่องที่เพิ่งทาไปเงียบๆ ⇒ ถามก่อน (จอคอมคลิกซ้ำล้างทันทีเหมือนเดิม · 2026-10-20)
       if (isMobile && !await askConfirm('ล้างเครื่องหมายช่องนี้?')) return;
       const { error } = await supabase.from('bbs_observations').delete().eq('id', cur.id);
-      if (error) return toast.error(`ล้างช่องไม่สำเร็จ: ${error.message}`);
+      if (error) return toast.error(`${tr("ล้างช่องไม่สำเร็จ")}: ${error.message}`);
       setCells(c => { const n = { ...c }; delete n[key]; return n; });
       return;
     }
@@ -317,7 +317,7 @@ export default function BbsCheck() {
     };
     const { data, error } = await supabase.from('bbs_observations')
       .upsert(payload, { onConflict: 'sheet_id,employee_id,day' }).select().single();
-    if (error) return toast.error(`บันทึกไม่สำเร็จ: ${error.message}`);
+    if (error) return toast.error(`${tr("บันทึกไม่สำเร็จ")}: ${error.message}`);
     setCells(c => ({ ...c, [key]: data }));
   };
 
@@ -334,7 +334,7 @@ export default function BbsCheck() {
       { onConflict: 'sheet_id,employee_id' });
     if (error) {
       setRowNotes(m => ({ ...m, [empId]: cur }));   // คืนค่าเดิม ไม่ให้จอโกหกว่าบันทึกแล้ว
-      toast.error(`บันทึกหมายเหตุไม่สำเร็จ: ${error.message}`);
+      toast.error(`${tr("บันทึกหมายเหตุไม่สำเร็จ")}: ${error.message}`);
     }
   };
 
@@ -370,7 +370,7 @@ export default function BbsCheck() {
         .in('employee_id', empIds);
       /* ไม่กรองกะ — BBS ไม่แยกกะแล้ว (ดูหัวบล็อกไฟล์) เอาผลตรวจ PPE ของทั้งวัน */
       const lp = await fetchAllPages(q, { orderBy: ['work_date', 'employee_id'] });
-      if (lp.error) { toast.error(`อ่านผลตรวจ PPE ไม่สำเร็จ: ${lp.error}`); return; }
+      if (lp.error) { toast.error(`${tr("อ่านผลตรวจ PPE ไม่สำเร็จ")}: ${lp.error}`); return; }
       // โหลดไม่ครบ = ช่องที่ขาดจะถูกอ่านว่า "ไม่ได้ตรวจ" ⇒ ห้ามเติมต่อเงียบๆ
       if (lp.truncated) { toast.error('ผลตรวจ PPE เดือนนี้เยอะเกินกว่าจะโหลดครบ — ยังเติมอัตโนมัติไม่ได้'); return; }
       const logs = lp.rows;
@@ -388,14 +388,14 @@ export default function BbsCheck() {
 
       if (!rows.length) {
         toast.info(skipManual
-          ? `ไม่มีอะไรให้เติม — ${skipManual} ช่องเป็นของที่กรอกเอง (ระบบไม่ทับ)`
+          ? `${tr("ไม่มีอะไรให้เติม")} — ${skipManual} ${tr("ช่องเป็นของที่กรอกเอง (ระบบไม่ทับ")})`
           : 'ไม่มีข้อมูลการตรวจ PPE ของเดือน/ไลน์/กะนี้');
         return;
       }
 
       const { data, error: upErr } = await supabase.from('bbs_observations')
         .upsert(rows, { onConflict: 'sheet_id,employee_id,day' }).select();
-      if (upErr) { toast.error(`เติมไม่สำเร็จ: ${upErr.message}`); return; }
+      if (upErr) { toast.error(`${tr("เติมไม่สำเร็จ")}: ${upErr.message}`); return; }
 
       setCells(c => {
         const n = { ...c };
@@ -403,8 +403,8 @@ export default function BbsCheck() {
         return n;
       });
       const ng = rows.filter(r => r.mark === 'ng').length;
-      toast.success(`เติม ${data?.length ?? 0} ช่อง (พบไม่สวม PPE ${ng} ช่อง)`
-        + (skipManual ? ` · ข้ามของที่กรอกเอง ${skipManual} ช่อง` : ''));
+      toast.success(`${tr("เติม")} ${data?.length ?? 0} ${tr("ช่อง (พบไม่สวม")} PPE ${ng} ${tr("ช่อง")})`
+        + (skipManual ? ` · ${tr("ข้ามของที่กรอกเอง")} ${skipManual} ${tr("ช่อง")}` : ''));
     } finally { setBusy(false); }
   };
 
@@ -430,10 +430,10 @@ export default function BbsCheck() {
     };
     const { data, error } = await supabase.from('bbs_sheets')
       .update(patch).eq('id', sh.id).select('id');
-    if (error) return toast.error(`บันทึกผู้ตรวจไม่สำเร็จ: ${error.message}`);
+    if (error) return toast.error(`${tr("บันทึกผู้ตรวจไม่สำเร็จ")}: ${error.message}`);
     if (!data?.length) return toast.error('บันทึกไม่สำเร็จ — บัญชีนี้ไม่มีสิทธิ์แก้ใบนี้');
     setSheet(s => ({ ...s, ...patch }));
-    toast.success(pk.self || !pk.name ? 'บันทึกผู้ตรวจสอบแล้ว' : `บันทึกผู้ตรวจสอบแล้ว — ลายเซ็นจะขึ้นเมื่อ ${pk.name} สแกนบัตร/login มาเลือกตัวเอง`);
+    toast.success(pk.self || !pk.name ? 'บันทึกผู้ตรวจสอบแล้ว' : `${tr("บันทึกผู้ตรวจสอบแล้ว — ลายเซ็นจะขึ้นเมื่อ")} ${pk.name} ${tr("สแกนบัตร/login มาเลือกตัวเอง")}`);
   };
 
   const setInspectorCode = async (code) => {
@@ -529,7 +529,7 @@ export default function BbsCheck() {
       <ReadOnlyNote show={!canRecord} role={role} what="บันทึกผลสังเกต BBS" permKey="bbs:record" />
 
       {canRecord && lineObj && !lineWrite.ok && (
-        <NoticeBar tone="warn" style={{ marginBottom: 12 }}>🔒 {writeBlockText(lineWrite, { what: `ใบ BBS ของไลน์ ${lineObj.name}`, unit: lineObj.section || '' })}</NoticeBar>
+        <NoticeBar tone="warn" style={{ marginBottom: 12 }}>🔒 {writeBlockText(lineWrite, { what: `${tr("ใบ BBS ของไลน์")} ${lineObj.name}`, unit: lineObj.section || '' })}</NoticeBar>
       )}
       {loadWarn && (
         <NoticeBar tone="bad" style={{ marginBottom: 12 }}>{loadWarn} {tr('— ตัวเลขบนหน้านี้อาจไม่ครบ')}</NoticeBar>
@@ -560,7 +560,7 @@ export default function BbsCheck() {
 
       {/* ── ผู้ตรวจสอบ + ขอบเขตที่ระบบเติมได้ ── */}
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start', marginBottom: 12 }}>
-        <div style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 12px', display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 12px', display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           <div>
             <label style={lbl}>{tr('ผู้ตรวจสอบ (ลายเซ็น: โปรไฟล์ → ฐานพนักงาน)')}</label>
             <SearchSelect disabled={!canRecord} value={signers.find(s => s.full_name === sheet?.inspector_name)?.id || ''}
@@ -601,7 +601,7 @@ export default function BbsCheck() {
           padding: '8px 12px', fontSize: 12, lineHeight: 1.6, maxWidth: 420,
         }}>
           <b>{tr('ระบบเติมให้ได้')} {autoAgreements.length} {tr('ข้อ จากทั้งหมด')} {agreements.length} {tr('ข้อ')}</b>
-          {autoAgreements.length > 0 && <> {tr('(ข้อ')} {autoAgreements.map(a => a.seq).join(', ')} — มาจากการตรวจ PPE รายวัน)</>}
+          {autoAgreements.length > 0 && <> {tr('(ข้อ')} {autoAgreements.map(a => a.seq).join(', ')} — {tr("มาจากการตรวจ PPE รายวัน")})</>}
           <div style={{ color: 'var(--text2)', marginTop: 2 }}>
             ข้อที่เหลือต้องให้ผู้ตรวจสังเกตเองแล้วทาในตาราง · ระบบ<b>{tr('ไม่ทับ')}</b>ช่องที่กรอกเอง
             และ<b>{tr('ไม่เติม')}</b>วันที่ไม่มีบันทึกเช็คชื่อ
@@ -610,7 +610,7 @@ export default function BbsCheck() {
               ห้ามเดาข้อความ · แต่ต้องบอกว่ายังไม่ครบ ไม่งั้นคนคิดว่าระบบมีแค่นี้ */}
           {agreements.length < 13 && (
             <div style={{ color: 'var(--amber)', marginTop: 3, fontWeight: 700 }}>
-              ยังมีข้อตกลงแค่ {agreements.length} ข้อ — ใบจริงมี 13 ข้อ กด “ข้อตกลง” เพื่อเพิ่มให้ครบ
+              {tr("ยังมีข้อตกลงแค่")} {agreements.length} {tr("ข้อ — ใบจริงมี 13 ข้อ กด “ข้อตกลง” เพื่อเพิ่มให้ครบ")}
             </div>
           )}
         </div>
@@ -669,7 +669,7 @@ export default function BbsCheck() {
                 <button onClick={() => setSelDay(Math.max(1, day - 1))} disabled={day <= 1} style={navBtn} aria-label={tr('วันก่อนหน้า')}>◀</button>
                 <div style={{ flex: 1, textAlign: 'center' }}>
                   <div style={{ fontSize: 16, fontWeight: 800, color: dstr === today ? 'var(--accent)' : 'var(--text)' }}>
-                    วันที่ {day} {dstr === today && <span style={{ fontSize: 11, marginLeft: 4 }}>{tr('· วันนี้')}</span>}
+                    {tr("วันที่")} {day} {dstr === today && <span style={{ fontSize: 11, marginLeft: 4 }}>{tr('· วันนี้')}</span>}
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('ทาแล้ว')} {done}/{emps.length} {tr('คน')}</div>
                 </div>
@@ -683,7 +683,7 @@ export default function BbsCheck() {
                   const c = cells[cellKey(e.id, day)];
                   const picking = ngPick === e.id;
                   return (
-                    <div key={e.id} style={{ border: `1px solid ${c ? (markColor(c) + '66') : 'var(--border)'}`, borderRadius: 'var(--r-lg)', padding: '10px 12px', background: 'var(--card)' }}>
+                    <div key={e.id} style={{ border: `1px solid ${c ? (markColor(c) + '66') : 'var(--border)'}`, borderRadius: 'var(--r-lg)', padding: '10px 12px', background: 'var(--card-surf)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                         <span style={{ fontSize: 12, color: 'var(--muted)', minWidth: 18 }}>{i + 1}</span>
                         <div style={{ flex: 1, minWidth: 0 }}>
@@ -754,8 +754,8 @@ export default function BbsCheck() {
                     const c = cells[cellKey(e.id, d)];
                     return (
                       <td key={d} onClick={() => paint(e, d)}
-                        title={c ? `${MARK_BY_KEY[c.mark]?.label || c.mark}${c.agreement_seq ? ` (ข้อ ${c.agreement_seq})` : ''}`
-                          + `\n${c.source === 'ppe' ? 'เติมอัตโนมัติจากผลตรวจ PPE' : 'กรอกเอง'}${c.note ? `\n${c.note}` : ''}` : ''}
+                        title={c ? `${MARK_BY_KEY[c.mark]?.label || c.mark}${c.agreement_seq ? ` (${tr("ข้อ")} ${c.agreement_seq})` : ''}`
+                          + `\n${c.source === 'ppe' ? tr('เติมอัตโนมัติจากผลตรวจ PPE') : tr('กรอกเอง')}${c.note ? `\n${c.note}` : ''}` : ''}
                         style={{
                           ...td(), cursor: canRecord ? 'pointer' : 'default',
                           color: markColor(c), fontWeight: 700,
@@ -787,14 +787,14 @@ export default function BbsCheck() {
         ))}
         <span style={{ flex: 1 }} />
         <span role="status" style={{ color: 'var(--muted)' }}>
-          เดือนนี้: ✓ {stat.ok} {tr('· ไม่เหมาะสม')} {stat.ng} {tr('· ปรับแก้')} {stat.fixed} {tr('· ไม่ได้ตรวจ')} {stat.na}
-          {' · '}{tr('เติมอัตโนมัติ')} {stat.auto} {tr('/ กรอกเอง')} {stat.manual} ช่อง
+          {tr("เดือนนี้")}: ✓ {stat.ok} {tr('· ไม่เหมาะสม')} {stat.ng} {tr('· ปรับแก้')} {stat.fixed} {tr('· ไม่ได้ตรวจ')} {stat.na}
+          {' · '}{tr('เติมอัตโนมัติ')} {stat.auto} {tr('/ กรอกเอง')} {stat.manual} {tr("ช่อง")}
           {/* 🔴 ตัวหาร — ไม่มีแล้วบรรทัดนี้ตอบไม่ได้ว่ากรอกครบแค่ไหน (ดูเหตุผลที่ stat) */}
           {stat.due > 0 && (
             <>
-              {' · '}{tr('กรอกแล้ว')} <b style={{ color: 'var(--text)' }}>{stat.filled}</b>/{stat.due} ช่อง
+              {' · '}{tr('กรอกแล้ว')} <b style={{ color: 'var(--text)' }}>{stat.filled}</b>/{stat.due} {tr("ช่อง")}
               {stat.blank > 0 && <> · <b style={{ color: 'var(--amber)' }}>{tr('ยังไม่กรอก')} {stat.blank}</b></>}
-              {' '}{tr('(ถึงวันที่')} {stat.elapsed} · {emps.length} คน)
+              {' '}{tr('(ถึงวันที่')} {stat.elapsed} · {emps.length} {tr("คน")})
             </>
           )}
           {/* 🔴 วันที่ไม่นับเป็นตัวหาร ต้องบอกบนจอ — ไม่บอก คนอ่านจะนึกว่าตัวหารหายไปเฉยๆ */}
@@ -870,7 +870,7 @@ function AgreementsModal({ agreements, canManage, role, onClose }) {
         // 23505 = ชนกับ unique index ของเลขข้อ (bbs_agree_seq_uniq) — แปลเป็นภาษาคน
         toast.error(error.code === '23505'
           ? 'เลขข้อซ้ำกับข้อที่มีอยู่แล้ว — เปลี่ยนเลขข้อแล้วบันทึกใหม่'
-          : `บันทึกไม่สำเร็จ: ${error.message}`);
+          : `${tr("บันทึกไม่สำเร็จ")}: ${error.message}`);
         return;
       }
 
@@ -893,7 +893,7 @@ function AgreementsModal({ agreements, canManage, role, onClose }) {
 
   return (
     <div /* ⚠️ ฟอร์มกรอกข้อมูล — ไม่ปิดจาก backdrop กันเผลอแตะแล้วข้อมูลหาย (UI-CONVENTIONS §5) */  style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', width: 'min(760px,96vw)', maxHeight: '88vh', overflow: 'auto', padding: 18 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', width: 'min(760px,96vw)', maxHeight: '88vh', overflow: 'auto', padding: 18 }}>
         <h3 style={{ margin: '0 0 4px', fontSize: 16 }}>{tr('ข้อตกลงด้านความปลอดภัยในการปฏิบัติงาน')}</h3>
         <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--muted)', lineHeight: 1.6 }}>
           เลขข้อนี้คือตัวเลขที่พิมพ์ลงช่องในใบเมื่อพบพฤติกรรมไม่เหมาะสม ·

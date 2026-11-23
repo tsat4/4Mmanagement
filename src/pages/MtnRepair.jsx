@@ -167,7 +167,7 @@ const localDtValue = (iso) => {
 };
 
 const minutesBetween = (a, b) => (a && b ? Math.max(0, Math.round((new Date(b) - new Date(a)) / 60000)) : null);
-const fmtMin = (m) => (m == null ? '—' : m < 60 ? `${m} นาที` : `${Math.floor(m / 60)} ชม. ${m % 60} นาที`);
+const fmtMin = (m) => (m == null ? '—' : m < 60 ? `${m} ${trI18n("นาที")}` : `${Math.floor(m / 60)} ${trI18n("ชม.")} ${m % 60} ${trI18n("นาที")}`);
 // echo วันที่ (input ISO YYYY-MM-DD ค.ศ.) → DD/MM/พ.ศ.
 const beEcho = (ymd) => { if (!ymd) return ''; const [y, m, d] = ymd.split('-'); return `${d}/${m}/${Number(y) + 543}`; };
 
@@ -402,16 +402,16 @@ export function MoReportFromDowntime({ downtime, lineName, initial, defaultDept,
   if (st.loading || st.err || !m) return (
     <ModalShell title={trI18n('เปิดใบแจ้งซ่อมจาก Downtime')} onClose={onClose}>
       {st.err
-        ? <div style={{ color: 'var(--red)', fontSize: 13 }}>{trI18n('⚠️ โหลดทะเบียนของฟอร์มแจ้งซ่อมไม่สำเร็จ (')}{st.err}) — ยังเปิดใบไม่ได้
-            <div><button type="button" onClick={load} style={{ marginTop: 8, fontSize: 12, padding: '4px 12px', borderRadius: 'var(--r-md)', cursor: 'pointer', background: 'var(--bg3)', color: 'var(--text)', border: '1px solid var(--border2)' }}>{trI18n('ลองใหม่')}</button></div></div>
+        ? <div style={{ color: 'var(--red)', fontSize: 13 }}>{trI18n('⚠️ โหลดทะเบียนของฟอร์มแจ้งซ่อมไม่สำเร็จ (')}{st.err}) — {trI18n("ยังเปิดใบไม่ได้")}
+            <div><button type="button" onClick={load} style={{ marginTop: 8, fontSize: 12, padding: '4px 12px', borderRadius: 'var(--r-md)', cursor: 'pointer', background: 'var(--bg3-surf)', color: 'var(--text)', border: '1px solid var(--border2)' }}>{trI18n('ลองใหม่')}</button></div></div>
         : <div style={{ color: 'var(--muted)', fontSize: 13 }}>{trI18n('กำลังโหลดฟอร์มแจ้งซ่อม…')}</div>}
     </ModalShell>
   );
   return (
     <ReportModal {...m} fullName={fullName} defaultDept={defaultDept} onClose={onClose} onSaved={onSaved}
       title={fillOrderId
-        ? `เพิ่มรายละเอียดใบ MO · ${lineName || ''}`
-        : `เปิดใบแจ้งซ่อมจาก Downtime · ${lineName || ''}`}
+        ? `${trI18n("เพิ่มรายละเอียดใบ")} MO · ${lineName || ''}`
+        : `${trI18n("เปิดใบแจ้งซ่อมจาก")} Downtime · ${lineName || ''}`}
       initial={initial}
       fillOrderId={fillOrderId}
       sourceDowntimeId={fillOrderId ? null : (downtime?.id || null)}
@@ -447,7 +447,7 @@ function ModalShell({ title, onClose, children, wide, dirty }) {
   const askClose = async () => { if (dirty && !await confirmDiscard()) return; onClose(); };
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 3000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', overflowY: 'auto', padding: '4vh 2vw' }}>
-      <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', width: wide ? 'min(96vw, 1200px)' : 'min(96vw, 640px)', maxHeight: '92vh', overflowY: 'auto' }}>
+      <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', width: wide ? 'min(96vw, 1200px)' : 'min(96vw, 640px)', maxHeight: '92vh', overflowY: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, background: 'var(--card)', zIndex: 1 }}>
           <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{title}</div>
           <button onClick={askClose} aria-label={trI18n('ปิด')} style={{ background: 'none', border: 'none', fontSize: 22, color: 'var(--muted)', cursor: 'pointer', lineHeight: 1 }}>✕</button>
@@ -463,7 +463,7 @@ const Field = ({ label, required, children }) => (
 const DateField = ({ label, value, onChange, required }) => (
   <Field label={label} required={required}>
     <input type="date" value={value || ''} onChange={e => onChange(e.target.value)} style={inp} />
-    <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{trI18n('ปฏิทินเป็น ค.ศ.')}{value ? ` · = ${beEcho(value)} (พ.ศ.)` : ''}</div>
+    <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{trI18n('ปฏิทินเป็น ค.ศ.')}{value ? ` · = ${beEcho(value)} (${trI18n("พ.ศ.")})` : ''}</div>
   </Field>
 );
 
@@ -574,7 +574,7 @@ export default function MtnRepair() {
     const key = String(moParam).trim().toLowerCase();
     const hit = orders.find(o => String(o.id) === moParam || String(o.mo_no || '').trim().toLowerCase() === key);
     if (hit) { setTab('list', { replace: true }); openDetail(hit); }
-    else toast.info(`ไม่พบใบ MO "${moParam}" ในรายการที่คุณเห็น (อาจถูกปิด/อยู่นอกขอบเขตของคุณ)`);
+    else toast.info(`${trI18n("ไม่พบใบ")} MO "${moParam}" ${trI18n("ในรายการที่คุณเห็น (อาจถูกปิด/อยู่นอกขอบเขตของคุณ")})`);
     mergeSp({ mo: null }, { replace: true });
     /* ⚠️ ห้ามใส่ `openDetail` ใน deps — มันประกาศ (const) อยู่ **ใต้** effect นี้ และ deps array
        ถูก evaluate ตอน render (ก่อนถึงบรรทัดประกาศ) ⇒ TDZ "Cannot access before initialization"
@@ -791,7 +791,7 @@ const HANDOFF_CAP = 2000;
   /* ใบเต็ม 116 คอลัมน์ — โหลดเฉพาะใบที่เปิดดูจริง (ไม่ใช่ทั้งพันใบทุกรอบ) */
   const fetchFullOrder = useCallback(async (id) => {
     const { data, error } = await supabaseDR.from('mtn_orders').select('*').eq('id', id).maybeSingle();
-    if (error) { toast.error('โหลดรายละเอียดใบ MO ไม่สำเร็จ: ' + error.message); return null; }
+    if (error) { toast.error((trI18n('โหลดรายละเอียดใบ MO ไม่สำเร็จ') + ': ') + error.message); return null; }
     return data;
   }, []);
 
@@ -1036,9 +1036,9 @@ const HANDOFF_CAP = 2000;
       if (tch.error) toast.error('โหลดชื่อช่างซ่อมไม่ครบ — คอลัมน์ "ช่างซ่อมจริง" ในไฟล์เขียนกำกับไว้แล้ว');
       if (cmt.error) toast.error('โหลดคอมเมนต์ไม่ครบ — คอลัมน์คอมเมนต์ในไฟล์ใช้อ้างอิงไม่ได้ (เขียนกำกับไว้ในไฟล์แล้ว)');
       /* 🔴 บอกความครบถ้วนตอนโหลดเสร็จด้วย — คนมักเอาไฟล์ไปใช้เลยโดยไม่อ่านหัวชีท */
-      toast.success(`ออกไฟล์แล้ว ${r.rows} ใบ${r.vague ? ` · ในนั้นชี้เป้าไม่ได้ ${r.vague} ใบ (ดูชีทพาเรโต)` : ''}`);
+      toast.success(`${trI18n("ออกไฟล์แล้ว")} ${r.rows} ${trI18n("ใบ")}${r.vague ? ` · ${trI18n("ในนั้นชี้เป้าไม่ได้")} ${r.vague} ${trI18n("ใบ (ดูชีทพาเรโต")})` : ''}`);
     } catch (e) {
-      toast.error('ทำไฟล์ Excel ไม่สำเร็จ: ' + (e?.message || e));
+      toast.error((trI18n('ทำไฟล์ Excel ไม่สำเร็จ') + ': ') + (e?.message || e));
     } finally { setExporting(false); }   // ล้มกลางทาง ปุ่มต้องปลดเสมอ
   }, [shown, tr.from, tr.to, fDept, fLine, fStatus, fShift, fRepairType, fText]);
 
@@ -1111,7 +1111,7 @@ const HANDOFF_CAP = 2000;
   const openImprovementFromMo = (o) => {
     sessionStorage.setItem('imp_prefill', JSON.stringify({
       line_name: o.line_name, machine_no: o.machine_no, item_type: o.item_type,
-      problem: o.problem_characteristic, title: `ลดใบซ่อม ${o.problem_characteristic || ''} ${o.machine_no || ''}`.trim(),
+      problem: o.problem_characteristic, title: `${trI18n("ลดใบซ่อม")} ${o.problem_characteristic || ''} ${o.machine_no || ''}`.trim(),
     }));
     navigate('/improvements');
   };
@@ -1126,9 +1126,9 @@ const HANDOFF_CAP = 2000;
     <Page>
       <PageHeader
         title={trI18n('แจ้งซ่อม MTN (MO)')} icon="🛠️"
-        sub={<>{trI18n('ค้างดำเนินการ')} <b style={{ color: openCount ? 'var(--red)' : 'var(--green)' }}>{openCount}</b> ใบ
+        sub={<>{trI18n('ค้างดำเนินการ')} <b style={{ color: openCount ? 'var(--red)' : 'var(--green)' }}>{openCount}</b> {trI18n("ใบ")}
           {firstResp.total > 0 && <> {trI18n('· ช่างฝ่ายผลิตแก้เองจบ')} <b style={{ color: firstResp.pct >= 60 ? 'var(--green)' : 'var(--amber)' }}>{firstResp.pct}%</b>
-            <span style={{ color: 'var(--muted)' }}> ({firstResp.passed} {trI18n('ใบ · ส่งต่อช่างเฉพาะทาง')} {firstResp.sent} ใบ)</span></>}</>}
+            <span style={{ color: 'var(--muted)' }}> ({firstResp.passed} {trI18n('ใบ · ส่งต่อช่างเฉพาะทาง')} {firstResp.sent} {trI18n("ใบ")})</span></>}</>}
         tabs={TAB_DEFS} tab={tab} onTab={setTab}
       />
 
@@ -1139,7 +1139,7 @@ const HANDOFF_CAP = 2000;
           scale={tr.scale} from={tr.from} to={tr.to} today={tr.today}
           onFrom={tr.setFrom} onTo={tr.setTo} onPreset={tr.setPreset} onView={tr.setView}
           scales={null} periods={['day', 'week', 'month', 'year']} finest="hour"
-          note={<InfoMore id="mo-date-rule" label={trI18n('วันของใบ / กะ นับอย่างไร')}>วันของใบ = <b>{trI18n('วันทำงาน')}</b> (ก่อน 08:00 นับเป็นวันก่อนหน้า) · กะอนุมานจาก
+          note={<InfoMore id="mo-date-rule" label={trI18n('วันของใบ / กะ นับอย่างไร')}>{trI18n("วันของใบ")} = <b>{trI18n('วันทำงาน')}</b> ({trI18n("ก่อน 08:00 นับเป็นวันก่อนหน้า) · กะอนุมานจาก")}
             <b> {trI18n('เวลาที่กดแจ้ง')}</b> {trI18n('(เช้า 08:00–19:59 · ดึก 20:00–07:59) — ใบที่แจ้งย้อนหลังจะตกกะตามเวลาที่กด ไม่ใช่กะที่เครื่องเสียจริง')}</InfoMore>}
         >
           <select value={fDept} onChange={e => setFDept(e.target.value)}><option value="">{trI18n(ALL.unit)}</option><TeamOpts list={mtnDepts} /></select>
@@ -1204,7 +1204,7 @@ const HANDOFF_CAP = 2000;
               ส่ง `shown` = ใบที่เห็นบนจอจริง ⇒ ไฟล์ตรงกับที่คนกรองไว้ ไม่ใช่ทั้งฐาน */}
           {/* ปุ่มตายตัว 2 ปุ่มของหน้า (UI §6.35): Excel · แจ้งซ่อมใหม่ */}
           <button type="button" className="pg-btn" onClick={doExport} disabled={exporting || !shown.length}
-            title={shown.length ? `ออกไฟล์ Excel ${shown.length} ใบ ตามช่วง/ตัวกรองที่เลือกอยู่` : 'ไม่มีใบในช่วง/ตัวกรองที่เลือก'}
+            title={shown.length ? `${trI18n("ออกไฟล์")} Excel ${shown.length} ${trI18n("ใบ ตามช่วง/ตัวกรองที่เลือกอยู่")}` : 'ไม่มีใบในช่วง/ตัวกรองที่เลือก'}
             style={{ height: 'var(--ctl-h)', opacity: (exporting || !shown.length) ? 0.5 : 1, cursor: (exporting || !shown.length) ? 'not-allowed' : 'pointer' }}>
             {exporting ? trI18n('กำลังทำไฟล์…') : 'Excel'}
           </button>
@@ -1217,14 +1217,14 @@ const HANDOFF_CAP = 2000;
                (กฎ: กรองแถวออกแล้วต้องบอก · ไม่งั้นคนอ่านว่าใบหายไปไหนหมด) */}
         {fAck === 'pending' && (
           <NoticeBar tone="info" style={{ marginBottom: 10 }}>
-            กรองเฉพาะ <b>{trI18n('ใบทีม MTN ที่ผู้จัดการต้นสังกัดยังไม่เซ็นรับทราบ')}</b> {trI18n('— ช่องนี้')} <b>{trI18n('ไม่บล็อกงาน')}</b>
+            {trI18n("กรองเฉพาะ")} <b>{trI18n('ใบทีม MTN ที่ผู้จัดการต้นสังกัดยังไม่เซ็นรับทราบ')}</b> {trI18n('— ช่องนี้')} <b>{trI18n('ไม่บล็อกงาน')}</b>
             <InfoMore id="mo-ack-how" label={trI18n('วิธีเซ็น')}>เปิดใบแล้วกดปุ่ม "อนุมัติใบ MO (ผู้จัดการต้นสังกัด)" · <b>{trI18n('ใบที่ปิดไปแล้วก็ย้อนเซ็นได้')}</b> —
               สลับช่องสถานะเป็น "ทุกสถานะ" เพื่อให้ใบที่ปิดแล้วขึ้นมาด้วย</InfoMore>
           </NoticeBar>
         )}
         {orders.length >= ORDER_CAP && (
           <NoticeBar tone="warn" style={{ marginBottom: 10 }}>
-            ใบที่<b>{trI18n('ปิดแล้ว')}</b>{trI18n('แสดงเฉพาะ')} {ORDER_CAP.toLocaleString()} {trI18n('ใบล่าสุด ·')} <b>{trI18n('ใบที่ยังไม่ปิดโหลดมาครบทุกใบ')}</b>
+            {trI18n("ใบที่")}<b>{trI18n('ปิดแล้ว')}</b>{trI18n('แสดงเฉพาะ')} {ORDER_CAP.toLocaleString()} {trI18n('ใบล่าสุด ·')} <b>{trI18n('ใบที่ยังไม่ปิดโหลดมาครบทุกใบ')}</b>
             <InfoMore id="mo-cap-why" label={trI18n('ที่เก่ากว่านั้น?')}>{trI18n('ที่เก่ากว่านั้นไม่ได้โหลดมา — ค้นด้วยเลข MO ที่หน้าสอบกลับ/ประวัติเครื่อง')}</InfoMore>
           </NoticeBar>
         )}
@@ -1232,15 +1232,15 @@ const HANDOFF_CAP = 2000;
         {(openLoadErr || openCapped) && (
           <NoticeBar tone="warn" style={{ marginBottom: 10 }}>
             {openLoadErr
-              ? `โหลดชุด "ใบที่ยังไม่ปิด" ไม่สำเร็จ (${openLoadErr}) — ใบค้างที่เก่ากว่า ${ORDER_CAP.toLocaleString()} ใบล่าสุดอาจไม่อยู่ในลิสต์นี้`
-              : `ใบที่ยังไม่ปิดชนเพดาน ${OPEN_CAP.toLocaleString()} ใบ — อาจมีใบค้างที่ยังไม่ได้โหลดมา`}
+              ? `${trI18n("โหลดชุด \"ใบที่ยังไม่ปิด\" ไม่สำเร็จ")} (${openLoadErr}) — ${trI18n("ใบค้างที่เก่ากว่า")} ${ORDER_CAP.toLocaleString()} ${trI18n("ใบล่าสุดอาจไม่อยู่ในลิสต์นี้")}`
+              : `${trI18n("ใบที่ยังไม่ปิดชนเพดาน")} ${OPEN_CAP.toLocaleString()} ${trI18n("ใบ — อาจมีใบค้างที่ยังไม่ได้โหลดมา")}`}
           </NoticeBar>
         )}
         {/* ใบที่ตกนอกกรอบวันที่ — ต้องบอก ห้ามหายเงียบ (โดยเฉพาะใบที่ยังไม่ปิด) */}
         {dateHidden.n > 0 && (
           <NoticeBar tone={dateHidden.open > 0 ? 'warn' : 'info'} style={{ marginBottom: 10 }}
-            action={oldestDate && oldestDate < tr.from ? { label: `ดูทั้งหมด (ตั้งแต่ ${oldestDate})`, onClick: () => tr.setRange(oldestDate, tr.to) } : undefined}>
-            ตัวกรองวันที่ซ่อนอยู่ <b>{dateHidden.n}</b> ใบ
+            action={oldestDate && oldestDate < tr.from ? { label: `${trI18n("ดูทั้งหมด (ตั้งแต่")} ${oldestDate})`, onClick: () => tr.setRange(oldestDate, tr.to) } : undefined}>
+            {trI18n("ตัวกรองวันที่ซ่อนอยู่")} <b>{dateHidden.n}</b> {trI18n("ใบ")}
             {dateHidden.open > 0 && <> {trI18n('— ในนั้น')} <b style={{ color: 'var(--red)' }}>{dateHidden.open} {trI18n('ใบยังไม่ปิด')}</b></>}
           </NoticeBar>
         )}
@@ -1275,7 +1275,7 @@ const HANDOFF_CAP = 2000;
               {ladderSteps(emptyWhy.ladder).map((r, i) => (
                 <span key={r.key || `all-${i}`} style={{ color: r.n === 0 ? 'var(--red)' : 'var(--text2)', fontWeight: r.n === 0 ? 800 : 400 }}>
                   {i > 0 && <span style={{ color: 'var(--muted)', fontWeight: 400 }}>→ </span>}
-                  {trI18n(r.label)}{r.value ? ` "${r.value}"` : ''} <b>{r.n.toLocaleString()}</b> ใบ
+                  {trI18n(r.label)}{r.value ? ` "${r.value}"` : ''} <b>{r.n.toLocaleString()}</b> {trI18n("ใบ")}
                 </span>
               ))}
             </div>
@@ -1284,14 +1284,14 @@ const HANDOFF_CAP = 2000;
                 <span style={{ color: 'var(--muted)' }}>{trI18n('ปลดตัวใดตัวหนึ่งแล้วได้ใบคืน:')}</span>
                 {emptyWhy.culprits.map(c => (c.removable ? (
                   <button key={c.key} onClick={() => clearFilterBy(c.key)}
-                    title={`ปลดตัวกรอง "${c.label}" แล้วจะเห็น ${c.n} ใบ`}
+                    title={`${trI18n("ปลดตัวกรอง")} "${c.label}" ${trI18n("แล้วจะเห็น")} ${c.n} ${trI18n("ใบ")}`}
                     style={{ height: 'var(--ctl-h)', padding: '0 11px', borderRadius: 'var(--ctl-r)', fontSize: 'var(--ctl-fs)',
-                      fontWeight: 700, cursor: 'pointer', background: 'var(--bg2)', color: 'var(--text)', border: '1px solid var(--border2)' }}>
+                      fontWeight: 700, cursor: 'pointer', background: 'var(--bg2-surf)', color: 'var(--text)', border: '1px solid var(--border2)' }}>
                     {trI18n(c.label)}{c.value ? `: ${c.value}` : ''} → {c.n.toLocaleString()} {trI18n('ใบ')}
                   </button>
                 ) : (
                   <span key={c.key} style={{ color: 'var(--muted)' }}>
-                    · {c.label} ({c.n.toLocaleString()} ใบ) — มาจากสิทธิ์ของคุณ ปลดเองไม่ได้
+                    · {c.label} ({c.n.toLocaleString()} {trI18n("ใบ) — มาจากสิทธิ์ของคุณ ปลดเองไม่ได้")}
                   </span>
                 )))}
               </div>
@@ -1313,7 +1313,7 @@ const HANDOFF_CAP = 2000;
             {!shown.length && <div style={{ color: 'var(--muted)', padding: 24, textAlign: 'center' }}>{trI18n('ไม่มีรายการ')}</div>}
           </div>
         ) : (
-        <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'auto', maxHeight: 'calc(100vh - 170px)' }}>
+        <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'auto', maxHeight: 'calc(100vh - 170px)' }}>
           {/* กรอบเลื่อนเอง (สูงไม่เกินจอ) ⇒ หัวตาราง sticky ค้างอยู่ตอนเลื่อนลง 300 ใบ */}
           <table className="mo-list">
             <thead><tr>
@@ -1337,7 +1337,7 @@ const HANDOFF_CAP = 2000;
              (คำสั่ง user 08/11 — ใบที่มาจาก downtime ต้องมีรูปให้ช่างเห็นอาการ)
           🔴 เติมค่าเดิมจากใบ แล้วเขียนทับใบเดิม — ห้ามเปิดใบใหม่ (ใบซ้ำกับ downtime เดียวกัน) */}
       {fillOrder && <ReportModal {...cp} fillOrderId={fillOrder.id} requireBefore={!fillOrder.before_img}
-        title={`เพิ่มรายละเอียดใบ MO${fillOrder.mo_no ? ` ${fillOrder.mo_no}` : ' (ยังไม่ออกเลข)'}`}
+        title={`${trI18n("เพิ่มรายละเอียดใบ")} MO${fillOrder.mo_no ? ` ${fillOrder.mo_no}` : trI18n(' (ยังไม่ออกเลข)')}`}
         initial={{
           mtn_dept: fillOrder.mtn_dept || '', line_name: fillOrder.line_name || '', machine_no: fillOrder.machine_no || '',
           item_type: fillOrder.item_type || '', problem_group: fillOrder.problem_group || '',
@@ -1379,7 +1379,7 @@ function MoCard({ o, onOpen }) {
       <div className="mo-card-what">{o.problem_characteristic || '—'}{o.report_note ? <span> — {o.report_note}</span> : null}</div>
       <div className="mo-card-meta">
         <span>{fmtDateTime(o.report_at)}</span><span>{deptNameOf(dept)}</span>
-        {main && <span>{main}{extra ? ` · เปิดโดย ${extra}` : ''}</span>}
+        {main && <span>{main}{extra ? ` · ${trI18n("เปิดโดย")} ${extra}` : ''}</span>}
       </div>
       {o.status !== 'rejected' && (
         <div className="mo-card-prog">
@@ -1659,7 +1659,7 @@ function ReportModal({ lines, lineLoadErr = '', onReloadLines, machines, machine
   // (ค้นจาก machines ทั้งหมด ไม่ใช่เฉพาะไลน์ที่เลือกไว้ — ป้ายบอกเองว่าเครื่องอยู่ไลน์ไหน)
   const onScanMachine = (parsed) => {
     const mc = resolveMachine(parsed, machines);
-    if (!mc) return `ไม่พบเครื่องนี้ในฐานข้อมูล (${parsed.raw}) — ตรวจว่าเครื่องลงทะเบียนแล้วหรือยัง`;
+    if (!mc) return `${trI18n("ไม่พบเครื่องนี้ในฐานข้อมูล")} (${parsed.raw}) — ${trI18n("ตรวจว่าเครื่องลงทะเบียนแล้วหรือยัง")}`;
     const { section, cc } = lineDerived(mc.line_name);
     setDirty(true);
     setF(p => ({
@@ -1669,7 +1669,7 @@ function ReportModal({ lines, lineLoadErr = '', onReloadLines, machines, machine
       dept_section: section || p.dept_section,
       cost_center: cc || p.cost_center,
     }));
-    toast.success(`เลือกเครื่อง ${mc.machine_no}${mc.line_name ? ` · ${mc.line_name}` : ''}`);
+    toast.success(`${trI18n("เลือกเครื่อง")} ${mc.machine_no}${mc.line_name ? ` · ${mc.line_name}` : ''}`);
   };
   // เลือกชนิดอุปกรณ์ → เดาทีมให้เฉพาะตอนที่ยังไม่ได้เลือกทีม (fill-if-empty)
   // ⚠️ ห้ามทับทีมที่ user เลือกแล้ว — เคสจริง (feedback 2026-08-19): เลือกทีม JIG แล้วจิ้มชนิดกลาง 🌐
@@ -1833,7 +1833,7 @@ function ReportModal({ lines, lineLoadErr = '', onReloadLines, machines, machine
             const blob = await resizeMoImage(beforeFile);
             const url = await uploadMtnImg(blob, `before/${fillOrderId}-${Date.now()}.${imgExt(blob)}`);
             checkWrite(await supabaseDR.from('mtn_orders').update({ before_img: url }).eq('id', fillOrderId), 'ผูกรูปเข้าใบ');
-          } catch (e) { toast.error('อัปโหลดรูปไม่สำเร็จ: ' + e.message + ' — ใบยังติดธงรอรายละเอียด แนบรูปใหม่ได้'); }
+          } catch (e) { toast.error((trI18n('อัปโหลดรูปไม่สำเร็จ') + ': ') + e.message + (' — ' + trI18n('ใบยังติดธงรอรายละเอียด แนบรูปใหม่ได้'))); }
         }
         /* 🔔 ใบจาก Downtime เคยเงียบสนิท (วัดจริง 20/11 · 14 วัน):
            ① เส้นทางนี้ไม่เคยยิง `mtn_reported` เลย — ฐานเปิดใบให้ตอนกด "เรียกช่าง" (trigger
@@ -1859,7 +1859,7 @@ function ReportModal({ lines, lineLoadErr = '', onReloadLines, machines, machine
         if (!error && occurredIso) toast.error('บันทึกใบแล้ว แต่ "วันเวลาที่เกิดเหตุ" ยังไม่ถูกเก็บ — ฐาน DR ยังไม่มีคอลัมน์ occurred_at (รัน migration 20260908_mtn_orders_occurred_at)');
       }
       if (error) return toast.error(error.message);
-      if (beforeFile) { try { const blob = await resizeMoImage(beforeFile); const url = await uploadMtnImg(blob, `before/${data.id}-${Date.now()}.${imgExt(blob)}`); const { error: eImg } = await supabaseDR.from('mtn_orders').update({ before_img: url }).eq('id', data.id); if (eImg) throw new Error(`ผูกรูปเข้าใบไม่สำเร็จ (${eImg.message}) — แนบใหม่ได้ด้วยปุ่มแก้ไข`); data.before_img = url; } catch (e) { toast.error('อัปโหลดรูปไม่สำเร็จ: ' + e.message); } }
+      if (beforeFile) { try { const blob = await resizeMoImage(beforeFile); const url = await uploadMtnImg(blob, `before/${data.id}-${Date.now()}.${imgExt(blob)}`); const { error: eImg } = await supabaseDR.from('mtn_orders').update({ before_img: url }).eq('id', data.id); if (eImg) throw new Error(`ผูกรูปเข้าใบไม่สำเร็จ (${eImg.message}) — แนบใหม่ได้ด้วยปุ่มแก้ไข`); data.before_img = url; } catch (e) { toast.error((trI18n('อัปโหลดรูปไม่สำเร็จ') + ': ') + e.message); } }
       notifyMtn(data, 'mtn_reported');
       toast.success('แจ้งซ่อมแล้ว รอ MTN รับงาน'); onSaved();
     } finally { setSaving(false); }   // รูปแปลงค้าง/เน็ตหลุด ปุ่มต้องปลดเสมอ (feedback 2026-09-08)
@@ -1916,7 +1916,7 @@ function ReportModal({ lines, lineLoadErr = '', onReloadLines, machines, machine
             </select>
           </Field>
         {/* <LineSelect> = ลำดับชั้น + ปลดระวาง + ค่าเก่าไม่หายเงียบ (lines ถูก scope ไว้แล้วจากหน้าหลัก) · 2026-09-07 */}
-        <Field label={`ไลน์การผลิต${f.dept_section && scopedLines.length < lines.length ? ` (${scopedLines.length} ไลน์ของ ${f.dept_section})` : ''}`} required>
+        <Field label={`${trI18n("ไลน์การผลิต")}${f.dept_section && scopedLines.length < lines.length ? ` (${scopedLines.length} ${trI18n("ไลน์ของ")} ${f.dept_section})` : ''}`} required>
           <LineSelect lines={scopedLines} value={f.line_name} onChange={onLine} placeholder={trI18n('— เลือก —')} style={inp} required />
           {/* 🔴 ลิสต์ว่าง 2 ความหมาย — ที่นี่ว่างได้ทางเดียวคือ "ทะเบียนไลน์โหลดไม่สำเร็จ"
               (ตัวกรองด้านบน fail-open อยู่แล้ว: กรองแล้วเหลือ 0 จะถอยไปลิสต์เต็ม)
@@ -1930,7 +1930,7 @@ function ReportModal({ lines, lineLoadErr = '', onReloadLines, machines, machine
                 <button type="button"
                   onClick={() => onReloadLines?.()}
                   style={{ marginLeft: 6, fontSize: 11.5, padding: '2px 10px', borderRadius: 'var(--r-md)', cursor: 'pointer',
-                           background: 'var(--bg3)', color: 'var(--text)', border: '1px solid var(--border2)' }}>
+                           background: 'var(--bg3-surf)', color: 'var(--text)', border: '1px solid var(--border2)' }}>
                   {trI18n('โหลดทะเบียนไลน์ใหม่')}
                 </button>
               </div>
@@ -1946,7 +1946,7 @@ function ReportModal({ lines, lineLoadErr = '', onReloadLines, machines, machine
             {/* ล็อกเพราะมาจากทะเบียนแม่พิมพ์ — ผู้แจ้งไม่ต้องเลือก (ข้อมูลผิดให้แก้ที่ทะเบียน ไม่ใช่ในใบ) */}
             <div style={{ ...inp, display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg3)' }}>
               <b>{f.item_type}</b>
-              <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{trI18n('จากทะเบียนแม่พิมพ์ ·')} {dieDerived.source === 'op' ? `ประเภท OP ${dieDerived.opLabel}` : `ชุดแบบ ${dieDerived.kindLabel}`}</span>
+              <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{trI18n('จากทะเบียนแม่พิมพ์ ·')} {dieDerived.source === 'op' ? `${trI18n("ประเภท")} OP ${dieDerived.opLabel}` : `${trI18n("ชุดแบบ")} ${dieDerived.kindLabel}`}</span>
             </div>
             <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>{trI18n('ไม่ตรงกับของจริง? แจ้งทีมแม่พิมพ์แก้ประเภท OP / รูปแบบชุดที่ /equipment (แท็บแม่พิมพ์)')}</div>
           </Field>
@@ -1975,10 +1975,10 @@ function ReportModal({ lines, lineLoadErr = '', onReloadLines, machines, machine
             <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 3 }}>{trI18n('งานแม่พิมพ์: เลือกหมายเลขแม่พิมพ์ด้านล่างก่อนได้เลย — ระบบเติมชนิดจากทะเบียนให้เอง')}</div>
           )}
           {wantDie && f.machine_no && dieItemMap && !dieDerived?.itemType && (
-            <div style={{ fontSize: 11.5, color: 'var(--amber)', marginTop: 3 }}>{trI18n('⚠ แม่พิมพ์')} {f.machine_no} {dieDerived ? `(${[dieDerived.opLabel && `OP ${dieDerived.opLabel}`, dieDerived.kindLabel && `ชุดแบบ ${dieDerived.kindLabel}`].filter(Boolean).join(' · ')}) ยังไม่ได้ตั้ง "ชนิดอุปกรณ์ในใบแจ้งซ่อม"` : 'ยังไม่ผูกชุด/ประเภท OP ในทะเบียน'} {trI18n('— เลือกชนิดเองไปก่อน')}</div>
+            <div style={{ fontSize: 11.5, color: 'var(--amber)', marginTop: 3 }}>{trI18n('⚠ แม่พิมพ์')} {f.machine_no} {dieDerived ? `(${[dieDerived.opLabel && `OP ${dieDerived.opLabel}`, dieDerived.kindLabel && `ชุดแบบ ${dieDerived.kindLabel}`].filter(Boolean).join(' · ')}) ${trI18n("ยังไม่ได้ตั้ง \"ชนิดอุปกรณ์ในใบแจ้งซ่อม")}"` : 'ยังไม่ผูกชุด/ประเภท OP ในทะเบียน'} {trI18n('— เลือกชนิดเองไปก่อน')}</div>
           )}
         </Field>}
-        <Field label={wantDie ? `หมายเลขแม่พิมพ์ (${lineMachines.length} ตัว · ทุกไลน์)` : 'หมายเลขเครื่อง'}>
+        <Field label={wantDie ? `${trI18n("หมายเลขแม่พิมพ์")} (${lineMachines.length} ${trI18n("ตัว · ทุกไลน์")})` : 'หมายเลขเครื่อง'}>
           <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
             {/* <MachineSelect> แทน datalist — ค้นเลข/ชื่อ/ไลน์ · เครื่องของไลน์ที่เลือกขึ้นก่อน · พิมพ์เองได้พร้อมป้าย (2026-09-07) */}
             <MachineSelect value={f.machine_no} onChange={onMachinePick} machines={lineMachines} lines={lineFam} kinds={machineKinds} strict={machineStrict} allowFree history={machineHist}
@@ -1992,11 +1992,11 @@ function ReportModal({ lines, lineLoadErr = '', onReloadLines, machines, machine
               {famMachineCount > 0 ? (
                 <>
                   <span style={{ color: 'var(--muted)' }}>
-                    {machineStrict ? `🎯 เฉพาะเครื่องของ ${f.line_name} (${famMachineCount} ตัว)` : `🏭 ทุกไลน์ (${lineMachines.length} ตัว)`}
+                    {machineStrict ? `🎯 ${trI18n("เฉพาะเครื่องของ")} ${f.line_name} (${famMachineCount} ${trI18n("ตัว")})` : `🏭 ${trI18n("ทุกไลน์")} (${lineMachines.length} ${trI18n("ตัว")})`}
                   </span>
                   <button type="button" className="tbtn" onClick={() => setAllMachines(v => !v)}
                     title={trI18n('เครื่องย้ายไลน์ / ลงทะเบียนไว้ผิดไลน์ — กดดูทั้งโรงงานได้เสมอ')}
-                    style={{ padding: '1px 9px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)', fontSize: 11, cursor: 'pointer' }}>
+                    style={{ padding: '1px 9px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)', fontSize: 11, cursor: 'pointer' }}>
                     {machineStrict ? trI18n('ดูทุกไลน์') : trI18n('กรองตามไลน์')}
                   </button>
                 </>
@@ -2028,8 +2028,8 @@ function ReportModal({ lines, lineLoadErr = '', onReloadLines, machines, machine
               }}>
                 <div style={{ fontSize: 12.5, fontWeight: 800, color: c, marginBottom: 4 }}>
                   {dupLv === 'cross'
-                    ? `⚠️ เครื่องนี้มีใบของทีมอื่นเปิดค้างอยู่ ${dups.length} ใบ — เช็คก่อนว่าเรื่องเดียวกันหรือเปล่า`
-                    : `🔁 เครื่องนี้มีใบเปิดค้างอยู่แล้ว ${dups.length} ใบ`}
+                    ? `⚠️ ${trI18n("เครื่องนี้มีใบของทีมอื่นเปิดค้างอยู่")} ${dups.length} ${trI18n("ใบ — เช็คก่อนว่าเรื่องเดียวกันหรือเปล่า")}`
+                    : `🔁 ${trI18n("เครื่องนี้มีใบเปิดค้างอยู่แล้ว")} ${dups.length} ${trI18n("ใบ")}`}
                 </div>
                 <div style={{ display: 'grid', gap: 3 }}>
                   {dups.slice(0, 5).map(o => (
@@ -2057,7 +2057,7 @@ function ReportModal({ lines, lineLoadErr = '', onReloadLines, machines, machine
             {probGroups.map(([g, list]) => <option key={g} value={g}>{g} ({list.length})</option>)}
           </select>
         </Field>
-        <Field label={`หัวข้อย่อย${subOf.length ? ` (${subOf.length})` : ''}`} required>
+        <Field label={`${trI18n("หัวข้อย่อย")}${subOf.length ? ` (${subOf.length})` : ''}`} required>
           <select value={f.problem_characteristic} onChange={e => onChar(e.target.value)} disabled={!f.problem_group} style={{ ...inp, ...(f.problem_group ? null : { background: 'var(--bg2)' }) }}>
             <option value="">{f.problem_group ? trI18n('— เลือกหัวข้อย่อย —') : trI18n('เลือกกลุ่มก่อน')}</option>
             {subOf.map(p => <option key={p.id} value={p.characteristic}>{trI18n(p.characteristic)}</option>)}
@@ -2086,7 +2086,7 @@ function ReportModal({ lines, lineLoadErr = '', onReloadLines, machines, machine
           <textarea value={f.report_note} onChange={e => set('report_note', e.target.value)}
             placeholder={MO_NOTE_HINT} style={{ ...inp, minHeight: 72 }} />
           <div style={{ fontSize: 11.5, marginTop: 3, color: noteCheck.message ? 'var(--amber)' : 'var(--muted)' }}>
-            {noteCheck.message ? `⚠ ${noteCheck.message}` : `✓ รายละเอียดครบพอให้ช่างเตรียมตัว (${noteCheck.len} ตัวอักษร)`}
+            {noteCheck.message ? `⚠ ${noteCheck.message}` : `✓ ${trI18n("รายละเอียดครบพอให้ช่างเตรียมตัว")} (${noteCheck.len} ${trI18n("ตัวอักษร")})`}
           </div>
         </Field>
         <ImgField label={trI18n('รูปก่อนซ่อม')} required={requireBefore} value={beforeUrl} onPick={pickBefore} />
@@ -2468,7 +2468,7 @@ function printMoReportMtn(o, dparts = [], logo0, dlabor = [], cmt = NO_CMT, cost
       <!-- ช่องซ้ายต่อจากกล่องรายละเอียดข้างบน (ไม่มีเส้นคั่น) = ที่เขียนด้วยมือต่อของผู้แจ้ง — ไม่ใช่ที่ว่างทิ้งเปล่า
            🔴 เดิมเขียน rowspan="2" แต่ตารางนี้มีแค่ 2 แถว (กินแถวที่ไม่มีอยู่) ⇒ ตัดออก -->
       <td style="border-top:none;height:56px"></td>
-      <td class="sgc" colspan="2">${sg('ผู้จัดการโรงงาน', o.plant_manager_name, sgn(o.plant_manager_uid, o.plant_manager_sign), o.plant_manager_at, needsPlantMgrByCost(o) ? `งบเกิน ${PLANT_MGR_COST_LIMIT.toLocaleString()} — เซ็นแล้วส่งบัญชี` : 'MO. สร้าง ส่ง ผจก.โรงงานอนุมัติ')}</td>
+      <td class="sgc" colspan="2">${sg('ผู้จัดการโรงงาน', o.plant_manager_name, sgn(o.plant_manager_uid, o.plant_manager_sign), o.plant_manager_at, needsPlantMgrByCost(o) ? `${trI18n("งบเกิน")} ${PLANT_MGR_COST_LIMIT.toLocaleString()} — ${trI18n("เซ็นแล้วส่งบัญชี")}` : 'MO. สร้าง ส่ง ผจก.โรงงานอนุมัติ')}</td>
     </tr>
   </table>
 
@@ -2496,7 +2496,7 @@ function printMoReportMtn(o, dparts = [], logo0, dlabor = [], cmt = NO_CMT, cost
             <td class="sgc" style="width:50%;border-right:1px solid #000">${sg('ผู้รับ MO (ซ่อมบำรุง)', o.accepted_by, sgn(o.accepted_by_uid, null), o.accept_at)}</td>
             <td class="sgc" style="width:50%">${o.mo_ack_at
               ? sg('ผู้อนุมัติ (ผจก.ส่วนซ่อมบำรุง)', o.mo_approved_by, sgn(o.mo_approved_by_uid, o.mo_approve_sign), o.mo_ack_at)
-              : sg('ผู้อนุมัติ (ผจก.ส่วนซ่อมบำรุง)', o.mo_approved_by ? `${o.mo_approved_by} (รอรับทราบ)` : '', null, null)}</td>
+              : sg('ผู้อนุมัติ (ผจก.ส่วนซ่อมบำรุง)', o.mo_approved_by ? `${o.mo_approved_by} (${trI18n("รอรับทราบ")})` : '', null, null)}</td>
           </tr>
         </table>
       </td>
@@ -2603,11 +2603,11 @@ function MachineUsabilityPanel({ order, machines, fullName, canEdit, affectedLin
       'บันทึกสถานะเครื่อง');
     setBusy(false);
     if (!ok) return;
-    toast.success(`ตั้งสถานะ ${order.machine_no} เป็น "${MACHINE_USABILITY.find(x => x.key === pick)?.label}" แล้ว`);
+    toast.success(`${trI18n("ตั้งสถานะ")} ${order.machine_no} ${trI18n("เป็น")} "${MACHINE_USABILITY.find(x => x.key === pick)?.label}" ${trI18n("แล้ว")}`);
     setPick(null); setNote(''); onSaved?.();
   };
   return (
-    <div style={{ border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '8px 10px', marginBottom: 10, background: 'var(--bg3)' }}>
+    <div style={{ border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '8px 10px', marginBottom: 10, background: 'var(--bg3-surf)' }}>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', fontSize: 12.5 }}>
         <b>🔌 {trI18n('สถานะเครื่อง')} {mc.machine_no}</b>
         <span style={{ fontWeight: 700, color: (MACHINE_USABILITY.find(x => x.key === u.state) || {}).color }}>
@@ -2656,7 +2656,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
   /* 🔒 ฝั่ง + ระดับตำแหน่งของคนกด — ใช้ล็อกช่องเซ็นในลูป MO (2026-10-04 · คำสั่ง user)
      🔴 ตัดสินจากข้อมูลที่บันทึกไว้จริงเท่านั้น (mtn_teams / role / sections / position)
         ไม่รู้ = ไม่บล็อก แต่จอต้องเขียนบอก (stepAssumptions) — ห้ามเดาแทนคน */
-  const { mtnTeams: myTeams, sections: mySections, position: myPosition } = useContext(UserContext);
+  const { mtnTeams: myTeams, sections: mySections, position: myPosition } = useContext(UserContext);   // allUnits มาจาก prop แล้ว
   const actorSide = actorSideOf({ mtnTeams: myTeams, role, sections: mySections, isAm: isAmTeam });
   const posRank = positionRank(myPosition);
   const [showHist, setShowHist] = useState(false);   // 📜 ประวัติการซ่อมของเครื่องในใบนี้ (19/10)
@@ -2773,7 +2773,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
       if (v.code === 'rank_too_low')
         return toast.error('ช่องนี้ต้องเป็นระดับหัวหน้าแผนก/ผู้จัดการขึ้นไป — ตำแหน่งของบัญชีนี้ต่ำกว่าที่ช่องกำหนด (แก้ตำแหน่งได้ที่ /add-user)');
       if (v.code === 'out_of_scope')
-        return toast.error(`ใบนี้เป็นของ ${[o.line_name, o.dept_section].filter(Boolean).join(' · ') || 'ส่วนงานอื่น'} — "ผู้จัดการต้นสังกัด" เซ็นได้เฉพาะใบในขอบเขตที่ตัวเองรับผิดชอบ (ดูแลควบแผนก ให้แอดมินเพิ่มขอบเขตที่ /add-user)`);
+        return toast.error(`${trI18n("ใบนี้เป็นของ")} ${[o.line_name, o.dept_section].filter(Boolean).join(' · ') || trI18n('ส่วนงานอื่น')} — "${trI18n("ผู้จัดการต้นสังกัด\" เซ็นได้เฉพาะใบในขอบเขตที่ตัวเองรับผิดชอบ (ดูแลควบแผนก ให้แอดมินเพิ่มขอบเขตที่")} /add-user)`);
       if (v.code === 'wrong_side' || v.code === 'other_team')
         return toast.error('ช่องนี้เป็นของ ผจก.ส่วนซ่อมบำรุง ทีมที่รับใบนี้เท่านั้น');
       return toast.error('เฉพาะผู้จัดการที่ถูกระบุในใบ หรือผู้ถือสิทธิ์อนุมัติปิดใบ (mtn_repair:approve) เท่านั้น');
@@ -2853,7 +2853,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
        🔴 ต้องมีทะเบียนกฎ `mtn_resubmitted` + edge รู้จัก event นี้ก่อน ไม่งั้น edge ตอบ 400
           "unknown event" แล้ว**แจ้งเตือนหายทั้งก้อน** (deploy edge + insert rule ไปแล้ว 18/11) */
     notifyMtn(fresh, 'mtn_resubmitted');   // แจ้งทีมใหม่ให้มารับงาน (บอกว่าเป็นใบเก่า)
-    setResubBusy(false); toast.success(`ส่งใหม่ให้ทีม ${resubDept} แล้ว`); onReload && onReload(); onClose();
+    setResubBusy(false); toast.success(`${trI18n("ส่งใหม่ให้ทีม")} ${resubDept} ${trI18n("แล้ว")}`); onReload && onReload(); onClose();
   };
 
   /* ── ➡️ ส่งต่องานให้ทีมช่างที่เกี่ยวข้อง (2026-09-14 · คำสั่ง user — รอบ 2) ─────────────
@@ -2931,16 +2931,16 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
       updated_at: nowIso,
     }).eq('id', o.id).eq('status', o.status).select('id, supplier');
     setVenBusy(false);
-    if (error) return toast.error('บันทึกไม่สำเร็จ: ' + error.message);
+    if (error) return toast.error((trI18n('บันทึกไม่สำเร็จ') + ': ') + error.message);
     if (!data?.length) return toast.error('ใบนี้ถูกคนอื่นเปลี่ยนสถานะไปแล้ว — รีเฟรชแล้วลองใหม่');
     notifyVendor('mtn_vendor_sent', data[0], [
-      `🔧 ใบ ${o.mo_no || '(ยังไม่ออกเลข)'} · ${o.line_name || '-'}${o.machine_no ? ` · ${o.machine_no}` : ''}`,
-      `📤 ส่งซ่อมภายนอก: ${venSup.trim()}`,
+      `🔧 ${trI18n("ใบ")} ${o.mo_no || trI18n('(ยังไม่ออกเลข)')} · ${o.line_name || '-'}${o.machine_no ? ` · ${o.machine_no}` : ''}`,
+      `📤 ${trI18n("ส่งซ่อมภายนอก")}: ${venSup.trim()}`,
       venNote.trim() ? `📝 ${venNote.trim()}` : '',
-      `⏳ เวลาช่วงนี้ไม่นับเป็นเวลาซ่อมของช่าง แต่ไลน์ยังนับหยุดอยู่`,
+      `⏳ ${trI18n("เวลาช่วงนี้ไม่นับเป็นเวลาซ่อมของช่าง แต่ไลน์ยังนับหยุดอยู่")}`,
     ]);
     setShowVendor(false); setVenSup(''); setVenNote('');
-    toast.success(`📤 บันทึกส่งซ่อมภายนอก (${venSup.trim()}) — แจ้งผู้เปิดใบและหัวหน้าส่วนงานแล้ว`);
+    toast.success(`📤 ${trI18n("บันทึกส่งซ่อมภายนอก")} (${venSup.trim()}) — ${trI18n("แจ้งผู้เปิดใบและหัวหน้าส่วนงานแล้ว")}`);
     onReload && onReload(); onClose();
   };
 
@@ -2952,17 +2952,17 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
       status: 'repairing', vendor_back_at: nowIso, vendor_back_by: fullName || '', updated_at: nowIso,
     }).eq('id', o.id).eq('status', VENDOR_STATUS).select('id, supplier, vendor_sent_at, vendor_back_at');
     setVenBusy(false);
-    if (error) return toast.error('บันทึกไม่สำเร็จ: ' + error.message);
+    if (error) return toast.error((trI18n('บันทึกไม่สำเร็จ') + ': ') + error.message);
     if (!data?.length) return toast.error('ใบนี้ถูกคนอื่นเปลี่ยนสถานะไปแล้ว — รีเฟรชแล้วลองใหม่');
     // ⏸️ ของกลับมาอยู่ในมือช่าง = จบช่วงหยุด MTTR ที่เริ่มตอน MTN ตัดสินเส้นทาง (20/10) · ล้ม = บอก ไม่กลืน
     if (o.mttr_hold_from && !o.mttr_hold_to)
       checkWrite(await supabaseDR.from('mtn_orders').update({ mttr_hold_to: nowIso }).eq('id', o.id).is('mttr_hold_to', null), 'จบช่วงหยุด MTTR');
     notifyVendor('mtn_vendor_back', data[0], [
-      `🔧 ใบ ${o.mo_no || '(ยังไม่ออกเลข)'} · ${o.line_name || '-'}${o.machine_no ? ` · ${o.machine_no}` : ''}`,
-      `📥 ของกลับจาก ${data[0].supplier || 'supplier'} แล้ว — รวมอยู่ข้างนอก ${vendorHoldLabel(data[0])}`,
-      `🔧 ช่างดำเนินการต่อ`,
+      `🔧 ${trI18n("ใบ")} ${o.mo_no || trI18n('(ยังไม่ออกเลข)')} · ${o.line_name || '-'}${o.machine_no ? ` · ${o.machine_no}` : ''}`,
+      `📥 ${trI18n("ของกลับจาก")} ${data[0].supplier || 'supplier'} ${trI18n("แล้ว — รวมอยู่ข้างนอก")} ${vendorHoldLabel(data[0])}`,
+      `🔧 ${trI18n("ช่างดำเนินการต่อ")}`,
     ]);
-    toast.success(`📥 บันทึกของกลับแล้ว — อยู่ข้างนอกรวม ${vendorHoldLabel(data[0])}`);
+    toast.success(`📥 ${trI18n("บันทึกของกลับแล้ว — อยู่ข้างนอกรวม")} ${vendorHoldLabel(data[0])}`);
     onReload && onReload(); onClose();
   };
 
@@ -2976,7 +2976,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
       /* 0) กันสร้างใบซ้ำตอนกดใหม่หลังปิดใบเดิมพลาด — ถ้าเคยสร้างไปแล้วใช้ใบเดิมนั้นต่อ */
       const { data: prior, error: ePrior } = await supabaseDR.from('mtn_order_handoffs')
         .select('id, to_order_id').eq('from_order_id', o.id).limit(1);
-      if (ePrior) { setHoBusy(false); return toast.error('ตรวจประวัติการส่งต่อไม่สำเร็จ: ' + ePrior.message); }
+      if (ePrior) { setHoBusy(false); return toast.error((trI18n('ตรวจประวัติการส่งต่อไม่สำเร็จ') + ': ') + ePrior.message); }
       let childId = prior?.[0]?.to_order_id || null;
 
       /* 1) เปิดใบใหม่ให้ทีมปลายทาง — คัดลอก "ตัวปัญหา" ที่ผู้แจ้งกรอกไว้ (ไม่ใช่ผลงานของทีมเดิม)
@@ -2998,7 +2998,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
           source_downtime_id: o.source_downtime_id, source_inspection_id: o.source_inspection_id,
           report_note: [o.report_note, `[ส่งต่อจาก ${o.mo_no || 'ใบก่อนหน้า'} · ${deptNameOf(orderTeam)}] ${hoReason.trim()}`].filter(Boolean).join('\n'),
         }).select('id, mo_no').single();
-        if (eChild || !child) { setHoBusy(false); return toast.error('เปิดใบใหม่ให้ทีมปลายทางไม่สำเร็จ: ' + (eChild?.message || '')); }
+        if (eChild || !child) { setHoBusy(false); return toast.error((trI18n('เปิดใบใหม่ให้ทีมปลายทางไม่สำเร็จ') + ': ') + (eChild?.message || '')); }
         childId = child.id;
 
         /* 2) ผูกความสัมพันธ์ — ล้มตรงนี้ = มีใบใหม่แต่ไม่รู้ที่มา ต้องบอกดังๆ ห้ามเงียบ
@@ -3008,7 +3008,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
           from_dept: orderTeam || null, to_dept: toDept,
           reason: hoReason.trim(), handed_by: fullName || '', handed_at: nowIso,
         }), 'ผูกใบใหม่กับใบเดิม');
-        if (!okLink) { setHoBusy(false); return toast.error(`เปิดใบใหม่แล้วแต่ผูกกับใบเดิมไม่ได้ — แจ้งแอดมิน (ใบใหม่ id ${childId})`); }
+        if (!okLink) { setHoBusy(false); return toast.error(`${trI18n("เปิดใบใหม่แล้วแต่ผูกกับใบเดิมไม่ได้ — แจ้งแอดมิน (ใบใหม่")} id ${childId})`); }
       }
 
       /* 3) ปิดใบเดิม — จบที่ทีมนี้ "แก้ไม่ได้ ส่งต่อแล้ว" · ผลตรวจ/ช่าง/รูป ยังอยู่ในใบครบ
@@ -3017,16 +3017,16 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
         .update({ status: 'transferred', updated_at: nowIso })
         .eq('id', o.id).eq('status', o.status).select('id');
       setHoBusy(false);
-      if (eClose) return toast.error('ปิดใบเดิมไม่สำเร็จ: ' + eClose.message);
+      if (eClose) return toast.error((trI18n('ปิดใบเดิมไม่สำเร็จ') + ': ') + eClose.message);
       if (!closed?.length) return toast.error('ใบนี้ถูกคนอื่นเปลี่ยนสถานะไปแล้ว — รีเฟรชแล้วลองใหม่');
 
       const { data: fresh } = await supabaseDR.from('mtn_orders').select('*').eq('id', childId).single();
       if (fresh) notifyMtn(fresh, 'mtn_reported');   // ทีมใหม่ได้แจ้งเตือนเหมือนใบแจ้งซ่อมใหม่
-      toast.success(`ส่งต่อให้ทีม ${deptNameOf(hoDept)} แล้ว — เปิดใบใหม่ของทีมนั้น (ใบนี้ปิดเป็น "ส่งต่อทีมอื่น")`);
+      toast.success(`${trI18n("ส่งต่อให้ทีม")} ${deptNameOf(hoDept)} ${trI18n("แล้ว — เปิดใบใหม่ของทีมนั้น (ใบนี้ปิดเป็น \"ส่งต่อทีมอื่น")}")`);
       onReload && onReload(); onClose();
     } catch (e) {
       setHoBusy(false);
-      toast.error('ส่งต่อไม่สำเร็จ: ' + (e?.message || e));
+      toast.error((trI18n('ส่งต่อไม่สำเร็จ') + ': ') + (e?.message || e));
     }
   };
 
@@ -3051,7 +3051,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
     const tw = canWriteTeam(userTeams, o.mtn_dept, { role, allUnits });
     if (!tw.ok && !ownCancel) { toast.info(teamBlockText(tw, 'ใบแจ้งซ่อมของทีมนี้')); return; }
     if (removeMode === MO_REMOVE_DELETE) {
-      if (!await askConfirm(`ลบใบแจ้งซ่อมนี้?\n\n${removeWhy}`)) return;
+      if (!await askConfirm(`${trI18n("ลบใบแจ้งซ่อมนี้")}?\n\n${removeWhy}`)) return;
       /* 🔴 นับแถวที่ลบได้ก่อน ค่อยลบรูปใน storage — เช็คแค่ `error` แล้วลบรูปไปก่อน
          = RLS ปฏิเสธเงียบ (0 แถว ไม่มี error) แถวยังอยู่แต่รูปหายถาวร (กฎเหล็กข้อ 2) */
       /* 🔗 ด่านชั้น DB: FK `mtn_order_handoffs.to_order_id` เป็น `on delete restrict` (11/11)
@@ -3074,17 +3074,17 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
        🔴 ไม่ลบรูป/ไม่ลบค่าแรง-อะไหล่ — ใบยังอยู่ให้สอบกลับ */
     /* 🔗 ใบที่ถูกส่งต่อมายังไม่ออกเลข MO (ออกตอนทีมปลายทางกดรับงาน) ⇒ ห้ามขึ้น "ยกเลิกใบ undefined" */
     const label = String(o.mo_no || '').trim() || '(ยังไม่ออกเลข MO)';
-    const why = (prompt(`ยกเลิกใบ ${label}?\n\n${removeWhy}\n\nเหตุผล (บังคับ):`) || '').trim();
+    const why = (prompt(`${trI18n("ยกเลิกใบ")} ${label}?\n\n${removeWhy}\n\n${trI18n("เหตุผล (บังคับ")}):`) || '').trim();
     if (!why) return;
     const rows = await checkWriteRows(await supabaseDR.from('mtn_orders').update({
       status: 'cancelled',
       /* เขียนเหตุผลลงช่องเดิมของ reject — ใบพิมพ์/จอที่อ่าน reject_reason อยู่แล้วจึงเห็นเองทันที
          (ไม่สร้างคอลัมน์ใหม่ที่ไม่มีใครอ่าน) · ติดป้ายไว้ว่ามาจากการยกเลิก ไม่ใช่ Reject */
-      reject_reason: `[ยกเลิกใบ] ${why} — โดย ${fullName || '(ไม่ทราบชื่อ)'}`,
+      reject_reason: `[${trI18n("ยกเลิกใบ")}] ${why} — ${trI18n("โดย")} ${fullName || trI18n('(ไม่ทราบชื่อ)')}`,
       updated_at: new Date().toISOString(),
     }).eq('id', o.id).eq('status', o.status).select('id'), 'ยกเลิกใบแจ้งซ่อม');
     if (!rows) return;
-    toast.success(`ยกเลิกใบ ${o.mo_no} แล้ว — เลขยังอยู่ในระบบ สอบกลับได้`);
+    toast.success(`${trI18n("ยกเลิกใบ")} ${o.mo_no} ${trI18n("แล้ว — เลขยังอยู่ในระบบ สอบกลับได้")}`);
     onReload && onReload(); onClose();
   };
   const Row = ({ k, v }) => v ? <div style={{ display: 'flex', gap: 8, fontSize: 12.5, padding: '2px 0' }}><span style={{ color: 'var(--muted)', minWidth: 120 }}>{k}</span><span style={{ color: 'var(--text)', flex: 1 }}>{v}</span></div> : null;
@@ -3142,7 +3142,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
   const qa5 = mtnForm ? 'none' : moQaState(o);
   const qa5Note = qa5 === 'skipped' ? (
     <div style={{ fontSize: 12, color: 'var(--amber)', background: 'var(--amber-dim)', border: '1px solid var(--amber-line)', borderRadius: 'var(--r-md)', padding: '6px 9px', marginBottom: 6, lineHeight: 1.6 }}>
-      ⏭ <b>{trI18n('ไม่ต้องตรวจ QA —')} {mtnForm ? 'ใบซ่อมของทีม MTN ไม่มีขั้น QA ในลูป' : qaAppliesTo(o) ? 'งานนี้ไม่เกี่ยวกับคุณภาพ' : `งาน${PURPOSES.find(x => x.key === o.purpose)?.label || ''} ไม่ต้องผ่านการตรวจคุณภาพ`}</b>
+      ⏭ <b>{trI18n('ไม่ต้องตรวจ QA —')} {mtnForm ? 'ใบซ่อมของทีม MTN ไม่มีขั้น QA ในลูป' : qaAppliesTo(o) ? 'งานนี้ไม่เกี่ยวกับคุณภาพ' : `${trI18n("งาน")}${PURPOSES.find(x => x.key === o.purpose)?.label || ''} ${trI18n("ไม่ต้องผ่านการตรวจคุณภาพ")}`}</b>
       <div style={{ color: 'var(--text2)' }}>
         {/* 4 ที่มาของ "ข้าม" ต้องแยกให้ออก: ฟอร์ม MTN ไม่มี QA เลย · QA กดเอง · ใบเก่าที่ขั้น 4 เลือกไว้ · จุดประสงค์ของงาน */}
         {mtnForm
@@ -3195,27 +3195,27 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
       );
     };
   return (
-    <ModalShell title={`${o.mo_no || '(ยังไม่ออกเลข MO)'} · ${stripIcon(m.label)} · ${deptNameOf(dept)}`} onClose={onClose} wide>
+    <ModalShell title={`${o.mo_no || trI18n('(ยังไม่ออกเลข MO)')} · ${stripIcon(m.label)} · ${deptNameOf(dept)}`} onClose={onClose} wide>
       {affectedLines.length > 0 && (
         <NoticeBar tone="bad" style={{ marginBottom: 10 }}>
-          อุปกรณ์นี้จ่ายให้ {affectedLines.length} {trI18n('ไลน์ — หยุดซ่อม/ตัดไฟจะกระทบ:')} <b>{affectedLines.join(', ')}</b>
+          {trI18n("อุปกรณ์นี้จ่ายให้")} {affectedLines.length} {trI18n('ไลน์ — หยุดซ่อม/ตัดไฟจะกระทบ:')} <b>{affectedLines.join(', ')}</b>
         </NoticeBar>
       )}
       {openImps.length > 0 && (
         <div style={{ marginBottom: 10, padding: '8px 12px', borderRadius: 'var(--r-md)', background: 'var(--blue-dim)', border: '1px solid var(--blue-line)', fontSize: 12.5, color: 'var(--blue)' }}
           title={openImps.map(i => i.title).join('\n')}>
-          มีโปรเจคปรับปรุงกำลังทำ {openImps.length} โปรเจคสำหรับเครื่อง/ไลน์นี้
+          {trI18n("มีโปรเจคปรับปรุงกำลังทำ")} {openImps.length} {trI18n("โปรเจคสำหรับเครื่อง/ไลน์นี้")}
         </div>
       )}
       {repeatIssue && (
         <NoticeBar tone="warn" style={{ marginBottom: 10 }}>
-          ติดตามผลได้ว่า "{o.follow_up}" — ควรเปิดโปรเจคปรับปรุงแก้ที่ต้นเหตุ
+          {trI18n("ติดตามผลได้ว่า")} "{o.follow_up}" — {trI18n("ควรเปิดโปรเจคปรับปรุงแก้ที่ต้นเหตุ")}
         </NoticeBar>
       )}
       {o.status === 'returned' && (
         <div style={{ marginBottom: 10, padding: '10px 12px', borderRadius: 'var(--r-md)', background: 'var(--amber-dim)', border: '1px solid var(--amber-line)' }}>
           <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--amber)' }}>{trI18n('↩️ ใบนี้ถูกตีกลับ — ผิดแผนก')}</div>
-          <div style={{ fontSize: 12.5, color: 'var(--text)', margin: '4px 0' }}>{trI18n('เหตุผล:')} <b>{o.reject_reason || '-'}</b>{o.returned_from_dept ? ` (ตีกลับจากทีม ${deptNameOf(o.returned_from_dept)})` : ''}</div>
+          <div style={{ fontSize: 12.5, color: 'var(--text)', margin: '4px 0' }}>{trI18n('เหตุผล:')} <b>{o.reject_reason || '-'}</b>{o.returned_from_dept ? ` (${trI18n("ตีกลับจากทีม")} ${deptNameOf(o.returned_from_dept)})` : ''}</div>
           {can('mtn_repair', 'report', role) ? (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 6 }}>
               <span style={{ fontSize: 12, color: 'var(--muted)' }}>{trI18n('ส่งใหม่ให้ทีม:')}</span>
@@ -3227,8 +3227,8 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
         </div>
       )}
       {o.status !== 'returned' && o.bounce_count > 0 && (
-        <div style={{ marginBottom: 10, padding: '6px 10px', borderRadius: 'var(--r-md)', background: 'var(--bg2)', border: '1px solid var(--border)', fontSize: 11.5, color: 'var(--amber)' }}>
-          ↩️ ใบนี้เคยถูกตีกลับ {o.bounce_count} {trI18n('ครั้ง')}{o.first_report_at ? ` · เปิดครั้งแรก ${fmtDateTime(o.first_report_at)}` : ''} — เวลา KPI นับจากรอบล่าสุด
+        <div style={{ marginBottom: 10, padding: '6px 10px', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)', border: '1px solid var(--border)', fontSize: 11.5, color: 'var(--amber)' }}>
+          ↩️ {trI18n("ใบนี้เคยถูกตีกลับ")} {o.bounce_count} {trI18n('ครั้ง')}{o.first_report_at ? ` · ${trI18n("เปิดครั้งแรก")} ${fmtDateTime(o.first_report_at)}` : ''} — {trI18n("เวลา KPI นับจากรอบล่าสุด")}
         </div>
       )}
       {/* 🔎 ใบนี้ถูกส่งต่อ**มา** — ทีมใหม่ต้องเห็นว่าทีมก่อนหน้าเข้าไปดูอะไรมาแล้ว
@@ -3236,7 +3236,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
       {handoffIn && (
         <div style={{ marginBottom: 10, padding: '8px 11px', borderRadius: 'var(--r-md)', background: 'var(--blue-dim)', border: '1px solid var(--blue-line)' }}>
           <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--blue)', marginBottom: 3 }}>
-            ➡️ ส่งต่อมาจาก {handoffIn.src?.mo_no || o.transferred_from_mo || 'ใบก่อนหน้า'} {trI18n('· ทีม')} {deptNameOf(handoffIn.from_dept) || '—'}
+            ➡️ {trI18n("ส่งต่อมาจาก")} {handoffIn.src?.mo_no || o.transferred_from_mo || 'ใบก่อนหน้า'} {trI18n('· ทีม')} {deptNameOf(handoffIn.from_dept) || '—'}
           </div>
           <div style={{ fontSize: 11.5, lineHeight: 1.7 }}>
             <div style={{ color: 'var(--text)' }}>{trI18n('เหตุผลที่ส่งต่อ:')} <b>{handoffIn.reason}</b></div>
@@ -3252,7 +3252,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
       )}
       {/* ใบนี้ส่งต่อ**ไป** แล้ว — ใบนี้จบที่ทีมนี้ ให้ตามงานต่อที่ใบใหม่ */}
       {handoffOut.length > 0 && (
-        <div style={{ marginBottom: 10, padding: '8px 11px', borderRadius: 'var(--r-md)', background: 'var(--bg2)', border: '1px solid var(--border)' }}>
+        <div style={{ marginBottom: 10, padding: '8px 11px', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)', border: '1px solid var(--border)' }}>
           {handoffOut.map(h => (
             <div key={h.id} style={{ fontSize: 11.5, lineHeight: 1.7 }}>
               <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--amber)' }}>{trI18n('➡️ ใบนี้ส่งต่อให้ทีม')} {deptNameOf(h.to_dept)} {trI18n('แล้ว — จบที่ทีมนี้')}</div>
@@ -3269,11 +3269,11 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
         <div style={{ marginBottom: 10, padding: '8px 11px', borderRadius: 'var(--r-md)',
           background: 'var(--amber-dim)', border: '1px solid var(--amber)' }}>
           <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--amber)' }}>
-            ค่าใช้จ่าย {Number(orderCostTotal(o, dlabor, dparts) || 0).toLocaleString()} {trI18n('บาท — เกิน')} {PLANT_MGR_COST_LIMIT.toLocaleString()} บาท
+            {trI18n("ค่าใช้จ่าย")} {Number(orderCostTotal(o, dlabor, dparts) || 0).toLocaleString()} {trI18n('บาท — เกิน')} {PLANT_MGR_COST_LIMIT.toLocaleString()} {trI18n("บาท")}
           </div>
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 3, lineHeight: 1.6 }}>
-            ต้องให้ <b style={{ color: 'var(--text2)' }}>{trI18n('ผจก.โรงงานเซ็น')}</b> — กด 🖨 พิมพ์ใบ แล้วส่งให้บัญชี
-            <br />{trI18n('ลายเซ็นนี้ไม่อยู่ในลูป 9 ขั้น ⇒')} <b style={{ color: 'var(--text2)' }}>{trI18n('ปิดใบในระบบได้ตามปกติ')}</b> ไม่ต้องรอ
+            {trI18n("ต้องให้")} <b style={{ color: 'var(--text2)' }}>{trI18n('ผจก.โรงงานเซ็น')}</b> — {trI18n("กด 🖨 พิมพ์ใบ แล้วส่งให้บัญชี")}
+            <br />{trI18n('ลายเซ็นนี้ไม่อยู่ในลูป 9 ขั้น ⇒')} <b style={{ color: 'var(--text2)' }}>{trI18n('ปิดใบในระบบได้ตามปกติ')}</b> {trI18n("ไม่ต้องรอ")}
           </div>
         </div>
       )}
@@ -3282,10 +3282,10 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
         <div style={{ marginBottom: 10, padding: '8px 11px', borderRadius: 'var(--r-md)',
           background: 'var(--blue-dim)', border: '1px solid var(--blue)' }}>
           <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--blue)' }}>
-            ส่งซ่อมภายนอก — อยู่กับ {o.supplier || 'supplier'} {trI18n('มาแล้ว')} {vendorHoldLabel(o)}
+            {trI18n("ส่งซ่อมภายนอก — อยู่กับ")} {o.supplier || 'supplier'} {trI18n('มาแล้ว')} {vendorHoldLabel(o)}
           </div>
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 4, lineHeight: 1.6 }}>
-            ส่งเมื่อ {fmtDateTime(o.vendor_sent_at)}{o.vendor_sent_by ? ` โดย ${o.vendor_sent_by}` : ''}
+            {trI18n("ส่งเมื่อ")} {fmtDateTime(o.vendor_sent_at)}{o.vendor_sent_by ? ` ${trI18n("โดย")} ${o.vendor_sent_by}` : ''}
             {o.vendor_note ? <> · {o.vendor_note}</> : null}
             <br />{trI18n('⏳ ช่วงนี้')} <b style={{ color: 'var(--text2)' }}>{trI18n('ไม่นับเป็นเวลาซ่อมของช่าง')}</b> {trI18n('แต่')} <b style={{ color: 'var(--text2)' }}>{trI18n('ไลน์ยังนับหยุดอยู่')}</b>
           </div>
@@ -3317,7 +3317,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
           canEdit={canEditStep(2) || canEditStep(3)} onStockChanged={onReload} />
       )}
       {canSendVendor(o) && canEditStep(3) && (
-        <div style={{ marginBottom: 10, padding: '8px 11px', borderRadius: 'var(--r-md)', background: 'var(--bg2)', border: '1px solid var(--border)' }}>
+        <div style={{ marginBottom: 10, padding: '8px 11px', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)', border: '1px solid var(--border)' }}>
           {!showVendor ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <div style={{ fontSize: 11.5, color: 'var(--muted)', flex: 1, minWidth: 190 }}>
@@ -3356,7 +3356,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
       )}
       {/* ➡️ ปุ่มส่งต่อ — ทีมที่ถือใบอยู่ (ขั้น 2-3) เท่านั้น · เกณฑ์ = canHandoff() + สิทธิ์ขั้น 3 */}
       {canHandoff(o) && canEditStep(3) && (
-        <div style={{ marginBottom: 10, padding: '8px 11px', borderRadius: 'var(--r-md)', background: 'var(--bg2)', border: '1px solid var(--border)' }}>
+        <div style={{ marginBottom: 10, padding: '8px 11px', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)', border: '1px solid var(--border)' }}>
           {!showHandoff ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <div style={{ fontSize: 11.5, color: 'var(--muted)', flex: 1, minWidth: 190 }}>
@@ -3397,14 +3397,14 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
       {mtnForm && (o.mo_approved_by || o.mo_ack_at) && (() => {
         const ack = canSignMtnApproval('mtn_mgr', stepCtx);
         return (
-          <div style={{ marginBottom: 10, padding: '8px 11px', borderRadius: 'var(--r-md)', background: 'var(--bg2)', border: '1px solid var(--border)' }}>
+          <div style={{ marginBottom: 10, padding: '8px 11px', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)', border: '1px solid var(--border)' }}>
             <div style={{ fontSize: 12, fontWeight: 800 }}>
               {o.mo_ack_at ? '✅ ผจก.ส่วนซ่อมบำรุง รับทราบแล้ว' : '✍️ รอ ผจก.ส่วนซ่อมบำรุง รับทราบ (ไม่บล็อกงาน)'}
             </div>
             <div style={{ fontSize: 11.5, color: 'var(--text2)', marginTop: 3 }}>
               {o.mo_ack_at
                 ? <b style={{ color: 'var(--accent)' }}>✔ {o.mo_approved_by || '—'} · {fmtDateTime(o.mo_ack_at)}</b>
-                : <span style={{ color: 'var(--muted)' }}>ยังไม่รับทราบ{o.mo_approved_by ? ` (ช่างระบุไว้: ${o.mo_approved_by})` : ''}</span>}
+                : <span style={{ color: 'var(--muted)' }}>{trI18n("ยังไม่รับทราบ")}{o.mo_approved_by ? ` (${trI18n("ช่างระบุไว้")}: ${o.mo_approved_by})` : ''}</span>}
             </div>
             {!o.mo_ack_at && (
               <div style={{ display: 'flex', gap: 8, marginTop: 6, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -3428,7 +3428,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
         <div style={{ marginBottom: 10, padding: '8px 11px', borderRadius: 'var(--r-md)', background: appr.blocked ? 'var(--red-dim)' : 'var(--bg2)', border: `1px solid ${appr.blocked ? 'var(--red)' : 'var(--border)'}` }}>
           <div style={{ fontSize: 12, fontWeight: 800, color: appr.blocked ? 'var(--red)' : 'var(--text)' }}>
             {appr.blocked
-              ? `🔒 งาน${PURPOSES.find(x => x.key === appr.purpose)?.label || ''} — ต้องอนุมัติก่อนช่างเริ่มงาน`
+              ? `🔒 ${trI18n("งาน")}${PURPOSES.find(x => x.key === appr.purpose)?.label || ''} — ${trI18n("ต้องอนุมัติก่อนช่างเริ่มงาน")}`
               : appr.ackPending ? '✍️ รอผู้จัดการเซ็นรับทราบ (ไม่บล็อกงาน — ช่างทำงานต่อได้เลย)' : '✅ ลายเซ็นผู้จัดการครบแล้ว'}
           </div>
           <div style={{ fontSize: 11.5, color: 'var(--text2)', marginTop: 3, lineHeight: 1.7 }}>
@@ -3438,8 +3438,8 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
                 ⚠️ บัญชีนี้ยังไม่ได้ตั้งตำแหน่ง — ระบบ<b>{trI18n('ไม่ได้ตรวจ')}</b>ว่าถึงระดับที่เซ็นช่องนี้ได้หรือไม่ (ตั้งที่ /add-user)
               </div>
             )}
-            <div>{trI18n('ผู้จัดการต้นสังกัด:')} {o.dept_manager_at ? <b style={{ color: 'var(--accent)' }}>✔ {o.dept_manager_name || '—'} · {fmtDateTime(o.dept_manager_at)}</b> : <span style={{ color: 'var(--muted)' }}>{trI18n('ยังไม่เซ็น')}{o.dept_manager_name ? ` (ระบุไว้: ${o.dept_manager_name})` : ''}</span>}</div>
-            {appr.needPlant && <div>{trI18n('ผู้จัดการโรงงาน (งานสร้าง):')} {o.plant_manager_at ? <b style={{ color: 'var(--accent)' }}>✔ {o.plant_manager_name || '—'} · {fmtDateTime(o.plant_manager_at)}</b> : <span style={{ color: 'var(--muted)' }}>{trI18n('ยังไม่เซ็น')}{o.plant_manager_name ? ` (ระบุไว้: ${o.plant_manager_name})` : ''}</span>}</div>}
+            <div>{trI18n('ผู้จัดการต้นสังกัด:')} {o.dept_manager_at ? <b style={{ color: 'var(--accent)' }}>✔ {o.dept_manager_name || '—'} · {fmtDateTime(o.dept_manager_at)}</b> : <span style={{ color: 'var(--muted)' }}>{trI18n('ยังไม่เซ็น')}{o.dept_manager_name ? ` (${trI18n("ระบุไว้")}: ${o.dept_manager_name})` : ''}</span>}</div>
+            {appr.needPlant && <div>{trI18n('ผู้จัดการโรงงาน (งานสร้าง):')} {o.plant_manager_at ? <b style={{ color: 'var(--accent)' }}>✔ {o.plant_manager_name || '—'} · {fmtDateTime(o.plant_manager_at)}</b> : <span style={{ color: 'var(--muted)' }}>{trI18n('ยังไม่เซ็น')}{o.plant_manager_name ? ` (${trI18n("ระบุไว้")}: ${o.plant_manager_name})` : ''}</span>}</div>}
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
             {canSignMtnApproval('dept', stepCtx).ok && <button onClick={() => signApproval('dept')} disabled={signBusy === 'dept'} style={{ ...btnPri, padding: '6px 12px', fontSize: 12 }}>{signBusy === 'dept' ? trI18n('กำลังเซ็น…') : trI18n('อนุมัติใบ MO (ผู้จัดการต้นสังกัด)')}</button>}
@@ -3450,7 +3450,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
                 ({
                   rank_too_low: 'เซ็นช่องนี้ได้เฉพาะระดับหัวหน้าแผนกขึ้นไป',
                       shared_account: 'บัญชีกลางเซ็นไม่ได้ — ให้ผู้จัดการ login ด้วยบัญชีตัวเอง',
-                  out_of_scope: `ใบนี้เป็นของ${[o.line_name, o.dept_section].filter(Boolean).join(' · ') || 'ส่วนงานอื่น'} — เซ็นได้เฉพาะใบในขอบเขตที่ตัวเองรับผิดชอบ`,
+                  out_of_scope: `${trI18n("ใบนี้เป็นของ")}${[o.line_name, o.dept_section].filter(Boolean).join(' · ') || trI18n('ส่วนงานอื่น')} — ${trI18n("เซ็นได้เฉพาะใบในขอบเขตที่ตัวเองรับผิดชอบ")}`,
                 })[canSignMtnApproval(appr.missing[0], stepCtx).code]
                 || 'เซ็นได้เฉพาะผู้จัดการที่ถูกระบุในใบ หรือผู้ถือสิทธิ์อนุมัติปิดใบ'
               }</span>
@@ -3460,8 +3460,13 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
         </div>
       )}
       {/* 🔌 ปุ่มเปิด-ปิดเครื่อง (19/11) — ช่างที่ทำงานอยู่ในใบนี้กดได้เลย ไม่ต้องไปหาอีกหน้า */}
+      {/* 🔴 20/11: เดิมเขียน can('mtn_repair','repair') — คีย์นี้ไม่มีในระบบ (ไม่มีแถว/ไม่มี catalog) ⇒ ปุ่มโผล่เฉพาะ admin
+          ด่าน permissionCatalogCoverage จับได้ตอน merge · เกณฑ์ = "ขั้นลงมือซ่อม" ตัวเดียวกับฟอร์ม (canDoStep ผ่าน stageOf —
+          เลขขั้นต่างกันระหว่างฟอร์ม JIG/DIE กับ MTN ห้ามเขียน step === 3) · ผู้ถือ manage_master กดได้เสมอ */}
       <MachineUsabilityPanel order={o} machines={machines} fullName={fullName}
-        canEdit={can('mtn_repair', 'repair', role)} affectedLines={affectedLines} onSaved={onReload} />
+        canEdit={can('mtn_repair', 'manage_master', role)
+          || [2, 3, 4, 5, 6, 7, 8].some(s => stageOf(s, { mtnForm }) === 'service' && canEditStep(s))}
+        affectedLines={affectedLines} onSaved={onReload} />
       {/* ผู้เปิดใบตรวจรับ (ขั้น 4) และรับมอบ (ขั้น 6) ของใบตัวเองได้เสมอ — บอกให้รู้ว่าทำไมกดได้ */}
       {isOrderReporter(o, fullName) && o.status !== 'closed' && (
         <NoticeBar tone="ok" style={{ marginBottom: 10 }}>
@@ -3491,7 +3496,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
       })()}
       {/* 🪜 ตอนนี้ถึงขั้นไหน — กฎอยู่ moFlow() (mtnStepPerm.js) ห้ามตัดสินในหน้า · UI §6.30 */}
       {(() => { const f = moFlow(o); return (
-        <div style={{ marginBottom: 12, padding: '10px 12px 8px', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--bg2)' }}>
+        <div style={{ marginBottom: 12, padding: '10px 12px 8px', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)' }}>
           <StepFlow steps={f.steps} waiting={f.waiting} unknown={!f.known} />
           {/* ✍️ ลายเซ็นที่อยู่ "นอกลำดับขั้น" (18/11 · หน้างานแจ้ง)
               🔴 แถบขั้นบอกว่าเหลือขั้นเดียว แต่ยังค้างลายเซ็นไม่ล็อกงานอีก 2 ช่องที่ไม่โผล่ที่ไหนเลย
@@ -3516,7 +3521,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
         <div>
           <StepBox n={1} done>
             <Row k="วันเวลาที่แจ้ง" v={fmtDateTime(o.report_at)} /><Row k="หน่วยงาน" v={deptNameOf(dept)} />
-            {o.occurred_at && <Row k="เกิดเหตุจริง" v={`${fmtDateTime(o.occurred_at)} (แจ้งย้อนหลัง)`} />}
+            {o.occurred_at && <Row k="เกิดเหตุจริง" v={`${fmtDateTime(o.occurred_at)} (${trI18n("แจ้งย้อนหลัง")})`} />}
             <Row k="ขอบเขต / ประเภท" v={[SCOPE_OPTS.find(s => s.v === o.repair_scope)?.t, o.current_step < 2 && o.repair_type ? `${o.repair_type} (ผู้แจ้งระบุ)` : null].filter(Boolean).join(' · ')} />
             <Row k="ไลน์ / แผนก" v={`${o.line_name || '—'}${o.dept_section ? ' · ' + o.dept_section : ''}`} />
             <Row k="ส่วนงาน" v={o.work_area} /><Row k="Cost Center" v={o.cost_center} />
@@ -3535,7 +3540,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
             <Row k="ซ่อมเสร็จเมื่อ" v={o.repair_done_at && fmtDateTime(o.repair_done_at)} /><Row k="สาเหตุ" v={o.root_cause} /><Row k="วิธีแก้ไข" v={o.solution} />
             <Row k="ช่างหลัก / รอง" v={[o.tech_main, o.tech_secondary].filter(Boolean).join(' / ')} />
             {!!dparts.length && <Row k="อะไหล่ที่ใช้" v={dparts.map(p => `${p.part_name} ×${p.qty}${p.unit || ''}`).join(', ')} />}
-            {(o.labor_cost != null || o.parts_cost != null) && <Row k="ค่าใช้จ่าย" v={`ค่าแรง ${(Number(o.labor_cost) || 0).toLocaleString()} + อะไหล่ ${(Number(o.parts_cost) || 0).toLocaleString()} = ${((Number(o.labor_cost) || 0) + (Number(o.parts_cost) || 0)).toLocaleString()} บาท`} />}
+            {(o.labor_cost != null || o.parts_cost != null) && <Row k="ค่าใช้จ่าย" v={`${trI18n("ค่าแรง")} ${(Number(o.labor_cost) || 0).toLocaleString()} + ${trI18n("อะไหล่")} ${(Number(o.parts_cost) || 0).toLocaleString()} = ${((Number(o.labor_cost) || 0) + (Number(o.parts_cost) || 0)).toLocaleString()} ${trI18n("บาท")}`} />}
             <div style={{ marginTop: 6 }}><Img label={trI18n('รูปหลังซ่อม')} url={o.after_img} /></div>
           </StepBox>
         </div>
@@ -3567,7 +3572,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
               <Row k="ความพึงพอใจเฉลี่ย" v={`${satAvg(o.satisfaction).toFixed(2)}/3 (${Math.round(satAvg(o.satisfaction) / 3 * 100)}%)`} />
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 2 }}>
                 {SAT_DIMS.filter(d => o.satisfaction?.[d.key]).map(d => { const lv = SAT_LEVELS.find(l => l.v === Number(o.satisfaction[d.key])); return (
-                  <span key={d.key} style={{ fontSize: 11, padding: '2px 6px', borderRadius: 'var(--r-md)', background: 'var(--bg3)', border: `1px solid ${lv?.color || 'var(--border)'}`, color: 'var(--text2)' }}>{trI18n(d.label)}: <b style={{ color: lv?.color }}>{lv?.t}</b></span>
+                  <span key={d.key} style={{ fontSize: 11, padding: '2px 6px', borderRadius: 'var(--r-md)', background: 'var(--bg3-surf)', border: `1px solid ${lv?.color || 'var(--border)'}`, color: 'var(--text2)' }}>{trI18n(d.label)}: <b style={{ color: lv?.color }}>{lv?.t}</b></span>
                 ); })}
               </div>
             </div>}
@@ -3586,12 +3591,12 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
               <Row k="ปิดใบเมื่อ" v={o.cost_mgr_at && fmtDateTime(o.cost_mgr_at)} /><Row k="ผจก.ฝ่ายที่แจ้ง" v={o.cost_mgr_name} /><Img label={trI18n('ลายเซ็นปิดใบ')} url={sgn(o.cost_mgr_uid, o.cost_mgr_sign)} /><Row k="ความคิดเห็นเพิ่มเติม" v={o.extra_comment} />
             </StepBox>
             <div style={{ marginBottom: 8 }}><InfoMore id="mo-mtn-loop" label={trI18n('ใบทีม MTN ไม่มีขั้น QA · ช่องลายเซ็น 7 จุดบนใบพิมพ์')}>
-              ใบของทีม MTN <b>{trI18n('ไม่มีขั้นตรวจคุณภาพ (QA) ในลูป')}</b> — ขั้น 5 ของฟอร์ม JIG/DIE (ตรวจคุณภาพโดย QA)
-              {' '}{trI18n('ถูกแทนด้วย')} <b>{trI18n('“รับมอบ / ติดตามผล”')}</b> ⇒ ใบนี้มี 8 ขั้น และไม่มีขั้นไหนรอ QA เลย
+              {trI18n("ใบของทีม")} MTN <b>{trI18n('ไม่มีขั้นตรวจคุณภาพ (QA) ในลูป')}</b> — {trI18n("ขั้น 5 ของฟอร์ม JIG/DIE (ตรวจคุณภาพโดย")} QA)
+              {' '}{trI18n('ถูกแทนด้วย')} <b>{trI18n('“รับมอบ / ติดตามผล”')}</b> ⇒ {trI18n("ใบนี้มี 8 ขั้น และไม่มีขั้นไหนรอ QA เลย")}
               <div style={{ marginTop: 3 }}>
-                <b>{trI18n('ช่องลายเซ็น 7 จุดบนใบพิมพ์')}</b> FM-MTN-006 เป็นคนละชุดกับชื่อขั้นข้างบน
-                {' '}(ผู้แจ้ง → ผจก.ต้นสังกัดผู้แจ้งรับทราบ → ช่างรับงาน → ผจก.ช่างรับทราบ → หัวหน้าแผนกช่างตรวจ → ผจก.ช่างอนุมัติ → ผจก.ฝ่ายที่แจ้งปิดใบ)
-                {' '}{trI18n('— ช่องที่ 2 และ 4 เป็นการ')} <b>{trI18n('รับทราบนอกลูป')}</b> เซ็นตามหลังได้ ไม่บล็อกงาน จึงไม่มีเป็นขั้นบนจอ
+                <b>{trI18n('ช่องลายเซ็น 7 จุดบนใบพิมพ์')}</b> FM-MTN-006 {trI18n("เป็นคนละชุดกับชื่อขั้นข้างบน")}
+                {' '}({trI18n("ผู้แจ้ง → ผจก.ต้นสังกัดผู้แจ้งรับทราบ → ช่างรับงาน → ผจก.ช่างรับทราบ → หัวหน้าแผนกช่างตรวจ → ผจก.ช่างอนุมัติ → ผจก.ฝ่ายที่แจ้งปิดใบ")})
+                {' '}{trI18n('— ช่องที่ 2 และ 4 เป็นการ')} <b>{trI18n('รับทราบนอกลูป')}</b> {trI18n("เซ็นตามหลังได้ ไม่บล็อกงาน จึงไม่มีเป็นขั้นบนจอ")}
               </div>
             </InfoMore></div>
           </> : (
@@ -3602,7 +3607,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
           <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 10, fontSize: 12.5 }}>
             <div style={{ fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>⏱ KPI</div>
             <Row k="เข้าดำเนินการ (MTTA)" v={fmtMin(resp)} /><Row k="เวลาซ่อม (TTR)" v={venHold > 0 && ttr != null
-              ? `${fmtMin(ttr)} (หักหยุด MTTR ${fmtMin(venHold)} · รวมทั้งหมด ${fmtMin(ttrGross)})`
+              ? `${fmtMin(ttr)} (${trI18n("หักหยุด")} MTTR ${fmtMin(venHold)} · ${trI18n("รวมทั้งหมด")} ${fmtMin(ttrGross)})`
               : fmtMin(ttr)} />
             {/* 🔴 เดิมบรรทัดนี้ชื่อ "หยุดรวม (Breakdown)" — ชวนอ่านว่าเป็นเวลาที่ไลน์หยุด
                 ทั้งที่เป็นนาฬิกาฝั่งช่างล้วน (กดเรียก → กดซ่อมเสร็จ) เป็นต้นเหตุที่หน้างานสับสน
@@ -3614,8 +3619,8 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
             <div style={{ marginTop: 8, borderTop: '1px solid var(--border)', paddingTop: 7 }}>
               {dtRow.state === 'none' && (
                 <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                  ใบนี้ไม่ได้เปิดจากรายการเครื่องหยุด — <b>{trI18n('ระบบจึงไม่รู้ว่าไลน์หยุดจริงกี่นาที')}</b>
-                  {' '}(เลขข้างบนเป็นนาฬิกาฝั่งช่างเท่านั้น)
+                  {trI18n("ใบนี้ไม่ได้เปิดจากรายการเครื่องหยุด")} — <b>{trI18n('ระบบจึงไม่รู้ว่าไลน์หยุดจริงกี่นาที')}</b>
+                  {' '}({trI18n("เลขข้างบนเป็นนาฬิกาฝั่งช่างเท่านั้น")})
                 </div>
               )}
               {dtRow.state === 'loading' && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{trI18n('กำลังโหลดเวลาไลน์หยุด…')}</div>}
@@ -3624,7 +3629,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
               )}
               {tl && (<>
                 <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text2)', marginBottom: 3 }}>
-                  ไลน์หยุดจริง {fmtMin(tl.lineStopMin)}
+                  {trI18n("ไลน์หยุดจริง")} {fmtMin(tl.lineStopMin)}
                   {tl.mcBreakdownMin != null && <span style={{ color: 'var(--muted)', fontWeight: 400 }}>
                     {' '}{trI18n('· M/C Breakdown (ถึงซ่อมเสร็จ)')} {fmtMin(tl.mcBreakdownMin)}</span>}
                 </div>
@@ -3674,9 +3679,9 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
               <div style={{ marginTop: 5, paddingTop: 5, borderTop: '1px dashed var(--amber-line)', color: 'var(--text)' }}>
                 🤝 <b>{trI18n('ฝั่งช่างทำงานเสร็จหมดแล้ว — เหลือขั้นสุดท้ายของฝ่ายที่แจ้ง (รับมอบ/ติดตามผล)')}</b>
                 <div style={{ color: 'var(--text2)', marginTop: 2 }}>
-                  คนที่ต้องกด: <b style={{ color: 'var(--text)' }}>{o.reported_by_name || o.reporter_prod || trI18n('— (ใบนี้ไม่ได้บันทึกชื่อผู้แจ้ง)')}</b>
+                  {trI18n("คนที่ต้องกด")}: <b style={{ color: 'var(--text)' }}>{o.reported_by_name || o.reporter_prod || trI18n('— (ใบนี้ไม่ได้บันทึกชื่อผู้แจ้ง)')}</b>
                   {[o.line_name, o.dept_section].filter(Boolean).length ? ` · ${[o.line_name, o.dept_section].filter(Boolean).join(' · ')}` : ''}
-                  {' '}— หรือหัวหน้าแผนกของฝ่ายนั้น (ผู้ถือสิทธิ์ mtn_repair:handover)
+                  {' '}— {trI18n("หรือหัวหน้าแผนกของฝ่ายนั้น (ผู้ถือสิทธิ์")} mtn_repair:handover)
                 </div>
               </div>
             )}
@@ -3687,7 +3692,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
           ตั้งแต่ 07/10 คอมเมนต์พวกนี้ไปโผล่ใน **ช่องผู้แจ้งของใบพิมพ์ + Excel** ด้วย
           (คอมเมนต์ทีม MTN: เปิดเอกสารมาแล้วรายละเอียดไม่ตรงของจริง)
           ⇒ ต้องเขียนบอกคนที่กำลังพิมพ์ ไม่งั้นเขาคิดว่าคุยกันในนี้แล้วหายไปเฉยๆ */}
-      <EventComments refKind="mtn_order" refId={o.id} contextLabel={`ใบซ่อม ${o.mo_no || `#${o.id}`}${o.machine_no ? ` (${o.machine_no})` : ''}`} />
+      <EventComments refKind="mtn_order" refId={o.id} contextLabel={`${trI18n("ใบซ่อม")} ${o.mo_no || `#${o.id}`}${o.machine_no ? ` (${o.machine_no})` : ''}`} />
       <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 4 }}>
         คอมเมนต์ข้างบนจะถูกพิมพ์ลงใบ MO ด้วย — <b>{trI18n('ต่อท้ายรายละเอียดที่ผู้แจ้งเขียนไว้')}</b> (ของเดิมไม่ถูกแก้ทับ) พร้อมชื่อผู้คอมเมนต์และเวลา
       </div>
@@ -3765,11 +3770,11 @@ function TechMultiPick({ value = [], groups, onChange }) {
       </div>
       {groups.others.length > 0 && (
         <button type="button" onClick={() => setShowOthers(v => !v)} style={{ ...btnGhost, padding: '4px 10px', fontSize: 11.5, marginTop: 6 }}>
-          {showOthers ? 'ซ่อนช่างทีมอื่น' : `ช่างทีมอื่น (${groups.others.length}) — รับงานข้ามทีม`}
+          {showOthers ? 'ซ่อนช่างทีมอื่น' : `${trI18n("ช่างทีมอื่น")} (${groups.others.length}) — ${trI18n("รับงานข้ามทีม")}`}
         </button>
       )}
       {showOthers && <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>{groups.others.map(t => chip(t, true))}</div>}
-      <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>{(value || []).length ? `เลือกแล้ว ${value.length} คน: ${joinTechs(value)}` : 'ยังไม่ได้เลือก'}</div>
+      <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>{(value || []).length ? `${trI18n("เลือกแล้ว")} ${value.length} ${trI18n("คน")}: ${joinTechs(value)}` : 'ยังไม่ได้เลือก'}</div>
     </div>
   );
 }
@@ -3777,7 +3782,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
   /* 🔒 ฝั่ง + ระดับตำแหน่งของคนกด — ใช้ล็อกช่องเซ็นในลูป MO (2026-10-04 · คำสั่ง user)
      🔴 ตัดสินจากข้อมูลที่บันทึกไว้จริงเท่านั้น (mtn_teams / role / sections / position)
         ไม่รู้ = ไม่บล็อก แต่จอต้องเขียนบอก (stepAssumptions) — ห้ามเดาแทนคน */
-  const { mtnTeams: myTeams, sections: mySections, position: myPosition } = useContext(UserContext);
+  const { mtnTeams: myTeams, sections: mySections, position: myPosition, allUnits } = useContext(UserContext);
   const isMobile = useIsMobile();   // 📱 ปุ่มบันทึกเกาะล่างของฟอร์มขั้น (15/10)
   const actorSide = actorSideOf({ mtnTeams: myTeams, role, sections: mySections, isAm: isAmTeam });
   const posRank = positionRank(myPosition);
@@ -3802,12 +3807,12 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
   const techOpts = (
     <>
       {techGroups.mine.length > 0 && (
-        <optgroup label={`ช่างทีม ${deptNameOf(techGroups.teamKey)} (${techGroups.mine.length})`}>
+        <optgroup label={`${trI18n("ช่างทีม")} ${deptNameOf(techGroups.teamKey)} (${techGroups.mine.length})`}>
           {techGroups.mine.map(t => <option key={t.id} value={t.name}>{trI18n(t.name)}</option>)}
         </optgroup>
       )}
       {techGroups.others.length > 0 && (
-        <optgroup label={`— ทีมอื่น (${techGroups.others.length}) · เลือกได้ถ้ารับงานข้ามทีม —`}>
+        <optgroup label={`— ${trI18n("ทีมอื่น")} (${techGroups.others.length}) · ${trI18n("เลือกได้ถ้ารับงานข้ามทีม")} —`}>
           {techGroups.others.map(t => <option key={t.id} value={t.name}>{t.name}{t.dept ? ` · ${deptNameOf(t.dept)}` : ''}</option>)}
         </optgroup>
       )}
@@ -3976,7 +3981,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
   const partOpts = useMemo(() => {
     const tk = teamKeyOf(order?.mtn_dept || '');
     const grp = (p) => (tk && p.team && sameTeam(p.team, tk)) ? 0 : (p.team ? 2 : 1);
-    const gname = [`🔩 อะไหล่ทีม ${deptNameOf(tk) || ''}`.trim(), '🌐 ใช้ร่วมทุกทีม', '🔩 ทีมอื่น'];
+    const gname = [`🔩 ${trI18n("อะไหล่ทีม")} ${deptNameOf(tk) || ''}`.trim(), '🌐 ใช้ร่วมทุกทีม', '🔩 ทีมอื่น'];
     return (parts || []).map(p => {
       const g = grp(p), st = Number(p.stock_qty) || 0, lo = Number(p.min_qty) || 0;
       return {
@@ -4010,7 +4015,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
   const syncDowntimeTimes = async (order, patch, fillCallAt = null) => {
     if (!order?.source_downtime_id) return;
     const { error } = await supabaseDR.from('downtime_logs').update(patch).eq('id', order.source_downtime_id);
-    if (error) { toast.error('บันทึกใบ MO แล้ว แต่ส่งเวลากลับไปที่รายการเครื่องหยุดไม่สำเร็จ — ' + error.message); return; }
+    if (error) { toast.error((trI18n('บันทึกใบ MO แล้ว แต่ส่งเวลากลับไปที่รายการเครื่องหยุดไม่สำเร็จ') + ' — ') + error.message); return; }
     if (fillCallAt) {
       /* 🔴 ต้องเติม `call_mtn_team` ด้วย (แก้ 2026-10-19 · คำสั่ง user "แยกแผนกช่างให้ชัด")
          เดิมเติมแค่ `call_mtn`+เวลา ⇒ แถวนั้น **ไม่ระบุทีม** (วัด ต.ค.: 80 จาก 175 ครั้ง = 46%)
@@ -4032,13 +4037,13 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
     if (step === 3 && partsState !== 'ok') {
       return toast.error(partsState === 'loading'
         ? 'รอโหลดรายการอะไหล่เดิมของใบนี้ก่อน แล้วกดบันทึกอีกครั้ง'
-        : `โหลดรายการอะไหล่เดิมไม่สำเร็จ (${partsErr}) — ปิดแล้วเปิดใบใหม่ก่อนบันทึก ไม่งั้นอะไหล่เดิมจะหาย`);
+        : `${trI18n("โหลดรายการอะไหล่เดิมไม่สำเร็จ")} (${partsErr}) — ${trI18n("ปิดแล้วเปิดใบใหม่ก่อนบันทึก ไม่งั้นอะไหล่เดิมจะหาย")}`);
     }
     /* ค่าแรงเดิมยังไม่ได้โหลด/โหลดล้ม = ห้ามบันทึก (ขั้นบันทึกจะลบค่าแรงเดิมทั้งชุด) */
     if (needLabor && laborState !== 'ok') {
       return toast.error(laborState === 'loading'
         ? 'รอโหลดค่าแรงเดิมของใบนี้ก่อน แล้วกดบันทึกอีกครั้ง'
-        : `โหลดค่าแรงเดิมไม่สำเร็จ (${laborErr}) — กด "โหลดใหม่" ในช่องค่าแรงก่อนบันทึก ไม่งั้นค่าแรงเดิมจะหาย`);
+        : `${trI18n("โหลดค่าแรงเดิมไม่สำเร็จ")} (${laborErr}) — ${trI18n("กด \"โหลดใหม่\" ในช่องค่าแรงก่อนบันทึก ไม่งั้นค่าแรงเดิมจะหาย")}`);
     }
     setSaving(true);
     try {
@@ -4065,28 +4070,28 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
         if (verdict.code === 'other_team')
           /* 15/10: ด่านนี้ครอบขั้น 2-3 (รับงาน/ลงผลซ่อม) ด้วยแล้ว — ข้อความต้องตรงขั้นที่กด */
           return toast.error(step === 2 || step === 3
-            ? `ใบนี้แจ้งถึงทีม ${deptNameOf(orderTeam)} โดยตรง — ให้ช่างทีมนั้นทำ`
-              + ' (ถ้าไม่ใช่งานของเขา ให้ตีกลับใบ หรือให้เขากด “➡️ ส่งต่องาน” มาที่ทีมคุณ)'
-            : `ขั้นปิดใบเป็นของผู้จัดการทีม ${deptNameOf(orderTeam)} — บัญชีนี้ถูกตั้งเป็นช่างทีมอื่น`);
+            ? `${trI18n("ใบนี้แจ้งถึงทีม")} ${deptNameOf(orderTeam)} ${trI18n("โดยตรง — ให้ช่างทีมนั้นทำ")}`
+              + (' (' + trI18n('ถ้าไม่ใช่งานของเขา ให้ตีกลับใบ หรือให้เขากด “➡️ ส่งต่องาน” มาที่ทีมคุณ') + ')')
+            : `${trI18n("ขั้นปิดใบเป็นของผู้จัดการทีม")} ${deptNameOf(orderTeam)} — ${trI18n("บัญชีนี้ถูกตั้งเป็นช่างทีมอื่น")}`);
         if (verdict.code === 'await_mgr_approval')
           return toast.error('ใบนี้เป็นงานปรับปรุง/สร้าง — ต้องให้ผู้จัดการเซ็นอนุมัติก่อนช่างเริ่มงาน (ปุ่ม “✍️ อนุมัติใบ MO” ในใบ)');
         if (meta?.ownTeam && can('mtn_repair', 'service_own_team', role) && !inOrderTeam)
-          return toast.error(`ใบนี้แจ้งถึงทีม ${deptNameOf(orderTeam)} — คุณทำได้เฉพาะใบของทีมตัวเอง`);
+          return toast.error(`${trI18n("ใบนี้แจ้งถึงทีม")} ${deptNameOf(orderTeam)} — ${trI18n("คุณทำได้เฉพาะใบของทีมตัวเอง")}`);
         /* 🔒 ล็อกฝั่ง/ตำแหน่ง (2026-10-04) — "ไม่มีสิทธิ์" เฉยๆ ทำให้คนไปขอ role เพิ่ม
            ทั้งที่ปัญหาคือ "ช่องนี้ไม่ใช่ของคุณ" · ต้องชี้ทางแก้ที่ถูก (ไปแก้ข้อมูลบัญชี ไม่ใช่ขอสิทธิ์) */
         if (verdict.code === 'wrong_side')
           return toast.error(meta?.side === 'reporter'
-            ? `ช่องนี้เป็นของฝ่ายที่แจ้ง (${[o.line_name, o.dept_section].filter(Boolean).join(' · ') || 'เจ้าของค่าใช้จ่าย'}) — ฝั่งช่างเซ็นแทนไม่ได้`
+            ? `${trI18n("ช่องนี้เป็นของฝ่ายที่แจ้ง")} (${[o.line_name, o.dept_section].filter(Boolean).join(' · ') || trI18n('เจ้าของค่าใช้จ่าย')}) — ${trI18n("ฝั่งช่างเซ็นแทนไม่ได้")}`
             : 'ช่องนี้เป็นของฝั่งซ่อมบำรุง — ฝ่ายที่แจ้งเซ็นแทนไม่ได้');
         if (verdict.code === 'shared_account')
-          return toast.error(`ช่องนี้เป็นลายเซ็นของ${meta?.whoShort || 'ผู้มีตำแหน่ง'} — บัญชีกลางเซ็นแทนไม่ได้ ให้เจ้าของตำแหน่ง login ด้วยบัญชีของตัวเอง`);
+          return toast.error(`${trI18n("ช่องนี้เป็นลายเซ็นของ")}${meta?.whoShort || trI18n('ผู้มีตำแหน่ง')} — ${trI18n("บัญชีกลางเซ็นแทนไม่ได้ ให้เจ้าของตำแหน่ง login ด้วยบัญชีของตัวเอง")}`);
         if (verdict.code === 'rank_too_low')
-          return toast.error(`ช่องนี้ต้องเป็นระดับ${verdict.needRank >= 60 ? 'ผู้จัดการ' : verdict.needRank <= 30 ? 'วิศวกร / หัวหน้า' : 'หัวหน้าแผนก/ส่วน'}ขึ้นไป — ตำแหน่งของบัญชีนี้ต่ำกว่าที่ช่องกำหนด (แก้ตำแหน่งได้ที่ /add-user)`);
+          return toast.error(`${trI18n("ช่องนี้ต้องเป็นระดับ")}${verdict.needRank >= 60 ? trI18n('ผู้จัดการ') : verdict.needRank <= 30 ? trI18n('วิศวกร / หัวหน้า') : trI18n('หัวหน้าแผนก/ส่วน')}${trI18n("ขึ้นไป — ตำแหน่งของบัญชีนี้ต่ำกว่าที่ช่องกำหนด (แก้ตำแหน่งได้ที่")} /add-user)`);
         if (verdict.code === 'out_of_scope')
-          return toast.error(`ใบนี้เป็นของ ${[o.line_name, o.dept_section].filter(Boolean).join(' · ') || 'ฝ่ายอื่น'} — ขั้นนี้ทำได้เฉพาะใบของส่วนงานตัวเอง (ผู้เปิดใบหรือหัวหน้าฝ่ายนั้นเป็นคนกด)`);
+          return toast.error(`${trI18n("ใบนี้เป็นของ")} ${[o.line_name, o.dept_section].filter(Boolean).join(' · ') || trI18n('ฝ่ายอื่น')} — ${trI18n("ขั้นนี้ทำได้เฉพาะใบของส่วนงานตัวเอง (ผู้เปิดใบหรือหัวหน้าฝ่ายนั้นเป็นคนกด")})`);
         if (meta?.byReporter)
-          return toast.error(`ขั้นนี้เป็นของ${meta.who} — ใบนี้เปิดโดย “${o.reported_by_name || o.reporter_prod || '—'}”`);
-        return toast.error(`ขั้นนี้เป็นหน้าที่ของ${meta?.who || 'ผู้มีสิทธิ์'} — บัญชีนี้ทำไม่ได้`);
+          return toast.error(`${trI18n("ขั้นนี้เป็นของ")}${meta.who} — ${trI18n("ใบนี้เปิดโดย")} “${o.reported_by_name || o.reporter_prod || '—'}”`);
+        return toast.error(`${trI18n("ขั้นนี้เป็นหน้าที่ของ")}${meta?.who || trI18n('ผู้มีสิทธิ์')} — ${trI18n("บัญชีนี้ทำไม่ได้")}`);
       }
       /* 🔴 ถามยืนยันก่อนเขียน — เฉพาะจังหวะที่เป็น "การอนุมัติ/เซ็นรับ" (utils/signConfirm.js)
          ไม่ครอบ จ่ายงาน/ลงผลซ่อม (เป็นการกรอกงาน ไม่ใช่อนุมัติ · UI §5.4 ห้ามถามพร่ำเพรื่อ)
@@ -4119,11 +4124,11 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
           }
           const _isClose = _stage === 'close' || _stage === 'cost_mgr_close';
           if (!await confirmSign({
-            what: `ขั้น ${step}: ${_meta?.title || _stage}`,
+            what: `${trI18n("ขั้น")} ${step}: ${_meta?.title || _stage}`,
             orderNo: o.mo_no || o.id, actor: fullName || '—', as: _meta?.whoShort || _meta?.who || null,
             effect: _isClose ? 'ปิดใบ MO ใบนี้' : null,
             warn: _gate.gate === 'unknown'
-              ? `${moCloseGateText(_gate)}\n\n⚠️ เซ็นแล้วแก้เองไม่ได้ — ต้องให้ผู้ถือสิทธิ์แก้ย้อนหลังมาปลดให้`
+              ? `${moCloseGateText(_gate)}\n\n⚠️ ${trI18n("เซ็นแล้วแก้เองไม่ได้ — ต้องให้ผู้ถือสิทธิ์แก้ย้อนหลังมาปลดให้")}`
               : undefined,
           })) { setSaving(false); return; }
         }
@@ -4160,7 +4165,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
         let imgWarn1 = null;
         if (beforeFile) {
           try { const b = await resizeMoImage(beforeFile); upd.before_img = await uploadMtnImg(b, `before/${o.id}-${Date.now()}.${imgExt(b)}`); }
-          catch (e) { imgWarn1 = `บันทึกข้อมูลแจ้งซ่อมแล้ว แต่แนบ "รูปปัญหา" ไม่สำเร็จ — ${e.message || e}`; }
+          catch (e) { imgWarn1 = `${trI18n("บันทึกข้อมูลแจ้งซ่อมแล้ว แต่แนบ \"รูปปัญหา\" ไม่สำเร็จ")} — ${e.message || e}`; }
         }
         const r1 = await supabaseDR.from('mtn_orders').update(upd).eq('id', o.id).select('id');
         if (!checkWriteRows(r1, 'แก้ไขข้อมูลแจ้งซ่อม')) { setSaving(false); return; }
@@ -4180,12 +4185,12 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
            · เกณฑ์ว่าตีกลับได้ไหมอยู่ที่ `canBounceBack()` ใน mtnStepPerm.js ที่เดียว (ใช้ร่วมกับกล่องเตือนบนฟอร์ม)
            · `current_step: 1` ให้ตรงกับตอน resubmit — ใบกลับไปอยู่ที่ผู้แจ้งจริงๆ ไม่ค้างโชว์ว่าผ่านขั้น 2 แล้ว */
         if (isReject) {
-          if (!canBounceBack(o)) { setSaving(false); return toast.error(`ใบนี้เดินไปถึงขั้น ${o.current_step} แล้ว — ตีกลับไม่ได้ (ผลงาน/ลายเซ็นขั้น 3 เป็นต้นไปจะหายจากใบ) · ถ้าแจ้งผิดแผนกจริง ให้ปิดใบนี้แล้วเปิดใบใหม่ให้ทีมที่ถูก`); }
+          if (!canBounceBack(o)) { setSaving(false); return toast.error(`${trI18n("ใบนี้เดินไปถึงขั้น")} ${o.current_step} ${trI18n("แล้ว — ตีกลับไม่ได้ (ผลงาน/ลายเซ็นขั้น 3 เป็นต้นไปจะหายจากใบ) · ถ้าแจ้งผิดแผนกจริง ให้ปิดใบนี้แล้วเปิดใบใหม่ให้ทีมที่ถูก")}`); }
           Object.assign(upd, { status: 'returned', current_step: 1, reject_reason: f.reject_reason, returned_at: new Date().toISOString(), returned_from_dept: o.mtn_dept || null });
         } else if (!editMode) { upd.status = 'assigned'; upd.current_step = step; }
         // ออกเลข MO ก่อนเลื่อนสถานะ — ถ้า RPC ล้ม (เน็ตสะดุด) ใบยังเป็น pending ให้กดสเตป 2 ใหม่ได้
         // (เดิมเลื่อน status→assigned ก่อน แล้ว RPC ล้ม → ใบค้าง assigned + mo_no=null ตลอดกาล ทำสเตป 2 ซ้ำไม่ได้)
-        if (!editMode && !isReject) { const prefix = repairTypes.find(r => r.name === f.repair_type)?.prefix || 'BM'; const { error: eMo } = await supabaseDR.rpc('mtn_assign_mo_no', { p_order_id: o.id, p_prefix: prefix }); if (eMo) { setSaving(false); return toast.error('ออกเลข MO ไม่สำเร็จ: ' + eMo.message); } }
+        if (!editMode && !isReject) { const prefix = repairTypes.find(r => r.name === f.repair_type)?.prefix || 'BM'; const { error: eMo } = await supabaseDR.rpc('mtn_assign_mo_no', { p_order_id: o.id, p_prefix: prefix }); if (eMo) { setSaving(false); return toast.error((trI18n('ออกเลข MO ไม่สำเร็จ') + ': ') + eMo.message); } }
         const { error: eUpd } = await supabaseDR.from('mtn_orders').update(upd).eq('id', o.id);
         if (eUpd) { setSaving(false); return toast.error(eUpd.message); }
         /* ฟอร์ม MTN มีลายเซ็น ผจก.ส่วนซ่อมบำรุง กลางใบ (อนุมัติให้เดินงาน) คนละจุดกับ "รับรองโดย" ท้ายใบ */
@@ -4217,7 +4222,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
         let imgWarn = null;
         if (afterFile) {
           try { const b = await resizeMoImage(afterFile); upd.after_img = await uploadMtnImg(b, `after/${o.id}-${Date.now()}.${imgExt(b)}`); }
-          catch (e) { imgWarn = `บันทึกการซ่อมแล้ว แต่แนบ "รูปหลังซ่อม" ไม่สำเร็จ — ${e.message || e}`; }
+          catch (e) { imgWarn = `${trI18n("บันทึกการซ่อมแล้ว แต่แนบ \"รูปหลังซ่อม\" ไม่สำเร็จ")} — ${e.message || e}`; }
         }
         /* 🔴 ต้องเช็คผลก่อนแตะสต็อก (audit 2026-09-02)
            เดิมไม่เช็ค error เลย ⇒ update ล้ม (RLS/เน็ต/คอลัมน์) แต่โค้ดเดินต่อไป insert อะไหล่
@@ -4226,7 +4231,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
            คอมเมนต์เหนือขึ้นไปยืนยันเองว่าเคยมีเคสกดซ้ำ 13 ครั้ง — ตอนนั้นรอดเพราะรูปพังแล้ว throw
            ก่อนถึงสต็อก · พอ error รูปถูก catch ไปต่อ ด่านนั้นก็หายไป */
         const { error: eUpd3 } = await supabaseDR.from('mtn_orders').update(upd).eq('id', o.id);
-        if (eUpd3) { setSaving(false); return toast.error('บันทึกการซ่อมไม่สำเร็จ (ยังไม่ตัดสต็อกอะไหล่): ' + eUpd3.message); }
+        if (eUpd3) { setSaving(false); return toast.error((trI18n('บันทึกการซ่อมไม่สำเร็จ (ยังไม่ตัดสต็อกอะไหล่') + '): ') + eUpd3.message); }
         // เวลาซ่อมเสร็จ → ใบหยุดเครื่อง (แยก "ซ่อมจริง" ออกจาก "กลับมารัน" ได้)
         if (upd.repair_done_at) await syncDowntimeTimes(o, { fix_at: upd.repair_done_at });
         if (imgWarn) toast.error(imgWarn);
@@ -4287,18 +4292,18 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
         /* 🔴 ประตูของเรื่องนี้ — บันทึกรายการไม่สำเร็จ = ไม่แตะสต็อกเลย แล้วบอกให้ชัดว่าต้องทำอะไรต่อ
            (เงียบไม่ได้: ช่างจะเข้าใจว่าเบิกแล้ว · ตัดไปเลยก็ไม่ได้: ของหายจากคลังโดยไม่มีใบรองรับ) */
         if (!partsWritten) {
-          toast.error('⚠️ ยังไม่ได้ตัดสต็อกอะไหล่ — บันทึกรายการอะไหล่ลงใบ MO ไม่สำเร็จ '
-            + '(บันทึกการซ่อมส่วนอื่นเรียบร้อยแล้ว) · กดบันทึกอีกครั้ง หรือแจ้งแอดมินระบบ');
+          toast.error(('⚠️ ' + trI18n('ยังไม่ได้ตัดสต็อกอะไหล่ — บันทึกรายการอะไหล่ลงใบ MO ไม่สำเร็จ') + ' ')
+            + ('(' + trI18n('บันทึกการซ่อมส่วนอื่นเรียบร้อยแล้ว) · กดบันทึกอีกครั้ง หรือแจ้งแอดมินระบบ')));
         } else for (const pid of new Set([...Object.keys(byPart), ...Object.keys(basePartQty)])) {
           const delta = (byPart[pid] || 0) - (basePartQty[pid] || 0);
           if (!delta) continue;   // ยอดเท่าเดิม = ไม่แตะสต็อก (นี่คือตัวกันตัดซ้ำ)
           const { error: eSt } = await supabaseDR.rpc('mtn_stock_move', {
             p_part_id: pid, p_type: delta > 0 ? 'issue' : 'in', p_qty: Math.abs(delta),
-            p_note: `${delta > 0 ? 'เบิกใช้' : 'คืนจากแก้ไขใบ'} ${o.mo_no || ''}`.trim(),
+            p_note: `${delta > 0 ? trI18n('เบิกใช้') : trI18n('คืนจากแก้ไขใบ')} ${o.mo_no || ''}`.trim(),
             p_by_name: fullName, p_ref_order: o.id,
           });
           // สต็อกไม่พอ/อะไหล่ถูกลบ = แจ้งแล้วไปต่อ (บันทึกการซ่อมสำคัญกว่า ห้ามให้ทั้งใบล้มเพราะยอดอะไหล่)
-          if (eSt) toast.error(`ปรับสต็อก "${usable.find(x => x.part_id === pid)?.name || parts.find(x => x.id === pid)?.name || ''}" ไม่สำเร็จ: ${eSt.message}`);
+          if (eSt) toast.error(`${trI18n("ปรับสต็อก")} "${usable.find(x => x.part_id === pid)?.name || parts.find(x => x.id === pid)?.name || ''}" ${trI18n("ไม่สำเร็จ")}: ${eSt.message}`);
         }
       } else if (stage === 'accept_work') {
         const s = await resolveSign('checker_sign'); if (!s) { setSaving(false); return toast.error('ลงลายเซ็นผู้ตรวจ'); }
@@ -4318,7 +4323,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
            จะถูกดึงกลับมารอ QA ใหม่ทั้งที่เดินไปขั้น 6-7 แล้ว */
         // ไม่เช็คผล = ขึ้น "บันทึกแล้ว" ทั้งที่ใบยังอยู่ขั้นเดิม + ยิง Telegram ด้วยแถวเก่า (audit 2026-09-02)
         { const { error: eUpdN } = await supabaseDR.from('mtn_orders').update(upd).eq('id', o.id);
-          if (eUpdN) { setSaving(false); return toast.error('บันทึกไม่สำเร็จ: ' + eUpdN.message); } }
+          if (eUpdN) { setSaving(false); return toast.error((trI18n('บันทึกไม่สำเร็จ') + ': ') + eUpdN.message); } }
       } else if (stage === 'qa') {
         const s = await resolveSign('qa_sign'); if (!s) { setSaving(false); return toast.error('ลงลายเซ็น QA'); }
         // QA ตรวจจริง = ยืนยันว่าใบนี้ "เกี่ยวกับคุณภาพ" (ช่องนี้เป็นคำตอบของ QA ตั้งแต่ 2026-09-14
@@ -4327,12 +4332,12 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
         // รูป QA ก็ห้ามลากทั้งใบล้มเหมือนกัน (เหตุผลเดียวกับรูปหลังซ่อมในขั้น 3)
         if (qaFile) {
           try { const b = await resizeMoImage(qaFile); upd.qa_img = await uploadMtnImg(b, `qa/${o.id}-${Date.now()}.${imgExt(b)}`); }
-          catch (e) { toast.error(`บันทึกผลคุณภาพแล้ว แต่แนบรูปไม่สำเร็จ — ${e.message || e}`); }
+          catch (e) { toast.error(`${trI18n("บันทึกผลคุณภาพแล้ว แต่แนบรูปไม่สำเร็จ")} — ${e.message || e}`); }
         }
         if (!editMode) { upd.status = 'qa'; upd.current_step = step; upd.qa_at = new Date().toISOString(); }
         // ไม่เช็คผล = ขึ้น "บันทึกแล้ว" ทั้งที่ใบยังอยู่ขั้นเดิม + ยิง Telegram ด้วยแถวเก่า (audit 2026-09-02)
         { const { error: eUpdN } = await supabaseDR.from('mtn_orders').update(upd).eq('id', o.id);
-          if (eUpdN) { setSaving(false); return toast.error('บันทึกไม่สำเร็จ: ' + eUpdN.message); } }
+          if (eUpdN) { setSaving(false); return toast.error((trI18n('บันทึกไม่สำเร็จ') + ': ') + eUpdN.message); } }
       } else if (stage === 'handover') {
         const s = await resolveSign('ho_sign'); if (!s) { setSaving(false); return toast.error('ลงลายเซ็น'); }
         { const sat = {}; SAT_DIMS.forEach(d => { const v = Number(f.satisfaction?.[d.key]); if (v >= 1 && v <= 3) sat[d.key] = v; });
@@ -4347,7 +4352,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
         if (!editMode) { upd.status = 'handover'; upd.current_step = step; upd.ho_at = new Date().toISOString(); }
         // ไม่เช็คผล = ขึ้น "บันทึกแล้ว" ทั้งที่ใบยังอยู่ขั้นเดิม + ยิง Telegram ด้วยแถวเก่า (audit 2026-09-02)
         { const { error: eUpdN } = await supabaseDR.from('mtn_orders').update(upd).eq('id', o.id);
-          if (eUpdN) { setSaving(false); return toast.error('บันทึกไม่สำเร็จ: ' + eUpdN.message); } }
+          if (eUpdN) { setSaving(false); return toast.error((trI18n('บันทึกไม่สำเร็จ') + ': ') + eUpdN.message); } }
       } else if (stage === 'mtn_head') {
         /* ขั้น 6 ของใบ MTN = **หัวหน้าแผนกช่าง ตรวจสอบงานหลังแก้ไข** (ช่องเซ็นที่ 5 ของฟอร์ม)
            ⚠️ ยังไม่ปิดใบ — status คง `handover` · ตัวบอกว่าผ่านขั้นนี้คือ `mtn_head_at` */
@@ -4355,7 +4360,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
         Object.assign(upd, { mtn_head_name: f.mtn_head_name || fullName || null, mtn_head_sign: s });
         if (!editMode) { upd.current_step = step; upd.mtn_head_at = new Date().toISOString(); }
         { const { error: eUpdN } = await supabaseDR.from('mtn_orders').update(upd).eq('id', o.id);
-          if (eUpdN) { setSaving(false); return toast.error('บันทึกไม่สำเร็จ: ' + eUpdN.message); } }
+          if (eUpdN) { setSaving(false); return toast.error((trI18n('บันทึกไม่สำเร็จ') + ': ') + eUpdN.message); } }
       } else if (stage === 'mtn_approve') {
         /* ขั้น 7 ของใบ MTN = **ผจก.ช่างอนุมัติ** (ช่อง "รับรองโดย (ผจก.ส่วนซ่อมบำรุง)" = approver_*)
            ⚠️ ยังไม่ปิดใบ — คนปิดคือ ผจก.ฝ่ายที่แจ้ง ขั้น 8 (คำสั่ง user 22/09) */
@@ -4363,7 +4368,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
         Object.assign(upd, { approver_name: f.approver_name || fullName || null, approve_sign: s });
         if (!editMode) { upd.current_step = step; upd.approve_at = new Date().toISOString(); }
         { const { error: eUpdN } = await supabaseDR.from('mtn_orders').update(upd).eq('id', o.id);
-          if (eUpdN) { setSaving(false); return toast.error('บันทึกไม่สำเร็จ: ' + eUpdN.message); } }
+          if (eUpdN) { setSaving(false); return toast.error((trI18n('บันทึกไม่สำเร็จ') + ': ') + eUpdN.message); } }
       } else if (stage === 'cost_mgr_close') {
         /* ขั้น 8 ของใบ MTN = **ผจก.ฝ่ายที่แจ้งอนุมัติ = ปิดใบ** (ช่อง "ผู้จัดการ" ท้ายใบ = cost_mgr_*)
            ลายเซ็นจุดสุดท้ายของ 7 จุดตาม WI — ปิดแล้วสถานะเป็น closed */
@@ -4371,14 +4376,14 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
         Object.assign(upd, { cost_mgr_name: f.cost_mgr_name || fullName || null, cost_mgr_sign: s, extra_comment: f.extra_comment || null });
         if (!editMode) { upd.status = 'closed'; upd.current_step = step; upd.cost_mgr_at = new Date().toISOString(); }
         { const { error: eUpdN } = await supabaseDR.from('mtn_orders').update(upd).eq('id', o.id);
-          if (eUpdN) { setSaving(false); return toast.error('บันทึกไม่สำเร็จ: ' + eUpdN.message); } }
+          if (eUpdN) { setSaving(false); return toast.error((trI18n('บันทึกไม่สำเร็จ') + ': ') + eUpdN.message); } }
       } else if (stage === 'close') {
         const s = await resolveSign('approve_sign'); if (!s) { setSaving(false); return toast.error('ลงลายเซ็นผู้อนุมัติ'); }
         Object.assign(upd, { approver_name: f.approver_name, approve_sign: s });
         if (!editMode) { upd.status = 'closed'; upd.current_step = step; upd.approve_at = new Date().toISOString(); }
         // ไม่เช็คผล = ขึ้น "บันทึกแล้ว" ทั้งที่ใบยังอยู่ขั้นเดิม + ยิง Telegram ด้วยแถวเก่า (audit 2026-09-02)
         { const { error: eUpdN } = await supabaseDR.from('mtn_orders').update(upd).eq('id', o.id);
-          if (eUpdN) { setSaving(false); return toast.error('บันทึกไม่สำเร็จ: ' + eUpdN.message); } }
+          if (eUpdN) { setSaving(false); return toast.error((trI18n('บันทึกไม่สำเร็จ') + ': ') + eUpdN.message); } }
       }
       // ลบไฟล์เก่าที่ถูกแทนที่ (รูปก่อน/หลัง/QA + ลายเซ็นต่อขั้น) — ลบหลัง DB update สำเร็จเท่านั้น + best-effort
       // ไม่งั้นแก้ไขหลังบันทึกทีไร ไฟล์เดิมกำพร้าค้างใน bucket mtn-images ทุกครั้ง (QC audit 2026-08-03)
@@ -4404,8 +4409,8 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
         if (!editMode && fresh?.status === 'closed') {
           const snapRes = await saveMoSnapshot(fresh);
           if (!snapRes.ok) {
-            toast.error('ปิดใบแล้ว แต่เก็บบันทึกต้นฉบับไม่สำเร็จ — ' + snapRes.reason
-              + ' · ใบที่พิมพ์จะเขียนกำกับว่าเป็นข้อมูลปัจจุบัน');
+            toast.error((trI18n('ปิดใบแล้ว แต่เก็บบันทึกต้นฉบับไม่สำเร็จ') + ' — ') + snapRes.reason
+              + (' · ' + trI18n('ใบที่พิมพ์จะเขียนกำกับว่าเป็นข้อมูลปัจจุบัน')));
           }
         }
         /* 🧾 ปิดใบสมบูรณ์ = ลบไฟล์ใบเสนอราคาทิ้ง (18/11 · คำสั่ง user "ปิดใบแบบสมบูรณ์ละลบได้เลย")
@@ -4416,7 +4421,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
            🔴 เงื่อนไข "ปิดสมบูรณ์" ตัดสินที่ `prQuote.js` ที่เดียว ห้ามเทียบ status เองที่นี่ */
         if (!editMode && fresh?.status === 'closed') {
           const q = await purgeMoQuotes(fresh);
-          if (!q.ok) toast.error('ปิดใบแล้ว แต่ลบไฟล์ใบเสนอราคาไม่สำเร็จ — ' + q.reason);
+          if (!q.ok) toast.error((trI18n('ปิดใบแล้ว แต่ลบไฟล์ใบเสนอราคาไม่สำเร็จ') + ' — ') + q.reason);
           else if (q.purged) toast.success(q.reason);
         }
         const ev = skipQa ? 'mtn_qa_skipped' : isReject ? 'mtn_returned' : stepEventOf(step, isMtnForm);
@@ -4428,7 +4433,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
 
   // หัวโมดัล = stepLabel() ตัวเดียวกับปุ่มขั้นถัดไป — ห้ามพิมพ์ชื่อขั้นซ้ำที่นี่ (เคยมี map `titles` แล้ว drift)
   return (
-    <ModalShell title={`${o.mo_no || o.item_type || ''} · ${skipQa ? 'ข้าม QA — งานไม่เกี่ยวกับคุณภาพ (ขั้น 5 → 6)' : `${editMode ? 'แก้ไข ' : ''}${stripIcon(stepLabel(step, { mtnForm: isMtnForm, toolTeam: isToolTeam }))}`}`} onClose={onClose} dirty={dirty}>
+    <ModalShell title={`${o.mo_no || o.item_type || ''} · ${skipQa ? trI18n('ข้าม QA — งานไม่เกี่ยวกับคุณภาพ (ขั้น 5 → 6)') : `${editMode ? trI18n('แก้ไข ') : ''}${stripIcon(stepLabel(step, { mtnForm: isMtnForm, toolTeam: isToolTeam }))}`}`} onClose={onClose} dirty={dirty}>
       <div style={{ display: 'grid', gap: 12 }}>
         {/* 🛒 ด่านลูป PR — เขียนบนจอ **ก่อน**กดเซ็น ไม่ใช่ให้กรอกครบแล้วค่อยเด้ง (10/11 · คำสั่ง user)
             ทางแก้ต้องอยู่ในข้อความ (ไปทำที่ไหน ใครทำได้) ไม่ใช่บอกแค่ว่าทำไม่ได้ */}
@@ -4447,17 +4452,17 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
           </NoticeBar>
         )}
         {stepMeta(step, { mtnForm: isMtnForm, toolTeam: isToolTeam }) && !skipQa && (
-          <div style={{ fontSize: 11.5, color: 'var(--muted)', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '6px 10px' }}>
-            ขั้นนี้เป็นหน้าที่ของ <b style={{ color: 'var(--text2)' }}>{stepMeta(step, { mtnForm: isMtnForm, toolTeam: isToolTeam }).who}</b>
+          <div style={{ fontSize: 11.5, color: 'var(--muted)', background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '6px 10px' }}>
+            {trI18n("ขั้นนี้เป็นหน้าที่ของ")} <b style={{ color: 'var(--text2)' }}>{stepMeta(step, { mtnForm: isMtnForm, toolTeam: isToolTeam }).who}</b>
             {stepMeta(step, { mtnForm: isMtnForm, toolTeam: isToolTeam }).byReporter && (o.reported_by_name || o.reporter_prod) ? <> {trI18n('· ใบนี้เปิดโดย')} <b style={{ color: 'var(--text2)' }}>{o.reported_by_name || o.reporter_prod}</b></> : null}
           </div>
         )}
         {modalStage === 'report' && <>
-          <div style={{ fontSize: 12, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 11px', lineHeight: 1.6 }}>
+          <div style={{ fontSize: 12, background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 11px', lineHeight: 1.6 }}>
             ✏️ <b>{trI18n('แก้ได้เฉพาะ 3 ช่องนี้')}</b> — รูปปัญหา · รายละเอียดปัญหา · ระบุเพิ่มเติม
             <div style={{ color: 'var(--muted)', marginTop: 2 }}>
-              ไลน์ · เครื่อง · ลักษณะปัญหา · ผู้แจ้ง · ทีมช่าง <b style={{ color: 'var(--text2)' }}>{trI18n('ล็อกไว้')}</b> —
-              ใบออกเลข MO แล้วแก้ของพวกนี้ทำให้สอบกลับเพี้ยน · แจ้งผิดแผนกให้ใช้ <b>{trI18n('ตีกลับ')}</b> {trI18n('หรือ')} <b>{trI18n('ส่งต่องาน')}</b>
+              {trI18n("ไลน์ · เครื่อง · ลักษณะปัญหา · ผู้แจ้ง · ทีมช่าง")} <b style={{ color: 'var(--text2)' }}>{trI18n('ล็อกไว้')}</b> —
+              {trI18n("ใบออกเลข MO แล้วแก้ของพวกนี้ทำให้สอบกลับเพี้ยน · แจ้งผิดแผนกให้ใช้")} <b>{trI18n('ตีกลับ')}</b> {trI18n('หรือ')} <b>{trI18n('ส่งต่องาน')}</b>
             </div>
           </div>
           {/* 📷 ใบที่เปิดจากการ์ด Downtime ไม่เคยมีช่องแนบรูป ⇒ ตรงนี้คือทางเดียวที่เติมย้อนหลังได้ */}
@@ -4466,11 +4471,11 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
           <Field label={trI18n('ระบุเพิ่มเติม')}><textarea value={f.report_note} onChange={e => set('report_note', e.target.value)} style={{ ...inp, minHeight: 60 }} /></Field>
         </>}
         {modalStage === 'assign' && <>
-          <Field label={`ประเภทงานซ่อม${o.repair_type && !editMode ? ' (ผู้แจ้งระบุมา — แก้ได้ก่อนออกเลข MO)' : ''}`} required><select value={f.repair_type} onChange={e => set('repair_type', e.target.value)} style={inp}>{teamRepairTypes.map(r => <option key={r.id} value={r.name}>{r.name} ({r.prefix})</option>)}</select></Field>
-          {isReject ? <><div style={{ fontSize: 11.5, color: canBounceBack(o) ? 'var(--amber)' : 'var(--red)', background: canBounceBack(o) ? 'var(--amber-dim)' : 'var(--red-dim)', border: `1px solid ${canBounceBack(o) ? 'var(--amber-line)' : 'var(--red-line)'}`, borderRadius: 'var(--r-md)', padding: '7px 10px' }}>{canBounceBack(o) ? '↩️ ตีกลับให้ผู้แจ้ง — ใบจะเด้งกลับหาผู้แจ้งพร้อมเหตุผล ให้แก้แผนกแล้วส่งใหม่ (ไม่ทิ้งใบ · เวลาเริ่มนับใหม่ให้แผนกที่ถูก)' : `⛔ ใบนี้เดินไปถึงขั้น ${o.current_step} แล้ว — ตีกลับไม่ได้ (ผลงาน/ลายเซ็นขั้น 3 เป็นต้นไปจะหายจากใบ) กดบันทึกจะไม่ผ่าน · ถ้าแจ้งผิดแผนกจริง ให้ปิดใบนี้แล้วเปิดใบใหม่ให้ทีมที่ถูก`}</div><Field label={trI18n('เหตุผลที่ตีกลับ (เช่น ผิดแผนก — ควรแจ้ง JIG MTN)')} required><textarea value={f.reject_reason} onChange={e => set('reject_reason', e.target.value)} style={{ ...inp, minHeight: 60 }} /></Field></> : <>
+          <Field label={`${trI18n("ประเภทงานซ่อม")}${o.repair_type && !editMode ? trI18n(' (ผู้แจ้งระบุมา — แก้ได้ก่อนออกเลข MO)') : ''}`} required><select value={f.repair_type} onChange={e => set('repair_type', e.target.value)} style={inp}>{teamRepairTypes.map(r => <option key={r.id} value={r.name}>{r.name} ({r.prefix})</option>)}</select></Field>
+          {isReject ? <><div style={{ fontSize: 11.5, color: canBounceBack(o) ? 'var(--amber)' : 'var(--red)', background: canBounceBack(o) ? 'var(--amber-dim)' : 'var(--red-dim)', border: `1px solid ${canBounceBack(o) ? 'var(--amber-line)' : 'var(--red-line)'}`, borderRadius: 'var(--r-md)', padding: '7px 10px' }}>{canBounceBack(o) ? '↩️ ตีกลับให้ผู้แจ้ง — ใบจะเด้งกลับหาผู้แจ้งพร้อมเหตุผล ให้แก้แผนกแล้วส่งใหม่ (ไม่ทิ้งใบ · เวลาเริ่มนับใหม่ให้แผนกที่ถูก)' : `⛔ ${trI18n("ใบนี้เดินไปถึงขั้น")} ${o.current_step} ${trI18n("แล้ว — ตีกลับไม่ได้ (ผลงาน/ลายเซ็นขั้น 3 เป็นต้นไปจะหายจากใบ) กดบันทึกจะไม่ผ่าน · ถ้าแจ้งผิดแผนกจริง ให้ปิดใบนี้แล้วเปิดใบใหม่ให้ทีมที่ถูก")}`}</div><Field label={trI18n('เหตุผลที่ตีกลับ (เช่น ผิดแผนก — ควรแจ้ง JIG MTN)')} required><textarea value={f.reject_reason} onChange={e => set('reject_reason', e.target.value)} style={{ ...inp, minHeight: 60 }} /></Field></> : <>
             {/* หัวหน้าช่าง = <PersonSelect> (role ซ่อมบำรุง/หัวหน้าขึ้นก่อน) — เก็บชื่อ snapshot เหมือนเดิม · 2026-09-07 */}
             <Field label={trI18n('ผู้รับเรื่อง / จ่ายงาน (หัวหน้าช่าง)')}><PersonSelect value={f.accepted_by} source="both" roles={MTN_HEAD_ROLES} teams={acceptTeams} onChange={res => set('accepted_by', res.name)} inputStyle={{ background: 'var(--bg)' }} /></Field>
-            <Field label={`มอบหมายช่างซ่อม — เลือกได้หลายคน${techGroups.teamKey ? ` (ทีม ${deptNameOf(techGroups.teamKey)})` : ''}`} required>
+            <Field label={`${trI18n("มอบหมายช่างซ่อม — เลือกได้หลายคน")}${techGroups.teamKey ? ` (${trI18n("ทีม")} ${deptNameOf(techGroups.teamKey)})` : ''}`} required>
               <TechMultiPick value={f.assigned_techs} groups={techGroups} onChange={v => set('assigned_techs', v)} />
               {/* ⚠️ ไม่มีช่างในทีมของใบเลย = ต้องบอกว่าเพราะอะไรและแก้ที่ไหน ห้ามปล่อยให้ไล่หาเอง
                   เคสที่เจอจริง: ช่างฝ่ายผลิตยังไม่ถูกติ๊ก employees.mtn_team จึงไม่โผล่สักคน */}
@@ -4491,7 +4496,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
                 <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 2 }}>{trI18n('ระบุชื่อเท่านั้น — ช่องนี้จะขึ้น “รอรับทราบ” จนกว่า ผจก. คนนั้นจะ login มากดรับทราบเอง (ลายเซ็น/วันที่มาตอนนั้น)')}</div>
               </Field>
             )}
-            {!editMode && <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{trI18n('เมื่อบันทึก ระบบจะออกเลข MO ให้อัตโนมัติ (')}{isMtnForm ? 'MTN.ปี/เดือน-ลำดับ (รีเซ็ตทุกเดือน ตามฟอร์มกระดาษ)' : `${repairTypes.find(r => r.name === f.repair_type)?.prefix}-DDMMYY-ลำดับ`})</div>}
+            {!editMode && <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{trI18n('เมื่อบันทึก ระบบจะออกเลข MO ให้อัตโนมัติ (')}{isMtnForm ? 'MTN.ปี/เดือน-ลำดับ (รีเซ็ตทุกเดือน ตามฟอร์มกระดาษ)' : `${repairTypes.find(r => r.name === f.repair_type)?.prefix}-DDMMYY-${trI18n("ลำดับ")}`})</div>}
           </>}
         </>}
         {modalStage === 'service' && <>
@@ -4499,8 +4504,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
             <Field label={trI18n('วันเวลาที่เริ่มลงมือซ่อม')}>
               <input type="datetime-local" value={f.repair_start_at} onChange={e => set('repair_start_at', e.target.value)} max={localDtNow()} style={inp} />
               <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-                ว่าง = ถือว่าเริ่มตอนรับงาน · ฟอร์มกระดาษแยก “วันที่รับแจ้ง / รับ MO / เริ่มซ่อม” คนละช่อง
-                — ค่านี้ทำให้แยก <b>{trI18n('เวลารอช่าง')}</b> {trI18n('ออกจาก')} <b>{trI18n('เวลาซ่อมจริง')}</b> ได้
+                {trI18n("ว่าง = ถือว่าเริ่มตอนรับงาน · ฟอร์มกระดาษแยก “วันที่รับแจ้ง / รับ MO / เริ่มซ่อม” คนละช่อง — ค่านี้ทำให้แยก")} <b>{trI18n('เวลารอช่าง')}</b> {trI18n('ออกจาก')} <b>{trI18n('เวลาซ่อมจริง')}</b> {trI18n("ได้")}
               </div>
             </Field>
             <Field label={trI18n('สาเหตุเกิดจาก')}>
@@ -4533,7 +4537,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
               {laborState === 'loading' && <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>{trI18n('กำลังโหลดค่าแรงเดิมของใบนี้…')}</div>}
               {laborState === 'error' && (
                 <div role="alert" style={{ fontSize: 12, color: 'var(--red)', fontWeight: 700, marginBottom: 6 }}>
-                  ⚠️ โหลดค่าแรงเดิมไม่สำเร็จ ({laborErr}{trI18n(') — ยังบันทึกขั้นนี้ไม่ได้ (กันค่าแรงเดิมหาย)')}{' '}
+                  ⚠️ {trI18n("โหลดค่าแรงเดิมไม่สำเร็จ")} ({laborErr}{trI18n(') — ยังบันทึกขั้นนี้ไม่ได้ (กันค่าแรงเดิมหาย)')}{' '}
                   <button type="button" onClick={loadLabor} style={{ ...btnGhost, padding: '2px 8px', fontSize: 12 }}>{trI18n('โหลดใหม่')}</button>
                 </div>
               )}
@@ -4572,7 +4576,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
             {partsState === 'loading' && <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>{trI18n('กำลังโหลดรายการอะไหล่เดิมของใบนี้…')}</div>}
             {partsState === 'error' && (
               <div style={{ fontSize: 12, color: 'var(--red)', background: 'var(--red-dim)', border: '1px solid var(--red-line)', borderRadius: 'var(--r-md)', padding: '6px 9px', marginBottom: 6, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                <span>{trI18n('โหลดรายการอะไหล่เดิมไม่สำเร็จ (')}{partsErr}) — บันทึกไม่ได้จนกว่าจะโหลดติด</span>
+                <span>{trI18n('โหลดรายการอะไหล่เดิมไม่สำเร็จ (')}{partsErr}) — {trI18n("บันทึกไม่ได้จนกว่าจะโหลดติด")}</span>
                 <button type="button" onClick={loadParts} style={{ ...btnGhost, padding: '2px 8px', fontSize: 12 }}>{trI18n('โหลดใหม่')}</button>
               </div>
             )}
@@ -4580,7 +4584,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
               const master = parts.find(x => x.id === p.part_id);
               const over = master && Number(p.qty) > (Number(master.stock_qty) || 0);
               return (
-                <div key={i} style={{ marginBottom: 6, background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 7 }}>
+                <div key={i} style={{ marginBottom: 6, background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 7 }}>
                   <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
                     <SearchSelect
                       style={{ flex: 1, minWidth: 0 }}
@@ -4602,7 +4606,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
                   {/* ⚠️ เบิกเกินสต็อก — RPC mtn_stock_move กันติดลบอยู่แล้ว บอกก่อนกดบันทึกจะได้ไม่เสียเที่ยว */}
                   {over && (
                     <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 4 }}>
-                      ⚠ เบิก {p.qty} {trI18n('แต่คงเหลือ')} {master.stock_qty} {master.unit || ''} — บันทึกไม่ผ่าน ต้องรับเข้าคลังก่อน หรือลดจำนวน
+                      ⚠ {trI18n("เบิก")} {p.qty} {trI18n('แต่คงเหลือ')} {master.stock_qty} {master.unit || ''} — {trI18n("บันทึกไม่ผ่าน ต้องรับเข้าคลังก่อน หรือลดจำนวน")}
                     </div>
                   )}
                 </div>
@@ -4619,7 +4623,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
             </Field>
             <Field label={trI18n('(2) ค่าอะไหล่/อุปกรณ์ (บาท)')}><input type="number" value={f.parts_cost} onChange={e => set('parts_cost', e.target.value)} placeholder="0" style={inp} /></Field>
           </div>
-          <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>รวมค่าใช้จ่าย (1)+(2) = <b style={{ color: 'var(--text)' }}>{((Number(f.labor_cost) || 0) + (Number(f.parts_cost) || 0)).toLocaleString()}</b> {trI18n('บาท · ตั้งราคามาตรฐานที่แท็บ ⚙️ ข้อมูลตั้งต้น → 💰 ค่าแรงมาตรฐาน')}</div>
+          <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{trI18n("รวมค่าใช้จ่าย")} (1)+(2) = <b style={{ color: 'var(--text)' }}>{((Number(f.labor_cost) || 0) + (Number(f.parts_cost) || 0)).toLocaleString()}</b> {trI18n('บาท · ตั้งราคามาตรฐานที่แท็บ ⚙️ ข้อมูลตั้งต้น → 💰 ค่าแรงมาตรฐาน')}</div>
         </>}
         {modalStage === 'accept_work' && <>
           <Field label={isToolTeam ? trI18n('ผลตรวจรับ — ช่างตรวจงานผ่านไหม (ก่อนส่ง QA)') : trI18n('ผลตรวจรับ — ฝ่ายที่แจ้งรับงานได้ไหม')}><select value={f.check_result} onChange={e => set('check_result', e.target.value)} style={inp}>{CHECK_RESULTS.map(r => <option key={r}>{trI18n(r)}</option>)}</select></Field>
@@ -4628,7 +4632,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
               ตอนนี้ทุกใบจอดรอ QA และ **QA เท่านั้น** ที่ตัดสินว่าเกี่ยว/ไม่เกี่ยวกับคุณภาพ (ขั้น 5) */}
           {/* 🔴 ใบที่ QA ไม่อยู่ในลูป (ฟอร์ม MTN · งานสร้าง/ปรับปรุง) ห้ามบอกว่า "จะถูกส่งให้ QA"
                  — คนเซ็นขั้น 4 จะรอ QA ที่ไม่มีวันมา · ขั้นถัดไปจริงอ่านจาก stepLabel() ห้ามพิมพ์ชื่อขั้นเอง */}
-          <div style={{ fontSize: 12, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 12px', lineHeight: 1.55 }}>
+          <div style={{ fontSize: 12, background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 12px', lineHeight: 1.55 }}>
             {qaAppliesTo(o) ? <>
               🧪 <b>{trI18n('ใบนี้จะถูกส่งให้ QA ตรวจรับ (ขั้น 5) ทุกใบ')}</b>
               <div style={{ color: 'var(--muted)', marginTop: 2 }}>
@@ -4639,7 +4643,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
               🚫 <b>{trI18n('ใบนี้ไม่มีขั้นตรวจคุณภาพ (QA) ในลูป')}</b>
               <div style={{ color: 'var(--muted)', marginTop: 2 }}>
                 {isMtnForm ? 'ใบซ่อมของทีม MTN (FM-MTN-006) เดินตามลำดับลายเซ็นของฟอร์มนี้ซึ่งไม่มีช่อง QA' : 'งานสร้าง/ปรับปรุง ไม่ใช่งานซ่อมของที่กำลังผลิต จึงไม่ต้องตรวจคุณภาพหลังซ่อม'} —
-                เซ็นแล้วใบไปที่ <b style={{ color: 'var(--text2)' }}>{stepLabel(nextStepOf({ ...o, status: 'checked' }) ?? (isMtnForm ? 5 : 6), { mtnForm: isMtnForm, toolTeam: isToolTeam })}</b> ต่อทันที
+                {trI18n("เซ็นแล้วใบไปที่")} <b style={{ color: 'var(--text2)' }}>{stepLabel(nextStepOf({ ...o, status: 'checked' }) ?? (isMtnForm ? 5 : 6), { mtnForm: isMtnForm, toolTeam: isToolTeam })}</b> {trI18n("ต่อทันที")}
               </div>
             </>}
           </div>
@@ -4654,7 +4658,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
         </>}
         {skipQa && <>
           <Field label={trI18n('เหตุผลที่ไม่ต้องให้ QA ตรวจ (เช่น ซ่อมไฟ/ลม/โครงสร้าง ไม่แตะจุดที่กระทบชิ้นงาน)')} required><textarea value={f.qa_skip_reason} onChange={e => set('qa_skip_reason', e.target.value)} style={{ ...inp, minHeight: 64 }} /></Field>
-          <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{trI18n('ผู้ยืนยัน:')} <b style={{ color: 'var(--text2)' }}>{fullName || '—'}</b> {trI18n('· ผลตรวจรับขั้น 4 (')}{o.check_result || '—'} · {o.checker_name || '—'}) คงเดิม ไม่ต้องเซ็นใหม่</div>
+          <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{trI18n('ผู้ยืนยัน:')} <b style={{ color: 'var(--text2)' }}>{fullName || '—'}</b> {trI18n('· ผลตรวจรับขั้น 4 (')}{o.check_result || '—'} · {o.checker_name || '—'}) {trI18n("คงเดิม ไม่ต้องเซ็นใหม่")}</div>
         </>}
         {modalStage === 'qa' && !skipQa && <>
           <Field label={trI18n('คุณภาพหลังการแก้ไข')}><select value={f.qa_result} onChange={e => set('qa_result', e.target.value)} style={inp}>{QA_RESULTS.map(r => <option key={r}>{trI18n(r)}</option>)}</select></Field>
@@ -4720,16 +4724,16 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
                เดิมโมดัลขั้นปิดใบมีแค่ช่องชื่อ+ความคิดเห็น ⇒ คนเซ็นอนุมัติค่าใช้จ่ายโดยไม่เห็นค่าใช้จ่าย
                🔴 โหลดไม่ติดต้องเขียนบนจอ ห้ามโชว์ยอดว่างเฉยๆ (ลิสต์ว่าง 2 ความหมาย) */}
         {CLOSE_STAGES.includes(modalStage) && (
-          <div style={{ fontSize: 12.5, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 10px', lineHeight: 1.6 }}>
+          <div style={{ fontSize: 12.5, background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 10px', lineHeight: 1.6 }}>
             <div style={{ fontWeight: 800, marginBottom: 4 }}>{trI18n('ค่าใช้จ่ายของใบนี้')}</div>
             {partsState === 'loading' && <div style={{ color: 'var(--muted)' }}>{trI18n('กำลังโหลดรายการอะไหล่…')}</div>}
-            {partsState === 'error' && <div style={{ color: 'var(--red)' }}>{trI18n('โหลดรายการอะไหล่ไม่สำเร็จ (')}{partsErr}) — ยอดอะไหล่ข้างล่างอาจไม่ครบ</div>}
+            {partsState === 'error' && <div style={{ color: 'var(--red)' }}>{trI18n('โหลดรายการอะไหล่ไม่สำเร็จ (')}{partsErr}) — {trI18n("ยอดอะไหล่ข้างล่างอาจไม่ครบ")}</div>}
             {partsState === 'ok' && (usedParts.length
               ? <div style={{ color: 'var(--text2)' }}>{trI18n('อะไหล่')} {usedParts.length} {trI18n('รายการ:')} {usedParts.map(x => `${x.name} ×${x.qty}${x.unit || ''}`).join(', ')}</div>
               : <div style={{ color: 'var(--muted)' }}>{trI18n('ไม่มีการเบิกอะไหล่ในใบนี้')}</div>)}
             <div style={{ marginTop: 2 }}>
-              ค่าแรง <b>{o.labor_cost == null ? '—' : Number(o.labor_cost).toLocaleString()}</b> {trI18n('+ อะไหล่')} <b>{o.parts_cost == null ? '—' : Number(o.parts_cost).toLocaleString()}</b>
-              {(o.labor_cost != null || o.parts_cost != null) && <> = <b style={{ color: 'var(--accent2)' }}>{((Number(o.labor_cost) || 0) + (Number(o.parts_cost) || 0)).toLocaleString()}</b></>} บาท
+              {trI18n("ค่าแรง")} <b>{o.labor_cost == null ? '—' : Number(o.labor_cost).toLocaleString()}</b> {trI18n('+ อะไหล่')} <b>{o.parts_cost == null ? '—' : Number(o.parts_cost).toLocaleString()}</b>
+              {(o.labor_cost != null || o.parts_cost != null) && <> = <b style={{ color: 'var(--accent2)' }}>{((Number(o.labor_cost) || 0) + (Number(o.parts_cost) || 0)).toLocaleString()}</b></>} {trI18n("บาท")}
             </div>
           </div>
         )}
@@ -4773,7 +4777,7 @@ function MasterAuditLog({ teams = [] }) {
       client={supabaseDR}
       tables={Object.keys(AUDIT_TABLES)}
       fmtValue={(f, v) => ((f === 'team' || f === 'dept') && v !== undefined ? teamName(v) : undefined)}
-      intro={<>{trI18n('📜 ใครแก้อะไรใน')}<b>{trI18n('ข้อมูลตั้งต้นของทีมช่าง')}</b> — เรียงใหม่สุดก่อน · บันทึกอัตโนมัติทุกครั้งที่เพิ่ม/แก้/ลบ
+      intro={<>{trI18n('📜 ใครแก้อะไรใน')}<b>{trI18n('ข้อมูลตั้งต้นของทีมช่าง')}</b> — {trI18n("เรียงใหม่สุดก่อน · บันทึกอัตโนมัติทุกครั้งที่เพิ่ม/แก้/ลบ")}
         <br /><span style={{ opacity: 0.85 }}>{trI18n('อยากดูของทั้งระบบ (สิทธิ์ · พนักงาน · สินค้า · เครื่องจักร …) ไปที่')} <b>{trI18n('ตั้งค่าโปรแกรม,ฐานข้อมูล → 📜 ประวัติการแก้ไขข้อมูล')}</b></span></>}
     />
   );
@@ -4791,7 +4795,7 @@ function MasterTab({ techs, parts, problemTypes, itemTypes, repairTypes = [], la
     const label = DEPT_OWNED[table];
     if (!label) return true;
     const row = (table === 'mtn_technicians' ? techs : laborRates).find(x => x.id === id);
-    const own = teamRowOwner({ team: row?.dept }, { myTeams: userTeams, role });
+    const own = teamRowOwner({ team: row?.dept }, { myTeams: userTeams, role, allUnits });
     if (own.ok) return true;
     toast.info(teamRowLockNote({ team: row?.dept }, own.code));
     return false;
@@ -4811,15 +4815,15 @@ function MasterTab({ techs, parts, problemTypes, itemTypes, repairTypes = [], la
     const byTeam = {};
     for (const r of rows) { const k = teamKeyOf(r.mtn_dept) || ''; byTeam[k] = (byTeam[k] || 0) + 1; }
     const brk = Object.entries(byTeam).sort((a, b) => b[1] - a[1])
-      .map(([k, n]) => `   · ${k ? (deptNameOf(k) || k) : 'ไม่ระบุทีม'} ${n} ใบ`).join('\n');
+      .map(([k, n]) => `   · ${k ? (deptNameOf(k) || k) : trI18n('ไม่ระบุทีม')} ${n} ${trI18n("ใบ")}`).join('\n');
     const okGo = await askConfirm(
-      `มีใบแจ้งซ่อม ${count} ใบที่บันทึกค่าเดิมไว้ว่า "${oldV}"\n${brk}\n\n` +
-      (Object.keys(byTeam).length > 1 ? `⚠️ ใบเหล่านี้อยู่หลายทีม — แก้แล้วประวัติของทุกทีมข้างบนเปลี่ยนตาม\n\n` : '') +
-      `[ตกลง] = แก้ใบเหล่านั้นเป็น "${newV}" ด้วย → KPI/พาเรโต้รวมเป็นกลุ่มเดียว\n` +
-      `[ยกเลิก] = เก็บใบเดิมไว้ตามที่บันทึกวันนั้น → พาเรโต้จะแยกเป็น 2 กลุ่ม`);
+      `${trI18n("มีใบแจ้งซ่อม")} ${count} ${trI18n("ใบที่บันทึกค่าเดิมไว้ว่า")} "${oldV}"\n${brk}\n\n` +
+      (Object.keys(byTeam).length > 1 ? `⚠️ ${trI18n("ใบเหล่านี้อยู่หลายทีม — แก้แล้วประวัติของทุกทีมข้างบนเปลี่ยนตาม")}\n\n` : '') +
+      `[${trI18n("ตกลง] = แก้ใบเหล่านั้นเป็น")} "${newV}" ${trI18n("ด้วย → KPI/พาเรโต้รวมเป็นกลุ่มเดียว")}\n` +
+      `[${trI18n("ยกเลิก] = เก็บใบเดิมไว้ตามที่บันทึกวันนั้น → พาเรโต้จะแยกเป็น 2 กลุ่ม")}`);
     if (!okGo) return;
     const { error } = await supabaseDR.from('mtn_orders').update({ [col]: newV }).eq(col, oldV);
-    if (error) toast.error(error.message); else toast.success(`อัปเดตใบซ่อม ${count} ใบตามชื่อใหม่แล้ว`);
+    if (error) toast.error(error.message); else toast.success(`${trI18n("อัปเดตใบซ่อม")} ${count} ${trI18n("ใบตามชื่อใหม่แล้ว")}`);
   };
 
   /* 🔴 ลบ = `is_active=false` (update) ⇒ ด่าน `%:delete` ฝั่ง DB มองไม่เห็น
@@ -4859,7 +4863,7 @@ function MasterTab({ techs, parts, problemTypes, itemTypes, repairTypes = [], la
         <div key={dep} style={{ marginBottom: 10 }}>
           <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--accent2)', marginBottom: 4 }}>{dep} ({list.length})</div>
           <div style={{ display: 'grid', gap: 6 }}>{list.map(it => it.from_employee ? (
-            <div key={it.id} style={{ ...techRowGrid, background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 10px', opacity: 0.9 }}>
+            <div key={it.id} style={{ ...techRowGrid, background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 10px', opacity: 0.9 }}>
               <span style={{ fontSize: 13, minWidth: 0 }}>{it.name}{it.emp_code ? <span style={{ color: 'var(--muted)', fontSize: 11 }}> · {it.emp_code}</span> : null}</span>
               <span />
               <span style={{ fontSize: 11, padding: '1px 7px', borderRadius: 'var(--r-xs)', background: 'var(--blue-dim)', color: 'var(--blue)', border: '1px solid var(--blue-line)', fontWeight: 700, justifySelf: 'start' }}>{trI18n('จากฐานพนักงาน')}</span>
@@ -4867,7 +4871,7 @@ function MasterTab({ techs, parts, problemTypes, itemTypes, repairTypes = [], la
               <span />
             </div>
           ) : (
-            <div key={it.id} style={{ ...techRowGrid, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 10px' }}>
+            <div key={it.id} style={{ ...techRowGrid, background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 10px' }}>
               <input defaultValue={it.name} onBlur={e => e.target.value !== it.name && updRow('mtn_technicians', it.id, { name: e.target.value })} style={{ ...inp, width: '100%', minWidth: 0 }} />
               <select defaultValue={teamKeyOf(it.dept) || 'maintenance'} onChange={e => updRow('mtn_technicians', it.id, { dept: e.target.value })} style={{ ...inp, width: '100%', minWidth: 0 }}><TeamOpts list={mtnDepts} /></select>
               <span style={{ fontSize: 11, color: 'var(--muted)' }}>{trI18n('เฉพาะกิจ')}</span>
@@ -4905,7 +4909,7 @@ function MasterTab({ techs, parts, problemTypes, itemTypes, repairTypes = [], la
       </div>
       <div style={{ display: 'grid', gap: 6 }}>
         {laborRates.map(r => (
-          <div key={r.id} style={{ ...laborRowGrid, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 10px' }}>
+          <div key={r.id} style={{ ...laborRowGrid, background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 10px' }}>
             <input defaultValue={r.name} onBlur={e => e.target.value !== r.name && updRow('mtn_labor_rates', r.id, { name: e.target.value })} style={{ ...inp, width: '100%', minWidth: 0 }} />
             <input type="number" defaultValue={r.price} onBlur={e => Number(e.target.value) !== Number(r.price) && updRow('mtn_labor_rates', r.id, { price: Number(e.target.value) || 0 })} style={{ ...inp, width: '100%', minWidth: 0 }} />
             <input defaultValue={r.unit || ''} onBlur={e => e.target.value !== (r.unit || '') && updRow('mtn_labor_rates', r.id, { unit: e.target.value })} style={{ ...inp, width: '100%', minWidth: 0 }} />
@@ -4940,16 +4944,16 @@ function MasterTab({ techs, parts, problemTypes, itemTypes, repairTypes = [], la
          · แถว 🌐 ใช้ร่วมทุกทีม   → เฉพาะ admin/manager (แก้ทีเดียวกระทบทุกทีม)
        ⚠️ fallback สำคัญ: user ที่ยังไม่ได้ตั้ง `profiles.mtn_teams` = ไม่ล็อก
           ไม่งั้นวันที่ deploy ช่างที่ยังไม่ถูกตั้งทีมจะแก้อะไรไม่ได้ทั้งระบบ */
-    const isBoss = role === 'admin' || role === 'manager';
+    const isBoss = role === 'admin' || allUnits === true;   // 13/11: บอส = ใบผ่านรายคน ไม่ใช่ชื่อ role
     const myKeys = (userTeams || []).map(teamKeyOf).filter(Boolean);
     const unscoped = myKeys.length === 0;   // ยังไม่ตั้งทีม = ไม่ล็อก (ใช้ต่อในแถวเพิ่ม/ช่องเลือกทีม)
     const teamNameOf = (k) => (k ? (teamOpts.find(t => teamKeyOf(t.key) === teamKeyOf(k))?.dept_name || deptNameOf(k) || k) : '🌐 ใช้ร่วมทุกทีม');
     /* ตรรกะย้ายไปของกลาง `utils/mtnTeamOwn.js` แล้ว (2026-10-14) — คลังอะไหล่ใช้ตัวเดียวกัน
        ห้ามก๊อปเงื่อนไขกลับมาเขียนในหน้า (กฎ "แก้กฎที่เดียว") */
-    const canEditRow = (r) => !teamed || teamRowOwner(r, { myTeams: userTeams, role }).ok;
+    const canEditRow = (r) => !teamed || teamRowOwner(r, { myTeams: userTeams, role, allUnits }).ok;
     const lockNote = (r) => {
       const t = teamKeyOf(r?.team);
-      return t ? `รายการนี้เป็นของทีม ${teamNameOf(t)} — แก้ได้เฉพาะทีมนั้นหรือหัวหน้า`
+      return t ? `${trI18n("รายการนี้เป็นของทีม")} ${teamNameOf(t)} — ${trI18n("แก้ได้เฉพาะทีมนั้นหรือหัวหน้า")}`
         : 'รายการนี้ทุกทีมใช้ร่วมกัน — แก้ได้เฉพาะหัวหน้า (แก้ทีเดียวกระทบทุกทีม)';
     };
     // เปลี่ยนทีมของแถว = ของหายจากลิสต์ทีมเดิมทันที → ต้องบอกก่อนเสมอ ห้ามเงียบ
@@ -4957,10 +4961,10 @@ function MasterTab({ techs, parts, problemTypes, itemTypes, repairTypes = [], la
       const from = teamKeyOf(it.team), to = teamKeyOf(v) || null;
       if (from === to) return;
       const msg = !from
-        ? `ตอนนี้ "${it[fields[0].k]}" ทุกทีมใช้ร่วมกัน\n\nเปลี่ยนเป็นของทีม "${teamNameOf(to)}" แล้ว\n→ ทีมอื่นจะไม่เห็นรายการนี้ในฟอร์มแจ้งซ่อมอีก`
+        ? `${trI18n("ตอนนี้")} "${it[fields[0].k]}" ${trI18n("ทุกทีมใช้ร่วมกัน\\n\\nเปลี่ยนเป็นของทีม")} "${teamNameOf(to)}" ${trI18n("แล้ว\\n→ ทีมอื่นจะไม่เห็นรายการนี้ในฟอร์มแจ้งซ่อมอีก")}`
         : to
-          ? `ย้าย "${it[fields[0].k]}"\nจากทีม "${teamNameOf(from)}" → "${teamNameOf(to)}"\n\n→ ทีมเดิมจะไม่เห็นรายการนี้อีก`
-          : `เปลี่ยน "${it[fields[0].k]}" เป็นของกลาง (ทุกทีมใช้ร่วมกัน)\n\n→ ทุกทีมจะเห็นรายการนี้ และแก้ได้เฉพาะหัวหน้า`;
+          ? `${trI18n("ย้าย")} "${it[fields[0].k]}"\n${trI18n("จากทีม")} "${teamNameOf(from)}" → "${teamNameOf(to)}"\n\n→ ${trI18n("ทีมเดิมจะไม่เห็นรายการนี้อีก")}`
+          : `${trI18n("เปลี่ยน")} "${it[fields[0].k]}" ${trI18n("เป็นของกลาง (ทุกทีมใช้ร่วมกัน)\\n\\n→ ทุกทีมจะเห็นรายการนี้ และแก้ได้เฉพาะหัวหน้า")}`;
       if (!await askConfirm(msg + '\n\nยืนยัน?')) return;
       updRow(table, it.id, { team: to });
     };
@@ -5013,7 +5017,7 @@ function MasterTab({ techs, parts, problemTypes, itemTypes, repairTypes = [], la
           </FilterBar>
         )}
         {teamed && !isBoss && (
-          <div style={{ fontSize: 11.5, color: 'var(--muted)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '7px 10px', marginBottom: 10 }}>
+          <div style={{ fontSize: 11.5, color: 'var(--muted)', background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '7px 10px', marginBottom: 10 }}>
             {unscoped
               ? '⚠️ บัญชีนี้ยังไม่ได้ตั้ง "ทีมช่างซ่อม" ที่หน้าจัดการผู้ใช้งาน — ตอนนี้จึงยังแก้ได้ทุกรายการ · ตั้งทีมแล้วระบบจะล็อกให้แก้ได้เฉพาะของทีมตัวเอง'
               : <>{trI18n('🔒 แก้ได้เฉพาะรายการของทีม')} <b>{myKeys.map(teamNameOf).join(' · ')}</b> {trI18n('— ของทีมอื่นและรายการ 🌐 ใช้ร่วมทุกทีม ดูได้อย่างเดียว (แก้ทีเดียวกระทบทุกทีม ต้องให้หัวหน้าแก้)')}</>}
@@ -5022,7 +5026,7 @@ function MasterTab({ techs, parts, problemTypes, itemTypes, repairTypes = [], la
         {hasGroupCol && (gaps.byTeam.length || gaps.dupN
           ? <div style={{ ...warnBox, color: 'var(--accent2)', background: 'var(--bg3)', border: '1px solid var(--accent2)' }}>
               ⚠️ <b>{trI18n('ทะเบียนยังไม่ครบ')}</b>
-              {!!gaps.byTeam.length && <> — {gaps.byTeam.map(([k, n]) => `${teamNameOf(k)} ${n} แถว`).join(' · ')} {trI18n('ยังไม่ได้ตั้ง')}<b>{trI18n('กลุ่มใหญ่')}</b> {trI18n('⇒ ช่างทีมนั้นเปิดฟอร์มแจ้งซ่อมจะเจอกลุ่ม “')}{UNGROUPED_LABEL}{trI18n('” แทนกลุ่มจริง และทุกใบของทีมจะลงกลุ่มเป็นถังขยะ')}</>}
+              {!!gaps.byTeam.length && <> — {gaps.byTeam.map(([k, n]) => `${teamNameOf(k)} ${n} ${trI18n("แถว")}`).join(' · ')} {trI18n('ยังไม่ได้ตั้ง')}<b>{trI18n('กลุ่มใหญ่')}</b> {trI18n('⇒ ช่างทีมนั้นเปิดฟอร์มแจ้งซ่อมจะเจอกลุ่ม “')}{UNGROUPED_LABEL}{trI18n('” แทนกลุ่มจริง และทุกใบของทีมจะลงกลุ่มเป็นถังขยะ')}</>}
               {!!gaps.dupN && <> {gaps.byTeam.length ? '·' : '—'} {trI18n('มี')}<b>{trI18n('หัวข้อย่อยซ้ำ')}</b>{trI18n('ในทีม+กลุ่มเดียวกัน')} {gaps.dupN} {trI18n('ชุด ⇒ คนแจ้งเห็น 2 บรรทัดเหมือนกันใน dropdown เดียว แล้วพาเรโตแตกเป็น 2 แท่ง')}</>}
             </div>
           : <div style={{ ...warnBox, color: 'var(--muted)', background: 'var(--bg3)', border: '1px solid var(--border)' }}>
@@ -5059,10 +5063,10 @@ function MasterTab({ techs, parts, problemTypes, itemTypes, repairTypes = [], la
         </div>
         <div style={{ display: 'grid', gap: 6 }}>{shown.map(it => {
           const ok = canEditRow(it);
-          const ro = { background: 'var(--bg2)', color: 'var(--text2)', cursor: 'default' };
+          const ro = { background: 'var(--bg2-surf)', color: 'var(--text2)', cursor: 'default' };
           return (
           <div key={it.id} title={ok ? undefined : lockNote(it)}
-            style={{ ...rowGrid, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 10px', opacity: ok ? 1 : 0.72 }}>
+            style={{ ...rowGrid, background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 10px', opacity: ok ? 1 : 0.72 }}>
             {fields.map(fl => <input key={fl.k} defaultValue={it[fl.k] || ''} readOnly={!ok} onBlur={ok ? async e => {
               const nv = e.target.value, ov = it[fl.k] || '';
               if (nv === ov) return;
@@ -5151,9 +5155,9 @@ function MasterTab({ techs, parts, problemTypes, itemTypes, repairTypes = [], la
     const tw = canWriteTeam(userTeams, t?.key || t?.dept_name, { role, allUnits });
     if (!tw.ok) { toast.info(teamBlockText(tw, 'เลขเอกสารของทีมนี้')); return; }
     const c = (code || '').trim().toUpperCase(); if (!c || c === (t.mo_code || '')) return;
-    if (!await askConfirm(`เปลี่ยนรหัสทีม ${t.dept_name}: ${t.mo_code || '(ว่าง)'} → ${c}\n\n`
-      + `⚠️ ตัวนับเลขรันผูกกับรหัส — เปลี่ยนแล้วเลขจะ**เริ่มใหม่จาก 1** (ตอนนี้อยู่ที่ ${t.last_seq})\n`
-      + 'และเลขใหม่อาจซ้ำกับใบเก่าที่ออกไปแล้ว · ยืนยันหรือไม่?')) { loadMoSeq(); return; }
+    if (!await askConfirm(`${trI18n("เปลี่ยนรหัสทีม")} ${t.dept_name}: ${t.mo_code || trI18n('(ว่าง)')} → ${c}\n\n`
+      + `⚠️ ${trI18n("ตัวนับเลขรันผูกกับรหัส — เปลี่ยนแล้วเลขจะ**เริ่มใหม่จาก 1** (ตอนนี้อยู่ที่")} ${t.last_seq})\n`
+      + (trI18n('และเลขใหม่อาจซ้ำกับใบเก่าที่ออกไปแล้ว · ยืนยันหรือไม่') + '?'))) { loadMoSeq(); return; }
     const { error } = await supabaseDR.from('mtn_teams').update({ mo_code: c }).eq('id', t.id);
     if (error) return toast.error(error.message);
     toast.success('บันทึกรหัสทีมแล้ว'); loadMoSeq();
@@ -5173,14 +5177,13 @@ function MasterTab({ techs, parts, problemTypes, itemTypes, repairTypes = [], la
   const MoSeqList = () => (
     <div>
       <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 12, lineHeight: 1.7 }}>
-        เลข MO ออกตอน <b>{trI18n('รับงาน (ขั้น 2)')}</b> {trI18n('— ระบบออกให้ที่เดียว')} <b>{trI18n('ไม่ต้องจด/จองเลขเอง')}</b><br />
-        <b>{trI18n('แต่ละทีมใช้คนละรูปแบบ')}</b> ตามฟอร์มกระดาษของทีมนั้น (ดูเลขถัดไปจริงของแต่ละทีมด้านล่าง)
-        · ตั้ง "เลขล่าสุด" เพื่อ<b>{trI18n('ต่อจากระบบเดิม')}</b> — ใส่เลขที่ออกไปแล้วล่าสุด ใบถัดไปจะนับต่อจากนั้น
+        {trI18n("เลข MO ออกตอน")} <b>{trI18n('รับงาน (ขั้น 2)')}</b> {trI18n('— ระบบออกให้ที่เดียว')} <b>{trI18n('ไม่ต้องจด/จองเลขเอง')}</b><br />
+        <b>{trI18n('แต่ละทีมใช้คนละรูปแบบ')}</b> {trI18n("ตามฟอร์มกระดาษของทีมนั้น (ดูเลขถัดไปจริงของแต่ละทีมด้านล่าง) · ตั้ง \"เลขล่าสุด\" เพื่อ")}<b>{trI18n('ต่อจากระบบเดิม')}</b> — {trI18n("ใส่เลขที่ออกไปแล้วล่าสุด ใบถัดไปจะนับต่อจากนั้น")}
       </div>
-      {moErr ? <div style={{ color: 'var(--muted)', padding: 16, background: 'var(--bg2)', borderRadius: 'var(--r-md)' }}>{trI18n('⚠️ ยังไม่ได้ apply migration เลข MO ต่อทีม (')}<code>20260724_mtn_mo_per_team.sql</code>) — apply ก่อนถึงจะตั้งค่าได้</div> :
+      {moErr ? <div style={{ color: 'var(--muted)', padding: 16, background: 'var(--bg2)', borderRadius: 'var(--r-md)' }}>{trI18n('⚠️ ยังไม่ได้ apply migration เลข MO ต่อทีม (')}<code>20260724_mtn_mo_per_team.sql</code>) — apply {trI18n("ก่อนถึงจะตั้งค่าได้")}</div> :
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {moRows.map(t => (
-            <div key={t.id} style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '10px 12px' }}>
+            <div key={t.id} style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '10px 12px' }}>
               <div style={{ flex: '1 1 150px', minWidth: 0 }}>
                 <b style={{ fontSize: 13 }}>{t.dept_name}</b>
                 {/* รูปแบบของทีมนี้มาจาก moFormatHint() — ห้ามพิมพ์รูปแบบซ้ำในหน้า */}

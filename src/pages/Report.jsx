@@ -7,6 +7,7 @@ import { onlyShopfloorStaff } from '../utils/staffKind';   // 👥 นับค�
 import { lineHeadsOf, headScopeLineIds } from '../utils/lineHeads';   // 👨‍🔧 หัวหน้างานของไลน์ (หลายคน/หลายกะ)
 import { buildScheduleMaps } from '../utils/shiftAssign';
 import { UserContext } from '../App';
+import { canWriteLine, writeBlockText } from '../utils/writeScope';   // 🔐 ชั้น ③ ของใบ 4M (13/11)
 import { confirmSign } from '../utils/signConfirm';
 import { toast } from '../components/Toast';
 import ToggleDot from '../components/ToggleDot';
@@ -168,7 +169,7 @@ async function fetchAllRows(buildQuery, pageSize = 1000, maxRows = 50000) {
   const out = [];
   for (let i = 0; i < maxRows; i += pageSize) {
     const { data, error } = await buildQuery().range(i, i + pageSize - 1);
-    if (error) { toast.error('โหลดข้อมูลไม่สำเร็จ: ' + error.message); break; }
+    if (error) { toast.error((trI18n('โหลดข้อมูลไม่สำเร็จ') + ': ') + error.message); break; }
     out.push(...(data || []));
     if (!data || data.length < pageSize) break;
   }
@@ -228,7 +229,7 @@ function ScopeUnresolvedNote({ scope, linesLoaded }) {
   );
   if (scope.unresolved) return (
     <NoticeBar tone="warn" style={{ marginBottom: 12 }}>
-      ตัดขอบเขตด้วยไลน์ไม่ได้ (ไลน์ของบัญชีไม่ตรงทะเบียน) — แสดงตามส่วนงานที่ตั้งไว้: {scope.scopeSecs.join(' · ')}
+      {trI18n("ตัดขอบเขตด้วยไลน์ไม่ได้ (ไลน์ของบัญชีไม่ตรงทะเบียน) — แสดงตามส่วนงานที่ตั้งไว้")}: {scope.scopeSecs.join(' · ')}
     </NoticeBar>
   );
   if (scope.unsure) return (
@@ -384,7 +385,7 @@ function OtTransportBookingTab({ autoOpenMaster }) {
      จองวันหยุดที่ไม่มี ot_period (จองเก่าก่อนมีฟีเจอร์) → คืน '' ให้แสดง "ไม่ระบุ" เตือนธุรการ */
   const otTimeLabel = (r) => {
     const m = otPeriodMeta(r.ot_period);
-    if (m) return `${m.time} · ${m.hours} ชม.`;
+    if (m) return `${m.time} · ${m.hours} ${trI18n("ชม.")}`;
     if (isHoliday) return '';
     return WEEKDAY_OT_TIME[r.shift] || '—';
   };
@@ -420,7 +421,7 @@ function OtTransportBookingTab({ autoOpenMaster }) {
   const handleExportCsv = () => {
     downloadCSV(
       'csv_ot_bus_booking',
-      `จองรถ_OT_${date}.csv`,
+      `${trI18n("จองรถ")}_OT_${date}.csv`,
       ['ลำดับ', 'รหัสพนักงาน', 'ชื่อ-สกุล', 'ไลน์/แผนก', 'กะ', 'ช่วงเวลา OT', 'สายรถ', 'งานที่ทำ'],
       filteredRows.map((r, i) => [
         i + 1,
@@ -443,7 +444,7 @@ function OtTransportBookingTab({ autoOpenMaster }) {
       <td style="border:1px solid #ccc;padding:3px 6px">${r.employees?.name || ''}</td>
       <td style="border:1px solid #ccc;padding:3px 6px">${lineName(r.employees?.line_id) || r.employees?.section || r.employees?.department || ''}</td>
       <td style="border:1px solid #ccc;padding:3px 6px;text-align:center">${shiftLabel(r.shift)}</td>
-      <td style="border:1px solid #ccc;padding:3px 6px;text-align:center">${otTimeLabel(r) || 'ไม่ระบุ'}</td>
+      <td style="border:1px solid #ccc;padding:3px 6px;text-align:center">${otTimeLabel(r) || trI18n('ไม่ระบุ')}</td>
       <td style="border:1px solid #ccc;padding:3px 6px">${busRouteLabel(r)}</td>
       <td style="border:1px solid #ccc;padding:3px 6px">${taskLabel(r)}</td>
     </tr>`).join('');
@@ -512,7 +513,7 @@ table{border-collapse:collapse;width:100%}
       {showMaster && canManageMaster && <OtMasterDataPanel />}
 
       <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 10 }}>
-        รายชื่อพนักงานที่จองว่าจะมาทำ OT วันที่ {date} {trI18n('(จากหน้าเช็คชื่อ ทั้งกะเช้า/กะดึก) — ใช้สำหรับธุรการจองรถรับส่ง · รวม')} <strong style={{ color: 'var(--text)' }}>{filteredRows.length}</strong> คน
+        {trI18n("รายชื่อพนักงานที่จองว่าจะมาทำ OT วันที่")} {date} {trI18n('(จากหน้าเช็คชื่อ ทั้งกะเช้า/กะดึก) — ใช้สำหรับธุรการจองรถรับส่ง · รวม')} <strong style={{ color: 'var(--text)' }}>{filteredRows.length}</strong> {trI18n("คน")}
       </div>
 
       <div className="card table-sticky" style={{ overflowX: 'auto' }}>
@@ -581,7 +582,7 @@ function OtMasterDataPanel() {
     const { error } = await supabase.from('bus_routes').insert([{
       code: newRouteCode.trim(), name: newRouteName.trim(), sort_order: Math.max(0, ...busRoutes.map(r => r.sort_order || 0)) + 1,
     }]);
-    if (error) { toast.error('เกิดข้อผิดพลาด: ' + error.message); return; }
+    if (error) { toast.error((trI18n('เกิดข้อผิดพลาด') + ': ') + error.message); return; }
     setNewRouteCode(''); setNewRouteName('');
     load();
   };
@@ -591,39 +592,39 @@ function OtMasterDataPanel() {
     const { error } = await supabase.from('ot_task_types').insert([{
       name: newTaskName.trim(), sort_order: Math.max(0, ...taskTypes.map(t => t.sort_order || 0)) + 1,
     }]);
-    if (error) { toast.error('เกิดข้อผิดพลาด: ' + error.message); return; }
+    if (error) { toast.error((trI18n('เกิดข้อผิดพลาด') + ': ') + error.message); return; }
     setNewTaskName('');
     load();
   };
 
   // ปิดใช้งาน master = หายจาก dropdown จองรถ OT → ยืนยันก่อน (UI-CONVENTIONS §5.4) · เปิดกลับไม่ต้องถาม
   const toggleRouteActive = async (r) => {
-    if (r.is_active && !await askConfirm(`ปิดใช้งานสายรถ "${r.name || r.code}" ?\n\nจะไม่ขึ้นให้เลือกตอนจองรถ OT (เปิดกลับได้ภายหลัง)`)) return;
+    if (r.is_active && !await askConfirm(`${trI18n("ปิดใช้งานสายรถ")} "${r.name || r.code}" ?\n\n${trI18n("จะไม่ขึ้นให้เลือกตอนจองรถ OT (เปิดกลับได้ภายหลัง")})`)) return;
     const { error } = await supabase.from('bus_routes').update({ is_active: !r.is_active }).eq('id', r.id);
-    if (error) toast.error('เกิดข้อผิดพลาด: ' + error.message);
+    if (error) toast.error((trI18n('เกิดข้อผิดพลาด') + ': ') + error.message);
     load();
   };
 
   const toggleTaskActive = async (t) => {
-    if (t.is_active && !await askConfirm(`ปิดใช้งานงาน OT "${t.name || t.code}" ?\n\nจะไม่ขึ้นให้เลือกตอนจองรถ OT (เปิดกลับได้ภายหลัง)`)) return;
+    if (t.is_active && !await askConfirm(`${trI18n("ปิดใช้งานงาน")} OT "${t.name || t.code}" ?\n\n${trI18n("จะไม่ขึ้นให้เลือกตอนจองรถ OT (เปิดกลับได้ภายหลัง")})`)) return;
     const { error } = await supabase.from('ot_task_types').update({ is_active: !t.is_active }).eq('id', t.id);
-    if (error) toast.error('เกิดข้อผิดพลาด: ' + error.message);
+    if (error) toast.error((trI18n('เกิดข้อผิดพลาด') + ': ') + error.message);
     load();
   };
 
   // การจอง/พนักงานเก่าอ้าง master เหล่านี้อยู่ (task_type_id / bus_route_id) — ลบแล้วประวัติจะโชว์ "—"
   // แนะนำ "ปิดใช้" แทน · เช็ค error เสมอ (ถ้ามี FK กันลบไว้ จะได้ไม่ล้มเหลวเงียบๆ)
   const removeRoute = async (r) => {
-    if (!await askConfirm(`ลบสายรถ "${r.code} ${r.name}"?\n(ประวัติการจอง/พนักงานที่ผูกสายนี้จะแสดงเป็น "—" — ถ้าแค่เลิกใช้ แนะนำกด "ปิดใช้" แทน)`)) return;
+    if (!await askConfirm(`${trI18n("ลบสายรถ")} "${r.code} ${r.name}"?\n(${trI18n("ประวัติการจอง/พนักงานที่ผูกสายนี้จะแสดงเป็น \"—\" — ถ้าแค่เลิกใช้ แนะนำกด \"ปิดใช้\" แทน")})`)) return;
     const { error } = await supabase.from('bus_routes').delete().eq('id', r.id);
-    if (error) { toast.error('ลบไม่สำเร็จ: ' + error.message); return; }
+    if (error) { toast.error((trI18n('ลบไม่สำเร็จ') + ': ') + error.message); return; }
     load();
   };
 
   const removeTask = async (t) => {
-    if (!await askConfirm(`ลบงาน "${t.name}"?\n(ประวัติการจองที่ผูกงานนี้จะแสดงเป็น "—" — ถ้าแค่เลิกใช้ แนะนำกด "ปิดใช้" แทน)`)) return;
+    if (!await askConfirm(`${trI18n("ลบงาน")} "${t.name}"?\n(${trI18n("ประวัติการจองที่ผูกงานนี้จะแสดงเป็น \"—\" — ถ้าแค่เลิกใช้ แนะนำกด \"ปิดใช้\" แทน")})`)) return;
     const { error } = await supabase.from('ot_task_types').delete().eq('id', t.id);
-    if (error) { toast.error('ลบไม่สำเร็จ: ' + error.message); return; }
+    if (error) { toast.error((trI18n('ลบไม่สำเร็จ') + ': ') + error.message); return; }
     load();
   };
 
@@ -691,19 +692,19 @@ function SimpleNameMaster({ table, title, placeholder, offNote }) {
   const add = async () => {
     if (!newName.trim()) return;
     const { error } = await supabase.from(table).insert([{ name: newName.trim(), sort_order: Math.max(0, ...rows.map(r => r.sort_order || 0)) + 1 }]);
-    if (error) { toast.error('เกิดข้อผิดพลาด: ' + error.message); return; }
+    if (error) { toast.error((trI18n('เกิดข้อผิดพลาด') + ': ') + error.message); return; }
     setNewName(''); load();
   };
   const toggle = async (r) => {
-    if (r.is_active && !await askConfirm(`ปิดใช้งาน "${r.name}" ?\n\n${offNote} (เปิดกลับได้ภายหลัง)`)) return;
+    if (r.is_active && !await askConfirm(`${trI18n("ปิดใช้งาน")} "${r.name}" ?\n\n${offNote} (${trI18n("เปิดกลับได้ภายหลัง")})`)) return;
     const { error } = await supabase.from(table).update({ is_active: !r.is_active }).eq('id', r.id);
-    if (error) toast.error('เกิดข้อผิดพลาด: ' + error.message);
+    if (error) toast.error((trI18n('เกิดข้อผิดพลาด') + ': ') + error.message);
     load();
   };
   const remove = async (r) => {
-    if (!await askConfirm(`ลบ "${r.name}"?\n(ข้อมูลเก่าที่บันทึกด้วยชื่อนี้ยังอ่านออก — ถ้าแค่เลิกใช้ แนะนำกด "ปิดใช้" แทน)`)) return;
+    if (!await askConfirm(`${trI18n("ลบ")} "${r.name}"?\n(${trI18n("ข้อมูลเก่าที่บันทึกด้วยชื่อนี้ยังอ่านออก — ถ้าแค่เลิกใช้ แนะนำกด \"ปิดใช้\" แทน")})`)) return;
     const { error } = await supabase.from(table).delete().eq('id', r.id);
-    if (error) { toast.error('ลบไม่สำเร็จ: ' + error.message); return; }
+    if (error) { toast.error((trI18n('ลบไม่สำเร็จ') + ': ') + error.message); return; }
     load();
   };
   return (
@@ -837,7 +838,7 @@ table{border-collapse:collapse;width:100%}
 @media print{@page{size:A4 landscape;margin:10mm}body{-webkit-print-color-adjust:exact}}</style>
 </head><body style="padding:10mm">
 <h2 style="margin:0 0 4px;font-size:16px">${trI18n('รายงานเช็คชื่อประจำวัน')}</h2>
-<p style="color:#666;margin:0 0 12px;font-size:10px">วันที่: ${date} (${dayTypeLabel}) · กะ: ${shift === 'day' ? 'เช้า' : shift === 'night' ? 'ดึก' : 'ทั้งหมด'} · พิมพ์วันที่: ${todayStr} · รวม ${filteredLogs.length} ${trI18n('คน')}</p>
+<p style="color:#666;margin:0 0 12px;font-size:10px">วันที่: ${date} (${dayTypeLabel}) · กะ: ${shift === 'day' ? trI18n('เช้า') : shift === 'night' ? trI18n('ดึก') : trI18n('ทั้งหมด')} · พิมพ์วันที่: ${todayStr} · รวม ${filteredLogs.length} ${trI18n('คน')}</p>
 <table><thead><tr style="background:#f3f4f6">
 <th style="border:1px solid #ccc;padding:4px">#</th>
 <th style="border:1px solid #ccc;padding:4px">${trI18n('รหัส')}</th>
@@ -977,7 +978,7 @@ function PerEmployeeTab() {
       .select('work_date, is_present, has_helmet, has_boots, has_gloves, assigned_line')
       .eq('employee_id', selected).gte('work_date', from).lte('work_date', to)
       .order('work_date', { ascending: false });
-    if (error) toast.error('โหลดข้อมูลไม่สำเร็จ: ' + error.message);
+    if (error) toast.error((trI18n('โหลดข้อมูลไม่สำเร็จ') + ': ') + error.message);
     setLogs(data || []);
     setLoading(false);
   };
@@ -1468,7 +1469,7 @@ table{border-collapse:collapse;width:100%}
                 <tr key={i}>
                   <td style={{ color: 'var(--blue)', fontWeight: 700 }}>{r.code}</td>
                   <td style={{ fontWeight: 600 }}>{r.name}</td>
-                  <td><KpiSmall value={r.present} label={`/ ${r.total} วัน`} /></td>
+                  <td><KpiSmall value={r.present} label={`/ ${r.total} ${trI18n("วัน")}`} /></td>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <div style={{ flex: 1, height: 6, background: 'var(--bg3)', borderRadius: 'var(--r-xs)', minWidth: 60 }}>
@@ -1503,7 +1504,10 @@ const STATUS_META = {
 /* deep-link: focusId = ใบที่ถูกคลิกมาจากหน้าอื่น (เน้นแถว + เลื่อนไปหา) · initStatus/initFrom =
    ตั้งตัวกรองตั้งต้นให้ใบนั้นอยู่ในรายการ (ใบค้างมักเก่ากว่าช่วง 7 วัน default — ไม่ตั้งจะเปิดมาเจอจอว่าง) */
 function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
-  const { role, lineId: userLineId, sections: scopeSecs = [], fullName = '', scopeIdx } = useContext(UserContext);
+  const { role, lineId: userLineId, sections: scopeSecs = [], fullName = '', section: homeSection, allUnits, respCostCenters, scopeIdx, writeUnits } = useContext(UserContext);
+  /* 🔐 ชั้น ③ ของใบ 4M (13/11 · audit role↔scope): ขอบเขตการ "อนุมัติ/reset" มาจากขอบเขตรายคน
+     (บ้าน · CC · มอบหมาย · ใบผ่าน) ผ่าน `canWriteLine` — เดิมใช้ `sections` (ที่เห็น) + ทางลัด role==='manager' */
+  const wCtx = { role, section: homeSection, sections: scopeSecs, allUnits, respCostCenters, scopeIdx, writeUnits };
   const orgSectionList = useOrgSections();
 
   // Determine if the current user can act on this log at its current stage
@@ -1512,23 +1516,17 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
     // QA step — action gate ผ่านตาราง permission (admin/manager/qa ไม่ scope เหมือนเดิม)
     if (log.status === 'pending_qa') return can('four_m', 'approve_qa', role);
     if (log.status !== 'pending') return false;
-    // SV step — สิทธิ์ action มาจาก can() ส่วน scoping ยังเป็นตาม role เดิมทุกประการ
+    // SV step — สิทธิ์ action มาจาก can() · ขอบเขต = ชั้น ③ รายคน (canWriteLine) ไม่ใช่ role/sections
     if (!can('four_m', 'approve_sv', role)) return false;
-    if (role === 'admin') return true;
     if (role === 'leader') {
       const myLine = lines.find(l => l.id === userLineId);
       if (!myLine) return false;
       // ครอบครัวไลน์ (ตัวเอง + ไลน์หลัก + ไลน์ย่อย) — leader ไลน์ย่อยต้องอนุมัติ log ที่เกิดจาก
-      // การจัดคนลงจุดของไลน์หลัก (พื้นที่เดียวกัน) ได้ด้วย ไม่ใช่แค่สายลงอย่างเดียว
+      // การจัดคนลงจุดของไลน์หลัก (พื้นที่เดียวกัน) ได้ด้วย · ไลน์ที่ผูก = ขอบเขตรายคนของหัวหน้ากลุ่ม
       return lineFamilyOf(myLine.name).includes(log.line_name);
     }
-    // role ที่ถูกจำกัดขอบเขตส่วนงาน (supervisor เดิม + manager/qa ที่กำหนด sections) — อนุมัติได้เฉพาะใน scope
-    if (scopeSecs.length) {
-      const logLine = lines.find(l => l.name === log.line_name);
-      return inSectionScope(scopeSecs, logLine?.section);
-    }
-    if (role === 'manager') return true; // manager ไม่กำหนด scope = ไม่จำกัด เหมือนเดิม
-    return false; // supervisor ที่ไม่มี section = fail-closed เหมือนเดิม
+    // 🔴 ไม่รู้ไลน์ของใบ = ไม่ให้อนุมัติ (ใบ 4M ทุกใบผูกไลน์) · ของหน่วยอื่น = เห็นได้ แต่กดไม่ได้
+    return canWriteLine(wCtx, log.line_name, lines, { unknownTarget: 'block' }).ok;
   };
 
   const today = getWorkDate();
@@ -1688,7 +1686,7 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
     // guard สถานะเดิม — กัน SV สองคนกดพร้อมกันแล้วทับผลของกันเอง (0 แถว = มีคนจัดการไปแล้ว)
     const { data: updated, error } = await supabase.from('four_m_logs').update(update)
       .eq('id', log.id).eq('status', log.status).select('id');
-    if (error) { toast.error('เกิดข้อผิดพลาด: ' + error.message); return; }
+    if (error) { toast.error((trI18n('เกิดข้อผิดพลาด') + ': ') + error.message); return; }
     if (!updated?.length) { toast.info('รายการนี้ถูกจัดการโดยผู้อื่นไปแล้ว — รีเฟรชข้อมูลใหม่'); load(); return; }
     toast.success(nextStatus === 'pending_qa' ? 'SV Approved → รอ QA' : 'Approved เรียบร้อย');
     supabase.functions.invoke('send-notification', { body: { event: 'status_change', log: { ...log, ...update, status: nextStatus } } }).catch(() => {});
@@ -1710,7 +1708,7 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
         catch (err) { toast.error(err?.message || 'อ่านไฟล์รูปไม่สำเร็จ — ลองใช้ JPG/PNG'); return; }
         const path = `qa/${Date.now()}_${user.id}.jpg`;
         const { error: upErr } = await supabase.storage.from('four-m-images').upload(path, resized, uploadOpts({ upsert: false, contentType: 'image/jpeg' }));
-        if (upErr) { toast.error('อัปโหลดรูปไม่สำเร็จ: ' + upErr.message); return; }
+        if (upErr) { toast.error((trI18n('อัปโหลดรูปไม่สำเร็จ') + ': ') + upErr.message); return; }
         qa_image_url = supabase.storage.from('four-m-images').getPublicUrl(path).data.publicUrl;
       }
 
@@ -1718,7 +1716,7 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
       const update = { status: 'approved', approved_by: user.id, approved_at: now, reject_reason: null, ...(qa_image_url ? { qa_image_url } : {}) };
       const { data: updated, error } = await supabase.from('four_m_logs').update(update)
         .eq('id', qaApproveModal.id).eq('status', 'pending_qa').select('id');
-      if (error) { toast.error('เกิดข้อผิดพลาด: ' + error.message); return; }
+      if (error) { toast.error((trI18n('เกิดข้อผิดพลาด') + ': ') + error.message); return; }
       if (!updated?.length) { toast.info('รายการนี้ถูกจัดการโดยผู้อื่นไปแล้ว — รีเฟรชข้อมูลใหม่'); setQaApproveModal(null); load(); return; }
       // แทนที่รูป QA เดิม (เช่นเคยอนุมัติแล้วถูก Reset) → ลบไฟล์เก่าหลัง DB update สำเร็จ (best-effort — กฎ storage)
       if (qa_image_url && qaApproveModal.qa_image_url?.includes('/four-m-images/')) {
@@ -1744,7 +1742,7 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
     // guard สถานะเดิม — reject ได้เฉพาะรายการที่ยังรออนุมัติ (กัน race ทับผล approve ของคนอื่น)
     if (log) q = q.in('status', ['pending', 'pending_qa']);
     const { data: updated, error } = await q.select('id');
-    if (error) { toast.error('เกิดข้อผิดพลาด: ' + error.message); return; }
+    if (error) { toast.error((trI18n('เกิดข้อผิดพลาด') + ': ') + error.message); return; }
     if (!updated?.length) { toast.info('รายการนี้ถูกจัดการโดยผู้อื่นไปแล้ว — รีเฟรชข้อมูลใหม่'); setRejectModal(null); setRejectReason(''); load(); return; }
     toast.success('Rejected แล้ว');
     if (log) supabase.functions.invoke('send-notification', { body: { event: 'status_change', log: { ...log, status: 'rejected', reject_reason: rejectReason.trim() } } }).catch(() => {});
@@ -1839,7 +1837,7 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
       w.document.write(changePointPrintDoc(html));
       w.document.close();
     } catch (e) {
-      toast.error(`ออกใบไม่สำเร็จ: ${e?.message || e}`);
+      toast.error(`${trI18n("ออกใบไม่สำเร็จ")}: ${e?.message || e}`);
     } finally {
       setCpcExporting(false);
     }
@@ -1882,7 +1880,7 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
                 {trI18n('ยืนยัน Reject')}
               </button>
               <button onClick={() => { setRejectModal(null); setRejectReason(''); }}
-                style={{ flex: 1, padding: 11, background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}>
+                style={{ flex: 1, padding: 11, background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}>
                 {trI18n('ยกเลิก')}
               </button>
             </div>
@@ -1936,7 +1934,7 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
                 {isApprovingSaving ? trI18n('กำลังบันทึก...') : 'QA Approve'}
               </button>
               <button onClick={() => { setQaApproveModal(null); setQaImageFile(null); setQaImagePreview(null); }} disabled={isApprovingSaving}
-                style={{ flex: 1, padding: 11, background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}>
+                style={{ flex: 1, padding: 11, background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}>
                 {trI18n('ยกเลิก')}
               </button>
             </div>
@@ -1980,7 +1978,7 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
         </select>
         {actionableCount > 0 && (
           <span style={{ fontSize: 11, fontWeight: 700, background: 'var(--amber-dim)', color: 'var(--amber)', border: '1px solid var(--amber-line)', borderRadius: 'var(--r-md)', padding: '3px 8px' }}>
-            ⏳ รอดำเนินการ {actionableCount} รายการ
+            ⏳ {trI18n("รอดำเนินการ")} {actionableCount} {trI18n("รายการ")}
           </span>
         )}
         <span className="spacer" />
@@ -2050,7 +2048,7 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {pickable.map(n => (
                     <button key={n} type="button" onClick={() => { setLine(n); setFourMSection(''); setFourMUnit({ name: '', lines: [] }); }}
-                      style={{ padding: '6px 12px', borderRadius: 'var(--r-md)', fontSize: 12, cursor: 'pointer', background: 'var(--bg3)', color: 'var(--text)', border: '1px solid var(--border2)' }}>
+                      style={{ padding: '6px 12px', borderRadius: 'var(--r-md)', fontSize: 12, cursor: 'pointer', background: 'var(--bg3-surf)', color: 'var(--text)', border: '1px solid var(--border2)' }}>
                       {n}
                     </button>
                   ))}
@@ -2064,7 +2062,7 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
         if (!fresh || cpcSheet.loading) return <div className="card" style={{ padding: 16, marginBottom: 16, color: 'var(--muted)' }}>{trI18n('กำลังโหลดใบ Changing Point...')}</div>;
         if (cpcSheet.error) return (
           <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 'var(--r-md)', fontSize: 12.5, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.35)' }}>
-            โหลดใบไม่สำเร็จ — {cpcSheet.error}
+            {trI18n("โหลดใบไม่สำเร็จ")} — {cpcSheet.error}
           </div>
         );
         return (
@@ -2095,7 +2093,7 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12, padding: '8px 12px', borderRadius: 'var(--r-md)',
             background: 'var(--amber-dim)', border: '1px solid var(--amber-line)', fontSize: 12.5, color: 'var(--text)' }}>
             <span>{trI18n('เน้นใบที่เลือกมา —')} <b>{focusRow.line_name || trI18n('ไม่ระบุไลน์')}</b> · {focusRow.category} · {fmtDate(focusRow.work_date)}</span>
-            <button onClick={() => setFocus('')} style={{ padding: '3px 10px', borderRadius: 'var(--r-md)', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)' }}>
+            <button onClick={() => setFocus('')} style={{ padding: '3px 10px', borderRadius: 'var(--r-md)', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)' }}>
               {trI18n('ล้างการเน้น')}
             </button>
           </div>
@@ -2107,7 +2105,7 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
               style={{ padding: '3px 10px', borderRadius: 'var(--r-md)', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', background: 'var(--amber-dim)', color: 'var(--amber)', border: '1px solid var(--amber-line)' }}>
               {trI18n('ล้างตัวกรอง')}
             </button>
-            <button onClick={() => setFocus('')} style={{ padding: '3px 10px', borderRadius: 'var(--r-md)', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)' }}>
+            <button onClick={() => setFocus('')} style={{ padding: '3px 10px', borderRadius: 'var(--r-md)', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)' }}>
               {trI18n('ปิด')}
             </button>
           </div>
@@ -2201,6 +2199,9 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
                       ) : (
                         can('four_m', 'reset', role) && (
                           <button onClick={async () => {
+                            /* 🔐 ชั้น ③ (13/11): reset ใบของไลน์นอกขอบเขตไม่ได้ — คีย์ reset บอกแค่ "กดปุ่มเป็น" */
+                            const wr = canWriteLine(wCtx, l.line_name, lines, { unknownTarget: 'block' });
+                            if (!wr.ok) { toast.error(writeBlockText(wr, { what: `${trI18n("ใบ 4M ของไลน์")} ${l.line_name}` })); return; }
                             // Reset = status change → ต้องเคลียร์รูป QA เดิม (ลบไฟล์ด้วย) + แจ้ง Telegram + เช็ค error
                             const oldQaUrl = l.qa_image_url;
                             /* 🔴 นับแถว ไม่ใช่ดูแค่ error — RLS ปฏิเสธ UPDATE = 0 แถว ไม่มี error
@@ -2218,7 +2219,7 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
                             toast.success('Reset กลับเป็นรออนุมัติแล้ว');
                             load();
                           }}
-                            style={{ padding: '3px 8px', borderRadius: 5, fontSize: 11, cursor: 'pointer', background: 'var(--bg3)', color: 'var(--muted)', border: '1px solid var(--border)' }}>
+                            style={{ padding: '3px 8px', borderRadius: 5, fontSize: 11, cursor: 'pointer', background: 'var(--bg3-surf)', color: 'var(--muted)', border: '1px solid var(--border)' }}>
                             Reset
                           </button>
                         )
@@ -2285,7 +2286,7 @@ function DocumentControlPanel() {
       updated_at: new Date().toISOString(),
     }, { onConflict: 'doc_key' });
     setSaving(false);
-    if (error) { toast.error('เกิดข้อผิดพลาด: ' + error.message); return; }
+    if (error) { toast.error((trI18n('เกิดข้อผิดพลาด') + ': ') + error.message); return; }
     toast.success('บันทึกข้อมูลเอกสารสำเร็จ');
     load();
   };
@@ -2301,13 +2302,13 @@ function DocumentControlPanel() {
       responsible: newRev.responsible.trim() || null,
       approved_name: newRev.approved_name.trim() || null,
     }]);
-    if (error) { toast.error('เกิดข้อผิดพลาด: ' + error.message); return; }
+    if (error) { toast.error((trI18n('เกิดข้อผิดพลาด') + ': ') + error.message); return; }
     setNewRev({ record_date: '', rev: '', issued_date: '', description: '', responsible: '', approved_name: '' });
     load();
   };
 
   const removeRevision = async (r) => {
-    if (!await askConfirm(`ลบ Rev "${r.rev}"?`)) return;
+    if (!await askConfirm(`${trI18n("ลบ")} Rev "${r.rev}"?`)) return;
     checkWriteRows(await supabase.from('doc_form_revisions').delete().eq('id', r.id).select('id'), 'ลบ revision');
     load();
   };
@@ -2559,7 +2560,7 @@ function SkillMatrixTab() {
               const v = sm[s.name];
               return `<td style="border:1px solid #ccc;text-align:center;padding:2px">${v !== undefined && v > 0 ? v : '—'}</td>`;
             }).join('');
-            return `<tr><td style="border:1px solid #ccc;text-align:center;padding:2px">${i+1}</td><td style="border:1px solid #ccc;padding:2px 4px">${emp.employee_id_code || ''}</td><td style="border:1px solid #ccc;padding:2px 4px">${emp.name || ''}${emp._isHelper ? ' 🤝' : ''}</td><td style="border:1px solid #ccc;padding:2px 4px">${emp.section || ''}${emp._isHelper ? ` (ยืมมาช่วย ${emp._helperTo || ''})` : ''}</td><td style="border:1px solid #ccc;padding:2px 4px;text-align:center">${emp.team || ''}</td>${cells}<td style="border:1px solid #ccc;text-align:center;font-weight:700;padding:2px">${avg !== null ? avg : '—'}</td></tr>`;
+            return `<tr><td style="border:1px solid #ccc;text-align:center;padding:2px">${i+1}</td><td style="border:1px solid #ccc;padding:2px 4px">${emp.employee_id_code || ''}</td><td style="border:1px solid #ccc;padding:2px 4px">${emp.name || ''}${emp._isHelper ? ' 🤝' : ''}</td><td style="border:1px solid #ccc;padding:2px 4px">${emp.section || ''}${emp._isHelper ? ` (${trI18n("ยืมมาช่วย")} ${emp._helperTo || ''})` : ''}</td><td style="border:1px solid #ccc;padding:2px 4px;text-align:center">${emp.team || ''}</td>${cells}<td style="border:1px solid #ccc;text-align:center;font-weight:700;padding:2px">${avg !== null ? avg : '—'}</td></tr>`;
           }).join('');
           const catHeaderCells = groups.map(g => `<th colspan="${g.skills.length}" style="border:1px solid #ccc;background:${g.color}18;color:${g.color};padding:3px 2px;font-size:9px;font-weight:800;text-align:center">${g.icon} ${g.label}</th>`).join('');
           const html = `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"/><title>Skill Matrix</title>
@@ -2569,7 +2570,7 @@ table{border-collapse:collapse;width:100%}
 @media print{@page{size:A3 landscape;margin:8mm}body{-webkit-print-color-adjust:exact}}</style>
 </head><body style="padding:8mm">
 <h2 style="margin:0 0 4px;font-size:14px">Skill Matrix</h2>
-<p style="color:#666;margin:0 0 8px;font-size:9px">พิมพ์วันที่: ${todayStr} · รวม ${employees.length} คน${employees.some(e => e._isHelper) ? ' · 🤝 = ยืมตัวมาช่วยกะนี้ (ต้นสังกัดอยู่ไลน์อื่น)' : ''}</p>
+<p style="color:#666;margin:0 0 8px;font-size:9px">พิมพ์วันที่: ${todayStr} · รวม ${employees.length} คน${employees.some(e => e._isHelper) ? trI18n(' · 🤝 = ยืมตัวมาช่วยกะนี้ (ต้นสังกัดอยู่ไลน์อื่น)') : ''}</p>
 <table><thead>
 <tr style="background:#f3f4f6">
 <th rowspan="2" style="border:1px solid #ccc;padding:3px">#</th>
@@ -2614,7 +2615,7 @@ ${catHeaderCells}
             {trI18n(lv.label)} ≥{lv.min}
           </span>
         ))}
-        <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 'var(--r-xs)', background: 'var(--bg3)', color: 'var(--muted)', border: '1px solid var(--border)' }}>{trI18n('— ยังไม่ประเมิน')}</span>
+        <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 'var(--r-xs)', background: 'var(--bg3-surf)', color: 'var(--muted)', border: '1px solid var(--border)' }}>{trI18n('— ยังไม่ประเมิน')}</span>
       </div>
 
       {loading ? <Loader /> : (() => {
@@ -2737,11 +2738,11 @@ ${catHeaderCells}
                         <div style={{ fontSize: 11, color: 'var(--muted)' }}>{emp.employee_id_code}</div>
                         {/* 🤝 ยืมมาช่วยกะนี้ — ต้นสังกัดยังเป็นไลน์เดิม (ห้ามอ่านว่าย้ายสังกัดแล้ว) */}
                         {emp._isHelper && (
-                          <div title={`ยืมมาจาก ${emp._helperFrom} มาช่วย ${emp._helperTo || 'ไลน์นี้'} เฉพาะกะนี้`}
+                          <div title={`${trI18n("ยืมมาจาก")} ${emp._helperFrom} ${trI18n("มาช่วย")} ${emp._helperTo || trI18n('ไลน์นี้')} ${trI18n("เฉพาะกะนี้")}`}
                             style={{ marginTop: 3, display: 'inline-block', fontSize: 11, fontWeight: 700,
                               color: 'var(--blue)', background: 'var(--blue)18', border: '1px solid var(--blue)44',
                               borderRadius: 'var(--r-xs)', padding: '0 5px', whiteSpace: 'nowrap' }}>
-                            ยืมจาก {emp._helperFrom}
+                            {trI18n("ยืมจาก")} {emp._helperFrom}
                           </div>
                         )}
                         {avg !== null && (
@@ -2808,8 +2809,8 @@ function calcServiceDuration(startDate) {
   let months = now.getMonth() - start.getMonth();
   if (months < 0) { years--; months += 12; }
   const parts = [];
-  if (years > 0) parts.push(`${years}ปี`);
-  if (months > 0) parts.push(`${months}เดือน`);
+  if (years > 0) parts.push(`${years}${trI18n("ปี")}`);
+  if (months > 0) parts.push(`${months}${trI18n("เดือน")}`);
   return parts.length ? parts.join(' ') : '< 1 เดือน';
 }
 
@@ -3195,9 +3196,9 @@ function MultiSkillFormTab() {
               ].map(({ label, val, set, opts, plain }) => (
                 <div key={label}>
                   <span style={lbSt}>{label}</span>
-                  <select value={val} onChange={e => set(e.target.value)} style={{ width: '100%', padding: '6px 10px', borderRadius: 'var(--ctl-r)', fontSize: 13, background: 'var(--bg3)', border: '1px solid var(--border2)', color: 'var(--text)' }}>
+                  <select value={val} onChange={e => set(e.target.value)} style={{ width: '100%', padding: '6px 10px', borderRadius: 'var(--ctl-r)', fontSize: 13, background: 'var(--bg3-surf)', border: '1px solid var(--border2)', color: 'var(--text)' }}>
                     <option value="">—</option>
-                    {val && !opts.includes(val) && <option value={val}>{plain ? val : `${val} ⚠ ไม่มีในผัง`}</option>}
+                    {val && !opts.includes(val) && <option value={val}>{plain ? val : `${val} ⚠ ${trI18n("ไม่มีในผัง")}`}</option>}
                     {opts.map(o => <option key={o} value={o}>{trI18n(o)}</option>)}
                   </select>
                 </div>
@@ -3216,7 +3217,7 @@ function MultiSkillFormTab() {
                 { label: sigLabelsOf('multi_skill', MS_SIG_DEFAULTS)[1], name: checker, setName: setChecker, sig: checkerSig, setSig: setCheckerSig, autoRole: 'supervisor' },
                 { label: sigLabelsOf('multi_skill', MS_SIG_DEFAULTS)[2], name: approver, setName: setApprover, sig: approverSig, setSig: setApproverSig, autoRole: 'manager/admin' },
               ].map(({ label, name, setName, sig, setSig, autoRole }) => (
-                <div key={label} style={{ border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: 10, background: 'var(--bg2)' }}>
+                <div key={label} style={{ border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: 10, background: 'var(--bg2-surf)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                     <span style={lbSt}>{label}</span>
                     <span style={{ fontSize: 11, color: 'var(--muted)', background: 'var(--bg3)', borderRadius: 'var(--r-xs)', padding: '1px 5px' }}>{autoRole}</span>
@@ -3234,7 +3235,7 @@ function MultiSkillFormTab() {
                   ) : name && !isSelfName(name, ctxFullName) ? (
                     /* ✍️ ช่องของคนอื่น — ห้ามอัปโหลดรูปลายเซ็นแทนเจ้าตัว · เว้นไว้เซ็นมือบนใบพิมพ์ */
                     <div style={{ height: 48, border: '1px dashed var(--amber-line)', borderRadius: 'var(--r-xs)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--amber)', textAlign: 'center', padding: '0 6px' }}>
-                      ลายเซ็นใส่ได้เฉพาะเจ้าตัว — ใบพิมพ์จะเว้นช่องให้ {name} เซ็นมือ
+                      {trI18n("ลายเซ็นใส่ได้เฉพาะเจ้าตัว — ใบพิมพ์จะเว้นช่องให้")} {name} {trI18n("เซ็นมือ")}
                     </div>
                   ) : (
                     <label style={{ display: 'block', cursor: 'pointer' }}>
@@ -3691,7 +3692,7 @@ function SkillAllowanceTab() {
   const handlePrint = async () => {
     const days = periodDays();
     const dStr = `${days[0]}-${days[days.length-1]}`;
-    const sectionLabel = section || (line ? `ไลน์ ${line}` : 'ทุกไลน์');
+    const sectionLabel = section || (line ? `${trI18n("ไลน์")} ${line}` : 'ทุกไลน์');
     const logoDataUrl = await formLogo('skill_pay_summary');
 
     // จำนวนแถวทั้งหมด เทียบกับความสูงที่ 1 หน้า A4 แนวนอนรับได้
@@ -3961,18 +3962,18 @@ function SkillAllowanceTab() {
           {headChoices.length > 1 && (
             <div style={{ marginTop: 5, maxWidth: 320 }}>
               <div style={{ fontSize: 11, color: 'var(--amber)' }}>
-                ⚠️ ไลน์นี้มีหัวหน้างาน {headChoices.length} {trI18n('คน')}{team ? ` ในทีม ${team}` : ' (ทุกกะ)'} — ใบมีช่องเซ็นช่องเดียว เลือกคนที่เซ็นใบนี้
+                ⚠️ {trI18n("ไลน์นี้มีหัวหน้างาน")} {headChoices.length} {trI18n('คน')}{team ? ` ${trI18n("ในทีม")} ${team}` : ' (ทุกกะ)'} — {trI18n("ใบมีช่องเซ็นช่องเดียว เลือกคนที่เซ็นใบนี้")}
                 {!team ? ' · เลือก "ทีม" ที่แถบกรองด้านบน แล้วระบบจะเหลือเฉพาะหัวหน้าของกะนั้น' : ''}
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
                 {headChoices.map(r => (
                   <button key={r.id} type="button" onClick={() => setSignerHead(r.name)}
-                    title={`${r.name}${r.team ? ` · ทีม ${r.team}` : ''}${r.shift ? ` · ${r.shift === 'day' ? 'กะเช้า' : 'กะดึก'}` : ' · ยังไม่รู้กะ'}`}
+                    title={`${r.name}${r.team ? ` · ${trI18n("ทีม")} ${r.team}` : ''}${r.shift ? ` · ${r.shift === 'day' ? trI18n('กะเช้า') : trI18n('กะดึก')}` : trI18n(' · ยังไม่รู้กะ')}`}
                     style={{ padding: '3px 9px', borderRadius: 'var(--r-md)', fontSize: 11.5, cursor: 'pointer',
                       border: `1px solid ${signerHead === r.name ? 'var(--accent)' : 'var(--border2)'}`,
                       background: signerHead === r.name ? 'var(--accent-dim)' : 'var(--bg3)',
                       color: 'var(--text)', fontWeight: signerHead === r.name ? 700 : 400 }}>
-                    {r.name}{r.shift ? (r.shift === 'day' ? ' · เช้า' : ' · ดึก') : r.team ? ` · ทีม ${r.team}` : ''}
+                    {r.name}{r.shift ? (r.shift === 'day' ? ' · เช้า' : ' · ดึก') : r.team ? ` · ${trI18n("ทีม")} ${r.team}` : ''}
                   </button>
                 ))}
               </div>
@@ -3981,16 +3982,15 @@ function SkillAllowanceTab() {
           {/* ไม่มีใครในทะเบียน = บอกตรงๆ ว่าชื่อที่เห็นมาจากช่องพิมพ์เก่า (จอต้องไม่เงียบ) */}
           {line && !lineHeads.rows.length && (
             <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 5, maxWidth: 320 }}>
-              ℹ️ ทะเบียนพนักงานยังไม่มีหัวหน้าไลน์/หัวหน้าแผนกของไลน์นี้
-              {lineHeads.legacyName ? ` — ที่เติมให้คือชื่อที่พิมพ์ไว้ในทะเบียนไลน์ ("${lineHeads.legacyName}")` : ''}
+              ℹ️ {trI18n("ทะเบียนพนักงานยังไม่มีหัวหน้าไลน์/หัวหน้าแผนกของไลน์นี้")}
+              {lineHeads.legacyName ? ` — ${trI18n("ที่เติมให้คือชื่อที่พิมพ์ไว้ในทะเบียนไลน์")} ("${lineHeads.legacyName}")` : ''}
               {' · ตั้งตำแหน่ง+ทีม+ไลน์ ให้เขาที่ /operator แล้วจะเลือกตามกะได้'}
             </div>
           )}
           {/* 🔴 2 ทะเบียนไม่ตรงกัน — คนออกใบต้องรู้ว่าทำไมชื่อที่คาดว่าจะเห็นไม่ขึ้น (28/10) */}
           {lineHeads.conflicts.length > 0 && (
             <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 5, maxWidth: 320 }}>
-              ⚠️ {lineHeads.conflicts.map(c => c.name).join(' · ')} — บัญชีผู้ใช้ตั้งเป็นหัวหน้าของไลน์นี้
-              แต่ทะเบียนพนักงานยังไม่ใช่ตำแหน่งหัวหน้า จึงไม่ขึ้นในรายชื่อ · แก้ที่ /operator
+              ⚠️ {lineHeads.conflicts.map(c => c.name).join(' · ')} — {trI18n("บัญชีผู้ใช้ตั้งเป็นหัวหน้าของไลน์นี้ แต่ทะเบียนพนักงานยังไม่ใช่ตำแหน่งหัวหน้า จึงไม่ขึ้นในรายชื่อ · แก้ที่")} /operator
             </div>
           )}
           {lineHeads.level === 'supervisor' && headChoices.length > 0 && (
@@ -4023,12 +4023,12 @@ function SkillAllowanceTab() {
             <div>
               <span style={{ fontWeight: 700, fontSize: 15 }}>{trI18n('ใบสรุปค่าฝีมือ')}</span>
               <span style={{ color: 'var(--muted)', fontSize: 12, marginLeft: 10 }}>
-                งวดวันที่ {days[0]}-{days[days.length-1]} {THAI_MONTHS[month]} {year + 543}
+                {trI18n("งวดวันที่")} {days[0]}-{days[days.length-1]} {THAI_MONTHS[month]} {year + 543}
               </span>
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <span style={{ background: 'var(--green-dim)', color: 'var(--green)', borderRadius: 'var(--r-md)', padding: '3px 10px', fontSize: 12, fontWeight: 700 }}>
-                {rows.length} คน
+                {rows.length} {trI18n("คน")}
               </span>
               {canExport && (
                 <button onClick={handlePrint} style={{ padding: '7px 14px', borderRadius: 'var(--r-md)', fontSize: 12, fontWeight: 700, cursor: 'pointer', background: 'var(--blue-dim)', color: 'var(--blue)', border: '1px solid var(--blue-line)', display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -4555,7 +4555,7 @@ function AttendanceFormTab() {
             downloadCSV(
               'csv_attendance_sheet',
               `attendance_${year}_${String(month).padStart(2,'0')}_p${period}.csv`,
-              ['รหัสพนักงาน', 'ชื่อ', 'ส่วนงาน', 'Team', ...daysArr.map(d => isSunday(d) ? `${d}(หยุด)` : String(d)), 'รวมวัน', 'OT (ชม.)'],
+              ['รหัสพนักงาน', 'ชื่อ', 'ส่วนงาน', 'Team', ...daysArr.map(d => isSunday(d) ? `${d}(${trI18n("หยุด")})` : String(d)), 'รวมวัน', 'OT (ชม.)'],
               empRows.map(r => {
                 const totalP  = daysArr.filter(d => r.byDay[d]?.present).length;
                 const totalOT = sumOtHours(r, daysArr);
@@ -4591,7 +4591,7 @@ function AttendanceFormTab() {
             <span style={{ fontWeight: 700 }}>{trI18n('ใบบันทึกการมาทำงาน')}</span>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-                งวดวันที่ {days[0]}-{days[days.length-1]} {THAI_MONTHS[month]} {year+543} · {empRows.length} คน
+                {trI18n("งวดวันที่")} {days[0]}-{days[days.length-1]} {THAI_MONTHS[month]} {year+543} · {empRows.length} {trI18n("คน")}
               </span>
               {canExport && (
                 <button onClick={handlePrint} style={{ padding: '7px 14px', borderRadius: 'var(--r-md)', fontSize: 12, fontWeight: 700, cursor: 'pointer', background: 'var(--blue-dim)', color: 'var(--blue)', border: '1px solid var(--blue-line)', display: 'flex', alignItems: 'center', gap: 5 }}>

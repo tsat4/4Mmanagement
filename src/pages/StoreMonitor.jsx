@@ -162,7 +162,7 @@ export default function StoreMonitor() {
           { icon: '⏰', label: 'รอบส่งเลยเวลา', value: nLate, warn: nLate > 0, tone: 'var(--red)' },
           { icon: '📊', label: 'รายการทั้งหมด', value: scoped.length, tone: 'var(--text)' },
         ].map(c => (
-          <div key={c.label} style={{ flex: '1 1 140px', background: 'var(--bg2)', border: `1px solid ${c.warn ? 'var(--red-line)' : 'var(--border)'}`, borderRadius: 'var(--r-md)', padding: '8px 12px' }}>
+          <div key={c.label} style={{ flex: '1 1 140px', background: 'var(--bg2-surf)', border: `1px solid ${c.warn ? 'var(--red-line)' : 'var(--border)'}`, borderRadius: 'var(--r-md)', padding: '8px 12px' }}>
             <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700 }}>{c.icon} {tr(c.label)}</div>
             <div style={{ fontSize: 22, fontWeight: 900, color: c.warn && c.value > 0 ? c.tone : 'var(--text)', fontFamily: 'var(--font-display)' }}>{c.value}</div>
           </div>
@@ -171,12 +171,12 @@ export default function StoreMonitor() {
 
       {loadErr && (
         <div style={{ ...card, borderColor: 'var(--red-line)', background: 'var(--red-dim)', padding: '10px 14px', marginBottom: 12, fontSize: 13, color: 'var(--red)', fontWeight: 700 }}>
-          ⚠ โหลดข้อมูลเฝ้าระวังไม่สำเร็จ — <b>{tr('ไม่ได้แปลว่าไม่มีเรื่องผิดปกติ')}</b> ({loadErr})
+          ⚠ {tr("โหลดข้อมูลเฝ้าระวังไม่สำเร็จ")} — <b>{tr('ไม่ได้แปลว่าไม่มีเรื่องผิดปกติ')}</b> ({loadErr})
         </div>
       )}
       {cutMsg && (
         <div style={{ ...card, borderColor: 'var(--amber-line)', background: 'var(--amber-dim)', padding: '10px 14px', marginBottom: 12, fontSize: 13, color: 'var(--amber)', fontWeight: 700 }}>
-          ⚠ รายการผิดปกติเกิน {cutMsg} {tr('รายการ — แสดงเฉพาะที่รุนแรงที่สุด')} <b>{tr('ตัวเลขบนจอยังไม่ครบ')}</b>
+          ⚠ {tr("รายการผิดปกติเกิน")} {cutMsg} {tr('รายการ — แสดงเฉพาะที่รุนแรงที่สุด')} <b>{tr('ตัวเลขบนจอยังไม่ครบ')}</b>
         </div>
       )}
       {loading ? (

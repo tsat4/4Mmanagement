@@ -110,7 +110,7 @@ export default function FixtureShimPanel({
     if (preview.after < 0)     { toast.error('ค่ารวมติดลบไม่ได้'); return; }
     if (f.reason === 'other' && !f.note.trim()) { toast.error('เหตุผล "อื่นๆ" ต้องระบุรายละเอียด'); return; }
     if (afterStack?.level === 'over' &&
-        !await askConfirm(`หลังบันทึกจะเป็น ${preview.after} mm ซึ่ง **เกินเพดาน ${point.max_shim_mm} mm**\n\nชิมชดเชยต่อไปไม่ไหวแล้ว — ควรเปิดใบซ่อมเพื่อเปลี่ยนชิ้นส่วนจริง\n\nยืนยันบันทึกต่อ?`)) return;
+        !await askConfirm(`${tr("หลังบันทึกจะเป็น")} ${preview.after} mm ${tr("ซึ่ง **เกินเพดาน")} ${point.max_shim_mm} mm**\n\n${tr("ชิมชดเชยต่อไปไม่ไหวแล้ว — ควรเปิดใบซ่อมเพื่อเปลี่ยนชิ้นส่วนจริง\\n\\nยืนยันบันทึกต่อ")}?`)) return;
 
     setSaving(true);
     try {
@@ -122,12 +122,12 @@ export default function FixtureShimPanel({
       });
       if (!res.ok) throw new Error(res.error || 'บันทึกไม่สำเร็จ');
       if (res.warn) toast.error(res.warn);
-      else toast.success(`บันทึกแล้ว · ค่ารวมใหม่ ${preview.after} mm`);
+      else toast.success(`${tr("บันทึกแล้ว · ค่ารวมใหม่")} ${preview.after} mm`);
       setF(p => ({ ...p, delta: '', total: '', plates_text: '', measure_before: '', measure_after: '', note: '' }));
       await load();
       onSaved?.();
     } catch (e) {
-      toast.error(`บันทึกไม่สำเร็จ: ${e.message}`);
+      toast.error(`${tr("บันทึกไม่สำเร็จ")}: ${e.message}`);
     } finally { setSaving(false); }
   };
 
@@ -135,7 +135,7 @@ export default function FixtureShimPanel({
     const { data, error } = await supabaseDR.from('fixture_shim_events')
       .update({ approved_by: fullName || tr('ไม่ระบุ'), approved_at: new Date().toISOString() })
       .eq('id', ev.id).select('id');
-    if (error) return toast.error(`อนุมัติไม่สำเร็จ: ${error.message}`);
+    if (error) return toast.error(`${tr("อนุมัติไม่สำเร็จ")}: ${error.message}`);
     if (!data?.length) return toast.error('อนุมัติไม่สำเร็จ — ไม่มีแถวถูกเขียน');
     toast.success('อนุมัติแล้ว');
     load();
@@ -175,13 +175,13 @@ export default function FixtureShimPanel({
               ['ห่างจาก baseline', st.added == null ? '—' : `${st.added > 0 ? '+' : ''}${st.added} mm`, '#94a3b8'],
               ['เพดาน', fmt(n0(point.max_shim_mm)), LV[st.level].c],
             ].map(([k, v, c]) => (
-              <div key={k} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)',
+              <div key={k} style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)',
                                     padding: '8px 14px', minWidth: 128 }}>
                 <div style={{ fontSize: 11, color: 'var(--muted)' }}>{k}</div>
                 <div style={{ fontSize: 17, fontWeight: 800, color: c }}>{v}</div>
               </div>
             ))}
-            <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)',
+            <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)',
                           padding: '8px 14px', minWidth: 150 }}>
               <div style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('อายุชิ้นส่วน (tool life)')}</div>
               <div style={{ fontSize: 17, fontWeight: 800,
@@ -209,7 +209,7 @@ export default function FixtureShimPanel({
 
           {/* ── ฟอร์มบันทึก ── */}
           {canRecord ? (
-            <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 14,
+            <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 14,
                           display: 'grid', gap: 10 }}>
               <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))' }}>
                 <Field label={tr('สิ่งที่ทำ')}>
@@ -267,14 +267,14 @@ export default function FixtureShimPanel({
                   <span style={{ color: 'var(--muted)' }}>{tr('กรอกค่าชิมเพื่อดูผลลัพธ์')}</span>
                 ) : (
                   <>
-                    จะบันทึกเป็น <b style={{ fontSize: 15 }}>{preview.after} mm</b>
+                    {tr("จะบันทึกเป็น")} <b style={{ fontSize: 15 }}>{preview.after} mm</b>
                     <span style={{ color: 'var(--muted)' }}>
-                      {' '}({before == null ? 'ยังไม่เคยบันทึกค่าเดิม' : `จากเดิม ${before} mm`}
+                      {' '}({before == null ? 'ยังไม่เคยบันทึกค่าเดิม' : `${tr("จากเดิม")} ${before} mm`}
                       {preview.delta != null && `, ${preview.delta > 0 ? '+' : ''}${preview.delta} mm`})
                     </span>
                     {afterStack?.level === 'over' && (
                       <div style={{ color: '#ef4444', fontWeight: 700, marginTop: 4 }}>
-                        🔴 เกินเพดาน {point.max_shim_mm} mm — ชิมชดเชยต่อไม่ไหว ควรเปิดใบซ่อมเปลี่ยนชิ้นส่วนจริง
+                        🔴 {tr("เกินเพดาน")} {point.max_shim_mm} mm — {tr("ชิมชดเชยต่อไม่ไหว ควรเปิดใบซ่อมเปลี่ยนชิ้นส่วนจริง")}
                       </div>
                     )}
                   </>
@@ -297,12 +297,12 @@ export default function FixtureShimPanel({
           {canManage && (learned.suggested != null || (maxSug.suggested != null && point.max_shim_mm == null)) && (
             <div style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.35)',
                           borderRadius: 'var(--r-md)', padding: '10px 14px', fontSize: 12.5, lineHeight: 1.7 }}>
-              <b>{tr('ข้อเสนอจากประวัติจริงของจุดนี้')}</b> — ระบบไม่ตั้งให้เอง ไปกดยืนยันที่แท็บทะเบียนจุด
+              <b>{tr('ข้อเสนอจากประวัติจริงของจุดนี้')}</b> — {tr("ระบบไม่ตั้งให้เอง ไปกดยืนยันที่แท็บทะเบียนจุด")}
               {learned.suggested != null && (
-                <div>{tr('• อายุชิ้นส่วนจริงเฉลี่ย')} <b>{learned.suggested.toLocaleString()} shot</b> {tr('(จาก')} {learned.samples} ช่วงการเปลี่ยน)</div>
+                <div>{tr('• อายุชิ้นส่วนจริงเฉลี่ย')} <b>{learned.suggested.toLocaleString()} shot</b> {tr('(จาก')} {learned.samples} {tr("ช่วงการเปลี่ยน")})</div>
               )}
               {maxSug.suggested != null && point.max_shim_mm == null && (
-                <div>{tr('• เพดานชิมที่เหมาะ ~')}<b>{maxSug.suggested} mm</b> {tr('(จากค่าที่เคยใช้จริง')} {maxSug.samples} ครั้ง)</div>
+                <div>{tr('• เพดานชิมที่เหมาะ ~')}<b>{maxSug.suggested} mm</b> {tr('(จากค่าที่เคยใช้จริง')} {maxSug.samples} {tr("ครั้ง")})</div>
               )}
             </div>
           )}
@@ -310,14 +310,14 @@ export default function FixtureShimPanel({
           {/* ── ประวัติ ── */}
           <div>
             <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 6 }}>
-              ประวัติของจุดนี้ {loading && <span style={{ color: 'var(--muted)', fontWeight: 400 }}>{tr('· กำลังโหลด…')}</span>}
+              {tr("ประวัติของจุดนี้")} {loading && <span style={{ color: 'var(--muted)', fontWeight: 400 }}>{tr('· กำลังโหลด…')}</span>}
             </div>
             {loadErr ? (
               <div style={{ background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.45)',
                             borderRadius: 'var(--r-md)', padding: '8px 12px', fontSize: 12.5 }}>
-                ⚠️ โหลดประวัติไม่สำเร็จ: {loadErr} — <b>{tr('ไม่ใช่ว่าไม่มีประวัติ')}</b>
+                ⚠️ {tr("โหลดประวัติไม่สำเร็จ")}: {loadErr} — <b>{tr('ไม่ใช่ว่าไม่มีประวัติ')}</b>
                 <button onClick={load} style={{ marginLeft: 8, padding: '3px 10px', borderRadius: 'var(--r-md)', fontSize: 12,
-                        background: 'var(--bg2)', color: 'var(--text)', border: '1px solid var(--border)', cursor: 'pointer' }}>
+                        background: 'var(--bg2-surf)', color: 'var(--text)', border: '1px solid var(--border)', cursor: 'pointer' }}>
                   {tr('ลองใหม่')}
                 </button>
               </div>

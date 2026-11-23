@@ -36,7 +36,7 @@ export default function PointJumpBar({ points, labels, onJump, flashKey, compact
           const blank = !String(c.name ?? '').trim()
           return (
             <button key={c._key} type="button" onClick={() => onJump(c._key)}
-              title={`${labels[c._key]} · ${blank ? '(ยังไม่ตั้งชื่อ)' : c.name}${c.group_name ? ` — ${c.group_name}` : ''}`}
+              title={`${labels[c._key]} · ${blank ? tr('(ยังไม่ตั้งชื่อ)') : c.name}${c.group_name ? ` — ${c.group_name}` : ''}`}
               style={{ flex: '0 0 auto', padding: '3px 8px', borderRadius: 12, fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
                 maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 border: `1px ${blank ? 'dashed' : 'solid'} ${blank ? 'var(--red)' : flashKey === c._key ? 'var(--accent)' : 'var(--border2)'}`,
@@ -46,7 +46,7 @@ export default function PointJumpBar({ points, labels, onJump, flashKey, compact
             </button>
           )
         })}
-        {hits.length === 0 && <span style={{ fontSize: 12, color: 'var(--muted)', padding: '3px 0' }}>ไม่พบจุดที่ตรงกับ "{q}"</span>}
+        {hits.length === 0 && <span style={{ fontSize: 12, color: 'var(--muted)', padding: '3px 0' }}>{tr("ไม่พบจุดที่ตรงกับ")} "{q}"</span>}
       </div>
     </div>
   )

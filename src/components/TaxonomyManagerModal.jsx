@@ -24,7 +24,7 @@ const EMOJI_SUGGESTIONS = ['👁', '👂', '✋', '📏', '📐', '🔧', '🔩'
 // เพิ่มชนิดใหม่ที่ master แล้ว modal นี้ตกหล่น) · l ใช้ label ไทยตาม master
 const EQUIP_TYPE_OPTS = EQUIPMENT_KINDS.map(k => ({ k: k.key, l: `${k.icon} ${k.label}` }))
 
-export default function TaxonomyManagerModal({ table, title, extraField = 'color', withEquipTypes = false, teams = null, role = null, myTeams = [], onClose, onChanged }) {
+export default function TaxonomyManagerModal({ table, title, extraField = 'color', withEquipTypes = false, teams = null, role = null, myTeams = [], allUnits = false, onClose, onChanged }) {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(null) // row object or 'new'
@@ -35,9 +35,9 @@ export default function TaxonomyManagerModal({ table, title, extraField = 'color
 
   /* ล็อกตามเจ้าของ — กติกาเดียวกับ SimpleList ใน /mtn-repair (ดู CLAUDE.md
      "master ของทีมช่าง ใครเป็นเจ้าของ คนนั้นแก้") · แถวของทีมอื่น = ดูอย่างเดียว
-     · แถว 🌐 ของกลาง = admin/manager เท่านั้น (แก้ทีเดียวกระทบทุกทีม)
+     · แถว 🌐 ของกลาง = admin/ผู้ถือใบผ่านข้ามหน่วยเท่านั้น (แก้ทีเดียวกระทบทุกทีม)
      ⚠️ ยังไม่ได้ตั้งทีมให้ user (myTeams ว่าง) = ไม่ล็อก ไม่งั้นช่างทำงานไม่ได้ */
-  const isBoss = role === 'admin' || role === 'manager'
+  const isBoss = role === 'admin' || allUnits === true   // 13/11: บอส = ใบผ่านข้ามหน่วยรายคน ไม่ใช่ชื่อ role (manager ≠ แก้ข้ามทีม)
   const myKeys = (myTeams || []).map(teamKeyOf).filter(Boolean)
   const unscoped = !withTeam || myKeys.length === 0
   const canEditRow = (r) => {
@@ -46,7 +46,7 @@ export default function TaxonomyManagerModal({ table, title, extraField = 'color
   }
   const teamLabel = (k) => (k ? (teams?.find(t => t.key === k)?.dept_name || k) : '🌐 ใช้ร่วมทุกทีม')
   const lockNote = (r) => (r?.team
-    ? `รายการนี้เป็นของทีม ${teamLabel(r.team)} — แก้ได้เฉพาะทีมนั้นหรือหัวหน้า`
+    ? `${tr("รายการนี้เป็นของทีม")} ${teamLabel(r.team)} — ${tr("แก้ได้เฉพาะทีมนั้นหรือหัวหน้า")}`
     : 'รายการนี้ทุกทีมใช้ร่วมกัน — แก้ได้เฉพาะหัวหน้า (แก้ทีเดียวกระทบทุกทีม)')
 
   const fetchRows = async () => {
@@ -94,7 +94,7 @@ export default function TaxonomyManagerModal({ table, title, extraField = 'color
   }
 
   const remove = async (r) => {
-    if (!await askConfirm(`ลบ "${r.label}" (${r.code}) ?\nจุดตรวจที่ใช้ค่านี้จะยังเก็บ code เดิมไว้`)) return
+    if (!await askConfirm(`${tr("ลบ")} "${r.label}" (${r.code}) ?\n${tr("จุดตรวจที่ใช้ค่านี้จะยังเก็บ code เดิมไว้")}`)) return
     const { error } = await supabaseDR.from(table).delete().eq('id', r.id)
     if (error) { toast.error(error.message); return }
     toast.success('ลบแล้ว')
@@ -110,7 +110,7 @@ export default function TaxonomyManagerModal({ table, title, extraField = 'color
       {/* modal มีฟอร์มกรอกข้อมูล — ห้ามปิดจากคลิก backdrop (ข้อมูลที่พิมพ์อยู่จะหาย) ปิดจากปุ่ม × เท่านั้น */}
       <div style={{ position: 'absolute', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)' }} />
       <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }}
-        style={{ position: 'relative', zIndex: 10, width: '100%', maxWidth: 480, maxHeight: '88vh', display: 'flex', flexDirection: 'column', borderRadius: 12, background: 'var(--bg2)', border: '1px solid var(--border2)', boxShadow: 'var(--shadow-lg)' }}>
+        style={{ position: 'relative', zIndex: 10, width: '100%', maxWidth: 480, maxHeight: '88vh', display: 'flex', flexDirection: 'column', borderRadius: 12, background: 'var(--bg2-surf)', border: '1px solid var(--border2)', boxShadow: 'var(--shadow-lg)' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h2 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', margin: 0, fontFamily: 'var(--font-display)' }}>{title}</h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 20, cursor: 'pointer' }}>×</button>
@@ -122,7 +122,7 @@ export default function TaxonomyManagerModal({ table, title, extraField = 'color
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {rows.map(r => (
-                <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--card)', opacity: r.is_active ? 1 : 0.5 }}>
+                <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--card-surf)', opacity: r.is_active ? 1 : 0.5 }}>
                   {extraField === 'color' && <span style={{ width: 14, height: 14, borderRadius: '50%', background: r.color, flexShrink: 0 }} />}
                   {extraField === 'icon' && <span style={{ fontSize: 18, flexShrink: 0 }}>{r.icon}</span>}
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -143,7 +143,7 @@ export default function TaxonomyManagerModal({ table, title, extraField = 'color
           )}
 
           {editing && (
-            <div style={{ marginTop: 14, padding: 14, borderRadius: 'var(--r-md)', border: '1px solid var(--accent)', background: 'var(--bg3)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ marginTop: 14, padding: 14, borderRadius: 'var(--r-md)', border: '1px solid var(--accent)', background: 'var(--bg3-surf)', display: 'flex', flexDirection: 'column', gap: 10 }}>
               <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', margin: 0 }}>{editing === 'new' ? tr('เพิ่มรายการใหม่') : tr('แก้ไขรายการ')}</p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 8 }}>
                 <div><label style={lbl}>Code *</label><input value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))} placeholder="LP" style={inp} /></div>
@@ -197,7 +197,7 @@ export default function TaxonomyManagerModal({ table, title, extraField = 'color
                 </label>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => setEditing(null)} style={{ flex: 1, padding: '8px 0', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg2)', color: 'var(--muted)', fontSize: 13, cursor: 'pointer' }}>{tr('ยกเลิก')}</button>
+                <button onClick={() => setEditing(null)} style={{ flex: 1, padding: '8px 0', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg2-surf)', color: 'var(--muted)', fontSize: 13, cursor: 'pointer' }}>{tr('ยกเลิก')}</button>
                 <button onClick={save} disabled={saving} style={{ flex: 1, padding: '8px 0', borderRadius: 'var(--r-md)', border: 'none', background: 'var(--accent)', color: 'var(--accent-ink)', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>{saving ? tr('บันทึก...') : tr('บันทึก')}</button>
               </div>
             </div>

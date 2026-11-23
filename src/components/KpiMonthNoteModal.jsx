@@ -53,7 +53,7 @@ export default function KpiMonthNoteModal({ title, icon, monthText, valueText, n
         const ok = checkWriteRows(await supabase.from('kpi_month_notes').update({ image_url: url }).eq('id', id).select('id'), 'แนบรูปหมายเหตุ');
         if (!ok) removeActionImg(url);
       } catch (e) {
-        toast.error('บันทึกข้อความแล้ว แต่อัปโหลดรูปไม่สำเร็จ: ' + (e?.message || e));
+        toast.error((tr('บันทึกข้อความแล้ว แต่อัปโหลดรูปไม่สำเร็จ') + ': ') + (e?.message || e));
       } finally { setBusy(false); }
     }
     setText(''); setFile(null);
@@ -61,7 +61,7 @@ export default function KpiMonthNoteModal({ title, icon, monthText, valueText, n
     onChanged?.();
   };
   const remove = async (n) => {
-    if (!await askConfirm(`ลบหมายเหตุนี้?\n"${n.text.slice(0, 80)}"`)) return;
+    if (!await askConfirm(`${tr("ลบหมายเหตุนี้")}?\n"${n.text.slice(0, 80)}"`)) return;
     const res = await supabase.from('kpi_month_notes').update({ is_active: false }).eq('id', n.id).select('id');
     if (!checkWrite(res, 'ลบหมายเหตุ')) return;
     if (!res.data?.length) { toast.error('ลบไม่สำเร็จ — ไม่มีสิทธิ์ (ต้องมี kpi:manage)'); return; }
@@ -88,7 +88,7 @@ export default function KpiMonthNoteModal({ title, icon, monthText, valueText, n
         <div style={{ padding: 14, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8, flex: 1, minHeight: 0 }}>
           {notes.length === 0 && (
             <div style={{ fontSize: 13, color: 'var(--muted)', textAlign: 'center', padding: '18px 8px' }}>
-              ยังไม่มีหมายเหตุของเดือนนี้{canEdit ? ' — พิมพ์ด้านล่างเพื่อบันทึกว่าเกิดอะไรขึ้น / ทำอะไรไปแล้ว' : ''}
+              {tr("ยังไม่มีหมายเหตุของเดือนนี้")}{canEdit ? ' — พิมพ์ด้านล่างเพื่อบันทึกว่าเกิดอะไรขึ้น / ทำอะไรไปแล้ว' : ''}
             </div>
           )}
           {notes.map((n) => {
@@ -124,7 +124,7 @@ export default function KpiMonthNoteModal({ title, icon, monthText, valueText, n
             <QualityPhotoField label={tr('รูปแนบ (ไม่บังคับ)')} file={file} onPick={setFile}
               hint={tr('ถ่ายสิ่งที่เกิดขึ้น/สิ่งที่แก้ไป — เปิดดูตอนนำเสนอได้จากแท่งเดือนนี้')} />
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-              <button onClick={onClose} style={{ fontSize: 13, padding: '6px 12px', borderRadius: 'var(--r-md)', cursor: 'pointer', background: 'var(--bg3)', color: 'var(--text)', border: '1px solid var(--border2)' }}>{tr('ปิด')}</button>
+              <button onClick={onClose} style={{ fontSize: 13, padding: '6px 12px', borderRadius: 'var(--r-md)', cursor: 'pointer', background: 'var(--bg3-surf)', color: 'var(--text)', border: '1px solid var(--border2)' }}>{tr('ปิด')}</button>
               <button onClick={add} disabled={busy} style={{ fontSize: 13, fontWeight: 700, padding: '6px 14px', borderRadius: 'var(--r-md)', cursor: 'pointer', background: 'var(--accent)', color: 'var(--accent-ink)', border: 'none' }}>{busy ? tr('กำลังบันทึก…') : tr('บันทึก')}</button>
             </div>
           </div>

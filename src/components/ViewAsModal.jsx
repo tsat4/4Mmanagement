@@ -98,7 +98,7 @@ export default function ViewAsModal({ current, onClose, onApply }) {
         {isLeader ? (
           <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
             <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', flex: 2, minWidth: 200 }}>
-              ไลน์ของหัวหน้ากลุ่ม (scope = ทั้งครอบครัวไลน์)
+              {tr("ไลน์ของหัวหน้ากลุ่ม (scope = ทั้งครอบครัวไลน์")})
               {/* picker กลาง (UI §5.1.2) — ไม่ส่ง role/sections เพราะจอนี้คือ "สวมบทบาท" ต้องเห็นทุกไลน์
                   includeRetired: คงพฤติกรรมเดิม (เดิม map จาก lines ดิบ ไม่กรอง is_active) */}
               <LineSelect lines={lines} value={lineId} onChange={setLineId} valueKey="id"
@@ -156,7 +156,7 @@ export default function ViewAsModal({ current, onClose, onApply }) {
 
         <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
           <button onClick={onClose}
-            style={{ flex: 1, padding: '10px 0', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+            style={{ flex: 1, padding: '10px 0', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
             {tr('ยกเลิก')}
           </button>
           <button onClick={apply}

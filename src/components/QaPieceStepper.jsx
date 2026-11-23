@@ -138,11 +138,11 @@ export default function QaPieceStepper({
   const submitPiece = () => {
     if (!canRecord) { toast.error('ไม่มีสิทธิ์บันทึกผลตรวจ'); return; }
     if (missing.length) {
-      toast.error(`บันทึกไม่ได้ — ยังไม่ได้ตรวจ ${missing.length} จุด (#${missing.slice(0, 10).map(i => i.balloon_no || '?').join(', #')}${missing.length > 10 ? ' …' : ''}) — ต้องครบทุกจุดก่อนบันทึกชิ้น`);
+      toast.error(`${tr("บันทึกไม่ได้ — ยังไม่ได้ตรวจ")} ${missing.length} ${tr("จุด")} (#${missing.slice(0, 10).map(i => i.balloon_no || '?').join(', #')}${missing.length > 10 ? ' …' : ''}) — ${tr("ต้องครบทุกจุดก่อนบันทึกชิ้น")}`);
       setMissJump(j => ({ id: missing[0].id, n: (j?.n || 0) + 1, at: Date.now() })); return;
     }
     if (ngNoNote.length) {
-      toast.error(`บันทึกไม่ได้ — จุดที่ไม่ผ่านต้องกรอก "เสียอย่างไร" (#${ngNoNote.map(i => i.balloon_no).join(', #')})`);
+      toast.error(`${tr("บันทึกไม่ได้ — จุดที่ไม่ผ่านต้องกรอก \"เสียอย่างไร")}" (#${ngNoNote.map(i => i.balloon_no).join(', #')})`);
       setMissJump(j => ({ id: ngNoNote[0].id, n: (j?.n || 0) + 1, at: Date.now() })); return;
     }
     const payload = {
@@ -178,14 +178,14 @@ export default function QaPieceStepper({
   const failedInRound = roundPieces.filter(p => p.result === 'fail');
 
   return (
-    <div style={{ background: 'var(--card)', border: `1px solid ${tone}66`, borderRadius: 'var(--r-lg)', padding: 14, marginBottom: 12 }}>
+    <div style={{ background: 'var(--card-surf)', border: `1px solid ${tone}66`, borderRadius: 'var(--r-lg)', padding: 14, marginBottom: 12 }}>
       {/* ป้ายสถานะจากตัวเดินกฎ */}
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
         <span style={{ fontWeight: 800, fontSize: 14 }}>
-          {state === 'accepted' ? '✅ ยอมรับแล้ว' : state === 'await_action' ? '🚨 รอ action แก้ไข' : `🔩 ชิ้นที่ ${seq?.nextPiece ?? 1}`}
+          {state === 'accepted' ? '✅ ยอมรับแล้ว' : state === 'await_action' ? '🚨 รอ action แก้ไข' : `🔩 ${tr("ชิ้นที่")} ${seq?.nextPiece ?? 1}`}
         </span>
-        <Chip label={`รอบที่ ${seq?.round ?? 1}`} color="#6b7280" />
-        {seq?.alarmCount > 0 && <Chip label={`alarm ${seq.alarmCount} ครั้ง`} color="#ef4444" />}
+        <Chip label={`${tr("รอบที่")} ${seq?.round ?? 1}`} color="#6b7280" />
+        {seq?.alarmCount > 0 && <Chip label={`alarm ${seq.alarmCount} ${tr("ครั้ง")}`} color="#ef4444" />}
         <span style={{ fontSize: 12.5, color: tone, fontWeight: 700 }}>{seqLabel(seq)}</span>
       </div>
 
@@ -193,18 +193,18 @@ export default function QaPieceStepper({
       {(pieces?.length > 0 || actions?.length > 0) && (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10, fontSize: 11.5 }}>
           {[...(pieces || [])].sort((a, b) => a.piece_no - b.piece_no).map(p => (
-            <span key={p.id || p.piece_no} title={p.failed_items?.length ? `ตก: ${p.failed_items.map(f => `#${f.balloon_no} ${f.characteristic}`).join(' · ')}${p.remark ? `\n${p.remark}` : ''}` : 'ผ่านทุกจุด'}
+            <span key={p.id || p.piece_no} title={p.failed_items?.length ? `${tr("ตก")}: ${p.failed_items.map(f => `#${f.balloon_no} ${f.characteristic}`).join(' · ')}${p.remark ? `\n${p.remark}` : ''}` : 'ผ่านทุกจุด'}
               style={{ padding: '3px 9px', borderRadius: 'var(--r-pill)', fontWeight: 700,
                 background: p.result === 'pass' ? 'rgba(34,197,94,0.14)' : 'rgba(239,68,68,0.14)',
                 color: p.result === 'pass' ? '#22c55e' : '#ef4444', border: `1px solid ${p.result === 'pass' ? '#22c55e55' : '#ef444455'}` }}>
-              ชิ้น {p.piece_no} {p.result === 'pass' ? '✓' : `✕${p.disposition ? ` · ${DISPOSITION[p.disposition]?.label?.split(' ')[1] || p.disposition}` : ''}`}
-              {p.round_no > 1 ? ` (รอบ ${p.round_no})` : ''}
+              {tr("ชิ้น")} {p.piece_no} {p.result === 'pass' ? '✓' : `✕${p.disposition ? ` · ${DISPOSITION[p.disposition]?.label?.split(' ')[1] || p.disposition}` : ''}`}
+              {p.round_no > 1 ? ` (${tr("รอบ")} ${p.round_no})` : ''}
             </span>
           ))}
           {(actions || []).map(a => (
             <span key={a.id || a.round_no} title={String(a.action_text || '')}
               style={{ padding: '3px 9px', borderRadius: 'var(--r-pill)', fontWeight: 700, background: 'rgba(245,158,11,0.14)', color: '#f59e0b', border: '1px solid #f59e0b55' }}>
-              action รอบ {a.round_no}: {String(a.action_text || '—').slice(0, 40)}{String(a.action_text || '').length > 40 ? '…' : ''} — {a.action_by || '—'}
+              action {tr("รอบ")} {a.round_no}: {String(a.action_text || '—').slice(0, 40)}{String(a.action_text || '').length > 40 ? '…' : ''} — {a.action_by || '—'}
               {a.four_m_log_id ? ' · 4M' : ''}
             </span>
           ))}
@@ -215,8 +215,8 @@ export default function QaPieceStepper({
       {state === 'await_action' && (
         <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 'var(--r-md)', padding: 12 }}>
           <div style={{ fontSize: 12.5, marginBottom: 8, lineHeight: 1.6 }}>
-            ชิ้นที่ตกในรอบนี้: {failedInRound.map(p => `ชิ้น ${p.piece_no} (${(p.failed_items || []).map(f => `#${f.balloon_no}`).join(', ') || '—'})`).join(' · ') || '—'}
-            <br />{tr('ฝ่ายผลิตบันทึกว่าแก้ไขอะไร แล้ว QA กลับมาตรวจต่อ ต้องผ่านติดกัน')} {SEQ_RULE.PASSES_TO_ACCEPT} ชิ้นถึงยอมรับ (ตกอีกชิ้นเดียว = alarm ซ้ำ)
+            {tr("ชิ้นที่ตกในรอบนี้")}: {failedInRound.map(p => `${tr("ชิ้น")} ${p.piece_no} (${(p.failed_items || []).map(f => `#${f.balloon_no}`).join(', ') || '—'})`).join(' · ') || '—'}
+            <br />{tr('ฝ่ายผลิตบันทึกว่าแก้ไขอะไร แล้ว QA กลับมาตรวจต่อ ต้องผ่านติดกัน')} {SEQ_RULE.PASSES_TO_ACCEPT} {tr("ชิ้นถึงยอมรับ (ตกอีกชิ้นเดียว = alarm ซ้ำ")})
           </div>
           {canAction ? (
             <div style={{ display: 'grid', gap: 8, gridTemplateColumns: isMobile ? 'minmax(0,1fr)' : '2fr 1fr', alignItems: 'start' }}>
@@ -284,7 +284,7 @@ export default function QaPieceStepper({
                     fontWeight: 800, fontSize: 12, color: '#fff', background: j ? JUDGE[j].color : '#4d9fff' }}>{i.balloon_no}</span>
                   {/* 🔍 รูปโคลสอัพของจุด (ตั้งที่ /qa-setup) — แตะซูม · แบบเดียวกับใบตรวจ PM */}
                   {i.image_path && <PointThumb url={qaFileUrl(i.image_path)} height={40} label={i.balloon_no}
-                    name={i.characteristic} description={`สเปค: ${specLabel(i)}${i.method ? ` · ${i.method}` : ''}`} />}
+                    name={i.characteristic} description={`${tr("สเปค")}: ${specLabel(i)}${i.method ? ` · ${i.method}` : ''}`} />}
                   <div style={{ flex: '1 1 180px', minWidth: 160 }}>
                     <div style={{ fontSize: 13, fontWeight: 700 }}>{i.characteristic}</div>
                     <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{tr('สเปค:')} {specLabel(i)}{i.method ? ` · ${i.method}` : ''}</div>
@@ -311,7 +311,7 @@ export default function QaPieceStepper({
                     </div>
                   )}
                   {needValue && j && (
-                    <span style={{ fontSize: 12, fontWeight: 700, color: JUDGE[j].color, whiteSpace: 'nowrap' }}>{j === 'na' ? 'ข้าม' : `อัตโนมัติ: ${JUDGE[j].label}`}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: JUDGE[j].color, whiteSpace: 'nowrap' }}>{j === 'na' ? 'ข้าม' : `${tr("อัตโนมัติ")}: ${JUDGE[j].label}`}</span>
                   )}
                   {/* จุดคำนวณข้ามเองเมื่อจุด A/B ถูกข้าม — ไม่มีปุ่มข้ามของตัวเอง */}
                   {!calcOf(i) && (<button className="tbtn" title={tr('ไม่ได้ตรวจจุดนี้ในชิ้นนี้')} onClick={() => setD(i.id, { judge: d.judge === 'na' ? null : 'na', value: d.judge === 'na' ? d.value : '' })}
@@ -328,13 +328,13 @@ export default function QaPieceStepper({
             <button disabled={busy} onClick={passAllAttr} style={btn('var(--bg3)', 'var(--text2)')} title={tr('ติ๊กผ่านให้จุดที่ยังไม่ตอบ (ยกเว้นจุดที่ต้องกรอกค่าวัด)')}>{tr('✓ ผ่านทุกจุดที่เหลือ')}</button>
             <span style={{ flex: 1 }} />
             <span style={{ fontSize: 12, color: result === 'fail' ? '#ef4444' : result === 'pass' ? '#22c55e' : 'var(--muted)', fontWeight: 700 }}>
-              {result === 'fail' ? `ชิ้นนี้ตก ${failedItems.length} จุด` : result === 'pass' ? 'ชิ้นนี้ผ่านทุกจุด' : `เหลืออีก ${missing.length} จุด`}
+              {result === 'fail' ? `${tr("ชิ้นนี้ตก")} ${failedItems.length} ${tr("จุด")}` : result === 'pass' ? 'ชิ้นนี้ผ่านทุกจุด' : `${tr("เหลืออีก")} ${missing.length} ${tr("จุด")}`}
             </span>
             {/* 🔴 ตรวจไม่ครบ = บันทึกไม่ได้ แต่ปุ่มต้องกดได้เพื่อบอกเหตุ (19/11 · คำสั่ง user "กดบันทึกต้องแจ้งว่าบันทึกไม่ได้
                 ขาดข้อไหน และเด้งไปหาข้อนั้น") — เดิม disabled เงียบ ⇒ กดแล้วไม่มีอะไรเกิด · ด่านจริงอยู่ submitPiece */}
             <button disabled={busy} onClick={submitPiece}
               style={btn(result === 'fail' ? '#ef4444' : result ? 'var(--accent)' : 'var(--accent2)', result === 'fail' ? '#fff' : 'var(--accent-ink)', { fontWeight: 800 })}>
-              {!result ? `ยังบันทึกไม่ได้ — ยังไม่ตรวจ ${missing.length} จุด` : result === 'fail' ? `✕ บันทึกชิ้นที่ ${seq?.nextPiece} (ตก) →` : `✓ บันทึกชิ้นที่ ${seq?.nextPiece}`}
+              {!result ? `${tr("ยังบันทึกไม่ได้ — ยังไม่ตรวจ")} ${missing.length} ${tr("จุด")}` : result === 'fail' ? `✕ ${tr("บันทึกชิ้นที่")} ${seq?.nextPiece} (${tr("ตก")}) →` : `✓ ${tr("บันทึกชิ้นที่")} ${seq?.nextPiece}`}
             </button>
           </div>
         </>
@@ -344,14 +344,14 @@ export default function QaPieceStepper({
       )}
       {state === 'accepted' && (
         <div style={{ fontSize: 12.5, color: '#22c55e' }}>
-          ปิดใบแล้ว {sheet?.closed_at ? `เมื่อ ${new Date(sheet.closed_at).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}` : ''}{sheet?.closed_by ? ` โดย ${sheet.closed_by}` : ''}
+          {tr("ปิดใบแล้ว")} {sheet?.closed_at ? `${tr("เมื่อ")} ${new Date(sheet.closed_at).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}` : ''}{sheet?.closed_by ? ` ${tr("โดย")} ${sheet.closed_by}` : ''}
         </div>
       )}
 
       {/* ── modal disposition ของชิ้นที่ตก — ฟอร์ม: ไม่ปิดจาก backdrop (UI-CONVENTIONS §5) ── */}
       {dispo && (
         <div className="modal-scroll" /* modal-scroll = เลื่อนถึงปุ่มล่างได้เมื่อจอเตี้ย/คีย์บอร์ดเด้ง (UI-CONVENTIONS §4 · index.css) */ style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 12 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card)', border: '1px solid rgba(239,68,68,0.5)', borderRadius: 'var(--r-lg)', padding: 16, width: 'min(560px, 100%)' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: '1px solid rgba(239,68,68,0.5)', borderRadius: 'var(--r-lg)', padding: 16, width: 'min(560px, 100%)' }}>
             <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 6 }}>{tr('✕ ชิ้นที่')} {seq?.nextPiece} {tr('ตก')} {dispo.payload.failedItems.length} {tr('จุด — จะทำอะไรกับชิ้นนี้')}</div>
             <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 10, lineHeight: 1.6 }}>
               {dispo.payload.failedItems.map(f => `#${f.balloon_no} ${f.characteristic}${f.value != null && f.value !== '' ? ` = ${f.value}` : ''} (${f.spec_text})${f.note ? ` — ${f.note}` : ''}`).join(' · ')}

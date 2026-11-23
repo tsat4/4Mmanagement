@@ -90,7 +90,7 @@ export default function PmForecast() {
       const jigs = jigRes.rows
       if (!live()) return
       const mainErr = [['แผน PM', planRes], ['รายการตรวจ', clRes], ['ทะเบียนเครื่อง', jigRes]]
-        .map(([lb, r]) => r.error ? `${lb}: ${r.error}` : r.truncated ? `${lb}: อ่านได้ไม่ครบ` : null).filter(Boolean)
+        .map(([lb, r]) => r.error ? `${lb}: ${r.error}` : r.truncated ? `${lb}: ${tr("อ่านได้ไม่ครบ")}` : null).filter(Boolean)
       setLoadErr(mainErr.join(' · '))
       if (mainErr.length) { setRows([]); setNoLineN(0); return }
       const jigById = Object.fromEntries((jigs || []).map(j => [j.id, j]))
@@ -121,7 +121,7 @@ export default function PmForecast() {
       if (!live()) return
       // forecast/ทะเบียนสินค้าอ่านไม่ได้ = อัตรา/วันถอยไปใช้ยอดจริง 30 วันทุกแถว — ต้องบอก ไม่งั้นคนเชื่อว่าเป็นอัตรา forecast
       setPartErr([['ทะเบียนสินค้า', prodRes], ['forecast เดือนนี้', fcRes]]
-        .map(([lb, r]) => r.error ? `${lb}: ${r.error}` : r.truncated ? `${lb}: อ่านได้ไม่ครบ` : null).filter(Boolean).join(' · '))
+        .map(([lb, r]) => r.error ? `${lb}: ${r.error}` : r.truncated ? `${lb}: ${tr("อ่านได้ไม่ครบ")}` : null).filter(Boolean).join(' · '))
       const fcByMat = {}
       ;(fcRes.rows).forEach(f => { if (f.mat_no) fcByMat[f.mat_no] = (fcByMat[f.mat_no] || 0) + Number(f.qty || 0) })
 
@@ -222,17 +222,17 @@ export default function PmForecast() {
 
       {prodErr && (
         <div role="alert" style={{ padding: '8px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--red)', color: 'var(--red)', fontSize: 12.5, fontWeight: 700 }}>
-          ⚠️ โหลดยอดผลิตย้อนหลังไม่สำเร็จ ({prodErr}) — ยอดสะสม / อัตราต่อวัน / buffer ด้านล่างไม่ใช่ค่าจริง (ต่ำกว่าจริง) กด 🔄 รีเฟรช
+          ⚠️ {tr("โหลดยอดผลิตย้อนหลังไม่สำเร็จ")} ({prodErr}) — {tr("ยอดสะสม / อัตราต่อวัน / buffer ด้านล่างไม่ใช่ค่าจริง (ต่ำกว่าจริง) กด 🔄 รีเฟรช")}
         </div>
       )}
       {loadErr && (
         <div role="alert" style={{ padding: '8px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--red)', color: 'var(--red)', fontSize: 12.5, fontWeight: 700 }}>
-          ⚠️ โหลดแผน PM ไม่สำเร็จ ({loadErr}) — <u>{tr('ไม่ได้แปลว่าไม่มีแผน')}</u> ตารางว่างเพราะอ่านข้อมูลไม่ได้ กด 🔄 รีเฟรช
+          ⚠️ {tr("โหลดแผน PM ไม่สำเร็จ")} ({loadErr}) — <u>{tr('ไม่ได้แปลว่าไม่มีแผน')}</u> {tr("ตารางว่างเพราะอ่านข้อมูลไม่ได้ กด 🔄 รีเฟรช")}
         </div>
       )}
       {partErr && !loadErr && (
         <div role="alert" style={{ padding: '8px 12px', borderRadius: 'var(--r-md)', border: '1px solid #f59a3f', color: '#f59a3f', fontSize: 12.5, fontWeight: 700 }}>
-          ⚠️ โหลด {partErr} ไม่สำเร็จ — อัตรา/วันทุกแถวถอยไปใช้ยอดผลิตจริง 30 วันแทน forecast
+          ⚠️ {tr("โหลด")} {partErr} {tr("ไม่สำเร็จ — อัตรา/วันทุกแถวถอยไปใช้ยอดผลิตจริง 30 วันแทน")} forecast
         </div>
       )}
       {tab === 'usage' ? (
@@ -250,14 +250,14 @@ export default function PmForecast() {
         <SearchInput value={fQ} onChange={setFQ} fields="ไลน์ / อุปกรณ์" />
         <span className="filter-count">{tr('แสดง')} {shown.length} {tr('จาก')} {rows.length}</span>
         {droppedNoLine > 0 && <span className="filter-count" style={{ color: '#f59a3f' }} title={tr('ชื่อไลน์ของแผนไม่ตรงทะเบียนไลน์ผลิต — กรองตามไลน์ไม่ได้')}>{tr('⚠ อีก')} {droppedNoLine} {tr('แผนไลน์ไม่ตรงทะเบียน')}</span>}
-        {filtered && <button type="button" onClick={clearFilters} style={{ background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text2)', borderRadius: 'var(--r-md)', padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}>{tr('ล้างตัวกรอง')}</button>}
+        {filtered && <button type="button" onClick={clearFilters} style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', color: 'var(--text2)', borderRadius: 'var(--r-md)', padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}>{tr('ล้างตัวกรอง')}</button>}
         <span className="spacer" />
         {noLineN > 0 && <span className="filter-count" title={tr('แผนที่ทั้งตัวแผน (usage_source_line) และเครื่อง (line_name) ไม่มีไลน์ — คิดยอดผลิต/วัน PM ไม่ได้ ไปตั้งไลน์ให้เครื่องที่ทะเบียนอุปกรณ์')} style={{ color: '#f59a3f', fontWeight: 700 }}>⚠ {noLineN} {tr('แผนไม่มีไลน์ — ไม่แสดง')}</span>}
         {totalBuffer > 0 && <span className="filter-count" style={{ color: 'var(--accent2)', fontWeight: 700 }}>{tr('Σ buffer ที่ต้องเตรียม ≈')} {totalBuffer.toLocaleString()} {tr('ชิ้น')}</span>}
       </FilterBar>
 
       {loading ? <div style={{ color: 'var(--muted)', padding: 40, textAlign: 'center' }}>{tr('กำลังคำนวณ...')}</div>
-        : (!shown.length && rows.length) ? <div style={{ color: 'var(--muted)', padding: 40, textAlign: 'center' }}>{tr('ไม่มีแผนที่ตรงกับตัวกรอง')}{droppedNoLine ? ` · อีก ${droppedNoLine} แผนไลน์ไม่ตรงทะเบียน กรองตามไลน์ไม่ได้` : ''}</div>
+        : (!shown.length && rows.length) ? <div style={{ color: 'var(--muted)', padding: 40, textAlign: 'center' }}>{tr('ไม่มีแผนที่ตรงกับตัวกรอง')}{droppedNoLine ? ` · ${tr("อีก")} ${droppedNoLine} ${tr("แผนไลน์ไม่ตรงทะเบียน กรองตามไลน์ไม่ได้")}` : ''}</div>
         : loadErr ? <div style={{ color: 'var(--muted)', padding: 40, textAlign: 'center' }}>{tr('อ่านข้อมูลไม่ได้ — ดูแถบแดงด้านบน')}</div>
         : !shown.length ? <div style={{ color: 'var(--muted)', padding: 40, textAlign: 'center' }}>{tr('ยังไม่มีแผน PM ที่คำนวณได้ (ต้องตั้ง usage_threshold หรือรอบเวลา + มียอดผลิต/forecast)')}</div>
         : (
@@ -282,12 +282,12 @@ export default function PmForecast() {
                           : <span style={{ color: 'var(--muted)' }}>{tr('รอบ')} {p.interval_days} {tr('วัน')}</span>}
                       </td>
                       <td style={{ padding: '8px 10px', fontWeight: 700, color: r.overdue ? 'var(--red)' : r.inWindow ? '#f59a3f' : 'var(--text)', whiteSpace: 'nowrap' }}>{fmtThai(r.projected)}</td>
-                      <td style={{ padding: '8px 10px', whiteSpace: 'nowrap', color: r.overdue ? 'var(--red)' : r.inWindow ? '#f59a3f' : 'var(--muted)' }}>{r.daysTo == null ? '—' : r.overdue ? `เลย ${Math.abs(r.daysTo)} วัน` : `${r.daysTo} วัน`}</td>
+                      <td style={{ padding: '8px 10px', whiteSpace: 'nowrap', color: r.overdue ? 'var(--red)' : r.inWindow ? '#f59a3f' : 'var(--muted)' }}>{r.daysTo == null ? '—' : r.overdue ? `${tr("เลย")} ${Math.abs(r.daysTo)} ${tr("วัน")}` : `${r.daysTo} ${tr("วัน")}`}</td>
                       <td style={{ padding: '8px 10px' }}>{canManage ? <input type="number" defaultValue={p.pm_duration_hours ?? ''} onBlur={e => { const v = e.target.value === '' ? null : Number(e.target.value); if (v !== (p.pm_duration_hours ?? null)) saveCfg(p.id, { pm_duration_hours: v }) }} style={inp} placeholder="—" /> : (p.pm_duration_hours ?? '—')}</td>
                       <td style={{ padding: '8px 10px' }}>{canManage ? <input type="number" defaultValue={p.lead_time_days ?? 10} onBlur={e => { const v = Number(e.target.value) || 0; if (v !== (p.lead_time_days ?? 10)) saveCfg(p.id, { lead_time_days: v }) }} style={inp} /> : (p.lead_time_days ?? 10)}</td>
                       <td style={{ padding: '8px 10px' }}>{canManage ? <input type="number" defaultValue={p.buffer_margin_pct ?? 15} onBlur={e => { const v = Number(e.target.value) || 0; if (v !== (p.buffer_margin_pct ?? 15)) saveCfg(p.id, { buffer_margin_pct: v }) }} style={inp} /> : (p.buffer_margin_pct ?? 15)}</td>
                       <td style={{ padding: '8px 10px', fontWeight: 800, color: r.inWindow && r.buffer ? 'var(--accent2)' : 'var(--muted)', whiteSpace: 'nowrap' }}>{r.buffer ? r.buffer.toLocaleString() : (p.pm_duration_hours ? '0' : tr('ตั้งระยะ PM'))}</td>
-                      {canCoord && <td style={{ padding: '8px 10px', whiteSpace: 'nowrap' }}><button onClick={() => toCoordination(r)} title={tr('สร้างแผนประสานงาน PM (แจ้ง Production)')} style={{ background: 'var(--bg3)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '5px 10px', fontSize: 11.5, fontWeight: 600, cursor: 'pointer' }}>{tr('แผนประสานงาน')}</button></td>}
+                      {canCoord && <td style={{ padding: '8px 10px', whiteSpace: 'nowrap' }}><button onClick={() => toCoordination(r)} title={tr('สร้างแผนประสานงาน PM (แจ้ง Production)')} style={{ background: 'var(--bg3-surf)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '5px 10px', fontSize: 11.5, fontWeight: 600, cursor: 'pointer' }}>{tr('แผนประสานงาน')}</button></td>}
                     </tr>
                   )
                 })}

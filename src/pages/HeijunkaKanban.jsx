@@ -47,6 +47,8 @@ import Segmented from '../components/Segmented';
 import SearchInput from '../components/SearchInput';
 import { ALL } from '../utils/filterLabels';
 import useTabParam from '../utils/useTabParam';
+import { useLiveBoard } from '../utils/useLiveBoard';
+import InfoMore from '../components/InfoMore';
 import { groupAccumulator, STALE_DAYS } from '../utils/pullAccumulator';
 import { storeBtn } from '../utils/storeUi';
 import MatLabel from '../components/MatLabel';
@@ -54,7 +56,7 @@ import { fetchByIds, openPlusHistory } from '../utils/fetchByIds';
 import { halfDayBreakIntervals, halfDayBreakBands, breakBandName, breakBandTitle } from '../utils/oee';
 import { SPENT_STATUSES } from '../utils/shiftCapacity';
 import PartCard, { partCardGrid } from '../components/PartCard';
-import StatusZones from '../components/StatusZones';
+import StatusZones, { RowTable } from '../components/StatusZones';
 import PartThumb from '../components/PartThumb';
 import { loadPartImages, partImageOf, imageCoverage } from '../utils/partImages';
 import { loadDocForms } from '../utils/docForms';
@@ -123,7 +125,7 @@ function LineBoardLink({ line }) {
     <button onClick={(e) => { e.stopPropagation(); navigate(`/management?line=${encodeURIComponent(line)}&view=heijunka`); }}
       title={tr('เปิดบอร์ด Heijunka ของไลน์นี้ (จอเดียวกับที่ไลน์ผลิตเห็น)')}
       style={{ padding: '2px 9px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontSize: 11, fontWeight: 700,
-        background: 'var(--bg2)', color: 'var(--text2)', border: '1px solid var(--border)', flexShrink: 0 }}>
+        background: 'var(--bg2-surf)', color: 'var(--text2)', border: '1px solid var(--border)', flexShrink: 0 }}>
       บอร์ดไลน์
     </button>
   );
@@ -143,7 +145,7 @@ function OnDemandStrip({ wipRequests = [], nowMs, onGo }) {
     .map(w => ({ w, min: Math.round((nowMs - new Date(w.requested_at).getTime()) / 60000) }))
     .sort((a, b) => b.min - a.min)[0];
   const tile = (icon, label, val, sub, color) => (
-    <div style={{ flex: '1 1 150px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 12px' }}>
+    <div style={{ flex: '1 1 150px', background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 12px' }}>
       <div style={{ fontSize: 11, color: 'var(--muted)' }}>{icon} {label}</div>
       <div style={{ fontSize: 20, fontWeight: 900, color: color || 'var(--text)', lineHeight: 1.1 }}>{val}</div>
       {sub && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{sub}</div>}
@@ -152,7 +154,7 @@ function OnDemandStrip({ wipRequests = [], nowMs, onGo }) {
   return (
     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12, alignItems: 'stretch' }}>
       {tile('🚚', 'โหมดส่งตามคำขอ', 'เบิกตอนไหนส่งตอนนั้น', 'ไม่มีไลน์ไหนใช้รอบ · คิวเรียงตามเวลาแจ้ง')}
-      {tile('🔔', 'รอหยิบ', n('pending'), oldest ? `รอนานสุด ${oldest.min} นาที · ${oldest.w.mat_no} → ${oldest.w.line_name}` : 'ไม่มีใบรอ', oldest && oldest.min > 60 ? 'var(--red)' : undefined)}
+      {tile('🔔', 'รอหยิบ', n('pending'), oldest ? `${tr("รอนานสุด")} ${oldest.min} ${tr("นาที")} · ${oldest.w.mat_no} → ${oldest.w.line_name}` : 'ไม่มีใบรอ', oldest && oldest.min > 60 ? 'var(--red)' : undefined)}
       {tile('🔧', 'กำลังเตรียม', n('preparing'), 'สแกนพาร์ทแล้ว · ตัดสต็อกแล้ว')}
       {tile('📍', 'ส่งแล้ว รอไลน์รับ', n('delivered'), 'ไลน์กดรับใน Daily Report → ใบจบ')}
       <button onClick={onGo} style={{ alignSelf: 'center', padding: '9px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--accent)', background: 'var(--accent-dim)', color: 'var(--accent)', fontSize: 12.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
@@ -174,12 +176,12 @@ function OnDemandLineBlock({ lineName, lineMap, wipRequests = [], onGoChart, onG
     <button onClick={fn} style={{ background: 'none', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '4px 10px', cursor: 'pointer', fontSize: 11.5, fontWeight: 700, color: 'var(--accent)', fontFamily: 'var(--font-body)' }}>{label}</button>
   );
   return (
-    <div style={{ padding: '10px 14px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+    <div style={{ padding: '10px 14px', background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
       <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text)' }}>{tr('ส่งตามคำขอ')}</span>
       <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{tr('เบิกตอนไหนส่งตอนนั้น — ไลน์นี้ไม่ใช้รอบ')}</span>
       {tickets.length
         ? <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--blue)' }}>
-            ใบค้าง {tickets.length} · {Object.entries(byStatus).map(([s, n]) => `${WIP_ST_SHORT[s] || s} ${n}`).join(' · ')}
+            {tr("ใบค้าง")} {tickets.length} · {Object.entries(byStatus).map(([s, n]) => `${WIP_ST_SHORT[s] || s} ${n}`).join(' · ')}
           </span>
         : <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{tr('ยังไม่มีใบส่งค้าง')}</span>}
       <span style={{ flex: 1 }} />
@@ -232,7 +234,7 @@ function StoreBoardView({ rounds, deliveries, view, kanbanStd, onConfirm, confir
             <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--amber)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
               {lineName}
               <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>
-                {demand.parts.length} {tr('พาร์ท ·')} {demand.totalKanban} การ์ด (ทั้งวัน)
+                {demand.parts.length} {tr('พาร์ท ·')} {demand.totalKanban} {tr("การ์ด (ทั้งวัน")})
               </span>
               <LineBoardLink line={lineName} />
             </div>
@@ -262,10 +264,10 @@ function StoreBoardView({ rounds, deliveries, view, kanbanStd, onConfirm, confir
                         <span style={{ fontSize: 11, fontWeight: 800, padding: '2px 7px', borderRadius: 'var(--r-md)', background: 'rgba(0,0,0,0.15)', color: status.color }}>{tr(status.label)}</span>
                       </div>
                       <div style={{ fontSize: 14, fontWeight: 900, color: 'var(--text)', marginBottom: 4 }}>
-                        ส่ง {r.delivery_time?.slice(0, 5) || '—'}
+                        {tr("ส่ง")} {r.delivery_time?.slice(0, 5) || '—'}
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.7 }}>
-                        ตัดยอด {r.cutoff_time?.slice(0, 5) || '—'} {tr('· เตรียม')} {r.prep_minutes || 60} {tr('น.')}<br />
+                        {tr("ตัดยอด")} {r.cutoff_time?.slice(0, 5) || '—'} {tr('· เตรียม')} {r.prep_minutes || 60} {tr('น.')}<br />
                         {r.points_count || 1} {tr('จุด ×')} {r.time_per_point_min || 10} {tr('น. · เสร็จ ~')}{finishTime}
                       </div>
                       <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(128,128,128,0.15)', fontSize: 12 }}>
@@ -294,7 +296,7 @@ function StoreBoardView({ rounds, deliveries, view, kanbanStd, onConfirm, confir
                       )}
                       {isReceived && (
                         <div style={{ fontSize: 11, color: receivedMap[key].received_status === 'full' ? 'var(--green)' : 'var(--amber)', marginTop: 4 }}>
-                          {receivedMap[key].received_status === 'full' ? '✔️' : '⚠️'} {receivedMap[key].received_by} รับของแล้ว
+                          {receivedMap[key].received_status === 'full' ? '✔️' : '⚠️'} {receivedMap[key].received_by} {tr("รับของแล้ว")}
                           {receivedMap[key].received_note ? ` — ${receivedMap[key].received_note}` : ''}
                         </div>
                       )}
@@ -311,7 +313,7 @@ function StoreBoardView({ rounds, deliveries, view, kanbanStd, onConfirm, confir
                               </div>
                               <div style={{ textAlign: 'right', flexShrink: 0 }}>
                                 <div style={{ fontWeight: 800, color: p.netTotal > 0 ? 'var(--amber)' : 'var(--green)' }}>
-                                  {p.netTotal <= 0 ? '✓ stock พอ' : per ? `${p.cards} ใบ` : `${fmt(p.netTotal)} ${p.uom}`}
+                                  {p.netTotal <= 0 ? '✓ stock พอ' : per ? `${p.cards} ${tr("ใบ")}` : `${fmt(p.netTotal)} ${p.uom}`}
                                 </div>
                                 <div style={{ color: 'var(--muted)', fontSize: 11 }}>{tr('ต้องใช้')} {fmt(p.qty)}{p.netTotal > 0 && p.netTotal !== p.qty ? ` · NET ${fmt(p.netTotal)}` : ''}</div>
                               </div>
@@ -454,7 +456,7 @@ function DeliveryTimelineBoard({ rounds, deliveries, view, kanbanStd, fmt, lineM
           const widthPct = Math.min(100 - leftPct, (be - bs) * pctPerMs);
           if (widthPct <= 0) return null;
           return (
-            <div key={`brk-${pi}`} title={`${breakBandTitle(band, lineName)} — ไลน์ไม่รองรับ KANBAN`}
+            <div key={`brk-${pi}`} title={`${breakBandTitle(band, lineName)} — ${tr("ไลน์ไม่รองรับ")} KANBAN`}
               style={{
                 position: 'absolute', top: 0, bottom: 0, left: `${leftPct}%`, width: `${widthPct}%`,
                 background: 'repeating-linear-gradient(45deg, rgba(148,163,184,0.18) 0px, rgba(148,163,184,0.18) 4px, transparent 4px, transparent 8px)',
@@ -480,7 +482,7 @@ function DeliveryTimelineBoard({ rounds, deliveries, view, kanbanStd, fmt, lineM
           const hhmm = (r.delivery_time || '').slice(0, 5);
           const expandKey = `${r.line_name}|${r.shift}|${r.round_no}`;
           return (
-            <div key={r.id} title={`รอบ ${r.round_no} (${r.shift === 'night' ? 'กะดึก' : 'กะเช้า'}) · ส่ง ${hhmm} · ${cards} การ์ด · ${status.label}${hitBreak ? ' · ⚠ เวลาส่งตรงกับช่วงพัก — ไลน์ไม่รับของ ควรขยับเวลารอบ' : ''}`}
+            <div key={r.id} title={`${tr("รอบ")} ${r.round_no} (${r.shift === 'night' ? tr('กะดึก') : tr('กะเช้า')}) · ${tr("ส่ง")} ${hhmm} · ${cards} ${tr("การ์ด")} · ${status.label}${hitBreak ? tr(' · ⚠ เวลาส่งตรงกับช่วงพัก — ไลน์ไม่รับของ ควรขยับเวลารอบ') : ''}`}
               onClick={() => setExpanded(expanded === expandKey ? null : expandKey)}
               style={{
                 position: 'absolute', top: 4, bottom: 4, left: `${leftPct}%`, width: `${widthPct}%`, minWidth: 46,
@@ -490,7 +492,7 @@ function DeliveryTimelineBoard({ rounds, deliveries, view, kanbanStd, fmt, lineM
               }}>
               {/* ⚠️ ต้องพิมพ์ "เวลาส่งจริง" บนบล็อกเสมอ — จอกับข้อมูลจะได้ไม่มีทางเถียงกันเงียบๆ อีก */}
               <div style={{ fontSize: 11, fontWeight: 800, color: status.top, lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {hitBreak ? '⚠' : '🎴'}{hhmm}{cards > 0 ? ` · ${cards}ใบ` : ''}
+                {hitBreak ? '⚠' : '🎴'}{hhmm}{cards > 0 ? ` · ${cards}${tr("ใบ")}` : ''}
               </div>
             </div>
           );
@@ -505,7 +507,7 @@ function DeliveryTimelineBoard({ rounds, deliveries, view, kanbanStd, fmt, lineM
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 16 }}>
-      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', padding: '6px 10px', background: 'var(--bg2)', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)' }}>
+      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', padding: '6px 10px', background: 'var(--bg2-surf)', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)' }}>
         {[
           { c: 'var(--border2)', icon: '⬜', label: 'รอ' },
           { c: 'var(--blue)', icon: '⏳', label: 'กำลังเตรียม / ส่งแล้วรอรับ' },
@@ -540,7 +542,7 @@ function DeliveryTimelineBoard({ rounds, deliveries, view, kanbanStd, fmt, lineM
                 {hourHeader(half.hours, half.startMs)}
                 <div style={{ display: 'flex', minHeight: 36 }}>
                   <div style={{ width: LEFT_W, flexShrink: 0, padding: '4px 8px', borderRight: '1px solid var(--border2)', display: 'flex', alignItems: 'center', fontSize: 11, color: nHalf ? 'var(--muted)' : 'var(--border2)', fontWeight: 700, ...stickyL('var(--card)') }}>
-                    {nHalf ? `${nHalf} รอบ` : `— ไม่มีรอบ${half.key === 'pm' ? 'กะดึก' : 'กะเช้า'}`}
+                    {nHalf ? `${nHalf} ${tr("รอบ")}` : `— ${tr("ไม่มีรอบ")}${half.key === 'pm' ? tr('กะดึก') : tr('กะเช้า')}`}
                   </div>
                   {renderTimeline(lineRounds, half, `${lineName}-${half.key}`, lineName)}
                 </div>
@@ -567,7 +569,7 @@ function DeliveryTimelineBoard({ rounds, deliveries, view, kanbanStd, fmt, lineM
                         const per = kanbanStd[p.mat_no];
                         return (
                           <span key={p.mat_no} style={chip('var(--bg2)', 'var(--text2)')}>
-                            <span style={{ fontFamily: 'monospace', color: 'var(--blue)' }}>{p.mat_no}</span> · {p.netTotal <= 0 ? '✓ stock พอ' : per ? `${p.cards} ใบ` : `${fmt(p.netTotal)} ${p.uom}`}
+                            <span style={{ fontFamily: 'monospace', color: 'var(--blue)' }}>{p.mat_no}</span> · {p.netTotal <= 0 ? '✓ stock พอ' : per ? `${p.cards} ${tr("ใบ")}` : `${fmt(p.netTotal)} ${p.uom}`}
                           </span>
                         );
                       })}
@@ -612,14 +614,14 @@ function DeliveryRoundsPanel({ rounds, deliveries, onConfirm, confirming, onRece
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: collapsed ? 0 : 16 }}
         onClick={() => setCollapsed(v => !v)}>
         <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>
-          ⏰ รอบจัดส่ง{(() => { const { startMs, endMs } = dayFrameMs(workDate); return nowMs >= startMs && nowMs < endMs ? 'วันนี้' : ` ${workDate}`; })()} <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>({rounds.length} รอบ)</span>
+          ⏰ {tr("รอบจัดส่ง")}{(() => { const { startMs, endMs } = dayFrameMs(workDate); return nowMs >= startMs && nowMs < endMs ? 'วันนี้' : ` ${workDate}`; })()} <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>({rounds.length} {tr("รอบ")})</span>
         </div>
         <span style={{ color: 'var(--muted)', fontSize: 14 }}>{collapsed ? '▶' : '▼'}</span>
       </div>
       {!collapsed && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))', gap: 12 }}>
           {Object.keys(byLine).sort(lineNameCompare).map(lineName => (
-            <div key={lineName} style={{ background: 'var(--bg2)', borderRadius: 'var(--r-md)', padding: 12, border: '1px solid var(--border2)' }}>
+            <div key={lineName} style={{ background: 'var(--bg2-surf)', borderRadius: 'var(--r-md)', padding: 12, border: '1px solid var(--border2)' }}>
               <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text)', marginBottom: 8, borderBottom: '1px solid var(--border)', paddingBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
                 {lineName} <LineBoardLink line={lineName} />
               </div>
@@ -633,13 +635,13 @@ function DeliveryRoundsPanel({ rounds, deliveries, onConfirm, confirming, onRece
                   const alloc = roundAlloc?.[r.id] || { parts: [], totalKanban: 0 };
                   const parts = alloc.parts;
                   return (
-                    <div key={r.id} style={{ background: 'var(--card)', borderRadius: 'var(--r-md)', padding: '8px 10px', border: `1px solid ${status.border}`, opacity: isConf ? 0.8 : 1 }}>
+                    <div key={r.id} style={{ background: 'var(--card-surf)', borderRadius: 'var(--r-md)', padding: '8px 10px', border: `1px solid ${status.border}`, opacity: isConf ? 0.8 : 1 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                         <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text)' }}>{r.shift === 'night' ? '🌙' : '☀️'} {tr('รอบ')} {r.round_no}</div>
                         <span style={chip(status.bg, status.color)}>{tr(status.label)}</span>
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                        ตัดยอด {r.cutoff_time?.slice(0,5) || '—'} {tr('→ ส่ง')} {r.delivery_time?.slice(0,5) || '—'} · {alloc.totalKanban} การ์ด
+                        {tr("ตัดยอด")} {r.cutoff_time?.slice(0,5) || '—'} {tr('→ ส่ง')} {r.delivery_time?.slice(0,5) || '—'} · {alloc.totalKanban} {tr("การ์ด")}
                       </div>
                       {(() => {
                         const tp = tripsFor?.(r.id, alloc.totalKanban);
@@ -674,7 +676,7 @@ function DeliveryRoundsPanel({ rounds, deliveries, onConfirm, confirming, onRece
                       )}
                       {isReceived && (
                         <div style={{ fontSize: 11, color: receivedMap[key].received_status === 'full' ? 'var(--green)' : 'var(--amber)', marginTop: 3 }}>
-                          {receivedMap[key].received_status === 'full' ? '✔️' : '⚠️'} {receivedMap[key].received_by} รับของแล้ว
+                          {receivedMap[key].received_status === 'full' ? '✔️' : '⚠️'} {receivedMap[key].received_by} {tr("รับของแล้ว")}
                         </div>
                       )}
                     </div>
@@ -744,11 +746,11 @@ function PlannerStrip({ rounds, deliveries, roundAlloc, workDate, breakPolicies,
     const cut = timeStrToMs(workDate, r.cutoff_time);
     const dlv = timeStrToMs(workDate, r.delivery_time);
     if (cut != null && dlv != null && cut >= dlv)
-      warnings.push(`${r.line_name} รอบ ${r.round_no}: เวลาตัดยอด ${r.cutoff_time?.slice(0, 5)} ต้องมาก่อนเวลาส่ง ${r.delivery_time?.slice(0, 5)}`);
+      warnings.push(`${r.line_name} ${tr("รอบ")} ${r.round_no}: ${tr("เวลาตัดยอด")} ${r.cutoff_time?.slice(0, 5)} ${tr("ต้องมาก่อนเวลาส่ง")} ${r.delivery_time?.slice(0, 5)}`);
     if (dlv != null) {
       const fin = dlv + roundDeliveryMin(r) * 60000;
       const hit = breakIvs.find(b => (b.shift === 'both' || b.shift === r.shift) && dlv < b.e && fin > b.s);
-      if (hit) warnings.push(`${r.line_name} รอบ ${r.round_no}: ช่วงส่ง ${r.delivery_time?.slice(0, 5)} ชนช่วง "${hit.name}" (ตามเวลาพักค่ากลาง) — ควรเลื่อนเวลาส่ง`);
+      if (hit) warnings.push(`${r.line_name} ${tr("รอบ")} ${r.round_no}: ${tr("ช่วงส่ง")} ${r.delivery_time?.slice(0, 5)} ${tr("ชนช่วง")} "${hit.name}" (${tr("ตามเวลาพักค่ากลาง) — ควรเลื่อนเวลาส่ง")}`);
     }
   });
 
@@ -765,12 +767,12 @@ function PlannerStrip({ rounds, deliveries, roundAlloc, workDate, breakPolicies,
     const avg = total / list.length;
     list.forEach(({ r, cards }) => {
       if (cards >= avg * 2 && cards >= 4)
-        warnings.push(`${r.line_name} รอบ ${r.round_no}: โหลด ${cards} การ์ด สูงกว่าค่าเฉลี่ย ${avg.toFixed(1)} มาก — พิจารณาขยับเวลาตัดยอดหรือเพิ่มรอบเพื่อเกลี่ยโหลด (heijunka)`);
+        warnings.push(`${r.line_name} ${tr("รอบ")} ${r.round_no}: ${tr("โหลด")} ${cards} ${tr("การ์ด สูงกว่าค่าเฉลี่ย")} ${avg.toFixed(1)} ${tr("มาก — พิจารณาขยับเวลาตัดยอดหรือเพิ่มรอบเพื่อเกลี่ยโหลด")} (heijunka)`);
     });
   });
 
   const tile = (icon, label, value, sub, color) => (
-    <div key={label} style={{ flex: '1 1 150px', minWidth: 150, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '10px 14px' }}>
+    <div key={label} style={{ flex: '1 1 150px', minWidth: 150, background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '10px 14px' }}>
       <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700 }}>{icon} {label}</div>
       <div style={{ fontSize: 20, fontWeight: 900, fontFamily: 'var(--font-display)', color: color || 'var(--text)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</div>
       {sub && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</div>}
@@ -781,18 +783,18 @@ function PlannerStrip({ rounds, deliveries, roundAlloc, workDate, breakPolicies,
     <div style={{ marginBottom: 16 }}>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         {tile('⏱', 'ตัดยอดถัดไป',
-          nextCut ? `อีก ${nextCutMins} นาที` : isToday ? '—' : '—',
-          nextCut ? `${nextCut.r.line_name} รอบ ${nextCut.r.round_no} · ตัดยอด ${nextCut.r.cutoff_time?.slice(0, 5)}` : (isToday ? 'ไม่มีรอบที่รอตัดยอด' : 'นอกกรอบวันงานที่เลือก'),
+          nextCut ? `${tr("อีก")} ${nextCutMins} ${tr("นาที")}` : isToday ? '—' : '—',
+          nextCut ? `${nextCut.r.line_name} ${tr("รอบ")} ${nextCut.r.round_no} · ${tr("ตัดยอด")} ${nextCut.r.cutoff_time?.slice(0, 5)}` : (isToday ? 'ไม่มีรอบที่รอตัดยอด' : 'นอกกรอบวันงานที่เลือก'),
           nextCut && nextCutMins <= 15 ? 'var(--amber)' : 'var(--text)')}
         {tile('⏭', 'รอบส่งถัดไป',
-          next ? (nextMins > 0 ? `อีก ${nextMins} นาที` : '🚚 กำลังส่ง') : isToday ? 'ครบทุกรอบแล้ว' : '—',
-          next ? `${next.r.line_name} รอบ ${next.r.round_no} · ส่ง ${next.r.delivery_time?.slice(0, 5)}` : (isToday ? '' : 'นอกกรอบวันงานที่เลือก'),
+          next ? (nextMins > 0 ? `${tr("อีก")} ${nextMins} ${tr("นาที")}` : '🚚 กำลังส่ง') : isToday ? 'ครบทุกรอบแล้ว' : '—',
+          next ? `${next.r.line_name} ${tr("รอบ")} ${next.r.round_no} · ${tr("ส่ง")} ${next.r.delivery_time?.slice(0, 5)}` : (isToday ? '' : 'นอกกรอบวันงานที่เลือก'),
           next && nextMins <= 15 ? 'var(--amber)' : 'var(--text)')}
         {tile('🔴', 'รอบค้างส่ง', overdue.length,
-          overdue.length ? overdue.slice(0, 2).map(r => `${r.line_name} รอบ ${r.round_no}`).join(' · ') + (overdue.length > 2 ? ` +${overdue.length - 2}` : '') : 'ไม่มี',
+          overdue.length ? overdue.slice(0, 2).map(r => `${r.line_name} ${tr("รอบ")} ${r.round_no}`).join(' · ') + (overdue.length > 2 ? ` +${overdue.length - 2}` : '') : 'ไม่มี',
           overdue.length ? 'var(--red)' : 'var(--green)')}
-        {tile('🎴', 'การ์ดรอเตรียมส่ง', cardsLeft, `${pending.length} รอบที่ยังไม่ยืนยันส่ง`, cardsLeft > 0 ? 'var(--amber)' : 'var(--green)')}
-        {tile('✅', 'ยืนยันส่งแล้ว', `${confirmedCount}/${rounds.length}`, isToday ? 'รอบของวันนี้ทั้งหมด' : `รอบของ ${workDate} ทั้งหมด`, confirmedCount === rounds.length ? 'var(--green)' : 'var(--text)')}
+        {tile('🎴', 'การ์ดรอเตรียมส่ง', cardsLeft, `${pending.length} ${tr("รอบที่ยังไม่ยืนยันส่ง")}`, cardsLeft > 0 ? 'var(--amber)' : 'var(--green)')}
+        {tile('✅', 'ยืนยันส่งแล้ว', `${confirmedCount}/${rounds.length}`, isToday ? 'รอบของวันนี้ทั้งหมด' : `${tr("รอบของ")} ${workDate} ${tr("ทั้งหมด")}`, confirmedCount === rounds.length ? 'var(--green)' : 'var(--text)')}
       </div>
       {warnings.length > 0 && (
         <div style={{ marginTop: 10, padding: '10px 14px', background: 'var(--red-dim)', border: '1px solid var(--red-line)', borderRadius: 'var(--radius-lg)' }}>
@@ -845,16 +847,16 @@ function AccCard({ a, fmt }) {
   const pct = a.pct == null ? null : Math.min(100, a.pct);
   const done = a.pct != null && a.pct >= 100;
   return (
-    <div style={{ background: 'var(--bg2)', border: `1px solid ${done ? 'var(--green-line)' : 'var(--border)'}`, borderRadius: 'var(--r-md)', padding: 12 }}>
+    <div style={{ background: 'var(--bg2-surf)', border: `1px solid ${done ? 'var(--green-line)' : 'var(--border)'}`, borderRadius: 'var(--r-md)', padding: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         <span style={{ fontFamily: 'monospace', fontWeight: 800, color: matColor(a.child_mat_no), fontSize: 13 }}>{a.child_mat_no}</span>
         {/* ค้างนาน = สัญญาณว่าของไม่ไหลแล้ว ห้ามปล่อยให้ดูเหมือนแถวปกติ */}
-        {a.stale && <span title={`ไม่ขยับเกิน ${STALE_DAYS} วัน`} style={{ fontSize: 11, fontWeight: 800, color: 'var(--amber)' }}>⏳</span>}
+        {a.stale && <span title={`${tr("ไม่ขยับเกิน")} ${STALE_DAYS} ${tr("วัน")}`} style={{ fontSize: 11, fontWeight: 800, color: 'var(--amber)' }}>⏳</span>}
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 6 }}>
         <span style={{ fontSize: 18, fontWeight: 900, color: 'var(--text)' }}>{fmt(a.pending_qty)}</span>
         <span style={{ fontSize: 11, color: a.lot ? 'var(--muted)' : 'var(--amber)', fontWeight: a.lot ? 400 : 800 }}>
-          {a.lot ? `/ ${fmt(a.lot)} ล็อต` : 'ยังไม่ตั้ง lot'}
+          {a.lot ? `/ ${fmt(a.lot)} ${tr("ล็อต")}` : 'ยังไม่ตั้ง lot'}
         </span>
       </div>
       {a.lot && (
@@ -864,7 +866,7 @@ function AccCard({ a, fmt }) {
           </div>
           {/* บอก % ตรงๆ — แถบอย่างเดียวเทียบข้ามการ์ดด้วยสายตาไม่ได้ */}
           <div style={{ fontSize: 11, fontWeight: 700, color: done ? 'var(--green)' : 'var(--muted)', marginTop: 3 }}>
-            {done ? `ครบล็อตแล้ว (${Math.round(a.pct)}%)` : `${Math.round(a.pct)}% ของล็อต`}
+            {done ? `${tr("ครบล็อตแล้ว")} (${Math.round(a.pct)}%)` : `${Math.round(a.pct)}% ${tr("ของล็อต")}`}
           </div>
         </>
       )}
@@ -898,7 +900,7 @@ function AccGroup({ title, hint, color, rows, fmt, defaultOpen, cap = 0 }) {
       )}
       {open && hidden > 0 && (
         <button className="tbtn" onClick={() => setAll(true)}
-          style={{ marginTop: 8, padding: '5px 12px', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 800, cursor: 'pointer', background: 'var(--bg2)', color: 'var(--text2)', border: '1px solid var(--border)', fontFamily: 'var(--font-body)' }}>
+          style={{ marginTop: 8, padding: '5px 12px', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 800, cursor: 'pointer', background: 'var(--bg2-surf)', color: 'var(--text2)', border: '1px solid var(--border)', fontFamily: 'var(--font-body)' }}>
           {tr('ดูอีก')} {hidden} {tr('รายการที่เหลือ')}
         </button>
       )}
@@ -920,7 +922,7 @@ function AccumulatorGroups({ groups, fmt }) {
         title={tr('⚠️ ยังไม่ตั้งขนาดล็อต — สะสมไปก็ไม่ออกใบ')} hint={tr('ตั้ง lot ที่ /products แท็บ Kanban Std ก่อน')} />
       {staleCount > 0 && (
         <div style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 700 }}>
-          ⏳ {staleCount} {tr('รายการไม่ขยับเกิน')} {STALE_DAYS} วัน — demand ค้างที่ของอาจไม่ไหลแล้ว
+          ⏳ {staleCount} {tr('รายการไม่ขยับเกิน')} {STALE_DAYS} {tr("วัน — demand ค้างที่ของอาจไม่ไหลแล้ว")}
         </div>
       )}
     </>
@@ -979,7 +981,7 @@ function ReleaseDueSection({ due, fmt }) {
                 border: `1px solid ${out ? 'var(--red-line)' : 'var(--amber-line)'}` }}>
                 <MatLabel mat={r.mat_no} name={r.part_name} size={12.5} />
                 <div style={{ fontSize: 11.5, color: out ? 'var(--red)' : 'var(--text2)', fontWeight: out ? 800 : 400, marginTop: 3 }}>
-                  เหลือ {fmt(r.have)} {tr('/ ขั้นต่ำ')} {fmt(r.min)}{r.shortage > 0 ? ` · ขาด ${fmt(r.shortage)}` : ''}
+                  {tr("เหลือ")} {fmt(r.have)} {tr('/ ขั้นต่ำ')} {fmt(r.min)}{r.shortage > 0 ? ` · ${tr("ขาด")} ${fmt(r.shortage)}` : ''}
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
                   {r.line_name ? <>🏭 {r.line_name} · </> : null}{tr('📍 ยอดที่')} {r.loc}
@@ -1077,14 +1079,14 @@ function PullBoard({ lotRequests, rawRequests, accumulator, lotSizeMap, releaseD
                           {canReorder && (
                             <div style={{ display: 'flex', gap: 4 }}>
                               <button className="tbtn" onClick={() => onReorder(queue, lot, 'up')} disabled={busy === lot.id || qIdx === 0}
-                                style={{ minWidth: 36, minHeight: 36, padding: '4px 8px', borderRadius: 'var(--radius)', cursor: qIdx === 0 ? 'default' : 'pointer', fontSize: 13, fontWeight: 800, background: 'var(--bg2)', color: qIdx === 0 ? 'var(--border2)' : 'var(--text)', border: '1px solid var(--border2)' }}>▲</button>
+                                style={{ minWidth: 36, minHeight: 36, padding: '4px 8px', borderRadius: 'var(--radius)', cursor: qIdx === 0 ? 'default' : 'pointer', fontSize: 13, fontWeight: 800, background: 'var(--bg2-surf)', color: qIdx === 0 ? 'var(--border2)' : 'var(--text)', border: '1px solid var(--border2)' }}>▲</button>
                               <button className="tbtn" onClick={() => onReorder(queue, lot, 'down')} disabled={busy === lot.id || qIdx === queue.length - 1}
-                                style={{ minWidth: 36, minHeight: 36, padding: '4px 8px', borderRadius: 'var(--radius)', cursor: qIdx === queue.length - 1 ? 'default' : 'pointer', fontSize: 13, fontWeight: 800, background: 'var(--bg2)', color: qIdx === queue.length - 1 ? 'var(--border2)' : 'var(--text)', border: '1px solid var(--border2)' }}>▼</button>
+                                style={{ minWidth: 36, minHeight: 36, padding: '4px 8px', borderRadius: 'var(--radius)', cursor: qIdx === queue.length - 1 ? 'default' : 'pointer', fontSize: 13, fontWeight: 800, background: 'var(--bg2-surf)', color: qIdx === queue.length - 1 ? 'var(--border2)' : 'var(--text)', border: '1px solid var(--border2)' }}>▼</button>
                             </div>
                           )}
                         </div>
                         <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-                          {lot.work_date || ''}{lot.source_prod_no ? ` · จาก FG ${lot.source_prod_no}` : ''}
+                          {lot.work_date || ''}{lot.source_prod_no ? ` · ${tr("จาก")} FG ${lot.source_prod_no}` : ''}
                         </div>
                         {canOperate && st.next && (
                           <button onClick={() => onAdvanceLot(lot, st.next)} disabled={busy === lot.id}
@@ -1262,10 +1264,33 @@ const matchQ = (q, ...fields) => {
   return fields.some(f => String(f ?? '').toLowerCase().includes(s));
 };
 
+/* การ์ดกริดเดิม หรือแถวตาราง (pro · 19/11) — ลูกเป็น QueueCard ชุดเดิม เปลี่ยนแค่การวาง */
+function CardsOrRows({ table, style, children }) {
+  if (table) return <div style={style}><RowTable>{children}</RowTable></div>;
+  return <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(min(330px, 100%), 1fr))', gap: 12, ...style }}>{children}</div>;
+}
+
 function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false, focus = null, direction = null, areaOf = () => null, homeOf = () => null, rounds, deliveries, view, onConfirm, confirming, onReceive, imgOf,
-  lotRequests, rawRequests, rackRequests, pkgRequests, wipRequests, purchaseRequests, purchaseErr, busy, onAdvanceLot, onIssueRaw, onAdvanceWip, onCancelWip, onAdvancePurchase, setBulkBuy, fmt, workDate, nowMs, canOperate, lotMats = null, inflowRules = null }) {
+  lotRequests, rawRequests, rackRequests, pkgRequests, wipRequests, purchaseRequests, purchaseErr, busy, onAdvanceLot, onIssueRaw, onAdvanceWip, onCancelWip, onAdvancePurchase, setBulkBuy, fmt, workDate, nowMs, canOperate, lotMats = null, inflowRules = null,
+  leadFilters = null, kpiSlot = null, purpose = null }) {
 
   const { roundAlloc } = view;
+  /* 📋 19/11 (mockup รับ/ส่งของที่ user เคาะ) — ฝังใน Stock Management (`direction`) = หน้าตา "1 หน้า 1 งาน":
+     แท็บย่อยจริง (ตัวเลขค้างบนแท็บ) → แถบกรองเดียว → แถบไลน์เรียกของ → ตัวเลขสรุป → ตาราง 1 แถว = 1 ใบ
+     /heijunka (ไม่มี direction) = หน้าตาเดิมเป๊ะ · มือถือ = การ์ดเหมือนเดิม (แถวกว้างอ่านไม่ได้บนจอแคบ) */
+  const pro = !!direction;
+  const isMobileBoard = useIsMobile();
+  const zl = pro && !isMobileBoard ? 'table' : 'cards';
+  /* ตัวเลขบนแท็บ "รอรับเข้า" — คิวโหลดในคอมโพเนนต์ของมันเองซึ่ง mount เฉพาะตอนเปิดแท็บ
+     ⇒ นับหัว (head) แยก · อ่านไม่ได้ = ไม่ขึ้นตัวเลข (ไม่รู้ ≠ 0) */
+  const wantReceiptCount = !!opsStores?.includes('receipts');
+  const [receiptCount, setReceiptCount] = useState(null);
+  const loadReceiptCount = useCallback(async () => {
+    if (!wantReceiptCount) return;
+    const { count, error } = await supabaseDR.from('stock_receipts').select('id', { count: 'exact', head: true }).eq('status', 'pending');
+    setReceiptCount(error ? null : count);
+  }, [wantReceiptCount]);
+  useLiveBoard(loadReceiptCount, { tables: ['stock_receipts'], topic: 'stock-receipts-count', enabled: wantReceiptCount });
   const [buyFilter, setBuyFilter] = useState(() => urlPick('buy', ['3', '5'], ''));   // '' | '3' | '5' · ?buy= (จอวนหน้า)
   const [q, setQ] = useState(() => focus?.q || '');   // ค้นหา: รหัส / ชื่อ / ไลน์ปลายทาง
   /* 🧾 05/11 (คำสั่ง user ข้อ B) — ใบเบิกจากใบผลิต (`line_order`) ที่ยังรอหยิบ แต่ไลน์ไม่มีใบผลิตเปิดอยู่ที่ใช้พาร์ทนั้นแล้ว
@@ -1342,7 +1367,7 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
   const wipAllBy = {};
   WIP_STORES.forEach(k => { wipAllBy[k] = wipRequests.filter(r => storeOfMat(r.mat_no) === k).length; });
   const vRounds = rounds.filter(r => {
-    if (!matchQ(q, r.line_name, `รอบ ${r.round_no}`) || !areaOk(r.line_name)) { tally.fg.search++; return false; }
+    if (!matchQ(q, r.line_name, `${tr("รอบ")} ${r.round_no}`) || !areaOk(r.line_name)) { tally.fg.search++; return false; }
     return true;
   });
 
@@ -1362,7 +1387,7 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
   const hid = tally[store] || { done: 0, search: 0 };
   const hiddenNote = (hid.done || hid.search) ? (
     <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 10 }}>
-      ซ่อนอยู่{hid.done ? ` · เสร็จแล้ว ${hid.done} รายการ` : ''}{hid.search ? ` · ไม่ตรงคำค้น/ตัวกรอง ${hid.search} รายการ` : ''}
+      {tr("ซ่อนอยู่")}{hid.done ? ` · ${tr("เสร็จแล้ว")} ${hid.done} ${tr("รายการ")}` : ''}{hid.search ? ` · ${tr("ไม่ตรงคำค้น/ตัวกรอง")} ${hid.search} ${tr("รายการ")}` : ''}
     </div>
   ) : null;
 
@@ -1373,8 +1398,8 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
     return (
       <div style={{ marginBottom: 18 }}>
         <div style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--text)', margin: '0 0 8px' }}>{tr('ใบเบิก-ส่งเข้าไลน์')} <span style={{ fontWeight: 500, color: 'var(--muted)', fontSize: 12 }}>{tr('· ไลน์เรียก/เปิดใบผลิต → สโตร์หยิบ → ส่งถึงไลน์')}</span></div>
-        {rows.length === 0 ? <div style={{ padding: 18, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('ไม่มีใบเบิกที่ค้างอยู่')}{q ? ` และตรงกับคำค้น "${q}"` : ''}</div> : (
-        <StatusZones rows={rows} zones={WIP_ZONES(showDone)} renderCard={w => {
+        {rows.length === 0 ? <div style={{ padding: 18, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('ไม่มีใบเบิกที่ค้างอยู่')}{q ? ` ${tr("และตรงกับคำค้น")} "${q}"` : ''}</div> : (
+        <StatusZones layout={zl} rows={rows} zones={WIP_ZONES(showDone)} renderCard={w => {
             const st = WIP_STATUS[w.status] || WIP_STATUS.pending;
             /* 🔴 2026-10-01 — ใบขอเติมมีรูปแบบเดียว: "ส่งพาร์ทเข้าไลน์" (ชั้น พื้นที่→ไลน์→พาร์ท)
                เลิกใบแบบ "เติมจุด WIP จุดใดจุดหนึ่ง" แล้ว (ไม่เคยถูกใช้จริงสักใบ — ทุกใบในฐานเป็นใบระดับไลน์)
@@ -1390,7 +1415,7 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
             const gateMeta = gate ? `${gate.icon} ${w.delivered_gate === 'scanned' ? (w.delivered_point_name || gate.label) : gate.label}${w.delivered_gate === 'override' && w.delivered_override_reason ? ` — ${w.delivered_override_reason}` : ''}` : '';
             const nextLabel = w.status === 'preparing' ? '📍 ถึงไลน์แล้ว · สแกนจุดส่ง' : w.status === 'pending' ? '🔍 เริ่มเตรียม · สแกนพาร์ท' : st.next;
             const pickMeta = w.picked_qty != null && w.status !== 'pending'
-              ? `${PICK_GATES[w.picked_gate]?.icon || '🔧'} หยิบ ${fmt(w.picked_qty)}${isCoilUom(w.uom) ? ' kg' : ''}${Number(w.picked_qty) < Number(w.request_qty) ? ` / ${fmt(w.request_qty)} (ไม่ครบ)` : ''}${w.stock_txn_ids?.length ? ' · ตัดสต็อกแล้ว' : (w.stock_txn_note ? ` · ⚠ ${w.stock_txn_note}` : '')}` : '';
+              ? `${PICK_GATES[w.picked_gate]?.icon || '🔧'} ${tr("หยิบ")} ${fmt(w.picked_qty)}${isCoilUom(w.uom) ? ' kg' : ''}${Number(w.picked_qty) < Number(w.request_qty) ? ` / ${fmt(w.request_qty)} (${tr("ไม่ครบ")})` : ''}${w.stock_txn_ids?.length ? tr(' · ตัดสต็อกแล้ว') : (w.stock_txn_note ? ` · ⚠ ${w.stock_txn_note}` : '')}` : '';
             return (
               <QueueCard key={w.id} code={code} showImg img={imgOf(w.mat_no)}
                 name={w.part_name || w.point_name || 'ไลน์ขอเบิกเข้าไลน์'}
@@ -1402,12 +1427,12 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
                 ) : null}
                 rows={[{ k: 'ที่มา', v: src.label },
                      { k: w.source === 'store_forecast' ? 'เปิดใบ' : 'ไลน์แจ้ง',
-                       v: at ? `${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')} น.` : null },
+                       v: at ? `${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')} ${tr("น.")}` : null },
                      /* 👤 20/10 — สโตร์ต้องรู้ว่า "ใครเรียก" ไว้โทรกลับถามเวลาของไม่ตรง/ไลน์เปลี่ยนรุ่น
                         ใบเก่าของไลน์ไม่มีชื่อ (เพิ่ง stamp 20/10 ที่ LinePartCallPanel) ⇒ ไม่มีชื่อ = ไม่โชว์แถว ห้ามเดา */
                      { k: src.who, v: w.requested_by || null },
                      /* 🏠 05/11 — หยิบจากไหน = ที่จัดเก็บหลักของพาร์ท · ไปไหน = พื้นที่ของไลน์ที่ขอ */
-                     { k: '🏬 จาก → ไป', v: `${homeOf(w.mat_no) || 'ยังไม่ตั้งที่จัดเก็บหลัก'} → ${areaOf(w.line_name) || 'ไลน์ยังไม่ผูกพื้นที่'}` },
+                     { k: '🏬 จาก → ไป', v: `${homeOf(w.mat_no) || tr('ยังไม่ตั้งที่จัดเก็บหลัก')} → ${areaOf(w.line_name) || tr('ไลน์ยังไม่ผูกพื้นที่')}` },
                      { k: 'หยิบแล้ว', v: pickMeta || null },
                      { k: 'ถึงไลน์', v: gateMeta || null },
                      /* 📭 05/11 ข้อ D — ส่งแล้วไลน์ยังไม่กดรับ (unreceivedAge · replenishGate.js) */
@@ -1429,62 +1454,27 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
     );
   };
 
-  return (
-    <div style={{ padding: 16 }}>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-        {/* แท็บ Store FG = รอบส่ง — ไม่มีรอบ active = ไม่มีอะไรให้ทำ ซ่อนไปเลย (โผล่เองเมื่อไลน์ตั้งรอบ) · audit 2026-09-07 */}
-        {STORE_TABS.filter(t => (opsStores ? opsStores.includes(t.key) : !t.inOnly)
-          && (t.key !== 'fg' || rounds.length > 0 || wipAllBy.fg > 0)
-          && (t.key !== 'other' || wipAllBy.other > 0)).map(t => (
-          <button key={t.key} onClick={() => setStore(t.key)} title={tr(t.desc)}
-            style={{ padding: '10px 16px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-body)',
-              background: store === t.key ? 'var(--accent)' : 'var(--bg2)', color: store === t.key ? 'var(--accent-ink)' : 'var(--text2)',
-              border: `1px solid ${store === t.key ? 'var(--accent)' : 'var(--border)'}`, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, minWidth: 150 }}>
-            <span>{t.icon} {tr(t.label)} {counts[t.key] > 0 && <span style={{ opacity: 0.8 }}>({counts[t.key]})</span>}</span>
-            <span style={{ fontSize: 11, fontWeight: 500, opacity: 0.75 }}>{tr(t.desc)}</span>
-          </button>
-        ))}
-      </div>
+  /* 🗂️ ตู้ที่โชว์ (เงื่อนไขเดิมทั้งหมด) — ใช้ทั้งแบบปุ่มการ์ด (/heijunka) และแท็บย่อย (pro) */
+  const visibleStores = STORE_TABS.filter(t => (opsStores ? opsStores.includes(t.key) : !t.inOnly)
+    && (t.key !== 'fg' || rounds.length > 0 || wipAllBy.fg > 0)
+    && (t.key !== 'other' || wipAllBy.other > 0));
+  if (opsStores) visibleStores.sort((a, b) => opsStores.indexOf(a.key) - opsStores.indexOf(b.key));
+  /* ตัวกรองพื้นที่/สโตร์มีผลกับใบเบิก-ส่งเข้าไลน์ + ใบล็อต/ใบเบิกวัตถุดิบเท่านั้น ⇒ แท็บอื่นไม่โชว์ (ช่องที่กดแล้วไม่มีผล = จอโกหก) */
+  const areaApplies = ['child', 'ext', 'raw', 'fg', 'other', 'lots'].includes(store);
+  const ownBar = store === 'receipts';   // คิวรอรับเข้ามีแถบกรองของตัวเอง (คลังปลายทาง/ต้นทาง/รวมกอง) — แถบเดียวต่อแท็บ
+  const anyFilter = !!q || !!areaSel || !!storeSel || showDone;
+  const clearFilters = () => { setQ(''); setAreaSel(''); setStoreSel(''); setShowDone(false); };
+  const countOf = (k) => (k === 'receipts' ? receiptCount : counts[k]);
 
-      {/* ── ค้นหา + สลับงานค้าง/ทั้งหมด (ใช้ได้ทุกแท็บ) ── */}
-      <FilterBar bare style={{ marginBottom: 14 }}>
-        <SearchInput value={q} onChange={setQ} fields="รหัส / ชื่อพาร์ท / ไลน์" grow={false} />
-        {direction && (() => {
-          const lines = direction === 'out'
-            ? [...wipRequests.map(r => r.line_name), ...rounds.map(r => r.line_name), ...lotRequests.map(l => l.source_line)]
-            : lotRequests.map(l => l.source_line);
-          const opts = [...new Set(lines.filter(Boolean).map(areaKey))].sort();
-          const mats = direction === 'out'
-            ? [...wipRequests.map(r => r.mat_no), ...lotRequests.map(l => l.child_mat_no)]
-            : lotRequests.map(l => l.child_mat_no);
-          const storeOpts = [...new Set(mats.filter(Boolean).map(storeKey))].sort();
-          const sideLbl = direction === 'out' ? 'ต้นทาง' : 'ปลายทาง';
-          return (<>
-            <select value={storeSel} onChange={e => setStoreSel(e.target.value)} aria-label={`พื้นที่สโตร์${sideLbl}`}>
-              <option value="">{sideLbl}{tr(': ทุกพื้นที่สโตร์')}</option>
-              {storeOpts.map(a => <option key={a} value={a}>{sideLbl}: 🏬 {a === '—' ? 'พาร์ทที่ยังไม่ตั้งที่จัดเก็บหลัก' : a}</option>)}
-            </select>
-            <select value={areaSel} onChange={e => setAreaSel(e.target.value)} aria-label={direction === 'out' ? tr('พื้นที่ปลายทาง') : tr('พื้นที่ต้นทาง')}>
-              <option value="">{direction === 'out' ? tr('ปลายทาง: ทุกพื้นที่ผลิต') : tr('ต้นทาง: ทุกพื้นที่ผลิต')}</option>
-              {opts.map(a => <option key={a} value={a}>{direction === 'out' ? 'ปลายทาง' : 'ต้นทาง'}: {a === '—' ? 'ไลน์ที่ยังไม่ผูกพื้นที่ SAP' : a}</option>)}
-            </select>
-          </>);
-        })()}
-        <button onClick={() => setShowDone(v => !v)} style={{
-          padding: '7px 14px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-body)',
-          background: showDone ? 'var(--bg2)' : 'var(--accent)', color: showDone ? 'var(--text2)' : '#08130a',
-          border: `1px solid ${showDone ? 'var(--border)' : 'var(--accent)'}`,
-        }}>{showDone ? tr('ทั้งหมด (รวมที่เสร็จแล้ว)') : tr('เฉพาะงานค้าง')}</button>
-      </FilterBar>
-
+  const body = (<>
       {store === 'fg' && (<>
         {hiddenNote}
         {wipSection('fg')}
         {rounds.length === 0 && wipAllBy.fg > 0 ? null : rounds.length === 0 ? <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
           ทุกไลน์ใช้โหมด "ส่งตามคำขอ" (เบิกตอนไหนส่งตอนนั้น) — ไม่มีรอบให้ยืนยัน · ใบเบิก-ส่งงาน FG (1xx) อยู่ด้านบนของตู้นี้ · ชิ้นส่วนอื่นอยู่ตู้ตามเลขพาร์ท
         </div> :
-        vRounds.length === 0 ? <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>ไม่มีรอบที่ตรงกับคำค้น "{q}"</div> :
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(min(330px, 100%), 1fr))', gap: 12 }}>
+        vRounds.length === 0 ? <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr("ไม่มีรอบที่ตรงกับคำค้น")} "{q}"</div> :
+        <CardsOrRows table={zl === 'table'}>
           {vRounds.map(r => {
             const key = `${r.line_name}|${r.shift}|${r.round_no}`;
             const status = getRoundStatus(r, confirmedSet, receivedMap, workDate, nowMs);
@@ -1493,7 +1483,7 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
             const alloc = roundAlloc[r.id] || { parts: [], totalKanban: 0 };
             const needAction = !isConf && (status.label === '⏳ กำลังเตรียม' || status.label === '🔴 ค้างส่ง');
             return (
-              <QueueCard key={r.id} code={`${r.shift === 'night' ? '🌙' : '☀️'} รอบ ${r.round_no}`} name={r.line_name}
+              <QueueCard key={r.id} code={`${r.shift === 'night' ? '🌙' : '☀️'} ${tr("รอบ")} ${r.round_no}`} name={r.line_name}
                 qty={alloc.totalKanban} unit="การ์ด" qtyLabel="คัมบังในรอบนี้" destination={r.line_name}
                 statusLabel={status.label} statusColor={status.top} statusBg={status.bg} statusBorder={status.border}
                 actionLabel={canOperate ? (needAction ? '✅ ยืนยันส่งแล้ว' : (isConf && !isReceived ? '✔️ รับครบ' : null)) : null}
@@ -1502,22 +1492,24 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
                 rows={[
                   { k: 'เวลาส่ง', v: r.delivery_time?.slice(0, 5) || '—' },
                   { k: 'ตัดยอด', v: r.cutoff_time?.slice(0, 5) || '—' },
-                  { k: 'พาร์ท', v: `${alloc.parts.length} รายการ` },
+                  { k: 'พาร์ท', v: `${alloc.parts.length} ${tr("รายการ")}` },
                 ]} />
             );
           })}
-        </div>}
+        </CardsOrRows>}
       </>)}
 
       {store === 'child' && (<>
         {hiddenNote}
-        {wipSection('child')}
+        {wipSection('child') || (direction === 'out' && <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
+          {tr('ยังไม่มีใบเบิกชิ้นส่วน Semi Part (2xx) — ใบเกิดจากไลน์กด "📦 เบิก" ใน Daily Report')}
+        </div>)}
         {/* ขาออก (/line-stock?tab=out) = เฉพาะใบเบิก-ส่งเข้าไลน์ · ใบล็อตย้ายไปขาเข้า (แท็บ 'lots') */}
         {direction !== 'out' && (<>
         {wipAllBy.child > 0 && <div style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--text)', margin: '6px 0 8px' }}>{tr('ใบล็อตผลิต Semi Part')}</div>}
         {lotRequests.length === 0 ? <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('ยังไม่มีใบสั่งผลิตพาร์ทย่อย')}</div> :
-        vLots.length === 0 ? <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('ไม่มีใบสั่งผลิตที่ค้างอยู่')}{q ? ` และตรงกับคำค้น "${q}"` : ''}</div> :
-        <StatusZones rows={vLots} zones={LOT_ZONES(showDone)} renderCard={lot => {
+        vLots.length === 0 ? <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('ไม่มีใบสั่งผลิตที่ค้างอยู่')}{q ? ` ${tr("และตรงกับคำค้น")} "${q}"` : ''}</div> :
+        <StatusZones layout={zl} rows={vLots} zones={LOT_ZONES(showDone)} renderCard={lot => {
             const st = LOT_STATUS[lot.status] || LOT_STATUS.pending;
             /* 🔴 27/10 (feedback สโตร์ ข้อ A2): *"ปุ่ม รับของเข้าสโตร์ ให้เอาออก ... ถ้าสโตร์มีการกดรับงาน
                จากหน้า สต็อกในไลน์ > รอรับเข้า"* ⇒ ขั้นสุดท้ายของล็อตมี 2 ความหมาย แล้วแต่ "ของเข้าทางไหน":
@@ -1557,8 +1549,8 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
       {store === 'lots' && (<>
         {hiddenNote}
         {lotRequests.length === 0 ? <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('ยังไม่มีใบสั่งผลิตพาร์ทย่อย')}</div> :
-        vLots.length === 0 ? <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('ไม่มีใบสั่งผลิตที่ค้างอยู่')}{q ? ` และตรงกับคำค้น "${q}"` : ''}</div> :
-        <StatusZones rows={vLots} zones={LOT_ZONES(showDone)} renderCard={lot => {
+        vLots.length === 0 ? <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('ไม่มีใบสั่งผลิตที่ค้างอยู่')}{q ? ` ${tr("และตรงกับคำค้น")} "${q}"` : ''}</div> :
+        <StatusZones layout={zl} rows={vLots} zones={LOT_ZONES(showDone)} renderCard={lot => {
             const st = LOT_STATUS[lot.status] || LOT_STATUS.pending;
             /* 🔴 27/10 (feedback สโตร์ ข้อ A2): *"ปุ่ม รับของเข้าสโตร์ ให้เอาออก ... ถ้าสโตร์มีการกดรับงาน
                จากหน้า สต็อกในไลน์ > รอรับเข้า"* ⇒ ขั้นสุดท้ายของล็อตมี 2 ความหมาย แล้วแต่ "ของเข้าทางไหน":
@@ -1603,19 +1595,19 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
             <div style={{ fontSize: 12, color: 'var(--red)', fontWeight: 700, marginBottom: 10 }}>{tr('🔴 โหลดคิวจัดซื้อไม่ได้ —')} {purchaseErr}</div>
           )}
           {purGroups.length === 0 ? <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
-            {purchaseRequests.length === 0 ? 'ยังไม่มีรายการจัดซื้อ — เกิดอัตโนมัติเมื่อของซื้อ (300/500) ในสโตร์ไม่พอต่อแผนผลิต' : `ไม่มีรายการที่ตรงกับตัวกรอง${q ? ` / คำค้น "${q}"` : ''}`}
+            {purchaseRequests.length === 0 ? 'ยังไม่มีรายการจัดซื้อ — เกิดอัตโนมัติเมื่อของซื้อ (300/500) ในสโตร์ไม่พอต่อแผนผลิต' : `${tr("ไม่มีรายการที่ตรงกับตัวกรอง")}${q ? ` / ${tr("คำค้น")} "${q}"` : ''}`}
           </div> : (<>
             <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 10 }}>
-              รวมยอดตามพาร์ท · <b style={{ color: 'var(--text)' }}>{purGroups.length} {tr('พาร์ท')}</b> {tr('จาก')} {fmt(purShown)} ใบ
+              {tr("รวมยอดตามพาร์ท")} · <b style={{ color: 'var(--text)' }}>{purGroups.length} {tr('พาร์ท')}</b> {tr('จาก')} {fmt(purShown)} {tr("ใบ")}
               {purGroups.some(g => g.slips > 1) && ' — ใบซ้ำพาร์ทเดียวกันเกิดจากระบบออกใบละล็อต · กดปุ่มบนการ์ดเพื่อเลื่อนสถานะรวมทีเดียว'}
             </div>
             {hiddenNote}
-            <StatusZones rows={purGroups} zones={PUR_ZONES(showDone)} renderCard={g => {
+            <StatusZones layout={zl} rows={purGroups} zones={PUR_ZONES(showDone)} renderCard={g => {
                 const st = PURCHASE_STATUS[g.status] || PURCHASE_STATUS.pending;
                 const many = g.slips > 1;
                 const lot = Number(g.min_lot) === Number(g.max_lot)
-                  ? `${fmt(g.min_lot)} ชิ้น × ${fmt(g.slips)} ใบ`
-                  : `${fmt(g.min_lot)}–${fmt(g.max_lot)} ชิ้น/ใบ × ${fmt(g.slips)} ใบ`;
+                  ? `${fmt(g.min_lot)} ${tr("ชิ้น")} × ${fmt(g.slips)} ${tr("ใบ")}`
+                  : `${fmt(g.min_lot)}–${fmt(g.max_lot)} ${tr("ชิ้น/ใบ")} × ${fmt(g.slips)} ${tr("ใบ")}`;
                 /* ⚠️ วิว group ด้วย (mat_no, status) แล้วเอา min(dest_line)/min(supplier) มาโชว์
                    → กลุ่มที่ใบกระจายหลายไลน์ การ์ดจะโชว์ไลน์เดียว = โกหกเงียบ
                    (วัดจริง 2026-09-02: 8 จาก 25 กลุ่ม · 50031601 = 5 ไลน์ 2 ซัพพลายเออร์)
@@ -1626,16 +1618,16 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
                 return (
                   <QueueCard key={`${g.mat_no}|${g.status}`} code={g.mat_no} name={g.part_name} showImg img={imgOf(g.mat_no)}
                     qty={fmt(g.total_qty)} unit="ชิ้น" qtyLabel="ยอดรวมทุกใบ"
-                    destination={multiDest ? `${g.dest_count} ไลน์ (กางดูในปุ่มรวมยอด)` : (g.dest_line || '—')}
-                    statusLabel={many ? `${st.label} · ${fmt(g.slips)} ใบ` : st.label}
+                    destination={multiDest ? `${g.dest_count} ${tr("ไลน์ (กางดูในปุ่มรวมยอด")})` : (g.dest_line || '—')}
+                    statusLabel={many ? `${st.label} · ${fmt(g.slips)} ${tr("ใบ")}` : st.label}
                     statusColor={st.color} statusBg={st.bg} statusBorder={st.border}
-                    actionLabel={canOperate && st.nextLabel ? (many ? `${st.nextLabel} รวม ${fmt(g.slips)} ใบ` : st.nextLabel) : null}
+                    actionLabel={canOperate && st.nextLabel ? (many ? `${st.nextLabel} ${tr("รวม")} ${fmt(g.slips)} ${tr("ใบ")}` : st.nextLabel) : null}
                     busy={busy === g.first_id}
                     onAction={() => (many ? setBulkBuy({ g, next: st.next, label: st.nextLabel })
                                           : onAdvancePurchase(g, st.next))}
                     rows={[
                       { k: 'แตกเป็นใบ', v: many ? lot : null },
-                      { k: 'ซัพพลายเออร์', v: g.supplier ? `${g.supplier}${multiSup ? ` +อีก ${g.supplier_count - 1}` : ''}` : null },
+                      { k: 'ซัพพลายเออร์', v: g.supplier ? `${g.supplier}${multiSup ? ` +${tr("อีก")} ${g.supplier_count - 1}` : ''}` : null },
                     ]} />
                 );
               }} />
@@ -1648,8 +1640,8 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
         {wipSection('raw')}
         {wipAllBy.raw > 0 && <div style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--text)', margin: '6px 0 8px' }}>{tr('ใบเบิกวัตถุดิบของใบล็อต')}</div>}
         {rawRequests.length === 0 ? <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('ยังไม่มีใบเบิกวัตถุดิบ')}</div> :
-        vRaws.length === 0 ? <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('ไม่มีใบเบิกที่ค้างอยู่')}{q ? ` และตรงกับคำค้น "${q}"` : ''}</div> :
-        <StatusZones rows={vRaws} zones={RAW_ZONES(showDone)} statusOf={r => (r.status === 'issued' ? 'issued' : 'pending')} renderCard={r => {
+        vRaws.length === 0 ? <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('ไม่มีใบเบิกที่ค้างอยู่')}{q ? ` ${tr("และตรงกับคำค้น")} "${q}"` : ''}</div> :
+        <StatusZones layout={zl} rows={vRaws} zones={RAW_ZONES(showDone)} statusOf={r => (r.status === 'issued' ? 'issued' : 'pending')} renderCard={r => {
             const parentLot = lotRequests.find(l => l.id === r.lot_request_id);
             const issued = r.status === 'issued';
             return (
@@ -1674,7 +1666,7 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
           </div>
           <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--muted)', marginBottom: 8 }}>{tr('ภาชนะ (แร็ค/ถาด)')}</div>
           {vRacks.length === 0 ? <div style={{ padding: '10px 0 20px', color: 'var(--muted)', fontSize: 13 }}>{rackRequests.length === 0 ? tr('ยังไม่มีการเรียกภาชนะ') : tr('ไม่มีการเรียกภาชนะที่ค้างอยู่')}</div> : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(min(330px, 100%), 1fr))', gap: 12, marginBottom: 20 }}>
+            <CardsOrRows table={zl === 'table'} style={{ marginBottom: 20 }}>
               {vRacks.map(r => {
                 const st = RACK_STATUS[r.status] || RACK_STATUS.requested;
                 return (
@@ -1685,11 +1677,11 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
                     meta={r.note || ''} />
                 );
               })}
-            </div>
+            </CardsOrRows>
           )}
           <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--muted)', marginBottom: 8 }}>{tr('Packaging (จากการผลิต)')}</div>
           {vPkgs.length === 0 ? <div style={{ padding: '10px 0', color: 'var(--muted)', fontSize: 13 }}>{pkgRequests.length === 0 ? tr('ยังไม่มีใบเบิก packaging') : tr('ไม่มีใบเบิก packaging ที่ค้างอยู่')}</div> : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(min(330px, 100%), 1fr))', gap: 12 }}>
+            <CardsOrRows table={zl === 'table'}>
               {vPkgs.map(p => {
                 const issued = p.status === 'issued';
                 return (
@@ -1704,24 +1696,123 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
                     ]} />
                 );
               })}
-            </div>
+            </CardsOrRows>
           )}
         </>
       )}
 
       {/* 🧪 งานชุบ — โหลดข้อมูลเอง (ใบส่งชุบ/ยอดคลัง) · ใช้คำค้น + "เฉพาะงานค้าง" ชุดเดียวกับแท็บอื่น */}
-      {store === 'plating' && <PlatingBoard q={q} showDone={showDone} readOnly={readOnly} part={direction === 'out' ? 'send' : 'all'} />}
-      {store === 'plating_in' && <PlatingBoard q={q} showDone={showDone} readOnly={readOnly} part="receive" />}
-      {store === 'receipts' && <StockReceiptQueue />}
+      {store === 'plating' && <PlatingBoard q={q} showDone={showDone} readOnly={readOnly} part={direction === 'out' ? 'send' : 'all'} table={zl === 'table'} />}
+      {store === 'plating_in' && <PlatingBoard q={q} showDone={showDone} readOnly={readOnly} part="receive" table={zl === 'table'} />}
+      {store === 'receipts' && <StockReceiptQueue banner={pro ? <StoreCallSiren variant="inline" here={direction === 'out'} /> : null} table={zl === 'table'} />}
 
       {store === 'open' && <OpenOrderDemandPanel q={q} />}
 
       {(store === 'ext' || store === 'other') && (<>
         {hiddenNote}
         {wipSection(store) || <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
-          ยังไม่มีใบเบิก{store === 'ext' ? 'ชิ้นส่วนซื้อ (3xx)' : 'ที่เลขพาร์ทไม่เข้ากลุ่ม'} — ใบเกิดจากไลน์กด "📦 เบิก" ใน Daily Report
+          {tr("ยังไม่มีใบเบิก")}{store === 'ext' ? 'ชิ้นส่วนซื้อ (3xx)' : 'ที่เลขพาร์ทไม่เข้ากลุ่ม'} — {tr("ใบเกิดจากไลน์กด \"📦 เบิก\" ใน")} Daily Report
         </div>}
       </>)}
+  </>);
+
+  if (pro) return (
+    <div>
+      <PageHeader
+        tabs={visibleStores.map(t => ({ key: t.key, label: `${t.icon} ${tr(t.label)}`, title: tr(t.desc),
+          badge: countOf(t.key) > 0 ? String(countOf(t.key)) : undefined }))}
+        tab={store} onTab={setStore}
+      />
+      {/* แถบกรองเดียว · ปุ่มล้างตัวกรอง = ของกลางใน FilterBar (ตัวกรองอยู่ใน state ⇒ ส่ง onClear เมื่อมีค่าค้าง) */}
+      {!ownBar && (
+        <FilterBar onClear={anyFilter ? clearFilters : undefined} clearKeep={['store']}>
+
+          {leadFilters}
+          <SearchInput value={q} onChange={setQ} fields="รหัส / ชื่อพาร์ท / ไลน์" grow={false} />
+          {areaApplies && (() => {
+          const lines = direction === 'out'
+            ? [...wipRequests.map(r => r.line_name), ...rounds.map(r => r.line_name), ...lotRequests.map(l => l.source_line)]
+            : lotRequests.map(l => l.source_line);
+          const opts = [...new Set(lines.filter(Boolean).map(areaKey))].sort();
+          const mats = direction === 'out'
+            ? [...wipRequests.map(r => r.mat_no), ...lotRequests.map(l => l.child_mat_no)]
+            : lotRequests.map(l => l.child_mat_no);
+          const storeOpts = [...new Set(mats.filter(Boolean).map(storeKey))].sort();
+          const sideLbl = direction === 'out' ? 'ต้นทาง' : 'ปลายทาง';
+          return (<>
+            <select value={storeSel} onChange={e => setStoreSel(e.target.value)} aria-label={`${tr("พื้นที่สโตร์")}${sideLbl}`}>
+              <option value="">{sideLbl}{tr(': ทุกพื้นที่สโตร์')}</option>
+              {storeOpts.map(a => <option key={a} value={a}>{sideLbl}: 🏬 {a === '—' ? 'พาร์ทที่ยังไม่ตั้งที่จัดเก็บหลัก' : a}</option>)}
+            </select>
+            <select value={areaSel} onChange={e => setAreaSel(e.target.value)} aria-label={direction === 'out' ? tr('พื้นที่ปลายทาง') : tr('พื้นที่ต้นทาง')}>
+              <option value="">{direction === 'out' ? tr('ปลายทาง: ทุกพื้นที่ผลิต') : tr('ต้นทาง: ทุกพื้นที่ผลิต')}</option>
+              {opts.map(a => <option key={a} value={a}>{direction === 'out' ? 'ปลายทาง' : 'ต้นทาง'}: {a === '—' ? 'ไลน์ที่ยังไม่ผูกพื้นที่ SAP' : a}</option>)}
+            </select>
+          </>);
+        })()}
+          <button type="button" aria-pressed={!showDone} onClick={() => setShowDone(v => !v)} style={{
+            padding: '7px 14px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-body)',
+            background: showDone ? 'var(--bg2)' : 'var(--accent)', color: showDone ? 'var(--text2)' : 'var(--accent-ink)',
+            border: `1px solid ${showDone ? 'var(--border)' : 'var(--accent)'}`,
+          }}>{showDone ? tr('ทั้งหมด (รวมที่เสร็จแล้ว)') : tr('เฉพาะงานค้าง')}</button>
+          {purpose && <><span className="spacer" /><InfoMore label={tr('หน้านี้ทำอะไร')}>{tr(purpose)}</InfoMore></>}
+        </FilterBar>
+      )}
+      {!ownBar && <StoreCallSiren variant="inline" here={direction === 'out'} />}
+      {kpiSlot}
+      {body}
+    </div>
+  );
+
+  return (
+    <div style={{ padding: 16 }}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+        {/* แท็บ Store FG = รอบส่ง — ไม่มีรอบ active = ไม่มีอะไรให้ทำ ซ่อนไปเลย (โผล่เองเมื่อไลน์ตั้งรอบ) · audit 2026-09-07 */}
+        {STORE_TABS.filter(t => (opsStores ? opsStores.includes(t.key) : !t.inOnly)
+          && (t.key !== 'fg' || rounds.length > 0 || wipAllBy.fg > 0)
+          && (t.key !== 'other' || wipAllBy.other > 0)).map(t => (
+          <button key={t.key} onClick={() => setStore(t.key)} title={tr(t.desc)}
+            style={{ padding: '10px 16px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-body)',
+              background: store === t.key ? 'var(--accent)' : 'var(--bg2)', color: store === t.key ? 'var(--accent-ink)' : 'var(--text2)',
+              border: `1px solid ${store === t.key ? 'var(--accent)' : 'var(--border)'}`, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, minWidth: 150 }}>
+            <span>{t.icon} {tr(t.label)} {counts[t.key] > 0 && <span style={{ opacity: 0.8 }}>({counts[t.key]})</span>}</span>
+            <span style={{ fontSize: 11, fontWeight: 500, opacity: 0.75 }}>{tr(t.desc)}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* ── ค้นหา + สลับงานค้าง/ทั้งหมด (ใช้ได้ทุกแท็บ) ── */}
+      <FilterBar bare style={{ marginBottom: 14 }}>
+        <SearchInput value={q} onChange={setQ} fields="รหัส / ชื่อพาร์ท / ไลน์" grow={false} />
+        {direction && (() => {
+          const lines = direction === 'out'
+            ? [...wipRequests.map(r => r.line_name), ...rounds.map(r => r.line_name), ...lotRequests.map(l => l.source_line)]
+            : lotRequests.map(l => l.source_line);
+          const opts = [...new Set(lines.filter(Boolean).map(areaKey))].sort();
+          const mats = direction === 'out'
+            ? [...wipRequests.map(r => r.mat_no), ...lotRequests.map(l => l.child_mat_no)]
+            : lotRequests.map(l => l.child_mat_no);
+          const storeOpts = [...new Set(mats.filter(Boolean).map(storeKey))].sort();
+          const sideLbl = direction === 'out' ? 'ต้นทาง' : 'ปลายทาง';
+          return (<>
+            <select value={storeSel} onChange={e => setStoreSel(e.target.value)} aria-label={`${tr("พื้นที่สโตร์")}${sideLbl}`}>
+              <option value="">{sideLbl}{tr(': ทุกพื้นที่สโตร์')}</option>
+              {storeOpts.map(a => <option key={a} value={a}>{sideLbl}: 🏬 {a === '—' ? 'พาร์ทที่ยังไม่ตั้งที่จัดเก็บหลัก' : a}</option>)}
+            </select>
+            <select value={areaSel} onChange={e => setAreaSel(e.target.value)} aria-label={direction === 'out' ? tr('พื้นที่ปลายทาง') : tr('พื้นที่ต้นทาง')}>
+              <option value="">{direction === 'out' ? tr('ปลายทาง: ทุกพื้นที่ผลิต') : tr('ต้นทาง: ทุกพื้นที่ผลิต')}</option>
+              {opts.map(a => <option key={a} value={a}>{direction === 'out' ? 'ปลายทาง' : 'ต้นทาง'}: {a === '—' ? 'ไลน์ที่ยังไม่ผูกพื้นที่ SAP' : a}</option>)}
+            </select>
+          </>);
+        })()}
+        <button onClick={() => setShowDone(v => !v)} style={{
+          padding: '7px 14px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-body)',
+          background: showDone ? 'var(--bg2)' : 'var(--accent)', color: showDone ? 'var(--text2)' : '#08130a',
+          border: `1px solid ${showDone ? 'var(--border)' : 'var(--accent)'}`,
+        }}>{showDone ? tr('ทั้งหมด (รวมที่เสร็จแล้ว)') : tr('เฉพาะงานค้าง')}</button>
+      </FilterBar>
+
+      {body}
 
     </div>
   );
@@ -1861,7 +1952,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
     loadHomeSlocs().then(r => {
       if (!alive) return;
       setHomeSloc(r);
-      if (r.error && r.error !== 'not_ready') toast.error(`โหลดที่จัดเก็บหลักของพาร์ทไม่ได้ — ${r.error}`);
+      if (r.error && r.error !== 'not_ready') toast.error(`${tr("โหลดที่จัดเก็บหลักของพาร์ทไม่ได้")} — ${r.error}`);
     });
     return () => { alive = false; };
   }, []);
@@ -1974,7 +2065,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
       supabaseDR.from('stock_inflow_rules').select('match_type, match_value, dest_line_name, is_active, mode').eq('is_active', true),
     ]);
     // ทะเบียนรหัสคลังยังไม่ apply (42P01/42703) = ยังไม่ผูก SLoc ทั้งระบบ (tag เป็น null ตรงความจริง) · error อื่นห้ามกลืน
-    if (slocErr && !['42P01', '42703'].includes(slocErr.code)) toast.error('โหลดทะเบียนรหัสคลังไม่ได้: ' + slocErr.message);
+    if (slocErr && !['42P01', '42703'].includes(slocErr.code)) toast.error((tr('โหลดทะเบียนรหัสคลังไม่ได้') + ': ') + slocErr.message);
     setSlocs(slocErr ? [] : (slocRows || []));
     // ยังไม่ apply migration (42P01) = บอกบนจอ ห้ามโชว์ว่างเปล่าเหมือนไม่มีของต้องสั่ง
     setPurchaseErr(purErr ? (purErr.code === '42P01'
@@ -1984,7 +2075,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
        คิวที่ล้ม = คงข้อมูลรอบก่อนไว้ + บอกบนจอว่าคิวไหนโหลดไม่ได้ (ห้ามเขียนทับด้วยลิสต์ว่าง) */
     const failed = [['Store Child', eLots], ['ใบเบิกวัตถุดิบ', eRaws], ['ยอดสะสม child', eAcc], ['ขนาดล็อต', eKs],
       ['แร็ค', eRacks], ['ภาชนะ', ePkgs], ['ใบเบิก-ส่งเข้าไลน์', eWips]].filter(([, e]) => e);
-    if (failed.length) toast.error(`โหลดคิวสโตร์ไม่ได้: ${failed.map(([n, e]) => `${n} (${e.message})`).join(' · ')} — จอแสดงข้อมูลรอบก่อน`);
+    if (failed.length) toast.error(`${tr("โหลดคิวสโตร์ไม่ได้")}: ${failed.map(([n, e]) => `${n} (${e.message})`).join(' · ')} — ${tr("จอแสดงข้อมูลรอบก่อน")}`);
     if (!eLots) setLotRequests(lots || []);
     if (!eRaws) setRawRequests(raws || []);
     if (!eAcc) setAccumulator(acc || []);
@@ -1994,7 +2085,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
     if (!eWips) setWipRequests(wips || []);
     /* ทะเบียนจุดส่งยังไม่ apply (42P01) = ทุกไลน์ยังไม่มีจุด → ด่านผ่านแบบ no_point ซึ่งตรงความจริง
        แต่ error อื่นห้ามกลืน — โหลดไม่ได้แล้วเงียบ = ด่านหายไปโดยไม่มีใครรู้ */
-    if (dpErr && dpErr.code !== '42P01') toast.error('โหลดทะเบียนจุดส่งไม่ได้: ' + dpErr.message);
+    if (dpErr && dpErr.code !== '42P01') toast.error((tr('โหลดทะเบียนจุดส่งไม่ได้') + ': ') + dpErr.message);
     setDeliveryPoints(dpErr ? [] : (dps || []));
     setPurchaseRequests(purchases || []);
     /* 🔴 อ่านกฎไม่ได้ = **ไม่รู้** ว่าพาร์ทไหนเข้าทางไหน ⇒ null ให้การ์ดเขียนว่ายังตอบไม่ได้ ห้ามเดา */
@@ -2080,7 +2171,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
     };
   };
   /* หมายเหตุ ledger บอกไลน์ที่ใช้เสมอเมื่อคลังที่ตัดเป็นคนละที่ — สอบกลับได้ว่าของไปใช้ที่ไหน */
-  const usedAtNote = (loc, line) => (line && loc !== line ? ` · ใช้ที่ ${line}` : '');
+  const usedAtNote = (loc, line) => (line && loc !== line ? ` · ${tr("ใช้ที่")} ${line}` : '');
 
   const advanceLot = async (lot, next) => {
     if (!opsGuard()) return;   // 🔴 /heijunka = monitor · เขียนได้เฉพาะโหมด ops (/line-stock)
@@ -2099,7 +2190,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
         .update({ status: next }).eq('id', lot.id).eq('status', lot.status).select('id');
       if (error) throw error;
       if (!updated || updated.length === 0) {
-        toast.info(`ล็อต ${lot.child_mat_no} ถูกเปลี่ยนสถานะโดยคนอื่นไปแล้ว — รีเฟรชให้ใหม่`);
+        toast.info(`${tr("ล็อต")} ${lot.child_mat_no} ${tr("ถูกเปลี่ยนสถานะโดยคนอื่นไปแล้ว — รีเฟรชให้ใหม่")}`);
         await loadPull(); setPullBusy(null); return;
       }
       // ── รับของเข้าสโตร์ = ปิด loop (ของที่ไลน์ทำเสร็จ กลับเข้าสต็อกคลังปลายทาง + ตัดวัตถุดิบที่ใช้) ──
@@ -2135,7 +2226,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
                 throw new Error(`ยังไม่ได้ตั้งคลังปลายทางของ ${lot.child_mat_no} — ไปตั้งที่ สต็อกในไลน์ › กฎรับเข้าคลัง แล้วกดรับใหม่`);
               }
               txns.push({ line_name: destLoc, mat_no: lot.child_mat_no, part_name: lot.part_name, qty: lot.lot_qty,
-                type: 'issue', work_date: wd, note: `auto: รับ child เข้า ${destLoc} (ล็อต ${lot.lot_qty} · ผลิตที่ ${lot.source_line})`, created_by: fullName || 'สโตร์' });
+                type: 'issue', work_date: wd, note: `auto: ${tr("รับ child เข้า")} ${destLoc} (${tr("ล็อต")} ${lot.lot_qty} · ${tr("ผลิตที่")} ${lot.source_line})`, created_by: fullName || 'สโตร์' });
             }
             // (2) ตัดสต็อกวัตถุดิบตามใบเบิก **ที่ยังไม่ถูกจ่าย** — query สดจาก DB ห้ามใช้ state
             //    (state เคยโหลดแค่ 400 แถวล่าสุด: ใบเบิกของล็อตเก่าหลุดหน้าต่าง = ถูกมาร์ค issued
@@ -2153,7 +2244,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
             (lotRaws || []).forEach(r => {
               splitOf(r.raw_mat_no, r.qty).forEach(({ loc, qty }) => {
                 txns.push({ line_name: loc, mat_no: r.raw_mat_no, part_name: r.part_name, qty,
-                  type: 'consume', work_date: wd, note: `auto: ใช้ผลิต ${lot.child_mat_no} (ล็อต)${usedAtNote(loc, lot.source_line)}`, created_by: fullName || 'สโตร์' });
+                  type: 'consume', work_date: wd, note: `auto: ${tr("ใช้ผลิต")} ${lot.child_mat_no} (${tr("ล็อต")})${usedAtNote(loc, lot.source_line)}`, created_by: fullName || 'สโตร์' });
               });
             });
           }
@@ -2166,14 +2257,14 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
           if (!lot.source_line) {
             const { error: e3 } = await supabaseDR.from('raw_withdrawal_requests')
               .update({ status: 'issued' }).eq('lot_request_id', lot.id).eq('status', 'pending');
-            if (e3) toast.error(`ปิดล็อต ${lot.child_mat_no} เรียบร้อย แต่ปิดใบเบิกวัตถุดิบไม่สำเร็จ — ไปปิดเองที่คิวใบเบิก (${e3.message})`);
+            if (e3) toast.error(`${tr("ปิดล็อต")} ${lot.child_mat_no} ${tr("เรียบร้อย แต่ปิดใบเบิกวัตถุดิบไม่สำเร็จ — ไปปิดเองที่คิวใบเบิก")} (${e3.message})`);
           }
         } catch (ledgerErr) {
           /* ใบเบิกที่ claim ไว้ต้องคืน pending ด้วย — ไม่งั้นกดใหม่แล้ววัตถุดิบไม่ถูกตัด (กฎข้อ 6 · claim แล้ว ledger ล้ม = คืน) */
           const { error: eRawBack } = claimedRawIds.length
             ? await supabaseDR.from('raw_withdrawal_requests').update({ status: 'pending' }).in('id', claimedRawIds).eq('status', 'issued')
             : { error: null };
-          if (eRawBack) toast.error(`คืนสถานะใบเบิกวัตถุดิบของล็อต ${lot.child_mat_no} ไม่สำเร็จ — แจ้ง admin (${eRawBack.message})`);
+          if (eRawBack) toast.error(`${tr("คืนสถานะใบเบิกวัตถุดิบของล็อต")} ${lot.child_mat_no} ${tr("ไม่สำเร็จ — แจ้ง")} admin (${eRawBack.message})`);
           const { error: eBack } = await supabaseDR.from('child_lot_requests')
             .update({ status: lot.status }).eq('id', lot.id).eq('status', next);
           throw new Error(eBack
@@ -2184,9 +2275,9 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
       // toast ตามจริง: เติมสต็อกเฉพาะเมื่อมี source_line (ผลิตเองแล้วของกลับเข้าสโตร์)
       /* ข้อความต้องตรงกับสิ่งที่เกิดขึ้นจริง — ปิดล็อตโดยไม่ลงสต็อก ห้ามขึ้นว่า "สต็อก +N" */
       toast.success(next === 'done'
-        ? (destLoc ? `📥 รับเข้า ${destLoc} · ${lot.child_mat_no} สต็อก +${lot.lot_qty}`
-          : `✅ ปิดใบล็อต ${lot.child_mat_no} — ของเข้าคลังทางคิว "รอรับเข้า" ไม่ลงสต็อกซ้ำที่นี่`)
-        : (next === 'producing' ? `📤 ปล่อย ${lot.child_mat_no} เข้าไลน์ ${lot.source_line || ''} แล้ว` : `อัปเดตล็อต ${lot.child_mat_no} → ${next}`));
+        ? (destLoc ? `📥 ${tr("รับเข้า")} ${destLoc} · ${lot.child_mat_no} ${tr("สต็อก")} +${lot.lot_qty}`
+          : `✅ ${tr("ปิดใบล็อต")} ${lot.child_mat_no} — ${tr("ของเข้าคลังทางคิว \"รอรับเข้า\" ไม่ลงสต็อกซ้ำที่นี่")}`)
+        : (next === 'producing' ? `📤 ${tr("ปล่อย")} ${lot.child_mat_no} ${tr("เข้าไลน์")} ${lot.source_line || ''} ${tr("แล้ว")}` : `${tr("อัปเดตล็อต")} ${lot.child_mat_no} → ${next}`));
       await loadPull();
       await load();
     } catch (err) { toast.error(err.message); }
@@ -2239,8 +2330,8 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
       /* ⚠️ เดิม: `dest_line` ว่าง = ข้าม ไม่เติมสต็อกเลย (QC flow-audit #42) — ตอนนี้รับเข้าคลังได้เสมอ
          เพราะ "ไม่รู้ว่าไลน์ไหนจะใช้" ไม่ได้แปลว่า "ของไม่ได้มา" · ไลน์ที่รอของไปอยู่ในหมายเหตุแทน */
       toast.success(next === 'ordered'
-        ? `🛒 บันทึกสั่งซื้อ ${pr.mat_no}`
-        : `✅ รับเข้าคลัง ${pr.mat_no} +${pr.qty} — ไลน์เบิกจากคลังอีกที`);
+        ? `🛒 ${tr("บันทึกสั่งซื้อ")} ${pr.mat_no}`
+        : `✅ ${tr("รับเข้าคลัง")} ${pr.mat_no} +${pr.qty} — ${tr("ไลน์เบิกจากคลังอีกที")}`);
       await loadPull();
       await load();
     } catch (err) { toast.error(err.message); }
@@ -2264,7 +2355,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
       const bad = rs.find(r => r.error);
       if (bad) throw bad.error;
       await loadPull();
-    } catch (err) { toast.error('เรียงคิวไม่สำเร็จ (ลำดับอาจเขียนไม่ครบ — รีเฟรชแล้วลองใหม่): ' + err.message); }
+    } catch (err) { toast.error((tr('เรียงคิวไม่สำเร็จ (ลำดับอาจเขียนไม่ครบ — รีเฟรชแล้วลองใหม่') + '): ') + err.message); }
     setPullBusy(null);
   };
 
@@ -2278,7 +2369,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
         .update({ status: 'issued' }).eq('id', raw.id).eq('status', 'pending').select('id');
       if (error) throw error;
       if (!done?.length) {
-        toast.info(`ใบเบิก ${raw.raw_mat_no} ถูกจ่ายไปแล้ว — รีเฟรชให้ใหม่`);
+        toast.info(`${tr("ใบเบิก")} ${raw.raw_mat_no} ${tr("ถูกจ่ายไปแล้ว — รีเฟรชให้ใหม่")}`);
         await loadPull(); setPullBusy(null); return;
       }
       /* 🔴 06/10 — จ่าย = วัตถุดิบออกจากสต็อกจริง ⇒ ตัดสต็อกตอนนี้ (consume ที่ไลน์ผลิตของล็อต · แถวเดียวกับที่ปิดล็อตเคยเขียน)
@@ -2294,7 +2385,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
           const parts = (await loadRawLocOf([raw.raw_mat_no], lot.source_line))(raw.raw_mat_no, raw.qty);
           const { error: eTx } = !parts.length ? { error: null } : await supabaseDR.from('line_stock_transactions').insert(parts.map(({ loc, qty }) => ({
             line_name: loc, mat_no: raw.raw_mat_no, part_name: raw.part_name, qty,
-            type: 'consume', work_date: getWorkDate(), note: `auto: ใช้ผลิต ${lot.child_mat_no} (ล็อต · จ่ายวัตถุดิบ)${usedAtNote(loc, lot.source_line)}`,
+            type: 'consume', work_date: getWorkDate(), note: `auto: ${tr("ใช้ผลิต")} ${lot.child_mat_no} (${tr("ล็อต · จ่ายวัตถุดิบ")})${usedAtNote(loc, lot.source_line)}`,
             created_by: fullName || 'สโตร์' })));
           if (eTx) throw eTx;
         }
@@ -2305,7 +2396,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
           ? `ตัดสต็อกวัตถุดิบไม่สำเร็จ และคืนสถานะใบเบิกไม่ได้ — ใบ ${raw.raw_mat_no} เป็น "จ่ายแล้ว" ทั้งที่สต็อกยังไม่ลด แจ้ง admin (${ledgerErr.message})`
           : `ตัดสต็อกวัตถุดิบไม่สำเร็จ — คืนใบเบิก ${raw.raw_mat_no} เป็น "รอจ่าย" แล้ว ลองกดใหม่ (${ledgerErr.message})`);
       }
-      toast.success(`จ่ายวัตถุดิบ ${raw.raw_mat_no} แล้ว · ตัดสต็อก ${(Number(raw.qty) || 0).toLocaleString()}`);
+      toast.success(`${tr("จ่ายวัตถุดิบ")} ${raw.raw_mat_no} ${tr("แล้ว · ตัดสต็อก")} ${(Number(raw.qty) || 0).toLocaleString()}`);
       await loadPull();
     } catch (err) { toast.error(err.message); }
     setPullBusy(null);
@@ -2322,7 +2413,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
     // "Alert in Smart Fac / Mobile Phone" (Smart Withdraw Kanban) — หยิบผิดพาร์ทขึ้น Telegram ห้อง logistic ด้วย (rule wip_pick_blocked · fire-and-forget)
     if (step === 'pick' && evt.outcome === 'blocked') {
       notifyEvent({ event: 'wip_pick_blocked', type: 'error', ref_table: 'wip_replenish_requests', ref_id: w.id, line_name: w.line_name, actor: fullName,
-        lines: [`🏭 ไลน์: ${w.line_name}`, `🔩 ใบต้องการ ${w.mat_no} · ที่ยิงมา ${evt.actual || evt.scanned_raw || '—'}`, `👤 ${fullName || 'สโตร์'} — ระบบบล็อกไว้ รอแก้ให้ถูกแล้วสแกนใหม่`] });
+        lines: [`🏭 ${tr("ไลน์")}: ${w.line_name}`, `🔩 ${tr("ใบต้องการ")} ${w.mat_no} · ${tr("ที่ยิงมา")} ${evt.actual || evt.scanned_raw || '—'}`, `👤 ${fullName || tr('สโตร์')} — ${tr("ระบบบล็อกไว้ รอแก้ให้ถูกแล้วสแกนใหม่")}`] });
     }
     const { error } = await supabase.from('line_replenish_scan_blocks').insert({
       request_id: w.id, line_name: w.line_name, mat_no: w.mat_no, step, check_kind: step === 'pick' ? 'part' : 'point',
@@ -2330,7 +2421,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
       expected: evt.expected || null, actual: evt.actual || null, reason: evt.reason || null, actor_name: fullName || null,
     });
     // 42P01 = ยังไม่ apply migration Main → ฟีเจอร์บันทึกยังไม่เปิด (ด่านฝั่งจอยังทำงาน) · error อื่นต้องเห็น
-    if (error && error.code !== '42P01') toast.error('บันทึกเหตุการณ์ด่านสแกนไม่สำเร็จ: ' + error.message);
+    if (error && error.code !== '42P01') toast.error((tr('บันทึกเหตุการณ์ด่านสแกนไม่สำเร็จ') + ': ') + error.message);
   };
 
   /* 🏬 สโตร์เลือกพาร์ทจาก Store Time Chart → สร้างใบเข้าคิวเติม WIP เอง (2026-09-07 · คำสั่ง user)
@@ -2365,13 +2456,13 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
       else if (error.code === '23505') dup++;
       else errs.push(`${it.mat_no}: ${error.message}`);
     }
-    if (ok) toast.success(`🚚 สร้างใบส่ง ${ok} รายการ เข้าตู้งานสโตร์แล้ว${dup ? ` · ${dup} รายการมีใบค้างอยู่แล้ว` : ''}`);
-    else if (dup && !errs.length) toast.error(`ทุกรายการมีใบค้างอยู่ในคิวแล้ว (${dup}) — ดูที่ตู้งานสโตร์ตามเลขพาร์ท`);
-    if (errs.length) toast.error(`สร้างไม่สำเร็จ ${errs.length} รายการ: ${errs[0]}`);
-    if (fgSkip.length) toast.error(`ไม่ได้สร้างใบ ${fgSkip.length} รายการ (${fgSkip.slice(0, 3).join(', ')}${fgSkip.length > 3 ? '…' : ''}) — ${FG_NO_LINE_REQUEST}`);
+    if (ok) toast.success(`🚚 ${tr("สร้างใบส่ง")} ${ok} ${tr("รายการ เข้าตู้งานสโตร์แล้ว")}${dup ? ` · ${dup} ${tr("รายการมีใบค้างอยู่แล้ว")}` : ''}`);
+    else if (dup && !errs.length) toast.error(`${tr("ทุกรายการมีใบค้างอยู่ในคิวแล้ว")} (${dup}) — ${tr("ดูที่ตู้งานสโตร์ตามเลขพาร์ท")}`);
+    if (errs.length) toast.error(`${tr("สร้างไม่สำเร็จ")} ${errs.length} ${tr("รายการ")}: ${errs[0]}`);
+    if (fgSkip.length) toast.error(`${tr("ไม่ได้สร้างใบ")} ${fgSkip.length} ${tr("รายการ")} (${fgSkip.slice(0, 3).join(', ')}${fgSkip.length > 3 ? '…' : ''}) — ${FG_NO_LINE_REQUEST}`);
     if (noSourceCol) toast.error('บันทึกใบแล้ว แต่ยังไม่ได้ apply migration 20260907_wip_replenish_source (Main) — ใบไม่ถูกมาร์กว่ามาจากสโตร์');
     if (noSlocCol) toast.error('บันทึกใบแล้ว แต่ยังไม่ได้ apply migration 20260908_wip_replenish_storage_location (Main) — ใบไม่ถูกแปะรหัสคลัง SAP');
-    else if (ok && noSlocLines.size) toast.info(`ℹ️ ${[...noSlocLines].join(', ')} ยังไม่ผูกรหัสคลัง SAP — ใบไม่มีมุม SAP (ผูกที่ 📦 Line Stock → แท็บ 🏬 โซนคลัง → ทะเบียนรหัสคลัง)`);
+    else if (ok && noSlocLines.size) toast.info(`ℹ️ ${[...noSlocLines].join(', ')} ${tr("ยังไม่ผูกรหัสคลัง SAP — ใบไม่มีมุม SAP (ผูกที่ 📦 Line Stock → แท็บ 🏬 โซนคลัง → ทะเบียนรหัสคลัง")})`);
     await loadPull();
     if (ok) { setViewMode('unified'); setUnifiedStore(storeOfMat(items[0]?.mat_no)); }   // พาไปเห็นใบที่เพิ่งสร้าง — ทำงานต่อได้ทันที
     return ok > 0 || (dup > 0 && !errs.length);
@@ -2391,15 +2482,15 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
     if (!opsGuard()) return false;   // 🔴 /heijunka = monitor · เขียนได้เฉพาะโหมด ops (/line-stock)
     if (w.stock_txn_ids?.length) return true;
     const wd = getWorkDate();
-    const tag = `ใบ ${String(w.id).slice(0, 8)})`;
+    const tag = `${tr("ใบ")} ${String(w.id).slice(0, 8)})`;
     const base = { mat_no: w.mat_no, part_name: w.part_name || null, status: 'approved', work_date: wd, created_by: fullName || 'สโตร์',
-      note: `auto: ใบขอเติม ${w.mat_no} → ${w.line_name} (ยืนยันเตรียม · ${tag}` };
+      note: `auto: ${tr("ใบขอเติม")} ${w.mat_no} → ${w.line_name} (${tr("ยืนยันเตรียม")} · ${tag}` };
     const { data: prior, error: priorErr } = await supabaseDR.from('line_stock_transactions')
       .select('id').eq('mat_no', w.mat_no).like('note', `%${tag}%`);
-    if (priorErr) { toast.error(`เช็คว่าเคยตัดสต็อกใบนี้แล้วหรือยังไม่ได้ — ยังไม่ตัด (กันตัดซ้ำ): ${priorErr.message}`); return false; }
+    if (priorErr) { toast.error(`${tr("เช็คว่าเคยตัดสต็อกใบนี้แล้วหรือยังไม่ได้ — ยังไม่ตัด (กันตัดซ้ำ")}): ${priorErr.message}`); return false; }
     if (prior?.length) {
       const { error: eb } = await supabase.from('wip_replenish_requests').update({ stock_txn_ids: prior.map(r => r.id) }).eq('id', w.id);
-      if (eb && eb.code !== '42703') toast.error('ผูกเลข ledger กับใบไม่สำเร็จ: ' + eb.message);
+      if (eb && eb.code !== '42703') toast.error((tr('ผูกเลข ledger กับใบไม่สำเร็จ') + ': ') + eb.message);
       return true;
     }
     const { data: st, error: stErr } = await supabaseDR.from('line_stock_summary').select('qty_on_hand').eq('line_name', 'STORE').eq('mat_no', w.mat_no).maybeSingle();
@@ -2410,24 +2501,24 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
     const storeSloc = homeSlocOf(homeSloc.map, w.mat_no);   // 🏠 05/11 — ที่จัดเก็บหลักของพาร์ท (ไม่ตั้ง = null ไม่เดา)
     const rows = [{ ...base, line_name: w.line_name, qty, type: 'issue', storage_location: lineSloc }];
     rows.push({ ...base, line_name: 'STORE', qty, type: 'consume', storage_location: storeSloc });
-    if (stErr) note = `เช็คสต็อก STORE ไม่ได้ (${stErr.message}) — หัก STORE เต็มจำนวนแล้ว อาจติดลบ`;
-    else if ((parseFloat(st?.qty_on_hand) || 0) < qty) note = `${STORE_NEG_NOTE} (มี ${(parseFloat(st?.qty_on_hand) || 0).toLocaleString()} จ่าย ${Number(qty).toLocaleString()})`;
-    if (!lineSloc) note = `${note ? note + ' · ' : ''}ไลน์ ${w.line_name} ยังไม่ผูกรหัสคลัง SAP — ledger ไม่มีมุม SAP (ผูกที่ 📦 Line Stock → แท็บ 🏬 โซนคลัง → ทะเบียนรหัสคลัง)`;
+    if (stErr) note = `${tr("เช็คสต็อก STORE ไม่ได้")} (${stErr.message}) — ${tr("หัก STORE เต็มจำนวนแล้ว อาจติดลบ")}`;
+    else if ((parseFloat(st?.qty_on_hand) || 0) < qty) note = `${STORE_NEG_NOTE} (${tr("มี")} ${(parseFloat(st?.qty_on_hand) || 0).toLocaleString()} ${tr("จ่าย")} ${Number(qty).toLocaleString()})`;
+    if (!lineSloc) note = `${note ? note + ' · ' : ''}${tr("ไลน์")} ${w.line_name} ${tr("ยังไม่ผูกรหัสคลัง SAP — ledger ไม่มีมุม SAP (ผูกที่ 📦 Line Stock → แท็บ 🏬 โซนคลัง → ทะเบียนรหัสคลัง")})`;
     let { data: ins, error } = await supabaseDR.from('line_stock_transactions').insert(rows).select('id');
     // 42703 = ยังไม่ apply 20260908_storage_locations_line_map (DR) → ตัดสต็อกแบบไม่ tag (ห้ามให้การตัดสต็อกล้มเพราะชั้นบัญชี)
     if (error?.code === '42703') {
       ({ data: ins, error } = await supabaseDR.from('line_stock_transactions').insert(rows.map(({ storage_location, ...r }) => { void storage_location; return r; })).select('id'));
-      if (!error) note = `${note ? note + ' · ' : ''}ยังไม่ apply migration 20260908_storage_locations_line_map (DR) — ledger ไม่ถูกแปะรหัสคลัง`;
+      if (!error) note = `${note ? note + ' · ' : ''}${tr("ยังไม่ apply migration 20260908_storage_locations_line_map (DR) — ledger ไม่ถูกแปะรหัสคลัง")}`;
     }
     if (error) {
-      toast.error(`ตัดสต็อกไม่สำเร็จ (ใบยังเป็น "กำลังเตรียม"): ${error.message}`);
-      const { error: en } = await supabase.from('wip_replenish_requests').update({ stock_txn_note: `ตัดสต็อกไม่สำเร็จ: ${error.message}` }).eq('id', w.id);
-      if (en && en.code !== '42703') toast.error('จดเหตุผลตัดสต็อกไม่สำเร็จลงใบไม่ได้: ' + en.message);
+      toast.error(`${tr("ตัดสต็อกไม่สำเร็จ (ใบยังเป็น \"กำลังเตรียม")}"): ${error.message}`);
+      const { error: en } = await supabase.from('wip_replenish_requests').update({ stock_txn_note: `${tr("ตัดสต็อกไม่สำเร็จ")}: ${error.message}` }).eq('id', w.id);
+      if (en && en.code !== '42703') toast.error((tr('จดเหตุผลตัดสต็อกไม่สำเร็จลงใบไม่ได้') + ': ') + en.message);
       return false;
     }
     if (note) toast.error(`⚠ ${note}`);
     const { error: e2 } = await supabase.from('wip_replenish_requests').update({ stock_txn_ids: (ins || []).map(r => r.id), stock_txn_note: note }).eq('id', w.id);
-    if (e2 && e2.code !== '42703') toast.error('ผูกเลข ledger กับใบไม่สำเร็จ: ' + e2.message);
+    if (e2 && e2.code !== '42703') toast.error((tr('ผูกเลข ledger กับใบไม่สำเร็จ') + ': ') + e2.message);
     return true;
   };
 
@@ -2436,7 +2527,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
   const cancelWip = async (w) => {
     if (!opsGuard()) return;
     if (!okToOperate(w?.line_name, 'คิวเติมของไลน์นี้')) return;
-    const reason = window.prompt(`ยกเลิกใบเบิก ${w.mat_no} × ${fmt(w.request_qty)} → ${w.line_name}\n\nเหตุผล (บังคับ):`, 'ใบผลิตต้นทางปิด/ยกเลิกแล้ว');
+    const reason = window.prompt(`${tr("ยกเลิกใบเบิก")} ${w.mat_no} × ${fmt(w.request_qty)} → ${w.line_name}\n\n${tr("เหตุผล (บังคับ")}):`, 'ใบผลิตต้นทางปิด/ยกเลิกแล้ว');
     if (reason === null) return;
     if (!reason.trim()) { toast.error('ต้องใส่เหตุผลการยกเลิก'); return; }
     setPullBusy(w.id);
@@ -2444,9 +2535,9 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
       .update({ status: 'cancelled', cancel_reason: reason.trim(), cancelled_at: new Date().toISOString(), cancelled_by_name: fullName || null })
       .eq('id', w.id).eq('status', 'pending').select('id');
     setPullBusy(null);
-    if (res.error) { toast.error(`ยกเลิกไม่สำเร็จ: ${res.error.message}`); return; }
+    if (res.error) { toast.error(`${tr("ยกเลิกไม่สำเร็จ")}: ${res.error.message}`); return; }
     if (!res.data?.length) { toast.info('ใบนี้ถูกหยิบ/เปลี่ยนสถานะจากเครื่องอื่นแล้ว — โหลดคิวใหม่'); await loadPull(); return; }
-    toast.success(`ยกเลิกใบเบิก ${w.mat_no} แล้ว`);
+    toast.success(`${tr("ยกเลิกใบเบิก")} ${w.mat_no} ${tr("แล้ว")}`);
     await loadPull();
   };
 
@@ -2485,7 +2576,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
             ? { status: next, picked_at: payload.picked_at, picked_by_name: payload.picked_by_name }
             : { status: next, delivered_by: payload.delivered_by, delivered_at: payload.delivered_at })
           .eq('id', w.id).eq('status', w.status).select('id'));
-        if (!error) toast.error(`บันทึกแล้ว แต่ผลสแกนยังไม่ถูกเก็บ — ยังไม่ได้ apply migration ${next === 'preparing' ? '20260907_wip_replenish_pick_gate' : '20260903_wip_replenish_deliver_gate'} (Main) แจ้ง admin`);
+        if (!error) toast.error(`${tr("บันทึกแล้ว แต่ผลสแกนยังไม่ถูกเก็บ — ยังไม่ได้")} apply migration ${next === 'preparing' ? '20260907_wip_replenish_pick_gate' : '20260903_wip_replenish_deliver_gate'} (Main) ${tr("แจ้ง")} admin`);
       }
       if (error) throw error;
       // CAS ไม่ติด = อีกเครื่องขยับใบนี้ไปแล้ว → ปิดโมดัลด้วย ไม่งั้นค้างอยู่กับใบที่ไม่มีอยู่ในสถานะนั้นแล้ว
@@ -2501,12 +2592,12 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
          (เขียนเองด้วย = สต็อกโผล่ 2 ที่ เพราะตัดไปแล้วตอนสโตร์ยืนยันเตรียม ขั้น 5)
          ⇒ ต้องเตือนบนจอ ห้ามให้เข้าใจว่ายอดขยับให้แล้ว */
       toast.success(next === 'delivered'
-        ? `🚚 ส่ง ${what} แล้ว — รอไลน์ ${w.line_name} กดยืนยันรับ`
+        ? `🚚 ${tr("ส่ง")} ${what} ${tr("แล้ว — รอไลน์")} ${w.line_name} ${tr("กดยืนยันรับ")}`
         : next === 'preparing'
           ? (deducted
-            ? `🔧 เริ่มเตรียม ${what} — ตัดสต็อกให้แล้ว หยิบเสร็จไปวางที่ไลน์แล้วกด "ถึงไลน์แล้ว"`
-            : `🔧 เริ่มเตรียม ${what} — ⚠ ยังไม่ได้ตัดสต็อก ระบบจะลองตัดอีกครั้งตอนกด "ถึงไลน์แล้ว"`)
-          : `อัปเดต ${what} → ${next}`);
+            ? `🔧 ${tr("เริ่มเตรียม")} ${what} — ${tr("ตัดสต็อกให้แล้ว หยิบเสร็จไปวางที่ไลน์แล้วกด \"ถึงไลน์แล้ว")}"`
+            : `🔧 ${tr("เริ่มเตรียม")} ${what} — ⚠ ${tr("ยังไม่ได้ตัดสต็อก ระบบจะลองตัดอีกครั้งตอนกด \"ถึงไลน์แล้ว")}"`)
+          : `${tr("อัปเดต")} ${what} → ${next}`);
       await loadPull();
     } catch (err) { toast.error(err.message); }
     setPullBusy(null);
@@ -2622,7 +2713,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
         setStoreStock(ss);   // mat ที่ไม่มีคีย์ = "ไม่มีข้อมูลสต็อก" ≠ "ของหมด" (จอต้องแยกให้ออก)
       } else { setKanbanStd({}); setLineStock({}); setStoreStock({}); }
     } catch (err) {
-      toast.error('โหลดข้อมูลไม่สำเร็จ: ' + err.message);
+      toast.error((tr('โหลดข้อมูลไม่สำเร็จ') + ': ') + err.message);
     }
     setLoading(false);
   }, [workDate]);
@@ -2683,7 +2774,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
       }, { onConflict: 'work_date,line_name,shift,round_no', ignoreDuplicates: true }).select('id');
       if (error) throw error;
       if (!claimed || claimed.length === 0) {
-        toast.info(`รอบ ${r.round_no} ยืนยันส่งไปแล้ว — ไม่บันทึกซ้ำ`);
+        toast.info(`${tr("รอบ")} ${r.round_no} ${tr("ยืนยันส่งไปแล้ว — ไม่บันทึกซ้ำ")}`);
         await loadDeliveries();
         setConfirming(null);
         return;
@@ -2692,7 +2783,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
       const issueRows = (parts || []).filter(p => p.netTotal > 0).map(p => ({
         line_name: r.line_name, mat_no: p.mat_no, part_name: p.part_name, qty: p.netTotal,
         type: 'issue', work_date: workDate,
-        note: `Kanban ${r.line_name} รอบ ${r.round_no} (รอผลิตยืนยันรับ)`,
+        note: `Kanban ${r.line_name} ${tr("รอบ")} ${r.round_no} (${tr("รอผลิตยืนยันรับ")})`,
         created_by: fullName || 'Store',
       }));
       /* 🔴 02/11 (feedback ประชุม "ยอดสโตร์-ผลิตยังไม่ถูกหัก"): รอบคัมบังเดิมบวกเข้าไลน์อย่างเดียว ไม่เคยหัก STORE
@@ -2709,7 +2800,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
         issueRows.forEach(x => need.set(x.mat_no, (need.get(x.mat_no) || 0) + (Number(x.qty) || 0)));
         storeMissing = stErr ? mats : mats.filter(m => (have.get(m) || 0) < need.get(m));
         issueRows.slice().forEach(x => issueRows.push({
-          ...x, line_name: 'STORE', type: 'consume', note: `Kanban ${r.line_name} รอบ ${r.round_no} — จ่ายออกจาก STORE`,
+          ...x, line_name: 'STORE', type: 'consume', note: `Kanban ${r.line_name} ${tr("รอบ")} ${r.round_no} — ${tr("จ่ายออกจาก")} STORE`,
         }));
       }
       if (issueRows.length) {
@@ -2721,8 +2812,8 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
           throw new Error(`บันทึกสต็อกไม่สำเร็จ: ${e2.message}${eUndo ? ' · คืนสถานะรอบไม่สำเร็จ แจ้ง admin' : ' · ยกเลิกการยืนยันแล้ว กดใหม่ได้'}`);
         }
       }
-      toast.success(`✅ ยืนยันส่งแล้ว: ${r.line_name} รอบ ${r.round_no}`);
-      if (storeMissing.length) toast.error(`⚠ STORE ติดลบ ${storeMissing.length} รายการ (ยอดในระบบไม่พอ · หักเต็มแล้ว รอลงรับเข้า STORE หักล้าง): ${storeMissing.slice(0, 5).join(', ')}${storeMissing.length > 5 ? ' …' : ''}`);
+      toast.success(`✅ ${tr("ยืนยันส่งแล้ว")}: ${r.line_name} ${tr("รอบ")} ${r.round_no}`);
+      if (storeMissing.length) toast.error(`⚠ STORE ${tr("ติดลบ")} ${storeMissing.length} ${tr("รายการ (ยอดในระบบไม่พอ · หักเต็มแล้ว รอลงรับเข้า STORE หักล้าง")}): ${storeMissing.slice(0, 5).join(', ')}${storeMissing.length > 5 ? ' …' : ''}`);
       await loadDeliveries();
     } catch (err) { toast.error(err.message); }
     setConfirming(null);
@@ -2756,12 +2847,12 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
           if (shortfall > 0) {
             /* ⚠️ 05/11 — ส่วนที่ขาดย้ายไปคลังพัก (ไม่ตัดทิ้ง) + เปิดเคสผลต่าง · `utils/stockDiscrepancy.js` */
             shortRows.push(...shortReceiptRows({ line: round.line_name, mat: p.mat_no, part: p.part_name, short: shortfall,
-              workDate, by: fullName || 'ผลิต', ref: `Kanban ${round.line_name} รอบ ${round.round_no} ส่ง ${p.netTotal} รับจริง ${actual}` }));
+              workDate, by: fullName || 'ผลิต', ref: `Kanban ${round.line_name} ${tr("รอบ")} ${round.round_no} ${tr("ส่ง")} ${p.netTotal} ${tr("รับจริง")} ${actual}` }));
             shortCases.push({ source: 'kanban_round', line_name: round.line_name, mat_no: p.mat_no, part_name: p.part_name || null,
               sent_qty: p.netTotal, received_qty: actual, short_qty: shortfall, work_date: workDate, reported_by: fullName || null });
           }
         });
-        shortageNote = shortCases.map(s => `${s.mat_no} ขาด ${s.short_qty}`).join(', ');
+        shortageNote = shortCases.map(s => `${s.mat_no} ${tr("ขาด")} ${s.short_qty}`).join(', ');
       }
       // claim สถานะก่อนแล้วค่อยเขียน consume — 2 เครื่องกดพร้อมกันมีแค่คนเดียวที่ claim ได้
       // (เดิม insert consume ก่อน update = กดซ้ำ consume shortfall สองรอบ · pattern เดียวกับ confirmRound)
@@ -2794,7 +2885,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
       }
       if (shortCases.length) {
         const { error: eCase } = await supabaseDR.from('stock_discrepancies').insert(shortCases.map(c => ({ ...c, ref_id: String(claimed[0].id) })));
-        if (eCase) toast.error(`ย้ายส่วนที่ขาดไปคลังพักแล้ว แต่เปิดเคสผลต่างไม่สำเร็จ: ${eCase.message} — แจ้ง admin (ยอดยังอยู่ที่คลังพัก ไม่หาย)`);
+        if (eCase) toast.error(`${tr("ย้ายส่วนที่ขาดไปคลังพักแล้ว แต่เปิดเคสผลต่างไม่สำเร็จ")}: ${eCase.message} — ${tr("แจ้ง admin (ยอดยังอยู่ที่คลังพัก ไม่หาย")})`);
       }
       toast.success(mode === 'full' ? '✔️ ยืนยันรับครบแล้ว' : '⚠️ บันทึกรับไม่ครบแล้ว — ส่วนที่ขาดอยู่คลังพัก รอผลิต+สโตร์เคลียร์');
       setReceiveModal(null);
@@ -3076,7 +3167,8 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
       {/* 🔊📦 ไซเรน "ไลน์เรียกของ" — บอร์ดนี้คือจอทำงานของสโตร์ (24/10 · คำสั่ง user)
           ดังเฉพาะใบที่ "ไลน์เรียก" และยังไม่มีใครรับทราบ · ใบที่สโตร์สร้างเองไม่ดัง (ไม่เตือนตัวเอง)
           🔴 หน้านี้ไม่มี <DowntimeSiren> ⇒ slot=0 ได้ · ถ้าวันหลังเพิ่มไซเรนอื่นในหน้านี้ ต้องแยก slot */}
-      <StoreCallSiren />
+      {/* 19/11 ops (Stock Management) = แถบในเนื้อหน้า ไม่ลอยทับ — วาดใน UnifiedStoreBoard ใต้แถบกรอง */}
+      {!isOps && <StoreCallSiren />}
       {/* ⚠️ heijunka:operate seed ตั้งแต่ 2026-07-08 = ทุก role ณ ตอนนั้น — mtn/dept_admin ที่เพิ่มทีหลังไม่มีแถว */}
       <ReadOnlyNote show={isOps && !canOperate} role={role} what="สั่งงาน/จัดคิวบนบอร์ด"
         permKey="heijunka:operate" />
@@ -3084,7 +3176,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
       <PageHeader title={tr('บอร์ดคัมบัง (ทุกสโตร์) — Heijunka')} icon="🎴"
         tabs={isOps ? undefined : viewTabs} tab={viewMode} onTab={setViewMode}
         sub={<>
-          ความต้องการพาร์ทย่อย{isBackDate ? '' : 'ตามแผนผลิตวันนี้'} · แตกจาก BOM ของแต่ละ product
+          {tr("ความต้องการพาร์ทย่อย")}{isBackDate ? '' : 'ตามแผนผลิตวันนี้'} · {tr("แตกจาก BOM ของแต่ละ")} product
           {/* ⚠️ ดูวันย้อนหลัง/ล่วงหน้าต้องเห็นชัด — รอบที่ยังไม่ยืนยันของวันเก่าจะขึ้น 🔴 ค้างส่ง ทั้งกระดาน
               ถ้าไม่ติดป้ายบอก คนอ่านจะเข้าใจว่าเป็นของวันนี้แล้ววิ่งไปตามงานที่ผ่านไปแล้ว */}
           {isBackDate && (
@@ -3093,14 +3185,18 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
               borderRadius: 'var(--r-pill)', fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-body)',
               background: 'var(--amber-dim)', border: '1px solid var(--amber-line)', color: 'var(--amber)',
             }}>
-              กำลังดูวันที่ {workDate} (ไม่ใช่วันงานปัจจุบัน)
+              {tr("กำลังดูวันที่")} {workDate} ({tr("ไม่ใช่วันงานปัจจุบัน")})
               <button onClick={() => setWorkDate(liveWorkDate)} style={{
                 padding: '2px 8px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontSize: 11, fontWeight: 700,
-                fontFamily: 'var(--font-body)', background: 'var(--bg2)', border: '1px solid var(--border)', color: 'var(--text2)',
+                fontFamily: 'var(--font-body)', background: 'var(--bg2-surf)', border: '1px solid var(--border)', color: 'var(--text2)',
               }}>{tr('⟳ กลับวันนี้')}</button>
             </div>
           )}
         </>} />
+      {/* 📋 19/11 (mockup รับ/ส่งของที่ user เคาะ) — ops = "1 หน้า 1 งาน": แถบกรองแผน/สรุป demand/คำอธิบาย
+          ไม่วาดที่นี่ · ตัวกรองที่มีผลกับคิวจริง (วันที่/กะ — รอบส่ง) ย้ายไปแถบเดียวใน UnifiedStoreBoard
+          ขอบเขตไลน์/ชิปประเภท/CSV มีผลกับตาราง demand เท่านั้น ⇒ อยู่ที่ /heijunka (จอดูสัญญาณ) */}
+      {!isOps && (<>
       <FilterBar>
         <LineScopeSelect lines={Object.values(lineMap)} section={scopeSec} line={scopeLine}
           onChange={(sec, ln, meta) => {
@@ -3138,7 +3234,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
         <span className="spacer" />
         <button onClick={exportCSV} style={{
           padding: '8px 14px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontSize: 12, fontWeight: 700,
-          background: 'var(--bg2)', border: '1px solid var(--border)', color: 'var(--text)', fontFamily: 'var(--font-body)',
+          background: 'var(--bg2-surf)', border: '1px solid var(--border)', color: 'var(--text)', fontFamily: 'var(--font-body)',
         }}>CSV</button>
       </FilterBar>
 
@@ -3168,7 +3264,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {view.noBom.map(p => (
               <span key={p.mat_no || p.name} style={chip('var(--amber-dim)', 'var(--amber)')}>
-                {p.name} {tr('· แผน')} {fmt(p.qty)} ชิ้น
+                {p.name} {tr('· แผน')} {fmt(p.qty)} {tr("ชิ้น")}
               </span>
             ))}
           </div>
@@ -3176,7 +3272,10 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
         </div>
       )}
 
+      </>)}
+
       {/* Smart Scheduling Planner */}
+      {!isOps && (<>
       <PlannerStrip rounds={rounds} deliveries={deliveries} roundAlloc={view.roundAlloc} workDate={workDate} breakPolicies={breakPolicies} nowMs={nowMs} />
       {/* ไม่มีรอบ = แถบสถานการณ์ของโหมดส่งตามคำขอ (PlannerStrip ซ่อนตัวเอง) — งานค้างตามสถานะ + ใบที่รอนานสุด · audit 2026-09-07 */}
       {!rounds.length && <OnDemandStrip wipRequests={wipRequests} nowMs={nowMs} onGo={() => { setViewMode('unified'); setUnifiedStore('child'); }} />}
@@ -3190,7 +3289,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
           เหลือไว้ที่นี่แค่บรรทัดบอกว่า "แท็บที่เปิดอยู่ตอบคำถามอะไร" — ป้ายแท็บสั้นเกินกว่าจะอธิบายตัวเอง */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 10,
-        padding: '7px 12px', borderRadius: 'var(--r-md)', background: 'var(--bg2)', border: '1px solid var(--border)',
+        padding: '7px 12px', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)', border: '1px solid var(--border)',
       }}>
         <span style={{
           fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 'var(--r-pill)', whiteSpace: 'nowrap',
@@ -3213,9 +3312,10 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
           </span>
         )}
       </div>
+      </>)}
 
-      {/* Demand board */}
-      <div style={{ ...card, padding: 0, overflow: 'hidden' }}>
+      {/* Demand board — ops ไม่มีกรอบการ์ดครอบ (ตู้งานมีหัวแท็บย่อย/แถบกรอง/ตารางของตัวเอง) */}
+      <div style={isOps ? undefined : { ...card, padding: 0, overflow: 'hidden' }}>
         {loading ? (
           <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('กำลังโหลด...')}</div>
         ) : viewMode === 'unified' ? (
@@ -3228,6 +3328,25 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
             busy={pullBusy} onAdvanceLot={advanceLot} onIssueRaw={issueRaw} onAdvanceWip={advanceWip} onCancelWip={cancelWip} onAdvancePurchase={advancePurchase}
             lotMats={lotMats}
             inflowRules={inflowRules}
+            leadFilters={isOps && direction === 'out' ? (<>
+              <input type="date" value={workDate} onChange={e => setWorkDate(e.target.value)} aria-label={tr('วันที่ (รอบส่ง)')} />
+              <Segmented value={shiftFilter} onChange={setShiftFilter} label={tr('กะ')}
+                options={[{ value: 'all', label: ALL.shift }, { value: 'day', label: SHIFT_LABEL.day }, { value: 'night', label: SHIFT_LABEL.night }]} />
+              {isBackDate && (
+                <button type="button" onClick={() => setWorkDate(liveWorkDate)} title={tr('กำลังดูวันที่ไม่ใช่วันงานปัจจุบัน')}
+                  style={{ fontSize: 12, fontWeight: 700, color: 'var(--amber)', background: 'var(--amber-dim)', border: '1px solid var(--amber-line)',
+                    borderRadius: 999, padding: '4px 10px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                  ⚠ {tr("ดูวันที่")} {workDate} · ⟳ {tr("กลับวันนี้")}
+                </button>
+              )}
+            </>) : null}
+            kpiSlot={isOps && direction === 'out' ? (<>
+              <PlannerStrip rounds={rounds} deliveries={deliveries} roundAlloc={view.roundAlloc} workDate={workDate} breakPolicies={breakPolicies} nowMs={nowMs} />
+              {!rounds.length && <OnDemandStrip wipRequests={wipRequests} nowMs={nowMs} onGo={() => setUnifiedStore('child')} />}
+              <ProdProgressStrip workDate={workDate}
+                onOpenLine={(ln) => navigate(`/management?line=${encodeURIComponent(ln)}&view=heijunka`)} />
+            </>) : null}
+            purpose={isOps ? VIEW_META.unified?.purpose : null}
             fmt={fmt} workDate={workDate} nowMs={nowMs} canOperate={canOperate} imgOf={imgOf}
           />
         ) : viewMode === 'chart' ? (
@@ -3388,7 +3507,7 @@ function ReceiveModal({ round, parts, mode, fmt, saving, onCancel, onSubmit }) {
 
   return (
     <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 24, width: 'min(440px,100%)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+      <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 24, width: 'min(440px,100%)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
         <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginBottom: 4, fontFamily: 'var(--font-display)' }}>
           {mode === 'full' ? '✔️ ยืนยันรับของครบ' : '⚠️ บันทึกรับของไม่ครบ'}
         </div>
@@ -3396,7 +3515,7 @@ function ReceiveModal({ round, parts, mode, fmt, saving, onCancel, onSubmit }) {
 
         {mode === 'full' ? (
           <div style={{ fontSize: 13, color: 'var(--text2)' }}>
-            ยืนยันว่าได้รับพาร์ททั้งหมด {netParts.length} รายการ ตามจำนวนที่ Store แจ้งครบถูกต้อง
+            {tr("ยืนยันว่าได้รับพาร์ททั้งหมด")} {netParts.length} {tr("รายการ ตามจำนวนที่ Store แจ้งครบถูกต้อง")}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -3410,7 +3529,7 @@ function ReceiveModal({ round, parts, mode, fmt, saving, onCancel, onSubmit }) {
                 <input type="number" min="0" step="any"
                   value={actual[p.mat_no]}
                   onChange={e => setActual(a => ({ ...a, [p.mat_no]: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
-                  style={{ width: 90, padding: '6px 8px', borderRadius: 'var(--ctl-r)', border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', fontSize: 13, fontWeight: 700, textAlign: 'center' }}
+                  style={{ width: 90, padding: '6px 8px', borderRadius: 'var(--ctl-r)', border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)', fontSize: 13, fontWeight: 700, textAlign: 'center' }}
                 />
               </div>
             ))}
@@ -3418,7 +3537,7 @@ function ReceiveModal({ round, parts, mode, fmt, saving, onCancel, onSubmit }) {
         )}
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
-          <button onClick={onCancel} style={{ padding: '8px 16px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', cursor: 'pointer', fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-body)' }}>{tr('ยกเลิก')}</button>
+          <button onClick={onCancel} style={{ padding: '8px 16px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)', cursor: 'pointer', fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-body)' }}>{tr('ยกเลิก')}</button>
           <button onClick={() => onSubmit(actual)} disabled={saving}
             style={{ padding: '8px 16px', borderRadius: 'var(--r-md)', border: 'none', background: mode === 'full' ? '#22c55e' : '#f59e0b', color: '#08130a', cursor: 'pointer', fontSize: 13, fontWeight: 800, fontFamily: 'var(--font-body)', opacity: saving ? 0.6 : 1 }}>
             {saving ? '...' : mode === 'full' ? tr('ยืนยันรับครบ') : tr('บันทึกรับไม่ครบ')}

@@ -55,7 +55,7 @@ const PAGE_OPTIONS = NAV_ITEMS
 const pageMeta = (path) => NAV_ITEMS.find(n => n.to === pathOnly(path));
 
 export default function DisplayRotation() {
-  const { role, realRole, sections: mySections } = useContext(UserContext);
+  const { role, realRole, writeUnits: mySections, allUnits } = useContext(UserContext);   // 13/11: จอที่ตั้งได้ = หน่วยที่ "แก้ได้" ไม่ใช่ที่เห็น
   const isMobile = useIsMobile(1100);
   const canEdit = canSeeded('display_rotation', 'manage', role);
   const lines = useProductionLines();
@@ -121,13 +121,13 @@ export default function DisplayRotation() {
   }, [realRole]);
 
   /* ── จอที่ "ฉัน" ดูแลได้ (ขอบเขตส่วนงาน) · จำนวนที่ซ่อนต้องเขียนบนจอ ── */
-  const mySecKey = (mySections || []).join('|');
+  const mySecKey = (mySections || []).join('|');   // deps เป็น string (กฎข้อ 9)
   const { screens, hiddenScreens } = useMemo(() => {
     const mine = mySecKey ? mySecKey.split('|') : [];
-    const ok = accounts.filter(a => canManageDisplay(mine, sectionsOfProfile(a)));
+    const ok = accounts.filter(a => canManageDisplay(mine, sectionsOfProfile(a), { allUnits }));
     ok.sort((a, b) => String(a.full_name || '').localeCompare(String(b.full_name || ''), 'th', { numeric: true }));
     return { screens: ok, hiddenScreens: accounts.length - ok.length };
-  }, [accounts, mySecKey]);
+  }, [accounts, mySecKey, allUnits]);
   const shown = useMemo(() => {
     const k = q.trim().toLowerCase();
     if (!k) return screens;
@@ -213,13 +213,13 @@ export default function DisplayRotation() {
 
   const save = async () => {
     if (!selId || !canEdit) return;
-    if (!canManageDisplay(mySections || [], tvSections)) { toast.error('จอนี้อยู่นอกส่วนงานที่คุณดูแล'); return; }
+    if (!canManageDisplay(mySections || [], tvSections, { allUnits })) { toast.error('จอนี้อยู่นอกส่วนงานที่คุณดูแล'); return; }
     const items = cleanItemsForSave(form.items);
     const bad = items.find(it => !isValidRotationPath(it.path));
-    if (bad) { toast.error(`ที่อยู่หน้าไม่ถูกต้อง: "${bad.path}" — ต้องขึ้นต้นด้วย / และอยู่ในระบบนี้`); return; }
+    if (bad) { toast.error(`${tr("ที่อยู่หน้าไม่ถูกต้อง")}: "${bad.path}" — ${tr("ต้องขึ้นต้นด้วย / และอยู่ในระบบนี้")}`); return; }
     const denied = items.filter(it => !canAccessPage(pathOnly(it.path), targetRole));
     if (denied.length) {
-      toast.error(`บัญชีนี้เข้าไม่ได้ ${denied.length} หน้า (${denied.map(d => d.path).join(', ')}) — เอาออกก่อนบันทึก`);
+      toast.error(`${tr("บัญชีนี้เข้าไม่ได้")} ${denied.length} ${tr("หน้า")} (${denied.map(d => d.path).join(', ')}) — ${tr("เอาออกก่อนบันทึก")}`);
       return;
     }
     setSaving(true);
@@ -307,7 +307,7 @@ export default function DisplayRotation() {
                   {secs.length ? secs.join(', ') : 'ยังไม่ตั้งส่วนงาน (เห็นทั้งโรงงาน)'}
                 </span>
                 <span style={{ fontSize: 12, color: plan ? (plan.enabled ? 'var(--green)' : 'var(--muted)') : 'var(--muted)' }}>
-                  {plan ? (plan.enabled ? `วน ${n} หน้า` : 'ปิดการวน') : '— ยังไม่ตั้งรอบ'}
+                  {plan ? (plan.enabled ? `${tr("วน")} ${n} ${tr("หน้า")}` : 'ปิดการวน') : '— ยังไม่ตั้งรอบ'}
                 </span>
                 {plan?.note && <span style={{ fontSize: 11, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{plan.note}</span>}
               </button>
@@ -356,7 +356,7 @@ export default function DisplayRotation() {
               <Field label={tr('ตำแหน่งที่ติดจอ / หมายเหตุ')}>
                 <input type="text" value={form.note || ''} disabled={!canEdit} maxLength={200}
                   onChange={e => setF('note', e.target.value)}
-                  placeholder={`เช่น ${tvSections[0] || 'PD3'} ห้องช่าง ผนังซ้าย`} />
+                  placeholder={`${tr("เช่น")} ${tvSections[0] || 'PD3'} ${tr("ห้องช่าง ผนังซ้าย")}`} />
               </Field>
             </section>
 
@@ -364,13 +364,13 @@ export default function DisplayRotation() {
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
                 <div style={{ fontSize: 15, fontWeight: 800 }}>{tr('ลำดับหน้าที่วน')}</div>
                 <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-                  วนจริง {preview.playable.length} {tr('หน้า · ครบรอบ')} {fmtSec(cycleSec)}
+                  {tr("วนจริง")} {preview.playable.length} {tr('หน้า · ครบรอบ')} {fmtSec(cycleSec)}
                   {preview.skipped.length > 0 && <span style={{ color: 'var(--red)', fontWeight: 700 }}> {tr('· จะถูกข้าม')} {preview.skipped.length} {tr('หน้า')}</span>}
                 </div>
               </div>
               <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 10 }}>
-                เลือกได้ {pageOptions.length} หน้าที่จอนี้เข้าได้
-                {hiddenPages > 0 && ` · ซ่อน ${hiddenPages} หน้าที่ role จอแสดงผลไม่มีสิทธิ์ (เปิดได้ที่ /permissions)`}
+                {tr("เลือกได้")} {pageOptions.length} {tr("หน้าที่จอนี้เข้าได้")}
+                {hiddenPages > 0 && ` · ${tr("ซ่อน")} ${hiddenPages} ${tr("หน้าที่ role จอแสดงผลไม่มีสิทธิ์ (เปิดได้ที่")} /permissions)`}
               </div>
 
               {form.items.length === 0 && (
@@ -410,8 +410,8 @@ export default function DisplayRotation() {
               )}
               {plans[selId]?.updated_at && (
                 <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 10 }}>
-                  แก้ล่าสุด {new Date(plans[selId].updated_at).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}
-                  {plans[selId].updated_by_name ? ` โดย ${plans[selId].updated_by_name}` : ''}
+                  {tr("แก้ล่าสุด")} {new Date(plans[selId].updated_at).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}
+                  {plans[selId].updated_by_name ? ` ${tr("โดย")} ${plans[selId].updated_by_name}` : ''}
                 </div>
               )}
             </section>
@@ -424,7 +424,7 @@ export default function DisplayRotation() {
                 <div style={{ fontSize: 15, fontWeight: 800 }}>{tr('สั่งจอ')}</div>
                 {online ? (
                   <span style={{ ...chipSt, color: 'var(--green)', borderColor: 'var(--green)' }}>
-                    🟢 ออนไลน์ · หน้า {(live.idx ?? 0) + 1}/{live.n}{live.held ? ' · ⏸ หยุดอยู่' : ''}
+                    🟢 {tr("ออนไลน์ · หน้า")} {(live.idx ?? 0) + 1}/{live.n}{live.held ? ' · ⏸ หยุดอยู่' : ''}
                   </span>
                 ) : (
                   <span style={{ ...chipSt, color: 'var(--muted)' }}>{tr('⚪ ไม่ได้เปิดอยู่ / ยังไม่ได้ login')}</span>
@@ -432,7 +432,7 @@ export default function DisplayRotation() {
               </div>
               {online && live.path && (
                 <div style={{ fontSize: 12, color: 'var(--text2)' }}>
-                  ตอนนี้: <b>{pageMeta(live.path)?.label || live.path}</b>
+                  {tr("ตอนนี้")}: <b>{pageMeta(live.path)?.label || live.path}</b>
                   {paramSummary(live.path).length > 0 && <span style={{ color: 'var(--muted)' }}> · {paramSummary(live.path).join(' · ')}</span>}
                 </div>
               )}
@@ -466,7 +466,7 @@ export default function DisplayRotation() {
               </div>
               <PagePreview path={focusPath} />
               <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
-                ⚠ ตัวอย่างเปิดด้วยบัญชีของคุณ — ข้อมูลอาจกว้างกว่าที่จอเห็นจริง (จอเห็นเฉพาะ {tvSections.length ? tvSections.join(', ') : 'ทั้งโรงงาน'})
+                ⚠ {tr("ตัวอย่างเปิดด้วยบัญชีของคุณ — ข้อมูลอาจกว้างกว่าที่จอเห็นจริง (จอเห็นเฉพาะ")} {tvSections.length ? tvSections.join(', ') : 'ทั้งโรงงาน'})
               </div>
             </section>
           </div>
@@ -550,7 +550,7 @@ function ItemRow({ i, it, n, canEdit, focused, onFocus, pageOptions, defaultSec,
     return (
       <div onClick={onFocus} role="button" tabIndex={0} onKeyDown={e => { if (e.key === 'Enter') onFocus(); }}
         style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 'var(--r-md)', cursor: 'pointer',
-          border: '1px solid var(--border2)', background: 'var(--bg2)', minWidth: 0 }}>
+          border: '1px solid var(--border2)', background: 'var(--bg2-surf)', minWidth: 0 }}>
         <b style={{ width: 22, textAlign: 'center', fontSize: 13 }}>{i + 1}</b>
         <span style={{ fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }}>{meta ? `${meta.icon} ${meta.label}` : (it.path || '— ยังไม่เลือกหน้า —')}</span>
         <span style={{ flex: 1, minWidth: 0, fontSize: 12, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -640,7 +640,7 @@ function ItemRow({ i, it, n, canEdit, focused, onFocus, pageOptions, defaultSec,
                   <select value={params[d.key] || ''} disabled={!canEdit || orgNodes == null} onChange={e => setParam(d.key, e.target.value)}>
                     <option value="">{orgNodes == null ? 'กำลังโหลดผังองค์กร…' : orgFail ? `⚠️ ${orgFail}` : ALL.dept}</option>
                     {params[d.key] && !deptOptions.some(o => (d.valueAs === 'name' ? o.name : o.id) === params[d.key]) && (
-                      <option value={params[d.key]}>{`(ไม่พบในผังปัจจุบัน) ${params[d.key]}`}</option>
+                      <option value={params[d.key]}>{`(${tr("ไม่พบในผังปัจจุบัน")}) ${params[d.key]}`}</option>
                     )}
                     {deptOptions.map(o => <option key={o.id} value={d.valueAs === 'name' ? o.name : o.id}>{tvSections.length === 1 ? o.name : `${o.sec} · ${o.name}`}</option>)}
                   </select>
@@ -648,14 +648,14 @@ function ItemRow({ i, it, n, canEdit, focused, onFocus, pageOptions, defaultSec,
                 {d.kind === 'station' && (
                   <select value={params[d.key] || ''} disabled={!canEdit || srcOpts.station == null} onChange={e => setParam(d.key, e.target.value)}>
                     <option value="">{srcState('station') || tr('— ค่าเริ่มต้นของหน้า (จุดงานแรก) —')}</option>
-                    {params[d.key] && !stationOpts.some(w => String(w.id) === params[d.key]) && <option value={params[d.key]}>{`(ไม่พบในรายการ) ${params[d.key]}`}</option>}
+                    {params[d.key] && !stationOpts.some(w => String(w.id) === params[d.key]) && <option value={params[d.key]}>{`(${tr("ไม่พบในรายการ")}) ${params[d.key]}`}</option>}
                     {stationOpts.map(w => <option key={w.id} value={String(w.id)}>{`${w.line_name || '—'} · ${w.station_name || w.id}`}</option>)}
                   </select>
                 )}
                 {d.kind === 'wtype' && (
                   <select value={params[d.key] || ''} disabled={!canEdit || srcOpts.wtype == null} onChange={e => setParam(d.key, e.target.value)}>
                     <option value="">{srcState('wtype') || tr('— ยังไม่เลือก —')}</option>
-                    {params[d.key] && Array.isArray(srcOpts.wtype) && !srcOpts.wtype.includes(params[d.key]) && <option value={params[d.key]}>{`(ไม่พบในทะเบียน) ${params[d.key]}`}</option>}
+                    {params[d.key] && Array.isArray(srcOpts.wtype) && !srcOpts.wtype.includes(params[d.key]) && <option value={params[d.key]}>{`(${tr("ไม่พบในทะเบียน")}) ${params[d.key]}`}</option>}
                     {(Array.isArray(srcOpts.wtype) ? srcOpts.wtype : []).map(t => <option key={t} value={t}>{tr(t)}</option>)}
                   </select>
                 )}
@@ -689,7 +689,7 @@ function ItemRow({ i, it, n, canEdit, focused, onFocus, pageOptions, defaultSec,
           )}
           {defs && <div style={{ flex: 1 }} />}
           <input type="number" min={ROT_LIMITS.minSec} max={ROT_LIMITS.maxSec} value={it.sec ?? ''} disabled={!canEdit}
-            placeholder={`${Math.max(secOf({}, defaultSec), minSecForPath(it.path))} วิ`} title={tr('วินาทีของหน้านี้ (ว่าง = ค่าตั้งต้น)')}
+            placeholder={`${Math.max(secOf({}, defaultSec), minSecForPath(it.path))} ${tr("วิ")}`} title={tr('วินาทีของหน้านี้ (ว่าง = ค่าตั้งต้น)')}
             onChange={e => onChange({ sec: e.target.value === '' ? null : e.target.value })} style={{ width: 96 }} />
           {canEdit && (
             <>
@@ -701,12 +701,12 @@ function ItemRow({ i, it, n, canEdit, focused, onFocus, pageOptions, defaultSec,
         </div>
         {minSecForPath(it.path) > secOf(it, defaultSec) && (
           <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-            วนมุมมองครบรอบใช้ {fmtSec(minSecForPath(it.path))} — จอจะอยู่หน้านี้อย่างน้อยเท่านั้นเอง
+            {tr("วนมุมมองครบรอบใช้")} {fmtSec(minSecForPath(it.path))} — {tr("จอจะอยู่หน้านี้อย่างน้อยเท่านั้นเอง")}
           </div>
         )}
         {skip && (
           <div style={{ fontSize: 12, color: 'var(--red)', fontWeight: 700 }}>
-            ⛔ <code>{skip.path}</code> — {SKIP_REASON_LABEL[skip.reason]} · จอจะข้ามหน้านี้
+            ⛔ <code>{skip.path}</code> — {SKIP_REASON_LABEL[skip.reason]} · {tr("จอจะข้ามหน้านี้")}
             {skip.reason === 'no_access' && ' — เอาออกก่อนจึงบันทึกได้ (หรือเปิดสิทธิ์ให้ role นี้ที่ /permissions)'}
           </div>
         )}
@@ -753,7 +753,7 @@ function PagePreview({ path }) {
           ))}
           {path !== shown && (
             <div style={{ position: 'absolute', right: 8, bottom: 8, padding: '3px 10px', borderRadius: 'var(--r-pill)', fontSize: 11,
-              background: 'var(--card)', border: '1px solid var(--border2)', color: 'var(--muted)' }}>{tr('⏳ กำลังโหลดตัวอย่าง…')}</div>
+              background: 'var(--card-surf)', border: '1px solid var(--border2)', color: 'var(--muted)' }}>{tr('⏳ กำลังโหลดตัวอย่าง…')}</div>
           )}
         </>
       ) : (

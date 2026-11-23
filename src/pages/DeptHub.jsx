@@ -459,7 +459,7 @@ export default function DeptHub({ onLogout, theme, onToggleTheme, userFullName, 
               <div onClick={() => setProfileOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 1290 }} />
               <div style={{
                 position: 'absolute', top: 46, right: 0, zIndex: 1300, width: 240,
-                background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)',
+                background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)',
                 boxShadow: 'var(--shadow-lg)', overflow: 'hidden',
               }}>
                 <div style={{ padding: '14px 14px 12px', borderBottom: '1px solid var(--border)', display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -514,7 +514,7 @@ export default function DeptHub({ onLogout, theme, onToggleTheme, userFullName, 
         {/* 🌐 ปุ่มสลับภาษา — คู่กับปุ่มธีม ป้ายบอก "กดแล้วได้ภาษาอะไร" */}
         <button type="button" onClick={toggleLang} title={langToggleTitle(lang)} aria-label={langToggleTitle(lang)} style={{
           height: 38, minWidth: 44, padding: '0 10px', borderRadius: 'var(--r-md)',
-          background: 'var(--card)', border: '1px solid var(--border)',
+          background: 'var(--card-surf)', border: '1px solid var(--border)',
           color: 'var(--text)', cursor: 'pointer', fontSize: 12.5, fontWeight: 700, letterSpacing: '0.04em',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
         }}>
@@ -523,7 +523,7 @@ export default function DeptHub({ onLogout, theme, onToggleTheme, userFullName, 
         {onToggleTheme && (
           <button onClick={onToggleTheme} title={tr('สลับธีม')} style={{
             width: 38, height: 38, borderRadius: 'var(--r-md)',
-            background: 'var(--card)', border: '1px solid var(--border)',
+            background: 'var(--card-surf)', border: '1px solid var(--border)',
             color: 'var(--text)', cursor: 'pointer', fontSize: 16,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
@@ -552,7 +552,7 @@ export default function DeptHub({ onLogout, theme, onToggleTheme, userFullName, 
             style={{ maxWidth: 460, marginTop: 14 }}>
             <span style={{ fontSize: 15 }}>🔎</span>
             <span style={{ flex: 1 }}>{tr('ค้นหาเมนู… (เช่น ซ่อม, oee, สต๊อก)')}</span>
-            <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700, padding: '2px 6px', borderRadius: 'var(--r-xs)', background: 'var(--bg3)', border: '1px solid var(--border2)', color: 'var(--text2)' }}>
+            <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700, padding: '2px 6px', borderRadius: 'var(--r-xs)', background: 'var(--bg3-surf)', border: '1px solid var(--border2)', color: 'var(--text2)' }}>
               Ctrl K
             </span>
           </button>
@@ -561,13 +561,13 @@ export default function DeptHub({ onLogout, theme, onToggleTheme, userFullName, 
 
         {/* นาฬิกา + กะ — readout สด (ชิดขวาบนจอกว้าง) */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-          <span className="hub-clock" style={{ fontFamily: MONO, fontSize: 14, fontWeight: 700, color: 'var(--text)', background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '4px 12px', fontVariantNumeric: 'tabular-nums' }}>
+          <span className="hub-clock" style={{ fontFamily: MONO, fontSize: 14, fontWeight: 700, color: 'var(--text)', background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '4px 12px', fontVariantNumeric: 'tabular-nums' }}>
             ⏱ {clock}
           </span>
-          <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 700, color: isDayShift ? 'var(--amber)' : 'var(--blue)', background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '5px 12px' }}>
+          <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 700, color: isDayShift ? 'var(--amber)' : 'var(--blue)', background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '5px 12px' }}>
             {tr(isDayShift ? '☀️ กะเช้า 08:00–20:00' : '🌙 กะดึก 20:00–08:00')}
           </span>
-          <span className="hub-date" style={{ fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 600, color: 'var(--text2)', background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '5px 12px' }}>
+          <span className="hub-date" style={{ fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 600, color: 'var(--text2)', background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '5px 12px' }}>
             {thaiDate}
           </span>
         </div>
@@ -585,8 +585,8 @@ export default function DeptHub({ onLogout, theme, onToggleTheme, userFullName, 
             border: '1px solid var(--border)', color: wholeFactory ? 'var(--muted)' : 'var(--accent)',
           }} title={wholeFactory
               ? (MAINTENANCE_ROLES.includes(userRole) ? 'หน่วยงานช่างดูแลเครื่องจักรทุกไลน์ จึงเห็นทั้งโรงงาน' : 'บัญชีนี้ไม่ได้จำกัดส่วนงาน')
-              : `นับเฉพาะไลน์: ${(scopeNames || []).join(', ')}`}>
-            {wholeFactory ? tr('🏭 ทั้งโรงงาน') : `👥 ส่วนงานของฉัน (${(scopeNames || []).length} ไลน์)`}
+              : `${tr("นับเฉพาะไลน์")}: ${(scopeNames || []).join(', ')}`}>
+            {wholeFactory ? tr('🏭 ทั้งโรงงาน') : `👥 ${tr("ส่วนงานของฉัน")} (${(scopeNames || []).length} ${tr("ไลน์")})`}
           </span>
           <span style={{ flex: 1, height: 1, background: 'var(--border)' }} />
           <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('อัปเดตทุก 60 วินาที')}</span>
@@ -696,7 +696,7 @@ export default function DeptHub({ onLogout, theme, onToggleTheme, userFullName, 
                 const homeShort = NAV_GROUP_META[item.group]?.short || item.group;
                 return (
                   <button key={item.to} type="button" className="dept-chip"
-                    title={guest ? `เปิด ${item.label} — ทางลัด · เมนูนี้อยู่หมวด "${item.group}"` : `เปิด ${item.label}`}
+                    title={guest ? `${tr("เปิด")} ${item.label} — ${tr("ทางลัด · เมนูนี้อยู่หมวด")} "${item.group}"` : `${tr("เปิด")} ${item.label}`}
                     onClick={e => openMenu(e, item.to)}
                     style={guest
                       ? { background: 'transparent', color: 'var(--text2)', border: '1px dashed var(--border2)' }

@@ -50,14 +50,14 @@ export default function ProcessTypeSetup({ role }) {
     if (!form.label?.trim()) { toast.error('กรอกชื่อกระบวนการ'); return; }
     const key = editing === 'new' ? (slug(form.key) || slug(form.label)) : form.key;
     if (!key) { toast.error('กรอก key ภาษาอังกฤษ (เช่น laser_cutting)'); return; }
-    if (editing === 'new' && items.some(i => i.key === key)) { toast.error(`key "${key}" มีอยู่แล้ว`); return; }
+    if (editing === 'new' && items.some(i => i.key === key)) { toast.error(`key "${key}" ${tr("มีอยู่แล้ว")}`); return; }
     setSaving(true);
     const { error } = await supabaseDR.from('process_types').upsert({
       key, label: form.label.trim(), icon: form.icon || null, color: form.color || null,
       sort_order: Number(form.sort_order) || 0, is_active: !!form.is_active,
     }, { onConflict: 'key' });
     setSaving(false);
-    if (error) { toast.error('บันทึกไม่สำเร็จ: ' + error.message + ' (ยัง apply migration process_types ไม่ครบ?)'); return; }
+    if (error) { toast.error((tr('บันทึกไม่สำเร็จ') + ': ') + error.message + (' (' + tr('ยัง apply migration process_types ไม่ครบ') + '?)')); return; }
     toast.success('บันทึกกระบวนการแล้ว — มีผลทุกจุดที่ใช้ทันที');
     setEditing(null); load();
   };
@@ -71,7 +71,7 @@ export default function ProcessTypeSetup({ role }) {
     setBusyKey(null);
     const block = processTypeBlockMessage(it.label || it.key, refs);
     if (block) { toast.error(block); return; }
-    if (!await askConfirm(`ลบกระบวนการ "${it.label}"?\nตรวจแล้วไม่มีเครื่องจักร/สินค้า/สูตรพัก/ขั้นตอน ที่ tag ค่านี้อยู่`)) return;
+    if (!await askConfirm(`${tr("ลบกระบวนการ")} "${it.label}"?\n${tr("ตรวจแล้วไม่มีเครื่องจักร/สินค้า/สูตรพัก/ขั้นตอน ที่ tag ค่านี้อยู่")}`)) return;
     const { error } = await supabaseDR.from('process_types').delete().eq('key', it.key);
     if (error) { toast.error(error.message); return; }
     toast.success('ลบแล้ว'); load();
@@ -89,7 +89,7 @@ export default function ProcessTypeSetup({ role }) {
       </InfoMore>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {items.map(it => (
-          <div key={it.key} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', opacity: it.is_active !== false ? 1 : 0.45 }}>
+          <div key={it.key} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', opacity: it.is_active !== false ? 1 : 0.45 }}>
             <span style={{ fontSize: 20 }}>{it.icon || '🏭'}</span>
             <div style={{ flex: 1, minWidth: 0 }}>
               <span style={{ fontSize: 14, fontWeight: 700, color: it.color || 'var(--text)' }}>{tr(it.label)}</span>
@@ -108,8 +108,8 @@ export default function ProcessTypeSetup({ role }) {
 
       {editing && form && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14 }}>
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(96vw, 560px)' }}>
-            <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginBottom: 12 }}>{editing === 'new' ? '➕ เพิ่มกระบวนการ' : `✏️ แก้ไข ${form.label}`}</div>
+          <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(96vw, 560px)' }}>
+            <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginBottom: 12 }}>{editing === 'new' ? '➕ เพิ่มกระบวนการ' : `✏️ ${tr("แก้ไข")} ${form.label}`}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10 }}>
                 <Field label={tr('ชื่อกระบวนการ *')}>

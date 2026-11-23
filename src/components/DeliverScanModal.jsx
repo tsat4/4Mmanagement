@@ -82,7 +82,7 @@ export default function DeliverScanModal({ request, points = [], canOverride = f
       {/* ไม่ปิดจาก backdrop — โมดัลมีช่องกรอกเหตุผล (UI-CONVENTIONS §5) */}
       <div style={{ position: 'fixed', inset: 0, zIndex: 2300, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
         <div onClick={e => e.stopPropagation()} className="modal-scroll"
-          style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(520px, 96vw)', maxHeight: '92vh', overflowY: 'auto' }}>
+          style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(520px, 96vw)', maxHeight: '92vh', overflowY: 'auto' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3 style={{ margin: 0, fontSize: 16, color: 'var(--text)' }}>{tr('ถึงไลน์แล้ว — สแกนจุดส่งก่อนปิดใบ')}</h3>
             <button onClick={onClose} className="tbtn" style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 22, cursor: 'pointer', lineHeight: 1 }}>✕</button>
@@ -144,7 +144,7 @@ export default function DeliverScanModal({ request, points = [], canOverride = f
           ) : (
             <div style={{ marginTop: 14 }}>
               <div style={{ fontSize: 12, color: 'var(--text2)' }}>
-                ใบนี้ต้องวางที่: {serving.map(p => (
+                {tr("ใบนี้ต้องวางที่")}: {serving.map(p => (
                   <span key={p.id} style={{ display: 'inline-block', margin: '2px 4px 0 0', padding: '2px 8px', borderRadius: 'var(--r-md)', background: 'rgba(34,197,94,0.12)', color: '#22c55e', fontWeight: 700, fontSize: 12 }}>{pointLabel(p)}</span>
                 ))}
               </div>
@@ -187,13 +187,13 @@ export default function DeliverScanModal({ request, points = [], canOverride = f
                       <div>
                         <div style={{ fontSize: 12.5, fontWeight: 800, color: '#ef4444' }}>{tr('ปลดบล็อก — ระบุเหตุผล (ถูกบันทึกเป็นข้อมูล ไปแก้ต้นเหตุทีหลัง)')}</div>
                         <select value={reasonKey} onChange={e => setReasonKey(e.target.value)}
-                          style={{ width: '100%', marginTop: 6, padding: '8px 10px', borderRadius: 'var(--ctl-r)', border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', fontSize: 13 }}>
+                          style={{ width: '100%', marginTop: 6, padding: '8px 10px', borderRadius: 'var(--ctl-r)', border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)', fontSize: 13 }}>
                           <option value="">{tr('— เลือกเหตุผล —')}</option>
                           {OVERRIDE_REASONS.map(r => <option key={r.key} value={r.key}>{tr(r.label)}</option>)}
                         </select>
                         <input value={reasonNote} onChange={e => setReasonNote(e.target.value)}
                           placeholder={reasonKey === 'other' ? tr('ระบุเหตุผล (บังคับ)') : tr('รายละเอียดเพิ่มเติม (ไม่บังคับ)')}
-                          style={{ width: '100%', marginTop: 6, padding: '8px 10px', borderRadius: 'var(--ctl-r)', border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', fontSize: 13 }} />
+                          style={{ width: '100%', marginTop: 6, padding: '8px 10px', borderRadius: 'var(--ctl-r)', border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)', fontSize: 13 }} />
                         <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 4 }}>{tr('ผู้ปลด:')} {fullName || '—'}</div>
                         <div style={{ display: 'flex', gap: 8, marginTop: 10, justifyContent: 'flex-end' }}>
                           <button onClick={() => setOverriding(false)} disabled={busy} style={btn('transparent', 'var(--muted)', 'var(--border2)', busy)}>{tr('กลับไปสแกน')}</button>
@@ -217,7 +217,7 @@ export default function DeliverScanModal({ request, points = [], canOverride = f
       </div>
 
       {scanOpen && (
-        <ScanModal title={tr('สแกน QR จุดส่งงาน')} hint={`ยิงป้าย 🎯 ที่ติดหน้าไลน์ ${request?.line_name || ''} — หรือพิมพ์รหัสสั้นบนป้าย`}
+        <ScanModal title={tr('สแกน QR จุดส่งงาน')} hint={`${tr("ยิงป้าย 🎯 ที่ติดหน้าไลน์")} ${request?.line_name || ''} — ${tr("หรือพิมพ์รหัสสั้นบนป้าย")}`}
           onScan={onScan} onClose={() => setScanOpen(false)} closeOnHit={false} />
       )}
     </>

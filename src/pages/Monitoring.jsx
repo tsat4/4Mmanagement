@@ -141,7 +141,7 @@ export default function Monitoring() {
       .select('id, board_key, name, kind, line_name, customer, period_kind, period_count, start_date, rows, sl_row, sl_includes_seed, sort_order, note')
       .eq('is_active', true)
       .order('kind').order('sort_order', { nullsFirst: false }).order('name');
-    if (error) { setWarn(`โหลดทะเบียนบอร์ดไม่สำเร็จ: ${error.message}`); return; }
+    if (error) { setWarn(`${tr("โหลดทะเบียนบอร์ดไม่สำเร็จ")}: ${error.message}`); return; }
     setBoards(data || []);
   }, []);
   const wctx = useMemo(() => ({ role, section: homeSection, sections: mySections, allUnits, respCostCenters, scopeIdx }),
@@ -201,7 +201,7 @@ export default function Monitoring() {
       { orderBy: ['sort_order', 'id'] },
     );
     if (!mine()) return;
-    if (pr.error) { setWarn(`โหลดพาร์ทไม่สำเร็จ: ${pr.error}`); setLoading(false); return; }
+    if (pr.error) { setWarn(`${tr("โหลดพาร์ทไม่สำเร็จ")}: ${pr.error}`); setLoading(false); return; }
     const partRows = pr.rows || [];
 
     /* 🔴 `.in(ids)` ยาวเกินเพดาน proxy = คืนค่าว่าง**เงียบ** (ข้อ 5) ⇒ ต้องผ่าน fetchByIds ที่แบ่งก้อนให้
@@ -221,7 +221,7 @@ export default function Monitoring() {
     setCells(cr.rows || []);
     setWarn(
       pr.truncated ? 'พาร์ทบนบอร์ดนี้มีมากกว่าที่ดึงมาได้ — รายการด้านล่างไม่ครบ'
-        : (cr.errors && cr.errors.length) ? `โหลดช่องที่กรอกไว้ไม่ครบ: ${cr.errors[0]}` : '',
+        : (cr.errors && cr.errors.length) ? `${tr("โหลดช่องที่กรอกไว้ไม่ครบ")}: ${cr.errors[0]}` : '',
     );
     setLoading(false);
   }, [bId]);
@@ -320,7 +320,7 @@ export default function Monitoring() {
       const locs = [...new Set(mats.map(m => locOf(m)).filter(Boolean))].sort();
       const noRow = mats.filter(m => !onHand.has(m)).length;
       setSysNote(refErr
-        ? `⚠️ อ่านยอดคลังไม่ครบ (${refErr.message || refErr}) ⇒ BALANCE สัปดาห์นี้ยังเป็นค่าจากสูตร และไม่มี IN จากระบบ`
+        ? `⚠️ ${tr("อ่านยอดคลังไม่ครบ")} (${refErr.message || refErr}) ⇒ BALANCE ${tr("สัปดาห์นี้ยังเป็นค่าจากสูตร และไม่มี IN จากระบบ")}`
         : [
           `BALANCE สัปดาห์นี้ = ยอดคงเหลือจริงในคลัง (${locs.join(' · ') || '–'}) · IN = ของที่คลังกดรับแล้ว`,
           rcpQty ? `⏳ รอคลังกดรับ ${(rcpR.rows || []).length} ใบ · ${rcpQty.toLocaleString()} ชิ้น (ยังไม่นับใน IN)` : '',
@@ -375,7 +375,7 @@ export default function Monitoring() {
       const noRow = mats.filter(m => !onHand.has(m)).length;
       const noLv = kbErr ? mats.length : mats.filter(m => !(kbR.rows || []).some(r => String(r.mat_no || '').trim() === m && (r.min_qty != null || r.max_qty != null))).length;
       setSysNote(refErr
-        ? `⚠️ อ่านยอดคลัง STORE ไม่ครบ (${refErr.message || refErr}) ⇒ รับ/จ่าย/คงเหลือ ยังไม่ขึ้นจากระบบ`
+        ? `⚠️ ${tr("อ่านยอดคลัง STORE ไม่ครบ")} (${refErr.message || refErr}) ⇒ ${tr("รับ/จ่าย/คงเหลือ ยังไม่ขึ้นจากระบบ")}`
         : [
           'รับ / จ่าย / คงเหลือ = รายการจริงที่ STORE · คอลัมน์วันนี้ = ยอดคงเหลือจริง · SAP = สโตร์กรอก · Diff = SAP − คงเหลือ',
           noRow ? `⚠️ ${noRow} พาร์ทยังไม่มียอดที่ STORE ⇒ คงเหลือขึ้น – (ตั้งยอดที่ /line-stock?tab=count)` : '',
@@ -531,7 +531,7 @@ export default function Monitoring() {
     const locs = [...new Set(mats.map(m => locOf(m)).filter(Boolean))].sort();
     const noRow = mats.filter(m => !onHand.has(m)).length;
     setSysNote(refErr
-      ? `⚠️ อ่านกฎรับเข้าคลัง/ยอดคลังไม่ครบ (${refErr.message || refErr}) ⇒ คอลัมน์วันนี้ยังไม่ได้ยึดยอดจริง และไม่มีของออกจากระบบ — BALANCE เป็นค่าจากสูตรล้วน`
+      ? `⚠️ ${tr("อ่านกฎรับเข้าคลัง/ยอดคลังไม่ครบ")} (${refErr.message || refErr}) ⇒ ${tr("คอลัมน์วันนี้ยังไม่ได้ยึดยอดจริง และไม่มีของออกจากระบบ — BALANCE เป็นค่าจากสูตรล้วน")}`
       : [
         `คอลัมน์วันนี้ = ยอดคงเหลือจริงในคลัง (${locs.join(' · ') || '–'}) · IN = คลังกดรับแล้ว · ของออก = ใช้/คืนจากคลังนั้น`,
         rcpRows.length ? `⏳ ผลิตคอนเฟิร์มแล้วรอคลังกดรับ ${rcpRows.length} ใบ · ${rcpQty.toLocaleString()} ชิ้น (ยังไม่นับใน IN — รับที่ /line-stock?tab=in&store=receipts)` : '',
@@ -578,7 +578,7 @@ export default function Monitoring() {
     [partMat, sysLock, periods, board?.period_kind],
   );
   const lockNote = sysLock.size
-    ? ` · IN ล็อก ${sysLock.size} พาร์ท (ระบบมีตัวเลขแล้ว — ตั้งแต่วันแรกที่มีถึงวันนี้ · ยอดไม่ตรงกดช่องเพื่อขอปรับยอดคลัง)`
+    ? ` · IN ${tr("ล็อก")} ${sysLock.size} ${tr("พาร์ท (ระบบมีตัวเลขแล้ว — ตั้งแต่วันแรกที่มีถึงวันนี้ · ยอดไม่ตรงกดช่องเพื่อขอปรับยอดคลัง")})`
     : '';
   /* กดช่อง IN ที่ล็อก ⇒ เปิดใบ "ขอปรับยอดคลัง" (ไม่ใช่พิมพ์ทับ) */
   const onLockedCell = useCallback(({ partId }) => {
@@ -602,8 +602,8 @@ export default function Monitoring() {
     const mat = String(part?.mat_no || '').trim();
     if (!mat) return;
     const cust = board?.customer || '';
-    if (!cust) { toast.info(`บอร์ด ${board?.name || ''} ยังไม่ผูกลูกค้า — ยอดนี้ยังไม่ขึ้นหน้า Delivery`); return; }
-    const fail = (msg) => toast.error(`บันทึกบนบอร์ดแล้ว แต่ส่งเข้าใบส่งของ (Delivery) ไม่สำเร็จ: ${msg} — แก้ช่องนี้อีกครั้ง`);
+    if (!cust) { toast.info(`${tr("บอร์ด")} ${board?.name || ''} ${tr("ยังไม่ผูกลูกค้า — ยอดนี้ยังไม่ขึ้นหน้า")} Delivery`); return; }
+    const fail = (msg) => toast.error(`${tr("บันทึกบนบอร์ดแล้ว แต่ส่งเข้าใบส่งของ (Delivery) ไม่สำเร็จ")}: ${msg} — ${tr("แก้ช่องนี้อีกครั้ง")}`);
     const { data: rows, error } = await supabaseDR.from('customer_shipping_orders')
       .select('id, qty, status, source').eq('customer', cust).eq('mat_no', mat).eq('due_date', periodKey)
       .in('status', ['pending', 'shipped']);
@@ -620,7 +620,7 @@ export default function Monitoring() {
       const r = await supabaseDR.from('customer_shipping_orders').insert({
         mat_no: mat, part_name: part?.part_name || null, customer: cust,
         customer_part_no: part?.part_no || null, due_date: periodKey, qty: plan.insertQty,
-        status: 'pending', source: 'monitoring', note: `Monitoring · บอร์ด ${board?.name || ''}`,
+        status: 'pending', source: 'monitoring', note: `Monitoring · ${tr("บอร์ด")} ${board?.name || ''}`,
         created_by_name: fullName || null,
       }).select('id');
       if (r.error || !r.data?.length) { fail(r.error?.message || 'ไม่มีสิทธิ์เขียน'); return; }
@@ -655,7 +655,7 @@ export default function Monitoring() {
     let qty = null;
     if (!isText) {
       const n = Number(raw.replace(/,/g, ''));
-      if (!Number.isFinite(n)) { toast.error(`"${raw}" ไม่ใช่ตัวเลข`); return; }
+      if (!Number.isFinite(n)) { toast.error(`"${raw}" ${tr("ไม่ใช่ตัวเลข")}`); return; }
       qty = n;
     }
     const row = {
@@ -703,7 +703,7 @@ export default function Monitoring() {
             <button type="button" className="pg-btn" onClick={() => setShowFgSync(true)}
               title={tr('สร้าง/อัพเดทบอร์ด FG ต่อลูกค้า จากออเดอร์ EDI 862/830 ที่นำเข้าไว้แล้ว')}
               style={{ fontSize: 13, fontWeight: 700, padding: '7px 14px', borderRadius: 8, cursor: 'pointer',
-                background: 'var(--bg3)', color: 'var(--text)', border: '1px solid var(--border2)' }}>
+                background: 'var(--bg3-surf)', color: 'var(--text)', border: '1px solid var(--border2)' }}>
               {tr('สร้างบอร์ด FG จากออเดอร์')}
             </button>
             <button type="button" className="pg-btn" onClick={() => setShowImport(true)}
@@ -738,12 +738,12 @@ export default function Monitoring() {
                   · ท่อนที่เหลือ (อธิบายว่าเลขมาจากไหน) = ไป title */}
             <NoteLine text={isFg
               ? (bCust
-                ? `ผูกลูกค้า ${bCust} ⇒ ยอดยกมา = ของพร้อมส่งในคลัง FG · ลูกค้าสั่งจาก EDI 862/830 (รวมใบค้างส่งไว้คอลัมน์แรก) · ผลิตเข้านับจากใบผลิตทุกไลน์${sysNote ? ` · ${sysNote}` : ''}`
+                ? `${tr("ผูกลูกค้า")} ${bCust} ⇒ ${tr("ยอดยกมา = ของพร้อมส่งในคลัง FG · ลูกค้าสั่งจาก EDI 862/830 (รวมใบค้างส่งไว้คอลัมน์แรก) · ผลิตเข้านับจากใบผลิตทุกไลน์")}${sysNote ? ` · ${sysNote}` : ''}`
                 : '⚠️ บอร์ด FG ใบนี้ยังไม่ผูกลูกค้า ⇒ ระบบดึงยอดลูกค้าสั่งให้ไม่ได้ — กด "📦 สร้างบอร์ด FG จากออเดอร์" ใหม่อีกครั้ง')
               : isGreat
-                ? `ส่งเกรท (รายสัปดาห์) ⇒ ระบบเติมของเข้าให้ · ส่งลูกค้ากรอกเอง${sysNote ? ` · ${sysNote}` : ''}${lockNote}`
+                ? `${tr("ส่งเกรท (รายสัปดาห์) ⇒ ระบบเติมของเข้าให้ · ส่งลูกค้ากรอกเอง")}${sysNote ? ` · ${sysNote}` : ''}${lockNote}`
               : board?.line_name
-                ? `ผูกไลน์ ${board.line_name} ⇒ ระบบเติมของเข้า/ออก/ขั้นต่ำให้${sysNote ? ` · ${sysNote}` : ''}${lockNote}`
+                ? `${tr("ผูกไลน์")} ${board.line_name} ⇒ ${tr("ระบบเติมของเข้า/ออก/ขั้นต่ำให้")}${sysNote ? ` · ${sysNote}` : ''}${lockNote}`
                 : 'ยังไม่ผูกไลน์ ⇒ ทุกช่องต้องกรอกเอง'} fs={FS} />
           </FilterBar>
         ) : null}
@@ -788,7 +788,7 @@ export default function Monitoring() {
         </Suspense>
       ) : !tabBoards.length ? (
         <div style={{ ...card, fontSize: FS + 1, lineHeight: 1.9 }}>
-          ยังไม่มีบอร์ดในหมวดนี้ ({subDef.kinds.map(k => BOARD_TABS.find(t => t.key === k)?.sheets).filter(Boolean).join(' · ')})
+          {tr("ยังไม่มีบอร์ดในหมวดนี้")} ({subDef.kinds.map(k => BOARD_TABS.find(t => t.key === k)?.sheets).filter(Boolean).join(' · ')})
           {canEdit
             ? <> {tr('— กด')} <b>{tr('นำเข้าจากไฟล์ Excel')}</b> {tr('แล้วเลือกไฟล์')} <code>1.Monitoring-&lt;เดือน&gt;.xlsx</code> {tr('ระบบจะสร้างบอร์ดให้ตามชีทในไฟล์')}</>
             : ' — ต้องมีสิทธิ์จัดการบอร์ดจึงจะนำเข้าได้'}
@@ -800,7 +800,7 @@ export default function Monitoring() {
         {canEditPerm && !boardWrite.ok && (
           <div style={{ ...card, padding: '8px 10px', marginBottom: 8, fontSize: FS,
             borderLeft: '4px solid var(--amber)' }}>
-            {writeBlockText(boardWrite, { what: `บอร์ด "${board?.name || ''}"` })}
+            {writeBlockText(boardWrite, { what: `${tr("บอร์ด")} "${board?.name || ''}"` })}
           </div>
         )}
         <MonitorBoardGrid

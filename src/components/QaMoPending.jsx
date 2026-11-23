@@ -92,7 +92,7 @@ export default function QaMoPending() {
         {/* อ่านไม่ได้ = เขียนบนจอ ห้ามปล่อยให้เข้าใจว่า "ไม่มีงาน" */}
         {fail && (
           <div style={{ fontSize: 12, color: 'var(--accent2)', marginTop: 8, lineHeight: 1.6 }}>
-            ⚠️ อ่านรายการใบซ่อมไม่สำเร็จ: {fail}<br />
+            ⚠️ {tr("อ่านรายการใบซ่อมไม่สำเร็จ")}: {fail}<br />
             <span style={{ color: 'var(--muted)' }}>{tr('ยังไม่ทราบว่ามีใบรอตรวจกี่ใบ — ไม่ใช่ว่าไม่มี')}</span>
           </div>
         )}
@@ -104,7 +104,7 @@ export default function QaMoPending() {
               <span style={{ color: 'var(--accent)' }}>{tr('✅ ไม่มีใบซ่อมรอ QA ตรวจ')}</span>
             ) : (
               <>
-                <b style={{ fontSize: 15 }}>{rows.length.toLocaleString()} {tr('ใบ')}</b> รอตรวจ
+                <b style={{ fontSize: 15 }}>{rows.length.toLocaleString()} {tr('ใบ')}</b> {tr("รอตรวจ")}
                 {capped && <span style={{ color: 'var(--accent2)' }}> {tr('(อย่างน้อย — ชนเพดานคิวรี นับได้ไม่ครบ)')}</span>}
                 {view.oldest != null && <> {tr('· เก่าสุด')} <b style={{ color: view.oldest >= OLD_DAYS ? 'var(--accent2)' : 'inherit' }}>{view.oldest} {tr('วัน')}</b></>}
                 {view.over > 0 && <> {tr('· ค้างเกิน')} {OLD_DAYS} {tr('วัน')} <b style={{ color: 'var(--accent2)' }}>{view.over} {tr('ใบ')}</b></>}
@@ -144,7 +144,7 @@ export default function QaMoPending() {
                   <td style={{ padding: '6px 9px', whiteSpace: 'nowrap',
                                color: (r.age ?? 0) >= OLD_DAYS ? 'var(--accent2)' : 'inherit',
                                fontWeight: (r.age ?? 0) >= OLD_DAYS ? 800 : 400 }}>
-                    {r.age == null ? '—' : `${r.age} วัน`}
+                    {r.age == null ? '—' : `${r.age} ${tr("วัน")}`}
                   </td>
                   <td style={{ padding: '6px 9px', whiteSpace: 'nowrap' }}>
                     {String(r.dept_section || '').trim() || <span style={{ color: 'var(--accent2)' }}>{tr('ไม่ระบุ')}</span>}

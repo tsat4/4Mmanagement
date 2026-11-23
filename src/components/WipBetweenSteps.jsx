@@ -105,7 +105,7 @@ export default function WipBetweenSteps() {
         setBaselines(b);
       }
     } catch (e) {
-      toast.error('โหลดข้อมูล WIP ไม่สำเร็จ: ' + (e.message || e));
+      toast.error((tr('โหลดข้อมูล WIP ไม่สำเร็จ') + ': ') + (e.message || e));
     } finally {
       setLoading(false);
     }
@@ -138,13 +138,13 @@ export default function WipBetweenSteps() {
         note: countNote.trim() || null, updated_by_name: fullName || null,
       });
       if (error) throw error;
-      toast.success(`บันทึกยอดนับจริง ${counting.label} = ${qty} แล้ว — ระบบนับต่อจากจุดนี้`);
+      toast.success(`${tr("บันทึกยอดนับจริง")} ${counting.label} = ${qty} ${tr("แล้ว — ระบบนับต่อจากจุดนี้")}`);
       setCounting(null); setCountQty(''); setCountNote('');
       load();
     } catch (e) {
       toast.error(String(e.message || '').includes('wip_adjustments')
         ? 'ยังไม่ได้ apply migration 20260818_wip_adjustments_dr — แจ้ง admin แล้วค่อยนับจริงได้'
-        : 'บันทึกไม่สำเร็จ: ' + (e.message || e));
+        : (tr('บันทึกไม่สำเร็จ') + ': ') + (e.message || e));
     } finally { setSaving(false); }
   };
 
@@ -154,9 +154,7 @@ export default function WipBetweenSteps() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{ ...card, background: 'rgba(14,165,233,0.06)', borderColor: 'rgba(14,165,233,0.3)', fontSize: 12.5, lineHeight: 1.7 }}>
         <b style={{ color: '#0ea5e9' }}>{tr('ยอดค้างระหว่างขั้น (คำนวณอัตโนมัติจากใบผลิต — ไม่ต้องคีย์รับ-จ่าย)')}</b><br />
-        ค้าง = ยอดสะสมที่ผ่านขั้นนั้น − ยอดปลายทางที่ประกอบ/ผลิตแล้ว (ทุกชิ้น 1:1 กับปลายทาง) ·
-        เป็นบัญชี<b>{tr('ภายในแผนก')}</b>ไว้ดูจังหวะงาน ไม่เกี่ยว SAP/สต็อกทางการ ·
-        ของเสียระหว่างทางทำตัวเลขคลาดได้ → กด <b>{tr('นับจริง')}</b> เพื่อตั้งต้นใหม่เป็นระยะ
+        {tr("ค้าง = ยอดสะสมที่ผ่านขั้นนั้น − ยอดปลายทางที่ประกอบ/ผลิตแล้ว (ทุกชิ้น 1:1 กับปลายทาง) · เป็นบัญชี")}<b>{tr('ภายในแผนก')}</b>{tr("ไว้ดูจังหวะงาน ไม่เกี่ยว SAP/สต็อกทางการ · ของเสียระหว่างทางทำตัวเลขคลาดได้ → กด")} <b>{tr('นับจริง')}</b> {tr("เพื่อตั้งต้นใหม่เป็นระยะ")}
         {baselineTableMissing && (
           <div style={{ marginTop: 6, color: '#f59e0b', fontWeight: 700 }}>
             ⚠ ยังไม่ได้ apply migration <code>20260818_wip_adjustments_dr</code> (DR) — ตัวเลขคิดจากใบผลิตทั้งหมดตั้งแต่เริ่มระบบ และปุ่มนับจริงยังบันทึกไม่ได้
@@ -201,7 +199,7 @@ export default function WipBetweenSteps() {
                 <span style={{ color: 'var(--muted)' }}>{tr('− สต็อก FG')} {fgOnHand.toLocaleString()}</span>
                 {net ? (
                   <span style={chip(net.fgNeed > 0 ? 'rgba(245,158,11,0.12)' : 'rgba(61,214,92,0.12)', net.fgNeed > 0 ? '#f59e0b' : 'var(--accent)')}>
-                    {net.fgNeed > 0 ? `→ ต้องผลิต FG อีก ${net.fgNeed.toLocaleString()}` : '→ สต็อก FG พอแล้ว ✓'}
+                    {net.fgNeed > 0 ? `→ ${tr("ต้องผลิต FG อีก")} ${net.fgNeed.toLocaleString()}` : '→ สต็อก FG พอแล้ว ✓'}
                   </span>
                 ) : (
                   <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('กรอกความต้องการ → เห็นเลยว่าแต่ละขั้นต้องทำเพิ่มเท่าไหร่')}</span>
@@ -239,7 +237,7 @@ export default function WipBetweenSteps() {
                         </div>
                         {r.between.map(b => (
                           <div key={b.from + b.to} style={{ fontSize: 11, marginTop: 3, color: b.qty < 0 ? '#f59e0b' : 'var(--text2)' }}>
-                            ↳ ค้างระหว่าง {b.from} → {b.to}: <b>{b.qty.toLocaleString()}</b>
+                            ↳ {tr("ค้างระหว่าง")} {b.from} → {b.to}: <b>{b.qty.toLocaleString()}</b>
                             {b.qty < 0 && ' ⚠ ติดลบ — ลำดับสถานี/ของเสียยังไม่ถูกปรับ'}
                           </div>
                         ))}
@@ -260,7 +258,7 @@ export default function WipBetweenSteps() {
                         )}
                         {r.baseline && (
                           <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                            นับจริงล่าสุด {r.baseline.qty.toLocaleString()} · {new Date(r.baseline.ts).toLocaleDateString('th-TH')}
+                            {tr("นับจริงล่าสุด")} {r.baseline.qty.toLocaleString()} · {new Date(r.baseline.ts).toLocaleDateString('th-TH')}
                           </div>
                         )}
                       </td>
@@ -274,7 +272,7 @@ export default function WipBetweenSteps() {
                       <td style={{ padding: '7px 8px', textAlign: 'right' }}>
                         {canAdjust && (
                           <button onClick={() => { setCounting({ bufferKey: r.mat, label: `${r.mat}` }); setCountQty(''); setCountNote(''); }}
-                            style={{ fontSize: 11, padding: '4px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', cursor: 'pointer' }}>
+                            style={{ fontSize: 11, padding: '4px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)', cursor: 'pointer' }}>
                             📋 นับจริง
                           </button>
                         )}
@@ -302,7 +300,7 @@ export default function WipBetweenSteps() {
               placeholder={tr('หมายเหตุ (ถ้ามี)')} style={{ padding: '8px 10px', borderRadius: 'var(--ctl-r)', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 13 }} />
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button disabled={saving} onClick={() => setCounting(null)}
-                style={{ padding: '7px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', cursor: 'pointer', fontSize: 13 }}>{tr('ยกเลิก')}</button>
+                style={{ padding: '7px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)', cursor: 'pointer', fontSize: 13 }}>{tr('ยกเลิก')}</button>
               <button disabled={saving} onClick={saveCount}
                 style={{ padding: '7px 16px', borderRadius: 'var(--r-md)', border: 'none', background: '#16a34a', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
                 {saving ? tr('กำลังบันทึก…') : tr('💾 บันทึกยอดนับจริง')}

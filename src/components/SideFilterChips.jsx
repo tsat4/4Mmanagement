@@ -29,7 +29,7 @@ export default function SideFilterChips({ value, onChange, counts = {}, total, u
   // ฝั่งที่ถือของจริง (control = Sales/Planner/Billing ไม่ได้ถือของ จึงไม่มีในตัวกรองพาร์ท)
   const matSides = SIDES;   // เหลือเฉพาะฝั่งที่ถือของ (control ถูกยุบออกแล้ว 30/09)
   const chips = [
-    { key: '', icon: '📋', short: 'ทั้งหมด', color: 'var(--text2)', count: all, desc: `ทุกฝั่งรวมกัน ${all} ${unit}` },
+    { key: '', icon: '📋', short: 'ทั้งหมด', color: 'var(--text2)', count: all, desc: `${tr("ทุกฝั่งรวมกัน")} ${all} ${unit}` },
     ...matSides.map(s => ({ key: s.key, icon: s.icon, short: labels?.[s.key] || s.short, color: s.color, count: n[s.key], desc: `${s.owner} — ${s.desc}` })),
     // โชว์เฉพาะเมื่อมีของค้างจริง (ปกติควรเป็น 0)
     ...(n.unknown > 0
