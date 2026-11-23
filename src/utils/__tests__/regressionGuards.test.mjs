@@ -12390,6 +12390,37 @@ test('🛡️ ตัด-จ่ายสต็อกต้องหักเต�
     + '   📄 docs/modules/store-board-workflow.md §ตัดเต็ม ยอมติดลบ\n');
 });
 
+test('🔔 mo-from-downtime-must-alarm — ใบ MO ที่เกิดจาก Downtime ต้องแจ้งทีมปลายทางตอนรายละเอียดครบ', () => {
+  /* 20/11 (หน้างาน MTN แจ้ง): *"ตอนส่ง Downtime ข้ามแผนกมา มันไม่มี alarm แจ้งครับ มันมาแต่ MO …
+     ช่างซ่อมอีกเครื่องเสร็จแต่มอนิเตอร์อยู่ ไม่รู้ว่ามี MO ส่งต่อจาก Downtime"*
+     ── วัดจริง 20/11 (DR · 14 วัน) ──────────────────────────────────────────────
+     ① กด "เรียกช่าง" → trigger `trg_dt_call_mtn_opens_mo` เปิดใบให้ในฐาน (plpgsql ยิง http ไม่ได้)
+        แล้วคนมาเติมรายละเอียดทีหลังผ่าน `MoReportFromDowntime` → เส้นทาง `fillOrderId`
+        ซึ่ง **`return` ก่อนถึง `notifyMtn()`** ⇒ ไม่มีจังหวะไหนบอกช่างว่ามีใบใหม่
+     ② **12 ใบ ทีมปลายทาง ≠ ทีมที่ถูกเรียก** (production→jig 5 · production→maintenance 5 ·
+        jig→production 1 · maintenance→production 1) ⇒ `downtime_call_mtn` วิ่งไปทีมเดิม
+        ทีมที่ได้ใบจริง **ไม่เคยได้ alarm เลยสักครั้ง**
+     🔴 ใบจาก Downtime 167 ใบ/7 วัน (129 เติมครบแล้ว) — ไม่ใช่เคสหายาก */
+  const bad = [];
+  const P = 'src/pages/MtnRepair.jsx';
+  const src = stripComments(readFileSync(join(ROOT, P), 'utf8'));
+  /* เส้นทางเติมรายละเอียดใบที่ฐานเปิดไว้ — ตัดเอาเฉพาะบล็อกนั้น */
+  const i = src.indexOf('if (fillOrderId) {');   // บล็อกตอน "บันทึก" เท่านั้น (ชื่อ prop โผล่ก่อนหน้าหลายที่)
+  const blk = i < 0 ? '' : src.slice(i, i + 3000);
+  if (!blk) bad.push(`${P}: หาเส้นทางบันทึกแบบเติมรายละเอียด (if (fillOrderId)) ไม่เจอ — เปลี่ยนแล้วต้องแก้ด่านนี้`);
+  else {
+    if (!/notifyMtn\(\s*fresh\s*,\s*'mtn_reported'\s*\)/.test(blk))
+      bad.push(`${P}: เติมรายละเอียดครบแล้วต้องยิง notifyMtn(fresh, 'mtn_reported') — ไม่ยิง = ใบโผล่ในลิสต์เงียบๆ`);
+    /* 🔴 payload ต้องเป็นแถว**หลังเติม** — ทีมปลายทางอาจไม่ใช่ทีมที่ถูกเรียกตอนกด "เรียกช่าง" */
+    if (!/\.eq\('id', fillOrderId\)\.select\('\*'\)/.test(blk))
+      bad.push(`${P}: update ต้อง .select('*') เอาแถวจริงกลับมา — ส่ง payload เก่า = แจ้งผิดทีม (เคส 12 ใบ/14 วัน)`);
+    /* 🔴 ยังเติมไม่ครบ ห้ามยิง — ช่างเปิดมาเจอใบเปล่า */
+    if (!/if \(done && fresh\)/.test(blk))
+      bad.push(`${P}: ต้องยิงเฉพาะตอน done (รายละเอียดครบ) — ยิงตอนยังไม่ครบ = ช่างเปิดมาเจอใบเปล่า`);
+  }
+  assert.deepEqual(bad, [], `\n\n❌ ${bad.length} จุดผิดกฎ "ใบจาก Downtime ต้องมี alarm"\n   ${bad.join('\n   ')}\n`);
+});
+
 /* ═══ 📅 pm-monthly-signoff — 2026-11-20 · ใบ PM ③④ รายเดือน (คำสั่ง user 19/11) ═════════════════
    📄 docs/modules/pm-hub-check-setup.md §รอบ 2 · ห้ามกลับไปตัดสินผู้เซ็นจากตำแหน่ง/role · ห้ามประกอบ kind/scope_key เอง */
 test('📅 pm-monthly-signoff — ผู้เซ็นมาจากผังองค์กร · ③ บล็อกจนผ่าน ② · คิดด่านใหม่ตอนกด', () => {
