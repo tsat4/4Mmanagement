@@ -1678,7 +1678,7 @@ function StaffingTab({ section, deptParam, today, nodes, employees, lines, slotP
              ⇒ ไม่คิดช่องว่างของกะนั้น (จุดงานที่ไม่ได้เดินวันนั้น ไม่ใช่ "ขาดคน" · user 15/10) */
           const sessions = { day: sessionsOfDeptShift(sIdx, x.lines, d, 'day'), night: sessionsOfDeptShift(sIdx, x.lines, d, 'night') };
           const ran = { day: sessions.day.length > 0, night: sessions.night.length > 0 };
-          return { key: x.key, name: x.name, shifts: staffingOfDept(x, { ran }), sessions };
+          return { key: x.key, name: x.name, shifts: staffingOfDept(x, { ran }), sessions, lineMode: !!x.lineFilter };
         }) });
     }
     return out;
@@ -1727,7 +1727,7 @@ function StaffingTab({ section, deptParam, today, nodes, employees, lines, slotP
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead><tr>
                 <th style={th}>{trI18n('แผนก')}</th><th style={{ ...th, textAlign: 'right' }}>{trI18n('กะที่เช็คแล้ว')}</th><th style={{ ...th, textAlign: 'right' }}>{trI18n('กะที่ขาดคน')}</th>
-                <th style={{ ...th, textAlign: 'right' }}>{trI18n('ยืนจริง / ในทะเบียน')}</th><th style={{ ...th, textAlign: 'right' }}>{trI18n('ขาดคน (คน-กะ)')}</th>
+                <th style={{ ...th, textAlign: 'right' }}>{trI18n(lineName ? 'ยืนจริง / std' : 'ยืนจริง / ในทะเบียน')}</th><th style={{ ...th, textAlign: 'right' }}>{trI18n(lineName ? 'ขาดจาก std (คน-กะ)' : 'ขาดคน (คน-กะ)')}</th>
                 <th style={{ ...th, textAlign: 'right' }}>{trI18n('ช่องว่างอัตรากำลัง')}</th><th style={{ ...th, textAlign: 'right' }}>{trI18n('ลา')}</th><th style={{ ...th, textAlign: 'right' }}>{trI18n('ขาดงาน')}</th>
                 <th style={{ ...th, textAlign: 'right' }}>{trI18n('ยังไม่เช็ค')}</th><th style={{ ...th, textAlign: 'right' }}>{trI18n('ถูกยืมออก')}</th><th style={{ ...th, textAlign: 'right' }}>{trI18n('ยืมเข้า')}</th>
                 <th style={th}>{trI18n('ขาดหนักสุด')}</th><th style={{ ...th, textAlign: 'right' }}>{trI18n('กะไม่ได้เช็คชื่อ')}</th>
@@ -1738,7 +1738,7 @@ function StaffingTab({ section, deptParam, today, nodes, employees, lines, slotP
                     <td style={{ ...td, fontWeight: 700, whiteSpace: 'normal', minWidth: 140 }}>{sm.name}{sm.noPlanShifts > 0 && <div style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 400 }}>⚠️ {sm.noPlanShifts} {trI18n('กะมีทีมที่ไม่มีแผนช่อง')}</div>}</td>
                     <td style={num}>{sm.shifts}</td>
                     <td style={num}>{sm.shifts ? `${sm.shortShifts} (${pct(sm.shortShifts / sm.shifts)})` : '–'}</td>
-                    <td style={num}>{sm.shifts ? `${sm.onFloor} / ${sm.registered} (${pct(sm.fill)})` : '–'}</td>
+                    <td style={num}>{sm.shifts ? `${sm.onFloor} / ${lineName ? sm.seats : sm.registered} (${pct(sm.fill)})` : '–'}</td>
                     <td style={{ ...num, fontWeight: 800 }}>{sm.shifts ? sm.absentShort : '–'}</td>
                     <td style={num}>
                       {/* 🧩 กรองถึงไลน์ = ช่องรายทีมแยกลงไลน์ไม่ได้ ⇒ '–' เสมอ (ห้ามโชว์ 0 · ตัวหารที่หายไม่ใช่ศูนย์) */}

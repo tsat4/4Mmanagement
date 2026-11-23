@@ -650,3 +650,15 @@ test('narrowDeptToLine: คนสังกัดไลน์แม่ที่�
   // ไม่ผูกจุดงานให้ไลน์ลูก = นับได้แค่คนสังกัดตรง (จอบอกให้ผูกจุดงาน)
   assert.equal(M.narrowDeptToLine(d, fam, 'Line 60').opsTotal, 0);
 });
+
+test('แผน vs มาจริง กรองถึงไลน์: ขาด = std − ยืนจริง · % หารด้วย std (ไม่ใช่ทะเบียนที่ = คนมาแล้ว 100% เสมอ)', () => {
+  const fam = [{ id: 61, name: 'Line 61', std_day_shift: 7, std_night_shift: 7 }];
+  const P = (id, st) => ({ id, line_id: 1, attend: 'present', team: 'B', row: 'op', log: { is_present: true, assigned_line: st } });
+  const d = { key: 'd', opsTotal: 5, cols: [{ team: 'B', shift: 'day', leaders: [], ops: [P('a', 'w'), P('b', 'w'), P('c', 'w'), P('e', 'w'), P('f', 'x')] }], borrowed: [] };
+  const n = M.narrowDeptToLine(d, fam, 'Line 61', { stationIds: new Set(['w']) });
+  const st = M.staffingOfDept(n);
+  assert.equal(st.day.onFloor, 4); assert.equal(st.day.registered, 4);
+  assert.equal(st.day.absentGap, 3);                  // 7 − 4 ไม่ใช่ 0
+  const sum = M.summarizeStaffing([{ date: '2026-11-23', depts: [{ key: 'd', name: 'x', shifts: st, lineMode: true }] }]);
+  assert.equal(sum[0].absentShort, 3); assert.equal(Math.round(sum[0].fill * 100), 57);   // 4/7 ไม่ใช่ 100%
+});
