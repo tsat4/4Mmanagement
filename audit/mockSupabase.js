@@ -673,6 +673,16 @@ const TABLE_ROWS = {
     ...r, line_name: LINE_NAME(AM_TARGET[i][0]), jig_id: `id-${AM_TARGET[i][1]}`,
     shift: AM_TARGET[i][2], is_active: true, sort_order: i,
   } : { ...r, line_name: LINE_NAME(5), jig_id: `id-${i}`, shift: null, is_active: false, sort_order: i }),
+  /* 🧩 สถานี AM (2026-11-23 · ห้ามถอด) — ใบรวมของอุปกรณ์ที่ติดตั้งคู่กัน + บอร์ดนับเป็นชุด
+     ไลน์ 1 = สถานีที่มีตัว NG (id-2 fail) · ไลน์ 4 = สถานีที่ยังขาดตัว (id-12 pending)
+     ⇒ ใบสถานี (/daily-checker?tab=amcheck&equip=id-1) · แท็บตั้งค่าสถานี · ชิป "ขาด" บนบอร์ด ถูกวาดใน crashsweep */
+  am_stations: (r, i) => (i <= 2
+    ? { ...r, id: `id-${i}`, name: i === 1 ? 'Robot cell #1 (mock)' : 'Robot cell #4 (mock)', line_name: LINE_NAME(i === 1 ? 1 : 4), is_active: true, sort_order: i }
+    : { ...r, line_name: LINE_NAME(5), is_active: false, sort_order: i }),
+  am_station_members: (r, i) => {
+    const M = { 1: ['id-1', 'id-1'], 2: ['id-1', 'id-2'], 3: ['id-2', 'id-11'], 4: ['id-2', 'id-12'] };
+    return M[i] ? { ...r, station_id: M[i][0], jig_id: M[i][1], sort_order: i } : { ...r, station_id: 'none', jig_id: `zz-${i}`, sort_order: i };
+  },
   /* 🗺️ factory_map / factory_line_regions — **ต้องมีเสมอ ห้ามถอด** (2026-09-22)
      `/factory-map` เช็ค `if (!imageUrl) return <ยังไม่มีรูปผังโรงงาน>` ก่อนวาดอะไรทั้งนั้น
      ⇒ mock เดิมคืน `image_url: ''` (falsy) ⇒ **ทั้งหน้าไม่เคยเรนเดอร์อะไรเลยนอกจากข้อความว่าง**
