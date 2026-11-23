@@ -156,6 +156,15 @@ JIG MTN จะท่วมห้อง · ให้เห็นบนจอแ�
 - Excel = doc_key **`xlsx_am_monthly`** (เลขฟอร์มที่ชื่อไฟล์ · ชีต 2 = คำอธิบาย/ข้อจำกัด) — migration `20261103_doc_forms_xlsx_am_monthly_main.sql` (**MAIN · apply แล้ว**)
 - `loadRunDays()` (`utils/runDays.js`) **แบ่งหน้าแล้ว + คืน `byKey`** (คีย์ → ชื่อไลน์ที่เปิดกะ) — additive, LPA/Poka-Yoke ไม่กระทบ
 
+**⚙️ รายเครื่องในรายงานรายเดือน (23/11 · คำสั่ง user "ไลน์ใหญ่ตัดสินเป็นไลน์ถูกแล้ว"):**
+- `loadMonthlyAm()` ดึง `prod_orders(session_id, machine_no)` ของกะจริงทั้งเดือน (`loadRunDays().sessions` · additive) → `ordersByKey` (runKey → ใบผลิต)
+  + `loadAmStations()` → `buildAmMonthly({ ordersByKey, amStations })` ต่อวัน: `runningMachinesByLine()` → **`amTargetsByRun()` ตัวเดียวกับบอร์ดวันนี้/ตัวเตือน**
+- ช่องเครื่องที่ `notRunning` ในวันที่ไลน์เปิดกะ = `NP` · ทุกเครื่องในไลน์ไม่เดิน = ช่องไลน์ `NP` (ไม่ใช่ "ขาด")
+- ใบผลิตไม่ลงเลข/ลงไม่ครบ = ทั้งไลน์ (เหมือนบอร์ด) · ใบผลิตอ่านไม่ได้ (`ordersError`) = ทั้งไลน์ทุกวัน + แถบเหลือง
+- แถวไลน์มี `modeDays` → `amModeDaysNote()` เขียนใต้ชื่อไลน์ ("รายเครื่อง N วัน · ทั้งไลน์ M วัน") + ชีตคำอธิบาย Excel
+- จำลองข้อมูลจริง 1–22 พ.ย. กะเช้า (ก่อน merge): เครื่อง-วันที่ "ต้องตรวจ" D3 104→48 · D4 75→31 · D5 144→71 · D6 27→12 ·
+  ไลน์อื่นทุกไลน์เท่าเดิม (ใบผลิตไม่ลงเลขเครื่อง) — ส่วนที่ลดรวม **robot (RB-xx) ที่ไม่เคยอยู่บนใบผลิต** ⇒ ต้องตั้งสถานี AM ให้ robot คู่จิ๊ก
+
 **ข้อจำกัดที่รู้ตัว (ยังไม่ทำ):** ทะเบียนที่ปิดใช้ (`is_active=false`) ไม่มีวันปิด ⇒ เครื่องที่เอาออกแล้วไม่โผล่ย้อนหลัง ·
 NG นับระดับ "เครื่อง-วัน" ไม่ใช่รายข้อ (`inspection_results`) · ยังไม่มีใบพิมพ์ PDF (Excel อย่างเดียว)
 
@@ -173,6 +182,10 @@ NG นับระดับ "เครื่อง-วัน" ไม่ใช่
   - วัดจริง DR 14 วัน: ใบผลิต 1,179/6,205 ใบลงเลขเครื่อง · ทะเบียน AM 78/78 แถวมีเลขเครื่อง
 - **ตัวเตือนส้ม edge `pm-daily-scan` v6 (05/11 · deploy แล้ว):** ตัดสินรายเครื่องเหมือนจอ — อ่าน `prod_orders.machine_no` · เครื่องที่ไม่มีใบสแกนกะนี้ = ไม่ต้องตรวจ · นาฬิกา 60 น. เริ่มที่ใบแรกของเครื่องนั้น · ใบไม่ลงเลขเครื่อง = ถอยไปทั้งไลน์
   · ข้อความเตือนนับ "ตรวจแล้ว/ต้องตรวจ" จากเครื่องที่เดินจริง และรายชื่อ = เครื่องที่เลยเวลาแล้วเท่านั้น · ส่ง `am_mode`/`not_running` ไปด้วย
+- **🧩 สถานี AM (23/11):** `amTargetsByRun(tg, run, { mateKeysOf })` — เครื่องที่ไม่อยู่บนใบผลิตแต่ **เพื่อนร่วมสถานีมีใบ** = ต้องตรวจ (`viaStation`)
+  · robot/stationary/nut feeder ไม่เคยลงเลขบนใบ (ใบลงที่จิ๊ก/ปืนเชื่อม) · `mateKeysOf` จาก `stationMateKeysFn(amStations, machineNoOf)`
+  · `loadDailyAm()` คืน `amStations`/`amStationsError` (ทุกจอที่ `...res` ได้กฎนี้) · DailyPM ส่ง `amStations` ของแท็บตัวเอง · edge อ่าน `am_stations` เอง
+  · อ่านสถานีไม่ได้ = กฎเดิม (ไม่มีเพื่อน) + จอเขียนบอก
   · 🔴 กติกาอยู่ `supabase/functions/pm-daily-scan/amRun.js` = สำเนา JS ของ `amTargetsByRun`/`amMachineKeys`/`machineKey` (Deno import `src/` ไม่ได้) — ด่าน `src/utils/__tests__/pmDailyScanParity.test.mjs` เทียบผลกับฝั่งจอ **แก้ที่หนึ่งต้องแก้อีกที่**
 
 ### B3 — AM ผิดปกติ ⇒ ต้องเปิด MO หรือเขียนเหตุผล + ติดตามจนปิด
