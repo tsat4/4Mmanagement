@@ -18144,6 +18144,20 @@ const EN = {
   "ไล่ย้อนวันให้ที่ 1 วันไว้ก่อน (อาจสั้นกว่าจริง)": "Counted back 1 day for now (may be shorter than actual)",
   "ไหลต่อได้": "Can flow on",
 
+
+  /* ── 🌐 รอบ 6c (24/11) — คีย์จาก main (LPA แผนไตรมาส · PMCheckData) ── */
+  "ก่อนพิมพ์หรือเปลี่ยนไลน์/กะ/ไตรมาส": "before printing or changing line/shift/quarter",
+  "ทิ้งแล้วเปลี่ยนเลยไหม?": "Discard and switch anyway?",
+  "ปิดปุ่มบันทึกแผนไว้ (กันแผนเดิมถูกลบ)": "Save-plan button disabled (protects the existing plan from deletion)",
+  "มีการแก้แผนไตรมาสที่ยังไม่ได้บันทึก — กด": "The quarterly plan has unsaved edits — press",
+  "อ่านแผนเดิมของไตรมาสนี้ไม่สำเร็จ — ปิดการบันทึกไว้ กันแผนเดิมถูกเขียนทับ/ลบ · กดโหลดใหม่ก่อน": "Failed to read this quarter's existing plan — saving disabled to protect it from being overwritten/deleted · reload first",
+  "อ่านแผนเดิมไม่สำเร็จ — โหลดใหม่ก่อนบันทึก": "Failed to read the existing plan — reload before saving",
+  "เปลี่ยนไลน์/กะ/ไตรมาสตอนนี้ = ทิ้งการแก้ไขทั้งหมด": "Changing line/shift/quarter now = discards every edit",
+  "แผนไตรมาสที่แก้ไว้ (แท็บแผนตรวจ) ยังไม่ได้บันทึก": "Edited quarterly plan (Inspection plan tab) not saved yet",
+  "โหลดสถานะใบล่าสุดไม่สำเร็จ": "Failed to load the sheet's latest status",
+  "ใบนี้ถูกอนุมัติหรือตีกลับไปแล้วโดยคนอื่น — โหลดสถานะล่าสุดให้แล้ว": "This sheet was already approved or returned by someone else — latest status loaded",
+  "ไลน์/กะ/ไตรมาส": "line/shift/quarter",
+
 };
 
 export default EN;
