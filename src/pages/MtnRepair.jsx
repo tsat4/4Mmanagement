@@ -2677,6 +2677,12 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
         ไม่รู้ = ไม่บล็อก แต่จอต้องเขียนบอก (stepAssumptions) — ห้ามเดาแทนคน */
   const { mtnTeams: myTeams, sections: mySections, position: myPosition } = useContext(UserContext);   // allUnits มาจาก prop แล้ว
   const actorSide = actorSideOf({ mtnTeams: myTeams, role, sections: mySections, isAm: isAmTeam });
+  /* 🪪 23/11 (คำสั่ง user) — ทุกข้อความ "เซ็นช่องนี้ไม่ได้" ต้องบอกชื่อบัญชีที่กำลังใช้อยู่
+     เคสจริงวันนั้น: ผจก.กดไม่ได้ ไล่ตรวจสิทธิ์/ตำแหน่ง/ขอบเขตกันทั้งวัน สุดท้าย **เข้าผิดบัญชี**
+     🔴 ไม่รู้ชื่อ = ไม่ขึ้นบรรทัดนี้ (ห้ามขึ้น "บัญชี —") */
+  const whoAmILine = String(fullName || '').trim()
+    ? `🪪 ${trI18n('ตอนนี้คุณใช้บัญชี')} “${String(fullName).trim()}” — ${trI18n('ไม่ใช่บัญชีคุณ? ออกจากระบบแล้วเข้าใหม่')}`
+    : null;
   const posRank = positionRank(myPosition);
   const [showHist, setShowHist] = useState(false);   // 📜 ประวัติการซ่อมของเครื่องในใบนี้ (19/10)
   const navHist = useNavigate();
@@ -3443,7 +3449,8 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
                       shared_account: 'บัญชีกลางเซ็นไม่ได้ — ให้ผู้จัดการ login ด้วยบัญชีตัวเอง',
                       wrong_side: 'ช่องนี้เป็นของฝั่งซ่อมบำรุง',
                       other_team: 'ช่องนี้เป็นของ ผจก. ทีมที่รับใบนี้',
-                    })[ack.code] || 'รับทราบได้เฉพาะ ผจก. ที่ถูกระบุในใบ หรือผู้ถือสิทธิ์อนุมัติ'}</span>}
+                    })[ack.code] || 'รับทราบได้เฉพาะ ผจก. ที่ถูกระบุในใบ หรือผู้ถือสิทธิ์อนุมัติ'}
+                      {whoAmILine && <span style={{ display: 'block', marginTop: 2 }}>{whoAmILine}</span>}</span>}
                 {ack.ok && posRank == null && <span style={{ fontSize: 11, color: 'var(--amber)' }}>⚠️ บัญชีนี้ยังไม่ได้ตั้งตำแหน่ง — ระบบไม่ได้ตรวจระดับ</span>}
               </div>
             )}
@@ -3481,7 +3488,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
                   out_of_scope: `${trI18n("ใบนี้เป็นของ")}${[o.line_name, o.dept_section].filter(Boolean).join(' · ') || trI18n('ส่วนงานอื่น')} — ${trI18n("เซ็นได้เฉพาะใบในขอบเขตที่ตัวเองรับผิดชอบ")}`,
                 })[canSignMtnApproval(appr.missing[0], stepCtx).code]
                 || 'เซ็นได้เฉพาะผู้จัดการที่ถูกระบุในใบ หรือผู้ถือสิทธิ์อนุมัติปิดใบ'
-              }</span>
+              }{whoAmILine && <span style={{ display: 'block', marginTop: 2 }}>{whoAmILine}</span>}</span>
             )}
             {appr.missing.length > 0 && canSignMtnApproval(appr.missing[0], stepCtx).ok && !signatureUrl && <span style={{ fontSize: 11, color: 'var(--accent2)', alignSelf: 'center' }}>{trI18n('ยังไม่มีลายเซ็นในโปรไฟล์ — จะบันทึกเป็นชื่อ+เวลา (ตั้งลายเซ็นได้ที่มุมขวาบน)')}</span>}
           </div>
@@ -3688,6 +3695,8 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
             {(stepDenyHint(next.step, { teamName: deptNameOf(orderTeam), reporterName: o.reported_by_name || o.reporter_prod, outOfScope: canDoStep(next.step, stepCtx).code === 'out_of_scope', otherTeam: canDoStep(next.step, stepCtx).code === 'other_team',
               wrongSide: canDoStep(next.step, stepCtx).code === 'wrong_side', rankTooLow: canDoStep(next.step, stepCtx).code === 'rank_too_low', sharedAccount: canDoStep(next.step, stepCtx).code === 'shared_account',
               orderLine: o.line_name, orderSection: o.dept_section, mtnForm, toolTeam: isToolTeamOrder(o),
+              /* 🪪 บอกชื่อบัญชีที่ล็อกอินอยู่ (23/11) — เคสจริง: ผจก.กดไม่ได้เพราะเข้าผิดบัญชี */
+              actorName: fullName,
               awaitApproval: canDoStep(next.step, stepCtx).code === 'await_mgr_approval' ? { missing: appr.missing, deptName: o.dept_manager_name, plantName: o.plant_manager_name } : null }) || []).map((t, i) => <div key={i}>{t}</div>)}
             {/* 🔴 ระบบปล่อยผ่านเพราะ "ไม่รู้ฝั่ง/ตำแหน่งของคนกด" ⇒ ต้องเขียนบนจอ ห้ามเงียบ
                 (ไม่งั้นคนเข้าใจว่าด่านตรวจแล้ว ทั้งที่ไม่ได้ตรวจ — 31% ยังไม่มีส่วนงาน · 79% ไม่มีทีมช่าง) */}

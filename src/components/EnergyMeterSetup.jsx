@@ -119,7 +119,6 @@ export default function EnergyMeterSetup() {
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 14, alignContent: 'start' }}>
       {err && <NoticeBar tone="warn">{err}</NoticeBar>}
       {!canEdit && <NoticeBar tone="info">{tr('ดูได้อย่างเดียว — การแก้ต้องมีสิทธิ์บันทึกพลังงาน (energy:record)')}</NoticeBar>}
-      <datalist id="energy-panels">{panels.map(p => <option key={p} value={p} />)}</datalist>
 
       <div style={card}>
         <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{tr('ตู้บนบอร์ดค่าไฟสด')} ({rows.length})</div>
@@ -141,7 +140,7 @@ export default function EnergyMeterSetup() {
                   <tr key={k} style={{ background: dirty ? 'var(--accent-dim)' : undefined }}>
                     <td style={{ ...td, fontSize: 12.5, color: 'var(--text2)', whiteSpace: 'nowrap' }} title={r.updated_by ? `${tr('แก้ล่าสุดโดย')} ${r.updated_by}` : undefined}>{r.scope_name}</td>
                     <td style={td}><input style={inp} value={d.display_name} placeholder={r.scope_name} disabled={dis} onChange={e => setD(k, 'display_name', e.target.value)} /></td>
-                    <td style={td}><input style={inp} list="energy-panels" value={d.panel} disabled={dis} onChange={e => setD(k, 'panel', e.target.value)} /></td>
+                    <td style={td}><PanelPick panels={panels} value={d.panel} disabled={dis} onChange={v => setD(k, 'panel', v)} /></td>
                     <td style={td}>
                       <select style={inp} value={d.parent_name || ''} disabled={dis} onChange={e => setD(k, 'parent_name', e.target.value)}>
                         <option value="">{tr('— ชั้นบนสุด —')}</option>
@@ -175,12 +174,14 @@ export default function EnergyMeterSetup() {
         <div style={card}>
           <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{tr('เพิ่มตู้เข้าบอร์ด')}</div>
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 8 }}>
-            {tr('เลือกได้เฉพาะมิเตอร์ที่ผูก topic แล้ว (หน้าการเชื่อมต่อ) และยังไม่อยู่บนบอร์ด')} · {freeScopes.length} {tr('ตัวที่ยังไม่ได้เพิ่ม')}
+            {tr('เลือกได้เฉพาะมิเตอร์ที่ผูก topic แล้ว (หน้าการเชื่อมต่อ) และยังไม่อยู่บนบอร์ด')} · {freeScopes.length
+              ? `${freeScopes.length} ${tr('ตัวที่ยังไม่ได้เพิ่ม')}`
+              : tr('ตอนนี้มิเตอร์ที่ผูก topic แล้วอยู่บนบอร์ดครบทุกตัว — มีมิเตอร์ใหม่ ให้ผูก topic ที่หน้าการเชื่อมต่อก่อน แล้วจะขึ้นในช่องนี้')}
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'end' }}>
             <label style={addLbl}>{tr('มิเตอร์')}
-              <select value={add.scope} onChange={e => setAdd(a => ({ ...a, scope: e.target.value }))} style={inp}>
-                <option value="">{tr('— เลือก —')}</option>
+              <select value={add.scope} onChange={e => setAdd(a => ({ ...a, scope: e.target.value }))} style={inp} disabled={!freeScopes.length}>
+                <option value="">{freeScopes.length ? tr('— เลือก —') : tr('— ไม่มีมิเตอร์ที่ยังไม่ได้เพิ่ม —')}</option>
                 {freeScopes.map(s => <option key={keyOf(s)} value={keyOf(s)}>{s.scope_name}</option>)}
               </select>
             </label>
@@ -188,7 +189,7 @@ export default function EnergyMeterSetup() {
               <input style={inp} value={add.display_name} placeholder={tr('ว่าง = ชื่อมิเตอร์')} onChange={e => setAdd(a => ({ ...a, display_name: e.target.value }))} />
             </label>
             <label style={addLbl}>{tr('ตู้')}
-              <input style={inp} list="energy-panels" value={add.panel} onChange={e => setAdd(a => ({ ...a, panel: e.target.value }))} />
+              <PanelPick panels={panels} value={add.panel} onChange={v => setAdd(a => ({ ...a, panel: v }))} />
             </label>
             <label style={addLbl}>{tr('ต่อจาก')}
               <select value={add.parent_name} onChange={e => setAdd(a => ({ ...a, parent_name: e.target.value }))} style={inp}>
@@ -201,5 +202,29 @@ export default function EnergyMeterSetup() {
         </div>
       )}
     </div>
+  );
+}
+
+/* ช่อง "ตู้" — เลือกจากตู้ที่มีอยู่ (ทุกตัวขึ้นเสมอ) หรือ "➕ ตู้ใหม่…" แล้วพิมพ์ชื่อ
+   (เดิม input+datalist: เบราว์เซอร์กรองตัวเลือกตามค่าที่อยู่ในช่อง ⇒ เห็นแค่ตู้เดิมตู้เดียว · user แจ้ง 23/11) */
+function PanelPick({ panels, value, onChange, disabled }) {
+  const [typing, setTyping] = useState(false);
+  const known = panels.includes(value);
+  if (typing || (value && !known)) {
+    return (
+      <div style={{ display: 'flex', gap: 4 }}>
+        <input style={inp} value={value} autoFocus={typing} disabled={disabled} placeholder={tr('ชื่อตู้ใหม่')} onChange={e => onChange(e.target.value)} />
+        {panels.length > 0 && <button type="button" className="pg-btn" disabled={disabled} title={tr('เลือกจากตู้ที่มี')}
+          onClick={() => { setTyping(false); onChange(panels.includes(value) ? value : ''); }}>☰</button>}
+      </div>
+    );
+  }
+  return (
+    <select style={inp} value={value || ''} disabled={disabled}
+      onChange={e => { if (e.target.value === '__new') { setTyping(true); onChange(''); } else onChange(e.target.value); }}>
+      {!value && <option value="">{tr('— เลือกตู้ —')}</option>}
+      {panels.map(p => <option key={p} value={p}>{p}</option>)}
+      <option value="__new">{tr('➕ ตู้ใหม่…')}</option>
+    </select>
   );
 }
