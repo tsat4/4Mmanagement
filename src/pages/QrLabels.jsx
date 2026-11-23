@@ -318,7 +318,7 @@ export default function QrLabels() {
       </FilterBar>
       {kind === 'delivery' && (
         <div style={{ fontSize: 12.5, color: 'var(--text2)', background: 'var(--bg2-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '9px 12px', marginBottom: 12 }}>
-          ป้ายที่สโตร์สแกนตอนวางของถึงไลน์ (ลูปเรียกชิ้นส่วนขั้น 7) — ติดที่จุดวางของจริงหน้าไลน์ · ตั้ง/แก้จุดที่ ⚙️ ตั้งค่าผังไลน์ → 🎯 จุดส่งงาน · แนะนำขนาด <b>{tr('ใหญ่ 90×60')}</b> (สแกนจากระยะแร็ค)
+          {tr("ป้ายที่สโตร์สแกนตอนวางของถึงไลน์ (ลูปเรียกชิ้นส่วนขั้น 7) — ติดที่จุดวางของจริงหน้าไลน์ · ตั้ง/แก้จุดที่ ⚙️ ตั้งค่าผังไลน์ → 🎯 จุดส่งงาน · แนะนำขนาด")} <b>{tr('ใหญ่ 90×60')}</b> ({tr("สแกนจากระยะแร็ค")})
         </div>
       )}
       {kind === 'part' && (
@@ -331,7 +331,7 @@ export default function QrLabels() {
       )}
       {kind === 'delivery' && !loading && !visible.length && (
         <NoticeBar tone="warn" style={{ marginBottom: 12 }}>
-          ยังไม่มีจุดส่งงานที่เปิดใช้ (ในขอบเขตที่คุณเห็น) — ให้หัวหน้าไลน์ตั้งที่ ⚙️ ตั้งค่าผังไลน์ ก่อน แล้วกลับมาพิมพ์
+          {tr("ยังไม่มีจุดส่งงานที่เปิดใช้ (ในขอบเขตที่คุณเห็น) — ให้หัวหน้าไลน์ตั้งที่ ⚙️ ตั้งค่าผังไลน์ ก่อน แล้วกลับมาพิมพ์")}
         </NoticeBar>
       )}
 
@@ -356,7 +356,7 @@ export default function QrLabels() {
       )}
       {kind === 'jig' && !loading && !visible.length && (
         <NoticeBar tone="warn" style={{ marginBottom: 12 }}>
-          ยังไม่มีจิ๊ก — ลงทะเบียนที่ 🧰 ทะเบียนอุปกรณ์ → แท็บ JIG (หรือ PM Setup) ก่อน แล้วกลับมาพิมพ์ป้ายได้ทันที
+          {tr("ยังไม่มีจิ๊ก — ลงทะเบียนที่ 🧰 ทะเบียนอุปกรณ์ → แท็บ JIG (หรือ PM Setup) ก่อน แล้วกลับมาพิมพ์ป้ายได้ทันที")}
         </NoticeBar>
       )}
       {missingNo > 0 && kind !== 'delivery' && (

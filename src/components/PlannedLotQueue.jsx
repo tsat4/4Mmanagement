@@ -105,7 +105,7 @@ export default function PlannedLotQueue({ session, orders = [] }) {
         )}
       </div>
       <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 6 }}>
-        แผนเป็น<b>{tr('กรอบ')}</b> ไม่ได้สั่งให้เปิดใบ — หน้างานสแกนคัมบัง/เปิดเป้าตามปกติ ระบบรวมยอดทุกกะของวันมาเทียบให้เอง
+        {tr("แผนเป็น")}<b>{tr('กรอบ')}</b> {tr("ไม่ได้สั่งให้เปิดใบ — หน้างานสแกนคัมบัง/เปิดเป้าตามปกติ ระบบรวมยอดทุกกะของวันมาเทียบให้เอง")}
       </div>
       {dayErr && (
         <div style={{ fontSize: 11.5, color: '#f59e0b', marginBottom: 6 }}>

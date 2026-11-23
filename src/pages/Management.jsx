@@ -1255,7 +1255,7 @@ export default function Management() {
         {helperMap[worker.employee_id] && (
           <div title={`${tr("ยืมตัวจากไลน์")} ${allLines.find(l => l.id === worker.employees?.line_id)?.name || tr('อื่น')} ${tr("มาช่วยกะนี้")}`}
             style={{ fontSize: 11, fontWeight: 800, color: 'var(--blue)', background: 'var(--blue-dim)', borderRadius: 'var(--r-xs)', padding: '1px 6px', flexShrink: 0, whiteSpace: 'nowrap' }}>
-            ยืมตัว
+            {tr("ยืมตัว")}
           </div>
         )}
         {/* assign to special task */}
@@ -1460,7 +1460,7 @@ export default function Management() {
           {/* ช่องเลือกไลน์ย้ายขึ้นแถบกรองใต้หัวเพจแล้ว (09/11) — ที่นี่เหลือคำเตือนอ่านทะเบียนไม่ได้ + หมายเหตุไลน์ย่อย/ไลน์หลัก */}
           {lineLoadErr && (
             <div style={{ fontSize: 11, color: 'var(--danger)', marginTop: 5, lineHeight: 1.5 }}>
-              ⚠️ อ่านทะเบียนไลน์ผลิตไม่สำเร็จ — รายการที่เห็นอาจไม่ครบ (ไม่ใช่ว่าไลน์ถูกลบ)
+              ⚠️ {tr("อ่านทะเบียนไลน์ผลิตไม่สำเร็จ — รายการที่เห็นอาจไม่ครบ (ไม่ใช่ว่าไลน์ถูกลบ")})
               <button onClick={() => retryLinesRef.current?.()}
                 style={{ marginLeft: 6, fontSize: 11, padding: '1px 8px', borderRadius: 'var(--r-md)', cursor: 'pointer',
                          background: 'var(--bg3-surf)', color: 'var(--text)', border: '1px solid var(--border2)' }}>
@@ -1501,7 +1501,7 @@ export default function Management() {
               background: 'var(--blue-dim)', border: '1px solid var(--blue-line)' }}>
               {!isLiveView && (
                 <div style={{ fontSize: 11, color: 'var(--blue)', lineHeight: 1.5 }}>
-                  โหมดย้อนหลัง — <b>{tr('อ่านอย่างเดียว จัดคนไม่ได้')}</b> · แสดงจุดงานสุดท้ายของกะนั้น
+                  {tr("โหมดย้อนหลัง")} — <b>{tr('อ่านอย่างเดียว จัดคนไม่ได้')}</b> · {tr("แสดงจุดงานสุดท้ายของกะนั้น")}
                   <button onClick={() => { setBoardDate(todayWorkDate); setViewShift(getCurrentShift()); }}
                     style={{ marginLeft: 6, padding: '2px 9px', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 700, cursor: 'pointer', background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text2)' }}>
                     {tr('⟳ กลับมาดูสด')}
@@ -3130,7 +3130,7 @@ export default function Management() {
               </button>
               <button onClick={() => { if (!isSavingDoc) { setPendingDocModal(null); setDocImageFile(null); setDocImagePreview(null); } }}
                 style={{ flex: 1, padding: 12, background: 'var(--bg3-surf)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
-                ยกเลิก
+                {tr("ยกเลิก")}
               </button>
             </div>
           </div>
@@ -3260,7 +3260,7 @@ export default function Management() {
                 </button>
                 <button onClick={() => { if (!isSaving4M) { setShow4MModal(null); setLog4MForm({ category: 'Man', description: '' }); setReqImageFile(null); setReqImagePreview(null); } }}
                   style={{ flex: 1, padding: 12, background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 8, cursor: isSaving4M ? 'not-allowed' : 'pointer' }}>
-                  ยกเลิก
+                  {tr("ยกเลิก")}
                 </button>
               </div>
             </div>
@@ -3532,12 +3532,12 @@ function PointDetailCard({ detail, alarms, onClose }) {
         )}
         {notRegistered && (
           <div style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'center', background: 'var(--bg3-surf)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: '10px 12px', marginTop: infoRows.length ? 8 : 0 }}>
-            ยังไม่ลงทะเบียนในฐานข้อมูล
+            {tr("ยังไม่ลงทะเบียนในฐานข้อมูล")}
           </div>
         )}
         {machine && !loading && !jig && (
           <div style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'center', padding: '8px 0 2px' }}>
-            ยังไม่มีข้อมูล Jig/PM ผูกกับเครื่องนี้
+            {tr("ยังไม่มีข้อมูล Jig/PM ผูกกับเครื่องนี้")}
           </div>
         )}
       </div>

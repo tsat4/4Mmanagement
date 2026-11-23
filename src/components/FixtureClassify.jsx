@@ -109,10 +109,9 @@ export default function FixtureClassify({ machines, mapKeys, canEdit, lines = []
     return (
       <div style={{ background: 'rgba(34,197,94,0.10)', border: '1px solid rgba(34,197,94,0.45)',
                     borderRadius: 'var(--r-md)', padding: '14px 16px', fontSize: 13 }}>
-        ✅ ไม่มีเครื่องที่ระบบสงสัยว่าเป็นจิ๊ก/ฟิกเจอร์แล้ว
+        ✅ {tr("ไม่มีเครื่องที่ระบบสงสัยว่าเป็นจิ๊ก/ฟิกเจอร์แล้ว")}
         <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 6 }}>
-          ระบบดูจากเลขเครื่อง (JHYD/GPHYD/JIG) · ชื่อ (JIG/GRIPPER/CENTERING/MARKING/POKA-YOKE) และการวางบนผังไลน์
-          — ถ้ามีตัวที่ระบบไม่รู้จัก ให้เปลี่ยนชนิดรายตัวที่ <b>{tr('ฐานข้อมูลเครื่องจักร')}</b>
+          {tr("ระบบดูจากเลขเครื่อง (JHYD/GPHYD/JIG) · ชื่อ (JIG/GRIPPER/CENTERING/MARKING/POKA-YOKE) และการวางบนผังไลน์ — ถ้ามีตัวที่ระบบไม่รู้จัก ให้เปลี่ยนชนิดรายตัวที่")} <b>{tr('ฐานข้อมูลเครื่องจักร')}</b>
         </div>
       </div>
     );
@@ -123,11 +122,9 @@ export default function FixtureClassify({ machines, mapKeys, canEdit, lines = []
       <div style={{ background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.45)',
                     borderRadius: 'var(--r-md)', padding: '12px 14px', fontSize: 12.5, lineHeight: 1.65 }}>
         <b>{tr('⚠️ ระบบ “เสนอ” เท่านั้น — คนเป็นคนตัดสิน')}</b><br />
-        ชื่ออย่าง <code>Welding</code> / <code>Tower load</code> / <code>MAGAZINE</code> แยกไม่ออกว่าเป็นจิ๊กหรือเครื่องจักร
-        ระบบจึงไม่เปลี่ยนให้เอง · ติ๊กเฉพาะตัวที่ช่างยืนยันว่าเป็นจิ๊ก/ฟิกเจอร์จริง
+        {tr("ชื่ออย่าง")} <code>Welding</code> / <code>Tower load</code> / <code>MAGAZINE</code> {tr("แยกไม่ออกว่าเป็นจิ๊กหรือเครื่องจักร ระบบจึงไม่เปลี่ยนให้เอง · ติ๊กเฉพาะตัวที่ช่างยืนยันว่าเป็นจิ๊ก/ฟิกเจอร์จริง")}
         <div style={{ marginTop: 6, color: 'var(--muted)' }}>
-          พบ <b>{cands.length}</b> รายการที่ยังเป็น “เครื่องจักร” แต่มีลักษณะของจิ๊ก ·
-          ตั้งชนิดถูกแล้วถึงจะลงทะเบียนจุดชิมได้
+          {tr("พบ")} <b>{cands.length}</b> {tr("รายการที่ยังเป็น “เครื่องจักร” แต่มีลักษณะของจิ๊ก · ตั้งชนิดถูกแล้วถึงจะลงทะเบียนจุดชิมได้")}
         </div>
       </div>
 

@@ -499,8 +499,7 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
 
         {profileMissing && (
           <div style={{ ...noteBox('#f59e0b'), marginBottom: 10 }}>
-            ⚠ ยังอ่านทะเบียนรูปแบบไฟล์ (<code>customer_pull_formats</code>) ไม่ได้ — ใช้ค่าสำรองของ Ford e-SMART ในโค้ดแทน ·
-            ถ้าไฟล์ลูกค้าเจ้าอื่นให้ apply migration <code>20260908_customer_pull_signals_esmart.sql</code> ก่อน
+            ⚠ {tr("ยังอ่านทะเบียนรูปแบบไฟล์")} (<code>customer_pull_formats</code>) {tr("ไม่ได้ — ใช้ค่าสำรองของ Ford e-SMART ในโค้ดแทน · ถ้าไฟล์ลูกค้าเจ้าอื่นให้")} apply migration <code>20260908_customer_pull_signals_esmart.sql</code> {tr("ก่อน")}
           </div>
         )}
 
@@ -551,7 +550,7 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
                 <div style={{ fontWeight: 800, marginBottom: 4 }}>{tr('ตรวจวันที่ให้แน่ก่อนยืนยัน')}</div>
                 <div style={{ fontSize: 12, marginBottom: 6 }}>
                   {tr("วันงานที่ระบบอ่านได้คือ")} <b>{workDate || '—'}</b> {tr('รอบส่ง')} <b>{shipTime || '—'}</b> —
-                  {tr("ถ้าไม่ตรงกับไฟล์ ให้แก้ 2 ช่องด้านบนก่อน")} · <b>วันที่ผิด = ใบไปโผล่ผิดวันและสต็อกถูกตัดซ้ำ</b>
+                  {tr("ถ้าไม่ตรงกับไฟล์ ให้แก้ 2 ช่องด้านบนก่อน")} · <b>{tr("วันที่ผิด = ใบไปโผล่ผิดวันและสต็อกถูกตัดซ้ำ")}</b>
                 </div>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                   <input type="checkbox" checked={dateAck} onChange={e => setDateAck(e.target.checked)} />
@@ -576,8 +575,7 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
                   </div>
                 ))}
                 <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 6, lineHeight: 1.6 }}>
-                  ยืนยันต่อได้ถ้าตั้งใจ (เช่นรอบก่อนล้มกลางทาง) — ระบบจะ<b>{tr('ไม่สร้างใบซ้ำ')}</b> เพราะเทียบกับของจริงก่อนเขียนเสมอ
-                  และมีด่านกันซ้ำที่ฐานข้อมูลอีกชั้น · ถ้าไม่มีอะไรต้องแก้จริง ระบบจะบอกว่า “นำเข้าไปแล้ว” แล้วปิดให้เอง
+                  {tr("ยืนยันต่อได้ถ้าตั้งใจ (เช่นรอบก่อนล้มกลางทาง) — ระบบจะ")}<b>{tr('ไม่สร้างใบซ้ำ')}</b> {tr("เพราะเทียบกับของจริงก่อนเขียนเสมอ และมีด่านกันซ้ำที่ฐานข้อมูลอีกชั้น · ถ้าไม่มีอะไรต้องแก้จริง ระบบจะบอกว่า “นำเข้าไปแล้ว” แล้วปิดให้เอง")}
                 </div>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 8, cursor: 'pointer', fontSize: 12, fontWeight: 800 }}>
                   <input type="checkbox" checked={dupAck} onChange={e => setDupAck(e.target.checked)} />
@@ -648,13 +646,12 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
 
             {!shipToMap?.[shipTo] && shipTo && (
               <div style={{ ...noteBox('#f59e0b'), marginBottom: 8 }}>
-                ⚠ <b>{shipTo}</b> ไม่มีในทะเบียน Ship-to — ชาร์ต/workflow ต่อลูกค้าจะไม่ครบ ตั้งได้ที่แท็บ ⚙️ Ship-to Config
+                ⚠ <b>{shipTo}</b> {tr("ไม่มีในทะเบียน Ship-to — ชาร์ต/workflow ต่อลูกค้าจะไม่ครบ ตั้งได้ที่แท็บ")} ⚙️ Ship-to Config
               </div>
             )}
             {shipTo && !scopedByCustomer && (
               <div style={{ ...noteBox('#f59e0b'), marginBottom: 8 }}>
-                ⚠ ยังไม่ได้ตั้ง “ชื่อลูกค้า” ให้ ship-to นี้ (หรือไม่มีสินค้าไหนใช้ชื่อนั้น) — เลขพาร์ทลูกค้า 1 ตัวชี้ได้หลาย MAT
-                จึงอาจ<b>{tr('จับคู่ไม่ได้')}</b> · ตั้งที่ ⚙️ Ship-to Config ให้ตรงกับช่อง “ลูกค้า” ใน Product Master
+                ⚠ {tr("ยังไม่ได้ตั้ง “ชื่อลูกค้า” ให้ ship-to นี้ (หรือไม่มีสินค้าไหนใช้ชื่อนั้น) — เลขพาร์ทลูกค้า 1 ตัวชี้ได้หลาย MAT จึงอาจ")}<b>{tr('จับคู่ไม่ได้')}</b> · {tr("ตั้งที่ ⚙️ Ship-to Config ให้ตรงกับช่อง “ลูกค้า” ใน")} Product Master
               </div>
             )}
             {ctxError && <div style={{ ...noteBox('#ef4444'), marginBottom: 8 }}>🔴 {ctxError}</div>}

@@ -239,7 +239,7 @@ export default function CapacityBoard({ role, scope, lines, months, calMap, dema
         <div style={card}>
           <div style={{ fontSize:14, fontWeight:800, marginBottom:4 }}>{tr('ทะเบียนรูปแบบกะ — เพดานกำลังผลิต')}</div>
           <div style={{ fontSize:11, color:'var(--muted)', lineHeight:1.65, marginBottom:10 }}>
-            {tr("ค่าเริ่มต้นถอดจากสไลด์")} <b>Capacity_TSATP.4_update_June_26</b> {tr('— ทุกไลน์ในสไลด์ใช้')} <b>2 shift = วันทำงาน × 15.5 ชม.</b> ⇒ 1 {tr("กะ = 7.75 ชม. (465 นาที")})
+            {tr("ค่าเริ่มต้นถอดจากสไลด์")} <b>Capacity_TSATP.4_update_June_26</b> {tr('— ทุกไลน์ในสไลด์ใช้')} <b>2 shift = {tr("วันทำงาน × 15.5 ชม.")}</b> ⇒ 1 {tr("กะ = 7.75 ชม. (465 นาที")})
             <br />
             ⚠️ {tr("ตัวเลขนี้")} <b>{tr('ตั้งใจให้ต่าง')}</b> {tr("จาก 490 นาที/กะ ที่แท็บรายวันใช้ (08:00–17:30 หักพัก 80 นาที) — 490 = เวลาเดินเครื่องได้ · 465 = เวลาที่ฝ่ายวางแผนใช้คิดเพดานรายเดือน")}
             <br />
@@ -247,7 +247,7 @@ export default function CapacityBoard({ role, scope, lines, months, calMap, dema
           </div>
           {patErr && (
             <div style={{ fontSize:12, color:'#f59e0b', marginBottom:8 }}>
-              ⚠️ อ่านทะเบียนจากฐานไม่ได้ — กำลังใช้ค่าเริ่มต้นในโค้ด (แก้แล้วจะบันทึกไม่ได้ · แจ้ง admin ว่ายังไม่ได้ apply migration 20260924_capacity_shift_patterns)
+              ⚠️ {tr("อ่านทะเบียนจากฐานไม่ได้ — กำลังใช้ค่าเริ่มต้นในโค้ด (แก้แล้วจะบันทึกไม่ได้ · แจ้ง admin ว่ายังไม่ได้")} apply migration 20260924_capacity_shift_patterns)
             </div>
           )}
           <div style={{ overflowX:'auto' }}>
@@ -391,9 +391,9 @@ export default function CapacityBoard({ role, scope, lines, months, calMap, dema
           </table>
         </div>
         <div style={{ fontSize:11, color:'var(--muted)', marginTop:8, lineHeight:1.7 }}>
-          🔴 <b>{tr('ActWorkload คิดจากเวลามาตรฐาน (ชิ้น × CT)')}</b> ไม่ใช่กำลังผลิตจริง — ถ้าใช้ของจริงแล้วหารด้วย OEE อีก จะคิด OEE ซ้ำสองรอบ
+          🔴 <b>{tr('ActWorkload คิดจากเวลามาตรฐาน (ชิ้น × CT)')}</b> {tr("ไม่ใช่กำลังผลิตจริง — ถ้าใช้ของจริงแล้วหารด้วย OEE อีก จะคิด OEE ซ้ำสองรอบ")}
           <br />
-          🔴 งานคู่ RH/LH ถูกยุบเป็น shot เดียวแล้ว (ปั๊มทีเดียวได้ 2 ชิ้น — บวกทั้งสองข้าง = ภาระ 2 เท่า)
+          🔴 {tr("งานคู่ RH/LH ถูกยุบเป็น shot เดียวแล้ว (ปั๊มทีเดียวได้ 2 ชิ้น — บวกทั้งสองข้าง = ภาระ 2 เท่า")})
         </div>
       </div>
 

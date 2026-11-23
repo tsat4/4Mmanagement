@@ -138,7 +138,7 @@ export default function ProgramUpdate() {
                       borderRadius: 'var(--r-md)', padding: '10px 14px', fontSize: 13, color: 'var(--text2)', lineHeight: 1.6 }}>
           ❌ <b>{trI18n('โหลดรายการอัพเดทไม่สำเร็จ')}</b> ({err}) — <b>{trI18n('ไม่ได้หมายความว่าไม่มีอัพเดท')}</b>
           <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-            ไฟล์ <code>changelog.json</code> ถูกสร้างตอน build — ถ้าเพิ่ง deploy ลองรีเฟรชอีกครั้ง
+            {trI18n("ไฟล์")} <code>changelog.json</code> {trI18n("ถูกสร้างตอน build — ถ้าเพิ่ง deploy ลองรีเฟรชอีกครั้ง")}
           </div>
         </div>
       )}

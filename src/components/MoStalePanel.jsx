@@ -112,9 +112,7 @@ export default function MoStalePanel({
     >
       {/* เกณฑ์การนับ — ต้องเขียนไว้ เพราะสรุปเช้า/Telegram นับจาก "วันแจ้ง" จึงได้เลขมากกว่าโดยเจตนา */}
       <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 7, lineHeight: 1.5 }}>
-        นับจาก<b> {tr('เวลาที่ใบเข้าขั้นปัจจุบัน')}</b> (ไม่ใช่วันแจ้ง) — ใบที่เพิ่งถูกเลื่อนขั้นจะเริ่มนับใหม่
-        · สรุปเช้า/Telegram นับจาก<b> {tr('วันแจ้ง')}</b> จึงได้ยอดมากกว่าปกติ
-        · นับ<b> {tr('ทุกใบที่ยังไม่ปิดในขอบเขตของคุณ')}</b> ไม่ขึ้นกับตัวกรองด้านบน
+        {tr("นับจาก")}<b> {tr('เวลาที่ใบเข้าขั้นปัจจุบัน')}</b> ({tr("ไม่ใช่วันแจ้ง) — ใบที่เพิ่งถูกเลื่อนขั้นจะเริ่มนับใหม่ · สรุปเช้า/Telegram นับจาก")}<b> {tr('วันแจ้ง')}</b> {tr("จึงได้ยอดมากกว่าปกติ · นับ")}<b> {tr('ทุกใบที่ยังไม่ปิดในขอบเขตของคุณ')}</b> {tr("ไม่ขึ้นกับตัวกรองด้านบน")}
       </div>
 
       {/* ── ความซื่อสัตย์ของจอ: ยอดนี้ครบหรือไม่ครบ ต้องรู้ก่อนอ่านเลข ── */}
@@ -125,7 +123,7 @@ export default function MoStalePanel({
       )}
       {partial && (
         <div style={{ fontSize: 11.5, color: 'var(--text2)', marginBottom: 6 }}>
-          ⚠️ ใบถูกตัดที่เพดานคิวรี — ใบที่เก่ากว่านั้นไม่ได้โหลดมา ยอดค้างจริงอาจมากกว่านี้
+          ⚠️ {tr("ใบถูกตัดที่เพดานคิวรี — ใบที่เก่ากว่านั้นไม่ได้โหลดมา ยอดค้างจริงอาจมากกว่านี้")}
         </div>
       )}
       {unknown > 0 && (
@@ -199,12 +197,12 @@ export default function MoStalePanel({
               {/* ❓ ใบที่นับวันไม่ได้ ไม่ได้อยู่ในแถบนี้เลย — ต้องเขียนบอก ไม่ใช่ปล่อยให้ยอดไม่ตรงกันเงียบๆ */}
               {chase.unknownAge > 0 && (
                 <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 5 }}>
-                  ❓ อีก <b>{chase.unknownAge} {tr('ใบ')}</b> ไม่มีวันเวลาให้นับ จึงยังไม่รู้ว่ารอใครนานแค่ไหน (ไม่อยู่ในแถบนี้)
+                  ❓ {tr("อีก")} <b>{chase.unknownAge} {tr('ใบ')}</b> {tr("ไม่มีวันเวลาให้นับ จึงยังไม่รู้ว่ารอใครนานแค่ไหน (ไม่อยู่ในแถบนี้")})
                 </div>
               )}
               {!side ? (
                 <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                  กดกองด้านบนเพื่อดูรายชื่อ “ต้องไปตามใคร” — เรียงใบที่ดองนานสุดขึ้นก่อน
+                  {tr("กดกองด้านบนเพื่อดูรายชื่อ “ต้องไปตามใคร” — เรียงใบที่ดองนานสุดขึ้นก่อน")}
                 </div>
               ) : (() => {
                 const sel = chase.sides.find(x => x.side === side);
@@ -295,20 +293,20 @@ export default function MoStalePanel({
         <div role="alert" style={{ marginTop: 10, fontSize: 12, fontWeight: 700,
           color: statusColor('bad'), background: 'var(--card-surf)',
           border: `1px solid ${statusColor('bad')}55`, borderRadius: 'var(--r-md)', padding: '7px 10px' }}>
-          ⚠️ อ่านโซ่การส่งต่อไม่สำเร็จ — ยังไม่รู้ว่ามีใบที่ส่งต่อแล้วปลายทางหายไปหรือเปล่า
+          ⚠️ {tr("อ่านโซ่การส่งต่อไม่สำเร็จ — ยังไม่รู้ว่ามีใบที่ส่งต่อแล้วปลายทางหายไปหรือเปล่า")}
           <div style={{ fontWeight: 400, color: 'var(--text2)', marginTop: 2 }}>{gapsErr}</div>
         </div>
       ) : gaps && gaps.total > 0 && (
         <div style={{ marginTop: 10, borderTop: '1px dashed var(--border2)', paddingTop: 9 }}>
           <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 6 }}>
-            🔗 ส่งต่อแล้วแต่ปลายทางไม่มีใครทำ · <b style={{ color: statusColor('bad') }}>{gaps.total} {tr('ใบ')}</b>
+            🔗 {tr("ส่งต่อแล้วแต่ปลายทางไม่มีใครทำ")} · <b style={{ color: statusColor('bad') }}>{gaps.total} {tr('ใบ')}</b>
             <div style={{ fontSize: 11.5, fontWeight: 400, color: 'var(--text2)', marginTop: 2 }}>
-              ใบต้นทางปิดไปแล้ว (ส่งต่อ = จบที่ทีมนั้น) — ใบพวกนี้<b>{tr('ไม่อยู่ในกองค้างข้างบน')}</b> และไม่อยู่ในคิวของใคร
+              {tr("ใบต้นทางปิดไปแล้ว (ส่งต่อ = จบที่ทีมนั้น) — ใบพวกนี้")}<b>{tr('ไม่อยู่ในกองค้างข้างบน')}</b> {tr("และไม่อยู่ในคิวของใคร")}
             </div>
           </div>
           {gapsCapped && (
             <div style={{ fontSize: 11.5, color: statusColor('warn'), fontWeight: 700, marginBottom: 5 }}>
-              ⚠️ โซ่ส่งต่อชนเพดานที่โหลด — อาจมีมากกว่าที่เห็น
+              ⚠️ {tr("โซ่ส่งต่อชนเพดานที่โหลด — อาจมีมากกว่าที่เห็น")}
             </div>
           )}
           <div style={{ display: 'grid', gap: 6, alignContent: 'start' }}>

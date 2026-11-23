@@ -1124,7 +1124,7 @@ export default function OrderTrace() {
             </div>
             {sum.capped && (
               <div style={{ marginTop: 8, fontSize: 11.5, color: 'var(--amber)' }}>
-                ⚠️ แสดง 300 ใบแรกเท่านั้น (มีมากกว่านี้) — แคบช่วงวันหรือระบุ MAT/PROD.NO ให้เจาะจงขึ้นเพื่อดูครบ
+                ⚠️ {trI18n("แสดง 300 ใบแรกเท่านั้น (มีมากกว่านี้) — แคบช่วงวันหรือระบุ MAT/PROD.NO ให้เจาะจงขึ้นเพื่อดูครบ")}
               </div>
             )}
           </div>
@@ -1233,7 +1233,7 @@ export default function OrderTrace() {
                   <div style={{ fontSize: 12.5, lineHeight: 1.7, color: 'var(--muted)' }}>
                     {trI18n("พาร์ทนี้")} <b style={{ color: 'var(--text2)' }}>{trI18n('ยังไม่มีเอกสาร PFMEA / Control Plan ในระบบ')}</b> —
                     {trI18n("จึงยังโฟกัสตามอาการไม่ได้ (ทั้งระบบลงไปแล้ว")} {trace.pe?.totalSets ?? 0} {trI18n("พาร์ท")})
-                    <div style={{ marginTop: 5 }}>{trI18n('ลงเอกสารได้ที่หน้า')} <b>คุณภาพ & วิศวกรรม → Flow / PFMEA / Control Plan</b></div>
+                    <div style={{ marginTop: 5 }}>{trI18n('ลงเอกสารได้ที่หน้า')} <b>{trI18n("คุณภาพ & วิศวกรรม")} → Flow / PFMEA / Control Plan</b></div>
                   </div>
                 ) : (
                   <>
@@ -1265,9 +1265,9 @@ export default function OrderTrace() {
                     ) : claim.notInFmea ? (
                       <div style={{ ...card, borderLeft: '4px solid var(--amber)', fontSize: 12.5, lineHeight: 1.7 }}>
                         <b style={{ color: 'var(--amber)' }}>{trI18n('อาการนี้ไม่มีใน PFMEA ของพาร์ทนี้เลย')}</b> —
-                        แปลว่า<b>{trI18n('ไม่เคยถูกคาดไว้ตอนออกแบบกระบวนการ')}</b>
+                        {trI18n("แปลว่า")}<b>{trI18n('ไม่เคยถูกคาดไว้ตอนออกแบบกระบวนการ')}</b>
                         <div style={{ color: 'var(--muted)', marginTop: 4 }}>
-                          นี่คือข้อสรุปที่ต้องเขียนใน 8D ขา Systemic (D7) อยู่แล้ว — และต้อง revise PFMEA เพิ่ม failure mode ใหม่
+                          {trI18n("นี่คือข้อสรุปที่ต้องเขียนใน 8D ขา Systemic (D7) อยู่แล้ว — และต้อง revise PFMEA เพิ่ม failure mode ใหม่")}
                         </div>
                       </div>
                     ) : (
@@ -1275,7 +1275,7 @@ export default function OrderTrace() {
                         {/* ── ขา 1 · Occurrence ── */}
                         <div style={{ ...card, borderLeft: '4px solid var(--red)' }}>
                           <div style={{ fontWeight: 800, fontSize: 13.5, marginBottom: 6 }}>
-                            🔴 ขา 1 · ทำไมถึงเกิด <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(8D · D4 Root Cause)</span>
+                            🔴 {trI18n("ขา 1 · ทำไมถึงเกิด")} <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(8D · D4 Root Cause)</span>
                           </div>
                           {claim.fm && (
                             <div style={{ fontSize: 12.5, lineHeight: 1.7, marginBottom: 6 }}>
@@ -1308,7 +1308,7 @@ export default function OrderTrace() {
                           )}
                           {claim.noPmMachines > 0 && (
                             <div style={{ marginTop: 6, fontSize: 12.5, color: 'var(--amber)' }}>
-                              เครื่องที่เกี่ยวข้อง <b>{claim.noPmMachines} {trI18n('ตัวยังไม่มีแผน PM')}</b> — ไม่มีการบำรุงรักษาเชิงป้องกันรองรับ
+                              {trI18n("เครื่องที่เกี่ยวข้อง")} <b>{claim.noPmMachines} {trI18n('ตัวยังไม่มีแผน PM')}</b> — {trI18n("ไม่มีการบำรุงรักษาเชิงป้องกันรองรับ")}
                             </div>
                           )}
                         </div>
@@ -1316,7 +1316,7 @@ export default function OrderTrace() {
                         {/* ── ขา 2 · Detection ── */}
                         <div style={{ ...card, borderLeft: '4px solid var(--amber)' }}>
                           <div style={{ fontWeight: 800, fontSize: 13.5, marginBottom: 6 }}>
-                            🟠 ขา 2 · ทำไมถึงหลุดรอด <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(8D · D4 Escape Point)</span>
+                            🟠 {trI18n("ขา 2 · ทำไมถึงหลุดรอด")} <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(8D · D4 Escape Point)</span>
                           </div>
                           {claim.fm?.detection_ctrl && (
                             <div style={{ fontSize: 12.5, lineHeight: 1.7, marginBottom: 5 }}>
@@ -1353,7 +1353,7 @@ export default function OrderTrace() {
                         {/* ── ขา 3 · Systemic ── */}
                         <div style={{ ...card, borderLeft: '4px solid var(--blue)' }}>
                           <div style={{ fontWeight: 800, fontSize: 13.5, marginBottom: 6 }}>
-                            🟣 ขา 3 · ทำไมระบบคุมไม่ได้ <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(8D · D7 Prevent Recurrence)</span>
+                            🟣 {trI18n("ขา 3 · ทำไมระบบคุมไม่ได้")} <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(8D · D7 Prevent Recurrence)</span>
                           </div>
                           <div style={{ display: 'grid', gap: 4, fontSize: 12.5, lineHeight: 1.65 }}>
                             {claim.rpn >= 100 && (
@@ -1379,8 +1379,8 @@ export default function OrderTrace() {
                         </div>
 
                         <div style={{ fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.6 }}>
-                          ⚠️ ระบบ<b>{trI18n('เสนอจุดที่ต้องสงสัย')}</b>จากการจับคู่ชิ้นส่วน/คำในอาการ —
-                          <b>{trI18n('ไม่ใช่การยืนยันสาเหตุ')}</b> คนยังต้องเป็นผู้ตัดสิน · หน้านี้ไม่บันทึกอะไรลงฐานข้อมูล
+                          ⚠️ {trI18n("ระบบ")}<b>{trI18n('เสนอจุดที่ต้องสงสัย')}</b>{trI18n("จากการจับคู่ชิ้นส่วน/คำในอาการ")} —
+                          <b>{trI18n('ไม่ใช่การยืนยันสาเหตุ')}</b> {trI18n("คนยังต้องเป็นผู้ตัดสิน · หน้านี้ไม่บันทึกอะไรลงฐานข้อมูล")}
                         </div>
                       </div>
                     )}
@@ -1460,7 +1460,7 @@ export default function OrderTrace() {
                       </div>
                       {!trace.people.length && <div style={{ color: 'var(--muted)', fontSize: 12 }}>{trI18n('ไม่พบข้อมูลเช็คชื่อของวันนั้น')}</div>}
                       <div style={{ marginTop: 8, fontSize: 11, color: 'var(--muted)' }}>
-                        ⚠️ Skill fit คิดจากคะแนนสกิล "ปัจจุบัน" เทียบเกณฑ์จุดงาน (ระบบไม่เก็บ history คะแนน ณ วันผลิต) · จุดที่เข้า = จากเช็คชื่อ/จัดกำลังคนวันนั้น
+                        ⚠️ Skill fit {trI18n("คิดจากคะแนนสกิล \"ปัจจุบัน\" เทียบเกณฑ์จุดงาน (ระบบไม่เก็บ history คะแนน ณ วันผลิต) · จุดที่เข้า = จากเช็คชื่อ/จัดกำลังคนวันนั้น")}
                       </div>
                     </>
                   );
@@ -1481,7 +1481,7 @@ export default function OrderTrace() {
                           {' '}({orderAnalysis.batchNeedFrom === 'ct' ? trI18n('จาก CT มาตรฐาน') : trI18n('จากอัตราจริงของกะ')}) → <b>{trI18n('ผลิตไม่ทันในช่วงนั้น')}</b></>
                       )}
                       {!orderAnalysis.batchNeedSec && <> {trI18n('(ยังไม่ตั้ง CT และไม่มีข้อมูลกะพอ — ใช้เกณฑ์สำรอง')} {FALLBACK_BATCH_SEC / 60} {trI18n("นาที")})</>}
-                      {' '}→ <b>เวลา "เปิด→ปิด" ของใบนี้ไม่ใช่เวลาผลิตจริงของใบเดียว</b> {trI18n('จึงคิด วิ/ชิ้น รายใบไม่ได้ · ใช้ตัวเลข')} <b>{trI18n('ระดับกลุ่ม')}</b> {trI18n("ด้านล่างแทน")}
+                      {' '}→ <b>{trI18n("เวลา \"เปิด→ปิด\" ของใบนี้ไม่ใช่เวลาผลิตจริงของใบเดียว")}</b> {trI18n('จึงคิด วิ/ชิ้น รายใบไม่ได้ · ใช้ตัวเลข')} <b>{trI18n('ระดับกลุ่ม')}</b> {trI18n("ด้านล่างแทน")}
                     </NoticeBar>
                   )}
 
@@ -1555,7 +1555,7 @@ export default function OrderTrace() {
                   {/* ระดับความแน่ชัด — ห้ามให้ "ผู้ต้องสงสัย" ดูเหมือนคำตอบ */}
                   {trace.equip.confirmedNo ? (
                     <NoticeBar tone="ok" style={{ marginBottom: 8 }}>
-                      ใบนี้ระบุเครื่องไว้ชัดเจน: <b>{trace.equip.confirmedNo}</b> — สอบกลับได้ถึงตัวเครื่อง
+                      {trI18n("ใบนี้ระบุเครื่องไว้ชัดเจน")}: <b>{trace.equip.confirmedNo}</b> — {trI18n("สอบกลับได้ถึงตัวเครื่อง")}
                     </NoticeBar>
                   ) : !trace.equip.isParallel ? (
                     /* ไลน์ไหลทีละชิ้น = งานผ่านทุกเครื่องตามลำดับ → ทุกตัว "ถูกใช้จริง" ไม่ใช่ผู้ต้องสงสัย */
@@ -1571,7 +1571,7 @@ export default function OrderTrace() {
                     <div style={{ fontSize: 12, marginBottom: 8, padding: '6px 10px', borderRadius: 'var(--r-md)', background: 'var(--amber-dim)', border: '1px solid var(--amber-line)' }}>
                       ⚠️ {trI18n("ไลน์นี้เป็น")} <b>{trI18n('เครื่องขนาน')}</b> {trI18n('(แต่ละใบวิ่งเครื่องเดียว) และ')} <b>{trI18n('ใบนี้ไม่ได้บันทึกว่าใช้เครื่องไหน')}</b> {trI18n('— รายการล่างจึงเป็น')} <b>{trI18n('ผู้ต้องสงสัย')}</b> {trI18n("ไม่ใช่ข้อสรุป")}
                       <div style={{ color: 'var(--muted)', marginTop: 3 }}>
-                        อยากสอบถึงตัวเครื่อง: เลือกเครื่องตอนเปิด Order — ใบที่เปิดหลังจากนั้นจะระบุเครื่องให้เอง
+                        {trI18n("อยากสอบถึงตัวเครื่อง: เลือกเครื่องตอนเปิด Order — ใบที่เปิดหลังจากนั้นจะระบุเครื่องให้เอง")}
                       </div>
                     </div>
                   )}
@@ -1596,13 +1596,13 @@ export default function OrderTrace() {
 
                   {trace.equip.partial && (
                     <NoticeBar tone="warn" style={{ marginBottom: 8 }}>
-                      โหลดประวัติได้ไม่ครบทุกรายการ — ช่องที่ขึ้นว่า "ไม่มีประวัติ" อาจเป็นเพราะดูไม่ครบ ไม่ใช่ว่าไม่มีจริง (ดู console หากต้องตรวจสอบ)
+                      {trI18n("โหลดประวัติได้ไม่ครบทุกรายการ — ช่องที่ขึ้นว่า \"ไม่มีประวัติ\" อาจเป็นเพราะดูไม่ครบ ไม่ใช่ว่าไม่มีจริง (ดู console หากต้องตรวจสอบ")})
                     </NoticeBar>
                   )}
 
                   {trace.equip.dieCount === 0 && (
                     <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 8 }}>
-                      ยังไม่มีจิ๊ก/แม่พิมพ์ตัวจริงลงทะเบียนในไลน์นี้ — ลงข้อมูลที่ PM Setup แล้วสอบกลับถึงตัวแม่พิมพ์ได้เหมือนเครื่องจักร
+                      {trI18n("ยังไม่มีจิ๊ก/แม่พิมพ์ตัวจริงลงทะเบียนในไลน์นี้ — ลงข้อมูลที่ PM Setup แล้วสอบกลับถึงตัวแม่พิมพ์ได้เหมือนเครื่องจักร")}
                     </div>
                   )}
 
@@ -1749,7 +1749,7 @@ export default function OrderTrace() {
                 ))}
                 {!trace.childLots.length && <div style={{ color: 'var(--muted)', fontSize: 12 }}>{trI18n('ไม่มีล็อตพาร์ทย่อยที่ trigger จากใบนี้')}</div>}
                 <div style={{ marginTop: 8, fontSize: 11, color: 'var(--muted)' }}>
-                  ⚠️ ขอบเขต: ล็อต child = ใบที่ "trigger" การผลิตพาร์ทย่อย (เชื่อมเชิงเวลา ไม่ใช่ identity รายชิ้น) · การเบิกวัตถุดิบสุดทางที่เลข MAT — ระบบยังไม่เก็บ lot no. ของ supplier
+                  ⚠️ {trI18n("ขอบเขต: ล็อต child = ใบที่ \"trigger\" การผลิตพาร์ทย่อย (เชื่อมเชิงเวลา ไม่ใช่ identity รายชิ้น) · การเบิกวัตถุดิบสุดทางที่เลข MAT — ระบบยังไม่เก็บ lot no. ของ")} supplier
                 </div>
               </CollapseCard>
 

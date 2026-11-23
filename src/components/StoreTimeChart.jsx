@@ -405,7 +405,7 @@ export default function StoreTimeChart({
   // ไม่มีทั้งรอบและ demand = วันนี้ผลิตยังไม่ต้องใช้ของ (ไม่ใช่ "ยังตั้งค่าไม่เสร็จ")
   if (!hasRoundMode && !onDemandLines.length) return (
     <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
-      วันงานนี้ยังไม่มีความต้องการพาร์ทจากไลน์ผลิต — เปิดใบผลิตแล้วระบบจะแตก BOM มาให้เอง
+      {tr("วันงานนี้ยังไม่มีความต้องการพาร์ทจากไลน์ผลิต — เปิดใบผลิตแล้วระบบจะแตก BOM มาให้เอง")}
     </div>
   );
 
@@ -445,7 +445,7 @@ export default function StoreTimeChart({
             {/* หัวชั่วโมง */}
             <div style={{ display: 'flex', borderBottom: '1px solid var(--border2)', background: 'var(--bg2)', position: 'relative' }}>
               <div style={{ width: leftW, flexShrink: 0, padding: '3px 10px', fontSize: 11, fontWeight: 700, color: 'var(--muted)', borderRight: '1px solid var(--border2)', ...(isMobile ? { position: 'sticky', left: 0, zIndex: 6, background: 'var(--bg2)' } : null) }}>
-                ไลน์ปลายทาง · คลิกชื่อเพื่อย่อ
+                {tr("ไลน์ปลายทาง · คลิกชื่อเพื่อย่อ")}
               </div>
               <div style={{ flex: 1, position: 'relative', height: 22 }}>
                 {hourMarks.map((m, i) => (i % 2 === 0 && (
@@ -618,8 +618,7 @@ export default function StoreTimeChart({
             </span>
           </div>
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 10 }}>
-            ไม่ได้นัดเวลาไว้ — เวลาบนไทม์ไลน์มาจาก <b>{tr('การคำนวณ')}</b>: หัก WIP ด้วยของที่ผลิตไปแล้ววันนี้
-            แล้วเดินเวลาด้วย cycle time ของใบที่ยังไม่ปิด → <b>{tr('ไลน์ไหนจะขาดของก่อน ไปส่งก่อน')}</b>
+            {tr("ไม่ได้นัดเวลาไว้ — เวลาบนไทม์ไลน์มาจาก")} <b>{tr('การคำนวณ')}</b>: {tr("หัก WIP ด้วยของที่ผลิตไปแล้ววันนี้ แล้วเดินเวลาด้วย cycle time ของใบที่ยังไม่ปิด")} → <b>{tr('ไลน์ไหนจะขาดของก่อน ไปส่งก่อน')}</b>
           </div>
 
           {/* 📥 โหมดมอง WIP=0 — ต้องบอกให้เห็นชัดทุกครั้งที่เปิด ห้ามให้ยอด gross ดูเหมือนยอดสุทธิ */}
@@ -629,12 +628,10 @@ export default function StoreTimeChart({
               <div style={{ flex: 1, minWidth: 240, fontSize: 11.5, color: 'var(--text2)', lineHeight: 1.55 }}>
                 <b style={{ color: '#f59e0b' }}>{assumedTotal} {tr('พาร์ทยังไม่เคยมีการจ่ายเข้าไลน์ในระบบ → คิดเป็น 0 แล้วส่งเต็มจำนวนตาม BOM')}</b>
                 <div style={{ color: 'var(--muted)', marginTop: 2 }}>
-                  ยอดที่เห็นเป็น <b>{tr('ยอดเต็ม ยังไม่หักของที่อาจมีอยู่ที่ไลน์แล้ว')}</b> ·
-                  เวลาที่พลอต = <b>{tr('เวลาที่ไลน์เริ่มต้องใช้ของชิ้นนั้น')}</b> (กำหนดส่ง) ไม่ใช่เวลาที่ของหมดจริง ·
-                  ลำดับส่งของยังถูกต้องตามคิวใบผลิต
+                  {tr("ยอดที่เห็นเป็น")} <b>{tr('ยอดเต็ม ยังไม่หักของที่อาจมีอยู่ที่ไลน์แล้ว')}</b> ·
+                  {tr("เวลาที่พลอต")} = <b>{tr('เวลาที่ไลน์เริ่มต้องใช้ของชิ้นนั้น')}</b> ({tr("กำหนดส่ง) ไม่ใช่เวลาที่ของหมดจริง · ลำดับส่งของยังถูกต้องตามคิวใบผลิต")}
                   <div style={{ marginTop: 2 }}>
-                    ส่งของแล้วบันทึกที่ <b>{tr('Line Stock → + จ่ายพาร์ทเข้าไลน์')}</b> — แถวยอดจะขึ้นเอง
-                    แล้วรอบหน้าระบบหักให้ พาร์ทนั้นจะเลิกขึ้น 📥
+                    {tr("ส่งของแล้วบันทึกที่")} <b>{tr('Line Stock → + จ่ายพาร์ทเข้าไลน์')}</b> — {tr("แถวยอดจะขึ้นเอง แล้วรอบหน้าระบบหักให้ พาร์ทนั้นจะเลิกขึ้น")} 📥
                   </div>
                 </div>
               </div>
@@ -649,7 +646,7 @@ export default function StoreTimeChart({
             <div style={{ ...card, background: 'var(--bg2)', padding: '8px 11px', marginBottom: 10,
               display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
               <span style={{ flex: 1, minWidth: 240, fontSize: 11.5, color: 'var(--muted)' }}>
-                ❔ <b>{unknownTotal} {tr('พาร์ท')}</b> ยังไม่มียอด WIP ที่ไลน์ → ถูกซ่อนอยู่ ไม่ขึ้นบนไทม์ไลน์
+                ❔ <b>{unknownTotal} {tr('พาร์ท')}</b> {tr("ยังไม่มียอด WIP ที่ไลน์ → ถูกซ่อนอยู่ ไม่ขึ้นบนไทม์ไลน์")}
               </span>
               <button onClick={toggleAssume} style={{ background: 'rgba(245,158,11,0.14)', border: '1px solid rgba(245,158,11,0.4)', borderRadius: 'var(--r-md)',
                 padding: '5px 10px', cursor: 'pointer', fontSize: 11, fontWeight: 800, color: '#f59e0b', fontFamily: 'var(--font-body)', whiteSpace: 'nowrap' }}>
@@ -664,7 +661,7 @@ export default function StoreTimeChart({
               <div style={isMobile ? { minWidth: 780 } : undefined}>
                 <div style={{ display: 'flex', borderBottom: '1px solid var(--border2)' }}>
                   <div style={{ width: leftW, flexShrink: 0, padding: '4px 8px', fontSize: 11, color: 'var(--muted)', fontWeight: 700, ...(isMobile ? { position: 'sticky', left: 0, zIndex: 6, background: 'var(--card)' } : null) }}>
-                    ไลน์ · จะขาดของเมื่อไหร่
+                    {tr("ไลน์ · จะขาดของเมื่อไหร่")}
                   </div>
                   <div style={{ flex: 1, position: 'relative', height: 20 }}>
                     {hourMarks.filter((_, i) => i % 2 === 0).map(m => (
@@ -764,7 +761,7 @@ export default function StoreTimeChart({
                 {selItems.length ? `☑ ${tr("เลือกแล้ว")} ${selItems.length} ${tr("รายการ")} · ${selItems.reduce((s, it) => s + it.qty, 0).toLocaleString()} ${tr("ชิ้น")}` : '① ติ๊กพาร์ทในรายการด้านล่าง → ② กดสร้างใบส่ง'}
               </span>
               <span style={{ fontSize: 12, color: 'var(--muted)', flex: '1 1 200px' }}>
-                ใบจะเข้า 🔄 คิวเติม WIP (คิวเดียวกับที่ไลน์เรียก) → กด "เริ่มเตรียม" สแกนพาร์ท+จำนวน (ตัดสต็อกให้เลย) → ถึงไลน์สแกนจุดส่ง → ผลิตยืนยันรับ
+                {tr("ใบจะเข้า 🔄 คิวเติม WIP (คิวเดียวกับที่ไลน์เรียก) → กด \"เริ่มเตรียม\" สแกนพาร์ท+จำนวน (ตัดสต็อกให้เลย) → ถึงไลน์สแกนจุดส่ง → ผลิตยืนยันรับ")}
               </span>
               {selItems.length > 0 && (
                 <button onClick={() => setSel({})} disabled={creating}
@@ -913,7 +910,7 @@ export default function StoreTimeChart({
       {/* ── การ์ดรายรอบ + walkback + ของที่ต้องเตรียม (โหมดรอบเท่านั้น) ── */}
       {!hasRoundMode ? null : cardsSorted.length === 0 ? (
         <div style={{ ...card, padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
-          ไม่มีรอบในตัวกรองนี้
+          {tr("ไม่มีรอบในตัวกรองนี้")}
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(290px, 100%), 1fr))', gap: 12 }}>

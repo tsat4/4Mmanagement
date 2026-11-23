@@ -191,7 +191,7 @@ export default function ParetoChart({
         {shown.some(r => r._cls === 'C') && <Key c={ABC_COLOR.C} t="C — หางยาว" />}
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
           <svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke={LINE_COLOR} strokeWidth="2" /></svg>
-          % สะสม (อ่านแกนขวา)
+          % {tr("สะสม (อ่านแกนขวา")})
         </span>
         {/* ⚠️ ข้อความนี้ต้องอยู่ **ในไฟล์นี้** เท่านั้น — หน้าแม่ไม่รู้ว่าตอนนี้กางหางยาวอยู่หรือย่ออยู่
             (เดิมอยู่ใน ParetoAbcChart แล้วเขียนว่า "แสดง 11 อันดับแรกจาก 46" ทั้งที่จอกางครบ 46 แท่งแล้ว) */}

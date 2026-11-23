@@ -41,7 +41,7 @@ function TimeInput24({ value = '', onChange, style = {} }) {
       <button type="button" title={tr('ใช้เวลาปัจจุบัน')}
         onClick={() => onChange?.({ target: { value: new Date().toTimeString().slice(0,5) } })}
         style={{ fontSize: 12, fontWeight: 700, padding: '5px 8px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-        ตอนนี้
+        {tr("ตอนนี้")}
       </button>
     </div>
   );
@@ -479,11 +479,11 @@ function CreateEventForm({ form, setForm, groupedEvents, lines, matrix, checkIte
 
         {!selectedEvent ? (
           <div style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--muted)', fontSize: 13 }}>
-            เลือก Event เพื่อดู Checklist
+            {tr("เลือก Event เพื่อดู")} Checklist
           </div>
         ) : Object.keys(checksByRole).length === 0 ? (
           <div style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--muted)', fontSize: 13 }}>
-            ไม่มี Checklist สำหรับ Event นี้
+            {tr("ไม่มี Checklist สำหรับ Event นี้")}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -1241,7 +1241,7 @@ function EventDetailModal({ log, matrix, checkItems, eventDefs, role: roleProp, 
         {/* Approval section */}
         <div style={{ marginBottom: 24 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12 }}>
-            ✅ การอนุมัติตาม Role
+            ✅ {tr("การอนุมัติตาม")} Role
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 10 }}>
             {approvals.map(appr => {

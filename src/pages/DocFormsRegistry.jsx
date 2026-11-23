@@ -261,7 +261,7 @@ export default function DocFormsRegistry() {
       )}
 
       <InfoMore label={tr('ฟอร์มใหม่เข้าทะเบียนยังไง')} size={11.5} style={{ marginTop: 10 }}>
-        💡 ฟอร์มใหม่จะถูกเพิ่มเข้าทะเบียนโดยทีมพัฒนาเมื่อสร้างฟอร์มในระบบ (คีย์อ้างอิงผูกกับโค้ด) — หน้านี้แก้ เลขฟอร์ม/Rev/Effective/ช่องลายเซ็น/หมายเหตุ ได้เอง
+        💡 {tr("ฟอร์มใหม่จะถูกเพิ่มเข้าทะเบียนโดยทีมพัฒนาเมื่อสร้างฟอร์มในระบบ (คีย์อ้างอิงผูกกับโค้ด) — หน้านี้แก้ เลขฟอร์ม/Rev/Effective/ช่องลายเซ็น/หมายเหตุ ได้เอง")}
       </InfoMore>
 
       {/* modal แก้ไข (มีฟอร์ม — ไม่ปิดจาก backdrop) */}
@@ -302,12 +302,12 @@ export default function DocFormsRegistry() {
                   <div style={lb}>{tr('ใช้งาน')}</div>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text)', cursor: 'pointer', paddingTop: 6 }}>
                     <input type="checkbox" checked={editing.is_active !== false} onChange={e => setF('is_active', e.target.checked)} style={{ width: 'auto' }} />
-                    เปิดใช้ (ปิด = ฟอร์มใช้ค่า default ในโค้ด)
+                    {tr("เปิดใช้ (ปิด = ฟอร์มใช้ค่า default ในโค้ด")})
                   </label>
                 </div>
               </div>
               <div>
-                <div style={lb}>ช่องลายเซ็นหัวเอกสาร (บรรทัดละช่อง — เว้นว่าง = ใช้ default ของฟอร์ม)</div>
+                <div style={lb}>{tr("ช่องลายเซ็นหัวเอกสาร (บรรทัดละช่อง — เว้นว่าง = ใช้ default ของฟอร์ม")})</div>
                 <textarea rows={3} value={editing._sigText} onChange={e => setF('_sigText', e.target.value)} placeholder={'ผู้จัดทำ\nระดับจัดการอนุมัติ\nผู้รับทราบ'} style={{ width: '100%', fontSize: 13 }} />
                 <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{tr('⚠️ จำนวนช่องต้องเท่าเดิมตาม layout ฟอร์ม (เปลี่ยนได้เฉพาะข้อความ)')}</div>
               </div>
@@ -331,7 +331,7 @@ export default function DocFormsRegistry() {
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10, marginTop: 4 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)' }}>
-                    ✍️ ชุดช่องลายเซ็นเฉพาะส่วนงาน <span style={{ color: 'var(--muted)', fontWeight: 400 }}>({scopes.length})</span>
+                    ✍️ {tr("ชุดช่องลายเซ็นเฉพาะส่วนงาน")} <span style={{ color: 'var(--muted)', fontWeight: 400 }}>({scopes.length})</span>
                   </div>
                   {canManage && (
                     <button onClick={() => openScope(editing, null)}
@@ -461,17 +461,17 @@ export default function DocFormsRegistry() {
                   </div>
                 ))}
                 <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3, lineHeight: 1.6 }}>
-                  ⚠️ จำนวนช่องล็อกตาม layout ฟอร์ม · ป้ายที่ไม่แก้ = ตามชุดกลาง (ชุดกลางเปลี่ยนแล้วตามเอง) · ชื่อที่กรอกจะพิมพ์ใต้เส้นลงชื่อ
+                  ⚠️ {tr("จำนวนช่องล็อกตาม layout ฟอร์ม · ป้ายที่ไม่แก้ = ตามชุดกลาง (ชุดกลางเปลี่ยนแล้วตามเอง) · ชื่อที่กรอกจะพิมพ์ใต้เส้นลงชื่อ")}
                 </div>
               </div>
               <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <div><div style={lb}>footer เฉพาะส่วนงาน (เว้นว่าง = ใช้ของกลาง)</div>
+                <div><div style={lb}>footer {tr("เฉพาะส่วนงาน (เว้นว่าง = ใช้ของกลาง")})</div>
                   <input type="text" value={scopeEdit.footer_note} onChange={e => setScopeEdit(v => ({ ...v, footer_note: e.target.value }))} style={{ width: '100%' }} /></div>
                 <div><div style={lb}>{tr('ผู้ออกเอกสารเฉพาะส่วนงาน')}</div>
                   <SearchSelect value={scopeEdit.issued_by || ''} placeholder={tr('— ใช้ของกลาง (พิมพ์ค้นหาชื่อ) —')}
                     options={profiles.map(p => ({ id: p.id, label: p.full_name }))} onChange={({ id }) => setScopeEdit(v => ({ ...v, issued_by: id }))} /></div>
               </div>
-              <div><div style={lb}>Legend เฉพาะส่วนงาน (เว้นว่าง = ใช้ของกลาง)</div>
+              <div><div style={lb}>Legend {tr("เฉพาะส่วนงาน (เว้นว่าง = ใช้ของกลาง")})</div>
                 <textarea rows={2} value={scopeEdit.legend} onChange={e => setScopeEdit(v => ({ ...v, legend: e.target.value }))} style={{ width: '100%', fontSize: 12.5 }} /></div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
                 <button onClick={() => setScopeEdit(null)} style={{ padding: '8px 16px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)', cursor: 'pointer', fontSize: 13 }}>{tr('ยกเลิก')}</button>

@@ -139,7 +139,7 @@ export default function StoreMonitor() {
       <FilterBar style={{ marginBottom: 14 }}>
         {/* 🔴 แถบกรองต้องเป็น **แถบเดียว** (UI-STANDARD §3.1) — เดิมชิปฝั่งขาเข้า-ขาออกเป็นแถวแยก
             เหนือแถบกรอง = ตัวกรอง 2 ชั้น · ย้ายเข้ามาเป็น child 20/10 (ต้นแบบ: /line-stock) */}
-        <SideFilterChips value={sideFilter} onChange={setSideFilter} counts={sideCounts} unit="เรื่อง" />
+        <SideFilterChips value={sideFilter} onChange={setSideFilter} counts={sideCounts} unit={tr("เรื่อง")} />
         {lines.length > 0 && (
           /* ไลน์ที่มีเรื่องเตือน — จัดลำดับชั้นตามผัง (แม่→ลูก) ส่วนคลังที่ไม่ใช่ไลน์ผลิตแยก optgroup
              scope ถูกกรองที่ `scoped` แล้ว จึงไม่ต้องส่ง role/sections ซ้ำ */
@@ -183,7 +183,7 @@ export default function StoreMonitor() {
         <div style={{ ...card, padding: 40, textAlign: 'center', color: 'var(--muted)' }}>{tr('กำลังโหลด...')}</div>
       ) : shown.length === 0 ? (
         <div style={{ ...card, padding: 40, textAlign: 'center', color: 'var(--green)', fontSize: 14, fontWeight: 700 }}>
-          ✅ ไม่พบความผิดปกติ — สต๊อกอยู่ในเกณฑ์ min/max และรอบส่งปกติ
+          ✅ {tr("ไม่พบความผิดปกติ — สต๊อกอยู่ในเกณฑ์ min/max และรอบส่งปกติ")}
         </div>
       ) : (
         <div style={partCardGrid()}>
@@ -211,8 +211,7 @@ export default function StoreMonitor() {
       )}
 
       <InfoMore label={tr('แหล่งข้อมูลและขอบเขต')} size={11.5} style={{ marginTop: 16 }}>
-        แหล่งข้อมูล: on-hand (line_stock_summary) เทียบ Min/Max (kanban_standards จาก 🎴 คำนวณ Kanban) · รอบส่ง (kanban_delivery_rounds/kanban_deliveries) · สั่งซื้อ (purchase_requests) ·
-        เคส "ผิดกล่อง/pattern/pallet" ในตาราง TPS 17 เคส ต้องมีการสแกนคัมบัง/leveling pattern ก่อน = เฟสถัดไป
+        {tr("แหล่งข้อมูล: on-hand (line_stock_summary) เทียบ Min/Max (kanban_standards จาก 🎴 คำนวณ Kanban) · รอบส่ง (kanban_delivery_rounds/kanban_deliveries) · สั่งซื้อ (purchase_requests) · เคส \"ผิดกล่อง/pattern/pallet\" ในตาราง TPS 17 เคส ต้องมีการสแกนคัมบัง/leveling pattern ก่อน = เฟสถัดไป")}
       </InfoMore>
     </Page>
   );

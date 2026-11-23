@@ -214,7 +214,7 @@ export default function StoreWaitCards({ data, navigate, big = 1 }) {
     )}
     {loaded && !reqErr && !req.cards.length && (
       <div style={{ ...card, textAlign: 'center', padding: 18, fontSize: 13 * big, fontWeight: 800, color: '#22c55e' }}>
-        ✅ ไม่มีไลน์ไหนเรียกของ
+        ✅ {tr("ไม่มีไลน์ไหนเรียกของ")}
       </div>
     )}
     {!loaded && <div style={{ ...card, color: 'var(--muted)', fontSize: 12.5 }}>{tr('กำลังโหลดคำขอจากไลน์…')}</div>}
@@ -314,7 +314,7 @@ export default function StoreWaitCards({ data, navigate, big = 1 }) {
     {/* ══ ④ สั่งซื้อค้าง — นับรวมอย่างเดียว ห้ามโชว์รายใบ ══ */}
     {poPending.length > 0 && (
       <div onClick={goQueue} style={{ ...card, cursor: 'pointer', fontSize: 11.5 * big, color: 'var(--muted)' }}>
-        สั่งซื้อค้าง (ยังไม่รับเข้า) <b style={{ color: 'var(--text)' }}>{poPending.length}</b> พาร์ท — ดูที่บอร์ดสโตร์ ›
+        {tr("สั่งซื้อค้าง (ยังไม่รับเข้า")}) <b style={{ color: 'var(--text)' }}>{poPending.length}</b> {tr("พาร์ท — ดูที่บอร์ดสโตร์")} ›
       </div>
     )}
   </>);

@@ -410,7 +410,7 @@ export default function ProductHistory() {
               </div>
               <div style={{ fontSize: 11.5, color: 'var(--text2)', marginTop: 3, lineHeight: 1.7 }}>
                 {trI18n("แยกเลขกันที่")} <b>{trI18n('ปลายทางที่ส่งลูกค้า')}</b> — {groupMats.filter(g => g.mat_no !== selMat.mat_no).map(g => g.mat_no).join(' · ')}
-                <br />{trI18n('ออเดอร์ลูกค้ามักถูกบันทึกใต้เลขเดียวของกลุ่ม →')} <b>ดูทีละตัวจะเห็นยอด "ขาด/เกิน" ที่ไม่ใช่ภาพจริง</b> {trI18n("กดปุ่ม 🔗 ด้านบนเพื่อดูรวม")}
+                <br />{trI18n('ออเดอร์ลูกค้ามักถูกบันทึกใต้เลขเดียวของกลุ่ม →')} <b>{trI18n("ดูทีละตัวจะเห็นยอด \"ขาด/เกิน\" ที่ไม่ใช่ภาพจริง")}</b> {trI18n("กดปุ่ม 🔗 ด้านบนเพื่อดูรวม")}
               </div>
             </div>
           )}
@@ -459,7 +459,7 @@ export default function ProductHistory() {
           {daily.length > 0 && (
             <CollapseCard id="daily" title={trI18n('ผลิตรายวัน')} count={`${daily.length} ${trI18n("วัน")}`}>
               {/* component กลาง — มีแกน Y + เส้น grid + ตัวเลขบนแท่ง (UI-CONVENTIONS §5.2) */}
-              <DailyBars height={150} unit=" ชิ้น"
+              <DailyBars height={150} unit={trI18n(" ชิ้น")}
                 data={daily.map(d => ({
                   key: d.d, label: fmtDate(d.d), empty: d.empty,
                   segs: [{ v: d.produced, color: 'var(--accent)', name: 'ผลิตดี' },
@@ -475,7 +475,7 @@ export default function ProductHistory() {
           <CollapseCard id="orders" title={trI18n('รายการใบผลิต')} count={`${dayGroups.length} ${trI18n("วัน")} · ${rows.length.toLocaleString()} ${trI18n("ใบ")}`}>
             {loading ? <div style={{ color: 'var(--muted)', fontSize: 12 }}>{trI18n('กำลังโหลด...')}</div> : rows.length === 0 ? <div style={{ color: 'var(--muted)', fontSize: 12 }}>{trI18n('ไม่มีการผลิตในช่วงนี้')}</div> : (
             <div style={{ overflowX: 'auto' }}>
-              <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 6 }}>คลิกวันเพื่อแตกราย "ไลน์·กะ" · คลิกกะเพื่อแตกรายใบ</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 6 }}>{trI18n("คลิกวันเพื่อแตกราย \"ไลน์·กะ\" · คลิกกะเพื่อแตกรายใบ")}</div>
               <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 760 }}>
                 <thead><tr>
                   <th style={th}>{trI18n('วัน → ไลน์·กะ → ใบ')}</th>
@@ -546,7 +546,7 @@ export default function ProductHistory() {
           <CollapseCard id="audit" title={trI18n('ประวัติการแก้ไขข้อมูลสินค้า (ใครแก้อะไรเมื่อไหร่)')} count={audit.length} defaultOpen={audit.length > 0}>
             {audit.length === 0 ? (
               <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-                ยังไม่มีประวัติ — ระบบ audit เริ่มเก็บหลัง apply migration <code>20260724_audit_log_dr.sql</code> (การแก้ไขก่อนหน้านั้นไม่ถูกบันทึก)
+                {trI18n("ยังไม่มีประวัติ — ระบบ audit เริ่มเก็บหลัง")} apply migration <code>20260724_audit_log_dr.sql</code> ({trI18n("การแก้ไขก่อนหน้านั้นไม่ถูกบันทึก")})
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

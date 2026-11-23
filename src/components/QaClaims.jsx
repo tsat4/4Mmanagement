@@ -201,7 +201,7 @@ export default function QaClaims({ lines = [], scopeNames = null, role, lineId, 
   if (missing) {
     return (
       <div style={{ padding: 22, textAlign: 'center', color: 'var(--muted)', fontSize: 13, border: '1px dashed var(--border2)', borderRadius: 'var(--r-lg)' }}>
-        ยังไม่ได้ติดตั้งทะเบียนเคลมลูกค้า — แจ้ง admin ให้ apply migration <b>20260817_qa_customer_claims</b>
+        {tr("ยังไม่ได้ติดตั้งทะเบียนเคลมลูกค้า — แจ้ง admin ให้")} apply migration <b>20260817_qa_customer_claims</b>
       </div>
     );
   }
@@ -241,7 +241,7 @@ export default function QaClaims({ lines = [], scopeNames = null, role, lineId, 
           </div>}
           {maybeIds.size > 0 && <div style={{ color: '#f59e0b', marginTop: sureIds.size ? 5 : 0 }}>
             ❓ <b>{tr('อาจซ้ำอีก')} {maybeIds.size} {tr('ใบ')}</b>
-            <span style={{ color: 'var(--text2)' }}> — พาร์ทเดิมและพูดถึงชิ้นส่วนเดียวกัน แต่ข้อความไม่ตรงพอจะฟันธง (เช่น "นัทไม่มี" กับ "นัทเชื่อมเยื้องศูนย์" คนละอาการ) <b>{tr('ต้องเปิดดูเอง')}</b></span>
+            <span style={{ color: 'var(--text2)' }}> — {tr("พาร์ทเดิมและพูดถึงชิ้นส่วนเดียวกัน แต่ข้อความไม่ตรงพอจะฟันธง (เช่น \"นัทไม่มี\" กับ \"นัทเชื่อมเยื้องศูนย์\" คนละอาการ")}) <b>{tr('ต้องเปิดดูเอง')}</b></span>
           </div>}
         </div>
       )}
@@ -325,7 +325,7 @@ function ClaimModal({ detail, setDetail, lines, role, lineId, sections, partOpts
               </div>
               {sure.length > 0 && (
                 <div style={{ color: '#f59e0b', marginTop: 5 }}>
-                  มาตรการจาก 8D ครั้งก่อน<b>{tr('ยังไม่ได้ผลจริง')}</b> — ทบทวนของเดิมก่อน อย่าเปิด 8D ใบใหม่ด้วยวิธีเดิม (IATF §10.2.3 effectiveness)
+                  {tr("มาตรการจาก 8D ครั้งก่อน")}<b>{tr('ยังไม่ได้ผลจริง')}</b> — {tr("ทบทวนของเดิมก่อน อย่าเปิด 8D ใบใหม่ด้วยวิธีเดิม")} (IATF §10.2.3 effectiveness)
                 </div>
               )}
             </div>

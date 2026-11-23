@@ -291,7 +291,7 @@ export default function DailyPM() {
       {tab === 'status' && (
         dashboard.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--muted)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-lg)' }}>
-            ยังไม่มีไลน์ที่ลงทะเบียนเครื่องตรวจ — ไปที่แท็บ “ลงทะเบียนเครื่องตรวจ” ก่อน
+            {tr("ยังไม่มีไลน์ที่ลงทะเบียนเครื่องตรวจ — ไปที่แท็บ “ลงทะเบียนเครื่องตรวจ” ก่อน")}
           </div>
         ) : (<>
           {/* แถบสรุปรวมทุกไลน์ — เรียงตามความเร่งด่วนเหมือนการ์ดด้านล่าง */}
@@ -434,7 +434,7 @@ export default function DailyPM() {
                       display: 'inline-block', marginTop: 10, fontSize: 12, fontWeight: 700, textDecoration: 'none',
                       padding: '6px 12px', borderRadius: 8, background: `${tint(meta.color, 'dim')}`, color: meta.color, border: `1px solid ${tint(meta.color, 'line')}`,
                     }}>
-                      📋 ไปตรวจเครื่องของไลน์นี้ →
+                      📋 {tr("ไปตรวจเครื่องของไลน์นี้")} →
                     </Link>
                   )}
                 </div>
@@ -505,7 +505,7 @@ export default function DailyPM() {
             </div>
           ) : Object.keys(jigsByLine).length === 0 ? (
             <div style={{ textAlign: 'center', padding: 40, color: 'var(--muted)' }}>
-              ยังไม่มีอุปกรณ์ในระบบ — เพิ่มได้ที่หน้า <Link to="/pm?tab=setup&dept=production" style={{ color: 'var(--accent)', fontWeight: 700 }}>{tr('ตั้งค่า PM → แท็บ ฝ่ายผลิต')}</Link>
+              {tr("ยังไม่มีอุปกรณ์ในระบบ — เพิ่มได้ที่หน้า")} <Link to="/pm?tab=setup&dept=production" style={{ color: 'var(--accent)', fontWeight: 700 }}>{tr('ตั้งค่า PM → แท็บ ฝ่ายผลิต')}</Link>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxHeight: 'calc(100vh - 300px)', overflowY: 'auto', paddingRight: 4 }}>

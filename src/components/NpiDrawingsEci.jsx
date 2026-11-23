@@ -267,7 +267,7 @@ export default function NpiDrawingsEci({ project, parts, partId, onPickPart, dra
             </Field>
             <Field label={tr('ลิงก์ภายนอก (PLM / แชร์ไดรฟ์)')}><input style={inp} value={dwModal.external_url || ''} onChange={e => setDwModal({ ...dwModal, external_url: e.target.value })} placeholder="https://…" /></Field>
           </div>
-          <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 8 }}>บันทึกเป็น "ร่าง" ก่อน · ผู้มีสิทธิ์ npi:approve กด ✅ ปล่อย เพื่อให้เป็น rev ปัจจุบัน</div>
+          <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 8 }}>{tr("บันทึกเป็น \"ร่าง\" ก่อน · ผู้มีสิทธิ์ npi:approve กด ✅ ปล่อย เพื่อให้เป็น rev ปัจจุบัน")}</div>
         </Modal>
       )}
 
@@ -302,7 +302,7 @@ export default function NpiDrawingsEci({ project, parts, partId, onPickPart, dra
           </div>
 
           <div style={{ marginTop: 12, border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 10 }}>
-            <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 6 }}>ผลกระทบ — ติ๊กแล้วต้องผูก "ของจริง" ก่อนปิดงาน</div>
+            <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 6 }}>{tr("ผลกระทบ — ติ๊กแล้วต้องผูก \"ของจริง\" ก่อนปิดงาน")}</div>
             <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, alignItems: 'start' }}>
               <Leg on={eciModal.affects_drawing} label={tr('แบบ/Drawing rev ใหม่')} onToggle={v => setEciModal({ ...eciModal, affects_drawing: v })}>
                 <select style={inp} value={eciModal.drawing_revision_id} onChange={e => setEciModal({ ...eciModal, drawing_revision_id: e.target.value })} disabled={!eciModal.affects_drawing}>

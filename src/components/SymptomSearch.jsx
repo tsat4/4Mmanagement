@@ -234,8 +234,7 @@ export default function SymptomSearch({ inScope, onOpenOrder, machine = null, on
         <div style={{ ...box, borderColor: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 13, fontWeight: 800 }}>{trI18n('เฉพาะเครื่อง')} <b style={{ fontSize: 15 }}>{machine}</b></span>
           <span style={{ fontSize: 11.5, color: 'var(--muted)', flex: '1 1 260px', lineHeight: 1.55 }}>
-            กด 🔎 ค้นหาได้เลยโดยไม่ต้องพิมพ์อาการ (= ทุกเหตุการณ์ของเครื่องนี้ในช่วงวัน) · พิมพ์อาการเพื่อแคบลง
-            · ของเสียเห็นเฉพาะใบที่ระบุเครื่องตอนเปิดใบ (ไลน์เครื่องขนาน) — ไลน์ไหลทีละชิ้นไม่ได้ผูกของเสียกับเครื่อง
+            {trI18n("กด 🔎 ค้นหาได้เลยโดยไม่ต้องพิมพ์อาการ (= ทุกเหตุการณ์ของเครื่องนี้ในช่วงวัน) · พิมพ์อาการเพื่อแคบลง · ของเสียเห็นเฉพาะใบที่ระบุเครื่องตอนเปิดใบ (ไลน์เครื่องขนาน) — ไลน์ไหลทีละชิ้นไม่ได้ผูกของเสียกับเครื่อง")}
           </span>
           {onClearMachine && (
             <button onClick={() => { onClearMachine(); setRes(null); }}
@@ -263,7 +262,7 @@ export default function SymptomSearch({ inScope, onOpenOrder, machine = null, on
         <div style={{ ...box, fontSize: 12.5, lineHeight: 1.7 }}>
           <b>{trI18n('ไม่พบรายการที่ตรงกับ “')}{res.term}”</b> {trI18n('ในช่วง')} {fmtDay(from)} – {fmtDay(to)}
           <div style={{ color: 'var(--muted)', marginTop: 6 }}>
-            ⚠️ <b>{trI18n('ไม่เจอ ≠ ไม่เคยเกิด')}</b> — อาจเกิดจริงแต่ถูกบันทึกด้วยคำอื่น หรือลงเป็นประเภทกว้างๆ โดยไม่ได้กรอกรายละเอียด
+            ⚠️ <b>{trI18n('ไม่เจอ ≠ ไม่เคยเกิด')}</b> — {trI18n("อาจเกิดจริงแต่ถูกบันทึกด้วยคำอื่น หรือลงเป็นประเภทกว้างๆ โดยไม่ได้กรอกรายละเอียด")}
             <div style={{ marginTop: 4 }}>{trI18n('ลอง: ใช้คำสั้นลง (เช่น “ตัดไม่ขาด” → “ตัดไม่”) · ขยายช่วงวัน · ลองคำที่หน้างานใช้จริง')}</div>
           </div>
         </div>
@@ -294,7 +293,7 @@ export default function SymptomSearch({ inScope, onOpenOrder, machine = null, on
                 ))}
               </div>
               <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 6 }}>
-                ใช้เป็นคำค้นรอบหน้าได้ — สำนวนที่ต่างกันมากอาจหลุดจากผลค้นครั้งนี้
+                {trI18n("ใช้เป็นคำค้นรอบหน้าได้ — สำนวนที่ต่างกันมากอาจหลุดจากผลค้นครั้งนี้")}
               </div>
             </div>
           )}

@@ -1019,7 +1019,7 @@ function LadderTab({ c, navigate, isMobile }) {
       <div style={{ ...cardSt, borderLeft: '4px solid var(--red)' }}>
         <div style={{ fontSize: 14.5, fontWeight: 700, marginBottom: 3 }}>{tr('ข้อมูลชิ้นไหนปลดล็อกได้เยอะที่สุด')}</div>
         <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 10 }}>
-          นับจากสายข้อมูลของทุกคำถาม — ชิ้นที่ยังไม่มี และถูกใช้ในหลายคำถามที่สุด ควรทำก่อน
+          {tr("นับจากสายข้อมูลของทุกคำถาม — ชิ้นที่ยังไม่มี และถูกใช้ในหลายคำถามที่สุด ควรทำก่อน")}
         </div>
         {(() => {
           const tally = {};
@@ -1086,7 +1086,7 @@ function DeptTab({ c, navigate, isMobile }) {
           })}
         </div>
         <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 9 }}>
-          % = ค่าเฉลี่ยของตัวชี้วัดที่มีตัวหารชัดเจนในแผนกนั้น · <b>{tr('วัดความครบของข้อมูล ไม่ได้วัดคุณภาพของข้อมูล')}</b>
+          % = {tr("ค่าเฉลี่ยของตัวชี้วัดที่มีตัวหารชัดเจนในแผนกนั้น")} · <b>{tr('วัดความครบของข้อมูล ไม่ได้วัดคุณภาพของข้อมูล')}</b>
         </div>
       </div>
 
@@ -1162,10 +1162,10 @@ function RoiTab({ c, loss, rates, demoOn, day, navigate, isMobile }) {
           {WINDOW_DAYS} {tr('วันล่าสุด (')}{loss.from} → {loss.to}) · {fmtNum(loss.sessWin)} {tr("กะ")}
         </div>
         <div style={{ display: 'grid', gap: 9, gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(auto-fit, minmax(min(190px,100%),1fr))', alignContent: 'start' }}>
-          <Fact label={tr('เครื่องหยุด นอกแผน')} value={fmtNum(dtHours)} unit="ชม." sub={`${fmtNum(loss.unplannedMin)} ${tr("นาที")}`} />
-          <Fact label={tr('หยุดตามแผน')} value={fmtNum(loss.plannedMin / 60)} unit="ชม." sub={tr('ไม่นับเป็นความสูญเสีย')} />
-          <Fact label={tr('ของเสีย + สงสัย')} value={fmtNum(loss.ngQty)} unit="ชิ้น" sub={`${tr("จาก")} ${fmtNum(c.sessWithNg)} ${tr("กะที่มีการบันทึก")}`} />
-          <Fact label={tr('ใบซ่อมที่เปิดตามมา')} value={fmtNum(c.mo)} unit="ใบ" sub={tr('ทั้งระบบตั้งแต่เริ่มใช้')} />
+          <Fact label={tr('เครื่องหยุด นอกแผน')} value={fmtNum(dtHours)} unit={tr("ชม.")} sub={`${fmtNum(loss.unplannedMin)} ${tr("นาที")}`} />
+          <Fact label={tr('หยุดตามแผน')} value={fmtNum(loss.plannedMin / 60)} unit={tr("ชม.")} sub={tr('ไม่นับเป็นความสูญเสีย')} />
+          <Fact label={tr('ของเสีย + สงสัย')} value={fmtNum(loss.ngQty)} unit={tr("ชิ้น")} sub={`${tr("จาก")} ${fmtNum(c.sessWithNg)} ${tr("กะที่มีการบันทึก")}`} />
+          <Fact label={tr('ใบซ่อมที่เปิดตามมา')} value={fmtNum(c.mo)} unit={tr("ใบ")} sub={tr('ทั้งระบบตั้งแต่เริ่มใช้')} />
         </div>
       </div>
 
@@ -1205,8 +1205,8 @@ function RoiTab({ c, loss, rates, demoOn, day, navigate, isMobile }) {
       <div style={{ ...cardSt, borderLeft: '4px solid var(--accent)' }}>
         <div style={{ fontSize: 14.5, fontWeight: 700, marginBottom: 10 }}>{tr('③ เป็นเงินเท่าไหร่')}</div>
         <div style={{ display: 'grid', gap: 9, gridTemplateColumns: isMobile ? 'minmax(0, 1fr)' : 'repeat(auto-fit, minmax(min(210px,100%),1fr))', alignContent: 'start' }}>
-          <Fact label={`${tr("มูลค่าเวลาที่หยุดนอกแผน")} / ${WINDOW_DAYS} ${tr("วัน")}`} value={fmtBaht(dtBaht)} unit="บาท" sub={`${fmtNum(dtHours)} ${tr("ชม.")} × ${fmtNum(rate)} ${tr("บาท")}`} />
-          <Fact label={`${tr("ถ้าลดได้")} ${cut}%`} value={fmtBaht(cutBaht)} unit="บาท/เดือน" sub={`≈ ${fmtBaht(cutBaht * 12)} ${tr("บาท/ปี")}`} />
+          <Fact label={`${tr("มูลค่าเวลาที่หยุดนอกแผน")} / ${WINDOW_DAYS} ${tr("วัน")}`} value={fmtBaht(dtBaht)} unit={tr("บาท")} sub={`${fmtNum(dtHours)} ${tr("ชม.")} × ${fmtNum(rate)} ${tr("บาท")}`} />
+          <Fact label={`${tr("ถ้าลดได้")} ${cut}%`} value={fmtBaht(cutBaht)} unit={tr("บาท/เดือน")} sub={`≈ ${fmtBaht(cutBaht * 12)} ${tr("บาท/ปี")}`} />
           {/* โหมดสาธิต: สมมติต้นทุน/ชิ้น เพื่อให้เห็นว่าช่องนี้จะตอบอะไรเมื่อกรอกต้นทุนแล้ว */}
           {noNgCost && demoOn ? (
             <div style={{ background: 'var(--blue-dim)', border: '1px dashed var(--blue)', borderRadius: 'var(--r-md)', padding: '10px 12px' }}>
@@ -1238,7 +1238,7 @@ function RoiTab({ c, loss, rates, demoOn, day, navigate, isMobile }) {
       <div style={{ ...cardSt, borderLeft: '4px solid var(--red)' }}>
         <div style={{ fontSize: 14.5, fontWeight: 700, marginBottom: 3 }}>{tr('④ ทำไมวันนี้ยังไม่ได้เงินก้อนนี้')}</div>
         <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 10 }}>
-          ระบบ<b style={{ color: 'var(--text)' }}>{tr('วัดความสูญเสียได้แล้ว')}</b> แต่ขั้นตอนที่จะแปลงเป็นการแก้จริงยังขาด
+          {tr("ระบบ")}<b style={{ color: 'var(--text)' }}>{tr('วัดความสูญเสียได้แล้ว')}</b> {tr("แต่ขั้นตอนที่จะแปลงเป็นการแก้จริงยังขาด")}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
           {[
@@ -1472,8 +1472,8 @@ function DeepDiveTab({ dd, err, demoOn, navigate, isMobile }) {
           fontSize: 11.5, lineHeight: 1.6, color: 'var(--text2)', background: 'var(--bg3)',
           borderRadius: 'var(--r-md)', padding: '8px 10px', marginBottom: 10,
         }}>
-          ✅ จัดกลุ่มจาก<b>{tr('ค่าที่หัวหน้าตั้งไว้เองใน master')}</b> (ประเภท Downtime → 6 Big Losses)
-          <b> {tr('ไม่ใช่การเดาจากข้อความ')}</b> — แก้การจัดหมวดได้ที่ Daily Report → ⚙️ ตั้งค่า
+          ✅ {tr("จัดกลุ่มจาก")}<b>{tr('ค่าที่หัวหน้าตั้งไว้เองใน master')}</b> ({tr("ประเภท")} Downtime → 6 Big Losses)
+          <b> {tr('ไม่ใช่การเดาจากข้อความ')}</b> — {tr("แก้การจัดหมวดได้ที่ Daily Report → ⚙️ ตั้งค่า")}
         </div>
 
         <div style={gcol(isMobile ? 1 : 2)}>
@@ -1529,8 +1529,7 @@ function DeepDiveTab({ dd, err, demoOn, navigate, isMobile }) {
             marginTop: 9, fontSize: 12.5, lineHeight: 1.6, background: 'rgba(245,154,63,.09)',
             border: '1px solid var(--accent2)', borderRadius: 'var(--r-md)', padding: '8px 10px',
           }}>
-            🔗 <b>{tr('ต่อกลับชั้นที่ 1 ได้ทันที')}</b> — A ที่ตกไป อธิบายได้ด้วยเครื่องเสีย + ตั้งเครื่อง
-            รวม <b>{fmtNum(aMin)} {tr('นาที')}</b> · ส่วน P กับ Q มีก้อนของตัวเองแยกกันชัดเจน
+            🔗 <b>{tr('ต่อกลับชั้นที่ 1 ได้ทันที')}</b> — A {tr("ที่ตกไป อธิบายได้ด้วยเครื่องเสีย + ตั้งเครื่อง รวม")} <b>{fmtNum(aMin)} {tr('นาที')}</b> · {tr("ส่วน P กับ Q มีก้อนของตัวเองแยกกันชัดเจน")}
           </div>
         )}
 
@@ -1542,8 +1541,7 @@ function DeepDiveTab({ dd, err, demoOn, navigate, isMobile }) {
           }}>
             🔎 <b>{m} {tr('เสีย')} {n} {tr('ครั้งในกะเดียว')}</b> {tr('— คนละอาการกัน (')}{machRows.filter(d => d.machine_no === m).map(d => d.description?.trim() || d.dt_type).join(' / ')})
             <div style={{ color: 'var(--muted)', marginTop: 3 }}>
-              เสียหลายจุดในกะเดียว = มักเป็นเรื่องสภาพเครื่องโดยรวม ไม่ใช่อุบัติเหตุรายครั้ง —
-              นี่คือจุดที่ควรถามต่อว่า “เคยคาดไว้ใน FMEA มั้ย”
+              {tr("เสียหลายจุดในกะเดียว = มักเป็นเรื่องสภาพเครื่องโดยรวม ไม่ใช่อุบัติเหตุรายครั้ง — นี่คือจุดที่ควรถามต่อว่า “เคยคาดไว้ใน FMEA มั้ย")}”
             </div>
           </div>
         ))}
@@ -1583,8 +1581,7 @@ function DeepDiveTab({ dd, err, demoOn, navigate, isMobile }) {
               {tr("ฝั่งของเสีย")}: “{(f.description || f.def_type || '').trim()}” ({fmtNum(f.qty)} {tr("ชิ้น")})
             </div>
             <div style={{ color: 'var(--muted)', marginTop: 3 }}>
-              จับคู่จาก<b>{tr('ข้อความที่พนักงานพิมพ์')}</b> ไม่ใช่ความสัมพันธ์ที่ระบบยืนยัน — แต่ถ้าจริง
-              แปลว่า A กับ Q ของกะนี้มี<b>{tr('ต้นเหตุเดียวกัน')}</b> แก้จุดเดียวได้ทั้งสองฝั่ง
+              {tr("จับคู่จาก")}<b>{tr('ข้อความที่พนักงานพิมพ์')}</b> {tr("ไม่ใช่ความสัมพันธ์ที่ระบบยืนยัน — แต่ถ้าจริง แปลว่า A กับ Q ของกะนี้มี")}<b>{tr('ต้นเหตุเดียวกัน')}</b> {tr("แก้จุดเดียวได้ทั้งสองฝั่ง")}
             </div>
           </div>
         ))}
@@ -1603,7 +1600,7 @@ function DeepDiveTab({ dd, err, demoOn, navigate, isMobile }) {
             </div>
           ) : (
             <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.6 }}>
-              ไม่มีการบันทึก 4M ของไลน์นี้ในวันนั้น — <b>{tr('ไม่ได้แปลว่าไม่มีอะไรเปลี่ยน')}</b> อาจแปลว่ายังไม่ได้ลงบันทึก
+              {tr("ไม่มีการบันทึก 4M ของไลน์นี้ในวันนั้น")} — <b>{tr('ไม่ได้แปลว่าไม่มีอะไรเปลี่ยน')}</b> {tr("อาจแปลว่ายังไม่ได้ลงบันทึก")}
             </div>
           )}
         </div>
@@ -1630,8 +1627,7 @@ function DeepDiveTab({ dd, err, demoOn, navigate, isMobile }) {
           <div style={{
             ...cardSt, background: 'var(--bg3)', borderLeft: '4px solid var(--amber)', marginBottom: 10, fontSize: 12.5, lineHeight: 1.7,
           }}>
-            <b style={{ color: 'var(--amber)' }}>{tr('พาร์ทที่ผลิตในกะนี้ยังไม่มีชุดเอกสาร')}</b> — จึงยังย้อนกลับไปถามไม่ได้ว่า
-            อาการที่เกิดวันนี้ <b>{tr('เคยถูกคาดไว้ตอนออกแบบกระบวนการหรือเปล่า')}</b>
+            <b style={{ color: 'var(--amber)' }}>{tr('พาร์ทที่ผลิตในกะนี้ยังไม่มีชุดเอกสาร')}</b> — {tr("จึงยังย้อนกลับไปถามไม่ได้ว่า อาการที่เกิดวันนี้")} <b>{tr('เคยถูกคาดไว้ตอนออกแบบกระบวนการหรือเปล่า')}</b>
             <div style={{ marginTop: 6, color: 'var(--muted)' }}>
               {tr("โมดูล")} Flow / PFMEA / Control Plan <b>{tr('มีหน้าจอให้กรอกแล้ว')}</b> {tr('และตอนนี้ลงไปแล้ว')} {fmtNum(dd.pe.totalSets)} {tr("พาร์ท — ยังไม่ครอบคลุมพาร์ทนี้ · ตราบใดที่ยังไม่ลง เราจะ")}<b>{tr('วัดความสูญเสียได้ละเอียด แต่เทียบกลับไปที่เจตนาการออกแบบไม่ได้')}</b>
               {tr("คือตอบไม่ได้ว่า “เคยรู้อยู่แล้วแต่ปล่อย” หรือ “ไม่เคยคิดถึงเลย")}”
@@ -1687,8 +1683,7 @@ function DeepDiveTab({ dd, err, demoOn, navigate, isMobile }) {
 
         {demoOn && !peReady && (
           <div style={{ marginTop: 10, fontSize: 12, color: 'var(--muted)', lineHeight: 1.6 }}>
-            ทั้ง 3 การ์ดข้างบนเป็น<b>{tr('ตัวอย่างคำตอบ')}</b> — ชื่อเครื่อง/อาการ/ประเภทของเสีย
-            เป็นของจริงจากกะนี้ แต่ค่า S-O-D · RPN · ความถี่ใน Control Plan เป็น<b>{tr('ตัวเลขสมมติ')}</b>
+            {tr("ทั้ง 3 การ์ดข้างบนเป็น")}<b>{tr('ตัวอย่างคำตอบ')}</b> — {tr("ชื่อเครื่อง/อาการ/ประเภทของเสีย เป็นของจริงจากกะนี้ แต่ค่า S-O-D · RPN · ความถี่ใน Control Plan เป็น")}<b>{tr('ตัวเลขสมมติ')}</b>
           </div>
         )}
       </div>
@@ -1703,10 +1698,10 @@ function DeepDiveTab({ dd, err, demoOn, navigate, isMobile }) {
           </div>
           {ngTotal > 0 && <div><b>{tr('ฝั่งคุณภาพ:')}</b> {tr('ของเสีย')} {fmtNum(ngTotal)} {tr('ชิ้น —')} {dd.def.map(f => f.def_type).join(' · ')}</div>}
           <div style={{ color: 'var(--muted)' }}>
-            ทั้งหมดข้างบนนี้ระบบ<b>{tr('ตอบได้แล้ววันนี้')}</b> จากข้อมูลที่หน้างานกรอกเองทุกกะ
+            {tr("ทั้งหมดข้างบนนี้ระบบ")}<b>{tr('ตอบได้แล้ววันนี้')}</b> {tr("จากข้อมูลที่หน้างานกรอกเองทุกกะ")}
           </div>
           <div style={{ borderTop: '1px solid var(--border)', paddingTop: 7 }}>
-            <b>{tr('ที่ยังตอบไม่ได้')}</b> คือชั้น 3 — ต้องมี 2 อย่าง:
+            <b>{tr('ที่ยังตอบไม่ได้')}</b> {tr("คือชั้น 3 — ต้องมี 2 อย่าง")}:
             <div style={{ marginTop: 4, display: 'grid', gap: 3, color: 'var(--text2)' }}>
               <div>{tr('① เพิ่ม')}<b>{tr('ช่อง 4M ที่ประเภท Downtime')}</b> {tr('เพื่อเลิกเดาจากข้อความ (แก้ที่ Daily Report → ⚙️ ตั้งค่า)')}</div>
               <div>
@@ -1805,15 +1800,12 @@ export default function AdoptionOutlook() {
       <div style={{
         ...cardSt, borderLeft: '4px solid var(--accent2)', marginBottom: 12, fontSize: 12.5, lineHeight: 1.65,
       }}>
-        <b>{tr('คำถามของหน้านี้:')}</b> เมื่อทุกแผนกใช้ระบบจริงและข้อมูลมองเห็นกันหมด —
-        เราจะ<b>{tr('ตอบคำถามอะไรได้บ้างที่วันนี้ตอบไม่ได้')}</b> (สอบกลับ · คุมคุณภาพ · เห็นเครื่องเบี่ยงเบน ·
-        รู้ผลกระทบต่อการจัดส่ง · พยากรณ์ข้ามแผนก · prescriptive maintenance)
+        <b>{tr('คำถามของหน้านี้:')}</b> {tr("เมื่อทุกแผนกใช้ระบบจริงและข้อมูลมองเห็นกันหมด — เราจะ")}<b>{tr('ตอบคำถามอะไรได้บ้างที่วันนี้ตอบไม่ได้')}</b> ({tr("สอบกลับ · คุมคุณภาพ · เห็นเครื่องเบี่ยงเบน · รู้ผลกระทบต่อการจัดส่ง · พยากรณ์ข้ามแผนก")} · prescriptive maintenance)
         <div style={{ marginTop: 6 }}>
-          ป้าย <Badge tone="real">{tr('วัดจริง')}</Badge> = นับสดจากฐานข้อมูลตอนเปิดหน้า ·
-          ป้าย <Badge tone="guess">{tr('คาดการณ์')}</Badge> = สิ่งที่<b>{tr('ยังไม่เกิด')}</b> จะเป็นไปได้เมื่อข้อมูลครบ
+          {tr("ป้าย")} <Badge tone="real">{tr('วัดจริง')}</Badge> = {tr("นับสดจากฐานข้อมูลตอนเปิดหน้า · ป้าย")} <Badge tone="guess">{tr('คาดการณ์')}</Badge> = {tr("สิ่งที่")}<b>{tr('ยังไม่เกิด')}</b> {tr("จะเป็นไปได้เมื่อข้อมูลครบ")}
         </div>
         <div style={{ marginTop: 6, color: 'var(--muted)' }}>
-          หน้านี้อ่านอย่างเดียว ไม่แก้ไขข้อมูลใดๆ · ทุกปุ่มคือทางลัดไปหน้าที่ทำงานจริง ·
+          {tr("หน้านี้อ่านอย่างเดียว ไม่แก้ไขข้อมูลใดๆ · ทุกปุ่มคือทางลัดไปหน้าที่ทำงานจริง")} ·
           <b> {tr('ทุกความสามารถในหน้านี้ใช้ข้อมูลที่ระบบเก็บอยู่แล้ว ไม่ต้องซื้อระบบเพิ่ม')}</b>
         </div>
       </div>
@@ -1824,8 +1816,8 @@ export default function AdoptionOutlook() {
           ...cardSt, borderLeft: '4px solid var(--blue)', background: 'var(--blue-dim)',
           marginBottom: 12, fontSize: 12.5, lineHeight: 1.6,
         }}>
-          <b style={{ color: 'var(--blue)' }}>{tr('โหมดสาธิตเปิดอยู่')}</b> — ส่วนที่ข้อมูลจริงยังไม่มี ถูกเติมด้วย
-          <b> {tr('ตัวเลขจำลอง')}</b> เพื่อให้เห็นว่า “หน้าตาคำตอบ” เป็นยังไงเมื่อทุกแผนกใช้ครบ
+          <b style={{ color: 'var(--blue)' }}>{tr('โหมดสาธิตเปิดอยู่')}</b> — {tr("ส่วนที่ข้อมูลจริงยังไม่มี ถูกเติมด้วย")}
+          <b> {tr('ตัวเลขจำลอง')}</b> {tr("เพื่อให้เห็นว่า “หน้าตาคำตอบ” เป็นยังไงเมื่อทุกแผนกใช้ครบ")}
           <div style={{ marginTop: 5, color: 'var(--muted)' }}>
             {tr("ชื่อไลน์ · เครื่องจักร · สินค้า · ลูกค้า")} = <b>{tr('ของจริงจากฐานข้อมูล')}</b> ·
             {tr("ตัวเลขทั้งหมด")} = <b>{tr('สมมติ')}</b> ({tr("นิ่งไม่ดิ้นตอนรีเฟรช เพื่อให้สาธิตซ้ำได้เหมือนเดิม) · ชิปสีม่วง 🧪 = จุดข้อมูลที่ยังไม่มีจริง")} · <b>{tr('ปิดโหมดนี้เพื่อกลับไปดูสถานะจริง')}</b>

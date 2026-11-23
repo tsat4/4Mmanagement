@@ -246,13 +246,13 @@ export default function LineWipPanel({ lineName, workDate, lines = [] }) {
           )}
           {partial && !err && (
             <div style={{ fontSize: 11, color: TONE.warn, marginBottom: 8 }}>
-              ⚠️ โหลดได้ไม่ครบทุกแถว — ตัวเลขอาจต่ำกว่าความจริง ลองรีเฟรช
+              ⚠️ {tr("โหลดได้ไม่ครบทุกแถว — ตัวเลขอาจต่ำกว่าความจริง ลองรีเฟรช")}
             </div>
           )}
 
           {!firstIssueDate ? (
             <div style={{ ...card, background: 'var(--bg2)', padding: '10px 12px', fontSize: 11.5, color: 'var(--muted)', marginBottom: 10 }}>
-              📭 <b>ไลน์นี้ยังไม่เคยมีบันทึก "จ่ายพาร์ทเข้าไลน์" ในระบบเลย</b> — ตอบไม่ได้ว่าค้างอยู่เท่าไหร่
+              📭 <b>{tr("ไลน์นี้ยังไม่เคยมีบันทึก \"จ่ายพาร์ทเข้าไลน์\" ในระบบเลย")}</b> — {tr("ตอบไม่ได้ว่าค้างอยู่เท่าไหร่")}
               <div style={{ marginTop: 2 }}>
                 {tr("ตัวเลข \"ตัดเป็น FG\" ด้านล่างคำนวณจากใบผลิตได้ตามปกติ · ให้สโตร์บันทึกที่")}{' '}
                 <Link to="/line-stock" style={{ color: 'var(--accent)', fontWeight: 700 }}>{tr('📦 Line Stock → + จ่ายพาร์ทเข้าไลน์')}</Link>{' '}
@@ -261,7 +261,7 @@ export default function LineWipPanel({ lineName, workDate, lines = [] }) {
             </div>
           ) : (
             <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8 }}>
-              ยอดสะสมนับตั้งแต่ <b>{firstIssueDate}</b> (วันแรกที่สโตร์เริ่มบันทึกการจ่ายเข้าไลน์นี้)
+              {tr("ยอดสะสมนับตั้งแต่")} <b>{firstIssueDate}</b> ({tr("วันแรกที่สโตร์เริ่มบันทึกการจ่ายเข้าไลน์นี้")})
             </div>
           )}
 
@@ -269,7 +269,7 @@ export default function LineWipPanel({ lineName, workDate, lines = [] }) {
               นี่คือคำอธิบายว่าทำไมยอดค้างของไลน์ถึงน้อย/ติดลบ ทั้งที่สโตร์จ่ายมาแล้ว */}
           {SHOW_UP && stuckUp.length > 0 && (
             <div style={{ ...card, borderColor: 'rgba(245,158,11,0.4)', background: 'rgba(245,158,11,0.07)', padding: '9px 12px', marginBottom: 10, fontSize: 11.5, color: 'var(--text2)' }}>
-              🔀 <b style={{ color: TONE.warn }}>{tr('มีของค้างอยู่ที่ไลน์แม่')} {stuckUp.length} {tr('พาร์ท')}</b> — ยังไม่ถูกย้ายลงมาที่ไลน์นี้ จึงไม่นับรวมด้านล่าง
+              🔀 <b style={{ color: TONE.warn }}>{tr('มีของค้างอยู่ที่ไลน์แม่')} {stuckUp.length} {tr('พาร์ท')}</b> — {tr("ยังไม่ถูกย้ายลงมาที่ไลน์นี้ จึงไม่นับรวมด้านล่าง")}
               <div style={{ marginTop: 4, display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                 {stuckUp.slice(0, 8).map(s => (
                   <span key={s.mat_no} style={{ padding: '2px 8px', borderRadius: 'var(--r-md)', background: 'var(--bg3-surf)', border: '1px solid var(--border2)', fontSize: 11 }}>
@@ -367,10 +367,9 @@ export default function LineWipPanel({ lineName, workDate, lines = [] }) {
           )}
 
           <div style={{ marginTop: 8, fontSize: 11, color: 'var(--muted)', lineHeight: 1.5 }}>
-            📥 <b>{tr('รับเข้า')}</b> = บันทึกจริงจากสโตร์ (issue + ปรับยอด − คืน) ·
-            🏭 <b>{tr('ตัดเป็น FG')}</b> = <b>{tr('คำนวณ')}</b> จากยอดผลิต × BOM (ไม่ได้อ่านยอดตัดสต็อก เพราะ backflush ยังไม่ทำงาน) ·
-            📦 <b>{tr('ค้าง')}</b> = รับเข้า − ตัดเป็น FG ·
-            📭 = ไลน์ใช้ของแล้วแต่ไม่มีบันทึกรับเข้า (สโตร์ยังไม่ได้ลงระบบ ไม่ใช่ของหมด)
+            📥 <b>{tr('รับเข้า')}</b> = {tr("บันทึกจริงจากสโตร์ (issue + ปรับยอด − คืน")}) ·
+            🏭 <b>{tr('ตัดเป็น FG')}</b> = <b>{tr('คำนวณ')}</b> {tr("จากยอดผลิต × BOM (ไม่ได้อ่านยอดตัดสต็อก เพราะ backflush ยังไม่ทำงาน")}) ·
+            📦 <b>{tr('ค้าง')}</b> = {tr("รับเข้า − ตัดเป็น FG · 📭 = ไลน์ใช้ของแล้วแต่ไม่มีบันทึกรับเข้า (สโตร์ยังไม่ได้ลงระบบ ไม่ใช่ของหมด")})
           </div>
         </div>
       )}

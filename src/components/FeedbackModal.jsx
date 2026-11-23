@@ -306,7 +306,7 @@ export default function FeedbackModal({ onClose }) {
         <div style={{ padding: 18, overflowY: 'auto', flex: 1 }}>
           {notReady && (
             <div style={{ fontSize: 12, color: '#f59e0b', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 'var(--r-md)', padding: '8px 10px', marginBottom: 12 }}>
-              ⚠ ยังใช้งานไม่ได้ — ยังไม่ได้ apply migration <code>20260814_user_feedback.sql</code> (แจ้ง admin)
+              ⚠ {tr("ยังใช้งานไม่ได้ — ยังไม่ได้")} apply migration <code>20260814_user_feedback.sql</code> ({tr("แจ้ง")} admin)
             </div>
           )}
 

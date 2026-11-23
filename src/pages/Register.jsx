@@ -238,7 +238,7 @@ export default function Register({ embedded = false, onSaved }) {
               </select>
               {isOrphanSec && (
                 <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4, lineHeight: 1.4 }}>
-                  หน่วยงานขึ้นตรงฝ่าย — ไม่มี Section · Group/Line เว้นว่างได้
+                  {tr("หน่วยงานขึ้นตรงฝ่าย — ไม่มี Section · Group/Line เว้นว่างได้")}
                 </div>
               )}
               {/* 🔴 เลือก Section แล้วแต่ dropdown แผนกว่าง = ส่วนงานนั้นยังไม่มีแผนกในผังองค์กร
@@ -246,7 +246,7 @@ export default function Register({ embedded = false, onSaved }) {
                   เดิมปล่อยว่างเงียบ → คนกรอกนึกว่าระบบพัง ต้องบอกว่าติดตรงไหนและไปแก้ที่ไหน */}
               {!isOrphanSec && section && deptOpts.length === 0 && (
                 <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 4, lineHeight: 1.5 }}>
-                  ⚠️ ส่วนงาน <b>{section}</b> ยังไม่มีแผนกในผังองค์กร — เลือกแผนกไม่ได้จนกว่าจะเพิ่มก่อน
+                  ⚠️ {tr("ส่วนงาน")} <b>{section}</b> {tr("ยังไม่มีแผนกในผังองค์กร — เลือกแผนกไม่ได้จนกว่าจะเพิ่มก่อน")}
                   <div style={{ color: 'var(--muted)' }}>{tr('เพิ่มที่')} <b>{tr('ตั้งค่า → ผังองค์กร (/org-setup)')}</b></div>
                 </div>
               )}
@@ -271,7 +271,7 @@ export default function Register({ embedded = false, onSaved }) {
             <label style={labelSt}>{tr('Group / กลุ่ม (Line)')}</label>
             {isSupportKind ? (
               <div style={{ fontSize: 12, color: 'var(--muted)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: '8px 10px', lineHeight: 1.5 }}>
-                สายสนับสนุนไม่ผูกกลุ่ม/ไลน์ผลิต — สังกัดอยู่ที่ <b>{tr('ส่วนงาน + แผนก')}</b> ข้างบนแทน
+                {tr("สายสนับสนุนไม่ผูกกลุ่ม/ไลน์ผลิต — สังกัดอยู่ที่")} <b>{tr('ส่วนงาน + แผนก')}</b> {tr("ข้างบนแทน")}
               </div>
             ) : (() => {
               // cascade Section→แผนก→กลุ่ม (UI-CONVENTIONS §5.3): กลุ่มจากผังองค์กร (org_nodes kind='line') ใต้แผนกที่เลือก

@@ -935,7 +935,7 @@ ${printImgs.map((f, i) => attachData[i] ? `<div style="page-break-before:always;
       {!editing[sigKey] && editing[nameKey] && (isSelfName(editing[nameKey], fullName)
         ? (mySigOjt
             ? <button onClick={() => setEditing(prev => ({ ...prev, [sigKey]: mySigOjt }))} style={{ marginTop: 4, padding: '3px 9px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)', cursor: 'pointer', fontSize: 11 }}>✍️ {tr("เซ็นเป็น")}{label}</button>
-            : <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 3 }}>โปรไฟล์ของคุณยังไม่มีลายเซ็น — อัปโหลดที่เมนูโปรไฟล์ก่อน</div>)
+            : <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 3 }}>{tr("โปรไฟล์ของคุณยังไม่มีลายเซ็น — อัปโหลดที่เมนูโปรไฟล์ก่อน")}</div>)
         : <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 3 }}>{tr("รอ")} {editing[nameKey]} login {tr("มาเซ็นเอง")}</div>)}
     </div>
   );
@@ -970,8 +970,8 @@ ${printImgs.map((f, i) => attachData[i] ? `<div style="page-break-before:always;
 
       {filesOff && (
         <div style={{ background: 'var(--amber-dim)', border: '1px solid var(--amber-line)', color: 'var(--amber)', borderRadius: 'var(--r-md)', padding: '8px 12px', fontSize: 12.5, fontWeight: 700, marginBottom: 10 }}>
-          ไฟล์แนบยังใช้ไม่ได้ — ตาราง <code>ojt_training_files</code> ยังไม่มีในฐานข้อมูล (ยังไม่ได้รัน migration
-          <code> 20261101_ojt_attachments_main.sql</code>) · ใบอบรม/รายชื่อ/ลายเซ็น/พิมพ์ PDF ใช้ได้ปกติทุกอย่าง
+          {tr("ไฟล์แนบยังใช้ไม่ได้ — ตาราง")} <code>ojt_training_files</code> {tr("ยังไม่มีในฐานข้อมูล (ยังไม่ได้รัน")} migration
+          <code> 20261101_ojt_attachments_main.sql</code>) · {tr("ใบอบรม/รายชื่อ/ลายเซ็น/พิมพ์ PDF ใช้ได้ปกติทุกอย่าง")}
           <div style={{ fontWeight: 400, fontSize: 11.5, marginTop: 2 }}>{tr('รายละเอียด:')} {filesOff}</div>
         </div>
       )}
@@ -1021,7 +1021,7 @@ ${printImgs.map((f, i) => attachData[i] ? `<div style="page-break-before:always;
                 </tr>
               ))}
               {visibleTrainings.length === 0 && (
-                <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--muted)', padding: 30, fontSize: 13 }}>ยังไม่มีใบอบรม — กด "➕ สร้างใบอบรม" เพื่อเริ่ม</td></tr>
+                <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--muted)', padding: 30, fontSize: 13 }}>{tr("ยังไม่มีใบอบรม — กด \"➕ สร้างใบอบรม\" เพื่อเริ่ม")}</td></tr>
               )}
             </tbody>
           </table>
@@ -1191,7 +1191,7 @@ ${printImgs.map((f, i) => attachData[i] ? `<div style="page-break-before:always;
                         {tr("เซ็นแล้ว")} {signed}/{total}{signed < total ? ` · ${tr("ยังขาด")} ${total - signed}` : ' ✔ ครบแล้ว'}
                       </span>
                       <span style={{ fontSize: 11, color: 'var(--muted)' }}>
-                        เซ็นจนครบแล้วค่อยปล่อยเน็ตทีเดียว — เซ็นกลางคันแล้วปิดก็เก็บเท่าที่เซ็นไป
+                        {tr("เซ็นจนครบแล้วค่อยปล่อยเน็ตทีเดียว — เซ็นกลางคันแล้วปิดก็เก็บเท่าที่เซ็นไป")}
                       </span>
                     </div>
                   );

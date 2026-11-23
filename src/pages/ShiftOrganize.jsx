@@ -499,8 +499,7 @@ export default function ShiftOrganize() {
         <div style={{ background: 'var(--amber-dim)', border: '1px solid var(--amber)', borderRadius: 'var(--r-md)', padding: '10px 12px', marginBottom: 14, fontSize: 12.5, lineHeight: 1.65 }}>
           🏢 <b>{tr('บัญชีนี้แก้ได้เฉพาะตาราง “หน่วยงานสนับสนุน”')}</b>{myUnit ? <> {tr('— เฉพาะหน่วยงาน')} <b>{mySection}</b></> : ''} ({tr("ตารางล่าง) — ตารางกะไลน์ผลิตด้านบนดูได้อย่างเดียว")}
           <div style={{ color: 'var(--text2)', marginTop: 3 }}>
-            {!myUnit && <>ยังไม่ได้ตั้ง “หน่วยงาน” ให้บัญชีนี้ → แก้ได้ทุกหน่วยงานที่เห็น ·
-              ถ้าต้องการจำกัดเฉพาะหน่วยงานตัวเอง ให้ admin ตั้งช่องส่วนงานที่ <b>/add-user</b><br /></>}
+            {!myUnit && <>{tr("ยังไม่ได้ตั้ง “หน่วยงาน” ให้บัญชีนี้ → แก้ได้ทุกหน่วยงานที่เห็น · ถ้าต้องการจำกัดเฉพาะหน่วยงานตัวเอง ให้ admin ตั้งช่องส่วนงานที่")} <b>/add-user</b><br /></>}
             {tr("ถ้าต้องแก้กะไลน์ผลิต/override รายคน/ยุบกะด้วย ให้ admin เปิดสิทธิ์")}{' '}
             <code>shift_schedule:edit</code> {tr('ให้ role')} <b>{roleLabel(role)}</b> {tr("เพิ่ม")}
           </div>
@@ -668,8 +667,8 @@ export default function ShiftOrganize() {
       {canEdit && (
         <InfoMore size={11} style={{ marginBottom: 24, padding: '0 4px' }} id="so_help"
           lead={<>{tr('กด ⇄ สลับ แล้วกด 💾 บันทึก — มีผลทุกวันในสัปดาห์ (จันทร์–อาทิตย์)')}</>}>
-          <b>{tr('ตั้งกะที่ไลน์แม่แล้วไลน์ลูกวิ่งตามอัตโนมัติ')}</b> (↳ ตามไลน์แม่)
-          <br />สลับกะที่ไลน์ลูกเอง = ✎ แก้เอง (ไม่ตามแม่แล้ว) · กด "↳ ตามแม่" เพื่อกลับไปตามไลน์แม่
+          <b>{tr('ตั้งกะที่ไลน์แม่แล้วไลน์ลูกวิ่งตามอัตโนมัติ')}</b> (↳ {tr("ตามไลน์แม่")})
+          <br />{tr("สลับกะที่ไลน์ลูกเอง = ✎ แก้เอง (ไม่ตามแม่แล้ว) · กด \"↳ ตามแม่\" เพื่อกลับไปตามไลน์แม่")}
         </InfoMore>
       )}
 
@@ -708,7 +707,7 @@ export default function ShiftOrganize() {
                         {d.inOrg === undefined && (
                           <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: 'var(--amber)' }}
                             title={tr('ชื่อแผนกนี้ไม่มีในผังองค์กร — พนักงานกรอกไว้เอง (ตั้งกะได้ปกติ แต่ควรจัดให้ตรงผังที่ /org-setup)')}>
-                            ⚠ นอกผัง
+                            ⚠ {tr("นอกผัง")}
                           </span>
                         )}
                         {d.orphan && <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--muted)' }} title={tr('แผนกขึ้นตรงฝ่าย ไม่สังกัดส่วนงานผลิต')}>{tr('ขึ้นตรงฝ่าย')}</span>}
@@ -743,7 +742,7 @@ export default function ShiftOrganize() {
                           {!canEditDeptRow(d) ? (
                             <span style={{ fontSize: 11, color: 'var(--muted)' }}
                               title={`${tr("หน่วยงานนี้ไม่ใช่ของคุณ — บัญชีนี้ตั้งหน่วยงานไว้เป็น")} "${mySection}"`}>
-                              ของหน่วยงานอื่น
+                              {tr("ของหน่วยงานอื่น")}
                             </span>
                           ) : (
                           <button onClick={() => toggleDept(d.name)}
@@ -813,7 +812,7 @@ export default function ShiftOrganize() {
             {overrides.length === 0 && (
               <tr>
                 <td colSpan={canEdit ? 6 : 5} style={{ textAlign: 'center', color: 'var(--muted)', padding: 24, fontSize: 13 }}>
-                  ไม่มีรายการพิเศษในสัปดาห์นี้
+                  {tr("ไม่มีรายการพิเศษในสัปดาห์นี้")}
                 </td>
               </tr>
             )}
@@ -873,7 +872,7 @@ export default function ShiftOrganize() {
             {visibleMergeEvents.length === 0 && (
               <tr>
                 <td colSpan={canEdit ? 6 : 5} style={{ textAlign: 'center', color: 'var(--muted)', padding: 24, fontSize: 13 }}>
-                  ไม่มีเหตุการณ์ยุบกะที่ใช้งานอยู่
+                  {tr("ไม่มีเหตุการณ์ยุบกะที่ใช้งานอยู่")}
                 </td>
               </tr>
             )}
@@ -914,7 +913,7 @@ export default function ShiftOrganize() {
         </table>
       </div>
       <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 24, padding: '0 4px' }}>
-        เหตุการณ์ยุบกะจะ override ตาราง A/B ปกติ แต่ shift override รายบุคคลจะยังมีสิทธิ์สูงสุด
+        {tr("เหตุการณ์ยุบกะจะ override ตาราง A/B ปกติ แต่ shift override รายบุคคลจะยังมีสิทธิ์สูงสุด")}
       </div>
 
       {/* Merge Event Modal */}

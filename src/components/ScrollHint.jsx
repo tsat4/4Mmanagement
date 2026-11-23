@@ -102,7 +102,7 @@ export default function ScrollHint() {
         color: 'var(--text)', background: 'var(--bg3-surf)',
         border: '1px solid var(--border2)', boxShadow: 'var(--shadow-float)',
       }}>
-      เลื่อนลงดูต่อ <span style={{ fontSize: 14, lineHeight: 1 }}>▾</span>
+      {tr("เลื่อนลงดูต่อ")} <span style={{ fontSize: 14, lineHeight: 1 }}>▾</span>
     </button>
   );
 }

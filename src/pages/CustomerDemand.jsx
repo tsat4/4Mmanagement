@@ -653,7 +653,7 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
         <button onClick={() => shiftDay(1)} style={{ ...btn(false), width: 'auto', flexShrink: 0 }}>▶</button>
         {!isToday && <button onClick={() => setDay(workDateStr())} style={{ ...btn(true), width: 'auto', flexShrink: 0 }}>{tr('วันนี้')}</button>}
         <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)', border: '1px solid var(--border)', color: 'var(--muted)', flexShrink: 0 }}>
-          วันงาน 08:00 → 08:00
+          {tr("วันงาน")} 08:00 → 08:00
         </span>
         <span style={{ width: 1, height: 22, background: 'var(--border)', flexShrink: 0 }} />
         <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 700 }}>
@@ -682,7 +682,7 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
           <button onClick={() => { setAddForm({ ...emptyAdd, due_date: day >= workDateStr() ? day : workDateStr() }); setShowAdd(true); }}
             title={tr('ลูกค้าสั่งเพิ่มนอกไฟล์ EDI (สั่งด่วน/โทรสั่ง) — คีย์เข้าระบบได้ทันที ไม่ต้องรออัพโหลด 862')}
             style={{ padding: '4px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--accent)', background: 'var(--accent)', color: 'var(--accent-ink)', fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: 'var(--font-body)', flexShrink: 0 }}>
-            เพิ่ม order ด่วน
+            {tr("เพิ่ม order ด่วน")}
           </button>
         )}
       </FilterBar>
@@ -711,8 +711,7 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
             </div>
             <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.6 }}>
-                สำหรับ order ที่ลูกค้าสั่งเพิ่มนอกไฟล์ EDI — ใบนี้จะเข้าชาร์ต/walkback/หัก stock เหมือน order ปกติ
-                และ<strong>{tr('ไม่ถูกแทนที่')}</strong>ตอนอัพโหลด 862 รอบถัดไป (แทนที่เฉพาะใบจาก EDI)
+                {tr("สำหรับ order ที่ลูกค้าสั่งเพิ่มนอกไฟล์ EDI — ใบนี้จะเข้าชาร์ต/walkback/หัก stock เหมือน order ปกติ และ")}<strong>{tr('ไม่ถูกแทนที่')}</strong>{tr("ตอนอัพโหลด 862 รอบถัดไป (แทนที่เฉพาะใบจาก")} EDI)
               </div>
               <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11, fontWeight: 700, color: 'var(--muted)' }}>{tr('ลูกค้า (Ship-to)')}
@@ -743,7 +742,7 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
                     <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--amber)' }}>{tr('รอบกะดึก → ส่งจริง')} {shipDueDate(addForm.due_date, addForm.ship_time)} {addForm.ship_time}</span>
                   )}
                 </label>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11, fontWeight: 700, color: 'var(--muted)' }}>รอบเวลาส่ง (เว้นว่าง = ⏳ ไม่ระบุ)
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11, fontWeight: 700, color: 'var(--muted)' }}>{tr("รอบเวลาส่ง (เว้นว่าง = ⏳ ไม่ระบุ")})
                   <input type="time" value={addForm.ship_time} onChange={e => setAddForm(f => ({ ...f, ship_time: e.target.value }))} style={inputSt} />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11, fontWeight: 700, color: 'var(--muted)' }}>{tr('เลขที่ PO')}
@@ -1196,13 +1195,11 @@ function WorkflowSection({ canEdit }) {
     <div style={{ ...card, marginTop: 16 }}>
       <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)', marginBottom: 4, fontFamily: 'var(--font-display)' }}>{tr('Standard Workflow การส่งงาน (walkback)')}</div>
       <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>
-        นับถอยหลังจาก<strong>{tr('เวลาส่งถึงลูกค้า')}</strong> — แต่ละเฟสต้องถึงสถานะที่กำหนดก่อน deadline (เวลาส่ง − นาที walkback)
-        ระบบสแกนทุก 10 นาที เฟสไหนหลุดจะแจ้งเข้า Smart Logistic ทันที ไม่ต้องรอตก due ลูกค้า
-        · เพิ่ม/ลดจำนวนเฟสได้ตามความเหมาะสมของแต่ละลูกค้า
+        {tr("นับถอยหลังจาก")}<strong>{tr('เวลาส่งถึงลูกค้า')}</strong> — {tr("แต่ละเฟสต้องถึงสถานะที่กำหนดก่อน deadline (เวลาส่ง − นาที walkback) ระบบสแกนทุก 10 นาที เฟสไหนหลุดจะแจ้งเข้า Smart Logistic ทันที ไม่ต้องรอตก due ลูกค้า · เพิ่ม/ลดจำนวนเฟสได้ตามความเหมาะสมของแต่ละลูกค้า")}
       </div>
       {/* ⭐ 2 กติกาที่คนตั้งค่าต้องเห็น ไม่งั้นตั้งแล้วไม่รู้ว่าจะเกิดอะไรขึ้นหน้างาน */}
       <div style={{ fontSize: 12, color: 'var(--text2)', background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '9px 12px', marginBottom: 12, lineHeight: 1.65 }}>
-        🏁 <strong>เฟสท้ายสุด = จบงาน</strong> — {tr("พอกดถึงเฟสล่างสุดของตาราง ระบบปิดรอบส่งให้เลย ไม่มีปุ่มให้กดต่อ")}
+        🏁 <strong>{tr("เฟสท้ายสุด = จบงาน")}</strong> — {tr("พอกดถึงเฟสล่างสุดของตาราง ระบบปิดรอบส่งให้เลย ไม่มีปุ่มให้กดต่อ")}
         {lastStep && <> {tr('(ตอนนี้คือ')} <strong style={{ color: 'var(--blue)' }}>{lastStep.name}</strong>)</>}
         {lastStep && lastStep.requires_status !== 'shipped' && <> {tr('· เหมาะกับลูกค้าที่')}<strong>{tr('เอารถ milk run มารับเอง')}</strong> {tr('— ของขึ้นรถแล้วงานของเราจบตรงนั้น')}</>}
         <br />
@@ -1350,11 +1347,11 @@ function ShipToTab({ canEdit, onChanged, fullName }) {
     <div style={card}>
       <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)', marginBottom: 4, fontFamily: 'var(--font-display)' }}>Ship-to Plant Config</div>
       <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>
-        ตั้งชื่อลูกค้าให้ code ปลายทางจากไฟล์ EDI (เช่น GRBNA → AAT) — ชื่อนี้จะแสดงแทน code ในทุกหน้าจอ · code ใหม่จากไฟล์ EDI จะถูกเพิ่มเข้าลิสต์นี้อัตโนมัติ
-        · 🔒 <b>{tr('ลำดับในชาร์ต')}</b> = แถวลูกค้าบน Shipping Time Chart (เลขน้อยอยู่บน · ล็อกตายตัวทุกวัน · ว่าง = ต่อท้าย)
+        {tr("ตั้งชื่อลูกค้าให้ code ปลายทางจากไฟล์ EDI (เช่น GRBNA → AAT) — ชื่อนี้จะแสดงแทน code ในทุกหน้าจอ · code ใหม่จากไฟล์ EDI จะถูกเพิ่มเข้าลิสต์นี้อัตโนมัติ")}
+        · 🔒 <b>{tr('ลำดับในชาร์ต')}</b> = {tr("แถวลูกค้าบน Shipping Time Chart (เลขน้อยอยู่บน · ล็อกตายตัวทุกวัน · ว่าง = ต่อท้าย")})
         <div style={{ marginTop: 5, color: 'var(--amber)' }}>
-          ⚠️ ชื่อนี้ถูกใช้เป็น<b>{tr('กุญแจแยกออเดอร์')}</b> ตอนนำเข้า EDI — เลขพาร์ทลูกค้าตัวเดียวมีได้หลายเลข SAP ต่างกันที่ลูกค้าปลายทาง
-          <b> ต้องสะกดตรงกับช่อง "ลูกค้า" ใน Product Master</b> ไม่งั้นแยกไม่ออก แล้วออเดอร์ทุกเจ้าจะไปกองที่เลขเดียว
+          ⚠️ {tr("ชื่อนี้ถูกใช้เป็น")}<b>{tr('กุญแจแยกออเดอร์')}</b> {tr("ตอนนำเข้า EDI — เลขพาร์ทลูกค้าตัวเดียวมีได้หลายเลข SAP ต่างกันที่ลูกค้าปลายทาง")}
+          <b> {tr("ต้องสะกดตรงกับช่อง \"ลูกค้า\" ใน")} Product Master</b> {tr("ไม่งั้นแยกไม่ออก แล้วออเดอร์ทุกเจ้าจะไปกองที่เลขเดียว")}
           <div style={{ color: 'var(--muted)', marginTop: 2 }}>{tr('→ เลือกจากลิสต์ (ดึงจาก Product Master) แทนการพิมพ์เอง · พิมพ์เองได้ถ้าเป็นลูกค้าใหม่ที่ยังไม่มีสินค้า')}</div>
         </div>
       </div>
@@ -1485,7 +1482,7 @@ function CustomerPicker({ value, code, opts, onChange, edSt }) {
       ) : hit ? (
         <div style={{ fontSize: 11, color: 'var(--green)', marginTop: 2 }}>{tr('✓ ตรงกับ')} {hit.n} {tr('สินค้าใน Product Master')}</div>
       ) : (
-        <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 2 }}>⚠ ไม่มีสินค้าไหนใช้ชื่อลูกค้านี้ — แยกออเดอร์ไม่ได้ (ตรวจตัวสะกด หรือไปตั้งช่อง "ลูกค้า" ที่ Product Master)</div>
+        <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 2 }}>⚠ {tr("ไม่มีสินค้าไหนใช้ชื่อลูกค้านี้ — แยกออเดอร์ไม่ได้ (ตรวจตัวสะกด หรือไปตั้งช่อง \"ลูกค้า\" ที่")} Product Master)</div>
       )}
     </div>
   );

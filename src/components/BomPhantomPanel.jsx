@@ -170,8 +170,7 @@ export default function BomPhantomPanel({ onOpenSheet }) {
         <span className="filter-count">{shown.length} {tr('รายการ')}</span>
         <InfoMore label={tr('กฎการตัดสต็อก / ของลมคืออะไร')} id="bom_phantom_help">
           <b>{tr('กฎการตัดสต็อก')}</b> {tr('— คอนเฟิมใบไหน ตัด')}<b>{tr('ลูกที่ติดตัวใบนั้น')}</b>{tr('เท่านั้น ·')} <b>{tr('ลูกมีหน้าที่ไปตัดหลาน')}</b>{tr("เมื่อใบของลูกถูกคอนเฟิม · ผัง BOM สร้าง")}<b>{tr('ใบเดียว')}</b> {tr("ลูก/หลานไม่ต้องมีใบแยก")}
-          <div style={{ marginTop: 4 }}><b>{tr('ของลม (phantom)')}</b> = <b>{tr('ข้อยกเว้น')}</b> สำหรับชิ้นที่ไม่มีวันเปิดใบผลิตเอง —
-            ติ๊กแล้วระบบจะข้ามตัวมัน ไปตัดลูกของมันที่ชั้นแม่แทน (ขั้น OP เป็นของลมอัตโนมัติ)</div>
+          <div style={{ marginTop: 4 }}><b>{tr('ของลม (phantom)')}</b> = <b>{tr('ข้อยกเว้น')}</b> {tr("สำหรับชิ้นที่ไม่มีวันเปิดใบผลิตเอง — ติ๊กแล้วระบบจะข้ามตัวมัน ไปตัดลูกของมันที่ชั้นแม่แทน (ขั้น OP เป็นของลมอัตโนมัติ")})</div>
           <div style={{ marginTop: 4 }}>{tr('จอนี้แก้ได้แค่ทะเบียนของลม —')} <b>{tr('ไม่แก้ BOM ให้')}</b> {tr('(PE เป็นเจ้าของข้อมูล)')}</div>
         </InfoMore>
       </FilterBar>
@@ -194,8 +193,8 @@ export default function BomPhantomPanel({ onOpenSheet }) {
       {gaps.length > 0 && (
         <div style={{ background: 'var(--card-surf)', border: `1px solid ${BAD}`, borderRadius: 'var(--r-md)',
                       padding: '8px 12px', marginBottom: 10, fontSize: 12, lineHeight: 1.6 }}>
-          🔴 <b style={{ color: BAD }}>{tr('โซ่ขาด')} {gaps.length} {tr('รายการ')}</b> — อยู่ใน BOM แต่
-          <b> {tr('ไม่มีใบผลิตไหนตัดมันไปใช้เลย')}</b> (กฎ: ตัดลูกตรง · ลูกไปตัดหลาน ⇒ โซ่ต้องเดินถึงทุกชั้น)
+          🔴 <b style={{ color: BAD }}>{tr('โซ่ขาด')} {gaps.length} {tr('รายการ')}</b> — {tr("อยู่ใน BOM แต่")}
+          <b> {tr('ไม่มีใบผลิตไหนตัดมันไปใช้เลย')}</b> ({tr("กฎ: ตัดลูกตรง · ลูกไปตัดหลาน ⇒ โซ่ต้องเดินถึงทุกชั้น")})
           <div style={{ overflowX: 'auto', marginTop: 6 }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead><tr>
@@ -288,7 +287,7 @@ export default function BomPhantomPanel({ onOpenSheet }) {
                             <button onClick={() => confirmSeeded(r.mat_no)} disabled={busy === r.mat_no}
                               style={{ fontSize: 11, padding: '2px 8px', borderRadius: 'var(--r-md)',
                                        border: `1px solid ${OK}`, color: OK, background: 'var(--card-surf)', cursor: 'pointer' }}>
-                              ✓ ยืนยัน
+                              ✓ {tr("ยืนยัน")}
                             </button>
                           )}
                           <button onClick={() => setPhantom(r.mat_no, !isPhantom)} disabled={busy === r.mat_no}

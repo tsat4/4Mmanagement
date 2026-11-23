@@ -250,7 +250,7 @@ export default function CapaEffectiveness({ capa, onChange, canEdit, canWriteRes
               </select>
             </label>
             <label style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700 }}>
-              ประเภทของเสียที่วัด (ว่าง = ทุกประเภทของพาร์ทนี้)
+              {tr("ประเภทของเสียที่วัด (ว่าง = ทุกประเภทของพาร์ทนี้")})
               <select style={{ ...inputSt, marginTop: 4 }} value={capa.eff_defect_type_id || ''} disabled={!canEdit}
                 onChange={(e) => {
                   const t = types.find((x) => x.id === e.target.value);
@@ -293,7 +293,7 @@ export default function CapaEffectiveness({ capa, onChange, canEdit, canWriteRes
               {tr(V.label)}{judged.reason ? ` — ${judged.reason}` : ''}
               {judged.verdict === 'worse' || judged.verdict === 'not_effective' ? (
                 <div style={{ fontWeight: 600, marginTop: 3 }}>
-                  ต้องกลับไปทบทวน D4 (สาเหตุราก) — สาเหตุที่ระบุอาจไม่ใช่ตัวจริง หรือมาตรการยังไม่ถูกทำจริงหน้างาน
+                  {tr("ต้องกลับไปทบทวน D4 (สาเหตุราก) — สาเหตุที่ระบุอาจไม่ใช่ตัวจริง หรือมาตรการยังไม่ถูกทำจริงหน้างาน")}
                 </div>
               ) : null}
             </div>

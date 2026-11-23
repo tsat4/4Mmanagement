@@ -76,7 +76,7 @@ export default function PartLevelCoveragePanel() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ ...card, padding: '14px 16px' }}>
         <div style={{ fontWeight: 800, fontSize: 15, fontFamily: 'var(--font-display)', marginBottom: 4 }}>
-          จุดเรียกเติมชิ้นส่วน — ไลน์ไหนยังไม่ตั้ง
+          {tr("จุดเรียกเติมชิ้นส่วน — ไลน์ไหนยังไม่ตั้ง")}
         </div>
         <div style={{ fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.65 }}>
           {tr("พาร์ทที่")} <b>{tr('ไลน์ใช้')}</b> {tr('(ต้องเบิกจากสโตร์) และยังไม่มีใครตั้ง')} <b>min</b> {tr("ไว้ = ระบบจะ")}<b>{tr('ไม่เสนอให้เบิก')}</b>{tr("เลย ⇒ ไลน์ต้องไปโทร/เดินบอกสโตร์เอง · ตั้งค่าจริงที่")} <b>{tr('ตั้งค่าผัง → 🏭 ผลิต (ผังไลน์) → เลือกไลน์ → 📦 จุดเรียกเติมชิ้นส่วน')}</b>
@@ -93,7 +93,7 @@ export default function PartLevelCoveragePanel() {
       )}
       {data?.linesUnknown && (
         <div style={{ ...card, padding: '10px 14px', borderColor: '#f59e0b', color: '#f59e0b', fontSize: 12, fontWeight: 700 }}>
-          ⚠ อ่านทะเบียนไลน์ไม่ได้ — แยก “ไลน์ผลิต” ออกจาก “คลัง” ไม่ได้ จึงแสดงทุกชื่อปลายทางไปก่อน
+          ⚠ {tr("อ่านทะเบียนไลน์ไม่ได้ — แยก “ไลน์ผลิต” ออกจาก “คลัง” ไม่ได้ จึงแสดงทุกชื่อปลายทางไปก่อน")}
         </div>
       )}
 

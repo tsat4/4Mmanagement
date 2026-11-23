@@ -1156,7 +1156,7 @@ export default function ScrapReport() {
                       {(it.defect_img || it._imgFile) ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                           <img src={it._imgFile ? URL.createObjectURL(it._imgFile) : it.defect_img}
-                            alt="รูปของเสีย" loading="lazy" title={it._imgFile ? tr('ยังไม่ได้อัปโหลด — จะอัปตอนกดบันทึกใบ') : tr('กดเพื่อเปลี่ยน/ดูรูป')}
+                            alt={tr("รูปของเสีย")} loading="lazy" title={it._imgFile ? tr('ยังไม่ได้อัปโหลด — จะอัปตอนกดบันทึกใบ') : tr('กดเพื่อเปลี่ยน/ดูรูป')}
                             onClick={() => setPhotoItem(it._key)}
                             style={{ height: 30, width: 40, objectFit: 'cover', borderRadius: 4, cursor: 'pointer',
                               border: `1px solid ${it._imgFile ? 'var(--amber)' : 'var(--border)'}` }} />
@@ -1169,7 +1169,7 @@ export default function ScrapReport() {
                     <td style={tdSt} data-l="" className="sr-c sr-del"><DeleteButton onClick={() => delItem(it._key)} title={tr('ลบ')} /></td>
                   </tr>
                 ))}
-                {editor.items.length === 0 && <tr><td style={tdSt} colSpan={15}><span style={{ color: 'var(--muted)' }}>ยังไม่มีรายการ — กด "ดึงจาก Daily Report" หรือ "เพิ่มจาก SAP/BOM"</span></td></tr>}
+                {editor.items.length === 0 && <tr><td style={tdSt} colSpan={15}><span style={{ color: 'var(--muted)' }}>{tr("ยังไม่มีรายการ — กด \"ดึงจาก Daily Report\" หรือ \"เพิ่มจาก")} SAP/BOM"</span></td></tr>}
               </tbody>
               {editor.items.length > 0 && (
                 <tfoot><tr>
@@ -1280,8 +1280,7 @@ export default function ScrapReport() {
             <div style={{ padding: 16 }}>
               {fromBin && (
                 <div style={{ fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.6, marginBottom: 10 }}>
-                  🔴 รายการนี้ดึงมาจากแท็กแดง — รูปที่เห็นคือรูปตอนลงถัง เปลี่ยนที่นี่จะมีผลเฉพาะใบนี้
-                  (ไม่ย้อนกลับไปแก้ใบถัง)
+                  🔴 {tr("รายการนี้ดึงมาจากแท็กแดง — รูปที่เห็นคือรูปตอนลงถัง เปลี่ยนที่นี่จะมีผลเฉพาะใบนี้ (ไม่ย้อนกลับไปแก้ใบถัง")})
                 </div>
               )}
               <QualityPhotoField

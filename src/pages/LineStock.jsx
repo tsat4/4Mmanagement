@@ -559,7 +559,7 @@ function StockTab({ role, scope }) {
             setLineFilter('');
             setScopePickLines(kind === 'all' ? null : (info?.lines || []));
           }} />
-        <SideFilterChips value={sideFilter} onChange={setSideFilter} counts={sideCounts} unit="รายการ"
+        <SideFilterChips value={sideFilter} onChange={setSideFilter} counts={sideCounts} unit={tr("รายการ")}
           labels={{ inbound: 'ของป้อนไลน์ (2xx·3xx·5xx)', outbound: 'FG รอส่ง (1xx)' }} />
         {!showTxn && groupMode === 'sloc' && (
           <select value={areaActive} onChange={e => setAreaFilter(e.target.value)} aria-label={tr('เลือกพื้นที่ SAP')}>
@@ -585,7 +585,7 @@ function StockTab({ role, scope }) {
         </button>
         {canIssue && (
           <button onClick={() => { setForm({ ...EMPTY_FORM, type:'issue', work_date:getToday() }); setShowForm(true); }} style={btn('var(--accent)')}>
-            + จ่ายพาร์ทเข้าไลน์
+            + {tr("จ่ายพาร์ทเข้าไลน์")}
           </button>
         )}
         {/* 16/11 — ถอดป้าย "สโตร์ กับ จัดส่ง ต่างกันยังไง" · ชื่อชิปบอกเองแล้วว่านับเลข MAT กลุ่มไหน */}
@@ -700,8 +700,7 @@ function StockTab({ role, scope }) {
             <span>{tr('· ซ่อนไลน์นอกขอบเขต')} <b>{stockScoped.hidden.toLocaleString()}</b> {tr('รายการ')}</span>
           )}
           {stockScoped.offRegistry.length > 0 && (
-            <span>· <b>{stockScoped.offRegistry.join(' / ')}</b> ไม่ใช่ไลน์ในทะเบียน
-              (ตรวจขอบเขตไม่ได้ จึงยังโชว์อยู่)</span>
+            <span>· <b>{stockScoped.offRegistry.join(' / ')}</b> {tr("ไม่ใช่ไลน์ในทะเบียน (ตรวจขอบเขตไม่ได้ จึงยังโชว์อยู่")})</span>
           )}
         </div>
       )}
@@ -845,15 +844,15 @@ function StockTab({ role, scope }) {
                               {canIssue && (
                                 <td style={{ padding:'8px 14px', borderTop:'1px solid var(--border)' }}>
                                   {isFgMat(p.mat_no) ? (
-                                    <span title='FG งานสำเร็จ — หักอัตโนมัติเมื่อกด "ส่งแล้ว" ที่หน้า Delivery ไม่ต้องจ่ายเข้าไลน์'
+                                    <span title={tr("FG งานสำเร็จ — หักอัตโนมัติเมื่อกด \"ส่งแล้ว\" ที่หน้า Delivery ไม่ต้องจ่ายเข้าไลน์")}
                                       style={{ fontSize:11, fontWeight:700, color:'var(--muted)', whiteSpace:'nowrap' }}>
-                                      หักผ่าน Delivery
+                                      {tr("หักผ่าน")} Delivery
                                     </span>
                                   ) : (
                                     <button title={oneLine ? `${tr("จ่ายเข้า")} ${oneLine}` : 'พาร์ทนี้อยู่หลายไลน์ในพื้นที่เดียวกัน — เลือกไลน์ปลายทางในฟอร์ม'}
                                       onClick={() => { setForm({ ...EMPTY_FORM, line_name: oneLine, mat_no: p.mat_no, part_name: name || '', type:'issue', work_date:getToday() }); setShowForm(true); }}
                                       style={{ ...btn('var(--green-dim)', 'var(--green)'), padding:'4px 10px', fontSize:11, border:'1px solid var(--green-line)' }}>
-                                      + จ่าย
+                                      + {tr("จ่าย")}
                                     </button>
                                   )}
                                 </td>
@@ -870,7 +869,7 @@ function StockTab({ role, scope }) {
                     if (!sv.ops.length) return null;
                     return (
                       <div style={{ padding:'10px 16px', borderTop:'1px solid var(--border)', background:'var(--blue-dim)' }}>
-                        <div style={{ fontSize:12.5, fontWeight:800, color:'var(--text)' }}>🔩 มุม SAP
+                        <div style={{ fontSize:12.5, fontWeight:800, color:'var(--text)' }}>🔩 {tr("มุม")} SAP
                           <span style={{ fontWeight:400, fontSize:11.5, color:'var(--muted)' }}> {tr('· ชิ้นผ่านขั้น OP ยังไม่ถูกแม่ใช้ ⇒ ใน SAP ยังเป็นของที่ขั้นกิน (SAP ตัดตอนคอนเฟิร์มแม่)')}</span>
                         </div>
                         {opInputs.error && <div style={{ fontSize:11.5, color:'var(--red)', marginTop:4 }}>{tr('⚠ อ่านสูตรขั้น OP ไม่ได้ (')}{opInputs.error}) — {tr("ตัวเลขมุม SAP ด้านล่างอาจไม่ครบ")}</div>}
@@ -1419,7 +1418,7 @@ function DeliveryRoundsTab({ canEdit, fullName, scope }) {
                     <option value="night">{tr('กะดึก (night)')}</option>
                   </select>
                   <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3, lineHeight: 1.5 }}>
-                    กะดึกต้องตั้งรอบของตัวเองแยก — รอบกะเช้าไม่ครอบกะดึกให้
+                    {tr("กะดึกต้องตั้งรอบของตัวเองแยก — รอบกะเช้าไม่ครอบกะดึกให้")}
                   </div>
                 </div>
                 <div>
@@ -1840,7 +1839,7 @@ function InflowRulesTab({ canEdit }) {
       )}
       {!canEdit && (
         <div style={{ ...card, borderColor: 'var(--amber-line)', fontSize: 12, color: 'var(--amber)' }}>
-          โหมดดูอย่างเดียว — แก้กฎได้เฉพาะผู้มีสิทธิ์จัดการรอบจัดส่ง (ตั้งได้ที่หน้า จัดการสิทธิ์)
+          {tr("โหมดดูอย่างเดียว — แก้กฎได้เฉพาะผู้มีสิทธิ์จัดการรอบจัดส่ง (ตั้งได้ที่หน้า จัดการสิทธิ์")})
         </div>
       )}
     </div>

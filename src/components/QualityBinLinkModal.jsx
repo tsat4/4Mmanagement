@@ -155,7 +155,7 @@ export default function QualityBinLinkModal({ defect, session, actorName, existi
         padding: 20, width: 'min(96vw, 640px)', maxHeight: '90vh', overflowY: 'auto' }}>
 
         <div style={{ fontSize: 15.5, fontWeight: 800, color: 'var(--text)', marginBottom: 3 }}>
-          ลงถังเหลือง / ถังแดง
+          {tr("ลงถังเหลือง / ถังแดง")}
         </div>
 
         <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>
@@ -263,13 +263,12 @@ export default function QualityBinLinkModal({ defect, session, actorName, existi
               <div key={c.key}>{c.icon} {c.name} — {c.qty.toLocaleString('th-TH')} {tr('ชิ้น')}</div>
             ))}
             <div style={{ marginTop: 8, color: 'var(--muted)', fontSize: 11.5 }}>
-              ช่องที่ยังไม่รู้ตอนนี้ (ผลพิจารณา QA · ผลการซ่อม OK/NG · วันนำกลับเข้ากระบวนการ)
-              กรอกทีหลังได้ที่หน้าถังเหลือง/ถังแดง
+              {tr("ช่องที่ยังไม่รู้ตอนนี้ (ผลพิจารณา QA · ผลการซ่อม OK/NG · วันนำกลับเข้ากระบวนการ) กรอกทีหลังได้ที่หน้าถังเหลือง/ถังแดง")}
             </div>
             <Link to="/qa?tab=bins" onClick={onClose}
               style={{ display: 'inline-block', marginTop: 10, padding: '7px 14px', borderRadius: 8,
                 background: '#22c55e', color: '#06230f', fontWeight: 800, fontSize: 12.5, textDecoration: 'none' }}>
-              🗑️ ไปดูใบในถัง →
+              🗑️ {tr("ไปดูใบในถัง")} →
             </Link>
           </div>
         )}

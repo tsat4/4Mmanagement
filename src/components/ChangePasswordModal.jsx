@@ -71,7 +71,7 @@ export default function ChangePasswordModal({ open, onClose, userEmail }) {
             <span style={{ fontSize: 20 }}>🔐</span>
             <div>
               <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>
-                เปลี่ยนรหัสผ่าน
+                {tr("เปลี่ยนรหัสผ่าน")}
               </div>
               <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 1 }}>{userEmail}</div>
             </div>

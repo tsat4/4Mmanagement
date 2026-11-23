@@ -1169,7 +1169,7 @@ ${issuesHtml}
             {!canManage && <button onClick={printPlan} disabled={printing} style={btnBlue}>{tr('พิมพ์ (')}{monthLabel(selMonth)})</button>}
           </div>
           <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>
-            <span style={{ color: 'var(--text2)' }}>{tr('○ วางแผน')}</span> · <span style={{ color: 'var(--green)' }}>{tr('● ตรวจแล้ว')}</span> · <span style={{ color: 'var(--red)' }}>{tr('⊗ เลยกำหนดยังไม่ตรวจ')}</span> · แถวเขียว = วันหยุด · หลายสถานี/วัน = คั่นด้วย ,
+            <span style={{ color: 'var(--text2)' }}>{tr('○ วางแผน')}</span> · <span style={{ color: 'var(--green)' }}>{tr('● ตรวจแล้ว')}</span> · <span style={{ color: 'var(--red)' }}>{tr('⊗ เลยกำหนดยังไม่ตรวจ')}</span> · {tr("แถวเขียว = วันหยุด · หลายสถานี/วัน = คั่นด้วย")} ,
           </div>
 
           {/* 3 เดือนของไตรมาส */}
@@ -1357,7 +1357,7 @@ ${issuesHtml}
                 {tr("ข้อที่ถอดออกจากเช็คลิสต์แล้ว — เก็บไว้จากตอนตรวจ")} ({removedAnswers.length} {tr("ข้อ")})
               </div>
               <div style={{ fontSize: 11, color: 'var(--muted)', padding: '4px 0' }}>
-                ข้อเหล่านี้ถูกลบ/ปิดใช้งาน/ซ่อนของไลน์นี้ไปหลังวันที่ตรวจ — แสดงไว้ให้ใบตรวจอ่านครบตามที่ตรวจจริง (แก้ไม่ได้)
+                {tr("ข้อเหล่านี้ถูกลบ/ปิดใช้งาน/ซ่อนของไลน์นี้ไปหลังวันที่ตรวจ — แสดงไว้ให้ใบตรวจอ่านครบตามที่ตรวจจริง (แก้ไม่ได้")})
               </div>
               {removedAnswers.map(a => {
                 const m = ansMeta(a.answer);
@@ -1584,9 +1584,7 @@ ${issuesHtml}
               <>
                 <b style={{ fontSize: 13, color: 'var(--accent)' }}>{tr("กำลังแก้หัวข้อตรวจของไลน์")} "{qScope}"</b>
                 <div style={{ color: 'var(--text2)', marginTop: 2 }}>
-                  ข้อที่ติดป้าย <b>{tr('ทะเบียนกลาง')}</b> = ของส่วนรวม แก้เนื้อหา/ลบที่นี่ไม่ได้ —
-                  ไม่อยากใช้ข้อไหนที่ไลน์นี้ กด <b>{tr('ไม่ใช้ที่ไลน์นี้')}</b> (ไลน์อื่นไม่กระทบ) ·
-                  ข้อที่ติดป้าย <b>{tr('เฉพาะไลน์นี้')}</b> เป็นของไลน์คุณเอง เพิ่ม/แก้/ลบได้เต็มที่
+                  {tr("ข้อที่ติดป้าย")} <b>{tr('ทะเบียนกลาง')}</b> = {tr("ของส่วนรวม แก้เนื้อหา/ลบที่นี่ไม่ได้ — ไม่อยากใช้ข้อไหนที่ไลน์นี้ กด")} <b>{tr('ไม่ใช้ที่ไลน์นี้')}</b> ({tr("ไลน์อื่นไม่กระทบ) · ข้อที่ติดป้าย")} <b>{tr('เฉพาะไลน์นี้')}</b> {tr("เป็นของไลน์คุณเอง เพิ่ม/แก้/ลบได้เต็มที่")}
                 </div>
                 {qScopeStats && (
                   <div style={{ marginTop: 5, fontSize: 12, color: 'var(--text)' }}>
@@ -1600,9 +1598,8 @@ ${issuesHtml}
               <>
                 <b style={{ fontSize: 13, color: 'var(--amber)' }}>{tr('กำลังแก้ “ทะเบียนกลาง” — ทุกไลน์ใช้ร่วมกัน')}</b>
                 <div style={{ color: 'var(--text2)', marginTop: 2 }}>
-                  แก้/ลบที่นี่ <b>{tr('กระทบใบตรวจของทุกไลน์พร้อมกัน')}</b> ·
-                  ถ้าจะเพิ่ม/เอาออกเฉพาะแผนกตัวเอง ให้เลือกไลน์จากช่อง “จัดการคำถามของ” ด้านบนก่อน ·
-                  ข้อที่เคยถูกตรวจไปแล้ว <b>{tr('ลบไม่ได้')}</b> (ใบย้อนหลังจะอ่านไม่ครบ) ให้กด ⏸ ปิดใช้งานแทน
+                  {tr("แก้/ลบที่นี่")} <b>{tr('กระทบใบตรวจของทุกไลน์พร้อมกัน')}</b> ·
+                  {tr("ถ้าจะเพิ่ม/เอาออกเฉพาะแผนกตัวเอง ให้เลือกไลน์จากช่อง “จัดการคำถามของ” ด้านบนก่อน · ข้อที่เคยถูกตรวจไปแล้ว")} <b>{tr('ลบไม่ได้')}</b> ({tr("ใบย้อนหลังจะอ่านไม่ครบ) ให้กด ⏸ ปิดใช้งานแทน")}
                 </div>
               </>
             )}
@@ -1676,7 +1673,7 @@ ${issuesHtml}
               </div>
               <div><div style={lb}>{tr('คำถาม')}</div><textarea rows={2} value={qEditing.question} onChange={e => setQEditing(p => ({ ...p, question: e.target.value }))} style={{ width: '100%', fontSize: 13 }} /></div>
               <div>
-                <div style={lb}>ใช้กับไลน์ (เว้นว่าง = ทุกไลน์)</div>
+                <div style={lb}>{tr("ใช้กับไลน์ (เว้นว่าง = ทุกไลน์")})</div>
                 <LineSelect lines={visibleLines} value={qEditing.line_name || ''} placeholder={ALL.line} style={{ width: '100%' }}
                   onChange={v => setQEditing(p => ({ ...p, line_name: v }))} />
               </div>

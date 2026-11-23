@@ -979,13 +979,13 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
     return (
       <>
         {tiles.length ? <div style={{ display: 'grid', gap: Math.max(4, Math.round(5 * kk)) }}>{tiles}</div>
-          : <div style={{ fontSize: fs(11), lineHeight: 1.4, color: 'var(--muted)' }}>ยังไม่มีข้อมูลพอสรุป — ต้องมีค่าอย่างน้อย 1 เดือน + เป้าที่ตั้งไว้</div>}
+          : <div style={{ fontSize: fs(11), lineHeight: 1.4, color: 'var(--muted)' }}>{tr("ยังไม่มีข้อมูลพอสรุป — ต้องมีค่าอย่างน้อย 1 เดือน + เป้าที่ตั้งไว้")}</div>}
         {drv && (
           <div style={{ marginTop: Math.round(6 * kk), padding: `${Math.round(5 * kk)}px ${Math.round(8 * kk)}px`, borderRadius: 'var(--r-md)', background: 'var(--bg3)', borderLeft: `3px solid ${toneVar('warn')}`, fontSize: fs(11.5), lineHeight: 1.45, color: 'var(--text)', overflowWrap: 'anywhere' }}>
-            <b style={{ color: 'var(--muted)', fontSize: fs(10.5) }}>เหตุหลัก</b><br />{drv.text}
+            <b style={{ color: 'var(--muted)', fontSize: fs(10.5) }}>{tr("เหตุหลัก")}</b><br />{drv.text}
           </div>
         )}
-        {rest.length > 0 && <div style={{ marginTop: Math.round(6 * kk) }}><InsightList k={kk} items={rest} max={0} lines={4} label="รายละเอียด" /></div>}
+        {rest.length > 0 && <div style={{ marginTop: Math.round(6 * kk) }}><InsightList k={kk} items={rest} max={0} lines={4} label={tr("รายละเอียด")} /></div>}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, margin: '8px 0 6px' }}>
           {crit.map(([lb, v]) => <span key={lb} style={chip}><span style={{ color: 'var(--muted)', fontWeight: 600 }}>{lb}</span> {v}</span>)}
         </div>
@@ -1329,7 +1329,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
                   <ReadOnlyNote show={!canRecord} role={role} compact what="บันทึกเหตุการณ์ความปลอดภัย" permKey="safety:record" />
                   {!todo.length ? (
                     <div style={{ fontSize: fs(11), color: 'var(--muted)', lineHeight: 1.4, padding: 6 }}>
-                      ไม่มีงานค้างในส่วนงานนี้ — ตัวเลขหลุดเป้าบนแผ่นไหน ให้ตั้ง Action ที่แท็บ 🖥️ จอ SQDCM
+                      {tr("ไม่มีงานค้างในส่วนงานนี้ — ตัวเลขหลุดเป้าบนแผ่นไหน ให้ตั้ง Action ที่แท็บ 🖥️ จอ")} SQDCM
                     </div>
                   ) : todo.slice(0, 30).map((x) => {
                     const late = x.due && x.due < date;

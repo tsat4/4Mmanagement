@@ -295,7 +295,7 @@ export default function OverseasTravelMockup() {
       <PageHeader
         title={tr('เบิกเงินเดินทางต่างประเทศ')}
         icon="✈️"
-        sub={<span><b style={{ color: 'var(--amber)' }}>MOCKUP</b> · ข้อมูลจำลองในหน้านี้ ไม่บันทึกลงฐานข้อมูล (รีเฟรช = เริ่มใหม่)</span>}
+        sub={<span><b style={{ color: 'var(--amber)' }}>MOCKUP</b> · {tr("ข้อมูลจำลองในหน้านี้ ไม่บันทึกลงฐานข้อมูล (รีเฟรช = เริ่มใหม่")})</span>}
         tabs={tabs} tab={tab} onTab={setTab}
       />
       <div style={{ marginBottom: 12 }}>
@@ -390,7 +390,7 @@ export default function OverseasTravelMockup() {
                     </div>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                       <button type="button" style={btnPrimary} onClick={() => upd(r.id, n => { n.claim.submitted = true; return n; }, `${tr("ยื่น")} Expense Claim ${baht(claimTotal(r))}`)}>{tr('ยื่น Expense Claim (')}{baht(claimTotal(r))})</button>
-                      <span style={muted}>ไม่มีค่าใช้จ่ายนอกเบี้ยเลี้ยง = ยื่นแบบไม่มีรายการได้</span>
+                      <span style={muted}>{tr("ไม่มีค่าใช้จ่ายนอกเบี้ยเลี้ยง = ยื่นแบบไม่มีรายการได้")}</span>
                     </div>
                   </div>
                 )}

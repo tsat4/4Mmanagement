@@ -152,7 +152,7 @@ export function PlanSparesModal({ row, canEdit, canIssue, byName, byUid, onClose
             <tbody>
               {!ready.items.length && (
                 <tr><td colSpan={5} style={{ ...td, textAlign: 'center', color: 'var(--muted)', padding: 18 }}>
-                  ยังไม่ได้ผูกอะไหล่ — เพิ่มอะไหล่ที่ใช้ใน PM รอบหนึ่งด้านล่าง แล้วระบบจะรวมความต้องการล่วงหน้าให้เอง
+                  {tr("ยังไม่ได้ผูกอะไหล่ — เพิ่มอะไหล่ที่ใช้ใน PM รอบหนึ่งด้านล่าง แล้วระบบจะรวมความต้องการล่วงหน้าให้เอง")}
                 </td></tr>
               )}
               {ready.items.map(i => (
@@ -327,8 +327,7 @@ function SpareDemandModal({ demand, error, onClose, onOpenPlan }) {
         </div>
       )}
       <div style={{ marginTop: 10, fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.6 }}>
-        * PM ที่เลยกำหนดนับเป็นวันนี้ · "ต้องสั่งภายใน" = วันที่เริ่มขาด − leadtime ของอะไหล่ (ตั้งที่ทะเบียนอะไหล่) ·
-        safety = จำนวนขั้นต่ำ (min) ตาม WI-JIG-010 · ใช้จริงจะตัดสต็อกเมื่อกด "เบิกอะไหล่ตามแผน PM" หรือเบิกในใบ MO
+        * PM {tr("ที่เลยกำหนดนับเป็นวันนี้ · \"ต้องสั่งภายใน\" = วันที่เริ่มขาด − leadtime ของอะไหล่ (ตั้งที่ทะเบียนอะไหล่) · safety = จำนวนขั้นต่ำ (min) ตาม WI-JIG-010 · ใช้จริงจะตัดสต็อกเมื่อกด \"เบิกอะไหล่ตามแผน PM\" หรือเบิกในใบ")} MO
       </div>
     </Shell>
   )

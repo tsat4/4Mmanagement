@@ -445,7 +445,7 @@ export default function Energy() {
           {coveredName && (
             <div style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 400, marginTop: 2 }}
               title={tr('ไลน์แม่กรอกค่ารวมไว้แล้ว ค่าแถวนี้จึงเป็นรายละเอียดย่อย ไม่ถูกบวกซ้ำเข้ายอดรวม')}>
-              ↳ นับรวมอยู่ใน <b>{coveredName}</b> แล้ว · ไม่บวกซ้ำเข้ายอดที่วัดได้
+              ↳ {tr("นับรวมอยู่ใน")} <b>{coveredName}</b> {tr("แล้ว · ไม่บวกซ้ำเข้ายอดที่วัดได้")}
             </div>
           )}
           {roll?.childCount > 0 && (
@@ -466,7 +466,7 @@ export default function Energy() {
             ) : (
               <div style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 400, marginTop: 2 }}
                 title={tr('ตั้งที่ /machine-database → แก้เครื่อง facility → แผง 🔗 Supply route')}>
-                ⚠ ยังไม่ได้ตั้งว่าจ่ายให้ไลน์ไหน
+                ⚠ {tr("ยังไม่ได้ตั้งว่าจ่ายให้ไลน์ไหน")}
               </div>
             )
           )}
@@ -537,14 +537,13 @@ export default function Energy() {
           style={{ ...monthBtn, cursor: month >= monthKeyOf() ? 'not-allowed' : 'pointer', opacity: month >= monthKeyOf() ? 0.4 : 1 }}>▶</button>
       </FilterBar>
 
-      <NoticeBar tone="info" style={{ marginBottom: 12 }}><b>{tr('เฟส 1 — ตัวเลขมาจากการกรอกมือ')}</b> ยังไม่ได้ต่อมิเตอร์อัตโนมัติ
+      <NoticeBar tone="info" style={{ marginBottom: 12 }}><b>{tr('เฟส 1 — ตัวเลขมาจากการกรอกมือ')}</b> {tr("ยังไม่ได้ต่อมิเตอร์อัตโนมัติ")}
         <InfoMore label={tr('ใช้ยังไง')}>{tr('ใช้ดูแนวโน้มและเทียบเดือนได้ แต่ยังไม่ใช่ค่าที่วัดแบบ realtime · ค่าที่กรอกไปแสดงบนผังรวมโรงงาน (metric พลังงาน)')}</InfoMore>
       </NoticeBar>
 
       {cfgMissing && (
         <NoticeBar tone="bad" style={{ marginBottom: 12 }}>
-          <b>{tr('ยังไม่ได้ apply migration')} <code>20260819_energy_carbon_c1</code></b> — ยังตั้งชั้นจุดวัด (มีมิเตอร์/ยังไม่มี)
-          และคำนวณ CO2e ไม่ได้ · ส่วนการกรอกหน่วยไฟยังใช้ได้ปกติ (แจ้ง admin ให้รัน migration)
+          <b>{tr('ยังไม่ได้ apply migration')} <code>20260819_energy_carbon_c1</code></b> — {tr("ยังตั้งชั้นจุดวัด (มีมิเตอร์/ยังไม่มี) และคำนวณ CO2e ไม่ได้ · ส่วนการกรอกหน่วยไฟยังใช้ได้ปกติ (แจ้ง admin ให้รัน")} migration)
         </NoticeBar>
       )}
 
@@ -577,8 +576,7 @@ export default function Energy() {
       {/* ⚠️ เตือนเฉพาะ "ผิดจริง" — ผลรวมมากกว่าบิลเป็นไปไม่ได้ · น้อยกว่าบิลคือเรื่องปกติที่ยังไม่ได้ติดมิเตอร์ */}
       {cover.over && (
         <NoticeBar tone="bad" style={{ marginBottom: 12 }}>
-          <b>{tr('ผลรวมรายจุด (')}{fmtKwh(cover.metered)}{tr(') มากกว่ายอดบิล (')}{fmtKwh(cover.bill)})</b> — เป็นไปไม่ได้
-          ตรวจว่ามีจุดที่นับซ้ำ (มิเตอร์แม่กับมิเตอร์ลูกติ๊กว่ามีมิเตอร์ทั้งคู่) หรือกรอกผิดหลัก
+          <b>{tr('ผลรวมรายจุด (')}{fmtKwh(cover.metered)}{tr(') มากกว่ายอดบิล (')}{fmtKwh(cover.bill)})</b> — {tr("เป็นไปไม่ได้ ตรวจว่ามีจุดที่นับซ้ำ (มิเตอร์แม่กับมิเตอร์ลูกติ๊กว่ามีมิเตอร์ทั้งคู่) หรือกรอกผิดหลัก")}
         </NoticeBar>
       )}
 
@@ -617,13 +615,13 @@ export default function Energy() {
             {/* กติกาที่คนกรอกต้องรู้ก่อนพิมพ์ตัวแรก — เขียนไว้ตรงนี้ ไม่ใช่ให้เดาจากผลลัพธ์ */}
             <div style={{ fontSize: 11.5, color: 'var(--text2)', margin: '-4px 0 8px', lineHeight: 1.6 }}>
               📏 <b>{tr('ลงตามที่มิเตอร์อ่านได้จริง')}</b> {tr('— เบรกเกอร์แยก HDF-01 / HDF-02 ก็ลงแยกได้เลย ไม่ต้องบวกมือรวมที่ไลน์แม่')}<br />
-              {tr("ระบบไม่บวกซ้ำให้อยู่แล้ว")}: <b>ไลน์แม่มีค่า = ใช้ค่าของแม่</b> ({tr("ลูกกลายเป็นรายละเอียด")}) ·
-              <b> ไลน์แม่เว้นว่าง = รวมค่าลูกขึ้นมาเป็นยอดกลุ่ม</b>
+              {tr("ระบบไม่บวกซ้ำให้อยู่แล้ว")}: <b>{tr("ไลน์แม่มีค่า = ใช้ค่าของแม่")}</b> ({tr("ลูกกลายเป็นรายละเอียด")}) ·
+              <b> {tr("ไลน์แม่เว้นว่าง = รวมค่าลูกขึ้นมาเป็นยอดกลุ่ม")}</b>
             </div>
             <div style={{ ...card, padding: 0, overflowX: 'auto', marginBottom: 20 }}>
               {meteredPts.length === 0 ? (
                 <div style={{ padding: 14, fontSize: 12.5, color: 'var(--muted)' }}>
-                  ยังไม่ได้ระบุว่าจุดไหนมีมิเตอร์ — กดปุ่ม <b>{tr('+ มีมิเตอร์')}</b> ที่แถวของจุดนั้นในตารางด้านล่าง
+                  {tr("ยังไม่ได้ระบุว่าจุดไหนมีมิเตอร์ — กดปุ่ม")} <b>{tr('+ มีมิเตอร์')}</b> {tr("ที่แถวของจุดนั้นในตารางด้านล่าง")}
                 </div>
               ) : (
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 800 }}>
@@ -656,7 +654,7 @@ export default function Energy() {
           <>
             {/* ① เทรนด์ 12 เดือน + เทียบปีก่อน */}
             <div style={{ ...card, marginBottom: 14 }}>
-              <div style={secTitle}>{tr('แนวโน้ม')} {TREND_MONTHS} {tr('เดือน')} {hasYoy && <span style={{ fontWeight: 400, fontSize: 11.5, color: 'var(--muted)' }}>— เส้นประ = เดือนเดียวกันปีก่อน</span>}</div>
+              <div style={secTitle}>{tr('แนวโน้ม')} {TREND_MONTHS} {tr('เดือน')} {hasYoy && <span style={{ fontWeight: 400, fontSize: 11.5, color: 'var(--muted)' }}>— {tr("เส้นประ = เดือนเดียวกันปีก่อน")}</span>}</div>
               {!hasTrend ? <div style={{ color: 'var(--muted)', fontSize: 13 }}>{tr('ยังไม่มีข้อมูลในช่วงนี้ — ไปกรอกที่แท็บ 📝')}</div> : (
                 <ResponsiveContainer width="100%" height={260}>
                   <ComposedChart data={trend} margin={{ top: 6, right: 8, left: 0, bottom: 0 }}>
@@ -685,9 +683,9 @@ export default function Energy() {
                 ) : (
                   <>
                     <div style={{ fontSize: 12.5, color: 'var(--text2)', marginBottom: 8 }}>
-                      <b>{tr('ยอดไฟขึ้น ≠ แย่ลง')}</b> — อาจแค่ผลิตเยอะขึ้น · SEC เป็นตัวเดียวที่แยก 2 เรื่องนี้ออกจากกัน:
-                      <span style={{ color: GOOD }}> ยอดขึ้น + SEC ลง = ดี</span> ·
-                      <span style={{ color: BAD }}> ยอดเท่าเดิม + SEC ขึ้น = มีของรั่ว/เครื่องเสื่อม</span>
+                      <b>{tr('ยอดไฟขึ้น ≠ แย่ลง')}</b> — {tr("อาจแค่ผลิตเยอะขึ้น · SEC เป็นตัวเดียวที่แยก 2 เรื่องนี้ออกจากกัน")}:
+                      <span style={{ color: GOOD }}> {tr("ยอดขึ้น + SEC ลง = ดี")}</span> ·
+                      <span style={{ color: BAD }}> {tr("ยอดเท่าเดิม + SEC ขึ้น = มีของรั่ว/เครื่องเสื่อม")}</span>
                     </div>
                     {/* 📊 2 กราฟซ้อนแกน X เดียวกัน — **ห้ามกลับไปเป็นกราฟแกน Y 2 ข้าง** (23/09 ก้อน C)
                         เดิมเป็น ComposedChart ที่มี `yAxisId="l"` (ชิ้น) กับ `yAxisId="r"` (kWh/ชิ้น) ซ้อนกัน
@@ -723,11 +721,11 @@ export default function Energy() {
                       </LineChart>
                     </ResponsiveContainer>
                     <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 12, color: 'var(--muted)', marginTop: 6 }}>
-                      <span>📏 <b>{PIECE_BASIS_LABEL}</b> — ต่างจากจอผลิตที่นับเป็น stroke (1 ปั๊ม = 1)</span>
+                      <span>📏 <b>{PIECE_BASIS_LABEL}</b> — {tr("ต่างจากจอผลิตที่นับเป็น stroke (1 ปั๊ม")} = 1)</span>
                       {kgPerPiece != null && <span>{tr('คาร์บอนต่อชิ้น')} <b>{kgPerPiece}</b> {tr('kgCO2e (ช่วง gate-to-gate เท่านั้น ยังไม่รวมวัสดุที่ซื้อเข้ามา)')}</span>}
                     </div>
                     <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 4 }}>
-                      ⚠️ ระดับ<b>{tr('ทั้งโรงงาน')}</b>เท่านั้น (ไฟทั้งโรงงาน ÷ ชิ้นทั้งโรงงาน) — แยกรายไลน์/รายพาร์ทต้องรอมิเตอร์รายไลน์
+                      ⚠️ {tr("ระดับ")}<b>{tr('ทั้งโรงงาน')}</b>{tr("เท่านั้น (ไฟทั้งโรงงาน ÷ ชิ้นทั้งโรงงาน) — แยกรายไลน์/รายพาร์ทต้องรอมิเตอร์รายไลน์")}
                     </div>
                   </>
                 )}
@@ -769,7 +767,7 @@ export default function Energy() {
                   </ResponsiveContainer>
                   {contribRows.some(r => r.isNew || r.isGone) && (
                     <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 4 }}>
-                      ⬤ เทา = จุดที่เพิ่งเริ่มกรอก หรือเดือนนี้ยังไม่กรอก — <b>{tr('ไม่ใช่การใช้ไฟที่เปลี่ยนจริง')}</b> อย่าเอาไปสรุป
+                      ⬤ {tr("เทา = จุดที่เพิ่งเริ่มกรอก หรือเดือนนี้ยังไม่กรอก")} — <b>{tr('ไม่ใช่การใช้ไฟที่เปลี่ยนจริง')}</b> {tr("อย่าเอาไปสรุป")}
                     </div>
                   )}
                 </>
@@ -833,7 +831,7 @@ export default function Energy() {
                 </tbody>
               </table>
               <div style={{ fontSize: 11.5, color: 'var(--muted)', padding: '8px 14px 12px' }}>
-                * = ค่าที่ไลน์แม่กรอกครอบไว้แล้ว (แสดงเป็นรายละเอียด <b>ไม่ถูกบวกซ้ำ</b> เข้ายอดรวม/กราฟด้านบน)
+                * = {tr("ค่าที่ไลน์แม่กรอกครอบไว้แล้ว (แสดงเป็นรายละเอียด")} <b>{tr("ไม่ถูกบวกซ้ำ")}</b> {tr("เข้ายอดรวม/กราฟด้านบน")})
               </div>
             </div>
           </>

@@ -286,7 +286,7 @@ export default function DisplayRotation() {
         </div>
         {loaded && screens.length === 0 && (
           <div style={{ fontSize: 13, color: 'var(--muted)' }}>
-            ยังไม่มีบัญชีจอ (role 📺 จอแสดงผล) ในส่วนงานของคุณ — สร้าง/ตั้งส่วนงานบัญชีจอที่ /add-user
+            {tr("ยังไม่มีบัญชีจอ (role 📺 จอแสดงผล) ในส่วนงานของคุณ — สร้าง/ตั้งส่วนงานบัญชีจอที่")} /add-user
           </div>
         )}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 6, alignContent: 'start' }}>
@@ -331,12 +331,12 @@ export default function DisplayRotation() {
                 {emails[selAcc.id] && <span style={{ fontSize: 12, color: 'var(--muted)' }}>{emails[selAcc.id]}</span>}
               </div>
               <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: -6 }}>
-                ส่วนงานดึงจากบัญชีจอเอง (แก้ที่ /add-user) — จอเห็นข้อมูลเฉพาะส่วนงานนี้ทุกหน้า
+                {tr("ส่วนงานดึงจากบัญชีจอเอง (แก้ที่ /add-user) — จอเห็นข้อมูลเฉพาะส่วนงานนี้ทุกหน้า")}
               </div>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 700 }}>
                 <input type="checkbox" checked={!!form.enabled} disabled={!canEdit} onChange={e => setF('enabled', e.target.checked)} />
                 {tr('เปิดการวนหน้า')}
-                <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--muted)' }}>(ปิด = เก็บรอบไว้ แต่จอค้างหน้าเดิม)</span>
+                <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--muted)' }}>({tr("ปิด = เก็บรอบไว้ แต่จอค้างหน้าเดิม")})</span>
               </label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
                 <Field label={tr('ค่าตั้งต้น วินาที/หน้า')}>
@@ -455,7 +455,7 @@ export default function DisplayRotation() {
                 </div>
               )}
               <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                ปุ่มเลขหน้า = รอบที่บันทึกแล้ว (แก้แล้วยังไม่บันทึก จอยังไม่รู้) · จอต้องตั้งรอบไว้และเปิดอยู่จึงสั่งได้
+                {tr("ปุ่มเลขหน้า = รอบที่บันทึกแล้ว (แก้แล้วยังไม่บันทึก จอยังไม่รู้) · จอต้องตั้งรอบไว้และเปิดอยู่จึงสั่งได้")}
               </div>
             </section>
 
@@ -758,7 +758,7 @@ function PagePreview({ path }) {
         </>
       ) : (
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--muted)', padding: 12, textAlign: 'center' }}>
-          เลือกหน้าในแถวทางซ้ายเพื่อดูตัวอย่าง
+          {tr("เลือกหน้าในแถวทางซ้ายเพื่อดูตัวอย่าง")}
         </div>
       )}
     </div>

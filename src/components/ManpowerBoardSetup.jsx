@@ -248,7 +248,7 @@ export default function ManpowerBoardSetup({ section, nodes, lines, employees, s
         <section style={{ marginBottom: 18 }}>
           <div style={{ fontWeight: 800, marginBottom: 4 }}>{tr('1. จำนวนช่องตำแหน่งต่อทีม')}</div>
           <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>
-            ช่องว่าง = จำนวนที่ตั้ง − พนักงานในทะเบียนของทีมนั้น · <b>เว้นว่าง = ใช้คนมาตรฐานของไลน์ (std)</b> ตามกะของทีมวันนี้ · กด Enter หรือ 💾 เพื่อบันทึก
+            {tr("ช่องว่าง = จำนวนที่ตั้ง − พนักงานในทะเบียนของทีมนั้น")} · <b>{tr("เว้นว่าง = ใช้คนมาตรฐานของไลน์")} (std)</b> {tr("ตามกะของทีมวันนี้ · กด Enter หรือ 💾 เพื่อบันทึก")}
           </div>
           {!depts.length ? <div style={{ fontSize: 13, color: 'var(--muted)' }}>{tr('ส่วนงานนี้ยังไม่มีแผนกในผังองค์กร')}</div> : (
             <div style={{ overflowX: 'auto' }}>
@@ -287,8 +287,8 @@ export default function ManpowerBoardSetup({ section, nodes, lines, employees, s
         <section style={{ marginBottom: 18 }}>
           <div style={{ fontWeight: 800, marginBottom: 4 }}>{tr('2. คนต่อกะของแต่ละจุดงาน')}</div>
           <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>
-            ตั้งแล้ว ช่องว่างบนบอร์ดจะบอกได้ว่า <b>{tr('ขาดที่จุดไหน กะไหน')}</b> (นับจากจุดประจำของคน — ตั้งที่ /management) ·
-            <b> เว้นว่าง = ไม่นับจุดนั้น</b> · ลำดับที่บอร์ดใช้: ช่องต่อทีม (ข้อ 1) ชนะ → จุดงาน → std ของไลน์ · พิมพ์แล้วกด Enter/คลิกที่อื่นเพื่อบันทึก
+            {tr("ตั้งแล้ว ช่องว่างบนบอร์ดจะบอกได้ว่า")} <b>{tr('ขาดที่จุดไหน กะไหน')}</b> ({tr("นับจากจุดประจำของคน — ตั้งที่")} /management) ·
+            <b> {tr("เว้นว่าง = ไม่นับจุดนั้น")}</b> · {tr("ลำดับที่บอร์ดใช้: ช่องต่อทีม (ข้อ 1) ชนะ → จุดงาน → std ของไลน์ · พิมพ์แล้วกด Enter/คลิกที่อื่นเพื่อบันทึก")}
           </div>
           {!secLines.length ? <div style={{ fontSize: 13, color: 'var(--muted)' }}>{tr('ส่วนงานนี้ยังไม่ได้ผูกไลน์ผลิตในผังองค์กร')}</div> : (
             <div style={{ display: 'grid', gap: 8 }}>
@@ -334,7 +334,7 @@ export default function ManpowerBoardSetup({ section, nodes, lines, employees, s
           <div style={{ fontWeight: 800, marginBottom: 4 }}>{tr('3. ช่างประจำไลน์')}</div>
 
           <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>
-            ช่างแผนกไหนก็ได้ (MTN · DIE · JIG …) — ขึ้นแถว "ช่างเทคนิคประจำไลน์" ของแผนกที่ดูแลไลน์นั้น · <b>{tr('ไม่เปลี่ยนสังกัดของช่าง')}</b>
+            {tr("ช่างแผนกไหนก็ได้ (MTN · DIE · JIG …) — ขึ้นแถว \"ช่างเทคนิคประจำไลน์\" ของแผนกที่ดูแลไลน์นั้น")} · <b>{tr('ไม่เปลี่ยนสังกัดของช่าง')}</b>
           </div>
           {!secLines.length ? <div style={{ fontSize: 13, color: 'var(--muted)' }}>{tr('ส่วนงานนี้ยังไม่ได้ผูกไลน์ผลิตในผังองค์กร (ตั้งที่ /org-setup)')}</div> : (
             <div style={{ display: 'grid', gap: 8 }}>
@@ -369,9 +369,9 @@ export default function ManpowerBoardSetup({ section, nodes, lines, employees, s
         <section style={{ marginTop: 18 }}>
           <div style={{ fontWeight: 800, marginBottom: 4 }}>{tr('4. 🏃 คนวิ่งข้ามแผนก (ไปช่วยประจำ)')}</div>
           <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>
-            คนที่สังกัดแผนกหนึ่งแต่ไปช่วยอีกแผนกเป็นประจำ — ผูกไว้แล้วการ์ดจะขึ้นบนบอร์ดของแผนกที่ไปช่วยด้วย ·
+            {tr("คนที่สังกัดแผนกหนึ่งแต่ไปช่วยอีกแผนกเป็นประจำ — ผูกไว้แล้วการ์ดจะขึ้นบนบอร์ดของแผนกที่ไปช่วยด้วย")} ·
             <b> {tr('ไม่ย้ายสังกัด · cost center ไม่เปลี่ยน · ไม่นับเป็นกำลังคน/ช่องว่างของแผนกที่ไปช่วย')}</b>
-            (หน่วยต้นสังกัดนับเขาอยู่แล้ว — นับ 2 ที่ = กำลังคนเกินจริง) · อยากยืมเฉพาะวันนี้ให้ใช้ "ยืมตัว" ที่หน้าเช็คชื่อแทน
+            ({tr("หน่วยต้นสังกัดนับเขาอยู่แล้ว — นับ 2 ที่ = กำลังคนเกินจริง) · อยากยืมเฉพาะวันนี้ให้ใช้ \"ยืมตัว\" ที่หน้าเช็คชื่อแทน")}
           </div>
           {!depts.length ? <div style={{ fontSize: 13, color: 'var(--muted)' }}>{tr('ส่วนงานนี้ยังไม่มีแผนกในผังองค์กร (ตั้งที่ /org-setup)')}</div> : (
             <div style={{ display: 'grid', gap: 8 }}>

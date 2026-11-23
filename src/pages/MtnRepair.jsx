@@ -1244,8 +1244,8 @@ const HANDOFF_CAP = 2000;
         {fAck === 'pending' && (
           <NoticeBar tone="info" style={{ marginBottom: 10 }}>
             {trI18n("กรองเฉพาะ")} <b>{trI18n('ใบทีม MTN ที่ผู้จัดการต้นสังกัดยังไม่เซ็นรับทราบ')}</b> {trI18n('— ช่องนี้')} <b>{trI18n('ไม่บล็อกงาน')}</b>
-            <InfoMore id="mo-ack-how" label={trI18n('วิธีเซ็น')}>เปิดใบแล้วกดปุ่ม "อนุมัติใบ MO (ผู้จัดการต้นสังกัด)" · <b>{trI18n('ใบที่ปิดไปแล้วก็ย้อนเซ็นได้')}</b> —
-              สลับช่องสถานะเป็น "ทุกสถานะ" เพื่อให้ใบที่ปิดแล้วขึ้นมาด้วย</InfoMore>
+            <InfoMore id="mo-ack-how" label={trI18n('วิธีเซ็น')}>{trI18n("เปิดใบแล้วกดปุ่ม \"อนุมัติใบ MO (ผู้จัดการต้นสังกัด")})" · <b>{trI18n('ใบที่ปิดไปแล้วก็ย้อนเซ็นได้')}</b> —
+              {trI18n("สลับช่องสถานะเป็น \"ทุกสถานะ\" เพื่อให้ใบที่ปิดแล้วขึ้นมาด้วย")}</InfoMore>
           </NoticeBar>
         )}
         {orders.length >= ORDER_CAP && (
@@ -1295,7 +1295,7 @@ const HANDOFF_CAP = 2000;
           <div style={{ fontSize: 12.5, color: 'var(--text2)', background: 'var(--amber-dim)',
             border: '1px solid var(--amber-line)', borderRadius: 'var(--r-md)', padding: '10px 13px', marginBottom: 10, lineHeight: 1.7 }}>
             <div style={{ fontWeight: 800, color: 'var(--text)', fontSize: 13 }}>
-              ตัวกรองที่เลือกอยู่ตัดใบออกหมด — ไม่ได้แปลว่าไม่มีงาน
+              {trI18n("ตัวกรองที่เลือกอยู่ตัดใบออกหมด — ไม่ได้แปลว่าไม่มีงาน")}
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 5, marginTop: 4 }}>
               {ladderSteps(emptyWhy.ladder).map((r, i) => (
@@ -1324,7 +1324,7 @@ const HANDOFF_CAP = 2000;
             )}
             {emptyWhy.needsMulti && (
               <div style={{ marginTop: 6, color: 'var(--muted)' }}>
-                ปลดตัวเดียวยังไม่พอ — กดปุ่ม <b>{trI18n('ล้างตัวกรอง')}</b> ในแถบด้านบนเพื่อเริ่มใหม่
+                {trI18n("ปลดตัวเดียวยังไม่พอ — กดปุ่ม")} <b>{trI18n('ล้างตัวกรอง')}</b> {trI18n("ในแถบด้านบนเพื่อเริ่มใหม่")}
               </div>
             )}
           </div>
@@ -1950,9 +1950,9 @@ function ReportModal({ lines, lineLoadErr = '', onReloadLines, machines, machine
               ⇒ ต้องเขียนตรงนี้ด้วย ไม่ใช่แค่แถบรวมด้านบนของแอป */}
           {(lineLoadErr || !lines.length) && (
             <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--red)', marginTop: 3 }}>
-              ⚠️ ทะเบียนไลน์โหลดไม่สำเร็จ — <b>{trI18n('ไม่ใช่เรื่องสิทธิ์ และไลน์ไม่ได้ถูกลบ')}</b>
+              ⚠️ {trI18n("ทะเบียนไลน์โหลดไม่สำเร็จ")} — <b>{trI18n('ไม่ใช่เรื่องสิทธิ์ และไลน์ไม่ได้ถูกลบ')}</b>
               <div style={{ fontWeight: 400, color: 'var(--text2)' }}>
-                กดปุ่มข้างล่างนี้ก่อน · ถ้ายังไม่หาย ให้ออกจากระบบแล้วเข้าใหม่
+                {trI18n("กดปุ่มข้างล่างนี้ก่อน · ถ้ายังไม่หาย ให้ออกจากระบบแล้วเข้าใหม่")}
                 <button type="button"
                   onClick={() => onReloadLines?.()}
                   style={{ marginLeft: 6, fontSize: 11.5, padding: '2px 10px', borderRadius: 'var(--r-md)', cursor: 'pointer',
@@ -2070,7 +2070,7 @@ function ReportModal({ lines, lineLoadErr = '', onReloadLines, machines, machine
                   {dups.length > 5 && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{trI18n('…และอีก')} {dups.length - 5} {trI18n('ใบ')}</div>}
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-                  ถ้าเป็นคนละอาการ แจ้งใบใหม่ได้ตามปกติ — ระบบไม่บล็อก
+                  {trI18n("ถ้าเป็นคนละอาการ แจ้งใบใหม่ได้ตามปกติ — ระบบไม่บล็อก")}
                 </div>
               </div>
             );
@@ -2119,7 +2119,7 @@ function ReportModal({ lines, lineLoadErr = '', onReloadLines, machines, machine
         {requireBefore && !beforeFile && <div style={{ fontSize: 11.5, color: 'var(--red)', marginTop: -6 }}>{trI18n('ต้องแนบรูปก่อนซ่อม — ให้ช่างเห็นอาการก่อนเดินมา')}</div>}
         <Field label={trI18n('วันเวลาที่เกิดเหตุ (กรอกเฉพาะแจ้งย้อนหลัง)')}>
           <input type="datetime-local" value={f.occurred_at} onChange={e => set('occurred_at', e.target.value)} max={localDtNow()} style={inp} />
-          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>ว่าง = เกิดเหตุตอนนี้ · เวลาที่กดแจ้งยังถูกบันทึกแยกไว้ใช้คิด Response time/เลข MO</div>
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{trI18n("ว่าง = เกิดเหตุตอนนี้ · เวลาที่กดแจ้งยังถูกบันทึกแยกไว้ใช้คิด Response time/เลข")} MO</div>
         </Field>
 
         <FormStep n={5} title={trI18n('ข้อมูลฟอร์ม MTN')} visible={teamKeyOf(f.mtn_dept) === 'maintenance'} />
@@ -3362,8 +3362,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
           {!showVendor ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <div style={{ fontSize: 11.5, color: 'var(--muted)', flex: 1, minWidth: 190 }}>
-                ต้องให้ <b style={{ color: 'var(--text2)' }}>{trI18n('ผู้รับจ้างภายนอกมาแก้?')}</b> — บันทึกไว้ ใบยังเป็นของทีมนี้
-                แต่เวลาที่รอของจะ<b style={{ color: 'var(--text2)' }}>{trI18n('ไม่ถูกนับเป็นเวลาซ่อมของช่าง')}</b>
+                {trI18n("ต้องให้")} <b style={{ color: 'var(--text2)' }}>{trI18n('ผู้รับจ้างภายนอกมาแก้?')}</b> — {trI18n("บันทึกไว้ ใบยังเป็นของทีมนี้ แต่เวลาที่รอของจะ")}<b style={{ color: 'var(--text2)' }}>{trI18n('ไม่ถูกนับเป็นเวลาซ่อมของช่าง')}</b>
               </div>
               <button onClick={() => { setVenSup(o.supplier || ''); setVenNote(''); setShowVendor(true); }}
                 style={{ ...btnGhost, color: 'var(--blue)', borderColor: 'var(--blue)' }}>{trI18n('ส่งซ่อมภายนอก')}</button>
@@ -3380,9 +3379,8 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
                   placeholder={trI18n('เช่น ถอดมอเตอร์ส่งพันขดลวด นัดรับ 3 วัน')} style={{ ...inp, fontSize: 12.5, minHeight: 52 }} />
               </div>
               <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 5, lineHeight: 1.6 }}>
-                กดแล้ว: ใบเปลี่ยนเป็น <b style={{ color: 'var(--blue)' }}>{trI18n('“📤 ส่งซ่อมภายนอก (รอ supplier)”')}</b> (ยังไม่ปิด)
-                · <b style={{ color: 'var(--text2)' }}>{trI18n('แจ้งผู้เปิดใบ + หัวหน้าส่วนงาน')}</b> ทันที
-                · ค่าใช้จ่ายลงช่องเดิมตอนซ่อมเสร็จ (ค่าแรง / ค่าอะไหล่)
+                {trI18n("กดแล้ว: ใบเปลี่ยนเป็น")} <b style={{ color: 'var(--blue)' }}>{trI18n('“📤 ส่งซ่อมภายนอก (รอ supplier)”')}</b> ({trI18n("ยังไม่ปิด")})
+                · <b style={{ color: 'var(--text2)' }}>{trI18n('แจ้งผู้เปิดใบ + หัวหน้าส่วนงาน')}</b> {trI18n("ทันที · ค่าใช้จ่ายลงช่องเดิมตอนซ่อมเสร็จ (ค่าแรง / ค่าอะไหล่")})
               </div>
               <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                 <button onClick={() => setShowVendor(false)} style={btnGhost}>{trI18n('ยกเลิก')}</button>
@@ -3401,7 +3399,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
           {!showHandoff ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <div style={{ fontSize: 11.5, color: 'var(--muted)', flex: 1, minWidth: 190 }}>
-                ดูแล้วเกินมือทีมนี้? <b style={{ color: 'var(--text2)' }}>{trI18n('ส่งต่อให้ช่างเฉพาะทางได้เลย')}</b> — ระบบปิดใบนี้ให้ แล้วเปิดใบใหม่ของทีมนั้นพร้อมผลตรวจที่ทำมา
+                {trI18n("ดูแล้วเกินมือทีมนี้")}? <b style={{ color: 'var(--text2)' }}>{trI18n('ส่งต่อให้ช่างเฉพาะทางได้เลย')}</b> — {trI18n("ระบบปิดใบนี้ให้ แล้วเปิดใบใหม่ของทีมนั้นพร้อมผลตรวจที่ทำมา")}
               </div>
               <button onClick={() => { setHoDept(''); setHoReason(''); setShowHandoff(true); }} style={{ ...btnGhost, color: 'var(--blue)', borderColor: 'var(--blue)' }}>{trI18n('ส่งต่อทีมอื่น')}</button>
             </div>
@@ -3422,9 +3420,8 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
                 <textarea value={hoReason} onChange={e => setHoReason(e.target.value)} placeholder={trI18n('เช่น ตรวจแล้วเป็นที่บอร์ดคอนโทรล เกินขอบเขตช่างฝ่ายผลิต ต้องให้ MTN ถอดเช็ค')} style={{ ...inp, fontSize: 12.5, minHeight: 58 }} />
               </div>
               <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 5, lineHeight: 1.6 }}>
-                กดแล้ว: <b style={{ color: 'var(--text2)' }}>{trI18n('ใบนี้ปิดเป็น “ส่งต่อทีมอื่น”')}</b> (ผลตรวจ/ช่าง/รูป ยังอยู่ในใบครบ ไม่หาย)
-                · <b style={{ color: 'var(--text2)' }}>{trI18n('เปิดใบใหม่ให้ทีมปลายทาง ได้เลข MO ของทีมนั้นเอง')}</b> ตอนหัวหน้าช่างกดรับงาน
-                · 2 ใบผูกกันไว้ กดดูย้อนกันได้ · เวลา KPI ของทีมใหม่เริ่มนับจากตอนนี้ (เวลาที่ปัญหาเกิดครั้งแรกยังเก็บไว้)
+                {trI18n("กดแล้ว")}: <b style={{ color: 'var(--text2)' }}>{trI18n('ใบนี้ปิดเป็น “ส่งต่อทีมอื่น”')}</b> ({trI18n("ผลตรวจ/ช่าง/รูป ยังอยู่ในใบครบ ไม่หาย")})
+                · <b style={{ color: 'var(--text2)' }}>{trI18n('เปิดใบใหม่ให้ทีมปลายทาง ได้เลข MO ของทีมนั้นเอง')}</b> {trI18n("ตอนหัวหน้าช่างกดรับงาน · 2 ใบผูกกันไว้ กดดูย้อนกันได้ · เวลา KPI ของทีมใหม่เริ่มนับจากตอนนี้ (เวลาที่ปัญหาเกิดครั้งแรกยังเก็บไว้")})
               </div>
               <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                 <button onClick={() => setShowHandoff(false)} style={btnGhost}>{trI18n('ยกเลิก')}</button>
@@ -3458,7 +3455,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
                       other_team: 'ช่องนี้เป็นของ ผจก. ทีมที่รับใบนี้',
                     })[ack.code] || 'รับทราบได้เฉพาะ ผจก. ที่ถูกระบุในใบ หรือผู้ถือสิทธิ์อนุมัติ'}
                       {whoAmILine && <span style={{ display: 'block', marginTop: 2 }}>{whoAmILine}</span>}</span>}
-                {ack.ok && posRank == null && <span style={{ fontSize: 11, color: 'var(--amber)' }}>⚠️ บัญชีนี้ยังไม่ได้ตั้งตำแหน่ง — ระบบไม่ได้ตรวจระดับ</span>}
+                {ack.ok && posRank == null && <span style={{ fontSize: 11, color: 'var(--amber)' }}>⚠️ {trI18n("บัญชีนี้ยังไม่ได้ตั้งตำแหน่ง — ระบบไม่ได้ตรวจระดับ")}</span>}
               </div>
             )}
           </div>
@@ -3477,7 +3474,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
             {posRank == null && (appr?.missing?.length > 0) && (
               /* 🔴 ไม่รู้ตำแหน่งของบัญชีนี้ = ด่านตำแหน่งไม่ได้ตรวจ — ห้ามเงียบ (กฎ MTN ขั้น 6/7/8) */
               <div style={{ fontSize: 11, color: 'var(--amber)', marginBottom: 3 }}>
-                ⚠️ บัญชีนี้ยังไม่ได้ตั้งตำแหน่ง — ระบบ<b>{trI18n('ไม่ได้ตรวจ')}</b>ว่าถึงระดับที่เซ็นช่องนี้ได้หรือไม่ (ตั้งที่ /add-user)
+                ⚠️ {trI18n("บัญชีนี้ยังไม่ได้ตั้งตำแหน่ง — ระบบ")}<b>{trI18n('ไม่ได้ตรวจ')}</b>{trI18n("ว่าถึงระดับที่เซ็นช่องนี้ได้หรือไม่ (ตั้งที่")} /add-user)
               </div>
             )}
             <div>{trI18n('ผู้จัดการต้นสังกัด:')} {o.dept_manager_at ? <b style={{ color: 'var(--accent)' }}>✔ {o.dept_manager_name || '—'} · {fmtDateTime(o.dept_manager_at)}</b> : <span style={{ color: 'var(--muted)' }}>{trI18n('ยังไม่เซ็น')}{o.dept_manager_name ? ` (${trI18n("ระบุไว้")}: ${o.dept_manager_name})` : ''}</span>}</div>
@@ -3512,7 +3509,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
       {/* ผู้เปิดใบตรวจรับ (ขั้น 4) และรับมอบ (ขั้น 6) ของใบตัวเองได้เสมอ — บอกให้รู้ว่าทำไมกดได้ */}
       {isOrderReporter(o, fullName) && o.status !== 'closed' && (
         <NoticeBar tone="ok" style={{ marginBottom: 10 }}>
-          คุณเป็น<b>{trI18n('ผู้เปิดใบนี้')}</b> — ตรวจรับงานหลังซ่อม (ขั้น 4) และรับมอบ/ติดตามผล (ขั้น 6) ได้เอง
+          {trI18n("คุณเป็น")}<b>{trI18n('ผู้เปิดใบนี้')}</b> — {trI18n("ตรวจรับงานหลังซ่อม (ขั้น 4) และรับมอบ/ติดตามผล (ขั้น 6) ได้เอง")}
         </NoticeBar>
       )}
       {/* ⏳ ใบที่ระบบเปิดให้ตอนกด "เรียกช่าง" แล้วยังไม่มีใครใส่รายละเอียด (13/11 · คำสั่ง user)
@@ -3604,7 +3601,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
           {!mtnForm && (
             /* done = QA ตรวจจริงเท่านั้น (moQaState) — ห้ามกลับไปใช้ current_step >= 5 */
             <StepBox n={5} done={qa5 === 'done'} skipped={qa5 === 'skipped'} note={qa5Note}>
-              {isWaitingQa(o) && !isQaSkipped(o) && <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 4 }}>⏳ รอ QA ตรวจ — ถ้างานนี้ไม่เกี่ยวกับคุณภาพ กด "⏭ ข้าม QA" ด้านล่างเพื่อไปรับมอบได้เลย</div>}
+              {isWaitingQa(o) && !isQaSkipped(o) && <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 4 }}>⏳ {trI18n("รอ QA ตรวจ — ถ้างานนี้ไม่เกี่ยวกับคุณภาพ กด \"⏭ ข้าม QA\" ด้านล่างเพื่อไปรับมอบได้เลย")}</div>}
               <Row k="ผลคุณภาพ" v={o.qa_result} /><Row k="รายละเอียด" v={o.qa_note} /><Row k="ผู้ตรวจ QA" v={o.qa_checker} /><Img label={trI18n('รูปยืนยันคุณภาพ')} url={o.qa_img} /><Img label={trI18n('ลายเซ็น QA')} url={sgn(o.qa_checker_uid, o.qa_sign)} />
             </StepBox>
           )}
@@ -3682,7 +3679,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
                 ))}
                 {tl.outOfOrder && (
                   <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 3 }}>
-                    ⚠ เวลาในใบไม่เรียงตามจริง (กดปุ่มย้อนหลัง) — แบ่งช่วงบางช่วงไม่ได้
+                    ⚠ {trI18n("เวลาในใบไม่เรียงตามจริง (กดปุ่มย้อนหลัง) — แบ่งช่วงบางช่วงไม่ได้")}
                   </div>
                 )}
                 {tl.missing.length > 0 && !tl.outOfOrder && (
@@ -3738,7 +3735,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
           ⇒ ต้องเขียนบอกคนที่กำลังพิมพ์ ไม่งั้นเขาคิดว่าคุยกันในนี้แล้วหายไปเฉยๆ */}
       <EventComments refKind="mtn_order" refId={o.id} contextLabel={`${trI18n("ใบซ่อม")} ${o.mo_no || `#${o.id}`}${o.machine_no ? ` (${o.machine_no})` : ''}`} />
       <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 4 }}>
-        คอมเมนต์ข้างบนจะถูกพิมพ์ลงใบ MO ด้วย — <b>{trI18n('ต่อท้ายรายละเอียดที่ผู้แจ้งเขียนไว้')}</b> (ของเดิมไม่ถูกแก้ทับ) พร้อมชื่อผู้คอมเมนต์และเวลา
+        {trI18n("คอมเมนต์ข้างบนจะถูกพิมพ์ลงใบ MO ด้วย")} — <b>{trI18n('ต่อท้ายรายละเอียดที่ผู้แจ้งเขียนไว้')}</b> ({trI18n("ของเดิมไม่ถูกแก้ทับ) พร้อมชื่อผู้คอมเมนต์และเวลา")}
       </div>
       {/* 🖥️ แถบปุ่มท้ายใบ — เกาะล่างของการ์ดโมดัลบนจอคอม (28/10 · คำสั่ง user)
           ใบที่เซ็นครบหลายขั้นสูง ~3 จอ ปุ่ม "ขั้นถัดไป" เคยอยู่ก้นใบ ⇒ เปิดใบทีต้องเลื่อนสุดก่อนทำงาน
@@ -3752,7 +3749,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
           : !canDelete('mtn_repair', 'manage_master', role) && isSharedAccount()
             ? <span style={{ fontSize: 11.5, color: 'var(--muted)', alignSelf: 'center' }}
                 title={trI18n('บัญชีกลางใช้ร่วมกันหลายคน ลบแล้วสอบกลับไม่ได้ว่าใครกด — ให้ล็อกอินด้วยบัญชีของตัวเองถ้าต้องลบจริง')}>
-                บัญชีกลางลบใบไม่ได้
+                {trI18n("บัญชีกลางลบใบไม่ได้")}
               </span>
             : <span />}
         {/* ปุ่มตายตัว ≤2 (UI §6.35): [ขั้นถัดไป (primary)] [ปิด] + ⋯ (ประวัติเครื่อง · โปรเจคปรับปรุง · พิมพ์ · QA ข้าม · ลบ/ยกเลิก) */}
@@ -4491,8 +4488,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
         )}
         {skipQa && (
           <NoticeBar tone="warn" style={{ marginBottom: 0 }}>
-            ใบนี้ค้างรอ QA เพราะขั้น 4 ระบุว่า <b>{trI18n('“เกี่ยวกับคุณภาพ”')}</b> — ถ้างานซ่อมนี้ไม่กระทบคุณภาพชิ้นงานจริง
-            กดยืนยันเพื่อข้ามการตรวจ QA แล้วไป <b>{trI18n('รับมอบ / ติดตามผล (ขั้น 6)')}</b> ทันที · ระบบบันทึกชื่อคุณและเหตุผลไว้ในใบ
+            {trI18n("ใบนี้ค้างรอ QA เพราะขั้น 4 ระบุว่า")} <b>{trI18n('“เกี่ยวกับคุณภาพ”')}</b> — {trI18n("ถ้างานซ่อมนี้ไม่กระทบคุณภาพชิ้นงานจริง กดยืนยันเพื่อข้ามการตรวจ QA แล้วไป")} <b>{trI18n('รับมอบ / ติดตามผล (ขั้น 6)')}</b> {trI18n("ทันที · ระบบบันทึกชื่อคุณและเหตุผลไว้ในใบ")}
           </NoticeBar>
         )}
         {stepMeta(step, { mtnForm: isMtnForm, toolTeam: isToolTeam }) && !skipQa && (
@@ -4503,7 +4499,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
         )}
         {modalStage === 'report' && <>
           <div style={{ fontSize: 12, background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 11px', lineHeight: 1.6 }}>
-            ✏️ <b>{trI18n('แก้ได้เฉพาะ 3 ช่องนี้')}</b> — รูปปัญหา · รายละเอียดปัญหา · ระบุเพิ่มเติม
+            ✏️ <b>{trI18n('แก้ได้เฉพาะ 3 ช่องนี้')}</b> — {trI18n("รูปปัญหา · รายละเอียดปัญหา · ระบุเพิ่มเติม")}
             <div style={{ color: 'var(--muted)', marginTop: 2 }}>
               {trI18n("ไลน์ · เครื่อง · ลักษณะปัญหา · ผู้แจ้ง · ทีมช่าง")} <b style={{ color: 'var(--text2)' }}>{trI18n('ล็อกไว้')}</b> —
               {trI18n("ใบออกเลข MO แล้วแก้ของพวกนี้ทำให้สอบกลับเพี้ยน · แจ้งผิดแผนกให้ใช้")} <b>{trI18n('ตีกลับ')}</b> {trI18n('หรือ')} <b>{trI18n('ส่งต่องาน')}</b>
@@ -4525,7 +4521,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
                   เคสที่เจอจริง: ช่างฝ่ายผลิตยังไม่ถูกติ๊ก employees.mtn_team จึงไม่โผล่สักคน */}
               {techGroups.teamKey && techGroups.mine.length === 0 && (
                 <div style={{ fontSize: 11.5, color: 'var(--amber)', background: 'var(--amber-dim)', border: '1px solid var(--amber-line)', borderRadius: 'var(--r-md)', padding: '7px 10px', marginTop: 6, lineHeight: 1.6 }}>
-                  ⚠️ ยังไม่มีใครถูกตั้งเป็นช่างทีม <b>{deptNameOf(techGroups.teamKey)}</b> เลย
+                  ⚠️ {trI18n("ยังไม่มีใครถูกตั้งเป็นช่างทีม")} <b>{deptNameOf(techGroups.teamKey)}</b> {trI18n("เลย")}
                   <div>{trI18n('ไปตั้งที่')} <b>{trI18n('ฐานข้อมูลพนักงาน (/operator)')}</b> {trI18n('→ แก้ไขพนักงาน → ช่อง')} <b>{trI18n('ทีมช่างซ่อม')}</b></div>
                   <div style={{ opacity: 0.85 }}>{trI18n('ระหว่างนี้เลือกช่างทีมอื่นไปก่อนได้')}</div>
                 </div>
@@ -4605,9 +4601,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
                   ช่องช่างหลัก/รองอยู่ด้านบน · ตารางนี้คือค่าแรง ⇒ บอกให้ชัดว่าอันไหนไปโผล่ที่ไหน */}
               {(f.tech_main || f.tech_secondary) && (
                 <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 4, lineHeight: 1.6 }}>
-                  ℹ️ <b>{[f.tech_main, f.tech_secondary].filter(Boolean).join(' / ')}</b> (ช่างซ่อมหลัก/รองที่เลือกไว้ด้านบน)
-                  จะขึ้นในตาราง “ค่าแรงในการปฏิบัติงาน” ของใบพิมพ์ให้เองอยู่แล้ว —
-                  เพิ่มที่นี่เฉพาะตอนต้องลง<b>{trI18n('ค่าแรงเป็นเงิน')}</b> หรือมีคนช่วยเพิ่มนอกเหนือจาก 2 คนนั้น
+                  ℹ️ <b>{[f.tech_main, f.tech_secondary].filter(Boolean).join(' / ')}</b> ({trI18n("ช่างซ่อมหลัก/รองที่เลือกไว้ด้านบน) จะขึ้นในตาราง “ค่าแรงในการปฏิบัติงาน” ของใบพิมพ์ให้เองอยู่แล้ว — เพิ่มที่นี่เฉพาะตอนต้องลง")}<b>{trI18n('ค่าแรงเป็นเงิน')}</b> {trI18n("หรือมีคนช่วยเพิ่มนอกเหนือจาก 2 คนนั้น")}
                 </div>
               )}
               {sumLabor(laborRows) != null && <div style={{ fontSize: 12.5, textAlign: 'right', fontWeight: 800, marginTop: 2 }}>{trI18n('(1) รวมค่าแรง')} {sumLabor(laborRows).toLocaleString()} {trI18n('บาท')}</div>}
@@ -4680,8 +4674,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
             {qaAppliesTo(o) ? <>
               🧪 <b>{trI18n('ใบนี้จะถูกส่งให้ QA ตรวจรับ (ขั้น 5) ทุกใบ')}</b>
               <div style={{ color: 'var(--muted)', marginTop: 2 }}>
-                ถ้างานไม่เกี่ยวกับคุณภาพชิ้นงาน <b style={{ color: 'var(--text2)' }}>{trI18n('QA จะเป็นผู้ระบุเองที่ขั้น 5')}</b> แล้วใบไปรับมอบต่อ —
-                ฝ่ายที่แจ้งข้ามขั้น QA เองไม่ได้ (เปลี่ยน 14/09/2026 ตามผังกระบวนการของโรงงาน ที่มี “หน่วยงานคุณภาพตรวจรับงานหลังซ่อม” อยู่ในเส้นทางหลักทุกสาย)
+                {trI18n("ถ้างานไม่เกี่ยวกับคุณภาพชิ้นงาน")} <b style={{ color: 'var(--text2)' }}>{trI18n('QA จะเป็นผู้ระบุเองที่ขั้น 5')}</b> {trI18n("แล้วใบไปรับมอบต่อ — ฝ่ายที่แจ้งข้ามขั้น QA เองไม่ได้ (เปลี่ยน 14/09/2026 ตามผังกระบวนการของโรงงาน ที่มี “หน่วยงานคุณภาพตรวจรับงานหลังซ่อม” อยู่ในเส้นทางหลักทุกสาย")})
               </div>
             </> : <>
               🚫 <b>{trI18n('ใบนี้ไม่มีขั้นตรวจคุณภาพ (QA) ในลูป')}</b>
@@ -4730,7 +4723,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
                   </div>
                 </div>
               ))}
-              <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>ให้คะแนนโดยหน่วยงานผู้แจ้ง — ไม่บังคับ ข้ามได้ (เว้นว่าง = ไม่ประเมิน)</div>
+              <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{trI18n("ให้คะแนนโดยหน่วยงานผู้แจ้ง — ไม่บังคับ ข้ามได้ (เว้นว่าง = ไม่ประเมิน")})</div>
               {(() => { const ss = satScore(f.satisfaction, SAT_DIMS.map(d => d.key));
                 return ss.sum == null ? null : (
                   <div style={{ fontSize: 12.5, fontWeight: 800 }}>{trI18n('คะแนนรวม')} {ss.sum}/{ss.max} {trI18n('· คิดเป็น')} {ss.pct}%</div>
@@ -4901,8 +4894,8 @@ function MasterTab({ techs, parts, problemTypes, itemTypes, repairTypes = [], la
     <div>
       <InfoMore style={{ marginBottom: 8 }} id="mtn_tech"
         lead={<>{trI18n('💡 ช่างมาจาก')}<b>{trI18n('ฐานข้อมูลพนักงาน')}</b> {trI18n('— เพิ่ม/แก้ที่หน้านั้น')}</>}>
-        ช่าง = พนักงานที่ section เป็นทีมช่าง (MTN/JIG/DIE) · มีสกิลได้เหมือน operator
-        <br />ด้านล่างเพิ่มได้เฉพาะ "ช่างเฉพาะกิจ" ที่ไม่ได้อยู่ในฐานพนักงาน
+        {trI18n("ช่าง = พนักงานที่ section เป็นทีมช่าง (MTN/JIG/DIE) · มีสกิลได้เหมือน")} operator
+        <br />{trI18n("ด้านล่างเพิ่มได้เฉพาะ \"ช่างเฉพาะกิจ\" ที่ไม่ได้อยู่ในฐานพนักงาน")}
       </InfoMore>
       <div style={{ overflowX: 'auto', paddingBottom: 2 }}>
       <div style={{ width: 'max-content', minWidth: '100%' }}>
@@ -5067,7 +5060,7 @@ function MasterTab({ techs, parts, problemTypes, itemTypes, repairTypes = [], la
             </select>
             {!!hiddenN && <span className="filter-count">{trI18n('ซ่อน')} {hiddenN} {trI18n('รายการของทีมอื่น')}</span>}
             <span className="spacer" />
-            <span className="filter-count">🌐 = ใช้ร่วมทุกทีม</span>
+            <span className="filter-count">🌐 = {trI18n("ใช้ร่วมทุกทีม")}</span>
           </FilterBar>
         )}
         {teamed && !isBoss && (
@@ -5084,7 +5077,7 @@ function MasterTab({ techs, parts, problemTypes, itemTypes, repairTypes = [], la
               {!!gaps.dupN && <> {gaps.byTeam.length ? '·' : '—'} {trI18n('มี')}<b>{trI18n('หัวข้อย่อยซ้ำ')}</b>{trI18n('ในทีม+กลุ่มเดียวกัน')} {gaps.dupN} {trI18n('ชุด ⇒ คนแจ้งเห็น 2 บรรทัดเหมือนกันใน dropdown เดียว แล้วพาเรโตแตกเป็น 2 แท่ง')}</>}
             </div>
           : <div style={{ ...warnBox, color: 'var(--muted)', background: 'var(--bg3)', border: '1px solid var(--border)' }}>
-              ✅ ทุกแถวมีกลุ่มใหญ่ครบ · ไม่มีหัวข้อย่อยซ้ำในทีม+กลุ่มเดียวกัน
+              ✅ {trI18n("ทุกแถวมีกลุ่มใหญ่ครบ · ไม่มีหัวข้อย่อยซ้ำในทีม+กลุ่มเดียวกัน")}
             </div>)}
         <div style={{ overflowX: 'auto', paddingBottom: 2 }}>
         <div style={{ width: 'max-content', minWidth: '100%' }}>
@@ -5162,7 +5155,7 @@ function MasterTab({ techs, parts, problemTypes, itemTypes, repairTypes = [], la
               : <span title={lockNote(it)} style={{ justifySelf: 'end', fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{trI18n('ดูอย่างเดียว')}</span>}
           </div>); })}
           {!shown.length && <div style={{ color: 'var(--muted)', fontSize: 13, padding: 12 }}>
-            ไม่มีรายการของทีมนี้ — เพิ่มด้านบน (หรือเลือก "ทุกทีม" เพื่อดูของทีมอื่น)
+            {trI18n("ไม่มีรายการของทีมนี้ — เพิ่มด้านบน (หรือเลือก \"ทุกทีม\" เพื่อดูของทีมอื่น")})
           </div>}
         </div>
         </div>
@@ -5279,7 +5272,7 @@ function MasterTab({ techs, parts, problemTypes, itemTypes, repairTypes = [], la
       {sub === 'item' && <SimpleList table="mtn_item_types" items={itemTypes} addLabel="เพิ่มชนิด" shared fields={[{ k: 'name', ph: 'ชนิดอุปกรณ์', w: 240 }]} />}
       {sub === 'repair' && (<>
         <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 8 }}>
-          ⚠️ รหัสย่อถูกใช้เป็นส่วนหนึ่งของเลข MO (เช่น <code>MTN-<b>BM</b>-060826-0001</code>) — เปลี่ยนแล้วมีผลกับใบที่ออกเลขใหม่เท่านั้น ใบเก่าคงเดิม
+          ⚠️ {trI18n("รหัสย่อถูกใช้เป็นส่วนหนึ่งของเลข MO (เช่น")} <code>MTN-<b>BM</b>-060826-0001</code>) — {trI18n("เปลี่ยนแล้วมีผลกับใบที่ออกเลขใหม่เท่านั้น ใบเก่าคงเดิม")}
         </div>
         <SimpleList table="mtn_repair_types" items={repairTypes} addLabel="เพิ่มประเภท"
           fields={[{ k: 'name', ph: 'ประเภทงานซ่อม (เช่น Breakdown)', w: 260 }, { k: 'prefix', ph: 'รหัสย่อ BM/CM/PM', w: 150 }]} />

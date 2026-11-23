@@ -1942,7 +1942,7 @@ export default function Checkin() {
             </div>
             {!helpersReady && (
               <NoticeBar tone="bad" style={{ marginBottom: 10 }}>
-                ระบบยืมตัวยังใช้ไม่ได้ — ยังไม่ได้ apply migration <code>20260819_line_helpers_main.sql</code> (แจ้ง admin)
+                {tr("ระบบยืมตัวยังใช้ไม่ได้ — ยังไม่ได้")} apply migration <code>20260819_line_helpers_main.sql</code> ({tr("แจ้ง")} admin)
               </NoticeBar>
             )}
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10, flexWrap: 'wrap' }}>
@@ -2049,7 +2049,7 @@ export default function Checkin() {
         <Icon glyph="👤" size={20} style={{ color: 'var(--accent)' }} />
         <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
           <span style={{ fontSize: 13, color: 'var(--text)', fontWeight: 700 }}>
-            กำลังเช็คชื่อในนาม: <span style={{ color: 'var(--accent)' }}>{fullName || tr('ไม่ทราบชื่อ')}</span>
+            {tr("กำลังเช็คชื่อในนาม")}: <span style={{ color: 'var(--accent)' }}>{fullName || tr('ไม่ทราบชื่อ')}</span>
           </span>
           <span style={{ fontSize: 11, color: 'var(--muted)' }}>
             {roleLabel(role)} · {myScopeLabel}
@@ -2146,7 +2146,7 @@ export default function Checkin() {
 
       {previewNight && (
         <NoticeBar tone="bad" style={{ marginBottom: 14 }} action={{ label: 'ออกจาก Preview', onClick: () => setPreviewNight(false) }}>
-          <b>{tr('โหมด Preview กะดึก')}</b> — เวลาจริงยังเป็นกะเช้า ปุ่มบันทึกถูกปิดไว้กันข้อมูลผิดพลาด
+          <b>{tr('โหมด Preview กะดึก')}</b> — {tr("เวลาจริงยังเป็นกะเช้า ปุ่มบันทึกถูกปิดไว้กันข้อมูลผิดพลาด")}
         </NoticeBar>
       )}
 
@@ -2174,8 +2174,7 @@ export default function Checkin() {
           ⚠️ คนกลุ่มนี้ **ยังอยู่ในลิสต์ให้เช็คชื่อได้ตามปกติ** — คำเตือนนี้อธิบายเหตุ ไม่ได้บล็อกงาน */}
       {!noSchedule && noShiftRows.length > 0 && (
         <NoticeBar tone="bad" style={{ marginBottom: 14 }}>
-          <strong>{noShiftPeople} {tr('คนยังไม่มีกะ')}</strong> — ตารางกะสัปดาห์นี้ยังไม่มีแถวของไลน์เหล่านี้
-          (และไม่มีไลน์แม่ให้ตกทอด) · เช็คชื่อได้ตามปกติ แต่กะจะว่างและกำลังคนของไลน์นับเป็น 0
+          <strong>{noShiftPeople} {tr('คนยังไม่มีกะ')}</strong> — {tr("ตารางกะสัปดาห์นี้ยังไม่มีแถวของไลน์เหล่านี้ (และไม่มีไลน์แม่ให้ตกทอด) · เช็คชื่อได้ตามปกติ แต่กะจะว่างและกำลังคนของไลน์นับเป็น")} 0
           <div style={{ marginTop: 5, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {noShiftRows.map(([nm, n]) => (
               <span key={nm} style={{
@@ -2241,7 +2240,7 @@ export default function Checkin() {
         <div className="ck-cards">
           {displayed.map(renderCheckinRow)}
           {displayed.length === 0 && (
-            <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 24, fontSize: 13 }}>ไม่มีพนักงานในกะนี้ — ลองเลือก "ทุกคน"</div>
+            <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 24, fontSize: 13 }}>{tr("ไม่มีพนักงานในกะนี้ — ลองเลือก \"ทุกคน")}"</div>
           )}
         </div>
       ) : (
@@ -2268,7 +2267,7 @@ export default function Checkin() {
             {displayed.length === 0 && (
               <tr>
                 <td colSpan={11} style={{ textAlign: 'center', color: 'var(--muted)', padding: 24, fontSize: 13 }}>
-                  ไม่มีพนักงานในกะนี้ — ลองเลือก "ทุกคน"
+                  {tr("ไม่มีพนักงานในกะนี้ — ลองเลือก \"ทุกคน")}"
                 </td>
               </tr>
             )}
@@ -2311,10 +2310,9 @@ export default function Checkin() {
               borderRadius: 'var(--r-md)', padding: '9px 11px', marginBottom: 14,
             }}>
               <b style={{ color: 'var(--accent2)' }}>{tr('ℹ️ เช็คชื่อไม่ใช่การเปิดกะ')}</b><br />
-              ระบบ<b>{tr('ไม่เปิดกะให้อัตโนมัติ')}</b> — <b>เปิดกะ = สำหรับไลน์ที่จะลงข้อมูลการผลิตเท่านั้น</b>
-              (ยอดผลิต · Downtime · ของเสีย · OEE)<br />
-              ไลน์ที่ต้องลงข้อมูลผลิต ให้ไปกด <b>{tr('“เปิดกะ” ที่หน้า Daily Report')}</b> ของไลน์ตัวเอง ·
-              ไลน์ที่ใช้แค่เช็คชื่อ <b>{tr('ไม่ต้องเปิดกะ')}</b>
+              {tr("ระบบ")}<b>{tr('ไม่เปิดกะให้อัตโนมัติ')}</b> — <b>{tr("เปิดกะ = สำหรับไลน์ที่จะลงข้อมูลการผลิตเท่านั้น")}</b>
+              ({tr("ยอดผลิต · Downtime · ของเสีย")} · OEE)<br />
+              {tr("ไลน์ที่ต้องลงข้อมูลผลิต ให้ไปกด")} <b>{tr('“เปิดกะ” ที่หน้า Daily Report')}</b> {tr("ของไลน์ตัวเอง · ไลน์ที่ใช้แค่เช็คชื่อ")} <b>{tr('ไม่ต้องเปิดกะ')}</b>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button
@@ -2339,7 +2337,7 @@ export default function Checkin() {
           <div style={{ background: 'var(--card-surf)', borderRadius: 'var(--r-lg)', padding: 22, width: '100%', maxWidth: 640, maxHeight: '86vh', display: 'flex', flexDirection: 'column', border: '1px solid var(--border)' }}>
             <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 6, color: 'var(--text)' }}>{tr('จองรถ OT')}</div>
             <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 14, lineHeight: 1.5 }}>
-              เลือกวันที่/กะ/ไลน์/ทีมได้อิสระ ไม่ต้องรอเช็คชื่อกะนั้น — เหมาะกับกรณีทีมที่ต้องจอง OT ไม่ใช่ทีมที่กำลังเช็คชื่ออยู่ (เช่น จันทร์แรกหลังสลับกะ)
+              {tr("เลือกวันที่/กะ/ไลน์/ทีมได้อิสระ ไม่ต้องรอเช็คชื่อกะนั้น — เหมาะกับกรณีทีมที่ต้องจอง OT ไม่ใช่ทีมที่กำลังเช็คชื่ออยู่ (เช่น จันทร์แรกหลังสลับกะ")})
             </div>
 
             <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
@@ -2362,7 +2360,7 @@ export default function Checkin() {
 
             {isHolidayDate(otBookDate) && (
               <div style={{ fontSize: 12, color: 'var(--amber)', fontWeight: 700, marginBottom: 10 }}>
-                วันที่เลือกเป็นวันหยุด — เลือกช่วงเวลา OT ให้พนักงานแต่ละคน (8 ชม. / 10 ชม.)
+                {tr("วันที่เลือกเป็นวันหยุด — เลือกช่วงเวลา OT ให้พนักงานแต่ละคน (8 ชม. / 10 ชม.")})
               </div>
             )}
 
@@ -2444,7 +2442,7 @@ export default function Checkin() {
           <div style={{ background: 'var(--card-surf)', borderRadius: 'var(--r-lg)', padding: 22, width: 'min(380px, 94vw)', border: '1px solid var(--border)' }}>
             <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 14, color: 'var(--text)' }}>{tr('ส่งออกฟอร์มกระดาษ (PDF)')}</div>
             <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 14, lineHeight: 1.5 }}>
-              สร้างฟอร์ม 2 หน้า ตามฟอร์มกระดาษจริงที่ใช้หน้างาน:<br />
+              {tr("สร้างฟอร์ม 2 หน้า ตามฟอร์มกระดาษจริงที่ใช้หน้างาน")}:<br />
               1) ใบรายงานการปฏิบัติงานชดเชย/ทำ OT &nbsp; 2) บันทึกการมาทำงาน
             </div>
             <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: 4 }}>{tr('เดือน')}</label>

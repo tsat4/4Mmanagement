@@ -231,8 +231,7 @@ export default function QaFmeBoard({ scopedLineNames, onOpen }) {
           ⏱️ {tr("คาดการณ์เวลาไม่ได้")} <b>{noCt.length} {tr('รุ่น')}</b> {tr('(ยังไม่ได้ตั้ง Cycle Time):')}{' '}
           {noCt.slice(0, 6).map(r => `${r.lineName}·${r.matNo}`).join(' · ')}{noCt.length > 6 ? ` … ${tr("อีก")} ${noCt.length - 6}` : ''}
           <div style={{ marginTop: 3, opacity: 0.85 }}>
-            ระบบไม่เดาเวลาให้ — ตั้ง CT ที่ <b>Product Master</b> แล้วบล็อกคาดการณ์จะขึ้นเอง
-            (งานตรวจจริงยังทำงานปกติ ไม่กระทบ)
+            {tr("ระบบไม่เดาเวลาให้ — ตั้ง CT ที่")} <b>Product Master</b> {tr("แล้วบล็อกคาดการณ์จะขึ้นเอง (งานตรวจจริงยังทำงานปกติ ไม่กระทบ")})
           </div>
         </div>
       )}
@@ -253,14 +252,14 @@ export default function QaFmeBoard({ scopedLineNames, onOpen }) {
                   <>
                     <b style={{ fontSize: 13 }}>{d.r.lineName} · {d.r.matNo}</b>
                     <div style={{ color: C.eta, fontWeight: 700, marginTop: 2 }}>
-                      คาดการณ์ — ยังไม่ใช่งานตรวจจริง
+                      {tr("คาดการณ์ — ยังไม่ใช่งานตรวจจริง")}
                     </div>
                     <div>{tr('น่าจะผลิตครบ ~')}<b>{hhmm(d.etaMin)}</b></div>
                     <div style={{ color: 'var(--muted)' }}>
                       {tr("เหลืออีก")} {d.r.remaining.toLocaleString()} {tr('ชิ้น · CT')} {d.ct} {tr("วิ/ชิ้น (หักเวลาพักแล้ว")})
                     </div>
                     <div style={{ color: 'var(--muted)', marginTop: 5, fontSize: 11.5 }}>
-                      เวลานี้ขยับตามจังหวะผลิตจริง · ระบบจะสร้างงานตรวจ “ชิ้นสุดท้าย” ให้เองเมื่อรุ่นนี้จบจริง
+                      {tr("เวลานี้ขยับตามจังหวะผลิตจริง · ระบบจะสร้างงานตรวจ “ชิ้นสุดท้าย” ให้เองเมื่อรุ่นนี้จบจริง")}
                     </div>
                   </>
                 ) : (
@@ -278,7 +277,7 @@ export default function QaFmeBoard({ scopedLineNames, onOpen }) {
                     )}
                     {!o.part_id && (
                       <div style={{ color: '#f59e0b', fontSize: 11.5 }}>
-                        ⚠️ ยังไม่ผูกกับพาร์ทในระบบตรวจ — ตั้งเลข MAT ที่ /qa-setup ก่อนถึงเปิดใบอัตโนมัติได้
+                        ⚠️ {tr("ยังไม่ผูกกับพาร์ทในระบบตรวจ — ตั้งเลข MAT ที่ /qa-setup ก่อนถึงเปิดใบอัตโนมัติได้")}
                       </div>
                     )}
                     {['pending', 'acked'].includes(o.status) && (

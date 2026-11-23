@@ -168,7 +168,7 @@ export default function PpeSetup() {
   return (
     <Page>
       <PageHeader icon="🦺" title={tr('ข้อกำหนด PPE ของแต่ละหน่วยงาน')}
-        subtitle="ตั้งว่าหน่วยไหนต้องใส่อะไร — ตกทอด ทั้งโรงงาน → ส่วนงาน → ไลน์ (แม่→ลูก) → จุดงาน · ชั้นล่างชนะชั้นบน"
+        subtitle={tr("ตั้งว่าหน่วยไหนต้องใส่อะไร — ตกทอด ทั้งโรงงาน → ส่วนงาน → ไลน์ (แม่→ลูก) → จุดงาน · ชั้นล่างชนะชั้นบน")}
         filters={(
           <FilterBar>
             <Segmented label={tr('ตั้งค่าที่ชั้น')} value={kind} options={SCOPE_OPTS}
@@ -200,11 +200,11 @@ export default function PpeSetup() {
 
       {loadErr && (
         <NoticeBar tone="bad">
-          <b>{tr('อ่านทะเบียน PPE ไม่สำเร็จ')}</b> — ยังตั้งค่าไม่ได้ และหน้าจอนี้ไม่ได้แปลว่า "ไม่มีข้อกำหนด"
+          <b>{tr('อ่านทะเบียน PPE ไม่สำเร็จ')}</b> — {tr("ยังตั้งค่าไม่ได้ และหน้าจอนี้ไม่ได้แปลว่า \"ไม่มีข้อกำหนด")}"
           <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 3 }}>{loadErr} {tr('· โหลดหน้าใหม่อีกครั้ง')}</div>
         </NoticeBar>
       )}
-      {linesFailed && <NoticeBar tone="warn">อ่านทะเบียนไลน์ไม่สำเร็จ — ชั้น "ไลน์/จุดงาน" อาจไม่ครบ</NoticeBar>}
+      {linesFailed && <NoticeBar tone="warn">{tr("อ่านทะเบียนไลน์ไม่สำเร็จ — ชั้น \"ไลน์/จุดงาน\" อาจไม่ครบ")}</NoticeBar>}
       {!canEdit && !loadErr && (
         <NoticeBar tone="warn">{tr('บัญชีนี้ดูได้อย่างเดียว (ต้องมีสิทธิ์')} <code>ppe:manage</code>) — {tr("ขอสิทธิ์ที่หน้าจัดการสิทธิ์")}</NoticeBar>
       )}
@@ -218,7 +218,7 @@ export default function PpeSetup() {
       )}
       {kind === 'station' && !!lineKey && !stFail && !stations.length && (
         <NoticeBar tone="warn">
-          ไลน์ <b>{lineById[String(lineKey)]?.name || lineKey}</b> ยังไม่ได้ตั้งจุดงานไว้ จึงตั้งข้อกำหนดรายจุดงานไม่ได้
+          {tr("ไลน์")} <b>{lineById[String(lineKey)]?.name || lineKey}</b> {tr("ยังไม่ได้ตั้งจุดงานไว้ จึงตั้งข้อกำหนดรายจุดงานไม่ได้")}
           <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 3 }}>
             {tr("ตั้งจุดงานที่หน้า")} <b>{tr('ตั้งค่าผัง/Floorplan')}</b> {tr('→ แท็บผังไลน์ · หรือตั้งข้อกำหนดที่ชั้น')} <b>{tr('ไลน์')}</b> {tr("แทน (ตกทอดถึงทุกจุดงานในไลน์")})
           </div>
@@ -271,9 +271,9 @@ export default function PpeSetup() {
         </div>
 
         <p style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.8, marginTop: 10 }}>
-          <b>{tr('ตกทอด')}</b> = ใช้ตามชั้นบน (ไม่ได้ตั้งที่นี่) · <b>{tr('บังคับ')}</b> = หน่วยนี้ต้องใส่ ·
-          <b> {tr('ยกเว้น')}</b> = หน่วยนี้ไม่ต้องใส่ แม้ชั้นบนจะบังคับ<br />
-          รายการที่ตั้งไว้จะไปขึ้นให้ติ๊กตอน <b>{tr('สแกนบัตรเช็คชื่อ')}</b> — ขึ้นเฉพาะรายการที่หน่วยนั้นบังคับ
+          <b>{tr('ตกทอด')}</b> = {tr("ใช้ตามชั้นบน (ไม่ได้ตั้งที่นี่")}) · <b>{tr('บังคับ')}</b> = {tr("หน่วยนี้ต้องใส่")} ·
+          <b> {tr('ยกเว้น')}</b> = {tr("หน่วยนี้ไม่ต้องใส่ แม้ชั้นบนจะบังคับ")}<br />
+          {tr("รายการที่ตั้งไว้จะไปขึ้นให้ติ๊กตอน")} <b>{tr('สแกนบัตรเช็คชื่อ')}</b> — {tr("ขึ้นเฉพาะรายการที่หน่วยนั้นบังคับ")}
         </p>
       </>)}
     </Page>
