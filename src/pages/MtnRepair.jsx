@@ -27,7 +27,7 @@ import { can, canDelete, isActionSeeded, isSharedAccount } from '../utils/permis
 import { ackWaitsOnMe } from '../utils/myQueue';   // ✍️ กฎ "ใบนี้รอเราเซ็นรับทราบไหม" ที่เดียว (23/11)
 import { confirmSign, needsSignConfirm } from '../utils/signConfirm';
 import { moTimeline } from '../utils/mtnTimeline';   // ⏱️ 4 ช่วงของไลน์หยุด (คำศัพท์ชุดเดียวของระบบ)
-import { MO_DONE_STATUSES, MO_STATUS_META as STATUS_META, QA_NOT_RELATED, QA_RELATED, QA_SKIP_REASON_STEP4, canBounceBack, canDoStep, canHandoff, canSignMtnApproval, canSkipQa, isMoOpen, isOrderReporter, isQaSkipped, isWaitingQa, lastStep, orderReporterText, nextStepOf, moQaState, mtnCloseStage, moStatusLabel, moStatusMeta, orderInReporterScope, stageOf, stepDenyHint, stepLabel, stepMeta, moFlow, moWaitMeta, qaRelatedView, moRemoveMode, canCancelOwnMo, MO_REMOVE_BLOCKED, MO_REMOVE_CANCEL, MO_REMOVE_DELETE, actorSideOf, stepAssumptions, assumptionHint } from '../utils/mtnStepPerm';
+import { MO_DONE_STATUSES, MO_STATUS_META as STATUS_META, QA_NOT_RELATED, QA_RELATED, QA_SKIP_REASON_STEP4, canBounceBack, canDoStep, canHandoff, canSignMtnApproval, canSkipQa, isMoOpen, isOrderReporter, isQaSkipped, isWaitingQa, lastStep, orderReporterText, nextStepOf, moQaState, mtnCloseStage, moStatusLabel, moStatusMeta, orderInReporterScope, stageOf, stepDenyHint, stepLabel, stepMeta, moFlow, moWaitMeta, qaRelatedView, moRemoveMode, canCancelOwnMo, canCancelReportedMo, MO_REMOVE_BLOCKED, MO_REMOVE_CANCEL, MO_REMOVE_DELETE, actorSideOf, stepAssumptions, assumptionHint } from '../utils/mtnStepPerm';
 import { positionRank } from '../utils/positions';
 import { findOpenOnMachine, dupLevel } from '../utils/mtnDuplicate';
 /* 🔢 เลข MO ออกยังไง — ต้องตรงกับ RPC `mtn_assign_mo_no` เป๊ะ (14/10 · ห้ามเดารูปแบบเองในหน้า) */
@@ -3057,10 +3057,19 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
      🔴 เส้นทางนี้ได้แค่ "ยกเลิก" — ใบที่ยังไม่มีเลข MO (โหมดปกติ = ลบ) ต้องถูกบีบเป็นยกเลิก
         เพราะ 11/11 เจอใบถูกลบตอน `pending` 4 ใบ แล้วปัญหาหายจากระบบหมด */
   const canRemoveAsBoss = canDelete('mtn_repair', 'manage_master', role);
+  /* 👔 23/11 (คำสั่ง user "เปิดให้หัวหน้ายกเลิกได้เลย") — หัวหน้าของ**ฝ่ายที่แจ้ง**
+     ยกเลิกใบของลูกน้องได้ ตอนที่ยังไม่มีช่างรับงาน · เกณฑ์อยู่ `canCancelReportedMo()`
+     🔴 ห้ามเทียบฝั่ง/ตำแหน่ง/ขอบเขตเองที่นี่ — ส่ง ctx ชุดเดียวกับด่านขั้นอื่นเข้าไป */
+  const bossCancel = canCancelReportedMo(o, {
+    can: (a) => can('mtn_repair', a, role), actorSide, posRank, inReporterScope,
+  });
   const ownCancel = canCancelOwnMo(o, { fullName });
-  const removeMode = (ownCancel && !canRemoveAsBoss) ? MO_REMOVE_CANCEL : removal.mode;
-  const removeWhy = (ownCancel && !canRemoveAsBoss)
-    ? 'คุณเป็นผู้เปิดใบนี้ และยังไม่มีช่างรับงาน — ยกเลิกได้ (ใบยังอยู่ให้สอบกลับ ลบไม่ได้)'
+  const softCancel = (ownCancel || bossCancel) && !canRemoveAsBoss;
+  const removeMode = softCancel ? MO_REMOVE_CANCEL : removal.mode;
+  const removeWhy = softCancel
+    ? (ownCancel
+      ? 'คุณเป็นผู้เปิดใบนี้ และยังไม่มีช่างรับงาน — ยกเลิกได้ (ใบยังอยู่ให้สอบกลับ ลบไม่ได้)'
+      : 'คุณเป็นหัวหน้าของฝ่ายที่แจ้ง และยังไม่มีช่างรับงาน — ยกเลิกแทนผู้แจ้งได้ (ใบยังอยู่ให้สอบกลับ ลบไม่ได้)')
     : removal.why;
   const del = async () => {
     /* 🔐 ลบใบของทีมอื่น = ไม่มีเหตุผลทางธุรกิจรองรับเลย (audit 15/10) — ต่างจากการ "แก้ย้อนหลัง"
@@ -3068,7 +3077,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
     /* ✋ ด่านทีมไว้กัน "ลบใบของทีมอื่น" — **ไม่ใช้กับผู้เปิดใบที่ถอนใบตัวเอง** (16/11)
        ผู้แจ้งอยู่ฝั่งผู้แจ้ง ไม่เคยอยู่ทีมช่าง ⇒ ถ้าไม่ยกเว้น เมนูจะโผล่แต่กดแล้วเด้ง "ใบของทีมนี้" */
     const tw = canWriteTeam(userTeams, o.mtn_dept, { role, allUnits });
-    if (!tw.ok && !ownCancel) { toast.info(teamBlockText(tw, 'ใบแจ้งซ่อมของทีมนี้')); return; }
+    if (!tw.ok && !ownCancel && !bossCancel) { toast.info(teamBlockText(tw, 'ใบแจ้งซ่อมของทีมนี้')); return; }
     if (removeMode === MO_REMOVE_DELETE) {
       if (!await askConfirm(`${trI18n("ลบใบแจ้งซ่อมนี้")}?\n\n${removeWhy}`)) return;
       /* 🔴 นับแถวที่ลบได้ก่อน ค่อยลบรูปใน storage — เช็คแค่ `error` แล้วลบรูปไปก่อน

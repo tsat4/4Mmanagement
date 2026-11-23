@@ -11725,10 +11725,33 @@ test('🙋 owner-cancel-never-deletes — เส้นทาง "เจ้าข
   assert.ok(/canCancelOwnMo\(/.test(src),
     '\n\n❌ MtnRepair.jsx ไม่ได้ถาม `canCancelOwnMo()` แล้ว — เกณฑ์ "ใครเป็นเจ้าของใบ" ต้องอยู่ที่'
     + ' mtnStepPerm.js ห้ามเทียบชื่อผู้แจ้งเองในหน้า\n');
-  assert.ok(/ownCancel\s*&&\s*!canRemoveAsBoss\s*\)\s*\?\s*MO_REMOVE_CANCEL/.test(src),
-    '\n\n❌ เส้นทางเจ้าของใบไม่ได้ถูกบีบเป็น MO_REMOVE_CANCEL อีกแล้ว'
-    + '\n   ใบที่ยังไม่มีเลข MO โหมดปกติคือ "ลบ" ⇒ ผู้แจ้งจะลบใบหายได้'
+  /* 23/11 — เปิดให้ **หัวหน้าของฝ่ายที่แจ้ง** ยกเลิกแทนลูกน้องได้ด้วย (คำสั่ง user)
+     ⇒ เส้นทาง "นุ่ม" มี 2 ทางแล้ว แต่กติกาเดิมห้ามเปลี่ยน: ทั้งคู่ต้องถูกบีบเป็นยกเลิก ห้ามลบ */
+  assert.ok(/const softCancel = \(ownCancel \|\| bossCancel\) && !canRemoveAsBoss;/.test(src),
+    '\n\n❌ ไม่พบ softCancel = (ownCancel || bossCancel) && !canRemoveAsBoss'
+    + '\n   เส้นทาง "ยกเลิกแบบไม่ใช่แอดมิน" ต้องรวมอยู่ตัวแปรเดียว ไม่งั้นแตกเป็น 2 กฎแล้วหลุดทางใดทางหนึ่ง\n');
+  assert.ok(/removeMode = softCancel \? MO_REMOVE_CANCEL/.test(src),
+    '\n\n❌ เส้นทางยกเลิกแบบไม่ใช่แอดมิน ไม่ได้ถูกบีบเป็น MO_REMOVE_CANCEL อีกแล้ว'
+    + '\n   ใบที่ยังไม่มีเลข MO โหมดปกติคือ "ลบ" ⇒ ผู้แจ้ง/หัวหน้าจะลบใบหายได้'
     + '\n   (11/11 เคยหายไป 4 ใบด้วยคลาสนี้ — Reed ชำรุด Line 61 ค้าง 50 วันโดยไม่มีใครรู้)\n');
+  /* 🔴 หัวหน้าต้องถูกตรวจ 3 ชั้น (ฝั่ง · ขอบเขต · ตำแหน่ง) ที่ utils ห้ามเทียบเองในหน้า */
+  assert.ok(/canCancelReportedMo\(o, \{[\s\S]{0,200}?actorSide, posRank, inReporterScope/.test(src),
+    '\n\n❌ canCancelReportedMo() ต้องได้รับ actorSide/posRank/inReporterScope ครบ'
+    + '\n   ขาดตัวใดตัวหนึ่ง = หัวหน้าหน่วยอื่นยกเลิกใบข้ามหน่วยได้\n');
+  const u = readFileSync(join(ROOT, 'src/utils/mtnStepPerm.js'), 'utf8');
+  const fn = u.match(/export function canCancelReportedMo[\s\S]*?\n\}/);
+  assert.ok(fn, '\n\n❌ หา canCancelReportedMo() ใน mtnStepPerm.js ไม่เจอ\n');
+  assert.ok(/OWNER_CANCEL_STATUSES\.includes/.test(fn[0]),
+    '\n\n❌ หัวหน้าต้องยกเลิกได้เฉพาะสถานะเดียวกับเจ้าของใบ (ยังไม่มีช่างรับงาน)\n');
+  for (const [re, why] of [
+    [/actorSide !== 'reporter' && actorSide !== 'both'/, 'ฝั่งผู้แจ้ง — ไม่รู้ฝั่ง = ไม่ให้'],
+    [/inReporterScope !== true/, 'ขอบเขตใบ — ไม่รู้ขอบเขต = ไม่ให้'],
+    [/posRank == null \|\| posRank < HANDOVER_MIN_RANK/, 'ตำแหน่ง — ไม่รู้ตำแหน่ง = ไม่ให้'],
+  ]) {
+    assert.ok(re.test(fn[0]),
+      `\n\n❌ canCancelReportedMo ขาดด่าน: ${why}`
+      + '\n   การยกเลิกใบของคนอื่น = fail-closed เสมอ (ต่างจากด่านเซ็นที่ "ไม่รู้ = ไม่บล็อก")\n');
+  }
 });
 
 /* ── 🧭 ตัวกรอง "ไลน์" ห้ามซ่อนคนที่ไม่ได้สังกัดไลน์ (regression จริง 13/11 → แจ้ง 16/11) ────
