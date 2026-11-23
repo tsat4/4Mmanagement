@@ -34,7 +34,7 @@ import { moFormatHint, moMonthKeyOf, moNoOf, moSeqKeyOf } from '../utils/moNumbe
 /* ⏳ ใบค้างขั้นเดิม — สูตร "ค้างกี่วัน/ขั้นไหน" อยู่ที่นี่ที่เดียว ห้ามนับวันในหน้า (13/10) */
 import { buildMoStaleBoard } from '../utils/mtnStale';
 /* 🏃 แผงไล่งาน — "ใบค้างนี้รอใครลงมือ" (05/11) · กฎการแบ่งฝั่ง/หาเป้าอยู่ util ที่เดียว */
-import { buildMoChaseBoard, PR_CLOSE_STAGES, moCloseGate, moCloseGateText } from '../utils/moChase';
+import { buildMoChaseBoard, PR_CLOSE_STAGES, moCloseGate, moCloseGateText, moPrBlocked, MO_LABEL_WAIT_PR } from '../utils/moChase';
 import { inSectionScope, lineScope } from '../utils/sectionScope';
 import { getLineFamilyNames } from '../utils/lineHierarchy';
 import { teamsForUser, teamForSection, teamForItem, sameTeam, filterByTeam, visibleForTeam, seesEverything, teamKeyOf, deptNameOf, teamOptions, teamRowOwner, teamRowLockNote, canWriteTeam, teamBlockText, moCodeOf } from '../utils/mtnTeams';
@@ -202,6 +202,13 @@ const NAME_CASCADE = {
    (`transferred` หลุดมาจริง: ไม่มีตัวเลือกใน dropdown ฟิลเตอร์ + การ์ดขึ้นสีแดงขั้น 1)
    **ห้ามเขียนตารางสถานะกลับมาที่นี่อีก** · dropdown ฟิลเตอร์สร้างจาก STATUS_META ที่ import มา */
 const statusMetaOf = moStatusMeta;   // สี/ขั้นจากตาราง + ป้ายจาก moStatusLabel() เสมอ
+/* 🛒 ป้ายของใบที่ถึงคิวปิดแล้วแต่ PR ยังค้าง (23/11 · หน้างาน "บอกรออนุมัติแต่อนุมัติไม่ได้")
+   🔴 กฎอยู่ `moPrBlocked()` (ใช้ `moCloseGate` ตัวเดียวกับด่านตอนกด) — ห้ามเทียบ PR เองที่นี่
+   🔴 ไม่รู้เรื่อง PR (`prs = null`) = คืนป้ายเดิมเป๊ะ · สีคงเดิม (ยังเป็นใบที่ใกล้จบ ไม่ใช่ใบมีปัญหา) */
+const statusMetaWithPr = (o, prs) => {
+  const m = statusMetaOf(o);
+  return moPrBlocked(o, prs) ? { ...m, label: MO_LABEL_WAIT_PR } : m;
+};
 /* 🎨 ชิปสถานะในหน้านี้วาดด้วยพาเลต 5 สี (05/11 · UI §6.17): แดง = รอรับงาน (ยังไม่มีใครถือ) · อำพัน = อยู่ระหว่างทำ/ตีกลับ ·
    ฟ้า = รออนุมัติปิด/ส่งต่อ · เขียว = ปิดแล้ว · เทา = ยกเลิก — `MO_STATUS_META.color` (hex) ยังอยู่ให้จออื่นที่ยังไม่ได้ไล่ */
 const STATUS_TONE = { pending: 'bad', assigned: 'warn', repairing: 'warn', repaired: 'warn', checked: 'warn', qa: 'warn',
@@ -882,6 +889,9 @@ const HANDOFF_CAP = 2000;
   /* 🔴 ตัวกรอง "รอขั้นไหน" แยกชั้นจาก `beforeWait` — ไม่เอาไปรวมในชั้นเดียวกับตัวกรองอื่น
      เพราะ dropdown ด้านล่างนับตัวเลือกจาก `beforeWait` ⇒ เลือกขั้นหนึ่งแล้วขั้นอื่นต้องยังอยู่ให้เลือกกลับ */
   const prStateOf = useCallback((o) => prQueueStateOf(o, openPrs.byOrder[o.id] || []), [openPrs]);
+  /* 🛒 ใบขอซื้อของใบนี้ สำหรับ "ป้ายสถานะ" — อ่านทะเบียนไม่ได้ = `null` = ป้ายเดิมเป๊ะ
+     (ห้ามส่ง `[]` ตอนโหลดล้ม: `[]` แปลว่า "ไม่มี PR" ซึ่งจะทำให้ป้ายบอกว่าปิดได้ทั้งที่ไม่รู้) */
+  const prsForLabel = useCallback((o) => (openPrs.error ? null : (openPrs.byOrder[o.id] || [])), [openPrs]);
   const prMatch = useCallback((o) => {
     if (!fPr || !PR_FILTERS.some(x => x.v === fPr)) return true;   // ค่าที่ไม่รู้จัก = ไม่กรอง (ลิงก์เก่าห้ามทำจอว่าง)
     const st = prStateOf(o);
@@ -1309,7 +1319,7 @@ const HANDOFF_CAP = 2000;
             บนจอ 360×640 (MOBILE-UX-STANDARD §2 ข้อ 4–5) · จอคอมยังเป็นตาราง (คำสั่ง user 05/10 เดิม) */}
         {isMobile ? (
           <div className="mo-cards">
-            {shown.map(o => <MoCard key={o.id} o={o} onOpen={() => openDetail(o)} />)}
+            {shown.map(o => <MoCard key={o.id} o={o} onOpen={() => openDetail(o)} prs={prsForLabel(o)} />)}
             {!shown.length && <div style={{ color: 'var(--muted)', padding: 24, textAlign: 'center' }}>{trI18n('ไม่มีรายการ')}</div>}
           </div>
         ) : (
@@ -1321,7 +1331,7 @@ const HANDOFF_CAP = 2000;
               <th>{trI18n('ไลน์')}</th><th>{trI18n('ชนิด · เครื่อง')}</th><th>{trI18n('ปัญหา')}</th><th>{trI18n('รายละเอียด')}</th><th>{trI18n('ชื่อผู้แจ้ง')}</th>
             </tr></thead>
             <tbody>
-              {shown.map(o => <MoRow key={o.id} o={o} onOpen={() => openDetail(o)} />)}
+              {shown.map(o => <MoRow key={o.id} o={o} onOpen={() => openDetail(o)} prs={prsForLabel(o)} />)}
               {!shown.length && <tr><td colSpan={10} style={{ color: 'var(--muted)', padding: 24, textAlign: 'center' }}>{trI18n('ไม่มีรายการ')}</td></tr>}
             </tbody>
           </table>
@@ -1363,8 +1373,8 @@ const HANDOFF_CAP = 2000;
 
 /* 📱 การ์ด 1 ใบ (มือถือเท่านั้น) — ข้อมูลชุดเดียวกับ MoRow · ลำดับตามคำถามคนหน้างาน:
    "ใบไหน · ถึงไหนแล้ว" → "ที่ไหน เครื่องอะไร" → "เป็นอะไร" → "ใคร/เมื่อไหร่" · ใบรอรับงาน = รางแดงซ้าย (Andon) */
-function MoCard({ o, onOpen }) {
-  const m = statusMetaOf(o);
+function MoCard({ o, onOpen, prs = null }) {
+  const m = statusMetaWithPr(o, prs);
   const last = lastStep({ mtnForm: isMtnFormOrder(o) });
   const pct = o.status === 'closed' ? 100 : Math.round((o.current_step / last) * 100);
   const dept = o.mtn_dept || deptForItem(o.item_type);
@@ -1391,8 +1401,8 @@ function MoCard({ o, onOpen }) {
   );
 }
 
-function MoRow({ o, onOpen }) {
-  const m = statusMetaOf(o);
+function MoRow({ o, onOpen, prs = null }) {
+  const m = statusMetaWithPr(o, prs);
   const last = lastStep({ mtnForm: isMtnFormOrder(o) });
   // ใบเก่าปิดที่ current_step 8 (flow 8 ขั้นก่อน 22/09) — ปิดแล้วต้องเต็ม 100% ห้ามค้าง 89%
   const pct = o.status === 'closed' ? 100 : Math.round((o.current_step / last) * 100);
@@ -4744,7 +4754,17 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
       <div className={isMobile ? 'm-savebar m-stepbar' : undefined}
         style={isMobile ? undefined : { display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
         <button onClick={tryClose} style={isMobile ? undefined : btnGhost}>{trI18n('ยกเลิก')}</button>
-        <button onClick={save} disabled={saving} style={isMobile ? undefined : btnPri}>{saving ? trI18n('บันทึก…') : skipQa ? trI18n('ยืนยันข้าม QA ไปขั้น 6') : (editMode ? trI18n('บันทึกการแก้ไข') : trI18n('บันทึก'))}</button>
+        {/* 🛒 PR ยังไม่จบ = ปิดใบไม่ได้จริง ⇒ **ปิดปุ่มไปเลย** (23/11 · หน้างาน "มันงง")
+            เดิมปุ่มเขียวกดได้ แล้วค่อยเด้ง error ตอนกด = จอชวนให้กดสิ่งที่ทำไม่ได้
+            🔴 ปิดเฉพาะตอน `block` — `unknown` (อ่าน PR ไม่ได้) ต้องกดได้ตามเดิม (ไม่รู้ ≠ ห้าม) */}
+        <button onClick={save} disabled={saving || prGate.gate === 'block'}
+          title={prGate.gate === 'block' ? moCloseGateText(prGate) : undefined}
+          style={isMobile ? undefined : { ...btnPri, ...(prGate.gate === 'block' ? { opacity: 0.5, cursor: 'not-allowed' } : null) }}>
+          {saving ? trI18n('บันทึก…')
+            : prGate.gate === 'block' ? trI18n('ปิดใบยังไม่ได้ — PR ค้าง')
+            : skipQa ? trI18n('ยืนยันข้าม QA ไปขั้น 6')
+            : (editMode ? trI18n('บันทึกการแก้ไข') : trI18n('บันทึก'))}
+        </button>
       </div>
     </ModalShell>
   );
