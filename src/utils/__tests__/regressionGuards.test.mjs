@@ -12569,3 +12569,30 @@ test('✍️ ack-queue-single-rule — ป้าย "รอคุณเซ็น
   }
   assert.deepEqual(bad, [], `\n\n❌ ${bad.length} จุดผิดกฎ "ป้ายกับลิสต์ต้องกฎเดียวกัน"\n   ${bad.join('\n   ')}\n`);
 });
+
+test('🧮 mo-list-cols-cover-queue-rules — คอลัมน์ที่กฎคิวใช้ ต้องอยู่ใน MO_LIST_COLS', () => {
+  /* 23/11 (หน้างานแจ้ง): *"ที่รอ 1 ใบ กดเข้าไปก็ไม่เจออะไร"*
+     ต้นเหตุ: หน้า MO ไม่ได้ select `dept_section` ⇒ `scopeStateOf()` (ที่ `ackWaitsOnMe` ใช้)
+     อ่านได้ `undefined` ⇒ คืน 'unknown' ทุกแถว ⇒ ตัวกรอง `?ack=pending` ขึ้น 0 รายการ
+     ทั้งที่ป้ายในคิว (ซึ่ง select ชุดเต็ม) นับได้
+     🔴 **คลาสเดิมของโปรเจค** — คอลัมน์ที่ไม่ได้ select = undefined เงียบๆ (กฎเขียน DB ข้อ 12)
+        อันตรายเป็นพิเศษเมื่อเอา "กฎกลาง" ไปใช้กับแถวที่ select มาไม่ครบ:
+        กฎไม่ได้พัง แต่มันตัดสินจากข้อมูลที่ไม่มี แล้วจอว่างเงียบ */
+  const bad = [];
+  const P = 'src/pages/MtnRepair.jsx';
+  const src = readFileSync(join(ROOT, P), 'utf8');
+  const m = src.match(/const MO_LIST_COLS = \[([\s\S]*?)\]/);
+  assert.ok(m, `\n\n❌ หา MO_LIST_COLS ใน ${P} ไม่เจอ\n`);
+  const cols = [...m[1].matchAll(/'([a-z_0-9]+)'/g)].map(x => x[1]);
+  /* คอลัมน์ที่กฎกลางอ่าน — เพิ่มกฎที่อ่านคอลัมน์ใหม่ ต้องมาเติมที่นี่ด้วย */
+  for (const [c, why] of [
+    ['dept_section', 'scopeStateOf() — ใช้ตัดสิน "ใบนี้ของหน่วยเราไหม" ใน ackWaitsOnMe + ตัวกรองขอบเขต'],
+    ['dept_manager_at', 'ackWaitsOnMe — เซ็นรับทราบไปแล้วหรือยัง'],
+    ['purpose', 'isApprovalBlocked() — งานปรับปรุง/สร้างต้องอนุมัติก่อน'],
+    ['status', 'isMoOpen / moWaitMeta'],
+    ['current_step', 'moWaitMeta — ใบรอขั้นไหน'],
+  ]) {
+    if (!cols.includes(c)) bad.push(`${P}: MO_LIST_COLS ขาด '${c}' — ${why}`);
+  }
+  assert.deepEqual(bad, [], `\n\n❌ ${bad.length} คอลัมน์ที่กฎใช้แต่ไม่ได้ดึงมา (จอจะเงียบ ไม่ใช่ error)\n   ${bad.join('\n   ')}\n`);
+});
