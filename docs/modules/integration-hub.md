@@ -185,3 +185,8 @@ user เลือกจาก 4 ทาง: ① เทียบอย่างเ
 - ผูก `hdf/<ตู้>/{kw,kwh_total,v,a,pf}` → `zone/<ตู้>` 24 แถว (AC-08 ไม่ส่ง pf) · ค่ารายเฟส v1-3/a1-3 เข้าเองผ่าน topic พี่น้อง (ingest v9)
 - ทะเบียนบอร์ด `energy_live_meters`: ตู้ `MDB (HDF)` — MDB-07 → Aircomp-HDF → AC-06 / AC-07 / AC-08 (ผังอ่านจากจอ Node-RED · แก้ `parent_name` ได้)
 - 🔴 **MDB-06 ไม่ได้แตะ** — มีคนผูกไว้ก่อนแล้วกับโซน `Utility Hydrofroming` (ข้อมูลรายเดือนใช้โซนนั้น) · ยังไม่ขึ้นบอร์ดสด รอ user ตัดสิน
+
+## 📘 คู่มือ (WI) — `/integrations?tab=guide` (23/11 · คำสั่ง user)
+- `src/components/IntegrationGuide.jsx` · 6 ขั้น (สร้างต้นทาง → รหัสลับ → import flow → env + เลือกฐาน + Deploy → ตรวจสุขภาพ → ผูก topic/เครื่อง/เหตุผล) + ปัญหาที่เจอบ่อย
+- 🔴 **เนื้อหาต้องตรงพฤติกรรมจริง** — แก้ flow (`nodeRedFlow.js`) / edge (`ingest-energy`, `integration-admin`) / หน้าต้นทาง แล้วต้องตามแก้ WI ในคอมมิทเดียวกัน
+- แสดงอย่างเดียว ไม่ใช่เอกสาร export — ถ้าเพิ่มปุ่มพิมพ์ต้องลง `/doc-forms` ก่อน

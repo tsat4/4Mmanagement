@@ -10368,6 +10368,9 @@ const EN = {
   'หมายเหตุ (เช่น IP · PLC · ฐานข้อมูล)': 'Note (e.g. IP · PLC · database)',
   'แก้ไม่ได้ — อยู่ในชื่อ topic ของมิเตอร์ เปลี่ยนแล้วข้อมูลจะหลุด': 'cannot be changed — it is part of the meter topic names; changing it breaks incoming data',
   'แก้ชื่อ / หมายเหตุ': 'Edit name / note',
+  'คู่มือ (WI)': 'Guide (WI)',
+  'คู่มือการเชื่อมต่อ (WI)': 'Connection guide (WI)',
+  'ปัญหาที่เจอบ่อย': 'Common problems',
   // 📥 CSV ผลตรวจ QA (16/11)
   'CSV ย้อนหลัง': 'CSV, past',
   'ช่วงวันของไฟล์ CSV': 'Date range of the CSV file',
