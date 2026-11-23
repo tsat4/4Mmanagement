@@ -636,3 +636,17 @@ test('lineDeptsOf: std ของไลน์นับครั้งเดีย
   assert.equal(r.length, 2); assert.equal(r[1].planTotal, null);   // มีคนจริง = แสดง แต่ไม่บวก std ซ้ำ
   assert.equal(r.reduce((a, d) => a + (d.planTotal || 0), 0), 28);
 });
+
+test('narrowDeptToLine: คนสังกัดไลน์แม่ที่วันนี้ยืนจุดงานของไลน์ลูก = นับที่ไลน์ลูก (ไม่ต้องย้ายสังกัด)', () => {
+  const fam = [{ id: 60, name: 'Line 60', std_day_shift: 6 }];
+  const P = (id, line_id, log) => ({ id, line_id, attend: log?.is_present ? 'present' : 'unchecked', team: 'A', row: 'op', log });
+  const d = { key: 'd1', opsTotal: 3, cols: [{ team: 'A', shift: 'day', leaders: [],
+    ops: [P('a', 1, { is_present: true, assigned_line: 'ws60' }),   // สังกัดแม่ · วันนี้ยืนจุดของ Line 60
+          P('b', 1, { is_present: true, assigned_line: 'ws61' }),   // สังกัดแม่ · ยืนจุดของไลน์อื่น
+          P('c', 1, { is_present: false, assigned_line: 'ws60' })] }], borrowed: [] };   // ไม่มา = ไม่นับ
+  const n = M.narrowDeptToLine(d, fam, 'Line 60', { stationIds: new Set(['ws60']) });
+  assert.deepEqual(n.cols[0].ops.map(p => p.id), ['a']);
+  assert.equal(n.lineFilter.viaStation, 1); assert.equal(n.lineFilter.stations, 1);
+  // ไม่ผูกจุดงานให้ไลน์ลูก = นับได้แค่คนสังกัดตรง (จอบอกให้ผูกจุดงาน)
+  assert.equal(M.narrowDeptToLine(d, fam, 'Line 60').opsTotal, 0);
+});

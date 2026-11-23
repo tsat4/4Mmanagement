@@ -249,9 +249,12 @@ export default function ManpowerBoard() {
   const llineName = params.get('lline') || '';
   const lineFam = useMemo(() => (llineName ? lineFamilyDown(lines, llineName) : []), [lines, llineName]);
   const lineFamKey = lineFam.map(l => l.id).join(',');
+  // จุดงานของไลน์ที่เลือก (+ลูก) — คนที่วันนี้ยืนจุดเหล่านี้นับเป็นคนของไลน์ (ไม่ต้องย้ายสังกัด · user 23/11)
+  const lineStationIds = useMemo(() => new Set(lineFam.length ? stationsOfLineFamily(lines, llineName, stations).map(st => String(st.id)) : []),
+    [lineFamKey, llineName, stations]); // eslint-disable-line react-hooks/exhaustive-deps
   const lineDepts = useMemo(() => {
-    return lineDeptsOf(depts, lineFam, llineName);
-  }, [depts, lineFamKey, llineName]); // eslint-disable-line react-hooks/exhaustive-deps
+    return lineDeptsOf(depts, lineFam, llineName, { stationIds: lineStationIds });
+  }, [depts, lineFamKey, llineName, lineStationIds]); // eslint-disable-line react-hooks/exhaustive-deps
   const lineSelf = lineFam[0] || null;   // getLineFamily คืนตัวเองตัวแรก
   const lineBoard = useMemo(() => (lineFam.length ? boardForLine(board, lineDepts) : board), [board, lineDepts, lineFamKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -664,6 +667,8 @@ function LineFilterNotice({ lineName, lineSelf, depts, tab, onParent, onClear })
   const direct = depts.reduce((a, d) => a + (d.opsTotal || 0) + d.cols.reduce((x, c) => x + c.leaders.length, 0), 0);
   const deptOps = depts.reduce((a, d) => a + (d.lineFilter?.deptOps || 0), 0);
   const hiddenFlex = depts.reduce((a, d) => a + (d.lineFilter?.hiddenFlex || 0), 0);
+  const stations = depts.reduce((a, d) => Math.max(a, d.lineFilter?.stations || 0), 0);
+  const viaStation = depts.reduce((a, d) => a + (d.lineFilter?.viaStation || 0), 0);
   const empty = tab !== 'fourm' && tab !== 'history' && direct === 0;
   const btn = { fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 'var(--r-md)', cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--bg2)', color: 'var(--text2)' };
   return (
@@ -673,10 +678,13 @@ function LineFilterNotice({ lineName, lineSelf, depts, tab, onParent, onClear })
       {!depts.length && <span style={{ color: 'var(--amber)' }}>{trI18n('— ไลน์นี้ไม่อยู่ในแผนกของส่วนงานที่เลือก')}</span>}
       {empty && depts.length > 0 && (
         <span style={{ color: 'var(--amber)' }}>
-          {trI18n('— ยังไม่มีพนักงานสังกัดไลน์นี้โดยตรง')}{deptOps > 0 ? ` (${deptOps} ${trI18n('คนในแผนกสังกัดไลน์อื่น/ไลน์แม่')}${lineSelf?.parent_line_name ? ` ${lineSelf.parent_line_name}` : ''})` : ''}
-          {' · '}{trI18n('ย้ายสังกัดได้ที่ทะเบียนพนักงาน')}
+          {stations === 0
+            ? <>{trI18n('— ไลน์นี้ยังไม่มีจุดงานของตัวเอง จึงยังรู้ไม่ได้ว่าวันนี้ใครทำงานที่ไลน์นี้')}{deptOps > 0 ? ` (${deptOps} ${trI18n('คนสังกัดไลน์แม่')}${lineSelf?.parent_line_name ? ` ${lineSelf.parent_line_name}` : ''})` : ''}
+                {' · '}{trI18n('ผูกจุดงานให้ไลน์นี้ที่ /line-setup แล้วคนที่ถูกวางจุดของไลน์นี้จะขึ้นที่นี่')}</>
+            : trI18n('— วันนี้ยังไม่มีใครถูกวางที่จุดงานของไลน์นี้ (วางจุดที่ /management)')}
         </span>
       )}
+      {viaStation > 0 && <span style={{ color: 'var(--muted)', fontSize: 12 }}>· {viaStation} {trI18n('คนสังกัดไลน์แม่ วันนี้ยืนจุดงานของไลน์นี้')}</span>}
       {(tab === 'staffing') && <span style={{ color: 'var(--muted)', fontSize: 12 }}>{trI18n('· เทียบคนมาจริงกับ std ของไลน์ — ช่องตำแหน่งตั้งรายทีม แยกลงไลน์ไม่ได้ จึงไม่คิดช่องว่างอัตรากำลัง')}</span>}
       {(tab === 'org') && <span style={{ color: 'var(--muted)', fontSize: 12 }}>{trI18n('· ช่องว่างรายทีมแยกลงไลน์ไม่ได้ จึงไม่แสดง · หัวหน้าแผนก/ช่าง = ทั้งแผนก')}{hiddenFlex ? ` · ${trI18n('ซ่อนคนวิ่งข้ามแผนก')} ${hiddenFlex} ${trI18n('คน')}` : ''}</span>}
       <span className="spacer" style={{ flex: 1 }} />
@@ -1611,6 +1619,7 @@ const STAFFING_MAX_DAYS = 62;
 
 function StaffingTab({ section, deptParam, today, nodes, employees, lines, slotPlans, lineTechs, stations, stationPlans, homeByEmp, actingPos, lineFam = [], lineName = '' }) {
   const lineIds = useMemo(() => new Set(lineFam.map(l => String(l.id))), [lineFam]);
+  const lineStIds = useMemo(() => new Set(lineFam.length ? stationsOfLineFamily(lines, lineName, stations).map(st => String(st.id)) : []), [lineFam, lineName, lines, stations]);
   const tr = useTimeRange({ defaultDays: 30 });
   const to = tr.to > today ? today : tr.to;
   const capFrom = addDaysStr(to, -(STAFFING_MAX_DAYS - 1));
@@ -1626,7 +1635,7 @@ function StaffingTab({ section, deptParam, today, nodes, employees, lines, slotP
     let alive = true;
     setState(s0 => ({ ...s0, loading: true }));
     Promise.all([
-      fetchAllPages(() => supabase.from('daily_production_logs').select('id, employee_id, work_date, shift, is_present, leave_type')
+      fetchAllPages(() => supabase.from('daily_production_logs').select('id, employee_id, work_date, shift, is_present, leave_type, assigned_line')
         .gte('work_date', from).lte('work_date', to), { orderBy: 'id', maxPages: 10 }),
       fetchAllPages(() => supabase.from('shift_schedules').select('id, work_date, line_id, dept_name, day_team')
         .gte('work_date', from).lte('work_date', to), { orderBy: 'id', maxPages: 10 }),
@@ -1663,7 +1672,7 @@ function StaffingTab({ section, deptParam, today, nodes, employees, lines, slotP
         attendance: att[d] || {}, slotPlans, lineTechs, helpers: applyWorkingPositions(raw.borrowed.byDate?.[d] || [], actingPos), stations, stationPlans, homeByEmp });
       const inDept = (board?.depts || []).filter(x => !deptParam || x.key === deptParam);
       // 🧩 กรองถึงไลน์ — คนมาจริง vs std ของไลน์ (ช่องรายทีมแยกไลน์ไม่ได้ = ไม่คิดช่องว่าง · `lineDeptsOf`)
-      out.push({ date: d, depts: (lineIds.size ? lineDeptsOf(inDept, lineFam, lineName) : inDept)
+      out.push({ date: d, depts: (lineIds.size ? lineDeptsOf(inDept, lineFam, lineName, { stationIds: lineStIds }) : inDept)
         .map(x => {
           /* 🔴 กะผลิตที่ปิดแล้ว = หลักฐานว่า "ไลน์เดินในกะนี้จริง" — ไม่มี = ยืนยันไม่ได้
              ⇒ ไม่คิดช่องว่างของกะนั้น (จุดงานที่ไม่ได้เดินวันนั้น ไม่ใช่ "ขาดคน" · user 15/10) */
@@ -1673,7 +1682,7 @@ function StaffingTab({ section, deptParam, today, nodes, employees, lines, slotP
         }) });
     }
     return out;
-  }, [raw, from, to, today, section, deptParam, nodes, employees, lines, slotPlans, lineTechs, stations, stationPlans, homeByEmp, actingPos, lineIds, lineFam, lineName]);
+  }, [raw, from, to, today, section, deptParam, nodes, employees, lines, slotPlans, lineTechs, stations, stationPlans, homeByEmp, actingPos, lineIds, lineFam, lineName, lineStIds]);
   const summary = useMemo(() => summarizeStaffing(days), [days]);
   const oeeCmp = useMemo(() => compareOeeByStaffing(days), [days]);
   const rowsOf = useMemo(() => summary.flatMap(sm => ['day', 'night'].map(sh => ({ key: sm.key, name: sm.name, sh }))), [summary]);

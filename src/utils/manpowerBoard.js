@@ -970,11 +970,15 @@ export function personFitState(x, p, fit) {
    · กำลังคนตามผัง = std ของไลน์ (`planOf`) · คนวิ่งข้ามแผนก (ตั้งรายหน่วย) แยกไลน์ไม่ได้ = ซ่อน + นับบอก
    · หัวหน้าแผนก/ช่าง = งานระดับแผนก คงไว้ (ไม่นับเป็นกำลังคนอยู่แล้ว)
    @param familyLines  `lineFamilyDown(lines, ชื่อไลน์)` · ว่าง = คืน null (ไม่รู้จักไลน์ ห้ามเดา) */
-export function narrowDeptToLine(d, familyLines = [], lineName = '') {
+export function narrowDeptToLine(d, familyLines = [], lineName = '', { stationIds = null } = {}) {
   if (!d || !familyLines.length) return null;
   const famIds = new Set(familyLines.map(l => String(l.id)));
   const famNames = new Set(familyLines.map(l => String(l.name || '').trim().toLowerCase()));
-  const keep = (p) => famIds.has(String(p?.line_id ?? ''));
+  /* 👥 คนของไลน์ = สังกัดตรง **หรือ** วันนี้ยืนจุดงานของไลน์นี้ (user 23/11: "อยู่กับแม่ก็กระจายลงลูกได้ตอนทำงาน")
+     ⇒ คนสังกัดไลน์แม่ที่ถูกวางที่จุดของไลน์ลูก (`log.assigned_line` = id จุดงาน) ขึ้นที่ไลน์ลูก · ไม่ต้องย้ายสังกัด */
+  const st = stationIds instanceof Set ? stationIds : new Set();
+  const atStation = (p) => !!p?.log?.is_present && p.log.assigned_line != null && st.has(String(p.log.assigned_line));
+  const keep = (p) => famIds.has(String(p?.line_id ?? '')) || atStation(p);
   const cols = (d.cols || []).map(c => ({ ...c, leaders: c.leaders.filter(keep), ops: c.ops.filter(keep),
     slots: null, slotPlan: null, slotSource: 'line', slotStations: undefined }))
     .filter(c => c.leaders.length || c.ops.length);
@@ -996,7 +1000,8 @@ export function narrowDeptToLine(d, familyLines = [], lineName = '') {
     unknownShiftTeams: cols.filter(c => c.team && !c.shift && c.ops.length).map(c => c.team),
     unknownPos: allOps.filter(p => p.unknownPos).length,
     stationInfo: null,
-    lineFilter: { name: lineName, deptOps: d.opsTotal || 0, hiddenFlex: (d.flex || []).length },
+    lineFilter: { name: lineName, deptOps: d.opsTotal || 0, hiddenFlex: (d.flex || []).length,
+      stations: st.size, viaStation: allOps.filter(p => !famIds.has(String(p.line_id ?? '')) && atStation(p)).length },
   };
 }
 
@@ -1023,13 +1028,13 @@ export function boardForLine(board, lineDepts) {
 /** 🧩 แผนกที่ "ครอบไลน์ที่เลือก" แล้วกรองถึงไลน์ (ใช้ทั้งผังกำลังคน/4M/แผน vs มาจริง)
     🔴 std ของไลน์นับ **ครั้งเดียว** ที่แผนกหลัก — ถังไม่ระบุแผนก (`NO_DEPT`) ครอบไลน์เดียวกันได้ (คนที่ไม่มีแผนก)
        เดิมบวก std ซ้ำ 2 เท่า (เจอตอนทำ 23/11: HDF1 std 28 ขึ้นหัวผัง 56) ⇒ แผนกรองถัดไปไม่มี std + ไม่มีคน = ไม่แสดง */
-export function lineDeptsOf(depts, familyLines = [], lineName = '') {
+export function lineDeptsOf(depts, familyLines = [], lineName = '', opts = {}) {
   if (!familyLines.length) return depts;
   const ids = new Set(familyLines.map(l => String(l.id)));
   const hits = (depts || []).filter(d => (d.lines || []).some(l => ids.has(String(l.id))));
   hits.sort((a, b) => (a.key === NO_DEPT_KEY) - (b.key === NO_DEPT_KEY));
   return hits.map((d, i) => {
-    const n = narrowDeptToLine(d, familyLines, lineName);
+    const n = narrowDeptToLine(d, familyLines, lineName, opts);
     if (!n || i === 0) return n;
     if (!n.opsTotal && !(n.borrowed || []).length) return null;
     return { ...n, plan: { day: null, night: null }, planTotal: null };
