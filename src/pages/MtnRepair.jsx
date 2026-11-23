@@ -24,9 +24,10 @@ import { PURPOSES, CAUSE_CATS, needsPlantManager, needsApprovalFirst, laborAmoun
 import AuditLogViewer from '../components/AuditLogViewer';
 import StepFlow from '../components/StepFlow';
 import { can, canDelete, isActionSeeded, isSharedAccount } from '../utils/permissions';
+import { ackWaitsOnMe } from '../utils/myQueue';   // ✍️ กฎ "ใบนี้รอเราเซ็นรับทราบไหม" ที่เดียว (23/11)
 import { confirmSign, needsSignConfirm } from '../utils/signConfirm';
 import { moTimeline } from '../utils/mtnTimeline';   // ⏱️ 4 ช่วงของไลน์หยุด (คำศัพท์ชุดเดียวของระบบ)
-import { MO_DONE_STATUSES, MO_STATUS_META as STATUS_META, QA_NOT_RELATED, QA_RELATED, QA_SKIP_REASON_STEP4, canBounceBack, canDoStep, canHandoff, canSignMtnApproval, canSkipQa, isMoOpen, isOrderReporter, isQaSkipped, isWaitingQa, lastStep, orderReporterText, nextStepOf, moQaState, mtnCloseStage, moStatusLabel, moStatusMeta, orderInReporterScope, stageOf, stepDenyHint, stepLabel, stepMeta, moFlow, moWaitMeta, qaRelatedView, moRemoveMode, canCancelOwnMo, MO_REMOVE_BLOCKED, MO_REMOVE_CANCEL, MO_REMOVE_DELETE, actorSideOf, stepAssumptions, assumptionHint } from '../utils/mtnStepPerm';
+import { MO_DONE_STATUSES, MO_STATUS_META as STATUS_META, QA_NOT_RELATED, QA_RELATED, QA_SKIP_REASON_STEP4, canBounceBack, canDoStep, canHandoff, canSignMtnApproval, canSkipQa, isMoOpen, isOrderReporter, isQaSkipped, isWaitingQa, lastStep, orderReporterText, nextStepOf, moQaState, mtnCloseStage, moStatusLabel, moStatusMeta, orderInReporterScope, stageOf, stepDenyHint, stepLabel, stepMeta, moFlow, moWaitMeta, qaRelatedView, moRemoveMode, canCancelOwnMo, canCancelReportedMo, MO_REMOVE_BLOCKED, MO_REMOVE_CANCEL, MO_REMOVE_DELETE, actorSideOf, stepAssumptions, assumptionHint } from '../utils/mtnStepPerm';
 import { positionRank } from '../utils/positions';
 import { findOpenOnMachine, dupLevel } from '../utils/mtnDuplicate';
 /* 🔢 เลข MO ออกยังไง — ต้องตรงกับ RPC `mtn_assign_mo_no` เป๊ะ (14/10 · ห้ามเดารูปแบบเองในหน้า) */
@@ -34,7 +35,7 @@ import { moFormatHint, moMonthKeyOf, moNoOf, moSeqKeyOf } from '../utils/moNumbe
 /* ⏳ ใบค้างขั้นเดิม — สูตร "ค้างกี่วัน/ขั้นไหน" อยู่ที่นี่ที่เดียว ห้ามนับวันในหน้า (13/10) */
 import { buildMoStaleBoard } from '../utils/mtnStale';
 /* 🏃 แผงไล่งาน — "ใบค้างนี้รอใครลงมือ" (05/11) · กฎการแบ่งฝั่ง/หาเป้าอยู่ util ที่เดียว */
-import { buildMoChaseBoard, PR_CLOSE_STAGES, moCloseGate, moCloseGateText } from '../utils/moChase';
+import { buildMoChaseBoard, PR_CLOSE_STAGES, moCloseGate, moCloseGateText, moPrBlocked, MO_LABEL_WAIT_PR } from '../utils/moChase';
 import { inSectionScope, lineScope } from '../utils/sectionScope';
 import { getLineFamilyNames } from '../utils/lineHierarchy';
 import { teamsForUser, teamForSection, teamForItem, sameTeam, filterByTeam, visibleForTeam, seesEverything, teamKeyOf, deptNameOf, teamOptions, teamRowOwner, teamRowLockNote, canWriteTeam, teamBlockText, moCodeOf } from '../utils/mtnTeams';
@@ -202,6 +203,13 @@ const NAME_CASCADE = {
    (`transferred` หลุดมาจริง: ไม่มีตัวเลือกใน dropdown ฟิลเตอร์ + การ์ดขึ้นสีแดงขั้น 1)
    **ห้ามเขียนตารางสถานะกลับมาที่นี่อีก** · dropdown ฟิลเตอร์สร้างจาก STATUS_META ที่ import มา */
 const statusMetaOf = moStatusMeta;   // สี/ขั้นจากตาราง + ป้ายจาก moStatusLabel() เสมอ
+/* 🛒 ป้ายของใบที่ถึงคิวปิดแล้วแต่ PR ยังค้าง (23/11 · หน้างาน "บอกรออนุมัติแต่อนุมัติไม่ได้")
+   🔴 กฎอยู่ `moPrBlocked()` (ใช้ `moCloseGate` ตัวเดียวกับด่านตอนกด) — ห้ามเทียบ PR เองที่นี่
+   🔴 ไม่รู้เรื่อง PR (`prs = null`) = คืนป้ายเดิมเป๊ะ · สีคงเดิม (ยังเป็นใบที่ใกล้จบ ไม่ใช่ใบมีปัญหา) */
+const statusMetaWithPr = (o, prs) => {
+  const m = statusMetaOf(o);
+  return moPrBlocked(o, prs) ? { ...m, label: MO_LABEL_WAIT_PR } : m;
+};
 /* 🎨 ชิปสถานะในหน้านี้วาดด้วยพาเลต 5 สี (05/11 · UI §6.17): แดง = รอรับงาน (ยังไม่มีใครถือ) · อำพัน = อยู่ระหว่างทำ/ตีกลับ ·
    ฟ้า = รออนุมัติปิด/ส่งต่อ · เขียว = ปิดแล้ว · เทา = ยกเลิก — `MO_STATUS_META.color` (hex) ยังอยู่ให้จออื่นที่ยังไม่ได้ไล่ */
 const STATUS_TONE = { pending: 'bad', assigned: 'warn', repairing: 'warn', repaired: 'warn', checked: 'warn', qa: 'warn',
@@ -882,6 +890,9 @@ const HANDOFF_CAP = 2000;
   /* 🔴 ตัวกรอง "รอขั้นไหน" แยกชั้นจาก `beforeWait` — ไม่เอาไปรวมในชั้นเดียวกับตัวกรองอื่น
      เพราะ dropdown ด้านล่างนับตัวเลือกจาก `beforeWait` ⇒ เลือกขั้นหนึ่งแล้วขั้นอื่นต้องยังอยู่ให้เลือกกลับ */
   const prStateOf = useCallback((o) => prQueueStateOf(o, openPrs.byOrder[o.id] || []), [openPrs]);
+  /* 🛒 ใบขอซื้อของใบนี้ สำหรับ "ป้ายสถานะ" — อ่านทะเบียนไม่ได้ = `null` = ป้ายเดิมเป๊ะ
+     (ห้ามส่ง `[]` ตอนโหลดล้ม: `[]` แปลว่า "ไม่มี PR" ซึ่งจะทำให้ป้ายบอกว่าปิดได้ทั้งที่ไม่รู้) */
+  const prsForLabel = useCallback((o) => (openPrs.error ? null : (openPrs.byOrder[o.id] || [])), [openPrs]);
   const prMatch = useCallback((o) => {
     if (!fPr || !PR_FILTERS.some(x => x.v === fPr)) return true;   // ค่าที่ไม่รู้จัก = ไม่กรอง (ลิงก์เก่าห้ามทำจอว่าง)
     const st = prStateOf(o);
@@ -893,11 +904,19 @@ const HANDOFF_CAP = 2000;
     beforeWait.forEach(o => { const st = prStateOf(o); if (st) c[st]++; });
     return { ...c, waiting: c.need + c.no_no };
   }, [beforeWait, prStateOf]);
+  /* ✍️ ตัวตนของผู้ใช้ในรูปแบบที่ `ackWaitsOnMe()` ต้องการ — ชุดเดียวกับที่คิวงานส่งให้ */
+  const ackMe = useMemo(() => ({
+    name: fullName, sections: scopeSecs || [], isShared: isSharedAccount(),
+    can: (a) => can('mtn_repair', a, role),
+  }), [fullName, scopeSecs, role]);
   /* ชั้น "คิว" — ดูลิสต์ตัวกรองด้านบนว่าทำไมต้องเขียนเป็นลิสต์ */
   const queueFilters = useMemo(() => [
     { key: 'wait', label: 'รอขั้น', value: fWait, on: !!fWait, test: o => waitStageOf(o) === fWait },
+    /* ✍️ 23/11 — ต้องใช้กฎ **ตัวเดียวกับป้ายในคิว** (`ackWaitsOnMe`) ไม่งั้นเลขไม่ตรง
+       หน้างานแจ้ง: ป้ายบอก 1 ใบ กดเข้ามาเจอ 4 ใบ (มีใบตีกลับ/รอยกเลิก/ไม่ใช่ของเราปนมา)
+       🔴 ห้ามเขียนเงื่อนไขเองที่นี่อีก (มีด่าน `ack-queue-single-rule`) */
     { key: 'ack', label: 'รอ ผจก.ต้นสังกัดเซ็นรับทราบ', on: fAck === 'pending',
-      test: o => isMtnFormOrder(o) && !o.dept_manager_at },
+      test: o => ackWaitsOnMe(o, ackMe) },
     { key: 'pr', label: 'งาน PR', value: PR_FILTERS.find(x => x.v === fPr)?.label || fPr,
       on: !!fPr && PR_FILTERS.some(x => x.v === fPr), test: prMatch },
     /* ⏳ ใบรอเพิ่มรายละเอียด — ตัดสินด้วย `isDetailsPending()` ห้ามเทียบ `=== true` ลอยๆ ในหน้า
@@ -1309,7 +1328,7 @@ const HANDOFF_CAP = 2000;
             บนจอ 360×640 (MOBILE-UX-STANDARD §2 ข้อ 4–5) · จอคอมยังเป็นตาราง (คำสั่ง user 05/10 เดิม) */}
         {isMobile ? (
           <div className="mo-cards">
-            {shown.map(o => <MoCard key={o.id} o={o} onOpen={() => openDetail(o)} />)}
+            {shown.map(o => <MoCard key={o.id} o={o} onOpen={() => openDetail(o)} prs={prsForLabel(o)} />)}
             {!shown.length && <div style={{ color: 'var(--muted)', padding: 24, textAlign: 'center' }}>{trI18n('ไม่มีรายการ')}</div>}
           </div>
         ) : (
@@ -1321,7 +1340,7 @@ const HANDOFF_CAP = 2000;
               <th>{trI18n('ไลน์')}</th><th>{trI18n('ชนิด · เครื่อง')}</th><th>{trI18n('ปัญหา')}</th><th>{trI18n('รายละเอียด')}</th><th>{trI18n('ชื่อผู้แจ้ง')}</th>
             </tr></thead>
             <tbody>
-              {shown.map(o => <MoRow key={o.id} o={o} onOpen={() => openDetail(o)} />)}
+              {shown.map(o => <MoRow key={o.id} o={o} onOpen={() => openDetail(o)} prs={prsForLabel(o)} />)}
               {!shown.length && <tr><td colSpan={10} style={{ color: 'var(--muted)', padding: 24, textAlign: 'center' }}>{trI18n('ไม่มีรายการ')}</td></tr>}
             </tbody>
           </table>
@@ -1363,8 +1382,8 @@ const HANDOFF_CAP = 2000;
 
 /* 📱 การ์ด 1 ใบ (มือถือเท่านั้น) — ข้อมูลชุดเดียวกับ MoRow · ลำดับตามคำถามคนหน้างาน:
    "ใบไหน · ถึงไหนแล้ว" → "ที่ไหน เครื่องอะไร" → "เป็นอะไร" → "ใคร/เมื่อไหร่" · ใบรอรับงาน = รางแดงซ้าย (Andon) */
-function MoCard({ o, onOpen }) {
-  const m = statusMetaOf(o);
+function MoCard({ o, onOpen, prs = null }) {
+  const m = statusMetaWithPr(o, prs);
   const last = lastStep({ mtnForm: isMtnFormOrder(o) });
   const pct = o.status === 'closed' ? 100 : Math.round((o.current_step / last) * 100);
   const dept = o.mtn_dept || deptForItem(o.item_type);
@@ -1391,8 +1410,8 @@ function MoCard({ o, onOpen }) {
   );
 }
 
-function MoRow({ o, onOpen }) {
-  const m = statusMetaOf(o);
+function MoRow({ o, onOpen, prs = null }) {
+  const m = statusMetaWithPr(o, prs);
   const last = lastStep({ mtnForm: isMtnFormOrder(o) });
   // ใบเก่าปิดที่ current_step 8 (flow 8 ขั้นก่อน 22/09) — ปิดแล้วต้องเต็ม 100% ห้ามค้าง 89%
   const pct = o.status === 'closed' ? 100 : Math.round((o.current_step / last) * 100);
@@ -3038,10 +3057,19 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
      🔴 เส้นทางนี้ได้แค่ "ยกเลิก" — ใบที่ยังไม่มีเลข MO (โหมดปกติ = ลบ) ต้องถูกบีบเป็นยกเลิก
         เพราะ 11/11 เจอใบถูกลบตอน `pending` 4 ใบ แล้วปัญหาหายจากระบบหมด */
   const canRemoveAsBoss = canDelete('mtn_repair', 'manage_master', role);
+  /* 👔 23/11 (คำสั่ง user "เปิดให้หัวหน้ายกเลิกได้เลย") — หัวหน้าของ**ฝ่ายที่แจ้ง**
+     ยกเลิกใบของลูกน้องได้ ตอนที่ยังไม่มีช่างรับงาน · เกณฑ์อยู่ `canCancelReportedMo()`
+     🔴 ห้ามเทียบฝั่ง/ตำแหน่ง/ขอบเขตเองที่นี่ — ส่ง ctx ชุดเดียวกับด่านขั้นอื่นเข้าไป */
+  const bossCancel = canCancelReportedMo(o, {
+    can: (a) => can('mtn_repair', a, role), actorSide, posRank, inReporterScope,
+  });
   const ownCancel = canCancelOwnMo(o, { fullName });
-  const removeMode = (ownCancel && !canRemoveAsBoss) ? MO_REMOVE_CANCEL : removal.mode;
-  const removeWhy = (ownCancel && !canRemoveAsBoss)
-    ? 'คุณเป็นผู้เปิดใบนี้ และยังไม่มีช่างรับงาน — ยกเลิกได้ (ใบยังอยู่ให้สอบกลับ ลบไม่ได้)'
+  const softCancel = (ownCancel || bossCancel) && !canRemoveAsBoss;
+  const removeMode = softCancel ? MO_REMOVE_CANCEL : removal.mode;
+  const removeWhy = softCancel
+    ? (ownCancel
+      ? 'คุณเป็นผู้เปิดใบนี้ และยังไม่มีช่างรับงาน — ยกเลิกได้ (ใบยังอยู่ให้สอบกลับ ลบไม่ได้)'
+      : 'คุณเป็นหัวหน้าของฝ่ายที่แจ้ง และยังไม่มีช่างรับงาน — ยกเลิกแทนผู้แจ้งได้ (ใบยังอยู่ให้สอบกลับ ลบไม่ได้)')
     : removal.why;
   const del = async () => {
     /* 🔐 ลบใบของทีมอื่น = ไม่มีเหตุผลทางธุรกิจรองรับเลย (audit 15/10) — ต่างจากการ "แก้ย้อนหลัง"
@@ -3049,7 +3077,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
     /* ✋ ด่านทีมไว้กัน "ลบใบของทีมอื่น" — **ไม่ใช้กับผู้เปิดใบที่ถอนใบตัวเอง** (16/11)
        ผู้แจ้งอยู่ฝั่งผู้แจ้ง ไม่เคยอยู่ทีมช่าง ⇒ ถ้าไม่ยกเว้น เมนูจะโผล่แต่กดแล้วเด้ง "ใบของทีมนี้" */
     const tw = canWriteTeam(userTeams, o.mtn_dept, { role, allUnits });
-    if (!tw.ok && !ownCancel) { toast.info(teamBlockText(tw, 'ใบแจ้งซ่อมของทีมนี้')); return; }
+    if (!tw.ok && !ownCancel && !bossCancel) { toast.info(teamBlockText(tw, 'ใบแจ้งซ่อมของทีมนี้')); return; }
     if (removeMode === MO_REMOVE_DELETE) {
       if (!await askConfirm(`${trI18n("ลบใบแจ้งซ่อมนี้")}?\n\n${removeWhy}`)) return;
       /* 🔴 นับแถวที่ลบได้ก่อน ค่อยลบรูปใน storage — เช็คแค่ `error` แล้วลบรูปไปก่อน
@@ -4744,7 +4772,17 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
       <div className={isMobile ? 'm-savebar m-stepbar' : undefined}
         style={isMobile ? undefined : { display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
         <button onClick={tryClose} style={isMobile ? undefined : btnGhost}>{trI18n('ยกเลิก')}</button>
-        <button onClick={save} disabled={saving} style={isMobile ? undefined : btnPri}>{saving ? trI18n('บันทึก…') : skipQa ? trI18n('ยืนยันข้าม QA ไปขั้น 6') : (editMode ? trI18n('บันทึกการแก้ไข') : trI18n('บันทึก'))}</button>
+        {/* 🛒 PR ยังไม่จบ = ปิดใบไม่ได้จริง ⇒ **ปิดปุ่มไปเลย** (23/11 · หน้างาน "มันงง")
+            เดิมปุ่มเขียวกดได้ แล้วค่อยเด้ง error ตอนกด = จอชวนให้กดสิ่งที่ทำไม่ได้
+            🔴 ปิดเฉพาะตอน `block` — `unknown` (อ่าน PR ไม่ได้) ต้องกดได้ตามเดิม (ไม่รู้ ≠ ห้าม) */}
+        <button onClick={save} disabled={saving || prGate.gate === 'block'}
+          title={prGate.gate === 'block' ? moCloseGateText(prGate) : undefined}
+          style={isMobile ? undefined : { ...btnPri, ...(prGate.gate === 'block' ? { opacity: 0.5, cursor: 'not-allowed' } : null) }}>
+          {saving ? trI18n('บันทึก…')
+            : prGate.gate === 'block' ? trI18n('ปิดใบยังไม่ได้ — PR ค้าง')
+            : skipQa ? trI18n('ยืนยันข้าม QA ไปขั้น 6')
+            : (editMode ? trI18n('บันทึกการแก้ไข') : trI18n('บันทึก'))}
+        </button>
       </div>
     </ModalShell>
   );

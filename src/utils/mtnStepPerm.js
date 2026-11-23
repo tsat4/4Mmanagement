@@ -946,6 +946,31 @@ export function moRemoveMode(order = {}) {
       หน้าจอเป็นคนตัดสินว่าจะยกด่านทีมให้เฉพาะเส้นทางนี้ (ใบของตัวเอง ≠ ลบใบทีมอื่น) */
 export const OWNER_CANCEL_STATUSES = Object.freeze(['pending', 'returned']);
 
+/* ── 👔 หัวหน้าของฝ่ายที่แจ้ง ยกเลิกใบของลูกน้องได้ ──────────────── 2026-11-23 · คำสั่ง user
+   *"เปิดให้หัวหน้ายกเลิกได้เลย"*
+
+   ที่มา: หน้างานเจอใบค้าง "รอรับงาน" ที่เปิดผิด/ไม่ต้องทำแล้ว นอนในคิวช่างเป็นสัปดาห์
+   (วัด 23/11: 6 ใบค้างตั้งแต่ 16-21/11) — เดิมยกเลิกได้แค่ **ผู้เปิดใบเอง** กับ **แอดมินช่าง**
+   ⇒ ผู้เปิดใบลาหยุด/ลืม = ไม่มีใครเคลียร์ได้ ทั้งที่หัวหน้าเขารู้ดีว่าไม่ต้องทำแล้ว
+
+   🔴 **ขอบเขตเท่าเดิมกับผู้เปิดใบเป๊ะ** — เฉพาะ `pending`/`returned` (ยังไม่มีช่างกดรับ)
+      เลยจากนี้ช่างลงมือแล้ว = เป็นเรื่องของทีมช่าง ไม่ใช่ของฝ่ายที่แจ้งฝ่ายเดียว
+   🔴 **ยกเลิกเท่านั้น ไม่ใช่ลบ** — ใบต้องเหลือร่องรอยเสมอ (เหตุผลเดียวกับ `canCancelOwnMo`)
+   🔴 **ต้องเป็นหัวหน้าของ "ฝ่ายที่แจ้ง" จริง** 3 ชั้น: ฝั่งผู้แจ้ง (`side`) · อยู่ในขอบเขตใบ
+      (`inReporterScope`) · ตำแหน่ง ≥ `HANDOVER_MIN_RANK` (เกณฑ์เดียวกับขั้น "รับมอบ" ซึ่งเป็น
+      ช่องของหัวหน้าแผนกผู้แจ้งอยู่แล้ว — ไม่ตั้งเกณฑ์ชุดใหม่)
+   🔴 **ไม่รู้ = ไม่ให้** (fail-closed) — ต่างจากด่านเซ็นที่ "ไม่รู้ = ไม่บล็อก"
+      เพราะอันนี้เป็นการ**ทำลายงานของคนอื่น** ไม่ใช่การเซ็นช่องของตัวเอง */
+export function canCancelReportedMo(order = {}, opts = {}) {
+  const { can = () => false, actorSide = 'unknown', posRank = null, inReporterScope = null } = opts;
+  if (!isMoOpen(order)) return false;
+  if (!OWNER_CANCEL_STATUSES.includes(String(order?.status || '').trim())) return false;
+  if (actorSide !== 'reporter' && actorSide !== 'both') return false;   // ไม่รู้ฝั่ง = ไม่ให้
+  if (inReporterScope !== true) return false;                           // ไม่รู้ขอบเขต = ไม่ให้
+  if (posRank == null || posRank < HANDOVER_MIN_RANK) return false;     // ไม่รู้ตำแหน่ง = ไม่ให้
+  return !!can('report');   // ต้องเป็นคนที่แจ้งซ่อมได้อยู่แล้ว (ฝ่ายที่แจ้ง)
+}
+
 /** ผู้ใช้คนนี้ "ถอนใบของตัวเอง" ได้ไหม — ไม่รู้ชื่อ = false (ไม่รู้ ≠ ใช่) */
 export function canCancelOwnMo(order = {}, { fullName = '' } = {}) {
   if (!isMoOpen(order)) return false;
