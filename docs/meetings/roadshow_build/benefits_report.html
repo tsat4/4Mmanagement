@@ -20,6 +20,7 @@
   th { background:var(--g); color:#fff; text-align:left; padding:1.3mm 2mm; font-weight:700; }
   td { border-bottom:1px solid var(--bd); padding:1.2mm 2mm; vertical-align:top; }
   tr:nth-child(even) td { background:#FAFAFA; }
+  table.tight { font-size:8.6pt; margin:1mm 0 1.5mm; } table.tight td { padding:.7mm 1.6mm; } table.tight td:nth-child(2) { white-space:nowrap; }
   td.num, th.num { text-align:right; white-space:nowrap; }
   .tag { display:inline-block; font-size:7.6pt; font-weight:700; border-radius:1mm; padding:0 1.5mm; margin-left:1mm; vertical-align:1px; }
   .m { background:#EAF6EE; color:var(--g); border:1px solid var(--g); }   /* วัดจริง */
@@ -62,7 +63,7 @@
 
 <h3>สรุปผู้บริหาร</h3>
 <div class="kpis">
-  <div class="kpi"><div class="v">~1,400 <small>ใบ/สัปดาห์</small></div><div class="l">เอกสารหน้างานที่ทำในระบบแทนกระดาษ <span class="tag e">ประมาณการ</span></div></div>
+  <div class="kpi"><div class="v">~4,600 <small>แผ่น/เดือน</small></div><div class="l">กระดาษหน้างานที่ไม่ต้องพิมพ์ (ต.ค. วัดจริง ~2,900) <span class="tag e">ประมาณการ</span></div></div>
   <div class="kpi"><div class="v">24 <small>ไลน์</small></div><div class="l">ไลน์ที่เปิดกะในระบบ (ก.ย. 14–19) <span class="tag m">วัดจริง</span></div></div>
   <div class="kpi"><div class="v">~50 <small>คน/สัปดาห์</small></div><div class="l">คนที่บันทึกข้อมูลจริง (ก.ย. ~16) <span class="tag m">วัดจริง</span></div></div>
   <div class="kpi or"><div class="v">16 → 8 <small>ชม.</small></div><div class="l">ปิดกะหลังเลิกกะ (มัธยฐาน) เร็วขึ้นครึ่งหนึ่ง <span class="tag m">วัดจริง</span></div></div>
@@ -70,19 +71,29 @@
 <p>ในเกือบ 2 เดือน ESM ขยายจากไลน์นำร่องไปเกือบทุกไลน์ จุดที่เห็นผลชัดที่สุดคือ <b>เอกสารหน้างานหลักย้ายจากกระดาษเข้าระบบ</b> แล้ว และเพราะข้อมูลอยู่ในระบบตั้งแต่ต้นทาง ประโยชน์จึงต่อยอดเป็น 3 ชั้น ได้แก่ <b>งานเดินเร็วขึ้นเพราะไม่ต้องเดินส่งเอกสาร</b> · <b>ไม่ต้องคีย์กระดาษลง Excel แล้วทำกราฟเอง</b> เพราะระบบวิเคราะห์ให้ · และ <b>รู้ปัญหาทันที</b>ผ่านการแจ้งเตือนและสรุปงานอัตโนมัติ รายงานนี้เรียงตามลำดับนั้น และปิดท้ายด้วยเรื่องที่ยังต้องแก้ เพื่อให้ตัวเลขชุดถัดไปดีขึ้นจริง</p>
 
 <h2><span class="no">1</span>ไร้กระดาษ (Paperless)</h2>
-<p>ฟอร์มหน้างานที่ใช้ทุกกะถูกทำในระบบแทนกระดาษแล้ว ตัวเลขด้านล่างเป็นจำนวนเอกสารเฉลี่ยต่อสัปดาห์ในเดือน พ.ย. (3 สัปดาห์ล่าสุด)</p>
-<table>
-  <tr><th>เอกสาร (เดิมเป็นกระดาษ)</th><th class="num">ก.ย./สัปดาห์</th><th class="num">พ.ย./สัปดาห์</th><th>ตอนนี้ทำที่</th></tr>
-  <tr><td>รายงานการผลิตประจำกะ (1 ใบ/ไลน์/กะ)</td><td class="num">122</td><td class="num">246 <span class="tag m">วัดจริง</span></td><td>Daily Production Report</td></tr>
-  <tr><td>ใบเช็คชื่อ + PPE (คนที่ถูกเช็คในระบบ)</td><td class="num">~170 คน</td><td class="num">~265 คน <span class="tag m">วัดจริง</span></td><td>เช็คชื่อ &amp; PPE</td></tr>
-  <tr><td>ใบตรวจเครื่องจักรต้นกะ (AM)</td><td class="num">~20</td><td class="num">~250 <span class="tag m">วัดจริง</span></td><td>Daily Checker · AM</td></tr>
-  <tr><td>ใบตรวจคุณภาพ QA</td><td class="num">0</td><td class="num">~260 <span class="tag m">วัดจริง</span></td><td>Quality Control Center (พิมพ์ได้เมื่อต้องการ)</td></tr>
-  <tr><td>ใบแจ้งซ่อม MO</td><td class="num">~111</td><td class="num">~292 <span class="tag m">วัดจริง</span></td><td>แจ้งซ่อม MTN</td></tr>
-  <tr><td>ใบ 4M Change (รวมที่ระบบเปิดให้เองด้าน "คน" ประมาณครึ่งหนึ่ง)</td><td class="num">~32</td><td class="num">~240 <span class="tag m">วัดจริง</span></td><td>4M · อนุมัติในระบบ</td></tr>
+<p>นับตาม <b>"หน่วยของใบกระดาษจริง"</b> ไม่ใช่จำนวนครั้งที่ตรวจ — เช็คชีทรายเดือน (AM · LPA · BBS · Poka-yoke) ตรวจกี่วันก็ยังเป็น <b>1 แผ่นต่อเครื่องหรือต่อไลน์ต่อเดือน</b> ส่วนใบที่ออกเป็นเรื่องๆ (MO · 4M · ใบงานประจำกะ · ใบ QA) นับใบละแผ่น</p>
+<table class="tight">
+  <tr><th>เอกสาร (เดิมเป็นกระดาษ)</th><th>หน่วยของใบกระดาษ</th><th class="num">ต.ค.<br>แผ่น/เดือน</th><th class="num">พ.ย.<br>แผ่น/เดือน</th><th class="num">พ.ย. ครั้งที่บันทึก<br>(คีย์ Excel เดิม)</th></tr>
+  <tr><td>รายงานการผลิตประจำกะ</td><td>1 แผ่น / ไลน์ / กะ</td><td class="num">783</td><td class="num">~1,030</td><td class="num">~1,030</td></tr>
+  <tr><td>ใบตรวจคุณภาพ QA</td><td>1 แผ่น / พาร์ท / กะ / รอบ</td><td class="num">139</td><td class="num">~1,000</td><td class="num">~1,000</td></tr>
+  <tr><td>ใบแจ้งซ่อม MO</td><td>1 แผ่น / เรื่อง</td><td class="num">809</td><td class="num">~1,250</td><td class="num">~1,250</td></tr>
+  <tr><td>ใบ 4M Change (เฉพาะที่คนยื่น)</td><td>1 แผ่น / เรื่อง</td><td class="num">585</td><td class="num">~440</td><td class="num">~440</td></tr>
+  <tr><td>ใบเช็คชื่อ + PPE *</td><td>1 แผ่น / ไลน์ / กะ</td><td class="num">316</td><td class="num">~360</td><td class="num">~360</td></tr>
+  <tr><td>แท็กถังเหลือง/แดง · ใบแจ้งปัญหา · เศษเหล็ก</td><td>1 แผ่น / เรื่อง</td><td class="num">51</td><td class="num">~265</td><td class="num">~265</td></tr>
+  <tr><td>ใบตรวจเครื่องจักร AM (เช็คชีทรายเดือน)</td><td>1 แผ่น / เครื่อง / เดือน</td><td class="num">38</td><td class="num">51</td><td class="num">~1,000</td></tr>
+  <tr><td>ใบ PM ช่าง (FM-JIG-003)</td><td>1 แผ่น / ครั้ง</td><td class="num">35</td><td class="num">~53</td><td class="num">~53</td></tr>
+  <tr><td>LPA (ใบแผน + ใบรายงาน FM-QMR-008)</td><td>2 แผ่น / ไลน์ / กะ / เดือน</td><td class="num">40</td><td class="num">40</td><td class="num">~620</td></tr>
+  <tr><td>BBS (ใบสังเกตความปลอดภัย)</td><td>1 แผ่น / ไลน์ / เดือน</td><td class="num">19</td><td class="num">17</td><td class="num">17</td></tr>
+  <tr><td>ใบตรวจ Poka-yoke *</td><td>1 แผ่น / อุปกรณ์ / เดือน</td><td class="num">16</td><td class="num">49</td><td class="num">~1,950</td></tr>
+  <tr><td>บันทึกฝึกอบรม OJT</td><td>1 แผ่น / ครั้ง</td><td class="num">53</td><td class="num">~23</td><td class="num">~23</td></tr>
+  <tr><td><b>รวม</b></td><td></td><td class="num"><b>~2,900</b> <span class="tag m">วัดจริง</span></td><td class="num"><b>~4,600</b></td><td class="num"><b>~8,000</b></td></tr>
 </table>
+<p class="legend">ต.ค. = เต็มเดือน วัดจริงจากระบบ · พ.ย. = ข้อมูล 1–22 พ.ย. คิดเต็มเดือน (×30/22) <span class="tag e">ประมาณการ</span> ยกเว้นเช็คชีทรายเดือนที่นับจำนวนแผ่นจริง · * หน่วยของใบเช็คชื่อและใบ Poka-yoke เป็นสมมติฐาน รอหน้างานยืนยัน</p>
 <div class="box note">
-  <b>ประมาณการกระดาษที่ไม่ต้องพิมพ์ <span class="tag e">ประมาณการ</span></b><br>
-  รวมเอกสารข้างบน ≈ <b>1,400 ใบต่อสัปดาห์ ≈ 6,000 ใบต่อเดือน</b> (สมมติ 1 ใบ = 1 แผ่น · ใบเช็คชื่อ 1 แผ่นต่อไลน์ต่อกะ · 4M นับเฉพาะครึ่งที่คนยื่น · ยังไม่นับสำเนาและใบที่เขียนผิดแล้วทิ้ง ตัวเลขจริงจึงน่าจะสูงกว่านี้)
+  <b>อ่านตัวเลขนี้อย่างไร</b><br>
+  <b>กระดาษที่ไม่ต้องพิมพ์ ≈ 4,600 แผ่นต่อเดือน</b> (ราว 9 รีม) ยังไม่นับสำเนาและใบที่เขียนผิดแล้วทิ้ง ·
+  แต่ประโยชน์ที่ใหญ่กว่าคือคอลัมน์ขวาสุด: <b>~8,000 ครั้งต่อเดือน</b> ที่เดิมต้องมีคนอ่านจากกระดาษแล้วคีย์ลง Excel
+  (เช็คชีท AM 1 แผ่นมีผลตรวจทั้งเดือน · ใบ Poka-yoke 1 แผ่นมีผลตรวจทุกกะ) — ตอนนี้ระบบเก็บเป็นข้อมูลตั้งแต่ตอนตรวจ ดูหัวข้อ 3
 </div>
 <h3>ประโยชน์ที่มากกว่าค่ากระดาษ</h3>
 <ul>
@@ -92,7 +103,7 @@
   <li><b>ไม่ต้องเก็บแฟ้มเอกสาร</b> — ลดพื้นที่จัดเก็บและงานจัดแฟ้มรายเดือน <span class="tag q">เชิงคุณภาพ</span></li>
 </ul>
 
-<h2 class="pb"><span class="no">2</span>e-Workflow — งานเดินเร็วขึ้นเพราะไม่ต้องเดินส่งเอกสาร</h2>
+<h2><span class="no">2</span>e-Workflow — งานเดินเร็วขึ้นเพราะไม่ต้องเดินส่งเอกสาร</h2>
 <p>เมื่อเอกสารอยู่ในระบบ ขั้นตอนอนุมัติและส่งต่องานก็เกิดบนหน้าจอทันที ไม่ต้องรอคนเดินเอากระดาษไปหาผู้อนุมัติ ไม่ต้องรอรวบรวมแล้วส่งเป็นรอบ</p>
 
 <h3>ใบแจ้งซ่อม (MO) — ตัวอย่างงานที่ส่งต่อหลายมือ</h3>
@@ -114,11 +125,7 @@
   <tr><td>ปิดกะ</td><td>หัวหน้ากลุ่มขอปิดกะ → หัวหน้าส่วนอนุมัติ</td><td>ตัวเลขกะพร้อมใช้เร็วขึ้น</td></tr>
   <tr><td>เรียกของจากสโตร์</td><td>ไลน์เรียก → สโตร์ยืนยันเตรียม → ไลน์รับ</td><td>ไม่ต้องเดินไปถาม · ตัดสต็อกให้เอง</td></tr>
 </table>
-<div class="kpis" style="grid-template-columns:repeat(3,1fr)">
-  <div class="kpi or"><div class="v">16 → 8 <small>ชม.</small></div><div class="l">ปิดกะหลังเลิกกะ (มัธยฐาน) <span class="tag m">วัดจริง</span></div></div>
-  <div class="kpi"><div class="v">43% → 18%</div><div class="l">ใบงานที่ลงย้อนหลัง — บันทึกตอนผลิตจริงมากขึ้น <span class="tag m">วัดจริง</span></div></div>
-  <div class="kpi"><div class="v">0 <small>แฟ้ม</small></div><div class="l">ใบที่ต้องเดินส่งและเก็บแฟ้ม สำหรับงานที่ย้ายเข้าระบบแล้ว <span class="tag q">เชิงคุณภาพ</span></div></div>
-</div>
+<p><b>ผลที่วัดได้:</b> ปิดกะหลังเลิกกะเร็วขึ้น <b>16 → 8 ชม.</b> (มัธยฐาน) <span class="tag m">วัดจริง</span> · ใบงานที่ลงย้อนหลังลดจาก <b>43% → 18%</b> <span class="tag m">วัดจริง</span> · งานที่ย้ายเข้าระบบแล้วไม่มีใบต้องเดินส่งหรือเก็บแฟ้ม <span class="tag q">เชิงคุณภาพ</span></p>
 
 <h2 class="pb"><span class="no">3</span>วิเคราะห์ได้ทันที — ไม่ต้องคีย์กระดาษลง Excel แล้วทำกราฟเอง</h2>
 <p>ประโยชน์ชั้นนี้ใหญ่กว่าการลดกระดาษ เพราะตัด <b>"ทั้งขั้นตอน"</b> ออก ไม่ใช่แค่เปลี่ยนวัสดุ เดิมข้อมูลต้องเดินทาง 4 ทอดกว่าจะเป็นกราฟ ตอนนี้เหลือทอดเดียว</p>
@@ -143,7 +150,7 @@
 
 <div class="box note">
   <b>ประมาณการเวลาที่ไม่ต้องคีย์ข้อมูลซ้ำ <span class="tag e">ประมาณการ</span></b><br>
-  ถ้าเดิมการคีย์เอกสาร 1 ใบลง Excel ใช้ประมาณ <b>2 นาที</b> เอกสาร ~1,400 ใบต่อสัปดาห์ = <b>~47 ชั่วโมงคนต่อสัปดาห์ (~200 ชั่วโมงต่อเดือน)</b> ยังไม่รวมเวลาทำกราฟและรายงานประชุม
+  การคีย์นับตาม <b>"ครั้งที่บันทึก"</b> ไม่ใช่จำนวนแผ่น (เช็คชีทรายเดือน 1 แผ่นต้องคีย์ทุกวัน) — ~8,000 ครั้งต่อเดือน × ประมาณ <b>1 นาทีต่อครั้ง</b> = <b>~130 ชั่วโมงคนต่อเดือน</b> ยังไม่รวมเวลาทำกราฟและรายงานประชุม
   — <b>ต้องยืนยันด้วยการจับเวลาจริง</b> (แผนประเมินข้อ 3: จับเวลาตำแหน่งละ 3–5 คน) ก่อนแปลงเป็นเงิน
 </div>
 <div class="box warn">
