@@ -25,6 +25,7 @@
    (เลขขั้นคนละความหมายระหว่างฟอร์ม JIG/DIE กับ MTN — กฎเหล็กใน CLAUDE.md)
    ═══════════════════════════════════════════════════════════════════════════ */
 import { personKey, normPersonName } from './actorStamp.js';
+import { moPrBlocked } from './moChase.js';
 import {
   canDoStep, moWaitMeta, offLoopWaitOf, approvalWaitsOnMe, sideAllows, STAGE_APPROVE_FIRST,
   canSignMtnApproval,
@@ -333,7 +334,13 @@ export function buildQueue(src = {}, me = {}, now = new Date()) {
     if (!w.meta) continue;
     if (w.byName && isMeAmong(w, me)) { mine.push(moItem(o, w, TIER.MINE)); continue; }
     // ขั้นล็อกตำแหน่งที่เราเซ็นได้คนเดียว (ในขอบเขตเรา) ⇒ รอคุณ + ขึ้นก่อน (soleSignerFor ข้างบน)
-    if (!w.byName && soleSignerFor(o, w, me) && scopeStateOf(o, me) === 'in') {
+    /* 🛒 23/11 (หน้างาน: *"รอเรา 7 ใบ แต่เป็นใบอยู่ loop pr ซึ่งมันไม่ได้รอเราไง"*)
+       ใบที่ลูปจัดซื้อยังไม่จบ = **กดอนุมัติไม่ได้จริง** (ด่าน `moCloseGate` บล็อกตอนกด)
+       ⇒ ห้ามนับเป็น "รอคุณเซ็น" · คนที่ต้องลงมือคือช่าง/จัดซื้อ ไม่ใช่ ผจก.
+       🔴 ใช้ `moPrBlocked()` ตัวเดียวกับป้ายสถานะในหน้า MO — ห้ามเทียบ PR เองที่นี่
+       🔴 ไม่ได้ส่ง `prOf` มา (ผู้เรียกไม่มีข้อมูล PR) = พฤติกรรมเดิมเป๊ะ ไม่ตัดอะไรทิ้ง */
+    if (!w.byName && soleSignerFor(o, w, me) && scopeStateOf(o, me) === 'in'
+        && !moPrBlocked(o, src.prOf ? src.prOf(o) : null)) {
       mine.push({ ...moItem(o, w, TIER.MINE), sign: true, tag: '✍️ รอคุณเซ็น' });
       /* สะสมไว้ทำ "ป้ายคาไว้" บรรทัดเดียวต่อขั้น (คำสั่ง user 22/10) — ดู signRollup ข้างล่าง */
       const sk = w.meta.stage || `step${w.step}`;

@@ -75,7 +75,7 @@ export async function loadMyQueue(me) {
   const ok = (r) => (r.error ? undefined : (r.data || []));
 
   const canLu = !!(me.canLevelUp || me.canLevelUp100);
-  const [moR, sesR, prR, fourR, actR, lines, luR, binR, binRedR, redPendR, rfqAssessR, gapR, gapOdR] = await Promise.all([
+  const [moR, sesR, prR, moPrR, fourR, actR, lines, luR, binR, binRedR, redPendR, rfqAssessR, gapR, gapOdR] = await Promise.all([
     /* กรองด้วยสถานะที่ยังมีคนต้องทำต่อ — เดิม `.gt('current_step', 1)` ตัดใบ "รอจ่ายงาน" (current_step = 1)
        ทิ้งทั้งหมด และ `.is('approve_at', null)` ตัดใบ MTN ที่อนุมัติแล้วแต่ยังรอปิดใบ (ขั้น 8) */
     supabaseDR.from('mtn_orders').select(MO_COLS)
@@ -85,6 +85,14 @@ export async function loadMyQueue(me) {
       .eq('status', 'pending_close').order('work_date', { ascending: true }).limit(100),
     supabaseDR.from('purchase_requests').select('id', { count: 'exact', head: true })
       .is('ordered_at', null),
+    /* 🛒 23/11 — ใบขอซื้อของใบ MO (คนละตารางกับ `purchase_requests` ข้างบน)
+       ใช้ตอบว่า "ใบนี้ติดลูป PR อยู่ไหม" ⇒ ใบที่ติดอยู่ **ห้ามนับเป็น "รอคุณเซ็น"**
+       (หน้างาน 23/11: *"รอเรา 7 ใบ แต่เป็นใบอยู่ loop pr ซึ่งมันไม่ได้รอเราไง"*)
+       🔴 เลือก 3 คอลัมน์พอ · ล้ม = ส่ง undefined ⇒ `prOf` เป็น null = พฤติกรรมเดิม ไม่ตัดใบทิ้งมั่ว */
+    /* cap-ok: mtn_purchase_requests ทั้งตาราง 32 แถว · เข้าเงื่อนไขคิวรีนี้ 26 แถว (วัด 23/11)
+       โตเกิน 1000 เมื่อไหร่ต้องเปลี่ยนเป็น fetchAllRows */
+    supabaseDR.from('mtn_purchase_requests').select('order_id, status, po_no')
+      .neq('status', 'cancelled').not('order_id', 'is', null).limit(1000),
     supabase.from('four_m_logs').select('id, work_date, line_name, category, description, status')
       .in('status', ['pending', 'pending_qa']).order('work_date', { ascending: true }).limit(200),
     supabase.from('meeting_action_items').select('id, problem, section, line_name, assignee, due_date, meeting_date, status')
@@ -176,7 +184,14 @@ export async function loadMyQueue(me) {
   /* `moAll` = ชุดนับยอดกอง · ตอนนี้เป็นชุดเดียวกับรายการ (เพดาน 1000 ครอบใบเปิดค้างทั้งหมดแล้ว)
      🔴 คิวรีล่ม = `mo` เป็น undefined ⇒ **ไม่ส่ง** `moAll` เพื่อให้ `countsCapped` ติดธง
         ห้ามส่ง [] (จะกลายเป็น "ทุกกองมี 0 ใบ" ทั้งที่ไม่รู้ · ลิสต์ว่าง 2 ความหมาย · กฎข้อ 12) */
+  /* 🛒 ใบขอซื้อรายใบ — อ่านไม่ได้ = `null` (ไม่รู้ ≠ ไม่มี) ⇒ กฎถอยไปพฤติกรรมเดิม */
+  const moPrByOrder = moPrR?.error ? null : (() => {
+    const by = {};
+    (moPrR?.data || []).forEach(r => { (by[r.order_id] || (by[r.order_id] = [])).push(r); });
+    return by;
+  })();
   return buildQueue({ mo, moAll: mo, moAllCapped: moTruncated, moTruncated,
+    prOf: moPrByOrder ? (o) => (moPrByOrder[o.id] || []) : null,
     sessions: ok(sesR), fourM, actions: ok(actR), summaries, levelUps, bins, binsTruncated, redBins, redBinsTruncated, rfqAssess }, me);
 }
 
