@@ -76,7 +76,7 @@ export default function EnergyHistory() {
     const a = new Date(Date.parse(`${from}T08:00:00+07:00`)).toISOString();
     const b = new Date(Date.parse(`${to}T08:00:00+07:00`) + 86400000).toISOString();
     const [rd, dy, ev] = await Promise.all([
-      minuteWanted ? fetchAllRows(supabaseDR, 'energy_readings', 'scope_name, bucket_at, kw, kwh_total, v, a',
+      minuteWanted ? fetchAllRows(supabaseDR, 'energy_readings', 'scope_name, bucket_at, kw, kw_max, kwh_total, v, a, a_max',
         q => q.eq('scope_kind', 'zone').in('scope_name', ns).gte('bucket_at', a).lt('bucket_at', b).order('bucket_at').order('scope_name'))
         : Promise.resolve({ data: [], error: null }),
       fetchAllRows(supabaseDR, 'energy_daily', 'scope_name, day, kwh, peak_kw, peak_at',
