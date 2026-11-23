@@ -164,6 +164,25 @@ export function scopeStateOf(row, me) {
  *  ⚠️ พฤติกรรมเหมือนเดิมเป๊ะ (แถวไม่ระบุส่วนงาน = false) — แค่ยืมคำตอบจาก `scopeStateOf` จุดเดียว */
 export const inMyScope = (row, me) => scopeStateOf(row, me) === 'in';
 
+/**
+ * ✍️ **"ใบนี้รอ *เรา* เซ็นรับทราบ (ผจก.ต้นสังกัด) ไหม"** — เจ้าของกฎที่เดียว
+ *
+ * 🔴 23/11 (หน้างานแจ้ง): *"แจ้งเตือนที่ 2 บอกมีรอ 1 ใบ กดเข้ามาเจอ 4 ใบ และเป็นใบถูกตีกลับ/รอยกเลิก"*
+ *    ต้นเหตุ: ป้ายในคิวนับด้วยกฎ 5 ข้อ (ฟอร์ม MTN · ยังไม่เซ็น · ไม่ใช่ใบที่ลายเซ็นบล็อกงาน ·
+ *    อยู่ในขอบเขตเรา · เราเซ็นได้จริง) แต่ **ตัวกรอง `?ack=pending` ในหน้า MO เช็คแค่ 2 ข้อแรก**
+ *    ⇒ กดจากป้ายแล้วเจอใบที่ไม่ใช่ของเรา/เซ็นไม่ได้/ใบตีกลับ ปนมาด้วย
+ *    **ป้ายกับลิสต์ที่ป้ายพาไป ต้องใช้กฎเดียวกันเสมอ** — ไม่งั้นเลขไม่ตรงและคนเลิกเชื่อป้าย
+ * 🔴 ห้ามเขียนเงื่อนไขชุดนี้ซ้ำในหน้า (มีด่าน `ack-queue-single-rule`)
+ */
+export function ackWaitsOnMe(o, me = {}) {
+  if (!o || !isMtnFormRow(o) || o.dept_manager_at) return false;
+  if (isApprovalBlocked(o)) return false;          // ใบที่ลายเซ็นนี้บล็อกงานจริง = ขึ้นเป็นรายการของตัวเองแล้ว
+  if (scopeStateOf(o, me) !== 'in') return false;  // ผจก.เห็นเฉพาะใบของส่วนงานตัวเอง
+  return canSignMtnApproval('dept', {
+    order: o, fullName: me.name || '', can: me.can || (() => false), isShared: !!me.isShared,
+  }).ok;
+}
+
 /* ── ขั้นที่ "ตำแหน่งเดียวเซ็นได้" — นับเป็นงานรอคุณ (2026-10-13 · คำสั่ง user) ──────────────
    *"อย่างอนุมัติ MO สำหรับช่องที่คนเซ็นคือ ผู้จัดการฝ่ายผู้แจ้ง ต้องอนุมัติและอนุมัติได้คนเดียว
      ก็ต้องเตือนแค่ user นั้น และสำคัญกว่าแจ้งเตือนอื่นๆ ของหน่วยงาน"*
@@ -304,8 +323,7 @@ export function buildQueue(src = {}, me = {}, now = new Date()) {
     /* 🔴 ใบที่ลายเซ็นนี้ **บล็อกงานจริง** (งานปรับปรุง/สร้าง) ไม่เข้าป้ายนี้ — มันขึ้นเป็นรายการ
        ของตัวเองอยู่แล้วผ่าน moWaitMeta/approvalWaitsOnMe · นับซ้ำ = badge เกินจริง
        และป้ายนี้เขียนว่า "ไม่บล็อกงาน" ซึ่งจะกลายเป็นคำโกหกสำหรับใบที่บล็อกอยู่ */
-    if (isMtnFormRow(o) && !o.dept_manager_at && !isApprovalBlocked(o) && scopeStateOf(o, me) === 'in'
-        && canSignMtnApproval('dept', { order: o, fullName: me.name || '', can: me.can || (() => false), isShared: !!me.isShared }).ok) {
+    if (ackWaitsOnMe(o, me)) {
       ackCount += 1;
       const aAge = ageDays(o.work_date, now);
       if (aAge != null && (ackOldest == null || aAge > ackOldest)) ackOldest = aAge;

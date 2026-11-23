@@ -12515,3 +12515,34 @@ test('🔴 dt-entry-sanity-warns — ช่องลง downtime ต้องเ
   assert.ok(!/planned_cap_min \* 3|durMin > 3 \*/.test(page),
     '\n\n❌ มีเกณฑ์ตัวเลขเขียนในหน้า — เกณฑ์ต้องอยู่ shiftDataSanity.js ที่เดียว\n');
 });
+
+test('✍️ ack-queue-single-rule — ป้าย "รอคุณเซ็นรับทราบ" กับลิสต์ที่ป้ายพาไป ต้องใช้กฎเดียวกัน', () => {
+  /* 23/11 (หน้างานแจ้ง): *"แจ้งเตือนที่ 2 ที่บอกมีรอ 1 ใบ ทำไมไม่ตรง กดเข้ามาเจอ 4 ใบ
+     และเป็นใบถูกตีกลับรอยกเลิก"*
+     ต้นเหตุ: ป้ายนับด้วยกฎ 5 ข้อ (ฟอร์ม MTN · ยังไม่เซ็น · ไม่ใช่ใบที่ลายเซ็นบล็อกงาน ·
+     อยู่ในขอบเขตเรา · `canSignMtnApproval('dept')` ผ่าน) แต่ตัวกรอง `?ack=pending` ในหน้า MO
+     เขียนเองแค่ `isMtnFormOrder(o) && !o.dept_manager_at` = 2 ข้อแรก
+     ⇒ ลิสต์ลากใบของหน่วยอื่น/ใบที่เราเซ็นไม่ได้/ใบตีกลับเข้ามาด้วย
+     🔴 **ป้ายที่บอกจำนวน กับลิสต์ที่ป้ายนั้นพาไป ต้องนับด้วยกฎชิ้นเดียวกันเสมอ**
+        เลขไม่ตรงครั้งเดียว คนเลิกเชื่อป้ายทั้งแผง */
+  const bad = [];
+  const Q = 'src/utils/myQueue.js';
+  const q = stripComments(readFileSync(join(ROOT, Q), 'utf8'));
+  if (!/export function ackWaitsOnMe/.test(q))
+    bad.push(`${Q}: ต้องมี ackWaitsOnMe() — กฎ "ใบนี้รอเราเซ็นรับทราบไหม" มีที่เดียว`);
+  if (!/if \(ackWaitsOnMe\(o, me\)\)/.test(q))
+    bad.push(`${Q}: ตัวนับป้ายต้องเรียก ackWaitsOnMe() ไม่ใช่เขียนเงื่อนไขซ้ำ`);
+
+  const P = 'src/pages/MtnRepair.jsx';
+  const p = stripComments(readFileSync(join(ROOT, P), 'utf8'));
+  /* ตัวกรอง ?ack=pending ต้องเรียกกฎกลาง ห้ามเทียบ dept_manager_at เองในบล็อกตัวกรอง */
+  const f = p.match(/\{ key: 'ack',[\s\S]{0,300}?\},/);
+  if (!f) bad.push(`${P}: หาตัวกรอง ?ack=pending ไม่เจอ — เปลี่ยนแล้วต้องแก้ด่านนี้`);
+  else {
+    if (!/ackWaitsOnMe\(/.test(f[0]))
+      bad.push(`${P}: ตัวกรอง ?ack=pending ต้องใช้ ackWaitsOnMe() — เขียนเงื่อนไขเอง = เลขไม่ตรงกับป้าย`);
+    if (/dept_manager_at/.test(f[0]))
+      bad.push(`${P}: ตัวกรอง ?ack=pending ยังเทียบ dept_manager_at เอง — กฎต้องอยู่ myQueue.js ที่เดียว`);
+  }
+  assert.deepEqual(bad, [], `\n\n❌ ${bad.length} จุดผิดกฎ "ป้ายกับลิสต์ต้องกฎเดียวกัน"\n   ${bad.join('\n   ')}\n`);
+});

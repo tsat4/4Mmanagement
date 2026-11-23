@@ -24,6 +24,7 @@ import { PURPOSES, CAUSE_CATS, needsPlantManager, needsApprovalFirst, laborAmoun
 import AuditLogViewer from '../components/AuditLogViewer';
 import StepFlow from '../components/StepFlow';
 import { can, canDelete, isActionSeeded, isSharedAccount } from '../utils/permissions';
+import { ackWaitsOnMe } from '../utils/myQueue';   // ✍️ กฎ "ใบนี้รอเราเซ็นรับทราบไหม" ที่เดียว (23/11)
 import { confirmSign, needsSignConfirm } from '../utils/signConfirm';
 import { moTimeline } from '../utils/mtnTimeline';   // ⏱️ 4 ช่วงของไลน์หยุด (คำศัพท์ชุดเดียวของระบบ)
 import { MO_DONE_STATUSES, MO_STATUS_META as STATUS_META, QA_NOT_RELATED, QA_RELATED, QA_SKIP_REASON_STEP4, canBounceBack, canDoStep, canHandoff, canSignMtnApproval, canSkipQa, isMoOpen, isOrderReporter, isQaSkipped, isWaitingQa, lastStep, orderReporterText, nextStepOf, moQaState, mtnCloseStage, moStatusLabel, moStatusMeta, orderInReporterScope, stageOf, stepDenyHint, stepLabel, stepMeta, moFlow, moWaitMeta, qaRelatedView, moRemoveMode, canCancelOwnMo, MO_REMOVE_BLOCKED, MO_REMOVE_CANCEL, MO_REMOVE_DELETE, actorSideOf, stepAssumptions, assumptionHint } from '../utils/mtnStepPerm';
@@ -903,11 +904,19 @@ const HANDOFF_CAP = 2000;
     beforeWait.forEach(o => { const st = prStateOf(o); if (st) c[st]++; });
     return { ...c, waiting: c.need + c.no_no };
   }, [beforeWait, prStateOf]);
+  /* ✍️ ตัวตนของผู้ใช้ในรูปแบบที่ `ackWaitsOnMe()` ต้องการ — ชุดเดียวกับที่คิวงานส่งให้ */
+  const ackMe = useMemo(() => ({
+    name: fullName, sections: scopeSecs || [], isShared: isSharedAccount(),
+    can: (a) => can('mtn_repair', a, role),
+  }), [fullName, scopeSecs, role]);
   /* ชั้น "คิว" — ดูลิสต์ตัวกรองด้านบนว่าทำไมต้องเขียนเป็นลิสต์ */
   const queueFilters = useMemo(() => [
     { key: 'wait', label: 'รอขั้น', value: fWait, on: !!fWait, test: o => waitStageOf(o) === fWait },
+    /* ✍️ 23/11 — ต้องใช้กฎ **ตัวเดียวกับป้ายในคิว** (`ackWaitsOnMe`) ไม่งั้นเลขไม่ตรง
+       หน้างานแจ้ง: ป้ายบอก 1 ใบ กดเข้ามาเจอ 4 ใบ (มีใบตีกลับ/รอยกเลิก/ไม่ใช่ของเราปนมา)
+       🔴 ห้ามเขียนเงื่อนไขเองที่นี่อีก (มีด่าน `ack-queue-single-rule`) */
     { key: 'ack', label: 'รอ ผจก.ต้นสังกัดเซ็นรับทราบ', on: fAck === 'pending',
-      test: o => isMtnFormOrder(o) && !o.dept_manager_at },
+      test: o => ackWaitsOnMe(o, ackMe) },
     { key: 'pr', label: 'งาน PR', value: PR_FILTERS.find(x => x.v === fPr)?.label || fPr,
       on: !!fPr && PR_FILTERS.some(x => x.v === fPr), test: prMatch },
     /* ⏳ ใบรอเพิ่มรายละเอียด — ตัดสินด้วย `isDetailsPending()` ห้ามเทียบ `=== true` ลอยๆ ในหน้า
