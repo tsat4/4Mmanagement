@@ -11,6 +11,8 @@ import { getWorkDate } from '../utils/workDate';
 import { PLANT_BASE_KEY } from '../utils/kpiFormula';
 
 import { tr } from '../utils/i18n';
+import { ImportInfo, WrongFileNote } from './ImportKit';
+import { importLabel, whichImport } from '../utils/importRegistry';
 const MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 const fmt = (v) => (v == null ? '–' : Number(v).toLocaleString('th-TH', { maximumFractionDigits: 2 }));
 const memKey = (sheet) => `esm.kpiBaseImport.${sheet}`;
@@ -28,6 +30,7 @@ const MONTH_TH = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค
 export default function KpiBaseImportModal({ year, unitLabel, unitSk, base, canPlant, canUnit, onSave, onClose }) {
   const [file, setFile] = useState(null);
   const [wb, setWb] = useState(null);            // { sheets: {name: grid} }
+  const [wrong, setWrong] = useState(null);      // 📥 ไฟล์ของจุดนำเข้าอื่น (importRegistry)
   const [sheet, setSheet] = useState('');
   const [monthRow, setMonthRow] = useState(null); // แถวหัวเดือนที่ใช้ (override ได้)
   const [varRows, setVarRows] = useState({});
@@ -57,13 +60,16 @@ export default function KpiBaseImportModal({ year, unitLabel, unitSk, base, canP
   const zeroWarn = closedM != null && maxMonth > closedM ? `⚠ ${tr("ในไฟล์นี้เดือนหลัง")} ${MONTH_TH[closedM - 1]} ${tr("ยอดขาย/กำลังคนเป็น 0 (ยังไม่ปิดเดือน) — ตั้ง \"ถึงเดือน")}" = ${MONTH_TH[closedM - 1]} ${tr("ไม่งั้นจะบันทึก 0 เป็นค่าจริง")}` : '';
 
   const pick = async (f) => {
-    setFile(f); setErr(''); setWb(null); setSheet('');
+    setFile(f); setErr(''); setWb(null); setSheet(''); setWrong(null);
     if (!f) return;
     try {
       const XLSX = await import('xlsx');
       const book = XLSX.read(await f.arrayBuffer(), { type: 'array', cellDates: true });
       const sheets = {};
       book.SheetNames.forEach((name) => { sheets[name] = XLSX.utils.sheet_to_json(book.Sheets[name], { header: 1, raw: true, defval: null, blankrows: false }); });
+      /* 📥 ไม่มีชีทหน้าตา monthly report เลย + เป็นไฟล์ของจุดนำเข้าอื่น = บอกทางไป (ไม่รู้จัก = ทำงานเดิม) */
+      const other = bestSheet(sheets) ? null : whichImport(book.SheetNames.map(name => ({ name, rows: sheets[name] })), 'kpi_acct');
+      if (other) { setWrong(other); return; }
       setWb({ sheets, names: book.SheetNames });
       setSheet(bestSheet(sheets) || book.SheetNames[0] || '');   // ไฟล์บัญชีมี 10+ ชีท — เลือกชีทที่จับตัวแปรได้มากสุดก่อน (เปลี่ยนเองได้)
       /* เดือนจากชื่อไฟล์ ("… Jan-2026 …") ชนะการเดาจากวันนี้ — เดือนถัดไปในไฟล์เป็น 0/แผน ไม่ใช่ค่าจริง */
@@ -125,11 +131,12 @@ export default function KpiBaseImportModal({ year, unitLabel, unitSk, base, canP
     <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 12 }}>
       <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', boxShadow: 'var(--shadow-lg)', width: 'min(1180px, 100%)', maxHeight: '92vh', overflow: 'auto', padding: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <b style={{ fontSize: 14, color: 'var(--text)' }}>{tr('นำเข้าตัวเลขฐานจาก Excel ของบัญชี — ปี')} {year + 543}</b>
+          <b style={{ fontSize: 14, color: 'var(--text)' }}>📥 {tr(importLabel('kpi_acct'))} — {tr('ปี')} {year + 543}</b>
           <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{tr('ค่ากลาง → ทั้งโรงงาน · ยอดเงินของหน่วย →')} {unitLabel}</span>
           <span style={{ flex: 1 }} />
           <button onClick={onClose} style={{ ...inp, cursor: 'pointer' }}>{tr('ปิด')}</button>
         </div>
+        <div style={{ marginTop: 10 }}><ImportInfo k="kpi_acct" /></div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginTop: 10 }}>
           <input type="file" accept=".xlsx,.xlsm,.xlsb,.xls,.csv" onChange={e => pick(e.target.files?.[0] || null)} style={{ fontSize: 12 }} />
           {wb && (
@@ -152,6 +159,7 @@ export default function KpiBaseImportModal({ year, unitLabel, unitSk, base, canP
           )}
         </div>
         {err && <div style={{ marginTop: 8, color: '#ef4444', fontSize: 12.5 }}>{err}</div>}
+        {wrong && <div style={{ marginTop: 8 }}><WrongFileNote k={wrong} here="kpi_acct" onGo={onClose} /></div>}
         {wb && monthInfo?.subRow != null && (
           <div style={{ marginTop: 6, fontSize: 12, color: '#38bdf8' }}>{tr('ℹ️ หัวเดือนคร่อมบล็อก PLAN | Rolling | ACTUAL — ใช้คอลัมน์')} <b>ACTUAL → Amount</b> {tr('ของแต่ละเดือน (แถว')} {monthInfo.subRow + 1})</div>
         )}

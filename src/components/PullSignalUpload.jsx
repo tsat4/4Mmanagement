@@ -19,6 +19,8 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { supabaseDR } from '../supabaseClient';
 import { toast } from './Toast';
+import { ImportInfo, WrongFileNote } from './ImportKit';
+import { importLabel, whichImport } from '../utils/importRegistry';
 import { checkWrite } from '../utils/dbWrite';
 import { buildPnIndex, resolveMatNo } from '../utils/matResolve';
 import {
@@ -132,7 +134,10 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
       const { profile, guessed } = pickProfile(matrix, profiles || [FALLBACK_PROFILE]);
       // ⭐ ส่งชื่อไฟล์ไปด้วย — พอร์ทัลประทับเวลาที่ออกรายงานไว้ในชื่อ ใช้เป็นไม้บรรทัดตัดสินวันที่
       const res = parsePullFile(matrix, profile, await ensureRounds(), { fileName: f.name });
-      setParsed({ ...res, profile, guessed, rowsInFile: matrix.length });
+      /* 📥 อ่านไม่ออก + เป็นไฟล์ของจุดนำเข้าอื่น = บอกทางไป (importRegistry) */
+      const wrong = res.ok ? null : whichImport(wb.SheetNames.map(name => ({
+        name, rows: XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: true, defval: '' }) })), 'esmart');
+      setParsed({ ...res, profile, guessed, rowsInFile: matrix.length, wrong });
       if (res.ok) {
         setShipTo(res.shipTo || '');
         setWorkDate(res.slot?.work_date || dateStr(new Date()));
@@ -480,7 +485,7 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 4 }}>
           <span style={{ fontSize: 15, fontWeight: 900, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>
-            อัพโหลด e-SMART — ยืนยัน order จากลูกค้า
+            📥 {tr(importLabel('esmart'))} — {tr('ยืนยัน order จากลูกค้า')}
           </span>
           <button className="tbtn" onClick={() => { reset(); onClose?.(); }}
             style={{ background: 'none', border: 'none', color: 'var(--text2)', fontSize: 18, cursor: 'pointer' }}>✕</button>
@@ -489,6 +494,8 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
           {tr("ไฟล์จากพอร์ทัลลูกค้า")} = <b>{tr('ยอดยืนยันสุดท้ายก่อนส่ง')}</b> {tr('· ระบบอัพเดท')}<b>{tr('เฉพาะพาร์ทที่อยู่ในไฟล์')}</b> ·
           {tr("พาร์ทที่ไม่อยู่ในไฟล์ถือว่า")}<b>{tr('ตรงกับ 862 อยู่แล้ว ไม่ถูกแตะ')}</b>
         </div>
+
+        <div style={{ marginBottom: 12 }}><ImportInfo k="esmart" /></div>
 
         {profileMissing && (
           <div style={{ ...noteBox('#f59e0b'), marginBottom: 10 }}>
@@ -504,7 +511,7 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
           <input type="file" accept=".csv,.xlsx,.xls" style={{ display: 'none' }}
             onChange={e => onFile(e.target.files?.[0])} />
           <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--accent)' }}>
-            {file ? `📄 ${file.name}` : '📎 เลือกไฟล์ e-SMART (.csv / .xlsx)'}
+            {file ? `📄 ${file.name}` : tr('เลือกไฟล์ e-SMART (.csv / .xlsx)')}
           </span>
           <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
             {file ? 'คลิกเพื่อเปลี่ยนไฟล์' : 'ระบบอ่านหัวไฟล์เพื่อรู้ช่วงเวลาและรูปแบบเอง'}
@@ -514,7 +521,9 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
         {loading && <div style={{ fontSize: 12, color: 'var(--text2)' }}>{tr('⏳ กำลังอ่าน…')}</div>}
 
         {parsed && !parsed.ok && (
-          <div style={noteBox('#ef4444')}>🔴 {parsed.error}</div>
+          parsed.wrong
+            ? <WrongFileNote k={parsed.wrong} here="esmart" onGo={() => { reset(); onClose?.(); }} />
+            : <div style={noteBox('#ef4444')}>🔴 {parsed.error}</div>
         )}
 
         {parsed?.ok && (
