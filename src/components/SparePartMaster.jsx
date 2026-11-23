@@ -8,6 +8,8 @@
      ไม่กรอก Rank เอง (แต่ override ได้พร้อมเหตุผล)
    - ตำแหน่งชั้นวาง (shelf) ใช้ "รหัสเดียวกันทั้งคลัง" — เลือกช่องจากผังคลัง mtn_rack_cells ผ่าน <SearchSelect> (2026-09-07)
      — เป็นกุญแจที่แผนผังคลัง (rack map) จะใช้จับคู่ในเฟสถัดไป */
+import { ImportButton, ImportInfo, WrongFileNote } from './ImportKit';   // 📥 ปุ่ม/หัวนำเข้ามาตรฐาน (UI §6.44)
+import { importLabel, whichImport, isImportOf } from '../utils/importRegistry';
 import { useState, useEffect, useMemo, useCallback, useRef, useContext } from 'react';
 import { UserContext } from '../App';
 import ReadOnlyNote from './ReadOnlyNote';
@@ -324,7 +326,7 @@ export default function SparePartMaster({ parts = [], reload, fullName, role, my
         <SearchInput value={q} onChange={setQ} fields="ชื่อ / รหัส / MAT / Part no. / ผู้ขาย / ชั้นวาง / ใช้กับ" />
         <span className="spacer" />
         <button onClick={printList} style={{ ...btnGhost, padding: '0 13px', fontSize: 12.5 }}>{tr('พิมพ์')}</button>
-        {canEdit && <button onClick={() => setShowImport(true)} style={{ ...btnGhost, padding: '0 13px', fontSize: 12.5 }}>{tr('นำเข้า/อัพเดท')}</button>}
+        {canEdit && <ImportButton k="spare" tone="quiet" onClick={() => setShowImport(true)} style={{ fontSize: 12.5 }} />}
         {canEdit && <button onClick={() => setShowCats(true)} style={{ ...btnGhost, padding: '0 13px', fontSize: 12.5 }}>{tr('หมวด')}</button>}
         {canEdit && <button onClick={() => setEditPart('new')} style={{ ...btnPri, padding: '0 15px', fontSize: 12.5 }}>{tr('➕ เพิ่มอะไหล่')}</button>}
       </FilterBar>
@@ -948,6 +950,7 @@ function ImportModal({ parts, cats, teams, fullName, ownOf = () => ({ ok: true }
   const [impSection, setImpSection] = useState(sectionKeyOf(defSection));   // หน่วยงานเจ้าของของทั้งไฟล์
   const [withStock, setWithStock] = useState(false);
   const [parsed, setParsed] = useState(null);      // { rows, unknown, monthCols }
+  const [wrong, setWrong] = useState(null);        // 📥 ไฟล์ของจุดนำเข้าอื่น (importRegistry)
   const [fileName, setFileName] = useState('');
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(null);
@@ -967,18 +970,24 @@ function ImportModal({ parts, cats, teams, fullName, ownOf = () => ({ ok: true }
   const pick = async (e) => {
     const file = e.target.files?.[0]; e.target.value = '';
     if (!file) return;
-    setBusy(true); setFileName(file.name);
+    setBusy(true); setFileName(file.name); setWrong(null);
     try {
       const XLSX = await import('xlsx');          // dynamic import — ไม่ให้ bundle หลักบวม
       const wb = XLSX.read(await file.arrayBuffer(), { cellDates: false });
       // เลือกชีทแรกที่แปลงแล้วได้แถวข้อมูล (ไฟล์จริงมักมีหลายชีท)
       let best = null;
+      const sheets = [];
       for (const name of wb.SheetNames) {
         const matrix = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: true, defval: '' });
+        sheets.push({ name, rows: matrix });
         const p = parseSpareSheet(matrix, { teamKeyOf, categories: cats });
         if (p.rows.length && (!best || p.rows.length > best.rows.length)) best = p;
       }
-      if (!best || !best.rows.length) {
+      /* 📥 ตัวอ่านอะไหล่ "หลวม" (หัวคอลัมน์ไหนก็จับได้) — เคสจริง 24/11: Stock_Store ถูกอ่านเป็นอะไหล่ใหม่ 90 รายการ
+         ⇒ ถามทะเบียนก่อน: เป็นไฟล์ของจุดอื่นชัด + ไม่ใช่หน้าตาทะเบียนอะไหล่ = บอกทางไป ไม่ขึ้นตัวอย่าง */
+      const other = isImportOf('spare', sheets) ? null : whichImport(sheets, 'spare');
+      if (other) { setWrong(other); setParsed(null); }
+      else if (!best || !best.rows.length) {
         toast.error('อ่านไฟล์ไม่ได้ — ต้องมีหัวคอลัมน์ "ชื่ออะไหล่" หรือ "รหัส" อย่างน้อย 1 คอลัมน์');
         setParsed(null);
       } else setParsed(best);
@@ -1066,7 +1075,8 @@ function ImportModal({ parts, cats, teams, fullName, ownOf = () => ({ ok: true }
   return (
     <div /* ⚠️ ฟอร์มกรอกข้อมูล — ไม่ปิดจาก backdrop กันเผลอแตะแล้วข้อมูลหาย (UI-CONVENTIONS §5) */  style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'grid', placeItems: 'center', zIndex: 2000, padding: 16 }}>
       <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(820px, 96vw)', maxHeight: '92vh', overflow: 'auto' }}>
-        <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 2 }}>{tr('นำเข้า / อัพเดทคลังอะไหล่จากไฟล์')}</div>
+        <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>📥 {tr(importLabel('spare'))}</div>
+        <div style={{ marginBottom: 10 }}><ImportInfo k="spare" sample={{ label: 'ดาวน์โหลดไฟล์ตัวอย่าง', onClick: template }} /></div>
         <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 14 }}>
           รองรับ .xlsx / .csv · หัวคอลัมน์ไทยหรืออังกฤษก็ได้ · <b>{tr('อัพโหลดไฟล์เดิมซ้ำได้เรื่อยๆ')}</b> ระบบจะอัพเดททับตามคีย์ ไม่สร้างรายการซ้ำ
         </div>
@@ -1075,9 +1085,9 @@ function ImportModal({ parts, cats, teams, fullName, ownOf = () => ({ ok: true }
           <label style={{ ...btnPri, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.5 : 1 }}>
             {tr('เลือกไฟล์')}<input type="file" accept=".xlsx,.xls,.csv" disabled={busy} onChange={pick} style={{ display: 'none' }} />
           </label>
-          <button onClick={template} style={{ ...btnGhost, padding: '8px 13px', fontSize: 12.5 }}>{tr('⬇️ ดาวน์โหลดไฟล์ตัวอย่าง')}</button>
           {fileName && <span style={{ fontSize: 12, color: 'var(--muted)' }}>{fileName}</span>}
         </div>
+        {wrong && <div style={{ marginBottom: 12 }}><WrongFileNote k={wrong} here="spare" onGo={onClose} /></div>}
 
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 10, fontSize: 12.5 }}>
           <span style={{ fontWeight: 700, color: 'var(--text2)' }}>{tr('นำเข้าเป็นของหน่วยงาน:')}</span>
