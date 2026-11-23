@@ -12596,3 +12596,31 @@ test('🧮 mo-list-cols-cover-queue-rules — คอลัมน์ที่ก�
   }
   assert.deepEqual(bad, [], `\n\n❌ ${bad.length} คอลัมน์ที่กฎใช้แต่ไม่ได้ดึงมา (จอจะเงียบ ไม่ใช่ error)\n   ${bad.join('\n   ')}\n`);
 });
+
+test('🚩 fail-needs-reason-all-checks — ทุกใบตรวจ: ตอบ "ไม่ผ่าน/N" ต้องมีเหตุผล · กฎตัวเดียวกัน', () => {
+  /* 23/11 (คำสั่ง user ขยายจาก 19/11 "ทุกระบบการตรวจเครื่องจักรทั้ง am/pm … เลือก NG ต้องใส่เหตุผล")
+     ③ ใบตรวจ AM/PM (`PMCheckData`) ลงไปแล้ว 19/11 — ด่าน `ng-needs-reason`
+     ② Poka-Yoke: ปุ่ม "ไม่ผ่าน" **กดครั้งเดียวเขียนฐานทันที** (upsert) ⇒ กดพลาด = บันทึกไปแล้ว
+        ⇒ ต้องเปิดช่องเหตุผลก่อน กดยืนยันถึงเขียน
+     ① LPA: ตอบ `N` แล้วไม่มีคำอธิบาย = ใบเอาไปใช้เป็นหลักฐานต่อไม่ได้
+     🔴 ทั้ง 3 จอใช้ `ngReasonCheck()` ตัวเดียวกัน — ห้ามเขียนเกณฑ์ "เหตุผลพอไหม" ชุดที่ 2 */
+  const bad = [];
+  for (const [f, needles] of [
+    ['src/pages/PokaYokeCheck.jsx', [
+      [/import \{ ngReasonCheck \}/, 'ต้องใช้กฎกลาง ngReasonCheck()'],
+      [/ngReasonCheck\(\{ attr: willResult === 'fail' \? 'ng' : 'ok'/, 'ด่านตอนเขียนจริงใน saveCheck (ไม่ใช่แค่ซ่อนปุ่ม)'],
+      [/onClick=\{\(\) => askFail\(d\)\}/, 'ปุ่ม "ไม่ผ่าน" ต้องเปิดช่องเหตุผล ไม่ใช่เขียนฐานทันที'],
+    ]],
+    ['src/pages/LayerProcessAudit.jsx', [
+      [/import \{ ngReasonCheck \}/, 'ต้องใช้กฎกลาง ngReasonCheck()'],
+      [/attr: draft\.answers\[q\.id\]\?\.answer === 'N' \? 'ng' : 'ok'/, 'ตอบ N ต้องมีเหตุผลตอนกดบันทึก'],
+    ]],
+    ['src/pages/PMCheckData.jsx', [
+      [/ngReasonCheck\(\{ attr: r\.attr/, 'ใบตรวจ AM/PM (ของเดิม 19/11)'],
+    ]],
+  ]) {
+    const src = stripComments(readFileSync(join(ROOT, f), 'utf8'));
+    for (const [re, why] of needles) if (!re.test(src)) bad.push(`${f}: ${why}`);
+  }
+  assert.deepEqual(bad, [], `\n\n❌ ${bad.length} จุดที่ใบตรวจไม่บังคับเหตุผล (หรือเขียนเกณฑ์เอง)\n   ${bad.join('\n   ')}\n`);
+});
