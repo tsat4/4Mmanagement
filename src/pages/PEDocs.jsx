@@ -492,9 +492,8 @@ export default function PEDocs() {
                     <div style={{ padding: 12 }}>
                       {/* ⚠️ ต้องบอกเสมอว่านี่ไม่ใช่ไฟล์ PFC ตัวจริง — ห้ามถอดข้อความนี้ */}
                       <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 10, lineHeight: 1.6 }}>
-                        ผังนี้ระบบวาดจาก<b>{tr('รายการขั้นงานในตารางด้านล่าง')}</b> — แก้ OP แล้วผังเปลี่ยนตามทันที ·
-                        <b style={{ color: 'var(--text2)' }}> {tr('ไม่ใช่ไฟล์ PFC ต้นฉบับของ PE')}</b> (ไฟล์นั้นเป็นรูปทรง Excel ~560 ชิ้นวางมือข้าม 5 หน้า
-                        ระบบสร้างให้เหมือนเป๊ะไม่ได้ และดาวน์โหลดเป็น Excel ฟอร์มเดิมไม่ได้ — แก้ผังตัวจริงต้องแก้ใน Excel แล้วอัพเข้ามาใหม่)
+                        {tr("ผังนี้ระบบวาดจาก")}<b>{tr('รายการขั้นงานในตารางด้านล่าง')}</b> — {tr("แก้ OP แล้วผังเปลี่ยนตามทันที")} ·
+                        <b style={{ color: 'var(--text2)' }}> {tr('ไม่ใช่ไฟล์ PFC ต้นฉบับของ PE')}</b> ({tr("ไฟล์นั้นเป็นรูปทรง Excel ~560 ชิ้นวางมือข้าม 5 หน้า ระบบสร้างให้เหมือนเป๊ะไม่ได้ และดาวน์โหลดเป็น Excel ฟอร์มเดิมไม่ได้ — แก้ผังตัวจริงต้องแก้ใน Excel แล้วอัพเข้ามาใหม่")})
                       </div>
                       <div style={{ overflowX: 'auto' }}>
                         <div style={{ minWidth: 720 }}>
@@ -844,7 +843,7 @@ export default function PEDocs() {
               </select>
             </label>
             {/* machine_no ไหลต่อไป part_routings (PeRoutingSuggest) → กล่อง VSM — เลือกจากทะเบียน machines (DR) แทน datalist (2026-09-07) */}
-            <div style={lbl}>เครื่องจักร (M/C No.)
+            <div style={lbl}>{tr("เครื่องจักร")} (M/C No.)
               <MachineSelect value={procModal.machine_no || ''} lines={procFam} allowFree history={mcHist} freeHint="เครื่องที่ยังไม่ลงทะเบียน /machines"
                 placeholder="SP-82" style={{ marginTop: 4 }} onChange={r => setProcModal({ ...procModal, machine_no: r.machine_no })} />
             </div>
@@ -978,7 +977,7 @@ export default function PEDocs() {
                 onChange={({ id }) => setCpModal({ ...cpModal, process_id: id })} />
             </label>
             <label style={lbl}>Char No.<input type="number" value={cpModal.char_no ?? ''} onChange={e => setCpModal({ ...cpModal, char_no: e.target.value })} style={{ marginTop: 4, width: 110, display: 'block' }} /></label>
-            <label style={{ ...lbl, gridColumn: '1 / -1' }}>Sub-op (กลุ่มในใบ CP เช่น "130.3 · PROGRESSIVE")<input value={cpModal.sub_op || ''} onChange={e => setCpModal({ ...cpModal, sub_op: e.target.value })} style={{ marginTop: 4 }} /></label>
+            <label style={{ ...lbl, gridColumn: '1 / -1' }}>Sub-op ({tr("กลุ่มในใบ CP เช่น")} "130.3 · PROGRESSIVE")<input value={cpModal.sub_op || ''} onChange={e => setCpModal({ ...cpModal, sub_op: e.target.value })} style={{ marginTop: 4 }} /></label>
             <label style={lbl}>Product Characteristic<input value={cpModal.product_char || ''} onChange={e => setCpModal({ ...cpModal, product_char: e.target.value })} placeholder="QUANTITY OF NUT" style={{ marginTop: 4 }} /></label>
             <label style={lbl}>Process Characteristic<input value={cpModal.process_char || ''} onChange={e => setCpModal({ ...cpModal, process_char: e.target.value })} placeholder="WELDING PARAMETER" style={{ marginTop: 4 }} /></label>
             <label style={lbl}>Special Char.

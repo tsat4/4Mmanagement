@@ -109,9 +109,9 @@ export default function EquipmentHub() {
         {/* ไม่มีสิทธิ์สักแท็บ = ต้องบอกว่าทำไม ห้ามปล่อยจอว่าง (UI-CONVENTIONS §6.9) */}
         {!available.length && (
           <div style={{ padding: 24, textAlign: 'center', color: 'var(--muted)', fontSize: 13, border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)' }}>
-            บัญชีนี้ยังไม่มีสิทธิ์เข้าทะเบียนอุปกรณ์ตัวไหนเลย — ให้ admin เปิดสิทธิ์หน้า
+            {tr("บัญชีนี้ยังไม่มีสิทธิ์เข้าทะเบียนอุปกรณ์ตัวไหนเลย — ให้ admin เปิดสิทธิ์หน้า")}
             <b style={{ color: 'var(--text2)' }}> {tr('ฐานข้อมูลเครื่องจักร / ทะเบียนแม่พิมพ์ / Fixture / แจ้งซ่อม MTN')} </b>
-            ที่ <b style={{ color: 'var(--text2)' }}>/permissions</b>
+            {tr("ที่")} <b style={{ color: 'var(--text2)' }}>/permissions</b>
           </div>
         )}
       <Hub>

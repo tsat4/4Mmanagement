@@ -166,7 +166,7 @@ export default function PmMonthlyReport() {
         <div style={{ fontSize: 12 }}>
           <div style={{ color: 'var(--green)', fontWeight: 800 }}>✓ {row.signed_by_name || '-'}{row.snapshot?.via?.kind === 'acting' ? ' (รักษาการ)' : ''}</div>
           <div style={{ color: 'var(--muted)' }}>{positionLabel(row.position) || ''} {fmtWhen(row.signed_at)}</div>
-          {pmSnapshotDrift(row.snapshot, live) && <div style={{ color: 'var(--amber)', fontWeight: 700 }}>⚠ ตัวเลขเปลี่ยนหลังลงนาม</div>}
+          {pmSnapshotDrift(row.snapshot, live) && <div style={{ color: 'var(--amber)', fontWeight: 700 }}>⚠ {tr("ตัวเลขเปลี่ยนหลังลงนาม")}</div>}
           {permitted(step) && <button type="button" className="pg-btn" style={{ marginTop: 4 }} onClick={() => { setRevoking(row); setReason('') }}>{tr('เพิกถอน')}</button>}
         </div>
       )
@@ -191,8 +191,8 @@ export default function PmMonthlyReport() {
       </FilterBar>
 
       <NoticeBar tone="info" style={{ marginBottom: 10 }}>
-        สาย: ① ผู้ตรวจสแกนบัตร → ② หัวหน้าผู้ตรวจยืนยันทีละใบ → <b>③ ผจก.ส่วนของผู้ตรวจ อนุมัติ (ต่อทีม)</b> →
-        <b> ④ ผจก.ส่วนที่ถูกตรวจ รับทราบ (ต่อส่วนงาน)</b> · ผู้เซ็น ③④ = หัวหน้า/รักษาการตามผังองค์กร (ตั้งที่ /org-setup)
+        {tr("สาย: ① ผู้ตรวจสแกนบัตร → ② หัวหน้าผู้ตรวจยืนยันทีละใบ")} → <b>③ {tr("ผจก.ส่วนของผู้ตรวจ อนุมัติ (ต่อทีม")})</b> →
+        <b> ④ {tr("ผจก.ส่วนที่ถูกตรวจ รับทราบ (ต่อส่วนงาน")})</b> · {tr("ผู้เซ็น ③④ = หัวหน้า/รักษาการตามผังองค์กร (ตั้งที่")} /org-setup)
       </NoticeBar>
       {data && !data.ok && <NoticeBar tone="bad" style={{ marginBottom: 10 }}>{tr('อ่านใบตรวจของเดือนไม่สำเร็จ')}: {data.error}</NoticeBar>}
       {lines === null && data && <NoticeBar tone="warn" style={{ marginBottom: 10 }}>{tr('อ่านทะเบียนไลน์ไม่สำเร็จ — แยกส่วนงานที่ถูกตรวจไม่ได้')}</NoticeBar>}

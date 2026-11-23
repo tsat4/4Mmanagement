@@ -1121,7 +1121,7 @@ export default function LineSetup({ embedded = false } = {}) {
                   padding: '4px 10px', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 700,
                   zIndex: 20, boxShadow: 'var(--shadow-float)', pointerEvents: 'none',
                 }}>
-                  ใช้รูปผังจากไลน์หลัก — อัปโหลดรูปใหม่เพื่อแยกเป็นของตัวเอง
+                  {tr("ใช้รูปผังจากไลน์หลัก — อัปโหลดรูปใหม่เพื่อแยกเป็นของตัวเอง")}
                 </div>
               )}
               <img
@@ -1499,7 +1499,7 @@ export default function LineSetup({ embedded = false } = {}) {
                 </label>
                 {skillDefs.length === 0 ? (
                   <div style={{ fontSize: 11, color: 'var(--muted)', padding: '8px', background: 'var(--bg3)', borderRadius: 'var(--r-md)' }}>
-                    ยังไม่มีสกิล — กำหนดสกิลได้ที่หน้า Operator
+                    {tr("ยังไม่มีสกิล — กำหนดสกิลได้ที่หน้า")} Operator
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -1573,7 +1573,7 @@ export default function LineSetup({ embedded = false } = {}) {
                   </button>
                   <button onClick={() => { setTempPos(null); setFormData({ id: null, name: '', requirements: {}, skill_allowance: false, skill_allowance_type: '' }); }}
                     style={{ padding: '9px 14px', background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 7 }}>
-                    ยกเลิก
+                    {tr("ยกเลิก")}
                   </button>
                 </div>
               </div>
@@ -1660,7 +1660,7 @@ export default function LineSetup({ embedded = false } = {}) {
                       ))}
                     </datalist>
                     <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>
-                      ใส่ชื่อกลุ่มเดียวกันให้เครื่องที่ทำงานคู่ขนานแบบ balance cycle time (เช่น Laser1/2/3) — ถ้าตัวใดหยุด ระบบจะลดกำลังผลิตตามสัดส่วน (1/จำนวนเครื่องในกลุ่ม) ไม่ใช่หยุดทั้งไลน์
+                      {tr("ใส่ชื่อกลุ่มเดียวกันให้เครื่องที่ทำงานคู่ขนานแบบ balance cycle time (เช่น Laser1/2/3) — ถ้าตัวใดหยุด ระบบจะลดกำลังผลิตตามสัดส่วน (1/จำนวนเครื่องในกลุ่ม) ไม่ใช่หยุดทั้งไลน์")}
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
@@ -1669,7 +1669,7 @@ export default function LineSetup({ embedded = false } = {}) {
                     </button>
                     <button type="button" className="pg-btn sm" onClick={() => { setMachineTempPos(null); setMachineForm({ id: null, machine_no: '', redundancy_group: '' }); }}
                      >
-                      ยกเลิก
+                      {tr("ยกเลิก")}
                     </button>
                   </div>
                 </div>
@@ -1773,7 +1773,7 @@ export default function LineSetup({ embedded = false } = {}) {
           <div>
             {/* ══ ข้อมูลของกลุ่ม — ไลน์ย่อยที่ไม่ได้ตั้งเอง จะตกทอดค่าจากไลน์แม่ ══ */}
             <div style={groupHeadSt}>
-              ข้อมูลของกลุ่ม <span style={{ fontWeight: 400, color: 'var(--muted)' }}>{tr('· ไลน์ย่อยที่ไม่ได้ตั้งเอง จะตามไลน์แม่')}</span>
+              {tr("ข้อมูลของกลุ่ม")} <span style={{ fontWeight: 400, color: 'var(--muted)' }}>{tr('· ไลน์ย่อยที่ไม่ได้ตั้งเอง จะตามไลน์แม่')}</span>
             </div>
             {parentLineObj && (
               <div style={inheritNoteSt}>
@@ -1827,7 +1827,7 @@ export default function LineSetup({ embedded = false } = {}) {
               </div>
             </div>
             <div style={{ fontSize: 11, color: 'var(--muted)', margin: '-4px 0 12px' }}>
-              รวมกำลังคน <strong style={{ color: 'var(--text)' }}>{(parseInt(stdDay) || 0) + (parseInt(stdNight) || 0)}</strong> คน (เช้า+ดึก)
+              {tr("รวมกำลังคน")} <strong style={{ color: 'var(--text)' }}>{(parseInt(stdDay) || 0) + (parseInt(stdNight) || 0)}</strong> {tr("คน (เช้า+ดึก")})
             </div>
             {/* ══ 👨‍🔧 หัวหน้างาน — ของจริงมาจากทะเบียนพนักงาน ไม่ใช่ช่องพิมพ์ (28/10 · feedback user) ══
                 *"ไลน์นึงมีหัวหน้าได้ 2-3 คน แล้วแต่ว่ามีกี่กะการทำงาน"* ⇒ ช่องข้อความช่องเดียวตอบไม่ได้
@@ -1861,8 +1861,7 @@ export default function LineSetup({ embedded = false } = {}) {
                 ) : (
                   /* 🔴 "ทะเบียนยังไม่มี" ≠ "ไลน์นี้ไม่มีหัวหน้า" — เขียนให้ตรง ห้ามโชว์ว่างเฉยๆ */
                   <div style={{ fontSize: 12.5, color: 'var(--amber)' }}>
-                    ⚠️ ยังไม่มีใครถูกตั้งเป็นหัวหน้าไลน์/หัวหน้าแผนกของไลน์นี้ในทะเบียนพนักงาน —
-                    ตั้งตำแหน่ง + ทีม + ไลน์ ให้เขาที่ <strong>/operator</strong> แล้วชื่อจะขึ้นเองทุกจอ
+                    ⚠️ {tr("ยังไม่มีใครถูกตั้งเป็นหัวหน้าไลน์/หัวหน้าแผนกของไลน์นี้ในทะเบียนพนักงาน — ตั้งตำแหน่ง + ทีม + ไลน์ ให้เขาที่")} <strong>/operator</strong> {tr("แล้วชื่อจะขึ้นเองทุกจอ")}
                   </div>
                 )}
               </div>
@@ -1886,7 +1885,7 @@ export default function LineSetup({ embedded = false } = {}) {
                     ))}
                   </ul>
                   <div style={{ color: 'var(--muted)', marginTop: 3 }}>
-                    ชื่อที่ขึ้นข้างบนยึด <strong>{tr('ตำแหน่งในทะเบียนพนักงาน')}</strong> เสมอ — สิทธิ์ของบัญชีไม่ใช่ตำแหน่งงาน
+                    {tr("ชื่อที่ขึ้นข้างบนยึด")} <strong>{tr('ตำแหน่งในทะเบียนพนักงาน')}</strong> {tr("เสมอ — สิทธิ์ของบัญชีไม่ใช่ตำแหน่งงาน")}
                   </div>
                 </div>
               )}
@@ -1909,11 +1908,11 @@ export default function LineSetup({ embedded = false } = {}) {
                     placeholder={parentLineObj?.head_name ? `${tr("ตามไลน์แม่")}: ${parentLineObj.head_name}` : 'เว้นว่าง = ใช้ชื่อจากทะเบียนข้างบน'} />
                   {lineHeads.legacyInRegistry === false && (
                     <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 4 }}>
-                      ⚠️ ชื่อนี้ไม่มีในทะเบียนพนักงาน — ระบบจะเทียบกลับไม่ได้ (เช็คชื่อ/สกิล/กำลังคน ไม่รู้ว่าเป็นใคร)
+                      ⚠️ {tr("ชื่อนี้ไม่มีในทะเบียนพนักงาน — ระบบจะเทียบกลับไม่ได้ (เช็คชื่อ/สกิล/กำลังคน ไม่รู้ว่าเป็นใคร")})
                     </div>
                   )}
                   <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-                    เว้นว่างไว้ดีที่สุด — ใบค่าฝีมือจะให้เลือกจากรายชื่อจริงข้างบนตามกะที่ออกใบ
+                    {tr("เว้นว่างไว้ดีที่สุด — ใบค่าฝีมือจะให้เลือกจากรายชื่อจริงข้างบนตามกะที่ออกใบ")}
                   </div>
                 </div>
               </details>
@@ -1922,7 +1921,7 @@ export default function LineSetup({ embedded = false } = {}) {
             {/* ══ ข้อมูลเฉพาะไลน์นี้ — คุณสมบัติเครื่อง/การไหลงานจริง ไม่ตกทอดถึงไลน์ย่อย ══
                 แยกพื้นหลัง+เส้นคั่นให้เห็นชัดว่า "คนละเรื่องกับกำลังคนข้างบน" (user ทักว่าของปนกันในแผงเดียว) */}
             <div style={{ ...groupHeadSt, borderTop: '2px solid var(--border)', paddingTop: 12, marginTop: 4 }}>
-              คุณสมบัติของไลน์นี้ <span style={{ fontWeight: 400, color: 'var(--muted)' }}>{tr('· ไม่ใช่เรื่องกำลังคน · ไม่ตกทอดถึงไลน์ย่อย ตั้งแยกทุกไลน์')}</span>
+              {tr("คุณสมบัติของไลน์นี้")} <span style={{ fontWeight: 400, color: 'var(--muted)' }}>{tr('· ไม่ใช่เรื่องกำลังคน · ไม่ตกทอดถึงไลน์ย่อย ตั้งแยกทุกไลน์')}</span>
             </div>
             {/* ชนิดหน่วย ต้องมาก่อน "ประเภทไลน์" — ตอบคำถามที่ใหญ่กว่า (เป็นไลน์ผลิตไหม) */}
             <div style={{ marginBottom: 12 }}>
@@ -1976,16 +1975,14 @@ export default function LineSetup({ embedded = false } = {}) {
                   placeholder={tr('เช่น 3')} style={{ marginTop: 4, width: 120 }} />
                 <div style={{ marginTop: 4 }}>
                   <Hint label={tr('N คือเลขอะไร')}>
-                    = <strong style={{ color: 'var(--text)' }}>{tr('เครื่องหลักที่เดินพร้อมกันจริงตอนเต็มกำลัง')}</strong> (ไม่ใช่จำนวนเครื่องทั้งหมดในไลน์ และไม่ใช่จำนวนคน)
-                    · ตั้งได้ทุกโหมดไหลงาน — เช่น LASER-345/789 (เลเซอร์ 3 ตัวขึ้นงานคู่ LH/RH) เป็น One-piece flow แต่ตั้ง N=3
-                    · <strong style={{ color: 'var(--text)' }}>มีผล 2 ที่: หัก Downtime 1/N ในสูตร OEE และตัวเลข "ควรผลิตได้ตอนนี้" บนผังรวมโรงงาน</strong>
+                    = <strong style={{ color: 'var(--text)' }}>{tr('เครื่องหลักที่เดินพร้อมกันจริงตอนเต็มกำลัง')}</strong> ({tr("ไม่ใช่จำนวนเครื่องทั้งหมดในไลน์ และไม่ใช่จำนวนคน) · ตั้งได้ทุกโหมดไหลงาน — เช่น LASER-345/789 (เลเซอร์ 3 ตัวขึ้นงานคู่ LH/RH) เป็น One-piece flow แต่ตั้ง")} N=3
+                    · <strong style={{ color: 'var(--text)' }}>{tr("มีผล 2 ที่: หัก Downtime 1/N ในสูตร OEE และตัวเลข \"ควรผลิตได้ตอนนี้\" บนผังรวมโรงงาน")}</strong>
                   </Hint>
                 </div>
                 {flowMode === 'parallel_machine' && !(parseInt(parallelStations) > 0) && (
                   // ⚠️ ไลน์เครื่องขนานที่ไม่ตั้ง N = ผังรวมคำนวณกำลังผลิตไม่ได้ ต้องถอยไปสูตรอัตราตามเวลา — ห้ามปล่อยเงียบ
                   <div style={{ fontSize: 11, lineHeight: 1.45, color: 'var(--amber)', background: 'var(--amber)14', border: '1px solid var(--amber)44', borderRadius: 'var(--r-md)', padding: '6px 8px', marginTop: 6 }}>
-                    ⚠️ ไลน์นี้ตั้งเป็น "เครื่องขนาน" แต่ยังไม่ได้กรอก N — ระบบไม่รู้ว่าเดินกี่เครื่องพร้อมกัน
-                    จึงคิด "ควรผลิตได้ตอนนี้" จากสัดส่วนเวลาที่ผ่านไปแทน (หยาบกว่า) และหัก Downtime เต็มเหมือนไลน์เครื่องเดียว
+                    ⚠️ {tr("ไลน์นี้ตั้งเป็น \"เครื่องขนาน\" แต่ยังไม่ได้กรอก N — ระบบไม่รู้ว่าเดินกี่เครื่องพร้อมกัน จึงคิด \"ควรผลิตได้ตอนนี้\" จากสัดส่วนเวลาที่ผ่านไปแทน (หยาบกว่า) และหัก Downtime เต็มเหมือนไลน์เครื่องเดียว")}
                   </div>
                 )}
               </div>

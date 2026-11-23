@@ -503,7 +503,7 @@ function PartHead({ part, board, shortAt, racks = null, raw = null, level = null
       {shortAt ? <div style={{ color: '#f87171', fontWeight: 700, fontSize: FS - 0.5 }}>{tr('⚠ ของขาด')} {shortAt.slice(5)}</div> : null}
       {!part.in_registry && part.mat_no ? (
         <div style={{ color: 'var(--accent2)', fontSize: FS - 1 }} title={tr('พาร์ทนี้ยังไม่อยู่ในทะเบียนสินค้า (dr_products) ⇒ ระบบดึงยอดผลิต/CT ให้ไม่ได้')}>
-          ⚠ ยังไม่อยู่ในทะเบียนสินค้า
+          ⚠ {tr("ยังไม่อยู่ในทะเบียนสินค้า")}
         </div>
       ) : null}
     </div>

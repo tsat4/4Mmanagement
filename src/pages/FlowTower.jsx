@@ -278,7 +278,7 @@ export default function FlowTower() {
           <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('กำลังอ่านผังองค์กร…')}</span>
         ) : usedDivs.length === 0 ? (
           <span style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 700 }}>
-            ⚠️ ฝ่ายที่หน้านี้อ้างถึงยังไม่มีในผังองค์กร — ตั้งที่ /org-setup แล้วชื่อฝ่ายจะขึ้นเอง
+            ⚠️ {tr("ฝ่ายที่หน้านี้อ้างถึงยังไม่มีในผังองค์กร — ตั้งที่ /org-setup แล้วชื่อฝ่ายจะขึ้นเอง")}
           </span>
         ) : usedDivs.map(dv => (
           <span key={dv.code} style={{ fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: 'var(--r-pill)', color: dv.color, background: `${tint(dv.color, 'dim')}`, border: `1px solid ${tint(dv.color, 'line')}` }}>
@@ -344,16 +344,14 @@ export default function FlowTower() {
       <div style={{ ...card, padding: '14px 16px', marginBottom: 16, borderColor: (S.blocks?.length ? 'var(--red-line)' : 'var(--border)') }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
           <div style={{ fontSize: 14, fontWeight: 900, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>
-            จุดที่ความต้องการค้าง ไม่กลายเป็นใบสั่ง
+            {tr("จุดที่ความต้องการค้าง ไม่กลายเป็นใบสั่ง")}
           </div>
           <div style={{ fontSize: 12, color: S.blocks?.length ? 'var(--red)' : 'var(--green)', fontWeight: 800 }}>
             {S.blocks?.length ? `${fmt(S.blocks.length)} ${tr("พาร์ท")} · ${fmt(S.blockQty)} ${tr("ชิ้น")}` : 'ไม่มีจุดตัน'}
           </div>
         </div>
         <InfoMore label={tr('ทำไมยังออกใบสั่งไม่ได้')} size={11.5} style={{ marginBottom: 10 }}>
-          ระบบระเบิด BOM แล้วสะสมความต้องการไว้ แต่**ยังออกใบสั่งไม่ได้เพราะไม่ได้ตั้ง "ขนาดล็อต"** (จะสั่งครั้งละกี่ชิ้น)
-          — เป็นการตัดสินใจของคน ระบบจึงไม่ตั้งให้เอง · ค่าที่เสนอ = 1 กล่องตามบรรจุจริง กดยืนยันแล้วแก้ทีหลังได้
-          · แถว ⏳ = ตั้งล็อตแล้วแต่ยอดค้างเกินเพดานออกใบต่อรอบ (MAX_LOTS) — จะทยอยออกใบเองทุกครั้งที่ปิดใบผลิต
+          {tr("ระบบระเบิด BOM แล้วสะสมความต้องการไว้ แต่**ยังออกใบสั่งไม่ได้เพราะไม่ได้ตั้ง \"ขนาดล็อต\"** (จะสั่งครั้งละกี่ชิ้น) — เป็นการตัดสินใจของคน ระบบจึงไม่ตั้งให้เอง · ค่าที่เสนอ = 1 กล่องตามบรรจุจริง กดยืนยันแล้วแก้ทีหลังได้ · แถว ⏳ = ตั้งล็อตแล้วแต่ยอดค้างเกินเพดานออกใบต่อรอบ (MAX_LOTS) — จะทยอยออกใบเองทุกครั้งที่ปิดใบผลิต")}
         </InfoMore>
         {!d ? <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('กำลังโหลด…')}</div>
           : S.blocks.length === 0 ? <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('ทุกพาร์ทตั้งขนาดล็อตครบแล้ว')}</div>
@@ -431,9 +429,9 @@ export default function FlowTower() {
           </table>
         </div>
         <div style={{ marginTop: 10, fontSize: 11, color: 'var(--muted)', lineHeight: 1.6 }}>
-          <b>{tr('⚪ ยังไม่ใช้')}</b> = แผนกนั้นยังไม่เริ่มทดลองใช้ (โปรเจคทยอยขยายผลรายแผนก) — <b>{tr('ไม่ใช่ระบบพัง')}</b> ·
-          <b style={{ color: 'var(--red)' }}> {tr('🔴 ตัน')}</b> = มีความต้องการค้างจริงแต่ไม่ไหลออก ต้องแก้ ·
-          <b style={{ color: 'var(--amber)' }}> {tr('🟠 ส่งต่อด้วยคน')}</b> = ยังไม่มีเส้นข้อมูลอัตโนมัติ ใช้คนตัดสินใจแทน
+          <b>{tr('⚪ ยังไม่ใช้')}</b> = {tr("แผนกนั้นยังไม่เริ่มทดลองใช้ (โปรเจคทยอยขยายผลรายแผนก")}) — <b>{tr('ไม่ใช่ระบบพัง')}</b> ·
+          <b style={{ color: 'var(--red)' }}> {tr('🔴 ตัน')}</b> = {tr("มีความต้องการค้างจริงแต่ไม่ไหลออก ต้องแก้")} ·
+          <b style={{ color: 'var(--amber)' }}> {tr('🟠 ส่งต่อด้วยคน')}</b> = {tr("ยังไม่มีเส้นข้อมูลอัตโนมัติ ใช้คนตัดสินใจแทน")}
         </div>
       </div>
     </Page>

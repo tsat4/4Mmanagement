@@ -640,7 +640,7 @@ function OrgTab({ board, depts, skills }) {
               <span style={{ display: 'inline-block', fontSize: 11.5, fontWeight: 800, padding: '2px 8px', borderRadius: 'var(--r-xs)', border: '1px solid var(--border2)', background: 'var(--bg2-surf)', color: 'var(--text2)' }}>
                 {trI18n("วิ่งข้ามมาช่วยประจำ")} {d.flex.length} {trI18n('คน')}</span>
               <span style={{ fontSize: 12, color: 'var(--muted)', marginLeft: 8 }}>
-                ไม่นับรวมในทะเบียนของแผนก · cost center ยังอยู่ที่หน่วยต้นสังกัด
+                {trI18n("ไม่นับรวมในทะเบียนของแผนก · cost center ยังอยู่ที่หน่วยต้นสังกัด")}
               </span>
               <div style={{ ...CARD_GRID, marginTop: 6 }}>
                 {d.flex.map(p => <SkillCard key={p.id} p={p} skills={skills} />)}
@@ -1002,9 +1002,9 @@ function LineLayoutView({ board, depts, lines, attendance, maps, tv, stationPlan
   const legend = (
     <span style={{ display: 'flex', gap: 12, fontSize: 12, flexWrap: 'wrap' }}>
       {Object.entries(SHIFT_META).map(([k, m]) => <span key={k} style={{ color: m.color, fontWeight: 700 }}>● {trI18n(m.label)}</span>)}
-      <span style={{ color: 'var(--muted)' }}>จาง = ลา/ขาด · ✳ = ย้ายมาวันนี้ · ↗ = วันนี้ไปจุดอื่น · วงประ + สีกะ = ขาดคนประจำกะนั้น</span>
+      <span style={{ color: 'var(--muted)' }}>{trI18n("จาง = ลา/ขาด · ✳ = ย้ายมาวันนี้ · ↗ = วันนี้ไปจุดอื่น · วงประ + สีกะ = ขาดคนประจำกะนั้น")}</span>
       {!tv && <span style={{ color: 'var(--muted)' }}>
-        จุดมุมหมุด = ทักษะ: <b style={{ color: FIT_DOT.ok }}>●</b> ผ่าน · <b style={{ color: FIT_DOT.gap }}>●</b> ไม่ถึง · <b style={{ color: FIT_DOT.noreq }}>●</b> จุดยังไม่ตั้งทักษะ · กดหมุด = รายละเอียด
+        {trI18n("จุดมุมหมุด = ทักษะ")}: <b style={{ color: FIT_DOT.ok }}>●</b> {trI18n("ผ่าน")} · <b style={{ color: FIT_DOT.gap }}>●</b> {trI18n("ไม่ถึง")} · <b style={{ color: FIT_DOT.noreq }}>●</b> {trI18n("จุดยังไม่ตั้งทักษะ · กดหมุด = รายละเอียด")}
       </span>}
     </span>
   );
@@ -1099,9 +1099,9 @@ function LineSidePanel({ sum, stationsN, emptyStations, slotShort, placed, fit, 
       {sum.group && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{trI18n('ตัดสินทั้งกลุ่ม')} <b style={{ color: 'var(--text)' }}>{sum.group}</b></div>}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
         <Stat label={`${trI18n("มา")}${sum.shift === 'night' ? trI18n('กะดึก') : trI18n('กะเช้า')} / std`} value={sum.std == null ? '—' : `${sum.onFloor}/${sum.std}`} />
-        <Stat label="ขาด (คน)" value={sum.short == null ? '—' : sum.short} tone={sum.short >= 3 ? 'var(--red)' : sum.short ? 'var(--amber)' : undefined} />
-        <Stat label="ทักษะไม่ถึง (กะนี้ ทั้งกลุ่ม)" value={`${sum.gapPeople} ${trI18n("คน")}`} tone={sum.gapPeople ? 'var(--amber)' : undefined} />
-        <Stat label="จุดงาน (ยังไม่มีคนประจำ)" value={`${stationsN} (${emptyStations})`} />
+        <Stat label={trI18n("ขาด (คน)")} value={sum.short == null ? '—' : sum.short} tone={sum.short >= 3 ? 'var(--red)' : sum.short ? 'var(--amber)' : undefined} />
+        <Stat label={trI18n("ทักษะไม่ถึง (กะนี้ ทั้งกลุ่ม)")} value={`${sum.gapPeople} ${trI18n("คน")}`} tone={sum.gapPeople ? 'var(--amber)' : undefined} />
+        <Stat label={trI18n("จุดงาน (ยังไม่มีคนประจำ)")} value={`${stationsN} (${emptyStations})`} />
       </div>
       <div style={{ fontSize: 12, color: 'var(--muted)' }}>
         {trI18n('สีไลน์ = คนที่มากะนี้เทียบกำลังคนตามผัง (std) · จุดงานเยอะกว่าคนได้ปกติ (คนเดียวหมุนหลายจุด) จึงไม่นับจุดว่างเป็นการขาด')}
@@ -1286,9 +1286,7 @@ function SkillGapTable({ gaps, defs }) {
         </tbody>
       </table>
       <div style={{ padding: '8px 12px', fontSize: 12, color: 'var(--muted)' }}>
-        กรอบทึบ = ประเมินแล้วแต่คะแนนยังไม่ถึง (มี/ต้องการ) · กรอบประ = ยังไม่เคยประเมินทักษะนั้น (นับเป็น 0) ·
-        ⏳ = ได้ขั้นแล้วจากการสะสม EXP แต่รอหัวหน้าอนุมัติ (สีฟ้า = อนุมัติแล้วจะผ่านจุดนี้ทันที) ·
-        ประเมิน/ปรับคะแนนที่ /operator · ตั้งทักษะที่จุดต้องการที่ /line-setup
+        {trI18n("กรอบทึบ = ประเมินแล้วแต่คะแนนยังไม่ถึง (มี/ต้องการ) · กรอบประ = ยังไม่เคยประเมินทักษะนั้น (นับเป็น 0) · ⏳ = ได้ขั้นแล้วจากการสะสม EXP แต่รอหัวหน้าอนุมัติ (สีฟ้า = อนุมัติแล้วจะผ่านจุดนี้ทันที) · ประเมิน/ปรับคะแนนที่ /operator · ตั้งทักษะที่จุดต้องการที่")} /line-setup
       </div>
     </div>
   );
@@ -1762,11 +1760,9 @@ function StaffingTab({ section, deptParam, today, nodes, employees, lines, slotP
               </tbody>
             </table>
             <div style={{ padding: '8px 12px', fontSize: 12, color: 'var(--muted)' }}>
-              🧑 <b>{trI18n('ขาดคน')}</b> = ลา + ขาดงาน + ยังไม่เช็ค + ถูกยืมออก − ยืมเข้า (นับเฉพาะกะที่ขาด) · <b>"กะที่ขาดคน" นับจากช่องนี้เท่านั้น</b> ·
-              🪑 <b>{trI18n('ช่องว่างอัตรากำลัง')}</b> คนละเรื่องกัน — ไม่ใช่ "วันนี้มีคนไม่มา" แต่คือตำแหน่งที่ยังไม่มีคนประจำ ·
-              "คิดไม่ได้ N กะ" = ยืนยันไม่ได้ว่าไลน์เดินกะนั้น (ไม่มีกะผลิตที่ปิดแล้ว) จึงไม่นับช่องว่าง — <b>{trI18n('ไม่รู้ ≠ ไม่ขาด')}</b> ·
-              "ตัดตามผัง N" = ช่องว่างดิบจากจุดงานเกินกำลังคนตามผัง (std − คนที่มาจริง) จึงถูกตัด — จุดที่ใช้คนวนๆ ไม่ใช่ช่องว่างถาวร ·
-              "⚠️ ไม่รู้กำลังคนผัง N กะ" = ไลน์ของแผนกนี้ยังไม่ได้ตั้ง std (ตั้งที่ /line-setup) ⇒ <b>{trI18n('ไม่ได้ตัดเพดาน')}</b> ช่องว่างอาจสูงกว่าจริง
+              🧑 <b>{trI18n('ขาดคน')}</b> = {trI18n("ลา + ขาดงาน + ยังไม่เช็ค + ถูกยืมออก − ยืมเข้า (นับเฉพาะกะที่ขาด")}) · <b>"{trI18n("กะที่ขาดคน\" นับจากช่องนี้เท่านั้น")}</b> ·
+              🪑 <b>{trI18n('ช่องว่างอัตรากำลัง')}</b> {trI18n("คนละเรื่องกัน — ไม่ใช่ \"วันนี้มีคนไม่มา\" แต่คือตำแหน่งที่ยังไม่มีคนประจำ · \"คิดไม่ได้ N กะ\" = ยืนยันไม่ได้ว่าไลน์เดินกะนั้น (ไม่มีกะผลิตที่ปิดแล้ว) จึงไม่นับช่องว่าง")} — <b>{trI18n('ไม่รู้ ≠ ไม่ขาด')}</b> ·
+              "{trI18n("ตัดตามผัง N\" = ช่องว่างดิบจากจุดงานเกินกำลังคนตามผัง (std − คนที่มาจริง) จึงถูกตัด — จุดที่ใช้คนวนๆ ไม่ใช่ช่องว่างถาวร · \"⚠️ ไม่รู้กำลังคนผัง N กะ\" = ไลน์ของแผนกนี้ยังไม่ได้ตั้ง std (ตั้งที่")} /line-setup) ⇒ <b>{trI18n('ไม่ได้ตัดเพดาน')}</b> {trI18n("ช่องว่างอาจสูงกว่าจริง")}
             </div>
           </div>
 
@@ -1800,15 +1796,12 @@ function StaffingTab({ section, deptParam, today, nodes, employees, lines, slotP
               </tbody>
             </table>
             <div style={{ padding: '8px 12px', fontSize: 12, color: 'var(--muted)', lineHeight: 1.6 }}>
-              <b>{trI18n('ปกติ')}</b> = มัธยฐานของคนยืนจริงต่อกะของแผนกนั้นเอง (ไม่ใช่ที่นั่งตาม std — std บางไลน์ยังตั้งสูงกว่าคนในทะเบียน จนเกือบทุกกะดู "ขาด") ·
-              นับเฉพาะกะที่เช็คชื่อแล้วและมีกะผลิตปิดแล้ว · OEE/%P = ค่าที่ระบบบันทึกตอนปิดกะของทุกไลน์ในแผนก (ถ่วงด้วยเวลา) ·
-              ไม่รวมยอดชิ้นข้ามไลน์เพราะไลน์ย่อยป้อนงานต่อกัน บวกกันจะนับซ้ำ ·
-              ⚠️ เป็น<b>{trI18n('ความสัมพันธ์')}</b> ไม่ใช่ข้อพิสูจน์ว่าคนน้อยเป็นสาเหตุ — กะนั้นอาจมีเครื่องเสีย/ของขาดด้วย ดูต้นเหตุที่ Daily Report ของกะนั้น
+              <b>{trI18n('ปกติ')}</b> = {trI18n("มัธยฐานของคนยืนจริงต่อกะของแผนกนั้นเอง (ไม่ใช่ที่นั่งตาม std — std บางไลน์ยังตั้งสูงกว่าคนในทะเบียน จนเกือบทุกกะดู \"ขาด\") · นับเฉพาะกะที่เช็คชื่อแล้วและมีกะผลิตปิดแล้ว · OEE/%P = ค่าที่ระบบบันทึกตอนปิดกะของทุกไลน์ในแผนก (ถ่วงด้วยเวลา) · ไม่รวมยอดชิ้นข้ามไลน์เพราะไลน์ย่อยป้อนงานต่อกัน บวกกันจะนับซ้ำ · ⚠️ เป็น")}<b>{trI18n('ความสัมพันธ์')}</b> {trI18n("ไม่ใช่ข้อพิสูจน์ว่าคนน้อยเป็นสาเหตุ — กะนั้นอาจมีเครื่องเสีย/ของขาดด้วย ดูต้นเหตุที่ Daily Report ของกะนั้น")}
             </div>
           </div>
 
           <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
-            <div style={{ padding: '10px 12px', fontWeight: 800 }}>{trI18n('รายวัน — คนขาดกี่คน')} <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--muted)' }}>(ตัวเลข = คนขาด (ลา/ขาดงาน/ยังไม่เช็ค/ถูกยืมออก) · +n = คนเกิน · ✓ = มากันครบ · · = ไม่ได้เช็คชื่อ · ชี้ที่ช่องเพื่อดูสาเหตุ + ช่องว่างอัตรากำลัง)</span></div>
+            <div style={{ padding: '10px 12px', fontWeight: 800 }}>{trI18n('รายวัน — คนขาดกี่คน')} <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--muted)' }}>({trI18n("ตัวเลข = คนขาด (ลา/ขาดงาน/ยังไม่เช็ค/ถูกยืมออก) · +n = คนเกิน · ✓ = มากันครบ · · = ไม่ได้เช็คชื่อ · ชี้ที่ช่องเพื่อดูสาเหตุ + ช่องว่างอัตรากำลัง")})</span></div>
             <table style={{ borderCollapse: 'collapse' }}>
               <thead><tr>
                 <th style={{ ...th, position: 'sticky', left: 0, background: 'var(--card)', zIndex: 1 }}>{trI18n('แผนก · กะ')}</th>
@@ -1959,7 +1952,7 @@ function HistoryTab({ section, dept, deptParam, nodes, lines, stations, employee
               </tbody>
             </table>
             <div style={{ padding: '6px 12px 10px', fontSize: 12, color: 'var(--muted)' }}>
-              สุทธิ = ผลรวมของ (ค่าใหม่ − ค่าเดิม) · ล้างค่า = ลดเท่าค่าเดิม (บอร์ดกลับไปใช้ค่าถัดไปในลำดับ: ช่องต่อทีม → จุดงาน → std)
+              {trI18n("สุทธิ = ผลรวมของ (ค่าใหม่ − ค่าเดิม) · ล้างค่า = ลดเท่าค่าเดิม (บอร์ดกลับไปใช้ค่าถัดไปในลำดับ: ช่องต่อทีม → จุดงาน")} → std)
             </div>
           </div>
           <div className="card table-sticky" style={{ padding: 0, overflowX: 'auto' }}>

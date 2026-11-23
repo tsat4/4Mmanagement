@@ -484,7 +484,7 @@ export default function OeeInsightPanel({ lines, ccRates = [], initLine = '', se
             );
           })}
           <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-            เจอปัญหาซ้ำที่คุ้มค่าแก้ → เปิดโปรเจคในหน้า Improvements (พาเรโต้จะ prefill เป้าให้) แล้วระบบติดตามผลก่อน/หลังให้อัตโนมัติ
+            {trI18n("เจอปัญหาซ้ำที่คุ้มค่าแก้ → เปิดโปรเจคในหน้า Improvements (พาเรโต้จะ prefill เป้าให้) แล้วระบบติดตามผลก่อน/หลังให้อัตโนมัติ")}
           </div>
         </div>
       )}

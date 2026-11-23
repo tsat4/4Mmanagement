@@ -471,11 +471,10 @@ export default function PermissionsManagement() {
         hint={tr('ดูได้ทั้งตาราง แต่ติ๊กไม่ได้ — ฐานข้อมูลใช้คีย์เดียวกันนี้เป็นด่าน (เดิมติ๊กได้บนจอแต่ไม่บันทึกจริง)')} />
 
       <div data-page-note="1" style={{ ...s.section, fontSize: 12, color: 'var(--muted)', lineHeight: 1.6 }}>
-        ⚠️ <strong>{tr('Admin เข้าถึงได้ทุกอย่างเสมอ')}</strong> (ล็อกไว้ กันกรณีตั้งค่าผิดจนตัวเองเข้าไม่ได้) —
-        การเปลี่ยนแปลงมีผลกับทุกเครื่องที่เปิดระบบอยู่ทันที (sync อัตโนมัติ)
+        ⚠️ <strong>{tr('Admin เข้าถึงได้ทุกอย่างเสมอ')}</strong> ({tr("ล็อกไว้ กันกรณีตั้งค่าผิดจนตัวเองเข้าไม่ได้) — การเปลี่ยนแปลงมีผลกับทุกเครื่องที่เปิดระบบอยู่ทันที (sync อัตโนมัติ")})
         <div style={{ marginTop: 6 }}>
           🛡️ <strong style={{ color: 'var(--amber)' }}>{tr('แอดมินหน่วยงาน')}</strong> = {tr("คอลัมน์พิเศษ (ไม่ใช่ role ที่เลือกให้ user) — เป็น \"สิทธิ์เพิ่ม\" ของคนที่ติ๊ก")}
-          <strong> "เป็นแอดมินหน่วยงาน"</strong> {tr('ในหน้าจัดการผู้ใช้ · คนนั้นได้')} <strong>{tr('role เดิม + action ที่ติ๊กในคอลัมน์นี้')}</strong>
+          <strong> "{tr("เป็นแอดมินหน่วยงาน")}"</strong> {tr('ในหน้าจัดการผู้ใช้ · คนนั้นได้')} <strong>{tr('role เดิม + action ที่ติ๊กในคอลัมน์นี้')}</strong>
           {tr("เฉพาะในหน้าที่ role เดิมเข้าถึงได้ (จำกัด scope หน่วยงานตัวเองตามปกติ ไม่ใช่ admin ระบบ) · แนะนำตั้งเฉพาะแท็บ \"สิทธิ์การทำงาน")}"
         </div>
       </div>
@@ -535,7 +534,7 @@ export default function PermissionsManagement() {
           {canManage && <> · <b>{tr('คลิกที่ช่องเพื่อสลับค่าได้เลย')}</b> {tr('(ปิดสิทธิ์จะถามยืนยันก่อน · มีผลทุกเครื่องทันที)')}</>}
           {matrixStat.unseeded > 0 && (
             <div style={{ marginTop: 4, color: 'var(--amber)' }}>
-              ⚠️ ช่องที่ยังไม่เคยตั้งค่า <b>{matrixStat.unseeded.toLocaleString()}</b> ช่อง จากที่แสดงอยู่
+              ⚠️ {tr("ช่องที่ยังไม่เคยตั้งค่า")} <b>{matrixStat.unseeded.toLocaleString()}</b> {tr("ช่อง จากที่แสดงอยู่")}
             </div>
           )}
           <div style={{ marginTop: 4 }}>
@@ -547,7 +546,7 @@ export default function PermissionsManagement() {
 
         {matrixGroups.length === 0 ? (
           <div style={{ ...s.section, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
-            ไม่พบฟังก์ชันที่ตรงกับตัวกรอง
+            {tr("ไม่พบฟังก์ชันที่ตรงกับตัวกรอง")}
           </div>
         ) : (
           <div className="table-sticky">
@@ -625,10 +624,9 @@ export default function PermissionsManagement() {
       {tab === 'pages' && (
         <>
           <div style={{ ...s.section, fontSize: 12, lineHeight: 1.6, borderColor: 'var(--amber-line)', background: 'var(--amber-dim)' }}>
-            🛡️ <strong style={{ color: 'var(--amber)' }}>แอดมินหน่วยงาน "เปิดหน้า" ให้ไม่ได้</strong> — คอลัมน์นั้นจึงไม่มีในแท็บนี้ (ระบบบล็อกไว้ในโค้ด ติ๊กไปก็ไม่มีผล)
+            🛡️ <strong style={{ color: 'var(--amber)' }}>{tr("แอดมินหน่วยงาน \"เปิดหน้า\" ให้ไม่ได้")}</strong> — {tr("คอลัมน์นั้นจึงไม่มีในแท็บนี้ (ระบบบล็อกไว้ในโค้ด ติ๊กไปก็ไม่มีผล")})
             <div style={{ marginTop: 4 }}>
-              ต้องการให้ใครเข้าหน้าไหนได้ ให้ติ๊กที่ <strong>{tr('role เดิมของเขา')}</strong> ในตารางนี้ ·
-              แล้วค่อยไปเพิ่มอำนาจ แก้/อนุมัติ ให้เขาที่แท็บ <strong>"สิทธิ์การทำงาน"</strong> คอลัมน์แอดมินหน่วยงาน
+              {tr("ต้องการให้ใครเข้าหน้าไหนได้ ให้ติ๊กที่")} <strong>{tr('role เดิมของเขา')}</strong> {tr("ในตารางนี้ · แล้วค่อยไปเพิ่มอำนาจ แก้/อนุมัติ ให้เขาที่แท็บ")} <strong>"{tr("สิทธิ์การทำงาน")}"</strong> {tr("คอลัมน์แอดมินหน่วยงาน")}
             </div>
           </div>
           {renderPermTable(pageGroups, 'หน้า', PAGE_COLS)}

@@ -516,7 +516,7 @@ export default function MtnAndonBoard({ d, ctx, cards = 'maintenance' }) {
       )}
       {d.loadErr && (
         <div style={{ ...card, borderColor: 'var(--amber)', color: 'var(--amber)', fontSize: 13 }}>
-          ⚠ ข้อมูล downtime ย้อนหลังโหลดไม่ครบ — ตัวเลขสรุปอาจต่ำกว่าจริง
+          ⚠ {tr("ข้อมูล downtime ย้อนหลังโหลดไม่ครบ — ตัวเลขสรุปอาจต่ำกว่าจริง")}
         </div>
       )}
 
@@ -553,14 +553,14 @@ export default function MtnAndonBoard({ d, ctx, cards = 'maintenance' }) {
               ⚠️ ห้ามตัดข้อความทิ้ง: legend บอกว่าสีไหนแปลว่าอะไร · ประโยคท้ายกันคนเข้าใจว่า
               เป็นสถานะเครื่องเรียลไทม์ (ยังไม่มี SCADA/มิเตอร์รายเครื่อง — กฎ CLAUDE.md) */}
           <div ref={legRef} style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 11px', fontSize: 11, color: 'var(--muted)', lineHeight: 1.5 }}>
-            <span>กดกรอบไลน์ = ดูปัญหาของไลน์นั้น</span>
+            <span>{tr("กดกรอบไลน์ = ดูปัญหาของไลน์นั้น")}</span>
             <span><b style={{ color: 'var(--red)' }}>■</b> {tr('เรียกช่าง (กระพริบ)')}</span>
             <span><b style={{ color: 'var(--amber)' }}>■</b> {tr('หยุดเกินเกณฑ์')}</span>
             <span><b style={{ color: 'var(--blue)' }}>■</b> {tr('เพิ่งหยุด (ยังในกรอบ)')}</span>
             <span><b style={{ color: 'var(--green)' }}>■</b> {tr('เปิดกะอยู่')}</span>
             <span><b style={{ color: 'var(--muted)' }}>■</b> {tr('ไม่ได้เปิดกะ')}</span>
-            {showStore && <span><b style={{ color: 'var(--blue)' }}>■</b> ไลน์เรียกของ · ป้าย 📦 = รอบส่งค้าง/รอของ (เครื่องหยุดชนะเสมอ)</span>}
-            {showRoutine && <span><b style={{ color: ROUTINE_MAP_COLOR }}>■</b> งานประจำกะค้าง (📋 AM · PY = Poka-Yoke · LPA · ! = เลยกรอบ AM · เครื่องหยุดชนะเสมอ)</span>}
+            {showStore && <span><b style={{ color: 'var(--blue)' }}>■</b> {tr("ไลน์เรียกของ · ป้าย 📦 = รอบส่งค้าง/รอของ (เครื่องหยุดชนะเสมอ")})</span>}
+            {showRoutine && <span><b style={{ color: ROUTINE_MAP_COLOR }}>■</b> {tr("งานประจำกะค้าง (📋 AM · PY = Poka-Yoke · LPA · ! = เลยกรอบ AM · เครื่องหยุดชนะเสมอ")})</span>}
             {/* 🔴 แผงนี้ขึ้นบน `/tv-board` ด้วย = จอไม่มีเมาส์ ⇒ ท่อนที่เหลือบนจอต้องอ่านรู้เรื่องเอง
                 เก็บข้อเท็จจริง "ผังไม่กรองทีม" ไว้ · เหตุผล/ขอบเขตของชิป → tooltip · user 18/11 */}
             {showPm && (
@@ -600,7 +600,7 @@ export default function MtnAndonBoard({ d, ctx, cards = 'maintenance' }) {
 
           {!live.length && (
             <div style={{ ...card, textAlign: 'center', padding: 24, fontSize: 13 * big, fontWeight: 800, color: 'var(--green)' }}>
-              ✅ ไม่มีเครื่องหยุดอยู่ตอนนี้
+              ✅ {tr("ไม่มีเครื่องหยุดอยู่ตอนนี้")}
             </div>
           )}
 
@@ -643,13 +643,13 @@ export default function MtnAndonBoard({ d, ctx, cards = 'maintenance' }) {
               {/* ⚠️ ไม่มี machine_no = จับคู่ทีมไม่ได้ → ขึ้นให้ทุกทีมเห็น และต่อประวัติเครื่อง/ใบซ่อมไม่ได้ */}
               {!r.machine_no && (
                 <div style={{ fontSize: 11 * big, color: 'var(--accent2)', lineHeight: 1.4 }}>
-                  ผู้แจ้งไม่ได้เลือกเครื่องตอนลง Downtime — จัดคิวให้ทีมไม่ได้ (จึงแสดงให้ทุกทีม)
+                  {tr("ผู้แจ้งไม่ได้เลือกเครื่องตอนลง Downtime — จัดคิวให้ทีมไม่ได้ (จึงแสดงให้ทุกทีม")})
                 </div>
               )}
               {/* ของทีมอื่น: บอกให้ชัดว่าไลน์หยุดจริง แต่คิวซ่อมไม่ใช่ของห้องนี้ */}
               {oth && (
                 <div style={{ fontSize: 11 * big, color: 'var(--muted)', lineHeight: 1.4 }}>
-                  ไลน์นี้หยุดอยู่จริง แต่เป็นคิวซ่อมของทีม <b>{deptNameOf(r._team)}</b>
+                  {tr("ไลน์นี้หยุดอยู่จริง แต่เป็นคิวซ่อมของทีม")} <b>{deptNameOf(r._team)}</b>
                 </div>
               )}
             </div>

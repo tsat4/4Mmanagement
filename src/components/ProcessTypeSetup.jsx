@@ -84,8 +84,7 @@ export default function ProcessTypeSetup({ role }) {
         {canEdit && <button onClick={() => openEdit()} style={saveBtnStyle}>{tr('+ เพิ่มกระบวนการ')}</button>}
       </div>
       <InfoMore label={tr('กระบวนการที่ตั้งไว้ที่นี่ใช้ที่ไหนบ้าง')} id="pts-usage" size={12} style={{ marginBottom: 16 }}>
-        กระบวนการที่ตั้งไว้ที่นี่ถูกใช้ร่วมกันทั้งระบบ: tag เครื่องจักร (ตั้งค่าผังไลน์) · สินค้า (Product Master) ·
-        ประเภท Downtime/งานเสีย/นโยบายพัก — ไลน์เห็นประเภทตามกระบวนการของเครื่อง/สินค้าที่มีจริงในไลน์
+        {tr("กระบวนการที่ตั้งไว้ที่นี่ถูกใช้ร่วมกันทั้งระบบ: tag เครื่องจักร (ตั้งค่าผังไลน์) · สินค้า (Product Master) · ประเภท Downtime/งานเสีย/นโยบายพัก — ไลน์เห็นประเภทตามกระบวนการของเครื่อง/สินค้าที่มีจริงในไลน์")}
       </InfoMore>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {items.map(it => (

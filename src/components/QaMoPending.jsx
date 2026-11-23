@@ -111,7 +111,7 @@ export default function QaMoPending() {
                 {q.trim() && <> {tr('· ตรงคำค้น')} {view.list.length.toLocaleString()} {tr('ใบ')}</>}
                 {view.noSection > 0 && (
                   <div style={{ color: 'var(--accent2)', fontSize: 11.5 }}>
-                    ⚠️ ในนั้น <b>{view.noSection}</b> ใบไม่ระบุส่วนงาน — ไม่เข้าคิวของหน่วยงานไหนเลย
+                    ⚠️ {tr("ในนั้น")} <b>{view.noSection}</b> {tr("ใบไม่ระบุส่วนงาน — ไม่เข้าคิวของหน่วยงานไหนเลย")}
                   </div>
                 )}
               </>

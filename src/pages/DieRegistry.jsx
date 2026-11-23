@@ -1077,7 +1077,7 @@ export default function DieRegistry() {
           <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 10, wordBreak: 'break-word' }}>
             <b style={{ fontFamily: 'monospace', fontSize: 14, color: 'var(--text)', marginRight: 8 }}>{editDie.die_no || 'D-????'}</b>
             {editDie.machine_no}
-            <div style={{ fontSize: 11, marginTop: 2 }}>เลขแม่พิมพ์ระบบออกให้ แก้ไม่ได้ · 1 เลข = แม่พิมพ์ 1 ตัว = 1 OP</div>
+            <div style={{ fontSize: 11, marginTop: 2 }}>{tr("เลขแม่พิมพ์ระบบออกให้ แก้ไม่ได้ · 1 เลข = แม่พิมพ์ 1 ตัว")} = 1 OP</div>
           </div>
           <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <Field label={tr('ชุดบ้าน (อยู่ชุดไหน)')} hint={tr('ชุดอื่นยืมไปใช้ได้ที่หน้าชุด')}>

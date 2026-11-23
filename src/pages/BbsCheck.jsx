@@ -588,7 +588,7 @@ export default function BbsCheck() {
           <div style={{ textAlign: 'center' }}>
             <label style={lbl}>{tr('ลายเซ็น')}</label>
             {shownSig
-              ? <img src={shownSig} alt="ลายเซ็น" style={{ height: 34, background: '#fff', borderRadius: 4, padding: 2 }} />
+              ? <img src={shownSig} alt={tr("ลายเซ็น")} style={{ height: 34, background: '#fff', borderRadius: 4, padding: 2 }} />
               : <div style={{ fontSize: 11, color: 'var(--muted)', padding: '9px 0' }}>
                   {signers.length ? 'ยังไม่เลือกผู้ตรวจ' : 'ยังไม่มีใครบันทึกลายเซ็นในโปรไฟล์'}
                 </div>}
@@ -603,8 +603,7 @@ export default function BbsCheck() {
           <b>{tr('ระบบเติมให้ได้')} {autoAgreements.length} {tr('ข้อ จากทั้งหมด')} {agreements.length} {tr('ข้อ')}</b>
           {autoAgreements.length > 0 && <> {tr('(ข้อ')} {autoAgreements.map(a => a.seq).join(', ')} — {tr("มาจากการตรวจ PPE รายวัน")})</>}
           <div style={{ color: 'var(--text2)', marginTop: 2 }}>
-            ข้อที่เหลือต้องให้ผู้ตรวจสังเกตเองแล้วทาในตาราง · ระบบ<b>{tr('ไม่ทับ')}</b>ช่องที่กรอกเอง
-            และ<b>{tr('ไม่เติม')}</b>วันที่ไม่มีบันทึกเช็คชื่อ
+            {tr("ข้อที่เหลือต้องให้ผู้ตรวจสังเกตเองแล้วทาในตาราง · ระบบ")}<b>{tr('ไม่ทับ')}</b>{tr("ช่องที่กรอกเอง และ")}<b>{tr('ไม่เติม')}</b>{tr("วันที่ไม่มีบันทึกเช็คชื่อ")}
           </div>
           {/* ⚠️ ข้อความ 13 ข้อในไฟล์ Excel ต้นฉบับฝังเป็น OLE object แกะไม่ได้ → ต้องให้คนกรอกเอง
               ห้ามเดาข้อความ · แต่ต้องบอกว่ายังไม่ครบ ไม่งั้นคนคิดว่าระบบมีแค่นี้ */}
@@ -640,7 +639,7 @@ export default function BbsCheck() {
                 : <option value={1}>{tr('1. (ยังไม่ได้บันทึกข้อตกลง)')}</option>}
             </select>
           )}
-          <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>คลิกช่องเดิมซ้ำด้วยแปรงเดิม = ล้างช่อง</span>
+          <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{tr("คลิกช่องเดิมซ้ำด้วยแปรงเดิม = ล้างช่อง")}</span>
         </div>
       )}
 
@@ -649,7 +648,7 @@ export default function BbsCheck() {
         <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>{tr('กำลังโหลด...')}</div>
       ) : !emps.length ? (
         <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)' }}>
-          ไม่มีพนักงานในไลน์นี้ — ตรวจที่หน้าฐานข้อมูลพนักงานว่าผูก “ไลน์” ไว้แล้วหรือยัง
+          {tr("ไม่มีพนักงานในไลน์นี้ — ตรวจที่หน้าฐานข้อมูลพนักงานว่าผูก “ไลน์” ไว้แล้วหรือยัง")}
         </div>
       ) : isMobile ? (
         /* ── มือถือ: เลือกวัน → การ์ดต่อคน → กดชิป ── */
@@ -726,7 +725,7 @@ export default function BbsCheck() {
                   );
                 })}
               </div>
-              <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 8 }}>กดชิปเดิมซ้ำ = ล้างช่อง · หมายเหตุท้ายแถวและมุมมองทั้งเดือนดูได้บนจอใหญ่</div>
+              <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 8 }}>{tr("กดชิปเดิมซ้ำ = ล้างช่อง · หมายเหตุท้ายแถวและมุมมองทั้งเดือนดูได้บนจอใหญ่")}</div>
             </div>
           );
         })()
@@ -896,8 +895,7 @@ function AgreementsModal({ agreements, canManage, role, onClose }) {
       <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', width: 'min(760px,96vw)', maxHeight: '88vh', overflow: 'auto', padding: 18 }}>
         <h3 style={{ margin: '0 0 4px', fontSize: 16 }}>{tr('ข้อตกลงด้านความปลอดภัยในการปฏิบัติงาน')}</h3>
         <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--muted)', lineHeight: 1.6 }}>
-          เลขข้อนี้คือตัวเลขที่พิมพ์ลงช่องในใบเมื่อพบพฤติกรรมไม่เหมาะสม ·
-          ข้อที่ผูกกับ “การตรวจ PPE” ระบบจะเติมช่องให้อัตโนมัติได้
+          {tr("เลขข้อนี้คือตัวเลขที่พิมพ์ลงช่องในใบเมื่อพบพฤติกรรมไม่เหมาะสม · ข้อที่ผูกกับ “การตรวจ PPE” ระบบจะเติมช่องให้อัตโนมัติได้")}
         </p>
 
         <ReadOnlyNote show={!canManage} role={role} compact
@@ -943,7 +941,7 @@ function AgreementsModal({ agreements, canManage, role, onClose }) {
 
         {!rows.length && (
           <div style={{ padding: 20, textAlign: 'center', color: 'var(--muted)', fontSize: 12.5 }}>
-            ยังไม่มีข้อตกลง — กด “＋ เพิ่มข้อ” แล้วพิมพ์ตามใบของแผนก
+            {tr("ยังไม่มีข้อตกลง — กด “＋ เพิ่มข้อ” แล้วพิมพ์ตามใบของแผนก")}
           </div>
         )}
 

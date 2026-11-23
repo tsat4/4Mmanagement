@@ -258,7 +258,7 @@ export default function ParetoAbcChart({
         {rows.length > MAX_BARS + 1 && (
           <span style={{ color: 'var(--muted)' }}>{tr('สัดส่วน A/B/C ข้างบนนับครบทุกรายการ ไม่ใช่เฉพาะแท่งที่เห็น')}</span>
         )}
-        {dims.length > 0 && <span style={{ color: 'var(--accent)', fontWeight: 700 }}>คลิกแท่ง/ชิป = เจาะลึก</span>}
+        {dims.length > 0 && <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{tr("คลิกแท่ง/ชิป = เจาะลึก")}</span>}
       </div>
       {/* เน้นกลุ่ม A — ตัวที่ต้องแก้ก่อน (คลิกเจาะได้) */}
       <div style={{ marginTop: 9, display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>

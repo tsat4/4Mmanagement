@@ -220,8 +220,8 @@ export default function ThailandZoneMap({ zones, groups = [], onPickZone, onPick
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 8, fontSize: 12, color: 'var(--muted)' }}>
         <span><b>{tr('สี:')}</b> <b style={{ color: '#22c55e' }}>●</b> {tr('ตามเป้า')} <b style={{ color: '#f59e0b' }}>●</b> {tr('เฝ้าระวัง')} <b style={{ color: '#ef4444' }}>●</b> {tr('ต้องแก้')}</span>
         <span><b>{tr('ไอคอน:')}</b> {groups.map(g => `${g.icon} ${g.short}`).join(' · ')}</span>
-        <span>★ = บริษัทเรา (ข้อมูลจริง)</span>
-        <span>คลิกหมุด = ดูรายไลน์ · คลิกกรอบโซน = ดูบริษัทในโซน</span>
+        <span>★ = {tr("บริษัทเรา (ข้อมูลจริง")})</span>
+        <span>{tr("คลิกหมุด = ดูรายไลน์ · คลิกกรอบโซน = ดูบริษัทในโซน")}</span>
       </div>
     </div>
     </div>

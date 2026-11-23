@@ -112,7 +112,7 @@ export default function OrgAssignmentsPanel({ nodes = [] }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
         <h3 style={{ margin: 0, fontSize: 15, fontFamily: 'var(--font-display)' }}>{tr('ใครคุมหน่วยไหน · ตำแหน่งจริง / รักษาการ')}</h3>
         <span style={{ fontSize: 11, color: 'var(--muted)' }}>
-          ตอบ “ใครคุมหน่วยไหน” — คนละเรื่องกับ “สังกัดที่ไหน” · คนเดียวคุมได้หลายหน่วย
+          {tr("ตอบ “ใครคุมหน่วยไหน” — คนละเรื่องกับ “สังกัดที่ไหน” · คนเดียวคุมได้หลายหน่วย")}
         </span>
         {canEdit && (
           <button onClick={() => setOpen(v => !v)} style={{ marginLeft: 'auto', padding: '5px 12px',
@@ -129,8 +129,8 @@ export default function OrgAssignmentsPanel({ nodes = [] }) {
       {canSeeOnly && (
         <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 10, padding: '7px 10px',
           background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
-          ดูได้อย่างเดียว — การแต่งตั้งผู้คุมหน่วยงาน (ตามตำแหน่ง/รักษาการ) ต้องมีสิทธิ์ <b>org:manage</b>
-          (สิทธิ์ <b>org:manage_own_unit</b> ที่บัญชีนี้มี ใช้แก้โครงผังในหน่วยของตัวเองได้ แต่ยังแต่งตั้งคนไม่ได้)
+          {tr("ดูได้อย่างเดียว — การแต่งตั้งผู้คุมหน่วยงาน (ตามตำแหน่ง/รักษาการ) ต้องมีสิทธิ์")} <b>org:manage</b>
+          ({tr("สิทธิ์")} <b>org:manage_own_unit</b> {tr("ที่บัญชีนี้มี ใช้แก้โครงผังในหน่วยของตัวเองได้ แต่ยังแต่งตั้งคนไม่ได้")})
         </div>
       )}
 
@@ -149,7 +149,7 @@ export default function OrgAssignmentsPanel({ nodes = [] }) {
           {sum.unconfirmed.length > 0 && chip('rgba(148,163,184,0.25)', 'var(--text2)',
             `❓ ${tr("ยังไม่ยืนยัน")} ${sum.unconfirmed.length}`)}
           <span style={{ color: 'var(--muted)', fontSize: 11 }}>
-            · รักษาการที่ไม่มีวันจบ = สิทธิ์ชั่วคราวที่กลายเป็นถาวรโดยไม่มีใครรู้
+            · {tr("รักษาการที่ไม่มีวันจบ = สิทธิ์ชั่วคราวที่กลายเป็นถาวรโดยไม่มีใครรู้")}
           </span>
         </div>
       )}
@@ -187,7 +187,7 @@ export default function OrgAssignmentsPanel({ nodes = [] }) {
 
       {rows.length === 0 ? (
         <div style={{ fontSize: 12, color: 'var(--muted)', padding: '10px 2px' }}>
-          ยังไม่มีข้อมูล — กด “➕ เพิ่ม” เพื่อระบุว่าใครคุมหน่วยไหน
+          {tr("ยังไม่มีข้อมูล — กด “➕ เพิ่ม” เพื่อระบุว่าใครคุมหน่วยไหน")}
         </div>
       ) : (
         <div style={{ overflowX: 'auto' }}>

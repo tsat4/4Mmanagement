@@ -473,7 +473,7 @@ export default function LineOeeBoard() {
               {!data?.target && !tv && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>{tr('เป้ามาตรฐาน (ยังไม่ตั้ง 🎯 ที่ /oee-analytics)')}</div>}
               {data?.target?.inheritedFrom && !tv && (
                 <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-                  ใช้เป้าของกรุ๊ป <b style={{ color: 'var(--text2)' }}>{data.target.inheritedFrom}</b> (ไลน์นี้ยังไม่ตั้งเป้าของตัวเอง)
+                  {tr("ใช้เป้าของกรุ๊ป")} <b style={{ color: 'var(--text2)' }}>{data.target.inheritedFrom}</b> ({tr("ไลน์นี้ยังไม่ตั้งเป้าของตัวเอง")})
                 </div>
               )}
             </div>
@@ -486,7 +486,7 @@ export default function LineOeeBoard() {
               {C.activeDt.length ? (
                 <>
                   <div style={{ fontSize: tv ? 72 : 'clamp(30px,3vw,40px)', fontWeight: 900, lineHeight: 1.15, color: 'var(--red)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span className="dt-alarm-icon">🔴</span> หยุด
+                    <span className="dt-alarm-icon">🔴</span> {tr("หยุด")}
                   </div>
                   <div style={{ fontSize: T(11.5, 22), color: tv ? 'var(--text2)' : 'var(--muted)', marginTop: 4 }}>
                     {C.activeDt.map(d2 => d2.dr_downtime_types?.name_th || 'ไม่ระบุ').join(' · ')}
@@ -515,12 +515,12 @@ export default function LineOeeBoard() {
                   {C.liveNow?.pOver && (
                     <div style={{ fontSize: T(11, 20), color: 'var(--amber)', fontWeight: 700, marginTop: 4, lineHeight: 1.5 }}>
                       ⚠ %P {tr("คิดได้")} {C.liveNow.pRawPct}% ({tr("ถูกตัดเหลือ 100) — งานที่บันทึกใช้เวลามากกว่าเวลาที่เครื่องมี")}
-                      <span style={{ fontWeight: 400 }}> · เช็คยอดที่ลง / เวลาเปิดใบ / CT ในทะเบียน</span>
+                      <span style={{ fontWeight: 400 }}> · {tr("เช็คยอดที่ลง / เวลาเปิดใบ / CT ในทะเบียน")}</span>
                     </div>
                   )}
                   {C.liveNoDt && (
                     <div style={{ fontSize: T(11, 20), color: 'var(--amber)', marginTop: 4, lineHeight: 1.5 }}>
-                      ⚠ กะนี้ยังไม่มีใครลง Downtime — %A = 100 เพราะ<b>ยังไม่มีข้อมูล</b> ไม่ใช่เครื่องไม่เคยหยุด
+                      ⚠ {tr("กะนี้ยังไม่มีใครลง Downtime — %A = 100 เพราะ")}<b>{tr("ยังไม่มีข้อมูล")}</b> {tr("ไม่ใช่เครื่องไม่เคยหยุด")}
                     </div>
                   )}
                 </>

@@ -176,7 +176,7 @@ export function Fishbone({ records, categoryOf, textOf, labelOf, effect = 'ป�
       {/* ⚠️ ผังนี้ส่วนใหญ่ "เดา" แกนมาจากข้อความ — ต้องบอกสัดส่วนไว้บนจอเสมอ ห้ามทำเป็นว่ารู้แน่ */}
       {fb.guessRate != null && fb.guessRate > 0 && (
         <div style={{ fontSize: 11.5, color: '#f59e0b', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.35)', borderRadius: 'var(--r-md)', padding: '6px 9px', marginBottom: 8, lineHeight: 1.6 }}>
-          ⚠️ <b>{Math.round(fb.guessRate * 100)}{tr('% ของรายการ ระบบเดาแกนให้จากข้อความ')}</b> (ไม่ได้มีคนเลือกหมวดสาเหตุไว้)
+          ⚠️ <b>{Math.round(fb.guessRate * 100)}{tr('% ของรายการ ระบบเดาแกนให้จากข้อความ')}</b> ({tr("ไม่ได้มีคนเลือกหมวดสาเหตุไว้")})
           <div style={{ color: 'var(--text2)' }}>{tr('ให้ช่างเลือก “สาเหตุเกิดจาก” ตอนบันทึกขั้นลงมือซ่อม แล้วผังนี้จะแม่นขึ้นเอง')}</div>
         </div>
       )}
@@ -317,7 +317,7 @@ export function RunChart({ records, keyOf, valOf, keys, unit = 'ครั้ง'
       <div style={{ fontSize: 11.5, color: 'var(--text2)', marginTop: 6 }}>
         {tr("รวม")} <b>{fmt(rc.total, 1)}</b> {unit} {tr('· เฉลี่ยช่วงละ')} <b>{fmt(rc.mean, 1)}</b>
         {/* ช่วงที่ไม่มีเหตุการณ์ = 0 จริง ไม่ใช่ "ไม่มีข้อมูล" — แท่งว่างต้องอยู่บนกราฟ */}
-        <span style={{ color: 'var(--muted)' }}> · ช่วงที่ไม่มีแท่ง = ไม่มีเหตุการณ์จริง (ไม่ใช่ข้อมูลหาย)</span>
+        <span style={{ color: 'var(--muted)' }}> · {tr("ช่วงที่ไม่มีแท่ง = ไม่มีเหตุการณ์จริง (ไม่ใช่ข้อมูลหาย")})</span>
       </div>
     </>
   );

@@ -196,7 +196,7 @@ export default function Transport() {
       {tab === 'assign' && (
         byLine.length === 0 ? (
           <div style={{ ...card, padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
-            ยังไม่มีรอบจัดส่ง — ตั้งค่าที่ 📦 Line Stock → ⏰ รอบจัดส่ง
+            {tr("ยังไม่มีรอบจัดส่ง — ตั้งค่าที่ 📦 Line Stock → ⏰ รอบจัดส่ง")}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -263,7 +263,7 @@ export default function Transport() {
             )}
           </div>
           {carriers.length === 0 ? (
-            <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>ยังไม่มีคนขับ — กด "➕ เพิ่มคนขับ"</div>
+            <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr("ยังไม่มีคนขับ — กด \"➕ เพิ่มคนขับ")}"</div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(min(260px, 100%), 1fr))', gap: 10 }}>
               {carriers.map(c => (
@@ -420,7 +420,7 @@ function RouteTab({ byLine, stopsByRound, stopNodes, nById, nodes, edges, imageU
 
   if (!hasGraph) return (
     <div style={{ ...card, padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
-      ยังไม่มีถนน/จุดจอดบนผัง — วาดก่อนที่ <b style={{ color: 'var(--text2)' }}>{tr('ตั้งค่าผัง/Floorplan → 📦 Store / AMR')}</b>
+      {tr("ยังไม่มีถนน/จุดจอดบนผัง — วาดก่อนที่")} <b style={{ color: 'var(--text2)' }}>{tr('ตั้งค่าผัง/Floorplan → 📦 Store / AMR')}</b>
     </div>
   );
 
@@ -562,7 +562,7 @@ function RouteTab({ byLine, stopsByRound, stopNodes, nById, nodes, edges, imageU
                 </div>
                 {totalMin != null ? (
                   <div style={{ fontSize: 12.5, color: 'var(--text)' }}>
-                    ⏱️ เวลา: <b>{fmtMin(totalMin)}</b>
+                    ⏱️ {tr("เวลา")}: <b>{fmtMin(totalMin)}</b>
                     <span style={{ color: 'var(--muted)' }}> {tr('(วิ่ง')} {fmtMin(moveMin)}{dwellTotal > 0 ? ` + ${tr("แวะ")} ${fmtMin(dwellTotal)}` : ''})</span>
                   </div>
                 ) : <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('⏱️ ตั้งมาตราส่วน + ความเร็ว เพื่อดูเวลา')}</div>}
@@ -600,7 +600,7 @@ function RouteTab({ byLine, stopsByRound, stopNodes, nById, nodes, edges, imageU
         {imageUrl ? (
           <>
           <div style={{ position: 'relative', borderRadius: 'var(--r-lg)', overflow: 'hidden', border: '1px solid var(--border)' }}>
-            <img src={imageUrl} alt="แผนที่เส้นทาง" style={{ display: 'block', width: '100%', height: 'auto' }} />
+            <img src={imageUrl} alt={tr("แผนที่เส้นทาง")} style={{ display: 'block', width: '100%', height: 'auto' }} />
             <div style={{ position: 'absolute', inset: 0, background: 'rgba(6,8,14,0.35)' }} />
             <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
               {/* ถนนทั้งโรงงาน — เห็นครบทุกเส้น เส้นที่ไม่ได้ใช้ = เทาบาง (คำสั่ง user 2026-08-03) */}
@@ -651,22 +651,22 @@ function RouteTab({ byLine, stopsByRound, stopNodes, nById, nodes, edges, imageU
           {/* legend ใต้แผนที่ */}
           <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center', marginTop: 7, fontSize: 11.5, color: 'var(--muted)' }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-              <span style={{ width: 22, height: 3.5, borderRadius: 'var(--r-xs)', background: 'var(--green)', display: 'inline-block' }} /> เส้นทางรอบนี้
+              <span style={{ width: 22, height: 3.5, borderRadius: 'var(--r-xs)', background: 'var(--green)', display: 'inline-block' }} /> {tr("เส้นทางรอบนี้")}
             </span>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-              <span style={{ width: 22, height: 2, borderRadius: 'var(--r-xs)', background: 'var(--muted)', opacity: 0.7, display: 'inline-block' }} /> ถนนทั้งโรงงาน (ไม่ได้ใช้รอบนี้)
+              <span style={{ width: 22, height: 2, borderRadius: 'var(--r-xs)', background: 'var(--muted)', opacity: 0.7, display: 'inline-block' }} /> {tr("ถนนทั้งโรงงาน (ไม่ได้ใช้รอบนี้")})
             </span>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-              <span style={{ width: 13, height: 13, borderRadius: '50%', background: 'var(--blue)', color: '#08130a', fontSize: 11, fontWeight: 900, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>⬆</span> รับของ (load)
+              <span style={{ width: 13, height: 13, borderRadius: '50%', background: 'var(--blue)', color: '#08130a', fontSize: 11, fontWeight: 900, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>⬆</span> {tr("รับของ")} (load)
             </span>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-              <span style={{ width: 13, height: 13, borderRadius: '50%', background: 'var(--green)', color: '#08130a', fontSize: 11, fontWeight: 900, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>⬇</span> ส่งของ (drop)
+              <span style={{ width: 13, height: 13, borderRadius: '50%', background: 'var(--green)', color: '#08130a', fontSize: 11, fontWeight: 900, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>⬇</span> {tr("ส่งของ")} (drop)
             </span>
           </div>
           </>
         ) : (
           <div style={{ ...card, padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
-            ยังไม่มีรูปผัง — อัปโหลดที่ ตั้งค่าผัง/Floorplan → 🗺️ ภาพรวมโรงงาน (คำนวณระยะยังทำได้จากพิกัดจุด)
+            {tr("ยังไม่มีรูปผัง — อัปโหลดที่ ตั้งค่าผัง/Floorplan → 🗺️ ภาพรวมโรงงาน (คำนวณระยะยังทำได้จากพิกัดจุด")})
           </div>
         )}
       </div>

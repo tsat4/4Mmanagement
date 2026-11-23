@@ -365,12 +365,7 @@ export default function NPI() {
         <ReadOnlyNote role={role} what="อนุมัติเอกสารส่งมอบ/PPAP · ปล่อยแบบ · ตัดสิน ECI" permKey="npi:approve" compact />
       )}
       <InfoMore id="npi_help" lead="ต้นน้ำของ ESM: ติดตามพาร์ทรุ่นใหม่ตั้งแต่รับงานจนถึง SOP">
-        เฟสและรายการเอกสารส่งมอบมาจาก <b>{tr('แม่แบบต่อลูกค้า')}</b> (APQP 5 เฟส + PPAP 18 elements · Toyota SPTT0–4) — เพิ่มลูกค้าใหม่ที่แท็บ ⚙️ แม่แบบ ไม่ต้องแก้โค้ด ·
-        พาร์ทจะได้สำเนาเฟส/รายการ ณ วันสร้าง (แม่แบบเปลี่ยนทีหลังไม่ย้อนแก้ — กด 🔄 sync เพื่อเติมรายการที่ขาด) ·
-        ไฟสี: 🟢 อนุมัติ/ตามแผน · 🟡 กำลังทำ/รออนุมัติ/เหลือ ≤7 วัน · 🔴 เลยกำหนด/ตีกลับ/เฟสเลยวันแผน ·
-        ผูกพาร์ทกับชุด PFC/FMEA/CP (`/pe-docs`) และมาตรฐานตรวจ QA (`/qa-setup`) เพื่อให้เอกสารตอน SOP เป็นชุดเดียวกับ mass production ·
-        ECI ปิดได้ต่อเมื่อทุกขาที่ติ๊กว่ากระทบมีของจริงผูก (แบบ rev ใหม่ / คำขอแก้ PE / ใบ 4M / แผน tooling) ·
-        ยังไม่ทำ: supplier portal (เฟส 4) · การแจ้งเตือนอัตโนมัติเมื่อเอกสารเลยกำหนด
+        {tr("เฟสและรายการเอกสารส่งมอบมาจาก")} <b>{tr('แม่แบบต่อลูกค้า')}</b> (APQP 5 {tr("เฟส + PPAP 18 elements · Toyota SPTT0–4) — เพิ่มลูกค้าใหม่ที่แท็บ ⚙️ แม่แบบ ไม่ต้องแก้โค้ด · พาร์ทจะได้สำเนาเฟส/รายการ ณ วันสร้าง (แม่แบบเปลี่ยนทีหลังไม่ย้อนแก้ — กด 🔄 sync เพื่อเติมรายการที่ขาด) · ไฟสี: 🟢 อนุมัติ/ตามแผน · 🟡 กำลังทำ/รออนุมัติ/เหลือ ≤7 วัน · 🔴 เลยกำหนด/ตีกลับ/เฟสเลยวันแผน · ผูกพาร์ทกับชุด PFC/FMEA/CP (`/pe-docs`) และมาตรฐานตรวจ QA (`/qa-setup`) เพื่อให้เอกสารตอน SOP เป็นชุดเดียวกับ mass production · ECI ปิดได้ต่อเมื่อทุกขาที่ติ๊กว่ากระทบมีของจริงผูก (แบบ rev ใหม่ / คำขอแก้ PE / ใบ 4M / แผน tooling) · ยังไม่ทำ: supplier portal (เฟส 4) · การแจ้งเตือนอัตโนมัติเมื่อเอกสารเลยกำหนด")}
       </InfoMore>
 
       {loading ? <div style={{ color: 'var(--muted)', padding: 30 }}>{tr('กำลังโหลด…')}</div> : (
@@ -633,7 +628,7 @@ function Board({ projects, rollByProject, templates, project, tplPhases, parts, 
 
           <div style={{ ...card }}>
             <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 8 }}>{tr('พาร์ท × เฟส —')} {project.name}</div>
-            {!parts.length ? <div style={{ color: 'var(--muted)', fontSize: 12.5 }}>ยังไม่มีพาร์ท — เพิ่มที่แท็บ 📦 พาร์ท & PPAP</div>
+            {!parts.length ? <div style={{ color: 'var(--muted)', fontSize: 12.5 }}>{tr("ยังไม่มีพาร์ท — เพิ่มที่แท็บ 📦 พาร์ท")} & PPAP</div>
               : !tplPhases.length ? <div style={{ color: 'var(--amber)', fontSize: 12.5, fontWeight: 700 }}>{tr('แม่แบบของโปรเจคนี้ยังไม่มีเฟส — ตั้งที่แท็บ ⚙️ แม่แบบ')}</div> : (
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -680,7 +675,7 @@ function Board({ projects, rollByProject, templates, project, tplPhases, parts, 
               </div>
             )}
             <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8 }}>
-              🟢 อนุมัติครบ/ตามแผน · 🟡 กำลังทำ/รออนุมัติ/เหลือ ≤7 วัน · 🔴 เลยกำหนด/ตีกลับ/เฟสเลยวันแผน · คลิกช่องเพื่อเปิดพาร์ท
+              🟢 {tr("อนุมัติครบ/ตามแผน · 🟡 กำลังทำ/รออนุมัติ/เหลือ ≤7 วัน · 🔴 เลยกำหนด/ตีกลับ/เฟสเลยวันแผน · คลิกช่องเพื่อเปิดพาร์ท")}
             </div>
           </div>
         </>

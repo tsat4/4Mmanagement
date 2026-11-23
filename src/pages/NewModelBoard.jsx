@@ -227,7 +227,7 @@ function NpiLinkCard({ proj, isMobile }) {
     return (
       <div className="nmb-card" data-eva="R" style={{ ...CARD, marginBottom: 12, padding: '12px 13px 12px 17px', borderRadius: 'var(--r-md)',
         '--nmb-color': 'var(--red)', fontSize: 12.5 }}>
-        <b>{tr('อ่านข้อมูล NPI ไม่สำเร็จ')}</b> — ตัวเลขฝั่ง NPI จึงยังไม่แสดง (ไม่ได้แปลว่ารุ่นนี้ยังไม่ผูก)
+        <b>{tr('อ่านข้อมูล NPI ไม่สำเร็จ')}</b> — {tr("ตัวเลขฝั่ง NPI จึงยังไม่แสดง (ไม่ได้แปลว่ารุ่นนี้ยังไม่ผูก")})
         <div style={{ color: 'var(--muted)', fontSize: 11.5, marginTop: 3 }}>{error}</div>
       </div>
     );
@@ -235,7 +235,7 @@ function NpiLinkCard({ proj, isMobile }) {
   if (!sum) {
     return (
       <div className="nmb-card" data-eva="none" style={{ ...CARD, marginBottom: 12, padding: '12px 13px 12px 17px', borderRadius: 'var(--r-md)', fontSize: 12.5, lineHeight: 1.6 }}>
-        🔗 <b>{tr('รุ่นนี้ยังไม่ผูกกับโปรเจค NPI')}</b> — บอร์ดจึงแสดงได้แค่สิ่งที่ถอดจากบอร์ดกระดาษ
+        🔗 <b>{tr('รุ่นนี้ยังไม่ผูกกับโปรเจค NPI')}</b> — {tr("บอร์ดจึงแสดงได้แค่สิ่งที่ถอดจากบอร์ดกระดาษ")}
         <div style={{ color: 'var(--text2)', marginTop: 4 }}>
           {tr("ผูกที่")} <a href="/npi" style={{ color: 'var(--accent)' }}>{tr('พาร์ทใหม่ APQP / PPAP')}</a> {tr('→ เลือกโปรเจค →')} <b>{tr('✏️ โปรเจค')}</b> → {tr("ช่อง")}
           <b> {tr('“🧭 รุ่นบนบอร์ด New Model”')}</b> {tr('→ เลือก')} <b>{proj.title}</b>
@@ -255,11 +255,11 @@ function NpiLinkCard({ proj, isMobile }) {
         <b style={{ fontSize: 13 }}>{sum.code || tr('(ไม่มีรหัสโปรเจค)')}</b>
         <span style={{ fontSize: 12, color: 'var(--text2)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sum.name}</span>
         <a href={`/npi?project=${encodeURIComponent(sum.projectId)}`} style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--accent)', whiteSpace: 'nowrap' }}>
-          เปิดใน /npi →
+          {tr("เปิดใน")} /npi →
         </a>
       </div>
       <div style={st}>
-        <NpiStat label={tr('พาร์ท')} value={sum.parts} suffix="ตัว" />
+        <NpiStat label={tr('พาร์ท')} value={sum.parts} suffix={tr("ตัว")} />
         <NpiStat label={tr('PPAP ผ่าน')} value={sum.ppapApproved} suffix={sum.parts != null ? `/ ${sum.parts}` : ''} />
         <NpiStat label={tr('เอกสารครบ')} value={sum.docPct} suffix="%" />
         <NpiStat label={tr('ECI ยังไม่จบ')} value={sum.eciOpen} suffix={sum.eciTotal != null ? `/ ${sum.eciTotal}` : ''}
@@ -523,7 +523,7 @@ function BucketBar({ proj, leaves, go, isMobile }) {
             <span style={{ fontSize: 13, fontWeight: 700 }}>{tr('ยังไม่ประเมิน')}</span>
           </div>
           <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.4 }}>
-            ยังไม่ถึงด่าน หรือยังไม่มีใครตั้งสี — <b>{tr('ไม่ใช่ผ่าน')}</b>
+            {tr("ยังไม่ถึงด่าน หรือยังไม่มีใครตั้งสี")} — <b>{tr('ไม่ใช่ผ่าน')}</b>
           </div>
         </div>
       </div>
@@ -543,7 +543,7 @@ function PopTable({ proj, go }) {
     return (
       <div style={{ marginBottom: 14 }}>
         <SectionHead n="②" title="POP STATUS" />
-        <Empty text="รุ่นนี้ยังไม่ได้ผูกใบ POP เข้าระบบ" />
+        <Empty text={tr("รุ่นนี้ยังไม่ได้ผูกใบ POP เข้าระบบ")} />
       </div>
     );
   }
@@ -744,10 +744,10 @@ function LevelBucket({ proj, bucket, go }) {
       <div style={{ ...CARD, marginBottom: 12, borderLeft: `3px solid ${evaMeta(b?.eva).color}`, fontSize: 12.5, lineHeight: 1.55 }}>
         <b>{tr(b?.label)}</b> — {tr(b?.hint)}
         <div style={{ color: 'var(--muted)', fontSize: 11.5, marginTop: 3 }}>
-          ข้ามจากหัวบอร์ดมาที่นี่โดยไม่ต้องไล่ทีละชั้น (ทางลัดที่ IEC ขอไว้ใน work flow)
+          {tr("ข้ามจากหัวบอร์ดมาที่นี่โดยไม่ต้องไล่ทีละชั้น (ทางลัดที่ IEC ขอไว้ใน")} work flow)
         </div>
       </div>
-      {!leaves.length ? <Empty text="ไม่มีหัวข้อในถังนี้" /> : (
+      {!leaves.length ? <Empty text={tr("ไม่มีหัวข้อในถังนี้")} /> : (
         <div style={CARD}>
           <Scroller>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 520 }}>
@@ -791,7 +791,7 @@ function LevelPop({ proj, main, go }) {
           <b style={{ fontSize: 14 }}>{main.no}. {tr(main.label)}</b>
         </div>
         <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 5, lineHeight: 1.5 }}>
-          ไฟของหัวข้อใหญ่ = <b>{tr('แย่สุดของหัวข้อย่อยชนะ')}</b> — IEC เขียนไว้ว่า
+          {tr("ไฟของหัวข้อใหญ่")} = <b>{tr('แย่สุดของหัวข้อย่อยชนะ')}</b> — IEC เขียนไว้ว่า
           &ldquo;ถ้ามี 1 ตัวเป็นสีแดง ต้องโชว์แดงเลย&rdquo;
         </div>
         <RuleNote ruleKey="pop" />
@@ -865,7 +865,7 @@ function LevelPopSub({ proj, main, sub, go }) {
         </div>
         <RuleNote ruleKey="doc" />
       </div>
-      {!topics.length ? <Empty text="ยังไม่มีรายการหัวข้อของเอกสารชุดนี้" /> : (
+      {!topics.length ? <Empty text={tr("ยังไม่มีรายการหัวข้อของเอกสารชุดนี้")} /> : (
         <div style={CARD}>
           <Scroller>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 500 }}>
@@ -956,7 +956,7 @@ function PanelMatrix({ p }) {
         </tbody>
       </table>
       <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 8 }}>
-        ⚪ = ยังไม่ถึงด่าน (ไม่ใช่ไม่ผ่าน) — บนบอร์ดกระดาษคือบล็อกที่ยังเว้นว่างไว้
+        ⚪ = {tr("ยังไม่ถึงด่าน (ไม่ใช่ไม่ผ่าน) — บนบอร์ดกระดาษคือบล็อกที่ยังเว้นว่างไว้")}
       </div>
     </Scroller>
   );
@@ -1108,7 +1108,7 @@ function LevelPanel({ proj, panel }) {
       )}
       {panel.key === 'pop' && (
         <div style={{ ...CARD, marginTop: 12 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>ชุดเอกสารที่ลูกค้าบังคับต่อด่าน (TMA SPTT Document · ตัวเลข = จำนวนหน้า)</div>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>{tr("ชุดเอกสารที่ลูกค้าบังคับต่อด่าน (TMA SPTT Document · ตัวเลข = จำนวนหน้า")})</div>
           <Scroller>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 660 }}>
               <thead><tr>{['#', 'เอกสาร', 'CV 1st', 'CV 2nd', '1A (LVPT)', 'MPT (HVPT)', 'QCS', 'SOP'].map(c => <th key={c} style={th}>{tr(c)}</th>)}</tr></thead>
@@ -1327,7 +1327,7 @@ function TvView({ projects, index, onIndex, onExit, openPanelKey, onPick, onClos
                   ) : hot ? (
                     /* กฎ IEC ข้อ 2: แดงต้องมีข้อความ — ยังไม่เขียน = ฟ้องบนจอ ห้ามย่อการ์ดให้เนียน */
                     <div style={{ fontSize: F.noteHot, color: '#fca5a5', lineHeight: 1.32 }}>
-                      ⚠️ แดงแต่ยังไม่เขียนว่าเกิดอะไร / จะแก้ยังไง
+                      ⚠️ {tr("แดงแต่ยังไม่เขียนว่าเกิดอะไร / จะแก้ยังไง")}
                     </div>
                   ) : null}
                   {/* ใบเล็กที่มีตัวเลขแล้ว ยุบบรรทัดนี้ไปรวมกับแถวที่มา (ประหยัด 1 บรรทัด ไม่ให้ล้นการ์ด) */}
@@ -1498,7 +1498,7 @@ export default function NewModelBoard() {
           <button type="button" className="pg-btn" onClick={() => { setTvIndex(Math.max(0, data.projects.findIndex(p => p.id === proj.id))); go({ cust: cust.code, proj: proj.id, tv: '1' }); }}
             style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', color: 'var(--text)',
               borderRadius: 8, padding: '7px 13px', cursor: 'pointer', fontSize: 12.5 }}>
-            📺 เปิดโหมดจอ TV (70 นิ้ว)
+            📺 {tr("เปิดโหมดจอ TV (70 นิ้ว")})
           </button>
         ) : null} />
       <Trail items={trail} />

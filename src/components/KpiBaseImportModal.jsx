@@ -161,10 +161,10 @@ export default function KpiBaseImportModal({ year, unitLabel, unitSk, base, canP
         {wb && magWarn && <div style={{ marginTop: 6, fontSize: 12.5, color: '#f59e0b' }}>{magWarn}</div>}
         {wb && zeroWarn && <div style={{ marginTop: 6, fontSize: 12.5, color: '#ef4444', fontWeight: 700 }}>{zeroWarn} <button type="button" onClick={() => setMaxMonth(closedM)} style={{ ...inp, cursor: 'pointer', marginLeft: 6 }}>{tr('ตั้งเป็น')} {MONTH_TH[closedM - 1]}</button></div>}
         {wb && grid && sheetKind(grid, sheet) === 'inventory' && (
-          <div style={{ marginTop: 6, fontSize: 12, color: 'var(--muted)' }}>ℹ️ ชีทสต็อก — จับให้เฉพาะ "มูลค่าสินค้าคงคลัง" (แถว Inventory Balance All) · COGS/RM/ยอดขายในชีทนี้เป็นคนละฐานกับ PL Summary จึงไม่จับอัตโนมัติ (เลือกเองได้ถ้าบัญชียืนยัน)</div>
+          <div style={{ marginTop: 6, fontSize: 12, color: 'var(--muted)' }}>ℹ️ {tr("ชีทสต็อก — จับให้เฉพาะ \"มูลค่าสินค้าคงคลัง\" (แถว Inventory Balance All) · COGS/RM/ยอดขายในชีทนี้เป็นคนละฐานกับ PL Summary จึงไม่จับอัตโนมัติ (เลือกเองได้ถ้าบัญชียืนยัน")})</div>
         )}
         {wb && !Object.keys(monthInfo?.cols || {}).length && (
-          <div style={{ marginTop: 8, fontSize: 12.5, color: '#f59e0b' }}>⚠ ยังหาแถวหัวเดือนไม่เจอ (ต้องมีช่อง Jan/Feb… หรือ ม.ค./ก.พ.… หรือเลข 1–12 อย่างน้อย 6 ช่อง) — เลือกแถวเองจากช่อง "แถวหัวเดือน"</div>
+          <div style={{ marginTop: 8, fontSize: 12.5, color: '#f59e0b' }}>⚠ {tr("ยังหาแถวหัวเดือนไม่เจอ (ต้องมีช่อง Jan/Feb… หรือ ม.ค./ก.พ.… หรือเลข 1–12 อย่างน้อย 6 ช่อง) — เลือกแถวเองจากช่อง \"แถวหัวเดือน")}"</div>
         )}
         {grid && (
           <div style={{ overflowX: 'auto', marginTop: 10 }}>

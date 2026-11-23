@@ -207,7 +207,7 @@ export default function PurchaseBulkModal({ group, next, nextLabel, fullName, wo
 
         {slips && !err && (slips.length === 0 ? (
           <div style={{ ...box, fontSize: 12.5, color: 'var(--muted)' }}>
-            ไม่มีใบที่สถานะนี้แล้ว — อาจถูกเลื่อน/ยกเลิกไปก่อนหน้า
+            {tr("ไม่มีใบที่สถานะนี้แล้ว — อาจถูกเลื่อน/ยกเลิกไปก่อนหน้า")}
           </div>
         ) : (<>
           <div style={{ ...box, marginBottom: 10 }}>
@@ -255,8 +255,7 @@ export default function PurchaseBulkModal({ group, next, nextLabel, fullName, wo
           {noDest && next === 'received' && (
             <div style={{ ...box, borderColor: 'rgba(245,158,11,0.4)', background: 'rgba(245,158,11,0.07)',
               fontSize: 12, color: 'var(--text2)', marginBottom: 10 }}>
-              ⚠️ <b style={{ color: '#f59e0b' }}>{fmt(noDest.slips)} {tr('ใบ ไม่ได้ระบุปลายทางสโตร์')}</b> — ใบจะถูกเลื่อนเป็นรับเข้า
-              แต่ <b>{tr('สต็อกส่วนนั้น (')}{fmt(noDest.qty)} {tr("ชิ้น) จะไม่ถูกเติม")}</b> ต้องไปบันทึกรับเข้าเองที่ 📦 Line Stock
+              ⚠️ <b style={{ color: '#f59e0b' }}>{fmt(noDest.slips)} {tr('ใบ ไม่ได้ระบุปลายทางสโตร์')}</b> — {tr("ใบจะถูกเลื่อนเป็นรับเข้า แต่")} <b>{tr('สต็อกส่วนนั้น (')}{fmt(noDest.qty)} {tr("ชิ้น) จะไม่ถูกเติม")}</b> {tr("ต้องไปบันทึกรับเข้าเองที่")} 📦 Line Stock
             </div>
           )}
 

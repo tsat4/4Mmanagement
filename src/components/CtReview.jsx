@@ -194,7 +194,7 @@ export default function CtReview({ lines = [] }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{ ...card, borderColor: 'var(--accent)' }}>
         <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--accent)', marginBottom: 4 }}>
-          ⏱ ทบทวน Cycle Time — ระบบเสนอ วิศวกรตัดสิน
+          ⏱ {tr("ทบทวน Cycle Time — ระบบเสนอ วิศวกรตัดสิน")}
         </div>
         <div style={{ fontSize: 11.5, color: 'var(--text2)', lineHeight: 1.6 }}>
           {tr("เทียบ")} <b>{tr('CT มาตรฐาน')}</b> {tr('(ที่ใช้คิด %P) กับ')} <b>{tr('CT ที่สังเกตได้จริง')}</b> {tr('จากใบผลิตย้อนหลัง')} {DAYS_BACK} {tr("วัน")} ·

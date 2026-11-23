@@ -126,7 +126,7 @@ export default function MachineFactsPanel({ src, canManage, callAdmin }) {
       <div style={card}>
         <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{tr('① รหัสเครื่องของต้นทาง ↔ เครื่องในทะเบียน ESM')}</div>
         <div style={{ fontSize: 12, color: 'var(--muted)', margin: '4px 0 8px' }}>
-          ผูกแล้วข้อมูลย้อนหลังตามเอง (เก็บรหัสต้นทางไว้ ไม่ต้องย้ายข้อมูล) · ระบบเสนอเฉพาะเลขที่ตรงกับทะเบียนตัวเดียว — กดยืนยันเอง
+          {tr("ผูกแล้วข้อมูลย้อนหลังตามเอง (เก็บรหัสต้นทางไว้ ไม่ต้องย้ายข้อมูล) · ระบบเสนอเฉพาะเลขที่ตรงกับทะเบียนตัวเดียว — กดยืนยันเอง")}
         </div>
         {!tags.length ? <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{tr('ยังไม่เห็นรหัสเครื่องจากต้นทางนี้')}</div> : (
           <div style={{ overflowX: 'auto' }}>
@@ -181,7 +181,7 @@ export default function MachineFactsPanel({ src, canManage, callAdmin }) {
       <div style={card}>
         <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{tr('② เหตุผลหยุดของต้นทาง ↔ ประเภท downtime ของ ESM')}</div>
         <div style={{ fontSize: 12, color: 'var(--muted)', margin: '4px 0 8px' }}>
-          เลือกเองทีละรายการ · ระบบเสนอเฉพาะชื่อที่ตรงเป๊ะ · ไม่มีตัวตรงก็กด "ไม่มีใน ESM" ได้ (บันทึกว่าตรวจแล้ว) · ตอนนี้ใช้แสดงชื่อเท่านั้น ยังไม่สร้างใบ downtime
+          {tr("เลือกเองทีละรายการ · ระบบเสนอเฉพาะชื่อที่ตรงเป๊ะ · ไม่มีตัวตรงก็กด \"ไม่มีใน ESM\" ได้ (บันทึกว่าตรวจแล้ว) · ตอนนี้ใช้แสดงชื่อเท่านั้น ยังไม่สร้างใบ")} downtime
         </div>
         {reasons.noReason.count > 0 && (
           <NoticeBar tone="info" style={{ marginBottom: 8 }}>
@@ -212,11 +212,11 @@ export default function MachineFactsPanel({ src, canManage, callAdmin }) {
                         {r.map?.is_break ? (
                           /* 🍱 เวลาพัก — ESM ใช้นโยบายพัก (โควตานาที) · กดพักเกินนโยบาย = เสีย A (16/11 · ทาง A) */
                           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                            <b style={{ color: 'var(--blue)' }}>🍱 เวลาพัก — ESM คิดจากนโยบายพักเอง</b>
-                            <span style={{ fontSize: 12, color: 'var(--muted)' }}>กดพักเกินโควตานโยบาย = เสีย A (พักเกินเวลา)</span>
+                            <b style={{ color: 'var(--blue)' }}>🍱 {tr("เวลาพัก — ESM คิดจากนโยบายพักเอง")}</b>
+                            <span style={{ fontSize: 12, color: 'var(--muted)' }}>{tr("กดพักเกินโควตานโยบาย = เสีย A (พักเกินเวลา")})</span>
                             {canManage && (
                               <button type="button" className="pg-btn" disabled={!!busy}
-                                onClick={() => save(k, 'map_reason', { ...base, clear: true }, `${tr("ล้างป้ายเวลาพัก")} ${r.code}`)}>ล้าง</button>
+                                onClick={() => save(k, 'map_reason', { ...base, clear: true }, `${tr("ล้างป้ายเวลาพัก")} ${r.code}`)}>{tr("ล้าง")}</button>
                             )}
                           </div>
                         ) : canManage ? (
@@ -234,8 +234,8 @@ export default function MachineFactsPanel({ src, canManage, callAdmin }) {
                               )}
                               {r.kind === 'onplan' && (
                                 <button type="button" className="pg-btn" disabled={!!busy}
-                                  title="ใช้กับเหตุผลที่เป็นการกดพักหน้าเครื่อง — ESM คิดเวลาพักจากนโยบายเอง ส่วนที่เกินนโยบายนับเป็นเสีย"
-                                  onClick={() => save(k, 'map_reason', { ...base, downtime_type_id: null, is_break: true }, `${tr("ติดป้ายเวลาพัก")} ${r.code}`)}>🍱 เวลาพัก (ESM คิดเอง)</button>
+                                  title={tr("ใช้กับเหตุผลที่เป็นการกดพักหน้าเครื่อง — ESM คิดเวลาพักจากนโยบายเอง ส่วนที่เกินนโยบายนับเป็นเสีย")}
+                                  onClick={() => save(k, 'map_reason', { ...base, downtime_type_id: null, is_break: true }, `${tr("ติดป้ายเวลาพัก")} ${r.code}`)}>🍱 {tr("เวลาพัก (ESM คิดเอง")})</button>
                               )}
                               {!(r.map && !cur) && (
                                 <button type="button" className="pg-btn" disabled={!!busy}
@@ -266,8 +266,7 @@ export default function MachineFactsPanel({ src, canManage, callAdmin }) {
       <div style={card}>
         <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{tr('③ เทียบกับ Daily Report (รายไลน์ × กะ)')}</div>
         <div style={{ fontSize: 12, color: 'var(--muted)', margin: '4px 0 8px' }}>
-          ชิ้นแสดงรายเครื่อง ไม่รวมเป็นยอดไลน์ (ชิ้นเดียวอาจผ่านหลายเครื่อง) · นาที = เวลาหยุดที่เครื่องบันทึก แบ่งตามกะ ESM (เช้า 08–20 · ดึก 20–08)
-          · "–" = ไม่มีข้อมูล ไม่ใช่ 0
+          {tr("ชิ้นแสดงรายเครื่อง ไม่รวมเป็นยอดไลน์ (ชิ้นเดียวอาจผ่านหลายเครื่อง) · นาที = เวลาหยุดที่เครื่องบันทึก แบ่งตามกะ ESM (เช้า 08–20 · ดึก 20–08) · \"–\" = ไม่มีข้อมูล ไม่ใช่")} 0
         </div>
         {unmappedTags.length > 0 && (
           <NoticeBar tone="warn" style={{ marginBottom: 8 }}>

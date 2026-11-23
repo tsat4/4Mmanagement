@@ -126,8 +126,8 @@ export default function MtnOutsourcePanel({ order, parts = [], fullName = '', ca
         {canEdit && <button onClick={() => setAdding(v => !v)} style={{ ...btnGhost, marginLeft: 'auto' }}>{adding ? tr('ปิดฟอร์ม') : tr('+ ส่งของไปซ่อม')}</button>}
       </div>
       <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.6, marginBottom: 6 }}>
-        ใส่อะไหล่สำรองเข้าเครื่องแล้วเครื่องเดินได้ = <b>{tr('ปิดใบ MO ได้เลย ไม่ต้องรอของ')}</b> ·
-        ตัวที่ถอดออกมาส่งซ่อมแล้วบันทึกไว้ตรงนี้ · <b>กดรับของเข้า = เข้าสต็อกอะไหล่ให้อัตโนมัติ</b>
+        {tr("ใส่อะไหล่สำรองเข้าเครื่องแล้วเครื่องเดินได้")} = <b>{tr('ปิดใบ MO ได้เลย ไม่ต้องรอของ')}</b> ·
+        {tr("ตัวที่ถอดออกมาส่งซ่อมแล้วบันทึกไว้ตรงนี้")} · <b>{tr("กดรับของเข้า = เข้าสต็อกอะไหล่ให้อัตโนมัติ")}</b>
       </div>
       {err && <div style={{ fontSize: 11, color: 'var(--red)', marginBottom: 6 }}>{tr('⚠ โหลดรายการส่งซ่อมนอกไม่สำเร็จ:')} {err} {tr('— ตัวนับข้างบนอาจไม่ครบ')}</div>}
 
@@ -230,7 +230,7 @@ function AddForm({ parts, fullName, orderId, onCancel, onDone }) {
   return (
     <div style={{ padding: '8px 10px', borderRadius: 8, background: 'var(--card-surf)', border: '1px solid var(--border)', marginBottom: 7 }}>
       <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 3 }}>
-        อะไหล่ในทะเบียน (เลือก = รับกลับแล้วเข้าสต็อกให้เอง · พิมพ์เอง = ของนอกทะเบียน ไม่เข้าสต็อก)
+        {tr("อะไหล่ในทะเบียน (เลือก = รับกลับแล้วเข้าสต็อกให้เอง · พิมพ์เอง = ของนอกทะเบียน ไม่เข้าสต็อก")})
       </div>
       <SearchSelect value={f.part_id} text={f.part_name} options={partOpts} allowFree freeHint="ไม่เข้าสต็อก"
         placeholder={tr('ค้นอะไหล่ — ชื่อ / รหัส / ชั้นวาง หรือพิมพ์เอง')}

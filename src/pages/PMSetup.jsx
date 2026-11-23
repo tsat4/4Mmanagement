@@ -1047,7 +1047,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
             return (
               <div style={{ padding: '10px 12px', background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)' }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text2)', marginBottom: 6 }}>
-                  รายการตรวจของเครื่องนี้ (แยกตามแผนก)
+                  {tr("รายการตรวจของเครื่องนี้ (แยกตามแผนก")})
                 </div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   {deptSummary.length === 0
@@ -1055,12 +1055,12 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
                     : deptSummary.sort((a, b) => b.checkpointCount - a.checkpointCount).map(chip)}
                   {deptSummary.length > 0 && !cur && (
                     <span style={{ fontSize: 11.5, color: 'var(--muted)', alignSelf: 'center' }}>
-                      · <b style={{ color: deptColor }}>{deptLabel}</b> ยังไม่มี (ลงจุดตรวจด้านล่างแล้วบันทึกเพื่อสร้าง)
+                      · <b style={{ color: deptColor }}>{deptLabel}</b> {tr("ยังไม่มี (ลงจุดตรวจด้านล่างแล้วบันทึกเพื่อสร้าง")})
                     </span>
                   )}
                 </div>
                 <p style={{ fontSize: 11, color: 'var(--muted)', margin: '7px 0 0', lineHeight: 1.6 }}>
-                  1 เครื่องมีรายการตรวจได้หลายแผนก (ผลิตเช็ครายวัน · ช่างเช็คตามรอบ) — เครื่องจะโผล่ในแท็บของแผนกที่มีรายการตรวจ
+                  1 {tr("เครื่องมีรายการตรวจได้หลายแผนก (ผลิตเช็ครายวัน · ช่างเช็คตามรอบ) — เครื่องจะโผล่ในแท็บของแผนกที่มีรายการตรวจ")}
                 </p>
 
                 {/* 🧰 ปุ่มเปิดเครื่องมือ — พับไว้เป็นค่าเริ่มต้น (14/10) · บอก "ทิศ" ในป้ายเสมอ: ของเครื่องนี้ → ไปที่อื่น */}
@@ -1188,8 +1188,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
                             : <>{tr('ไม่พบ “')}{copyQ.trim()}{tr('” ทั้งใน')}<b>{tr('ทะเบียนอุปกรณ์ PM')}</b>{tr('และ')}<b>{tr('ทะเบียนเครื่องจักร')}</b> {tr('— ตรวจว่าพิมพ์เลขเครื่องถูกไหม')}</>}</span>}
                       </div>
                       <p style={{ fontSize: 11, color: 'var(--muted)', margin: '5px 0 0', lineHeight: 1.6 }}>
-                        เครื่องที่<b>{tr('มีจุดตรวจอยู่แล้วจะถูกข้าม ไม่ทับของเดิม')}</b> (ทับ = ประวัติผลตรวจของเครื่องนั้นหายถาวร)
-                        · คัดลอกเฉพาะ<b>{tr('นิยามจุดตรวจ')}</b> รอบเวลา/วันครบกำหนดของแต่ละเครื่องตั้งแยกกันเหมือนเดิม
+                        {tr("เครื่องที่")}<b>{tr('มีจุดตรวจอยู่แล้วจะถูกข้าม ไม่ทับของเดิม')}</b> ({tr("ทับ = ประวัติผลตรวจของเครื่องนั้นหายถาวร) · คัดลอกเฉพาะ")}<b>{tr('นิยามจุดตรวจ')}</b> {tr("รอบเวลา/วันครบกำหนดของแต่ละเครื่องตั้งแยกกันเหมือนเดิม")}
                       </p>
                       {/* 🔴 ผลรายเครื่อง — ห้ามสรุปเป็น "สำเร็จ" ก้อนเดียว */}
                       {copyReport && (() => {
@@ -1211,7 +1210,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
                 })()}
                 {others.length > 0 && (
                   <p style={{ fontSize: 11, color: 'var(--muted)', margin: '6px 0 0' }}>
-                    จุดตรวจของแผนกอื่นแก้ที่แท็บแผนกนั้น (สลับแท็บด้านบนของหน้า)
+                    {tr("จุดตรวจของแผนกอื่นแก้ที่แท็บแผนกนั้น (สลับแท็บด้านบนของหน้า")})
                   </p>
                 )}
               </div>
@@ -1407,7 +1406,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
             </div>
             {(planType === 'time' || planType === 'hybrid') && (
               <div style={{ marginTop: 8, fontSize: 11, color: 'var(--muted)' }}>
-                🗓️ <b>{tr('ตามเวลา')}</b> = ใช้ “รอบ PM” ด้านบน (ตอนนี้: <b style={{ color: 'var(--accent)' }}>{cycleLabel(null, Number(cycleDays) || null)}</b>) → ครบกำหนด = วันตรวจล่าสุด + รอบนั้น
+                🗓️ <b>{tr('ตามเวลา')}</b> = {tr("ใช้ “รอบ PM” ด้านบน (ตอนนี้")}: <b style={{ color: 'var(--accent)' }}>{cycleLabel(null, Number(cycleDays) || null)}</b>) → {tr("ครบกำหนด = วันตรวจล่าสุด + รอบนั้น")}
               </div>
             )}
             {(planType === 'usage' || planType === 'hybrid') && (
@@ -1424,7 +1423,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
                     placeholder={`— ${tr("ใช้ไลน์ของอุปกรณ์")}${lineName ? ` (${lineName})` : ''} —`} style={{ width: '100%' }} />
                 </div>
                 <div style={{ gridColumn: '1 / -1', fontSize: 11, color: 'var(--muted)' }}>
-                  ระบบนับ prod_orders.qty ของไลน์นี้ตั้งแต่ PM ครั้งก่อน เทียบ threshold → คำนวณวันครบ + health score · เลือกไลน์จากฐานข้อมูลไลน์ผลิต (เว้นว่าง = ใช้ไลน์ของอุปกรณ์)
+                  {tr("ระบบนับ prod_orders.qty ของไลน์นี้ตั้งแต่ PM ครั้งก่อน เทียบ threshold → คำนวณวันครบ + health score · เลือกไลน์จากฐานข้อมูลไลน์ผลิต (เว้นว่าง = ใช้ไลน์ของอุปกรณ์")})
                 </div>
               </div>
             )}
@@ -1564,7 +1563,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
                     {frameFilter != null && !anyNamed && un.length === 0 && (
                       <div style={{ textAlign: 'center', padding: '18px 12px', fontSize: 12, color: 'var(--muted)',
                                     border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)' }}>
-                        มุมนี้ยังไม่มีจุดตรวจ — กด <b>{tr('+ เพิ่มจุดตรวจ')}</b> แล้วกด 🔘 วางตำแหน่ง เพื่อปักหมุดบนรูปมุมนี้
+                        {tr("มุมนี้ยังไม่มีจุดตรวจ — กด")} <b>{tr('+ เพิ่มจุดตรวจ')}</b> {tr("แล้วกด 🔘 วางตำแหน่ง เพื่อปักหมุดบนรูปมุมนี้")}
                         <div style={{ marginTop: 8 }}>
                           <button type="button" onClick={() => setFrameFilter(null)}
                             style={{ padding: '4px 12px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontSize: 11.5, fontWeight: 700,
@@ -1898,7 +1897,7 @@ export default function PMSetup() {
       )}
       {droppedNoLine > 0 && fStatus !== 'no_line' && (
         <div style={{ marginBottom: 10, fontSize: 12, color: 'var(--muted)' }}>
-          ℹ️ มีอีก <b>{droppedNoLine}</b> อุปกรณ์ที่ตรงคำค้น/สถานะ แต่ช่องไลน์ว่างหรือชื่อไม่ตรงทะเบียน จึงไม่อยู่ในผลกรองไลน์ —
+          ℹ️ {tr("มีอีก")} <b>{droppedNoLine}</b> {tr("อุปกรณ์ที่ตรงคำค้น/สถานะ แต่ช่องไลน์ว่างหรือชื่อไม่ตรงทะเบียน จึงไม่อยู่ในผลกรองไลน์")} —
           <button type="button" onClick={() => setFStatus('no_line')} style={{ ...S.jumpBtn, marginLeft: 6 }}>{tr('ดูรายการนี้')}</button>
         </div>
       )}
@@ -1911,7 +1910,7 @@ export default function PMSetup() {
         <div style={S.empty}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>🔩</div>
           <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>{tr('ยังไม่มีอุปกรณ์')}</p>
-          <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 20 }}>กดปุ่ม "เพิ่มอุปกรณ์" เพื่อเริ่มต้น</p>
+          <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 20 }}>{tr("กดปุ่ม \"เพิ่มอุปกรณ์\" เพื่อเริ่มต้น")}</p>
           {canSetup && <button onClick={openCreate} style={S.primaryBtn}>{tr('+ เพิ่มอุปกรณ์')}</button>}
         </div>
       ) : (

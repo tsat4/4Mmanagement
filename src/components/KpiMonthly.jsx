@@ -220,7 +220,7 @@ function ChartModal({ c, curIdx, onClose }) {
               {extra.map((s, k) => (
                 <span key={s.key} style={{ marginRight: 10, color: EXTRA_COLORS[k % EXTRA_COLORS.length], fontWeight: 700 }}>— — {s.label}</span>
               ))}
-              <span>เส้นประ = ขาของแบบสอบถาม (รายละเอียดของค่ารวม) · <b>ไม่มีคะแนนรายขา</b> — คะแนน 1/0.5/0 ตัดสินจากค่ารวมตัวเดียว</span>
+              <span>{tr("เส้นประ = ขาของแบบสอบถาม (รายละเอียดของค่ารวม")}) · <b>{tr("ไม่มีคะแนนรายขา")}</b> — {tr("คะแนน 1/0.5/0 ตัดสินจากค่ารวมตัวเดียว")}</span>
             </div>
           )}
         </div>
@@ -1175,16 +1175,14 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
         </div>
       )}
       <InfoMore id="kpi-table-src" size={12} lead="นับเฉพาะกะที่ปิดแล้ว — กะที่เปิดค้างยังไม่ถูกนับ" label={tr('ที่มาของตัวเลข · สูตร')} style={{ marginBottom: 8 }}>
-        OEE = ค่า stamp ถ่วงน้ำหนักเวลารับภาระ ·
-        PPM = ของเสีย ÷ ยอดที่ผลิตทั้งหมด (สแกนดี + เสีย) × 10⁶ ไม่รวมงานทดลอง (สูตรเดียวกับใบ KPI ของบริษัท — ยืนยัน 2026-09-07) ·
-        Excel export ตามโครง 3 ชีทของฟอร์ม FM-HRM-6-022/024/025
+        OEE = {tr("ค่า stamp ถ่วงน้ำหนักเวลารับภาระ · PPM = ของเสีย ÷ ยอดที่ผลิตทั้งหมด (สแกนดี + เสีย) × 10⁶ ไม่รวมงานทดลอง (สูตรเดียวกับใบ KPI ของบริษัท — ยืนยัน 2026-09-07) · Excel export ตามโครง 3 ชีทของฟอร์ม")} FM-HRM-6-022/024/025
       </InfoMore>
 
       {/* ขอบเขตที่ไม่มีไลน์ผลิต (แผนกช่าง/สโตร์/QA) — บอกตรงๆ ห้ามโชว์ตาราง 0 (กฎความซื่อสัตย์ของจอ) */}
       {scopeNoLines && !loading && (
         <div style={{ ...card, fontSize: 12.5, color: 'var(--text2)', lineHeight: 1.6 }}>
-          ℹ️ <b>{org.labelOf(scope.kind, scope.value)}</b> ไม่มีไลน์ผลิตในผัง — ตัวเลขอัตโนมัติ (ยอดผลิต · ของเสีย · PPM · OEE · Downtime) ไม่มีให้คำนวณ
-          · <b>{tr('KPI กรอกมือ')}</b> ด้านล่างใช้ได้ตามปกติ (ใบ KPI ของหน่วยงานสนับสนุนเป็นแบบนี้ทั้งใบ เช่น JIG MTN = MTBF/MTTR/PM)
+          ℹ️ <b>{org.labelOf(scope.kind, scope.value)}</b> {tr("ไม่มีไลน์ผลิตในผัง — ตัวเลขอัตโนมัติ (ยอดผลิต · ของเสีย · PPM · OEE · Downtime) ไม่มีให้คำนวณ")}
+          · <b>{tr('KPI กรอกมือ')}</b> {tr("ด้านล่างใช้ได้ตามปกติ (ใบ KPI ของหน่วยงานสนับสนุนเป็นแบบนี้ทั้งใบ เช่น")} JIG MTN = MTBF/MTTR/PM)
         </div>
       )}
       {loading && <div style={{ ...card, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('กำลังโหลดข้อมูลทั้งปี...')} {prog}</div>}
@@ -1260,7 +1258,7 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
       {/* ═ KPI กรอกมือ (เฟส 2) ═ */}
       {kpiMissing && (
         <div style={{ ...card, borderColor: '#f59e0b', color: '#f59e0b', fontSize: 12.5 }}>
-          ⚠ KPI กรอกมือยังใช้ไม่ได้ — ยังไม่ได้ apply migration <code>20260824_kpi_definitions_main.sql</code> (Main) · แจ้ง admin
+          ⚠ KPI {tr("กรอกมือยังใช้ไม่ได้ — ยังไม่ได้")} apply migration <code>20260824_kpi_definitions_main.sql</code> (Main) · {tr("แจ้ง")} admin
         </div>
       )}
       {/* 💰 ตัวเลขฐานจากบัญชี/SAP (15/10) — คนกลางกรอกค่ากลางที่ ทั้งโรงงาน · หน่วยกรอกยอดเงินของตัวเอง · KPI สูตรคำนวณเอง */}
@@ -1397,7 +1395,7 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
         <div style={{ ...card, overflowX: 'auto' }}>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
             <span style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--text)' }}>
-              KPI นอกระบบ (กรอกมือ) — DL/OH % · Satisfaction · Safety · HR
+              KPI {tr("นอกระบบ (กรอกมือ")}) — DL/OH % · Satisfaction · Safety · HR
             </span>
             {canManage && (
               <button onClick={() => setEditDef({})} style={{ ...btnSt, padding: '4px 10px', fontSize: 12 }}>{tr('＋ เพิ่ม KPI')}</button>
@@ -1427,7 +1425,7 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
             </button>
             {!isPlant(scope) && (
               <span style={{ fontSize: 11.5, color: '#f59e0b' }}>
-                ขอบเขต <b>{scopePathText(org, scope)}</b> — แถวที่ติดป้ายในวงเล็บ = นิยามระดับแม่ที่ตกทอดมา (แก้ที่ระดับนั้น)
+                {tr("ขอบเขต")} <b>{scopePathText(org, scope)}</b> — {tr("แถวที่ติดป้ายในวงเล็บ = นิยามระดับแม่ที่ตกทอดมา (แก้ที่ระดับนั้น")})
               </span>
             )}
             {mtnTeam && (
@@ -1620,7 +1618,7 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
                             {plantKpi && !vDef && (
                               <span title={tr('KPI นี้ตั้งไว้ว่าใช้ค่าโรงงาน แต่ปีนี้ยังไม่มีนิยามระดับ ทั้งโรงงาน — สร้าง KPI ตัวนี้ที่ขอบเขต ทั้งโรงงาน แล้วกรอกที่นั่น (ช่องกรอกของหน่วยงานปิดไว้ กันแต่ละหน่วยตัวเลขไม่ตรงกัน)')}
                                 style={{ marginLeft: 5, fontSize: 11, color: '#f59e0b', cursor: 'pointer' }} onClick={() => setScope({ ...PLANT })}>
-                                ⚠ ยังไม่มีนิยามระดับโรงงาน → สร้างที่ ทั้งโรงงาน
+                                ⚠ {tr("ยังไม่มีนิยามระดับโรงงาน → สร้างที่ ทั้งโรงงาน")}
                               </span>
                             )}
                             {/* ✍️ ค่าที่หน่วยนี้เคยกรอกตอนยังเป็น "ของหน่วยงานเอง" — ตอนนี้เป็นค่าโรงงานแล้ว จอต้องบอกว่าซ่อนอยู่ ไม่ใช่หายเงียบ (19/10) */}
@@ -1701,7 +1699,7 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
                             <tr style={{ background: d2.score_by_plan ? 'var(--accent-dim)' : 'var(--bg2)' }}>
                               <td style={{ ...tdSt, textAlign: 'left', whiteSpace: 'normal', fontSize: 11.5, color: 'var(--text2)' }}
                                 title={d2.score_by_plan ? tr('แถวนี้ = เป้าของแต่ละเดือน (○△✗ ของเดือนนั้นเทียบค่านี้) · เดือนที่เว้นว่าง = เทียบเป้าปีแทน') : tr('แผนประกอบ — ใช้วาดเส้นประและป้าย ▲▼ เท่านั้น ไม่มีผลกับ ○△✗ (ถ้าต้องการให้มีผล เลือก "เทียบแผนของเดือนนั้น" ใน ✏️ นิยาม)')}>
-                                {d2.score_by_plan ? <b style={{ color: 'var(--text)' }}>📅 แผนของเดือน = เป้าเดือน</b> : 'แผนประกอบ (ไม่มีผลกับ ○△✗)'}
+                                {d2.score_by_plan ? <b style={{ color: 'var(--text)' }}>📅 {tr("แผนของเดือน = เป้าเดือน")}</b> : 'แผนประกอบ (ไม่มีผลกับ ○△✗)'}
                                 <div style={{ fontSize: 11, color: 'var(--muted)' }}>{d2.score_by_plan ? 'เว้นว่าง = เดือนนั้นเทียบเป้าปี' : 'เว้นว่าง = เดือนนั้นยังไม่ตั้งแผน'}</div>
                               </td>
                               {Array.from({ length: 12 }, (_, i) => (
@@ -1797,7 +1795,7 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
                 ⬆ KPI {tr("ที่หน่วยลูกถือ แต่")} {isPlant(scope) ? 'ระดับโรงงาน' : org.labelOf(scope.kind, scope.value)} {tr('ยังไม่ตั้ง — บอร์ด 📋 แสดงค่ารวมจากลูก (')}{childOnly.length} {tr("ตัว")})
               </div>
               <InfoMore id="kpi-child-ro" size={11} lead="อ่านอย่างเดียว (แก้ค่าที่ขอบเขตลูก)" style={{ marginBottom: 6 }}>
-                ผลรวม = KPI แบบรวมปี · ≈ เฉลี่ยไม่ถ่วงน้ำหนัก = KPI แบบ % · ตั้ง KPI นี้ที่ระดับนี้แล้ว ค่าที่กรอกเองจะชนะเป็นรายเดือน
+                {tr("ผลรวม = KPI แบบรวมปี · ≈ เฉลี่ยไม่ถ่วงน้ำหนัก = KPI แบบ % · ตั้ง KPI นี้ที่ระดับนี้แล้ว ค่าที่กรอกเองจะชนะเป็นรายเดือน")}
               </InfoMore>
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ borderCollapse: 'collapse', fontSize: 12 }}>
@@ -1828,10 +1826,10 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
             </div>
           )}
           <InfoMore id="kpi-monthly-howto" size={11} lead="กรอกแล้วบันทึกทันทีตอนออกจากช่อง" label={tr('วิธีกรอก · ความหมายสัญลักษณ์')} style={{ marginTop: 8 }}>
-            (Enter/คลิกที่อื่น) · ลบค่า = เว้นว่าง ·
-            <b>○ △ ✗</b> = ถึง Target · ถึงแค่ Commitment · ไม่ถึง — กติกาของแต่ละแถวเขียนไว้ใต้ชื่อ KPI (🎯) ตั้งที่ ✏️ นิยาม 4 ข้อ: ทิศทาง → Target → Commitment → ตัดสินรายเดือนยังไง ·
-            <b>{tr('เทียบเป้าเดียวกันทุกเดือน')}</b> = ค่าเดือนเทียบ Target ตรงๆ (KPI ส่วนใหญ่) · <b>{tr('เทียบแผนของเดือนนั้น')}</b> = แถว 📅 แผนเปิดให้เอง ช่องแผน = เป้าของเดือนนั้น (KPI สะสม/budget รายเดือน) ·
-            <b>{tr('แผนประกอบ')}</b> (ปุ่มบนแถบ) = เส้นประ + ▲▼ ของ KPI อื่น <b>{tr('ไม่ใช่คะแนน')}</b> · ⚠ เกณฑ์ขัดกัน = ตั้งค่าขัดกันเอง (เช่น Commit เข้มกว่า Target) ต้องแก้ที่ ✏️
+            (Enter/{tr("คลิกที่อื่น) · ลบค่า = เว้นว่าง")} ·
+            <b>○ △ ✗</b> = {tr("ถึง Target · ถึงแค่ Commitment · ไม่ถึง — กติกาของแต่ละแถวเขียนไว้ใต้ชื่อ KPI (🎯) ตั้งที่ ✏️ นิยาม 4 ข้อ: ทิศทาง → Target → Commitment → ตัดสินรายเดือนยังไง")} ·
+            <b>{tr('เทียบเป้าเดียวกันทุกเดือน')}</b> = {tr("ค่าเดือนเทียบ Target ตรงๆ (KPI ส่วนใหญ่")}) · <b>{tr('เทียบแผนของเดือนนั้น')}</b> = {tr("แถว 📅 แผนเปิดให้เอง ช่องแผน = เป้าของเดือนนั้น (KPI สะสม/budget รายเดือน")}) ·
+            <b>{tr('แผนประกอบ')}</b> ({tr("ปุ่มบนแถบ) = เส้นประ + ▲▼ ของ KPI อื่น")} <b>{tr('ไม่ใช่คะแนน')}</b> · ⚠ {tr("เกณฑ์ขัดกัน = ตั้งค่าขัดกันเอง (เช่น Commit เข้มกว่า Target) ต้องแก้ที่")} ✏️
           </InfoMore>
         </div>
       )}
@@ -2013,10 +2011,10 @@ function CatalogModal({ rows, canManage, usedNames = [], onClose, onChanged, onP
       <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(760px, 96vw)', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
         <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>{tr('ทะเบียนชื่อ KPI')}</div>
         <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 10, lineHeight: 1.6 }}>
-          ชื่อ + <b>{tr('ค่าตั้งต้น')}</b> (หน่วย · ทศนิยม · ทิศทาง · วิธีรวม 12 เดือน) ของ KPI แต่ละตัว —
-          <b>{tr('ทุกช่องที่นี่มีผลทุกปี ทุกส่วนงาน')}</b> · เพิ่มชื่อใหม่ทำตอนกด ＋ เพิ่ม KPI แล้วพิมพ์ชื่อที่ยังไม่มี
-          <br />🔓 หน่วย/ทศนิยม แต่ละแถวตั้งทับได้ในโมดัลนิยาม (ว่าง = ตามที่นี่) ·
-          🔒 <b>{tr('วิธีรวม 12 เดือน ตั้งทับรายแถวไม่ได้')}</b> — แผนกหนึ่งเฉลี่ย อีกแผนกรวม แล้วเอาเลขมาเทียบกันไม่ได้
+          {tr("ชื่อ")} + <b>{tr('ค่าตั้งต้น')}</b> ({tr("หน่วย · ทศนิยม · ทิศทาง · วิธีรวม 12 เดือน) ของ KPI แต่ละตัว")} —
+          <b>{tr('ทุกช่องที่นี่มีผลทุกปี ทุกส่วนงาน')}</b> · {tr("เพิ่มชื่อใหม่ทำตอนกด ＋ เพิ่ม KPI แล้วพิมพ์ชื่อที่ยังไม่มี")}
+          <br />🔓 {tr("หน่วย/ทศนิยม แต่ละแถวตั้งทับได้ในโมดัลนิยาม (ว่าง = ตามที่นี่")}) ·
+          🔒 <b>{tr('วิธีรวม 12 เดือน ตั้งทับรายแถวไม่ได้')}</b> — {tr("แผนกหนึ่งเฉลี่ย อีกแผนกรวม แล้วเอาเลขมาเทียบกันไม่ได้")}
         </div>
         <input style={inp} value={q} onChange={e => setQ(e.target.value)} placeholder={tr('ค้นหาชื่อ KPI…')} />
         <div style={{ overflowY: 'auto', marginTop: 10, flex: 1 }}>
@@ -2214,7 +2212,7 @@ function DefModal({ init, year, scope, org, orgFailed = '', scopeSet, userSectio
               <>
                 <input style={inp} value={f.name} onChange={e => set('name', e.target.value)} placeholder={tr('เช่น DL cost ต่อยอดขาย (%)')} />
                 <div style={{ fontSize: 11, color: '#f59e0b', marginTop: 4 }}>
-                  ⚠ ยังไม่ได้ apply migration ทะเบียนชื่อ KPI — พิมพ์ชื่อเองไปก่อน (เสี่ยงพิมพ์ต่างกันแล้วแตกเป็นคนละหัวข้อ)
+                  ⚠ {tr("ยังไม่ได้ apply migration ทะเบียนชื่อ KPI — พิมพ์ชื่อเองไปก่อน (เสี่ยงพิมพ์ต่างกันแล้วแตกเป็นคนละหัวข้อ")})
                 </div>
               </>
             ) : (
@@ -2306,12 +2304,12 @@ function DefModal({ init, year, scope, org, orgFailed = '', scopeSet, userSectio
             </select>
           </div>
           <div>
-            <div style={lbl}>ขอบเขต (ตามผังองค์กร · โรงงาน = ทุกหน่วยงาน)</div>
+            <div style={lbl}>{tr("ขอบเขต (ตามผังองค์กร · โรงงาน = ทุกหน่วยงาน")})</div>
             <OrgScopePicker ccOnly index={org} value={f.scope} onChange={v => set('scope', v)} scopeSet={scopeSet} sections={userSections} failed={orgFailed}
               width="100%" inputStyle={inp} />
             {f.scope?.kind === 'cost_center' && canonicalScope(org, f.scope).kind !== 'cost_center' && (
               <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 3 }}>
-                ↳ รหัสนี้เป็นของหน่วย <b>{org.labelOf(canonicalScope(org, f.scope).kind, canonicalScope(org, f.scope).value)}</b> — บันทึกที่หน่วยนั้น (เลือกหน่วยหรือรหัสก็เห็นแถวเดียวกัน)
+                ↳ {tr("รหัสนี้เป็นของหน่วย")} <b>{org.labelOf(canonicalScope(org, f.scope).kind, canonicalScope(org, f.scope).value)}</b> — {tr("บันทึกที่หน่วยนั้น (เลือกหน่วยหรือรหัสก็เห็นแถวเดียวกัน")})
               </div>
             )}
           </div>

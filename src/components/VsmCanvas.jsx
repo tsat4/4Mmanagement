@@ -466,7 +466,7 @@ export default function VsmCanvas({ model, palette = PALETTE_DARK, width = null,
       <g>
         <rect x={W - 336} y={Y_LAD + 40} width="316" height="74" fill={P.data} stroke={P.line} strokeWidth="1.2" />
         <text x={W - 326} y={Y_LAD + 56} fontSize="10.5" fill={P.ink}>
-          PLT = <tspan fontWeight="800">{fmt(T.pltDays, 2)}</tspan> วัน
+          PLT = <tspan fontWeight="800">{fmt(T.pltDays, 2)}</tspan> {tr("วัน")}
           <tspan dx="16">PT = <tspan fontWeight="800">{fmtMinSec(T.ptSec) || '—'}</tspan></tspan>
         </text>
         <text x={W - 326} y={Y_LAD + 74} fontSize="12.5" fontWeight="900" fill={P.nva}>

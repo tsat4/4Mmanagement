@@ -512,7 +512,7 @@ export default function MaterialRequests() {
             placeholder={tr('ค้นด้วยรหัส MAT หรือชื่อพาร์ท')} style={{ ...inpSt, width: '100%', marginBottom: 8 }} />
           {!parts.length && (
             <div style={{ fontSize: 12, color: '#f59e0b', marginBottom: 8 }}>
-              ⚠️ ยังไม่มีข้อมูลใน Material Master — กรอกรหัส/ชื่อเองได้ในตาราง แล้วไปลงทะเบียนที่ Product Master → 🗂 Material Master
+              ⚠️ {tr("ยังไม่มีข้อมูลใน Material Master — กรอกรหัส/ชื่อเองได้ในตาราง แล้วไปลงทะเบียนที่")} Product Master → 🗂 Material Master
             </div>
           )}
           <div style={{ maxHeight: 380, overflowY: 'auto' }}>
@@ -660,7 +660,7 @@ function Editor({ editor, setReq, setItem, addItem, delItem, canRecord, role, si
         </table>
       </div>
       <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-        “จ่าย/รับคืนจริง” สโตร์เป็นคนกรอก — ใบรายงานของเสียจะยึดจำนวนนี้ก่อน ไม่มีค่อยใช้จำนวนที่ขอ
+        “{tr("จ่าย/รับคืนจริง” สโตร์เป็นคนกรอก — ใบรายงานของเสียจะยึดจำนวนนี้ก่อน ไม่มีค่อยใช้จำนวนที่ขอ")}
       </div>
 
       {/* ── ลายเซ็น ── */}
@@ -679,14 +679,14 @@ function Editor({ editor, setReq, setItem, addItem, delItem, canRecord, role, si
               <img src={req[`${s.k}_sig_url`]} alt="" style={{ height: 26, marginTop: 4, background: '#fff', borderRadius: 4, padding: 2 }} />}
             {!req[`${s.k}_sig_url`] && req[`${s.k}_name`] && (isSelfName(req[`${s.k}_name`], fullName)
               ? (mySig && !ro
-                  ? <button onClick={() => setReq({ [`${s.k}_sig_url`]: mySig })} style={{ ...btnSt(), marginTop: 4, fontSize: 11, padding: '3px 9px' }}>✍️ เซ็นช่องนี้</button>
+                  ? <button onClick={() => setReq({ [`${s.k}_sig_url`]: mySig })} style={{ ...btnSt(), marginTop: 4, fontSize: 11, padding: '3px 9px' }}>✍️ {tr("เซ็นช่องนี้")}</button>
                   : <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 3 }}>{mySig ? '' : 'โปรไฟล์ของคุณยังไม่มีลายเซ็น'}</div>)
               : <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 3 }}>{tr("รอ")} {req[`${s.k}_name`]} login {tr("มาเซ็นเอง")}</div>)}
           </div>
         ))}
       </div>
       <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 5 }}>
-        ลายเซ็นดึงจากโปรไฟล์ของ<b>คนที่ login เท่านั้น</b> — เลือกชื่อคนอื่นได้ แต่เจ้าตัวต้องมากดเซ็นเอง · ใครยังไม่มีลายเซ็นให้ไปบันทึกที่เมนูโปรไฟล์ → จัดการลายเซ็น
+        {tr("ลายเซ็นดึงจากโปรไฟล์ของ")}<b>{tr("คนที่ login เท่านั้น")}</b> — {tr("เลือกชื่อคนอื่นได้ แต่เจ้าตัวต้องมากดเซ็นเอง · ใครยังไม่มีลายเซ็นให้ไปบันทึกที่เมนูโปรไฟล์ → จัดการลายเซ็น")}
       </div>
 
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>

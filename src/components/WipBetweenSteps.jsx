@@ -157,14 +157,14 @@ export default function WipBetweenSteps() {
         {tr("ค้าง = ยอดสะสมที่ผ่านขั้นนั้น − ยอดปลายทางที่ประกอบ/ผลิตแล้ว (ทุกชิ้น 1:1 กับปลายทาง) · เป็นบัญชี")}<b>{tr('ภายในแผนก')}</b>{tr("ไว้ดูจังหวะงาน ไม่เกี่ยว SAP/สต็อกทางการ · ของเสียระหว่างทางทำตัวเลขคลาดได้ → กด")} <b>{tr('นับจริง')}</b> {tr("เพื่อตั้งต้นใหม่เป็นระยะ")}
         {baselineTableMissing && (
           <div style={{ marginTop: 6, color: '#f59e0b', fontWeight: 700 }}>
-            ⚠ ยังไม่ได้ apply migration <code>20260818_wip_adjustments_dr</code> (DR) — ตัวเลขคิดจากใบผลิตทั้งหมดตั้งแต่เริ่มระบบ และปุ่มนับจริงยังบันทึกไม่ได้
+            ⚠ {tr("ยังไม่ได้")} apply migration <code>20260818_wip_adjustments_dr</code> (DR) — {tr("ตัวเลขคิดจากใบผลิตทั้งหมดตั้งแต่เริ่มระบบ และปุ่มนับจริงยังบันทึกไม่ได้")}
           </div>
         )}
       </div>
 
       {scopedChains.length === 0 && (
         <div style={{ ...card, color: 'var(--muted)', fontSize: 13 }}>
-          ยังไม่มีสาย OP ที่ผูกพาร์ทจริง — ไปติ๊ก 🔩 รายการขั้นตอน + เลือก "เป็นขั้นของพาร์ทจริง" ที่ Product Master ก่อน แผงนี้จะขึ้นให้เอง
+          {tr("ยังไม่มีสาย OP ที่ผูกพาร์ทจริง — ไปติ๊ก 🔩 รายการขั้นตอน + เลือก \"เป็นขั้นของพาร์ทจริง\" ที่ Product Master ก่อน แผงนี้จะขึ้นให้เอง")}
         </div>
       )}
 
@@ -273,7 +273,7 @@ export default function WipBetweenSteps() {
                         {canAdjust && (
                           <button onClick={() => { setCounting({ bufferKey: r.mat, label: `${r.mat}` }); setCountQty(''); setCountNote(''); }}
                             style={{ fontSize: 11, padding: '4px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)', cursor: 'pointer' }}>
-                            📋 นับจริง
+                            📋 {tr("นับจริง")}
                           </button>
                         )}
                       </td>
@@ -292,7 +292,7 @@ export default function WipBetweenSteps() {
           <div onClick={e => e.stopPropagation()} style={{ ...card, width: 'min(92vw, 420px)', display: 'flex', flexDirection: 'column', gap: 10 }}>
             <b>{tr('นับจริง —')} {tr(counting.label)}</b>
             <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.6 }}>
-              กรอก<b>{tr('จำนวนที่นับได้จริงตอนนี้')}</b> (ของที่ผ่านขั้นนี้แล้วและยังไม่ถึงปลายทาง) — ระบบจะตั้งต้นจากเลขนี้แล้วนับใบผลิตต่อให้เอง
+              {tr("กรอก")}<b>{tr('จำนวนที่นับได้จริงตอนนี้')}</b> ({tr("ของที่ผ่านขั้นนี้แล้วและยังไม่ถึงปลายทาง) — ระบบจะตั้งต้นจากเลขนี้แล้วนับใบผลิตต่อให้เอง")}
             </div>
             <input type="number" min="0" autoFocus value={countQty} onChange={e => setCountQty(e.target.value)}
               placeholder={tr('จำนวนที่นับได้ (ชิ้น)')} style={{ padding: '8px 10px', borderRadius: 'var(--ctl-r)', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 14 }} />

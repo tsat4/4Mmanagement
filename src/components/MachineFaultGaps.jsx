@@ -86,7 +86,7 @@ export default function MachineFaultGaps({ session, orders = [], downtimes = [],
         </span>
       </div>
       {res.err && <div style={{ fontSize: 12, color: 'var(--red)' }}>{res.err}</div>}
-      {res.truncated && <div style={{ fontSize: 12, color: 'var(--amber)' }}>ช่วงหยุดเกิน 1,000 รายการ — แสดงเฉพาะส่วนแรก</div>}
+      {res.truncated && <div style={{ fontSize: 12, color: 'var(--amber)' }}>{tr("ช่วงหยุดเกิน 1,000 รายการ — แสดงเฉพาะส่วนแรก")}</div>}
       {gaps.map(g => (
         <div key={g.key} style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', fontSize: 12.5 }}>
           <b style={{ fontFamily: 'ui-monospace, monospace' }}>{g.machineNo}</b>
@@ -98,7 +98,7 @@ export default function MachineFaultGaps({ session, orders = [], downtimes = [],
           {canEdit && (
             <button type="button" className="pg-btn" style={{ marginLeft: 'auto' }}
               onClick={() => onUse?.({ machine_no: g.machineNo, start_time: hm(g.startMs), end_time: hm(g.endMs), downtime_type_id: g.suggestTypeId || '' })}>
-              ลงจากช่วงนี้
+              {tr("ลงจากช่วงนี้")}
             </button>
           )}
         </div>

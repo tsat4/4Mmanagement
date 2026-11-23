@@ -334,7 +334,7 @@ export default function NotificationConfig() {
       <PageHeader title={tr('ตั้งค่าการแจ้งเตือน')} icon="🔔"
         sub={tr('เครื่องที่รับเข้ามือถือ · ใครได้รับเรื่องไหน (ในแอป) · ห้อง Telegram')} />
       <InfoMore label={tr('วิธีจัดห้อง')} size={11.5} style={{ marginBottom: 22 }}>
-        1 บอทยิงได้หลายห้อง · สร้าง/ลบห้องได้เอง · เลือกได้ว่าเรื่องไหนเข้าห้องไหน · ห้องที่ยังไม่ใส่ chat_id จะไปเข้ากลุ่มเดิม (fallback)
+        1 {tr("บอทยิงได้หลายห้อง · สร้าง/ลบห้องได้เอง · เลือกได้ว่าเรื่องไหนเข้าห้องไหน · ห้องที่ยังไม่ใส่ chat_id จะไปเข้ากลุ่มเดิม")} (fallback)
       </InfoMore>
 
       {/* ── 📲 เครื่องที่รับแจ้งเตือนเข้ามือถือ (2026-10-20 · feedback "มือถือไม่มีแจ้งเตือนใบซ่อม") ──
@@ -363,12 +363,12 @@ export default function NotificationConfig() {
         ) : (
           /* 🔒 ไม่ใช่ admin = ไม่วาดช่อง/ปุ่มเลย — เขียนบอกเหตุผล ห้ามโชว์ปุ่มที่กดแล้วไม่ผ่าน */
           <div style={{ flex: 1, minWidth: 220, fontSize: 12, color: 'var(--muted)' }}>
-            ตั้ง/เปลี่ยน token ได้เฉพาะ <b style={{ color: 'var(--text2)' }}>admin</b> —
-            ส่วนอื่นของหน้านี้ (ห้อง · เรื่องที่แจ้ง · ผู้รับ) ตั้งได้ตามปกติ
+            {tr("ตั้ง/เปลี่ยน token ได้เฉพาะ")} <b style={{ color: 'var(--text2)' }}>admin</b> —
+            {tr("ส่วนอื่นของหน้านี้ (ห้อง · เรื่องที่แจ้ง · ผู้รับ) ตั้งได้ตามปกติ")}
           </div>
         )}
         <InfoMore label={tr('เรื่อง token')} size={11.5} style={{ flexBasis: '100%' }}>
-          🔒 token เก็บแบบเข้ารหัสฝั่ง server — บันทึกแล้วดูย้อนหลังไม่ได้ (โชว์แค่ 4 ตัวท้าย) · ถ้าไม่ตั้งที่นี่ ระบบใช้ token เดิมที่ตั้งไว้ในระบบ
+          🔒 token {tr("เก็บแบบเข้ารหัสฝั่ง server — บันทึกแล้วดูย้อนหลังไม่ได้ (โชว์แค่ 4 ตัวท้าย) · ถ้าไม่ตั้งที่นี่ ระบบใช้ token เดิมที่ตั้งไว้ในระบบ")}
         </InfoMore>
       </div>
 
@@ -376,7 +376,7 @@ export default function NotificationConfig() {
       <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginBottom: 10 }}>{tr('เครื่องเปิดค้าง — เกณฑ์แจ้งเตือน')}</div>
       <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 14, marginBottom: 26, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
         <div style={{ fontSize: 12.5, color: 'var(--text)' }}>
-          แจ้งเตือนเมื่อ Downtime เปิดค้าง (ยังไม่ปิดรายการ) เกิน
+          {tr("แจ้งเตือนเมื่อ Downtime เปิดค้าง (ยังไม่ปิดรายการ) เกิน")}
         </div>
         <input
           type="number" min={1} inputMode="numeric"
@@ -389,8 +389,8 @@ export default function NotificationConfig() {
         </button>
         <InfoMore size={11} style={{ flexBasis: '100%' }} id="nc_dtopen"
           lead={<>{tr('เปิดค้างนานเกินเวลานี้ → ส่ง Telegram + เตือนเสียงหน้า Production')}</>}>
-          บันทึก Downtime ใหม่จะ<b>{tr('ไม่แจ้งทันที')}</b> (ปิดรายการแล้ว → สรุปตอนปิดกะ)
-          <br />ปุ่ม “เรียกช่าง MTN” ในหน้า Daily Report แจ้งทันทีเสมอ (เตือนเสียงหน้า Maintenance)
+          {tr("บันทึก Downtime ใหม่จะ")}<b>{tr('ไม่แจ้งทันที')}</b> ({tr("ปิดรายการแล้ว → สรุปตอนปิดกะ")})
+          <br />{tr("ปุ่ม “เรียกช่าง MTN” ในหน้า Daily Report แจ้งทันทีเสมอ (เตือนเสียงหน้า")} Maintenance)
         </InfoMore>
       </div>
 
@@ -398,9 +398,8 @@ export default function NotificationConfig() {
       <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>{tr('ห้องแจ้งเตือน')}</div>
       <InfoMore style={{ marginBottom: 10 }} id="nc_rooms" label={tr('แจ้งซ่อมแยกทีม')}
         lead={<>{tr('🔧 ตั้ง “ทีม” ให้ห้องได้ — ใบแจ้งซ่อมของทีมนั้นจะเข้าเฉพาะห้องของทีม')}</>}>
-        ใส่ chat_id ของกลุ่มทีมนั้น (JIG/DIE/MTN/PRODUCTION) → ใบแจ้งซ่อม MO ที่แจ้งถึงทีมนี้
-        จะเข้า<b>{tr('เฉพาะห้องของทีม')}</b>
-        <br />ทีมที่ยังไม่มีห้องเฉพาะ = เข้าห้องรวม (ตามที่เลือกในกฎ maintenance ด้านล่าง)
+        {tr("ใส่ chat_id ของกลุ่มทีมนั้น (JIG/DIE/MTN/PRODUCTION) → ใบแจ้งซ่อม MO ที่แจ้งถึงทีมนี้ จะเข้า")}<b>{tr('เฉพาะห้องของทีม')}</b>
+        <br />{tr("ทีมที่ยังไม่มีห้องเฉพาะ = เข้าห้องรวม (ตามที่เลือกในกฎ maintenance ด้านล่าง")})
       </InfoMore>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
         {rooms.map(room => (
@@ -420,7 +419,7 @@ export default function NotificationConfig() {
             <button type="button" className="pg-btn sm danger" onClick={() => deleteRoom(room)}>{tr('ลบ')}</button>
             {!(room.chat_id ?? '').trim() && (
               <div style={{ flexBasis: '100%', fontSize: 11, color: 'var(--accent2)' }}>
-                ⚠️ ยังไม่ใส่ chat_id — รายการที่เลือกห้องนี้จะไปเข้า<b>{tr('กลุ่มเดิม (fallback)')}</b> ไม่ใช่ห้องนี้
+                ⚠️ {tr("ยังไม่ใส่ chat_id — รายการที่เลือกห้องนี้จะไปเข้า")}<b>{tr('กลุ่มเดิม (fallback)')}</b> {tr("ไม่ใช่ห้องนี้")}
               </div>
             )}
           </div>
@@ -478,19 +477,19 @@ export default function NotificationConfig() {
                   </div>
                   {rule.is_enabled && selected.length === 0 && (
                     <div style={{ flexBasis: '100%', fontSize: 11, color: 'var(--muted)' }}>
-                      ยังไม่เลือกห้อง → จะไปเข้า<b>{tr('กลุ่มเดิม (fallback)')}</b>
+                      {tr("ยังไม่เลือกห้อง → จะไปเข้า")}<b>{tr('กลุ่มเดิม (fallback)')}</b>
                     </div>
                   )}
                   {rule.is_enabled && allSelectedMissChat && (
                     <div style={{ flexBasis: '100%', fontSize: 11, color: 'var(--accent2)' }}>
-                      ⚠️ ห้องที่เลือกยังไม่ใส่ chat_id → ตอนนี้จะไปเข้า<b>{tr('กลุ่มเดิม')}</b> ไม่ใช่ห้องนี้ (ไปเติม chat_id ที่ส่วน “ห้องแจ้งเตือน” ด้านบน)
+                      ⚠️ {tr("ห้องที่เลือกยังไม่ใส่ chat_id → ตอนนี้จะไปเข้า")}<b>{tr('กลุ่มเดิม')}</b> {tr("ไม่ใช่ห้องนี้ (ไปเติม chat_id ที่ส่วน “ห้องแจ้งเตือน” ด้านบน")})
                     </div>
                   )}
 
                   {/* ── ผู้รับในแอป (กระดิ่ง+เสียง+push) ตาม role ── */}
                   <div style={{ flexBasis: '100%', borderTop: '1px dashed var(--border)', paddingTop: 8, marginTop: 2 }}>
                     <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 5 }}>
-                      แจ้งในแอปด้วย (กระดิ่ง + เสียง + เด้งเข้ามือถือ) — เลือก role ผู้รับ · ไม่เลือก = เข้าแค่ Telegram
+                      {tr("แจ้งในแอปด้วย (กระดิ่ง + เสียง + เด้งเข้ามือถือ) — เลือก role ผู้รับ · ไม่เลือก = เข้าแค่")} Telegram
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                       {ROLE_OPTIONS.filter(r => r.value !== 'display').map(r => {
@@ -591,9 +590,7 @@ export default function NotificationConfig() {
                               <span>
                                 <b>{tr('แจ้งเฉพาะคนที่ดูแลส่วนงานของเหตุการณ์นั้น')}</b>
                                 <div style={{ color: 'var(--muted)', fontSize: 11, marginTop: 2 }}>
-                                  เช่น ของเสียที่ Line 60 → เด้งหาหัวหน้า PD2 เท่านั้น ไม่กวนส่วนงานอื่น ·
-                                  คนที่ไม่ได้จำกัดขอบเขต ได้รับเสมอ ·
-                                  เหตุการณ์ที่ไม่รู้ส่วนงาน = แจ้งทุกคนตาม role (ไม่เงียบ)
+                                  {tr("เช่น ของเสียที่ Line 60 → เด้งหาหัวหน้า PD2 เท่านั้น ไม่กวนส่วนงานอื่น · คนที่ไม่ได้จำกัดขอบเขต ได้รับเสมอ · เหตุการณ์ที่ไม่รู้ส่วนงาน = แจ้งทุกคนตาม role (ไม่เงียบ")})
                                 </div>
                               </span>
                             </label>
@@ -609,16 +606,15 @@ export default function NotificationConfig() {
                               <span>
                                 <b>{tr('ผู้บริหารก็ถูกกรองตามส่วนงานด้วย')}</b>
                                 <div style={{ color: 'var(--muted)', fontSize: 11, marginTop: 2 }}>
-                                  ไม่ติ๊ก = ผู้ดูแลระบบ / ผู้จัดการ ได้รับ<b>{tr('ทุกส่วนงาน')}</b>แม้เรื่องนี้กรองส่วนงานอยู่ (พฤติกรรมเดิม) ·
-                                  ติ๊ก = ผจก. PD1 ได้เฉพาะ PD1 เหมือนคนอื่น — เหมาะกับ<b>{tr('เรื่องที่ยิงถี่')}</b> ·
-                                  ⚠️ คนที่ยังไม่ได้ตั้งส่วนงานยังได้รับทุกส่วนงานอยู่ (ตั้งได้ที่หน้าจัดการผู้ใช้งาน)
+                                  {tr("ไม่ติ๊ก = ผู้ดูแลระบบ / ผู้จัดการ ได้รับ")}<b>{tr('ทุกส่วนงาน')}</b>{tr("แม้เรื่องนี้กรองส่วนงานอยู่ (พฤติกรรมเดิม) · ติ๊ก = ผจก. PD1 ได้เฉพาะ PD1 เหมือนคนอื่น — เหมาะกับ")}<b>{tr('เรื่องที่ยิงถี่')}</b> ·
+                                  ⚠️ {tr("คนที่ยังไม่ได้ตั้งส่วนงานยังได้รับทุกส่วนงานอยู่ (ตั้งได้ที่หน้าจัดการผู้ใช้งาน")})
                                 </div>
                               </span>
                             </label>
 
                             <div>
                               <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 5 }}>
-                                เฉพาะส่วนงาน — ไม่เลือก = ทุกส่วนงาน
+                                {tr("เฉพาะส่วนงาน — ไม่เลือก = ทุกส่วนงาน")}
                               </div>
                               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                                 {secOpts.length === 0 && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('— ยังไม่มีข้อมูลส่วนงาน —')}</span>}
@@ -638,7 +634,7 @@ export default function NotificationConfig() {
 
                             <div>
                               <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 5 }}>
-                                เฉพาะแผนก — ไม่เลือก = ทุกแผนก
+                                {tr("เฉพาะแผนก — ไม่เลือก = ทุกแผนก")}
                                 <span style={{ marginLeft: 6 }}>{tr('(ใช้ได้เมื่อบัญชีผู้ใช้ถูกผูกกับพนักงานแล้วที่ “จัดการผู้ใช้งาน”)')}</span>
                               </div>
                               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -677,7 +673,7 @@ export default function NotificationConfig() {
                     {editingTpl === rule.event_key && (
                       <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
                         <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                          คลิกตัวแปรเพื่อแทรก · รองรับ HTML tag ของ Telegram: <code>&lt;b&gt;ตัวหนา&lt;/b&gt;</code>
+                          {tr("คลิกตัวแปรเพื่อแทรก · รองรับ HTML tag ของ")} Telegram: <code>&lt;b&gt;ตัวหนา&lt;/b&gt;</code>
                         </div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                           {(PLACEHOLDERS[rule.event_key] ?? []).map(ph => (

@@ -228,7 +228,7 @@ export default function RoutingPanel({ canEdit, lines = [] }) {
           {loading && <div style={{ color: 'var(--muted)', fontSize: 13 }}>{tr('กำลังโหลด…')}</div>}
           {!loading && !steps.length && (
             <div style={{ padding: 22, textAlign: 'center', color: 'var(--muted)', fontSize: 13, background: 'var(--bg2)', borderRadius: 'var(--r-md)' }}>
-              ยังไม่ได้กำหนดลำดับกระบวนการ<br />
+              {tr("ยังไม่ได้กำหนดลำดับกระบวนการ")}<br />
               <span style={{ fontSize: 12 }}>{tr('VSM จะใช้ไลน์เดียวจาก Product Master ไปก่อน แล้วขึ้นเตือนว่ายังไม่ลง routing')}</span>
             </div>
           )}
@@ -276,9 +276,7 @@ export default function RoutingPanel({ canEdit, lines = [] }) {
                 </tbody>
               </table>
               <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 10, lineHeight: 1.6 }}>
-                <b>auto</b> = ปล่อยว่างให้ระบบไปหาจากข้อมูลจริง (C/T จาก Product Master · C/O จาก downtime ที่จัดหมวด
-                “ปรับตั้ง/เปลี่ยนรุ่น” · LOT จาก Kanban Std · คนจาก Standard Manpower) —
-                กรอกตัวเลขเฉพาะตอนค่าจริงไม่ตรงกับที่ต้องการให้แสดงในใบ VSM
+                <b>auto</b> = {tr("ปล่อยว่างให้ระบบไปหาจากข้อมูลจริง (C/T จาก Product Master · C/O จาก downtime ที่จัดหมวด “ปรับตั้ง/เปลี่ยนรุ่น” · LOT จาก Kanban Std · คนจาก Standard Manpower) — กรอกตัวเลขเฉพาะตอนค่าจริงไม่ตรงกับที่ต้องการให้แสดงในใบ")} VSM
               </div>
             </div>
           )}

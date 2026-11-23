@@ -440,7 +440,7 @@ export default function RackMap({ parts = [], canEdit, myTeams = [], mySection =
                 {(() => {
                   const ps = partsOf(selCell.shelf_code);
                   if (!ps.length) return <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>
-                    ช่องนี้ยังไม่มีอะไหล่ — ไปตั้ง "ตำแหน่งชั้นวาง" = <b>{selCell.shelf_code}</b> ที่แท็บคลังอะไหล่
+                    {tr("ช่องนี้ยังไม่มีอะไหล่ — ไปตั้ง \"ตำแหน่งชั้นวาง")}" = <b>{selCell.shelf_code}</b> {tr("ที่แท็บคลังอะไหล่")}
                   </div>;
                   return <div style={{ display: 'grid', gap: 6 }}>
                     {ps.map(p => {
@@ -466,7 +466,7 @@ export default function RackMap({ parts = [], canEdit, myTeams = [], mySection =
               </div>
             ) : (
               <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 12, fontSize: 12.5, color: 'var(--muted)' }}>
-                แตะช่องบนผังเพื่อดูว่ามีอะไหล่อะไรอยู่ · หรือพิมพ์ชื่อของในช่องค้นหาด้านบน แล้วช่องที่มีของจะไฮไลต์สีเหลือง
+                {tr("แตะช่องบนผังเพื่อดูว่ามีอะไหล่อะไรอยู่ · หรือพิมพ์ชื่อของในช่องค้นหาด้านบน แล้วช่องที่มีของจะไฮไลต์สีเหลือง")}
               </div>
             )}
 

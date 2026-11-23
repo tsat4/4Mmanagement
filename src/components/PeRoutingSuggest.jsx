@@ -107,9 +107,9 @@ export default function PeRoutingSuggest({ set, procs, lines = [], onClose }) {
         <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 20, cursor: 'pointer' }}>×</button>
       </div>
       <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 12, lineHeight: 1.6 }}>
-        ระบบแปลงรายการ OP ของ PFC เป็นร่างลำดับกระบวนการ (ตาราง <b>part_routings</b> ที่ใบ VSM ใช้) —
+        {tr("ระบบแปลงรายการ OP ของ PFC เป็นร่างลำดับกระบวนการ (ตาราง")} <b>part_routings</b> {tr("ที่ใบ VSM ใช้")}) —
         <b style={{ color: 'var(--text)' }}> {tr('ตรวจ/ติ๊กออก/แก้ชื่อ แล้วกดยืนยัน ระบบไม่บันทึกเองอัตโนมัติ')}</b> ·
-        CT / C/O / LOT / คน ไม่ต้องกรอก (VSM ไปหาจากข้อมูลจริงให้)
+        CT / C/O / LOT / {tr("คน ไม่ต้องกรอก (VSM ไปหาจากข้อมูลจริงให้")})
       </div>
 
       {products == null ? (
@@ -118,10 +118,10 @@ export default function PeRoutingSuggest({ set, procs, lines = [], onClose }) {
         <div style={{ padding: 24, textAlign: 'center' }}>
           <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--accent)', marginBottom: 8 }}>{tr('✅ บันทึก routing แล้ว')}</div>
           <div style={{ fontSize: 12.5, color: 'var(--text2)', marginBottom: 14 }}>
-            เปิดหน้า VSM เลือกสินค้า <b>{matNo}</b> แล้วกด "⚡ สร้างร่างจากข้อมูลจริง" — ผังจะแตกเป็นหลายกล่องตาม routing นี้
+            {tr("เปิดหน้า VSM เลือกสินค้า")} <b>{matNo}</b> {tr("แล้วกด \"⚡ สร้างร่างจากข้อมูลจริง\" — ผังจะแตกเป็นหลายกล่องตาม routing นี้")}
           </div>
           <Link to="/vsm" style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-ink)', background: 'var(--accent)', padding: '8px 18px', borderRadius: 6, textDecoration: 'none' }}>
-            🗺️ ไปหน้า VSM
+            🗺️ {tr("ไปหน้า")} VSM
           </Link>
         </div>
       ) : !matNo ? (
@@ -137,7 +137,7 @@ export default function PeRoutingSuggest({ set, procs, lines = [], onClose }) {
               ))}
             </div>
           </> : <>
-            ⚠️ {tr("ชุดเอกสารนี้ยังไม่ผูกเลข MAT SAP และเทียบเลขพาร์ท")} ({set.part_no}) {tr("กับ p_no ใน Product Master ไม่เจอ — routing ต้องผูกกับ MAT ถึงจะโยงข้อมูลผลิตได้")} · <b>กรอก "MAT SAP" ที่ปุ่ม ✏️ แก้ข้อมูลชุด ก่อน</b>
+            ⚠️ {tr("ชุดเอกสารนี้ยังไม่ผูกเลข MAT SAP และเทียบเลขพาร์ท")} ({set.part_no}) {tr("กับ p_no ใน Product Master ไม่เจอ — routing ต้องผูกกับ MAT ถึงจะโยงข้อมูลผลิตได้")} · <b>{tr("กรอก \"MAT SAP\" ที่ปุ่ม ✏️ แก้ข้อมูลชุด ก่อน")}</b>
             ({tr("หรือตั้ง p_no ของสินค้าที่ Product Master ให้ตรงกับ")} {set.part_no})
           </>}
         </div>

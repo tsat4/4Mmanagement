@@ -158,41 +158,41 @@ export default function StoreStockUpload({ canEdit, fullName, onClose, onImporte
           ))}
         </div>
 
-        <Sec title="รายบอร์ด" n={plan.sheets.length}>
+        <Sec title={tr("รายบอร์ด")} n={plan.sheets.length}>
           <List rows={plan.sheets} render={s => <><b>{s.sloc}</b> · {tr('ในไฟล์')} {s.upserts.length} · {tr('เพิ่ม')} {s.add.length} · {tr('แก้')} {s.update.length} · {tr('ถอด')} {s.remove.length}{s.dupMats.length ? ` · ⚠ MAT ซ้ำในชีท ${s.dupMats.length}` : ''}</>} />
         </Sec>
         {plan.skipped.length > 0 && (
-          <Sec title="ชีทที่ไม่ได้นำเข้า" n={plan.skipped.length} tone="var(--amber)">
+          <Sec title={tr("ชีทที่ไม่ได้นำเข้า")} n={plan.skipped.length} tone="var(--amber)">
             <List rows={plan.skipped} render={s => <><b>{s.name}</b> — {s.why}</>} />
           </Sec>
         )}
         {t.remove > 0 && (
-          <Sec title="จะถอดออกจากบอร์ด (ไม่อยู่ในไฟล์แล้ว)" n={t.remove} tone="var(--amber)">
+          <Sec title={tr("จะถอดออกจากบอร์ด (ไม่อยู่ในไฟล์แล้ว)")} n={t.remove} tone="var(--amber)">
             <List rows={plan.sheets.flatMap(s => s.remove.map(r => ({ ...r, sloc: s.sloc })))} render={r => <>{r.sloc} · <b>{r.mat_no}</b> {r.part_name || ''}</>} />
           </Sec>
         )}
-        <Sec title="MAX/MIN ที่จะเปลี่ยน (เดิม → ใหม่)" n={plan.minmax.length} tone="var(--blue)">
+        <Sec title={tr("MAX/MIN ที่จะเปลี่ยน (เดิม → ใหม่)")} n={plan.minmax.length} tone="var(--blue)">
           <List rows={plan.minmax} empty={tr('ไม่มีค่าที่เปลี่ยน')}
             render={m => <>{m.sloc} · <b>{m.mat}</b> {m.name || ''} — MIN {fmt(m.fromMin)} → <b>{fmt(m.min)}</b> · MAX {fmt(m.fromMax)} → <b>{fmt(m.max)}</b></>} />
         </Sec>
         {plan.minmaxBad.length > 0 && (
-          <Sec title="MAX น้อยกว่า MIN — ไม่บันทึก (แก้ในไฟล์ก่อน)" n={plan.minmaxBad.length} tone="var(--red)">
+          <Sec title={tr("MAX น้อยกว่า MIN — ไม่บันทึก (แก้ในไฟล์ก่อน)")} n={plan.minmaxBad.length} tone="var(--red)">
             <List rows={plan.minmaxBad} render={m => <>{m.sloc} · <b>{m.mat}</b> {m.name || ''} — MAX {fmt(m.max)} · MIN {fmt(m.min)}</>} />
           </Sec>
         )}
         {plan.minmaxNoKs.length > 0 && (
-          <Sec title="ยังไม่มีทะเบียนคัมบัง — MAX/MIN ไม่ได้บันทึก" n={plan.minmaxNoKs.length} tone="var(--amber)">
+          <Sec title={tr("ยังไม่มีทะเบียนคัมบัง — MAX/MIN ไม่ได้บันทึก")} n={plan.minmaxNoKs.length} tone="var(--amber)">
             <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{tr('ระบบไม่สร้างทะเบียนคัมบังให้เอง (จำนวนต่อใบคัมบังยังไม่รู้) — เพิ่มที่ Product Master › Kanban ก่อน แล้วอัพโหลดไฟล์อีกรอบ')}</div>
             <List rows={plan.minmaxNoKs} render={m => <>{m.sloc} · <b>{m.mat}</b> {m.name || ''} — MIN {fmt(m.min)} · MAX {fmt(m.max)}</>} />
           </Sec>
         )}
-        <Sec title="ที่จัดเก็บหลัก — เติมให้ (ยังว่าง)" n={plan.homeFill.length}>
+        <Sec title={tr("ที่จัดเก็บหลัก — เติมให้ (ยังว่าง)")} n={plan.homeFill.length}>
           {plan.homeConflict.length > 0 && <div style={{ fontSize: 13, color: 'var(--amber)', fontWeight: 700 }}>{tr('ตั้งไว้คนละที่ (ไม่ทับ)')} {plan.homeConflict.length}: {plan.homeConflict.slice(0, SHOW).map(h => `${h.mat} ${h.now}→${h.sloc}`).join(' · ')}{plan.homeConflict.length > SHOW ? ' …' : ''}</div>}
           {plan.homeNoPm.length > 0 && <div style={{ fontSize: 13, color: 'var(--muted)' }}>{tr('ไม่มีในทะเบียนพาร์ท (ตั้งที่จัดเก็บไม่ได้)')} {plan.homeNoPm.length}</div>}
         </Sec>
         {plan.dupAcross.length > 0 && (
-          <Sec title="MAT เดียวกันอยู่หลายชีท" n={plan.dupAcross.length} tone="var(--amber)">
-            <List rows={plan.dupAcross} render={d => <><b>{d.mat}</b> — {d.sheets.join(' และ ')} (ขึ้นทั้ง 2 บอร์ด · ที่จัดเก็บหลักใช้ชีทแรก)</>} />
+          <Sec title={tr("MAT เดียวกันอยู่หลายชีท")} n={plan.dupAcross.length} tone="var(--amber)">
+            <List rows={plan.dupAcross} render={d => <><b>{d.mat}</b> — {d.sheets.join(' และ ')} ({tr("ขึ้นทั้ง 2 บอร์ด · ที่จัดเก็บหลักใช้ชีทแรก")})</>} />
           </Sec>
         )}
 

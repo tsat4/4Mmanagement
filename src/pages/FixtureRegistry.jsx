@@ -483,7 +483,7 @@ export default function FixtureRegistry() {
       ) : tab === 'status' ? (
         <div style={{ display: 'grid', gap: 12 }}>
           <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>
-            จุดที่ต้องดูแล — เกินเพดานชิม · ถึงกำหนดตรวจ · ใกล้ครบ · จากทุกฟิกเจอร์ในขอบเขตของคุณ
+            {tr("จุดที่ต้องดูแล — เกินเพดานชิม · ถึงกำหนดตรวจ · ใกล้ครบ · จากทุกฟิกเจอร์ในขอบเขตของคุณ")}
           </div>
           {!statusRows.length ? (
             <div style={{ background: 'var(--green-dim)', border: '1px solid var(--green-line)',
@@ -491,7 +491,7 @@ export default function FixtureRegistry() {
               ✅ {tr("ไม่มีจุดที่ต้องดูแลตอนนี้")}
               {!allPoints.length && (
                 <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 6 }}>
-                  (ยังไม่มีจุดในทะเบียนเลย — เริ่มที่แท็บ 📋 ทะเบียนจุด)
+                  ({tr("ยังไม่มีจุดในทะเบียนเลย — เริ่มที่แท็บ 📋 ทะเบียนจุด")})
                 </div>
               )}
             </div>
@@ -537,8 +537,7 @@ export default function FixtureRegistry() {
           {tr("เลือกจิ๊ก/ฟิกเจอร์ก่อน")}
           {!fixtures.length && (
             <div data-warn="1" style={{ marginTop: 8, color: 'var(--amber)' }}>
-              ⚠️ ยังไม่มีอุปกรณ์ที่เป็นชนิด “จิ๊ก / ฟิกเจอร์” ในขอบเขตของคุณ —
-              ไปที่แท็บ <b>{tr('จัดชนิดอุปกรณ์')}</b> เพื่อติ๊กเครื่องที่จริงๆ เป็นจิ๊กก่อน
+              ⚠️ {tr("ยังไม่มีอุปกรณ์ที่เป็นชนิด “จิ๊ก / ฟิกเจอร์” ในขอบเขตของคุณ — ไปที่แท็บ")} <b>{tr('จัดชนิดอุปกรณ์')}</b> {tr("เพื่อติ๊กเครื่องที่จริงๆ เป็นจิ๊กก่อน")}
             </div>
           )}
         </div>
@@ -693,9 +692,8 @@ export default function FixtureRegistry() {
 
           {points.some(p => p.baseline_shim_mm == null) && (
             <NoticeBar tone="warn" style={{ marginBottom: 0 }}>
-              ยังไม่ได้วัด baseline <b>{points.filter(p => p.baseline_shim_mm == null).length}</b> จุด —
-              ถ้าไม่มี baseline ระบบจะตอบได้แค่ “ใส่ชิมไปกี่ครั้ง” แต่ตอบไม่ได้ว่า
-              <b> {tr('ห่างจากตอนรับมอบเท่าไหร่แล้ว')}</b> ซึ่งเป็นคำถามที่ลูกค้าถามจริง
+              {tr("ยังไม่ได้วัด")} baseline <b>{points.filter(p => p.baseline_shim_mm == null).length}</b> {tr("จุด — ถ้าไม่มี baseline ระบบจะตอบได้แค่ “ใส่ชิมไปกี่ครั้ง” แต่ตอบไม่ได้ว่า")}
+              <b> {tr('ห่างจากตอนรับมอบเท่าไหร่แล้ว')}</b> {tr("ซึ่งเป็นคำถามที่ลูกค้าถามจริง")}
             </NoticeBar>
           )}
         </div>
@@ -791,8 +789,8 @@ export default function FixtureRegistry() {
               </Field>
             </div>
             <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 10, lineHeight: 1.6 }}>
-              • ไม่ตั้งเพดาน = ระบบจะไม่เตือนเรื่องชิมของจุดนี้ (ตั้งทีหลังได้เมื่อมีข้อมูลพอ)<br />
-              • ไม่ตั้งความถี่ทั้ง 2 แกน = ใช้ความถี่ของเช็คลิสต์ PM เหมือนเดิม
+              • {tr("ไม่ตั้งเพดาน = ระบบจะไม่เตือนเรื่องชิมของจุดนี้ (ตั้งทีหลังได้เมื่อมีข้อมูลพอ")})<br />
+              • {tr("ไม่ตั้งความถี่ทั้ง 2 แกน = ใช้ความถี่ของเช็คลิสต์ PM เหมือนเดิม")}
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent: 'flex-end' }}>
               <button type="button" className="pg-btn sm" onClick={() => setEditing(null)}

@@ -147,11 +147,11 @@ function SourceList({ sources, hourly, nowMs, onOpen, canManage }) {
   return (
     <div style={{ display: 'grid', gap: 14, alignContent: 'start' }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10, alignContent: 'start' }}>
-        <Kpi label={tr('แหล่งต้นทาง')} value={sources.length} unit="ระบบ"
+        <Kpi label={tr('แหล่งต้นทาง')} value={sources.length} unit={tr("ระบบ")}
           sub={`${tr("ออนไลน์")} ${st.filter(x => x === 'online').length} · ${tr("ขาด")} ${st.filter(x => x === 'stale').length} · ${tr("ยังไม่เคยได้รับ")} ${st.filter(x => x === 'never').length} · ${tr("พัก")} ${st.filter(x => x === 'paused').length}`} />
         <Kpi label={tr('ชนิดข้อมูลที่ใช้อยู่')} value={kindsUsed.size} unit={`/ ${INTEGRATION_KINDS.length} ${tr("ชนิด")}`}
           sub={`ESM ${tr("รับได้แล้ว")} ${INTEGRATION_KINDS.filter(k => k.status === 'live').length} ${tr("ชนิด")}`} />
-        <Kpi label={tr('รับสำเร็จ 24 ชม.')} value={okToday.toLocaleString()} unit="ครั้ง" sub={tr('นับทุกต้นทางรวมกัน')} />
+        <Kpi label={tr('รับสำเร็จ 24 ชม.')} value={okToday.toLocaleString()} unit={tr("ครั้ง")} sub={tr('นับทุกต้นทางรวมกัน')} />
       </div>
       {!sources.length ? (
         <div style={{ ...card, color: 'var(--muted)' }}>{tr('ยังไม่มีต้นทางในทะเบียน')}{canManage ? ' — กด "+ เพิ่มการเชื่อมต่อ"' : ''}</div>
@@ -326,7 +326,7 @@ function SourceDetail({ src, hours, nowMs, canManage, canMap, onBack, onChanged,
             ))}
           </div>
           <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 6 }}>
-            1 แท่ง = 1 ชั่วโมง · เต็ม = ได้ครบทุกนาที · ส้ม = ขาดบางนาที · แดง = มีครั้งที่ล้ม · เทา = ไม่ได้รับเลย
+            1 {tr("แท่ง = 1 ชั่วโมง · เต็ม = ได้ครบทุกนาที · ส้ม = ขาดบางนาที · แดง = มีครั้งที่ล้ม · เทา = ไม่ได้รับเลย")}
           </div>
           <div style={{ fontSize: 13, color: 'var(--text2)', marginTop: 8 }}>
             {tr("สำเร็จ")} <b>{okSum.toLocaleString()}</b> {tr('· ล้ม')} <b style={{ color: failSum ? 'var(--red)' : 'inherit' }}>{failSum}</b> {tr('ครั้ง · รับสำเร็จล่าสุด')} {fmtTime(src.last_ok_at)}

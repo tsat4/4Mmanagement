@@ -340,8 +340,8 @@ export default function DieLayout({
       {/* บอกสถานะ link กับผังรวม — ห้ามเงียบ: ตีกรอบแล้วโซนบนผังรวมจะโชว์สถานะแม่พิมพ์ + คลิกเด้งมาหน้านี้ */}
       {area && mapZoneNames && !onFactoryMap && (
         <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 10 }}>
-          ผังนี้ยังไม่ถูกตีกรอบบนผังรวมโรงงาน — ไปที่ <b>{tr('ผังรวมโรงงาน → โหมดแก้ผัง')}</b> แล้วตีกรอบเลือกโซน
-          "🔨 <b>{area.name}</b>" (โซนบนผังรวมจะโชว์จำนวน/ใบซ่อมค้างของแม่พิมพ์ และคลิกเด้งเข้าผังนี้)
+          {tr("ผังนี้ยังไม่ถูกตีกรอบบนผังรวมโรงงาน — ไปที่")} <b>{tr('ผังรวมโรงงาน → โหมดแก้ผัง')}</b> {tr("แล้วตีกรอบเลือกโซน")}
+          "🔨 <b>{area.name}</b>" ({tr("โซนบนผังรวมจะโชว์จำนวน/ใบซ่อมค้างของแม่พิมพ์ และคลิกเด้งเข้าผังนี้")})
         </div>
       )}
 
@@ -370,7 +370,7 @@ export default function DieLayout({
         <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid #f59e0b', borderRadius: 'var(--r-md)', padding: '8px 12px', marginBottom: 10, fontSize: 12.5 }}>
           ✏️ <b>{tr('โหมดแก้ผัง')}</b> — {placingDie
             ? <>{tr('คลิกตำแหน่งบนรูปเพื่อวาง')} <b style={{ color: 'var(--accent)' }}>{placingDie.machine_no}</b> <button onClick={() => setPlacingId(null)} style={{ ...btnGhost, padding: '2px 8px', fontSize: 11.5, marginLeft: 6 }}>{tr('ยกเลิก')}</button></>
-            : <>เลือกแม่พิมพ์จากลิสต์ "ยังไม่ได้วางบนผัง" แล้วกด 📍 วาง · ลากหมุดเพื่อย้ายตำแหน่ง</>}
+            : <>{tr("เลือกแม่พิมพ์จากลิสต์ \"ยังไม่ได้วางบนผัง\" แล้วกด 📍 วาง · ลากหมุดเพื่อย้ายตำแหน่ง")}</>}
           <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
             <button onClick={hist.undo} disabled={!hist.canUndo || hist.busy} style={undoBtnStyle(hist.canUndo && !hist.busy)} title="Ctrl+Z">↩️ Undo</button>
             <button onClick={hist.redo} disabled={!hist.canRedo || hist.busy} style={undoBtnStyle(hist.canRedo && !hist.busy)} title="Ctrl+Y">↪️ Redo</button>
@@ -383,8 +383,8 @@ export default function DieLayout({
           <div style={{ fontSize: 34, marginBottom: 8 }}>🗺️</div>
           <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>{tr('ยังไม่มีผังจัดเก็บแม่พิมพ์')}</div>
           <div style={{ fontSize: 12.5, lineHeight: 1.8 }}>
-            ถ่ายรูปคลัง/พื้นที่วางแม่พิมพ์ (มุมสูงหรือมุมที่เห็นช่องวางชัด) → สร้างผังใหม่ → อัปโหลดรูป → วางหมุดแม่พิมพ์รายตัว<br />
-            จากนั้นค้นเลขแม่พิมพ์แล้วระบบจะชี้ว่าอยู่ตรงไหน + สีหมุดบอกสถานะ/ใบซ่อมค้าง
+            {tr("ถ่ายรูปคลัง/พื้นที่วางแม่พิมพ์ (มุมสูงหรือมุมที่เห็นช่องวางชัด) → สร้างผังใหม่ → อัปโหลดรูป → วางหมุดแม่พิมพ์รายตัว")}<br />
+            {tr("จากนั้นค้นเลขแม่พิมพ์แล้วระบบจะชี้ว่าอยู่ตรงไหน + สีหมุดบอกสถานะ/ใบซ่อมค้าง")}
           </div>
           {canEdit && <button onClick={() => setAreaForm({ mode: 'new' })} style={{ ...btnPri, marginTop: 14 }}>{tr('➕ สร้างผังจัดเก็บ')}</button>}
         </div>
@@ -537,7 +537,7 @@ export default function DieLayout({
               </div>
             ) : (
               <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 12, fontSize: 12.5, color: 'var(--muted)' }}>
-                แตะหมุดบนผังเพื่อดูรายละเอียด/เปลี่ยนสถานะแม่พิมพ์ · หรือพิมพ์เลขแม่พิมพ์ในช่องค้นหา แล้วหมุดที่ตรงจะไฮไลต์สีเหลือง
+                {tr("แตะหมุดบนผังเพื่อดูรายละเอียด/เปลี่ยนสถานะแม่พิมพ์ · หรือพิมพ์เลขแม่พิมพ์ในช่องค้นหา แล้วหมุดที่ตรงจะไฮไลต์สีเหลือง")}
               </div>
             )}
 

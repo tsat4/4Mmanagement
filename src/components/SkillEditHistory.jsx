@@ -77,7 +77,7 @@ export default function SkillEditHistory({ employeeId, limit = 30 }) {
       {open && (
         <div style={{ marginTop: 8 }}>
           <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8, lineHeight: 1.5 }}>
-            แสดงเฉพาะการแก้ด้วยมือในระบบ — การสะสม EXP อัตโนมัติรายวัน/รายสัปดาห์ไม่ถูกบันทึกที่นี่
+            {tr("แสดงเฉพาะการแก้ด้วยมือในระบบ — การสะสม EXP อัตโนมัติรายวัน/รายสัปดาห์ไม่ถูกบันทึกที่นี่")}
           </div>
 
           {loading && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('กำลังโหลด…')}</div>}

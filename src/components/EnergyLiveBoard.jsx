@@ -177,8 +177,7 @@ export default function EnergyLiveBoard() {
       )}
       {board.meters.length > 0 && t.never === t.total && (
         <NoticeBar tone="warn">
-          <b>{tr('ยังไม่เคยได้รับค่าจากมิเตอร์เลย')}</b> — ตัวส่ง (Node-RED) ต้อง POST ชื่อ topic ให้ตรงกับที่ผูกไว้ใน ตั้งค่า › การเชื่อมต่อ Node-RED / เครื่องจักร (/integrations)
-          เช่น <code>dieshop/DB-ROBOT/kw</code> · ช่องทั้งหมดจึงขึ้น "—" (ไม่ใช่ 0)
+          <b>{tr('ยังไม่เคยได้รับค่าจากมิเตอร์เลย')}</b> — {tr("ตัวส่ง (Node-RED) ต้อง POST ชื่อ topic ให้ตรงกับที่ผูกไว้ใน ตั้งค่า › การเชื่อมต่อ Node-RED / เครื่องจักร (/integrations) เช่น")} <code>dieshop/DB-ROBOT/kw</code> · {tr("ช่องทั้งหมดจึงขึ้น \"—\" (ไม่ใช่")} 0)
         </NoticeBar>
       )}
       {t.resets > 0 && (
@@ -204,7 +203,7 @@ export default function EnergyLiveBoard() {
           sub={t.avgPerDay != null ? `${tr("เฉลี่ยวันละ")} ${fmt(t.avgPerDay)} kWh (${t.monthDays} ${tr("วันที่มีข้อมูล")})` : 'ยังไม่มีข้อมูลของเดือนนี้'} />
         <Kpi color={t.offline || t.never ? WARN : GOOD} label={tr('สถานะมิเตอร์')} value={t.online} unit={`/ ${t.total} ${tr("ออนไลน์")}`}
           sub={<><span style={{ color: WARN }}>{tr('ขาดการติดต่อ')} {t.offline}</span> · <span style={{ color: 'var(--muted)' }}>{tr('ยังไม่เคยส่ง')} {t.never}</span></>} />
-        <Kpi color={t.alerts.length ? BAD : GOOD} label={tr('เกินลิมิตตอนนี้')} value={t.alerts.length} unit="เครื่อง"
+        <Kpi color={t.alerts.length ? BAD : GOOD} label={tr('เกินลิมิตตอนนี้')} value={t.alerts.length} unit={tr("เครื่อง")}
           sub={t.alerts.length ? `${tr("ที่")} ${t.alerts.map(m => m.label).join(', ')}` : 'ทุกเครื่องอยู่ในลิมิต (นับเฉพาะเครื่องที่ออนไลน์)'} />
       </div>
 
@@ -398,9 +397,9 @@ function TreeFlow({ panel, byKey, onOpen }) {
                 const bad = n.u?.state === 'negative';
                 return (
                   <g key={n.key}>
-                    <title>ไฟที่ไม่มีมิเตอร์วัด = แม่ − ผลรวมลูก</title>
+                    <title>{tr("ไฟที่ไม่มีมิเตอร์วัด = แม่ − ผลรวมลูก")}</title>
                     <rect x={n.x} y={top} width={TREE.boxW} height={TREE.boxH} rx="10" fill="var(--card)" stroke={bad ? BAD : IDLE} strokeWidth="2" strokeDasharray="6 5" />
-                    <text x={n.x + 14} y={top + 24} fill="var(--muted)" fontSize="14" fontWeight="700">ไม่มีมิเตอร์วัด</text>
+                    <text x={n.x + 14} y={top + 24} fill="var(--muted)" fontSize="14" fontWeight="700">{tr("ไม่มีมิเตอร์วัด")}</text>
                     <text x={n.x + 14} y={top + 46} fill={bad ? BAD : 'var(--text)'} fontSize="18" fontWeight="800">{uText(n.u)}</text>
                     <text x={n.x + 14} y={top + 64} fill={bad ? BAD : 'var(--muted)'} fontSize="12">{uNote(n.u)}</text>
                   </g>
@@ -444,7 +443,7 @@ function MeterCard({ m, pts, machines, onOpen }) {
             </div>
           )}
           <div style={{ fontSize: 12, color: 'var(--text2)' }}>
-            ลิมิต <b style={{ color: GOOD }}>{m.limitKw ?? '—'} kW</b> · <b style={{ color: ACC }}>{m.limitA ?? '—'} A</b>
+            {tr("ลิมิต")} <b style={{ color: GOOD }}>{m.limitKw ?? '—'} kW</b> · <b style={{ color: ACC }}>{m.limitA ?? '—'} A</b>
           </div>
         </div>
         <span style={{ alignSelf: 'flex-start', fontSize: 11.5, fontWeight: 700, color: sm.color, border: `1px solid ${sm.color}`, borderRadius: 999, padding: '2px 10px', whiteSpace: 'nowrap' }}>
@@ -506,7 +505,7 @@ function Gauge({ kw, max, color }) {
 function Spark({ pts, limit }) {
   if (pts.length < 2) {
     return <div style={{ height: 56, marginTop: 10, display: 'grid', placeItems: 'center', fontSize: 11.5, color: 'var(--muted)', border: '1px dashed var(--border)', borderRadius: 8 }}>
-      ยังไม่มีค่ารายนาทีของวันนี้
+      {tr("ยังไม่มีค่ารายนาทีของวันนี้")}
     </div>;
   }
   const W = 600, H = 56;

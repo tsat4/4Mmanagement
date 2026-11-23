@@ -380,11 +380,11 @@ export default function OrgSetup() {
       {!isAdmin && (
         canOwn && mySecId ? (
           <NoticeBar tone="ok" style={{ marginBottom: 14 }}>
-            คุณแก้ได้เฉพาะ <b>{tr("แผนก/กลุ่มใต้ส่วนงาน")} "{myUnit}"</b> ของตัวเอง — ส่วนงานอื่นและโครงระดับ Section เป็นของผู้ดูแลระบบ
+            {tr("คุณแก้ได้เฉพาะ")} <b>{tr("แผนก/กลุ่มใต้ส่วนงาน")} "{myUnit}"</b> {tr("ของตัวเอง — ส่วนงานอื่นและโครงระดับ Section เป็นของผู้ดูแลระบบ")}
           </NoticeBar>
         ) : canOwn && !mySecId ? (
           <div style={{ marginBottom: 14, padding: '9px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--amber-line)', background: 'var(--amber-dim)', fontSize: 12, color: 'var(--amber)', lineHeight: 1.6 }}>
-            ⚠️ บัญชีคุณมีสิทธิ์แก้ผังของหน่วยงานตัวเอง แต่ <b>{tr('ยังไม่ได้ตั้งว่าสังกัดส่วนงานไหน')}</b> จึงยังแก้อะไรไม่ได้
+            ⚠️ {tr("บัญชีคุณมีสิทธิ์แก้ผังของหน่วยงานตัวเอง แต่")} <b>{tr('ยังไม่ได้ตั้งว่าสังกัดส่วนงานไหน')}</b> {tr("จึงยังแก้อะไรไม่ได้")}
             <div style={{ color: 'var(--muted)' }}>{tr('ให้ผู้ดูแลระบบตั้งช่อง')} <b>Section</b> {tr('ให้บัญชีนี้ที่')} <b>{tr('ตั้งค่า → จัดการผู้ใช้งาน')}</b>{myUnit ? '' : tr(' (ตอนนี้ว่างอยู่)')}</div>
           </div>
         ) : (
@@ -404,7 +404,7 @@ export default function OrgSetup() {
         <>
           <div style={{ marginBottom: 12, padding: '9px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)',
                         background: 'var(--bg3-surf)', fontSize: 12, color: 'var(--text2)', lineHeight: 1.7 }}>
-            👥 <b>{tr('ทีม A/B/C ใช้สำหรับจัดกะการทำงาน — ไม่ใช่ชั้นในผังองค์กร')}</b> จึงไม่ปรากฏในมุมมองผังและใบ export
+            👥 <b>{tr('ทีม A/B/C ใช้สำหรับจัดกะการทำงาน — ไม่ใช่ชั้นในผังองค์กร')}</b> {tr("จึงไม่ปรากฏในมุมมองผังและใบ")} export
             <div style={{ color: 'var(--muted)' }}>
               {tr("ค่าที่บันทึกคือช่อง")} <b>Code</b> {tr('(เช่น')} <code>A</code>) {tr("ซึ่งตรงกับ")} <code>employees.team</code> ·
               {tr("ตารางกะใช้ที่")} <b>{tr('ตารางกะการทำงาน')}</b> ({'/shift-organize'})
@@ -429,7 +429,7 @@ export default function OrgSetup() {
                     </div>
                   );
                 })}
-                {!allLines.length && <Empty text="ยังไม่มีกลุ่มในผัง" />}
+                {!allLines.length && <Empty text={tr("ยังไม่มีกลุ่มในผัง")} />}
               </div>
             </div>
             <div style={colStyle} className="card">
@@ -439,13 +439,13 @@ export default function OrgSetup() {
                   <button className="tbtn" onClick={() => selLine && openCreate('team', selLine)} disabled={!selLine} style={addBtnSt}>➕</button>
                 )}
               </div>
-              {!selLine ? <Empty text="เลือกกลุ่มก่อน" /> : currentTeams.map(t => (
+              {!selLine ? <Empty text={tr("เลือกกลุ่มก่อน")} /> : currentTeams.map(t => (
                 <div key={t.id} style={itemStyle(false)}>
                   <NodeLabel node={t} meta={t.code && t.code !== t.name && <span style={{ fontSize: 11, color: 'var(--muted)' }}> ({t.code})</span>} />
                   {canEditNode(t) && <RowActions node={t} onEdit={openEdit} onToggle={toggleActive} onDelete={handleDelete} />}
                 </div>
               ))}
-              {selLine && !currentTeams.length && <Empty text="ยังไม่มีทีมในกลุ่มนี้" />}
+              {selLine && !currentTeams.length && <Empty text={tr("ยังไม่มีทีมในกลุ่มนี้")} />}
             </div>
           </div>
         </>
@@ -468,10 +468,10 @@ export default function OrgSetup() {
                 {canEditNode(s) && <RowActions node={s} onEdit={openEdit} onToggle={toggleActive} onDelete={handleDelete} />}
               </div>
             ))}
-            {!sections.length && <Empty text="ยังไม่มี Section" />}
+            {!sections.length && <Empty text={tr("ยังไม่มี Section")} />}
             <div style={itemStyle(selSection === ORPHAN)} onClick={() => setSelSection(ORPHAN)}>
               <span style={{ fontSize: 13, color: 'var(--text2)' }}>
-                ขึ้นตรงฝ่าย (ไม่มี Section)
+                {tr("ขึ้นตรงฝ่าย (ไม่มี")} Section)
                 <span style={{ fontSize: 11, color: 'var(--muted)' }}> ({orphanDepts.length} {tr("แผนก")})</span>
               </span>
             </div>
@@ -486,7 +486,7 @@ export default function OrgSetup() {
                 <button className="tbtn" onClick={() => selSection && openCreate('department', selSection === ORPHAN ? null : selSection)} disabled={!selSection} style={addBtnSt}>➕</button>
               )}
             </div>
-            {!selSection ? <Empty text="เลือก Section ก่อน" /> : currentDepts.map(d => (
+            {!selSection ? <Empty text={tr("เลือก Section ก่อน")} /> : currentDepts.map(d => (
               <div key={d.id} style={itemStyle(selDept === d.id)} onClick={() => setSelDept(d.id)}>
                 <NodeLabel node={d} meta={<span style={{ fontSize: 11, color: 'var(--muted)' }}> ({linesOf(d.id).length} {tr("กลุ่ม")})</span>}>
                   {d.cost_center && <CostBadge key="cc" code={d.cost_center} />}
@@ -496,7 +496,7 @@ export default function OrgSetup() {
                 {canEditNode(d) && <RowActions node={d} onEdit={openEdit} onToggle={toggleActive} onDelete={handleDelete} />}
               </div>
             ))}
-            {selSection && !currentDepts.length && <Empty text="ยังไม่มีแผนกในนี้" />}
+            {selSection && !currentDepts.length && <Empty text={tr("ยังไม่มีแผนกในนี้")} />}
           </div>
 
           {/* Lines */}
@@ -507,7 +507,7 @@ export default function OrgSetup() {
                 <button className="tbtn" onClick={() => selDept && openCreate('line', selDept)} disabled={!selDept} style={addBtnSt}>➕</button>
               )}
             </div>
-            {!selDept ? <Empty text="เลือกแผนกก่อน" /> : currentLines.map(l => (
+            {!selDept ? <Empty text={tr("เลือกแผนกก่อน")} /> : currentLines.map(l => (
               <div key={l.id} style={itemStyle(selLine === l.id)} onClick={() => setSelLine(l.id)}>
                 {/* จำนวนทีมใต้กลุ่ม — เห็นตั้งแต่ก่อนกด จะได้รู้ว่าทำไมลบไม่ได้ */}
                 <NodeLabel node={l} meta={teamsOf(l.id).length > 0 && <span style={{ fontSize: 11, color: 'var(--muted)' }}> ({teamsOf(l.id).length} {tr("ทีม")})</span>}>
@@ -517,7 +517,7 @@ export default function OrgSetup() {
                 {canEditNode(l) && <RowActions node={l} onEdit={openEdit} onToggle={toggleActive} onDelete={handleDelete} />}
               </div>
             ))}
-            {selDept && !currentLines.length && <Empty text="ยังไม่มีกลุ่มในแผนกนี้" />}
+            {selDept && !currentLines.length && <Empty text={tr("ยังไม่มีกลุ่มในแผนกนี้")} />}
           </div>
 
 
@@ -544,8 +544,7 @@ export default function OrgSetup() {
                   hint={tr('ชื่อที่ตั้งตรงนี้ถูกพิมพ์ลงช่องลายเซ็นในใบสรุปค่าฝีมือจริง — แอดมินหน่วยงานแก้ได้เฉพาะส่วนงานของตัวเอง')} />}
                 <InfoMore size={11} style={{ marginBottom: 10 }} id="org_signers"
                   lead={<>{tr('ใช้ดึงชื่อลงช่องลายเซ็น “ใบสรุปค่าฝีมือ” อัตโนมัติ')}</>}>
-                  ตั้งครั้งเดียวต่อส่วนงาน ใช้ร่วมทุกไลน์ในส่วนนี้
-                  (หัวหน้างานรายไลน์ตั้งที่หน้าจัดการไลน์)
+                  {tr("ตั้งครั้งเดียวต่อส่วนงาน ใช้ร่วมทุกไลน์ในส่วนนี้ (หัวหน้างานรายไลน์ตั้งที่หน้าจัดการไลน์")})
                 </InfoMore>
                 {!key && <div style={{ fontSize: 11, color: 'var(--amber)', marginBottom: 8 }}>{tr('⚠ ส่วนนี้ยังไม่มี Code/ชื่อที่ตรงกับ production_lines.section — ใบค่าฝีมืออาจดึงไม่เจอ')}</div>}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10 }}>
@@ -606,8 +605,8 @@ export default function OrgSetup() {
                   placeholder={modal.kind === 'team' ? tr('เช่น A') : tr('เช่น PD5 / A')} />
                 {modal.kind === 'team' && !formCode.trim() && (
                   <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 4, lineHeight: 1.45 }}>
-                    ⚠️ ไม่ใส่ Code = ตัวเลือกทีมจะใช้ชื่อเต็ม <b>"{formName.trim() || 'ชื่อทีม'}"</b> ซึ่ง
-                    <b> {tr('ไม่ตรงกับทีมที่พนักงานถูกบันทึกไว้')}</b> (ของเดิมเก็บเป็น A / B / C)
+                    ⚠️ {tr("ไม่ใส่ Code = ตัวเลือกทีมจะใช้ชื่อเต็ม")} <b>"{formName.trim() || 'ชื่อทีม'}"</b> {tr("ซึ่ง")}
+                    <b> {tr('ไม่ตรงกับทีมที่พนักงานถูกบันทึกไว้')}</b> ({tr("ของเดิมเก็บเป็น")} A / B / C)
                   </div>
                 )}
               </div>
@@ -668,7 +667,7 @@ export default function OrgSetup() {
                 if (supportUnit && !formRefLineId) return (
                   <div style={{ fontSize: 11, color: 'var(--muted)', background: 'var(--bg3-surf)',
                                 border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '8px 10px' }}>
-                    อยู่ใต้หน่วยงาน <b>{tr('สายสนับสนุน (Indirect)')}</b> — ไม่ต้องผูกไลน์ผลิต
+                    {tr("อยู่ใต้หน่วยงาน")} <b>{tr('สายสนับสนุน (Indirect)')}</b> — {tr("ไม่ต้องผูกไลน์ผลิต")}
                     <div style={{ marginTop: 2 }}>{tr('ถ้าหน่วยนี้มีไลน์ผลิตจริง ให้แก้ประเภทที่แผนกแม่เป็น Direct ก่อน')}</div>
                   </div>
                 );
@@ -679,7 +678,7 @@ export default function OrgSetup() {
                       placeholder={tr('— ไม่ผูก —')} onChange={setFormRefLineId} />
                     {supportUnit && (
                       <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 4 }}>
-                        ⚠️ หน่วยแม่เป็นสายสนับสนุน (Indirect) แต่กลุ่มนี้ผูกไลน์ผลิตไว้ — ตรวจว่าตั้งใจไหม
+                        ⚠️ {tr("หน่วยแม่เป็นสายสนับสนุน (Indirect) แต่กลุ่มนี้ผูกไลน์ผลิตไว้ — ตรวจว่าตั้งใจไหม")}
                       </div>
                     )}
                   </div>

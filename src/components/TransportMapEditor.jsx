@@ -356,7 +356,7 @@ export default function TransportMapEditor() {
   if (loading) return <div style={{ padding: 30, color: 'var(--muted)' }}>{tr('กำลังโหลดผัง…')}</div>
   if (!imageUrl) return (
     <div style={{ padding: 30, borderRadius: 'var(--r-lg)', border: '1px dashed var(--border2)', background: 'var(--card-surf)', color: 'var(--muted)', maxWidth: 640 }}>
-      ยังไม่มีรูปผังโรงงาน — อัปโหลดที่แท็บ <b style={{ color: 'var(--text2)' }}>{tr('ภาพรวมโรงงาน')}</b> ก่อน แล้วกลับมาวาดถนนทับผังเดียวกัน
+      {tr("ยังไม่มีรูปผังโรงงาน — อัปโหลดที่แท็บ")} <b style={{ color: 'var(--text2)' }}>{tr('ภาพรวมโรงงาน')}</b> {tr("ก่อน แล้วกลับมาวาดถนนทับผังเดียวกัน")}
     </div>
   )
 
@@ -415,7 +415,7 @@ export default function TransportMapEditor() {
         {/* map */}
         <div ref={wrapRef} onClick={onMapClick} onPointerMove={onMapPointerMove} onPointerUp={onMapPointerUp} onPointerCancel={onMapPointerUp}
           style={{ position: 'relative', flex: '1 1 560px', minWidth: 320, maxWidth: 1100, borderRadius: 'var(--r-lg)', overflow: 'hidden', border: '1px solid var(--border)', touchAction: 'none', cursor: (mode === 'node' || mode === 'draw') ? 'crosshair' : 'default' }}>
-          <img src={imageUrl} alt="ผังถนนโรงงาน" style={{ display: 'block', width: '100%', height: 'auto', pointerEvents: 'none', userSelect: 'none' }} />
+          <img src={imageUrl} alt={tr("ผังถนนโรงงาน")} style={{ display: 'block', width: '100%', height: 'auto', pointerEvents: 'none', userSelect: 'none' }} />
           <div style={{ position: 'absolute', inset: 0, background: 'rgba(6,8,14,0.28)', pointerEvents: 'none' }} />
           {/* edges */}
           <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>

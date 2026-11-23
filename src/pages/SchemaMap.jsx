@@ -259,8 +259,8 @@ export default function SchemaMap() {
 
       <div style={{ ...card(), marginBottom: 12, fontSize: 12.5, lineHeight: 1.65 }}>
         <InfoMore id="schema_intro" lead={<>
-          🐛 <b>{tr('เจอบัคแล้วอยากแจ้งให้ตรงจุด')}</b> — หาตารางที่เกี่ยว กดดูรายละเอียด แล้วกดปุ่ม
-          <b> {tr('“🐛 แจ้งบัคเรื่องตารางนี้”')}</b> ระบบจะใส่ชื่อตาราง · ฐานข้อมูล · PK · FK · หน้าที่ใช้ ไปให้เอง
+          🐛 <b>{tr('เจอบัคแล้วอยากแจ้งให้ตรงจุด')}</b> — {tr("หาตารางที่เกี่ยว กดดูรายละเอียด แล้วกดปุ่ม")}
+          <b> {tr('“🐛 แจ้งบัคเรื่องตารางนี้”')}</b> {tr("ระบบจะใส่ชื่อตาราง · ฐานข้อมูล · PK · FK · หน้าที่ใช้ ไปให้เอง")}
         </>}>
           <div style={{ marginTop: 6, color: 'var(--text2)' }}>
             • <b>{tr('ระบบนี้มีฐานข้อมูล 2 ตัวแยกกัน')}</b> — {tr(PROJ.main.label)} {tr('(จอ Supabase เขียนว่า “')}{PROJ.main.screen}”)
@@ -275,9 +275,8 @@ export default function SchemaMap() {
       {!!failed.length && (
         <div style={{ ...card(), marginBottom: 12, borderColor: 'var(--red-line)', background: 'var(--red-dim)', fontSize: 12.5, lineHeight: 1.6 }}>
           ⚠️ <b>{tr('อ่านโครงสร้างของ')} {failed.map(k => PROJ[k].label).join(' และ ')} {tr('ไม่ได้')}</b> —
-          ส่วนใหญ่แปลว่ายังไม่ได้ apply migration <code>20260922_schema_catalog_rpc_{failed[0]}.sql</code>
-          (ฟังก์ชัน <code>esm_schema_overview()</code>) หรือสิทธิ์ execute ยังไม่ถูก grant ·
-          ตารางฝั่งที่เหลือยังดูได้ตามปกติ
+          {tr("ส่วนใหญ่แปลว่ายังไม่ได้")} apply migration <code>20260922_schema_catalog_rpc_{failed[0]}.sql</code>
+          ({tr("ฟังก์ชัน")} <code>esm_schema_overview()</code>) {tr("หรือสิทธิ์ execute ยังไม่ถูก grant · ตารางฝั่งที่เหลือยังดูได้ตามปกติ")}
         </div>
       )}
 
@@ -342,7 +341,7 @@ export default function SchemaMap() {
             <div style={{ display: 'grid', gap: 12, alignContent: 'start' }}>
               {!sel && (
                 <div style={{ ...card(), fontSize: 13, color: 'var(--muted)', lineHeight: 1.7 }}>
-                  เลือกตารางทางซ้ายเพื่อดู <b>{tr('คอลัมน์ · คีย์หลัก (PK) · ความสัมพันธ์ (FK) · RLS · trigger')}</b>
+                  {tr("เลือกตารางทางซ้ายเพื่อดู")} <b>{tr('คอลัมน์ · คีย์หลัก (PK) · ความสัมพันธ์ (FK) · RLS · trigger')}</b>
                   <div style={{ marginTop: 8 }}>
                     {PKEYS.map(k => (
                       <div key={k} style={{ marginTop: 6 }}>
@@ -417,7 +416,7 @@ function TableDetail({ sel, detail, err, isMobile, pages, url, userName, size, o
               table: sel.table, projectLabel: `${P.label} (${P.screen})`, projectId: P.id,
               detail: d, pages, url,
             }) + (userName ? `${tr("ผู้แจ้ง")}: ${userName}\n` : ''))} style={{ ...btn(), background: 'var(--red-dim)', borderColor: 'var(--red-line)' }}>
-              แจ้งบัคเรื่องตารางนี้
+              {tr("แจ้งบัคเรื่องตารางนี้")}
             </button>
           </div>
         </div>
@@ -489,8 +488,7 @@ function TableDetail({ sel, detail, err, isMobile, pages, url, userName, size, o
                 </div>
               ) : (
                 <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-                  — ไม่พบหน้าที่เรียกชื่อตารางนี้ตรงๆ (อาจถูกใช้ผ่าน Edge Function / trigger ฝั่งฐานข้อมูล
-                  หรือเรียกด้วยชื่อตัวแปร ซึ่งตัวสแกนไม่เห็น)
+                  — {tr("ไม่พบหน้าที่เรียกชื่อตารางนี้ตรงๆ (อาจถูกใช้ผ่าน Edge Function / trigger ฝั่งฐานข้อมูล หรือเรียกด้วยชื่อตัวแปร ซึ่งตัวสแกนไม่เห็น")})
                 </div>
               )}
             </div>
@@ -648,7 +646,7 @@ function PagesTab({ q, setQ, isMobile, catalog, ghosts, onPick }) {
         <div style={{ ...card(), fontSize: 12, lineHeight: 1.7, borderColor: 'var(--amber-line)' }}>
           <b style={{ color: 'var(--amber)' }}>{tr('⚠️ ชื่อตารางที่โค้ดเรียกใช้ แต่ไม่มีอยู่จริงในฐานข้อมูลทั้ง 2 ฝั่ง')}</b>
           <div style={{ color: 'var(--muted)' }}>
-            (ตารางถูกลบ/เปลี่ยนชื่อไปแล้ว หรือชื่อในโค้ดพิมพ์ผิด — จุดพวกนี้จะพังเงียบตอนรันจริง ควรแจ้งให้ไปตรวจ)
+            ({tr("ตารางถูกลบ/เปลี่ยนชื่อไปแล้ว หรือชื่อในโค้ดพิมพ์ผิด — จุดพวกนี้จะพังเงียบตอนรันจริง ควรแจ้งให้ไปตรวจ")})
           </div>
           {[...ghosts.entries()].map(([t, ps]) => (
             <div key={t}>· <code>{t}</code> — {ps.map(pageLabel).join(' · ')}</div>
@@ -677,8 +675,7 @@ function AuditTab({ audits, isMobile, loading, onPick, onCopy }) {
     <div style={{ display: 'grid', gap: 12 }}>
       <div style={{ ...card(), fontSize: 12.5, lineHeight: 1.7 }}>
         <InfoMore id="schema_audit_intro" lead={<>
-          🩺 <b>{tr('ตรวจโครงสร้างจากฐานจริงทุกครั้งที่เปิดจอนี้')}</b> — ไม่ใช่รายงานที่ทำครั้งเดียวแล้วล้าสมัย ·
-          ตัวเลขบนแท็บนับเฉพาะข้อที่เป็นปัญหาจริง (🔴/🟡)
+          🩺 <b>{tr('ตรวจโครงสร้างจากฐานจริงทุกครั้งที่เปิดจอนี้')}</b> — {tr("ไม่ใช่รายงานที่ทำครั้งเดียวแล้วล้าสมัย · ตัวเลขบนแท็บนับเฉพาะข้อที่เป็นปัญหาจริง")} (🔴/🟡)
         </>}>
           <div style={{ marginTop: 6, color: 'var(--text2)' }}>
             <b>{tr('ทำความสะอาดรอบแรกไปแล้ว 22/09/2026:')}</b> {tr("ตารางสำรองที่ migration เก่าสร้างค้างไว้ใน")} public

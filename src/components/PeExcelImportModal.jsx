@@ -195,7 +195,7 @@ export default function PeExcelImportModal({ sets = [], currentSetId = '', onClo
 
       {step === 'pick' && (<>
         <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12, lineHeight: 1.6 }}>
-          ใช้ไฟล์ฟอร์ม TSAT ได้เลยไม่ต้องจัดใหม่ — ระบบอ่านทุกชีท OP แล้วประกอบเป็นชุดเอกสารให้<br />
+          {tr("ใช้ไฟล์ฟอร์ม TSAT ได้เลยไม่ต้องจัดใหม่ — ระบบอ่านทุกชีท OP แล้วประกอบเป็นชุดเอกสารให้")}<br />
           <b style={{ color: 'var(--text2)' }}>{tr('จะให้ดูสรุปก่อนเสมอ ยังไม่เขียนฐานข้อมูลจนกว่าจะกดยืนยัน')}</b>
         </div>
         <div style={{ display: 'grid', gap: 10 }}>
@@ -297,7 +297,7 @@ export default function PeExcelImportModal({ sets = [], currentSetId = '', onClo
                   {sets.map((s) => <option key={s.id} value={s.id}>{s.part_no} · {s.part_name || ''}</option>)}
                 </select>
                 <div style={{ fontSize: 11, color: '#ffb86b', marginTop: 6 }}>
-                  ⚠️ รายการ PFMEA / Control Plan / ประวัติแก้ไข เดิมของชุดนี้จะถูกแทนที่ทั้งหมด · ขั้นงาน OP ที่มีอยู่แล้วจะไม่ถูกลบ (เพิ่มเฉพาะ OP ใหม่)
+                  ⚠️ {tr("รายการ PFMEA / Control Plan / ประวัติแก้ไข เดิมของชุดนี้จะถูกแทนที่ทั้งหมด · ขั้นงาน OP ที่มีอยู่แล้วจะไม่ถูกลบ (เพิ่มเฉพาะ OP ใหม่")})
                 </div>
               </>
             )}

@@ -376,7 +376,7 @@ export default function RackCenter() {
         return (
           <div style={{ ...card, marginBottom: 16, borderColor: 'var(--amber-line)' }}>
             <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--amber)', marginBottom: 10, fontFamily: 'var(--font-display)' }}>
-              ใบเบิก Packaging จากการผลิต <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>({pending.length} {tr("รายการ")})</span>
+              {tr("ใบเบิก Packaging จากการผลิต")} <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>({pending.length} {tr("รายการ")})</span>
             </div>
             <div style={partCardGrid()}>
               {pending.map(p => (
@@ -454,7 +454,7 @@ export default function RackCenter() {
         <div style={{ ...card, maxWidth: 560 }}>
           <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)', marginBottom: 4, fontFamily: 'var(--font-display)' }}>{tr('SLA การส่งภาชนะภายในโรงงาน')}</div>
           <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>
-            นับจากเวลาที่ไลน์กดเรียก — เกินกำหนดแล้วยังไม่ถึงสถานะ บล็อกบนบอร์ดเวลาจะเปลี่ยนเป็น 🟠/🔴 ให้เห็นทันที
+            {tr("นับจากเวลาที่ไลน์กดเรียก — เกินกำหนดแล้วยังไม่ถึงสถานะ บล็อกบนบอร์ดเวลาจะเปลี่ยนเป็น 🟠/🔴 ให้เห็นทันที")}
           </div>
           {[
             { k: 'prepare_within_min', label: 'ต้องเริ่มเตรียมภายใน (นาที)' },
@@ -575,7 +575,7 @@ export default function RackCenter() {
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 24, width: 'min(420px,100%)' }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginBottom: 16, fontFamily: 'var(--font-display)' }}>
-              เรียกภาชนะ
+              {tr("เรียกภาชนะ")}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div>
@@ -682,7 +682,7 @@ function QrLabelModal({ lines, containerTypes, onClose, onPrint }) {
           <button onClick={onClose} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: 'var(--r-md)', padding: '2px 9px', fontSize: 13, cursor: 'pointer' }}>✕</button>
         </div>
         <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 10 }}>
-          เลือกไลน์ × ชนิดภาชนะ → ได้แผ่น A4 ป้ายละ 1 คู่ (QR = ลิงก์เปิดฟอร์มกรอกให้ครบ) เอาไปแปะจุดวางภาชนะหน้างาน
+          {tr("เลือกไลน์ × ชนิดภาชนะ → ได้แผ่น A4 ป้ายละ 1 คู่ (QR = ลิงก์เปิดฟอร์มกรอกให้ครบ) เอาไปแปะจุดวางภาชนะหน้างาน")}
         </div>
         <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text2)', marginBottom: 5 }}>{tr('ไลน์ (')}{selLines.size})</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 12 }}>

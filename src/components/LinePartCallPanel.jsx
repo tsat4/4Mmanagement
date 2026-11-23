@@ -684,7 +684,7 @@ export default function LinePartCallPanel({ lineName, lines = [], role, fullName
       ) : (
         <div style={{ background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 'var(--r-md)', padding: '10px 12px' }}>
           <div style={{ fontSize: 11.5, fontWeight: 800, color: '#22c55e', marginBottom: 6 }}>
-            ➕ ขอเบิกพาร์ทนี้เลย <span style={{ fontWeight: 400, color: 'var(--muted)' }}>· เลือกพาร์ทที่ไลน์นี้ผลิต = ใส่ยอดที่จะผลิต ระบบแตก BOM เป็นชิ้นส่วนที่ต้องเบิกให้</span>
+            ➕ {tr("ขอเบิกพาร์ทนี้เลย")} <span style={{ fontWeight: 400, color: 'var(--muted)' }}>· {tr("เลือกพาร์ทที่ไลน์นี้ผลิต = ใส่ยอดที่จะผลิต ระบบแตก BOM เป็นชิ้นส่วนที่ต้องเบิกให้")}</span>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
             {/* ช่องรับรหัสพาร์ทต้องเป็น picker กลาง ห้าม input เปล่า (UI-CONVENTIONS §5.1.2) */}
@@ -850,7 +850,7 @@ export default function LinePartCallPanel({ lineName, lines = [], role, fullName
           ))}
           {!canDecide && (
             <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-              ดูอย่างเดียว — คนตัดสินใจเบิกคือหัวหน้ากลุ่มของไลน์ (สิทธิ์ <code>wip_request:decide</code>)
+              {tr("ดูอย่างเดียว — คนตัดสินใจเบิกคือหัวหน้ากลุ่มของไลน์ (สิทธิ์")} <code>wip_request:decide</code>)
             </div>
           )}
         </div>
@@ -934,7 +934,7 @@ export default function LinePartCallPanel({ lineName, lines = [], role, fullName
       {/* ── worklist: ไลน์ยังไม่ตั้ง "จุดส่งงาน" — สโตร์ส่งได้ แต่ระบบตรวจไม่ได้ว่าวางถูกจุดไหม (เฟส 4 · ไม่รู้ = ห้ามบล็อก แต่ห้ามเงียบ) ── */}
       {!hasDeliveryPoint && (
         <div style={{ marginTop: 10, fontSize: 11, color: '#f59e0b' }}>
-          ไลน์นี้ยังไม่ตั้งจุดส่งงาน — สโตร์ยิง QR ยืนยันจุดวางของไม่ได้ · ตั้งที่ <b>{tr('ตั้งค่าผังไลน์ → 🎯 จุดส่งงาน')}</b> แล้วพิมพ์ป้ายที่ 🏷️ พิมพ์ป้าย QR
+          {tr("ไลน์นี้ยังไม่ตั้งจุดส่งงาน — สโตร์ยิง QR ยืนยันจุดวางของไม่ได้ · ตั้งที่")} <b>{tr('ตั้งค่าผังไลน์ → 🎯 จุดส่งงาน')}</b> {tr("แล้วพิมพ์ป้ายที่ 🏷️ พิมพ์ป้าย")} QR
         </div>
       )}
 

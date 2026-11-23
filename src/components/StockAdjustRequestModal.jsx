@@ -61,12 +61,11 @@ export default function StockAdjustRequestModal({ req, by, onClose }) {
             style={{ background: 'none', border: 'none', fontSize: 18, color: 'var(--muted)', cursor: 'pointer' }}>✕</button>
         </div>
         <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.7, marginBottom: 12 }}>
-          ช่อง IN ของพาร์ทนี้ระบบเป็นเจ้าของแล้ว (คลังกดรับ / Daily Report ลงยอด) — แก้บนบอร์ดไม่ได้
-          ถ้าของจริงไม่ตรง ให้ส่งยอดที่นับได้ เข้าคิวอนุมัติของคลัง
+          {tr("ช่อง IN ของพาร์ทนี้ระบบเป็นเจ้าของแล้ว (คลังกดรับ / Daily Report ลงยอด) — แก้บนบอร์ดไม่ได้ ถ้าของจริงไม่ตรง ให้ส่งยอดที่นับได้ เข้าคิวอนุมัติของคลัง")}
         </div>
         {!loc ? (
           <div style={{ fontSize: 12, color: '#f87171', marginBottom: 12 }}>
-            ⚠️ ยังไม่รู้ว่าพาร์ทนี้อยู่คลังไหน (กฎรับเข้าคลัง/Product Master ยังไม่ครบ) — ส่งคำขอไม่ได้ ให้ตั้งที่ /products ก่อน
+            ⚠️ {tr("ยังไม่รู้ว่าพาร์ทนี้อยู่คลังไหน (กฎรับเข้าคลัง/Product Master ยังไม่ครบ) — ส่งคำขอไม่ได้ ให้ตั้งที่ /products ก่อน")}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>

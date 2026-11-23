@@ -137,7 +137,7 @@ export default function NpiTooling({ parts, tooling, steps, stepTemplates, dieSe
       {range && rows.length > 0 && (
         <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 6, display: 'flex', justifyContent: 'space-between' }}>
           <span>{tr('ช่วงแสดง')} {fmtDate(range.start)} → {fmtDate(range.end)} ({range.days} {tr("วัน")})</span>
-          <span>▮ แผน · ▮ จริง · เส้นแดง = วันนี้</span>
+          <span>▮ {tr("แผน · ▮ จริง · เส้นแดง = วันนี้")}</span>
         </div>
       )}
 

@@ -800,10 +800,9 @@ export default function ProductionPlan() {
       {/* 🧹 worklist ให้ PE/Planning — ระบบไม่แก้ข้อมูลให้เอง (กฎของ bomTree.js) */}
       {!loading && useBom && demandPcs.bom?.flatDupes?.length > 0 && (
         <div style={{ background: 'var(--amber-dim)', border: '1px solid var(--amber-line)', borderRadius: 'var(--r-md)', padding: '9px 12px', fontSize: 12.5, color: 'var(--text)' }}>
-          🧹 <b>{tr('BOM แบนซ้ำ')} {demandPcs.bom.flatDupes.length} {tr('จุด')}</b> — ชิ้นเดียวกันถูกใส่ไว้ทั้งชั้น 1 และในชั้นลึกของใบเดียวกัน
+          🧹 <b>{tr('BOM แบนซ้ำ')} {demandPcs.bom.flatDupes.length} {tr('จุด')}</b> — {tr("ชิ้นเดียวกันถูกใส่ไว้ทั้งชั้น 1 และในชั้นลึกของใบเดียวกัน")}
           <div style={{ marginTop: 3, color: 'var(--muted)', fontSize: 11.5 }}>
-            แผนนี้ <b>{tr('ต่อโซ่แบบ SAP')}</b> (นับครั้งเดียว ไม่นับแถวชั้น 1 ที่ซ้ำ) — ตัวเลขจึงถูกแล้ว
-            แต่ข้อมูลยังซ้ำอยู่ ⇒ ให้ PE/Planning ไปเก็บที่ <b>{tr('/products แท็บ BOM')}</b>
+            {tr("แผนนี้")} <b>{tr('ต่อโซ่แบบ SAP')}</b> ({tr("นับครั้งเดียว ไม่นับแถวชั้น 1 ที่ซ้ำ) — ตัวเลขจึงถูกแล้ว แต่ข้อมูลยังซ้ำอยู่ ⇒ ให้ PE/Planning ไปเก็บที่")} <b>{tr('/products แท็บ BOM')}</b>
           </div>
           <div style={{ marginTop: 4, color: 'var(--muted)', fontSize: 11.5, wordBreak: 'break-word' }}>
             {demandPcs.bom.flatDupes.slice(0, 6).map(f => `${f.root} → ${f.mat_no}`).join(' · ')}
@@ -844,7 +843,7 @@ export default function ProductionPlan() {
            ทั้งที่ความจริงคือ "ยังไม่มีทางรับ order ของลูกค้าเจ้านั้นเข้าระบบ" (วัดจริง 22/09: 10 จาก 22 ไลน์) */}
       {!loading && tab === 'plan' && cap === 'day' && mode === 'chart' && silentLines.length > 0 && (
         <div style={{ background: 'var(--bg3-surf)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: '9px 12px', fontSize: 12.5, color: 'var(--text2)' }}>
-          🌑 <b>{silentLines.length} {tr('ไลน์ยังไม่มีข้อมูลความต้องการ')}</b> — ไม่ใช่ "ไลน์ว่าง" แต่คือยังไม่มี order/forecast ของพาร์ทในไลน์นี้เข้าระบบ
+          🌑 <b>{silentLines.length} {tr('ไลน์ยังไม่มีข้อมูลความต้องการ')}</b> — {tr("ไม่ใช่ \"ไลน์ว่าง\" แต่คือยังไม่มี order/forecast ของพาร์ทในไลน์นี้เข้าระบบ")}
           <div style={{ marginTop: 5, display: 'flex', flexWrap: 'wrap', gap: '4px 10px', fontSize: 11.5 }}>
             {silentLines.slice(0, 12).map(l => (
               <span key={l.line} style={{ color: 'var(--muted)' }}>
@@ -939,7 +938,7 @@ export default function ProductionPlan() {
                     : mustWork.map(r => <div key={r.line.id} style={{ color: 'var(--text2)' }}>{r.line.name} <span style={{ color: 'var(--blue)', fontWeight: 700 }}>{tr('· เรียกมา')} {r.recall75Days}/{r.sd75Total} {tr('วัน')}</span>{r.sd75Stoppable > 0 && <span style={{ color: 'var(--muted)' }}> {tr('(อีก')} {r.sd75Stoppable} {tr("วันหยุดได้")})</span>}</div>)}
                 </div>
               </div>
-              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>ตัดสินจาก order ค้างส่งจริง ณ ตอนนี้ + กำลังผลิตของแต่ละไลน์ — มาทำงานวัน ม.75 = ค่าแรงปกติ (ไม่ใช่ OT วันหยุด) · ดูวันไหนต้องมาที่แถบปฏิทินของไลน์ด้านล่าง (⚡)</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>{tr("ตัดสินจาก order ค้างส่งจริง ณ ตอนนี้ + กำลังผลิตของแต่ละไลน์ — มาทำงานวัน ม.75 = ค่าแรงปกติ (ไม่ใช่ OT วันหยุด) · ดูวันไหนต้องมาที่แถบปฏิทินของไลน์ด้านล่าง")} (⚡)</div>
             </div>
           );
         })()}

@@ -1095,7 +1095,7 @@ export default function QualityBins({ mode = 'full' }) {
                     ยังไม่เลือก = "รอ QA พิจารณา" ซึ่งเป็นสถานะจริง ห้ามบังคับเลือก
                     เลือกแล้วกดซ้ำ = ยกเลิกการตัดสิน (QA เปลี่ยนใจได้ก่อนของออกจากถัง) */}
                 <div style={{ gridColumn: '1 / -1', borderTop: '1px solid var(--border)', paddingTop: 8, fontSize: 12, fontWeight: 700, color: 'var(--muted)' }}>
-                  ผลการพิจารณาของ QA <span style={{ fontWeight: 400 }}>(WI-PD3-069 §5.4)</span>
+                  {trI18n("ผลการพิจารณาของ")} QA <span style={{ fontWeight: 400 }}>(WI-PD3-069 §5.4)</span>
                 </div>
                 <div style={{ gridColumn: '1 / -1', display: 'flex', flexWrap: 'wrap', gap: 7 }}>
                   {QA_DECISIONS.map(d => {
@@ -1127,8 +1127,7 @@ export default function QualityBins({ mode = 'full' }) {
                 )}
                 {form.qa_decision === 'scrap' && (
                   <div style={{ gridColumn: '1 / -1', fontSize: 11.5, color: 'var(--amber)', lineHeight: 1.5 }}>
-                    ⚠ บันทึกแล้วระบบจะถามยืนยันจำนวนเพื่อย้ายลงถังแดงให้ทันที — กดยกเลิก = ใบยังค้างในคิวรอพิจารณา
-                    (“เอาของลงถังแดง” เป็นการกระทำจริงหน้างาน ต้องมีคนกดยืนยัน)
+                    ⚠ {trI18n("บันทึกแล้วระบบจะถามยืนยันจำนวนเพื่อย้ายลงถังแดงให้ทันที — กดยกเลิก = ใบยังค้างในคิวรอพิจารณา (“เอาของลงถังแดง” เป็นการกระทำจริงหน้างาน ต้องมีคนกดยืนยัน")})
                   </div>
                 )}
                 <div style={{ gridColumn: '1 / -1', borderTop: '1px solid var(--border)', paddingTop: 8, fontSize: 12, fontWeight: 700, color: 'var(--muted)' }}>{trI18n('ผลการซ่อม')}</div>
@@ -1402,7 +1401,7 @@ export default function QualityBins({ mode = 'full' }) {
                       </span>
                     : <span title={trI18n('ยังไม่ได้ออกใบรายงานของเสีย — ไปที่หน้า 🗑️ ใบรายงานของเสีย แล้วกด ⤵ ดึงจากถังแดง')}
                         style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--amber)' }}>
-                        ⏳ ยังไม่ออกใบ
+                        ⏳ {trI18n("ยังไม่ออกใบ")}
                       </span>}
                 </td>}
                 <td style={{ ...td, whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>

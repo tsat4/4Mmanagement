@@ -68,7 +68,7 @@ function StepsEditor({ steps, onChange, disabled }) {
         </button>
       )}
       <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-        เว้น "ไม่เกิน" ว่าง = ขั้นสุดท้าย (ไม่จำกัด) · ระบบเรียงขั้นให้เองจากน้อยไปมาก
+        {tr("เว้น \"ไม่เกิน\" ว่าง = ขั้นสุดท้าย (ไม่จำกัด) · ระบบเรียงขั้นให้เองจากน้อยไปมาก")}
       </div>
     </div>
   );
@@ -177,11 +177,11 @@ export default function PressSetupRules({ dies = [], lineNames = [], canEdit = f
       {state === 'loading' && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('กำลังโหลด…')}</div>}
       {state === 'missing' && (
         <div style={{ fontSize: 12, color: '#f59e0b' }}>
-          ⚠️ ยังไม่ได้ apply migration <code>20260925_press_die_height_setup_dr.sql</code> (DR · Product DB) — แจ้ง admin
+          ⚠️ {tr("ยังไม่ได้")} apply migration <code>20260925_press_die_height_setup_dr.sql</code> (DR · Product DB) — {tr("แจ้ง")} admin
         </div>
       )}
       {state === 'error' && (
-        <div style={{ fontSize: 12, color: '#ef4444' }}>❌ โหลดกฎไม่ได้ (คนละเรื่องกับ "ยังไม่มีกฎ") — ลองใหม่อีกครั้ง</div>
+        <div style={{ fontSize: 12, color: '#ef4444' }}>❌ {tr("โหลดกฎไม่ได้ (คนละเรื่องกับ \"ยังไม่มีกฎ\") — ลองใหม่อีกครั้ง")}</div>
       )}
 
       {/* ความพร้อมของข้อมูล — บอกตรงๆ ว่ายังขาดอะไร */}
@@ -192,11 +192,11 @@ export default function PressSetupRules({ dies = [], lineNames = [], canEdit = f
         <br />
         {ready.canPlan
           ? <span style={{ color: 'var(--accent)' }}>{tr('✅ เริ่มเทียบลำดับได้แล้ว (ยิ่งกรอกความสูงครบ ตัวเลขยิ่งตรง)')}</span>
-          : <span style={{ color: '#f59e0b' }}>⚠️ ยังจัดลำดับให้ไม่ได้ — ต้องมีกฎที่บอก "ผลของความสูง" + รู้ความสูงอย่างน้อย 2 ตัว</span>}
+          : <span style={{ color: '#f59e0b' }}>⚠️ {tr("ยังจัดลำดับให้ไม่ได้ — ต้องมีกฎที่บอก \"ผลของความสูง\" + รู้ความสูงอย่างน้อย 2 ตัว")}</span>}
         {/* 2 คำถามคนละเรื่อง: จัดลำดับได้ (ไม่ต้องรู้เวลาฐาน) vs ตอบเวลารวมได้ (ต้องรู้) */}
         {!ready.canTotal && (
           <div style={{ color: 'var(--muted)' }}>
-            ℹ️ ยังไม่มีกฎไหนกรอก <b>{tr('เวลาฐาน')}</b> ⇒ จอจะบอก "เวลารวมทั้งรอบ" ไม่ได้ (แต่เทียบลำดับได้)
+            ℹ️ {tr("ยังไม่มีกฎไหนกรอก")} <b>{tr('เวลาฐาน')}</b> ⇒ {tr("จอจะบอก \"เวลารวมทั้งรอบ\" ไม่ได้ (แต่เทียบลำดับได้")})
           </div>
         )}
       </div>
@@ -232,7 +232,7 @@ export default function PressSetupRules({ dies = [], lineNames = [], canEdit = f
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10, alignItems: 'start' }}>
                   {/* ⭐ ตัวแปรหลักจากช่างปั๊ม: ต่างกัน 1 มม. = กี่วินาที (25/09 = 1 วินาที) */}
                   <label style={{ fontSize: 11, color: 'var(--muted)' }}>
-                    ต่างกัน 1 มม. = กี่วินาที
+                    {tr("ต่างกัน 1 มม. = กี่วินาที")}
                     <input type="number" step="0.1" min="0" disabled={!canEdit} value={valOf(r, 'per_mm_sec') ?? ''}
                       placeholder={tr('ยังไม่รู้')} onChange={e => patch(r.id, 'per_mm_sec', e.target.value)} style={{ ...inp, marginTop: 3 }} />
                   </label>
@@ -249,12 +249,12 @@ export default function PressSetupRules({ dies = [], lineNames = [], canEdit = f
                   </label>
                   <div style={{ gridColumn: '1 / -1' }}>
                     <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 3 }}>
-                      ผลของความสูง — <span style={{ color: 'var(--text2)' }}>
+                      {tr("ผลของความสูง")} — <span style={{ color: 'var(--text2)' }}>
                         {heightRuleText({ per_mm_sec: valOf(r, 'per_mm_sec'), height_steps: valOf(r, 'height_steps') })}
                       </span>
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>
-                      ขั้นบันไดด้านล่างเป็น <b>{tr('ของเสริม')}</b> (บวกทับอัตราต่อมม.) — ไว้ใส่เงื่อนไขแบบขั้น เช่น "เกิน 200 มม. ต้องเปลี่ยนบล็อกรอง +30 น." · ไม่มีก็เว้นว่างได้
+                      {tr("ขั้นบันไดด้านล่างเป็น")} <b>{tr('ของเสริม')}</b> ({tr("บวกทับอัตราต่อมม.) — ไว้ใส่เงื่อนไขแบบขั้น เช่น \"เกิน 200 มม. ต้องเปลี่ยนบล็อกรอง +30 น.\" · ไม่มีก็เว้นว่างได้")}
                     </div>
                     <StepsEditor steps={valOf(r, 'height_steps')} disabled={!canEdit}
                       onChange={v => patch(r.id, 'height_steps', v)} />
@@ -291,7 +291,7 @@ export default function PressSetupRules({ dies = [], lineNames = [], canEdit = f
                       placeholder={tr('เช่น P-01')} style={{ ...inp, marginTop: 3, fontFamily: 'monospace' }} />
                   </label>
                 )}
-                <label style={{ fontSize: 11, color: 'var(--muted)' }}>ต่างกัน 1 มม. = กี่วินาที
+                <label style={{ fontSize: 11, color: 'var(--muted)' }}>{tr("ต่างกัน 1 มม. = กี่วินาที")}
                   <input type="number" step="0.1" min="0" value={adding.per_mm_sec ?? ''} placeholder={tr('เช่น 1')}
                     onChange={e => setAdding(a => ({ ...a, per_mm_sec: e.target.value }))} style={{ ...inp, marginTop: 3 }} />
                 </label>
@@ -355,7 +355,7 @@ export default function PressSetupRules({ dies = [], lineNames = [], canEdit = f
                   </div>
                 )}
                 <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                  เป็นการทดลองบนทะเบียนทั้งไลน์ (ไม่ใช่คิวงานจริง) — ใช้ดูว่า "ลำดับมีผลแค่ไหน" ก่อนเอาไปจัดแผนจริง
+                  {tr("เป็นการทดลองบนทะเบียนทั้งไลน์ (ไม่ใช่คิวงานจริง) — ใช้ดูว่า \"ลำดับมีผลแค่ไหน\" ก่อนเอาไปจัดแผนจริง")}
                 </div>
               </div>
             );

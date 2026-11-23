@@ -250,7 +250,7 @@ function ManpowerTab({ employees, empById, lines, sectionsList, secFilter, setSe
 
       {partial && (
         <div style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 'var(--r-md)', background: 'rgba(224,92,74,0.1)', border: '1px solid rgba(224,92,74,0.3)', fontSize: 12, color: 'var(--red)' }}>
-          ⚠ โหลดข้อมูลบางส่วนไม่สำเร็จ — ตัวเลขด้านล่างอาจไม่ครบ
+          ⚠ {trI18n("โหลดข้อมูลบางส่วนไม่สำเร็จ — ตัวเลขด้านล่างอาจไม่ครบ")}
         </div>
       )}
 
@@ -409,7 +409,7 @@ function MovesTab({ empById, sectionsList, secFilter, setSecFilter, inScope, org
 
       {partial && (
         <div style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 'var(--r-md)', background: 'rgba(224,92,74,0.1)', border: '1px solid rgba(224,92,74,0.3)', fontSize: 12, color: 'var(--red)' }}>
-          ⚠ โหลดข้อมูลบางส่วนไม่สำเร็จ — ตัวเลขด้านล่างอาจไม่ครบ
+          ⚠ {trI18n("โหลดข้อมูลบางส่วนไม่สำเร็จ — ตัวเลขด้านล่างอาจไม่ครบ")}
         </div>
       )}
 
@@ -431,7 +431,7 @@ function MovesTab({ empById, sectionsList, secFilter, setSecFilter, inScope, org
             </BarChart>
           </ResponsiveContainer>
           <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
-            นับเฉพาะการ "เปลี่ยน" จุดงานกลางกะ (ไม่นับการมอบหมายจุดงานครั้งแรกของกะ)
+            {trI18n("นับเฉพาะการ \"เปลี่ยน\" จุดงานกลางกะ (ไม่นับการมอบหมายจุดงานครั้งแรกของกะ")})
           </div>
         </div>
       )}
@@ -590,12 +590,12 @@ function TurnoverTab({ employees, sectionsList, secFilter, setSecFilter, inScope
 
       {partial && (
         <div style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 'var(--r-md)', background: 'rgba(224,92,74,0.1)', border: '1px solid rgba(224,92,74,0.3)', fontSize: 12, color: 'var(--red)' }}>
-          ⚠ โหลดประวัติการออกงานไม่ครบ — ตัวเลขในแท็บนี้อาจไม่ครบ
+          ⚠ {trI18n("โหลดประวัติการออกงานไม่ครบ — ตัวเลขในแท็บนี้อาจไม่ครบ")}
         </div>
       )}
 
       <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 'var(--r-md)', background: 'rgba(245,154,63,0.08)', border: '1px solid rgba(245,154,63,0.3)', fontSize: 12, color: 'var(--text2)', lineHeight: 1.7 }}>
-        ⚠️ <b>ระบบเริ่มบันทึกวันที่ "ออกงาน" อัตโนมัติตั้งแต่ 2026-08-07</b> {trI18n('— พนักงานที่ inactive ก่อนหน้านั้นจะ')}<b>{trI18n('ไม่มีวันที่ออกให้ดู')}</b> ({trI18n("ไม่ใช่ว่าไม่เคยออก")})
+        ⚠️ <b>{trI18n("ระบบเริ่มบันทึกวันที่ \"ออกงาน\" อัตโนมัติตั้งแต่")} 2026-08-07</b> {trI18n('— พนักงานที่ inactive ก่อนหน้านั้นจะ')}<b>{trI18n('ไม่มีวันที่ออกให้ดู')}</b> ({trI18n("ไม่ใช่ว่าไม่เคยออก")})
         {' · '}{trI18n('ในขอบเขตที่เลือกตอนนี้: รู้วันที่ออก')} <b style={{ color: 'var(--text)' }}>{knownExits.length}</b> {trI18n('คน · ไม่ทราบวันที่ออก')} <b style={{ color: 'var(--text)' }}>{unknownExits.length}</b> {trI18n("คน")}
         {anomalousInScope.length > 0 && <><br />{trI18n('⚠️ พบพนักงาน')} <b style={{ color: 'var(--red)' }}>{anomalousInScope.length}</b> {trI18n('คนที่วันที่เริ่มงานผิดปกติ (เช่น กรอกปี พ.ศ. ลงช่องปี ค.ศ.) — ไม่รวมในกราฟ/อายุงานด้านล่าง ไปแก้ที่หน้า')} <a href="/operator" style={{ color: 'var(--blue)' }}>{trI18n('ฐานข้อมูลพนักงาน')}</a></>}
       </div>
@@ -621,7 +621,7 @@ function TurnoverTab({ employees, sectionsList, secFilter, setSecFilter, inScope
           </BarChart>
         </ResponsiveContainer>
         <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
-          "เข้าใหม่" นับจาก start_date ที่ถูกต้อง (ตัดค่าผิดปกติแล้ว) · "ออก" นับเฉพาะที่มีวันที่ออกจริงในระบบ — ไม่ใช่ยอดคงเหลือสะสม
+          "{trI18n("เข้าใหม่\" นับจาก start_date ที่ถูกต้อง (ตัดค่าผิดปกติแล้ว) · \"ออก\" นับเฉพาะที่มีวันที่ออกจริงในระบบ — ไม่ใช่ยอดคงเหลือสะสม")}
         </div>
       </div>
 
@@ -870,7 +870,7 @@ function OtMonthlyTab({ empById, sectionsList, secFilter, setSecFilter, inScope,
 
       {(coverage.missingDays.length > 0 || orphanCount > 0) && (
         <div className="card" style={{ padding: 14, marginBottom: 14, borderLeft: '4px solid var(--accent2)' }}>
-          <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>⚠ ช่องโหว่ข้อมูล — ตัวเลขนี้คือ "ขั้นต่ำ" ไม่ใช่ยอดเต็ม</div>
+          <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>⚠ {trI18n("ช่องโหว่ข้อมูล — ตัวเลขนี้คือ \"ขั้นต่ำ\" ไม่ใช่ยอดเต็ม")}</div>
           {coverage.missingDays.length > 0 && (
             <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>
               {coverage.missingDays.length} {trI18n('วันในเดือนนี้ไม่มีการเช็คชื่อในระบบเลย (วันหยุด')} {coverage.missingHolidayDays} {trI18n('วัน · วันทำงาน')} {coverage.missingWorkingDays} {trI18n("วัน) — คนที่มาทำ OT วันนั้นจะไม่ถูกนับ เว้นแต่มีใบจอง OT ไว้")}
@@ -961,7 +961,7 @@ function OtMonthlyTab({ empById, sectionsList, secFilter, setSecFilter, inScope,
                     <tr>
                       <td colSpan={isCurrentMonth ? 11 : 10} style={{ background: 'var(--bg2)', padding: '10px 14px' }}>
                         <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 6 }}>
-                          รายวัน — 🟢 วันทำงาน · 🔴 วันหยุด · 🟣 ม.75 · 📋 = มาจากใบจอง (ไม่มีเช็คชื่อ)
+                          {trI18n("รายวัน — 🟢 วันทำงาน · 🔴 วันหยุด · 🟣 ม.75 · 📋 = มาจากใบจอง (ไม่มีเช็คชื่อ")})
                         </div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                           {r.days.map(d => (
@@ -1003,7 +1003,7 @@ function OtMonthlyTab({ empById, sectionsList, secFilter, setSecFilter, inScope,
             })}
           </div>
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 8 }}>
-            งานที่จองไว้ในใบ OT คือ "เหตุผล" ที่ระบบตอบ HR ได้เอง — ใบที่ไม่เลือกงานจะไม่มีเหตุผลให้ตอบ (ตั้งรายการงานได้ที่ Report → แท็บจองรถ OT)
+            {trI18n("งานที่จองไว้ในใบ OT คือ \"เหตุผล\" ที่ระบบตอบ HR ได้เอง — ใบที่ไม่เลือกงานจะไม่มีเหตุผลให้ตอบ (ตั้งรายการงานได้ที่ Report → แท็บจองรถ")} OT)
           </div>
         </div>
       )}

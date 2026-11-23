@@ -430,7 +430,7 @@ export default function PMSchedule() {
       {!loading && noDue.length > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '10px 14px', marginBottom: 16, borderRadius: 'var(--r-md)', border: '1px solid #f59a3f55', background: '#f59a3f14' }}>
           <span style={{ fontSize: 13, color: 'var(--text)', flex: '1 1 260px' }}>
-            ⚠️ <b>{noDue.length}</b> รายการยังไม่มีวัน PM ครั้งถัดไป
+            ⚠️ <b>{noDue.length}</b> {tr("รายการยังไม่มีวัน PM ครั้งถัดไป")}
             <span style={{ color: 'var(--muted)' }}> ({noDue.filter(r => !r.cycle).length} {tr('ยังไม่ตั้งรอบ ·')} {noDue.filter(r => r.cycle).length} {tr("มีรอบแต่ยังไม่เคยตรวจ) — ระบบเตือนล่วงหน้าไม่ได้")}</span>
           </span>
           {canDefer
@@ -726,11 +726,11 @@ function CycleModal({ rows, byName, byUid, deptWrite, onClose, onSaved }) {
           {nextDate
             ? <>{tr("ระบบจะเตือนตามวันนี้ · ตรวจเสร็จแล้วรอบถัดไป = วันที่ตรวจจริง")} + {valid ? cycleLabel(null, n) : 'รอบ'}</>
             : single
-              ? (preview ? <>ไม่กรอก = คิดจากตรวจล่าสุด + รอบ → <b style={{ color: 'var(--text)' }}>{new Date(preview).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}</b></>
+              ? (preview ? <>{tr("ไม่กรอก = คิดจากตรวจล่าสุด + รอบ")} → <b style={{ color: 'var(--text)' }}>{new Date(preview).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}</b></>
                          : single.nextDue
                            ? <>{tr("ไม่กรอก = คงวันเดิม")} {single.nextDue.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}</>
                            : <>⚠️ {tr("ยังไม่เคยตรวจ + ไม่กรอกวัน")} = <b>{tr('ยังไม่มีวันครบกำหนด')}</b> {tr('จนกว่าจะตรวจครั้งแรก — แนะนำให้กรอกวัน')}</>)
-              : <>ไม่กรอก = รายการที่เคยตรวจแล้วคิดจากตรวจล่าสุด + รอบ · รายการที่ไม่เคยตรวจจะยังไม่มีวันครบกำหนด (แนะนำให้กรอกวัน)</>}
+              : <>{tr("ไม่กรอก = รายการที่เคยตรวจแล้วคิดจากตรวจล่าสุด + รอบ · รายการที่ไม่เคยตรวจจะยังไม่มีวันครบกำหนด (แนะนำให้กรอกวัน")})</>}
         </div>
         </>)}
 
@@ -1073,7 +1073,7 @@ function DayModal({ sel, onClose, onCheck }) {
         {/* ⚠️ วันที่เลยมาแล้ว มีแผน แต่ไม่มีผลตรวจเลย = ตกไปจริงๆ ต้องพูดออกมา ห้ามเงียบ */}
         {sel.items.some(r => r.status === 'overdue') && (sel.done?.length ?? 0) === 0 && (
           <div style={{ marginTop: 12, padding: '9px 12px', borderRadius: 'var(--r-md)', background: 'rgba(224,92,74,0.12)', border: '1px solid #e05c4a55', fontSize: 12, color: '#e05c4a', lineHeight: 1.6 }}>
-            🔴 <b>{tr('ยังไม่มีผลตรวจของวันนี้')}</b> — แผนเลยกำหนดมาแล้วและไม่มีใครบันทึกว่าทำ
+            🔴 <b>{tr('ยังไม่มีผลตรวจของวันนี้')}</b> — {tr("แผนเลยกำหนดมาแล้วและไม่มีใครบันทึกว่าทำ")}
             <div style={{ color: 'var(--muted)', marginTop: 3 }}>{tr('ทำแล้วให้กด “✓ ตรวจ” เพื่อบันทึกผล · ทำไม่ได้ให้เลื่อนแผนพร้อมเหตุผล จะได้ไม่ค้างแดงไปเรื่อยๆ')}</div>
           </div>
         )}

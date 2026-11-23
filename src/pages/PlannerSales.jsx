@@ -885,7 +885,7 @@ function UploadTab({ canUpload, fullName, onImported, custLabel }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {!canUpload && (
         <div style={{ ...card, borderColor: 'var(--amber-line)', fontSize: 13, color: 'var(--amber)' }}>
-          โหมดดูอย่างเดียว — การอัพโหลดทำได้เฉพาะ role: Sale / Manager / Admin
+          {tr("โหมดดูอย่างเดียว — การอัพโหลดทำได้เฉพาะ")} role: Sale / Manager / Admin
         </div>
       )}
       {canUpload && (
@@ -910,8 +910,7 @@ function UploadTab({ canUpload, fullName, onImported, custLabel }) {
               (ลูกค้าที่เพิ่มไว้ในทะเบียนจะอ่านไม่ออกจนกว่าจะโหลดได้) */}
           {fmtErr && (
             <NoticeBar tone="warn" style={{ marginBottom: 8 }}>
-              อ่านทะเบียนฟอร์แมตไฟล์ (<code>customer_pull_formats</code>) ไม่ได้ — ใช้ชื่อคอลัมน์ค่าสำรองในโค้ด (Ford 830/862) ·
-              ไฟล์ของลูกค้าที่เพิ่มไว้ในทะเบียนจะยังอ่านไม่ออก
+              {tr("อ่านทะเบียนฟอร์แมตไฟล์")} (<code>customer_pull_formats</code>) {tr("ไม่ได้ — ใช้ชื่อคอลัมน์ค่าสำรองในโค้ด (Ford 830/862) · ไฟล์ของลูกค้าที่เพิ่มไว้ในทะเบียนจะยังอ่านไม่ออก")}
             </NoticeBar>
           )}
           <DemandMailInbox refreshKey={mailKey} fullName={fullName}
@@ -1231,7 +1230,7 @@ function PlannerTab({ refreshKey, custLabel }) {
           </div>
         )}
         <InfoMore label={tr('Coverage คืออะไร')} size={11.5} style={{ marginTop: 10 }}>
-          Coverage = Order จริง ÷ Forecast · เกิน 110% (แดง) = ลูกค้าสั่งเกินที่พยากรณ์ ควรเช็คกำลังผลิต · ต่ำกว่า 80% (เหลือง) = order ยังมาไม่ครบตาม forecast
+          Coverage = Order {tr("จริง ÷ Forecast · เกิน 110% (แดง) = ลูกค้าสั่งเกินที่พยากรณ์ ควรเช็คกำลังผลิต · ต่ำกว่า 80% (เหลือง) = order ยังมาไม่ครบตาม")} forecast
         </InfoMore>
       </div>
     </div>
@@ -1696,8 +1695,7 @@ function KanbanCalcTab({ canApply, fullName, custLabel }) {
           <div style={{ flex: 1, minWidth: 220 }}>
             <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--amber)' }}>{capGap.length} {tr('พาร์ท CAP/ชม. ที่กรอก ห่างจากกำลังจริง ≥ 20%')}</div>
             <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-              ช่อง CAP/ชม. ตั้งต้นเป็น <b>{tr('กำลังทางทฤษฎี')}</b> (3600 ÷ CT) ซึ่งไม่หัก downtime/ของเสีย ·
-              ตัวเลข <b style={{ color: 'var(--amber)' }}>{tr('จริง ~')}</b> ใต้ช่อง = (3600 ÷ CT) × OEE จริงของไลน์นั้น (กะที่ปิดแล้ว 90 วัน) <b>{tr('คลิกเพื่อใช้ค่านั้น')}</b>
+              {tr("ช่อง CAP/ชม. ตั้งต้นเป็น")} <b>{tr('กำลังทางทฤษฎี')}</b> (3600 ÷ CT) {tr("ซึ่งไม่หัก downtime/ของเสีย · ตัวเลข")} <b style={{ color: 'var(--amber)' }}>{tr('จริง ~')}</b> {tr("ใต้ช่อง = (3600 ÷ CT) × OEE จริงของไลน์นั้น (กะที่ปิดแล้ว 90 วัน")}) <b>{tr('คลิกเพื่อใช้ค่านั้น')}</b>
               <div style={{ marginTop: 2 }}>{tr('⚠️ ระบบ')}<b>{tr('ไม่แทนค่าให้เอง')}</b> {tr('— จะวางแผนด้วยกำลังทฤษฎีหรือกำลังจริงเป็นการตัดสินใจของผู้วางแผน')}</div>
             </div>
           </div>
@@ -1885,8 +1883,8 @@ function KanbanCalcTab({ canApply, fullName, custLabel }) {
           <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 22, width: 'min(680px,100%)', maxHeight: '88vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: 16, fontWeight: 800, fontFamily: 'var(--font-display)', marginBottom: 4 }}>{tr('ยืนยันอัปเดต Kanban —')} {changedRows.length} {tr('รายการ')}</div>
             <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>
-              เขียนค่า Min/Max/Total + <b>{tr('ขนาดล็อต')}</b> ใหม่เข้า kanban_standards (ระบบดึงทั้งองค์กรใช้ต่อทันที)
-              <div style={{ marginTop: 3 }}>⚠️ <b>{tr('ขนาดล็อต')}</b> คือตัวที่ระบบใช้ตัดสินว่าสะสมความต้องการครบเมื่อไหร่ถึงออกใบสั่ง — ตั้งเล็กเกินจริง = ใบสั่งพุ่งเป็นร้อยใบ</div>
+              {tr("เขียนค่า")} Min/Max/Total + <b>{tr('ขนาดล็อต')}</b> {tr("ใหม่เข้า kanban_standards (ระบบดึงทั้งองค์กรใช้ต่อทันที")})
+              <div style={{ marginTop: 3 }}>⚠️ <b>{tr('ขนาดล็อต')}</b> {tr("คือตัวที่ระบบใช้ตัดสินว่าสะสมความต้องการครบเมื่อไหร่ถึงออกใบสั่ง — ตั้งเล็กเกินจริง = ใบสั่งพุ่งเป็นร้อยใบ")}</div>
             </div>
             <div style={{ overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>

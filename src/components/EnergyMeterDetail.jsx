@@ -194,7 +194,7 @@ export default function EnergyMeterDetail({ m, machines, boardMeters, totalToday
             </div>
           </div>
           <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-            1 จุด = 1 นาที (kW = สูงสุดของนาที · A = เฟสที่สูงสุด) · เส้นประแดง = ลิมิต · มิเตอร์หลุดเกิน 5 นาทีเส้นขาด
+            1 {tr("จุด = 1 นาที (kW = สูงสุดของนาที · A = เฟสที่สูงสุด) · เส้นประแดง = ลิมิต · มิเตอร์หลุดเกิน 5 นาทีเส้นขาด")}
           </div>
           {!loaded ? <div style={{ color: 'var(--muted)', padding: 20 }}>{tr('กำลังโหลด…')}</div>
             : shown.length < 2 ? <div style={{ color: 'var(--muted)', padding: 20, fontSize: 12.5 }}>{tr('ยังไม่มีค่ารายนาทีในช่วงนี้')}</div>
@@ -223,7 +223,7 @@ export default function EnergyMeterDetail({ m, machines, boardMeters, totalToday
                 </ResponsiveContainer>
               </>)}
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 6 }}>
-            ℹ️ ESM เก็บค่าสรุปรายนาที (ย้อนหลัง 7 วัน) — กราฟรายวินาทียังดูได้ที่ Node-RED
+            ℹ️ ESM {tr("เก็บค่าสรุปรายนาที (ย้อนหลัง 7 วัน) — กราฟรายวินาทียังดูได้ที่")} Node-RED
           </div>
         </div>
 
@@ -275,7 +275,7 @@ export default function EnergyMeterDetail({ m, machines, boardMeters, totalToday
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'minmax(0, 1fr)' : 'minmax(0, 2fr) minmax(260px, 1fr)', gap: 12, alignContent: 'start' }}>
       <div style={{ ...card, minWidth: 0 }}>
         <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{tr('ใช้ไฟรายวัน')} {DAYS} {tr('วันล่าสุด (kWh)')}</div>
-        <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>จากเลขมิเตอร์ต้น-ท้ายวัน · วันที่ไม่มีแท่ง = ไม่มีข้อมูล (ไม่ใช่ 0)</div>
+        <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{tr("จากเลขมิเตอร์ต้น-ท้ายวัน · วันที่ไม่มีแท่ง = ไม่มีข้อมูล (ไม่ใช่")} 0)</div>
         {daily == null ? <div style={{ color: 'var(--muted)', padding: 16, fontSize: 12.5 }}>{loaded ? tr('อ่านยอดรายวันไม่ได้') : tr('กำลังโหลด…')}</div>
           : !dailyBars.length ? <div style={{ color: 'var(--muted)', padding: 16, fontSize: 12.5 }}>{tr('ยังไม่มียอดรายวัน')}</div>
             : (
