@@ -24,6 +24,7 @@
    ══════════════════════════════════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useMemo, useCallback, useContext, useRef } from 'react';
 import { MoreMark } from './InfoMore';
+import NoticeBar from './NoticeBar';
 import { supabaseDR } from '../supabaseClient';
 import { UserContext } from '../App';
 import { can, canSeeded } from '../utils/permissions';
@@ -497,49 +498,52 @@ export default function ProdLotPlanner({
         {summary.started > 0 && <span style={{ fontSize: 12, color: 'var(--accent)' }}>{tr('▶ เริ่มแล้ว')} {summary.started} {tr('· ปิดแล้ว')} {summary.closed}</span>}
       </div>
 
-      {/* 🔴 งานที่ยังหาที่ลงไม่ได้ / ยังจัดกะให้ไม่ได้ — 2 เรื่องคนละสาเหตุ ห้ามยุบรวม ห้ามซ่อน */}
-      {(overflowCount > 0 || unsureCount > 0) && (
-        <div style={{ ...card, borderColor: overflowCount > 0 ? '#ef444466' : '#f59e0b66', fontSize: 12, color: 'var(--text2)', display: 'grid', gap: 3 }}>
-          {overflowCount > 0 && (
-            <div>🚨 <b style={{ color: '#ef4444' }}>{overflowCount} {tr('ล็อตล้นเลยขอบเขต')} {horizon.segments.length} {tr('กะ')}</b> —
-              งานยังไม่มีที่ลงจริง · ยืด "ไหลต่อได้" ให้ยาวขึ้น หรือลดงาน/เพิ่มกำลังผลิต
-              <b> {tr('ระบบไม่ยัดลงกะสุดท้ายให้')}</b></div>
-          )}
-          {/* 18/11 · user "ข้อความสีเทาแบบนั้นอยากให้เป็น tooltip มากกว่าโชว์มาเยอะๆ"
-              🔴 หัวคำเตือน + ผลที่ตามมา อยู่บนจอ · **เหตุผล**ย้ายไป title (ขาดไปก็ยังลงมือถูก) */}
-          {unsureCount > 0 && (
-            <div title={tr('เวลาเชื่อไม่ได้ เพราะไม่มี cycle time หรือมีล็อตที่ไม่มี CT อยู่ก่อนหน้า')}>
-              ⚠️ <b>{unsureCount} {tr('ล็อตยังจัดกะให้ไม่ได้')}</b> · <b>{tr('คงกะเดิมตอนบันทึก ไม่ถูกย้าย')}</b>{' '}
-              <MoreMark text={tr('เวลาเชื่อไม่ได้ เพราะไม่มี cycle time หรือมีล็อตที่ไม่มี CT อยู่ก่อนหน้า')} /></div>
-          )}
-        </div>
+      {/* 🔴 งานที่ยังหาที่ลงไม่ได้ / ยังจัดกะให้ไม่ได้ — 2 เรื่องคนละสาเหตุ ห้ามยุบรวม ห้ามซ่อน
+          UI §6.35 ข้อ 2 (23/11): หนึ่งเรื่อง = หนึ่ง <NoticeBar> บรรทัดเดียว — เดิมเป็นการ์ดขอบ hex ดิบ
+          ซึ่งเป็นภาษาภาพคนละชุดกับแถบของหน้าแม่ (และผิดกฎ token สี) */}
+      {overflowCount > 0 && (
+        <NoticeBar tone="bad" style={{ marginBottom: 0 }}>
+          <b>{overflowCount} {tr('ล็อตล้นเลยขอบเขต')} {horizon.segments.length} {tr('กะ')}</b> — {tr('งานยังไม่มีที่ลงจริง')} ·
+          <b> {tr('ระบบไม่ยัดลงกะสุดท้ายให้')}</b>
+          <MoreMark text={tr('ยืด "ไหลต่อได้" ให้ยาวขึ้น หรือลดงาน/เพิ่มกำลังผลิต')} />
+        </NoticeBar>
+      )}
+      {/* 18/11 · user "ข้อความสีเทาแบบนั้นอยากให้เป็น tooltip มากกว่าโชว์มาเยอะๆ"
+          🔴 หัวคำเตือน + ผลที่ตามมา อยู่บนจอ · **เหตุผล**ย้ายไป tooltip (ขาดไปก็ยังลงมือถูก) */}
+      {unsureCount > 0 && (
+        <NoticeBar tone="warn" style={{ marginBottom: 0 }}>
+          <b>{unsureCount} {tr('ล็อตยังจัดกะให้ไม่ได้')}</b> · <b>{tr('คงกะเดิมตอนบันทึก ไม่ถูกย้าย')}</b>
+          <MoreMark text={tr('เวลาเชื่อไม่ได้ เพราะไม่มี cycle time หรือมีล็อตที่ไม่มี CT อยู่ก่อนหน้า')} />
+        </NoticeBar>
       )}
 
-      {/* 🔴 ความซื่อสัตย์: อะไรที่ประเมินไม่ได้ ต้องเขียนบนจอ ห้ามปล่อยให้ตัวเลขดูสวย */}
-      {(summary.noCtMats.length > 0 || summary.setupUnknown || noHeight > 0 || summary.noTimeLots > 0) && (
-        <div style={{ ...card, borderColor: '#f59e0b66', fontSize: 12, color: 'var(--text2)', display: 'grid', gap: 3 }}>
-          {summary.noTimeLots > 0 && (
-            <div>🧪 <b>{summary.noTimeLots} {tr('ใบทดลองยังไม่ได้ระบุเวลาที่ขอ')}</b> — วางบนไทม์ไลน์ไม่ได้
-              และทำให้เวลาของใบที่อยู่หลังจากนั้น<b>{tr('เชื่อไม่ได้ทั้งหมด')}</b> · แก้ที่ช่อง "ขอใช้เครื่อง"</div>
-          )}
-          {/* รายชื่อ MAT ไป title — บนจอเหลือ "กี่ตัว + กระทบอะไร" ซึ่งพอให้ตัดสินใจได้แล้ว */}
-          {summary.noCtMats.length > 0 && (
-            <div title={`${tr('พาร์ทที่ยังไม่มี cycle time')}: ${summary.noCtMats.join(' · ')}`}>
-              ⚠️ <b>{summary.noCtMats.length} {tr('พาร์ทยังไม่มี cycle time')}</b>{' '}
-              <MoreMark text={`${tr('พาร์ทที่ยังไม่มี cycle time')}: ${summary.noCtMats.join(' · ')}`} />
-              — {tr("เวลาผลิตข้างบน")}<b>{tr('ต่ำกว่าจริง')}</b> {tr('· ไปกรอกที่ Product Master')}</div>
-          )}
-          {summary.setupUnknown && (
-            <div>⚠️ <b>{tr('ยังตอบเวลาเปลี่ยนรุ่นรวมไม่ได้')}</b> — {
-              summary.setupNoDie ? 'ยังไม่ได้ระบุแม่พิมพ์ในล็อตไหนเลย (ช่อง "แม่พิมพ์" ในตารางด้านล่าง)'
-                : rule ? 'ยังไม่ได้กรอกเวลาฐานยก-ลงแม่พิมพ์' : 'ยังไม่มีกฎเวลาเปลี่ยนรุ่นของไลน์นี้'}
-              {' '}{tr('(ตั้งที่')} <code>/equipment?tab=die</code>) · <b>"—" แปลว่าไม่รู้ ไม่ใช่ 0</b></div>
-          )}
-          {noHeight > 0 && (
-            <div>📏 <b>{tr('แม่พิมพ์')} {noHeight} {tr('ตัวยังไม่ได้กรอกความสูง')}</b> — ระบบจึงเรียงลำดับให้ประหยัดเวลาเปลี่ยนรุ่นไม่ได้
-              (ตัวที่ไม่รู้ความสูงถูกต่อท้ายลำดับ <b>{tr('ไม่ได้ตัดทิ้ง')}</b>)</div>
-          )}
-        </div>
+      {/* 🔴 ความซื่อสัตย์: อะไรที่ประเมินไม่ได้ ต้องเขียนบนจอ ห้ามปล่อยให้ตัวเลขดูสวย
+          ⇒ **ตัวเลข + ผลที่ตามมา อยู่บนแถบเสมอ ห้ามพับ** · เหตุผล/รายชื่อ → tooltip (UI §6.10) */}
+      {summary.noTimeLots > 0 && (
+        <NoticeBar tone="warn" icon="🧪" style={{ marginBottom: 0 }}>
+          <b>{summary.noTimeLots} {tr('ใบทดลองยังไม่ได้ระบุเวลาที่ขอ')}</b> — {tr('วางบนไทม์ไลน์ไม่ได้ · เวลาของใบหลังจากนั้น')}<b>{tr('เชื่อไม่ได้ทั้งหมด')}</b>
+          <MoreMark text={tr('แก้ที่ช่อง "ขอใช้เครื่อง"')} />
+        </NoticeBar>
+      )}
+      {/* รายชื่อ MAT ไป tooltip — บนจอเหลือ "กี่ตัว + กระทบอะไร" ซึ่งพอให้ตัดสินใจได้แล้ว */}
+      {summary.noCtMats.length > 0 && (
+        <NoticeBar tone="warn" style={{ marginBottom: 0 }}>
+          <b>{summary.noCtMats.length} {tr('พาร์ทยังไม่มี cycle time')}</b> — {tr("เวลาผลิตข้างบน")}<b>{tr('ต่ำกว่าจริง')}</b>
+          <MoreMark text={`${tr('ไปกรอกที่ Product Master')} · ${tr('พาร์ทที่ยังไม่มี cycle time')}: ${summary.noCtMats.join(' · ')}`} />
+        </NoticeBar>
+      )}
+      {summary.setupUnknown && (
+        <NoticeBar tone="warn" style={{ marginBottom: 0 }}>
+          <b>{tr('ยังตอบเวลาเปลี่ยนรุ่นรวมไม่ได้')}</b> · <b>{tr('"—" แปลว่าไม่รู้ ไม่ใช่ 0')}</b>
+          <MoreMark text={`${summary.setupNoDie ? tr('ยังไม่ได้ระบุแม่พิมพ์ในล็อตไหนเลย (ช่อง "แม่พิมพ์" ในตารางด้านล่าง)')
+            : rule ? tr('ยังไม่ได้กรอกเวลาฐานยก-ลงแม่พิมพ์') : tr('ยังไม่มีกฎเวลาเปลี่ยนรุ่นของไลน์นี้')} · ${tr('ตั้งที่')} /equipment?tab=die`} />
+        </NoticeBar>
+      )}
+      {noHeight > 0 && (
+        <NoticeBar tone="warn" icon="📏" style={{ marginBottom: 0 }}>
+          <b>{tr('แม่พิมพ์')} {noHeight} {tr('ตัวยังไม่ได้กรอกความสูง')}</b> — {tr('เรียงลำดับให้ประหยัดเวลาเปลี่ยนรุ่นไม่ได้')}
+          <MoreMark text={tr('ตัวที่ไม่รู้ความสูงถูกต่อท้ายลำดับ ไม่ได้ตัดทิ้ง')} />
+        </NoticeBar>
       )}
 
       {/* ── 🧲 ไทม์ไลน์จัดแผน (ลากสลับก่อนหลัง) ── */}

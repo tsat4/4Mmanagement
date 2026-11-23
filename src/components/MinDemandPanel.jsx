@@ -16,6 +16,7 @@
 import React from 'react';
 import { tr } from '../utils/i18n';
 import MatLabel from './MatLabel';
+import InfoMore from './InfoMore';
 import { toneVar, toneDim, toneLine } from '../utils/statusTone';
 
 const fmt = (n) => Number(n || 0).toLocaleString();
@@ -104,9 +105,14 @@ export default function MinDemandPanel({
       {/* 🔎 ตอบไม่ได้เพราะ "ทะเบียนตั้งผิดที่" — **แก้ได้** จึงต้องแยกออกมา ไม่ยุบรวมกับกองตอบไม่ได้ */}
       {!loading && wrong.length > 0 && (
         <div style={{ display: 'grid', gap: 4, paddingTop: 2, borderTop: '1px solid var(--border2)' }}>
+          {/* 🔴 ตัวเลข "กี่พาร์ท" ห้ามพับ (กฎความซื่อสัตย์) · คำอธิบาย/วิธีแก้ยาวเกิน 1 บรรทัด → InfoMore (UI §6.10)
+              เดิมเป็นข้อความ 123 ตัวอักษรวางนิ่ง — `audit/textsweep.mjs` จับได้ 23/11 */}
           <div style={{ fontSize: 11.5, color: 'var(--text2)' }}>
-            🔎 {wrong.length} {tr('พาร์ทตัดสินไม่ได้เพราะบัญชีที่ไลน์ในทะเบียนนิ่ง แต่ของขยับจริงที่อื่น — ย้ายทะเบียนที่')}{' '}
-            <code style={{ fontSize: 11 }}>/line-stock</code> {tr('แล้วสัญญาณจะเดินเอง')}
+            🔎 <b>{wrong.length}</b> {tr('พาร์ท — ทะเบียนตั้ง min ผิดที่')}
+            <InfoMore id="min-wrongplace" label={tr('แก้ยังไง')}>
+              {tr('บัญชีที่ไลน์ในทะเบียนนิ่ง แต่ของขยับจริงที่อื่น — ย้ายทะเบียนที่')}{' '}
+              <code style={{ fontSize: 11 }}>/line-stock</code> {tr('แล้วสัญญาณจะเดินเอง')}
+            </InfoMore>
           </div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {wrong.slice(0, max).map(r => (
