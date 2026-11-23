@@ -1939,7 +1939,7 @@ const oee = (A != null && P != null && Q != null) ? A * P * Q : null;
 | `production_sessions.ct_snapshot` | CT ที่ใช้จริงตอนปิดกะ (แม่นกว่า `ct_sec_at` เพราะไม่ต้องเดาย้อน) |
 
 · migration `20260917c_ct_history_snapshot_dr.sql` (**apply แล้ว**) · กะเก่าก่อน 17/09 = `ct_snapshot` null
-· ออกแบบเฟสถัดไป → `docs/ADAPTIVE-CT-DESIGN.md` (📌 ยังไม่เลือกทาง รอ user ตัดสิน)
+· ออกแบบเฟสถัดไป → `docs/ADAPTIVE-CT-DESIGN.md` (✅ เลือกทาง B + ทำแล้ว 18/09 — เอกสารนั้นเป็นบันทึกการตัดสินใจ ไม่ใช่ของค้าง)
 
 > ### ✅ ต่อยอด 2026-11-11 — **สูตรอ่าน snapshot กลับได้แล้ว + ตรึงเวลาพักด้วย**
 > เฟส 0 เก็บ `ct_snapshot` ไว้ **แต่ `computeSessionOee` ไม่เคยอ่านมัน** (อ่าน CT สดเสมอ)
