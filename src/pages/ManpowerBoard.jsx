@@ -53,6 +53,7 @@ import { cachedMaster } from '../utils/masterCache';
 import Segmented from '../components/Segmented';
 import FactoryMiniMap from '../components/FactoryMiniMap';
 import { labelAnchor } from '../utils/regionGeom';
+import { lineChainIds } from '../utils/lineHierarchy';
 import useIsMobile from '../utils/useIsMobile';
 
 import SectionScopeSelect from '../components/SectionScopeSelect';
@@ -659,7 +660,7 @@ function useShiftOfEmp(maps) {
 }
 
 /* ── 🗺️ ภาพรวมทั้งโรงงาน ── */
-function FactoryStaffView({ lines, attendance, maps, stationPlans, skills, employees, scopeNames, viewSwitch }) {
+function FactoryStaffView({ lines, depts, attendance, maps, stationPlans, skills, employees, scopeNames, viewSwitch }) {
   const merge = useMergeParams();
   const isMobile = useIsMobile();
   const [ws, setWs] = useState(null);         // workstations ทั้งโรงงาน (มีพิกัด + ทักษะที่จุดต้องการ)
@@ -694,13 +695,21 @@ function FactoryStaffView({ lines, attendance, maps, stationPlans, skills, emplo
   const shift = getCurrentShift();
   const allStationIds = useMemo(() => new Set((ws || []).map(s => String(s.id))), [ws]);
   // สถานะต่อกรอบ — คิดครั้งเดียวต่อชุดข้อมูล · นอกขอบเขตบัญชี = ไม่คิด (เทาจาง + นับบอกบนจอ)
+  // ไลน์ของส่วนงาน/แผนกที่เลือก (ครอบครัวแม่-ลูก) · ส่วนงานยังไม่ผูกไลน์ = ไม่กรอง (ห้ามซ่อนทั้งผังเงียบๆ)
+  const secKey = (depts || []).flatMap(d => (d.lines || []).map(l => l.id)).sort().join(',');
+  const secNames = useMemo(() => {
+    const fam = lineFamilyOf(lines || [], secKey ? secKey.split(',') : []);
+    return fam.length ? new Set(fam.map(l => l.name)) : null;
+  }, [lines, secKey]);
   const byRegion = useMemo(() => {
     const m = new Map();
     if (!ws) return m;
     const byGroup = new Map();   // 🧺 ตัดสินทั้งกลุ่ม (ไลน์แม่บนสุด) — กรอบลูกในกลุ่มเดียวกันใช้ผลเดียวกัน
     for (const r of regions) {
-      if (scopeNames && !scopeNames.has(r.line_name)) { m.set(r.line_name, { outOfScope: true }); continue; }
+      if (scopeNames && !scopeNames.has(r.line_name)) { m.set(r.line_name, { outOfScope: true, why: 'scope' }); continue; }
       const group = lineGroupRoot(lines, r.line_name);
+      // 🔎 กรองตามส่วนงาน/แผนกที่เลือกบนหัวเพจ (user 23/11 "เลือก PD3 ทำไมไลน์ PD4 ยังขึ้น") — นอกที่เลือก = จาง ไม่มีเลข
+      if (secNames && !secNames.has(group) && !secNames.has(r.line_name)) { m.set(r.line_name, { outOfScope: true, why: 'section', group }); continue; }
       if (!byGroup.has(group)) {
         const st = stationsOfLineFamily(lines, group, ws);
         const placed = layoutPeople({ stations: st, homeByEmp: homes, attendance, empById, shiftOfEmp, stationPlans });
@@ -712,7 +721,7 @@ function FactoryStaffView({ lines, attendance, maps, stationPlans, skills, emplo
       m.set(r.line_name, byGroup.get(group));
     }
     return m;
-  }, [ws, regions, scopeNames, lines, homes, attendance, empById, shiftOfEmp, stationPlans, skills, allStationIds, shift]);
+  }, [ws, regions, scopeNames, secNames, lines, homes, attendance, empById, shiftOfEmp, stationPlans, skills, allStationIds, shift]);
 
   // บนผัง = สีกรอบ + ชื่อไลน์ล้วน (user 20/11 "เอากรอบ text ในผังออก · มีแค่ชื่อไลน์เป็น index")
   //   ตัวเลขอยู่แผงขวาที่เดียว (ป้ายการ์ดบนผังซ้ำกับแผงและทับกันเองตรงไลน์ที่อยู่ชิดกัน) · ชื่อล้วนวางกันทับให้เอง
@@ -732,7 +741,8 @@ function FactoryStaffView({ lines, attendance, maps, stationPlans, skills, emplo
     const at = new Map();
     for (const r of regions) {
       const s = byRegion.get(r.line_name);
-      if (!s || s.outOfScope || (r.points || []).length < 3) continue;
+      // เลขนับทั้งโรงงาน (ไม่นับเฉพาะส่วนงานที่กรอง) ⇒ เปลี่ยนส่วนงานแล้วเลขของไลน์เดิมไม่เปลี่ยน
+      if (!s || (s.outOfScope && s.why !== 'section') || (r.points || []).length < 3) continue;
       const [x, y] = labelAnchor(r.points);
       const k = [Math.floor(y / 10), x];
       const cur = at.get(s.group);
@@ -766,7 +776,8 @@ function FactoryStaffView({ lines, attendance, maps, stationPlans, skills, emplo
     return [...g.entries()].map(([group, v]) => [group, v.s, v.names.sort(naturalCompare)])
       .sort((a, b) => STAFF_RANK[a[1].status] - STAFF_RANK[b[1].status] || naturalCompare(a[0], b[0]));
   }, [byRegion]);
-  const hidden = [...byRegion.values()].filter(s => s.outOfScope).length;
+  const hidden = [...byRegion.values()].filter(s => s.outOfScope && s.why === 'scope').length;
+  const otherSec = [...byRegion.values()].filter(s => s.outOfScope && s.why === 'section').length;
   const count = (k) => rows.filter(([, s]) => s.status === k).length;
 
   return (
@@ -808,6 +819,7 @@ function FactoryStaffView({ lines, attendance, maps, stationPlans, skills, emplo
               {(names.length > 1 || names[0] !== name) && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{trI18n('กรอบ:')} {names.join(', ')}</span>}
             </button>
           ))}
+          {otherSec > 0 && <div style={{ fontSize: 12, color: 'var(--muted)' }}>🔎 {trI18n('นอกส่วนงาน/แผนกที่เลือก — จางไว้')} {otherSec} {trI18n('กรอบ (เปลี่ยนส่วนงานที่ช่องด้านบน)')}</div>}
           {hidden > 0 && <div style={{ fontSize: 12, color: 'var(--muted)' }}>🔭 {trI18n('นอกขอบเขตบัญชี — ไม่แสดงสถานะ')} {hidden} {trI18n('กรอบ')}</div>}
         </div>
       </div>
@@ -855,8 +867,19 @@ function LineLayoutView({ board, depts, lines, attendance, maps, tv, stationPlan
   // 📺 จอ TV: หลายผัง = วนทีละผังเอง (ไม่มีเมาส์ไปเลือก dropdown) · โหมดปกติ = ตาม ?lline= (ไม่ระบุ = ผังแรก)
   const [tvIdx, setTvIdx] = useAutoPage(tv ? layouts.length : 0);
   const llineKey = lline.trim().toLowerCase();
+  const layoutByName = (n) => layouts.find(l => String(l.line_name || '').trim().toLowerCase() === String(n || '').trim().toLowerCase()) || null;
+  // 🔗 ไลน์ลูกส่วนใหญ่ไม่มีรูปผังของตัวเอง (จุดงานอยู่บนผังไลน์แม่) ⇒ ไล่ขึ้นสายแม่จนเจอผัง แล้ว**เขียนบอก**ว่าเป็นผังของใคร
+  //    (user 23/11 "ไลน์ลูกไม่ขึ้นให้คลิก" — เดิมกดกรอบ HDF1 บนภาพรวมแล้วได้ "ไม่มีรูปผัง")
+  const viaParent = useMemo(() => {
+    if (tv || !llineKey || layoutByName(lline)) return null;
+    const self = lines.find(l => l.name.trim().toLowerCase() === llineKey);
+    if (!self) return null;
+    const chain = lineChainIds(lines, self.id).slice(0, -1).reverse();   // แม่ใกล้สุดก่อน
+    for (const id of chain) { const up = lines.find(l => String(l.id) === String(id)); if (up && layoutByName(up.name)) return up.name; }
+    return null;
+  }, [tv, llineKey, lline, lines, layouts]); // eslint-disable-line react-hooks/exhaustive-deps
   const layout = tv ? layouts[clampPage(tvIdx, layouts.length)] || null
-    : (llineKey ? layouts.find(l => String(l.line_name || '').trim().toLowerCase() === llineKey) || null : layouts[0] || null);
+    : (llineKey ? layoutByName(viaParent || lline) : layouts[0] || null);
   // 🔴 ไลน์ที่ขอมาไม่มีรูปผัง = บอกตรงๆ ห้ามแอบโชว์ผังไลน์อื่นแทน
   const llineMissing = !tv && !!llineKey && layouts.length > 0 && !layout;
   useEffect(() => {
@@ -889,18 +912,17 @@ function LineLayoutView({ board, depts, lines, attendance, maps, tv, stationPlan
   // 🧺 ตัดสินทั้งกลุ่ม (ไลน์แม่บนสุด) — สูตรเดียวกับภาพรวม ⇒ สีแผงตรงกับสีกรอบบนผังรวมเสมอ
   //    ทักษะต้องคิดจากจุดของทั้งกลุ่ม ⇒ ผังนี้เป็นไลน์ลูก = โหลดจุด (พร้อมทักษะที่ต้องการ) ของทั้งกลุ่มเพิ่ม
   const group = layout ? lineGroupRoot(lines, layout.line_name) : null;
+  // 🔴 จุดของ "ทั้งกลุ่ม" ต้องมาจากทะเบียนจุดทั้งโรงงาน — เดิมผังไลน์แม่ใช้แค่จุดบนรูปผังนี้ ⇒ คนที่ยืนจุดของไลน์ลูก
+  //    ไม่ถูกนับ (user 23/11: HYDROFORM ผังรายไลน์ขึ้น 7/14 ทั้งที่มาจริง 16 = ภาพรวมโรงงาน) · โหลดครั้งเดียว (~135 แถว)
   const [groupSt, setGroupSt] = useState(null);
   useEffect(() => {
     let alive = true;
-    if (!group || group === layout?.line_name) { setGroupSt(null); return undefined; }
-    const ids = lineFamilyDown(lines, group).map(l => l.id);
-    if (!ids.length) { setGroupSt(null); return undefined; }
-    supabase.from('workstations').select('id, line_name, line_id, station_name, station_requirements(skill_name, min_score)').in('line_id', ids)
-      .then(({ data, error }) => { if (alive) { setGroupSt(data || []); if (error) setErr(error.message); } });
+    fetchAllPages(() => supabase.from('workstations').select('id, line_name, line_id, station_name, station_requirements(skill_name, min_score)'))
+      .then((r) => { if (alive) { setGroupSt(r.rows || []); if (r.error) setErr(String(r.error)); } });
     return () => { alive = false; };
-  }, [group, layout?.line_name, lines.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
   const sum = useMemo(() => {
-    const gst = groupSt ? stationsOfLineFamily(lines, group, groupSt) : stations;
+    const gst = groupSt && group ? stationsOfLineFamily(lines, group, groupSt) : stations;
     // ทะเบียนพนักงานทั้งโรงงาน (ไม่ใช่ของบอร์ดส่วนงาน) — ให้ได้เลขเดียวกับภาพรวมเป๊ะ
     const gPlaced = layoutPeople({ stations: gst, homeByEmp: homes, attendance, empById: allEmpById, shiftOfEmp, stationPlans });
     const gFit = stationSkillGaps(gPlaced, { skillsByEmp: skills?.byEmp || {},
@@ -945,6 +967,7 @@ function LineLayoutView({ board, depts, lines, attendance, maps, tv, stationPlan
         {tv && legend}
       </FilterBar>
       {err && <div style={{ fontSize: 12, color: 'var(--red)' }}>⚠️ {err}</div>}
+      {viaParent && layout && <div style={{ fontSize: 12, color: 'var(--blue)' }}>ℹ️ {trI18n('ไลน์')} <b>{lline}</b> {trI18n('ไม่มีรูปผังของตัวเอง — แสดงผังของไลน์แม่')} <b>{viaParent}</b> {trI18n('(จุดงานของไลน์ลูกอยู่บนผังนี้)')}</div>}
       {llineMissing ? (
         <div className="card" style={{ padding: 24, color: 'var(--amber)' }}>
           ⚠️ {trI18n('ไลน์')} <b>{lline}</b> {trI18n('ยังไม่มีรูปผังในส่วนงานนี้ — อัพโหลดที่ /line-setup หรือเลือกผังอื่นจากช่องด้านบน')}
