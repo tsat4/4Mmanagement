@@ -12,6 +12,7 @@ import { storeBtn } from '../utils/storeUi';
 import FilterBar from './FilterBar';
 import SearchInput from './SearchInput';
 import MatLabel from './MatLabel';
+import InfoMore from './InfoMore';
 import { tr } from '../utils/i18n';
 
 /* ═══ 📊 เทียบยอดคงคลัง SAP (MB52) กับระบบ — รายสัปดาห์ (2026-11-20 · คำสั่ง user)
@@ -53,6 +54,7 @@ export default function SapStockCompare() {
   const [sloc, setSloc] = useState('');
   const [onlyDiff, setOnlyDiff] = useState(true);
   const [q, setQ] = useState('');
+  const [showUp, setShowUp] = useState(false);   // หน้าต่างอัปโหลด (24/11)
 
   const loadUploads = useCallback(async () => {
     const { data, error } = await supabaseDR.from('sap_stock_uploads').select(UP_COLS)
@@ -89,7 +91,7 @@ export default function SapStockCompare() {
   };
 
   const save = async () => {
-    if (!canUpload || !parsed?.ok) return;
+    if (!canUpload || !parsed?.ok) return false;
     setBusy(true);
     const a = getActor();
     const { data, error } = await supabaseDR.rpc('sap_stock_upload_create', {
@@ -98,11 +100,12 @@ export default function SapStockCompare() {
       p_rows: parsed.rows,
     });
     setBusy(false);
-    if (error) { toast.error(`${tr("บันทึกไม่สำเร็จ")} — ${error.message}`); return; }
+    if (error) { toast.error(`${tr("บันทึกไม่สำเร็จ")} — ${error.message}`); return false; }
     toast.success(`✅ ${tr("บันทึกรอบเทียบแล้ว")} · ${(data?.slocs || []).join(', ')} · ${data?.compare_rows || 0} ${tr("แถว (ตรึงยอดระบบ ณ ตอนนี้")})`);
     setParsed(null); setFileName('');
     await loadUploads();
     if (data?.id) setSel(data.id);
+    return true;
   };
 
   const remove = async (u) => {
@@ -128,110 +131,125 @@ export default function SapStockCompare() {
   const tdR = { ...td, textAlign: 'right', whiteSpace: 'nowrap' };
   const diffColor = (d) => (d === 0 ? 'var(--green)' : 'var(--red)');
 
+  /* 📋 24/11 (คำสั่ง user "จัดแท็บ MB52 ให้ด้วย") — ลำดับมาตรฐาน: **แถบกรองเดียว** (รอบเทียบ · รหัสคลัง · เฉพาะที่ต่าง ·
+     ค้นหา · ⓘ · 📤 อัปโหลด) → ข้อมูลรอบ → ตัวเลขสรุปรายคลัง → ตาราง · การ์ดอัปโหลด/ปุ่มรอบที่เคยอยู่เหนือแถบกรอง
+     ย้ายเข้าแถบกรอง (เลือกรอบ = dropdown) และหน้าต่างอัปโหลด (กดปุ่มเปิด) · ตรรกะอัปโหลด/เทียบเหมือนเดิมทุกตัว */
+  const upload = parsed !== null || showUp;
+  const slocOpts = summary.map(x => x.sloc);
+  const anyFilter = !!sloc || !onlyDiff || !!q;
   return (
-    <div>
-      <div style={card}>
-        <b style={{ fontSize: 15 }}>📤 {tr('อัปโหลด MB52 จาก SAP')}</b>
-        <div style={{ fontSize: 12, color: 'var(--muted)', margin: '4px 0 8px' }}>
-          {tr('ไฟล์ .xls ที่ SAP export (หรือ .xlsx) · ไฟล์ทีละคลังหรือหลายคลังก็ได้ — ระบบเทียบเฉพาะรหัสคลังที่อยู่ในไฟล์ · ยอดฝั่งระบบตัด ณ เวลาที่กดบันทึก')}
-          <br />{tr('ต้องมีคอลัมน์ Material · SLoc · Unrestr. (ลำดับคอลัมน์ไม่สำคัญ) · แนะนำบันทึก layout กลางใน SAP ให้ทุกคน export แบบเดียวกัน')}
-        </div>
-        {!canUpload && <div style={{ color: 'var(--amber)', fontSize: 13 }}>🔒 {tr('ดูอย่างเดียว — อัปโหลด/ลบรอบต้องมีสิทธิ์ line_stock:issue')}</div>}
-        {canUpload && <input type="file" accept=".xls,.xlsx,.txt,.tsv" onChange={onFile} />}
-        {parsed && (
-          <div style={{ marginTop: 10, padding: 10, borderRadius: 8, background: parsed.ok ? 'var(--green-dim)' : 'var(--red-dim)', border: `1px solid ${parsed.ok ? 'var(--green-line)' : 'var(--red-line)'}` }}>
-            {parsed.ok ? <>
-              <div style={{ fontSize: 13 }}>
-                📄 <b>{fileName}</b> · {tr('วันที่ในไฟล์')} {parsed.reportDate || tr('ไม่พบ')} · {tr('รหัสคลัง')} <b>{parsed.slocs.join(', ')}</b> ·{' '}
-                {parsed.srcRows.toLocaleString()} {tr('บรรทัด')} → {parsed.rows.length.toLocaleString()} MAT · {tr('รวม Unrestr.')} {fmt(parsed.total)}
-              </div>
-              {parsed.warnings.map(w => <div key={w} style={{ fontSize: 12, color: 'var(--amber)' }}>⚠ {w}</div>)}
-              <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
-                <button type="button" style={storeBtn('primary')} disabled={busy} onClick={save}>{busy ? '…' : `💾 ${tr('บันทึกและเทียบ')}`}</button>
-                <button type="button" style={storeBtn('secondary')} disabled={busy} onClick={() => setParsed(null)}>{tr('ยกเลิก')}</button>
-              </div>
-            </> : <>
-              <div style={{ fontSize: 13, color: 'var(--red)' }}>⚠ {parsed.error}</div>
-              {parsed.headers?.length > 0 && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('หัวคอลัมน์ที่เจอ')}: {parsed.headers.join(' · ')}</div>}
-            </>}
-          </div>
-        )}
-      </div>
+    <div style={{ display: 'grid', gap: 12 }}>
+      <FilterBar onClear={anyFilter ? () => { setSloc(''); setOnlyDiff(true); setQ(''); } : undefined}>
+        <select value={sel || ''} onChange={e => setSel(e.target.value || null)} aria-label={tr('รอบเทียบ')} disabled={!uploads.length}>
+          {!uploads.length && <option value="">{tr('ยังไม่มีรอบเทียบ')}</option>}
+          {uploads.map(u => <option key={u.id} value={u.id}>{tr('รอบ')} {when(u.created_at)} · {(u.slocs || []).join(', ')}</option>)}
+        </select>
+        <select value={sloc} onChange={e => setSloc(e.target.value)} aria-label={tr('รหัสคลัง')} disabled={!slocOpts.length}>
+          <option value="">{tr('ทุกรหัสคลังในรอบนี้')}</option>
+          {slocOpts.map(x => <option key={x} value={x}>{x}</option>)}
+        </select>
+        <label style={{ fontSize: 13, display: 'flex', gap: 4, alignItems: 'center' }}>
+          <input type="checkbox" checked={onlyDiff} onChange={e => setOnlyDiff(e.target.checked)} /> {tr('เฉพาะที่ต่าง')}
+        </label>
+        <SearchInput value={q} onChange={setQ} placeholder={tr('ค้นหา MAT / ชื่อพาร์ท')} />
+        <span className="spacer" />
+        <InfoMore label={tr('วิธีใช้')}>
+          {tr('อัปโหลดไฟล์ MB52 ที่ SAP export (.xls หรือ .xlsx) ทีละคลังหรือหลายคลังก็ได้ — ระบบเทียบเฉพาะรหัสคลังที่อยู่ในไฟล์ · ยอดฝั่งระบบตรึง ณ เวลาที่กดบันทึก (ดูย้อนหลังได้ ตัวเลขไม่ขยับ) · ต่าง = ระบบเรา − SAP · เทียบกับ Unrestr. (QI/Blocked โชว์ข้าง)')}
+        </InfoMore>
+        {canUpload && <button type="button" style={storeBtn('primary', { minHeight: 36, padding: '6px 14px', fontSize: 13 })} onClick={() => setShowUp(true)}>📤 {tr('อัปโหลด MB52')}</button>}
+      </FilterBar>
 
-      <div style={card}>
-        <b style={{ fontSize: 15 }}>🗂️ {tr('รอบเทียบ')}</b>
-        {upErr && <div style={{ color: 'var(--red)', fontSize: 13 }}>⚠ {tr('โหลดรายการรอบไม่สำเร็จ')}: {upErr}</div>}
-        {!upErr && !uploads.length && <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6 }}>{tr('ยังไม่มีรอบเทียบ — อัปโหลดไฟล์ MB52 ด้านบน')}</div>}
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
-          {uploads.map(u => (
-            <button key={u.id} type="button" onClick={() => setSel(u.id)}
-              style={{ ...storeBtn(u.id === sel ? 'primary' : 'secondary'), minHeight: 0, padding: '6px 10px', fontSize: 12, fontWeight: 600 }}>
-              {when(u.created_at)} · {(u.slocs || []).join(', ')}
-            </button>
-          ))}
-        </div>
-      </div>
+      {!canUpload && <div style={{ color: 'var(--amber)', fontSize: 13 }}>🔒 {tr('ดูอย่างเดียว — อัปโหลด/ลบรอบต้องมีสิทธิ์ line_stock:issue')}</div>}
+      {upErr && <div style={{ color: 'var(--red)', fontSize: 13 }}>⚠ {tr('โหลดรายการรอบไม่สำเร็จ')}: {upErr}</div>}
+      {!upErr && !uploads.length && <div style={{ padding: 30, textAlign: 'center', fontSize: 13, color: 'var(--muted)' }}>{tr('ยังไม่มีรอบเทียบ — กด 📤 อัปโหลด MB52')}</div>}
 
-      {cur && (
-        <div style={card}>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'baseline' }}>
-            <b style={{ fontSize: 15 }}>📊 {cur.file_name || tr('ไม่มีชื่อไฟล์')}</b>
-            <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-              {tr('วันที่ SAP')} {cur.report_date || '—'} · {tr('ตรึงยอดระบบ')} {when(cur.cutoff_at)} · {tr('โดย')} {cur.uploaded_by || '—'} · {fmt(cur.sap_rows)} {tr('บรรทัดในไฟล์')}
-            </span>
-            {canUpload && <button type="button" style={{ ...storeBtn('secondary'), minHeight: 0, padding: '4px 10px', fontSize: 12, marginLeft: 'auto', color: 'var(--red)' }} onClick={() => remove(cur)}>🗑 {tr('ลบรอบนี้')}</button>}
+      {cur && <>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', fontSize: 13, color: 'var(--text2)' }}>
+          <span>📊 <b style={{ color: 'var(--text)' }}>{cur.file_name || tr('ไม่มีชื่อไฟล์')}</b></span>
+          <span>· {tr('วันที่ SAP')} {cur.report_date || '—'} · {tr('ตรึงยอดระบบ')} {when(cur.cutoff_at)} · {tr('โดย')} {cur.uploaded_by || '—'} · {fmt(cur.sap_rows)} {tr('บรรทัดในไฟล์')}</span>
+          {canUpload && <button type="button" style={{ ...storeBtn('secondary'), minHeight: 0, padding: '4px 10px', fontSize: 12, marginLeft: 'auto', color: 'var(--red)' }} onClick={() => remove(cur)}>🗑 {tr('ลบรอบนี้')}</button>}
+        </div>
+        {rowErr && <div style={{ color: 'var(--red)', fontSize: 13 }}>⚠ {tr('โหลดผลเทียบไม่สำเร็จ')}: {rowErr}</div>}
+        {loadingRows && <div style={{ fontSize: 13, color: 'var(--muted)' }}>{tr('กำลังโหลด…')}</div>}
+        {!loadingRows && !rowErr && <>
+          {/* ตัวเลขสรุปรายคลัง — กดแถว = กรองคลังนั้น (ช่องเดียวกับ dropdown รหัสคลังในแถบกรอง) */}
+          <div style={{ ...card, marginBottom: 0, padding: 0, overflowX: 'auto' }}>
+            <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 520 }}>
+              <thead><tr>
+                <th style={th}>{tr('รหัสคลัง')}</th><th style={thR}>SAP</th><th style={thR}>{tr('ระบบเรา')}</th>
+                <th style={thR}>MAT</th><th style={thR}>{tr('ตรง')}</th><th style={thR}>{tr('ต่าง')}</th><th style={thR}>{tr('ผลรวมส่วนต่าง')}</th>
+              </tr></thead>
+              <tbody>{summary.map(x => (
+                <tr key={x.sloc} style={{ cursor: 'pointer', background: sloc === x.sloc ? 'var(--accent-dim)' : undefined }} onClick={() => setSloc(sloc === x.sloc ? '' : x.sloc)}>
+                  <td style={td}><b>{x.sloc}</b></td><td style={tdR}>{fmt(x.sap)}</td><td style={tdR}>{fmt(x.esm)}</td>
+                  <td style={tdR}>{x.mats}</td><td style={{ ...tdR, color: 'var(--green)' }}>{x.match}</td>
+                  <td style={{ ...tdR, color: x.diff ? 'var(--red)' : 'var(--muted)' }}>{x.diff}</td><td style={tdR}>{fmt(x.absDiff)}</td>
+                </tr>
+              ))}</tbody>
+            </table>
           </div>
-          {rowErr && <div style={{ color: 'var(--red)', fontSize: 13 }}>⚠ {tr('โหลดผลเทียบไม่สำเร็จ')}: {rowErr}</div>}
-          {loadingRows && <div style={{ fontSize: 13, color: 'var(--muted)' }}>{tr('กำลังโหลด…')}</div>}
-          {!loadingRows && !rowErr && <>
-            <div style={{ overflowX: 'auto', margin: '8px 0' }}>
-              <table style={{ borderCollapse: 'collapse', minWidth: 520 }}>
-                <thead><tr>
-                  <th style={th}>{tr('รหัสคลัง')}</th><th style={thR}>SAP</th><th style={thR}>{tr('ระบบเรา')}</th>
-                  <th style={thR}>MAT</th><th style={thR}>{tr('ตรง')}</th><th style={thR}>{tr('ต่าง')}</th><th style={thR}>{tr('ผลรวมส่วนต่าง')}</th>
-                </tr></thead>
-                <tbody>{summary.map(x => (
-                  <tr key={x.sloc} style={{ cursor: 'pointer', background: sloc === x.sloc ? 'var(--accent-dim)' : undefined }} onClick={() => setSloc(sloc === x.sloc ? '' : x.sloc)}>
-                    <td style={td}><b>{x.sloc}</b></td><td style={tdR}>{fmt(x.sap)}</td><td style={tdR}>{fmt(x.esm)}</td>
-                    <td style={tdR}>{x.mats}</td><td style={{ ...tdR, color: 'var(--green)' }}>{x.match}</td>
-                    <td style={{ ...tdR, color: x.diff ? 'var(--red)' : 'var(--muted)' }}>{x.diff}</td><td style={tdR}>{fmt(x.absDiff)}</td>
+          {unknownPile > 0 && <div style={{ fontSize: 12, color: 'var(--amber)' }}>⚠ {unknownPile} {tr('แถวอยู่ในรหัสเทียม STORE?/FG? — พาร์ทยังไม่ได้ตั้งที่จัดเก็บหลัก ระบบจึงไม่รู้ว่าอยู่รหัสคลังไหนใน SAP (ตั้งที่ Part Master)')}</div>}
+          <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+            {sloc ? `${tr('รหัสคลัง')} ${sloc} · ` : ''}{tr('แสดง')} {shown.length.toLocaleString()} / {rows.length.toLocaleString()} {tr('แถว')} · {tr('เรียงส่วนต่างมาก→น้อย · ต่าง = ระบบเรา − SAP')}
+          </div>
+          <div style={{ ...card, marginBottom: 0, padding: 0, overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead><tr>
+                <th style={th}>{tr('รหัสคลัง')}</th><th style={th}>{tr('พาร์ท')}</th>
+                <th style={thR}>SAP Unrestr.</th><th style={thR}>{tr('ระบบเรา')}</th><th style={thR}>{tr('ต่าง')}</th><th style={th}>{tr('คำใบ้')}</th>
+              </tr></thead>
+              <tbody>{shown.map(r => {
+                const d = diffOf(r);
+                const extra = [Number(r.sap_qi) ? `QI ${fmt(r.sap_qi)}` : null, Number(r.sap_blocked) ? `Blocked ${fmt(r.sap_blocked)}` : null].filter(Boolean).join(' · ');
+                return (
+                  <tr key={r.id}>
+                    <td style={td}>{r.sloc}</td>
+                    <td style={td}><MatLabel mat={r.mat_no} name={r.part_name} size={13} /></td>
+                    <td style={tdR}>{fmt(r.sap_qty)} {r.bun || ''}{extra && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{extra}</div>}</td>
+                    <td style={tdR} title={ESM_BASIS_LABEL[r.esm_basis] || ''}>{fmt(r.esm_qty)}</td>
+                    <td style={{ ...tdR, color: diffColor(d), fontWeight: 600 }}>{d > 0 ? '+' : ''}{fmt(d)}</td>
+                    <td style={{ ...td, fontSize: 12, color: 'var(--text2)' }}>{hintsOf(r).join(' · ') || '—'}</td>
                   </tr>
-                ))}</tbody>
-              </table>
+                );
+              })}</tbody>
+            </table>
+          </div>
+        </>}
+      </>}
+
+      {/* 📤 หน้าต่างอัปโหลด — ตรรกะเดิม (แกะไฟล์ → ดูสรุป → บันทึกและเทียบ) */}
+      {upload && canUpload && (
+        <div className="overlay">
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ width: 'min(640px, 96vw)', maxHeight: '92vh', overflowY: 'auto', display: 'grid', gap: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <b style={{ fontSize: 16 }}>📤 {tr('อัปโหลด MB52 จาก SAP')}</b>
+              <button type="button" onClick={() => { setShowUp(false); setParsed(null); }} aria-label={tr('ปิด')}
+                style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--muted)', fontSize: 18, cursor: 'pointer' }}>✕</button>
             </div>
-            {unknownPile > 0 && <div style={{ fontSize: 12, color: 'var(--amber)', marginBottom: 6 }}>⚠ {unknownPile} {tr('แถวอยู่ในรหัสเทียม STORE?/FG? — พาร์ทยังไม่ได้ตั้งที่จัดเก็บหลัก ระบบจึงไม่รู้ว่าอยู่รหัสคลังไหนใน SAP (ตั้งที่ Part Master)')}</div>}
-            <FilterBar>
-              <label style={{ fontSize: 13, display: 'flex', gap: 4, alignItems: 'center' }}>
-                <input type="checkbox" checked={onlyDiff} onChange={e => setOnlyDiff(e.target.checked)} /> {tr('เฉพาะที่ต่าง')}
-              </label>
-              <SearchInput value={q} onChange={setQ} placeholder={tr('ค้นหา MAT / ชื่อพาร์ท')} />
-            </FilterBar>
-            <div style={{ fontSize: 12, color: 'var(--muted)', margin: '4px 0' }}>
-              {sloc ? `${tr('รหัสคลัง')} ${sloc} · ` : ''}{tr('แสดง')} {shown.length.toLocaleString()} / {rows.length.toLocaleString()} {tr('แถว')} · {tr('เรียงส่วนต่างมาก→น้อย · ต่าง = ระบบเรา − SAP')}
+            <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.6 }}>
+              {tr('ไฟล์ .xls ที่ SAP export (หรือ .xlsx) · ไฟล์ทีละคลังหรือหลายคลังก็ได้ — ระบบเทียบเฉพาะรหัสคลังที่อยู่ในไฟล์ · ยอดฝั่งระบบตัด ณ เวลาที่กดบันทึก')}
+              <br />{tr('ต้องมีคอลัมน์ Material · SLoc · Unrestr. (ลำดับคอลัมน์ไม่สำคัญ) · แนะนำบันทึก layout กลางใน SAP ให้ทุกคน export แบบเดียวกัน')}
             </div>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead><tr>
-                  <th style={th}>{tr('รหัสคลัง')}</th><th style={th}>{tr('พาร์ท')}</th>
-                  <th style={thR}>SAP Unrestr.</th><th style={thR}>{tr('ระบบเรา')}</th><th style={thR}>{tr('ต่าง')}</th><th style={th}>{tr('คำใบ้')}</th>
-                </tr></thead>
-                <tbody>{shown.map(r => {
-                  const d = diffOf(r);
-                  const extra = [Number(r.sap_qi) ? `QI ${fmt(r.sap_qi)}` : null, Number(r.sap_blocked) ? `Blocked ${fmt(r.sap_blocked)}` : null].filter(Boolean).join(' · ');
-                  return (
-                    <tr key={r.id}>
-                      <td style={td}>{r.sloc}</td>
-                      <td style={td}><MatLabel mat={r.mat_no} name={r.part_name} size={13} /></td>
-                      <td style={tdR}>{fmt(r.sap_qty)} {r.bun || ''}{extra && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{extra}</div>}</td>
-                      <td style={tdR} title={ESM_BASIS_LABEL[r.esm_basis] || ''}>{fmt(r.esm_qty)}</td>
-                      <td style={{ ...tdR, color: diffColor(d), fontWeight: 600 }}>{d > 0 ? '+' : ''}{fmt(d)}</td>
-                      <td style={{ ...td, fontSize: 12, color: 'var(--text2)' }}>{hintsOf(r).join(' · ') || '—'}</td>
-                    </tr>
-                  );
-                })}</tbody>
-              </table>
-            </div>
-          </>}
+            <input type="file" accept=".xls,.xlsx,.txt,.tsv" onChange={onFile} />
+            {parsed && (
+              <div style={{ padding: 10, borderRadius: 8, background: parsed.ok ? 'var(--green-dim)' : 'var(--red-dim)', border: `1px solid ${parsed.ok ? 'var(--green-line)' : 'var(--red-line)'}` }}>
+                {parsed.ok ? <>
+                  <div style={{ fontSize: 13 }}>
+                    📄 <b>{fileName}</b> · {tr('วันที่ในไฟล์')} {parsed.reportDate || tr('ไม่พบ')} · {tr('รหัสคลัง')} <b>{parsed.slocs.join(', ')}</b> ·{' '}
+                    {parsed.srcRows.toLocaleString()} {tr('บรรทัด')} → {parsed.rows.length.toLocaleString()} MAT · {tr('รวม Unrestr.')} {fmt(parsed.total)}
+                  </div>
+                  {parsed.warnings.map(w => <div key={w} style={{ fontSize: 12, color: 'var(--amber)' }}>⚠ {w}</div>)}
+                  <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+                    <button type="button" style={storeBtn('primary')} disabled={busy} onClick={async () => { if (await save()) setShowUp(false); }}>{busy ? '…' : `💾 ${tr('บันทึกและเทียบ')}`}</button>
+                    <button type="button" style={storeBtn('secondary')} disabled={busy} onClick={() => setParsed(null)}>{tr('ยกเลิก')}</button>
+                  </div>
+                </> : <>
+                  <div style={{ fontSize: 13, color: 'var(--red)' }}>⚠ {parsed.error}</div>
+                  {parsed.headers?.length > 0 && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('หัวคอลัมน์ที่เจอ')}: {parsed.headers.join(' · ')}</div>}
+                </>}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
