@@ -10,6 +10,7 @@ import PageHeader from '../components/PageHeader';
 import Page from '../components/Page';
 import { tr } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
+import { askConfirm } from '../utils/askConfirm';
 const MONTH_NAMES = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
 const WEEKDAY_HEAD = ['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'];
 const DAY_TYPES = ['working', 'ot15', 'ot2', 'shutdown75'];
@@ -69,11 +70,11 @@ export default function CompanyCalendar() {
     }));
     const { error } = await supabase.from('company_calendar').upsert(rows, { onConflict: 'work_date' });
     if (error) {
-      toast.error('บันทึกไม่สำเร็จ: ' + error.message);
+      toast.error((tr('บันทึกไม่สำเร็จ') + ': ') + error.message);
     } else {
       setCalendar(prev => ({ ...prev, ...draft }));
       setDraft({});
-      toast.success(`บันทึก ${rows.length} วันเรียบร้อย`);
+      toast.success(`${tr("บันทึก")} ${rows.length} ${tr("วันเรียบร้อย")}`);
     }
     setSaving(false);
   };
@@ -90,14 +91,14 @@ export default function CompanyCalendar() {
       d.setDate(d.getDate() + 1);
     }
     // เขียนทับทั้งปีทีเดียว — ยืนยันก่อน (ต่างจากคลิกรายวันที่มี draft)
-    if (!confirm(`ตั้งค่า ${dates.length} วัน (ทุกวันในสัปดาห์ที่เลือก ทั้งปี ${year}) เป็น "${bulkType}" ?\n\nเขียนทับค่าเดิมของวันเหล่านี้ทันที`)) return;
+    if (!await askConfirm(`${tr("ตั้งค่า")} ${dates.length} ${tr("วัน (ทุกวันในสัปดาห์ที่เลือก ทั้งปี")} ${year}) ${tr("เป็น")} "${bulkType}" ?\n\n${tr("เขียนทับค่าเดิมของวันเหล่านี้ทันที")}`)) return;
     setLoading(true);
     const { error } = await supabase.from('company_calendar').upsert(
       dates.map(dt => ({ work_date: dt, day_type: bulkType, updated_at: new Date().toISOString() })),
       { onConflict: 'work_date' }
     );
-    if (error) toast.error('บันทึกไม่สำเร็จ: ' + error.message);
-    else toast.success(`ตั้งค่า ${dates.length} วันเรียบร้อย`);
+    if (error) toast.error((tr('บันทึกไม่สำเร็จ') + ': ') + error.message);
+    else toast.success(`${tr("ตั้งค่า")} ${dates.length} ${tr("วันเรียบร้อย")}`);
     await fetchYear();
     setLoading(false);
   };
@@ -109,7 +110,7 @@ export default function CompanyCalendar() {
     const { error } = await supabase.from('company_calendar').upsert({
       work_date: singleDate, day_type: singleType, note: singleNote.trim() || null, updated_at: new Date().toISOString(),
     }, { onConflict: 'work_date' });
-    if (error) toast.error('บันทึกไม่สำเร็จ: ' + error.message);
+    if (error) toast.error((tr('บันทึกไม่สำเร็จ') + ': ') + error.message);
     else toast.success('เพิ่มวันหยุดเรียบร้อย');
     await fetchYear();
     setLoading(false);
@@ -213,7 +214,7 @@ export default function CompanyCalendar() {
                       key={i}
                       className="cal-day"
                       onClick={() => cycleDay(dateStr)}
-                      title={isDirty ? `${meta.label} (ยังไม่บันทึก)` : meta.label}
+                      title={isDirty ? `${meta.label} (${tr("ยังไม่บันทึก")})` : meta.label}
                       style={{
                         position: 'relative',
                         fontSize: 11, textAlign: 'center', padding: '4px 0', borderRadius: 'var(--r-xs)',
@@ -243,15 +244,15 @@ export default function CompanyCalendar() {
         <div style={{
           position: 'sticky', bottom: 16, marginTop: 18,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
-          background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 'var(--r-md)',
+          background: 'var(--bg3-surf)', border: '1px solid var(--accent)', borderRadius: 'var(--r-md)',
           padding: '12px 16px', boxShadow: 'var(--shadow-float)',
         }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
-            ● มีการเปลี่ยนแปลงที่ยังไม่บันทึก {pendingCount} วัน
+            ● {tr("มีการเปลี่ยนแปลงที่ยังไม่บันทึก")} {pendingCount} {tr("วัน")}
           </span>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={handleDiscardDraft} disabled={saving} style={cancelBtnSt}>{tr('ยกเลิก')}</button>
-            <button onClick={handleSaveDraft} disabled={saving} style={saveBtnSt}>{saving ? 'กำลังบันทึก...' : `บันทึก (${pendingCount})`}</button>
+            <button onClick={handleSaveDraft} disabled={saving} style={saveBtnSt}>{saving ? 'กำลังบันทึก...' : `${tr("บันทึก")} (${pendingCount})`}</button>
           </div>
         </div>
       )}

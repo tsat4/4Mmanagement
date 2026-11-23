@@ -90,6 +90,7 @@ Realtime + Edge Functions/Deno) · Telegram Bot API · deploy = Render.com (Stat
   ห้ามเช็คแค่ "มีลูกในตารางตัวเองไหม" · ต้นแบบ `src/utils/orgNodeRefs.js` (ผังองค์กร — เช็ค FK + สำเนาชื่อ ·
   ต่างชั้นใช้คีย์ต่างกัน code vs name) · **นับไม่ครบ = ห้ามลบ (fail-closed)** · 📄 `docs/modules/org-hierarchy.md`
 - **ตารางใหม่**: RLS ครบทุก cmd ที่ client ใช้ (`upsert` ต้องมี UPDATE) + 🔴 **GRANT ระดับตารางครบทุก cmd ด้วย** (RLS ผ่านแต่ GRANT ขาด = PostgREST ตอบ **401** · คิวรีตรวจใน `db-write-rules.md`) + `has_perm('<คีย์เดียวกับปุ่มบนจอ>')` + ผูก audit (ดู Traceability) + migration file เสมอ
+  · 🔑 **คีย์สิทธิ์ใหม่ต้อง insert `permission_catalog` ด้วย — seed แค่ `role_permissions` = จอ /permissions ไม่ขึ้น** (ด่าน `permissionCatalogCoverage.test.mjs` · 📄 `role-system.md`)
 
 ---
 
@@ -104,7 +105,7 @@ Realtime + Edge Functions/Deno) · Telegram Bot API · deploy = Render.com (Stat
 `traceability-audit-log` · `reusable-pm-checker` · `logistic-planner-sales` · `scrap-report` ·
 `store-requisition-form` · `qa-inspection` · `bbs-safety` · `dept-dashboard-tv` · `vsm` ·
 `spare-part-master` · `fixture-shim-record` · `floorplan-setup` · `workforce-insight` ·
-`product-history` · `order-trace` · `feedback-inbox` · `mkt-rfq` · `i18n` · `ppe-requirements` · `integration-hub` · `e-workflow`
+`product-history` · `order-trace` · `feedback-inbox` · `mkt-rfq` · `i18n` · `ppe-requirements` · `integration-hub` · `e-workflow` · `askbot` · `check-sheet-audit`
 (ดีไซน์ Dashboard → `docs/DASHBOARD-DESIGN.md`)
 
 ---
@@ -117,7 +118,9 @@ Realtime + Edge Functions/Deno) · Telegram Bot API · deploy = Render.com (Stat
 > 🔴 **ชั้น ③ = `src/utils/writeScope.js`** (`canWriteUnit`/`canWriteLine`/`writableRows`) ·
 >   **ฝั่งช่างใช้แกน "ทีม"** = `canWriteTeam()` (`utils/mtnTeams.js`) — ช่างซ่อมข้ามไลน์เป็นงานปกติ
 > 🔴 **"ขอบเขตที่เห็น" ≠ "ขอบเขตที่แก้ได้"** — เห็น = `sections` (**ว่าง = เห็นทั้งโรงงาน**) ·
->   แก้ = **`profiles.section` บ้านจริง** · ใบผ่านข้ามหน่วย = คีย์ **`scope:all_units`** (`UserContext.allUnits`)
+>   แก้ = **`profiles.section` บ้านจริง ∪ หน่วยที่ได้รับมอบหมาย** (`UserContext.writeUnits`) · ใบผ่านข้ามหน่วย = **รายคน `profiles.all_units`**
+>   (`UserContext.allUnits` · ตั้งที่ `/add-user` ช่อง 🌐 · 13/11 คำสั่ง user **"role ไม่ใช่ขอบเขต — manager ไม่ได้แปลว่าแก้ข้ามแผนกได้"** ·
+>   ห้ามแจกตาม role/ชื่อคีย์ · ฝั่ง DB `app_all_units()`/`app_write_units()` อ่านแหล่งเดียวกัน · ด่าน `writeScopeRegistryGate.test.mjs`)
 >   **ห้ามเอา `sections` มาตัดสินการแก้** (มีด่าน `write-scope-layer`)
 > 🔴 **แกนที่ 2 ของชั้น ③ = Cost Center (`src/utils/ccScope.js` · `canWriteScope`)** — ตั้งที่ `/add-user` ช่อง ④
 >   (`profiles.resp_cost_centers` · `UserContext.respCostCenters`) · **ว่าง = ถอยไปใช้ `section` เหมือนเดิม**
@@ -291,7 +294,7 @@ Realtime + Edge Functions/Deno) · Telegram Bot API · deploy = Render.com (Stat
 
 ## ⏱️ ตัวกรองช่วงเวลา — `<TimeRangeBar>` เหมือนกันทุกหน้า (2026-09-23 · คำสั่ง user)
 
-ปุ่ม**ช่วง** (วันนี้/สัปดาห์นี้/เดือนนี้/ปีนี้/🔒หลายปี) + ปุ่ม**ย้อนหลัง** 30/60/90/120 + กรอบวันที่ ·
+ปุ่ม**ช่วง** (วันนี้/สัปดาห์นี้/เดือนนี้/ปีนี้/🔒หลายปี) + ช่อง**ย้อนหลัง…** 30/60/90/120 (select ช่องเดียว · 18/11) + กรอบวันที่ ·
 **ห้ามวาดปุ่มสเกล/ช่องวันที่เองในหน้า**
 · สูตรแบ่งถัง/ป้ายแกน/บันได = `src/utils/timeRange.js` ที่เดียว · ผูก URL ด้วย `useTimeRange()` (`?scale=&from=&to=`)
 · **สเกลไม่เข้ากับช่วง = เตือน ห้ามบล็อก** · ปุ่มย้อนหลัง = ตัวเติมวัน **ไม่ใช่โหมดค้าง**
@@ -539,7 +542,9 @@ Realtime + Edge Functions/Deno) · Telegram Bot API · deploy = Render.com (Stat
 
 > ### 🕗 **หน้าต่าง deploy — ห้าม deploy ในเวลาทำงาน** (2026-10-26)
 > **08:00–17:30 deploy ได้เฉพาะของที่ "ไม่แก้แล้วหน้างานทำงานไม่ได้"** · ที่เหลือรอหลังเลิกกะ/ก่อนเข้ากะ
-> (deploy = สลับไฟล์ชุดใหม่ ⇒ แท็บที่เปิดค้างพังพร้อมกันทุกเครื่อง) · 📄 `docs/modules/deploy.md`
+> (deploy = สลับไฟล์ชุดใหม่ ⇒ แท็บที่เปิดค้างพังพร้อมกันทุกเครื่อง) · **19/11 ด่านนี้อยู่ใน
+> `scheduled-deploy.yml` แล้ว (พักไว้โดยไม่เลื่อน tag · ข้ามด้วย `[deploy-now]`)** ⇒ merge กลางวันได้
+> ตามปกติ ของจะขึ้นเองหลังเลิกกะ · 📄 `docs/modules/deploy.md`
 
 **build ผ่าน (`npm run build`) ก่อน commit เสมอ** · merge เข้า `main` = **deploy แบบกันถี่** (ห่างรอบก่อน ≥60 น. = ทันที · ไม่งั้นรอเงียบ 30 น. · `.github/workflows/scheduled-deploy.yml` · ด่วนกด Run workflow) · 🔴 **ห้ามเปิด Auto-Deploy ของ Render คืน** (นาที build หมดกลางเดือน · 📄 `docs/modules/deploy.md`)
 📄 **ที่มาของทุกด่าน + เคสจริงที่ทำให้ต้องมี → `docs/modules/build-gates.md`** (อ่านก่อนจะแตะ/ถอดด่านใดๆ)
@@ -611,6 +616,8 @@ Realtime + Edge Functions/Deno) · Telegram Bot API · deploy = Render.com (Stat
 - **จอ TV/บอร์ดหน้างาน: ฟอนต์พื้น 11px ห้ามต่ำกว่านี้** (ชิป/ป้าย 11–12 · หัวข้อ 14–15) — **มีด่าน `font-min-11`**
   + `audit/chartsweep.mjs` วัดขนาดที่เห็นจริง · แน่นเกิน = **เว้นป้าย/ซ่อนป้าย ห้ามลดฟอนต์**
   · ยกเว้น `src/lib/**` (ใบพิมพ์/PPTX = pt บนกระดาษ) · ตัวสเกลตามจอใช้ `fs()` ที่มีพื้น `Math.max(11, …)`
+- 🎚️ **ไล่เฉด = สีเดียว ΔL ≤ 5% ผ่าน token เท่านั้น** (20/11 · คำสั่ง user) — แผงใช้ `background:'var(--card-surf)'` (`--bg2-surf`/`--bg3-surf`)
+  ห้ามเขียน `linear-gradient` ของพื้นเองในหน้า · คู่ `--x-top/bot` ใหม่ต้องผ่านด่าน `gradientDeltaCap.test.mjs` (UI §6.17 ข้อ 6)
 - 🌑 **เงา = "ของชิ้นนี้ลอยอยู่" ห้ามเขียน rgba ดิบในหน้า** (ด่าน `card-shadow-via-token`) — การ์ดแบน `var(--shadow-sm)`
   (ธีมมืด = none · ธีมสว่างยังมี) · ของที่ลอยจริง `var(--shadow-float)` · modal `--shadow-md|lg` (UI §6.20)
 

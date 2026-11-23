@@ -1,4 +1,5 @@
 import { useContext } from 'react';
+import { MoreMark } from './InfoMore';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { NAV_ITEMS } from '../App';
 import useIsMobile from '../utils/useIsMobile';
@@ -43,6 +44,47 @@ import { tr } from '../utils/i18n';
    ลดการค้นพบ) ⇒ ProductMaster 4 แท็บ (ลูกค้า/Supplier/ทบทวน CT/Export) กลายเป็นของที่ไม่มีใครเจอ
    · แท็บโชว์ครบเสมอ — เดสก์ท็อปตัดขึ้นบรรทัดใหม่ (ตัวชี้วัด offsetTop ตามได้) · มือถือเลื่อนแนวนอน
    · แท็บเยอะจนรก = แก้ที่ "ของซ้ำ/ของที่ควรเป็นหน้าแยก" (NAVIGATION-REVIEW §2.3) ไม่ใช่ซ่อน */
+
+/* ══ 📝 คำบรรยายใต้ชื่อหน้า — ยาวเกินครึ่งบรรทัดให้พับไป tooltip (2026-11-18 · คำสั่ง user) ═════
+   user 18/11: *"ข้อความสีเทาแบบนั้นอยากให้เป็น tooltip เพื่ออ่านมากกว่าโชว์มาเยอะๆแบบนี้"*
+   textsweep 18/11 พบ **~30 หน้าหน้าละ 1 จุด** และทุกจุดคือ `sub=` ของคอมโพเนนต์นี้
+   ⇒ แก้ที่นี่ที่เดียวจบทุกหน้า **และกันหน้าใหม่ในอนาคตไปด้วย** (ไม่ต้องไล่แก้ทีละหน้า)
+
+   🔴 ย่อรูปแบบ ไม่ย่อความจริง:
+     · ท่อนแรก = "หน้านี้คืออะไร" **อยู่บนจอเสมอ** (ตัดทิ้งไม่ได้ คนเปิดมาต้องรู้ว่ามาถูกหน้าไหม)
+     · ⚠️ ทุกท่อน **อยู่บนจอเสมอ ห้ามพับ** — กฎ `components/InfoMore.jsx`
+       (คำเตือนสถานะจริงซ่อนแล้วกลับไปผิดเงียบ ซึ่งโปรเจคนี้ห้ามที่สุด)
+     · ท่อนที่เหลือ (ขยายความ/ที่มา) → `title=` + ⓘ ให้รู้ว่ามีของให้อ่านต่อ
+     · สั้นอยู่แล้ว (≤ SUB_HEAD_MAX) = ไม่พับ ไม่ขึ้น ⓘ ให้รก — พฤติกรรมเดิมเป๊ะ
+   ⚠️ จอสัมผัสชี้ไม่ได้ ⇒ ท่อนแรก + ⚠️ ต้องพอให้ใช้งานหน้าได้โดยไม่ต้องอ่าน tooltip         */
+const SUB_HEAD_MAX = 70;   // ครึ่งบรรทัดที่ 1500px — เกินนี้คือเริ่มแย่ที่กับเนื้อหา
+function SubLine({ text = '', marginTop = 3 }) {
+  const st = { fontSize: 12.5, color: 'var(--muted)', marginTop };
+  /* 🔴 `sub` รับ JSX ได้ด้วย (18 หน้าส่งเป็น element — ชิป/ตัวหนา/ลิงก์ข้างใน เช่น FactoryMap · MtnRepair · Checkin)
+        ของพวกนั้น**ห้ามแตะ**: แยกท่อนด้วยข้อความไม่ได้ และ `String(element)` = "[object Object]" บนจอ */
+  if (typeof text !== 'string') return <div style={st}>{text}</div>;
+  const full = text;
+  if (full.length <= SUB_HEAD_MAX) return <div style={st}>{full}</div>;
+
+  /* คั่นด้วย ` · ` เป็นหลัก — แต่หลายหน้าเขียนยาวโดยใช้ ` — ` คั่นแทน (เช่น /pe-docs)
+     ซึ่งเดิมหลุดด่านนี้ไปทั้งก้อน ⇒ ถ้าแยกด้วย ` · ` แล้วยังได้ท่อนเดียว ให้ลอง ` — ` ต่อ
+     🔴 ลองตามลำดับ ไม่ใช่แยกพร้อมกัน — บรรทัดที่มีทั้งคู่ (`A · B — C`) ต้องคงโครงเดิมไว้ */
+  let parts = full.split(' · ').map(x => x.trim()).filter(Boolean);
+  if (parts.length === 1) parts = full.split(' — ').map(x => x.trim()).filter(Boolean);
+  const warns = parts.filter(x => /^[⚠🔴]/.test(x));
+  const plain = parts.filter(x => !/^[⚠🔴]/.test(x));
+  /* เก็บท่อนแรกๆ ไว้บนจอจนกว่าจะเต็มครึ่งบรรทัด — อย่างน้อย 1 ท่อนเสมอ */
+  const head = []; let n = 0;
+  for (const x of plain) { if (head.length && n + x.length > SUB_HEAD_MAX) break; head.push(x); n += x.length + 3; }
+  const rest = plain.slice(head.length);
+  if (!rest.length) return <div style={st}>{full}</div>;
+  return (
+    <div style={st} title={rest.join(' · ')}>
+      {head.join(' · ')} <MoreMark text={rest.join(' · ')} />
+      {warns.map((w, i) => <span key={i} style={{ color: 'var(--amber)', fontWeight: 700 }}> · {w}</span>)}
+    </div>
+  );
+}
 
 export default function PageHeader({
   title, icon, sub, actions, tabs, tab, onTab, breadcrumb = true, filters, children,
@@ -152,7 +194,7 @@ export default function PageHeader({
             </h2>
             )
           )}
-          {sub && <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: inHub ? 0 : 3 }}>{tr(sub)}</div>}
+          {sub && <SubLine text={tr(sub)} marginTop={inHub ? 0 : 3} />}
         </div>
         {/* actions = ปุ่ม "คำสั่งระดับหน้า" เท่านั้น (บันทึก/เพิ่ม/พิมพ์/โหมด TV) — ห้ามใส่ตัวกรอง (select/วันที่/ขอบเขต/สเกล)
             ตัวกรองต้องอยู่ `filters` ⇒ ลงใต้แถบแท็บเสมอ (UI-STANDARD §2 ลำดับแนวตั้ง · stdsweep ตรวจ data-ph) */}

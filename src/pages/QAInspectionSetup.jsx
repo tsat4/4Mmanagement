@@ -41,6 +41,7 @@ import Page from '../components/Page';
 import SearchInput from '../components/SearchInput';
 import { tr } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
+import { askConfirm } from '../utils/askConfirm';
 
 /* 📐 แท็บของหน้านี้ — `?tab=` (UI-CONVENTIONS §6.8: ห้ามวาดแถบแท็บเอง ใช้ PageHeader+useTabParam) */
 const MAIN_TABS = [
@@ -98,7 +99,7 @@ function Modal({ title, onClose, children, width = 560 }) {
       /* ตั้งใจไม่ปิดเมื่อคลิกพื้นหลัง — กันเผลอกดแล้วข้อมูลในฟอร์มหาย ปิดได้จากปุ่ม ✕/ยกเลิกเท่านั้น */
     >
       <div style={{
-        background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)',
+        background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)',
         width: `min(${width}px, 96vw)`, boxShadow: 'var(--shadow-lg)', maxHeight: '90vh',
         display: 'flex', flexDirection: 'column',
       }}>
@@ -243,7 +244,7 @@ export default function QAInspectionSetup() {
             key: `b-${b.id}`, tag: 'BOM',
             part_no: b.part_no || b.mat_no || '', part_name: b.part_name || '',
             customer: parent?.customer || '', line_name: parent?.line_name || '',
-            sub: `ใน BOM: ${parent?.name || '—'}${b.supplier ? ` · ${b.supplier}` : ''}`,
+            sub: `${tr("ใน")} BOM: ${parent?.name || '—'}${b.supplier ? ` · ${b.supplier}` : ''}`,
           };
         }),
       ].filter(o => o.part_no || o.part_name);
@@ -300,13 +301,13 @@ export default function QAInspectionSetup() {
       let dq = supabase.from('qa_parts').select('part_no').eq('mat_no', payload.mat_no).limit(1);
       if (f.id) dq = dq.neq('id', f.id);
       const { data: dup, error: eDup } = await dq;
-      if (eDup) { toast.error(`ตรวจ MAT ซ้ำไม่สำเร็จ: ${eDup.message}`); return; }
-      if (dup?.length) { toast.error(`พาร์ท ${dup[0].part_no} ใช้ MAT ${payload.mat_no} นี้อยู่แล้ว — 1 MAT ผูกได้พาร์ทเดียว`); return; }
+      if (eDup) { toast.error(`${tr("ตรวจ MAT ซ้ำไม่สำเร็จ")}: ${eDup.message}`); return; }
+      if (dup?.length) { toast.error(`${tr("พาร์ท")} ${dup[0].part_no} ${tr("ใช้")} MAT ${payload.mat_no} ${tr("นี้อยู่แล้ว — 1 MAT ผูกได้พาร์ทเดียว")}`); return; }
     }
     const { data, error } = f.id
       ? await supabase.from('qa_parts').update(payload).eq('id', f.id).select().single()
       : await supabase.from('qa_parts').insert({ ...payload, created_by: fullName || null }).select().single();
-    if (error) { toast.error(error.code === '23505' ? `Part No. ${f.part_no} มีอยู่แล้ว` : `บันทึกไม่สำเร็จ: ${error.message}`); return; }
+    if (error) { toast.error(error.code === '23505' ? `Part No. ${f.part_no} ${tr("มีอยู่แล้ว")}` : `${tr("บันทึกไม่สำเร็จ")}: ${error.message}`); return; }
     toast.success('บันทึก Part แล้ว ✓');
     setPartModal(null);
     await loadParts();
@@ -322,10 +323,10 @@ export default function QAInspectionSetup() {
       .select('id', { count: 'exact', head: true }).eq('part_id', sel.id);
     if (eCnt || nSheets == null) { toast.error('ตรวจประวัติใบตรวจของพาร์ทนี้ไม่สำเร็จ — ยังลบไม่ได้'); return; }
     if (nSheets > 0) {
-      toast.error(`${sel.part_no} มีใบตรวจแล้ว ${nSheets} ใบ — ลบไม่ได้ (ประวัติตรวจจะหายถาวร) ให้แก้พาร์ทเป็น "ปิดใช้งาน" แทน`);
+      toast.error(`${sel.part_no} ${tr("มีใบตรวจแล้ว")} ${nSheets} ${tr("ใบ — ลบไม่ได้ (ประวัติตรวจจะหายถาวร) ให้แก้พาร์ทเป็น \"ปิดใช้งาน\" แทน")}`);
       return;
     }
-    if (!window.confirm(`ลบ ${sel.part_no} พร้อมจุดตรวจทั้งหมด ${items.length} จุด?`)) return;
+    if (!await askConfirm(`${tr("ลบ")} ${sel.part_no} ${tr("พร้อมจุดตรวจทั้งหมด")} ${items.length} ${tr("จุด")}?`)) return;
     const partId = sel.id;
     /* 🔴 ต้อง `.select('id')` แล้ว**นับแถว** ก่อนแตะ storage (QC audit 2026-10-06)
        RLS ปฏิเสธ DELETE = "สำเร็จ 0 แถว ไม่มี error" (กฎเหล็ก DB ข้อ 2) — เดิมเช็คแค่ `error`
@@ -361,8 +362,8 @@ export default function QAInspectionSetup() {
       control_method: `Dwg ${sel.dwg_no || sel.drawing_rev || ''} balloon #${it.balloon_no}`.replace(/\s+/g, ' ').trim(),
       created_by: fullName || null,
     });
-    if (error) { toast.error(`สร้างไม่สำเร็จ: ${error.message}`); return; }
-    toast.success(`สร้างจุดควบคุม SPC "${it.characteristic}" แล้ว — บันทึกค่าวัดที่ Quality Control Center ✓`);
+    if (error) { toast.error(`${tr("สร้างไม่สำเร็จ")}: ${error.message}`); return; }
+    toast.success(`${tr("สร้างจุดควบคุม")} SPC "${it.characteristic}" ${tr("แล้ว — บันทึกค่าวัดที่")} Quality Control Center ✓`);
   };
 
   return (
@@ -414,7 +415,7 @@ export default function QAInspectionSetup() {
                 <AttachImage url={prodImg} alt={sel.part_no} title={sel.part_no}
                   caption={tr('รูปจาก Product Master/BOM')} hint={tr('รูปจาก Product Master/BOM — แตะเพื่อดูรูปขยาย')}
                   style={{ flexShrink: 0 }}
-                  imgStyle={{ width: 72, height: 72, maxHeight: 72, objectFit: 'cover', borderRadius: 10, border: '1px solid var(--border2)', background: 'var(--bg2)' }} />
+                  imgStyle={{ width: 72, height: 72, maxHeight: 72, objectFit: 'cover', borderRadius: 10, border: '1px solid var(--border2)', background: 'var(--bg2-surf)' }} />
               )}
               <div style={{ flex: 1, minWidth: 200 }}>
                 <div style={{ fontWeight: 900, fontSize: 17, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -457,12 +458,12 @@ export default function QAInspectionSetup() {
             {/* drawings + หมุด — อ่านอย่างเดียว (แก้ในโมดัล 🎯 ตั้งค่าจุดตรวจ — ตัวปักหมุดตัวเดียวกับ PM) */}
             <div style={cardSt}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
-                <div style={{ fontWeight: 800, fontSize: 13.5 }}>Drawings ({drawings.length} แผ่น){sel.drawing_rev ? ` · Rev ${sel.drawing_rev}` : ''}</div>
+                <div style={{ fontWeight: 800, fontSize: 13.5 }}>Drawings ({drawings.length} {tr("แผ่น")}){sel.drawing_rev ? ` · Rev ${sel.drawing_rev}` : ''}</div>
                 {canEdit && drawings.length > 0 && <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>แตะหมุด = ไปแก้จุดนั้น</div>}
               </div>
               {drawings.length === 0 ? (
                 <div style={{ padding: 46, textAlign: 'center', color: 'var(--muted)', fontSize: 13, border: '2px dashed var(--border2)', borderRadius: 'var(--r-md)' }}>
-                  ยังไม่มี drawing — {canEdit ? 'กด "🎯 ตั้งค่าจุดตรวจ & Drawing" เพื่อเพิ่มแผ่น (รูปภาพหรือ PDF ≤20MB) แล้วปักหมุด' : 'รอ QA อัพโหลด'}
+                  {tr("ยังไม่มี")} drawing — {canEdit ? 'กด "🎯 ตั้งค่าจุดตรวจ & Drawing" เพื่อเพิ่มแผ่น (รูปภาพหรือ PDF ≤20MB) แล้วปักหมุด' : 'รอ QA อัพโหลด'}
                 </div>
               ) : (() => {
                 const frames = drawings.map(d => ({ _key: d.id, _preview: d.drawing_url, title: d.title, isPdf: /\.pdf($|\?)/i.test(d.drawing_url || '') }));
@@ -486,7 +487,7 @@ export default function QAInspectionSetup() {
             <div style={{ ...cardSt, padding: 0 }}>
               <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                 <div style={{ fontWeight: 800, fontSize: 13.5 }}>
-                  มาตรฐานการตรวจ ({items.length} จุด
+                  {tr("มาตรฐานการตรวจ")} ({items.length} {tr("จุด")}
                   {items.some(i => i.rank) ? ` · Rank M ${items.filter(i => i.rank === 'M').length} / SC ${items.filter(i => i.rank === 'SC').length}` : ''})
                 </div>
                 {(canEdit || (canManage && items.length > 0)) && (
@@ -522,7 +523,7 @@ export default function QAInspectionSetup() {
                         </td>
                         <td style={tdSt}>{it.characteristic}{it.remark ? <div style={{ fontSize: 11, color: 'var(--muted)' }}>{it.remark}</div> : null}</td>
                         <td style={tdSt}><Chip label={it.item_type === 'variable' ? 'Variable' : 'Attribute'} color={it.item_type === 'variable' ? 'var(--blue)' : 'var(--blue)'} /></td>
-                        <td style={{ ...tdSt, whiteSpace: 'nowrap' }} title={it.spec_text ? `ข้อความตามแบบ: ${it.spec_text}` : undefined}>
+                        <td style={{ ...tdSt, whiteSpace: 'nowrap' }} title={it.spec_text ? `${tr("ข้อความตามแบบ")}: ${it.spec_text}` : undefined}>
                           {/* ข้อความเดียวกับที่จอตรวจโชว์ (utils/qaSpec — ห้ามประกอบเอง) */}
                           {specLabel(it)}
                         </td>
@@ -557,12 +558,12 @@ export default function QAInspectionSetup() {
 
       {/* ── Part modal ── */}
       {partModal && (
-        <Modal title={partModal.id ? `✏️ แก้ไข ${partModal.part_no}` : '➕ เพิ่ม Part'} onClose={() => { setPartModal(null); setBomSearch(''); }}>
+        <Modal title={partModal.id ? `✏️ ${tr("แก้ไข")} ${partModal.part_no}` : '➕ เพิ่ม Part'} onClose={() => { setPartModal(null); setBomSearch(''); }}>
           {/* เลือกจากฐานข้อมูล BOM / Product Master → เติมฟอร์มให้ (แก้ทับได้) */}
-          <div style={{ marginBottom: 14, padding: 12, borderRadius: 'var(--r-md)', background: 'var(--bg3)', border: '1px dashed var(--border2)' }}>
+          <div style={{ marginBottom: 14, padding: 12, borderRadius: 'var(--r-md)', background: 'var(--bg3-surf)', border: '1px dashed var(--border2)' }}>
             <Field label={tr('เลือกจากฐานข้อมูล BOM / Product Master')}>
               <input style={inputSt} value={bomSearch} onChange={e => setBomSearch(e.target.value)}
-                placeholder={bomOptions === null ? 'กำลังโหลดฐานข้อมูล…' : `พิมพ์ค้นหา Part No. / ชื่อพาร์ท / MAT.NO (${bomOptions.length.toLocaleString()} รายการ)`} />
+                placeholder={bomOptions === null ? 'กำลังโหลดฐานข้อมูล…' : `${tr("พิมพ์ค้นหา Part No. / ชื่อพาร์ท")} / MAT.NO (${bomOptions.length.toLocaleString()} ${tr("รายการ")})`} />
             </Field>
             {bomSearch.trim().length >= 2 && (
               <div style={{ marginTop: 8, maxHeight: 220, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -570,7 +571,7 @@ export default function QAInspectionSetup() {
                   <button key={o.key} onClick={() => pickBomOption(o)}
                     style={{
                       textAlign: 'left', padding: '8px 10px', borderRadius: 'var(--r-md)', cursor: 'pointer',
-                      background: 'var(--card)', border: '1px solid var(--border)',
+                      background: 'var(--card-surf)', border: '1px solid var(--border)',
                       display: 'flex', gap: 8, alignItems: 'center',
                     }}>
                     <Chip label={o.tag} color={o.tag === 'BOM' ? 'var(--amber)' : 'var(--blue)'} />

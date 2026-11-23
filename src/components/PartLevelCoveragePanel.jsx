@@ -79,18 +79,16 @@ export default function PartLevelCoveragePanel() {
           จุดเรียกเติมชิ้นส่วน — ไลน์ไหนยังไม่ตั้ง
         </div>
         <div style={{ fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.65 }}>
-          พาร์ทที่ <b>{tr('ไลน์ใช้')}</b> {tr('(ต้องเบิกจากสโตร์) และยังไม่มีใครตั้ง')} <b>min</b> ไว้ = ระบบจะ<b>{tr('ไม่เสนอให้เบิก')}</b>เลย
-          ⇒ ไลน์ต้องไปโทร/เดินบอกสโตร์เอง · ตั้งค่าจริงที่ <b>{tr('ตั้งค่าผัง → 🏭 ผลิต (ผังไลน์) → เลือกไลน์ → 📦 จุดเรียกเติมชิ้นส่วน')}</b>
+          {tr("พาร์ทที่")} <b>{tr('ไลน์ใช้')}</b> {tr('(ต้องเบิกจากสโตร์) และยังไม่มีใครตั้ง')} <b>min</b> {tr("ไว้ = ระบบจะ")}<b>{tr('ไม่เสนอให้เบิก')}</b>{tr("เลย ⇒ ไลน์ต้องไปโทร/เดินบอกสโตร์เอง · ตั้งค่าจริงที่")} <b>{tr('ตั้งค่าผัง → 🏭 ผลิต (ผังไลน์) → เลือกไลน์ → 📦 จุดเรียกเติมชิ้นส่วน')}</b>
           <br />
-          ⚠️ นับจาก “พาร์ทที่เคยเดินผ่านไลน์นี้” (มีแถวในสรุปยอด — รวมแถวที่ยอดเหลือ 0)
-          · พาร์ทที่ <b>{tr('ไลน์ผลิตเอง')}</b> {tr('ไม่นับที่นี่ (เป็น “ผลิตเติม” · ค่า min/max อยู่ที่')} <b>/products → 🎴 Kanban Std</b>)
-          · จอนี้ชี้อย่างเดียว ไม่ตั้งค่าแทนใคร
+          ⚠️ {tr("นับจาก “พาร์ทที่เคยเดินผ่านไลน์นี้” (มีแถวในสรุปยอด — รวมแถวที่ยอดเหลือ 0) · พาร์ทที่")} <b>{tr('ไลน์ผลิตเอง')}</b> {tr('ไม่นับที่นี่ (เป็น “ผลิตเติม” · ค่า min/max อยู่ที่')} <b>/products → 🎴 Kanban Std</b>)
+          · {tr("จอนี้ชี้อย่างเดียว ไม่ตั้งค่าแทนใคร")}
         </div>
       </div>
 
       {loadErr.length > 0 && (
         <div style={{ ...card, padding: '10px 14px', borderColor: '#ef4444', color: '#ef4444', fontSize: 12, fontWeight: 700 }}>
-          ⚠ โหลดไม่ครบ: {loadErr.join(' · ')} — ตัวเลขข้างล่างอาจต่ำกว่าจริง (กดรีเฟรชหน้าอีกครั้ง)
+          ⚠ {tr("โหลดไม่ครบ")}: {loadErr.join(' · ')} — {tr("ตัวเลขข้างล่างอาจต่ำกว่าจริง (กดรีเฟรชหน้าอีกครั้ง")})
         </div>
       )}
       {data?.linesUnknown && (
@@ -106,9 +104,9 @@ export default function PartLevelCoveragePanel() {
           {/* สรุปทั้งโรงงาน — ตัวเลขที่เอาไปตามงานได้ */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, alignContent: 'start' }}>
             {[
-              { k: 'พาร์ทที่ต้องเบิกจากสโตร์', v: fmt(t.consume), s: `${t.lines} ไลน์ที่มีของเดินผ่าน`, c: 'var(--text)' },
-              { k: '🔴 ยังไม่มีใครเฝ้า', v: fmt(t.unwatched), s: t.consume ? `${Math.round((t.unwatched / t.consume) * 100)}% ของทั้งหมด` : '—', c: '#ef4444' },
-              { k: '✅ ตั้ง min แล้ว', v: fmt(t.watched), s: `${t.linesDone} ไลน์ครบแล้ว`, c: '#22c55e' },
+              { k: 'พาร์ทที่ต้องเบิกจากสโตร์', v: fmt(t.consume), s: `${t.lines} ${tr("ไลน์ที่มีของเดินผ่าน")}`, c: 'var(--text)' },
+              { k: '🔴 ยังไม่มีใครเฝ้า', v: fmt(t.unwatched), s: t.consume ? `${Math.round((t.unwatched / t.consume) * 100)}% ${tr("ของทั้งหมด")}` : '—', c: '#ef4444' },
+              { k: '✅ ตั้ง min แล้ว', v: fmt(t.watched), s: `${t.linesDone} ${tr("ไลน์ครบแล้ว")}`, c: '#22c55e' },
               { k: 'ไลน์ที่ยังขาด', v: fmt(t.linesWithGap), s: 'เรียงไว้ข้างล่างจากขาดมากสุด', c: '#f59e0b' },
             ].map(x => (
               <div key={x.k} style={{ ...card, padding: '12px 14px' }}>
@@ -121,8 +119,8 @@ export default function PartLevelCoveragePanel() {
 
           {/* ของที่กันออก/ของที่เป็นผลิตเติม — ห้ามหายเงียบ ต้องบอกว่ากันอะไรออกไป */}
           <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.7 }}>
-            กันออกจากตัวนับ: <b>{fmt(t.skipped)}</b> รายการของคลัง (STORE / FG WAREHOUSE / ปลายทางที่ไม่ใช่ไลน์ผลิต)
-            · <b>{fmt(t.produce)}</b> รายการเป็นของที่ไลน์ผลิตเอง (ผลิตเติม)
+            {tr("กันออกจากตัวนับ")}: <b>{fmt(t.skipped)}</b> {tr("รายการของคลัง (STORE / FG WAREHOUSE / ปลายทางที่ไม่ใช่ไลน์ผลิต")})
+            · <b>{fmt(t.produce)}</b> {tr("รายการเป็นของที่ไลน์ผลิตเอง (ผลิตเติม")})
             {t.rowNoMin > 0 && <> · 🟡 <b>{fmt(t.rowNoMin)}</b> {tr('รายการ')}<b>{tr('มีแถวจุดเรียกเติมแล้วแต่ไม่ได้ใส่ min')}</b> {tr('— ระบบยังไม่เตือนอะไรเลย')}</>}
           </div>
 
@@ -130,7 +128,7 @@ export default function PartLevelCoveragePanel() {
 
           {rows.length === 0 ? (
             <div style={{ ...card, padding: '26px 16px', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
-              {data.rows.length === 0 ? 'ยังไม่มียอดสต็อกหน้าไลน์ให้ตรวจ' : `ไม่มีไลน์/พาร์ทที่ตรงกับ "${q}"`}
+              {data.rows.length === 0 ? 'ยังไม่มียอดสต็อกหน้าไลน์ให้ตรวจ' : `${tr("ไม่มีไลน์/พาร์ทที่ตรงกับ")} "${q}"`}
             </div>
           ) : rows.map(g => {
             const folded = !open.has(g.line_name);

@@ -206,7 +206,7 @@ export default function PpeSetup() {
       )}
       {linesFailed && <NoticeBar tone="warn">อ่านทะเบียนไลน์ไม่สำเร็จ — ชั้น "ไลน์/จุดงาน" อาจไม่ครบ</NoticeBar>}
       {!canEdit && !loadErr && (
-        <NoticeBar tone="warn">{tr('บัญชีนี้ดูได้อย่างเดียว (ต้องมีสิทธิ์')} <code>ppe:manage</code>) — ขอสิทธิ์ที่หน้าจัดการสิทธิ์</NoticeBar>
+        <NoticeBar tone="warn">{tr('บัญชีนี้ดูได้อย่างเดียว (ต้องมีสิทธิ์')} <code>ppe:manage</code>) — {tr("ขอสิทธิ์ที่หน้าจัดการสิทธิ์")}</NoticeBar>
       )}
       {loading && <div style={{ ...card, color: 'var(--muted)' }}>{tr('กำลังโหลด…')}</div>}
 
@@ -220,13 +220,13 @@ export default function PpeSetup() {
         <NoticeBar tone="warn">
           ไลน์ <b>{lineById[String(lineKey)]?.name || lineKey}</b> ยังไม่ได้ตั้งจุดงานไว้ จึงตั้งข้อกำหนดรายจุดงานไม่ได้
           <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 3 }}>
-            ตั้งจุดงานที่หน้า <b>{tr('ตั้งค่าผัง/Floorplan')}</b> {tr('→ แท็บผังไลน์ · หรือตั้งข้อกำหนดที่ชั้น')} <b>{tr('ไลน์')}</b> แทน (ตกทอดถึงทุกจุดงานในไลน์)
+            {tr("ตั้งจุดงานที่หน้า")} <b>{tr('ตั้งค่าผัง/Floorplan')}</b> {tr('→ แท็บผังไลน์ · หรือตั้งข้อกำหนดที่ชั้น')} <b>{tr('ไลน์')}</b> {tr("แทน (ตกทอดถึงทุกจุดงานในไลน์")})
           </div>
         </NoticeBar>
       )}
       {!loading && !loadErr && kind !== 'plant' && !scopeKey && !(kind === 'station' && lineKey) && (
         <div style={{ ...card, color: 'var(--muted)' }}>
-          เลือก{PPE_SCOPE_LABEL[kind]}ที่ต้องการตั้งค่าก่อน — ระหว่างนี้ยังไม่แสดงรายการ เพราะแต่ละหน่วยตกทอดคนละชุด
+          {tr("เลือก")}{PPE_SCOPE_LABEL[kind]}{tr("ที่ต้องการตั้งค่าก่อน — ระหว่างนี้ยังไม่แสดงรายการ เพราะแต่ละหน่วยตกทอดคนละชุด")}
         </div>
       )}
 
@@ -235,7 +235,7 @@ export default function PpeSetup() {
           <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 700 }}>{tr('กำลังตั้งค่าที่')}</div>
           <div style={{ fontSize: 20, fontWeight: 900 }}>{PPE_SCOPE_LABEL[kind]} · {scopeName}</div>
           <div style={{ fontSize: 13, color: 'var(--text2)', marginTop: 4 }}>
-            ผลสุดท้ายของหน่วยนี้ = ต้องใส่ <b style={{ color: 'var(--green)' }}>{effective.required.length}</b> ชิ้น
+            {tr("ผลสุดท้ายของหน่วยนี้ = ต้องใส่")} <b style={{ color: 'var(--green)' }}>{effective.required.length}</b> {tr("ชิ้น")}
             {effective.required.length > 0 && <> — {effective.required.map(i => i.name_th).join(' · ')}</>}
           </div>
         </div>
@@ -257,9 +257,9 @@ export default function PpeSetup() {
                   {/* 🔴 กฎข้อ 3 — ต้องบอกเสมอว่าค่าที่เห็นมาจากชั้นไหน */}
                   <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 1 }}>
                     {v === 'inherit'
-                      ? (inhSrc ? `${inhOn ? 'บังคับ' : 'ยกเว้น'} — ${ppeSourceText(inhSrc, { nameOfLine: id => lineById[String(id)]?.name })}`
+                      ? (inhSrc ? `${inhOn ? tr('บังคับ') : tr('ยกเว้น')} — ${ppeSourceText(inhSrc, { nameOfLine: id => lineById[String(id)]?.name })}`
                         : 'ไม่มีชั้นไหนบังคับ')
-                      : `ตั้งไว้ที่${PPE_SCOPE_LABEL[kind]}นี้เอง`}
+                      : `${tr("ตั้งไว้ที่")}${PPE_SCOPE_LABEL[kind]}${tr("นี้เอง")}`}
                   </div>
                 </div>
                 <Segmented size="sm" value={v} options={VAL_OPTS} label={item.name_th}

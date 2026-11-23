@@ -250,7 +250,9 @@ export function manualMonthSeries({ entries = {}, year, summary = 'average' } = 
   const filled = series.filter(p => !p.empty);
   /* `rate` ไม่มียอดดิบให้หารในสายกรอกมือ ⇒ `summaryOf` ถอยมาเฉลี่ยพร้อมธง approx (จอต้องติดป้าย ≈) */
   const { value, effMode, approx } = summaryOf(series.map(p => p.v), { kpi_catalog: { summary_mode: mode } });
-  const sum = value == null ? null : (effMode === 'average' ? round1(value) : value);
+  /* 🔴 20/11: ไม่ปัดทศนิยมที่นี่ (เดิม round1 เฉพาะ average ⇒ YTD โชว์ "1 %" ขณะเดือนโชว์ 1.1794 % — user: "สรุปค่ามันเป็น % หรือไม่ %")
+     การปัดเป็นเรื่องของจอ (nf ตาม decimals ของนิยาม) ค่าในแถว/ตัดสินต้องเป็นค่าจริง */
+  const sum = value;
   series.push({ k: SUMMARY_KEY, v: sum, summary: true, kind: effMode, mode, approx });
   return { series, ytd: sum, months: filled.length, mode, effMode, approx };
 }

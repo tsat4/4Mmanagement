@@ -2,6 +2,9 @@ import React, { Suspense, useState, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import { MemoryRouter } from 'react-router-dom'
 import { UserContext, Sidebar, NAV_ITEMS, NotificationBell } from '../src/App'
+import { markView } from '../src/utils/motion'
+/* 📈 harness ไม่ได้ผ่าน App.jsx (ตัวเรียก markView ตอนเปลี่ยน URL) ⇒ เปิดหน้าต่างอนิเมชันกราฟตอนโหลด ให้เห็นเหมือนแอปจริง */
+markView()
 /* เปิดทะเบียนเมนูให้ `audit/stdsweep.mjs` อ่าน — ตรวจว่า "คุณอยู่ตรงนี้" บนรางตรงกับหมวดจริงไหม
    (`alsoIn` = หน้าที่อยู่ 2 หมวดจริงๆ ต้องถูกไฮไลต์ทั้งคู่) */
 window.__NAV = NAV_ITEMS.map(i => ({ to: i.to, group: i.group, alsoIn: i.alsoIn || null }))
@@ -9,6 +12,7 @@ import ScrollHint from '../src/components/ScrollHint'
 import MobileNavBar from '../src/components/MobileNavBar'
 import ScanWedgeGuard from '../src/components/ScanWedgeGuard'
 import { ToastContainer } from '../src/components/Toast'
+import ConfirmHost from '../src/components/ConfirmHost'   // ❓ กล่องยืนยันกลาง (18/11) — ไม่มี = askConfirm ถอยไป window.confirm แล้ว sweep วัดกล่องในแอปไม่ได้
 import '../src/index.css'
 
 const mods = import.meta.glob('../src/pages/*.jsx')
@@ -25,7 +29,6 @@ NAMES.push(...Object.keys(VARIANTS))
    🔴 เพิ่มมุมมอง/แท็บใหม่ที่มีโค้ดเป็นของตัวเอง = เติมที่นี่ในคอมมิทเดียวกัน */
 NAMES.push(
   'ProductionPlan&tab=lots',              // 🧲 แผนสั่งงานล็อต + ไทม์ไลน์ราง (PlanTimeline)
-  'ProductionPlan&tab=lots&view=week',    // 📅 มุมมองสัปดาห์ (PlanWeek · 17/11)
 )
 
 class EB extends React.Component {
@@ -119,7 +122,7 @@ function App(){
           ...(TV_SHELL ? { overflowX:'clip' } : { overflowY:'auto', overflowX:'hidden' }), minWidth:0 }}>
           <ScrollHint/><EB><Suspense fallback={<div>loading</div>}>{C ? <C {...(VARIANTS[name] || {})}/> : null}</Suspense></EB>
           {/* ToastContainer ต้องมีในหน้าปกติด้วย (05/10) — เดิมมีแค่ใน FeedbackLab ⇒ toast จากหน้าอื่น (เช่น "ขอบเขตนอกสังกัด" ของบอร์ด KPI) ไม่โผล่ ตรวจอัตโนมัติไม่ได้ */}
-          <ToastContainer/>
+          <ToastContainer/><ConfirmHost/>
         </main>
         {/* 📺 ?tvshell=1 — กรอบจอ TV (16/10) · แถบบน + body.esm-tv-shell เหมือนบัญชี display ในแอปจริง */}
         {TV_SHELL && <Suspense fallback={null}><TvShellHarness/></Suspense>}
@@ -143,7 +146,7 @@ const FeedbackLab = () => (
       {/* ⚠️ ต้องมี ToastContainer ใน harness ด้วย — ไม่งั้น `toast.error(...)` ไม่โผล่ที่ไหนเลย
           แล้วกฎ "ปฏิเสธไฟล์ต้องขึ้น toast บอกเหตุผล ห้ามเงียบ" จะตรวจอัตโนมัติไม่ได้
           (เจอ 22/09: เทสรายงานว่า 'ไม่มีข้อความเตือน' ทั้งที่โค้ดเรียก toast ถูกแล้ว) */}
-      <ToastContainer/>
+      <ToastContainer/><ConfirmHost/>
     </UserContext.Provider>
   </MemoryRouter>
 )
@@ -158,7 +161,7 @@ function BellLab(){
     <MemoryRouter initialEntries={[ENTRY]}>
       <UserContext.Provider value={{ ...CTX, role:'admin', sections:['PD1'], mtnTeams:[] }}>
         <EB><NotificationBell userId="x" role="admin" /></EB>
-        <ToastContainer/>
+        <ToastContainer/><ConfirmHost/>
       </UserContext.Provider>
     </MemoryRouter>
   )

@@ -293,6 +293,9 @@ const MO_AUDIENCE: Record<string, { people: string[]; team: boolean }> = {
   mtn_closed:     { people: ['reported_by_uid', 'reporter_prod_uid', 'accepted_by_uid', 'tech_main_uid', 'tech_secondary_uid', 'approver_uid', 'ho_checker_uid'], team: true },
   // ตีกลับ — คนที่ต้องแก้คือผู้แจ้งเท่านั้น
   mtn_returned:   { people: ['reported_by_uid', 'reporter_prod_uid'], team: false },
+  /* ↩️ ส่งใหม่หลังถูกตีกลับ (18/11) — ทีม**ปลายทางใหม่**ต้องรู้ว่ามีงานเข้า (เหมือนขั้น 1)
+     แต่ข้อความต้องบอกว่าเป็นใบเก่า ไม่ใช่ใบใหม่ (หน้างานแจ้ง "ใบ MO ไม่ได้มีคนเปิด แต่เด้งไปหาช่างเอง") */
+  mtn_resubmitted: { people: ['reported_by_uid', 'reporter_prod_uid', 'reporter_qa_uid'], team: true },
 };
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** อ่าน uid ของคนในใบตามรายการคอลัมน์ — ค่าที่ไม่ใช่ uuid ทิ้ง (บางคอลัมน์เก็บ "ชื่อที่พิมพ์เอง") */
@@ -317,6 +320,7 @@ const MO_INAPP: Record<string, { t: (v: Record<string, string>) => string; type:
   mtn_approved:  { t: (v) => `✍️ ผจก.แผนกที่แจ้งอนุมัติแล้ว ${v.mo_no} — รอ ผจก.ซ่อมบำรุงปิดใบ`, type: 'info' },
   mtn_closed:    { t: (v) => `✅ ปิดใบแจ้งซ่อม ${v.mo_no}`,                                 type: 'success' },
   mtn_returned:  { t: (v) => `↩️ ใบแจ้งซ่อมถูกตีกลับ — ${v.line_name} (แก้แผนกแล้วส่งใหม่)`, type: 'error'   },
+  mtn_resubmitted: { t: (v) => `🔁 ใบเก่าถูกส่งใหม่ — ${v.line_name} · ${v.item_type} (ส่งใหม่ครั้งที่ ${v.bounce_count})`, type: 'error' },
 };
 async function notifyMoInApp(routes: Record<string, Route>, event: string, v: Record<string, string>,
                              message: string, dept: string | null | undefined, mo: Record<string, unknown>) {
@@ -396,6 +400,9 @@ Deno.serve(async (req) => {
       qa_result: mo.qa_result || '-', qa_checker: mo.qa_checker || '-', follow_up: mo.follow_up || '-', ho_checker: mo.ho_checker || '-',
       qa_skip_reason: mo.qa_skip_reason || '-', qa_skipped_by: mo.qa_skipped_by || '-',
       approver: mo.approver_name || '-',
+      /* ↩️ ใบที่ถูกตีกลับแล้วส่งใหม่ (18/11) — ข้อความต้องบอกว่าเป็นของเก่า ไม่ใช่ใบเพิ่งเปิด */
+      bounce_count: String(mo.bounce_count ?? 0), resubmitted_by: mo.resubmitted_by || '-',
+      first_report: beDate(mo.first_report_at) || '-',
       cost_mgr: mo.cost_mgr_name || '-', cost_owner_dept: mo.cost_owner_dept || '-',
     };
     const equip = `${v.item_type}${v.machine_no ? ` (${v.machine_no})` : ''}`;
@@ -434,6 +441,16 @@ Deno.serve(async (req) => {
         builtin = [`✅ <b>อนุมัติปิดแจ้งซ่อม</b>`, `ไลน์การผลิต: ${v.line_name}`, `ชื่อรายการ: ${equip}`, `ปัญหา: ${v.problem}`, ``,
           `เลขแจ้งซ่อม: <b>${v.mo_no}</b>`, `ช่างซ่อม: ${v.tech_main}`, `วิธีแก้ไข: ${v.solution}`, `ผู้อนุมัติ: ${v.approver}`].join('\n');
         photo = mo.after_img || null; break;
+      case 'mtn_resubmitted':
+        /* 🔴 ห้ามใช้ข้อความเดียวกับ mtn_reported — ใบนี้เก่า ไม่ใช่ใบเพิ่งเปิด
+           (18/11 หน้างานแจ้ง: ใบที่สร้าง 09–14/11 ถูกส่งใหม่แล้วเด้งขึ้นหัวลิสต์เหมือนใบใหม่) */
+        builtin = [`🔁 <b>ใบแจ้งซ่อมถูกส่งใหม่ให้ ${v.dept}</b>`, `ไลน์การผลิต: ${v.line_name}`, `ชื่อรายการ: ${equip}`,
+          `ปัญหา: ${v.problem}`, ``,
+          `⚠️ <b>ใบนี้ไม่ใช่ใบใหม่</b> — เคยถูกตีกลับมาแล้ว ส่งใหม่ครั้งที่ ${v.bounce_count}`,
+          v.first_report !== '-' ? `เปิดใบครั้งแรก: ${v.first_report}` : '',
+          v.resubmitted_by !== '-' ? `ผู้กดส่งใหม่: ${v.resubmitted_by}` : '',
+          `PD ผู้แจ้ง: ${v.reporter_prod}`].filter(Boolean).join('\n');
+        photo = mo.before_img || null; break;
       case 'mtn_returned':
         builtin = [`↩️ <b>ตีกลับใบแจ้งซ่อม (ผิดแผนก)</b>`, `ไลน์การผลิต: ${v.line_name}`, `ชื่อรายการ: ${equip}`, `ปัญหา: ${v.problem}`, ``,
           `🛑 เหตุผลที่ตีกลับ: <b>${mo.reject_reason || '-'}</b>`, mo.returned_from_dept ? `ตีกลับจากทีม: ${teamName(mo.returned_from_dept)}` : '',
@@ -454,6 +471,7 @@ Deno.serve(async (req) => {
       : 'รอ QA ตรวจคุณภาพ (ขั้น 5)';
     const NEXT: Record<string, string> = {
       mtn_reported: 'รอช่างรับงาน (ขั้น 2)',
+      mtn_resubmitted: 'รอช่างรับงาน (ขั้น 2)',
       mtn_assigned: 'รอดำเนินการซ่อม (ขั้น 3)',
       mtn_repaired: 'รอตรวจสอบหลังซ่อม (ขั้น 4)',
       mtn_checked: nextAfterChecked,

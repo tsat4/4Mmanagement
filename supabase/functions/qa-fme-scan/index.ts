@@ -282,7 +282,8 @@ Deno.serve(async (req) => {
       else if (vals.length > 1) lotConflict.set(mat, vals.sort((a, b) => a - b));
     }
     const { data: partRules } = await supabase.from('qa_fme_part_rules').select('*');
-    const ruleByMat = new Map<string, { mid_every_pcs: number | null; is_active: boolean }>();
+    const ruleByMat = new Map<string, { mid_every_pcs: number | null; is_active: boolean;
+      mid_mode?: string | null; mid_every_min?: number | null; sample_n?: number | null }>();
     for (const r of partRules ?? []) ruleByMat.set(r.mat_no, r);
 
     /* ── 2) จับคู่ RH/LH เป็น "รุ่นเดียวกัน" — ตัวแทนกลุ่ม = mat ที่เรียงน้อยกว่า ── */
@@ -451,7 +452,16 @@ Deno.serve(async (req) => {
            ไล่ใบตามเวลา สะสมยอด · ทุกครั้งที่ข้ามหลัก N ชิ้น = ถึงคิวตรวจ 1 ครั้ง
            ⇒ ลอทใหญ่ผลิตทั้งวันได้หลายครั้ง · ลอทสั้นจบก่อนถึงหลักแรก = ไม่มีเลย (ถูกต้อง)
            เวลาที่ใช้ = เวลาของใบที่ทำให้ยอดข้ามหลักนั้น (ไม่ใช่เวลาที่สแกนเจอ) */
-        const midMode = String(cfg.mid_mode ?? 'lot');
+        /* 🎛️ โหมด Middle รายพาร์ท (19/11 · user: "ให้ QA ตั้งได้ว่าตัวไหนรอบเวลา ตัวไหนตามจำนวนที่คอนเฟิม")
+           qa_fme_part_rules.mid_mode ชนะค่ากลาง · แถวเก่า is_active=false = ปิด Middle เหมือนเดิม · ไม่มีแถว = ค่ากลาง */
+        let midMode = String(cfg.mid_mode ?? 'lot');
+        let ruleMin = 0;
+        for (const m of [r.mat, ...r.mats]) {
+          const pr = ruleByMat.get(m);
+          if (!pr) continue;
+          if (pr.mid_mode) { midMode = String(pr.mid_mode); ruleMin = Number(pr.mid_every_min ?? 0); break; }
+          if (pr.is_active === false) { midMode = 'off'; break; }
+        }
         if (midMode === 'lot') {
           const every = midEveryFor(r);
           if (every) {
@@ -497,10 +507,20 @@ Deno.serve(async (req) => {
             }
             runQty.set(r, evts.reduce((a, e) => a + e.q, 0));
           }
-        } else if (midMode === 'min' && cfg.mid_after_min > 0) {
-          // โหมดเดิม (ตามเวลา) — เก็บไว้เผื่อบางไลน์อยากใช้ ไม่ใช่ค่าเริ่มต้นแล้ว
-          const midAt = new Date(new Date(r.firstOpen).getTime() + cfg.mid_after_min * 60_000);
-          if (midAt <= now && !r.allDone) add(r, 'middle', 'mid_run', midAt.toISOString(), cfg.first_due_min);
+        } else if (midMode === 'min') {
+          /* ตามเวลา — ซ้ำทุก N นาทีนับจากเริ่มรุ่น ตราบที่รุ่นยังวิ่ง (รุ่นจบแล้ว = ถึงเวลาชิ้นสุดท้าย lastAct)
+             N = รายพาร์ท (mid_every_min) > ค่ากลาง (mid_after_min) · 0/ว่าง = ไม่เรียก (จอตั้งค่าเตือนแล้ว) */
+          const every = ruleMin > 0 ? ruleMin : Number(cfg.mid_after_min ?? 0);
+          if (every > 0) {
+            const cap = Number(cfg.mid_max_per_run ?? 12);
+            const t0 = new Date(r.firstOpen).getTime();
+            const until = r.allDone ? new Date(r.lastAct).getTime() : now.getTime();
+            for (let k = 1; k <= cap; k++) {
+              const at = t0 + k * every * 60_000;
+              if (at > until) break;
+              add(r, 'middle', 'mid_run', new Date(at).toISOString(), cfg.first_due_min, k);
+            }
+          }
         }
 
         /* end — ปิดกะ หรือ รุ่นนี้ปิดใบครบแล้วและมีรุ่นอื่นเริ่มหลังจากนั้น (= กำลังเปลี่ยนรุ่น)
@@ -634,7 +654,7 @@ Deno.serve(async (req) => {
     /* ── 7) sync ว่า "ตรวจแล้วหรือยัง" ── */
     // เปิดใบตรวจ = รับงานแล้ว (หยุดเตือน) · ปิดใบ = จบงาน  ⇒ ห้ามเตือนซ้ำหลังคนรับงานแล้ว
     const { data: open } = await supabase.from('qa_fme_obligations')
-      .select('*').in('status', ['pending', 'acked']).gte('work_date', yest);
+      .select('*').in('status', ['pending', 'acked', 'expired']).gte('work_date', yest);   // expired: ตรวจทีหลังยังจับคู่ปิดได้
     const obs = open ?? [];
     const { data: sheets } = await supabase.from('qa_inspection_sheets')
       .select('id, part_id, line_name, work_date, shift, stage, status, result, created_at')
@@ -674,6 +694,21 @@ Deno.serve(async (req) => {
       await supabase.from('qa_fme_obligations').update(patch).eq('id', ob.id);
       Object.assign(ob, patch);
       if (sh.status === 'done') closed++;
+    }
+
+    /* ⌛ หมดเวลา = ข้ามกะแล้วยังไม่ได้ตรวจ (17/11 · user "ทำปิดงานค้างข้ามกะเป็นหมดเวลา") — เดิมค้าง pending แล้วเตือน "เกินเวลา" ทั้งคืน
+       กะของงานจบแล้ว (วันงาน/กะ ≠ ตอนนี้) และเลยกำหนดตรวจแล้ว ⇒ status 'expired' + เหตุผล · **ไม่ลบ ไม่นับเป็นตรวจแล้ว**
+       (ย้อนดูได้ว่างานไหนไม่ได้ตรวจ) · ถ้า QA ตรวจทีหลังแล้วจับคู่ใบได้ รอบ sync ข้างบนปิดเป็น done ให้เอง · acked (QA เปิดใบแล้ว) ไม่แตะ */
+    const curShift = (() => { const h = bangkok(now).getUTCHours(); return h >= 8 && h < 20 ? 'day' : 'night'; })();
+    const stale = obs.filter(ob => ob.status === 'pending'
+      && (ob.work_date !== today || ob.shift !== curShift) && now > new Date(ob.due_at));
+    let expired = 0;
+    if (stale.length) {
+      const { error: exErr } = await supabase.from('qa_fme_obligations')
+        .update({ status: 'expired', cancel_reason: 'ระบบ: หมดเวลา — ข้ามกะแล้วยังไม่ได้ตรวจ' })
+        .in('id', stale.map(o => o.id)).eq('status', 'pending');
+      if (exErr) console.error('qa-fme-scan: expire', exErr.message);
+      else { expired = stale.length; stale.forEach(o => { o.status = 'expired'; }); }
     }
 
     /* ── 8) แจ้ง Telegram: เรียกครั้งแรก + เตือนซ้ำเมื่อเกินเวลา ── */
@@ -776,7 +811,7 @@ Deno.serve(async (req) => {
     // master อ่านมาไม่ครบ = ต้องเห็นใน log ของ cron ด้วย ไม่ใช่เฉพาะ dry-run (ห้ามล้มเหลวเงียบ)
     if (truncated.length) console.error('qa-fme-scan: master ชนเพดาน 1000 แถว →', truncated.join(', '));
     return json({ ok: true, scanned: { sessions: sessions.length, runs: runs.size },
-      created, closed, calls, escalations, master_truncated: truncated });
+      created, closed, expired, calls, escalations, master_truncated: truncated });
   } catch (e) {
     console.error('qa-fme-scan', e);
     return json({ ok: false, error: String((e as Error)?.message ?? e) }, 500);

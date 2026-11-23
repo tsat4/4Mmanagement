@@ -37,6 +37,7 @@ import PeSetFromMasterModal from '../components/PeSetFromMasterModal';
 import { DeleteButton } from '../components/IconButton';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 /* ═══════════════════════════════════════════════════════════════════════════
    🚀 NPI — พาร์ทใหม่: APQP / PPAP / Drawing Rev / ECI / Tooling Plan — /npi
    2026-09-07 · แบบเต็ม + กฎ: docs/modules/npi-apqp.md
@@ -164,7 +165,7 @@ export default function NPI() {
       fetchAll('pe_master_processes', '*'),
       fetchAll('pe_master_items', '*'),
     ]);
-    if (t.error || pj.error || adv.error) w.push(`โหลดทะเบียน NPI ไม่ได้ (${(t.error || pj.error || adv.error).message}) — ยังไม่ apply migration 20260907_npi_apqp_main (Main) ?`);
+    if (t.error || pj.error || adv.error) w.push(`${tr("โหลดทะเบียน NPI ไม่ได้")} (${(t.error || pj.error || adv.error).message}) — ${tr("ยังไม่")} apply migration 20260907_npi_apqp_main (Main) ?`);
     if (ps.error) w.push('โหลดชุดเอกสาร PE ไม่ได้');
     if (us.error) w.push('โหลดรายชื่อผู้ใช้ไม่ได้ (มอบหมายงานไม่ได้)');
     setTemplates((t.data || []).map(x => ({
@@ -192,7 +193,7 @@ export default function NPI() {
   const loadProject = useCallback(async (id) => {
     if (!id) { setParts([]); setPhases([]); setDelivs([]); setTasks([]); setDrawings([]); setEcis([]); setTooling([]); setSteps([]); return; }
     const { data: p, error } = await supabase.from('npi_parts').select('*').eq('project_id', id).order('part_no');
-    if (error) { toast.error(`โหลดพาร์ทไม่ได้: ${error.message}`); return; }
+    if (error) { toast.error(`${tr("โหลดพาร์ทไม่ได้")}: ${error.message}`); return; }
     const ids = (p || []).map(x => x.id);
     const [ph, dv, tk, dw, ec, tl] = await Promise.all([
       ids.length ? supabase.from('npi_part_phases').select('*').in('part_id', ids).order('seq') : { data: [] },
@@ -251,7 +252,7 @@ export default function NPI() {
     if (m.id) res = await supabase.from('npi_projects').update(row).eq('id', m.id).select().single();
     else res = await supabase.from('npi_projects').insert({ ...row, created_by_name: fullName || null }).select().single();
     setSaving(false);
-    if (res.error) return toast.error(`บันทึกไม่สำเร็จ: ${res.error.message}`);
+    if (res.error) return toast.error(`${tr("บันทึกไม่สำเร็จ")}: ${res.error.message}`);
     toast.success('บันทึกโปรเจคแล้ว');
     setProjModal(null);
     await loadMaster();
@@ -265,8 +266,8 @@ export default function NPI() {
     const { data: pjParts, error: ePart } = await supabase.from('npi_parts').select('id, part_no, line_name').eq('project_id', pj.id);
     const block = npiProjectDeleteBlock(partWriteOf, pjParts, { countable: !ePart });
     if (block) return toast.info(block);
-    if (!window.confirm(`ลบโปรเจค ${pj.project_code} ${pj.name} พร้อมพาร์ท/เอกสาร/ECI/tooling ทั้งหมด?`
-      + `${pjParts?.length ? `\nพาร์ทที่จะหายไปด้วย ${pjParts.length} รายการ` : ''}`
+    if (!await askConfirm(`${tr("ลบโปรเจค")} ${pj.project_code} ${pj.name} ${tr("พร้อมพาร์ท/เอกสาร/ECI/tooling ทั้งหมด")}?`
+      + `${pjParts?.length ? `\n${tr("พาร์ทที่จะหายไปด้วย")} ${pjParts.length} ${tr("รายการ")}` : ''}`
       + '\n(ถ้าแค่หยุดทำ ให้เปลี่ยนสถานะเป็น "ยกเลิก" แทน)')) return;
     // RLS ปฏิเสธ DELETE = 0 แถวไม่มี error ⇒ นับแถวก่อนขึ้น "ลบแล้ว" (กฎเขียน DB ข้อ 2)
     if (!checkWriteRows(await supabase.from('npi_projects').delete().eq('id', pj.id).select('id'), 'ลบโปรเจค')) return;
@@ -296,7 +297,7 @@ export default function NPI() {
     let res;
     if (m.id) res = await supabase.from('npi_parts').update(row).eq('id', m.id).select().single();
     else res = await supabase.from('npi_parts').insert({ ...row, project_id: project.id }).select().single();
-    if (res.error) { setSaving(false); return toast.error(`บันทึกไม่สำเร็จ: ${res.error.message}`); }
+    if (res.error) { setSaving(false); return toast.error(`${tr("บันทึกไม่สำเร็จ")}: ${res.error.message}`); }
     if (!m.id) {
       // instantiate เฟส + เอกสารส่งมอบจากแม่แบบ (snapshot) — วันแผนกระจายจาก kickoff→SOP ถ้ารู้
       const { phaseRows, delivRows } = buildPartRows({
@@ -305,7 +306,7 @@ export default function NPI() {
       });
       const e1 = phaseRows.length ? (await supabase.from('npi_part_phases').insert(phaseRows)).error : null;
       const e2 = delivRows.length ? (await supabase.from('npi_deliverables').insert(delivRows)).error : null;
-      if (e1 || e2) toast.error(`สร้างพาร์ทแล้ว แต่สร้างเฟส/รายการเอกสารจากแม่แบบไม่ครบ: ${(e1 || e2).message} — กด 🔄 sync แม่แบบ ในแผงพาร์ท`);
+      if (e1 || e2) toast.error(`${tr("สร้างพาร์ทแล้ว แต่สร้างเฟส/รายการเอกสารจากแม่แบบไม่ครบ")}: ${(e1 || e2).message} — ${tr("กด 🔄 sync แม่แบบ ในแผงพาร์ท")}`);
       else if (!template?.phases?.length) toast.info('แม่แบบนี้ยังไม่มีเฟส — ไปตั้งที่แท็บ ⚙️ แม่แบบ แล้วกด 🔄 sync');
     }
     setSaving(false);
@@ -317,7 +318,7 @@ export default function NPI() {
   const delPart = async (p) => {
     const w = partWriteOf(p?.line_name);
     if (!w.ok) return toast.info(writeBlockText(w, { what: 'พาร์ทของไลน์นี้' }));
-    if (!window.confirm(`ลบพาร์ท ${p.part_no} พร้อมเอกสาร/แบบ/tooling ของพาร์ทนี้ทั้งหมด?`)) return;
+    if (!await askConfirm(`${tr("ลบพาร์ท")} ${p.part_no} ${tr("พร้อมเอกสาร/แบบ/tooling ของพาร์ทนี้ทั้งหมด")}?`)) return;
     if (!checkWriteRows(await supabase.from('npi_parts').delete().eq('id', p.id).select('id'), 'ลบพาร์ท')) return;
     toast.success('ลบแล้ว'); setPartId(''); reload();
   };
@@ -327,8 +328,8 @@ export default function NPI() {
   const tabs = TABS_BASE.filter(t => t.key !== 'templates' || canTemplates);
   const sopLeft = project?.sop_date ? daysBetween(today, project.sop_date) : null;
   const sub = project
-    ? `${project.project_code} · ${project.customer || '—'} · ${template?.label || 'ไม่พบแม่แบบ'} · SOP ${project.sop_date ? fmtDate(project.sop_date) : '—'}${sopLeft != null ? ` (${sopLeft >= 0 ? `อีก ${sopLeft} วัน` : `เลยมา ${-sopLeft} วัน`})` : ''}`
-    : `${projects.length} โปรเจค · เลือกโปรเจคเพื่อดูรายละเอียด`;
+    ? `${project.project_code} · ${project.customer || '—'} · ${template?.label || tr('ไม่พบแม่แบบ')} · SOP ${project.sop_date ? fmtDate(project.sop_date) : '—'}${sopLeft != null ? ` (${sopLeft >= 0 ? `${tr("อีก")} ${sopLeft} ${tr("วัน")}` : `${tr("เลยมา")} ${-sopLeft} ${tr("วัน")}`})` : ''}`
+    : `${projects.length} ${tr("โปรเจค · เลือกโปรเจคเพื่อดูรายละเอียด")}`;
 
   /* 🔗 ลิงก์ไปบอร์ด New Model ของรุ่นที่ผูกไว้ — ต้องมีรุ่นนั้นอยู่จริงบนบอร์ดด้วย
      (รุ่นถูกถอดออกจากบอร์ดแล้ว แต่ค่าเก่าค้างในฐาน ⇒ ปุ่มจะพาไปหน้าว่าง) */
@@ -464,7 +465,7 @@ export default function NPI() {
       )}
 
       {partModal && project && (
-        <Modal title={partModal.id ? `แก้ไขพาร์ท ${partModal.part_no}` : 'เพิ่มพาร์ทในโปรเจค'} onClose={() => setPartModal(null)} width={720}
+        <Modal title={partModal.id ? `${tr("แก้ไขพาร์ท")} ${partModal.part_no}` : 'เพิ่มพาร์ทในโปรเจค'} onClose={() => setPartModal(null)} width={720}
           footer={<>
             <button style={ghost} onClick={() => setPartModal(null)}>{tr('ยกเลิก')}</button>
             <button style={btn()} disabled={saving} onClick={savePart}>{saving ? tr('กำลังบันทึก…') : tr('บันทึก')}</button>
@@ -506,7 +507,7 @@ export default function NPI() {
           </div>
           {!partModal.id && (
             <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 10 }}>
-              บันทึกแล้วระบบจะสร้าง <b>{template?.phases?.length || 0} {tr('เฟส')}</b> + <b>{template?.delivs?.filter(d => d.is_active !== false).length || 0} {tr('รายการเอกสารส่งมอบ')}</b> จากแม่แบบ "{tr(template?.label) || '—'}" ให้พาร์ทนี้
+              {tr("บันทึกแล้วระบบจะสร้าง")} <b>{template?.phases?.length || 0} {tr('เฟส')}</b> + <b>{template?.delivs?.filter(d => d.is_active !== false).length || 0} {tr('รายการเอกสารส่งมอบ')}</b> {tr("จากแม่แบบ")} "{tr(template?.label) || '—'}" {tr("ให้พาร์ทนี้")}
             </div>
           )}
         </Modal>
@@ -608,7 +609,7 @@ function Board({ projects, rollByProject, templates, project, tplPhases, parts, 
                 <span>{r.parts} {tr('พาร์ท')}</span>
                 <span>{r.done}/{r.total} ({r.pct}%)</span>
                 {r.overdue > 0 && <span style={{ color: 'var(--red)', fontWeight: 800 }}>{tr('⏰ เลย')} {r.overdue}</span>}
-                <span style={{ color: left != null && left < 0 ? 'var(--red)' : 'var(--text2)' }}>SOP {pj.sop_date ? fmtDate(pj.sop_date) : '—'}{left != null ? ` (${left >= 0 ? `อีก ${left} วัน` : `เลย ${-left} วัน`})` : ''}</span>
+                <span style={{ color: left != null && left < 0 ? 'var(--red)' : 'var(--text2)' }}>SOP {pj.sop_date ? fmtDate(pj.sop_date) : '—'}{left != null ? ` (${left >= 0 ? `${tr("อีก")} ${left} ${tr("วัน")}` : `${tr("เลย")} ${-left} ${tr("วัน")}`})` : ''}</span>
               </div>
               <div style={{ height: 6, background: 'var(--bg2)', borderRadius: 'var(--r-xs)', marginTop: 8, overflow: 'hidden' }}>
                 <div style={{ width: `${r.pct}%`, height: '100%', background: (LIGHT[r.light] || LIGHT.grey).color }} />
@@ -658,7 +659,7 @@ function Board({ projects, rollByProject, templates, project, tplPhases, parts, 
                             const phRow = phases.find(x => x.part_id === p.id && x.phase_code === ph.code);
                             return (
                               <td key={ph.code} style={{ ...tdSt, textAlign: 'center', cursor: 'pointer' }} onClick={() => onOpenPart(p.id)}
-                                title={phRow ? `${ph.label}: ${pr2?.done ?? 0}/${pr2?.total ?? 0} · แผน ${phRow.plan_start ? fmtDate(phRow.plan_start) : '—'} → ${phRow.plan_end ? fmtDate(phRow.plan_end) : '—'}` : 'พาร์ทนี้ไม่มีเฟสนี้ (sync แม่แบบ)'}>
+                                title={phRow ? `${ph.label}: ${pr2?.done ?? 0}/${pr2?.total ?? 0} · ${tr("แผน")} ${phRow.plan_start ? fmtDate(phRow.plan_start) : '—'} → ${phRow.plan_end ? fmtDate(phRow.plan_end) : '—'}` : 'พาร์ทนี้ไม่มีเฟสนี้ (sync แม่แบบ)'}>
                                 {phRow ? (
                                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
                                     <LightDot light={pr2?.light || 'grey'} size={18} />

@@ -99,14 +99,14 @@ export default function MoStalePanel({
       id="mo-stale" storePrefix="mo" defaultOpen={false}
       style={{ marginBottom: 10, padding: '10px 13px', ...headSkin }}
       title={<span style={{ fontSize: 13 }}>
-        ⏳ ค้างขั้นเดิมเกิน {days} {tr('วัน')}{' '}
+        ⏳ {tr("ค้างขั้นเดิมเกิน")} {days} {tr('วัน')}{' '}
         <b style={{ color: toneInk(headTone), fontSize: 15 }}>{stale}</b>
         <span style={{ color: 'var(--muted)', fontWeight: 600 }}> / {open} {tr('ใบที่ยังไม่ปิด')}</span>
         {oldest != null && <span style={{ color: 'var(--muted)', fontWeight: 600 }}> {tr('· เก่าสุด')} {oldest} {tr('วัน')}</span>}
       </span>}
       right={hard > 0 && (
         <span style={{ fontSize: 11.5, fontWeight: 800, color: statusColor('bad'), flexShrink: 0 }}>
-          🔴 เกิน {hardDays} {tr('วัน')} {hard} ใบ
+          🔴 {tr("เกิน")} {hardDays} {tr('วัน')} {hard} {tr("ใบ")}
         </span>
       )}
     >
@@ -120,7 +120,7 @@ export default function MoStalePanel({
       {/* ── ความซื่อสัตย์ของจอ: ยอดนี้ครบหรือไม่ครบ ต้องรู้ก่อนอ่านเลข ── */}
       {loadErr && (
         <div role="alert" style={{ fontSize: 11.5, fontWeight: 700, color: statusColor('bad'), marginBottom: 6 }}>
-          ⚠️ โหลดใบซ่อมไม่สำเร็จ ({loadErr}) — ยอดค้างด้านล่าง<b>{tr('ไม่ใช่ของครบ')}</b>
+          ⚠️ {tr("โหลดใบซ่อมไม่สำเร็จ")} ({loadErr}) — {tr("ยอดค้างด้านล่าง")}<b>{tr('ไม่ใช่ของครบ')}</b>
         </div>
       )}
       {partial && (
@@ -130,7 +130,7 @@ export default function MoStalePanel({
       )}
       {unknown > 0 && (
         <div style={{ fontSize: 11.5, color: 'var(--text2)', marginBottom: 6 }}>
-          ❓ <b>{unknown} {tr('ใบไม่มีวันเวลาให้นับ')}</b> {tr('— ยังไม่รู้ว่าค้างนานแค่ไหน (ไม่ถูกนับรวมใน')} {stale} ใบข้างบน)
+          ❓ <b>{unknown} {tr('ใบไม่มีวันเวลาให้นับ')}</b> {tr('— ยังไม่รู้ว่าค้างนานแค่ไหน (ไม่ถูกนับรวมใน')} {stale} {tr("ใบข้างบน")})
         </div>
       )}
       {approx > 0 && (
@@ -141,7 +141,7 @@ export default function MoStalePanel({
 
       {stale === 0 && !loadErr ? (
         <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text2)' }}>
-          ✅ ไม่มีใบค้างขั้นเดิมเกิน {days} {tr('วัน')}{open > 0 ? ` (ใบที่ยังไม่ปิด ${open} ใบ อยู่ในเกณฑ์ทั้งหมด)` : ''}
+          ✅ {tr("ไม่มีใบค้างขั้นเดิมเกิน")} {days} {tr('วัน')}{open > 0 ? ` (${tr("ใบที่ยังไม่ปิด")} ${open} ${tr("ใบ อยู่ในเกณฑ์ทั้งหมด")})` : ''}
         </div>
       ) : (
         <>
@@ -152,7 +152,7 @@ export default function MoStalePanel({
               <span style={lbl}>{tr('ค้างที่ขั้น:')}</span>
               {byStage.filter(s => s.stale > 0).map(s => (
                 <Chip key={s.key} tone={staleTone(s.hard > 0 ? hardDays : days)}
-                  label={`${s.icon} ${s.title}`} sub={`${s.stale} ใบ`}
+                  label={`${s.icon} ${s.title}`} sub={`${s.stale} ${tr("ใบ")}`}
                   onClick={s.stage && onStage ? () => onStage(s.stage) : undefined}
                   title={[`ค้างเกิน ${days} วัน ${s.stale} ใบ (จากทั้งขั้น ${s.n} ใบ)`,
                     s.hard > 0 && `เกิน ${hardDays} วัน ${s.hard} ใบ`,
@@ -167,7 +167,7 @@ export default function MoStalePanel({
             <span style={lbl}>{tr('ทีมช่าง:')}</span>
             {byTeam.filter(t => t.stale > 0).map(t => (
               <Chip key={t.dept || '(none)'} tone={staleTone(t.hard > 0 ? hardDays : days)}
-                label={t.dept ? (teamName(t.dept) || t.dept) : tr('(ไม่ระบุทีม)')} sub={`${t.stale} ใบ`}
+                label={t.dept ? (teamName(t.dept) || t.dept) : tr('(ไม่ระบุทีม)')} sub={`${t.stale} ${tr("ใบ")}`}
                 onClick={t.dept && onTeam ? () => onTeam(t.dept) : undefined}
                 title={[`ค้างเกิน ${days} วัน ${t.stale} ใบ (จากทั้งทีม ${t.n} ใบ)`,
                   t.oldest != null && `เก่าสุด ${t.oldest} วัน`,
@@ -187,7 +187,7 @@ export default function MoStalePanel({
                 {chase.sides.map(s2 => (
                   <Chip key={s2.side} tone={s2.tone}
                     label={`${s2.meta.icon} ${s2.meta.label}`}
-                    sub={`${s2.n} ใบ`}
+                    sub={`${s2.n} ${tr("ใบ")}`}
                     onClick={() => setSide(side === s2.side ? '' : s2.side)}
                     title={[s2.meta.hint,
                       s2.hard > 0 && `เกิน ${hardDays} วัน ${s2.hard} ใบ`,
@@ -235,7 +235,7 @@ export default function MoStalePanel({
                           {t.whoShort && t.kind !== 'role' && <span style={{ color: 'var(--muted)' }}>{tr('· ต้องกดโดย')} {t.whoShort}</span>}
                           <span>· {t.n} {tr('ใบ')}</span>
                           {t.hard > 0 && <span style={{ color: statusColor('bad'), fontWeight: 700 }}>{tr('· เกิน')} {hardDays} {tr('วัน')} {t.hard} {tr('ใบ')}</span>}
-                          {t.kind === 'no_target' && <span style={{ color: 'var(--muted)' }}>{tr('· ⓘ ใบไม่มีข้อมูลให้ชี้ตัวคน')}</span>}
+                          {t.kind === 'no_target' && <span style={{ color: 'var(--muted)' }}>{tr('· ใบไม่มีข้อมูลให้ชี้ตัวคน')}</span>}
                         </div>
                       );
                     })}
@@ -263,13 +263,13 @@ export default function MoStalePanel({
                 {o.machine_no && <span>· {o.machine_no}</span>}
                 {o.problem_characteristic && <span style={{ color: 'var(--muted)' }}>· {o.problem_characteristic}</span>}
                 {statusLabel(o) && <span style={{ color: 'var(--muted)' }}>· {statusLabel(o)}</span>}
-                {!o._stale.exact && <span style={{ color: 'var(--muted)' }}>{tr('· ⓘ นับจากวันแจ้ง (ไม่มีเวลาเข้าขั้น)')}</span>}
+                {!o._stale.exact && <span style={{ color: 'var(--muted)' }}>{tr('· นับจากวันแจ้ง (ไม่มีเวลาเข้าขั้น)')}</span>}
               </div>
             ))}
             {rows.length > rowsShown.length && (
               <button type="button" onClick={() => setAll(true)}
                 style={{ justifySelf: 'start', marginTop: 2, fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
-                  background: 'var(--bg2)', color: 'var(--text)', border: '1px solid var(--border2)',
+                  background: 'var(--bg2-surf)', color: 'var(--text)', border: '1px solid var(--border2)',
                   borderRadius: 'var(--ctl-r)', padding: '4px 11px' }}>
                 {tr('▼ แสดงอีก')} {rows.length - rowsShown.length} {tr('ใบ')}
               </button>
@@ -277,7 +277,7 @@ export default function MoStalePanel({
             {all && rows.length > FIRST_ROWS && (
               <button type="button" onClick={() => setAll(false)}
                 style={{ justifySelf: 'start', marginTop: 2, fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
-                  background: 'var(--bg2)', color: 'var(--text)', border: '1px solid var(--border2)',
+                  background: 'var(--bg2-surf)', color: 'var(--text)', border: '1px solid var(--border2)',
                   borderRadius: 'var(--ctl-r)', padding: '4px 11px' }}>
                 {tr('▲ ย่อเหลือ')} {FIRST_ROWS} {tr('ใบ')}
               </button>
@@ -293,7 +293,7 @@ export default function MoStalePanel({
           · โหลดล้ม/ชนเพดาน = เขียนบนจอ ห้ามโชว์ 0 (กฎความซื่อสัตย์ของจอ) */}
       {gapsErr ? (
         <div role="alert" style={{ marginTop: 10, fontSize: 12, fontWeight: 700,
-          color: statusColor('bad'), background: 'var(--card)',
+          color: statusColor('bad'), background: 'var(--card-surf)',
           border: `1px solid ${statusColor('bad')}55`, borderRadius: 'var(--r-md)', padding: '7px 10px' }}>
           ⚠️ อ่านโซ่การส่งต่อไม่สำเร็จ — ยังไม่รู้ว่ามีใบที่ส่งต่อแล้วปลายทางหายไปหรือเปล่า
           <div style={{ fontWeight: 400, color: 'var(--text2)', marginTop: 2 }}>{gapsErr}</div>
@@ -315,7 +315,7 @@ export default function MoStalePanel({
             {gaps.groups.map(g => (
               <div key={g.key}>
                 <div style={{ fontSize: 12, fontWeight: 800, color: statusColor(g.tone) }}>
-                  {g.icon} {tr(g.label)} · {g.n} ใบ
+                  {g.icon} {tr(g.label)} · {g.n} {tr("ใบ")}
                 </div>
                 <div style={{ fontSize: 11.5, color: 'var(--text2)', marginBottom: 4 }}>{tr(g.hint)}</div>
                 <div style={{ display: 'grid', gap: 4, alignContent: 'start' }}>
@@ -334,14 +334,14 @@ export default function MoStalePanel({
                         {r.reason ? <div style={{ color: 'var(--text2)', fontWeight: 400 }}>{tr('เหตุที่ส่งต่อ:')} {r.reason}</div> : null}
                         {r.childStatusLabel ? (
                           <div style={{ color: 'var(--text2)', fontWeight: 400 }}>
-                            ใบปลายทาง: {r.childStatusLabel}{r.childReason ? ` — ${r.childReason}` : ''}
+                            {tr("ใบปลายทาง")}: {r.childStatusLabel}{r.childReason ? ` — ${r.childReason}` : ''}
                           </div>
                         ) : null}
                       </>
                     );
                     const sty = {
                       textAlign: 'left', fontSize: 11.5, lineHeight: 1.5, padding: '5px 9px',
-                      background: 'var(--bg2)', color: 'var(--text)',
+                      background: 'var(--bg2-surf)', color: 'var(--text)',
                       border: `1px solid ${statusColor(meta.tone)}55`, borderRadius: 'var(--r-md)',
                     };
                     return (r.fromOrderId && onOpenId) ? (

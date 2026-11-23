@@ -219,7 +219,7 @@ export default function WorldFactoryMap({
                 </text>
                 <text x={lx} y={ly + 26 / k} textAnchor="middle" fill={col}
                   fontSize={13 / k} fontWeight="700" style={{ paintOrder: 'stroke', stroke: '#050d18', strokeWidth: 3.4 / k }}>
-                  {c.list.length} {tr('โรง ·')} {fmt(c.actual)} ชิ้น
+                  {c.list.length} {tr('โรง ·')} {fmt(c.actual)} {tr("ชิ้น")}
                 </text>
               </g>
             );
@@ -265,19 +265,19 @@ export default function WorldFactoryMap({
           return (
             <div style={{
               position: 'absolute', left, top, transform: 'translate(-50%, calc(-100% - 22px))',
-              pointerEvents: 'none', zIndex: 5, background: 'var(--card)', border: `1px solid ${col}`,
+              pointerEvents: 'none', zIndex: 5, background: 'var(--card-surf)', border: `1px solid ${col}`,
               borderRadius: 'var(--r-md)', padding: '8px 11px', minWidth: 196, boxShadow: 'var(--shadow-float)',
             }}>
               <div style={{ fontSize: 14, fontWeight: 800 }}>
                 {hover.kind === 'country' ? `${o.meta.flag} ${o.meta.name}` : `${o.flag} ${o.code}`}
               </div>
               <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 5 }}>
-                {hover.kind === 'country' ? `${o.list.length} โรงงาน` : `${o.groupMeta?.icon} ${o.groupMeta?.short} · ${o.region}`}
+                {hover.kind === 'country' ? `${o.list.length} ${tr("โรงงาน")}` : `${o.groupMeta?.icon} ${o.groupMeta?.short} · ${o.region}`}
               </div>
               {[['OEE', o.oee == null ? '—' : o.oee + '%', col],
               ['ผลิต/เป้า', `${fmt(o.actual)}/${fmt(o.target)}`, 'var(--text)'],
-              ['Downtime', `${fmt(o.dtMin)} น.`, o.dtMin > 0 ? '#f59e0b' : 'var(--text)'],
-              ['ของเสีย', `${fmt(o.ng)} ชิ้น`, o.ng > 0 ? '#ef4444' : 'var(--text)']].map(([l, v, c2]) => (
+              ['Downtime', `${fmt(o.dtMin)} ${tr("น.")}`, o.dtMin > 0 ? '#f59e0b' : 'var(--text)'],
+              ['ของเสีย', `${fmt(o.ng)} ${tr("ชิ้น")}`, o.ng > 0 ? '#ef4444' : 'var(--text)']].map(([l, v, c2]) => (
                 <div key={l} style={{ fontSize: 12, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
                   <span style={{ color: 'var(--muted)' }}>{l}</span><b style={{ color: c2 }}>{v}</b>
                 </div>
@@ -294,7 +294,7 @@ export default function WorldFactoryMap({
           position: 'absolute', left: 10, top: 10, fontSize: 12, fontWeight: 700,
           background: 'rgba(5,13,24,0.78)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '5px 10px', color: 'var(--text)',
         }}>
-          {zoomCc ? `${byCc.find(c => c.cc === zoomCc)?.meta.flag} ${byCc.find(c => c.cc === zoomCc)?.meta.name} · ${plants.length} โรงงาน` : `🌏 ทั้งโลก · ${comps.length} โรงงาน · ${byCc.length} ประเทศ`}
+          {zoomCc ? `${byCc.find(c => c.cc === zoomCc)?.meta.flag} ${byCc.find(c => c.cc === zoomCc)?.meta.name} · ${plants.length} ${tr("โรงงาน")}` : `🌏 ${tr("ทั้งโลก")} · ${comps.length} ${tr("โรงงาน")} · ${byCc.length} ${tr("ประเทศ")}`}
         </div>
       </div>
 

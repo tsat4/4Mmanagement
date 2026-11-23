@@ -25,6 +25,7 @@ import { checkWrite } from '../utils/dbWrite';
 import { FALLBACK_EDI_DICT } from '../utils/ediDetect';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 /* ช่องที่ระบบอ่านได้ — 3 ตัวแรกขาดไม่ได้ (ไม่มี = ประกอบความต้องการไม่ได้เลย) */
 const FIELDS = [
   { key: 'part', label: 'เลขพาร์ท', required: true },
@@ -83,7 +84,7 @@ export default function CustomerFileFormats({ canManage, onChanged }) {
     if (!code) { toast.error('ต้องมีรหัสฟอร์แมต (เช่น tsra_order)'); return; }
     const missing = FIELDS.filter(f => f.required && !fromTags(d.col_map[f.key]).length);
     if (missing.length) {
-      toast.error(`ต้องกรอกชื่อคอลัมน์ของ: ${missing.map(f => f.label).join(' · ')} — ขาดตัวใดตัวหนึ่งระบบอ่านไฟล์ไม่ได้`);
+      toast.error(`${tr("ต้องกรอกชื่อคอลัมน์ของ")}: ${missing.map(f => f.label).join(' · ')} — ${tr("ขาดตัวใดตัวหนึ่งระบบอ่านไฟล์ไม่ได้")}`);
       return;
     }
     const col_map = {};
@@ -106,7 +107,7 @@ export default function CustomerFileFormats({ canManage, onChanged }) {
   };
 
   const toggleActive = async (r) => {
-    if (r.is_active && !window.confirm(`ปิดใช้ "${r.name || r.code}"?\n\nไฟล์ของลูกค้าเจ้านี้จะอ่านไม่ออกจนกว่าจะเปิดกลับ (ข้อมูลที่นำเข้าไปแล้วไม่หาย)`)) return;
+    if (r.is_active && !await askConfirm(`${tr("ปิดใช้")} "${r.name || r.code}"?\n\n${tr("ไฟล์ของลูกค้าเจ้านี้จะอ่านไม่ออกจนกว่าจะเปิดกลับ (ข้อมูลที่นำเข้าไปแล้วไม่หาย")})`)) return;
     const res = await supabaseDR.from('customer_pull_formats')
       .update({ is_active: !r.is_active }).eq('code', r.code).select('code');
     if (!checkWrite(res, 'เปลี่ยนสถานะฟอร์แมต')) return;
@@ -118,7 +119,7 @@ export default function CustomerFileFormats({ canManage, onChanged }) {
   const editing = adding || !!draft;
 
   return (
-    <div style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 12 }}>
+    <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
         <b style={{ fontSize: 13 }}>{tr('ฟอร์แมตไฟล์ความต้องการของลูกค้า')}</b>
         <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>
@@ -134,7 +135,7 @@ export default function CustomerFileFormats({ canManage, onChanged }) {
           {rows.map(r => (
             <div key={r.code} style={{
               display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', padding: '6px 8px',
-              borderRadius: 'var(--r-md)', background: 'var(--card)', border: '1px solid var(--border)',
+              borderRadius: 'var(--r-md)', background: 'var(--card-surf)', border: '1px solid var(--border)',
               opacity: r.is_active ? 1 : 0.55,
             }}>
               <span style={{ fontSize: 11.5, fontFamily: 'monospace', color: 'var(--muted)', minWidth: 90 }}>{r.code}</span>
@@ -143,7 +144,7 @@ export default function CustomerFileFormats({ canManage, onChanged }) {
                 {r.customer_name || 'ไม่ระบุลูกค้า'} · {KINDS.find(k => k.value === r.kind)?.label || r.kind}
               </span>
               <span style={{ fontSize: 11, color: 'var(--muted)' }}>
-                {FIELDS.filter(f => (r.col_map?.[f.key] || []).length).length}/{FIELDS.length} ช่อง
+                {FIELDS.filter(f => (r.col_map?.[f.key] || []).length).length}/{FIELDS.length} {tr("ช่อง")}
               </span>
               {!r.is_active && <span style={{ fontSize: 11, color: '#f59e0b', fontWeight: 700 }}>{tr('ปิดใช้')}</span>}
               {canManage && !editing && (
@@ -163,7 +164,7 @@ export default function CustomerFileFormats({ canManage, onChanged }) {
       )}
 
       {editing && (
-        <div style={{ marginTop: 10, padding: 10, borderRadius: 'var(--r-md)', background: 'var(--card)', border: '1px solid var(--accent)' }}>
+        <div style={{ marginTop: 10, padding: 10, borderRadius: 'var(--r-md)', background: 'var(--card-surf)', border: '1px solid var(--accent)' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8, marginBottom: 8 }}>
             <label style={{ fontSize: 11.5, color: 'var(--muted)' }}>{tr('รหัส (ห้ามซ้ำ)')}
               <input value={D.code || ''} disabled={D._edit} placeholder="tsra_order"

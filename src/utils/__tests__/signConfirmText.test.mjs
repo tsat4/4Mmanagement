@@ -29,13 +29,14 @@ test('🔴 ข้อมูลไม่ครบ ต้องไม่พ่น�
   assert.match(t, /ยืนยันเซ็น/);
 });
 
-test('confirmSign: กดตกลง = true · กดยกเลิก = false', () => {
-  assert.equal(confirmSign({ orderNo: 'A' }, () => true), true);
-  assert.equal(confirmSign({ orderNo: 'A' }, () => false), false);
+test('confirmSign: กดตกลง = true · กดยกเลิก = false (18/11: คืน Promise — ผู้เรียกต้อง await)', async () => {
+  assert.equal(await confirmSign({ orderNo: 'A' }, () => true), true);
+  assert.equal(await confirmSign({ orderNo: 'A' }, () => false), false);
+  assert.equal(await confirmSign({ orderNo: 'A' }, async () => true), true);   // ask ที่เป็น async (กล่องในแอป)
 });
 
-test('🔴 ไม่มี window (เทส/SSR) = ไม่ขวางการทำงาน', () => {
-  assert.equal(confirmSign({ orderNo: 'A' }), true);
+test('🔴 ไม่มี window/host (เทส/SSR) = ไม่ขวางการทำงาน', async () => {
+  assert.equal(await confirmSign({ orderNo: 'A' }), true);
 });
 
 test('warn — จังหวะที่ของจริงแก้ได้ ต้องเปลี่ยนบรรทัดเตือนท้ายได้ (คำเตือนที่ไม่จริง = คนเลิกอ่าน)', () => {

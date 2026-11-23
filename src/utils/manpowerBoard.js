@@ -20,13 +20,16 @@
 import { positionKeyOf, levelOfPosition } from './positions.js';
 import { shiftFromTeam, scheduleTeamFor } from './shiftAssign.js';
 import { stdCapacityOf } from './stdManpower.js';
-import { getLineFamily } from './lineHierarchy.js';
+import { getLineFamily, lineAncestorIds, lineChainIds } from './lineHierarchy.js';
 import { orgNodeCompare, naturalCompare } from './listOrder.js';
 import { wavg, wLoad, wRun } from './oee.js';
 import { skillFit, skillMapOf, pendingMapOf } from './skillFit.js';
 import { costCenterOfNode } from './ccScope.js';
 
 /** แถว (row) ของผังที่คนแต่ละตำแหน่งไปอยู่ */
+/** ถังคนที่ไม่มีแผนก (key ของ dept ใน buildManpowerBoard) — ใช้ร่วม lineDeptsOf */
+const NO_DEPT_KEY = '__none__';
+
 export const ROW = Object.freeze({
   TOP: 'top',          // ผู้จัดการ / หัวหน้าส่วน — หัวผัง
   SUPPORT: 'support',  // วิศวกร / เจ้าหน้าที่ / ธุรการ — ข้างหัวผัง
@@ -181,7 +184,7 @@ export function buildManpowerBoard({ section, nodes = [], employees = [], lines 
   const depts = new Map(deptNodes.map(d => [d.id, {
     node: d, key: d.id, name: d.name, heads: [], techs: [], people: [],
   }]));
-  const NO_DEPT = '__none__';
+  const NO_DEPT = NO_DEPT_KEY;
   const deptBucket = (id) => {
     if (!depts.has(id)) depts.set(id, { node: null, key: NO_DEPT, name: 'ไม่ระบุแผนก', heads: [], techs: [], people: [] });
     return depts.get(id);
@@ -699,6 +702,13 @@ export function staffingOfDept(d, { ran = null } = {}) {
     s.absentGap = s.evaluated ? s.leave + s.absent + s.unchecked + s.lentOut - s.borrowedIn : null;
     s.seats = s.registered + (s.structGap || 0);
     s.gap = s.evaluated ? s.seats - s.onFloor : null;
+    // 🧩 กรองถึงไลน์ (`narrowDeptToLine`) — ช่องตำแหน่งตั้งรายทีม แยกลงไลน์ไม่ได้ ⇒ ไม่คิดช่องว่าง (null ไม่ใช่ 0)
+    //    เทียบ "คนมาจริง vs std ของไลน์" แทน (user 23/11 เลือก) · std ไม่ตั้ง = gap null
+    if (d.lineFilter) {
+      s.structGap = null; s.empty = 0; s.capped = 0;
+      s.seats = s.std;
+      s.gap = s.evaluated && s.std != null ? s.std - s.onFloor : null;
+    }
   }
   return out;
 }
@@ -863,4 +873,165 @@ export function stationSkillGaps(placed, { skillsByEmp = {}, reqsByStation = {} 
   }
   gaps.sort((a, b) => a.fit.score - b.fit.score || (b.temp - a.temp) || naturalCompare(a.emp.name || '', b.emp.name || ''));
   return { gaps, checked, ok, noReqPeople, noReqStations, onlyApproval: gaps.filter(g => g.onlyApproval).length };
+}
+
+/* ── 🗺️ ภาพรวมทั้งโรงงาน (แท็บผัง LAYOUT · 2026-11-20 · คำสั่ง user "ภาพรวมทั้งโรงงาน … ทำอะไรเจ๋งๆ") ──
+   กรอบไลน์บนผังรวม (`factory_line_regions` ชุดเดียวกับ /factory-map) ระบายสีตามกำลังคน **กะปัจจุบัน**
+   🔴 ฐานเทียบ = **กำลังคนตามผัง (std ต่อกะ · `planOf` → `stdCapacityOf`) ไม่ใช่จำนวนจุดงาน** (user 20/11:
+      "จุดงานส่วนใหญ่เยอะกว่าจำนวนพนักงาน — คนเดียวขึ้นจุด a ครึ่งวัน จุด b ครึ่งวัน")
+   เกณฑ์ (user เคาะ 20/11):
+     🔴 bad  = ขาด (std − มาจริง) ≥ 3 คน
+     🟡 warn = ขาด 1–2 คน **หรือ** มีคนยืนจุดที่ทักษะยังไม่ถึง
+     🟢 good = มาครบ std
+     ⚪ none = ตัดสินไม่ได้ — ไม่รู้ std / กะนี้ยังไม่มีใครเช็คชื่อ (เขียนเหตุผลใน `reason` · ห้ามโชว์ 0) */
+export const LINE_STAFF_SHORT_BAD = 3;
+
+/** ไลน์ของกรอบ = ตัวเอง + ลูกลงไป (**ไม่รวมไลน์แม่** — กรอบไลน์ลูกห้ามนับของแม่) · ไม่อยู่ในทะเบียน = [] */
+export function lineFamilyDown(lines, lineName) {
+  const self = (lines || []).find(l => l.name === lineName);
+  if (!self) return [];
+  const up = lineAncestorIds(lines, self.id);
+  return getLineFamily(lines, lineName).filter(l => !up.has(l.id));
+}
+
+/** 🧺 กลุ่มที่ใช้ตัดสินสีกรอบ = **ไลน์แม่บนสุด** (user 20/11 "ตัดสินทั้งกลุ่ม")
+    เหตุ: std ของกลุ่มอยู่ที่ไลน์แม่ (`stdManpower.js` กฎข้อ 1 — ลูกบางกลุ่มก็อปเลขแม่มา เช่น HYDROFORM 14 ทุกลูก)
+    และพนักงานสังกัดไลน์แม่ ⇒ กรอบไลน์ลูกทุกกรอบในกลุ่มเดียวกัน = สถานะเดียวกัน · ไม่อยู่ในทะเบียน = ชื่อเดิม */
+export function lineGroupRoot(lines, lineName) {
+  const self = (lines || []).find(l => l.name === lineName);
+  if (!self) return lineName;
+  const rootId = lineChainIds(lines, self.id)[0];
+  return (lines.find(l => String(l.id) === String(rootId)) || self).name;
+}
+
+/** จุดงานของกรอบไลน์ — จับด้วย line_id ก่อน ถอยไปชื่อ (ws เก่าไม่มี line_id) */
+export function stationsOfLineFamily(lines, lineName, stations) {
+  const fam = lineFamilyDown(lines, lineName);
+  const ids = new Set(fam.map(l => String(l.id)));
+  const names = new Set((fam.length ? fam.map(l => l.name) : [lineName]).map(n => String(n || '').trim().toLowerCase()));
+  return (stations || []).filter(s => (s.line_id != null && ids.has(String(s.line_id)))
+    || names.has(String(s.line_name || '').trim().toLowerCase()));
+}
+
+/**
+ * คนที่มากะนี้ของกรอบ เทียบ std
+ * @param familyLines   lineFamilyDown()
+ * @param stationIds    Set ของ id จุดงานในกรอบ
+ * @param allStationIds Set ของ id จุดงานทั้งโรงงาน (รู้ว่าวันนี้ไปยืนจุดของไลน์อื่น)
+ * @param attendance    { [employee_id]: log วันนี้ } · empById { [id]: employee }
+ * @param shift         'day' | 'night' (กะปัจจุบัน — `getCurrentShift()`)
+ * นับคนเข้ากรอบ: วางจุดงานวันนี้แล้ว = ตามจุด (ยืมเข้า/ยืมออกถูกเอง) · ยังไม่วางจุด = ตามไลน์สังกัด (`employees.line_id`)
+ * คืน { status, reason, shift, std, onFloor, checked, short, gapPeople }
+ */
+export function lineStaffStatus({ familyLines = [], stationIds = new Set(), allStationIds = new Set(), attendance = {}, empById = {}, shift, fit = null } = {}) {
+  const famIds = new Set(familyLines.map(l => String(l.id)));
+  let onFloor = 0, checked = 0;
+  for (const [empId, log] of Object.entries(attendance || {})) {
+    if (!log || log.shift !== shift) continue;
+    const st = log.assigned_line != null ? String(log.assigned_line) : null;
+    const mine = st && allStationIds.has(st) ? stationIds.has(st) : famIds.has(String(empById[empId]?.line_id ?? ''));
+    if (!mine) continue;
+    checked += 1;
+    if (log.is_present) onFloor += 1;
+  }
+  const std = familyLines.length ? planOf(familyLines, shift) : null;
+  const gapPeople = fit?.gaps?.filter(g => g.shift === shift).length || 0;
+  const base = { shift, std, onFloor, checked, short: null, gapPeople };
+  if (std == null) return { ...base, status: 'none', reason: familyLines.length ? 'ยังไม่ตั้งกำลังคน (std)' : 'ไม่ใช่ไลน์ในทะเบียน' };
+  if (!checked) return { ...base, status: 'none', reason: `${shift === 'night' ? 'กะดึก' : 'กะเช้า'}ยังไม่เช็คชื่อ` };
+  const short = Math.max(0, std - onFloor);
+  const out = { ...base, short };
+  if (short >= LINE_STAFF_SHORT_BAD) return { ...out, status: 'bad', reason: null };
+  if (short > 0 || gapPeople > 0) return { ...out, status: 'warn', reason: null };
+  return { ...out, status: 'good', reason: null };
+}
+
+/** ป้ายสั้นบนกรอบ — ตัวเลขล้วน (`เช้า มา 9/11 · ขาด 2`) · none = เหตุผล */
+export function lineStaffLabel(s) {
+  if (!s) return null;
+  if (s.status === 'none') return s.reason;
+  const parts = [`${s.shift === 'night' ? 'ดึก' : 'เช้า'} มา ${s.onFloor}/${s.std}`];
+  if (s.short) parts.push(`ขาด ${s.short}`);
+  if (s.gapPeople) parts.push(`ทักษะไม่ถึง ${s.gapPeople}`);
+  return parts.join(' · ');
+}
+
+/** ทักษะของคนที่ยืนจุดนี้วันนี้ — 'ok' | 'gap' | 'noreq' | null (ไม่ได้ยืน = ไม่ตัดสิน) */
+export function personFitState(x, p, fit) {
+  if (p.attend !== 'present' || p.away) return null;
+  if (!(x.station.station_requirements || []).length) return 'noreq';
+  return (fit?.gaps || []).some(g => g.emp.id === p.emp.id && String(g.station.id) === String(x.station.id)) ? 'gap' : 'ok';
+}
+
+/* ── 🧩 กรองบอร์ดของแผนกลงถึง "ไลน์" (23/11 · user "ให้แท็บอื่นกรองถึงระดับไลน์ด้วย") ─────────────
+   ใช้กับทุกแท็บที่ถือ dept ของ `buildManpowerBoard` (ผังกำลังคน · 4M · แผน vs มาจริง)
+   · คน = `line_id` อยู่ในไลน์ที่เลือก + ไลน์ลูกลงไป (**กรองตรง** · user เลือก) — ไลน์ไม่มีคนสังกัดตรง = ว่าง แล้วจอเขียนบอก
+   · ช่องตำแหน่ง (`manpower_slot_plans`) ตั้ง**รายทีม** แยกลงไลน์ไม่ได้ ⇒ `slots: null` + `slotSource: 'line'` (ห้ามโชว์ 0)
+   · กำลังคนตามผัง = std ของไลน์ (`planOf`) · คนวิ่งข้ามแผนก (ตั้งรายหน่วย) แยกไลน์ไม่ได้ = ซ่อน + นับบอก
+   · หัวหน้าแผนก/ช่าง = งานระดับแผนก คงไว้ (ไม่นับเป็นกำลังคนอยู่แล้ว)
+   @param familyLines  `lineFamilyDown(lines, ชื่อไลน์)` · ว่าง = คืน null (ไม่รู้จักไลน์ ห้ามเดา) */
+export function narrowDeptToLine(d, familyLines = [], lineName = '') {
+  if (!d || !familyLines.length) return null;
+  const famIds = new Set(familyLines.map(l => String(l.id)));
+  const famNames = new Set(familyLines.map(l => String(l.name || '').trim().toLowerCase()));
+  const keep = (p) => famIds.has(String(p?.line_id ?? ''));
+  const cols = (d.cols || []).map(c => ({ ...c, leaders: c.leaders.filter(keep), ops: c.ops.filter(keep),
+    slots: null, slotPlan: null, slotSource: 'line', slotStations: undefined }))
+    .filter(c => c.leaders.length || c.ops.length);
+  const allOps = cols.flatMap(c => c.ops);
+  const reg = { day: 0, night: 0 };
+  for (const c of cols) if (c.shift) reg[c.shift] += c.ops.length;
+  const plan = { day: planOf(familyLines, 'day'), night: planOf(familyLines, 'night') };
+  return {
+    ...d,
+    cols,
+    borrowed: (d.borrowed || []).filter(b => famNames.has(String(b.borrowed?.to || '').trim().toLowerCase())),
+    flex: [],
+    lines: familyLines,
+    plan, registered: reg,
+    planTotal: plan.day == null && plan.night == null ? null : (plan.day || 0) + (plan.night || 0),
+    opsTotal: allOps.length,
+    present: allOps.filter(p => p.attend === 'present').length,
+    lentOut: allOps.filter(p => p.lentTo).length,
+    unknownShiftTeams: cols.filter(c => c.team && !c.shift && c.ops.length).map(c => c.team),
+    unknownPos: allOps.filter(p => p.unknownPos).length,
+    stationInfo: null,
+    lineFilter: { name: lineName, deptOps: d.opsTotal || 0, hiddenFlex: (d.flex || []).length },
+  };
+}
+
+/** 🧩 บอร์ดทั้งส่วนงานที่ "กรองถึงไลน์" แล้ว — ตัวเลขหัวผัง (แผน/ในทะเบียน/มาวันนี้) ต้องคิดจากแผนกที่กรองแล้ว
+    ไม่งั้นหัวผังโชว์ยอดทั้งส่วนงานคู่กับคนของไลน์เดียว = จออ่านผิด (เจอตอนทำ 23/11) · ผู้จัดการ/วิศวกร (top/support) คงไว้ */
+export function boardForLine(board, lineDepts) {
+  if (!board) return board;
+  const sum = (f) => lineDepts.reduce((a, d) => a + (f(d) || 0), 0);
+  return {
+    ...board,
+    depts: lineDepts,
+    emptyDepts: [],
+    totals: {
+      ...board.totals,
+      plan: lineDepts.some(d => d.planTotal != null) ? sum(d => d.planTotal) : null,
+      ops: sum(d => d.opsTotal),
+      present: sum(d => d.present),
+      borrowed: sum(d => (d.borrowed || []).length),
+      flex: 0,
+    },
+  };
+}
+
+/** 🧩 แผนกที่ "ครอบไลน์ที่เลือก" แล้วกรองถึงไลน์ (ใช้ทั้งผังกำลังคน/4M/แผน vs มาจริง)
+    🔴 std ของไลน์นับ **ครั้งเดียว** ที่แผนกหลัก — ถังไม่ระบุแผนก (`NO_DEPT`) ครอบไลน์เดียวกันได้ (คนที่ไม่มีแผนก)
+       เดิมบวก std ซ้ำ 2 เท่า (เจอตอนทำ 23/11: HDF1 std 28 ขึ้นหัวผัง 56) ⇒ แผนกรองถัดไปไม่มี std + ไม่มีคน = ไม่แสดง */
+export function lineDeptsOf(depts, familyLines = [], lineName = '') {
+  if (!familyLines.length) return depts;
+  const ids = new Set(familyLines.map(l => String(l.id)));
+  const hits = (depts || []).filter(d => (d.lines || []).some(l => ids.has(String(l.id))));
+  hits.sort((a, b) => (a.key === NO_DEPT_KEY) - (b.key === NO_DEPT_KEY));
+  return hits.map((d, i) => {
+    const n = narrowDeptToLine(d, familyLines, lineName);
+    if (!n || i === 0) return n;
+    if (!n.opsTotal && !(n.borrowed || []).length) return null;
+    return { ...n, plan: { day: null, night: null }, planTotal: null };
+  }).filter(Boolean);
 }

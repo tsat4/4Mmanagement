@@ -89,7 +89,7 @@ export default function ImageCropModal({
       //    (คำสั่ง user 2026-09-11: "ถ้านามสกุลไม่ตรง ควร alarm แจ้งเตือน")
       //    เดิมไฟล์ที่ไม่ใช่รูปจะไปตายที่ img.onerror ซึ่งขึ้นข้อความเรื่องฟอร์แมตกล้อง = ชี้ผิดทาง
       if (!looksLikeImage(f)) {
-        toast.error(`ไฟล์นี้ไม่ใช่รูปภาพ (.${extOf(f.name) || 'ไม่มีนามสกุล'}) — เลือกได้เฉพาะ JPG · PNG · WEBP`);
+        toast.error(`${tr("ไฟล์นี้ไม่ใช่รูปภาพ")} (.${extOf(f.name) || tr('ไม่มีนามสกุล')}) — ${tr("เลือกได้เฉพาะ")} JPG · PNG · WEBP`);
         onCancel?.();
         return;
       }
@@ -100,7 +100,7 @@ export default function ImageCropModal({
       }
       // เช็คขนาด GIF หลังแปลงเสมอ (ไฟล์ที่แปลงแล้วเป็น JPEG ไม่เข้าเงื่อนไขนี้)
       if (isGifFile(f) && f.size > GIF_MAX_BYTES) {
-        toast.error(`รูปขยับ (GIF) ต้องมีขนาดไม่เกิน 2 MB (ไฟล์นี้ ${(f.size / 1024 / 1024).toFixed(1)} MB) — ลองใช้ GIF ที่สั้นลง/เล็กลง หรือย่อไฟล์ก่อนอัปโหลด`);
+        toast.error(`${tr("รูปขยับ (GIF) ต้องมีขนาดไม่เกิน 2 MB (ไฟล์นี้")} ${(f.size / 1024 / 1024).toFixed(1)} MB) — ${tr("ลองใช้ GIF ที่สั้นลง/เล็กลง หรือย่อไฟล์ก่อนอัปโหลด")}`);
         onCancel?.();
         return;
       }
@@ -223,7 +223,7 @@ export default function ImageCropModal({
 
   return (
     <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 20, width: 'min(380px,100%)' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 20, width: 'min(380px,100%)' }}>
         <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)', marginBottom: 12 }}>{title}</div>
         <div
           onPointerDown={useFull ? undefined : onPointerDown}

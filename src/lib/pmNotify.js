@@ -24,7 +24,7 @@ import { supabase } from '../supabaseClient'
    📄 docs/modules/notify-inapp-audit.md §รอบ 5                                              */
 import notifyEvent from '../utils/notifyEvent'
 
-export async function createNotification(userId, { title, body, type = 'info', refTable, refId }) {
+export async function createNotification(userId, { title, body, type = 'info', refTable, refId, link }) {
   const { error } = await supabase.from('notifications').insert({
     user_id: userId,
     title,
@@ -32,6 +32,7 @@ export async function createNotification(userId, { title, body, type = 'info', r
     type,
     ref_table: refTable ?? null,
     ref_id: refId ?? null,
+    ...(link ? { link } : {}),   // deep-link ถึงตัวใบ (notifLink.js ตรวจความปลอดภัย+สิทธิ์ก่อนพาไป) · ไม่ส่ง = ถอยไป ref_table เหมือนเดิม
   })
   if (error) throw error
 }
@@ -42,7 +43,7 @@ export async function createNotification(userId, { title, body, type = 'info', r
  * @param {{event:string,title:string,body?:string,type?:string,refTable?:string,refId?:string,lineName?:string}} p
  * @returns {Promise<{ownersCapped:boolean, owners:number}>} ให้หน้าจอเตือนได้เมื่อรายชื่อช่างถูกตัด
  */
-export async function notifyDepartment(department, { event, title, body, type = 'info', refTable, refId, lineName }) {
+export async function notifyDepartment(department, { event, title, body, type = 'info', refTable, refId, lineName, link }) {
   if (!event) throw new Error('notifyDepartment: ต้องระบุ event (คีย์ใน notification_rules)')
   /* ช่างของทีมนี้ = "เจ้าของงาน" ของใบตรวจ — อ่านไม่ได้ก็ยังยิงหัวหน้าตามทะเบียนต่อ (ห้ามเงียบทั้งใบ) */
   let owners = []
@@ -59,6 +60,7 @@ export async function notifyDepartment(department, { event, title, body, type = 
     type,
     line_name: lineName || undefined,
     ref_table: refTable, ref_id: refId,
+    ...(link ? { link } : {}),   // deep-link (edge กรอง safeInternalPath + จอเช็คสิทธิ์อีกชั้น) · 20/11
     extra_user_ids: owners.slice(0, 20),
   })
   return { owners: owners.length, ownersCapped: owners.length > 20 }

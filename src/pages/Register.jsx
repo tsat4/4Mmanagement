@@ -114,7 +114,7 @@ export default function Register({ embedded = false, onSaved }) {
       /* 🔁 รหัสซ้ำต้องตอบเป็น "ใคร อยู่ไหน สถานะอะไร แก้ที่ไหน" ก่อนอัปโหลดรูป/ก่อน insert
          (09/11: PD2 เพิ่ม 3 คนที่มีอยู่แล้วแต่ตัวเองมองไม่เห็น ⇒ เจอแต่ชื่อ constraint · employeeIdentity.js) */
       const dupe = await findEmployeeByCode(supabase, empCode);
-      if (dupe.error) { toast.error(`ตรวจรหัสซ้ำไม่ได้ — ยังไม่บันทึก: ${dupe.error.message}`); setIsUploading(false); return; }
+      if (dupe.error) { toast.error(`${tr("ตรวจรหัสซ้ำไม่ได้ — ยังไม่บันทึก")}: ${dupe.error.message}`); setIsUploading(false); return; }
       if (dupe.row) { toast.error(duplicateEmployeeText(dupe.row, { code: empCode, scopeSecs })); setIsUploading(false); return; }
 
       let photoUrl = null;
@@ -155,7 +155,7 @@ export default function Register({ embedded = false, onSaved }) {
          ไม่บอก = เพิ่มคนเสร็จ สลับไปแท็บ 👥 แล้วไม่เห็นคนที่เพิ่ง เพิ่ม จนกดรีเฟรชหน้า = จอโกหก */
       onSaved?.();
     } catch (err) {
-      toast.error('เกิดข้อผิดพลาด: ' + err.message);
+      toast.error((tr('เกิดข้อผิดพลาด') + ': ') + err.message);
     } finally {
       setIsUploading(false);
     }
@@ -303,14 +303,14 @@ export default function Register({ embedded = false, onSaved }) {
                   </select>
                   {curNode && !curNode.ref_line_id && (
                     <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 4, lineHeight: 1.45 }}>
-                      ⚠️ กลุ่ม <b>{curNode.name}</b> ยังไม่ได้ผูกกับไลน์ผลิตจริง — บันทึกได้ แต่พนักงานคนนี้
+                      ⚠️ {tr("กลุ่ม")} <b>{curNode.name}</b> {tr("ยังไม่ได้ผูกกับไลน์ผลิตจริง — บันทึกได้ แต่พนักงานคนนี้")}
                       <b> {tr('จะไม่ขึ้นในหน้าเช็คชื่อ')}</b> {tr('· ผูกไลน์ให้กลุ่มนี้ที่')}{' '}
-                      <Link to="/org-setup" style={{ color: 'var(--amber)', fontWeight: 700 }}>{tr('ผังองค์กร')}</Link> ก่อน
+                      <Link to="/org-setup" style={{ color: 'var(--amber)', fontWeight: 700 }}>{tr('ผังองค์กร')}</Link> {tr("ก่อน")}
                     </div>
                   )}
                   {!curNode && noRef.length > 0 && (
                     <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4, lineHeight: 1.45 }}>
-                      ⚠ {noRef.length} กลุ่มในลิสต์นี้ยังไม่ผูกไลน์ผลิต — เลือกแล้วคนจะไม่ขึ้นหน้าเช็คชื่อ
+                      ⚠ {noRef.length} {tr("กลุ่มในลิสต์นี้ยังไม่ผูกไลน์ผลิต — เลือกแล้วคนจะไม่ขึ้นหน้าเช็คชื่อ")}
                     </div>
                   )}
                   </>

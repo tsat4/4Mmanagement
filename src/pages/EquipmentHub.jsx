@@ -71,7 +71,7 @@ function SparePanel({ view }) {
   const load = useCallback(async () => {
     setLoading(true);
     const { data, error } = await fetchAllRows(supabaseDR, 'mtn_spare_parts', '*', q => q.eq('is_active', true).order('sort_order').order('id'));
-    if (error) toast.error('โหลดทะเบียนอะไหล่ไม่สำเร็จ: ' + (error.message || error));
+    if (error) toast.error((tr('โหลดทะเบียนอะไหล่ไม่สำเร็จ') + ': ') + (error.message || error));
     setParts(data || []);
     setLoading(false);
   }, []);

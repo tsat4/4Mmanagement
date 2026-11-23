@@ -19,6 +19,7 @@ import { tr } from '../utils/i18n';
 import { useWorkDate } from '../utils/useWorkDate';   // 📅 บอร์ดเปิดค้างข้ามวัน (12/11)
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 import InfoMore from '../components/InfoMore';   // ⓘ คำอธิบายพับ (UI §6.10)
+import { askConfirm } from '../utils/askConfirm';
 
 /* ══ 🔗 Flow Control Tower — สายธารของ "ความต้องการ" ตั้งแต่ลูกค้าถึงวัตถุดิบ ═══════════
    ตอบคำถามเดียว: **ความต้องการของลูกค้าไหลย้อนกลับไปถึงต้นน้ำครบหรือยัง ตันตรงไหน**
@@ -192,7 +193,7 @@ export default function FlowTower() {
   const setLot = async (row) => {
     const v = Number(row.suggested_lot);
     if (!(v > 0)) { toast.error('ยังไม่มีค่าบรรจุต่อกล่องให้ใช้เป็นค่าเริ่มต้น — ตั้งเองที่ Product Master'); return; }
-    if (!window.confirm(`ตั้งขนาดล็อตของ ${row.mat_no} = ${fmt(v)} ชิ้น (1 กล่อง)?\n\nความต้องการที่ค้างอยู่ ${fmt(row.pending_qty)} ชิ้น จะถูกแปลงเป็นใบสั่งในรอบผลิตถัดไป`)) return;
+    if (!await askConfirm(`${tr("ตั้งขนาดล็อตของ")} ${row.mat_no} = ${fmt(v)} ${tr("ชิ้น (1 กล่อง)?\\n\\nความต้องการที่ค้างอยู่")} ${fmt(row.pending_qty)} ${tr("ชิ้น จะถูกแปลงเป็นใบสั่งในรอบผลิตถัดไป")}`)) return;
     setBusy(row.mat_no);
     const { data, error } = await supabaseDR.from('kanban_standards')
       .update({ lot_size: v }).eq('mat_no', row.mat_no).eq('is_active', true).select('mat_no');
@@ -200,7 +201,7 @@ export default function FlowTower() {
     if (error) { toast.error(error.message); return; }
     // ⚠️ RLS/เงื่อนไขไม่ตรง = สำเร็จ 0 แถว ไม่ error — ต้องนับแถวก่อนบอกว่าสำเร็จ
     if (!data?.length) { toast.error('ไม่มีแถวถูกแก้ — ตรวจว่าพาร์ทนี้ยังเปิดใช้งานอยู่'); return; }
-    toast.success(`ตั้งล็อต ${row.mat_no} = ${fmt(v)} ชิ้นแล้ว`);
+    toast.success(`${tr("ตั้งล็อต")} ${row.mat_no} = ${fmt(v)} ${tr("ชิ้นแล้ว")}`);
     load();
   };
 
@@ -208,30 +209,30 @@ export default function FlowTower() {
   const S = d || {};
   const stations = [
     { key: 'sales', divCode: 'logistic', icon: '🛒', name: 'ลูกค้า / Sales',
-      lines: [[`${fmt(S.orderCnt)} รอบ`, 'ออเดอร์ค้างส่ง'], [fmt(S.orderQty), 'ชิ้นที่ต้องส่ง']],
+      lines: [[`${fmt(S.orderCnt)} ${tr("รอบ")}`, 'ออเดอร์ค้างส่ง'], [fmt(S.orderQty), 'ชิ้นที่ต้องส่ง']],
       to: '/customer-demand', st: S.orderCnt > 0 ? 'flow' : 'idle' },
     { key: 'fgwh', divCode: 'logistic', icon: '🏬', name: 'คลัง FG',
-      lines: [[fmt(S.fgStock), 'ชิ้นคงเหลือ'], [`${fmt(S.fgParts)} พาร์ท`, 'ในคลัง']],
+      lines: [[fmt(S.fgStock), 'ชิ้นคงเหลือ'], [`${fmt(S.fgParts)} ${tr("พาร์ท")}`, 'ในคลัง']],
       to: '/line-stock', st: S.fgStock > 0 ? 'flow' : 'idle' },
     { key: 'prod', divCode: 'production', icon: '🏭', name: 'ผลิต FG',
-      lines: [[fmt(S.producedToday), 'ชิ้นวันนี้'], [`${fmt(S.sessAll)} กะ`, `เปิดอยู่ ${fmt(S.sessOpen)}`]],
+      lines: [[fmt(S.producedToday), 'ชิ้นวันนี้'], [`${fmt(S.sessAll)} ${tr("กะ")}`, `${tr("เปิดอยู่")} ${fmt(S.sessOpen)}`]],
       to: '/daily-report', st: S.producedToday > 0 ? 'flow' : 'idle' },
     { key: 'wip', divCode: 'production', icon: '🔄', name: 'WIP หน้าไลน์',
-      lines: [[`${fmt(S.lvParts)} พาร์ท`, `ตั้งจุดเรียกเติมแล้ว ${fmt(S.lvLines)} ไลน์`], [`${fmt(S.wipReq)} ใบ`, 'ใบเติมของ']],
+      lines: [[`${fmt(S.lvParts)} ${tr("พาร์ท")}`, `${tr("ตั้งจุดเรียกเติมแล้ว")} ${fmt(S.lvLines)} ${tr("ไลน์")}`], [`${fmt(S.wipReq)} ${tr("ใบ")}`, 'ใบเติมของ']],
       to: '/daily-report', st: S.wipReq > 0 ? 'flow' : 'idle' },
     { key: 'store', divCode: 'logistic', icon: '📦', name: 'สโตร์พาร์ทย่อย',
-      lines: [[fmt(S.subStock), 'ชิ้นคงเหลือ'], [`${fmt(S.subParts)} พาร์ท`, 'ในสโตร์']],
+      lines: [[fmt(S.subStock), 'ชิ้นคงเหลือ'], [`${fmt(S.subParts)} ${tr("พาร์ท")}`, 'ในสโตร์']],
       to: '/line-stock', st: S.subStock > 0 ? 'flow' : 'idle' },
     { key: 'press', divCode: 'production', icon: '🔨', name: 'ผลิตพาร์ทย่อย (ปั๊ม)',
-      lines: [[`${fmt(S.lotPending)} ใบ`, 'รอผลิต'], [`${fmt(S.lotDoing)} ใบ`, 'กำลังผลิต']],
+      lines: [[`${fmt(S.lotPending)} ${tr("ใบ")}`, 'รอผลิต'], [`${fmt(S.lotDoing)} ${tr("ใบ")}`, 'กำลังผลิต']],
       to: '/heijunka', st: (S.lotPending + S.lotDoing) > 0 ? 'flow' : 'idle' },
     { key: 'raw', divCode: 'logistic', icon: '🗄️', name: 'สโตร์วัตถุดิบ / พาร์ทซื้อ',
-      lines: [[fmt(S.rawStock), 'ชิ้นคงเหลือ'], [`${fmt(S.rawPending)} ใบ`, 'ใบเบิกค้าง']],
+      lines: [[fmt(S.rawStock), 'ชิ้นคงเหลือ'], [`${fmt(S.rawPending)} ${tr("ใบ")}`, 'ใบเบิกค้าง']],
       to: '/line-stock', st: S.rawStock > 0 ? 'flow' : 'idle' },
     // ⚠️ สั่งซื้อ "วัตถุดิบ/พาร์ทที่ใช้ผลิต" = งานของ Planning (ฝ่าย Logistic & Sales)
     //    ไม่ใช่ส่วนจัดซื้อในผัง (ซึ่งดูแค่หา supplier + ของใช้ทั่วไป) — user ยืนยัน 2026-08-19
     { key: 'buy', divCode: 'logistic', icon: '🧾', name: 'สั่งซื้อวัตถุดิบ (Planning)',
-      lines: [[`${fmt(S.purchPending)} ใบ`, 'ใบสั่งซื้อรอดำเนินการ'], [`${fmt(S.blocks?.length)} พาร์ท`, 'ยังออกใบไม่ได้']],
+      lines: [[`${fmt(S.purchPending)} ${tr("ใบ")}`, 'ใบสั่งซื้อรอดำเนินการ'], [`${fmt(S.blocks?.length)} ${tr("พาร์ท")}`, 'ยังออกใบไม่ได้']],
       to: '/heijunka', st: S.purchMoved7d > 0 ? 'flow' : (S.purchPending > 0 || S.blocks?.length ? 'block' : 'idle'),
       note: 'ระบบคำนวณและออกใบให้อัตโนมัติจากการระเบิด BOM — Planning เป็นผู้ดำเนินการต่อ' },
   ];
@@ -260,7 +261,7 @@ export default function FlowTower() {
     <Page>
       <PageHeader
         title={tr('สายธารความต้องการ (Flow Control Tower)')} icon="🔗"
-        sub={`ความต้องการของลูกค้าไหลย้อนไปถึงวัตถุดิบครบหรือยัง · ข้อมูลสด ${workDate}`}
+        sub={`${tr("ความต้องการของลูกค้าไหลย้อนไปถึงวัตถุดิบครบหรือยัง · ข้อมูลสด")} ${workDate}`}
         actions={<button type="button" className="pg-btn" onClick={load} style={{ cursor: 'pointer' }}>{tr('รีเฟรช')}</button>}
       />
 
@@ -304,7 +305,7 @@ export default function FlowTower() {
               <div key={s.key} style={{ display: 'flex', alignItems: 'stretch', flex: '1 1 auto' }}>
                 <div
                   onClick={() => s.to && navigate(s.to)}
-                  title={s.note || (s.to ? `เปิดหน้า ${s.to}` : '')}
+                  title={s.note || (s.to ? `${tr("เปิดหน้า")} ${s.to}` : '')}
                   style={{
                     ...card, width: 158, flexShrink: 0, padding: '10px 12px', borderTop: `3px solid ${dv.color}`,
                     cursor: s.to ? 'pointer' : 'default', display: 'flex', flexDirection: 'column', gap: 4,
@@ -346,7 +347,7 @@ export default function FlowTower() {
             จุดที่ความต้องการค้าง ไม่กลายเป็นใบสั่ง
           </div>
           <div style={{ fontSize: 12, color: S.blocks?.length ? 'var(--red)' : 'var(--green)', fontWeight: 800 }}>
-            {S.blocks?.length ? `${fmt(S.blocks.length)} พาร์ท · ${fmt(S.blockQty)} ชิ้น` : 'ไม่มีจุดตัน'}
+            {S.blocks?.length ? `${fmt(S.blocks.length)} ${tr("พาร์ท")} · ${fmt(S.blockQty)} ${tr("ชิ้น")}` : 'ไม่มีจุดตัน'}
           </div>
         </div>
         <InfoMore label={tr('ทำไมยังออกใบสั่งไม่ได้')} size={11.5} style={{ marginBottom: 10 }}>
@@ -371,7 +372,7 @@ export default function FlowTower() {
                         <td style={{ padding: '7px 12px', maxWidth: 340 }}><MatLabel mat={b.mat_no} name={b.part_name} /></td>
                         <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 800, color: 'var(--red)' }}>{fmt(b.pending_qty)}</td>
                         <td style={{ padding: '7px 12px', fontSize: 11, color: 'var(--muted)' }}>
-                          {b.demand_kind === 'purchase' ? '🚛 สั่งซื้อ' : `🔨 ผลิตเอง${b.maker_line ? ` · ${b.maker_line}` : ''}`}
+                          {b.demand_kind === 'purchase' ? '🚛 สั่งซื้อ' : `🔨 ${tr("ผลิตเอง")}${b.maker_line ? ` · ${b.maker_line}` : ''}`}
                         </td>
                         <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 700 }}>{b.suggested_lot ? fmt(b.suggested_lot) : '—'}</td>
                         <td style={{ padding: '7px 12px' }}>
@@ -408,14 +409,14 @@ export default function FlowTower() {
             </tr></thead>
             <tbody>
               {[
-                ['Sales → คลัง FG', 'ออเดอร์ EDI 862 + forecast 830', S.orderCnt > 0 ? 'flow' : 'idle', `ออเดอร์ค้างส่ง ${fmt(S.orderCnt)} รอบ · ${fmt(S.orderQty)} ชิ้น`],
+                ['Sales → คลัง FG', 'ออเดอร์ EDI 862 + forecast 830', S.orderCnt > 0 ? 'flow' : 'idle', `${tr("ออเดอร์ค้างส่ง")} ${fmt(S.orderCnt)} ${tr("รอบ")} · ${fmt(S.orderQty)} ${tr("ชิ้น")}`],
                 ['คลัง FG → ผลิต FG', 'สแกนบัตรคัมบังเปิดใบผลิต (คนเป็นคนตัดสิน)', 'human', 'ระบบยังไม่แปลงออเดอร์เป็นคำสั่งผลิตอัตโนมัติ'],
-                ['ผลิต FG → คลัง FG', 'ปิดใบผลิต → เข้าคลังอัตโนมัติ (trigger)', 'flow', `วันนี้ผลิต ${fmt(S.producedToday)} ชิ้น จาก ${fmt(S.orderRows)} ใบ`],
-                ['ผลิต FG → สโตร์ย่อย', 'ระเบิด BOM + หักมินิสโตร์ (trigger)', 'flow', `สโตร์ย่อยคงเหลือ ${fmt(S.subStock)} ชิ้น`],
-                ['สโตร์ย่อย → ไลน์ปั๊ม', 'ใบสั่งผลิตลูกตามขนาดล็อต', S.lotAll > 0 ? 'flow' : 'idle', `${fmt(S.lotAll)} ใบ · รู้ไลน์ปลายทางแล้ว ${fmt(S.lotRouted)} ใบ`],
-                ['ไลน์ปั๊ม → สโตร์วัตถุดิบ', 'ใบเบิกวัตถุดิบตามสูตรของพาร์ทลูก', S.rawAll > 0 ? 'flow' : 'idle', `ใบเบิก ${fmt(S.rawAll)} ใบ · ค้าง ${fmt(S.rawPending)}`],
-                ['→ สั่งซื้อวัตถุดิบ (Planning)', 'ระเบิด BOM → ออกใบสั่งซื้ออัตโนมัติ', S.purchMoved7d > 0 ? 'flow' : (S.purchPending > 0 ? 'block' : 'idle'), `ออกใบให้แล้ว ${fmt(S.purchPending)} ใบรอดำเนินการ · อีก ${fmt(S.blocks?.length)} พาร์ทออกใบไม่ได้เพราะยังไม่ตั้งขนาดล็อต`],
-                ['WIP หน้าไลน์', 'ไลน์เบิกเองเมื่อต่ำกว่า min (ราย ไลน์+พาร์ท)', S.wipReq > 0 ? 'flow' : 'idle', `ตั้งจุดเรียกเติม ${fmt(S.lvParts)} พาร์ท ใน ${fmt(S.lvLines)} ไลน์ · ใบเติม ${fmt(S.wipReq)} ใบ`],
+                ['ผลิต FG → คลัง FG', 'ปิดใบผลิต → เข้าคลังอัตโนมัติ (trigger)', 'flow', `${tr("วันนี้ผลิต")} ${fmt(S.producedToday)} ${tr("ชิ้น จาก")} ${fmt(S.orderRows)} ${tr("ใบ")}`],
+                ['ผลิต FG → สโตร์ย่อย', 'ระเบิด BOM + หักมินิสโตร์ (trigger)', 'flow', `${tr("สโตร์ย่อยคงเหลือ")} ${fmt(S.subStock)} ${tr("ชิ้น")}`],
+                ['สโตร์ย่อย → ไลน์ปั๊ม', 'ใบสั่งผลิตลูกตามขนาดล็อต', S.lotAll > 0 ? 'flow' : 'idle', `${fmt(S.lotAll)} ${tr("ใบ · รู้ไลน์ปลายทางแล้ว")} ${fmt(S.lotRouted)} ${tr("ใบ")}`],
+                ['ไลน์ปั๊ม → สโตร์วัตถุดิบ', 'ใบเบิกวัตถุดิบตามสูตรของพาร์ทลูก', S.rawAll > 0 ? 'flow' : 'idle', `${tr("ใบเบิก")} ${fmt(S.rawAll)} ${tr("ใบ · ค้าง")} ${fmt(S.rawPending)}`],
+                ['→ สั่งซื้อวัตถุดิบ (Planning)', 'ระเบิด BOM → ออกใบสั่งซื้ออัตโนมัติ', S.purchMoved7d > 0 ? 'flow' : (S.purchPending > 0 ? 'block' : 'idle'), `${tr("ออกใบให้แล้ว")} ${fmt(S.purchPending)} ${tr("ใบรอดำเนินการ · อีก")} ${fmt(S.blocks?.length)} ${tr("พาร์ทออกใบไม่ได้เพราะยังไม่ตั้งขนาดล็อต")}`],
+                ['WIP หน้าไลน์', 'ไลน์เบิกเองเมื่อต่ำกว่า min (ราย ไลน์+พาร์ท)', S.wipReq > 0 ? 'flow' : 'idle', `${tr("ตั้งจุดเรียกเติม")} ${fmt(S.lvParts)} ${tr("พาร์ท ใน")} ${fmt(S.lvLines)} ${tr("ไลน์ · ใบเติม")} ${fmt(S.wipReq)} ${tr("ใบ")}`],
               ].map(([seg, mech, st, ev]) => (
                 <tr key={seg} style={{ borderTop: '1px solid var(--border)' }}>
                   <td style={{ padding: '8px 12px', fontWeight: 800, whiteSpace: 'nowrap' }}>{seg}</td>

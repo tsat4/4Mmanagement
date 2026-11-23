@@ -145,10 +145,22 @@ export const NEEDS_PR_PATHS = () => REPAIR_PATHS.filter(p => p.needsPr).map(p =>
  *     🔑 **เลข PR = "ขอซื้อแล้ว" · เลข PO = "สั่งแล้ว" — คนละขั้น ห้ามยุบ**
  *  🔴 ตัดสินจาก **เลข PO** ไม่ใช่ `status` อย่างเดียว — `ordered` ที่เลข PO ยังว่าง ยังไม่ใช่ "สั่งแล้ว"
  *     (เลข PO มาจาก SAP ทีหลัง เหมือน `pr_no`) */
+/* 🔴 **คอลัมน์ขั้นต่ำที่ `prQueueStateOf()` ต้องได้** — จอที่โหลดเอง**ต้องใช้ค่านี้ ห้ามพิมพ์ชื่อคอลัมน์เอง**
+   บั๊กจริง 18/11 (หน้างานแจ้ง: *"3. สั่งแล้ว มี PO รอของเข้า ไม่เด้งเข้า Filter"*):
+   รอบ 04/11 ย้ายเงื่อนไขขั้น ③ มาตัดสินที่ **เลข PO** แต่คิวรีลิสต์ยัง `select('order_id, pr_no, status')`
+   ⇒ `p.po_no` = `undefined` ทุกแถว ⇒ `!normalizePrNo(undefined)` จริงเสมอ ⇒ **ทุกใบตกถัง ② ·
+   ถัง ③ ว่างตลอดกาล** (วัดจริง 18/11: PR `ordered` 17 ใบมีเลข PO ครบทั้ง 17 · ใบ MO 3 ใบที่ควรอยู่ถัง ③
+   คือ O-MTN.2026/10-47 · 10-52 · 10-57 — ไม่เคยโผล่)
+   = คลาสบั๊ก "คอลัมน์ที่ไม่ได้ select = undefined เงียบๆ" ⇒ ผูกชื่อคอลัมน์ไว้กับสูตรที่ใช้มัน */
+export const PR_QUEUE_COLS = 'order_id, pr_no, po_no, status';
+
 export function prQueueStateOf(order, prs = []) {
   const live = (prs || []).filter(p => p && p.status !== 'cancelled');
   if (repairPathMeta(order?.repair_path)?.needsPr && !live.length) return 'need';
   const open = live.filter(isPrOpen);
+  /* 🔴 ไม่มี **คีย์** `po_no` ในแถวเลย = คิวรีไม่ได้ select มา ≠ "ยังไม่มีเลข PO"
+     เดาเป็น "ยังไม่สั่ง" = ถัง ③ ว่างตลอดโดยไม่มีใครรู้ (บั๊ก 18/11) ⇒ ตอบ `unknown` ให้จอเขียนบนจอ */
+  if (open.length && open.every(p => !(p && 'po_no' in p))) return 'unknown_po';
   if (open.some(p => !normalizePrNo(p.po_no))) return 'no_no';
   if (open.length) return 'open';
   return null;

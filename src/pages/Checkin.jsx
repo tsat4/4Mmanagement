@@ -22,6 +22,7 @@ import { fetchByIds, fetchAllPages } from '../utils/fetchByIds';
 import { loadCompanyCalendar, getDayType, isOtHolidayType } from '../utils/companyCalendar';
 import { holidayPeriodsForShift, defaultHolidayPeriod, otPeriodLabel, WEEKDAY_OT_TIME } from '../utils/otPeriods';
 import { getLineFamilyIds } from '../utils/lineHierarchy';
+import { notifyEvent } from '../utils/notifyEvent';   // 🔔 แจ้งหัวหน้าต้นสังกัดเมื่อคนของเขาถูกยืม (19/11)
 import { buildViewScope, empScopeOrFilter, scopeLineIds } from '../utils/viewScope';   // 👁️ ขอบเขตที่เห็นได้ ผ่านผัง (22/10)
 import LineSelect from '../components/LineSelect';
 import LineScopeSelect from '../components/LineScopeSelect';
@@ -52,6 +53,7 @@ import { SCAN_EVENT } from '../utils/scanWedge';
 
 import SectionScopeSelect from '../components/SectionScopeSelect';
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 // fallback เมื่อ master ยังว่าง/ยังไม่ apply migration 20260819 — ตัวจริงอยู่ตาราง leave_types
 // (จัดการที่ /report แผงจองรถ OT · เลิก hardcode ตาม QC audit 2026-08-19)
 const DEFAULT_LEAVE_TYPES = ['ลากิจ', 'ลาป่วย', 'ลาพักร้อน', 'อื่นๆ'];
@@ -395,7 +397,7 @@ export default function Checkin() {
       empQ,
       /* cap-ok: daily_production_logs วัน*เดียว* — วัด 11/11/26 สูงสุด 279 แถว/วัน (ทั้งโรงงาน) */
       supabase.from('daily_production_logs')
-        .select('employee_id, is_present, has_helmet, has_boots, has_gloves, has_ot, has_extended_ot, remark, leave_type, leave_duration, leave_period, leave_hours')
+        .select('employee_id, is_present, has_helmet, has_boots, has_gloves, has_ot, has_extended_ot, remark, leave_type, leave_duration, leave_period, leave_hours, checked_by')
         .eq('work_date', workDateStr),
       /* cap-ok: shift_schedules วัน*เดียว* — วัด 11/11/26 สูงสุด 45 แถว/วัน */
       supabase.from('shift_schedules').select('*').eq('work_date', workDateStr),
@@ -440,7 +442,7 @@ export default function Checkin() {
     const helperByEmp = Object.fromEntries(helperIn.map(h => [h.employee_id, h]));
     const helperOutByEmp = {};
     helperData.forEach(h => {
-      if (!inMyScope(h.to_line_id)) helperOutByEmp[h.employee_id] = lineById[h.to_line_id]?.name || 'ไลน์อื่น';
+      if (!inMyScope(h.to_line_id)) helperOutByEmp[h.employee_id] = { to: lineById[h.to_line_id]?.name || 'ไลน์อื่น', by: h.created_by_name || '' };
     });
 
     // พนักงานที่ถูกยืมเข้ามาแต่อยู่นอก scope query หลัก → ดึงเพิ่มรายตัว
@@ -487,8 +489,24 @@ export default function Checkin() {
           _helperFrom:    lineById[emp.line_id]?.name || emp.section || 'ไม่ระบุไลน์',
         };
       }
-      if (helperOutByEmp[emp.id]) return { ...emp, assignedShift, _helperOutTo: helperOutByEmp[emp.id] };
+      /* 🔒 ถูกยืมออกไปกะนี้ (19/11 · คำสั่ง user) — ไลน์ที่ยืมเป็นคนเช็คชื่อ/PPE **ฝั่งเดียว**
+         จอต้นสังกัดเห็นผลแต่แก้ไม่ได้ และ handleSave ข้ามคนนี้ (เดิม 2 ไลน์บันทึกทับกันได้ ใครกดทีหลังชนะ) */
+      if (helperOutByEmp[emp.id]) return { ...emp, assignedShift, _helperOutTo: helperOutByEmp[emp.id].to, _helperOutBy: helperOutByEmp[emp.id].by };
       return { ...emp, assignedShift };
+    });
+
+    /* 👀 คนที่ถูกยืมออก: บอกหัวหน้าต้นสังกัดว่า "ใครเช็คชื่อให้แล้ว" (ชื่อจาก profiles · ล้ม = ไม่โชว์ชื่อ ไม่บล็อก) */
+    const outIds = enriched.filter(e => e._helperOutTo).map(e => e.id);
+    const checkerIds = [...new Set((logData || []).filter(l => outIds.includes(l.employee_id) && l.checked_by).map(l => l.checked_by))];
+    let checkerName = {};
+    if (checkerIds.length) {
+      const { data: pf } = await supabase.from('profiles').select('id, full_name').in('id', checkerIds);
+      checkerName = Object.fromEntries((pf || []).map(p => [p.id, p.full_name]));
+    }
+    enriched.forEach(e => {
+      if (!e._helperOutTo) return;
+      const log = logData?.find(l => l.employee_id === e.id);
+      e._helperOutChecked = log ? (checkerName[log.checked_by] || 'ไลน์ที่ยืม') : '';
     });
 
     setEmployees(enriched);
@@ -630,7 +648,7 @@ export default function Checkin() {
       if (scopeSecs.length) return [`ส่วนงาน ${scopeSecs.join(', ')} (ยังไม่ผูกไลน์)`, team && `ทีม ${team}`].filter(Boolean).join(' · ');
       return 'ยังไม่กำหนดไลน์/ส่วนงาน';
     }
-    if (scopeSecs.length) return `ส่วนงาน ${scopeSecs.join(', ')}`;
+    if (scopeSecs.length) return `${tr("ส่วนงาน")} ${scopeSecs.join(', ')}`;
     return 'ทุกส่วนงาน';
   })();
 
@@ -648,6 +666,29 @@ export default function Checkin() {
     setShowBorrowModal(true);
   };
 
+  /* 🔔 หัวหน้าต้นสังกัดต้องรู้เมื่อคนของเขาถูกยืมไปช่วยไลน์อื่น (19/11 · คำสั่ง user)
+     ผู้รับ = ทะเบียน `notification_rules.line_helper_borrowed` (หัวหน้าไลน์ของไลน์ต้นสังกัด · ตั้งที่ /notification-config)
+     · ยืมกันเองในครอบครัวไลน์แม่-ลูก ไม่ถือว่าออก (กติกาเดียวกับ utils/borrowDays.js) = ไม่แจ้ง
+     · fire-and-forget — แจ้งไม่ได้ห้ามลากการยืมล้ม */
+  const notifyBorrowed = (emp, toLineId) => {
+    const home = lines.find(l => l.id === emp.line_id);
+    const to = lines.find(l => l.id === Number(toLineId));
+    if (!home || !to) return;
+    if (getLineFamilyIds(lines, home.id).has(to.id)) return;
+    notifyEvent({
+      event: 'line_helper_borrowed',
+      line_name: home.name, section: home.section || emp.section || undefined,
+      title: `🤝 ${emp.name} ${tr("ถูกยืมไปช่วย")} ${to.name}`,
+      lines: [
+        `${emp.name} (${emp.employee_id_code || '-'}) · ${tr("ไลน์ต้นสังกัด")} ${home.name}`,
+        `${tr("ไปช่วย")} ${to.name} · ${shiftInfo.label || (shiftInfo.shift === 'night' ? tr('กะดึก') : tr('กะเช้า'))} ${tr("วันที่")} ${shiftInfo.workDateStr}`,
+        `${tr("ยืมโดย")} ${fullName || '-'} — ${tr("ไลน์ที่ยืมเป็นคนเช็คชื่อ/ตรวจ PPE ให้กะนี้")}`,
+      ],
+      actor: fullName || undefined,
+      ref_table: 'line_helpers',
+    });
+  };
+
   const borrowEmployee = async (emp) => {
     if (!borrowLineId) { toast.error('เลือกไลน์ปลายทางที่จะให้มาช่วยก่อน'); return; }
     const { error } = await supabase.from('line_helpers').insert({
@@ -660,10 +701,11 @@ export default function Checkin() {
     if (error) {
       if (error.code === '42P01') toast.error('ยืมตัวยังใช้ไม่ได้ — ยังไม่ได้ apply migration 20260819_line_helpers_main (แจ้ง admin)');
       else if (error.code === '23505') await resolveBorrowConflict(emp);
-      else toast.error('ยืมตัวไม่สำเร็จ: ' + error.message);
+      else toast.error((tr('ยืมตัวไม่สำเร็จ') + ': ') + error.message);
       return;
     }
-    toast.success(`🤝 ยืม ${emp.name} มาช่วยกะนี้แล้ว`);
+    toast.success(`🤝 ${tr("ยืม")} ${emp.name} ${tr("มาช่วยกะนี้แล้ว")}`);
+    notifyBorrowed(emp, borrowLineId);
     setShowBorrowModal(false);
     fetchData();
   };
@@ -677,22 +719,23 @@ export default function Checkin() {
       .select('id, to_line_id, created_by_name')
       .eq('work_date', shiftInfo.workDateStr).eq('shift', shiftInfo.shift).eq('employee_id', emp.id).limit(1);
     const cur = rows?.[0];
-    if (error || !cur) { toast.error(`${emp.name} ถูกยืมตัวไปไลน์อื่นแล้วในกะนี้ — ต้องให้ไลน์นั้นกด ✕ คืนก่อน หรือรอกะถัดไป`); return; }
+    if (error || !cur) { toast.error(`${emp.name} ${tr("ถูกยืมตัวไปไลน์อื่นแล้วในกะนี้ — ต้องให้ไลน์นั้นกด ✕ คืนก่อน หรือรอกะถัดไป")}`); return; }
     const curLine = lines.find(l => l.id === cur.to_line_id)?.name || 'ไลน์อื่น';
-    const by = cur.created_by_name ? ` (${cur.created_by_name} ยืม)` : '';
+    const by = cur.created_by_name ? ` (${cur.created_by_name} ${tr("ยืม")})` : '';
     const target = lines.find(l => l.id === Number(borrowLineId))?.name || 'ไลน์ที่เลือก';
-    if (Number(borrowLineId) === cur.to_line_id) { toast.info(`${emp.name} ถูกยืมมา ${curLine} อยู่แล้วในกะนี้`); return; }
+    if (Number(borrowLineId) === cur.to_line_id) { toast.info(`${emp.name} ${tr("ถูกยืมมา")} ${curLine} ${tr("อยู่แล้วในกะนี้")}`); return; }
     const canMove = scopedLines.some(l => l.id === cur.to_line_id);
     if (!canMove) {
-      toast.error(`${emp.name} ถูกยืมไป ${curLine}${by} แล้วในกะนี้ — ให้ไลน์นั้นกด ✕ คืนก่อน หรือรอกะถัดไป (การยืมหมดอายุเองเมื่อเปลี่ยนกะ ไม่ต้องกดคืน)`);
+      toast.error(`${emp.name} ${tr("ถูกยืมไป")} ${curLine}${by} ${tr("แล้วในกะนี้ — ให้ไลน์นั้นกด ✕ คืนก่อน หรือรอกะถัดไป (การยืมหมดอายุเองเมื่อเปลี่ยนกะ ไม่ต้องกดคืน")})`);
       return;
     }
-    if (!window.confirm(`${emp.name} ถูกยืมไป ${curLine}${by} แล้วในกะนี้\nย้ายมาช่วย ${target} แทน?`)) return;
+    if (!await askConfirm(`${emp.name} ${tr("ถูกยืมไป")} ${curLine}${by} ${tr("แล้วในกะนี้\\nย้ายมาช่วย")} ${target} ${tr("แทน")}?`)) return;
     const { data: moved, error: mErr } = await supabase.from('line_helpers')
       .update({ to_line_id: Number(borrowLineId), created_by_name: fullName || null })
       .eq('id', cur.id).select('id');
-    if (mErr || !moved?.length) { toast.error('ย้ายการยืมไม่สำเร็จ: ' + (mErr?.message || 'ไม่มีแถวถูกแก้ (สิทธิ์?)')); return; }
-    toast.success(`🤝 ย้าย ${emp.name} จาก ${curLine} มาช่วย ${target} แล้ว`);
+    if (mErr || !moved?.length) { toast.error((tr('ย้ายการยืมไม่สำเร็จ') + ': ') + (mErr?.message || 'ไม่มีแถวถูกแก้ (สิทธิ์?)')); return; }
+    toast.success(`🤝 ${tr("ย้าย")} ${emp.name} ${tr("จาก")} ${curLine} ${tr("มาช่วย")} ${target} ${tr("แล้ว")}`);
+    notifyBorrowed(emp, borrowLineId);
     setShowBorrowModal(false);
     fetchData();
   };
@@ -719,7 +762,7 @@ export default function Checkin() {
     if (error) {
       setBorrowSumErr(error.includes('does not exist')
         ? 'ยังไม่ได้ apply migration 20260819_line_helpers_main (แจ้ง admin)'
-        : 'อ่านประวัติการยืมตัวไม่สำเร็จ: ' + error);
+        : (tr('อ่านประวัติการยืมตัวไม่สำเร็จ') + ': ') + error);
       setBorrowSum(null); setBorrowSumLoading(false);
       return;
     }
@@ -737,10 +780,10 @@ export default function Checkin() {
 
   const unborrowEmployee = async (emp) => {
     if (!emp._helperRowId) return;
-    if (!window.confirm(`คืน ${emp.name} กลับไลน์เดิม (${emp._helperFrom})?`)) return;
+    if (!await askConfirm(`${tr("คืน")} ${emp.name} ${tr("กลับไลน์เดิม")} (${emp._helperFrom})?`)) return;
     const { error } = await supabase.from('line_helpers').delete().eq('id', emp._helperRowId);
-    if (error) { toast.error('ยกเลิกยืมตัวไม่สำเร็จ: ' + error.message); return; }
-    toast.success(`คืน ${emp.name} กลับไลน์เดิมแล้ว`);
+    if (error) { toast.error((tr('ยกเลิกยืมตัวไม่สำเร็จ') + ': ') + error.message); return; }
+    toast.success(`${tr("คืน")} ${emp.name} ${tr("กลับไลน์เดิมแล้ว")}`);
     fetchData();
   };
 
@@ -760,13 +803,16 @@ export default function Checkin() {
     // บันทึกเฉพาะรายชื่อที่แสดงบนจอ (displayed) ไม่ใช่ roster ที่โหลดมาทั้งหมด —
     // ไม่งั้นหัวหน้ากะเช้าเปิดหน้าค้างแล้วกดบันทึกตอนเย็น จะทับเช็คชื่อกะดึก/ส่วนอื่นกลับเป็น "ไม่มา"
     // (สรุปยอด + modal ยืนยัน อ้าง displayed อยู่แล้ว — เขียนให้ตรงกัน)
-    const logs = displayed.map(emp => ckLogRow(emp, attendance[emp.id] || {}, userData.user.id));
+    /* 🔒 คนที่ถูกยืมออกไปไลน์อื่นกะนี้ = ไลน์ที่ยืมบันทึกฝั่งเดียว ⇒ ข้ามทั้งเช็คชื่อและจองรถ OT (19/11 · คำสั่ง user) */
+    const savable = displayed.filter(emp => !emp._helperOutTo);
+    const skippedOut = displayed.length - savable.length;
+    const logs = savable.map(emp => ckLogRow(emp, attendance[emp.id] || {}, userData.user.id));
 
     const { error } = await supabase
       .from('daily_production_logs')
       .upsert(logs, { onConflict: 'work_date,employee_id' });
 
-    if (error) { toast.error('เกิดข้อผิดพลาด: ' + error.message); setIsSaving(false); return; }
+    if (error) { toast.error((tr('เกิดข้อผิดพลาด') + ': ') + error.message); setIsSaving(false); return; }
 
     /* ── บันทึกการจอง OT (สำหรับธุรการจองรถรับส่ง) ──
        กะดึก: จองล่วงหน้าว่าจะมาทำ OT คืนวันถัดไป (checkbox 🚐 OT พรุ่งนี้) → work_date = วันถัดไป, shift='night'
@@ -778,8 +824,8 @@ export default function Checkin() {
       const bookDateIsHoliday = isHolidayDate(bookDate);
       const isBooked = emp => isNightShift ? !!otBookings[emp.id] : !!attendance[emp.id]?.has_ot;
 
-      const toBook   = displayed.filter(isBooked).map(emp => emp.id);
-      const toUnbook = displayed.filter(emp => !isBooked(emp)).map(emp => emp.id);
+      const toBook   = savable.filter(isBooked).map(emp => emp.id);
+      const toUnbook = savable.filter(emp => !isBooked(emp)).map(emp => emp.id);
 
       if (toBook.length) {
         const { error: eBook } = await supabase.from('ot_night_bookings').upsert(
@@ -794,7 +840,7 @@ export default function Checkin() {
           })),
           { onConflict: 'employee_id,work_date,shift' }
         );
-        if (eBook) toast.error('จองรถ OT บางรายการไม่สำเร็จ: ' + eBook.message);
+        if (eBook) toast.error((tr('จองรถ OT บางรายการไม่สำเร็จ') + ': ') + eBook.message);
       }
       if (toUnbook.length) {
         const { error: eUnbook } = await supabase.from('ot_night_bookings')
@@ -802,7 +848,7 @@ export default function Checkin() {
           .eq('work_date', bookDate)
           .eq('shift', otShift)
           .in('employee_id', toUnbook);
-        if (eUnbook) toast.error('ยกเลิกจองรถ OT บางรายการไม่สำเร็จ: ' + eUnbook.message);
+        if (eUnbook) toast.error((tr('ยกเลิกจองรถ OT บางรายการไม่สำเร็จ') + ': ') + eUnbook.message);
       }
     }
 
@@ -811,8 +857,8 @@ export default function Checkin() {
       const otShift = shiftInfo.shift;
       for (const d of extraAdvanceDates) {
         const isBookedExtra = emp => !!otExtraBookings[emp.id]?.[d];
-        const toBookExtra   = displayed.filter(isBookedExtra).map(emp => emp.id);
-        const toUnbookExtra = displayed.filter(emp => !isBookedExtra(emp)).map(emp => emp.id);
+        const toBookExtra   = savable.filter(isBookedExtra).map(emp => emp.id);
+        const toUnbookExtra = savable.filter(emp => !isBookedExtra(emp)).map(emp => emp.id);
 
         if (toBookExtra.length) {
           checkWrite(await supabase.from('ot_night_bookings').upsert(
@@ -843,7 +889,8 @@ export default function Checkin() {
        และเหมาทุกไลน์ทั้งโรงงาน) — ดู CLAUDE.md ส่วน "Employee Skills & EXP Farming" */
 
     // เช็คชื่อเสร็จแล้วไม่มีอะไรเด้งต่อ (ถอดออโต้เปิดกะออก 16/09) — บอกทางไปต่อให้ชัด ไม่ปล่อยเงียบ
-    toast.success('บันทึกเช็คชื่อสำเร็จ! · ไลน์ที่ต้องลงข้อมูลผลิต ไปกด “เปิดกะ” ที่หน้า Daily Report');
+    toast.success((tr('บันทึกเช็คชื่อสำเร็จ! · ไลน์ที่ต้องลงข้อมูลผลิต ไปกด “เปิดกะ” ที่หน้า') + ' Daily Report')
+      + (skippedOut ? ` · ${tr("ข้าม")} ${skippedOut} ${tr("คนที่ถูกยืมไปไลน์อื่น (ไลน์ที่ยืมเป็นคนบันทึก")})` : ''));
     if (ckDraftKey) clearDraft(ckDraftKey);
 
     /* ── สรุปเช็คชื่อเข้า Telegram ──
@@ -917,8 +964,8 @@ export default function Checkin() {
         const changed = shown.filter(e => attKey(attendance[e.id]) !== attKey(baseline.att[e.id]));
         const changedNames = changed.slice(0, 15).map(e => {
           const st = getRowStatus(attendance[e.id]);
-          return `• ${e.name} — ${STATUS_META[st]?.label || (attendance[e.id]?.is_present ? 'มา' : 'ขาด')}`;
-        }).join('\n') + (changed.length > 15 ? `\n…และอีก ${changed.length - 15} คน` : '');
+          return `• ${e.name} — ${STATUS_META[st]?.label || (attendance[e.id]?.is_present ? tr('มา') : tr('ขาด'))}`;
+        }).join('\n') + (changed.length > 15 ? `\n…${tr("และอีก")} ${changed.length - 15} ${tr("คน")}` : '');
         post('checkin_update', { summary: {
           line_name: lineNamesText, shift: shiftInfo.shift, shift_label: shiftInfo.label,
           work_date: workDateStr, total: shown.length, present, absent, leave, ot,
@@ -1025,10 +1072,10 @@ export default function Checkin() {
           .in('employee_id', toUnbook);
         if (error) throw error;
       }
-      toast.success(`บันทึกการจองรถ OT วันที่ ${otBookDate} แล้ว (${toBook.length} คน)`);
+      toast.success(`${tr("บันทึกการจองรถ OT วันที่")} ${otBookDate} ${tr("แล้ว")} (${toBook.length} ${tr("คน")})`);
       setShowOtBookModal(false);
     } catch (e) {
-      toast.error('บันทึกไม่สำเร็จ: ' + e.message);
+      toast.error((tr('บันทึกไม่สำเร็จ') + ': ') + e.message);
     } finally {
       setOtBookSaving(false);
     }
@@ -1141,9 +1188,9 @@ export default function Checkin() {
       doc.text(dfOt.title || 'ใบรายงานการปฏิบัติงานชดเชย / ทำ OT', 148, y0, { align: 'center' });
       y0 += 6;
       doc.setFontSize(9); doc.setFont('Sarabun', 'normal');
-      doc.text(`แผนก/ส่วนงาน: ${deptLabel}`, 14, y0);
-      doc.text(`เดือน: ${m}  ปี ${y + 543}   ช่วงวันที่ ${dayFrom}-${dayTo}`, 148, y0, { align: 'center' });
-      doc.text(`ชุดที่ 02`, 270, y0, { align: 'right' });
+      doc.text(`${tr("แผนก/ส่วนงาน")}: ${deptLabel}`, 14, y0);
+      doc.text(`${tr("เดือน")}: ${m}  ${tr("ปี")} ${y + 543}   ${tr("ช่วงวันที่")} ${dayFrom}-${dayTo}`, 148, y0, { align: 'center' });
+      doc.text(`${tr("ชุดที่")} 02`, 270, y0, { align: 'right' });
 
       const otHead = [['ลำดับ', 'เลขที่พนักงาน', 'ชื่อ-สกุล', ...days.map(String), 'รวม (ชม.)']];
       const otRows = scopedEmp.map((e, i) => {
@@ -1200,8 +1247,8 @@ export default function Checkin() {
       doc.text(dfAtt.title || 'บันทึกการมาทำงาน', 148, y1, { align: 'center' });
       y1 += 6;
       doc.setFontSize(9); doc.setFont('Sarabun', 'normal');
-      doc.text(`แผนก: ${deptLabel}`, 14, y1);
-      doc.text(`เดือน ${m} ปี ${y + 543}   วันที่ ${dayFrom}-${dayTo}`, 148, y1, { align: 'center' });
+      doc.text(`${tr("แผนก")}: ${deptLabel}`, 14, y1);
+      doc.text(`${tr("เดือน")} ${m} ${tr("ปี")} ${y + 543}   ${tr("วันที่")} ${dayFrom}-${dayTo}`, 148, y1, { align: 'center' });
 
       const attHead = [['ลำดับ', 'เลขที่พนักงาน', 'ชื่อ-สกุล', ...days.map(String)]];
       const attRows = scopedEmp.map((e, i) => {
@@ -1247,7 +1294,7 @@ export default function Checkin() {
       setShowExport(false);
     } catch (err) {
       console.error(err);
-      toast.error('สร้าง PDF ไม่สำเร็จ: ' + err.message);
+      toast.error((tr('สร้าง PDF ไม่สำเร็จ') + ': ') + err.message);
     } finally {
       setExporting(false);
     }
@@ -1352,25 +1399,27 @@ export default function Checkin() {
     if (!canRecord) return 'บัญชีนี้ไม่มีสิทธิ์เช็คชื่อ (checkin:record)';
     const raw = parsed?.raw || '';
     const r = badgeScanOutcome({ employees, displayedIds: new Set(displayed.map(e => e.id)), attendance, raw });
-    if (r.kind === 'unknown') return `ไม่พบรหัส "${raw}" ในรายชื่อพนักงานที่โหลดมา — ตรวจรหัสบนบัตร หรือพนักงานยังไม่อยู่ในทะเบียน`;
-    if (r.kind === 'not_shown') return `${r.emp.name} (${r.emp.employee_id_code}) ไม่อยู่ในรายชื่อที่แสดงตอนนี้ (คนละไลน์/กะ/ตัวกรอง) — เปลี่ยนตัวกรอง หรือกด "ยืมตัว" ถ้ามาช่วยไลน์นี้`;
+    if (r.kind === 'unknown') return `${tr("ไม่พบรหัส")} "${raw}" ${tr("ในรายชื่อพนักงานที่โหลดมา — ตรวจรหัสบนบัตร หรือพนักงานยังไม่อยู่ในทะเบียน")}`;
+    if (r.kind === 'not_shown') return `${r.emp.name} (${r.emp.employee_id_code}) ${tr("ไม่อยู่ในรายชื่อที่แสดงตอนนี้ (คนละไลน์/กะ/ตัวกรอง) — เปลี่ยนตัวกรอง หรือกด \"ยืมตัว\" ถ้ามาช่วยไลน์นี้")}`;
 
     /* 🔴 สแกน = เขียนลงฐาน **ทันทีทีละคน** (10/11 · คำสั่ง user "ควรจะเช็คมาเลย")
        `already` ก็เขียน — เพราะ "มางานอยู่แล้ว" อาจเป็นแค่ติ๊กค้างบนจอที่ยังไม่เคยบันทึก
        ข้ามไป = คนยิงบัตรเชื่อว่าเช็คแล้วแต่ฐานยังว่าง (upsert แถวเดิม = ไม่มีผลข้างเคียง) */
+    const lentOut = employees.find(e => e.id === r.emp.id)?._helperOutTo;
+    if (lentOut) return `${r.emp.name} ${tr("ถูกยืมไปช่วย")} ${lentOut} ${tr("กะนี้ — ไลน์ที่ยืมเป็นคนเช็คชื่อ (จอนี้บันทึกไม่ได้")})`;
     const rec = r.record || { ...(attendance[r.emp.id] || {}), is_present: true };
     const { data: userData } = await supabase.auth.getUser();
     if (!userData?.user?.id) return 'ยังไม่ได้เข้าระบบ — บันทึกไม่ได้ ให้ Login ก่อนแล้วยิงใหม่';
     const okRow = await upsertCheckin(supabase, ckLogRow(r.emp, rec, userData.user.id));
     // ❌ เขียนไม่ติด = **ห้ามติ๊กบนจอ** (ติ๊กไว้ = จอบอกว่าเช็คแล้วทั้งที่ฐานยังว่าง) · ให้ยิงซ้ำ
-    if (!okRow) return `บันทึก ${r.emp.name} ไม่สำเร็จ — ยังไม่ได้เช็คชื่อ (ดูข้อความแดงที่มุมจอ) · ยิงบัตรซ้ำอีกครั้ง`;
+    if (!okRow) return `${tr("บันทึก")} ${r.emp.name} ${tr("ไม่สำเร็จ — ยังไม่ได้เช็คชื่อ (ดูข้อความแดงที่มุมจอ) · ยิงบัตรซ้ำอีกครั้ง")}`;
 
     setAttendance(prev => ({ ...prev, [r.emp.id]: rec }));
     // ฐานใหม่แล้ว ⇒ ขยับ baseline ด้วย ไม่งั้นตัวนับ "ค้างบันทึก"/ร่างในเครื่อง ยังนับคนนี้ว่าค้าง
     setBaseline(prev => ({ ...prev, att: { ...prev.att, [r.emp.id]: JSON.parse(JSON.stringify(rec)) },
       logIds: new Set([...prev.logIds, r.emp.id]) }));
     setScanSaved(prev => prev.includes(r.emp.id) ? prev : [...prev, r.emp.id]);
-    return { ok: `✓ บันทึกแล้ว — ${r.emp.name} (${r.emp.employee_id_code}) มางาน` };
+    return { ok: `✓ ${tr("บันทึกแล้ว")} — ${r.emp.name} (${r.emp.employee_id_code}) ${tr("มางาน")}` };
   };
   badgeScanRef.current = isMobile && displayed.length > 0 ? onBadgeScan : null;
   /* 🔴 เรียงตามกลุ่มคน (หน้างาน → ช่าง → สนับสนุน) เพื่อให้แทรกหัวข้อกลุ่มได้ (14/10)
@@ -1414,7 +1463,7 @@ export default function Checkin() {
       <Fragment key={emp.id}>
         {newGroup && (
           <div className="ck-group">
-            {tr(gMeta?.label)} <span style={{ fontWeight: 600, color: 'var(--muted)' }}>· {groupCounts[grp]} คน
+            {tr(gMeta?.label)} <span style={{ fontWeight: 600, color: 'var(--muted)' }}>· {groupCounts[grp]} {tr("คน")}
               {grp !== STAFF_SHOPFLOOR && ' — เช็คชื่อได้ แต่ไม่ถูกนับเป็นกำลังคนของไลน์ผลิต'}</span>
           </div>
         )}
@@ -1426,7 +1475,7 @@ export default function Checkin() {
               {hasLeave && rec.leave_type && <div style={{ fontSize: 11, opacity: 0.85 }}>{rec.leave_type}</div>}
             </div>
           </div>
-          <div className="ck-tgs">
+          <div className="ck-tgs" style={emp._helperOutTo ? { pointerEvents: 'none', opacity: 0.5 } : undefined}>
             {tg(rec.is_present, rec.is_present ? '✅ มางาน' : '⬜ มางาน', () => toggle(emp.id, 'is_present'), false, 'var(--accent)')}
             {tg(rec.has_helmet, '⛑️ หมวก', () => toggle(emp.id, 'has_helmet'), !rec.is_present)}
             {tg(rec.has_boots, '🥾 รองเท้า', () => toggle(emp.id, 'has_boots'), !rec.is_present)}
@@ -1435,7 +1484,7 @@ export default function Checkin() {
             {(emp.assignedShift === 'day' || shiftInfo.shift === 'day') && rec.has_ot
               && tg(rec.has_extended_ot, 'OT+23', () => toggle(emp.id, 'has_extended_ot'), false, 'var(--red)')}
           </div>
-          <div className="ck-more">
+          <div className="ck-more" style={emp._helperOutTo ? { pointerEvents: 'none', opacity: 0.5 } : undefined}>
             <div><div className="ck-lbl">{tr('การลา')}</div>{cLeave}</div>
             <div><div className="ck-lbl">{tr('หมายเหตุ')}</div>{cRemark}</div>
             {needBooking && <div><div className="ck-lbl">{tr('จองรถ OT / งานที่ทำ')}</div><div className="ck-book">{cBooking}</div></div>}
@@ -1483,7 +1532,10 @@ export default function Checkin() {
                         )}
                         {emp._helperOutTo && (
                           <div style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 700, marginTop: 2 }}>
-                            → ไปช่วยไลน์ {emp._helperOutTo} (กะนี้)
+                            → {tr("ไปช่วยไลน์")} {emp._helperOutTo} ({tr("กะนี้")}){emp._helperOutBy ? ` · ${tr("ยืมโดย")} ${emp._helperOutBy}` : ''}
+                            <div style={{ fontWeight: 600, color: 'var(--muted)' }}>
+                              🔒 {emp._helperOutChecked ? `${tr("เช็คชื่อแล้วโดย")} ${emp._helperOutChecked}` : 'ยังไม่ได้เช็คชื่อ'} — {tr("ไลน์ที่ยืมเป็นคนบันทึก จอนี้แก้ไม่ได้")}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -1698,12 +1750,12 @@ export default function Checkin() {
                 {newGroup && (
                   <tr>
                     <td colSpan={99} style={{ background: 'var(--bg3)', padding: '6px 10px', fontSize: 12, fontWeight: 800, color: 'var(--text2)' }}>
-                      {tr(gMeta?.label)} <span style={{ fontWeight: 600, color: 'var(--muted)' }}>· {groupCounts[grp]} คน
+                      {tr(gMeta?.label)} <span style={{ fontWeight: 600, color: 'var(--muted)' }}>· {groupCounts[grp]} {tr("คน")}
                         {grp !== STAFF_SHOPFLOOR && ' — เช็คชื่อได้ แต่ไม่ถูกนับเป็นกำลังคนของไลน์ผลิต'}</span>
                     </td>
                   </tr>
                 )}
-                <tr style={{ background: meta.bg }}>
+                <tr style={{ background: meta.bg, ...(emp._helperOutTo ? { pointerEvents: 'none', opacity: 0.65 } : {}) }} aria-disabled={emp._helperOutTo ? true : undefined}>
                   {/* Employee */}
                   <td>
                     {cEmp}
@@ -1784,7 +1836,7 @@ export default function Checkin() {
                     )}
                     {hasLeave && rec.leave_duration === 'hours' && rec.leave_hours && (
                       <div style={{ fontSize: 11, fontWeight: 400, color: 'var(--muted)', marginTop: 1 }}>
-                        {rec.leave_hours} ชม.
+                        {rec.leave_hours} {tr("ชม.")}
                       </div>
                     )}
                   </td>
@@ -1802,14 +1854,14 @@ export default function Checkin() {
           🔴 ช่วงเวลาเขียนบนจอเสมอ · "ไม่รู้/ไม่ครบ" ต้องเห็น ห้ามกลายเป็น 0 เงียบ ๆ */}
       {showBorrowSum && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '20px 24px', maxWidth: 680, width: '100%', maxHeight: '86vh', display: 'flex', flexDirection: 'column', boxShadow: 'var(--shadow-lg)' }}>
+          <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '20px 24px', maxWidth: 680, width: '100%', maxHeight: '86vh', display: 'flex', flexDirection: 'column', boxShadow: 'var(--shadow-lg)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
               <div style={{ fontSize: 18, fontWeight: 900, color: 'var(--text)' }}>{tr('คนของเราที่ถูกยืมออกไปช่วยไลน์อื่น')}</div>
               <button onClick={() => setShowBorrowSum(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 18, cursor: 'pointer', padding: 4 }}>✕</button>
             </div>
             <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>
               {borrowSum
-                ? <>นับจาก<b> วันงาน {borrowSum.from} → {borrowSum.to}</b> ({borrowSum.days} {tr('วัน')}) · 1 วัน = 1 วัน ไม่ว่าถูกยืมกี่กะ · <b>{tr('ยืมข้ามไลน์แม่-ไลน์ลูกของตัวเองไม่นับว่าออก')}</b></>
+                ? <>{tr("นับจาก")}<b> {tr("วันงาน")} {borrowSum.from} → {borrowSum.to}</b> ({borrowSum.days} {tr('วัน')}) · 1 {tr("วัน = 1 วัน ไม่ว่าถูกยืมกี่กะ")} · <b>{tr('ยืมข้ามไลน์แม่-ไลน์ลูกของตัวเองไม่นับว่าออก')}</b></>
                 : <>{tr('ช่วง')} {BORROW_WINDOW_DAYS} {tr('วันทำงานล่าสุด')} — {tr('การยืมผูกกับวัน+กะ หมดกะหลุดเอง · แผงนี้ตอบว่า "ถูกยืมซ้ำกี่วัน" ซึ่งป้ายบนรายชื่อตอบไม่ได้')}</>}
             </div>
 
@@ -1825,7 +1877,7 @@ export default function Checkin() {
                   </div>
                 ) : (
                   /* 📱 ปัดได้ทั้ง 2 แกน — 4 คอลัมน์บนจอ 390px ต้องไม่ "ล้นแล้วปัดไม่ได้" */
-                  <div style={{ flex: 1, overflow: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--bg2)' }}>
+                  <div style={{ flex: 1, overflow: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 420 }}>
                       <thead>
                         <tr style={{ background: 'var(--bg3)', color: 'var(--text2)' }}>
@@ -1880,13 +1932,13 @@ export default function Checkin() {
       {/* 🤝 Modal ยืมพนักงานข้ามไลน์ */}
       {showBorrowModal && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '20px 24px', maxWidth: 520, width: '100%', maxHeight: '86vh', display: 'flex', flexDirection: 'column', boxShadow: 'var(--shadow-lg)' }}>
+          <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '20px 24px', maxWidth: 520, width: '100%', maxHeight: '86vh', display: 'flex', flexDirection: 'column', boxShadow: 'var(--shadow-lg)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
               <div style={{ fontSize: 18, fontWeight: 900, color: 'var(--text)' }}>{tr('ยืมพนักงานมาช่วยกะนี้')}</div>
               <button onClick={() => setShowBorrowModal(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 18, cursor: 'pointer', padding: 4 }}>✕</button>
             </div>
             <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>
-              {tr(shiftInfo.label)} · {shiftInfo.workDateStr} — คนที่ยืมจะโผล่ในรายชื่อเช็คชื่อและผังจัดกำลังคนของไลน์ปลายทาง เฉพาะกะนี้ (ไม่ย้ายสังกัดถาวร) · หมดกะแล้วหลุดเอง ไม่ต้องกดคืน — กด ✕ คืน เฉพาะเมื่อจะให้ไลน์อื่นยืมต่อในกะเดียวกัน
+              {tr(shiftInfo.label)} · {shiftInfo.workDateStr} — {tr("คนที่ยืมจะโผล่ในรายชื่อเช็คชื่อและผังจัดกำลังคนของไลน์ปลายทาง เฉพาะกะนี้ (ไม่ย้ายสังกัดถาวร) · หมดกะแล้วหลุดเอง ไม่ต้องกดคืน — กด ✕ คืน เฉพาะเมื่อจะให้ไลน์อื่นยืมต่อในกะเดียวกัน")}
             </div>
             {!helpersReady && (
               <NoticeBar tone="bad" style={{ marginBottom: 10 }}>
@@ -1901,10 +1953,10 @@ export default function Checkin() {
             </div>
             <SearchInput value={borrowSearch} onChange={setBorrowSearch} autoFocus grow={false}
               fields="ชื่อ / รหัสพนักงาน (อย่างน้อย 2 ตัวอักษร)" style={{ marginBottom: 10 }} />
-            <div style={{ flex: 1, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--bg2)', minHeight: 120 }}>
+            <div style={{ flex: 1, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)', minHeight: 120 }}>
               {borrowLoading && <div style={{ padding: 14, fontSize: 13, color: 'var(--muted)' }}>{tr('⏳ กำลังค้นหา...')}</div>}
               {!borrowLoading && borrowSearch.trim().length >= 2 && borrowResults.length === 0 && (
-                <div style={{ padding: 14, fontSize: 13, color: 'var(--muted)' }}>ไม่พบพนักงานที่ตรงกับ "{borrowSearch.trim()}"</div>
+                <div style={{ padding: 14, fontSize: 13, color: 'var(--muted)' }}>{tr("ไม่พบพนักงานที่ตรงกับ")} "{borrowSearch.trim()}"</div>
               )}
               {!borrowLoading && borrowSearch.trim().length < 2 && (
                 <div style={{ padding: 14, fontSize: 12, color: 'var(--muted)' }}>{tr('พิมพ์ชื่อหรือรหัสพนักงานเพื่อค้นหา — ค้นได้ทั้งโรงงาน ไม่จำกัดไลน์/ส่วนงาน')}</div>
@@ -1921,7 +1973,7 @@ export default function Checkin() {
                       : <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--bg3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>👤</div>}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</div>
-                      <div style={{ fontSize: 11, color: 'var(--muted)' }}>{r.employee_id_code} · {homeLine}{r.team ? ` · ทีม ${r.team}` : ''}</div>
+                      <div style={{ fontSize: 11, color: 'var(--muted)' }}>{r.employee_id_code} · {homeLine}{r.team ? ` · ${tr("ทีม")} ${r.team}` : ''}</div>
                     </div>
                     {borrowedHere
                       ? <span style={{ fontSize: 11, color: 'var(--blue)', fontWeight: 700, whiteSpace: 'nowrap' }}>{tr('ยืมแล้ว →')} {lines.find(l => l.id === already._helperToLineId)?.name || 'ไลน์ใน scope'}</span>
@@ -1967,7 +2019,7 @@ export default function Checkin() {
             { key: 'preview', icon: '🌙', label: previewNight ? 'ออกจาก Preview กะดึก' : 'Preview กะดึก', onClick: () => setPreviewNight(p => !p),
               hidden: realShiftInfo.shift !== 'day', badge: previewNight ? 'เปิดอยู่' : undefined,
               title: 'ดูตัวอย่างหน้าจอกะดึก (รวมคอลัมน์ OT พรุ่งนี้) — ปิดปุ่มบันทึกอัตโนมัติระหว่าง preview' },
-            { key: 'borrowsum', icon: '📊', label: `คนของเราที่ถูกยืมออก (${BORROW_WINDOW_DAYS} วัน)`, onClick: openBorrowSummary,
+            { key: 'borrowsum', icon: '📊', label: `${tr("คนของเราที่ถูกยืมออก")} (${BORROW_WINDOW_DAYS} ${tr("วัน")})`, onClick: openBorrowSummary,
               title: 'สรุปสะสมว่าคนของไลน์เราถูกยืมไปช่วยไลน์อื่นกี่วัน / ไลน์ไหน ในช่วง 30 วันทำงานล่าสุด (ป้ายบนรายชื่อบอกได้แค่กะนี้)' },
             { key: 'export', icon: '📄', label: 'ส่งออกฟอร์ม', onClick: () => { setExportSection(selSection || ''); setShowExport(true); } },
             { key: 'otbook', icon: '🚚', label: 'จองรถ OT', onClick: openOtBookModal, title: 'จองรถ OT วันที่/ไลน์/ทีมใดก็ได้ ไม่ต้องรอเช็คชื่อกะนั้น' },
@@ -2014,8 +2066,8 @@ export default function Checkin() {
           = เช็คชื่อไม่ได้ทั้งกะ) · Andon เหลือง = นิ่ง ไม่กระพริบ */}
       {scopeAnchorless({ role, lineId, sections: scopeSecs }) && (
         <NoticeBar tone="warn" style={{ marginBottom: 14 }}>
-          บัญชีนี้เป็น<b>{tr('หัวหน้ากลุ่ม')}</b>{tr('แต่')}<b>{tr('ยังไม่ได้ผูกไลน์ และไม่ได้ตั้งขอบเขตส่วนงาน')}</b> —
-          รายชื่อข้างล่างจึงเป็น<b>{tr('พนักงานทั้งโรงงาน')}</b> ไม่ใช่เฉพาะไลน์ที่ดูแล
+          {tr("บัญชีนี้เป็น")}<b>{tr('หัวหน้ากลุ่ม')}</b>{tr('แต่')}<b>{tr('ยังไม่ได้ผูกไลน์ และไม่ได้ตั้งขอบเขตส่วนงาน')}</b> —
+          {tr("รายชื่อข้างล่างจึงเป็น")}<b>{tr('พนักงานทั้งโรงงาน')}</b> {tr("ไม่ใช่เฉพาะไลน์ที่ดูแล")}
           <span style={{ color: 'var(--muted)' }}> {tr('· ให้แอดมินตั้งไลน์หรือขอบเขตส่วนงานที่ทะเบียนผู้ใช้')}</span>
         </NoticeBar>
       )}
@@ -2032,13 +2084,13 @@ export default function Checkin() {
           <span className="spacer" />
           {/* Employee count badge */}
           <span className="filter-count">
-            แสดง <span style={{ color: 'var(--text)', fontWeight: 700 }}>{displayed.length}</span> คน
+            {tr("แสดง")} <span style={{ color: 'var(--text)', fontWeight: 700 }}>{displayed.length}</span> {tr("คน")}
             {/* 16/11 แก้ข้อความ tooltip: ตั้งแต่ลง lineAxisFilter คนกลุ่มนี้ **ขึ้นแม้กรองรายไลน์**
                 (ข้อความเดิมบอกว่า "จะไม่ขึ้นเมื่อกรองรายไลน์" = จอโกหกหลังเปลี่ยนพฤติกรรม) */}
             {noLineCount > 0 && (
               <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--amber)', fontWeight: 700 }}
                 title={tr('คนเหล่านี้อยู่ส่วนงานนี้แต่ยังไม่ได้ผูกไลน์ — ยังขึ้นให้เช็คชื่อได้ตามปกติ (ตัวกรองไลน์ไม่ซ่อนคนที่ไม่สังกัดไลน์) แต่กำลังคนของไลน์จะไม่นับเขา · ไปผูกที่ ฐานข้อมูลพนักงาน (ช่อง Group / กลุ่ม)')}>
-                ⚠ {noLineCount} คนยังไม่ผูกไลน์
+                ⚠ {noLineCount} {tr("คนยังไม่ผูกไลน์")}
               </span>
             )}
             {/* 🧭 ทำไมคนที่ไม่ได้อยู่ไลน์นี้ยังขึ้นมา — ต้องเขียนบนจอ ไม่ใช่ให้หัวหน้าเดา */}
@@ -2087,8 +2139,8 @@ export default function Checkin() {
         <NoticeBar tone="warn" style={{ marginBottom: 14 }}
           action={{ label: 'โหลดรายชื่อกะใหม่', title: 'สิ่งที่ยังไม่บันทึกจะหาย',
             onClick: () => { setPreviewNight(false); setShiftChanged(null); setRealShiftInfo(getShiftInfo()); } }}>
-          <b>{tr('เวลาข้ามเข้า')} {tr(shiftChanged.label)} ({shiftChanged.workDateStr}) แล้ว</b> {tr('— หน้านี้ยังเป็นรายชื่อ')}{tr(realShiftInfo.label)} ({realShiftInfo.workDateStr})
-          · กดบันทึกตอนนี้ = บันทึกของกะเดิม (ถูกต้องถ้ายังกรอกกะเดิมอยู่)
+          <b>{tr('เวลาข้ามเข้า')} {tr(shiftChanged.label)} ({shiftChanged.workDateStr}) {tr("แล้ว")}</b> {tr('— หน้านี้ยังเป็นรายชื่อ')}{tr(realShiftInfo.label)} ({realShiftInfo.workDateStr})
+          · {tr("กดบันทึกตอนนี้ = บันทึกของกะเดิม (ถูกต้องถ้ายังกรอกกะเดิมอยู่")})
         </NoticeBar>
       )}
 
@@ -2104,7 +2156,7 @@ export default function Checkin() {
       {!isMobile && <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 14, fontSize: 12.5 }}>
         <InfoMore id="ck-ot-col" label={tr('คอลัมน์ จองรถ OT / งานที่ทำ คืออะไร')}>
           {shiftInfo.shift === 'night'
-            ? <>{tr('คอลัมน์')} <strong>{tr('จองรถ OT / งานที่ทำ')}</strong> = จองล่วงหน้าว่าจะมาทำ OT คืนวันที่ {addDaysToDateStr(shiftInfo.workDateStr, 1)} {tr('พร้อมระบุงานที่จะทำ เพื่อใช้ออกรายงานให้ธุรการจองรถรับส่ง (ดูที่หน้า Report)')}</>
+            ? <>{tr('คอลัมน์')} <strong>{tr('จองรถ OT / งานที่ทำ')}</strong> = {tr("จองล่วงหน้าว่าจะมาทำ OT คืนวันที่")} {addDaysToDateStr(shiftInfo.workDateStr, 1)} {tr('พร้อมระบุงานที่จะทำ เพื่อใช้ออกรายงานให้ธุรการจองรถรับส่ง (ดูที่หน้า Report)')}</>
             : <>{tr('ติ๊ก')} <strong>OT</strong> {tr('แล้วเลือก')} <strong>{tr('งานที่ทำ')}</strong> {tr('ในคอลัมน์ขวา เพื่อใช้ออกรายงานให้ธุรการจองรถรับส่ง (ดูที่หน้า Report)')}</>}
         </InfoMore>
         {!!extraAdvanceDates.length && (
@@ -2128,12 +2180,12 @@ export default function Checkin() {
             {noShiftRows.map(([nm, n]) => (
               <span key={nm} style={{
                 padding: '2px 8px', borderRadius: 'var(--r-pill)', fontSize: 11.5, fontWeight: 700,
-                background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--red)',
+                background: 'var(--bg3-surf)', border: '1px solid var(--border)', color: 'var(--red)',
               }}>{nm} · {n} {tr('คน')}</span>
             ))}
           </div>
           <div style={{ marginTop: 5, fontSize: 11.5, color: 'var(--muted)' }}>
-            แก้ที่หน้า <strong>{tr('ตารางกะ')}</strong> {tr('— กด')} <b>{tr('+ กำหนด')}</b> ที่ไลน์นั้น (ไลน์ที่สร้างใหม่หลังเติมตารางล่วงหน้าไปแล้ว จะไม่มีแถวของตัวเอง)
+            {tr("แก้ที่หน้า")} <strong>{tr('ตารางกะ')}</strong> {tr('— กด')} <b>{tr('+ กำหนด')}</b> {tr("ที่ไลน์นั้น (ไลน์ที่สร้างใหม่หลังเติมตารางล่วงหน้าไปแล้ว จะไม่มีแถวของตัวเอง")})
           </div>
         </NoticeBar>
       )}
@@ -2149,17 +2201,17 @@ export default function Checkin() {
           (ถามครั้งเดียวตอนเปิด ไม่ถามรายใบ — ยิงบัตรหน้าประตูต้องไหลต่อเนื่อง) */}
       {confirmScan && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: 16 }}>
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '22px 24px', width: '100%', maxWidth: 380, textAlign: 'center' }}>
+          <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '22px 24px', width: '100%', maxWidth: 380, textAlign: 'center' }}>
             <div style={{ fontSize: 32, marginBottom: 6 }}>🪪</div>
             <div style={{ fontSize: 14, color: 'var(--text2)', marginBottom: 4 }}>{tr('สแกนบัตรเช็คชื่อในนาม')}</div>
             <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--accent)', fontFamily: 'var(--font-display)' }}>{fullName || tr('ไม่ทราบชื่อ')}</div>
             <div style={{ fontSize: 12.5, color: 'var(--amber)', marginTop: 10, marginBottom: 18, lineHeight: 1.5 }}>
-              ยิงบัตร 1 ใบ = <b>{tr('บันทึก “มางาน” ลงระบบทันที')}</b> {tr('ไม่ต้องกด 💾 บันทึกอีก')}<br />
+              {tr("ยิงบัตร 1 ใบ")} = <b>{tr('บันทึก “มางาน” ลงระบบทันที')}</b> {tr('ไม่ต้องกด 💾 บันทึกอีก')}<br />
               ({shiftInfo.workDateStr} · {shiftInfo.label})
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <button type="button" onClick={() => setConfirmScan(false)}
-                style={{ flex: 1, minHeight: 46, borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text2)', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>{tr('ยกเลิก')}</button>
+                style={{ flex: 1, minHeight: 46, borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg3-surf)', color: 'var(--text2)', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>{tr('ยกเลิก')}</button>
               <button type="button" onClick={() => { setScanSaved([]); setConfirmScan(false); setBadgeScanOpen(true); }}
                 style={{ flex: 1, minHeight: 46, borderRadius: 'var(--r-md)', border: 'none', background: 'var(--accent)', color: 'var(--accent-ink)', fontSize: 15, fontWeight: 800, cursor: 'pointer' }}>{tr('เริ่มสแกน')}</button>
             </div>
@@ -2168,7 +2220,7 @@ export default function Checkin() {
       )}
       {badgeScanOpen && (
         <ScanModal title={tr('สแกนบัตรพนักงาน')} closeOnHit={false}
-          hint={`ส่องกล้องที่ QR บนบัตร หรือกดปุ่มสแกนข้างเครื่อง — ยิงทีละใบได้ต่อเนื่อง · ทุกใบบันทึกลงระบบทันที (ในนาม ${fullName || 'ไม่ทราบชื่อ'})`}
+          hint={`${tr("ส่องกล้องที่ QR บนบัตร หรือกดปุ่มสแกนข้างเครื่อง — ยิงทีละใบได้ต่อเนื่อง · ทุกใบบันทึกลงระบบทันที (ในนาม")} ${fullName || tr('ไม่ทราบชื่อ')})`}
           onScan={onBadgeScan} onClose={() => setBadgeScanOpen(false)}
           footer={<div style={{ marginTop: 12, fontSize: 13, fontWeight: 700, color: 'var(--text2)' }}>
             {/* 🔴 ตัวเลขต้องตอบ "รอบนี้ยิงไปกี่ใบแล้ว" — ของเดิมโชว์ยอดมางานรวม (รวมที่บันทึกไว้ก่อนหน้า)
@@ -2176,11 +2228,11 @@ export default function Checkin() {
                 และต่อท้ายว่า "ยังไม่ได้บันทึก" ตายตัวทั้งที่ตอนนี้บันทึกให้แล้ว = จอโกหก */}
             <span style={{ color: 'var(--green)' }}>{tr('บันทึกแล้วรอบนี้')} {scanSaved.length} {tr('คน')}</span>
             <span style={{ color: 'var(--muted)', fontWeight: 600 }}>
-              {' · '}{tr('มางานรวม')} {displayed.filter(e => attendance[e.id]?.is_present).length}/{displayed.length} คน
+              {' · '}{tr('มางานรวม')} {displayed.filter(e => attendance[e.id]?.is_present).length}/{displayed.length} {tr("คน")}
             </span>
             {ckPendingCount > 0 && (
               <div style={{ marginTop: 4, fontSize: 12, fontWeight: 600, color: 'var(--amber)' }}>
-                ⚠️ ยังมีที่ติ๊ก/แก้ด้วยมือค้างอยู่ {ckPendingCount} คน — ต้องปิดหน้าต่างนี้แล้วกด 💾 บันทึก (การยิงบัตรบันทึกให้เฉพาะคนที่ยิง)
+                ⚠️ {tr("ยังมีที่ติ๊ก/แก้ด้วยมือค้างอยู่")} {ckPendingCount} {tr("คน — ต้องปิดหน้าต่างนี้แล้วกด 💾 บันทึก (การยิงบัตรบันทึกให้เฉพาะคนที่ยิง")})
               </div>
             )}
           </div>} />
@@ -2241,13 +2293,13 @@ export default function Checkin() {
           (ไม่ปิดจากคลิกฉากหลัง ตามกฎ modal ฟอร์ม — ต้องเลือกยืนยัน/สลับผู้ใช้) */}
       {confirmSave && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: 16 }}>
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '22px 24px', width: '100%', maxWidth: 380, textAlign: 'center' }}>
+          <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '22px 24px', width: '100%', maxWidth: 380, textAlign: 'center' }}>
             <div style={{ fontSize: 32, marginBottom: 6 }}>👤</div>
             <div style={{ fontSize: 14, color: 'var(--text2)', marginBottom: 4 }}>{tr('บันทึกเช็คชื่อในนาม')}</div>
             <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--accent)', fontFamily: 'var(--font-display)' }}>{fullName || tr('ไม่ทราบชื่อ')}</div>
             <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4, marginBottom: 18 }}>
               {roleLabel(role)} · {myScopeLabel}<br />
-              ระบบจะลงว่าคนนี้เป็นผู้เช็คชื่อ — ถ้าไม่ใช่ตัวคุณ ให้สลับผู้ใช้ก่อน
+              {tr("ระบบจะลงว่าคนนี้เป็นผู้เช็คชื่อ — ถ้าไม่ใช่ตัวคุณ ให้สลับผู้ใช้ก่อน")}
             </div>
             {/* 🔎 เขียนให้ชัดว่าเช็คชื่อ ≠ เปิดกะ (2026-09-17 · คำสั่ง user)
                 เดิมบันทึกเสร็จระบบเด้ง modal เปิดกะให้เองทุกไลน์ → ถอดออก 16/09 เพราะสร้างกะเปล่า
@@ -2255,7 +2307,7 @@ export default function Checkin() {
                 ⇒ ไม่เอาออโต้กลับมา แต่ต้องบอกให้ชัดว่าต้องไปกดเองที่ไหน และกดเพื่ออะไร */}
             <div style={{
               textAlign: 'left', fontSize: 11.5, lineHeight: 1.55, color: 'var(--text2)',
-              background: 'var(--bg2)', border: '1px solid var(--border)',
+              background: 'var(--bg2-surf)', border: '1px solid var(--border)',
               borderRadius: 'var(--r-md)', padding: '9px 11px', marginBottom: 14,
             }}>
               <b style={{ color: 'var(--accent2)' }}>{tr('ℹ️ เช็คชื่อไม่ใช่การเปิดกะ')}</b><br />
@@ -2268,7 +2320,7 @@ export default function Checkin() {
               <button
                 onClick={handleSwitchUser}
                 style={{ flex: 1, padding: '11px 0', borderRadius: 'var(--r-md)', fontSize: 13, fontWeight: 700, cursor: 'pointer',
-                  background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)' }}>
+                  background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)' }}>
                 {tr('ไม่ใช่ฉัน')}
               </button>
               <button
@@ -2284,7 +2336,7 @@ export default function Checkin() {
 
       {showOtBookModal && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: 16 }}>
-          <div style={{ background: 'var(--card)', borderRadius: 'var(--r-lg)', padding: 22, width: '100%', maxWidth: 640, maxHeight: '86vh', display: 'flex', flexDirection: 'column', border: '1px solid var(--border)' }}>
+          <div style={{ background: 'var(--card-surf)', borderRadius: 'var(--r-lg)', padding: 22, width: '100%', maxWidth: 640, maxHeight: '86vh', display: 'flex', flexDirection: 'column', border: '1px solid var(--border)' }}>
             <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 6, color: 'var(--text)' }}>{tr('จองรถ OT')}</div>
             <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 14, lineHeight: 1.5 }}>
               เลือกวันที่/กะ/ไลน์/ทีมได้อิสระ ไม่ต้องรอเช็คชื่อกะนั้น — เหมาะกับกรณีทีมที่ต้องจอง OT ไม่ใช่ทีมที่กำลังเช็คชื่ออยู่ (เช่น จันทร์แรกหลังสลับกะ)
@@ -2376,7 +2428,7 @@ export default function Checkin() {
             </div>
 
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowOtBookModal(false)} style={{ padding: '8px 16px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)', cursor: 'pointer' }}>{tr('ยกเลิก')}</button>
+              <button onClick={() => setShowOtBookModal(false)} style={{ padding: '8px 16px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)', cursor: 'pointer' }}>{tr('ยกเลิก')}</button>
               <button onClick={handleSaveOtBookModal} disabled={otBookSaving || !otBookLineId || !canRecord}
                 style={{ padding: '8px 16px', borderRadius: 'var(--r-md)', border: 'none', background: 'var(--accent)', color: 'var(--accent-ink)', fontWeight: 700, cursor: otBookSaving || !otBookLineId ? 'not-allowed' : 'pointer', opacity: otBookSaving || !otBookLineId ? 0.6 : 1 }}>
                 {otBookSaving ? tr('กำลังบันทึก...') : tr('บันทึกการจอง')}
@@ -2389,7 +2441,7 @@ export default function Checkin() {
       {/* Export forms modal */}
       {showExport && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
-          <div style={{ background: 'var(--card)', borderRadius: 'var(--r-lg)', padding: 22, width: 'min(380px, 94vw)', border: '1px solid var(--border)' }}>
+          <div style={{ background: 'var(--card-surf)', borderRadius: 'var(--r-lg)', padding: 22, width: 'min(380px, 94vw)', border: '1px solid var(--border)' }}>
             <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 14, color: 'var(--text)' }}>{tr('ส่งออกฟอร์มกระดาษ (PDF)')}</div>
             <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 14, lineHeight: 1.5 }}>
               สร้างฟอร์ม 2 หน้า ตามฟอร์มกระดาษจริงที่ใช้หน้างาน:<br />
@@ -2412,7 +2464,7 @@ export default function Checkin() {
               width="100%" style={{ marginBottom: 18 }} />
 
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowExport(false)} style={{ padding: '8px 16px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)', cursor: 'pointer' }}>{tr('ยกเลิก')}</button>
+              <button onClick={() => setShowExport(false)} style={{ padding: '8px 16px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)', cursor: 'pointer' }}>{tr('ยกเลิก')}</button>
               <button onClick={handleExportForms} disabled={exporting}
                 style={{ padding: '8px 16px', borderRadius: 'var(--r-md)', border: 'none', background: 'var(--accent)', color: 'var(--accent-ink)', fontWeight: 700, cursor: 'pointer' }}>
                 {exporting ? tr('กำลังสร้าง...') : tr('สร้าง PDF')}

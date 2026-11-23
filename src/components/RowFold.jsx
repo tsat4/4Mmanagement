@@ -34,13 +34,13 @@ export default function RowFold({ rows = [], max = ROW_FOLD_MAX, unit = 'รา�
       style={{
         display: 'block', width: '100%', marginTop: colSpan ? 0 : 4, padding: '5px 10px',
         fontSize: 11.5, fontWeight: 600, textAlign: 'center', cursor: 'pointer',
-        color: 'var(--text2)', background: 'var(--bg3)',
+        color: 'var(--text2)', background: 'var(--bg3-surf)',
         border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)',
       }}
     >
       {all
-        ? `▴ ย่อกลับเหลือ ${max} ${unit}แรก`
-        : `▾ ดูทั้งหมด ${list.length} ${unit} — ซ่อนอยู่ ${hidden}`}
+        ? `▴ ${tr("ย่อกลับเหลือ")} ${max} ${unit}${tr("แรก")}`
+        : `▾ ${tr("ดูทั้งหมด")} ${list.length} ${unit} — ${tr("ซ่อนอยู่")} ${hidden}`}
     </button>
   );
   return (

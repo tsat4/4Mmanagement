@@ -28,6 +28,7 @@ import { ALL } from '../utils/filterLabels';
 import { urlParam } from '../utils/urlInit';
 import { tr } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
+import { askConfirm } from '../utils/askConfirm';
 
 function publicUrl(path) {
   if (!path) return null
@@ -183,7 +184,7 @@ export default function MtnMachineLayout({ setupMode = false }) {
       if (del.length) { const { error } = await supabaseDR.from('pm_facility_points').delete().in('id', del); if (error) throw error }
       if (ins.length) { const { error } = await supabaseDR.from('pm_facility_points').insert(ins); if (error) throw error }
       for (const p of upd) { const { error } = await supabaseDR.from('pm_facility_points').update({ pos_top: p.pos_top, pos_left: p.pos_left }).eq('id', p.id); if (error) throw error }
-    } catch (err) { toast.error('ย้อนไม่สำเร็จ: ' + err.message); return false }
+    } catch (err) { toast.error((tr('ย้อนไม่สำเร็จ') + ': ') + err.message); return false }
     facPointsRef.current = snap.points
     setFacPoints(snap.points)
     return true
@@ -214,7 +215,7 @@ export default function MtnMachineLayout({ setupMode = false }) {
       setProdPoints(points); setMachineInfo(info)
     } catch (e) {
       // เดิมกลืน error แล้วโชว์ผังว่าง = จอโกหกว่า "ไม่มีเครื่อง" — บอกตรงๆ
-      toast.error('โหลดผังเครื่องจักรไม่สำเร็จ: ' + (e?.message || e))
+      toast.error((tr('โหลดผังเครื่องจักรไม่สำเร็จ') + ': ') + (e?.message || e))
     } finally { setLoading(false) }
   }
 
@@ -316,7 +317,7 @@ export default function MtnMachineLayout({ setupMode = false }) {
   }
   const deleteArea = async (id) => {
     if (!editMode) return
-    if (!window.confirm('ลบโซนนี้? (อุปกรณ์ที่วางบนโซนนี้จะถูกเอาออกจากผัง แต่ตัวอุปกรณ์+ประวัติ PM ไม่หาย)')) return
+    if (!await askConfirm('ลบโซนนี้? (อุปกรณ์ที่วางบนโซนนี้จะถูกเอาออกจากผัง แต่ตัวอุปกรณ์+ประวัติ PM ไม่หาย)')) return
     const oldPath = areas.find(a => a.id === id)?.image_path
     /* 🔴 นับแถวก่อนแตะ storage (QC audit 06/10) — ไม่นับ = โซนยังอยู่ แต่รูปผังถูกลบ */
     const dres = await supabaseDR.from('pm_facility_areas').delete().eq('id', id).select('id')
@@ -365,7 +366,7 @@ export default function MtnMachineLayout({ setupMode = false }) {
         equipment_type: jigEquipTypeOf(m.equipment_kind),
         machine_id: m.id, machine_no: m.machine_no || null, line_name: m.line_name || null,
       }).select('id').single()
-      if (je) return toast.error('สร้างอุปกรณ์ PM ไม่สำเร็จ: ' + je.message)
+      if (je) return toast.error((tr('สร้างอุปกรณ์ PM ไม่สำเร็จ') + ': ') + je.message)
       invalidateTable('jigs')   // ทะเบียนเข้า cache แล้ว (13/10 · คีย์ 'jigs:am')
       jigId = jig.id
     }
@@ -483,15 +484,15 @@ export default function MtnMachineLayout({ setupMode = false }) {
       </div>
 
       {view === 'facility' && (armedJig || armedMachine) && (
-        <div style={{ fontSize: 12, color: 'var(--accent2)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '6px 10px' }}>
-          คลิกบนผังเพื่อวาง <b>{armedJig ? (jigInfo[armedJig]?.jig_no || jigInfo[armedJig]?.name) : (facMachines.find(m => m.id === armedMachine)?.machine_no)}</b>{armedMachine ? ' (ดึงจากฐานเครื่องจักร)' : ''} · <span onClick={() => { setArmedJig(null); setArmedMachine(null) }} style={{ cursor: 'pointer', textDecoration: 'underline' }}>{tr('ยกเลิก')}</span>
+        <div style={{ fontSize: 12, color: 'var(--accent2)', background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '6px 10px' }}>
+          {tr("คลิกบนผังเพื่อวาง")} <b>{armedJig ? (jigInfo[armedJig]?.jig_no || jigInfo[armedJig]?.name) : (facMachines.find(m => m.id === armedMachine)?.machine_no)}</b>{armedMachine ? ' (ดึงจากฐานเครื่องจักร)' : ''} · <span onClick={() => { setArmedJig(null); setArmedMachine(null) }} style={{ cursor: 'pointer', textDecoration: 'underline' }}>{tr('ยกเลิก')}</span>
         </div>
       )}
 
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'stretch' }}>
         <div style={{ flex: '1 1 560px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
           {loading
-            ? <div style={{ flex: 1, minHeight: 320, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)' }}>
+            ? <div style={{ flex: 1, minHeight: 320, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)' }}>
                 <div style={{ width: 30, height: 30, border: '2px solid var(--accent)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
               </div>
             : <MachineFloorMap
@@ -504,13 +505,13 @@ export default function MtnMachineLayout({ setupMode = false }) {
           {sel && selInfo && (
             /* ⚠️ ผังสูงเกือบเต็มจอ → แผงรายละเอียดอยู่ใต้ fold: คลิกหมุดแล้ว "เหมือนคลิกได้เฉยๆ ไม่มีอะไรขึ้น"
                (user ทัก 2026-08-26) → เลื่อนมาให้เห็นเองทุกครั้งที่เลือกหมุด */
-            <div ref={detailRef} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 14 }}>
+            <div ref={detailRef} style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 14 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{selLabel}{selInfo.name && selInfo.name !== selLabel ? ` · ${selInfo.name}` : ''}</div>
                 <button onClick={() => setSelId(null)} style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: 'var(--r-md)', padding: '2px 8px', fontSize: 12, cursor: 'pointer' }}>✕</button>
               </div>
               {selChecklists.length === 0 ? (
-                <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('ยังไม่มีเช็คลิสต์ PM')}{dept !== 'all' ? ` ของแผนก ${deptLabelOf(dept)}` : ''} {tr('สำหรับรายการนี้')}</div>
+                <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('ยังไม่มีเช็คลิสต์ PM')}{dept !== 'all' ? ` ${tr("ของแผนก")} ${deptLabelOf(dept)}` : ''} {tr('สำหรับรายการนี้')}</div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {selChecklists.map((c, i) => {
@@ -520,9 +521,9 @@ export default function MtnMachineLayout({ setupMode = false }) {
                       <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 12, borderTop: i ? '1px dashed var(--border)' : 'none', paddingTop: i ? 6 : 0 }}>
                         <span style={{ width: 9, height: 9, borderRadius: '50%', background: m.color, flexShrink: 0 }} />
                         <span style={{ fontWeight: 700, color: 'var(--text)' }}>{c.eqName ?? selInfo.name}</span>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--blue)', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r-xs)', padding: '1px 5px' }}>{deptIconOf(c.dept)} {deptLabelOf(c.dept)}</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--blue)', background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-xs)', padding: '1px 5px' }}>{deptIconOf(c.dept)} {deptLabelOf(c.dept)}</span>
                         <span style={{ color: m.color, fontWeight: 700 }}>{tr(m.label)}</span>
-                        <span style={{ color: 'var(--muted)' }}>{c.nextDue ? `ครบ ${c.nextDue.toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' })}${dd != null ? (dd < 0 ? ` (เกิน ${Math.abs(dd)} วัน)` : ` (อีก ${dd} วัน)`) : ''}` : 'ยังไม่มีวัน PM ครั้งถัดไป'}</span>
+                        <span style={{ color: 'var(--muted)' }}>{c.nextDue ? `${tr("ครบ")} ${c.nextDue.toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' })}${dd != null ? (dd < 0 ? ` (${tr("เกิน")} ${Math.abs(dd)} ${tr("วัน")})` : ` (${tr("อีก")} ${dd} ${tr("วัน")})`) : ''}` : 'ยังไม่มีวัน PM ครั้งถัดไป'}</span>
                       </div>
                     )
                   })}
@@ -537,15 +538,15 @@ export default function MtnMachineLayout({ setupMode = false }) {
           <div style={S.side}>
             <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', marginBottom: (scopeHidden > 0 || viewScope.unsure) ? 6 : 10 }}>{tr('ไลน์ผลิต (')}{viewLines.length})</div>
             {(scopeHidden > 0 || viewScope.unsure) && (
-              <div title={viewScope.unsure ? 'ตัดขอบเขตของบัญชีนี้ไม่ได้ (ทะเบียนไลน์ยังไม่โหลด/ส่วนงานไม่ตรงผัง/หาไลน์ของบัญชีไม่เจอ)' : `ขอบเขตของบัญชีนี้: ${scopeLabel}`}
+              <div title={viewScope.unsure ? 'ตัดขอบเขตของบัญชีนี้ไม่ได้ (ทะเบียนไลน์ยังไม่โหลด/ส่วนงานไม่ตรงผัง/หาไลน์ของบัญชีไม่เจอ)' : `${tr("ขอบเขตของบัญชีนี้")}: ${scopeLabel}`}
                 style={{ fontSize: 11, fontWeight: 700, marginBottom: 10, padding: '3px 8px', borderRadius: 'var(--r-md)',
                   color: viewScope.unsure ? 'var(--amber)' : 'var(--accent)',
                   background: viewScope.unsure ? 'var(--amber-dim)' : 'var(--accent-dim)',
                   border: `1px solid ${viewScope.unsure ? 'var(--amber-line)' : 'var(--accent)'}` }}>
                 {viewScope.unsure
                   ? (viewScope.unlimited ? '⚠ ตัดขอบเขตไม่ได้ — แสดงทั้งโรงงาน'
-                    : `⚠ ขอบเขตไม่ชัด — แสดง ${viewLines.length} ไลน์ · ซ่อน ${scopeHidden}`)
-                  : `🔭 เฉพาะ ${scopeLabel} · ซ่อน ${scopeHidden} ไลน์นอกขอบเขต`}
+                    : `⚠ ${tr("ขอบเขตไม่ชัด — แสดง")} ${viewLines.length} ${tr("ไลน์ · ซ่อน")} ${scopeHidden}`)
+                  : `🔭 ${tr("เฉพาะ")} ${scopeLabel} · ${tr("ซ่อน")} ${scopeHidden} ${tr("ไลน์นอกขอบเขต")}`}
               </div>
             )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -574,7 +575,7 @@ export default function MtnMachineLayout({ setupMode = false }) {
               const d = zoneEnergy?.prev != null ? deltaPct(zoneEnergy.qty, zoneEnergy.prev) : null
               const dCol = d == null ? 'var(--muted)' : d <= -5 ? 'var(--green)' : d > 10 ? 'var(--red)' : 'var(--text2)'
               return (
-                <div style={{ border: '1px solid var(--border)', borderLeft: '3px solid var(--accent)', borderRadius: 'var(--r-md)', padding: '10px 12px', background: 'var(--bg2)', display: 'flex', flexDirection: 'column', gap: 11 }}>
+                <div style={{ border: '1px solid var(--border)', borderLeft: '3px solid var(--accent)', borderRadius: 'var(--r-md)', padding: '10px 12px', background: 'var(--bg2-surf)', display: 'flex', flexDirection: 'column', gap: 11 }}>
                   <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text)' }}>{tr('สถานะโซนนี้')}</div>
                   {/* 🛠️ PM — นับจากอุปกรณ์ที่สังกัดโซน (เกณฑ์เดียวกับผังรวมโรงงาน) ไม่ใช่แค่หมุดบนผัง */}
                   {(() => {
@@ -584,11 +585,11 @@ export default function MtnMachineLayout({ setupMode = false }) {
                     return (
                       <div>
                         <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)' }}>
-                          PM อุปกรณ์ · {zonePm?.equipCount ?? 0} {tr('ตัวในโซน')}{facPoints.length ? ` · ${facPoints.length} จุดบนผัง` : ''}
+                          PM {tr("อุปกรณ์")} · {zonePm?.equipCount ?? 0} {tr('ตัวในโซน')}{facPoints.length ? ` · ${facPoints.length} ${tr("จุดบนผัง")}` : ''}
                         </div>
                         {!rows.length ? (
                           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 3 }}>
-                            ยังไม่มีเช็คลิสต์ PM{dept !== 'all' ? ` ของ ${deptLabelOf(dept)}` : ''} {tr('ในโซนนี้ —')}{' '}
+                            {tr("ยังไม่มีเช็คลิสต์")} PM{dept !== 'all' ? ` ${tr("ของ")} ${deptLabelOf(dept)}` : ''} {tr('ในโซนนี้ —')}{' '}
                             <Link to="/pm?tab=setup" style={{ color: 'var(--accent)', fontWeight: 700 }}>{tr('ตั้งจุดตรวจที่ ศูนย์ PM → ตั้งค่าจุดตรวจ')}</Link>
                           </div>
                         ) : (<>
@@ -609,7 +610,7 @@ export default function MtnMachineLayout({ setupMode = false }) {
                                     <span style={{ width: 7, height: 7, borderRadius: '50%', background: m.color, flexShrink: 0 }} />
                                     <span style={{ fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</span>
                                     <span style={{ marginLeft: 'auto', flexShrink: 0, color: m.color, fontWeight: 700 }}>
-                                      {dd == null ? m.label : dd < 0 ? `เกิน ${Math.abs(dd)} วัน` : dd === 0 ? 'ครบวันนี้' : `อีก ${dd} วัน`}
+                                      {dd == null ? m.label : dd < 0 ? `${tr("เกิน")} ${Math.abs(dd)} ${tr("วัน")}` : dd === 0 ? 'ครบวันนี้' : `${tr("อีก")} ${dd} ${tr("วัน")}`}
                                     </span>
                                     {/* ปิดลูป: เห็นว่าถึงคิวแล้วกดไปตรวจได้เลย ไม่ต้องไปไล่หาเองในหน้า PM */}
                                     <Link to={`/pm?tab=check&dept=${r.dept || 'maintenance'}&equip=${r.jigId}`}
@@ -629,7 +630,7 @@ export default function MtnMachineLayout({ setupMode = false }) {
                           {/* มีแผน PM แต่ยังไม่ได้วางบนผัง = หาไม่เจอบนจอ ห้ามซ่อน */}
                           {zonePm?.unplaced > 0 && (
                             <div style={{ fontSize: 11, color: 'var(--accent2)', marginTop: 5 }}>
-                              ⚠ อุปกรณ์ในโซนนี้ {zonePm.unplaced} ตัวยังไม่ได้วางบนผัง — กด “✏️ แก้ผังโซน” เพื่อวาง
+                              ⚠ {tr("อุปกรณ์ในโซนนี้")} {zonePm.unplaced} {tr("ตัวยังไม่ได้วางบนผัง — กด “✏️ แก้ผังโซน” เพื่อวาง")}
                             </div>
                           )}
                         </>)}
@@ -639,7 +640,7 @@ export default function MtnMachineLayout({ setupMode = false }) {
                   <div>
                     <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)' }}>{tr('ใบซ่อม MO ค้างของโซนนี้')}</div>
                     <div style={{ fontSize: zoneMo.length ? 17 : 12, fontWeight: 900, color: zoneMo.length ? 'var(--amber)' : 'var(--green)', marginTop: 3 }}>
-                      {zoneMo.length ? `${zoneMo.length} ใบ` : '✅ ไม่มีใบค้าง'}
+                      {zoneMo.length ? `${zoneMo.length} ${tr("ใบ")}` : '✅ ไม่มีใบค้าง'}
                     </div>
                     {zoneMo.slice(0, 3).map(o => (
                       <div key={o.id} onClick={() => navigate('/mtn-repair')} style={{ fontSize: 11, color: 'var(--text2)', cursor: 'pointer', marginTop: 2 }}>
@@ -677,7 +678,7 @@ export default function MtnMachineLayout({ setupMode = false }) {
                 {editMode && (
                   <label style={{ display: 'block', marginBottom: 12 }}>
                     <input ref={fileRef} type="file" accept="image/*" hidden onChange={uploadImage} disabled={busy} />
-                    <span style={{ display: 'block', textAlign: 'center', background: 'var(--bg3)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: '8px', fontSize: 12, color: 'var(--text2)', cursor: 'pointer' }}>
+                    <span style={{ display: 'block', textAlign: 'center', background: 'var(--bg3-surf)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: '8px', fontSize: 12, color: 'var(--text2)', cursor: 'pointer' }}>
                       {busy ? 'อัปโหลด...' : facImage ? '🖼️ เปลี่ยนรูปผังโซน' : '📷 อัปโหลดรูปผังโซน'}
                     </span>
                   </label>
@@ -685,7 +686,7 @@ export default function MtnMachineLayout({ setupMode = false }) {
                 <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', marginBottom: 4 }}>{tr('อุปกรณ์ที่ยังไม่วาง (')}{unplacedJigs.length + facMachines.length})</div>
                 {/* บอกวิธีวางให้เห็นชัด — เดิมมีแต่ tooltip คนหาไม่เจอว่าต้องกดยังไง (2026-08-03) */}
                 {canEdit && (unplacedJigs.length + facMachines.length) > 0 && (
-                  <div style={{ fontSize: 11, color: facImage ? 'var(--accent)' : 'var(--accent2)', background: 'var(--bg3)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: '5px 8px', marginBottom: 7, lineHeight: 1.5 }}>
+                  <div style={{ fontSize: 11, color: facImage ? 'var(--accent)' : 'var(--accent2)', background: 'var(--bg3-surf)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: '5px 8px', marginBottom: 7, lineHeight: 1.5 }}>
                     {facImage
                       ? <>{tr('วิธีวาง:')} <b>{tr('① กดปุ่ม 📍 วาง')}</b> {tr('ที่อุปกรณ์ →')} <b>{tr('② คลิกตำแหน่งบนผัง')}</b></>
                       : <>{tr('⚠️ ต้อง')} <b>{tr('อัปโหลดรูปผังโซน')}</b> {tr('ก่อน ถึงจะวางอุปกรณ์ได้')}</>}

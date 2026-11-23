@@ -310,6 +310,15 @@ export function decimalsOf(d) {
   return 2;
 }
 
+/** 🧱 ช่วงค่าที่ "เป็นไปได้" ของตัวตน KPI (20/11 · user: "เดือนที่เหลือ ถ้าเป็นไปไม่ได้ ไม่ควรคาดการณ์ — OEE > 100 % · MTTR ติดลบ")
+    อ่านจากทะเบียน `kpi_catalog.value_min/value_max` เท่านั้น (ตั้งที่ปุ่ม 📘 ทะเบียน · seed: ทุกตัว ≥ 0 · % ≤ 100 · PPM ≤ 1e6)
+    · null = ไม่จำกัดด้านนั้น · **ห้าม hardcode "% = 100" ในหน้า** — ทะเบียนแก้ได้รายตัว (เช่น % เติบโตเกิน 100 ได้) */
+export function valueBoundsOf(d) {
+  const num = (v) => (v == null || v === '' || Number.isNaN(Number(v)) ? null : Number(v));
+  const c = d?.kpi_catalog || d;
+  return { min: num(c?.value_min), max: num(c?.value_max) };
+}
+
 /** วิธีรวมของแถว — อ่านจากทะเบียนเท่านั้น · คีย์แปลก/ไม่มี = `average` (ไม่ใช่พัง) */
 export function summaryModeOf(d) {
   const k = d?.kpi_catalog?.summary_mode || d?.summary_mode;
@@ -458,12 +467,34 @@ export function neededRunRate({ actual = [], target = null, def = null } = {}) {
   const mode0 = summaryModeOf(def);
   const sum = have.reduce((s, x) => s + x, 0);
   if (mode0 === 'rate') return null;
+  /* 🧱 เป็นไปได้ไหม (20/11): ที่ต้องทำต่อเดือนหลุดช่วง `valueBoundsOf()` ของทะเบียน = **เป็นไปไม่ได้** (`feasible:false` + `limit` ด้านที่ชน)
+     · ตัวยิ่งสูงยิ่งดี: ต้องได้ ≤ พื้น = ผ่านแน่ (`trivial`) · เกินเพดาน = ไม่ทัน
+     · ตัวยิ่งต่ำยิ่งดี: ต้องไม่เกิน ≥ เพดาน = ผ่านแน่ · ต่ำกว่าพื้น = ไม่ทัน
+     · ไม่มีขอบด้านนั้นในทะเบียน = ไม่ตัดสิน (feasible ตามเดิม) — จอยังโชว์ตัวเลข */
+  const down = String(def?.direction || def?.kpi_catalog?.direction || '').toLowerCase() === 'down';
+  const b = valueBoundsOf(def);
+  const judge = (perMonth) => {
+    if (down) {
+      if (b.min != null && perMonth < b.min) return { feasible: false, limit: { kind: 'min', value: b.min } };
+      if (b.max != null && perMonth >= b.max) return { feasible: true, trivial: true, limit: { kind: 'max', value: b.max } };
+    } else {
+      if (b.max != null && perMonth > b.max) return { feasible: false, limit: { kind: 'max', value: b.max } };
+      if (b.min != null && perMonth <= b.min) return { feasible: true, trivial: true, limit: { kind: 'min', value: b.min } };
+    }
+    return { feasible: true, trivial: false, limit: null };
+  };
+  /* `bestCase` (เฉพาะเป็นไปไม่ได้) = ค่าสรุปทั้งปี "ดีที่สุดที่ยังเป็นไปได้" ถ้าเดือนที่เหลือทำได้สุดขอบทุกเดือน — จอโชว์ตัวนี้แทนตัวเลขติดลบ/เกิน 100 */
   if (mode0 === 'max' || mode0 === 'as_of') {
     const last = a[a.map((x, i) => (x != null ? i : -1)).reduce((m, i) => Math.max(m, i), -1)];
-    return { kind: 'reach', perMonth: t, remaining, add: t - last };
+    const j = judge(t);
+    return { kind: 'reach', perMonth: t, remaining, add: t - last, ...j, bounds: b, bestCase: j.feasible ? null : j.limit.value };
   }
-  if (mode0 === 'sum') return { kind: 'sum', perMonth: (t - sum) / remaining, remaining };
-  return { kind: 'avg', perMonth: (t * 12 - sum) / remaining, remaining };
+  if (mode0 === 'sum') {
+    const pm = (t - sum) / remaining; const j = judge(pm);
+    return { kind: 'sum', perMonth: pm, remaining, ...j, bounds: b, bestCase: j.feasible ? null : sum + remaining * j.limit.value };
+  }
+  const pm = (t * 12 - sum) / remaining; const j = judge(pm);
+  return { kind: 'avg', perMonth: pm, remaining, ...j, bounds: b, bestCase: j.feasible ? null : (sum + remaining * j.limit.value) / 12 };
 }
 
 /** จัดรูปตัวเลขตามทศนิยมของแถว — `null`/ไม่ใช่ตัวเลข = สตริงว่าง **ห้ามคืน 0** */
@@ -743,10 +774,37 @@ const rowTopic = (r) => normTopic(r?.topic ?? r?.name);
  *   ไม่ใช่โชว์ตารางว่าง — กฎความซื่อสัตย์ของจอ · การเลือก KPI ต่อหน่วยงานเป็นการตั้งค่าของคน)
  *  🔴 ตรงเป๊ะเท่านั้น (ไม่สนตัวพิมพ์/ช่องว่าง/เครื่องหมาย) — ไม่ตรง = `null` ห้ามเดาคลุม
  *     เช่น "Tooling MTN" ต้องคืน null ไม่ใช่เดาเป็น "Tooling" (คนละชุด KPI กัน) */
+/* ══ 🔧 ทะเบียน "หน่วยงานจริงในโรงงาน → หน่วยงานมาตรฐาน" (2026-11-19 · คำสั่ง user) ═══════════
+   user 19/11: *"ทีมช่างใช้มาตรฐานเดียวกันคือ KPI Maintenance เพราะในแบบ KPI Die Maintenance
+                 เหมือนเป็นของโรงงานสร้างแม่พิมพ์ใช้"*
+
+   เหตุผลที่ต้องมีทะเบียนนี้ ไม่ใช่ผ่อนเกณฑ์การจับคู่ชื่อ:
+     แบบ `Die Maintenance` ในทะเบียนกลางเป็นของ **ธุรกิจสร้าง-ขายแม่พิมพ์** —
+     มี "Annual Sale Per Head" · "Manage project … on time delivery to customer" ·
+     "Keep inventory no more than" · "Customer Satisfaction (Q&D)"
+     ซึ่งทีมช่างที่ซ่อมแม่พิมพ์ในโรงงานปั๊มของเราไม่มีทางวัดได้ (ไม่มียอดขาย ไม่มีลูกค้าภายนอก)
+     และ**ไม่มี MTBF / MTTR / MO Closed / Machine Break Down เลยสักตัว** ซึ่งคือเนื้องานจริงของช่าง
+     ⇒ ทีมช่างทุกทีมอิงแบบ `Maintenance` (ที่มี Internal Satisfaction + ตัววัดงานซ่อมครบ)
+
+   🔴 นี่คือ "การตั้งค่าของคน" ที่ user เคาะแล้ว **ไม่ใช่การเดาจากชื่อ** —
+      `guessStdUnit` ยังคงกฎเดิมทุกอย่าง (ตรงเป๊ะเท่านั้น · ไม่ตรง = null) เพียงแต่ดูทะเบียนนี้ก่อน
+      และผลลัพธ์ยังเป็น **ข้อเสนอให้คนกดยืนยัน ห้ามตั้งให้เอง** เหมือนเดิม
+   🔴 คีย์เขียนแบบ "แบน" (ตัดช่องว่าง/ขีด/วงเล็บ ตัวพิมพ์เล็ก) ให้ตรงกับ flat() ข้างล่าง            */
+export const KPI_STD_UNIT_ALIASES = Object.freeze({
+  diemtn: 'Maintenance',       // ซ่อมบำรุงแม่พิมพ์ (ทีม die_maintenance)
+  jigmtn: 'Maintenance',       // ซ่อมบำรุงจิ๊ก (ทีม jig_maintenance)
+  toolingmtn: 'Maintenance',   // ซ่อมบำรุง Tooling — คนละตัวกับ std_unit 'Tooling' (ธุรกิจขายแม่พิมพ์)
+  mechanic: 'Maintenance',
+  electric: 'Maintenance',
+});
+
 export function guessStdUnit(name) {
   const flat = (s) => normTopic(s).replace(/[\s\-_.&/()]+/g, '');
   const n = flat(name);
   if (!n) return null;
+  /* ทะเบียนที่คนเคาะมาก่อน แล้วค่อยจับชื่อตรงเป๊ะ */
+  const alias = KPI_STD_UNIT_ALIASES[n];
+  if (alias) return alias;
   return KPI_STD_UNITS.find(u => flat(u.unit) === n)?.unit || null;
 }
 
@@ -785,12 +843,80 @@ export function checkStdSelection(rows = [], stdItems = null) {
   const diff = Math.round((weight - KPI_TOTAL_WEIGHT) * 100) / 100;
 
   let missingFixed = [];
+  /* 🧾 "ของนอกมาตรฐาน" — แถวในใบที่ไม่มีอยู่ในทะเบียนของหน่วยงานนี้เลย (2026-11-19 · คำสั่ง user)
+     เคสต้นเรื่อง: ใบของ **Die MTN** ถือแบบ `Die Maintenance` ซึ่งเป็นของธุรกิจสร้าง-ขายแม่พิมพ์
+     ("Annual Sale Per Head" · "Keep inventory no more than" · "Manage project … delivery to customer")
+     จอเดิมบอกได้แค่ "ข้อบังคับที่ยังไม่ได้หยิบ" ⇒ **ของแปลกปลอมที่ค้างอยู่ในใบมองไม่เห็นเลย**
+     ⚠️ เตือนเท่านั้น ห้ามบล็อก และห้ามลบให้เอง — ใบจริงบางใบเพิ่มของนอกมาตรฐานได้โดยตั้งใจ (§6)
+        คนเป็นคนตัดสินว่าจะเก็บหรือปิด (ปิด = `is_active=false` ไม่ใช่ลบ) */
+  let extras = [];
   if (Array.isArray(stdItems)) {
     missingFixed = matchStdItems(stdItems.filter(isStdFixed), rows)
       .filter(m => !m.row)
       .map(m => m.item);
+
+    const known = new Set();
+    for (const m of matchStdItems(stdItems, rows)) if (m.row) known.add(m.row);
+    extras = (Array.isArray(rows) ? rows : []).filter(r => r && !known.has(r));
   }
-  return { weight, diff, ok: diff === 0 && missingFixed.length === 0, missingFixed };
+  return { weight, diff, ok: diff === 0 && missingFixed.length === 0, missingFixed, extras };
+}
+
+/* ══ ⚖️ น้ำหนักรวมของแต่ละหน่วยครบ 50 หรือยัง — ดูข้ามหน่วยในที่เดียว ══════════════════
+   (2026-11-19 · คำสั่ง user "ทำหน้าสรุปน้ำหนักที่ยังไม่ครบเลย")
+
+   เคสต้นเรื่อง: หลังย้ายทีมช่างมาอิงแบบ `Maintenance` แล้วหยิบข้อบังคับที่ขาดเข้าใบ
+   **แถวใหม่ไม่มีน้ำหนัก** (ตั้งใจ — เอกสารกลุ่มให้หน่วยงานถ่วงเอง ระบบเดาแทนไม่ได้)
+   ⇒ วัด 19/11 มีแค่ Tooling MTN ที่ครบ 50 · ที่เหลือ 22 / 11 / 9 / 5 / 0
+   แต่ `checkStdSelection()` ตอบได้ทีละใบ ⇒ ต้องเปิดไล่ทีละหน่วยถึงจะรู้ว่าใครยังไม่ครบ
+
+   🔴 ไม่คิดเกณฑ์ใหม่ — เรียก `checkStdSelection()` ตัวเดิมรายหน่วย (เพดาน 50 มีที่เดียวคือ
+      `KPI_TOTAL_WEIGHT`) · ที่เพิ่มมาคือ "จัดกลุ่มตามขอบเขต แล้วเรียงตัวที่ห่างเป้าที่สุดขึ้นก่อน"
+   🔴 `defs` ไม่ใช่ array (โหลดไม่ได้) = คืน `null` **ห้ามคืนลิสต์ว่าง** — ลิสต์ว่างแปลว่า
+      "ครบทุกหน่วย" ซึ่งตรงข้ามกับความจริง (กฎความซื่อสัตย์ของจอ)
+   ⚠️ เห็นเฉพาะหน่วยที่ **มีแถว KPI อยู่แล้ว** — หน่วยที่ยังไม่มีใบเลยไม่โผล่ที่นี่
+      (คนละอาการ ไม่ใช่ "น้ำหนักขาด") ⇒ จอต้องเขียนกำกับ                                  */
+export function weightAudit(defs, { scopeOf, labelOf } = {}) {
+  if (!Array.isArray(defs)) return null;
+  /* 🔴 ขอบเขตของกลุ่มต้องมาจาก **ชุดเดียว** ทั้งคีย์ · ป้าย · ปลายทางที่กดแล้วไป
+        (19/11 เจอจริง: เคยจัดกลุ่มด้วยขอบเขตที่ยุบแล้ว แต่เก็บ `scope_kind/scope_value` ดิบไว้ทำป้าย
+         ⇒ แถวที่ `scope_kind='plant'` แต่ `section='PD3'` ขึ้นป้าย "ทั้งโรงงาน" **และกดแล้วพาไปผิดใบ**)
+     จอจริงส่ง `scopeOf` ที่ผ่าน `canonicalScope()` มา — CC ↔ หน่วยเจ้าของต้องนับเป็นขอบเขตเดียวกัน */
+  const scOf = typeof scopeOf === 'function'
+    ? scopeOf
+    : (d) => ({ kind: d?.scope_kind || null, value: d?.scope_value ?? null });
+  const keyOf = (sc) => (sc?.kind && sc.kind !== 'plant' ? `${sc.kind}:${sc.value ?? ''}` : 'plant');
+  const groups = new Map();
+  for (const d of defs) {
+    if (!d || d.is_active === false) continue;
+    const sc = scOf(d) || {};
+    const k = keyOf(sc);
+    if (!groups.has(k)) groups.set(k, { key: k, kind: sc.kind || null, value: sc.value ?? null, rows: [] });
+    groups.get(k).rows.push(d);
+  }
+  const out = [];
+  for (const g of groups.values()) {
+    const chk = checkStdSelection(g.rows);
+    out.push({
+      key: g.key, kind: g.kind, value: g.value,
+      label: (typeof labelOf === 'function' ? labelOf(g.kind, g.value) : null) || scopeLabel(g.kind, g.value),
+      weight: chk.weight, diff: chk.diff, ok: chk.diff === 0,
+      count: g.rows.length,
+      /* แถวที่ยังไม่ได้ใส่น้ำหนักเลย — ตัวชี้ว่า "เพิ่งหยิบเข้ามา ยังไม่ได้ถ่วง" */
+      /* ⚠️ `Number(null)` = 0 ซึ่ง finite ⇒ ต้องกัน null/undefined/'' ก่อน ไม่งั้นนับเป็น "ใส่น้ำหนักแล้ว" */
+      noWeight: g.rows.filter(r => r?.weight == null || r.weight === '' || !Number.isFinite(Number(r.weight))).length,
+      stdUnit: g.rows.map(r => r?.std_unit).find(Boolean) || null,
+    });
+  }
+  /* 🔴 ป้ายซ้ำ = จอโกหก — เจอจริง 19/11 ตอนทดสอบ: 2 ใบคนละชุด (1 ข้อ กับ 3 ข้อ) ขึ้นว่า "ทั้งโรงงาน"
+        เหมือนกันทั้งคู่ ⇒ คนอ่านแยกไม่ออกว่าต้องไปแก้ใบไหน (และนึกว่าระบบนับซ้ำ)
+        ต่อคีย์ขอบเขตท้ายป้าย **เฉพาะตัวที่ชนกัน** — ตัวที่ชื่อไม่ซ้ำคงรูปเดิม ไม่ให้รกเปล่าๆ */
+  const seen = new Map();
+  for (const u of out) seen.set(u.label, (seen.get(u.label) || 0) + 1);
+  for (const u of out) if (seen.get(u.label) > 1) u.label = `${u.label} [${u.key}]`;
+
+  /* ห่างเป้ามากสุดขึ้นก่อน · เท่ากันเรียงชื่อ (เรียงคงที่ ไม่สลับไปมาทุกครั้งที่โหลด) */
+  return out.sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff) || String(a.label).localeCompare(String(b.label), 'th'));
 }
 
 /* ── 🧾 "KPI นี้ตัดสินยังไง" เป็นประโยคเดียว + ตรวจเกณฑ์ที่ตั้งขัดกัน (2026-11-16 · user: "หน้ากรอก KPI งงเรื่อง plan และผ่าน/ตก") ──

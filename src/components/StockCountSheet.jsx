@@ -19,6 +19,7 @@ import { useDraftAutosave, loadDraft, clearDraft } from '../utils/formDraft';   
 import DraftRestoreBar from './DraftRestoreBar';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 /* ─── 📋 ตรวจนับ / เฟิร์มยอด — แท็บใน /line-stock (2026-09-23) ─────────────────
    เกิดจาก feedback หน้างาน (แพลนนิ่ง): "Stock บางตัวไม่ตรง" + "ให้ PD คีย์ผลิต
    แล้วเฟิร์มยอดให้เลยได้มั้ย"
@@ -116,7 +117,7 @@ export default function StockCountSheet({ role, scope }) {
     setLoading(false);
     // ห้ามกลืน error — คิวรีล้มแล้วจอขึ้นเหมือน "ไม่มีข้อมูล" คือคลาสบั๊กที่โปรเจคเจอซ้ำ
     const firstErr = sum.error || adj.error || sh.error || cut.error || dp.error || ks.error || rules.error || pl.error;
-    if (firstErr) { toast.error('โหลดข้อมูลสต็อกไม่สำเร็จ: ' + firstErr); return; }
+    if (firstErr) { toast.error((tr('โหลดข้อมูลสต็อกไม่สำเร็จ') + ': ') + firstErr); return; }
     setStock(sum.rows);
     setLines(pl.data || []);
     setAdjusts(adj.rows);
@@ -150,7 +151,7 @@ export default function StockCountSheet({ role, scope }) {
     if (!shipGap.open.length) return;
     /* 🔴 หักสต็อกย้อนหลังที่คลัง FG = เขียนของหน่วยงานนั้น ⇒ เช็คชั้น ③ ในฟังก์ชันที่เขียนจริง */
     const wf = canWriteLine(wctx, fgDest, lines);
-    if (!wf.ok) { toast.error(writeBlockText(wf, { what: `ยอดคลัง ${fgDest}` })); return; }
+    if (!wf.ok) { toast.error(writeBlockText(wf, { what: `${tr("ยอดคลัง")} ${fgDest}` })); return; }
     // แถวที่หักแล้วจะทำให้คงเหลือติดลบ = "ของออกไปแล้วแต่ไม่เคยถูกบันทึกรับเข้า" — ต้องบอกก่อน ห้ามเงียบ
     const onHand = {};
     stock.forEach(s => { if (s.line_name === fgDest) onHand[s.mat_no] = parseFloat(s.qty_on_hand) || 0; });
@@ -158,18 +159,18 @@ export default function StockCountSheet({ role, scope }) {
     shipGap.open.forEach(o => { after[o.sap] = (after[o.sap] ?? 0) - (Number(o.qty) || 0); });
     const neg = Object.entries(after).filter(([, v]) => v < 0);
     const warn = neg.length
-      ? `\n\n⚠️ หลังหักจะมี ${neg.length} พาร์ทคงเหลือติดลบ — แปลว่าของออกไปแล้วแต่ "ขาเข้า" ไม่เคยถูกบันทึก`
-        + `\n(ติดลบคือสัญญาณให้ไปแก้ที่การปิดใบผลิต/กฎรับเข้า แล้วเคลียร์ด้วยการตรวจนับข้างล่าง)`
+      ? `\n\n⚠️ ${tr("หลังหักจะมี")} ${neg.length} ${tr("พาร์ทคงเหลือติดลบ — แปลว่าของออกไปแล้วแต่ \"ขาเข้า\" ไม่เคยถูกบันทึก")}`
+        + `\n(${tr("ติดลบคือสัญญาณให้ไปแก้ที่การปิดใบผลิต/กฎรับเข้า แล้วเคลียร์ด้วยการตรวจนับข้างล่าง")})`
       : '';
-    if (!window.confirm(
-      `หักสต็อกย้อนหลัง ${shipGap.open.length} ใบ รวม ${n0(openQty)} ชิ้น ออกจาก ${fgDest}?`
-      + `\n(ใบที่ส่งก่อนรอบตรวจนับล่าสุดถูกกันออกแล้ว ${shipGap.closedByCount.length} ใบ — ยอดที่นับสะท้อนไปแล้ว)`
+    if (!await askConfirm(
+      `${tr("หักสต็อกย้อนหลัง")} ${shipGap.open.length} ${tr("ใบ รวม")} ${n0(openQty)} ${tr("ชิ้น ออกจาก")} ${fgDest}?`
+      + `\n(${tr("ใบที่ส่งก่อนรอบตรวจนับล่าสุดถูกกันออกแล้ว")} ${shipGap.closedByCount.length} ${tr("ใบ — ยอดที่นับสะท้อนไปแล้ว")})`
       + warn)) return;
     setCutting(true);
     const rows = shipGap.open.map(o => ({
       line_name: fgDest, mat_no: o.sap, part_name: o.part_name || null,
       qty: Number(o.qty) || 0, type: 'consume', status: 'approved', work_date: workDate,
-      note: `กระทบยอดย้อนหลัง: ส่งลูกค้า ${o.customer || ''} · ${o.due_date || ''} ${o.ship_time || ''}`
+      note: `${tr("กระทบยอดย้อนหลัง: ส่งลูกค้า")} ${o.customer || ''} · ${o.due_date || ''} ${o.ship_time || ''}`
             + `${o.order_no ? ` · PO ${o.order_no}` : ''}`,
       created_by: fullName || null,
       ref_shipment_id: o.id,
@@ -180,7 +181,7 @@ export default function StockCountSheet({ role, scope }) {
         'หักสต็อกย้อนหลัง');
     }
     setCutting(false);
-    if (ok) { toast.success(`✅ หักแล้ว ${rows.length} ใบ · ${n0(openQty)} ชิ้น`); load(); }
+    if (ok) { toast.success(`✅ ${tr("หักแล้ว")} ${rows.length} ${tr("ใบ")} · ${n0(openQty)} ${tr("ชิ้น")}`); load(); }
   };
 
   /* ── 📋 ตารางตรวจนับ ────────────────────────────────────────────────────── */
@@ -200,13 +201,13 @@ export default function StockCountSheet({ role, scope }) {
     /* 🔴 ผลตรวจนับเขียน `line_stock_transactions` ของไลน์/คลังที่เลือก (และ `approved` ทันทีถ้ามีสิทธิ์)
        ⇒ ด่านชั้น ③ ต้องอยู่ตรงนี้ ไม่ใช่แค่กรองรายการใน `<LineSelect>` */
     const w = canWriteLine(wctx, lineFilter, lines);
-    if (!w.ok) { toast.error(writeBlockText(w, { what: `ยอดคลังของ ${lineFilter || 'ไลน์นี้'}` })); return; }
+    if (!w.ok) { toast.error(writeBlockText(w, { what: `${tr("ยอดคลังของ")} ${lineFilter || tr('ไลน์นี้')}` })); return; }
     const txns = toAdjustTxns({ rows, lineName: lineFilter, workDate, by: fullName, note, counts });
     if (!txns.length) { toast.info('ยังไม่มีแถวที่ยอดต่างจากระบบ'); return; }
     const approved = approveNow && canApprove;
-    if (!window.confirm(
-      `บันทึกผลตรวจนับ ${txns.length} รายการที่ ${lineFilter}?`
-      + `\n📈 เพิ่ม ${summary.up} พาร์ท (${n0(summary.upQty)} ชิ้น) · ลด ${summary.down} พาร์ท (${n0(summary.downQty)} ชิ้น)`
+    if (!await askConfirm(
+      `${tr("บันทึกผลตรวจนับ")} ${txns.length} ${tr("รายการที่")} ${lineFilter}?`
+      + `\n📈 ${tr("เพิ่ม")} ${summary.up} ${tr("พาร์ท")} (${n0(summary.upQty)} ${tr("ชิ้น) · ลด")} ${summary.down} ${tr("พาร์ท")} (${n0(summary.downQty)} ${tr("ชิ้น")})`
       + (approved ? '\n\n✅ มีผลกับยอดคงเหลือทันที (คุณมีสิทธิ์อนุมัติ)' : '\n\n⏳ เข้าคิวรออนุมัติจากสโตร์ก่อนมีผล'))) return;
     setSaving(true);
     let ok = true;
@@ -218,8 +219,8 @@ export default function StockCountSheet({ role, scope }) {
     setSaving(false);
     if (!ok) return;
     toast[approved ? 'success' : 'info'](approved
-      ? `✅ เฟิร์มยอดแล้ว ${txns.length} รายการ`
-      : `⏳ ส่งผลตรวจนับ ${txns.length} รายการ — รอสโตร์อนุมัติที่แท็บ 📦 Stock`);
+      ? `✅ ${tr("เฟิร์มยอดแล้ว")} ${txns.length} ${tr("รายการ")}`
+      : `⏳ ${tr("ส่งผลตรวจนับ")} ${txns.length} ${tr("รายการ — รอสโตร์อนุมัติที่แท็บ")} 📦 Stock`);
     setCounts({}); setNote('');
     if (scDraftKey) clearDraft(scDraftKey);
     load();
@@ -238,27 +239,27 @@ export default function StockCountSheet({ role, scope }) {
           · เว้นว่าง = ยังไม่นับ ไม่แตะยอดเดิม · กรอก 0 = นับแล้วไม่มีของ
         </div>
 
-        <DraftRestoreBar draft={pendingDraft} what={`ใบนับ ${lineFilter}`}
+        <DraftRestoreBar draft={pendingDraft} what={`${tr("ใบนับ")} ${lineFilter}`}
           onRestore={() => { setCounts(pendingDraft.data?.counts || {}); setNote(pendingDraft.data?.note || ''); setPendingDraft(null); }}
           onDiscard={() => { if (scDraftKey) clearDraft(scDraftKey); setPendingDraft(null); }} />
         <div style={{ display:'flex', flexWrap:'wrap', gap:10, alignItems:'center', marginBottom:12 }}>
           <LineSelect
             lines={lines} value={lineFilter} onChange={changeLine} {...scope}
             placeholder={tr('— เลือกไลน์/คลังที่จะนับ —')}
-            style={{ width: isMobile ? '100%' : 260, padding:'6px 8px', borderRadius:6, border:'1px solid var(--border)', background:'var(--bg2)', color:'var(--text)', fontSize: isMobile ? 16 : 13 }}
+            style={{ width: isMobile ? '100%' : 260, padding:'6px 8px', borderRadius:6, border:'1px solid var(--border)', background: 'var(--bg2-surf)', color:'var(--text)', fontSize: isMobile ? 16 : 13 }}
             extraGroups={[{ label: 'คลัง', options: warehouseNames.map(n => ({ value: n })) }]}
           />
           <label style={{ fontSize:12, color:'var(--muted)' }}>
             {tr('วันที่นับ')}{' '}
             <input type="date" value={workDate} onChange={e => setWorkDate(e.target.value)}
-              style={{ width:150, padding:'6px 8px', borderRadius: 'var(--ctl-r)', border:'1px solid var(--border)', background:'var(--bg2)', color:'var(--text)', fontSize:13 }} />
+              style={{ width:150, padding:'6px 8px', borderRadius: 'var(--ctl-r)', border:'1px solid var(--border)', background: 'var(--bg2-surf)', color:'var(--text)', fontSize:13 }} />
           </label>
           <label style={{ fontSize:12, display:'flex', alignItems:'center', gap:6, cursor:'pointer' }}>
             <input type="checkbox" checked={hideZero} onChange={e => setHideZero(e.target.checked)} style={{ width:'auto' }} />
             {tr('ซ่อนพาร์ทที่ยอดเป็น 0')}
           </label>
           <input value={note} onChange={e => setNote(e.target.value)} placeholder={tr('หมายเหตุรอบนับ (ไม่บังคับ)')}
-            style={{ width: isMobile ? '100%' : 220, padding:'6px 8px', borderRadius: 'var(--ctl-r)', border:'1px solid var(--border)', background:'var(--bg2)', color:'var(--text)', fontSize:13 }} />
+            style={{ width: isMobile ? '100%' : 220, padding:'6px 8px', borderRadius: 'var(--ctl-r)', border:'1px solid var(--border)', background: 'var(--bg2-surf)', color:'var(--text)', fontSize:13 }} />
         </div>
 
         {!lineFilter ? (
@@ -280,7 +281,7 @@ export default function StockCountSheet({ role, scope }) {
                       <MatLabel mat={r.mat_no} name={r.part_name} />
                       <div className="sc-row">
                         <div className="sc-sys"><span>{tr('ในระบบ')}</span><b>{n0(r.qty_on_hand)}</b></div>
-                        <input type="number" inputMode="numeric" min="0" placeholder={tr('นับได้')} aria-label={`นับได้จริง ${r.mat_no}`}
+                        <input type="number" inputMode="numeric" min="0" placeholder={tr('นับได้')} aria-label={`${tr("นับได้จริง")} ${r.mat_no}`}
                           value={counts[r.mat_no] ?? ''}
                           onChange={e => setCounts(c => ({ ...c, [r.mat_no]: e.target.value }))} />
                         <div className="sc-diff" style={{ color: !d ? (typed ? 'var(--accent)' : 'var(--muted)') : d.dir === 'up' ? '#22c55e' : '#ef4444' }}>
@@ -331,7 +332,7 @@ export default function StockCountSheet({ role, scope }) {
                    (ของที่ล้างยอดได้ในคลิกเดียวโดยไม่มีใครยืนยัน = ยอดหายเงียบ) */}
             {canCount && (
               <div style={{ display:'flex', flexWrap:'wrap', gap:8, alignItems:'center', marginTop:12,
-                background:'var(--bg2)', border:'1px solid var(--border)', borderRadius: 'var(--r-md)', padding:'8px 10px' }}>
+                background: 'var(--bg2-surf)', border:'1px solid var(--border)', borderRadius: 'var(--r-md)', padding:'8px 10px' }}>
                 <span style={{ fontSize:12, fontWeight:700, color:'var(--text2)' }}>{tr('ตัวช่วยกรอก')}</span>
                 <button style={{ ...btn('var(--bg3)', 'var(--text)'), border:'1px solid var(--border2)', fontSize:12, padding:'6px 12px' }}
                   onClick={() => setCounts(c => {
@@ -355,8 +356,7 @@ export default function StockCountSheet({ role, scope }) {
             <div className={isMobile ? 'm-savebar sc-savebar' : undefined}
               style={isMobile ? undefined : { display:'flex', flexWrap:'wrap', gap:12, alignItems:'center', marginTop:12 }}>
               <div style={{ fontSize:12, color:'var(--muted)' }}>
-                นับแล้ว <b style={{ color:'var(--text)' }}>{summary.counted}</b>/{rows.length} พาร์ท ·
-                ตรง {summary.same} {tr('· เพิ่ม')} {summary.up} ({n0(summary.upQty)}) · ลด {summary.down} ({n0(summary.downQty)})
+                {tr("นับแล้ว")} <b style={{ color:'var(--text)' }}>{summary.counted}</b>/{rows.length} {tr("พาร์ท · ตรง")} {summary.same} {tr('· เพิ่ม')} {summary.up} ({n0(summary.upQty)}) · {tr("ลด")} {summary.down} ({n0(summary.downQty)})
               </div>
               {canApprove && (
                 <label style={{ fontSize:12, display:'flex', alignItems:'center', gap:6, cursor:'pointer' }}>
@@ -367,7 +367,7 @@ export default function StockCountSheet({ role, scope }) {
               {canCount ? (
                 <button style={{ ...btn('var(--accent)'), opacity: saving || !summary.changed ? 0.5 : 1 }}
                   disabled={saving || !summary.changed} onClick={save}>
-                  {saving ? 'กำลังบันทึก…' : `💾 บันทึกผลตรวจนับ (${summary.changed})`}
+                  {saving ? 'กำลังบันทึก…' : `💾 ${tr("บันทึกผลตรวจนับ")} (${summary.changed})`}
                 </button>
               ) : (
                 <span style={{ fontSize:12, color:'var(--muted)' }}>{tr('ดูอย่างเดียว — ต้องมีสิทธิ์ line_stock:issue จึงบันทึกได้')}</span>
@@ -385,29 +385,28 @@ export default function StockCountSheet({ role, scope }) {
           <div style={{ fontSize:15, fontWeight:800 }}>{tr('ส่งลูกค้าแล้ว แต่ยังไม่ถูกหักออกจากคลัง')}</div>
           {!!shipGap.open.length && (
             <span style={{ fontSize:12, fontWeight:800, background:'#ef444422', color:'#ef4444', padding:'3px 10px', borderRadius: 'var(--r-pill)' }}>
-              {shipGap.open.length} {tr('ใบ ·')} {n0(openQty)} ชิ้น
+              {shipGap.open.length} {tr('ใบ ·')} {n0(openQty)} {tr("ชิ้น")}
             </span>
           )}
           <div style={{ marginLeft:'auto', display:'flex', flexWrap:'wrap', gap:8 }}>
             {canCount && !!shipGap.open.length && (
               <button style={{ ...btn('#ef4444'), opacity: cutting ? 0.6 : 1 }} disabled={cutting} onClick={postMissingCuts}>
-                {cutting ? 'กำลังหัก…' : `🚚 หักย้อนหลัง ${shipGap.open.length} ใบ (${n0(openQty)} ชิ้น)`}
+                {cutting ? 'กำลังหัก…' : `🚚 ${tr("หักย้อนหลัง")} ${shipGap.open.length} ${tr("ใบ")} (${n0(openQty)} ${tr("ชิ้น")})`}
               </button>
             )}
             {!!(shipGap.open.length || shipGap.unresolved.length) && (
               <button style={btn('var(--bg3)', 'var(--text)')} onClick={() => setShowGap(v => !v)}>
-                {showGap ? '▲ ซ่อนรายการ' : `▼ ดูรายการ (${shipGap.open.length + shipGap.unresolved.length})`}
+                {showGap ? '▲ ซ่อนรายการ' : `▼ ${tr("ดูรายการ")} (${shipGap.open.length + shipGap.unresolved.length})`}
               </button>
             )}
           </div>
         </div>
         <div style={{ fontSize:12, color:'var(--muted)', lineHeight:1.65, marginBottom:10 }}>
-          หน้า 🚚 Delivery หักสต็อกให้อัตโนมัติตอนกด “ส่งแล้ว” — ใบที่หักไม่ได้ (จับคู่เลข SAP ไม่ได้
-          หรือของไม่เคยถูกบันทึกเข้าคลัง) จะเตือนบนจอครั้งเดียวแล้วหายไป ยอดคงเหลือจึงค้างสูงกว่าจริง
+          {tr("หน้า 🚚 Delivery หักสต็อกให้อัตโนมัติตอนกด “ส่งแล้ว” — ใบที่หักไม่ได้ (จับคู่เลข SAP ไม่ได้ หรือของไม่เคยถูกบันทึกเข้าคลัง) จะเตือนบนจอครั้งเดียวแล้วหายไป ยอดคงเหลือจึงค้างสูงกว่าจริง")}
           <br />
-          🔴 ใบที่ส่ง <b>{tr('ก่อน')}</b> รอบตรวจนับล่าสุดของพาร์ทนั้นถูกกันออกแล้ว
-          {shipGap.closedByCount.length > 0 && <> ({shipGap.closedByCount.length} ใบ)</>} —
-          ยอดที่นับได้สะท้อนของที่ออกไปแล้ว หักซ้ำจะทำให้ยอดหายสองเท่า
+          🔴 {tr("ใบที่ส่ง")} <b>{tr('ก่อน')}</b> {tr("รอบตรวจนับล่าสุดของพาร์ทนั้นถูกกันออกแล้ว")}
+          {shipGap.closedByCount.length > 0 && <> ({shipGap.closedByCount.length} {tr("ใบ")})</>} —
+          {tr("ยอดที่นับได้สะท้อนของที่ออกไปแล้ว หักซ้ำจะทำให้ยอดหายสองเท่า")}
         </div>
 
         {!fgDest ? (
@@ -451,7 +450,7 @@ export default function StockCountSheet({ role, scope }) {
                 </table>
                 {shipGap.open.length > 200 && (
                   <div style={{ fontSize:12, color:'var(--muted)', padding:'6px 10px' }}>
-                    …แสดง 200 จาก {shipGap.open.length} ใบ (ปุ่มหักทำครบทุกใบ)
+                    …{tr("แสดง 200 จาก")} {shipGap.open.length} {tr("ใบ (ปุ่มหักทำครบทุกใบ")})
                   </div>
                 )}
               </div>
@@ -459,8 +458,7 @@ export default function StockCountSheet({ role, scope }) {
 
             {showGap && !!shipGap.unresolved.length && (
               <div style={{ fontSize:12, color:'#f59e0b', marginBottom:10, lineHeight:1.6 }}>
-                ⚠️ อีก {shipGap.unresolved.length} {tr('ใบ (')}{n0(shipGap.unresolved.reduce((s, o) => s + (Number(o.qty) || 0), 0))} ชิ้น)
-                จับคู่เลข SAP ไม่ได้ — ระบบไม่เดาให้ ต้องแก้ p_no ที่ Product Master ก่อน เช่น{' '}
+                ⚠️ {tr("อีก")} {shipGap.unresolved.length} {tr('ใบ (')}{n0(shipGap.unresolved.reduce((s, o) => s + (Number(o.qty) || 0), 0))} {tr("ชิ้น) จับคู่เลข SAP ไม่ได้ — ระบบไม่เดาให้ ต้องแก้ p_no ที่ Product Master ก่อน เช่น")}{' '}
                 {shipGap.unresolved.slice(0, 3).map(o => o.mat_no).join(', ')}
                 <div style={{ marginTop:2 }}>
                   {matIssueText(shipGap.unresolved[0].mat_no, pickStockMat(shipGap.unresolved[0].mat_no, pnIndex, hasStockOf)) || ''}

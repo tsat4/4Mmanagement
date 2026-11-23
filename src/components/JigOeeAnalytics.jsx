@@ -102,21 +102,21 @@ function ShiftView({ sp, setParam }) {
         <input type="date" value={wd} onChange={e => setParam('wd', e.target.value)} aria-label="วันทำงาน" />
         <Segmented value={sh} onChange={v => setParam('sh', v)} options={SHIFT_OPTS} label="กะ" />
         <button type="button" className="pg-btn" onClick={load}>🔄 {trI18n('โหลดใหม่')}</button>
-        <span style={{ fontSize: 12, color: 'var(--muted)' }}>อัปเดตทุก 1 นาที{data?.at ? ` · ล่าสุด ${new Date(data.at).toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok' })}` : ''}</span>
+        <span style={{ fontSize: 12, color: 'var(--muted)' }}>{trI18n("อัปเดตทุก 1 นาที")}{data?.at ? ` · ${trI18n("ล่าสุด")} ${new Date(data.at).toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok' })}` : ''}</span>
       </FilterBar>
-      {data?.errors?.length > 0 && <NoticeBar tone="bad">อ่านไม่สำเร็จ: {data.errors.join(' · ')} — ตัวเลขด้านล่างอาจไม่ครบ</NoticeBar>}
+      {data?.errors?.length > 0 && <NoticeBar tone="bad">{trI18n("อ่านไม่สำเร็จ")}: {data.errors.join(' · ')} — {trI18n("ตัวเลขด้านล่างอาจไม่ครบ")}</NoticeBar>}
       {data == null ? <div style={{ color: 'var(--muted)' }}>กำลังโหลด…</div>
         : !data.jigs.length ? (
           <NoticeBar tone="warn">ยังไม่มีจิ๊ก/เครื่องที่ผูกกับ Node-RED — ไปผูกที่ <Link to="/integrations">ตั้งค่า › การเชื่อมต่อ Node-RED / เครื่องจักร</Link></NoticeBar>
         ) : (<>
           {all && (
             <JigKpiRow items={[
-              { label: `OEE รวม ${data.jigs.length} จิ๊ก`, value: fmtPct(all.oee), color: tone(all.oee), sub: 'ถ่วงตามเวลา (ไม่เฉลี่ย %)' },
+              { label: `OEE ${trI18n("รวม")} ${data.jigs.length} ${trI18n("จิ๊ก")}`, value: fmtPct(all.oee), color: tone(all.oee), sub: 'ถ่วงตามเวลา (ไม่เฉลี่ย %)' },
               { label: 'Availability', value: fmtPct(all.A), color: tone(all.A) },
               { label: 'Performance', value: fmtPct(all.P), color: tone(all.P), sub: all.partialP ? 'บางจิ๊กไม่รู้ CT — ไม่นับในตัวนี้' : null },
               { label: 'Quality', value: fmtPct(all.Q), color: tone(all.Q, 0.99), sub: all.partialQ ? 'บางจิ๊กไม่มีใบ — ยังไม่รู้ NG ที่คนตัดสิน' : null },
-              { label: 'ชิ้นจากเครื่อง', value: all.pieces.toLocaleString(), sub: `NG หน้าเครื่อง ${all.ngMachine}` },
-              { label: 'MTTR / MTBF', value: all.mttrMin == null ? '–' : `${all.mttrMin.toFixed(1)} น.`, sub: all.mtbfMin == null ? 'ไม่มี Alarm' : `MTBF ${all.mtbfMin.toFixed(1)} น. · Alarm ${all.faultN} ครั้ง` },
+              { label: 'ชิ้นจากเครื่อง', value: all.pieces.toLocaleString(), sub: `NG ${trI18n("หน้าเครื่อง")} ${all.ngMachine}` },
+              { label: 'MTTR / MTBF', value: all.mttrMin == null ? '–' : `${all.mttrMin.toFixed(1)} น.`, sub: all.mtbfMin == null ? 'ไม่มี Alarm' : `MTBF ${all.mtbfMin.toFixed(1)} ${trI18n("น.")} · Alarm ${all.faultN} ${trI18n("ครั้ง")}` },
             ]} />
           )}
           <KindLegend />
@@ -206,7 +206,7 @@ function ReportView({ setSp }) {
       [r.open ? 'กะยังไม่จบ' : '', ...(r.oee.why || [])].filter(Boolean).join(' / '),
     ]);
     downloadCsvDoc('csv_jig_oee_shift', `jig-oee_${from}_${to}.csv`, csvText(headers, body));
-    toast.success(`ส่งออก ${body.length} แถว`);
+    toast.success(`${trI18n("ส่งออก")} ${body.length} ${trI18n("แถว")}`);
   };
 
   const th = { textAlign: 'left', padding: '6px 8px', fontSize: 12, color: 'var(--muted)', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' };
@@ -223,17 +223,17 @@ function ReportView({ setSp }) {
         </div>
         <button type="button" className="pg-btn" onClick={exportCsv} disabled={!rows.length}>⬇ Export CSV</button>
       </TimeRangeBar>
-      {data?.errors?.length > 0 && <NoticeBar tone="bad">อ่านไม่สำเร็จ: {data.errors.join(' · ')} — ตัวเลขอาจไม่ครบ</NoticeBar>}
+      {data?.errors?.length > 0 && <NoticeBar tone="bad">{trI18n("อ่านไม่สำเร็จ")}: {data.errors.join(' · ')} — {trI18n("ตัวเลขอาจไม่ครบ")}</NoticeBar>}
       {data == null ? <div style={{ color: 'var(--muted)' }}>กำลังโหลด…</div> : !data.jigs.length ? (
         <NoticeBar tone="warn">ยังไม่มีจิ๊ก/เครื่องที่ผูกกับ Node-RED — ไปผูกที่ <Link to="/integrations">การเชื่อมต่อ Node-RED / เครื่องจักร</Link></NoticeBar>
       ) : !rows.length ? <NoticeBar tone="warn">ไม่มีข้อมูลจากเครื่องในช่วงนี้</NoticeBar> : (<>
         <JigKpiRow items={[
-          { label: 'OEE ช่วงที่เลือก', value: fmtPct(all.oee), color: tone(all.oee), sub: `${rows.length} กะ-จิ๊ก · ถ่วงตามเวลา` },
+          { label: 'OEE ช่วงที่เลือก', value: fmtPct(all.oee), color: tone(all.oee), sub: `${rows.length} ${trI18n("กะ-จิ๊ก · ถ่วงตามเวลา")}` },
           { label: 'Availability', value: fmtPct(all.A), color: tone(all.A) },
           { label: 'Performance', value: fmtPct(all.P), color: tone(all.P), sub: all.partialP ? 'บางกะไม่รู้ CT — ไม่นับ' : null },
           { label: 'Quality', value: fmtPct(all.Q), color: tone(all.Q, 0.99), sub: all.partialQ ? 'บางกะไม่มีใบ — ไม่รู้ NG ที่คนตัดสิน' : null },
-          { label: 'ชิ้นจากเครื่อง', value: all.pieces.toLocaleString(), sub: `NG หน้าเครื่อง ${all.ngMachine}` },
-          { label: 'MTTR / MTBF', value: all.mttrMin == null ? '–' : `${all.mttrMin.toFixed(1)} น.`, sub: all.mtbfMin == null ? 'ไม่มี Alarm' : `MTBF ${all.mtbfMin.toFixed(1)} น. · Alarm ${all.faultN} ครั้ง` },
+          { label: 'ชิ้นจากเครื่อง', value: all.pieces.toLocaleString(), sub: `NG ${trI18n("หน้าเครื่อง")} ${all.ngMachine}` },
+          { label: 'MTTR / MTBF', value: all.mttrMin == null ? '–' : `${all.mttrMin.toFixed(1)} น.`, sub: all.mtbfMin == null ? 'ไม่มี Alarm' : `MTBF ${all.mtbfMin.toFixed(1)} ${trI18n("น.")} · Alarm ${all.faultN} ${trI18n("ครั้ง")}` },
         ]} />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: 12, alignItems: 'start' }}>
           <div style={card}>
@@ -254,7 +254,7 @@ function ReportView({ setSp }) {
         <div style={card}>
           <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>ยอดผลิตรายวัน & ชิ้นที่ควรทำได้</div>
           <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>
-            {pick ? 'จิ๊กที่เลือก' : 'ทุกจิ๊กรวมกัน'} · เทา = ยังขาดจากที่ควรทำได้ (เวลาแผน ÷ CT พาร์ทในใบ · ไม่มีเทา = มีกะที่ไม่รู้ CT) · ชี้เพื่อดูเวลารายสถานะ · คลิกวันเพื่อดูทั้งวันรายชั่วโมง
+            {pick ? 'จิ๊กที่เลือก' : 'ทุกจิ๊กรวมกัน'} · {trI18n("เทา = ยังขาดจากที่ควรทำได้ (เวลาแผน ÷ CT พาร์ทในใบ · ไม่มีเทา = มีกะที่ไม่รู้ CT) · ชี้เพื่อดูเวลารายสถานะ · คลิกวันเพื่อดูทั้งวันรายชั่วโมง")}
           </div>
           <DailyCapacityChart rows={daily} onPick={openDay} />
         </div>
@@ -274,7 +274,7 @@ function ReportView({ setSp }) {
                   <td style={td}>{c.pieces.toLocaleString()}</td><td style={td}>{c.ngMachine}</td>
                   <td style={{ ...td, color: tone(c.A) }}>{fmtPct(c.A)}</td><td style={{ ...td, color: tone(c.P) }}>{fmtPct(c.P)}</td>
                   <td style={{ ...td, color: tone(c.Q, 0.99) }}>{fmtPct(c.Q)}</td><td style={{ ...td, color: tone(c.oee), fontWeight: 800 }}>{fmtPct(c.oee)}</td>
-                  <td style={td}>{c.mttrMin == null ? '–' : `${c.mttrMin.toFixed(1)} น.`}</td><td style={td}>{c.mtbfMin == null ? '–' : `${c.mtbfMin.toFixed(1)} น.`}</td>
+                  <td style={td}>{c.mttrMin == null ? '–' : `${c.mttrMin.toFixed(1)} ${trI18n("น.")}`}</td><td style={td}>{c.mtbfMin == null ? '–' : `${c.mtbfMin.toFixed(1)} ${trI18n("น.")}`}</td>
                 </tr>
               ))}</tbody>
             </table>
@@ -282,7 +282,7 @@ function ReportView({ setSp }) {
         </div>
         <div style={card}>
           <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>รายกะ</div>
-          <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>{rows.length} แถว · ตารางเดียวกับที่ Export CSV · "–" = คิดไม่ได้ (ดูหมายเหตุ)</div>
+          <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>{rows.length} {trI18n("แถว · ตารางเดียวกับที่ Export CSV · \"–\" = คิดไม่ได้ (ดูหมายเหตุ")})</div>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead><tr>{['วันที่', 'กะ', 'เครื่อง', 'MAT', 'แผน (นาที)', 'ชิ้น', 'NG คน/เครื่อง', 'A', 'P', 'Q', 'OEE', 'หมายเหตุ'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>

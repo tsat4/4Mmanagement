@@ -7,6 +7,7 @@ import { notifyEvent } from '../utils/notifyEvent';
 import LineSelect from './LineSelect';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 /* ══ 🛡️ บันทึกเหตุการณ์ความปลอดภัย (OBEYA แกน S) · 2026-08-27 ═══════════════════
    ระบบเดิม "ไม่มีที่เก็บอุบัติเหตุเลย" — ตรวจ 2026-08-27: ไม่มีตาราง accident/incident/injury
    ตัวนี้คือทางเข้าเดียวของตาราง safety_events
@@ -49,8 +50,8 @@ export default function SafetyEventModal({ init, section, date, lineRows = [], s
     return base.some(k => k.key === f.kind) ? base : [...base, safetyKind(f.kind)];
   }, [f.kind]);
 
-  const close = () => {
-    if (dirty && !window.confirm('ยังไม่ได้บันทึก — ปิดแล้วข้อมูลที่กรอกจะหาย ยืนยันปิด?')) return;
+  const close = async () => {
+    if (dirty && !await askConfirm('ยังไม่ได้บันทึก — ปิดแล้วข้อมูลที่กรอกจะหาย ยืนยันปิด?')) return;
     onClose?.();
   };
 
@@ -94,11 +95,11 @@ export default function SafetyEventModal({ init, section, date, lineRows = [], s
           type: kindMeta.severity >= 2 ? 'error' : 'info',
           ref_table: 'safety_events', ref_id: data?.id,
           lines: [
-            `📅 ${payload.event_date}${payload.shift ? ` · ${payload.shift === 'night' ? 'กะดึก' : 'กะเช้า'}` : ''}`,
-            `🏭 ${payload.section || 'ไม่ระบุส่วนงาน'}${payload.line_name ? ` · ${payload.line_name}` : ''}`,
+            `📅 ${payload.event_date}${payload.shift ? ` · ${payload.shift === 'night' ? tr('กะดึก') : tr('กะเช้า')}` : ''}`,
+            `🏭 ${payload.section || tr('ไม่ระบุส่วนงาน')}${payload.line_name ? ` · ${payload.line_name}` : ''}`,
             `📝 ${payload.description}`,
             payload.employee_name ? `👤 ${payload.employee_name}${payload.body_part ? ` · ${payload.body_part}` : ''}` : '',
-            payload.lost_days > 0 ? `🚑 หยุดงาน ${payload.lost_days} วัน` : '',
+            payload.lost_days > 0 ? `🚑 ${tr("หยุดงาน")} ${payload.lost_days} ${tr("วัน")}` : '',
             kindMeta.resetsStreak ? '🔴 ตัวนับ "วันปลอดอุบัติเหตุ" ของส่วนงานนี้ถูกรีเซ็ต' : '',
           ],
         });
@@ -109,17 +110,17 @@ export default function SafetyEventModal({ init, section, date, lineRows = [], s
       toast.error(
         e?.code === '42P01' ? 'ยังไม่ได้ apply migration safety_events (Main) — แจ้ง admin'
           : e?.code === '42501' ? 'ไม่มีสิทธิ์บันทึก (ต้องมี safety:record)'
-            : 'บันทึกไม่สำเร็จ: ' + (e?.message || e));
+            : (tr('บันทึกไม่สำเร็จ') + ': ') + (e?.message || e));
     } finally { setBusy(false); }
   };
 
   const remove = async () => {
-    if (!window.confirm('ซ่อนเหตุการณ์นี้ออกจากบอร์ด?\nระบบไม่ลบทิ้ง (เก็บไว้ในประวัติ) แต่จะไม่ถูกนับใน KPI อีก')) return;
+    if (!await askConfirm('ซ่อนเหตุการณ์นี้ออกจากบอร์ด?\nระบบไม่ลบทิ้ง (เก็บไว้ในประวัติ) แต่จะไม่ถูกนับใน KPI อีก')) return;
     setBusy(true);
     const { data, error } = await supabase.from('safety_events')
       .update({ is_active: false }).eq('id', init.id).select('id');
     setBusy(false);
-    if (error || !data?.length) { toast.error('ทำไม่สำเร็จ' + (error ? ': ' + error.message : ' (ไม่มีสิทธิ์)')); return; }
+    if (error || !data?.length) { toast.error(tr('ทำไม่สำเร็จ') + (error ? ': ' + error.message : ' (ไม่มีสิทธิ์)')); return; }
     toast.success('ซ่อนออกจากบอร์ดแล้ว');
     onSaved?.();
   };
@@ -130,7 +131,7 @@ export default function SafetyEventModal({ init, section, date, lineRows = [], s
   return (
     /* ⚠️ ไม่มี onClick ที่ backdrop โดยตั้งใจ — ฟอร์มกรอกข้อมูลห้ามปิดจากการเผลอแตะ */
     <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14 }}>
-      <div style={{ background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(720px, 96vw)', maxHeight: '92vh', overflowY: 'auto' }}>
+      <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(720px, 96vw)', maxHeight: '92vh', overflowY: 'auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12, gap: 8 }}>
           <b style={{ fontSize: 15, color: 'var(--text)' }}>
             {editing ? '✏️ แก้ไขเหตุการณ์ความปลอดภัย' : '🛡️ บันทึกเหตุการณ์ความปลอดภัย'}

@@ -57,7 +57,7 @@ export default function BomSheetGroups({ groups = [], counts = {}, search = '', 
     <div style={{ marginTop: 20 }}>
       {/* ── ที่มา: ทำไมต้องมีตารางนี้เพิ่มจากตารางคู่ ── */}
       <div style={{ marginBottom: 10, padding: '10px 14px', borderRadius: 'var(--r-md)', fontSize: 12, lineHeight: 1.65,
-        color: 'var(--text2)', border: '1px solid var(--border)', background: 'var(--bg2)' }}>
+        color: 'var(--text2)', border: '1px solid var(--border)', background: 'var(--bg2-surf)' }}>
         <div style={{ fontWeight: 800, color: 'var(--text)', marginBottom: 2 }}>
           พาร์ทที่ถูกนิยามลูกไว้หลายใบ — เทียบ “ทุกใบ” พร้อมกัน
         </div>
@@ -72,12 +72,12 @@ export default function BomSheetGroups({ groups = [], counts = {}, search = '', 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10,
         alignContent: 'start', marginBottom: 10 }}>
         {[
-          { k: 'ต้องดู', v: counts.open ?? 0, c: counts.open ? WARN : OK, sub: `จาก ${counts.total ?? 0} พาร์ทที่นิยามหลายใบ` },
+          { k: 'ต้องดู', v: counts.open ?? 0, c: counts.open ? WARN : OK, sub: `${tr("จาก")} ${counts.total ?? 0} ${tr("พาร์ทที่นิยามหลายใบ")}` },
           { k: '🔴 ไม่มีใบของตัวเอง', v: counts.noOwn ?? 0, c: counts.noOwn ? BAD : OK, sub: 'ตารางคู่มองไม่เห็นเลย' },
           { k: '⚠️ นิยามไว้ ≥3 ใบ', v: counts.threePlus ?? 0, c: counts.threePlus ? BAD : OK, sub: 'เทียบ 2 ใบแล้วตัดสินไม่ได้' },
           { k: 'ทุกใบตรงกัน', v: counts.agree ?? 0, c: OK, sub: 'ยังเสี่ยงแก้ใบเดียวแล้วใบอื่นค้าง' },
         ].map(s => (
-          <div key={s.k} style={{ padding: '9px 12px', borderRadius: 'var(--r-md)', background: 'var(--card)',
+          <div key={s.k} style={{ padding: '9px 12px', borderRadius: 'var(--r-md)', background: 'var(--card-surf)',
             border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
             <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700 }}>{s.k}</div>
             <div style={{ fontSize: 22, fontWeight: 900, color: s.c, lineHeight: 1.2 }}>{s.v}</div>
@@ -88,8 +88,8 @@ export default function BomSheetGroups({ groups = [], counts = {}, search = '', 
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
         <Segmented label={tr('แสดง')} value={gFilter} onChange={setGFilter} options={[
-          { value: 'open', label: `ต้องดู (${counts.open ?? 0})` },
-          { value: 'all', label: `ทั้งหมด (${counts.total ?? 0})` },
+          { value: 'open', label: `${tr("ต้องดู")} (${counts.open ?? 0})` },
+          { value: 'all', label: `${tr("ทั้งหมด")} (${counts.total ?? 0})` },
         ]} />
         <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700 }}>{shown.length} {tr('พาร์ท')}</span>
       </div>
@@ -129,13 +129,13 @@ export default function BomSheetGroups({ groups = [], counts = {}, search = '', 
                       )}
                       {g.nSheets >= 3 && (
                         <div style={{ fontSize: 11, color: WARN, fontWeight: 800, marginTop: 2 }}>
-                          นิยามไว้ {g.nSheets} ใบ
+                          {tr("นิยามไว้")} {g.nSheets} {tr("ใบ")}
                         </div>
                       )}
                     </td>
                     <td style={td}>
                       <button type="button" onClick={() => onOpenSheet?.(g.mat)} disabled={!onOpenSheet}
-                        title={`เปิดดู ${g.mat}`} style={btn}>{g.mat} ↗</button>
+                        title={`${tr("เปิดดู")} ${g.mat}`} style={btn}>{g.mat} ↗</button>
                       <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2, maxWidth: 190 }}>
                         <span style={{ color: matColor(g.mat), fontWeight: 700 }}>{matLabel(g.mat)}</span>
                         {g.matName ? ` · ${g.matName}` : ''}
@@ -146,7 +146,7 @@ export default function BomSheetGroups({ groups = [], counts = {}, search = '', 
                         {g.sheets.map(s => (
                           <button key={s.sheetId} type="button" disabled={!onOpenSheet}
                             onClick={() => onOpenSheet?.(s.sheetMat)}
-                            title={`${s.sheetName || s.sheetMat} · ${s.count} รายการ${s.isOwn ? ' (ใบของพาร์ทเอง)' : ''}`}
+                            title={`${s.sheetName || s.sheetMat} · ${s.count} ${tr("รายการ")}${s.isOwn ? tr(' (ใบของพาร์ทเอง)') : ''}`}
                             style={{ ...btn, fontSize: 11 }}>
                             {s.isOwn ? '★ ' : ''}{s.sheetMat || s.sheetId}
                           </button>
@@ -155,7 +155,7 @@ export default function BomSheetGroups({ groups = [], counts = {}, search = '', 
                       {/* ใบขั้นงานไม่ถูกเอามาเทียบ — แต่ต้องบอกว่ามี ห้ามซ่อน */}
                       {g.opSheets?.length > 0 && (
                         <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3, lineHeight: 1.5 }}>
-                          + ใบขั้นงาน {g.opSheets.map(s => s.sheetMat || s.sheetId).join(', ')} (ไม่เอามาเทียบ — คนละคำถาม)
+                          + {tr("ใบขั้นงาน")} {g.opSheets.map(s => s.sheetMat || s.sheetId).join(', ')} ({tr("ไม่เอามาเทียบ — คนละคำถาม")})
                         </div>
                       )}
                     </td>
@@ -193,9 +193,9 @@ export default function BomSheetGroups({ groups = [], counts = {}, search = '', 
           .sort((a, b) => a[1].rank - b[1].rank)
           .map(([k, m]) => (
             <div key={k} style={{ padding: '7px 10px', borderRadius: 'var(--r-md)', fontSize: 11, lineHeight: 1.55,
-              color: 'var(--text2)', border: '1px solid var(--border)', background: 'var(--card)' }}>
+              color: 'var(--text2)', border: '1px solid var(--border)', background: 'var(--card-surf)' }}>
               <span style={chip(statusColor(m.tone))}>{tr(m.label)}</span>
-              <span style={{ marginLeft: 6, color: 'var(--muted)' }}>({counts[k] ?? 0} พาร์ท)</span>
+              <span style={{ marginLeft: 6, color: 'var(--muted)' }}>({counts[k] ?? 0} {tr("พาร์ท")})</span>
               <div style={{ marginTop: 3 }}>{m.why}</div>
             </div>
           ))}

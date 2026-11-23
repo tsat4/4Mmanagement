@@ -267,7 +267,41 @@ export function moFlow(order = {}) {
   let waiting = null;
   if (vendor) waiting = 'ผู้รับจ้างภายนอก (supplier) — ส่งของกลับ แล้วช่างอัพเดทผลซ่อม';
   else if (next) { const m = next === 1 ? { whoShort: 'ผู้แจ้ง', title: 'แจ้งซ่อม' } : stepMeta(next, { mtnForm, toolTeam }); waiting = m ? `${m.whoShort} — ${m.title}` : null; }
-  return { steps, waiting, closed: closed || !!stop, known };
+  return { steps, waiting, closed: closed || !!stop, known, acks: moPendingAcks(order) };
+}
+
+/**
+ * ✍️ **ลายเซ็นที่อยู่ "นอกลำดับขั้น" และยังไม่ถูกเซ็น** — 2026-11-18 (หน้างานแจ้ง)
+ *
+ * 🔴 ที่มา: แถบขั้นบนใบบอกว่า *"รอ: ผจก.ฝ่ายที่แจ้ง อนุมัติปิดใบ"* เหมือนเหลือขั้นเดียว
+ *    แต่ของจริงยังค้างลายเซ็น **ไม่ล็อกงาน** อีก 2 ช่อง (ผจก.ส่วนซ่อมบำรุงรับทราบ ·
+ *    ผจก.ต้นสังกัดเซ็นรับทราบ) ที่ไม่โผล่ในแถบเลย ⇒ คนอ่านแถบคิดว่าใบใกล้จบแล้ว
+ *    คำ user: *"flow เหมือนขาดแค่ขั้นสุดท้าย แต่ขั้นไม่บล็อกงานไม่มีบอกเลย"*
+ *
+ * 🔴 **ช่องพวกนี้ไม่ใช่ "ขั้น" — ห้ามยัดเป็นขั้นในแถบ** (หลักเดียวกับด่านอนุมัติ 13/10:
+ *    ยัดเป็นขั้น = ทุกจอที่ไล่คิวด้วยเลขขั้นเพี้ยนตาม) ⇒ คืนเป็นลิสต์แยกให้จอเขียนใต้แถบ
+ * 🔴 **`undefined` = ไม่ได้ select คอลัมน์มา = ไม่รู้ ห้ามเดาว่าค้าง** (จะได้ไม่ขึ้นป้ายผิดบนจอ
+ *    ที่ดึงคอลัมน์ไม่ครบ) · ช่อง ผจก.ส่วนซ่อมบำรุงมีจริงเฉพาะใบที่ระบุชื่อไว้/เซ็นแล้ว
+ *    (เงื่อนไขเดียวกับแผงบนจอ) — ไม่มีชื่อ = ไม่มีช่องนั้น ไม่ใช่ "ค้าง"
+ * @returns {Array<{key,label,done}>} เฉพาะช่องที่ "มีจริงในใบนี้"
+ */
+export function moPendingAcks(order = {}) {
+  const out = [];
+  if (!isMtnFormRow(order)) return out;              // ช่องพวกนี้มีเฉพาะฟอร์ม FM-MTN-006
+  /* ① ผจก.ส่วนซ่อมบำรุง (ทีมที่รับใบ) รับทราบ */
+  if (order?.mo_ack_at !== undefined && (order?.mo_approved_by || order?.mo_ack_at)) {
+    out.push({ key: 'mtn_mgr', label: 'ผจก.ส่วนซ่อมบำรุง รับทราบ', done: !!order.mo_ack_at });
+  }
+  /* ② ผจก.ต้นสังกัด (+ ผจก.โรงงาน เมื่อเป็นงานสร้าง) — เฉพาะตอนที่ "ไม่ล็อกงาน"
+        ถ้ายัง `blocked` อยู่ = เป็นด่านจริง มีแผงของตัวเองบนจอแล้ว ไม่ต้องซ้ำที่นี่ */
+  if (order?.dept_manager_at !== undefined) {
+    const ap = mtnApprovalState(order);
+    if (ap.ackPending) {
+      if (ap.missing.includes('dept')) out.push({ key: 'dept', label: 'ผจก.ต้นสังกัด เซ็นรับทราบ', done: false });
+      if (ap.missing.includes('plant')) out.push({ key: 'plant', label: 'ผจก.โรงงาน เซ็นรับทราบ', done: false });
+    }
+  }
+  return out;
 }
 
 /** meta ของขั้น — `mtnForm` = ใบนี้ใช้ฟอร์ม FM-MTN-006 (ผู้เรียกคำนวณจากทีมช่างมาให้) */
@@ -912,6 +946,31 @@ export function moRemoveMode(order = {}) {
       หน้าจอเป็นคนตัดสินว่าจะยกด่านทีมให้เฉพาะเส้นทางนี้ (ใบของตัวเอง ≠ ลบใบทีมอื่น) */
 export const OWNER_CANCEL_STATUSES = Object.freeze(['pending', 'returned']);
 
+/* ── 👔 หัวหน้าของฝ่ายที่แจ้ง ยกเลิกใบของลูกน้องได้ ──────────────── 2026-11-23 · คำสั่ง user
+   *"เปิดให้หัวหน้ายกเลิกได้เลย"*
+
+   ที่มา: หน้างานเจอใบค้าง "รอรับงาน" ที่เปิดผิด/ไม่ต้องทำแล้ว นอนในคิวช่างเป็นสัปดาห์
+   (วัด 23/11: 6 ใบค้างตั้งแต่ 16-21/11) — เดิมยกเลิกได้แค่ **ผู้เปิดใบเอง** กับ **แอดมินช่าง**
+   ⇒ ผู้เปิดใบลาหยุด/ลืม = ไม่มีใครเคลียร์ได้ ทั้งที่หัวหน้าเขารู้ดีว่าไม่ต้องทำแล้ว
+
+   🔴 **ขอบเขตเท่าเดิมกับผู้เปิดใบเป๊ะ** — เฉพาะ `pending`/`returned` (ยังไม่มีช่างกดรับ)
+      เลยจากนี้ช่างลงมือแล้ว = เป็นเรื่องของทีมช่าง ไม่ใช่ของฝ่ายที่แจ้งฝ่ายเดียว
+   🔴 **ยกเลิกเท่านั้น ไม่ใช่ลบ** — ใบต้องเหลือร่องรอยเสมอ (เหตุผลเดียวกับ `canCancelOwnMo`)
+   🔴 **ต้องเป็นหัวหน้าของ "ฝ่ายที่แจ้ง" จริง** 3 ชั้น: ฝั่งผู้แจ้ง (`side`) · อยู่ในขอบเขตใบ
+      (`inReporterScope`) · ตำแหน่ง ≥ `HANDOVER_MIN_RANK` (เกณฑ์เดียวกับขั้น "รับมอบ" ซึ่งเป็น
+      ช่องของหัวหน้าแผนกผู้แจ้งอยู่แล้ว — ไม่ตั้งเกณฑ์ชุดใหม่)
+   🔴 **ไม่รู้ = ไม่ให้** (fail-closed) — ต่างจากด่านเซ็นที่ "ไม่รู้ = ไม่บล็อก"
+      เพราะอันนี้เป็นการ**ทำลายงานของคนอื่น** ไม่ใช่การเซ็นช่องของตัวเอง */
+export function canCancelReportedMo(order = {}, opts = {}) {
+  const { can = () => false, actorSide = 'unknown', posRank = null, inReporterScope = null } = opts;
+  if (!isMoOpen(order)) return false;
+  if (!OWNER_CANCEL_STATUSES.includes(String(order?.status || '').trim())) return false;
+  if (actorSide !== 'reporter' && actorSide !== 'both') return false;   // ไม่รู้ฝั่ง = ไม่ให้
+  if (inReporterScope !== true) return false;                           // ไม่รู้ขอบเขต = ไม่ให้
+  if (posRank == null || posRank < HANDOVER_MIN_RANK) return false;     // ไม่รู้ตำแหน่ง = ไม่ให้
+  return !!can('report');   // ต้องเป็นคนที่แจ้งซ่อมได้อยู่แล้ว (ฝ่ายที่แจ้ง)
+}
+
 /** ผู้ใช้คนนี้ "ถอนใบของตัวเอง" ได้ไหม — ไม่รู้ชื่อ = false (ไม่รู้ ≠ ใช่) */
 export function canCancelOwnMo(order = {}, { fullName = '' } = {}) {
   if (!isMoOpen(order)) return false;
@@ -1085,9 +1144,21 @@ export function canSkipQa(opts = {}) {
  * ข้อความบอกเหตุผลเมื่อทำไม่ได้ (UI-CONVENTIONS §6.9 — ซ่อนปุ่มได้ ห้ามซ่อนเหตุผล)
  * คืนเป็นโครงสร้าง ไม่ใช่ JSX — ให้หน้าจอวาดเอง
  */
-export function stepDenyHint(step, { teamName = '', reporterName = '', outOfScope = false, otherTeam = false, orderLine = '', orderSection = '', mtnForm = false, toolTeam = false, awaitApproval = null, wrongSide = false, rankTooLow = false, sharedAccount = false, assumed = [] } = {}) {
+export function stepDenyHint(step, { teamName = '', reporterName = '', outOfScope = false, otherTeam = false, orderLine = '', orderSection = '', mtnForm = false, toolTeam = false, awaitApproval = null, wrongSide = false, rankTooLow = false, sharedAccount = false, assumed = [], actorName = '' } = {}) {
   const meta = stepMeta(step, { mtnForm, toolTeam });
-  if (sharedAccount && meta) return [`ช่อง “${meta.title}” เป็นลายเซ็นของ${meta.whoShort || 'ผู้มีตำแหน่ง'} — บัญชีกลางเซ็นแทนไม่ได้ ให้เจ้าของตำแหน่ง login ด้วยบัญชีของตัวเอง`];
+  /* 🪪 **บอกชื่อบัญชีที่กำลังใช้อยู่** (23/11 · คำสั่ง user) — เคสจริงวันนั้น: ผจก.กดเซ็นไม่ได้
+     ไล่ตรวจสิทธิ์/ตำแหน่ง/ขอบเขตกันทั้งวัน สุดท้าย **เขาเข้าผิดบัญชี**
+     ข้อความเดิมบอกแค่ "เซ็นช่องนี้ไม่ได้" ⇒ ไม่มีอะไรชวนให้เอะใจว่าตัวเองอยู่ผิดบัญชี
+     🔴 ขึ้นเฉพาะด่านที่เป็นเรื่อง "ตัวตนของคนกด" (ฝั่ง · ตำแหน่ง · ขอบเขต · บัญชีกลาง)
+        ด่านที่เป็นเรื่องของ**ใบ** (รออนุมัติก่อนเริ่มงาน · ทีมอื่น) ไม่เกี่ยวกับว่าใครกด — ใส่ไปก็รก
+     🔴 ไม่รู้ชื่อ = ไม่ใส่บรรทัดนี้ (ห้ามขึ้น "บัญชี —") */
+  const whoAmI = String(actorName || '').trim()
+    ? `🪪 ตอนนี้คุณใช้บัญชี “${String(actorName).trim()}” — ถ้าไม่ใช่บัญชีของคุณ ให้ออกจากระบบแล้วเข้าใหม่ด้วยบัญชีตัวเอง`
+    : null;
+  if (sharedAccount && meta) {
+    return [`ช่อง “${meta.title}” เป็นลายเซ็นของ${meta.whoShort || 'ผู้มีตำแหน่ง'} — บัญชีกลางเซ็นแทนไม่ได้ ให้เจ้าของตำแหน่ง login ด้วยบัญชีของตัวเอง`,
+      ...(whoAmI ? [whoAmI] : [])];
+  }
   if (!meta) return null;
   const lines = [`ขั้นนี้เป็นหน้าที่ของ: ${meta.who}`];
   /* 🔒 ล็อกฝั่ง/ตำแหน่ง (2026-10-04) — ต้องบอกให้ตรงเหตุ ไม่งั้นคนจะไปขอ role เพิ่ม
@@ -1096,11 +1167,13 @@ export function stepDenyHint(step, { teamName = '', reporterName = '', outOfScop
     lines.push(meta.side === 'reporter'
       ? 'ช่องนี้เป็นของ **ฝ่ายที่แจ้ง** (เจ้าของค่าใช้จ่าย) — ฝั่งช่างเซ็นแทนไม่ได้ ตามใบ MO ฉบับกระดาษที่แยกช่องเซ็นไว้'
       : 'ช่องนี้เป็นของ **ฝั่งซ่อมบำรุง** — ฝ่ายที่แจ้งเซ็นแทนไม่ได้ ตามใบ MO ฉบับกระดาษที่แยกช่องเซ็นไว้');
+    if (whoAmI) lines.push(whoAmI);
     lines.push('ถ้าคุณอยู่ฝั่งนั้นจริง แปลว่าบัญชีนี้ยังตั้งข้อมูลไม่ตรง — ให้ admin แก้ “🔧 ทีมช่างซ่อม” หรือ “ส่วนงาน” ที่ /add-user');
     return lines;
   }
   if (rankTooLow) {
     lines.push(`ช่องนี้ต้องเป็นระดับ${meta.minRank >= 60 ? 'ผู้จัดการ' : 'หัวหน้าแผนก/ส่วน'}ขึ้นไป — ตำแหน่งของบัญชีนี้ต่ำกว่าที่ช่องนั้นกำหนด`);
+    if (whoAmI) lines.push(whoAmI);
     lines.push('ให้ผู้มีตำแหน่งตามช่องเป็นคนกด · ถ้าตำแหน่งในระบบไม่ตรงกับของจริง ให้ admin แก้ที่ /add-user');
     return lines;
   }
@@ -1120,6 +1193,7 @@ export function stepDenyHint(step, { teamName = '', reporterName = '', outOfScop
     // มีสิทธิ์ตามขั้น แต่ใบเป็นของฝ่ายอื่น — บอกให้ตรงเหตุ ไม่งั้นคนจะไปขอ role เพิ่มทั้งที่ไม่ใช่ปัญหา role
     const where = [orderLine, orderSection].filter(Boolean).join(' · ');
     lines.push(`ใบนี้เป็นของ${where ? ` ${where}` : 'ฝ่ายอื่น'} — คุณทำขั้นนี้ได้เฉพาะใบของส่วนงานตัวเอง`);
+    if (whoAmI) lines.push(whoAmI);
     if (reporterName) lines.push(`ให้ผู้เปิดใบ “${reporterName}” หรือหัวหน้าของฝ่ายนั้นเป็นคนกด · ถ้าต้องดูแลข้ามส่วนงานจริง ให้ admin เพิ่มส่วนงานให้บัญชีนี้ที่ /add-user`);
     else lines.push('ให้หัวหน้าของฝ่ายนั้นเป็นคนกด · ถ้าต้องดูแลข้ามส่วนงานจริง ให้ admin เพิ่มส่วนงานให้บัญชีนี้ที่ /add-user');
     return lines;

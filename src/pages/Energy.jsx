@@ -14,10 +14,12 @@
    ⚠️ ไฟฟ้าอย่างเดียว · ค่ากรอกมือต้องติดป้ายที่มาเสมอ
    ⚠️ สูตรทั้งหมดอยู่ src/utils/energy.js — ห้ามคำนวณเองในไฟล์นี้ */
 import { useState, useEffect, useMemo, useContext, useCallback } from 'react';
+import { MoreMark } from '../components/InfoMore';
 import {
   ResponsiveContainer, ComposedChart, BarChart, LineChart, Bar, Line, XAxis, YAxis,
   CartesianGrid, Tooltip, Legend, Cell, ReferenceLine,
 } from 'recharts';
+import { chartAnim } from '../utils/motion';
 import { supabase, supabaseDR } from '../supabaseClient';
 import { loadLinesRes } from '../utils/useProductionLines';
 import { UserContext } from '../App';
@@ -45,6 +47,8 @@ import {
 import { collapseOps } from '../utils/pairTotals';
 import { loadOpInfo, opInfoSync } from '../utils/opItems';
 import EnergyLiveBoard from '../components/EnergyLiveBoard';
+import EnergyHistory from '../components/EnergyHistory';
+import EnergyMeterSetup from '../components/EnergyMeterSetup';
 import { shortTick, fmtAxis, alignedYWidth, CELL_BAR_FILL } from '../utils/chartAxis';
 import { useLatestRequest } from '../utils/useLatestRequest';
 import { tr } from '../utils/i18n';
@@ -65,13 +69,15 @@ const GOOD = '#22c55e', BAD = '#ef4444', NEUTRAL = '#6b7f8c', ACCENT = '#38bdf8'
 export default function Energy() {
   const { role, lineId, sections: scopeSecs, scopeIdx } = useContext(UserContext);
   const canEdit = can('energy', 'record', role);
-  const [tab, setTab] = useTabParam(['input', 'summary', 'setup', 'live'], 'input');
+  const [tab, setTab] = useTabParam(['input', 'summary', 'setup', 'live', 'history', 'meters'], 'input');
   /* 🔌 แท็บ "มิเตอร์ / MQTT" ย้ายไปอยู่ /integrations ที่เดียวแล้ว (11/11 · user "ย้ายละก็ให้มันมีที่เดียว")
      ลิงก์/บุ๊กมาร์กเก่า ?tab=mqtt = ส่งต่อไปบ้านใหม่ ห้ามตกไปแท็บอื่นเงียบๆ */
   const [sp] = useSearchParams();
   const movedToHub = sp.get('tab') === 'mqtt';
   /* ⚡ แท็บค่าไฟสด (2026-11-09) — คนละแกนเวลากับแท็บอื่น (นาที vs เดือน) ⇒ ซ่อนแถบเดือน/KPI รายเดือน */
   const isLive = tab === 'live';
+  const isHistory = tab === 'history';
+  const isMeters = tab === 'meters';
   const [month, setMonth] = useState(() => monthKeyOf());
   const [lines, setLines] = useState([]);
   const [zones, setZones] = useState([]);
@@ -318,7 +324,7 @@ export default function Energy() {
        เช่นรวมสองรอบบิล/เพิ่งเปิดเครื่องใหม่ ระบบไม่มีทางรู้แทนคน) · แถวยังติด ⚠ ค้างไว้ให้เห็นด้วย */
     if (patch.qty != null) {
       const od = outlierVsHistory(patch.qty, pastByKey[`${p.kind}::${p.name}`]);
-      if (od) toast.info(`⚠ ${payload.scope_name}: ${fmtKwh(patch.qty)} kWh = ${od.ratio}× ของค่ากลางที่เคยลง (${fmtKwh(od.median)}) — บันทึกแล้ว แต่ช่วยตรวจว่ากรอกผิดหลักไหม`);
+      if (od) toast.info(`⚠ ${payload.scope_name}: ${fmtKwh(patch.qty)} kWh = ${od.ratio}× ${tr("ของค่ากลางที่เคยลง")} (${fmtKwh(od.median)}) — ${tr("บันทึกแล้ว แต่ช่วยตรวจว่ากรอกผิดหลักไหม")}`);
     }
     load();
   };
@@ -445,7 +451,7 @@ export default function Energy() {
           {roll?.childCount > 0 && (
             <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400, marginTop: 2 }}
               title={tr('ทวนว่าค่าที่ลงไว้ที่ไลน์แม่ ครอบคลุมไลน์ลูกที่ลงไว้แค่ไหน')}>
-              ประกอบด้วยไลน์ย่อยที่ลงไว้ {roll.childCount} {tr('จุด รวม')} {fmtKwh(roll.childQty)} kWh
+              {tr("ประกอบด้วยไลน์ย่อยที่ลงไว้")} {roll.childCount} {tr('จุด รวม')} {fmtKwh(roll.childQty)} kWh
               {childPct != null && <> = <b>{childPct}%</b> {tr('ของค่านี้')}{childPct > 102 ? ' ⚠ ลูกมากกว่าแม่' : ''}</>}
             </div>
           )}
@@ -455,7 +461,7 @@ export default function Energy() {
             feeds?.length > 0 ? (
               <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400, marginTop: 2 }}
                 title={tr('จาก Supply route (ฐานข้อมูลเครื่องจักร → เครื่อง facility → 🔗 Supply route)')}>
-                จ่ายให้: {feeds.slice(0, 4).join(', ')}{feeds.length > 4 ? ` +${feeds.length - 4}` : ''}
+                {tr("จ่ายให้")}: {feeds.slice(0, 4).join(', ')}{feeds.length > 4 ? ` +${feeds.length - 4}` : ''}
               </div>
             ) : (
               <div style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 400, marginTop: 2 }}
@@ -471,7 +477,7 @@ export default function Energy() {
               onBlur={e => { const v = numOrNull(e.target.value); if (v !== (r?.qty ?? null)) saveCell(target, { qty: v }); }}
               style={{ ...inp, width: 108, ...(odd ? { borderColor: 'var(--amber)' } : null), ...(canEdit ? null : { background: 'var(--bg2)' }) }} />
             {odd && <span style={{ color: 'var(--amber)', fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap' }}
-              title={`เดือนอื่นของจุดนี้อยู่แถว ${fmtKwh(odd.median)} kWh — ค่านี้ต่างกัน ${odd.ratio} เท่า ตรวจว่ากรอกผิดหลักไหม`}>⚠ {odd.ratio}×</span>}
+              title={`${tr("เดือนอื่นของจุดนี้อยู่แถว")} ${fmtKwh(odd.median)} kWh — ${tr("ค่านี้ต่างกัน")} ${odd.ratio} ${tr("เท่า ตรวจว่ากรอกผิดหลักไหม")}`}>⚠ {odd.ratio}×</span>}
           </div>
         </td>
         <td style={td}><input type="number" defaultValue={r?.cost ?? ''} readOnly={!canEdit} placeholder="—"
@@ -496,7 +502,7 @@ export default function Energy() {
             <button onClick={() => toggleMeter(p, !meteredSet.has(keyOf(p)))} disabled={!canEdit}
               title={meteredSet.has(keyOf(p)) ? tr('มีมิเตอร์ — นับเข้าผลรวมที่วัดได้') : tr('ยังไม่มีมิเตอร์ — กดเพื่อย้ายไปกลุ่มที่วัดได้')}
               style={{ padding: '4px 9px', borderRadius: 'var(--r-md)', fontSize: 11.5, fontWeight: 700, cursor: canEdit ? 'pointer' : 'default',
-                border: '1px solid var(--border2)', background: 'var(--bg3)', color: meteredSet.has(keyOf(p)) ? GOOD : 'var(--muted)' }}>
+                border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: meteredSet.has(keyOf(p)) ? GOOD : 'var(--muted)' }}>
               {meteredSet.has(keyOf(p)) ? tr('มีมิเตอร์') : tr('+ มีมิเตอร์')}
             </button>
           </td>
@@ -517,11 +523,11 @@ export default function Energy() {
   if (movedToHub) return <Navigate to="/integrations" replace />;
   return (
     <Page>
-      <PageHeader title={tr('พลังงานไฟฟ้า')} icon="⚡" sub={isLive ? 'ค่าไฟสดจากมิเตอร์ · อัปเดตทุก 1 นาที' : `${monthLabel(month)} · เฟส 1 กรอกรายเดือน`}
-        tabs={[{ key: 'live', label: 'ค่าไฟสด' }, { key: 'input', label: 'กรอกรายเดือน' }, { key: 'summary', label: 'สรุป & วิเคราะห์' }, { key: 'setup', label: 'ค่าการปล่อย' }]}
+      <PageHeader title={tr('พลังงานไฟฟ้า')} icon="⚡" sub={isLive ? 'ค่าไฟสดจากมิเตอร์ · อัปเดตทุก 1 นาที' : isMeters ? 'ตู้บนบอร์ดค่าไฟสด · ชื่อที่โชว์ · ผังแม่-ลูก · ลิมิต' : isHistory ? 'ประวัติการใช้ไฟจากมิเตอร์ · เทียบตู้ · ส่งออก Excel' : `${monthLabel(month)} · ${tr("เฟส 1 กรอกรายเดือน")}`}
+        tabs={[{ key: 'live', label: 'ค่าไฟสด' }, { key: 'history', label: 'ประวัติ & Excel' }, { key: 'input', label: 'กรอกรายเดือน' }, { key: 'summary', label: 'สรุป & วิเคราะห์' }, { key: 'setup', label: 'ค่าการปล่อย' }, { key: 'meters', label: 'ตั้งค่าตู้' }]}
         tab={tab} onTab={setTab}
       />
-      {isLive ? <EnergyLiveBoard /> : (<>
+      {isLive ? <EnergyLiveBoard /> : isHistory ? <EnergyHistory /> : isMeters ? <EnergyMeterSetup /> : (<>
       {/* แถบเดือน = FilterBar มาตรฐาน (UI-STANDARD 2026-09-24 — เดิมอยู่ในช่องปุ่มหัวเพจ ช่องสูง 31/33 มุม 7) */}
       <FilterBar>
         <span className="filter-label">{tr('เดือน')}</span>
@@ -550,14 +556,14 @@ export default function Energy() {
         <Kpi label={tr('ผลรวมที่วัดได้ (kWh)')} value={fmtKwh(metered.qty)}
           sub={cover.coverPct != null
             ? <>{cover.coverPct}{tr('% ของบิล ·')} {metered.filled}/{metered.total} {tr('จุดที่มีมิเตอร์')}</>
-            : `${metered.filled}/${metered.total} จุดที่มีมิเตอร์`} />
+            : `${metered.filled}/${metered.total} ${tr("จุดที่มีมิเตอร์")}`} />
         <Kpi label={tr('คาร์บอน (tCO2e)')} value={ef ? fmtTco2e(co2) : '—'}
           tone={ef ? 'var(--green)' : 'var(--muted)'} warn={!ef}
           sub={ef
             ? <>Scope 2 · {usingBill ? 'จากบิล' : 'จากผลรวมที่วัดได้'} {tr('· เทียบเดือนก่อน')} {deltaChip(deltaPct(co2, co2Prev))}</>
             : <span style={{ color: 'var(--amber)' }}>{tr('ยังไม่ได้ตั้งค่าการปล่อย → แท็บ ⚙️')}</span>} />
         <Kpi label={tr('ค่าไฟรวม (บาท)')} value={fmtBaht(bill?.cost ?? metered.cost)}
-          sub={`บาท/หน่วย ${bahtPerUnit(bill?.cost ?? metered.cost, bill?.qty ?? metered.qty) ?? '—'} (ปกติ 3.5–5)`} />
+          sub={`${tr("บาท/หน่วย")} ${bahtPerUnit(bill?.cost ?? metered.cost, bill?.qty ?? metered.qty) ?? '—'} (${tr("ปกติ")} 3.5–5)`} />
         {/* ⭐ SEC — ตัวเดียวที่แยก "ผลิตเยอะขึ้น" ออกจาก "ใช้ไฟเปลืองขึ้น" (ยอด kWh ขึ้น ≠ แย่ลง) */}
         <Kpi label={tr('kWh ต่อชิ้น (SEC)')}
           value={sec == null ? '—' : sec}
@@ -598,8 +604,10 @@ export default function Energy() {
                   {cover.unmetered == null ? '—' : fmtKwh(cover.unmetered)}
                   {cover.coverPct != null && <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--muted)' }}> · {Math.round(100 - cover.coverPct)}{tr('% ของบิล')}</span>}
                 </div>
+                {/* ใจความคือ "ไม่ใช่ข้อผิดพลาด" (กันคนไล่หาว่ามิเตอร์พัง) ⇒ อยู่บนจอ · ตัวอย่างจุด → ⓘ · 19/11 */}
                 <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-                  สำนักงาน · แสงสว่าง · ส่วนกลาง · จุดที่ยังไม่มีมิเตอร์ — <b>{tr('ไม่ใช่ข้อผิดพลาด')}</b>
+                  {tr('ส่วนที่ยังไม่มีมิเตอร์')} — <b>{tr('ไม่ใช่ข้อผิดพลาด')}</b>{' '}
+                  <MoreMark text={tr('สำนักงาน · แสงสว่าง · ส่วนกลาง · จุดที่ยังไม่มีมิเตอร์')} />
                 </div>
               </div>
             </div>
@@ -609,7 +617,7 @@ export default function Energy() {
             {/* กติกาที่คนกรอกต้องรู้ก่อนพิมพ์ตัวแรก — เขียนไว้ตรงนี้ ไม่ใช่ให้เดาจากผลลัพธ์ */}
             <div style={{ fontSize: 11.5, color: 'var(--text2)', margin: '-4px 0 8px', lineHeight: 1.6 }}>
               📏 <b>{tr('ลงตามที่มิเตอร์อ่านได้จริง')}</b> {tr('— เบรกเกอร์แยก HDF-01 / HDF-02 ก็ลงแยกได้เลย ไม่ต้องบวกมือรวมที่ไลน์แม่')}<br />
-              ระบบไม่บวกซ้ำให้อยู่แล้ว: <b>ไลน์แม่มีค่า = ใช้ค่าของแม่</b> (ลูกกลายเป็นรายละเอียด) ·
+              {tr("ระบบไม่บวกซ้ำให้อยู่แล้ว")}: <b>ไลน์แม่มีค่า = ใช้ค่าของแม่</b> ({tr("ลูกกลายเป็นรายละเอียด")}) ·
               <b> ไลน์แม่เว้นว่าง = รวมค่าลูกขึ้นมาเป็นยอดกลุ่ม</b>
             </div>
             <div style={{ ...card, padding: 0, overflowX: 'auto', marginBottom: 20 }}>
@@ -629,7 +637,7 @@ export default function Energy() {
             <h3 style={{ ...secTitle, display: 'flex', alignItems: 'center', gap: 8 }}>
               {tr('จุดที่ยังไม่มีมิเตอร์ (')}{otherPts.length})
               <button onClick={() => setShowUnmetered(v => !v)}
-                style={{ padding: '3px 10px', borderRadius: 'var(--r-md)', fontSize: 11.5, fontWeight: 700, border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)', cursor: 'pointer' }}>
+                style={{ padding: '3px 10px', borderRadius: 'var(--r-md)', fontSize: 11.5, fontWeight: 700, border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)', cursor: 'pointer' }}>
                 {showUnmetered ? tr('ซ่อน') : tr('แสดง')}
               </button>
               <span style={{ fontWeight: 400, fontSize: 11.5, color: 'var(--muted)' }}>{tr('— ทุกไลน์ในกลุ่ม + โซน · กรอกได้ถ้ามีตัวเลข แต่ยังไม่นับเข้าผลรวมที่วัดได้ (กด')} <b>{tr('+ มีมิเตอร์')}</b> {tr('เพื่อย้ายขึ้นไป)')}</span>
@@ -657,9 +665,9 @@ export default function Energy() {
                     <YAxis width="auto" tick={{ fontSize: 11, fill: 'var(--muted)' }} tickFormatter={fmtKwh} />
                     <Tooltip contentStyle={tipStyle} formatter={(v, n) => [v == null ? '—' : Math.round(v).toLocaleString(), n]} />
                     <Legend wrapperStyle={{ fontSize: 11.5 }} />
-                    <Bar dataKey="bill" name="บิลทั้งโรงงาน" fill={ACCENT} radius={[3, 3, 0, 0]} />
-                    <Bar dataKey="metered" name="ที่วัดได้จากมิเตอร์" fill={GOOD} radius={[3, 3, 0, 0]} />
-                    {hasYoy && <Line type="monotone" dataKey="lastYear" name="ปีก่อน (เดือนเดียวกัน)" stroke="var(--amber)" strokeDasharray="5 4" dot={false} strokeWidth={2} />}
+                    <Bar {...chartAnim()} dataKey="bill" name="บิลทั้งโรงงาน" fill={ACCENT} radius={[3, 3, 0, 0]} />
+                    <Bar {...chartAnim()} dataKey="metered" name="ที่วัดได้จากมิเตอร์" fill={GOOD} radius={[3, 3, 0, 0]} />
+                    {hasYoy && <Line {...chartAnim()} type="monotone" dataKey="lastYear" name="ปีก่อน (เดือนเดียวกัน)" stroke="var(--amber)" strokeDasharray="5 4" dot={false} strokeWidth={2} />}
                   </ComposedChart>
                 </ResponsiveContainer>
               )}
@@ -671,7 +679,7 @@ export default function Energy() {
               {prod == null ? <div style={{ color: 'var(--muted)', fontSize: 13 }}>{tr('กำลังรวมยอดผลิต…')}</div>
                 : !trend.some(t => t.sec != null) ? (
                   <div style={{ color: 'var(--muted)', fontSize: 13 }}>
-                    ยังคำนวณไม่ได้ — ต้องมีทั้ง <b>{tr('หน่วยไฟ')}</b> {tr('และ')} <b>{tr('ยอดผลิต')}</b> ของเดือนเดียวกัน
+                    {tr("ยังคำนวณไม่ได้ — ต้องมีทั้ง")} <b>{tr('หน่วยไฟ')}</b> {tr('และ')} <b>{tr('ยอดผลิต')}</b> {tr("ของเดือนเดียวกัน")}
                     {prodErr && <div style={{ color: 'var(--amber)', marginTop: 4 }}>{tr('⚠ ดึงยอดผลิตมีปัญหา:')} {prodErr}</div>}
                   </div>
                 ) : (
@@ -701,7 +709,7 @@ export default function Energy() {
                         <YAxis width={alignedYWidth([...trend.map(t => fmtPieces(t.pieces)), ...trend.map(t => fmtAxis(t.sec))])} tick={{ fontSize: 11, fill: 'var(--muted)' }}
                           tickFormatter={fmtPieces} />
                         <Tooltip contentStyle={tipStyle} formatter={(v) => [v == null ? '—' : Math.round(v).toLocaleString(), 'ผลิตได้ (ชิ้น)']} />
-                        <Bar dataKey="pieces" name="ผลิตได้ (ชิ้น)" fill={NEUTRAL} radius={[3, 3, 0, 0]} />
+                        <Bar {...chartAnim()} dataKey="pieces" name="ผลิตได้ (ชิ้น)" fill={NEUTRAL} radius={[3, 3, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                     <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--amber)', marginTop: 6, marginBottom: 2 }}>{tr('kWh ต่อชิ้น (SEC)')}</div>
@@ -711,7 +719,7 @@ export default function Energy() {
                         <XAxis dataKey="label" tick={{ fontSize: 11, fill: 'var(--muted)' }} />
                         <YAxis tickFormatter={fmtAxis} width={alignedYWidth([...trend.map(t => fmtPieces(t.pieces)), ...trend.map(t => fmtAxis(t.sec))])} tick={{ fontSize: 11, fill: 'var(--amber)' }} />
                         <Tooltip contentStyle={tipStyle} formatter={(v) => [v == null ? '—' : v, 'kWh ต่อชิ้น (SEC)']} />
-                        <Line type="monotone" dataKey="sec" name="kWh ต่อชิ้น (SEC)" stroke="var(--amber)" strokeWidth={2} dot={{ r: 3 }} connectNulls={false} />
+                        <Line {...chartAnim()} type="monotone" dataKey="sec" name="kWh ต่อชิ้น (SEC)" stroke="var(--amber)" strokeWidth={2} dot={{ r: 3 }} connectNulls={false} />
                       </LineChart>
                     </ResponsiveContainer>
                     <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 12, color: 'var(--muted)', marginTop: 6 }}>
@@ -728,7 +736,7 @@ export default function Energy() {
             {/* ③ อะไรทำให้เดือนนี้เปลี่ยน — คำถามที่กราฟเรียงยอดตอบไม่ได้ */}
             <div style={{ ...card, marginBottom: 14 }}>
               <div style={secTitle}>
-                อะไรทำให้เดือนนี้เปลี่ยน · {monthLabel(month)} {tr('เทียบ')} {monthLabel(prevMonth)}
+                {tr("อะไรทำให้เดือนนี้เปลี่ยน")} · {monthLabel(month)} {tr('เทียบ')} {monthLabel(prevMonth)}
               </div>
               {!contribRows.length ? (
                 <div style={{ color: 'var(--muted)', fontSize: 13 }}>{tr('ยังไม่มีเดือนก่อนให้เทียบ หรือไม่มีจุดไหนเปลี่ยน')}</div>
@@ -742,8 +750,8 @@ export default function Energy() {
                       <> {tr('· ขณะที่')} <b>{tr('บิลทั้งโรงงาน')}</b> {tr('เปลี่ยน')} <b>{(bill.qty - billPrev.qty) > 0 ? '+' : ''}{Math.round(bill.qty - billPrev.qty).toLocaleString()} kWh</b> ({deltaChip(deltaPct(bill.qty, billPrev.qty))})</>
                     )}
                     <div style={{ color: 'var(--muted)', marginTop: 3 }}>
-                      เรียงตาม<b>{tr('ขนาดผลกระทบ')}</b> ไม่ใช่ยอดใช้ — จุดที่ใช้ไฟเยอะที่สุด ไม่จำเป็นต้องเป็นตัวที่ทำให้บิลขึ้น
-                      {cover.coverPct != null && cover.coverPct < 90 && <> {tr('· ส่วนที่ยังไม่ได้แยกมิเตอร์ (')}{Math.round(100 - cover.coverPct)}% ของบิล) <b>{tr('อธิบายด้วยตารางนี้ไม่ได้')}</b></>}
+                      {tr("เรียงตาม")}<b>{tr('ขนาดผลกระทบ')}</b> {tr("ไม่ใช่ยอดใช้ — จุดที่ใช้ไฟเยอะที่สุด ไม่จำเป็นต้องเป็นตัวที่ทำให้บิลขึ้น")}
+                      {cover.coverPct != null && cover.coverPct < 90 && <> {tr('· ส่วนที่ยังไม่ได้แยกมิเตอร์ (')}{Math.round(100 - cover.coverPct)}% {tr("ของบิล")}) <b>{tr('อธิบายด้วยตารางนี้ไม่ได้')}</b></>}
                     </div>
                   </div>
                   <ResponsiveContainer width="100%" height={Math.max(140, contribRows.length * 30 + 30)}>
@@ -752,9 +760,9 @@ export default function Energy() {
                       <XAxis type="number" tick={{ fontSize: 11, fill: 'var(--muted)' }} tickFormatter={v => Math.round(v).toLocaleString()} />
                       <YAxis type="category" dataKey="label" width={130} tick={{ fontSize: 11, fill: 'var(--text2)' }} tickFormatter={shortTick(16)} />
                       <Tooltip contentStyle={tipStyle}
-                        formatter={(v, n, o) => [`${v > 0 ? '+' : ''}${Math.round(v).toLocaleString()} kWh (${o.payload.pct == null ? 'จุดใหม่' : `${o.payload.pct > 0 ? '+' : ''}${o.payload.pct}%`})`, 'ส่วนต่าง']} />
+                        formatter={(v, n, o) => [`${v > 0 ? '+' : ''}${Math.round(v).toLocaleString()} kWh (${o.payload.pct == null ? tr('จุดใหม่') : `${o.payload.pct > 0 ? '+' : ''}${o.payload.pct}%`})`, 'ส่วนต่าง']} />
                       <ReferenceLine x={0} stroke="var(--border2)" />
-                      <Bar dataKey="delta" fill={CELL_BAR_FILL} radius={[0, 3, 3, 0]}>
+                      <Bar {...chartAnim()} dataKey="delta" fill={CELL_BAR_FILL} radius={[0, 3, 3, 0]}>
                         {contribRows.map((r, i) => <Cell key={i} fill={r.isNew || r.isGone ? NEUTRAL : r.delta > 0 ? BAD : GOOD} />)}
                       </Bar>
                     </BarChart>
@@ -780,7 +788,7 @@ export default function Energy() {
                     <Tooltip contentStyle={tipStyle} formatter={v => Math.round(v).toLocaleString()} />
                     <Legend wrapperStyle={{ fontSize: 11.5 }} />
                     {compPts.map((p, i) => (
-                      <Bar key={keyOf(p)} dataKey={p.name} stackId="a"
+                      <Bar {...chartAnim()} key={keyOf(p)} dataKey={p.name} stackId="a"
                         fill={['#38bdf8', '#22c55e', '#f59e0b', '#a78bfa', '#f472b6', '#2dd4bf'][i % 6]} />
                     ))}
                   </BarChart>
@@ -867,9 +875,8 @@ function EfSetup({ factors, canEdit, cfgMissing, onSaved, month }) {
     <div style={{ ...card }}>
       <div style={secTitle}>{tr('ค่าการปล่อยก๊าซเรือนกระจก (Emission Factor)')}</div>
       <div style={{ fontSize: 12.5, color: 'var(--text2)', marginBottom: 12, lineHeight: 1.6 }}>
-        ใช้แปลง <b>kWh → kgCO2e</b> {tr('(Scope 2) · ค่านี้ประกาศโดย')} <b>TGO</b> {tr('และ')}<b>{tr('เปลี่ยนเกือบทุกปี')}</b><br />
-        ระบบ<b>{tr('ไม่ใส่ค่าเริ่มต้นให้โดยตั้งใจ')}</b> — ต้องเอาตัวเลขจากประกาศจริงมากรอก พร้อมระบุที่มา
-        (ใส่เลขมั่วไว้ก่อน = ตัวเลขคาร์บอนผิดที่ดูเหมือนถูก ซึ่งอันตรายกว่าไม่มีตัวเลข)<br />
+        {tr("ใช้แปลง")} <b>kWh → kgCO2e</b> {tr('(Scope 2) · ค่านี้ประกาศโดย')} <b>TGO</b> {tr('และ')}<b>{tr('เปลี่ยนเกือบทุกปี')}</b><br />
+        {tr("ระบบ")}<b>{tr('ไม่ใส่ค่าเริ่มต้นให้โดยตั้งใจ')}</b> — {tr("ต้องเอาตัวเลขจากประกาศจริงมากรอก พร้อมระบุที่มา (ใส่เลขมั่วไว้ก่อน = ตัวเลขคาร์บอนผิดที่ดูเหมือนถูก ซึ่งอันตรายกว่าไม่มีตัวเลข")})<br />
         <span style={{ color: 'var(--amber)' }}>{tr('⚠️ เพิ่มแถวใหม่เมื่อ EF เปลี่ยน —')} <b>{tr('ห้ามแก้ทับของเก่า')}</b> {tr('ไม่งั้นตัวเลขที่รายงานไปแล้วจะเปลี่ยนตาม')}</span>
       </div>
 
@@ -879,7 +886,7 @@ function EfSetup({ factors, canEdit, cfgMissing, onSaved, month }) {
           <div style={{ fontSize: 16, fontWeight: 800, marginTop: 2 }}>
             {cur.kg_co2e} <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--muted)' }}>kgCO2e/kWh</span>
             <div style={{ fontSize: 11.5, fontWeight: 400, color: 'var(--muted)', marginTop: 2 }}>
-              มีผลตั้งแต่ {cur.effective_from} {tr('· ที่มา:')} {cur.source_ref}
+              {tr("มีผลตั้งแต่")} {cur.effective_from} {tr('· ที่มา:')} {cur.source_ref}
             </div>
           </div>
         ) : <div style={{ fontSize: 13, color: 'var(--amber)', marginTop: 3 }}>{tr('ยังไม่มีค่าที่ครอบเดือนนี้ — tCO2e จะขึ้นเป็น “—” จนกว่าจะกรอก')}</div>}
@@ -916,8 +923,7 @@ function EfSetup({ factors, canEdit, cfgMissing, onSaved, month }) {
 
       <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 14, lineHeight: 1.6 }}>
         <b>{tr('ขอบเขตที่ทำอยู่:')}</b> {tr('Scope 2 (ไฟฟ้าที่ซื้อ) — ตอบคำถาม “บริษัทปล่อยเท่าไหร่ (CFO)” ได้ครบ')}<br />
-        ยังไม่รวม Scope 1 (น้ำมันรถยก/เครื่องปั่นไฟ) และ<b>{tr('ไม่ประเมิน Scope 3')}</b> ตามขอบเขตที่ตกลงไว้ ·
-        คาร์บอนของวัสดุที่ซื้อเข้ามา ต้อง<b>{tr('ขอจาก supplier')}</b> ไม่ใช่ประเมินเอง
+        {tr("ยังไม่รวม Scope 1 (น้ำมันรถยก/เครื่องปั่นไฟ) และ")}<b>{tr('ไม่ประเมิน Scope 3')}</b> {tr("ตามขอบเขตที่ตกลงไว้ · คาร์บอนของวัสดุที่ซื้อเข้ามา ต้อง")}<b>{tr('ขอจาก supplier')}</b> {tr("ไม่ใช่ประเมินเอง")}
       </div>
     </div>
   );

@@ -74,7 +74,7 @@ export default function MinDemandPanel({
               style={{
                 display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px',
                 border: '1px solid var(--border2)', borderRadius: 'var(--r-md)',
-                background: 'var(--card)', fontSize: 11.5,
+                background: 'var(--card-surf)', fontSize: 11.5,
               }}>
               <MatLabel mat={r.mat_no} name={r.part_name} size={11.5} style={{ flexWrap: 'nowrap' }} />
               <span style={{ color: toneVar('warn'), fontWeight: 800, whiteSpace: 'nowrap' }}>

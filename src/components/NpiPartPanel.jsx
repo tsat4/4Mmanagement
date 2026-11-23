@@ -22,6 +22,7 @@ import { DeleteButton } from './IconButton';
 import { npiBlock } from '../utils/npiScope';
 
 import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 export default function NpiPartPanel({ part, project, template, phases, delivs, drawings, tooling, peSets, qaParts, canEdit, canApprove, fullName, today, onChanged, partWriteOf }) {
   /* 🔐 ชั้นที่ 3 — ทุกแถวในแผงนี้เป็นของ `part` ตัวเดียว ⇒ ถามกฎครั้งเดียว (src/utils/npiScope.js)
      ไม่ได้รับ `partWriteOf` / พาร์ทไม่ระบุไลน์ = ตัดสินไม่ได้ ⇒ ไม่บล็อก (คงพฤติกรรมเดิม) */
@@ -57,12 +58,12 @@ export default function NpiPartPanel({ part, project, template, phases, delivs, 
     const { phaseRows, delivRows } = buildPartRows({ partId: part.id, templatePhases: template.phases, templateDelivs: template.delivs,
       existingPhases: phases, existingDelivs: delivs, sopDate: project.sop_date, kickoffDate: project.kickoff_date });
     if (!phaseRows.length && !delivRows.length) return toast.info('ครบตามแม่แบบแล้ว ไม่มีรายการเพิ่ม');
-    if (!window.confirm(`เติมจากแม่แบบ: เฟส ${phaseRows.length} · รายการเอกสาร ${delivRows.length} (ของเดิมไม่ถูกแตะ) ?`)) return;
+    if (!await askConfirm(`${tr("เติมจากแม่แบบ: เฟส")} ${phaseRows.length} · ${tr("รายการเอกสาร")} ${delivRows.length} (${tr("ของเดิมไม่ถูกแตะ")}) ?`)) return;
     setSaving(true);
     const e1 = phaseRows.length ? (await supabase.from('npi_part_phases').insert(phaseRows)).error : null;
     const e2 = delivRows.length ? (await supabase.from('npi_deliverables').insert(delivRows)).error : null;
     setSaving(false);
-    if (e1 || e2) return toast.error(`sync ไม่สำเร็จ: ${(e1 || e2).message}`);
+    if (e1 || e2) return toast.error(`sync ${tr("ไม่สำเร็จ")}: ${(e1 || e2).message}`);
     toast.success('เติมจากแม่แบบแล้ว'); onChanged();
   };
 
@@ -84,7 +85,7 @@ export default function NpiPartPanel({ part, project, template, phases, delivs, 
   const patchDeliv = async (d, patch) => {
     if (blocked()) return;
     const { error } = await supabase.from('npi_deliverables').update(patch).eq('id', d.id);
-    if (error) return toast.error(`บันทึกไม่สำเร็จ: ${error.message}`);
+    if (error) return toast.error(`${tr("บันทึกไม่สำเร็จ")}: ${error.message}`);
     onChanged();
   };
   const setStatus = (d, status) => {
@@ -115,7 +116,7 @@ export default function NpiPartPanel({ part, project, template, phases, delivs, 
   };
   const delDeliv = async (d) => {
     if (blocked()) return;
-    if (!window.confirm(`ลบรายการ "${d.label}" ?`)) return;
+    if (!await askConfirm(`${tr("ลบรายการ")} "${d.label}" ?`)) return;
     const { error } = await supabase.from('npi_deliverables').delete().eq('id', d.id);
     if (error) return toast.error(error.message);
     if (d.file_url) removeNpiFile(d.file_url);
@@ -144,7 +145,7 @@ export default function NpiPartPanel({ part, project, template, phases, delivs, 
     if (m.ppap_status !== part.ppap_status && ['submitted', 'approved', 'interim', 'rejected'].includes(m.ppap_status)) {
       notifyEvent({ event: 'npi_ppap_submitted', actor: fullName, line_name: part.line_name || undefined,
         title: `📦 PPAP ${part.part_no}: ${PPAP_STATUS[m.ppap_status]?.label}`,
-        lines: [`${project.name} (${project.project_code})`, `พาร์ท ${part.part_no} ${part.part_name || ''}`, `สถานะ PPAP → ${PPAP_STATUS[m.ppap_status]?.label}`, m.psw_no ? `PSW ${m.psw_no}` : ''],
+        lines: [`${project.name} (${project.project_code})`, `${tr("พาร์ท")} ${part.part_no} ${part.part_name || ''}`, `${tr("สถานะ")} PPAP → ${PPAP_STATUS[m.ppap_status]?.label}`, m.psw_no ? `PSW ${m.psw_no}` : ''],
         ref_table: 'npi_parts', ref_id: part.id });
     }
     toast.success('บันทึกสถานะ PPAP แล้ว'); setPpapModal(null); onChanged();
@@ -168,7 +169,7 @@ export default function NpiPartPanel({ part, project, template, phases, delivs, 
             <LightDot light={roll.light} size={16} />
             <span style={{ fontFamily: 'monospace', fontWeight: 900, fontSize: 17 }}>{part.part_no}</span>
             <span style={{ fontSize: 13, color: 'var(--text2)' }}>{part.part_name || ''}</span>
-            {roll.current && <Pill label={`เฟสปัจจุบัน: ${roll.current.label}`} color="#4d9fff" />}
+            {roll.current && <Pill label={`${tr("เฟสปัจจุบัน")}: ${roll.current.label}`} color="#4d9fff" />}
           </div>
           <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             <span>MAT {part.mat_no || '—'}</span><span>{tr('ไลน์')} {part.line_name || '—'}</span><span>{tr('ผู้รับผิดชอบ')} {part.owner_name || '—'}</span>
@@ -218,7 +219,7 @@ export default function NpiPartPanel({ part, project, template, phases, delivs, 
                     <span style={{ fontWeight: 800, fontSize: 12.5 }}>{tr(ph.label)}</span><LightDot light={r.light} />
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>
-                    แผน {ph.plan_start ? fmtDate(ph.plan_start) : '—'} → <span style={{ color: ph.status !== 'completed' && ph.plan_end && ph.plan_end < today ? '#ef4444' : undefined }}>{ph.plan_end ? fmtDate(ph.plan_end) : '—'}</span>
+                    {tr("แผน")} {ph.plan_start ? fmtDate(ph.plan_start) : '—'} → <span style={{ color: ph.status !== 'completed' && ph.plan_end && ph.plan_end < today ? '#ef4444' : undefined }}>{ph.plan_end ? fmtDate(ph.plan_end) : '—'}</span>
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('จริง')} {ph.actual_start ? fmtDate(ph.actual_start) : '—'} → {ph.actual_end ? fmtDate(ph.actual_end) : '—'}</div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 11.5 }}>
@@ -255,7 +256,7 @@ export default function NpiPartPanel({ part, project, template, phases, delivs, 
               <div onClick={() => setOpen(s => { const n = new Set(s); n.has(g.phase.phase_code) ? n.delete(g.phase.phase_code) : n.add(g.phase.phase_code); return n; })}
                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', cursor: 'pointer', background: 'var(--bg2)', borderRadius: 'var(--r-md)' }}>
                 <LightDot light={r.light} /><span style={{ fontWeight: 800, fontSize: 12.5 }}>{tr(g.phase.label)}</span>
-                <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{r.done}/{r.total} {tr('อนุมัติ')}{r.overdue ? ` · เลย ${r.overdue}` : ''}{hidden > 0 ? ` · ซ่อนตามตัวกรอง ${hidden}` : ''}</span>
+                <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{r.done}/{r.total} {tr('อนุมัติ')}{r.overdue ? ` · ${tr("เลย")} ${r.overdue}` : ''}{hidden > 0 ? ` · ${tr("ซ่อนตามตัวกรอง")} ${hidden}` : ''}</span>
                 <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--muted)' }}>{collapsed ? '▼' : '▲'}</span>
               </div>
               {!collapsed && rows.length > 0 && (
@@ -313,7 +314,7 @@ export default function NpiPartPanel({ part, project, template, phases, delivs, 
       </div>
 
       {phaseModal && (
-        <Modal title={`เฟส ${phaseModal.label}`} onClose={() => setPhaseModal(null)} width={560}
+        <Modal title={`${tr("เฟส")} ${phaseModal.label}`} onClose={() => setPhaseModal(null)} width={560}
           footer={<><button style={ghost} onClick={() => setPhaseModal(null)}>{tr('ยกเลิก')}</button><button style={btn()} disabled={saving} onClick={savePhase}>{tr('บันทึก')}</button></>}>
           <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, alignItems: 'start' }}>
             <Field label={tr('แผนเริ่ม')}><input type="date" style={inp} value={phaseModal.plan_start} onChange={e => setPhaseModal({ ...phaseModal, plan_start: e.target.value })} /></Field>
@@ -344,7 +345,7 @@ export default function NpiPartPanel({ part, project, template, phases, delivs, 
               {dvModal.ref_kind === 'drawing' ? <select style={inp} value={dvModal.ref_id || ''} onChange={e => setDvModal({ ...dvModal, ref_id: e.target.value })}><option value="">—</option>{drawings.map(dw => <option key={dw.id} value={dw.id}>{dw.kind.toUpperCase()} {dw.rev} {dw.is_current ? '(ปัจจุบัน)' : ''}</option>)}</select>
                 : dvModal.ref_kind === 'tooling' ? <select style={inp} value={dvModal.ref_id || ''} onChange={e => setDvModal({ ...dvModal, ref_id: e.target.value })}><option value="">—</option>{tooling.map(t => <option key={t.id} value={t.id}>{tr(t.tool_name)}</option>)}</select>
                 : dvModal.ref_kind === 'url' ? <input style={inp} value={dvModal.ref_id || ''} onChange={e => setDvModal({ ...dvModal, ref_id: e.target.value })} placeholder="https://…" />
-                : dvModal.ref_kind === 'pe_set' ? <div style={{ fontSize: 12, color: 'var(--muted)', paddingTop: 6 }}>{peSet ? `ชุด ${peSet.part_no}` : 'พาร์ทยังไม่ผูกชุด PE'}</div>
+                : dvModal.ref_kind === 'pe_set' ? <div style={{ fontSize: 12, color: 'var(--muted)', paddingTop: 6 }}>{peSet ? `${tr("ชุด")} ${peSet.part_no}` : 'พาร์ทยังไม่ผูกชุด PE'}</div>
                 : dvModal.ref_kind === 'qa_part' ? <div style={{ fontSize: 12, color: 'var(--muted)', paddingTop: 6 }}>{qaPart ? `QA ${qaPart.part_no}` : 'พาร์ทยังไม่ผูก QA part'}</div>
                 : <input style={inp} value={dvModal.ref_id || ''} onChange={e => setDvModal({ ...dvModal, ref_id: e.target.value })} placeholder={tr('เลขเอกสาร/อ้างอิง')} />}
             </Field>
@@ -359,7 +360,7 @@ export default function NpiPartPanel({ part, project, template, phases, delivs, 
       )}
 
       {ppapModal && (
-        <Modal title={`สถานะ PPAP / PSW — ${part.part_no}`} onClose={() => setPpapModal(null)} width={560}
+        <Modal title={`${tr("สถานะ")} PPAP / PSW — ${part.part_no}`} onClose={() => setPpapModal(null)} width={560}
           footer={<><button style={ghost} onClick={() => setPpapModal(null)}>{tr('ยกเลิก')}</button><button style={btn()} disabled={saving} onClick={savePpap}>{tr('บันทึก')}</button></>}>
           {/* 🪜 ถึงขั้นไหน — กฎ ppapFlow() (utils/npi.js) · UI §6.30 · วาดตามสถานะที่เลือกอยู่ */}
           {(() => { const f = ppapFlow(ppapModal.ppap_status); return <div style={{ marginBottom: 12 }}><StepFlow steps={f.steps} waiting={f.waiting} unknown={!f.known} /></div>; })()}
@@ -372,7 +373,7 @@ export default function NpiPartPanel({ part, project, template, phases, delivs, 
             <Field label={tr('วันลูกค้าอนุมัติ')}><input type="date" style={inp} value={ppapModal.psw_approved_at} onChange={e => setPpapModal({ ...ppapModal, psw_approved_at: e.target.value })} /></Field>
           </div>
           {roll.ppap.total > 0 && roll.ppap.done < roll.ppap.total && (ppapModal.ppap_status === 'submitted' || ppapModal.ppap_status === 'approved') && (
-            <div style={{ marginTop: 10, fontSize: 12, color: '#f59e0b', fontWeight: 700 }}>{tr('⚠️ PPAP element ยังอนุมัติในระบบไม่ครบ (')}{roll.ppap.done}/{roll.ppap.total}) — บันทึกได้ แต่ควรปิดรายการให้ตรงกับที่ส่งจริง</div>
+            <div style={{ marginTop: 10, fontSize: 12, color: '#f59e0b', fontWeight: 700 }}>{tr('⚠️ PPAP element ยังอนุมัติในระบบไม่ครบ (')}{roll.ppap.done}/{roll.ppap.total}) — {tr("บันทึกได้ แต่ควรปิดรายการให้ตรงกับที่ส่งจริง")}</div>
           )}
         </Modal>
       )}

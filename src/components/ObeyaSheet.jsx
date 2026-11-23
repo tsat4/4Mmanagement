@@ -87,7 +87,7 @@ export function StatusLamp({ k, w, stat, onGo, forceCompact = false }) {
   return (
     <button
       type="button" onClick={go || undefined} disabled={!go}
-      title={`${stat.label} — ${stat.why}${go ? ' · กดเพื่อเจาะดู' : ''}`}
+      title={`${stat.label} — ${stat.why}${go ? tr(' · กดเพื่อดูรายละเอียด') : ''}`}
       style={{
         display: 'flex', alignItems: 'center', gap: Math.max(4, Math.round(5 * k)),
         padding: `${Math.max(2, Math.round(2.5 * k))}px ${Math.max(6, Math.round(8 * k))}px`,
@@ -155,13 +155,14 @@ const SheetIconBtn = ({ fs, title, onClick, children, className }) => (
   <button type="button" className={className} onClick={onClick} title={title} aria-label={title} style={{
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     fontSize: fs(11), lineHeight: 1, padding: '3px 6px', borderRadius: 'var(--r-md)', flexShrink: 0, cursor: 'pointer',
-    background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)',
+    background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)',
   }}>{children}</button>
 );
 
 /* `bigNote` (30/09 · user: "ตัวเลขที่โชว์คืออะไร ไม่มี text บอก") = ป้ายเล็กติดตัวเลขใหญ่ว่าเป็นค่าของอะไร (เช่น "ก.ย." = ค่าเดือนที่เลือก) */
 /* `statZoom` (16/11 · user: ชิปไม่ตามเป้า กดแล้วไปหน้ากรอกเพื่ออะไร ควรเป็นสรุป insight) = กดชิปสถานะแล้วเปิด popup 🔍 ของแผ่นนี้แทน onLink · ใน popup เองชิปไม่มีลิงก์ */
 /* `goals` (16/11 · user: "Target/commitment ไปขึ้นเหมือน note น่าจะไฮไลท์ให้ชัดเหมือนค่า YTD") = แถวเกณฑ์ใต้ตัวเลขใหญ่ · รับ `(k, zoomedCopy) => node` เหมือน foot (คืน null = ไม่วาด) */
+/* 20/11 (user: "แว่นขยายกับป้ายสถานะทำหน้าที่เดียวกัน เอาแว่นขยายออก") — แผ่นที่ใช้ `statZoom` ส่ง `zoom={false}` ด้วย ⇒ มุมขวาบนว่าง popup เปิดจากชิปสถานะอย่างเดียว */
 /* `footAside` (16/11 · user: "insight เยอะจนกราฟหาย") = ท้ายแผ่นของใบใน popup ไปอยู่รางขวา (คนละคอลัมน์กับกราฟ)
    ⇒ ใช้กับแผ่นที่ท้ายแผ่นยาวได้จริง (insight) เท่านั้น · ไม่ส่ง = ชั้นล่างเพดาน 30% เหมือนเดิม */
 export function Sheet({ k, cw = 0, span = 1, icon, title, sub, big, unit, bigNote, delta, stat, foot, link, onLink, zoom = true, onClose, statZoom = false, goals = null, footAside = false, children }) {
@@ -201,7 +202,7 @@ export function Sheet({ k, cw = 0, span = 1, icon, title, sub, big, unit, bigNot
     {link && (
       <button className="tv-hide" onClick={onLink} style={{
         marginTop: 4, fontSize: fs(10.5), fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--r-md)',
-        background: 'var(--bg3)', color: 'var(--text2)', border: '1px solid var(--border2)', cursor: 'pointer',
+        background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)', cursor: 'pointer',
       }}>{link} ↗</button>
     )}
   </>);
@@ -211,7 +212,7 @@ export function Sheet({ k, cw = 0, span = 1, icon, title, sub, big, unit, bigNot
       /* ❌ ไม่มีแถบสีบนหัวแผ่นอีกแล้ว (คำสั่ง user 21/09 "สีสันของเส้นแต่ละ box ไม่เอา")
          สีบนแผ่นเหลือความหมายเดียว = **สถานะ** (ไฟดวงบนหัว + สีแท่งกราฟ) ไม่ใช่ "สีประจำแกน"
          — แถบสีประจำแกนแย่งความสนใจกับไฟสถานะ ทำให้แผ่นที่ปกติกับแผ่นที่มีปัญหาดูเด่นเท่ากัน */
-      background: 'var(--card)', border: '1px solid var(--border)',
+      background: 'var(--card-surf)', border: '1px solid var(--border)',
       borderRadius: 'var(--r-md)', boxShadow: 'var(--shadow-sm)',   // แผ่น KPI = การ์ดแบนบนกริด ไม่ได้ลอย
       display: 'flex', flexDirection: 'column', overflow: 'clip', minWidth: 0, minHeight: 0,
     }}>
@@ -317,8 +318,8 @@ export const FocusAxisNote = ({ k, loText, fixed = false }) => (
     ? 'กราฟนี้ขยายช่วงค่าถาวรให้เห็นความต่าง (ไม่มีปุ่มปิด) — ความสูงแท่ง/เส้นเทียบสัดส่วนกับ 0 ไม่ได้'
     : 'โหมดโฟกัส: ยกพื้นแกนขึ้นเพื่อขยายช่วงที่ค่ากระจุกอยู่ — ความสูงแท่งเทียบสัดส่วนกันไม่ได้ (กดปุ่ม 🎯 บนแถบกรองเพื่อปิด)'}
     style={{ position: 'absolute', top: 0, right: 6, zIndex: 1, fontSize: Math.max(11, Math.round(9.5 * k)), fontWeight: 700, color: 'var(--amber)',
-      background: 'var(--card)', border: '1px solid var(--amber)55', borderRadius: 'var(--r-xs)', padding: '0 5px', lineHeight: 1.5 }}>
-    แกนเริ่ม {loText} ไม่ใช่ 0
+      background: 'var(--card-surf)', border: '1px solid var(--amber)55', borderRadius: 'var(--r-xs)', padding: '0 5px', lineHeight: 1.5 }}>
+    {tr("แกนเริ่ม")} {loText} {tr("ไม่ใช่")} 0
   </div>
 );
 
