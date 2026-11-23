@@ -161,14 +161,16 @@ export default function DailyPM() {
 
   // build a dashboard row per line that has registered targets — สูตรเดียวกับผังรวมโรงงาน (lib/dailyAmBoard.js)
   const dashboard = useMemo(() => {
-    const byLine = dailyAmLineStatus({ targets, jigs, resultByJig, firstOrderByLine, openSessionLines, shift: shiftInfo.shift, now, runByLine, moFollow })
+    // 🧩 23/11 สถานีส่งเข้ากฎ "เครื่องไหนต้องตรวจ" ด้วย (robot ไม่อยู่บนใบผลิต แต่เดินพร้อมเพื่อนในสถานี) · อ่านไม่ได้ = null = กฎเดิม
+    const amStations = amSt.err ? null : amSt
+    const byLine = dailyAmLineStatus({ targets, jigs, resultByJig, firstOrderByLine, openSessionLines, shift: shiftInfo.shift, now, runByLine, moFollow, amStations })
     return Object.entries(byLine)
       .map(([line_name, st]) => ({ line_name, ...st }))
       .sort((a, b) => {
         const ord = { red: 0, orange: 1, pending: 2, idle: 3, green: 4, none: 5 }
         return (ord[a.status] ?? 9) - (ord[b.status] ?? 9)
       })
-  }, [targets, jigs, resultByJig, firstOrderByLine, openSessionLines, shiftInfo.shift, now, runByLine, moFollow])
+  }, [targets, jigs, resultByJig, firstOrderByLine, openSessionLines, shiftInfo.shift, now, runByLine, moFollow, amSt])
 
   const registeredKey = useMemo(() => {
     const s = new Set()

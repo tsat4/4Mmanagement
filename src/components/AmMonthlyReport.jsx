@@ -27,7 +27,7 @@ import FilterBar from './FilterBar'
 import Segmented from './Segmented'
 import LineScopeSelect from './LineScopeSelect'
 import { loadMonthlyAm } from '../lib/dailyAmBoard'
-import { buildAmMonthly, amMonthlyAoa, amRowsSummary, AM_RESULT_META } from '../lib/amMonthly'
+import { buildAmMonthly, amMonthlyAoa, amRowsSummary, AM_RESULT_META, amModeDaysNote } from '../lib/amMonthly'
 import { CHECK_DAY, CHECK_DAY_META, CHECK_DAY_LEGEND, checkDaysNote } from '../utils/dailyCheckDay'
 import { loadCompanyCalendar } from '../utils/companyCalendar'
 import { isWorkingDayFrom } from '../utils/workingDay'
@@ -97,6 +97,7 @@ export default function AmMonthlyReport({ lines = [], scopedLines = [] }) {
     return buildAmMonthly({
       month, shift, targets: raw.targets, jigs: raw.jigs, amEquipIds: raw.amEquipIds,
       inspections: raw.inspections, runsByKey: raw.runsByKey, lines: raw.lines,
+      ordersByKey: raw.ordersByKey, amStations: raw.amStations,   // ⚙️ รายเครื่อง + 🧩 สถานี (23/11)
       isWorkingDay: cal ? (d => isWorkingDayFrom(cal, d)) : null,
     })
   }, [raw, month, shift, cal])
@@ -206,6 +207,10 @@ export default function AmMonthlyReport({ lines = [], scopedLines = [] }) {
         ['สถานะวัน', 'ความหมาย'],
         ...CHECK_DAY_LEGEND.map(k => [CHECK_DAY_META[k].mark, CHECK_DAY_META[k].label]),
         ['(ว่าง)', 'วันหยุดโรงงาน / ยังไม่ถึงกะ'],
+        ['เครื่องไหนต้องตรวจ', 'ใบผลิตลงเลขเครื่องครบ = รายเครื่อง (ไม่มีใบผลิต และเพื่อนร่วมสถานี AM ก็ไม่มี = NP) · ไม่ลงเลขเครื่อง = ทั้งไลน์'],
+        ...shown.map(r => [r.line_name, amModeDaysNote(r.modeDays) || '—']),
+        ...(raw?.ordersError ? [['⚠', `อ่านใบผลิตไม่สำเร็จ (${raw.ordersError}) — ตัดสินทั้งไลน์ทุกวัน`]] : []),
+        ...(raw?.amStationsError ? [['⚠', `อ่านสถานี AM ไม่สำเร็จ (${raw.amStationsError}) — robot ที่ไม่อยู่บนใบผลิตนับเป็น NP`]] : []),
         ...(raw?.runsError ? [[], ['⚠', `${tr("อ่านตารางเปิดกะไม่สำเร็จ")} (${raw.runsError}) — ${tr("วันที่ไม่ได้ตรวจแสดงเป็น \"?\" ไม่ใช่ \"ขาด")}"`]] : []),
         ...(hiddenN ? [[], ['ตัวกรอง', `${tr("ไฟล์นี้มีเฉพาะไลน์ที่เลือก — ซ่อน")} ${hiddenN} ${tr("ไลน์")}`]] : []),
         [],
@@ -276,6 +281,19 @@ export default function AmMonthlyReport({ lines = [], scopedLines = [] }) {
             {!raw?.runsError && unknownN > 0 && (
               <div style={{ marginTop: 3, fontSize: 11.5, color: 'var(--amber)' }}>{tr('❔ ไม่รู้ว่าผลิตหรือไม่')} {unknownN} {tr('เครื่อง-วัน')}</div>
             )}
+            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>
+              {tr('ไลน์เปิดกะแล้ว — เครื่องไหนต้องตรวจ: ใบผลิตลงเลขเครื่องครบ = ตัดสินรายเครื่อง (เครื่องที่ไม่มีใบผลิต และเพื่อนร่วมสถานี AM ก็ไม่มี = NP) · ใบผลิตไม่ลงเลขเครื่อง = ทั้งไลน์ (ทุกเครื่องต้องตรวจ) — ดูป้ายใต้ชื่อไลน์')}
+            </div>
+            {raw?.ordersError && (
+              <div style={{ marginTop: 3, fontSize: 11.5, color: 'var(--amber)', fontWeight: 700 }}>
+                ⚠ {tr('อ่านใบผลิตไม่สำเร็จ')} ({raw.ordersError}) — {tr('ตัดสินทั้งไลน์ทุกวัน (ทุกเครื่องในทะเบียนต้องตรวจ)')}
+              </div>
+            )}
+            {raw?.amStationsError && (
+              <div style={{ marginTop: 3, fontSize: 11.5, color: 'var(--amber)', fontWeight: 700 }}>
+                ⚠ {tr('อ่านสถานี AM ไม่สำเร็จ')} ({raw.amStationsError}) — {tr('robot/อุปกรณ์ที่ไม่อยู่บนใบผลิตจะนับเป็นไม่เดิน (NP) แม้เพื่อนร่วมสถานีเดิน')}
+              </div>
+            )}
             {!cal && <div style={{ marginTop: 3, fontSize: 11, color: 'var(--muted)' }}>{tr('ยังโหลดปฏิทินบริษัทไม่ได้ — ยังไม่ระบายวันหยุด')}</div>}
             {hiddenN > 0 && <div style={{ marginTop: 3, fontSize: 11, color: 'var(--muted)' }}>{tr('ซ่อน')} {hiddenN} {tr('ไลน์ตามตัวกรอง')}</div>}
           </div>
@@ -325,6 +343,7 @@ export default function AmMonthlyReport({ lines = [], scopedLines = [] }) {
                         <td style={{ ...cell, ...stickyCol, fontWeight: 800, fontSize: 12, color: 'var(--text)', background: view === 'machine' ? 'var(--bg3)' : 'var(--card)' }}>
                           {r.line_name === '—' ? '⚠ ยังไม่ระบุไลน์' : r.line_name}
                           <span style={{ fontWeight: 500, color: 'var(--muted)', fontSize: 11 }}> · {r.machines.length} {tr('เครื่อง')}</span>
+                          {amModeDaysNote(r.modeDays) && <div style={{ fontWeight: 500, color: 'var(--muted)', fontSize: 11, lineHeight: 1.35, whiteSpace: 'normal' }}>{tr(amModeDaysNote(r.modeDays))}</div>}
                         </td>
                         {r.cells.map(c => {
                           const m = CHECK_DAY_META[c.state]
