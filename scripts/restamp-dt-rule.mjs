@@ -50,6 +50,12 @@ const FORCE = process.argv.includes('--force');   // ⚠️ ปิดด่า�
    🔴 ต้องมี `defects` ใน dump — ตัวเศษ %P รวมของเสีย/ของสงสัย (`ngByMatFrom`)
       ไม่มี = %P ต่ำกว่าจริง ⇒ สคริปต์หยุดทันที ไม่เดา */
 const WITH_P = process.argv.includes('--with-p');
+/* 🔀 `--lines <json>` = ทะเบียนไลน์ + แมป affects_lanes ⇒ **ทำไลน์เครื่องขนานได้**
+   รูปแบบ: { lines: { "<ชื่อไลน์>": { parallel_stations, flow_mode } }, affectsLanes: { "<machineKey>": n } }
+   (`parallel_stations`/`flow_mode` อยู่ฝั่ง **Main** · `affects_lanes` อยู่ฝั่ง **DR** — ดึงมาใส่ไฟล์เอง)
+   🔴 ไลน์ที่อยู่ในไฟล์นี้ = สคริปต์หารเลนให้ตรงกับที่จอทำ ⇒ **ไม่ต้องข้ามอีก**
+   🔴 ไลน์ที่ไม่อยู่ในไฟล์ = พฤติกรรมเดิม (ข้ามถ้าอยู่ใน PARALLEL_LINES หรือ DT รวมเกินเวลากะ) */
+const LINES_FILE = arg('--lines');
 const REASON = FORCE ? 'dt-rule-20261116-all' : 'dt-rule-20261116';
 const NOTE = FORCE ? 'คิด %A ใหม่ด้วยกฎ/ทะเบียนวันนี้ทุกกะ (คำสั่ง user 18/11) — %P/%Q ไม่แตะ'
                    : 'นิยาม downtime ใหม่ 16/11 — %P/%Q ไม่แตะ';
@@ -99,6 +105,17 @@ const main = async () => {
   const chunk = (a, n) => a.reduce((o, v, i) => ((o[Math.floor(i / n)] ||= []).push(v), o), []);
   let sessions, breaks, prods, kstds, orders = [], dts = [], defects = [];
 
+  /* ทะเบียนไลน์สำหรับหารเลน — ไม่ส่ง = ทุกไลน์ 1 เลน (พฤติกรรมเดิมเป๊ะ) */
+  let lineCfg = {}, affectsLanes = null;
+  if (LINES_FILE) {
+    const j = JSON.parse(readFileSync(LINES_FILE, 'utf8'));
+    lineCfg = j.lines || {};
+    affectsLanes = j.affectsLanes || null;
+    const n = Object.keys(lineCfg).length;
+    console.log(`ทะเบียนไลน์สำหรับหารเลน ${n} ไลน์` +
+      Object.entries(lineCfg).map(([k, v]) => ` · ${k}=${v?.parallel_stations || 1} เลน`).join(''));
+  }
+
   if (DUMP) {
     /* 🔌 ออฟไลน์: input ชุดเดียวกับที่โหลดจาก DB — ตรรกะข้างล่างใช้ร่วมกัน ห้ามแยกเป็นสูตรที่ 2 */
     let defectsDump;
@@ -135,6 +152,18 @@ const main = async () => {
       orders.push(...o); dts.push(...d);
     }
   }
+  /* 🔴 `laneWeightFn` ตัดสินจาก `d.machine_no` — dump ที่ไม่มีคอลัมน์นี้จะถูกนับเป็น
+     "ไม่ระบุเครื่อง = หยุดทั้งไลน์" ทุกแถว ⇒ **ไม่หารเลนเลย เงียบๆ** ⇒ %A ต่ำผิดเหมือนเดิม
+     (นี่คืออุบัติเหตุ 20/11 ซ้ำรอย) ⇒ ตรวจก่อน ไม่ผ่าน = หยุด */
+  if (Object.values(lineCfg).some(v => Number(v?.parallel_stations) > 1)) {
+    const hasMc = dts.some(x => 'machine_no' in x);
+    if (!hasMc) {
+      console.error('❌ --lines มีไลน์เครื่องขนาน แต่ dump ไม่มีคอลัมน์ `machine_no` ในใบ downtime');
+      console.error('   ⇒ หารเลนไม่ได้ จะได้ %A ต่ำผิดแบบเงียบๆ — เติม machine_no ใน dump ก่อน');
+      process.exit(1);
+    }
+  }
+
   const by = (rows) => rows.reduce((m, r) => ((m[r.session_id] ||= []).push(r), m), {});
   const ordBy = by(orders), dtBy = by(dts), defBy = by(defects);
   console.log(`ใบผลิต ${orders.length} · ใบ downtime ${dts.length}\n`);
@@ -150,14 +179,21 @@ const main = async () => {
   const rows = [], worst = [], zeroed = [], overShift = [];
 
   for (const s of sessions) {
-    if (PARALLEL_LINES.has(s.line_name)) { stat.skipLine++; continue; }
+    /* ไลน์ที่มีทะเบียนแล้ว = หารเลนได้ ⇒ ไม่ข้าม · ไม่มีทะเบียน = กติกาเดิม */
+    const lf = lineCfg[s.line_name] || null;
+    const laneN = Number(lf?.parallel_stations) > 1 ? Number(lf.parallel_stations) : 1;
+    if (!lf && PARALLEL_LINES.has(s.line_name)) { stat.skipLine++; continue; }
     if (s.shift_min == null || (s.oee_a == null && !FORCE)) { stat.skipNoA++; continue; }
     const dl = dtBy[s.id] || [];
 
     /* 🔴 ด่านจับ "ไลน์เครื่องขนานที่หลุดลิสต์" โดยไม่ต้องต่อทะเบียน Main:
        DT รวมเกินความยาวกะ = เป็นไปไม่ได้บนไลน์เครื่องเดียว ⇒ ลงรายเครื่องแน่ๆ
        สคริปต์นี้หารเลนไม่ได้ ⇒ **ข้าม ห้ามเดา** (เคส LASER-789 12/10: DT 829 น. บนกะ 570 น.) */
-    const dtSum = dl.reduce((a, x) => a + (Number(x.duration_min) || 0), 0);
+    /* 🔴 ไลน์ที่หารเลนได้ ต้องเทียบด้วย "นาทีของไลน์" ไม่ใช่นาทีดิบ
+       (ไลน์ 3 เลนลง DT รายเครื่อง ดิบเกินเวลากะเป็นเรื่องปกติ — ของไลน์จริงไม่เกิน) */
+    const dtSum = laneN > 1
+      ? dl.reduce((a, x) => a + (Number(x.duration_min) || 0) * (x.machine_no ? 1 / laneN : 1), 0)
+      : dl.reduce((a, x) => a + (Number(x.duration_min) || 0), 0);
     if (dtSum > Number(s.shift_min)) {
       stat.skipDtOverShift++;
       if (overShift.length < 20) overShift.push(`${s.work_date} ${String(s.line_name).padEnd(24)} ${s.shift.padEnd(5)} DT ${dtSum} น. > เวลากะ ${s.shift_min} น. (${dl.length} ใบ)`);
@@ -166,7 +202,7 @@ const main = async () => {
     const base = { session: s, orders: ordBy[s.id] || [], defects: defBy[s.id] || [], ngQty: 0,
       products: prods, kanbanStds: kstds, breakPolicies: breaks,
       processType: s.break_snapshot?.process_type ?? null,
-      lineFlow: {}, machineCount: 0, endTime: s.end_time || null };
+      lineFlow: lf || {}, machineCount: 0, affectsLanes, endTime: s.end_time || null };
 
     const oldR = computeSessionOee({ ...base, downtimes: dl.map(asOld) });
     const aOldCalc = oldR.A == null ? null : oldR.A * 100;
