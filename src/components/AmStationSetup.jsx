@@ -13,6 +13,8 @@ import { askConfirm } from '../utils/askConfirm'
 import { checkWrite, checkWriteRows } from '../utils/dbWrite'
 import { buildStationIndex, validateStation } from '../utils/amStations'
 import { tr } from '../utils/i18n'
+import { storeBtn } from '../utils/storeUi'
+import { fetchByIds } from '../utils/fetchByIds'
 
 const inputSt = { width: '100%', padding: '7px 10px', borderRadius: 8, fontSize: 13, background: 'var(--bg3)', border: '1px solid var(--border2)', color: 'var(--text)' }
 
@@ -36,6 +38,30 @@ export default function AmStationSetup({ jigs = [], targets = [], lines = [], ca
 
   const ix = useMemo(() => buildStationIndex(stations, members), [stations, members])
   const jigById = useMemo(() => new Map(jigs.map(j => [j.id, j])), [jigs])
+  /* 🔎 สมาชิกที่ไม่อยู่ในลิสต์ AM รายวันแล้ว (ถอดทะเบียน AM/ไม่มีใบตรวจ AM ภายหลัง · 23/11)
+     `jigs` จากหน้าแม่ = เฉพาะอุปกรณ์ AM รายวัน ⇒ อ่านชื่อจริงจากทะเบียน `jigs` เพิ่ม — ห้ามเขียนว่า "ถูกลบ" ทั้งที่ยังอยู่
+     และต้องโผล่ในฟอร์มแก้ให้ติ๊กออกได้ (ไม่งั้นถูกนับแต่มองไม่เห็น) */
+  const strayKey = useMemo(() => [...new Set(members.map(m => m.jig_id))].filter(id => !jigById.has(id)).sort().join(','), [members, jigById])
+  const [stray, setStray] = useState({ key: '', byId: new Map(), err: '' })
+  useEffect(() => {
+    let alive = true
+    if (!strayKey) { setStray({ key: '', byId: new Map(), err: '' }); return () => { alive = false } }
+    ;(async () => {
+      const r = await fetchByIds(strayKey.split(','), (part) => supabaseDR.from('jigs').select('id, name, machine_no, jig_no, line_name').in('id', part))
+      if (!alive) return
+      setStray({ key: strayKey, byId: new Map((r.rows || []).map(j => [j.id, j])), err: r.error || '' })
+    })()
+    return () => { alive = false }
+  }, [strayKey])
+  const strayReady = stray.key === strayKey
+  const jigInfo = (id) => jigById.get(id) || stray.byId.get(id) || null
+  /** ป้ายเตือนของสมาชิกที่ไม่อยู่ในลิสต์ AM รายวัน · '' = ปกติ */
+  const strayNote = (id) => {
+    if (jigById.has(id)) return ''
+    if (!strayReady) return tr('กำลังอ่านชื่ออุปกรณ์…')
+    if (stray.err) return `${tr('อ่านชื่ออุปกรณ์ไม่ได้')}: ${stray.err}`
+    return stray.byId.has(id) ? tr('ไม่ได้ลงทะเบียน AM รายวันแล้ว — กด "แก้" เพื่อเอาออกจากสถานี') : tr('ไม่พบอุปกรณ์นี้ในทะเบียน — กด "แก้" เพื่อเอาออกจากสถานี')
+  }
   const lineNames = useMemo(() => new Set((lines || []).map(l => l.name)), [lines])
   // อุปกรณ์ที่ลงทะเบียน AM รายวันของไลน์ที่เลือก (ลำดับเดิมของทะเบียน)
   const regJigsOfLine = useMemo(() => {
@@ -54,7 +80,7 @@ export default function AmStationSetup({ jigs = [], targets = [], lines = [], ca
     if (!canManage || !edit) return
     const err = validateStation({
       name: edit.name, line_name: edit.line_name, jigIds: edit.jigIds,
-      jigLineOf: (id) => jigById.get(id)?.line_name || null, takenBy: (id) => ix.byJig.get(id) || null, selfId: edit.id || null,
+      jigLineOf: (id) => jigInfo(id)?.line_name || null, takenBy: (id) => ix.byJig.get(id) || null, selfId: edit.id || null,
     })
     if (err) { toast.error(err); return }
     if (!lineNames.has(edit.line_name)) { toast.error(tr('ไลน์นี้อยู่นอกขอบเขตของคุณ')); return }   // ด่านซ้ำตอนเขียนจริง
@@ -105,7 +131,7 @@ export default function AmStationSetup({ jigs = [], targets = [], lines = [], ca
         <div style={{ minWidth: 220 }}>
           <LineSelect lines={lines} value={line} onChange={v => { setLine(v || ''); setEdit(null) }} placeholder={tr('— เลือกไลน์ —')} />
         </div>
-        {canManage && line && !edit && <button type="button" className="tbtn" onClick={startNew} disabled={busy} style={{ fontWeight: 700 }}>+ {tr('สร้างสถานี')}</button>}
+        {canManage && line && !edit && <button type="button" onClick={startNew} disabled={busy} style={storeBtn('primary')}>+ {tr('สร้างสถานี')}</button>}
         {!canManage && <span style={{ fontSize: 12, color: 'var(--accent2)' }}>{tr('* ดูได้อย่างเดียว — ต้องมีสิทธิ์ตั้งค่า PM')}</span>}
       </div>
       {loadErr && <div style={{ fontSize: 12.5, color: 'var(--amber)', marginBottom: 10 }}>{tr('อ่านรายการสถานีไม่ได้')}: {loadErr}</div>}
@@ -117,6 +143,29 @@ export default function AmStationSetup({ jigs = [], targets = [], lines = [], ca
           <div style={{ fontSize: 13.5, fontWeight: 800, marginBottom: 8 }}>{edit.id ? tr('แก้สถานี') : tr('สถานีใหม่')} · {edit.line_name}</div>
           <input id="am-station-name" value={edit.name} onChange={e => setEdit(x => ({ ...x, name: e.target.value }))} placeholder={tr('ชื่อสถานี เช่น Robot cell #1')} style={{ ...inputSt, marginBottom: 10 }} />
           <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>{tr('เลือกอุปกรณ์ในสถานี (ลำดับที่ติ๊ก = ลำดับในใบตรวจ)')} · {edit.jigIds.length} {tr('ตัว')}</div>
+          {(() => {
+            // สมาชิกเดิมของสถานีที่ไม่อยู่ในลิสต์ AM รายวันของไลน์นี้ — โชว์ให้ติ๊กออกได้
+            const regIds = new Set(regJigsOfLine.map(j => j.id))
+            const strays = (edit.id ? ix.membersOf(edit.id) : []).filter(id => !regIds.has(id))
+            if (!strays.length) return null
+            return (
+              <div style={{ display: 'grid', gap: 6, marginBottom: 6 }}>
+                {strays.map(id => {
+                  const on = edit.jigIds.includes(id)
+                  const j = jigInfo(id)
+                  return (
+                    <label key={id} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '7px 9px', borderRadius: 'var(--r-md)', border: '1px solid var(--amber)', background: 'var(--bg3)', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={on} disabled={busy} onChange={() => toggleJig(id)} style={{ marginTop: 2, width: 15, height: 15, flexShrink: 0 }} />
+                      <span style={{ minWidth: 0, flex: 1 }}>
+                        <span style={{ display: 'block', fontSize: 12, fontWeight: 700, wordBreak: 'break-word' }}>{on ? `${edit.jigIds.indexOf(id) + 1}. ` : ''}{j?.name || tr('(ไม่ทราบชื่อ)')}</span>
+                        <span style={{ display: 'block', fontSize: 11, color: 'var(--amber)' }}>⚠ {(j && !jigById.has(id) && j.line_name && j.line_name !== edit.line_name) ? `${tr('ย้ายไปไลน์')} ${j.line_name} ${tr('แล้ว')} · ` : ''}{strayNote(id).replace(/ — กด "แก้".*$/, '')} — {tr('ติ๊กออกเพื่อเอาออกจากสถานี')}</span>
+                      </span>
+                    </label>
+                  )
+                })}
+              </div>
+            )
+          })()}
           {regJigsOfLine.length === 0 ? (
             <div style={{ fontSize: 12.5, color: 'var(--amber)' }}>{tr('ไลน์นี้ยังไม่มีอุปกรณ์ที่ลงทะเบียน AM รายวัน — ลงทะเบียนที่แท็บ "ลงทะเบียนเครื่องตรวจ" ก่อน')}</div>
           ) : (
@@ -143,8 +192,8 @@ export default function AmStationSetup({ jigs = [], targets = [], lines = [], ca
             </div>
           )}
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            <button type="button" className="tbtn" onClick={save} disabled={busy} style={{ fontWeight: 800, color: 'var(--accent)', borderColor: 'var(--accent)' }}>{busy ? tr('กำลังบันทึก…') : tr('บันทึกสถานี')}</button>
-            <button type="button" className="tbtn" onClick={() => setEdit(null)} disabled={busy}>{tr('ยกเลิก')}</button>
+            <button type="button" onClick={save} disabled={busy} style={storeBtn('primary', { opacity: busy ? 0.6 : 1 })}>{busy ? tr('กำลังบันทึก…') : tr('บันทึกสถานี')}</button>
+            <button type="button" onClick={() => setEdit(null)} disabled={busy} style={storeBtn('secondary')}>{tr('ยกเลิก')}</button>
           </div>
         </div>
       )}
@@ -157,11 +206,14 @@ export default function AmStationSetup({ jigs = [], targets = [], lines = [], ca
           <div key={s.id} style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
               <b style={{ flex: 1, minWidth: 0, fontSize: 13.5 }}>🧩 {s.name}</b>
-              {canManage && <button type="button" className="tbtn" onClick={() => startEdit(s)} disabled={busy} style={{ padding: '3px 10px', fontSize: 12 }}>{tr('แก้')}</button>}
-              {canManage && <button type="button" className="tbtn" onClick={() => remove(s)} disabled={busy} style={{ padding: '3px 10px', fontSize: 12, color: 'var(--red)' }}>{tr('ลบ')}</button>}
+              {canManage && <button type="button" onClick={() => startEdit(s)} disabled={busy} style={storeBtn('secondary', { padding: '8px 14px' })}>{tr('แก้')}</button>}
+              {canManage && <button type="button" onClick={() => remove(s)} disabled={busy} style={storeBtn('secondary', { padding: '8px 14px', color: 'var(--red)', borderColor: 'var(--red)' })}>{tr('ลบ')}</button>}
             </div>
             <ol style={{ margin: 0, paddingLeft: 18, fontSize: 12.5, color: 'var(--text2)', lineHeight: 1.7 }}>
-              {ix.membersOf(s.id).map(id => <li key={id}>{jigById.get(id)?.name || <span style={{ color: 'var(--amber)' }}>{tr('อุปกรณ์ถูกลบ/หาไม่เจอ')}</span>}</li>)}
+              {ix.membersOf(s.id).map(id => {
+                const note = strayNote(id)
+                return <li key={id}>{jigInfo(id)?.name || tr('(ไม่ทราบชื่อ)')}{note && <span style={{ display: 'block', fontSize: 11.5, color: 'var(--amber)', lineHeight: 1.4 }}>⚠ {note}</span>}</li>
+              })}
             </ol>
           </div>
         ))}
