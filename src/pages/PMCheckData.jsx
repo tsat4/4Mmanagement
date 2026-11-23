@@ -55,6 +55,7 @@ import { loadEmployeeSigners, signatureOfPerson, resolveEmployeeSigner, inspecto
 import InspectorCodeField from '../components/InspectorCodeField'   // ✍️ รหัสผู้ตรวจจริง (C1 · 05/11)   // ✍️ ลายเซ็นในฐานพนักงาน (C1 · 03/11)
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 import { askConfirm } from '../utils/askConfirm';
+import { confirmSign } from '../utils/signConfirm';
 
 /* 🔩 จุดชิมของ fixture บนใบตรวจ PM (2026-09-08 · คำสั่ง user "shim record กับการตรวจใช้กลไกเดียวกัน")
    ข้อมูลแยกตาราง (fixture_points/fixture_shim_events) แต่ "รูป + หมุด" ชุดเดียวกับจุดตรวจ PM:
@@ -720,6 +721,7 @@ function HistoryModal({ inspection, checkpoints: cpsFromPage, jig, onClose, user
   const [approving, setApproving] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [insp, setInsp] = useState(inspection)
+  const { fullName: myFullName } = useContext(UserContext)
   const [rejecting, setRejecting] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
 
@@ -761,13 +763,32 @@ function HistoryModal({ inspection, checkpoints: cpsFromPage, jig, onClose, user
     ? amApproveAllowed({ can: (r, a) => can(r, a, userRole), isSeeded: isActionSeeded }) && !!amVerdict?.ok
     : can('pm', 'approve', userRole) && !!amVerdict?.ok) && (deptWrite?.ok !== false)
 
+  /** หลัง CAS ไม่ผ่าน — ดึงสถานะจริงของใบมาแสดง (อ่านไม่ได้ = บอก ไม่เงียบ) */
+  const reloadInspStatus = async () => {
+    const { data, error } = await supabaseDR.from('inspections').select('*').eq('id', insp.id).maybeSingle()
+    if (error) { toast.error((tr('โหลดสถานะใบล่าสุดไม่สำเร็จ') + ': ') + error.message); return }
+    if (data) setInsp(data)
+  }
+
   const handleApprove = async () => {
     if (deptWrite && !deptWrite.ok) { toast.info(teamBlockText(deptWrite, 'ผลตรวจของทีมนี้')); return }
     if (amVerdict && !amVerdict.ok) { toast.info(verdictText(amVerdict)); return }   // ด่านซ้ำตอนเขียนจริง (ปุ่มซ่อนอย่างเดียวไม่พอ)
+    /* 🔴 A2 (23/11): อนุมัติ = เซ็นรับ ⇒ ถามยืนยันผ่านของกลางก่อนเขียน DB (CLAUDE.md §4M · signConfirm.js)
+       ตีกลับไม่ต้องถาม — มีด่าน "ต้องพิมพ์เหตุผล" อยู่แล้ว (ห้ามถามพร่ำเพรื่อ) */
+    if (!await confirmSign({
+      what: isAm ? 'อนุมัติผลตรวจ AM' : 'ยืนยันผลตรวจ',
+      docLabel: 'ใบตรวจ', orderNo: [jig?.name, formatDate(insp.inspected_at)].filter(Boolean).join(' — '),
+      actor: myFullName, as: isAm ? 'ผู้อนุมัติ' : 'หัวหน้าผู้ยืนยัน',
+      effect: 'ใบเปลี่ยนเป็น "อนุมัติแล้ว" · ลายเซ็นคุณขึ้นช่องผู้อนุมัติในใบพิมพ์',
+      warn: '⚠️ อนุมัติแล้ว ยกเลิกหรือเปลี่ยนเป็นตีกลับในระบบไม่ได้',
+    })) return
     setApproving(true)
+    /* 🔴 A3 (23/11): compare-and-swap — เขียนได้เฉพาะใบที่ยัง "รออนุมัติ" อยู่จริง
+       (อีกคนตีกลับ/อนุมัติไปแล้วระหว่างที่จอนี้เปิดค้าง = 0 แถว ⇒ ไม่ทับผลของเขา แล้วโหลดสถานะจริงมาโชว์) */
     const { data, error } = await supabaseDR.from('inspections').update({
       approval_status: 'approved', approved_by: userId, approved_at: new Date().toISOString(), reject_reason: null,
-    }).eq('id', insp.id).select().single()
+    }).eq('id', insp.id).eq('approval_status', 'pending').select().maybeSingle()
+    if (!error && !data) { toast.error(tr('ใบนี้ถูกอนุมัติหรือตีกลับไปแล้วโดยคนอื่น — โหลดสถานะล่าสุดให้แล้ว')); await reloadInspStatus(); setApproving(false); return }
     if (error) toast.error((tr('อนุมัติไม่สำเร็จ') + ': ') + error.message)
     if (!error && data) {
       setInsp(data)
@@ -785,7 +806,8 @@ function HistoryModal({ inspection, checkpoints: cpsFromPage, jig, onClose, user
     setApproving(true)
     const { data, error } = await supabaseDR.from('inspections').update({
       approval_status: 'rejected', approved_by: userId, approved_at: new Date().toISOString(), reject_reason: rejectReason.trim(),
-    }).eq('id', insp.id).select().single()
+    }).eq('id', insp.id).eq('approval_status', 'pending').select().maybeSingle()   // A3: CAS เหมือนปุ่มอนุมัติ
+    if (!error && !data) { toast.error(tr('ใบนี้ถูกอนุมัติหรือตีกลับไปแล้วโดยคนอื่น — โหลดสถานะล่าสุดให้แล้ว')); setRejecting(false); await reloadInspStatus(); setApproving(false); return }
     if (error) toast.error((tr('ตีกลับไม่สำเร็จ') + ': ') + error.message)
     if (!error && data) {
       setInsp(data); setRejecting(false); setRejectReason('')
@@ -838,7 +860,9 @@ function HistoryModal({ inspection, checkpoints: cpsFromPage, jig, onClose, user
     } else {
       inspector = { email: profMap[insp.inspector_id]?.full_name ?? 'Inspector', signature_data: await getSig(insp.inspector_id) }
     }
-    const approver = insp.approved_by ? { email: profMap[insp.approved_by]?.full_name ?? 'Approver', signature_data: await getSig(insp.approved_by) } : null
+    /* 🔴 A1 (23/11): `approved_by` ถูกเขียนทั้งตอนอนุมัติและตอน "ตีกลับ" (= คนที่ตีกลับ)
+       ⇒ ช่องผู้อนุมัติในใบพิมพ์ต้องดูสถานะด้วย — ใบตีกลับ/รออนุมัติ ห้ามมีลายเซ็นผู้อนุมัติ */
+    const approver = (insp.approval_status === 'approved' && insp.approved_by) ? { email: profMap[insp.approved_by]?.full_name ?? 'Approver', signature_data: await getSig(insp.approved_by) } : null
     // ชื่อใต้ลายเซ็น = ชื่อจริง (profiles.full_name) ไม่ใช่อีเมล — เดิมช่อง APPROVED ขึ้น "tsat4pd3" (20/10)
     const exporter = { email: profMap[userId]?.full_name ?? currentUserEmail ?? 'Exporter', signature_data: await getSig(userId) }
     const categories = await fetchCategories({ includeInactive: true })
