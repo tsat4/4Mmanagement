@@ -45,7 +45,7 @@ import {
   staffingOfDept, summarizeStaffing, rosterOn, stationSkillGaps,
   indexSessions, sessionsOfDeptShift, oeeOfSessions, compareOeeByStaffing, MIN_SHIFTS_TO_COMPARE,
   ATTEND_META, FOUR_M, shiftMeta, SHIFT_META,
-  stationsOfLineFamily, lineFamilyDown, lineGroupRoot, lineStaffStatus, lineStaffLabel, personFitState,
+  stationsOfLineFamily, lineFamilyDown, lineGroupRoot, lineStaffStatus, lineDeptsOf, boardForLine, lineStaffLabel, personFitState,
 } from '../utils/manpowerBoard';
 import { skillFit, skillMapOf, pendingMapOf } from '../utils/skillFit';
 import { STATUS_COLOR } from '../utils/statusTone';
@@ -244,6 +244,16 @@ export default function ManpowerBoard() {
   const deptIgnored = !!rawDeptParam && !!board && rawDeptParam !== deptParam;
   const deptNode = useMemo(() => (deptParam ? nodes.find(n => String(n.id) === deptParam) || null : null), [nodes, deptParam]);
   const depts = useMemo(() => allowedDepts.filter(d => !deptParam || d.key === deptParam), [allowedDepts, deptParam]);
+  /* 🧩 กรองถึงไลน์ (`?lline=` · 23/11 user "ให้แท็บอื่นกรองถึงระดับไลน์ด้วย") — ผังกำลังคน · 4M · แผน vs มาจริง · ประวัติ
+     ผ่าน `narrowDeptToLine()` ที่เดียว · 🔴 แท็บผัง LAYOUT ใช้ `depts` เดิม (ต้องเห็นรูปผังของไลน์แม่) */
+  const llineName = params.get('lline') || '';
+  const lineFam = useMemo(() => (llineName ? lineFamilyDown(lines, llineName) : []), [lines, llineName]);
+  const lineFamKey = lineFam.map(l => l.id).join(',');
+  const lineDepts = useMemo(() => {
+    return lineDeptsOf(depts, lineFam, llineName);
+  }, [depts, lineFamKey, llineName]); // eslint-disable-line react-hooks/exhaustive-deps
+  const lineSelf = lineFam[0] || null;   // getLineFamily คืนตัวเองตัวแรก
+  const lineBoard = useMemo(() => (lineFam.length ? boardForLine(board, lineDepts) : board), [board, lineDepts, lineFamKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filters = (
     <>
@@ -315,15 +325,22 @@ export default function ManpowerBoard() {
         </>)}
       />
       {err && <div className="card" style={{ padding: 10, marginBottom: 12, borderLeft: '4px solid var(--red)', fontSize: 13 }}>{trI18n('⚠️ โหลดข้อมูลไม่ครบ —')} {err}</div>}
+      {!loading && board && lineFam.length > 0 && tab !== 'layout' && (
+        <LineFilterNotice lineName={llineName} lineSelf={lineSelf} depts={lineDepts} tab={tab}
+          onParent={lineSelf?.parent_line_name ? () => merge({ lline: lineSelf.parent_line_name }) : null}
+          onClear={() => merge({ lline: null })} />
+      )}
       {loading ? <div style={{ padding: 24, color: 'var(--muted)' }}>{trI18n('กำลังโหลด…')}</div>
         : !board ? <div className="card" style={{ padding: 24 }}>{trI18n('ยังไม่มีส่วนงานในผังองค์กร (ตั้งที่ /org-setup)')}</div>
-        : tab === 'org' ? (tv ? <OrgTv board={board} depts={depts} skills={skills} /> : <OrgTab board={board} depts={depts} skills={skills} />)
+        : tab === 'org' ? (tv ? <OrgTv board={lineBoard} depts={lineDepts} skills={skills} /> : <OrgTab board={lineBoard} depts={lineDepts} skills={skills} />)
         : tab === 'layout' ? <LayoutTab board={board} depts={depts} lines={lines} attendance={attendance} maps={maps} tv={tv} stationPlans={stationPlans} skills={skills}
             employees={employees} scopeNames={scopeNames} allWs={stations} />
         : tab === 'staffing' ? <StaffingTab section={section} deptParam={deptParam} today={workDate} nodes={nodes} employees={employees} lines={lines}
-            slotPlans={slotPlans} lineTechs={lineTechs} stations={stations} stationPlans={stationPlans} homeByEmp={homeByEmp} actingPos={actingPos} />
-        : tab === 'history' ? <HistoryTab section={section} dept={deptParam ? (board?.depts || []).find(d => d.key === deptParam) || null : null} deptParam={deptParam} nodes={nodes} lines={lines} stations={stations} employees={employees} />
-        : <FourMTab depts={depts} logs={fourM} tv={tv} />}
+            slotPlans={slotPlans} lineTechs={lineTechs} stations={stations} stationPlans={stationPlans} homeByEmp={homeByEmp} actingPos={actingPos}
+            lineFam={lineFam} lineName={llineName} />
+        : tab === 'history' ? <HistoryTab section={section} dept={deptParam ? (board?.depts || []).find(d => d.key === deptParam) || null : null} deptParam={deptParam} nodes={nodes} lines={lines} stations={stations} employees={employees}
+            lineFam={lineFam} />
+        : <FourMTab depts={lineDepts} logs={fourM} tv={tv} />}
       {setupOpen && section && (
         <ManpowerBoardSetup section={section} nodes={nodes} lines={lines} employees={employees}
           slotPlans={slotPlans} lineTechs={lineTechs} stations={stations} stationPlans={stationPlans} flexUnits={flexUnits}
@@ -637,6 +654,34 @@ function OrgTab({ board, depts, skills }) {
           )}
         </div>
       ))}
+    </div>
+  );
+}
+
+/* 🧩 แถบบอกว่ากำลังกรองถึงไลน์ (แท็บที่ไม่ใช่ผัง LAYOUT) — ห้ามให้จอว่างโดยไม่บอกเหตุ (กฎความซื่อสัตย์ของจอ)
+   ไลน์ไม่มีพนักงานสังกัดตรง (เช่น Line 60 — คนสังกัดไลน์แม่) = เขียนบอก + ปุ่มดูไลน์แม่ (user 23/11 เลือก "กรองตรง + บอกบนจอ") */
+function LineFilterNotice({ lineName, lineSelf, depts, tab, onParent, onClear }) {
+  const direct = depts.reduce((a, d) => a + (d.opsTotal || 0) + d.cols.reduce((x, c) => x + c.leaders.length, 0), 0);
+  const deptOps = depts.reduce((a, d) => a + (d.lineFilter?.deptOps || 0), 0);
+  const hiddenFlex = depts.reduce((a, d) => a + (d.lineFilter?.hiddenFlex || 0), 0);
+  const empty = tab !== 'fourm' && tab !== 'history' && direct === 0;
+  const btn = { fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 'var(--r-md)', cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--bg2)', color: 'var(--text2)' };
+  return (
+    <div className="card" style={{ padding: '8px 12px', marginBottom: 12, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', fontSize: 13,
+      borderLeft: `4px solid ${empty ? 'var(--amber)' : 'var(--accent)'}` }}>
+      <span>🧩 {trI18n('กรองถึงไลน์')} <b>{lineName}</b></span>
+      {!depts.length && <span style={{ color: 'var(--amber)' }}>{trI18n('— ไลน์นี้ไม่อยู่ในแผนกของส่วนงานที่เลือก')}</span>}
+      {empty && depts.length > 0 && (
+        <span style={{ color: 'var(--amber)' }}>
+          {trI18n('— ยังไม่มีพนักงานสังกัดไลน์นี้โดยตรง')}{deptOps > 0 ? ` (${deptOps} ${trI18n('คนในแผนกสังกัดไลน์อื่น/ไลน์แม่')}${lineSelf?.parent_line_name ? ` ${lineSelf.parent_line_name}` : ''})` : ''}
+          {' · '}{trI18n('ย้ายสังกัดได้ที่ทะเบียนพนักงาน')}
+        </span>
+      )}
+      {(tab === 'staffing') && <span style={{ color: 'var(--muted)', fontSize: 12 }}>{trI18n('· เทียบคนมาจริงกับ std ของไลน์ — ช่องตำแหน่งตั้งรายทีม แยกลงไลน์ไม่ได้ จึงไม่คิดช่องว่างอัตรากำลัง')}</span>}
+      {(tab === 'org') && <span style={{ color: 'var(--muted)', fontSize: 12 }}>{trI18n('· ช่องว่างรายทีมแยกลงไลน์ไม่ได้ จึงไม่แสดง · หัวหน้าแผนก/ช่าง = ทั้งแผนก')}{hiddenFlex ? ` · ${trI18n('ซ่อนคนวิ่งข้ามแผนก')} ${hiddenFlex} ${trI18n('คน')}` : ''}</span>}
+      <span className="spacer" style={{ flex: 1 }} />
+      {onParent && <button type="button" className="pg-btn" style={btn} onClick={onParent}>{trI18n('ดูไลน์แม่')} {lineSelf?.parent_line_name}</button>}
+      <button type="button" className="pg-btn" style={btn} onClick={onClear}>{trI18n('ล้างการกรองไลน์')}</button>
     </div>
   );
 }
@@ -1564,7 +1609,8 @@ function OrgTv({ board, depts, skills }) {
    เพดาน 62 วัน (~7,500 แถวเช็คชื่อ) — เลือกยาวกว่านั้น = ตัดให้เหลือ 62 วันล่าสุดแล้วเขียนบอก ไม่บล็อก */
 const STAFFING_MAX_DAYS = 62;
 
-function StaffingTab({ section, deptParam, today, nodes, employees, lines, slotPlans, lineTechs, stations, stationPlans, homeByEmp, actingPos }) {
+function StaffingTab({ section, deptParam, today, nodes, employees, lines, slotPlans, lineTechs, stations, stationPlans, homeByEmp, actingPos, lineFam = [], lineName = '' }) {
+  const lineIds = useMemo(() => new Set(lineFam.map(l => String(l.id))), [lineFam]);
   const tr = useTimeRange({ defaultDays: 30 });
   const to = tr.to > today ? today : tr.to;
   const capFrom = addDaysStr(to, -(STAFFING_MAX_DAYS - 1));
@@ -1615,7 +1661,9 @@ function StaffingTab({ section, deptParam, today, nodes, employees, lines, slotP
       const board = buildManpowerBoard({ section, nodes, employees: rosterOn(employees, d, { today, attendance: att[d] }), lines, maps: buildScheduleMaps(sch[d] || [], lines),
         // 🧭 คนยืมตัวย้อนหลังก็ต้องทับตำแหน่งด้วยชุดเดียวกับ `employees` (ส่งมาแล้วทับจากหน้าแม่)
         attendance: att[d] || {}, slotPlans, lineTechs, helpers: applyWorkingPositions(raw.borrowed.byDate?.[d] || [], actingPos), stations, stationPlans, homeByEmp });
-      out.push({ date: d, depts: (board?.depts || []).filter(x => !deptParam || x.key === deptParam)
+      const inDept = (board?.depts || []).filter(x => !deptParam || x.key === deptParam);
+      // 🧩 กรองถึงไลน์ — คนมาจริง vs std ของไลน์ (ช่องรายทีมแยกไลน์ไม่ได้ = ไม่คิดช่องว่าง · `lineDeptsOf`)
+      out.push({ date: d, depts: (lineIds.size ? lineDeptsOf(inDept, lineFam, lineName) : inDept)
         .map(x => {
           /* 🔴 กะผลิตที่ปิดแล้ว = หลักฐานว่า "ไลน์เดินในกะนี้จริง" — ไม่มี = ยืนยันไม่ได้
              ⇒ ไม่คิดช่องว่างของกะนั้น (จุดงานที่ไม่ได้เดินวันนั้น ไม่ใช่ "ขาดคน" · user 15/10) */
@@ -1625,7 +1673,7 @@ function StaffingTab({ section, deptParam, today, nodes, employees, lines, slotP
         }) });
     }
     return out;
-  }, [raw, from, to, today, section, deptParam, nodes, employees, lines, slotPlans, lineTechs, stations, stationPlans, homeByEmp, actingPos]);
+  }, [raw, from, to, today, section, deptParam, nodes, employees, lines, slotPlans, lineTechs, stations, stationPlans, homeByEmp, actingPos, lineIds, lineFam, lineName]);
   const summary = useMemo(() => summarizeStaffing(days), [days]);
   const oeeCmp = useMemo(() => compareOeeByStaffing(days), [days]);
   const rowsOf = useMemo(() => summary.flatMap(sm => ['day', 'night'].map(sh => ({ key: sm.key, name: sm.name, sh }))), [summary]);
@@ -1684,8 +1732,10 @@ function StaffingTab({ section, deptParam, today, nodes, employees, lines, slotP
                     <td style={num}>{sm.shifts ? `${sm.onFloor} / ${sm.registered} (${pct(sm.fill)})` : '–'}</td>
                     <td style={{ ...num, fontWeight: 800 }}>{sm.shifts ? sm.absentShort : '–'}</td>
                     <td style={num}>
-                      {sm.structUnknownShifts >= sm.shifts && sm.shifts ? '–' : sm.structShort}
-                      {sm.structUnknownShifts > 0 && (
+                      {/* 🧩 กรองถึงไลน์ = ช่องรายทีมแยกลงไลน์ไม่ได้ ⇒ '–' เสมอ (ห้ามโชว์ 0 · ตัวหารที่หายไม่ใช่ศูนย์) */}
+                      {lineName ? '–' : sm.structUnknownShifts >= sm.shifts && sm.shifts ? '–' : sm.structShort}
+                      {lineName && <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400 }}>{trI18n('แยกลงไลน์ไม่ได้')}</div>}
+                      {!lineName && sm.structUnknownShifts > 0 && (
                         <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400 }}>{trI18n('คิดไม่ได้')} {sm.structUnknownShifts} {trI18n('กะ')}</div>
                       )}
                       {sm.capped > 0 && (
@@ -1788,7 +1838,7 @@ function StaffingTab({ section, deptParam, today, nodes, employees, lines, slotP
    แปลเป็นภาษาคน + สรุปรายเดือนผ่าน describeSlotChanges/summarizeSlotChanges (manpowerBoard.js · มีเทส)
    รายงานย้อนหลัง ⇒ โหลดเมื่อเปลี่ยนช่วง/ส่วนงานเท่านั้น ไม่ poll ไม่ realtime */
 const HISTORY_CAP = 3000;
-function HistoryTab({ section, dept, deptParam, nodes, lines, stations, employees }) {
+function HistoryTab({ section, dept, deptParam, nodes, lines, stations, employees, lineFam = [] }) {
   const tr = useTimeRange({ defaultDays: 120 });
   const [rows, setRows] = useState([]);
   const [state, setState] = useState({ loading: true, error: '', truncated: false });
@@ -1827,7 +1877,8 @@ function HistoryTab({ section, dept, deptParam, nodes, lines, stations, employee
     //   แผนกที่เลือกไม่อยู่ในส่วนงานนี้แล้ว (dept=null) = ไม่มีอะไรตรง ห้ามถอยไปโชว์ทั้งส่วนงานเงียบๆ
     const deptSub = deptParam && dept?.node ? subOf(dept.node.id) : new Set();
     const deptLineIds = new Set((dept?.lines || []).map(l => String(l.id)));
-    let unattributed = 0;
+    let unattributed = 0, teamHidden = 0;
+    const lineIdSet = new Set(lineFam.map(l => String(l.id)));
     const inSection = ({ kind, nodeId, lineId }) => (kind === 'team' ? sub.has(nodeId) : lineId == null || famIds.has(String(lineId)));
     const out = describeSlotChanges(rows, {
       nodeById: new Map(nodes.map(n => [n.id, n])),
@@ -1837,6 +1888,12 @@ function HistoryTab({ section, dept, deptParam, nodes, lines, stations, employee
       // จุดงานที่ถูกลบไปแล้ว (lineId ไม่รู้) = โชว์ไว้ก่อน — ประวัติห้ามหาย ดีกว่าตัดทิ้งเพราะสืบส่วนงานไม่ได้
       inScope: (c) => {
         if (!inSection(c)) return false;
+        // 🧩 กรองถึงไลน์ — ช่องรายทีม (ตั้งที่โหนดทีม) แยกลงไลน์ไม่ได้ = ไม่แสดง แต่นับบอกบนจอ
+        if (lineIdSet.size) {
+          if (c.kind === 'team') { teamHidden += 1; return false; }
+          if (c.lineId == null) { unattributed += 1; return false; }
+          return lineIdSet.has(String(c.lineId));
+        }
         if (!deptParam) return true;
         if (c.kind === 'team') return deptSub.has(c.nodeId);
         // จุดงานที่ถูกลบไปแล้ว สืบแผนกไม่ได้ — ไม่ใส่ในแผนกไหน แต่นับไว้บอกบนจอ (ห้ามหายเงียบ)
@@ -1844,8 +1901,8 @@ function HistoryTab({ section, dept, deptParam, nodes, lines, stations, employee
         return deptLineIds.has(String(c.lineId));
       },
     });
-    return { items: out, unattributed };
-  }, [rows, section, dept, deptParam, nodes, lines, stations, employees]);
+    return { items: out, unattributed, teamHidden };
+  }, [rows, section, dept, deptParam, nodes, lines, stations, employees, lineFam]);
   const list = scoped.items;
   const months = useMemo(() => summarizeSlotChanges(list), [list]);
 
@@ -1861,6 +1918,9 @@ function HistoryTab({ section, dept, deptParam, nodes, lines, stations, employee
         note={`${trI18n("ส่วนงาน")} ${section?.name || '–'}${deptParam ? ` · ${trI18n("แผนก")} ${dept?.name || trI18n('(ไม่อยู่ในส่วนงานนี้)')}` : ''} · ${trI18n("ช่องต่อทีม · คนต่อกะของจุดงาน · ช่างประจำไลน์ (จากบันทึกการแก้ไขของระบบ")})`} />
       {state.error && <div className="card" style={{ padding: 10, borderLeft: '4px solid var(--red)', fontSize: 13 }}>{trI18n('⚠️ โหลดประวัติไม่สำเร็จ —')} {state.error}</div>}
       {state.truncated && <div style={{ fontSize: 12, color: 'var(--amber)' }}>{trI18n('⚠️ แสดงได้ไม่เกิน')} {HISTORY_CAP.toLocaleString()} {trI18n('รายการ — ช่วงนี้มีมากกว่านั้น ให้ย่อช่วงวันที่')}</div>}
+      {!state.loading && scoped.teamHidden > 0 && (
+        <div style={{ fontSize: 12, color: 'var(--muted)' }}>🧩 {trI18n('กรองถึงไลน์ — ซ่อนการเปลี่ยนช่องรายทีม')} {scoped.teamHidden} {trI18n('รายการ (ช่องตำแหน่งตั้งรายทีม แยกลงไลน์ไม่ได้ · ล้างการกรองไลน์เพื่อดู)')}</div>
+      )}
       {!state.loading && scoped.unattributed > 0 && (
         <div style={{ fontSize: 12, color: 'var(--muted)' }}>{trI18n('ℹ️ อีก')} {scoped.unattributed} {trI18n("รายการเป็นจุดงานที่ถูกลบไปแล้ว สืบไม่ได้ว่าเป็นของแผนกไหน — ไม่ได้แสดงในตัวกรองแผนก (เลือก")} "{ALL.dept}" {trI18n("เพื่อดู")})</div>
       )}

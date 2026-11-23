@@ -1853,7 +1853,6 @@ function InflowRulesTab({ canEdit }) {
 /* 🏬🛒 04/11 (คำสั่ง user) — งานที่ขยับยอดของสโตร์ย้ายมาที่นี่ · /heijunka เหลือดูสัญญาณ Kanban อย่างเดียว
    ฝังหน้าเดิมทั้งดุ้นแบบ /equipment (โหมด ops) — กฎ/ปุ่ม/ด่านเดิมทุกตัว ไม่เขียนใหม่ · `?view=`/`?store=` ไม่ชน `?tab=` */
 const HeijunkaKanban = lazy(() => import('./HeijunkaKanban'));
-const LineIssueGapQueue = lazy(() => import('../components/LineIssueGapQueue'));
 const SapStockCompare = lazy(() => import('../components/SapStockCompare'));   // 📊 เทียบยอด MB52 (20/11)
 /* 📉 16/11 (คำสั่ง user "รวมสต๊อกในไลน์กับ Monitoring แผน-สต๊อกเป็นหน้าเดียว") — ฝังหน้าเดิมทั้งดุ้นใน <Hub>
    หน้าลูกใช้ `?mon=` แทน `?tab=` (UI §6.8 ข้อ 2.4 · Monitoring.jsx อ่าน HubContext) */
@@ -1930,7 +1929,6 @@ export default function LineStock() {
         <Hub>
           <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>{tr('กำลังโหลด…')}</div>}>
             {/* 🧾 20/11 — ไลน์ใช้ของแล้วแต่สโตร์ยังไม่ลงจ่าย (ไม่มีรายการ = ไม่แสดง) */}
-            {activeTab === 'out' && <LineIssueGapQueue />}
             {/* key แยก = state ตู้ของ 2 แท็บไม่ปนกัน */}
             <HeijunkaKanban key={activeTab} mode="ops" direction={activeTab}
               opsStores={activeTab === 'out' ? OPS_STORES_OUT : OPS_STORES_IN} />
