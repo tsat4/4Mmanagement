@@ -181,7 +181,7 @@ export default function PickScanModal({ request, canOverride = false, fullName, 
                 )
               ) : (
                 <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-                  สแกนไม่ได้/ป้ายหาย → ให้หัวหน้าที่มีสิทธิ์ <code>wip_request:override</code> มาปลดบล็อก
+                  {tr("สแกนไม่ได้/ป้ายหาย → ให้หัวหน้าที่มีสิทธิ์")} <code>wip_request:override</code> {tr("มาปลดบล็อก")}
                 </div>
               )}
             </div>

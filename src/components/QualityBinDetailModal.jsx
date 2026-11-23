@@ -145,7 +145,7 @@ export default function QualityBinDetailModal({ row, hasRedChild = false, scrapD
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 12, alignContent: 'start' }}>
           {/* ── ซ้าย: รูป + รายการ ── */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <Section title="📷 รูปหลักฐาน">
+            <Section title={tr("📷 รูปหลักฐาน")}>
               {photos.length ? (
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', paddingTop: 4 }}>
                   {photos.map(p => (
@@ -161,7 +161,7 @@ export default function QualityBinDetailModal({ row, hasRedChild = false, scrapD
                 </div>
               )}
             </Section>
-            <Section title="📋 รายการ">
+            <Section title={tr("📋 รายการ")}>
               <Row k="วันที่ลงถัง" v={row.work_date} />
               <Row k="อายุแท็ก" v={age ? `${age.days} / ${age.limit} ${tr("วัน")}${age.over && st.key !== 'done' ? ` · ${tr("เกิน")} ${age.overBy} ${tr("วัน")}` : ''}` : '—'}
                 color={age?.over && st.key !== 'done' ? 'var(--red)' : undefined} strong={age?.over && st.key !== 'done'} />
@@ -175,7 +175,7 @@ export default function QualityBinDetailModal({ row, hasRedChild = false, scrapD
 
           {/* ── ขวา: ที่มา + ผลพิจารณา ── */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <Section title="🏭 ที่มาจาก Daily Report">
+            <Section title={tr("🏭 ที่มาจาก Daily Report")}>
               {!defectId ? (
                 <div style={{ fontSize: 12.5, color: 'var(--muted)', paddingTop: 4 }}>{tr('คีย์ลงถังโดยตรง — ไม่ได้มาจากบันทึกงานเสียใน Daily Report')}</div>
               ) : dlErr ? (
@@ -200,7 +200,7 @@ export default function QualityBinDetailModal({ row, hasRedChild = false, scrapD
             </Section>
 
             {isY ? (
-              <Section title="✍️ ผลพิจารณา QA / การซ่อม">
+              <Section title={tr("✍️ ผลพิจารณา QA / การซ่อม")}>
                 <Row k="ผล QA" v={dec ? tr(dec.label) : tr('⏳ ยังไม่พิจารณา')} color={dec ? dec.color : 'var(--amber)'} strong />
                 <Row k="ผู้พิจารณา" v={row.qa_by ? `${row.qa_by}${row.qa_decision_at ? ` · ${fmtTs(row.qa_decision_at)}` : ''}` : null} />
                 {row.qa_decision === 'use_as_is' && <Row k={`${tr("เลขใบ")} ${SPECIAL_USE_FORM}`} v={row.special_use_doc_no || tr('⏳ ยังไม่กรอก')} />}
@@ -212,7 +212,7 @@ export default function QualityBinDetailModal({ row, hasRedChild = false, scrapD
                 <Row k="กลับเข้ากระบวนการ" v={row.return_date} color="var(--green)" strong />
               </Section>
             ) : (
-              <Section title="🗑️ การกำจัดทำลาย (DOA)">
+              <Section title={tr("🗑️ การกำจัดทำลาย (DOA)")}>
                 <Row k="QA" v={row.qa_by || '—'} />
                 <Row k="ผู้กำจัดทำลาย" v={row.disposed_by ? `${row.disposed_by}${row.disposed_position ? ` · ${row.disposed_position}` : ''}` : tr('— ยังไม่กรอก')} />
                 <Row k="ใบรายงานของเสีย" v={row.scrap_report_id ? `${scrapDoc?.doc_no || tr('ออกใบแล้ว')}${scrapDoc?.status === 'draft' ? ` · ${tr('ร่าง ยังไม่ส่งอนุมัติ')}` : ''}` : tr('⏳ ยังไม่ออกใบ')}

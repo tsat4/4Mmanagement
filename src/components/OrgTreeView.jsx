@@ -293,7 +293,7 @@ export default function OrgTreeView({ nodes = [], scopeCtx = {}, canEdit = false
           {tr('โชว์ที่ปิดใช้งาน (')}{offCount})
         </label>
         <span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 'auto', lineHeight: 1.5 }}>
-          ลำดับชั้นมาจากผัง (หน่วยแม่) ไม่ใช่ตัวเลขรหัส · เทา = ตกทอดจากหน่วยแม่
+          {tr("ลำดับชั้นมาจากผัง (หน่วยแม่) ไม่ใช่ตัวเลขรหัส · เทา = ตกทอดจากหน่วยแม่")}
         </span>
       </div>
       {/* 🔴 ห้ามซ่อนเงียบ — บอกตรงๆ ว่าตัดอะไรออกและของนั้นไปอยู่ไหน */}
@@ -305,7 +305,7 @@ export default function OrgTreeView({ nodes = [], scopeCtx = {}, canEdit = false
       )}
       {empCount === undefined && (
         <div style={{ fontSize: 11.5, color: '#f59e0b', marginBottom: 6 }}>
-          ⚠ อ่านจำนวนพนักงานไม่สำเร็จ — ตัวเลข 👤 จะไม่ขึ้น (ไม่ได้แปลว่าหน่วยนั้นไม่มีคน)
+          ⚠ {tr("อ่านจำนวนพนักงานไม่สำเร็จ — ตัวเลข 👤 จะไม่ขึ้น (ไม่ได้แปลว่าหน่วยนั้นไม่มีคน")})
         </div>
       )}
       <div style={{ display: 'grid', alignContent: 'start', gap: 2 }}>

@@ -161,7 +161,7 @@ export default function QaFmeQueue({ scopedLineNames, onOpen }) {
 
   if (missing) return (
     <Box tone="warn">
-      ⚠️ ระบบเรียกตรวจ FME ยังไม่พร้อมใช้ — ยังไม่ได้ apply migration <code>20260819_qa_fme_call.sql</code> (แจ้ง admin)
+      ⚠️ {tr("ระบบเรียกตรวจ FME ยังไม่พร้อมใช้ — ยังไม่ได้")} apply migration <code>20260819_qa_fme_call.sql</code> ({tr("แจ้ง")} admin)
     </Box>
   );
 
@@ -182,7 +182,7 @@ export default function QaFmeQueue({ scopedLineNames, onOpen }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: rows.length || disabled ? 9 : 0 }}>
         <b style={{ fontSize: 14 }}>{tr('ฝ่ายผลิตเรียกตรวจ (FME)')}</b>
         <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-          เรียกอัตโนมัติเมื่อ <b>{tr('เปลี่ยนกะ')}</b> / <b>{tr('เปลี่ยนรุ่น')}</b> — นับเป็นรุ่น ไม่ใช่ต่อออเดอร์
+          {tr("เรียกอัตโนมัติเมื่อ")} <b>{tr('เปลี่ยนกะ')}</b> / <b>{tr('เปลี่ยนรุ่น')}</b> — {tr("นับเป็นรุ่น ไม่ใช่ต่อออเดอร์")}
         </span>
         {late.length > 0 && (
           <span style={{ fontSize: 11.5, fontWeight: 700, color: '#ef4444', background: 'rgba(239,68,68,0.12)',
@@ -283,15 +283,14 @@ export default function QaFmeQueue({ scopedLineNames, onOpen }) {
               <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 7, lineHeight: 1.7 }}>
                 {tr("คาบตรวจคิดจาก")} <b>{tr('lot size ของพาร์ทเอง')}</b> ({tr("ตั้งที่ Product Master → 🎴 Kanban Std) × ตัวคูณข้างบน — ลอทใหญ่ผลิตทั้งวันจะถูกเรียกหลายครั้ง · ลอทสั้นที่ผลิตไม่ถึง 1 ล็อตจะไม่ถูกเรียกเลย")}
                 <br /><b style={{ color: '#f59e0b' }}>{tr('พาร์ทที่ยังไม่ตั้ง lot size จะไม่มีการตรวจ Middle')}</b> ({tr("ระบบไม่เดาให้) — First / End ยังทำงานตามปกติ")}
-                <br />{tr('พาร์ทที่ตั้ง lot size ไว้')} <b>เล็กกว่า "คาบต่ำสุดที่ยอมรับ"</b> ({tr("เช่น ตั้งไว้ 1 ชิ้น) ถือว่ายังตั้งไม่ถูก — ระบบจะไม่ตั้ง Middle ให้ แล้วรายงานไว้ให้ไปแก้ที่")} Kanban Std
+                <br />{tr('พาร์ทที่ตั้ง lot size ไว้')} <b>{tr("เล็กกว่า \"คาบต่ำสุดที่ยอมรับ")}"</b> ({tr("เช่น ตั้งไว้ 1 ชิ้น) ถือว่ายังตั้งไม่ถูก — ระบบจะไม่ตั้ง Middle ให้ แล้วรายงานไว้ให้ไปแก้ที่")} Kanban Std
               </div>
             )}
           </div>
           <QaFmePartRules canEdit={canManage} fullName={fullName} centralMode={String(cfg.mid_mode ?? 'lot')} />
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 8, lineHeight: 1.6 }}>
-            ห้อง Telegram ที่รับแจ้ง ตั้งที่ <b>/notification-config</b> → หมวดคุณภาพ
-            (<code>qa_fme_call</code> = เรียกตรวจ · <code>qa_fme_overdue</code> = เกินเวลา) ·
-            เปิดใบตรวจของรุ่นนั้น = หยุดเตือนทันที · ปิดใบ = จบงาน
+            {tr("ห้อง Telegram ที่รับแจ้ง ตั้งที่")} <b>/notification-config</b> → {tr("หมวดคุณภาพ")}
+            (<code>qa_fme_call</code> = {tr("เรียกตรวจ")} · <code>qa_fme_overdue</code> = {tr("เกินเวลา) · เปิดใบตรวจของรุ่นนั้น = หยุดเตือนทันที · ปิดใบ = จบงาน")}
           </div>
         </div>
       )}

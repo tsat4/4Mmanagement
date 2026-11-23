@@ -879,7 +879,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
             stat={statusWhy(kS.value, kS.target, 'up', '%')}
             foot={<WarnNote k={k} text={kS.note} tone="bad" />}
             link="ไปหน้าเช็คชื่อ/PPE" onLink={() => drill('/daily-checker')}>
-            {isYear ? (yearBars(kS, { name: 'PPE ครบ' }) || <EmptyChart k={k} text="ยังไม่มีบันทึกเช็คชื่อในปีนี้" />) : kS.series.length ? (
+            {isYear ? (yearBars(kS, { name: 'PPE ครบ' }) || <EmptyChart k={k} text={tr("ยังไม่มีบันทึกเช็คชื่อในปีนี้")} />) : kS.series.length ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={daySeries(kS.series)} margin={{ top: 4, right: 6, left: 4, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
@@ -894,7 +894,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
-            ) : <EmptyChart k={k} text="ยังไม่มีบันทึกเช็คชื่อในช่วงนี้" />}
+            ) : <EmptyChart k={k} text={tr("ยังไม่มีบันทึกเช็คชื่อในช่วงนี้")} />}
           </Sheet>
           )}
 
@@ -908,7 +908,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
             delta={gapToTarget(kQ.value, kQ.target, 'up')} stat={statusWhy(kQ.value, kQ.target, 'up', '%')}
             foot={kQ.note ? <WarnNote k={k} text={kQ.note} /> : `${tr("เป้า")} ${kQ.target}%`}
             link="ดูของเสียละเอียด" onLink={() => drill('/oee-analytics', { tab: 'insight', ...drillParams(org, scope) })}>
-            {isYear ? (qNote(yearBars(kQ, { name: 'Q', domain: qDom, ticks: qFocus?.ticks })) || <EmptyChart k={k} text="ยังไม่มีกะที่ปิดแล้วในปีนี้" />) : kQ.series.length ? qNote(
+            {isYear ? (qNote(yearBars(kQ, { name: 'Q', domain: qDom, ticks: qFocus?.ticks })) || <EmptyChart k={k} text={tr("ยังไม่มีกะที่ปิดแล้วในปีนี้")} />) : kQ.series.length ? qNote(
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={daySeries(kQ.series)} margin={{ top: 4, right: 6, left: 4, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
@@ -919,7 +919,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
                   <Line {...chartAnim()} type="monotone" dataKey="v" stroke={axisSheet('Q').color} strokeWidth={2} dot={{ r: 2 }} connectNulls />
                 </ComposedChart>
               </ResponsiveContainer>,
-            ) : <EmptyChart k={k} text="ยังไม่มีกะที่ปิดแล้วในช่วงนี้" />}
+            ) : <EmptyChart k={k} text={tr("ยังไม่มีกะที่ปิดแล้วในช่วงนี้")} />}
           </Sheet>
           ); })()}
 
@@ -931,7 +931,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
             foot={kD.note ? <WarnNote k={k} text={kD.note} />
               : `${tr("แผน")} ${kD.plan.toLocaleString()} · ${tr("ทำได้")} ${kD.produced.toLocaleString()} ${tr("ชิ้น")}`}
             link="ดูแผน/ใบงาน" onLink={() => drill('/production-plan')}>
-            {isYear ? (yearBars(kD, { name: 'ทำได้ตามแผน' }) || <EmptyChart k={k} text="ยังไม่มีใบงานที่มีเป้าในปีนี้" />) : kD.series.length ? (
+            {isYear ? (yearBars(kD, { name: 'ทำได้ตามแผน' }) || <EmptyChart k={k} text={tr("ยังไม่มีใบงานที่มีเป้าในปีนี้")} />) : kD.series.length ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={daySeries(kD.series)} margin={{ top: 4, right: 6, left: 4, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
@@ -946,7 +946,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
-            ) : <EmptyChart k={k} text="ยังไม่มีใบงานที่มีเป้าในช่วงนี้" />}
+            ) : <EmptyChart k={k} text={tr("ยังไม่มีใบงานที่มีเป้าในช่วงนี้")} />}
           </Sheet>
           )}
 
@@ -959,7 +959,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
             foot={kC.note ? <WarnNote k={k} text={kC.note} />
               : `${tr("เครื่องหยุด")} ${fmtBaht(kC.dtBaht)} · ${tr("ของเสีย")} ${fmtBaht(kC.ngBaht)}`}
             link="ดู LOSS ละเอียด" onLink={() => drill('/oee-analytics', { tab: 'insight', ...drillParams(org, scope) })}>
-            {isYear ? (yearBars(kC, { stacked: true }) || <EmptyChart k={k} text="ยังไม่มีความสูญเสียที่คิดเป็นเงินได้" />) : kC.series.length ? (
+            {isYear ? (yearBars(kC, { stacked: true }) || <EmptyChart k={k} text={tr("ยังไม่มีความสูญเสียที่คิดเป็นเงินได้")} />) : kC.series.length ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={daySeries(kC.series)} margin={{ top: 4, right: 6, left: 4, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
@@ -970,7 +970,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
                   <Bar {...chartAnim()} dataKey="ng" stackId="c" fill="var(--blue)" radius={[2, 2, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
-            ) : <EmptyChart k={k} text="ยังไม่มีความสูญเสียที่คิดเป็นเงินได้" />}
+            ) : <EmptyChart k={k} text={tr("ยังไม่มีความสูญเสียที่คิดเป็นเงินได้")} />}
           </Sheet>
           )}
 
@@ -983,7 +983,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
             foot={kM.note ? <WarnNote k={k} text={kM.note} />
               : 'อัตรามาทำงานจากการเช็คชื่อรายวัน (ยังไม่มีข้อมูลขวัญกำลังใจ)'}
             link="ดูกำลังคนย้อนหลัง" onLink={() => drill('/workforce-insight')}>
-            {isYear ? (yearBars(kM, { name: 'มาทำงาน' }) || <EmptyChart k={k} text="ยังไม่มีบันทึกเช็คชื่อในปีนี้" />) : kM.series.length ? (
+            {isYear ? (yearBars(kM, { name: 'มาทำงาน' }) || <EmptyChart k={k} text={tr("ยังไม่มีบันทึกเช็คชื่อในปีนี้")} />) : kM.series.length ? (
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={daySeries(kM.series)} margin={{ top: 4, right: 6, left: 4, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
@@ -994,7 +994,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
                   <Bar {...chartAnim()} dataKey="v" fill={axisSheet('M').color} radius={[2, 2, 0, 0]} />
                 </ComposedChart>
               </ResponsiveContainer>
-            ) : <EmptyChart k={k} text="ยังไม่มีบันทึกเช็คชื่อในช่วงนี้" />}
+            ) : <EmptyChart k={k} text={tr("ยังไม่มีบันทึกเช็คชื่อในช่วงนี้")} />}
           </Sheet>
           )}
 
@@ -1013,7 +1013,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
               ? `${tr("งวดก่อน")} ${kOeePrev.value}% (${prev.from}→${prev.to}) · ${kOee.value >= kOeePrev.value ? tr('ดีขึ้น') : tr('แย่ลง')} ${Math.abs(round1(kOee.value - kOeePrev.value))} ${tr("จุด")}`
               : 'ยังเทียบงวดก่อนไม่ได้ (งวดก่อนไม่มีกะที่ปิดแล้ว)'}
             link="เจาะ OEE" onLink={() => drill('/oee-analytics', { ...drillParams(org, scope), date: to })}>
-            {isYear ? (yearBars(kOee, { name: 'OEE', span: 2 }) || <EmptyChart k={k} text="ยังไม่มีกะที่ปิดแล้วในปีนี้" />) : kOee.series.length ? (
+            {isYear ? (yearBars(kOee, { name: 'OEE', span: 2 }) || <EmptyChart k={k} text={tr("ยังไม่มีกะที่ปิดแล้วในปีนี้")} />) : kOee.series.length ? (
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={daySeries(kOee.series)} margin={{ top: 6, right: 8, left: 4, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
@@ -1029,7 +1029,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
                   </Bar>
                 </ComposedChart>
               </ResponsiveContainer>
-            ) : <EmptyChart k={k} text="ยังไม่มีกะที่ปิดแล้วในช่วงนี้" />}
+            ) : <EmptyChart k={k} text={tr("ยังไม่มีกะที่ปิดแล้วในช่วงนี้")} />}
           </Sheet>
           )}
 
@@ -1058,7 +1058,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
-            ) : <EmptyChart k={k} text="ไม่มีเวลาเครื่องหยุดนอกแผน" />}
+            ) : <EmptyChart k={k} text={tr("ไม่มีเวลาเครื่องหยุดนอกแผน")} />}
           </Sheet>
           )}
 
@@ -1073,10 +1073,9 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
               {health.empty ? (
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 6 }}>
                   <WarnNote k={k} tone="bad"
-                    text="ยังไม่มีใบ action ในช่วงที่ดู — ตามงานไม่ได้ว่าปัญหาที่พบถูกแก้หรือยัง (ตั้ง Action จากปุ่มบนหัวจอ)" />
+                    text={tr("ยังไม่มีใบ action ในช่วงที่ดู — ตามงานไม่ได้ว่าปัญหาที่พบถูกแก้หรือยัง (ตั้ง Action จากปุ่มบนหัวจอ)")} />
                   <div className="tv-hide" style={{ fontSize: fs(11), color: 'var(--muted)', lineHeight: 1.4 }}>
-                    นี่คือเหตุผลหลักที่ทำหน้านี้ — ไม่ใช่เพื่อโชว์ตัวเลขสวยๆ แต่เพื่อปิดลูป:
-                    ตัวเลขหลุดเป้า → ใครรับ → ทำอะไร → ภายในเมื่อไหร่ → ดีขึ้นจริงไหม
+                    {tr("นี่คือเหตุผลหลักที่ทำหน้านี้ — ไม่ใช่เพื่อโชว์ตัวเลขสวยๆ แต่เพื่อปิดลูป: ตัวเลขหลุดเป้า → ใครรับ → ทำอะไร → ภายในเมื่อไหร่ → ดีขึ้นจริงไหม")}
                   </div>
                   {canRecord && (
                     <button className="tv-hide" onClick={() => openModal()} style={{
@@ -1218,7 +1217,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
                 <LineSelect lines={lines} value={modal.line_name} onChange={v => setModal({ ...modal, line_name: v })}
                   role={role} lineId={lineId} sections={sections} style={{ marginTop: 3, fontSize: 13.5 }} />
               </label>
-              <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>ผู้รับผิดชอบ
+              <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{tr("ผู้รับผิดชอบ")}
                 <PersonSelect value={modal.assignee || ''} source="both" history={assigneeHist}
                   placeholder={tr('ชื่อผู้รับผิดชอบ')} style={{ marginTop: 3 }}
                   onChange={v => setModal({ ...modal, assignee: v })} />

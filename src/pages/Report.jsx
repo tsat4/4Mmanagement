@@ -224,7 +224,7 @@ function ScopeUnresolvedNote({ scope, linesLoaded }) {
   if (!scope || !linesLoaded) return null;
   if (scope.blocked) return (
     <NoticeBar tone="warn" style={{ marginBottom: 12 }}>
-      ตัดขอบเขตไลน์ของบัญชีนี้ไม่ได้ (ไลน์ของบัญชีไม่อยู่ในทะเบียน และไม่มีส่วนงานกำกับ) — ไม่แสดงรายชื่อเพื่อไม่ให้เห็นข้ามหน่วยงาน · แจ้งผู้ดูแลระบบให้ตั้งขอบเขตที่ /add-user
+      {trI18n("ตัดขอบเขตไลน์ของบัญชีนี้ไม่ได้ (ไลน์ของบัญชีไม่อยู่ในทะเบียน และไม่มีส่วนงานกำกับ) — ไม่แสดงรายชื่อเพื่อไม่ให้เห็นข้ามหน่วยงาน · แจ้งผู้ดูแลระบบให้ตั้งขอบเขตที่")} /add-user
     </NoticeBar>
   );
   if (scope.unresolved) return (
@@ -234,7 +234,7 @@ function ScopeUnresolvedNote({ scope, linesLoaded }) {
   );
   if (scope.unsure) return (
     <NoticeBar tone="warn" style={{ marginBottom: 12 }}>
-      ตัดขอบเขตของบัญชีนี้ไม่ได้ (ส่วนงานที่ตั้งไว้ไม่ตรงผัง) — กำลังแสดงทั้งโรงงาน
+      {trI18n("ตัดขอบเขตของบัญชีนี้ไม่ได้ (ส่วนงานที่ตั้งไว้ไม่ตรงผัง) — กำลังแสดงทั้งโรงงาน")}
     </NoticeBar>
   );
   return null;
@@ -2042,7 +2042,7 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
             <div className="card" style={{ padding: 16, marginBottom: 16 }}>
               <div style={{ fontWeight: 700, marginBottom: 6 }}>{trI18n('เลือก 1 ไลน์เพื่อดูใบ Changing Point')}</div>
               <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 10 }}>
-                ใบนี้ออกทีละไลน์ (1 ใบ = 1 ไลน์ × 1 เดือน) — กดชื่อไลน์ด้านล่าง หรือเลือกในช่องขอบเขตบนแถบกรอง
+                {trI18n("ใบนี้ออกทีละไลน์ (1 ใบ = 1 ไลน์ × 1 เดือน) — กดชื่อไลน์ด้านล่าง หรือเลือกในช่องขอบเขตบนแถบกรอง")}
               </div>
               {pickable.length ? (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -2080,9 +2080,9 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
       {allowedLineNames?.length === 0 && !loading && (
         <div style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 'var(--r-md)', fontSize: 12.5, color: 'var(--text)',
           background: 'var(--red-dim)', border: '1px solid var(--red-line)' }}>
-          ⚠️ ยังจับคู่ไลน์ในขอบเขตของคุณไม่ได้เลย — รายการจึงว่างทั้งที่อาจมีใบค้างอยู่
+          ⚠️ {trI18n("ยังจับคู่ไลน์ในขอบเขตของคุณไม่ได้เลย — รายการจึงว่างทั้งที่อาจมีใบค้างอยู่")}
           <div style={{ color: 'var(--muted)', marginTop: 2 }}>
-            อ่านทะเบียนไลน์ไม่สำเร็จ หรือส่วนงานที่ตั้งไว้ยังไม่มีไลน์ในผังองค์กร — โหลดหน้าใหม่ ถ้ายังไม่หายให้แจ้ง admin
+            {trI18n("อ่านทะเบียนไลน์ไม่สำเร็จ หรือส่วนงานที่ตั้งไว้ยังไม่มีไลน์ในผังองค์กร — โหลดหน้าใหม่ ถ้ายังไม่หายให้แจ้ง")} admin
           </div>
         </div>
       )}
@@ -2541,7 +2541,7 @@ function SkillMatrixTab() {
         {/* 🔴 กฎความซื่อสัตย์ของจอ — จอนี้กรองช่าง/สายสนับสนุนออก (กำลังคนของไลน์เท่านั้น)
             ต้องเขียนไว้ ไม่งั้นคนเทียบกับใบเช็คชื่อ (เห็นครบทุกกลุ่มตั้งแต่ 14/10) แล้วงงว่าทำไมหัวไม่ตรง */}
         <span className="filter-count" title={trI18n('สกิล/กำลังคน นับเฉพาะพนักงานหน้างาน — ช่างและสายสนับสนุนไม่เข้าสูตร (กฎ staffKind.js)')}>
-          · ไม่รวม 🔧 ช่าง / 🗂️ สายสนับสนุน
+          · {trI18n("ไม่รวม 🔧 ช่าง / 🗂️ สายสนับสนุน")}
         </span>
         <span className="filter-count">{trI18n('· คลิกที่พนักงานเพื่อดู Radar Chart')}</span>
         {canExport && (
@@ -3152,7 +3152,7 @@ function MultiSkillFormTab() {
         <EmpScopeFilters lines={lines} filterSection={filterSection} setFilterSection={setFilterSection} filterLine={filterLine} setFilterLine={setFilterLine} filterTeam={filterTeam} setFilterTeam={setFilterTeam} filterDept={filterDept} setFilterDept={setFilterDept} />
         {/* กรองช่าง/สายสนับสนุนออกเหมือนแท็บสกิล — ต้องเขียนบนจอ (กฎความซื่อสัตย์ของจอ) */}
         <span className="filter-count" title={trI18n('ใบประเมินทักษะออกให้พนักงานหน้างาน — ช่างและสายสนับสนุนไม่เข้าสูตร (กฎ staffKind.js)')}>
-          ไม่รวม 🔧 ช่าง / 🗂️ สายสนับสนุน
+          {trI18n("ไม่รวม 🔧 ช่าง / 🗂️ สายสนับสนุน")}
         </span>
         <span className="spacer" />
         <button onClick={load} disabled={loading}
@@ -3431,7 +3431,7 @@ function MultiSkillFormTab() {
 
       {!loading && employees.length === 0 && (
         <div className="card" style={{ textAlign: 'center', padding: 40, color: 'var(--muted)' }}>
-          เลือกไลน์และกด "ดึงข้อมูล" เพื่อแสดง Multi-Skill Matrix
+          {trI18n("เลือกไลน์และกด \"ดึงข้อมูล\" เพื่อแสดง")} Multi-Skill Matrix
         </div>
       )}
     </div>
@@ -3995,7 +3995,7 @@ function SkillAllowanceTab() {
           )}
           {lineHeads.level === 'supervisor' && headChoices.length > 0 && (
             <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4, maxWidth: 320 }}>
-              ℹ️ ไลน์นี้ยังไม่มี "หัวหน้าไลน์" ในทะเบียน — ที่เห็นคือหัวหน้าแผนก
+              ℹ️ {trI18n("ไลน์นี้ยังไม่มี \"หัวหน้าไลน์\" ในทะเบียน — ที่เห็นคือหัวหน้าแผนก")}
             </div>
           )}
         </div>
@@ -4087,7 +4087,7 @@ function SkillAllowanceTab() {
       )}
       {!loading && rows.length === 0 && (
         <div className="card" style={{ textAlign: 'center', padding: 40, color: 'var(--muted)' }}>
-          เลือกเงื่อนไขและกด "ดึงข้อมูล" เพื่อแสดงข้อมูลค่าฝีมือ
+          {trI18n("เลือกเงื่อนไขและกด \"ดึงข้อมูล\" เพื่อแสดงข้อมูลค่าฝีมือ")}
         </div>
       )}
     </div>
@@ -4584,7 +4584,7 @@ function AttendanceFormTab() {
         <div className="card table-sticky" style={{ overflowX: 'auto' }}>
           {calLoaded && days.every(d => getDayType(dayDateStr(d)) === 'working') && (
             <NoticeBar tone="warn" style={{ marginBottom: 8 }}>
-              งวดนี้ไม่มีวันหยุดในปฏิทินบริษัทเลย — ถ้าเดือนนี้มีวันหยุดจริง ให้ตั้งค่าที่ "ปฏิทินบริษัท" ก่อนพิมพ์ ไม่งั้นชั่วโมง OT วันหยุด (8/10 ชม.) จะถูกคิดแบบวันทำงานปกติ (2/5 ชม.)
+              {trI18n("งวดนี้ไม่มีวันหยุดในปฏิทินบริษัทเลย — ถ้าเดือนนี้มีวันหยุดจริง ให้ตั้งค่าที่ \"ปฏิทินบริษัท\" ก่อนพิมพ์ ไม่งั้นชั่วโมง OT วันหยุด (8/10 ชม.) จะถูกคิดแบบวันทำงานปกติ (2/5 ชม.")})
             </NoticeBar>
           )}
           <div style={{ marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
@@ -4645,7 +4645,7 @@ function AttendanceFormTab() {
       )}
       {!loading && empRows.length === 0 && (
         <div className="card" style={{ textAlign: 'center', padding: 40, color: 'var(--muted)' }}>
-          เลือกเงื่อนไขและกด "ดึงข้อมูล" เพื่อแสดงใบบันทึกการมาทำงาน
+          {trI18n("เลือกเงื่อนไขและกด \"ดึงข้อมูล\" เพื่อแสดงใบบันทึกการมาทำงาน")}
         </div>
       )}
     </div>

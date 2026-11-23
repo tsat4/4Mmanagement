@@ -367,7 +367,7 @@ export default function ScanLanding() {
           <div style={{ fontSize: 40, marginBottom: 6 }}>📷</div>
           <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{tr('ยังไม่มีรหัสจากป้าย')}</div>
           <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: '0 0 12px' }}>
-            ส่อง QR ที่ติดเครื่องด้วยกล้องมือถือ หรือกดสแกนจากในแอป
+            {tr("ส่อง QR ที่ติดเครื่องด้วยกล้องมือถือ หรือกดสแกนจากในแอป")}
           </p>
           <button onClick={() => setRescan(true)} style={{ minHeight: 44, padding: '0 20px', fontSize: 14, fontWeight: 800 }}>
             {tr('สแกนเลย')}
@@ -387,7 +387,7 @@ export default function ScanLanding() {
               {pointHit.is_active === false && <b style={{ color: 'var(--red, var(--red))' }}> {tr('· ปิดใช้งานแล้ว')}</b>}
             </div>
             <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: '10px 0 0', lineHeight: 1.7 }}>
-              ป้ายนี้ใช้ยืนยันตอน <b>{tr('สโตร์ส่งของถึงไลน์')}</b> — สแกนจากปุ่ม 📍 ในใบเติม WIP (หน้า Heijunka) ไม่ใช่ป้ายเครื่องจักร
+              {tr("ป้ายนี้ใช้ยืนยันตอน")} <b>{tr('สโตร์ส่งของถึงไลน์')}</b> — {tr("สแกนจากปุ่ม 📍 ในใบเติม WIP (หน้า Heijunka) ไม่ใช่ป้ายเครื่องจักร")}
             </p>
           </div>
           {canAccessPage('/heijunka', role) && (
@@ -484,7 +484,7 @@ export default function ScanLanding() {
                   {ppe.unknown ? (
                     /* 🔴 อ่านทะเบียนไม่ได้ ≠ "ไม่ต้องใส่อะไร" — เขียนบนจอ ห้ามข้ามเงียบ */
                     <div style={{ fontSize: 13, color: 'var(--red)', lineHeight: 1.6 }}>
-                      <b>{tr('อ่านทะเบียน PPE ไม่สำเร็จ')}</b> — เช็คชื่อบันทึกแล้ว แต่ยังถาม PPE ไม่ได้
+                      <b>{tr('อ่านทะเบียน PPE ไม่สำเร็จ')}</b> — {tr("เช็คชื่อบันทึกแล้ว แต่ยังถาม PPE ไม่ได้")}
                       <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 3 }}>{tr('ไปติ๊กที่หน้าเช็คชื่อแทน')}</div>
                     </div>
                   ) : (<>
@@ -548,7 +548,7 @@ export default function ScanLanding() {
                 {storageHit.is_active === false && <b style={{ color: 'var(--red, var(--red))' }}> {tr('· ปิดใช้งานแล้ว')}</b>}
               </div>
               <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: '10px 0 0', lineHeight: 1.7 }}>
-                ป้ายนี้ใช้ <b>{tr('ยิงในช่องรหัสคลัง')}</b> (ช่องที่มีปุ่ม 📷) แทนการเลือกจากรายการ
+                {tr("ป้ายนี้ใช้")} <b>{tr('ยิงในช่องรหัสคลัง')}</b> ({tr("ช่องที่มีปุ่ม 📷) แทนการเลือกจากรายการ")}
               </p>
             </div>
           )}

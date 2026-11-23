@@ -378,9 +378,8 @@ export default function StoreLotQueue({ lineName, lines = [], role }) {
                   {enough && (
                     <div style={{ marginTop: 5 }}>
                       <span style={chip('rgba(34,197,94,0.12)', '#22c55e')}
-                        title="ยอดที่ปั๊มไปแล้วครบตามที่สโตร์สั่ง — ถ้าล็อตนี้ทำจบจริง ให้ไปกดปิดล็อตที่บอร์ดสโตร์ (Heijunka)
-ระบบไม่ปิดให้เอง เพราะยังไม่รู้ว่าใบผลิตใบไหนทำเพื่อล็อตไหน — เดาแล้วปิดผิดใบย้อนยาก">
-                        ✅ ปั๊มครบยอดที่สั่งแล้ว — ปิดล็อตที่บอร์ดสโตร์
+                        title={tr("ยอดที่ปั๊มไปแล้วครบตามที่สโตร์สั่ง — ถ้าล็อตนี้ทำจบจริง ให้ไปกดปิดล็อตที่บอร์ดสโตร์ (Heijunka)\nระบบไม่ปิดให้เอง เพราะยังไม่รู้ว่าใบผลิตใบไหนทำเพื่อล็อตไหน — เดาแล้วปิดผิดใบย้อนยาก")}>
+                        ✅ {tr("ปั๊มครบยอดที่สั่งแล้ว — ปิดล็อตที่บอร์ดสโตร์")}
                       </span>
                     </div>
                   )}
@@ -428,8 +427,7 @@ export default function StoreLotQueue({ lineName, lines = [], role }) {
             </div>
             {openBlocks && (<>
             <div style={{ fontSize: 11.5, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 6 }}>
-              ยังไม่ได้ตั้ง <b>{tr('ขนาดล็อต (lot size)')}</b> ของพาร์ทเหล่านี้ ความต้องการจึงสะสมไว้เฉยๆ ไม่กลายเป็นใบสั่ง —
-              ตั้งค่าที่ <b>Product Master → 🎴 Kanban Std</b> แล้วใบสั่งจะออกเองรอบถัดไป
+              {tr("ยังไม่ได้ตั้ง")} <b>{tr('ขนาดล็อต (lot size)')}</b> {tr("ของพาร์ทเหล่านี้ ความต้องการจึงสะสมไว้เฉยๆ ไม่กลายเป็นใบสั่ง — ตั้งค่าที่")} <b>Product Master → 🎴 Kanban Std</b> {tr("แล้วใบสั่งจะออกเองรอบถัดไป")}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               {blocks.slice(0, 8).map(b => (
@@ -451,8 +449,7 @@ export default function StoreLotQueue({ lineName, lines = [], role }) {
         {/* ทำไมไม่มีปุ่ม "ผลิตเสร็จ" ที่นี่ — ซ่อนปุ่มได้ ห้ามซ่อนเหตุผล */}
         {lots.length > 0 && (
           <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid var(--border)', fontSize: 11, color: 'var(--muted)' }}
-            title="การปิดล็อตเขียนสต็อกจริง และหน้า Daily Report ก็เขียนสต็อกอยู่แล้วตอนสแกนปิดใบ
-กดทั้งสองที่สำหรับของก้อนเดียวกัน = สต็อกโผล่ซ้ำสองที่คนละชื่อ">
+            title={tr("การปิดล็อตเขียนสต็อกจริง และหน้า Daily Report ก็เขียนสต็อกอยู่แล้วตอนสแกนปิดใบ\nกดทั้งสองที่สำหรับของก้อนเดียวกัน = สต็อกโผล่ซ้ำสองที่คนละชื่อ")}>
             ℹ️ {tr("ที่นี่กด")} <b>{tr('รับงาน')}</b> {tr('ได้อย่างเดียว ·')} <b>{tr('ปิดล็อต')}</b> {tr('ทำที่')}{' '}
             <Link to="/heijunka" style={{ color: '#c084fc', fontWeight: 700 }}>{tr('บอร์ดสโตร์ (Heijunka)')}</Link> {tr("ที่เดียว")}
           </div>

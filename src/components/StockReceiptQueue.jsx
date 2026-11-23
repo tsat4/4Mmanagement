@@ -265,7 +265,7 @@ export default function StockReceiptQueue({ banner = null, table = false }) {
                         </label>
                         {prev && prev.diff !== 0 && (
                           <div style={{ fontSize: 11.5, color: 'var(--text2)', lineHeight: 1.6 }}>
-                            {tr("ปันแบบ")} <b>ใบเก่าก่อน</b>: {nFull} {tr("ใบได้เต็ม")}{nPart ? ` · ${nPart} ${tr("ใบได้บางส่วน")}` : ''}
+                            {tr("ปันแบบ")} <b>{tr("ใบเก่าก่อน")}</b>: {nFull} {tr("ใบได้เต็ม")}{nPart ? ` · ${nPart} ${tr("ใบได้บางส่วน")}` : ''}
                             {prev.zeroed ? <> · <b style={{ color: toneVar('warn') }}>{prev.zeroed} {tr('ใบได้ 0')}</b> {tr('(ของยังมาไม่ถึง)')}</> : null}
                           </div>
                         )}
@@ -277,7 +277,7 @@ export default function StockReceiptQueue({ banner = null, table = false }) {
                             onClick={async () => { if (await receiveGroup(g, form.qty, form.reason.trim())) setDiffFor(null); }}>
                             {busy === g.key ? 'กำลังบันทึก…' : `✅ ${tr("รับเข้า")} ${form.qty === '' ? '' : fmt(form.qty)}`}
                           </button>
-                          <button type="button" style={storeBtn('secondary')} onClick={() => setDiffFor(null)}>ยกเลิก</button>
+                          <button type="button" style={storeBtn('secondary')} onClick={() => setDiffFor(null)}>{tr("ยกเลิก")}</button>
                         </div>
                       </>
                     ) : (
@@ -288,7 +288,7 @@ export default function StockReceiptQueue({ banner = null, table = false }) {
                         </button>
                         <button type="button" style={storeBtn('secondary')}
                           onClick={() => { setDiffFor(g.key); setForm({ qty: String(g.expected), reason: '' }); }}>
-                          ✏️ ยอดไม่ตรง
+                          ✏️ {tr("ยอดไม่ตรง")}
                         </button>
                       </div>
                     ))}
@@ -369,7 +369,7 @@ export default function StockReceiptQueue({ banner = null, table = false }) {
                     </button>
                     <button type="button" style={storeBtn('secondary')}
                       onClick={() => { setDiffFor(r.id); setForm({ qty: String(r.qty_expected), reason: '' }); }}>
-                      ✏️ ยอดไม่ตรง
+                      ✏️ {tr("ยอดไม่ตรง")}
                     </button>
                   </div>
                 )) : null} />

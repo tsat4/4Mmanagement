@@ -149,7 +149,7 @@ export default function CompanyCalendar() {
         <div className="card" style={{ padding: 14, marginBottom: 20, display: 'flex', flexWrap: 'wrap', gap: 24 }}>
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
-              ตั้งค่าวันหยุดประจำสัปดาห์ทั้งปี
+              {tr("ตั้งค่าวันหยุดประจำสัปดาห์ทั้งปี")}
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               {/* width กัน index.css input/select {width:100%} ยืดเต็ม toolbar (กับดัก CSS ใน CLAUDE.md) */}
@@ -165,7 +165,7 @@ export default function CompanyCalendar() {
           </div>
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
-              เพิ่มวันหยุดพิเศษ/ประเพณีนิยม/แลกเปลี่ยน
+              {tr("เพิ่มวันหยุดพิเศษ/ประเพณีนิยม/แลกเปลี่ยน")}
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               {/* width กัน index.css input/select {width:100%} ยืดเต็ม toolbar (กับดัก CSS ใน CLAUDE.md) */}
@@ -182,10 +182,9 @@ export default function CompanyCalendar() {
 
       {canEdit && (
         <InfoMore size={11} style={{ marginBottom: 14 }} id="cal_help"
-          lead={<>{tr('💡 คลิกตัวเลขวันที่เพื่อสลับสถานะ —')} <b>ยังไม่บันทึกจนกว่าจะกด "บันทึก"</b></>}>
-          ลำดับที่สลับ: วันทำงาน → OT×1.5 → OT×2 → หยุดจ่าย 75% → วันทำงาน
-          <br /><b>{tr('หยุดจ่าย 75% (ม.75)')}</b> = หยุดชั่วคราวเหตุลูกค้าลด order — หยุดได้ค่าจ้าง 75% ·
-          มาทำงาน = ค่าแรงปกติ (ไม่ใช่ OT วันหยุด)
+          lead={<>{tr('💡 คลิกตัวเลขวันที่เพื่อสลับสถานะ —')} <b>{tr("ยังไม่บันทึกจนกว่าจะกด \"บันทึก")}"</b></>}>
+          {tr("ลำดับที่สลับ: วันทำงาน → OT×1.5 → OT×2 → หยุดจ่าย 75% → วันทำงาน")}
+          <br /><b>{tr('หยุดจ่าย 75% (ม.75)')}</b> = {tr("หยุดชั่วคราวเหตุลูกค้าลด order — หยุดได้ค่าจ้าง 75% · มาทำงาน = ค่าแรงปกติ (ไม่ใช่ OT วันหยุด")})
         </InfoMore>
       )}
 

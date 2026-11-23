@@ -667,7 +667,7 @@ export default function MtnMachineLayout({ setupMode = false }) {
                   </div>
                   {/* ⚠️ ห้ามเขียนว่า uptime/online — ยังไม่มีสัญญาณรายเครื่อง (กฎ SCADA) */}
                   <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.5, borderTop: '1px dashed var(--border)', paddingTop: 7 }}>
-                    ⏱ Uptime รายเครื่องยังไม่มีสัญญาณ (ต้องต่อ SCADA/มิเตอร์ก่อน) — สีบนผังมาจากรอบ PM ที่คนบันทึก
+                    ⏱ Uptime {tr("รายเครื่องยังไม่มีสัญญาณ (ต้องต่อ SCADA/มิเตอร์ก่อน) — สีบนผังมาจากรอบ PM ที่คนบันทึก")}
                   </div>
                 </div>
               )

@@ -151,7 +151,7 @@ export default function KpiStandardModal({ year, scopeCols = {}, scopeText = '',
 
         {missing && (
           <div style={{ fontSize: 12.5, color: '#f59e0b' }}>
-            ยังไม่ได้ apply migration <code>20260921_kpi_standard_2026_main.sql</code> (Main) — แจ้ง admin
+            {tr("ยังไม่ได้")} apply migration <code>20260921_kpi_standard_2026_main.sql</code> (Main) — {tr("แจ้ง")} admin
           </div>
         )}
 
@@ -173,7 +173,7 @@ export default function KpiStandardModal({ year, scopeCols = {}, scopeText = '',
           <>
             <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', fontSize: 12, marginBottom: 8 }}>
               <span style={{ color: 'var(--text2)' }}>
-                บังคับ <b style={{ color: nPickedFixed === nFixed ? '#22c55e' : '#ef4444' }}>{nPickedFixed}/{nFixed}</b>
+                {tr("บังคับ")} <b style={{ color: nPickedFixed === nFixed ? '#22c55e' : '#ef4444' }}>{nPickedFixed}/{nFixed}</b>
                 <span style={{ color: 'var(--muted)' }}> {tr('· เลือกได้')} {nPickedChoice}/{nChoice}</span>
               </span>
               <span style={{ color: 'var(--text2)' }}>
@@ -239,8 +239,7 @@ export default function KpiStandardModal({ year, scopeCols = {}, scopeText = '',
             </div>
 
             <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8, lineHeight: 1.6 }}>
-              หยิบเข้าใบแล้ว <b>{tr('ยังไม่มีเป้า/น้ำหนัก')}</b> — ตั้งต่อที่ตาราง KPI (เอกสารกลุ่มให้หน่วยงานถ่วงน้ำหนักเอง ระบบเดาแทนไม่ได้) ·
-              ตัวเลขข้างบนเป็น <b>{tr('คำเตือน ไม่ได้บล็อกการบันทึก')}</b> — ใบจริงเพิ่มข้อนอกมาตรฐานได้
+              {tr("หยิบเข้าใบแล้ว")} <b>{tr('ยังไม่มีเป้า/น้ำหนัก')}</b> — {tr("ตั้งต่อที่ตาราง KPI (เอกสารกลุ่มให้หน่วยงานถ่วงน้ำหนักเอง ระบบเดาแทนไม่ได้) · ตัวเลขข้างบนเป็น")} <b>{tr('คำเตือน ไม่ได้บล็อกการบันทึก')}</b> — {tr("ใบจริงเพิ่มข้อนอกมาตรฐานได้")}
             </div>
           </>
         )}

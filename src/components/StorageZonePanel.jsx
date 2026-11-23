@@ -120,17 +120,15 @@ export default function StorageZonePanel() {
     <div style={{ display: 'grid', gap: 12, alignContent: 'start' }}>
       {missing && (
         <div style={{ background: 'rgba(229,72,77,.12)', border: '1px solid #e5484d', borderRadius: 'var(--r-md)', padding: '10px 14px', fontSize: 13 }}>
-          ⛔ ตาราง <code>storage_zones</code> ยังไม่ถูกสร้างในฐานข้อมูล (DR) — แจ้ง admin รัน migration
-          <code> 20260825_storage_zones.sql</code> ก่อน แท็บนี้ถึงใช้งานได้
+          ⛔ {tr("ตาราง")} <code>storage_zones</code> {tr("ยังไม่ถูกสร้างในฐานข้อมูล (DR) — แจ้ง admin รัน")} migration
+          <code> 20260825_storage_zones.sql</code> {tr("ก่อน แท็บนี้ถึงใช้งานได้")}
         </div>
       )}
       <ReadOnlyNote show={!canManage && !missing} role={role} what="จัดการโซนคลัง (เพิ่ม/แก้/ผูก MAT)" permKey="storage:manage" />
 
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
         <div style={{ fontSize: 13, color: 'var(--text2)' }}>
-          ทะเบียนโซนจัดเก็บในคลัง — เริ่มจาก<b>{tr('ระบบ setup แผนผัง')}</b>ก็ได้: วาดกรอบบนผังรวม → เลือก
-          "🏬 โซนคลังสินค้า" ระบบสร้างทะเบียนให้เลย แล้วค่อยมาผูก MAT/ความจุที่นี่
-          (ผังคำนวณ เต็ม/ใกล้เต็ม/ต่ำกว่า Min จากสต็อกจริงให้เอง)
+          {tr("ทะเบียนโซนจัดเก็บในคลัง — เริ่มจาก")}<b>{tr('ระบบ setup แผนผัง')}</b>{tr("ก็ได้: วาดกรอบบนผังรวม → เลือก \"🏬 โซนคลังสินค้า\" ระบบสร้างทะเบียนให้เลย แล้วค่อยมาผูก MAT/ความจุที่นี่ (ผังคำนวณ เต็ม/ใกล้เต็ม/ต่ำกว่า Min จากสต็อกจริงให้เอง")})
         </div>
         <div style={{ flex: 1 }} />
         <button onClick={() => navigate('/factory-map')} style={btnSec}>{tr('ไปผังรวมโรงงาน')}</button>
@@ -142,8 +140,8 @@ export default function StorageZonePanel() {
       {/* 🗺️ กรอบเดิมบนผังรวมที่ยังไม่มีทะเบียน — หยิบมาลงทะเบียนเป็นโซนคลังได้เลย (อ้างอิงแผนผังที่วาดไว้แล้ว) */}
       {!loading && !missing && canManage && unclaimedFrames.length > 0 && (
         <div style={{ background: 'var(--bg2-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '10px 14px', fontSize: 13 }}>
-          กรอบบนผังรวมที่<b>{tr('ยังไม่มีทะเบียนโซน')} {unclaimedFrames.length} {tr('กรอบ')}</b> —
-          ถ้ากรอบไหนคือพื้นที่คลัง กด ➕ ลงทะเบียนได้เลย (ชื่อตรงกัน = จับคู่กรอบเดิมอัตโนมัติ ไม่ต้องวาดใหม่)
+          {tr("กรอบบนผังรวมที่")}<b>{tr('ยังไม่มีทะเบียนโซน')} {unclaimedFrames.length} {tr('กรอบ')}</b> —
+          {tr("ถ้ากรอบไหนคือพื้นที่คลัง กด ➕ ลงทะเบียนได้เลย (ชื่อตรงกัน = จับคู่กรอบเดิมอัตโนมัติ ไม่ต้องวาดใหม่")})
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
             {unclaimedFrames.map(n => (
               <button key={n} onClick={() => setEdit({ name: n })} style={{ ...btnSec, fontSize: 12, padding: '4px 10px' }}>
@@ -152,15 +150,14 @@ export default function StorageZonePanel() {
             ))}
           </div>
           <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 5 }}>
-            * กรอบที่เป็นโซนช่าง/facility ที่พิมพ์ชื่ออิสระไว้ ก็โผล่ในลิสต์นี้ — ไม่ใช่พื้นที่คลังก็ไม่ต้องกด
+            * {tr("กรอบที่เป็นโซนช่าง/facility ที่พิมพ์ชื่ออิสระไว้ ก็โผล่ในลิสต์นี้ — ไม่ใช่พื้นที่คลังก็ไม่ต้องกด")}
           </div>
         </div>
       )}
 
       {!loading && !missing && !zones.length && (
         <div style={{ background: 'var(--bg2-surf)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: 18, fontSize: 13, color: 'var(--text2)' }}>
-          ยังไม่มีโซนจัดเก็บ — เริ่มจาก ➕ เพิ่มโซน (เช่น "FG OUT LANE 1", "WIP APRON", "STORE SUB PART")
-          แล้วผูกว่า MAT ไหนเก็บโซนนั้น · ระบบไม่เดาผังคลังให้ (ตำแหน่งจัดเก็บเป็นความรู้หน้างาน)
+          {tr("ยังไม่มีโซนจัดเก็บ — เริ่มจาก ➕ เพิ่มโซน (เช่น \"FG OUT LANE 1\", \"WIP APRON\", \"STORE SUB PART\") แล้วผูกว่า MAT ไหนเก็บโซนนั้น · ระบบไม่เดาผังคลังให้ (ตำแหน่งจัดเก็บเป็นความรู้หน้างาน")})
         </div>
       )}
 
@@ -302,7 +299,7 @@ function ZoneFormModal({ zone, initialName, parts, stockByMat, onClose, onSaved 
       <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', width: 'min(680px, 96vw)', maxHeight: '92vh', overflowY: 'auto', padding: 18, display: 'grid', gap: 10, alignContent: 'start' }}>
         <b style={{ fontSize: 15 }}>{zone ? `✏️ ${tr("แก้โซน")}: ${zone.name}` : '➕ เพิ่มโซนจัดเก็บ'}</b>
         <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          <label style={lbl}>ชื่อโซน (= ชื่อกรอบบนผังรวม)
+          <label style={lbl}>{tr("ชื่อโซน (= ชื่อกรอบบนผังรวม")})
             <input value={name} onChange={e => setName(e.target.value)} placeholder={tr('เช่น FG OUT LANE 1')} />
           </label>
           <label style={lbl}>{tr('ชนิดโซน')}
@@ -310,7 +307,7 @@ function ZoneFormModal({ zone, initialName, parts, stockByMat, onClose, onSaved 
               {ZONE_KINDS.map(k => <option key={k.key} value={k.key}>{k.icon} {tr(k.label)}</option>)}
             </select>
           </label>
-          <label style={lbl}>ความจุ (จำนวนภาชนะ/กล่อง) — เว้นว่าง = ไม่รู้
+          <label style={lbl}>{tr("ความจุ (จำนวนภาชนะ/กล่อง) — เว้นว่าง = ไม่รู้")}
             <input type="number" min="0" value={cap} onChange={e => setCap(e.target.value)} placeholder={tr('เช่น 120')} />
           </label>
           <label style={lbl}>{tr('หมายเหตุ')}
@@ -327,7 +324,7 @@ function ZoneFormModal({ zone, initialName, parts, stockByMat, onClose, onSaved 
                 <button onClick={() => setMats(v => v.filter(x => x !== m))} style={{ ...btnMini, marginLeft: 6, padding: '0 4px' }}>✕</button>
               </span>
             ))}
-            {!mats.length && <span style={{ fontSize: 12, color: 'var(--muted)' }}>ยังไม่ผูก MAT — โซนจะขึ้นสีเทา "ยังไม่ผูก MAT" บนผัง</span>}
+            {!mats.length && <span style={{ fontSize: 12, color: 'var(--muted)' }}>{tr("ยังไม่ผูก MAT — โซนจะขึ้นสีเทา \"ยังไม่ผูก MAT\" บนผัง")}</span>}
           </div>
           <input value={q} onChange={e => setQ(e.target.value)} placeholder={tr('ค้น MAT / ชื่อพาร์ท จากทะเบียน Material Master แล้วกดเพิ่ม…')} />
           {q.trim() !== '' && (
@@ -347,7 +344,7 @@ function ZoneFormModal({ zone, initialName, parts, stockByMat, onClose, onSaved 
         {zone && (
           <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13 }}>
             <input type="checkbox" checked={active} onChange={e => setActive(e.target.checked)} />
-            เปิดใช้งานโซนนี้ (ปิด = soft delete — ประวัติ/กรอบยังอยู่ ไม่ลบทิ้ง)
+            {tr("เปิดใช้งานโซนนี้ (ปิด = soft delete — ประวัติ/กรอบยังอยู่ ไม่ลบทิ้ง")})
           </label>
         )}
 

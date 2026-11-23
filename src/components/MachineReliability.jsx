@@ -234,7 +234,7 @@ export default function MachineReliability({ machines = [], lineObjs = [], scope
       <div style={{ ...card, fontSize: 12, color: 'var(--text2)', lineHeight: 1.7 }}>
         <InfoMore label={trI18n('ตัวเลขนี้นับจากอะไร · สูตร MTTR/MTBF')} id="mr-def" size={12}>
         📐 <b>{trI18n('นับจาก downtime ที่หน้างานบันทึกจริง')}</b> {trI18n('(ไม่ใช่ใบแจ้งซ่อม) ในช่วง')} {days} {trI18n("วันล่าสุด · หยุดตามแผน (PM/เปลี่ยนรุ่น) ไม่นับเป็น \"ครั้งที่เสีย\" แต่หักออกจากเวลาเดินเครื่อง")}
-        <div><b>MTTR</b> = เวลาที่ไลน์หยุดเฉลี่ยต่อครั้ง (รวมเวลารอช่าง) — เฉลี่ยเฉพาะครั้งที่ปิดแล้ว</div>
+        <div><b>MTTR</b> = {trI18n("เวลาที่ไลน์หยุดเฉลี่ยต่อครั้ง (รวมเวลารอช่าง) — เฉลี่ยเฉพาะครั้งที่ปิดแล้ว")}</div>
         <div>
           <b>{trI18n('MTBF ของกลุ่ม')}</b> = Σ {trI18n("เวลาเดินเครื่อง ÷ Σ ครั้งที่เสีย")} (<b>{trI18n('รวมกอง ไม่ใช่เฉลี่ยค่าเฉลี่ยรายเครื่อง')}</b>) ·
           {trI18n("เครื่องที่ไม่เคยเสีย")} <b>{trI18n('นับชั่วโมงเดินเข้าตัวตั้งด้วย')}</b> {trI18n("แต่ MTBF รายตัวเป็น “—” (เสีย 0 ครั้ง หารไม่ได้")})
@@ -331,7 +331,7 @@ export default function MachineReliability({ machines = [], lineObjs = [], scope
       {/* ── ตารางรายอุปกรณ์ ── */}
       {!shown.length ? (
         <div style={{ ...card, fontSize: 13, color: 'var(--muted)', textAlign: 'center' }}>
-          ไม่มีอุปกรณ์ที่ตรงกับตัวกรอง — ลองขยายช่วงวันหรือเลือก “ทั้งหมด”
+          {trI18n("ไม่มีอุปกรณ์ที่ตรงกับตัวกรอง — ลองขยายช่วงวันหรือเลือก “ทั้งหมด")}”
         </div>
       ) : (
         <div className="table-sticky" style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>

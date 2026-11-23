@@ -85,9 +85,8 @@ export default function OpenOrderDemandPanel({ q = '' }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ ...card, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', alignItems: 'flex-start' }}>
         <div style={{ fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.65, flex: '1 1 420px' }}>
-          📋 <b style={{ color: 'var(--text)' }}>{tr('ไลน์เปิดใบผลิตแล้ว → ชิ้นส่วนที่ต้องเตรียมส่ง')}</b> (คิดจาก BOM ชั้นแรกของใบ · ยอดใบ × จำนวนต่อชิ้น)
-          <br />“ต้องส่งเพิ่ม” = ความต้องการ − ยอดคงเหลือหน้าไลน์ · <b>{tr('จอนี้แจ้งล่วงหน้าอย่างเดียว')}</b> ไม่ออกใบเบิก/ใบขอซื้อ —
-          ตอนไลน์ปิดใบ ระบบตัดสต็อกและออกใบตามเดิม
+          📋 <b style={{ color: 'var(--text)' }}>{tr('ไลน์เปิดใบผลิตแล้ว → ชิ้นส่วนที่ต้องเตรียมส่ง')}</b> ({tr("คิดจาก BOM ชั้นแรกของใบ · ยอดใบ × จำนวนต่อชิ้น")})
+          <br />“{tr("ต้องส่งเพิ่ม” = ความต้องการ − ยอดคงเหลือหน้าไลน์")} · <b>{tr('จอนี้แจ้งล่วงหน้าอย่างเดียว')}</b> {tr("ไม่ออกใบเบิก/ใบขอซื้อ — ตอนไลน์ปิดใบ ระบบตัดสต็อกและออกใบตามเดิม")}
         </div>
         <button onClick={load} disabled={busy} style={{ padding: '7px 14px', borderRadius: 'var(--r-md)', cursor: busy ? 'wait' : 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-body)', background: 'var(--bg2-surf)', color: 'var(--text2)', border: '1px solid var(--border)' }}>
           {busy ? tr('⏳ กำลังโหลด…') : tr('🔄 รีเฟรช')}

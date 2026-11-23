@@ -273,7 +273,7 @@ export default function AnnouncementMockup() {
       <PageHeader
         title={tr('ประกาศ / ชี้แจงบริษัท')}
         icon="📢"
-        sub={<span><b style={{ color: 'var(--amber)' }}>MOCKUP</b> · ข้อมูลจำลองในหน้านี้ ไม่บันทึกลงฐานข้อมูล (รีเฟรช = เริ่มใหม่)</span>}
+        sub={<span><b style={{ color: 'var(--amber)' }}>MOCKUP</b> · {tr("ข้อมูลจำลองในหน้านี้ ไม่บันทึกลงฐานข้อมูล (รีเฟรช = เริ่มใหม่")})</span>}
         tabs={tabs} tab={tab} onTab={setTab}
         filters={(
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
@@ -288,9 +288,7 @@ export default function AnnouncementMockup() {
 
       <div style={{ marginBottom: 12 }}>
         <InfoMore lead="ลำดับงาน: ผู้แจ้งกรอก → แจ้งเตือน EVP → EVP อนุมัติ (แจ้งกลับผู้แจ้ง) → ถึงวันมีผล ประกาศขึ้นให้ user ในส่วนงานที่เลือก">
-          สลับแท็บด้านบนเพื่อดูมุมของแต่ละคน · เลื่อน "วันที่จำลอง" เพื่อดูประกาศขึ้นตามวันมีผล ·
-          ผู้รับเลือกจากผังองค์กรจริง — เลือกหน่วยแม่ = ครอบหน่วยลูกทั้งหมด ·
-          ระบบจริงต้องมีตารางประกาศ + สิทธิ์ + แจ้งเตือนในแอป (ยังไม่ได้ทำ)
+          {tr("สลับแท็บด้านบนเพื่อดูมุมของแต่ละคน · เลื่อน \"วันที่จำลอง\" เพื่อดูประกาศขึ้นตามวันมีผล · ผู้รับเลือกจากผังองค์กรจริง — เลือกหน่วยแม่ = ครอบหน่วยลูกทั้งหมด · ระบบจริงต้องมีตารางประกาศ + สิทธิ์ + แจ้งเตือนในแอป (ยังไม่ได้ทำ")})
         </InfoMore>
       </div>
       {failed && <div style={{ ...card, borderColor: 'var(--red)', color: 'var(--red)', marginBottom: 12 }}>⚠ {failed} {tr('— ตัวเลือกผู้รับอาจไม่ครบ')}</div>}
@@ -305,7 +303,7 @@ export default function AnnouncementMockup() {
             <label style={{ display: 'grid', gap: 4, fontSize: 13 }}>{tr('รายละเอียด (Detail)')}
               <textarea rows={5} value={form.detail} onChange={e => setForm(f => ({ ...f, detail: e.target.value }))} />
             </label>
-            <div style={{ display: 'grid', gap: 6, fontSize: 13 }}>ผู้รับ (Who's receive) — เลือกจากผังองค์กร
+            <div style={{ display: 'grid', gap: 6, fontSize: 13 }}>{tr("ผู้รับ (Who's receive) — เลือกจากผังองค์กร")}
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                 <OrgScopePicker index={index} failed={failed} value={pick} onChange={setPick} costCenter={false} />
                 <button type="button" style={btnGhost} onClick={addScope}>{tr('+ เพิ่ม')}</button>
@@ -381,7 +379,7 @@ export default function AnnouncementMockup() {
                   {at
                     ? <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--green)' }}>✓ {me.name} {tr('รับทราบแล้ว (')}{fmtDate(at)})</span>
                     : <button type="button" style={btnPrimary} disabled={!me} onClick={() => acknowledge(a)}>{tr('รับทราบ')}</button>}
-                  {!me && <span style={{ fontSize: 12, color: 'var(--muted)' }}>เลือก "ฉันคือ" ก่อนจึงกดรับทราบได้</span>}
+                  {!me && <span style={{ fontSize: 12, color: 'var(--muted)' }}>{tr("เลือก \"ฉันคือ\" ก่อนจึงกดรับทราบได้")}</span>}
                 </div>
               </>) })
             );

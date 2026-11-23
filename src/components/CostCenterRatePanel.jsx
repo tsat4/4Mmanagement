@@ -163,7 +163,7 @@ export default function CostCenterRatePanel({ nodes, lines }) {
         title={<span>{tr('Activity Rate ต่อ Cost Center')} <span style={{ fontWeight: 600, color: 'var(--muted)' }}>({RATE_COMPONENTS.map(c => c.label).join('/')} {tr("บาท/ชม. — ใช้คิด cost saving ในโปรเจคปรับปรุง")})</span></span>}>
         <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8 }}>
           rate {tr("เป็นของ")} <b>{tr('รหัส Cost Center')}</b> {tr('(ไม่ได้ผูกกับไลน์) — ปกติบัญชีตั้งที่')} <b>{tr('ชั้นกลุ่ม')}</b> {tr("แล้วชั้นแผนก/ส่วนรวมขึ้นเองตามลำดับชั้นในผัง")}
-          · <b>บัญชีส่ง rate รอบใหม่ = กด “＋ rate ใหม่”</b> ({tr("ประวัติเดิมคงไว้ โปรเจคเก่าคำนวณด้วย rate ณ ช่วงนั้น) — ปุ่ม ✏️ ไว้แก้เฉพาะตอนกรอกตัวเลขผิด")}
+          · <b>{tr("บัญชีส่ง rate รอบใหม่ = กด “＋ rate ใหม่")}”</b> ({tr("ประวัติเดิมคงไว้ โปรเจคเก่าคำนวณด้วย rate ณ ช่วงนั้น) — ปุ่ม ✏️ ไว้แก้เฉพาะตอนกรอกตัวเลขผิด")}
           {noRateUsed > 0 && <span style={{ color: '#f59e0b', fontWeight: 700 }}> {tr('· ⚠ มี')} {noRateUsed} {tr('รหัสที่ไลน์ใช้อยู่แต่ยังไม่ตั้ง rate')}</span>}
           {otherCount > 0 && (
             <span> {tr('· ซ่อนรหัสระดับส่วน/แผนก')} {otherCount} {tr('รหัส')}{' '}
@@ -324,11 +324,11 @@ export default function CostCenterRatePanel({ nodes, lines }) {
                   <div style={{ fontSize: 11, color: 'var(--muted)', background: 'var(--bg3)', borderRadius: 'var(--r-md)', padding: '6px 9px', lineHeight: 1.6 }}>
                     {dateLocked ? (
                       <>
-                        🔒 วัน Effective ล็อกกันแก้พลาด — <b>{tr('ปรับ rate รอบใหม่ให้กด ＋ rate ในตาราง')}</b> (แถวเดิมเก็บเป็นประวัติ โปรเจคที่เริ่มก่อนหน้ายังคิดด้วย rate เดิม)
+                        🔒 {tr("วัน Effective ล็อกกันแก้พลาด")} — <b>{tr('ปรับ rate รอบใหม่ให้กด ＋ rate ในตาราง')}</b> ({tr("แถวเดิมเก็บเป็นประวัติ โปรเจคที่เริ่มก่อนหน้ายังคิดด้วย rate เดิม")})
                         <button onClick={unlockDate} style={{ marginLeft: 6, background: 'none', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', color: 'var(--accent)', fontSize: 11, fontWeight: 800, cursor: 'pointer', padding: '1px 7px' }}>{tr('แก้วันที่')}</button>
                       </>
                     ) : (
-                      <span style={{ color: '#f59e0b', fontWeight: 700 }}>ปลดล็อกวันที่แล้ว — เปลี่ยนวันนี้ = เปลี่ยนย้อนหลังว่า rate นี้ครอบช่วงไหน cost saving ของโปรเจคที่คำนวณด้วย rate ช่วงนี้จะขยับตาม</span>
+                      <span style={{ color: '#f59e0b', fontWeight: 700 }}>{tr("ปลดล็อกวันที่แล้ว — เปลี่ยนวันนี้ = เปลี่ยนย้อนหลังว่า rate นี้ครอบช่วงไหน cost saving ของโปรเจคที่คำนวณด้วย rate ช่วงนี้จะขยับตาม")}</span>
                     )}
                     <div style={{ marginTop: 3, opacity: 0.85 }}>
                       {tr("เวลาที่แก้ระบบบันทึกเอง: สร้าง")} {fmtStamp(form.created_at)} {tr('· แก้ล่าสุด')} {fmtStamp(form.updated_at)} ({tr("ใครแก้ดูได้ที่")} audit log)

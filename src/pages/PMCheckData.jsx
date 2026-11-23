@@ -363,7 +363,7 @@ function JigSpinCheck({ frames, checkpoints, results, activeCpId, onPinClick, sh
       {/* บอกให้รู้ว่าหมุดที่มี 🔍 กดดูรูปซูมได้ — ไม่งั้นไม่มีใครรู้ว่ากดได้ */}
       {!compact && framePins.some(c => c.image_path) && (
         <div style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'center', marginTop: 6 }}>
-          หมุดที่มีสัญลักษณ์แว่นขยาย = แตะเพื่อดูรูปซูมของจุดนั้น
+          {tr("หมุดที่มีสัญลักษณ์แว่นขยาย = แตะเพื่อดูรูปซูมของจุดนั้น")}
         </div>
       )}
       {zoomCp && <CpZoom cp={zoomCp} idx={cpIndex[zoomCp.id]} onClose={() => setZoomCp(null)} />}
@@ -2137,13 +2137,13 @@ export default function PMCheckData({ mode = 'pm' }) {
               <div style={{ marginTop: 12, padding: '10px 12px', borderRadius: 'var(--r-md)', border: '1px dashed var(--amber)55', background: 'var(--amber-dim)' }}>
                 <div style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--amber)' }}>{tr('⚠ มีรายการตรวจ AM แล้ว แต่ยังไม่ได้ลงทะเบียน ·')} {pendingReg.length} {tr('เครื่อง')}</div>
                 <div style={{ fontSize: 11, color: 'var(--muted)', margin: '3px 0 6px', lineHeight: 1.5 }}>
-                  ลงจุดตรวจไว้ที่ PM Setup แล้ว แต่ยังไม่ถูกติ๊กว่า “ต้องตรวจทุกต้นกะ” จึงยังไม่ขึ้นให้ตรวจที่นี่
+                  {tr("ลงจุดตรวจไว้ที่ PM Setup แล้ว แต่ยังไม่ถูกติ๊กว่า “ต้องตรวจทุกต้นกะ” จึงยังไม่ขึ้นให้ตรวจที่นี่")}
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--text2)', lineHeight: 1.6, maxHeight: 120, overflowY: 'auto' }}>
                   {pendingReg.map(j => <div key={j.id}>· {j.machine_no || j.name}{j.line_name ? ` (${j.line_name})` : ''}</div>)}
                 </div>
                 <Link to="/daily-checker?tab=pm" style={{ display: 'inline-block', marginTop: 6, fontSize: 11.5, color: 'var(--amber)', fontWeight: 800 }}>
-                  ไปลงทะเบียนที่แท็บ AM →
+                  {tr("ไปลงทะเบียนที่แท็บ")} AM →
                 </Link>
               </div>
             )
@@ -2321,7 +2321,7 @@ export default function PMCheckData({ mode = 'pm' }) {
                     <div style={{ textAlign: 'center', color: 'var(--muted)', fontSize: 13, padding: '32px 12px' }}>{tr('กำลังโหลดรายการตรวจ…')}</div>
                   ) : cpLoad.status === 'error' ? (
                     <div style={{ textAlign: 'center', color: 'var(--red)', fontSize: 13, padding: '32px 12px', lineHeight: 1.7 }}>
-                      ⚠️ โหลดรายการตรวจไม่สำเร็จ — ยังไม่รู้ว่าเครื่องนี้มีจุดตรวจหรือไม่
+                      ⚠️ {tr("โหลดรายการตรวจไม่สำเร็จ — ยังไม่รู้ว่าเครื่องนี้มีจุดตรวจหรือไม่")}
                       <div style={{ fontSize: 12, color: 'var(--muted)' }}>{cpLoad.msg}</div>
                       <button onClick={() => setCpReload(n => n + 1)} style={{ marginTop: 10, padding: '6px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text)', cursor: 'pointer', fontSize: 13 }}>{tr('ลองใหม่')}</button>
                     </div>
@@ -2336,7 +2336,7 @@ export default function PMCheckData({ mode = 'pm' }) {
                       {otherDepts.length > 0 && (
                         <div style={{ marginTop: 16, padding: '12px 14px', display: 'inline-block', textAlign: 'left', background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)' }}>
                           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text2)', marginBottom: 7 }}>
-                            เครื่องนี้มีจุดตรวจอยู่ใต้แผนกอื่น — กดเพื่อดู
+                            {tr("เครื่องนี้มีจุดตรวจอยู่ใต้แผนกอื่น — กดเพื่อดู")}
                           </div>
                           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                             {otherDepts.map(d => {
@@ -2352,7 +2352,7 @@ export default function PMCheckData({ mode = 'pm' }) {
                         </div>
                       )}
                       <div style={{ fontSize: 12, marginTop: 14 }}>
-                        ยังไม่ได้ลงจุดตรวจของแผนกนี้จริง → ตั้งที่ <b>PM Setup</b> (ถ้าลงผิดแผนก ย้ายข้ามแผนกได้ที่นั่น)
+                        {tr("ยังไม่ได้ลงจุดตรวจของแผนกนี้จริง → ตั้งที่")} <b>PM Setup</b> ({tr("ถ้าลงผิดแผนก ย้ายข้ามแผนกได้ที่นั่น")})
                       </div>
                       {/* จิ๊กที่มีจุดชิมแต่ยังไม่มีจุดตรวจ PM (เช่น JHYD12-01) — ค่าชิมบันทึกที่ /fixture ได้เลย ไม่ต้องรอใบตรวจ */}
                       {shimPoints.length > 0 && (
@@ -2462,7 +2462,7 @@ export default function PMCheckData({ mode = 'pm' }) {
                             </div>
                           ) : (!g && prevG ? (
                             <div style={{ padding: '7px 12px', borderRadius: 'var(--r-md)', marginBottom: 8, background: 'var(--bg3-surf)', border: '1px solid var(--border)', fontSize: 12.5, fontWeight: 800, color: 'var(--muted)' }}>
-                              อื่นๆ
+                              {tr("อื่นๆ")}
                             </div>
                           ) : null))
                           const row = cp.type === 'variable' ? (
@@ -2526,7 +2526,7 @@ export default function PMCheckData({ mode = 'pm' }) {
                             </div>
                             {!canShim && (
                               <NoticeBar tone="warn" style={{ marginBottom: 8 }}>
-                                บัญชีนี้ดูค่าชิมได้แต่บันทึกไม่ได้ — ต้องมีสิทธิ์ fixture_shim:record (admin เปิดให้ที่ /permissions)
+                                {tr("บัญชีนี้ดูค่าชิมได้แต่บันทึกไม่ได้ — ต้องมีสิทธิ์ fixture_shim:record (admin เปิดให้ที่")} /permissions)
                               </NoticeBar>
                             )}
                             {shimPoints.filter(pt => !focusOn || pt.id === activeShimId).map(pt => {
@@ -2636,12 +2636,12 @@ export default function PMCheckData({ mode = 'pm' }) {
                   {histMeta && !histMeta.teamsKnown && (
                     <p style={{ margin: 0, padding: '8px 10px', borderRadius: 'var(--r-md)', fontSize: 11.5, fontWeight: 600,
                                 border: '1px solid var(--amber)', background: 'var(--bg3-surf)', color: 'var(--amber)' }}>
-                      ⚠️ อ่านทีมเจ้าของใบไม่ได้ — ลิสต์นี้เป็นใบ<b>{tr('ทุกทีม')}</b>ของเครื่องนี้ปนกัน และบอกไม่ได้ว่าใบไหนของใคร
+                      ⚠️ {tr("อ่านทีมเจ้าของใบไม่ได้ — ลิสต์นี้เป็นใบ")}<b>{tr('ทุกทีม')}</b>{tr("ของเครื่องนี้ปนกัน และบอกไม่ได้ว่าใบไหนของใคร")}
                     </p>
                   )}
                   {histMeta?.teamsKnown && otherN === null && (
                     <p style={{ margin: 0, fontSize: 11.5, color: 'var(--amber)' }}>
-                      ⚠️ นับใบของทีมอื่นไม่ได้ — อาจมีใบของทีมอื่นบนเครื่องนี้ที่ยังไม่ได้แสดง
+                      ⚠️ {tr("นับใบของทีมอื่นไม่ได้ — อาจมีใบของทีมอื่นบนเครื่องนี้ที่ยังไม่ได้แสดง")}
                     </p>
                   )}
                   {!!otherN && (
@@ -2655,7 +2655,7 @@ export default function PMCheckData({ mode = 'pm' }) {
                   )}
                   {!!histMeta?.unknownN && (
                     <p style={{ margin: 0, fontSize: 11.5, color: 'var(--amber)' }}>
-                      ⚠️ อีก <b>{histMeta.unknownN}</b> ใบของเครื่องนี้ชี้ทีมเจ้าของไม่ได้ (ใบไม่ผูกจุดตรวจของเครื่องนี้) — ไม่ได้แสดงในลิสต์
+                      ⚠️ {tr("อีก")} <b>{histMeta.unknownN}</b> {tr("ใบของเครื่องนี้ชี้ทีมเจ้าของไม่ได้ (ใบไม่ผูกจุดตรวจของเครื่องนี้) — ไม่ได้แสดงในลิสต์")}
                     </p>
                   )}
                   {grp.mine.length === 0 && grp.others.length === 0 && grp.unknown.length === 0 ? (
@@ -2758,7 +2758,7 @@ export default function PMCheckData({ mode = 'pm' }) {
               {/* AM เจอ NG ส่งกลับให้ผลิตซ่อมเองไม่ได้ — ต้องบอกว่าทีมตั้งต้นมาจากการเดา ให้เลือกทับได้ */}
               {isAmTeam(department) && (
                 <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6, lineHeight: 1.6 }}>
-                  ผลตรวจนี้เป็น AM (ผลิตตรวจเอง) — ระบบเดาทีมช่างจากชนิดอุปกรณ์ให้ก่อน เลือกใหม่ได้ถ้าไม่ตรง
+                  {tr("ผลตรวจนี้เป็น AM (ผลิตตรวจเอง) — ระบบเดาทีมช่างจากชนิดอุปกรณ์ให้ก่อน เลือกใหม่ได้ถ้าไม่ตรง")}
                 </div>
               )}
             </div>

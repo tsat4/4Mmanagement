@@ -239,13 +239,13 @@ export default function QaPieceStepper({
               <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                 <button disabled={busy} onClick={submitAction} style={btn('#f59e0b', '#fff')}>{tr('บันทึก action แล้วให้ QA ตรวจต่อ')}</button>
                 <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-                  ใบ 4M เปิดเมื่อ action เป็นการเปลี่ยน คน/เครื่อง/วัตถุดิบ/วิธี — เข้าคิวอนุมัติหัวหน้า → QA ตามปกติ · rework ชิ้นเดียวไม่ต้องเปิด
+                  {tr("ใบ 4M เปิดเมื่อ action เป็นการเปลี่ยน คน/เครื่อง/วัตถุดิบ/วิธี — เข้าคิวอนุมัติหัวหน้า → QA ตามปกติ · rework ชิ้นเดียวไม่ต้องเปิด")}
                 </span>
               </div>
             </div>
           ) : (
             <div style={{ fontSize: 12.5, color: '#f59e0b' }}>
-              รอฝ่ายผลิต/หัวหน้าไลน์บันทึก action — role ของคุณไม่มีสิทธิ์ <code>qa:record_action</code> (admin เปิดให้ได้ที่ /permissions)
+              {tr("รอฝ่ายผลิต/หัวหน้าไลน์บันทึก action — role ของคุณไม่มีสิทธิ์")} <code>qa:record_action</code> (admin {tr("เปิดให้ได้ที่")} /permissions)
             </div>
           )}
         </div>

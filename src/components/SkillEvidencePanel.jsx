@@ -25,7 +25,7 @@ export default function SkillEvidencePanel({ ev, cfg, currentScore = null, compa
   if (!ev) {
     return (
       <div style={{ ...box, flex: 1, borderStyle: 'dashed', color: 'var(--muted)', fontSize: 12 }}>
-        ยังไม่มีข้อมูลหลักฐานสำหรับทักษะนี้ — คนนี้ยังไม่เคยลงเวลาที่สถานีที่ต้องใช้ทักษะนี้
+        {tr("ยังไม่มีข้อมูลหลักฐานสำหรับทักษะนี้ — คนนี้ยังไม่เคยลงเวลาที่สถานีที่ต้องใช้ทักษะนี้")}
       </div>
     );
   }
@@ -44,7 +44,7 @@ export default function SkillEvidencePanel({ ev, cfg, currentScore = null, compa
         {/* 🔴 ประเมินไม่ได้ ≠ คะแนน 0 — ต้องเขียนบนจอตรงๆ ห้ามโชว์ 0 (กฎความซื่อสัตย์ของจอ) */}
         {ev.shadow_score == null ? (
           <span style={{ fontSize: 11, color: 'var(--muted)' }}>
-            ไลน์นี้ยังไม่มีข้อมูลยอดผลิตในระบบ — ระบบยังตัดสินขา "ปริมาณ" ไม่ได้
+            {tr("ไลน์นี้ยังไม่มีข้อมูลยอดผลิตในระบบ — ระบบยังตัดสินขา \"ปริมาณ\" ไม่ได้")}
           </span>
         ) : (
           <span style={{ fontSize: 11, color: 'var(--muted)' }}>

@@ -1530,12 +1530,12 @@ export default function Improvements() {
                     </div>
                   </label>
                   <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.6, flex: 1, minWidth: 200, paddingBottom: 4 }}>
-                    เว้นว่างได้ แต่ไม่ตั้งเป้า = ระบบตอบไม่ได้ว่าโปรเจคนี้ควรได้เงินกลับมาเท่าไหร่<br />
-                    ผลจริงเริ่มนับหลังกดยืนยัน <b>{tr('“เริ่มลงมือแก้จริง”')}</b> (ขั้น Do) — ก่อนหน้านั้นการ์ดโชว์เป้าหมาย ไม่ใช่ผลลัพธ์
+                    {tr("เว้นว่างได้ แต่ไม่ตั้งเป้า = ระบบตอบไม่ได้ว่าโปรเจคนี้ควรได้เงินกลับมาเท่าไหร่")}<br />
+                    {tr("ผลจริงเริ่มนับหลังกดยืนยัน")} <b>{tr('“เริ่มลงมือแก้จริง”')}</b> ({tr("ขั้น Do) — ก่อนหน้านั้นการ์ดโชว์เป้าหมาย ไม่ใช่ผลลัพธ์")}
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)' }} title={tr('จุดตัดเทียบก่อน/หลัง — ถ้ายังไม่ได้ลงมือจริง ระบบจะเลื่อนให้ตอนกดเริ่มขั้น Do')}>{tr('วันเริ่มแก้ไข *')} <span style={{ fontWeight: 600, fontSize: 11 }}>(= จุดตัดเทียบก่อน/หลัง)</span>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)' }} title={tr('จุดตัดเทียบก่อน/หลัง — ถ้ายังไม่ได้ลงมือจริง ระบบจะเลื่อนให้ตอนกดเริ่มขั้น Do')}>{tr('วันเริ่มแก้ไข *')} <span style={{ fontWeight: 600, fontSize: 11 }}>(= {tr("จุดตัดเทียบก่อน/หลัง")})</span>
                     {/* width กัน index.css input{width:100%} (กับดัก CSS ใน CLAUDE.md) */}
                     <input type="date" value={modal.start_date} onChange={e => setModal({ ...modal, start_date: e.target.value })} style={{ marginTop: 4, width: 150, display: 'block' }} />
                   </label>
@@ -1663,8 +1663,7 @@ export default function Improvements() {
           <div className="modal">
             <h3 style={{ margin: '0 0 6px', fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{tr("เริ่มลงมือแก้")} — "{doModal.imp.title}"</h3>
             <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 10, lineHeight: 1.55 }}>
-              วันเริ่มแก้คือ<b>{tr('จุดตัดเทียบก่อน/หลัง')}</b> — ตั้งเป็นวันที่ลงมือจริง ตัวเลข % ลด/Cost Saving ถึงจะแม่น
-              (ปล่อยเป็นวันเปิดโปรเจคทั้งที่ยังวิเคราะห์อยู่ = ช่วง "หลังแก้" ปนวันที่ยังไม่ได้แก้)
+              {tr("วันเริ่มแก้คือ")}<b>{tr('จุดตัดเทียบก่อน/หลัง')}</b> — {tr("ตั้งเป็นวันที่ลงมือจริง ตัวเลข % ลด/Cost Saving ถึงจะแม่น (ปล่อยเป็นวันเปิดโปรเจคทั้งที่ยังวิเคราะห์อยู่ = ช่วง \"หลังแก้\" ปนวันที่ยังไม่ได้แก้")})
             </div>
             <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)' }}>{tr('การแก้ไขที่ลงมือทำ (Action) *')}
               <textarea value={doModal.action} onChange={e => setDoModal({ ...doModal, action: e.target.value })} rows={3}

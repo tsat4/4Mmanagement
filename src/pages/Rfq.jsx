@@ -336,10 +336,7 @@ export default function Rfq() {
       <ReadOnlyNote show={!canEdit} role={role} what="สร้าง/แก้ RFQ · พาร์ท · ส่ง CRD / ผูกโปรเจค NPI" permKey="rfq:edit" />
       {canEdit && !canAward && <ReadOnlyNote role={role} what="บันทึกผลได้งาน/ไม่ได้งาน · ออกใบแจ้งจัดทำ" permKey="rfq:award" compact />}
       <InfoMore id="rfq_help" lead="ต้นน้ำของสายธาร Marketing → New Model → โรงงาน (Q-neX เฟส 1)">
-        รับ RFQ จากลูกค้า → บันทึกพาร์ท/volume → <b>{tr('ส่ง CRD')}</b> ให้ IEC = สร้างโปรเจค NPI จากหน้านี้ (ระบบเสนอชื่อ/พาร์ท คนยืนยัน) →
-        ลูกค้าตัดสิน → <b>{tr('ได้งาน')}</b> = ออก <b>{tr('ใบแจ้งจัดทำ F-MKT-001/002')}</b> ให้ฝ่ายโรงงาน (ออกเลขแล้วพิมพ์ซ้ำได้ ใบเดิมเสมอ) ·
-        ยอดขาย/ปี = volume × ราคาชิ้น (ขาดตัวใดตัวหนึ่ง = ไม่คิด ไม่ใช่ 0) · volume ต้องบอกที่มาเสมอ (RFQ มี 3 ชุดคนละค่า) ·
-        เฟส 2a (13/11): แนบเอกสาร RFQ · model life · job type · <b>ส่งให้ IEC ประเมิน</b> → IEC ตอบ ผลิตได้ไหม/process flow/ราคาเป้าหมาย → สถานะเดินต่อได้ · ยังไม่ทำ (เฟส 2b-3): มอบงานแผนกอื่น · checklist gate · คำนวณต้นทุน ①–⑤ · ใบเสนอราคา 2 ชั้นอนุมัติ
+        {tr("รับ RFQ จากลูกค้า → บันทึกพาร์ท")}/volume → <b>{tr('ส่ง CRD')}</b> {tr("ให้ IEC = สร้างโปรเจค NPI จากหน้านี้ (ระบบเสนอชื่อ/พาร์ท คนยืนยัน) → ลูกค้าตัดสิน")} → <b>{tr('ได้งาน')}</b> = {tr("ออก")} <b>{tr('ใบแจ้งจัดทำ F-MKT-001/002')}</b> {tr("ให้ฝ่ายโรงงาน (ออกเลขแล้วพิมพ์ซ้ำได้ ใบเดิมเสมอ) · ยอดขาย/ปี = volume × ราคาชิ้น (ขาดตัวใดตัวหนึ่ง = ไม่คิด ไม่ใช่ 0) · volume ต้องบอกที่มาเสมอ (RFQ มี 3 ชุดคนละค่า) · เฟส 2a (13/11): แนบเอกสาร")} RFQ · model life · job type · <b>{tr("ส่งให้ IEC ประเมิน")}</b> → IEC {tr("ตอบ ผลิตได้ไหม/process flow/ราคาเป้าหมาย → สถานะเดินต่อได้ · ยังไม่ทำ (เฟส 2b-3): มอบงานแผนกอื่น · checklist gate · คำนวณต้นทุน ①–⑤ · ใบเสนอราคา 2 ชั้นอนุมัติ")}
       </InfoMore>
 
       {loading ? <div style={{ color: 'var(--muted)', padding: 30 }}>{tr('กำลังโหลด…')}</div> : tab === 'report' ? (
@@ -368,7 +365,7 @@ export default function Rfq() {
             <Field label={tr('ชนิดงาน')}><select style={inp} value={rfqModal.process_type} onChange={e => setRfqModal({ ...rfqModal, process_type: e.target.value })}>{Object.entries(PROCESS_TYPES).map(([k, v]) => <option key={k} value={k}>{tr(v)}</option>)}</select></Field>
             <Field label={tr('ความเร่งด่วน')}><select style={inp} value={rfqModal.priority} onChange={e => setRfqModal({ ...rfqModal, priority: e.target.value })}>{Object.entries(PRIORITIES).map(([k, v]) => <option key={k} value={k}>{tr(v)}</option>)}</select></Field>
             <Field label="Make-to-print / Co-design" hint="Q-neX job type"><select style={inp} value={rfqModal.job_type || ''} onChange={e => setRfqModal({ ...rfqModal, job_type: e.target.value })}><option value="">{tr('— ยังไม่ระบุ —')}</option>{Object.entries(JOB_TYPES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></Field>
-            <Field label="Model life (ปี)" hint="ยอดรวมตลอดอายุ = volume/ปี × ปี"><input type="number" step="0.5" style={inp} value={rfqModal.model_life_years ?? ''} onChange={e => setRfqModal({ ...rfqModal, model_life_years: e.target.value })} /></Field>
+            <Field label={tr("Model life (ปี)")} hint={tr("ยอดรวมตลอดอายุ = volume/ปี × ปี")}><input type="number" step="0.5" style={inp} value={rfqModal.model_life_years ?? ''} onChange={e => setRfqModal({ ...rfqModal, model_life_years: e.target.value })} /></Field>
             <Field label={tr('ผู้รับผิดชอบ (MKT Engineer)')} hint={mktPeopleHint}>
               <PersonSelect value={rfqModal.owner_name} onChange={(v) => setRfqModal({ ...rfqModal, owner_name: typeof v === 'string' ? v : (v?.name || '') })}
                 history={ownerHist} roles={MKT_PEOPLE_ROLES} strict placeholder={tr('ค้นชื่อทีม Marketing…')}
@@ -451,7 +448,7 @@ export default function Rfq() {
             </>)}
           </div>
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 10 }}>
-            สร้างแล้วเฟส/รายการเอกสารมาจากแม่แบบที่เลือก (snapshot) · สถานะ RFQ จะเลื่อนเป็น "IEC กำลังประเมิน" · ระบบ<b>{tr('ไม่')}</b>เขียนทับสิ่งที่ IEC ทำไว้ใน NPI
+            {tr("สร้างแล้วเฟส/รายการเอกสารมาจากแม่แบบที่เลือก (snapshot) · สถานะ RFQ จะเลื่อนเป็น \"IEC กำลังประเมิน\" · ระบบ")}<b>{tr('ไม่')}</b>{tr("เขียนทับสิ่งที่ IEC ทำไว้ใน")} NPI
           </div>
         </Modal>
       )}
@@ -618,7 +615,7 @@ function RfqSheet({ rfq, award, parts, mainParts, npi, canEdit, canAward, canAss
             {award?.production_order_no && <button style={ghost} onClick={onReprint}>{tr('พิมพ์ซ้ำ')} {award.production_order_no}</button>}
           </div>
         </div>
-        {!award ? <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>ยังไม่มีผล — ลูกค้าตัดสินแล้วมาบันทึกที่นี่ (ได้งาน = ออกใบแจ้งจัดทำให้โรงงานได้ทันที)</div> : (
+        {!award ? <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{tr("ยังไม่มีผล — ลูกค้าตัดสินแล้วมาบันทึกที่นี่ (ได้งาน = ออกใบแจ้งจัดทำให้โรงงานได้ทันที")})</div> : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: '0 16px', alignItems: 'start' }}>
             <div>
               {row('วันที่ตัดสิน', award.decided_at ? fmtDate(award.decided_at) : '—')}

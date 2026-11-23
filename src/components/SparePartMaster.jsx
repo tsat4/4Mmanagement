@@ -352,8 +352,7 @@ export default function SparePartMaster({ parts = [], reload, fullName, role, my
       {/* กรองหน่วยงานแล้วซ่อนอะไรไปบ้าง — ห้ามหายเงียบ (กฎเดียวกับตัวกรองทีมใน ⚙️ ข้อมูลตั้งต้น) */}
       {!!hiddenBySection && (
         <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '7px 12px', marginBottom: 10, fontSize: 12.5, color: 'var(--text2)' }}>
-          กำลังดูคลังของ <b style={{ color: 'var(--text)' }}>{sectionLabel(fSection, orgSecs)}</b> (รวมของกลาง) ·
-          ซ่อนอยู่ <b>{hiddenBySection}</b> รายการของหน่วยงานอื่น
+          {tr("กำลังดูคลังของ")} <b style={{ color: 'var(--text)' }}>{sectionLabel(fSection, orgSecs)}</b> ({tr("รวมของกลาง) · ซ่อนอยู่")} <b>{hiddenBySection}</b> {tr("รายการของหน่วยงานอื่น")}
           <button onClick={() => setFSection('')} style={{ ...btnGhost, padding: '3px 10px', fontSize: 11.5, marginLeft: 8 }}>{tr('ดูทุกหน่วยงาน')}</button>
         </div>
       )}
@@ -361,8 +360,7 @@ export default function SparePartMaster({ parts = [], reload, fullName, role, my
       {/* Rank A/B ที่ยังไม่ตั้ง Safety Stock — เตือนนิ่ง (ไม่กระพริบ ไม่ใช่ alarm) */}
       {!!summary.noSafety && (
         <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid #f59e0b', borderRadius: 'var(--r-md)', padding: '8px 12px', marginBottom: 10, fontSize: 12.5, color: 'var(--text)' }}>
-          ⚠️ มี <b>{summary.noSafety}</b> รายการที่เป็น Rank A/B แต่ยังไม่ได้ตั้ง Safety Stock (ขั้นต่ำ) —
-          ตาม WI-JIG-010 Rank A ต้องมีมากกว่าค่า Safety Stock เสมอ, Rank B ต้องมี Safety Stock
+          ⚠️ {tr("มี")} <b>{summary.noSafety}</b> {tr("รายการที่เป็น Rank A/B แต่ยังไม่ได้ตั้ง Safety Stock (ขั้นต่ำ) — ตาม WI-JIG-010 Rank A ต้องมีมากกว่าค่า Safety Stock เสมอ, Rank B ต้องมี")} Safety Stock
         </div>
       )}
 
@@ -391,7 +389,7 @@ export default function SparePartMaster({ parts = [], reload, fullName, role, my
                 ⇒ โชว์ 50 แถวแรก ที่เหลือกด "ดูทั้งหมด" · **ไม่ใช่ paging** — ข้อมูลครบเท่าเดิม
                 🔴 แถบกรอง/ค้นหาอยู่ข้างบนแล้ว ⇒ หาของเจอโดยไม่ต้องกางเสมอ
                 🔴 50 ไม่ใช่ 10 — ทะเบียนคือเหตุผลที่หน้านี้มีอยู่ ตัดเหลือ 10 = ใช้งานไม่ได้ */}
-            <RowFold rows={filtered} max={50} unit="รายการ" colSpan={13}>{p => {
+            <RowFold rows={filtered} max={50} unit={tr("รายการ")} colSpan={13}>{p => {
               const st = p._state, rk = p._rank, c = catOf(p.category);
               return (
                 <tr key={p.id}>
@@ -758,7 +756,7 @@ function PartEditModal({ part, cats, teams, shelfOpts, rackCells = [], secOpts =
             </div>
 
             <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--accent2)', marginBottom: 8 }}>สต็อก & การจัดซื้อ</div>
+              <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--accent2)', marginBottom: 8 }}>{tr("สต็อก & การจัดซื้อ")}</div>
               <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 10 }}>
                 {isNew
                   ? <Field label={tr('ยอดยกมา')} hint={tr('บันทึกเป็นรายการ \'รับเข้า\'')}><input type="number" min="0" value={f.stock_qty} onChange={e => set('stock_qty', e.target.value)} style={inp} /></Field>
@@ -810,7 +808,7 @@ function PartEditModal({ part, cats, teams, shelfOpts, rackCells = [], secOpts =
                     })}
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-                    ตัวเลขจางในช่อง = ยอดที่ระบบสะสมเองจากการเบิกจริง (ยอดที่คีย์จะ<b>{tr('บวกเพิ่ม')}</b> ไม่ทับกัน) · เว้นว่าง = ไม่มียอดที่คีย์เอง
+                    {tr("ตัวเลขจางในช่อง = ยอดที่ระบบสะสมเองจากการเบิกจริง (ยอดที่คีย์จะ")}<b>{tr('บวกเพิ่ม')}</b> {tr("ไม่ทับกัน) · เว้นว่าง = ไม่มียอดที่คีย์เอง")}
                   </div>
                 </div>
               )}
@@ -1078,7 +1076,7 @@ function ImportModal({ parts, cats, teams, fullName, ownOf = () => ({ ok: true }
         <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>📥 {tr(importLabel('spare'))}</div>
         <div style={{ marginBottom: 10 }}><ImportInfo k="spare" sample={{ label: 'ดาวน์โหลดไฟล์ตัวอย่าง', onClick: template }} /></div>
         <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 14 }}>
-          รองรับ .xlsx / .csv · หัวคอลัมน์ไทยหรืออังกฤษก็ได้ · <b>{tr('อัพโหลดไฟล์เดิมซ้ำได้เรื่อยๆ')}</b> ระบบจะอัพเดททับตามคีย์ ไม่สร้างรายการซ้ำ
+          {tr("รองรับ .xlsx / .csv · หัวคอลัมน์ไทยหรืออังกฤษก็ได้")} · <b>{tr('อัพโหลดไฟล์เดิมซ้ำได้เรื่อยๆ')}</b> {tr("ระบบจะอัพเดททับตามคีย์ ไม่สร้างรายการซ้ำ")}
         </div>
 
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
@@ -1096,7 +1094,7 @@ function ImportModal({ parts, cats, teams, fullName, ownOf = () => ({ ok: true }
             {secOpts.map((o, i) => <option key={`${o.code}-${i}`} value={o.code}>{tr(o.label)}</option>)}
           </select>
           <span style={{ color: 'var(--muted)', fontSize: 11.5 }}>
-            1 ไฟล์ = 1 หน่วยงาน · จับคู่ของเดิม<b>{tr('เฉพาะในหน่วยงานนี้')}</b> (ไม่ทับคลังของหน่วยงานอื่นที่ใช้เลขเดียวกัน)
+            1 {tr("ไฟล์ = 1 หน่วยงาน · จับคู่ของเดิม")}<b>{tr('เฉพาะในหน่วยงานนี้')}</b> ({tr("ไม่ทับคลังของหน่วยงานอื่นที่ใช้เลขเดียวกัน")})
           </span>
         </div>
 
@@ -1209,7 +1207,7 @@ function CategoryModal({ cats, teams = [], onClose, onSaved }) {
     <div /* ⚠️ ฟอร์มกรอกข้อมูล — ไม่ปิดจาก backdrop กันเผลอแตะแล้วข้อมูลหาย (UI-CONVENTIONS §5) */  style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'grid', placeItems: 'center', zIndex: 2000, padding: 16 }}>
       <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(560px, 96vw)', maxHeight: '90vh', overflow: 'auto' }}>
         <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 2 }}>{tr('หมวดอะไหล่')}</div>
-        <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 12 }}>รหัสหมวดใช้จัดกลุ่มในคลัง — เพิ่ม/แก้ได้เอง ไม่ต้องแก้โค้ด · ตั้งทีมได้ถ้าหมวดนั้นใช้เฉพาะบางทีม (เช่น LP = Locating Pin ของ JIG)</div>
+        <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 12 }}>{tr("รหัสหมวดใช้จัดกลุ่มในคลัง — เพิ่ม/แก้ได้เอง ไม่ต้องแก้โค้ด · ตั้งทีมได้ถ้าหมวดนั้นใช้เฉพาะบางทีม (เช่น LP = Locating Pin ของ")} JIG)</div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
           <input value={n.key} onChange={e => setN(p => ({ ...p, key: e.target.value }))} placeholder={tr('รหัส (EE)')} style={{ ...inp, width: 90 }} />
           <input value={n.icon} onChange={e => setN(p => ({ ...p, icon: e.target.value }))} placeholder={tr('ไอคอน')} style={{ ...inp, width: 70 }} />

@@ -362,7 +362,7 @@ export default function MaintenanceLevels() {
                       {it.pv.dueYmd && <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 3 }}>{trI18n('ครบ')} {fmtYmd(it.pv.dueYmd)}</div>}
                     </td>
                     <td style={{ ...td, fontVariantNumeric: 'tabular-nums' }}>
-                      <b>{it.pd.stopsR}</b> ครั้ง
+                      <b>{it.pd.stopsR}</b> {trI18n("ครั้ง")}
                       <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{trI18n('หยุด')} {fmtDur(it.pd.dtMinR)} {trI18n('· ช่วงก่อน')} {it.pd.stopsB} {trI18n('ครั้ง/60 วัน')}</div>
                     </td>
                     <td style={{ ...td, fontVariantNumeric: 'tabular-nums' }}>

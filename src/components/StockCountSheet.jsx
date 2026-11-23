@@ -235,8 +235,7 @@ export default function StockCountSheet({ role, scope }) {
       <div style={card}>
         <div style={{ fontSize:15, fontWeight:800, marginBottom:6 }}>{tr('ตรวจนับ / เฟิร์มยอด')}</div>
         <div style={{ fontSize:12, color:'var(--muted)', lineHeight:1.65, marginBottom:12 }}>
-          กรอก <b>{tr('ยอดที่นับได้จริง')}</b> (ไม่ใช่ผลต่าง) ระบบคิดส่วนต่างให้เอง แล้วบันทึกเป็นรายการ 🔧 ปรับยอดทีเดียวทั้งคลัง
-          · เว้นว่าง = ยังไม่นับ ไม่แตะยอดเดิม · กรอก 0 = นับแล้วไม่มีของ
+          {tr("กรอก")} <b>{tr('ยอดที่นับได้จริง')}</b> ({tr("ไม่ใช่ผลต่าง) ระบบคิดส่วนต่างให้เอง แล้วบันทึกเป็นรายการ 🔧 ปรับยอดทีเดียวทั้งคลัง · เว้นว่าง = ยังไม่นับ ไม่แตะยอดเดิม · กรอก 0 = นับแล้วไม่มีของ")}
         </div>
 
         <DraftRestoreBar draft={pendingDraft} what={`${tr("ใบนับ")} ${lineFilter}`}
@@ -340,14 +339,14 @@ export default function StockCountSheet({ role, scope }) {
                     rows.forEach(r => { if (next[r.mat_no] === undefined || next[r.mat_no] === '') next[r.mat_no] = '0'; });
                     return next;
                   })}>
-                  เติม 0 ให้แถวที่ยังไม่กรอก
+                  {tr("เติม 0 ให้แถวที่ยังไม่กรอก")}
                 </button>
                 <button style={{ ...btn('var(--bg3)', 'var(--text)'), border:'1px solid var(--border2)', fontSize:12, padding:'6px 12px' }}
                   onClick={() => setCounts({})}>
                   {tr('ล้างที่กรอก')}
                 </button>
                 <span style={{ fontSize:11, color:'var(--muted)' }}>
-                  ตั้งต้นคลังใหม่ = เติม 0 ทั้งหมด แล้วแก้เฉพาะแถวที่นับเจอของ — ยังต้องกดบันทึกเอง
+                  {tr("ตั้งต้นคลังใหม่ = เติม 0 ทั้งหมด แล้วแก้เฉพาะแถวที่นับเจอของ — ยังต้องกดบันทึกเอง")}
                 </span>
               </div>
             )}
@@ -411,8 +410,7 @@ export default function StockCountSheet({ role, scope }) {
 
         {!fgDest ? (
           <div style={{ fontSize:13, color:'#f59e0b' }}>
-            ⚠️ ยังไม่มีกฎรับเข้าอัตโนมัติของ FG (เลขขึ้นต้น 1) — ตั้งที่แท็บ ⚙️ รับเข้าอัตโนมัติ ก่อน
-            ระบบจึงจะรู้ว่าต้องหักออกจากคลังไหน
+            ⚠️ {tr("ยังไม่มีกฎรับเข้าอัตโนมัติของ FG (เลขขึ้นต้น 1) — ตั้งที่แท็บ ⚙️ รับเข้าอัตโนมัติ ก่อน ระบบจึงจะรู้ว่าต้องหักออกจากคลังไหน")}
           </div>
         ) : !shipGap.open.length && !shipGap.unresolved.length ? (
           <div style={{ fontSize:13, color:'var(--accent)' }}>{tr('✅ ไม่มีใบค้าง — ยอดขาออกตรงกับ ledger ทั้งหมด')}</div>

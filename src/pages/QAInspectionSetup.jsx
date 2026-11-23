@@ -459,7 +459,7 @@ export default function QAInspectionSetup() {
             <div style={cardSt}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
                 <div style={{ fontWeight: 800, fontSize: 13.5 }}>Drawings ({drawings.length} {tr("แผ่น")}){sel.drawing_rev ? ` · Rev ${sel.drawing_rev}` : ''}</div>
-                {canEdit && drawings.length > 0 && <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>แตะหมุด = ไปแก้จุดนั้น</div>}
+                {canEdit && drawings.length > 0 && <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{tr("แตะหมุด = ไปแก้จุดนั้น")}</div>}
               </div>
               {drawings.length === 0 ? (
                 <div style={{ padding: 46, textAlign: 'center', color: 'var(--muted)', fontSize: 13, border: '2px dashed var(--border2)', borderRadius: 'var(--r-md)' }}>

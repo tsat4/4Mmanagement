@@ -30,7 +30,7 @@ export default function PeMasterPullModal({ procs, fmea, masters, masterItems, i
   return (
     <Modal title={tr('เติม failure mode จาก master')} onClose={onClose} width={760}
       footer={<><button style={ghost} onClick={onClose}>{tr('ยกเลิก')}</button><button style={btn()} disabled={saving || !chosen.length} onClick={run}>{saving ? 'กำลังเพิ่ม…' : `➕ ${tr("เพิ่ม")} ${chosen.length} ${tr("รายการ")}`}</button></>}>
-      {!linked.length ? <WarnBar color="#f59e0b">ยังไม่มี OP ไหนผูกกระบวนการมาตรฐาน — ไปที่แท็บ Flow → ✏️ OP → เลือก "กระบวนการมาตรฐาน" ก่อน</WarnBar> : (
+      {!linked.length ? <WarnBar color="#f59e0b">{tr("ยังไม่มี OP ไหนผูกกระบวนการมาตรฐาน — ไปที่แท็บ Flow → ✏️ OP → เลือก \"กระบวนการมาตรฐาน\" ก่อน")}</WarnBar> : (
         <>
           <select style={{ ...inp, marginBottom: 8 }} value={procId} onChange={e => { setProcId(e.target.value); setPicked(null); }}>
             {linked.map(p => <option key={p.id} value={p.id}>OP {p.op_no} · {p.name} → 📚 {(masters || []).find(m => m.id === p.master_process_id)?.name || '?'}</option>)}

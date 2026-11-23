@@ -154,7 +154,7 @@ export default function StoreCallSiren({ slot = 0, variant = 'float', here = fal
       <div style={fixed({ bottom: chipBottom, right: 12, display: 'flex', alignItems: 'center', gap: 7,
         background: 'rgba(28,10,10,0.95)', border: '1px solid rgba(239,68,68,0.6)', borderRadius: 'var(--r-md)',
         padding: '7px 11px', fontSize: 11.5, fontWeight: 800, color: '#f87171', boxShadow: 'var(--shadow-lg)' })}>
-        ⚠️ อ่านใบขอเบิกจากไลน์ไม่ได้ — ยังบอกไม่ได้ว่ามีไลน์เรียกของหรือไม่
+        ⚠️ {tr("อ่านใบขอเบิกจากไลน์ไม่ได้ — ยังบอกไม่ได้ว่ามีไลน์เรียกของหรือไม่")}
       </div>
     );
     if (!muted) return null;
@@ -164,7 +164,7 @@ export default function StoreCallSiren({ slot = 0, variant = 'float', here = fal
         style={fixed({ bottom: chipBottom, right: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7,
           background: 'rgba(20,16,6,0.94)', border: '1px solid rgba(251,191,36,0.5)', borderRadius: 'var(--r-md)',
           padding: '7px 11px', fontSize: 11.5, fontWeight: 800, color: '#fbbf24', boxShadow: 'var(--shadow-lg)' })}>
-        เสียงเตือน "ไลน์เรียกของ" ยังไม่พร้อม — แตะที่นี่ 1 ครั้ง
+        {tr("เสียงเตือน \"ไลน์เรียกของ\" ยังไม่พร้อม — แตะที่นี่ 1 ครั้ง")}
       </div>
     );
   }
@@ -232,7 +232,7 @@ export default function StoreCallSiren({ slot = 0, variant = 'float', here = fal
             {muted && (
               <span onClick={unlockNow} title={tr('เบราว์เซอร์บล็อกเสียงจนกว่าจะมีคนแตะจอ')}
                 style={{ flexShrink: 0, fontSize: 11.5, fontWeight: 800, color: '#fbbf24', cursor: 'pointer' }}>
-                แตะเพื่อเปิดเสียง
+                {tr("แตะเพื่อเปิดเสียง")}
               </span>
             )}
             <button onClick={() => goPrep(a)} title={tr('ไปหน้าเตรียมงาน — Stock Management › 📤 ส่งของเข้าไลน์ › ตู้ตามเลขพาร์ท (กรองเฉพาะพาร์ทนี้)')}

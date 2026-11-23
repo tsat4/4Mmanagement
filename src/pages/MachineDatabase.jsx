@@ -521,7 +521,7 @@ export default function MachineDatabase() {
                 </div>
                 {kindOf(editing.equipment_kind) === 'die' && (
                   <div style={{ fontSize: 11, color: 'var(--accent2)', marginTop: 5, lineHeight: 1.5 }}>
-                    แม่พิมพ์มีรายละเอียดเพิ่ม (ชุด · ลำดับ OP · นับ shot · ลับคม) — ตั้งที่หน้า <b>{tr('ทะเบียนแม่พิมพ์')}</b>
+                    {tr("แม่พิมพ์มีรายละเอียดเพิ่ม (ชุด · ลำดับ OP · นับ shot · ลับคม) — ตั้งที่หน้า")} <b>{tr('ทะเบียนแม่พิมพ์')}</b>
                   </div>
                 )}
               </Field>
@@ -795,8 +795,7 @@ function BrandReviewModal({ proposals, onClose, onDone }) {
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 18, cursor: 'pointer' }}>✕</button>
         </div>
         <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 10, lineHeight: 1.6 }}>
-          ระบบอ่านจาก <b>{tr('คำแรกของชื่อเครื่อง')}</b> เท่านั้น (ไม่เดาจากชื่อรุ่น) · ตรวจแล้วติ๊กออก/แก้ยี่ห้อได้ก่อนบันทึก ·
-          เครื่องที่ระบบอ่านไม่ออกไม่อยู่ในลิสต์นี้ — กรอกเองในฟอร์มเครื่อง
+          {tr("ระบบอ่านจาก")} <b>{tr('คำแรกของชื่อเครื่อง')}</b> {tr("เท่านั้น (ไม่เดาจากชื่อรุ่น) · ตรวจแล้วติ๊กออก/แก้ยี่ห้อได้ก่อนบันทึก · เครื่องที่ระบบอ่านไม่ออกไม่อยู่ในลิสต์นี้ — กรอกเองในฟอร์มเครื่อง")}
         </div>
         <div style={{ flex: 1, overflowY: 'auto', marginBottom: 10 }}>
           {rows.map((r, i) => (
@@ -875,7 +874,7 @@ function MachineTypeManager({ types, canEdit, onClose, onChange }) {
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 18, cursor: 'pointer' }}>✕</button>
         </div>
         <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 12 }}>
-          สร้างประเภทเองได้ไม่จำกัด เช่น แยก "Robot" ออกเป็น "Robot - Arc Welding" / "Robot - Handling"
+          {tr("สร้างประเภทเองได้ไม่จำกัด เช่น แยก \"Robot\" ออกเป็น")} "Robot - Arc Welding" / "Robot - Handling"
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', marginBottom: 12 }}>

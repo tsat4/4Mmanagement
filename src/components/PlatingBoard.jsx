@@ -277,8 +277,7 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
       {liveErr && <div style={errTxt}>{tr('⚠ โหลดใบส่งชุบ/ยอดคลังไม่ครบ —')} {liveErr} {tr('· ตัวเลขบนจออาจขาด')}</div>}
       {masterReady && !platList.length && (
         <div style={warnTxt}>
-          ยังไม่มีสินค้าหลังชุบ — ระบบนับสินค้าที่อยู่บน "ไลน์ประเภท 🧪 จ้างนอก" เป็นงานหลังชุบ ·
-          ตั้งประเภทไลน์ที่ /line-setup (เช่นไลน์ Coating) แล้วสร้างสินค้าหลังชุบไว้บนไลน์นั้นที่ /products
+          {tr("ยังไม่มีสินค้าหลังชุบ — ระบบนับสินค้าที่อยู่บน \"ไลน์ประเภท 🧪 จ้างนอก\" เป็นงานหลังชุบ · ตั้งประเภทไลน์ที่ /line-setup (เช่นไลน์ Coating) แล้วสร้างสินค้าหลังชุบไว้บนไลน์นั้นที่")} /products
         </div>
       )}
 
@@ -411,7 +410,7 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
                     onChange={e => setForm(f => ({ ...f, reason: e.target.value }))} style={inp} aria-label={tr('รายละเอียด')} />
                   <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 12.5 }}>
                     <input type="checkbox" checked={form.close} onChange={e => setForm(f => ({ ...f, close: e.target.checked }))} />
-                    ปิดใบนี้ — ส่วนที่ขาดไม่กลับแล้ว (ไม่ติ๊ก = ส่วนที่เหลือยังค้างร้าน ทยอยรับได้)
+                    {tr("ปิดใบนี้ — ส่วนที่ขาดไม่กลับแล้ว (ไม่ติ๊ก = ส่วนที่เหลือยังค้างร้าน ทยอยรับได้")})
                   </label>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button type="button" disabled={busy === `recv|${o.id}`} style={storeBtn('primary', { flex: 1 })}

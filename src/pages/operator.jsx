@@ -1284,7 +1284,7 @@ export default function Operator() {
               </span>
               <InfoMore label={tr('เงื่อนไขที่นับว่า ไม่ตรงผัง')} size={11.5}>
                 {tr("แผนก/กลุ่มไม่มีในผัง หรือ")} <b>{tr('ยังไม่ผูกไลน์ (คนหน้างานที่ไม่มีไลน์จะไม่ขึ้นในหน้าเช็คชื่อ)')}</b> — {tr("เปิดแก้ไขแล้วเลือกใหม่จาก dropdown ได้เลย")}
-                · <b>ไลน์มาจาก "กลุ่ม" ไม่ใช่ "แผนก"</b> — {tr("ตั้งแผนกอย่างเดียวยังไม่พอ")}
+                · <b>{tr("ไลน์มาจาก \"กลุ่ม\" ไม่ใช่ \"แผนก")}"</b> — {tr("ตั้งแผนกอย่างเดียวยังไม่พอ")}
                 {offOrgStat.blocked > 0 && (
                   <> · <b style={{ color: 'var(--amber)' }}>{tr('ในนี้')} {offOrgStat.blocked} {tr('คน (')}{offOrgStat.blockedSecs.join(', ')}) {tr("แก้ที่ฟอร์มยังไม่ได้")}</b> —
                     {tr("ผังยังไม่มีแผนกของส่วนงานนี้ ต้องเพิ่มที่")} <Link to="/org-setup" style={{ color: 'var(--amber)', fontWeight: 700 }}>{tr('ผังองค์กร')}</Link> {tr('ก่อน')}</>
@@ -1306,7 +1306,7 @@ export default function Operator() {
           {!scrollState.hinted && scrollState.right && (
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--accent)', background: 'var(--green-dim)', border: '1px solid var(--green-line)', borderRadius: 'var(--r-pill)', padding: '3px 10px' }}>
-                ← เลื่อนดูสกิลเพิ่มเติม →
+                ← {tr("เลื่อนดูสกิลเพิ่มเติม")} →
               </div>
             </div>
           )}
@@ -1568,13 +1568,13 @@ export default function Operator() {
                               /* สกิลกลาง = แก้แล้วกระทบทุกส่วนงาน — ต้องเขียนบนจอ ไม่ใช่ปล่อยให้เดาจากช่องว่าง */
                               <span title={tr('ไม่ได้ผูกส่วนงาน — ใช้กับพนักงานทุกส่วนงาน แก้/ลบแล้วกระทบทั้งโรงงาน')}
                                 style={{ fontSize: 11, background: 'rgba(245,158,11,0.12)', color: '#f59e0b', borderRadius: 'var(--r-xs)', padding: '0 5px', fontWeight: 600 }}>
-                                สกิลกลาง (ทุกส่วนงาน)
+                                {tr("สกิลกลาง (ทุกส่วนงาน")})
                               </span>
                             )}
                             {!sdOk && (
                               <span title={writeBlockText(sdWrite(sd.scope_section), { what: 'สกิลนี้', unit: sd.scope_section || '' })}
                                 style={{ fontSize: 11, background: 'rgba(148,163,184,0.15)', color: 'var(--muted)', borderRadius: 'var(--r-xs)', padding: '0 5px', fontWeight: 600 }}>
-                                ดูได้ แก้ไม่ได้
+                                {tr("ดูได้ แก้ไม่ได้")}
                               </span>
                             )}
                             {sd.allowance_type && (
@@ -1667,7 +1667,7 @@ export default function Operator() {
                 {isAddingSkill ? tr('กำลังบันทึก...') : tr('เพิ่มสกิล')}
               </button>
               <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8 }}>
-                Key สร้างอัตโนมัติแบบ UUID — ชื่อไทยหรืออักขระพิเศษใช้ได้ทั้งหมด ไม่มีการชนกัน
+                Key {tr("สร้างอัตโนมัติแบบ UUID — ชื่อไทยหรืออักขระพิเศษใช้ได้ทั้งหมด ไม่มีการชนกัน")}
               </div>
             </div>
 
@@ -1805,8 +1805,7 @@ export default function Operator() {
           {expCfg && !expCfg.is_enabled && (
             <div style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 'var(--r-md)', fontSize: 12,
                           background: 'var(--bg2-surf)', border: '1px solid var(--border2)', color: 'var(--text2)' }}>
-              ℹ️ <strong>{tr('โหมดทดลอง (shadow)')}</strong> — สูตร EXP v2 คำนวณหลักฐานให้ดูเทียบได้
-              แต่ <strong>{tr('คะแนนจริงยังมาจากสูตรเดิม')}</strong> (+1/วัน · +2/สัปดาห์) · กดปุ่ม ⚪ ด้านบนเพื่อเริ่มใช้จริง
+              ℹ️ <strong>{tr('โหมดทดลอง (shadow)')}</strong> — {tr("สูตร EXP v2 คำนวณหลักฐานให้ดูเทียบได้ แต่")} <strong>{tr('คะแนนจริงยังมาจากสูตรเดิม')}</strong> (+1/{tr("วัน · +2/สัปดาห์) · กดปุ่ม ⚪ ด้านบนเพื่อเริ่มใช้จริง")}
             </div>
           )}
 
@@ -1823,7 +1822,7 @@ export default function Operator() {
 
           {levelUpRequests.length === 0 ? (
             <div className="card" style={{ textAlign: 'center', padding: 40, color: 'var(--muted)', fontSize: 14 }}>
-              ✅ ไม่มีคำขออัพระดับที่รอการอนุมัติ
+              ✅ {tr("ไม่มีคำขออัพระดับที่รอการอนุมัติ")}
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -1857,7 +1856,7 @@ export default function Operator() {
                         {emp?.section && <span style={{ fontSize: 11, background: 'rgba(77,159,255,0.1)', color: '#4d9fff', borderRadius: 'var(--r-xs)', padding: '1px 6px' }}>{emp.section}</span>}
                       </div>
                       <div style={{ fontSize: 13, marginBottom: 4 }}>
-                        ทักษะ: <strong style={{ color: 'var(--accent)' }}>{skillDefs.find(s => s.name === req.skill_name)?.label ?? req.skill_name}</strong>
+                        {tr("ทักษะ")}: <strong style={{ color: 'var(--accent)' }}>{skillDefs.find(s => s.name === req.skill_name)?.label ?? req.skill_name}</strong>
                         &nbsp;·&nbsp;
                         <span style={{ color: '#f59e0b', fontWeight: 600 }}>score {req.from_score}</span>
                         &nbsp;→&nbsp;
@@ -1878,7 +1877,7 @@ export default function Operator() {
                       {needsDoc && canApprove && (
                         <div style={{ marginTop: 10 }}>
                           <div style={{ fontSize: 11, color: '#a855f7', fontWeight: 600, marginBottom: 4 }}>
-                            แนบเอกสารการอบรมเฉพาะทาง <span style={{ color: '#ef4444' }}>*</span>
+                            {tr("แนบเอกสารการอบรมเฉพาะทาง")} <span style={{ color: '#ef4444' }}>*</span>
                           </div>
                           <div style={{ border: `2px dashed ${luDocFile ? '#a855f7' : 'var(--border2)'}`, borderRadius: 'var(--r-md)', padding: '8px 12px', cursor: 'pointer', background: luDocFile ? 'rgba(168,85,247,0.06)' : 'var(--bg2)', textAlign: 'center' }}
                             onClick={() => document.getElementById(`doc-${req.id}`).click()}>
@@ -2044,7 +2043,7 @@ export default function Operator() {
                             : allowed.length
                               ? <>{tr('แม่แบบกำหนดตำแหน่งนี้ไว้ที่')} <b>{allowed.join(' / ')}</b> {tr('(ติ๊ก ✓ ในลิสต์)')}</>
                               : <>{tr('แม่แบบไม่ได้ระบุเกรดของตำแหน่งนี้ — เลือกได้ตามจริง')}</>}
-                          {row && <> · <b>เลขน้อย = สูงกว่า</b> {tr('(เช่น S1 สูงกว่า S3)')}</>}
+                          {row && <> · <b>{tr("เลขน้อย = สูงกว่า")}</b> {tr('(เช่น S1 สูงกว่า S3)')}</>}
                         </div>
                       </div>
                     );
@@ -2085,7 +2084,7 @@ export default function Operator() {
                         </select>
                         {empSection === ORPHAN_SECTION && (
                           <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4, lineHeight: 1.4 }}>
-                            หน่วยงานขึ้นตรงฝ่าย — ไม่มี Section · Group/Line เว้นว่างได้
+                            {tr("หน่วยงานขึ้นตรงฝ่าย — ไม่มี Section · Group/Line เว้นว่างได้")}
                           </div>
                         )}
                         {/* ส่วนงานที่ยังไม่มีแผนกในผัง = แก้ผ่านฟอร์มไม่ได้ ต้องบอกให้ชัด ห้ามปล่อยว่างเงียบ
@@ -2145,7 +2144,7 @@ export default function Operator() {
                   );
                 })()}
                 <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3, lineHeight: 1.45 }}>
-                  A/B สลับเช้า-ดึกรายสัปดาห์ — ดู/ตั้งรอบหมุนที่ <Link to="/shift-organize" style={{ color: 'var(--accent)' }}>{tr('ตารางกะ')}</Link>
+                  A/B {tr("สลับเช้า-ดึกรายสัปดาห์ — ดู/ตั้งรอบหมุนที่")} <Link to="/shift-organize" style={{ color: 'var(--accent)' }}>{tr('ตารางกะ')}</Link>
                 </div>
               </div>
 
@@ -2306,7 +2305,7 @@ export default function Operator() {
                       </span>
                       {!empDiv && !showAllSkills && (
                         <span style={{ color: '#f59e0b' }} title={tr('ไปติดป้ายฝ่ายให้ส่วนงาน/แผนกนี้ที่หน้าผังองค์กร')}>
-                          ⚠️ ส่วนงานนี้ยังไม่ได้ติดป้ายฝ่าย — เห็นเฉพาะสกิลกลาง
+                          ⚠️ {tr("ส่วนงานนี้ยังไม่ได้ติดป้ายฝ่าย — เห็นเฉพาะสกิลกลาง")}
                         </span>
                       )}
                       {empDiv && ownDivCount === 0 && !showAllSkills && (
@@ -2438,7 +2437,7 @@ export default function Operator() {
                 <label style={labelSt}>{tr('✍️ ลายเซ็น (ใช้พิมพ์บนใบตรวจ)')}</label>
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                   {editingEmp.signature_url
-                    ? <img src={editingEmp.signature_url} alt="ลายเซ็น" style={{ height: 40, maxWidth: 180, objectFit: 'contain', background: '#fff', borderRadius: 4, padding: 2, border: '1px solid var(--border)' }} />
+                    ? <img src={editingEmp.signature_url} alt={tr("ลายเซ็น")} style={{ height: 40, maxWidth: 180, objectFit: 'contain', background: '#fff', borderRadius: 4, padding: 2, border: '1px solid var(--border)' }} />
                     : <span style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('ยังไม่มีลายเซ็น — ใบตรวจจะเว้นช่องให้เซ็นมือ')}</span>}
                   {canEditEmp(editingEmp) && editingEmp.id && (
                     <button type="button" onClick={() => setEmpSigOpen(true)}
@@ -2450,8 +2449,8 @@ export default function Operator() {
                 </div>
                 {!('signature_url' in editingEmp) && (
                   <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 4, lineHeight: 1.5 }}>
-                    ⚠️ ยังอ่านช่องลายเซ็นของพนักงานไม่ได้ — ระบบอาจยังไม่ได้เปิดคอลัมน์ลายเซ็น
-                    (migration <code>20261103_employee_signature_main.sql</code>) · บันทึกลายเซ็นจะยังไม่สำเร็จจนกว่าจะเปิด
+                    ⚠️ {tr("ยังอ่านช่องลายเซ็นของพนักงานไม่ได้ — ระบบอาจยังไม่ได้เปิดคอลัมน์ลายเซ็น")}
+                    (migration <code>20261103_employee_signature_main.sql</code>) · {tr("บันทึกลายเซ็นจะยังไม่สำเร็จจนกว่าจะเปิด")}
                   </div>
                 )}
               </div>
@@ -2587,7 +2586,7 @@ function SkillSubItemsModal({ skill, onClose }) {
           <>
             {rows.length === 0 && (
               <div style={{ fontSize: 12, color: 'var(--muted)', padding: '8px 0 12px' }}>
-                ยังไม่มีหัวข้อย่อย — ใบประเมินจะแสดง 1 แถว = ชื่อสกิลนี้ · เพิ่มหัวข้อเพื่อให้ตรงฟอร์มกระดาษ
+                {tr("ยังไม่มีหัวข้อย่อย — ใบประเมินจะแสดง 1 แถว = ชื่อสกิลนี้ · เพิ่มหัวข้อเพื่อให้ตรงฟอร์มกระดาษ")}
               </div>
             )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>

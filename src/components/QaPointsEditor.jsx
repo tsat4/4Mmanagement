@@ -76,7 +76,7 @@ const S = {
 function QaPointCard({ p, onChange, onDelete, isPinning, onPinToggle, onUnpin, hasImage, methodHist, calcOptions, calcIssues }) {
   const isVar = p.item_type === 'variable';
   return (
-    <PointCardShell label={p.balloon_no || '?'} caption="จุดตรวจชิ้นงาน" pinned={p.pos_x != null}
+    <PointCardShell label={p.balloon_no || '?'} caption={tr("จุดตรวจชิ้นงาน")} pinned={p.pos_x != null}
       isPinning={isPinning} canPin={hasImage} onPinToggle={onPinToggle} onUnpin={onUnpin} onDelete={onDelete}
       inactive={!p.is_active}
       /* 🔴 แนบรูปแล้วต้องเห็นพรีวิวทันที — เดิมเก็บแต่ `_imgFile` ⇒ จอยังเขียน "แนบรูปจุดนี้"
@@ -506,7 +506,7 @@ export default function QaPointsEditor({ part, focusItemId, methodHist, writeChe
           ))}
           {points.length === 0 && (
             <div style={{ padding: 20, textAlign: 'center', color: 'var(--muted)', fontSize: 13, border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)' }}>
-              ยังไม่มีจุดตรวจ — กด “+ เพิ่มจุดตรวจ” แล้วกด 🔘 วางตำแหน่ง → แตะบนรูป
+              {tr("ยังไม่มีจุดตรวจ — กด “+ เพิ่มจุดตรวจ” แล้วกด 🔘 วางตำแหน่ง → แตะบนรูป")}
             </div>
           )}
         </PinWorkspace>

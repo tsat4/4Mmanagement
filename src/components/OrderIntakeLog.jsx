@@ -296,7 +296,7 @@ function PullBatchDetail({ batchId }) {
   if (!rows.length) {
     return (
       <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>
-        ไม่มีแถวผูกกับไฟล์นี้ — ทุกแถวเคยนำเข้าจากไฟล์ก่อนหน้าแล้ว (ระบบไม่นับซ้ำ)
+        {trI18n("ไม่มีแถวผูกกับไฟล์นี้ — ทุกแถวเคยนำเข้าจากไฟล์ก่อนหน้าแล้ว (ระบบไม่นับซ้ำ")})
       </div>
     );
   }

@@ -140,7 +140,7 @@ export default function RemoteControl() {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: 'var(--muted)', fontSize: 13, textAlign: 'center', lineHeight: 1.8,
             }}>
-            ลาก 1 นิ้ว = เลื่อน pointer บนจอ<br />แตะ = คลิก · ลาก 2 นิ้ว = เลื่อนหน้า
+            {tr("ลาก 1 นิ้ว = เลื่อน pointer บนจอ")}<br />{tr("แตะ = คลิก · ลาก 2 นิ้ว = เลื่อนหน้า")}
           </div>
 
           {/* ── ปุ่มวาระ (โหมดประชุมแถวเช้า — ยิงปุ่มลูกศร) ── */}

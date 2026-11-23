@@ -1283,7 +1283,7 @@ export default function Dashboard({ view = 'timeline' }) {
         return (
           <motion.div {...stagger(7)} style={{ marginBottom: 24 }}>
             <div style={{ fontSize: T(14, 22), fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
-              สถานะไลน์ผลิต
+              {tr("สถานะไลน์ผลิต")}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: tv ? 'repeat(auto-fill, minmax(360px, 1fr))' : isUltra ? 'repeat(auto-fill, minmax(250px, 1fr))' : isWide ? 'repeat(auto-fill, minmax(230px, 1fr))' : 'repeat(auto-fill, minmax(200px, 1fr))', gap: isMobile ? 10 : 14 }}>
               {renderOrder.flatMap((line, i) => {
@@ -2357,11 +2357,11 @@ export default function Dashboard({ view = 'timeline' }) {
             </div>
             {visibleLayouts.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--muted)', fontSize: T(15, 24) }}>
-                ยังไม่มีผัง — ไปตั้งค่าที่หน้า <strong>{tr('ตั้งค่าผังไลน์')}</strong>
+                {tr("ยังไม่มีผัง — ไปตั้งค่าที่หน้า")} <strong>{tr('ตั้งค่าผังไลน์')}</strong>
               </div>
             ) : floorCards.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--muted)', fontSize: T(15, 24) }}>
-                ยังไม่มีคนถูกจัดลงจุดงานในผังกะนี้ — จัดคนลงจุดงานที่หน้า <strong>{tr('จัดการไลน์ผลิต')}</strong>
+                {tr("ยังไม่มีคนถูกจัดลงจุดงานในผังกะนี้ — จัดคนลงจุดงานที่หน้า")} <strong>{tr('จัดการไลน์ผลิต')}</strong>
                 <div style={{ fontSize: T(12, 18), marginTop: 6, opacity: 0.7 }}>{tr('(สรุปกำลังคนรวมดูได้ที่การ์ดสถานะไลน์ด้านบน)')}</div>
               </div>
             ) : (

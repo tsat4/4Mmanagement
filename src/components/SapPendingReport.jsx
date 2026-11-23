@@ -75,8 +75,7 @@ export default function SapPendingReport() {
           <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{fmt(sum.parts.length)} {tr('พาร์ท')}</div>
         </div>
         <div style={{ fontSize: 12, color: 'var(--text2)', flex: 1, minWidth: 240 }}>
-          ใบที่สโตร์ส่งถึงไลน์แล้ว แต่ <b>{tr('ตัดจ่ายใน SAP ไม่ได้')}</b> (ติ๊ก 🧾 ในป๊อปอัป "ถึงไลน์แล้ว") — ตัดใน SAP เสร็จแล้วกด "✔ ตัดใน SAP แล้ว" ·
-          ยอดสต็อกในระบบนี้ขยับไปตั้งแต่ตอนส่งแล้ว ไม่เปลี่ยนอีก
+          {tr("ใบที่สโตร์ส่งถึงไลน์แล้ว แต่")} <b>{tr('ตัดจ่ายใน SAP ไม่ได้')}</b> ({tr("ติ๊ก 🧾 ในป๊อปอัป \"ถึงไลน์แล้ว\") — ตัดใน SAP เสร็จแล้วกด \"✔ ตัดใน SAP แล้ว\" · ยอดสต็อกในระบบนี้ขยับไปตั้งแต่ตอนส่งแล้ว ไม่เปลี่ยนอีก")}
         </div>
         <button className="tbtn" onClick={load} style={{ padding: '7px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)', cursor: 'pointer', fontSize: 12.5 }}>{tr('↻ รีเฟรช')}</button>
       </div>

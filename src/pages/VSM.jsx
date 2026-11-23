@@ -569,10 +569,10 @@ export default function VSM() {
 
       {!model && (
         <div style={{ ...S.card, textAlign: 'center', padding: 40, color: 'var(--muted)', fontSize: 14 }}>
-          เลือกสินค้าสำเร็จรูปแล้วกด <b style={{ color: 'var(--text)' }}>{tr('⚡ สร้างร่างจากข้อมูลจริง')}</b>
+          {tr("เลือกสินค้าสำเร็จรูปแล้วกด")} <b style={{ color: 'var(--text)' }}>{tr('⚡ สร้างร่างจากข้อมูลจริง')}</b>
           <InfoMore label={tr('ลำดับกระบวนการมาจากไหน')} size={11.5} style={{ marginTop: 8 }}>
-            ลำดับกระบวนการ (ปั๊ม → ประกอบ → …) ตั้งที่ <b>Product Master → 🔀 Routing</b> —
-            ยังไม่ได้ตั้ง ระบบจะใช้ไลน์เดียวจาก Product Master ไปก่อนแล้วเตือนไว้
+            {tr("ลำดับกระบวนการ (ปั๊ม → ประกอบ → …) ตั้งที่")} <b>Product Master → 🔀 Routing</b> —
+            {tr("ยังไม่ได้ตั้ง ระบบจะใช้ไลน์เดียวจาก Product Master ไปก่อนแล้วเตือนไว้")}
           </InfoMore>
         </div>
       )}
@@ -581,7 +581,7 @@ export default function VSM() {
         <div style={{ ...S.card, marginBottom: 14 }}>
           <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>{tr('✍️ เนื้อหา A3 Report (Toyota / Denso)')}</div>
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 12 }}>
-            ช่อง <b>{tr('② สภาพปัจจุบัน')}</b> ระบบสรุปข้อเท็จจริง + ผัง VSM ให้เอง — ที่เหลือเป็นการวิเคราะห์ของคน ระบบไม่เดาให้
+            {tr("ช่อง")} <b>{tr('② สภาพปัจจุบัน')}</b> {tr("ระบบสรุปข้อเท็จจริง + ผัง VSM ให้เอง — ที่เหลือเป็นการวิเคราะห์ของคน ระบบไม่เดาให้")}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12, alignContent: 'start' }}>
             {[
@@ -608,7 +608,7 @@ export default function VSM() {
               <label style={{ fontSize: 11.5, color: 'var(--muted)' }}>{tr('⑥ แผนดำเนินการ (ใคร / อะไร / เมื่อไหร่)')}</label>
               <button onClick={() => setA3(v => ({ ...v, plan: [...(v.plan || []), { what: '', who: '', when: '', status: '' }] }))}
                 style={{ padding: '4px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg3-surf)', color: 'var(--text)', cursor: 'pointer', fontSize: 12 }}>
-                + เพิ่มแถว
+                + {tr("เพิ่มแถว")}
               </button>
             </div>
             {(a3.plan || []).map((r, i) => (
@@ -626,7 +626,7 @@ export default function VSM() {
                 <DeleteButton onClick={() => setA3(v => ({ ...v, plan: v.plan.filter((_, j) => j !== i) }))} title={tr('ลบ')} />
               </div>
             ))}
-            {!(a3.plan || []).length && <div style={{ fontSize: 12, color: 'var(--muted)' }}>ยังไม่มีแถว — กด "+ เพิ่มแถว"</div>}
+            {!(a3.plan || []).length && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr("ยังไม่มีแถว — กด \"+ เพิ่มแถว")}"</div>}
           </div>
         </div>
       )}
@@ -637,7 +637,7 @@ export default function VSM() {
         {loadWarn && (
           <div style={{ ...S.card, marginBottom: 12, padding: '10px 14px', border: '1px solid var(--amber)', background: 'var(--amber-dim)' }}>
             <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--amber)' }}>⚠️ {loadWarn}</div>
-            <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 3 }}>ลองกด "↻ ดึงข้อมูลใหม่" อีกครั้ง — ถ้ายังขึ้นซ้ำให้แจ้งผู้ดูแลระบบ</div>
+            <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 3 }}>{tr("ลองกด \"↻ ดึงข้อมูลใหม่\" อีกครั้ง — ถ้ายังขึ้นซ้ำให้แจ้งผู้ดูแลระบบ")}</div>
           </div>
         )}
         {/* ── 📋 worklist "ข้อมูลที่ VSM ยังขาด" (คำขอ user 2026-08-20 หลัง audit) ──
@@ -685,7 +685,7 @@ export default function VSM() {
         <div style={{ ...S.card, marginBottom: 14, overflowX: 'auto' }}>
           <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>{tr('ปรับค่าในกล่องกระบวนการ')}</div>
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 10 }}>
-            ช่องว่าง = ใช้ค่าที่ระบบคำนวณให้ · กรอกทับเมื่อค่าจริงไม่ตรง ·
+            {tr("ช่องว่าง = ใช้ค่าที่ระบบคำนวณให้ · กรอกทับเมื่อค่าจริงไม่ตรง")} ·
             <b style={{ color: 'var(--amber)' }}> {tr('คงคลังระหว่างทาง (WIP) ระบบไม่ได้เก็บ ต้องกรอกเอง')}</b>
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
@@ -778,7 +778,7 @@ export default function VSM() {
             ))}
             <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8, lineHeight: 1.5 }}>
               %VA = VA ÷ (VA + NVA) × 100 &nbsp;โดย NVA = PLT × A/T
-              <br />(สูตรเดียวกับใบ VSM กระดาษของบริษัท)
+              <br />({tr("สูตรเดียวกับใบ VSM กระดาษของบริษัท")})
             </div>
           </div>
           <div data-legend><VsmLegend palette={palette} /></div>
@@ -811,16 +811,16 @@ export default function VSM() {
           <FilterBar style={{ marginBottom: 14 }}>
             {fgPicker}
             <div style={{ flex: '2 1 280px', fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.6 }}>
-              ค่ามาตรฐานในกล่อง (C/T · C/O · %OEE · A/T) = ค่าเฉลี่ย<b style={{ color: 'var(--text)' }}>{tr('เดือนนี้')}</b> ·
-              สถานะไลน์ / ยอดวันนี้ / คงคลัง ▲ = <b style={{ color: 'var(--accent)' }}>{tr('สด')}</b><br />
-              มุมมองนี้<b>{tr('ไม่บันทึก/ไม่พิมพ์')}</b> — เอกสาร VSM ทางการ (snapshot) อยู่แท็บ 📋
+              {tr("ค่ามาตรฐานในกล่อง (C/T · C/O · %OEE · A/T) = ค่าเฉลี่ย")}<b style={{ color: 'var(--text)' }}>{tr('เดือนนี้')}</b> ·
+              {tr("สถานะไลน์ / ยอดวันนี้ / คงคลัง")} ▲ = <b style={{ color: 'var(--accent)' }}>{tr('สด')}</b><br />
+              {tr("มุมมองนี้")}<b>{tr('ไม่บันทึก/ไม่พิมพ์')}</b> — {tr("เอกสาร VSM ทางการ (snapshot) อยู่แท็บ")} 📋
             </div>
             {liveRaw && <button onClick={loadLive} style={btn('var(--bg3)', { color: 'var(--text)' })}>{tr('รีเฟรชตอนนี้')}</button>}
           </FilterBar>
 
           {!matNo && (
             <div style={{ ...S.card, textAlign: 'center', padding: 40, color: 'var(--muted)', fontSize: 14 }}>
-              เลือกสินค้าสำเร็จรูปก่อน — ระบบจะกางสายธารแล้วตามสถานะสดให้เอง
+              {tr("เลือกสินค้าสำเร็จรูปก่อน — ระบบจะกางสายธารแล้วตามสถานะสดให้เอง")}
             </div>
           )}
           {matNo && liveBusy && !liveModel && (
@@ -830,7 +830,7 @@ export default function VSM() {
           {matNo && !liveBusy && !liveModel && liveErr && (
             <div style={{ ...S.card, textAlign: 'center', padding: 30 }}>
               <div style={{ fontSize: 13.5, color: 'var(--red)', fontWeight: 700, marginBottom: 6 }}>
-                ⛔ โหลดโครงสายธารไม่สำเร็จ
+                ⛔ {tr("โหลดโครงสายธารไม่สำเร็จ")}
               </div>
               <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>
                 {liveErr} — {tr("มักเป็นสัญญาณเน็ตสะดุดชั่วคราว ลองใหม่ได้เลย")}
@@ -853,7 +853,7 @@ export default function VSM() {
               </span>
               {liveData?.partial && (
                 <span style={{ fontSize: 12, fontWeight: 700, padding: '5px 12px', borderRadius: 'var(--r-pill)', background: 'var(--amber-dim)', color: 'var(--amber)', border: '1px solid var(--amber)' }}>
-                  ⚠ โหลดข้อมูลสดไม่ครบ — ตัวเลขบางส่วนอาจขาด (จะลองใหม่รอบถัดไป)
+                  ⚠ {tr("โหลดข้อมูลสดไม่ครบ — ตัวเลขบางส่วนอาจขาด (จะลองใหม่รอบถัดไป")})
                 </span>
               )}
               {chips.map(([k, nn]) => (
@@ -912,9 +912,8 @@ export default function VSM() {
               <VsmCanvas model={liveModel} palette={palette} live={liveData} />
             </div>
             <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 14 }}>
-              ขอบกล่องกระบวนการ: <b style={{ color: 'var(--red)' }}>แดงกระพริบ = Downtime ค้าง</b> ·
-              <b style={{ color: 'var(--green)' }}> เขียว = กำลังผลิต</b> · เส้นประจาง = ยังไม่เปิดกะวันนี้ —
-              วางเมาส์บนกล่องเพื่อดูสถานะ · ▲ คงคลัง/PLT/%VA คำนวณจากยอดคงเหลือปัจจุบัน
+              {tr("ขอบกล่องกระบวนการ")}: <b style={{ color: 'var(--red)' }}>{tr("แดงกระพริบ = Downtime ค้าง")}</b> ·
+              <b style={{ color: 'var(--green)' }}> {tr("เขียว = กำลังผลิต")}</b> · {tr("เส้นประจาง = ยังไม่เปิดกะวันนี้ — วางเมาส์บนกล่องเพื่อดูสถานะ · ▲ คงคลัง/PLT/%VA คำนวณจากยอดคงเหลือปัจจุบัน")}
             </div>
 
             {/* ── การ์ดสถานะรายขั้น (ค่าสดเต็มรูป) ── */}
@@ -971,7 +970,7 @@ export default function VSM() {
                 </div>
               ))}
               <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8, lineHeight: 1.5 }}>
-                คงคลัง WIP กลางทางระบบยังไม่เก็บ (กรอกได้ในแท็บ 📋) — PLT สดจึงอาจต่ำกว่าความจริง
+                {tr("คงคลัง WIP กลางทางระบบยังไม่เก็บ (กรอกได้ในแท็บ 📋) — PLT สดจึงอาจต่ำกว่าความจริง")}
               </div>
             </div>
           </>}

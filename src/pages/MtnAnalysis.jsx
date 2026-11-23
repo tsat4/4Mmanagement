@@ -494,11 +494,11 @@ export default function MtnAnalysis() {
           {/* ── สรุปปัญหา ─────────────────────────────────────────────── */}
           <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8, alignContent: 'start' }}>
             <KPI label={`${trI18n("เหตุการณ์")} (${days} ${trI18n("วัน")})`} value={sum.n ? fmt(sum.n) : null} unit={unit} sub={`${sum.assets} ${trI18n("อุปกรณ์")}`} />
-            <KPI label={trI18n('เวลาสูญเสียรวม')} value={sum.totalMin == null ? null : fmt(sum.totalMin)} unit="นาที"
+            <KPI label={trI18n('เวลาสูญเสียรวม')} value={sum.totalMin == null ? null : fmt(sum.totalMin)} unit={trI18n("นาที")}
               sub={sum.noMin ? `⚠️ ${sum.noMin} ${trI18n("รายการยังไม่มีเวลา — ไม่ถูกนับ")}` : 'ครบทุกรายการ'} warn={!!sum.noMin} />
-            <KPI label={src === 'mo' ? trI18n('เวลาซ่อมเฉลี่ย') : trI18n('หยุดเฉลี่ยต่อครั้ง')} value={sum.avgMin == null ? null : fmt(sum.avgMin, 1)} unit="นาที"
+            <KPI label={src === 'mo' ? trI18n('เวลาซ่อมเฉลี่ย') : trI18n('หยุดเฉลี่ยต่อครั้ง')} value={sum.avgMin == null ? null : fmt(sum.avgMin, 1)} unit={trI18n("นาที")}
               sub={sum.medMin == null ? '' : `${trI18n("มัธยฐาน")} ${fmt(sum.medMin, 1)} ${trI18n("นาที")}`} />
-            <KPI label={trI18n('ค่าใช้จ่ายรวม')} value={sum.cost == null ? null : fmt(sum.cost)} unit="บาท"
+            <KPI label={trI18n('ค่าใช้จ่ายรวม')} value={sum.cost == null ? null : fmt(sum.cost)} unit={trI18n("บาท")}
               sub={sum.noCost ? `⚠️ ${sum.noCost} ${trI18n("รายการยังไม่ลงค่าใช้จ่าย")}` : 'ครบทุกรายการ'} warn={!!sum.noCost} />
             <KPI label={trI18n('แยกชนิดจากทะเบียน')} value={sum.n ? fmt(sum.n - sum.guessed) : null} unit={`/ ${sum.n}`}
               sub={sum.guessed ? `⚠️ ${sum.guessed} ${trI18n("รายการระบบเดาชนิดให้")}` : 'ยืนยันจากทะเบียนเครื่องทุกรายการ'} warn={!!sum.guessed} />
@@ -519,12 +519,12 @@ export default function MtnAnalysis() {
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', fontSize: 12, marginBottom: 8 }}>
                   {paretoSplit.planned.length > 0 && (
                     <span style={{ color: 'var(--muted)' }}>
-                      กัน <b style={{ color: 'var(--text2)' }}>{paretoSplit.planned.length} {trI18n('ใบ')}</b> ที่เป็น “งานตามแผน (PM)” ออกจากพาเรโตปัญหาแล้ว
+                      {trI18n("กัน")} <b style={{ color: 'var(--text2)' }}>{paretoSplit.planned.length} {trI18n('ใบ')}</b> {trI18n("ที่เป็น “งานตามแผน (PM)” ออกจากพาเรโตปัญหาแล้ว")}
                     </span>
                   )}
                   {typed.filled > 0 && (
                     <span style={{ color: 'var(--muted)' }} title={trI18n('พจนานุกรมมาจากทะเบียนอาการของโรงงาน + ใบที่ช่างจัดกลุ่มไว้แล้ว — เจาะดูคำที่ใช้เดาได้ที่มิติ 🔎')}>
-                      เดาหมวดให้ <b style={{ color: 'var(--text2)' }}>{typed.filled} {trI18n('ใบ')}</b> จากคำที่พนักงานพิมพ์ (เดิมเป็น “อื่นๆ”) — เจาะดูที่มาได้ในมิติ 🔎
+                      {trI18n("เดาหมวดให้")} <b style={{ color: 'var(--text2)' }}>{typed.filled} {trI18n('ใบ')}</b> {trI18n("จากคำที่พนักงานพิมพ์ (เดิมเป็น “อื่นๆ”) — เจาะดูที่มาได้ในมิติ")} 🔎
                     </span>
                   )}
                   {paretoNote && (
@@ -552,7 +552,7 @@ export default function MtnAnalysis() {
                 {/* ④ ฮิสโตแกรม */}
                 <Panel title={`④ ${trI18n("ฮิสโตแกรม")} — ${src === 'mo' ? trI18n('เวลาซ่อม') : trI18n('เวลาหยุด')}${trI18n("กระจายยังไง")}`}
                   sub={trI18n('ดูว่างานส่วนใหญ่ใช้เวลาช่วงไหน และมีหางยาวแค่ไหน (หางยาว = งานที่ต้องรออะไหล่/รอ supplier)')}>
-                  <Histogram values={rows} valOf={r => r.minutes} unit="นาที" />
+                  <Histogram values={rows} valOf={r => r.minutes} unit={trI18n("นาที")} />
                 </Panel>
 
                 {/* ⑥ กราฟควบคุม */}
@@ -586,7 +586,7 @@ export default function MtnAnalysis() {
                   <Stratify records={rows} keyOf={r => r.asset} unit={unit} top={10} />
                 </Panel>
                 <Panel title={trI18n('⑦ แบ่งชั้น — เวลาสูญเสียรวมรายอุปกรณ์')} sub={trI18n('เรียงตามนาที (รายการที่ยังไม่มีเวลาไม่ถูกนับ ไม่ได้ตีเป็น 0)')}>
-                  <Stratify records={rows.filter(r => r.minutes != null)} keyOf={r => r.asset} valOf={r => r.minutes} unit="นาที" top={10} />
+                  <Stratify records={rows.filter(r => r.minutes != null)} keyOf={r => r.asset} valOf={r => r.minutes} unit={trI18n("นาที")} top={10} />
                 </Panel>
               </div>
 

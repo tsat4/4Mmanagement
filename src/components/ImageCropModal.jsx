@@ -236,7 +236,7 @@ export default function ImageCropModal({
           {converting && (
             <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, color: 'var(--text2)', fontSize: 12, textAlign: 'center', padding: 12 }}>
               <span style={{ fontSize: 22 }}>⏳</span>
-              กำลังแปลงรูปจากกล้อง (HEIC)…<br />ครั้งแรกอาจใช้เวลาสักครู่
+              {tr("กำลังแปลงรูปจากกล้อง")} (HEIC)…<br />{tr("ครั้งแรกอาจใช้เวลาสักครู่")}
             </div>
           )}
           {imgUrl && natural.w > 0 && (

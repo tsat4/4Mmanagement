@@ -222,7 +222,7 @@ function PartsPickModal({ parts, onPick, onClose }) {
     <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 20, width: 'min(95vw,540px)', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
         <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{tr('เลือกจากทะเบียนกลาง Material Master')}</div>
-        <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 10 }}>ตัวตนสินค้า (MAT/ชื่อ) มาจากทะเบียนกลางที่เดียว — ไม่มีในลิสต์ = ไปเพิ่มที่ แท็บ Material Master ก่อน</div>
+        <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 10 }}>{tr("ตัวตนสินค้า (MAT/ชื่อ) มาจากทะเบียนกลางที่เดียว — ไม่มีในลิสต์ = ไปเพิ่มที่ แท็บ Material Master ก่อน")}</div>
         <SearchInput autoFocus value={q} onChange={setQ} fields="MAT / ชื่อ / P.NO / supplier"
           style={{ marginBottom: 10 }} inputStyle={inputSt} />
         <div style={{ overflowY: 'auto', flex: 1, minHeight: 120, border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
@@ -999,8 +999,7 @@ export default function ProductMaster() {
               {tr("ขั้นตอน (OP) ที่ยอดกำลังถูกนับซ้ำ")} {risky.length} {tr("รายการ")}
             </span>
             <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-              ของที่ขั้นพวกนี้รับมา <b>{tr('มีใบผลิตของตัวเองอยู่แล้ว')}</b> ⇒ ชิ้นเดียวกันถูกนับ 2 รอบในยอดรวม —
-              กด "แก้ไข" แล้วใส่ช่อง <b>"ยอดของขั้นนี้ไปรวมกับพาร์ทจริงตัวไหน"</b>
+              {tr("ของที่ขั้นพวกนี้รับมา")} <b>{tr('มีใบผลิตของตัวเองอยู่แล้ว')}</b> ⇒ {tr("ชิ้นเดียวกันถูกนับ 2 รอบในยอดรวม — กด \"แก้ไข\" แล้วใส่ช่อง")} <b>"{tr("ยอดของขั้นนี้ไปรวมกับพาร์ทจริงตัวไหน")}"</b>
             </span>
             <span style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'monospace' }}>
               ({risky.map(r => `${r.item.mat_no} → ${r.candidates.join('/')}`).join(' · ')})
@@ -1073,7 +1072,7 @@ export default function ProductMaster() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {visibleGroups.length === 0 && (
           <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--muted)', fontSize: 14, background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)' }}>
-            ไม่พบ product ที่ตรงเงื่อนไข
+            {tr("ไม่พบ product ที่ตรงเงื่อนไข")}
           </div>
         )}
         {visibleGroups.map(({ key: nameKey, name: partName, families: nameFamilies }) => {
@@ -1124,7 +1123,7 @@ export default function ProductMaster() {
                       {rawAsOutputWarning(item.mat_no, item.is_operation) && (
                         <span style={{ fontSize: 11, padding: '1px 7px', borderRadius: 'var(--r-pill)', background: 'var(--red-dim)', color: 'var(--red)', fontWeight: 700 }}
                           title={rawAsOutputWarning(item.mat_no, item.is_operation)}>
-                          ⚠ วัตถุดิบ ไม่ใช่ของที่ผลิตได้
+                          ⚠ {tr("วัตถุดิบ ไม่ใช่ของที่ผลิตได้")}
                         </span>
                       )}
                       {item.p_no   && <span style={{ fontSize: 11, fontFamily: 'monospace', color: 'var(--text2)' }}>P.NO: {item.p_no}</span>}
@@ -1367,7 +1366,7 @@ export default function ProductMaster() {
                   {/* คำใบ้เคส OP (user ขอ 2026-08-17): SAP ไม่มีตัวตนของขั้น — ตั้งชื่อเอง ห้ามใช้เลขพาร์ทจริงซ้ำ */}
                   {form.is_operation && (
                     <div style={{ fontSize: 11, color: 'var(--blue)', marginTop: 4 }}>
-                      รายการ OP ไม่ใช้เลข MAT SAP — ตั้งเลข/ชื่อของขั้นเองไม่ซ้ำใคร (เลขพาร์ทจริงใส่ช่อง "เป็นขั้นของพาร์ทจริง" ด้านล่างเท่านั้น)
+                      {tr("รายการ OP ไม่ใช้เลข MAT SAP — ตั้งเลข/ชื่อของขั้นเองไม่ซ้ำใคร (เลขพาร์ทจริงใส่ช่อง \"เป็นขั้นของพาร์ทจริง\" ด้านล่างเท่านั้น")})
                     </div>
                   )}
                   {/* เตือนเลขซ้ำตั้งแต่ตอนพิมพ์ — ไม่ต้องรอชน unique constraint ตอนกดบันทึก */}
@@ -1379,11 +1378,11 @@ export default function ProductMaster() {
                   {form.mat_no && !form.is_operation && pmParts.length > 0 && !matInRegistry(form.mat_no) && (
                     ecSource ? (
                       <div style={{ fontSize: 11, color: 'var(--blue)', marginTop: 4 }}>
-                        MAT ใหม่ — ระบบจะลงทะเบียน Material Master ให้อัตโนมัติตอนบันทึก EC
+                        MAT {tr("ใหม่ — ระบบจะลงทะเบียน Material Master ให้อัตโนมัติตอนบันทึก")} EC
                       </div>
                     ) : (
                       <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 4 }}>
-                        ⚠ MAT นี้ยังไม่มีในทะเบียนกลาง Material Master — แนะนำเพิ่มที่ แท็บ Material Master ก่อน กันเลขหลุดทะเบียน
+                        ⚠ MAT {tr("นี้ยังไม่มีในทะเบียนกลาง Material Master — แนะนำเพิ่มที่ แท็บ Material Master ก่อน กันเลขหลุดทะเบียน")}
                       </div>
                     )
                   )}
@@ -1447,7 +1446,7 @@ export default function ProductMaster() {
                   lead={<>{tr('เช่น งานขับนัทแต่ละสเต็ปของชิ้นเดียวกัน')}</>}>
                   {tr("ช่องบนสุดตั้งเลข/ชื่อของขั้นเอง (ไม่ใช้เลข")} SAP)
                   <br />{tr('ยอดรวมภาพใหญ่จะนับที่')}<b>{tr('พาร์ทจริง')}</b> {tr('ไม่บวกซ้ำ · ห้ามเอารายการ OP ไปเป็น')}<b>{tr('ลูก')}</b>{tr("ใน BOM ของใคร/คัมบัง")}
-                  <br />{tr('แต่ตัวขั้นเอง')} <b>ควรผูกสูตรว่า "กินอะไรเข้าไป"</b> {tr("ที่แท็บ BOM — ไม่งั้นของเสียที่หลุดขั้นนี้ตัดสต๊อก SAP ไม่ได้")} (2026-09-15)
+                  <br />{tr('แต่ตัวขั้นเอง')} <b>{tr("ควรผูกสูตรว่า \"กินอะไรเข้าไป")}"</b> {tr("ที่แท็บ BOM — ไม่งั้นของเสียที่หลุดขั้นนี้ตัดสต๊อก SAP ไม่ได้")} (2026-09-15)
                 </InfoMore>
                 {form.is_operation && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
@@ -1682,7 +1681,7 @@ export default function ProductMaster() {
             {/* header */}
             <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
               <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', marginBottom: 8 }}>
-                ตรวจสอบข้อมูลก่อนนำเข้า
+                {tr("ตรวจสอบข้อมูลก่อนนำเข้า")}
               </div>
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 'var(--r-pill)', background: 'var(--green-dim)', color: 'var(--green)' }}>
@@ -1870,7 +1869,7 @@ function OpStepsPanel({ parent, products, bomIx, parentKids, canEdit, guard, ful
                   <span style={{ color: 'var(--muted)' }}> {tr('— อัตโนมัติ (แม่มีลูกตัวเดียว)')}</span></div>
               )}
               {r.via === 'from_prev' && (
-                <div style={{ color: 'var(--muted)' }}>└ รับชิ้นงานต่อจากขั้นก่อนหน้าในโซ่ (ลำดับน้อยกว่า) — ไม่กินลูกของแม่เพิ่ม · ถ้าขั้นนี้ใส่ของเพิ่ม กด "เปิดใบของขั้น"</div>
+                <div style={{ color: 'var(--muted)' }}>└ {tr("รับชิ้นงานต่อจากขั้นก่อนหน้าในโซ่ (ลำดับน้อยกว่า) — ไม่กินลูกของแม่เพิ่ม · ถ้าขั้นนี้ใส่ของเพิ่ม กด \"เปิดใบของขั้น")}"</div>
               )}
               {r.via === 'unset' && (
                 <div style={{ color: 'var(--red)', fontWeight: 700 }}>{tr('⚠ ยังไม่ได้ผูกว่าขั้นนี้กินอะไร — เปิดใบขั้นนี้จะไม่เบิกของให้ (แม่มีลูก')} {parentKids.length} {tr("ตัว ระบบไม่เดา")})</div>
@@ -2837,7 +2836,7 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
                 <br />{tr('เพิ่ม/แก้ลูกของพาร์ทนี้ ต้องไปแก้ที่ใบนั้น · อยากให้มันมีใบของตัวเอง กด')} <b>{tr('“➕ เปิดใบ BOM ให้พาร์ทจากทะเบียน”')}</b> {tr("ทางซ้าย")}
                 {partView.sheets?.length > 1 && (
                   <div style={{ marginTop: 5 }}>
-                    ⚠️ <b>{tr('ลูกของพาร์ทนี้ถูกกรอกไว้')} {partView.sheets.length} {tr('ใบ')}</b> — เลือกดูทีละใบ (ระบบไม่รวมให้ รวม = นับซ้ำ)
+                    ⚠️ <b>{tr('ลูกของพาร์ทนี้ถูกกรอกไว้')} {partView.sheets.length} {tr('ใบ')}</b> — {tr("เลือกดูทีละใบ (ระบบไม่รวมให้ รวม = นับซ้ำ")})
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
                       {partView.sheets.map(x => (
                         <button key={x.sheetId} type="button" onClick={() => setPartView(v => ({ ...v, sheetId: x.sheetId }))}
@@ -2883,7 +2882,7 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
                   <div style={{ marginTop: 6, fontSize: 11.5, lineHeight: 1.6, padding: '7px 10px', borderRadius: 'var(--r-md)', background: 'var(--blue-dim)', border: '1px solid var(--blue-line)', color: 'var(--blue)', maxWidth: 620 }}>
                     🔩 <b>{tr('รายการขั้นตอน (OP)')}</b>{selProduct._op.parent ? ` · ${tr("เป็นขั้นของ")} ${selProduct._op.parent}` : ' · ยังไม่ผูกพาร์ทจริง'}
                     {selProduct._op.seq != null && ` · ${tr("ลำดับขั้น")} ${selProduct._op.seq}`}
-                    <br />{tr("สูตรที่นี่")} = <b>ของที่ "ขั้นนี้" ใส่เข้าไป (delta) เท่านั้น — ห้ามคีย์แบบสะสม</b>
+                    <br />{tr("สูตรที่นี่")} = <b>{tr("ของที่ \"ขั้นนี้\" ใส่เข้าไป (delta) เท่านั้น — ห้ามคีย์แบบสะสม")}</b>
                     {' '}{tr("ขั้นก่อนหน้าในสายเดียวกัน (พาร์ทจริงเดียวกัน + ลำดับขั้นน้อยกว่า) ระบบไล่ให้เองตอนตัดของเสีย")}
                     <br />{tr('ใช้ที่: ใบรายงานของเสีย')} <b>/scrap-report</b> → {tr("ปุ่ม 🧩 ระเบิดขั้นตอน (เลขขั้นไม่มีใน SAP ตัดสต๊อกไม่ได้")})
                   </div>
@@ -2910,7 +2909,7 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
               <div style={{ background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '10px 12px', marginBottom: 12 }}>
                 <div onClick={() => setShowTree(v => !v)}
                   style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 800, color: 'var(--text)' }}>
-                  โครงหลายชั้น (แบบ SAP Display Multilevel BOM)
+                  {tr("โครงหลายชั้น (แบบ")} SAP Display Multilevel BOM)
                   <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--muted)' }}>{showTree ? '▾' : '▸'}</span>
                 </div>
                 {showTree && (
@@ -3088,7 +3087,7 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
                 </select>
                 {pickerParent && (
                   <span style={{ fontSize: 11, color: 'var(--blue)' }}>
-                    พาร์ทที่มีอยู่ใต้ตัวอื่นแล้ว ยังเลือกซ้ำมาใส่ตรงนี้ได้ (คนละชั้น = คนละบรรทัด)
+                    {tr("พาร์ทที่มีอยู่ใต้ตัวอื่นแล้ว ยังเลือกซ้ำมาใส่ตรงนี้ได้ (คนละชั้น = คนละบรรทัด")})
                   </span>
                 )}
               </div>
@@ -3218,7 +3217,7 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
                   value={form.op_no} onChange={e => setForm(f => ({ ...f, op_no: e.target.value }))}
                   placeholder={tr('เช่น 190 — ไม่รู้ปล่อยว่าง ห้ามเดา')} />
                 <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3, lineHeight: 1.4 }}>
-                  ใช้ตอบ "ของเสียหลุดขั้นไหน ตัดอะไร" · "สโตร์ต้องส่งของนี้ไปขั้นไหน" — ว่าง = ยังไม่ระบุ (ไม่ใช่ error)
+                  {tr("ใช้ตอบ \"ของเสียหลุดขั้นไหน ตัดอะไร\" · \"สโตร์ต้องส่งของนี้ไปขั้นไหน\" — ว่าง = ยังไม่ระบุ (ไม่ใช่")} error)
                 </div>
               </div>
               {/* 📍 2 ช่องนี้เทียบกับ SAP โดยตรง (user ทัก 2026-09-02 ว่าเรายังไม่มี) */}
@@ -3366,9 +3365,8 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
               </div>
               {pkgMissing > 0 && (
                 <NoticeBar tone="warn" style={{ marginBottom: 10 }}>
-                  <b style={{ color: 'var(--amber)' }}>{tr('QTY/PKG ยังไม่มีค่า')} {pkgMissing} {tr('แถว')}</b> — จำนวนต่อกล่อง
-                  <b> {tr('ไม่มีอยู่ในไฟล์ SAP เลย')}</b> เป็นข้อมูลของทะเบียนพาร์ท ต้องมีคนกรอก
-                  (แถวที่ทะเบียนมีค่าแล้ว ระบบเติมให้เอง) · กรอกได้ที่แท็บ Material Master หรือปุ่มดินสอของแต่ละแถว
+                  <b style={{ color: 'var(--amber)' }}>{tr('QTY/PKG ยังไม่มีค่า')} {pkgMissing} {tr('แถว')}</b> — {tr("จำนวนต่อกล่อง")}
+                  <b> {tr('ไม่มีอยู่ในไฟล์ SAP เลย')}</b> {tr("เป็นข้อมูลของทะเบียนพาร์ท ต้องมีคนกรอก (แถวที่ทะเบียนมีค่าแล้ว ระบบเติมให้เอง) · กรอกได้ที่แท็บ Material Master หรือปุ่มดินสอของแต่ละแถว")}
                 </NoticeBar>
               )}
               {parsed.warnings.length > 0 && (
@@ -3463,8 +3461,8 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
           <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 24, width: 'min(420px,100%)' }}>
             <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', marginBottom: 4 }}>{tr('คัดลอก BOM จาก Product อื่น')}</div>
             <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 16 }}>
-              คัดลอกพาร์ทจาก BOM ของ product ที่เลือก เข้ามาใน <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{selProduct?.name}</span>
-              <br/>(พาร์ทที่มีอยู่แล้วจะถูกข้าม)
+              {tr("คัดลอกพาร์ทจาก BOM ของ product ที่เลือก เข้ามาใน")} <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{selProduct?.name}</span>
+              <br/>({tr("พาร์ทที่มีอยู่แล้วจะถูกข้าม")})
             </div>
             <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', display: 'block', marginBottom: 6 }}>{tr('เลือก Product ต้นฉบับ')}</label>
             <select style={{ ...inputSt, marginBottom: 20 }} value={copySource} onChange={e => setCopySource(e.target.value)}>
@@ -3561,7 +3559,7 @@ function ExportPanel() {
       <div>
         <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{tr('Export ข้อมูล')}</div>
         <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
-          CSV มี BOM หน้าไฟล์ (Excel เปิดภาษาไทยไม่เพี้ยน) · เกิน 1,000 แถวระบบไล่ดึงเป็นหน้าให้เอง ไม่ขาดกลาง
+          CSV {tr("มี BOM หน้าไฟล์ (Excel เปิดภาษาไทยไม่เพี้ยน) · เกิน 1,000 แถวระบบไล่ดึงเป็นหน้าให้เอง ไม่ขาดกลาง")}
         </div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 12, alignContent: 'start' }}>
@@ -3887,7 +3885,7 @@ function PartsMasterPanel({ canCreate, canEdit, fullName, setCsvPreview, reloadK
                       );
                       if (e.replacesMat) return (
                         <div style={{ fontSize: 11, color: 'var(--accent)', marginTop: 2, fontWeight: 700 }}>
-                          rev ล่าสุด · แทน <span style={{ fontFamily: 'monospace' }}>{e.replacesMat}</span>
+                          rev {tr("ล่าสุด · แทน")} <span style={{ fontFamily: 'monospace' }}>{e.replacesMat}</span>
                         </div>
                       );
                       return null;
@@ -4242,12 +4240,12 @@ function PackagingPanel({ canCreate, canEdit, mayDelete, fullName }) {
                   <option value="">{tr('— เลือกภาชนะ (Container Types) —')}</option>
                   {masters.map(m => <option key={m.id} value={m.code}>{m.code} · {m.name}{m.category ? ` (${m.category})` : ''}</option>)}
                 </select>
-                {masters.length === 0 && <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 4 }}>ยังไม่มีภาชนะ — กด "🗃 จัดการภาชนะ" เพิ่มก่อน</div>}
+                {masters.length === 0 && <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 4 }}>{tr("ยังไม่มีภาชนะ — กด \"🗃 จัดการภาชนะ\" เพิ่มก่อน")}</div>}
               </div>
               <div>
                 <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>{tr('จำนวนชิ้น FG ต่อ 1 บรรจุภัณฑ์ *')}</label>
                 <input type="number" min="1" step="1" style={{ ...inputSt, textAlign: 'center', fontWeight: 900, fontSize: 16 }} value={linkForm.pcs_per_pkg} onChange={e => setLinkForm(f => ({ ...f, pcs_per_pkg: e.target.value }))} />
-                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>เช่น 100 = 1 กล่องใส่ได้ 100 ชิ้น → ผลิต 200 ชิ้น เบิก 2 กล่อง</div>
+                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>{tr("เช่น 100 = 1 กล่องใส่ได้ 100 ชิ้น → ผลิต 200 ชิ้น เบิก 2 กล่อง")}</div>
               </div>
               <div>
                 <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>{tr('หมายเหตุ')}</label>
@@ -4401,7 +4399,7 @@ function KanbanStdPanel({ canEdit, fullName }) {
             {tr('Kanban Std — มาตรฐาน Qty/Kanban รายพาร์ท')}
           </h3>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--muted)' }}>
-            UOM และข้อมูลพาร์ทดึงจาก 🗂 Material Master โดยตรง (ไม่เก็บซ้ำ) · Qty/Kanban ตั้งต้นจาก Qty/Pkg (1 ใบ Kanban = 1 packaging)
+            UOM {tr("และข้อมูลพาร์ทดึงจาก 🗂 Material Master โดยตรง (ไม่เก็บซ้ำ) · Qty/Kanban ตั้งต้นจาก Qty/Pkg (1 ใบ")} Kanban = 1 packaging)
           </p>
         </div>
         <input
@@ -4514,18 +4512,17 @@ function KanbanStdPanel({ canEdit, fullName }) {
                 <input type="number" min="1" step="1" style={{ ...inputSt, textAlign: 'center', fontWeight: 900, fontSize: 16 }}
                   value={form.lot_size} onChange={e => setForm(f => ({ ...f, lot_size: e.target.value }))} placeholder={tr('พาร์ทพิเศษ/ผลิตตามสั่ง → ใส่ 1')} />
                 <div style={{ fontSize: 11, lineHeight: 1.6, marginTop: 4, color: 'var(--muted)' }}>
-                  <b style={{ color: 'var(--text)' }}>1</b> = ผลิตตามที่สั่ง ไม่ต้องรอสะสมล็อต (lot-for-lot — ใช้กับพาร์ทพิเศษที่ไม่มีขนาดล็อตประจำ)
+                  <b style={{ color: 'var(--text)' }}>1</b> = {tr("ผลิตตามที่สั่ง ไม่ต้องรอสะสมล็อต (lot-for-lot — ใช้กับพาร์ทพิเศษที่ไม่มีขนาดล็อตประจำ")})
                 </div>
                 {!String(form.lot_size || '').trim() && (
                   <div style={{ fontSize: 11, lineHeight: 1.6, marginTop: 5, color: 'var(--amber)', background: 'var(--amber)14', border: '1px solid var(--amber)44', borderRadius: 'var(--r-md)', padding: '6px 8px' }}>
-                    ⚠️ <b>เว้นว่าง = ความต้องการค้างถาวร</b> {tr('— ระบบจะสะสม demand ของพาร์ทนี้ไปเรื่อยๆ แต่')}<b>{tr('ไม่มีวันออกใบสั่ง')}</b>
+                    ⚠️ <b>{tr("เว้นว่าง = ความต้องการค้างถาวร")}</b> {tr('— ระบบจะสะสม demand ของพาร์ทนี้ไปเรื่อยๆ แต่')}<b>{tr('ไม่มีวันออกใบสั่ง')}</b>
                     <div style={{ opacity: 0.85, marginTop: 2 }}>{tr('ถ้าเป็นพาร์ทที่ผลิตตามสั่ง ให้ใส่')} <b>1</b> {tr('· จุดที่ค้างอยู่ตอนนี้ดูได้ที่หน้า 🔗 สายธารความต้องการ')}</div>
                   </div>
                 )}
               </div>
               <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                UOM: <strong style={{ color: 'var(--text)' }}>{parts.find(p => p.mat_no === form.mat_no)?.uom || '—'}</strong> (จาก Material Master)
-                · Min-Max คุมการเติมที่สโตร์ (ชิ้น) · Lot size = เกณฑ์ยิงใบสั่งผลิตพาร์ทย่อย (ชิ้น)
+                UOM: <strong style={{ color: 'var(--text)' }}>{parts.find(p => p.mat_no === form.mat_no)?.uom || '—'}</strong> ({tr("จาก Material Master) · Min-Max คุมการเติมที่สโตร์ (ชิ้น) · Lot size = เกณฑ์ยิงใบสั่งผลิตพาร์ทย่อย (ชิ้น")})
               </div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>

@@ -552,9 +552,9 @@ function QualityDashboard() {
             และ **ยอดผลิต/NG ถูกทาเขียวเมื่อ 0** ทั้งที่ "ผลิต 0 ชิ้น" ไม่ใช่เรื่องดี
             (0 ของ NG = ดีจริง · 0 ของยอดผลิต = ยังไม่มีข้อมูล ⇒ คนละเรื่อง ห้ามใช้สีเดียวกัน)
             เกณฑ์ PPM/FTT ที่หน้านี้ตั้งเอง เขียนกำกับไว้ใน `sub` แล้ว (UI §6.18 ข้อ 5) */}
-        <KpiCard label={trI18n('ยอดผลิตรวม')} value={stat.total.toLocaleString()} unit="ชิ้น"
+        <KpiCard label={trI18n('ยอดผลิตรวม')} value={stat.total.toLocaleString()} unit={trI18n("ชิ้น")}
           sub={productFilter ? `${trI18n("ชิ้นงาน")}: ${productOptions.find(p => p.key === productFilter)?.label || productFilter}` : `${shownSessions.length} ${trI18n("กะที่ปิดแล้ว")}${lineFilter ? ` · ${lineFilter}` : ''}`} />
-        <KpiCard label={trI18n('ของเสียรวม (NG)')} value={stat.ng.toLocaleString()} unit="ชิ้น"
+        <KpiCard label={trI18n('ของเสียรวม (NG)')} value={stat.ng.toLocaleString()} unit={trI18n("ชิ้น")}
           color={statusColor(toneOf({ value: stat.ng, zeroIsGood: true }))}
           sub={`${stat.total + stat.ng > 0 ? `${trI18n("จากผลิตจริง")} ${(stat.total + stat.ng).toLocaleString()} ${trI18n("ชิ้น")}` : trI18n('ยังไม่มีข้อมูล')}${stat.pendingSuspect ? ` · ⏳ ${trI18n("ของสงสัยรอ")} QA ${stat.pendingSuspect.toLocaleString()} ${trI18n("ชิ้น (ยังไม่นับ — PPM/FTT ยังไม่สรุป")})` : ''}`} />
         {/* 🔢 PPM = ชิ้นต่อล้าน ⇒ จำนวนเต็มเสมอ (`fmtPpm` · oee.js §7.3 · feedback 16/11)
@@ -569,9 +569,9 @@ function QualityDashboard() {
           color={stat.ftt == null ? 'var(--text)'
             : statusColor(stat.ftt >= 99 ? 'good' : stat.ftt >= 97 ? 'warn' : 'bad')}
           sub={trI18n('เกณฑ์จอนี้: เขียว ≥ 99% · เหลือง ≥ 97%')} />
-        <KpiCard label={trI18n('NCR เปิดค้าง')} value={ncrOpen} unit="ใบ"
+        <KpiCard label={trI18n('NCR เปิดค้าง')} value={ncrOpen} unit={trI18n("ใบ")}
           color={statusColor(toneOf({ value: ncrOpen, zeroIsGood: true, over: 'warn' }))} sub={trI18n('ยังไม่ปิดรายการ')} />
-        <KpiCard label={trI18n('CAPA เกินกำหนด')} value={capaOverdue} unit="ใบ"
+        <KpiCard label={trI18n('CAPA เกินกำหนด')} value={capaOverdue} unit={trI18n("ใบ")}
           color={statusColor(toneOf({ value: capaOverdue, zeroIsGood: true }))} sub={trI18n('เลย due date')} />
       </div>
 
@@ -619,7 +619,7 @@ function QualityDashboard() {
         {stat.pareto.length === 0 ? (
           <div style={{ color: 'var(--muted)', fontSize: 12, padding: 30, textAlign: 'center' }}>{trI18n('ไม่มีข้อมูลของเสียในช่วงนี้')}</div>
         ) : (
-          <ParetoChart rows={stat.pareto} unit="ชิ้น" height={300} />
+          <ParetoChart rows={stat.pareto} unit={trI18n("ชิ้น")} height={300} />
         )}
       </div>
     </div>
@@ -1896,7 +1896,7 @@ function CAPATab({ canRecord, canManage, prefill, onPrefillDone, lineObjs = [], 
           )}
           {!detail.id && (
             <div style={{ marginTop: 12, padding: '8px 11px', borderRadius: 'var(--r-md)', border: '1px dashed var(--border2)', fontSize: 11.5, color: 'var(--muted)' }}>
-              บันทึกก่อน แล้วแผง <b>{trI18n('เอกสารที่ต้องตามแก้')}</b> (PFMEA / Control Plan) จะขึ้นให้ใช้งาน
+              {trI18n("บันทึกก่อน แล้วแผง")} <b>{trI18n('เอกสารที่ต้องตามแก้')}</b> (PFMEA / Control Plan) {trI18n("จะขึ้นให้ใช้งาน")}
             </div>
           )}
 

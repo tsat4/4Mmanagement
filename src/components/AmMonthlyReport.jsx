@@ -270,8 +270,7 @@ export default function AmMonthlyReport({ lines = [], scopedLines = [] }) {
             {pct != null && <> {tr('· ความครบ')} <b style={{ color: 'var(--text)' }}>{pct}%</b></>}
             {' · '}<span style={{ color: ngN ? 'var(--red)' : 'var(--muted)', fontWeight: ngN ? 800 : 500 }}>{tr('พบผิดปกติ (NG)')} {ngN} {tr('ครั้ง')}</span>
             <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>
-              นับเป็น "เครื่อง-วัน" · ความครบ = ตรวจแล้ว ÷ (ตรวจแล้ว + ขาด) — ไม่นับวันไม่ได้ผลิต/ไม่มีแผน/ไม่รู้ ·
-              กะที่กำลังเดินอยู่ยังไม่ตัดสิน (ดูแท็บ 📊 สถานะวันนี้) · เครื่องที่เอาออกจากทะเบียนแล้วไม่แสดงย้อนหลัง
+              {tr("นับเป็น \"เครื่อง-วัน\" · ความครบ = ตรวจแล้ว ÷ (ตรวจแล้ว + ขาด) — ไม่นับวันไม่ได้ผลิต/ไม่มีแผน/ไม่รู้ · กะที่กำลังเดินอยู่ยังไม่ตัดสิน (ดูแท็บ 📊 สถานะวันนี้) · เครื่องที่เอาออกจากทะเบียนแล้วไม่แสดงย้อนหลัง")}
             </div>
             {raw?.runsError && (
               <div style={{ marginTop: 3, fontSize: 11.5, color: 'var(--amber)', fontWeight: 700 }}>
@@ -406,8 +405,7 @@ export default function AmMonthlyReport({ lines = [], scopedLines = [] }) {
             <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('กำลังโหลดทะเบียนลงนาม…')}</div>
           ) : sign.missing ? (
             <div style={{ fontSize: 12, color: 'var(--amber)', fontWeight: 700 }}>
-              ⚠ ระบบลงนามรายเดือนยังไม่เปิดใช้ — ตาราง am_monthly_signoffs ยังไม่ถูกสร้างบน Main (รอ admin apply migration) ·
-              ยังลงนามไม่ได้ และจอนี้ยังบอกไม่ได้ว่าเคยมีใครลงนาม
+              ⚠ {tr("ระบบลงนามรายเดือนยังไม่เปิดใช้ — ตาราง am_monthly_signoffs ยังไม่ถูกสร้างบน Main (รอ admin apply migration) · ยังลงนามไม่ได้ และจอนี้ยังบอกไม่ได้ว่าเคยมีใครลงนาม")}
             </div>
           ) : !sign.ok ? (
             <div style={{ fontSize: 12, color: 'var(--red)', fontWeight: 700 }}>
@@ -440,7 +438,7 @@ export default function AmMonthlyReport({ lines = [], scopedLines = [] }) {
                           {a.signed_by_name || 'ไม่ทราบชื่อ'}{a.position ? ` · ${positionLabel(a.position)}` : ' · ไม่ทราบตำแหน่ง'} · {fmtWhen(a.signed_at)}
                         </span>
                         {a.signature_url
-                          ? <img src={a.signature_url} alt="ลายเซ็น" style={{ height: 28, maxWidth: 110, objectFit: 'contain', background: '#fff', borderRadius: 4, padding: 2 }} />
+                          ? <img src={a.signature_url} alt={tr("ลายเซ็น")} style={{ height: 28, maxWidth: 110, objectFit: 'contain', background: '#fff', borderRadius: 4, padding: 2 }} />
                           : <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('(ไม่มีลายเซ็นในโปรไฟล์)')}</span>}
                         {a.note && <span style={{ fontSize: 11, color: 'var(--muted)' }}>“{a.note}”</span>}
                         {revNote}
@@ -472,7 +470,7 @@ export default function AmMonthlyReport({ lines = [], scopedLines = [] }) {
                       {v.ok ? (
                         <button type="button" onClick={() => { setSigning({ line: r.line_name }); setNote('') }}
                           style={{ background: 'var(--accent)', border: 'none', color: 'var(--accent-ink)', borderRadius: 'var(--r-md)', padding: '5px 12px', fontSize: 12, fontWeight: 700 }}>
-                          ✍️ ลงนามทบทวน
+                          ✍️ {tr("ลงนามทบทวน")}
                         </button>
                       ) : (
                         /* ปุ่มซ่อนได้ เหตุผลห้ามซ่อน — ยกเว้นคนที่ไม่มีสิทธิ์เลย (ไม่ใช่คนที่ต้องลงนาม) เขียนสั้นๆ */
@@ -510,7 +508,7 @@ export default function AmMonthlyReport({ lines = [], scopedLines = [] }) {
                 {tr("ผู้ลงนาม")}: <b>{fullName || '—'}</b>{myPosition ? ` · ${positionLabel(myPosition)}` : ''}
               </div>
               {mySignature
-                ? <img src={mySignature} alt="ลายเซ็นของคุณ" style={{ height: 40, maxWidth: 180, objectFit: 'contain', background: '#fff', borderRadius: 4, padding: 2, marginTop: 4 }} />
+                ? <img src={mySignature} alt={tr("ลายเซ็นของคุณ")} style={{ height: 40, maxWidth: 180, objectFit: 'contain', background: '#fff', borderRadius: 4, padding: 2, marginTop: 4 }} />
                 : <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 4 }}>{tr('บัญชีนี้ยังไม่มีลายเซ็นในโปรไฟล์ — บันทึกได้ แต่ Excel จะมีแค่ชื่อ (ตั้งลายเซ็นที่เมนูบัญชี)')}</div>}
               {myRank == null && <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 4 }}>{amApprovalAssumptionText(['approver'])}</div>}
               <textarea value={note} onChange={e => setNote(e.target.value)} rows={2} placeholder={tr('ความเห็น/ข้อสั่งการ (ถ้ามี)')}
