@@ -12295,7 +12295,19 @@ test('🚩 ng-needs-reason — ติ๊ก NG ในใบตรวจ AM/PM �
     const iSav = body.indexOf('setSaving(true)');
     if (iChk < 0) bad.push(`${P} handleSave: ต้องเช็คผ่าน ngReasonCheck() ก่อนเขียน DB (ซ่อนปุ่มไม่ใช่ด่าน)`);
     else if (iSav >= 0 && iChk > iSav) bad.push(`${P} handleSave: ngReasonCheck() ต้องมาก่อน setSaving(true) — เช็คหลังเริ่มเขียนไม่ได้กันอะไร`);
-    if (!/action_text/.test(body)) bad.push(`${P} handleSave: ต้องเขียนเหตุผลลง action_text (ช่องนี้มีอยู่แล้ว ห้ามเก็บแต่ในจอ)`);
+    /* 23/11: แถวผลตรวจย้ายไปของกลาง `buildResultRows()` (ใบเดี่ยว + ใบสถานี AM ใช้ตัวเดียวกัน)
+       ⇒ handleSave ต้องเขียน action_text เอง **หรือ** เรียก buildResultRows ที่เขียน action_text */
+    const brr = p.match(/function\s+buildResultRows\s*\([\s\S]*?\n\}\n/);
+    const viaShared = /buildResultRows\(/.test(body) && brr && /action_text/.test(brr[0]);
+    if (!/action_text/.test(body) && !viaShared) bad.push(`${P} handleSave: ต้องเขียนเหตุผลลง action_text (ช่องนี้มีอยู่แล้ว ห้ามเก็บแต่ในจอ)`);
+    /* 🧩 ใบสถานี AM (23/11) ต้องผ่านด่านเดียวกัน: ngReasonCheck ก่อน setSaving + แถวผ่าน buildResultRows */
+    const st = p.match(/function\s+AmStationSheet\s*\([\s\S]*?\n\}\n/);
+    if (st) {
+      const sb = st[0];
+      const sChk = sb.indexOf('ngReasonCheck('), sSav = sb.indexOf('setSaving(true)');
+      if (sChk < 0 || (sSav >= 0 && sChk > sSav)) bad.push(`${P} AmStationSheet: ต้องเช็ค ngReasonCheck() ก่อน setSaving(true)`);
+      if (!/buildResultRows\(/.test(sb)) bad.push(`${P} AmStationSheet: แถวผลตรวจต้องผ่าน buildResultRows() (ห้ามเขียนชุดที่ 2)`);
+    }
     /* 🔴 เรียกแล้วต้อง "หยุดบันทึก" จริง — `if (false)` / เก็บผลทิ้ง = ด่านหลอก */
     if (iChk >= 0 && !/ngReasonCheck\([\s\S]{0,400}?!\w*\.?ok[\s\S]{0,400}?return/.test(body))
       bad.push(`${P} handleSave: ผลจาก ngReasonCheck() ต้องนำไป return ออกจากการบันทึก (เรียกแล้วทิ้ง = ไม่มีด่าน)`);

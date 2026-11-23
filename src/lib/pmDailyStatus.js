@@ -159,6 +159,7 @@ export function dailyAmLineStatus({ targets, jigs, resultByJig = {}, firstOrderB
       noMnoOrders: split ? split.noMnoOrders : 0,
       allNotRunning,
       registeredN: tgAll.length,
+      requiredIds: tg.map(t => t.jig_id),   // 🧩 23/11 ชุดเครื่องที่ "ต้องตรวจกะนี้" จริง (ตัวหาร total) — บอร์ดนับเป็นสถานีใช้ ห้ามเดาเองจากทะเบียน
     }
     // 🔧 B3 — ผลตรวจ NG ของกะนี้ผูกใบซ่อมหรือยัง + ใบซ่อมค้างจากวันก่อน (ไม่ส่ง moFollow = ไม่มีข้อมูลส่วนนี้)
     if (moFollow) {
