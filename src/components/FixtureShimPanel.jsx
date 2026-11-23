@@ -157,7 +157,7 @@ export default function FixtureShimPanel({
             const s = shimStack(p);
             const mark = s.level === 'over' ? '🔴 ' : s.level === 'warn' ? '🟠 ' : '';
             return <option key={p.id} value={p.id}>
-              {mark}{p.point_no}{p.name ? ` · ${p.name}` : ''} — {s.current == null ? 'ยังไม่บันทึก' : `${s.current} mm`}
+              {mark}{p.point_no}{p.name ? ` · ${p.name}` : ''} — {s.current == null ? tr("ยังไม่บันทึก") : `${s.current} mm`}
             </option>;
           })}
         </select>
@@ -187,11 +187,11 @@ export default function FixtureShimPanel({
               <div style={{ fontSize: 17, fontWeight: 800,
                             color: life.level === 'over' ? '#ef4444' : life.level === 'warn' ? '#f59e0b'
                                  : life.level === 'unknown' ? '#94a3b8' : '#22c55e' }}>
-                {life.pct == null ? 'ประเมินไม่ได้' : `${Math.round(life.pct)}%`}
+                {life.pct == null ? tr("ประเมินไม่ได้") : `${Math.round(life.pct)}%`}
               </div>
               {life.pct == null && (
                 <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                  {point.expected_life_cycles == null ? 'ยังไม่ตั้งอายุชิ้นส่วน' : 'ยังนับ shot ไม่ได้'}
+                  {point.expected_life_cycles == null ? tr("ยังไม่ตั้งอายุชิ้นส่วน") : tr("ยังนับ shot ไม่ได้")}
                 </div>
               )}
             </div>
@@ -269,7 +269,7 @@ export default function FixtureShimPanel({
                   <>
                     {tr("จะบันทึกเป็น")} <b style={{ fontSize: 15 }}>{preview.after} mm</b>
                     <span style={{ color: 'var(--muted)' }}>
-                      {' '}({before == null ? 'ยังไม่เคยบันทึกค่าเดิม' : `${tr("จากเดิม")} ${before} mm`}
+                      {' '}({before == null ? tr("ยังไม่เคยบันทึกค่าเดิม") : `${tr("จากเดิม")} ${before} mm`}
                       {preview.delta != null && `, ${preview.delta > 0 ? '+' : ''}${preview.delta} mm`})
                     </span>
                     {afterStack?.level === 'over' && (
@@ -338,7 +338,7 @@ export default function FixtureShimPanel({
                       <tr key={ev.id} style={{ borderTop: '1px solid var(--border)' }}>
                         <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>{dt(ev.event_at)}</td>
                         <td style={{ padding: '6px 10px' }}>
-                          {SHIM_ACTIONS.find(a => a.key === ev.action)?.label || ev.action}
+                          {tr(SHIM_ACTIONS.find(a => a.key === ev.action)?.label) || ev.action}
                         </td>
                         <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
                           {fmt(n0(ev.shim_before_mm))} → <b>{fmt(n0(ev.shim_after_mm))}</b>

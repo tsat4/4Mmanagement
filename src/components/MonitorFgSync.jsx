@@ -209,7 +209,7 @@ export default function MonitorFgSync({ onClose, fullName, onSynced }) {
                     <b>{g.customer}</b>
                     <span style={{ color: 'var(--muted)' }}>{fmt(g.mats.length)} {tr('พาร์ท · ออเดอร์')} {fmt(g.orderRows)} {tr('แถว')}</span>
                     <span style={{ marginLeft: 'auto', fontWeight: 800, color: g.fresh.length ? 'var(--accent)' : 'var(--muted)' }}>
-                      {g.board ? (g.fresh.length ? `+${fmt(g.fresh.length)} ${tr("พาร์ทใหม่")}` : 'ครบแล้ว') : '🆕 บอร์ดใหม่'}
+                      {g.board ? (g.fresh.length ? `+${fmt(g.fresh.length)} ${tr("พาร์ทใหม่")}` : tr("ครบแล้ว")) : tr("🆕 บอร์ดใหม่")}
                     </span>
                   </div>
                   {g.fresh.length ? (

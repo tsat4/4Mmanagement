@@ -251,7 +251,7 @@ export default function CompanyCalendar() {
           </span>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={handleDiscardDraft} disabled={saving} style={cancelBtnSt}>{tr('ยกเลิก')}</button>
-            <button onClick={handleSaveDraft} disabled={saving} style={saveBtnSt}>{saving ? 'กำลังบันทึก...' : `${tr("บันทึก")} (${pendingCount})`}</button>
+            <button onClick={handleSaveDraft} disabled={saving} style={saveBtnSt}>{saving ? tr("กำลังบันทึก...") : `${tr("บันทึก")} (${pendingCount})`}</button>
           </div>
         </div>
       )}

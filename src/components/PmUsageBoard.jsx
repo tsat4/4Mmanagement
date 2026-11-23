@@ -83,7 +83,7 @@ export default function PmUsageBoard({ daily = [], lines = [], plans = [], today
       if (mats.length) {
         const { data: mr, error: mErr } = await supabaseDR.rpc('pm_usage_daily_by_mat', { p_days: 120, p_mats: mats });
         if (!alive) return;
-        if (mErr) errs.push('ยอดผลิตราย MAT');
+        if (mErr) errs.push(tr("ยอดผลิตราย MAT"));
         setMatRows(mr || []);
       }
       setDieErr(errs.length ? `${tr("โหลดไม่สำเร็จ")}: ${errs.join(' · ')} — ${tr("ยอดแม่พิมพ์บนจอไม่ครบ")}` : '');
@@ -177,7 +177,7 @@ export default function PmUsageBoard({ daily = [], lines = [], plans = [], today
                       {r.famLines.length > 1 && <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}> {tr('(รวมไลน์ลูก')} {r.famLines.length - 1})</span>}
                       {r.unknownLine && <span style={{ fontSize: 11, color: 'var(--accent2)', fontWeight: 500 }}> {tr('· ไม่อยู่ในทะเบียนไลน์')}</span>}
                     </td>
-                    <td style={{ ...td, color: r.eqCount ? 'var(--text2)' : 'var(--muted)' }}>{r.eqCount ? `${r.eqCount} ${tr("ตัว")}` : '— ไม่มีในทะเบียน'}</td>
+                    <td style={{ ...td, color: r.eqCount ? 'var(--text2)' : 'var(--muted)' }}>{r.eqCount ? `${r.eqCount} ${tr("ตัว")}` : tr("— ไม่มีในทะเบียน")}</td>
                     <td style={{ ...td, fontWeight: 800, fontFamily: 'monospace', color: 'var(--accent)' }}>{N(r.d30.qty)}</td>
                     <td style={{ ...td, fontFamily: 'monospace' }}>{N(r.d90.qty)}</td>
                     <td style={{ ...td, fontFamily: 'monospace' }}>{N(r.all.qty)}</td>
@@ -220,10 +220,10 @@ export default function PmUsageBoard({ daily = [], lines = [], plans = [], today
                                     <td style={{ padding: '5px 8px', fontFamily: 'monospace' }}>
                                       {accum == null ? (
                                         <span style={{ color: 'var(--accent2)', fontFamily: 'inherit', fontSize: 12 }}>
-                                          {!du?.sets ? 'ยังไม่อยู่ชุดแม่พิมพ์ไหน' : 'ชุดยังไม่ผูก MAT'} — {tr("นับไม่ได้")}
+                                          {!du?.sets ? tr("ยังไม่อยู่ชุดแม่พิมพ์ไหน") : tr("ชุดยังไม่ผูก MAT")} — {tr("นับไม่ได้")}
                                         </span>
                                       ) : <>{N(accum)} {tr('ชิ้น')}{shots != null && <span style={{ color: 'var(--muted)' }}> ({N(shots)} shot)</span>}</>}
-                                      <div style={{ fontSize: 11, color: 'var(--muted)' }}>{since ? `PM ${tr("ล่าสุด")} ${fmtThai(since)}` : 'ยังไม่เคยบันทึก PM — นับทั้งช่วง'}</div>
+                                      <div style={{ fontSize: 11, color: 'var(--muted)' }}>{since ? `PM ${tr("ล่าสุด")} ${fmtThai(since)}` : tr("ยังไม่เคยบันทึก PM — นับทั้งช่วง")}</div>
                                       {isDie && accum == null && <div style={{ fontSize: 11, color: 'var(--accent2)' }}>{tr('ผูก MAT ให้ชุดแม่พิมพ์ที่')} <Link to="/equipment?tab=die" style={{ color: 'var(--accent)' }}>{tr('ทะเบียนแม่พิมพ์')}</Link> {tr('ก่อน')}</div>}
                                       {isDie && accum != null && du.noMatSets.length > 0 && <div style={{ fontSize: 11, color: 'var(--accent2)' }}>{tr('≥ ยอดนี้ — ชุดที่ใช้ร่วมยังไม่ผูก MAT:')} {du.noMatSets.join(', ')}</div>}
                                       {isDie && accum != null && shots == null && du.why.length > 0 && <div style={{ fontSize: 11, color: 'var(--accent2)' }}>{tr('คิดเป็น shot ไม่ได้:')} {du.why.join(' · ')}</div>}
@@ -243,7 +243,7 @@ export default function PmUsageBoard({ daily = [], lines = [], plans = [], today
                                       )}
                                     </td>
                                     <td style={{ padding: '5px 8px', color: eta.etaDate ? (eta.daysLeft <= 0 ? '#ef4444' : 'var(--text2)') : 'var(--muted)' }}>
-                                      {isDie && accum == null ? '—' : !prog.hasThreshold ? 'ตั้งเกณฑ์ที่ ⚙️ ตั้งค่า PM' : eta.etaDate ? `${fmtThai(eta.etaDate)} (${tr("อีก")} ${eta.daysLeft} ${tr("วัน")})` : 'ไลน์ยังไม่เดินงาน'}
+                                      {isDie && accum == null ? '—' : !prog.hasThreshold ? tr("ตั้งเกณฑ์ที่ ⚙️ ตั้งค่า PM") : eta.etaDate ? `${fmtThai(eta.etaDate)} (${tr("อีก")} ${eta.daysLeft} ${tr("วัน")})` : tr("ไลน์ยังไม่เดินงาน")}
                                     </td>
                                   </tr>
                                 );

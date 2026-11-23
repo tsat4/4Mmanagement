@@ -282,7 +282,7 @@ export default function DisplayRotation() {
             <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('· ซ่อน')} {hiddenScreens} {tr('จอที่อยู่นอกส่วนงานของคุณ')}</div>
           )}
           <div style={{ flex: 1 }} />
-          {screens.length > 8 && <div style={{ width: 240, maxWidth: '100%' }}><SearchInput value={q} onChange={setQ} fields="ชื่อจอ / ส่วนงาน / หมายเหตุ" /></div>}
+          {screens.length > 8 && <div style={{ width: 240, maxWidth: '100%' }}><SearchInput value={q} onChange={setQ} fields={tr("ชื่อจอ / ส่วนงาน / หมายเหตุ")} /></div>}
         </div>
         {loaded && screens.length === 0 && (
           <div style={{ fontSize: 13, color: 'var(--muted)' }}>
@@ -304,10 +304,10 @@ export default function DisplayRotation() {
                 }}>
                 <span style={{ fontSize: 14, fontWeight: 800 }}>{a.full_name || emails[a.id] || a.id.slice(0, 8)}</span>
                 <span style={{ fontSize: 12, color: secs.length ? 'var(--text2)' : 'var(--amber)' }}>
-                  {secs.length ? secs.join(', ') : 'ยังไม่ตั้งส่วนงาน (เห็นทั้งโรงงาน)'}
+                  {secs.length ? secs.join(', ') : tr("ยังไม่ตั้งส่วนงาน (เห็นทั้งโรงงาน)")}
                 </span>
                 <span style={{ fontSize: 12, color: plan ? (plan.enabled ? 'var(--green)' : 'var(--muted)') : 'var(--muted)' }}>
-                  {plan ? (plan.enabled ? `${tr("วน")} ${n} ${tr("หน้า")}` : 'ปิดการวน') : '— ยังไม่ตั้งรอบ'}
+                  {plan ? (plan.enabled ? `${tr("วน")} ${n} ${tr("หน้า")}` : tr("ปิดการวน")) : tr("— ยังไม่ตั้งรอบ")}
                 </span>
                 {plan?.note && <span style={{ fontSize: 11, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{plan.note}</span>}
               </button>
@@ -327,7 +327,7 @@ export default function DisplayRotation() {
             <section className="card" style={{ padding: 16, display: 'grid', gap: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                 <div style={{ fontSize: 16, fontWeight: 800 }}>{selAcc.full_name}</div>
-                <span style={chipSt}>{tr('ส่วนงาน:')} {tvSections.length ? tvSections.join(', ') : 'ทั้งโรงงาน (ยังไม่ตั้ง)'}</span>
+                <span style={chipSt}>{tr('ส่วนงาน:')} {tvSections.length ? tvSections.join(', ') : tr("ทั้งโรงงาน (ยังไม่ตั้ง)")}</span>
                 {emails[selAcc.id] && <span style={{ fontSize: 12, color: 'var(--muted)' }}>{emails[selAcc.id]}</span>}
               </div>
               <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: -6 }}>
@@ -424,7 +424,7 @@ export default function DisplayRotation() {
                 <div style={{ fontSize: 15, fontWeight: 800 }}>{tr('สั่งจอ')}</div>
                 {online ? (
                   <span style={{ ...chipSt, color: 'var(--green)', borderColor: 'var(--green)' }}>
-                    🟢 {tr("ออนไลน์ · หน้า")} {(live.idx ?? 0) + 1}/{live.n}{live.held ? ' · ⏸ หยุดอยู่' : ''}
+                    🟢 {tr("ออนไลน์ · หน้า")} {(live.idx ?? 0) + 1}/{live.n}{live.held ? tr(" · ⏸ หยุดอยู่") : ''}
                   </span>
                 ) : (
                   <span style={{ ...chipSt, color: 'var(--muted)' }}>{tr('⚪ ไม่ได้เปิดอยู่ / ยังไม่ได้ login')}</span>
@@ -466,7 +466,7 @@ export default function DisplayRotation() {
               </div>
               <PagePreview path={focusPath} />
               <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
-                ⚠ {tr("ตัวอย่างเปิดด้วยบัญชีของคุณ — ข้อมูลอาจกว้างกว่าที่จอเห็นจริง (จอเห็นเฉพาะ")} {tvSections.length ? tvSections.join(', ') : 'ทั้งโรงงาน'})
+                ⚠ {tr("ตัวอย่างเปิดด้วยบัญชีของคุณ — ข้อมูลอาจกว้างกว่าที่จอเห็นจริง (จอเห็นเฉพาะ")} {tvSections.length ? tvSections.join(', ') : tr("ทั้งโรงงาน")})
               </div>
             </section>
           </div>
@@ -552,7 +552,7 @@ function ItemRow({ i, it, n, canEdit, focused, onFocus, pageOptions, defaultSec,
         style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 'var(--r-md)', cursor: 'pointer',
           border: '1px solid var(--border2)', background: 'var(--bg2-surf)', minWidth: 0 }}>
         <b style={{ width: 22, textAlign: 'center', fontSize: 13 }}>{i + 1}</b>
-        <span style={{ fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }}>{meta ? `${meta.icon} ${meta.label}` : (it.path || '— ยังไม่เลือกหน้า —')}</span>
+        <span style={{ fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }}>{meta ? `${meta.icon} ${meta.label}` : (it.path || tr("— ยังไม่เลือกหน้า —"))}</span>
         <span style={{ flex: 1, minWidth: 0, fontSize: 12, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {summary.join(' · ')}
         </span>
@@ -619,12 +619,12 @@ function ItemRow({ i, it, n, canEdit, focused, onFocus, pageOptions, defaultSec,
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6, minHeight: 34, fontSize: 13, color: 'var(--text)' }}>
                     <input type="checkbox" checked={params[d.key] === '1'} disabled={!canEdit}
                       onChange={e => setParam(d.key, e.target.checked ? '1' : '')} />
-                    {params[d.key] === '1' ? 'เปิด' : 'ปิด'}
+                    {params[d.key] === '1' ? tr("เปิด") : tr("ปิด")}
                   </span>
                 )}
                 {d.kind === 'scope' && (
                   <OrgScopePicker index={scopeIndex} failed={scopeFail} costCenter={false} sections={tvSections}
-                    plantLabel="— ค่าเริ่มต้นของหน้า (ส่วนงานของจอ) —" disabled={!canEdit}
+                    plantLabel={tr("— ค่าเริ่มต้นของหน้า (ส่วนงานของจอ) —")} disabled={!canEdit}
                     value={params[d.key] ? parseScopeKey(params[d.key]) : null}
                     onChange={sc => setParam(d.key, isPlant(sc) ? '' : scopeKey(sc.kind, sc.value))} />
                 )}
@@ -638,7 +638,7 @@ function ItemRow({ i, it, n, canEdit, focused, onFocus, pageOptions, defaultSec,
                 )}
                 {d.kind === 'orgdept' && (
                   <select value={params[d.key] || ''} disabled={!canEdit || orgNodes == null} onChange={e => setParam(d.key, e.target.value)}>
-                    <option value="">{orgNodes == null ? 'กำลังโหลดผังองค์กร…' : orgFail ? `⚠️ ${orgFail}` : ALL.dept}</option>
+                    <option value="">{orgNodes == null ? tr("กำลังโหลดผังองค์กร…") : orgFail ? `⚠️ ${orgFail}` : ALL.dept}</option>
                     {params[d.key] && !deptOptions.some(o => (d.valueAs === 'name' ? o.name : o.id) === params[d.key]) && (
                       <option value={params[d.key]}>{`(${tr("ไม่พบในผังปัจจุบัน")}) ${params[d.key]}`}</option>
                     )}

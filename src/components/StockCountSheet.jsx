@@ -284,7 +284,7 @@ export default function StockCountSheet({ role, scope }) {
                           value={counts[r.mat_no] ?? ''}
                           onChange={e => setCounts(c => ({ ...c, [r.mat_no]: e.target.value }))} />
                         <div className="sc-diff" style={{ color: !d ? (typed ? 'var(--accent)' : 'var(--muted)') : d.dir === 'up' ? '#22c55e' : '#ef4444' }}>
-                          {!d ? (typed ? 'ตรง' : '—') : `${d.delta > 0 ? '+' : ''}${n0(d.delta)}`}
+                          {!d ? (typed ? tr("ตรง") : '—') : `${d.delta > 0 ? '+' : ''}${n0(d.delta)}`}
                         </div>
                       </div>
                     </div>
@@ -316,7 +316,7 @@ export default function StockCountSheet({ role, scope }) {
                         </td>
                         <td style={{ ...td, textAlign:'right', fontWeight:800,
                           color: !d ? (typed ? 'var(--accent)' : 'var(--muted)') : d.dir === 'up' ? '#22c55e' : '#ef4444' }}>
-                          {!d ? (typed ? 'ตรง' : '—') : `${d.delta > 0 ? '+' : ''}${n0(d.delta)}`}
+                          {!d ? (typed ? tr("ตรง") : '—') : `${d.delta > 0 ? '+' : ''}${n0(d.delta)}`}
                         </td>
                       </tr>
                     );
@@ -366,7 +366,7 @@ export default function StockCountSheet({ role, scope }) {
               {canCount ? (
                 <button style={{ ...btn('var(--accent)'), opacity: saving || !summary.changed ? 0.5 : 1 }}
                   disabled={saving || !summary.changed} onClick={save}>
-                  {saving ? 'กำลังบันทึก…' : `💾 ${tr("บันทึกผลตรวจนับ")} (${summary.changed})`}
+                  {saving ? tr("กำลังบันทึก…") : `💾 ${tr("บันทึกผลตรวจนับ")} (${summary.changed})`}
                 </button>
               ) : (
                 <span style={{ fontSize:12, color:'var(--muted)' }}>{tr('ดูอย่างเดียว — ต้องมีสิทธิ์ line_stock:issue จึงบันทึกได้')}</span>
@@ -390,12 +390,12 @@ export default function StockCountSheet({ role, scope }) {
           <div style={{ marginLeft:'auto', display:'flex', flexWrap:'wrap', gap:8 }}>
             {canCount && !!shipGap.open.length && (
               <button style={{ ...btn('#ef4444'), opacity: cutting ? 0.6 : 1 }} disabled={cutting} onClick={postMissingCuts}>
-                {cutting ? 'กำลังหัก…' : `🚚 ${tr("หักย้อนหลัง")} ${shipGap.open.length} ${tr("ใบ")} (${n0(openQty)} ${tr("ชิ้น")})`}
+                {cutting ? tr("กำลังหัก…") : `🚚 ${tr("หักย้อนหลัง")} ${shipGap.open.length} ${tr("ใบ")} (${n0(openQty)} ${tr("ชิ้น")})`}
               </button>
             )}
             {!!(shipGap.open.length || shipGap.unresolved.length) && (
               <button style={btn('var(--bg3)', 'var(--text)')} onClick={() => setShowGap(v => !v)}>
-                {showGap ? '▲ ซ่อนรายการ' : `▼ ${tr("ดูรายการ")} (${shipGap.open.length + shipGap.unresolved.length})`}
+                {showGap ? tr("▲ ซ่อนรายการ") : `▼ ${tr("ดูรายการ")} (${shipGap.open.length + shipGap.unresolved.length})`}
               </button>
             )}
           </div>

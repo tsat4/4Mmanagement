@@ -206,7 +206,7 @@ export default function PressSetupRules({ dies = [], lineNames = [], canEdit = f
         <div style={{ display: 'grid', gap: 8 }}>
           {rows.length === 0 && (
             <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-              {tr("ยังไม่มีกฎในทะเบียน")} — {canEdit ? 'กด "+ เพิ่มกฎ" เพื่อกรอกตัวเลขที่ช่างปั๊มให้มา' : 'ให้ผู้มีสิทธิ์แก้ทะเบียนเป็นคนกรอก'}
+              {tr("ยังไม่มีกฎในทะเบียน")} — {canEdit ? tr("กด \"+ เพิ่มกฎ\" เพื่อกรอกตัวเลขที่ช่างปั๊มให้มา") : tr("ให้ผู้มีสิทธิ์แก้ทะเบียนเป็นคนกรอก")}
             </div>
           )}
           {rows.map(r => {
@@ -340,7 +340,7 @@ export default function PressSetupRules({ dies = [], lineNames = [], canEdit = f
                 {tr("เวลาปรับ shut height ตามลำดับทะเบียนตอนนี้")} ({preview.list.length} {tr("ตัว")}) = <b>{fmtMin(a)}</b> {tr("นาที · เรียงตามความสูง")} = <b>{fmtMin(b)}</b> {tr("นาที")}
                 {save != null && (
                   <div style={{ color: save > 0.05 ? 'var(--accent)' : 'var(--muted)', fontWeight: 700 }}>
-                    {save > 0.05 ? `⇒ ${tr("จัดลำดับใหม่ประหยัดได้")} ~${fmtMin(save)} ${tr("นาที/รอบ")}` : '⇒ ลำดับที่เป็นอยู่ดีอยู่แล้ว (เรียงใหม่ไม่ช่วย)'}
+                    {save > 0.05 ? `⇒ ${tr("จัดลำดับใหม่ประหยัดได้")} ~${fmtMin(save)} ${tr("นาที/รอบ")}` : tr("⇒ ลำดับที่เป็นอยู่ดีอยู่แล้ว (เรียงใหม่ไม่ช่วย)")}
                   </div>
                 )}
                 {preview.sortedSeq.baseUnknown && (

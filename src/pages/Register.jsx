@@ -298,7 +298,7 @@ export default function Register({ embedded = false, onSaved }) {
                   }}>
                     <option value="">{department ? tr('— เลือกกลุ่ม —') : tr('เลือกแผนกก่อน')}</option>
                     {orgGroupOpts.map(g => (
-                      <option key={g.id} value={g.name}>{g.name}{g.ref_line_id ? '' : '  ⚠ ยังไม่ผูกไลน์'}</option>
+                      <option key={g.id} value={g.name}>{g.name}{g.ref_line_id ? '' : tr("  ⚠ ยังไม่ผูกไลน์")}</option>
                     ))}
                   </select>
                   {curNode && !curNode.ref_line_id && (

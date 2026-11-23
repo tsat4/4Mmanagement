@@ -124,7 +124,7 @@ export default function StorageZonePanel() {
           <code> 20260825_storage_zones.sql</code> {tr("ก่อน แท็บนี้ถึงใช้งานได้")}
         </div>
       )}
-      <ReadOnlyNote show={!canManage && !missing} role={role} what="จัดการโซนคลัง (เพิ่ม/แก้/ผูก MAT)" permKey="storage:manage" />
+      <ReadOnlyNote show={!canManage && !missing} role={role} what={tr("จัดการโซนคลัง (เพิ่ม/แก้/ผูก MAT)")} permKey="storage:manage" />
 
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
         <div style={{ fontSize: 13, color: 'var(--text2)' }}>
@@ -178,7 +178,7 @@ export default function StorageZonePanel() {
               </div>
               <div style={{ fontSize: 12, color: 'var(--text2)' }}>
                 MAT {f.mats.length} {tr('รายการ · รวม')} {f.totQty.toLocaleString()} {tr("ชิ้น")}
-                {z.capacity_pkg ? ` · ${tr("ความจุ")} ${z.capacity_pkg} ${tr("กล่อง")}` : ' · ⚠ ยังไม่กรอกความจุ (fill% = ไม่รู้)'}
+                {z.capacity_pkg ? ` · ${tr("ความจุ")} ${z.capacity_pkg} ${tr("กล่อง")}` : tr(" · ⚠ ยังไม่กรอกความจุ (fill% = ไม่รู้)")}
               </div>
               {f.mats.length > 0 && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
@@ -215,7 +215,7 @@ export default function StorageZonePanel() {
             ))}
             {unassigned.length > 12 && (
               <button onClick={() => setShowAllUnassigned(v => !v)} style={btnMini}>
-                {showAllUnassigned ? 'ย่อ' : `▾ ${tr("ดูทั้งหมด")} (${unassigned.length})`}
+                {showAllUnassigned ? tr("ย่อ") : `▾ ${tr("ดูทั้งหมด")} (${unassigned.length})`}
               </button>
             )}
           </div>
@@ -297,7 +297,7 @@ function ZoneFormModal({ zone, initialName, parts, stockByMat, onClose, onSaved 
     <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       {/* ⚠️ ห้ามเติม onClick={onClose} ที่ backdrop — ฟอร์มมีข้อมูลค้าง เผลอแตะแล้วหาย (UI-CONVENTIONS §5) */}
       <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', width: 'min(680px, 96vw)', maxHeight: '92vh', overflowY: 'auto', padding: 18, display: 'grid', gap: 10, alignContent: 'start' }}>
-        <b style={{ fontSize: 15 }}>{zone ? `✏️ ${tr("แก้โซน")}: ${zone.name}` : '➕ เพิ่มโซนจัดเก็บ'}</b>
+        <b style={{ fontSize: 15 }}>{zone ? `✏️ ${tr("แก้โซน")}: ${zone.name}` : tr("➕ เพิ่มโซนจัดเก็บ")}</b>
         <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <label style={lbl}>{tr("ชื่อโซน (= ชื่อกรอบบนผังรวม")})
             <input value={name} onChange={e => setName(e.target.value)} placeholder={tr('เช่น FG OUT LANE 1')} />

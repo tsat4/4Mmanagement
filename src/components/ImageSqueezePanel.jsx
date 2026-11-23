@@ -117,7 +117,7 @@ export default function ImageSqueezePanel({ canRun = false, onDone }) {
               cursor: (!canRun || busy || scanning || scan?.total === 0) ? 'default' : 'pointer',
               maxWidth: '100%', whiteSpace: 'normal', textAlign: 'center',
             }}>
-            {busy || (scanning ? 'กำลังสำรวจ…' : scan?.total === 0 ? '✅ ไม่มีรูปค้างแล้ว' : `🗜️ ${tr("เริ่มบีบ")} ${scan?.total ?? ''} ${tr("ใบ")}`)}
+            {busy || (scanning ? tr("กำลังสำรวจ…") : scan?.total === 0 ? tr("✅ ไม่มีรูปค้างแล้ว") : `🗜️ ${tr("เริ่มบีบ")} ${scan?.total ?? ''} ${tr("ใบ")}`)}
           </button>
         </div>
         {!canRun && (

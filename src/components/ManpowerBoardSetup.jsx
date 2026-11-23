@@ -348,7 +348,7 @@ export default function ManpowerBoardSetup({ section, nodes, lines, employees, s
                         const e = empById.get(r.employee_id);
                         return (
                           <span key={r.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '2px 4px 2px 10px', border: '1px solid var(--border2)', borderRadius: 'var(--r-pill)', background: 'var(--bg2-surf)', fontSize: 13 }}>
-                            {e ? e.name : '(ไม่อยู่ในทะเบียน active)'}
+                            {e ? e.name : tr("(ไม่อยู่ในทะเบียน active)")}
                             {e?.position && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{positionLabel(e.position)}</span>}
                             <DeleteButton disabled={busy} onClick={() => removeTech(r)} title={`${tr("เอา")} ${e?.name || ''} ${tr("ออก")}`} style={{ width: 26, height: 26 }} />
                           </span>
@@ -386,7 +386,7 @@ export default function ManpowerBoardSetup({ section, nodes, lines, employees, s
                         const e = empById.get(r.employee_id);
                         return (
                           <span key={r.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '2px 4px 2px 10px', border: '1px solid var(--border2)', borderRadius: 'var(--r-pill)', background: 'var(--bg2-surf)', fontSize: 13 }}>
-                            {e ? e.name : '(ไม่อยู่ในทะเบียน active)'}
+                            {e ? e.name : tr("(ไม่อยู่ในทะเบียน active)")}
                             {e?.department && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('ต้นสังกัด')} {e.department}</span>}
                             <DeleteButton disabled={busy} onClick={() => removeFlex(r)} title={`${tr("เอา")} ${e?.name || ''} ${tr("ออก")}`} style={{ width: 26, height: 26 }} />
                           </span>
@@ -433,7 +433,7 @@ export default function ManpowerBoardSetup({ section, nodes, lines, employees, s
                       const e = empById.get(r.employee_id);
                       return (
                         <span key={r.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '2px 4px 2px 10px', border: '1px solid var(--amber)', borderRadius: 'var(--r-pill)', background: 'var(--bg2-surf)', fontSize: 13 }}>
-                          {e ? e.name : '(ไม่อยู่ในทะเบียน active)'}
+                          {e ? e.name : tr("(ไม่อยู่ในทะเบียน active)")}
                           {e?.department && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('ต้นสังกัด')} {e.department}</span>}
                           <DeleteButton disabled={busy} onClick={() => removeActing(r)} title={`${tr("ยกเลิกรักษาการของ")} ${e?.name || ''}`} style={{ width: 26, height: 26 }} />
                         </span>

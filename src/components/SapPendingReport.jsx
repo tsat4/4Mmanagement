@@ -85,7 +85,7 @@ export default function SapPendingReport() {
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <Segmented value={view} onChange={setView} label={tr('สถานะ')}
           options={[{ value: 'open', label: `${tr("ยังค้าง")} (${sum.open.length})` }, { value: 'cleared', label: `${tr("เคลียร์แล้ว")} (${rows.length - sum.open.length})` }]} />
-        <SearchInput value={q} onChange={setQ} fields="MAT / ชื่อพาร์ท / ไลน์ / สาเหตุ" grow={false} />
+        <SearchInput value={q} onChange={setQ} fields={tr("MAT / ชื่อพาร์ท / ไลน์ / สาเหตุ")} grow={false} />
       </div>
 
       {view === 'open' && parts.length > 0 && (
@@ -111,7 +111,7 @@ export default function SapPendingReport() {
       <div style={card}>
         <div style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--text)', marginBottom: 6 }}>{view === 'open' ? tr('รายใบที่ยังค้าง') : tr('รายใบที่เคลียร์แล้ว')}</div>
         {loading ? <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{tr('กำลังโหลด…')}</div>
-          : !list.length ? <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{view === 'open' ? 'ไม่มียอดค้างตัด SAP' : 'ยังไม่มีใบที่เคลียร์'}{hidden > 0 ? ` · ${tr("ซ่อนอยู่")} ${hidden} ${tr("ใบ (ไม่ตรงคำค้น")})` : ''}</div>
+          : !list.length ? <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{view === 'open' ? tr("ไม่มียอดค้างตัด SAP") : tr("ยังไม่มีใบที่เคลียร์")}{hidden > 0 ? ` · ${tr("ซ่อนอยู่")} ${hidden} ${tr("ใบ (ไม่ตรงคำค้น")})` : ''}</div>
           : (
             <>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>

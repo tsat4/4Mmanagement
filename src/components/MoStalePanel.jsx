@@ -256,7 +256,7 @@ export default function MoStalePanel({
                 <b style={{ color: toneInk(o._tone), minWidth: 62 }}>{o._stale.days} {tr('วัน')}</b>
                 <b style={{ color: 'var(--text)' }}>{o.mo_no || tr('(ยังไม่ออกเลข MO)')}</b>
                 <span>· {o._stale.icon} {tr('รอ')}{o._stale.title}</span>
-                <span>· {teamName(o.mtn_dept) || '(ไม่ระบุทีม)'}</span>
+                <span>· {teamName(o.mtn_dept) || tr("(ไม่ระบุทีม)")}</span>
                 {o.line_name && <span>· {o.line_name}</span>}
                 {o.machine_no && <span>· {o.machine_no}</span>}
                 {o.problem_characteristic && <span style={{ color: 'var(--muted)' }}>· {o.problem_characteristic}</span>}

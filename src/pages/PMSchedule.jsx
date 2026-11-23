@@ -370,7 +370,7 @@ export default function PMSchedule() {
           <select value={fStatus} onChange={e => setFStatus(e.target.value)} aria-label={tr('สถานะ')}>
             {statusOptions.map(o => <option key={o.value} value={o.value}>{tr(o.label)}</option>)}
           </select>
-          <SearchInput value={fQ} onChange={setFQ} fields="อุปกรณ์ / No. / เลขเครื่อง / ไลน์" />
+          <SearchInput value={fQ} onChange={setFQ} fields={tr("อุปกรณ์ / No. / เลขเครื่อง / ไลน์")} />
           {!loading && rows.length > 0 && (
             <span style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap' }}>
               {tr("แสดง")} <b style={{ color: 'var(--text)' }}>{shownRows.length}</b> {tr('จาก')} {rows.length} {tr("แผน")}
@@ -393,7 +393,7 @@ export default function PMSchedule() {
             if (cnt === 0) return null
             const on = fStatus === key
             return (
-              <div key={key} role="button" tabIndex={0} title={on ? 'กดอีกครั้งเพื่อดูทุกสถานะ' : `${tr("ดูเฉพาะ")} "${meta.label}"`}
+              <div key={key} role="button" tabIndex={0} title={on ? tr("กดอีกครั้งเพื่อดูทุกสถานะ") : `${tr("ดูเฉพาะ")} "${meta.label}"`}
                 onClick={() => setFStatus(on ? '' : key)} onKeyDown={e => { if (e.key === 'Enter') setFStatus(on ? '' : key) }}
                 style={{ ...S.summaryCard(meta.color), cursor: 'pointer', ...(on ? { boxShadow: `inset 0 0 0 2px ${meta.color}` } : null) }}>
                 <div style={{ fontSize: 22, fontWeight: 900, color: meta.color, fontFamily: 'var(--font-display)' }}>{cnt}</div>
@@ -542,7 +542,7 @@ export default function PMSchedule() {
                       {isUsage && (
                         <div style={{ marginTop: 3, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                           <span style={{ fontSize: 11, fontWeight: 700, color: reason === 'usage' ? '#4aa3e0' : 'var(--muted)', background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-xs)', padding: '1px 5px' }}>
-                            {reason === 'usage' ? '📈 ตามการใช้งาน' : '🗓️ ตามเวลา'}
+                            {reason === 'usage' ? tr("📈 ตามการใช้งาน") : tr("🗓️ ตามเวลา")}
                           </span>
                           {health != null && (
                             <span title={tr('สุขภาพ (ยิ่งต่ำยิ่งใกล้ครบตามยอดผลิต)')} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
@@ -561,7 +561,7 @@ export default function PMSchedule() {
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                        <button onClick={() => setSpareFor(r)} title={spareErr ? `${tr("นับจำนวนอะไหล่ที่ผูกไว้ไม่ได้")} (${spareErr}) — ${tr("เปิดดูในโมดัลได้")}` : "อะไหล่ที่ใช้ใน PM รอบหนึ่ง + เบิกตามแผน"} style={{ ...S.actionBtn(spareErr ? '#f59e0b' : spareCount.get(cl.id) ? '#4a90e0' : '#8b8b96') }}>{spareErr ? 'อะไหล่ ?' : spareCount.get(cl.id) ? `${tr("อะไหล่")} ${spareCount.get(cl.id)}` : 'อะไหล่'}</button>
+                        <button onClick={() => setSpareFor(r)} title={spareErr ? `${tr("นับจำนวนอะไหล่ที่ผูกไว้ไม่ได้")} (${spareErr}) — ${tr("เปิดดูในโมดัลได้")}` : tr("อะไหล่ที่ใช้ใน PM รอบหนึ่ง + เบิกตามแผน")} style={{ ...S.actionBtn(spareErr ? '#f59e0b' : spareCount.get(cl.id) ? '#4a90e0' : '#8b8b96') }}>{spareErr ? tr("อะไหล่ ?") : spareCount.get(cl.id) ? `${tr("อะไหล่")} ${spareCount.get(cl.id)}` : tr("อะไหล่")}</button>
                         {canDefer && <button onClick={() => setCycleFor([r])} style={{ ...S.actionBtn((nextDue || runDay) ? 'var(--muted)' : '#f59a3f') }} title={tr('ตั้งรอบ PM / วัน PM ครั้งถัดไป')}>{(nextDue || runDay) ? tr('รอบ/วัน') : tr('ตั้งวัน PM')}</button>}
                         {canDefer && r.plan?.id && (isDeferred
                           ? <button onClick={() => cancelDefer(r)} style={{ ...S.actionBtn('var(--muted)') }} title={tr('ยกเลิกการเลื่อน')}>{tr('ยกเลิกเลื่อน')}</button>
@@ -678,7 +678,7 @@ function CycleModal({ rows, byName, byUid, deptWrite, onClose, onSaved }) {
         <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>{tr('ตั้งรอบ PM / วัน PM ครั้งถัดไป')}</div>
         <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 14 }}>
           {single
-            ? <>{single.eq?.name ?? '—'}{single.eq?.line_name ? ` · ${single.eq.line_name}` : ''} {tr('· รอบตอนนี้:')} <b>{single.cycleText}</b>{lastYmd ? ` · ${tr("ตรวจล่าสุด")} ${new Date(lastYmd).toLocaleDateString('th-TH')}` : ' · ยังไม่เคยตรวจ'}</>
+            ? <>{single.eq?.name ?? '—'}{single.eq?.line_name ? ` · ${single.eq.line_name}` : ''} {tr('· รอบตอนนี้:')} <b>{single.cycleText}</b>{lastYmd ? ` · ${tr("ตรวจล่าสุด")} ${new Date(lastYmd).toLocaleDateString('th-TH')}` : tr(" · ยังไม่เคยตรวจ")}</>
             : <>{tr('ตั้งพร้อมกัน')} {picked.size} / {rows.length} {tr('รายการ (ติ๊กออกรายการที่ไม่ต้องการ)')}</>}
         </div>
 
@@ -724,7 +724,7 @@ function CycleModal({ rows, byName, byUid, deptWrite, onClose, onSaved }) {
         </label>
         <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 6, lineHeight: 1.6 }}>
           {nextDate
-            ? <>{tr("ระบบจะเตือนตามวันนี้ · ตรวจเสร็จแล้วรอบถัดไป = วันที่ตรวจจริง")} + {valid ? cycleLabel(null, n) : 'รอบ'}</>
+            ? <>{tr("ระบบจะเตือนตามวันนี้ · ตรวจเสร็จแล้วรอบถัดไป = วันที่ตรวจจริง")} + {valid ? cycleLabel(null, n) : tr("รอบ")}</>
             : single
               ? (preview ? <>{tr("ไม่กรอก = คิดจากตรวจล่าสุด + รอบ")} → <b style={{ color: 'var(--text)' }}>{new Date(preview).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}</b></>
                          : single.nextDue
@@ -872,7 +872,7 @@ function TimelineView({ rows, today, onCheck }) {
                พับกลับเข้าใน แทนการไล่เพิ่มตัวเลข minWidth ให้ถูกทุกครั้งที่ layout ขยับ */
             <div key={m} style={{ position: 'absolute', left: `${(m / RANGE) * 100}%`, top: 0, bottom: 0, borderLeft: '1px dashed var(--border2)', display: 'flex', alignItems: 'center',
               ...(m === RANGE ? { paddingRight: 4, transform: 'translateX(-100%)' } : { paddingLeft: 4 }) }}>
-              <span style={{ fontSize: 11, color: m === 0 ? 'var(--accent)' : 'var(--muted)', fontWeight: m === 0 ? 700 : 400, whiteSpace: 'nowrap' }}>{m === 0 ? '📍 วันนี้' : `+${m} ${tr("วัน")}`}</span>
+              <span style={{ fontSize: 11, color: m === 0 ? 'var(--accent)' : 'var(--muted)', fontWeight: m === 0 ? 700 : 400, whiteSpace: 'nowrap' }}>{m === 0 ? tr("📍 วันนี้") : `+${m} ${tr("วัน")}`}</span>
             </div>
           ))}
         </div>
@@ -1127,7 +1127,7 @@ function BucketView({ rows, today, onCheck }) {
                     <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.eq.name ?? '—'}</div>
                     <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{r.eq.line_name ?? '—'} · {r.runDay ? `🏃 ${tr("ทุก")} ${r.cycle || '—'} ${tr("วันเดิน")}` : r.cycleText}</div>
                     <div style={{ fontSize: 11, color: r.status === 'idle_skip' ? 'var(--muted)' : meta.color, fontWeight: 700, marginTop: 3 }}>
-                      {r.runDay ? runDayText(r.runDay) : d == null ? (r.cycle ? 'มีรอบแต่ยังไม่เคยตรวจ' : 'ยังไม่ตั้งรอบ') : d < 0 ? `${tr("เกิน")} ${Math.abs(d)} ${tr("วัน")}` : d === 0 ? 'ครบวันนี้' : `${tr("อีก")} ${d} ${tr("วัน")} · ${fmtDay(r.nextDue)}`}
+                      {r.runDay ? runDayText(r.runDay) : d == null ? (r.cycle ? tr("มีรอบแต่ยังไม่เคยตรวจ") : tr("ยังไม่ตั้งรอบ")) : d < 0 ? `${tr("เกิน")} ${Math.abs(d)} ${tr("วัน")}` : d === 0 ? tr("ครบวันนี้") : `${tr("อีก")} ${d} ${tr("วัน")} · ${fmtDay(r.nextDue)}`}
                     </div>
                   </div>
                 )

@@ -198,7 +198,7 @@ export default function KpiBaseImportModal({ year, unitLabel, unitSk, base, canP
                       </td>
                       <td style={{ ...td, textAlign: 'left', whiteSpace: 'normal', minWidth: 190 }}>
                         <b>{tr(v.label)}</b> <span style={{ color: 'var(--muted)' }}>({v.unit})</span>
-                        <div style={{ fontSize: 11, color: ok ? 'var(--muted)' : '#f59e0b' }}>→ {targetOf(v)}{!ok ? (v.level === 'plant' ? ' · นำเข้าได้เฉพาะตอนดู ทั้งโรงงาน' : ' · ไม่มีสิทธิ์เขียนขอบเขตนี้') : ''}</div>
+                        <div style={{ fontSize: 11, color: ok ? 'var(--muted)' : '#f59e0b' }}>→ {targetOf(v)}{!ok ? (v.level === 'plant' ? tr(" · นำเข้าได้เฉพาะตอนดู ทั้งโรงงาน") : tr(" · ไม่มีสิทธิ์เขียนขอบเขตนี้")) : ''}</div>
                       </td>
                       <td style={{ ...td, textAlign: 'left' }}>
                         <select style={{ ...inp, maxWidth: 260 }} value={row ?? ''} onChange={e => setVarRows(p => ({ ...p, [v.key]: e.target.value === '' ? null : Number(e.target.value) }))}>
@@ -211,7 +211,7 @@ export default function KpiBaseImportModal({ year, unitLabel, unitSk, base, canP
                         const old = base?.get ? base.get(sk, v.key, m) : null;
                         const changed = nv != null && old != null && Math.abs(nv - old) > 1e-9;
                         return (
-                          <td key={m} style={td} title={old != null ? `${tr("ค่าที่มีอยู่")}: ${fmt(old)}` : 'ยังไม่มีค่า'}>
+                          <td key={m} style={td} title={old != null ? `${tr("ค่าที่มีอยู่")}: ${fmt(old)}` : tr("ยังไม่มีค่า")}>
                             <div style={{ color: nv == null ? 'var(--muted)' : changed ? '#f59e0b' : 'var(--text)' }}>{fmt(nv)}</div>
                             {old != null && <div style={{ fontSize: 11, color: 'var(--muted)', textDecoration: changed ? 'line-through' : 'none' }}>{fmt(old)}</div>}
                           </td>
@@ -231,7 +231,7 @@ export default function KpiBaseImportModal({ year, unitLabel, unitSk, base, canP
           <button onClick={onClose} style={{ ...inp, cursor: 'pointer' }}>{tr('ยกเลิก')}</button>
           <button onClick={doImport} disabled={busy || !nCells}
             style={{ ...inp, cursor: nCells ? 'pointer' : 'not-allowed', background: nCells ? 'var(--accent)' : 'var(--bg2)', color: nCells ? 'var(--accent-ink)' : 'var(--muted)', fontWeight: 700 }}>
-            {busy ? '⏳ กำลังบันทึก…' : `💾 ${tr("นำเข้า")} ${nCells} ${tr("ค่า")} (${chosen.length} ${tr("ตัวแปร")})`}
+            {busy ? tr("⏳ กำลังบันทึก…") : `💾 ${tr("นำเข้า")} ${nCells} ${tr("ค่า")} (${chosen.length} ${tr("ตัวแปร")})`}
           </button>
         </div>
       </div>

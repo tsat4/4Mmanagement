@@ -811,7 +811,7 @@ function SignalRow({ s, navigate }) {
       <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
         <span style={{ flex: 1, minWidth: 140, fontSize: 12.5 }}>{tr(s.label)}</span>
         <span style={{ fontSize: 13.5, fontWeight: 800, color: col, fontVariantNumeric: 'tabular-nums' }}>
-          {failed ? 'โหลดไม่ได้' : fmtNum(s.now)}{s.total ? <span style={{ color: 'var(--muted)', fontWeight: 600 }}> / {fmtNum(s.total)}</span> : null}
+          {failed ? tr("โหลดไม่ได้") : fmtNum(s.now)}{s.total ? <span style={{ color: 'var(--muted)', fontWeight: 600 }}> / {fmtNum(s.total)}</span> : null}
           <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}> {s.unit}</span>
         </span>
         {p != null && <span style={{ fontSize: 12, fontWeight: 800, color: col, minWidth: 42, textAlign: 'right' }}>{p.toFixed(0)}%</span>}
@@ -984,7 +984,7 @@ function LadderTab({ c, navigate, isMobile }) {
           <div key={L.n} style={{ ...cardSt, borderLeft: `4px solid ${c0}` }}>
             <div style={{ display: 'flex', gap: 10, alignItems: 'baseline', flexWrap: 'wrap', marginBottom: 3 }}>
               <span style={{ fontSize: 22 }}>{L.icon}</span>
-              <span style={{ fontSize: 16, fontWeight: 800 }}>{tr('ระดับ')} {L.n} · {L.name}</span>
+              <span style={{ fontSize: 16, fontWeight: 800 }}>{tr('ระดับ')} {L.n} · {tr(L.name)}</span>
               <span style={{ fontSize: 12, color: 'var(--muted)' }}>{L.en}</span>
             </div>
             <div style={{ fontSize: 12.5, color: 'var(--text2)', marginBottom: 10 }}>{tr(L.desc)}</div>
@@ -1369,7 +1369,7 @@ function DeepDiveTab({ dd, err, demoOn, navigate, isMobile }) {
     return g ? { f, equip: g.name } : null;
   }).filter(Boolean);
 
-  const shiftTh = S.shift === 'night' ? 'กะดึก' : 'กะเช้า';
+  const shiftTh = S.shift === 'night' ? tr("กะดึก") : tr("กะเช้า");
   const gcol = (n) => ({ display: 'grid', gap: 10, gridTemplateColumns: isMobile ? 'minmax(0, 1fr)' : `repeat(${n}, 1fr)` });
 
   /* ── ชั้น 3: เอกสารออกแบบของ "พาร์ทนี้" — มีชุดแล้วหรือยัง ── */
@@ -1594,7 +1594,7 @@ function DeepDiveTab({ dd, err, demoOn, navigate, isMobile }) {
               {dd.fourM.slice(0, 6).map((m, i) => (
                 <div key={i} style={{ fontSize: 12, lineHeight: 1.55, color: 'var(--text2)' }}>
                   <b style={{ color: 'var(--text)' }}>{m.category}</b> — {m.description}
-                  <span style={{ color: 'var(--muted)' }}> · {m.status === 'approved' ? 'อนุมัติแล้ว' : m.status}</span>
+                  <span style={{ color: 'var(--muted)' }}> · {m.status === 'approved' ? tr("อนุมัติแล้ว") : m.status}</span>
                 </div>
               ))}
             </div>
@@ -1673,7 +1673,7 @@ function DeepDiveTab({ dd, err, demoOn, navigate, isMobile }) {
                   }}>{tr('เปิดดูรายตัวของพาร์ทนี้ →')}</button>
                 ) : (
                   <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-                    {peSet ? 'ชุดนี้ยังไม่ได้ลงหัวข้อนี้' : 'พาร์ทนี้ยังไม่มีเอกสาร'} — {tr("ตอบคำถามนี้ไม่ได้")}
+                    {peSet ? tr("ชุดนี้ยังไม่ได้ลงหัวข้อนี้") : tr("พาร์ทนี้ยังไม่มีเอกสาร")} — {tr("ตอบคำถามนี้ไม่ได้")}
                   </div>
                 )}
               </div>
@@ -1706,7 +1706,7 @@ function DeepDiveTab({ dd, err, demoOn, navigate, isMobile }) {
               <div>{tr('① เพิ่ม')}<b>{tr('ช่อง 4M ที่ประเภท Downtime')}</b> {tr('เพื่อเลิกเดาจากข้อความ (แก้ที่ Daily Report → ⚙️ ตั้งค่า)')}</div>
               <div>
                 ② {tr("ลง")}<b>{tr('เอกสาร Flow / PFMEA / Control Plan')}</b> {tr("ให้ครอบคลุมพาร์ทที่ผลิตจริง — หน้าจอมีแล้วที่")} <b>/pe-docs</b> {tr('ตอนนี้ลงไป')} {fmtNum(dd.pe.totalSets)} {tr("พาร์ท")}
-                {peSet ? ' (รวมพาร์ทของกะนี้แล้ว)' : ' แต่ยังไม่มีพาร์ทของกะนี้'}
+                {peSet ? tr(" (รวมพาร์ทของกะนี้แล้ว)") : tr(" แต่ยังไม่มีพาร์ทของกะนี้")}
               </div>
             </div>
           </div>
@@ -1792,7 +1792,7 @@ export default function AdoptionOutlook() {
             fontSize: 13, fontWeight: 700, padding: '7px 14px', borderRadius: 999, cursor: 'pointer',
             background: demoOn ? 'var(--blue)' : 'var(--bg3)', color: demoOn ? '#12081f' : 'var(--text)',
             border: `1px ${demoOn ? 'solid' : 'dashed'} ${demoOn ? 'var(--blue)' : 'var(--border2)'}`,
-          }}>{tr('โหมดสาธิต')} {demoOn ? 'เปิดอยู่' : 'ปิด'}</button>
+          }}>{tr('โหมดสาธิต')} {demoOn ? tr("เปิดอยู่") : tr("ปิด")}</button>
         }
       />
 

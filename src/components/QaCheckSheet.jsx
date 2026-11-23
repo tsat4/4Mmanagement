@@ -1069,7 +1069,7 @@ export default function QaCheckSheet({ canRecord }) {
               {(() => { const ng = results.filter(r => r.judgement === 'ng').length; return ng ? <span style={{ color: 'var(--red)', fontSize: 12 }}> · {tr('ไม่ผ่าน')} {ng} {tr('จุด (เปิด NCR ได้ในนี้)')}</span> : null; })()}
               {loading && <span style={{ fontWeight: 400, color: 'var(--muted)', fontSize: 12 }}> {tr('· กำลังโหลด…')}</span>}
               <span style={{ fontWeight: 400, color: 'var(--muted)', fontSize: 12 }}>
-                {' '}· {readOnly && canRecord ? 'ใบปิดแล้ว' : !canRecord ? 'ไม่มีสิทธิ์บันทึก — ดูอย่างเดียว' : 'บันทึกที่แผงตรวจทีละชิ้นด้านบน'}
+                {' '}· {readOnly && canRecord ? tr("ใบปิดแล้ว") : !canRecord ? tr("ไม่มีสิทธิ์บันทึก — ดูอย่างเดียว") : tr("บันทึกที่แผงตรวจทีละชิ้นด้านบน")}
               </span>
             </div>
             {showSummary && <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -1179,7 +1179,7 @@ function ItemRow({ item, res, draft, selected, readOnly, canRecord, busy, isMobi
             </div>
             {auto && (
               <div style={{ fontSize: 11.5, marginTop: 3, color: JUDGE[auto].color, fontWeight: 700 }}>
-                {tr("ตัดสินอัตโนมัติ")}: {JUDGE[auto].label}
+                {tr("ตัดสินอัตโนมัติ")}: {tr(JUDGE[auto].label)}
               </div>
             )}
           </div>

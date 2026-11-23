@@ -151,7 +151,7 @@ export default function DeliveryPointPanel({ lineName, lines = [] }) {
       <>
         <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 8 }}>{tr('ป้าย QR ที่สโตร์สแกนตอนวางของถึงไลน์ (ลูปเรียกชิ้นส่วนขั้น 7)')}</div>
         <div>
-          <ReadOnlyNote show={!canManage} role={role} what="ตั้งจุดส่งงานของไลน์" permKey="delivery_point:manage" compact />
+          <ReadOnlyNote show={!canManage} role={role} what={tr("ตั้งจุดส่งงานของไลน์")} permKey="delivery_point:manage" compact />
 
           {missing && (
             <div style={{ fontSize: 12.5, color: '#f59e0b', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 'var(--r-md)', padding: '8px 12px' }}>
@@ -230,7 +230,7 @@ export default function DeliveryPointPanel({ lineName, lines = [] }) {
                     )}
                     {others.length > 0 && (
                       <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 3 }}>
-                        {viaChild ? '📍 ของไลน์ย่อย: ' : '🔀 ใช้ร่วมกับ '}{others.join(' · ')}
+                        {viaChild ? tr("📍 ของไลน์ย่อย: ") : tr("🔀 ใช้ร่วมกับ ")}{others.join(' · ')}
                       </div>
                     )}
                     {r.note && <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 3 }}>{r.note}</div>}

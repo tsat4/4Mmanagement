@@ -354,7 +354,7 @@ function ReviewCard({ v, def, onDone }) {
         {tr('ช่องกรอก')} {(v.form_schema?.fields || []).length} · {tr('ขั้นอนุมัติ')} {steps.length} · {tr('เปิดใบได้')}: {(v.start_roles || []).map(roleLabel).join(', ') || '—'}
       </div>
       <StepFlow steps={f.steps} style={{ marginBottom: 8 }} />
-      {steps.map((s, i) => <div key={s.key || i} style={{ fontSize: 12, color: 'var(--text2)' }}>{i + 1}. {s.label} — {ASSIGNEE_RULES.find(r => r.rule === s.assignee?.rule)?.label || '?'} {s.assignee?.perm ? `(${s.assignee.perm} · ${s.assignee.unit === 'instance' ? tr('ส่วนงานผู้เปิด') : s.assignee.unit})` : ''}{s.assignee?.profile_name ? `(${s.assignee.profile_name})` : ''}</div>)}
+      {steps.map((s, i) => <div key={s.key || i} style={{ fontSize: 12, color: 'var(--text2)' }}>{i + 1}. {s.label} — {tr(ASSIGNEE_RULES.find(r => r.rule === s.assignee?.rule)?.label) || '?'} {s.assignee?.perm ? `(${s.assignee.perm} · ${s.assignee.unit === 'instance' ? tr('ส่วนงานผู้เปิด') : s.assignee.unit})` : ''}{s.assignee?.profile_name ? `(${s.assignee.profile_name})` : ''}</div>)}
       <div style={{ marginTop: 10 }}><WfFormFields form={v.form_schema} data={{}} readOnly /></div>
       <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap', alignItems: 'end' }}>
         <div style={{ flex: '1 1 240px' }}><Field label={tr('หมายเหตุ / เหตุผลส่งกลับ')}><input value={note} onChange={e => setNote(e.target.value)} style={inp} /></Field></div>

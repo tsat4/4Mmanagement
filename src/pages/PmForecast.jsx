@@ -213,8 +213,8 @@ export default function PmForecast() {
       <PageHeader
         title={tr('PM ล่วงหน้า (Planner)')} icon="🔧"
         sub={tab === 'due'
-          ? 'คาดวันที่จะต้อง PM ล่วงหน้า + buffer ที่ต้องผลิตเผื่อ ก่อนเครื่องหยุด · sync ให้วางแผน/ผลิตเตรียมตัว'
-          : 'ยอดผลิตสะสมของอุปกรณ์แต่ละตัว — ฐานของ PM แบบนับยอดผลิต (condition-based) แทนรอบเวลา'}
+          ? tr("คาดวันที่จะต้อง PM ล่วงหน้า + buffer ที่ต้องผลิตเผื่อ ก่อนเครื่องหยุด · sync ให้วางแผน/ผลิตเตรียมตัว")
+          : tr("ยอดผลิตสะสมของอุปกรณ์แต่ละตัว — ฐานของ PM แบบนับยอดผลิต (condition-based) แทนรอบเวลา")}
         tabs={[{ key: 'due', label: 'PM ที่จะครบกำหนด' }, { key: 'usage', label: 'ยอดผลิตสะสมรายอุปกรณ์' }]}
         tab={tab} onTab={setTab}
         actions={<button type="button" className="pg-btn" onClick={load} style={{ cursor: 'pointer' }}>{tr('รีเฟรช')}</button>}
@@ -247,7 +247,7 @@ export default function PmForecast() {
           <option value="window">{tr('เข้า window แล้ว (')}{windowCount})</option>
           <option value="later">{tr('ยังไม่ถึง window (')}{rows.filter(STATUS_KEEP.later).length})</option>
         </select>
-        <SearchInput value={fQ} onChange={setFQ} fields="ไลน์ / อุปกรณ์" />
+        <SearchInput value={fQ} onChange={setFQ} fields={tr("ไลน์ / อุปกรณ์")} />
         <span className="filter-count">{tr('แสดง')} {shown.length} {tr('จาก')} {rows.length}</span>
         {droppedNoLine > 0 && <span className="filter-count" style={{ color: '#f59a3f' }} title={tr('ชื่อไลน์ของแผนไม่ตรงทะเบียนไลน์ผลิต — กรองตามไลน์ไม่ได้')}>{tr('⚠ อีก')} {droppedNoLine} {tr('แผนไลน์ไม่ตรงทะเบียน')}</span>}
         {filtered && <button type="button" onClick={clearFilters} style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', color: 'var(--text2)', borderRadius: 'var(--r-md)', padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}>{tr('ล้างตัวกรอง')}</button>}
@@ -275,10 +275,10 @@ export default function PmForecast() {
                   return (
                     <tr key={p.id} style={{ borderTop: '1px solid var(--border)', background: rowBg }}>
                       <td style={{ padding: '8px 10px' }}><b style={{ color: 'var(--text)' }}>{r.line}</b><div style={{ fontSize: 11, color: 'var(--muted)' }}>{r.eqName}</div></td>
-                      <td style={{ padding: '8px 10px', whiteSpace: 'nowrap' }}>{r.isUsage ? `📊 ${p.usage_metric || 'shot'}` : '🗓 เวลา'}</td>
+                      <td style={{ padding: '8px 10px', whiteSpace: 'nowrap' }}>{r.isUsage ? `📊 ${p.usage_metric || 'shot'}` : tr("🗓 เวลา")}</td>
                       <td style={{ padding: '8px 10px', whiteSpace: 'nowrap' }}>
                         {r.isUsage
-                          ? <span style={{ fontFamily: 'monospace' }}>{Number(r.accumUsage).toLocaleString()}/{Number(p.usage_threshold).toLocaleString()}<div style={{ fontSize: 11, color: 'var(--muted)' }}>~{Math.round(r.dailyRate).toLocaleString()}{tr('/วัน (')}{r.rateSource === 'forecast' ? 'forecast' : 'จริง'})</div></span>
+                          ? <span style={{ fontFamily: 'monospace' }}>{Number(r.accumUsage).toLocaleString()}/{Number(p.usage_threshold).toLocaleString()}<div style={{ fontSize: 11, color: 'var(--muted)' }}>~{Math.round(r.dailyRate).toLocaleString()}{tr('/วัน (')}{r.rateSource === 'forecast' ? 'forecast' : tr("จริง")})</div></span>
                           : <span style={{ color: 'var(--muted)' }}>{tr('รอบ')} {p.interval_days} {tr('วัน')}</span>}
                       </td>
                       <td style={{ padding: '8px 10px', fontWeight: 700, color: r.overdue ? 'var(--red)' : r.inWindow ? '#f59a3f' : 'var(--text)', whiteSpace: 'nowrap' }}>{fmtThai(r.projected)}</td>

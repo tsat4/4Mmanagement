@@ -182,7 +182,7 @@ export default function QaPieceStepper({
       {/* ป้ายสถานะจากตัวเดินกฎ */}
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
         <span style={{ fontWeight: 800, fontSize: 14 }}>
-          {state === 'accepted' ? '✅ ยอมรับแล้ว' : state === 'await_action' ? '🚨 รอ action แก้ไข' : `🔩 ${tr("ชิ้นที่")} ${seq?.nextPiece ?? 1}`}
+          {state === 'accepted' ? tr("✅ ยอมรับแล้ว") : state === 'await_action' ? tr("🚨 รอ action แก้ไข") : `🔩 ${tr("ชิ้นที่")} ${seq?.nextPiece ?? 1}`}
         </span>
         <Chip label={`${tr("รอบที่")} ${seq?.round ?? 1}`} color="#6b7280" />
         {seq?.alarmCount > 0 && <Chip label={`alarm ${seq.alarmCount} ${tr("ครั้ง")}`} color="#ef4444" />}
@@ -193,7 +193,7 @@ export default function QaPieceStepper({
       {(pieces?.length > 0 || actions?.length > 0) && (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10, fontSize: 11.5 }}>
           {[...(pieces || [])].sort((a, b) => a.piece_no - b.piece_no).map(p => (
-            <span key={p.id || p.piece_no} title={p.failed_items?.length ? `${tr("ตก")}: ${p.failed_items.map(f => `#${f.balloon_no} ${f.characteristic}`).join(' · ')}${p.remark ? `\n${p.remark}` : ''}` : 'ผ่านทุกจุด'}
+            <span key={p.id || p.piece_no} title={p.failed_items?.length ? `${tr("ตก")}: ${p.failed_items.map(f => `#${f.balloon_no} ${f.characteristic}`).join(' · ')}${p.remark ? `\n${p.remark}` : ''}` : tr("ผ่านทุกจุด")}
               style={{ padding: '3px 9px', borderRadius: 'var(--r-pill)', fontWeight: 700,
                 background: p.result === 'pass' ? 'rgba(34,197,94,0.14)' : 'rgba(239,68,68,0.14)',
                 color: p.result === 'pass' ? '#22c55e' : '#ef4444', border: `1px solid ${p.result === 'pass' ? '#22c55e55' : '#ef444455'}` }}>
@@ -305,13 +305,13 @@ export default function QaPieceStepper({
                       {['ok', 'ng'].map(k => (
                         <button key={k} className="tbtn" onClick={() => setD(i.id, { judge: k })}
                           style={{ ...btn(d.judge === k ? JUDGE[k].color : 'var(--bg2)', d.judge === k ? '#fff' : JUDGE[k].color, { padding: isMobile ? '9px 12px' : '6px 10px', borderColor: JUDGE[k].color }) }}>
-                          {k === 'ok' ? '✓ ผ่าน' : '✕ ไม่ผ่าน'}
+                          {k === 'ok' ? tr("✓ ผ่าน") : tr("✕ ไม่ผ่าน")}
                         </button>
                       ))}
                     </div>
                   )}
                   {needValue && j && (
-                    <span style={{ fontSize: 12, fontWeight: 700, color: JUDGE[j].color, whiteSpace: 'nowrap' }}>{j === 'na' ? 'ข้าม' : `${tr("อัตโนมัติ")}: ${JUDGE[j].label}`}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: JUDGE[j].color, whiteSpace: 'nowrap' }}>{j === 'na' ? tr("ข้าม") : `${tr("อัตโนมัติ")}: ${JUDGE[j].label}`}</span>
                   )}
                   {/* จุดคำนวณข้ามเองเมื่อจุด A/B ถูกข้าม — ไม่มีปุ่มข้ามของตัวเอง */}
                   {!calcOf(i) && (<button className="tbtn" title={tr('ไม่ได้ตรวจจุดนี้ในชิ้นนี้')} onClick={() => setD(i.id, { judge: d.judge === 'na' ? null : 'na', value: d.judge === 'na' ? d.value : '' })}
@@ -328,7 +328,7 @@ export default function QaPieceStepper({
             <button disabled={busy} onClick={passAllAttr} style={btn('var(--bg3)', 'var(--text2)')} title={tr('ติ๊กผ่านให้จุดที่ยังไม่ตอบ (ยกเว้นจุดที่ต้องกรอกค่าวัด)')}>{tr('✓ ผ่านทุกจุดที่เหลือ')}</button>
             <span style={{ flex: 1 }} />
             <span style={{ fontSize: 12, color: result === 'fail' ? '#ef4444' : result === 'pass' ? '#22c55e' : 'var(--muted)', fontWeight: 700 }}>
-              {result === 'fail' ? `${tr("ชิ้นนี้ตก")} ${failedItems.length} ${tr("จุด")}` : result === 'pass' ? 'ชิ้นนี้ผ่านทุกจุด' : `${tr("เหลืออีก")} ${missing.length} ${tr("จุด")}`}
+              {result === 'fail' ? `${tr("ชิ้นนี้ตก")} ${failedItems.length} ${tr("จุด")}` : result === 'pass' ? tr("ชิ้นนี้ผ่านทุกจุด") : `${tr("เหลืออีก")} ${missing.length} ${tr("จุด")}`}
             </span>
             {/* 🔴 ตรวจไม่ครบ = บันทึกไม่ได้ แต่ปุ่มต้องกดได้เพื่อบอกเหตุ (19/11 · คำสั่ง user "กดบันทึกต้องแจ้งว่าบันทึกไม่ได้
                 ขาดข้อไหน และเด้งไปหาข้อนั้น") — เดิม disabled เงียบ ⇒ กดแล้วไม่มีอะไรเกิด · ด่านจริงอยู่ submitPiece */}

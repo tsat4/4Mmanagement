@@ -197,7 +197,7 @@ export default function PlanTimeline({
                                 {run.cutLeft && '↩ '}{isTrial && '🧪 '}{b.pairedWithPrev && '👯 '}#{b.seq} {lotKeyText(b.lot)}
                               </div>
                               <div style={{ fontSize: 11, color: 'var(--text2)', whiteSpace: 'nowrap', pointerEvents: 'none' }}>
-                                {isUnknown ? '⚠ ไม่มี CT'
+                                {isUnknown ? tr("⚠ ไม่มี CT")
                                   /* ยังไม่จบในกะนี้ — ในโหมดกะเดียวไม่มี "กะถัดไป" ให้ไหลไป จึงบอกเวลาตามเดิม */
                                   : run.cutRight ? (multi ? `${qtyText(b.lot.qty_plan)} ${tr("ชิ้น · ทำต่อกะถัดไป")} ↪`
                                                           : `${qtyText(b.lot.qty_plan)} ${tr("ชิ้น")} · ${fmtMin(b.runMin)}`)

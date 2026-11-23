@@ -133,7 +133,7 @@ export default function FixtureClassify({ machines, mapKeys, canEdit, lines = []
         {/* <LineSelect> — โชว์เฉพาะไลน์ที่มีรายการเสนอ (§5.3 ข้อ 6) · ชื่อไลน์ของเครื่องที่ไม่อยู่ในทะเบียนไลน์แยก optgroup ⚠ ไม่หายเงียบ · 2026-09-07 */}
         <LineSelect lines={lines.filter(l => lineOpts.includes(l.name))} value={lineF} onChange={setLineF} placeholder={ALL.line} includeRetired
                     extraGroups={[{ label: '⚠ ไลน์ที่ไม่มีในทะเบียนไลน์', options: lineOpts.filter(n => !lines.some(l => l.name === n)).map(n => ({ value: n, label: n })) }]} />
-        <SearchInput value={q} onChange={setQ} fields="เลขเครื่อง / ชื่อ" />
+        <SearchInput value={q} onChange={setQ} fields={tr("เลขเครื่อง / ชื่อ")} />
         <span className="spacer" />
         {hiddenCount > 0 && (
           <span className="filter-count">{tr('ซ่อนอยู่')} {hiddenCount} {tr('รายการ (ไม่ตรงตัวกรอง)')}</span>
@@ -191,7 +191,7 @@ export default function FixtureClassify({ machines, mapKeys, canEdit, lines = []
                   style={{ background: picked.size ? '#16a34a' : 'var(--bg2)', color: picked.size ? '#fff' : 'var(--muted)',
                            border: 'none', borderRadius: 'var(--r-md)', padding: '8px 18px', fontSize: 13, fontWeight: 700,
                            cursor: picked.size && !saving ? 'pointer' : 'not-allowed' }}>
-            {saving ? 'กำลังบันทึก…' : `${tr("บันทึก")} ${picked.size} ${tr("รายการ")}`}
+            {saving ? tr("กำลังบันทึก…") : `${tr("บันทึก")} ${picked.size} ${tr("รายการ")}`}
           </button>
         </div>
       )}

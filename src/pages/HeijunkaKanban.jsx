@@ -314,7 +314,7 @@ function StoreBoardView({ rounds, deliveries, view, kanbanStd, onConfirm, confir
                               </div>
                               <div style={{ textAlign: 'right', flexShrink: 0 }}>
                                 <div style={{ fontWeight: 800, color: p.netTotal > 0 ? 'var(--amber)' : 'var(--green)' }}>
-                                  {p.netTotal <= 0 ? '✓ stock พอ' : per ? `${p.cards} ${tr("ใบ")}` : `${fmt(p.netTotal)} ${p.uom}`}
+                                  {p.netTotal <= 0 ? tr("✓ stock พอ") : per ? `${p.cards} ${tr("ใบ")}` : `${fmt(p.netTotal)} ${p.uom}`}
                                 </div>
                                 <div style={{ color: 'var(--muted)', fontSize: 11 }}>{tr('ต้องใช้')} {fmt(p.qty)}{p.netTotal > 0 && p.netTotal !== p.qty ? ` · NET ${fmt(p.netTotal)}` : ''}</div>
                               </div>
@@ -570,7 +570,7 @@ function DeliveryTimelineBoard({ rounds, deliveries, view, kanbanStd, fmt, lineM
                         const per = kanbanStd[p.mat_no];
                         return (
                           <span key={p.mat_no} style={chip('var(--bg2)', 'var(--text2)')}>
-                            <span style={{ fontFamily: 'monospace', color: 'var(--blue)' }}>{p.mat_no}</span> · {p.netTotal <= 0 ? '✓ stock พอ' : per ? `${p.cards} ${tr("ใบ")}` : `${fmt(p.netTotal)} ${p.uom}`}
+                            <span style={{ fontFamily: 'monospace', color: 'var(--blue)' }}>{p.mat_no}</span> · {p.netTotal <= 0 ? tr("✓ stock พอ") : per ? `${p.cards} ${tr("ใบ")}` : `${fmt(p.netTotal)} ${p.uom}`}
                           </span>
                         );
                       })}
@@ -650,7 +650,7 @@ function DeliveryRoundsPanel({ rounds, deliveries, onConfirm, confirming, onRece
                         return (
                           <div style={{ fontSize: 11, marginTop: 2, color: tp.trips > 1 ? 'var(--amber)' : 'var(--muted)', fontWeight: tp.trips > 1 ? 700 : 400 }}
                             title={tp.assigned ? tr('คิดจากรถของคนขับที่มอบหมายรอบนี้ (หน้า มอบหมายขนส่ง)') : (tp.capFallback ? tr('รถของคนขับที่มอบหมายยังไม่ตั้งความจุ — คิดจากคันจุมากสุดในระบบแทน (ตั้งจุที่หน้า มอบหมายขนส่ง)') : tr('ยังไม่มอบหมายคนขับ — คิดจากรถที่จุมากสุด'))}>
-                            {tp.veh.icon} {alloc.totalKanban} {tr('กล่อง ÷ จุ')} {tp.cap} = <b>{tp.trips} {tr('เที่ยว')}</b>{tp.assigned ? '' : (tp.capFallback ? ' (รถคนขับยังไม่ตั้งจุ)' : ' (ยังไม่มอบหมายรถ)')}
+                            {tp.veh.icon} {alloc.totalKanban} {tr('กล่อง ÷ จุ')} {tp.cap} = <b>{tp.trips} {tr('เที่ยว')}</b>{tp.assigned ? '' : (tp.capFallback ? tr(" (รถคนขับยังไม่ตั้งจุ)") : tr(" (ยังไม่มอบหมายรถ)"))}
                           </div>
                         );
                       })()}
@@ -857,7 +857,7 @@ function AccCard({ a, fmt }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 6 }}>
         <span style={{ fontSize: 18, fontWeight: 900, color: 'var(--text)' }}>{fmt(a.pending_qty)}</span>
         <span style={{ fontSize: 11, color: a.lot ? 'var(--muted)' : 'var(--amber)', fontWeight: a.lot ? 400 : 800 }}>
-          {a.lot ? `/ ${fmt(a.lot)} ${tr("ล็อต")}` : 'ยังไม่ตั้ง lot'}
+          {a.lot ? `/ ${fmt(a.lot)} ${tr("ล็อต")}` : tr("ยังไม่ตั้ง lot")}
         </span>
       </div>
       {a.lot && (
@@ -1426,13 +1426,13 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
                · ใบที่ส่งแล้วโชว์ว่าผ่านด่านทางไหน (สแกน / ไลน์ยังไม่ตั้งจุด / ปลดบล็อก) ห้ามซ่อน override */
             const gate = w.status === 'delivered' && w.delivered_gate ? DELIVER_GATES[w.delivered_gate] : null;
             const gateMeta = gate ? `${gate.icon} ${w.delivered_gate === 'scanned' ? (w.delivered_point_name || gate.label) : gate.label}${w.delivered_gate === 'override' && w.delivered_override_reason ? ` — ${w.delivered_override_reason}` : ''}` : '';
-            const nextLabel = w.status === 'preparing' ? '📍 ถึงไลน์แล้ว · สแกนจุดส่ง' : w.status === 'pending' ? '🔍 เริ่มเตรียม · สแกนพาร์ท' : st.next;
+            const nextLabel = w.status === 'preparing' ? tr("📍 ถึงไลน์แล้ว · สแกนจุดส่ง") : w.status === 'pending' ? tr("🔍 เริ่มเตรียม · สแกนพาร์ท") : st.next;
             const pickMeta = w.picked_qty != null && w.status !== 'pending'
               ? `${PICK_GATES[w.picked_gate]?.icon || '🔧'} ${tr("หยิบ")} ${fmt(w.picked_qty)}${isCoilUom(w.uom) ? ' kg' : ''}${Number(w.picked_qty) < Number(w.request_qty) ? ` / ${fmt(w.request_qty)} (${tr("ไม่ครบ")})` : ''}${w.stock_txn_ids?.length ? tr(' · ตัดสต็อกแล้ว') : (w.stock_txn_note ? ` · ⚠ ${w.stock_txn_note}` : '')}` : '';
             return (
               <QueueCard key={w.id} code={code} showImg img={imgOf(w.mat_no)}
                 name={w.part_name || w.point_name || 'ไลน์ขอเบิกเข้าไลน์'}
-                qty={fmt(w.request_qty)} unit={isCoilUom(w.uom) ? 'kg · จ่ายเป็นม้วน' : ''} qtyLabel={isCoilUom(w.uom) ? '🧲 coil ต้องใช้' : 'จำนวนที่ต้องส่ง'} destination={w.line_name}
+                qty={fmt(w.request_qty)} unit={isCoilUom(w.uom) ? 'kg · จ่ายเป็นม้วน' : ''} qtyLabel={isCoilUom(w.uom) ? tr("🧲 coil ต้องใช้") : tr("จำนวนที่ต้องส่ง")} destination={w.line_name}
                 statusLabel={st.label} statusColor={st.color} statusBg={st.bg} statusBorder={st.border}
                 actionLabel={canOperate ? nextLabel : null} busy={busy === w.id} onAction={() => onAdvanceWip(w)}
                 footerExtra={canOperate && onCancelWip && orphanOrderReq(w) ? (
@@ -1499,9 +1499,9 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
             const needAction = !isConf && (status.label === '⏳ กำลังเตรียม' || status.label === '🔴 ค้างส่ง');
             return (
               <QueueCard key={r.id} code={`${r.shift === 'night' ? '🌙' : '☀️'} ${tr("รอบ")} ${r.round_no}`} name={r.line_name}
-                qty={alloc.totalKanban} unit={tr("การ์ด")} qtyLabel="คัมบังในรอบนี้" destination={r.line_name}
+                qty={alloc.totalKanban} unit={tr("การ์ด")} qtyLabel={tr("คัมบังในรอบนี้")} destination={r.line_name}
                 statusLabel={status.label} statusColor={status.top} statusBg={status.bg} statusBorder={status.border}
-                actionLabel={canOperate ? (needAction ? '✅ ยืนยันส่งแล้ว' : (isConf && !isReceived ? '✔️ รับครบ' : null)) : null}
+                actionLabel={canOperate ? (needAction ? tr("✅ ยืนยันส่งแล้ว") : (isConf && !isReceived ? tr("✔️ รับครบ") : null)) : null}
                 busy={confirming === r.id}
                 onAction={() => needAction ? onConfirm(r, alloc.parts) : onReceive(r, alloc.parts, 'full')}
                 rows={[
@@ -1533,23 +1533,23 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
                🔴 อ่านกฎไม่ได้ (`lotMats === null`) = **ไม่รู้** ⇒ เขียนบนการ์ดตรงๆ ห้ามเดาข้างใดข้างหนึ่ง */
             const byLot = lotMats ? lotMats.has(String(lot.child_mat_no || '').trim()) : null;
             const orphan = byLot === false && inflowRules ? lotOrphanRisk(lot, inflowRules) : false;
-            const doneLabel = byLot === null ? '✔ ปิดใบล็อต (ยังอ่านกฎรับเข้าไม่ได้)'
+            const doneLabel = byLot === null ? tr("✔ ปิดใบล็อต (ยังอ่านกฎรับเข้าไม่ได้)")
               : byLot ? st.nextLabel
-              : orphan ? '⚠️ ปิดใบล็อต (ของจะไม่เข้าคลัง)' : '✔ ปิดใบล็อต · ไม่ลงสต็อกที่นี่';
+              : orphan ? tr("⚠️ ปิดใบล็อต (ของจะไม่เข้าคลัง)") : tr("✔ ปิดใบล็อต · ไม่ลงสต็อกที่นี่");
             /* 🔴 ใบที่ออกก่อนสลับโหมด = ไม่มีใบรับเข้ารองรับ ⇒ ปิดแล้วของหายจากบัญชี
                ห้ามบอกว่า "ของเข้าคิวแล้ว" โดยไม่ดูว่าใบนี้ออกตอนไหน (`lotOrphanRisk` ข้างบน) */
             const inflowNote = lot.status !== 'producing' ? null
-              : byLot === null ? '⚠️ อ่านกฎรับเข้าคลังไม่ได้ — ยังบอกไม่ได้ว่าของเข้าทางไหน'
-              : orphan ? '🔴 ใบนี้ออกก่อนเปลี่ยนวิธีรับเข้า — ไม่มีใบ "รอรับเข้า" รองรับ · ปิดแล้วของจะไม่เข้าคลัง แจ้งแอดมินก่อนกด'
+              : byLot === null ? tr("⚠️ อ่านกฎรับเข้าคลังไม่ได้ — ยังบอกไม่ได้ว่าของเข้าทางไหน")
+              : orphan ? tr("🔴 ใบนี้ออกก่อนเปลี่ยนวิธีรับเข้า — ไม่มีใบ \"รอรับเข้า\" รองรับ · ปิดแล้วของจะไม่เข้าคลัง แจ้งแอดมินก่อนกด")
               /* 🔴 เขียนเท่าที่รู้จริง — กฎที่ถูกปิด (⚫) ไม่โผล่ในชุดนี้ (select กรอง is_active) ⇒
                  ห้ามฟันธงว่า "ของเข้าคิวแล้ว" · บอกว่าเข้าตามกฎของพาร์ท แล้วให้ไปดูที่คิวจริง */
-              : byLot ? null : '📥 ของเข้าคลังตามกฎรับเข้าของพาร์ทนี้ (ดูที่ "สต็อกในไลน์ › รอรับเข้า") — ปุ่มนี้แค่ปิดใบ ไม่ลงสต็อก';
+              : byLot ? null : tr("📥 ของเข้าคลังตามกฎรับเข้าของพาร์ทนี้ (ดูที่ \"สต็อกในไลน์ › รอรับเข้า\") — ปุ่มนี้แค่ปิดใบ ไม่ลงสต็อก");
             return (
               <QueueCard key={lot.id} code={lot.child_mat_no} name={lot.part_name} showImg img={imgOf(lot.child_mat_no)}
                 /* 🔴 26/10 (feedback สโตร์) — ช่องนี้คือ **ไลน์ที่ผลิตล็อตนี้** ไม่ใช่ "ปลายทาง"
                    ปลายทางจริงของของที่ผลิตเสร็จ = คลังตามกฎรับเข้า (STORE) · ป้ายเดิมอ่านแล้วเข้าใจผิดว่า
                    ของจะไปกองที่ไลน์ ซึ่งตรงกับอาการที่สโตร์แจ้งพอดี */
-                qty={fmt(lot.lot_qty)} unit={tr("ชิ้น")} qtyLabel="ขนาดล็อต" destLabel="ไลน์ผลิต" destination={lot.source_line || 'ของซื้อ'}
+                qty={fmt(lot.lot_qty)} unit={tr("ชิ้น")} qtyLabel={tr("ขนาดล็อต")} destLabel={tr("ไลน์ผลิต")} destination={lot.source_line || tr("ของซื้อ")}
                 statusLabel={st.label} statusColor={st.color} statusBg={st.bg} statusBorder={st.border}
                 actionLabel={canOperate ? (st.next === 'done' ? doneLabel : st.nextLabel) : null}
                 busy={busy === lot.id} onAction={() => onAdvanceLot(lot, st.next)}
@@ -1574,23 +1574,23 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
                🔴 อ่านกฎไม่ได้ (`lotMats === null`) = **ไม่รู้** ⇒ เขียนบนการ์ดตรงๆ ห้ามเดาข้างใดข้างหนึ่ง */
             const byLot = lotMats ? lotMats.has(String(lot.child_mat_no || '').trim()) : null;
             const orphan = byLot === false && inflowRules ? lotOrphanRisk(lot, inflowRules) : false;
-            const doneLabel = byLot === null ? '✔ ปิดใบล็อต (ยังอ่านกฎรับเข้าไม่ได้)'
+            const doneLabel = byLot === null ? tr("✔ ปิดใบล็อต (ยังอ่านกฎรับเข้าไม่ได้)")
               : byLot ? st.nextLabel
-              : orphan ? '⚠️ ปิดใบล็อต (ของจะไม่เข้าคลัง)' : '✔ ปิดใบล็อต · ไม่ลงสต็อกที่นี่';
+              : orphan ? tr("⚠️ ปิดใบล็อต (ของจะไม่เข้าคลัง)") : tr("✔ ปิดใบล็อต · ไม่ลงสต็อกที่นี่");
             /* 🔴 ใบที่ออกก่อนสลับโหมด = ไม่มีใบรับเข้ารองรับ ⇒ ปิดแล้วของหายจากบัญชี
                ห้ามบอกว่า "ของเข้าคิวแล้ว" โดยไม่ดูว่าใบนี้ออกตอนไหน (`lotOrphanRisk` ข้างบน) */
             const inflowNote = lot.status !== 'producing' ? null
-              : byLot === null ? '⚠️ อ่านกฎรับเข้าคลังไม่ได้ — ยังบอกไม่ได้ว่าของเข้าทางไหน'
-              : orphan ? '🔴 ใบนี้ออกก่อนเปลี่ยนวิธีรับเข้า — ไม่มีใบ "รอรับเข้า" รองรับ · ปิดแล้วของจะไม่เข้าคลัง แจ้งแอดมินก่อนกด'
+              : byLot === null ? tr("⚠️ อ่านกฎรับเข้าคลังไม่ได้ — ยังบอกไม่ได้ว่าของเข้าทางไหน")
+              : orphan ? tr("🔴 ใบนี้ออกก่อนเปลี่ยนวิธีรับเข้า — ไม่มีใบ \"รอรับเข้า\" รองรับ · ปิดแล้วของจะไม่เข้าคลัง แจ้งแอดมินก่อนกด")
               /* 🔴 เขียนเท่าที่รู้จริง — กฎที่ถูกปิด (⚫) ไม่โผล่ในชุดนี้ (select กรอง is_active) ⇒
                  ห้ามฟันธงว่า "ของเข้าคิวแล้ว" · บอกว่าเข้าตามกฎของพาร์ท แล้วให้ไปดูที่คิวจริง */
-              : byLot ? null : '📥 ของเข้าคลังตามกฎรับเข้าของพาร์ทนี้ (ดูที่ "สต็อกในไลน์ › รอรับเข้า") — ปุ่มนี้แค่ปิดใบ ไม่ลงสต็อก';
+              : byLot ? null : tr("📥 ของเข้าคลังตามกฎรับเข้าของพาร์ทนี้ (ดูที่ \"สต็อกในไลน์ › รอรับเข้า\") — ปุ่มนี้แค่ปิดใบ ไม่ลงสต็อก");
             return (
               <QueueCard key={lot.id} code={lot.child_mat_no} name={lot.part_name} showImg img={imgOf(lot.child_mat_no)}
                 /* 🔴 26/10 (feedback สโตร์) — ช่องนี้คือ **ไลน์ที่ผลิตล็อตนี้** ไม่ใช่ "ปลายทาง"
                    ปลายทางจริงของของที่ผลิตเสร็จ = คลังตามกฎรับเข้า (STORE) · ป้ายเดิมอ่านแล้วเข้าใจผิดว่า
                    ของจะไปกองที่ไลน์ ซึ่งตรงกับอาการที่สโตร์แจ้งพอดี */
-                qty={fmt(lot.lot_qty)} unit={tr("ชิ้น")} qtyLabel="ขนาดล็อต" destLabel="ไลน์ผลิต" destination={lot.source_line || 'ของซื้อ'}
+                qty={fmt(lot.lot_qty)} unit={tr("ชิ้น")} qtyLabel={tr("ขนาดล็อต")} destLabel={tr("ไลน์ผลิต")} destination={lot.source_line || tr("ของซื้อ")}
                 statusLabel={st.label} statusColor={st.color} statusBg={st.bg} statusBorder={st.border}
                 actionLabel={canOperate ? (st.next === 'done' ? doneLabel : st.nextLabel) : null}
                 busy={busy === lot.id} onAction={() => onAdvanceLot(lot, st.next)}
@@ -1610,7 +1610,7 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
             <div style={{ fontSize: 12, color: 'var(--red)', fontWeight: 700, marginBottom: 10 }}>{tr('🔴 โหลดคิวจัดซื้อไม่ได้ —')} {purchaseErr}</div>
           )}
           {purGroups.length === 0 ? <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
-            {purchaseRequests.length === 0 ? 'ยังไม่มีรายการจัดซื้อ — เกิดอัตโนมัติเมื่อของซื้อ (300/500) ในสโตร์ไม่พอต่อแผนผลิต' : `${tr("ไม่มีรายการที่ตรงกับตัวกรอง")}${q ? ` / ${tr("คำค้น")} "${q}"` : ''}`}
+            {purchaseRequests.length === 0 ? tr("ยังไม่มีรายการจัดซื้อ — เกิดอัตโนมัติเมื่อของซื้อ (300/500) ในสโตร์ไม่พอต่อแผนผลิต") : `${tr("ไม่มีรายการที่ตรงกับตัวกรอง")}${q ? ` / ${tr("คำค้น")} "${q}"` : ''}`}
           </div> : (<>
             <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 10 }}>
               {tr("รวมยอดตามพาร์ท")} · <b style={{ color: 'var(--text)' }}>{purGroups.length} {tr('พาร์ท')}</b> {tr('จาก')} {fmt(purShown)} {tr("ใบ")}
@@ -1632,7 +1632,7 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
                 const multiSup  = Number(g.supplier_count) > 1;
                 return (
                   <QueueCard key={`${g.mat_no}|${g.status}`} code={g.mat_no} name={g.part_name} showImg img={imgOf(g.mat_no)}
-                    qty={fmt(g.total_qty)} unit={tr("ชิ้น")} qtyLabel="ยอดรวมทุกใบ"
+                    qty={fmt(g.total_qty)} unit={tr("ชิ้น")} qtyLabel={tr("ยอดรวมทุกใบ")}
                     destination={multiDest ? `${g.dest_count} ${tr("ไลน์ (กางดูในปุ่มรวมยอด")})` : (g.dest_line || '—')}
                     statusLabel={many ? `${st.label} · ${fmt(g.slips)} ${tr("ใบ")}` : st.label}
                     statusColor={st.color} statusBg={st.bg} statusBorder={st.border}
@@ -1661,10 +1661,10 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
             const issued = r.status === 'issued';
             return (
               <QueueCard key={r.id} code={r.raw_mat_no} name={r.part_name} showImg img={imgOf(r.raw_mat_no)}
-                qty={fmt(r.qty)} unit="" qtyLabel="จำนวนที่ต้องจ่าย" destination={parentLot?.source_line || '—'}
-                statusLabel={issued ? '✔ จ่ายแล้ว' : '🆕 รอจ่าย'} statusColor={issued ? 'var(--green)' : 'var(--amber)'}
+                qty={fmt(r.qty)} unit="" qtyLabel={tr("จำนวนที่ต้องจ่าย")} destination={parentLot?.source_line || '—'}
+                statusLabel={issued ? tr("✔ จ่ายแล้ว") : tr("🆕 รอจ่าย")} statusColor={issued ? 'var(--green)' : 'var(--amber)'}
                 statusBg={issued ? 'var(--green-dim)' : 'var(--amber-dim)'} statusBorder={issued ? 'var(--green-line)' : 'var(--amber-line)'}
-                actionLabel={issued || !canOperate ? null : 'จ่ายวัตถุดิบ'} busy={busy === r.id} onAction={() => onIssueRaw(r)}
+                actionLabel={issued || !canOperate ? null : tr("จ่ายวัตถุดิบ")} busy={busy === r.id} onAction={() => onIssueRaw(r)}
                 rows={[{ k: 'ใช้กับ', v: r.lot_request_id ? parentLot?.child_mat_no || null : null }]} />
             );
           }} />}
@@ -1686,7 +1686,7 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
                 const st = RACK_STATUS[r.status] || RACK_STATUS.requested;
                 return (
                   <QueueCard key={r.id} code={r.container_name || 'ภาชนะ'} name={null}
-                    qty={r.qty} unit={tr("ใบ")} qtyLabel="จำนวนที่เรียก" destination={r.line_name}
+                    qty={r.qty} unit={tr("ใบ")} qtyLabel={tr("จำนวนที่เรียก")} destination={r.line_name}
                     statusLabel={st.label} statusColor={st.color} statusBg={st.bg} statusBorder={st.border}
                     actionLabel={null} busy={busy === r.id}
                     meta={r.note || ''} />
@@ -1701,8 +1701,8 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
                 const issued = p.status === 'issued';
                 return (
                   <QueueCard key={p.id} code={p.packaging_code} name={p.packaging_name}
-                    qty={p.qty} unit="" qtyLabel="จำนวนที่เบิก" destination={p.source_line || '—'}
-                    statusLabel={issued ? '✔ จ่ายแล้ว' : '🆕 รอจ่าย'} statusColor={issued ? 'var(--green)' : 'var(--amber)'}
+                    qty={p.qty} unit="" qtyLabel={tr("จำนวนที่เบิก")} destination={p.source_line || '—'}
+                    statusLabel={issued ? tr("✔ จ่ายแล้ว") : tr("🆕 รอจ่าย")} statusColor={issued ? 'var(--green)' : 'var(--amber)'}
                     statusBg={issued ? 'var(--green-dim)' : 'var(--amber-dim)'} statusBorder={issued ? 'var(--green-line)' : 'var(--amber-line)'}
                     actionLabel={null} busy={busy === p.id}
                     rows={[
@@ -1727,7 +1727,7 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
       {(store === 'ext' || store === 'other') && (<>
         {hiddenNote}
         {wipSection(store) || <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
-          {tr("ยังไม่มีใบเบิก")}{store === 'ext' ? 'ชิ้นส่วนซื้อ (3xx)' : 'ที่เลขพาร์ทไม่เข้ากลุ่ม'} — {tr("ใบเกิดจากไลน์กด \"📦 เบิก\" ใน")} Daily Report
+          {tr("ยังไม่มีใบเบิก")}{store === 'ext' ? tr("ชิ้นส่วนซื้อ (3xx)") : tr("ที่เลขพาร์ทไม่เข้ากลุ่ม")} — {tr("ใบเกิดจากไลน์กด \"📦 เบิก\" ใน")} Daily Report
         </div>}
       </>)}
   </>);
@@ -1744,7 +1744,7 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
         <FilterBar onClear={anyFilter ? clearFilters : undefined} clearKeep={['store']}>
 
           {leadFilters}
-          <SearchInput value={q} onChange={setQ} fields="รหัส / ชื่อพาร์ท / ไลน์" grow={false} />
+          <SearchInput value={q} onChange={setQ} fields={tr("รหัส / ชื่อพาร์ท / ไลน์")} grow={false} />
           {areaApplies && (() => {
           const lines = direction === 'out'
             ? [...wipRequests.map(r => r.line_name), ...rounds.map(r => r.line_name), ...lotRequests.map(l => l.source_line)]
@@ -1754,15 +1754,15 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
             ? [...wipRequests.map(r => r.mat_no), ...lotRequests.map(l => l.child_mat_no)]
             : lotRequests.map(l => l.child_mat_no);
           const storeOpts = [...new Set(mats.filter(Boolean).map(storeKey))].sort();
-          const sideLbl = direction === 'out' ? 'ต้นทาง' : 'ปลายทาง';
+          const sideLbl = direction === 'out' ? tr("ต้นทาง") : tr("ปลายทาง");
           return (<>
             <select value={storeSel} onChange={e => setStoreSel(e.target.value)} aria-label={`${tr("พื้นที่สโตร์")}${sideLbl}`}>
               <option value="">{sideLbl}{tr(': ทุกพื้นที่สโตร์')}</option>
-              {storeOpts.map(a => <option key={a} value={a}>{sideLbl}: 🏬 {a === '—' ? 'พาร์ทที่ยังไม่ตั้งที่จัดเก็บหลัก' : a}</option>)}
+              {storeOpts.map(a => <option key={a} value={a}>{sideLbl}: 🏬 {a === '—' ? tr("พาร์ทที่ยังไม่ตั้งที่จัดเก็บหลัก") : a}</option>)}
             </select>
             <select value={areaSel} onChange={e => setAreaSel(e.target.value)} aria-label={direction === 'out' ? tr('พื้นที่ปลายทาง') : tr('พื้นที่ต้นทาง')}>
               <option value="">{direction === 'out' ? tr('ปลายทาง: ทุกพื้นที่ผลิต') : tr('ต้นทาง: ทุกพื้นที่ผลิต')}</option>
-              {opts.map(a => <option key={a} value={a}>{direction === 'out' ? 'ปลายทาง' : 'ต้นทาง'}: {a === '—' ? 'ไลน์ที่ยังไม่ผูกพื้นที่ SAP' : a}</option>)}
+              {opts.map(a => <option key={a} value={a}>{direction === 'out' ? tr("ปลายทาง") : tr("ต้นทาง")}: {a === '—' ? tr("ไลน์ที่ยังไม่ผูกพื้นที่ SAP") : a}</option>)}
             </select>
           </>);
         })()}
@@ -1799,7 +1799,7 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
 
       {/* ── ค้นหา + สลับงานค้าง/ทั้งหมด (ใช้ได้ทุกแท็บ) ── */}
       <FilterBar bare style={{ marginBottom: 14 }}>
-        <SearchInput value={q} onChange={setQ} fields="รหัส / ชื่อพาร์ท / ไลน์" grow={false} />
+        <SearchInput value={q} onChange={setQ} fields={tr("รหัส / ชื่อพาร์ท / ไลน์")} grow={false} />
         {direction && (() => {
           const lines = direction === 'out'
             ? [...wipRequests.map(r => r.line_name), ...rounds.map(r => r.line_name), ...lotRequests.map(l => l.source_line)]
@@ -1809,15 +1809,15 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
             ? [...wipRequests.map(r => r.mat_no), ...lotRequests.map(l => l.child_mat_no)]
             : lotRequests.map(l => l.child_mat_no);
           const storeOpts = [...new Set(mats.filter(Boolean).map(storeKey))].sort();
-          const sideLbl = direction === 'out' ? 'ต้นทาง' : 'ปลายทาง';
+          const sideLbl = direction === 'out' ? tr("ต้นทาง") : tr("ปลายทาง");
           return (<>
             <select value={storeSel} onChange={e => setStoreSel(e.target.value)} aria-label={`${tr("พื้นที่สโตร์")}${sideLbl}`}>
               <option value="">{sideLbl}{tr(': ทุกพื้นที่สโตร์')}</option>
-              {storeOpts.map(a => <option key={a} value={a}>{sideLbl}: 🏬 {a === '—' ? 'พาร์ทที่ยังไม่ตั้งที่จัดเก็บหลัก' : a}</option>)}
+              {storeOpts.map(a => <option key={a} value={a}>{sideLbl}: 🏬 {a === '—' ? tr("พาร์ทที่ยังไม่ตั้งที่จัดเก็บหลัก") : a}</option>)}
             </select>
             <select value={areaSel} onChange={e => setAreaSel(e.target.value)} aria-label={direction === 'out' ? tr('พื้นที่ปลายทาง') : tr('พื้นที่ต้นทาง')}>
               <option value="">{direction === 'out' ? tr('ปลายทาง: ทุกพื้นที่ผลิต') : tr('ต้นทาง: ทุกพื้นที่ผลิต')}</option>
-              {opts.map(a => <option key={a} value={a}>{direction === 'out' ? 'ปลายทาง' : 'ต้นทาง'}: {a === '—' ? 'ไลน์ที่ยังไม่ผูกพื้นที่ SAP' : a}</option>)}
+              {opts.map(a => <option key={a} value={a}>{direction === 'out' ? tr("ปลายทาง") : tr("ต้นทาง")}: {a === '—' ? tr("ไลน์ที่ยังไม่ผูกพื้นที่ SAP") : a}</option>)}
             </select>
           </>);
         })()}
@@ -3186,13 +3186,13 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
       {/* 19/11 ops (Stock Management) = แถบในเนื้อหน้า ไม่ลอยทับ — วาดใน UnifiedStoreBoard ใต้แถบกรอง */}
       {!isOps && <StoreCallSiren />}
       {/* ⚠️ heijunka:operate seed ตั้งแต่ 2026-07-08 = ทุก role ณ ตอนนั้น — mtn/dept_admin ที่เพิ่มทีหลังไม่มีแถว */}
-      <ReadOnlyNote show={isOps && !canOperate} role={role} what="สั่งงาน/จัดคิวบนบอร์ด"
+      <ReadOnlyNote show={isOps && !canOperate} role={role} what={tr("สั่งงาน/จัดคิวบนบอร์ด")}
         permKey="heijunka:operate" />
       {/* Header — UI-STANDARD 2026-09-24: คำอธิบาย+ป้ายดูวันย้อนหลังอยู่ใน sub · ตัวกรองรวมเป็นแถบเดียว */}
       <PageHeader title={tr('บอร์ดคัมบัง (ทุกสโตร์) — Heijunka')} icon="🎴"
         tabs={isOps ? undefined : viewTabs} tab={viewMode} onTab={setViewMode}
         sub={<>
-          {tr("ความต้องการพาร์ทย่อย")}{isBackDate ? '' : 'ตามแผนผลิตวันนี้'} · {tr("แตกจาก BOM ของแต่ละ")} product
+          {tr("ความต้องการพาร์ทย่อย")}{isBackDate ? '' : tr("ตามแผนผลิตวันนี้")} · {tr("แตกจาก BOM ของแต่ละ")} product
           {/* ⚠️ ดูวันย้อนหลัง/ล่วงหน้าต้องเห็นชัด — รอบที่ยังไม่ยืนยันของวันเก่าจะขึ้น 🔴 ค้างส่ง ทั้งกระดาน
               ถ้าไม่ติดป้ายบอก คนอ่านจะเข้าใจว่าเป็นของวันนี้แล้ววิ่งไปตามงานที่ผ่านไปแล้ว */}
           {isBackDate && (
@@ -3448,7 +3448,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
                         {r.totalStock > 0 ? fmt(r.totalStock) : '—'}
                       </td>
                       <td style={{ padding: '8px 12px', borderTop: '1px solid var(--border)', textAlign: 'right', fontSize: 15, fontWeight: 900, color: stockCovered ? 'var(--green)' : 'var(--accent)' }}>
-                        {stockCovered ? '✓ พอ' : fmt(r.netTotal)} <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>{r.uom}</span>
+                        {stockCovered ? tr("✓ พอ") : fmt(r.netTotal)} <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>{r.uom}</span>
                       </td>
                       <td style={{ padding: '8px 12px', borderTop: '1px solid var(--border)', textAlign: 'right' }}>
                         {stockCovered
@@ -3525,7 +3525,7 @@ function ReceiveModal({ round, parts, mode, fmt, saving, onCancel, onSubmit }) {
     <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 24, width: 'min(440px,100%)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
         <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginBottom: 4, fontFamily: 'var(--font-display)' }}>
-          {mode === 'full' ? '✔️ ยืนยันรับของครบ' : '⚠️ บันทึกรับของไม่ครบ'}
+          {mode === 'full' ? tr("✔️ ยืนยันรับของครบ") : tr("⚠️ บันทึกรับของไม่ครบ")}
         </div>
         <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 16 }}>{round.line_name} {tr('· รอบ')} {round.round_no}</div>
 

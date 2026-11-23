@@ -293,7 +293,7 @@ export default function SparePartMaster({ parts = [], reload, fullName, role, my
 
   return (
     <div>
-      <ReadOnlyNote show={!canEdit && !canMove} role={role} what="แก้ทะเบียนอะไหล่/รับเข้า-เบิก"
+      <ReadOnlyNote show={!canEdit && !canMove} role={role} what={tr("แก้ทะเบียนอะไหล่/รับเข้า-เบิก")}
         permKey="mtn_repair:spare_master, mtn_repair:manage_master, mtn_repair:service"
         hint={tr('ค้นหาอะไหล่/ดูตำแหน่งชั้นวางได้ตามปกติ (ตั้งใจให้ช่างทุกคนค้นของได้)')} />
       {/* ── แถบเครื่องมือ ── มาตรฐาน FilterBar (UI-STANDARD 2026-09-24): ขอบเขต → ตัวกรอง → ค้นหา → ปุ่ม */}
@@ -323,7 +323,7 @@ export default function SparePartMaster({ parts = [], reload, fullName, role, my
           <option value="over">{tr('เกินสูงสุด')}</option>
           <option value="ok">{tr('ปกติ')}</option>
         </select>
-        <SearchInput value={q} onChange={setQ} fields="ชื่อ / รหัส / MAT / Part no. / ผู้ขาย / ชั้นวาง / ใช้กับ" />
+        <SearchInput value={q} onChange={setQ} fields={tr("ชื่อ / รหัส / MAT / Part no. / ผู้ขาย / ชั้นวาง / ใช้กับ")} />
         <span className="spacer" />
         <button onClick={printList} style={{ ...btnGhost, padding: '0 13px', fontSize: 12.5 }}>{tr('พิมพ์')}</button>
         {canEdit && <ImportButton k="spare" tone="quiet" onClick={() => setShowImport(true)} style={{ fontSize: 12.5 }} />}
@@ -453,7 +453,7 @@ export default function SparePartMaster({ parts = [], reload, fullName, role, my
             }}</RowFold>
             {!filtered.length && !loading && (
               <tr><td colSpan={13} style={{ ...td, textAlign: 'center', color: 'var(--muted)', padding: 24 }}>
-                {parts.length ? 'ไม่พบอะไหล่ตามเงื่อนไขที่กรอง' : 'ยังไม่มีอะไหล่ในคลัง — กด "➕ เพิ่มอะไหล่"'}
+                {parts.length ? tr("ไม่พบอะไหล่ตามเงื่อนไขที่กรอง") : tr("ยังไม่มีอะไหล่ในคลัง — กด \"➕ เพิ่มอะไหล่\"")}
               </td></tr>
             )}
           </tbody>
@@ -516,7 +516,7 @@ function StockMoveModal({ part, type, fullName, onClose, onDone }) {
   return (
     <div className="modal-scroll" /* ⚠️ ฟอร์มกรอกข้อมูล — ไม่ปิดจาก backdrop กันเผลอแตะแล้วข้อมูลหาย (UI-CONVENTIONS §5) */ /* modal-scroll = เลื่อนถึงปุ่มล่างได้เมื่อจอเตี้ย/คีย์บอร์ดเด้ง (UI-CONVENTIONS §4 · index.css) */ style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'grid', placeItems: 'center', zIndex: 2000, padding: 16 }}>
       <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(420px, 96vw)' }}>
-        <div style={{ fontSize: 15, fontWeight: 800, color: m.color, marginBottom: 3 }}>{m.title}</div>
+        <div style={{ fontSize: 15, fontWeight: 800, color: m.color, marginBottom: 3 }}>{tr(m.title)}</div>
         <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 2 }}>{part.name}</div>
         <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 12 }}>
           {part.code ? `${part.code} · ` : ''}{tr('คงเหลือปัจจุบัน')} <b style={{ color: 'var(--text)' }}>{fmtNum(cur)} {part.unit || ''}</b>
@@ -742,7 +742,7 @@ function PartEditModal({ part, cats, teams, shelfOpts, rackCells = [], secOpts =
               <Field label={tr('ตำแหน่งชั้นวาง')} hint={tr('เลือกช่องจากผังชั้นวาง (แท็บ 🗺️ ผังคลัง) — รหัสตรงกันทั้งคลัง หาของเจอเร็ว')}>
                 {/* <SearchSelect> จาก mtn_rack_cells แทน datalist ค่าเก่า — พิมพ์เองได้แต่ติดป้าย (ช่องที่ยังไม่วางผัง) · 2026-09-07 */}
                 <SearchSelect value={shelfSel ? shelfSel.id : ''} text={f.shelf} options={shelfOptions} allowFree
-                  placeholder={tr('ค้นรหัสชั้น / ชื่อชั้นวาง…')} freeHint="(ยังไม่มีช่องนี้ในผังชั้นวาง — วางผังที่แท็บ 🗺️)"
+                  placeholder={tr('ค้นรหัสชั้น / ชื่อชั้นวาง…')} freeHint={tr("(ยังไม่มีช่องนี้ในผังชั้นวาง — วางผังที่แท็บ 🗺️)")}
                   emptyText={tr('ไม่พบช่องชั้นวาง — วางผังที่แท็บ 🗺️ ผังคลังก่อน')}
                   onChange={({ text }) => set('shelf', text)} inputStyle={{ background: 'var(--bg)' }} />
               </Field>
@@ -783,8 +783,8 @@ function PartEditModal({ part, cats, teams, shelfOpts, rackCells = [], secOpts =
                 ) : (
                   <span style={{ color: '#f59e0b' }}>
                     ⚠️ {tr("ยังคำนวณ Rank ไม่ได้")} — {preview.missing === 'lead_time'
-                      ? 'ต้องกรอก Leadtime (วัน) ก่อน'
-                      : 'ยังไม่มีประวัติการใช้ — คีย์ยอดใช้ย้อนหลังจาก Excel ด้านล่าง หรือรอให้ระบบสะสมเองจากการเบิกใช้'}
+                      ? tr("ต้องกรอก Leadtime (วัน) ก่อน")
+                      : tr("ยังไม่มีประวัติการใช้ — คีย์ยอดใช้ย้อนหลังจาก Excel ด้านล่าง หรือรอให้ระบบสะสมเองจากการเบิกใช้")}
                   </span>
                 )}
               </div>
@@ -801,7 +801,7 @@ function PartEditModal({ part, cats, teams, shelfOpts, rackCells = [], secOpts =
                         <div key={k} style={{ width: 82 }}>
                           <div style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'center', marginBottom: 2 }}>{k.slice(2)}</div>
                           <input type="number" min="0" value={manual[k] ?? ''} onChange={e => setManualQty(k, e.target.value)}
-                            placeholder={sysOut ? String(sysOut) : '—'} title={sysOut ? `${tr("ระบบบันทึกไว้แล้ว")} ${sysOut} ${tr("ชิ้น (ยอดที่คีย์จะบวกเพิ่ม")})` : 'ยังไม่มียอดในระบบ'}
+                            placeholder={sysOut ? String(sysOut) : '—'} title={sysOut ? `${tr("ระบบบันทึกไว้แล้ว")} ${sysOut} ${tr("ชิ้น (ยอดที่คีย์จะบวกเพิ่ม")})` : tr("ยังไม่มียอดในระบบ")}
                             style={{ ...inp, textAlign: 'center', padding: '6px 4px' }} />
                         </div>
                       );
@@ -1176,7 +1176,7 @@ function ImportModal({ parts, cats, teams, fullName, ownOf = () => ({ ok: true }
           <button onClick={onClose} disabled={busy} style={{ ...btnGhost, opacity: busy ? 0.5 : 1 }}>{tr('ปิด')}</button>
           <button onClick={apply} disabled={busy || !parsed || !(stat.create + stat.update)}
             style={{ ...btnPri, opacity: (busy || !parsed || !(stat.create + stat.update)) ? 0.5 : 1 }}>
-            {busy ? 'กำลังทำงาน…' : `${tr("นำเข้า")} ${stat.create + stat.update} ${tr("รายการ")}`}
+            {busy ? tr("กำลังทำงาน…") : `${tr("นำเข้า")} ${stat.create + stat.update} ${tr("รายการ")}`}
           </button>
         </div>
       </div>

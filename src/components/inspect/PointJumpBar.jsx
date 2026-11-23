@@ -19,7 +19,7 @@ export default function PointJumpBar({ points, labels, onJump, flashKey, compact
     <div style={{ display: 'flex', flexDirection: compact ? 'row' : 'column', gap: 6, marginTop: 8, alignItems: compact ? 'center' : 'stretch' }}>
       <div style={{ display: 'flex', gap: 6, alignItems: 'center', flex: compact ? '0 0 150px' : undefined }}>
         <SearchInput value={q} onChange={setQ} placeholder={compact ? tr('ไปที่จุด…') : tr('ไปที่จุด — พิมพ์เลข (1.3) / ชื่อ / กลุ่ม แล้วกด Enter')}
-          ariaLabel="ไปที่จุดตรวจ"
+          ariaLabel={tr("ไปที่จุดตรวจ")}
           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (hits[0]) onJump(hits[0]._key) } }} />
         {!compact && (
           <>

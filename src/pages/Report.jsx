@@ -332,7 +332,7 @@ export default function Report({ mode = 'report' }) {
 function ExportNote() {
   const { role } = useContext(UserContext);
   return <ReadOnlyNote show={!can('report', 'export', role)} role={role}
-    what="ส่งออก/พิมพ์รายงาน" permKey="report:export"
+    what={trI18n("ส่งออก/พิมพ์รายงาน")} permKey="report:export"
     hint={trI18n('ดูตัวเลขบนหน้าจอได้ตามปกติ — ที่ปิดคือปุ่ม CSV / Excel / พิมพ์')} />;
 }
 
@@ -670,9 +670,9 @@ function OtMasterDataPanel() {
       {/* master ของหน้าเช็คชื่อ/จัดกำลังคนอีก 2 ลิสต์ (เลิก hardcode ในโค้ด — QC audit 2026-08-19)
           สิทธิ์เดียวกับแผงนี้ (ot_master:manage) — กลุ่มเดียวกัน ไม่เพิ่ม permission key ใหม่ */}
       <SimpleNameMaster table="special_task_types" title={trI18n('งานนอกไลน์ (หน้า จัดการไลน์ผลิต)')}
-        placeholder={trI18n('เช่น 5ส, คัดงาน')} offNote="จะไม่ขึ้นให้เลือกตอนมอบหมายงานนอกไลน์" />
+        placeholder={trI18n('เช่น 5ส, คัดงาน')} offNote={trI18n("จะไม่ขึ้นให้เลือกตอนมอบหมายงานนอกไลน์")} />
       <SimpleNameMaster table="leave_types" title={trI18n('ประเภทลา (หน้า เช็คชื่อ)')}
-        placeholder={trI18n('เช่น ลากิจ, ลาป่วย')} offNote="จะไม่ขึ้นให้เลือกตอนบันทึกการลา" />
+        placeholder={trI18n('เช่น ลากิจ, ลาป่วย')} offNote={trI18n("จะไม่ขึ้นให้เลือกตอนบันทึกการลา")} />
     </div>
   );
 }
@@ -1319,7 +1319,7 @@ table{border-collapse:collapse;width:100%}
                   </td>
                   <td>
                     <span style={{ fontSize: 12, fontWeight: 700, color: r.is_present ? 'var(--green)' : 'var(--red)' }}>
-                      {r.is_present ? '✓ มา' : '✗ ขาด'}
+                      {r.is_present ? trI18n("✓ มา") : trI18n("✗ ขาด")}
                     </span>
                   </td>
                 </tr>
@@ -2192,8 +2192,8 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
                           </div>
                         ) : (
                           <span style={{ fontSize: 11, color: 'var(--muted)' }} title={selfBlock?.text || undefined}>
-                            {l.status === 'pending_qa' ? 'รอ QA' : needsQA ? 'รอ SV → QA' : 'รอหัวหน้า'}
-                            {selfBlock && canApproveLog(l) && <><br /><span style={{ color: 'var(--amber)' }}>{selfBlock.code === 'own_log' ? 'ใบของคุณ — ให้คนอื่นอนุมัติ' : 'คุณเซ็น SV แล้ว — QA ต้องเป็นคนอื่น'}</span></>}
+                            {l.status === 'pending_qa' ? trI18n("รอ QA") : needsQA ? trI18n("รอ SV → QA") : trI18n("รอหัวหน้า")}
+                            {selfBlock && canApproveLog(l) && <><br /><span style={{ color: 'var(--amber)' }}>{selfBlock.code === 'own_log' ? trI18n("ใบของคุณ — ให้คนอื่นอนุมัติ") : trI18n("คุณเซ็น SV แล้ว — QA ต้องเป็นคนอื่น")}</span></>}
                           </span>
                         )
                       ) : (
@@ -3962,8 +3962,8 @@ function SkillAllowanceTab() {
           {headChoices.length > 1 && (
             <div style={{ marginTop: 5, maxWidth: 320 }}>
               <div style={{ fontSize: 11, color: 'var(--amber)' }}>
-                ⚠️ {trI18n("ไลน์นี้มีหัวหน้างาน")} {headChoices.length} {trI18n('คน')}{team ? ` ${trI18n("ในทีม")} ${team}` : ' (ทุกกะ)'} — {trI18n("ใบมีช่องเซ็นช่องเดียว เลือกคนที่เซ็นใบนี้")}
-                {!team ? ' · เลือก "ทีม" ที่แถบกรองด้านบน แล้วระบบจะเหลือเฉพาะหัวหน้าของกะนั้น' : ''}
+                ⚠️ {trI18n("ไลน์นี้มีหัวหน้างาน")} {headChoices.length} {trI18n('คน')}{team ? ` ${trI18n("ในทีม")} ${team}` : trI18n(" (ทุกกะ)")} — {trI18n("ใบมีช่องเซ็นช่องเดียว เลือกคนที่เซ็นใบนี้")}
+                {!team ? trI18n(" · เลือก \"ทีม\" ที่แถบกรองด้านบน แล้วระบบจะเหลือเฉพาะหัวหน้าของกะนั้น") : ''}
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
                 {headChoices.map(r => (
@@ -3973,7 +3973,7 @@ function SkillAllowanceTab() {
                       border: `1px solid ${signerHead === r.name ? 'var(--accent)' : 'var(--border2)'}`,
                       background: signerHead === r.name ? 'var(--accent-dim)' : 'var(--bg3)',
                       color: 'var(--text)', fontWeight: signerHead === r.name ? 700 : 400 }}>
-                    {r.name}{r.shift ? (r.shift === 'day' ? ' · เช้า' : ' · ดึก') : r.team ? ` · ${trI18n("ทีม")} ${r.team}` : ''}
+                    {r.name}{r.shift ? (r.shift === 'day' ? trI18n(" · เช้า") : trI18n(" · ดึก")) : r.team ? ` · ${trI18n("ทีม")} ${r.team}` : ''}
                   </button>
                 ))}
               </div>
@@ -3984,7 +3984,7 @@ function SkillAllowanceTab() {
             <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 5, maxWidth: 320 }}>
               ℹ️ {trI18n("ทะเบียนพนักงานยังไม่มีหัวหน้าไลน์/หัวหน้าแผนกของไลน์นี้")}
               {lineHeads.legacyName ? ` — ${trI18n("ที่เติมให้คือชื่อที่พิมพ์ไว้ในทะเบียนไลน์")} ("${lineHeads.legacyName}")` : ''}
-              {' · ตั้งตำแหน่ง+ทีม+ไลน์ ให้เขาที่ /operator แล้วจะเลือกตามกะได้'}
+              {trI18n(" · ตั้งตำแหน่ง+ทีม+ไลน์ ให้เขาที่ /operator แล้วจะเลือกตามกะได้")}
             </div>
           )}
           {/* 🔴 2 ทะเบียนไม่ตรงกัน — คนออกใบต้องรู้ว่าทำไมชื่อที่คาดว่าจะเห็นไม่ขึ้น (28/10) */}

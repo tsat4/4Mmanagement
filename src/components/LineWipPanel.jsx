@@ -351,7 +351,7 @@ export default function LineWipPanel({ lineName, workDate, lines = [] }) {
                   </span>
                   <span style={{ width: 74, textAlign: 'right', color: 'var(--muted)' }}>{fmt(p.received)}</span>
                   <span style={{ width: 74, textAlign: 'right', color: 'var(--muted)' }}
-                    title={Object.entries(p.fgSources).map(([fg, q]) => `${fg}: ${fmt(q)}`).join(' · ') || 'ยังไม่ถูกใช้'}>
+                    title={Object.entries(p.fgSources).map(([fg, q]) => `${fg}: ${fmt(q)}`).join(' · ') || tr("ยังไม่ถูกใช้")}>
                     {fmt(p.usedCalc)}
                   </span>
                   <span style={{ width: 74, textAlign: 'right', fontWeight: 800, color: tone }}>{fmt(p.shouldRemain)}</span>

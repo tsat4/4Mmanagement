@@ -467,7 +467,7 @@ export default function PermissionsManagement() {
       />
 
       {/* 🔒 ซ่อนปุ่มได้ แต่ห้ามซ่อนเหตุผล — ไม่งั้นช่องติ๊กที่กดไม่ได้จะดูเหมือนจอพัง */}
-      <ReadOnlyNote show={!canManage} role={myRole} what="แก้ตารางสิทธิ์" permKey="permissions:manage"
+      <ReadOnlyNote show={!canManage} role={myRole} what={tr("แก้ตารางสิทธิ์")} permKey="permissions:manage"
         hint={tr('ดูได้ทั้งตาราง แต่ติ๊กไม่ได้ — ฐานข้อมูลใช้คีย์เดียวกันนี้เป็นด่าน (เดิมติ๊กได้บนจอแต่ไม่บันทึกจริง)')} />
 
       <div data-page-note="1" style={{ ...s.section, fontSize: 12, color: 'var(--muted)', lineHeight: 1.6 }}>
@@ -512,7 +512,7 @@ export default function PermissionsManagement() {
             { value: 'page', label: 'เข้าหน้า' },
             { value: 'action', label: 'การทำงาน' },
           ]} />
-          <SearchInput value={q} onChange={setQ} fields="ชื่อฟังก์ชัน / คีย์สิทธิ์" />
+          <SearchInput value={q} onChange={setQ} fields={tr("ชื่อฟังก์ชัน / คีย์สิทธิ์")} />
           <label className="tbtn" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text2)', cursor: 'pointer' }}>
             <input type="checkbox" checked={onlyDiff} onChange={e => setOnlyDiff(e.target.checked)} style={{ accentColor: 'var(--accent)' }} />
             {tr('เฉพาะที่ชุดสิทธิ์ต่างกัน')}
@@ -560,7 +560,7 @@ export default function PermissionsManagement() {
                       <th key={r.value} style={{ textAlign: 'center', padding: '8px 4px', minWidth: 82 }} title={`${r.value}${r.desc ? ' — ' + r.desc : ''}`}>
                         <div style={{ fontSize: 11, fontWeight: 800, color: r.color }}>{r.icon} {tr(r.label)}</div>
                         <div style={{ fontSize: 11, fontWeight: 400, color: 'var(--muted)' }}>
-                          {r.bucket ? 'ธงเสริม' : n == null ? '—' : n > 0 ? `${n} ${tr("คน")}` : 'ยังไม่มีใครถือ'}
+                          {r.bucket ? tr("ธงเสริม") : n == null ? '—' : n > 0 ? `${n} ${tr("คน")}` : tr("ยังไม่มีใครถือ")}
                         </div>
                       </th>
                     );
@@ -589,7 +589,7 @@ export default function PermissionsManagement() {
                           const col = dead ? 'var(--border2)'
                             : raw === true ? 'var(--accent)' : raw === false ? 'var(--muted)' : 'var(--amber)';
                           const state = dead ? tr('เปิดหน้าให้ธงเสริมไม่ได้ (ระบบบล็อกในโค้ด)')
-                            : raw === true ? 'ทำได้' : raw === false ? 'ปิดไว้' : 'ยังไม่เคยตั้งค่าในทะเบียน';
+                            : raw === true ? tr("ทำได้") : raw === false ? tr("ปิดไว้") : tr("ยังไม่เคยตั้งค่าในทะเบียน");
                           /* admin ล็อกในโค้ด · ช่องตาย · ไม่มี permissions:manage = ดูอย่างเดียว (เหตุผลขึ้นใน ReadOnlyNote บนจอแล้ว) */
                           const editable = canManage && !dead && r.value !== 'admin';
                           const isSaving = !!saving[`${r.value}:${it.key}`];

@@ -188,7 +188,7 @@ export default function MachineReliability({ machines = [], lineObjs = [], scope
       >
         {/* ── ตัวกรอง — อยู่ในแถบเวลาแถบเดียว (UI-STANDARD 2026-09-24) ── */}
         <LineSelect lines={lineObjs} value={line} onChange={setLine} placeholder={ALL.line} />
-        <SearchInput value={q} onChange={setQ} fields="เลขเครื่อง / ชื่อ / ไลน์" ariaLabel="ค้นหาอุปกรณ์" />
+        <SearchInput value={q} onChange={setQ} fields={trI18n("เลขเครื่อง / ชื่อ / ไลน์")} ariaLabel={trI18n("ค้นหาอุปกรณ์")} />
       </TimeRangeBar>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
         {KIND_CHIPS.map(c => {
@@ -384,7 +384,7 @@ export default function MachineReliability({ machines = [], lineObjs = [], scope
                     <td style={tdNum}>{r.stops}{r.plannedStops > 0 && <span style={{ color: 'var(--muted)', fontSize: 11 }}> (+{r.plannedStops} {trI18n("ตามแผน")})</span>}</td>
                     <td style={tdNum} title={r.parallelN > 1 ? `${trI18n("มุมเครื่อง")} ${fmtDur(r.dtMin)} · ${trI18n("มุมไลน์")} ${fmtDur(r.dtMinW)}` : undefined}>{fmtDur(v.dtMin)}</td>
                     <td style={{ ...tdNum, color: 'var(--amber)', fontWeight: 700 }}
-                        title={r.phaseN > 0 ? `${trI18n("แยกช่วง")} (${r.phaseN} ${trI18n("ครั้ง): รอช่าง")} ${fmtDur(r.mttaMin)} · ${trI18n("ซ่อมจริง")} ${fmtDur(r.mttrPureMin)} · ${trI18n("กลับมารัน")} ${fmtDur(r.restartMin)}` : 'ยังแยกไม่ได้ — ต้องกดรับงาน/ซ่อมเสร็จตอนทำงานจริง'}>
+                        title={r.phaseN > 0 ? `${trI18n("แยกช่วง")} (${r.phaseN} ${trI18n("ครั้ง): รอช่าง")} ${fmtDur(r.mttaMin)} · ${trI18n("ซ่อมจริง")} ${fmtDur(r.mttrPureMin)} · ${trI18n("กลับมารัน")} ${fmtDur(r.restartMin)}` : trI18n("ยังแยกไม่ได้ — ต้องกดรับงาน/ซ่อมเสร็จตอนทำงานจริง")}>
                       {fmtDur(v.mttrMin)}{r.phaseN > 0 && <span style={{ fontSize: 11, color: 'var(--muted)' }}> ⏳{fmtDur(r.mttaMin)}</span>}
                     </td>
                     <td style={{ ...tdNum, color: v.mtbfMin == null ? 'var(--muted)' : 'var(--blue)', fontWeight: 700 }}

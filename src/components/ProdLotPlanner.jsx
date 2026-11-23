@@ -114,7 +114,7 @@ function DieMatLinkNote({ lot, dies, role, mayWrite, onDone }) {
     <button type="button" onClick={link} disabled={busy}
       style={{ marginTop: 2, fontSize: 11, padding: '1px 6px', borderRadius: 'var(--r-md)', cursor: busy ? 'default' : 'pointer',
         background: 'var(--card-surf)', border: '1px solid var(--border)', color: 'var(--accent)' }}>
-      {busy ? 'กำลังผูก…' : `🔗 ${tr("ผูก MAT นี้กับ")} ${set.set_code}`}
+      {busy ? tr("กำลังผูก…") : `🔗 ${tr("ผูก MAT นี้กับ")} ${set.set_code}`}
     </button>
   );
 }
@@ -481,7 +481,7 @@ export default function ProdLotPlanner({
         <span style={{ fontSize: 12.5, color: 'var(--text2)' }}
           title={summary.setupNoDie ? tr('ยังไม่ได้ระบุแม่พิมพ์ในล็อตไหนเลย — ประเมินเวลาเปลี่ยนรุ่นไม่ได้ (ไม่ใช่ "ไม่ต้องเปลี่ยน")') : ''}>
           {tr("เปลี่ยนรุ่น")} <b>{summary.setupMin == null ? '—' : fmtMin(summary.setupMin)}</b>
-          <span style={{ color: 'var(--muted)' }}> ({summary.setupNoDie ? 'ยังไม่ระบุแม่พิมพ์' : `${summary.changeCount} ${tr("ครั้ง")}`})</span>
+          <span style={{ color: 'var(--muted)' }}> ({summary.setupNoDie ? tr("ยังไม่ระบุแม่พิมพ์") : `${summary.changeCount} ${tr("ครั้ง")}`})</span>
         </span>
         <span style={{ fontSize: 13, fontWeight: 800, color: overflowCount > 0 ? '#ef4444' : 'var(--text)' }}>
           {tr("คาดจบ")} <b>{hz.finishMs == null ? '—' : fmtDayTime(hz.finishMs)}</b>
@@ -609,7 +609,7 @@ export default function ProdLotPlanner({
                           <b style={{ fontFamily: 'monospace', fontSize: 12 }}>{lotKeyText(l)}</b>
                           {l.trial_part_name && l.trial_part_no && <span style={{ color: 'var(--text2)', fontSize: 11 }}> · {l.trial_part_name}</span>}
                           <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                            {[l.trial_customer, l.trial_reason, l.requested_by && `ขอโดย ${l.requested_by}`].filter(Boolean).join(' · ') || 'ยังไม่ระบุที่มา'}
+                            {[l.trial_customer, l.trial_reason, l.requested_by && `ขอโดย ${l.requested_by}`].filter(Boolean).join(' · ') || tr("ยังไม่ระบุที่มา")}
                           </div>
                         </>
                       ) : (
@@ -648,7 +648,7 @@ export default function ProdLotPlanner({
                       const same = at.workDate === l.work_date && at.shift === l.shift;
                       return (
                         <span style={{ color: same ? 'var(--text2)' : 'var(--accent)' }}
-                          title={same ? 'ตรงกับที่บันทึกไว้' : `${tr("จะถูกย้ายจาก")} ${l.shift === 'night' ? tr('กะดึก') : tr('กะเช้า')} ${l.work_date} ${tr("ตอนกดบันทึก")}`}>
+                          title={same ? tr("ตรงกับที่บันทึกไว้") : `${tr("จะถูกย้ายจาก")} ${l.shift === 'night' ? tr('กะดึก') : tr('กะเช้า')} ${l.work_date} ${tr("ตอนกดบันทึก")}`}>
                           {SHIFT_LABEL[at.shift]} {at.workDate.slice(8)}/{at.workDate.slice(5, 7)}{same ? '' : ' ✧'}
                         </span>
                       );
@@ -683,7 +683,7 @@ export default function ProdLotPlanner({
                         );
                       })() : (l.die_no || <span style={{ color: 'var(--muted)' }}>—</span>)}
                       {die && <div style={{ fontSize: 11, color: die.die_height_mm == null ? '#f59e0b' : 'var(--muted)' }}>
-                        {die.die_height_mm == null ? '⚠ ไม่รู้ความสูง' : `${tr("สูง")} ${die.die_height_mm} ${tr("มม.")}`}</div>}
+                        {die.die_height_mm == null ? tr("⚠ ไม่รู้ความสูง") : `${tr("สูง")} ${die.die_height_mm} ${tr("มม.")}`}</div>}
                       <DieMatLinkNote lot={l} dies={dies} role={role} mayWrite={mayWrite} onDone={load} />
                     </td>
                     <td style={td}>
@@ -725,7 +725,7 @@ export default function ProdLotPlanner({
               <span key={`${o.kind}-${o.mat_no}`} style={{ color: 'var(--text2)' }}>
                 {o.kind === 'over' ? '➕' : '🆕'} <MatLabel mat={o.mat_no} size={11.5} />{' '}
                 <span style={{ color: 'var(--muted)' }}>
-                  {qtyText(o.pcs)} {tr('ชิ้น ·')} {o.orders} {tr('ใบ')}{o.kind === 'over' ? ' (เกินกรอบ)' : ' (ไม่มีในแผน)'}
+                  {qtyText(o.pcs)} {tr('ชิ้น ·')} {o.orders} {tr('ใบ')}{o.kind === 'over' ? tr(" (เกินกรอบ)") : tr(" (ไม่มีในแผน)")}
                 </span>
               </span>
             ))}

@@ -286,11 +286,11 @@ export default function DieRegistry() {
       supabaseDR.from('die_set_shared_dies').select('die_set_id, machine_id, op_seq, note'),
     ]);
     const { data: ln } = lnRes, { data: mc } = mcRes, { data: st } = stRes, { data: ot } = otRes, { data: pd } = pdRes;
-    if (lnRes.error) warn.push('ไลน์');
-    if (mcRes.error) warn.push('ทะเบียนแม่พิมพ์');
-    if (stRes.error) warn.push('ชุดแม่พิมพ์');
-    if (otRes.error) warn.push('ชนิด OP');
-    if (pdRes.error) warn.push('สินค้า');
+    if (lnRes.error) warn.push(tr("ไลน์"));
+    if (mcRes.error) warn.push(tr("ทะเบียนแม่พิมพ์"));
+    if (stRes.error) warn.push(tr("ชุดแม่พิมพ์"));
+    if (otRes.error) warn.push(tr("ชนิด OP"));
+    if (pdRes.error) warn.push(tr("สินค้า"));
     setLines(ln || []);
     // equipment_die เป็น 1:1 (machine_id เป็นทั้ง PK และ FK) → PostgREST คืนเป็น "object"
     // แต่รับทั้ง 2 ทรงไว้ กันกรณี schema cache มองเป็น 1:N แล้วคืน array (ว่าง = ยังไม่มีแถวส่วนขยาย)
@@ -377,9 +377,9 @@ export default function DieRegistry() {
     if (dup > 0) out.push(`OP ${tr("ซ้ำ")} ${dup} ${tr("ตัว — อาจเป็นหลายชุดที่ถูกรวมกัน (เช่นแยกตามวัสดุ) ต้องแยกชุดเอง")}`);
     const noOp = mem.filter(x => x.opSeq == null).length;
     if (noOp) out.push(`${tr("ยังไม่ระบุ")} OP ${noOp} ${tr("ตัว")}`);
-    if (!s.kind)    out.push('ยังไม่ระบุรูปแบบชุด');
-    if (!s.part_no) out.push('ยังไม่ระบุเลขพาร์ท');
-    if (!s.mat_no)  out.push('ยังไม่ผูก MAT SAP');
+    if (!s.kind)    out.push(tr("ยังไม่ระบุรูปแบบชุด"));
+    if (!s.part_no) out.push(tr("ยังไม่ระบุเลขพาร์ท"));
+    if (!s.mat_no)  out.push(tr("ยังไม่ผูก MAT SAP"));
     /* 🔨 ไม่รู้ "ชิ้น/จังหวะ" = PM แม่พิมพ์คิดเป็น shot ไม่ได้ (14/10) — เข้าลิสต์ "ต้องแก้" ให้หน้างานไล่กรอก
        แนบหลักฐานที่พบในชื่อ/เลขพาร์ทไปด้วยเพื่อให้ตัดสินเร็ว · 🔴 ระบบไม่กรอกให้เอง (pairHint ไม่เขียนฐาน) */
     /* ชิ้นออก/shot เป็นของ OP (05/11) — ตัวไหนว่างทั้งที่ OP และชุด = PM คิดเป็น shot ไม่ได้ (ppsOf ตัดสินที่เดียว) */
@@ -635,7 +635,7 @@ export default function DieRegistry() {
 
       {/* ⚠️ /die-registry เปิดให้ role `mtn` ด้วย — ถ้าวันหน้าถอด machines:edit ออกจาก mtn
           ปุ่มแก้จะหายทั้งหน้าโดยไม่มีคำอธิบาย (กับดักเดียวกับตารางกะ) */}
-      <ReadOnlyNote show={!canEdit} role={role} what="แก้ทะเบียนแม่พิมพ์"
+      <ReadOnlyNote show={!canEdit} role={role} what={tr("แก้ทะเบียนแม่พิมพ์")}
         permKey="machines:edit"
         hint={tr('แม่พิมพ์ใช้ตัวตนเดียวกับเครื่องจักร จึงคุมด้วยสิทธิ์เดียวกัน')} />
 
@@ -667,9 +667,9 @@ export default function DieRegistry() {
         <select value={filterKind} onChange={e => setFilterKind(e.target.value)}>
           <option value="">{allOf('รูปแบบชุด')}</option>
           <option value={KIND_NONE}>{tr('— ยังไม่ระบุ (')}{stat.noKind}) —</option>
-          {setKinds.map(k => <option key={k.key} value={k.key}>{tr(k.label)}{k.is_active ? '' : ' (ปิดใช้)'}</option>)}
+          {setKinds.map(k => <option key={k.key} value={k.key}>{tr(k.label)}{k.is_active ? '' : tr(" (ปิดใช้)")}</option>)}
         </select>
-        <SearchInput value={search} onChange={setSearch} fields="พาร์ท / ชื่อชุด / MAT / เลขแม่พิมพ์" />
+        <SearchInput value={search} onChange={setSearch} fields={tr("พาร์ท / ชื่อชุด / MAT / เลขแม่พิมพ์")} />
         <span className="spacer" />
         <span className="filter-count">{tr('แสดง')} {rows.length} {tr('ชุด')}</span>
         {/* 📥 Excel ให้ทีม DIE เอาไปไล่ข้อมูล (05/11 · คำสั่ง user) — ทั้งหมดในขอบเขต ไม่ตามตัวกรอง (worklist ต้องครบ) */}
@@ -748,7 +748,7 @@ export default function DieRegistry() {
 
       {rows.length === 0 && (
         <div style={{ padding: 28, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
-          {todoOnly ? 'ไม่มีชุดที่ต้องแก้แล้ว 🎉' : 'ไม่พบชุดแม่พิมพ์ตามเงื่อนไข'}
+          {todoOnly ? tr("ไม่มีชุดที่ต้องแก้แล้ว 🎉") : tr("ไม่พบชุดแม่พิมพ์ตามเงื่อนไข")}
         </div>
       )}
 
@@ -773,7 +773,7 @@ export default function DieRegistry() {
                     <span style={{ fontSize: 12, color: 'var(--muted)', width: 12 }}>{open ? '▼' : '▶'}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13.5, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {s.part_name || '(ไม่มีชื่อ)'}
+                        {s.part_name || tr("(ไม่มีชื่อ)")}
                       </div>
                       <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>
                         {tr("พาร์ท")} {s.part_no || <Blank />}
@@ -852,7 +852,7 @@ export default function DieRegistry() {
                                     {isShared && (
                                       <span title={`${tr("แม่พิมพ์ของชุด")} ${home?.set_code || home?.part_name || tr('(ไม่มีชุดบ้าน)')} — ${tr("ชุดนี้ยืมมาใช้ (common die) · แก้รายละเอียดที่ตัวแม่พิมพ์ได้เลย")}`}
                                         style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', marginRight: 6 }}>
-                                        {tr("ใช้ร่วม")} · {home?.set_code || home?.part_name || 'ไม่มีชุดบ้าน'}
+                                        {tr("ใช้ร่วม")} · {home?.set_code || home?.part_name || tr("ไม่มีชุดบ้าน")}
                                       </span>
                                     )}
                                     {d.machine_no}
@@ -894,7 +894,7 @@ export default function DieRegistry() {
                             <option value="">{tr('— เลือกแม่พิมพ์ที่จะใช้ร่วม —')}</option>
                             {shareOptions(s).map(d => (
                               <option key={d.id} value={d.id}>
-                                {d.ext?.die_no || '—'} · {setsById[d.ext?.die_set_id]?.set_code || 'ไม่มีชุด'}
+                                {d.ext?.die_no || '—'} · {setsById[d.ext?.die_set_id]?.set_code || tr("ไม่มีชุด")}
                                 {d.ext?.op_seq != null ? ` OP${d.ext.op_seq}` : ''} · {d.machine_no}
                               </option>
                             ))}
@@ -1017,7 +1017,7 @@ export default function DieRegistry() {
                   ตั้งใจแยกจาก production_lines · ชื่อเก่าที่ชุด/แม่พิมพ์ใช้อยู่แต่ยังไม่ลงทะเบียนยังเลือกซ้ำได้ (กันสะกดต่างจน
                   inScope()/ฟิลเตอร์/MO แตกเป็นคนละไลน์) · "✏️ ระบุใหม่" เฉพาะกรณีจริงที่ยังไม่มีในทะเบียน */}
               <SelectOrFree value={editSet.line_name || ''} options={setLineOptions} placeholder={tr('— เลือกจากทะเบียนกลุ่มเครื่องปั๊ม —')}
-                freeLabel="✏️ ระบุใหม่ (ยังไม่มีในทะเบียน die_press_lines)" freePlaceholder="เช่น LINE A ( 800 Ton )" style={inputStyle} inputStyle={inputStyle}
+                freeLabel={tr("✏️ ระบุใหม่ (ยังไม่มีในทะเบียน die_press_lines)")} freePlaceholder={tr("เช่น LINE A ( 800 Ton )")} style={inputStyle} inputStyle={inputStyle}
                 onChange={v => setEditSet(f => ({ ...f, line_name: v }))} />
             </Field>
             <Field label={tr('รูปแบบชุด')}>
@@ -1028,7 +1028,7 @@ export default function DieRegistry() {
                 {dieSetKindOptions(setKinds, editSet.kind || '').map(k => <option key={k.key} value={k.key}>{tr(k.label)}</option>)}
               </select>
               <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>
-                {editSet.kind ? setKinds.find(k => k.key === editSet.kind)?.desc : 'ยังไม่ระบุ — ใบแจ้งซ่อมจะเติมชนิดอุปกรณ์จากรูปแบบชุดไม่ได้ (ถ้าแม่พิมพ์ไม่มีประเภท OP ผู้แจ้งต้องเลือกเอง)'}
+                {editSet.kind ? setKinds.find(k => k.key === editSet.kind)?.desc : tr("ยังไม่ระบุ — ใบแจ้งซ่อมจะเติมชนิดอุปกรณ์จากรูปแบบชุดไม่ได้ (ถ้าแม่พิมพ์ไม่มีประเภท OP ผู้แจ้งต้องเลือกเอง)")}
                 {canEdit && <> {tr('· ไม่มีแบบที่ต้องการ? เพิ่มได้ที่แผง ⚙️ รูปแบบชุดแม่พิมพ์ ท้ายแท็บนี้')}</>}
               </div>
             </Field>

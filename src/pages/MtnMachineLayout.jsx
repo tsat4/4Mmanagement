@@ -137,7 +137,7 @@ export default function MtnMachineLayout({ setupMode = false }) {
     return lines.filter(l => ok.has(l.name))
   }, [lines, viewScope])
   const scopeHidden = viewScope.unlimited ? 0 : lines.length - viewLines.length
-  const scopeLabel = (scopeSecs || []).filter(Boolean).join(' · ') || 'ไลน์ของคุณ'
+  const scopeLabel = (scopeSecs || []).filter(Boolean).join(' · ') || tr("ไลน์ของคุณ")
   // ไลน์เริ่มต้น = ไลน์แรกในขอบเขต (ไม่จำกัด = แถวแรกของทะเบียน เหมือนเดิม) · เลือกแล้วไม่ทับ
   useEffect(() => {
     if (selectedLine || !lines.length) return
@@ -464,7 +464,7 @@ export default function MtnMachineLayout({ setupMode = false }) {
         {view === 'facility' && canEdit && (
           <button onClick={() => setFacEdit(v => { if (v) { setArmedJig(null); setArmedMachine(null) } return !v })}
             style={S.viewBtn(facEdit)} title={facEdit ? tr('กลับสู่โหมดดูสถานะ') : tr('เปิดเครื่องมือจัดผัง (เพิ่มโซน/อัปรูป/วางจุด)')}>
-            {facEdit ? 'เสร็จสิ้นการแก้ผัง' : 'แก้ผังโซน'}
+            {facEdit ? tr("เสร็จสิ้นการแก้ผัง") : tr("แก้ผังโซน")}
           </button>
         )}
         {view === 'facility' && editMode && (
@@ -485,7 +485,7 @@ export default function MtnMachineLayout({ setupMode = false }) {
 
       {view === 'facility' && (armedJig || armedMachine) && (
         <div style={{ fontSize: 12, color: 'var(--accent2)', background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '6px 10px' }}>
-          {tr("คลิกบนผังเพื่อวาง")} <b>{armedJig ? (jigInfo[armedJig]?.jig_no || jigInfo[armedJig]?.name) : (facMachines.find(m => m.id === armedMachine)?.machine_no)}</b>{armedMachine ? ' (ดึงจากฐานเครื่องจักร)' : ''} · <span onClick={() => { setArmedJig(null); setArmedMachine(null) }} style={{ cursor: 'pointer', textDecoration: 'underline' }}>{tr('ยกเลิก')}</span>
+          {tr("คลิกบนผังเพื่อวาง")} <b>{armedJig ? (jigInfo[armedJig]?.jig_no || jigInfo[armedJig]?.name) : (facMachines.find(m => m.id === armedMachine)?.machine_no)}</b>{armedMachine ? tr(" (ดึงจากฐานเครื่องจักร)") : ''} · <span onClick={() => { setArmedJig(null); setArmedMachine(null) }} style={{ cursor: 'pointer', textDecoration: 'underline' }}>{tr('ยกเลิก')}</span>
         </div>
       )}
 
@@ -523,7 +523,7 @@ export default function MtnMachineLayout({ setupMode = false }) {
                         <span style={{ fontWeight: 700, color: 'var(--text)' }}>{c.eqName ?? selInfo.name}</span>
                         <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--blue)', background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-xs)', padding: '1px 5px' }}>{deptIconOf(c.dept)} {deptLabelOf(c.dept)}</span>
                         <span style={{ color: m.color, fontWeight: 700 }}>{tr(m.label)}</span>
-                        <span style={{ color: 'var(--muted)' }}>{c.nextDue ? `${tr("ครบ")} ${c.nextDue.toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' })}${dd != null ? (dd < 0 ? ` (${tr("เกิน")} ${Math.abs(dd)} ${tr("วัน")})` : ` (${tr("อีก")} ${dd} ${tr("วัน")})`) : ''}` : 'ยังไม่มีวัน PM ครั้งถัดไป'}</span>
+                        <span style={{ color: 'var(--muted)' }}>{c.nextDue ? `${tr("ครบ")} ${c.nextDue.toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' })}${dd != null ? (dd < 0 ? ` (${tr("เกิน")} ${Math.abs(dd)} ${tr("วัน")})` : ` (${tr("อีก")} ${dd} ${tr("วัน")})`) : ''}` : tr("ยังไม่มีวัน PM ครั้งถัดไป")}</span>
                       </div>
                     )
                   })}
@@ -538,13 +538,13 @@ export default function MtnMachineLayout({ setupMode = false }) {
           <div style={S.side}>
             <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', marginBottom: (scopeHidden > 0 || viewScope.unsure) ? 6 : 10 }}>{tr('ไลน์ผลิต (')}{viewLines.length})</div>
             {(scopeHidden > 0 || viewScope.unsure) && (
-              <div title={viewScope.unsure ? 'ตัดขอบเขตของบัญชีนี้ไม่ได้ (ทะเบียนไลน์ยังไม่โหลด/ส่วนงานไม่ตรงผัง/หาไลน์ของบัญชีไม่เจอ)' : `${tr("ขอบเขตของบัญชีนี้")}: ${scopeLabel}`}
+              <div title={viewScope.unsure ? tr("ตัดขอบเขตของบัญชีนี้ไม่ได้ (ทะเบียนไลน์ยังไม่โหลด/ส่วนงานไม่ตรงผัง/หาไลน์ของบัญชีไม่เจอ)") : `${tr("ขอบเขตของบัญชีนี้")}: ${scopeLabel}`}
                 style={{ fontSize: 11, fontWeight: 700, marginBottom: 10, padding: '3px 8px', borderRadius: 'var(--r-md)',
                   color: viewScope.unsure ? 'var(--amber)' : 'var(--accent)',
                   background: viewScope.unsure ? 'var(--amber-dim)' : 'var(--accent-dim)',
                   border: `1px solid ${viewScope.unsure ? 'var(--amber-line)' : 'var(--accent)'}` }}>
                 {viewScope.unsure
-                  ? (viewScope.unlimited ? '⚠ ตัดขอบเขตไม่ได้ — แสดงทั้งโรงงาน'
+                  ? (viewScope.unlimited ? tr("⚠ ตัดขอบเขตไม่ได้ — แสดงทั้งโรงงาน")
                     : `⚠ ${tr("ขอบเขตไม่ชัด — แสดง")} ${viewLines.length} ${tr("ไลน์ · ซ่อน")} ${scopeHidden}`)
                   : `🔭 ${tr("เฉพาะ")} ${scopeLabel} · ${tr("ซ่อน")} ${scopeHidden} ${tr("ไลน์นอกขอบเขต")}`}
               </div>
@@ -610,7 +610,7 @@ export default function MtnMachineLayout({ setupMode = false }) {
                                     <span style={{ width: 7, height: 7, borderRadius: '50%', background: m.color, flexShrink: 0 }} />
                                     <span style={{ fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</span>
                                     <span style={{ marginLeft: 'auto', flexShrink: 0, color: m.color, fontWeight: 700 }}>
-                                      {dd == null ? m.label : dd < 0 ? `${tr("เกิน")} ${Math.abs(dd)} ${tr("วัน")}` : dd === 0 ? 'ครบวันนี้' : `${tr("อีก")} ${dd} ${tr("วัน")}`}
+                                      {dd == null ? m.label : dd < 0 ? `${tr("เกิน")} ${Math.abs(dd)} ${tr("วัน")}` : dd === 0 ? tr("ครบวันนี้") : `${tr("อีก")} ${dd} ${tr("วัน")}`}
                                     </span>
                                     {/* ปิดลูป: เห็นว่าถึงคิวแล้วกดไปตรวจได้เลย ไม่ต้องไปไล่หาเองในหน้า PM */}
                                     <Link to={`/pm?tab=check&dept=${r.dept || 'maintenance'}&equip=${r.jigId}`}
@@ -640,11 +640,11 @@ export default function MtnMachineLayout({ setupMode = false }) {
                   <div>
                     <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)' }}>{tr('ใบซ่อม MO ค้างของโซนนี้')}</div>
                     <div style={{ fontSize: zoneMo.length ? 17 : 12, fontWeight: 900, color: zoneMo.length ? 'var(--amber)' : 'var(--green)', marginTop: 3 }}>
-                      {zoneMo.length ? `${zoneMo.length} ${tr("ใบ")}` : '✅ ไม่มีใบค้าง'}
+                      {zoneMo.length ? `${zoneMo.length} ${tr("ใบ")}` : tr("✅ ไม่มีใบค้าง")}
                     </div>
                     {zoneMo.slice(0, 3).map(o => (
                       <div key={o.id} onClick={() => navigate('/mtn-repair')} style={{ fontSize: 11, color: 'var(--text2)', cursor: 'pointer', marginTop: 2 }}>
-                        {o.mo_no || '⏳ รอออกเลข'} · {o.machine_no}
+                        {o.mo_no || tr("⏳ รอออกเลข")} · {o.machine_no}
                       </div>
                     ))}
                     {zoneMo.length > 3 && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{tr('+ อีก')} {zoneMo.length - 3} {tr('ใบ — ดูที่ใบแจ้งซ่อม')}</div>}
@@ -679,7 +679,7 @@ export default function MtnMachineLayout({ setupMode = false }) {
                   <label style={{ display: 'block', marginBottom: 12 }}>
                     <input ref={fileRef} type="file" accept="image/*" hidden onChange={uploadImage} disabled={busy} />
                     <span style={{ display: 'block', textAlign: 'center', background: 'var(--bg3-surf)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: '8px', fontSize: 12, color: 'var(--text2)', cursor: 'pointer' }}>
-                      {busy ? 'อัปโหลด...' : facImage ? '🖼️ เปลี่ยนรูปผังโซน' : '📷 อัปโหลดรูปผังโซน'}
+                      {busy ? tr("อัปโหลด...") : facImage ? tr("🖼️ เปลี่ยนรูปผังโซน") : tr("📷 อัปโหลดรูปผังโซน")}
                     </span>
                   </label>
                 )}

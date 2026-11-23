@@ -28,7 +28,7 @@ async function loadCurrent(mats) {
   const pR = ids.length ? await fetchAllPages(() => supabaseDR.from('monitor_board_parts')
     .select('id, board_id, mat_no, part_no, row_key, part_name, packing, sort_order, is_active').in('board_id', ids)) : { rows: [] };
   if (pR.error) errs.push(`พาร์ทบนบอร์ด: ${pR.error}`);
-  if (pR.truncated) errs.push('พาร์ทบนบอร์ดโหลดไม่ครบ (เกินเพดาน)');
+  if (pR.truncated) errs.push(tr("พาร์ทบนบอร์ดโหลดไม่ครบ (เกินเพดาน)"));
   const kR = await fetchByIds(mats, part => supabaseDR.from('kanban_standards').select('mat_no, min_qty, max_qty').eq('is_active', true).in('mat_no', part), { orderBy: 'mat_no' });
   if (kR.error) errs.push(`ทะเบียนคัมบัง: ${kR.error}`);
   const hR = await fetchByIds(mats, part => supabaseDR.from('parts_master').select('mat_no, home_sloc').in('mat_no', part), { orderBy: 'mat_no' });

@@ -137,7 +137,7 @@ export default function LineOrderBoard({ lineName, family, date, lines, onSelect
                             border: `1.5px solid ${m.color}`, boxShadow: on ? `0 0 0 2px var(--text)` : 'none', color: 'var(--text)' }}>
                           <div style={{ fontSize: 11, fontWeight: 800, color: m.color, whiteSpace: 'nowrap' }}>{tr(m.label).split(' ')[0]}</div>
                           <div style={{ fontSize: 11.5, fontWeight: 700, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{c._made}/{c.qty ?? '—'}</div>
-                          <div style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{c.shift === 'night' ? '🌙' : '☀️'} {c.orderStartMs ? fmtMs(c.orderStartMs) : 'รอเปิด'}</div>
+                          <div style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{c.shift === 'night' ? '🌙' : '☀️'} {c.orderStartMs ? fmtMs(c.orderStartMs) : tr("รอเปิด")}</div>
                         </button>
                       );
                     })}
@@ -159,7 +159,7 @@ export function OrderDetailCard({ c }) {
   const row = (k, v) => <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}><span style={{ color: 'var(--muted)' }}>{k}</span><b style={{ color: 'var(--text)', textAlign: 'right' }}>{v}</b></div>;
   return (
     <div style={{ background: 'var(--bg3-surf)', border: `1px solid ${m.color}66`, borderLeft: `4px solid ${m.color}`, borderRadius: 'var(--r-md)', padding: '8px 10px', fontSize: 12, display: 'grid', gap: 3 }}>
-      <div style={{ fontWeight: 800, color: 'var(--text)' }}>{c.prod_no || 'ใบไม่มีเลข'} — <span style={{ color: m.color }}>{tr(m.label)}</span></div>
+      <div style={{ fontWeight: 800, color: 'var(--text)' }}>{c.prod_no || tr("ใบไม่มีเลข")} — <span style={{ color: m.color }}>{tr(m.label)}</span></div>
       <div style={{ color: 'var(--text2)' }}>{c.productLabel} · {c.mat_no}{c.line_name ? ` · ${c.line_name}` : ''}</div>
       {row('ทำได้ / สั่ง', `${c._made} / ${c.qty ?? '—'}`)}
       {row('เปิดใบ', c.orderStartMs ? fmtMs(c.orderStartMs) : 'ยังไม่เปิด')}

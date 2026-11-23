@@ -164,7 +164,7 @@ export default function PmMonthlyReport() {
       const live = pmSignSnapshot(sum.get(teamKey), section)
       return (
         <div style={{ fontSize: 12 }}>
-          <div style={{ color: 'var(--green)', fontWeight: 800 }}>✓ {row.signed_by_name || '-'}{row.snapshot?.via?.kind === 'acting' ? ' (รักษาการ)' : ''}</div>
+          <div style={{ color: 'var(--green)', fontWeight: 800 }}>✓ {row.signed_by_name || '-'}{row.snapshot?.via?.kind === 'acting' ? tr(" (รักษาการ)") : ''}</div>
           <div style={{ color: 'var(--muted)' }}>{positionLabel(row.position) || ''} {fmtWhen(row.signed_at)}</div>
           {pmSnapshotDrift(row.snapshot, live) && <div style={{ color: 'var(--amber)', fontWeight: 700 }}>⚠ {tr("ตัวเลขเปลี่ยนหลังลงนาม")}</div>}
           {permitted(step) && <button type="button" className="pg-btn" style={{ marginTop: 4 }} onClick={() => { setRevoking(row); setReason('') }}>{tr('เพิกถอน')}</button>}

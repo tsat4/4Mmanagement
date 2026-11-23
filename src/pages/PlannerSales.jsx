@@ -931,7 +931,7 @@ function UploadTab({ canUpload, fullName, onImported, custLabel }) {
           {edi && (
             <div style={{ border: '1px solid var(--blue-line)', background: 'var(--blue-dim)', borderRadius: 'var(--r-md)', padding: 14, marginBottom: 4 }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--blue)', marginBottom: 8 }}>
-                EDI {ediKind === 'orders' ? '862 — Shipping Schedule (รอบส่งงาน)' : '830 — Planning Forecast'}
+                EDI {ediKind === 'orders' ? tr("862 — Shipping Schedule (รอบส่งงาน)") : '830 — Planning Forecast'}
               </div>
 
               {/* 🔴 ผลการเดาชนิดต้องขึ้นจอ + แก้ได้ (2026-09-17)
@@ -945,7 +945,7 @@ function UploadTab({ canUpload, fullName, onImported, custLabel }) {
                 border: `1px solid ${edi.kindGuess?.sure ? 'var(--green-line)' : 'var(--amber-line)'}`,
               }}>
                 <span style={{ color: edi.kindGuess?.sure ? 'var(--green)' : 'var(--amber)', fontWeight: 700 }}>
-                  {edi.kindGuess?.sure ? '✓ ระบบอ่านชนิดได้' : '⚠️ ระบบแยกชนิดไม่ชัด'}
+                  {edi.kindGuess?.sure ? tr("✓ ระบบอ่านชนิดได้") : tr("⚠️ ระบบแยกชนิดไม่ชัด")}
                 </span>
                 <span style={{ color: 'var(--text2)' }}>{edi.kindGuess?.reason}</span>
                 <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -1010,7 +1010,7 @@ function UploadTab({ canUpload, fullName, onImported, custLabel }) {
                 onSaved={async () => { const l = lastFilesRef.current; if (l) await handleFiles(l.files, l.kind); }} />
               <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 10 }}>
                 {tr("การนำเข้าจะ")}<strong>{tr('แทนที่')}</strong>{tr("ข้อมูล EDI ฉบับเดิมของ ship-to เดียวกัน (อัพใหม่ทุกวันได้ ยอดไม่ทบซ้ำ")})
-                {ediKind === 'orders' ? ' · รอบที่เตรียม/ส่งไปแล้วจะไม่ถูกแตะ' : ''}
+                {ediKind === 'orders' ? tr(" · รอบที่เตรียม/ส่งไปแล้วจะไม่ถูกแตะ") : ''}
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button onClick={doImportEdi} disabled={saving}
@@ -1057,7 +1057,7 @@ function UploadTab({ canUpload, fullName, onImported, custLabel }) {
               </div>
               <button onClick={doImport} disabled={saving}
                 style={{ padding: '10px 24px', borderRadius: 'var(--r-md)', border: 'none', background: 'var(--accent)', color: 'var(--accent-ink)', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'var(--font-body)', opacity: saving ? 0.6 : 1 }}>
-                {saving ? 'กำลังนำเข้า...' : `${tr("นำเข้าข้อมูล")} ${kind === 'forecast' ? 'Forecast' : 'Orders'}`}
+                {saving ? tr("กำลังนำเข้า...") : `${tr("นำเข้าข้อมูล")} ${kind === 'forecast' ? 'Forecast' : 'Orders'}`}
               </button>
             </>
           )}
@@ -1231,7 +1231,7 @@ function PlannerTab({ refreshKey, custLabel }) {
                       {r.coverage == null ? '—' : `${fmt(r.coverage)}%`}
                     </td>
                     <td style={{ padding: '7px 12px', borderTop: '1px solid var(--border)', fontSize: 12, fontWeight: 700, textAlign: 'right', color: r.loadHours == null ? 'var(--amber)' : 'var(--text)' }}>
-                      {r.loadHours == null ? 'ไม่มี CT' : fmt(r.loadHours)}
+                      {r.loadHours == null ? tr("ไม่มี CT") : fmt(r.loadHours)}
                     </td>
                   </tr>
                 ))}
@@ -1694,8 +1694,8 @@ function KanbanCalcTab({ canApply, fullName, custLabel }) {
 
       <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>
         {calcType === 'production'
-          ? '📖 Production Kanban (คัมบังสั่งผลิต press). Vol/Day = ⌈forecast/วันทำงาน⌉ · Kanban(sys) = ⌈(Info+Process+Safety)/CT/pkg⌉ · Min = Safety · Max = Min + Kanban/Lot · แก้ param แล้วค่าคำนวณอัปเดตทันที · มีสรุปภาระการผลิต (%load) ด้านล่าง'
-          : '📖 Withdrawal Kanban (คัมบังเบิกถอน FG). Order/เดือน = ผลรวม forecast ของเดือนที่เลือก · แก้ param ในตารางแล้วค่าคำนวณอัปเดตทันที · Apply = เขียนเข้า kanban_standards (ระบบดึงใช้ต่อ)'}
+          ? tr("📖 Production Kanban (คัมบังสั่งผลิต press). Vol/Day = ⌈forecast/วันทำงาน⌉ · Kanban(sys) = ⌈(Info+Process+Safety)/CT/pkg⌉ · Min = Safety · Max = Min + Kanban/Lot · แก้ param แล้วค่าคำนวณอัปเดตทันที · มีสรุปภาระการผลิต (%load) ด้านล่าง")
+          : tr("📖 Withdrawal Kanban (คัมบังเบิกถอน FG). Order/เดือน = ผลรวม forecast ของเดือนที่เลือก · แก้ param ในตารางแล้วค่าคำนวณอัปเดตทันที · Apply = เขียนเข้า kanban_standards (ระบบดึงใช้ต่อ)")}
       </div>
 
       {/* CAP/ชม. ที่กรอก vs กำลังจริงจาก OEE — ไม่แทนค่าให้เอง แต่ต้องเห็นว่าห่างกันแค่ไหน */}
@@ -1763,7 +1763,7 @@ function KanbanCalcTab({ canApply, fullName, custLabel }) {
                               → ต้องเห็นตัวเลขที่จะถูกบันทึกจริงตรงนี้ ห้ามให้ไปรู้ตอนของระเบิดแล้ว */}
                           {c === 'lot_size' && (
                             <div style={{ fontSize: 11, marginTop: 2, whiteSpace: 'nowrap', color: lotPcsOf(calcType, row.pp) > 0 ? 'var(--muted)' : 'var(--amber)' }}>
-                              {lotPcsOf(calcType, row.pp) > 0 ? `= ${fmt(lotPcsOf(calcType, row.pp))} ${tr("ชิ้น")}` : 'ต้องมี Pkg'}
+                              {lotPcsOf(calcType, row.pp) > 0 ? `= ${fmt(lotPcsOf(calcType, row.pp))} ${tr("ชิ้น")}` : tr("ต้องมี Pkg")}
                             </div>
                           )}
                           {/* CAP ที่กรอกเป็นกำลังทางทฤษฎี — โชว์กำลังจริงจาก OEE ให้เทียบ กดแล้วเติมให้ (คนกดเอง) */}

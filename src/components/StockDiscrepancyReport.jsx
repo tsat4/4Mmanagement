@@ -180,7 +180,7 @@ export default function StockDiscrepancyReport() {
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <Segmented value={view} onChange={setView} label={tr('สถานะ')}
           options={[{ value: 'open', label: 'ยังไม่เคลียร์' }, { value: 'done', label: 'เคลียร์แล้ว' }, { value: 'all', label: 'ทั้งหมด' }]} />
-        <SearchInput value={q} onChange={setQ} fields="MAT / ชื่อพาร์ท / ไลน์ / เลข SAP / หมายเหตุ" grow={false} />
+        <SearchInput value={q} onChange={setQ} fields={tr("MAT / ชื่อพาร์ท / ไลน์ / เลข SAP / หมายเหตุ")} grow={false} />
         {month && <span style={{ fontSize: 12, color: 'var(--text2)' }}>{tr('เดือน')} {month} <button className="tbtn" onClick={() => setMonth('')} style={btn(false)}>{tr('✕ ทุกเดือน')}</button></span>}
         <div style={{ flex: 1 }} />
         <button className="tbtn" onClick={exportCsv} disabled={!list.length} style={btn(false)}>⬇️ Export CSV</button>
@@ -188,7 +188,7 @@ export default function StockDiscrepancyReport() {
 
       <div style={card}>
         {loading ? <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{tr('กำลังโหลด…')}</div>
-          : !list.length ? <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{view === 'open' ? 'ไม่มีเคสค้างในคลังพัก' : 'ไม่มีรายการ'}{base.length > list.length ? ` · ${tr("ซ่อนอยู่")} ${base.length - list.length} ${tr("เคส (ไม่ตรงคำค้น")})` : ''}</div>
+          : !list.length ? <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{view === 'open' ? tr("ไม่มีเคสค้างในคลังพัก") : tr("ไม่มีรายการ")}{base.length > list.length ? ` · ${tr("ซ่อนอยู่")} ${base.length - list.length} ${tr("เคส (ไม่ตรงคำค้น")})` : ''}</div>
           : (
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -244,7 +244,7 @@ export default function StockDiscrepancyReport() {
         <div style={{ position: 'fixed', inset: 0, zIndex: 2300, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(480px, 96vw)', boxShadow: 'var(--shadow-lg)' }}>
             <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>
-              {form.mode === 'propose' ? '🤝 เสนอผลเคลียร์' : '✔ ยืนยันผลเคลียร์'}
+              {form.mode === 'propose' ? tr("🤝 เสนอผลเคลียร์") : tr("✔ ยืนยันผลเคลียร์")}
             </div>
             <div style={{ fontSize: 12.5, color: 'var(--text2)', marginBottom: 10 }}>
               <MatLabel mat={form.d.mat_no} name={form.d.part_name} /> · {form.d.line_name} {tr('· ขาด')} <b>{fmt(form.d.short_qty)}</b>

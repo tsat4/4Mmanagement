@@ -1210,7 +1210,7 @@ export default function Operator() {
             </>); })()}
             {/* 🔎 ค้นชื่อ/รหัส — feedback หน้างาน 23/09: "พนักงานหลักร้อย เลื่อนหาแย่เลย"
                 ใช้ normSearch ของกลาง ⇒ ทนช่องว่างซ้อน/ขีด และการสะกดไทย (ธ/ธ์ · สระ/วรรณยุกต์) */}
-            <SearchInput value={empSearch} onChange={setEmpSearch} fields="ชื่อ / รหัส / ตำแหน่ง" />
+            <SearchInput value={empSearch} onChange={setEmpSearch} fields={tr("ชื่อ / รหัส / ตำแหน่ง")} />
             <span className="spacer" />
             {empSearch && (
               <span className="filter-count" style={{ color: displayed.length ? 'var(--accent)' : 'var(--amber)', fontWeight: 700, whiteSpace: 'normal' }}>
@@ -1266,7 +1266,7 @@ export default function Operator() {
                   padding: '6px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--blue-line)', fontSize: 12, cursor: 'pointer',
                   background: filterNoPhoto ? 'var(--blue-line)' : 'transparent', color: 'var(--blue)', fontWeight: 700,
                 }}>
-                {filterNoPhoto ? 'กำลังดูเฉพาะคนที่ยังไม่มีรูป' : 'ดูเฉพาะคนที่ยังไม่มีรูป'}
+                {filterNoPhoto ? tr("กำลังดูเฉพาะคนที่ยังไม่มีรูป") : tr("ดูเฉพาะคนที่ยังไม่มีรูป")}
                 <ToggleDot on={filterNoPhoto} ring="var(--bg)" />
               </button>
             </div>
@@ -1296,7 +1296,7 @@ export default function Operator() {
                   padding: '6px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--amber-line)', fontSize: 12, cursor: 'pointer',
                   background: filterOffOrg ? 'var(--amber-line)' : 'transparent', color: 'var(--amber)', fontWeight: 700,
                 }}>
-                {filterOffOrg ? 'กำลังดูเฉพาะที่ต้องแก้' : 'ดูเฉพาะที่ต้องแก้'}
+                {filterOffOrg ? tr("กำลังดูเฉพาะที่ต้องแก้") : tr("ดูเฉพาะที่ต้องแก้")}
                 <ToggleDot on={filterOffOrg} ring="var(--bg)" />
               </button>
             </div>
@@ -1740,7 +1740,7 @@ export default function Operator() {
                       <input type="color" value={editingSkill.color}
                         onChange={e => setEditingSkill({ ...editingSkill, color: e.target.value })}
                         style={{ width: 44, height: 36, padding: 2, borderRadius: 'var(--ctl-r)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', cursor: 'pointer' }} />
-                      <span style={{ fontSize: 13, color: editingSkill.color, fontWeight: 700 }}>● {tr(editingSkill.label) || 'ตัวอย่าง'}</span>
+                      <span style={{ fontSize: 13, color: editingSkill.color, fontWeight: 700 }}>● {tr(editingSkill.label) || tr("ตัวอย่าง")}</span>
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 10 }}>
@@ -1795,7 +1795,7 @@ export default function Operator() {
                     background: expCfg?.is_enabled ? 'rgba(34,197,94,0.12)' : 'var(--bg2)',
                     color: expCfg?.is_enabled ? '#22c55e' : 'var(--muted)',
                     border: `1px solid ${expCfg?.is_enabled ? 'rgba(34,197,94,0.35)' : 'var(--border2)'}` }}>
-                  {expCfg?.is_enabled ? 'EXP v2: ใช้จริง' : 'EXP v2: โหมดทดลอง'}
+                  {expCfg?.is_enabled ? tr("EXP v2: ใช้จริง") : tr("EXP v2: โหมดทดลอง")}
                 </button>
               </>
             )}
@@ -1844,7 +1844,7 @@ export default function Operator() {
                   (req.to_level > SKILL_EDIT_CAP && !canEditHighSkill)
                     ? `${tr("ต้องมีสิทธิ์ skills:edit_high ด้วย (คะแนน")} ${req.to_level} ${tr("เกินเพดาน")} ${SKILL_EDIT_CAP} ${tr("ที่บัญชีนี้ตั้งได้")})`
                   : (skillDefs.find(sd => sd.name === req.skill_name)?.category === 'allowance_skill' && !canEditAllowance)
-                    ? 'ต้องมีสิทธิ์ skills:edit_allowance ด้วย (สกิลหมวดใบเซอร์ค่าฝีมือ)'
+                    ? tr("ต้องมีสิทธิ์ skills:edit_allowance ด้วย (สกิลหมวดใบเซอร์ค่าฝีมือ)")
                   : '';
                 const canApprove = mayApprove && !writeBlock;
                 return (
@@ -1860,7 +1860,7 @@ export default function Operator() {
                         &nbsp;·&nbsp;
                         <span style={{ color: '#f59e0b', fontWeight: 600 }}>score {req.from_score}</span>
                         &nbsp;→&nbsp;
-                        <span style={{ color: toLv?.color, fontWeight: 800 }}>Level {req.to_level} ({toLv?.label})</span>
+                        <span style={{ color: toLv?.color, fontWeight: 800 }}>Level {req.to_level} ({tr(toLv?.label)})</span>
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--muted)' }}>
                         {tr("ขอเมื่อ")} {fmtDateMedium(req.requested_at)}
@@ -1931,7 +1931,7 @@ export default function Operator() {
                       <span style={{ fontSize: 11, color: writeBlock ? '#f59e0b' : 'var(--muted)', maxWidth: 200, lineHeight: 1.45, flexShrink: 0 }}>
                         {writeBlock
                           ? <>{tr('🔒 อนุมัติไม่ได้ —')} {writeBlock}</>
-                          : (req.to_level === 100 ? 'รอชุดสิทธิ์ทั้งฝ่ายอนุมัติ' : 'รอชุดสิทธิ์ระดับส่วนอนุมัติ')}
+                          : (req.to_level === 100 ? tr("รอชุดสิทธิ์ทั้งฝ่ายอนุมัติ") : tr("รอชุดสิทธิ์ระดับส่วนอนุมัติ"))}
                       </span>
                     )}
                   </div>
@@ -2199,7 +2199,7 @@ export default function Operator() {
                       }}>
                         <option value="">{editingEmp.department ? tr('— เลือกกลุ่ม —') : tr('เลือกแผนกก่อน')}</option>
                         {orgGroups.map(g => (
-                          <option key={g.id} value={g.name}>{g.name}{g.ref_line_id ? '' : '  ⚠ ยังไม่ผูกไลน์'}</option>
+                          <option key={g.id} value={g.name}>{g.name}{g.ref_line_id ? '' : tr("  ⚠ ยังไม่ผูกไลน์")}</option>
                         ))}
                         {cur && !curInOrg && <option value={cur}>{cur} {tr('(นอกผัง — ค่าเดิม)')}</option>}
                       </select>
@@ -2251,7 +2251,7 @@ export default function Operator() {
                 <label style={{ ...labelSt, marginBottom: canEditSkills ? 12 : 6, display: 'block' }}>{tr('ระดับทักษะ')}</label>
                 {!canEditSkillsFor(editingEmp) && (
                   <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 5 }}>
-                    {tr("ดูอย่างเดียว")} — {canEditSkills ? `${tr("แก้ได้เฉพาะพนักงานในส่วนงาน")} ${homeSection || tr('ของตัวเอง')}` : 'บัญชีนี้ไม่มีสิทธิ์แก้ระดับทักษะ'} ({tr("ข้อมูลอื่นในฟอร์มยังแก้ได้ตามปกติ")})
+                    {tr("ดูอย่างเดียว")} — {canEditSkills ? `${tr("แก้ได้เฉพาะพนักงานในส่วนงาน")} ${homeSection || tr('ของตัวเอง')}` : tr("บัญชีนี้ไม่มีสิทธิ์แก้ระดับทักษะ")} ({tr("ข้อมูลอื่นในฟอร์มยังแก้ได้ตามปกติ")})
                   </div>
                 )}
                 {canEditSkillsFor(editingEmp) && !canEditHighSkill && (

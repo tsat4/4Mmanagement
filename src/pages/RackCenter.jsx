@@ -182,7 +182,7 @@ export default function RackCenter() {
     [requests, scopedNames, allLineNames]);
   const pkgScoped = useMemo(() => filterRowsByLineScope(pkgReqs, { scopedNames, lineNames: allLineNames, nameOf: p => p?.source_line }),
     [pkgReqs, scopedNames, allLineNames]);
-  const scopeLabel = (sections || []).filter(Boolean).join(' · ') || 'ไลน์ของคุณ';
+  const scopeLabel = (sections || []).filter(Boolean).join(' · ') || tr("ไลน์ของคุณ");
 
   const filtered = useMemo(() => {
     const rows = reqScoped.rows;
@@ -330,7 +330,7 @@ export default function RackCenter() {
     <Page>
       {/* ⚠️ rack_center:operate seed ไว้ตั้งแต่ 2026-07-08 (ก่อนมี role mtn/engineer/planner_store/dept_admin)
           → role ที่เพิ่มทีหลังเปิดหน้านี้ได้แต่เรียกภาชนะไม่ได้ ต้องบอกให้ชัด */}
-      <ReadOnlyNote show={!canOperate} role={role} what="เรียกภาชนะ/รับงาน"
+      <ReadOnlyNote show={!canOperate} role={role} what={tr("เรียกภาชนะ/รับงาน")}
         permKey="rack_center:operate" />
       {/* UI-STANDARD 2026-09-24: หัวเพจ + แท็บ ผ่าน PageHeader (เดิมวาด h1/แถบปุ่มเอง) · แท็บผูก ?tab= */}
       <PageHeader title={tr('ภาชนะ & Packaging — เรียกภาชนะ')} icon="🗃️"
@@ -353,7 +353,7 @@ export default function RackCenter() {
         </label>
       </FilterBar>
       {(scopedNames || viewScope.unsure) && (reqScoped.hidden + pkgScoped.hidden > 0 || viewScope.unsure) && (
-        <div title={viewScope.unsure ? 'ตัดขอบเขตของบัญชีนี้ไม่ได้ (ทะเบียนไลน์ยังไม่โหลด/ส่วนงานไม่ตรงผัง)' : `${tr("ขอบเขตของบัญชีนี้")}: ${scopeLabel}`}
+        <div title={viewScope.unsure ? tr("ตัดขอบเขตของบัญชีนี้ไม่ได้ (ทะเบียนไลน์ยังไม่โหลด/ส่วนงานไม่ตรงผัง)") : `${tr("ขอบเขตของบัญชีนี้")}: ${scopeLabel}`}
           style={{ display: 'inline-block', margin: '0 0 12px', padding: '4px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700,
             color: viewScope.unsure ? 'var(--amber)' : 'var(--accent)',
             background: viewScope.unsure ? 'var(--amber-dim)' : 'var(--accent-dim)',
@@ -361,7 +361,7 @@ export default function RackCenter() {
           {viewScope.unsure
             ? (scopedNames
               ? `⚠ ${tr("ขอบเขตไม่ชัด — แสดงเฉพาะ")} ${scopeLabel} · ${tr("ซ่อน")} ${reqScoped.hidden + pkgScoped.hidden} ${tr("ใบนอกขอบเขต")}`
-              : '⚠ ตัดขอบเขตไม่ได้ — แสดงทั้งโรงงาน')
+              : tr("⚠ ตัดขอบเขตไม่ได้ — แสดงทั้งโรงงาน"))
             : `🔭 ${tr("เฉพาะ")} ${scopeLabel} · ${tr("ซ่อน")} ${reqScoped.hidden} ${tr("ใบเรียกภาชนะ")}${pkgScoped.hidden ? ` + ${pkgScoped.hidden} ${tr("ใบเบิก")} packaging` : ''} ${tr("นอกขอบเขต")}`}
         </div>
       )}
@@ -697,7 +697,7 @@ function QrLabelModal({ lines, containerTypes, onClose, onPrint }) {
           <button disabled={printing || !selLines.size || !selTypes.size}
             onClick={async () => { setPrinting(true); try { await onPrint([...selLines], [...selTypes]); } finally { setPrinting(false); } }}
             style={{ ...btn(selLines.size && selTypes.size ? 'var(--accent)' : 'var(--bg2)', selLines.size && selTypes.size ? 'var(--accent-ink)' : 'var(--muted)'), cursor: selLines.size && selTypes.size ? 'pointer' : 'not-allowed' }}>
-            {printing ? '...' : 'พิมพ์ป้าย'}
+            {printing ? '...' : tr("พิมพ์ป้าย")}
           </button>
         </div>
       </div>

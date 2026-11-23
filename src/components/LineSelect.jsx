@@ -168,7 +168,7 @@ export default function LineSelect({
       {grouped.groups.map(g => {
         const items = g.options.map(o => <option key={o.value} value={o.value}>{indent(o)}</option>);
         // หัวกลุ่ม = ส่วนงาน · มีกลุ่มพิเศษ (คลัง ฯลฯ) แต่ส่วนงานเดียว ⇒ ยังต้องมีหัว "ไลน์ผลิต" กั้นจากกลุ่มพิเศษ
-        const label = g.label ? `📁 ${g.label}` : (hasExtra ? '🏭 ไลน์ผลิต' : null);   // 📁 = ไอคอนส่วนงานชุดเดียวกับผังองค์กร (SCOPE_KIND_META)
+        const label = g.label ? `📁 ${g.label}` : (hasExtra ? tr("🏭 ไลน์ผลิต") : null);   // 📁 = ไอคอนส่วนงานชุดเดียวกับผังองค์กร (SCOPE_KIND_META)
         return label ? <optgroup key={label} label={label}>{items}</optgroup> : items;
       })}
       {extraAt === 'end' && extraEls}

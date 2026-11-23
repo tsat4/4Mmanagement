@@ -217,7 +217,7 @@ export default function EnergyMqttTopics({ points, canEdit }) {
         <div style={{ ...secTitle, padding: '12px 14px 0' }}>{tr('topic ที่ตั้งไว้ (')}{rows.length})</div>
         {rows.length === 0 ? (
           <div style={{ padding: 14, fontSize: 12.5, color: 'var(--muted)' }}>
-            {tr("ยังไม่มี")} topic — {canEdit ? 'เพิ่มจากฟอร์มด้านบน' : 'ต้องมีสิทธิ์บันทึกถึงจะเพิ่มได้'}
+            {tr("ยังไม่มี")} topic — {canEdit ? tr("เพิ่มจากฟอร์มด้านบน") : tr("ต้องมีสิทธิ์บันทึกถึงจะเพิ่มได้")}
           </div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>

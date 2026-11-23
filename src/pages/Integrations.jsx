@@ -112,7 +112,7 @@ export default function Integrations() {
   return (
     <Page>
       {header}
-      {err && <NoticeBar tone="bad">{err}{sources ? ' — ตัวเลขบนจอเป็นของรอบก่อนหน้า' : ''}</NoticeBar>}
+      {err && <NoticeBar tone="bad">{err}{sources ? tr(" — ตัวเลขบนจอเป็นของรอบก่อนหน้า") : ''}</NoticeBar>}
       {!sources && !err && <div style={{ color: 'var(--muted)', padding: 20 }}>{tr('กำลังโหลด…')}</div>}
 
       {tab === 'guide' && <IntegrationGuide />}
@@ -154,7 +154,7 @@ function SourceList({ sources, hourly, nowMs, onOpen, canManage }) {
         <Kpi label={tr('รับสำเร็จ 24 ชม.')} value={okToday.toLocaleString()} unit={tr("ครั้ง")} sub={tr('นับทุกต้นทางรวมกัน')} />
       </div>
       {!sources.length ? (
-        <div style={{ ...card, color: 'var(--muted)' }}>{tr('ยังไม่มีต้นทางในทะเบียน')}{canManage ? ' — กด "+ เพิ่มการเชื่อมต่อ"' : ''}</div>
+        <div style={{ ...card, color: 'var(--muted)' }}>{tr('ยังไม่มีต้นทางในทะเบียน')}{canManage ? tr(" — กด \"+ เพิ่มการเชื่อมต่อ\"") : ''}</div>
       ) : sources.map((s, i) => {
         const m = STATUS[st[i]];
         return (
@@ -293,7 +293,7 @@ function SourceDetail({ src, hours, nowMs, canManage, canMap, onBack, onChanged,
             onClick={() => act('rotate', 'ออกรหัสใหม่', src.key_hint
               ? 'ออกรหัสใหม่แล้ว รหัสเดิมจะใช้ไม่ได้ทันที — Node-RED ที่ใช้รหัสเดิมจะส่งไม่เข้าจนกว่าจะเปลี่ยน ยืนยัน?'
               : 'ออกรหัสของต้นทางนี้ (secret กลางเดิมยังใช้ได้จนกว่าจะกด "เลิกใช้รหัสกลาง") ยืนยัน?')}>
-            🔑 {src.key_hint ? 'เปลี่ยนรหัสลับ' : 'ออกรหัสของต้นทางนี้'}</button>
+            🔑 {src.key_hint ? tr("เปลี่ยนรหัสลับ") : tr("ออกรหัสของต้นทางนี้")}</button>
           {src.legacy_secret && src.key_hint && (
             <button type="button" className="pg-btn" disabled={!!busy}
               onClick={() => act('legacy_off', 'เลิกใช้รหัสกลาง', 'ยืนยันว่า Node-RED เปลี่ยนไปใช้ ESM_SOURCE_KEY แล้ว? หลังกด รหัสกลางเดิมจะส่งเข้าต้นทางนี้ไม่ได้')}>
@@ -305,8 +305,8 @@ function SourceDetail({ src, hours, nowMs, canManage, canMap, onBack, onChanged,
             {src.is_paused ? tr('▶ เปิดรับต่อ') : tr('⏸ พักการรับ')}</button>
         </>}
         <span style={{ fontSize: 12, color: noAuth ? 'var(--red)' : 'var(--muted)' }}>
-          {noAuth ? '⚠ ยังไม่ได้ออกรหัส — ต้นทางนี้ส่งข้อมูลเข้าไม่ได้จนกว่าจะออกรหัส'
-            : <>{tr('ยืนยันตัวตนด้วย:')} {usesLegacy ? 'รหัสกลาง (INGEST_SECRET)' : `${tr("รหัสของต้นทาง")} …${src.key_hint}`}{src.legacy_secret && src.key_hint ? ' · ยังรับรหัสกลางอยู่' : ''}</>}
+          {noAuth ? tr("⚠ ยังไม่ได้ออกรหัส — ต้นทางนี้ส่งข้อมูลเข้าไม่ได้จนกว่าจะออกรหัส")
+            : <>{tr('ยืนยันตัวตนด้วย:')} {usesLegacy ? tr("รหัสกลาง (INGEST_SECRET)") : `${tr("รหัสของต้นทาง")} …${src.key_hint}`}{src.legacy_secret && src.key_hint ? tr(" · ยังรับรหัสกลางอยู่") : ''}</>}
         </span>
       </div>
 
@@ -389,9 +389,9 @@ function KindsTab({ sources }) {
           <div key={k.key} style={{ ...card, display: 'grid', gap: 4, alignContent: 'start' }}>
             <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{k.icon} {tr(k.label)}</div>
             <div style={{ fontSize: 12, fontWeight: 700, color: k.status === 'live' ? 'var(--green)' : 'var(--amber)' }}>
-              {k.status === 'live' ? '● ESM รับได้แล้ว' : '○ ออกแบบไว้ — ยังไม่มีปลายทางรับ'}
+              {k.status === 'live' ? tr("● ESM รับได้แล้ว") : tr("○ ออกแบบไว้ — ยังไม่มีปลายทางรับ")}
             </div>
-            <div style={{ fontSize: 12.5, color: 'var(--text2)' }}>{k.help}</div>
+            <div style={{ fontSize: 12.5, color: 'var(--text2)' }}>{tr(k.help)}</div>
             <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('ปลายทาง:')} {k.dest}</div>
             <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('ต้นทางที่ส่ง:')} {users.length ? users.map(s => s.name).join(', ') : '—'}</div>
           </div>

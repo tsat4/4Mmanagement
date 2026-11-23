@@ -265,7 +265,7 @@ function NpiLinkCard({ proj, isMobile }) {
         <NpiStat label={tr('ECI ยังไม่จบ')} value={sum.eciOpen} suffix={sum.eciTotal != null ? `/ ${sum.eciTotal}` : ''}
           tone={sum.eciOpen ? 'var(--amber)' : undefined} />
         <NpiStat label={tr('ถึง SOP')} value={sum.sopIn == null ? null : (sum.sopIn >= 0 ? sum.sopIn : -sum.sopIn)}
-          suffix={sum.sopIn == null ? '' : (sum.sopIn >= 0 ? 'วัน' : 'วัน (เลยแล้ว)')}
+          suffix={sum.sopIn == null ? '' : (sum.sopIn >= 0 ? tr("วัน") : tr("วัน (เลยแล้ว)"))}
           tone={sum.sopIn != null && sum.sopIn < 0 ? 'var(--red)' : undefined} />
       </div>
       <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 9, lineHeight: 1.5 }}>
@@ -378,7 +378,7 @@ function LevelOverview({ data, go }) {
                 <span style={{ fontSize: 14.5, fontWeight: 700 }}>{c.name}</span>
               </div>
               <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-                {c.projects.length ? `${c.projects.length} ${tr("รุ่นในระบบ")}` : 'ยังไม่มีโปรเจคในระบบ'}
+                {c.projects.length ? `${c.projects.length} ${tr("รุ่นในระบบ")}` : tr("ยังไม่มีโปรเจคในระบบ")}
               </div>
               {!!c.projects.length && (
                 <div style={{ fontSize: 11.5, color: 'var(--text2)' }}>
@@ -387,7 +387,7 @@ function LevelOverview({ data, go }) {
               )}
               {worst && <div style={{ fontSize: 11.5, color: 'var(--red)' }}>🔴 {worst.title}</div>}
               <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                {tr('ทีม')} {teams.join(' · ') || '–'} {tr('· ด่าน')} {c.milestones.length ? c.milestones.join(' → ') : 'ยังไม่ตั้งแม่แบบ'}
+                {tr('ทีม')} {teams.join(' · ') || '–'} {tr('· ด่าน')} {c.milestones.length ? c.milestones.join(' → ') : tr("ยังไม่ตั้งแม่แบบ")}
               </div>
             </button>
           );
@@ -512,7 +512,7 @@ function BucketBar({ proj, leaves, go, isMobile }) {
                 <span style={{ fontSize: 13, fontWeight: 700 }}>{tr(b.label)}</span>
               </div>
               <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.4 }}>
-                {n ? 'กดเพื่อดูรายการ' : 'ยังไม่มีหัวข้อในถังนี้'}
+                {n ? tr("กดเพื่อดูรายการ") : tr("ยังไม่มีหัวข้อในถังนี้")}
               </div>
             </button>
           );
@@ -572,7 +572,7 @@ function PopTable({ proj, go }) {
                       {kids.length ? `${kids.length} ${tr("หัวข้อ")}` : '—'}
                     </td>
                     <td style={{ ...td, fontSize: 11.5, color: 'var(--text2)' }}>
-                      {kc ? countsLabel(kc) : (m.note || (eva === 'none' ? 'ยังไม่ประเมิน' : evaMeta(eva).label))}
+                      {kc ? countsLabel(kc) : (m.note || (eva === 'none' ? tr("ยังไม่ประเมิน") : evaMeta(eva).label))}
                     </td>
                   </tr>
                 );
@@ -766,7 +766,7 @@ function LevelBucket({ proj, bucket, go }) {
                       {l.path === l.mainKey ? '—' : l.mainLabel}
                     </td>
                     <td style={{ ...td, fontSize: 11.5, color: l.note ? 'var(--text2)' : 'var(--red)' }}>
-                      {l.note || (l.eva === 'R' ? '⚠️ แดงแต่ยังไม่มีคำอธิบาย' : '—')}
+                      {l.note || (l.eva === 'R' ? tr("⚠️ แดงแต่ยังไม่มีคำอธิบาย") : '—')}
                     </td>
                   </tr>
                 ))}
@@ -837,7 +837,7 @@ function LevelPop({ proj, main, go }) {
                       <td style={{ ...td, fontSize: 11.5, color: 'var(--text2)' }}>
                         {s.fromStage ? `${tr("ด่าน")} ${s.fromStage}`
                           : s.panel ? `${tr("แผง")} ${proj.panels.find(p => p.key === s.panel)?.label || s.panel}`
-                          : 'ยังไม่มีหลักฐานผูกไว้'}
+                          : tr("ยังไม่มีหลักฐานผูกไว้")}
                       </td>
                     </tr>
                   );
@@ -880,7 +880,7 @@ function LevelPopSub({ proj, main, sub, go }) {
                     <td style={td}><Dot eva={t.eva} /></td>
                     <td style={{ ...td, fontWeight: 700 }}>{tr(t.label)}</td>
                     <td style={{ ...td, fontSize: 11.5, color: 'var(--muted)' }}>
-                      {t.panel ? `${tr("แผง")} ${proj.panels.find(p => p.key === t.panel)?.label || t.panel} →` : 'ยังไม่ผูก'}
+                      {t.panel ? `${tr("แผง")} ${proj.panels.find(p => p.key === t.panel)?.label || t.panel} →` : tr("ยังไม่ผูก")}
                     </td>
                     <td style={{ ...td, fontSize: 11.5, color: 'var(--text2)' }}>{t.note || '—'}</td>
                   </tr>

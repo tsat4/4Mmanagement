@@ -167,7 +167,7 @@ export default function DieStatusBoard({
             active: fStatus === 'regrind', onClick: () => setFStatus(v => v === 'regrind' ? '' : 'regrind'),
           })}
         </div>
-        <SearchInput value={q} onChange={setQ} fields="เลขแม่พิมพ์ / พาร์ท / หมายเหตุ" />
+        <SearchInput value={q} onChange={setQ} fields={tr("เลขแม่พิมพ์ / พาร์ท / หมายเหตุ")} />
         <span className="spacer" />
         <span className="filter-count">{tr('แสดง')} {rows.length} {tr('ตัว')}</span>
       </FilterBar>
@@ -236,7 +236,7 @@ export default function DieStatusBoard({
                     <td style={tdStyle}>
                       {mos.length ? mos.map(o => (
                         <div key={o.id} style={{ fontSize: 11.5, color: '#ef4444', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                          {o.mo_no || '(ยังไม่ออกเลข MO)'} <span style={{ fontWeight: 400 }}>· {moStatusLabel(o)}</span>
+                          {o.mo_no || tr("(ยังไม่ออกเลข MO)")} <span style={{ fontWeight: 400 }}>· {moStatusLabel(o)}</span>
                         </div>
                       )) : <span style={{ color: 'var(--muted)' }}>—</span>}
                     </td>

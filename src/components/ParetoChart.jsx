@@ -186,9 +186,9 @@ export default function ParetoChart({
 
       {/* คำอธิบาย + ปุ่มปรับมุมป้าย (จอ TV ไม่มีเมาส์ → ต้องกดได้ ไม่ใช่ hover) */}
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', fontSize: 11.5, color: mut, marginTop: 6 }}>
-        {shown.some(r => r._cls === 'A') && <Key c={ABC_COLOR.A} t="A — ต้องแก้ก่อน (สะสมถึง 80%)" />}
-        {shown.some(r => r._cls === 'B') && <Key c={ABC_COLOR.B} t="B — รอง (80–95%)" />}
-        {shown.some(r => r._cls === 'C') && <Key c={ABC_COLOR.C} t="C — หางยาว" />}
+        {shown.some(r => r._cls === 'A') && <Key c={ABC_COLOR.A} t={tr("A — ต้องแก้ก่อน (สะสมถึง 80%)")} />}
+        {shown.some(r => r._cls === 'B') && <Key c={ABC_COLOR.B} t={tr("B — รอง (80–95%)")} />}
+        {shown.some(r => r._cls === 'C') && <Key c={ABC_COLOR.C} t={tr("C — หางยาว")} />}
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
           <svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke={LINE_COLOR} strokeWidth="2" /></svg>
           % {tr("สะสม (อ่านแกนขวา")})
@@ -206,7 +206,7 @@ export default function ParetoChart({
         {tiny.length > 0 && (
           <span style={{ color: '#f59e0b', fontWeight: 700 }}>
             ⚠️ {tiny.length} {tr('แท่งท้ายเตี้ยกว่า 1 พิกเซล (ต่ำสุด')} {fmtV(tinyMin)} {unit}) — <u>{tr('ไม่ใช่ 0')}</u>
-            {showAll ? ' · กด “ย่อหางยาว” เพื่อรวมเป็นแท่งเดียว' : ''}
+            {showAll ? tr(" · กด “ย่อหางยาว” เพื่อรวมเป็นแท่งเดียว") : ''}
           </span>
         )}
         <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: 5, alignItems: 'center' }}>
@@ -224,7 +224,7 @@ export default function ParetoChart({
               ...miniBtn,
               borderColor: ang2 === a ? 'var(--accent)' : 'var(--border)',
               color: ang2 === a ? 'var(--text)' : 'var(--muted)',
-            }}>{a === 0 ? 'นอน' : `${Math.abs(a)}°`}</button>
+            }}>{a === 0 ? tr("นอน") : `${Math.abs(a)}°`}</button>
           ))}
         </span>
       </div>

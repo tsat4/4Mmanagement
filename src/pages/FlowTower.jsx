@@ -347,7 +347,7 @@ export default function FlowTower() {
             {tr("จุดที่ความต้องการค้าง ไม่กลายเป็นใบสั่ง")}
           </div>
           <div style={{ fontSize: 12, color: S.blocks?.length ? 'var(--red)' : 'var(--green)', fontWeight: 800 }}>
-            {S.blocks?.length ? `${fmt(S.blocks.length)} ${tr("พาร์ท")} · ${fmt(S.blockQty)} ${tr("ชิ้น")}` : 'ไม่มีจุดตัน'}
+            {S.blocks?.length ? `${fmt(S.blocks.length)} ${tr("พาร์ท")} · ${fmt(S.blockQty)} ${tr("ชิ้น")}` : tr("ไม่มีจุดตัน")}
           </div>
         </div>
         <InfoMore label={tr('ทำไมยังออกใบสั่งไม่ได้')} size={11.5} style={{ marginBottom: 10 }}>
@@ -370,7 +370,7 @@ export default function FlowTower() {
                         <td style={{ padding: '7px 12px', maxWidth: 340 }}><MatLabel mat={b.mat_no} name={b.part_name} /></td>
                         <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 800, color: 'var(--red)' }}>{fmt(b.pending_qty)}</td>
                         <td style={{ padding: '7px 12px', fontSize: 11, color: 'var(--muted)' }}>
-                          {b.demand_kind === 'purchase' ? '🚛 สั่งซื้อ' : `🔨 ${tr("ผลิตเอง")}${b.maker_line ? ` · ${b.maker_line}` : ''}`}
+                          {b.demand_kind === 'purchase' ? tr("🚛 สั่งซื้อ") : `🔨 ${tr("ผลิตเอง")}${b.maker_line ? ` · ${b.maker_line}` : ''}`}
                         </td>
                         <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 700 }}>{b.suggested_lot ? fmt(b.suggested_lot) : '—'}</td>
                         <td style={{ padding: '7px 12px' }}>

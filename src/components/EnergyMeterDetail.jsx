@@ -173,14 +173,14 @@ export default function EnergyMeterDetail({ m, machines, boardMeters, totalToday
         <Kpi color={m.overKw ? BAD : GOOD} label={tr('กำลังไฟ (สูงสุดในนาทีล่าสุด)')} value={fmt(m.kw, 2)} unit="kW"
           sub={`${tr("สูงสุดวันนี้")} ${fmt(m.peakKw)} kW · ${tr("ลิมิต")} ${m.limitKw ?? '—'} kW`} />
         <Kpi color={INFO} label={tr('ใช้ไฟวันนี้')} value={fmt(m.todayKwh)} unit="kWh"
-          sub={todayPct != null ? `${fmt(todayPct, 0)}% ${tr("ของไฟทุกตู้วันนี้")}` : 'ตั้งแต่ 00:00 น.'} />
+          sub={todayPct != null ? `${fmt(todayPct, 0)}% ${tr("ของไฟทุกตู้วันนี้")}` : tr("ตั้งแต่ 00:00 น.")} />
         <Kpi color={INFO} label={tr('ใช้ไฟเดือนนี้')} value={fmt(m.monthKwh, 0)} unit="kWh"
-          sub={avgDay != null ? `${tr("เฉลี่ยวันละ")} ${fmt(avgDay)} kWh (${m.monthDays} ${tr("วันที่มีข้อมูล")})` : 'ยังไม่มีข้อมูลของเดือนนี้'} />
+          sub={avgDay != null ? `${tr("เฉลี่ยวันละ")} ${fmt(avgDay)} kWh (${m.monthDays} ${tr("วันที่มีข้อมูล")})` : tr("ยังไม่มีข้อมูลของเดือนนี้")} />
         <Kpi color={INFO} label={tr('เลขมิเตอร์สะสม')} value={fmt(m.kwhTotal, 0)} unit="kWh" sub={tr('อ่านตรงจากมิเตอร์ (Active Energy)')} />
         <Kpi color={m.overA ? BAD : ACC} label={tr('แรงดัน · กระแส')} value={<><span style={{ color: INFO }}>{fmt(m.v, 0)}</span><small style={{ fontSize: 13, color: 'var(--muted)' }}> V </small><span style={{ color: m.overA ? BAD : ACC }}>{fmt(m.a)}</span></>} unit="A"
           sub={`V ${tr("เฉลี่ย 3 เฟส · A เฟสที่สูงสุด · ลิมิต")} ${m.limitA ?? '—'} A`} />
         <Kpi color={st.color} label={tr('สถานะมิเตอร์')} value={st.label} unit=""
-          sub={m.ageMin == null ? 'ยังไม่เคยได้รับข้อมูล' : m.ageMin < 1 ? 'ข้อมูลล่าสุดเมื่อสักครู่' : `${tr("ข้อมูลล่าสุด")} ${m.ageMin} ${tr("นาทีที่แล้ว")}`} />
+          sub={m.ageMin == null ? tr("ยังไม่เคยได้รับข้อมูล") : m.ageMin < 1 ? tr("ข้อมูลล่าสุดเมื่อสักครู่") : `${tr("ข้อมูลล่าสุด")} ${m.ageMin} ${tr("นาทีที่แล้ว")}`} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'minmax(0, 1fr)' : 'minmax(0, 1.6fr) minmax(280px, 1fr) minmax(280px, 1fr)', gap: 12, alignContent: 'start' }}>

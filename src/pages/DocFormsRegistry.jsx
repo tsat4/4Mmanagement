@@ -294,8 +294,8 @@ export default function DocFormsRegistry() {
                   </div>
                   <div style={{ fontSize: 11, color: editing.layout_locked !== false ? 'var(--muted)' : 'var(--accent)', marginTop: 3, lineHeight: 1.5 }}>
                     {editing.layout_locked !== false
-                      ? '🔒 ฟอร์มนี้ layout ออกแบบมาตายตัวกับแนวกระดาษ (ตารางกว้างตามจำนวนวัน/คอลัมน์) — เปลี่ยนแนวแล้วใบพัง จึงล็อกไว้ ค่าที่แสดงใช้กับใบตัวอย่างเท่านั้น'
-                      : '✅ รายงานภายใน — เปลี่ยนแนวแล้วมีผลกับใบพิมพ์จริงทันที'}
+                      ? tr("🔒 ฟอร์มนี้ layout ออกแบบมาตายตัวกับแนวกระดาษ (ตารางกว้างตามจำนวนวัน/คอลัมน์) — เปลี่ยนแนวแล้วใบพัง จึงล็อกไว้ ค่าที่แสดงใช้กับใบตัวอย่างเท่านั้น")
+                      : tr("✅ รายงานภายใน — เปลี่ยนแนวแล้วมีผลกับใบพิมพ์จริงทันที")}
                   </div>
                 </div>
                 <div>
@@ -441,7 +441,7 @@ export default function DocFormsRegistry() {
                   {sections.map(sc => {
                     const code = sc.code || sc.name;
                     const used = scopes.some(x => x.section === code && x.id !== scopeEdit.id);
-                    return <option key={sc.id} value={code} disabled={used}>{code}{sc.name && sc.name !== code ? ` — ${sc.name}` : ''}{used ? ' (ตั้งไว้แล้ว)' : ''}</option>;
+                    return <option key={sc.id} value={code} disabled={used}>{code}{sc.name && sc.name !== code ? ` — ${sc.name}` : ''}{used ? tr(" (ตั้งไว้แล้ว)") : ''}</option>;
                   })}
                 </select>
                 {!!scopeEdit.id && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>{tr('เปลี่ยนส่วนงานไม่ได้ — ถ้าผิดให้ลบแล้วเพิ่มใหม่')}</div>}

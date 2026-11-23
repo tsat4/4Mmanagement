@@ -129,7 +129,7 @@ export default function TaxonomyManagerModal({ table, title, extraField = 'color
                     <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{tr(r.label)}</span>
                     <span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 6 }}>{r.code}</span>
                     {withEquipTypes && <span style={{ fontSize: 11, color: 'var(--accent2)', marginLeft: 6, fontWeight: 700 }}>{r.equip_types?.length ? r.equip_types.join('/') : tr('ทุกชนิด')}</span>}
-                    {withTeam && <span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 6, fontWeight: 700 }}>{r.team ? (teams.find(t => t.key === r.team)?.dept_name || r.team) : '🌐 ทุกทีม'}</span>}
+                    {withTeam && <span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 6, fontWeight: 700 }}>{r.team ? (teams.find(t => t.key === r.team)?.dept_name || r.team) : tr("🌐 ทุกทีม")}</span>}
                     {!r.is_active && <span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 6 }}>{tr('(ปิดใช้งาน)')}</span>}
                   </div>
                   {canEditRow(r) ? <>

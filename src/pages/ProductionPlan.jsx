@@ -787,7 +787,7 @@ export default function ProductionPlan() {
               {show.map((l, i) => (
                 <div key={`${l.mat_no}-${l.needBy}-${i}`}>
                   <b style={{ color: 'var(--text2)' }}>{l.mat_no}</b> {Math.round(l.qty).toLocaleString()} {tr("ชิ้น · ต้องเริ่ม")} <b style={{ color: 'var(--red)' }}>{fmtDate(l.needBy)}</b> {tr('เพื่อให้ทันดิว')} {fmtDate(l.dueOfParent)}
-                  {l.days > 1 && <span> {tr('· ใช้เวลาผลิต ~')}{l.days} {tr('วัน')}{l.capped ? ' (ตัดที่เพดาน 60 วัน — กำลังผลิตที่ระบบรู้ต่ำผิดปกติ ตรวจ CT/ประวัติพาร์ทนี้)' : ''}</span>}
+                  {l.days > 1 && <span> {tr('· ใช้เวลาผลิต ~')}{l.days} {tr('วัน')}{l.capped ? tr(" (ตัดที่เพดาน 60 วัน — กำลังผลิตที่ระบบรู้ต่ำผิดปกติ ตรวจ CT/ประวัติพาร์ทนี้)") : ''}</span>}
                   {l.root !== l.mat_no && <span> {tr('(ของใบ')} {l.root})</span>}
                 </div>
               ))}
@@ -883,7 +883,7 @@ export default function ProductionPlan() {
               background: mode === 'slide' ? 'var(--accent-dim)' : 'var(--bg2)',
               color: mode === 'slide' ? 'var(--accent)' : 'var(--text2)',
             }}>
-            {mode === 'slide' ? 'กลับไปดูกราฟ' : 'โหมดสไลด์โรงงาน'}
+            {mode === 'slide' ? tr("กลับไปดูกราฟ") : tr("โหมดสไลด์โรงงาน")}
           </button>
         </div>
       ) : null}
@@ -1004,7 +1004,7 @@ export default function ProductionPlan() {
         monthly.length === 0 ? <div style={{ ...card, color: 'var(--muted)', fontSize: 13 }}>{tr('ไม่มี forecast สำหรับไลน์ใน scope')}</div> :
         monthly.map(({ line, rows }) => (
           <div key={line.id} style={card}>
-            <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginBottom: 6 }}>{line.name} <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400 }}>{line.section}{hasNightShift(viewLines, line.name) ? ' · มีกะดึก' : ' · กะเช้าอย่างเดียว'}</span></div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginBottom: 6 }}>{line.name} <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400 }}>{line.section}{hasNightShift(viewLines, line.name) ? tr(" · มีกะดึก") : tr(" · กะเช้าอย่างเดียว")}</span></div>
             {/* 📊 เดือนไหนงานล้นกำลัง — เห็นจากกราฟก่อน แล้วค่อยอ่านเลขในตาราง
                 🔴 เดือนที่ไม่มี forecast ต้องไม่กลายเป็นแท่ง 0 (= "ไม่มีงาน") ⇒ กรองออกจากกราฟ
                    แล้วตารางยังโชว์ "—" ให้เห็นว่าเดือนนั้นไม่มีข้อมูล */}

@@ -360,11 +360,11 @@ export default function NPI() {
         tabs={tabs} tab={tab} onTab={setTab} />
 
       <WarnBar>{warn}</WarnBar>
-      <ReadOnlyNote show={!canEdit} role={role} what="สร้าง/แก้โปรเจค พาร์ท เอกสารส่งมอบ แบบ ECI และแผน tooling" permKey="npi:edit" />
+      <ReadOnlyNote show={!canEdit} role={role} what={tr("สร้าง/แก้โปรเจค พาร์ท เอกสารส่งมอบ แบบ ECI และแผน tooling")} permKey="npi:edit" />
       {canEdit && !canApprove && (
-        <ReadOnlyNote role={role} what="อนุมัติเอกสารส่งมอบ/PPAP · ปล่อยแบบ · ตัดสิน ECI" permKey="npi:approve" compact />
+        <ReadOnlyNote role={role} what={tr("อนุมัติเอกสารส่งมอบ/PPAP · ปล่อยแบบ · ตัดสิน ECI")} permKey="npi:approve" compact />
       )}
-      <InfoMore id="npi_help" lead="ต้นน้ำของ ESM: ติดตามพาร์ทรุ่นใหม่ตั้งแต่รับงานจนถึง SOP">
+      <InfoMore id="npi_help" lead={tr("ต้นน้ำของ ESM: ติดตามพาร์ทรุ่นใหม่ตั้งแต่รับงานจนถึง SOP")}>
         {tr("เฟสและรายการเอกสารส่งมอบมาจาก")} <b>{tr('แม่แบบต่อลูกค้า')}</b> (APQP 5 {tr("เฟส + PPAP 18 elements · Toyota SPTT0–4) — เพิ่มลูกค้าใหม่ที่แท็บ ⚙️ แม่แบบ ไม่ต้องแก้โค้ด · พาร์ทจะได้สำเนาเฟส/รายการ ณ วันสร้าง (แม่แบบเปลี่ยนทีหลังไม่ย้อนแก้ — กด 🔄 sync เพื่อเติมรายการที่ขาด) · ไฟสี: 🟢 อนุมัติ/ตามแผน · 🟡 กำลังทำ/รออนุมัติ/เหลือ ≤7 วัน · 🔴 เลยกำหนด/ตีกลับ/เฟสเลยวันแผน · ผูกพาร์ทกับชุด PFC/FMEA/CP (`/pe-docs`) และมาตรฐานตรวจ QA (`/qa-setup`) เพื่อให้เอกสารตอน SOP เป็นชุดเดียวกับ mass production · ECI ปิดได้ต่อเมื่อทุกขาที่ติ๊กว่ากระทบมีของจริงผูก (แบบ rev ใหม่ / คำขอแก้ PE / ใบ 4M / แผน tooling) · ยังไม่ทำ: supplier portal (เฟส 4) · การแจ้งเตือนอัตโนมัติเมื่อเอกสารเลยกำหนด")}
       </InfoMore>
 
@@ -460,7 +460,7 @@ export default function NPI() {
       )}
 
       {partModal && project && (
-        <Modal title={partModal.id ? `${tr("แก้ไขพาร์ท")} ${partModal.part_no}` : 'เพิ่มพาร์ทในโปรเจค'} onClose={() => setPartModal(null)} width={720}
+        <Modal title={partModal.id ? `${tr("แก้ไขพาร์ท")} ${partModal.part_no}` : tr("เพิ่มพาร์ทในโปรเจค")} onClose={() => setPartModal(null)} width={720}
           footer={<>
             <button style={ghost} onClick={() => setPartModal(null)}>{tr('ยกเลิก')}</button>
             <button style={btn()} disabled={saving} onClick={savePart}>{saving ? tr('กำลังบันทึก…') : tr('บันทึก')}</button>
@@ -480,7 +480,7 @@ export default function NPI() {
             {/* 🔴 mat_no = คีย์โยง Product Master ตอน SOP → ProductSelect · พาร์ทใหม่ก่อน SOP ยังไม่มีใน master พิมพ์เองได้พร้อมป้าย (2026-09-07) */}
             <Field label="MAT No. (SAP)" hint={tr('โยง Product Master ตอน SOP')}>
               <ProductSelect value={partModal.mat_no || ''} lines={partModal.line_name ? [partModal.line_name] : undefined} history={matHist}
-                allowFree freeHint="พาร์ทใหม่ที่ยังไม่มีใน Product Master — ผูกให้ตรงตอน SOP"
+                allowFree freeHint={tr("พาร์ทใหม่ที่ยังไม่มีใน Product Master — ผูกให้ตรงตอน SOP")}
                 onChange={r => setPartModal({ ...partModal, mat_no: r.mat_no })} />
             </Field>
             <Field label={tr('ไลน์ที่วางแผนผลิต')}>
@@ -550,7 +550,7 @@ function PartsTable({ parts, rollByPart, partId, onPick, canEdit, onAdd, onEdit,
                     <td style={{ ...tdSt, textAlign: 'right', whiteSpace: 'nowrap' }}>{r.done ?? 0}/{r.total ?? 0} <span style={{ color: 'var(--muted)' }}>({r.pct ?? 0}%)</span>{r.overdue ? <span style={{ color: 'var(--red)', fontWeight: 800 }}> {tr('· เลย')} {r.overdue}</span> : null}</td>
                     <td style={tdSt}><Pill label={`${PPAP_STATUS[p.ppap_status]?.label || p.ppap_status} ${r.ppap ? `${r.ppap.done}/${r.ppap.total}` : ''}`} color={PPAP_STATUS[p.ppap_status]?.color} /></td>
                     <td style={tdSt} onClick={e => e.stopPropagation()}>
-                      {p.pe_set_id ? <Link to={`/pe-docs?set=${p.pe_set_id}`} style={{ color: 'var(--blue)', fontSize: 12 }}>📐 {peSets.find(s => s.id === p.pe_set_id)?.part_no || 'เปิด'}</Link> : <span style={{ color: 'var(--amber)', fontSize: 11.5 }} title={tr('ยังไม่ผูกชุด PFC/FMEA/CP')}>{tr('ยังไม่ผูก')}</span>}
+                      {p.pe_set_id ? <Link to={`/pe-docs?set=${p.pe_set_id}`} style={{ color: 'var(--blue)', fontSize: 12 }}>📐 {peSets.find(s => s.id === p.pe_set_id)?.part_no || tr("เปิด")}</Link> : <span style={{ color: 'var(--amber)', fontSize: 11.5 }} title={tr('ยังไม่ผูกชุด PFC/FMEA/CP')}>{tr('ยังไม่ผูก')}</span>}
                     </td>
                     <td style={tdSt}><Pill label={tr(PART_STATUS[p.status]?.label) || p.status} color={PART_STATUS[p.status]?.color} /></td>
                     <td style={{ ...tdSt, whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
@@ -654,7 +654,7 @@ function Board({ projects, rollByProject, templates, project, tplPhases, parts, 
                             const phRow = phases.find(x => x.part_id === p.id && x.phase_code === ph.code);
                             return (
                               <td key={ph.code} style={{ ...tdSt, textAlign: 'center', cursor: 'pointer' }} onClick={() => onOpenPart(p.id)}
-                                title={phRow ? `${ph.label}: ${pr2?.done ?? 0}/${pr2?.total ?? 0} · ${tr("แผน")} ${phRow.plan_start ? fmtDate(phRow.plan_start) : '—'} → ${phRow.plan_end ? fmtDate(phRow.plan_end) : '—'}` : 'พาร์ทนี้ไม่มีเฟสนี้ (sync แม่แบบ)'}>
+                                title={phRow ? `${ph.label}: ${pr2?.done ?? 0}/${pr2?.total ?? 0} · ${tr("แผน")} ${phRow.plan_start ? fmtDate(phRow.plan_start) : '—'} → ${phRow.plan_end ? fmtDate(phRow.plan_end) : '—'}` : tr("พาร์ทนี้ไม่มีเฟสนี้ (sync แม่แบบ)")}>
                                 {phRow ? (
                                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
                                     <LightDot light={pr2?.light || 'grey'} size={18} />

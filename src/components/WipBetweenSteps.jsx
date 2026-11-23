@@ -199,7 +199,7 @@ export default function WipBetweenSteps() {
                 <span style={{ color: 'var(--muted)' }}>{tr('− สต็อก FG')} {fgOnHand.toLocaleString()}</span>
                 {net ? (
                   <span style={chip(net.fgNeed > 0 ? 'rgba(245,158,11,0.12)' : 'rgba(61,214,92,0.12)', net.fgNeed > 0 ? '#f59e0b' : 'var(--accent)')}>
-                    {net.fgNeed > 0 ? `→ ${tr("ต้องผลิต FG อีก")} ${net.fgNeed.toLocaleString()}` : '→ สต็อก FG พอแล้ว ✓'}
+                    {net.fgNeed > 0 ? `→ ${tr("ต้องผลิต FG อีก")} ${net.fgNeed.toLocaleString()}` : tr("→ สต็อก FG พอแล้ว ✓")}
                   </span>
                 ) : (
                   <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('กรอกความต้องการ → เห็นเลยว่าแต่ละขั้นต้องทำเพิ่มเท่าไหร่')}</span>

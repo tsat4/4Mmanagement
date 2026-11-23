@@ -365,7 +365,7 @@ export default function MaterialRequests() {
 
   return (
     <div style={wrap}>
-      <ReadOnlyNote show={!canRecord} role={role} what="ออกใบเบิก/คืนสินค้าคงคลัง" permKey="scrap:record" />
+      <ReadOnlyNote show={!canRecord} role={role} what={tr("ออกใบเบิก/คืนสินค้าคงคลัง")} permKey="scrap:record" />
 
       {warn && (
         <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid #ef4444', borderRadius: 'var(--r-md)', padding: '8px 12px', marginBottom: 12, fontSize: 12.5 }}>
@@ -565,7 +565,7 @@ function Editor({ editor, setReq, setItem, addItem, delItem, canRecord, role, si
 
   return (
     <Modal title={`${req.id ? tr('แก้ไข') : tr('ออก')}${tr("ใบขอ")}${KIND_LABEL[req.kind]}${tr("สินค้าคงคลัง")} (FM-STO-003)`} onClose={onClose} width={1020}>
-      <ReadOnlyNote show={ro} role={role} compact what="แก้ใบเบิก" permKey="scrap:record" />
+      <ReadOnlyNote show={ro} role={role} compact what={tr("แก้ใบเบิก")} permKey="scrap:record" />
       {/* 🪜 ถึงขั้นไหน — กฎ matReqFlow() (utils/materialRequest.js) · UI §6.30 */}
       {req.id && (() => { const f = matReqFlow(req); return <div style={{ marginBottom: 12 }}><StepFlow steps={f.steps} waiting={f.waiting} unknown={!f.known} /></div>; })()}
 
@@ -680,7 +680,7 @@ function Editor({ editor, setReq, setItem, addItem, delItem, canRecord, role, si
             {!req[`${s.k}_sig_url`] && req[`${s.k}_name`] && (isSelfName(req[`${s.k}_name`], fullName)
               ? (mySig && !ro
                   ? <button onClick={() => setReq({ [`${s.k}_sig_url`]: mySig })} style={{ ...btnSt(), marginTop: 4, fontSize: 11, padding: '3px 9px' }}>✍️ {tr("เซ็นช่องนี้")}</button>
-                  : <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 3 }}>{mySig ? '' : 'โปรไฟล์ของคุณยังไม่มีลายเซ็น'}</div>)
+                  : <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 3 }}>{mySig ? '' : tr("โปรไฟล์ของคุณยังไม่มีลายเซ็น")}</div>)
               : <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 3 }}>{tr("รอ")} {req[`${s.k}_name`]} login {tr("มาเซ็นเอง")}</div>)}
           </div>
         ))}

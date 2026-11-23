@@ -158,7 +158,7 @@ export default function ProblemFixModal({ kind, row, title, actorName, onClose, 
                     border: `1px solid ${w.why === 'code' ? 'rgba(168,85,247,0.45)' : 'var(--border2)'}` }}>
                   <span style={{ display: 'block', fontWeight: 800, fontFamily: 'monospace' }}>{w.wi_no}</span>
                   <span style={{ fontSize: 11, color: 'var(--muted)' }}>
-                    {w.code} · {w.symptom} · {w.why === 'code' ? 'ตรงเลขพาร์ท' : 'ตรงคำอาการ'}
+                    {w.code} · {w.symptom} · {w.why === 'code' ? tr("ตรงเลขพาร์ท") : tr("ตรงคำอาการ")}
                   </span>
                 </button>
               ))}

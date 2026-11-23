@@ -360,7 +360,7 @@ export default function DisplayRotator({ userId, role, disabled, shell = false, 
   }
   if (!active || !cur) return null;
 
-  const status = held ? '⏸ หยุดอยู่'
+  const status = held ? tr("⏸ หยุดอยู่")
     : pausedLeft > 0 ? `⏸ ${tr("มีคนใช้จอ · วนต่อใน")} ${fmtSec(pausedLeft)}`
       : subWait ? `${tr("รอหน้าย่อย")} ${subWait.page}/${subWait.count}`
         : `${tr("ถัดไปใน")} ${fmtSec(Math.max(0, cur.sec - elapsed))}`;
@@ -404,11 +404,11 @@ function TvShellBar({ pathname, search, now, loadErr, active, idx, n, sec, elaps
     : NAV_ITEMS.find(x => x.to === pathname) || { icon: '🖥️', label: pathname };
   const chips = barChips(`${pathname}${search || ''}`);
   const d = new Date(now);
-  const shift = getCurrentShift(d) === 'day' ? '☀️ กะเช้า' : '🌙 กะดึก';
+  const shift = getCurrentShift(d) === 'day' ? tr("☀️ กะเช้า") : tr("🌙 กะดึก");
   const hhmm = d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Bangkok' });
   const wd = getWorkDate(d);
   const status = !active ? null
-    : held ? '⏸ หยุดค้าง'
+    : held ? tr("⏸ หยุดค้าง")
       : pausedLeft > 0 ? `⏸ ${tr("มีคนใช้จอ · วนต่อใน")} ${fmtSec(pausedLeft)}`
         : subWait ? `${tr("รอหน้าย่อย")} ${subWait.page}/${subWait.count}`
           : `${tr("ถัดไปใน")} ${fmtSec(Math.max(0, sec - elapsed))}`;

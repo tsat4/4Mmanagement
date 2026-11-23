@@ -371,7 +371,7 @@ export default function FeedbackModal({ onClose }) {
               <button onClick={send} disabled={saving || !msg.trim()}
                 style={{ marginTop: 14, width: '100%', padding: '10px 0', borderRadius: 'var(--r-md)', border: 'none', cursor: (saving || !msg.trim()) ? 'default' : 'pointer',
                   background: 'var(--accent)', color: 'var(--accent-ink)', fontWeight: 800, fontSize: 14, opacity: (saving || !msg.trim()) ? 0.5 : 1 }}>
-                {saving ? (shots.length ? `${tr("กำลังอัปรูป")} ${shots.length} ${tr("รูป...")}` : 'กำลังส่ง...') : '📨 ส่งให้ทีมงาน'}
+                {saving ? (shots.length ? `${tr("กำลังอัปรูป")} ${shots.length} ${tr("รูป...")}` : tr("กำลังส่ง...")) : tr("📨 ส่งให้ทีมงาน")}
               </button>
             </>
           ) : (
@@ -390,7 +390,7 @@ export default function FeedbackModal({ onClose }) {
 
               {loading ? <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('กำลังโหลด...')}</div>
                 : !shown.length ? <div style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'center', padding: 20 }}>
-                    {rows.length ? 'ไม่มีเรื่องที่ยังไม่ปิด 👍' : 'ยังไม่มีเรื่องที่ส่งเข้ามา'}
+                    {rows.length ? tr("ไม่มีเรื่องที่ยังไม่ปิด 👍") : tr("ยังไม่มีเรื่องที่ส่งเข้ามา")}
                   </div>
                 : shown.map(r => {
                   const k = KINDS.find(x => x.key === r.kind) || KINDS[0];

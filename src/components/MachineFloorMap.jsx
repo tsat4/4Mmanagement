@@ -230,7 +230,7 @@ export default function MachineFloorMap({
           color: showPills ? 'var(--accent)' : '#cdd6ce',
           border: `1.5px solid ${showPills ? 'var(--accent)' : 'var(--border2)'}`,
         }}>
-        {showPills ? '🏷️ ซ่อนป้าย' : '🏷️ โชว์ป้าย'}
+        {showPills ? tr("🏷️ ซ่อนป้าย") : tr("🏷️ โชว์ป้าย")}
       </button>
     </div>
   )

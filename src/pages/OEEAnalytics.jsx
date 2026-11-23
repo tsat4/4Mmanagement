@@ -208,7 +208,7 @@ const KpiCard = ({ label, value, color, sub, calc, more, primary = false, unit =
                 marginTop: 5, padding: '2px 7px', borderRadius: 'var(--r-md)', cursor: 'pointer',
                 border: '1px solid var(--border2)', background: 'var(--bg3-surf)',
                 color: 'var(--muted)', fontSize: 11, fontWeight: 700,
-              }}>{open ? 'ย่อ' : `${MORE_MARK} ${trI18n("อ่านเพิ่ม")}`}</button>
+              }}>{open ? trI18n("ย่อ") : `${MORE_MARK} ${trI18n("อ่านเพิ่ม")}`}</button>
               {open && <div style={{ marginTop: 5 }}>{more}</div>}
             </>
           )}
@@ -256,7 +256,7 @@ function MiniTrendTip({ active, payload, label, dataKey, metric }) {
   return (
     <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '4px 8px', fontSize: 11, boxShadow: 'var(--shadow-float)' }}>
       <div style={{ color: 'var(--muted)' }}>{label}</div>
-      <div style={{ fontWeight: 800 }}>{metric} {v != null ? `${v}%` : 'ไม่มีข้อมูล'}</div>
+      <div style={{ fontWeight: 800 }}>{metric} {v != null ? `${v}%` : trI18n("ไม่มีข้อมูล")}</div>
     </div>
   );
 }
@@ -468,7 +468,7 @@ export default function OEEAnalytics() {
     return isScoped ? linesFull.map(l => l.name) : null;
   }, [tdLine, tdUnit, tdUnitLines, tdDept, tdSection, linesFull, parentChildrenMap, isScoped]);
 
-  const tdScopeLabel = tdLine || tdDept || (tdUnit ? `${trI18n("แผนก")} ${tdUnit}` : '') || tdSection || 'ทุกไลน์';
+  const tdScopeLabel = tdLine || tdDept || (tdUnit ? `${trI18n("แผนก")} ${tdUnit}` : '') || tdSection || trI18n("ทุกไลน์");
 
   /* 🔴 ไลน์ที่ส่งให้แท็บ "เจาะลึก" ต้องเป็น array **ตัวเดิม** ตราบใดที่ค่ายังไม่เปลี่ยน
      เดิมเขียน `linesFull.filter(...)` ตรงใน JSX ⇒ array ใหม่ทุก render ⇒ `run` ในแผงนั้น
@@ -1642,7 +1642,7 @@ export default function OEEAnalytics() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <div>
                   <div style={s.title}>
-                    {tdLiveSession && tdLiveSession.status !== 'closed' ? 'กะที่กำลังผลิตอยู่ตอนนี้' : 'กะล่าสุดของวันที่เลือก'}
+                    {tdLiveSession && tdLiveSession.status !== 'closed' ? trI18n("กะที่กำลังผลิตอยู่ตอนนี้") : trI18n("กะล่าสุดของวันที่เลือก")}
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
                     {tdLiveSession && tdLiveSession.status !== 'closed'
@@ -1652,12 +1652,12 @@ export default function OEEAnalytics() {
                         : tdLiveCalc?.qtyNoCt > 0 ? `${trI18n("ค่าสด — ⚠ มีชิ้นงานที่ยังไม่ตั้ง")} CT ${tdLiveCalc.qtyNoCt} ${trI18n("ชิ้น")} (${(tdLiveCalc.matsNoCt || []).slice(0, 3).join(', ')}) → %P ${trI18n("ต่ำกว่าจริง")}`
                         : isLiveCalc ? `${trI18n("ค่าสด — คำนวณจากข้อมูล ณ ตอนนี้ (ยังไม่ปิดกะ) · ตัวเลขจริงยืนยันตอนปิดกะ")}`
                                     : `${trI18n("รอข้อมูล — กะเพิ่งเปิด ยังคำนวณไม่ได้ (ต้องเดินอย่างน้อย")} ${LIVE_MIN_ELAPSED} ${trI18n("นาที")})`)
-                      : 'ค่าที่บันทึกไว้ตอนปิดกะ'}
+                      : trI18n("ค่าที่บันทึกไว้ตอนปิดกะ")}
                   </div>
                 </div>
                 {tdLiveSession && (() => { const b = STATUS_BADGE[tdLiveSession.status] || STATUS_BADGE.closed; return (
                   <span style={{ fontSize: 11, fontWeight: 800, padding: '3px 10px', borderRadius: 'var(--r-pill)', background: b.bg, color: b.color, whiteSpace: 'nowrap' }}>
-                    {trI18n(b.label)}{isLiveCalc ? ' · สด' : ''}
+                    {trI18n(b.label)}{isLiveCalc ? trI18n(" · สด") : ''}
                   </span>
                 ); })()}
               </div>
@@ -1673,7 +1673,7 @@ export default function OEEAnalytics() {
                     <div style={{ fontSize: 11, color: 'var(--muted)' }}>{trI18n('ชิ้นงานที่ผลิต')}</div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>
                       {tdLiveParts.length ? (tdLiveParts.length > 2 ? `${tdLiveParts.slice(0, 2).join(', ')} +${tdLiveParts.length - 2}` : tdLiveParts.join(', '))
-                        : (tdLiveSession.dr_products?.name || tdLiveSession.dr_products?.mat_no || 'ยังไม่เปิดใบงาน')}
+                        : (tdLiveSession.dr_products?.name || tdLiveSession.dr_products?.mat_no || trI18n("ยังไม่เปิดใบงาน"))}
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--muted)' }}>OEE</div>
                     <div style={{ fontSize: 28, fontWeight: 900, color: tdLiveRow?.calcOEE != null ? oeeColor(tdLiveRow.calcOEE) : 'var(--muted)' }}>
@@ -1751,7 +1751,7 @@ export default function OEEAnalytics() {
                         <b style={{ color: 'var(--muted)' }}>{k === 'oee' ? 'OEE' : k.toUpperCase()}</b>{' '}
                         <b style={{ color: v.now != null ? (k === 'oee' ? oeeColor(v.now) : METRIC_COLOR[k]) : 'var(--muted)' }}>{v.now ?? '—'}{v.now != null ? '%' : ''}</b>
                         <span style={{ color: up ? 'var(--green)' : dn ? 'var(--red)' : 'var(--muted)' }}>
-                          {v.diff == null ? ' (เทียบไม่ได้)' : ` (${up ? '▲+' : dn ? '▼' : '●'}${v.diff})`}
+                          {v.diff == null ? trI18n(" (เทียบไม่ได้)") : ` (${up ? '▲+' : dn ? '▼' : '●'}${v.diff})`}
                         </span>
                       </span>
                     );
@@ -1775,7 +1775,7 @@ export default function OEEAnalytics() {
                       {v.now ?? '—'}{v.now != null ? '%' : ''}
                     </div>
                     <div style={{ fontSize: 11, fontWeight: 700, color: up ? 'var(--green)' : dn ? 'var(--red)' : 'var(--muted)' }}>
-                      {v.diff == null ? 'เทียบไม่ได้' : `${up ? '▲ +' : dn ? '▼ ' : '● '}${v.diff} ${trI18n("จุด")}`}
+                      {v.diff == null ? trI18n("เทียบไม่ได้") : `${up ? '▲ +' : dn ? '▼ ' : '● '}${v.diff} ${trI18n("จุด")}`}
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--muted)' }}>
                       {trI18n("เฉลี่ย")} {v.avg ?? '—'}{v.avg != null ? '%' : ''}
@@ -1885,7 +1885,7 @@ export default function OEEAnalytics() {
                       {rest.length > 0 && (
                         <button onClick={() => setTdDtShowAll(v => !v)}
                           style={{ marginTop: 2, padding: '6px 10px', borderRadius: 'var(--r-md)', border: '1px dashed var(--border2)', background: 'transparent', color: 'var(--muted)', fontSize: 11.5, cursor: 'pointer', textAlign: 'center' }}>
-                          {tdDtShowAll ? 'ย่อเหลือ Top 8' : `${trI18n("อื่นๆ อีก")} ${rest.length} ${trI18n("สาเหตุ")} · ${restMin.toLocaleString()} ${trI18n("นาที")} (${restPct}%)`}
+                          {tdDtShowAll ? trI18n("ย่อเหลือ Top 8") : `${trI18n("อื่นๆ อีก")} ${rest.length} ${trI18n("สาเหตุ")} · ${restMin.toLocaleString()} ${trI18n("นาที")} (${restPct}%)`}
                         </button>
                       )}
                     </div>

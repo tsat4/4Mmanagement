@@ -193,7 +193,7 @@ export default function NpiTooling({ parts, tooling, steps, stepTemplates, dieSe
       })}
 
       {planModal && (
-        <Modal title={planModal.id ? `${tr("แก้ไขแผน")} ${planModal.tool_name}` : 'เพิ่มแผน tooling'} onClose={() => setPlanModal(null)} width={680}
+        <Modal title={planModal.id ? `${tr("แก้ไขแผน")} ${planModal.tool_name}` : tr("เพิ่มแผน tooling")} onClose={() => setPlanModal(null)} width={680}
           footer={<><button style={ghost} onClick={() => setPlanModal(null)}>{tr('ยกเลิก')}</button><button style={btn()} disabled={saving} onClick={savePlan}>{saving ? tr('กำลังบันทึก…') : tr('💾 บันทึก')}</button></>}>
           <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, alignItems: 'start' }}>
             <Field label={tr('พาร์ท *')}><select style={inp} value={planModal.part_id} onChange={e => setPlanModal({ ...planModal, part_id: e.target.value })}><option value="">—</option>{parts.map(p => <option key={p.id} value={p.id}>{p.part_no} · {p.part_name || ''}</option>)}</select></Field>
@@ -221,14 +221,14 @@ export default function NpiTooling({ parts, tooling, steps, stepTemplates, dieSe
           {!planModal.id && (
             <label style={{ fontSize: 12.5, display: 'flex', gap: 6, alignItems: 'center', marginTop: 10 }}>
               <input type="checkbox" checked={!!planModal._seedSteps} onChange={e => setPlanModal({ ...planModal, _seedSteps: e.target.checked })} />
-              {tr("สร้างขั้นงานจากแม่แบบชนิด")} "{TOOL_KIND[planModal.tool_kind]?.label}" ({stepTemplates.filter(s => s.tool_kind === planModal.tool_kind).length} {tr('ขั้น · วันแผนต่อเนื่องจากวันเริ่ม — แก้ทีหลังได้)')}
+              {tr("สร้างขั้นงานจากแม่แบบชนิด")} "{tr(TOOL_KIND[planModal.tool_kind]?.label)}" ({stepTemplates.filter(s => s.tool_kind === planModal.tool_kind).length} {tr('ขั้น · วันแผนต่อเนื่องจากวันเริ่ม — แก้ทีหลังได้)')}
             </label>
           )}
         </Modal>
       )}
 
       {stepModal && (
-        <Modal title={stepModal.id ? `${tr("ขั้น")} ${stepModal.name}` : 'เพิ่มขั้นงาน'} onClose={() => setStepModal(null)} width={600}
+        <Modal title={stepModal.id ? `${tr("ขั้น")} ${stepModal.name}` : tr("เพิ่มขั้นงาน")} onClose={() => setStepModal(null)} width={600}
           footer={<><button style={ghost} onClick={() => setStepModal(null)}>{tr('ยกเลิก')}</button><button style={btn()} disabled={saving} onClick={saveStep}>{tr('บันทึก')}</button></>}>
           <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, alignItems: 'start' }}>
             <Field label={tr('ชื่อขั้นงาน *')} span={2}><input style={inp} value={stepModal.name} onChange={e => setStepModal({ ...stepModal, name: e.target.value })} /></Field>

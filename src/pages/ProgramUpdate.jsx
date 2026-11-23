@@ -118,7 +118,7 @@ export default function ProgramUpdate() {
         icon="📦" title={trI18n('อัพเดทโปรแกรม')}
         sub={data
           ? `${trI18n("ข้อมูลสดถึง")} ${fmtStamp(data.generatedAt)} · ${trI18n("เก็บจากประวัติการแก้จริงของระบบ")}`
-          : 'รายการสิ่งที่เพิ่ม/แก้ไปในระบบ — อ่านจากประวัติการแก้จริง'}
+          : trI18n("รายการสิ่งที่เพิ่ม/แก้ไปในระบบ — อ่านจากประวัติการแก้จริง")}
         filters={(
           <TimeRangeBar
             scale={tr.scale} from={from} to={to} today={tr.today} scales={null}
@@ -128,7 +128,7 @@ export default function ProgramUpdate() {
               : null}
           >
             <Segmented value={kind} onChange={setKind} options={segOpts} label={trI18n('ชนิดการเปลี่ยนแปลง')} />
-            <SearchInput value={q} onChange={setQ} fields="ข้อความ / เรื่อง" />
+            <SearchInput value={q} onChange={setQ} fields={trI18n("ข้อความ / เรื่อง")} />
           </TimeRangeBar>
         )}
       />
@@ -175,8 +175,8 @@ export default function ProgramUpdate() {
           {!feed.length ? (
             <div style={{ fontSize: 13, color: 'var(--muted)', padding: '14px 2px' }}>
               {inRange.length
-                ? 'ไม่มีรายการที่ตรงกับตัวกรอง — ลองเปลี่ยนชนิดหรือล้างคำค้น'
-                : 'ช่วงเวลานี้ไม่มีการเปลี่ยนแปลงระบบ (ไม่ใช่โหลดไม่ได้ — ข้อมูลโหลดครบแล้ว)'}
+                ? trI18n("ไม่มีรายการที่ตรงกับตัวกรอง — ลองเปลี่ยนชนิดหรือล้างคำค้น")
+                : trI18n("ช่วงเวลานี้ไม่มีการเปลี่ยนแปลงระบบ (ไม่ใช่โหลดไม่ได้ — ข้อมูลโหลดครบแล้ว)")}
             </div>
           ) : <>
           {view.days.length > 1 && (
@@ -185,7 +185,7 @@ export default function ProgramUpdate() {
                 title={trI18n('กางทุกวันเพื่ออ่านต่อเนื่อง หรือพับให้เห็นเฉพาะหัววัน')}
                 style={{ padding: '3px 10px', borderRadius: 'var(--r-md)', fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
                          border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)' }}>
-                {(allOpen == null ? fewItems : allOpen) ? 'พับทุกวัน' : 'กางทุกวัน'}
+                {(allOpen == null ? fewItems : allOpen) ? trI18n("พับทุกวัน") : trI18n("กางทุกวัน")}
               </button>
             </div>
           )}

@@ -317,7 +317,7 @@ export default function AmMonthlyReport({ lines = [], scopedLines = [] }) {
 
           {rep.rows.length === 0 ? (
             <div style={{ textAlign: 'center', padding: 40, color: 'var(--muted)' }}>
-              {tr("ยังไม่มีเครื่องที่ลงทะเบียนตรวจ")} AM {shift === 'day' ? 'กะเช้า' : 'กะดึก'} — {tr("ไปที่แท็บ “⚙️ ลงทะเบียนเครื่องตรวจ” ก่อน")}
+              {tr("ยังไม่มีเครื่องที่ลงทะเบียนตรวจ")} AM {shift === 'day' ? tr("กะเช้า") : tr("กะดึก")} — {tr("ไปที่แท็บ “⚙️ ลงทะเบียนเครื่องตรวจ” ก่อน")}
             </div>
           ) : shown.length === 0 ? (
             <div style={{ textAlign: 'center', padding: 40, color: 'var(--muted)' }}>{tr('ไม่มีไลน์ที่ตรงกับตัวกรอง (ซ่อน')} {hiddenN} {tr("ไลน์")})</div>
@@ -340,7 +340,7 @@ export default function AmMonthlyReport({ lines = [], scopedLines = [] }) {
                     const lineRow = (
                       <tr key={r.line_name}>
                         <td style={{ ...cell, ...stickyCol, fontWeight: 800, fontSize: 12, color: 'var(--text)', background: view === 'machine' ? 'var(--bg3)' : 'var(--card)' }}>
-                          {r.line_name === '—' ? '⚠ ยังไม่ระบุไลน์' : r.line_name}
+                          {r.line_name === '—' ? tr("⚠ ยังไม่ระบุไลน์") : r.line_name}
                           <span style={{ fontWeight: 500, color: 'var(--muted)', fontSize: 11 }}> · {r.machines.length} {tr('เครื่อง')}</span>
                           {amModeDaysShort(r.modeDays) && <div title={tr(amModeDaysNote(r.modeDays))} style={{ fontWeight: 500, color: 'var(--muted)', fontSize: 11, lineHeight: 1.35 }}>{tr(amModeDaysShort(r.modeDays))}</div>}
                         </td>
@@ -394,11 +394,11 @@ export default function AmMonthlyReport({ lines = [], scopedLines = [] }) {
         <div className="card" style={{ padding: 16, marginTop: 12 }}>
           <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{tr('✍️ ลงนามทบทวนรายเดือน — หัวหน้าแผนก/ส่วน')}</div>
           <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2, marginBottom: 8 }}>
-            {tr("ขั้นที่ 3 ของสาย AM: พนักงานตรวจทุกต้นกะ → หัวหน้ากลุ่มรับทราบรายวัน → หัวหน้าแผนก/ส่วนทบทวนรายเดือน · ลงนามต่อไลน์ของเดือน")} {month} {shift === 'day' ? 'กะเช้า' : 'กะดึก'} · {tr("ระบบเก็บสรุป ณ ตอนลงนามไว้เทียบภายหลัง")}
+            {tr("ขั้นที่ 3 ของสาย AM: พนักงานตรวจทุกต้นกะ → หัวหน้ากลุ่มรับทราบรายวัน → หัวหน้าแผนก/ส่วนทบทวนรายเดือน · ลงนามต่อไลน์ของเดือน")} {month} {shift === 'day' ? tr("กะเช้า") : tr("กะดึก")} · {tr("ระบบเก็บสรุป ณ ตอนลงนามไว้เทียบภายหลัง")}
           </div>
           {!mc.complete && (
             <div style={{ fontSize: 12, color: 'var(--amber)', fontWeight: 700, marginBottom: 8 }}>
-              ⏳ {tr("เดือนนี้ยังไม่จบ — ลงนามได้ตั้งแต่")} {mc.opensOn || 'หลังสิ้นเดือน'} ({tr("ก่อนนั้นตัวเลขยังขยับ ลายเซ็นจะไม่ตรงกับเดือนจริง")})
+              ⏳ {tr("เดือนนี้ยังไม่จบ — ลงนามได้ตั้งแต่")} {mc.opensOn || tr("หลังสิ้นเดือน")} ({tr("ก่อนนั้นตัวเลขยังขยับ ลายเซ็นจะไม่ตรงกับเดือนจริง")})
             </div>
           )}
           {!signFresh ? (
@@ -420,7 +420,7 @@ export default function AmMonthlyReport({ lines = [], scopedLines = [] }) {
                 {shown.map(r => {
                   const e = byLine?.get(r.line_name)
                   const a = e?.active
-                  const lineLabel = r.line_name === '—' ? '⚠ ยังไม่ระบุไลน์' : r.line_name
+                  const lineLabel = r.line_name === '—' ? tr("⚠ ยังไม่ระบุไลน์") : r.line_name
                   const revN = e?.revoked?.length || 0
                   const revNote = revN ? (
                     <span style={{ fontSize: 11, color: 'var(--muted)' }} title={e.revoked.map(x => `${fmtWhen(x.revoked_at)} ${x.revoked_by_name || ''}: ${x.revoke_reason || ''}`).join('\n')}>
@@ -435,7 +435,7 @@ export default function AmMonthlyReport({ lines = [], scopedLines = [] }) {
                         <b style={{ minWidth: 140, fontSize: 12, color: 'var(--text)' }}>{lineLabel}</b>
                         <span style={{ fontSize: 12, color: 'var(--green)', fontWeight: 700 }}>{tr('✅ ลงนามแล้ว')}</span>
                         <span style={{ fontSize: 12, color: 'var(--text2)' }}>
-                          {a.signed_by_name || 'ไม่ทราบชื่อ'}{a.position ? ` · ${positionLabel(a.position)}` : ' · ไม่ทราบตำแหน่ง'} · {fmtWhen(a.signed_at)}
+                          {a.signed_by_name || tr("ไม่ทราบชื่อ")}{a.position ? ` · ${positionLabel(a.position)}` : tr(" · ไม่ทราบตำแหน่ง")} · {fmtWhen(a.signed_at)}
                         </span>
                         {a.signature_url
                           ? <img src={a.signature_url} alt={tr("ลายเซ็น")} style={{ height: 28, maxWidth: 110, objectFit: 'contain', background: '#fff', borderRadius: 4, padding: 2 }} />
@@ -452,7 +452,7 @@ export default function AmMonthlyReport({ lines = [], scopedLines = [] }) {
                         {drift.length > 0 && (
                           <div style={{ flexBasis: '100%', fontSize: 11, color: 'var(--amber)', fontWeight: 700 }}>
                             ⚠ {tr("ตัวเลขตอนนี้ต่างจากที่ลงนามไว้")} — {amSignoffDriftText(drift)} · {tr("ลายเซ็นนี้รับรองตัวเลข ณ ตอนลงนาม (ตรวจ")} {a.snapshot?.sum?.done ?? '–'}/{a.snapshot?.sum?.due ?? '–'} {tr('· ขาด')} {a.snapshot?.sum?.missed ?? '–'} · NG {a.snapshot?.ngN ?? '–'})
-                            {rv.ok ? ' — ถ้าต้องรับรองตัวเลขใหม่ ให้เพิกถอนแล้วลงนามใหม่' : ''}
+                            {rv.ok ? tr(" — ถ้าต้องรับรองตัวเลขใหม่ ให้เพิกถอนแล้วลงนามใหม่") : ''}
                           </div>
                         )}
                       </div>
@@ -496,7 +496,7 @@ export default function AmMonthlyReport({ lines = [], scopedLines = [] }) {
             <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', width: 'min(520px, 100%)', maxHeight: '90vh', overflowY: 'auto', boxShadow: 'var(--shadow-lg)', padding: 16 }}>
               <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{tr('✍️ ลงนามทบทวน AM รายเดือน')}</div>
               <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 4 }}>
-                {tr("ไลน์")} <b>{signing.line}</b> {tr('· เดือน')} {month} · {shift === 'day' ? 'กะเช้า' : 'กะดึก'}
+                {tr("ไลน์")} <b>{signing.line}</b> {tr('· เดือน')} {month} · {shift === 'day' ? tr("กะเช้า") : tr("กะดึก")}
               </div>
               {row && (
                 <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 8, padding: '8px 10px', background: 'var(--bg3)', borderRadius: 'var(--r-md)' }}>

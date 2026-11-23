@@ -119,7 +119,7 @@ export default function OrgAssignmentsPanel({ nodes = [] }) {
             borderRadius: 'var(--r-md)', fontSize: 12, fontWeight: 700, cursor: 'pointer',
             background: open ? 'var(--bg3)' : 'var(--accent)', color: open ? 'var(--text2)' : '#fff',
             border: `1px solid ${open ? 'var(--border2)' : 'var(--accent)'}` }}>
-            {open ? 'ยกเลิก' : '➕ เพิ่ม'}
+            {open ? tr("ยกเลิก") : tr("➕ เพิ่ม")}
           </button>
         )}
       </div>
@@ -174,8 +174,8 @@ export default function OrgAssignmentsPanel({ nodes = [] }) {
               onChange={e => setForm(f => ({ ...f, ends_on: e.target.value }))} />
             <div style={{ fontSize: 11, color: form.kind === 'acting' && !form.ends_on ? '#f59e0b' : 'var(--muted)', marginTop: 2 }}>
               {form.kind === 'acting'
-                ? (form.ends_on ? 'วันสิ้นสุด' : '⚠️ รักษาการควรมีวันสิ้นสุด')
-                : 'วันสิ้นสุด (ไม่ใส่ก็ได้)'}
+                ? (form.ends_on ? tr("วันสิ้นสุด") : tr("⚠️ รักษาการควรมีวันสิ้นสุด"))
+                : tr("วันสิ้นสุด (ไม่ใส่ก็ได้)")}
             </div>
           </div>
           <button onClick={add} disabled={busy} style={{ padding: '7px 14px', borderRadius: 'var(--r-md)', fontWeight: 700,
@@ -207,7 +207,7 @@ export default function OrgAssignmentsPanel({ nodes = [] }) {
                 const m = STATUS[st] || STATUS.active;
                 return (
                   <tr key={r.id}>
-                    <td>{n ? `${NODE_KIND_TH[n.kind] || n.kind} · ${n.name}` : '(หน่วยถูกลบ)'}</td>
+                    <td>{n ? `${NODE_KIND_TH[n.kind] || n.kind} · ${n.name}` : tr("(หน่วยถูกลบ)")}</td>
                     <td>{nameOf(r.profile_id)}
                       {r.note && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{r.note}</div>}</td>
                     {/* 🔴 บทบาท = **ตำแหน่งจริงของคนนั้น** ไม่ใช่คำที่ระบบประดิษฐ์ (21/10 · คำสั่ง user) */}

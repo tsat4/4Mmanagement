@@ -167,7 +167,7 @@ export default function TrialBookingModal({ lineName, dies = [], onClose, onAdd 
           <span style={{ fontSize: 11.5, color: estMin > 0 ? 'var(--text2)' : '#f59e0b', marginRight: 'auto' }}>
             {estMin > 0
               ? `${tr("จะจองเวลาเครื่อง")} ${Math.floor(estMin / 60)}:${String(estMin % 60).padStart(2, '0')} ${tr("ชม. ต่อท้ายคิว")}`
-              : '⚠️ ยังไม่ได้ระบุเวลา — วางลงไทม์ไลน์ไม่ได้'}
+              : tr("⚠️ ยังไม่ได้ระบุเวลา — วางลงไทม์ไลน์ไม่ได้")}
           </span>
           <button onClick={onClose}>{tr('ยกเลิก')}</button>
           <button onClick={submit} style={{ background: 'var(--accent)', color: 'var(--accent-ink)', fontWeight: 800 }}>

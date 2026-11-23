@@ -430,14 +430,14 @@ export default function MtnAndonBoard({ d, ctx, cards = 'maintenance' }) {
             backgroundImage: hot ? 'linear-gradient(var(--blue-dim), var(--blue-dim))' : undefined,
           }}>
             <span style={{ fontSize: 15 * big, fontWeight: 900, color: failed ? 'var(--red)' : n ? 'var(--blue)' : 'var(--green)' }}>
-              {!storeTv.loaded ? 'กำลังโหลดคำขอจากไลน์…'
-                : storeTv.reqErr ? '⚠ ดึงคำขอจากไลน์ไม่สำเร็จ'
-                : n ? `🔔 ${tr("ไลน์เรียกของ")} ${n} ${tr("รายการ")} · ${nl} ${tr("ไลน์")}` : '✅ ไม่มีไลน์ไหนเรียกของ'}
+              {!storeTv.loaded ? tr("กำลังโหลดคำขอจากไลน์…")
+                : storeTv.reqErr ? tr("⚠ ดึงคำขอจากไลน์ไม่สำเร็จ")
+                : n ? `🔔 ${tr("ไลน์เรียกของ")} ${n} ${tr("รายการ")} · ${nl} ${tr("ไลน์")}` : tr("✅ ไม่มีไลน์ไหนเรียกของ")}
             </span>
             {nWait > 0 && <span style={{ fontSize: 12 * big, fontWeight: 900, color: 'var(--red)' }}>{tr('รอบส่งค้าง')} {nWait} {tr('ไลน์')}</span>}
             <span style={{ fontSize: 11 * big, fontWeight: 800, color: nShort ? 'var(--amber)' : 'var(--green)' }}>{tr('ต่ำกว่า Min')} {nShort}</span>
             <span style={{ marginLeft: 'auto', fontSize: 11 * big, fontWeight: 800, color: nCall ? 'var(--red)' : live.length ? 'var(--amber)' : 'var(--muted)' }}>
-              {nCall ? `📞 ${tr("เรียกช่าง")} ${nCall} ${tr("เครื่อง")}` : live.length ? `🔧 ${tr("เครื่องหยุด")} ${live.length}` : '✅ ไม่มีเครื่องหยุด'}
+              {nCall ? `📞 ${tr("เรียกช่าง")} ${nCall} ${tr("เครื่อง")}` : live.length ? `🔧 ${tr("เครื่องหยุด")} ${live.length}` : tr("✅ ไม่มีเครื่องหยุด")}
             </span>
           </div>
         );
@@ -449,7 +449,7 @@ export default function MtnAndonBoard({ d, ctx, cards = 'maintenance' }) {
         background: nCall ? 'var(--red-dim)' : live.length ? 'var(--amber-dim)' : 'var(--card)',
       }}>
         <div style={{ fontSize: 15 * big, fontWeight: 900, color: nCall ? 'var(--red)' : live.length ? 'var(--amber)' : 'var(--green)' }}>
-          {nCall ? `📞 ${tr("เรียกช่าง")} ${nCall} ${tr("เครื่อง")}` : live.length ? `🔧 ${tr("เครื่องหยุดอยู่")} ${live.length} ${tr("เครื่อง")}` : '✅ ไม่มีเครื่องหยุดอยู่ตอนนี้'}
+          {nCall ? `📞 ${tr("เรียกช่าง")} ${nCall} ${tr("เครื่อง")}` : live.length ? `🔧 ${tr("เครื่องหยุดอยู่")} ${live.length} ${tr("เครื่อง")}` : tr("✅ ไม่มีเครื่องหยุดอยู่ตอนนี้")}
           {/* 🔴 พาดหัวยังนับ "ทุกทีม" เสมอ (ห้ามกรอง — กฎข้อเท็จจริงของฝ่ายผลิต)
               แต่ห้องช่างต้องตอบได้ทันทีว่า "เรียกเราไหม" ⇒ ต่อท้ายว่าของทีมนี้กี่ใบ
               + ใบที่คนกดไม่ได้เลือกทีม ต้องเขียนบอก (ช่องโหว่ข้อมูล ห้ามกลืน) */}
@@ -482,14 +482,14 @@ export default function MtnAndonBoard({ d, ctx, cards = 'maintenance' }) {
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 12.5 * big, fontWeight: 800 }}>
           {showRoutine && routine.loaded && (
             <span style={{ color: routine.errs.length ? 'var(--red)' : routine.counts?.lines ? 'var(--amber)' : 'var(--green)' }}>
-              {routine.errs.length ? '⚠ งานประจำกะดึงไม่ครบ'
-                : routine.counts?.lines ? `📋 ${tr("งานประจำกะค้าง")} ${routine.counts.lines} ${tr("ไลน์")}` : '📋 งานประจำกะครบ'}
+              {routine.errs.length ? tr("⚠ งานประจำกะดึงไม่ครบ")
+                : routine.counts?.lines ? `📋 ${tr("งานประจำกะค้าง")} ${routine.counts.lines} ${tr("ไลน์")}` : tr("📋 งานประจำกะครบ")}
             </span>
           )}
           {showMo && <span style={{ color: mo.length ? 'var(--amber)' : 'var(--green)' }}>{tr('ใบซ่อมค้าง')} {mo.length}</span>}
           {showPm && (
           <span onClick={() => navigate('/pm?tab=plan')} style={{ cursor: 'pointer', color: pmOver ? 'var(--red)' : (pmToday || pm.length) ? 'var(--amber)' : 'var(--green)' }}>
-            {pmOver ? `PM ${tr("เกินกำหนด")} ${pmOver}` : '✅ ไม่มี PM เกินกำหนด'}
+            {pmOver ? `PM ${tr("เกินกำหนด")} ${pmOver}` : tr("✅ ไม่มี PM เกินกำหนด")}
             {pm.length - pmOver > 0 && (
               <span style={{ color: 'var(--amber)' }}> {tr('· ถึงกำหนดใน')} {PM_SOON_DAYS} {tr('วัน')} {pm.length - pmOver}</span>
             )}
@@ -623,7 +623,7 @@ export default function MtnAndonBoard({ d, ctx, cards = 'maintenance' }) {
               }}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
                 <span style={{ fontSize: 14 * big, fontWeight: 900, color: 'var(--text)', lineHeight: 1.15, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {r.production_sessions?.line_name || 'ไม่ระบุไลน์'}
+                  {r.production_sessions?.line_name || tr("ไม่ระบุไลน์")}
                 </span>
                 <span style={{ marginLeft: 'auto', flexShrink: 0, fontSize: 16 * big, fontWeight: 900, color: r._s.color, lineHeight: 1, whiteSpace: 'nowrap' }}>
                   {fmtMin(r._min)}
@@ -631,10 +631,10 @@ export default function MtnAndonBoard({ d, ctx, cards = 'maintenance' }) {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 11 * big }}>
                 <span style={{ fontWeight: 800, color: r.machine_no ? 'var(--text2)' : 'var(--accent2)' }}>
-                  {r.machine_no || '⚠ ไม่ระบุเครื่อง'}
+                  {r.machine_no || tr("⚠ ไม่ระบุเครื่อง")}
                 </span>
                 <span style={{ color: 'var(--muted)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {r.dr_downtime_types?.name_th || 'ไม่ระบุประเภท'}
+                  {r.dr_downtime_types?.name_th || tr("ไม่ระบุประเภท")}
                 </span>
                 <span style={{ marginLeft: 'auto', flexShrink: 0, fontWeight: 800, color: r._s.color }}>{tr(r._s.label)}</span>
               </div>
@@ -700,7 +700,7 @@ export default function MtnAndonBoard({ d, ctx, cards = 'maintenance' }) {
                   ? `✅ ${tr("ไม่มีแผนที่ถึงกำหนดใน")} ${PM_SOON_DAYS} ${tr("วัน (แผนที่ใช้งานอยู่")} ${pmBuckets.length}${pmRunDayN ? ` · AM ${tr("ตามวันเดิน")} ${pmRunDayN} ${tr("ดูจอ")} AM` : ''}${pmNoCycleN ? ` · ⚠ ${tr("ไม่ตั้งรอบ")} ${pmNoCycleN}` : ''})`
                   : (d.plans || []).length
                     ? `${tr("ไม่มีแผน PM ของไลน์ในขอบเขตจอนี้ (แผนของไลน์อื่น")} ${pmScopeHidden} ${tr("แผนไม่แสดง")})`
-                    : '⚠ ยังไม่มีแผน PM ในระบบ — ตั้งจุดตรวจ/รอบเวลาที่ ⚙️ ตั้งค่าจุดตรวจ'}
+                    : tr("⚠ ยังไม่มีแผน PM ในระบบ — ตั้งจุดตรวจ/รอบเวลาที่ ⚙️ ตั้งค่าจุดตรวจ")}
               </div>
             )}
             {pm.slice(0, 8).map(p => (
@@ -714,7 +714,7 @@ export default function MtnAndonBoard({ d, ctx, cards = 'maintenance' }) {
                   {p.am && <span style={{ color: 'var(--green)', fontWeight: 800 }}> · AM</span>}
                 </span>
                 <b style={{ flexShrink: 0, color: p.bucket === 'never' ? 'var(--amber)' : p.days < 0 ? 'var(--red)' : p.days === 0 ? 'var(--amber)' : 'var(--muted)' }}>
-                  {p.bucket === 'never' ? 'ไม่เคยตรวจ' : p.days < 0 ? `${tr("เกิน")} ${Math.abs(p.days)} ${tr("วัน")}` : p.days === 0 ? 'วันนี้' : `${tr("อีก")} ${p.days} ${tr("วัน")}`}
+                  {p.bucket === 'never' ? tr("ไม่เคยตรวจ") : p.days < 0 ? `${tr("เกิน")} ${Math.abs(p.days)} ${tr("วัน")}` : p.days === 0 ? tr("วันนี้") : `${tr("อีก")} ${p.days} ${tr("วัน")}`}
                 </b>
               </div>
             ))}
@@ -779,7 +779,7 @@ export default function MtnAndonBoard({ d, ctx, cards = 'maintenance' }) {
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ fontSize: 19, fontWeight: 900, color: 'var(--text)' }}>{zoom}</div>
                   <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
-                    {zLive.length ? `🔴 ${tr("เครื่องหยุดอยู่")} ${zLive.length} ${tr("รายการ")}` : '✅ ไม่มีเครื่องหยุดอยู่ตอนนี้'}
+                    {zLive.length ? `🔴 ${tr("เครื่องหยุดอยู่")} ${zLive.length} ${tr("รายการ")}` : tr("✅ ไม่มีเครื่องหยุดอยู่ตอนนี้")}
                     {' · '}{tr('🛠️ ใบซ่อมค้าง')} {zMo.length}{' · '}{tr('📅 PM ถึงกำหนด')} {zPm.length}
                   </div>
                 </div>
@@ -814,7 +814,7 @@ export default function MtnAndonBoard({ d, ctx, cards = 'maintenance' }) {
                         <div key={o.id} onClick={() => navigate('/mtn-repair')} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, cursor: 'pointer' }}>
                           <b style={{ color: 'var(--text)', flexShrink: 0 }}>{o.mo_no || tr('⏳ รอออกเลข')}</b>
                           <span style={{ color: 'var(--muted)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {o.machine_no || 'ไม่ระบุเครื่อง'}{o.problem_characteristic ? ` · ${o.problem_characteristic}` : ''}
+                            {o.machine_no || tr("ไม่ระบุเครื่อง")}{o.problem_characteristic ? ` · ${o.problem_characteristic}` : ''}
                           </span>
                           <span style={{ marginLeft: 'auto', flexShrink: 0, color: 'var(--amber)', fontWeight: 700 }}>{moStatusLabel(o)}</span>
                         </div>
@@ -834,7 +834,7 @@ export default function MtnAndonBoard({ d, ctx, cards = 'maintenance' }) {
                             {p.name}{p.am && <span style={{ color: 'var(--green)', fontWeight: 800 }}> · AM</span>}
                           </span>
                           <b style={{ marginLeft: 'auto', flexShrink: 0, color: p.days < 0 ? 'var(--red)' : p.days === 0 ? 'var(--amber)' : 'var(--muted)' }}>
-                            {p.days < 0 ? `${tr("เกิน")} ${Math.abs(p.days)} ${tr("วัน")}` : p.days === 0 ? 'วันนี้' : `${tr("อีก")} ${p.days} ${tr("วัน")}`}
+                            {p.days < 0 ? `${tr("เกิน")} ${Math.abs(p.days)} ${tr("วัน")}` : p.days === 0 ? tr("วันนี้") : `${tr("อีก")} ${p.days} ${tr("วัน")}`}
                           </b>
                         </div>
                       ))}

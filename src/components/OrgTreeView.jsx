@@ -218,10 +218,10 @@ export default function OrgTreeView({ nodes = [], scopeCtx = {}, canEdit = false
             {meta.th}{meta.level ? ` · ${tr("เลเวล")} ${meta.level}` : ''}
           </span>
           {cc?.cc ? (
-            <span title={inherited ? `${tr("ตกทอดจาก")} ${cc.from?.name || tr('หน่วยแม่')}` : 'รหัสของหน่วยนี้เอง'}
+            <span title={inherited ? `${tr("ตกทอดจาก")} ${cc.from?.name || tr('หน่วยแม่')}` : tr("รหัสของหน่วยนี้เอง")}
               style={{ fontSize: 11, fontWeight: 700, fontFamily: 'monospace',
                 color: inherited ? 'var(--muted)' : '#22c55e' }}>
-              {cc.cc}{inherited ? ' · ตกทอด' : ''}
+              {cc.cc}{inherited ? tr(" · ตกทอด") : ''}
             </span>
           ) : (
             <span title={tr('ไม่มีรหัส Cost Center ทั้งสาย — ตั้งที่หน่วยนี้หรือหน่วยแม่')}
@@ -263,8 +263,8 @@ export default function OrgTreeView({ nodes = [], scopeCtx = {}, canEdit = false
                 {n.parent_id && (
                   <button type="button" className="tbtn" onClick={() => toggleInherit(n)} disabled={busy}
                     title={n.inherit_scope === false
-                      ? 'ให้ขอบเขตของหน่วยแม่ครอบหน่วยนี้ตามปกติ'
-                      : 'หน่วยนี้มาฝากไว้ใต้หน่วยแม่ — ไม่ให้หน่วยแม่มีสิทธิ์แก้ข้อมูล'}
+                      ? tr("ให้ขอบเขตของหน่วยแม่ครอบหน่วยนี้ตามปกติ")
+                      : tr("หน่วยนี้มาฝากไว้ใต้หน่วยแม่ — ไม่ให้หน่วยแม่มีสิทธิ์แก้ข้อมูล")}
                     style={{ fontSize: 11, padding: '2px 8px' }}>
                     {n.inherit_scope === false ? tr('🔓 ให้ตกทอด') : tr('🔒 ไม่ตกทอด')}
                   </button>
@@ -284,7 +284,7 @@ export default function OrgTreeView({ nodes = [], scopeCtx = {}, canEdit = false
   return (
     <div className="card" style={{ padding: 14 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
-        <SearchInput value={q} onChange={setQ} fields="ชื่อหน่วย / รหัส / CC" />
+        <SearchInput value={q} onChange={setQ} fields={tr("ชื่อหน่วย / รหัส / CC")} />
         <button type="button" className="tbtn" onClick={() => doPrint({ mode: 'overall' })} disabled={printing}
           title={tr('ออกใบแผนผังองค์กรทั้งโรงงาน (ฝ่าย → ส่วน → แผนก) ตามฟอร์ม FM-HRM-I-001')}
           style={{ fontSize: 12, padding: '3px 10px' }}>{tr('ผังใหญ่ (ทั้งโรงงาน)')}</button>

@@ -85,7 +85,7 @@ export default function QaMoPending() {
             {busy ? tr('กำลังโหลด…') : tr('โหลดใหม่')}
           </button>
           <div style={{ marginLeft: 'auto', minWidth: 190 }}>
-            <SearchInput value={q} onChange={setQ} fields="เลข MO / ไลน์ / เครื่อง / อุปกรณ์" />
+            <SearchInput value={q} onChange={setQ} fields={tr("เลข MO / ไลน์ / เครื่อง / อุปกรณ์")} />
           </div>
         </div>
 
@@ -137,7 +137,7 @@ export default function QaMoPending() {
                   <td style={{ padding: '6px 9px', whiteSpace: 'nowrap' }}>
                     <Link to={`/mtn-repair?mo=${encodeURIComponent(r.id)}`}
                       style={{ color: 'var(--accent)', fontWeight: 700, textDecoration: 'none' }}>
-                      {r.mo_no || '(ยังไม่มีเลข)'}
+                      {r.mo_no || tr("(ยังไม่มีเลข)")}
                     </Link>
                   </td>
                   <td style={{ padding: '6px 9px', whiteSpace: 'nowrap' }}>{r.work_date || '—'}</td>

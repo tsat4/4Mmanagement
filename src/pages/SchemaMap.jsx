@@ -246,7 +246,7 @@ export default function SchemaMap() {
     <Page>
       <PageHeader
         title={tr('โครงสร้างฐานข้อมูล')} icon="🗄️"
-        sub={loading ? 'กำลังอ่านโครงสร้างจากฐานข้อมูล…'
+        sub={loading ? tr("กำลังอ่านโครงสร้างจากฐานข้อมูล…")
           : `${total} ${tr("ตาราง/วิว")} · ${totalFk} ${tr("เส้นความสัมพันธ์")} (FK) · ${USAGE.pages?.length || 0} ${tr("หน้าในระบบ")}`}
         actions={<button type="button" className="pg-btn" onClick={reload}>{tr('อ่านใหม่')}</button>}
         tabs={[
@@ -264,7 +264,7 @@ export default function SchemaMap() {
         </>}>
           <div style={{ marginTop: 6, color: 'var(--text2)' }}>
             • <b>{tr('ระบบนี้มีฐานข้อมูล 2 ตัวแยกกัน')}</b> — {tr(PROJ.main.label)} {tr('(จอ Supabase เขียนว่า “')}{PROJ.main.screen}”)
-            {tr("และ")} {PROJ.dr.label} (“{PROJ.dr.screen}”) · {tr("ชื่อตารางคล้ายกันหลายตัว เวลาแจ้งให้บอกฝั่งด้วยเสมอ")}
+            {tr("และ")} {tr(PROJ.dr.label)} (“{PROJ.dr.screen}”) · {tr("ชื่อตารางคล้ายกันหลายตัว เวลาแจ้งให้บอกฝั่งด้วยเสมอ")}
             <br />• {tr("ตัวเลขแถว")} = <b>{tr('ค่าประมาณจากสถิติของฐาน')}</b> ({tr("ไม่ได้นับจริงทุกครั้ง) ใช้ดูขนาดคร่าวๆ เท่านั้น")}
             <br />{tr('• “หน้าไหนใช้ตารางไหน” มาจาก')}<b>{tr('การสแกนซอร์สตอน build')}</b> — {tr("จับเฉพาะที่โค้ดเขียนชื่อตารางตรงๆ ถ้าหน้าไหนเรียกผ่านฟังก์ชันกลางที่ส่งชื่อตารางเป็นตัวแปร จะไม่ขึ้นในลิสต์นี้")}
             <br />{tr('• ข้อมูลโครงสร้าง cache ไว้ 12 ชม. — เพิ่ง apply migration ให้กด')} <b>{tr('อ่านใหม่')}</b>
@@ -285,7 +285,7 @@ export default function SchemaMap() {
           {/* ── ลิสต์ตาราง ─────────────────────────────────────────────── */}
           {(!isMobile || !sel) && (
             <div style={{ ...card(), display: 'grid', gap: 9, alignContent: 'start' }}>
-              <SearchInput value={q} onChange={setQ} fields="ชื่อตาราง (เช่น downtime, employee)" />
+              <SearchInput value={q} onChange={setQ} fields={tr("ชื่อตาราง (เช่น downtime, employee)")} />
               <TabBar size="sm" value={side} onChange={setSide}
                 tabs={[{ key: 'all', label: allOf('ฐานข้อมูล') }, ...PKEYS.map(k => ({ key: k, label: PROJ[k].label, badge: over[k]?.tables?.length || 0 }))]} />
 
@@ -544,7 +544,7 @@ function TableDetail({ sel, detail, err, isMobile, pages, url, userName, size, o
               {(d.policies || []).length ? d.policies.map(p => (
                 <div key={p.name}>· <b>{p.cmd}</b> — {(p.roles || []).join(', ')} <span style={{ color: 'var(--muted)' }}>({p.name})</span></div>
               )) : <div style={{ color: d.rls ? 'var(--amber)' : 'var(--muted)' }}>
-                {d.rls ? '— เปิด RLS แต่ไม่มี policy เลย = อ่าน/เขียนไม่ได้ทั้งตาราง' : '— ไม่มี (RLS ปิดอยู่)'}
+                {d.rls ? tr("— เปิด RLS แต่ไม่มี policy เลย = อ่าน/เขียนไม่ได้ทั้งตาราง") : tr("— ไม่มี (RLS ปิดอยู่)")}
               </div>}
 
               <div style={{ color: 'var(--muted)', marginTop: 7 }}>Trigger ({(d.triggers || []).length}):</div>
@@ -587,7 +587,7 @@ function PagesTab({ q, setQ, isMobile, catalog, ghosts, onPick }) {
   return (
     <div style={{ display: 'grid', gap: 10 }}>
       <div style={{ ...card(), display: 'grid', gap: 8 }}>
-        <SearchInput value={q} onChange={setQ} fields="ชื่อหน้า / path / ชื่อตาราง" />
+        <SearchInput value={q} onChange={setQ} fields={tr("ชื่อหน้า / path / ชื่อตาราง")} />
         <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.6 }}>
           {tr("แสดง")} {pages.length} {tr('หน้า จากทั้งหมด')} {(USAGE.pages || []).length} ·
           {tr("สแกนซอร์สเมื่อ")} {new Date(USAGE.builtAt).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' })} ({tr("ตอน")} build)
@@ -623,7 +623,7 @@ function PagesTab({ q, setQ, isMobile, catalog, ghosts, onPick }) {
                       const k = sideOf(t, guess);
                       return (
                         <button key={`${guess}-${t}`} onClick={() => k && onPick(k, t)} disabled={!k}
-                          title={k ? `${PROJ[k].label} · ${tr("กดเพื่อดูโครงสร้าง")}` : 'ไม่พบตารางนี้ในฐานข้อมูล'}
+                          title={k ? `${PROJ[k].label} · ${tr("กดเพื่อดูโครงสร้าง")}` : tr("ไม่พบตารางนี้ในฐานข้อมูล")}
                           style={{ ...chip(false), opacity: k ? 1 : 0.55, cursor: k ? 'pointer' : 'default' }}>
                           {k === 'main' ? '🗄️' : k === 'dr' ? '🏭' : '❔'} {t}
                         </button>
@@ -717,7 +717,7 @@ function AuditTab({ audits, isMobile, loading, onPick, onCopy }) {
                     <span style={{ flexShrink: 0 }}>{c.rows.length ? lv.icon : '✅'}</span>
                     <span style={{ flex: '1 1 auto', minWidth: 0, fontSize: 13, fontWeight: 700 }}>{c.title}</span>
                     <span style={{ flexShrink: 0, fontSize: 12, color: c.rows.length ? lv.color : 'var(--muted)', fontWeight: 700 }}>
-                      {c.rows.length ? `${c.rows.length} ${tr("รายการ")}` : 'ไม่พบ'}
+                      {c.rows.length ? `${c.rows.length} ${tr("รายการ")}` : tr("ไม่พบ")}
                     </span>
                     <span style={{ flexShrink: 0, fontSize: 11.5, color: 'var(--muted)' }}>{on ? '▾' : '▸'}</span>
                   </button>

@@ -1471,7 +1471,7 @@ export default function Checkin() {
           <div className="ck-top">
             <div style={{ flex: 1, minWidth: 0 }}>{cEmp}</div>
             <div className="ck-status" style={{ color: meta.color }}>
-              {emp.assignedShift ? (emp.assignedShift === 'day' ? 'เช้า · ' : 'ดึก · ') : ''}{tr(meta.label)}
+              {emp.assignedShift ? (emp.assignedShift === 'day' ? tr("เช้า · ") : tr("ดึก · ")) : ''}{tr(meta.label)}
               {hasLeave && rec.leave_type && <div style={{ fontSize: 11, opacity: 0.85 }}>{rec.leave_type}</div>}
             </div>
           </div>
@@ -1534,7 +1534,7 @@ export default function Checkin() {
                           <div style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 700, marginTop: 2 }}>
                             → {tr("ไปช่วยไลน์")} {emp._helperOutTo} ({tr("กะนี้")}){emp._helperOutBy ? ` · ${tr("ยืมโดย")} ${emp._helperOutBy}` : ''}
                             <div style={{ fontWeight: 600, color: 'var(--muted)' }}>
-                              🔒 {emp._helperOutChecked ? `${tr("เช็คชื่อแล้วโดย")} ${emp._helperOutChecked}` : 'ยังไม่ได้เช็คชื่อ'} — {tr("ไลน์ที่ยืมเป็นคนบันทึก จอนี้แก้ไม่ได้")}
+                              🔒 {emp._helperOutChecked ? `${tr("เช็คชื่อแล้วโดย")} ${emp._helperOutChecked}` : tr("ยังไม่ได้เช็คชื่อ")} — {tr("ไลน์ที่ยืมเป็นคนบันทึก จอนี้แก้ไม่ได้")}
                             </div>
                           </div>
                         )}
@@ -1611,7 +1611,7 @@ export default function Checkin() {
                               }}
                             >
                               {tr(opt.label)}
-                              <div style={{ fontSize: 11, opacity: 0.8, fontWeight: 400 }}>{opt.sub}</div>
+                              <div style={{ fontSize: 11, opacity: 0.8, fontWeight: 400 }}>{tr(opt.sub)}</div>
                             </button>
                           ))}
                         </div>
@@ -1952,7 +1952,7 @@ export default function Checkin() {
                 style={{ padding: '7px 10px', borderRadius: 6, fontSize: 13, width: 'auto', minWidth: 200, flex: 1 }} onChange={setBorrowLineId} />
             </div>
             <SearchInput value={borrowSearch} onChange={setBorrowSearch} autoFocus grow={false}
-              fields="ชื่อ / รหัสพนักงาน (อย่างน้อย 2 ตัวอักษร)" style={{ marginBottom: 10 }} />
+              fields={tr("ชื่อ / รหัสพนักงาน (อย่างน้อย 2 ตัวอักษร)")} style={{ marginBottom: 10 }} />
             <div style={{ flex: 1, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)', minHeight: 120 }}>
               {borrowLoading && <div style={{ padding: 14, fontSize: 13, color: 'var(--muted)' }}>{tr('⏳ กำลังค้นหา...')}</div>}
               {!borrowLoading && borrowSearch.trim().length >= 2 && borrowResults.length === 0 && (
@@ -1976,7 +1976,7 @@ export default function Checkin() {
                       <div style={{ fontSize: 11, color: 'var(--muted)' }}>{r.employee_id_code} · {homeLine}{r.team ? ` · ${tr("ทีม")} ${r.team}` : ''}</div>
                     </div>
                     {borrowedHere
-                      ? <span style={{ fontSize: 11, color: 'var(--blue)', fontWeight: 700, whiteSpace: 'nowrap' }}>{tr('ยืมแล้ว →')} {lines.find(l => l.id === already._helperToLineId)?.name || 'ไลน์ใน scope'}</span>
+                      ? <span style={{ fontSize: 11, color: 'var(--blue)', fontWeight: 700, whiteSpace: 'nowrap' }}>{tr('ยืมแล้ว →')} {lines.find(l => l.id === already._helperToLineId)?.name || tr("ไลน์ใน scope")}</span>
                       : inRoster
                         ? <span style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{tr('อยู่ในรายชื่อแล้ว')}</span>
                         : (
@@ -2133,7 +2133,7 @@ export default function Checkin() {
         )}
       </div>
 
-      <DraftRestoreBar draft={ckPending} what="การเช็คชื่อกะนี้" onRestore={restoreCkDraft}
+      <DraftRestoreBar draft={ckPending} what={tr("การเช็คชื่อกะนี้")} onRestore={restoreCkDraft}
         onDiscard={() => { if (ckDraftKey) clearDraft(ckDraftKey); setCkPending(null); }} />
       {shiftChanged && (
         <NoticeBar tone="warn" style={{ marginBottom: 14 }}

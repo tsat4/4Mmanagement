@@ -731,7 +731,7 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11, fontWeight: 700, color: 'var(--muted)' }}>{tr('จำนวน (ชิ้น) *')}
                   <input type="number" min="1" value={addForm.qty} onChange={e => setAddForm(f => ({ ...f, qty: e.target.value }))} style={inputSt} />
                 </label>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11, fontWeight: 700, color: 'var(--muted)' }}>{tr('ชื่อพาร์ท')}{prodNames[addForm.mat_no.trim()] ? ' (จาก Product Master)' : ''}
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11, fontWeight: 700, color: 'var(--muted)' }}>{tr('ชื่อพาร์ท')}{prodNames[addForm.mat_no.trim()] ? tr(" (จาก Product Master)") : ''}
                   {/* snapshot ชื่อจาก dr_products — MAT ที่เลือกจากทะเบียนแล้วห้ามแก้ชื่อเอง (ชื่อคนละแบบ = สอบกลับไม่เจอ) (2026-09-07) */}
                   <input value={addForm.part_name} readOnly={!!prodNames[addForm.mat_no.trim()]} onChange={e => setAddForm(f => ({ ...f, part_name: e.target.value }))}
                     style={{ ...inputSt, opacity: prodNames[addForm.mat_no.trim()] ? 0.75 : 1 }} />
@@ -1061,7 +1061,7 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
                       { k: 'สต็อก', v: covEl },
                       { k: 'ส่งโดย', v: o.shipped_by ? `✓ ${o.shipped_by}${o.shipped_at ? ` · ${new Date(o.shipped_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' })}` : ''}` : null },
                     ]}
-                    note={plan ? 'ลูกค้ายืนยันรอบจริงด้วย e-SMART — อัพไฟล์แล้วใบนี้จะถูกแทนด้วยยอดจริง' : null}
+                    note={plan ? tr("ลูกค้ายืนยันรอบจริงด้วย e-SMART — อัพไฟล์แล้วใบนี้จะถูกแทนด้วยยอดจริง") : null}
                     alert={od}
                     dim={isClosedOrder(o)}
                     footer={(isOpenOrder(o) && phases.length > 0) || nx ? (
@@ -1240,7 +1240,7 @@ function WorkflowSection({ canEdit }) {
                   <select value={val(r, 'requires_status')} onChange={e => setVal(r, 'requires_status', e.target.value)} style={{ ...edSt, width: 170 }}>
                     {REQ_STATUS_OPTIONS.map(x => <option key={x.value} value={x.value}>{tr(x.label)}</option>)}
                   </select>
-                ) : <span style={{ fontSize: 12 }}>{REQ_STATUS_OPTIONS.find(x => x.value === r.requires_status)?.label || r.requires_status}</span>}</td>
+                ) : <span style={{ fontSize: 12 }}>{tr(REQ_STATUS_OPTIONS.find(x => x.value === r.requires_status)?.label) || r.requires_status}</span>}</td>
                 <td style={{ ...cell, whiteSpace: 'nowrap' }}>
                   {canEdit ? (
                     <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, cursor: 'pointer', color: 'var(--text2)' }}
@@ -1475,7 +1475,7 @@ function CustomerPicker({ value, code, opts, onChange, edSt }) {
     <div>
       <CustomerSelect value={v} onChange={({ customer }) => onChange(customer)} inputStyle={edSt}
         extra={opts.map(o => o.name)}
-        freeHint="ลูกค้าใหม่ — ถ้าไม่มีสินค้าไหนใช้ชื่อนี้ จะแยกออเดอร์ตามลูกค้าไม่ได้" />
+        freeHint={tr("ลูกค้าใหม่ — ถ้าไม่มีสินค้าไหนใช้ชื่อนี้ จะแยกออเดอร์ตามลูกค้าไม่ได้")} />
       {/* บอกผลการจับคู่ทันที — "SOUTH ARFIGA" ต้องเห็นว่าไม่ตรงกับใครตั้งแต่ยังไม่กดบันทึก */}
       {unset ? (
         <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{tr('ยังไม่ตั้ง — แยกออเดอร์ตามลูกค้าไม่ได้')}</div>

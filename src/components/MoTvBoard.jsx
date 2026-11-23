@@ -66,8 +66,8 @@ export default function MoTvBoard({ inScope, isMobile = false }) {
   }), [rows, group, team, inScope, now]);
 
   const g = moTvGroupMeta(group);
-  const title = g ? `${g.icon} ${g.label}` : '🧾 ใบแจ้งซ่อม MO ที่ยังไม่ปิด · ทุกขั้น';
-  const teamLabel = team ? deptNameOf(team) : 'ทุกทีมช่าง';
+  const title = g ? `${g.icon} ${g.label}` : tr("🧾 ใบแจ้งซ่อม MO ที่ยังไม่ปิด · ทุกขั้น");
+  const teamLabel = team ? deptNameOf(team) : tr("ทุกทีมช่าง");
 
   const boxRef = useRef(null);
   const pager = useTvPager(boxRef, {

@@ -558,7 +558,7 @@ export default function MorningMeeting() {
   };
 
   /* ── ส่งสรุปเข้า Telegram ── */
-  const scopeLabel = secFilter || (sectionOpts.length ? sectionOpts.join('+') : 'ทุกส่วนงาน');
+  const scopeLabel = secFilter || (sectionOpts.length ? sectionOpts.join('+') : tr("ทุกส่วนงาน"));
   const sendTelegram = async () => {
     setSendingTg(true);
     try {
@@ -909,7 +909,7 @@ export default function MorningMeeting() {
                   </span>
                   <button type="button" className="pg-btn sm" onClick={() => setShowRoutineMoves(v => !v)}
                     style={{ marginLeft: 'auto', whiteSpace: 'nowrap' }}>
-                    {showRoutineMoves ? 'ซ่อนรายชื่อ' : `${tr("ดูรายชื่อ")} (${routine.length})`}
+                    {showRoutineMoves ? tr("ซ่อนรายชื่อ") : `${tr("ดูรายชื่อ")} (${routine.length})`}
                   </button>
                 </div>
                 {showRoutineMoves && (
@@ -1000,7 +1000,7 @@ export default function MorningMeeting() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                   {a.assignee && <span style={chip('var(--blue)')}>{a.assignee}</span>}
-                  {a.due_date && <span style={chip(overdue ? 'var(--red)' : 'var(--muted)')}>{overdue ? '⚠ เลยกำหนด ' : '📅 '}{fmtDate(a.due_date)}</span>}
+                  {a.due_date && <span style={chip(overdue ? 'var(--red)' : 'var(--muted)')}>{overdue ? tr("⚠ เลยกำหนด ") : '📅 '}{fmtDate(a.due_date)}</span>}
                   <span style={chip(st.color)}>{tr(st.label)}</span>
                   {canRecord && ['open', 'doing'].includes(a.status) && (
                     <>
@@ -1130,7 +1130,7 @@ export default function MorningMeeting() {
               <button onClick={() => setSlide(s => Math.min(slides.length - 1, s + 1))} disabled={slide === slides.length - 1} style={{ ...btnSt(false), fontSize: 16, opacity: slide === slides.length - 1 ? 0.4 : 1 }}>▶</button>
               <button onClick={() => setGestureOn(v => !v)} style={{ ...btnSt(gestureOn), position: 'relative' }}
                 title={'ควบคุมด้วยท่ามือผ่านกล้อง (ประมวลผลในเครื่อง ไม่ส่งภาพออกไปไหน)\n☝️ ชี้นิ้ว ◀/▶ ค้าง = เปลี่ยนวาระ · ชี้ ▲/▼ ค้าง = เลื่อนหน้า\n✋ ปัดซ้าย/ขวา = เปลี่ยนวาระ · ค้าง = ถัดไป · ✊ ค้าง = ออกจากโหมด'}>
-                {gestureOn ? 'ปิดท่ามือ' : 'คุมด้วยท่ามือ'}
+                {gestureOn ? tr("ปิดท่ามือ") : tr("คุมด้วยท่ามือ")}
                 <ToggleDot on={gestureOn} />
               </button>
               <button onClick={() => { setTvMode(false); setGestureOn(false); }} style={{ ...btnSt(false), fontSize: 14 }} title={tr('ออกจากโหมดประชุม (Esc)')}>✕</button>

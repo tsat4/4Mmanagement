@@ -154,7 +154,7 @@ export default function NpiPartPanel({ part, project, template, phases, delivs, 
   const refLink = (d) => {
     if (d.ref_kind === 'pe_set' && (d.ref_id || part.pe_set_id)) return <Link to={`/pe-docs?set=${d.ref_id || part.pe_set_id}${d.doc_kind === 'fmea' ? '&tab=fmea' : d.doc_kind === 'cp' ? '&tab=cp' : ''}`} style={{ color: '#4d9fff' }}>📐 PE docs</Link>;
     if (d.ref_kind === 'qa_part' && (d.ref_id || part.qa_part_id)) return <Link to="/qa-setup" style={{ color: '#4d9fff' }}>🔍 QA setup</Link>;
-    if (d.ref_kind === 'drawing' && d.ref_id) { const dw = drawings.find(x => x.id === d.ref_id); return <span>{tr('แบบ')} {dw ? `${dw.kind.toUpperCase()} ${dw.rev}` : '(ไม่พบ)'}</span>; }
+    if (d.ref_kind === 'drawing' && d.ref_id) { const dw = drawings.find(x => x.id === d.ref_id); return <span>{tr('แบบ')} {dw ? `${dw.kind.toUpperCase()} ${dw.rev}` : tr("(ไม่พบ)")}</span>; }
     if (d.ref_kind === 'tooling' && d.ref_id) { const t = tooling.find(x => x.id === d.ref_id); return <span>{t?.tool_name || tr('(ไม่พบ)')}</span>; }
     if (d.ref_kind === 'url' && d.ref_id) return <a href={d.ref_id} target="_blank" rel="noreferrer" style={{ color: '#4d9fff' }}>{tr('ลิงก์')}</a>;
     return null;
@@ -342,11 +342,11 @@ export default function NpiPartPanel({ part, project, template, phases, delivs, 
             <Field label={tr('ทีมเจ้าของ')}><select style={inp} value={dvModal.owner_role || ''} onChange={e => setDvModal({ ...dvModal, owner_role: e.target.value })}><option value="">—</option>{Object.entries(OWNER_ROLE).map(([k, l]) => <option key={k} value={k}>{tr(l)}</option>)}</select></Field>
             <Field label={tr('อ้างอิงของจริงในระบบ')}><select style={inp} value={dvModal.ref_kind || ''} onChange={e => setDvModal({ ...dvModal, ref_kind: e.target.value, ref_id: '' })}><option value="">—</option>{Object.entries(REF_KIND).map(([k, l]) => <option key={k} value={k}>{tr(l)}</option>)}</select></Field>
             <Field label={tr('รายการที่อ้าง')}>
-              {dvModal.ref_kind === 'drawing' ? <select style={inp} value={dvModal.ref_id || ''} onChange={e => setDvModal({ ...dvModal, ref_id: e.target.value })}><option value="">—</option>{drawings.map(dw => <option key={dw.id} value={dw.id}>{dw.kind.toUpperCase()} {dw.rev} {dw.is_current ? '(ปัจจุบัน)' : ''}</option>)}</select>
+              {dvModal.ref_kind === 'drawing' ? <select style={inp} value={dvModal.ref_id || ''} onChange={e => setDvModal({ ...dvModal, ref_id: e.target.value })}><option value="">—</option>{drawings.map(dw => <option key={dw.id} value={dw.id}>{dw.kind.toUpperCase()} {dw.rev} {dw.is_current ? tr("(ปัจจุบัน)") : ''}</option>)}</select>
                 : dvModal.ref_kind === 'tooling' ? <select style={inp} value={dvModal.ref_id || ''} onChange={e => setDvModal({ ...dvModal, ref_id: e.target.value })}><option value="">—</option>{tooling.map(t => <option key={t.id} value={t.id}>{tr(t.tool_name)}</option>)}</select>
                 : dvModal.ref_kind === 'url' ? <input style={inp} value={dvModal.ref_id || ''} onChange={e => setDvModal({ ...dvModal, ref_id: e.target.value })} placeholder="https://…" />
-                : dvModal.ref_kind === 'pe_set' ? <div style={{ fontSize: 12, color: 'var(--muted)', paddingTop: 6 }}>{peSet ? `${tr("ชุด")} ${peSet.part_no}` : 'พาร์ทยังไม่ผูกชุด PE'}</div>
-                : dvModal.ref_kind === 'qa_part' ? <div style={{ fontSize: 12, color: 'var(--muted)', paddingTop: 6 }}>{qaPart ? `QA ${qaPart.part_no}` : 'พาร์ทยังไม่ผูก QA part'}</div>
+                : dvModal.ref_kind === 'pe_set' ? <div style={{ fontSize: 12, color: 'var(--muted)', paddingTop: 6 }}>{peSet ? `${tr("ชุด")} ${peSet.part_no}` : tr("พาร์ทยังไม่ผูกชุด PE")}</div>
+                : dvModal.ref_kind === 'qa_part' ? <div style={{ fontSize: 12, color: 'var(--muted)', paddingTop: 6 }}>{qaPart ? `QA ${qaPart.part_no}` : tr("พาร์ทยังไม่ผูก QA part")}</div>
                 : <input style={inp} value={dvModal.ref_id || ''} onChange={e => setDvModal({ ...dvModal, ref_id: e.target.value })} placeholder={tr('เลขเอกสาร/อ้างอิง')} />}
             </Field>
             <Field label={tr('ลำดับ')}><input type="number" style={inp} value={dvModal.seq ?? 0} onChange={e => setDvModal({ ...dvModal, seq: e.target.value })} /></Field>

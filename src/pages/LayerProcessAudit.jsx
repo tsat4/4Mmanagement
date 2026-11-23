@@ -1244,7 +1244,7 @@ ${issuesHtml}
               ⚠ {draftErr} — <b>{tr('ยังบันทึกไม่ได้')}</b> ({tr("ถ้าบันทึกทับตอนนี้ คำตอบที่เคยตรวจไว้จะหาย) · ลองเปลี่ยนวัน/ไลน์แล้วกลับมาใหม่")}
             </div>
           )}
-          <DraftRestoreBar draft={pendingDraft} what="ใบตรวจ LPA ชุดนี้" onRestore={restoreLpaDraft}
+          <DraftRestoreBar draft={pendingDraft} what={tr("ใบตรวจ LPA ชุดนี้")} onRestore={restoreLpaDraft}
             onDiscard={() => { if (lpaDraftKey) clearDraft(lpaDraftKey); setPendingDraft(null); }} />
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 12 }}>
             <div>
@@ -1313,7 +1313,7 @@ ${issuesHtml}
             if (!catQs.length) return null;
             return (
               <div key={cat.key} style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 13, fontWeight: 800, color: cat.key === 'special' ? 'var(--red)' : 'var(--text)', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>{cat.full}</div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: cat.key === 'special' ? 'var(--red)' : 'var(--text)', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>{tr(cat.full)}</div>
                 {catQs.map(q => {
                   const a = draft?.answers[q.id];
                   return (
@@ -1525,7 +1525,7 @@ ${issuesHtml}
                     const catQs = qs.filter(q => q.category === cat.key);
                     if (!catQs.length) return null;
                     return [
-                      <tr key={cat.key + '_h'}><td colSpan={2 + nDays + 6} style={{ ...cellStyle, textAlign: 'left', fontWeight: 800, fontSize: 12, color: cat.key === 'special' ? 'var(--red)' : 'var(--text)', background: 'var(--bg3)' }}>{cat.full}</td></tr>,
+                      <tr key={cat.key + '_h'}><td colSpan={2 + nDays + 6} style={{ ...cellStyle, textAlign: 'left', fontWeight: 800, fontSize: 12, color: cat.key === 'special' ? 'var(--red)' : 'var(--text)', background: 'var(--bg3)' }}>{tr(cat.full)}</td></tr>,
                       ...catQs.map(q => (
                         <tr key={q.id}>
                           <td style={cellStyle}>{q.seq}</td>
@@ -1570,7 +1570,7 @@ ${issuesHtml}
             </div>
             <button
               onClick={() => setQEditing({ category: 'safety', seq: (Math.max(0, ...questions.map(q => q.seq)) + 1), question: '', line_name: qScope || '', issue_start: '', issue_end: '', is_active: true })}
-              style={btnAccent}>{tr('เพิ่มคำถาม')}{qScope ? ` (${tr("เฉพาะไลน์")} ${qScope})` : ' (เข้าทะเบียนกลาง — ทุกไลน์เห็น)'}</button>
+              style={btnAccent}>{tr('เพิ่มคำถาม')}{qScope ? ` (${tr("เฉพาะไลน์")} ${qScope})` : tr(" (เข้าทะเบียนกลาง — ทุกไลน์เห็น)")}</button>
           </div>
           {/* 🔴 ป้าย "ตอนนี้คุณกำลังแก้ของใคร" — ห้ามถอด (2026-10-12 · feedback user)
               เคสจริง: มีคนกดลบข้อ common 2 ข้อจากมุมมอง "ทุกไลน์" ⇒ หายจากใบตรวจทุกไลน์
@@ -1610,7 +1610,7 @@ ${issuesHtml}
             if (!catQs.length) return null;
             return (
               <div key={cat.key} style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 13, fontWeight: 800, color: cat.key === 'special' ? 'var(--red)' : 'var(--text)', padding: '5px 0', borderBottom: '1px solid var(--border)' }}>{cat.full}</div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: cat.key === 'special' ? 'var(--red)' : 'var(--text)', padding: '5px 0', borderBottom: '1px solid var(--border)' }}>{tr(cat.full)}</div>
                 {catQs.map(q => {
                   const isCommon = !q.line_name;
                   const hiddenHere = qScope && isCommon && (q.hidden_for_lines || []).includes(qScope);
@@ -1641,7 +1641,7 @@ ${issuesHtml}
                         <>
                           <button className="tbtn" onClick={() => setQEditing({ ...q })} style={{ ...btnGray, padding: '4px 10px', fontSize: 12 }}>✏️</button>
                           <button className="tbtn" onClick={() => toggleQuestion(q)} style={{ ...btnGray, padding: '4px 10px', fontSize: 12 }}>{q.is_active ? '⏸' : '▶'}</button>
-                          <DeleteButton onClick={() => deleteQuestion(q)} disabled={qBusy} title={q.line_name ? `${tr("ลบข้อเฉพาะไลน์")} ${q.line_name}` : 'ลบข้อของส่วนรวม (ทุกไลน์)'} />
+                          <DeleteButton onClick={() => deleteQuestion(q)} disabled={qBusy} title={q.line_name ? `${tr("ลบข้อเฉพาะไลน์")} ${q.line_name}` : tr("ลบข้อของส่วนรวม (ทุกไลน์)")} />
                         </>
                       )}
                     </div>
@@ -1658,7 +1658,7 @@ ${issuesHtml}
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14 }}>
           <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(96vw, 640px)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-              <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{qEditing.id ? '✏️ แก้ไข' : '➕ เพิ่ม'}{tr('คำถาม')}</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{qEditing.id ? tr("✏️ แก้ไข") : tr("➕ เพิ่ม")}{tr('คำถาม')}</div>
               <button onClick={() => setQEditing(null)} style={{ background: 'none', border: 'none', fontSize: 20, color: 'var(--muted)', cursor: 'pointer' }}>✕</button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

@@ -88,7 +88,7 @@ export default function KpiMonthNoteModal({ title, icon, monthText, valueText, n
         <div style={{ padding: 14, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8, flex: 1, minHeight: 0 }}>
           {notes.length === 0 && (
             <div style={{ fontSize: 13, color: 'var(--muted)', textAlign: 'center', padding: '18px 8px' }}>
-              {tr("ยังไม่มีหมายเหตุของเดือนนี้")}{canEdit ? ' — พิมพ์ด้านล่างเพื่อบันทึกว่าเกิดอะไรขึ้น / ทำอะไรไปแล้ว' : ''}
+              {tr("ยังไม่มีหมายเหตุของเดือนนี้")}{canEdit ? tr(" — พิมพ์ด้านล่างเพื่อบันทึกว่าเกิดอะไรขึ้น / ทำอะไรไปแล้ว") : ''}
             </div>
           )}
           {notes.map((n) => {
@@ -98,7 +98,7 @@ export default function KpiMonthNoteModal({ title, icon, monthText, valueText, n
                 <div style={{ fontSize: 16, lineHeight: 1 }} title={tr(m.label)}>{m.icon}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13.5, color: 'var(--text)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{n.text}</div>
-                  <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>{tr(m.label)} · {n.created_by_name || 'ไม่ระบุผู้บันทึก'} · {fmtWhen(n.created_at)}</div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>{tr(m.label)} · {n.created_by_name || tr("ไม่ระบุผู้บันทึก")} · {fmtWhen(n.created_at)}</div>
                 </div>
                 {/* 🔍 กดขยายในแอป (16/11) — เดิมเปิดแท็บใหม่ = หลุดออกจากโมดัลที่กำลังอ่านบันทึก */}
                 {n.image_url && (

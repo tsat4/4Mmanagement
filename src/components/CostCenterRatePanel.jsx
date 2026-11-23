@@ -276,7 +276,7 @@ export default function CostCenterRatePanel({ nodes, lines }) {
         ) : (
           /* ซ่อนปุ่มได้ ห้ามซ่อนเหตุผล — UI-CONVENTIONS §6.9 */
           <ReadOnlyNote role={role} permKey="cost_rate:manage"
-            what="แก้ Activity Rate (ค่าแรง/ค่าเสื่อม/โสหุ้ย ต่อ cost center)"
+            what={tr("แก้ Activity Rate (ค่าแรง/ค่าเสื่อม/โสหุ้ย ต่อ cost center)")}
             hint={tr('rate ชุดนี้เป็นตัวคูณของ “เงินที่ประหยัดได้” ทุกจอ (โปรเจคปรับปรุง · มูลค่าดาวไทม์/ของเสีย · เด็ครายงานเดือน) จึงเปิดให้เฉพาะผู้ดูแลระบบ/ผู้จัดการ')} />
         )}
 
@@ -337,7 +337,7 @@ export default function CostCenterRatePanel({ nodes, lines }) {
                 )}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
                   {RATE_COMPONENTS.map(c => (
-                    <label key={c.key} style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)' }}>{tr(c.label)} <span style={{ fontWeight: 600 }}>({c.full})</span>
+                    <label key={c.key} style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)' }}>{tr(c.label)} <span style={{ fontWeight: 600 }}>({tr(c.full)})</span>
                       <input type="number" min="0" step="any" value={form[c.field]} onChange={e => setForm({ ...form, [c.field]: e.target.value })} placeholder={tr('บาท/ชม.')} style={{ marginTop: 4 }} />
                     </label>
                   ))}

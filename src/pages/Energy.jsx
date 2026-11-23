@@ -452,7 +452,7 @@ export default function Energy() {
             <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400, marginTop: 2 }}
               title={tr('ทวนว่าค่าที่ลงไว้ที่ไลน์แม่ ครอบคลุมไลน์ลูกที่ลงไว้แค่ไหน')}>
               {tr("ประกอบด้วยไลน์ย่อยที่ลงไว้")} {roll.childCount} {tr('จุด รวม')} {fmtKwh(roll.childQty)} kWh
-              {childPct != null && <> = <b>{childPct}%</b> {tr('ของค่านี้')}{childPct > 102 ? ' ⚠ ลูกมากกว่าแม่' : ''}</>}
+              {childPct != null && <> = <b>{childPct}%</b> {tr('ของค่านี้')}{childPct > 102 ? tr(" ⚠ ลูกมากกว่าแม่") : ''}</>}
             </div>
           )}
           {/* "utility นี้จ่ายให้ไลน์ไหน" — อ่านจาก Supply route ที่ตั้งไว้ในฐานข้อมูลเครื่องจักร
@@ -523,7 +523,7 @@ export default function Energy() {
   if (movedToHub) return <Navigate to="/integrations" replace />;
   return (
     <Page>
-      <PageHeader title={tr('พลังงานไฟฟ้า')} icon="⚡" sub={isLive ? 'ค่าไฟสดจากมิเตอร์ · อัปเดตทุก 1 นาที' : isMeters ? 'ตู้บนบอร์ดค่าไฟสด · ชื่อที่โชว์ · ผังแม่-ลูก · ลิมิต' : isHistory ? 'ประวัติการใช้ไฟจากมิเตอร์ · เทียบตู้ · ส่งออก Excel' : `${monthLabel(month)} · ${tr("เฟส 1 กรอกรายเดือน")}`}
+      <PageHeader title={tr('พลังงานไฟฟ้า')} icon="⚡" sub={isLive ? tr("ค่าไฟสดจากมิเตอร์ · อัปเดตทุก 1 นาที") : isMeters ? tr("ตู้บนบอร์ดค่าไฟสด · ชื่อที่โชว์ · ผังแม่-ลูก · ลิมิต") : isHistory ? tr("ประวัติการใช้ไฟจากมิเตอร์ · เทียบตู้ · ส่งออก Excel") : `${monthLabel(month)} · ${tr("เฟส 1 กรอกรายเดือน")}`}
         tabs={[{ key: 'live', label: 'ค่าไฟสด' }, { key: 'history', label: 'ประวัติ & Excel' }, { key: 'input', label: 'กรอกรายเดือน' }, { key: 'summary', label: 'สรุป & วิเคราะห์' }, { key: 'setup', label: 'ค่าการปล่อย' }, { key: 'meters', label: 'ตั้งค่าตู้' }]}
         tab={tab} onTab={setTab}
       />
@@ -559,7 +559,7 @@ export default function Energy() {
         <Kpi label={tr('คาร์บอน (tCO2e)')} value={ef ? fmtTco2e(co2) : '—'}
           tone={ef ? 'var(--green)' : 'var(--muted)'} warn={!ef}
           sub={ef
-            ? <>Scope 2 · {usingBill ? 'จากบิล' : 'จากผลรวมที่วัดได้'} {tr('· เทียบเดือนก่อน')} {deltaChip(deltaPct(co2, co2Prev))}</>
+            ? <>Scope 2 · {usingBill ? tr("จากบิล") : tr("จากผลรวมที่วัดได้")} {tr('· เทียบเดือนก่อน')} {deltaChip(deltaPct(co2, co2Prev))}</>
             : <span style={{ color: 'var(--amber)' }}>{tr('ยังไม่ได้ตั้งค่าการปล่อย → แท็บ ⚙️')}</span>} />
         <Kpi label={tr('ค่าไฟรวม (บาท)')} value={fmtBaht(bill?.cost ?? metered.cost)}
           sub={`${tr("บาท/หน่วย")} ${bahtPerUnit(bill?.cost ?? metered.cost, bill?.qty ?? metered.qty) ?? '—'} (${tr("ปกติ")} 3.5–5)`} />

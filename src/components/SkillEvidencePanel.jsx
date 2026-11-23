@@ -66,9 +66,9 @@ export default function SkillEvidencePanel({ ev, cfg, currentScore = null, compa
             <div style={{ height: '100%', width: `${Math.round(prog * 100)}%`, background: 'var(--accent)' }} />
           </div>
           <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>
-            {ev.cur_band >= 4 ? 'ขั้นสูงสุด'
-              : leftDay == null ? 'ยังประเมินเวลาที่เหลือไม่ได้'
-              : leftDay === 0   ? 'ถึงเพดานขั้นแล้ว'
+            {ev.cur_band >= 4 ? tr("ขั้นสูงสุด")
+              : leftDay == null ? tr("ยังประเมินเวลาที่เหลือไม่ได้")
+              : leftDay === 0   ? tr("ถึงเพดานขั้นแล้ว")
               : `${tr("อีกราว")} ${nf(leftDay)} ${tr("วันทำงานถึงเพดานขั้น")}`}
           </div>
         </div>
@@ -79,7 +79,7 @@ export default function SkillEvidencePanel({ ev, cfg, currentScore = null, compa
             {ev.ng_ratio == null ? '–' : `${Number(ev.ng_ratio).toFixed(2)}x`}
           </div>
           <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>
-            {ev.ng_ratio == null ? 'ข้อมูลไม่พอตัดสิน' : `${tr("เพดาน")} ${cfg?.quality_max_ratio ?? '–'}x`}
+            {ev.ng_ratio == null ? tr("ข้อมูลไม่พอตัดสิน") : `${tr("เพดาน")} ${cfg?.quality_max_ratio ?? '–'}x`}
           </div>
         </div>
 
@@ -97,8 +97,8 @@ export default function SkillEvidencePanel({ ev, cfg, currentScore = null, compa
             {ev.has_ojt ? '✅' : '—'} OJT {ev.is_trainer ? ' · ' : ''}
           </div>
           <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>
-            {ev.ojt_post_score != null ? `${tr("คะแนนสอบ")} ${ev.ojt_post_score}` : 'ไม่มีคะแนนสอบ'}
-            {ev.is_trainer ? ' · เคยเป็นผู้สอน' : ''}
+            {ev.ojt_post_score != null ? `${tr("คะแนนสอบ")} ${ev.ojt_post_score}` : tr("ไม่มีคะแนนสอบ")}
+            {ev.is_trainer ? tr(" · เคยเป็นผู้สอน") : ''}
           </div>
         </div>
 

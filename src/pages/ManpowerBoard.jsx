@@ -267,7 +267,7 @@ export default function ManpowerBoard() {
           (แท็บผัง LAYOUT เปิดผังของไลน์นั้น — ไลน์ลูกไม่มีรูปผัง = ผังแม่ + เขียนบอก) · เลือกส่วนงาน/แผนก = ล้าง `?lline=` */}
       <SectionScopeSelect lines={scopeNames ? viewScope.lines : lines} pickDept pickLine line={params.get('lline') || ''}
         value={section ? orgKey(section) : ''} dept={deptNode ? orgKey(deptNode) : ''}
-        allLabel={sectionNodes.length ? '— เลือกส่วนงาน —' : '— ไม่มีส่วนงานในขอบเขต —'} width={300}
+        allLabel={sectionNodes.length ? trI18n("— เลือกส่วนงาน —") : trI18n("— ไม่มีส่วนงานในขอบเขต —")} width={300}
         onChange={(sec, info) => {
           const deptOf = (unit) => {
             const cands = nodes.filter(n => n.kind === 'department' && orgKey(n) === unit);
@@ -288,8 +288,8 @@ export default function ManpowerBoard() {
         <span style={{ fontSize: 12, fontWeight: 700, borderRadius: 'var(--r-md)', padding: '3px 8px', whiteSpace: 'nowrap',
           color: viewScope.unsure || deptIgnored ? 'var(--amber)' : 'var(--accent)',
           background: viewScope.unsure || deptIgnored ? 'var(--amber)1a' : 'var(--accent-dim)' }}>
-          {viewScope.unsure ? '⚠ ตัดขอบเขตบัญชีไม่ได้ — แสดงตามที่ตั้งไว้'
-            : deptIgnored ? '⚠ แผนกในลิงก์อยู่นอกขอบเขตของบัญชี — แสดงแผนกที่เห็นได้แทน'
+          {viewScope.unsure ? trI18n("⚠ ตัดขอบเขตบัญชีไม่ได้ — แสดงตามที่ตั้งไว้")
+            : deptIgnored ? trI18n("⚠ แผนกในลิงก์อยู่นอกขอบเขตของบัญชี — แสดงแผนกที่เห็นได้แทน")
             : `🔭 ${trI18n("เฉพาะแผนกในขอบเขต · ซ่อน")} ${scopeHiddenDepts} ${trI18n("แผนก")}`}
         </span>
       )}
@@ -323,7 +323,7 @@ export default function ManpowerBoard() {
             style={{ padding: '7px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
               border: `1px solid ${tv ? 'var(--accent)' : 'var(--border2)'}`, background: tv ? 'var(--accent-dim)' : 'var(--bg2)', color: tv ? 'var(--accent)' : 'var(--text2)' }}
             title={trI18n('จอ TV ไม่มีเมาส์: ไม่เลื่อน แบ่งเป็นหน้า เปลี่ยนหน้าเองทุก 20 วิ (← → หรือรีโมตก็ได้)')}>
-            {tv ? 'ออกจากโหมดจอ TV' : 'โหมดจอ TV'}
+            {tv ? trI18n("ออกจากโหมดจอ TV") : trI18n("โหมดจอ TV")}
           </button>
         </>)}
       />
@@ -408,7 +408,7 @@ function HelperTag({ p }) {
 function FlexTag({ p }) {
   const f = p.flexFrom;
   if (!f) return null;
-  const home = f.nodeName || 'หน่วยอื่น';
+  const home = f.nodeName || trI18n("หน่วยอื่น");
   const cc = f.costCenter ? ` · cost center ${f.costCenter}` : '';
   return (
     <span title={`${trI18n("ต้นสังกัด")}: ${home}${cc}${f.note ? ` · ${f.note}` : ''} — ${trI18n("มาช่วยแผนกนี้ประจำ ไม่ได้ย้ายสังกัด และไม่นับเป็นกำลังคนของแผนกนี้")}`}
@@ -438,7 +438,7 @@ function PersonChip({ p }) {
       <Photo p={p} size={34} />
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
-        <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{positionLabel(p.position) || 'ไม่ระบุตำแหน่ง'}{p.team ? ` · ${trI18n("ทีม")} ${p.team}` : ''}{p.external && p.department ? ` · ${trI18n("สังกัด")} ${p.department}` : ''}</div>
+        <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{positionLabel(p.position) || trI18n("ไม่ระบุตำแหน่ง")}{p.team ? ` · ${trI18n("ทีม")} ${p.team}` : ''}{p.external && p.department ? ` · ${trI18n("สังกัด")} ${p.department}` : ''}</div>
         {p.linkedLines?.length > 0 && (
           <div style={{ fontSize: 11, color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={`${trI18n("ช่างประจำไลน์")}: ${p.linkedLines.join(', ')}`}>{p.linkedLines.join(', ')}</div>
         )}
@@ -517,7 +517,7 @@ function SkillCard({ p, skills }) {
 /** ช่องว่าง — รู้จุดงาน (ช่องระดับจุดงาน) = เขียนชื่อจุดด้วย หัวหน้าจะได้รู้ว่าต้องหาคนลงตรงไหน */
 function EmptySlot({ station, h }) {
   return (
-    <div title={station ? `${trI18n("จุด")} ${station} ${trI18n("ยังขาดคนประจำ")}` : 'ช่องว่าง'} style={{ border: '2px dashed var(--border2)', borderRadius: 'var(--r-md)', minHeight: h || 92, height: h,
+    <div title={station ? `${trI18n("จุด")} ${station} ${trI18n("ยังขาดคนประจำ")}` : trI18n("ช่องว่าง")} style={{ border: '2px dashed var(--border2)', borderRadius: 'var(--r-md)', minHeight: h || 92, height: h,
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, padding: 4, overflow: 'hidden',
       color: 'var(--muted)', fontSize: 12, fontWeight: 700, textAlign: 'center' }}>
       {trI18n("ช่องว่าง")}
@@ -542,7 +542,7 @@ function TeamColumn({ c, skills }) {
     <div style={{ flex: '1 1 260px', minWidth: 0, maxWidth: '100%', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 8, background: 'var(--bg2-surf)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
         <RoleTag>{trI18n('หัวหน้ากลุ่ม')}</RoleTag>
-        <strong style={{ fontSize: 14 }}>{c.team ? `${trI18n("ทีม")} ${c.team}` : 'ไม่ระบุทีม'}</strong>
+        <strong style={{ fontSize: 14 }}>{c.team ? `${trI18n("ทีม")} ${c.team}` : trI18n("ไม่ระบุทีม")}</strong>
         <span style={{ fontSize: 12, fontWeight: 700, color: sm.color }}>● {c.shift ? `${sm.label}${trI18n("วันนี้")}` : sm.label}</span>
         <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--muted)' }}>
           {c.ops.length} {trI18n('คน')}{slotText(c)}
@@ -1389,12 +1389,12 @@ function FourMCard({ d, logs, tv }) {
               <div style={{ background: m.color, color: m.key === 'machine' ? '#1f2937' : '#fff', fontWeight: 800, fontSize: 14, borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 4px' }}>{trI18n(m.label)}</div>
               <div style={{ border: `2px solid ${tone}`, borderRadius: 'var(--r-md)', padding: '6px 10px', minWidth: 0 }}>
                 <div style={{ fontWeight: 800, fontSize: 16, color: tone }}>
-                  {!d.lines.length ? 'ไม่รู้' : bad ? `${trI18n("ผิดปกติ")} · ${s.rows.length} ${trI18n("ใบ")}` : 'ปกติ'}
+                  {!d.lines.length ? trI18n("ไม่รู้") : bad ? `${trI18n("ผิดปกติ")} · ${s.rows.length} ${trI18n("ใบ")}` : trI18n("ปกติ")}
                   {bad && s.pending > 0 && <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', marginLeft: 6 }}>{trI18n('(รออนุมัติ')} {s.pending})</span>}
                 </div>
                 {s.rows.slice(0, descMax).map(r => (
                   <div key={r.id} style={{ fontSize: 12, color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.description}>
-                    · {r.line_name} — {r.description || '(ไม่มีรายละเอียด)'}
+                    · {r.line_name} — {r.description || trI18n("(ไม่มีรายละเอียด)")}
                   </div>
                 ))}
                 {s.rows.length > descMax && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{trI18n('+ อีก')} {s.rows.length - descMax} {trI18n('ใบ')}</div>}
@@ -1580,12 +1580,12 @@ function OrgTv({ board, depts, skills }) {
                   <div key={c.team || '-'} style={{ flex: '1 1 0', minWidth: 0, border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 8, background: 'var(--bg2-surf)', overflow: 'hidden' }}>
                     <div style={{ height: TV_COLHEAD_H, display: 'flex', flexDirection: 'column', justifyContent: 'center', overflow: 'hidden' }}>
                       <div style={{ display: 'flex', gap: 8, alignItems: 'center', whiteSpace: 'nowrap' }}>
-                        <strong style={{ fontSize: 15 }}>{c.team ? `${trI18n("ทีม")} ${c.team}` : 'ไม่ระบุทีม'}</strong>
+                        <strong style={{ fontSize: 15 }}>{c.team ? `${trI18n("ทีม")} ${c.team}` : trI18n("ไม่ระบุทีม")}</strong>
                         <span style={{ fontSize: 12.5, fontWeight: 700, color: sm.color }}>● {c.shift ? `${sm.label}${trI18n("วันนี้")}` : sm.label}</span>
                         <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--muted)' }}>{c.ops.length} {trI18n('คน')}{slotText(c)}</span>
                       </div>
                       <div style={{ fontSize: 12, color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {trI18n("หัวหน้ากลุ่ม")}: {c.leaders.length ? c.leaders.map(p => p.name).join(', ') : '— ยังไม่มีในทะเบียน'}
+                        {trI18n("หัวหน้ากลุ่ม")}: {c.leaders.length ? c.leaders.map(p => p.name).join(', ') : trI18n("— ยังไม่มีในทะเบียน")}
                       </div>
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignContent: 'flex-start' }}>
@@ -1927,7 +1927,7 @@ function HistoryTab({ section, dept, deptParam, nodes, lines, stations, employee
         <div style={{ fontSize: 12, color: 'var(--muted)' }}>{trI18n('ℹ️ อีก')} {scoped.unattributed} {trI18n("รายการเป็นจุดงานที่ถูกลบไปแล้ว สืบไม่ได้ว่าเป็นของแผนกไหน — ไม่ได้แสดงในตัวกรองแผนก (เลือก")} "{ALL.dept}" {trI18n("เพื่อดู")})</div>
       )}
       {state.loading ? <div style={{ padding: 24, color: 'var(--muted)' }}>{trI18n('กำลังโหลด…')}</div> : !list.length ? (
-        <div className="card" style={{ padding: 24, color: 'var(--muted)' }}>{trI18n('ไม่มีการเปลี่ยนช่อง/คนต่อกะ/ช่างประจำไลน์ของ')}{deptParam ? 'แผนก' : 'ส่วนงาน'}{trI18n('นี้ในช่วงที่เลือก')}</div>
+        <div className="card" style={{ padding: 24, color: 'var(--muted)' }}>{trI18n('ไม่มีการเปลี่ยนช่อง/คนต่อกะ/ช่างประจำไลน์ของ')}{deptParam ? trI18n("แผนก") : trI18n("ส่วนงาน")}{trI18n('นี้ในช่วงที่เลือก')}</div>
       ) : (
         <>
           <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
@@ -1968,7 +1968,7 @@ function HistoryTab({ section, dept, deptParam, nodes, lines, stations, employee
                     <td style={td}>{c.actor}</td>
                     <td style={{ ...td, whiteSpace: 'nowrap' }}>{SLOT_KIND_META[c.kind].icon} {trI18n(SLOT_KIND_META[c.kind].label)}</td>
                     <td style={td}>{c.where}</td>
-                    <td style={{ ...td, whiteSpace: 'nowrap' }}>{c.kind === 'team' ? (c.team ? `${trI18n("ทีม")} ${c.team}` : 'ไม่ระบุทีม') : '–'}</td>
+                    <td style={{ ...td, whiteSpace: 'nowrap' }}>{c.kind === 'team' ? (c.team ? `${trI18n("ทีม")} ${c.team}` : trI18n("ไม่ระบุทีม")) : '–'}</td>
                     {/* ไม่ใส่สีเขียว/แดง — ช่องเพิ่มไม่ได้แปลว่า "ดี" (UI §6.17 สี = ความหมาย) */}
                     <td style={{ ...td, fontWeight: 700 }}>{c.text}</td>
                   </tr>

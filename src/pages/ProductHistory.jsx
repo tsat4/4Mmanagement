@@ -296,7 +296,7 @@ export default function ProductHistory() {
         <LineSelect lines={lines.filter(l => lineGroups.inUse.has(l.name))} value={filterLine} onChange={setFilterLine}
           role={role} lineId={lineId} sections={sections} placeholder={ALL.line}
           extraGroups={[{ label: 'นอกผัง (ชื่อไลน์ไม่ตรงทะเบียนไลน์ผลิต)', options: lineGroups.off.map(n => ({ value: n })) }]} />
-        <SearchInput value={search} onChange={setSearch} fields="MAT.NO / ชื่อ / P/N" />
+        <SearchInput value={search} onChange={setSearch} fields={trI18n("MAT.NO / ชื่อ / P/N")} />
       </TimeRangeBar>
 
       <div style={{ ...card, marginBottom: 16 }}>
@@ -305,8 +305,8 @@ export default function ProductHistory() {
           <div onClick={() => setPickerOpen(o => !o)}
             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none', marginBottom: 6 }}>
             <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-              {trI18n("พบ")} <b>{filteredProducts.length.toLocaleString()}</b> {trI18n('รายการ')}{filteredProducts.length > 300 ? ' · แสดง 300 แรก — พิมพ์ค้นหา/เลือกไลน์เพื่อกรองเพิ่ม' : ''}
-              {pickerOpen ? ' · คลิกสินค้าเพื่อดูประวัติ' : selMat ? ` · ${trI18n("เลือกอยู่")}: ${selMat.mat_no} — ${trI18n("กดเพื่อเปลี่ยนสินค้า")}` : ' · กดเพื่อแสดงรายการ'}
+              {trI18n("พบ")} <b>{filteredProducts.length.toLocaleString()}</b> {trI18n('รายการ')}{filteredProducts.length > 300 ? trI18n(" · แสดง 300 แรก — พิมพ์ค้นหา/เลือกไลน์เพื่อกรองเพิ่ม") : ''}
+              {pickerOpen ? trI18n(" · คลิกสินค้าเพื่อดูประวัติ") : selMat ? ` · ${trI18n("เลือกอยู่")}: ${selMat.mat_no} — ${trI18n("กดเพื่อเปลี่ยนสินค้า")}` : trI18n(" · กดเพื่อแสดงรายการ")}
             </div>
             <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700 }}>{pickerOpen ? '▲' : '▼'}</span>
           </div>
@@ -451,7 +451,7 @@ export default function ProductHistory() {
           {/* ── ผลิตเทียบกับความต้องการลูกค้า (2026-08-19 · คำสั่ง user) ──
               ตอบ "ผลิตพอกับที่ลูกค้าสั่งไหม · ต้องเร่งหรือชะลอ" ซึ่งเดิมดูไม่ได้เลย
               ⚠️ ไม่ผูกกับ daily.length — ไม่มีการผลิตเลย ยิ่งต้องเห็นว่าลูกค้าสั่งอยู่เท่าไหร่ */}
-          <CollapseCard id="demand" title={trI18n('ผลิตเทียบกับความต้องการลูกค้า')} count="ออเดอร์ + forecast">
+          <CollapseCard id="demand" title={trI18n('ผลิตเทียบกับความต้องการลูกค้า')} count={trI18n("ออเดอร์ + forecast")}>
             <DemandVsProduction products={activeMats} prodByDay={prodByDay} today={todayStr()} />
           </CollapseCard>
 
@@ -505,7 +505,7 @@ export default function ProductHistory() {
                           return (
                             <Fragment key={sk}>
                               <tr onClick={() => toggleSet(setOpenShifts, sk)} style={{ cursor: 'pointer', background: 'var(--bg2)' }}>
-                                <td style={{ ...td, paddingLeft: 28, fontWeight: 700 }}>{sOpen ? '▾' : '▸'} {s.shift === 'day' ? '☀️ กะเช้า' : '🌙 กะดึก'} · {s.line || '—'}</td>
+                                <td style={{ ...td, paddingLeft: 28, fontWeight: 700 }}>{sOpen ? '▾' : '▸'} {s.shift === 'day' ? trI18n("☀️ กะเช้า") : trI18n("🌙 กะดึก")} · {s.line || '—'}</td>
                                 <td style={{ ...td, textAlign: 'right' }}>{s.items.length}</td>
                                 <td style={{ ...td, textAlign: 'right' }}>{s.target.toLocaleString()}</td>
                                 <td style={{ ...td, textAlign: 'right', fontWeight: 700, color: 'var(--green)' }}>{s.produced.toLocaleString()}</td>
@@ -514,7 +514,7 @@ export default function ProductHistory() {
                               </tr>
                               {sOpen && s.items.map(r => (
                                 <tr key={r.id}>
-                                  <td style={{ ...td, paddingLeft: 52, color: 'var(--muted)' }}>└ {r.prod_no || 'ใบผลิต'}{r.machine_no ? ` · ${r.machine_no}` : ''}</td>
+                                  <td style={{ ...td, paddingLeft: 52, color: 'var(--muted)' }}>└ {r.prod_no || trI18n("ใบผลิต")}{r.machine_no ? ` · ${r.machine_no}` : ''}</td>
                                   <td style={td}></td>
                                   <td style={{ ...td, textAlign: 'right' }}>{(r.target || 0).toLocaleString()}</td>
                                   <td style={{ ...td, textAlign: 'right', color: 'var(--green)' }}>{(r.produced || 0).toLocaleString()}</td>

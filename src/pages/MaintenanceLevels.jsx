@@ -171,7 +171,7 @@ export default function MaintenanceLevels() {
       if (!alive) return;
       const NAMES = ['ทะเบียนเครื่อง', 'downtime', 'กะการผลิต', 'นโยบายพัก', 'ใบตรวจ PM', 'อุปกรณ์ PM', 'แผน PM', 'ผลตรวจ'];
       const errs = res.map((r, i) => (r.error ? NAMES[i] : null)).filter(Boolean);
-      if (spareRes.error) errs.push('อะไหล่ของแผน PM (คำแนะนำเรื่องอะไหล่ไม่ครบ)');
+      if (spareRes.error) errs.push(trI18n("อะไหล่ของแผน PM (คำแนะนำเรื่องอะไหล่ไม่ครบ)"));
       if (errs.length) {
         setLoadErr(`${trI18n("โหลดไม่สำเร็จ")}: ${errs.join(' · ')} — ${trI18n("ตัวเลขบนจอไม่ครบ")}`);
         toast.error(`${trI18n("โหลดข้อมูลไม่ครบ")}: ${errs.join(' · ')}`);
@@ -266,7 +266,7 @@ export default function MaintenanceLevels() {
           { value: 'todo', label: `🎯 ${trI18n("สิ่งที่ควรทำ")} (${actionsOf(scoped).length})` },
           { value: 'equip', label: `📋 ${trI18n("รายอุปกรณ์")} (${scoped.length})` },
         ]} />
-        <SearchInput value={q} onChange={setQ} fields="เลขเครื่อง / ชื่อ / ไลน์" ariaLabel="ค้นหาอุปกรณ์" />
+        <SearchInput value={q} onChange={setQ} fields={trI18n("เลขเครื่อง / ชื่อ / ไลน์")} ariaLabel={trI18n("ค้นหาอุปกรณ์")} />
         <span className="spacer" />
         <button onClick={() => setReloadKey(k => k + 1)} style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', color: 'var(--text2)', borderRadius: 'var(--r-md)', padding: '0 12px', fontSize: 13, cursor: 'pointer', fontWeight: 700 }}>{trI18n('รีเฟรช')}</button>
       </FilterBar>
@@ -275,10 +275,10 @@ export default function MaintenanceLevels() {
       {/* ── บันได 3 ขั้น ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12, alignContent: 'start' }}>
         <LevelCard step="1" title={trI18n('Preventive — ป้องกันตามแผน')} en="Time-based PM" color="#4a90e0"
-          question="แผนบอกว่าถึงเวลาหรือยัง"
+          question={trI18n("แผนบอกว่าถึงเวลาหรือยัง")}
           foot={sum.preventive.failingNoPlan > 0
             ? `${trI18n("ช่องว่าง")}: ${sum.preventive.failingNoPlan} ${trI18n("อุปกรณ์เสีย")} ≥${THRESH.minStops} ${trI18n("ครั้ง/30 วัน แต่ยังไม่มีแผน PM ที่มีรอบ")}`
-            : 'แผนที่เป็น "ตามรอบ" ไม่มีวันครบกำหนด = ระบบเตือนล่วงหน้าไม่ได้'}>
+            : trI18n("แผนที่เป็น \"ตามรอบ\" ไม่มีวันครบกำหนด = ระบบเตือนล่วงหน้าไม่ได้")}>
           <Stat label={trI18n('มีแผน PM')} value={sum.preventive.withPlan} sub={`(${trI18n("มีรอบจริง")} ${sum.preventive.withCycle})`} />
           <Stat label={trI18n('เลยกำหนด')} value={sum.preventive.overdue} color={sum.preventive.overdue ? 'var(--red)' : undefined} />
           <Stat label={trI18n('ใกล้ครบกำหนด')} value={sum.preventive.dueSoon} color={sum.preventive.dueSoon ? '#f59a3f' : undefined} />
@@ -286,7 +286,7 @@ export default function MaintenanceLevels() {
         </LevelCard>
 
         <LevelCard step="2" title={trI18n('Predictive — ดูจากข้อมูลจริง')} en="Reliability-based (downtime)" color="var(--blue)"
-          question="เครื่องกำลังเสียบ่อยขึ้นไหม · จะเสียอีกเมื่อไหร่"
+          question={trI18n("เครื่องกำลังเสียบ่อยขึ้นไหม · จะเสียอีกเมื่อไหร่")}
           foot={`${trI18n("เทียบ")} ${WINDOW.recentDays} ${trI18n("วันล่าสุด (ตั้งแต่")} ${fmtYmd(cov?.recentFrom)}) ${trI18n("กับ")} ${WINDOW.baseDays} ${trI18n("วันก่อนหน้า · ต่อชั่วโมงเดินเครื่องจริง (หักพักแล้ว")})`}>
           <Stat label={trI18n('วิเคราะห์ได้')} value={sum.predictive.analysed} sub={sum.predictive.nodata ? `(${trI18n("ไม่รู้ชั่วโมงเดิน")} ${sum.predictive.nodata})` : ''} />
           <Stat label={trI18n('แนวโน้มแย่ลง')} value={sum.predictive.worse} color={sum.predictive.worse ? 'var(--red)' : undefined} />
@@ -298,8 +298,8 @@ export default function MaintenanceLevels() {
         </LevelCard>
 
         <LevelCard step="3" title={trI18n('Prescriptive — บอกว่าควรทำอะไร')} en="Recommended actions" color="#3dd65c"
-          question="ควรทำอะไร ภายในเมื่อไหร่ เพราะอะไร"
-          foot="กฎที่อ่านออกได้ ไม่ใช่ AI — ทุกข้อบอกเหตุผลเป็นตัวเลข · ระบบไม่เลื่อนแผนให้เอง ช่างเป็นคนตัดสิน">
+          question={trI18n("ควรทำอะไร ภายในเมื่อไหร่ เพราะอะไร")}
+          foot={trI18n("กฎที่อ่านออกได้ ไม่ใช่ AI — ทุกข้อบอกเหตุผลเป็นตัวเลข · ระบบไม่เลื่อนแผนให้เอง ช่างเป็นคนตัดสิน")}>
           <Stat label={trI18n('คำแนะนำทั้งหมด')} value={sum.prescriptive.total} sub={`(${sum.prescriptive.equip} ${trI18n("อุปกรณ์")})`} />
           <Stat label={trI18n(PRIORITY[1].label)} value={sum.prescriptive.p1} color={sum.prescriptive.p1 ? PRIORITY[1].color : undefined} />
           <Stat label={trI18n(PRIORITY[2].label)} value={sum.prescriptive.p2} color={sum.prescriptive.p2 ? PRIORITY[2].color : undefined} />
@@ -317,7 +317,7 @@ export default function MaintenanceLevels() {
       {/* ── ตาราง ── */}
       {!shownRows.length ? (
         <div style={{ ...card, textAlign: 'center', color: 'var(--muted)', fontSize: 13, padding: 30 }}>
-          {view === 'todo' ? 'ไม่มีคำแนะนำในตัวกรองนี้ ✅' : 'ไม่มีอุปกรณ์ในตัวกรองนี้ (อุปกรณ์ที่ไม่มีแผน PM และไม่เคยเสียใน 90 วัน ไม่ขึ้นรายการ)'}
+          {view === 'todo' ? trI18n("ไม่มีคำแนะนำในตัวกรองนี้ ✅") : trI18n("ไม่มีอุปกรณ์ในตัวกรองนี้ (อุปกรณ์ที่ไม่มีแผน PM และไม่เคยเสียใน 90 วัน ไม่ขึ้นรายการ)")}
         </div>
       ) : view === 'todo' ? (
         <div className="table-sticky" style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)' }}>
@@ -408,7 +408,7 @@ export default function MaintenanceLevels() {
         {trI18n("แม่พิมพ์/จิ๊ก ใช้ชั่วโมงเดินของไลน์แทนเวลาที่ถูกใช้จริง (อัตราเสียต่ำกว่าจริง) · ยังไม่มีผลวัดค่า SPC จากใบตรวจ ⇒ ยังทำ predictive จากสภาพเครื่อง (condition-based) ไม่ได้")} ·
         {cov?.unmatched ? ` ${trI18n("เลขเครื่องที่กรอกแต่ไม่อยู่ในทะเบียน")} ${cov.unmatched} ${trI18n("เลข (ติดป้าย \"นอกทะเบียน")}") ·` : ''}
         {cov?.unknownShifts ? ` ${trI18n("กะที่หาชั่วโมงไม่ได้")} ${cov.unknownShifts} ${trI18n("กะ (ชั่วโมงเดินต่ำกว่าจริง")}) ·` : ''}
-        {cov && !cov.hasBreakPolicy ? ' ⚠️ ไม่พบนโยบายเวลาพัก — ชั่วโมงเดินสูงกว่าจริง ·' : ''}
+        {cov && !cov.hasBreakPolicy ? trI18n(" ⚠️ ไม่พบนโยบายเวลาพัก — ชั่วโมงเดินสูงกว่าจริง ·") : ''}
         {cov?.checklistNoEquip ? ` ${trI18n("ใบตรวจ PM ที่หาอุปกรณ์ไม่เจอ")} ${cov.checklistNoEquip} ${trI18n("ใบ")} ·` : ''}
         {cov?.amChecklists ? ` ${trI18n("ใบตรวจ AM (ผลิตตรวจเอง")}) ${cov.amChecklists} ${trI18n("ใบ ไม่นับในชั้น Preventive — ดูที่จอ")} AM ·` : ''}
         {' '}{trI18n("อุปกรณ์ที่ไม่มีแผน PM และไม่เสียเลยใน 90 วันไม่ขึ้นรายการ")}

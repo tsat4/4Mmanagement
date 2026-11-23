@@ -115,7 +115,7 @@ export function ZoomStateStrip({ segments = [], startMs, endMs, nowMs = Date.now
   return (
     <div style={{ display: 'grid', gap: 6 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--muted)' }}>
-        <span>{view ? `${tr("ซูม")} ${hm(a)}–${hm(b)}` : 'ทั้งช่วง'} · {tr("ลากเพื่อเลือกช่วง หรือคลิกเพื่อซูม")}</span>
+        <span>{view ? `${tr("ซูม")} ${hm(a)}–${hm(b)}` : tr("ทั้งช่วง")} · {tr("ลากเพื่อเลือกช่วง หรือคลิกเพื่อซูม")}</span>
         {view && <button type="button" className="pg-btn" style={{ marginLeft: 'auto' }} onClick={() => setView(null)}>⤢ {tr("ย่อกลับทั้งช่วง")}</button>}
       </div>
       <div ref={ref} className={animClass('sweep')} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={() => setDrag(null)}
@@ -184,7 +184,7 @@ export function JigOeeCard({ j, target = 0.85, onOpen, nowMs = Date.now() }) {
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', fontFamily: 'ui-monospace, monospace' }}>{j.machineNo}</div>
           <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-            {j.ctInfo?.mats?.length ? `MAT ${j.ctInfo.mats.join(', ')}` : 'ไม่มีใบผลิตบนจิ๊กนี้'}{j.ctInfo?.ct ? ` · CT ${Math.round(j.ctInfo.ct * 10) / 10} s` : ''}
+            {j.ctInfo?.mats?.length ? `MAT ${j.ctInfo.mats.join(', ')}` : tr("ไม่มีใบผลิตบนจิ๊กนี้")}{j.ctInfo?.ct ? ` · CT ${Math.round(j.ctInfo.ct * 10) / 10} s` : ''}
           </div>
         </div>
         {st && (st.live ? (
@@ -219,7 +219,7 @@ export function JigOeeCard({ j, target = 0.85, onOpen, nowMs = Date.now() }) {
       {why.length > 0 && <div style={{ fontSize: 11.5, color: 'var(--amber)' }}>{why.map(w => WHY_TEXT[w]).join(' · ')}</div>}
       {o.pOver && <div style={{ fontSize: 11.5, color: 'var(--red)' }}>%P {tr("เกิน 100% (ตัดไว้) — CT ในระบบอาจยาวกว่าจริง ตรวจ CT ของพาร์ท")}</div>}
       {st?.approx && <div style={{ fontSize: 11, color: st.liveStale ? 'var(--amber)' : 'var(--muted)' }}>
-        * {st.liveStale ? 'สถานะสดขาดการส่งเกิน 3 นาที — แสดงสถานะล่าสุดที่รู้จากช่วงหยุดที่จบแล้วแทน' : 'สถานะล่าสุดที่รู้จากช่วงหยุดที่จบแล้ว (ยังไม่ได้ส่งสถานะสด — เพิ่มชนิด "สถานะสดของเครื่อง" ใน flow)'}
+        * {st.liveStale ? tr("สถานะสดขาดการส่งเกิน 3 นาที — แสดงสถานะล่าสุดที่รู้จากช่วงหยุดที่จบแล้วแทน") : tr("สถานะล่าสุดที่รู้จากช่วงหยุดที่จบแล้ว (ยังไม่ได้ส่งสถานะสด — เพิ่มชนิด \"สถานะสดของเครื่อง\" ใน flow)")}
       </div>}
     </div>
   );
@@ -266,7 +266,7 @@ export function LossWaterfall({ o }) {
             {r.sec != null && base > 0 && <div className={animClass('grow')} style={{ width: `${Math.min(100, (r.sec / base) * 100)}%`, height: '100%', background: r.loss ? 'var(--red)' : 'var(--blue)', opacity: r.loss ? 0.75 : 1 }} />}
           </div>
           <span style={{ textAlign: 'right', color: 'var(--text)' }}>
-            {r.sec == null ? '– (ไม่รู้ CT)' : `${fmtHM(r.sec)} · ${base > 0 ? Math.round((r.sec / base) * 100) : 0}%`}
+            {r.sec == null ? tr("– (ไม่รู้ CT)") : `${fmtHM(r.sec)} · ${base > 0 ? Math.round((r.sec / base) * 100) : 0}%`}
           </span>
         </div>
       ))}
@@ -345,7 +345,7 @@ export function HourlyChart({ buckets = [], segments = null }) {
         {data.map(d => <span key={d.h} style={{ overflow: 'hidden' }}>{d.oee == null ? '–' : `${d.oee}%`}</span>)}
       </div>
       <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-        {tr("แถวล่าง = OEE ของชั่วโมง (ชิ้นดี × CT ÷ เวลาแผนของชั่วโมง) · เป้าว่าง = ยังไม่รู้")} CT{stateMin ? ' · ชี้ชั่วโมงเดียวกันได้ทั้ง 2 กราฟ' : ''}
+        {tr("แถวล่าง = OEE ของชั่วโมง (ชิ้นดี × CT ÷ เวลาแผนของชั่วโมง) · เป้าว่าง = ยังไม่รู้")} CT{stateMin ? tr(" · ชี้ชั่วโมงเดียวกันได้ทั้ง 2 กราฟ") : ''}
       </div>
     </div>
   );
@@ -366,7 +366,7 @@ export function DailyCapacityChart({ rows = [], onPick }) {
     );
     return (
       <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 6, padding: '8px 10px', fontSize: 12, color: 'var(--text)', boxShadow: 'var(--shadow-float)', display: 'grid', gap: 2 }}>
-        <div style={{ fontWeight: 700, marginBottom: 2 }}>{d.d}{onPick ? ' · คลิกเพื่อดูทั้งวัน' : ''}</div>
+        <div style={{ fontWeight: 700, marginBottom: 2 }}>{d.d}{onPick ? tr(" · คลิกเพื่อดูทั้งวัน") : ''}</div>
         {line('var(--green)', d.good.toLocaleString(), `${tr("ชิ้นดี")}${d.cap != null ? ` · ${tr("ควรได้")} ${d.cap.toLocaleString()}${d.achieve != null ? ` (${Math.round(d.achieve * 100)}%)` : ''}` : tr(' · ไม่รู้ CT บางกะ')}`)}
         {d.ng > 0 && line('var(--red)', d.ng.toLocaleString(), 'NG หน้าเครื่อง')}
         {line('var(--border2)', fmtM(d.planned), 'เวลาแผนผลิต')}
@@ -455,7 +455,7 @@ export function StopDrillPanel({ row, events = [], orders = [], tagNo, fromMs, t
   }, [row?.key, orderKey, fromMs, toMs]); // eslint-disable-line react-hooks/exhaustive-deps
   const linked = useMemo(() => (links ? linkStops(occ, { orders, downtimes: links.downtimes, repairs: links.repairs, keyOf: machineKey }) : null), [links, occ, orders]);
   if (!row) return null;
-  const title = row.state === 'minor' ? 'หยุดสั้น < 2 นาที' : row.state === 'break_over' ? KIND_META.break_over.label : `${kindMeta(row.state).label}${row.code != null ? ` · ${row.code}` : ''}${row.text ? ` ${row.text}` : ''}`;
+  const title = row.state === 'minor' ? tr("หยุดสั้น < 2 นาที") : row.state === 'break_over' ? KIND_META.break_over.label : `${kindMeta(row.state).label}${row.code != null ? ` · ${row.code}` : ''}${row.text ? ` ${row.text}` : ''}`;
   const th = { textAlign: 'left', padding: '5px 8px', fontSize: 12, color: 'var(--muted)', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' };
   const td = { padding: '5px 8px', fontSize: 12.5, borderBottom: '1px solid var(--border)', verticalAlign: 'top' };
   const list = linked || occ;
@@ -471,7 +471,7 @@ export function StopDrillPanel({ row, events = [], orders = [], tagNo, fromMs, t
         <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{tr("พักเกินเวลานโยบาย = ยอดรวมทั้งกะ (กดพักรวมเกินโควตา) ไม่ได้เป็นรายครั้ง — ดูช่วงที่กดพักในแถบสถานะ")}</div>
       ) : !occ.length ? (
         <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>
-          {row.key === 'minor' ? 'หยุดสั้นในรายงานหลายวันนับจากยอดสรุป ไม่มีรายครั้ง — ดูรายครั้งได้ในมุมมอง "ภาพรวมกะ"' : 'ไม่พบรายครั้งของสาเหตุนี้ในข้อมูลที่โหลดไว้'}
+          {row.key === 'minor' ? tr("หยุดสั้นในรายงานหลายวันนับจากยอดสรุป ไม่มีรายครั้ง — ดูรายครั้งได้ในมุมมอง \"ภาพรวมกะ\"") : tr("ไม่พบรายครั้งของสาเหตุนี้ในข้อมูลที่โหลดไว้")}
         </div>
       ) : (<>
         <div style={{ fontSize: 12.5, color: 'var(--text)' }}>
@@ -491,7 +491,7 @@ export function StopDrillPanel({ row, events = [], orders = [], tagNo, fromMs, t
                 <td style={{ ...td, whiteSpace: 'nowrap' }}>{o.shift ? `${o.shift.workDate.slice(8, 10)}/${o.shift.workDate.slice(5, 7)} ${o.shift.shift === 'day' ? tr('เช้า') : tr('ดึก')}` : '–'}</td>
                 <td style={td}>{!linked ? '…' : o.mats.length ? <>{o.mats.join(', ')}{o.matBy === 'shift' && <span style={{ color: 'var(--muted)' }}> ({tr("ใบในกะ — ไม่มีใบเปิดตอนนั้น")})</span>}</> : <span style={{ color: 'var(--amber)' }}>{tr("ไม่มีใบผลิตบนจิ๊ก")}</span>}</td>
                 <td style={td}>{!linked ? '…' : o.downtimes.length ? o.downtimes.map(d => (
-                  <div key={d.id}>{links.typeName.get(d.downtime_type_id) || 'ไม่ระบุประเภท'} · {Math.round(Number(d.duration_min) || 0)} {tr("น.")}{d.description ? ` · ${d.description}` : ''}{d.reported_by_name ? <span style={{ color: 'var(--muted)' }}> ({d.reported_by_name})</span> : null}</div>
+                  <div key={d.id}>{links.typeName.get(d.downtime_type_id) || tr("ไม่ระบุประเภท")} · {Math.round(Number(d.duration_min) || 0)} {tr("น.")}{d.description ? ` · ${d.description}` : ''}{d.reported_by_name ? <span style={{ color: 'var(--muted)' }}> ({d.reported_by_name})</span> : null}</div>
                 )) : <span style={{ color: 'var(--amber)' }}>{tr("ยังไม่ลง")}</span>}</td>
                 <td style={td}>{!linked ? '…' : o.repairs.length ? o.repairs.map(r => (
                   <div key={r.id}><b>{r.mo_no || 'MO'}</b> · {r.status}{r.root_cause ? ` · ${tr("สาเหตุ")}: ${r.root_cause}` : r.problem_detail ? ` · ${r.problem_detail}` : ''}{r.moBy === 'time' && <span style={{ color: 'var(--muted)' }}> ({tr("เวลาตรงกัน")})</span>}</div>
@@ -532,7 +532,7 @@ export function StopTable({ stops = [], limit = 40 }) {
       </table>
       {stops.length > limit && (
         <button type="button" className="pg-btn" style={{ marginTop: 6 }} onClick={() => setAll(v => !v)}>
-          {all ? 'ย่อ' : `${tr("แสดงทั้งหมด")} ${stops.length} ${tr("รายการ (ซ่อนอยู่")} ${stops.length - limit})`}
+          {all ? tr("ย่อ") : `${tr("แสดงทั้งหมด")} ${stops.length} ${tr("รายการ (ซ่อนอยู่")} ${stops.length - limit})`}
         </button>
       )}
     </div>
@@ -589,7 +589,7 @@ export function JigDrilldown({ j, trendRows = null, target = 0.85 }) {
                   <b style={{ fontFamily: 'ui-monospace, monospace' }}>{x.mat_no}</b>
                   <span>{tr("แผน")} {x.qty ?? '–'}</span>
                   <span style={{ color: x.status === 'confirmed' ? 'var(--green)' : 'var(--amber)' }}>
-                    {x.status === 'confirmed' ? `${tr("ยืนยัน")} ${x.qty_ok ?? x.qty} · ${hm(Date.parse(x.confirmed_at))}` : 'ยังเปิดอยู่'}
+                    {x.status === 'confirmed' ? `${tr("ยืนยัน")} ${x.qty_ok ?? x.qty} · ${hm(Date.parse(x.confirmed_at))}` : tr("ยังเปิดอยู่")}
                   </span>
                 </div>
               ))}

@@ -283,7 +283,7 @@ export default function WorldFactoryMap({
                 </div>
               ))}
               <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-                {hover.kind === 'country' ? 'คลิกเพื่อซูมเข้าประเทศนี้' : 'คลิกเพื่อเลือกทางเข้า'}
+                {hover.kind === 'country' ? tr("คลิกเพื่อซูมเข้าประเทศนี้") : tr("คลิกเพื่อเลือกทางเข้า")}
               </div>
             </div>
           );

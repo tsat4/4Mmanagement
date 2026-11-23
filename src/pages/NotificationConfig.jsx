@@ -27,10 +27,10 @@ const monoStyle = { ...inputStyle, fontFamily: 'monospace' }
 const targetSummary = (rule) => {
   const parts = []
   // 🎯 ตัวนี้ขึ้นก่อนเสมอ — มันเปลี่ยน "ใครได้รับ" มากกว่าตัวกรองอื่นทั้งหมดรวมกัน (2026-09-23)
-  if (rule.inapp_cast === 'fallback') parts.push('เจ้าของงานก่อน')
-  if (rule.can_mute === false) parts.push('🔒 ผู้ใช้ปิดเองไม่ได้')
-  if (rule.inapp_match_section) parts.push('เฉพาะส่วนงานที่เกิดเหตุ')
-  if (rule.inapp_scope_strict) parts.push('ผู้บริหารก็ถูกกรองตามส่วนงาน')
+  if (rule.inapp_cast === 'fallback') parts.push(tr("เจ้าของงานก่อน"))
+  if (rule.can_mute === false) parts.push(tr("🔒 ผู้ใช้ปิดเองไม่ได้"))
+  if (rule.inapp_match_section) parts.push(tr("เฉพาะส่วนงานที่เกิดเหตุ"))
+  if (rule.inapp_scope_strict) parts.push(tr("ผู้บริหารก็ถูกกรองตามส่วนงาน"))
   if (rule.inapp_sections?.length) parts.push(`${tr("ส่วนงาน")}: ${rule.inapp_sections.join(', ')}`)
   if (rule.inapp_depts?.length) parts.push(`${tr("แผนก")}: ${rule.inapp_depts.join(', ')}`)
   return parts.length ? `● ${parts.join(' · ')}` : '○ ทุกส่วนงาน/ทุกแผนก'
@@ -346,7 +346,7 @@ export default function NotificationConfig() {
       <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginBottom: 10 }}>Bot Token</div>
       <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 14, marginBottom: 26, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
         <div style={{ fontSize: 12, color: tokenStatus.is_set ? 'var(--accent)' : 'var(--accent2)', minWidth: 150 }}>
-          {tokenStatus.is_set ? `✅ ${tr("ตั้งค่าแล้ว")} (••••${tokenStatus.last4 ?? ''})` : '⚠️ ยังไม่ได้ตั้ง token'}
+          {tokenStatus.is_set ? `✅ ${tr("ตั้งค่าแล้ว")} (••••${tokenStatus.last4 ?? ''})` : tr("⚠️ ยังไม่ได้ตั้ง token")}
         </div>
         {canSetToken ? (
           <>
@@ -666,7 +666,7 @@ export default function NotificationConfig() {
                         {editingTpl === rule.event_key ? tr('ปิดตัวแก้ข้อความ') : tr('ปรับข้อความ')}
                       </button>
                       <span style={{ fontSize: 11, color: rule.template ? 'var(--accent)' : 'var(--muted)' }}>
-                        {rule.template ? '● ใช้ข้อความที่กำหนดเอง' : '○ ใช้ข้อความมาตรฐานของระบบ'}
+                        {rule.template ? tr("● ใช้ข้อความที่กำหนดเอง") : tr("○ ใช้ข้อความมาตรฐานของระบบ")}
                       </span>
                     </div>
 

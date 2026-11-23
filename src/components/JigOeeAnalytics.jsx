@@ -253,7 +253,7 @@ function ReportView({ setSp }) {
         <div style={card}>
           <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{trI18n("ยอดผลิตรายวัน & ชิ้นที่ควรทำได้")}</div>
           <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>
-            {pick ? 'จิ๊กที่เลือก' : 'ทุกจิ๊กรวมกัน'} · {trI18n("เทา = ยังขาดจากที่ควรทำได้ (เวลาแผน ÷ CT พาร์ทในใบ · ไม่มีเทา = มีกะที่ไม่รู้ CT) · ชี้เพื่อดูเวลารายสถานะ · คลิกวันเพื่อดูทั้งวันรายชั่วโมง")}
+            {pick ? trI18n("จิ๊กที่เลือก") : trI18n("ทุกจิ๊กรวมกัน")} · {trI18n("เทา = ยังขาดจากที่ควรทำได้ (เวลาแผน ÷ CT พาร์ทในใบ · ไม่มีเทา = มีกะที่ไม่รู้ CT) · ชี้เพื่อดูเวลารายสถานะ · คลิกวันเพื่อดูทั้งวันรายชั่วโมง")}
           </div>
           <DailyCapacityChart rows={daily} onPick={openDay} />
         </div>
@@ -287,13 +287,13 @@ function ReportView({ setSp }) {
               <thead><tr>{['วันที่', 'กะ', 'เครื่อง', 'MAT', 'แผน (นาที)', 'ชิ้น', 'NG คน/เครื่อง', 'A', 'P', 'Q', 'OEE', 'หมายเหตุ'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
               <tbody>{rows.map(r => (
                 <tr key={`${r.sourceId}|${r.tag}|${r.workDate}|${r.shift}`}>
-                  <td style={td}>{r.workDate}</td><td style={td}>{r.shift === 'day' ? 'เช้า' : 'ดึก'}{r.open ? ' (ยังไม่จบ)' : ''}</td>
+                  <td style={td}>{r.workDate}</td><td style={td}>{r.shift === 'day' ? trI18n("เช้า") : trI18n("ดึก")}{r.open ? trI18n(" (ยังไม่จบ)") : ''}</td>
                   <td style={{ ...td, fontFamily: 'ui-monospace, monospace' }}>{r.machineNo}</td><td style={td}>{(r.ctInfo?.mats || []).join(', ') || '–'}</td>
                   <td style={td}>{Math.round(r.oee.plannedSec / 60)}</td><td style={td}>{r.oee.pieces ?? '–'}</td>
                   <td style={td}>{r.oee.ngPeople ?? '–'} / {r.oee.ngMachine}</td>
                   <td style={td}>{fmtPct(r.oee.A)}</td><td style={td}>{fmtPct(r.oee.P)}</td><td style={td}>{fmtPct(r.oee.Q)}</td>
                   <td style={{ ...td, fontWeight: 800, color: tone(r.oee.oee) }}>{fmtPct(r.oee.oee)}</td>
-                  <td style={{ ...td, color: 'var(--muted)', whiteSpace: 'normal', minWidth: 180 }}>{(r.oee.why || []).includes('no_order') ? 'ไม่มีใบผลิตบนจิ๊ก' : (r.oee.why || []).includes('no_ct') ? 'ไม่รู้ CT' : ''}</td>
+                  <td style={{ ...td, color: 'var(--muted)', whiteSpace: 'normal', minWidth: 180 }}>{(r.oee.why || []).includes('no_order') ? trI18n("ไม่มีใบผลิตบนจิ๊ก") : (r.oee.why || []).includes('no_ct') ? trI18n("ไม่รู้ CT") : ''}</td>
                 </tr>
               ))}</tbody>
             </table>

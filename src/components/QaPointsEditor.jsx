@@ -462,14 +462,14 @@ export default function QaPointsEditor({ part, focusItemId, methodHist, writeChe
 
   return (
     <InspectEditorModal wide={wide} bodyRef={bodyRef} onClose={onClose} onSave={handleSave} saving={saving}
-      title={`${tr("ตั้งค่าจุดตรวจ")} — ${part.part_no || part.part_name || tr('ชิ้นงาน')}`} subtitle={[part.part_name, part.customer].filter(Boolean).join(' · ') || 'ชิ้นงาน'}>
+      title={`${tr("ตั้งค่าจุดตรวจ")} — ${part.part_no || part.part_name || tr('ชิ้นงาน')}`} subtitle={[part.part_name, part.customer].filter(Boolean).join(' · ') || tr("ชิ้นงาน")}>
       {loading ? (
         <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>{tr('กำลังโหลด…')}</div>
       ) : loadErr ? (
         <div style={{ padding: 16, color: 'var(--red)', fontWeight: 700 }}>{tr('⚠️ โหลดข้อมูลไม่สำเร็จ (')}{loadErr}) — {tr("ปิดแล้วเปิดใหม่ · ยังไม่ได้แก้อะไร")}</div>
       ) : (
         <PinWorkspace twoCol={wide} stickyRef={stickyRef}
-          boardTitle="Drawing / รูปชิ้นงาน (หลายแผ่น) + จุดตรวจ"
+          boardTitle={tr("Drawing / รูปชิ้นงาน (หลายแผ่น) + จุดตรวจ")}
           boardBadge={pinnedCount > 0 ? `📍 ${pinnedCount}/${points.length} ${tr("จุดวางแล้ว")}` : null}
           board={(
             <SpinAnnotator subject="part" spinnable={false} acceptPdf

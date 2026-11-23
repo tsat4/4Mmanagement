@@ -134,7 +134,7 @@ export default function SafetyEventModal({ init, section, date, lineRows = [], s
       <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(720px, 96vw)', maxHeight: '92vh', overflowY: 'auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12, gap: 8 }}>
           <b style={{ fontSize: 15, color: 'var(--text)' }}>
-            {editing ? '✏️ แก้ไขเหตุการณ์ความปลอดภัย' : '🛡️ บันทึกเหตุการณ์ความปลอดภัย'}
+            {editing ? tr("✏️ แก้ไขเหตุการณ์ความปลอดภัย") : tr("🛡️ บันทึกเหตุการณ์ความปลอดภัย")}
           </b>
           <button onClick={close} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--muted)', fontSize: 17, cursor: 'pointer' }}>✕</button>
         </div>
@@ -160,8 +160,8 @@ export default function SafetyEventModal({ init, section, date, lineRows = [], s
             </select>
             <div style={{ fontSize: 11, color: kindMeta.resetsStreak ? '#ef4444' : 'var(--muted)', marginTop: 3 }}>
               {kindMeta.resetsStreak
-                ? '🔴 ระดับนี้จะ "รีเซ็ตตัวนับวันปลอดอุบัติเหตุ" ของส่วนงานนี้'
-                : 'ระดับนี้ไม่รีเซ็ตตัวนับวันปลอดอุบัติเหตุ (นับเฉพาะถึงขั้นหยุดงาน)'}
+                ? tr("🔴 ระดับนี้จะ \"รีเซ็ตตัวนับวันปลอดอุบัติเหตุ\" ของส่วนงานนี้")
+                : tr("ระดับนี้ไม่รีเซ็ตตัวนับวันปลอดอุบัติเหตุ (นับเฉพาะถึงขั้นหยุดงาน)")}
             </div>
           </div>
 

@@ -388,7 +388,7 @@ export default function OrgSetup() {
             <div style={{ color: 'var(--muted)' }}>{tr('ให้ผู้ดูแลระบบตั้งช่อง')} <b>Section</b> {tr('ให้บัญชีนี้ที่')} <b>{tr('ตั้งค่า → จัดการผู้ใช้งาน')}</b>{myUnit ? '' : tr(' (ตอนนี้ว่างอยู่)')}</div>
           </div>
         ) : (
-          <ReadOnlyNote permKey="org:manage_own_unit" what="แก้ผังองค์กรของหน่วยงานตัวเอง" />
+          <ReadOnlyNote permKey="org:manage_own_unit" what={tr("แก้ผังองค์กรของหน่วยงานตัวเอง")} />
         )
       )}
 
@@ -423,7 +423,7 @@ export default function OrgSetup() {
                     <div key={l.id} style={itemStyle(selLine === l.id)} onClick={() => setSelLine(l.id)}>
                       <NodeLabel node={l} meta={
                         <span style={{ fontSize: 11, color: 'var(--muted)' }}>
-                          {' '}· {[sec?.name, dept?.name].filter(Boolean).join(' › ') || 'ไม่มีหน่วยแม่'}
+                          {' '}· {[sec?.name, dept?.name].filter(Boolean).join(' › ') || tr("ไม่มีหน่วยแม่")}
                           {teamsOf(l.id).length > 0 ? ` · ${teamsOf(l.id).length} ${tr("ทีม")}` : ''}
                         </span>} />
                     </div>
@@ -540,7 +540,7 @@ export default function OrgSetup() {
                 </div>
                 {/* ซ่อนปุ่มได้ ห้ามซ่อนเหตุผล — §6.9 */}
                 {!sgEdit && <ReadOnlyNote role={role} permKey="org:manage_own_unit" compact
-                  what="แก้ผู้เซ็นใบค่าฝีมือของส่วนงานนี้"
+                  what={tr("แก้ผู้เซ็นใบค่าฝีมือของส่วนงานนี้")}
                   hint={tr('ชื่อที่ตั้งตรงนี้ถูกพิมพ์ลงช่องลายเซ็นในใบสรุปค่าฝีมือจริง — แอดมินหน่วยงานแก้ได้เฉพาะส่วนงานของตัวเอง')} />}
                 <InfoMore size={11} style={{ marginBottom: 10 }} id="org_signers"
                   lead={<>{tr('ใช้ดึงชื่อลงช่องลายเซ็น “ใบสรุปค่าฝีมือ” อัตโนมัติ')}</>}>
@@ -599,20 +599,20 @@ export default function OrgSetup() {
                 {/* 🔴 ชั้น "ทีม" ใช้ `code` เป็นคีย์จับคู่จริง — ทะเบียนพนักงานเก็บ 'A'/'B'/'C' ไม่ใช่ "Team A"
                     (ดู src/utils/orgNodeRefs.js) ⇒ เว้นว่าง = dropdown ทีมได้ชื่อเต็มมา แล้วไม่ตรงกับคนที่มีอยู่ */}
                 <label style={labelSt}>
-                  Code {modal.kind === 'team' ? '(ค่าที่บันทึกในทะเบียนพนักงาน เช่น A / B / C)' : '(ใช้อ้างอิงค่าเดิมในระบบ — ไม่บังคับ)'}
+                  Code {modal.kind === 'team' ? tr("(ค่าที่บันทึกในทะเบียนพนักงาน เช่น A / B / C)") : tr("(ใช้อ้างอิงค่าเดิมในระบบ — ไม่บังคับ)")}
                 </label>
                 <input type="text" value={formCode} onChange={e => setFormCode(e.target.value)}
                   placeholder={modal.kind === 'team' ? tr('เช่น A') : tr('เช่น PD5 / A')} />
                 {modal.kind === 'team' && !formCode.trim() && (
                   <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 4, lineHeight: 1.45 }}>
-                    ⚠️ {tr("ไม่ใส่ Code = ตัวเลือกทีมจะใช้ชื่อเต็ม")} <b>"{formName.trim() || 'ชื่อทีม'}"</b> {tr("ซึ่ง")}
+                    ⚠️ {tr("ไม่ใส่ Code = ตัวเลือกทีมจะใช้ชื่อเต็ม")} <b>"{formName.trim() || tr("ชื่อทีม")}"</b> {tr("ซึ่ง")}
                     <b> {tr('ไม่ตรงกับทีมที่พนักงานถูกบันทึกไว้')}</b> ({tr("ของเดิมเก็บเป็น")} A / B / C)
                   </div>
                 )}
               </div>
               <div>
                 <label style={labelSt}>
-                  Cost Center {modal.kind === 'line' && formRefLineId ? '(จากไลน์ที่ผูก)' : COST_CENTER_REQUIRED.includes(modal.kind) ? '(บังคับ)' : '(ไม่บังคับ)'}
+                  Cost Center {modal.kind === 'line' && formRefLineId ? tr("(จากไลน์ที่ผูก)") : COST_CENTER_REQUIRED.includes(modal.kind) ? tr("(บังคับ)") : tr("(ไม่บังคับ)")}
                 </label>
                 {modal.kind === 'line' && formRefLineId ? (
                   <>
@@ -636,7 +636,7 @@ export default function OrgSetup() {
                     <option value="indirect">{tr('Indirect — สนับสนุน (ช่างซ่อมบำรุง/QA/ธุรการ/ขาย)')}</option>
                   </select>
                   <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-                    {tr("พนักงานใน")}{modal.kind === 'section' ? 'ส่วน' : 'แผนก'}{tr('นี้จะถูกจัดเป็นประเภทนี้อัตโนมัติ')}{modal.kind === 'section' ? ' (แผนกตั้งทับได้)' : ' (ช่างส่วนใหญ่อยู่ระดับแผนก)'}
+                    {tr("พนักงานใน")}{modal.kind === 'section' ? tr("ส่วน") : tr("แผนก")}{tr('นี้จะถูกจัดเป็นประเภทนี้อัตโนมัติ')}{modal.kind === 'section' ? tr(" (แผนกตั้งทับได้)") : tr(" (ช่างส่วนใหญ่อยู่ระดับแผนก)")}
                   </div>
                 </div>
               )}
@@ -654,7 +654,7 @@ export default function OrgSetup() {
                   <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
                     {tr("ใช้แยก “สกิลของฝ่ายไหน” — ติดที่ตัวบนสุดพอ ตัวลูกตกทอดเอง")}
                     {/* ส่วนงานมีแม่เป็น Plant แล้ว (20/11) แต่ชั้นบนไม่มีป้ายฝ่ายให้ตกทอด ⇒ ไม่ใช่ "ปล่อยว่างได้" */}
-                    {modal.kind !== 'section' && modal.parentId ? ' (ตัวนี้มีแม่อยู่แล้ว ปล่อยว่างได้)' : ''}
+                    {modal.kind !== 'section' && modal.parentId ? tr(" (ตัวนี้มีแม่อยู่แล้ว ปล่อยว่างได้)") : ''}
                     {!canDivisions && ' · ต้องมีสิทธิ์ org:manage_divisions ถึงแก้ได้'}
                   </div>
                 </div>
@@ -746,7 +746,7 @@ function DivBadge({ node, nodes }) {
         border: `1px solid ${(m?.color || 'var(--border)')}${own ? '' : '55'}`,
         color: m?.color || 'var(--muted)', opacity: own ? 1 : 0.6,
       }}>
-      {m?.icon} {tr(m?.label) || eff}{own ? '' : ' (ตกทอด)'}
+      {m?.icon} {tr(m?.label) || eff}{own ? '' : tr(" (ตกทอด)")}
     </span>
   );
 }

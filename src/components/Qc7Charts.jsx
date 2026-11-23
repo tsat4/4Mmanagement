@@ -168,7 +168,7 @@ export function ScatterPlot({ records, xOf, yOf, labelOf, xLabel, yLabel, minN =
 export function Fishbone({ records, categoryOf, textOf, labelOf, effect = 'ปัญหา' }) {
   const [open, setOpen] = useState(null);
   const fb = fishbone(records, { categoryOf, textOf, labelOf });
-  if (!fb.n) return <NotEnough reason="ยังไม่มีเหตุการณ์ในช่วงนี้" />;
+  if (!fb.n) return <NotEnough reason={tr("ยังไม่มีเหตุการณ์ในช่วงนี้")} />;
   const max = Math.max(...fb.bones.map(b => b.count), 1);
   const cur = fb.bones.find(b => b.key === open);
   return (
@@ -225,7 +225,7 @@ export function Fishbone({ records, categoryOf, textOf, labelOf, effect = 'ป�
 /* ═══ ① ใบตรวจสอบ (ตารางนับไขว้) ═══════════════════════════════════════════ */
 export function CheckSheet({ records, rowOf, colOf, rowLabel = 'อุปกรณ์', colLabel = 'กลุ่มปัญหา', maxRows = 12, maxCols = 8 }) {
   const cs = checkSheet(records, { rowOf, colOf, maxRows, maxCols });
-  if (!cs.total) return <NotEnough reason="ยังไม่มีเหตุการณ์ในช่วงนี้" />;
+  if (!cs.total) return <NotEnough reason={tr("ยังไม่มีเหตุการณ์ในช่วงนี้")} />;
   const hot = Math.max(...cs.rows.flatMap(r => cs.cols.map(c => cs.cell[r]?.[c] || 0)), 1);
   return (
     <>
@@ -276,7 +276,7 @@ export function CheckSheet({ records, rowOf, colOf, rowLabel = 'อุปกร�
 /* ═══ ⑦ แบ่งชั้น (Stratification) ═══════════════════════════════════════════ */
 export function Stratify({ records, keyOf, valOf, unit = 'ครั้ง', top = 10, onPick }) {
   const s = stratify(records, { keyOf, valOf, top });
-  if (!s.total) return <NotEnough reason="ยังไม่มีเหตุการณ์ในช่วงนี้" />;
+  if (!s.total) return <NotEnough reason={tr("ยังไม่มีเหตุการณ์ในช่วงนี้")} />;
   const max = Math.max(...s.list.map(g => g.value), 1);
   return (
     <>
@@ -299,7 +299,7 @@ export function Stratify({ records, keyOf, valOf, unit = 'ครั้ง', top 
 /* ═══ ⑦ กราฟแนวโน้ม (Run chart) ═════════════════════════════════════════════ */
 export function RunChart({ records, keyOf, valOf, keys, unit = 'ครั้ง' }) {
   const rc = runChart(records, { keyOf, valOf, keys });
-  if (!rc.n) return <NotEnough reason="ยังไม่มีช่วงเวลาให้เทียบ" />;
+  if (!rc.n) return <NotEnough reason={tr("ยังไม่มีช่วงเวลาให้เทียบ")} />;
   const max = Math.max(rc.max || 0, 1);
   return (
     <>

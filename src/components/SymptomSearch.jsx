@@ -222,7 +222,7 @@ export default function SymptomSearch({ inScope, onOpenOrder, machine = null, on
         onFrom={tr.setFrom} onTo={tr.setTo} onPreset={tr.setPreset}
       >
         <SearchInput value={q} onChange={setQ} onKeyDown={(e) => { if (e.key === 'Enter') run(); }}
-          fields="อาการ เช่น ตัดไม่ขาด · นัทไม่มี · เป็นครีบ · โรบอทชนจิ๊ก" />
+          fields={trI18n("อาการ เช่น ตัดไม่ขาด · นัทไม่มี · เป็นครีบ · โรบอทชนจิ๊ก")} />
         <button onClick={run} disabled={busy || noInput}
           style={{ padding: '0 18px', borderRadius: 'var(--r-md)', border: 'none', fontWeight: 800, fontSize: 13,
                    background: busy || noInput ? 'var(--bg3)' : 'var(--accent)', color: busy || noInput ? 'var(--muted)' : '#fff',

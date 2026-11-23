@@ -255,7 +255,7 @@ export default function StoreWaitCards({ data, navigate, big = 1 }) {
             {w.line}
           </span>
           <span style={{ marginLeft: 'auto', flexShrink: 0, fontSize: 12 * big, fontWeight: 900, color: w.color, whiteSpace: 'nowrap' }}>
-            {CASE[w.items[0].code].label}
+            {tr(CASE[w.items[0].code].label)}
           </span>
         </div>
         {w.items.slice(0, 3).map((it, i) => (
@@ -291,7 +291,7 @@ export default function StoreWaitCards({ data, navigate, big = 1 }) {
             {/* ครบ 3 ค่าผ่านของกลาง — รหัสไม่ถูกตัด ชื่อตัดได้ตัวเดียว */}
             <MatLabel mat={r.mat_no} name={r.part_name} size={12} style={{ minWidth: 0, flex: 1 }} />
             <span style={{ width: 120, flexShrink: 0, textAlign: 'right', fontSize: 13, fontWeight: 900, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums', color: out ? '#ef4444' : '#facc15' }}>
-              {out ? 'หมด' : fmtQty(r.qty_on_hand)}
+              {out ? tr("หมด") : fmtQty(r.qty_on_hand)}
               <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)' }}> / {fmtQty(r.min_qty)}</span>
             </span>
           </div>

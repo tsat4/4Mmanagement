@@ -89,7 +89,7 @@ export default function EdiMatchFixer({ edi, canEdit, custLabel, onSaved }) {
   const list = (k, arr) => (showAll[k] ? arr : arr.slice(0, LIMIT));
   const more = (k, arr) => arr.length > LIMIT && (
     <button type="button" style={{ ...btn(false), marginTop: 6 }} onClick={() => setShowAll(s => ({ ...s, [k]: !s[k] }))}>
-      {showAll[k] ? 'ย่อ' : `${tr("แสดงทั้งหมด")} (${arr.length})`}
+      {showAll[k] ? tr("ย่อ") : `${tr("แสดงทั้งหมด")} (${arr.length})`}
     </button>
   );
   const readOnly = !canEdit && (
@@ -182,7 +182,7 @@ export default function EdiMatchFixer({ edi, canEdit, custLabel, onSaved }) {
                     </select>
                     <button type="button" disabled={!!busy || !pick[part]} style={btn(true)}
                       onClick={() => save(scope[part] ?? '', part, pick[part], 'เลือกเองบนจอนำเข้า EDI')}>
-                      {busy === `${scope[part] ?? ''}|${part}` ? '…' : 'จำคู่นี้'}
+                      {busy === `${scope[part] ?? ''}|${part}` ? '…' : tr("จำคู่นี้")}
                     </button>
                   </>
                 )}

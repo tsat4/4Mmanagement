@@ -221,8 +221,8 @@ export default function QaFmeBoard({ scopedLineNames, onOpen }) {
 
       {/* คำอธิบายสี — บอร์ดที่คนอ่านไม่ออกว่าสีไหนแปลว่าอะไร = บอร์ดที่ไม่มีใครใช้ */}
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', fontSize: 11.5, color: 'var(--muted)', padding: '8px 4px 0' }}>
-        <Key c={C.pending} t="รอตรวจ" /><Key c={C.late} t="เกินเวลา" /><Key c={C.acked} t="กำลังตรวจ" />
-        <Key c={C.ok} t="ตรวจแล้ว" /><Key c={C.ng} t="เจอของเสีย" /><Key c={C.cancel} t="ยกเลิก" />
+        <Key c={C.pending} t={tr("รอตรวจ")} /><Key c={C.late} t={tr("เกินเวลา")} /><Key c={C.acked} t={tr("กำลังตรวจ")} />
+        <Key c={C.ok} t={tr("ตรวจแล้ว")} /><Key c={C.ng} t={tr("เจอของเสีย")} /><Key c={C.cancel} t={tr("ยกเลิก")} />
         <Key c={C.eta} t={`${tr("คาดการณ์ชิ้นสุดท้าย")}${etaCount ? ` (${etaCount})` : ''}`} dashed />
       </div>
 
@@ -266,7 +266,7 @@ export default function QaFmeBoard({ scopedLineNames, onOpen }) {
                   <>
                     <b style={{ fontSize: 13 }}>{o.line_name} · {o.mat_no}</b>
                     <div>{(STAGE[o.stage] || STAGE.first).icon} {(STAGE[o.stage] || STAGE.first).label}
-                      {' · '}{o.shift === 'night' ? 'กะดึก' : 'กะเช้า'}</div>
+                      {' · '}{o.shift === 'night' ? tr("กะดึก") : tr("กะเช้า")}</div>
                     <div style={{ color: 'var(--muted)' }}>
                       {tr("เรียกตอน")} {hhmm(frameMinFromIso(o.triggered_at))} {tr('· ครบกำหนด')} {hhmm(frameMinFromIso(o.due_at))}
                     </div>

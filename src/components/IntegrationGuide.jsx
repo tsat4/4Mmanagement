@@ -106,7 +106,7 @@ export default function IntegrationGuide() {
                 <ul style={{ margin: 0, paddingLeft: 20, display: 'grid', gap: 4, fontSize: 13, color: 'var(--text2)' }}>{g.lines.map(l => <li key={l}>{tr(l)}</li>)}</ul>
               </div>
             ))}
-            {s.tip && <div style={{ fontSize: 12.5, color: 'var(--text2)', borderLeft: '3px solid var(--amber)', background: 'var(--bg2)', borderRadius: 4, padding: '6px 10px' }}>⚠️ {tr(s.tip)}</div>}
+            {tr(s.tip) && <div style={{ fontSize: 12.5, color: 'var(--text2)', borderLeft: '3px solid var(--amber)', background: 'var(--bg2)', borderRadius: 4, padding: '6px 10px' }}>⚠️ {tr(s.tip)}</div>}
           </div>
         </div>
       ))}
@@ -120,7 +120,7 @@ export default function IntegrationGuide() {
           </div>
         ))}
         <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-          {tr('ตัวอย่างชื่อ topic:')} <span style={code}>hdf/MDB-07/kw</span> · <span style={code}>dieshop/DB-CNC/kwh_total</span> · {tr('รูปแบบ')} <span style={code}>{'<รหัสต้นทาง>/<ตู้>/<ค่า>'}</span>
+          {tr('ตัวอย่างชื่อ topic:')} <span style={code}>hdf/MDB-07/kw</span> · <span style={code}>dieshop/DB-CNC/kwh_total</span> · {tr('รูปแบบ')} <span style={code}>{tr("<รหัสต้นทาง>/<ตู้>/<ค่า>")}</span>
         </div>
       </div>
     </div>

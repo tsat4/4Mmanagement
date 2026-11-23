@@ -190,7 +190,7 @@ export default function Transport() {
         tab={tab} onTab={setTab}
       />
 
-      <ReadOnlyNote show={!canManage} role={role} what="มอบหมายคนขับ/แก้ทะเบียนยานพาหนะ"
+      <ReadOnlyNote show={!canManage} role={role} what={tr("มอบหมายคนขับ/แก้ทะเบียนยานพาหนะ")}
         permKey="transport:manage" />
 
       {tab === 'assign' && (
@@ -228,7 +228,7 @@ export default function Transport() {
                             </select>
                           ) : (
                             <div style={{ fontSize: 12.5, fontWeight: 700, color: carrier ? 'var(--text)' : 'var(--muted)' }}>
-                              {carrier ? `👷 ${carrier.name}` : '— ยังไม่มอบหมาย —'}
+                              {carrier ? `👷 ${carrier.name}` : tr("— ยังไม่มอบหมาย —")}
                             </div>
                           )}
                           {carrier && carrier.vehicles?.length > 0 && (
@@ -273,7 +273,7 @@ export default function Transport() {
                     {canManage && <button className="tbtn" onClick={() => setEditCarrier(c)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13 }}>✏️</button>}
                   </div>
                   <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>
-                    {c.emp_code ? `${c.emp_code} · ` : ''}{SHIFTS.find(s => s[0] === c.shift)?.[1] || 'ทุกกะ'}{c.section ? ` · ${c.section}` : ''}{!c.is_active ? ' · ⛔ ปิด' : ''}
+                    {c.emp_code ? `${c.emp_code} · ` : ''}{SHIFTS.find(s => s[0] === c.shift)?.[1] || tr("ทุกกะ")}{c.section ? ` · ${c.section}` : ''}{!c.is_active ? tr(" · ⛔ ปิด") : ''}
                   </div>
                   <div style={{ fontSize: 11.5, color: 'var(--text2)', marginTop: 6 }}>
                     {c.vehicles?.length ? c.vehicles.map(vehLabel).join(' · ') : <span style={{ color: 'var(--muted)' }}>{tr('— ยังไม่ระบุยานพาหนะ —')}</span>}
@@ -475,12 +475,12 @@ function RouteTab({ byLine, stopsByRound, stopNodes, nById, nodes, edges, imageU
                             background: isLoad ? 'var(--blue-dim)' : 'var(--green-dim)',
                             color: isLoad ? 'var(--blue)' : 'var(--accent)',
                             border: `1px solid ${isLoad ? 'var(--blue-line)' : 'var(--accent)'}` }}>
-                          {isLoad ? 'รับ' : 'ส่ง'}
+                          {isLoad ? tr("รับ") : tr("ส่ง")}
                         </button>
                       );
                     })()}
                     <span style={{ flex: 1, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {k.icon} {n?.name || n?.line_name || '(จุดไม่มีชื่อ)'}
+                      {k.icon} {n?.name || n?.line_name || tr("(จุดไม่มีชื่อ)")}
                       {broken && <span style={{ color: 'var(--red)', fontSize: 11 }}> {tr('· ⚠ ถนนขาด')}</span>}
                     </span>
                     {canManage && <>
@@ -513,7 +513,7 @@ function RouteTab({ byLine, stopsByRound, stopNodes, nById, nodes, edges, imageU
                             background: mine ? 'var(--accent-dim, var(--green-dim))' : 'var(--bg2)',
                             color: mine ? 'var(--accent)' : 'var(--text2)',
                             border: `1px solid ${mine ? 'var(--accent)' : 'var(--border)'}` }}>
-                          {mine ? ' ' : ''}{nodeKind(n.kind).icon} {n.name || n.line_name || 'จุด'}
+                          {mine ? ' ' : ''}{nodeKind(n.kind).icon} {n.name || n.line_name || tr("จุด")}
                         </button>
                       );
                     })}
@@ -735,7 +735,7 @@ function CarrierModal({ carrier, vehicles, employees = [], fullName, onClose, on
           </div>
           <div><span style={lbl}>{tr('ชื่อ *')}</span><input value={f.name} onChange={e => { setF({ ...f, name: e.target.value }); setEmpLocked(false); }} style={inp} /></div>
           <div style={{ display: 'flex', gap: 10 }}>
-            <div style={{ flex: 1 }}><span style={lbl}>{tr('รหัสพนักงาน')}{empLocked ? ' (จากทะเบียน)' : ''}</span>
+            <div style={{ flex: 1 }}><span style={lbl}>{tr('รหัสพนักงาน')}{empLocked ? tr(" (จากทะเบียน)") : ''}</span>
               <input value={f.emp_code || ''} readOnly={empLocked} onChange={e => setF({ ...f, emp_code: e.target.value })} style={{ ...inp, opacity: empLocked ? 0.75 : 1 }} /></div>
             <div style={{ flex: 1 }}><span style={lbl}>{tr('กะ')}</span>
               <select value={f.shift || ''} onChange={e => setF({ ...f, shift: e.target.value })} style={inp}>

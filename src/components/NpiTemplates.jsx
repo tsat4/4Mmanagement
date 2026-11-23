@@ -70,7 +70,7 @@ export default function NpiTemplates({ templates, onChanged }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <div style={{ fontSize: 14, fontWeight: 800 }}>{tr('แม่แบบเฟส / รายการเอกสาร')}</div>
           <select value={tpl?.id || ''} onChange={e => setTplId(e.target.value)} style={{ ...inp, width: 'auto', minWidth: 240 }}>
-            {templates.map(t => <option key={t.id} value={t.id}>{tr(t.label)}{t.customer ? ` (${t.customer})` : ''}{t.is_active ? '' : ' · ปิดใช้'}</option>)}
+            {templates.map(t => <option key={t.id} value={t.id}>{tr(t.label)}{t.customer ? ` (${t.customer})` : ''}{t.is_active ? '' : tr(" · ปิดใช้")}</option>)}
           </select>
           {tpl && <button style={ghost} onClick={() => setTplModal({ ...tpl })}>{tr('✏️ แม่แบบ')}</button>}
         </div>

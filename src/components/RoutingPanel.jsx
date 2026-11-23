@@ -289,7 +289,7 @@ export default function RoutingPanel({ canEdit, lines = [] }) {
           style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: 16 }}>
           <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 20, width: 'min(96vw, 620px)', maxHeight: '92vh', overflowY: 'auto' }}>
             <h3 style={{ margin: '0 0 14px', fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>
-              {editing === 'new' ? 'เพิ่มขั้นกระบวนการ' : 'แก้ไขขั้นกระบวนการ'}
+              {editing === 'new' ? tr("เพิ่มขั้นกระบวนการ") : tr("แก้ไขขั้นกระบวนการ")}
             </h3>
             <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, alignContent: 'start' }}>
               <div style={{ gridColumn: '1 / -1' }}>

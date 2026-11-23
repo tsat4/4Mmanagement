@@ -59,7 +59,7 @@ export default function QualityBinLinkModal({ defect, session, actorName, existi
   const qaByHist = useColumnHistory(supabaseDR, 'quality_bin_records', 'qa_by');
   const disposedHist = useColumnHistory(supabaseDR, 'quality_bin_records', 'disposed_by');
 
-  const defectName = defect?.dr_defect_types?.name_th || 'ของเสีย';
+  const defectName = defect?.dr_defect_types?.name_th || tr("ของเสีย");
   const causeDefault = [defectName, defect?.description].filter(Boolean).join(' — ');
 
   // ค่าตั้งต้นของแต่ละถัง — ติ๊กให้เฉพาะถังที่มีจำนวนจริง และยังไม่เคยลง
@@ -178,14 +178,14 @@ export default function QualityBinLinkModal({ defect, session, actorName, existi
               <label style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer' }}>
                 <input type="checkbox" checked={r.on} onChange={e => set(b.key, { on: e.target.checked })}
                   style={{ width: 16, height: 16, accentColor: b.color }} />
-                <span style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--text)' }}>{b.icon} {b.name}</span>
-                <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{b.sub}</span>
+                <span style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--text)' }}>{b.icon} {tr(b.name)}</span>
+                <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{tr(b.sub)}</span>
               </label>
 
               {had > 0 && (
                 // เคยลงไปแล้ว = เตือนเสมอ ห้ามให้ลงซ้ำโดยไม่รู้ตัว (แต่ไม่บล็อก — ทยอยลงถังได้จริง)
                 <div style={{ fontSize: 11.5, color: '#f59e0b', marginTop: 7 }}>
-                  ⚠ {tr("บันทึกงานเสียรายการนี้เคยลง")}{b.name}{tr('ไปแล้ว')} {had.toLocaleString('th-TH')} {tr("ชิ้น — ติ๊กใหม่ = ลงเพิ่มอีกใบ")}
+                  ⚠ {tr("บันทึกงานเสียรายการนี้เคยลง")}{tr(b.name)}{tr('ไปแล้ว')} {had.toLocaleString('th-TH')} {tr("ชิ้น — ติ๊กใหม่ = ลงเพิ่มอีกใบ")}
                 </div>
               )}
 
@@ -283,7 +283,7 @@ export default function QualityBinLinkModal({ defect, session, actorName, existi
               background: picked.length ? '#e05252' : 'var(--border2)', color: '#fff',
               fontSize: 13, fontWeight: 700, cursor: saving || !picked.length ? 'default' : 'pointer',
               opacity: saving ? 0.6 : 1 }}>
-              {saving ? 'กำลังบันทึก…' : `${tr("ลงถัง")} (${picked.length})`}
+              {saving ? tr("กำลังบันทึก…") : `${tr("ลงถัง")} (${picked.length})`}
             </button>
           )}
         </div>

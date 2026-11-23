@@ -919,7 +919,7 @@ export default function AddUser() {
           <option value="">{tr(ALL.role)}</option>
           <RoleOptGroups />
         </select>
-        <SearchInput value={q} onChange={setQ} fields="ชื่อ / อีเมล / ตำแหน่ง" />
+        <SearchInput value={q} onChange={setQ} fields={tr("ชื่อ / อีเมล / ตำแหน่ง")} />
         {(q || filterRole || filterSection || onlyFixUsers) && (
           <button onClick={() => { setQ(''); setFilterRole(''); setFilterSection(''); setOnlyFixUsers(false); }}
             style={{ padding: '8px 12px', borderRadius: 'var(--r-md)', fontSize: 12, border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)', cursor: 'pointer' }}>
@@ -981,13 +981,13 @@ export default function AddUser() {
               style={{ width: 'auto', fontSize: 11, padding: '2px 9px', cursor: 'pointer', borderRadius: 'var(--r-md)',
                 border: `1px solid ${tableIssue === g.key ? 'var(--red)' : 'var(--border2)'}`,
                 background: tableIssue === g.key ? 'var(--red-dim)' : 'var(--bg3)', color: 'var(--text2)' }}>
-              {tableIssue === g.key ? 'เลิกกรองตาราง' : 'กรองตาราง'}
+              {tableIssue === g.key ? tr("เลิกกรองตาราง") : tr("กรองตาราง")}
             </button>
             <button type="button" onClick={() => setOpenWl(o => (o === g.key ? null : g.key))} aria-expanded={openWl === g.key}
               style={{ width: 'auto', fontSize: 11, padding: '2px 9px', cursor: 'pointer', borderRadius: 'var(--r-md)',
                 border: `1px solid ${openWl === g.key ? 'var(--accent)' : 'var(--border2)'}`,
                 background: openWl === g.key ? 'var(--accent-dim)' : 'var(--bg3)', color: 'var(--text2)' }}>
-              {openWl === g.key ? 'ซ่อนรายชื่อ ▴' : 'ดูรายชื่อ ▾'}
+              {openWl === g.key ? tr("ซ่อนรายชื่อ ▴") : tr("ดูรายชื่อ ▾")}
             </button>
           </div>
         );
@@ -1004,7 +1004,7 @@ export default function AddUser() {
                   style={{ width: 'auto', fontSize: 11.5, padding: '3px 10px', cursor: 'pointer', borderRadius: 'var(--r-md)',
                     border: `1px solid ${onlyFixUsers ? 'var(--red)' : 'var(--border2)'}`,
                     background: onlyFixUsers ? 'var(--red-dim)' : 'var(--bg3)', color: 'var(--text2)' }}>
-                  {onlyFixUsers ? 'แสดงทุกบัญชี' : `${tr("ตารางเฉพาะ")} ${issueIdx.fixUsers} ${tr("บัญชีที่ต้องแก้")}`}
+                  {onlyFixUsers ? tr("แสดงทุกบัญชี") : `${tr("ตารางเฉพาะ")} ${issueIdx.fixUsers} ${tr("บัญชีที่ต้องแก้")}`}
                 </button>
               )}
             </div>
@@ -1025,7 +1025,7 @@ export default function AddUser() {
                   }}
                   style={{ width: 'auto', fontSize: 11.5, fontWeight: 700, padding: '2px 0', cursor: 'pointer',
                     background: 'none', border: 'none', color: 'var(--muted)' }}>
-                  {tr('ℹ️ ข้อมูลประกอบ — ไม่มีผลกับสิทธิ์ ไม่ต้องรีบแก้ (')}{issueIdx.infoTotal} {tr('เรื่อง)')} {showInfoIssues ? 'พับ' : 'กาง'}
+                  {tr('ℹ️ ข้อมูลประกอบ — ไม่มีผลกับสิทธิ์ ไม่ต้องรีบแก้ (')}{issueIdx.infoTotal} {tr('เรื่อง)')} {showInfoIssues ? tr("พับ") : tr("กาง")}
                 </button>
                 {showInfoIssues && groups.info.map(row)}
               </div>
@@ -1151,7 +1151,7 @@ export default function AddUser() {
                           <span key={d.key} style={{ color: 'var(--muted)' }}>
                             {d.empLabel}: {idText(d.key, d.emp)} · <b style={{ color: 'var(--accent)' }}>
                               {d.acctLabel}: {idText(d.key, d.acct)}</b>
-                            {d.undecided ? ' (ยังไม่ตัดสิน)' : ''}
+                            {d.undecided ? tr(" (ยังไม่ตัดสิน)") : ''}
                           </span>
                         ))}
                       </div>
@@ -1320,9 +1320,9 @@ export default function AddUser() {
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8, padding: '8px 12px',
             borderRadius: 'var(--r-md)', border: '1px solid var(--red-line)', background: 'var(--red-dim)', fontSize: 12.5 }}>
             <b>{tr('ตารางกรองเฉพาะ:')}</b>
-            <span>{def ? `${def.icon} ${def.what}` : '🔴 ทุกบัญชีที่ต้องแก้'}</span>
+            <span>{def ? `${def.icon} ${def.what}` : tr("🔴 ทุกบัญชีที่ต้องแก้")}</span>
             <span style={{ color: left ? 'var(--red)' : 'var(--green)', fontWeight: 700 }}>
-              {left ? `${tr("เหลือ")} ${left} ${tr("บัญชี")}` : '✓ เคลียร์ครบแล้ว'}
+              {left ? `${tr("เหลือ")} ${left} ${tr("บัญชี")}` : tr("✓ เคลียร์ครบแล้ว")}
             </span>
             {def && <span style={{ color: 'var(--muted)' }}>{tr('วิธีแก้:')} {def.fix}</span>}
             <span style={{ flex: 1 }} />
@@ -1354,7 +1354,7 @@ export default function AddUser() {
               <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--muted)', padding: 28, fontSize: 13 }}>{tr('ไม่พบข้อมูลผู้ใช้')}</td></tr>
             ) : view.length === 0 ? (
               <tr><td colSpan={8} style={{ textAlign: 'center', color: tableIssue && !q && !filterRole && !filterSection ? 'var(--green)' : 'var(--muted)', padding: 28, fontSize: 13 }}>
-                {tableIssue && !q && !filterRole && !filterSection ? '✓ ไม่มีบัญชีค้างเรื่องนี้แล้ว' : 'ไม่พบ user ที่ตรงกับตัวกรอง — ลองล้างตัวกรอง'}</td></tr>
+                {tableIssue && !q && !filterRole && !filterSection ? tr("✓ ไม่มีบัญชีค้างเรื่องนี้แล้ว") : tr("ไม่พบ user ที่ตรงกับตัวกรอง — ลองล้างตัวกรอง")}</td></tr>
             ) : view.map(u => {
               const rc      = ROLES.find(r => r.value === u.role);
               const lineName = lines.find(l => l.id === u.line_id)?.name || '—';
@@ -1446,7 +1446,7 @@ export default function AddUser() {
                         fontWeight: a.state === 'never' ? 700 : 400, whiteSpace: 'nowrap' }}
                         title={u.last_sign_in_at
                           ? new Date(u.last_sign_in_at).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })
-                          : (a.state === ACT_UNKNOWN ? 'อ่าน auth.users ไม่ได้ — ไม่ใช่ว่าไม่เคยเข้า' : 'ยังไม่เคย login เลยแม้ครั้งเดียว')}>
+                          : (a.state === ACT_UNKNOWN ? tr("อ่าน auth.users ไม่ได้ — ไม่ใช่ว่าไม่เคยเข้า") : tr("ยังไม่เคย login เลยแม้ครั้งเดียว"))}>
                         {a.state === ACT_UNKNOWN ? '—' : a.text}
                       </td>
                     );
@@ -1519,7 +1519,7 @@ export default function AddUser() {
                       )}
                       <span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 6 }}>{tr(r.desc)}</span>
                       <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 2 }}>
-                        {sum.all ? '✅ เข้าได้ทุกหน้า' : sum.total === 0 ? '— ยังไม่เปิดสิทธิ์หน้าไหน' : `${tr("เข้าได้")} ${sum.total} ${tr("หน้า")}: ${sum.groups.join(' · ')}`}
+                        {sum.all ? tr("✅ เข้าได้ทุกหน้า") : sum.total === 0 ? tr("— ยังไม่เปิดสิทธิ์หน้าไหน") : `${tr("เข้าได้")} ${sum.total} ${tr("หน้า")}: ${sum.groups.join(' · ')}`}
                       </div>
                       {/* 13/11: role ไม่มีใบผ่านข้ามหน่วยอีกแล้ว — "แก้ของหน่วยไหนได้" ตั้งรายคนที่ช่อง ④/🌐 ของแต่ละบัญชี */}
                       <div style={{ fontSize: 11, marginTop: 1, color: 'var(--muted)' }}>
@@ -1540,7 +1540,7 @@ export default function AddUser() {
           {/* จอ desktop: ขยายกว้าง 2 คอลัมน์ ห้ามทรงแคบสูงจนล้นจอ (UI-CONVENTIONS "ขยายกว้างก่อนยอมสูงเกินจอ") */}
           <div className="modal" style={{ width: 'min(96vw, 920px)', maxWidth: 920, maxHeight: '94vh', overflowY: 'auto' }}>
             <h3 style={{ marginTop: 0, marginBottom: 18, fontFamily: 'var(--font-display)', color: 'var(--text)', fontSize: 17 }}>
-              {modalMode === 'create' ? '➕ เพิ่มผู้ใช้ใหม่' : '✏️ แก้ไขข้อมูลผู้ใช้'}
+              {modalMode === 'create' ? tr("➕ เพิ่มผู้ใช้ใหม่") : tr("✏️ แก้ไขข้อมูลผู้ใช้")}
             </h3>
 
             <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: 13, alignItems: 'start' }}>
@@ -1787,7 +1787,7 @@ export default function AddUser() {
                   <select value={form.position} onChange={e => setF('position', e.target.value)} style={{ flex: 1, minWidth: 0 }}>
                     <option value="">{tr('— ไม่ระบุ —')}</option>
                     {positionOptionsWith(form.position).map(p => (
-                      <option key={p.value} value={p.value}>{tr(p.label)}{p.level == null && !posOpts().some(o => o.value === p.value) ? ' ⚠ นอกทะเบียน' : ''}</option>
+                      <option key={p.value} value={p.value}>{tr(p.label)}{p.level == null && !posOpts().some(o => o.value === p.value) ? tr(" ⚠ นอกทะเบียน") : ''}</option>
                     ))}
                   </select>
                   <button type="button" onClick={() => setNewPos(v => (v ? null : { key: '', label_th: '', level: 'staff' }))}
@@ -1861,10 +1861,10 @@ export default function AddUser() {
                       </label>
                       <div style={{ padding: '8px 12px', background: 'var(--bg3-surf)', borderRadius: 'var(--r-md)', fontSize: 12.5,
                         color: emp?.section ? 'var(--text)' : 'var(--amber)', border: '1px solid var(--border2)' }}>
-                        {!emp ? '— ยังไม่ได้เลือกพนักงาน —'
+                        {!emp ? tr("— ยังไม่ได้เลือกพนักงาน —")
                               : emp.section
                                 ? <>🏠 <b>{emp.section}</b>{emp.department ? <span style={{ color: 'var(--muted)' }}> · {emp.department}</span> : null}</>
-                                : '⚠ ทะเบียนพนักงานยังไม่ระบุส่วนงาน — ไปกรอกที่ฐานพนักงานก่อน'}
+                                : tr("⚠ ทะเบียนพนักงานยังไม่ระบุส่วนงาน — ไปกรอกที่ฐานพนักงานก่อน")}
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4, lineHeight: 1.5 }}>
                         {tr("ใช้ตอบว่า")} <b>{tr('“แก้ข้อมูลของใครได้”')}</b> ({tr("ชั้นสิทธิ์ที่ 3) — ไม่ใช่ช่อง ② ข้างล่างที่ตอบว่า “เห็นข้อมูลของใคร")}”
@@ -1973,9 +1973,9 @@ export default function AddUser() {
                   return (
                     <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 5, lineHeight: 1.5 }}>
                       {sum.all
-                        ? '✅ role นี้เข้าได้ทุกหน้า'
+                        ? tr("✅ role นี้เข้าได้ทุกหน้า")
                         : sum.total === 0
-                          ? '⚠️ role นี้ยังไม่ถูกเปิดสิทธิ์หน้าไหนเลย — ไปเปิดที่เมนู 🔐 จัดการสิทธิ์'
+                          ? tr("⚠️ role นี้ยังไม่ถูกเปิดสิทธิ์หน้าไหนเลย — ไปเปิดที่เมนู 🔐 จัดการสิทธิ์")
                           : <>{tr('เข้าได้')} <b>{sum.total} {tr('หน้า')}</b> {tr('ในหมวด:')} {sum.groups.join(' · ')} {tr('— ปรับรายหน้าได้ที่เมนู 🔐 จัดการสิทธิ์')}</>}
                     </div>
                   );
@@ -2115,7 +2115,7 @@ export default function AddUser() {
                   <div style={{ fontSize: 11, lineHeight: 1.6, marginBottom: 5, padding: '6px 9px', borderRadius: 'var(--r-md)',
                     background: 'var(--blue-dim)', border: '1px solid var(--blue-line)', color: 'var(--text)' }}>
                     {tr("พนักงานที่ผูกกับบัญชีนี้สังกัดหน่วยที่")} CC <code>{ccFromEmp.cc}</code>
-                    {ccFromEmp.from ? <> ({ccFromEmp.from}{ccFromEmp.inherited ? ' · ตกทอดจากหน่วยแม่' : ''})</> : null}
+                    {ccFromEmp.from ? <> ({ccFromEmp.from}{ccFromEmp.inherited ? tr(" · ตกทอดจากหน่วยแม่") : ''})</> : null}
                     {!form.respCcs.includes(ccFromEmp.cc) && (
                       <button type="button" onClick={() => toggleCc(ccFromEmp.cc)}
                         style={{ marginLeft: 8, padding: '2px 8px', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 700,
@@ -2292,8 +2292,8 @@ export default function AddUser() {
               {(form.role === 'supervisor' || form.role === 'leader') && (
                 <div style={{ gridColumn: '1 / -1', fontSize: 11, color: 'var(--muted)', padding: '8px 10px', background: 'var(--bg3)', borderRadius: 'var(--r-md)', lineHeight: 1.5 }}>
                   ⚠️ {form.role === 'supervisor'
-                    ? 'สิทธิ์ระดับส่วน เห็นเฉพาะข้อมูลใน Section ที่ติ๊กไว้ — ถ้าไม่กำหนดจะเห็นทุกส่วนงานแบบไม่จำกัด'
-                    : 'สิทธิ์ระดับไลน์ เห็นเฉพาะข้อมูลในไลน์+Team ที่กำหนด — ถ้าไม่กำหนดจะเห็นทุกไลน์แบบไม่จำกัด'}
+                    ? tr("สิทธิ์ระดับส่วน เห็นเฉพาะข้อมูลใน Section ที่ติ๊กไว้ — ถ้าไม่กำหนดจะเห็นทุกส่วนงานแบบไม่จำกัด")
+                    : tr("สิทธิ์ระดับไลน์ เห็นเฉพาะข้อมูลในไลน์+Team ที่กำหนด — ถ้าไม่กำหนดจะเห็นทุกไลน์แบบไม่จำกัด")}
                 </div>
               )}
 
@@ -2332,7 +2332,7 @@ export default function AddUser() {
                       <select value={reassignTo} onChange={e => setReassignTo(e.target.value)} style={{ flex: 1, minWidth: 220 }}>
                         <option value="">{tr('— เลือกบัญชีที่จะรับโอนประวัติ —')}</option>
                         {others.map(u => (
-                          <option key={u.id} value={u.id}>{u.full_name || '(ไม่มีชื่อ)'} · {u.email}</option>
+                          <option key={u.id} value={u.id}>{u.full_name || tr("(ไม่มีชื่อ)")} · {u.email}</option>
                         ))}
                       </select>
                       <button type="button" disabled={!reassignTo || loading} onClick={() => handleDelete(reassignTo)}

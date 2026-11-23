@@ -584,7 +584,7 @@ export default function DeptHub({ onLogout, theme, onToggleTheme, userFullName, 
             fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 'var(--r-pill)',
             border: '1px solid var(--border)', color: wholeFactory ? 'var(--muted)' : 'var(--accent)',
           }} title={wholeFactory
-              ? (MAINTENANCE_ROLES.includes(userRole) ? 'หน่วยงานช่างดูแลเครื่องจักรทุกไลน์ จึงเห็นทั้งโรงงาน' : 'บัญชีนี้ไม่ได้จำกัดส่วนงาน')
+              ? (MAINTENANCE_ROLES.includes(userRole) ? tr("หน่วยงานช่างดูแลเครื่องจักรทุกไลน์ จึงเห็นทั้งโรงงาน") : tr("บัญชีนี้ไม่ได้จำกัดส่วนงาน"))
               : `${tr("นับเฉพาะไลน์")}: ${(scopeNames || []).join(', ')}`}>
             {wholeFactory ? tr('🏭 ทั้งโรงงาน') : `👥 ${tr("ส่วนงานของฉัน")} (${(scopeNames || []).length} ${tr("ไลน์")})`}
           </span>
@@ -611,7 +611,7 @@ export default function DeptHub({ onLogout, theme, onToggleTheme, userFullName, 
             <motion.div key={t.key} {...stagger(i)} style={{ flex: '1 1 150px', display: 'flex' }}>
             <KpiTile label={tr(t.label)} value={t.val}
               unit={t.of != null && t.val != null ? `/ ${t.of} ${tr(t.unit)}` : tr(t.unit)}
-              note={t.val == null ? 'ยังโหลดไม่ได้' : tr(t.note)} tone={t.val == null ? undefined : (t.tone === 'none' ? undefined : t.tone)}
+              note={t.val == null ? tr("ยังโหลดไม่ได้") : tr(t.note)} tone={t.val == null ? undefined : (t.tone === 'none' ? undefined : t.tone)}
               title={t.goTitle} style={{ flex: 1 }} hero={t.key === 'dt'}
               onClick={t.to && canAccessPage(t.to.split('?')[0], userRole) ? () => navigate(t.to) : undefined} />
             </motion.div>

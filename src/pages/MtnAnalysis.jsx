@@ -352,7 +352,7 @@ export default function MtnAnalysis() {
   /* แกนเต็มของช่วง (รวมถังที่เงียบ) — ส่งเฉพาะถังที่มีข้อมูล = ช่วงเงียบหายจากกราฟ
      แล้วเส้นแนวโน้มลากข้ามไปเหมือนไม่เคยมีช่วงเงียบ */
   const wKeys = useMemo(() => bucketAxis(tr.from, tr.to, tr.scale), [tr.from, tr.to, tr.scale]);
-  const bucketWord = scaleOf(tr.scale)?.short || 'ช่วง';
+  const bucketWord = scaleOf(tr.scale)?.short || trI18n("ช่วง");
 
   /* สรุปหัวจอ — ทุกตัวคืน null เมื่อ "ยังวัดไม่ได้" (ห้ามตีเป็น 0) */
   const sum = useMemo(() => {
@@ -422,7 +422,7 @@ export default function MtnAnalysis() {
       <PageHeader
         title={trI18n('วิเคราะห์ปัญหา (ซ่อมบำรุง)')} icon="🔍"
         sub={tab === 'kpi'
-          ? 'KPI ทีมช่าง — MTTA / MTTR / MDT · ความพึงพอใจ · ความน่าเชื่อถือรายอุปกรณ์'
+          ? trI18n("KPI ทีมช่าง — MTTA / MTTR / MDT · ความพึงพอใจ · ความน่าเชื่อถือรายอุปกรณ์")
           : `QC 7 Tools ${trI18n("แยกตามชนิดสินทรัพย์")} · ${srcMeta.note}`}
         tabs={MAIN_TABS} tab={tab} onTab={setTab}
         actions={
@@ -487,7 +487,7 @@ export default function MtnAnalysis() {
           )}
           {scopeUnsure && (
             <NoticeBar tone="warn">
-              {trI18n("ตัดขอบเขตไลน์ของบัญชีนี้ไม่ได้ (ไลน์/ส่วนงานของบัญชีไม่ตรงทะเบียน")}) — {scopeLines ? 'แสดงตามส่วนงานที่ตั้งไว้' : 'กำลังแสดงทั้งโรงงาน'}
+              {trI18n("ตัดขอบเขตไลน์ของบัญชีนี้ไม่ได้ (ไลน์/ส่วนงานของบัญชีไม่ตรงทะเบียน")}) — {scopeLines ? trI18n("แสดงตามส่วนงานที่ตั้งไว้") : trI18n("กำลังแสดงทั้งโรงงาน")}
             </NoticeBar>
           )}
 
@@ -495,13 +495,13 @@ export default function MtnAnalysis() {
           <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8, alignContent: 'start' }}>
             <KPI label={`${trI18n("เหตุการณ์")} (${days} ${trI18n("วัน")})`} value={sum.n ? fmt(sum.n) : null} unit={unit} sub={`${sum.assets} ${trI18n("อุปกรณ์")}`} />
             <KPI label={trI18n('เวลาสูญเสียรวม')} value={sum.totalMin == null ? null : fmt(sum.totalMin)} unit={trI18n("นาที")}
-              sub={sum.noMin ? `⚠️ ${sum.noMin} ${trI18n("รายการยังไม่มีเวลา — ไม่ถูกนับ")}` : 'ครบทุกรายการ'} warn={!!sum.noMin} />
+              sub={sum.noMin ? `⚠️ ${sum.noMin} ${trI18n("รายการยังไม่มีเวลา — ไม่ถูกนับ")}` : trI18n("ครบทุกรายการ")} warn={!!sum.noMin} />
             <KPI label={src === 'mo' ? trI18n('เวลาซ่อมเฉลี่ย') : trI18n('หยุดเฉลี่ยต่อครั้ง')} value={sum.avgMin == null ? null : fmt(sum.avgMin, 1)} unit={trI18n("นาที")}
               sub={sum.medMin == null ? '' : `${trI18n("มัธยฐาน")} ${fmt(sum.medMin, 1)} ${trI18n("นาที")}`} />
             <KPI label={trI18n('ค่าใช้จ่ายรวม')} value={sum.cost == null ? null : fmt(sum.cost)} unit={trI18n("บาท")}
-              sub={sum.noCost ? `⚠️ ${sum.noCost} ${trI18n("รายการยังไม่ลงค่าใช้จ่าย")}` : 'ครบทุกรายการ'} warn={!!sum.noCost} />
+              sub={sum.noCost ? `⚠️ ${sum.noCost} ${trI18n("รายการยังไม่ลงค่าใช้จ่าย")}` : trI18n("ครบทุกรายการ")} warn={!!sum.noCost} />
             <KPI label={trI18n('แยกชนิดจากทะเบียน')} value={sum.n ? fmt(sum.n - sum.guessed) : null} unit={`/ ${sum.n}`}
-              sub={sum.guessed ? `⚠️ ${sum.guessed} ${trI18n("รายการระบบเดาชนิดให้")}` : 'ยืนยันจากทะเบียนเครื่องทุกรายการ'} warn={!!sum.guessed} />
+              sub={sum.guessed ? `⚠️ ${sum.guessed} ${trI18n("รายการระบบเดาชนิดให้")}` : trI18n("ยืนยันจากทะเบียนเครื่องทุกรายการ")} warn={!!sum.guessed} />
           </div>
 
           {rows.length === 0 ? (
@@ -571,7 +571,7 @@ export default function MtnAnalysis() {
                 <Panel title={trI18n('⑤ ผังกระจาย — ซ่อมบ่อย ↔ เสียเวลามาก ไปด้วยกันไหม')}
                   sub={trI18n('1 จุด = 1 อุปกรณ์ · มุมขวาบน = ทั้งบ่อยทั้งนาน คือเป้าหมายแรกของการปรับปรุง')}>
                   <ScatterPlot records={perAsset} xOf={a => a.times} yOf={a => a.minutes} labelOf={a => a.asset}
-                    xLabel={`${trI18n("จำนวนครั้ง")} (${unit})`} yLabel="เวลารวม (นาที)" />
+                    xLabel={`${trI18n("จำนวนครั้ง")} (${unit})`} yLabel={trI18n("เวลารวม (นาที)")} />
                 </Panel>
 
                 {/* ⑦ แนวโน้ม */}
@@ -593,13 +593,13 @@ export default function MtnAnalysis() {
               {/* ① ใบตรวจสอบ */}
               <Panel title={trI18n('① ใบตรวจสอบ — นับไขว้ อุปกรณ์ × กลุ่มปัญหา')}
                 sub={trI18n('ตารางนับแบบใบเช็กชีตกระดาษ · ช่องเข้มแดง = จุดที่ซ้ำบ่อยที่สุด ให้เริ่มแก้ตรงนั้น')}>
-                <CheckSheet records={rows} rowOf={r => r.asset} colOf={r => r.group} rowLabel="อุปกรณ์" colLabel="กลุ่มปัญหา" />
+                <CheckSheet records={rows} rowOf={r => r.asset} colOf={r => r.group} rowLabel={trI18n("อุปกรณ์")} colLabel={trI18n("กลุ่มปัญหา")} />
               </Panel>
             </>
           )}
 
           <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.8 }}>
-            {trI18n("แหล่งข้อมูล")}: {src === 'mo' ? 'ใบแจ้งซ่อม (MO)' : 'บันทึกเครื่องหยุดจาก Daily Report'} ·
+            {trI18n("แหล่งข้อมูล")}: {src === 'mo' ? trI18n("ใบแจ้งซ่อม (MO)") : trI18n("บันทึกเครื่องหยุดจาก Daily Report")} ·
             {trI18n("ชนิดสินทรัพย์ตัดสินจาก \"ชนิดอุปกรณ์\" ในทะเบียนเครื่องจักร ไม่ใช่ทีมช่างที่รับงาน · หน้านี้อ่านอย่างเดียว ไม่แก้ข้อมูล และไม่ดึงซ้ำอัตโนมัติ (กด ↻ เมื่อต้องการข้อมูลล่าสุด")})
           </div>
         </div>

@@ -89,7 +89,7 @@ export default function AuditLogViewer({ client, tables, limit = 300, intro, fmt
           <option value="">{tr(ALL.person)}</option>
           {actorOpts.map(a => <option key={a} value={a}>{tr(a)}</option>)}
         </select>
-        <SearchInput value={q} onChange={setQ} fields="ชื่อรายการ / คน" />
+        <SearchInput value={q} onChange={setQ} fields={tr("ชื่อรายการ / คน")} />
         <span className="spacer" />
         <span className="filter-count">
           {shown.length} {tr('รายการ')}{rows.length >= limit ? ` (${tr("แสดง")} ${limit} ${tr("ล่าสุด — เก่ากว่านี้ยังมีอีก")})` : ''}
@@ -109,7 +109,7 @@ export default function AuditLogViewer({ client, tables, limit = 300, intro, fmt
 
       {!loading && !err && !shown.length && (
         <div style={{ color: 'var(--muted)', padding: 16, fontSize: 13 }}>
-          {rows.length ? 'ไม่มีรายการตรงกับตัวกรอง' : 'ยังไม่มีประวัติการแก้ไข'}
+          {rows.length ? tr("ไม่มีรายการตรงกับตัวกรอง") : tr("ยังไม่มีประวัติการแก้ไข")}
         </div>
       )}
 
@@ -123,7 +123,7 @@ export default function AuditLogViewer({ client, tables, limit = 300, intro, fmt
               <span style={{ color: 'var(--muted)' }}>{tableLabel(r.table_name)}</span>
               <b style={{ color: 'var(--text)' }}>{rowLabel(r)}</b>
               <span style={{ marginLeft: 'auto', color: 'var(--muted)', fontSize: 11.5 }}>
-                {r.actor || '— (ระบบ/migration)'} · {fmtDT(r.changed_at)}
+                {r.actor || tr("— (ระบบ/migration)")} · {fmtDT(r.changed_at)}
               </span>
             </div>
             {/* 📤 ปิดใบข้ามไลน์ (03/11) — ไม่มีการกดยืนยัน ⇒ แถวนี้คือหลักฐานชิ้นเดียว

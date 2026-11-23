@@ -146,7 +146,7 @@ export default function PeRoutingSuggest({ set, procs, lines = [], onClose }) {
           {tr("ผูกกับ MAT SAP")}: <b style={{ color: 'var(--text)', fontFamily: 'monospace' }}>{matNo}</b>
           {matched ? ` · ${matched.name}` : ''}
           <span style={{ color: 'var(--muted)' }}>
-            {how === 'set_mat' ? ' (จากชุดเอกสาร)' : how === 'p_no' ? ` (${tr("จับคู่")} p_no ${set.part_no})` : ''}
+            {how === 'set_mat' ? tr(" (จากชุดเอกสาร)") : how === 'p_no' ? ` (${tr("จับคู่")} p_no ${set.part_no})` : ''}
           </span>
           {!matched && <span style={{ color: '#f59e0b' }}> {tr('· ⚠ เลขนี้ยังไม่มีใน Product Master — ใบ VSM จะยังเลือกไม่ได้จนกว่าจะเพิ่มสินค้า')}</span>}
         </div>
@@ -212,7 +212,7 @@ export default function PeRoutingSuggest({ set, procs, lines = [], onClose }) {
           <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)', fontSize: 13, cursor: 'pointer' }}>{tr('ยกเลิก')}</button>
           <button onClick={confirm} disabled={saving || !included}
             style={{ padding: '8px 18px', borderRadius: 'var(--r-md)', border: 'none', background: 'var(--accent)', color: 'var(--accent-ink)', fontSize: 13, fontWeight: 800, cursor: 'pointer', opacity: (saving || !included) ? 0.5 : 1 }}>
-            {saving ? '⏳ กำลังบันทึก…' : `✅ ${tr("ยืนยันบันทึก")} ${included} ${tr("ขั้น")}`}
+            {saving ? tr("⏳ กำลังบันทึก…") : `✅ ${tr("ยืนยันบันทึก")} ${included} ${tr("ขั้น")}`}
           </button>
         </div>
       </>}

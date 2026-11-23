@@ -179,7 +179,7 @@ export default function DowntimeTimeline({ sessions = [], downtimes = [], workDa
                 <div style={{ width: labelW, flexShrink: 0, paddingRight: 8, minWidth: 0 }}>
                   <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.line}>{r.line}</div>
                   <div style={{ fontSize: 11, color: unplannedMin > 0 ? '#ef4444' : 'var(--muted)' }}>
-                    {unplannedMin > 0 ? `${tr("หยุด")} ${unplannedMin} ${tr("น.")}` : 'ไม่มีหยุดนอกแผน'}
+                    {unplannedMin > 0 ? `${tr("หยุด")} ${unplannedMin} ${tr("น.")}` : tr("ไม่มีหยุดนอกแผน")}
                   </div>
                   {unaccMin > CLOSE_AHEAD_WARN_MIN && (
                     <div title={`${tr("กะนี้ปิดไปแล้ว แต่ \"เวลาปิดกะ\" ที่บันทึกไว้ล้ำหน้าเวลาที่กดปิดจริง และช่วงที่ล้ำ")} ${fmtOffset(unaccMin)} ${tr("ไม่มีใบ Downtime รองรับเลย\\nแถบเขียวจึงลากไปในอนาคต และเวลาเดินเครื่อง (ฐานของ %A/%P) ถูกคิดเกินจริงเท่านั้น\\n→ แก้ที่หน้า Daily Report ปุ่มแก้เวลาเริ่ม-ปิดกะ หรือลง Downtime คลุมช่วงที่ไม่ได้ผลิต")}`}
@@ -228,7 +228,7 @@ export default function DowntimeTimeline({ sessions = [], downtimes = [], workDa
 
       {sel && (
         <div style={{ marginTop: 8, padding: '8px 11px', background: 'var(--bg2-surf)', border: `1px solid ${sel.color}`, borderRadius: 'var(--r-md)', fontSize: 11.5, lineHeight: 1.65 }}>
-          <b style={{ color: sel.planned ? PLANNED_COLOR : sel.color }}>{sel.planned ? '🗓️ หยุดตามแผน' : '🔴 หยุดนอกแผน'} · {sel.name}</b>
+          <b style={{ color: sel.planned ? PLANNED_COLOR : sel.color }}>{sel.planned ? tr("🗓️ หยุดตามแผน") : tr("🔴 หยุดนอกแผน")} · {sel.name}</b>
           {' '}<span style={{ color: 'var(--muted)' }}>{sel.line}</span>
           {sel.machine && <> {tr('· เครื่อง')} <b>{sel.machine}</b></>}
           <div style={{ color: 'var(--text2)' }}>

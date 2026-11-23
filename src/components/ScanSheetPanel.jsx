@@ -114,12 +114,12 @@ export default function ScanSheetPanel({ lines, canPrint }) {
       {loadErr && <div style={{ fontSize: 12.5, color: 'var(--red)', marginBottom: 10 }}>⚠️ {loadErr} {tr('— ยังพิมพ์ไม่ได้')}</div>}
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
         <LineSelect lines={visLines} value={lineName} onChange={setLineName} placeholder={tr('— เลือกไลน์ —')} />
-        {line && <span style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('กระบวนการของไลน์:')} {pts.size ? [...pts].join(', ') : 'ไม่พบ (ติ๊กเฉพาะประเภทกลาง)'}</span>}
+        {line && <span style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('กระบวนการของไลน์:')} {pts.size ? [...pts].join(', ') : tr("ไม่พบ (ติ๊กเฉพาะประเภทกลาง)")}</span>}
         <span style={{ marginLeft: 'auto' }} />
         {canPrint && (
           <button type="button" onClick={print} disabled={!line || busy || !!loadErr}
             style={{ padding: '8px 18px', borderRadius: 'var(--r-md)', border: 'none', fontSize: 13.5, fontWeight: 800, cursor: line && !busy ? 'pointer' : 'not-allowed', background: line && !loadErr ? 'var(--accent)' : 'var(--bg3)', color: line && !loadErr ? 'var(--accent-ink)' : 'var(--muted)' }}>
-            {busy ? 'กำลังสร้าง…' : `🖨️ ${tr("พิมพ์ใบสแกน")} (${pickDt.size + pickNg.size} ${tr("ช่อง")})`}
+            {busy ? tr("กำลังสร้าง…") : `🖨️ ${tr("พิมพ์ใบสแกน")} (${pickDt.size + pickNg.size} ${tr("ช่อง")})`}
           </button>
         )}
       </div>

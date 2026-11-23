@@ -51,7 +51,7 @@ export default function KpiBaseInputsPanel({ year, scope, org, rows = [], base: 
   const base = baseIn || buildBaseIndex(rows);
   const [importing, setImporting] = useState(false);
   const mySk = baseScopeKeyOf(scope);
-  const label = plant ? 'ทั้งโรงงาน' : org.labelOf(scope.kind, scope.value);
+  const label = plant ? tr("ทั้งโรงงาน") : org.labelOf(scope.kind, scope.value);
   const [busy, setBusy] = useState('');
 
   const save = async (varKey, sk, month, raw) => {

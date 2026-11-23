@@ -283,7 +283,7 @@ function ManpowerTab({ employees, empById, lines, sectionsList, secFilter, setSe
             </ComposedChart>
           </ResponsiveContainer>
           <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
-            {trI18n("นับจากการเช็คชื่อรายวัน")} (daily_production_logs){shift !== 'all' && stdTotal == null ? ' · ยังไม่ตั้งกำลังคนมาตรฐานของขอบเขตนี้ (ตั้งที่ LineSetup)' : ''}
+            {trI18n("นับจากการเช็คชื่อรายวัน")} (daily_production_logs){shift !== 'all' && stdTotal == null ? trI18n(" · ยังไม่ตั้งกำลังคนมาตรฐานของขอบเขตนี้ (ตั้งที่ LineSetup)") : ''}
             {offLine.people > 0 && (
               <> · <span style={{ color: 'var(--amber)', fontWeight: 700 }}>
                 {trI18n("ไม่นับช่าง/สายสนับสนุน")} {offLine.people} {trI18n('คน (')}{offLine.logs} {trI18n("แถวเช็คชื่อ")})
@@ -828,7 +828,7 @@ function OtMonthlyTab({ empById, sectionsList, secFilter, setSecFilter, inScope,
       <FilterBar style={{ marginBottom: 14 }}>
         <SectionScopeSelect index={orgIndex} failed={orgFail} value={secFilter} onChange={s => setSecFilter(s)} only={sectionsList} />
         <select value={month} onChange={e => setMonth(e.target.value)}>
-          {monthOpts.map(m => <option key={m} value={m}>{monthLabel(m)}{m === monthKey(today) ? ' (เดือนนี้)' : ''}</option>)}
+          {monthOpts.map(m => <option key={m} value={m}>{monthLabel(m)}{m === monthKey(today) ? trI18n(" (เดือนนี้)") : ''}</option>)}
         </select>
         <label style={{ fontSize: 12.5, display: 'flex', alignItems: 'center', gap: 6 }}>
           {trI18n('เกณฑ์')}
@@ -913,7 +913,7 @@ function OtMonthlyTab({ empById, sectionsList, secFilter, setSecFilter, inScope,
 
       <div className="card table-sticky" style={{ overflowX: 'auto', marginBottom: 14 }}>
         <div style={{ padding: '10px 14px', fontWeight: 700, fontSize: 13, borderBottom: '1px solid var(--border)' }}>
-          {onlyOver ? `${trI18n("คนที่ทำ OT ตั้งแต่")} ${threshold} ${trI18n("วันขึ้นไป")}` : 'คนที่ทำ OT ทั้งหมด'} — {monthLabel(month)} ({shown.length} {trI18n("คน")})
+          {onlyOver ? `${trI18n("คนที่ทำ OT ตั้งแต่")} ${threshold} ${trI18n("วันขึ้นไป")}` : trI18n("คนที่ทำ OT ทั้งหมด")} — {monthLabel(month)} ({shown.length} {trI18n("คน")})
           <span style={{ fontWeight: 400, color: 'var(--muted)', marginLeft: 8, fontSize: 11.5 }}>{trI18n('คลิกแถวเพื่อดูรายวัน')}</span>
         </div>
         <table style={{ minWidth: 980 }}>
@@ -929,7 +929,7 @@ function OtMonthlyTab({ empById, sectionsList, secFilter, setSecFilter, inScope,
           <tbody>
             {shown.length === 0 ? (
               <tr><td colSpan={isCurrentMonth ? 11 : 10} style={{ textAlign: 'center', color: 'var(--muted)', padding: 20 }}>
-                {loading ? 'กำลังโหลด…' : 'ไม่มีคนถึงเกณฑ์ในเดือนนี้'}
+                {loading ? trI18n("กำลังโหลด…") : trI18n("ไม่มีคนถึงเกณฑ์ในเดือนนี้")}
               </td></tr>
             ) : shown.map((r, i) => {
               const over = r.total >= threshold;

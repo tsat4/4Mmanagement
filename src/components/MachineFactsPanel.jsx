@@ -222,7 +222,7 @@ export default function MachineFactsPanel({ src, canManage, callAdmin }) {
                         ) : canManage ? (
                           <div style={{ display: 'grid', gap: 6 }}>
                             <SearchSelect value={cur} options={dtOptions} placeholder={tr('ค้นประเภท downtime…')}
-                              loadFail={data.errs.includes('ประเภท downtime') ? 'โหลดประเภท downtime ไม่สำเร็จ' : ''}
+                              loadFail={data.errs.includes('ประเภท downtime') ? tr("โหลดประเภท downtime ไม่สำเร็จ") : ''}
                               onChange={({ id }) => id && id !== cur && save(k, 'map_reason', { ...base, downtime_type_id: id }, `${tr("จับคู่เหตุผล")} ${r.code}`)} />
                             {cur && !dtById.has(cur) && !data.errs.includes('ประเภท downtime') && (
                               <span style={{ fontSize: 12, color: 'var(--red)' }}>{tr('⚠ ประเภทที่จับคู่ไว้ถูกลบจากทะเบียนแล้ว — เลือกใหม่หรือล้าง')}</span>
@@ -249,7 +249,7 @@ export default function MachineFactsPanel({ src, canManage, callAdmin }) {
                             </div>
                           </div>
                         ) : (
-                          r.map ? (cur ? <b>{dtById.get(cur)?.name_th || tr('⚠ ประเภทนี้ถูกลบแล้ว')}</b> : 'ไม่มีตัวตรงใน ESM')
+                          r.map ? (cur ? <b>{dtById.get(cur)?.name_th || tr('⚠ ประเภทนี้ถูกลบแล้ว')}</b> : tr("ไม่มีตัวตรงใน ESM"))
                             : <span style={{ color: 'var(--amber)' }}>{tr('ยังไม่จับคู่')}</span>
                         )}
                       </td>
@@ -293,7 +293,7 @@ export default function MachineFactsPanel({ src, canManage, callAdmin }) {
                     return ms.map((m, i) => (
                       <tr key={`${r.key}|${m?.tag || '-'}`}>
                         {i === 0 && <>
-                          <td style={{ ...td, whiteSpace: 'nowrap', fontWeight: 700 }} rowSpan={ms.length}>{fmtDate(r.workDate)} · {r.shift === 'day' ? 'เช้า' : 'ดึก'}</td>
+                          <td style={{ ...td, whiteSpace: 'nowrap', fontWeight: 700 }} rowSpan={ms.length}>{fmtDate(r.workDate)} · {r.shift === 'day' ? tr("เช้า") : tr("ดึก")}</td>
                           <td style={{ ...td, whiteSpace: 'nowrap' }} rowSpan={ms.length}>{r.line}</td>
                           <td style={td} rowSpan={ms.length}>
                             {r.session ? <b>{num(r.session.actual_qty)}</b> : <span style={{ color: 'var(--muted)' }}>{tr('ไม่มีใบผลิต')}</span>}

@@ -110,7 +110,7 @@ function FlowBar({ st, ack }) {
               {bad ? '✕' : done ? '✓' : i + 1}
             </span>
             <span style={{ fontSize: 12, fontWeight: done || cur || bad ? 700 : 400, color: c }}>Step {i + 1} · {label}</span>
-            <span style={{ fontSize: 11, color: 'var(--muted)' }}>{bad ? 'ถูกตีกลับ' : cur ? `${tr("ถึงขั้นนี้")} · ${STEP_SUB[i]}` : STEP_SUB[i]}</span>
+            <span style={{ fontSize: 11, color: 'var(--muted)' }}>{bad ? tr("ถูกตีกลับ") : cur ? `${tr("ถึงขั้นนี้")} · ${STEP_SUB[i]}` : STEP_SUB[i]}</span>
             {i === 3 && at === 3 && ack && (
               <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>
                 {tr("รับทราบ")} {ack.done} / {ack.total} {tr('คน')}{ack.total ? ` (${Math.round((ack.done / ack.total) * 100)}%)` : ''}
@@ -287,7 +287,7 @@ export default function AnnouncementMockup() {
       />
 
       <div style={{ marginBottom: 12 }}>
-        <InfoMore lead="ลำดับงาน: ผู้แจ้งกรอก → แจ้งเตือน EVP → EVP อนุมัติ (แจ้งกลับผู้แจ้ง) → ถึงวันมีผล ประกาศขึ้นให้ user ในส่วนงานที่เลือก">
+        <InfoMore lead={tr("ลำดับงาน: ผู้แจ้งกรอก → แจ้งเตือน EVP → EVP อนุมัติ (แจ้งกลับผู้แจ้ง) → ถึงวันมีผล ประกาศขึ้นให้ user ในส่วนงานที่เลือก")}>
           {tr("สลับแท็บด้านบนเพื่อดูมุมของแต่ละคน · เลื่อน \"วันที่จำลอง\" เพื่อดูประกาศขึ้นตามวันมีผล · ผู้รับเลือกจากผังองค์กรจริง — เลือกหน่วยแม่ = ครอบหน่วยลูกทั้งหมด · ระบบจริงต้องมีตารางประกาศ + สิทธิ์ + แจ้งเตือนในแอป (ยังไม่ได้ทำ")})
         </InfoMore>
       </div>
@@ -361,7 +361,7 @@ export default function AnnouncementMockup() {
         <div style={{ display: 'grid', gap: 12 }}>
           <div style={{ ...card, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <span style={{ fontSize: 13 }}>{tr('ดูในฐานะพนักงานของ')}</span>
-            <OrgScopePicker index={index} failed={failed} value={myUnit} onChange={(v) => { setMyUnit(v); setMeId(''); }} costCenter={false} plantLabel="— เลือกหน่วยงานของพนักงาน —" />
+            <OrgScopePicker index={index} failed={failed} value={myUnit} onChange={(v) => { setMyUnit(v); setMeId(''); }} costCenter={false} plantLabel={tr("— เลือกหน่วยงานของพนักงาน —")} />
             <select value={meId} onChange={e => setMeId(e.target.value)} disabled={!myPeople.length} style={{ width: 240 }}>
               <option value="">{myPeople.length ? tr('— ฉันคือ (รายชื่อจำลอง) —') : tr('หน่วยนี้ไม่มีรายชื่อจำลอง')}</option>
               {myPeople.map(e => <option key={e.id} value={e.id}>{tr(e.name)}</option>)}

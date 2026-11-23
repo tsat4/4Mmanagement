@@ -212,7 +212,7 @@ export default function CapacityBoard({ role, scope, lines, months, calMap, dema
         <div>
           <div style={{ fontSize:11, color:'var(--muted)' }}>{tr('OEE จริง (median 60 วัน)')}</div>
           <div style={{ fontSize:20, fontWeight:800, color: oee.hasActual ? '#22c55e' : 'var(--muted)' }}>
-            {oee.hasActual ? `${(oee.actual * 100).toFixed(1)}%` : 'ยังไม่มีประวัติ'}
+            {oee.hasActual ? `${(oee.actual * 100).toFixed(1)}%` : tr("ยังไม่มีประวัติ")}
           </div>
         </div>
         <div style={{ fontSize:18, color:'var(--muted)' }}>vs</div>
@@ -223,7 +223,7 @@ export default function CapacityBoard({ role, scope, lines, months, calMap, dema
         </div>
         {oee.hasActual && (
           <div style={{ fontSize:12, color: oee.actual >= oee.target ? '#22c55e' : '#ef4444', fontWeight:700 }}>
-            {oee.actual >= oee.target ? '▲ ถึงเป้า' : `▼ ${tr("ต่ำกว่าเป้า")} ${((oee.target - oee.actual) * 100).toFixed(1)} ${tr("จุด")}`}
+            {oee.actual >= oee.target ? tr("▲ ถึงเป้า") : `▼ ${tr("ต่ำกว่าเป้า")} ${((oee.target - oee.actual) * 100).toFixed(1)} ${tr("จุด")}`}
           </div>
         )}
         <div style={{ fontSize:11, color:'var(--muted)', marginLeft:'auto', maxWidth:340, lineHeight:1.6 }}>
@@ -293,7 +293,7 @@ export default function CapacityBoard({ role, scope, lines, months, calMap, dema
           {canEdit && !patErr && (
             <button style={{ ...btn('var(--accent)'), marginTop:10, opacity: saving || !Object.keys(draft).length ? 0.5 : 1 }}
               disabled={saving || !Object.keys(draft).length} onClick={saveReg}>
-              {saving ? 'กำลังบันทึก…' : `💾 ${tr("บันทึก")} (${Object.keys(draft).length})`}
+              {saving ? tr("กำลังบันทึก…") : `💾 ${tr("บันทึก")} (${Object.keys(draft).length})`}
             </button>
           )}
         </div>

@@ -188,8 +188,8 @@ export function PlanSparesModal({ row, canEdit, canIssue, byName, byUid, onClose
 
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginTop: 14, padding: '10px 12px', borderRadius: 'var(--r-md)', background: 'var(--bg3)' }}>
           <span style={{ flex: '1 1 240px', fontSize: 12.5, color: 'var(--text2)' }}>
-            {ready.allOk == null ? 'ผูกอะไหล่ก่อน แล้วจึงเบิกตามแผนได้'
-              : ready.allOk ? '✅ อะไหล่พร้อมสำหรับ PM รอบถัดไป'
+            {ready.allOk == null ? tr("ผูกอะไหล่ก่อน แล้วจึงเบิกตามแผนได้")
+              : ready.allOk ? tr("✅ อะไหล่พร้อมสำหรับ PM รอบถัดไป")
                 : <span style={{ color: '#ef4444', fontWeight: 700 }}>{tr('⚠️ ขาด')} {ready.shortCount} {tr('รายการ — เบิกทั้งชุดไม่ได้จนกว่าจะรับของเข้า')}</span>}
           </span>
           {canIssue
@@ -204,7 +204,7 @@ export function PlanSparesModal({ row, canEdit, canIssue, byName, byUid, onClose
             {history.slice(0, 8).map(h => (
               <div key={h.id} style={{ fontSize: 12, color: 'var(--muted)', padding: '3px 0', borderTop: '1px dashed var(--border)' }}>
                 {new Date(h.created_at).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                {' · '}{partById.get(h.part_id)?.name || 'อะไหล่'} × {fmtN(Math.abs(Number(h.qty)))}{h.by_name ? ` · ${h.by_name}` : ''}
+                {' · '}{partById.get(h.part_id)?.name || tr("อะไหล่")} × {fmtN(Math.abs(Number(h.qty)))}{h.by_name ? ` · ${h.by_name}` : ''}
               </div>
             ))}
           </div>

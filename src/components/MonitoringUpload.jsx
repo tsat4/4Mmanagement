@@ -400,12 +400,12 @@ function PreviewPanel({ p, canBoard, onCancel, onConfirm, busy, card, warnBox })
                 <td style={{ padding: '4px 8px', fontSize: 12, color: 'var(--muted)', borderBottom: '1px solid var(--border2)' }}>{r.kind}</td>
                 <td style={{ padding: '4px 8px', fontSize: 12, borderBottom: '1px solid var(--border2)',
                              color: r.customer ? 'var(--text)' : 'var(--muted)' }}>
-                  {r.customer || (r.kind === 'ลูกค้า' ? '— ไม่มีในทะเบียน —' : '—')}
+                  {r.customer || (r.kind === 'ลูกค้า' ? tr("— ไม่มีในทะเบียน —") : '—')}
                 </td>
                 <td style={{ padding: '4px 8px', fontSize: 12, textAlign: 'right', borderBottom: '1px solid var(--border2)' }}>{r.parts}</td>
                 <td style={{ padding: '4px 8px', fontSize: 12, textAlign: 'right', fontWeight: 700,
                              color: r.orders ? 'var(--accent)' : '#ef4444', borderBottom: '1px solid var(--border2)' }}>
-                  {r.orders ? `${r.orders} ${tr("ใบ")} · ${r.orderQty.toLocaleString()}` : '0 ใบ'}
+                  {r.orders ? `${r.orders} ${tr("ใบ")} · ${r.orderQty.toLocaleString()}` : tr("0 ใบ")}
                 </td>
                 <td style={{ padding: '4px 8px', fontSize: 12, textAlign: 'right', whiteSpace: 'nowrap',
                              color: r.staleDays > 0 ? '#f59e0b' : 'var(--muted)', borderBottom: '1px solid var(--border2)' }}>

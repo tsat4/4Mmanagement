@@ -392,14 +392,14 @@ export default function QAInspectionSetup() {
                   opacity: p.is_active ? 1 : 0.5,
                 }}>
                 <div style={{ fontWeight: 800, fontSize: 13, color: p.id === selId ? 'var(--accent)' : 'var(--text)' }}>
-                  {p.part_no}{p.is_active ? '' : ' (ปิด)'}
+                  {p.part_no}{p.is_active ? '' : tr(" (ปิด)")}
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {[p.part_name, p.customer].filter(Boolean).join(' · ') || '—'}
                 </div>
               </button>
             ))}
-            {shownParts.length === 0 && <div style={{ color: 'var(--muted)', fontSize: 12, padding: 16, textAlign: 'center' }}>{tr('ยังไม่มี part')}{canManage ? ' — กด ＋ เพื่อเพิ่ม' : ''}</div>}
+            {shownParts.length === 0 && <div style={{ color: 'var(--muted)', fontSize: 12, padding: 16, textAlign: 'center' }}>{tr('ยังไม่มี part')}{canManage ? tr(" — กด ＋ เพื่อเพิ่ม") : ''}</div>}
           </div>
         </div>
 
@@ -463,7 +463,7 @@ export default function QAInspectionSetup() {
               </div>
               {drawings.length === 0 ? (
                 <div style={{ padding: 46, textAlign: 'center', color: 'var(--muted)', fontSize: 13, border: '2px dashed var(--border2)', borderRadius: 'var(--r-md)' }}>
-                  {tr("ยังไม่มี")} drawing — {canEdit ? 'กด "🎯 ตั้งค่าจุดตรวจ & Drawing" เพื่อเพิ่มแผ่น (รูปภาพหรือ PDF ≤20MB) แล้วปักหมุด' : 'รอ QA อัพโหลด'}
+                  {tr("ยังไม่มี")} drawing — {canEdit ? tr("กด \"🎯 ตั้งค่าจุดตรวจ & Drawing\" เพื่อเพิ่มแผ่น (รูปภาพหรือ PDF ≤20MB) แล้วปักหมุด") : tr("รอ QA อัพโหลด")}
                 </div>
               ) : (() => {
                 const frames = drawings.map(d => ({ _key: d.id, _preview: d.drawing_url, title: d.title, isPdf: /\.pdf($|\?)/i.test(d.drawing_url || '') }));
@@ -544,7 +544,7 @@ export default function QAInspectionSetup() {
                     ))}
                     {items.length === 0 && (
                       <tr><td style={tdSt} colSpan={9}>
-                        <span style={{ color: 'var(--muted)' }}>{tr('ยังไม่มีจุดตรวจ')}{canEdit ? ' — กด "🎯 แก้ไข / เพิ่มจุดตรวจ"' : ''}</span>
+                        <span style={{ color: 'var(--muted)' }}>{tr('ยังไม่มีจุดตรวจ')}{canEdit ? tr(" — กด \"🎯 แก้ไข / เพิ่มจุดตรวจ\"") : ''}</span>
                       </td></tr>
                     )}
                   </tbody>
@@ -558,12 +558,12 @@ export default function QAInspectionSetup() {
 
       {/* ── Part modal ── */}
       {partModal && (
-        <Modal title={partModal.id ? `✏️ ${tr("แก้ไข")} ${partModal.part_no}` : '➕ เพิ่ม Part'} onClose={() => { setPartModal(null); setBomSearch(''); }}>
+        <Modal title={partModal.id ? `✏️ ${tr("แก้ไข")} ${partModal.part_no}` : tr("➕ เพิ่ม Part")} onClose={() => { setPartModal(null); setBomSearch(''); }}>
           {/* เลือกจากฐานข้อมูล BOM / Product Master → เติมฟอร์มให้ (แก้ทับได้) */}
           <div style={{ marginBottom: 14, padding: 12, borderRadius: 'var(--r-md)', background: 'var(--bg3-surf)', border: '1px dashed var(--border2)' }}>
             <Field label={tr('เลือกจากฐานข้อมูล BOM / Product Master')}>
               <input style={inputSt} value={bomSearch} onChange={e => setBomSearch(e.target.value)}
-                placeholder={bomOptions === null ? 'กำลังโหลดฐานข้อมูล…' : `${tr("พิมพ์ค้นหา Part No. / ชื่อพาร์ท")} / MAT.NO (${bomOptions.length.toLocaleString()} ${tr("รายการ")})`} />
+                placeholder={bomOptions === null ? tr("กำลังโหลดฐานข้อมูล…") : `${tr("พิมพ์ค้นหา Part No. / ชื่อพาร์ท")} / MAT.NO (${bomOptions.length.toLocaleString()} ${tr("รายการ")})`} />
             </Field>
             {bomSearch.trim().length >= 2 && (
               <div style={{ marginTop: 8, maxHeight: 220, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>

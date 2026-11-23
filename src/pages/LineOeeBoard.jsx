@@ -436,7 +436,7 @@ export default function LineOeeBoard() {
         <LineSelect lines={boardLines} value={line} onChange={setLine} placeholder={null}
           role={role} lineId={lineId} sections={sections} scopeIdx={scopeIdx}
           style={{ width: 250, padding: '6px 10px', fontSize: 14, fontWeight: 700, borderRadius: 8, background: 'var(--bg2-surf)', border: '1px solid var(--border)', color: 'var(--text)' }} />
-        <span style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('หน้าต่าง')} {DAYS_KPI} {tr('วันล่าสุด')}{C?.liveInWindow ? ' · รวมกะที่กำลังเปิด (สด)' : ''}</span>
+        <span style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('หน้าต่าง')} {DAYS_KPI} {tr('วันล่าสุด')}{C?.liveInWindow ? tr(" · รวมกะที่กำลังเปิด (สด)") : ''}</span>
         <span style={{ marginLeft: 'auto', fontSize: 20, fontWeight: 900, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>
           {now.toLocaleTimeString('th-TH', { hour12: false })}
           <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--muted)', marginLeft: 8 }}>{now.toLocaleDateString('th-TH')}</span>
@@ -445,7 +445,7 @@ export default function LineOeeBoard() {
 
       {partial && (
         <div style={{ ...card, borderColor: 'var(--amber)', color: 'var(--amber)', fontSize: T(12.5, 22), padding: '8px 14px', flex: tv ? '0 0 auto' : undefined }}>
-          {tv ? '⚠ โหลดข้อมูลได้ไม่ครบ — ตัวเลขอาจต่ำกว่าจริง' : '⚠ โหลดข้อมูลได้ไม่ครบ — ตัวเลขบางส่วนอาจต่ำกว่าจริง (ลองรีเฟรช/เช็คเครือข่าย)'}
+          {tv ? tr("⚠ โหลดข้อมูลได้ไม่ครบ — ตัวเลขอาจต่ำกว่าจริง") : tr("⚠ โหลดข้อมูลได้ไม่ครบ — ตัวเลขบางส่วนอาจต่ำกว่าจริง (ลองรีเฟรช/เช็คเครือข่าย)")}
         </div>
       )}
 
@@ -502,7 +502,7 @@ export default function LineOeeBoard() {
                     {C.liveNow?.oee != null ? `${Math.round(C.liveNow.oee)}%` : '—'}
                   </div>
                   <div style={{ fontSize: T(11.5, 22), color: tv ? 'var(--text2)' : 'var(--muted)', marginTop: 4 }}>
-                    {C.liveNow?.oee != null ? '🟢 กำลังผลิต · OEE กะนี้' : C.liveNow?.noCt ? '⚠ ยังไม่ตั้ง CT — คำนวณไม่ได้' : '🟢 กำลังผลิต · ยังประเมินไม่ได้'}
+                    {C.liveNow?.oee != null ? tr("🟢 กำลังผลิต · OEE กะนี้") : C.liveNow?.noCt ? tr("⚠ ยังไม่ตั้ง CT — คำนวณไม่ได้") : tr("🟢 กำลังผลิต · ยังประเมินไม่ได้")}
                     {C.liveLine && C.liveLine !== line ? ` · ${C.liveLine}` : ''}
                     {C.liveMore > 0 ? ` (+${C.liveMore} ${tr("ไลน์เปิดอยู่")})` : ''}
                   </div>
@@ -621,7 +621,7 @@ export default function LineOeeBoard() {
                               (คู่กับ "✓ กลับมาแล้ว") → แยกไอคอนออกมา shake เดี่ยว ข้อความเป็นภาษาไทยล้วน */}
                           {active
                             ? <b style={{ color: planned ? 'var(--muted)' : 'var(--red)' }}>
-                                {planned ? '🗓️ ตามแผน' : <><span className="dt-alarm-icon">🔴</span> {tr('ยังหยุดอยู่')}</>}
+                                {planned ? tr("🗓️ ตามแผน") : <><span className="dt-alarm-icon">🔴</span> {tr('ยังหยุดอยู่')}</>}
                               </b>
                             /* 🔴 กะปิดแล้วแต่แถวยังเปิดค้าง = คนลืมปิดรายการ — บอกตรงๆ ห้ามแปลงเป็น
                                "ยังหยุดอยู่" (กระพริบค้างเป็นเดือน) และห้ามแปลงเป็น "กลับมาแล้ว" (ไม่มีใครไปตามปิด) */
@@ -652,7 +652,7 @@ export default function LineOeeBoard() {
               </b>
             ) : C.hasOpen ? (
               /* %P ถูก cap = เลขไม่น่าเชื่อ ⇒ แถบท้ายจอต้องเตือนเหมือนการ์ดบน (ห้ามเขียวสนิท) */
-              <b style={{ color: C.liveNow?.pOver ? 'var(--amber)' : 'var(--green)', fontSize: T(14, 28) }}>▶ {line} {tr('กำลังผลิต')}{C.liveNow?.oee != null ? ` · OEE ${tr("กะนี้ (สด")}) ${Math.round(C.liveNow.oee)}%` : C.liveNow?.noCt ? ' · ⚠ ยังไม่ตั้ง CT — คำนวณ P ไม่ได้' : ''}{C.liveNow?.pOver ? ` · ⚠ %P ${tr("คิดได้")} ${C.liveNow.pRawPct}% ${tr("ถูกตัดเหลือ")} 100` : ''}</b>
+              <b style={{ color: C.liveNow?.pOver ? 'var(--amber)' : 'var(--green)', fontSize: T(14, 28) }}>▶ {line} {tr('กำลังผลิต')}{C.liveNow?.oee != null ? ` · OEE ${tr("กะนี้ (สด")}) ${Math.round(C.liveNow.oee)}%` : C.liveNow?.noCt ? tr(" · ⚠ ยังไม่ตั้ง CT — คำนวณ P ไม่ได้") : ''}{C.liveNow?.pOver ? ` · ⚠ %P ${tr("คิดได้")} ${C.liveNow.pRawPct}% ${tr("ถูกตัดเหลือ")} 100` : ''}</b>
             ) : (
               <b style={{ color: 'var(--muted)', fontSize: T(14, 28) }}>⏸ {line} {tr('ยังไม่เปิดกะ')}</b>
             )}

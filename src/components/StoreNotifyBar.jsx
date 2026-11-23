@@ -36,7 +36,7 @@ export default function StoreNotifyBar({ bar, busy = false, onOpen, onDismiss, o
       style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '8px 12px', marginTop: 10,
         borderRadius: 'var(--r-md)', border: `1px solid var(--${tone}-line)`, background: `var(--${tone}-dim)` }}>
       <div style={{ flex: '1 1 220px', fontSize: 12, fontWeight: 700, color: `var(--${tone})`, lineHeight: 1.45 }}>
-        {text}{loading && res ? ' · กำลังคิดใหม่…' : ''}
+        {text}{loading && res ? tr(" · กำลังคิดใหม่…") : ''}
       </div>
       <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
         {err

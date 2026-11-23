@@ -578,7 +578,7 @@ export default function GroupOverview() {
           <Kpi label={tr('Downtime นอกแผน')} value={fmtNum(scope.dtMin)} sub={tr('นาที')} color={scope.dtMin > 0 ? 'var(--amber)' : undefined} />
           <Kpi label={tr('ของเสีย')} value={fmtNum(scope.ng)} sub={tr('ชิ้น (NG + สงสัย)')} color={scope.ng > 0 ? 'var(--red)' : undefined} />
           <Kpi label={tr('คนเข้างาน')} value={pplText(scope.present, scope.head)}
-            sub={scope.head ? `${Math.round(scope.present / scope.head * 100)}% ${tr("ของกำลังคน")}` : 'ยังไม่มีรายชื่อพนักงานผูกไลน์'} />
+            sub={scope.head ? `${Math.round(scope.present / scope.head * 100)}% ${tr("ของกำลังคน")}` : tr("ยังไม่มีรายชื่อพนักงานผูกไลน์")} />
         </div>
 
         {/* ══ ระดับ 1: TSG ══ (แกนแผนที่ = โซนพื้นที่ · แกนกลุ่มธุรกิจ = การ์ดกลุ่ม) */}
@@ -608,7 +608,7 @@ export default function GroupOverview() {
           {(sel.axis !== 'map' || lv1View === 'rank') && (
           <div style={card}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 10 }}>
-              <div style={{ fontSize: 15, fontWeight: 700 }}>{tr('เทียบผลการผลิต')}{sel.axis === 'map' ? 'รายโซนพื้นที่' : 'รายกลุ่มธุรกิจ'}</div>
+              <div style={{ fontSize: 15, fontWeight: 700 }}>{tr('เทียบผลการผลิต')}{sel.axis === 'map' ? tr("รายโซนพื้นที่") : tr("รายกลุ่มธุรกิจ")}</div>
               {sel.axis === 'map' && lv1Switch}
             </div>
             <RankBars items={axisNodes} onPick={(g) => setSel(s => ({ ...s, node: g.key, comp: null }))} />
@@ -869,7 +869,7 @@ export default function GroupOverview() {
           </div>
           {hotspots.length > 5 && (
             <button onClick={() => setHotAll(v => !v)} style={{ ...btn, marginTop: 8, fontSize: 12.5, padding: '5px 12px' }}>
-              {hotAll ? 'แสดง 5 อันดับแรก' : `${tr("แสดงอีก")} ${hotspots.length - 5} ${tr("ไลน์")}`}
+              {hotAll ? tr("แสดง 5 อันดับแรก") : `${tr("แสดงอีก")} ${hotspots.length - 5} ${tr("ไลน์")}`}
             </button>
           )}
         </div>
@@ -922,7 +922,7 @@ export default function GroupOverview() {
               <div style={{ fontSize: 14.5, fontWeight: 800 }}>{tr('เข้าหน้าผังโรงงาน (Floor Plan) ของ')} {pickComp.code}</div>
               <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 3, lineHeight: 1.6 }}>
                 {pickComp.real
-                  ? 'เปิดผังรวมโรงงานจริง — เห็นทุกไลน์บนผัง สีตามสถานะ กดเข้าไลน์ดูรายละเอียดได้'
+                  ? tr("เปิดผังรวมโรงงานจริง — เห็นทุกไลน์บนผัง สีตามสถานะ กดเข้าไลน์ดูรายละเอียดได้")
                   : <>{tr('ยังไม่มีผังของบริษัทจำลอง —')} <b>{tr('ระบบจริง')}</b>{tr(': แต่ละบริษัทมีผังของตัวเอง (ผูกบริษัทเข้ากับผังโรงงาน) กดแล้วเด้งเข้าผังของบริษัทนั้นได้เลย')}</>}
               </div>
             </button>
