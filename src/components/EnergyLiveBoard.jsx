@@ -71,7 +71,7 @@ export default function EnergyLiveBoard() {
     try {
       const [m, l, d, r] = await Promise.all([
         supabaseDR.from('energy_live_meters')
-          .select('scope_kind, scope_name, panel, parent_name, subtitle, limit_kw, limit_a, gauge_max_kw, sort_order')
+          .select('scope_kind, scope_name, display_name, panel, parent_name, subtitle, limit_kw, limit_a, gauge_max_kw, sort_order')
           .eq('is_active', true),
         supabaseDR.from('energy_live').select('scope_kind, scope_name, field, value, received_at'),
         supabaseDR.from('energy_daily')
@@ -131,6 +131,11 @@ export default function EnergyLiveBoard() {
   const today = bkkDateStr(nowMs);
   const board = useMemo(() => buildLiveBoard({ meters, live, daily, today, nowMs }), [meters, live, daily, today, nowMs]);
   const byKey = useMemo(() => new Map(board.meters.map(m => [m.key, m])), [board.meters]);
+  const panelParam = params.get('panel') || '';
+  const shownPanel = board.panels.find(p => p.panel === panelParam) || board.panels[0] || null;
+  const pickPanel = useCallback((name) => {
+    setParams(prev => { const n = new URLSearchParams(prev); n.set('panel', name); return n; }, { replace: true });
+  }, [setParams]);
   const series = useMemo(() => liveSeries(readings, meters), [readings, meters]);
   const panelPeaks = useMemo(() => {
     const out = {};
@@ -200,7 +205,7 @@ export default function EnergyLiveBoard() {
         <Kpi color={t.offline || t.never ? WARN : GOOD} label={tr('สถานะมิเตอร์')} value={t.online} unit={`/ ${t.total} ${tr("ออนไลน์")}`}
           sub={<><span style={{ color: WARN }}>{tr('ขาดการติดต่อ')} {t.offline}</span> · <span style={{ color: 'var(--muted)' }}>{tr('ยังไม่เคยส่ง')} {t.never}</span></>} />
         <Kpi color={t.alerts.length ? BAD : GOOD} label={tr('เกินลิมิตตอนนี้')} value={t.alerts.length} unit="เครื่อง"
-          sub={t.alerts.length ? `${tr("ที่")} ${t.alerts.map(m => m.name).join(', ')}` : 'ทุกเครื่องอยู่ในลิมิต (นับเฉพาะเครื่องที่ออนไลน์)'} />
+          sub={t.alerts.length ? `${tr("ที่")} ${t.alerts.map(m => m.label).join(', ')}` : 'ทุกเครื่องอยู่ในลิมิต (นับเฉพาะเครื่องที่ออนไลน์)'} />
       </div>
 
       {/* ── เส้นทางจ่ายไฟ ── */}
@@ -210,9 +215,28 @@ export default function EnergyLiveBoard() {
           {board.warnings.cycles.length > 0 && ` · ${tr("ตั้งแม่วนกัน")}: ${board.warnings.cycles.join(', ')}`} — {tr("แสดงเป็นชั้นบนสุดของตู้ไว้ก่อน (แก้ parent_name ในทะเบียน")})
         </NoticeBar>
       )}
-      {board.panels.map(p => (p.nested
-        ? <TreeFlow key={p.panel} panel={p} byKey={byKey} onOpen={openMeter} />
-        : <PanelFlow key={p.panel} panel={p} onOpen={openMeter} />))}
+      {/* 🗂️ เลือกดูทีละตู้ (23/11 · คำสั่ง user "10 ตู้ จอล้นลงไปยาว ไม่เอา") — `?panel=` (คนละ param กับ ?tab=/?meter=)
+          ตู้ที่ไม่ได้เลือกต้องยังเห็นว่ามีเครื่องเกินลิมิต/ขาดการติดต่อ — ปุ่มเปลี่ยนสีตาม ห้ามซ่อนเงียบ */}
+      {board.panels.length > 1 && (
+        <div role="tablist" aria-label={tr('เลือกตู้')} style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {board.panels.map(p => {
+            const on = p.panel === shownPanel?.panel;
+            const alert = p.meters.some(m => m.overKw || m.overA);
+            const tone = alert ? BAD : p.partial ? WARN : GOOD;
+            return (
+              <button key={p.panel} type="button" role="tab" aria-selected={on} onClick={() => pickPanel(p.panel)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 'var(--r-md)', cursor: 'pointer',
+                  border: `1px solid ${on ? ACC : 'var(--border)'}`, background: on ? 'var(--accent-dim)' : 'var(--card)', color: 'var(--text)', fontSize: 13 }}>
+                <span aria-hidden style={{ width: 8, height: 8, borderRadius: '50%', background: tone, flexShrink: 0 }} />
+                <b style={{ whiteSpace: 'nowrap' }}>{tr('ตู้')} {p.panel}</b>
+                <span style={{ color: tone, fontWeight: 700, whiteSpace: 'nowrap' }}>{fmt(p.kw)} kW</span>
+                <span style={{ color: 'var(--muted)', fontSize: 12, whiteSpace: 'nowrap' }}>{p.online}/{p.total}{alert ? ` · ${tr('เกินลิมิต')}` : ''}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {shownPanel && <TreeFlow key={shownPanel.panel} panel={shownPanel} byKey={byKey} onOpen={openMeter} />}
 
       {/* ── การ์ดรายเครื่อง ── */}
       {board.meters.length > 0 && (
@@ -275,76 +299,6 @@ function Kpi({ color, label, value, unit, sub }) {
   );
 }
 
-/** ตู้ → เส้นประวิ่งไปแต่ละเครื่อง · ความเร็วเส้นแปรตามกำลังไฟ (เทียบสเกลเกจของเครื่องนั้น) */
-function PanelFlow({ panel, onOpen }) {
-  const isMobile = useIsMobile();
-  const n = panel.meters.length;
-  const rowH = 78, top = 40, H = top + n * rowH;
-  const busX = 330, boxX = 680, midY = top + (n * rowH) / 2 - rowH / 2 + 26;
-  return (
-    <div style={{ ...card }}>
-      <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{tr('เส้นทางจ่ายไฟจากตู้')} {panel.panel}</div>
-      <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>ความเร็วเส้นแปรตามกำลังไฟที่ใช้ · ยอดตู้ = ผลรวมเครื่องที่ออนไลน์</div>
-      {/* 📱 มือถือ: SVG กว้าง 1000 ถูกย่อจนตัวหนังสือ < 11px ⇒ แสดงเป็นรายการแทน (จอคอมไม่เปลี่ยน) */}
-      {isMobile ? (
-        <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
-          <div style={{ fontSize: 22, fontWeight: 800, color: ACC }}>{fmt(panel.kw)} kW
-            <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted)' }}> {tr('· ออนไลน์')} {panel.online}/{panel.total}{panel.partial ? ' (ยอดไม่ครบ)' : ''}</span></div>
-          {panel.meters.map(m => {
-            const sm = statusMeta(m);
-            return (
-              <div key={m.key} role="button" tabIndex={0} onClick={() => onOpen(m.name)} onKeyDown={(e) => { if (e.key === 'Enter') onOpen(m.name); }}
-                style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 13, borderLeft: `3px solid ${sm.color}`, paddingLeft: 8, cursor: 'pointer' }}>
-                <span style={{ fontWeight: 700, color: 'var(--text)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name}</span>
-                <span style={{ color: sm.color, whiteSpace: 'nowrap' }}>{fmt(m.kw)} kW · {fmt(m.a)} A</span>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-      <svg viewBox={`0 0 1000 ${H}`} style={{ width: '100%', height: 'auto', display: 'block', marginTop: 6 }} role="img"
-        aria-label={`${tr("ตู้")} ${panel.panel} ${fmt(panel.kw)} kW`}>
-        <rect x="40" y={midY - 46} width="230" height="92" rx="12" fill={ACC} opacity="0.9" />
-        <text x="155" y={midY - 18} textAnchor="middle" fill="var(--bg)" fontSize="15" fontWeight="700">{tr('ตู้')} {panel.panel}</text>
-        <text x="155" y={midY + 12} textAnchor="middle" fill="var(--bg)" fontSize="28" fontWeight="800">{fmt(panel.kw)} kW</text>
-        <text x="155" y={midY + 34} textAnchor="middle" fill="var(--bg)" fontSize="13">
-          {tr("ออนไลน์")} {panel.online}/{panel.total} {tr('เครื่อง')}{panel.partial ? ' (ยอดไม่ครบ)' : ''}
-        </text>
-        <line x1="270" y1={midY} x2={busX} y2={midY} stroke={ACC} strokeWidth="5" />
-        <line x1={busX} y1={top + 26} x2={busX} y2={top + (n - 1) * rowH + 26} stroke={ACC} strokeWidth="5" />
-        {panel.meters.map((m, i) => {
-          const y = top + i * rowH + 26;
-          const sm = statusMeta(m);
-          const live = m.status === 'online' && m.kw != null && m.kw > 0;
-          const ratio = live && m.gaugeMax ? Math.min(1, m.kw / m.gaugeMax) : 0;
-          const dur = live ? (2.4 - 1.9 * ratio).toFixed(2) : null;   // 2.4 วิ (เบา) → 0.5 วิ (เต็มสเกล)
-          return (
-            <g key={m.key} role="button" tabIndex={0} style={{ cursor: 'pointer' }} onClick={() => onOpen(m.name)}
-              onKeyDown={(e) => { if (e.key === 'Enter') onOpen(m.name); }}>
-              <title>{tr('เปิดหน้ารายตู้')} {m.name}</title>
-              <circle cx={busX} cy={y} r="6" fill={ACC} />
-              <line x1={busX} y1={y} x2={boxX} y2={y} stroke="var(--border)" strokeWidth="5" />
-              <line x1={busX} y1={y} x2={boxX} y2={y} stroke={live ? ACC : IDLE} strokeWidth="5" strokeDasharray="18 10"
-                className={live ? 'energy-flow' : undefined} style={live ? { animationDuration: `${dur}s` } : undefined} />
-              <text x={(busX + boxX) / 2} y={y - 12} textAnchor="middle" fill={sm.color} fontSize="18" fontWeight="700">
-                {fmt(m.kw)} kW · {fmt(m.a)} A
-              </text>
-              <rect x={boxX} y={y - 26} width="290" height="52" rx="10" fill="var(--card)" stroke={sm.color} strokeWidth="3" />
-              <circle cx={boxX + 24} cy={y} r="7" fill={sm.color} />
-              {/* ชื่อบรรทัดบน · สถานะบรรทัดล่าง — ชื่อยาวเกินกล่องตัดด้วย … (ชื่อเต็มอยู่ใน title) */}
-              <text x={boxX + 42} y={y - 2} fill="var(--text)" fontSize="19" fontWeight="800">
-                <title>{m.name}</title>{m.name.length > 20 ? `${m.name.slice(0, 19)}…` : m.name}
-              </text>
-              <text x={boxX + 42} y={y + 17} fill={sm.color} fontSize="13" fontWeight="700">{tr(sm.label)}</text>
-            </g>
-          );
-        })}
-      </svg>
-      )}
-    </div>
-  );
-}
-
 /** 🌳 ผังจ่ายไฟหลายชั้น (20/11 · คำสั่ง user "เอาผังวาดให้สมบูรณ์") — ใช้เมื่อตู้มีมิเตอร์ที่ตั้งแม่ (parent_name)
  *  ข้อมูล/ยอด/ไฟไม่มีมิเตอร์วัด มาจาก buildLiveBoard() เท่านั้น — ไฟล์นี้วาดอย่างเดียว
  *  ตู้ที่มีรากหลายตัว = กล่องตู้ (ผลรวมราก) เป็นชั้นแรก · รากตัวเดียว = กล่องมิเตอร์รากเป็นชั้นแรก (ค่าที่วัดจริงที่ตู้) */
@@ -401,7 +355,7 @@ function TreeFlow({ panel, byKey, onOpen }) {
             return (
               <div key={n.key} role="button" tabIndex={0} onClick={open(n)} onKeyDown={(e) => { if (e.key === 'Enter') onOpen(n.m.name); }}
                 style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 13, borderLeft: `3px solid ${sm.color}`, paddingLeft: 8, marginLeft: n.d * 14, cursor: 'pointer' }}>
-                <span style={{ fontWeight: 700, color: 'var(--text)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.m.name}</span>
+                <span style={{ fontWeight: 700, color: 'var(--text)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.m.label}</span>
                 <span style={{ color: sm.color, whiteSpace: 'nowrap' }}>{fmt(n.m.kw)} kW · {fmt(n.m.a)} A</span>
               </div>
             );
@@ -456,11 +410,11 @@ function TreeFlow({ panel, byKey, onOpen }) {
               return (
                 <g key={n.key} role="button" tabIndex={0} style={{ cursor: 'pointer' }} onClick={open(n)}
                   onKeyDown={(e) => { if (e.key === 'Enter') onOpen(m.name); }}>
-                  <title>{tr('เปิดหน้ารายตู้')} {m.name}</title>
+                  <title>{tr('เปิดหน้ารายตู้')} {m.label}</title>
                   <rect x={n.x} y={top} width={TREE.boxW} height={TREE.boxH} rx="10" fill={isTop ? ACC : 'var(--card)'} opacity={isTop ? 0.9 : 1} stroke={sm.color} strokeWidth="3" />
                   <circle cx={n.x + 16} cy={top + 19} r="6" fill={sm.color} />
                   <text x={n.x + 30} y={top + 25} fill={isTop ? 'var(--bg)' : 'var(--text)'} fontSize="16" fontWeight="800">
-                    <title>{m.name}</title>{m.name.length > 18 ? `${m.name.slice(0, 17)}…` : m.name}
+                    <title>{m.label}</title>{m.label.length > 18 ? `${m.label.slice(0, 17)}…` : m.label}
                   </text>
                   <text x={n.x + 14} y={top + 48} fill={isTop ? 'var(--bg)' : sm.color} fontSize="18" fontWeight="800">{fmt(m.kw)} kW · {fmt(m.a)} A</text>
                   <text x={n.x + 14} y={top + 65} fill={isTop ? 'var(--bg)' : sm.color} fontSize="12" fontWeight="700">{tr(sm.label)}</text>
@@ -477,12 +431,12 @@ function TreeFlow({ panel, byKey, onOpen }) {
 function MeterCard({ m, pts, machines, onOpen }) {
   const sm = statusMeta(m);
   return (
-    <div role="button" tabIndex={0} title={`${tr("เปิดหน้ารายตู้")} ${m.name}`} onClick={() => onOpen(m.name)}
+    <div role="button" tabIndex={0} title={`${tr("เปิดหน้ารายตู้")} ${m.label}`} onClick={() => onOpen(m.name)}
       onKeyDown={(e) => { if (e.key === 'Enter') onOpen(m.name); }}
       style={{ ...card, borderColor: sm.color === GOOD ? 'var(--border)' : sm.color, cursor: 'pointer' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
         <div>
-          <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>{m.name}</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>{m.label}</div>
           <div style={{ fontSize: 12, color: 'var(--muted)' }}>{m.subtitle}</div>
           {machines.length > 0 && (
             <div style={{ fontSize: 11.5, color: 'var(--text2)' }} title={machines.map(x => `${x.no} (${x.line})`).join(', ')}>

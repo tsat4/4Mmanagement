@@ -12,6 +12,7 @@ import { getWorkDate, addDaysStr } from '../utils/workDate';
 import { toast } from '../components/Toast';
 import Page, { Hub, HubContext } from '../components/Page';
 import PageHeader from '../components/PageHeader';
+import OverflowMenu from '../components/OverflowMenu';
 import FilterBar from '../components/FilterBar';
 import useTabParam from '../utils/useTabParam';
 import MonitorBoardGrid from '../components/MonitorBoardGrid';
@@ -30,6 +31,7 @@ import { tr } from '../utils/i18n';
 /* 🔴 จุดอัพโหลดไฟล์ Monitoring มี **จุดเดียวทั้งระบบ** (08/10 คำสั่ง user) — ตัวเดียวกับที่
    `/planner-sales?tab=monitoring` ใช้ · กดที่ไหนก็ลงครบทุกชั้นในครั้งเดียว ห้ามแยกกลับเป็น 2 ตัว */
 const MonitoringUpload = lazy(() => import('../components/MonitoringUpload'));
+const StoreStockUpload = lazy(() => import('../components/StoreStockUpload'));   // 📥 ไฟล์ทะเบียนพาร์ทสโตร์ (23/11)
 const MonitorFgSync = lazy(() => import('../components/MonitorFgSync'));
 /* 📉 "คาดการณ์ของจะขาด" ของเดิม — embed ทั้งดุ้น ไม่แก้ของเดิม (pattern เดียวกับ /equipment · PmHub)
    เหตุผลที่**ยุบตารางเข้าด้วยกันตรงๆ ไม่ได้** เขียนไว้ที่ docs/modules/monitoring-boards.md §6.6 */
@@ -124,6 +126,7 @@ export default function Monitoring() {
   const [warn, setWarn] = useState('');
   const [truncated, setTruncated] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showStoreUp, setShowStoreUp] = useState(false);   // 📥 ไฟล์ทะเบียนพาร์ทสโตร์ (Stock_Store.xlsm · 23/11)
   const [showFgSync, setShowFgSync] = useState(false);
 
   const canEditPerm = canSeeded('monitoring', 'manage', role);
@@ -700,17 +703,32 @@ export default function Monitoring() {
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {/* 📦 บอร์ด FG ไม่ได้มาจากไฟล์ Excel — ปุ่มจึงแยกจาก "นำเข้าจากไฟล์" ตั้งแต่หัวเพจ
                 (ปุ่มเดียวกันแล้วเดาจากแท็บ = คนกดผิดแล้วงงว่าทำไมไม่ขอไฟล์) */}
-            <button type="button" className="pg-btn" onClick={() => setShowFgSync(true)}
-              title={tr('สร้าง/อัพเดทบอร์ด FG ต่อลูกค้า จากออเดอร์ EDI 862/830 ที่นำเข้าไว้แล้ว')}
-              style={{ fontSize: 13, fontWeight: 700, padding: '7px 14px', borderRadius: 8, cursor: 'pointer',
-                background: 'var(--bg3-surf)', color: 'var(--text)', border: '1px solid var(--border2)' }}>
-              {tr('สร้างบอร์ด FG จากออเดอร์')}
-            </button>
+            {/* 🏬 23/11 — กลุ่มสโตร์: ปุ่มหลักคือไฟล์ของสโตร์ (Stock_Store.xlsm · คนละไฟล์กับทีมวางแผน)
+                ปุ่มบอร์ด FG ย้ายเข้า ⋯ เฉพาะกลุ่มนี้ (ปุ่มตายตัว ≤ 2 · UI §6.35) · กลุ่มอื่นเหมือนเดิมเป๊ะ */}
+            {groupDef.key === 'store' ? (
+              <button type="button" className="pg-btn" onClick={() => setShowStoreUp(true)}
+                title={tr('อัพโหลด Stock_Store.xlsm — รายชื่อพาร์ทแต่ละพื้นที่ + STD/PC + MAX/MIN (ดูก่อนยืนยัน)')}
+                style={{ fontSize: 13, fontWeight: 700, padding: '7px 14px', borderRadius: 8, cursor: 'pointer',
+                  background: 'var(--accent)', color: 'var(--accent-ink)', border: 'none' }}>
+                {tr('📥 อัพโหลดไฟล์สโตร์')}
+              </button>
+            ) : (
+              <button type="button" className="pg-btn" onClick={() => setShowFgSync(true)}
+                title={tr('สร้าง/อัพเดทบอร์ด FG ต่อลูกค้า จากออเดอร์ EDI 862/830 ที่นำเข้าไว้แล้ว')}
+                style={{ fontSize: 13, fontWeight: 700, padding: '7px 14px', borderRadius: 8, cursor: 'pointer',
+                  background: 'var(--bg3-surf)', color: 'var(--text)', border: '1px solid var(--border2)' }}>
+                {tr('สร้างบอร์ด FG จากออเดอร์')}
+              </button>
+            )}
             <button type="button" className="pg-btn" onClick={() => setShowImport(true)}
               style={{ fontSize: 13, fontWeight: 700, padding: '7px 14px', borderRadius: 8, cursor: 'pointer',
-                background: 'var(--accent)', color: 'var(--accent-ink)', border: 'none' }}>
+                ...(groupDef.key === 'store'
+                  ? { background: 'var(--bg3-surf)', color: 'var(--text)', border: '1px solid var(--border2)' }
+                  : { background: 'var(--accent)', color: 'var(--accent-ink)', border: 'none' }) }}>
               {tr('นำเข้าจากไฟล์ Excel')}
             </button>
+            <OverflowMenu items={[{ key: 'fg-sync', icon: '📦', label: tr('สร้างบอร์ด FG จากออเดอร์'),
+              onClick: () => setShowFgSync(true), hidden: groupDef.key !== 'store' }]} />
           </div>
         ) : null}
         filters={(tab !== 'fg' || fgView === 'board') && tabBoards.length ? (
@@ -824,6 +842,14 @@ export default function Monitoring() {
             onClose={() => setShowFgSync(false)} fullName={fullName}
             onSynced={() => { setTab('fg'); loadBoards(); }}
           />
+        </Suspense>
+      ) : null}
+
+      {showStoreUp ? (
+        <Suspense fallback={null}>
+          <StoreStockUpload canEdit={canEdit} fullName={fullName}
+            onClose={() => setShowStoreUp(false)}
+            onImported={() => { setShowStoreUp(false); loadBoards(); load(); }} />
         </Suspense>
       ) : null}
 

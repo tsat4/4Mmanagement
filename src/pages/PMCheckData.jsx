@@ -980,7 +980,7 @@ const pmHasInput = (results, notes) => !!(notes && String(notes).trim())
    · บันทึกล้มกลางทาง = ตัวที่บันทึกแล้วไม่บันทึกซ้ำ (savedIds) + บอกบนจอว่าล้มที่ตัวไหน
    📄 docs/modules/pm-hub-check-setup.md §🧩 สถานี AM */
 function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, deptWrite, userId, userRole, fullName, myPosition,
-  myEmployeeId, isSharedAccount, inspectorCode, setInspectorCode, checkedThisShift, ownerTeamOf, onSavedJig, onQueueMo, onOpenSingle }) {
+  myEmployeeId, isSharedAccount, inspectorCode, setInspectorCode, checkedThisShift, ownerTeamOf, onSavedJig, onQueueMo, onOpenSingle, isMobileView = false }) {
   const [sec, setSec] = useState({ key: '', status: 'loading', list: [], err: '' })   // list: [{ jig, checklistId, cps, ngHist }]
   const [results, setResults] = useState({})
   const [notes, setNotes] = useState('')
@@ -989,6 +989,11 @@ function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, d
   const rowRefs = useRef({})
   const memberKey = memberJigs.map(j => j.id).join(',')
   const loadKey = `${station.id}|${memberKey}|${amDept}`
+  /* 📝 ร่างในเครื่อง (มือถือ · 23/11 · ชุดเดียวกับใบเดี่ยว utils/formDraft.js) — คีย์ = สถานี|สมาชิก|ทีม|คนกรอก
+     เก็บ savedIds ด้วย: บันทึกได้บางเครื่องแล้วแอปปิด → กู้คืนแล้วตัวที่บันทึกแล้วไม่บันทึกซ้ำ
+     จอคอมไม่โหลด/ไม่วาดแถบ (pendingDraft ตั้งเฉพาะมือถือ) */
+  const [pendingDraft, setPendingDraft] = useState(null)
+  const draftKey = isMobileView && userId ? `amst:${loadKey}:${userId}` : null
 
   useEffect(() => {
     let alive = true
@@ -1010,6 +1015,8 @@ function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, d
         list.forEach(m => m.cps.forEach(c => { init[c.id] = { v1: '', v2: '', v3: '', attr: '', note: '', mval: '', reason: '', reasonAccepted: false } }))
         setResults(init)
         setSec({ key: loadKey, status: 'ok', list, err: '' })
+        const dr = draftKey ? loadDraft(draftKey) : null
+        setPendingDraft(dr && (pmHasInput(dr.data?.results, dr.data?.notes) || dr.data?.savedIds?.length) ? dr : null)
       } catch (e) {
         if (alive) setSec({ key: loadKey, status: 'error', list: [], err: e?.message || String(e) })   // อ่านไม่ได้ ≠ ไม่มีจุดตรวจ
       }
@@ -1024,6 +1031,22 @@ function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, d
   const calcRes = pmCalcResults(allCps, results)
   const missingList = pending.flatMap(m => m.cps.map((cp, i) => (!cpFilledOf(cp, calcRes[cp.id]) ? { m, cp, no: i + 1 } : null)).filter(Boolean))
   const noCl = pending.filter(m => !m.cps.length)
+
+  const allSavedNow = sec.list.length > 0 && pending.length === 0
+  const liveDraftKey = draftKey && sec.status === 'ok' && sec.key === loadKey ? draftKey : null
+  const stDirty = !!liveDraftKey && !pendingDraft && !allSavedNow && (pmHasInput(results, notes) || savedIds.size > 0)
+  useDraftAutosave(liveDraftKey, { results, notes, savedIds: [...savedIds] }, stDirty)
+  const restoreDraft = () => {
+    const d = pendingDraft?.data; if (!d) return
+    // เติมเฉพาะจุดตรวจที่ยังมีอยู่ (จุดที่ถูกลบออกจากเช็คลิสต์ทีหลังไม่เอากลับ) · savedIds เฉพาะสมาชิกปัจจุบัน
+    setResults(prev => { const n = { ...prev }; Object.entries(d.results || {}).forEach(([k, v]) => { if (k in n) n[k] = { ...n[k], ...v } }); return n })
+    if (d.notes) setNotes(d.notes)
+    const ids = new Set(sec.list.map(m => m.jig.id))
+    const sv = (d.savedIds || []).filter(id => ids.has(id))
+    if (sv.length) setSavedIds(new Set(sv))
+    setPendingDraft(null)
+  }
+  const discardDraft = () => { if (draftKey) clearDraft(draftKey); setPendingDraft(null) }
 
   const jumpTo = (cpId) => { const el = rowRefs.current[cpId]; if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }) }
   const shortName = (jig) => jig.machine_no || jig.jig_no || jig.name
@@ -1116,6 +1139,7 @@ function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, d
           : `${tr('บันทึกสถานี')} ${station.name} ${tr('ครบ')} ${done.length} ${tr('เครื่อง — ผู้ตรวจ')} ${badgeEmp?.name || raw}`)
         if (!onSite.approve && onSite.text) toast.info(onSite.text)
         setNotes('')
+        if (draftKey) clearDraft(draftKey)
       }
       // 🔧 B3 — NG ทุกตัว ⇒ คิวเปิดใบซ่อม (หรือเขียนเหตุผล) ไปทีมเจ้าของ PM ของตัวนั้น
       const ngItems = done.filter(d => d.overall === 'fail' && d.ngTopics.length)
@@ -1140,6 +1164,7 @@ function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, d
           {station.line_name} · {sec.list.length} {tr('เครื่อง ตรวจในใบเดียว กดบันทึกครั้งเดียว — ระบบแยกเก็บผลรายเครื่อง')}
         </div>
       </div>
+      <DraftRestoreBar draft={pendingDraft} what={`${tr('ใบสถานี')} ${station.name}`} onRestore={restoreDraft} onDiscard={discardDraft} />
       {!allSaved && (
         <div style={{ position: 'sticky', top: 0, zIndex: 3, background: 'var(--card)', padding: '6px 0', marginBottom: 8, fontSize: 12.5, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <b>{tr('ตรวจแล้ว')} {doneCps}/{totalCps}</b>
@@ -2204,7 +2229,7 @@ export default function PMCheckData({ mode = 'pm' }) {
                   canRecord={canRecord} deptWrite={deptWrite} userId={userId} userRole={userRole} fullName={fullName}
                   myPosition={myPosition} myEmployeeId={myEmployeeId} isSharedAccount={isSharedAccount}
                   inspectorCode={inspectorCode} setInspectorCode={setInspectorCode} checkedThisShift={checkedThisShift}
-                  ownerTeamOf={ownerTeamOf}
+                  ownerTeamOf={ownerTeamOf} isMobileView={isMobileView}
                   onSavedJig={(id, overall) => setCheckedThisShift(prev => ({ ...prev, [id]: overall }))}
                   onQueueMo={(items) => setMoQueue(prev => [...prev, ...items])}
                   onOpenSingle={(id) => { setSingleJigId(id); setParams({ equip: id }); setTab('history') }} />

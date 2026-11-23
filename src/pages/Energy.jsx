@@ -48,6 +48,7 @@ import { collapseOps } from '../utils/pairTotals';
 import { loadOpInfo, opInfoSync } from '../utils/opItems';
 import EnergyLiveBoard from '../components/EnergyLiveBoard';
 import EnergyHistory from '../components/EnergyHistory';
+import EnergyMeterSetup from '../components/EnergyMeterSetup';
 import { shortTick, fmtAxis, alignedYWidth, CELL_BAR_FILL } from '../utils/chartAxis';
 import { useLatestRequest } from '../utils/useLatestRequest';
 import { tr } from '../utils/i18n';
@@ -68,7 +69,7 @@ const GOOD = '#22c55e', BAD = '#ef4444', NEUTRAL = '#6b7f8c', ACCENT = '#38bdf8'
 export default function Energy() {
   const { role, lineId, sections: scopeSecs, scopeIdx } = useContext(UserContext);
   const canEdit = can('energy', 'record', role);
-  const [tab, setTab] = useTabParam(['input', 'summary', 'setup', 'live', 'history'], 'input');
+  const [tab, setTab] = useTabParam(['input', 'summary', 'setup', 'live', 'history', 'meters'], 'input');
   /* 🔌 แท็บ "มิเตอร์ / MQTT" ย้ายไปอยู่ /integrations ที่เดียวแล้ว (11/11 · user "ย้ายละก็ให้มันมีที่เดียว")
      ลิงก์/บุ๊กมาร์กเก่า ?tab=mqtt = ส่งต่อไปบ้านใหม่ ห้ามตกไปแท็บอื่นเงียบๆ */
   const [sp] = useSearchParams();
@@ -76,6 +77,7 @@ export default function Energy() {
   /* ⚡ แท็บค่าไฟสด (2026-11-09) — คนละแกนเวลากับแท็บอื่น (นาที vs เดือน) ⇒ ซ่อนแถบเดือน/KPI รายเดือน */
   const isLive = tab === 'live';
   const isHistory = tab === 'history';
+  const isMeters = tab === 'meters';
   const [month, setMonth] = useState(() => monthKeyOf());
   const [lines, setLines] = useState([]);
   const [zones, setZones] = useState([]);
@@ -521,11 +523,11 @@ export default function Energy() {
   if (movedToHub) return <Navigate to="/integrations" replace />;
   return (
     <Page>
-      <PageHeader title={tr('พลังงานไฟฟ้า')} icon="⚡" sub={isLive ? 'ค่าไฟสดจากมิเตอร์ · อัปเดตทุก 1 นาที' : isHistory ? 'ประวัติการใช้ไฟจากมิเตอร์ · เทียบตู้ · ส่งออก Excel' : `${monthLabel(month)} · ${tr("เฟส 1 กรอกรายเดือน")}`}
-        tabs={[{ key: 'live', label: 'ค่าไฟสด' }, { key: 'history', label: 'ประวัติ & Excel' }, { key: 'input', label: 'กรอกรายเดือน' }, { key: 'summary', label: 'สรุป & วิเคราะห์' }, { key: 'setup', label: 'ค่าการปล่อย' }]}
+      <PageHeader title={tr('พลังงานไฟฟ้า')} icon="⚡" sub={isLive ? 'ค่าไฟสดจากมิเตอร์ · อัปเดตทุก 1 นาที' : isMeters ? 'ตู้บนบอร์ดค่าไฟสด · ชื่อที่โชว์ · ผังแม่-ลูก · ลิมิต' : isHistory ? 'ประวัติการใช้ไฟจากมิเตอร์ · เทียบตู้ · ส่งออก Excel' : `${monthLabel(month)} · ${tr("เฟส 1 กรอกรายเดือน")}`}
+        tabs={[{ key: 'live', label: 'ค่าไฟสด' }, { key: 'history', label: 'ประวัติ & Excel' }, { key: 'input', label: 'กรอกรายเดือน' }, { key: 'summary', label: 'สรุป & วิเคราะห์' }, { key: 'setup', label: 'ค่าการปล่อย' }, { key: 'meters', label: 'ตั้งค่าตู้' }]}
         tab={tab} onTab={setTab}
       />
-      {isLive ? <EnergyLiveBoard /> : isHistory ? <EnergyHistory /> : (<>
+      {isLive ? <EnergyLiveBoard /> : isHistory ? <EnergyHistory /> : isMeters ? <EnergyMeterSetup /> : (<>
       {/* แถบเดือน = FilterBar มาตรฐาน (UI-STANDARD 2026-09-24 — เดิมอยู่ในช่องปุ่มหัวเพจ ช่องสูง 31/33 มุม 7) */}
       <FilterBar>
         <span className="filter-label">{tr('เดือน')}</span>
