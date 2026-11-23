@@ -24,7 +24,8 @@ import PurchaseBulkModal from '../components/PurchaseBulkModal';
 import OpenOrderDemandPanel from '../components/OpenOrderDemandPanel';
 import { storeOfMat, WIP_STORES, isFgMat, FG_NO_LINE_REQUEST } from '../utils/storeOps';   // 🗂️ ใบเบิก-ส่งเข้าไลน์ไปอยู่ตู้ตามเลขพาร์ท (04/11)
 import { shortReceiptRows } from '../utils/stockDiscrepancy';   // ⚠️ รับไม่ครบ = ย้ายไปคลังพัก ไม่ตัดทิ้ง (05/11)
-import StockReceiptQueue from '../components/StockReceiptQueue';   // 📥 ขาเข้า: รอรับเข้า (05/11)
+import StockReceiptQueue from '../components/StockReceiptQueue';
+import LineIssueGapQueue from '../components/LineIssueGapQueue';   // 🧾 แท็บย่อยของส่งของเข้าไลน์ (24/11)   // 📥 ขาเข้า: รอรับเข้า (05/11)
 import PlatingBoard from '../components/PlatingBoard';
 import DeliverScanModal from '../components/DeliverScanModal';
 import PickScanModal from '../components/PickScanModal';
@@ -1155,6 +1156,9 @@ const STORE_TABS = [
   { key: 'lots',     icon: '🔧', label: 'ใบล็อตผลิต Semi Part', desc: 'พื้นที่ผลิต → สโตร์ · ปล่อยใบให้ไลน์ผลิต แล้วรับของกลับเข้าสโตร์', inOnly: true },
   { key: 'receipts', icon: '📥', label: 'รอรับเข้า (ไลน์ปิดใบผลิต)', desc: 'พื้นที่ผลิต → สโตร์/W/H · นับของจริงแล้วกดรับ', inOnly: true },
   { key: 'plating_in', icon: '🧪', label: 'รับกลับจากร้านชุบ', desc: 'ร้านชุบ → สโตร์ · นับรับต่อใบ', inOnly: true },
+  /* 🧾 24/11 (คำสั่ง user "ย้ายกล่องไลน์ใช้ของแล้วไปเป็นแท็บย่อย") — เดิมเป็นกล่องเหนือแท็บย่อยของแท็บส่งของ
+     (ดันลำดับ แท็บ→แถบกรอง→เนื้อหา) · ตัวเลขค้าง + เกิน 1 กะ ขึ้นบนแท็บแทน · โผล่เฉพาะตอนมีรายการ */
+  { key: 'gap',      icon: '🧾', label: 'ไลน์ใช้แล้ว ยังไม่ลงจ่าย', desc: 'ไลน์ถูกตัดจนติดลบ แต่ STORE ในระบบยังมีของ — ยืนยันว่าจ่ายไปแล้ว / ไม่ได้จ่าย', outOnly: true },
   // ตะกร้ารับท้าย — ใบเบิกที่เลขพาร์ทไม่เข้ากลุ่ม 1/2/3/5 (ห้ามหายจากจอ · โผล่เฉพาะตอนมีใบ)
   { key: 'other',    icon: '❔', label: 'ไม่เข้ากลุ่ม',  desc: 'ใบเบิกที่เลขพาร์ทไม่ใช่ 1xx/2xx/3xx/5xx — ตรวจเลขพาร์ท' },
   // 🧪 งานชุบภายนอก (13/10) — ร้านชุบทำหน้าที่เหมือนไลน์ผลิต (2xx ก่อนชุบ → 2xx หลังชุบ) แต่ไม่ยืนยันยอดเอง
@@ -1291,6 +1295,15 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
     setReceiptCount(error ? null : count);
   }, [wantReceiptCount]);
   useLiveBoard(loadReceiptCount, { tables: ['stock_receipts'], topic: 'stock-receipts-count', enabled: wantReceiptCount });
+  /* 🧾 แท็บ "ไลน์ใช้แล้ว ยังไม่ลงจ่าย" — นับจากวิวเดียวกับคิว (v_line_issue_gaps) · อ่านไม่ได้ = ไม่ขึ้นเลข (ไม่รู้ ≠ 0) */
+  const wantGapCount = !!opsStores?.includes('gap');
+  const [gapCount, setGapCount] = useState(null);   // { n, overdue } | null
+  const loadGapCount = useCallback(async () => {
+    if (!wantGapCount) return;
+    const { data, error } = await supabaseDR.from('v_line_issue_gaps').select('overdue').limit(1000);
+    setGapCount(error ? null : { n: (data || []).length, overdue: (data || []).filter(r => r.overdue).length });
+  }, [wantGapCount]);
+  useLiveBoard(loadGapCount, { tables: ['line_stock_transactions'], topic: 'line-issue-gaps-count', enabled: wantGapCount });
   const [buyFilter, setBuyFilter] = useState(() => urlPick('buy', ['3', '5'], ''));   // '' | '3' | '5' · ?buy= (จอวนหน้า)
   const [q, setQ] = useState(() => focus?.q || '');   // ค้นหา: รหัส / ชื่อ / ไลน์ปลายทาง
   /* 🧾 05/11 (คำสั่ง user ข้อ B) — ใบเบิกจากใบผลิต (`line_order`) ที่ยังรอหยิบ แต่ไลน์ไม่มีใบผลิตเปิดอยู่ที่ใช้พาร์ทนั้นแล้ว
@@ -1455,16 +1468,18 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
   };
 
   /* 🗂️ ตู้ที่โชว์ (เงื่อนไขเดิมทั้งหมด) — ใช้ทั้งแบบปุ่มการ์ด (/heijunka) และแท็บย่อย (pro) */
-  const visibleStores = STORE_TABS.filter(t => (opsStores ? opsStores.includes(t.key) : !t.inOnly)
+  const visibleStores = STORE_TABS.filter(t => (opsStores ? opsStores.includes(t.key) : !t.inOnly && !t.outOnly)
     && (t.key !== 'fg' || rounds.length > 0 || wipAllBy.fg > 0)
-    && (t.key !== 'other' || wipAllBy.other > 0));
+    && (t.key !== 'other' || wipAllBy.other > 0)
+    && (t.key !== 'gap' || (gapCount?.n || 0) > 0 || store === 'gap'));
   if (opsStores) visibleStores.sort((a, b) => opsStores.indexOf(a.key) - opsStores.indexOf(b.key));
   /* ตัวกรองพื้นที่/สโตร์มีผลกับใบเบิก-ส่งเข้าไลน์ + ใบล็อต/ใบเบิกวัตถุดิบเท่านั้น ⇒ แท็บอื่นไม่โชว์ (ช่องที่กดแล้วไม่มีผล = จอโกหก) */
   const areaApplies = ['child', 'ext', 'raw', 'fg', 'other', 'lots'].includes(store);
-  const ownBar = store === 'receipts';   // คิวรอรับเข้ามีแถบกรองของตัวเอง (คลังปลายทาง/ต้นทาง/รวมกอง) — แถบเดียวต่อแท็บ
+  const ownBar = store === 'receipts' || store === 'gap';   // คิวรอรับเข้ามีแถบกรองของตัวเอง (คลังปลายทาง/ต้นทาง/รวมกอง) — แถบเดียวต่อแท็บ
   const anyFilter = !!q || !!areaSel || !!storeSel || showDone;
   const clearFilters = () => { setQ(''); setAreaSel(''); setStoreSel(''); setShowDone(false); };
-  const countOf = (k) => (k === 'receipts' ? receiptCount : counts[k]);
+  const countOf = (k) => (k === 'receipts' ? receiptCount : k === 'gap' ? gapCount?.n : counts[k]);
+  const badgeOf = (k) => (k === 'gap' && gapCount?.overdue ? `⏰${gapCount.overdue} · ${gapCount.n}` : (countOf(k) > 0 ? String(countOf(k)) : undefined));
 
   const body = (<>
       {store === 'fg' && (<>
@@ -1704,6 +1719,7 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
       {/* 🧪 งานชุบ — โหลดข้อมูลเอง (ใบส่งชุบ/ยอดคลัง) · ใช้คำค้น + "เฉพาะงานค้าง" ชุดเดียวกับแท็บอื่น */}
       {store === 'plating' && <PlatingBoard q={q} showDone={showDone} readOnly={readOnly} part={direction === 'out' ? 'send' : 'all'} table={zl === 'table'} />}
       {store === 'plating_in' && <PlatingBoard q={q} showDone={showDone} readOnly={readOnly} part="receive" table={zl === 'table'} />}
+      {store === 'gap' && <LineIssueGapQueue embedded banner={pro ? <StoreCallSiren variant="inline" here={direction === 'out'} /> : null} />}
       {store === 'receipts' && <StockReceiptQueue banner={pro ? <StoreCallSiren variant="inline" here={direction === 'out'} /> : null} table={zl === 'table'} />}
 
       {store === 'open' && <OpenOrderDemandPanel q={q} />}
@@ -1720,7 +1736,7 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
     <div>
       <PageHeader
         tabs={visibleStores.map(t => ({ key: t.key, label: `${t.icon} ${tr(t.label)}`, title: tr(t.desc),
-          badge: countOf(t.key) > 0 ? String(countOf(t.key)) : undefined }))}
+          badge: badgeOf(t.key) }))}
         tab={store} onTab={setStore}
       />
       {/* แถบกรองเดียว · ปุ่มล้างตัวกรอง = ของกลางใน FilterBar (ตัวกรองอยู่ใน state ⇒ ส่ง onClear เมื่อมีค่าค้าง) */}
@@ -1759,7 +1775,7 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
         </FilterBar>
       )}
       {!ownBar && <StoreCallSiren variant="inline" here={direction === 'out'} />}
-      {kpiSlot}
+      {!ownBar && kpiSlot}
       {body}
     </div>
   );
@@ -1768,7 +1784,7 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
     <div style={{ padding: 16 }}>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
         {/* แท็บ Store FG = รอบส่ง — ไม่มีรอบ active = ไม่มีอะไรให้ทำ ซ่อนไปเลย (โผล่เองเมื่อไลน์ตั้งรอบ) · audit 2026-09-07 */}
-        {STORE_TABS.filter(t => (opsStores ? opsStores.includes(t.key) : !t.inOnly)
+        {STORE_TABS.filter(t => (opsStores ? opsStores.includes(t.key) : !t.inOnly && !t.outOnly)
           && (t.key !== 'fg' || rounds.length > 0 || wipAllBy.fg > 0)
           && (t.key !== 'other' || wipAllBy.other > 0)).map(t => (
           <button key={t.key} onClick={() => setStore(t.key)} title={tr(t.desc)}
