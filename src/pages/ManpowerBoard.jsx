@@ -250,15 +250,26 @@ export default function ManpowerBoard() {
       {/* 09/11 (คำสั่ง user "dropdown ไม่เหมือนดึงจากผังองค์กร"): ส่วนงาน + แผนก 2 ช่องแบน → ต้นไม้ผังช่องเดียว
           · หน่วยขึ้นตรงฝ่าย (QA · Tooling MTN) อยู่ในต้นไม้เป็น "แผนก" ⇒ เลือกแล้วเปิดบอร์ดของมันเอง (เหมือนเดิมที่นับเป็น section)
           · `?sec=`/`?dept=` ใน URL เท่าเดิม (dept = id โหนดแผนก) — ลิงก์เดิมยังใช้ได้ */}
-      <SectionScopeSelect lines={scopeNames ? viewScope.lines : lines} pickDept value={section ? orgKey(section) : ''} dept={deptNode ? orgKey(deptNode) : ''}
+      {/* 🧩 23/11 (user "ให้ช่องเลือกส่วนงานเลือกไลน์ลูกได้ด้วย") — `pickLine`: เลือกไลน์ ⇒ ส่วนงาน+แผนกที่ครอบไลน์นั้น + `?lline=`
+          (แท็บผัง LAYOUT เปิดผังของไลน์นั้น — ไลน์ลูกไม่มีรูปผัง = ผังแม่ + เขียนบอก) · เลือกส่วนงาน/แผนก = ล้าง `?lline=` */}
+      <SectionScopeSelect lines={scopeNames ? viewScope.lines : lines} pickDept pickLine line={params.get('lline') || ''}
+        value={section ? orgKey(section) : ''} dept={deptNode ? orgKey(deptNode) : ''}
         allLabel={sectionNodes.length ? '— เลือกส่วนงาน —' : '— ไม่มีส่วนงานในขอบเขต —'} width={300}
         onChange={(sec, info) => {
-          if (info.kind !== 'department') { merge({ sec: sec || null, dept: null }); return; }
-          const cands = nodes.filter(n => n.kind === 'department' && orgKey(n) === info.unit);
-          const orphan = cands.find(n => isOrphanDept(n, nodes));
-          if (orphan) { merge({ sec: orgKey(orphan), dept: null }); return; }   // หน่วยขึ้นตรง = บอร์ดของตัวเอง
-          const under = cands.find(n => { const p = nodes.find(x => String(x.id) === String(n.parent_id)); return p && orgKey(p) === sec; }) || cands[0];
-          merge({ sec: sec || null, dept: under ? String(under.id) : null });
+          const deptOf = (unit) => {
+            const cands = nodes.filter(n => n.kind === 'department' && orgKey(n) === unit);
+            const orphan = cands.find(n => isOrphanDept(n, nodes));
+            if (orphan) return { sec: orgKey(orphan), dept: null };   // หน่วยขึ้นตรง = บอร์ดของตัวเอง
+            const under = cands.find(n => { const p = nodes.find(x => String(x.id) === String(n.parent_id)); return p && orgKey(p) === sec; }) || cands[0];
+            return { sec: sec || null, dept: under ? String(under.id) : null };
+          };
+          if (info.kind === 'line') {
+            const d = info.dept ? deptOf(info.dept) : { sec: sec || null, dept: null };
+            merge({ ...d, lline: info.unit, ...(tab === 'layout' ? { lv: 'line' } : {}) });
+            return;
+          }
+          if (info.kind !== 'department') { merge({ sec: sec || null, dept: null, lline: null }); return; }
+          merge({ ...deptOf(info.unit), lline: null });
         }} />
       {(scopeHiddenDepts > 0 || deptIgnored || viewScope.unsure) && (
         <span style={{ fontSize: 12, fontWeight: 700, borderRadius: 'var(--r-md)', padding: '3px 8px', whiteSpace: 'nowrap',
