@@ -170,6 +170,11 @@ push เข้า main วันละถึง 31 ครั้ง (หลาย
 3. **ทางเข้าจากมือถือนอกเครือข่ายโรงงาน** ที่ปลอดภัย (VPN หรือ reverse proxy + TLS + firewall)
 4. **แผนตอน server ล่มตี 2** — ทั้งโรงงานพึ่งระบบนี้แล้ว เปิดกะไม่ได้ = เสียหายจริง
 
+📄 **สเปคเครื่องที่ต้องขอ (รองรับ 10 ปี · ใบขอสำหรับยื่น IT) → `docs/modules/onprem-server-sizing.md`**
+สรุป: **16 cores · 64 GB RAM · 1 TB NVMe · 2 เครื่อง (primary + standby)** ·
+รองรับข้อมูลจริง **~184 GB ใน 10 ปี** (ฐานข้อมูล ~94 GB + ไฟล์ ~90 GB · ขยายเต็มโรงงานนี้)
+🔴 ต้องมี **Supavisor/PgBouncer** ด้วย — วันนี้ใช้ไป 56 จาก 90 connections แล้วฝั่ง DR
+
 ของที่ต้องย้าย: Postgres 2 ชุด · GoTrue (auth) · PostgREST · Realtime · Storage · Edge Functions
 · RLS policy ทั้งหมด · publication ของ realtime (`src/utils/realtimeTables.js`)
 ⚠️ **ฝั่ง DR เป็น `anon` ทั้งโปรเจค** — เปิดออกอินเทอร์เน็ตโดยไม่มีด่านหน้า = ใครก็อ่านข้อมูลผลิตได้
