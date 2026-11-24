@@ -1,10 +1,13 @@
 import React, { Suspense, useState, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, useLocation } from 'react-router-dom'
 import { UserContext, Sidebar, NAV_ITEMS, NotificationBell } from '../src/App'
 import { markView } from '../src/utils/motion'
 /* 📈 harness ไม่ได้ผ่าน App.jsx (ตัวเรียก markView ตอนเปลี่ยน URL) ⇒ เปิดหน้าต่างอนิเมชันกราฟตอนโหลด ให้เห็นเหมือนแอปจริง */
 markView()
+/* 24/11: แอปจริง App.jsx เรียก markView() ทุกครั้งที่ pathname/search เปลี่ยน (สลับแท็บ = ?tab= เปลี่ยน) — harness ใช้ MemoryRouter
+   ⇒ ต้องเรียกเองตอน location เปลี่ยน ไม่งั้นเลขวิ่ง/กราฟเล่นเฉพาะตอนโหลดหน้าครั้งแรก (ตรวจ/ถ่ายคลิปแล้วไม่เหมือนแอปจริง) */
+function ViewMarker() { const loc = useLocation(); useEffect(() => { markView() }, [loc.pathname, loc.search]); return null }
 /* เปิดทะเบียนเมนูให้ `audit/stdsweep.mjs` อ่าน — ตรวจว่า "คุณอยู่ตรงนี้" บนรางตรงกับหมวดจริงไหม
    (`alsoIn` = หน้าที่อยู่ 2 หมวดจริงๆ ต้องถูกไฮไลต์ทั้งคู่) */
 window.__NAV = NAV_ITEMS.map(i => ({ to: i.to, group: i.group, alsoIn: i.alsoIn || null }))
@@ -81,7 +84,7 @@ function SidebarLab(){
   window.__setPin = setPinned
   const marginLeft = open ? (pinned ? 'calc(var(--rail-w) + var(--sidebar-w))' : 'var(--rail-w)') : 0
   return (
-    <MemoryRouter initialEntries={[ENTRY]}>
+    <MemoryRouter initialEntries={[ENTRY]}><ViewMarker />
       <UserContext.Provider value={{ ...CTX, role:'admin' }}>
         <div style={{ display:'flex', minHeight:'100vh', background:'var(--bg)' }}>
           <Sidebar isOpen={open} onClose={()=>setOpen(false)} onLogout={()=>{}} theme="dark" onToggleTheme={()=>{}}
@@ -114,7 +117,7 @@ function App(){
     mods[key]().then(m => setC(()=>m.default)).catch(e => { window.__crash=true; console.error(e) })
   },[name])
   return (
-    <MemoryRouter initialEntries={[ENTRY]}>
+    <MemoryRouter initialEntries={[ENTRY]}><ViewMarker />
       <UserContext.Provider value={CTX}>
         {/* จำลองโครงเดียวกับ App จริง: main เลื่อนแนวตั้งอย่างเดียว */}
         {/* 📺 ?tvshell=1: main ไม่เลื่อนเอง (ทั้งเอกสารเลื่อน) เหมือน App จริง — ตัววนจอแบ่งส่วนด้วย window.scrollTo */}
@@ -138,7 +141,7 @@ function App(){
    มันถูก render จาก App shell ไม่ใช่จากหน้าไหน ⇒ crashsweep ที่ไล่เปิดทีละ "หน้า" มองไม่เห็นเลย
    พอเพิ่มช่องแนบรูป (สิ่งที่พังได้จริง: preview/ถอดรูป/ล้นโมดัลบนมือถือ) เลยต้องมี harness ของตัวเอง */
 const FeedbackLab = () => (
-  <MemoryRouter initialEntries={[ENTRY]}>
+  <MemoryRouter initialEntries={[ENTRY]}><ViewMarker />
     <UserContext.Provider value={{ ...CTX, role:'admin' }}>
       <EB><Suspense fallback={<div>loading</div>}>
         {React.createElement(React.lazy(() => import('../src/components/FeedbackModal')), { onClose(){} })}
@@ -158,7 +161,7 @@ function BellLab(){
     if (new URLSearchParams(location.search).get('open')) setTimeout(() => document.querySelector('button[title]')?.click(), 600)
   }, [])
   return (
-    <MemoryRouter initialEntries={[ENTRY]}>
+    <MemoryRouter initialEntries={[ENTRY]}><ViewMarker />
       <UserContext.Provider value={{ ...CTX, role:'admin', sections:['PD1'], mtnTeams:[] }}>
         <EB><NotificationBell userId="x" role="admin" /></EB>
         <ToastContainer/><ConfirmHost/>
