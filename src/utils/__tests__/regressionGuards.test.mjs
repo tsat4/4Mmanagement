@@ -12783,3 +12783,12 @@ test('🔴 part-oee-range-clamp-visible — ตัดช่วงให้สั
   assert.equal(hits, 1,
     `\n\n❌ ${rel} มีสูตร %A รายพาร์ท ${hits} ชุด — ต้องอยู่ที่ aggregateByProduct() ที่เดียว\n   (กฎการรวมหลายกะ: ตัวตั้งรวม ÷ ตัวหารรวม · ห้ามเฉลี่ย % รายกะ)\n`);
 });
+
+/* ── 🗺️ order-trace-stations-by-name (24/11 · user "แก้ OrderTrace ด้วย") ──────
+   จุดงานไลน์ลูกผูกด้วย line_name (line_id = null) — หาด้วย line_id อย่างเดียว = สาย APRON ได้ 0 จุด */
+test('🛡️ order-trace-stations-by-name — สอบกลับใบผลิตต้องหาจุดงานด้วยชื่อไลน์ด้วย', () => {
+  const code = stripComments(readFileSync(join(ROOT, 'src/pages/OrderTrace.jsx'), 'utf8'));
+  assert.ok(/from\(\s*'workstations'\s*\)\s*\.select\(\s*wsCols\s*\)\s*\.in\(\s*'line_name'\s*,\s*famNames\s*\)/.test(code),
+    '\n🗺️ OrderTrace.jsx ต้องหาจุดงานด้วย .in(\'line_name\', famNames) ควบคู่ line_id — '
+    + 'จุดของไลน์ลูกผูกด้วยชื่อ (line_id = null) · เดิมได้ 0 จุด ช่อง "จุดประจำ" ขึ้น "—" (📄 docs/modules/order-trace.md §24/11)\n');
+});
