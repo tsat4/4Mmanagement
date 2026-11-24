@@ -54,6 +54,7 @@ import {
 import { ST, worstStatus, safetyKind, isInjury, ymd } from '../utils/obeya';
 
 import { tr, dateLocale } from '../utils/i18n';
+import Skeleton from './Skeleton';
 /* ══ 📋 OBEYA — บอร์ด KPI ส่วนงาน · 2026-08-27 → 2026-09-23 (วาดใหม่เป็น "แผ่น A4" ชุดเดียวกับจอ SQDCM) ═══
    แทนกระดาษ "OBEYA KPI monitoring" ที่แปะผนังห้องประชุมหน้างาน (คำสั่งนายใหญ่ผ่าน user 2026-08-27)
    user เคาะ 3 ข้อ: ① แยกรายส่วนงาน ② ตัวไหนวิ่งทุกกะให้อัพเดทรายวัน ③ มีแกน Safety
@@ -1278,12 +1279,12 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
             ที่ไม่พอจริง (มือถือหัวเพจสูง) = ถอยไป `auto` ยอมให้เลื่อน ดีกว่าตัดเนื้อหาหาย */}
         <div ref={wrapRef} style={{ flex: 1, minWidth: 0, minHeight: 0, overflow: fitOn ? 'clip' : 'auto' }}>
           {loading && !data ? (
-            <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>{tr('กำลังโหลดข้อมูล…')}</div>
+            <Skeleton cards={6} style={{ padding: '8px 0' }} />   /* 24/11: โครงเทาวิบแทนข้อความลอย (components/Skeleton) */
           ) : !scope ? (
             <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>{tr('กำลังเลือกขอบเขตเริ่มต้น…')}</div>
           ) : (
             <div style={sheetsBox}>
-              {pageItems.filter((x) => x.kind === 'kpi').map(({ row: r }) => (
+              {pageItems.filter((x) => x.kind === 'kpi').map(({ row: r }, sheetIdx) => (
                 <div key={r.key} style={{ position: 'relative', minHeight: 0, display: 'grid' }}>
                 {arrange && (
                   <div style={{ position: 'absolute', top: 4, right: 6, zIndex: 3, display: 'flex', gap: 4 }}>
@@ -1291,7 +1292,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
                     <button onClick={() => moveSheet(r.key, 1)} disabled={rows[rows.length - 1]?.key === r.key} title={tr('เลื่อนไปถัดไป')} style={{ ...navBtn, fontSize: 13, padding: '2px 8px' }}>▶</button>
                   </div>
                 )}
-                <Sheet k={k} cw={cw} icon={r.icon} title={r.name} statZoom goals={(kk, zoomedCopy) => goalsRow(r, kk, zoomedCopy)} footAside
+                <Sheet k={k} cw={cw} idx={sheetIdx} icon={r.icon} title={r.name} statZoom goals={(kk, zoomedCopy) => goalsRow(r, kk, zoomedCopy)} footAside
                   /* 30/09 (user): เลขใหญ่ = ค่าเดือนที่เลือก · บรรทัดรอง = YTD บอกวิธีรวม+จำนวนเดือน · ท้ายแผ่น = คาดปลายปี
                      16/11 (user): กดชิปสถานะ = เปิด popup 🔍 (insight) ไม่ใช่พาไปหน้ากรอก — ปุ่ม "กรอก/ตั้งเป้า" ท้ายแผ่นยังไปหน้ากรอกเหมือนเดิม */
                   sub={`${r.curChild ? tr('⬆ ค่ารวมจากหน่วยลูก (เดือนนี้ระดับนี้ไม่ได้กรอก)') : srcLabel(r)}${r.ytd != null

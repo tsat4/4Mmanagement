@@ -751,6 +751,15 @@ button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
 .anim-grow { animation: animGrow 0.8s ease-out both; transform-origin: left center; }
 @media (prefers-reduced-motion: reduce) { .anim-sweep, .anim-grow { animation: none; } }
 html[data-perf="lite"] .anim-sweep, html[data-perf="lite"] .anim-grow { animation: none; }
+/* 🩶 skeleton (components/Skeleton.jsx · 24/11) — พื้น --bg3 วิบด้วย --bg2 (token เดิม 2 ระดับ ไม่ใช่สีใหม่) · นิ่งบนจอ TV / reduced-motion */
+@keyframes skelShimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.skel { border-radius: var(--r-sm); background: var(--bg3); background-image: linear-gradient(90deg, var(--bg3) 25%, var(--bg2) 50%, var(--bg3) 75%); background-size: 200% 100%; animation: skelShimmer 1.4s ease-in-out infinite; }
+.skel-card { background: var(--card); background-image: var(--card-surf); border: 1px solid var(--border); border-radius: var(--r-md); padding: 16px 18px; min-height: 96px; }
+@media (prefers-reduced-motion: reduce) { .skel { animation: none; } }
+html[data-perf="lite"] .skel { animation: none; }
+/* 🪄 การ์ดยกตอนชี้ (utils/motion.js liftHover · 24/11) — เงาเพิ่มเฉพาะตอนลอย ผ่าน token `--shadow-float` (UI §6.20) · เฉพาะอุปกรณ์มีเมาส์ */
+@media (hover: hover) and (pointer: fine) { .lift-card { transition: box-shadow 0.18s ease; } .lift-card:hover { box-shadow: var(--shadow-float); } }
+html[data-perf="lite"] .lift-card:hover { box-shadow: var(--shadow-sm); }
 
 /* ─── Downtime alarm — จุดเครื่องจักรกระพริบสีแดงเมื่อมี downtime ค้างอยู่ ── */
 @keyframes dtAlarmBlink {
