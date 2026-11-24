@@ -433,3 +433,33 @@ mtn-daily-summary · daily-4m-summary · qa-fme-scan) ซึ่ง **ไม่�
   ทั้งคู่แยกกลุ่ม `checked` ตาม `quality_related` (เกี่ยวกับคุณภาพ → รอ QA ขั้น 5 · ไม่เกี่ยว → รอฝ่ายที่แจ้งรับมอบ ขั้น 6)
   **ตรรกะนี้ถูกเขียนซ้ำแบบย่อในทั้ง 2 ไฟล์** เพราะ edge import จาก `src/` ไม่ได้ — source of truth คือ `moStatusLabel()`/`isWaitingQa()` ใน `src/utils/mtnStepPerm.js` · **แก้ที่นั่นแล้วต้องตามมาแก้ 2 ไฟล์นี้เสมอ** (convention เดียวกับ `src/utils/dieStatus.js`)
   smoke test หลัง deploy: `net.http_post` body `{}` → send-mtn-notification ตอบ `400 {"error":"missing mo"}` = บูตได้ ไม่มีผลข้างเคียง (mtn-daily-summary ทดสอบแบบนี้ไม่ได้ — ยิงแล้วมันส่งสรุปเข้ากลุ่มจริง)
+
+## 🚀 Deploy edge function — ไฟล์ใหญ่ห้าม deploy ผ่าน MCP (24/11/2026)
+
+**ของกลาง: `.github/workflows/deploy-edge-function.yml`** (กดเองที่ Actions → Deploy edge function)
+เลือกชื่อ function + ฝั่ง (main/dr) · ต้องมี secret **`SUPABASE_ACCESS_TOKEN`**
+(ออกที่ Supabase → Account → Access Tokens · ไม่ตั้ง = workflow เตือนแล้วข้าม ไม่ทำ CI ล่ม)
+
+### 🔴 ทำไมไม่ deploy ผ่าน MCP ตรงๆ
+MCP `deploy_edge_function` ต้องส่ง **เนื้อไฟล์ทั้งก้อน** ⇒ AI ต้องพิมพ์ไฟล์ออกมาใหม่ทั้งไฟล์
+`send-notification` = **62 KB / 920 บรรทัด** (template literal · emoji · คอมเมนต์ไทย)
+**พลาด 1 อักขระ = แจ้งเตือนทั้งโรงงานหยุด** และ rollback ก็ต้องพิมพ์ 59 KB ซ้ำอีก
+⇒ ให้ CI deploy จาก git ที่เป็นแหล่งจริง **ไม่ผ่านการพิมพ์ซ้ำ**
+🔑 **เกณฑ์: ไฟล์สั้น (< ~200 บรรทัด) deploy ผ่าน MCP ได้ · ยาวกว่านั้นใช้ workflow**
+
+### 🔴 `verify_jwt` ต้องเป็น `false`
+ของจริงฝั่ง live เป็น `false` ทุกตัว — ตัวเรียกส่ง anon key ไม่ใช่ JWT ของผู้ใช้
+⇒ CLI ต้องใส่ `--no-verify-jwt` · **ลืม = ทุก call ตอบ 401 เงียบๆ แจ้งเตือนหยุดทั้งระบบ**
+(workflow ตั้ง default ให้แล้ว)
+
+### ตรวจกลับทุกครั้ง (กฎโปรเจค: "apply/deploy เองแล้วตรวจกลับ")
+`sha256sum` ของไฟล์ในรีโป ต้องตรงกับเนื้อไฟล์ที่ดึงกลับจาก live — ไม่ตรง = กดซ้ำ ห้ามปล่อย
+🕗 **ไม่ผูกกับ push โดยตั้งใจ** — edge function ไม่สลับบันเดิลหน้าเว็บ (แท็บที่เปิดค้างไม่กระทบ)
+แต่ให้เลือกจังหวะเอง
+
+### สถานะ `send-notification` (24/11)
+รีโป `cfb7106` ≠ live **version 48** — ต่างกัน 3 hunk / 62 บรรทัด:
+`withoutRecentSame()` + ยิงเป็นก้อนผ่าน `insertNotifications(..., 'four_m_status')` + คืน `skipped`
+🔑 **ไม่ด่วน** — บั๊กที่โค้ดนี้แก้ **ปิดไปแล้วด้วย trigger `trg_notification_dedupe` ฝั่ง DB**
+วัดจริง: แถวต่อผู้รับ **4.00 (26/10 ตอนเจอบั๊ก) → 1.00–1.13 (07–19/11)**
+ที่ยังได้เพิ่มจากการ deploy = ลด insert ที่เสียเปล่า + ยิงก้อนเดียวแทน 79 รอบ + ติด `event_key`
