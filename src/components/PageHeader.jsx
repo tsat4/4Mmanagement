@@ -2,6 +2,7 @@ import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { MoreMark } from './InfoMore';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { NAV_ITEMS, STICKY_TAB_GROUPS, inNavGroup } from '../App';
+import { NAV_SUB_TABS } from '../utils/navSubTabs';   // 🗂️ 24/11 หน้าที่แท็บย้ายไปเป็นข้อย่อยในแผงเมนู
 import useIsMobile from '../utils/useIsMobile';
 import { HubContext } from './Page';
 import MobileFilterFold, { splitFilterChildren } from './MobileFilterFold';
@@ -183,7 +184,11 @@ export default function PageHeader({
      · ไม่เข้าเงื่อนไข = ไม่มี style เพิ่มเลย (หน้าอื่นเหมือนเดิมเป๊ะ) */
   /* 🗜️ 24/11 (คำสั่ง user) เงื่อนไขเดียวกันนี้ = "หัวเพจกะทัดรัด" ด้วย: ไม่มี breadcrumb · ไม่มีคำบรรยาย (`sub`) ·
      ชื่อหน้าอยู่บนสุด · แถบแท็บแถวเดียว (ล้น = ปุ่ม ◀ ▶) · ปุ่ม 🔍 ท้ายแถบ (`HeaderSearch`) */
-  const sticky = !inHub && !isMobile && !!topTabs.length && !filters && !!navItem && inNavGroup(navItem, STICKY_TAB_GROUPS);
+  const compact = !inHub && !isMobile && !filters && !!navItem && inNavGroup(navItem, STICKY_TAB_GROUPS);
+  /* 🗂️ 24/11 (คำสั่ง user "ย้าย Detail bar ไป Sub bar เป็นข้อย่อย") — หน้าที่อยู่ในทะเบียน `NAV_SUB_TABS` เปลี่ยนแท็บที่แผงเมนู
+     ⇒ ไม่วาดแถบแท็บในหน้า · ปุ่ม 🔍 ย้ายไปแถวชื่อหน้า · ไม่อยู่ในทะเบียน = แถบแท็บตรึงบนแบบเดิม (แท็บไม่มีวันหายเฉยๆ) */
+  const tabsInNav = compact && !!NAV_SUB_TABS[pathname];
+  const sticky = compact && !!topTabs.length && !tabsInNav;
   const rootRef = useRef(null);
   const [stickTop, setStickTop] = useState(0);
   useLayoutEffect(() => {
@@ -269,7 +274,7 @@ export default function PageHeader({
     <div data-ph-root="1" ref={rootRef} style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 'var(--ph-mb, 12px)',
       /* 📌 sticky: พื้นทึบกันเนื้อหาทะลุ · z ต่ำกว่าแผงเมนู (997+) / กระดิ่ง (1200) · เว้นขวาพ้น 🔔 ให้แถบแท็บ (ชื่อหน้าย้ายมาเว้นที่นี่แทน) */
       ...(sticky ? { position: 'sticky', top: stickTop, zIndex: 50, background: 'var(--bg)', paddingRight: 52 } : null) }}>
-      {!sticky && crumbs}
+      {!compact && crumbs}
 
       {(!inHub || sub || actions) && (
       <div className="ph-chrome" style={{
@@ -291,17 +296,19 @@ export default function PageHeader({
             </h2>
             )
           )}
-          {sub && !sticky && <SubLine text={tr(sub)} marginTop={inHub ? 0 : 3} />}
+          {sub && !compact && <SubLine text={tr(sub)} marginTop={inHub ? 0 : 3} />}
         </div>
         {/* actions = ปุ่ม "คำสั่งระดับหน้า" เท่านั้น (บันทึก/เพิ่ม/พิมพ์/โหมด TV) — ห้ามใส่ตัวกรอง (select/วันที่/ขอบเขต/สเกล)
             ตัวกรองต้องอยู่ `filters` ⇒ ลงใต้แถบแท็บเสมอ (UI-STANDARD §2 ลำดับแนวตั้ง · stdsweep ตรวจ data-ph) */}
         {actions && <div data-ph="actions" style={{ display: 'flex', flexWrap: 'wrap', gap: 7, alignItems: 'center' }}>{actions}</div>}
+        {/* 🔍 หัวเพจกะทัดรัดที่ไม่มีแถบแท็บในหน้า = ปุ่มค้นหาอยู่ท้ายแถวชื่อหน้า (มีแถบแท็บ = อยู่ท้ายแถบแท็บ) */}
+        {compact && !sticky && <HeaderSearch rootRef={rootRef} tabKey={String(tab ?? '')} />}
       </div>
       )}
 
-      {sticky && crumbs}
+      {compact && crumbs}
 
-      {!!tabList.length && renderTabs()}
+      {!!tabList.length && !tabsInNav && renderTabs()}
 
       {/* ── ลำดับแนวตั้งตายตัวทุกหน้า: breadcrumb → ชื่อหน้า|ปุ่มคำสั่ง → แท็บ → แถบกรอง → เนื้อหา ──
           (user 24/09: "ลำดับยังโดดไปมา เดี๋ยวแท็บมาก่อนช่องค้นหา บางหน้าค้นหาอยู่บนสุดก่อนแท็บ") */}

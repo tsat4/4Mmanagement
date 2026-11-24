@@ -17,7 +17,9 @@ import SignatureModal from './components/SignatureModal';
 import ChangePasswordModal from './components/ChangePasswordModal';
 const FeedbackModal = lazy(() => import('./components/FeedbackModal'));
 const NotifyPrefsModal = lazy(() => import('./components/NotifyPrefsModal'));  // 🔕 ตั้งค่าแจ้งเตือนของฉัน
-import { loadPermissions, canAccessPage, setDeptAdmin, setSharedAccount, can, canSeeded } from './utils/permissions';
+import { loadPermissions, canAccessPage, setDeptAdmin, setSharedAccount, can, canSeeded, hasPermission } from './utils/permissions';
+import { NAV_SUB_TABS } from './utils/navSubTabs';            // 🗂️ 24/11 แท็บของหน้า = ข้อย่อยในแผงเมนู
+import { useNavSubItemsStore } from './utils/navSubItems';   // 🗂️ ข้อย่อยชั้นที่ 3 ที่หน้าประกาศตอนรัน (พื้นที่ SAP ฯลฯ)
 /* 🏷️ รุ่นของเว็บ (full / nm) — สลับตอน build ด้วย alias ใน vite.nm.config.js · 📄 src/appEdition.js */
 import { EDITION, EDITION_LABEL, EDITION_HOME } from './appEdition';
 import { LOGISTIC_GROUPS } from './utils/logisticSide';
@@ -552,6 +554,9 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
   // panel = ชื่อหมวด | '__star' (ใช้บ่อย) | '__me' (โปรไฟล์) | null = ปิด
   // ปกติแผง "ลอยทับ" เนื้อหา (เนื้อหาไม่ถูกบีบ — คำสั่ง user) · ปักหมุด 📌 = ค้างไว้และดันเนื้อหา
   const [panel, setPanel] = useState(null);
+  /* 🗂️ ข้อย่อยในแผง (24/11 · คำสั่ง user): กาง/ซ่อนรายเมนู · ไม่เคยกด = กางเฉพาะเมนู/แท็บของหน้าที่เปิดอยู่ */
+  const [subOpen, setSubOpen] = useState({});
+  const navSubLive = useNavSubItemsStore();
   /* คิวงานของฉัน — โหลดที่นี่เพราะ **badge ต้องมีเลขแม้แผงปิดอยู่** (กฎอยู่ MyQueuePanel.jsx) */
   const myQueue = useMyQueue(panel === '__me');
   const pinnedRef = useRef(pinned);
@@ -822,6 +827,83 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
     );
   };
 
+  /* ══ 🗂️ แถวเมนู + ข้อย่อย (แท็บของหน้า · ชั้นที่ 3 ที่หน้าประกาศ) — 24/11 คำสั่ง user "ย้าย Detail bar ไป Sub bar เป็นข้อย่อย"
+     · ชั้น 2 = ทะเบียน `NAV_SUB_TABS` (utils/navSubTabs.js) — เห็นทุกเมนูตลอดแม้ยังไม่เปิดหน้านั้น · กรองสิทธิ์รายแท็บด้วย `perm`
+     · ชั้น 3 = `useNavSubItemsStore()` — มีเฉพาะตอนหน้านั้นเปิดอยู่ (ไม่เดารายการ) · กด = `?<query>=<key>`
+     · "อยู่ตรงนี้" หน้าตาเดียวกับทุกชั้น (พื้น accent-dim + แถบซ้าย + aria-current) · ชื่อยาวตัด … + `title` ชื่อเต็ม
+     · กดข้อย่อย = ปิดแผงเหมือนเมนูอื่น (ปักหมุด = ค้าง) — user เลือก 24/11 ══ */
+  const subTabsOf = (item) => {
+    const reg = NAV_SUB_TABS[item.to];
+    if (!reg) return null;
+    const tabs = reg.tabs.filter(t => !t.perm || hasPermission(t.perm, userRole));
+    return tabs.length ? { ...reg, tabs } : null;
+  };
+  const subLinkStyle = (on, depth) => ({
+    display: 'block', position: 'relative', textDecoration: 'none', borderRadius: 'var(--radius)',
+    padding: depth === 3 ? '4px 8px 4px 10px' : '5px 8px 5px 10px', fontSize: depth === 3 ? 12 : 12.5,
+    fontWeight: on ? 700 : 500, color: on ? 'var(--accent)' : (depth === 3 ? 'var(--muted)' : 'var(--text2)'),
+    background: on ? 'var(--accent-dim)' : 'transparent', borderLeft: `2px solid ${on ? 'var(--accent)' : 'transparent'}`,
+    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+  });
+  const chevron = (open, onToggle, label) => (
+    <button type="button" onClick={onToggle} aria-expanded={open} aria-label={label} title={label} style={{
+      width: 24, height: 24, flexShrink: 0, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer',
+      color: 'var(--muted)', fontSize: 11, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+    }}>{open ? '▾' : '▸'}</button>
+  );
+  const subNav = (item, group, onPick) => {
+    const reg = subTabsOf(item);
+    if (!reg) return navRow(item, group, onPick);
+    const onPage = location.pathname === item.to;
+    const sp = new URLSearchParams(location.search);
+    const curTab = onPage ? (sp.get(reg.param) || String(reg.tabs[0].key)) : null;
+    const k2 = item.to;
+    const open2 = subOpen[k2] ?? onPage;
+    const toggle = (k, cur) => setSubOpen(o => ({ ...o, [k]: !cur }));
+    return (
+      <>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>{navRow(item, group, onPick)}</div>
+          {chevron(open2, () => toggle(k2, open2), open2 ? tr('ซ่อนข้อย่อย') : tr('แสดงข้อย่อย'))}
+        </div>
+        {open2 && (
+          <div role="group" aria-label={tr(item.label)} style={{ margin: '1px 0 4px 20px', paddingLeft: 6, borderLeft: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 1 }}>
+            {reg.tabs.map(t => {
+              const on = curTab === String(t.key);
+              const live = on ? navSubLive[`${item.to}|${t.key}`] : null;
+              const k3 = `${item.to}|${t.key}`;
+              const open3 = subOpen[k3] ?? true;
+              const base = `${item.to}?${reg.param}=${encodeURIComponent(t.key)}`;
+              const label = tr(t.label);
+              const curQ = live ? (sp.get(live.query) || '') : '';
+              return (
+                <div key={t.key}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Link to={base} onClick={onPick} title={label} aria-current={on && !curQ ? 'page' : undefined}
+                      style={{ ...subLinkStyle(on, 2), flex: 1, minWidth: 0 }}>{label}</Link>
+                    {live && live.items.length > 0 && chevron(open3, () => toggle(k3, open3), open3 ? tr('ซ่อนข้อย่อย') : tr('แสดงข้อย่อย'))}
+                  </div>
+                  {live && live.items.length > 0 && open3 && (
+                    <div role="group" aria-label={label} style={{ margin: '1px 0 3px 14px', paddingLeft: 6, borderLeft: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 1, maxHeight: 320, overflowY: 'auto' }}>
+                      <Link to={base} onClick={onPick} title={tr('ทั้งหมด')} aria-current={!curQ ? 'page' : undefined} style={subLinkStyle(!curQ, 3)}>{tr('ทั้งหมด')}</Link>
+                      {live.items.map(it => {
+                        const on3 = curQ === String(it.key);
+                        return (
+                          <Link key={it.key} to={`${base}&${live.query}=${encodeURIComponent(it.key)}`} onClick={onPick}
+                            title={it.label} aria-current={on3 ? 'page' : undefined} style={subLinkStyle(on3, 3)}>{it.label}</Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </>
+    );
+  };
+
   /* ── Desktop: rail 64px + แผงหมวดลอยทับ (sidebar แบบ D · 2026-08-18) ─────────────
      หลัก: เนื้อหาหลักเสีย 64px เท่านั้น (เดิม 252px) — แผงเมนูลอยทับตอนกดไอคอนหมวด
      เลือกเมนูแล้วปิดเอง · 📌 ปักหมุด = ค้างแผงไว้และดันเนื้อหา (opt-in เท่านั้น) */
@@ -1003,7 +1085,8 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
             </div>
             {/* ชื่อหมวดของแผงที่เปิด (ย้ายจากหัวแผง · 20/11) */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '12px 8px 6px', fontSize: 12, fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.02em', flexShrink: 0, minWidth: 0 }}>
-              <span style={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{panelMeta.title}</span>
+              {/* 24/11: ชื่อหมวดยาวถูกตัด … ⇒ ชี้เมาส์ดูชื่อเต็ม (คำสั่ง user) */}
+              <span title={panelMeta.title} style={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{panelMeta.title}</span>
             </div>
 
             <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -1017,7 +1100,7 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
                       borderTop: i === 0 ? 'none' : '1px solid var(--border)',
                     }}>{tr(navSubOf(item, panel))}</div>
                   )}
-                  {navRow(item, panel, () => { if (!pinned) setPanel(null); })}
+                  {subNav(item, panel, () => { if (!pinned) setPanel(null); })}
                 </div>
               ))}
 

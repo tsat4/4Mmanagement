@@ -31,6 +31,9 @@ import { rangeDays } from '../utils/timeRange';
 import FilterBar from '../components/FilterBar';
 import { ALL, allOf } from '../utils/filterLabels';
 import useTabParam, { useMergeParams } from '../utils/useTabParam';
+import { LINE_STOCK_TABS } from '../utils/navSubTabs';
+import { useNavSubItems } from '../utils/navSubItems';
+import { useSearchParams } from 'react-router-dom';
 import WipBetweenSteps from '../components/WipBetweenSteps';
 import SapViewConsumption from '../components/SapViewConsumption';
 import StockCountSheet from '../components/StockCountSheet';
@@ -155,7 +158,14 @@ function StockTab({ role, scope }) {
   const [scopePickLines, setScopePickLines] = useState(null);
   /* 🔎 09/11 (คำสั่ง user "แยกพื้นที่แบบกางทุกกลุ่มมันรก — ควรมี dropdown เลือกพื้นที่ + ค้นหา MAT / Part No / ชื่อ")
      areaFilter = key ของกลุ่มพื้นที่ SAP ('' = ทุกพื้นที่) · stockQ = คำค้น */
-  const [areaFilter, setAreaFilter] = useState('');
+  /* 🗂️ 24/11 (คำสั่ง user "S401… เป็นหัวข้อย่อยใต้ Stock ในแผงเมนู · กดแล้วกรองเหลือพื้นที่นั้น") — พื้นที่ที่เลือกอยู่ใน URL `?area=`
+     ⇒ แผงเมนูพามาที่พื้นที่ได้ · ช่องเลือกบนจอกับแผงเมนูเป็นค่าเดียวกัน · `replace` = ไม่สะสมประวัติย้อนกลับทีละพื้นที่ */
+  const [lsSp] = useSearchParams();
+  const setLsParams = useMergeParams();
+  const areaFilter = lsSp.get('area') || '';
+  const setAreaFilter = useCallback((v) => setLsParams({ area: v || null }, { replace: true }), [setLsParams]);
+  // เปิดมาด้วย ?area= แต่จำโหมด "ตามไลน์" ไว้ = สลับเป็นตามพื้นที่ (ไม่งั้นตัวกรองไม่มีผลเงียบๆ)
+  useEffect(() => { if (areaFilter && groupBy !== 'sloc') pickGroupBy('sloc'); }, [areaFilter]);   // eslint-disable-line react-hooks/exhaustive-deps
   const [stockQ, setStockQ] = useState('');
   const [partNoMap, setPartNoMap] = useState({});
   // คลังปลายทางที่ไม่ใช่ไลน์ผลิต — derive จากของที่มีจริง + กฎรับเข้าอัตโนมัติ ไม่ hardcode ชื่อคลัง
@@ -493,6 +503,9 @@ function StockTab({ role, scope }) {
   /* กลุ่มที่โชว์จริง = เลือกพื้นที่ (โหมดพื้นที่เท่านั้น) → ค้นหา MAT / Part No / ชื่อพาร์ท
      ⚠️ ตัวเลือกพื้นที่ทำจาก `groups` (ก่อนค้นหา) — ค้นหาแล้วพื้นที่ใน dropdown ต้องไม่หาย */
   const areaActive = groupMode === 'sloc' && areaFilter && groups.some(g => g.key === areaFilter) ? areaFilter : '';
+  // 🗂️ ประกาศรายชื่อพื้นที่ให้แผงเมนู (ข้อย่อยชั้นที่ 3 ใต้ "Stock") — ชุดเดียวกับช่องเลือกพื้นที่บนจอ
+  const areaNav = useMemo(() => (groupMode === 'sloc' ? groups.map(g => ({ key: g.key, label: g.title })) : null), [groupMode, groups]);
+  useNavSubItems('/line-stock', 'stock', 'area', areaNav);
   const stockNeedle = stockQ.trim().toLowerCase();
   const shownGroups = useMemo(() => {
     let gs = areaActive ? groups.filter(g => g.key === areaActive) : groups;
@@ -1869,20 +1882,8 @@ const SETTING_TABS = [
 ];
 /* แท็บหลัก — 16/11: Stock ขึ้นแท็บแรก + เปิดหน้ามาเจอ (user "default อยู่ tab ที่ 4 แปลกๆ")
    `perm` = สิทธิ์หน้าเดิมของแท็บนั้น (หน้ารวม piggyback 2 คีย์ใน canAccessPage) */
-const TABS = [
-  { key:'stock',      label: 'Stock',                  perm: 'page:/line-stock' },
-  /* 16/11 (คำสั่ง user) เลิกคำ ขาออก/ขาเข้า — คน W/H อ่านกลับด้าน · key out/in คงเดิม */
-  { key:'out',        label: 'ส่งของเข้าไลน์',          perm: 'page:/line-stock' },
-  { key:'in',         label: 'รับของเข้าคลัง',          perm: 'page:/line-stock' },
-  { key:'monitoring', label: 'Monitoring แผน-สต๊อก',    perm: 'page:/monitoring' },
-  { key:'count',      label: 'ตรวจนับ/เฟิร์มยอด',       perm: 'page:/line-stock' },   // กระทบยอดขาออกที่หลุด + ตรวจนับทั้งคลัง (2026-09-23)
-  { key:'sap',        label: 'ค้างตัด SAP',             perm: 'page:/line-stock' },   // ใบที่ส่งถึงไลน์แล้วแต่ตัดจ่ายใน SAP ไม่ได้ (04/11)
-  { key:'diff',       label: 'คลังพัก/ผลต่าง',          perm: 'page:/line-stock' },   // รับไม่ครบ = ส่วนที่ขาดพักไว้ (05/11)
-  { key:'wip',        label: 'WIP ค้างระหว่างขั้น',      perm: 'page:/line-stock' },   // คนละเรื่องกับ 'คิวเติม WIP' ในบอร์ดคัมบัง
-  { key:'sapview',    label: 'เทียบตัดแบบ SAP',         perm: 'page:/line-stock' },   // FG×BOM แบบ SAP เทียบที่ ESM ตัดจริง (20/11)
-  { key:'sapstock',   label: 'เทียบยอด SAP (MB52)',     perm: 'page:/line-stock' },   // อัปโหลด MB52 เทียบยอดคงคลังรายสัปดาห์ (20/11)
-  { key:'settings',   label: 'ตั้งค่า',                 perm: 'page:/line-stock' },
-];
+/* 24/11 — ลิสต์แท็บย้ายไปทะเบียนกลาง (แผงเมนูวาดเป็นข้อย่อย) · `src/utils/navSubTabs.js` */
+const TABS = LINE_STOCK_TABS;
 
 function SettingsTab({ canEdit, fullName, scope }) {
   const [sub, setSub] = useTabParam(SETTING_TABS.map(t => t.key), SETTING_TABS[0].key, 'set');

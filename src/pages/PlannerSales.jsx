@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useContext, useRef } from 'react';
+import { PLANNER_SALES_TABS } from '../utils/navSubTabs';
 import { lineNameCompare } from '../utils/lineHierarchy';
 import { supabase, supabaseDR } from '../supabaseClient';
 import { UserContext } from '../App';
@@ -1934,7 +1935,7 @@ export default function PlannerSales() {
   // ทะเบียนเอกสาร — ชื่อไฟล์ CSV อ่านเลขฟอร์มจาก cache นี้ (lazy chunk ต้องโหลดเอง)
   useEffect(() => { loadDocForms(); }, []);
   const { role, fullName } = useContext(UserContext);
-  const [tab, setTab] = useTabParam(['planner', 'kanban', 'upload', 'monitoring'], 'planner');
+  const [tab, setTab] = useTabParam(PLANNER_SALES_TABS.map(t => t.key), 'planner');
   const [refreshKey, setRefreshKey] = useState(0);
   // สิทธิ์อัพโหลดจากตาราง role_permissions (ปรับได้ที่หน้า จัดการสิทธิ์ → สิทธิ์การทำงาน)
   const canUpload = can('demand', 'upload', role);
@@ -1959,12 +1960,7 @@ export default function PlannerSales() {
       <PageHeader
         title={tr('Planner & Sales — Forecast จากลูกค้า')} icon="📈"
         sub={tr('Sales อัพโหลด Forecast/Order จากลูกค้า → ระบบวางแผนภาระการผลิตล่วงหน้า · ติดตามรอบส่งงานรายวันที่หน้า 🚚 Delivery')}
-        tabs={[
-          { key: 'planner', label: 'Forecast Planner' },
-          { key: 'kanban', label: tr("คำนวณ Kanban") },
-          { key: 'upload', label: tr("อัพโหลด (Sales)") },
-          { key: 'monitoring', label: 'Monitoring (Planning)' },
-        ]}
+        tabs={PLANNER_SALES_TABS /* ทะเบียนกลาง navSubTabs.js (24/11) */}
         tab={tab} onTab={setTab}
       />
 
