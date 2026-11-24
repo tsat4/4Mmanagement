@@ -946,15 +946,23 @@ function LineLayoutView({ board, depts, lines, attendance, maps, tv, stationPlan
     : (llineKey ? layoutByName(viaParent || lline) : layouts[0] || null);
   // 🔴 ไลน์ที่ขอมาไม่มีรูปผัง = บอกตรงๆ ห้ามแอบโชว์ผังไลน์อื่นแทน
   const llineMissing = !tv && !!llineKey && layouts.length > 0 && !layout;
+  // 🎛️ เลือกผังผ่านช่อง "ส่วนงาน/ไลน์" บนหัวเพจช่องเดียว (user 24/11 — เดิมมีช่องเลือกผังซ้อนอีกช่อง แล้ว 2 ช่องไม่ตามกัน)
+  //    ยังไม่ระบุไลน์ = ตั้ง ?lline= เป็นผังแรกให้เอง ⇒ ช่องบนบอกเสมอว่ากำลังดูผังของไลน์ไหน (replace — ไม่เพิ่มประวัติย้อนกลับ)
+  const firstLayoutName = layouts[0]?.line_name || '';
+  useEffect(() => {
+    if (!tv && !llineKey && firstLayoutName) merge({ lline: firstLayoutName }, { replace: true });
+  }, [tv, llineKey, firstLayoutName, merge]);
+  // 🔴 จุดบนผัง = จุดของไลน์เจ้าของผัง "+ ไลน์ลูกทั้งหมด" — ไลน์ลูกไม่มีรูปผังของตัวเอง แต่วางพิกัดบนผังไลน์แม่
+  //    (จุดไลน์ลูกผูกด้วย line_name · line_id ว่าง) · เดิมโหลดแค่ชื่อไลน์แม่ ⇒ ผัง LINE APRON ASSY ขึ้นแค่ Supervisor
+  //    (user 24/11 "จุดงานก็ไม่ขึ้น") · จับคู่ผ่าน stationsOfLineFamily ตัวเดียวกับสถานะกลุ่ม
   useEffect(() => {
     let alive = true;
     if (!layout) { setStations([]); return undefined; }
     // 🎯 ทักษะที่จุดต้องการ (station_requirements) มากับจุดเลย — ใช้ตอบ "ยืนจุดที่ฝีมือถึงไหม"
-    const q = supabase.from('workstations').select('id, line_name, line_id, station_name, pos_top, pos_left, station_requirements(skill_name, min_score)');
-    (layout.line_id != null ? q.or(`line_id.eq.${layout.line_id},line_name.eq."${layout.line_name}"`) : q.eq('line_name', layout.line_name))
-      .then(({ data, error }) => { if (alive) { setStations(data || []); if (error) setErr(error.message); } });
+    fetchAllPages(() => supabase.from('workstations').select('id, line_name, line_id, station_name, pos_top, pos_left, station_requirements(skill_name, min_score)'))
+      .then((r) => { if (!alive) return; setStations(stationsOfLineFamily(lines, layout.line_name, r.rows || [])); if (r.error) setErr(String(r.error)); });
     return () => { alive = false; };
-  }, [layout?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [layout?.id, lines.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const empById = useMemo(() => {
     const m = {};
@@ -1021,12 +1029,6 @@ function LineLayoutView({ board, depts, lines, attendance, maps, tv, stationPlan
     <div style={{ display: 'grid', gap: 10 }}>
       <FilterBar bare>
         {viewSwitch}
-        {!tv && (layouts.length > 1 || llineMissing) && (
-          <select value={layout?.line_name ?? ''} onChange={e => merge({ lline: e.target.value || null })} aria-label={trI18n('ผังไลน์')}>
-            {llineMissing && <option value="">{lline} — {trI18n('ไม่มีรูปผัง')}</option>}
-            {layouts.map(l => <option key={l.id} value={l.line_name}>{trI18n(l.line_name)}</option>)}
-          </select>
-        )}
         <span className="spacer" />
         {tv && legend}
       </FilterBar>

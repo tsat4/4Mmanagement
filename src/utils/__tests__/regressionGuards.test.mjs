@@ -58,6 +58,28 @@ function stripComments(src) {
    scan: โฟลเดอร์ที่ตรวจ · ext: นามสกุล · re: regex (global) · allow: ไฟล์ที่ยกเว้น + เหตุผล */
 const RULES = [
   {
+    id: 'manpower-layout-stations-via-family',
+    scan: ['src/pages/ManpowerBoard.jsx'], ext: ['.jsx'],
+    /* จับการกรองไลน์ฝั่ง DB ทุกแบบในไฟล์นี้: `line_id.eq.` ใน .or() · .eq/.in('line_name'|'line_id')
+       (ไฟล์นี้ไม่มีคิวรีตารางอื่นที่กรองไลน์ · คิวรีมักแตกบรรทัด `const q = …; q.or(…)` ⇒ ห้ามผูกกับ from('workstations')) */
+    re: /line_(id|name)\.eq\.|\.(eq|in)\(\s*['"`]line_(name|id)['"`]/g,
+    why: '🗺️ user 24/11 "จุดงานก็ไม่ขึ้น" — ผัง LINE APRON ASSY ขึ้นแค่ Supervisor 1 จุด เพราะคิวรีกรอง line_id/line_name ของไลน์แม่ '
+       + 'แต่จุดของไลน์ลูก (Line 60/61/SUB APRON 18 จุด) วางบนผังแม่และผูกด้วย line_name ของลูก (line_id = null) · '
+       + '⚠️ harness mock ไม่กรอง query ⇒ รูป audit ขึ้นครบ จับไม่ได้',
+    fix: 'โหลดจุดงานทั้งหมดแล้วกรองด้วย `stationsOfLineFamily(lines, ชื่อไลน์, rows)` (src/utils/manpowerBoard.js — ไลน์นั้น + ลูกทั้งหมด · จับ id ก่อน ถอยไปชื่อ)',
+    allow: {},
+  },
+  {
+    id: 'manpower-layout-single-line-picker',
+    scan: ['src/pages/ManpowerBoard.jsx'], ext: ['.jsx'],
+    /* จับช่อง <select> ที่ตั้ง ?lline= เอง (ช่องเลือกผังซ้อน) */
+    re: /<select\b[^\n]*merge\(\s*\{\s*lline\s*:/g,
+    why: '🎛️ user 24/11 "dropdown กับ select ทับซ้อนกันรึป่าว" — เคยมีช่องเลือกผังข้างปุ่ม "ผังรายไลน์" ซ้อนกับช่อง ส่วนงาน/ไลน์ บนหัวเพจ '
+       + 'แล้ว 2 ช่องไม่ตามกัน (บน = PD3 · ล่าง = LINE APRON ASSY) · user เลือก "เหลือช่องบนช่องเดียว"',
+    fix: 'เลือกไลน์/ผังผ่าน `SectionScopeSelect pickLine` บนหัวเพจเท่านั้น (ตั้ง ?lline=) — 📄 docs/modules/manpower-board.md §24/11',
+    allow: {},
+  },
+  {
     id: 'wf-tables-write-via-rpc',
     scan: ['src'], ext: ['.jsx', '.js'],
     /* จับการเขียนตาราง e-Workflow ตรงจาก client: from('wf_…').insert/update/upsert/delete */
