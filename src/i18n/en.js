@@ -18338,6 +18338,18 @@ const EN = {
   "ไลน์นอกทะเบียน": "Line off-register",
   "📍 เฉพาะที่ลงจุดแล้ว": "📍 Only with points registered",
 
+  /* ── 🌐 คีย์จาก main 24/11 (OEE รายพาร์ทย้อนหลัง) ── */
+  "ชี้ CT ไม่ได้": "Cannot determine CT",
+  "ยังไม่มีข้อมูลใบผลิตในช่วงที่เลือก": "No production-order data in the selected range",
+  "อยากดูเดือนก่อน ให้เลื่อนกรอบวันที่": "To see an earlier month, move the date range",
+  "ช่วงที่เลือกยาว": "Selected range is long",
+  "วันล่าสุดของช่วง": "Last day of the range",
+  "ไม่มีกะในช่วง/ขอบเขตที่เลือก": "No shifts in the selected range/scope",
+  "คิดไม่สำเร็จ": "Computation failed",
+  "ไม่มีพาร์ทที่คิด OEE ได้ในช่วงที่เลือก": "No part with computable OEE in the selected range",
+  "%A/%P/%Q ของช่วง = ตัวตั้งรวม ÷ ตัวหารรวม (ไม่ใช่เฉลี่ยรายกะ) — กะที่ผลิตน้อยจึงไม่ถ่วงเท่ากะที่ผลิตเยอะ": "%A/%P/%Q of the range = total numerator ÷ total denominator (not a per-shift average) — low-output shifts weigh less than high-output ones",
+  "ข้อมูลบางส่วนถูกตัด (ช่วงยาวเกิน)": "Some data was cut (range too long)",
+
 };
 
 export default EN;
