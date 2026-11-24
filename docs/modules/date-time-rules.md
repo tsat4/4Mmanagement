@@ -48,7 +48,8 @@ getShiftInfo()  // object { shift, label } — กะเช้า 08:00-20:00 / 
 - `dateLocale()` (`src/utils/i18n.js`) = `'th-TH'` ในโหมดไทย · `'en-GB'` ในโหมดอังกฤษ ⇒ ทุก `toLocaleString/toLocaleDateString/toLocaleTimeString` ที่โชว์บนจอใช้ตัวนี้ (ด่าน `date-locale-no-th-TH`) · ใช้กับตัวเลขก็ได้ (คอมม่าเหมือนกัน)
 - `monthsShort()` / `yearDisplay(ceYear)` / `MONTHS_SHORT_TH` (`src/utils/dateFormat.js`) — ชื่อเดือนและปีตามภาษา · **ห้ามประกาศอาร์เรย์ 'ม.ค.' เองในหน้า** (ด่าน `date-no-hand-month-array` · ยกเว้น parser `kpiBaseImport.js`/`askBot.js`) · `fmtDateMedium` = `04 ส.ค. 69` / `04 Aug 26`
 - 🔴 **`src/lib` (ใบพิมพ์ · Excel · PPTX) ไม่เข้าด่าน — ยังไทย/พ.ศ. เสมอ** (เอกสารควบคุมของโรงงาน) · ใบพิมพ์ KPI ใน `KpiMonthly` ใช้ `MONTHS_SHORT_TH` ตรงๆ
-- ⚠️ **ตัวกลาง `fmtDate/fmtDateFull/fmtDateTime` (เลขล้วน `05/08/26` · 193 จุด) ยังเป็น ค.ศ. ทุกโหมด** — ยังไม่เปลี่ยน (กระทบ Excel/ใบพิมพ์ที่ส่งออกนอกระบบ · รอ user เคาะแยก) · ถ้าเคาะให้เป็น พ.ศ. ในโหมดไทย แก้ที่ `dateFormat.js` ที่เดียว
+- **ตัวกลาง `fmtDate/fmtDateFull/fmtDateTime/fmtDateTimeFull` (เลขล้วน · 193 จุด) ตามภาษาด้วย** (user เคาะ "เอาเลย" 24/11) — ไทย `05/08/69` · `05/08/2569` · EN `05/08/26` · ปีผ่าน `yearDisplay()` ที่เดียว
+  ⚠️ **ผลข้างเคียงที่รับไว้:** ใบพิมพ์/Excel/CSV ใน `src/lib` ที่ใช้ตัวกลาง (4 ไฟล์) จะออกปีตาม**โหมดที่คนกดอยู่** (EN = ค.ศ.) · Excel อาจตีความ `05/08/69` เป็น 1969 ถ้าเปิดเป็นวันที่ — ถ้าเอกสารไหนต้องยึด พ.ศ. เสมอ ให้ตรึง lang ที่จุดนั้น (ยังไม่มีเคสขอ)
 - หลังแก้: 161 จุดใน pages/components/utils สลับตามภาษา · อาร์เรย์เดือน 12 ไฟล์ยุบเข้าตัวกลาง · ด่าน 2 ตัว + เทส `dateLocale.test.mjs`
 
 **กับดัก:** ไฟล์ใน `src/utils` ที่ node test import ตรง ต้องเขียน `from './i18n.js'` (มี `.js`) — `'./i18n'` ผ่าน vite แต่ node test ล้ม 6 ไฟล์

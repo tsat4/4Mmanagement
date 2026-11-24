@@ -505,7 +505,7 @@ Realtime + Edge Functions/Deno) · Telegram Bot API · deploy = Render.com (Stat
 > · **บวก/ลบวันจากสตริงวันที่ = `addDaysStr()`** (ไฟล์เดียวกัน · UTC ล้วน · แกะไม่ออก = `null`)
 >   🔴 **ตัวที่คืน "สตริงวันที่" ห้ามปิดท้ายด้วย `.toISOString().slice(0,10)`** — ผสม 2 ระบบเวลา = คลาดวันเงียบ (มีด่าน `no-utc-workdate`)
 > · กะปัจจุบัน = `getCurrentShift()` · `getShiftInfo()` คืน `{ shift, label }`
-> · **แสดงผล** = `toLocaleString(dateLocale(), …)` · 🔴 **ไทย = พ.ศ. · EN = ค.ศ.** (24/11) — `dateLocale()` · `monthsShort()`/`yearDisplay()` (`utils/dateFormat.js`) ห้าม hardcode `'th-TH'`/อาร์เรย์ 'ม.ค.' (2 ด่าน) · `src/lib` ยังไทย-พ.ศ.
+> · **แสดงผล** = `toLocaleString(dateLocale(), …)` · 🔴 **ไทย = พ.ศ. · EN = ค.ศ.** (24/11) ทั้ง `fmtDate*` — `dateLocale()` · `monthsShort()`/`yearDisplay()` (`utils/dateFormat.js`) ห้าม hardcode `'th-TH'`/อาร์เรย์ 'ม.ค.' (2 ด่าน)
 > · **ฝั่ง SQL (DR) ใช้ `work_date_bangkok()` ห้ามใช้ `current_date`** (= UTC · เพี้ยน 07:00-07:59 ไทย)
 
 > ⚠️ **"วันทำงาน" ต้องอ้างอิงปฏิทินบริษัทก่อน ห้ามใช้ค่าคงที่ 22/26 วัน** (คำสั่ง user 2026-07-21) —
