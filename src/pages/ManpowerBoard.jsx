@@ -57,7 +57,7 @@ import { lineChainIds } from '../utils/lineHierarchy';
 import useIsMobile from '../utils/useIsMobile';
 
 import SectionScopeSelect from '../components/SectionScopeSelect';
-import { tr as trI18n } from '../utils/i18n';
+import { tr as trI18n, dateLocale } from '../utils/i18n';
 /* ═══════════════════════════════════════════════════════════════════════════════════════
    🧑‍🤝‍🧑 Manpower Control Board — /manpower-board (2026-10-06 · คำสั่ง user)
 
@@ -1911,8 +1911,8 @@ function HistoryTab({ section, dept, deptParam, nodes, lines, stations, employee
   const th = { textAlign: 'left', fontSize: 12, padding: '8px 10px', color: 'var(--muted)', whiteSpace: 'nowrap' };
   const td = { padding: '7px 10px', fontSize: 13, borderTop: '1px solid var(--border)', verticalAlign: 'top' };
   const signed = (n) => (n > 0 ? `+${n}` : String(n));
-  const fmtAt = (t) => new Date(t).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' });
-  const monthTh = (ym) => { const [y, m] = ym.split('-'); return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString('th-TH', { month: 'short', year: 'numeric' }); };
+  const fmtAt = (t) => new Date(t).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' });
+  const monthTh = (ym) => { const [y, m] = ym.split('-'); return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString(dateLocale(), { month: 'short', year: 'numeric' }); };
   return (
     <div style={{ display: 'grid', gap: 12 }}>
       <TimeRangeBar scale={tr.scale} from={from} to={to} today={tr.today} scales={null}

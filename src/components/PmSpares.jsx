@@ -21,13 +21,13 @@ import SearchSelect from './SearchSelect'
 import { planReadiness, SPARE_HORIZON_DAYS } from '../utils/pmSpares'
 import { loadSpareParts, loadPmSpareDemand } from '../lib/pmSpareData'
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
-const fmtN = (n) => (n == null ? '—' : Number(n).toLocaleString('th-TH', { maximumFractionDigits: 2 }))
+const fmtN = (n) => (n == null ? '—' : Number(n).toLocaleString(dateLocale(), { maximumFractionDigits: 2 }))
 const fmtYmd = (ymd) => {
   if (!ymd) return '—'
   const [y, m, d] = ymd.split('-').map(Number)
-  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('th-TH', { timeZone: 'UTC', day: 'numeric', month: 'short' })
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString(dateLocale(), { timeZone: 'UTC', day: 'numeric', month: 'short' })
 }
 const inp = { padding: '7px 9px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', fontSize: 13, boxSizing: 'border-box' }
 const btn = (c, solid) => ({ padding: '7px 14px', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', border: solid ? 'none' : `1px solid ${c}55`, background: solid ? c : `${c}14`, color: solid ? '#fff' : c })
@@ -141,7 +141,7 @@ export function PlanSparesModal({ row, canEdit, canIssue, byName, byUid, onClose
 
   return (
     <Shell title={tr('อะไหล่ที่ใช้ใน PM รอบหนึ่ง')} onClose={onClose}
-      sub={<>{eqLabel || '—'}{row.eq?.line_name ? ` · ${row.eq.line_name}` : ''} {tr('· รอบ:')} <b>{row.cycleText || '—'}</b>{row.nextDue ? ` · PM ${tr("ครั้งถัดไป")} ${row.nextDue.toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short' })}` : ''}</>}>
+      sub={<>{eqLabel || '—'}{row.eq?.line_name ? ` · ${row.eq.line_name}` : ''} {tr('· รอบ:')} <b>{row.cycleText || '—'}</b>{row.nextDue ? ` · PM ${tr("ครั้งถัดไป")} ${row.nextDue.toLocaleDateString(dateLocale(), { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short' })}` : ''}</>}>
       {loadErr && <div style={{ color: '#ef4444', fontSize: 12.5, fontWeight: 700, marginBottom: 8 }}>⚠️ {loadErr}</div>}
       {loading ? <div style={{ padding: 24, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('กำลังโหลด…')}</div> : (<>
         <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
@@ -203,7 +203,7 @@ export function PlanSparesModal({ row, canEdit, canIssue, byName, byUid, onClose
             <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--text2)', marginBottom: 4 }}>{tr('ประวัติเบิกให้ PM ใบนี้')}</div>
             {history.slice(0, 8).map(h => (
               <div key={h.id} style={{ fontSize: 12, color: 'var(--muted)', padding: '3px 0', borderTop: '1px dashed var(--border)' }}>
-                {new Date(h.created_at).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                {new Date(h.created_at).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                 {' · '}{partById.get(h.part_id)?.name || tr("อะไหล่")} × {fmtN(Math.abs(Number(h.qty)))}{h.by_name ? ` · ${h.by_name}` : ''}
               </div>
             ))}

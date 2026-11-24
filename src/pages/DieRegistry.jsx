@@ -38,7 +38,7 @@ import { loadDocForms } from '../utils/docForms';
 import { xlsxDocName } from '../utils/csvDoc';
 
 import NoticeBar from '../components/NoticeBar';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
 /* ═══════════════════════════════════════════════════════════════
    ทะเบียนแม่พิมพ์ & DIE MAINTENANCE — /die-registry
@@ -507,7 +507,7 @@ export default function DieRegistry() {
       XLSX.utils.book_append_sheet(wb, wsS, 'ชุด');
       // คำอธิบายอยู่ชีตท้าย — ชีตข้อมูลต้องเริ่มที่หัวตาราง (ตัวอ่านของผู้ใช้ยึดแถวแรก = หัว)
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
-        ['ทะเบียนแม่พิมพ์', `${tr("ส่งออก")} ${new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })} ${tr("โดย")} ${fullName || '-'}`],
+        ['ทะเบียนแม่พิมพ์', `${tr("ส่งออก")} ${new Date().toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok' })} ${tr("โดย")} ${fullName || '-'}`],
         ['ขอบเขต', scopeActive ? 'เฉพาะส่วนงานของผู้ส่งออก' : 'ทั้งโรงงาน'],
         ['ช่องว่าง', 'ยังไม่ได้กรอก (ไม่ใช่ 0) — ไล่เติมแล้วกรอกกลับที่หน้า /equipment?tab=die'],
         ['เลขแม่พิมพ์', 'D-xxxx ระบบออกให้ ห้ามแก้ · 1 เลข = แม่พิมพ์ 1 ตัว = 1 OP'],

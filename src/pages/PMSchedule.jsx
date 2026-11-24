@@ -19,7 +19,7 @@ import { toast } from '../components/Toast'
 import { loadPmTeams, pmTeamsSync } from '../utils/pmTeams'
 import { inspMeta } from '../utils/inspectionStatus'
 import { checkWrite } from '../utils/dbWrite';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import PersonSelect from '../components/PersonSelect' // ชื่อคน = picker กลาง (single-source audit 2026-09-07)
 import useColumnHistory from '../utils/useColumnHistory'
 import Page from '../components/Page'
@@ -71,7 +71,7 @@ function daysBetween(from, to) { return Math.round((atMidnight(to).getTime() - a
 function dayKey(d) { const x = atMidnight(d); return `${x.getFullYear()}-${x.getMonth()}-${x.getDate()}` }
 // 'YYYY-MM-DD' จากเวลา local — ห้ามใช้ toISOString() (คืน UTC → เที่ยงคืนไทยกลายเป็นวันก่อนหน้าเสมอ · ดู CLAUDE.md "Date/Time Utilities")
 function ymd(d) { const x = new Date(d); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}` }
-const fmtDay = (d) => new Date(d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', timeZone: 'Asia/Bangkok' })
+const fmtDay = (d) => new Date(d).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short', timeZone: 'Asia/Bangkok' })
 
 const S = {
   page: { minHeight: '100%', background: 'var(--bg)' },   // ขอบ/ความกว้างมาจาก <Page> (UI-STANDARD 2026-09-24)
@@ -519,7 +519,7 @@ export default function PMSchedule() {
                     </td>
                     <td style={{ fontSize: 13, color: 'var(--muted)' }}>{r.cycleText}</td>
                     <td style={{ fontSize: 13, color: 'var(--text2)' }}>
-                      {lastDone ? new Date(lastDone).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' }) : <span style={{ color: 'var(--muted)' }}>—</span>}
+                      {lastDone ? new Date(lastDone).toLocaleDateString(dateLocale(), { timeZone: 'Asia/Bangkok' }) : <span style={{ color: 'var(--muted)' }}>—</span>}
                     </td>
                     <td style={{ fontSize: 13, color: isOverdue ? '#e05c4a' : isDeferred ? '#4a90e0' : 'var(--text2)', fontWeight: (isOverdue || isDeferred) ? 700 : 400 }}>
                       {/* 🏃 แผน run_day ไม่มีวันครบกำหนดแบบปฏิทิน — ต้องเขียนเป็น **เงื่อนไข**
@@ -527,7 +527,7 @@ export default function PMSchedule() {
                       {runDay
                         ? <RunDayCell res={runDay} cycle={r.cycle} />
                         : <>
-                            {nextDue ? nextDue.toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' }) : <span style={{ color: 'var(--muted)' }}>—</span>}
+                            {nextDue ? nextDue.toLocaleDateString(dateLocale(), { timeZone: 'Asia/Bangkok' }) : <span style={{ color: 'var(--muted)' }}>—</span>}
                             {isOverdue && nextDue && (
                               <div style={{ fontSize: 11, color: '#e05c4a' }}>
                                 {tr("เกิน")} {Math.abs(daysUntilDue(nextDue))} {tr("วัน")}
@@ -678,7 +678,7 @@ function CycleModal({ rows, byName, byUid, deptWrite, onClose, onSaved }) {
         <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>{tr('ตั้งรอบ PM / วัน PM ครั้งถัดไป')}</div>
         <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 14 }}>
           {single
-            ? <>{single.eq?.name ?? '—'}{single.eq?.line_name ? ` · ${single.eq.line_name}` : ''} {tr('· รอบตอนนี้:')} <b>{single.cycleText}</b>{lastYmd ? ` · ${tr("ตรวจล่าสุด")} ${new Date(lastYmd).toLocaleDateString('th-TH')}` : tr(" · ยังไม่เคยตรวจ")}</>
+            ? <>{single.eq?.name ?? '—'}{single.eq?.line_name ? ` · ${single.eq.line_name}` : ''} {tr('· รอบตอนนี้:')} <b>{single.cycleText}</b>{lastYmd ? ` · ${tr("ตรวจล่าสุด")} ${new Date(lastYmd).toLocaleDateString(dateLocale())}` : tr(" · ยังไม่เคยตรวจ")}</>
             : <>{tr('ตั้งพร้อมกัน')} {picked.size} / {rows.length} {tr('รายการ (ติ๊กออกรายการที่ไม่ต้องการ)')}</>}
         </div>
 
@@ -726,9 +726,9 @@ function CycleModal({ rows, byName, byUid, deptWrite, onClose, onSaved }) {
           {nextDate
             ? <>{tr("ระบบจะเตือนตามวันนี้ · ตรวจเสร็จแล้วรอบถัดไป = วันที่ตรวจจริง")} + {valid ? cycleLabel(null, n) : tr("รอบ")}</>
             : single
-              ? (preview ? <>{tr("ไม่กรอก = คิดจากตรวจล่าสุด + รอบ")} → <b style={{ color: 'var(--text)' }}>{new Date(preview).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}</b></>
+              ? (preview ? <>{tr("ไม่กรอก = คิดจากตรวจล่าสุด + รอบ")} → <b style={{ color: 'var(--text)' }}>{new Date(preview).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'long', year: 'numeric' })}</b></>
                          : single.nextDue
-                           ? <>{tr("ไม่กรอก = คงวันเดิม")} {single.nextDue.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}</>
+                           ? <>{tr("ไม่กรอก = คงวันเดิม")} {single.nextDue.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'long', year: 'numeric' })}</>
                            : <>⚠️ {tr("ยังไม่เคยตรวจ + ไม่กรอกวัน")} = <b>{tr('ยังไม่มีวันครบกำหนด')}</b> {tr('จนกว่าจะตรวจครั้งแรก — แนะนำให้กรอกวัน')}</>)
               : <>{tr("ไม่กรอก = รายการที่เคยตรวจแล้วคิดจากตรวจล่าสุด + รอบ · รายการที่ไม่เคยตรวจจะยังไม่มีวันครบกำหนด (แนะนำให้กรอกวัน")})</>}
         </div>
@@ -807,11 +807,11 @@ function DeferModal({ row, byName, byUid, deptWrite, onClose, onSaved }) {
     <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: 16 }}>
       <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 20, width: 'min(440px,96vw)' }}>
         <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>{tr('⏭ เลื่อนแผน PM')}</div>
-        <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 14 }}>{eqName}{row.eq?.line_name ? ` · ${row.eq.line_name}` : ''} {tr('· ครบกำหนดเดิม')} {curDue ? new Date(curDue).toLocaleDateString('th-TH') : '—'}</div>
+        <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 14 }}>{eqName}{row.eq?.line_name ? ` · ${row.eq.line_name}` : ''} {tr('· ครบกำหนดเดิม')} {curDue ? new Date(curDue).toLocaleDateString(dateLocale()) : '—'}</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <label style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text2)' }}>{tr('เลื่อนไปวันที่')}
             <input type="date" value={toDue} onChange={e => setToDue(e.target.value)} style={{ ...inp, marginTop: 4 }} />
-            {toDue && <span style={{ fontSize: 11, color: 'var(--muted)' }}>= {new Date(toDue).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}</span>}
+            {toDue && <span style={{ fontSize: 11, color: 'var(--muted)' }}>= {new Date(toDue).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'long', year: 'numeric' })}</span>}
           </label>
           <label style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text2)' }}>{tr('เหตุผลการเลื่อน *')}
             <textarea value={reason} onChange={e => setReason(e.target.value)} placeholder={tr('เช่น คิวผลิตแน่น ผลิตไม่หยุด / ตัดไฟไม่ได้ช่วงนี้')} style={{ ...inp, marginTop: 4, minHeight: 54 }} />
@@ -1062,7 +1062,7 @@ function DayModal({ sel, onClose, onCheck }) {
                     <div style={{ fontSize: 11, color: x.meta.color, fontWeight: 700 }}>{tr(x.meta.label)}</div>
                   </div>
                   <span style={{ flexShrink: 0, fontSize: 11, color: 'var(--muted)' }}>
-                    {new Date(x.inspected_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(x.inspected_at).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
               ))}

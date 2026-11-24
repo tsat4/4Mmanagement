@@ -26,7 +26,7 @@ import Page, { Hub } from '../components/Page';
 import PageHeader from '../components/PageHeader';
 import { ALL } from '../utils/filterLabels';
 import { urlParam } from '../utils/urlInit';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 import { askConfirm } from '../utils/askConfirm';
 
@@ -523,7 +523,7 @@ export default function MtnMachineLayout({ setupMode = false }) {
                         <span style={{ fontWeight: 700, color: 'var(--text)' }}>{c.eqName ?? selInfo.name}</span>
                         <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--blue)', background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-xs)', padding: '1px 5px' }}>{deptIconOf(c.dept)} {deptLabelOf(c.dept)}</span>
                         <span style={{ color: m.color, fontWeight: 700 }}>{tr(m.label)}</span>
-                        <span style={{ color: 'var(--muted)' }}>{c.nextDue ? `${tr("ครบ")} ${c.nextDue.toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' })}${dd != null ? (dd < 0 ? ` (${tr("เกิน")} ${Math.abs(dd)} ${tr("วัน")})` : ` (${tr("อีก")} ${dd} ${tr("วัน")})`) : ''}` : tr("ยังไม่มีวัน PM ครั้งถัดไป")}</span>
+                        <span style={{ color: 'var(--muted)' }}>{c.nextDue ? `${tr("ครบ")} ${c.nextDue.toLocaleDateString(dateLocale(), { timeZone: 'Asia/Bangkok' })}${dd != null ? (dd < 0 ? ` (${tr("เกิน")} ${Math.abs(dd)} ${tr("วัน")})` : ` (${tr("อีก")} ${dd} ${tr("วัน")})`) : ''}` : tr("ยังไม่มีวัน PM ครั้งถัดไป")}</span>
                       </div>
                     )
                   })}

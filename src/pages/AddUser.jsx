@@ -42,7 +42,7 @@ import SearchInput from '../components/SearchInput';
 import { ALL } from '../utils/filterLabels';
 import NoticeBar from '../components/NoticeBar';
 import SectionScopeSelect from '../components/SectionScopeSelect';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 import { askConfirm } from '../utils/askConfirm';
 /* ทีมช่างซ่อม (profiles.mtn_teams) — เดิมมีหน้าที่เดียวคือ "แยกคิวใบแจ้งซ่อม MO ให้ถูกทีม"
@@ -1436,7 +1436,7 @@ export default function AddUser() {
                     {u.team ? `Team ${u.team}` : '—'}
                   </td>
                   <td style={{ textAlign: 'center', fontSize: 12, color: u.created_at ? 'var(--text2)' : 'var(--muted)', whiteSpace: 'nowrap' }}>
-                    {u.created_at ? new Date(u.created_at).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', year: '2-digit' }) : '—'}
+                    {u.created_at ? new Date(u.created_at).toLocaleDateString(dateLocale(), { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', year: '2-digit' }) : '—'}
                   </td>
                   {/* 🕵️ เข้าใช้ล่าสุด — "ไม่เคยเข้าใช้" กับ "อ่านไม่ได้" ต้องเขียนต่างกัน (accountActivity.js) */}
                   {(() => {
@@ -1445,7 +1445,7 @@ export default function AddUser() {
                       <td style={{ textAlign: 'center', fontSize: 12, color: activityTone(a.state),
                         fontWeight: a.state === 'never' ? 700 : 400, whiteSpace: 'nowrap' }}
                         title={u.last_sign_in_at
-                          ? new Date(u.last_sign_in_at).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })
+                          ? new Date(u.last_sign_in_at).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok' })
                           : (a.state === ACT_UNKNOWN ? tr("อ่าน auth.users ไม่ได้ — ไม่ใช่ว่าไม่เคยเข้า") : tr("ยังไม่เคย login เลยแม้ครั้งเดียว"))}>
                         {a.state === ACT_UNKNOWN ? '—' : a.text}
                       </td>

@@ -12,7 +12,7 @@ import { RATE_COMPONENTS, rateFor, fmtBaht } from '../utils/costSaving';
 import { loadCostCenterRefs, costCenterBlockMessage } from '../utils/costCenterRefs';
 import { DeleteButton } from './IconButton';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
 /* ═══ 💰 Activity Rate ต่อ Cost Center — แผงใน /org-setup (2026-08-11) ═══
    rate ที่บัญชีคำนวณ ต่อ cost center (ก้อนตาม RATE_COMPONENTS) — ใช้แปลงผล Improvement เป็น cost saving
@@ -25,7 +25,7 @@ const todayStr = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 /* timestamp ที่ระบบ stamp เอง (created_at/updated_at) — แสดงผลอย่างเดียว ห้ามให้กรอก */
-const fmtStamp = (v) => (v ? new Date(v).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' }) : '—');
+const fmtStamp = (v) => (v ? new Date(v).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' }) : '—');
 
 /* ⚠️ ช่อง rate ทั้งหมด generate จาก RATE_COMPONENTS — เพิ่มก้อนใหม่ที่ costSaving.js ที่เดียว
    ฟอร์ม/ตาราง/ยอดรวม ตามให้เอง ห้ามพิมพ์ชื่อคอลัมน์ rate ซ้ำในไฟล์นี้ */

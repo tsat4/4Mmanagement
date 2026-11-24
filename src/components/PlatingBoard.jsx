@@ -22,7 +22,7 @@ import {
   sendBlockReason, sendStockWarn, openQtyOf, receiveBlockReason, orderZone, OUTSOURCE_LINE_TYPE,
 } from '../utils/plating';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
 /* ═══ 🧪 งานชุบภายนอก — แท็บในตู้ Kanban รวม (/heijunka) · 2026-10-13 คำสั่ง user
 
@@ -54,7 +54,7 @@ const ZONES = (withDone) => [
 ];
 const dmy = (iso) => {
   const d = iso ? new Date(iso) : null;
-  return d && !isNaN(d) ? d.toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok', day: '2-digit', month: 'short' }) : '—';
+  return d && !isNaN(d) ? d.toLocaleDateString(dateLocale(), { timeZone: 'Asia/Bangkok', day: '2-digit', month: 'short' }) : '—';
 };
 const daysAgo = (iso, nowMs) => {
   const t = Date.parse(iso);

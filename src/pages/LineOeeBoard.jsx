@@ -30,7 +30,7 @@ import { chartAnim } from '../utils/motion';
 import { CELL_BAR_FILL } from '../utils/chartAxis';
 import useTvShell, { tvSizer } from '../utils/useTvShell';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 /* ═══ 📟 OEE บอร์ดหน้าไลน์ — /line-oee (2026-08-25 · คำสั่ง user "เพิ่มหน้า OEE หน้าไลน์แบบนี้") ═══
    จอ TV ประจำไลน์ผลิต 1 จอ = 1 ไลน์ (deep-link ?line=<ชื่อกลุ่มไลน์>) — โครงตามภาพอ้างอิง
    OEE SUMMARY WEEKLY ของ vendor: Overall vs Target/Variance · เทรนด์รายวัน · การ์ด A/P/Q
@@ -438,8 +438,8 @@ export default function LineOeeBoard() {
           style={{ width: 250, padding: '6px 10px', fontSize: 14, fontWeight: 700, borderRadius: 8, background: 'var(--bg2-surf)', border: '1px solid var(--border)', color: 'var(--text)' }} />
         <span style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('หน้าต่าง')} {DAYS_KPI} {tr('วันล่าสุด')}{C?.liveInWindow ? tr(" · รวมกะที่กำลังเปิด (สด)") : ''}</span>
         <span style={{ marginLeft: 'auto', fontSize: 20, fontWeight: 900, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>
-          {now.toLocaleTimeString('th-TH', { hour12: false })}
-          <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--muted)', marginLeft: 8 }}>{now.toLocaleDateString('th-TH')}</span>
+          {now.toLocaleTimeString(dateLocale(), { hour12: false })}
+          <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--muted)', marginLeft: 8 }}>{now.toLocaleDateString(dateLocale())}</span>
         </span>
       </div>
 
@@ -606,8 +606,8 @@ export default function LineOeeBoard() {
                       <tr key={d2.id} className={active && !planned ? 'dt-alarm-blink' : undefined}>
                         <td style={{ fontSize: T(11.5, 20), color: 'var(--text2)', padding: tdPad, whiteSpace: 'nowrap', ...cellClip }}>
                           {d2.started_at ? (tv
-                            ? new Date(d2.started_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false })
-                            : new Date(d2.started_at).toLocaleString('th-TH', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })) : '—'}
+                            ? new Date(d2.started_at).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit', hour12: false })
+                            : new Date(d2.started_at).toLocaleString(dateLocale(), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })) : '—'}
                         </td>
                         <td style={{ fontSize: T(11.5, 20), color: 'var(--text)', padding: tdPad, ...cellClip }}>
                           {d2.dr_downtime_types?.name_th || '—'}{d2.description && !tv ? <span style={{ color: 'var(--muted)' }}> · {d2.description}</span> : ''}

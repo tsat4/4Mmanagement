@@ -22,7 +22,7 @@ import { tooltipProps, axisTick, fmtAxis, CHART_MARGIN, alignedYWidth } from '..
 import TimeRangeBar from './TimeRangeBar';
 import NoticeBar from './NoticeBar';
 import { toast } from './Toast';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import useIsMobile from '../utils/useIsMobile';
 
 const GOOD = 'var(--green)', WARN = 'var(--amber)', BAD = 'var(--red)', ACC = 'var(--accent2)', INFO = 'var(--blue)', IDLE = 'var(--muted)';
@@ -33,7 +33,7 @@ const MINUTE_MAX_DAYS = 3;        // เกินนี้ไม่ดึงร�
 const EVENTS_MAX = 1000;
 const fmt = (v, d = 1) => (v == null || !Number.isFinite(Number(v)) ? '—'
   : Number(v).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d }));
-const tLabel = (ms) => new Date(ms).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+const tLabel = (ms) => new Date(ms).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
 export default function EnergyHistory() {
   const [sp, setSp] = useSearchParams();

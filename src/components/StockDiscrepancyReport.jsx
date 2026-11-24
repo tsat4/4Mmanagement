@@ -23,11 +23,11 @@ import MatLabel from './MatLabel';
 import SearchInput from './SearchInput';
 import Segmented from './Segmented';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
 const COLS = 'id, created_at, source, ref_id, line_name, mat_no, part_name, sent_qty, received_qty, short_qty, work_date, reported_by, note, status, proposed_outcome, proposed_by, proposed_side, proposed_at, confirmed_by, confirmed_side, resolved_at, resolved_by, resolve_note, sap_doc';
 const fmt = (v) => (v == null ? '—' : Number(v).toLocaleString());
-const dt = (iso) => (iso ? new Date(iso).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—');
+const dt = (iso) => (iso ? new Date(iso).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—');
 const card = { background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: 14 };
 const th = { textAlign: 'left', fontSize: 11.5, color: 'var(--muted)', fontWeight: 700, padding: '6px 8px', borderBottom: '1px solid var(--border)' };
 const td = { fontSize: 12.5, color: 'var(--text)', padding: '7px 8px', borderBottom: '1px solid var(--border)', verticalAlign: 'top' };

@@ -62,7 +62,7 @@ import StepFlow from '../components/StepFlow';
 import { fourMFlow, fourMSelfBlock } from '../utils/fourMFlow';
 import { isSelfName } from '../utils/selfSign';
 import SectionScopeSelect from '../components/SectionScopeSelect';
-import { tr as trI18n } from '../utils/i18n';
+import { tr as trI18n, dateLocale } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 import { askConfirm } from '../utils/askConfirm';
 
@@ -437,7 +437,7 @@ function OtTransportBookingTab({ autoOpenMaster }) {
   };
 
   const handlePrint = () => {
-    const printedAt = new Date().toLocaleDateString('th-TH', { dateStyle: 'long' });
+    const printedAt = new Date().toLocaleDateString(dateLocale(), { dateStyle: 'long' });
     const rowsHtml = filteredRows.map((r, i) => `<tr>
       <td style="border:1px solid #ccc;padding:3px 6px;text-align:center">${i + 1}</td>
       <td style="border:1px solid #ccc;padding:3px 6px">${r.employees?.employee_id_code || ''}</td>
@@ -817,7 +817,7 @@ function DailyTab() {
   }), [logs, dailySection, dailyDept, dailyLine, dailyTeam, lines]);
 
   const handlePrintDaily = () => {
-    const todayStr = new Date().toLocaleDateString('th-TH', { dateStyle: 'long' });
+    const todayStr = new Date().toLocaleDateString(dateLocale(), { dateStyle: 'long' });
     const rowsHtml = filteredLogs.map((l, i) => `<tr>
       <td style="border:1px solid #ccc;padding:3px 6px;text-align:center">${i+1}</td>
       <td style="border:1px solid #ccc;padding:3px 6px">${l.employees?.employee_id_code || ''}</td>
@@ -1008,7 +1008,7 @@ function PerEmployeeTab() {
 
   const handlePrintPerEmp = () => {
     const emp = employees.find(e => e.id === selected);
-    const todayStr = new Date().toLocaleDateString('th-TH', { dateStyle: 'long' });
+    const todayStr = new Date().toLocaleDateString(dateLocale(), { dateStyle: 'long' });
     const rowsHtml = logs.map((l, i) => {
       const dt = DAY_TYPE_META[getDayType(l.work_date)];
       return `<tr style="${dt.label !== DAY_TYPE_META.working.label ? `background:${tint(dt.color, 'dim')}` : ''}">
@@ -1205,7 +1205,7 @@ function StationLogTab() {
   }), [rows, stationTeam, stationShift]);
 
   const handlePrintStation = () => {
-    const todayStr = new Date().toLocaleDateString('th-TH', { dateStyle: 'long' });
+    const todayStr = new Date().toLocaleDateString(dateLocale(), { dateStyle: 'long' });
     const rowsHtml = filteredRows.map((r, i) => {
       const dt = DAY_TYPE_META[getDayType(r.work_date)];
       return `<tr style="${dt.label !== DAY_TYPE_META.working.label ? `background:${tint(dt.color, 'dim')}` : ''}">
@@ -1397,7 +1397,7 @@ function RangeTab() {
   }), [rows, rangeSection, rangeUnit, rangeUnitIds, rangeLine, rangeTeam, lines]);
 
   const handlePrintRange = () => {
-    const todayStr = new Date().toLocaleDateString('th-TH', { dateStyle: 'long' });
+    const todayStr = new Date().toLocaleDateString(dateLocale(), { dateStyle: 'long' });
     const rowsHtml = filteredRows.map((r, i) => `<tr>
       <td style="border:1px solid #ccc;padding:3px 6px;text-align:center">${i+1}</td>
       <td style="border:1px solid #ccc;padding:3px 6px">${r.code || ''}</td>
@@ -2167,7 +2167,7 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
                         {(() => { const f = fourMFlow(l); return <StepFlow compact steps={f.steps} unknown={!f.known} />; })()}
                         {svName && <span style={{ fontSize: 11, color: 'var(--muted)' }}>SV: {svName}</span>}
                         {qaName && <span style={{ fontSize: 11, color: 'var(--muted)' }}>QA: {qaName}</span>}
-                        {l.approved_at && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{new Date(l.approved_at).toLocaleDateString('th-TH')}</span>}
+                        {l.approved_at && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{new Date(l.approved_at).toLocaleDateString(dateLocale())}</span>}
                       </div>
                     </td>
                     <td style={{ textAlign: 'center' }}>
@@ -2548,7 +2548,7 @@ function SkillMatrixTab() {
         <button onClick={() => {
           const groups = groupSkillsByCategory(skillDefs);
           const ordered = groups.flatMap(g => g.skills);
-          const todayStr = new Date().toLocaleDateString('th-TH', { dateStyle: 'long' });
+          const todayStr = new Date().toLocaleDateString(dateLocale(), { dateStyle: 'long' });
           const headerCells = ordered.map(s => `<th style="border:1px solid #ccc;padding:3px 2px;font-size:9px;text-align:center;writing-mode:vertical-rl;transform:rotate(180deg);height:80px;white-space:nowrap">${s.label}</th>`).join('');
           const rowsHtml = employees.map((emp, i) => {
             const sm = Object.fromEntries((emp.employee_skills || []).map(s => [s.skill_name, s.score]));
@@ -2815,7 +2815,7 @@ function calcServiceDuration(startDate) {
 }
 
 function buildMultiSkillHtml({ empRows, levelCounts, skillDefs, dept, section, department, headName, maker, checker, approver, totalEmps, makerSigUrl, checkerSigUrl, approverSigUrl, logoUrl }) {
-  const today = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+  const today = new Date().toLocaleDateString(dateLocale(), { year: 'numeric', month: 'long', day: 'numeric' });
 
   const levelCell = (lv) =>
     `<td style="text-align:center;border:1px solid #999;padding:2px">${skillGaugeSvgStr(lv)}</td>`;

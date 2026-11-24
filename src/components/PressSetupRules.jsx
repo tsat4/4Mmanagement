@@ -15,7 +15,7 @@ import { toast } from './Toast';
 import { checkWrite } from '../utils/dbWrite';
 import { resolveSetupRule, sequenceSetup, orderByDieHeight, setupDataReadiness } from '../utils/pressSetup';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
 const COLS = 'id, scope_kind, scope_value, per_mm_sec, base_min, same_die_min, height_steps, note, is_active, updated_by_name, updated_at';
 const SCOPES = [
@@ -30,7 +30,7 @@ const btn = (bg, color = '#fff') => ({ padding: '5px 10px', borderRadius: 6, fon
 const numOrNull = (v) => (v === '' || v == null || Number.isNaN(Number(v)) ? null : Number(v));
 
 /* ปัดเศษนาทีให้อ่านรู้เรื่อง — นาทีที่มาจากวินาที/60 เป็นทศนิยมยาว (ห้ามโชว์ดิบ) */
-const fmtMin = (v) => (v == null ? '—' : (Math.abs(v) < 10 ? Math.round(v * 10) / 10 : Math.round(v)).toLocaleString('th-TH'));
+const fmtMin = (v) => (v == null ? '—' : (Math.abs(v) < 10 ? Math.round(v * 10) / 10 : Math.round(v)).toLocaleString(dateLocale()));
 
 /* แปลงกฎผลของความสูงเป็นข้อความอ่านง่าย — อัตราต่อมม. + ขั้นบันได (ถ้ามี) */
 function heightRuleText(rule) {

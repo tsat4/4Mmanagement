@@ -124,7 +124,7 @@ import StepFlow from '../components/StepFlow';
 import MachineSelect from '../components/MachineSelect';
 import MachineFaultGaps from '../components/MachineFaultGaps';
 import { loadFamilyQtyTotals, familyQtyChip } from '../utils/familyTotals';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { statusColor as toneColor, toneVar, toneDim, toneLine } from '../utils/statusTone';   // 🎨 token พาเลต 5 สี (UI §6.17)   // สีสถานะชุดเดียวทั้งระบบ (ห้ามตั้ง hex เอง · ชื่อ statusColor ชนกับตัวแปรในหน้า)
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 import { askConfirm } from '../utils/askConfirm';
@@ -8131,7 +8131,7 @@ function HistoryTab({ role }) {
                         setProbDocs(m => ({ ...m, [s.id]: (m[s.id] || []).map(d =>
                           d.id === doc.id ? { ...d, reprint_count: (Number(d.reprint_count) || 0) + 1 } : d) }));
                       }}
-                      title={`${tr("พิมพ์ซ้ำใบเดิม")} ${doc.doc_no}\n${tr("ปัญหา")}: ${doc.problem_title || tr('(ไม่ได้ระบุ)')}\n${tr("ออกโดย")} ${doc.issued_by || '—'} ${doc.issued_at ? new Date(doc.issued_at).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }) : ''}${doc.reprint_count ? `\n${tr("พิมพ์ซ้ำแล้ว")} ${doc.reprint_count} ${tr("ครั้ง")}` : ''}`}
+                      title={`${tr("พิมพ์ซ้ำใบเดิม")} ${doc.doc_no}\n${tr("ปัญหา")}: ${doc.problem_title || tr('(ไม่ได้ระบุ)')}\n${tr("ออกโดย")} ${doc.issued_by || '—'} ${doc.issued_at ? new Date(doc.issued_at).toLocaleString(dateLocale(), { dateStyle: 'short', timeStyle: 'short' }) : ''}${doc.reprint_count ? `\n${tr("พิมพ์ซ้ำแล้ว")} ${doc.reprint_count} ${tr("ครั้ง")}` : ''}`}
                       style={{ background: 'var(--green-dim)', border: '1px solid var(--green-line)', color: 'var(--green)',
                         borderRadius: 6, padding: '3px 9px', fontSize: 11, cursor: 'pointer', fontWeight: 700, whiteSpace: 'nowrap' }}>
                       {doc.doc_no}
@@ -8228,7 +8228,7 @@ function HistoryTab({ role }) {
                             <b style={{ color: 'var(--green)' }}>{doc.doc_no}</b>
                             {' · '}{doc.problem_title ? <>{tr('ปัญหา:')} <b style={{ color: 'var(--text)' }}>{doc.problem_title}</b></> : <i>{tr('ไม่ได้ระบุหัวเรื่อง')}</i>}
                             {tr(" · ออกโดย ")}{doc.issued_by || '—'}
-                            {doc.issued_at && ` ${new Date(doc.issued_at).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })}`}
+                            {doc.issued_at && ` ${new Date(doc.issued_at).toLocaleString(dateLocale(), { dateStyle: 'short', timeStyle: 'short' })}`}
                             {!!doc.reprint_count && ` · ${tr("พิมพ์ซ้ำ")} ${doc.reprint_count} ${tr("ครั้ง")}`}
                             {match === false && (
                               <div style={{ color: 'var(--amber)', fontWeight: 700 }}>

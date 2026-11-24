@@ -15,7 +15,7 @@ import {
   DIE_STATUSES, DIE_STATUS_UNSET, dieStatusMeta, buildOpenMoMap, openMosOf,
   regrindOver, saveDieStatus, MIGRATION_HINT,
 } from '../utils/dieStatus';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { moStatusLabel } from '../utils/mtnStepPerm';   // ป้ายสถานะใบ MO (แยกรอ QA / รอรับมอบ)
 
 const inp = { padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 13, boxSizing: 'border-box' };
@@ -252,7 +252,7 @@ export default function DieStatusBoard({
                     </td>
                     <td style={{ ...tdStyle, fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>
                       {e.status_updated_at
-                        ? <>{new Date(e.status_updated_at).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' })}
+                        ? <>{new Date(e.status_updated_at).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' })}
                           {e.status_updated_by_name ? <div>{e.status_updated_by_name}</div> : null}</>
                         : '—'}
                     </td>

@@ -22,14 +22,14 @@ import { notifyEvent } from '../utils/notifyEvent';
 import { checkData } from '../utils/wfSchema';
 import { wfFlow, WF_STATUS } from '../utils/wfFlow';
 import { statusColor } from '../utils/statusTone';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 
 const TABS = [
   { key: 'inbox', label: '📥 รอฉัน' },
   { key: 'mine', label: '📄 ใบของฉัน' },
   { key: 'new', label: '➕ เปิดใบใหม่' },
 ];
-const fmt = (ts) => (ts ? new Date(ts).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' }) : '—');
+const fmt = (ts) => (ts ? new Date(ts).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' }) : '—');
 const ACTION_LABEL = { submit: 'ยื่นใบ', approve: 'อนุมัติ', reject: 'ตีกลับ', return: 'ส่งกลับให้แก้', resubmit: 'ส่งใหม่', cancel: 'ยกเลิก' };
 
 /** ยิงแจ้งเตือนในแอปตามที่ RPC บอก (fire-and-forget · ผู้รับ = เจ้าของงานตรง) */

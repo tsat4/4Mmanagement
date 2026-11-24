@@ -22,7 +22,7 @@ import SearchInput from '../components/SearchInput';
 import useTimeRange from '../utils/useTimeRange';
 import { useMergeParams } from '../utils/useTabParam';
 import { KINDS, USER_KINDS, kindOf, buildFeed, countByKind, limitFeed } from '../utils/changelog';
-import { tr as trI18n } from '../utils/i18n';
+import { tr as trI18n, dateLocale } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 
 /* เพดานรายการที่วาดต่อรอบ — ช่วงกว้างมาก (ทั้งประวัติ = 1,157 รายการ) ทำจอ TV/มือถือหน่วง
@@ -32,13 +32,13 @@ const PAGE_ROWS = 400;
 const fmtThaiDate = (ymd) => {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(ymd || ''));
   if (!m) return ymd || '—';
-  return new Date(`${ymd}T00:00:00`).toLocaleDateString('th-TH',
+  return new Date(`${ymd}T00:00:00`).toLocaleDateString(dateLocale(),
     { day: 'numeric', month: 'short', year: '2-digit', timeZone: 'Asia/Bangkok' });
 };
 const fmtStamp = (iso) => {
   const t = Date.parse(iso || '');
   return Number.isFinite(t)
-    ? new Date(t).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Bangkok' })
+    ? new Date(t).toLocaleString(dateLocale(), { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Bangkok' })
     : '—';
 };
 

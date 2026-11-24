@@ -16,7 +16,7 @@ import { auditProject, auditText, fmtBytes } from '../utils/schemaAudit';
 import { openFeedback } from '../utils/feedbackPrefill';
 import { UserContext } from '../App';
 import USAGE from 'virtual:schema-usage';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import TabBar from '../components/TabBar';   // แถบเลือกมุมมอง = แท็บเส้นใต้มาตรฐาน (UI §6.36 ข้อ 0)
 
 /* ══ 🗄️ โครงสร้างฐานข้อมูล (Data Map) — /schema ═══════════════════════════════════════
@@ -590,7 +590,7 @@ function PagesTab({ q, setQ, isMobile, catalog, ghosts, onPick }) {
         <SearchInput value={q} onChange={setQ} fields={tr("ชื่อหน้า / path / ชื่อตาราง")} />
         <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.6 }}>
           {tr("แสดง")} {pages.length} {tr('หน้า จากทั้งหมด')} {(USAGE.pages || []).length} ·
-          {tr("สแกนซอร์สเมื่อ")} {new Date(USAGE.builtAt).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' })} ({tr("ตอน")} build)
+          {tr("สแกนซอร์สเมื่อ")} {new Date(USAGE.builtAt).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' })} ({tr("ตอน")} build)
           {!!ghosts.size && <> · <span style={{ color: 'var(--amber)' }}>{tr('พบชื่อตารางในโค้ด')} {ghosts.size} {tr('ตัวที่ไม่มีอยู่จริงในฐานข้อมูล (ดูท้ายหน้า)')}</span></>}
         </div>
       </div>

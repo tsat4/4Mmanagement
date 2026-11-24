@@ -4,6 +4,7 @@
  * or toLocaleString() directly — they produce inconsistent output across OS locales.
  */
 import { getWorkDate } from './workDate.js';
+import { getLang } from './i18n.js';
 
 const toDate = (v) => {
   if (!v) return null;
@@ -75,18 +76,26 @@ export const fmtDateTimeFull = (v) => {
 
 /** DD MMM  e.g. 05 มิ.ย.  — compact label for charts / axis */
 const MONTHS_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const MONTHS_SHORT_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+/* 🌐 ชื่อเดือนตามภาษา — ไทย = ตัวย่อไทย + ปี พ.ศ. · อังกฤษ = ตัวย่ออังกฤษ + ปี ค.ศ. (คำสั่ง user 24/11) */
+/** ตัวย่อเดือนตามภาษาปัจจุบัน (index 0-11) — 🔴 ห้ามประกาศอาร์เรย์ 'ม.ค.' ซ้ำในหน้า ใช้ตัวนี้ (มีด่าน) */
+export const monthsShort = () => (getLang() === 'th' ? MONTHS_SHORT : MONTHS_SHORT_EN);
+export const MONTHS_SHORT_TH = MONTHS_SHORT;   // ใบพิมพ์ที่ยึดภาษาไทยเสมอ
+/** ปีสำหรับแสดงผล — ไทย = พ.ศ. (+543) · อังกฤษ = ค.ศ. (คำสั่ง user 24/11) · รับปี ค.ศ. เป็นตัวเลข */
+export const yearDisplay = (ceYear) => Number(ceYear) + (getLang() === 'th' ? 543 : 0);
+const monthShort = (d) => monthsShort()[d.getMonth()];
+const yy2 = (d) => String(yearDisplay(d.getFullYear())).slice(-2);
 export const fmtDateLabel = (v) => {
   const d = toDate(v);
   if (!d) return '';
-  return `${String(d.getDate()).padStart(2, '0')} ${MONTHS_SHORT[d.getMonth()]}`;
+  return `${String(d.getDate()).padStart(2, '0')} ${monthShort(d)}`;
 };
 
-/** DD MMM YY  e.g. 05 มิ.ย. 26 — medium label */
+/** DD MMM YY  e.g. 05 มิ.ย. 69 (ไทย · พ.ศ.) / 05 Jun 26 (EN · ค.ศ.) — medium label */
 export const fmtDateMedium = (v) => {
   const d = toDate(v);
   if (!d) return '';
-  const yy = String(d.getFullYear()).slice(-2);
-  return `${String(d.getDate()).padStart(2, '0')} ${MONTHS_SHORT[d.getMonth()]} ${yy}`;
+  return `${String(d.getDate()).padStart(2, '0')} ${monthShort(d)} ${yy2(d)}`;
 };
 
 /**

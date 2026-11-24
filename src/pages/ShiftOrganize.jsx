@@ -24,7 +24,7 @@ import PageHeader from '../components/PageHeader';
 import NoticeBar from '../components/NoticeBar';
 import Page from '../components/Page';
 import { DeleteButton } from '../components/IconButton';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
 function getWeekDates(refDate) {
   const d = new Date(refDate);
@@ -477,7 +477,7 @@ export default function ShiftOrganize() {
   const nextWeek = () => { const d = new Date(weekRef); d.setDate(d.getDate() + 7); setWeekRef(d); };
   const goToday  = () => setWeekRef(new Date());
 
-  const fmtDate = (d) => d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+  const fmtDate = (d) => d.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' });
 
   return (
     <Page>

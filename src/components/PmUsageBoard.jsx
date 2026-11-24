@@ -8,6 +8,7 @@ import { dieUsage, setMatsOf } from '../utils/dieUsage';            // 🔨 แ�
 import { membersBySet } from '../utils/dieRegistryExport';
 
 import { tr } from '../utils/i18n';
+import { monthsShort, yearDisplay } from '../utils/dateFormat';
 /* ══ 📊 ยอดผลิตสะสมรายอุปกรณ์ — แท็บใน /pm-forecast ══════════════════  2026-09-15
    คำสั่ง user: *"ดูหน้าไหนได้บ้างว่าเครื่องไหนผ่านการผลิตไปแล้วกี่ชิ้นงาน"*
    (ก่อนหน้านี้ **ไม่มีหน้าไหนดูได้เลย** — ยอดผลิตทุกจอเป็นราย "ไลน์" หรือราย "สินค้า")
@@ -29,7 +30,7 @@ const N = (v) => Number(v || 0).toLocaleString();
 const fmtThai = (ymd) => {
   if (!ymd) return '—';
   const [y, m, d] = String(ymd).slice(0, 10).split('-');
-  return `${+d} ${['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'][+m - 1]} ${String(+y + 543).slice(-2)}`;
+  return `${+d} ${monthsShort()[+m - 1]} ${String(yearDisplay(+y)).slice(-2)}`;
 };
 
 const KIND_META = {

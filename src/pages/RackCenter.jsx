@@ -29,7 +29,7 @@ import { LIVE } from '../utils/refreshRates';
 import { coalesce } from '../utils/liveRefresh';
 import PartCard, { partCardGrid } from '../components/PartCard';
 import { storeBtn } from '../utils/storeUi';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 import { askConfirm } from '../utils/askConfirm';
 
@@ -59,7 +59,7 @@ function timeAgo(iso) {
   if (mins < 60) return `${mins} ${tr("นาทีที่แล้ว")}`;
   const hrs = Math.round(mins / 60);
   if (hrs < 24) return `${hrs} ${tr("ชม.ที่แล้ว")}`;
-  return new Date(iso).toLocaleDateString('th-TH');
+  return new Date(iso).toLocaleDateString(dateLocale());
 }
 
 const EMPTY_FORM = { line_name: '', container_type_id: '', qty: '1', note: '' };
@@ -432,7 +432,7 @@ export default function RackCenter() {
           sub: `${byLine[lnName].length} ${tr("รายการ")} · ✅ ${byLine[lnName].filter(x => x.status === 'received').length}`,
           items: byLine[lnName].map(r => {
             const tm = frameMinFromIso(r.requested_at);
-            const hhmm = new Date(r.requested_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+            const hhmm = new Date(r.requested_at).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit' });
             return { id: r.id, timeMin: tm ?? 480, color: colorOf(r), text: `${hhmm}${r.status === 'received' ? ' ✅' : ''}`,
               title: `${hhmm} · ${r.container_name} ×${r.qty} · ${r.line_name}`, data: r };
           }),

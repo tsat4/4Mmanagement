@@ -9,7 +9,7 @@
    ══════════════════════════════════════════════════════════════════════ */
 import { bandProgress, daysToNextBand, evidenceState, shadowDelta } from '../utils/skillExp';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 const box = {
   background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 7,
   padding: '8px 10px', minWidth: 104, flex: '1 1 104px',
@@ -17,7 +17,7 @@ const box = {
 const capLabel = { fontSize: 11, color: 'var(--muted)', marginBottom: 2 };
 const capValue = { fontSize: 14, fontWeight: 800, lineHeight: 1.2 };
 
-const nf = (n) => (n == null ? '–' : Number(n).toLocaleString('th-TH'));
+const nf = (n) => (n == null ? '–' : Number(n).toLocaleString(dateLocale()));
 
 export default function SkillEvidencePanel({ ev, cfg, currentScore = null, compact = false }) {
   const st = evidenceState(ev);

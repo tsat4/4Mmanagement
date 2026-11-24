@@ -42,7 +42,7 @@ import { RATE, LIVE } from '../utils/refreshRates';
 import { coalesce } from '../utils/liveRefresh';
 import { liveChannel } from '../utils/liveChannel';
 import { DeleteButton } from '../components/IconButton';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import InfoMore from '../components/InfoMore';   // ⓘ คำอธิบายพับ (UI §6.10)
 import { directSheetRows } from '../utils/bomTree';   // 🌳 ลูกตรงแบบ SAP (19/11)
 
@@ -769,7 +769,7 @@ export default function VSM() {
               ['MCT (PLT + PT)', fmtMct(model.totals.pltDays, model.totals.ptSec) || '—'],
               ['%VA (Value Added)', model.totals.vaPct == null ? '—' : `${model.totals.vaPct}%`],
               ['Takt Time', model.info.ttSec == null ? '—' : `${model.info.ttSec} sec`],
-              ['Available Time', model.info.atSec == null ? '—' : `${model.info.atSec.toLocaleString('th-TH')} sec/${tr("วัน")}`],
+              ['Available Time', model.info.atSec == null ? '—' : `${model.info.atSec.toLocaleString(dateLocale())} sec/${tr("วัน")}`],
             ].map(([k, v]) => (
               <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid var(--border)', fontSize: 12.5 }}>
                 <span style={{ color: 'var(--muted)' }}>{k}</span>
@@ -848,7 +848,7 @@ export default function VSM() {
               }}>
                 {/* จุดสถานะ live = นิ่ง+เรืองแสง ห้ามกระพริบ (Andon สงวนกระพริบให้แดง) */}
                 <span style={{ width: 8, height: 8, borderRadius: 'var(--r-pill)', background: 'var(--green)', boxShadow: '0 0 6px var(--green)' }} />
-                REALTIME · {tr("อัปเดต")} {liveData?.at ? new Date(liveData.at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'}
+                REALTIME · {tr("อัปเดต")} {liveData?.at ? new Date(liveData.at).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'}
                 <span style={{ color: 'var(--muted)', fontWeight: 400 }}>{tr('· วันงาน')} {liveData?.workDate || getWorkDate()}</span>
               </span>
               {liveData?.partial && (

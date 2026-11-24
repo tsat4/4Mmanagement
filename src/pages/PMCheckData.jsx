@@ -34,7 +34,7 @@ import { buildStationIndex } from '../utils/amStations'   // 🧩 สถาน�
 import { MTN_TEAMS, deptNameOf, teamKeyOf, teamForEquipmentKind, teamsForUser, canWriteTeam, teamBlockText } from '../utils/mtnTeams'
 import { checkWriteRows } from '../utils/dbWrite';
 import NoticeBar from '../components/NoticeBar';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { getWorkDate } from '../utils/workDate'
 import { amShiftInfo, AM_MO_COLS } from '../lib/dailyAmBoard'
 import { DEFAULT_POINT_KINDS, pointDueStatus, pointPin, shimStack, deriveShimAction } from '../utils/fixturePoints'
@@ -81,7 +81,7 @@ function fmt(v, digits = 3) {
   return Number(v).toFixed(digits).replace(/\.?0+$/, '')
 }
 function formatDate(iso) {
-  return new Date(iso).toLocaleString('th-TH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  return new Date(iso).toLocaleString(dateLocale(), { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 function computeAvg(v1, v2, v3) {
   if (v1 === '' || v2 === '' || v3 === '' || v1 == null || v2 == null || v3 == null) return null

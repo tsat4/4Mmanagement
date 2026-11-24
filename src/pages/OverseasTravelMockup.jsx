@@ -6,7 +6,7 @@ import { toast } from '../components/Toast';
 import useTabParam from '../utils/useTabParam';
 import { getWorkDate, addDaysStr } from '../utils/workDate';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 /* ══ ✈️ เบิกเงินเดินทางต่างประเทศ — MOCKUP workflow (2026-10-29 · คำสั่ง user · ผัง "Overseas Business Travel Process") ══
    ถอดจากผัง swimlane 6 ช่อง: ผู้เดินทาง · ผู้อนุมัติ · HR/Compliance · Travel/Admin · Finance/Accounting/ECM
    ลำดับ 7 ข้อตามคอลัมน์ "คำอธิบาย" ของผัง = แถบสถานะ 7 ขั้นของทุกใบ:
@@ -54,7 +54,7 @@ const h3 = { margin: 0, fontSize: 15 };
 const muted = { fontSize: 12, color: 'var(--muted)' };
 
 const baht = (n) => `${Math.round(Number(n) || 0).toLocaleString('en-US')} ${tr("บาท")}`;
-const fmtDate = (s) => { try { return new Date(`${s}T00:00:00`).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return s; } };
+const fmtDate = (s) => { try { return new Date(`${s}T00:00:00`).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return s; } };
 /* จำนวนวันเดินทาง (นับวันไป-กลับรวม) — แกะวันไม่ออก = null ห้ามเดา */
 function tripDays(from, to) {
   const a = Date.parse(`${from}T00:00:00Z`); const b = Date.parse(`${to}T00:00:00Z`);

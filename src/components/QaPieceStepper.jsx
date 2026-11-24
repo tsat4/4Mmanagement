@@ -22,7 +22,7 @@ import { qaFileUrl } from '../lib/qaImages';
 import SignedDecimalInput from './SignedDecimalInput';
 import { calcOf, calcFormula, qaCalcDraft } from '../utils/inspectCalc';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { pointType, TYPE_ORDER } from '../utils/qaDataSheet';
 const JUDGE = {
   ok: { label: 'ผ่าน', color: '#22c55e' },
@@ -344,7 +344,7 @@ export default function QaPieceStepper({
       )}
       {state === 'accepted' && (
         <div style={{ fontSize: 12.5, color: '#22c55e' }}>
-          {tr("ปิดใบแล้ว")} {sheet?.closed_at ? `${tr("เมื่อ")} ${new Date(sheet.closed_at).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}` : ''}{sheet?.closed_by ? ` ${tr("โดย")} ${sheet.closed_by}` : ''}
+          {tr("ปิดใบแล้ว")} {sheet?.closed_at ? `${tr("เมื่อ")} ${new Date(sheet.closed_at).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok' })}` : ''}{sheet?.closed_by ? ` ${tr("โดย")} ${sheet.closed_by}` : ''}
         </div>
       )}
 

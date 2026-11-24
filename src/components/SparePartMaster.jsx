@@ -38,7 +38,7 @@ import useSuppliers from '../utils/useSuppliers';
 import { uploadOpts } from '../utils/storageUpload';
 import { DeleteButton } from './IconButton';
 import { SpareDemandBanner } from './PmSpares';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { localDateStr } from '../utils/workDate'; // วันปฏิทินเดียวกับแท็บแผน PM (ymd(new Date())) — ไม่ใช่วันทำงานตัด 08:00
 import { askConfirm } from '../utils/askConfirm';
 
@@ -271,7 +271,7 @@ export default function SparePartMaster({ parts = [], reload, fullName, role, my
       th{background:#eee;font-size:9.5px}tr{page-break-inside:avoid}</style></head><body>
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div><h2>${esc(df.title || 'รายการอะไหล่สำรอง (Spare part list)')}</h2>
-        <div class="sub">ทีม: ${esc(teamLabel)} · หน่วยงาน: ${esc(secText)} · จำนวน ${filtered.length} รายการ · พิมพ์ ${new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}</div></div>
+        <div class="sub">ทีม: ${esc(teamLabel)} · หน่วยงาน: ${esc(secText)} · จำนวน ${filtered.length} รายการ · พิมพ์ ${new Date().toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok' })}</div></div>
         ${code ? `<div style="font-size:10px;text-align:right">${esc(code)}${df.effective_date ? `<br>Effective: ${esc(df.effective_date)}` : ''}</div>` : ''}
       </div>
       <table><thead><tr>${head.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead>
@@ -922,7 +922,7 @@ function HistoryModal({ part, usageRows, onClose }) {
                 const qn = Number(t.qty) || 0;
                 return (
                   <tr key={t.id}>
-                    <td style={{ ...td, fontSize: 11.5, whiteSpace: 'nowrap' }}>{new Date(t.created_at).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' })}</td>
+                    <td style={{ ...td, fontSize: 11.5, whiteSpace: 'nowrap' }}>{new Date(t.created_at).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' })}</td>
                     <td style={{ ...td, color: m.color, fontWeight: 700, fontSize: 12 }}>{tr(m.label)}</td>
                     <td style={{ ...td, textAlign: 'right', fontWeight: 800, color: qn >= 0 ? '#22c55e' : '#f59e0b' }}>{qn > 0 ? '+' : ''}{fmtNum(qn)}</td>
                     <td style={{ ...td, textAlign: 'right' }}>{fmtNum(t.balance)}</td>

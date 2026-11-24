@@ -4,7 +4,7 @@ import { toast } from './Toast';
 import { checkWrite } from '../utils/dbWrite';
 import { mailsMissingFiles } from '../utils/mailInbox';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
 /* ─── 📬 ไฟล์จากเมลรอนำเข้า (2026-09-30) ─────────────────────────────────────
    แถวในคิว `demand_mail_inbox` (DR) เกิดจากสคริปต์ Outlook บนเครื่อง user
@@ -18,7 +18,7 @@ const STALE_H = 24;
 /** ชนิดไฟล์จากชื่อ (`830_…` / `862_…`) — ไว้เทียบว่าใบไหนใหม่กว่า · ไม่รู้ = null (ไม่เตือน) */
 const kindOf = (name) => (String(name || '').match(/^(830|862)[_ .-]/) || [])[1] || null;
 const tsOf = (r) => new Date(r.received_at || r.created_at).getTime();
-const fmtTime = (iso) => (iso ? new Date(iso).toLocaleString('th-TH', {
+const fmtTime = (iso) => (iso ? new Date(iso).toLocaleString(dateLocale(), {
   timeZone: 'Asia/Bangkok', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
 }) : '—');
 

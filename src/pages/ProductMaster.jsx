@@ -70,7 +70,7 @@ import { downloadCsvDoc, csvText } from '../utils/csvDoc';
 import { DeleteButton } from '../components/IconButton';
 import { loadFamilyQtyTotals, familyQtyChip } from '../utils/familyTotals';
 import NoticeBar from '../components/NoticeBar';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { statusColor } from '../utils/statusTone';   // สีสถานะชุดเดียวทั้งระบบ (ห้ามตั้ง hex เอง)
 import { fetchAllRows } from '../utils/fetchAllRows';          // ทะเบียนที่โตได้ ห้าม select() เปล่า (เพดาน 1000 แถว)
 import { fetchAllPages } from '../utils/fetchByIds';            // คิวรีที่ต้องการ shape เอง (bom_items)
@@ -1834,7 +1834,7 @@ function OpStepsPanel({ parent, products, bomIx, parentKids, canEdit, guard, ful
     if (!checkWriteRows(res, `${tr("เอา")} ${row.mat_no} ${tr("ออกจากขั้น")} ${op.mat_no}`)) return;
     onChanged?.();
   };
-  const fmtQ = (q) => Number(q).toLocaleString('th-TH', { maximumFractionDigits: 3 });
+  const fmtQ = (q) => Number(q).toLocaleString(dateLocale(), { maximumFractionDigits: 3 });
   return (
     <div style={{ background: 'var(--bg2-surf)', border: '1px solid var(--blue-line)', borderRadius: 'var(--r-md)', padding: '10px 12px', marginBottom: 12 }}>
       <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--text)' }}>{tr('🔩 ขั้น OP ของพาร์ทนี้ (')}{ops.length})
@@ -4450,7 +4450,7 @@ function KanbanStdPanel({ canEdit, fullName }) {
                     <td style={{ padding: '9px 14px', borderTop: '1px solid var(--border)', fontSize: 11, color: 'var(--muted)' }}>
                       {row.ks ? (
                         <span title={row.ks.updated_by || ''}>
-                          {row.ks.updated_at ? new Date(row.ks.updated_at).toLocaleDateString('th-TH') : '—'}
+                          {row.ks.updated_at ? new Date(row.ks.updated_at).toLocaleDateString(dateLocale()) : '—'}
                           {row.ks.updated_by ? <span style={{ display: 'block', fontSize: 11 }}>{row.ks.updated_by}</span> : null}
                         </span>
                       ) : '—'}

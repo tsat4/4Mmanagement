@@ -16,8 +16,8 @@ import { positionAllCards, orderKeyOf, planStatusOf } from '../utils/heijunkaQue
 import { buildBoardCards, boardFrame, cardState, cardMade, groupBoardRows, CARD_STATE_META } from '../utils/boardCards';
 import PlanSlipBar from './PlanSlipBar';
 
-import { tr } from '../utils/i18n';
-const fmtMs = (ms) => (ms == null ? '—' : new Date(ms).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' }));
+import { tr, dateLocale } from '../utils/i18n';
+const fmtMs = (ms) => (ms == null ? '—' : new Date(ms).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' }));
 const ORDER_COLS = 'id, session_id, status, qty, qty_ok, qty_actual, qty_target, is_manual, is_backfill, prod_no, mat_no, machine_no, opened_at, confirmed_at';
 
 /**

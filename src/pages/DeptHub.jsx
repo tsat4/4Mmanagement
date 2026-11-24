@@ -28,7 +28,7 @@ import { visibleInterval } from '../utils/usePolling';
 import { RATE, LIVE } from '../utils/refreshRates';
 import { liveChannel } from '../utils/liveChannel';
 import { coalesce, makeIdleGate } from '../utils/liveRefresh';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import Icon from '../components/Icon';   // ✒️ ไอคอนเส้นแทน emoji (UI §6.36)
 
 /* ── DeptHub — landing "Smart Factory / Industry 5.0" (redesign v2 2026-07-13) ──
@@ -247,7 +247,7 @@ export default function DeptHub({ onLogout, theme, onToggleTheme, userFullName, 
   }, []);
   const isDayShift = now.getHours() >= 8 && now.getHours() < 20;
   const clock = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-  const thaiDate = now.toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  const thaiDate = now.toLocaleDateString(dateLocale(), { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 
   // ── LIVE TELEMETRY — นับจากตารางจริง (head:true count = เบา) refresh ทุก 60 วิ ──
   // เป็นของเสริมของหน้า hub: query พลาด = คงค่าเดิม/แสดง "–" ห้ามทำหน้าพัง

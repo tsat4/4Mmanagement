@@ -7,7 +7,7 @@ import {
   toolLifeStatus, learnedToolLife, suggestMaxShim,
 } from '../utils/fixturePoints';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
 /* ═══════════════════════════════════════════════════════════════
    🔧 บันทึกการใส่/ถอดชิม — หัวใจของโมดูล
@@ -45,7 +45,7 @@ function Field({ label, hint, children }) {
 }
 
 const fmt = (v, unit = ' mm') => (v == null ? '—' : `${v}${unit}`);
-const dt = (s) => (s ? new Date(s).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }) : '—');
+const dt = (s) => (s ? new Date(s).toLocaleString(dateLocale(), { dateStyle: 'short', timeStyle: 'short' }) : '—');
 
 export default function FixtureShimPanel({
   points, pointId, onPickPoint, canRecord, canApprove, canManage,

@@ -29,7 +29,7 @@ import { buildEsmartManaged, isEsmartPlanRow } from '../utils/shipPlan'; // แ�
 import { fetchAllPages } from '../utils/fetchByIds';
 import PartCard, { partCardGrid } from '../components/PartCard';   // 🃏 การ์ดมาตรฐานเดียวกับสโตร์ (UI §6.23)
 import usePartImages from '../utils/usePartImages';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { storeBtn } from '../utils/storeUi'; // วันงาน + รอบ → due_date ตามปฏิทิน (16/10)
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 import { askConfirm } from '../utils/askConfirm';
@@ -1059,7 +1059,7 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
                       { k: tr("เลขลูกค้า"), v: o.customer_part_no && o.customer_part_no !== sap ? o.customer_part_no : null },
                       { k: 'PO / Dock', v: [o.order_no && `PO ${o.order_no}`, o.dock_code && `Dock ${o.dock_code}`].filter(Boolean).join(' · ') || null },
                       { k: tr("สต็อก"), v: covEl },
-                      { k: tr("ส่งโดย"), v: o.shipped_by ? `✓ ${o.shipped_by}${o.shipped_at ? ` · ${new Date(o.shipped_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' })}` : ''}` : null },
+                      { k: tr("ส่งโดย"), v: o.shipped_by ? `✓ ${o.shipped_by}${o.shipped_at ? ` · ${new Date(o.shipped_at).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' })}` : ''}` : null },
                     ]}
                     note={plan ? tr("ลูกค้ายืนยันรอบจริงด้วย e-SMART — อัพไฟล์แล้วใบนี้จะถูกแทนด้วยยอดจริง") : null}
                     alert={od}

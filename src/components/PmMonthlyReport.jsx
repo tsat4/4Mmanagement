@@ -26,8 +26,9 @@ import {
   loadPmMonthInspections, loadOrgForSign, loadPmMonthlySignoffs, signPmMonthly, revokePmMonthly,
 } from '../lib/pmMonthlySignoff'
 import { tr } from '../utils/i18n'
+import { dateLocale } from '../utils/i18n';
 
-const fmtWhen = (ts) => (ts ? new Date(ts).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' }) : '')
+const fmtWhen = (ts) => (ts ? new Date(ts).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' }) : '')
 
 export default function PmMonthlyReport() {
   const { role, fullName, position: myPosition, signatureUrl: mySignature } = useContext(UserContext)

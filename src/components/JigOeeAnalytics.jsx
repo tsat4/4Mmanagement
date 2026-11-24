@@ -20,7 +20,7 @@ import { downloadCsvDoc, csvText } from '../utils/csvDoc';
 import { loadDocForms } from '../utils/docForms';
 import { pct1, stopPareto, dailyCapacityRows } from '../utils/machineOee';
 import { lineNameCompare } from '../utils/lineHierarchy';
-import { tr as trI18n } from '../utils/i18n';
+import { tr as trI18n, dateLocale } from '../utils/i18n';
 import { loadJigShift, loadJigReport, combineJigRows } from '../lib/jigOeeData';
 import { JigOeeCard, JigDrilldown, JigKpiRow, KindLegend, StopParetoChart, ShiftTrendChart, LossWaterfall, DailyCapacityChart, StopDrillPanel } from './JigOee';
 
@@ -101,7 +101,7 @@ function ShiftView({ sp, setParam }) {
         <input type="date" value={wd} onChange={e => setParam('wd', e.target.value)} aria-label={trI18n("วันทำงาน")} />
         <Segmented value={sh} onChange={v => setParam('sh', v)} options={SHIFT_OPTS} label={trI18n("กะ")} />
         <button type="button" className="pg-btn" onClick={load}>🔄 {trI18n('โหลดใหม่')}</button>
-        <span style={{ fontSize: 12, color: 'var(--muted)' }}>{trI18n("อัปเดตทุก 1 นาที")}{data?.at ? ` · ${trI18n("ล่าสุด")} ${new Date(data.at).toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok' })}` : ''}</span>
+        <span style={{ fontSize: 12, color: 'var(--muted)' }}>{trI18n("อัปเดตทุก 1 นาที")}{data?.at ? ` · ${trI18n("ล่าสุด")} ${new Date(data.at).toLocaleTimeString(dateLocale(), { timeZone: 'Asia/Bangkok' })}` : ''}</span>
       </FilterBar>
       {data?.errors?.length > 0 && <NoticeBar tone="bad">{trI18n("อ่านไม่สำเร็จ")}: {data.errors.join(' · ')} — {trI18n("ตัวเลขด้านล่างอาจไม่ครบ")}</NoticeBar>}
       {data == null ? <div style={{ color: 'var(--muted)' }}>{trI18n("กำลังโหลด")}…</div>

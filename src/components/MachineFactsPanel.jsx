@@ -25,15 +25,15 @@ import {
   summarizeMachineFacts, compareWithSessions, reasonRows, tagRows, suggestDowntimeType, stopTotals, STATE_META, STATE_ORDER,
 } from '../utils/machineFacts';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
 const DAYS = 7;
 const card = { background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 14, boxShadow: 'var(--shadow-sm)', minWidth: 0 };
 const th = { textAlign: 'left', padding: '6px 8px', fontSize: 12, color: 'var(--muted)', fontWeight: 700, borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' };
 const td = { padding: '6px 8px', fontSize: 12.5, borderBottom: '1px solid var(--border)', verticalAlign: 'top' };
 const KIND_LABEL = { onplan: 'หยุดตามแผน (OnplanMaster)', alarm: 'Alarm (AlarmMaster)', unplan: 'หยุดนอกแผน/รอ (UnplanMaster)' };
-const fmtTime = (ms) => (ms ? new Date(ms).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—');
-const fmtDate = (d) => new Date(`${d}T00:00:00+07:00`).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok', weekday: 'short', day: 'numeric', month: 'short' });
+const fmtTime = (ms) => (ms ? new Date(ms).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—');
+const fmtDate = (d) => new Date(`${d}T00:00:00+07:00`).toLocaleDateString(dateLocale(), { timeZone: 'Asia/Bangkok', weekday: 'short', day: 'numeric', month: 'short' });
 const minTxt = (sec) => (sec == null ? '–' : `${Math.round(sec / 60).toLocaleString()}`);
 const num = (v) => (v == null ? '–' : Number(v).toLocaleString());
 

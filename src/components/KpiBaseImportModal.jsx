@@ -10,11 +10,11 @@ import { detectMonthColumns, detectVarRows, extractValues, rowLabels, IMPORT_MUL
 import { getWorkDate } from '../utils/workDate';
 import { PLANT_BASE_KEY } from '../utils/kpiFormula';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { ImportInfo, WrongFileNote } from './ImportKit';
 import { importLabel, whichImport } from '../utils/importRegistry';
-const MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-const fmt = (v) => (v == null ? '–' : Number(v).toLocaleString('th-TH', { maximumFractionDigits: 2 }));
+import { monthsShort } from '../utils/dateFormat';
+const fmt = (v) => (v == null ? '–' : Number(v).toLocaleString(dateLocale(), { maximumFractionDigits: 2 }));
 const memKey = (sheet) => `esm.kpiBaseImport.${sheet}`;
 const loadMem = (sheet) => { try { return JSON.parse(localStorage.getItem(memKey(sheet)) || 'null'); } catch { return null; } };
 const saveMem = (sheet, v) => { try { localStorage.setItem(memKey(sheet), JSON.stringify(v)); } catch { /* private mode */ } };
@@ -25,7 +25,6 @@ const saveMem = (sheet, v) => { try { localStorage.setItem(memKey(sheet), JSON.s
  * @param canPlant   เขียนค่ากลางได้ไหม (ดู ทั้งโรงงาน + สิทธิ์) · canUnit เขียนยอดเงินของหน่วยได้ไหม
  * @param onSave     async (values {varKey:{month:value}}) → จำนวนที่บันทึก
  */
-const MONTH_TH = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
 export default function KpiBaseImportModal({ year, unitLabel, unitSk, base, canPlant, canUnit, onSave, onClose }) {
   const [file, setFile] = useState(null);
@@ -57,7 +56,7 @@ export default function KpiBaseImportModal({ year, unitLabel, unitSk, base, canP
   /* เดือนที่ยังไม่ปิดในไฟล์บัญชีเป็น 0 (ไม่ใช่ว่าง) — ถ้า "ถึงเดือน" เลยเดือนสุดท้ายที่มียอดขาย/กำลังคน > 0 จะนำเข้า 0 เป็นค่าจริง ⇒ เตือน */
   const allVals = useMemo(() => (grid ? extractValues(grid, { varRows, monthCols: monthInfo?.cols || {}, multiplier: mult }) : {}), [grid, varRows, monthInfo, mult]);
   const closedM = useMemo(() => lastClosedMonth(allVals), [allVals]);
-  const zeroWarn = closedM != null && maxMonth > closedM ? `⚠ ${tr("ในไฟล์นี้เดือนหลัง")} ${MONTH_TH[closedM - 1]} ${tr("ยอดขาย/กำลังคนเป็น 0 (ยังไม่ปิดเดือน) — ตั้ง \"ถึงเดือน")}" = ${MONTH_TH[closedM - 1]} ${tr("ไม่งั้นจะบันทึก 0 เป็นค่าจริง")}` : '';
+  const zeroWarn = closedM != null && maxMonth > closedM ? `⚠ ${tr("ในไฟล์นี้เดือนหลัง")} ${monthsShort()[closedM - 1]} ${tr("ยอดขาย/กำลังคนเป็น 0 (ยังไม่ปิดเดือน) — ตั้ง \"ถึงเดือน")}" = ${monthsShort()[closedM - 1]} ${tr("ไม่งั้นจะบันทึก 0 เป็นค่าจริง")}` : '';
 
   const pick = async (f) => {
     setFile(f); setErr(''); setWb(null); setSheet(''); setWrong(null);
@@ -148,7 +147,7 @@ export default function KpiBaseImportModal({ year, unitLabel, unitSk, base, canP
               <span style={{ fontSize: 12, color: 'var(--text2)' }}>{tr('ถึงเดือน')}</span>
               <select style={inp} value={maxMonth} onChange={e => setMaxMonth(Number(e.target.value))} title={tr('เดือนล่าสุดที่บัญชีปิดแล้ว — เดือนหลังจากนี้ในไฟล์เป็นแผน/Rolling ไม่นำเข้า')}>
                 <option value={0}>{tr('— ไม่นำเข้า —')}</option>
-                {Array.from({ length: 12 }, (_, i) => <option key={i + 1} value={i + 1}>{tr(MONTH_TH[i])}</option>)}
+                {Array.from({ length: 12 }, (_, i) => <option key={i + 1} value={i + 1}>{tr(monthsShort()[i])}</option>)}
               </select>
               <span style={{ fontSize: 12, color: 'var(--text2)' }}>{tr('แถวหัวเดือน')}</span>
               <select style={inp} value={monthRow ?? ''} onChange={e => setMonthRow(e.target.value === '' ? null : Number(e.target.value))}>
@@ -164,10 +163,10 @@ export default function KpiBaseImportModal({ year, unitLabel, unitSk, base, canP
           <div style={{ marginTop: 6, fontSize: 12, color: '#38bdf8' }}>{tr('ℹ️ หัวเดือนคร่อมบล็อก PLAN | Rolling | ACTUAL — ใช้คอลัมน์')} <b>ACTUAL → Amount</b> {tr('ของแต่ละเดือน (แถว')} {monthInfo.subRow + 1})</div>
         )}
         {wb && rollingM.length > 0 && (
-          <div style={{ marginTop: 6, fontSize: 12.5, color: '#f59e0b' }}>{tr('⚠ เดือน')} {rollingM.map(m => MONTH_TH[m - 1]).join(' · ')} {tr('ไม่มีคอลัมน์ ACTUAL — ใช้')} <b>Rolling</b> {tr("แทน (เดือนที่ยังไม่ปิด Rolling = แผน) · ลด \"ถึงเดือน\" ถ้าไม่ใช่ตัวเลขจริง")}</div>
+          <div style={{ marginTop: 6, fontSize: 12.5, color: '#f59e0b' }}>{tr('⚠ เดือน')} {rollingM.map(m => monthsShort()[m - 1]).join(' · ')} {tr('ไม่มีคอลัมน์ ACTUAL — ใช้')} <b>Rolling</b> {tr("แทน (เดือนที่ยังไม่ปิด Rolling = แผน) · ลด \"ถึงเดือน\" ถ้าไม่ใช่ตัวเลขจริง")}</div>
         )}
         {wb && magWarn && <div style={{ marginTop: 6, fontSize: 12.5, color: '#f59e0b' }}>{magWarn}</div>}
-        {wb && zeroWarn && <div style={{ marginTop: 6, fontSize: 12.5, color: '#ef4444', fontWeight: 700 }}>{zeroWarn} <button type="button" onClick={() => setMaxMonth(closedM)} style={{ ...inp, cursor: 'pointer', marginLeft: 6 }}>{tr('ตั้งเป็น')} {MONTH_TH[closedM - 1]}</button></div>}
+        {wb && zeroWarn && <div style={{ marginTop: 6, fontSize: 12.5, color: '#ef4444', fontWeight: 700 }}>{zeroWarn} <button type="button" onClick={() => setMaxMonth(closedM)} style={{ ...inp, cursor: 'pointer', marginLeft: 6 }}>{tr('ตั้งเป็น')} {monthsShort()[closedM - 1]}</button></div>}
         {wb && grid && sheetKind(grid, sheet) === 'inventory' && (
           <div style={{ marginTop: 6, fontSize: 12, color: 'var(--muted)' }}>ℹ️ {tr("ชีทสต็อก — จับให้เฉพาะ \"มูลค่าสินค้าคงคลัง\" (แถว Inventory Balance All) · COGS/RM/ยอดขายในชีทนี้เป็นคนละฐานกับ PL Summary จึงไม่จับอัตโนมัติ (เลือกเองได้ถ้าบัญชียืนยัน")})</div>
         )}
@@ -182,7 +181,7 @@ export default function KpiBaseImportModal({ year, unitLabel, unitSk, base, canP
                   <th style={{ ...th, textAlign: 'left' }}>{tr('นำเข้า')}</th>
                   <th style={{ ...th, textAlign: 'left' }}>{tr('ตัวแปร → เขียนที่')}</th>
                   <th style={{ ...th, textAlign: 'left' }}>{tr('แถวในไฟล์')}</th>
-                  {months.map(m => <th key={m} style={th}>{tr(MONTHS[m - 1])}</th>)}
+                  {months.map(m => <th key={m} style={th}>{tr(monthsShort()[m - 1])}</th>)}
                 </tr>
               </thead>
               <tbody>

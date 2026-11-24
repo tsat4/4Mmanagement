@@ -50,7 +50,7 @@ import Segmented from '../components/Segmented';
 import TabBar from '../components/TabBar';
 import { urlPick, urlBool, urlParam } from '../utils/urlInit';
 import SectionScopeSelect from '../components/SectionScopeSelect';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 
 /* เกณฑ์ "อัตราการมาทำงาน" ของจอนี้ — การ์ดบนสุดกับการ์ดรายไลน์ต้องใช้ชุดเดียวกัน (2026-10-19)
@@ -1026,7 +1026,7 @@ export default function Dashboard({ view = 'timeline' }) {
             )}
             <span style={{ fontSize: 14, color: 'var(--muted)', fontFamily: 'var(--font-display)' }}>
               {isToday
-                ? now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                ? now.toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit', second: '2-digit' })
                 : selectedDate}
             </span>
           </div>
@@ -2464,7 +2464,7 @@ export default function Dashboard({ view = 'timeline' }) {
                           </div>
                           {log.created_at && (
                             <div style={{ fontSize: T(12, 18), color: 'var(--muted)', marginTop: 4 }}>
-                              {new Date(log.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                              {new Date(log.created_at).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit' })}
                             </div>
                           )}
                         </div>
@@ -2487,7 +2487,7 @@ export default function Dashboard({ view = 'timeline' }) {
         const dts = andonLine.names.flatMap(n => dtAlarmByLine[n] || []);
         const fms = fourMLogs.filter(f => andonLine.names.includes(f.line_name));
         const CAT_ICON = { Man: '👤', Machine: '⚙️', Material: '📦', Method: '📋' };
-        const fmtTime = (ts) => ts ? new Date(ts).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '—';
+        const fmtTime = (ts) => ts ? new Date(ts).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit' }) : '—';
         // ── ระดับไฟ Andon: แดง = เครื่องหยุดค้างอยู่ · เหลือง = มีรายการรอดำเนินการ · เขียว = อนุมัติครบ/ปกติ ──
         const hasOngoingDT = dts.some(d => !d.ended_at && d.duration_min == null);
         const hasPendingFM = fms.some(f => f.status !== 'approved' && f.status !== 'rejected');

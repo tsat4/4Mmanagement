@@ -39,7 +39,7 @@ import useTimeRange from '../utils/useTimeRange';
 import { bucketKey, bucketLabel } from '../utils/timeRange';
 import useTabParam from '../utils/useTabParam';
 import { urlBool } from '../utils/urlInit';
-import { fmtTime } from '../utils/dateFormat';
+import {fmtTime, monthsShort, yearDisplay } from '../utils/dateFormat';
 import { visibleInterval } from '../utils/usePolling';
 import { fetchByIds, fetchAllPages } from '../utils/fetchByIds';
 import LineSelect from '../components/LineSelect';
@@ -53,7 +53,7 @@ import { useLatestRequest } from '../utils/useLatestRequest';
 import { MORE_MARK } from '../components/InfoMore';   // เครื่องหมาย "อ่านเพิ่ม" ชุดเดียวกันทั้งระบบ
 import { BREAK_POLICY_COLS } from '../utils/oeeMasters';
 import NoticeBar from '../components/NoticeBar';
-import { tr as trI18n } from '../utils/i18n';
+import { tr as trI18n, dateLocale } from '../utils/i18n';
 import MatLabel from '../components/MatLabel';   // 📦 ป้าย MAT→ชื่อ/Part No. ของกลาง (ตาราง OEE รายพาร์ท)
 
 /* ข้อความขยายของแถบ "ค่าสด" — ใช้ทั้งที่ title= ของบรรทัด (hover ทั้งบรรทัดบนจอคอม)
@@ -148,8 +148,7 @@ const policyBreakMin = (row, policies) => policyBreakForShift({
 // สัปดาห์เริ่มวันจันทร์ (ธรรมเนียมโรงงาน) — key = วันที่จันทร์ของสัปดาห์นั้น (YYYY-MM-DD, sortable)
 /* ⏱️ ตัวแบ่งถัง/ป้ายแกนเวลา ย้ายไป `src/utils/timeRange.js` ทั้งหมดแล้ว (23/09)
    — ของเดิมในหน้านี้ถูกลบทิ้ง **ห้ามเขียนกลับมาในหน้า** (จะกลายเป็นสูตรคนละชุดกับหน้าอื่นอีก) */
-const thMonths = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-const fmtThaiDate   = d => { if (!d) return '—'; const [y,m,dd] = d.split('-').map(Number); return `${dd} ${thMonths[m-1]} ${y+543}`; };
+const fmtThaiDate   = d => { if (!d) return '—'; const [y,m,dd] = d.split('-').map(Number); return `${dd} ${monthsShort()[m-1]} ${yearDisplay(y)}`; };
 
 function getWorkDateStr(date = new Date()) {
   const h = date.getHours();
@@ -1545,7 +1544,7 @@ export default function OEEAnalytics() {
 
             <span className="spacer" />
             <span className="filter-count">
-              {trI18n("อัปเดตล่าสุด")} : {lastUpdate ? lastUpdate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'}
+              {trI18n("อัปเดตล่าสุด")} : {lastUpdate ? lastUpdate.toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'}
             </span>
             <button onClick={() => { loadToday(); loadTdHistory(); }} style={{ ...s.tab(false) }} title={trI18n('โหลดใหม่')}>🔄</button>
             <button onClick={() => setAutoRefresh(v => !v)} style={s.tab(autoRefresh)}>

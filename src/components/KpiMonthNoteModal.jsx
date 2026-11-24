@@ -15,7 +15,7 @@ import { imgExt } from '../utils/resizeImage';
 import { toast } from './Toast';
 import { DeleteButton } from './IconButton';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
 export const NOTE_KINDS = [
   { key: 'remark', icon: '💬', label: 'Remark',  hint: 'เกิดอะไรขึ้นเดือนนี้' },
@@ -24,7 +24,7 @@ export const NOTE_KINDS = [
 ];
 export const noteKindMeta = (k) => NOTE_KINDS.find(x => x.key === k) || NOTE_KINDS[0];
 
-const fmtWhen = (iso) => (iso ? new Date(iso).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '');
+const fmtWhen = (iso) => (iso ? new Date(iso).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '');
 
 export default function KpiMonthNoteModal({ title, icon, monthText, valueText, notes = [], canEdit, ctx, onClose, onChanged }) {
   const [kind, setKind] = useState('remark');

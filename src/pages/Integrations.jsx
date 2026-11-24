@@ -26,7 +26,7 @@ import { energyPointOptions, energyZonesFrom } from '../utils/energy';
 import { INTEGRATION_KINDS, kindOf, kindLabel, sourceStatus, healthBars, SOURCE_STALE_MIN } from '../utils/integrationKinds';
 import { buildNodeRedFlow, envVarName } from '../utils/nodeRedFlow';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
 const COLS = 'id, code, name, note, kinds, key_hint, legacy_secret, is_paused, last_seen_at, last_ok_at, last_error, last_result, updated_at, updated_by';
 const INGEST_URL = `${DR_BASE_URL}/functions/v1/ingest-energy`;
@@ -38,7 +38,7 @@ const STATUS = {
   never: { label: 'ยังไม่เคยได้รับ', color: 'var(--muted)' },
   paused: { label: 'พักการรับ', color: 'var(--red)' },
 };
-const fmtTime = (iso) => (iso ? new Date(iso).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—');
+const fmtTime = (iso) => (iso ? new Date(iso).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—');
 
 /** เรียก edge integration-admin — ตรวจ token ล็อกอินของ Main + has_perm('integration:manage') ฝั่ง server */
 async function callAdmin(action, payload = {}) {
@@ -320,7 +320,7 @@ function SourceDetail({ src, hours, nowMs, canManage, canMap, onBack, onChanged,
           <div style={{ display: 'flex', gap: 2, height: 40, alignItems: 'flex-end', marginTop: 10 }} role="img"
             aria-label={`24 ${tr("ชั่วโมงล่าสุด รับสำเร็จ")} ${okSum} ${tr("ครั้ง ล้ม")} ${failSum} ${tr("ครั้ง")}`}>
             {bars.map(b => (
-              <div key={b.hourMs} title={`${new Date(b.hourMs).toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit' })} · ${tr("สำเร็จ")} ${b.ok}/${b.expect}${b.fail ? ` · ${tr("ล้ม")} ${b.fail}` : ''}`}
+              <div key={b.hourMs} title={`${new Date(b.hourMs).toLocaleTimeString(dateLocale(), { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit' })} · ${tr("สำเร็จ")} ${b.ok}/${b.expect}${b.fail ? ` · ${tr("ล้ม")} ${b.fail}` : ''}`}
                 style={{ flex: 1, height: `${Math.max(6, b.ratio * 100)}%`, borderRadius: 2,
                   background: b.fail ? 'var(--red)' : b.ratio >= 0.95 ? 'var(--green)' : b.ok ? 'var(--amber)' : 'var(--border)' }} />
             ))}

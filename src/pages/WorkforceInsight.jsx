@@ -35,7 +35,8 @@ import { chartAnim } from '../utils/motion';
 
 import SectionScopeSelect from '../components/SectionScopeSelect';
 import useOrgScope from '../utils/useOrgScope';
-import { tr as trI18n } from '../utils/i18n';
+import { tr as trI18n, dateLocale } from '../utils/i18n';
+import { monthsShort, yearDisplay } from '../utils/dateFormat';
 /* ═══════════════════════════════════════════════════════════════════════════════════════
    📈 กำลังคน & Turnover — /workforce-insight (2026-09-02 · คำขอ user)
 
@@ -83,8 +84,7 @@ const monthKey = (dateStr) => (dateStr || '').slice(0, 7); // YYYY-MM
 const monthLabel = (ym) => {
   const [y, m] = (ym || '').split('-');
   if (!y || !m) return ym;
-  const TH_M = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-  return `${TH_M[Number(m) - 1] || m} ${String(Number(y) + 543).slice(-2)}`;
+  return `${monthsShort()[Number(m) - 1] || m} ${String(yearDisplay(Number(y))).slice(-2)}`;
 };
 /* CSV = เอกสาร ⇒ ชื่อไฟล์ต้องผ่านทะเบียน /doc-forms (src/utils/csvDoc.js · 06/10)
    ทะเบียนยังไม่ตั้งเลขฟอร์ม = ได้ชื่อเดิมเป๊ะ ไม่มีอะไรเปลี่ยน */
@@ -465,7 +465,7 @@ function MovesTab({ empById, sectionsList, secFilter, setSecFilter, inScope, org
                     <td>{emp?.name || '—'} <span style={{ color: 'var(--muted)', fontSize: 11 }}>{emp?.employee_id_code}</span></td>
                     <td style={{ fontSize: 12, color: 'var(--text2)' }}>{mv.line_name}</td>
                     <td style={{ fontSize: 12 }}>{mv.from} → <b>{mv.to}</b></td>
-                    <td style={{ fontSize: 11, color: 'var(--muted)' }}>{new Date(mv.at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</td>
+                    <td style={{ fontSize: 11, color: 'var(--muted)' }}>{new Date(mv.at).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit' })}</td>
                     <td style={{ fontSize: 11, color: 'var(--muted)' }}>{mv.by || '—'}</td>
                   </tr>
                 );

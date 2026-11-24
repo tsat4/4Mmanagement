@@ -33,9 +33,9 @@ import {
   REQ_STATUS, buildRequestCards, requestLinesOf, matLinesOf, scopeShortMats, waitText,
 } from '../utils/storeTvDemand';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 const card = { background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: 14 };
-const fmtQty = (v) => (v == null || v === '' || !Number.isFinite(Number(v)) ? '–' : Number(v).toLocaleString('th-TH'));
+const fmtQty = (v) => (v == null || v === '' || !Number.isFinite(Number(v)) ? '–' : Number(v).toLocaleString(dateLocale()));
 
 /* สีต่อเคสรอบส่ง — C ด่วนสุด (ไลน์รออยู่แล้วจริง) · D รองลงมา
    ⚠️ "งานค้างของสโตร์" ไม่ใช่ alarm เครื่องหยุด → **ห้ามกระพริบ** (กฎ Andon: กระพริบเฉพาะแดงของเครื่อง) */

@@ -26,7 +26,7 @@ import {
 } from '../utils/displayRotation';
 
 import SectionScopeSelect from '../components/SectionScopeSelect';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
 /* ══ 🔁 ตั้งค่าจอวนหน้า — /display-rotation ══════════════════════════════════════════
    2026-10-09 · คำสั่ง user: "แบบมีหน้า config ได้ ว่าจอ user นี้จะเปิดอะไรวนบ้าง"
@@ -410,7 +410,7 @@ export default function DisplayRotation() {
               )}
               {plans[selId]?.updated_at && (
                 <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 10 }}>
-                  {tr("แก้ล่าสุด")} {new Date(plans[selId].updated_at).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}
+                  {tr("แก้ล่าสุด")} {new Date(plans[selId].updated_at).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok' })}
                   {plans[selId].updated_by_name ? ` ${tr("โดย")} ${plans[selId].updated_by_name}` : ''}
                 </div>
               )}

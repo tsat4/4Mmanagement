@@ -2,7 +2,7 @@ import { useState, useEffect, useContext, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase, supabaseDR } from '../supabaseClient'
 import { loadLinesRes } from '../utils/useProductionLines';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { UserContext } from '../App'
 import { can } from '../utils/permissions'
 import { toast } from '../components/Toast'
@@ -32,7 +32,7 @@ function todayBangkok() {
   const p = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
   return p // YYYY-MM-DD
 }
-function fmtThai(d) { return d ? d.toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok', day: '2-digit', month: 'short', year: '2-digit' }) : '—' }
+function fmtThai(d) { return d ? d.toLocaleDateString(dateLocale(), { timeZone: 'Asia/Bangkok', day: '2-digit', month: 'short', year: '2-digit' }) : '—' }
 
 export default function PmForecast() {
   const { role, lineId, sections: scopeSecs, scopeIdx } = useContext(UserContext)

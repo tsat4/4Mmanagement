@@ -18,9 +18,9 @@ import { machineHistoryRows } from '../utils/machineHistoryForm';
 import { teamKeyOf, deptNameOf } from '../utils/mtnTeams';
 import { toast } from './Toast';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 const fmtMin = (m) => (m == null ? '—' : m >= 60 ? `${(m / 60).toFixed(1)} ${tr("ชม.")}` : `${Math.round(m)} ${tr("นาที")}`);
-const fmtBaht = (v) => (v == null ? '—' : `${Number(v).toLocaleString('th-TH', { maximumFractionDigits: 0 })} ${tr("บาท")}`);
+const fmtBaht = (v) => (v == null ? '—' : `${Number(v).toLocaleString(dateLocale(), { maximumFractionDigits: 0 })} ${tr("บาท")}`);
 
 function Card({ t, v, h }) {
   return (

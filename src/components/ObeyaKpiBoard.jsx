@@ -53,7 +53,7 @@ import {
 } from '../utils/obeyaYear';
 import { ST, worstStatus, safetyKind, isInjury, ymd } from '../utils/obeya';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 /* ══ 📋 OBEYA — บอร์ด KPI ส่วนงาน · 2026-08-27 → 2026-09-23 (วาดใหม่เป็น "แผ่น A4" ชุดเดียวกับจอ SQDCM) ═══
    แทนกระดาษ "OBEYA KPI monitoring" ที่แปะผนังห้องประชุมหน้างาน (คำสั่งนายใหญ่ผ่าน user 2026-08-27)
    user เคาะ 3 ข้อ: ① แยกรายส่วนงาน ② ตัวไหนวิ่งทุกกะให้อัพเดทรายวัน ③ มีแกน Safety
@@ -135,7 +135,7 @@ const LAMP_LABEL = { good: 'ตามเป้า', warn: 'ถึง Commitment'
 const SRC_PAGE_NAMES = { '/oee-analytics': 'OEE Analytics', '/safety': 'Safety', '/bbs': 'BBS' };
 const srcPageName = (to) => SRC_PAGE_NAMES[String(to || '').split('?')[0]] || String(to || '').split('?')[0].replace(/^\//, '');
 /* ตัวเลขฐานของสูตรบนจอ — บาท ≥ 1 ล้าน = MB · ไม่งั้น บ. · ตัวแปรอื่นตามหน่วยของมัน (ใช้ร่วมบรรทัดรอง 🧮 + insight 🔍) */
-const fmtInVar = (v, x) => { const u = baseVarOf(v)?.unit || ''; if (x == null) return '—'; if (u === 'บาท') return Math.abs(x) >= 1e6 ? `${(x / 1e6).toLocaleString('th-TH', { maximumFractionDigits: 1 })} MB` : `${Math.round(x).toLocaleString('th-TH')} ${tr("บ.")}`; return `${Number(x).toLocaleString('th-TH', { maximumFractionDigits: 1 })} ${u}`; };
+const fmtInVar = (v, x) => { const u = baseVarOf(v)?.unit || ''; if (x == null) return '—'; if (u === 'บาท') return Math.abs(x) >= 1e6 ? `${(x / 1e6).toLocaleString(dateLocale(), { maximumFractionDigits: 1 })} MB` : `${Math.round(x).toLocaleString(dateLocale())} ${tr("บ.")}`; return `${Number(x).toLocaleString(dateLocale(), { maximumFractionDigits: 1 })} ${u}`; };
 const toLamp = (st, why) => ({ status: st === ST.unknown ? 'none' : st, label: st === ST.unknown ? (why?.startsWith('ยังไม่มี') || why?.startsWith('ยังไม่กรอก') ? tr('ยังไม่มีข้อมูล') : tr('ไม่มีเป้า')) : LAMP_LABEL[st], why: why || '' });
 
 /* แผ่น KPI บนมือถือ: หัว (ชื่อ·ตัวเลขใหญ่·ไฟ) ~90px + กราฟ ~200px + ท้าย — อ่านออก ไม่ต้องเลื่อนในแผ่น */

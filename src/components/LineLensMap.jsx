@@ -17,7 +17,7 @@ import { STATUS_META } from '../lib/pmSchedule';
 import { machineKey } from '../utils/machineNo';
 import { markerFor, dtByMachine, dtWithoutMachine, stationMarker, STATION_META, LENS_LABEL, DT_COLOR, NO_DATA_COLOR } from '../utils/lineLens';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 const LEGEND = {
   pm: [['overdue', STATUS_META.overdue], ['due_soon', STATUS_META.due_soon], ['ok', STATUS_META.ok], ['never', STATUS_META.never], ['no_plan', { label: 'ไม่มีแผน PM', color: NO_DATA_COLOR }]],
   am: [['overdue', STATUS_META.overdue], ['due_soon', STATUS_META.due_soon], ['ok', STATUS_META.ok], ['no_plan', { label: 'ไม่มีแผน AM', color: NO_DATA_COLOR }]],
@@ -171,7 +171,7 @@ export function MachineDetailCard({ m, lens, onClose }) {
                       <span style={{ width: 7, height: 7, borderRadius: '50%', background: STATUS_META[c.status]?.color || NO_DATA_COLOR, flexShrink: 0 }} />
                       <span style={{ color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.eqName} · {c.clName}</span>
                       <span style={{ marginLeft: 'auto', flexShrink: 0, fontWeight: 700, color: STATUS_META[c.status]?.color || 'var(--muted)' }}>
-                        {tr(STATUS_META[c.status]?.label) || c.status}{c.nextDue ? ` · ${c.nextDue.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}` : ''}
+                        {tr(STATUS_META[c.status]?.label) || c.status}{c.nextDue ? ` · ${c.nextDue.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' })}` : ''}
                       </span>
                     </div>
                   ))}
