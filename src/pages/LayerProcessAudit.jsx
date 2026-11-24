@@ -185,14 +185,19 @@ export default function LayerProcessAudit() {
   const [myProfile, setMyProfile] = useState(null);
   const [calReady, setCalReady] = useState(false);
 
-  const [selLine, setSelLine] = useState('');
+  /* 🔗 N5 (24/11): ลิงก์จากแจ้งเตือน "LPA พบ N/T" เปิดใบนั้นตรงๆ — `?line=&shift=&date=&layer=` (อ่านครั้งเดียวตอนเปิดหน้า) */
+  const [deepLink] = useState(() => {
+    try { const q = new URLSearchParams(window.location.search); return { line: q.get('line') || '', shift: q.get('shift') || '', date: q.get('date') || '', layer: q.get('layer') || '' }; }
+    catch { return {}; }
+  });
+  const [selLine, setSelLine] = useState(deepLink.line || '');
   const lineWrite = canWriteLine(qCtx, selLine, lines);
   const lineGuard = (what) => {
     if (lineWrite.ok) return true;
     toast.error(writeBlockText(lineWrite, { what }));
     return false;
   };
-  const [selShift, setSelShift] = useState(getCurrentShift());
+  const [selShift, setSelShift] = useState(['day', 'night'].includes(deepLink.shift) ? deepLink.shift : getCurrentShift());
   const [selMonth, setSelMonth] = useState(getWorkDate().slice(0, 7));
 
   /* plan */
@@ -221,8 +226,8 @@ export default function LayerProcessAudit() {
   const [qHeader, setQHeader] = useState({ leader_name: '', supervisor_name: '', manager_name: '', gm_name: '', stations: '' });
 
   /* audit record */
-  const [auditDate, setAuditDate] = useState(getWorkDate());
-  const [auditLayer, setAuditLayer] = useState(role === 'manager' ? 'manager' : role === 'supervisor' ? 'supervisor' : role === 'engineer' || role === 'qa' ? 'supervisor' : 'leader');
+  const [auditDate, setAuditDate] = useState(/^\d{4}-\d{2}-\d{2}$/.test(deepLink.date || '') ? deepLink.date : getWorkDate());
+  const [auditLayer, setAuditLayer] = useState(['leader', 'supervisor', 'manager', 'gm'].includes(deepLink.layer) ? deepLink.layer : role === 'manager' ? 'manager' : role === 'supervisor' ? 'supervisor' : role === 'engineer' || role === 'qa' ? 'supervisor' : 'leader');
   const [draft, setDraft] = useState(null);          // { id?, station, auditor_name, auditor_sig_url, answers: {qid:{answer,note}} }
   /* 🔴 อ่านใบเดิมไม่สำเร็จ = **ห้ามเดาว่า "ยังไม่มีใบ"** (ดูในเอฟเฟกต์โหลดใบ) — เก็บเหตุผลไว้เขียนบนจอ */
   const [draftErr, setDraftErr] = useState('');
@@ -230,6 +235,7 @@ export default function LayerProcessAudit() {
      เตะออกหมดกะ/สลับไลน์-กะ-วัน-ชั้น = คำตอบที่ติ๊กไว้หายทั้งใบ · เก็บร่างต่อชุด line|shift|date|layer|คนกรอก
      แล้วถามกู้คืนตอนเปิดชุดเดิม (utils/formDraft.js) · `loadedSnapRef` = คำตอบที่โหลดจากฐาน (ไว้ดูว่า "แก้แล้วยังไม่บันทึก" ไหม) */
   const loadedSnapRef = useRef('');
+  const savedAnswersRef = useRef({});   // N5: คำตอบที่อยู่ในฐานแล้วของใบที่เปิดอยู่ (ไว้ดูว่า N/T ไหน "ใหม่")
   const [pendingDraft, setPendingDraft] = useState(null);
   const [auditPlanStations, setAuditPlanStations] = useState([]); // สถานีในแผนเดือนที่ตรวจ — ตัวเลือกช่อง "Station ที่ตรวจ"
   const [wsNames, setWsNames] = useState([]);        // จุดงาน (workstations) ของครอบครัวไลน์ที่เลือก — ตัวเลือกสถานี (2026-09-07)
@@ -678,9 +684,11 @@ export default function LayerProcessAudit() {
         (existing.lpa_audit_answers || []).forEach(a => { if (a.question_id) ans[a.question_id] = { answer: a.answer, note: a.note || '', text: a.question_text || '' }; });
         setDraft({ key, id: existing.id, station: existing.station || planStation, auditor_name: existing.auditor_name || fullName || '', auditor_sig_url: existing.auditor_sig_url || null, answers: ans });
         loadedSnapRef.current = lpaSnap(ans, existing.station || planStation);
+        savedAnswersRef.current = Object.fromEntries(Object.entries(ans).map(([k, v]) => [k, v.answer]));
       } else {
         setDraft({ key, id: null, station: planStation, auditor_name: fullName || '', auditor_sig_url: myProfile?.signature_url || null, answers: {} });
         loadedSnapRef.current = lpaSnap({}, planStation);
+        savedAnswersRef.current = {};
       }
       const saved = isMobile ? loadDraft(`lpa:${key}:${fullName || ''}`) : null;
       setPendingDraft(saved && lpaSnap(saved.data?.answers, saved.data?.station) !== loadedSnapRef.current ? saved : null);
@@ -810,13 +818,17 @@ export default function LayerProcessAudit() {
       if (insErr) throw insErr;
       // แจ้งเฉพาะ "เจอข้อบกพร่อง" (ตอบ N/T) — ตรวจผ่านล้วนไม่ต้องรบกวนใคร
       const finds = auditQuestions.filter(q => ['N', 'T'].includes(draft.answers[q.id]?.answer));
-      if (finds.length) notifyEvent({
+      /* 🔴 N5 (24/11): แจ้งเฉพาะข้อ N/T ที่ "ใหม่" เทียบกับที่บันทึกไว้แล้ว — เดิมกดบันทึกซ้ำ (แก้โน้ต/เซ็น) ยิงซ้ำทุกครั้ง */
+      const newFinds = finds.filter(q => !['N', 'T'].includes(savedAnswersRef.current?.[q.id]));
+      savedAnswersRef.current = Object.fromEntries(auditQuestions.map(q => [q.id, draft.answers[q.id]?.answer]));
+      if (newFinds.length) notifyEvent({
         event: 'lpa_finding', type: 'error', ref_table: 'lpa_audits', ref_id: saved.id,
+        link: `/daily-checker?tab=lpa&sub=audit&line=${encodeURIComponent(selLine)}&shift=${selShift}&date=${auditDate}&layer=${auditLayer}`,
         line_name: selLine, actor: draft.auditor_name || fullName,
         lines: [
           `🏭 ${tr("ไลน์")}: ${selLine} · ${SHIFT_META[selShift]} · 📅 ${thDate(auditDate)}`,
           `🔍 ${tr("ชั้น")} ${LAYERS.find(l => l.key === auditLayer)?.label || auditLayer}${draft.station ? ` · ${tr("จุด")} ${draft.station}` : ''}`,
-          `❗ ${tr("พบ")} ${finds.length} ${tr("ข้อ จากทั้งหมด")} ${auditQuestions.length} ${tr("ข้อ")}`,
+          `❗ ${tr("พบ")} ${finds.length} ${tr("ข้อ จากทั้งหมด")} ${auditQuestions.length} ${tr("ข้อ")}${newFinds.length < finds.length ? ` (${tr("ใหม่")} ${newFinds.length})` : ''}`,
           ...finds.slice(0, 5).map(q => `  • [${draft.answers[q.id].answer}] ${tr("ข้อ")} ${q.seq} ${q.question.slice(0, 70)} — ${draft.answers[q.id].note?.trim() || ''}`),
           finds.length > 5 ? `  • …${tr("และอีก")} ${finds.length - 5} ${tr("ข้อ")}` : '',
         ],
