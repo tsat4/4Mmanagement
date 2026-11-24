@@ -287,4 +287,4 @@ NG นับระดับ "เครื่อง-วัน" ไม่ใช่
   · แกนทีม `canWriteTeam` เดิมปล่อยคนไม่มีทีม (`no_team_anchor`) ผ่านทุกไลน์ · ใบ PM ช่างยังใช้แกนทีมเหมือนเดิม
   · พิสูจน์กับข้อมูลจริง 24/11: ใบ AM อนุมัติแล้ว 790 ใบ ผู้อนุมัติ 7 คน — ทุกใบอยู่ไลน์ในส่วนงาน/CC ของผู้อนุมัติ (PD2→ไลน์ D · PD3→HDF) ไม่มีใครถูกตัด
 - **A5 คิวงานของฉัน**: ใบ AM `pending` → ชั้น `unit` บรรทัดเดียวต่อไลน์ (`amappr:<ไลน์>`) เฉพาะคนที่ `amApproveAllowed` · ไม่ขึ้น badge · วัด 24/11 ค้าง 326 ใบ 10 ไลน์
-- **แจ้งเตือน**: AM NG ในแอป = `pm_inspection_ng` **ใบเดียว** (pm_daily_red คง Telegram อย่างเดียว ⇒ ไม่ซ้ำ) · `pm_daily_orange` (ไม่ทำตามเวลา) ขึ้นในแอปถึง leader+supervisor ส่วนงานไลน์ · `pm_daily_green` ไม่ขึ้นในแอป · ลิงก์ `pm_daily_*` → `/daily-checker?tab=pm`
+- **แจ้งเตือน**: AM NG ในแอป = `am_inspection_ng` **ใบเดียว** (25/11 แยกจาก `pm_inspection_ng` ของช่าง · ผู้รับ + `leader` · migration `20261125_am_inspection_ng_rule_main.sql` apply แล้ว · ใบ PM ช่างผู้รับเดิมเป๊ะ) (pm_daily_red คง Telegram อย่างเดียว ⇒ ไม่ซ้ำ) · `pm_daily_orange` (ไม่ทำตามเวลา) ขึ้นในแอปถึง leader+supervisor ส่วนงานไลน์ · `pm_daily_green` ไม่ขึ้นในแอป · ลิงก์ `pm_daily_*` → `/daily-checker?tab=pm`

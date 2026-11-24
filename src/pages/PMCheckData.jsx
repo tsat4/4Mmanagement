@@ -1144,7 +1144,7 @@ function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, d
       for (const d of done) {
         if (d.overall === 'fail') {
           notifyDepartment(amDept, {
-            event: 'pm_inspection_ng', title: 'พบผลตรวจไม่ผ่าน (NG)', body: `${d.m.jig.name} — ${formatDate(d.insp.inspected_at)} · สถานี ${station.name}`,
+            event: 'am_inspection_ng', title: 'พบผลตรวจไม่ผ่าน (NG)', body: `${d.m.jig.name} — ${formatDate(d.insp.inspected_at)} · สถานี ${station.name}`,
             type: 'error', refTable: 'inspections', refId: d.insp.id, link: inspNotifLink(amDept, d.m.jig.id), lineName: d.m.jig.line_name || null,
           }).catch(() => {})
         }
@@ -1963,7 +1963,9 @@ export default function PMCheckData({ mode = 'pm' }) {
            เดิมยิง 83 คนข้าม 12 ส่วนงาน · คนกดเองถูกตัดออกที่ edge แล้ว (actor_id) ไม่ต้องส่ง excludeUserId
            🔴 ทีมใหญ่เกิน 20 คน = รายชื่อช่างถูกตัด ⇒ ต้องเขียนบนจอ ห้ามเงียบ */
         notifyDepartment(department, {
-          event: 'pm_inspection_ng',
+          /* 🔔 25/11 (คำสั่ง user "เพิ่ม leader ในการ์ด AM แดง"): ใบ AM แยกกติกาเป็น `am_inspection_ng`
+             (ผู้รับ + leader) ⇒ ใบ PM ของช่างยังใช้ `pm_inspection_ng` ผู้รับเดิมเป๊ะ — ปรับ 2 เรื่องแยกกันได้ที่ /notification-config */
+          event: isAmTeam(department) ? 'am_inspection_ng' : 'pm_inspection_ng',
           title: 'พบผลตรวจไม่ผ่าน (NG)',
           body: `${selectedJig.name} — ${formatDate(insp.inspected_at)}`,
           type: 'error', refTable: 'inspections', refId: insp.id,

@@ -10215,8 +10215,9 @@ test('🛡️ pm-notify-via-single-source — แจ้งเตือนผล�
   const page = stripComments(readFileSync(join(ROOT, 'src/pages/PMCheckData.jsx'), 'utf8'));
   assert.ok(/ownersCapped/.test(page),
     '\n\n❌ หน้าจอไม่ได้เตือนเมื่อรายชื่อช่างถูกตัด (จอต้องไม่โกหกว่าส่งครบ)\n');
-  assert.ok(/event:\s*'pm_inspection_ng'/.test(page),
-    '\n\n❌ ไม่ได้ส่ง event key — edge จะตอบ 400 แล้วแจ้งเตือนหายทั้งใบ\n');
+  assert.ok(/'pm_inspection_ng'/.test(page) && /event:\s*'am_inspection_ng'/.test(page),
+    '\n\n❌ ไม่ได้ส่ง event key — edge จะตอบ 400 แล้วแจ้งเตือนหายทั้งใบ\n'
+    + '   (25/11: ใบ AM = am_inspection_ng · ใบ PM ช่าง = pm_inspection_ng — ทั้ง 2 คีย์ต้องมีแถวใน notification_rules)\n');
 });
 
 test('🔊 siren-call-mtn-needs-team — ไซเรน "เรียกช่าง" ต้องรู้ขอบเขตทีมของจอเสมอ', () => {
