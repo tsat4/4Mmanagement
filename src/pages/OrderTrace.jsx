@@ -330,11 +330,15 @@ export default function OrderTrace() {
       // Main — คน/4M/การตรวจ ของไลน์+วันนั้น (ทุกก้อน best-effort)
       try {
         // คน + สกิลปัจจุบัน (⚠️ ไม่มี history — คะแนน ณ วันนี้ ไม่ใช่ ณ วันผลิต) + จุดงาน + เกณฑ์สกิลต่อจุด
-        const [emp, ws] = await Promise.all([
+        // 🔴 จุดงานไลน์ลูกผูกด้วย line_name (line_id = null) — หาด้วย line_id อย่างเดียวได้ 0 จุด (วัด 24/11: สาย APRON 0 → 19 จุด)
+        //    ⇒ หา 2 ทาง (id + ชื่อ) แล้วรวมตาม id · ห้ามต่อสตริง .or() ด้วยชื่อไลน์ (ชื่อมีช่องว่าง/จุลภาคได้)
+        const wsCols = 'id, station_name, station_requirements(skill_name, min_score)';
+        const [emp, wsById, wsByName] = await Promise.all([
           supabase.from('employees').select('id, name, employee_id_code, team, position, employee_skills(skill_name, score)').in('line_id', famIds).eq('is_active', true),
-          supabase.from('workstations').select('id, station_name, station_requirements(skill_name, min_score)').in('line_id', famIds),
+          famIds.length ? supabase.from('workstations').select(wsCols).in('line_id', famIds) : Promise.resolve({ data: [] }),
+          famNames.length ? supabase.from('workstations').select(wsCols).in('line_name', famNames) : Promise.resolve({ data: [] }),
         ]);
-        const wsAll = ws.data || [];
+        const wsAll = [...new Map([...(wsById.data || []), ...(wsByName.data || [])].map(w => [String(w.id), w])).values()];
         t.stations = Object.fromEntries(wsAll.map(w => [String(w.id), w.station_name]));
         t.reqsByStation = Object.fromEntries(wsAll.map(w => [String(w.id), w.station_requirements || []]));
         t.skillsByEmp = Object.fromEntries((emp.data || []).map(e => [e.id, Object.fromEntries((e.employee_skills || []).map(s => [s.skill_name, s.score]))]));
