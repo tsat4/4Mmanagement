@@ -19,7 +19,6 @@ const FeedbackModal = lazy(() => import('./components/FeedbackModal'));
 const NotifyPrefsModal = lazy(() => import('./components/NotifyPrefsModal'));  // 🔕 ตั้งค่าแจ้งเตือนของฉัน
 import { loadPermissions, canAccessPage, setDeptAdmin, setSharedAccount, can, canSeeded, hasPermission } from './utils/permissions';
 import { NAV_SUB_TABS } from './utils/navSubTabs';            // 🗂️ 24/11 แท็บของหน้า = ข้อย่อยในแผงเมนู
-import { useNavSubItemsStore } from './utils/navSubItems';   // 🗂️ ข้อย่อยชั้นที่ 3 ที่หน้าประกาศตอนรัน (พื้นที่ SAP ฯลฯ)
 /* 🏷️ รุ่นของเว็บ (full / nm) — สลับตอน build ด้วย alias ใน vite.nm.config.js · 📄 src/appEdition.js */
 import { EDITION, EDITION_LABEL, EDITION_HOME } from './appEdition';
 import { LOGISTIC_GROUPS } from './utils/logisticSide';
@@ -556,7 +555,6 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
   const [panel, setPanel] = useState(null);
   /* 🗂️ ข้อย่อยในแผง (24/11 · คำสั่ง user): กาง/ซ่อนรายเมนู · ไม่เคยกด = กางเฉพาะเมนู/แท็บของหน้าที่เปิดอยู่ */
   const [subOpen, setSubOpen] = useState({});
-  const navSubLive = useNavSubItemsStore();
   /* คิวงานของฉัน — โหลดที่นี่เพราะ **badge ต้องมีเลขแม้แผงปิดอยู่** (กฎอยู่ MyQueuePanel.jsx) */
   const myQueue = useMyQueue(panel === '__me');
   const pinnedRef = useRef(pinned);
@@ -827,9 +825,9 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
     );
   };
 
-  /* ══ 🗂️ แถวเมนู + ข้อย่อย (แท็บของหน้า · ชั้นที่ 3 ที่หน้าประกาศ) — 24/11 คำสั่ง user "ย้าย Detail bar ไป Sub bar เป็นข้อย่อย"
-     · ชั้น 2 = ทะเบียน `NAV_SUB_TABS` (utils/navSubTabs.js) — เห็นทุกเมนูตลอดแม้ยังไม่เปิดหน้านั้น · กรองสิทธิ์รายแท็บด้วย `perm`
-     · ชั้น 3 = `useNavSubItemsStore()` — มีเฉพาะตอนหน้านั้นเปิดอยู่ (ไม่เดารายการ) · กด = `?<query>=<key>`
+  /* ══ 🗂️ แถวเมนู + ข้อย่อย (แท็บของหน้า) — 24/11 คำสั่ง user "ย้าย Detail bar ไป Sub bar เป็นข้อย่อย"
+     · ข้อย่อย = ทะเบียน `NAV_SUB_TABS` (utils/navSubTabs.js) — เห็นทุกเมนูตลอดแม้ยังไม่เปิดหน้านั้น · กรองสิทธิ์รายแท็บด้วย `perm`
+     · รายการชั้นถัดไป (พื้นที่ SAP ฯลฯ) **ไม่อยู่ในแผงนี้** — อยู่ "Detail Bar" ใต้ breadcrumb ในหน้า (PageHeader · 24/11 รอบ 4)
      · "อยู่ตรงนี้" หน้าตาเดียวกับทุกชั้น (พื้น accent-dim + แถบซ้าย + aria-current) · ชื่อยาวตัด … + `title` ชื่อเต็ม
      · กดข้อย่อย = ปิดแผงเหมือนเมนูอื่น (ปักหมุด = ค้าง) — user เลือก 24/11 ══ */
   const subTabsOf = (item) => {
@@ -838,10 +836,10 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
     const tabs = reg.tabs.filter(t => !t.perm || hasPermission(t.perm, userRole));
     return tabs.length ? { ...reg, tabs } : null;
   };
-  const subLinkStyle = (on, depth) => ({
+  const subLinkStyle = (on) => ({
     display: 'block', position: 'relative', textDecoration: 'none', borderRadius: 'var(--radius)',
-    padding: depth === 3 ? '4px 8px 4px 10px' : '5px 8px 5px 10px', fontSize: depth === 3 ? 12 : 12.5,
-    fontWeight: on ? 700 : 500, color: on ? 'var(--accent)' : (depth === 3 ? 'var(--muted)' : 'var(--text2)'),
+    padding: '5px 8px 5px 10px', fontSize: 12.5,
+    fontWeight: on ? 700 : 500, color: on ? 'var(--accent)' : 'var(--text2)',
     background: on ? 'var(--accent-dim)' : 'transparent', borderLeft: `2px solid ${on ? 'var(--accent)' : 'transparent'}`,
     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
   });
@@ -870,32 +868,10 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
           <div role="group" aria-label={tr(item.label)} style={{ margin: '1px 0 4px 20px', paddingLeft: 6, borderLeft: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 1 }}>
             {reg.tabs.map(t => {
               const on = curTab === String(t.key);
-              const live = on ? navSubLive[`${item.to}|${t.key}`] : null;
-              const k3 = `${item.to}|${t.key}`;
-              const open3 = subOpen[k3] ?? true;
-              const base = `${item.to}?${reg.param}=${encodeURIComponent(t.key)}`;
               const label = tr(t.label);
-              const curQ = live ? (sp.get(live.query) || '') : '';
               return (
-                <div key={t.key}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Link to={base} onClick={onPick} title={label} aria-current={on && !curQ ? 'page' : undefined}
-                      style={{ ...subLinkStyle(on, 2), flex: 1, minWidth: 0 }}>{label}</Link>
-                    {live && live.items.length > 0 && chevron(open3, () => toggle(k3, open3), open3 ? tr('ซ่อนข้อย่อย') : tr('แสดงข้อย่อย'))}
-                  </div>
-                  {live && live.items.length > 0 && open3 && (
-                    <div role="group" aria-label={label} style={{ margin: '1px 0 3px 14px', paddingLeft: 6, borderLeft: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 1, maxHeight: 320, overflowY: 'auto' }}>
-                      <Link to={base} onClick={onPick} title={tr('ทั้งหมด')} aria-current={!curQ ? 'page' : undefined} style={subLinkStyle(!curQ, 3)}>{tr('ทั้งหมด')}</Link>
-                      {live.items.map(it => {
-                        const on3 = curQ === String(it.key);
-                        return (
-                          <Link key={it.key} to={`${base}&${live.query}=${encodeURIComponent(it.key)}`} onClick={onPick}
-                            title={it.label} aria-current={on3 ? 'page' : undefined} style={subLinkStyle(on3, 3)}>{it.label}</Link>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
+                <Link key={t.key} to={`${item.to}?${reg.param}=${encodeURIComponent(t.key)}`} onClick={onPick} title={label}
+                  aria-current={on ? 'page' : undefined} style={subLinkStyle(on)}>{label}</Link>
               );
             })}
           </div>

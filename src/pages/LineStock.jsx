@@ -158,8 +158,8 @@ function StockTab({ role, scope }) {
   const [scopePickLines, setScopePickLines] = useState(null);
   /* 🔎 09/11 (คำสั่ง user "แยกพื้นที่แบบกางทุกกลุ่มมันรก — ควรมี dropdown เลือกพื้นที่ + ค้นหา MAT / Part No / ชื่อ")
      areaFilter = key ของกลุ่มพื้นที่ SAP ('' = ทุกพื้นที่) · stockQ = คำค้น */
-  /* 🗂️ 24/11 (คำสั่ง user "S401… เป็นหัวข้อย่อยใต้ Stock ในแผงเมนู · กดแล้วกรองเหลือพื้นที่นั้น") — พื้นที่ที่เลือกอยู่ใน URL `?area=`
-     ⇒ แผงเมนูพามาที่พื้นที่ได้ · ช่องเลือกบนจอกับแผงเมนูเป็นค่าเดียวกัน · `replace` = ไม่สะสมประวัติย้อนกลับทีละพื้นที่ */
+  /* 🗂️ 24/11 (คำสั่ง user "S401… อยู่ Detail Bar ใต้ breadcrumb · กดแล้วกรองเหลือพื้นที่นั้น") — พื้นที่ที่เลือกอยู่ใน URL `?area=`
+     ⇒ Detail Bar พามาที่พื้นที่ได้ · ช่องเลือกบนจอกับ Detail Bar เป็นค่าเดียวกัน · `replace` = ไม่สะสมประวัติย้อนกลับทีละพื้นที่ */
   const [lsSp] = useSearchParams();
   const setLsParams = useMergeParams();
   const areaFilter = lsSp.get('area') || '';
@@ -503,7 +503,7 @@ function StockTab({ role, scope }) {
   /* กลุ่มที่โชว์จริง = เลือกพื้นที่ (โหมดพื้นที่เท่านั้น) → ค้นหา MAT / Part No / ชื่อพาร์ท
      ⚠️ ตัวเลือกพื้นที่ทำจาก `groups` (ก่อนค้นหา) — ค้นหาแล้วพื้นที่ใน dropdown ต้องไม่หาย */
   const areaActive = groupMode === 'sloc' && areaFilter && groups.some(g => g.key === areaFilter) ? areaFilter : '';
-  // 🗂️ ประกาศรายชื่อพื้นที่ให้แผงเมนู (ข้อย่อยชั้นที่ 3 ใต้ "Stock") — ชุดเดียวกับช่องเลือกพื้นที่บนจอ
+  // 📍 ประกาศรายชื่อพื้นที่ให้ Detail Bar ใต้ breadcrumb (PageHeader) — ชุดเดียวกับช่องเลือกพื้นที่บนจอ
   const areaNav = useMemo(() => (groupMode === 'sloc' ? groups.map(g => ({ key: g.key, label: g.title })) : null), [groupMode, groups]);
   useNavSubItems('/line-stock', 'stock', 'area', areaNav);
   const stockNeedle = stockQ.trim().toLowerCase();
