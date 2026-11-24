@@ -195,3 +195,5 @@ user เลือกจาก 4 ทาง: ① เทียบอย่างเ
 - `buildNodeRedFlow` (energy_readings): kW = `power` ล่าสุด · A = (A+B+C)/3 ล่าสุด · แต่ละตัวแนบ `max` ของนาที (MAX power / MAX เฟสสูงสุด)
 - ingest-energy v10 โชว์ `last` · เก็บ `max` ที่ `energy_readings.kw_max/a_max` · ต้นทางที่ไม่ส่ง max = พฤติกรรมเดิม
 - ต้องให้หน้างาน **import flow ใหม่** ทุกต้นทางค่าไฟ (hdf · dieshop) ถึงจะเห็นค่าตรงจอ Node-RED · 📄 `docs/ENERGY_MONITORING_DESIGN.md`
+- 🧹 **กดผูก topic แล้วรายการ "ยังไม่ได้ผูก" ลบเองทันที** (24/11 · คำสั่ง user) — trigger `trg_energy_topic_mapped_clear` บน `energy_meter_topics` (DR)
+  ลบ topic ตัวนั้น + ค่ารายเฟส v1-v3/a1-a3 ของตู้เดียวกัน · ผูกแบบปิดใช้ (`is_active=false`) = ไม่ลบ · ครอบทุกทางที่ผูก (หน้าจอ/SQL)
