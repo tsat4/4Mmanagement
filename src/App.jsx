@@ -17,7 +17,8 @@ import SignatureModal from './components/SignatureModal';
 import ChangePasswordModal from './components/ChangePasswordModal';
 const FeedbackModal = lazy(() => import('./components/FeedbackModal'));
 const NotifyPrefsModal = lazy(() => import('./components/NotifyPrefsModal'));  // 🔕 ตั้งค่าแจ้งเตือนของฉัน
-import { loadPermissions, canAccessPage, setDeptAdmin, setSharedAccount, can, canSeeded } from './utils/permissions';
+import { loadPermissions, canAccessPage, setDeptAdmin, setSharedAccount, can, canSeeded, hasPermission } from './utils/permissions';
+import { NAV_SUB_TABS } from './utils/navSubTabs';            // 🗂️ 24/11 แท็บของหน้า = ข้อย่อยในแผงเมนู
 /* 🏷️ รุ่นของเว็บ (full / nm) — สลับตอน build ด้วย alias ใน vite.nm.config.js · 📄 src/appEdition.js */
 import { EDITION, EDITION_LABEL, EDITION_HOME } from './appEdition';
 import { LOGISTIC_GROUPS } from './utils/logisticSide';
@@ -552,6 +553,8 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
   // panel = ชื่อหมวด | '__star' (ใช้บ่อย) | '__me' (โปรไฟล์) | null = ปิด
   // ปกติแผง "ลอยทับ" เนื้อหา (เนื้อหาไม่ถูกบีบ — คำสั่ง user) · ปักหมุด 📌 = ค้างไว้และดันเนื้อหา
   const [panel, setPanel] = useState(null);
+  /* 🗂️ ข้อย่อยในแผง (24/11 · คำสั่ง user): กาง/ซ่อนรายเมนู · ไม่เคยกด = กางเฉพาะเมนู/แท็บของหน้าที่เปิดอยู่ */
+  const [subOpen, setSubOpen] = useState({});
   /* คิวงานของฉัน — โหลดที่นี่เพราะ **badge ต้องมีเลขแม้แผงปิดอยู่** (กฎอยู่ MyQueuePanel.jsx) */
   const myQueue = useMyQueue(panel === '__me');
   const pinnedRef = useRef(pinned);
@@ -822,6 +825,61 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
     );
   };
 
+  /* ══ 🗂️ แถวเมนู + ข้อย่อย (แท็บของหน้า) — 24/11 คำสั่ง user "ย้าย Detail bar ไป Sub bar เป็นข้อย่อย"
+     · ข้อย่อย = ทะเบียน `NAV_SUB_TABS` (utils/navSubTabs.js) — เห็นทุกเมนูตลอดแม้ยังไม่เปิดหน้านั้น · กรองสิทธิ์รายแท็บด้วย `perm`
+     · รายการชั้นถัดไป (พื้นที่ SAP ฯลฯ) **ไม่อยู่ในแผงนี้** — อยู่ "Detail Bar" ใต้ breadcrumb ในหน้า (PageHeader · 24/11 รอบ 4)
+     · "อยู่ตรงนี้" หน้าตาเดียวกับทุกชั้น (พื้น accent-dim + แถบซ้าย + aria-current) · ชื่อยาวตัด … + `title` ชื่อเต็ม
+     · กดข้อย่อย = ปิดแผงเหมือนเมนูอื่น (ปักหมุด = ค้าง) — user เลือก 24/11 ══ */
+  const subTabsOf = (item) => {
+    const reg = NAV_SUB_TABS[item.to];
+    if (!reg) return null;
+    const tabs = reg.tabs.filter(t => !t.perm || hasPermission(t.perm, userRole));
+    return tabs.length ? { ...reg, tabs } : null;
+  };
+  const subLinkStyle = (on) => ({
+    display: 'block', position: 'relative', textDecoration: 'none', borderRadius: 'var(--radius)',
+    padding: '5px 8px 5px 10px', fontSize: 12.5,
+    fontWeight: on ? 700 : 500, color: on ? 'var(--accent)' : 'var(--text2)',
+    background: on ? 'var(--accent-dim)' : 'transparent', borderLeft: `2px solid ${on ? 'var(--accent)' : 'transparent'}`,
+    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+  });
+  const chevron = (open, onToggle, label) => (
+    <button type="button" onClick={onToggle} aria-expanded={open} aria-label={label} title={label} style={{
+      width: 24, height: 24, flexShrink: 0, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer',
+      color: 'var(--muted)', fontSize: 11, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+    }}>{open ? '▾' : '▸'}</button>
+  );
+  const subNav = (item, group, onPick) => {
+    const reg = subTabsOf(item);
+    if (!reg) return navRow(item, group, onPick);
+    const onPage = location.pathname === item.to;
+    const sp = new URLSearchParams(location.search);
+    const curTab = onPage ? (sp.get(reg.param) || String(reg.tabs[0].key)) : null;
+    const k2 = item.to;
+    const open2 = subOpen[k2] ?? onPage;
+    const toggle = (k, cur) => setSubOpen(o => ({ ...o, [k]: !cur }));
+    return (
+      <>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>{navRow(item, group, onPick)}</div>
+          {chevron(open2, () => toggle(k2, open2), open2 ? tr('ซ่อนข้อย่อย') : tr('แสดงข้อย่อย'))}
+        </div>
+        {open2 && (
+          <div role="group" aria-label={tr(item.label)} style={{ margin: '1px 0 4px 20px', paddingLeft: 6, borderLeft: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 1 }}>
+            {reg.tabs.map(t => {
+              const on = curTab === String(t.key);
+              const label = tr(t.label);
+              return (
+                <Link key={t.key} to={`${item.to}?${reg.param}=${encodeURIComponent(t.key)}`} onClick={onPick} title={label}
+                  aria-current={on ? 'page' : undefined} style={subLinkStyle(on)}>{label}</Link>
+              );
+            })}
+          </div>
+        )}
+      </>
+    );
+  };
+
   /* ── Desktop: rail 64px + แผงหมวดลอยทับ (sidebar แบบ D · 2026-08-18) ─────────────
      หลัก: เนื้อหาหลักเสีย 64px เท่านั้น (เดิม 252px) — แผงเมนูลอยทับตอนกดไอคอนหมวด
      เลือกเมนูแล้วปิดเอง · 📌 ปักหมุด = ค้างแผงไว้และดันเนื้อหา (opt-in เท่านั้น) */
@@ -1003,7 +1061,8 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
             </div>
             {/* ชื่อหมวดของแผงที่เปิด (ย้ายจากหัวแผง · 20/11) */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '12px 8px 6px', fontSize: 12, fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.02em', flexShrink: 0, minWidth: 0 }}>
-              <span style={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{panelMeta.title}</span>
+              {/* 24/11: ชื่อหมวดยาวถูกตัด … ⇒ ชี้เมาส์ดูชื่อเต็ม (คำสั่ง user) */}
+              <span title={panelMeta.title} style={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{panelMeta.title}</span>
             </div>
 
             <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -1017,7 +1076,7 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
                       borderTop: i === 0 ? 'none' : '1px solid var(--border)',
                     }}>{tr(navSubOf(item, panel))}</div>
                   )}
-                  {navRow(item, panel, () => { if (!pinned) setPanel(null); })}
+                  {subNav(item, panel, () => { if (!pinned) setPanel(null); })}
                 </div>
               ))}
 

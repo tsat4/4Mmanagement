@@ -2,6 +2,9 @@ import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { MoreMark } from './InfoMore';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { NAV_ITEMS, STICKY_TAB_GROUPS, inNavGroup } from '../App';
+import { NAV_SUB_TABS } from '../utils/navSubTabs';
+import { useNavSubItemsStore } from '../utils/navSubItems';   // 🗂️ Detail Bar = รายการที่หน้าประกาศตอนรัน (พื้นที่ SAP)
+import { useMergeParams } from '../utils/useTabParam';   // 🗂️ 24/11 หน้าที่แท็บย้ายไปเป็นข้อย่อยในแผงเมนู
 import useIsMobile from '../utils/useIsMobile';
 import { HubContext } from './Page';
 import MobileFilterFold, { splitFilterChildren } from './MobileFilterFold';
@@ -161,7 +164,7 @@ export default function PageHeader({
   const isMobile = useIsMobile();
   const { tr } = useLang();
   const inHub = useContext(HubContext);   // หน้าลูกใน hub → ไม่วาดชื่อหน้า/breadcrumb ซ้ำ (Page.jsx)
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const navigate = useNavigate();
   const navItem = NAV_ITEMS.find(n => n.to === pathname);
   const rawTabs = (tabs || []).filter(Boolean);
@@ -183,20 +186,33 @@ export default function PageHeader({
      · ไม่เข้าเงื่อนไข = ไม่มี style เพิ่มเลย (หน้าอื่นเหมือนเดิมเป๊ะ) */
   /* 🗜️ 24/11 (คำสั่ง user) เงื่อนไขเดียวกันนี้ = "หัวเพจกะทัดรัด" ด้วย: ไม่มี breadcrumb · ไม่มีคำบรรยาย (`sub`) ·
      ชื่อหน้าอยู่บนสุด · แถบแท็บแถวเดียว (ล้น = ปุ่ม ◀ ▶) · ปุ่ม 🔍 ท้ายแถบ (`HeaderSearch`) */
-  const sticky = !inHub && !isMobile && !!topTabs.length && !filters && !!navItem && inNavGroup(navItem, STICKY_TAB_GROUPS);
+  const compact = !inHub && !isMobile && !filters && !!navItem && inNavGroup(navItem, STICKY_TAB_GROUPS);
+  /* 🗂️ 24/11 (คำสั่ง user "ย้าย Detail bar ไป Sub bar เป็นข้อย่อย") — หน้าที่อยู่ในทะเบียน `NAV_SUB_TABS` เปลี่ยนแท็บที่แผงเมนู
+     ⇒ ไม่วาดแถบแท็บในหน้า · ปุ่ม 🔍 ย้ายไปแถวชื่อหน้า · ไม่อยู่ในทะเบียน = แถบแท็บตรึงบนแบบเดิม (แท็บไม่มีวันหายเฉยๆ) */
+  const tabsInNav = compact && !!NAV_SUB_TABS[pathname];
+  /* 📍 Detail Bar (24/11 รอบ 4 · คำสั่ง user "ถัดจาก breadcrumb = Detail Bar: S401, S402…") — ใต้ breadcrumb
+     รายการมาจากหน้า (`useNavSubItems(path, tab, query, items)` — ข้อมูลจริงของแท็บนั้น ไม่เดา) · กด = ตั้ง `?<query>=` (ตัวกรองเดียวกับช่องบนจอ)
+     · ตอนนี้มีเฉพาะแท็บที่จัดกลุ่มตามพื้นที่ SAP (user เลือก "แสดงเฉพาะหน้าที่มีพื้นที่ SAP") · ไม่มีรายการ = ไม่วาดแถบ
+     · แถวเดียว + ◀ ▶ เมื่อล้น (`TabBar scroller`) · ตรึงบนตอนเลื่อนจอ + ปุ่ม 🔍 ท้ายแถบ */
+  const navLive = useNavSubItemsStore();
+  const setUrl = useMergeParams();
+  const detail = compact ? (navLive[`${pathname}|${tab ?? ''}`] || null) : null;
+  const detailItems = detail && detail.items.length ? detail.items : null;
+  const detailCur = detailItems ? (new URLSearchParams(search).get(detail.query) || '') : '';
+  const sticky = compact && ((!!topTabs.length && !tabsInNav) || !!detailItems);
   const rootRef = useRef(null);
   const [stickTop, setStickTop] = useState(0);
   useLayoutEffect(() => {
     if (!sticky) return undefined;
     const root = rootRef.current;
     if (!root) return undefined;
-    const measure = () => { const bar = root.querySelector('[data-tabbar]'); setStickTop(bar ? -bar.offsetTop : 0); };
+    const measure = () => { const bar = root.querySelector('[data-tabbar], [data-detailbar]'); setStickTop(bar ? -bar.offsetTop : 0); };
     measure();
     if (typeof ResizeObserver === 'undefined') return undefined;
     const ro = new ResizeObserver(measure);
     ro.observe(root);
     return () => ro.disconnect();
-  }, [sticky]);
+  }, [sticky, !!detailItems]);   // eslint-disable-line react-hooks/exhaustive-deps
   const leafLabel = stripIcon(tr((activeGroup ? activeGroup.children : rawTabs).find(t => t.key === tab)?.label));
   const tabLabel = activeGroup ? [stripIcon(tr(activeGroup.label)), leafLabel].filter(Boolean).join(' › ') : leafLabel;
 
@@ -269,7 +285,7 @@ export default function PageHeader({
     <div data-ph-root="1" ref={rootRef} style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 'var(--ph-mb, 12px)',
       /* 📌 sticky: พื้นทึบกันเนื้อหาทะลุ · z ต่ำกว่าแผงเมนู (997+) / กระดิ่ง (1200) · เว้นขวาพ้น 🔔 ให้แถบแท็บ (ชื่อหน้าย้ายมาเว้นที่นี่แทน) */
       ...(sticky ? { position: 'sticky', top: stickTop, zIndex: 50, background: 'var(--bg)', paddingRight: 52 } : null) }}>
-      {!sticky && crumbs}
+      {!compact && crumbs}
 
       {(!inHub || sub || actions) && (
       <div className="ph-chrome" style={{
@@ -291,17 +307,30 @@ export default function PageHeader({
             </h2>
             )
           )}
-          {sub && !sticky && <SubLine text={tr(sub)} marginTop={inHub ? 0 : 3} />}
+          {sub && !compact && <SubLine text={tr(sub)} marginTop={inHub ? 0 : 3} />}
         </div>
         {/* actions = ปุ่ม "คำสั่งระดับหน้า" เท่านั้น (บันทึก/เพิ่ม/พิมพ์/โหมด TV) — ห้ามใส่ตัวกรอง (select/วันที่/ขอบเขต/สเกล)
             ตัวกรองต้องอยู่ `filters` ⇒ ลงใต้แถบแท็บเสมอ (UI-STANDARD §2 ลำดับแนวตั้ง · stdsweep ตรวจ data-ph) */}
         {actions && <div data-ph="actions" style={{ display: 'flex', flexWrap: 'wrap', gap: 7, alignItems: 'center' }}>{actions}</div>}
+        {/* 🔍 หัวเพจกะทัดรัดที่ไม่มีแถบแท็บในหน้า = ปุ่มค้นหาอยู่ท้ายแถวชื่อหน้า (มีแถบแท็บ = อยู่ท้ายแถบแท็บ) */}
+        {compact && !sticky && !detailItems && <HeaderSearch rootRef={rootRef} tabKey={String(tab ?? '')} />}
       </div>
       )}
 
-      {sticky && crumbs}
+      {compact && crumbs}
 
-      {!!tabList.length && renderTabs()}
+      {/* 📍 Detail Bar — ใต้ breadcrumb (ดูคอมเมนต์ `detail` ข้างบน) · "ทั้งหมด" = ล้างตัวกรอง */}
+      {detailItems && (
+        <div data-detailbar="1" className="ph-chrome">
+          <TabBar scroller
+            tabs={[{ key: '__all', label: tr('ทั้งหมด') }, ...detailItems.map(it => ({ key: String(it.key), label: it.label, title: it.label }))]}
+            value={detailCur || '__all'}
+            onChange={(k) => setUrl({ [detail.query]: k === '__all' ? null : k }, { replace: true })}
+            after={<HeaderSearch rootRef={rootRef} tabKey={String(tab ?? '')} />} />
+        </div>
+      )}
+
+      {!!tabList.length && !tabsInNav && renderTabs()}
 
       {/* ── ลำดับแนวตั้งตายตัวทุกหน้า: breadcrumb → ชื่อหน้า|ปุ่มคำสั่ง → แท็บ → แถบกรอง → เนื้อหา ──
           (user 24/09: "ลำดับยังโดดไปมา เดี๋ยวแท็บมาก่อนช่องค้นหา บางหน้าค้นหาอยู่บนสุดก่อนแท็บ") */}
