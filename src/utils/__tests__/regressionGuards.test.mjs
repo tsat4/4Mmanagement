@@ -4806,7 +4806,7 @@ test('🛡️ approve-needs-confirm-4m — ปุ่มอนุมัติ 4M 
   assert.ok(cAt > 0 && uAt > 0 && cAt < uAt,
     '\n\n❌ `handleApprove` (อนุมัติ 4M) เขียน DB โดยไม่ถามยืนยันก่อน\n'
     + '   ทำไมห้าม: ชื่อคนกดไปอยู่บนใบ · compare-and-swap = กดคืนเองไม่ได้ ต้องให้คนตีกลับ\n'
-    + '   แก้ยังไง: `if (!confirmSign({ what, docLabel, orderNo, actor, as, effect })) return;`\n'
+    + '   แก้ยังไง: `if (!await confirmSign({ what, docLabel, orderNo, actor, as, effect })) return;`\n'
     + '   ⚠️ ขั้น QA ไม่ต้องถามซ้ำ (มี modal แนบรูป) · ตีกลับไม่ต้อง (ต้องพิมพ์เหตุผล)\n');
 
   /* ของกลางต้องเป็นตัวเดียวกับที่ใบ MO ใช้ — ห้ามเขียนข้อความยืนยันเองในหน้า */
@@ -4826,7 +4826,7 @@ test('🛡️ mtn-approve-needs-confirm — ปุ่มเซ็น/อนุ�
   assert.ok(cAt > 0 && uAt > 0 && cAt < uAt,
     '\n\n❌ `signApproval` เขียน DB โดยไม่ถามยืนยันก่อน (หรือถามหลังเขียนไปแล้ว)\n'
     + '   ทำไมห้าม: ลายเซ็นผู้จัดการเป็น one-way — เซ็นพลาดแล้วเจ้าตัวปลดเองไม่ได้\n'
-    + '   แก้ยังไง: `if (!confirmSign({ what, orderNo, actor, as })) return;` ก่อน `.update(`\n');
+    + '   แก้ยังไง: `if (!await confirmSign({ what, orderNo, actor, as })) return;` ก่อน `.update(`\n');
 
   /* ② ขั้นที่เป็นการเซ็น/อนุมัติใน StepModal — ต้องถามผ่านทะเบียน stage ไม่ใช่ไล่เช็คเลขขั้นเอง */
   assert.ok(/needsSignConfirm\s*\(/.test(src) && /confirmSign\s*\(/.test(src),
@@ -12721,3 +12721,24 @@ test('🔴 restamp-lane-needs-machine-no — หารเลนต้องม�
   assert.match(sc, /laneN > 1[\s\S]{0,200}?1 \/ laneN/,
     '\n\n❌ ด่าน DT-เกินเวลากะ ยังเทียบด้วยนาทีดิบ — ไลน์เครื่องขนานจะถูกข้ามทุกกะ\n');
 });
+
+test('🛡️ confirm-sign-must-await — confirmSign() คืน Promise ⇒ ทุกจุดต้อง await (ไม่งั้นกล่องขึ้นแต่ไม่กันอะไรเลย)', () => {
+  /* 24/11 (คำสั่ง user): หน้า /workflows เรียก `if (!confirmSign(...)) return` — Promise เป็น truthy เสมอ
+     ⇒ `!promise` = false ⇒ อนุมัติไปแล้วทั้งที่กล่องยืนยันยังเปิดอยู่ (กดยกเลิกก็ไม่มีผล)
+     ของกลางเปลี่ยนเป็นกล่องในแอป (Promise) ตั้งแต่ 18/11 · จุดที่เขียนก่อนหน้านั้นต้อง await ทุกตัว */
+  const bad = [];
+  const walk = (d) => { for (const n of readdirSync(d, { withFileTypes: true })) {
+    const f = join(d, n.name);
+    if (n.isDirectory()) { if (n.name !== '__tests__' && n.name !== 'node_modules') walk(f); continue; }
+    if (!/\.(jsx?|mjs)$/.test(n.name) || f.endsWith('signConfirm.js')) continue;
+    const src = stripComments(readFileSync(f, 'utf8'));
+    for (const m of src.matchAll(/(\S+\s*)confirmSign\(/g)) {
+      if (/^(await\s*|function\s*)$/.test(m[1]) || /\bawait\s*$/.test(m[1])) continue;
+      if (/import|export/.test(m[1])) continue;
+      bad.push(`${f.replace(ROOT + '/', '')}: ...${m[0]}`);
+    }
+  } };
+  walk(join(ROOT, 'src'));
+  assert.deepEqual(bad, [], `\n\n❌ ${bad.length} จุดเรียก confirmSign() โดยไม่ await\n   ${bad.join('\n   ')}\n   แก้: \`if (!await confirmSign({...})) return\` (ฟังก์ชันรอบนอกต้องเป็น async)\n`);
+});
+

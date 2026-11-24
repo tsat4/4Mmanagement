@@ -31,6 +31,7 @@ import { loadPmTeams, pmTeamsSync, teamKind, recordPermFor, isAmTeam, splitInspB
 import { carryNgReason, ngReasonCheck, okWhileMoOpen } from '../utils/ngReason'   // 🚩 NG ต้องมีเหตุผล (19/11)
 import { loadNgHistory } from '../lib/ngHistory'
 import { buildStationIndex } from '../utils/amStations'   // 🧩 สถานี AM (23/11)
+import { canWriteLine, writeBlockText } from '../utils/writeScope'   // 🔐 A4 (24/11): อนุมัติใบ AM = ไลน์ในขอบเขตตัวเอง
 import { MTN_TEAMS, deptNameOf, teamKeyOf, teamForEquipmentKind, teamsForUser, canWriteTeam, teamBlockText } from '../utils/mtnTeams'
 import { checkWriteRows } from '../utils/dbWrite';
 import NoticeBar from '../components/NoticeBar';
@@ -715,7 +716,7 @@ export function inspNotifLink(dept, jigId) {
   return isAmTeam(dept) ? `/daily-checker?tab=amcheck&${q.toString()}` : `/pm?tab=check&${q.toString()}`
 }
 
-function HistoryModal({ inspection, checkpoints: cpsFromPage, jig, onClose, userId, userRole, deptWrite, canRecord = false,
+function HistoryModal({ inspection, checkpoints: cpsFromPage, jig, onClose, userId, userRole, deptWrite, lineWrite = null, canRecord = false,
   isAm = false, deptKey = null, inspectorPosition = null, myPosition = null, inspectorIsSelf = null, isShared = false }) {
   const [results, setResults] = useState([])
   const [approving, setApproving] = useState(false)
@@ -761,7 +762,7 @@ function HistoryModal({ inspection, checkpoints: cpsFromPage, jig, onClose, user
   const verdictText = (v) => (isAm ? amApprovalText(v) : pmConfirmText(v))
   const canApprove = (isAm
     ? amApproveAllowed({ can: (r, a) => can(r, a, userRole), isSeeded: isActionSeeded }) && !!amVerdict?.ok
-    : can('pm', 'approve', userRole) && !!amVerdict?.ok) && (deptWrite?.ok !== false)
+    : can('pm', 'approve', userRole) && !!amVerdict?.ok) && (deptWrite?.ok !== false) && (lineWrite?.ok !== false)
 
   /** หลัง CAS ไม่ผ่าน — ดึงสถานะจริงของใบมาแสดง (อ่านไม่ได้ = บอก ไม่เงียบ) */
   const reloadInspStatus = async () => {
@@ -772,6 +773,7 @@ function HistoryModal({ inspection, checkpoints: cpsFromPage, jig, onClose, user
 
   const handleApprove = async () => {
     if (deptWrite && !deptWrite.ok) { toast.info(teamBlockText(deptWrite, 'ผลตรวจของทีมนี้')); return }
+    if (lineWrite && !lineWrite.ok) { toast.info(writeBlockText(lineWrite, { what: `ใบตรวจ AM ของไลน์ ${jig?.line_name || ''}` })); return }   // A4
     if (amVerdict && !amVerdict.ok) { toast.info(verdictText(amVerdict)); return }   // ด่านซ้ำตอนเขียนจริง (ปุ่มซ่อนอย่างเดียวไม่พอ)
     /* 🔴 A2 (23/11): อนุมัติ = เซ็นรับ ⇒ ถามยืนยันผ่านของกลางก่อนเขียน DB (CLAUDE.md §4M · signConfirm.js)
        ตีกลับไม่ต้องถาม — มีด่าน "ต้องพิมพ์เหตุผล" อยู่แล้ว (ห้ามถามพร่ำเพรื่อ) */
@@ -802,6 +804,7 @@ function HistoryModal({ inspection, checkpoints: cpsFromPage, jig, onClose, user
   const handleReject = async () => {
     if (!rejectReason.trim()) return
     if (deptWrite && !deptWrite.ok) { toast.info(teamBlockText(deptWrite, 'ผลตรวจของทีมนี้')); return }
+    if (lineWrite && !lineWrite.ok) { toast.info(writeBlockText(lineWrite, { what: `ใบตรวจ AM ของไลน์ ${jig?.line_name || ''}` })); return }   // A4
     if (amVerdict && !amVerdict.ok) { toast.info(verdictText(amVerdict)); return }
     setApproving(true)
     const { data, error } = await supabaseDR.from('inspections').update({
@@ -1003,7 +1006,7 @@ const pmHasInput = (results, notes) => !!(notes && String(notes).trim())
    · สูตรตัดสิน/เขียนแถวใช้ของกลางชุดเดียวกับใบเดี่ยว (overallOf · buildResultRows · ngTopicsOf · stampPlansAfterCheck)
    · บันทึกล้มกลางทาง = ตัวที่บันทึกแล้วไม่บันทึกซ้ำ (savedIds) + บอกบนจอว่าล้มที่ตัวไหน
    📄 docs/modules/pm-hub-check-setup.md §🧩 สถานี AM */
-function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, deptWrite, userId, userRole, fullName, myPosition,
+function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, deptWrite, amLineWrite = null, userId, userRole, fullName, myPosition,
   myEmployeeId, isSharedAccount, inspectorCode, setInspectorCode, checkedThisShift, ownerTeamOf, onSavedJig, onQueueMo, onOpenSingle, isMobileView = false }) {
   const [sec, setSec] = useState({ key: '', status: 'loading', list: [], err: '' })   // list: [{ jig, checklistId, cps, ngHist }]
   const [results, setResults] = useState({})
@@ -1112,7 +1115,7 @@ function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, d
       const onSite = amOnSiteApproval({
         inspectorRank: positionRank(badgeEmp.position), approverRank: positionRank(myPosition),
         isSelf: myEmployeeId === undefined ? null : (!!myEmployeeId && badgeEmp.id === myEmployeeId),
-        canApprove: amApproveAllowed({ can: (r, a) => can(r, a, userRole), isSeeded: isActionSeeded }) && deptWrite?.ok !== false,
+        canApprove: amApproveAllowed({ can: (r, a) => can(r, a, userRole), isSeeded: isActionSeeded }) && deptWrite?.ok !== false && amLineWrite?.ok !== false,
         isShared: !!isSharedAccount,
       })
       const approvalPatch = onSite.approve ? { approval_status: 'approved', approved_by: userId, approved_at: new Date().toISOString() } : {}
@@ -1276,7 +1279,8 @@ export default function PMCheckData({ mode = 'pm' }) {
            แต่ `can()` ที่นี่ยังอ่าน role จริงจากฐาน ⇒ เห็นปุ่มครบ แล้วสรุปผลทดสอบผิด
      🔴 `userId` ยังต้องเป็น **auth uid จริง** เสมอ (คนตรวจ/คนอนุมัติ/คนสั่ง export ในใบ)
         ห้ามเอา role ที่ถูกสวมไปปนกับตัวตนคนเซ็น */
-  const { role: userRole, fullName, mtnTeams: myMtnTeams, sections: mySections, allUnits, position: myPosition, isSharedAccount, lineId: myLineId, scopeIdx } = useContext(UserContext)
+  const { role: userRole, fullName, mtnTeams: myMtnTeams, sections: mySections, allUnits, position: myPosition, isSharedAccount, lineId: myLineId, scopeIdx,
+    section: homeSection, respCostCenters, writeUnits } = useContext(UserContext)
   /* ══ 🔐 "ทีมที่เปิดอยู่ (?dept=) เป็นทีมของเราไหม" (15/10 · คำสั่ง user) ══════════════════
      เดิมคีย์ที่ใช้ตัดสินมาจาก `?dept=` ตรงๆ ⇒ ช่างทีมหนึ่งสลับ URL ไปอีกทีม แล้วลงผลตรวจ /
      อนุมัติ / **เลื่อนรอบ PM** ของอุปกรณ์ทีมนั้นได้ (audit 15/10 · ระดับ A)
@@ -1285,6 +1289,12 @@ export default function PMCheckData({ mode = 'pm' }) {
   const myTeams = useMemo(() => teamsForUser(myMtnTeams, mySections), [myMtnTeams, mySections])
   const deptWrite = useMemo(() => canWriteTeam(myTeams, department, { allUnits, role: userRole }),
     [myTeams, department, allUnits, userRole])
+  /* 🔴 A4 (24/11 · คำสั่ง user "อนุมัติ AM ต้องอยู่ในไลน์/ส่วนงานตัวเอง"): ใบ AM เป็นของ "ไลน์" ไม่ใช่ทีมช่าง
+     ⇒ แกนทีม (`canWriteTeam`) ปล่อยหัวหน้าฝ่ายผลิตที่ไม่มีทีม (no_team_anchor = ok) อนุมัติได้ทุกไลน์
+     ⇒ ชั้น ③ ของใบ AM = `canWriteLine` (ctx ครบ 2 แกน respCostCenters + scopeIdx) · ไม่รู้ไลน์ = บล็อก
+     · วัด 24/11: ใบ AM อนุมัติแล้ว 790 ใบ ผู้อนุมัติ 7 คน — ทุกใบอยู่ไลน์ในส่วนงานของผู้อนุมัติ (ไม่มีใครถูกตัด) */
+  const amLineCtx = useMemo(() => ({ role: userRole, section: homeSection, sections: mySections, allUnits, respCostCenters, scopeIdx, writeUnits }),
+    [userRole, homeSection, mySections, allUnits, respCostCenters, scopeIdx, writeUnits])
   /* 🔧 เจอ NG → เปิดใบแจ้งซ่อม MO ต่อได้เลย (2026-09-02 · feedback หน้างาน)
      ⚠️ **ระบบเสนอ คนกดยืนยัน** ห้ามเปิดใบให้อัตโนมัติ (กฎเดิมทั้งโปรเจค) —
         ใบซ่อมเป็นงานที่มีคนต้องรับผิดชอบจริง ไม่ใช่ผลข้างเคียงของการกดบันทึก */
@@ -1373,6 +1383,7 @@ export default function PMCheckData({ mode = 'pm' }) {
   /* 🗂️ ลิสต์ซ้ายแท็บช่าง (PM) — จัดกลุ่มตามไลน์ + กรองขอบเขตไลน์ (20/10 audit หน้า PM ข้อ 6)
      ⚠️ กรองการดูเท่านั้น ไม่ตัดตามส่วนงานของผู้ใช้ — ช่างซ่อมข้ามไลน์เป็นงานปกติ (แกนสิทธิ์ช่าง = ทีม) */
   const { rows: lineRows } = useProductionLinesState()
+  const amLineWriteOf = (lineName) => canWriteLine(amLineCtx, lineName, lineRows, { unknownTarget: 'block' })
   const scopeLines = useMemo(() => {   // ชื่อไลน์ซ้ำในทะเบียน = key ซ้ำในตัวเลือก ⇒ ยุบด้วยชื่อ
     const seen = new Set()
     return (lineRows || []).filter(l => l?.name && !seen.has(l.name) && seen.add(l.name))
@@ -1908,7 +1919,8 @@ export default function PMCheckData({ mode = 'pm' }) {
         onSite = amOnSiteApproval({
           inspectorRank: positionRank(badgeEmp.position), approverRank: positionRank(myPosition),
           isSelf: myEmployeeId === undefined ? null : (!!myEmployeeId && badgeEmp.id === myEmployeeId),
-          canApprove: amApproveAllowed({ can: (r, a) => can(r, a, userRole), isSeeded: isActionSeeded }) && deptWrite?.ok !== false,
+          canApprove: amApproveAllowed({ can: (r, a) => can(r, a, userRole), isSeeded: isActionSeeded }) && deptWrite?.ok !== false
+            && amLineWriteOf(selectedJig?.line_name).ok,   // A4: อนุมัติหน้าเครื่อง = ไลน์ในขอบเขตเท่านั้น (ไม่ผ่าน = บันทึกเป็นรออนุมัติ)
           isShared: !!isSharedAccount,
         })
         if (onSite.approve) approvalPatch = { approval_status: 'approved', approved_by: userId, approved_at: new Date().toISOString() }
@@ -2250,7 +2262,7 @@ export default function PMCheckData({ mode = 'pm' }) {
               {/* 🧩 สถานี AM — อุปกรณ์นี้อยู่ในสถานี ⇒ ใบรวมทั้งชุด (23/11) */}
               {tab === 'record' && station && (
                 <AmStationSheet station={station} memberJigs={stationJigs} amDept={department} methodIndex={methodIndex}
-                  canRecord={canRecord} deptWrite={deptWrite} userId={userId} userRole={userRole} fullName={fullName}
+                  canRecord={canRecord} deptWrite={deptWrite} amLineWrite={amLineWriteOf(station.line_name)} userId={userId} userRole={userRole} fullName={fullName}
                   myPosition={myPosition} myEmployeeId={myEmployeeId} isSharedAccount={isSharedAccount}
                   inspectorCode={inspectorCode} setInspectorCode={setInspectorCode} checkedThisShift={checkedThisShift}
                   ownerTeamOf={ownerTeamOf} isMobileView={isMobileView}
@@ -2724,6 +2736,7 @@ export default function PMCheckData({ mode = 'pm' }) {
           <HistoryModal inspection={viewInspection} checkpoints={checkpoints} jig={selectedJig}
             userId={userId} userRole={userRole} deptWrite={deptWrite} canRecord={canRecord}
             isAm={isAmTeam(clDeptById[viewInspection.checklist_id] ?? department)}
+            lineWrite={isAmTeam(clDeptById[viewInspection.checklist_id] ?? department) ? amLineWriteOf(selectedJig?.line_name) : null}
             deptKey={clDeptById[viewInspection.checklist_id] ?? department}
             inspectorPosition={inspectorOf(viewInspection).position} inspectorIsSelf={inspectorOf(viewInspection).isSelf} myPosition={myPosition}
             isShared={!!isSharedAccount}

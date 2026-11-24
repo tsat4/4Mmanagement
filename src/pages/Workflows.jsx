@@ -269,8 +269,8 @@ function InstanceModal({ id, me, defById, onClose, onChanged }) {
     toast.success(`${label}${tr("แล้ว")}`);
     reloadAll();
   };
-  const approve = () => {
-    if (!confirmSign({ what: isAck ? 'รับทราบ' : 'อนุมัติ', orderNo: inst.doc_no, docLabel: def?.name || 'ใบงาน', actor: fullName, as: step?.label,
+  const approve = async () => {
+    if (!await confirmSign({ what: isAck ? 'รับทราบ' : 'อนุมัติ', orderNo: inst.doc_no, docLabel: def?.name || 'ใบงาน', actor: fullName, as: step?.label,
       effect: (inst.current_step + 1 >= (version?.flow_schema?.steps?.length || 0)) ? 'ใบจบ (อนุมัติครบ)' : 'ส่งต่อขั้นถัดไป' })) return;
     run(() => supabase.rpc('wf_act', { p_task: myTask.id, p_action: 'approve', p_comment: null, p_expected_rev: inst.step_rev }), isAck ? 'รับทราบ' : 'อนุมัติ');
   };

@@ -47,6 +47,7 @@ import FilterBar from '../components/FilterBar';
 import { DeleteButton } from '../components/IconButton';
 import { tr } from '../utils/i18n';
 import { pickSignerPatch } from '../utils/selfSign';
+import { createBurstTracker, normScanCode } from '../utils/scanWedge';   // 🔫 แยก "สแกนบัตร" ออกจาก "พิมพ์รหัส" (A6 · 24/11)
 import { askConfirm } from '../utils/askConfirm';
 /* ⚠️ ห้าม import SHIFT_OPTIONS มาใช้ที่นี่ (เคยพลาดมาแล้ว — ดูหัวข้อ SHEET_SHIFT_OPTIONS ด้านล่าง) */
 
@@ -233,7 +234,13 @@ export default function BbsCheck() {
     resolveEmployeeSigner(supabase, inspCode).then(r => { if (alive) setCodeSigner(r); });
     return () => { alive = false; };
   }, [inspCode]);
-  const shownSig = signatureOfPerson({ profileSig: sheet?.inspector_sig_url, employeeSig: codeSigner?.signatureUrl });
+  /* 🔴 A6 (24/11 · คำสั่ง user "ลายเซ็นต้องเป็นของเจ้าตัว"): เดิมพิมพ์รหัสคนอื่นแล้วระบบดึงลายเซ็นคนนั้นมาแปะทันที
+     ⇒ ลายเซ็นบนใบ = `inspector_sig_url` ที่บันทึกไว้เท่านั้น · ลายเซ็นจากฐานพนักงานถูกเขียนลงช่องนี้
+       **เฉพาะตอนสแกนบัตรจริง** (จังหวะเครื่องสแกน · `scanWedge`) หรือรหัสเป็นของคนที่ login เอง
+     · พิมพ์รหัสคนอื่น = โชว์ชื่อได้ แต่ช่องลายเซ็นว่าง (เซ็นมือบนกระดาษ/ให้เจ้าตัวสแกนบัตร) */
+  const shownSig = sheet?.inspector_sig_url || null;
+  const codeBurstRef = useRef(createBurstTracker());
+  const scannedCodeRef = useRef('');
 
   /* 🔐 ชั้น ③ (19/11 · ออดิท check sheet) — สิทธิ์ `bbs:record` บอกแค่ "กดบันทึกเป็นไหม"
      ไม่ได้บอกว่า "ใบของไลน์นี้เป็นของหน่วยงานเราไหม" ⇒ เดิมเลือกไลน์ส่วนงานอื่นแล้วทาช่องได้
@@ -440,12 +447,28 @@ export default function BbsCheck() {
     const sh = sheet; if (!sh) return;
     if (!canRecord || !lineGuard()) return;
     if ((code || null) === (sh.inspector_code || null)) return;
+    const scanned = !!code && normScanCode(code) === scannedCodeRef.current;
+    scannedCodeRef.current = '';
+    const norm = (v) => String(v || '').trim().replace(/\s+/g, ' ').toLowerCase();
+    const myEmp = allEmps.find(e => norm(e.name) === norm(fullName));
+    const isMine = !!code && !!myEmp?.employee_id_code && normScanCode(myEmp.employee_id_code) === normScanCode(code);
+    let sigPatch = { inspector_sig_url: null };   // รหัสเปลี่ยน = ลายเซ็นเดิมไม่ใช่ของคนนี้แล้ว
+    let note = '';
+    if (code && (scanned || isMine)) {
+      const signer = await resolveEmployeeSigner(supabase, code);
+      const sig = isMine ? signatureOfPerson({ profileSig: signers.find(p => norm(p.full_name) === norm(fullName))?.signature_url, employeeSig: signer?.signatureUrl }) : signer?.signatureUrl;
+      sigPatch = { inspector_sig_url: sig || null, ...(signer?.name ? { inspector_name: signer.name } : {}) };
+      if (!sig) note = signer?.note || tr('คนนี้ยังไม่มีลายเซ็นในระบบ — ใบจะเว้นช่องให้เซ็นมือ');
+    } else if (code) {
+      note = tr('พิมพ์รหัสเอง = ไม่ดึงลายเซ็นมาแปะ (ลายเซ็นต้องเป็นของเจ้าตัว) — ให้ผู้ตรวจสแกนบัตรเอง หรือเซ็นมือบนใบพิมพ์');
+    }
     const { data, error } = await supabase.from('bbs_sheets')
-      .update({ inspector_code: code || null, updated_by_name: fullName || null })
+      .update({ inspector_code: code || null, ...sigPatch, updated_by_name: fullName || null })
       .eq('id', sh.id).select('id');
     if (error || !data?.length) return toast.error('บันทึกรหัสพนักงานไม่สำเร็จ');
     // ต้องอัปเดต state ด้วย — ไม่งั้นลายเซ็นจากรหัสใหม่ไม่ถูกโหลด (ใบพิมพ์ใช้รหัสเก่า)
-    setSheet(s => (s && s.id === sh.id ? { ...s, inspector_code: code || null } : s));
+    setSheet(s => (s && s.id === sh.id ? { ...s, inspector_code: code || null, ...sigPatch } : s));
+    if (note) toast.info(note);
   };
 
   /* ── วันไหน "ต้องสังเกต" (19/11 · ออดิท check sheet ข้อ 5) ──────────────────────────────
@@ -513,7 +536,7 @@ export default function BbsCheck() {
     /* ✍️ ลายเซ็นผู้ตรวจ: โปรไฟล์ที่เลือก → ฐานพนักงานตามรหัส → เว้นช่องเซ็นมือ (resolve สดตอนกดพิมพ์)
        ระบุไม่ได้/ยังไม่มีลายเซ็น = บอกเหตุผลบนจอ ห้ามออกใบช่องว่างเงียบๆ */
     const signer = sheet.inspector_code ? await resolveEmployeeSigner(supabase, sheet.inspector_code) : null;
-    const sigUrl = signatureOfPerson({ profileSig: sheet.inspector_sig_url, employeeSig: signer?.signatureUrl });
+    const sigUrl = sheet.inspector_sig_url || null;   // A6: ลายเซ็นที่บันทึกไว้เท่านั้น — ไม่ resolve จากรหัสที่พิมพ์ตอนพิมพ์ใบ
     if (!sigUrl) toast.info(signer?.note || 'ยังไม่ได้ระบุผู้ตรวจ (เลือกชื่อ หรือสแกน/พิมพ์รหัสพนักงาน) — ใบจะเว้นช่องลายเซ็นไว้ให้เซ็นมือ');
     const ok = await printBbsSheet({
       sheet: { ...sheet, inspector_name: sheet.inspector_name || signer?.name || null, inspector_sig_url: sigUrl },
@@ -574,7 +597,11 @@ export default function BbsCheck() {
                 ผู้รับเหมาที่ไม่มีบัตร = พิมพ์รหัสเอง · ชื่อ/ลายเซ็นดึงจากฐานพนักงานตามรหัส (C1 · 03/11) */}
             <input key={`${sheet?.id || ''}|${sheet?.inspector_code || ''}`} defaultValue={sheet?.inspector_code || ''} disabled={!canRecord || !sheet}
               onBlur={e => setInspectorCode(e.target.value.trim())}
-              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
+              onKeyDown={e => {
+                const r = codeBurstRef.current.feed({ key: e.key, t: e.timeStamp || performance.now(), target: e.currentTarget, value: e.currentTarget.value });
+                if (r.kind === 'scan') scannedCodeRef.current = normScanCode(e.currentTarget.value);
+                if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); }
+              }}
               placeholder={tr('เช่น 61234')}
               style={{ width: 110, padding: '6px 8px', fontSize: 12.5 }} />
             {codeSigner && codeSigner.state !== 'no_code' && (
