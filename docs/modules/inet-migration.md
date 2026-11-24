@@ -170,3 +170,22 @@ Storage v1.89.12 · Edge runtime v1.77.9) · ประตูใช้ nginx แ�
 
 **ยังไม่ได้ทำ:** รันบน OpenShift จริง (`openshift/esm-stack.yaml` ตรวจแค่รูปแบบ) · ย้ายตัวไฟล์ storage ·
 cron 20 งานด้วยที่อยู่ใหม่ · ความลับของ functions (Telegram ฯลฯ) · Studio/SQL Editor สำหรับแอดมิน
+
+## 10. คำตอบจาก INET (24/11/2026) + ผลต่อแผน
+
+แผนผังจริง = "Project 23 VM" (ทั้งบริษัท) · ESM วาง: **container = VLAN 2 (Kubernetes/Rancher)** ·
+**ฐานข้อมูล 3 เครื่อง = VLAN 1 (Cloud AHV)** · **รูป/ไฟล์ = S3 ใน VLAN 4** (INET ยืนยัน)
+
+| คำถาม | INET ตอบ | ผลต่อแผน |
+|---|---|---|
+| ทางเข้าจากนอก/มือถือ | เข้า IP Public ได้ · ลูกค้า map domain เองได้ | ต้องขอ IT บริษัททำ DNS + ใบรับรอง HTTPS · ❓ยังไม่ได้คำตอบว่าโรงงานอยู่บน MPLS ไหม |
+| timeout websocket (จอสด) | ทดสอบแล้วปรับค่าได้ | ทดสอบจอสดค้าง > 1 ชม. ตอน POC |
+| PostgreSQL 17 + extension | ได้ · INET ติดตั้ง extension ให้ | ต้องส่งรายการ extension + ข้อกำหนด §10.1 · ใช้ image ของ Supabase บน VM ไม่ได้แล้ว ⇒ ต้องมีสคริปต์สร้าง role/schema ของ Supabase บน Postgres ทั่วไป |
+| backup | snapshot ระดับ VM มีให้ · backup รายตาราง = addon เพิ่ม | เสนอ: snapshot + `pg_dump` รายคืนลง S3 ของเราเอง (ไม่ต้องซื้อ addon) + ซ้อมกู้คืน |
+
+### 10.1 ข้อกำหนดฐานข้อมูลที่ต้องส่ง INET
+- extension: `pg_cron` `pg_net` `pg_trgm` `pgstattuple` `pgcrypto` `uuid-ossp` (`supabase_vault` ใช้อยู่แต่ไม่มีความลับเก็บ — 0 แถวทั้ง 2 ฐาน วัด 18/11)
+- 🔴 **`wal_level = logical`** + replication slot ว่าง ≥ 5 — จอสด (realtime) อ่านการเปลี่ยนแปลงผ่าน logical replication
+- 🔴 **ฐาน 3 เครื่องเป็น HA** ⇒ ถามว่าสลับเครื่องอัตโนมัติด้วยอะไร · แอปต่อผ่านที่อยู่เดียว (VIP) · logical slot ตามไปเครื่องใหม่ไหม
+  (PG17 มี failover slot — ถ้าไม่ตั้ง หลังสลับเครื่องจอสดเงียบ) · `pg_cron` รันเฉพาะเครื่องหลัก
+- role ระดับ superuser หรือสิทธิ์สร้าง role/schema 1 ครั้งตอนตั้ง (role ของ Supabase: `anon` `authenticated` `service_role` `authenticator` `supabase_auth_admin` `supabase_storage_admin` `supabase_admin` ฯลฯ)
