@@ -19,6 +19,7 @@
 | `TSAT_ECM_TCO_5Y_Template_2026-11-11.xlsx` | ใช้คู่กับเด็คด้านบน | แม่แบบ TCO 5 ปี (Opt1–5: In-house · ต่อยอด SFM · Bendix · OutSystems · VR) + Decision Matrix ถ่วงน้ำหนัก · ช่องเหลือง = กรอก · นับช่องว่างแล้วขึ้น "ห้ามเทียบ" · Opt2 ใส่แค่ INET + เครื่องมือ AI (มีที่มา) · สร้างจาก `roadshow_build/build_ecm_tco.py` | 11/11/2026 |
 | `ECM-PMO_SFM-Facts_2026-11-11.md` · `ECM-PMO_Project-Charter-RACI_2026-11-11.md` | ใช้คู่กับเด็คด้านบน | ข้อเท็จจริง SFM (ทุกตัวเลขมีที่มา + ประกาศผลประโยชน์ทับซ้อน) · ร่าง Charter + RACI เต็ม | 11/11/2026 |
 | `TSAT_ECM_Project_Team_2026-11-12.pptx` | ใช้ภายในทีม + อยู่ในเด็ค EVP หน้า 12 | ผังทีมงานโครงการ ECM (ร่าง) 1 หน้า **TSG R01** — PMO กำกับ ทีม IT · ทีม OT · ตัวแทนหน่วยงาน 7 หน่วย (Qnex · IEC · MTN · HR · F&A · QSM · ผลิต) · ชื่อคนทุกช่อง [รอระบุ] · สร้างจาก `roadshow_build/build_ecm_team.py` (เด็ค EVP เรียกฟังก์ชันเดียวกัน) | 12/11/2026 |
+| `TSAT_SPG_PMO_Prep_2026-11-24.pptx` · `SPG-PMO_Prep-Pack_2026-11-24.md` | เตรียมความพร้อม PMO สาย SPG ใน TSOS | 11 สไลด์ไทย **TSG R01** + เอกสารฉบับเต็ม — ผัง TSOS (Holding Biz Plan 2027 Draft1 หน้า 70) · **จุดชน Holding ↔ SPG (OEE · TPM · HR · New model · E-Workflow · ML/Interlock) + หลักแบ่งตามชั้นข้อมูล** · คำถามให้ที่ประชุมตัดสิน 5 ข้อ · เงื่อนไขก่อนรับบริษัทที่ 2 · Key User 6 หน่วย · Dev 6 คน + onboarding · ขอ Shared Support · Roadmap · RACI · ชื่อคน [รอระบุ] · สร้างจาก `roadshow_build/build_spg_pmo.py` | 24/11/2026 |
 
 ## ตัวเลขหลักที่นำเสนอ 25/09 (เก็บไว้เทียบรอบหน้า)
 
