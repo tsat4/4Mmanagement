@@ -12742,3 +12742,27 @@ test('🛡️ confirm-sign-must-await — confirmSign() คืน Promise ⇒ �
   assert.deepEqual(bad, [], `\n\n❌ ${bad.length} จุดเรียก confirmSign() โดยไม่ await\n   ${bad.join('\n   ')}\n   แก้: \`if (!await confirmSign({...})) return\` (ฟังก์ชันรอบนอกต้องเป็น async)\n`);
 });
 
+
+test('🛡️ daily-checker-2411 — แผน/อนุมัติ/ลายเซ็น/แจ้งเตือน Daily Checker (24/11 · คำสั่ง user)', () => {
+  const bad = [];
+  const rd = (f) => stripComments(readFileSync(join(ROOT, f), 'utf8'));
+  const lpa = rd('src/pages/LayerProcessAudit.jsx');
+  for (const [re, why] of [
+    [/lpaPlanCellStatus\(/, 'P4/P5: สถานะช่องแผนต้องผ่าน lpaPlanCellStatus() (นับตามรอบ · ไลน์ไม่เดิน · รอเซ็น)'],
+    [/lpaAutoFillQuarter\(/, 'P3: เติมแผนต้องผ่าน lpaAutoFillQuarter() (ข้ามวันที่ผ่านแล้ว)'],
+    [/levels=\{LAYER_PICK_LEVELS\[k\]\}/, 'P6: ช่องผู้ตรวจต้องดันตำแหน่งที่ตรงขึ้นก่อน'],
+    [/editedByOther \? null/, 'A6: คนอื่นแก้ใบที่เซ็นแล้ว ต้องล้างลายเซ็นผู้ตรวจ'],
+    [/const newFinds = finds\.filter/, 'N5: แจ้ง lpa_finding เฉพาะข้อ N/T ใหม่'],
+  ]) if (!re.test(lpa)) bad.push(why);
+  if (/plan_leader: true[\s\S]{0,40}working\.forEach/.test(lpa)) bad.push('P3: autoFillQuarter เขียนเองในหน้าอีกแล้ว');
+  const bbs = rd('src/pages/BbsCheck.jsx');
+  if (!/const shownSig = sheet\?\.inspector_sig_url \|\| null/.test(bbs)) bad.push('A6: BBS ลายเซ็นบนจอต้องเป็นค่าที่บันทึกไว้ ไม่ resolve จากรหัสที่พิมพ์');
+  if (/employeeSig: signer\?\.signatureUrl \}\);\s*if \(!sigUrl\)/.test(bbs)) bad.push('A6: BBS ใบพิมพ์ห้ามดึงลายเซ็นจากรหัส');
+  const pm = rd('src/pages/PMCheckData.jsx');
+  if (!/lineWrite=\{isAmTeam\(/.test(pm) || !/lineWrite && !lineWrite\.ok/.test(pm)) bad.push('A4: อนุมัติใบ AM ต้องผ่าน canWriteLine ของไลน์อุปกรณ์');
+  const py = rd('src/pages/PokaYokeCheck.jsx');
+  if (!/event: 'pokayoke_fail'/.test(py)) bad.push("N3: Poka-Yoke ไม่ผ่านต้องยิง 'pokayoke_fail'");
+  const mq = rd('src/utils/myQueue.js');
+  if (!/key: `amappr:\$\{g\.line\}`/.test(mq)) bad.push('A5: ใบ AM รออนุมัติต้องอยู่ในคิวงาน (บรรทัดเดียวต่อไลน์)');
+  assert.deepEqual(bad, [], `\n\n❌ ${bad.length} จุด\n   ${bad.join('\n   ')}\n`);
+});
