@@ -23,6 +23,7 @@ import NoticeBar from '../components/NoticeBar';
 import { tr } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 import { askConfirm } from '../utils/askConfirm';
+import { notifyEvent } from '../utils/notifyEvent';   // 🔔 N3 (24/11): ทดสอบไม่ผ่าน = แจ้ง (เดิมเงียบ)
 import { checkWriteRows } from '../utils/dbWrite';
 import { canWriteLine, writeBlockText } from '../utils/writeScope';   // 🔐 ชั้น ③ (19/11 · ออดิท check sheet)
 const NO_LINES = [];
@@ -162,6 +163,19 @@ export default function PokaYokeCheck() {
     if (error) { toast.error((tr('บันทึกไม่สำเร็จ') + ': ') + error.message); return; }
     setChecks(m => ({ ...m, [device.id]: data }));
     dropFail(device.id);
+    /* 🔔 N3 (24/11 · คำสั่ง user): อุปกรณ์กันผิดพลาด "จับของเสียไม่ได้" = ของต้องสงสัยไหลต่อ ⇒ แจ้งทันที
+       ผู้รับตามทะเบียน `pokayoke_fail` (supervisor + QA ของส่วนงานไลน์ · แก้ที่ /notification-config)
+       · แจ้งเฉพาะตอนเปลี่ยนเป็น "ไม่ผ่าน" (บันทึกซ้ำ/แก้โน้ตของใบที่ไม่ผ่านอยู่แล้ว = ไม่ยิงซ้ำ) */
+    if (row.result === 'fail' && prev.result !== 'fail') notifyEvent({
+      event: 'pokayoke_fail', type: 'error', ref_table: 'pokayoke_checks', ref_id: data?.id,
+      line_name: device.line_name, actor: row.checker_name || fullName,
+      link: `/daily-checker?tab=pokayoke`,
+      lines: [
+        `🏭 ${tr("ไลน์")}: ${device.line_name} · ${selShift === 'night' ? tr('กะดึก') : tr('กะเช้า')} · 📅 ${selDate}`,
+        `🛡️ ${device.code ? `${device.code} · ` : ''}${device.name}${device.station ? ` (${device.station})` : ''}`,
+        `❌ ${tr("ทดสอบไม่ผ่าน")}: ${row.note || '-'}`,
+      ],
+    });
   };
 
   // ── ทะเบียนอุปกรณ์ ──
