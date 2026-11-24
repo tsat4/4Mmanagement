@@ -1198,4 +1198,4 @@ line_id: emp.line_id ?? ident.line_id
 - แก้ (DB อย่างเดียว · 09:25): `20261121_all_units_qa_doccontrol_main.sql` ตั้ง `all_units=true` ให้ qa 19 + document_control 2 = เท่าเดิมก่อน 20/11
 - ทำไมเมื่อคืนตรวจไม่เจอ: วัดจาก `audit_log` ซึ่งไม่ครอบตาราง qa_parts/ทะเบียนพาร์ท ⇒ **บทเรียน: การพิสูจน์ด้วย audit_log ครอบเฉพาะตารางที่มี trigger audit**
   ต้องไล่ "role ที่เสียใบผ่าน × จอที่มีด่านหน่วย" เป็นรายจอด้วย (ลิสต์จอ: grep canWriteUnit/canWriteLine/writableRows)
-- ค้าง (Monday): แก้ `qaWriteCtx` ให้ไม่นับไลน์ `unit_kind='support'` เป็น "ไลน์ของ QA" (ผ่าน `src/utils/unitKind.js`) — ตอนนี้ใบผ่านรายคนครอบอยู่
+- ✅ 24/11: `qaWriteCtx` นับเฉพาะไลน์ผลิต (`isProductionUnit` · utils/unitKind.js) — หน่วยสนับสนุนในทะเบียนไม่ทำให้ QA "มีไลน์" · เทสใน `qaViewScope.test.mjs` · ใบผ่านรายคนของ QA ยังคงไว้ (ชั้นกันซ้อน)
