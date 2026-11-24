@@ -162,7 +162,7 @@
   --shadow-float: 0 2px 8px rgba(0,0,0,0.18);   /* ของที่ลอยจริง — มีเงาทั้ง 2 ธีม (ดู :root) */
   --shadow-md: 0 4px 20px rgba(0,0,0,0.10);
   --shadow-lg: 0 10px 40px rgba(0,0,0,0.14);
-  --rail-top:    #ffffff;  --rail-bot:    #f5f6f8;
+  --rail-top:    #eceef2;  --rail-bot:    #e6e8ec;   /* 24/11: เข้มกว่า --bg หนึ่งขั้น ให้แผ่นเนื้อหา (.app-sheet) ลอยเห็นชัดในธีมสว่าง · ΔL ≤ 5% */
   --panel-top:   #ffffff;  --panel-bot:   #f1f2f4;   /* 20/11 เดิม #eef0f3 Δ5.7% เกินเพดาน gradient-delta-cap ⇒ Δ4.9% */
   --avatar-from: #1a7a1a;  --avatar-to:   #176717;   /* 20/11 เดิม #0d3d14 ⇒ Δ4.3% ตามเพดาน */
   --card-top:    #ffffff;  --card-bot:    #fafbfc;
