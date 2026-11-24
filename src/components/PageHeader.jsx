@@ -1,7 +1,7 @@
-import { useContext } from 'react';
+import { useContext, useLayoutEffect, useRef, useState } from 'react';
 import { MoreMark } from './InfoMore';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { NAV_ITEMS } from '../App';
+import { NAV_ITEMS, STICKY_TAB_GROUPS, inNavGroup } from '../App';
 import useIsMobile from '../utils/useIsMobile';
 import { HubContext } from './Page';
 import MobileFilterFold, { splitFilterChildren } from './MobileFilterFold';
@@ -107,6 +107,25 @@ export default function PageHeader({
   const topValue = activeGroup ? `grp:${activeGroup.key}` : tab;
   const onTop = (k) => { const g = String(k).startsWith('grp:') && rawTabs.find(t => Array.isArray(t.children) && `grp:${t.key}` === k); onTab && onTab(g ? g.children[0].key : k); };
   const tabList = topTabs;
+  /* 📌 Detail bar ตรึงบน (24/11 · คำสั่ง user "ข้อมูลเยอะ สไลด์ขึ้นลงใช้เวลาหานาน") — เฉพาะหน้าในหมวด `STICKY_TAB_GROUPS` (App.jsx)
+     · จอคอมเท่านั้น · หน้าเดี่ยวที่มีแท็บ และไม่มี `filters=` (ให้ค้างแค่แถบแท็บ ตามที่ user เลือก)
+     · วิธี: ก้อนหัวเพจทั้งก้อนเป็น sticky แต่ `top` ติดลบเท่าความสูงส่วนเหนือแถบแท็บ ⇒ breadcrumb/ชื่อหน้าเลื่อนหายไป เหลือแท็บติดขอบบน
+       (sticky ต้องเป็นลูกตรงของ <Page> ที่สูงเต็มหน้า — ห่อแค่แถบแท็บใน div ของหัวเพจจะเกาะได้แค่ในกล่องหัวเพจ)
+     · ไม่เข้าเงื่อนไข = ไม่มี style เพิ่มเลย (หน้าอื่นเหมือนเดิมเป๊ะ) */
+  const sticky = !inHub && !isMobile && !!topTabs.length && !filters && !!navItem && inNavGroup(navItem, STICKY_TAB_GROUPS);
+  const rootRef = useRef(null);
+  const [stickTop, setStickTop] = useState(0);
+  useLayoutEffect(() => {
+    if (!sticky) return undefined;
+    const root = rootRef.current;
+    if (!root) return undefined;
+    const measure = () => { const bar = root.querySelector('[data-tabbar]'); setStickTop(bar ? -bar.offsetTop : 0); };
+    measure();
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const ro = new ResizeObserver(measure);
+    ro.observe(root);
+    return () => ro.disconnect();
+  }, [sticky]);
   const leafLabel = stripIcon(tr((activeGroup ? activeGroup.children : rawTabs).find(t => t.key === tab)?.label));
   const tabLabel = activeGroup ? [stripIcon(tr(activeGroup.label)), leafLabel].filter(Boolean).join(' › ') : leafLabel;
 
@@ -160,7 +179,9 @@ export default function PageHeader({
        🔴 ตัวตรวจลำดับ (`audit/stdsweep.mjs`) ต้องวัด "ก้นของก้อนนี้" ไม่ใช่ก้นของ `h1`
           ไม่งั้นคำอธิบายใต้ชื่อหน้า (`sub=`) จะถูกนับเป็น "ของแทรกเหนือแถบกรอง" ทุกหน้า
           (เจอจริง 20/10: รายงาน 19 มุมมอง ซึ่งส่วนใหญ่เป็น false positive จากเหตุนี้) */
-    <div data-ph-root="1" style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 'var(--ph-mb, 12px)' }}>
+    <div data-ph-root="1" ref={rootRef} style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 'var(--ph-mb, 12px)',
+      /* 📌 sticky: พื้นทึบกันเนื้อหาทะลุ · z ต่ำกว่าแผงเมนู (997+) / กระดิ่ง (1200) · เว้นขวาพ้น 🔔 ให้แถบแท็บ (ชื่อหน้าย้ายมาเว้นที่นี่แทน) */
+      ...(sticky ? { position: 'sticky', top: stickTop, zIndex: 50, background: 'var(--bg)', paddingRight: 52 } : null) }}>
       {breadcrumb && navItem && !inHub && (
         <div className="ph-chrome" style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', fontSize: 12, color: 'var(--muted)' }}>
           <button onClick={() => navigate('/')} style={{
@@ -177,7 +198,7 @@ export default function PageHeader({
       {(!inHub || sub || actions) && (
       <div className="ph-chrome" style={{
         display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center',
-        justifyContent: 'space-between', paddingRight: inHub ? 0 : 52,   // กัน 🔔 ทับ (UI §7) — ใน hub หัวของแม่กันให้แล้ว
+        justifyContent: 'space-between', paddingRight: (inHub || sticky) ? 0 : 52,   // กัน 🔔 ทับ (UI §7) — ใน hub หัวของแม่กันให้แล้ว · sticky = รากเว้นให้แล้ว
       }}>
         <div style={{ minWidth: 0 }}>
           {!inHub && (
