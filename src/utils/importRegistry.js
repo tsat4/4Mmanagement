@@ -14,6 +14,7 @@ import { storeSheetHeader } from './storeStockSheet.js';
 import { detectMonitoringKind } from './monitoringSheet.js';
 import { isEdiHeaderRow, normHdr } from './ediDetect.js';
 import { TEMPLATE_HEADERS as SPARE_TEMPLATE } from './spareImport.js';
+import { isCsatSheet } from './csatImport.js';
 
 const low = (s) => String(s ?? '').toLowerCase().replace(/\s+/g, ' ').trim();
 const firstRows = (rows, n) => (rows || []).slice(0, n).map(r => (Array.isArray(r) ? r : []));
@@ -39,6 +40,7 @@ const DETECT = {
     const hs = new Set(r.map(c => normHdr(c)));
     return SPARE_TEMPLATE.filter(t => hs.has(normHdr(t))).length >= 6;
   }),
+  kpi_csat: (rows) => isCsatSheet(rows),
 };
 
 /**
@@ -92,6 +94,11 @@ export const IMPORTS = {
     name: 'Monthly report บัญชี', file: 'Monthly report (.xlsx / .xlsb)', from: 'ฝ่ายบัญชี',
     cols: 'แถวหัวเดือน (Jan… / ม.ค.…) + แถวยอดขาย · COGS ฯลฯ', where: 'OBEYA › ตาราง KPI › ตัวเลขฐาน', to: '/obeya?tab=table',
   },
+  /* 🤝 24/11 — ไฟล์ V5 ของ QSM (รายลูกค้า × Delivery/Quality × เดือน) · ตัวแกะ src/utils/csatImport.js · เขียน kpi_csat_scores → trigger รวมเป็น csat_* */
+  kpi_csat: {
+    name: 'Customer Satisfaction (V5)', file: 'TSAT 4 V5 %Customer Satisfaction FY<ปี> <เดือน> - Rev.xx.xlsx', from: 'QSM (อีเมล Update KPI Customer Satisfaction รายเดือน)',
+    cols: 'ชีท STD FAC. (<ปี>) · แถว Customer · Type (Delivery/Quality) · คู่ Result/Score รายเดือน · Total Delivery/Quality · Overall', where: 'OBEYA › ตาราง KPI › ตัวเลขฐาน (ขอบเขต ทั้งโรงงาน)', to: '/obeya?tab=table',
+  },
 };
 export const IMPORT_KEYS = Object.keys(IMPORTS);
 
@@ -101,7 +108,7 @@ export const importLabel = (k) => `นำเข้า ${IMPORTS[k]?.name || ''}`
 /** ไฟล์นี้เป็นของจุดนำเข้าไหน — ดูทุกชีท · ไม่มั่นใจ = null (ห้ามเดา)
  *  @param sheets [{ name, rows }] · @param except คีย์ของจุดที่กำลังนำเข้า (ไม่ตอบตัวเอง) */
 export function whichImport(sheets = [], except = '') {
-  const order = ['store_stock', 'sap_mb52', 'esmart', 'edi', 'sap_bom', 'product_csv', 'parts_csv', 'spare', 'planner_monitoring'];
+  const order = ['store_stock', 'sap_mb52', 'esmart', 'edi', 'sap_bom', 'product_csv', 'parts_csv', 'spare', 'planner_monitoring', 'kpi_csat'];
   for (const k of order) {
     if (k === except) continue;
     if ((sheets || []).some(s => { try { return DETECT[k](s?.rows || []); } catch { return false; } })) return k;

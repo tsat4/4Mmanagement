@@ -933,6 +933,9 @@ const TABLE_FIXED = {
     { id: 'kd-6', year: 2026, section: 'JIG MTN', scope_kind: 'department', scope_value: 'JIG MTN', line_group: null, category: 'customer', seq: 6, name: 'MO Closed on target', source: 'manual', unit: '%', target_compare: '>=', target_value: 99, commit_compare: '>=', commit_value: 95, direction: 'up', weight: 6, is_active: true, catalog_id: null, std_unit: 'Maintenance', std_item_id: null, kpi_catalog: null },
     /* ✍️ OEE กรอกมือของ PD1 (09/10 · เคสจริง PD2 คีย์ OEE ม.ค.–ส.ค. แล้วไม่ขึ้น) — เปิดสาขา overlay บนแถว auto:
        เดือนที่กรอก = ค่าทางการ (ทึบ) · เดือนที่ไม่กรอก = ค่าระบบ (computed ลายประ) · ห้ามถอด */
+    /* 🤝 24/11 Customer Satisfaction (Q&D): นิยามโรงงาน = รางสูตร csat_qd_pct · นิยาม PD1 ถือเป้า/น้ำหนัก แต่ค่าอ่านจากแผ่นโรงงาน (value_scope plant) */
+    { id: 'kd-csat', year: 2026, section: null, scope_kind: 'plant', scope_value: null, line_group: null, category: 'customer', seq: 1, name: 'Customer Satisfaction (Q&D)', source: 'manual', provider: 'formula', provider_config: { formula: 'csat_qd_pct' }, target_compare: '>=', target_value: 100, commit_compare: '>=', commit_value: 95, direction: 'up', weight: 5, is_active: true, catalog_id: 'kc-csat', std_unit: null, std_item_id: null, kpi_catalog: { id: 'kc-csat', name: 'Customer Satisfaction (Q&D)', unit: '%', category: 'customer', direction: 'up', decimals: 2, summary_mode: 'average', value_scope: 'plant', board_slot: 'csat', value_min: 0, value_max: 100 } },
+    { id: 'kd-csat-pd1', year: 2026, section: 'PD1', scope_kind: 'section', scope_value: 'PD1', line_group: null, category: 'customer', seq: 1, name: 'Customer Satisfaction (Q&D)', source: 'manual', target_compare: '>=', target_value: 100, commit_compare: '>=', commit_value: 95, direction: 'up', weight: 5, is_active: true, catalog_id: 'kc-csat', std_unit: 'Production', std_item_id: null, kpi_catalog: { id: 'kc-csat', name: 'Customer Satisfaction (Q&D)', unit: '%', category: 'customer', direction: 'up', decimals: 2, summary_mode: 'average', value_scope: 'plant', board_slot: 'csat', value_min: 0, value_max: 100 } },
     { id: 'kd-8', year: 2026, section: 'PD1', scope_kind: 'section', scope_value: 'PD1', line_group: null, category: 'internal', seq: 8, name: 'OEE', source: 'manual', target_value: 85, direction: 'up', weight: 5, is_active: true, catalog_id: 'kc-oee', std_unit: 'Production', std_item_id: null, kpi_catalog: { id: 'kc-oee', name: 'OEE', unit: '%', category: 'internal', direction: 'up', decimals: 2, summary_mode: 'average', value_scope: 'own', board_slot: 'oee', value_min: 0, value_max: 100 } },
     { id: 'kd-9', year: 2026, section: 'PD1', scope_kind: 'section', scope_value: 'PD1', line_group: null, category: 'internal', seq: 9, name: 'Safety', source: 'manual', target_value: 0, direction: 'down', weight: 5, is_active: true, catalog_id: 'kc-safe', std_unit: 'Production', std_item_id: null, kpi_catalog: { id: 'kc-safe', name: 'Safety', unit: 'ครั้ง', category: 'internal', direction: 'down', decimals: 0, summary_mode: 'sum', value_scope: 'own', board_slot: 'safe' } },
     // ⬆ 12/10 นิยามของ "หน่วยลูก" (แผนก id-2 ใต้ PD1) ที่ PD1 ไม่มี ⇒ บอร์ด PD1 ต้องรวมขึ้นเป็นแผ่น roll:… (sum · เป้ารวม) — ห้ามถอด
@@ -966,6 +969,22 @@ const TABLE_FIXED = {
     { id: 'kbl-1', year: 2026, scope_kind: 'section', scope_value: 'PD1', row_keys: ['oee', 'gone', 'rm'], updated_by_name: 'ทดสอบ ระบบ' },
   ],
   /* 📝 หมายเหตุรายเดือน (30/09) — แผ่น %RM (slot rm) ที่ทั้งโรงงาน เดือน 3 มีโน้ต ⇒ เปิดสายเครื่องหมาย 📝 บนแท่ง + โมดัล (ห้ามถอด) */
+  /* 🤝 Customer Satisfaction (Q&D) รางสูตร (24/11) — นิยามโรงงาน provider formula csat_qd_pct + นิยาม PD1 (ค่าโรงงาน value_scope plant) ⇒ แผ่น csat ของ PD1 คิดจาก kpi_base_inputs csat_* (ห้ามถอด) */
+  kpi_base_inputs: [
+    ...[[1, 3, 3, 3, 3], [2, 4, 4, 3.5, 4], [3, 3, 4, 4, 4]].flatMap(([m, qa, qt, da, dt]) => [
+      { id: `kb-csat-q-a-${m}`, year: 2026, month: m, scope_kind: 'plant', scope_value: '', var_key: 'csat_q_actual', value: qa, created_by_name: 'csat-rollup' },
+      { id: `kb-csat-q-t-${m}`, year: 2026, month: m, scope_kind: 'plant', scope_value: '', var_key: 'csat_q_total', value: qt, created_by_name: 'csat-rollup' },
+      { id: `kb-csat-d-a-${m}`, year: 2026, month: m, scope_kind: 'plant', scope_value: '', var_key: 'csat_d_actual', value: da, created_by_name: 'csat-rollup' },
+      { id: `kb-csat-d-t-${m}`, year: 2026, month: m, scope_kind: 'plant', scope_value: '', var_key: 'csat_d_total', value: dt, created_by_name: 'csat-rollup' },
+    ]),
+  ],
+  /* 🤝 คะแนน Customer Satisfaction รายลูกค้า (24/11) — ให้ popup 🔍 ของแผ่น csat วาดตารางรายลูกค้า (ห้ามถอด · FORD ต.ค. Q เกรด C = เคสสีแดง) */
+  kpi_csat_scores: [
+    ...['FORD (FTM+AAT)', 'GWM', 'TSPKK', 'TSRA'].flatMap((c, ci) => [1, 2, 3].flatMap(m => [
+      { id: `kcs-${ci}-d-${m}`, year: 2026, month: m, customer: c, kind: 'delivery', result: c === 'GWM' ? 0 : 100 - (m === 2 && ci === 2 ? 3 : 0), score: m === 2 && ci === 2 ? 0.5 : 1, evaluated: !(c === 'GWM' && m === 1), remark: c === 'TSRA' ? 'ไม่มีการประเมินจากลูกค้า เนื่องจากไม่มี Order' : null, grade_a: c === 'GWM' ? '≤ 5 Points' : '≥ 81 Points' },
+      { id: `kcs-${ci}-q-${m}`, year: 2026, month: m, customer: c, kind: 'quality', result: m === 3 && ci === 0 ? 14 : 0, score: m === 3 && ci === 0 ? 0 : 1, evaluated: !(c === 'GWM' && m === 1), remark: null, grade_a: '≤ 6 PPM.' },
+    ])),
+  ],
   kpi_month_notes: [
     { id: 'kn-1', year: 2026, month: 3, scope_kind: 'plant', scope_value: '', row_key: 'rm', kind: 'remark', text: 'ราคาเหล็กขึ้น 4% ตามสัญญา Q1', created_by_name: 'ทดสอบ ระบบ', created_at: '2026-04-02T02:00:00Z', is_active: true },
     { id: 'kn-2', year: 2026, month: 3, scope_kind: 'plant', scope_value: '', row_key: 'rm', kind: 'action', text: 'เจรจา supplier รอบ 2 · เป้าลดลง 1.5% ใน Q2', created_by_name: 'ทดสอบ ระบบ', created_at: '2026-04-02T02:05:00Z', is_active: true },
