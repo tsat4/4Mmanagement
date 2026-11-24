@@ -1296,3 +1296,7 @@ body.esm-tv-shell .tv-hide { display: none !important; }
 @media (hover: hover) {
   .qb-row:hover > td { background: var(--bg2); }
 }
+
+/* 🗂 TabBar `scroller` (จอคอม · 24/11): แถบแท็บแถวเดียวเลื่อนด้วยปุ่ม ◀ ▶ — ซ่อนแถบเลื่อนของกล่อง (ปุ่มบอกทางแทนแล้ว) */
+.tabbar-scroller { scrollbar-width: none; }
+.tabbar-scroller::-webkit-scrollbar { display: none; }
