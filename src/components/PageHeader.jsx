@@ -1,4 +1,4 @@
-import { useContext, useLayoutEffect, useRef, useState } from 'react';
+import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { MoreMark } from './InfoMore';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { NAV_ITEMS, STICKY_TAB_GROUPS, inNavGroup } from '../App';
@@ -86,6 +86,75 @@ function SubLine({ text = '', marginTop = 3 }) {
   );
 }
 
+/* ══ 🔍 ปุ่มค้นหาท้ายแถบแท็บ — หัวเพจกะทัดรัด (หมวดใน `STICKY_TAB_GROUPS` · 24/11 คำสั่ง user) ════════════════
+   user เลือก "ค้นหาข้อมูลในแท็บที่เปิดอยู่" ⇒ ปุ่มนี้ **ไม่มีตรรกะค้นหาของตัวเอง** — มันพิมพ์ลงช่องค้นหาของแท็บ
+   (`<SearchInput>` = `input[type=search]`) ⇒ ตัวกรองของแต่ละแท็บทำงานเหมือนพิมพ์ที่ช่องเดิมเป๊ะ (single source)
+   · แถบแท็บตรึงบนจอ ⇒ เลื่อนลึกแค่ไหนก็ค้นได้ไม่ต้องเลื่อนกลับขึ้นไปหาช่อง
+   · หาช่อง: ช่อง search ตัวแรกที่มองเห็นในหน้า (นอกหัวเพจ · ไม่อยู่ในโมดัล)
+   · 🔴 แท็บไม่มีช่องค้นหา = บอกบนจอว่า "แท็บนี้ไม่มีช่องค้นหา" ห้ามเปิดช่องที่พิมพ์แล้วไม่เกิดอะไร (จอโกหก)
+   · พิมพ์ผ่าน native setter + event `input` (วิธีมาตรฐานให้ onChange ของ React รับค่า) */
+const SEARCH_SEL = 'input[type="search"]';
+function findTabSearch(root) {
+  const scope = root?.parentElement;
+  if (!scope) return null;
+  return [...scope.querySelectorAll(SEARCH_SEL)].find(el => !root.contains(el) && el.offsetParent !== null
+    && !el.closest('[role="dialog"], .modal, .modal-overlay')) || null;
+}
+function pushValue(el, v) {
+  const set = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+  if (set) set.call(el, v); else el.value = v;
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+}
+function HeaderSearch({ rootRef, tabKey }) {
+  const { tr } = useLang();
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState('');
+  const [none, setNone] = useState(false);
+  const [ph, setPh] = useState('');
+  const targetRef = useRef(null);
+  // เปลี่ยนแท็บ = ช่องเป้าหมายเปลี่ยน ⇒ ปิดแล้วเริ่มใหม่ (ห้ามพิมพ์ค้างไปลงช่องของแท็บเก่า)
+  useEffect(() => { setOpen(false); setQ(''); setNone(false); targetRef.current = null; }, [tabKey]);
+  useEffect(() => { if (!none) return undefined; const id = setTimeout(() => setNone(false), 2500); return () => clearTimeout(id); }, [none]);
+  const toggle = () => {
+    if (open) { setOpen(false); return; }
+    const el = findTabSearch(rootRef.current);
+    targetRef.current = el;
+    if (!el) { setNone(true); return; }
+    setQ(el.value || ''); setPh(el.placeholder || tr('ค้นหา')); setNone(false); setOpen(true);
+  };
+  const onChange = (v) => {
+    setQ(v);
+    const el = targetRef.current;
+    if (el && el.isConnected) pushValue(el, v);
+    else { targetRef.current = null; setOpen(false); setNone(true); }   // ช่องหายไปแล้ว (แท็บถูกถอด) — บอก ไม่พิมพ์ลอย
+  };
+  return (
+    <span data-ph="tab-search" style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+      {open && (
+        <span className="search-input" style={{ width: 240 }}>
+          <span className="search-ico" aria-hidden="true">🔍</span>
+          <input type="search" autoFocus value={q} placeholder={ph} aria-label={ph}
+            onChange={e => onChange(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Escape') setOpen(false); }}
+            style={{ paddingLeft: 30, paddingRight: 28 }} />
+          {q ? <button type="button" className="search-clear" aria-label={tr('ล้างคำค้น')} onClick={() => onChange('')}>✕</button> : null}
+        </span>
+      )}
+      <button type="button" onClick={toggle} aria-pressed={open} aria-label={tr('ค้นหาข้อมูลในแท็บนี้')} title={tr('ค้นหาข้อมูลในแท็บนี้')}
+        style={{ width: 30, height: 30, borderRadius: 'var(--r-md)', flexShrink: 0, cursor: 'pointer',
+          border: `1px solid ${open ? 'var(--accent)' : 'var(--border2)'}`, background: open ? 'var(--accent-dim)' : 'var(--card)',
+          color: open ? 'var(--accent)' : 'var(--text)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Icon glyph="🔍" size={15} />
+      </button>
+      {none && (
+        <span role="status" style={{ position: 'absolute', top: '100%', right: 0, marginTop: 6, whiteSpace: 'nowrap', zIndex: 60,
+          fontSize: 12, padding: '6px 10px', borderRadius: 'var(--r-md)', background: 'var(--card)', border: '1px solid var(--border2)',
+          color: 'var(--muted)', boxShadow: 'var(--shadow-float)' }}>{tr('แท็บนี้ไม่มีช่องค้นหา')}</span>
+      )}
+    </span>
+  );
+}
+
 export default function PageHeader({
   title, icon, sub, actions, tabs, tab, onTab, breadcrumb = true, filters, children,
 }) {
@@ -112,6 +181,8 @@ export default function PageHeader({
      · วิธี: ก้อนหัวเพจทั้งก้อนเป็น sticky แต่ `top` ติดลบเท่าความสูงส่วนเหนือแถบแท็บ ⇒ breadcrumb/ชื่อหน้าเลื่อนหายไป เหลือแท็บติดขอบบน
        (sticky ต้องเป็นลูกตรงของ <Page> ที่สูงเต็มหน้า — ห่อแค่แถบแท็บใน div ของหัวเพจจะเกาะได้แค่ในกล่องหัวเพจ)
      · ไม่เข้าเงื่อนไข = ไม่มี style เพิ่มเลย (หน้าอื่นเหมือนเดิมเป๊ะ) */
+  /* 🗜️ 24/11 (คำสั่ง user) เงื่อนไขเดียวกันนี้ = "หัวเพจกะทัดรัด" ด้วย: ไม่มี breadcrumb · ไม่มีคำบรรยาย (`sub`) ·
+     ชื่อหน้าอยู่บนสุด · แถบแท็บแถวเดียว (ล้น = ปุ่ม ◀ ▶) · ปุ่ม 🔍 ท้ายแถบ (`HeaderSearch`) */
   const sticky = !inHub && !isMobile && !!topTabs.length && !filters && !!navItem && inNavGroup(navItem, STICKY_TAB_GROUPS);
   const rootRef = useRef(null);
   const [stickTop, setStickTop] = useState(0);
@@ -133,7 +204,9 @@ export default function PageHeader({
      แถวลูกติด `data-subtab` = ของที่อนุญาตให้คั่นระหว่างแท็บกับแถบกรอง (stdsweep §2.1) */
   const renderTabs = () => (
     <>
-      <TabBar className="ph-chrome" tabs={topTabs} value={topValue} onChange={onTop} audit />
+      {/* 24/11: โหมดกะทัดรัด = แถวเดียว + ปุ่ม ◀ ▶ เมื่อล้น + ปุ่มค้นหาท้ายแถบ */}
+      <TabBar className="ph-chrome" tabs={topTabs} value={topValue} onChange={onTop} audit
+        {...(sticky ? { scroller: true, after: <HeaderSearch rootRef={rootRef} tabKey={String(tab)} /> } : null)} />
       {activeGroup && (
         <div data-subtab="1" className="ph-chrome" style={{ marginTop: -4 }}>
           <TabBar size="sm" tabs={activeGroup.children} value={tab} onChange={onTab} />
@@ -174,15 +247,8 @@ export default function PageHeader({
     );
   }
 
-  return (
-    /* `data-ph-root` = ก้อนหัวเพจทั้งก้อน (ชื่อ + คำอธิบาย + แถบแท็บ + filters/actions ของหัว)
-       🔴 ตัวตรวจลำดับ (`audit/stdsweep.mjs`) ต้องวัด "ก้นของก้อนนี้" ไม่ใช่ก้นของ `h1`
-          ไม่งั้นคำอธิบายใต้ชื่อหน้า (`sub=`) จะถูกนับเป็น "ของแทรกเหนือแถบกรอง" ทุกหน้า
-          (เจอจริง 20/10: รายงาน 19 มุมมอง ซึ่งส่วนใหญ่เป็น false positive จากเหตุนี้) */
-    <div data-ph-root="1" ref={rootRef} style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 'var(--ph-mb, 12px)',
-      /* 📌 sticky: พื้นทึบกันเนื้อหาทะลุ · z ต่ำกว่าแผงเมนู (997+) / กระดิ่ง (1200) · เว้นขวาพ้น 🔔 ให้แถบแท็บ (ชื่อหน้าย้ายมาเว้นที่นี่แทน) */
-      ...(sticky ? { position: 'sticky', top: stickTop, zIndex: 50, background: 'var(--bg)', paddingRight: 52 } : null) }}>
-      {breadcrumb && navItem && !inHub && (
+  /* breadcrumb — ปกติอยู่บนสุด · หัวเพจกะทัดรัด (24/11 · คำสั่ง user) = ใต้ชื่อหน้า เหนือแถบแท็บ */
+  const crumbs = breadcrumb && navItem && !inHub ? (
         <div className="ph-chrome" style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', fontSize: 12, color: 'var(--muted)' }}>
           <button onClick={() => navigate('/')} style={{
             background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--muted)', fontSize: 12,
@@ -193,7 +259,17 @@ export default function PageHeader({
           <span style={{ color: 'var(--text)', fontWeight: 700 }}>{tr(navItem.label)}</span>
           {tabLabel && <><span>›</span><span style={{ color: 'var(--text2)' }}>{tabLabel}</span></>}
         </div>
-      )}
+  ) : null;
+
+  return (
+    /* `data-ph-root` = ก้อนหัวเพจทั้งก้อน (ชื่อ + คำอธิบาย + แถบแท็บ + filters/actions ของหัว)
+       🔴 ตัวตรวจลำดับ (`audit/stdsweep.mjs`) ต้องวัด "ก้นของก้อนนี้" ไม่ใช่ก้นของ `h1`
+          ไม่งั้นคำอธิบายใต้ชื่อหน้า (`sub=`) จะถูกนับเป็น "ของแทรกเหนือแถบกรอง" ทุกหน้า
+          (เจอจริง 20/10: รายงาน 19 มุมมอง ซึ่งส่วนใหญ่เป็น false positive จากเหตุนี้) */
+    <div data-ph-root="1" ref={rootRef} style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 'var(--ph-mb, 12px)',
+      /* 📌 sticky: พื้นทึบกันเนื้อหาทะลุ · z ต่ำกว่าแผงเมนู (997+) / กระดิ่ง (1200) · เว้นขวาพ้น 🔔 ให้แถบแท็บ (ชื่อหน้าย้ายมาเว้นที่นี่แทน) */
+      ...(sticky ? { position: 'sticky', top: stickTop, zIndex: 50, background: 'var(--bg)', paddingRight: 52 } : null) }}>
+      {!sticky && crumbs}
 
       {(!inHub || sub || actions) && (
       <div className="ph-chrome" style={{
@@ -215,13 +291,15 @@ export default function PageHeader({
             </h2>
             )
           )}
-          {sub && <SubLine text={tr(sub)} marginTop={inHub ? 0 : 3} />}
+          {sub && !sticky && <SubLine text={tr(sub)} marginTop={inHub ? 0 : 3} />}
         </div>
         {/* actions = ปุ่ม "คำสั่งระดับหน้า" เท่านั้น (บันทึก/เพิ่ม/พิมพ์/โหมด TV) — ห้ามใส่ตัวกรอง (select/วันที่/ขอบเขต/สเกล)
             ตัวกรองต้องอยู่ `filters` ⇒ ลงใต้แถบแท็บเสมอ (UI-STANDARD §2 ลำดับแนวตั้ง · stdsweep ตรวจ data-ph) */}
         {actions && <div data-ph="actions" style={{ display: 'flex', flexWrap: 'wrap', gap: 7, alignItems: 'center' }}>{actions}</div>}
       </div>
       )}
+
+      {sticky && crumbs}
 
       {!!tabList.length && renderTabs()}
 
