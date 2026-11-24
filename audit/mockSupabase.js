@@ -775,6 +775,30 @@ const TABLE_FIXED = {
        ② `ot_scope: 'ot'`        เปิดสาขา isOt (ทิ้งแถว no_ot ทั้งหมด)
        ③ `anchor: 'shift_end'`   เปิดสาขาพักท้ายกะ (ยึดเวลาเลิกกะ · offset_min)
           — ถอดแถวนี้ = สาขาที่เพิ่งแก้ 20/10 ไม่ถูกรันในสวีปใดเลย */
+  /* 🧾 production_plan_lots — **ชั้นแผนของทีมวางแผน (Layer 1)** ที่ `<PlanFrameRow>` วาดบน /management
+     🔴 เดิมตารางนี้ไม่มีแถวใน mock เลย ⇒ แถวกรอบแผนไม่เคยถูกวาดในสวีปใดเลย และไม่มีใคร
+        (รวมทั้ง user) เคยเห็นว่าชั้นนี้มีอยู่จริง — เข้าใจผิดว่าบอร์ด "ไม่เชื่อมกับหน้าวางแผน"
+     ต้องตรงกับ mock ตัวอื่น: work_date 2026-08-04 · line LINE APRON ASSY / HYDROFORM · mat 10101001/02
+     **ห้ามถอดแถวพวกนี้** (audit/README.md §แถวพิเศษ) */
+  production_plan_lots: [
+    { id: 'pl-1', work_date: '2026-08-04', shift: 'day', line_name: 'LINE APRON ASSY / HYDROFORM',
+      seq: 1, mat_no: '10101001', part_name: 'BRKT RAD SUPT UPR RH', qty_plan: 360,
+      machine_no: 'SW10', die_no: 'D-1001', status: 'planned', prod_order_id: null,
+      est_min: null, setup_min_est: 20, note: null, planned_by: 'ทีมวางแผน' },
+    { id: 'pl-2', work_date: '2026-08-04', shift: 'day', line_name: 'LINE APRON ASSY / HYDROFORM',
+      seq: 2, mat_no: '10101002', part_name: 'BRKT RAD SUPT UPR LH', qty_plan: 240,
+      machine_no: 'SW10', die_no: 'D-1002', status: 'planned', prod_order_id: null,
+      est_min: null, setup_min_est: 20, note: null, planned_by: 'ทีมวางแผน' },
+    { id: 'pl-3', work_date: '2026-08-04', shift: 'day', line_name: 'LINE APRON ASSY / HYDROFORM',
+      seq: 3, mat_no: '10101001', part_name: 'BRKT RAD SUPT UPR RH', qty_plan: 480,
+      machine_no: 'SW10', die_no: 'D-1001', status: 'planned', prod_order_id: null,
+      est_min: null, setup_min_est: 20, note: null, planned_by: 'ทีมวางแผน' },
+    /* 🔴 ล็อตที่ไม่รู้ CT — เปิดสาขา `noCt` ของ PlanFrameRow (กล่องไม่สเกลกับเวลา + ตัวหลังจางลง) */
+    { id: 'pl-4', work_date: '2026-08-04', shift: 'day', line_name: 'LINE APRON ASSY / HYDROFORM',
+      seq: 4, mat_no: '19999999', part_name: 'พาร์ทที่ยังไม่มี cycle time', qty_plan: 120,
+      machine_no: null, die_no: null, status: 'planned', prod_order_id: null,
+      est_min: null, setup_min_est: null, note: null, planned_by: 'ทีมวางแผน' },
+  ],
   break_policies: [
     { id: 'bp-1', name_th: 'ประชุมแถวกะเช้า', name_en: 'Morning Line Meeting', shift: 'day',
       start_time: '08:00:00', duration_min: 10, process_type: 'common', ot_scope: 'always',
