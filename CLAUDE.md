@@ -565,6 +565,7 @@ Realtime + Edge Functions/Deno) · Telegram Bot API · deploy = Render.com (Stat
   · เพิ่มคอลัมน์ nullable ใน `ROW()` ต้องเติมใน `NULLISH()` ด้วย (เหตุผลรายตัว → `audit/README.md`)
 - **📱 `node audit/mobilesweep.mjs` (ทุกหน้า @390px)** — **แตะ layout ที่มี `isMobile` หรือ `position:sticky`
   ต้องรันก่อน merge** (จับ sticky ทับเนื้อหา · ของล้นแล้วปัดไม่ได้ · ข้อความถูกบีบกว้าง 0)
+  · `ONLY='Page&tab=x' node audit/mobilesweep.mjs` = เฉพาะหน้าที่ระบุ (เหมือน crashsweep · 24/11)
 
 ### QC Agent — `/qc-audit` (subagent `qc-project-rules` · read-only)
 
