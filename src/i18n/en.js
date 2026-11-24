@@ -18285,6 +18285,12 @@ const EN = {
   "ยอดตามใบผลิตรวม": "Total per production orders",
   "ใช้ทำ": "Used to make",
 
+  // 📋 ใบทบทวนสิทธิ์ (/add-user · 24/11)
+  'ใบทบทวนสิทธิ์': 'Access review sheet',
+  'ส่งออก Excel: ทุกบัญชี + ธงความเสี่ยง + ช่องให้ผู้ทบทวนกรอกผล (ISO 27001 A.5.18)': 'Export Excel: every account + risk flags + reviewer columns (ISO 27001 A.5.18)',
+  'ส่งออกใบทบทวนสิทธิ์แล้ว': 'Access review exported',
+  'ข้อมูลอ่านไม่ได้ (ดูหัวใบ)': 'data could not be read (see sheet header)',
+  'ส่งออกใบทบทวนสิทธิ์ไม่สำเร็จ': 'Access review export failed',
 };
 
 export default EN;

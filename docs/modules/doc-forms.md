@@ -133,6 +133,11 @@ migration `20261008_doc_forms_csv_round2_main.sql` (MAIN · **apply แล้ว
 > · เทียบกับคีย์ที่โค้ดอ่านจริง: `grep -rhoE "['\"](csv|xlsx)_[a-z0-9_]+['\"]" src/`
 >   (⚠️ `/daily-report` ประกอบคีย์แบบ `csv_dr_${reportType}` ⇒ grep ตรงๆ ไม่เห็น 4 คีย์นั้น)
 
+**เพิ่ม 24/11:** `xlsx_access_review` — Excel ใบทบทวนสิทธิ์ผู้ใช้ ESM (ISO 27001 A.5.18 · `/add-user` ปุ่ม 📋 ใบทบทวนสิทธิ์ ·
+`src/lib/accessReviewExport.js` · ธง/แถว `src/utils/accessReview.js`) · migration `20261124_doc_forms_xlsx_access_review_main.sql`
+(MAIN · **apply แล้ว 24/11** · `form_code` ว่าง) · ช่องลงนาม fallback = ผู้จัดทำ · ผู้ทบทวน · ผู้อนุมัติ (ตั้งที่ `/doc-forms` ได้)
+· ค่าจากข้อมูลเขียนเป็น string ของ exceljs (ไม่ใช่ `{formula}`) ⇒ ไม่โดน formula injection
+
 **เพิ่ม 05/11:** `xlsx_die_registry` — Excel ทะเบียนแม่พิมพ์ (`/equipment?tab=die` ปุ่ม 📥 · `DieRegistry.jsx` · แถว `src/utils/dieRegistryExport.js`) · migration `20261105b_doc_forms_xlsx_die_registry_main.sql` (MAIN · **apply แล้ว** · `form_code` ว่าง)
 
 **16/11:** `qa_inspection_sheet` ตั้ง FM-QA-112 Rev. 01 (Effective 13/11/2020 · ช่องเซ็น Approved/Checked/Prepared) ตามใบจริง · เพิ่ม `csv_qa_inspection_data` (CSV ผล Inspection Data) — migration `20261116b_doc_forms_qa_inspection_data_main.sql`

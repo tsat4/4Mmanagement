@@ -1,9 +1,12 @@
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef, useContext } from 'react';
 import { orgNodeCompare } from '../utils/listOrder';
 import { supabase } from '../supabaseClient';
 import { toast } from '../components/Toast';
 import { loadLinesRes } from '../utils/useProductionLines';
-import { accessSummaryForRole } from '../App';
+import { accessSummaryForRole, UserContext } from '../App';
+import { buildAccessReview } from '../utils/accessReview';   // 📋 ใบทบทวนสิทธิ์ ISO 27001 A.5.18 (24/11)
+import { exportAccessReviewExcel } from '../lib/accessReviewExport';
+import { fetchByIds } from '../utils/fetchByIds';
 import { ROLE_OPTIONS, roleLabel, groupRolesByAxis, ORG_LEVELS } from '../utils/roleMeta';
 import { effectiveSections as deriveSections, ccsForSections } from '../utils/scopePicker';
 import { recommendScopeDepth } from '../utils/derivedScope';
@@ -134,6 +137,8 @@ export default function AddUser() {
   const [teamOpts,      setTeamOpts]      = useState([]);
   const [fetchingUsers, setFetchingUsers] = useState(true);
   const [authErr, setAuthErr] = useState(null);   // 🔴 อ่านอีเมล login ไม่ได้ (admin-only) = ต้องเขียนบนจอ ห้ามโชว์ช่องว่าง
+  const { fullName: myName } = useContext(UserContext);
+  const [reviewBusy, setReviewBusy] = useState(false);   // 📋 กำลังสร้างใบทบทวนสิทธิ์
   const [showModal,     setShowModal]     = useState(false);
   const [modalMode,     setModalMode]     = useState('create');
   const [editingId,     setEditingId]     = useState(null);
@@ -433,7 +438,48 @@ export default function AddUser() {
       dual:     users.filter(u => dualMeaningInfo(u, empOf(u)).length).map(u => u.id),
     });
   }, [users, emps, empById]);
-  /* ผลค้นพนักงาน — ถ้าคำค้นไม่ตรงใคร **ห้ามคืนลิสต์ว่าง** (ลิสต์ว่าง = คนอ่านสรุปว่า "ไม่มีคนนี้"
+  /* 📋 ใบทบทวนสิทธิ์ (ISO 27001 A.5.18 · 24/11 · user เลือก "เก็บผลเป็นไฟล์ Excel" ไม่สร้างตารางใหม่)
+     ธง/ลำดับ = `utils/accessReview.js` · กองงานค้าง = `issueIdx.byUser` ชุดเดียวกับจอ · ไม่แก้ profiles ใดๆ
+     🔴 `emps` บนจอโหลดเฉพาะ is_active ⇒ ถามสถานะพนักงานของบัญชีที่ผูกไว้ตรงจากฐาน (รวมคนที่พ้นสภาพ)
+        อ่านไม่ได้ = ส่ง null ⇒ ใบเขียนว่า "อ่านไม่ได้" ห้ามสรุปว่าพ้นสภาพ */
+  const exportAccessReview = async () => {
+    if (reviewBusy) return;
+    setReviewBusy(true);
+    try {
+      const notes = [];
+      if (authErr) notes.push('อ่านอีเมล/เวลาเข้าใช้ไม่ได้ (ต้องเป็น admin) — ช่องเข้าใช้ล่าสุดจะเป็น "อ่านไม่ได้"');
+      const empIds = [...new Set(users.map(u => u.employee_id).filter(Boolean))];
+      let empStatus = new Map();
+      if (empIds.length) {
+        const res = await fetchByIds(empIds, ids => supabase.from('employees').select('id, is_active').in('id', ids));
+        if (res.error || res.failed) {
+          empStatus = null;
+          notes.push(`อ่านสถานะพนักงานไม่ได้ (${res.error || 'บางส่วนล้ม'}) — ไม่ได้ตรวจว่าใครพ้นสภาพ`);
+        } else {
+          res.rows.forEach(e => empStatus.set(e.id, e.is_active === true));
+        }
+      }
+      const now = new Date();
+      const rows = buildAccessReview(users, {
+        issuesByUser: issueIdx.byUser, empStatus, now,
+        describe: (u) => ({
+          roleText: u.role ? roleLabel(u.role) : '',
+          positionText: u.position ? (positionLabel(u.position) || u.position) : '',
+          sectionText: u.sections?.length ? u.sections.join(', ') : (u.section || ''),
+          lineText: lines.find(l => l.id === u.line_id)?.name || '',
+          scopeText: u.scope_depth ? (SCOPE_DEPTH_META[u.scope_depth]?.label || u.scope_depth) : 'ยังไม่ตั้ง',
+          ccText: Array.isArray(u.resp_cost_centers) ? u.resp_cost_centers.join(', ') : '',
+        }),
+      });
+      await exportAccessReviewExcel(rows, { now, exportedBy: myName || '', notes });
+      toast.success(`${tr('ส่งออกใบทบทวนสิทธิ์แล้ว')} ${rows.length} ${tr('บัญชี')}` + (notes.length ? ` · ⚠ ${notes.length} ${tr('ข้อมูลอ่านไม่ได้ (ดูหัวใบ)')}` : ''));
+    } catch (e) {
+      toast.error(`${tr('ส่งออกใบทบทวนสิทธิ์ไม่สำเร็จ')}: ${e?.message || e}`);
+    } finally {
+      setReviewBusy(false);
+    }
+  };
+  /* ผลค้นพนักงาน —ถ้าคำค้นไม่ตรงใคร **ห้ามคืนลิสต์ว่าง** (ลิสต์ว่าง = คนอ่านสรุปว่า "ไม่มีคนนี้"
      แล้วไปสร้างซ้ำ — เกิดจริง 23/09) · คืนทุกคนแทน แล้วขึ้นป้ายบอกว่าไม่พบคำค้น */
   const empMatches = useMemo(() => {
     const q = nzThai(empSearch);
@@ -899,12 +945,19 @@ export default function AddUser() {
   return (
     <Page>
       <PageHeader title={tr('จัดการผู้ใช้งาน')} icon="🔑" sub={tr('กำหนดสิทธิ์และสังกัด Section / Group / Team ของแต่ละ user')}
-        actions={
+        actions={<>
+          {/* 📋 ISO 27001 A.5.18 — ใบทบทวนสิทธิ์ทุกบัญชี (Excel ให้ผู้ทบทวนกรอกผล/ลงชื่อ) */}
+          <button type="button" className="pg-btn"
+            onClick={exportAccessReview} disabled={reviewBusy || fetchingUsers}
+            title={tr('ส่งออก Excel: ทุกบัญชี + ธงความเสี่ยง + ช่องให้ผู้ทบทวนกรอกผล (ISO 27001 A.5.18)')}
+            style={{ cursor: reviewBusy || fetchingUsers ? 'wait' : 'pointer' }}>
+            {reviewBusy ? tr('กำลังสร้าง…') : `📋 ${tr('ใบทบทวนสิทธิ์')}`}
+          </button>
           <button type="button" className="pg-btn"
             onClick={openCreate} style={{ cursor: 'pointer' }}>
             {tr('เพิ่มผู้ใช้ใหม่')}
           </button>
-        } />
+        </>} />
 
       {message && (
         <NoticeBar tone="ok" style={{ marginBottom: 14 }}>
