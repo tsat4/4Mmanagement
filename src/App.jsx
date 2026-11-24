@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useRef, useMemo, lazy, Suspense, useCallback } from 'react';
 import { fmtDateTime } from './utils/dateFormat';
 import { motion } from 'framer-motion';
-import { railPill } from './utils/motion';   // 18/11: pill เมนู "ไหล" ไปตำแหน่งใหม่ (นิ่งเองบน TV / reduced-motion)
+import { railPill, markView } from './utils/motion';   // 18/11: pill เมนู "ไหล" ไปตำแหน่งใหม่ (นิ่งเองบน TV / reduced-motion)
 import tsLogo from './assets/TS logo transparent.png';   // splash: พื้นโปร่งใส (06/11)
 import { BrowserRouter as Router, Routes, Route, Link, Navigate, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { supabase } from './supabaseClient';
@@ -19,7 +19,7 @@ const FeedbackModal = lazy(() => import('./components/FeedbackModal'));
 const NotifyPrefsModal = lazy(() => import('./components/NotifyPrefsModal'));  // 🔕 ตั้งค่าแจ้งเตือนของฉัน
 import { loadPermissions, canAccessPage, setDeptAdmin, setSharedAccount, can, canSeeded } from './utils/permissions';
 /* 🏷️ รุ่นของเว็บ (full / nm) — สลับตอน build ด้วย alias ใน vite.nm.config.js · 📄 src/appEdition.js */
-import { EDITION_LABEL, EDITION_HOME } from './appEdition';
+import { EDITION, EDITION_LABEL, EDITION_HOME } from './appEdition';
 import { LOGISTIC_GROUPS } from './utils/logisticSide';
 import { trackVisit, topPaths } from './utils/navRecent';
 import { effectiveSections } from './utils/sectionScope';
@@ -482,6 +482,23 @@ function AvatarSilhouette() {
   );
 }
 
+/* 🏷️ ชื่อระบบบนหัวแผงเมนู — ตาม edition (20/11 · กันเว็บ New Model ขึ้น "ESM") · ESM เต็ม = ESM / Shopfloor Management */
+const BRAND = EDITION === 'full'
+  ? { title: 'ESM', sub: 'Shopfloor Management' }
+  : { title: String(EDITION_LABEL).split(' · ')[0], sub: String(EDITION_LABEL).split(' · ')[1] || '' };
+/** หัวแผงเมนู: โลโก้ + ชื่อระบบ (ใช้ทั้งแผง desktop และ drawer มือถือ — หน้าตาเดียวกัน) */
+function SidebarBrand({ onGo }) {
+  return (<>
+    <Link to={EDITION_HOME} title="หน้าหลัก (เลือกโมดูล)" style={{ lineHeight: 0, flexShrink: 0 }} onClick={onGo}>
+      <img src={tsLogo} alt="Thai Summit Group" width={30} height={30} style={{ borderRadius: 6 }} />
+    </Link>
+    <div style={{ flex: 1, minWidth: 0, lineHeight: 1.15 }}>
+      <div style={{ fontSize: 15, fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--text)', letterSpacing: '0.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{BRAND.title}</div>
+      {BRAND.sub && <div style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{BRAND.sub}</div>}
+    </div>
+  </>);
+}
+
 export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userRole, userLineId, userEmail, userFullName, userSignatureUrl, userPosition, userAvatarUrl, remoteCode, onToggleRemote, onOpenPalette, pinned, onTogglePin, realRole, onOpenViewAs, onAvatarSaved }) {
   const { lang, toggleLang, tr } = useLang();   // 🌐 ป้ายเมนู/หมวดแปลที่จุดวาด — ข้อมูล NAV_ITEMS ยังเป็นไทย (คีย์)
   // 🔄 ผลการทับขอบเขตด้วย org_assignments — มาจาก UserContext (ProtectedLayout) ไม่เพิ่ม prop
@@ -547,9 +564,6 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
     .map(g => ({ group: g, items: visibleItems.filter(i => inNavGroup(i, [g])) }))
     .filter(g => g.items.length > 0);
   const displayName = userFullName || userEmail || '';
-  const initials = displayName
-    ? displayName.split(/[\s@]/)[0].slice(0, 2).toUpperCase()
-    : '?';
 
   /* `isHomeHere` = "หน้าที่เปิดอยู่ **มีบ้านจริง** อยู่หมวดนี้ไหม" — ตัวตัดสินไฮไลต์ "อยู่ตรงนี้"
      ทุกชั้น (ราง · แผงลอย · accordion มือถือ) · หน้าที่มาเป็น *ทางลัด* (`alsoIn`) ไม่นับ
@@ -584,13 +598,10 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
            มาทำของตกแต่ง ทั้งที่ 2 สีนี้ถูกจองไว้แปลว่า "ปกติ/มีปัญหา" ทั้งระบบ (utils/statusTone.js) */
         <div style={{
           width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-          /* 20/11: จอคอม = ไล่เฉดเขียวสีเดียว + เงาคน (ชุดเดียวกับการ์ดท้ายแผง · token --avatar-*) · มือถือคงตัวย่อเดิม (ตกลง 20/11) */
-          ...(isMobile
-            ? { background: 'var(--bg2)', border: '1px solid var(--border2)', color: 'var(--text2)' }
-            : { background: 'linear-gradient(135deg, var(--avatar-from) 0%, var(--avatar-to) 100%)', color: 'var(--accent-ink)', overflow: 'hidden' }),
+          /* 20/11: ไล่เฉดเขียวสีเดียว + เงาคน ทั้งจอคอมและมือถือ (ชุดเดียวกับการ์ดท้ายแผง · token --avatar-*) */
+          background: 'linear-gradient(135deg, var(--avatar-from) 0%, var(--avatar-to) 100%)', color: 'var(--accent-ink)', overflow: 'hidden',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 12, fontWeight: 800,
-        }}>{isMobile ? initials : <AvatarSilhouette />}</div>
+        }}><AvatarSilhouette /></div>
       )}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -951,13 +962,7 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
                 (ไม่เพิ่มปุ่มหุบแผงชุดที่ 2 — ◀ ท้ายราง = ซ่อนเมนูทั้งหมด · ✕ = ปิดแผง · user ทักเรื่องซ้ำ 20/11)
                 ชื่อหมวดลงไปเป็นป้ายเล็กใต้หัว */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '12px 0 10px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-              <Link to="/" title="หน้าหลัก (เลือกโมดูล)" style={{ lineHeight: 0, flexShrink: 0 }} onClick={() => { if (!pinned) setPanel(null); }}>
-                <img src={tsLogo} alt="Thai Summit Group" width={30} height={30} style={{ borderRadius: 6 }} />
-              </Link>
-              <div style={{ flex: 1, minWidth: 0, lineHeight: 1.15 }}>
-                <div style={{ fontSize: 15, fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--text)', letterSpacing: '0.02em' }}>ESM</div>
-                <div style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Shopfloor Management</div>
-              </div>
+              <SidebarBrand onGo={() => { if (!pinned) setPanel(null); }} />
               {/* 20/11: ไอคอนเส้นชุดเดียวกับเมนู แทน emoji 📌/✕ (emoji สีแดงชนพาเลต · UI §6.36) — หน้าที่ปุ่มเดิมทุกอย่าง */}
               {onTogglePin && <button onClick={onTogglePin} aria-pressed={pinned} title={pinned ? 'เลิกปักหมุด — แผงจะปิดเองหลังเลือกเมนู' : 'ปักหมุดแผงค้างไว้ (เนื้อหาหลักจะแคบลง)'} style={{
                 width: 28, height: 28, borderRadius: 8, flexShrink: 0, cursor: 'pointer', outline: 'none',
@@ -1072,7 +1077,7 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
       <nav style={{
         position: 'fixed', top: 0, left: 0, height: '100vh',
         width: isOpen ? 'var(--sidebar-w)' : '0px',
-        background: 'var(--bg2)',
+        background: 'linear-gradient(180deg, var(--panel-top) 0%, var(--panel-bot) 100%)',   // 🪪 20/11 ชุดเดียวกับแผง desktop
         borderRight: isOpen ? '1px solid var(--border)' : 'none',
         display: 'flex', flexDirection: 'column',
         padding: isOpen ? '0 10px 20px' : '0',
@@ -1081,26 +1086,19 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
         zIndex: 1000,
         boxShadow: isOpen ? '4px 0 30px rgba(0,0,0,0.3)' : 'none',
       }}>
-        {/* Logo + ปุ่มพับ sidebar (อยู่ในหัวแถบ ไม่ลอยทับเนื้อหา) */}
-        <div style={{ padding: '18px 6px 16px', borderBottom: '1px solid var(--border)', marginBottom: 10, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-            <img src={tsLogo} alt="Thai Summit Group" width={28} height={28} style={{ borderRadius: 3, flexShrink: 0 }} />
-            <div>
-              <div style={{ fontSize: 11, letterSpacing: '2px', color: 'var(--accent)', textTransform: 'uppercase', fontWeight: 700, fontFamily: 'var(--font-display)' }}>Thai Summit</div>
-              <div style={{ fontSize: 11, letterSpacing: '1.5px', color: 'var(--muted)', textTransform: 'uppercase', fontFamily: 'var(--font-display)' }}>{EDITION_LABEL}</div>
-            </div>
-          </div>
+        {/* หัวแถบ = โลโก้ + ชื่อระบบ (หน้าตาเดียวกับแผง desktop · 20/11) + ปุ่มพับ (ไอคอนเส้น) */}
+        <div style={{ padding: '14px 4px 12px', borderBottom: '1px solid var(--border)', marginBottom: 10, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 9 }}>
+          <SidebarBrand onGo={onClose} />
           <button
             onClick={onClose}
-            title="พับเมนู"
+            title="พับเมนู" aria-label="พับเมนู"
             style={{
-              // สัญลักษณ์ show/hide เหมือนกันทั้งระบบ: 32×32 radius8 bg3 border2 · ◀ = พับ
               width: 32, height: 32, borderRadius: 8, flexShrink: 0,
               background: 'var(--bg3)', border: '1px solid var(--border2)',
-              color: 'var(--text2)', fontSize: 14, cursor: 'pointer', outline: 'none',
+              color: 'var(--text2)', cursor: 'pointer', outline: 'none',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
-          >◀</button>
+          ><Icon name="PanelLeftClose" size={16} /></button>
         </div>
 
         {/* ค้นหาเมนู — 51 รายการ 8 หมวด ถ้าไม่มีช่องค้นต้องจำว่าอยู่หมวดไหน (NAVIGATION-REVIEW §2.5) */}
@@ -1906,6 +1904,11 @@ function ProtectedLayout({ session, theme, onToggleTheme, userRole, realRole, vi
   const navigate = useNavigate();
   const location = useLocation();
   useEffect(() => { setTvNavOpen(false); }, [location.pathname]);
+  /* 📈 อนิเมชันกราฟเล่นครั้งเดียวต่อ "สิ่งที่ดู" (utils/motion.js chartAnim) — URL เปลี่ยน = เปิดหน้าต่างใหม่ · รีเฟรชข้อมูล = ไม่เล่นซ้ำ
+     ทำระหว่าง render (ไม่ใช่ useEffect) เพื่อให้กราฟที่วาดในรอบเดียวกันเห็นหน้าต่างใหม่ทันที · idempotent ต่อ URL */
+  const viewKeyRef = useRef(null);
+  const viewKey = `${location.pathname}?${location.search}`;
+  if (viewKeyRef.current !== viewKey) { viewKeyRef.current = viewKey; markView(); }
   /* 📺 กรอบจอ TV ชุดเดียวทุกหน้า (16/10) — ตัดสินที่ isTvShell() (utils/displayRotation.js) ที่เดียว
      ⇒ ไม่มี sidebar/rail/กระดิ่ง/ปุ่มเมนู · แถบบนวาดโดย DisplayRotator · หัวเพจทุกหน้าซ่อนด้วย body.esm-tv-shell .ph-chrome */
   const tvShell = isTvShell(userRole, location.search);

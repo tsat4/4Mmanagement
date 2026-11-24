@@ -63,7 +63,7 @@ export default function WorkflowDesigner() {
     ]).then(([d, v]) => {
       if (!alive) return;
       const e = d.error || v.error;
-      setLoadErr(e ? `โหลดใบงานไม่สำเร็จ: ${e.message}` : '');
+      setLoadErr(e ? `${tr("โหลดใบงานไม่สำเร็จ")}: ${e.message}` : '');
       setDefs(d.data || []); setVers(v.data || []);
     });
     return () => { alive = false; };
@@ -75,7 +75,7 @@ export default function WorkflowDesigner() {
     return m;
   }, [vers]);
   const pending = vers.filter(v => v.status === 'pending_publish');
-  const tabs = TABS.filter(t => t.key !== 'review' || canPublish).map(t => (t.key === 'review' && pending.length ? { ...t, label: `${t.label} (${pending.length})` } : t));
+  const tabs = TABS.filter(t => t.key !== 'review' || canPublish).map(t => (t.key === 'review' && pending.length ? { ...t, label: `${tr(t.label)} (${pending.length})` } : t));
   const openDef = (id) => { merge({ tab: 'edit', def: id || null }); };
   const refresh = () => setReload(x => x + 1);
 
@@ -136,7 +136,7 @@ function Editor({ def, latest, canDesign, canPublish, mySection, onSaved }) {
     let alive = true;
     supabase.from('permission_catalog').select('resource, action, label').order('sort').then(({ data, error }) => {
       if (!alive) return;
-      if (error) toast.error(`โหลดรายการสิทธิ์ไม่สำเร็จ: ${error.message}`);
+      if (error) toast.error(`${tr("โหลดรายการสิทธิ์ไม่สำเร็จ")}: ${error.message}`);
       setPerms((data || []).filter(p => p.resource !== 'page' && p.resource !== 'wf').map(p => ({ key: `${p.resource}:${p.action}`, label: p.label })));
     });
     return () => { alive = false; };
@@ -192,7 +192,7 @@ function Editor({ def, latest, canDesign, canPublish, mySection, onSaved }) {
       {!s.defId && !readOnly && (
         <div style={{ ...card, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <span style={{ fontSize: 13 }}>{tr('เริ่มจากแม่แบบ:')}</span>
-          <button type="button" style={ghost} onClick={() => up({ name: TEMPLATE_4M.name, key: s.key || 'test_4m', fields: TEMPLATE_4M.form.fields, steps: TEMPLATE_4M.flow.steps, onReturn: TEMPLATE_4M.flow.onReturn, startRoles: TEMPLATE_4M.startRoles })}>
+          <button type="button" style={ghost} onClick={() => up({ name: tr(TEMPLATE_4M.name), key: s.key || 'test_4m', fields: TEMPLATE_4M.form.fields, steps: TEMPLATE_4M.flow.steps, onReturn: TEMPLATE_4M.flow.onReturn, startRoles: TEMPLATE_4M.startRoles })}>
             {tr('🧪 4M Change (ทดลอง)')}
           </button>
           <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('ใบทดลองในตัวสร้าง — ไม่ใช่ใบ 4M จริงที่หน้า /report')}</span>
@@ -354,7 +354,7 @@ function ReviewCard({ v, def, onDone }) {
         {tr('ช่องกรอก')} {(v.form_schema?.fields || []).length} · {tr('ขั้นอนุมัติ')} {steps.length} · {tr('เปิดใบได้')}: {(v.start_roles || []).map(roleLabel).join(', ') || '—'}
       </div>
       <StepFlow steps={f.steps} style={{ marginBottom: 8 }} />
-      {steps.map((s, i) => <div key={s.key || i} style={{ fontSize: 12, color: 'var(--text2)' }}>{i + 1}. {s.label} — {ASSIGNEE_RULES.find(r => r.rule === s.assignee?.rule)?.label || '?'} {s.assignee?.perm ? `(${s.assignee.perm} · ${s.assignee.unit === 'instance' ? tr('ส่วนงานผู้เปิด') : s.assignee.unit})` : ''}{s.assignee?.profile_name ? `(${s.assignee.profile_name})` : ''}</div>)}
+      {steps.map((s, i) => <div key={s.key || i} style={{ fontSize: 12, color: 'var(--text2)' }}>{i + 1}. {s.label} — {tr(ASSIGNEE_RULES.find(r => r.rule === s.assignee?.rule)?.label) || '?'} {s.assignee?.perm ? `(${s.assignee.perm} · ${s.assignee.unit === 'instance' ? tr('ส่วนงานผู้เปิด') : s.assignee.unit})` : ''}{s.assignee?.profile_name ? `(${s.assignee.profile_name})` : ''}</div>)}
       <div style={{ marginTop: 10 }}><WfFormFields form={v.form_schema} data={{}} readOnly /></div>
       <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap', alignItems: 'end' }}>
         <div style={{ flex: '1 1 240px' }}><Field label={tr('หมายเหตุ / เหตุผลส่งกลับ')}><input value={note} onChange={e => setNote(e.target.value)} style={inp} /></Field></div>

@@ -85,7 +85,7 @@ export default function EventComments({ refKind, refId, contextLabel = 'รา�
       if (targets.length) {
         supabase.from('notifications').insert(targets.map(m => ({
           user_id: m.id, type: 'info',
-          title: `💬 ${fullName || 'เพื่อนร่วมงาน'} กล่าวถึงคุณใน ${contextLabel}`,
+          title: `💬 ${fullName || tr('เพื่อนร่วมงาน')} ${tr("กล่าวถึงคุณใน")} ${contextLabel}`,
           body: text.slice(0, 160),
           ...refTarget(refKind, refId),
         }))).then(({ error: nErr }) => { if (nErr) console.warn('mention notify:', nErr.message); });
@@ -93,7 +93,7 @@ export default function EventComments({ refKind, refId, contextLabel = 'รา�
       setBody(''); setMentions([]); setPickOpen(false);
       load();
     } catch (err) {
-      toast.error(`ส่งคอมเมนต์ไม่สำเร็จ: ${err?.message || 'ลองใหม่อีกครั้ง'}`);
+      toast.error(`${tr("ส่งคอมเมนต์ไม่สำเร็จ")}: ${err?.message || tr('ลองใหม่อีกครั้ง')}`);
     }
     setPosting(false);
   };
@@ -110,13 +110,13 @@ export default function EventComments({ refKind, refId, contextLabel = 'รา�
   return (
     <div style={{ marginTop: 12, border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--bg)', padding: '10px 12px' }}>
       <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text2)', marginBottom: 8 }}>
-        คอมเมนต์{items ? ` (${items.length})` : ''}
+        {tr("คอมเมนต์")}{items ? ` (${items.length})` : ''}
         <span style={{ fontWeight: 500, color: 'var(--muted)', marginLeft: 8, fontSize: 11 }}>{tr('คุยกันใต้ใบงาน — ประวัติติดรายการนี้')}</span>
       </div>
 
       {unavailable ? (
         <div style={{ fontSize: 12, color: 'var(--muted)', padding: '4px 0' }}>
-          ⚠️ ระบบคอมเมนต์ยังไม่เปิดใช้ (ยังไม่ run migration <code style={{ fontSize: 11 }}>20260716_event_comments.sql</code>)
+          ⚠️ {tr("ระบบคอมเมนต์ยังไม่เปิดใช้ (ยังไม่")} run migration <code style={{ fontSize: 11 }}>20260716_event_comments.sql</code>)
         </div>
       ) : (
         <>
@@ -125,7 +125,7 @@ export default function EventComments({ refKind, refId, contextLabel = 'รา�
             {items == null && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('กำลังโหลด...')}</div>}
             {items != null && items.length === 0 && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('ยังไม่มีคอมเมนต์ — เริ่มคุยเรื่องรายการนี้ได้เลย')}</div>}
             {(items || []).map(c => (
-              <div key={c.id} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '7px 10px' }}>
+              <div key={c.id} style={{ background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '7px 10px' }}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
                   <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--accent)' }}>{c.author_name}</span>
                   <span style={{ fontSize: 11, color: 'var(--muted)' }}>{fmtDateTime(c.created_at)}</span>
@@ -150,11 +150,11 @@ export default function EventComments({ refKind, refId, contextLabel = 'รา�
             {users.length > 0 && (
               <div style={{ position: 'relative' }}>
                 <button className="tbtn" onClick={() => setPickOpen(o => !o)}
-                  style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)', background: 'var(--bg2)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: '3px 10px', cursor: 'pointer' }}>
+                  style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)', background: 'var(--bg2-surf)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: '3px 10px', cursor: 'pointer' }}>
                   {tr('แจ้งเตือนถึง... ▾')}
                 </button>
                 {pickOpen && (
-                  <div style={{ position: 'absolute', bottom: 'calc(100% + 4px)', left: 0, zIndex: 50, width: 230, background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', boxShadow: 'var(--shadow-lg)', padding: 8 }}>
+                  <div style={{ position: 'absolute', bottom: 'calc(100% + 4px)', left: 0, zIndex: 50, width: 230, background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', boxShadow: 'var(--shadow-lg)', padding: 8 }}>
                     {/* width:'auto' กัน trap input{width:100%}? — อยู่ใน column เต็มกล่อง ใช้ 100% ได้ */}
                     <input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder={tr('ค้นหาชื่อ...')}
                       style={{ fontSize: 12, padding: '6px 9px', marginBottom: 6 }} />

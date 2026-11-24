@@ -12,8 +12,9 @@ import FilterBar from './FilterBar';
 import SearchInput from './SearchInput';
 import LineSelect from './LineSelect';
 import MatLabel from './MatLabel';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { storeBtn } from '../utils/storeUi';
+import InfoMore from './InfoMore';
 
 /* ═══ 🧾 คิว "ของที่ไลน์ใช้แต่สโตร์ยังไม่ลงจ่าย" (2026-11-20 · คำสั่ง user ทาง 1)
 
@@ -31,10 +32,13 @@ const fmt = (n) => Number(n || 0).toLocaleString();
 const when = (iso) => {
   if (!iso) return tr('ไม่ทราบเวลา');
   const d = new Date(iso);
-  return isNaN(d) ? '—' : d.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  return isNaN(d) ? '—' : d.toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 };
 
-export default function LineIssueGapQueue() {
+/* 📋 24/11 (คำสั่ง user) — `embedded` = อยู่ในแท็บย่อยของ Stock Management › ส่งของเข้าไลน์
+   ไม่มีกล่อง/หัวพับ · แถบกรองของคิวนี้ = แถบกรองเดียวของแท็บ · `banner` (แถบไลน์เรียกของ) ต่อท้ายแถบกรอง
+   · ว่าง = เขียนบอก (ไม่ return null — เข้ามาในแท็บแล้วจอว่างเปล่า = งง) · ไม่ส่ง embedded = กล่องแบบเดิม */
+export default function LineIssueGapQueue({ embedded = false, banner = null }) {
   const { role, fullName } = useContext(UserContext);
   const canIssue = can('line_stock', 'issue', role);
   const [rows, setRows] = useState([]);
@@ -67,24 +71,24 @@ export default function LineIssueGapQueue() {
     setBusy(keyOf(r));
     const { data, error } = await supabaseDR.rpc('line_issue_gap_confirm', { p_line: r.line_name, p_mat: r.mat_no, ...by() });
     setBusy(null);
-    if (error) { toast.error(`ยืนยันไม่สำเร็จ — ${error.message}`); load(); return; }
+    if (error) { toast.error(`${tr("ยืนยันไม่สำเร็จ")} — ${error.message}`); load(); return; }
     const moved = Number(data) || 0;
-    if (moved < Number(r.gap)) toast.error(`⚠ ย้ายได้ ${fmt(moved)} จากที่ไลน์ขาด ${fmt(r.gap)} — STORE ในระบบไม่พอ ส่วนที่เหลือไลน์ยังติดลบ (ต้องนับ/ลงรับเข้า STORE)`);
-    else toast.success(`✅ ลงจ่าย ${r.mat_no} → ${r.line_name} ${fmt(moved)} ชิ้นแล้ว`);
+    if (moved < Number(r.gap)) toast.error(`⚠ ${tr("ย้ายได้")} ${fmt(moved)} ${tr("จากที่ไลน์ขาด")} ${fmt(r.gap)} — STORE ${tr("ในระบบไม่พอ ส่วนที่เหลือไลน์ยังติดลบ (ต้องนับ/ลงรับเข้า")} STORE)`);
+    else toast.success(`✅ ${tr("ลงจ่าย")} ${r.mat_no} → ${r.line_name} ${fmt(moved)} ${tr("ชิ้นแล้ว")}`);
     load();
   };
 
   const confirmAll = async () => {
     if (!canIssue || !shown.length) return;
-    if (!await askConfirm(`ยืนยันว่าสโตร์จ่ายไปแล้วทั้ง ${shown.length} รายการที่เห็น?\n\nระบบจะหัก STORE และบวกเข้าไลน์ตามยอดที่ไลน์ใช้ไป (ไม่เกินยอด STORE)\nในนาม ${fullName || '(ไม่รู้ชื่อผู้ใช้)'}`)) return;
+    if (!await askConfirm(`${tr("ยืนยันว่าสโตร์จ่ายไปแล้วทั้ง")} ${shown.length} ${tr("รายการที่เห็น?\\n\\nระบบจะหัก STORE และบวกเข้าไลน์ตามยอดที่ไลน์ใช้ไป (ไม่เกินยอด STORE)\\nในนาม")} ${fullName || tr('(ไม่รู้ชื่อผู้ใช้)')}`)) return;
     setBusy('*');
     const { data, error } = await supabaseDR.rpc('line_issue_gap_confirm_many', {
       p_lines: shown.map(r => r.line_name), p_mats: shown.map(r => r.mat_no), ...by(),
     });
     setBusy(null);
-    if (error) { toast.error(`ยืนยันไม่สำเร็จ — ${error.message}`); load(); return; }
+    if (error) { toast.error(`${tr("ยืนยันไม่สำเร็จ")} — ${error.message}`); load(); return; }
     const ok = data?.confirmed || 0, skip = data?.skipped || 0;
-    (skip ? toast.error : toast.success)(`✅ ลงจ่ายแล้ว ${ok} รายการ (${fmt(data?.qty)} ชิ้น)${skip ? ` · ข้าม ${skip} รายการที่ไม่ค้างแล้ว/ทำไม่ได้ — รีเฟรชดู` : ''}`);
+    (skip ? toast.error : toast.success)(`✅ ${tr("ลงจ่ายแล้ว")} ${ok} ${tr("รายการ")} (${fmt(data?.qty)} ${tr("ชิ้น")})${skip ? ` · ${tr("ข้าม")} ${skip} ${tr("รายการที่ไม่ค้างแล้ว/ทำไม่ได้ — รีเฟรชดู")}` : ''}`);
     load();
   };
 
@@ -94,32 +98,36 @@ export default function LineIssueGapQueue() {
     setBusy(keyOf(r));
     const { error } = await supabaseDR.rpc('line_issue_gap_reject', { p_line: r.line_name, p_mat: r.mat_no, p_reason: reason.trim(), ...by() });
     setBusy(null);
-    if (error) { toast.error(`บันทึกไม่สำเร็จ — ${error.message}`); load(); return; }
-    toast.success(`🚫 บันทึกว่าไม่ได้จ่าย ${r.mat_no} — ยอด ${fmt(r.gap)} ย้ายไปคลังพัก เปิดเคสที่แท็บ "คลังพัก/ผลต่าง" แล้ว`);
+    if (error) { toast.error(`${tr("บันทึกไม่สำเร็จ")} — ${error.message}`); load(); return; }
+    toast.success(`🚫 ${tr("บันทึกว่าไม่ได้จ่าย")} ${r.mat_no} — ${tr("ยอด")} ${fmt(r.gap)} ${tr("ย้ายไปคลังพัก เปิดเคสที่แท็บ \"คลังพัก/ผลต่าง\" แล้ว")}`);
     setRejectFor(null); setReason(''); load();
   };
 
-  if (!rows.length && !loadErr) return null;   // ไม่มีรายการค้าง = ไม่กินพื้นที่บอร์ด
+  if (!rows.length && !loadErr && !embedded) return null;   // ไม่มีรายการค้าง = ไม่กินพื้นที่บอร์ด
 
   const th = { padding: '6px 8px', fontSize: 12, color: 'var(--muted)', textAlign: 'left', whiteSpace: 'nowrap', borderBottom: '1px solid var(--border)' };
   const td = { padding: '6px 8px', fontSize: 13, borderBottom: '1px solid var(--border2)', verticalAlign: 'top' };
   /* ปุ่มมาตรฐานบอร์ดสโตร์ (utils/storeUi.js · เป้านิ้ว 44px สำหรับแท็บเล็ตหน้าคลัง) */
   const btn = (kind) => storeBtn(kind === 'go' ? 'primary' : 'secondary', { whiteSpace: 'nowrap', ...(kind === 'danger' ? { color: 'var(--red)', borderColor: 'var(--red-line)' } : {}) });
 
+  const show = embedded || open;
   return (
-    <div style={{ background: 'var(--card)', border: `1px solid ${overdueN ? 'var(--red)' : 'var(--border)'}`, borderRadius: 10, padding: 12, marginBottom: 12, boxShadow: 'var(--shadow-sm)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', cursor: 'pointer' }} onClick={() => setOpen(o => !o)}>
+    <div style={embedded ? { display: 'grid', gap: 10 } : { background: 'var(--card-surf)', border: `1px solid ${overdueN ? 'var(--red)' : 'var(--border)'}`, borderRadius: 10, padding: 12, marginBottom: 12, boxShadow: 'var(--shadow-sm)' }}>
+      {!embedded && <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', cursor: 'pointer' }} onClick={() => setOpen(o => !o)}>
         <b style={{ fontSize: 15 }}>🧾 {tr('ไลน์ใช้ของแล้ว แต่สโตร์ยังไม่ลงจ่าย')}</b>
         <span style={{ fontSize: 12, padding: '2px 8px', borderRadius: 10, background: 'var(--amber-dim)', color: 'var(--amber)' }}>{rows.length} {tr('รายการ')}</span>
         {overdueN > 0 && <span style={{ fontSize: 12, padding: '2px 8px', borderRadius: 10, background: 'var(--red-dim)', color: 'var(--red)' }}>⏰ {tr('เกิน 1 กะ')} {overdueN}</span>}
         <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--muted)' }}>{open ? '▲' : '▼'}</span>
-      </div>
-      {open && <>
-        <div style={{ fontSize: 12, color: 'var(--muted)', margin: '6px 0 8px' }}>
+      </div>}
+      {show && <>
+        {!embedded && <div style={{ fontSize: 12, color: 'var(--muted)', margin: '6px 0 8px' }}>
           {tr('ไลน์ถูกตัดตอนปิดใบผลิตจนติดลบ ขณะที่ STORE ในระบบยังมีของ = สโตร์ยื่นของให้แล้วแต่ไม่ได้ลงจ่าย · จ่ายไปแล้วจริงกด ✅ · ไม่ได้จ่ายกด 🚫 แล้วใส่เหตุผล (ยอดไปคลังพักให้ 2 ฝ่ายเคลียร์)')}
-        </div>
+        </div>}
+        {/* แท็บย่อย: คำเตือนลงใต้แถบกรอง (ลำดับ แท็บ → แถบกรอง → เนื้อหา) */}
+        {!embedded && <>
         {loadErr && <div style={{ color: 'var(--red)', fontSize: 13, marginBottom: 6 }}>⚠ {tr('โหลดคิวไม่สำเร็จ')}: {loadErr}</div>}
         {!canIssue && <div style={{ color: 'var(--amber)', fontSize: 13, marginBottom: 6 }}>🔒 {tr('ดูอย่างเดียว — ยืนยัน/ปฏิเสธต้องมีสิทธิ์ลงจ่ายพาร์ทเข้าไลน์ (line_stock:issue)')}</div>}
+        </>}
         <FilterBar>
           <LineSelect lines={lineRows} value={line} onChange={setLine} placeholder={ALL.line} />
           <SearchInput value={q} onChange={setQ} placeholder={tr('ค้นหา MAT / ชื่อพาร์ท')} />
@@ -128,7 +136,22 @@ export default function LineIssueGapQueue() {
               ✅ {tr('ยืนยันจ่ายทั้งหมดที่เห็น')} ({shown.length})
             </button>
           )}
+          {embedded && <><span className="spacer" /><InfoMore label={tr('หน้านี้ทำอะไร')}>
+            {tr('ไลน์ถูกตัดตอนปิดใบผลิตจนติดลบ ขณะที่ STORE ในระบบยังมีของ = สโตร์ยื่นของให้แล้วแต่ไม่ได้ลงจ่าย · จ่ายไปแล้วจริงกด ✅ · ไม่ได้จ่ายกด 🚫 แล้วใส่เหตุผล (ยอดไปคลังพักให้ 2 ฝ่ายเคลียร์)')}
+          </InfoMore></>}
         </FilterBar>
+        {embedded && banner}
+        {embedded && <>
+        {loadErr && <div style={{ color: 'var(--red)', fontSize: 13, marginBottom: 6 }}>⚠ {tr('โหลดคิวไม่สำเร็จ')}: {loadErr}</div>}
+        {!canIssue && <div style={{ color: 'var(--amber)', fontSize: 13, marginBottom: 6 }}>🔒 {tr('ดูอย่างเดียว — ยืนยัน/ปฏิเสธต้องมีสิทธิ์ลงจ่ายพาร์ทเข้าไลน์ (line_stock:issue)')}</div>}
+        </>}
+        {embedded && (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', fontSize: 13 }}>
+            <span style={{ padding: '3px 10px', borderRadius: 999, background: 'var(--amber-dim)', color: 'var(--amber)', fontWeight: 700 }}>{tr('ค้าง')} {rows.length} {tr('รายการ')}</span>
+            {overdueN > 0 && <span style={{ padding: '3px 10px', borderRadius: 999, background: 'var(--red-dim)', color: 'var(--red)', fontWeight: 700 }}>⏰ {tr('เกิน 1 กะ')} {overdueN}</span>}
+          </div>
+        )}
+        {embedded && !rows.length && !loadErr && <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('ไม่มีรายการค้าง — ไลน์ไม่ติดลบ หรือ STORE ในระบบไม่มีของให้ย้าย')}</div>}
         {shown.length < rows.length && <div style={{ fontSize: 12, color: 'var(--muted)', margin: '4px 0' }}>{tr('ซ่อนตามตัวกรอง')} {rows.length - shown.length} {tr('รายการ')}</div>}
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>

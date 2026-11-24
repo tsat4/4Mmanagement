@@ -5,6 +5,7 @@
    · ตาราง `kpi_base_inputs` unique index มี `coalesce(scope_value,'')` = expression ⇒ **ห้าม upsert** (42P10 · กฎ DB ข้อ 3) → หาแถวเดิมจาก
      ดัชนีแล้ว update ตาม id ไม่มีค่อย insert · ทุกการเขียนนับแถว (RLS ปฏิเสธ = 0 แถวเงียบ · กฎ DB ข้อ 2)
    · สูตร/ตัวแปรอยู่ `utils/kpiSetup.js` + `utils/kpiFormula.js` — แผงนี้ไม่คำนวณอะไรเอง */
+import { ImportButton } from './ImportKit';   // 📥 ปุ่มนำเข้ามาตรฐาน (UI §6.44)
 import { useState, useEffect, useContext } from 'react';
 import InfoMore from './InfoMore';   // ⓘ คำอธิบายยาวพับไว้ (UI §6.10)
 import { UserContext } from '../App';
@@ -15,9 +16,9 @@ import { isPlant } from '../utils/orgScope';
 import { BASE_VARS_BY_LEVEL, baseScopeKeyOf, baseScopeColumns, buildBaseIndex, formulasUsingVar, PLANT_BASE_KEY } from '../utils/kpiFormula';
 import KpiBaseImportModal from './KpiBaseImportModal';
 
-import { tr } from '../utils/i18n';
-const MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-const fmt = (v) => (v == null ? '' : Number(v).toLocaleString('th-TH', { maximumFractionDigits: 2 }));
+import { tr, dateLocale } from '../utils/i18n';
+import { monthsShort } from '../utils/dateFormat';
+const fmt = (v) => (v == null ? '' : Number(v).toLocaleString(dateLocale(), { maximumFractionDigits: 2 }));
 
 function Cell({ value, auto, disabled, onCommit }) {
   const [v, setV] = useState(value == null ? '' : String(value));
@@ -31,7 +32,7 @@ function Cell({ value, auto, disabled, onCommit }) {
   return (
     <input value={v} onChange={e => setV(e.target.value)} onBlur={() => onCommit(v.trim())} onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }}
       inputMode="decimal" placeholder={autoTxt} title={autoTxt ? tr('ค่าอัตโนมัติจากทะเบียนพนักงาน — กรอกทับได้ถ้าตัวเลขจริงต่างจากนี้') : undefined}
-      style={{ width: 92, padding: '3px 5px', fontSize: 12, textAlign: 'right', borderRadius: 'var(--ctl-r)', background: 'var(--bg2)', border: '1px solid var(--border)',
+      style={{ width: 92, padding: '3px 5px', fontSize: 12, textAlign: 'right', borderRadius: 'var(--ctl-r)', background: 'var(--bg2-surf)', border: '1px solid var(--border)',
         color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }} />
   );
 }
@@ -50,7 +51,7 @@ export default function KpiBaseInputsPanel({ year, scope, org, rows = [], base: 
   const base = baseIn || buildBaseIndex(rows);
   const [importing, setImporting] = useState(false);
   const mySk = baseScopeKeyOf(scope);
-  const label = plant ? 'ทั้งโรงงาน' : org.labelOf(scope.kind, scope.value);
+  const label = plant ? tr("ทั้งโรงงาน") : org.labelOf(scope.kind, scope.value);
   const [busy, setBusy] = useState('');
 
   const save = async (varKey, sk, month, raw) => {
@@ -61,7 +62,7 @@ export default function KpiBaseInputsPanel({ year, scope, org, rows = [], base: 
     const prev = existing?.value == null ? null : Number(existing.value);
     if (prev === value) return;
     if (!existing && value == null) return;
-    const tag = `ตัวเลขฐาน ${varKey} ${MONTHS[month - 1]}`;
+    const tag = `${tr("ตัวเลขฐาน")} ${varKey} ${monthsShort()[month - 1]}`;
     setBusy(`${sk}|${varKey}|${month}`);
     const ok = existing
       ? checkWriteRows(await supabase.from('kpi_base_inputs').update({ value }).eq('id', existing.id).select('id'), tag)
@@ -93,14 +94,14 @@ export default function KpiBaseInputsPanel({ year, scope, org, rows = [], base: 
         const existing = base.row(sk, varKey, month);
         const prev = existing?.value == null ? null : Number(existing.value);
         if (prev === value) continue;
-        const tag = `นำเข้า ${varKey} ${MONTHS[month - 1]}`;
+        const tag = `${tr("นำเข้า")} ${varKey} ${monthsShort()[month - 1]}`;
         const ok = existing
           ? checkWriteRows(await supabase.from('kpi_base_inputs').update({ value }).eq('id', existing.id).select('id'), tag)
           : checkWriteRows(await supabase.from('kpi_base_inputs').insert({ year, month, var_key: varKey, value, ...cols, ...(await stamp()) }).select('id'), tag);
         if (ok) n += 1; else fail += 1;
       }
     }
-    if (fail) toast.error(`บันทึกไม่สำเร็จ ${fail} ค่า (ดูข้อความด้านบน)`);
+    if (fail) toast.error(`${tr("บันทึกไม่สำเร็จ")} ${fail} ${tr("ค่า (ดูข้อความด้านบน")})`);
     if (n) onChanged?.();
     return n;
   };
@@ -117,7 +118,7 @@ export default function KpiBaseInputsPanel({ year, scope, org, rows = [], base: 
       </div>
       <div style={{ overflowX: 'auto' }}>
         <table style={{ borderCollapse: 'collapse', fontSize: 12, width: '100%' }}>
-          <thead><tr><th style={{ ...th, textAlign: 'left' }}>{tr('ตัวแปร')}</th>{MONTHS.map(m => <th key={m} style={th}>{tr(m)}</th>)}</tr></thead>
+          <thead><tr><th style={{ ...th, textAlign: 'left' }}>{tr('ตัวแปร')}</th>{monthsShort().map(m => <th key={m} style={th}>{tr(m)}</th>)}</tr></thead>
           <tbody>
             {vars.map(v => (
               <tr key={v.key}>
@@ -127,7 +128,7 @@ export default function KpiBaseInputsPanel({ year, scope, org, rows = [], base: 
                     <div style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('ใช้ในสูตร:')} {formulasUsingVar(v.key).join(' · ')}</div>
                   )}
                 </td>
-                {MONTHS.map((_, i) => {
+                {monthsShort().map((_, i) => {
                   const r = base.row(sk, v.key, i + 1);
                   const val = r?.value == null ? null : Number(r.value);
                   const k = `${sk}|${v.key}|${i + 1}`;
@@ -147,26 +148,23 @@ export default function KpiBaseInputsPanel({ year, scope, org, rows = [], base: 
   );
 
   return (
-    <details open={defaultOpen} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: '10px 16px' }}>
+    <details open={defaultOpen} style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 12, padding: '10px 16px' }}>
       <summary style={{ cursor: 'pointer', fontSize: 12.5, fontWeight: 800, color: 'var(--text)' }}>
-        ตัวเลขฐานจากบัญชี/SAP (กรอกเดือนละครั้ง) — ระบบคำนวณ %DL+OH · %RM · DSI · ยอดขาย/หัว ให้เอง
+        {tr("ตัวเลขฐานจากบัญชี/SAP (กรอกเดือนละครั้ง) — ระบบคำนวณ %DL+OH · %RM · DSI · ยอดขาย/หัว ให้เอง")}
         <span style={{ marginLeft: 8, fontSize: 11.5, fontWeight: 500, color: 'var(--muted)' }}>
-          ขอบเขต: {label} · {rows.length} {tr('ค่าในปี')} {year + 543}
+          {tr("ขอบเขต")}: {label} · {rows.length} {tr('ค่าในปี')} {year + 543}
         </span>
         {/* 📥 อยู่บนหัวแผง (19/10 · user: "หาที่อัพไฟล์ไม่เจอ") — แผงพับอยู่ก็ยังเห็น · กันไม่ให้คลิกไปสลับพับ/กาง */}
         {canManage && (
-          <button type="button" onClick={e => { e.preventDefault(); e.stopPropagation(); setImporting(true); }}
+          <ImportButton k="kpi_acct" onClick={e => { e.preventDefault(); e.stopPropagation(); setImporting(true); }}
             title={tr('อัพโหลด monthly report ของบัญชี (.xlsx/.xlsb) แล้วให้ระบบอ่านแถว/เดือนให้ ตรวจก่อนบันทึก')}
-            style={{ marginLeft: 10, padding: '4px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--accent)', background: 'var(--accent)', color: 'var(--accent-ink)', cursor: 'pointer', fontSize: 12, fontWeight: 700, verticalAlign: 'middle' }}>
-            {tr('นำเข้าจาก Excel บัญชี')}
-          </button>
+            style={{ marginLeft: 10, padding: '4px 12px', fontSize: 12, verticalAlign: 'middle' }} />
         )}
       </summary>
       <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap', marginTop: 6 }}>
         <InfoMore id="kpi-base-howto" size={11.5} label={tr('ตัวเลขฐานใช้ยังไง')} style={{ flex: 1, minWidth: 280 }}>
-          KPI ที่ตั้ง "ที่มาของตัวเลข = 🧮 คำนวณจากตัวเลขฐาน" (ปุ่ม ✏️ ของแถว) จะไม่ต้องกรอก % เอง — ระบบเอายอดเงินของหน่วย ÷ ยอดขายกลางของโรงงานให้ทุกเดือน ·
-          ช่องว่าง = ยังไม่มีตัวเลข (ไม่ใช่ 0) · เดือนที่ขาดตัวแปรใดตัวแปรหนึ่ง แถว KPI จะเขียนบอกว่าขาดอะไร ·
-          <b>≈ จาง = กำลังคนจากทะเบียนพนักงาน</b> (ยังไม่มีใครกรอก · ทะเบียนอาจไม่ครบ กรอกทับได้)
+          KPI {tr("ที่ตั้ง \"ที่มาของตัวเลข = 🧮 คำนวณจากตัวเลขฐาน\" (ปุ่ม ✏️ ของแถว) จะไม่ต้องกรอก % เอง — ระบบเอายอดเงินของหน่วย ÷ ยอดขายกลางของโรงงานให้ทุกเดือน · ช่องว่าง = ยังไม่มีตัวเลข (ไม่ใช่ 0) · เดือนที่ขาดตัวแปรใดตัวแปรหนึ่ง แถว KPI จะเขียนบอกว่าขาดอะไร")} ·
+          <b>≈ {tr("จาง = กำลังคนจากทะเบียนพนักงาน")}</b> ({tr("ยังไม่มีใครกรอก · ทะเบียนอาจไม่ครบ กรอกทับได้")})
         </InfoMore>
       </div>
       {importing && (
@@ -176,7 +174,7 @@ export default function KpiBaseInputsPanel({ year, scope, org, rows = [], base: 
       {block('🏭 ค่ากลางทั้งโรงงาน — คนกลางกรอกครั้งเดียว ทุกหน่วยใช้ตัวเดียวกัน', BASE_VARS_BY_LEVEL.plant, PLANT_BASE_KEY, plant && canManage,
         plant ? (canManage ? '' : (blockText || 'ดูได้อย่างเดียว — ต้องมีสิทธิ์ kpi:manage + ใบผ่านทั้งโรงงาน'))
           : <span>{tr('อ่านอย่างเดียวที่นี่ — กรอกที่ขอบเขต')} <b style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={onGoPlant}>{tr('ทั้งโรงงาน')}</b></span>)}
-      {block(plant ? '🏢 ยอดรวมทั้งโรงงาน (ตัวตั้งของ KPI ระดับโรงงาน)' : `🏢 ยอดเงินของ ${label} (กรอกยอดเงินอย่างเดียว ระบบหารให้)`,
+      {block(plant ? '🏢 ยอดรวมทั้งโรงงาน (ตัวตั้งของ KPI ระดับโรงงาน)' : `🏢 ${tr("ยอดเงินของ")} ${label} (${tr("กรอกยอดเงินอย่างเดียว ระบบหารให้")})`,
         BASE_VARS_BY_LEVEL.unit, mySk, canManage, canManage ? '' : (blockText || 'ดูได้อย่างเดียว'))}
     </details>
   );

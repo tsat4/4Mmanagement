@@ -591,3 +591,74 @@ test('lineGroupRoot: กรอบไลน์ลูกตัดสินที�
   const fam = M.lineFamilyDown(lines, 'HYDROFORM');
   assert.equal(M.lineStaffStatus({ familyLines: fam, attendance: { a: { shift: 'day', is_present: true } }, empById: { a: { line_id: 1 } }, shift: 'day' }).std, 14);
 });
+
+test('narrowDeptToLine: คนกรองตรงตาม line_id · ช่องตำแหน่งรายทีม = null (ไม่ใช่ 0) · std ของไลน์ · แผน vs มาจริงไม่คิดช่องว่าง', () => {
+  const fam = [{ id: 60, name: 'Line 60', std_day_shift: 6, std_night_shift: 6 }];
+  const P = (id, line_id, attend = 'present') => ({ id, line_id, attend, team: 'A', row: 'op' });
+  const d = { key: 'd1', name: 'APRON', opsTotal: 3, flex: [{ id: 'f' }],
+    cols: [{ team: 'A', shift: 'day', leaders: [], ops: [P('a', 60), P('b', 1), P('c', 60, 'leave')], slots: 2, slotSource: 'plan' },
+           { team: 'B', shift: 'night', leaders: [], ops: [P('d', 1)], slots: 1, slotSource: 'plan' }],
+    borrowed: [{ id: 'x', borrowed: { to: 'Line 60', shift: 'day' } }, { id: 'y', borrowed: { to: 'Line 61', shift: 'day' } }] };
+  const n = M.narrowDeptToLine(d, fam, 'Line 60');
+  assert.equal(n.opsTotal, 2); assert.equal(n.present, 1);
+  assert.equal(n.cols.length, 1);                       // ทีม B ไม่มีคนของไลน์นี้ = ไม่มีคอลัมน์
+  assert.equal(n.cols[0].slots, null); assert.equal(n.cols[0].slotSource, 'line');
+  assert.deepEqual(n.borrowed.map(b => b.id), ['x']);
+  assert.equal(n.plan.day, 6); assert.equal(n.flex.length, 0); assert.equal(n.lineFilter.hiddenFlex, 1);
+  const st = M.staffingOfDept(n);
+  assert.equal(st.day.structGap, null);                 // แยกลงไลน์ไม่ได้ ห้ามเป็น 0
+  assert.equal(st.day.std, 6); assert.equal(st.day.gap, 6 - st.day.onFloor);
+  // ไลน์ไม่มีคนสังกัดตรง = ว่าง (จอเขียนบอก) · ไม่รู้จักไลน์ = null
+  assert.equal(M.narrowDeptToLine({ ...d, cols: [{ ...d.cols[1] }] }, fam, 'Line 60').opsTotal, 0);
+  assert.equal(M.narrowDeptToLine(d, [], 'x'), null);
+});
+
+test('boardForLine: หัวผังคิดจากแผนกที่กรองถึงไลน์แล้ว (ไม่ใช่ยอดทั้งส่วนงาน)', () => {
+  const board = { top: [{ id: 'm' }], depts: [{}, {}], emptyDepts: ['X'], totals: { plan: 90, ops: 61, present: 23, borrowed: 4, flex: 2, members: 70 } };
+  const ld = [{ planTotal: 12, opsTotal: 3, present: 2, borrowed: [{}] }];
+  const b = M.boardForLine(board, ld);
+  assert.deepEqual([b.totals.plan, b.totals.ops, b.totals.present, b.totals.borrowed, b.totals.flex], [12, 3, 2, 1, 0]);
+  assert.equal(b.top.length, 1); assert.deepEqual(b.emptyDepts, []);
+  assert.equal(M.boardForLine(board, [{ planTotal: null, opsTotal: 0, present: 0, borrowed: [] }]).totals.plan, null);   // ไม่ตั้ง std = null ไม่ใช่ 0
+});
+
+test('lineDeptsOf: std ของไลน์นับครั้งเดียว — ถังไม่ระบุแผนกที่ครอบไลน์เดียวกันไม่บวก std ซ้ำ · ไม่มีคน = ไม่แสดง', () => {
+  const fam = [{ id: 7, name: 'HDF1', std_day_shift: 14, std_night_shift: 14 }];
+  const P = (id, line_id) => ({ id, line_id, attend: 'present', team: 'A', row: 'op' });
+  const real = { key: 'd1', lines: fam, opsTotal: 1, cols: [{ team: 'A', shift: 'day', leaders: [], ops: [P('a', 7)] }], borrowed: [] };
+  const none = { key: '__none__', lines: fam, opsTotal: 0, cols: [], borrowed: [] };
+  const other = { key: 'd2', lines: [{ id: 9 }], opsTotal: 1, cols: [], borrowed: [] };
+  let r = M.lineDeptsOf([none, real, other], fam, 'HDF1');
+  assert.deepEqual(r.map(d => d.key), ['d1']);                 // ถังไม่ระบุแผนกไม่มีคน = ไม่แสดง · แผนกที่ไม่ครอบไลน์ = ตัดออก
+  assert.equal(r.reduce((a, d) => a + (d.planTotal || 0), 0), 28);
+  const noneWithPeople = { ...none, opsTotal: 1, cols: [{ team: 'B', shift: 'night', leaders: [], ops: [P('z', 7)] }] };
+  r = M.lineDeptsOf([noneWithPeople, real], fam, 'HDF1');
+  assert.equal(r.length, 2); assert.equal(r[1].planTotal, null);   // มีคนจริง = แสดง แต่ไม่บวก std ซ้ำ
+  assert.equal(r.reduce((a, d) => a + (d.planTotal || 0), 0), 28);
+});
+
+test('narrowDeptToLine: คนสังกัดไลน์แม่ที่วันนี้ยืนจุดงานของไลน์ลูก = นับที่ไลน์ลูก (ไม่ต้องย้ายสังกัด)', () => {
+  const fam = [{ id: 60, name: 'Line 60', std_day_shift: 6 }];
+  const P = (id, line_id, log) => ({ id, line_id, attend: log?.is_present ? 'present' : 'unchecked', team: 'A', row: 'op', log });
+  const d = { key: 'd1', opsTotal: 3, cols: [{ team: 'A', shift: 'day', leaders: [],
+    ops: [P('a', 1, { is_present: true, assigned_line: 'ws60' }),   // สังกัดแม่ · วันนี้ยืนจุดของ Line 60
+          P('b', 1, { is_present: true, assigned_line: 'ws61' }),   // สังกัดแม่ · ยืนจุดของไลน์อื่น
+          P('c', 1, { is_present: false, assigned_line: 'ws60' })] }], borrowed: [] };   // ไม่มา = ไม่นับ
+  const n = M.narrowDeptToLine(d, fam, 'Line 60', { stationIds: new Set(['ws60']) });
+  assert.deepEqual(n.cols[0].ops.map(p => p.id), ['a']);
+  assert.equal(n.lineFilter.viaStation, 1); assert.equal(n.lineFilter.stations, 1);
+  // ไม่ผูกจุดงานให้ไลน์ลูก = นับได้แค่คนสังกัดตรง (จอบอกให้ผูกจุดงาน)
+  assert.equal(M.narrowDeptToLine(d, fam, 'Line 60').opsTotal, 0);
+});
+
+test('แผน vs มาจริง กรองถึงไลน์: ขาด = std − ยืนจริง · % หารด้วย std (ไม่ใช่ทะเบียนที่ = คนมาแล้ว 100% เสมอ)', () => {
+  const fam = [{ id: 61, name: 'Line 61', std_day_shift: 7, std_night_shift: 7 }];
+  const P = (id, st) => ({ id, line_id: 1, attend: 'present', team: 'B', row: 'op', log: { is_present: true, assigned_line: st } });
+  const d = { key: 'd', opsTotal: 5, cols: [{ team: 'B', shift: 'day', leaders: [], ops: [P('a', 'w'), P('b', 'w'), P('c', 'w'), P('e', 'w'), P('f', 'x')] }], borrowed: [] };
+  const n = M.narrowDeptToLine(d, fam, 'Line 61', { stationIds: new Set(['w']) });
+  const st = M.staffingOfDept(n);
+  assert.equal(st.day.onFloor, 4); assert.equal(st.day.registered, 4);
+  assert.equal(st.day.absentGap, 3);                  // 7 − 4 ไม่ใช่ 0
+  const sum = M.summarizeStaffing([{ date: '2026-11-23', depts: [{ key: 'd', name: 'x', shifts: st, lineMode: true }] }]);
+  assert.equal(sum[0].absentShort, 3); assert.equal(Math.round(sum[0].fill * 100), 57);   // 4/7 ไม่ใช่ 100%
+});

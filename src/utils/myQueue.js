@@ -25,6 +25,7 @@
    (เลขขั้นคนละความหมายระหว่างฟอร์ม JIG/DIE กับ MTN — กฎเหล็กใน CLAUDE.md)
    ═══════════════════════════════════════════════════════════════════════════ */
 import { personKey, normPersonName } from './actorStamp.js';
+import { moPrBlocked } from './moChase.js';
 import {
   canDoStep, moWaitMeta, offLoopWaitOf, approvalWaitsOnMe, sideAllows, STAGE_APPROVE_FIRST,
   canSignMtnApproval,
@@ -163,6 +164,25 @@ export function scopeStateOf(row, me) {
 /** แถวนี้อยู่ในขอบเขตของเราไหม — `sections: []` = ไม่จำกัด (เห็นทุกส่วนงาน)
  *  ⚠️ พฤติกรรมเหมือนเดิมเป๊ะ (แถวไม่ระบุส่วนงาน = false) — แค่ยืมคำตอบจาก `scopeStateOf` จุดเดียว */
 export const inMyScope = (row, me) => scopeStateOf(row, me) === 'in';
+
+/**
+ * ✍️ **"ใบนี้รอ *เรา* เซ็นรับทราบ (ผจก.ต้นสังกัด) ไหม"** — เจ้าของกฎที่เดียว
+ *
+ * 🔴 23/11 (หน้างานแจ้ง): *"แจ้งเตือนที่ 2 บอกมีรอ 1 ใบ กดเข้ามาเจอ 4 ใบ และเป็นใบถูกตีกลับ/รอยกเลิก"*
+ *    ต้นเหตุ: ป้ายในคิวนับด้วยกฎ 5 ข้อ (ฟอร์ม MTN · ยังไม่เซ็น · ไม่ใช่ใบที่ลายเซ็นบล็อกงาน ·
+ *    อยู่ในขอบเขตเรา · เราเซ็นได้จริง) แต่ **ตัวกรอง `?ack=pending` ในหน้า MO เช็คแค่ 2 ข้อแรก**
+ *    ⇒ กดจากป้ายแล้วเจอใบที่ไม่ใช่ของเรา/เซ็นไม่ได้/ใบตีกลับ ปนมาด้วย
+ *    **ป้ายกับลิสต์ที่ป้ายพาไป ต้องใช้กฎเดียวกันเสมอ** — ไม่งั้นเลขไม่ตรงและคนเลิกเชื่อป้าย
+ * 🔴 ห้ามเขียนเงื่อนไขชุดนี้ซ้ำในหน้า (มีด่าน `ack-queue-single-rule`)
+ */
+export function ackWaitsOnMe(o, me = {}) {
+  if (!o || !isMtnFormRow(o) || o.dept_manager_at) return false;
+  if (isApprovalBlocked(o)) return false;          // ใบที่ลายเซ็นนี้บล็อกงานจริง = ขึ้นเป็นรายการของตัวเองแล้ว
+  if (scopeStateOf(o, me) !== 'in') return false;  // ผจก.เห็นเฉพาะใบของส่วนงานตัวเอง
+  return canSignMtnApproval('dept', {
+    order: o, fullName: me.name || '', can: me.can || (() => false), isShared: !!me.isShared,
+  }).ok;
+}
 
 /* ── ขั้นที่ "ตำแหน่งเดียวเซ็นได้" — นับเป็นงานรอคุณ (2026-10-13 · คำสั่ง user) ──────────────
    *"อย่างอนุมัติ MO สำหรับช่องที่คนเซ็นคือ ผู้จัดการฝ่ายผู้แจ้ง ต้องอนุมัติและอนุมัติได้คนเดียว
@@ -304,8 +324,7 @@ export function buildQueue(src = {}, me = {}, now = new Date()) {
     /* 🔴 ใบที่ลายเซ็นนี้ **บล็อกงานจริง** (งานปรับปรุง/สร้าง) ไม่เข้าป้ายนี้ — มันขึ้นเป็นรายการ
        ของตัวเองอยู่แล้วผ่าน moWaitMeta/approvalWaitsOnMe · นับซ้ำ = badge เกินจริง
        และป้ายนี้เขียนว่า "ไม่บล็อกงาน" ซึ่งจะกลายเป็นคำโกหกสำหรับใบที่บล็อกอยู่ */
-    if (isMtnFormRow(o) && !o.dept_manager_at && !isApprovalBlocked(o) && scopeStateOf(o, me) === 'in'
-        && canSignMtnApproval('dept', { order: o, fullName: me.name || '', can: me.can || (() => false), isShared: !!me.isShared }).ok) {
+    if (ackWaitsOnMe(o, me)) {
       ackCount += 1;
       const aAge = ageDays(o.work_date, now);
       if (aAge != null && (ackOldest == null || aAge > ackOldest)) ackOldest = aAge;
@@ -315,7 +334,13 @@ export function buildQueue(src = {}, me = {}, now = new Date()) {
     if (!w.meta) continue;
     if (w.byName && isMeAmong(w, me)) { mine.push(moItem(o, w, TIER.MINE)); continue; }
     // ขั้นล็อกตำแหน่งที่เราเซ็นได้คนเดียว (ในขอบเขตเรา) ⇒ รอคุณ + ขึ้นก่อน (soleSignerFor ข้างบน)
-    if (!w.byName && soleSignerFor(o, w, me) && scopeStateOf(o, me) === 'in') {
+    /* 🛒 23/11 (หน้างาน: *"รอเรา 7 ใบ แต่เป็นใบอยู่ loop pr ซึ่งมันไม่ได้รอเราไง"*)
+       ใบที่ลูปจัดซื้อยังไม่จบ = **กดอนุมัติไม่ได้จริง** (ด่าน `moCloseGate` บล็อกตอนกด)
+       ⇒ ห้ามนับเป็น "รอคุณเซ็น" · คนที่ต้องลงมือคือช่าง/จัดซื้อ ไม่ใช่ ผจก.
+       🔴 ใช้ `moPrBlocked()` ตัวเดียวกับป้ายสถานะในหน้า MO — ห้ามเทียบ PR เองที่นี่
+       🔴 ไม่ได้ส่ง `prOf` มา (ผู้เรียกไม่มีข้อมูล PR) = พฤติกรรมเดิมเป๊ะ ไม่ตัดอะไรทิ้ง */
+    if (!w.byName && soleSignerFor(o, w, me) && scopeStateOf(o, me) === 'in'
+        && !moPrBlocked(o, src.prOf ? src.prOf(o) : null)) {
       mine.push({ ...moItem(o, w, TIER.MINE), sign: true, tag: '✍️ รอคุณเซ็น' });
       /* สะสมไว้ทำ "ป้ายคาไว้" บรรทัดเดียวต่อขั้น (คำสั่ง user 22/10) — ดู signRollup ข้างล่าง */
       const sk = w.meta.stage || `step${w.step}`;

@@ -17,6 +17,7 @@ import {
   ResponsiveContainer, LineChart, BarChart, Line, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, ReferenceLine, Cell, LabelList,
 } from 'recharts';
+import { chartAnim } from '../utils/motion';
 import { supabase, supabaseDR } from '../supabaseClient';
 import { fetchByIds, fetchAllPages } from '../utils/fetchByIds';
 import { toast } from '../components/Toast';
@@ -64,7 +65,7 @@ import SearchInput from '../components/SearchInput';
 import { ALL, allOf } from '../utils/filterLabels';
 import { shortTick, fmtAxis, CELL_BAR_FILL } from '../utils/chartAxis';
 import { DeleteButton } from '../components/IconButton';
-import { tr as trI18n } from '../utils/i18n';
+import { tr as trI18n, dateLocale } from '../utils/i18n';
 import { tint } from '../utils/statusTone';
 import { itemAsChar, itemLabel, matchCharToItem, groupRowsByItem, POINT_FILTERS, pointPasses, sortPoints, CPK_OK } from '../utils/qaSpcSource';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 /* 📥 CSV ค่าวัด SPC + สรุป Cp-Cpk (16/11) — CSV = เอกสาร ⇒ ชื่อไฟล์ผ่านทะเบียน /doc-forms */
@@ -99,7 +100,7 @@ function getCurrentShift() {
   const h = new Date().getHours();
   return (h >= 8 && h < 20) ? 'day' : 'night';
 }
-const fmtD = (s) => s ? new Date(s + (s.length === 10 ? 'T00:00:00' : '')).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }) : '—';
+const fmtD = (s) => s ? new Date(s + (s.length === 10 ? 'T00:00:00' : '')).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short', year: '2-digit' }) : '—';
 
 /* ── SPC constants (AIAG SPC manual, subgroup size n = 2..10) ──────────────
    n=1 ใช้ I-MR chart: X limits = X̄ ± 2.66·MR̄ (E2), d2 = 1.128 */
@@ -267,7 +268,7 @@ function Modal({ title, onClose, children, width = 560 }) {
       /* ตั้งใจไม่ปิดเมื่อคลิกพื้นหลัง — กันเผลอกดแล้วข้อมูลในฟอร์มหาย ปิดได้จากปุ่ม ✕/ยกเลิกเท่านั้น */
     >
       <div style={{
-        background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)',
+        background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)',
         width: `min(${width}px, 96vw)`, boxShadow: 'var(--shadow-lg)', maxHeight: '90vh',
         display: 'flex', flexDirection: 'column',
       }}>
@@ -408,10 +409,10 @@ function QualityDashboard() {
       ]);
       if (!alive) return;
       const errs = [];
-      if (ssErr) errs.push(`กะผลิต: ${ssErr.message}`);
-      else if ((ss || []).length >= 1000) errs.push('กะผลิตเกิน 1,000 กะ — ตัวเลขอาจไม่ครบ ลองย่อช่วงวันที่');
-      if (ooRes.error || ooRes.truncated) errs.push(`ใบผลิต: ${ooRes.error || 'โหลดไม่ครบ'}`);
-      if (ddRes.error || ddRes.truncated) errs.push(`ของเสีย: ${ddRes.error || 'โหลดไม่ครบ'}`);
+      if (ssErr) errs.push(`${trI18n("กะผลิต")}: ${ssErr.message}`);
+      else if ((ss || []).length >= 1000) errs.push(trI18n("กะผลิตเกิน 1,000 กะ — ตัวเลขอาจไม่ครบ ลองย่อช่วงวันที่"));
+      if (ooRes.error || ooRes.truncated) errs.push(`${trI18n("ใบผลิต")}: ${ooRes.error || trI18n('โหลดไม่ครบ')}`);
+      if (ddRes.error || ddRes.truncated) errs.push(`${trI18n("ของเสีย")}: ${ddRes.error || trI18n('โหลดไม่ครบ')}`);
       if (ncrErr) errs.push(`NCR: ${ncrErr.message}`);
       if (capaErr) errs.push(`CAPA: ${capaErr.message}`);
       setLoadErr(errs);
@@ -533,7 +534,7 @@ function QualityDashboard() {
         <span className="filter-label">{trI18n('ไลน์')}</span>
         <LineSelect lines={allLines.filter(l => lineOptions.includes(l.name))} includeRetired
           value={lineFilter} onChange={setLineFilter} placeholder={ALL.line} extraAt="end"
-          extraGroups={[{ label: 'ไม่อยู่ในทะเบียนไลน์', options: lineOptions.filter(n => !allLines.some(l => l.name === n)).map(n => ({ value: n })) }]} />
+          extraGroups={[{ label: trI18n("ไม่อยู่ในทะเบียนไลน์"), options: lineOptions.filter(n => !allLines.some(l => l.name === n)).map(n => ({ value: n })) }]} />
         <span className="filter-label">{trI18n('ชิ้นงาน')}</span>
         <SearchSelect value={productFilter || ''} placeholder={allOf('ชิ้นงาน')} style={{ minWidth: 200, maxWidth: 320 }}
           options={productOptions.map(p => ({ id: p.key, label: p.label, sub: p.key !== p.label ? p.key : '', keywords: p.key }))}
@@ -543,7 +544,7 @@ function QualityDashboard() {
 
       {loadErr.length > 0 && (
         <div role="alert" style={{ padding: '8px 12px', borderRadius: 'var(--r-md)', border: '1px solid #e05252', color: '#e05252', fontSize: 12.5, fontWeight: 700 }}>
-          ⚠️ ข้อมูลบางส่วนโหลดไม่สำเร็จ — ตัวเลขด้านล่างอาจต่ำกว่าจริง: {loadErr.join(' · ')}
+          ⚠️ {trI18n("ข้อมูลบางส่วนโหลดไม่สำเร็จ — ตัวเลขด้านล่างอาจต่ำกว่าจริง")}: {loadErr.join(' · ')}
         </div>
       )}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -551,11 +552,11 @@ function QualityDashboard() {
             และ **ยอดผลิต/NG ถูกทาเขียวเมื่อ 0** ทั้งที่ "ผลิต 0 ชิ้น" ไม่ใช่เรื่องดี
             (0 ของ NG = ดีจริง · 0 ของยอดผลิต = ยังไม่มีข้อมูล ⇒ คนละเรื่อง ห้ามใช้สีเดียวกัน)
             เกณฑ์ PPM/FTT ที่หน้านี้ตั้งเอง เขียนกำกับไว้ใน `sub` แล้ว (UI §6.18 ข้อ 5) */}
-        <KpiCard label={trI18n('ยอดผลิตรวม')} value={stat.total.toLocaleString()} unit="ชิ้น"
-          sub={productFilter ? `ชิ้นงาน: ${productOptions.find(p => p.key === productFilter)?.label || productFilter}` : `${shownSessions.length} กะที่ปิดแล้ว${lineFilter ? ` · ${lineFilter}` : ''}`} />
-        <KpiCard label={trI18n('ของเสียรวม (NG)')} value={stat.ng.toLocaleString()} unit="ชิ้น"
+        <KpiCard label={trI18n('ยอดผลิตรวม')} value={stat.total.toLocaleString()} unit={trI18n("ชิ้น")}
+          sub={productFilter ? `${trI18n("ชิ้นงาน")}: ${productOptions.find(p => p.key === productFilter)?.label || productFilter}` : `${shownSessions.length} ${trI18n("กะที่ปิดแล้ว")}${lineFilter ? ` · ${lineFilter}` : ''}`} />
+        <KpiCard label={trI18n('ของเสียรวม (NG)')} value={stat.ng.toLocaleString()} unit={trI18n("ชิ้น")}
           color={statusColor(toneOf({ value: stat.ng, zeroIsGood: true }))}
-          sub={`${stat.total + stat.ng > 0 ? `จากผลิตจริง ${(stat.total + stat.ng).toLocaleString()} ชิ้น` : 'ยังไม่มีข้อมูล'}${stat.pendingSuspect ? ` · ⏳ ของสงสัยรอ QA ${stat.pendingSuspect.toLocaleString()} ชิ้น (ยังไม่นับ — PPM/FTT ยังไม่สรุป)` : ''}`} />
+          sub={`${stat.total + stat.ng > 0 ? `${trI18n("จากผลิตจริง")} ${(stat.total + stat.ng).toLocaleString()} ${trI18n("ชิ้น")}` : trI18n('ยังไม่มีข้อมูล')}${stat.pendingSuspect ? ` · ⏳ ${trI18n("ของสงสัยรอ")} QA ${stat.pendingSuspect.toLocaleString()} ${trI18n("ชิ้น (ยังไม่นับ — PPM/FTT ยังไม่สรุป")})` : ''}`} />
         {/* 🔢 PPM = ชิ้นต่อล้าน ⇒ จำนวนเต็มเสมอ (`fmtPpm` · oee.js §7.3 · feedback 16/11)
             ยอดผลิตยังไม่ถูกบันทึกแต่มีของเสีย = คิดไม่ได้ ⇒ ขีด **พร้อมเขียนเหตุบนจอ** ห้ามโชว์ 1,000,000 */}
         <KpiCard primary label={trI18n('PPM — ของเสียต่อล้านชิ้น')} value={stat.ppm != null ? fmtPpm(stat.ppm) : null}
@@ -568,9 +569,9 @@ function QualityDashboard() {
           color={stat.ftt == null ? 'var(--text)'
             : statusColor(stat.ftt >= 99 ? 'good' : stat.ftt >= 97 ? 'warn' : 'bad')}
           sub={trI18n('เกณฑ์จอนี้: เขียว ≥ 99% · เหลือง ≥ 97%')} />
-        <KpiCard label={trI18n('NCR เปิดค้าง')} value={ncrOpen} unit="ใบ"
+        <KpiCard label={trI18n('NCR เปิดค้าง')} value={ncrOpen} unit={trI18n("ใบ")}
           color={statusColor(toneOf({ value: ncrOpen, zeroIsGood: true, over: 'warn' }))} sub={trI18n('ยังไม่ปิดรายการ')} />
-        <KpiCard label={trI18n('CAPA เกินกำหนด')} value={capaOverdue} unit="ใบ"
+        <KpiCard label={trI18n('CAPA เกินกำหนด')} value={capaOverdue} unit={trI18n("ใบ")}
           color={statusColor(toneOf({ value: capaOverdue, zeroIsGood: true }))} sub={trI18n('เลย due date')} />
       </div>
 
@@ -582,8 +583,8 @@ function QualityDashboard() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--muted)' }} />
               <YAxis tickFormatter={fmtAxis} width="auto" tick={{ fontSize: 11, fill: 'var(--muted)' }} />
-              <Tooltip contentStyle={{ background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 8, fontSize: 12 }} />
-              <Line type="monotone" dataKey="ppm" name="PPM" stroke="var(--red)" strokeWidth={2} dot={{ r: 2.5 }} connectNulls />
+              <Tooltip contentStyle={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 8, fontSize: 12 }} />
+              <Line {...chartAnim()} type="monotone" dataKey="ppm" name="PPM" stroke="var(--red)" strokeWidth={2} dot={{ r: 2.5 }} connectNulls />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -598,9 +599,9 @@ function QualityDashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis dataKey="line" tick={{ fontSize: 11, fill: 'var(--muted)' }} interval={0} angle={-35} textAnchor="end" height={64} tickFormatter={shortTick(12)} />
                 <YAxis tickFormatter={fmtAxis} width="auto" tick={{ fontSize: 11, fill: 'var(--muted)' }} />
-                <Tooltip contentStyle={{ background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 8, fontSize: 12 }}
+                <Tooltip contentStyle={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 8, fontSize: 12 }}
                   formatter={(v, name) => [name === 'PPM' ? Number(v).toLocaleString() : v, name]} />
-                <Bar dataKey="ng" name="NG (ชิ้น)" fill="var(--red)" opacity={0.85} radius={[3, 3, 0, 0]}>
+                <Bar {...chartAnim()} dataKey="ng" name="NG (ชิ้น)" fill="var(--red)" opacity={0.85} radius={[3, 3, 0, 0]}>
                   <LabelList dataKey="ppm" position="top" formatter={v => v ? `${Number(v).toLocaleString()} ppm` : ''} style={{ fontSize: 11, fill: 'var(--muted)' }} />
                 </Bar>
               </BarChart>
@@ -618,7 +619,7 @@ function QualityDashboard() {
         {stat.pareto.length === 0 ? (
           <div style={{ color: 'var(--muted)', fontSize: 12, padding: 30, textAlign: 'center' }}>{trI18n('ไม่มีข้อมูลของเสียในช่วงนี้')}</div>
         ) : (
-          <ParetoChart rows={stat.pareto} unit="ชิ้น" height={300} />
+          <ParetoChart rows={stat.pareto} unit={trI18n("ชิ้น")} height={300} />
         )}
       </div>
     </div>
@@ -711,7 +712,7 @@ function SPCTab({ lineObjs, canRecord, canManage, canExport = false, partOpts = 
       .order('work_date', { ascending: false }).order('created_at', { ascending: false })
       .limit(n);
     if (req !== rowsReq.current) return;
-    if (error) toast.error(`โหลดค่าที่วัดไม่สำเร็จ: ${error.message}`);
+    if (error) toast.error(`${trI18n("โหลดค่าที่วัดไม่สำเร็จ")}: ${error.message}`);
     setRows((data || []).reverse()); // เรียงเก่า→ใหม่สำหรับกราฟ
     setLoading(false);
   }, []);
@@ -755,7 +756,7 @@ function SPCTab({ lineObjs, canRecord, canManage, canExport = false, partOpts = 
         .eq('qa_inspection_sheets.part_id', partId).eq('item_type', 'variable'));
       if (!alive) return;
       setPartRes({ part: partId, byItem: groupRowsByItem(rows), loading: false,
-        err: error ? `โหลดค่าจากใบตรวจไม่สำเร็จ: ${error}` : truncated ? 'ค่าวัดของชิ้นงานนี้เยอะเกินเพดาน — แสดงไม่ครบ' : null });
+        err: error ? `${trI18n("โหลดค่าจากใบตรวจไม่สำเร็จ")}: ${error}` : truncated ? 'ค่าวัดของชิ้นงานนี้เยอะเกินเพดาน — แสดงไม่ครบ' : null });
     })();
     return () => { alive = false; };
   }, [partId]);
@@ -837,7 +838,7 @@ function SPCTab({ lineObjs, canRecord, canManage, canExport = false, partOpts = 
     const { error } = f.id
       ? await supabase.from('qa_characteristics').update(payload).eq('id', f.id)
       : await supabase.from('qa_characteristics').insert({ ...payload, created_by: fullName || null });
-    if (error) { toast.error(`บันทึกไม่สำเร็จ: ${error.message}`); return; }
+    if (error) { toast.error(`${trI18n("บันทึกไม่สำเร็จ")}: ${error.message}`); return; }
     toast.success('บันทึกจุดควบคุมแล้ว ✓');
     setCharModal(null);
     loadChars();
@@ -852,12 +853,12 @@ function SPCTab({ lineObjs, canRecord, canManage, canExport = false, partOpts = 
     if (!sel) return;
     if (!selWrite.ok) { toast.info(writeBlockText(selWrite, { what: 'ผลวัดของไลน์นี้' })); return; }
     const vals = readings.map(v => Number(v));
-    if (readings.some(v => v === '' || !Number.isFinite(Number(v)))) { toast.error(`กรอกค่าวัดให้ครบ ${sel.subgroup_size} ค่า`); return; }
+    if (readings.some(v => v === '' || !Number.isFinite(Number(v)))) { toast.error(`${trI18n("กรอกค่าวัดให้ครบ")} ${sel.subgroup_size} ${trI18n("ค่า")}`); return; }
     const { error } = await supabase.from('qa_measurements').insert({
       characteristic_id: sel.id, work_date: getWorkDate(), shift: getCurrentShift(),
       readings: vals, operator_name: fullName || null, created_by: fullName || null,
     });
-    if (error) { toast.error(`บันทึกไม่สำเร็จ: ${error.message}`); return; }
+    if (error) { toast.error(`${trI18n("บันทึกไม่สำเร็จ")}: ${error.message}`); return; }
     toast.success('บันทึกผลวัดแล้ว ✓');
     setReadings(Array(sel.subgroup_size).fill(''));
     loadRows('manual', sel.id, limitN);
@@ -889,8 +890,8 @@ function SPCTab({ lineObjs, canRecord, canManage, canExport = false, partOpts = 
   const partLabel = partOpts2.find(o => o.id === partId)?.label || '';
   const askIfPartial = async () => {
     if (!isSheet || !partRes.err) return true;
-    toast.error(`ข้อมูลไม่ครบ: ${partRes.err}`);
-    return await askConfirm(`⚠️ ${partRes.err}\n\nไฟล์ที่ได้จะไม่ครบ (ชื่อไฟล์จะติดคำว่า "ไม่ครบ")\nดาวน์โหลดต่อไหม?`);
+    toast.error(`${trI18n("ข้อมูลไม่ครบ")}: ${partRes.err}`);
+    return await askConfirm(`⚠️ ${partRes.err}\n\n${trI18n("ไฟล์ที่ได้จะไม่ครบ (ชื่อไฟล์จะติดคำว่า \"ไม่ครบ\")\\nดาวน์โหลดต่อไหม")}?`);
   };
   const partialTag = () => (isSheet && partRes.err ? 'ไม่ครบ' : '');
 
@@ -907,7 +908,7 @@ function SPCTab({ lineObjs, canRecord, canManage, canExport = false, partOpts = 
       ? csvStamp(['qa_spc_values', partLabel, `last${limitN}`, partialTag()])
       : csvStamp(['qa_spc_values', sel?.part_no, sel?.characteristic, `last${limitN}`]);
     downloadCsvDoc('csv_qa_spc_values', name, csvText(QA_SPC_VALUE_HEADERS, csvRows));
-    toast.success(`ส่งออก ${csvRows.length.toLocaleString()} ค่าวัด จาก ${groups.length} จุด ✓`);
+    toast.success(`${trI18n("ส่งออก")} ${csvRows.length.toLocaleString()} ${trI18n("ค่าวัด จาก")} ${groups.length} ${trI18n("จุด")} ✓`);
   };
 
   const exportSpcSummary = async () => {
@@ -920,7 +921,7 @@ function SPCTab({ lineObjs, canRecord, canManage, canExport = false, partOpts = 
     if (!await askIfPartial()) return;
     downloadCsvDoc('csv_qa_spc_summary', csvStamp(['qa_spc_summary', partLabel, `last${limitN}`, partialTag()]),
       csvText(QA_SPC_SUMMARY_HEADERS, qaSpcSummaryRows(stats)));
-    toast.success(`ส่งออกสรุป ${stats.length} จุด ✓`);
+    toast.success(`${trI18n("ส่งออกสรุป")} ${stats.length} ${trI18n("จุด")} ✓`);
   };
 
   return (
@@ -938,7 +939,7 @@ function SPCTab({ lineObjs, canRecord, canManage, canExport = false, partOpts = 
               onChange={({ id }) => { if (id) pickPart(id); }} />
             <Segmented label={trI18n('แสดง')} value={pointFilter} onChange={setPointFilter}
               options={POINT_FILTERS.map(f => ({ ...f, label: `${trI18n(f.label)} ${pointCounts[f.value] ?? 0}` }))} />
-            <SearchInput value={pointQ} onChange={setPointQ} fields="เลขบอลลูน / ชื่อจุด" />
+            <SearchInput value={pointQ} onChange={setPointQ} fields={trI18n("เลขบอลลูน / ชื่อจุด")} />
           </>
         ) : (
           <>
@@ -954,7 +955,7 @@ function SPCTab({ lineObjs, canRecord, canManage, canExport = false, partOpts = 
             {chars.length === 0 && <option value="">{trI18n('— ยังไม่มีจุดควบคุม กด "+ เพิ่มจุดควบคุม" —')}</option>}
             {shownChars.map(c => (
               <option key={c.id} value={c.id}>
-                {c.part_no} · {c.characteristic}{c.unit ? ` (${c.unit})` : ''}{c.is_active ? '' : ' [ปิดใช้งาน]'}
+                {c.part_no} · {c.characteristic}{c.unit ? ` (${c.unit})` : ''}{c.is_active ? '' : trI18n(" [ปิดใช้งาน]")}
               </option>
             ))}
           </select>
@@ -1028,7 +1029,7 @@ function SPCTab({ lineObjs, canRecord, canManage, canExport = false, partOpts = 
                       <td style={{ ...tdSt, textAlign: 'right' }}>{st.n || '—'}</td>
                       <td style={{ ...tdSt, textAlign: 'right', fontFamily: 'monospace', fontSize: 12 }}>{fmtNum(st.mean)}</td>
                       <td style={{ ...tdSt, textAlign: 'right', fontWeight: 800, color: cpkColor(st.cpk) }}
-                        title={st.cpk == null ? (st.n ? 'คิด Cpk ไม่ได้ (ค่าน้อยไป หรือค่าเท่ากันหมด หรือไม่มี spec)' : 'ยังไม่มีค่าในใบตรวจ') : (st.cpk < CPK_OK ? 'ต่ำกว่า 1.33' : '')}>{fmtNum(st.cpk, 2)}</td>
+                        title={st.cpk == null ? (st.n ? trI18n("คิด Cpk ไม่ได้ (ค่าน้อยไป หรือค่าเท่ากันหมด หรือไม่มี spec)") : trI18n("ยังไม่มีค่าในใบตรวจ")) : (st.cpk < CPK_OK ? trI18n("ต่ำกว่า 1.33") : '')}>{fmtNum(st.cpk, 2)}</td>
                       <td style={{ ...tdSt, textAlign: 'right', fontWeight: st.oos ? 800 : 400, color: st.oos ? 'var(--red)' : 'var(--muted)' }}>{st.n ? st.oos : '—'}</td>
                       <td style={{ ...tdSt, textAlign: 'right', fontFamily: 'monospace', fontSize: 12 }}>{st.last ?? '—'}{st.lastDate ? <span style={{ color: 'var(--muted)', marginLeft: 6 }}>{fmtD(st.lastDate)}</span> : null}</td>
                     </tr>
@@ -1055,12 +1056,12 @@ function SPCTab({ lineObjs, canRecord, canManage, canExport = false, partOpts = 
       {sel && spcExcluded > 0 && (
         <div style={{ ...cardSt, borderColor: 'var(--amber-line)', background: 'var(--amber-dim)' }}>
           <div style={{ fontWeight: 800, fontSize: 13, color: 'var(--amber)', marginBottom: 4 }}>
-            ⚠️ ตัดออก {spcExcluded} กลุ่มที่จำนวนค่าวัดไม่ตรง n={sel.subgroup_size}
+            ⚠️ {trI18n("ตัดออก")} {spcExcluded} {trI18n("กลุ่มที่จำนวนค่าวัดไม่ตรง")} n={sel.subgroup_size}
           </div>
           <div style={{ fontSize: 12, color: 'var(--text2)' }}>
-            ค่าคงที่ control chart (A2/D3/D4/d2) ผูกกับขนาด subgroup คงที่ — กลุ่มที่กรอกไม่ครบ/เกินจะทำ Cpk เพี้ยน จึงไม่ถูกนำมาคำนวณ
-            {spc ? ` (คำนวณจาก ${spc.points.length} กลุ่มที่ครบ n)` : ' — ทุกกลุ่มถูกตัดออก จึงยังคำนวณไม่ได้'}
-            {' '}{trI18n('· แก้โดยกรอกค่าวัดให้ครบ')} {sel.subgroup_size} ค่าต่อกลุ่ม หรือปรับ n ของจุดควบคุมให้ตรงกับที่วัดจริง
+            {trI18n("ค่าคงที่ control chart (A2/D3/D4/d2) ผูกกับขนาด subgroup คงที่ — กลุ่มที่กรอกไม่ครบ/เกินจะทำ Cpk เพี้ยน จึงไม่ถูกนำมาคำนวณ")}
+            {spc ? ` (${trI18n("คำนวณจาก")} ${spc.points.length} ${trI18n("กลุ่มที่ครบ")} n)` : trI18n(" — ทุกกลุ่มถูกตัดออก จึงยังคำนวณไม่ได้")}
+            {' '}{trI18n('· แก้โดยกรอกค่าวัดให้ครบ')} {sel.subgroup_size} {trI18n("ค่าต่อกลุ่ม หรือปรับ n ของจุดควบคุมให้ตรงกับที่วัดจริง")}
           </div>
         </div>
       )}
@@ -1088,9 +1089,9 @@ function SPCTab({ lineObjs, canRecord, canManage, canExport = false, partOpts = 
               <div style={{ fontWeight: 800, fontSize: 13, color: 'var(--red)', marginBottom: 4 }}>{trI18n('⚠️ พบสัญญาณผิดปกติบน control chart')} {violations.length} {trI18n('จุด')}</div>
               <div style={{ fontSize: 12, color: 'var(--text2)' }}>
                 {violations.slice(0, 6).map(p =>
-                  `กลุ่ม #${p.idx} (${fmtD(p.date)}): ${[p.oocX && 'X̄ เกิน control limit', p.oocR && 'R เกิน control limit', p.run && 'run ≥7 จุดข้างเดียวของ CL'].filter(Boolean).join(', ')}`
-                ).join(' · ')}{violations.length > 6 ? ` · และอีก ${violations.length - 6} จุด` : ''}
-                {' — ตรวจสอบ process แล้วบันทึก NCR/CAPA หากยืนยันความผิดปกติ'}
+                  `${trI18n("กลุ่ม")} #${p.idx} (${fmtD(p.date)}): ${[p.oocX && 'X̄ เกิน control limit', p.oocR && 'R เกิน control limit', p.run && 'run ≥7 จุดข้างเดียวของ CL'].filter(Boolean).join(', ')}`
+                ).join(' · ')}{violations.length > 6 ? ` · ${trI18n("และอีก")} ${violations.length - 6} ${trI18n("จุด")}` : ''}
+                {trI18n(" — ตรวจสอบ process แล้วบันทึก NCR/CAPA หากยืนยันความผิดปกติ")}
               </div>
             </div>
           )}
@@ -1105,14 +1106,14 @@ function SPCTab({ lineObjs, canRecord, canManage, canExport = false, partOpts = 
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                     <XAxis dataKey="idx" tick={{ fontSize: 11, fill: 'var(--muted)' }} />
                     <YAxis width="auto" domain={['auto', 'auto']} tick={{ fontSize: 11, fill: 'var(--muted)' }} tickFormatter={v => Number(v).toFixed(2)} />
-                    <Tooltip contentStyle={{ background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 8, fontSize: 12 }}
-                      labelFormatter={i => `กลุ่ม #${i}`} />
+                    <Tooltip contentStyle={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 8, fontSize: 12 }}
+                      labelFormatter={i => `${trI18n("กลุ่ม")} #${i}`} />
                     <ReferenceLine y={spc.uclX} stroke="var(--red)" strokeDasharray="5 3" label={{ value: `UCL ${fmtNum(spc.uclX)}`, fontSize: 11, fill: 'var(--red)', position: 'right' }} />
                     <ReferenceLine y={spc.xbarbar} stroke="var(--green)" label={{ value: `CL ${fmtNum(spc.xbarbar)}`, fontSize: 11, fill: 'var(--green)', position: 'right' }} />
                     <ReferenceLine y={spc.lclX} stroke="var(--red)" strokeDasharray="5 3" label={{ value: `LCL ${fmtNum(spc.lclX)}`, fontSize: 11, fill: 'var(--red)', position: 'right' }} />
                     {spc.usl != null && <ReferenceLine y={spc.usl} stroke="var(--amber)" strokeDasharray="2 3" label={{ value: 'USL', fontSize: 11, fill: 'var(--amber)', position: 'right' }} />}
                     {spc.lsl != null && <ReferenceLine y={spc.lsl} stroke="var(--amber)" strokeDasharray="2 3" label={{ value: 'LSL', fontSize: 11, fill: 'var(--amber)', position: 'right' }} />}
-                    <Line type="linear" dataKey="xbar" name={sel.subgroup_size === 1 ? 'X' : 'X̄'} stroke="var(--blue)" strokeWidth={2} dot={dot('xbar')} isAnimationActive={false} />
+                    <Line type="linear" dataKey="xbar" name={sel.subgroup_size === 1 ? 'X' : 'X̄'} stroke="var(--blue)" strokeWidth={2} dot={dot('xbar')} {...chartAnim()} />
                   </LineChart>
                 </ResponsiveContainer>
               ) : <div style={{ color: 'var(--muted)', fontSize: 12, padding: 30, textAlign: 'center' }}>{viewLoading ? trI18n('กำลังโหลด…') : trI18n('ยังไม่มีผลวัด')}</div>}
@@ -1127,11 +1128,11 @@ function SPCTab({ lineObjs, canRecord, canManage, canExport = false, partOpts = 
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                     <XAxis dataKey="idx" tick={{ fontSize: 11, fill: 'var(--muted)' }} />
                     <YAxis width="auto" domain={[0, 'auto']} tick={{ fontSize: 11, fill: 'var(--muted)' }} tickFormatter={v => Number(v).toFixed(2)} />
-                    <Tooltip contentStyle={{ background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 8, fontSize: 12 }}
-                      labelFormatter={i => `กลุ่ม #${i}`} />
+                    <Tooltip contentStyle={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 8, fontSize: 12 }}
+                      labelFormatter={i => `${trI18n("กลุ่ม")} #${i}`} />
                     {spc.uclR != null && <ReferenceLine y={spc.uclR} stroke="var(--red)" strokeDasharray="5 3" label={{ value: `UCL ${fmtNum(spc.uclR)}`, fontSize: 11, fill: 'var(--red)', position: 'right' }} />}
                     {spc.rbar != null && <ReferenceLine y={spc.rbar} stroke="var(--green)" label={{ value: `CL ${fmtNum(spc.rbar)}`, fontSize: 11, fill: 'var(--green)', position: 'right' }} />}
-                    <Line type="linear" dataKey="range" name="R" stroke="var(--blue)" strokeWidth={2} dot={dot('range')} isAnimationActive={false} connectNulls />
+                    <Line type="linear" dataKey="range" name="R" stroke="var(--blue)" strokeWidth={2} dot={dot('range')} {...chartAnim()} connectNulls />
                   </LineChart>
                 </ResponsiveContainer>
               ) : <div style={{ color: 'var(--muted)', fontSize: 12, padding: 30, textAlign: 'center' }}>—</div>}
@@ -1146,10 +1147,10 @@ function SPCTab({ lineObjs, canRecord, canManage, canExport = false, partOpts = 
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                     <XAxis dataKey="x" tick={{ fontSize: 11, fill: 'var(--muted)' }} />
                     <YAxis tickFormatter={fmtAxis} width="auto" allowDecimals={false} tick={{ fontSize: 11, fill: 'var(--muted)' }} />
-                    <Tooltip contentStyle={{ background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 8, fontSize: 12 }}
+                    <Tooltip contentStyle={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 8, fontSize: 12 }}
                       formatter={(v) => [v, 'จำนวนค่า']}
                       labelFormatter={(x, p) => p?.[0] ? `${fmtNum(p[0].payload.from, 3)} – ${fmtNum(p[0].payload.to, 3)}` : x} />
-                    <Bar dataKey="count" name="จำนวนค่า" fill={CELL_BAR_FILL} radius={[3, 3, 0, 0]}>
+                    <Bar {...chartAnim()} dataKey="count" name="จำนวนค่า" fill={CELL_BAR_FILL} radius={[3, 3, 0, 0]}>
                       {hist.map((b, i) => {
                         const bad = (spc.usl != null && b.from >= spc.usl) || (spc.lsl != null && b.to <= spc.lsl);
                         return <Cell key={i} fill={bad ? 'var(--red)' : 'var(--blue)'} opacity={0.85} />;
@@ -1192,11 +1193,11 @@ function SPCTab({ lineObjs, canRecord, canManage, canExport = false, partOpts = 
                   </div>
                 </>
               ) : (<>
-              <div style={{ fontWeight: 800, fontSize: 13.5, marginBottom: 8 }}>✍️ บันทึกผลวัด (subgroup ใหม่ · n={sel.subgroup_size})</div>
+              <div style={{ fontWeight: 800, fontSize: 13.5, marginBottom: 8 }}>✍️ {trI18n("บันทึกผลวัด (subgroup ใหม่")} · n={sel.subgroup_size})</div>
               {canRecord ? (
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
                   {readings.map((v, i) => (
-                    <input key={i} type="number" step="any" value={v} placeholder={`ค่า ${i + 1}`}
+                    <input key={i} type="number" step="any" value={v} placeholder={`${trI18n("ค่า")} ${i + 1}`}
                       onChange={e => setReadings(r => r.map((x, j) => j === i ? e.target.value : x))}
                       style={{ ...inputSt, width: 86 }} />
                   ))}
@@ -1326,7 +1327,7 @@ function NCRTab({ lineObjs, canRecord, canManage, onOpenCapa, partOpts = [] }) {
     // จำกัดตามไลน์ — 🔴 ใบที่ไม่ระบุไลน์ต้องเห็นด้วย (`IN` ไม่จับ NULL ⇒ เปิดแล้วหายจากรายการ · audit 19/10)
     if (scopedLineNames) q = q.or(`line_name.is.null,line_name.in.(${scopedLineNames.map(n => `"${n.replace(/"/g, '\\"')}"`).join(',')})`);
     const { data, error } = await q;
-    if (error) toast.error(`โหลด NCR ไม่สำเร็จ: ${error.message}`);
+    if (error) toast.error(`${trI18n("โหลด NCR ไม่สำเร็จ")}: ${error.message}`);
     setList(data || []);
   }, [filter, scopedLineNames]);
   useEffect(() => { load(); }, [load]);
@@ -1350,9 +1351,9 @@ function NCRTab({ lineObjs, canRecord, canManage, onOpenCapa, partOpts = [] }) {
         line_name: f.line_name || null, part_no: (f.part_no || '').trim() || null, part_name: (f.part_name || '').trim() || null,
         source: f.source, severity: f.severity, defect_desc: f.defect_desc.trim(),
         qty_found: parseInt(f.qty_found) || 0, qty_ng: parseInt(f.qty_ng) || 0,
-      }).eq('id', f.id).select('id'), `แก้ ${f.ncr_no}`);
+      }).eq('id', f.id).select('id'), `${trI18n("แก้")} ${f.ncr_no}`);
       if (!ok) return;
-      toast.success(`แก้ ${f.ncr_no} แล้ว ✓`);
+      toast.success(`${trI18n("แก้")} ${f.ncr_no} ${trI18n("แล้ว")} ✓`);
       setCreateModal(null);
       await load();
       const { data } = await supabase.from('qa_ncr').select('*').eq('id', f.id).single();
@@ -1368,18 +1369,18 @@ function NCRTab({ lineObjs, canRecord, canManage, onOpenCapa, partOpts = [] }) {
       qty_found: parseInt(f.qty_found) || 0, qty_ng: parseInt(f.qty_ng) || 0,
       created_by: fullName || null,
     }).select('id');
-    if (!checkWriteRows(ins, `สร้าง ${ncr_no}`)) return;
+    if (!checkWriteRows(ins, `${trI18n("สร้าง")} ${ncr_no}`)) return;
     notifyEvent({
       event: 'qa_ncr_opened', type: 'error', ref_table: 'qa_ncr',
       line_name: f.line_name || null, actor: fullName,
       lines: [
         `📄 ${ncr_no} · ${f.severity === 'critical' ? '🔴 critical' : f.severity === 'major' ? '🟠 major' : '🟡 minor'}`,
-        `🏭 ไลน์: ${f.line_name || '—'} · พาร์ท: ${f.part_no.trim() || '—'}`,
-        `🚫 NG ${parseInt(f.qty_ng) || 0} / ตรวจ ${parseInt(f.qty_found) || 0}`,
+        `🏭 ${trI18n("ไลน์")}: ${f.line_name || '—'} · ${trI18n("พาร์ท")}: ${f.part_no.trim() || '—'}`,
+        `🚫 NG ${parseInt(f.qty_ng) || 0} / ${trI18n("ตรวจ")} ${parseInt(f.qty_found) || 0}`,
         `📝 ${f.defect_desc.trim()}`,
       ],
     });
-    toast.success(`เปิด ${ncr_no} แล้ว ✓`);
+    toast.success(`${trI18n("เปิด")} ${ncr_no} ${trI18n("แล้ว")} ✓`);
     setCreateModal(null);
     load();
   };
@@ -1389,15 +1390,15 @@ function NCRTab({ lineObjs, canRecord, canManage, onOpenCapa, partOpts = [] }) {
     if (!canManage) { toast.error('ยกเลิกใบ NCR ต้องมีสิทธิ์ qa:manage'); return; }
     const { count, error: eC } = await supabase.from('qa_capa').select('id', { count: 'exact', head: true }).eq('ncr_id', n.id);
     if (eC || count == null) { toast.error('ตรวจใบ 8D ที่ผูกอยู่ไม่สำเร็จ — ยังยกเลิกไม่ได้'); return; }
-    if (count > 0) { toast.error(`${n.ncr_no} มีใบ 8D ผูกอยู่ ${count} ใบ — ยกเลิกไม่ได้ (ปิดผ่านขั้นตอนปกติแทน)`); return; }
-    const reason = window.prompt(`ยกเลิก ${n.ncr_no} — เหตุผล (เช่น เปิดซ้ำกับ NCR-xxx / ควรเป็นเคลมลูกค้า):`);
+    if (count > 0) { toast.error(`${n.ncr_no} ${trI18n("มีใบ 8D ผูกอยู่")} ${count} ${trI18n("ใบ — ยกเลิกไม่ได้ (ปิดผ่านขั้นตอนปกติแทน")})`); return; }
+    const reason = window.prompt(`${trI18n("ยกเลิก")} ${n.ncr_no} — ${trI18n("เหตุผล (เช่น เปิดซ้ำกับ NCR-xxx / ควรเป็นเคลมลูกค้า")}):`);
     if (reason == null) return;
     if (!reason.trim()) { toast.error('ต้องใส่เหตุผลการยกเลิก'); return; }
     const ok = checkWriteRows(await supabase.from('qa_ncr').update({
       status: 'cancelled', cancel_reason: reason.trim(), cancelled_by: fullName || null, cancelled_at: new Date().toISOString(),
-    }).eq('id', n.id).select('id'), `ยกเลิก ${n.ncr_no}`);
+    }).eq('id', n.id).select('id'), `${trI18n("ยกเลิก")} ${n.ncr_no}`);
     if (!ok) return;
-    toast.success(`ยกเลิก ${n.ncr_no} แล้ว (ดูได้ที่ตัวกรอง "ยกเลิก")`);
+    toast.success(`${trI18n("ยกเลิก")} ${n.ncr_no} ${trI18n("แล้ว (ดูได้ที่ตัวกรอง \"ยกเลิก")}")`);
     setDetail(null); load();
   };
 
@@ -1454,7 +1455,7 @@ function NCRTab({ lineObjs, canRecord, canManage, onOpenCapa, partOpts = [] }) {
       </div>
 
       {createModal && (
-        <Modal title={createModal.id ? `✏️ แก้ข้อมูล ${createModal.ncr_no}` : '🚨 เปิด NCR ใหม่'} onClose={() => setCreateModal(null)} width={960}>
+        <Modal title={createModal.id ? `✏️ ${trI18n("แก้ข้อมูล")} ${createModal.ncr_no}` : trI18n("🚨 เปิด NCR ใหม่")} onClose={() => setCreateModal(null)} width={960}>
           <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <Field label={trI18n('วันที่พบ')}><input type="date" style={inputSt} value={createModal.report_date} onChange={e => setCreateModal(f => ({ ...f, report_date: e.target.value }))} /></Field>
             <Field label={trI18n('ไลน์ผลิต')}>
@@ -1507,7 +1508,7 @@ function NCRTab({ lineObjs, canRecord, canManage, onOpenCapa, partOpts = [] }) {
             <div><b>Part:</b> {detail.part_no || '—'} {detail.part_name || ''}</div>
             <div><b>{trI18n('พบ/NG:')}</b> {detail.qty_found} / <span style={{ color: 'var(--red)', fontWeight: 700 }}>{detail.qty_ng}</span> {trI18n('ชิ้น')}</div>
             <div style={{ gridColumn: '1 / -1' }}><b>{trI18n('ปัญหา:')}</b> {detail.defect_desc}</div>
-            <div style={{ gridColumn: '1 / -1', color: 'var(--muted)', fontSize: 11.5 }}>{trI18n('เปิดโดย')} {detail.created_by || '—'}{detail.closed_at ? ` · ปิดเมื่อ ${fmtD(detail.closed_at.slice(0, 10))} โดย ${detail.closed_by || '—'}` : ''}</div>
+            <div style={{ gridColumn: '1 / -1', color: 'var(--muted)', fontSize: 11.5 }}>{trI18n('เปิดโดย')} {detail.created_by || '—'}{detail.closed_at ? ` · ${trI18n("ปิดเมื่อ")} ${fmtD(detail.closed_at.slice(0, 10))} ${trI18n("โดย")} ${detail.closed_by || '—'}` : ''}</div>
             {detail.status === 'cancelled' && (
               <div style={{ gridColumn: '1 / -1', color: '#6b7280', fontSize: 12.5 }}>{trI18n('❌ ยกเลิกโดย')} {detail.cancelled_by || '—'} — {detail.cancel_reason}</div>
             )}
@@ -1566,7 +1567,7 @@ function NCRTab({ lineObjs, canRecord, canManage, onOpenCapa, partOpts = [] }) {
                         status: 'closed', closed_at: new Date().toISOString(), closed_by: fullName || null,
                         ...(edit.disposition ? { disposition: edit.disposition, disposition_note: edit.disposition_note.trim() || null, disposition_by: fullName || null } : {}),
                         containment: edit.containment.trim() || null, root_cause: edit.root_cause.trim() || null,
-                      }, `ปิด ${detail.ncr_no} แล้ว ✓`);
+                      }, `${trI18n("ปิด")} ${detail.ncr_no} ${trI18n("แล้ว")} ✓`);
                     }}>{trI18n('ปิด NCR')}</button>
                   </>
                 )}
@@ -1576,7 +1577,7 @@ function NCRTab({ lineObjs, canRecord, canManage, onOpenCapa, partOpts = [] }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 13 }}>
               <div><b>{trI18n('กักกัน:')}</b> {detail.containment || '—'}</div>
               <div><b>Root cause:</b> {detail.root_cause || '—'}</div>
-              <div><b>Disposition:</b> {DISPO[detail.disposition] || '—'} {detail.disposition_note ? `(${detail.disposition_note})` : ''} {detail.disposition_by ? `· โดย ${detail.disposition_by}` : ''}</div>
+              <div><b>Disposition:</b> {DISPO[detail.disposition] || '—'} {detail.disposition_note ? `(${detail.disposition_note})` : ''} {detail.disposition_by ? `· ${trI18n("โดย")} ${detail.disposition_by}` : ''}</div>
             </div>
           )}
         </Modal>
@@ -1629,7 +1630,7 @@ function CAPATab({ canRecord, canManage, prefill, onPrefillDone, lineObjs = [], 
     if (filter === 'active') q = q.neq('status', 'closed');
     if (filter === 'closed') q = q.eq('status', 'closed');
     const { data, error } = await q;
-    if (error) toast.error(`โหลด CAPA ไม่สำเร็จ: ${error.message}`);
+    if (error) toast.error(`${trI18n("โหลด CAPA ไม่สำเร็จ")}: ${error.message}`);
     setList(data || []);
   }, [filter]);
   useEffect(() => { load(); }, [load]);
@@ -1665,7 +1666,7 @@ function CAPATab({ canRecord, canManage, prefill, onPrefillDone, lineObjs = [], 
       /* พาเลขพาร์ท/ไลน์มาด้วย — เป็นกุญแจหาชุดเอกสาร PE ในลูปปิด 8D */
       part_no: prefill.part_no || '', line_name: prefill.line_name || '',
       ncr_source: prefill.source || null,
-      title: `แก้ไขปัญหา ${prefill.defect_desc?.slice(0, 60) || ''} (${prefill.ncr_no})`,
+      title: `${trI18n("แก้ไขปัญหา")} ${prefill.defect_desc?.slice(0, 60) || ''} (${prefill.ncr_no})`,
       owner_name: fullName || '', due_date: '',
       d1_team: '', d2_problem: prefill.defect_desc || '', d3_containment: prefill.containment || '',
       d4_root_cause: prefill.root_cause || '', d5_corrective: '', d6_implement: '', d7_prevent: '', d8_closure: '',
@@ -1721,16 +1722,16 @@ function CAPATab({ canRecord, canManage, prefill, onPrefillDone, lineObjs = [], 
       ({ error } = await write(slim));
       if (!error) toast.error('บันทึกแล้ว แต่ยังเก็บ "ผลวัดประสิทธิผล" ไม่ได้ — ยังไม่ได้ apply migration 20260818_capa_effectiveness (แจ้ง admin)');
     }
-    if (error) { toast.error(`บันทึกไม่สำเร็จ: ${error.message}`); return; }
+    if (error) { toast.error(`${trI18n("บันทึกไม่สำเร็จ")}: ${error.message}`); return; }
     // แจ้งเฉพาะตอน "เปิดใบใหม่" — แก้ระหว่างทาง/ปิดใบไม่ต้องเด้งซ้ำ
     if (!f.id) notifyEvent({
       event: 'qa_capa_opened', type: 'info', ref_table: 'qa_capa',
       line_name: f.line_name || null, actor: fullName,
       lines: [
-        `🏭 ไลน์: ${f.line_name || '—'} · พาร์ท: ${f.part_no || '—'}`,
+        `🏭 ${trI18n("ไลน์")}: ${f.line_name || '—'} · ${trI18n("พาร์ท")}: ${f.part_no || '—'}`,
         f.d2_problem ? `📝 ${String(f.d2_problem).slice(0, 300)}` : '',
-        f.owner_name ? `🙋 ผู้รับผิดชอบ: ${f.owner_name}` : '',
-        f.due_date ? `📅 กำหนดเสร็จ: ${f.due_date}` : '',
+        f.owner_name ? `🙋 ${trI18n("ผู้รับผิดชอบ")}: ${f.owner_name}` : '',
+        f.due_date ? `📅 ${trI18n("กำหนดเสร็จ")}: ${f.due_date}` : '',
       ],
     });
     toast.success(msg);
@@ -1750,7 +1751,7 @@ function CAPATab({ canRecord, canManage, prefill, onPrefillDone, lineObjs = [], 
             และต้องบอกปลายทางที่ "ดูได้จริง" (ที่นี่กางกลับไม่ได้ ⇒ ชี้ไปบอร์ดคุณภาพ) */}
         {hiddenCount > 0 && (
           <span className="filter-count" title={trI18n('ใบของส่วนงานอื่น — ดูรายละเอียดได้ที่บอร์ดคุณภาพ แต่แก้/ปิดไม่ได้')}>
-            ไม่แสดง {hiddenCount} ใบของส่วนงานอื่น
+            {trI18n("ไม่แสดง")} {hiddenCount} {trI18n("ใบของส่วนงานอื่น")}
           </span>
         )}
         {canRecord && <button style={btnSt()} onClick={() => setDetail({
@@ -1797,7 +1798,7 @@ function CAPATab({ canRecord, canManage, prefill, onPrefillDone, lineObjs = [], 
               );
             })}
             {visible.length === 0 && <tr><td style={tdSt} colSpan={6}><span style={{ color: 'var(--muted)' }}>
-              {hiddenCount > 0 ? `ไม่มีใบ 8D ของส่วนงานคุณ (มี ${hiddenCount} ใบของส่วนงานอื่น — ดูได้ที่บอร์ดคุณภาพ)` : 'ไม่มีรายการ'}
+              {hiddenCount > 0 ? `${trI18n("ไม่มีใบ 8D ของส่วนงานคุณ (มี")} ${hiddenCount} ${trI18n("ใบของส่วนงานอื่น — ดูได้ที่บอร์ดคุณภาพ")})` : trI18n("ไม่มีรายการ")}
             </span></td></tr>}
 
           </tbody>
@@ -1805,7 +1806,7 @@ function CAPATab({ canRecord, canManage, prefill, onPrefillDone, lineObjs = [], 
       </div>
 
       {detail && (
-        <Modal title={detail.id ? `🛠 ${detail.capa_no}` : '🛠 เปิด CAPA / 8D ใหม่'} onClose={() => setDetail(null)} width={1400}>
+        <Modal title={detail.id ? `🛠 ${detail.capa_no}` : trI18n("🛠 เปิด CAPA / 8D ใหม่")} onClose={() => setDetail(null)} width={1400}>
           {/* 🪜 ถึงขั้นไหน — กฎ capaFlow() (utils/qaDocStatus.js) · UI §6.30 · ใบใหม่ยังไม่มีสถานะ = ไม่วาด */}
           {detail.id && (() => { const f = capaFlow(detail); return <div style={{ marginBottom: 12 }}><StepFlow steps={f.steps} waiting={f.waiting} unknown={!f.known} /></div>; })()}
           <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
@@ -1895,7 +1896,7 @@ function CAPATab({ canRecord, canManage, prefill, onPrefillDone, lineObjs = [], 
           )}
           {!detail.id && (
             <div style={{ marginTop: 12, padding: '8px 11px', borderRadius: 'var(--r-md)', border: '1px dashed var(--border2)', fontSize: 11.5, color: 'var(--muted)' }}>
-              บันทึกก่อน แล้วแผง <b>{trI18n('เอกสารที่ต้องตามแก้')}</b> (PFMEA / Control Plan) จะขึ้นให้ใช้งาน
+              {trI18n("บันทึกก่อน แล้วแผง")} <b>{trI18n('เอกสารที่ต้องตามแก้')}</b> (PFMEA / Control Plan) {trI18n("จะขึ้นให้ใช้งาน")}
             </div>
           )}
 
@@ -1930,18 +1931,18 @@ function CAPATab({ canRecord, canManage, prefill, onPrefillDone, lineObjs = [], 
                   const n = (v) => (Math.round((v || 0) * 10) / 10).toFixed(1);
                   if (j && (j.verdict === 'not_effective' || j.verdict === 'worse')) {
                     if (!await askConfirm(
-                      `⚠️ ตัวเลขจริงบอกว่าของเสียยังไม่ลด\n\n`
-                      + `ก่อนแก้ ${n(m?.beforePerDay)} ชิ้น/วัน → หลังแก้ ${n(m?.afterPerDay)} ชิ้น/วัน\n`
-                      + `${j.reason}\n\nปกติควรกลับไปทบทวน D4 (สาเหตุราก) ก่อน\nยืนยันจะปิดใบนี้เลยไหม? (ผลนี้จะถูกบันทึกไว้ในใบ)`
+                      `⚠️ ${trI18n("ตัวเลขจริงบอกว่าของเสียยังไม่ลด")}\n\n`
+                      + `${trI18n("ก่อนแก้")} ${n(m?.beforePerDay)} ${trI18n("ชิ้น/วัน → หลังแก้")} ${n(m?.afterPerDay)} ${trI18n("ชิ้น/วัน")}\n`
+                      + `${j.reason}\n\n${trI18n("ปกติควรกลับไปทบทวน D4 (สาเหตุราก) ก่อน\\nยืนยันจะปิดใบนี้เลยไหม? (ผลนี้จะถูกบันทึกไว้ในใบ")})`
                     )) return;
                   } else if (j && (j.verdict === 'too_early' || j.verdict === 'no_pivot' || j.verdict === 'no_data' || j.verdict === 'no_baseline')) {
                     if (!await askConfirm(
-                      `ℹ️ ระบบยังวัดประสิทธิผลจากข้อมูลจริงไม่ได้\n(${j.reason})\n\n`
-                      + `ปิดใบโดยอ้างอิงแค่ข้อความที่กรอกไว้ ใช่ไหม?`
+                      `ℹ️ ${trI18n("ระบบยังวัดประสิทธิผลจากข้อมูลจริงไม่ได้")}\n(${j.reason})\n\n`
+                      + `${trI18n("ปิดใบโดยอ้างอิงแค่ข้อความที่กรอกไว้ ใช่ไหม")}?`
                     )) return;
                   }
                   const stamp = j ? { _eff: { eff_verdict: j.verdict, eff_measured_at: new Date().toISOString(), eff_snapshot: m ? { ...m, reason: j.reason } : null } } : {};
-                  save({ status: 'closed', ...stamp }, `ปิด ${detail.capa_no} แล้ว ✓`);
+                  save({ status: 'closed', ...stamp }, `${trI18n("ปิด")} ${detail.capa_no} ${trI18n("แล้ว")} ✓`);
                 }}>{trI18n('ปิด CAPA')}</button>
               )}
             </div>
@@ -2011,7 +2012,7 @@ function InstrumentTab({ lineObjs, canManage }) {
     const { error } = f.id
       ? await supabase.from('qa_instruments').update(payload).eq('id', f.id)
       : await supabase.from('qa_instruments').insert(payload);
-    if (error) { toast.error(`บันทึกไม่สำเร็จ: ${error.message}`); return; }
+    if (error) { toast.error(`${trI18n("บันทึกไม่สำเร็จ")}: ${error.message}`); return; }
     invalidateInstruments(); // cache ทะเบียนเครื่องมือกลาง (useInstruments) — ให้ <InstrumentSelect> หน้าอื่นเห็นของใหม่
     toast.success('บันทึกแล้ว ✓');
     setModal(null);
@@ -2037,7 +2038,7 @@ function InstrumentTab({ lineObjs, canManage }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <FilterBar>
-        <SearchInput value={search} onChange={setSearch} fields="รหัส / ชื่อ / ตำแหน่ง" />
+        <SearchInput value={search} onChange={setSearch} fields={trI18n("รหัส / ชื่อ / ตำแหน่ง")} />
         <span className="spacer" />
         {canManage && <button style={btnSt()} onClick={() => setModal({ ...EMPTY_INST })}>{trI18n('+ เพิ่มเครื่องมือวัด')}</button>}
       </FilterBar>
@@ -2086,7 +2087,7 @@ function InstrumentTab({ lineObjs, canManage }) {
       </div>
 
       {modal && (
-        <Modal title={modal.id ? `✏️ ${modal.code}` : '➕ เพิ่มเครื่องมือวัด'} onClose={() => setModal(null)} width={620}>
+        <Modal title={modal.id ? `✏️ ${modal.code}` : trI18n("➕ เพิ่มเครื่องมือวัด")} onClose={() => setModal(null)} width={620}>
           <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
             <Field label={trI18n('รหัส *')}><input style={inputSt} value={modal.code} onChange={e => setModal(f => ({ ...f, code: e.target.value }))} /></Field>
             <Field label={trI18n('ชื่อเครื่องมือ *')}><input style={inputSt} value={modal.name} onChange={e => setModal(f => ({ ...f, name: e.target.value }))} /></Field>
@@ -2096,7 +2097,7 @@ function InstrumentTab({ lineObjs, canManage }) {
             <Field label="Range"><input style={inputSt} placeholder="0-150 mm" value={modal.range_spec} onChange={e => setModal(f => ({ ...f, range_spec: e.target.value }))} /></Field>
             <Field label="Resolution"><input style={inputSt} placeholder="0.01 mm" value={modal.resolution} onChange={e => setModal(f => ({ ...f, resolution: e.target.value }))} /></Field>
             <Field label={trI18n('ตำแหน่ง/แผนก')}>
-              <SelectOrFree value={modal.location} options={orgUnits} placeholder={trI18n('— เลือกจากผังองค์กร —')} freePlaceholder="ระบุเอง เช่น ห้อง CMM" style={inputSt}
+              <SelectOrFree value={modal.location} options={orgUnits} placeholder={trI18n('— เลือกจากผังองค์กร —')} freePlaceholder={trI18n("ระบุเอง เช่น ห้อง CMM")} style={inputSt}
                 onChange={v => setModal(f => ({ ...f, location: v }))} />
             </Field>
             <Field label={trI18n('ไลน์')}>

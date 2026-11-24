@@ -155,11 +155,11 @@ export default function OrgSetup() {
     if (kind === 'department') return sections.map(s => ({ id: s.id, label: s.name }));
     if (kind === 'line') return allDepts.map(d => {
       const sec = sections.find(s => s.id === d.parent_id);
-      return { id: d.id, label: `${sec ? sec.name : 'ขึ้นตรงฝ่าย'} > ${d.name}` };
+      return { id: d.id, label: `${sec ? sec.name : tr('ขึ้นตรงฝ่าย')} > ${d.name}` };
     });
     if (kind === 'team') return allLines.map(l => {
       const dep = allDepts.find(d => d.id === l.parent_id);
-      return { id: l.id, label: `${dep ? dep.name : 'ไม่มีแผนก'} > ${l.name}` };
+      return { id: l.id, label: `${dep ? dep.name : tr('ไม่มีแผนก')} > ${l.name}` };
     });
     return [];
   };
@@ -247,7 +247,7 @@ export default function OrgSetup() {
       const dup = nodes.find(n =>
         n.is_active && n.cost_center && n.cost_center.trim() === formCostCenter.trim() && n.id !== modal.editing?.id
       );
-      if (dup) return toast.error(`Cost Center นี้ถูกใช้แล้วที่ "${dup.name}" — กรุณาเปลี่ยนเลข`);
+      if (dup) return toast.error(`Cost Center ${tr("นี้ถูกใช้แล้วที่")} "${dup.name}" — ${tr("กรุณาเปลี่ยนเลข")}`);
     }
     /* 🔴 เปลี่ยน "คีย์" ของโหนด = สำเนาชื่อในทะเบียนอื่นชี้ของที่ไม่มีอยู่แล้ว (05/10)
          คีย์ = `code || name` · กลุ่มใช้ "ชื่อ" (ดู src/utils/orgNodeRefs.js)
@@ -261,9 +261,9 @@ export default function OrgSetup() {
       if (refs.partial) return toast.error('ยังไม่บันทึก — ตรวจไม่ครบว่ามีใครอ้างชื่อเดิมอยู่ · ลองใหม่อีกครั้ง');
       const affected = (refs.textEmp || 0) + (refs.textProf || 0);
       if (affected) {
-        if (!await askConfirm(`เปลี่ยน "${keyChg.from}" → "${keyChg.to}" ?\n\n`
-          + `ทะเบียนที่ยังอ้างชื่อเดิม ${affected} รายการจะถูกเปลี่ยนตามให้ด้วย\n`
-          + '(ถ้าไม่เปลี่ยนตาม คนเหล่านั้นจะหลุดจากหน่วยงานนี้เงียบๆ)')) return;
+        if (!await askConfirm(`${tr("เปลี่ยน")} "${keyChg.from}" → "${keyChg.to}" ?\n\n`
+          + `${tr("ทะเบียนที่ยังอ้างชื่อเดิม")} ${affected} ${tr("รายการจะถูกเปลี่ยนตามให้ด้วย")}\n`
+          + ('(' + tr('ถ้าไม่เปลี่ยนตาม คนเหล่านั้นจะหลุดจากหน่วยงานนี้เงียบๆ') + ')'))) return;
         cascade = keyChg;
       }
     }
@@ -287,18 +287,18 @@ export default function OrgSetup() {
     const { data: wrote, error } = editNode
       ? await supabase.from('org_nodes').update(payload).eq('id', editNode.id).select('id')
       : await supabase.from('org_nodes').insert({ ...payload, sort_order: nodes.length + 1 }).select('id');
-    if (error)        { setSaving(false); return toast.error('บันทึกไม่สำเร็จ: ' + error.message); }
+    if (error)        { setSaving(false); return toast.error((tr('บันทึกไม่สำเร็จ') + ': ') + error.message); }
     if (!wrote?.length) { setSaving(false); return toast.error('บันทึกไม่สำเร็จ — ไม่มีสิทธิ์แก้ หรือรายการนี้ถูกลบไปแล้ว'); }
     // ไล่เปลี่ยน "สำเนาชื่อ" ตามคีย์ใหม่ — เขียนไม่ได้ต้องบอกว่าชื่อไม่ตรงกันแล้ว ห้าม toast เขียวทับ
     const casc = cascade ? await renameOrgRefs(supabase, editNode, cascade.from, cascade.to, nodes) : null;
     setSaving(false);
     if (casc?.failed.length) {
-      toast.error(`เปลี่ยนชื่อในผังแล้ว แต่ทะเบียนแก้ตามไม่ได้ (${casc.failed[0]})`
-        + ' — ชื่อจะไม่ตรงกันจนแก้ที่หน้าพนักงาน');
+      toast.error(`${tr("เปลี่ยนชื่อในผังแล้ว แต่ทะเบียนแก้ตามไม่ได้")} (${casc.failed[0]})`
+        + (' — ' + tr('ชื่อจะไม่ตรงกันจนแก้ที่หน้าพนักงาน')));
     } else if (casc) {
-      toast.success(`แก้ไขสำเร็จ · เปลี่ยนชื่อตามให้ในทะเบียนอื่น ${casc.rows} รายการ`
+      toast.success(`${tr("แก้ไขสำเร็จ · เปลี่ยนชื่อตามให้ในทะเบียนอื่น")} ${casc.rows} ${tr("รายการ")}`
         // 🔴 คีย์ชนกับโหนดต่างชั้น ⇒ ไม่ไล่เปลี่ยนให้ (อาจเป็นของอีกโหนด) — ต้องบอก ห้ามเงียบ
-        + (casc.skipped?.length ? ` · ไม่ได้เปลี่ยน ${casc.skipped.join(', ')} (ชื่อชนกับหน่วยต่างชั้น — แก้เองที่หน้านั้น)` : ''));
+        + (casc.skipped?.length ? ` · ${tr("ไม่ได้เปลี่ยน")} ${casc.skipped.join(', ')} (${tr("ชื่อชนกับหน่วยต่างชั้น — แก้เองที่หน้านั้น")})` : ''));
     } else {
       toast.success(editNode ? 'แก้ไขสำเร็จ' : 'เพิ่มสำเร็จ');
     }
@@ -312,13 +312,13 @@ export default function OrgSetup() {
        (เคสจริง 05/10: กลุ่มที่คนผูกอยู่ 35 คนหายจาก dropdown แล้วหน้าเช็คชื่อว่างเปล่า) */
     if (node.is_active) {
       const refs = await loadOrgNodeRefs(supabase, node, nodes);
-      if (!await askConfirm(`ปิดใช้งาน "${node.name}" ?\n\nจะหายจาก dropdown/การเลือกในหน้าอื่น (ข้อมูลเดิมยังอยู่ เปิดกลับได้)`
+      if (!await askConfirm(`${tr("ปิดใช้งาน")} "${node.name}" ?\n\n${tr("จะหายจาก dropdown/การเลือกในหน้าอื่น (ข้อมูลเดิมยังอยู่ เปิดกลับได้")})`
         + orgRefDeactivateNote(refs))) return;
     }
     const { data: wrote, error } = await supabase.from('org_nodes')
       .update({ is_active: !node.is_active }).eq('id', node.id).select('id');
     if (error) return toast.error(error.message);
-    if (!wrote?.length) return toast.error(`${node.is_active ? 'ปิด' : 'เปิด'}ใช้งานไม่สำเร็จ — ไม่มีสิทธิ์แก้ หรือรายการนี้ถูกลบไปแล้ว`);
+    if (!wrote?.length) return toast.error(`${node.is_active ? tr('ปิด') : tr('เปิด')}${tr("ใช้งานไม่สำเร็จ — ไม่มีสิทธิ์แก้ หรือรายการนี้ถูกลบไปแล้ว")}`);
     fetchAll();
   };
 
@@ -333,8 +333,8 @@ export default function OrgSetup() {
     if (children.length > 0) {
       const kinds = [...new Set(children.map(c => ORG_KIND_TH[c.kind] || c.kind))].join('/');
       const names = children.slice(0, 6).map(c => c.name).join(', ')
-                  + (children.length > 6 ? ` …อีก ${children.length - 6}` : '');
-      return toast.error(`ลบไม่ได้: "${node.name}" ยังมี${kinds}ลูก ${children.length} รายการ — ${names}`
+                  + (children.length > 6 ? ` …${tr("อีก")} ${children.length - 6}` : '');
+      return toast.error(`${tr("ลบไม่ได้")}: "${node.name}" ${tr("ยังมี")}${kinds}${tr("ลูก")} ${children.length} ${tr("รายการ")} — ${names}`
         + ' · ย้าย/ลบลูกก่อน หรือกด "ปิดใช้งาน" แทน');
     }
     /* 🔴 relate table ไม่ได้มีแค่ "ลูกในผัง" — ตารางอื่นชี้โหนดนี้อยู่ด้วย (05/10 วัดจริง)
@@ -345,13 +345,13 @@ export default function OrgSetup() {
     const refs = await loadOrgNodeRefs(supabase, node, nodes);
     const blocked = orgRefBlockMessage(node, refs);
     if (blocked) return toast.error(blocked);
-    if (!await askConfirm(`ลบ "${node.name}" ?` + orgRefDeleteNote(refs)
+    if (!await askConfirm(`${tr("ลบ")} "${node.name}" ?` + orgRefDeleteNote(refs)
       + '\n\n(ถ้าเคยผูกกับข้อมูลอื่นแนะนำ "ปิดใช้งาน" แทนการลบ)')) return;
     const { data: gone, error } = await supabase.from('org_nodes').delete().eq('id', node.id).select('id');
     // FK ฝั่ง DB เป็น restrict แล้ว (migration 20261005) — ด่านชั้นสองกันกรณีมีคนผูกเพิ่มระหว่างที่เปิดจอค้าง
     if (error) return toast.error(error.code === '23503'
-      ? `ลบไม่ได้: ยังมีข้อมูลอื่นผูกกับ "${node.name}" อยู่ (เพิ่งถูกผูกเพิ่ม?) — รีเฟรชแล้วลองอีกครั้ง`
-      : 'ลบไม่สำเร็จ: ' + error.message);
+      ? `${tr("ลบไม่ได้: ยังมีข้อมูลอื่นผูกกับ")} "${node.name}" ${tr("อยู่ (เพิ่งถูกผูกเพิ่ม?) — รีเฟรชแล้วลองอีกครั้ง")}`
+      : (tr('ลบไม่สำเร็จ') + ': ') + error.message);
     if (!gone?.length) return toast.error('ลบไม่สำเร็จ — ไม่มีสิทธิ์ลบ หรือรายการนี้ถูกลบไปแล้ว');
     toast.success('ลบสำเร็จ');
     if (node.kind === 'section' && selSection === node.id) setSelSection(null);
@@ -372,23 +372,23 @@ export default function OrgSetup() {
     <Page>
       <PageHeader title={tr('แผนผังองค์กร')} icon="🏢"
         sub={tr('จัดการโครงสร้าง Section/ส่วน → Department/แผนก → Group/กลุ่ม พร้อม Cost Center (master data ที่หน้าอื่นใช้อ้างอิง)')}
-        tabs={[{ key: 'tree', label: 'มุมมองผัง' }, { key: 'manage', label: 'จัดการหน่วยงาน' },
-               { key: 'teams', label: 'ทีม (จัดกะ)' }]}
+        tabs={[{ key: 'tree', label: tr("มุมมองผัง") }, { key: 'manage', label: tr("จัดการหน่วยงาน") },
+               { key: 'teams', label: tr("ทีม (จัดกะ)") }]}
         tab={tab} onTab={setTab} />
 
       {/* ซ่อนปุ่มได้ ห้ามซ่อนเหตุผล (UI-CONVENTIONS §6.9) — ต้องรู้ว่าแก้อะไรได้/ไม่ได้ และต้องไปขอใคร */}
       {!isAdmin && (
         canOwn && mySecId ? (
           <NoticeBar tone="ok" style={{ marginBottom: 14 }}>
-            คุณแก้ได้เฉพาะ <b>แผนก/กลุ่มใต้ส่วนงาน "{myUnit}"</b> ของตัวเอง — ส่วนงานอื่นและโครงระดับ Section เป็นของผู้ดูแลระบบ
+            {tr("คุณแก้ได้เฉพาะ")} <b>{tr("แผนก/กลุ่มใต้ส่วนงาน")} "{myUnit}"</b> {tr("ของตัวเอง — ส่วนงานอื่นและโครงระดับ Section เป็นของผู้ดูแลระบบ")}
           </NoticeBar>
         ) : canOwn && !mySecId ? (
           <div style={{ marginBottom: 14, padding: '9px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--amber-line)', background: 'var(--amber-dim)', fontSize: 12, color: 'var(--amber)', lineHeight: 1.6 }}>
-            ⚠️ บัญชีคุณมีสิทธิ์แก้ผังของหน่วยงานตัวเอง แต่ <b>{tr('ยังไม่ได้ตั้งว่าสังกัดส่วนงานไหน')}</b> จึงยังแก้อะไรไม่ได้
+            ⚠️ {tr("บัญชีคุณมีสิทธิ์แก้ผังของหน่วยงานตัวเอง แต่")} <b>{tr('ยังไม่ได้ตั้งว่าสังกัดส่วนงานไหน')}</b> {tr("จึงยังแก้อะไรไม่ได้")}
             <div style={{ color: 'var(--muted)' }}>{tr('ให้ผู้ดูแลระบบตั้งช่อง')} <b>Section</b> {tr('ให้บัญชีนี้ที่')} <b>{tr('ตั้งค่า → จัดการผู้ใช้งาน')}</b>{myUnit ? '' : tr(' (ตอนนี้ว่างอยู่)')}</div>
           </div>
         ) : (
-          <ReadOnlyNote permKey="org:manage_own_unit" what="แก้ผังองค์กรของหน่วยงานตัวเอง" />
+          <ReadOnlyNote permKey="org:manage_own_unit" what={tr("แก้ผังองค์กรของหน่วยงานตัวเอง")} />
         )
       )}
 
@@ -403,17 +403,17 @@ export default function OrgSetup() {
            ใช้ CRUD ชุดเดียวกับแท็บจัดการหน่วยงาน (openCreate/openEdit/handleDelete) ไม่ได้ก๊อปตรรกะใหม่ */
         <>
           <div style={{ marginBottom: 12, padding: '9px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)',
-                        background: 'var(--bg3)', fontSize: 12, color: 'var(--text2)', lineHeight: 1.7 }}>
-            👥 <b>{tr('ทีม A/B/C ใช้สำหรับจัดกะการทำงาน — ไม่ใช่ชั้นในผังองค์กร')}</b> จึงไม่ปรากฏในมุมมองผังและใบ export
+                        background: 'var(--bg3-surf)', fontSize: 12, color: 'var(--text2)', lineHeight: 1.7 }}>
+            👥 <b>{tr('ทีม A/B/C ใช้สำหรับจัดกะการทำงาน — ไม่ใช่ชั้นในผังองค์กร')}</b> {tr("จึงไม่ปรากฏในมุมมองผังและใบ")} export
             <div style={{ color: 'var(--muted)' }}>
-              ค่าที่บันทึกคือช่อง <b>Code</b> {tr('(เช่น')} <code>A</code>) ซึ่งตรงกับ <code>employees.team</code> ·
-              ตารางกะใช้ที่ <b>{tr('ตารางกะการทำงาน')}</b> ({'/shift-organize'})
+              {tr("ค่าที่บันทึกคือช่อง")} <b>Code</b> {tr('(เช่น')} <code>A</code>) {tr("ซึ่งตรงกับ")} <code>employees.team</code> ·
+              {tr("ตารางกะใช้ที่")} <b>{tr('ตารางกะการทำงาน')}</b> ({'/shift-organize'})
             </div>
           </div>
           <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
             <div style={colStyle} className="card">
               <strong style={{ fontSize: 13, color: 'var(--text2)', display: 'block', marginBottom: 10 }}>
-                เลือกกลุ่ม ({allLines.length})
+                {tr("เลือกกลุ่ม")} ({allLines.length})
               </strong>
               <div style={{ maxHeight: 'calc(100vh - 320px)', overflowY: 'auto' }}>
                 {allLines.map(l => {
@@ -423,13 +423,13 @@ export default function OrgSetup() {
                     <div key={l.id} style={itemStyle(selLine === l.id)} onClick={() => setSelLine(l.id)}>
                       <NodeLabel node={l} meta={
                         <span style={{ fontSize: 11, color: 'var(--muted)' }}>
-                          {' '}· {[sec?.name, dept?.name].filter(Boolean).join(' › ') || 'ไม่มีหน่วยแม่'}
-                          {teamsOf(l.id).length > 0 ? ` · ${teamsOf(l.id).length} ทีม` : ''}
+                          {' '}· {[sec?.name, dept?.name].filter(Boolean).join(' › ') || tr("ไม่มีหน่วยแม่")}
+                          {teamsOf(l.id).length > 0 ? ` · ${teamsOf(l.id).length} ${tr("ทีม")}` : ''}
                         </span>} />
                     </div>
                   );
                 })}
-                {!allLines.length && <Empty text="ยังไม่มีกลุ่มในผัง" />}
+                {!allLines.length && <Empty text={tr("ยังไม่มีกลุ่มในผัง")} />}
               </div>
             </div>
             <div style={colStyle} className="card">
@@ -439,13 +439,13 @@ export default function OrgSetup() {
                   <button className="tbtn" onClick={() => selLine && openCreate('team', selLine)} disabled={!selLine} style={addBtnSt}>➕</button>
                 )}
               </div>
-              {!selLine ? <Empty text="เลือกกลุ่มก่อน" /> : currentTeams.map(t => (
+              {!selLine ? <Empty text={tr("เลือกกลุ่มก่อน")} /> : currentTeams.map(t => (
                 <div key={t.id} style={itemStyle(false)}>
                   <NodeLabel node={t} meta={t.code && t.code !== t.name && <span style={{ fontSize: 11, color: 'var(--muted)' }}> ({t.code})</span>} />
                   {canEditNode(t) && <RowActions node={t} onEdit={openEdit} onToggle={toggleActive} onDelete={handleDelete} />}
                 </div>
               ))}
-              {selLine && !currentTeams.length && <Empty text="ยังไม่มีทีมในกลุ่มนี้" />}
+              {selLine && !currentTeams.length && <Empty text={tr("ยังไม่มีทีมในกลุ่มนี้")} />}
             </div>
           </div>
         </>
@@ -460,7 +460,7 @@ export default function OrgSetup() {
             <div style={{ maxHeight: 'calc(100vh - 280px)', overflowY: 'auto' }}>
             {sections.map(s => (
               <div key={s.id} style={itemStyle(selSection === s.id)} onClick={() => setSelSection(s.id)}>
-                <NodeLabel node={s} meta={<span style={{ fontSize: 11, color: 'var(--muted)' }}> ({deptsOf(s.id).length} แผนก)</span>}>
+                <NodeLabel node={s} meta={<span style={{ fontSize: 11, color: 'var(--muted)' }}> ({deptsOf(s.id).length} {tr("แผนก")})</span>}>
                   {s.cost_center && <CostBadge key="cc" code={s.cost_center} />}
                   {s.labor_type && <LaborBadge key="lb" type={s.labor_type} />}
                   {(s.division || divisionOfNode(s.id, nodes)) && <DivBadge key="dv" node={s} nodes={nodes} />}
@@ -468,11 +468,11 @@ export default function OrgSetup() {
                 {canEditNode(s) && <RowActions node={s} onEdit={openEdit} onToggle={toggleActive} onDelete={handleDelete} />}
               </div>
             ))}
-            {!sections.length && <Empty text="ยังไม่มี Section" />}
+            {!sections.length && <Empty text={tr("ยังไม่มี Section")} />}
             <div style={itemStyle(selSection === ORPHAN)} onClick={() => setSelSection(ORPHAN)}>
               <span style={{ fontSize: 13, color: 'var(--text2)' }}>
-                ขึ้นตรงฝ่าย (ไม่มี Section)
-                <span style={{ fontSize: 11, color: 'var(--muted)' }}> ({orphanDepts.length} แผนก)</span>
+                {tr("ขึ้นตรงฝ่าย (ไม่มี")} Section)
+                <span style={{ fontSize: 11, color: 'var(--muted)' }}> ({orphanDepts.length} {tr("แผนก")})</span>
               </span>
             </div>
             </div>
@@ -486,9 +486,9 @@ export default function OrgSetup() {
                 <button className="tbtn" onClick={() => selSection && openCreate('department', selSection === ORPHAN ? null : selSection)} disabled={!selSection} style={addBtnSt}>➕</button>
               )}
             </div>
-            {!selSection ? <Empty text="เลือก Section ก่อน" /> : currentDepts.map(d => (
+            {!selSection ? <Empty text={tr("เลือก Section ก่อน")} /> : currentDepts.map(d => (
               <div key={d.id} style={itemStyle(selDept === d.id)} onClick={() => setSelDept(d.id)}>
-                <NodeLabel node={d} meta={<span style={{ fontSize: 11, color: 'var(--muted)' }}> ({linesOf(d.id).length} กลุ่ม)</span>}>
+                <NodeLabel node={d} meta={<span style={{ fontSize: 11, color: 'var(--muted)' }}> ({linesOf(d.id).length} {tr("กลุ่ม")})</span>}>
                   {d.cost_center && <CostBadge key="cc" code={d.cost_center} />}
                   {d.labor_type && <LaborBadge key="lb" type={d.labor_type} />}
                   {(d.division || divisionOfNode(d.id, nodes)) && <DivBadge key="dv" node={d} nodes={nodes} />}
@@ -496,7 +496,7 @@ export default function OrgSetup() {
                 {canEditNode(d) && <RowActions node={d} onEdit={openEdit} onToggle={toggleActive} onDelete={handleDelete} />}
               </div>
             ))}
-            {selSection && !currentDepts.length && <Empty text="ยังไม่มีแผนกในนี้" />}
+            {selSection && !currentDepts.length && <Empty text={tr("ยังไม่มีแผนกในนี้")} />}
           </div>
 
           {/* Lines */}
@@ -507,17 +507,17 @@ export default function OrgSetup() {
                 <button className="tbtn" onClick={() => selDept && openCreate('line', selDept)} disabled={!selDept} style={addBtnSt}>➕</button>
               )}
             </div>
-            {!selDept ? <Empty text="เลือกแผนกก่อน" /> : currentLines.map(l => (
+            {!selDept ? <Empty text={tr("เลือกแผนกก่อน")} /> : currentLines.map(l => (
               <div key={l.id} style={itemStyle(selLine === l.id)} onClick={() => setSelLine(l.id)}>
                 {/* จำนวนทีมใต้กลุ่ม — เห็นตั้งแต่ก่อนกด จะได้รู้ว่าทำไมลบไม่ได้ */}
-                <NodeLabel node={l} meta={teamsOf(l.id).length > 0 && <span style={{ fontSize: 11, color: 'var(--muted)' }}> ({teamsOf(l.id).length} ทีม)</span>}>
+                <NodeLabel node={l} meta={teamsOf(l.id).length > 0 && <span style={{ fontSize: 11, color: 'var(--muted)' }}> ({teamsOf(l.id).length} {tr("ทีม")})</span>}>
                   {!l.ref_line_id && <span key="nr" style={{ fontSize: 11, color: 'var(--amber)', whiteSpace: 'nowrap' }}>{tr('(ไม่ผูก production_lines)')}</span>}
                   {lineCostCenter(l) && <CostBadge key="cc" code={lineCostCenter(l)} />}
                 </NodeLabel>
                 {canEditNode(l) && <RowActions node={l} onEdit={openEdit} onToggle={toggleActive} onDelete={handleDelete} />}
               </div>
             ))}
-            {selDept && !currentLines.length && <Empty text="ยังไม่มีกลุ่มในแผนกนี้" />}
+            {selDept && !currentLines.length && <Empty text={tr("ยังไม่มีกลุ่มในแผนกนี้")} />}
           </div>
 
 
@@ -540,12 +540,11 @@ export default function OrgSetup() {
                 </div>
                 {/* ซ่อนปุ่มได้ ห้ามซ่อนเหตุผล — §6.9 */}
                 {!sgEdit && <ReadOnlyNote role={role} permKey="org:manage_own_unit" compact
-                  what="แก้ผู้เซ็นใบค่าฝีมือของส่วนงานนี้"
+                  what={tr("แก้ผู้เซ็นใบค่าฝีมือของส่วนงานนี้")}
                   hint={tr('ชื่อที่ตั้งตรงนี้ถูกพิมพ์ลงช่องลายเซ็นในใบสรุปค่าฝีมือจริง — แอดมินหน่วยงานแก้ได้เฉพาะส่วนงานของตัวเอง')} />}
                 <InfoMore size={11} style={{ marginBottom: 10 }} id="org_signers"
                   lead={<>{tr('ใช้ดึงชื่อลงช่องลายเซ็น “ใบสรุปค่าฝีมือ” อัตโนมัติ')}</>}>
-                  ตั้งครั้งเดียวต่อส่วนงาน ใช้ร่วมทุกไลน์ในส่วนนี้
-                  (หัวหน้างานรายไลน์ตั้งที่หน้าจัดการไลน์)
+                  {tr("ตั้งครั้งเดียวต่อส่วนงาน ใช้ร่วมทุกไลน์ในส่วนนี้ (หัวหน้างานรายไลน์ตั้งที่หน้าจัดการไลน์")})
                 </InfoMore>
                 {!key && <div style={{ fontSize: 11, color: 'var(--amber)', marginBottom: 8 }}>{tr('⚠ ส่วนนี้ยังไม่มี Code/ชื่อที่ตรงกับ production_lines.section — ใบค่าฝีมืออาจดึงไม่เจอ')}</div>}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10 }}>
@@ -574,7 +573,7 @@ export default function OrgSetup() {
         <div className="overlay">
           <div className="modal" style={{ maxWidth: 420 }}>
             <h3 style={{ marginTop: 0, marginBottom: 16, fontFamily: 'var(--font-display)', color: 'var(--text)', fontSize: 16 }}>
-              {modal.editing ? `✏️ แก้ไข ${KIND_LABEL[modal.kind]}` : `➕ เพิ่ม ${KIND_LABEL[modal.kind]}`}
+              {modal.editing ? `✏️ ${tr("แก้ไข")} ${KIND_LABEL[modal.kind]}` : `➕ ${tr("เพิ่ม")} ${KIND_LABEL[modal.kind]}`}
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div>
@@ -591,7 +590,7 @@ export default function OrgSetup() {
                   {/* 🔴 กรองแถวออกแล้วต้องเขียนบนจอว่าซ่อนกี่รายการ — ไม่งั้นดูเหมือนผังมีแค่นี้ */}
                   {parentChoices.hidden > 0 && (
                     <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4, lineHeight: 1.45 }}>
-                      ซ่อน {parentChoices.hidden} รายการที่อยู่นอกส่วนงานของคุณ — ย้ายข้ามส่วนงานต้องให้ admin ทำ
+                      {tr("ซ่อน")} {parentChoices.hidden} {tr("รายการที่อยู่นอกส่วนงานของคุณ — ย้ายข้ามส่วนงานต้องให้ admin ทำ")}
                     </div>
                   )}
                 </div>
@@ -600,20 +599,20 @@ export default function OrgSetup() {
                 {/* 🔴 ชั้น "ทีม" ใช้ `code` เป็นคีย์จับคู่จริง — ทะเบียนพนักงานเก็บ 'A'/'B'/'C' ไม่ใช่ "Team A"
                     (ดู src/utils/orgNodeRefs.js) ⇒ เว้นว่าง = dropdown ทีมได้ชื่อเต็มมา แล้วไม่ตรงกับคนที่มีอยู่ */}
                 <label style={labelSt}>
-                  Code {modal.kind === 'team' ? '(ค่าที่บันทึกในทะเบียนพนักงาน เช่น A / B / C)' : '(ใช้อ้างอิงค่าเดิมในระบบ — ไม่บังคับ)'}
+                  Code {modal.kind === 'team' ? tr("(ค่าที่บันทึกในทะเบียนพนักงาน เช่น A / B / C)") : tr("(ใช้อ้างอิงค่าเดิมในระบบ — ไม่บังคับ)")}
                 </label>
                 <input type="text" value={formCode} onChange={e => setFormCode(e.target.value)}
                   placeholder={modal.kind === 'team' ? tr('เช่น A') : tr('เช่น PD5 / A')} />
                 {modal.kind === 'team' && !formCode.trim() && (
                   <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 4, lineHeight: 1.45 }}>
-                    ⚠️ ไม่ใส่ Code = ตัวเลือกทีมจะใช้ชื่อเต็ม <b>"{formName.trim() || 'ชื่อทีม'}"</b> ซึ่ง
-                    <b> {tr('ไม่ตรงกับทีมที่พนักงานถูกบันทึกไว้')}</b> (ของเดิมเก็บเป็น A / B / C)
+                    ⚠️ {tr("ไม่ใส่ Code = ตัวเลือกทีมจะใช้ชื่อเต็ม")} <b>"{formName.trim() || tr("ชื่อทีม")}"</b> {tr("ซึ่ง")}
+                    <b> {tr('ไม่ตรงกับทีมที่พนักงานถูกบันทึกไว้')}</b> ({tr("ของเดิมเก็บเป็น")} A / B / C)
                   </div>
                 )}
               </div>
               <div>
                 <label style={labelSt}>
-                  Cost Center {modal.kind === 'line' && formRefLineId ? '(จากไลน์ที่ผูก)' : COST_CENTER_REQUIRED.includes(modal.kind) ? '(บังคับ)' : '(ไม่บังคับ)'}
+                  Cost Center {modal.kind === 'line' && formRefLineId ? tr("(จากไลน์ที่ผูก)") : COST_CENTER_REQUIRED.includes(modal.kind) ? tr("(บังคับ)") : tr("(ไม่บังคับ)")}
                 </label>
                 {modal.kind === 'line' && formRefLineId ? (
                   <>
@@ -637,7 +636,7 @@ export default function OrgSetup() {
                     <option value="indirect">{tr('Indirect — สนับสนุน (ช่างซ่อมบำรุง/QA/ธุรการ/ขาย)')}</option>
                   </select>
                   <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-                    พนักงานใน{modal.kind === 'section' ? 'ส่วน' : 'แผนก'}{tr('นี้จะถูกจัดเป็นประเภทนี้อัตโนมัติ')}{modal.kind === 'section' ? ' (แผนกตั้งทับได้)' : ' (ช่างส่วนใหญ่อยู่ระดับแผนก)'}
+                    {tr("พนักงานใน")}{modal.kind === 'section' ? tr("ส่วน") : tr("แผนก")}{tr('นี้จะถูกจัดเป็นประเภทนี้อัตโนมัติ')}{modal.kind === 'section' ? tr(" (แผนกตั้งทับได้)") : tr(" (ช่างส่วนใหญ่อยู่ระดับแผนก)")}
                   </div>
                 </div>
               )}
@@ -653,9 +652,9 @@ export default function OrgSetup() {
                     {divisionsSync().map(d => <option key={d.code} value={d.code}>{d.icon} {tr(d.label)}</option>)}
                   </select>
                   <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-                    ใช้แยก “สกิลของฝ่ายไหน” — ติดที่ตัวบนสุดพอ ตัวลูกตกทอดเอง
+                    {tr("ใช้แยก “สกิลของฝ่ายไหน” — ติดที่ตัวบนสุดพอ ตัวลูกตกทอดเอง")}
                     {/* ส่วนงานมีแม่เป็น Plant แล้ว (20/11) แต่ชั้นบนไม่มีป้ายฝ่ายให้ตกทอด ⇒ ไม่ใช่ "ปล่อยว่างได้" */}
-                    {modal.kind !== 'section' && modal.parentId ? ' (ตัวนี้มีแม่อยู่แล้ว ปล่อยว่างได้)' : ''}
+                    {modal.kind !== 'section' && modal.parentId ? tr(" (ตัวนี้มีแม่อยู่แล้ว ปล่อยว่างได้)") : ''}
                     {!canDivisions && ' · ต้องมีสิทธิ์ org:manage_divisions ถึงแก้ได้'}
                   </div>
                 </div>
@@ -666,9 +665,9 @@ export default function OrgSetup() {
                    (บทเรียนเดียวกับทะเบียนพนักงานที่เผลอกรองสายสนับสนุนออก 23/09) */
                 const supportUnit = modalParentLabor === 'indirect';
                 if (supportUnit && !formRefLineId) return (
-                  <div style={{ fontSize: 11, color: 'var(--muted)', background: 'var(--bg3)',
+                  <div style={{ fontSize: 11, color: 'var(--muted)', background: 'var(--bg3-surf)',
                                 border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '8px 10px' }}>
-                    อยู่ใต้หน่วยงาน <b>{tr('สายสนับสนุน (Indirect)')}</b> — ไม่ต้องผูกไลน์ผลิต
+                    {tr("อยู่ใต้หน่วยงาน")} <b>{tr('สายสนับสนุน (Indirect)')}</b> — {tr("ไม่ต้องผูกไลน์ผลิต")}
                     <div style={{ marginTop: 2 }}>{tr('ถ้าหน่วยนี้มีไลน์ผลิตจริง ให้แก้ประเภทที่แผนกแม่เป็น Direct ก่อน')}</div>
                   </div>
                 );
@@ -679,7 +678,7 @@ export default function OrgSetup() {
                       placeholder={tr('— ไม่ผูก —')} onChange={setFormRefLineId} />
                     {supportUnit && (
                       <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 4 }}>
-                        ⚠️ หน่วยแม่เป็นสายสนับสนุน (Indirect) แต่กลุ่มนี้ผูกไลน์ผลิตไว้ — ตรวจว่าตั้งใจไหม
+                        ⚠️ {tr("หน่วยแม่เป็นสายสนับสนุน (Indirect) แต่กลุ่มนี้ผูกไลน์ผลิตไว้ — ตรวจว่าตั้งใจไหม")}
                       </div>
                     )}
                   </div>
@@ -705,9 +704,9 @@ function RowActions({ node, onEdit, onToggle, onDelete }) {
   // ปุ่มกล่อง 30×30 ชุดเดียวกัน (IconButton) — เดิมเป็นอีโมจิเปล่า 13px ถังขยะเล็กจนดูไม่ออก (user 06/10)
   return (
     <div style={{ display: 'flex', gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-      <IconButton onClick={() => onEdit(node)} title={`แก้ไข ${node.name}`}>✏️</IconButton>
+      <IconButton onClick={() => onEdit(node)} title={`${tr("แก้ไข")} ${node.name}`}>✏️</IconButton>
       <IconButton onClick={() => onToggle(node)} title={node.is_active ? tr('ปิดใช้งาน') : tr('เปิดใช้งาน')}>{node.is_active ? '🟢' : '⚪'}</IconButton>
-      <DeleteButton onClick={() => onDelete(node)} title={`ลบ ${node.name}`} />
+      <DeleteButton onClick={() => onDelete(node)} title={`${tr("ลบ")} ${node.name}`} />
     </div>
   );
 }
@@ -728,7 +727,7 @@ function NodeLabel({ node, meta, children }) {
 
 function CostBadge({ code }) {
   return (
-    <span style={{ fontSize: 11, padding: '1px 6px', borderRadius: 'var(--r-xs)', background: 'var(--bg3)', color: 'var(--muted)', border: '1px solid var(--border2)', whiteSpace: 'nowrap' }}>
+    <span style={{ fontSize: 11, padding: '1px 6px', borderRadius: 'var(--r-xs)', background: 'var(--bg3-surf)', color: 'var(--muted)', border: '1px solid var(--border2)', whiteSpace: 'nowrap' }}>
       {code}
     </span>
   );
@@ -747,7 +746,7 @@ function DivBadge({ node, nodes }) {
         border: `1px solid ${(m?.color || 'var(--border)')}${own ? '' : '55'}`,
         color: m?.color || 'var(--muted)', opacity: own ? 1 : 0.6,
       }}>
-      {m?.icon} {tr(m?.label) || eff}{own ? '' : ' (ตกทอด)'}
+      {m?.icon} {tr(m?.label) || eff}{own ? '' : tr(" (ตกทอด)")}
     </span>
   );
 }
