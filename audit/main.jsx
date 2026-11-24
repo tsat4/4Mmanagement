@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { UserContext, Sidebar, NAV_ITEMS, NotificationBell } from '../src/App'
 import { markView } from '../src/utils/motion'
+import TabBody from '../src/components/TabBody'
+import Skeleton from '../src/components/Skeleton'
 /* 📈 harness ไม่ได้ผ่าน App.jsx (ตัวเรียก markView ตอนเปลี่ยน URL) ⇒ เปิดหน้าต่างอนิเมชันกราฟตอนโหลด ให้เห็นเหมือนแอปจริง */
 markView()
 /* 24/11: แอปจริง App.jsx เรียก markView() ทุกครั้งที่ pathname/search เปลี่ยน (สลับแท็บ = ?tab= เปลี่ยน) — harness ใช้ MemoryRouter
@@ -78,6 +80,22 @@ const CTX = { role:ROLE, lineId:2, team:'A', section:SECTIONS[0] || 'PD1', secti
 
 /* ?p=__sidebar — วัด sidebar แบบ D (rail + แผงลอย) นอกแอปจริง · role=admin เพื่อให้เห็นเมนูครบ
    จำลอง marginLeft แบบเดียวกับ ProtectedLayout เพื่อวัดว่าเนื้อหาถูกบีบเมื่อไหร่ */
+/* 24/11: lab ของ sidebar โหลด "หน้าจริง" ตาม path ที่เมนูพาไป (เดโม sidebar↔แผ่นเนื้อหา · TabBody) — `/daily-report` → DailyReport.jsx
+   หาไฟล์ไม่เจอ = บอกบนจอ (ไม่ใช่ทุก route ชื่อตรงไฟล์) · ไม่ใช่ตัวสวีป — crashsweep ยังใช้ <App/> เดิม */
+function ShellPage(){
+  const loc = useLocation()
+  const file = loc.pathname === '/' ? 'DeptHub' : loc.pathname.slice(1).split('/')[0].split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('')
+  const key = `../src/pages/${file}.jsx`
+  const [C, setC] = useState(null)
+  useEffect(() => { setC(null); if (!mods[key]) return; mods[key]().then(m => setC(() => m.default)).catch(() => setC(null)) }, [key])
+  return (
+    <TabBody tab={loc.pathname}>
+      {!mods[key] ? <div style={{ padding: 24, color: 'var(--muted)' }}>harness: ไม่มีไฟล์ {file}.jsx สำหรับ {loc.pathname}</div>
+        : !C ? <Skeleton cards={6} style={{ padding: '24px 24px 0' }} />
+        : <EB><Suspense fallback={<Skeleton cards={6} style={{ padding: '24px 24px 0' }} />}><C /></Suspense></EB>}
+    </TabBody>
+  )
+}
 function SidebarLab(){
   const [pinned, setPinned] = useState(false)
   const [open, setOpen] = useState(true)
@@ -86,15 +104,15 @@ function SidebarLab(){
   return (
     <MemoryRouter initialEntries={[ENTRY]}><ViewMarker />
       <UserContext.Provider value={{ ...CTX, role:'admin' }}>
-        <div style={{ display:'flex', minHeight:'100vh', background:'var(--bg)' }}>
+        <div className="app-frame" style={{ display:'flex', minHeight:'100vh', background:'var(--bg)' }}>
           <Sidebar isOpen={open} onClose={()=>setOpen(false)} onLogout={()=>{}} theme="dark" onToggleTheme={()=>{}}
             userRole="admin" userLineId={null} userEmail="a@b.c" userFullName="ทดสอบ ระบบ" userSignatureUrl={null}
             userPosition="operator" userAvatarUrl={null} remoteCode={null} onToggleRemote={()=>{}}
             onOpenPalette={()=>{ window.__palette = (window.__palette||0)+1 }} pinned={pinned} onTogglePin={()=>setPinned(v=>!v)} />
           {!open && <button id="reopen" onClick={()=>setOpen(true)} style={{position:'fixed',top:10,left:14,zIndex:1100}}>☰</button>}
-          <main id="mainbox" style={{ flex:1, marginLeft, minHeight:'100vh', paddingTop:14, background:'var(--bg)',
+          <main id="mainbox" className="app-sheet" style={{ flex:1, marginLeft, minHeight:'100vh', paddingTop:14, background:'var(--bg)',
             overflowY:'auto', overflowX:'hidden', minWidth:0, transition:'margin-left 0.3s' }}>
-            <div id="content" style={{ padding:20, color:'var(--text)' }}>พื้นที่เนื้อหาหลัก</div>
+            <ShellPage />
           </main>
         </div>
       </UserContext.Provider>
