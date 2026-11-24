@@ -204,7 +204,8 @@ export const NAV_ITEMS = [
   // วางแผนการผลิต ใช้ 2 ฝ่าย: ผลิตตัดสินเปิดกะ/OT · planner เอายอดลูกค้ามาเทียบกำลังผลิต
   // ⇒ **บ้านจริง = ฝ่ายผลิต** (ย้ายไป Logistic = หัวหน้าไลน์หาไม่เจอ) · `alsoIn` = โผล่เป็น
   //    *ทางลัด* ในหมวด Logistic ด้วย (หน้าตาต่างชัด — ดู `isNavGuest`) · สิทธิ์ชุดเดียวเหมือนเดิม
-  { to: '/production-plan', icon: '🗓️', label: 'วางแผนการผลิต',      group: 'ฝ่ายผลิต', alsoIn: LOGISTIC_GROUPS.inbound },
+  //    `alsoInSub` = หัวข้อย่อยของแถวทางลัดในหมวด `alsoIn` (`sub` ใช้กับหมวดบ้านเท่านั้น · ดู `navSubOf`)
+  { to: '/production-plan', icon: '🗓️', label: 'วางแผนการผลิต',      group: 'ฝ่ายผลิต', alsoIn: LOGISTIC_GROUPS.inbound, alsoInSub: 'Planning' },
   { to: '/oee-analytics',  icon: '📈', label: 'OEE',                group: 'วิเคราะห์ & รายงาน' },
   { to: '/product-history', icon: '📜', label: 'ประวัติผลิต (by Product)', group: 'วิเคราะห์ & รายงาน' },
   { to: '/vsm',            icon: '🗺️', label: 'VSM สายธารคุณค่า',   group: 'วิเคราะห์ & รายงาน' },
@@ -217,14 +218,15 @@ export const NAV_ITEMS = [
      ⚠️ Warehouse (เก็บ FG 1xx → ขาออก) ≠ Store (คุม 2xx/3xx/5xx → ขาเข้า) — ห้ามสลับ
      นิยามฝั่ง + การจัดฝั่งจากเลข MAT อยู่ที่ src/utils/logisticSide.js จุดเดียว */
   /* 📦 16/11 (คำสั่ง user) รวม "สต๊อกในไลน์" + "Monitoring แผน-สต๊อก" เป็นหน้าเดียว — /monitoring พาไปแท็บ ?tab=monitoring */
-  { to: '/line-stock',      icon: '📦', label: 'Stock Management',         group: LOGISTIC_GROUPS.inbound },
-  { to: '/heijunka',       icon: '🎴', label: 'บอร์ดคัมบัง (ทุกสโตร์)',   group: LOGISTIC_GROUPS.inbound },
-  { to: '/transport',       icon: '🚚', label: 'มอบหมายขนส่ง (Transport)',   group: LOGISTIC_GROUPS.inbound },
+  /* 🗂️ 24/11 (คำสั่ง user): Sub Bar หมวดนี้แบ่ง 3 หัวข้อ Sale & Marketing → Planning → Store (ลำดับ = `NAV_SUB_ORDER`) */
+  { to: '/line-stock',      icon: '📦', label: 'Stock Management',         group: LOGISTIC_GROUPS.inbound, sub: 'Store' },
+  { to: '/heijunka',       icon: '🎴', label: 'บอร์ดคัมบัง (ทุกสโตร์)',   group: LOGISTIC_GROUPS.inbound, sub: 'Store' },
+  { to: '/transport',       icon: '🚚', label: 'มอบหมายขนส่ง (Transport)',   group: LOGISTIC_GROUPS.inbound, sub: 'Store' },
   // เฝ้าระวังสต๊อกจับทั้ง 2 ฝั่ง (A/B เทียบ min-max ของทุกเลข · E ใบสั่งซื้อค้าง) → โผล่ทั้งสองหมวด
   // `alsoIn` = โชว์ซ้ำเฉพาะใน sidebar/หน้า Home · ที่อื่น (สิทธิ์/ค้นหา/breadcrumb/ตัวนับ) นับครั้งเดียว
-  { to: '/store-monitor',   icon: '🚨', label: 'เฝ้าระวังสต๊อก (Abnormal)',  group: LOGISTIC_GROUPS.inbound, alsoIn: LOGISTIC_GROUPS.outbound },
+  { to: '/store-monitor',   icon: '🚨', label: 'เฝ้าระวังสต๊อก (Abnormal)',  group: LOGISTIC_GROUPS.inbound, alsoIn: LOGISTIC_GROUPS.outbound, sub: 'Store' },
   // 🔴 หมวดแผนงานยุบเข้ามาที่นี่ (30/09 · คำสั่ง user — planner + store = หน่วยเดียว ดู logisticSide.js)
-  { to: '/planner-sales',   icon: '📈', label: 'Planner & Sales',           group: LOGISTIC_GROUPS.inbound },
+  { to: '/planner-sales',   icon: '📈', label: 'Planner & Sales',           group: LOGISTIC_GROUPS.inbound, sub: 'Sale & Marketing' },
 
   /* 📉 บอร์ด Monitoring (01/10) = แท็บ `?tab=monitoring` ของ Stock Management แล้ว (16/11 · คำสั่ง user)
      🔴 ถอด `alsoIn: 'ฝ่ายผลิต'` ไปแล้ว 11/11 · **อย่าเอาเมนูแยกหรือทางลัดกลับโดยไม่ถาม user** */
@@ -361,6 +363,25 @@ export const inNavGroup = (item, groups) =>
        บอกแค่ "ตัวอักษร accent" ไม่ใส่พื้น/แถบซ้าย — ไม่งั้นมันจะดูเป็นบ้านที่สอง */
 export const isNavGuest = (item, group) =>
   !!item.alsoIn && item.alsoIn === group && item.group !== group;
+
+/* 🗂️ หัวข้อย่อยของแถวเมนูในหมวดที่กำลังวาด — บ้านจริงใช้ `sub` · แถวทางลัด (`alsoIn`) ใช้ `alsoInSub`
+   (ไม่งั้นหัวข้อของหมวดหนึ่งไปโผล่ในอีกหมวด) · ไม่มี = ไม่คั่นหัวข้อ (พฤติกรรมเดิม) */
+export const navSubOf = (item, group) => (isNavGuest(item, group) ? item.alsoInSub : item.sub) || null;
+
+/* ลำดับหัวข้อย่อยต่อหมวด — หมวดที่ไม่อยู่ในนี้ = ลำดับตาม NAV_ITEMS เดิมเป๊ะ
+   แถวที่ไม่มีหัวข้อในหมวดที่มีลำดับ = ไปท้ายสุด (ไม่หาย) · 24/11 คำสั่ง user */
+export const NAV_SUB_ORDER = {
+  [LOGISTIC_GROUPS.inbound]: ['Sale & Marketing', 'Planning', 'Store'],
+};
+export function orderNavItems(items, group) {
+  const order = NAV_SUB_ORDER[group];
+  if (!order) return items;
+  const rank = (i) => { const k = order.indexOf(navSubOf(i, group)); return k < 0 ? order.length : k; };
+  return items.map((it, idx) => ({ it, idx })).sort((a, b) => rank(a.it) - rank(b.it) || a.idx - b.idx).map(x => x.it);
+}
+
+/* 📌 หมวดที่ "แถบแท็บหัวเพจ" (Detail bar) ตรึงติดบนตอนเลื่อนจอ — PageHeader อ่านจากที่นี่ (24/11 คำสั่ง user · จอคอมเท่านั้น) */
+export const STICKY_TAB_GROUPS = [LOGISTIC_GROUPS.inbound];
 
 // สรุปสิทธิ์เข้าหน้าของ role จากตารางสิทธิ์จริง (role_permissions) — ใช้โชว์ในหน้า จัดการผู้ใช้งาน
 // เพื่อไม่ต้อง hardcode รายชื่อโมดูลต่อ role (เคย hardcode แล้ว drift ตามโมดูลที่เพิ่มไม่ทัน)
@@ -561,7 +582,7 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
     ? visibleItems.filter(i => (i.label + ' ' + i.group + ' ' + i.to).toLowerCase().includes(q))
     : null;
   const groupedItems = NAV_GROUP_ORDER
-    .map(g => ({ group: g, items: visibleItems.filter(i => inNavGroup(i, [g])) }))
+    .map(g => ({ group: g, items: orderNavItems(visibleItems.filter(i => inNavGroup(i, [g])), g) }))
     .filter(g => g.items.length > 0);
   const displayName = userFullName || userEmail || '';
 
@@ -989,12 +1010,12 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
               {panelItems && panelItems.map((item, i) => (
                 <div key={item.to}>
                   {/* หัวข้อย่อยในหมวด (`sub`) — คั่นเฉพาะตอนเปลี่ยนกลุ่ม ไม่เพิ่มหมวดบนแถบไอคอน */}
-                  {item.sub && item.sub !== panelItems[i - 1]?.sub && (
+                  {navSubOf(item, panel) && navSubOf(item, panel) !== (i ? navSubOf(panelItems[i - 1], panel) : null) && (
                     <div style={{
                       fontSize: 11, fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.04em',
                       padding: '9px 9px 3px', marginTop: i === 0 ? 0 : 5,
                       borderTop: i === 0 ? 'none' : '1px solid var(--border)',
-                    }}>{tr(item.sub)}</div>
+                    }}>{tr(navSubOf(item, panel))}</div>
                   )}
                   {navRow(item, panel, () => { if (!pinned) setPanel(null); })}
                 </div>
@@ -1192,12 +1213,12 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
                   {open && items.map((item, i) => (
                     <div key={item.to}>
                       {/* หัวข้อย่อย (`sub`) — เหมือนแผงบน desktop ให้ 2 โหมดเห็นโครงเดียวกัน */}
-                      {item.sub && item.sub !== items[i - 1]?.sub && (
+                      {navSubOf(item, group) && navSubOf(item, group) !== (i ? navSubOf(items[i - 1], group) : null) && (
                         <div style={{
                           fontSize: 11, fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.04em',
                           padding: '9px 9px 3px', marginTop: i === 0 ? 0 : 5,
                           borderTop: i === 0 ? 'none' : '1px solid var(--border)',
-                        }}>{tr(item.sub)}</div>
+                        }}>{tr(navSubOf(item, group))}</div>
                       )}
                       {navRow(item, group, onClose)}
                     </div>
