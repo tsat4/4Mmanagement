@@ -1793,11 +1793,11 @@ export default function PMSetup() {
   const filtered = !!(fQ.trim() || fScope.names?.length || fStatus)
   const clearFilters = () => { setFQ(''); setFScope({ section: '', line: '', names: null }); setFStatus('') }
   const statusOptions = [
-    { value: '', label: `ทั้งหมด (${allRows.length})` },
-    { value: 'ready', label: `✓ พร้อม (${statusCount.ready})` },
-    { value: 'no_cp', label: `⚪ ไม่มีจุดตรวจ (${statusCount.no_cp})` },
-    amRegistered ? { value: 'am_pending', label: `⚠ ยังไม่ลงทะเบียน AM (${statusCount.am_pending})` } : null,
-    statusCount.no_line ? { value: 'no_line', label: `ไลน์นอกทะเบียน (${statusCount.no_line})`, title: 'ช่องไลน์ว่าง หรือชื่อไม่ตรงทะเบียนไลน์ผลิต — กรองตามไลน์ไม่ได้' } : null,
+    { value: '', label: `${tr('ทั้งหมด')} (${allRows.length})` },
+    { value: 'ready', label: `✓ ${tr('พร้อม')} (${statusCount.ready})` },
+    { value: 'no_cp', label: `⚪ ${tr('ไม่มีจุดตรวจ')} (${statusCount.no_cp})` },
+    amRegistered ? { value: 'am_pending', label: `⚠ ${tr('ยังไม่ลงทะเบียน AM')} (${statusCount.am_pending})` } : null,
+    statusCount.no_line ? { value: 'no_line', label: `${tr('ไลน์นอกทะเบียน')} (${statusCount.no_line})`, title: 'ช่องไลน์ว่าง หรือชื่อไม่ตรงทะเบียนไลน์ผลิต — กรองตามไลน์ไม่ได้' } : null,
   ].filter(Boolean)
 
   const handleDelete = async (jig) => {

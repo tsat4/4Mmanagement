@@ -843,7 +843,7 @@ function LevelPill({ n, dim }) {
       display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700,
       color: dim ? 'var(--muted)' : col, border: `1px solid ${dim ? 'var(--border2)' : col}`,
       borderRadius: 'var(--r-pill)', padding: '2px 9px', whiteSpace: 'nowrap', opacity: dim ? 0.75 : 1,
-    }}>{L.icon} {L.name}</span>
+    }}>{L.icon} {tr(L.name)}</span>
   );
 }
 
@@ -882,14 +882,14 @@ function DimensionTab({ c, ents, demoOn, day, navigate, isMobile }) {
                     return (
                       <span key={si} style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                         {si > 0 && <span style={{ color: 'var(--muted)', fontSize: 12 }}>→</span>}
-                        <span title={`${tr("ข้อมูลจาก")}: ${s.d}${sim ? tr(' (จำลองในโหมดสาธิต)') : ''}`} style={{
+                        <span title={`${tr("ข้อมูลจาก")}: ${tr(s.d)}${sim ? tr(' (จำลองในโหมดสาธิต)') : ''}`} style={{
                           fontSize: 11.5, fontWeight: 600, borderRadius: 'var(--r-md)', padding: '3px 8px', whiteSpace: 'nowrap',
                           color: col,
                           background: ok ? 'var(--green-dim)' : sim ? 'var(--blue-dim)' : 'transparent',
                           border: `1px ${ok ? 'solid' : 'dashed'} ${ok ? 'var(--green-line)' : sim ? 'var(--blue)' : 'var(--border2)'}`,
                         }}>
                           {ok ? '✓' : sim ? '🧪' : '○'} {s.l}
-                          <span style={{ opacity: 0.65, marginLeft: 4 }}>· {s.d}</span>
+                          <span style={{ opacity: 0.65, marginLeft: 4 }}>· {tr(s.d)}</span>
                         </span>
                       </span>
                     );
@@ -1042,7 +1042,7 @@ function LadderTab({ c, navigate, isMobile }) {
                     minWidth: 58, whiteSpace: 'nowrap',
                   }}>{x.n} {tr('คำถาม')}</span>
                   <span style={{ flex: 1, minWidth: 0, fontSize: 12.5 }}>
-                    <b>{x.l}</b><span style={{ color: 'var(--muted)' }}> · {x.d}</span>
+                    <b>{tr(x.l)}</b><span style={{ color: 'var(--muted)' }}> · {tr(x.d)}</span>
                   </span>
                 </div>
               ))}

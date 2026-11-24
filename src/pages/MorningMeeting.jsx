@@ -698,7 +698,7 @@ export default function MorningMeeting() {
                     const s = shifts.find(x => x.shift === sh);
                     return (
                       <Fragment key={sh}>
-                        <span style={{ fontSize: 12, color: 'var(--text2)', whiteSpace: 'nowrap' }}>{SHIFT_LABEL[sh]}</span>
+                        <span style={{ fontSize: 12, color: 'var(--text2)', whiteSpace: 'nowrap' }}>{tr(SHIFT_LABEL[sh])}</span>
                         {!s ? (
                           <span style={{ gridColumn: '2 / -1', fontSize: 12, color: 'var(--muted)' }}>{tr('— ไม่เปิดกะ —')}</span>
                         ) : (
@@ -756,7 +756,7 @@ export default function MorningMeeting() {
             <tbody>
               {missedOrders.map(m => (
                 <tr key={m.o.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td style={{ padding: '6px 8px', whiteSpace: 'nowrap' }}>{m.line} <span style={{ color: 'var(--muted)', fontSize: 11 }}>{m.shift ? SHIFT_LABEL[m.shift] : ''}</span></td>
+                  <td style={{ padding: '6px 8px', whiteSpace: 'nowrap' }}>{m.line} <span style={{ color: 'var(--muted)', fontSize: 11 }}>{m.shift ? tr(SHIFT_LABEL[m.shift]) : ''}</span></td>
                   <td style={{ padding: '6px 8px' }}>{m.o.part_name || m.o.mat_no || '-'} <span style={{ color: 'var(--muted)', fontSize: 11 }}>({m.o.prod_no})</span></td>
                   <td style={{ padding: '6px 8px', textAlign: 'right' }}>{m.target.toLocaleString()}</td>
                   <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 700 }}>{m.actual.toLocaleString()}</td>

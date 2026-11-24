@@ -20,13 +20,14 @@ import { round1, statusOf, Q_THIN_DEFECT_ROWS } from './obeyaKpi.js';
 import { scoreDef, summaryOf } from './kpiSetup.js';
 import { DEFAULT_OEE_TARGET, orderPlanQty, ppmOf } from './oee.js';
 import { monthsShort } from './dateFormat.js';
+import { tr } from './i18n.js';
 
 /* ── ช่วงเวลา ─────────────────────────────────────────────────────────────────────── */
 export const SUMMARY_KEY = 'ALL';           // คีย์ของแท่งที่ 13
 
 export const yearOf = (today) => Number(String(today).slice(0, 4));
 export const monthKeys = (year) => Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`);
-export const monthLabel = (k) => (k === SUMMARY_KEY ? 'สรุป' : monthsShort()[Number(String(k).slice(5, 7)) - 1] || k);
+export const monthLabel = (k) => (k === SUMMARY_KEY ? tr('สรุป') : monthsShort()[Number(String(k).slice(5, 7)) - 1] || k);
 export const lastDayOf = (k) => { const [y, m] = String(k).split('-').map(Number); return new Date(y, m, 0).getDate(); };
 
 /** ปีปฏิทิน — ปีปัจจุบันตัดที่ `today` (เดือนถัดไปยังไม่เกิด) · ปีย้อนหลัง = ทั้งปี */

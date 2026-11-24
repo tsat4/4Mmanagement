@@ -57,7 +57,7 @@ export default function MachineFactsPanel({ src, canManage, callAdmin }) {
       supabaseDR.from('dr_downtime_types').select('id, name_th, category, process_type, is_active, sort_order').order('sort_order'),
     ]);
     if (id !== req.current) return;
-    const errs = [st.error && 'ช่วงหยุด', pc.error && 'นับชิ้น', tm.error && 'การผูกเครื่อง', rm.error && 'การจับคู่เหตุผล', dt.error && 'ประเภท downtime'].filter(Boolean);
+    const errs = [st.error && tr('ช่วงหยุด'), pc.error && tr('นับชิ้น'), tm.error && tr('การผูกเครื่อง'), rm.error && tr('การจับคู่เหตุผล'), dt.error && tr('ประเภท downtime')].filter(Boolean);
     // ฝั่ง Daily Report โหลดแยก (loadDr) — คงค่ารอบก่อนไว้ ไม่งั้นตารางเทียบหายไปค้าง "กำลังโหลด" จนรอบหน้า
     setData(prev => ({ states: st.data || [], counters: pc.data || [], tagMap: tm.data || [], reasonMap: rm.data || [], dtTypes: dt.data || [],
       errs, fromDate: bkkDateStr(fromMs), sessions: prev?.sessions ?? null, downtimes: prev?.downtimes ?? null, drErr: prev?.drErr ?? null }));

@@ -719,7 +719,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
     const acts = (data.actions || []).map(a => ({
       id: `a-${a.id}`, icon: a.source === 'obeya' ? '🏛️' : '🌅', kind: 'action',
       // หัวข้อว่าง/ช่องว่างล้วน = เขียนให้รู้ว่าว่าง ห้ามปล่อยแถวไม่มีชื่อ (UX audit 05/10)
-      title: (a.problem || '').trim() || '(ไม่มีหัวข้อ)',
+      title: (a.problem || '').trim() || tr('(ไม่มีหัวข้อ)'),
       meta: [a.line_name, a.assignee ? `ผู้รับผิดชอบ ${a.assignee}` : 'ยังไม่ระบุผู้รับผิดชอบ'].filter(Boolean).join(' · '),
       due: a.due_date || null, color: 'var(--blue)', to: a.source === 'obeya' ? '/obeya?tab=sqdcm' : '/morning-meeting',
     }));
@@ -730,7 +730,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
         /* ชนิดที่ไม่อยู่ในทะเบียน = safetyKind คืน short '?' ⇒ เดิมขึ้น "? — …" (UX audit 05/10) — เขียนเป็นคำแทน */
         title: `${k.unknown ? tr('ไม่ระบุชนิด') : k.short} — ${(e.description || '').trim() || tr('(ไม่มีรายละเอียด)')}`,
         meta: [e.line_name, e.employee_name].filter(Boolean).join(' · ') || 'ยังไม่ปิดเคส',
-        due: null, color: k.color, to: null, warn: !e.countermeasure ? 'ยังไม่ได้ลงมาตรการแก้ไข' : null,
+        due: null, color: k.color, to: null, warn: !e.countermeasure ? tr('ยังไม่ได้ลงมาตรการแก้ไข') : null,
       };
     });
     const over = x => (x.due && x.due < date ? 0 : 1);
@@ -1016,7 +1016,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
     const dense = r.series.some(p => p.v != null && labelW(p.v) > slotW);
     const data = r.series.map((p, i) => {
       const show = p.v != null && (!dense || p.summary || p.k === monthKey || i % 2 === 0);
-      return { ...p, v: cv(p.v), vRaw: p.v, man: cv(p.man), manRaw: p.man ?? null, plan: cv(p.plan), proj: cv(p.proj), label: p.summary ? 'สรุป' : String(Number(String(p.k).slice(5, 7))),
+      return { ...p, v: cv(p.v), vRaw: p.v, man: cv(p.man), manRaw: p.man ?? null, plan: cv(p.plan), proj: cv(p.proj), label: p.summary ? tr('สรุป') : String(Number(String(p.k).slice(5, 7))),
         vLabel: `${show ? nf(cv(p.v), decL) : ''}${p.noteMark || ''}`, projLabel: p.proj != null && zoomed ? nf(cv(p.proj), decL) : '' };
     });
     if (!data.some(p => p.v != null)) return <EmptyChart k={kk} text={`${tr("ยังไม่มีค่าสักเดือนในปี")} ${year}`} />;   // เหตุผลอยู่ที่ไฟ/ท้ายแผ่นแล้ว ไม่พิมพ์ซ้ำ

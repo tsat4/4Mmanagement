@@ -1,3 +1,4 @@
+import { tr } from './i18n.js';
 // ── ชื่อชุดสิทธิ์ (role) ที่แสดงผลทั้งแอป — source of truth จุดเดียว (2026-07-13) ──
 // หลักตั้งชื่อ: บอก "ขอบเขตสิทธิ์ในระบบ" ห้ามใช้คำตำแหน่งงานบริษัท (ผู้จัดการ/หัวหน้าส่วน/หัวหน้าไลน์ ฯลฯ)
 // เพื่อไม่ชนกับตำแหน่งจริงใน profiles.position — role คือ "ชุดสิทธิ์" ไม่ใช่ตำแหน่ง (ดู CLAUDE.md "Role System")
@@ -98,5 +99,5 @@ export const PERMISSION_COLUMN_ROLES = Object.entries(ROLE_META).filter(isLive).
 // ป้ายสั้นสำหรับชิป/หัวคอลัมน์ เช่น "🏭 สิทธิ์ทั้งฝ่าย" — role แปลกที่ไม่รู้จักคืน key เดิม
 export const roleLabel = (role) => {
   const m = ROLE_META[role];
-  return m ? `${m.icon} ${m.label}` : role;
+  return m ? `${m.icon} ${tr(m.label)}` : role;
 };

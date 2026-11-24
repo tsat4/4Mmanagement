@@ -970,7 +970,7 @@ export default function AddUser() {
           <div key={g.key} style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap', fontSize: 12, padding: '3px 0' }}>
             <b style={{ minWidth: 84, color: g.sev === SEV_FIX ? 'var(--red)' : 'var(--text2)' }}>{g.icon} {g.count} {tr('บัญชี')}</b>
             <span style={{ flex: '1 1 280px', minWidth: 0, color: 'var(--text2)' }}>
-              {g.what} <span style={{ color: 'var(--muted)' }}>→ {g.fix}</span>
+              {tr(g.what)} <span style={{ color: 'var(--muted)' }}>→ {tr(g.fix)}</span>
             </span>
             <button type="button" aria-pressed={tableIssue === g.key}
               onClick={() => {
@@ -1324,7 +1324,7 @@ export default function AddUser() {
             <span style={{ color: left ? 'var(--red)' : 'var(--green)', fontWeight: 700 }}>
               {left ? `${tr("เหลือ")} ${left} ${tr("บัญชี")}` : tr("✓ เคลียร์ครบแล้ว")}
             </span>
-            {def && <span style={{ color: 'var(--muted)' }}>{tr('วิธีแก้:')} {def.fix}</span>}
+            {def && <span style={{ color: 'var(--muted)' }}>{tr('วิธีแก้:')} {tr(def.fix)}</span>}
             <span style={{ flex: 1 }} />
             <button type="button" onClick={() => setTableIssue(null)}
               style={{ width: 'auto', fontSize: 11.5, padding: '3px 10px', cursor: 'pointer', borderRadius: 'var(--r-md)',
@@ -1374,7 +1374,7 @@ export default function AddUser() {
                         <div style={{ marginTop: 3, display: 'flex', flexDirection: 'column', gap: 1, maxWidth: 320 }}>
                           {fx.map(i => (
                             <div key={i.key} title={i.line} style={{ fontSize: 11, color: 'var(--red)', lineHeight: 1.4 }}>
-                              {i.icon} <b>{i.chip}</b> <span style={{ color: 'var(--text2)' }}>— {i.fix}</span>
+                              {i.icon} <b>{tr(i.chip)}</b> <span style={{ color: 'var(--text2)' }}>— {tr(i.fix)}</span>
                             </div>
                           ))}
                           {inf.length > 0 && (

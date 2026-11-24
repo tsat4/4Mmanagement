@@ -1150,7 +1150,7 @@ export default function Improvements() {
                         <div style={{ fontSize: 11, color: '#e05252', fontWeight: 700 }}>{tr('⚠️ ข้อมูลไม่ครบ (')}{r.partial}) — {tr("ตัวเลขก่อน/หลังด้านล่างอาจต่ำกว่าจริง")}</div>
                       )}
                       {/* ยังไม่ลงมือแก้ = ไม่มีแถบ "หลังแก้" ให้ดู (ช่วงนั้นคือช่วงที่ยังไม่ได้แก้อะไรเลย) */}
-                      {[[started ? 'ก่อนแก้' : 'ปัจจุบัน', r.beforePerDay, r.beforeTotal, r.beforeCount, r.beforeDays, 'var(--red)'],
+                      {[[started ? tr('ก่อนแก้') : tr('ปัจจุบัน'), r.beforePerDay, r.beforeTotal, r.beforeCount, r.beforeDays, 'var(--red)'],
                         ...(started ? [['หลังแก้', r.afterPerDay, r.afterTotal, r.afterCount, r.afterDays, improved || r.afterPerDay === 0 ? 'var(--green)' : 'var(--amber)']] : [])
                       ].map(([label, perDay, total, count, days, color]) => (
                         <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1159,7 +1159,7 @@ export default function Improvements() {
                             <div style={{ width: `${Math.min(100, (perDay / maxPerDay) * 100)}%`, height: '100%', background: color, borderRadius: 'var(--r-xs)', transition: 'width 0.4s' }} />
                           </div>
                           <span style={{ fontSize: 11, fontWeight: 800, color, width: 150, flexShrink: 0, textAlign: 'right' }}>
-                            {perDay.toFixed(1)} {r.unit}{tr('/วัน')} <span style={{ fontWeight: 600, color: 'var(--muted)' }}>({total.toFixed(0)} / {days}{tr("วัน")})</span>
+                            {perDay.toFixed(1)} {tr(r.unit)}{tr('/วัน')} <span style={{ fontWeight: 600, color: 'var(--muted)' }}>({total.toFixed(0)} / {days}{tr("วัน")})</span>
                           </span>
                         </div>
                       ))}
@@ -1184,7 +1184,7 @@ export default function Improvements() {
                             ? <>{tr('ลดลง')} <b>{Number(imp.target_value).toLocaleString()} {r?.unit || ''}{tr('/วัน')}</b></>
                             : <>{tr('ลด')} <b>{Number(imp.target_value)}%</b></>}
                           {r && !r.noData && r.beforePerDay > 0 && tgt && (
-                            <> {tr('(จาก')} {r.beforePerDay.toFixed(1)} → {(r.beforePerDay * (1 - tgt.frac)).toFixed(1)} {r.unit}/{tr("วัน")})</>
+                            <> {tr('(จาก')} {r.beforePerDay.toFixed(1)} → {(r.beforePerDay * (1 - tgt.frac)).toFixed(1)} {tr(r.unit)}/{tr("วัน")})</>
                           )}
                           {tgt?.perMonth != null && (
                             <> {tr('· คาดว่าจะประหยัด')} <b style={{ color: 'var(--amber)' }}>~{fmtBaht(tgt.perMonth)}{tr('/เดือน')}</b></>
@@ -1229,7 +1229,7 @@ export default function Improvements() {
                               : [])].map(c => {
                             const on = costComps.includes(c.key);
                             return (
-                              <button key={c.key} onClick={() => toggleComp(c.key)} title={`${c.full} — ${on ? tr('นับในยอดรวม (กดเพื่อไม่นับ)') : tr('ไม่นับในยอดรวม (กดเพื่อนับ)')}`}
+                              <button key={c.key} onClick={() => toggleComp(c.key)} title={`${tr(c.full)} — ${on ? tr('นับในยอดรวม (กดเพื่อไม่นับ)') : tr('ไม่นับในยอดรวม (กดเพื่อนับ)')}`}
                                 style={{ fontSize: 11, fontWeight: 800, padding: '1px 8px', borderRadius: 'var(--r-md)', cursor: 'pointer',
                                   border: `1px solid ${on ? 'var(--accent)' : 'var(--border)'}`,
                                   background: on ? 'var(--accent-dim)' : 'transparent',

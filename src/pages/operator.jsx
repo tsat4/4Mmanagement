@@ -957,7 +957,7 @@ export default function Operator() {
     /* 🔴 ผู้จัดการ/หัวหน้าส่วน ยืน**เหนือชั้นแผนก** — ผูกแค่ส่วนงานก็ถูกแล้ว ห้ามนับเป็นข้อมูลไม่ครบ
        (20/10 · user: "ดุลยทรรศน์ เป็นผู้จัดการ เลือกแค่ส่วนพอ ไม่ต้องเลือกแผนก")
        ตัดสินที่ `needsDepartment()` (utils/positions.js) ที่เดียว — ห้ามเทียบชื่อตำแหน่งเองในหน้า */
-    if (!dep && needsDepartment(emp.position)) r.push('ยังไม่ระบุแผนก');
+    if (!dep && needsDepartment(emp.position)) r.push(tr('ยังไม่ระบุแผนก'));
     else if (!orgDeptKeys.has(dep.toLowerCase())) r.push(`${tr("แผนก")} "${dep}" ${tr("ไม่มีในผัง")}`);
     const grp = String(emp.group_name || '').trim();
     /* 🔴 กลุ่มที่ "มีอยู่จริงในทะเบียนไลน์" ไม่ใช่ข้อมูลผิด แม้ไม่อยู่ใต้แผนกตัวเอง (16/10 · user "group ก็มั่ว")
@@ -2032,7 +2032,7 @@ export default function Operator() {
                           <option value="">{tr('— ยังไม่ระบุ —')}</option>
                           {all.map(g => (
                             <option key={g.code} value={g.code}>
-                              {g.code} · {g.label_th}{allowed.includes(g.code) ? ' ✓' : ''}
+                              {g.code} · {tr(g.label_th)}{allowed.includes(g.code) ? ' ✓' : ''}
                             </option>
                           ))}
                         </select>

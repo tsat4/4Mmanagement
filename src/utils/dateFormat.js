@@ -37,6 +37,13 @@ const MONTHS_SHORT_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','
 /** ตัวย่อเดือนตามภาษาปัจจุบัน (index 0-11) — 🔴 ห้ามประกาศอาร์เรย์ 'ม.ค.' ซ้ำในหน้า ใช้ตัวนี้ (มีด่าน) */
 export const monthsShort = () => (getLang() === 'th' ? MONTHS_SHORT : MONTHS_SHORT_EN);
 export const MONTHS_SHORT_TH = MONTHS_SHORT;   // ใบพิมพ์ที่ยึดภาษาไทยเสมอ
+/** ตัวย่อวันในสัปดาห์ตามภาษา (index 0 = อาทิตย์) — `weekdaysShort()` มีจุด · `weekdaysMin()` ไม่มีจุด */
+const WD_TH = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+const WD_TH_MIN = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
+const WD_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const WD_EN_MIN = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+export const weekdaysShort = () => (getLang() === 'th' ? WD_TH : WD_EN);
+export const weekdaysMin = () => (getLang() === 'th' ? WD_TH_MIN : WD_EN_MIN);
 /** ปีสำหรับแสดงผล — ไทย = พ.ศ. (+543) · อังกฤษ = ค.ศ. (คำสั่ง user 24/11) · รับปี ค.ศ. เป็นตัวเลข */
 export const yearDisplay = (ceYear) => Number(ceYear) + (getLang() === 'th' ? 543 : 0);
 const monthShort = (d) => monthsShort()[d.getMonth()];

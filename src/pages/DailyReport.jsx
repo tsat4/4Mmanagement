@@ -9567,10 +9567,10 @@ function BreakPolicySetup({ role }) {
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{item.name_th}</span>
                 {item.name_en && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{item.name_en}</span>}
-                <span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 'var(--r-pill)', background: 'var(--amber-dim)', color: 'var(--amber)', fontWeight: 700 }}>{SHIFT_LABEL[item.shift]}</span>
-                <span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 'var(--r-pill)', background: 'var(--blue-dim)', color: 'var(--blue)', fontWeight: 700 }}>{PROC_LABEL[item.process_type]}</span>
+                <span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 'var(--r-pill)', background: 'var(--amber-dim)', color: 'var(--amber)', fontWeight: 700 }}>{tr(SHIFT_LABEL[item.shift])}</span>
+                <span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 'var(--r-pill)', background: 'var(--blue-dim)', color: 'var(--blue)', fontWeight: 700 }}>{tr(PROC_LABEL[item.process_type])}</span>
                 {OT_LABEL[item.ot_scope] && (
-                  <span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 'var(--r-pill)', background: 'var(--blue-dim)', color: 'var(--blue)', fontWeight: 700 }}>{OT_LABEL[item.ot_scope]}</span>
+                  <span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 'var(--r-pill)', background: 'var(--blue-dim)', color: 'var(--blue)', fontWeight: 700 }}>{tr(OT_LABEL[item.ot_scope])}</span>
                 )}
                 {item.anchor === 'shift_end' && (
                   <span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 'var(--r-pill)', background: 'var(--green-dim)', color: 'var(--green)', fontWeight: 700 }}>{tr('ท้ายกะ')}</span>

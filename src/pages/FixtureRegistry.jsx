@@ -439,7 +439,7 @@ export default function FixtureRegistry() {
             {/* 📍 20/11 — กรอง + บอกความครบทั้งระบบ ไม่ต้องไล่เลือกทีละตัวว่าตัวไหนมีข้อมูล */}
             <label style={{ fontSize: 12, color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer' }} title={tr('ลงจุดชิมในทะเบียนแล้ว')}>
               <input type="checkbox" checked={onlyWithPts} onChange={e => setOnlyWithPts(e.target.checked)} />
-              {tr('📍 เฉพาะที่ลงจุดแล้ว (')}{withPtsCount})
+              {tr('📍 เฉพาะที่ลงจุดแล้ว')} ({withPtsCount})
             </label>
             <span style={{ fontSize: 11.5, color: withPtsCount ? 'var(--muted)' : 'var(--amber)' }}>
               {tr('ลงจุดชิมแล้ว')} <b style={{ color: withPtsCount ? 'var(--text2)' : 'var(--amber)' }}>{withPtsCount}</b> {tr('จาก')} {fixtures.length} {tr('ตัว')}
