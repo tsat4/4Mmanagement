@@ -1,7 +1,9 @@
 import React, { Suspense, useState, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import { MemoryRouter, useLocation } from 'react-router-dom'
-import { UserContext, Sidebar, NAV_ITEMS, NotificationBell } from '../src/App'
+import { UserContext, Sidebar, NAV_ITEMS, NAV_GROUP_ORDER, NAV_GROUP_META, NotificationBell } from '../src/App'
+import { motion } from 'framer-motion'
+import { railPill } from '../src/utils/motion'
 import { markView } from '../src/utils/motion'
 import TabBody from '../src/components/TabBody'
 import Skeleton from '../src/components/Skeleton'
@@ -94,6 +96,55 @@ function ShellPage(){
         : !C ? <Skeleton cards={6} style={{ padding: '24px 24px 0' }} />
         : <EB><Suspense fallback={<Skeleton cards={6} style={{ padding: '24px 24px 0' }} />}><C /></Suspense></EB>}
     </TabBody>
+  )
+}
+/* ?p=__sidebar2 — 24/11 ต้นแบบ "ราง 260px ย่อเหลือ 72px" แบบรีล Sidebar v2 (ระดับหนัก) ด้วย token ของเรา · หมวดจาก NAV_GROUP_ORDER จริง
+   หน้าจริงโหลดผ่าน ShellPage · เป็นแค่แล็บสำหรับเคาะดีไซน์ — Sidebar จริงยังเป็น rail 64px + แผงลอย */
+function WideSidebarLab(){
+  const [min, setMin] = useState(false)
+  const [group, setGroup] = useState('ภาพรวม')
+  const [path, setPath] = useState('/')
+  const items = NAV_ITEMS.filter(i => i.group === group)
+  const W = min ? 72 : 260
+  const nav = (p) => { setPath(p); window.history.replaceState(null, '', '?p=__sidebar2&role=admin&go=' + encodeURIComponent(p)) }
+  return (
+    <UserContext.Provider value={CTX}>
+      <MemoryRouter initialEntries={[path]} key={path}>
+        <ViewMarker />
+        <div className="app-frame" style={{ display:'flex', minHeight:'100vh', background:'var(--bg)' }}>
+          <aside style={{ position:'fixed', top:0, left:0, bottom:0, width:W, transition:'width .32s cubic-bezier(.2,.8,.2,1)', overflow:'hidden', display:'flex', flexDirection:'column', padding:'14px 10px', gap:4,
+            background:'linear-gradient(180deg, var(--rail-top), var(--rail-bot))', borderRight:'1px solid var(--border)', zIndex:50 }}>
+            <button onClick={()=>setMin(m=>!m)} aria-label="ย่อ/ขยาย" style={{ position:'absolute', top:16, right:-1, width:24, height:24, borderRadius:'50%', border:'1px solid var(--border)', background:'var(--card)', color:'var(--muted)', cursor:'pointer', transform: min ? 'rotate(180deg)' : 'none', transition:'transform .32s' }}>‹</button>
+            <div style={{ display:'flex', alignItems:'center', gap:10, height:40, padding:'0 6px', marginBottom:6 }}>
+              <span style={{ flex:'0 0 32px', width:32, height:32, borderRadius:'50%', background:'var(--accent)', color:'var(--accent-ink)', display:'grid', placeItems:'center', fontWeight:700, fontSize:13 }}>E</span>
+              <span style={{ fontWeight:600, fontSize:15, color:'var(--text)', opacity: min ? 0 : 1, transform: min ? 'translateX(-8px)' : 'none', transition:'opacity .18s, transform .25s', whiteSpace:'nowrap' }}>ESM</span>
+            </div>
+            <div style={{ fontSize:11, color:'var(--muted)', padding:'4px 10px 2px', whiteSpace:'nowrap' }}>{min ? '•' : 'หมวด'}</div>
+            {[...new Set(NAV_GROUP_ORDER)].map(g => { const m = NAV_GROUP_META[g] || {}; const cur = g === group; return (
+              <button key={g} onClick={()=>{ setGroup(g); const first = NAV_ITEMS.find(i => i.group === g); if (first) nav(first.to) }} aria-current={cur ? 'page' : undefined} title={g}
+                style={{ position:'relative', display:'flex', alignItems:'center', gap:12, height:40, padding:'0 12px', borderRadius:12, border:'none', background:'transparent', color: cur ? 'var(--accent)' : 'var(--muted)', fontWeight: cur ? 600 : 400, cursor:'pointer', fontSize:13, whiteSpace:'nowrap', textAlign:'left', width:'100%' }}>
+                {cur && <motion.span layoutId="wide-active" transition={railPill()} aria-hidden="true" className="neon-row" style={{ position:'absolute', inset:0, borderRadius:12, background:'var(--accent-dim)', pointerEvents:'none' }}>
+                  <span className="neon-bar" style={{ position:'absolute', left:-10, top:8, bottom:8, width:4, borderRadius:'0 4px 4px 0', background:'var(--accent)' }} />
+                </motion.span>}
+                <span style={{ position:'relative', zIndex:1, flex:'0 0 20px', fontSize:16, textAlign:'center' }}>{m.icon || '•'}</span>
+                <span style={{ position:'relative', zIndex:1, opacity: min ? 0 : 1, transform: min ? 'translateX(-8px)' : 'none', transition:'opacity .18s, transform .25s', overflow:'hidden', textOverflow:'ellipsis' }}>{m.short || g}</span>
+              </button>) })}
+            {!min && items.length > 1 && <div style={{ marginTop:8, paddingLeft:8, borderLeft:'1px solid var(--border)', display:'flex', flexDirection:'column', gap:2 }}>
+              {items.slice(0, 8).map(i => <button key={i.to} onClick={()=>nav(i.to)} aria-current={path === i.to ? 'page' : undefined}
+                style={{ display:'flex', alignItems:'center', gap:8, height:30, padding:'0 10px', borderRadius:8, border:'none', background: path === i.to ? 'var(--accent-dim)' : 'transparent', color: path === i.to ? 'var(--accent)' : 'var(--muted)', fontSize:12, cursor:'pointer', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', textAlign:'left' }}>{i.label}</button>)}
+            </div>}
+            <div style={{ flex:1 }} />
+            <div style={{ display:'flex', alignItems:'center', gap:10, height:42, padding:'0 8px', borderRadius:12, background:'var(--accent-dim)', color:'var(--text)', fontSize:12, whiteSpace:'nowrap', overflow:'hidden' }}>
+              <span style={{ flex:'0 0 26px', width:26, height:26, borderRadius:'50%', background:'var(--accent)', color:'var(--accent-ink)', display:'grid', placeItems:'center', fontSize:11, fontWeight:700 }}>ท</span>
+              <span style={{ opacity: min ? 0 : 1, transition:'opacity .18s' }}>ทดสอบ ระบบ · PD1</span>
+            </div>
+          </aside>
+          <main id="mainbox" className="app-sheet" style={{ flex:1, marginLeft:W, minHeight:'100vh', paddingTop:14, background:'var(--bg)', overflowY:'auto', overflowX:'hidden', minWidth:0, transition:'margin-left .32s cubic-bezier(.2,.8,.2,1)' }}>
+            <ShellPage />
+          </main>
+        </div>
+      </MemoryRouter>
+    </UserContext.Provider>
   )
 }
 function SidebarLab(){
@@ -191,4 +242,4 @@ function BellLab(){
 window.__PAGES = NAMES
 const only = new URLSearchParams(location.search).get('p')
 createRoot(document.getElementById('root')).render(
-  only === '__sidebar' ? <SidebarLab/> : only === '__feedback' ? <FeedbackLab/> : only === '__bell' ? <BellLab/> : <App/>)
+  only === '__sidebar' ? <SidebarLab/> : only === '__sidebar2' ? <WideSidebarLab/> : only === '__feedback' ? <FeedbackLab/> : only === '__bell' ? <BellLab/> : <App/>)

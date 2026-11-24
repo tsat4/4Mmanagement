@@ -786,9 +786,12 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
         onClick={onClick}
       >
         {cur && !guest && (
-          <motion.span layoutId="nav-active" transition={railPill()} aria-hidden="true" style={{
-            position: 'absolute', inset: 0, borderRadius: 'inherit', background: 'var(--accent-dim)', borderLeft: '2px solid var(--accent)', pointerEvents: 'none',
-          }} />
+          <motion.span layoutId="nav-active" transition={railPill()} aria-hidden="true" className="neon-row" style={{
+            /* 24/11 ทดลอง (รีล Sidebar v2): พื้นไล่จาก accent-dim → โปร่ง + แท่งซ้าย 3px เรืองแสง (.neon-bar · index.css) */
+            position: 'absolute', inset: 0, borderRadius: 'inherit', background: 'var(--accent-dim)', pointerEvents: 'none',
+          }}>
+            <span className="neon-bar" style={{ position: 'absolute', left: 0, top: 7, bottom: 7, width: 3, borderRadius: '0 3px 3px 0', background: 'var(--accent)' }} />
+          </motion.span>
         )}
         <Icon glyph={item.icon} size={17} style={{ opacity: guest ? 0.7 : 1, position: 'relative', zIndex: 1 }} />
         <span style={{ position: 'relative', zIndex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tr(item.label)}</span>
@@ -850,7 +853,7 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
             /* 24/11: pill สีเดียวกับแผ่นเนื้อหา (.app-sheet) และยื่นขวาจนชนแผ่น ⇒ "แท็บที่ติดกับหน้า" (รีล CRM V10) · แถบ accent ซ้าย + ตัวอักษร accent คงเดิม (UI-STANDARD §4.5) */
             position: 'absolute', top: 0, bottom: 0, left: 0, right: -4, borderRadius: '10px 0 0 10px', background: 'var(--bg)', pointerEvents: 'none',
           }}>
-            <span style={{ position: 'absolute', left: 0, top: 6, bottom: 6, width: 3, borderRadius: '0 3px 3px 0', background: 'var(--accent)' }} />
+            <span className="neon-bar" style={{ position: 'absolute', left: 0, top: 6, bottom: 6, width: 3, borderRadius: '0 3px 3px 0', background: 'var(--accent)' }} />
           </motion.span>
         )}
         <Icon glyph={icon} size={19} style={{ position: 'relative', zIndex: 1 }} />

@@ -767,6 +767,13 @@ html[data-perf="lite"] .lift-card:hover { box-shadow: var(--shadow-sm); }
 .app-sheet { background: var(--bg); border-radius: 16px 0 0 16px; border: 1px solid var(--border); border-left: none; margin: 8px 0 8px 0; min-height: calc(100vh - 16px - var(--tvbar-h, 0px)) !important; }
 @media (max-width: 768px) { .app-sheet { border-radius: 0; margin: 0; border: none; } }
 body.esm-tv-shell .app-sheet { border-radius: 0; margin: 0; border: none; }
+/* ✨ แท่ง active "นีออน" (24/11 · รีล Sidebar v2 — ทดลอง) — เงาสีเดียวกับ accent offset 0 = "สัญญาณ" ไม่ใช่ "ของลอย"
+   (อยู่ในข้อยกเว้นของด่าน card-shadow-via-token โดยเจตนา) · ใช้ --accent-glow ที่มีทั้ง 2 ธีม · TV lite/reduced-motion = ไม่มีเงา
+   พื้นแถว active ไล่จาก --accent-dim → โปร่ง (tint ไม่ใช่พื้นผิว ⇒ ไม่เข้ากฎ ΔL ของ --x-top/bot) */
+.neon-bar { box-shadow: 0 0 10px 2px var(--accent-glow), 0 0 22px 4px var(--accent-dim); }
+.neon-row { background: linear-gradient(90deg, var(--accent-dim), transparent 78%) !important; }
+html[data-perf="lite"] .neon-bar { box-shadow: none; }
+@media (prefers-reduced-motion: reduce) { .neon-bar { box-shadow: none; } }
 
 /* ─── Downtime alarm — จุดเครื่องจักรกระพริบสีแดงเมื่อมี downtime ค้างอยู่ ── */
 @keyframes dtAlarmBlink {
