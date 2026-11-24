@@ -27,6 +27,7 @@ import { getActor } from '../utils/actorStamp';
 import { loadProductionLines } from '../utils/useProductionLines';
 import { OPEN_MO_STATUSES, actorSideOf } from '../utils/mtnStepPerm';
 import { isAmTeam } from '../utils/pmTeams';
+import { amApproveAllowed } from '../utils/amApproval';
 import { positionRank } from '../utils/positions';
 import { can as canPerm, isActionSeeded, canSeeded as canSeededPerm, isSharedAccount } from '../utils/permissions';
 import { teamKeyOf } from '../utils/mtnTeams';
@@ -75,7 +76,7 @@ export async function loadMyQueue(me) {
   const ok = (r) => (r.error ? undefined : (r.data || []));
 
   const canLu = !!(me.canLevelUp || me.canLevelUp100);
-  const [moR, sesR, prR, moPrR, fourR, actR, lines, luR, binR, binRedR, redPendR, rfqAssessR, gapR, gapOdR] = await Promise.all([
+  const [moR, sesR, prR, moPrR, fourR, actR, lines, luR, binR, binRedR, redPendR, rfqAssessR, gapR, gapOdR, amR] = await Promise.all([
     /* กรองด้วยสถานะที่ยังมีคนต้องทำต่อ — เดิม `.gt('current_step', 1)` ตัดใบ "รอจ่ายงาน" (current_step = 1)
        ทิ้งทั้งหมด และ `.is('approve_at', null)` ตัดใบ MTN ที่อนุมัติแล้วแต่ยังรอปิดใบ (ขั้น 8) */
     supabaseDR.from('mtn_orders').select(MO_COLS)
@@ -128,6 +129,12 @@ export async function loadMyQueue(me) {
     /* 🧾 20/11 — ไลน์ใช้ของแล้วแต่สโตร์ยังไม่ลงจ่าย (v_line_issue_gaps · DR) · นับอย่างเดียว ไม่ดึงแถว */
     supabaseDR.from('v_line_issue_gaps').select('mat_no', { count: 'exact', head: true }),
     supabaseDR.from('v_line_issue_gaps').select('mat_no', { count: 'exact', head: true }).eq('overdue', true),
+    /* ✍️ A5 (24/11 · คำสั่ง user): ใบตรวจ AM รออนุมัติ — เดิมไม่โผล่ในคิวใคร ต้องไล่เปิดทีละอุปกรณ์ (วัด 24/11: ค้าง 326 ใบ)
+       โหลดเฉพาะคนที่อนุมัติ AM ได้ (`amApproveAllowed` — คีย์เดียวกับปุ่มในใบตรวจ) · คอลัมน์เท่าที่ใช้ · ทีม AM ตัดสินฝั่ง JS (`isAmTeam`) */
+    me.canAmApprove
+      ? supabaseDR.from('inspections').select('id, inspected_at, jigs!inner(line_name), checklists!inner(department)')
+        .eq('approval_status', 'pending').order('inspected_at', { ascending: true }).limit(1000)
+      : Promise.resolve({ data: null, error: null }),
   ]);
   const rfqAssess = me.canRfqAssess ? ok(rfqAssessR)?.map(r => ({ id: r.id, rfq_id: r.rfq_id, round: r.round, requested_at: r.requested_at, ...(r.mkt_rfqs || {}) })) : undefined;
   const levelUps = canLu ? ok(luR)?.map(r => ({ id: r.id, to_level: r.to_level, requested_at: r.requested_at, section: r.employees?.section })) : undefined;
@@ -155,6 +162,11 @@ export async function loadMyQueue(me) {
   const redBins = redPendR.error ? null
     : (redPendR.data || []).map(b => ({ ...b, section: secOfLine.get(String(b.line_name || '').trim().toLowerCase()) }));
   const redBinsTruncated = Array.isArray(redPendR.data) && redPendR.data.length >= 300;
+
+  const amPending = me.canAmApprove ? ok(amR)?.filter(r => isAmTeam(r.checklists?.department))
+    .map(r => ({ id: r.id, inspected_at: r.inspected_at, line_name: r.jigs?.line_name || null,
+      section: secOfLine.get(String(r.jigs?.line_name || '').trim().toLowerCase()) })) : undefined;
+  const amPendingTruncated = Array.isArray(amR?.data) && amR.data.length >= 1000;
 
   const moRows = ok(moR);
   const mo = moRows?.filter(o => !DEAD.includes(String(o.status || '')));
@@ -192,7 +204,8 @@ export async function loadMyQueue(me) {
   })();
   return buildQueue({ mo, moAll: mo, moAllCapped: moTruncated, moTruncated,
     prOf: moPrByOrder ? (o) => (moPrByOrder[o.id] || []) : null,
-    sessions: ok(sesR), fourM, actions: ok(actR), summaries, levelUps, bins, binsTruncated, redBins, redBinsTruncated, rfqAssess }, me);
+    sessions: ok(sesR), fourM, actions: ok(actR), summaries, levelUps, bins, binsTruncated, redBins, redBinsTruncated, rfqAssess,
+    amPending, amPendingTruncated }, me);
 }
 
 /* ── UI ชิ้นเล็ก ────────────────────────────────────────────────────────── */
@@ -345,6 +358,8 @@ export function useMyQueue(open = false) {
           canRfqAssess: canPerm('rfq', 'assess', role),
           // 🔎 ถังเหลืองขั้น QA (ตัดสิน/ตรวจรับ) — คีย์เดียวกับปุ่มในหน้าถัง
           canBinDecide: canSeededPerm('qa', 'bin_decide', role),
+          // ✍️ ใบตรวจ AM รออนุมัติ — คีย์เดียวกับปุ่มอนุมัติใน /daily-checker?tab=amcheck (A5 · 24/11)
+          canAmApprove: amApproveAllowed({ can: (r, a) => canPerm(r, a, role), isSeeded: isActionSeeded }),
         });
       } catch {
         /* supabase-js คืน error ไม่ throw — มาถึงนี่ได้เฉพาะกรณีผิดปกติ ⇒ ถือว่าไม่ครบ ห้ามขึ้นว่าไม่มีงาน */
