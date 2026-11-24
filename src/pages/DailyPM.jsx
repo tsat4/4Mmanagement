@@ -464,7 +464,7 @@ export default function DailyPM() {
                 { n: '1', title: 'เพิ่มเครื่อง + หัวข้อตรวจ', desc: <>{tr('ที่หน้า')} <Link to="/pm?tab=setup&dept=production" style={{ color: 'var(--accent)', fontWeight: 700 }}>{tr('ตั้งค่า PM → แท็บ ฝ่ายผลิต')}</Link> ({tr("กด \"+ เพิ่มอุปกรณ์\" แล้วใส่ชื่อ/ไลน์/หัวข้อที่ต้องตรวจ")})</> },
                 { n: '2', title: 'ลงทะเบียนที่แท็บนี้', desc: 'ติ๊กเครื่องที่ "ต้องตรวจทุกต้นกะ" ของแต่ละไลน์ — ตัวเลข N ของไลน์มาจากตรงนี้' },
                 { n: '3', title: 'พนักงานตรวจต้นกะ', desc: <>{tr('ที่หน้า')} <Link to="/daily-checker?tab=amcheck" style={{ color: 'var(--accent)', fontWeight: 700 }}>{tr('แท็บ บันทึกผลตรวจ AM')}</Link> {tr('เลือกเครื่อง ติ๊กผ่าน/NG แล้วบันทึก')}</> },
-                { n: '4', title: 'ระบบเฝ้าเอง', desc: 'เปิดใบผลิตใบแรกของไลน์ → เริ่มนับ 60 นาที · ครบ+ผ่าน = 🟢 แจ้ง Telegram · พบ NG = 🔴 · เกินเวลายังไม่ครบ = 🟠' },
+                { n: '4', title: 'ระบบเฝ้าเอง', desc: 'เปิดใบผลิตใบแรกของไลน์ → เริ่มนับ 60 นาที · ครบ+ผ่าน = 🟢 · พบ NG = 🔴 แจ้งในแอปถึงทีม AM/หัวหน้า · เกินเวลายังไม่ครบ = 🟠 แจ้งในแอปถึงหัวหน้าไลน์+หัวหน้าแผนก' },
               ].map(s => (
                 <div key={s.n} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                   <span style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--accent-dim)', color: 'var(--accent)', fontSize: 11, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{s.n}</span>
