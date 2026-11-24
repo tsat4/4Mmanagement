@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { CLOSE_AHEAD_WARN_MIN, dtCoverMin, fmtOffset } from '../utils/shiftWindow';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 /**
  * ⏱ ไทม์ไลน์เครื่องหยุดรายไลน์ — "หยุดตอนไหนของวัน" ไม่ใช่แค่ "หยุดรวมกี่นาที"
  *
@@ -61,7 +61,7 @@ export function downtimeSpan(d, nowMs) {
 
 const PLANNED_COLOR = '#64748b';   // เทาสงบ — หยุดตามแผนไม่ใช่ loss (กฎ Andon: ห้ามแดง ห้ามกระพริบ)
 const RUN_COLOR     = 'rgba(34,197,94,0.55)';
-const hhmm = (ms) => new Date(ms).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false });
+const hhmm = (ms) => new Date(ms).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit', hour12: false });
 
 export default function DowntimeTimeline({ sessions = [], downtimes = [], workDate, isMobile = false }) {
   const [sel, setSel] = useState(null);

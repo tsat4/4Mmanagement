@@ -15,7 +15,7 @@
 import { LIVE_STATUS } from '../lib/vsmLive';
 import { fmtMct, fmtMinSec } from '../lib/vsmModel';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 export const PALETTE_LIGHT = {
   bg: '#ffffff', ink: '#111827', sub: '#4b5563', line: '#374151', faint: '#9ca3af',
   box: '#ffffff', boxHead: '#dbeafe', data: '#f9fafb', inv: '#fde68a', invInk: '#78350f',
@@ -98,7 +98,7 @@ const Y_TOP = 16;
 const FEED_H = 78;                    // ความสูงต่อสายป้อน 1 สาย
 const FEED_BOX_W = 132, FEED_BOX_H = 40;
 
-const fmt = (v, d = 0) => (v == null ? '—' : Number(v).toLocaleString('th-TH', { maximumFractionDigits: d }));
+const fmt = (v, d = 0) => (v == null ? '—' : Number(v).toLocaleString(dateLocale(), { maximumFractionDigits: d }));
 
 /* ── ชิ้นส่วนย่อย ─────────────────────────────────────────────────────────── */
 const Fact = ({ x, y, P, title, sub, sub2, w = FACT_W }) => (

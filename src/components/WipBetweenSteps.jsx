@@ -10,7 +10,7 @@ import { buildWipChains, computeChainWip, netRequirement } from '../utils/wipCha
 import { fetchAllPages } from '../utils/fetchByIds';
 import { openOnly } from '../utils/shipStatus';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 /* ═══ 📦 WIP ระหว่างขั้น (เฟส 1 · 2026-08-18) — แท็บใน /line-stock ═══
    ยอดค้างทุก buffer ของสาย OP คำนวณจากใบผลิตที่บันทึกอยู่แล้ว (Σขั้น − Σปลายทาง)
    หน้างานไม่ต้องคีย์รับ-จ่าย · บัญชีภายในแผนก ไม่เกี่ยว SAP/สต็อกทางการ
@@ -258,7 +258,7 @@ export default function WipBetweenSteps() {
                         )}
                         {r.baseline && (
                           <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                            {tr("นับจริงล่าสุด")} {r.baseline.qty.toLocaleString()} · {new Date(r.baseline.ts).toLocaleDateString('th-TH')}
+                            {tr("นับจริงล่าสุด")} {r.baseline.qty.toLocaleString()} · {new Date(r.baseline.ts).toLocaleDateString(dateLocale())}
                           </div>
                         )}
                       </td>

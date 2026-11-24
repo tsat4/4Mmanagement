@@ -832,9 +832,9 @@ function KanbanCardGrid({ rowList, kanbanStd, fmt, imgOf }) {
             metric={{ label: covered ? 'ต้องเบิกเพิ่ม' : 'ต้องเบิก (NET)', value: covered ? '0' : fmt(r.netTotal), unit: r.uom }}
             aside={!covered && per ? { label: 'คัมบัง', value: `${Math.ceil(r.netTotal / per)} ใบ × ${fmt(per)}` } : null}
             rows={[
-              { k: 'ใช้ทั้งวัน', v: `${fmt(r.grossTotal)} ${r.uom || ''}`.trim() },
+              { k: tr("ใช้ทั้งวัน"), v: `${fmt(r.grossTotal)} ${r.uom || ''}`.trim() },
               // 🔴 "ไม่มีข้อมูล" ≠ "0" — พาร์ทที่ยังไม่เคยตั้งยอดที่คลัง ห้ามแสดงเป็นศูนย์
-              { k: 'มีในสต็อก', v: r.totalStock > 0 ? fmt(r.totalStock) : 'ยังไม่มีข้อมูล' },
+              { k: tr("มีในสต็อก"), v: r.totalStock > 0 ? fmt(r.totalStock) : 'ยังไม่มีข้อมูล' },
             ]}
             dim={covered} />
         );
@@ -1438,25 +1438,25 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
                 footerExtra={canOperate && onCancelWip && orphanOrderReq(w) ? (
                   <button onClick={() => onCancelWip(w)} disabled={busy === w.id} style={storeBtn('secondary', { width: '100%', marginTop: 6 })}>{tr('ยกเลิกใบเบิกนี้ (ใบผลิตปิดแล้ว)')}</button>
                 ) : null}
-                rows={[{ k: 'ที่มา', v: src.label },
+                rows={[{ k: tr("ที่มา"), v: src.label },
                      { k: w.source === 'store_forecast' ? 'เปิดใบ' : 'ไลน์แจ้ง',
                        v: at ? `${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')} ${tr("น.")}` : null },
                      /* 👤 20/10 — สโตร์ต้องรู้ว่า "ใครเรียก" ไว้โทรกลับถามเวลาของไม่ตรง/ไลน์เปลี่ยนรุ่น
                         ใบเก่าของไลน์ไม่มีชื่อ (เพิ่ง stamp 20/10 ที่ LinePartCallPanel) ⇒ ไม่มีชื่อ = ไม่โชว์แถว ห้ามเดา */
                      { k: src.who, v: w.requested_by || null },
                      /* 🏠 05/11 — หยิบจากไหน = ที่จัดเก็บหลักของพาร์ท · ไปไหน = พื้นที่ของไลน์ที่ขอ */
-                     { k: '🏬 จาก → ไป', v: `${homeOf(w.mat_no) || tr('ยังไม่ตั้งที่จัดเก็บหลัก')} → ${areaOf(w.line_name) || tr('ไลน์ยังไม่ผูกพื้นที่')}` },
-                     { k: 'หยิบแล้ว', v: pickMeta || null },
-                     { k: 'ถึงไลน์', v: gateMeta || null },
+                     { k: tr("🏬 จาก → ไป"), v: `${homeOf(w.mat_no) || tr('ยังไม่ตั้งที่จัดเก็บหลัก')} → ${areaOf(w.line_name) || tr('ไลน์ยังไม่ผูกพื้นที่')}` },
+                     { k: tr("หยิบแล้ว"), v: pickMeta || null },
+                     { k: tr("ถึงไลน์"), v: gateMeta || null },
                      /* 📭 05/11 ข้อ D — ส่งแล้วไลน์ยังไม่กดรับ (unreceivedAge · replenishGate.js) */
-                     { k: '📭 รอไลน์รับ', v: unreceivedAge(w)?.text || null },
-                     { k: '⚠️ ใบผลิต', v: orphanOrderReq(w) ? 'ไลน์ไม่มีใบผลิตเปิดอยู่ที่ใช้พาร์ทนี้แล้ว (ปิด/ยกเลิก) — ถามไลน์ก่อนเตรียม ถ้าไม่ใช้แล้วกดยกเลิกใบ' : null },
+                     { k: tr("📭 รอไลน์รับ"), v: unreceivedAge(w)?.text || null },
+                     { k: tr("⚠️ ใบผลิต"), v: orphanOrderReq(w) ? 'ไลน์ไม่มีใบผลิตเปิดอยู่ที่ใช้พาร์ทนี้แล้ว (ปิด/ยกเลิก) — ถามไลน์ก่อนเตรียม ถ้าไม่ใช้แล้วกดยกเลิกใบ' : null },
                      /* 🔴 คิวนี้ = "ของที่สโตร์ตัดจ่ายเข้าไลน์" ⇒ ต้องเป็น 2xxx/3xxx/5xxx
                         เลข 1xxx คือ FG ที่ไลน์ "ผลิตออกมา" — สโตร์ไม่มีเลขนี้ให้จ่าย หาในคลังก็ไม่เจอ
                         (user แจ้ง 02/10: "สโตร์จะไม่รู้เลขนี้ จะมองหาเลขที่ต้องตัดจ่ายคือพวก 5xxx 3xxx 2xxx")
                         ต้นเหตุแก้ที่ monitoringSheet.js แล้ว + ปิดทะเบียนที่ผิด 28 แถว — แถวนี้กันใบเก่า/ใบที่
                         คนสร้างเองหลุดมา **เตือนอย่างเดียว ไม่บล็อก** (ดัดค่าที่คนกรอก = เดาแทนคน) */
-                     { k: '⚠️ เลข MAT',
+                     { k: tr("⚠️ เลข MAT"),
                        v: String(w.mat_no || '').trim().charAt(0) === '1'
                          ? 'เป็น FG (ของที่ไลน์ผลิตออก) — สโตร์ตัดจ่ายไม่ได้ ให้ถามไลน์ว่าต้องการเลข 2xxx/3xxx/5xxx ตัวไหน'
                          : null }]} />
@@ -1505,9 +1505,9 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
                 busy={confirming === r.id}
                 onAction={() => needAction ? onConfirm(r, alloc.parts) : onReceive(r, alloc.parts, 'full')}
                 rows={[
-                  { k: 'เวลาส่ง', v: r.delivery_time?.slice(0, 5) || '—' },
-                  { k: 'ตัดยอด', v: r.cutoff_time?.slice(0, 5) || '—' },
-                  { k: 'พาร์ท', v: `${alloc.parts.length} ${tr("รายการ")}` },
+                  { k: tr("เวลาส่ง"), v: r.delivery_time?.slice(0, 5) || '—' },
+                  { k: tr("ตัดยอด"), v: r.cutoff_time?.slice(0, 5) || '—' },
+                  { k: tr("พาร์ท"), v: `${alloc.parts.length} ${tr("รายการ")}` },
                 ]} />
             );
           })}
@@ -1554,7 +1554,7 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
                 actionLabel={canOperate ? (st.next === 'done' ? doneLabel : st.nextLabel) : null}
                 busy={busy === lot.id} onAction={() => onAdvanceLot(lot, st.next)}
                 meta={inflowNote}
-                rows={[{ k: 'มาจาก FG', v: lot.source_prod_no || null }]} />
+                rows={[{ k: tr("มาจาก FG"), v: lot.source_prod_no || null }]} />
             );
           }} />}
         </>)}
@@ -1595,7 +1595,7 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
                 actionLabel={canOperate ? (st.next === 'done' ? doneLabel : st.nextLabel) : null}
                 busy={busy === lot.id} onAction={() => onAdvanceLot(lot, st.next)}
                 meta={inflowNote}
-                rows={[{ k: 'มาจาก FG', v: lot.source_prod_no || null }]} />
+                rows={[{ k: tr("มาจาก FG"), v: lot.source_prod_no || null }]} />
             );
           }} />}
       </>)}
@@ -1604,7 +1604,7 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
         <>
           <FilterBar bare>
             <Segmented value={buyFilter} onChange={setBuyFilter} label={tr('ประเภทพาร์ทจัดซื้อ')}
-              options={PURCHASE_FILTERS.map(f => ({ value: f.key, label: f.label }))} />
+              options={PURCHASE_FILTERS.map(f => ({ value: f.key, label: tr(f.label) }))} />
           </FilterBar>
           {purchaseErr && (
             <div style={{ fontSize: 12, color: 'var(--red)', fontWeight: 700, marginBottom: 10 }}>{tr('🔴 โหลดคิวจัดซื้อไม่ได้ —')} {purchaseErr}</div>
@@ -1641,8 +1641,8 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
                     onAction={() => (many ? setBulkBuy({ g, next: st.next, label: st.nextLabel })
                                           : onAdvancePurchase(g, st.next))}
                     rows={[
-                      { k: 'แตกเป็นใบ', v: many ? lot : null },
-                      { k: 'ซัพพลายเออร์', v: g.supplier ? `${g.supplier}${multiSup ? ` +${tr("อีก")} ${g.supplier_count - 1}` : ''}` : null },
+                      { k: tr("แตกเป็นใบ"), v: many ? lot : null },
+                      { k: tr("ซัพพลายเออร์"), v: g.supplier ? `${g.supplier}${multiSup ? ` +${tr("อีก")} ${g.supplier_count - 1}` : ''}` : null },
                     ]} />
                 );
               }} />
@@ -1665,7 +1665,7 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
                 statusLabel={issued ? tr("✔ จ่ายแล้ว") : tr("🆕 รอจ่าย")} statusColor={issued ? 'var(--green)' : 'var(--amber)'}
                 statusBg={issued ? 'var(--green-dim)' : 'var(--amber-dim)'} statusBorder={issued ? 'var(--green-line)' : 'var(--amber-line)'}
                 actionLabel={issued || !canOperate ? null : tr("จ่ายวัตถุดิบ")} busy={busy === r.id} onAction={() => onIssueRaw(r)}
-                rows={[{ k: 'ใช้กับ', v: r.lot_request_id ? parentLot?.child_mat_no || null : null }]} />
+                rows={[{ k: tr("ใช้กับ"), v: r.lot_request_id ? parentLot?.child_mat_no || null : null }]} />
             );
           }} />}
       </>)}
@@ -1706,8 +1706,8 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
                     statusBg={issued ? 'var(--green-dim)' : 'var(--amber-dim)'} statusBorder={issued ? 'var(--green-line)' : 'var(--amber-line)'}
                     actionLabel={null} busy={busy === p.id}
                     rows={[
-                      { k: 'สินค้า', v: p.product_name || null },
-                      { k: 'ใบ FG', v: p.source_prod_no || null },
+                      { k: tr("สินค้า"), v: p.product_name || null },
+                      { k: tr("ใบ FG"), v: p.source_prod_no || null },
                     ]} />
                 );
               })}
@@ -3324,7 +3324,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
         {viewMode === 'demand' && (
           <span style={{ marginLeft: 'auto' }}>
             <Segmented value={demandFmt} onChange={setDemandFmt} label={tr('รูปแบบการแสดงผล')}
-              options={[{ value: 'cards', label: 'การ์ด' }, { value: 'table', label: 'ตาราง' }]} />
+              options={[{ value: 'cards', label: tr("การ์ด") }, { value: 'table', label: tr("ตาราง") }]} />
           </span>
         )}
       </div>

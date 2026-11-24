@@ -9,7 +9,7 @@ import { inSectionScope, scopedLines as scopedLinesOf } from '../utils/sectionSc
 import { getLineFamilyNames } from '../utils/lineHierarchy';
 import { hasNightShift } from '../utils/stdManpower';
 import useIsMobile from '../utils/useIsMobile';
-import { fmtDate } from '../utils/dateFormat';
+import {fmtDate, weekdaysMin } from '../utils/dateFormat';
 import { fetchByIds, fetchAllPages } from '../utils/fetchByIds';
 import { dedupeForecastRows } from '../utils/demandSupply';
 import { toast } from '../components/Toast';
@@ -674,11 +674,11 @@ export default function ProductionPlan() {
       <PageHeader
         title={tr('วางแผนการผลิต')} icon="🗓️"
         tabs={[
-          { key: 'plan', label: 'กำลังการผลิต' },
+          { key: 'plan', label: tr("กำลังการผลิต") },
           /* 📋 แท็บเดียวของหน้านี้ที่ **เขียน DB** — แท็บกำลังการผลิตวิเคราะห์อย่างเดียว
              (งาน lot size ที่ไม่ได้เดินตามคัมบัง ต้องมีคนวางคิวให้ ไม่ใช่ first come first serve) */
-          { key: 'lots', label: 'แผนสั่งงาน (ล็อต)' },
-          { key: 'settings', label: 'ตั้งค่า' },
+          { key: 'lots', label: tr("แผนสั่งงาน (ล็อต)") },
+          { key: 'settings', label: tr("ตั้งค่า") },
         ]}
         tab={tab} onTab={setTab}
       />
@@ -702,8 +702,8 @@ export default function ProductionPlan() {
         <span className="spacer" />
         <span className="filter-label">{tr('วางแผนที่กำลัง:')}</span>
         <Segmented value={capMode} onChange={setCapMode} label={tr('วางแผนที่กำลัง')} options={[
-          { value: 'median', label: 'ปกติ (median)', title: 'ใช้ median ของยอดที่เคยทำได้จริง (สมจริง)' },
-          { value: 'safe', label: 'ปลอดภัย (P25)', title: 'ใช้ P25 — เผื่อวันที่ทำได้น้อย (ปลอดภัยไว้ก่อน)' },
+          { value: 'median', label: tr("ปกติ (median)"), title: tr("ใช้ median ของยอดที่เคยทำได้จริง (สมจริง)") },
+          { value: 'safe', label: tr("ปลอดภัย (P25)"), title: tr("ใช้ P25 — เผื่อวันที่ทำได้น้อย (ปลอดภัยไว้ก่อน)") },
         ]} />
       </FilterBar>
 
@@ -871,7 +871,7 @@ export default function ProductionPlan() {
             value={cap} onChange={setCap}
             options={[
               { value: 'day', label: `📅 ${tr("รายวัน")} (${DAILY_HORIZON} ${tr("วัน · ออเดอร์จริง")})` },
-              { value: 'month', label: 'รายเดือน (Forecast)' },
+              { value: 'month', label: tr("รายเดือน (Forecast)") },
             ]}
           />
           <button type="button" onClick={() => setMode(mode === 'slide' ? 'chart' : 'slide')}
@@ -900,8 +900,8 @@ export default function ProductionPlan() {
           help={tr('ตัวเลือกในหน้าต่าง 🧪 จองเครื่องทดลอง (แท็บแผนสั่งงาน) — ใบจองเก็บข้อความเหตุผลนี้ · ยังเลือก \'อื่นๆ (พิมพ์เอง)\' ได้เสมอ')}
           keyFrom={r => String(r.label || '').trim().toUpperCase().replace(/\s+/g, ' ')}
           fields={[
-            { key: 'label', label: 'เหตุผล', required: true },
-            { key: 'note', label: 'หมายเหตุ' },
+            { key: 'label', label: tr("เหตุผล"), required: true },
+            { key: 'note', label: tr("หมายเหตุ") },
           ]} />
       ) : loading ? (
         <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>{tr('กำลังวิเคราะห์กำลังผลิต…')}</div>
@@ -983,9 +983,9 @@ export default function ProductionPlan() {
                 const top = d.plan.includes('holiday_work') ? PLAN_META.holiday_work : d.plan.includes('recall75') ? PLAN_META.recall75 : d.plan.includes('night') ? PLAN_META.night : d.plan.includes('ot') ? PLAN_META.ot : d.plan.includes('day') ? PLAN_META.day : null;
                 const dd = new Date(`${d.date}T12:00:00`);
                 return (
-                  <div key={d.date} title={`${fmtDate(d.date)}${d.sd75 ? tr(' (หยุดจ่าย 75% — ม.75)') : d.holiday ? tr(' (วันหยุด)') : ''}\n${tr("ดิววันนี้")} ${Math.round(d.duePcs).toLocaleString()} ${tr("ชิ้น")} (${d.dueLoad.toFixed(2)} ${tr("กะ)\\nแผน")}: ${d.plan.map(p => PLAN_META[p]?.label || p).join(' ') || (d.holiday ? tr('หยุด') : tr('ว่าง'))}\n${tr("ค้างยกไป")} ${d.backlog.toFixed(2)} ${tr("กะ")}`}
+                  <div key={d.date} title={`${fmtDate(d.date)}${d.sd75 ? tr(' (หยุดจ่าย 75% — ม.75)') : d.holiday ? tr(' (วันหยุด)') : ''}\n${tr("ดิววันนี้")} ${Math.round(d.duePcs).toLocaleString()} ${tr("ชิ้น")} (${d.dueLoad.toFixed(2)} ${tr("กะ)\\nแผน")}: ${d.plan.map(p => tr(PLAN_META[p]?.label) || p).join(' ') || (d.holiday ? tr('หยุด') : tr('ว่าง'))}\n${tr("ค้างยกไป")} ${d.backlog.toFixed(2)} ${tr("กะ")}`}
                     style={{ flexShrink: 0, width: 40, textAlign: 'center' }}>
-                    <div style={{ fontSize: 11, color: d.sd75 ? 'var(--blue)' : d.holiday ? 'var(--red)' : 'var(--muted)' }}>{['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'][dd.getDay()]}</div>
+                    <div style={{ fontSize: 11, color: d.sd75 ? 'var(--blue)' : d.holiday ? 'var(--red)' : 'var(--muted)' }}>{weekdaysMin()[dd.getDay()]}</div>
                     <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)' }}>{dd.getDate()}</div>
                     <div style={{ height: 26, marginTop: 2, borderRadius: 'var(--r-xs)', background: top ? `${tint(top.color, 'dim')}` : (d.holiday ? 'var(--bg3)' : 'var(--bg2)'), border: `1px solid ${top ? top.color : 'var(--border2)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>
                       {top === PLAN_META.holiday_work ? '⚠' : top === PLAN_META.recall75 ? '⚡' : top === PLAN_META.night ? '🌙' : top === PLAN_META.ot ? '⏰' : top === PLAN_META.day ? '☀' : (d.holiday ? '·' : '')}

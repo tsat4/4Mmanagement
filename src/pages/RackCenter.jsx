@@ -29,7 +29,7 @@ import { LIVE } from '../utils/refreshRates';
 import { coalesce } from '../utils/liveRefresh';
 import PartCard, { partCardGrid } from '../components/PartCard';
 import { storeBtn } from '../utils/storeUi';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 import { askConfirm } from '../utils/askConfirm';
 
@@ -59,7 +59,7 @@ function timeAgo(iso) {
   if (mins < 60) return `${mins} ${tr("นาทีที่แล้ว")}`;
   const hrs = Math.round(mins / 60);
   if (hrs < 24) return `${hrs} ${tr("ชม.ที่แล้ว")}`;
-  return new Date(iso).toLocaleDateString('th-TH');
+  return new Date(iso).toLocaleDateString(dateLocale());
 }
 
 const EMPTY_FORM = { line_name: '', container_type_id: '', qty: '1', note: '' };
@@ -338,7 +338,7 @@ export default function RackCenter() {
         actions={canOperate ? (
           <>
             {/* ปุ่มตายตัว ≤2 (UI §6.35): [สแกน] [เรียกภาชนะ] · ป้าย QR → ⋯ */}
-            <OverflowMenu items={[{ key: 'qr', icon: '🏷️', label: 'ป้าย QR', onClick: () => setQrOpen(true), title: 'พิมพ์แผ่นป้าย QR ไปแปะหน้างาน' }]} />
+            <OverflowMenu items={[{ key: 'qr', icon: '🏷️', label: tr("ป้าย QR"), onClick: () => setQrOpen(true), title: tr("พิมพ์แผ่นป้าย QR ไปแปะหน้างาน") }]} />
             <button type="button" className="pg-btn" onClick={() => setScanOpen(true)} title={tr('สแกน QR ที่แปะหน้างาน — กล้องในแอป หรือปืนยิงสแกน')}>{tr('สแกน')}</button>
             <button type="button" className="pg-btn primary" onClick={() => { setForm({ ...EMPTY_FORM, line_name: lineFilter }); setShowForm(true); }}>{tr('เรียกภาชนะ')}</button>
           </>
@@ -384,12 +384,12 @@ export default function RackCenter() {
                    แต่โครงการ์ด/ปุ่ม/ระยะ ใช้ของกลางตัวเดียวกับคิวสโตร์ (UI §6.23) */
                 <PartCard key={p.id}
                   code={p.packaging_code} name={p.packaging_name} showImg={false}
-                  status={{ label: 'รอจ่าย', color: 'var(--amber)', bg: 'var(--amber-dim)', border: 'var(--amber-line)' }}
-                  metric={{ label: 'จำนวนที่ต้องจ่าย', value: p.qty, unit: '' }}
+                  status={{ label: tr("รอจ่าย"), color: 'var(--amber)', bg: 'var(--amber-dim)', border: 'var(--amber-line)' }}
+                  metric={{ label: tr("จำนวนที่ต้องจ่าย"), value: p.qty, unit: '' }}
                   aside={p.source_line ? { label: 'ไลน์ที่ขอ', value: p.source_line } : null}
                   rows={[
-                    { k: 'สินค้า', v: p.product_name || null },
-                    { k: 'ใบ FG', v: p.source_prod_no || null },
+                    { k: tr("สินค้า"), v: p.product_name || null },
+                    { k: tr("ใบ FG"), v: p.source_prod_no || null },
                   ]}
                   footer={canOperate
                     ? (
@@ -432,7 +432,7 @@ export default function RackCenter() {
           sub: `${byLine[lnName].length} ${tr("รายการ")} · ✅ ${byLine[lnName].filter(x => x.status === 'received').length}`,
           items: byLine[lnName].map(r => {
             const tm = frameMinFromIso(r.requested_at);
-            const hhmm = new Date(r.requested_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+            const hhmm = new Date(r.requested_at).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit' });
             return { id: r.id, timeMin: tm ?? 480, color: colorOf(r), text: `${hhmm}${r.status === 'received' ? ' ✅' : ''}`,
               title: `${hhmm} · ${r.container_name} ×${r.qty} · ${r.line_name}`, data: r };
           }),

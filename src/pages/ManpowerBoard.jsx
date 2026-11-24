@@ -57,7 +57,7 @@ import { lineChainIds } from '../utils/lineHierarchy';
 import useIsMobile from '../utils/useIsMobile';
 
 import SectionScopeSelect from '../components/SectionScopeSelect';
-import { tr as trI18n } from '../utils/i18n';
+import { tr as trI18n, dateLocale } from '../utils/i18n';
 /* ═══════════════════════════════════════════════════════════════════════════════════════
    🧑‍🤝‍🧑 Manpower Control Board — /manpower-board (2026-10-06 · คำสั่ง user)
 
@@ -304,11 +304,11 @@ export default function ManpowerBoard() {
         title="Manpower Control Board" icon="🧑‍🤝‍🧑"
         sub={trI18n('ผังกำลังคน · ผังจุดงาน · ป้ายสถานะ 4M ของส่วนงาน — อ่านอย่างเดียว ตามทะเบียนพนักงาน/ตารางกะ/เช็คชื่อวันนี้')}
         tabs={[
-          { key: 'org', label: 'ผังกำลังคน' },
-          { key: 'layout', label: 'ผัง LAYOUT' },
-          { key: 'fourm', label: 'ป้ายสถานะ 4M' },
-          { key: 'staffing', label: 'แผน vs มาจริง' },
-          { key: 'history', label: 'ประวัติการเปลี่ยนช่อง' },
+          { key: 'org', label: trI18n("ผังกำลังคน") },
+          { key: 'layout', label: trI18n("ผัง LAYOUT") },
+          { key: 'fourm', label: trI18n("ป้ายสถานะ 4M") },
+          { key: 'staffing', label: trI18n("แผน vs มาจริง") },
+          { key: 'history', label: trI18n("ประวัติการเปลี่ยนช่อง") },
         ]}
         tab={tab} onTab={setTab}
         filters={filters}
@@ -385,7 +385,7 @@ function Photo({ p, size = 44 }) {
 
 function AttendDot({ p }) {
   const m = ATTEND_META[p.attend];
-  const label = p.attend === 'leave' && p.log?.leave_type ? `${trI18n("ลา")} (${p.log.leave_type})` : m.label;
+  const label = p.attend === 'leave' && p.log?.leave_type ? `${trI18n("ลา")} (${p.log.leave_type})` : trI18n(m.label);
   return <span title={label} style={{ fontSize: 11, fontWeight: 700, color: m.color, whiteSpace: 'nowrap' }}>● {label}</span>;
 }
 
@@ -1326,7 +1326,7 @@ function LayoutMap({ layout, placed, reserve = 12, fit = null, focus = null, onO
                     const dim = away || attend === 'leave' || attend === 'absent';
                     const fs = !tv && fit ? personFitState(x, p, fit) : null;
                     return (
-                      <div key={emp.id} title={`${emp.name} · ${shiftMeta(shift).label} · ${ATTEND_META[attend].label}${temp ? trI18n(' · ย้ายมาวันนี้') : ''}${away ? trI18n(' · วันนี้ไปยืนจุดอื่น') : ''}`}
+                      <div key={emp.id} title={`${emp.name} · ${shiftMeta(shift).label} · ${trI18n(ATTEND_META[attend].label)}${temp ? trI18n(' · ย้ายมาวันนี้') : ''}${away ? trI18n(' · วันนี้ไปยืนจุดอื่น') : ''}`}
                         style={{ position: 'relative', width: sz, height: sz }}>
                         <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', background: '#1a1a1a',
                           border: `${ms?.ring || 2}px ${temp ? 'dashed' : 'solid'} ${c}`, opacity: dim ? 0.4 : 1, filter: dim ? 'grayscale(1)' : undefined }}>
@@ -1911,8 +1911,8 @@ function HistoryTab({ section, dept, deptParam, nodes, lines, stations, employee
   const th = { textAlign: 'left', fontSize: 12, padding: '8px 10px', color: 'var(--muted)', whiteSpace: 'nowrap' };
   const td = { padding: '7px 10px', fontSize: 13, borderTop: '1px solid var(--border)', verticalAlign: 'top' };
   const signed = (n) => (n > 0 ? `+${n}` : String(n));
-  const fmtAt = (t) => new Date(t).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' });
-  const monthTh = (ym) => { const [y, m] = ym.split('-'); return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString('th-TH', { month: 'short', year: 'numeric' }); };
+  const fmtAt = (t) => new Date(t).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' });
+  const monthTh = (ym) => { const [y, m] = ym.split('-'); return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString(dateLocale(), { month: 'short', year: 'numeric' }); };
   return (
     <div style={{ display: 'grid', gap: 12 }}>
       <TimeRangeBar scale={tr.scale} from={from} to={to} today={tr.today} scales={null}

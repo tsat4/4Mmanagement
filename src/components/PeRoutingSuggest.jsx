@@ -166,7 +166,7 @@ export default function PeRoutingSuggest({ set, procs, lines = [], onClose }) {
         <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>
             <thead style={{ background: 'var(--bg2)' }}>
-              <tr>{['✓', 'OP', 'ชนิด', 'ชื่อขั้น (แก้ได้)', 'ไลน์', 'เครื่อง', 'จุดพักหลังขั้น (WIP)'].map((h, i) =>
+              <tr>{['✓', 'OP', tr("ชนิด"), tr("ชื่อขั้น (แก้ได้)"), tr("ไลน์"), tr("เครื่อง"), tr("จุดพักหลังขั้น (WIP)")].map((h, i) =>
                 <th key={i} style={{ padding: '6px 8px', fontSize: 11, color: 'var(--muted)', textAlign: 'left', whiteSpace: 'nowrap' }}>{tr(h)}</th>)}
               </tr>
             </thead>

@@ -4,6 +4,8 @@
    เฟส 1 = ไฟฟ้าอย่างเดียว กรอกรายเดือน (คำสั่ง user 2026-08-11)
    โครงเต็ม (มิเตอร์/TOU/demand/SEC) อยู่ docs/ENERGY_MONITORING_DESIGN.md */
 
+import { monthsShort, yearDisplay } from './dateFormat.js';
+
 /** 'YYYY-MM' ของวันที่ (local time — ห้ามใช้ toISOString ตามกฎ Date/Time ของโปรเจค) */
 export function monthKeyOf(d = new Date()) {
   const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0')
@@ -16,11 +18,10 @@ export function shiftMonth(key, delta) {
   return monthKeyOf(d)
 }
 /** '2026-08' → 'ส.ค. 2569' (พ.ศ. ตามที่ใช้ทั้งระบบ) */
-const TH_MON = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
 export function monthLabel(key) {
   const [y, m] = String(key).split('-').map(Number)
   if (!y || !m) return key
-  return `${TH_MON[m - 1]} ${y + 543}`
+  return `${monthsShort()[m - 1]} ${yearDisplay(y)}`
 }
 
 /** ตัวเลขหน่วยไฟ — ไม่ปัดให้เหลือ 0 ถ้ามีค่าจริง (ค่าน้อยๆ ต้องยังเห็น) */

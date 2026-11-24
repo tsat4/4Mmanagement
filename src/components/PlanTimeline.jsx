@@ -96,7 +96,7 @@ export default function PlanTimeline({
               <div style={{ width: LABEL_W, flex: `0 0 ${LABEL_W}px`, display: 'flex', flexDirection: 'column',
                 justifyContent: 'center', paddingTop: 14 }}>
                 <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text2)', whiteSpace: 'nowrap' }}>
-                  {SHIFT_LABEL[row.seg.shift]}
+                  {tr(SHIFT_LABEL[row.seg.shift])}
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--muted)' }}>
                   {dm(row.seg.workDate)}

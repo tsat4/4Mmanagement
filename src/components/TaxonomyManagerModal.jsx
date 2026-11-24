@@ -183,8 +183,8 @@ export default function TaxonomyManagerModal({ table, title, extraField = 'color
                 <div><label style={lbl}>{tr('ใช้กับชนิดอุปกรณ์ (ว่าง = ทุกชนิด)')}</label>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     {EQUIP_TYPE_OPTS.map(o => {
-                      const on = (form.equip_types || []).includes(o.k)
-                      return <button key={o.k} onClick={() => setForm(f => { const cur = f.equip_types || []; return { ...f, equip_types: on ? cur.filter(x => x !== o.k) : [...cur, o.k] } })}
+                      const on = (form.equip_types || []).includes(tr(o.k))
+                      return <button key={tr(o.k)} onClick={() => setForm(f => { const cur = f.equip_types || []; return { ...f, equip_types: on ? cur.filter(x => x !== tr(o.k)) : [...cur, tr(o.k)] } })}
                         style={{ padding: '4px 12px', borderRadius: 'var(--r-md)', fontSize: 12, fontWeight: 700, cursor: 'pointer', border: `1.5px solid ${on ? 'var(--accent)' : 'var(--border2)'}`, background: on ? 'var(--accent-dim)' : 'var(--bg2)', color: on ? 'var(--accent)' : 'var(--muted)' }}>{o.l}</button>
                     })}
                   </div>

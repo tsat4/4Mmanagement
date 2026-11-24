@@ -530,7 +530,7 @@ export default function PEDocs() {
               <div className="table-sticky" style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
                   <thead style={{ background: 'var(--bg2)' }}>
-                    <tr>{['OP', 'ชนิด', 'ชื่อกระบวนการ', 'รูป', 'เครื่อง', 'ไลน์/พื้นที่', 'Child part / Nut', 'CC/SC', 'เชื่อม', 'FMEA', 'CP', ''].map((h, i) => <th key={i} style={thSt}>{tr(h)}</th>)}</tr>
+                    <tr>{['OP', tr("ชนิด"), tr("ชื่อกระบวนการ"), tr("รูป"), tr("เครื่อง"), tr("ไลน์/พื้นที่"), 'Child part / Nut', 'CC/SC', tr("เชื่อม"), 'FMEA', 'CP', ''].map((h, i) => <th key={i} style={thSt}>{tr(h)}</th>)}</tr>
                   </thead>
                   <tbody>
                     {procs.length === 0 && <tr><td colSpan={12} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)', fontSize: 12 }}>{tr('ยังไม่มี process — เริ่มจากเพิ่ม OP ตามผัง flow (10, 20, ... หรือ 100.1)')}</td></tr>}
@@ -600,7 +600,7 @@ export default function PEDocs() {
                           const meta = CMP_META[c.state];
                           const extra = c.state === 'better' ? ` ${c.rpnItem} < ${c.rpnMaster}` : c.state === 'behind' ? ` → v${mItem?.version}` : c.state === 'diverged' ? ` (master ${c.rpnMaster ?? '—'})` : '';
                           return <>
-                            <span title={`${meta.label}${mItem ? ` · master v${mItem.version} RPN ${c.rpnMaster ?? '—'}` : ''}`} style={{ fontSize: 11, fontWeight: 800, color: meta.color, border: `1px solid ${tint(meta.color, 'line')}`, borderRadius: 'var(--r-xs)', padding: '1px 6px', whiteSpace: 'nowrap' }}>{meta.icon} {tr(meta.label)}{extra}</span>
+                            <span title={`${tr(meta.label)}${mItem ? ` · master v${mItem.version} RPN ${c.rpnMaster ?? '—'}` : ''}`} style={{ fontSize: 11, fontWeight: 800, color: meta.color, border: `1px solid ${tint(meta.color, 'line')}`, borderRadius: 'var(--r-xs)', padding: '1px 6px', whiteSpace: 'nowrap' }}>{meta.icon} {tr(meta.label)}{extra}</span>
                             {pendingSrc.has(it.id) ? <span style={{ fontSize: 11, color: 'var(--blue)', fontWeight: 700 }}>{tr('เสนอแล้ว')}</span>
                               : canEdit && (c.state === 'better' || c.state === 'unlinked') && <button style={btnSm} onClick={() => proposeOne(it)}>{c.state === 'better' ? tr('เสนอเข้า master') : tr('เสนอเป็นรายการใหม่')}</button>}
                           </>;
@@ -643,7 +643,7 @@ export default function PEDocs() {
               <div className="table-sticky" style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1100 }}>
                   <thead style={{ background: 'var(--bg2)' }}>
-                    <tr>{['OP', 'No.', 'Characteristics (Product / Process)', 'CC/SC', 'ผู้คุม', 'Spec/Tolerance', 'วิธีวัด', 'Sample', 'ความถี่', 'Control method', 'Reaction plan', ''].map((h, i) => <th key={i} style={thSt}>{tr(h)}</th>)}</tr>
+                    <tr>{['OP', 'No.', 'Characteristics (Product / Process)', 'CC/SC', tr("ผู้คุม"), 'Spec/Tolerance', tr("วิธีวัด"), 'Sample', tr("ความถี่"), 'Control method', 'Reaction plan', ''].map((h, i) => <th key={i} style={thSt}>{tr(h)}</th>)}</tr>
                   </thead>
                   <tbody>
                     {cpView.length === 0 && <tr><td colSpan={12} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)', fontSize: 12 }}>{tr('ยังไม่มีจุดควบคุม')}</td></tr>}
@@ -695,7 +695,7 @@ export default function PEDocs() {
               <div className="table-sticky" style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
                   <thead style={{ background: 'var(--bg2)' }}>
-                    <tr>{['เอกสาร', 'Rev', 'วันที่', 'Suffix (Part no.)', 'ECN', 'เนื้อหาการแก้ไข', 'ต้นเหตุ', 'ออก/ตรวจ/รับรอง', ''].map((h, i) => <th key={i} style={thSt}>{tr(h)}</th>)}</tr>
+                    <tr>{[tr("เอกสาร"), 'Rev', tr("วันที่"), 'Suffix (Part no.)', 'ECN', tr("เนื้อหาการแก้ไข"), tr("ต้นเหตุ"), tr("ออก/ตรวจ/รับรอง"), ''].map((h, i) => <th key={i} style={thSt}>{tr(h)}</th>)}</tr>
                   </thead>
                   <tbody>
                     {revs.length === 0 && <tr><td colSpan={9} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)', fontSize: 12 }}>{tr('ยังไม่มีประวัติ revision')}</td></tr>}

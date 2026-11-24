@@ -125,7 +125,7 @@ export default function QaMoPending() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
               <tr style={{ background: 'var(--bg2)', textAlign: 'left' }}>
-                {['เลข MO', 'วันที่แจ้ง', 'ค้าง', 'ส่วนงาน', 'ไลน์ / เครื่อง', 'อุปกรณ์', 'อาการ'].map(h => (
+                {[tr("เลข MO"), tr("วันที่แจ้ง"), tr("ค้าง"), tr("ส่วนงาน"), tr("ไลน์ / เครื่อง"), tr("อุปกรณ์"), tr("อาการ")].map(h => (
                   <th key={h} style={{ padding: '7px 9px', fontWeight: 800, whiteSpace: 'nowrap',
                                        borderBottom: '1px solid var(--border)' }}>{tr(h)}</th>
                 ))}

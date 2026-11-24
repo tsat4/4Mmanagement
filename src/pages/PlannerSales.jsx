@@ -36,11 +36,12 @@ import { fmtAxis } from '../utils/chartAxis';
 import { loadDocForms } from '../utils/docForms';
 import { downloadCsvDoc } from '../utils/csvDoc';
 import NoticeBar from '../components/NoticeBar';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import InfoMore from '../components/InfoMore';   // ⓘ คำอธิบายพับ (UI §6.10)
 import { ImportButton, ImportInfo, WrongFileNote } from '../components/ImportKit';
 import { whichImport } from '../utils/importRegistry';
 import { askConfirm } from '../utils/askConfirm';
+import { monthsShort, yearDisplay } from '../utils/dateFormat';
 
 /* ─── PLANNER & SALES — Forecast Planner + อัพโหลดไฟล์จากลูกค้า ──────────────
    Sales อัพโหลด Excel 2 แบบ: (1) Forecast ล่วงหน้าจากลูกค้า (2) Order + รอบเวลาส่งงาน
@@ -68,8 +69,7 @@ const workDateStr = () => { const d = new Date(); if (d.getHours() < 8) d.setDat
 const monthFirst = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
 const monthLabel = (iso) => {
   const [y, m] = iso.split('-').map(Number);
-  const TH = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-  return `${TH[m - 1]} ${y + 543}`;
+  return `${monthsShort()[m - 1]} ${yearDisplay(y)}`;
 };
 const fmt = (n) => Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 1 });
 
@@ -1072,7 +1072,7 @@ function UploadTab({ canUpload, fullName, onImported, custLabel }) {
               <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'var(--bg2-surf)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)' }}>
                 <div style={{ fontSize: 12, color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {b.kind === 'forecast' ? '📈' : '🚚'} <strong>{b.file_name || tr('(ไม่มีชื่อไฟล์)')}</strong>
-                  <span style={{ color: 'var(--muted)' }}> · {b.row_count} {tr('แถว ·')} {b.uploaded_by} · {new Date(b.uploaded_at).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}</span>
+                  <span style={{ color: 'var(--muted)' }}> · {b.row_count} {tr('แถว ·')} {b.uploaded_by} · {new Date(b.uploaded_at).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok' })}</span>
                 </div>
                 {canUpload && (
                   <button onClick={() => deleteBatch(b)} style={{ padding: '4px 10px', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 700, cursor: 'pointer', background: 'var(--red-dim)', color: 'var(--red)', border: '1px solid var(--red-line)', flexShrink: 0, fontFamily: 'var(--font-body)' }}>{tr('ลบ')}</button>
@@ -1667,7 +1667,7 @@ function KanbanCalcTab({ canApply, fullName, custLabel }) {
           /* ไลน์ที่มีพาร์ทในตาราง — จัดลำดับชั้นตามผัง (แม่→ลูก) แทนลิสต์แบนเรียงตัวอักษร */
           <LineSelect lines={prodLines.filter(l => lines.includes(l.name))}
             value={lineFilter} onChange={setLineFilter} placeholder={ALL.line}
-            extraGroups={[{ label: 'ไม่มีในทะเบียนไลน์', options: lines.filter(n => !prodLines.some(l => l.name === n)).map(n => ({ value: n })) }]}
+            extraGroups={[{ label: tr("ไม่มีในทะเบียนไลน์"), options: lines.filter(n => !prodLines.some(l => l.name === n)).map(n => ({ value: n })) }]}
           />
         )}
         <span className="filter-label">{tr('เดือน Forecast ที่ใช้คำนวณ')}</span>
@@ -1961,8 +1961,8 @@ export default function PlannerSales() {
         sub={tr('Sales อัพโหลด Forecast/Order จากลูกค้า → ระบบวางแผนภาระการผลิตล่วงหน้า · ติดตามรอบส่งงานรายวันที่หน้า 🚚 Delivery')}
         tabs={[
           { key: 'planner', label: 'Forecast Planner' },
-          { key: 'kanban', label: 'คำนวณ Kanban' },
-          { key: 'upload', label: 'อัพโหลด (Sales)' },
+          { key: 'kanban', label: tr("คำนวณ Kanban") },
+          { key: 'upload', label: tr("อัพโหลด (Sales)") },
           { key: 'monitoring', label: 'Monitoring (Planning)' },
         ]}
         tab={tab} onTab={setTab}

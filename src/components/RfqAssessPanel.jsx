@@ -194,8 +194,8 @@ export function RfqAssessCard({ rfq, assessments, canEdit, canAssess, fullName, 
     <div style={{ ...card, gridColumn: '1 / -1' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
         <div style={{ fontWeight: 800 }}>📐 {tr("ประเมินความเป็นไปได้")} (IEC)
-          {latest && <Pill label={`${tr("รอบ")} ${latest.round} · ${ASSESS_STATUS[latest.status]?.label || latest.status}`} color={statusColor(ASSESS_STATUS[latest.status]?.tone || 'none')} small />}
-          {latest?.status === 'submitted' && latest.feasible && <Pill label={FEASIBLE[latest.feasible]?.label || latest.feasible} color={statusColor(FEASIBLE[latest.feasible]?.tone || 'none')} small />}
+          {latest && <Pill label={`${tr("รอบ")} ${latest.round} · ${tr(ASSESS_STATUS[latest.status]?.label) || latest.status}`} color={statusColor(ASSESS_STATUS[latest.status]?.tone || 'none')} small />}
+          {latest?.status === 'submitted' && latest.feasible && <Pill label={tr(FEASIBLE[latest.feasible]?.label) || latest.feasible} color={statusColor(FEASIBLE[latest.feasible]?.tone || 'none')} small />}
         </div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {canEdit && !isClosed(rfq.status) && latest?.status !== 'draft' && (
@@ -291,7 +291,7 @@ export function RfqAssessCard({ rfq, assessments, canEdit, canAssess, fullName, 
       {latest?.status === 'submitted' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: '0 16px', alignItems: 'start' }} className="mgrid">
           <div>
-            {row('ผล', <Pill label={FEASIBLE[latest.feasible]?.label || latest.feasible || '—'} color={statusColor(FEASIBLE[latest.feasible]?.tone || 'none')} small />)}
+            {row('ผล', <Pill label={tr(FEASIBLE[latest.feasible]?.label) || latest.feasible || '—'} color={statusColor(FEASIBLE[latest.feasible]?.tone || 'none')} small />)}
             {latest.feasible_note && row(latest.feasible === 'no' ? 'เหตุผล' : 'เงื่อนไข', latest.feasible_note)}
             {row('ชนิดงานในมุม IEC', latest.job_type_view ? <>{JOB_TYPES[latest.job_type_view]}{rfq.job_type && latest.job_type_view !== rfq.job_type && <span style={{ color: statusColor('warn') }}> · {tr("ต่างจากที่ MKT ตั้ง")} ({JOB_TYPES[rfq.job_type]})</span>}</> : '—')}
             {row('ไลน์อ้างอิง', latest.ref_line_name)}
@@ -299,7 +299,7 @@ export function RfqAssessCard({ rfq, assessments, canEdit, canAssess, fullName, 
             {row('ความเสี่ยง', latest.risks)}
             {row('เวลาเตรียมการ', latest.lead_time_note)}
             {row('ราคาเป้าหมายลูกค้า', latest.target_price_feasible
-              ? <><Pill label={TARGET_PRICE_FEASIBLE[latest.target_price_feasible]?.label || latest.target_price_feasible} color={statusColor(TARGET_PRICE_FEASIBLE[latest.target_price_feasible]?.tone || 'none')} small />{latest.target_price_note ? ` ${latest.target_price_note}` : ''}</>
+              ? <><Pill label={tr(TARGET_PRICE_FEASIBLE[latest.target_price_feasible]?.label) || latest.target_price_feasible} color={statusColor(TARGET_PRICE_FEASIBLE[latest.target_price_feasible]?.tone || 'none')} small />{latest.target_price_note ? ` ${latest.target_price_note}` : ''}</>
               : <span style={{ color: 'var(--muted)' }}>{tr("ไม่ได้ตอบ")}{rfq.customer_target_price == null ? tr(" (RFQ ไม่มีราคาเป้าหมาย)") : ''}</span>)}
             {row('ประเมินโดย', `${latest.assessed_by_name || '—'} · ${latest.submitted_at ? fmtDateTime(latest.submitted_at) : '—'}`)}
           </div>
@@ -309,7 +309,7 @@ export function RfqAssessCard({ rfq, assessments, canEdit, canAssess, fullName, 
           </div>
         </div>
       )}
-      {assessments.length > 1 && <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 6 }}>{tr("ประวัติ")}: {assessments.slice().sort((a, b) => a.round - b.round).map(a => `${tr("รอบ")} ${a.round} ${ASSESS_STATUS[a.status]?.label || a.status}${a.feasible ? ` (${FEASIBLE[a.feasible]?.label})` : ''}`).join(' → ')}</div>}
+      {assessments.length > 1 && <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 6 }}>{tr("ประวัติ")}: {assessments.slice().sort((a, b) => a.round - b.round).map(a => `${tr("รอบ")} ${a.round} ${tr(ASSESS_STATUS[a.status]?.label) || a.status}${a.feasible ? ` (${tr(FEASIBLE[a.feasible]?.label)})` : ''}`).join(' → ')}</div>}
       {latest?.status === 'draft' && canEdit && <WarnBar color="var(--amber)">{tr("สถานะ RFQ จะเดินต่อขั้น 3 ขึ้นไปได้ หลัง IEC ส่งผลรอบนี้กลับมา")}</WarnBar>}
     </div>
   );

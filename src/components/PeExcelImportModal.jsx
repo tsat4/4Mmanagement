@@ -259,7 +259,7 @@ export default function PeExcelImportModal({ sets = [], currentSetId = '', onClo
           <div style={{ maxHeight: 230, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', marginBottom: 12 }}>
             <table className="table-sticky" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11.5 }}>
               <thead><tr style={{ background: 'var(--bg3)' }}>
-                {['OP', 'ชื่อขั้นงาน', 'ชนิด', 'PFMEA', 'CP', 'child part / เครื่อง'].map((h) => (
+                {['OP', tr("ชื่อขั้นงาน"), tr("ชนิด"), 'PFMEA', 'CP', tr("child part / เครื่อง")].map((h) => (
                   <th key={h} style={{ padding: '6px 8px', textAlign: 'left', fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{tr(h)}</th>
                 ))}
               </tr></thead>

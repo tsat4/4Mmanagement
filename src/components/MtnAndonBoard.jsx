@@ -471,7 +471,7 @@ export default function MtnAndonBoard({ d, ctx, cards = 'maintenance' }) {
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
           {/* ทีม = แท็บเส้นใต้มาตรฐาน (06/11 · เดิมแคปซูล) · "ทุกทีม" ซ้ายสุด (UI-STANDARD §3) */}
           <TabBar size="sm" value={team ?? ''} onChange={k => setTeam(k || null)}
-            tabs={[{ key: '', label: 'ทุกทีม' }, ...MTN_TEAMS.map(t => ({ key: t, label: deptNameOf(t) }))]} />
+            tabs={[{ key: '', label: tr("ทุกทีม") }, ...MTN_TEAMS.map(t => ({ key: t, label: deptNameOf(t) }))]} />
           {myTeams.length === 1 && !sp.get('team') && (
             <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('· ตั้งต้นตามทีมของบัญชีนี้')}</span>
           )}

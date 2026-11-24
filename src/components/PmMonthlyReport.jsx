@@ -26,8 +26,9 @@ import {
   loadPmMonthInspections, loadOrgForSign, loadPmMonthlySignoffs, signPmMonthly, revokePmMonthly,
 } from '../lib/pmMonthlySignoff'
 import { tr } from '../utils/i18n'
+import { dateLocale } from '../utils/i18n';
 
-const fmtWhen = (ts) => (ts ? new Date(ts).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' }) : '')
+const fmtWhen = (ts) => (ts ? new Date(ts).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' }) : '')
 
 export default function PmMonthlyReport() {
   const { role, fullName, position: myPosition, signatureUrl: mySignature } = useContext(UserContext)
@@ -174,7 +175,7 @@ export default function PmMonthlyReport() {
     if (!sign?.ok) return <span style={{ fontSize: 12, color: 'var(--amber)' }}>{sign?.missing ? tr('ระบบลงนามยังไม่เปิดใช้') : tr('อ่านทะเบียนลงนามไม่ได้')}</span>
     const v = verdictFor(teamKey, step, section)
     return v.ok
-      ? <button type="button" className="pg-btn primary" disabled={busy} onClick={() => doSign(teamKey, step, section)}>{PM_SIGN_STEPS[step].short}</button>
+      ? <button type="button" className="pg-btn primary" disabled={busy} onClick={() => doSign(teamKey, step, section)}>{tr(PM_SIGN_STEPS[step].short)}</button>
       : <span style={{ fontSize: 12, color: 'var(--muted)' }}>{pmMonthlySignText(v, { teamLabel: teamLabel(teamKey), section })}</span>
   }
 
@@ -220,10 +221,10 @@ export default function PmMonthlyReport() {
                 </div>
                 {!teamMonthReady(t) && <div style={{ fontSize: 12, color: 'var(--amber)', marginTop: 2 }}>{tr('ขั้น ③ รอใบทุกใบผ่านขั้น ② ก่อน')}</div>}
               </div>
-              <div style={{ minWidth: 220 }}><div style={{ fontSize: 11, color: 'var(--muted)' }}>{PM_SIGN_STEPS[3].label}</div><SignCell teamKey={t.team} step={3} /></div>
+              <div style={{ minWidth: 220 }}><div style={{ fontSize: 11, color: 'var(--muted)' }}>{tr(PM_SIGN_STEPS[3].label)}</div><SignCell teamKey={t.team} step={3} /></div>
             </div>
             <table style={{ width: '100%', marginTop: 10, fontSize: 12 }}>
-              <thead><tr><th style={{ textAlign: 'left' }}>{tr('ส่วนงานที่ถูกตรวจ')}</th><th>{tr('ใบ')}</th><th>NG</th><th>{tr('เครื่อง')}</th><th style={{ textAlign: 'left' }}>{PM_SIGN_STEPS[4].label}</th></tr></thead>
+              <thead><tr><th style={{ textAlign: 'left' }}>{tr('ส่วนงานที่ถูกตรวจ')}</th><th>{tr('ใบ')}</th><th>NG</th><th>{tr('เครื่อง')}</th><th style={{ textAlign: 'left' }}>{tr(PM_SIGN_STEPS[4].label)}</th></tr></thead>
               <tbody>
                 {[...t.sections.values()].map(s => (
                   <tr key={s.section}>
@@ -241,7 +242,7 @@ export default function PmMonthlyReport() {
       {revoking && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14 }}>
           <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(96vw, 460px)', boxShadow: 'var(--shadow-lg)' }}>
-            <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 8 }}>{tr('เพิกถอนลายเซ็น')} — {teamLabel(revoking.team)} {revoking.section ? `· ${revoking.section}` : ''} ({PM_SIGN_STEPS[revoking.step]?.short})</div>
+            <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 8 }}>{tr('เพิกถอนลายเซ็น')} — {teamLabel(revoking.team)} {revoking.section ? `· ${revoking.section}` : ''} ({tr(PM_SIGN_STEPS[revoking.step]?.short)})</div>
             <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>{tr('ไม่ลบประวัติ — ลายเซ็นเดิมเปลี่ยนเป็น "เพิกถอน" พร้อมเหตุผล')}</div>
             <textarea value={reason} onChange={e => setReason(e.target.value)} rows={3} style={{ width: '100%' }}
               placeholder={`${tr("เหตุผล (อย่างน้อย")} ${PM_REVOKE_REASON_MIN} ${tr("ตัวอักษร")})`} />

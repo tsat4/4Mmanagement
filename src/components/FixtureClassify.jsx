@@ -132,7 +132,7 @@ export default function FixtureClassify({ machines, mapKeys, canEdit, lines = []
       <FilterBar style={{ marginBottom: 0 }}>
         {/* <LineSelect> — โชว์เฉพาะไลน์ที่มีรายการเสนอ (§5.3 ข้อ 6) · ชื่อไลน์ของเครื่องที่ไม่อยู่ในทะเบียนไลน์แยก optgroup ⚠ ไม่หายเงียบ · 2026-09-07 */}
         <LineSelect lines={lines.filter(l => lineOpts.includes(l.name))} value={lineF} onChange={setLineF} placeholder={ALL.line} includeRetired
-                    extraGroups={[{ label: '⚠ ไลน์ที่ไม่มีในทะเบียนไลน์', options: lineOpts.filter(n => !lines.some(l => l.name === n)).map(n => ({ value: n, label: n })) }]} />
+                    extraGroups={[{ label: tr("⚠ ไลน์ที่ไม่มีในทะเบียนไลน์"), options: lineOpts.filter(n => !lines.some(l => l.name === n)).map(n => ({ value: n, label: n })) }]} />
         <SearchInput value={q} onChange={setQ} fields={tr("เลขเครื่อง / ชื่อ")} />
         <span className="spacer" />
         {hiddenCount > 0 && (

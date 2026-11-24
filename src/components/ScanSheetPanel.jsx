@@ -8,7 +8,7 @@ import { lineProcessTypes, typeFitsLine, defaultSheetPicks } from '../utils/scan
 import { buildScanSheetHtml } from '../lib/scanSheetPrint';
 import { withDocFoot, docFormSync, fullCode } from '../utils/docForms';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 /* 🗒️ แท็บ "ใบสแกนประจำไลน์ (A4)" ใน /qr-labels — เฟส 2 (2026-10-28 · คำสั่ง user: A4 แผ่นแยกตามไลน์)
    เลือกไลน์ → ระบบติ๊กประเภท Downtime/งานเสียที่เป็นของไลน์นั้นไว้ให้ (กติกาเดียวกับ dropdown ใน Daily Report)
    → ติ๊กเพิ่ม/เอาออก → พิมพ์ · กติกา `utils/scanSheet.js` · ตัวพิมพ์ `lib/scanSheetPrint.js` · ทะเบียนเอกสาร `scan_sheet` */
@@ -65,7 +65,7 @@ export default function ScanSheetPanel({ lines, canPrint }) {
         downtime: dt.filter(t => pickDt.has(String(t.id))),
         defects: ng.filter(t => pickNg.has(String(t.id))),
         formCode: fullCode(df),
-        printedAt: new Date().toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' }),
+        printedAt: new Date().toLocaleDateString(dateLocale(), { timeZone: 'Asia/Bangkok' }),
         toSvg: (p) => QR.toString(p, { type: 'svg', margin: 0, errorCorrectionLevel: 'M' }),
       });
       const w = window.open('', '_blank');

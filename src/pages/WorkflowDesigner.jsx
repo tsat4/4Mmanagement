@@ -75,7 +75,7 @@ export default function WorkflowDesigner() {
     return m;
   }, [vers]);
   const pending = vers.filter(v => v.status === 'pending_publish');
-  const tabs = TABS.filter(t => t.key !== 'review' || canPublish).map(t => (t.key === 'review' && pending.length ? { ...t, label: `${t.label} (${pending.length})` } : t));
+  const tabs = TABS.filter(t => t.key !== 'review' || canPublish).map(t => (t.key === 'review' && pending.length ? { ...t, label: `${tr(t.label)} (${pending.length})` } : t));
   const openDef = (id) => { merge({ tab: 'edit', def: id || null }); };
   const refresh = () => setReload(x => x + 1);
 
@@ -192,7 +192,7 @@ function Editor({ def, latest, canDesign, canPublish, mySection, onSaved }) {
       {!s.defId && !readOnly && (
         <div style={{ ...card, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <span style={{ fontSize: 13 }}>{tr('เริ่มจากแม่แบบ:')}</span>
-          <button type="button" style={ghost} onClick={() => up({ name: TEMPLATE_4M.name, key: s.key || 'test_4m', fields: TEMPLATE_4M.form.fields, steps: TEMPLATE_4M.flow.steps, onReturn: TEMPLATE_4M.flow.onReturn, startRoles: TEMPLATE_4M.startRoles })}>
+          <button type="button" style={ghost} onClick={() => up({ name: tr(TEMPLATE_4M.name), key: s.key || 'test_4m', fields: TEMPLATE_4M.form.fields, steps: TEMPLATE_4M.flow.steps, onReturn: TEMPLATE_4M.flow.onReturn, startRoles: TEMPLATE_4M.startRoles })}>
             {tr('🧪 4M Change (ทดลอง)')}
           </button>
           <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('ใบทดลองในตัวสร้าง — ไม่ใช่ใบ 4M จริงที่หน้า /report')}</span>

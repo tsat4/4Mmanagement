@@ -1601,7 +1601,7 @@ export default function Checkin() {
                             <button
                               key={opt.value}
                               onClick={() => setField(emp.id, 'leave_period', opt.value)}
-                              title={opt.sub}
+                              title={tr(opt.sub)}
                               style={{
                                 flex: 1, padding: '3px 4px', fontSize: 11, fontWeight: 700,
                                 borderRadius: 'var(--r-md)', border: 'none', cursor: 'pointer',
@@ -2010,7 +2010,7 @@ export default function Checkin() {
         filters={<>
           {/* "เฉพาะกะนี้ / ทุกคน" = ตัวกรองการดู ⇒ อยู่แถบกรองใต้แท็บ ไม่ใช่ปุ่มคำสั่ง (05/11 · UI §6.35 · เดิมเป็นปุ่ม toggle บนหัว) */}
           <Segmented value={filterShift ? 'shift' : 'all'} onChange={v => setFilterShift(v === 'shift')} label={tr('แสดงใคร')}
-            options={[{ value: 'shift', label: 'เฉพาะกะนี้' }, { value: 'all', label: 'ทุกคน' }]} />
+            options={[{ value: 'shift', label: tr("เฉพาะกะนี้") }, { value: 'all', label: tr("ทุกคน") }]} />
           {previewNight && <span data-warn="1" style={{ fontSize: 12, color: 'var(--amber)', fontWeight: 700 }}>{tr('กำลัง Preview กะดึก')}</span>}
         </>}
         actions={<>
@@ -2018,11 +2018,11 @@ export default function Checkin() {
           <OverflowMenu items={[
             { key: 'preview', icon: '🌙', label: previewNight ? 'ออกจาก Preview กะดึก' : 'Preview กะดึก', onClick: () => setPreviewNight(p => !p),
               hidden: realShiftInfo.shift !== 'day', badge: previewNight ? 'เปิดอยู่' : undefined,
-              title: 'ดูตัวอย่างหน้าจอกะดึก (รวมคอลัมน์ OT พรุ่งนี้) — ปิดปุ่มบันทึกอัตโนมัติระหว่าง preview' },
+              title: tr("ดูตัวอย่างหน้าจอกะดึก (รวมคอลัมน์ OT พรุ่งนี้) — ปิดปุ่มบันทึกอัตโนมัติระหว่าง preview") },
             { key: 'borrowsum', icon: '📊', label: `${tr("คนของเราที่ถูกยืมออก")} (${BORROW_WINDOW_DAYS} ${tr("วัน")})`, onClick: openBorrowSummary,
-              title: 'สรุปสะสมว่าคนของไลน์เราถูกยืมไปช่วยไลน์อื่นกี่วัน / ไลน์ไหน ในช่วง 30 วันทำงานล่าสุด (ป้ายบนรายชื่อบอกได้แค่กะนี้)' },
-            { key: 'export', icon: '📄', label: 'ส่งออกฟอร์ม', onClick: () => { setExportSection(selSection || ''); setShowExport(true); } },
-            { key: 'otbook', icon: '🚚', label: 'จองรถ OT', onClick: openOtBookModal, title: 'จองรถ OT วันที่/ไลน์/ทีมใดก็ได้ ไม่ต้องรอเช็คชื่อกะนั้น' },
+              title: tr("สรุปสะสมว่าคนของไลน์เราถูกยืมไปช่วยไลน์อื่นกี่วัน / ไลน์ไหน ในช่วง 30 วันทำงานล่าสุด (ป้ายบนรายชื่อบอกได้แค่กะนี้)") },
+            { key: 'export', icon: '📄', label: tr("ส่งออกฟอร์ม"), onClick: () => { setExportSection(selSection || ''); setShowExport(true); } },
+            { key: 'otbook', icon: '🚚', label: tr("จองรถ OT"), onClick: openOtBookModal, title: tr("จองรถ OT วันที่/ไลน์/ทีมใดก็ได้ ไม่ต้องรอเช็คชื่อกะนั้น") },
           ]} />
           {canRecord && (
             <button type="button" className="pg-btn" onClick={openBorrowModal}
@@ -2137,7 +2137,7 @@ export default function Checkin() {
         onDiscard={() => { if (ckDraftKey) clearDraft(ckDraftKey); setCkPending(null); }} />
       {shiftChanged && (
         <NoticeBar tone="warn" style={{ marginBottom: 14 }}
-          action={{ label: 'โหลดรายชื่อกะใหม่', title: 'สิ่งที่ยังไม่บันทึกจะหาย',
+          action={{ label: tr("โหลดรายชื่อกะใหม่"), title: tr("สิ่งที่ยังไม่บันทึกจะหาย"),
             onClick: () => { setPreviewNight(false); setShiftChanged(null); setRealShiftInfo(getShiftInfo()); } }}>
           <b>{tr('เวลาข้ามเข้า')} {tr(shiftChanged.label)} ({shiftChanged.workDateStr}) {tr("แล้ว")}</b> {tr('— หน้านี้ยังเป็นรายชื่อ')}{tr(realShiftInfo.label)} ({realShiftInfo.workDateStr})
           · {tr("กดบันทึกตอนนี้ = บันทึกของกะเดิม (ถูกต้องถ้ายังกรอกกะเดิมอยู่")})
@@ -2145,7 +2145,7 @@ export default function Checkin() {
       )}
 
       {previewNight && (
-        <NoticeBar tone="bad" style={{ marginBottom: 14 }} action={{ label: 'ออกจาก Preview', onClick: () => setPreviewNight(false) }}>
+        <NoticeBar tone="bad" style={{ marginBottom: 14 }} action={{ label: tr("ออกจาก Preview"), onClick: () => setPreviewNight(false) }}>
           <b>{tr('โหมด Preview กะดึก')}</b> — {tr("เวลาจริงยังเป็นกะเช้า ปุ่มบันทึกถูกปิดไว้กันข้อมูลผิดพลาด")}
         </NoticeBar>
       )}

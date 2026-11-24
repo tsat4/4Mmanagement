@@ -459,9 +459,9 @@ export default function PermissionsManagement() {
         title={tr('จัดการสิทธิ์')} icon="🔐"
         sub={tr('กำหนดว่าแต่ละ role เข้าหน้าไหนได้ (แท็บแรก) และทำอะไรในหน้านั้นได้บ้าง เช่น สร้าง/แก้/ลบ/อนุมัติ (แท็บสอง)')}
         tabs={[
-          { key: 'matrix', label: 'ภาพรวม (ใครทำอะไรได้)' },
-          { key: 'pages', label: 'การเข้าถึงหน้า' },
-          { key: 'actions', label: 'สิทธิ์การทำงาน (สร้าง/แก้/ลบ/อนุมัติ)' },
+          { key: 'matrix', label: tr("ภาพรวม (ใครทำอะไรได้)") },
+          { key: 'pages', label: tr("การเข้าถึงหน้า") },
+          { key: 'actions', label: tr("สิทธิ์การทำงาน (สร้าง/แก้/ลบ/อนุมัติ)") },
         ]}
         tab={tab} onTab={setTab}
       />
@@ -488,7 +488,7 @@ export default function PermissionsManagement() {
               { ic: '🔐', t: 'ชุดสิทธิ์ (role)', c: 'var(--accent)',
                 d: <>{tr('ตัวเดียวที่')}<b>{tr('ให้/ไม่ให้')}</b>{tr('ปุ่มกับหน้า — คือตารางข้างล่างนี้ · ตั้งที่แท็บ 📄 / 🛠️')}</> },
               { ic: '🌳', t: 'ขอบเขต (ระดับการมองเห็น)', c: 'var(--blue)',
-                d: <>{tr('หุบว่า')}<b>{tr('เห็นข้อมูลของใคร')}</b> {tr('— ไม่เพิ่ม/ลดปุ่ม ·')} {SCOPE_DEPTHS.map(d => SCOPE_DEPTH_META[d].short).join(' → ')} {tr('· ตั้งรายคนที่ 🔑 จัดการผู้ใช้')}</> },
+                d: <>{tr('หุบว่า')}<b>{tr('เห็นข้อมูลของใคร')}</b> {tr('— ไม่เพิ่ม/ลดปุ่ม ·')} {SCOPE_DEPTHS.map(d => tr(SCOPE_DEPTH_META[d].short)).join(' → ')} {tr('· ตั้งรายคนที่ 🔑 จัดการผู้ใช้')}</> },
               { ic: '🪪', t: 'ตำแหน่ง / ระดับ', c: 'var(--amber)',
                 d: <><b>{tr('ไม่ให้สิทธิ์')}</b> {tr('ใช้เป็นคำแนะนำ+ค่าตั้งต้นเท่านั้น —')} <b>{tr('ยกเว้นช่องเซ็นในใบ MO')}</b> {tr('(ขั้นผู้ตรวจสอบ/รับรอง/ผจก.) ที่ล็อกด้วยระดับจริง')}</> },
             ].map(x => (
@@ -501,16 +501,16 @@ export default function PermissionsManagement() {
           </InfoMore>
           <InfoMore label={tr('ระดับที่ล็อกช่องเซ็น MO')} size={11.5} style={{ padding: '9px 14px', borderTop: '1px solid var(--border)' }}>
             🪪 <b>{tr('ระดับที่ล็อกช่องเซ็น MO:')}</b>{' '}
-            {POSITION_LEVELS.filter(l => l.rank >= 40).map(l => `${l.label} (${l.rank})`).join(' · ')}
+            {POSITION_LEVELS.filter(l => l.rank >= 40).map(l => `${tr(l.label)} (${l.rank})`).join(' · ')}
             {' '}— {tr("ช่องส่งมอบต้อง ≥40 · ผู้ตรวจสอบ/หัวหน้าช่าง ≥50 · อนุมัติ/ปิดค่าใช้จ่าย")} ≥60
           </InfoMore>
         </div>
 
         <FilterBar>
           <Segmented value={kind} onChange={setKind} label={tr('ชนิดสิทธิ์')} size="sm" options={[
-            { value: 'all', label: 'ทั้งหมด' },
-            { value: 'page', label: 'เข้าหน้า' },
-            { value: 'action', label: 'การทำงาน' },
+            { value: 'all', label: tr("ทั้งหมด") },
+            { value: 'page', label: tr("เข้าหน้า") },
+            { value: 'action', label: tr("การทำงาน") },
           ]} />
           <SearchInput value={q} onChange={setQ} fields={tr("ชื่อฟังก์ชัน / คีย์สิทธิ์")} />
           <label className="tbtn" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text2)', cursor: 'pointer' }}>

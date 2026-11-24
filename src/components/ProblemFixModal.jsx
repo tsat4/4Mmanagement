@@ -19,12 +19,12 @@ import useColumnHistory from '../utils/useColumnHistory';
 /* 📕 ทะเบียน QRs ↔ WI การซ่อม (WI-PD3-069 §6) — กติกาการจับคู่อยู่ใน util กลาง (pure + มีเทส) */
 import { matchRepairWi } from '../utils/repairWi';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 const TABLE = { downtime: 'downtime_logs', defect: 'defect_logs' };
 const TYPE_COL = { downtime: 'downtime_type_id', defect: 'defect_type_id' };
 
 const txt = v => String(v || '').trim();
-const dmy = iso => (iso ? new Date(iso).toLocaleDateString('th-TH', { day: '2-digit', month: 'short' }) : '');
+const dmy = iso => (iso ? new Date(iso).toLocaleDateString(dateLocale(), { day: '2-digit', month: 'short' }) : '');
 
 export default function ProblemFixModal({ kind, row, title, actorName, onClose, onSaved }) {
   const [fix, setFix]         = useState(row?.fix_action || '');

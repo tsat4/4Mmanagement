@@ -683,7 +683,7 @@ export default function Monitoring() {
   }, [canEdit, board, fullName, syncRackOrder]);
 
   const countOf = (kinds) => boards.filter(b => kinds.includes(b.kind)).length;
-  const groupTabs = BOARD_GROUPS.map(g => ({ key: g.key, label: g.label }));
+  const groupTabs = BOARD_GROUPS.map(g => ({ key: g.key, label: tr(g.label) }));
   const subTabs = groupDef.subs.map(sd => {
     const full = MON_SUBS.find(x => x.key === sd.key);
     const n = countOf(full.kinds);

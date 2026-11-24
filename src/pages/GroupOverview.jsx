@@ -20,7 +20,7 @@ import PageHeader from '../components/PageHeader';
 import Segmented from '../components/Segmented';
 import { ALL } from '../utils/filterLabels';
 import InfoMore from '../components/InfoMore';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import TabBar from '../components/TabBar';   // แถบเลือกมุมมอง = แท็บเส้นใต้มาตรฐาน (UI §6.36 ข้อ 0)
 
 /* ══ 🏢 ภาพรวมกลุ่มบริษัท TSG (Group Overview) — MOCKUP หลายโรงงาน · 2026-08-05 ══════════
@@ -49,7 +49,7 @@ function reviewDefaultDate() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 const shiftDate = (s, delta) => { const d = new Date(`${s}T00:00:00`); d.setDate(d.getDate() + delta); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
-const fmtThaiDate = (s) => { try { return new Date(`${s}T00:00:00`).toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }); } catch { return s; } };
+const fmtThaiDate = (s) => { try { return new Date(`${s}T00:00:00`).toLocaleDateString(dateLocale(), { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }); } catch { return s; } };
 const fmtNum = (n) => (n == null ? '0' : Math.round(n).toLocaleString('en-US'));
 /* สี OEE เทียบเป้ากลุ่มจริง (oeeTargetForLines + statusOf) — ประกาศใน component · 05/10 เดิม 80/65 ตายตัว */
 const pctCol = (p) => p == null ? 'var(--muted)' : p >= 95 ? '#22c55e' : p >= 80 ? '#f59e0b' : '#ef4444';
@@ -347,7 +347,7 @@ export default function GroupOverview() {
 
     // สร้างบริษัททั้งหมดครั้งเดียว แล้วค่อยจัดกลุ่ม 2 แกน (กลุ่มธุรกิจ / โซนพื้นที่)
     const built = ORG.groups.flatMap(g => {
-      const gMeta = { key: g.key, name: g.name, short: g.short, icon: g.icon };
+      const gMeta = { key: g.key, name: tr(g.name), short: tr(g.short), icon: g.icon };
       return g.companies.map(c => {
         let lines;
         if (c.real) {
@@ -464,7 +464,7 @@ export default function GroupOverview() {
   const lv1Switch = (
     <span style={{ marginLeft: 'auto' }}>
       <Segmented value={lv1View} onChange={setLv1View}
-        options={[{ value: 'map', label: 'แผนที่' }, { value: 'rank', label: 'เทียบรายโซน' }]} />
+        options={[{ value: 'map', label: tr("แผนที่") }, { value: 'rank', label: tr("เทียบรายโซน") }]} />
     </span>
   );
   const crumbBtn = (label, onClick, active) => (
@@ -503,7 +503,7 @@ export default function GroupOverview() {
         filters={<>
           {/* สลับแกนมอง: ตามพื้นที่ (แผนที่) หรือ ตามกลุ่มธุรกิจ — เปลี่ยนแกนแล้วกลับไประดับ TSG */}
           <Segmented label={tr('แกนมอง')} value={sel.axis} onChange={k => setSel({ axis: k, node: null, comp: null })}
-            options={[{ value: 'map', label: 'ตามพื้นที่' }, { value: 'biz', label: 'ตามกลุ่มธุรกิจ' }]} />
+            options={[{ value: 'map', label: tr("ตามพื้นที่") }, { value: 'biz', label: tr("ตามกลุ่มธุรกิจ") }]} />
           <span className="sep" />
           <span className="filter-label">{tr('วันงาน')}</span>
           <button className="tbtn ctl-btn" onClick={() => setDate(shiftDate(date, -1))} style={btn}>◀</button>
@@ -517,7 +517,7 @@ export default function GroupOverview() {
            รายละเอียดวิธีอ่านพับไว้ใน InfoMore (UX audit 05/10: เดิมกล่องเส้นประ 4 บรรทัดดันเนื้อหาลง) ── */}
       <InfoMore id="group_overview_mock" tone="warn" size={12.5}
         lead={<><b style={{ color: 'var(--green)' }}>TSAT4 = {tr("ข้อมูลจริง")}</b> ({tr("กะที่ปิดแล้วของวันที่เลือก) · บริษัทอื่น")} = <b style={{ color: 'var(--amber)' }}>{tr('ตัวเลขจำลอง')}</b> {tr('· หน้านี้ไม่เขียนข้อมูล')}</>}>
-        {tr("โครงองค์กร")}: <b>{ORG.code}</b> {tr('→ กลุ่มธุรกิจ (')}{ORG.groups.map(g => g.short).join(' / ')}) → {tr("บริษัท → ไลน์ผลิต · ดูอีกแกนเป็น")} <b>{tr('พื้นที่')}</b> ({ZONES.length} {tr("โซน/ประเทศ) ได้จากปุ่ม \"แกนมอง")}" — <b>{tr('กดหมุด/การ์ด/ชื่อ เพื่อเจาะลึกลงชั้นถัดไป')}</b>
+        {tr("โครงองค์กร")}: <b>{ORG.code}</b> {tr('→ กลุ่มธุรกิจ (')}{ORG.groups.map(g => tr(g.short)).join(' / ')}) → {tr("บริษัท → ไลน์ผลิต · ดูอีกแกนเป็น")} <b>{tr('พื้นที่')}</b> ({ZONES.length} {tr("โซน/ประเทศ) ได้จากปุ่ม \"แกนมอง")}" — <b>{tr('กดหมุด/การ์ด/ชื่อ เพื่อเจาะลึกลงชั้นถัดไป')}</b>
         · {tr("ตัวเลขจำลองปั้นจากข้อมูลจริงชุดเดียวกัน (สุ่มแบบคงที่ ไม่เปลี่ยนทุกครั้งที่รีเฟรช) · ยังไม่มีทะเบียนบริษัท/โรงงานจริง — ดู \"ถ้าจะรองรับหลายบริษัทจริง\" ท้ายหน้า")}
       </InfoMore>
 
@@ -597,7 +597,7 @@ export default function GroupOverview() {
               <WorldFactoryMap
                 comps={tree.allComps}
                 countries={COUNTRY_META}
-                groups={ORG.groups.map(g => ({ key: g.key, icon: g.icon, short: g.short }))}
+                groups={ORG.groups.map(g => ({ key: g.key, icon: g.icon, short: tr(g.short) }))}
                 isMobile={isMobile}
                 height={isMobile ? 420 : 500}
                 onPickCompany={(c) => setPickComp(c)}
@@ -697,7 +697,7 @@ export default function GroupOverview() {
               </div>
               <ThailandZoneMap
                 zones={[bizNode]}
-                groups={ORG.groups.map(g => ({ key: g.key, icon: g.icon, short: g.short }))}
+                groups={ORG.groups.map(g => ({ key: g.key, icon: g.icon, short: tr(g.short) }))}
                 isMobile={isMobile}
                 height={isMobile ? 380 : 470}
                 onPickZone={() => { }}

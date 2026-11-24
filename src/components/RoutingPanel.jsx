@@ -18,7 +18,7 @@ import { checkWriteRows } from '../utils/dbWrite';
 import LineSelect from './LineSelect';
 import MachineSelect from './MachineSelect';
 import { DeleteButton } from './IconButton';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import SupplierSelect from './SupplierSelect'; // ผู้รับจ้าง = ทะเบียน DR suppliers (จ้างนอก/บริการขึ้นก่อน) — 2026-09-08
 import useColumnHistory from '../utils/useColumnHistory'; // 📜 เลขเครื่องที่เคยบันทึกใน routing — ทะเบียน machines ไม่มีก็ยังเลือกซ้ำได้ (2026-09-07)
 import { askConfirm } from '../utils/askConfirm';
@@ -237,7 +237,7 @@ export default function RoutingPanel({ canEdit, lines = [] }) {
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 760 }}>
                 <thead><tr style={{ background: 'var(--bg2)' }}>
-                  {['#', 'กระบวนการ', 'ไลน์ / ผู้รับจ้าง', 'C/T', 'C/O', 'LOT', 'คน', 'จุดพักหลังขั้นนี้', ''].map((h, i) =>
+                  {['#', tr("กระบวนการ"), tr("ไลน์ / ผู้รับจ้าง"), 'C/T', 'C/O', 'LOT', tr("คน"), tr("จุดพักหลังขั้นนี้"), ''].map((h, i) =>
                     <th key={i} style={{ padding: '7px 8px', fontSize: 11.5, color: 'var(--muted)', textAlign: 'left', whiteSpace: 'nowrap' }}>{tr(h)}</th>)}
                 </tr></thead>
                 <tbody>
@@ -259,7 +259,7 @@ export default function RoutingPanel({ canEdit, lines = [] }) {
                         </td>
                       ))}
                       <td style={{ padding: '7px 8px', fontSize: 12, color: 'var(--text)', borderTop: '1px solid var(--border)' }}>
-                        {r.wip_label ? `${r.wip_label}${r.wip_qty != null ? ` · ${Number(r.wip_qty).toLocaleString('th-TH')} pcs` : ''}` : '—'}
+                        {r.wip_label ? `${r.wip_label}${r.wip_qty != null ? ` · ${Number(r.wip_qty).toLocaleString(dateLocale())} pcs` : ''}` : '—'}
                       </td>
                       <td style={{ padding: '5px 8px', borderTop: '1px solid var(--border)', whiteSpace: 'nowrap' }}>
                         {canEdit && <>

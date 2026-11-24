@@ -240,9 +240,9 @@ export default function NpiPartPanel({ part, project, template, phases, delivs, 
           {/* UI-STANDARD 2026-09-24 — ตัวกรอง 4 ตัวเลือก = Segmented ("ทุก…" ซ้ายสุด) */}
           <Segmented size="sm" value={filter} onChange={setFilter} label={tr('กรองเอกสารส่งมอบ')} options={[
             { value: 'all', label: allOf('รายการ') },
-            { value: 'open', label: 'ยังไม่ปิด' },
-            { value: 'ppap', label: 'เฉพาะ PPAP' },
-            { value: 'red', label: '🔴 เลยกำหนด' },
+            { value: 'open', label: tr("ยังไม่ปิด") },
+            { value: 'ppap', label: tr("เฉพาะ PPAP") },
+            { value: 'red', label: tr("🔴 เลยกำหนด") },
           ]} />
         </div>
         {!delivs.length && <div style={{ color: 'var(--muted)', fontSize: 12.5 }}>{tr('ยังไม่มีรายการ — sync จากแม่แบบ หรือ + รายการ')}</div>}

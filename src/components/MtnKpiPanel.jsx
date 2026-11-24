@@ -95,7 +95,7 @@ export default function MtnKpiPanel({ orders = [], scopeLines = null, lineObjs =
     const satOverall = rated.length ? rated.reduce((s, o) => s + satAvg(o.satisfaction), 0) / rated.length : null;
     const satByDim = SAT_DIMS.map(d => {
       const vs = rated.map(o => Number(o.satisfaction?.[d.key])).filter(v => v >= 1 && v <= 3);
-      return { label: d.label, avg: vs.length ? vs.reduce((a, b) => a + b, 0) / vs.length : null, n: vs.length };
+      return { label: trI18n(d.label), avg: vs.length ? vs.reduce((a, b) => a + b, 0) / vs.length : null, n: vs.length };
     });
     return { n: rows.length, resp: avg(resp), ttr: avg(ttr), bd: avg(bd),
              respBox: box(resp), ttrBox: box(ttr), bdBox: box(bd), lateN, lateHr: LATE_MIN / 60,

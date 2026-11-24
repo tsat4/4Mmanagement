@@ -12,7 +12,7 @@ import useTimeRange from '../utils/useTimeRange';
 import { rangeDays } from '../utils/timeRange';
 import { BREAK_POLICY_COLS } from '../utils/oeeMasters';
 
-import { tr as trI18n } from '../utils/i18n';
+import { tr as trI18n, getLang } from '../utils/i18n';
 /* ── 🧠 OEE Insight Engine — วิเคราะห์ภาพรวมอัตโนมัติ (rule-based + สถิติ) ──
    ตอบ 2 คำถามหลักของ user (2026-07-14):
    1. "ทำไมยอดงานไม่ได้ตามเป้า" → แตกเป้าที่หายไปเป็นชิ้น: Downtime นอกแผน / NG / ความเร็วต่ำกว่า CT
@@ -31,6 +31,8 @@ const todayWorkDate = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 const DOW_TH = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์'];
+const DOW_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const dowName = (i) => (getLang() === 'th' ? DOW_TH : DOW_EN)[i];
 const avg = (a) => (a.length ? a.reduce((s, v) => s + v, 0) / a.length : 0);
 // เฉลี่ย OEE/A/P ข้ามกะ ต้องถ่วงด้วยเวลารับภาระ (กฎ OEE · util กลาง oeeAvg.js) — เดิม avg() ธรรมดา
 // ทำให้ insight อ้างตัวเลข "เฉลี่ยกะเช้า vs ดึก" ไม่ตรงกับ KPI ในหน้าเดียวกัน (แก้ 2026-08-05)
@@ -257,7 +259,7 @@ export default function OeeInsightPanel({ lines, ccRates = [], initLine = '', se
         if (med > 0 && worst.perDay > med * 1.6) {
           out.push({
             sev: 'med', icon: '📅',
-            title: `${trI18n("วัน")}${DOW_TH[worst.dow]} Downtime ${trI18n("นอกแผนสูงผิดปกติ")}`,
+            title: `${trI18n("วัน")}${dowName(worst.dow)} Downtime ${trI18n("นอกแผนสูงผิดปกติ")}`,
             detail: `${trI18n("เฉลี่ย")} ${Math.round(worst.perDay)} ${trI18n("นาที/วัน (จาก")} ${worst.n} ${trI18n("วัน) เทียบค่ากลางวันอื่น")} ${Math.round(med)} ${trI18n("นาที — เช็คกิจกรรมประจำวันนั้น (เริ่มสัปดาห์/สลับแผน/วัตถุดิบเข้า ฯลฯ")})`,
             impact: worst.perDay,
           });

@@ -25,7 +25,7 @@ import FilterBar from './FilterBar';
 import SearchInput from './SearchInput';
 import ScanModal from './ScanModal';   // 📷 สแกนป้ายแม่พิมพ์ → เด้งเข้าหมุด (2026-10-06)
 import { uploadOpts } from '../utils/storageUpload';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { dieSetMats } from '../utils/dieSetMats'; // 🔨 ชุดแม่พิมพ์ทำได้ 2 MAT (งานคู่ RH/LH)
 import { askConfirm } from '../utils/askConfirm';
 
@@ -297,7 +297,7 @@ export default function DieLayout({
   }
 
   const legendItems = [
-    ...DIE_STATUSES.map(s => [s.color, `${s.icon} ${s.label}`]),
+    ...DIE_STATUSES.map(s => [s.color, `${s.icon} ${tr(s.label)}`]),
     [DIE_STATUS_UNSET.color, `${DIE_STATUS_UNSET.icon} ${tr("ยังไม่ระบุ")}`],
     ['#ef4444', '🔧 มีใบซ่อม MO ค้าง (รอรับงาน = กระพริบ)'],
     ['#facc15', '🔍 ผลการค้นหา'],
@@ -503,7 +503,7 @@ export default function DieLayout({
                           {mos.map(o => (
                             <div key={o.id} style={{ fontSize: 11.5, lineHeight: 1.7 }}>
                               <b>{o.mo_no || tr('(ยังไม่ออกเลข MO)')}</b> · {moStatusLabel(o)}
-                              {o.report_at && <span style={{ color: 'var(--muted)' }}> {tr('· แจ้ง')} {new Date(o.report_at).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' })}</span>}
+                              {o.report_at && <span style={{ color: 'var(--muted)' }}> {tr('· แจ้ง')} {new Date(o.report_at).toLocaleDateString(dateLocale(), { timeZone: 'Asia/Bangkok' })}</span>}
                             </div>
                           ))}
                           <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{tr('ดำเนินการต่อที่หน้า 🛠️ แจ้งซ่อม (MO)')}</div>

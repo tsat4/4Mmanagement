@@ -86,7 +86,7 @@ export default function QaFmePartRules({ canEdit, fullName, centralMode }) {
       <div style={{ maxHeight: 360, overflow: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 720 }}>
           <thead><tr>
-            {['ไลน์', 'พาร์ท', 'Middle', 'ทุกกี่ชิ้น', 'ทุกกี่นาที', 'ตรวจต่อรอบ (ชิ้น)'].map(h => (
+            {[tr("ไลน์"), tr("พาร์ท"), 'Middle', tr("ทุกกี่ชิ้น"), tr("ทุกกี่นาที"), tr("ตรวจต่อรอบ (ชิ้น)")].map(h => (
               <th key={h} style={th}>{tr(h)}</th>
             ))}
           </tr></thead>
@@ -101,7 +101,7 @@ export default function QaFmePartRules({ canEdit, fullName, centralMode }) {
                   <td style={td}><MatLabel mat={p.mat_no} name={p.part_name} pNo={p.part_no} oneLine /></td>
                   <td style={td}>
                     <select disabled={dis} value={mode} onChange={e => save(p.mat_no, { mid_mode: e.target.value || null, is_active: e.target.value === 'off' ? true : (r?.is_active ?? true) })}>
-                      {MODES.map(m => <option key={m.k} value={m.k}>{tr(m.label)}</option>)}
+                      {MODES.map(m => <option key={tr(m.k)} value={tr(m.k)}>{tr(m.label)}</option>)}
                     </select>
                   </td>
                   <td style={td}>

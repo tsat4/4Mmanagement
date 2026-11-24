@@ -29,7 +29,7 @@ import useTimeRange from '../utils/useTimeRange';
 import { urlBool } from '../utils/urlInit';
 
 import NoticeBar from '../components/NoticeBar';
-import { tr as trI18n } from '../utils/i18n';
+import { tr as trI18n, dateLocale } from '../utils/i18n';
 /*
   🔎 สอบกลับ Order (Order Traceability) — 2026-07-30
   รู้ prod_no ที่สแกน kanban → เห็นทุกอย่างที่เกิดขึ้นกับใบนั้น + สถานการณ์รอบข้าง ณ เวลานั้น:
@@ -44,9 +44,9 @@ const todayStr = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 const addDays = (s, n) => { const [y, m, d] = s.split('-').map(Number); const dt = new Date(y, m - 1, d); dt.setDate(dt.getDate() + n); return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`; };
-const fmtTime = t => t ? new Date(t).toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit' }) : '—';
-const fmtDT = t => t ? new Date(t).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
-const fmtDate = s => { if (!s) return '—'; const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString('th-TH', { weekday: 'short', day: '2-digit', month: '2-digit', year: '2-digit' }); };
+const fmtTime = t => t ? new Date(t).toLocaleTimeString(dateLocale(), { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit' }) : '—';
+const fmtDT = t => t ? new Date(t).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
+const fmtDate = s => { if (!s) return '—'; const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString(dateLocale(), { weekday: 'short', day: '2-digit', month: '2-digit', year: '2-digit' }); };
 const STATUS_META = {
   open: { label: 'กำลังผลิต', color: 'var(--green)' }, confirmed: { label: 'ปิดใบแล้ว', color: 'var(--green)' },
   carry_over: { label: 'ยกยอดข้ามกะ', color: 'var(--amber)' }, cancelled: { label: 'ยกเลิก', color: 'var(--red)' },
@@ -997,8 +997,8 @@ export default function OrderTrace() {
           ? trI18n("มีแต่อาการที่ลูกค้าแจ้ง → ค้นหาของเสีย/เครื่องหยุดที่เกี่ยวข้อง แล้วเจาะเข้าใบผลิต")
           : trI18n("สแกน/ค้นหาใบผลิต → เห็นทุกเหตุการณ์ + สถานการณ์รอบข้าง ณ เวลาผลิตใบนั้น")}
         tabs={[
-          { key: 'order', label: 'จากเลขใบผลิต' },
-          { key: 'symptom', label: 'จากอาการที่แจ้ง' },
+          { key: 'order', label: trI18n("จากเลขใบผลิต") },
+          { key: 'symptom', label: trI18n("จากอาการที่แจ้ง") },
         ]}
         tab={tab} onTab={setTab}
       />

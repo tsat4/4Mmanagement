@@ -33,7 +33,7 @@ import { issueProductionOrder, reprintProductionOrder } from '../lib/mktProducti
 import { inp, card, btn, ghost, thSt, tdSt, Field, Pill, Modal, WarnBar } from '../components/NpiUi';
 import { DeleteButton } from '../components/IconButton';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
 /* ═══════════════════════════════════════════════════════════════════════════
    💼 RFQ / เสนอราคา — Marketing (Q-neX เฟส 1) — /rfq · 2026-10-30
@@ -64,7 +64,7 @@ const emptyRfq = { rfq_no: '', customer: '', model: '', title: '', process_type:
   model_life_years: '', job_type: '' };
 const emptyPart = { part_no: '', part_name: '', parent_part_id: '', material_spec: '', thickness_mm: '', qty_per: 1, coating: '', cad_revision: '', remark: '' };
 const num = (v) => (v === '' || v == null ? null : Number(v));
-const fmtN = (v, d = 0) => (v == null || v === '' ? '—' : Number(v).toLocaleString('th-TH', { minimumFractionDigits: d, maximumFractionDigits: d }));
+const fmtN = (v, d = 0) => (v == null || v === '' ? '—' : Number(v).toLocaleString(dateLocale(), { minimumFractionDigits: d, maximumFractionDigits: d }));
 
 export default function Rfq() {
   const { role, fullName } = useContext(UserContext);

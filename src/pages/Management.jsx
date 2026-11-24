@@ -1417,7 +1417,7 @@ export default function Management() {
           <LineSelect lines={lines} value={selectedLine} placeholder={null} onChange={setSelectedLine} includeSupport />
           {selectedLine && (
             <Segmented value={viewShift} onChange={setViewShift} label={tr('กะที่ดู')}
-              options={[{ value: 'day', label: 'กะเช้า' }, { value: 'night', label: 'กะดึก' }]} />
+              options={[{ value: 'day', label: tr("กะเช้า") }, { value: 'night', label: tr("กะดึก") }]} />
           )}
           {selectedLine && (
             <span title={tr('เปลี่ยนวันที่ได้ที่แถบ Heijunka')} style={{ fontSize: 12, color: isLiveView ? 'var(--muted)' : 'var(--blue)', fontWeight: isLiveView ? 400 : 700, whiteSpace: 'nowrap' }}>
@@ -1427,7 +1427,7 @@ export default function Management() {
           {boardWouldSquish && (
             <span title={tr('kanban เยอะ — สลับดูทีละมุมเต็มจอ')} style={{ display: 'contents' }}>
               <Segmented value={mainView} onChange={switchView} label={tr('มุมมอง')}
-                options={[{ value: 'map', label: 'ผังไลน์ + คน' }, { value: 'heijunka', label: 'Heijunka' }]} />
+                options={[{ value: 'map', label: tr("ผังไลน์ + คน") }, { value: 'heijunka', label: 'Heijunka' }]} />
             </span>
           )}
         </>} />
