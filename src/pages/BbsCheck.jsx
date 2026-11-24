@@ -562,7 +562,7 @@ export default function BbsCheck() {
       <PageHeader title={tr('สังเกตพฤติกรรมความปลอดภัย (BBS)')} icon="🦺"
         actions={<>
           {/* ปุ่มตายตัว ≤2 (UI §6.35): [เติมจากผลตรวจ PPE] [พิมพ์/PDF] · ข้อตกลง → ⋯ */}
-          <OverflowMenu items={[{ key: 'agree', icon: '📋', label: 'ข้อตกลง', badge: agreements.length, onClick: () => setShowAgree(true) }]} />
+          <OverflowMenu items={[{ key: 'agree', icon: '📋', label: tr("ข้อตกลง"), badge: agreements.length, onClick: () => setShowAgree(true) }]} />
           {canRecord && (
             <button type="button" className="pg-btn primary" onClick={autoFill} disabled={busy || !emps.length}>
               {busy ? tr('กำลังเติม…') : tr('เติมจากผลตรวจ PPE')}

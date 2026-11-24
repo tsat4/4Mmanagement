@@ -370,12 +370,12 @@ export function DailyCapacityChart({ rows = [], onPick }) {
         {line('var(--green)', d.good.toLocaleString(), `${tr("ชิ้นดี")}${d.cap != null ? ` · ${tr("ควรได้")} ${d.cap.toLocaleString()}${d.achieve != null ? ` (${Math.round(d.achieve * 100)}%)` : ''}` : tr(' · ไม่รู้ CT บางกะ')}`)}
         {d.ng > 0 && line('var(--red)', d.ng.toLocaleString(), 'NG หน้าเครื่อง')}
         {line('var(--border2)', fmtM(d.planned), 'เวลาแผนผลิต')}
-        {line(KIND_META.run.color, fmtM(d.run), KIND_META.run.label)}
-        {d.minor > 0 && line(KIND_META.minor.color, fmtM(d.minor), KIND_META.minor.label)}
-        {d.fault > 0 && line(KIND_META.fault.color, fmtM(d.fault), KIND_META.fault.label)}
-        {d.unplanned > 0 && line(KIND_META.unplanned.color, fmtM(d.unplanned), KIND_META.unplanned.label)}
-        {d.idle > 0 && line(KIND_META.idle.color, fmtM(d.idle), KIND_META.idle.label)}
-        {d.breakOver > 0 && line(KIND_META.break_over.color, fmtM(d.breakOver), KIND_META.break_over.label)}
+        {line(KIND_META.run.color, fmtM(d.run), tr(KIND_META.run.label))}
+        {d.minor > 0 && line(KIND_META.minor.color, fmtM(d.minor), tr(KIND_META.minor.label))}
+        {d.fault > 0 && line(KIND_META.fault.color, fmtM(d.fault), tr(KIND_META.fault.label))}
+        {d.unplanned > 0 && line(KIND_META.unplanned.color, fmtM(d.unplanned), tr(KIND_META.unplanned.label))}
+        {d.idle > 0 && line(KIND_META.idle.color, fmtM(d.idle), tr(KIND_META.idle.label))}
+        {d.breakOver > 0 && line(KIND_META.break_over.color, fmtM(d.breakOver), tr(KIND_META.break_over.label))}
         {line(KIND_META.planned_stop.color, fmtM(d.excluded), 'หยุดตามแผน / พัก / ไม่มีแผน (ไม่นับในเวลาแผน)')}
       </div>
     );
@@ -455,7 +455,7 @@ export function StopDrillPanel({ row, events = [], orders = [], tagNo, fromMs, t
   }, [row?.key, orderKey, fromMs, toMs]); // eslint-disable-line react-hooks/exhaustive-deps
   const linked = useMemo(() => (links ? linkStops(occ, { orders, downtimes: links.downtimes, repairs: links.repairs, keyOf: machineKey }) : null), [links, occ, orders]);
   if (!row) return null;
-  const title = row.state === 'minor' ? tr("หยุดสั้น < 2 นาที") : row.state === 'break_over' ? KIND_META.break_over.label : `${kindMeta(row.state).label}${row.code != null ? ` · ${row.code}` : ''}${row.text ? ` ${row.text}` : ''}`;
+  const title = row.state === 'minor' ? tr("หยุดสั้น < 2 นาที") : row.state === 'break_over' ? tr(KIND_META.break_over.label) : `${kindMeta(row.state).label}${row.code != null ? ` · ${row.code}` : ''}${row.text ? ` ${row.text}` : ''}`;
   const th = { textAlign: 'left', padding: '5px 8px', fontSize: 12, color: 'var(--muted)', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' };
   const td = { padding: '5px 8px', fontSize: 12.5, borderBottom: '1px solid var(--border)', verticalAlign: 'top' };
   const list = linked || occ;
@@ -482,7 +482,7 @@ export function StopDrillPanel({ row, events = [], orders = [], tagNo, fromMs, t
         {links?.errors?.length > 0 && <div style={{ fontSize: 12, color: 'var(--red)' }}>{tr("อ่านไม่สำเร็จ")}: {links.errors.join(' · ')} — {tr("ช่อง \"ยังไม่ลง/ไม่มี\" อาจไม่จริง")}</div>}
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead><tr>{['เริ่ม', 'นาที', 'เครื่อง', 'กะ', 'พาร์ทที่ผลิตอยู่', 'downtime ที่คนลง', 'ใบแจ้งซ่อม'].map(h => <th key={h} style={th}>{tr(h)}</th>)}</tr></thead>
+            <thead><tr>{[tr("เริ่ม"), tr("นาที"), tr("เครื่อง"), tr("กะ"), tr("พาร์ทที่ผลิตอยู่"), tr("downtime ที่คนลง"), tr("ใบแจ้งซ่อม")].map(h => <th key={h} style={th}>{tr(h)}</th>)}</tr></thead>
             <tbody>{list.slice(0, 200).map(o => (
               <tr key={`${o.tag}|${o.startMs}`}>
                 <td style={{ ...td, whiteSpace: 'nowrap' }}>{fmtDT(o.startMs)}</td>
@@ -561,7 +561,7 @@ export function JigDrilldown({ j, trendRows = null, target = 0.85 }) {
         { label: 'Availability', value: fmtPct(o.A), color: toneOfPct(o.A, target), sub: `${tr("เดิน")} ${fmtHM(o.operatingSec)} / ${tr("แผน")} ${fmtHM(o.plannedSec)}` },
         { label: 'Performance', value: fmtPct(o.P), color: toneOfPct(o.P, target), sub: o.ct ? `CT ${Math.round(o.ct * 10) / 10} s (${tr("พาร์ทในใบ) · เฉลี่ย")} ${o.avgCycleSec?.toFixed(1) ?? '–'} s` : 'ไม่รู้ CT' },
         { label: 'Quality', value: fmtPct(o.Q), color: toneOfPct(o.Q, 0.99), sub: o.ngPeople == null ? 'ไม่มีใบ ⇒ ไม่รู้ NG ที่คนตัดสิน' : `NG ${tr("คนตัดสิน")} ${o.ngPeople} · ${tr("หน้าเครื่อง")} ${o.ngMachine}` },
-        { label: 'ชิ้น: เครื่อง / ยืนยัน / แผน', value: `${o.pieces ?? '–'} / ${j.orders.length ? j.confirmedQty : '–'} / ${j.orders.length ? j.planQty : '–'}`, sub: `${ordersDone.length}/${j.orders.length} ${tr("ใบปิดแล้ว")}` },
+        { label: tr("ชิ้น: เครื่อง / ยืนยัน / แผน"), value: `${o.pieces ?? '–'} / ${j.orders.length ? j.confirmedQty : '–'} / ${j.orders.length ? j.planQty : '–'}`, sub: `${ordersDone.length}/${j.orders.length} ${tr("ใบปิดแล้ว")}` },
         { label: 'MTTR / MTBF (Alarm)', value: `${o.mttrMin == null ? '–' : `${o.mttrMin.toFixed(1)} น.`}`, sub: o.mtbfMin == null ? 'ไม่มี Alarm' : `MTBF ${o.mtbfMin.toFixed(1)} ${tr("น.")} · Alarm ${o.counts.alarm + o.counts.alarmMinor} ${tr("ครั้ง")}` },
       ]} />
       {(why.length > 0 || o.pOver) && (

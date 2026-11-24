@@ -11,8 +11,8 @@ import Page from '../components/Page';
 import { tr } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 import { askConfirm } from '../utils/askConfirm';
+import { weekdaysShort } from '../utils/dateFormat';
 const MONTH_NAMES = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-const WEEKDAY_HEAD = ['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'];
 const DAY_TYPES = ['working', 'ot15', 'ot2', 'shutdown75'];
 
 const toDateStr = (y, m, d) => `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
@@ -154,7 +154,7 @@ export default function CompanyCalendar() {
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               {/* width กัน index.css input/select {width:100%} ยืดเต็ม toolbar (กับดัก CSS ใน CLAUDE.md) */}
               <select value={bulkWeekday} onChange={e => setBulkWeekday(e.target.value)} style={{ width: 'auto' }}>
-                {WEEKDAY_HEAD.map((w, i) => <option key={i} value={i}>{tr(w)}</option>)}
+                {weekdaysShort().map((w, i) => <option key={i} value={i}>{tr(w)}</option>)}
               </select>
               <span style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{tr('เป็น')}</span>
               <select value={bulkType} onChange={e => setBulkType(e.target.value)} style={{ width: 'auto' }}>
@@ -197,7 +197,7 @@ export default function CompanyCalendar() {
             <div key={m} className="card" style={{ padding: 12 }}>
               <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', marginBottom: 8 }}>{name}</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3, marginBottom: 4 }}>
-                {WEEKDAY_HEAD.map(w => (
+                {weekdaysShort().map(w => (
                   <div key={w} style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'center' }}>{w}</div>
                 ))}
               </div>
@@ -213,7 +213,7 @@ export default function CompanyCalendar() {
                       key={i}
                       className="cal-day"
                       onClick={() => cycleDay(dateStr)}
-                      title={isDirty ? `${meta.label} (${tr("ยังไม่บันทึก")})` : meta.label}
+                      title={isDirty ? `${tr(meta.label)} (${tr("ยังไม่บันทึก")})` : tr(meta.label)}
                       style={{
                         position: 'relative',
                         fontSize: 11, textAlign: 'center', padding: '4px 0', borderRadius: 'var(--r-xs)',

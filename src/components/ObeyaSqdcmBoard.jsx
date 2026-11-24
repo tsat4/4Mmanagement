@@ -792,7 +792,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
               <span className="sep" />
               {/* ช่วงที่ดู — value ว่างเมื่อใช้กรอบกำหนดเอง/เจาะเดือน ⇒ กดปุ่มเดิมซ้ำได้ (pickPeriod ล้าง custom) */}
               <Segmented label={tr('ช่วงที่ดู')} value={custom || monthSel ? null : period} onChange={pickPeriod}
-                options={PERIODS.map(p => ({ value: p.key, label: PERIOD_LABEL[p.key] || p.label }))} />
+                options={PERIODS.map(p => ({ value: p.key, label: PERIOD_LABEL[p.key] || tr(p.label) }))} />
               {monthSel && (
                 <button className="ctl-btn" onClick={() => pickPeriod('year')} title={tr('กลับไปดูทั้งปี')} style={yearNavBtn}>{tr('← ปี')} {year}</button>
               )}

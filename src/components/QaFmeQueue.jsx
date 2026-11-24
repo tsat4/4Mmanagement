@@ -28,7 +28,7 @@ import { assessFmeReadiness } from '../utils/qaFmeReadiness';
 import QaFmeBoard from './QaFmeBoard';
 import QaFmePartRules from './QaFmePartRules';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { getWorkDate, getCurrentShift } from '../utils/workDate';
 const STAGE_META = {
   first:  { label: 'ชิ้นแรก',      icon: '1️⃣', color: '#f59e0b' },
@@ -44,7 +44,7 @@ const REASON_LABEL = {
 
 const fmtTime = (iso) => {
   if (!iso) return '-';
-  try { return new Date(iso).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }); } catch { return '-'; }
+  try { return new Date(iso).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit' }); } catch { return '-'; }
 };
 
 const FME_QUEUE_LIMIT = 300;   // ถึงเพดาน = เขียนบนจอว่าอาจไม่ครบ (ไม่ตัดเงียบ)

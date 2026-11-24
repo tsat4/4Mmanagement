@@ -549,6 +549,25 @@ const RULES = [
     allow: {},
   },
   {
+    id: 'date-locale-no-th-TH',
+    scan: ['src/pages', 'src/components', 'src/utils'], ext: ['.jsx', '.js'],
+    /* วันที่/เวลาที่โชว์บนจอต้องตามภาษา — ไทย = th-TH (พ.ศ.) · อังกฤษ = en-GB (ค.ศ.) ⇒ ใช้ dateLocale() จาก utils/i18n
+       (คำสั่ง user 24/11 "โหมด en เป็น ค.ศ. โหมดไทยเป็น พ.ศ.") · src/lib (ใบพิมพ์/Excel) ยังไทยเสมอ ไม่เข้าด่าน */
+    re: /toLocale(?:Date|Time)?String\(\s*'th-TH'/g,
+    why: 'สลับเป็น EN แล้ววันที่ยังเป็น "4 ส.ค. 69" (วัดจาก harness 24/11: 94 ชุด) — hardcode locale = ไม่ตามภาษา',
+    fix: "toLocale*String(dateLocale(), …) · import { dateLocale } from utils/i18n (📄 docs/modules/date-time-rules.md §ภาษา)",
+    allow: { 'src/utils/i18n.js': 'เจ้าของกฎ' },
+  },
+  {
+    id: 'date-no-hand-month-array',
+    scan: ['src/pages', 'src/components', 'src/utils'], ext: ['.jsx', '.js'],
+    /* อาร์เรย์ตัวย่อเดือนไทยที่ประกาศเองในหน้า = ไม่ตามภาษา + ปีไม่ตรงกฎ ⇒ ใช้ monthsShort()/yearDisplay() จาก utils/dateFormat */
+    re: /\[\s*'ม\.ค\.'\s*,\s*'ก\.พ\.'/g,
+    why: 'เจอ 12 ไฟล์ประกาศ [\'ม.ค.\',…] ซ้ำ (24/11) — บางตัว +543 บางตัว ค.ศ. · โหมด EN ยังไทย',
+    fix: "monthsShort()[i] + yearDisplay(y) จาก utils/dateFormat (ใบพิมพ์ไทยเสมอใช้ MONTHS_SHORT_TH)",
+    allow: { 'src/utils/dateFormat.js': 'เจ้าของกฎ', 'src/utils/kpiBaseImport.js': 'ตัวแกะหัวคอลัมน์ไฟล์ Excel (parser ไม่ใช่การแสดงผล)', 'src/utils/askBot.js': 'ตัวแกะข้อความถาม (parser)' },
+  },
+  {
     id: 'i18n-import-path-depth',
     scan: ['src/components/inspect'], ext: ['.jsx'],   // เฉพาะโฟลเดอร์ย่อย — ไฟล์ตรงใต้ pages/components ใช้ '../utils/i18n' ถูกแล้ว
     /* ไฟล์ในโฟลเดอร์ย่อย (src/components/inspect/…) เขียน import '../utils/i18n' = ชี้ผิดชั้น — lint ไม่จับ (resolve ตอน bundle)
@@ -12765,4 +12784,25 @@ test('🛡️ daily-checker-2411 — แผน/อนุมัติ/ลาย�
   const mq = rd('src/utils/myQueue.js');
   if (!/key: `amappr:\$\{g\.line\}`/.test(mq)) bad.push('A5: ใบ AM รออนุมัติต้องอยู่ในคิวงาน (บรรทัดเดียวต่อไลน์)');
   assert.deepEqual(bad, [], `\n\n❌ ${bad.length} จุด\n   ${bad.join('\n   ')}\n`);
+});
+
+test('🔴 part-oee-range-clamp-visible — ตัดช่วงให้สั้นลงแล้วต้องเขียนบนจอ', () => {
+  /* 24/11: แท็บ "รายพาร์ท" คิด `computeSessionOee()` **ทีละกะ** ⇒ ต้องมีเพดานช่วง (PART_MAX_DAYS)
+     🔴 กับดัก: ตัดช่วงเงียบๆ = คนเลือก "ปีนี้" แล้วอ่านเลขของ 31 วันโดยคิดว่าเป็นทั้งปี
+        (คลาสเดียวกับ `.slice(0,10)` ก่อนคิด % สะสมของพาเรโต — จอโกหกโดยไม่พัง)
+     ⇒ ไฟล์ที่ใช้เพดานตัดช่วง ต้องมีทั้งธง `clamped` และการ render ธงนั้น
+     + ตัวรวมหลายกะต้องมีชุดเดียว (`aggregateByProduct`) ห้ามเขียนลูปรวมชุดที่ 2 ในหน้า */
+  const rel = 'src/pages/OEEAnalytics.jsx';
+  const raw = readFileSync(join(ROOT, rel), 'utf8');
+  assert.match(raw, /PART_MAX_DAYS/, `\n\n❌ ${rel} ไม่มีเพดานช่วงของแท็บรายพาร์ท\n`);
+  assert.match(raw, /clamped:\s*true/, `\n\n❌ ${rel} ตัดช่วงแล้วไม่ตั้งธง clamped\n`);
+  assert.match(raw, /partWin\.clamped\s*&&/,
+    `\n\n❌ ${rel} มีเพดานช่วงแต่ไม่ render ธง clamped — ตัดช่วงเงียบ = จอโกหก\n`);
+  /* สูตร %A/%P/%Q ของ "รายพาร์ทรวมหลายกะ" ต้องมีชุดเดียว = ในตัวรวมกลาง */
+  const code = stripComments(raw);
+  assert.match(code, /function aggregateByProduct\(/,
+    `\n\n❌ ${rel} ไม่มีตัวรวมกลาง aggregateByProduct()\n`);
+  const hits = (code.match(/netAvailMin\s*>\s*0\s*\?/g) || []).length;
+  assert.equal(hits, 1,
+    `\n\n❌ ${rel} มีสูตร %A รายพาร์ท ${hits} ชุด — ต้องอยู่ที่ aggregateByProduct() ที่เดียว\n   (กฎการรวมหลายกะ: ตัวตั้งรวม ÷ ตัวหารรวม · ห้ามเฉลี่ย % รายกะ)\n`);
 });

@@ -524,7 +524,7 @@ export default function Energy() {
   return (
     <Page>
       <PageHeader title={tr('พลังงานไฟฟ้า')} icon="⚡" sub={isLive ? tr("ค่าไฟสดจากมิเตอร์ · อัปเดตทุก 1 นาที") : isMeters ? tr("ตู้บนบอร์ดค่าไฟสด · ชื่อที่โชว์ · ผังแม่-ลูก · ลิมิต") : isHistory ? tr("ประวัติการใช้ไฟจากมิเตอร์ · เทียบตู้ · ส่งออก Excel") : `${monthLabel(month)} · ${tr("เฟส 1 กรอกรายเดือน")}`}
-        tabs={[{ key: 'live', label: 'ค่าไฟสด' }, { key: 'history', label: 'ประวัติ & Excel' }, { key: 'input', label: 'กรอกรายเดือน' }, { key: 'summary', label: 'สรุป & วิเคราะห์' }, { key: 'setup', label: 'ค่าการปล่อย' }, { key: 'meters', label: 'ตั้งค่าตู้' }]}
+        tabs={[{ key: 'live', label: tr("ค่าไฟสด") }, { key: 'history', label: tr("ประวัติ & Excel") }, { key: 'input', label: tr("กรอกรายเดือน") }, { key: 'summary', label: tr("สรุป & วิเคราะห์") }, { key: 'setup', label: tr("ค่าการปล่อย") }, { key: 'meters', label: tr("ตั้งค่าตู้") }]}
         tab={tab} onTab={setTab}
       />
       {isLive ? <EnergyLiveBoard /> : isHistory ? <EnergyHistory /> : isMeters ? <EnergyMeterSetup /> : (<>

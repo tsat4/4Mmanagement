@@ -42,10 +42,10 @@ export default function ShiftTimeSplit({ split, compact = false }) {
     <div style={{ marginTop: 6 }}>
       <div style={{ display: 'flex', height: compact ? 7 : 9, borderRadius: 'var(--r-xs)', overflow: 'hidden', background: 'var(--border2)' }}>
         {SEGS.map(s => {
-          const v = Number(split[s.k]) || 0;
+          const v = Number(split[tr(s.k)]) || 0;
           if (v <= 0) return null;
           return (
-            <div key={s.k} title={`${s.label} ${Math.round(v)} ${tr("นาที")}`}
+            <div key={tr(s.k)} title={`${tr(s.label)} ${Math.round(v)} ${tr("นาที")}`}
               style={{ width: `${(v / total) * 100}%`, background: s.c, transition: 'width 0.7s ease' }} />
           );
         })}
@@ -58,11 +58,11 @@ export default function ShiftTimeSplit({ split, compact = false }) {
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4, alignItems: 'baseline' }}>
         {SEGS.map(s => {
-          const v = Math.round(Number(split[s.k]) || 0);
-          if (v <= 0 && s.k !== 'unknownMin') return null;
-          const hot = s.k === 'unknownMin' && v > 0;
+          const v = Math.round(Number(split[tr(s.k)]) || 0);
+          if (v <= 0 && tr(s.k) !== 'unknownMin') return null;
+          const hot = tr(s.k) === 'unknownMin' && v > 0;
           return (
-            <span key={s.k} title={tr(s.label)} style={{ fontSize: fs, color: hot ? 'var(--text)' : 'var(--muted)', fontWeight: hot ? 800 : 600 }}>
+            <span key={tr(s.k)} title={tr(s.label)} style={{ fontSize: fs, color: hot ? 'var(--text)' : 'var(--muted)', fontWeight: hot ? 800 : 600 }}>
               {s.icon} {tr(s.label)} <span style={{ color: s.c, fontWeight: 800 }}>{v}</span> {tr("น.")}
             </span>
           );

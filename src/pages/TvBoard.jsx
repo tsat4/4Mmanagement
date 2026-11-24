@@ -215,7 +215,7 @@ export default function TvBoard({ onOpenMenu = null }) {
 
       {barOpen && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '9px 12px' }}>
-          <TabBar size="sm" value={dept} onChange={k => setParam('dept', k)} tabs={DEPTS.map(x => ({ key: x.key, label: x.label }))} />
+          <TabBar size="sm" value={dept} onChange={k => setParam('dept', k)} tabs={DEPTS.map(x => ({ key: x.key, label: tr(x.label) }))} />
           <span style={{ width: 1, height: 20, background: 'var(--border2)' }} />
           {/* ส่วนงาน — ค่าที่ไม่มีในลิสต์ (ส่วนงานถูกเปลี่ยนชื่อ) ต้องยังเลือกเห็นได้ ห้ามหายเงียบ */}
           <SectionScopeSelect lines={lines} value={secFilter} onChange={s => setParam('sec', s)} only={secOpts} width={220}

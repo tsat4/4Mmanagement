@@ -843,7 +843,7 @@ function LevelPill({ n, dim }) {
       display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700,
       color: dim ? 'var(--muted)' : col, border: `1px solid ${dim ? 'var(--border2)' : col}`,
       borderRadius: 'var(--r-pill)', padding: '2px 9px', whiteSpace: 'nowrap', opacity: dim ? 0.75 : 1,
-    }}>{L.icon} {L.name}</span>
+    }}>{L.icon} {tr(L.name)}</span>
   );
 }
 
@@ -882,14 +882,14 @@ function DimensionTab({ c, ents, demoOn, day, navigate, isMobile }) {
                     return (
                       <span key={si} style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                         {si > 0 && <span style={{ color: 'var(--muted)', fontSize: 12 }}>→</span>}
-                        <span title={`${tr("ข้อมูลจาก")}: ${s.d}${sim ? tr(' (จำลองในโหมดสาธิต)') : ''}`} style={{
+                        <span title={`${tr("ข้อมูลจาก")}: ${tr(s.d)}${sim ? tr(' (จำลองในโหมดสาธิต)') : ''}`} style={{
                           fontSize: 11.5, fontWeight: 600, borderRadius: 'var(--r-md)', padding: '3px 8px', whiteSpace: 'nowrap',
                           color: col,
                           background: ok ? 'var(--green-dim)' : sim ? 'var(--blue-dim)' : 'transparent',
                           border: `1px ${ok ? 'solid' : 'dashed'} ${ok ? 'var(--green-line)' : sim ? 'var(--blue)' : 'var(--border2)'}`,
                         }}>
                           {ok ? '✓' : sim ? '🧪' : '○'} {s.l}
-                          <span style={{ opacity: 0.65, marginLeft: 4 }}>· {s.d}</span>
+                          <span style={{ opacity: 0.65, marginLeft: 4 }}>· {tr(s.d)}</span>
                         </span>
                       </span>
                     );
@@ -978,7 +978,7 @@ function LadderTab({ c, navigate, isMobile }) {
 
       {LEVELS.map(L => {
         const nowAt = all.filter(q => q.now === L.n);
-        const fullAt = all.filter(q => q.full === L.n);
+        const fullAt = all.filter(q => tr(q.full) === L.n);
         const c0 = col[L.n - 1];
         return (
           <div key={L.n} style={{ ...cardSt, borderLeft: `4px solid ${c0}` }}>
@@ -1042,7 +1042,7 @@ function LadderTab({ c, navigate, isMobile }) {
                     minWidth: 58, whiteSpace: 'nowrap',
                   }}>{x.n} {tr('คำถาม')}</span>
                   <span style={{ flex: 1, minWidth: 0, fontSize: 12.5 }}>
-                    <b>{x.l}</b><span style={{ color: 'var(--muted)' }}> · {x.d}</span>
+                    <b>{tr(x.l)}</b><span style={{ color: 'var(--muted)' }}> · {tr(x.d)}</span>
                   </span>
                 </div>
               ))}
@@ -1366,7 +1366,7 @@ function DeepDiveTab({ dd, err, demoOn, navigate, isMobile }) {
   const linkedDefs = dd.def.map(f => {
     const t = `${f.def_type || ''} ${f.description || ''}`.toLowerCase();
     const g = machEquip.find(g => g.w.some(w => t.includes(w)));
-    return g ? { f, equip: g.name } : null;
+    return g ? { f, equip: tr(g.name) } : null;
   }).filter(Boolean);
 
   const shiftTh = S.shift === 'night' ? tr("กะดึก") : tr("กะเช้า");
@@ -1780,11 +1780,11 @@ export default function AdoptionOutlook() {
         title={tr('ภาพเมื่อข้อมูลเชื่อมกันทั้งองค์กร')} icon="🔮"
         sub={`${tr("ข้อมูล ณ")} ${d.loss.to} · ${tr("ฝั่ง \"วันนี้\" นับสดจากฐานจริงทั้งหมด ไม่มีตัวเลขสมมติ")}`}
         tabs={[
-          { key: 'dim', label: 'มิติที่มองเห็นได้' },
-          { key: 'deep', label: 'เจาะ 1 กะจริง' },
-          { key: 'ladder', label: '4 ระดับ (ถึง Prescriptive)' },
-          { key: 'dept', label: 'ก่อน-หลัง รายแผนก' },
-          { key: 'roi', label: 'เงินที่ประหยัดได้' },
+          { key: 'dim', label: tr("มิติที่มองเห็นได้") },
+          { key: 'deep', label: tr("เจาะ 1 กะจริง") },
+          { key: 'ladder', label: tr("4 ระดับ (ถึง Prescriptive)") },
+          { key: 'dept', label: tr("ก่อน-หลัง รายแผนก") },
+          { key: 'roi', label: tr("เงินที่ประหยัดได้") },
         ]}
         tab={tab} onTab={setTab}
         actions={

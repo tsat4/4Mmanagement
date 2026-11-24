@@ -16,7 +16,7 @@ import { supabaseDR } from '../supabaseClient';
 import StepFlow from './StepFlow';
 import { PointThumb } from './inspect/PointZoom';
 import { decisionOf, binTagAge, ncFlow, ncStep, SPECIAL_USE_FORM } from '../utils/qualityBin';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 
 /* คอลัมน์ที่ใช้จริง — ห้าม select('*') (กฎเขียน DB ข้อ 11) */
 const DEFECT_COLS = 'id, qty_ng, qty_suspect, qty_repair, description, reported_by_name, logged_at, is_trial, '
@@ -24,7 +24,7 @@ const DEFECT_COLS = 'id, qty_ng, qty_suspect, qty_repair, description, reported_
   + 'dr_defect_types(name_th), prod_orders(prod_no, mat_no, part_name, machine_no), '
   + 'production_sessions(work_date, shift, line_name)';
 
-const fmtTs = (v) => (v ? new Date(v).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'medium', timeStyle: 'short' }) : '');
+const fmtTs = (v) => (v ? new Date(v).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', dateStyle: 'medium', timeStyle: 'short' }) : '');
 const SHIFT_TH = { day: 'กะเช้า', night: 'กะดึก' };
 
 function Row({ k, v, strong, color }) {

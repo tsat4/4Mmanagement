@@ -39,7 +39,7 @@ import useTabParam from '../utils/useTabParam';
 import QaInspectorScopes from '../components/QaInspectorScopes';
 import Page from '../components/Page';
 import SearchInput from '../components/SearchInput';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 import { askConfirm } from '../utils/askConfirm';
 
@@ -49,7 +49,7 @@ const MAIN_TABS = [
   { key: 'inspectors', label: 'QC ประจำไลน์' },
 ];
 
-const fmtDT = s => s ? new Date(s).toLocaleString('th-TH', { day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
+const fmtDT = s => s ? new Date(s).toLocaleString(dateLocale(), { day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
 
 const inputSt = {
   width: '100%', padding: '8px 10px', borderRadius: 8, fontSize: 13,

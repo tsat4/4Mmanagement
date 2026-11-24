@@ -16,6 +16,7 @@ import {
 import { jphTable, jphSummary } from '../utils/jph';
 
 import { tr } from '../utils/i18n';
+import { monthsShort, yearDisplay } from '../utils/dateFormat';
 /* ─── 📊 Capacity — แท็บใน /production-plan (2026-09-24) ────────────────────────
    user ส่งสไลด์ `Capacity_TSATP.4_update_June_26.pptx` มาพร้อมภาพหน้านี้ แล้วบอกว่า
    *"capacity โรงงานเราดูกันแบบนี้ แต่ในโปรแกรมเราเป็นแบบนี้ คนจะดูไม่เข้าใจ"*
@@ -47,7 +48,7 @@ const FLAG_META = {
 };
 const monthLabel = (mk) => {
   const [y, m] = mk.split('-');
-  return `${['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'][Number(m) - 1]} ${String(Number(y) + 543).slice(-2)}`;
+  return `${monthsShort()[Number(m) - 1]} ${String(yearDisplay(Number(y))).slice(-2)}`;
 };
 
 export default function CapacityBoard({ role, scope, lines, months, calMap, demandByMonth, ctOf, lineOfMat, pairOf, lineOee, estOf, netMin, customerOf, nameOfMat }) {

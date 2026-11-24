@@ -423,7 +423,7 @@ export default function ProdLotPlanner({
         <input type="date" value={date} onChange={e => setDate(e.target.value)} />
         {/* 🔗 ไม่ใช่ "ดูกะไหน" อีกต่อไป — คิวไหลข้ามกะเอง ช่องนี้แค่บอกว่า**เริ่มวาง**ที่กะไหน */}
         <Segmented value={shift} onChange={setShift} label={tr('เริ่มที่')} options={[
-          { value: 'day', label: 'กะเช้า' }, { value: 'night', label: 'กะดึก' },
+          { value: 'day', label: tr("กะเช้า") }, { value: 'night', label: tr("กะดึก") },
         ]} />
         <label style={{ fontSize: 12, color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 5 }}
           title={tr('คิวจะไหลต่อไปได้กี่กะ — ไม่พอก็ยืดเพิ่ม (งานที่ล้นเลยขอบเขตจะขึ้นเตือน ไม่ถูกยัดลงกะสุดท้าย)')}>

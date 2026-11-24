@@ -16,7 +16,7 @@ import { auditProject, auditText, fmtBytes } from '../utils/schemaAudit';
 import { openFeedback } from '../utils/feedbackPrefill';
 import { UserContext } from '../App';
 import USAGE from 'virtual:schema-usage';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import TabBar from '../components/TabBar';   // แถบเลือกมุมมอง = แท็บเส้นใต้มาตรฐาน (UI §6.36 ข้อ 0)
 
 /* ══ 🗄️ โครงสร้างฐานข้อมูล (Data Map) — /schema ═══════════════════════════════════════
@@ -250,9 +250,9 @@ export default function SchemaMap() {
           : `${total} ${tr("ตาราง/วิว")} · ${totalFk} ${tr("เส้นความสัมพันธ์")} (FK) · ${USAGE.pages?.length || 0} ${tr("หน้าในระบบ")}`}
         actions={<button type="button" className="pg-btn" onClick={reload}>{tr('อ่านใหม่')}</button>}
         tabs={[
-          { key: 'tables', label: 'ตาราง / คีย์ / ความสัมพันธ์' },
-          { key: 'pages', label: 'หน้าไหนใช้ตารางไหน' },
-          { key: 'audit', label: 'ตรวจสุขภาพโครงสร้าง', badge: auditBadge || undefined },
+          { key: 'tables', label: tr("ตาราง / คีย์ / ความสัมพันธ์") },
+          { key: 'pages', label: tr("หน้าไหนใช้ตารางไหน") },
+          { key: 'audit', label: tr("ตรวจสุขภาพโครงสร้าง"), badge: auditBadge || undefined },
         ]}
         tab={tab} onTab={setTab}
       />
@@ -274,7 +274,7 @@ export default function SchemaMap() {
 
       {!!failed.length && (
         <div style={{ ...card(), marginBottom: 12, borderColor: 'var(--red-line)', background: 'var(--red-dim)', fontSize: 12.5, lineHeight: 1.6 }}>
-          ⚠️ <b>{tr('อ่านโครงสร้างของ')} {failed.map(k => PROJ[k].label).join(' และ ')} {tr('ไม่ได้')}</b> —
+          ⚠️ <b>{tr('อ่านโครงสร้างของ')} {failed.map(k => tr(PROJ[k].label)).join(' และ ')} {tr('ไม่ได้')}</b> —
           {tr("ส่วนใหญ่แปลว่ายังไม่ได้")} apply migration <code>20260922_schema_catalog_rpc_{failed[0]}.sql</code>
           ({tr("ฟังก์ชัน")} <code>esm_schema_overview()</code>) {tr("หรือสิทธิ์ execute ยังไม่ถูก grant · ตารางฝั่งที่เหลือยังดูได้ตามปกติ")}
         </div>
@@ -287,7 +287,7 @@ export default function SchemaMap() {
             <div style={{ ...card(), display: 'grid', gap: 9, alignContent: 'start' }}>
               <SearchInput value={q} onChange={setQ} fields={tr("ชื่อตาราง (เช่น downtime, employee)")} />
               <TabBar size="sm" value={side} onChange={setSide}
-                tabs={[{ key: 'all', label: allOf('ฐานข้อมูล') }, ...PKEYS.map(k => ({ key: k, label: PROJ[k].label, badge: over[k]?.tables?.length || 0 }))]} />
+                tabs={[{ key: 'all', label: allOf('ฐานข้อมูล') }, ...PKEYS.map(k => ({ key: k, label: tr(PROJ[k].label), badge: over[k]?.tables?.length || 0 }))]} />
 
               {loading && <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{tr('กำลังโหลด…')}</div>}
               {!loading && !rows.length && (
@@ -413,7 +413,7 @@ function TableDetail({ sel, detail, err, isMobile, pages, url, userName, size, o
             <button onClick={() => onCopy(summary(), 'คัดลอกข้อมูลตารางแล้ว — วางในแชท/ใบแจ้งได้เลย')} style={btn()}>{tr('คัดลอกข้อมูลตาราง')}</button>
             <button onClick={() => onCopy(url, 'คัดลอกลิงก์แล้ว')} style={btn()}>{tr('คัดลอกลิงก์')}</button>
             <button onClick={() => openFeedback(bugReportText({
-              table: sel.table, projectLabel: `${P.label} (${P.screen})`, projectId: P.id,
+              table: sel.table, projectLabel: `${tr(P.label)} (${P.screen})`, projectId: P.id,
               detail: d, pages, url,
             }) + (userName ? `${tr("ผู้แจ้ง")}: ${userName}\n` : ''))} style={{ ...btn(), background: 'var(--red-dim)', borderColor: 'var(--red-line)' }}>
               {tr("แจ้งบัคเรื่องตารางนี้")}
@@ -502,7 +502,7 @@ function TableDetail({ sel, detail, err, isMobile, pages, url, userName, size, o
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 560, fontVariantNumeric: 'tabular-nums' }}>
             <thead>
               <tr>
-                {['คอลัมน์', 'ชนิดข้อมูล', 'ว่างได้?', 'คีย์', 'ค่าเริ่มต้น / หมายเหตุ'].map((h, i) => (
+                {[tr("คอลัมน์"), tr("ชนิดข้อมูล"), tr("ว่างได้?"), tr("คีย์"), tr("ค่าเริ่มต้น / หมายเหตุ")].map((h, i) => (
                   <th key={h} style={{ textAlign: 'left', padding: '5px 7px', borderBottom: '1px solid var(--border2)', color: 'var(--muted)', fontSize: 11.5, whiteSpace: 'nowrap', width: i === 4 ? '35%' : undefined }}>{tr(h)}</th>
                 ))}
               </tr>
@@ -590,7 +590,7 @@ function PagesTab({ q, setQ, isMobile, catalog, ghosts, onPick }) {
         <SearchInput value={q} onChange={setQ} fields={tr("ชื่อหน้า / path / ชื่อตาราง")} />
         <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.6 }}>
           {tr("แสดง")} {pages.length} {tr('หน้า จากทั้งหมด')} {(USAGE.pages || []).length} ·
-          {tr("สแกนซอร์สเมื่อ")} {new Date(USAGE.builtAt).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' })} ({tr("ตอน")} build)
+          {tr("สแกนซอร์สเมื่อ")} {new Date(USAGE.builtAt).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' })} ({tr("ตอน")} build)
           {!!ghosts.size && <> · <span style={{ color: 'var(--amber)' }}>{tr('พบชื่อตารางในโค้ด')} {ghosts.size} {tr('ตัวที่ไม่มีอยู่จริงในฐานข้อมูล (ดูท้ายหน้า)')}</span></>}
         </div>
       </div>
@@ -623,7 +623,7 @@ function PagesTab({ q, setQ, isMobile, catalog, ghosts, onPick }) {
                       const k = sideOf(t, guess);
                       return (
                         <button key={`${guess}-${t}`} onClick={() => k && onPick(k, t)} disabled={!k}
-                          title={k ? `${PROJ[k].label} · ${tr("กดเพื่อดูโครงสร้าง")}` : tr("ไม่พบตารางนี้ในฐานข้อมูล")}
+                          title={k ? `${tr(PROJ[k].label)} · ${tr("กดเพื่อดูโครงสร้าง")}` : tr("ไม่พบตารางนี้ในฐานข้อมูล")}
                           style={{ ...chip(false), opacity: k ? 1 : 0.55, cursor: k ? 'pointer' : 'default' }}>
                           {k === 'main' ? '🗄️' : k === 'dr' ? '🏭' : '❔'} {t}
                         </button>
@@ -698,7 +698,7 @@ function AuditTab({ audits, isMobile, loading, onPick, onCopy }) {
               <div style={{ minWidth: 0, fontSize: 14, fontWeight: 800, color: P.color }}>
                 {tr(P.label)} <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted)' }}>· {result.total} {tr('ตาราง/วิว')}</span>
               </div>
-              <button onClick={() => onCopy(auditText(result, `${P.label} (${P.screen})`), 'คัดลอกผลตรวจแล้ว')} style={btn()}>
+              <button onClick={() => onCopy(auditText(result, `${tr(P.label)} (${P.screen})`), 'คัดลอกผลตรวจแล้ว')} style={btn()}>
                 {tr('คัดลอกผลตรวจ')}
               </button>
             </div>

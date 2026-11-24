@@ -42,7 +42,7 @@ import SearchInput from '../components/SearchInput';
 import { ALL } from '../utils/filterLabels';
 import NoticeBar from '../components/NoticeBar';
 import SectionScopeSelect from '../components/SectionScopeSelect';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 import { askConfirm } from '../utils/askConfirm';
 /* ทีมช่างซ่อม (profiles.mtn_teams) — เดิมมีหน้าที่เดียวคือ "แยกคิวใบแจ้งซ่อม MO ให้ถูกทีม"
@@ -970,7 +970,7 @@ export default function AddUser() {
           <div key={g.key} style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap', fontSize: 12, padding: '3px 0' }}>
             <b style={{ minWidth: 84, color: g.sev === SEV_FIX ? 'var(--red)' : 'var(--text2)' }}>{g.icon} {g.count} {tr('บัญชี')}</b>
             <span style={{ flex: '1 1 280px', minWidth: 0, color: 'var(--text2)' }}>
-              {g.what} <span style={{ color: 'var(--muted)' }}>→ {g.fix}</span>
+              {tr(g.what)} <span style={{ color: 'var(--muted)' }}>→ {tr(g.fix)}</span>
             </span>
             <button type="button" aria-pressed={tableIssue === g.key}
               onClick={() => {
@@ -1324,7 +1324,7 @@ export default function AddUser() {
             <span style={{ color: left ? 'var(--red)' : 'var(--green)', fontWeight: 700 }}>
               {left ? `${tr("เหลือ")} ${left} ${tr("บัญชี")}` : tr("✓ เคลียร์ครบแล้ว")}
             </span>
-            {def && <span style={{ color: 'var(--muted)' }}>{tr('วิธีแก้:')} {def.fix}</span>}
+            {def && <span style={{ color: 'var(--muted)' }}>{tr('วิธีแก้:')} {tr(def.fix)}</span>}
             <span style={{ flex: 1 }} />
             <button type="button" onClick={() => setTableIssue(null)}
               style={{ width: 'auto', fontSize: 11.5, padding: '3px 10px', cursor: 'pointer', borderRadius: 'var(--r-md)',
@@ -1374,7 +1374,7 @@ export default function AddUser() {
                         <div style={{ marginTop: 3, display: 'flex', flexDirection: 'column', gap: 1, maxWidth: 320 }}>
                           {fx.map(i => (
                             <div key={i.key} title={i.line} style={{ fontSize: 11, color: 'var(--red)', lineHeight: 1.4 }}>
-                              {i.icon} <b>{i.chip}</b> <span style={{ color: 'var(--text2)' }}>— {i.fix}</span>
+                              {i.icon} <b>{tr(i.chip)}</b> <span style={{ color: 'var(--text2)' }}>— {tr(i.fix)}</span>
                             </div>
                           ))}
                           {inf.length > 0 && (
@@ -1436,7 +1436,7 @@ export default function AddUser() {
                     {u.team ? `Team ${u.team}` : '—'}
                   </td>
                   <td style={{ textAlign: 'center', fontSize: 12, color: u.created_at ? 'var(--text2)' : 'var(--muted)', whiteSpace: 'nowrap' }}>
-                    {u.created_at ? new Date(u.created_at).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', year: '2-digit' }) : '—'}
+                    {u.created_at ? new Date(u.created_at).toLocaleDateString(dateLocale(), { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', year: '2-digit' }) : '—'}
                   </td>
                   {/* 🕵️ เข้าใช้ล่าสุด — "ไม่เคยเข้าใช้" กับ "อ่านไม่ได้" ต้องเขียนต่างกัน (accountActivity.js) */}
                   {(() => {
@@ -1445,7 +1445,7 @@ export default function AddUser() {
                       <td style={{ textAlign: 'center', fontSize: 12, color: activityTone(a.state),
                         fontWeight: a.state === 'never' ? 700 : 400, whiteSpace: 'nowrap' }}
                         title={u.last_sign_in_at
-                          ? new Date(u.last_sign_in_at).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })
+                          ? new Date(u.last_sign_in_at).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok' })
                           : (a.state === ACT_UNKNOWN ? tr("อ่าน auth.users ไม่ได้ — ไม่ใช่ว่าไม่เคยเข้า") : tr("ยังไม่เคย login เลยแม้ครั้งเดียว"))}>
                         {a.state === ACT_UNKNOWN ? '—' : a.text}
                       </td>

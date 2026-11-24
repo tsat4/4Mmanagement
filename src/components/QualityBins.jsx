@@ -61,7 +61,7 @@ import { DeleteButton } from './IconButton';
 import QualityBinDetailModal from './QualityBinDetailModal';
 import { PointThumb } from './inspect/PointZoom';
 
-import { tr as trI18n } from '../utils/i18n';
+import { tr as trI18n, dateLocale } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
 const BINS = [
   { key: 'yellow', label: '🟡 ถังเหลือง — ชิ้นงานต้องสงสัย', short: 'ถังเหลือง', color: '#f5b942' },
@@ -1247,7 +1247,7 @@ export default function QualityBins({ mode = 'full' }) {
           (อยู่ในแถบกรองแล้วดันแถบเป็น 2 บรรทัด) */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
       <div style={{ fontSize: 12.5, color: 'var(--muted)', flex: '1 1 420px', minWidth: 0 }}>
-        {loading ? trI18n("กำลังโหลด…") : `${filtered.length} ${trI18n("รายการ · รวม")} ${totalQty.toLocaleString('th-TH')} ${trI18n("ชิ้น")}`}
+        {loading ? trI18n("กำลังโหลด…") : `${filtered.length} ${trI18n("รายการ · รวม")} ${totalQty.toLocaleString(dateLocale())} ${trI18n("ชิ้น")}`}
         {!loading && isY && !overdueOnly && (
           <span> · <b style={{ color: 'var(--amber)' }}>{trI18n('ค้างในสาย')} {pendOpen.length}</b> {trI18n('(ทุกวันที่ ไม่ขึ้นกับช่วง) · ที่ปิดแล้วแสดงตามช่วงที่เลือก')}</span>
         )}
@@ -1292,10 +1292,10 @@ export default function QualityBins({ mode = 'full' }) {
             emptyText={trI18n('ยังไม่มีรายการ — เพิ่มจากตัว WI-PD3-069 §6')}
             offNote={trI18n("รายการนี้จะไม่ถูกแนะนำในโมดัลลงวิธีแก้ไขอีก (บันทึกเก่าที่อ้าง WI นี้ไว้แล้วไม่กระทบ)")}
             fields={[
-              { key: 'symptom',   label: 'อาการ', required: true, placeholder: 'Missing nut' },
-              { key: 'wi_no',     label: 'WI ซ่อม', required: true, mono: true, placeholder: 'WI-PD3-018 (หลายเล่มคั่นด้วย , )' },
-              { key: 'part_name', label: 'ชื่อชิ้นงาน' },
-              { key: 'note',      label: 'หมายเหตุ' },
+              { key: 'symptom',   label: trI18n("อาการ"), required: true, placeholder: 'Missing nut' },
+              { key: 'wi_no',     label: trI18n("WI ซ่อม"), required: true, mono: true, placeholder: 'WI-PD3-018 (หลายเล่มคั่นด้วย , )' },
+              { key: 'part_name', label: trI18n("ชื่อชิ้นงาน") },
+              { key: 'note',      label: trI18n("หมายเหตุ") },
             ]}
           />
         </div>
@@ -1361,7 +1361,7 @@ export default function QualityBins({ mode = 'full' }) {
                   </div>
                 </td>
                 <td style={td}>{r.line_name || '—'}</td>
-                <td style={{ ...td, fontWeight: 700 }}>{Number(r.qty || 0).toLocaleString('th-TH')}</td>
+                <td style={{ ...td, fontWeight: 700 }}>{Number(r.qty || 0).toLocaleString(dateLocale())}</td>
                 <td style={td}>{(isY ? r.cause : causeView(r)) || '—'}</td>
                 <td style={td}>{r.reported_by || '—'}</td>
                 {/* §5.4 ขั้น + ผลพิจารณา QA — null = "รอ QA พิจารณา" ห้ามเดาผลให้ · ขั้นตัดสินที่ ncStep()/ncFlow() */}

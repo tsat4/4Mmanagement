@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 /**
  * ประวัติการแก้คะแนนทักษะของพนักงาน 1 คน — อ่านจาก `audit_log` (Main)
  *
@@ -36,7 +36,7 @@ export default function SkillEditHistory({ employeeId, limit = 30 }) {
 
   const fmt = ts => {
     try {
-      return new Date(ts).toLocaleString('th-TH', {
+      return new Date(ts).toLocaleString(dateLocale(), {
         timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', year: '2-digit',
         hour: '2-digit', minute: '2-digit',
       });

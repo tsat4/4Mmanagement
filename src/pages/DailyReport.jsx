@@ -124,7 +124,7 @@ import StepFlow from '../components/StepFlow';
 import MachineSelect from '../components/MachineSelect';
 import MachineFaultGaps from '../components/MachineFaultGaps';
 import { loadFamilyQtyTotals, familyQtyChip } from '../utils/familyTotals';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { statusColor as toneColor, toneVar, toneDim, toneLine } from '../utils/statusTone';   // 🎨 token พาเลต 5 สี (UI §6.17)   // สีสถานะชุดเดียวทั้งระบบ (ห้ามตั้ง hex เอง · ชื่อ statusColor ชนกับตัวแปรในหน้า)
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 import { askConfirm } from '../utils/askConfirm';
@@ -351,13 +351,13 @@ export default function DailyReport() {
         title="Daily Production Report" icon="📊"
         sub={tr('บันทึกผลผลิตและ Downtime แบบ Real-time รายกะ')}
         tabs={[
-          { key: 'live', label: 'Live กะนี้' },
+          { key: 'live', label: tr("Live กะนี้") },
           // ไม่มีกะค้าง = ไม่ต้องมีแท็บให้รก · โหลดไม่สำเร็จก็ต้องโชว์ (จะได้เข้าไปเห็นสาเหตุ ห้ามเงียบ)
           ...((stale.rows.length || stale.error) ? [{
             key: 'stale',
             label: stale.error ? '⏰ กะค้าง ⚠' : `⏰ ${tr("กะค้าง")} ${stale.rows.length}${staleOver ? ` · ${tr("เกิน")} ${STALE_SESSION_DAYS} ${tr("วัน")} ${staleOver}` : ''}`,
           }] : []),
-          { key: 'history', label: 'ประวัติ' },
+          { key: 'history', label: tr("ประวัติ") },
           { key: 'export', label: 'Export' },
           ...(canSetup ? [{ key: 'setup', label: 'ตั้งค่า' }] : []),
         ]}
@@ -3817,7 +3817,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
           const over7 = overdueAlert.filter(o => o.age > STALE_SESSION_DAYS);
           const oldest = overdueAlert[0]?.age || 0;
           return (
-            <NoticeBar tone="warn" action={{ label: 'ไปไล่ปิด →', onClick: onGoStale, title: 'เปิดแท็บ กะค้าง — ไล่ปิด/อนุมัติทีละกะ' }}>
+            <NoticeBar tone="warn" action={{ label: tr("ไปไล่ปิด →"), onClick: onGoStale, title: tr("เปิดแท็บ กะค้าง — ไล่ปิด/อนุมัติทีละกะ") }}>
               <b>{tr('กะค้างยังไม่ปิด')} {overdueAlert.length} {tr('กะ')}</b>
               {over7.length > 0 && <> {tr('· เกิน')} {STALE_SESSION_DAYS} {tr('วัน')} {over7.length} {tr('กะ · เก่าสุด')} {oldest} {tr('วัน')}</>}
               {' '}— {tr("ไม่เกี่ยวกับกะที่กำลังทำอยู่ เริ่มกะใหม่ได้ตามปกติ")}
@@ -8131,7 +8131,7 @@ function HistoryTab({ role }) {
                         setProbDocs(m => ({ ...m, [s.id]: (m[s.id] || []).map(d =>
                           d.id === doc.id ? { ...d, reprint_count: (Number(d.reprint_count) || 0) + 1 } : d) }));
                       }}
-                      title={`${tr("พิมพ์ซ้ำใบเดิม")} ${doc.doc_no}\n${tr("ปัญหา")}: ${doc.problem_title || tr('(ไม่ได้ระบุ)')}\n${tr("ออกโดย")} ${doc.issued_by || '—'} ${doc.issued_at ? new Date(doc.issued_at).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }) : ''}${doc.reprint_count ? `\n${tr("พิมพ์ซ้ำแล้ว")} ${doc.reprint_count} ${tr("ครั้ง")}` : ''}`}
+                      title={`${tr("พิมพ์ซ้ำใบเดิม")} ${doc.doc_no}\n${tr("ปัญหา")}: ${doc.problem_title || tr('(ไม่ได้ระบุ)')}\n${tr("ออกโดย")} ${doc.issued_by || '—'} ${doc.issued_at ? new Date(doc.issued_at).toLocaleString(dateLocale(), { dateStyle: 'short', timeStyle: 'short' }) : ''}${doc.reprint_count ? `\n${tr("พิมพ์ซ้ำแล้ว")} ${doc.reprint_count} ${tr("ครั้ง")}` : ''}`}
                       style={{ background: 'var(--green-dim)', border: '1px solid var(--green-line)', color: 'var(--green)',
                         borderRadius: 6, padding: '3px 9px', fontSize: 11, cursor: 'pointer', fontWeight: 700, whiteSpace: 'nowrap' }}>
                       {doc.doc_no}
@@ -8228,7 +8228,7 @@ function HistoryTab({ role }) {
                             <b style={{ color: 'var(--green)' }}>{doc.doc_no}</b>
                             {' · '}{doc.problem_title ? <>{tr('ปัญหา:')} <b style={{ color: 'var(--text)' }}>{doc.problem_title}</b></> : <i>{tr('ไม่ได้ระบุหัวเรื่อง')}</i>}
                             {tr(" · ออกโดย ")}{doc.issued_by || '—'}
-                            {doc.issued_at && ` ${new Date(doc.issued_at).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })}`}
+                            {doc.issued_at && ` ${new Date(doc.issued_at).toLocaleString(dateLocale(), { dateStyle: 'short', timeStyle: 'short' })}`}
                             {!!doc.reprint_count && ` · ${tr("พิมพ์ซ้ำ")} ${doc.reprint_count} ${tr("ครั้ง")}`}
                             {match === false && (
                               <div style={{ color: 'var(--amber)', fontWeight: 700 }}>
@@ -9567,10 +9567,10 @@ function BreakPolicySetup({ role }) {
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{item.name_th}</span>
                 {item.name_en && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{item.name_en}</span>}
-                <span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 'var(--r-pill)', background: 'var(--amber-dim)', color: 'var(--amber)', fontWeight: 700 }}>{SHIFT_LABEL[item.shift]}</span>
-                <span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 'var(--r-pill)', background: 'var(--blue-dim)', color: 'var(--blue)', fontWeight: 700 }}>{PROC_LABEL[item.process_type]}</span>
+                <span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 'var(--r-pill)', background: 'var(--amber-dim)', color: 'var(--amber)', fontWeight: 700 }}>{tr(SHIFT_LABEL[item.shift])}</span>
+                <span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 'var(--r-pill)', background: 'var(--blue-dim)', color: 'var(--blue)', fontWeight: 700 }}>{tr(PROC_LABEL[item.process_type])}</span>
                 {OT_LABEL[item.ot_scope] && (
-                  <span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 'var(--r-pill)', background: 'var(--blue-dim)', color: 'var(--blue)', fontWeight: 700 }}>{OT_LABEL[item.ot_scope]}</span>
+                  <span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 'var(--r-pill)', background: 'var(--blue-dim)', color: 'var(--blue)', fontWeight: 700 }}>{tr(OT_LABEL[item.ot_scope])}</span>
                 )}
                 {item.anchor === 'shift_end' && (
                   <span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 'var(--r-pill)', background: 'var(--green-dim)', color: 'var(--green)', fontWeight: 700 }}>{tr('ท้ายกะ')}</span>

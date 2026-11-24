@@ -16,9 +16,9 @@ import { confirmSign } from '../utils/signConfirm';
 import { createNotification } from '../lib/pmNotify';
 import { toneVar, toneDim, toneLine } from '../utils/statusTone';
 import { QA_APPROVAL, QA_REJECT_MIN, qaApprovalState, qaApproveVerdict, qaApproveText, qaApproveAssumedText, qaRejectReasonValid } from '../utils/qaApproval';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 
-const fmtAt = (iso) => (iso ? new Date(iso).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' }) : '');
+const fmtAt = (iso) => (iso ? new Date(iso).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' }) : '');
 export const sheetLabel = (s) => `${s.part_no || '—'} · ${s.work_date} ${s.shift === 'day' ? tr('กะเช้า') : tr('กะดึก')} ${tr("รอบ")} ${s.round_no}`;
 
 export default function QaSheetApproval({ sheet, onChanged }) {

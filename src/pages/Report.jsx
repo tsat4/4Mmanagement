@@ -62,7 +62,7 @@ import StepFlow from '../components/StepFlow';
 import { fourMFlow, fourMSelfBlock } from '../utils/fourMFlow';
 import { isSelfName } from '../utils/selfSign';
 import SectionScopeSelect from '../components/SectionScopeSelect';
-import { tr as trI18n } from '../utils/i18n';
+import { tr as trI18n, dateLocale } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 import { askConfirm } from '../utils/askConfirm';
 
@@ -437,7 +437,7 @@ function OtTransportBookingTab({ autoOpenMaster }) {
   };
 
   const handlePrint = () => {
-    const printedAt = new Date().toLocaleDateString('th-TH', { dateStyle: 'long' });
+    const printedAt = new Date().toLocaleDateString(dateLocale(), { dateStyle: 'long' });
     const rowsHtml = filteredRows.map((r, i) => `<tr>
       <td style="border:1px solid #ccc;padding:3px 6px;text-align:center">${i + 1}</td>
       <td style="border:1px solid #ccc;padding:3px 6px">${r.employees?.employee_id_code || ''}</td>
@@ -817,7 +817,7 @@ function DailyTab() {
   }), [logs, dailySection, dailyDept, dailyLine, dailyTeam, lines]);
 
   const handlePrintDaily = () => {
-    const todayStr = new Date().toLocaleDateString('th-TH', { dateStyle: 'long' });
+    const todayStr = new Date().toLocaleDateString(dateLocale(), { dateStyle: 'long' });
     const rowsHtml = filteredLogs.map((l, i) => `<tr>
       <td style="border:1px solid #ccc;padding:3px 6px;text-align:center">${i+1}</td>
       <td style="border:1px solid #ccc;padding:3px 6px">${l.employees?.employee_id_code || ''}</td>
@@ -886,7 +886,7 @@ table{border-collapse:collapse;width:100%}
           `daily_${date}_${shift}.csv`,
           ['วันที่', 'ประเภทวัน', 'กะ', 'รหัสพนักงาน', 'ชื่อ', 'แผนก', 'ทีม', 'หมวก', 'รองเท้า', 'ถุงมือ', 'OT'],
           // fallback กะจาก team: C = กะเช้าตลอด · A/B หมุนกะ ไม่รู้รอบจริง = เว้นว่าง (เดิมเดา A=เช้า B=ดึกตายตัว — ผิดครึ่งสัปดาห์)
-          filteredLogs.map(l => [date, DAY_TYPE_META[getDayType(date)]?.label || '', l.shift || (l.employees?.team === 'C' ? 'day' : ''), l.employees?.employee_id_code, l.employees?.name, l.employees?.department || '', l.employees?.team || '', l.has_helmet ? '✓' : '✗', l.has_boots ? '✓' : '✗', l.has_gloves ? '✓' : '✗', l.has_ot ? '✓' : ''])
+          filteredLogs.map(l => [date, trI18n(DAY_TYPE_META[getDayType(date)]?.label) || '', l.shift || (l.employees?.team === 'C' ? 'day' : ''), l.employees?.employee_id_code, l.employees?.name, l.employees?.department || '', l.employees?.team || '', l.has_helmet ? '✓' : '✗', l.has_boots ? '✓' : '✗', l.has_gloves ? '✓' : '✗', l.has_ot ? '✓' : ''])
         )} />
       </FilterBar>
       {loading ? <Loader /> : (
@@ -1008,7 +1008,7 @@ function PerEmployeeTab() {
 
   const handlePrintPerEmp = () => {
     const emp = employees.find(e => e.id === selected);
-    const todayStr = new Date().toLocaleDateString('th-TH', { dateStyle: 'long' });
+    const todayStr = new Date().toLocaleDateString(dateLocale(), { dateStyle: 'long' });
     const rowsHtml = logs.map((l, i) => {
       const dt = DAY_TYPE_META[getDayType(l.work_date)];
       return `<tr style="${dt.label !== DAY_TYPE_META.working.label ? `background:${tint(dt.color, 'dim')}` : ''}">
@@ -1071,7 +1071,7 @@ table{border-collapse:collapse;width:100%}
             `employee_${emp?.employee_id_code || selected}_${month}.csv`,
             ['วันที่', 'ประเภทวัน', 'มาทำงาน', 'หมวก', 'รองเท้า', 'ถุงมือ', 'จุดงาน'],
             // assigned_line เก็บ id จุดงาน — ต้อง map เป็นชื่อสถานีเหมือนหน้าจอ/PDF (เดิม CSV ออกเป็น uuid ดิบ)
-            logs.map(l => [l.work_date, DAY_TYPE_META[getDayType(l.work_date)]?.label || '', l.is_present ? '✓' : '✗', l.has_helmet ? '✓' : '✗', l.has_boots ? '✓' : '✗', l.has_gloves ? '✓' : '✗', stationMap[String(l.assigned_line)] || l.assigned_line || ''])
+            logs.map(l => [l.work_date, trI18n(DAY_TYPE_META[getDayType(l.work_date)]?.label) || '', l.is_present ? '✓' : '✗', l.has_helmet ? '✓' : '✗', l.has_boots ? '✓' : '✗', l.has_gloves ? '✓' : '✗', stationMap[String(l.assigned_line)] || l.assigned_line || ''])
           );
         }} />
       </FilterBar>
@@ -1205,7 +1205,7 @@ function StationLogTab() {
   }), [rows, stationTeam, stationShift]);
 
   const handlePrintStation = () => {
-    const todayStr = new Date().toLocaleDateString('th-TH', { dateStyle: 'long' });
+    const todayStr = new Date().toLocaleDateString(dateLocale(), { dateStyle: 'long' });
     const rowsHtml = filteredRows.map((r, i) => {
       const dt = DAY_TYPE_META[getDayType(r.work_date)];
       return `<tr style="${dt.label !== DAY_TYPE_META.working.label ? `background:${tint(dt.color, 'dim')}` : ''}">
@@ -1277,7 +1277,7 @@ table{border-collapse:collapse;width:100%}
           'csv_station_attendance',
           `station_${station?.station_name || selectedStation}_${from}_${to}.csv`,
           ['วันที่', 'ประเภทวัน', 'รหัส', 'ชื่อ', 'ทีม', 'กะ', 'สังกัด', 'มาทำงาน', 'PPE ครบ'],
-          filteredRows.map(r => [r.work_date, DAY_TYPE_META[getDayType(r.work_date)].label, r.employees?.employee_id_code, r.employees?.name, r.employees?.team || '', r.shift || '', r.employees?.section || '', r.is_present ? '✓' : '✗', (r.has_helmet && r.has_boots && r.has_gloves) ? '✓' : '✗'])
+          filteredRows.map(r => [r.work_date, trI18n(DAY_TYPE_META[getDayType(r.work_date)].label), r.employees?.employee_id_code, r.employees?.name, r.employees?.team || '', r.shift || '', r.employees?.section || '', r.is_present ? '✓' : '✗', (r.has_helmet && r.has_boots && r.has_gloves) ? '✓' : '✗'])
         )} />
       </TimeRangeBar>
 
@@ -1397,7 +1397,7 @@ function RangeTab() {
   }), [rows, rangeSection, rangeUnit, rangeUnitIds, rangeLine, rangeTeam, lines]);
 
   const handlePrintRange = () => {
-    const todayStr = new Date().toLocaleDateString('th-TH', { dateStyle: 'long' });
+    const todayStr = new Date().toLocaleDateString(dateLocale(), { dateStyle: 'long' });
     const rowsHtml = filteredRows.map((r, i) => `<tr>
       <td style="border:1px solid #ccc;padding:3px 6px;text-align:center">${i+1}</td>
       <td style="border:1px solid #ccc;padding:3px 6px">${r.code || ''}</td>
@@ -1987,12 +1987,12 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
           `4m_changes_${from}_${to}.csv`,
           ['วันที่', 'ประเภทวัน', 'ไลน์', 'ประเภท', 'ประเภทย่อย', 'รายละเอียด', 'สถานะ', 'เวลาสร้าง'],
           // export ชุดเดียวกับตารางบนจอ (ผ่าน filter ส่วนงาน) — เดิมใช้ logs ดิบ CSV ไม่ตรงจอ
-          fourMFilteredLogs.map(l => [l.work_date, DAY_TYPE_META[getDayType(l.work_date)]?.label || '', l.line_name, l.category, l.change_subtype || '', l.description, l.status, l.created_at ? fmtDateTime(l.created_at) : ''])
+          fourMFilteredLogs.map(l => [l.work_date, trI18n(DAY_TYPE_META[getDayType(l.work_date)]?.label) || '', l.line_name, l.category, l.change_subtype || '', l.description, l.status, l.created_at ? fmtDateTime(l.created_at) : ''])
         )} />
         <span className="sep" />
         {/* 📅 สลับ "รายการใบ" ↔ "ใบ Changing Point" (แบบกระดาษ FM-PD2-037) — ดูบนจอได้ ไม่ต้องกด Export (05/11) */}
         <Segmented value={fourMView} onChange={setFourMView} label={trI18n('มุมมอง')}
-          options={[{ value: 'table', label: 'ตาราง' }, { value: 'sheet', label: 'ใบ Changing Point' }]} />
+          options={[{ value: 'table', label: trI18n("ตาราง") }, { value: 'sheet', label: trI18n("ใบ Changing Point") }]} />
         <span className="filter-label">{trI18n('เดือนของใบ')}</span>
         <input type="month" value={cpcMonth} onChange={e => setCpcMonth(e.target.value)} />
         {canExport && (
@@ -2167,7 +2167,7 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
                         {(() => { const f = fourMFlow(l); return <StepFlow compact steps={f.steps} unknown={!f.known} />; })()}
                         {svName && <span style={{ fontSize: 11, color: 'var(--muted)' }}>SV: {svName}</span>}
                         {qaName && <span style={{ fontSize: 11, color: 'var(--muted)' }}>QA: {qaName}</span>}
-                        {l.approved_at && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{new Date(l.approved_at).toLocaleDateString('th-TH')}</span>}
+                        {l.approved_at && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{new Date(l.approved_at).toLocaleDateString(dateLocale())}</span>}
                       </div>
                     </td>
                     <td style={{ textAlign: 'center' }}>
@@ -2548,7 +2548,7 @@ function SkillMatrixTab() {
         <button onClick={() => {
           const groups = groupSkillsByCategory(skillDefs);
           const ordered = groups.flatMap(g => g.skills);
-          const todayStr = new Date().toLocaleDateString('th-TH', { dateStyle: 'long' });
+          const todayStr = new Date().toLocaleDateString(dateLocale(), { dateStyle: 'long' });
           const headerCells = ordered.map(s => `<th style="border:1px solid #ccc;padding:3px 2px;font-size:9px;text-align:center;writing-mode:vertical-rl;transform:rotate(180deg);height:80px;white-space:nowrap">${s.label}</th>`).join('');
           const rowsHtml = employees.map((emp, i) => {
             const sm = Object.fromEntries((emp.employee_skills || []).map(s => [s.skill_name, s.score]));
@@ -2611,7 +2611,7 @@ ${catHeaderCells}
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
         {SKILL_LEVELS.filter(lv => lv.min > 0).map(lv => (
-          <span key={lv.label} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 'var(--r-xs)', background: lv.bg, color: lv.color, border: `1px solid ${tint(lv.color, 'line')}` }}>
+          <span key={trI18n(lv.label)} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 'var(--r-xs)', background: lv.bg, color: lv.color, border: `1px solid ${tint(lv.color, 'line')}` }}>
             {trI18n(lv.label)} ≥{lv.min}
           </span>
         ))}
@@ -2815,7 +2815,7 @@ function calcServiceDuration(startDate) {
 }
 
 function buildMultiSkillHtml({ empRows, levelCounts, skillDefs, dept, section, department, headName, maker, checker, approver, totalEmps, makerSigUrl, checkerSigUrl, approverSigUrl, logoUrl }) {
-  const today = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+  const today = new Date().toLocaleDateString(dateLocale(), { year: 'numeric', month: 'long', day: 'numeric' });
 
   const levelCell = (lv) =>
     `<td style="text-align:center;border:1px solid #999;padding:2px">${skillGaugeSvgStr(lv)}</td>`;

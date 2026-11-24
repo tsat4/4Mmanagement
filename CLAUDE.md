@@ -505,7 +505,7 @@ Realtime + Edge Functions/Deno) · Telegram Bot API · deploy = Render.com (Stat
 > · **บวก/ลบวันจากสตริงวันที่ = `addDaysStr()`** (ไฟล์เดียวกัน · UTC ล้วน · แกะไม่ออก = `null`)
 >   🔴 **ตัวที่คืน "สตริงวันที่" ห้ามปิดท้ายด้วย `.toISOString().slice(0,10)`** — ผสม 2 ระบบเวลา = คลาดวันเงียบ (มีด่าน `no-utc-workdate`)
 > · กะปัจจุบัน = `getCurrentShift()` · `getShiftInfo()` คืน `{ shift, label }`
-> · **แสดงผล**เวลาใช้ `toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })` (ไม่ใช่สำหรับ query)
+> · **แสดงผล** = `toLocaleString(dateLocale(), …)` · 🔴 **ไทย = พ.ศ. · EN = ค.ศ.** (24/11) ทั้ง `fmtDate*` — `dateLocale()` · `monthsShort()`/`yearDisplay()` (`utils/dateFormat.js`) ห้าม hardcode `'th-TH'`/อาร์เรย์ 'ม.ค.' (2 ด่าน)
 > · **ฝั่ง SQL (DR) ใช้ `work_date_bangkok()` ห้ามใช้ `current_date`** (= UTC · เพี้ยน 07:00-07:59 ไทย)
 
 > ⚠️ **"วันทำงาน" ต้องอ้างอิงปฏิทินบริษัทก่อน ห้ามใช้ค่าคงที่ 22/26 วัน** (คำสั่ง user 2026-07-21) —
@@ -517,7 +517,7 @@ Realtime + Edge Functions/Deno) · Telegram Bot API · deploy = Render.com (Stat
 > 📄 **คำอธิบายเต็ม + ตัวเลข/เคสจริงของทุกข้อ → `docs/modules/db-write-rules.md`** (ห้ามตัดข้อไหนออกจากลิสต์นี้)
 
 1. **supabase-js ไม่ throw** (`const { data } = await …` = กลืน error 100%) ⇒ **ทุก insert/update/delete อ่าน `error` ผ่าน `checkWrite(await …, 'ป้ายงาน')`** (`src/utils/dbWrite.js`) · delete-then-insert: delete ล้ม = หยุด ห้าม insert ต่อ
-2. **RLS ปฏิเสธ UPDATE/DELETE = "สำเร็จ 0 แถว ไม่มี error"** (มีแต่ INSERT ที่โยน 42501) ⇒ ปุ่มที่ผลลัพธ์สำคัญต้อง **`checkWriteRows(await ….select('id'), 'ป้ายงาน')`** · ⚠️ **`checkWrite` ไม่นับแถว** (2 ด่าน) · 🔴 **ลบไฟล์ใน storage ได้หลังนับแถว > 0 เท่านั้น** (ไฟล์หายถาวรแต่แถวยังอยู่ · มีด่าน) · 🔴 **ทะเบียนที่จับคู่ด้วยข้อความ ลบได้หลังนับปลายทางครบ — นับไม่ได้ = ห้ามลบ** (`utils/orgNodeRefs.js` · `utils/processTypeRefs.js` · **ทะเบียนบน `SimpleMasterPanel` ต้องส่ง `onBeforeDelete={masterDeleteGuard(…)}` ทุกตัว** `utils/masterRefs.js` · มีด่าน)
+2. **RLS ปฏิเสธ UPDATE/DELETE = "สำเร็จ 0 แถว ไม่มี error"** (INSERT เท่านั้นที่โยน 42501) ⇒ ปุ่มสำคัญใช้ **`checkWriteRows(await ….select('id'), 'ป้ายงาน')`** (`checkWrite` ไม่นับแถว · 2 ด่าน) · 🔴 **ลบไฟล์ storage ได้หลังนับแถว > 0 เท่านั้น** (มีด่าน) · 🔴 **ทะเบียนที่จับคู่ด้วยข้อความ ลบได้หลังนับปลายทางครบ — นับไม่ได้ = ห้ามลบ** (`utils/orgNodeRefs.js` · `utils/processTypeRefs.js` · **ทะเบียนบน `SimpleMasterPanel` ต้องส่ง `onBeforeDelete={masterDeleteGuard(…)}` ทุกตัว** `utils/masterRefs.js` · มีด่าน)
 3. **policy RLS ต้อง `has_perm('<คีย์เดียวกับปุ่มบนจอ>')` ห้าม hardcode role array** (**จอที่คุมสิทธิ์เองก็ต้องเช็คสิทธิ์ผู้ดู** — มีด่าน) · **ตารางใหม่ต้องมี policy ครบทุก cmd ที่ client ใช้ — `upsert` ต้องมี UPDATE** · 🔑 **คีย์ของ `upsert` ต้องเป็น unique index คอลัมน์ล้วน ห้าม expression/partial** (`42P10` = ไม่เขียนเลยทั้งก้อน · มีด่าน)
 4. **stale-response race** — ทุก effect ที่ await แล้ว set state ต้องมี guard (`let alive = true` + cleanup / request id / ref ปัจจุบัน)
     · 🔴 **จอที่ payload ผสม "id ที่โหลดมา" กับ "ตัวเลือกที่เลือกอยู่" ต้องมีด่านชั้น 2 ตอนกดบันทึกด้วย**
@@ -565,6 +565,7 @@ Realtime + Edge Functions/Deno) · Telegram Bot API · deploy = Render.com (Stat
   · เพิ่มคอลัมน์ nullable ใน `ROW()` ต้องเติมใน `NULLISH()` ด้วย (เหตุผลรายตัว → `audit/README.md`)
 - **📱 `node audit/mobilesweep.mjs` (ทุกหน้า @390px)** — **แตะ layout ที่มี `isMobile` หรือ `position:sticky`
   ต้องรันก่อน merge** (จับ sticky ทับเนื้อหา · ของล้นแล้วปัดไม่ได้ · ข้อความถูกบีบกว้าง 0)
+  · `ONLY='Page&tab=x' node audit/mobilesweep.mjs` = เฉพาะหน้าที่ระบุ (เหมือน crashsweep · 24/11)
 
 ### QC Agent — `/qc-audit` (subagent `qc-project-rules` · read-only)
 

@@ -373,7 +373,7 @@ export default function MachineDatabase() {
         actions={(canEdit || canCreate) ? (
           <>
             {/* ปุ่มตายตัว ≤2 (UI §6.35): [จัดการประเภท] [+ เพิ่มเครื่องจักร] · แยกยี่ห้อจากชื่อ → ⋯ (มี badge จำนวนที่ค้าง) */}
-            <OverflowMenu items={[{ key: 'brand', icon: '🏷️', label: 'แยกยี่ห้อจากชื่อ', badge: brandTodo.length, onClick: () => setShowBrandReview(true),
+            <OverflowMenu items={[{ key: 'brand', icon: '🏷️', label: tr("แยกยี่ห้อจากชื่อ"), badge: brandTodo.length, onClick: () => setShowBrandReview(true),
               hidden: !(canEdit && hasBrandCol && brandTodo.length > 0) }]} />
             {canEdit && <button type="button" className="pg-btn" onClick={() => setShowTypeManager(true)}>{tr('จัดการประเภทเครื่องจักร')}</button>}
             {canCreate && <button type="button" className="pg-btn primary" onClick={() => openEdit()}>{tr('+ เพิ่มเครื่องจักร')}</button>}

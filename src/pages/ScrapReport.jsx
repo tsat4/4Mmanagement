@@ -58,7 +58,7 @@ import useIsMobile from '../utils/useIsMobile';
    ⚠️ แท็บที่ /qa ยังอยู่เหมือนเดิม (QA = คนพิจารณา) — ข้อมูลชุดเดียวกัน ไม่ได้ก๊อป */
 import QualityBins from '../components/QualityBins';
 import useTabParam from '../utils/useTabParam';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 import { askConfirm } from '../utils/askConfirm';
 
@@ -71,7 +71,7 @@ function getWorkDate() {
   if (now.getHours() < 8) { const y = new Date(now); y.setDate(y.getDate() - 1); return localDateStr(y); }
   return localDateStr(now);
 }
-const fmtD = s => s ? new Date(s + 'T00:00:00').toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }) : '—';
+const fmtD = s => s ? new Date(s + 'T00:00:00').toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short', year: '2-digit' }) : '—';
 
 const inputSt = { width: '100%', padding: '8px 10px', borderRadius: 8, fontSize: 13, background: 'var(--bg3)', border: '1px solid var(--border2)', color: 'var(--text)' };
 const btnSt = (bg = 'var(--accent)', color = bg === 'var(--accent)' ? 'var(--accent-ink)' : '#fff') => ({ padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13, background: bg, color });
@@ -950,7 +950,7 @@ export default function ScrapReport() {
               <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 820 }}>
                   <thead><tr>
-                    {['#', 'รูป', 'ชิ้นงาน', 'Code', 'จำนวน', 'ยืนยัน', 'สาเหตุ (4M)', 'ช่วง', 'รหัสงานเสีย'].map(h => <th key={h} style={thSt}>{tr(h)}</th>)}
+                    {['#', tr("รูป"), tr("ชิ้นงาน"), 'Code', tr("จำนวน"), tr("ยืนยัน"), tr("สาเหตุ (4M)"), tr("ช่วง"), tr("รหัสงานเสีย")].map(h => <th key={h} style={thSt}>{tr(h)}</th>)}
                   </tr></thead>
                   <tbody>
                     {its.map((it, i) => (

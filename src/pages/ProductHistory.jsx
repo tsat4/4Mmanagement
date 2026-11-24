@@ -17,7 +17,7 @@ import TimeRangeBar from '../components/TimeRangeBar';
 import useTimeRange from '../utils/useTimeRange';
 
 import NoticeBar from '../components/NoticeBar';
-import { tr as trI18n } from '../utils/i18n';
+import { tr as trI18n, dateLocale } from '../utils/i18n';
 // ประวัติผลิตราย Product — ดูย้อนหลังว่าสินค้าตัวหนึ่งผลิตที่ไลน์ไหน/กะไหน เท่าไหร่ เสียเท่าไหร่ (2026-07-24)
 // + ประวัติการแก้ master data ของสินค้านั้น (audit_log — ใครแก้ line_name/CT เมื่อไหร่)
 
@@ -27,9 +27,9 @@ const todayStr = () => {
 };
 const addDays = (s, n) => { const [y, m, d] = s.split('-').map(Number); const dt = new Date(y, m - 1, d); dt.setDate(dt.getDate() + n); return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`; };
 const fmtDate = s => { if (!s) return '—'; const [, m, d] = s.split('-'); return `${+d}/${+m}`; };
-const fmtDayFull = s => { if (!s) return '—'; const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString('th-TH', { weekday: 'short', day: '2-digit', month: '2-digit' }); };
+const fmtDayFull = s => { if (!s) return '—'; const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString(dateLocale(), { weekday: 'short', day: '2-digit', month: '2-digit' }); };
 const STATUS_TH = s => s === 'confirmed' ? '✓ ปิด' : s === 'carry_over' ? '➡ ยกยอด' : s === 'cancelled' ? '✕ ยกเลิก' : s === 'open' ? '● ผลิต' : s;
-const fmtDT = t => t ? new Date(t).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
+const fmtDT = t => t ? new Date(t).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
 const AUDIT_FIELD_TH = { line_name: 'ไลน์', cycle_time_sec: 'Cycle Time', name: 'ชื่อ', p_no: 'P/N', pair_mat_no: 'คู่ RH/LH', is_active: 'สถานะใช้งาน', customer: 'ลูกค้า' };
 
 const card = { background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 16px' };
@@ -295,7 +295,7 @@ export default function ProductHistory() {
         {/* <LineSelect> กลาง (ลำดับชั้น + scope + ตัดปลดระวาง) — เฉพาะไลน์ที่มีสินค้าจริง · ชื่อนอกทะเบียนแยก optgroup ห้ามซ่อน (2026-09-07) */}
         <LineSelect lines={lines.filter(l => lineGroups.inUse.has(l.name))} value={filterLine} onChange={setFilterLine}
           role={role} lineId={lineId} sections={sections} placeholder={ALL.line}
-          extraGroups={[{ label: 'นอกผัง (ชื่อไลน์ไม่ตรงทะเบียนไลน์ผลิต)', options: lineGroups.off.map(n => ({ value: n })) }]} />
+          extraGroups={[{ label: trI18n("นอกผัง (ชื่อไลน์ไม่ตรงทะเบียนไลน์ผลิต)"), options: lineGroups.off.map(n => ({ value: n })) }]} />
         <SearchInput value={search} onChange={setSearch} fields={trI18n("MAT.NO / ชื่อ / P/N")} />
       </TimeRangeBar>
 

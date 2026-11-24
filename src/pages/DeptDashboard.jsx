@@ -26,7 +26,7 @@ import ParetoAbcChart from '../components/ParetoAbcChart';
 import PageHeader from '../components/PageHeader';
 import Segmented from '../components/Segmented';
 import Page from '../components/Page';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { useWorkDate } from '../utils/useWorkDate';   // 📅 จอเปิดค้างข้ามวัน (12/11)
 /* 🚨 จอเฝ้าระวัง (MtnAndonBoard) ย้ายไปหน้า `/tv` แล้ว (nav audit 2026-08-28)
    หน้านี้ = "คิวงานที่กดไปทำ" · `/tv` = "จอแขวน" — mount บอร์ดเดียวกัน 2 ที่คือทางเข้าซ้ำ */
@@ -51,7 +51,7 @@ import { useWorkDate } from '../utils/useWorkDate';   // 📅 จอเปิด
 /* บวกวันบน 'YYYY-MM-DD' แบบ local — ห้าม toISOString (UTC เพี้ยน 1 วันช่วง 00:00-07:00 ไทย) */
 const dayAdd = (s, n) => { const d = new Date(`${s}T00:00:00`); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const fmtNum = (n) => (n == null ? '—' : Math.round(n).toLocaleString('en-US'));
-const fmtDate = (s) => { try { return new Date(`${s}T00:00:00`).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }); } catch { return s; } };
+const fmtDate = (s) => { try { return new Date(`${s}T00:00:00`).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' }); } catch { return s; } };
 /* สี OEE เทียบเป้ากลุ่มจริง (oeeTargetForLines + statusOf/valueInk) — คิดใน ProductionView · 05/10 เดิม 80/65 ตายตัว */
 const pctCol = (p) => p == null ? 'var(--muted)' : p >= 95 ? 'var(--green)' : p >= 80 ? 'var(--amber)' : 'var(--red)';
 const daysSince = (iso) => iso ? Math.floor((Date.now() - new Date(iso)) / 86400000) : null;
@@ -408,7 +408,7 @@ function ProductionView({ d, ctx }) {
     </Section>
 
     <ParetoAbcChart title={tr('Downtime นอกแผน 7 วัน (ABC)')} records={dtRecords} unit={tr("นาที")}
-      dims={[{ key: 'machine', label: 'เครื่องจักร' }, { key: 'line', label: 'ไลน์' }, { key: 'shift', label: 'กะ' }, { key: 'date', label: 'วัน' }, { key: 'note', label: 'หมายเหตุ', cluster: true }]}
+      dims={[{ key: 'machine', label: tr("เครื่องจักร") }, { key: 'line', label: tr("ไลน์") }, { key: 'shift', label: tr("กะ") }, { key: 'date', label: tr("วัน") }, { key: 'note', label: tr("หมายเหตุ"), cluster: true }]}
       sectionStyle={cardSt} emptyText={tr('ไม่มี downtime นอกแผนใน 7 วัน')} />
 
     <Section title={tr('ทางลัด')}>
@@ -883,7 +883,7 @@ function QaView({ d, ctx }) {
     </div>
 
     <ParetoAbcChart title={tr('ของเสีย 7 วัน แยกตามประเภท (ABC)')} records={defRecords} unit={tr("ชิ้น")}
-      dims={[{ key: 'line', label: 'ไลน์' }, { key: 'product', label: 'ชิ้นงาน' }, { key: 'shift', label: 'กะ' }, { key: 'date', label: 'วัน' }, { key: 'note', label: 'หมายเหตุ', cluster: true }]}
+      dims={[{ key: 'line', label: tr("ไลน์") }, { key: 'product', label: tr("ชิ้นงาน") }, { key: 'shift', label: tr("กะ") }, { key: 'date', label: tr("วัน") }, { key: 'note', label: tr("หมายเหตุ"), cluster: true }]}
       sectionStyle={cardSt} emptyText={tr('ไม่มีบันทึกของเสียใน 7 วัน — ตรวจสอบว่าลงบันทึกครบหรือยัง')} />
 
     <Section title={tr('ทางลัด')}>
@@ -1012,7 +1012,7 @@ export default function DeptDashboard({ embedded = false, tabs, tab: hubTab, onT
           filters={view === 'now' ? (<>
             <span className="filter-label">{tr('มุมมอง')}</span>
             <Segmented label={tr('มุมมองฝ่าย')} value={dept} onChange={setDept}
-              options={DEPTS.map(t => ({ value: t.key, label: `${t.icon} ${t.label}` }))} />
+              options={DEPTS.map(t => ({ value: t.key, label: `${t.icon} ${tr(t.label)}` }))} />
             <span className="spacer" />
             {/* 📺 จอเฝ้าระวังย้ายไปหน้า `/tv` แล้ว (nav audit 2026-08-28) — ปุ่มนี้คงทางเข้าเดิมไว้ (ห้ามตัดทางออกของใคร) */}
             <button className="ctl-btn" onClick={() => navigate(`/tv?dept=${dept === 'store' ? 'store' : dept === 'production' ? 'production' : 'maintenance'}`)}

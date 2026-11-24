@@ -246,7 +246,7 @@ export default function StockCountSheet({ role, scope }) {
             lines={lines} value={lineFilter} onChange={changeLine} {...scope}
             placeholder={tr('— เลือกไลน์/คลังที่จะนับ —')}
             style={{ width: isMobile ? '100%' : 260, padding:'6px 8px', borderRadius:6, border:'1px solid var(--border)', background: 'var(--bg2-surf)', color:'var(--text)', fontSize: isMobile ? 16 : 13 }}
-            extraGroups={[{ label: 'คลัง', options: warehouseNames.map(n => ({ value: n })) }]}
+            extraGroups={[{ label: tr("คลัง"), options: warehouseNames.map(n => ({ value: n })) }]}
           />
           <label style={{ fontSize:12, color:'var(--muted)' }}>
             {tr('วันที่นับ')}{' '}
@@ -420,7 +420,7 @@ export default function StockCountSheet({ role, scope }) {
               <div style={{ overflowX:'auto', overflowY:'auto', maxHeight:'42vh', marginBottom:10, border:'1px solid var(--border2)', borderRadius: 'var(--r-md)' }}>
                 <table style={{ width:'100%', borderCollapse:'collapse', minWidth:640 }}>
                   <thead><tr>
-                    {['วันส่ง', 'ลูกค้า', 'MAT', 'จำนวน', 'คงเหลือหลังหัก'].map((h, i) => (
+                    {[tr("วันส่ง"), tr("ลูกค้า"), 'MAT', tr("จำนวน"), tr("คงเหลือหลังหัก")].map((h, i) => (
                       <th key={h} style={{ ...th, position:'sticky', top:0, background:'var(--card)', zIndex:1,
                         textAlign: i >= 3 ? 'right' : 'left' }}>{tr(h)}</th>
                     ))}

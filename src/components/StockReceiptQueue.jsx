@@ -245,12 +245,12 @@ export default function StockReceiptQueue({ banner = null, table = false }) {
             return (
               <PartCard key={g.key} code={g.mat_no} name={g.part_name} img={imgOf(g.mat_no)} alert={stale}
                 status={stale ? { label: tr('⏰ ค้าง'), color: toneVar('bad') } : { label: tr('📥 รอรับ'), color: toneVar('warn') }}
-                metric={{ label: 'ยอดตามใบผลิตรวม', value: fmt(g.expected), unit: 'ชิ้น' }}
-                aside={{ label: 'เข้าคลัง', value: g.dest_line_name }}
+                metric={{ label: tr("ยอดตามใบผลิตรวม"), value: fmt(g.expected), unit: 'ชิ้น' }}
+                aside={{ label: tr("เข้าคลัง"), value: g.dest_line_name }}
                 rows={[
-                  { k: 'จากไลน์', v: g.source_line },
-                  { k: 'จำนวนใบ', v: `${g.count} ${tr("ใบ")}` },
-                  { k: 'ค้างนานสุด', v: `${ageText(age)} (${tr("ปิดใบ")} ${hhmm(oldest?.created_at) || '—'})` },
+                  { k: tr("จากไลน์"), v: g.source_line },
+                  { k: tr("จำนวนใบ"), v: `${g.count} ${tr("ใบ")}` },
+                  { k: tr("ค้างนานสุด"), v: `${ageText(age)} (${tr("ปิดใบ")} ${hhmm(oldest?.created_at) || '—'})` },
                 ]}
                 footer={
                   <div style={{ display: 'grid', gap: 8 }}>
@@ -330,16 +330,16 @@ export default function StockReceiptQueue({ banner = null, table = false }) {
                   ? (stale ? { label: '⏰ ค้าง', color: '#ef4444' } : { label: 'รอรับ', color: '#f59e0b' })
                   : { label: '✅ รับแล้ว', color: '#22c55e' }}
                 metric={{ label: pending ? 'ยอดตามใบผลิต' : 'รับเข้าจริง', value: fmt(pending ? r.qty_expected : r.qty_received), unit: 'ชิ้น' }}
-                aside={{ label: 'เข้าคลัง', value: r.dest_line_name }}
+                aside={{ label: tr("เข้าคลัง"), value: r.dest_line_name }}
                 dim={!pending}
                 rows={[
-                  { k: 'จากไลน์', v: r.source_line },
-                  { k: 'ใบผลิต', v: r.prod_no },
-                  { k: 'ปิดใบ', v: `${hhmm(r.created_at) || '—'} · ${ageText(age)} ${tr("ที่แล้ว")}` },
+                  { k: tr("จากไลน์"), v: r.source_line },
+                  { k: tr("ใบผลิต"), v: r.prod_no },
+                  { k: tr("ปิดใบ"), v: `${hhmm(r.created_at) || '—'} · ${ageText(age)} ${tr("ที่แล้ว")}` },
                   /* 19/11 — ใบคืนจากถังเหลือง (QA งานดี/ซ่อมผ่าน · trigger fn_qbin_return_receipt) เขียนเหตุผลเต็มประโยคมาเอง */
-                  { k: 'หมายเหตุ', v: r.partial_reason ? (String(r.partial_reason).startsWith('คืนจาก') ? r.partial_reason : `${tr("ยอดบางส่วนจาก")}${r.partial_reason}`) : null },
-                  { k: 'ผู้รับ', v: pending ? null : `${r.received_by || '—'} · ${hhmm(r.received_at) || ''}` },
-                  { k: 'ส่วนต่าง', v: !pending && r.diff_reason ? `${fmt(r.qty_received - r.qty_expected)} — ${r.diff_reason}` : null },
+                  { k: tr("หมายเหตุ"), v: r.partial_reason ? (String(r.partial_reason).startsWith('คืนจาก') ? r.partial_reason : `${tr("ยอดบางส่วนจาก")}${r.partial_reason}`) : null },
+                  { k: tr("ผู้รับ"), v: pending ? null : `${r.received_by || '—'} · ${hhmm(r.received_at) || ''}` },
+                  { k: tr("ส่วนต่าง"), v: !pending && r.diff_reason ? `${fmt(r.qty_received - r.qty_expected)} — ${r.diff_reason}` : null },
                 ]}
                 footer={pending && canReceive ? (editing ? (
                   <div style={{ display: 'grid', gap: 8 }}>

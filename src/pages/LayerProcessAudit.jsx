@@ -1161,9 +1161,9 @@ ${issuesHtml}
       <PageHeader title="Layer Process Audit (LPA)" icon="📋"
         sub={`${tr("แผนตรวจ + บันทึกผล + รายงาน")} ${lpaFormNo} — Leader ${tr("ทุกวัน · Supervisor รายสัปดาห์ · Manager รายเดือน · GM รายไตรมาส")}`}
         tabs={[
-          { key: 'audit', label: 'บันทึกผลตรวจ' },
-          { key: 'plan', label: 'แผนตรวจ' },
-          { key: 'report', label: 'รายงาน' },
+          { key: 'audit', label: tr("บันทึกผลตรวจ") },
+          { key: 'plan', label: tr("แผนตรวจ") },
+          { key: 'report', label: tr("รายงาน") },
           canManage && { key: 'questions', label: 'คำถาม' },
         ]}
         tab={tab} onTab={setTab} />

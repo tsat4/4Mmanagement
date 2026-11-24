@@ -339,7 +339,7 @@ export default function NPI() {
   const projectSelect = (
     <select value={projectId} onChange={e => setProject(e.target.value)} className="grow" style={{ minWidth: 220, maxWidth: 420 }}>
       <option value="">{tr('— เลือกโปรเจครุ่นใหม่ —')}</option>
-      {projects.map(p => <option key={p.id} value={p.id}>{p.project_code} · {p.name}{p.status !== 'active' && p.status !== 'planning' ? ` (${PROJECT_STATUS[p.status]?.label})` : ''}</option>)}
+      {projects.map(p => <option key={p.id} value={p.id}>{p.project_code} · {p.name}{p.status !== 'active' && p.status !== 'planning' ? ` (${tr(PROJECT_STATUS[p.status]?.label)})` : ''}</option>)}
     </select>
   );
 
@@ -548,7 +548,7 @@ function PartsTable({ parts, rollByPart, partId, onPick, canEdit, onAdd, onEdit,
                     <td style={tdSt}>{p.line_name || <span style={{ color: 'var(--amber)', fontWeight: 700 }} title={tr('ยังไม่กำหนดไลน์')}>—</span>}</td>
                     <td style={tdSt}>{r.current ? <Pill label={tr(r.current.label)} color="var(--blue)" /> : <span style={{ color: 'var(--amber)' }}>{tr('ไม่มีเฟส')}</span>}</td>
                     <td style={{ ...tdSt, textAlign: 'right', whiteSpace: 'nowrap' }}>{r.done ?? 0}/{r.total ?? 0} <span style={{ color: 'var(--muted)' }}>({r.pct ?? 0}%)</span>{r.overdue ? <span style={{ color: 'var(--red)', fontWeight: 800 }}> {tr('· เลย')} {r.overdue}</span> : null}</td>
-                    <td style={tdSt}><Pill label={`${PPAP_STATUS[p.ppap_status]?.label || p.ppap_status} ${r.ppap ? `${r.ppap.done}/${r.ppap.total}` : ''}`} color={PPAP_STATUS[p.ppap_status]?.color} /></td>
+                    <td style={tdSt}><Pill label={`${tr(PPAP_STATUS[p.ppap_status]?.label) || p.ppap_status} ${r.ppap ? `${r.ppap.done}/${r.ppap.total}` : ''}`} color={PPAP_STATUS[p.ppap_status]?.color} /></td>
                     <td style={tdSt} onClick={e => e.stopPropagation()}>
                       {p.pe_set_id ? <Link to={`/pe-docs?set=${p.pe_set_id}`} style={{ color: 'var(--blue)', fontSize: 12 }}>📐 {peSets.find(s => s.id === p.pe_set_id)?.part_no || tr("เปิด")}</Link> : <span style={{ color: 'var(--amber)', fontSize: 11.5 }} title={tr('ยังไม่ผูกชุด PFC/FMEA/CP')}>{tr('ยังไม่ผูก')}</span>}
                     </td>
@@ -665,7 +665,7 @@ function Board({ projects, rollByProject, templates, project, tplPhases, parts, 
                               </td>
                             );
                           })}
-                          <td style={{ ...tdSt, textAlign: 'center' }}><Pill label={`${PPAP_STATUS[p.ppap_status]?.label || ''} ${r.ppap ? `${r.ppap.done}/${r.ppap.total}` : ''}`} color={PPAP_STATUS[p.ppap_status]?.color} small /></td>
+                          <td style={{ ...tdSt, textAlign: 'center' }}><Pill label={`${tr(PPAP_STATUS[p.ppap_status]?.label) || ''} ${r.ppap ? `${r.ppap.done}/${r.ppap.total}` : ''}`} color={PPAP_STATUS[p.ppap_status]?.color} small /></td>
                           <td style={{ ...tdSt, textAlign: 'right', fontWeight: 800, color: 'var(--text)' }}>{r.pct ?? 0}%</td>
                         </tr>
                       );

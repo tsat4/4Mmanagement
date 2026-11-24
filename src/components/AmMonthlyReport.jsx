@@ -35,7 +35,7 @@ import { getWorkDate } from '../utils/workDate'
 import { loadDocForms } from '../utils/docForms'
 import { xlsxDocName } from '../utils/csvDoc'
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 // กะเป็น "ส่วนหนึ่งของคีย์" (AM ตรวจต้นกะ) ⇒ ไม่มีตัวเลือก "ทุกกะ" (filterLabels.js: ห้ามใช้ SHIFT_OPTIONS กับจอแบบนี้)
 const AM_SHIFT_OPTIONS = [
   { value: 'day', label: 'กะเช้า' },
@@ -47,7 +47,7 @@ const VIEW_OPTIONS = [
 ]
 const norm = (v) => String(v ?? '').trim().toLowerCase()
 const HOLIDAY_BG = 'var(--green-dim)'   // สีหัวคอลัมน์วันหยุด — ชุดเดียวกับตาราง LPA
-const fmtWhen = (iso) => (iso ? new Date(iso).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '')
+const fmtWhen = (iso) => (iso ? new Date(iso).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '')
 
 const cell = { border: '1px solid var(--border)', textAlign: 'center', fontSize: 11, minWidth: 26, padding: '2px 1px', whiteSpace: 'nowrap' }
 const stickyCol = { position: 'sticky', left: 0, background: 'var(--card)', zIndex: 1, textAlign: 'left', minWidth: 190, maxWidth: 240, padding: '3px 6px' }
@@ -347,7 +347,7 @@ export default function AmMonthlyReport({ lines = [], scopedLines = [] }) {
                         {r.cells.map(c => {
                           const m = CHECK_DAY_META[c.state]
                           return (
-                            <td key={c.date} title={`${c.date} · ${m.label}${c.due ? ` · ${tr("ตรวจ")} ${c.checked}/${c.due} ${tr("เครื่อง")}` : ''}${c.ng ? ` · NG ${c.ng}` : ''}`}
+                            <td key={c.date} title={`${c.date} · ${tr(m.label)}${c.due ? ` · ${tr("ตรวจ")} ${c.checked}/${c.due} ${tr("เครื่อง")}` : ''}${c.ng ? ` · NG ${c.ng}` : ''}`}
                               style={{ ...cell, background: m.tint || undefined }}>
                               {c.state === CHECK_DAY.done
                                 ? <b style={{ color: c.ng ? 'var(--red)' : 'var(--green)' }}>{c.ng ? `NG${c.ng > 1 ? c.ng : ''}` : `${c.checked}/${c.due}`}</b>
@@ -371,7 +371,7 @@ export default function AmMonthlyReport({ lines = [], scopedLines = [] }) {
                           const m = CHECK_DAY_META[c.state]
                           const res = c.state === CHECK_DAY.done ? AM_RESULT_META[c.result] : null
                           return (
-                            <td key={c.date} title={`${c.date} · ${res ? res.label : m.label}`} style={{ ...cell, background: m.tint || undefined }}>
+                            <td key={c.date} title={`${c.date} · ${res ? res.label : tr(m.label)}`} style={{ ...cell, background: m.tint || undefined }}>
                               {c.state === CHECK_DAY.done
                                 ? <b style={{ color: res?.color || 'var(--text)' }}>{res?.mark || 'OK'}</b>
                                 : <StateChip state={c.state} />}

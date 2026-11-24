@@ -385,7 +385,7 @@ function PreviewPanel({ p, canBoard, onCancel, onConfirm, busy, card, warnBox })
       <div style={{ overflowX: 'auto', marginBottom: 10 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
           <thead><tr>
-            {['ชีท', 'ชนิด', 'ลูกค้า', 'พาร์ท', 'ออเดอร์', 'ถึงวันที่'].map((h, i) => (
+            {[tr("ชีท"), tr("ชนิด"), tr("ลูกค้า"), tr("พาร์ท"), tr("ออเดอร์"), tr("ถึงวันที่")].map((h, i) => (
               <th key={h} style={{ textAlign: i >= 3 ? 'right' : 'left', padding: '4px 8px', fontSize: 11,
                                    color: 'var(--muted)', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>{tr(h)}</th>
             ))}

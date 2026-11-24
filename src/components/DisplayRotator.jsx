@@ -11,7 +11,7 @@ import { tvPages } from '../utils/tvPager';
 import { NAV_ITEMS, UserContext } from '../App';
 import { getCurrentShift, getWorkDate } from '../utils/workDate';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
 /* ══ 📺 DisplayRotator — จอวนหน้าเอง ตามแผนของบัญชีที่ login ══════════════════════════
    2026-10-09 · คำสั่ง user: "ตั้งว่าจอ user นี้จะเปิดอะไรวนบ้าง" · ตั้งค่าที่ /display-rotation
@@ -405,7 +405,7 @@ function TvShellBar({ pathname, search, now, loadErr, active, idx, n, sec, elaps
   const chips = barChips(`${pathname}${search || ''}`);
   const d = new Date(now);
   const shift = getCurrentShift(d) === 'day' ? tr("☀️ กะเช้า") : tr("🌙 กะดึก");
-  const hhmm = d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Bangkok' });
+  const hhmm = d.toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Bangkok' });
   const wd = getWorkDate(d);
   const status = !active ? null
     : held ? tr("⏸ หยุดค้าง")

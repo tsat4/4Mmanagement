@@ -65,7 +65,7 @@ import InfoMore from '../components/InfoMore';   // ⓘ คำอธิบาย
 import TabBar from '../components/TabBar';
 
 import NoticeBar from '../components/NoticeBar';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
 /* ── ผังรวมโรงงาน (Factory Master Map) — polygon อิสระ + เลือก metric, 2026-07-16 ──────
    รูปผังใหญ่ทั้งโรงงาน 1 รูป + วาด polygon ล้อมแต่ละไลน์ (L/U ได้) ระบายสีตาม metric ที่เลือก
@@ -88,7 +88,7 @@ function reviewDefaultDate() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 const shiftDate = (s, delta) => { const d = new Date(`${s}T00:00:00`); d.setDate(d.getDate() + delta); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
-const fmtThaiDate = (s) => { try { return new Date(`${s}T00:00:00`).toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }); } catch { return s; } };
+const fmtThaiDate = (s) => { try { return new Date(`${s}T00:00:00`).toLocaleDateString(dateLocale(), { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }); } catch { return s; } };
 const fmtNum = (n) => (n == null ? '0' : Math.round(n).toLocaleString('en-US'));
 const pctCol = (p) => p == null ? 'var(--muted)' : p >= 95 ? '#22c55e' : p >= 80 ? '#f59e0b' : '#ef4444';
 /* สี OEE = เทียบเป้ากลุ่ม (oee_targets) ผ่าน oeeTargetForLines + statusOf — ประกาศใน component (ต้องรู้ lines/เป้า)
@@ -2061,7 +2061,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
       const av = a.val, bv = b.val;
       if (av == null && bv == null) return a.name.localeCompare(b.name);
       if (av == null) return 1; if (bv == null) return -1;
-      return M.desc ? bv - av : av - bv;
+      return tr(M.desc) ? bv - av : av - bv;
     });
     return arr;
   }, [lineStatus, manpower, pmStatus, amDaily, supplyStatus, facilitySupply, dieZones, storeZones, regions, metric, editing, showFac, topNames, parentOf]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -2088,7 +2088,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
       const Mx = METRICS[mKey];
       return rollupAxis({
         rows: sts.map(({ name, st }) => ({
-          name, status: catToStatus(Mx.cat(st)), text: Mx.text(st), val: Mx.value(st),
+          name, status: catToStatus(Mx.cat(st)), text: tr(Mx.text)(st), val: Mx.value(st),
         })),
         ...extra,
       });
@@ -2649,8 +2649,8 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
       {!editing && (
         <div className="tv-hide" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
           <Segmented label={tr('ช่วงเวลาของทั้งหน้า')} value={viewMode} onChange={setViewMode} options={[
-            { value: 'live', label: 'Live (วันนี้สด)', title: 'ผัง แผงขวา และรายละเอียดที่คลิก = ข้อมูลสดของวันนี้' },
-            { value: 'review', label: 'ทบทวนรายวัน', title: 'ผัง แผงขวา และรายละเอียดที่คลิก = ยอดทั้งวันของวันที่เลือก' },
+            { value: 'live', label: tr("Live (วันนี้สด)"), title: tr("ผัง แผงขวา และรายละเอียดที่คลิก = ข้อมูลสดของวันนี้") },
+            { value: 'review', label: tr("ทบทวนรายวัน"), title: tr("ผัง แผงขวา และรายละเอียดที่คลิก = ยอดทั้งวันของวันที่เลือก") },
           ]} />
           {isReview && (<>
             <button onClick={() => setReviewDate(d => shiftDate(d, -1))} style={navBtn}>◀</button>
@@ -3235,7 +3235,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
               {/* สลับโหมดแผง */}
               {/* โหมดทบทวน = แผงเป็นสรุปของวันที่เลือกอย่างเดียว (OBEYA/อันดับ เป็นของสด) */}
               {!isReview && <TabBar className="tv-hide" size="sm" style={{ marginBottom: 12 }} value={panelMode} onChange={setPanelMode}
-                tabs={[{ key: 'review', label: 'สรุปวันนี้' }, { key: 'obeya', label: 'OBEYA (สด)', title: "สถานะรายหัวข้อแบบห้อง OBEYA (SQDCM) จากข้อมูลสดของวันนี้ — กดหัวข้อเพื่อเจาะหาไลน์ที่มีปัญหา" }, { key: 'live', label: 'อันดับ', title: "จัดอันดับไลน์ตามแท็บ metric ที่เลือกด้านบน (พลังงาน / PM / Supply Route ดูได้ที่นี่เท่านั้น)" }]} />}
+                tabs={[{ key: 'review', label: tr("สรุปวันนี้") }, { key: 'obeya', label: tr("OBEYA (สด)"), title: tr("สถานะรายหัวข้อแบบห้อง OBEYA (SQDCM) จากข้อมูลสดของวันนี้ — กดหัวข้อเพื่อเจาะหาไลน์ที่มีปัญหา") }, { key: 'live', label: tr("อันดับ"), title: tr("จัดอันดับไลน์ตามแท็บ metric ที่เลือกด้านบน (พลังงาน / PM / Supply Route ดูได้ที่นี่เท่านั้น)") }]} />}
 
               {(isReview || panelMode === 'review') ? (
                 <>
@@ -3613,7 +3613,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
               </div>
             )}
             <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 9, textAlign: 'center', fontWeight: 700 }}>
-              {tr("คลิกเพื่อดูรายละเอียด")}{M?.label && metric !== 'health' ? ` ${tr("เรื่อง")} ${M.label}` : ''} + {tr("ผังของไลน์")}
+              {tr("คลิกเพื่อดูรายละเอียด")}{tr(M?.label) && metric !== 'health' ? ` ${tr("เรื่อง")} ${tr(M.label)}` : ''} + {tr("ผังของไลน์")}
             </div>
           </div>
         );
@@ -3723,9 +3723,9 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
                   </div>
                   {metric !== 'health' && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 6, fontSize: 12 }}>
-                      <span style={{ color: 'var(--text2)', fontWeight: 700 }}>{storyAll ? tr("แสดงทุกเรื่อง") : `${tr("แสดงเฉพาะเรื่อง")} ${M.label}`}</span>
+                      <span style={{ color: 'var(--text2)', fontWeight: 700 }}>{storyAll ? tr("แสดงทุกเรื่อง") : `${tr("แสดงเฉพาะเรื่อง")} ${tr(M.label)}`}</span>
                       <button onClick={() => setStoryAll(v => !v)} style={{ ...miniTab(storyAll), fontSize: 11.5, padding: '3px 10px' }}>
-                        {storyAll ? `${tr("กลับไปเฉพาะ")} ${M.label}` : tr("ดูทุกเรื่องของไลน์")}
+                        {storyAll ? `${tr("กลับไปเฉพาะ")} ${tr(M.label)}` : tr("ดูทุกเรื่องของไลน์")}
                       </button>
                     </div>
                   )}
@@ -4268,7 +4268,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
                     <thead><tr style={{ color: 'var(--muted)', textAlign: 'left' }}>
-                      {['MAT', 'ชื่อพาร์ท', 'คงเหลือ', 'กล่อง', 'Min', 'Max', 'สถานะ'].map(h => <th key={h} style={{ padding: '4px 6px', borderBottom: '1px solid var(--border2)' }}>{tr(h)}</th>)}
+                      {['MAT', tr("ชื่อพาร์ท"), tr("คงเหลือ"), tr("กล่อง"), 'Min', 'Max', tr("สถานะ")].map(h => <th key={h} style={{ padding: '4px 6px', borderBottom: '1px solid var(--border2)' }}>{tr(h)}</th>)}
                     </tr></thead>
                     <tbody>
                       {f.mats.slice().sort((a, b) => (b.short ? 1 : 0) - (a.short ? 1 : 0) || b.qty - a.qty).map(m => (

@@ -1028,7 +1028,7 @@ export default function QaCheckSheet({ canRecord }) {
                               size={BK} label={i.balloon_no} color={pinColor(i)} selected={selItemId === i.id}
                               hollow={!pinJudged(i)}
                               offX={i.label_dx} offY={i.label_dy} badge={i.image_path ? '🔍' : null}
-                              title={`#${i.balloon_no} ${i.characteristic}${i.rank ? ` · ${i.rank}` : ''} — ${pinJudged(i) ? (JUDGE[resById.get(i.id).judgement]?.label || '') : tr('ยังไม่ตรวจ')}${i.image_path ? tr(' · แตะเพื่อดูรูปซูมจุดนี้') : ''}`}
+                              title={`#${i.balloon_no} ${i.characteristic}${i.rank ? ` · ${i.rank}` : ''} — ${pinJudged(i) ? (tr(JUDGE[resById.get(i.id).judgement]?.label) || '') : tr('ยังไม่ตรวจ')}${i.image_path ? tr(' · แตะเพื่อดูรูปซูมจุดนี้') : ''}`}
                               onClick={() => focusItem(i.id)} />
                           ))}
                         </div>

@@ -1365,7 +1365,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
               {/* <LineSelect> แทนช่องพิมพ์เอง — jigs.line_name เป็นคีย์จัดกลุ่ม DailyPM/PMSchedule/FactoryMap · พื้นที่ facility
                   แยก optgroup จาก pm_facility_areas · ค่าเก่าที่ไม่อยู่ในทะเบียนยังโชว์ ⚠ ไม่หายเงียบ · 2026-09-07 */}
               <LineSelect lines={lineOptions} value={lineName} onChange={setLineName} placeholder={tr('— เลือกไลน์ / พื้นที่ —')} includeRetired
-                extraGroups={[{ label: 'พื้นที่ Facility / Utility', options: facilityAreas.filter(a => !lineOptions.some(l => l.name === a.name)).map(a => ({ value: a.name, label: a.name })) }]}
+                extraGroups={[{ label: tr("พื้นที่ Facility / Utility"), options: facilityAreas.filter(a => !lineOptions.some(l => l.name === a.name)).map(a => ({ value: a.name, label: a.name })) }]}
                 style={{ width: '100%' }} />
             </div>
           )}
@@ -1631,7 +1631,7 @@ function EquipmentTable({ groups, canSetup, onEdit, onDelete }) {
                       {r.cpCount}{r.hasPins && <span title={tr('ปักหมุดบนรูปแล้ว')} style={{ marginLeft: 4 }}>📍</span>}
                     </td>
                     <td style={{ whiteSpace: 'nowrap', fontSize: 12, fontWeight: 700, color: st?.color ?? 'var(--muted)' }}>
-                      {st ? `${st.icon} ${st.label}` : tr("✓ พร้อม")}
+                      {st ? `${st.icon} ${tr(st.label)}` : tr("✓ พร้อม")}
                       {r.status === 'am_pending' && <> · <Link to="/daily-checker?tab=pm" onClick={e => e.stopPropagation()} style={{ color: st.color, textDecoration: 'underline' }}>{tr('ลงทะเบียน')}</Link></>}
                     </td>
                     {canSetup && (
@@ -1793,11 +1793,11 @@ export default function PMSetup() {
   const filtered = !!(fQ.trim() || fScope.names?.length || fStatus)
   const clearFilters = () => { setFQ(''); setFScope({ section: '', line: '', names: null }); setFStatus('') }
   const statusOptions = [
-    { value: '', label: `ทั้งหมด (${allRows.length})` },
-    { value: 'ready', label: `✓ พร้อม (${statusCount.ready})` },
-    { value: 'no_cp', label: `⚪ ไม่มีจุดตรวจ (${statusCount.no_cp})` },
-    amRegistered ? { value: 'am_pending', label: `⚠ ยังไม่ลงทะเบียน AM (${statusCount.am_pending})` } : null,
-    statusCount.no_line ? { value: 'no_line', label: `ไลน์นอกทะเบียน (${statusCount.no_line})`, title: 'ช่องไลน์ว่าง หรือชื่อไม่ตรงทะเบียนไลน์ผลิต — กรองตามไลน์ไม่ได้' } : null,
+    { value: '', label: `${tr('ทั้งหมด')} (${allRows.length})` },
+    { value: 'ready', label: `✓ ${tr('พร้อม')} (${statusCount.ready})` },
+    { value: 'no_cp', label: `⚪ ${tr('ไม่มีจุดตรวจ')} (${statusCount.no_cp})` },
+    amRegistered ? { value: 'am_pending', label: `⚠ ${tr('ยังไม่ลงทะเบียน AM')} (${statusCount.am_pending})` } : null,
+    statusCount.no_line ? { value: 'no_line', label: `${tr('ไลน์นอกทะเบียน')} (${statusCount.no_line})`, title: 'ช่องไลน์ว่าง หรือชื่อไม่ตรงทะเบียนไลน์ผลิต — กรองตามไลน์ไม่ได้' } : null,
   ].filter(Boolean)
 
   const handleDelete = async (jig) => {
@@ -1882,8 +1882,8 @@ export default function PMSetup() {
         actions={canSetup && <>
           {/* ปุ่มตายตัว ≤2 (UI §6.35): [+ เพิ่มอุปกรณ์] · ทะเบียนประเภท/วิธีตรวจ → ⋯ */}
           <OverflowMenu items={[
-            { key: 'cat', icon: '⚙️', label: 'ทะเบียนประเภท', onClick: () => setTaxModal('category') },
-            { key: 'method', icon: '📋', label: 'ทะเบียนวิธีตรวจ', onClick: () => setTaxModal('method') },
+            { key: 'cat', icon: '⚙️', label: tr("ทะเบียนประเภท"), onClick: () => setTaxModal('category') },
+            { key: 'method', icon: '📋', label: tr("ทะเบียนวิธีตรวจ"), onClick: () => setTaxModal('method') },
           ]} />
           <button type="button" className="pg-btn primary" onClick={openCreate}>{tr('+ เพิ่มอุปกรณ์')}</button>
         </>} />

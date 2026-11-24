@@ -11,7 +11,7 @@ import { isPlant, scopeKey, scopeCovers, scopePathText, sameScope, PLANT } from 
 import { rint, rnd } from '../utils/seededRandom';
 import { getWorkDate, addDaysStr } from '../utils/workDate';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 /* ══ 📢 ประกาศ / ชี้แจงบริษัท — MOCKUP workflow (2026-10-29 · คำสั่ง user จากโน้ตลายมือ) ══════════
    โจทย์: "Workflow การรับประกาศของบริษัท"  Issue → Approve → Publish
      · ผู้แจ้งกรอก หัวข้อ · รายละเอียด · ผู้รับ (เลือกขอบเขตจากผังองค์กร) · Effective date
@@ -50,7 +50,7 @@ const btnPrimary = { padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWe
 const btnGhost = { padding: '6px 12px', borderRadius: 10, fontSize: 13, fontWeight: 700,
   background: 'var(--bg2)', color: 'var(--text)', border: '1px solid var(--border2)' };
 
-const fmtDate = (s) => { try { return new Date(`${s}T00:00:00`).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return s; } };
+const fmtDate = (s) => { try { return new Date(`${s}T00:00:00`).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return s; } };
 
 let seq = 3;
 const seed = (today) => ([

@@ -414,7 +414,7 @@ export default function MtnAnalysis() {
 
   const assetTabs = ASSET_CLASSES.map(a => ({
     key: a.key,
-    label: `${a.icon} ${a.label}${loading ? '' : ` (${(byClass[a.key] || []).length})`}`,
+    label: `${a.icon} ${trI18n(a.label)}${loading ? '' : ` (${(byClass[a.key] || []).length})`}`,
   }));
 
   return (
@@ -423,7 +423,7 @@ export default function MtnAnalysis() {
         title={trI18n('วิเคราะห์ปัญหา (ซ่อมบำรุง)')} icon="🔍"
         sub={tab === 'kpi'
           ? trI18n("KPI ทีมช่าง — MTTA / MTTR / MDT · ความพึงพอใจ · ความน่าเชื่อถือรายอุปกรณ์")
-          : `QC 7 Tools ${trI18n("แยกตามชนิดสินทรัพย์")} · ${srcMeta.note}`}
+          : `QC 7 Tools ${trI18n("แยกตามชนิดสินทรัพย์")} · ${trI18n(srcMeta.note)}`}
         tabs={MAIN_TABS} tab={tab} onTab={setTab}
         actions={
           /* ตัวกรองแหล่งข้อมูล/ช่วงเวลา เป็นของแท็บ QC7 เท่านั้น (อยู่ใน TimeRangeBar ข้างล่าง) — แผง KPI มีตัวกรองของตัวเอง
@@ -475,7 +475,7 @@ export default function MtnAnalysis() {
           {/* ── แถบชนิดสินทรัพย์ (แท็บชั้นที่ 2 · `?asset=`) ─────────────────────
                  🔴 ทุกชนิดต้องอยู่ครบเสมอ แม้จำนวนเป็น 0 — กดเข้าไปแล้วเห็นว่า "ช่วงนี้ไม่มีงาน"
                     ต่างจากการซ่อนแท็บทิ้งซึ่งอ่านว่า "ระบบไม่รองรับของชนิดนี้" */}
-          <TabBar size="sm" value={asset} onChange={setAsset} tabs={assetTabs.map(t => ({ key: t.key, label: t.label }))} />
+          <TabBar size="sm" value={asset} onChange={setAsset} tabs={assetTabs.map(t => ({ key: t.key, label: trI18n(t.label) }))} />
 
           {/* 🔭 ขอบเขตบัญชี — ซ่อนแถวของไลน์อื่นแล้วต้องบอกบนจอ (CLAUDE.md "กรองแถวออกแล้วต้องเขียนบนจอ") */}
           {scopeLines && (
@@ -505,10 +505,10 @@ export default function MtnAnalysis() {
           </div>
 
           {rows.length === 0 ? (
-            <Panel title={`${trI18n("ยังไม่มีเหตุการณ์ในกลุ่ม")} “${ASSET_CLASSES.find(a => a.key === asset)?.label}”`}
+            <Panel title={`${trI18n("ยังไม่มีเหตุการณ์ในกลุ่ม")} “${trI18n(ASSET_CLASSES.find(a => a.key === asset)?.label)}”`}
               sub={trI18n('แท็บนี้ยังอยู่เสมอ ไม่ได้ถูกซ่อน — ว่างแปลว่า “ช่วงนี้ไม่มีงานที่ผูกกับสินทรัพย์กลุ่มนี้” ไม่ใช่จอพัง')}>
               <NotEnough
-                reason={`${trI18n("ไม่พบ")}${srcMeta.label}${trI18n("ของกลุ่มนี้ในช่วง")} ${days} ${trI18n("วันย้อนหลัง")}`}
+                reason={`${trI18n("ไม่พบ")}${trI18n(srcMeta.label)}${trI18n("ของกลุ่มนี้ในช่วง")} ${days} ${trI18n("วันย้อนหลัง")}`}
                 hint={trI18n('ลองขยายช่วงเวลา หรือสลับแหล่งข้อมูล · ถ้าแน่ใจว่ามีงานจริง มักเป็นเพราะเลขเครื่องในใบไม่ตรงกับทะเบียน (ไปแก้ที่ทะเบียนเครื่องจักร)')} />
             </Panel>
           ) : (
@@ -545,7 +545,7 @@ export default function MtnAnalysis() {
               <Panel title={trI18n('③ ผังก้างปลา — สาเหตุกองอยู่แกนไหน (4M)')}
                 sub={trI18n('จัดรายการเข้าแกน คน/เครื่อง/วัสดุ/วิธี/การวัด/สภาพแวดล้อม — ใช้หมวดที่ช่างเลือกไว้ก่อน ไม่มีจึงเดาจากข้อความสาเหตุ')}>
                 <Fishbone records={rows} categoryOf={r => r.cause_category} textOf={r => r.causeText} labelOf={r => r.label}
-                  effect={`${ASSET_CLASSES.find(a => a.key === asset)?.label} ${trI18n("หยุด/เสียหาย")}`} />
+                  effect={`${trI18n(ASSET_CLASSES.find(a => a.key === asset)?.label)} ${trI18n("หยุด/เสียหาย")}`} />
               </Panel>
 
               <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(330px, 1fr))', gap: 12, alignContent: 'start' }}>
