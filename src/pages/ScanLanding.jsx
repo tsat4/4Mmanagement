@@ -451,10 +451,10 @@ export default function ScanLanding() {
                   <span style={{ fontSize: 22 }}>🪪</span>
                   <span style={{ minWidth: 0 }}>
                     <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--green)' }}>
-                      {ckResult === 'busy' ? 'กำลังบันทึก…' : 'เช็คชื่อ “มางาน” เลย'}
+                      {ckResult === 'busy' ? tr("กำลังบันทึก…") : tr("เช็คชื่อ “มางาน” เลย")}
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-                      {tr('บันทึกทันทีในนาม')} {fullName || 'ผู้ใช้นี้'} · {getWorkDate()} · {getCurrentShift() === 'night' ? 'กะดึก' : 'กะเช้า'}
+                      {tr('บันทึกทันทีในนาม')} {fullName || tr("ผู้ใช้นี้")} · {getWorkDate()} · {getCurrentShift() === 'night' ? tr("กะดึก") : tr("กะเช้า")}
                     </div>
                   </span>
                 </button>
@@ -527,9 +527,9 @@ export default function ScanLanding() {
               )}
               {ppe?.done && (
                 <div style={{ fontSize: 13, color: ppe.done === 'ok' ? 'var(--green)' : 'var(--muted)', lineHeight: 1.6 }}>
-                  {ppe.done === 'ok' ? '🦺 PPE ครบตามที่ไลน์นี้บังคับ'
+                  {ppe.done === 'ok' ? tr("🦺 PPE ครบตามที่ไลน์นี้บังคับ")
                     : ppe.done === 'missing' ? `🦺 ${tr("บันทึกแล้ว — ขาด")} ${ppe.missN} ${tr("ชิ้น (หัวหน้าเห็นที่หน้าเช็คชื่อ")})`
-                    : '🦺 ยังไม่ได้ตรวจ PPE — ค้างไว้ให้หัวหน้าติ๊กที่หน้าเช็คชื่อ'}
+                    : tr("🦺 ยังไม่ได้ตรวจ PPE — ค้างไว้ให้หัวหน้าติ๊กที่หน้าเช็คชื่อ")}
                 </div>
               )}
               {canAccessPage('/checkin', role) && (
@@ -565,7 +565,7 @@ export default function ScanLanding() {
                   {t.is_active === false && <b style={{ color: 'var(--red, var(--red))' }}> {tr('· ปิดใช้งานแล้ว — ยิงลงใบไม่ได้ พิมพ์แผ่นใหม่')}</b>}
                 </div>
                 <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: '10px 0 0', lineHeight: 1.7 }}>
-                  {tr("ป้ายนี้มาจาก")} <b>{tr('ใบสแกนประจำไลน์')}</b> {tr('— ใช้ยิงตอนบันทึก')} {isDt ? 'Downtime' : 'งานเสีย'} {tr("ใน Daily Report (ปุ่ม 📷 ข้างช่องประเภท หรือกดปุ่มสแกนข้างเครื่องตอนฟอร์มเปิดอยู่")})
+                  {tr("ป้ายนี้มาจาก")} <b>{tr('ใบสแกนประจำไลน์')}</b> {tr('— ใช้ยิงตอนบันทึก')} {isDt ? 'Downtime' : tr("งานเสีย")} {tr("ใน Daily Report (ปุ่ม 📷 ข้างช่องประเภท หรือกดปุ่มสแกนข้างเครื่องตอนฟอร์มเปิดอยู่")})
                 </p>
               </div>
               {canAccessPage('/daily-report', role) && <ActionLink to="/daily-report" icon="📋" label={tr('ไป Daily Report')} sub={`${tr("เปิดฟอร์มบันทึก")}${isDt ? ' Downtime' : tr('งานเสีย')} ${tr("แล้วยิงป้ายนี้")}`} />}
@@ -594,7 +594,7 @@ export default function ScanLanding() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={card}>
               <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700, marginBottom: 2 }}>
-                {order ? '📄 ใบผลิต' : '📦 สินค้า / พาร์ท'}
+                {order ? tr("📄 ใบผลิต") : tr("📦 สินค้า / พาร์ท")}
               </div>
               <div style={{ fontSize: 24, fontWeight: 900, lineHeight: 1.2, wordBreak: 'break-all' }}>{order ? order.prod_no : mat}</div>
               <div style={{ fontSize: 13, color: 'var(--text2)', marginTop: 2 }}>
@@ -627,7 +627,7 @@ export default function ScanLanding() {
           <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 6 }}>{tr('⚠️ ไม่พบสิ่งที่ตรงกับป้ายนี้')}</div>
           <div style={{ fontSize: 12.5, color: 'var(--text2)', lineHeight: 1.8 }}>
             {tr("รหัสที่อ่านได้")}: <code style={{ background: 'var(--bg3)', padding: '1px 6px', borderRadius: 4 }}>{scan?.raw || raw}</code><br />
-            {tr("ชนิดป้าย")}: {scan?.typed ? `${QR_KINDS[scan.kind]?.icon ?? ''} ${QR_KINDS[scan.kind]?.label ?? scan.kind}` : 'เลขเปล่า (ไม่ใช่ป้ายของระบบ)'}
+            {tr("ชนิดป้าย")}: {scan?.typed ? `${QR_KINDS[scan.kind]?.icon ?? ''} ${tr(QR_KINDS[scan.kind]?.label) ?? scan.kind}` : tr("เลขเปล่า (ไม่ใช่ป้ายของระบบ)")}
             {/* 🗒️ ป้ายเฟส 2 ที่หาแถวไม่เจอ (ถูกลบ/ปิด) — บอกว่าป้ายใช้ที่ไหน ไม่ปล่อยให้คิดว่าป้ายเสีย (28/10) */}
             {['line', 'downtime_type', 'defect_type', 'storage'].includes(scan?.kind) && (
               <><br />{tr('ป้ายชนิดนี้ถูกต้อง แต่')}<b>{tr('ไม่พบแถวในทะเบียน')}</b> {tr('(อาจถูกลบ/เปลี่ยนรหัส) — พิมพ์ป้ายใหม่จากหน้า QR Labels')}</>
@@ -646,7 +646,7 @@ export default function ScanLanding() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={card}>
             <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>
-              {isDie ? '🔨 แม่พิมพ์' : hit.machine ? '⚙️ เครื่องจักร' : '🧩 อุปกรณ์'}
+              {isDie ? tr("🔨 แม่พิมพ์") : hit.machine ? tr("⚙️ เครื่องจักร") : tr("🧩 อุปกรณ์")}
             </div>
             <div style={{ fontSize: 26, fontWeight: 900, lineHeight: 1.2 }}>{title}</div>
             {subtitle && <div style={{ fontSize: 13, color: 'var(--text2)', marginTop: 2 }}>{subtitle}</div>}

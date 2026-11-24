@@ -165,7 +165,7 @@ export default function BomPhantomPanel({ onOpenSheet }) {
           { value: 'confirmed', label: `${tr("ของลม")} (${counts.confirmed})` },
           { value: 'real',      label: `${tr("ของจริง")} (${counts.real})` },
         ]} />
-        <SearchInput value={search} onChange={setSearch} fields="MAT / ชื่อพาร์ท" />
+        <SearchInput value={search} onChange={setSearch} fields={tr("MAT / ชื่อพาร์ท")} />
         <span className="spacer" />
         <span className="filter-count">{shown.length} {tr('รายการ')}</span>
         <InfoMore label={tr('กฎการตัดสต็อก / ของลมคืออะไร')} id="bom_phantom_help">
@@ -231,7 +231,7 @@ export default function BomPhantomPanel({ onOpenSheet }) {
         <div style={{ fontSize: 12, color: 'var(--muted)', padding: 12 }}>{tr('กำลังโหลด…')}</div>
       ) : shown.length === 0 ? (
         <div style={{ fontSize: 12, color: 'var(--muted)', padding: 12 }}>
-          {loadFail ? 'อ่านข้อมูลไม่ได้ — ไม่ใช่ว่าไม่มีรายการ' : 'ไม่มีรายการตามตัวกรองนี้'}
+          {loadFail ? tr("อ่านข้อมูลไม่ได้ — ไม่ใช่ว่าไม่มีรายการ") : tr("ไม่มีรายการตามตัวกรองนี้")}
         </div>
       ) : (
         <div style={{ overflowX: 'auto' }}>

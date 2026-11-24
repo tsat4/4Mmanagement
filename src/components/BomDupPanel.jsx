@@ -206,7 +206,7 @@ export default function BomDupPanel({ onOpenSheet }) {
           { value: 'cleared', label: `${tr("ตรวจแล้ว")} (${prog.cleared})` },
           { value: 'all', label: `${tr("ทั้งหมด")} (${prog.total})` },
         ]} />
-        <SearchInput value={search} onChange={setSearch} fields="MAT ใบ / พาร์ท / ชื่อ" />
+        <SearchInput value={search} onChange={setSearch} fields={tr("MAT ใบ / พาร์ท / ชื่อ")} />
         <span className="spacer" />
         <span className="filter-count">{shown.length} {tr('คู่')}</span>
       </FilterBar>
@@ -234,11 +234,11 @@ export default function BomDupPanel({ onOpenSheet }) {
       {!shown.length ? (
         <div style={{ padding: 20, textAlign: 'center', fontSize: 12.5, color: 'var(--muted)',
           border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)' }}>
-          {!prog.total ? '✅ ไม่มีคู่ที่นิยามไว้ 2 ใบเลย'
-            : vFilter === 'open' ? '✅ ตรวจครบทุกคู่แล้ว (กด "ทั้งหมด" เพื่อดูย้อนหลัง)'
-            : vFilter === 'hot' ? '✅ ของร้อนเคลียร์หมดแล้ว'
-            : vFilter === 'cleared' ? 'ยังไม่มีคู่ที่กดตรวจแล้ว'
-            : 'ไม่มีคู่ที่ตรงคำค้น'}
+          {!prog.total ? tr("✅ ไม่มีคู่ที่นิยามไว้ 2 ใบเลย")
+            : vFilter === 'open' ? tr("✅ ตรวจครบทุกคู่แล้ว (กด \"ทั้งหมด\" เพื่อดูย้อนหลัง)")
+            : vFilter === 'hot' ? tr("✅ ของร้อนเคลียร์หมดแล้ว")
+            : vFilter === 'cleared' ? tr("ยังไม่มีคู่ที่กดตรวจแล้ว")
+            : tr("ไม่มีคู่ที่ตรงคำค้น")}
         </div>
       ) : (
         <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>

@@ -24,7 +24,7 @@ import PageHeader from '../components/PageHeader';
 import NoticeBar from '../components/NoticeBar';
 import Page from '../components/Page';
 import { DeleteButton } from '../components/IconButton';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
 function getWeekDates(refDate) {
   const d = new Date(refDate);
@@ -477,7 +477,7 @@ export default function ShiftOrganize() {
   const nextWeek = () => { const d = new Date(weekRef); d.setDate(d.getDate() + 7); setWeekRef(d); };
   const goToday  = () => setWeekRef(new Date());
 
-  const fmtDate = (d) => d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+  const fmtDate = (d) => d.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' });
 
   return (
     <Page>
@@ -487,7 +487,7 @@ export default function ShiftOrganize() {
           <button type="button" className="pg-btn primary"
             onClick={handleSave}
             disabled={isSaving}>
-            {isSaving ? 'กำลังบันทึก...' : `${tr("บันทึก")} (${pendingCount} ${tr("รายการ")})`}
+            {isSaving ? tr("กำลังบันทึก...") : `${tr("บันทึก")} (${pendingCount} ${tr("รายการ")})`}
           </button>
         ) : null} />
 
@@ -505,7 +505,7 @@ export default function ShiftOrganize() {
           </div>
         </div>
       )}
-      <ReadOnlyNote show={!canEditDept} role={role} what="แก้ตารางกะ"
+      <ReadOnlyNote show={!canEditDept} role={role} what={tr("แก้ตารางกะ")}
         permKey="shift_schedule:edit, shift_schedule:edit_dept"
         hint={tr('ค่าตั้งต้นของระบบให้เฉพาะ ผู้ดูแลระบบ / สิทธิ์ทั้งฝ่าย / สิทธิ์ระดับส่วน — role ที่เพิ่มเข้าระบบทีหลัง (เช่น ซ่อมบำรุง) จะยังไม่มีสิทธิ์นี้จนกว่าจะติ๊กเปิดเอง · edit_dept = แก้ได้เฉพาะตารางหน่วยงานสนับสนุน ไม่แตะกะไลน์ผลิต')} />
       {/* ── ตารางกะไลน์ผลิต ── */}
@@ -558,7 +558,7 @@ export default function ShiftOrganize() {
                 padding: '2px 8px', borderRadius: 'var(--r-pill)', fontSize: 11.5, fontWeight: 700,
                 background: 'var(--bg3-surf)', border: '1px solid var(--border)',
                 color: l.n ? 'var(--red)' : 'var(--muted)',
-              }}>{l.name}{l.n ? ` · ${l.n} ${tr("คน")}` : ' · ไม่มีพนักงาน'}</span>
+              }}>{l.name}{l.n ? ` · ${l.n} ${tr("คน")}` : tr(" · ไม่มีพนักงาน")}</span>
             ))}
           </div>
           <div style={{ marginTop: 5, fontSize: 11.5, color: 'var(--muted)' }}>
@@ -827,7 +827,7 @@ export default function ShiftOrganize() {
                     background: o.shift === 'day' ? 'var(--amber-dim)' : 'var(--blue-dim)',
                     color: o.shift === 'day' ? 'var(--amber)' : 'var(--blue)',
                   }}>
-                    {o.shift === 'day' ? '☀️ เช้า' : '🌙 ดึก'}
+                    {o.shift === 'day' ? tr("☀️ เช้า") : tr("🌙 ดึก")}
                   </span>
                 </td>
                 <td style={{ fontSize: 12, color: 'var(--muted)' }}>{o.reason || '—'}</td>
@@ -897,7 +897,7 @@ export default function ShiftOrganize() {
                       background: evt.target_shift === 'day' ? 'var(--amber-dim)' : 'var(--blue-dim)',
                       color: evt.target_shift === 'day' ? 'var(--amber)' : 'var(--blue)',
                     }}>
-                      {evt.target_shift === 'day' ? '☀️ กะเช้า' : '🌙 กะดึก'}
+                      {evt.target_shift === 'day' ? tr("☀️ กะเช้า") : tr("🌙 กะดึก")}
                     </span>
                   </td>
                   <td style={{ fontSize: 12, color: 'var(--muted)' }}>{evt.reason || '—'}</td>
@@ -994,7 +994,7 @@ export default function ShiftOrganize() {
                     ? `${tr("พนักงานทุกคนใน")} ${mrgSection} (${employees.filter(e => e.production_lines?.section === mrgSection).length} ${tr("คน")})`
                     : `${tr("พนักงานใน")} ${lines.find(l => String(l.id) === String(mrgLineId))?.name} (${employees.filter(e => String(e.line_id) === String(mrgLineId)).length} ${tr("คน")})`
                   }{' '}
-                  {tr("จะถูกย้ายเป็น")}{mrgShift === 'day' ? 'กะเช้า' : 'กะดึก'} {tr('ตั้งแต่')} {mrgStart} {tr('ถึง')} {mrgEnd}
+                  {tr("จะถูกย้ายเป็น")}{mrgShift === 'day' ? tr("กะเช้า") : tr("กะดึก")} {tr('ตั้งแต่')} {mrgStart} {tr('ถึง')} {mrgEnd}
                 </div>
               )}
 
@@ -1033,7 +1033,7 @@ export default function ShiftOrganize() {
                   options={employees.map(emp => {
                     /* 🔧🗂️ ติดป้ายกลุ่มให้คนที่ไม่ใช่หน้างาน — จอนี้เห็นครบทุกกลุ่มแล้ว (ไม่กรอง) ⇒ ต้องแยกออกด้วยตา */
                     const g = staffGroupOf(emp);
-                    const tag = g === STAFF_SHOPFLOOR ? '' : ` · ${STAFF_KINDS.find(k => k.key === g)?.label || ''}`;
+                    const tag = g === STAFF_SHOPFLOOR ? '' : ` · ${tr(STAFF_KINDS.find(k => k.key === g)?.label) || ''}`;
                     return { id: String(emp.id), label: `${emp.employee_id_code} — ${emp.name}${tag}`, keywords: emp.employee_id_code };
                   })}
                   onChange={({ id }) => setOvrEmpId(id)} />

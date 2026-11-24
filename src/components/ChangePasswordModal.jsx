@@ -170,7 +170,7 @@ export default function ChangePasswordModal({ open, onClose, userEmail }) {
           {next.length > 0 && (
             <div>
               <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>
-                {tr("ความแข็งแกร่ง")}: {next.length < 6 ? '⚠ อ่อน' : next.length < 10 ? '🟡 พอใช้' : '🟢 แข็งแกร่ง'}
+                {tr("ความแข็งแกร่ง")}: {next.length < 6 ? tr("⚠ อ่อน") : next.length < 10 ? tr("🟡 พอใช้") : tr("🟢 แข็งแกร่ง")}
               </div>
               <div style={{ height: 3, borderRadius: 'var(--r-xs)', background: 'var(--border2)', overflow: 'hidden' }}>
                 <div style={{

@@ -227,7 +227,7 @@ export default function StorageLocPanel() {
 
   const untaggedTip = untagged == null ? null : untagged > 0
     ? `ledger ${tr("เก่า")} ${untagged.toLocaleString()} ${tr("แถวยังไม่มีมุม SAP (เขียนก่อนมีชั้นนี้ หรือไลน์ยังไม่ผูก) — ยอดใน v_sloc_stock จะต่ำกว่าจริงจนกว่าจะแปะ")}`
-    : 'ledger ทุกแถวมีมุม SAP แล้ว';
+    : tr("ledger ทุกแถวมีมุม SAP แล้ว");
 
   return (
     <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 16, marginBottom: 16 }}>
@@ -255,7 +255,7 @@ export default function StorageLocPanel() {
         </div>
       </div>
 
-      <ReadOnlyNote show={!canManage && !missing} role={role} what="จัดการทะเบียนรหัสคลัง" permKey="storage:manage" />
+      <ReadOnlyNote show={!canManage && !missing} role={role} what={tr("จัดการทะเบียนรหัสคลัง")} permKey="storage:manage" />
 
       {missing && (
         <div style={{ padding: '12px 14px', borderRadius: 'var(--r-md)', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', fontSize: 12.5, color: '#f59e0b', fontWeight: 700 }}>
@@ -333,7 +333,7 @@ export default function StorageLocPanel() {
                         ? <><span style={{ color: '#3b82f6', fontWeight: 700 }}>{own.join(' · ')}</span>
                             {inherited.length > 0 && <span style={{ color: 'var(--muted)' }}> {tr('→ ตกทอด')} {inherited.length} {tr('ไลน์:')} {inherited.slice(0, 8).join(' · ')}{inherited.length > 8 ? ` … (+${inherited.length - 8})` : ''}</span>}</>
                         : isStoreKind(r.kind)
-                          ? <span style={{ color: 'var(--muted)' }}>{tr('ที่จัดเก็บหลักของ')} {homeCount == null ? '? (อ่านไม่ได้)' : (homeCount[slocLabel(r.code)] || 0)} {tr('พาร์ท · สโตร์/คลังไม่ต้องผูกไลน์ — ตั้งที่ทะเบียนพาร์ท (/products แท็บ Parts)')}</span>
+                          ? <span style={{ color: 'var(--muted)' }}>{tr('ที่จัดเก็บหลักของ')} {homeCount == null ? tr("? (อ่านไม่ได้)") : (homeCount[slocLabel(r.code)] || 0)} {tr('พาร์ท · สโตร์/คลังไม่ต้องผูกไลน์ — ตั้งที่ทะเบียนพาร์ท (/products แท็บ Parts)')}</span>
                           : <span style={{ color: 'var(--muted)' }}>{tr('— ยังไม่ผูกไลน์ (ไม่มีอะไรถูกแปะรหัสนี้อัตโนมัติ)')}</span>}
                     </div>
                   )}
@@ -345,8 +345,8 @@ export default function StorageLocPanel() {
                     {/* ลบได้เฉพาะตอน "นับการใช้งานได้ และไม่มีใครใช้" — นอกนั้นปิดไว้ (fail-closed)
                         ปุ่มยังอยู่ (ไม่ซ่อน) + title บอกเหตุผล ไม่งั้นดูเหมือนฟีเจอร์หาย */}
                     <DeleteButton onClick={() => remove(r)} disabled={countFailed || inUse}
-                      title={countFailed ? 'ตรวจการใช้งานไม่ได้ — ยังลบรหัสนี้ไม่ได้'
-                        : inUse ? 'มีคนใช้รหัสนี้อยู่ (BOM / ledger / จุดส่ง) — ปิดใช้งานแทนการลบ' : 'ลบรหัสคลังนี้'} />
+                      title={countFailed ? tr("ตรวจการใช้งานไม่ได้ — ยังลบรหัสนี้ไม่ได้")
+                        : inUse ? tr("มีคนใช้รหัสนี้อยู่ (BOM / ledger / จุดส่ง) — ปิดใช้งานแทนการลบ") : tr("ลบรหัสคลังนี้")} />
                   </div>
                 )}
               </div>
@@ -385,7 +385,7 @@ function LocForm({ init, isNew, onSave, onClose, rows, lines, noLineMap, role, l
     <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 24, width: 'min(480px,100%)', maxHeight: '92vh', overflowY: 'auto' }}>
         <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', marginBottom: 14 }}>
-          {isNew ? '➕ เพิ่มรหัสคลัง' : `✏️ ${tr("แก้ไข")} ${init.code}`}
+          {isNew ? tr("➕ เพิ่มรหัสคลัง") : `✏️ ${tr("แก้ไข")} ${init.code}`}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div>

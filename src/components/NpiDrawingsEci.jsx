@@ -221,7 +221,7 @@ export default function NpiDrawingsEci({ project, parts, partId, onPickPart, dra
                       <td style={tdSt}>{e.source === 'customer' ? tr('ลูกค้า') : tr('ภายใน')}</td>
                       <td style={tdSt}><Pill label={tr(ECI_STATUS[e.status]?.label)} color={ECI_STATUS[e.status]?.color} />{e.status === 'rejected' && e.reject_reason && <div style={{ fontSize: 11, color: '#f59e0b' }}>{e.reject_reason}</div>}</td>
                       <td style={tdSt}>
-                        {legs.length ? <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>{legs.map(l => <Pill key={l.flag} label={`${e[l.link] ? '✓' : '○'} ${l.label}`} color={e[l.link] ? '#22c55e' : '#f59e0b'} small />)}</div> : <span style={{ color: 'var(--muted)' }}>{tr('ยังไม่ประเมิน')}</span>}
+                        {legs.length ? <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>{legs.map(l => <Pill key={l.flag} label={`${e[l.link] ? '✓' : '○'} ${tr(l.label)}`} color={e[l.link] ? '#22c55e' : '#f59e0b'} small />)}</div> : <span style={{ color: 'var(--muted)' }}>{tr('ยังไม่ประเมิน')}</span>}
                         {legs.length > 0 && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{linked}/{legs.length}</div>}
                       </td>
                       <td style={{ ...tdSt, color: late ? '#ef4444' : undefined, fontWeight: late ? 800 : 400 }}>{e.target_date ? fmtDate(e.target_date) : '—'}{e.effective_date ? <div style={{ fontSize: 11, color: '#22c55e' }}>{tr('มีผล')} {fmtDate(e.effective_date)}</div> : null}</td>
@@ -238,7 +238,7 @@ export default function NpiDrawingsEci({ project, parts, partId, onPickPart, dra
       </div>
 
       {dwModal && (
-        <Modal title={dwModal.id ? `${tr("แก้ไขแบบ")} Rev ${dwModal.rev}` : 'เพิ่ม revision แบบ'} onClose={() => setDwModal(null)} width={600}
+        <Modal title={dwModal.id ? `${tr("แก้ไขแบบ")} Rev ${dwModal.rev}` : tr("เพิ่ม revision แบบ")} onClose={() => setDwModal(null)} width={600}
           footer={<><button style={ghost} onClick={() => setDwModal(null)}>{tr('ยกเลิก')}</button><button style={btn()} disabled={saving} onClick={saveDrawing}>{saving ? tr('กำลังบันทึก…') : tr('💾 บันทึก')}</button></>}>
           <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, alignItems: 'start' }}>
             <Field label={tr('ชนิด')}><select style={inp} value={dwModal.kind} onChange={e => setDwModal({ ...dwModal, kind: e.target.value })}>{Object.entries(DWG_KIND).map(([k, l]) => <option key={k} value={k}>{tr(l)}</option>)}</select></Field>
@@ -253,7 +253,7 @@ export default function NpiDrawingsEci({ project, parts, partId, onPickPart, dra
                   <select style={inp} value={cur} onChange={e => setDwModal({ ...dwModal, eci_no: e.target.value })}>
                     <option value="">{tr('— ไม่มี / ไม่ระบุ —')}</option>
                     {cur && !mine.some(e => e.eci_no === cur) && <option value={cur}>{cur} {tr('⚠ ไม่พบในทะเบียน ECI ของพาร์ทนี้')}</option>}
-                    {mine.map(e => <option key={e.id} value={e.eci_no}>{e.eci_no} · {e.title || ''}{ECI_STATUS[e.status] ? ` (${ECI_STATUS[e.status].label})` : ''}</option>)}
+                    {mine.map(e => <option key={e.id} value={e.eci_no}>{e.eci_no} · {e.title || ''}{ECI_STATUS[e.status] ? ` (${tr(ECI_STATUS[e.status].label)})` : ''}</option>)}
                   </select>
                 );
               })()}
@@ -261,7 +261,7 @@ export default function NpiDrawingsEci({ project, parts, partId, onPickPart, dra
             <Field label={tr('รายละเอียดการเปลี่ยน')} span={2}><textarea style={{ ...inp, minHeight: 56 }} value={dwModal.description || ''} onChange={e => setDwModal({ ...dwModal, description: e.target.value })} /></Field>
             <Field label={tr('ไฟล์ (PDF/รูป ≤20MB)')} hint={tr('3D ไม่เก็บไฟล์ — ใส่ลิงก์')}>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                <FilePick onFile={async f => setDwModal(m => ({ ...m, _file: f }))} accept=".pdf,image/*" label={dwModal._file ? `📎 ${dwModal._file.name.slice(0, 20)}` : (dwModal.file_url ? '↻ เปลี่ยนไฟล์' : '📎 เลือกไฟล์')} />
+                <FilePick onFile={async f => setDwModal(m => ({ ...m, _file: f }))} accept=".pdf,image/*" label={dwModal._file ? `📎 ${dwModal._file.name.slice(0, 20)}` : (dwModal.file_url ? tr("↻ เปลี่ยนไฟล์") : tr("📎 เลือกไฟล์"))} />
                 {dwModal.file_url && !dwModal._file && <a href={dwModal.file_url} target="_blank" rel="noreferrer" style={{ fontSize: 11.5, color: '#4d9fff' }}>{tr('ไฟล์เดิม')}</a>}
               </div>
             </Field>
@@ -272,7 +272,7 @@ export default function NpiDrawingsEci({ project, parts, partId, onPickPart, dra
       )}
 
       {eciModal && (
-        <Modal title={eciModal.id ? `ECI ${eciModal.eci_no}` : 'รับ ECI ใหม่'} onClose={() => setEciModal(null)} width={760}
+        <Modal title={eciModal.id ? `ECI ${eciModal.eci_no}` : tr("รับ ECI ใหม่")} onClose={() => setEciModal(null)} width={760}
           footer={<>
             <button style={ghost} onClick={() => setEciModal(null)}>{tr('ยกเลิก')}</button>
             {canApprove && eciModal.id && eciModal.status !== 'implemented' && eciModal.status !== 'rejected' && (
@@ -293,7 +293,7 @@ export default function NpiDrawingsEci({ project, parts, partId, onPickPart, dra
             <Field label={tr('หัวข้อ *')} span={3}><input style={inp} value={eciModal.title} onChange={e => setEciModal({ ...eciModal, title: e.target.value })} /></Field>
             <Field label={tr('รายละเอียด')} span={3}><textarea style={{ ...inp, minHeight: 56 }} value={eciModal.description || ''} onChange={e => setEciModal({ ...eciModal, description: e.target.value })} /></Field>
             {/* ผู้ขอ = user ภายใน (profiles) · ที่มาจากลูกค้า = พิมพ์ชื่อผู้ติดต่อเองได้ (allowFree + ป้าย) (2026-09-07) */}
-            <Field label={tr('ผู้ขอ/ต้นเรื่อง')}><PersonSelect value={eciModal.requested_by || ''} history={reqHist} freeHint="ผู้ติดต่อฝั่งลูกค้า" onChange={r => setEciModal({ ...eciModal, requested_by: r.name })} /></Field>
+            <Field label={tr('ผู้ขอ/ต้นเรื่อง')}><PersonSelect value={eciModal.requested_by || ''} history={reqHist} freeHint={tr("ผู้ติดต่อฝั่งลูกค้า")} onChange={r => setEciModal({ ...eciModal, requested_by: r.name })} /></Field>
             <Field label={tr('วันที่รับ')}><input type="date" style={inp} value={eciModal.requested_date || ''} onChange={e => setEciModal({ ...eciModal, requested_date: e.target.value })} /></Field>
             <Field label={tr('ต้องมีผลภายใน')}><input type="date" style={inp} value={eciModal.target_date || ''} onChange={e => setEciModal({ ...eciModal, target_date: e.target.value })} /></Field>
             <Field label={tr('สถานะ')}><MetaSelect value={eciModal.status} onChange={v => setEciModal({ ...eciModal, status: v })} meta={ECI_STATUS} exclude={canApprove ? [] : ['approved', 'rejected', 'implemented']} /></Field>
@@ -307,7 +307,7 @@ export default function NpiDrawingsEci({ project, parts, partId, onPickPart, dra
               <Leg on={eciModal.affects_drawing} label={tr('แบบ/Drawing rev ใหม่')} onToggle={v => setEciModal({ ...eciModal, affects_drawing: v })}>
                 <select style={inp} value={eciModal.drawing_revision_id} onChange={e => setEciModal({ ...eciModal, drawing_revision_id: e.target.value })} disabled={!eciModal.affects_drawing}>
                   <option value="">{tr('— เลือก rev แบบของพาร์ท —')}</option>
-                  {eciPartDrawings.map(d => <option key={d.id} value={d.id}>{DWG_KIND[d.kind]} Rev {d.rev} ({DWG_STATUS[d.status]?.label})</option>)}
+                  {eciPartDrawings.map(d => <option key={d.id} value={d.id}>{DWG_KIND[d.kind]} Rev {d.rev} ({tr(DWG_STATUS[d.status]?.label)})</option>)}
                 </select>
                 {eciModal.affects_drawing && !eciPartDrawings.length && <div style={{ fontSize: 11, color: '#f59e0b' }}>{tr('พาร์ทนี้ยังไม่มี rev แบบ — เพิ่มที่ตารางแบบด้านบนก่อน')}</div>}
               </Leg>

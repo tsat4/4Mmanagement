@@ -6,7 +6,7 @@ import { toast } from '../components/Toast';
 import useTabParam from '../utils/useTabParam';
 import { getWorkDate, addDaysStr } from '../utils/workDate';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 /* ══ ✈️ เบิกเงินเดินทางต่างประเทศ — MOCKUP workflow (2026-10-29 · คำสั่ง user · ผัง "Overseas Business Travel Process") ══
    ถอดจากผัง swimlane 6 ช่อง: ผู้เดินทาง · ผู้อนุมัติ · HR/Compliance · Travel/Admin · Finance/Accounting/ECM
    ลำดับ 7 ข้อตามคอลัมน์ "คำอธิบาย" ของผัง = แถบสถานะ 7 ขั้นของทุกใบ:
@@ -54,7 +54,7 @@ const h3 = { margin: 0, fontSize: 15 };
 const muted = { fontSize: 12, color: 'var(--muted)' };
 
 const baht = (n) => `${Math.round(Number(n) || 0).toLocaleString('en-US')} ${tr("บาท")}`;
-const fmtDate = (s) => { try { return new Date(`${s}T00:00:00`).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return s; } };
+const fmtDate = (s) => { try { return new Date(`${s}T00:00:00`).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return s; } };
 /* จำนวนวันเดินทาง (นับวันไป-กลับรวม) — แกะวันไม่ออก = null ห้ามเดา */
 function tripDays(from, to) {
   const a = Date.parse(`${from}T00:00:00Z`); const b = Date.parse(`${to}T00:00:00Z`);
@@ -265,7 +265,7 @@ export default function OverseasTravelMockup() {
         </div>
         <div style={{ ...muted, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           <span>{tr('งบประมาณ')} {baht(r.budget)}</span>
-          <span>Advance: {r.advReq ? baht(r.advAmount) : 'ไม่ขอ'}</span>
+          <span>Advance: {r.advReq ? baht(r.advAmount) : tr("ไม่ขอ")}</span>
         </div>
         <PhaseBar r={r} />
         {r.returned && <div style={{ fontSize: 13, color: 'var(--red)' }}>↩ {r.returned.by} {tr('ส่งกลับแก้ไข:')} {r.returned.reason}</div>}
@@ -299,7 +299,7 @@ export default function OverseasTravelMockup() {
         tabs={tabs} tab={tab} onTab={setTab}
       />
       <div style={{ marginBottom: 12 }}>
-        <InfoMore lead="ลำดับงาน 7 ขั้นตามผัง: ขอเดินทาง → อนุมัติ 3 ระดับ → HR/Compliance → เตรียมเดินทาง → เดินทาง → ยื่นเบิก → Finance ปิดงาน">
+        <InfoMore lead={tr("ลำดับงาน 7 ขั้นตามผัง: ขอเดินทาง → อนุมัติ 3 ระดับ → HR/Compliance → เตรียมเดินทาง → เดินทาง → ยื่นเบิก → Finance ปิดงาน")}>
           {tr("สลับแท็บด้านบนเพื่อเล่นเป็นแต่ละฝ่าย — ตัวเลขบนแท็บ = จำนวนใบที่รอฝ่ายนั้น · Finance ตรวจงบได้ตั้งแต่ยื่นคำขอ (ขนานกับการอนุมัติ) · Visa และ Advance เป็นขั้นตามเงื่อนไข · อัตราเบี้ยเลี้ยง")} {baht(PER_DIEM_SAMPLE)}/{tr("วัน เป็นตัวอย่าง — ระบบจริงต้องอ่านจากประกาศบริษัท")}
         </InfoMore>
       </div>
@@ -313,7 +313,7 @@ export default function OverseasTravelMockup() {
       {tab === 'traveler' && (
         <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', alignItems: 'start' }}>
           <div style={{ ...card, display: 'grid', gap: 10 }}>
-            <h3 style={h3}>{editId ? `✏️ ${tr("แก้ไขคำขอ")} ${items.find(r => r.id === editId)?.no || ''}` : '🧳 Travel Request — ยื่นคำขอเดินทาง'}</h3>
+            <h3 style={h3}>{editId ? `✏️ ${tr("แก้ไขคำขอ")} ${items.find(r => r.id === editId)?.no || ''}` : tr("🧳 Travel Request — ยื่นคำขอเดินทาง")}</h3>
             <label style={field}>{tr('วัตถุประสงค์')}
               <input value={form.purpose} onChange={e => setForm(f => ({ ...f, purpose: e.target.value }))} placeholder={tr('เช่น ประชุมลูกค้า / อบรม / audit supplier')} />
             </label>
@@ -461,14 +461,14 @@ export default function OverseasTravelMockup() {
             const a = r.admin;
             const blockers = readyBlockers(r);
             const tick = (k, label) => upd(r.id, n => { n.admin[k] = true; return n; }, `Admin: ${label}`);
-            const nextStep = ADMIN_STEPS.find(x => !a[x.k]);
+            const nextStep = ADMIN_STEPS.find(x => !a[tr(x.k)]);
             return reqCard(r, (
               <div style={{ display: 'grid', gap: 6 }}>
                 <Check ok={a.passport}>{tr('ตรวจ Passport (อายุ / ความถูกต้อง)')}</Check>
-                <Check ok={a.visaReq != null}>{tr('ต้องใช้ Visa หรือไม่:')} {a.visaReq == null ? '—' : a.visaReq ? 'ต้องใช้' : 'ไม่ต้องใช้'}</Check>
+                <Check ok={a.visaReq != null}>{tr('ต้องใช้ Visa หรือไม่:')} {a.visaReq == null ? '—' : a.visaReq ? tr("ต้องใช้") : tr("ไม่ต้องใช้")}</Check>
                 {a.visaReq && <Check ok={r.visaDocsSent}>{tr('ผู้เดินทางส่งเอกสาร Visa')}</Check>}
                 {a.visaReq && <Check ok={a.visaApplied}>{tr('Admin ยื่น Visa และติดตามผล')}</Check>}
-                {ADMIN_STEPS.map(x => <Check key={x.k} ok={a[x.k]}>{tr(x.label)}</Check>)}
+                {ADMIN_STEPS.map(x => <Check key={tr(x.k)} ok={a[tr(x.k)]}>{tr(x.label)}</Check>)}
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                   {!a.passport && <button type="button" style={btnPrimary} onClick={() => tick('passport', 'ตรวจ Passport ผ่าน')}>{tr('ตรวจ Passport ผ่าน')}</button>}
                   {a.passport && a.visaReq == null && (<>
@@ -479,7 +479,7 @@ export default function OverseasTravelMockup() {
                     ? <button type="button" style={btnPrimary} onClick={() => tick('visaApplied', 'ยื่น Visa และติดตามผล')}>{tr('ยื่น Visa แล้ว')}</button>
                     : <span style={muted}>{tr('รอผู้เดินทางส่งเอกสาร Visa')}</span>)}
                   {a.passport && a.visaReq != null && (!a.visaReq || a.visaApplied) && nextStep && (
-                    <button type="button" style={btnPrimary} onClick={() => tick(nextStep.k, nextStep.label)}>{tr(nextStep.label)}</button>
+                    <button type="button" style={btnPrimary} onClick={() => tick(tr(nextStep.k), tr(nextStep.label))}>{tr(nextStep.label)}</button>
                   )}
                 </div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', borderTop: '1px dashed var(--border)', paddingTop: 8 }}>
@@ -523,9 +523,9 @@ export default function OverseasTravelMockup() {
                       : <div style={muted}>{tr('ไม่มีรายการค่าใช้จ่าย')}</div>}
                     <div style={{ fontSize: 13 }}>{tr('รวมค่าใช้จ่าย')} <b>{baht(claimSum)}</b></div>
                     <div style={{ fontSize: 13 }}>
-                      {tr("เบี้ยเลี้ยง")} {pd == null ? 'คำนวณไม่ได้ (วันเดินทางไม่ถูกต้อง)' : <><b>{baht(pd)}</b> <span style={muted}>({tripDays(r.from, r.to)} {tr('วัน ×')} {baht(PER_DIEM_SAMPLE)} {tr("อัตราตัวอย่าง")})</span></>}
+                      {tr("เบี้ยเลี้ยง")} {pd == null ? tr("คำนวณไม่ได้ (วันเดินทางไม่ถูกต้อง)") : <><b>{baht(pd)}</b> <span style={muted}>({tripDays(r.from, r.to)} {tr('วัน ×')} {baht(PER_DIEM_SAMPLE)} {tr("อัตราตัวอย่าง")})</span></>}
                     </div>
-                    <div style={{ fontSize: 13 }}>{tr('หักล้าง Advance')} {r.adv.paid ? `− ${baht(r.advAmount)}` : '(ไม่มี)'}</div>
+                    <div style={{ fontSize: 13 }}>{tr('หักล้าง Advance')} {r.adv.paid ? `− ${baht(r.advAmount)}` : tr("(ไม่มี)")}</div>
                     {settle != null && (
                       <div style={{ fontSize: 14, fontWeight: 800, color: settle >= 0 ? 'var(--text)' : 'var(--amber)' }}>
                         {settle >= 0 ? `${tr("บริษัทจ่ายเพิ่มให้ผู้เดินทาง")} ${baht(settle)}` : `${tr("ผู้เดินทางคืนเงินบริษัท")} ${baht(-settle)}`}

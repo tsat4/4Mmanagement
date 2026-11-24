@@ -72,7 +72,7 @@ export default function PmHub() {
             — 5 แท็บชื่อคล้ายกัน ไม่มีคำอธิบายคนใหม่แยกไม่ออกว่าจะเข้าอันไหน */}
         <PageHeader title={tr('ซ่อมบำรุงตามแผน (PM)')} icon="🔧"
           sub={tr(cur?.hint) || tr('ตั้งจุดตรวจ → ครบกำหนด → เตรียมล่วงหน้า → นัดผลิต → ตรวจจริง → เลื่อนรอบถัดไปเอง')}
-          tabs={available.map(t => ({ key: t.key, label: t.label }))} tab={active} onTab={setActive} />
+          tabs={available.map(t => ({ key: t.key, label: tr(t.label) }))} tab={active} onTab={setActive} />
 
       {cur ? (
         <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>{tr('กำลังโหลด...')}</div>}>

@@ -159,7 +159,7 @@ export default function MtnOutsourcePanel({ order, parts = [], fullName = '', ca
               {r.supplier ? ` · ${tr("ร้าน")} ${r.supplier}` : ''}
               {r.pr_no ? ` · PR ${r.pr_no}` : ''}
               {r.repair_cost != null ? ` · ${tr("ค่าซ่อม")} ${r.repair_cost}` : ''}
-              {r.expected_at ? ` · ${tr("นัดรับ")} ${r.expected_at}` : ' · ไม่ได้นัดวันรับ'}
+              {r.expected_at ? ` · ${tr("นัดรับ")} ${r.expected_at}` : tr(" · ไม่ได้นัดวันรับ")}
               {r.back_at ? ` · ${tr("รับกลับ")} ${fmtDateTime(r.back_at)}${r.back_by ? ` ${tr("โดย")} ${r.back_by}` : ''}` : ''}
               {r.cancelled_at ? ` · ${tr("ยกเลิก")} ${fmtDateTime(r.cancelled_at)}${r.cancel_reason ? ` — ${r.cancel_reason}` : ''}` : ''}
               {r.note ? ` · ${r.note}` : ''}
@@ -232,7 +232,7 @@ function AddForm({ parts, fullName, orderId, onCancel, onDone }) {
       <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 3 }}>
         {tr("อะไหล่ในทะเบียน (เลือก = รับกลับแล้วเข้าสต็อกให้เอง · พิมพ์เอง = ของนอกทะเบียน ไม่เข้าสต็อก")})
       </div>
-      <SearchSelect value={f.part_id} text={f.part_name} options={partOpts} allowFree freeHint="ไม่เข้าสต็อก"
+      <SearchSelect value={f.part_id} text={f.part_name} options={partOpts} allowFree freeHint={tr("ไม่เข้าสต็อก")}
         placeholder={tr('ค้นอะไหล่ — ชื่อ / รหัส / ชั้นวาง หรือพิมพ์เอง')}
         onChange={({ id, text }) => setF(o => ({ ...o, part_id: id || '', part_name: text || '' }))} />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(118px, 1fr))', gap: 6, marginTop: 6 }}>

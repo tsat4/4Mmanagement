@@ -58,7 +58,7 @@ import useIsMobile from '../utils/useIsMobile';
    ⚠️ แท็บที่ /qa ยังอยู่เหมือนเดิม (QA = คนพิจารณา) — ข้อมูลชุดเดียวกัน ไม่ได้ก๊อป */
 import QualityBins from '../components/QualityBins';
 import useTabParam from '../utils/useTabParam';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 import { askConfirm } from '../utils/askConfirm';
 
@@ -71,7 +71,7 @@ function getWorkDate() {
   if (now.getHours() < 8) { const y = new Date(now); y.setDate(y.getDate() - 1); return localDateStr(y); }
   return localDateStr(now);
 }
-const fmtD = s => s ? new Date(s + 'T00:00:00').toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }) : '—';
+const fmtD = s => s ? new Date(s + 'T00:00:00').toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short', year: '2-digit' }) : '—';
 
 const inputSt = { width: '100%', padding: '8px 10px', borderRadius: 8, fontSize: 13, background: 'var(--bg3)', border: '1px solid var(--border2)', color: 'var(--text)' };
 const btnSt = (bg = 'var(--accent)', color = bg === 'var(--accent)' ? 'var(--accent-ink)' : '#fff') => ({ padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13, background: bg, color });
@@ -758,11 +758,11 @@ export default function ScrapReport() {
 
   return (
     <Page>
-      <ReadOnlyNote show={!canRecord} role={role} what="สร้าง/แก้ใบรายงานของเสีย"
+      <ReadOnlyNote show={!canRecord} role={role} what={tr("สร้าง/แก้ใบรายงานของเสีย")}
         permKey="scrap:record" hint={tr('ยังเปิดดูใบเดิม พิมพ์ และ export Excel ได้ตามปกติ')} />
       <PageHeader title={tr('ของเสีย — ใบรายงาน & ถังเหลือง/แดง')} icon="♻️"
         sub={tab === 'bins'
-          ? 'ชิ้นงานต้องสงสัย (ถังเหลือง) / ชิ้นงานเสีย (ถังแดง) — เอกสารตัวจริงอยู่ที่นี่ · QA เห็นเฉพาะคิวรอพิจารณาใน /qa'
+          ? tr("ชิ้นงานต้องสงสัย (ถังเหลือง) / ชิ้นงานเสีย (ถังแดง) — เอกสารตัวจริงอยู่ที่นี่ · QA เห็นเฉพาะคิวรอพิจารณาใน /qa")
           : `${scrapFormNo} — ${tr("ลงยอดของเสียต่อไลน์/วัน · ดึงตั้งต้นจาก Daily Report + เพิ่มพาร์ทย่อย · export ตรงฟอร์ม")}`}
         tabs={TABS} tab={tab} onTab={setTab} />
 
@@ -779,7 +779,7 @@ export default function ScrapReport() {
         <Segmented label={tr('สถานะ')} value={stFilter} onChange={setStFilter}
           options={[{ value: '', label: ALL.status }, ...Object.entries(STATUS_META).map(([v, m]) => ({ value: v, label: tr(m.label) }))]} />
         <LineSelect lines={lines} value={lineFilter} onChange={setLineFilter} placeholder={ALL.line} />
-        <SearchInput value={q} onChange={setQ} fields="เลขที่ / ไลน์" />
+        <SearchInput value={q} onChange={setQ} fields={tr("เลขที่ / ไลน์")} />
         <span className="spacer" />
         {canRecord && <button style={btnSt()} onClick={openNew}>{tr('+ เปิดใบใหม่')}</button>}
       </TimeRangeBar>
@@ -795,9 +795,9 @@ export default function ScrapReport() {
       {scopeRes.unsure && (
         <div style={{ ...cardSt, padding: '8px 12px', marginBottom: 12, fontSize: 12.5, color: 'var(--amber)',
           border: '1px solid var(--amber-line)', background: 'var(--amber-dim)' }}>
-          ⚠️ {tr("ยังตัดขอบเขตไลน์ไม่ชัด")} ({scopeRes.reason === 'registry_unloaded' ? 'โหลดทะเบียนไลน์ไม่สำเร็จ'
-            : scopeRes.reason === 'own_line_unknown' ? 'ไม่พบไลน์ที่บัญชีนี้สังกัดในทะเบียน'
-            : 'ส่วนงานของบัญชีนี้ไม่ตรงกับไลน์ไหนในทะเบียน'}) —
+          ⚠️ {tr("ยังตัดขอบเขตไลน์ไม่ชัด")} ({scopeRes.reason === 'registry_unloaded' ? tr("โหลดทะเบียนไลน์ไม่สำเร็จ")
+            : scopeRes.reason === 'own_line_unknown' ? tr("ไม่พบไลน์ที่บัญชีนี้สังกัดในทะเบียน")
+            : tr("ส่วนงานของบัญชีนี้ไม่ตรงกับไลน์ไหนในทะเบียน")}) —
           {tr("รายการด้านล่างอาจกว้าง/แคบกว่าขอบเขตจริงของคุณ")}
         </div>
       )}
@@ -928,12 +928,12 @@ export default function ScrapReport() {
             return (<>
               <div style={{ marginBottom: 12 }}><StepFlow steps={flow.steps} waiting={flow.waiting} unknown={!flow.known} /></div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, marginBottom: 14, alignContent: 'start' }}>
-                <KV k="วันที่" v={fmtD(f.report_date)} />
-                <KV k="ไลน์" v={f.line_name} />
-                <KV k="ส่วน / แผนก" v={[f.section, f.dept].filter(Boolean).join(' / ')} />
+                <KV k={tr("วันที่")} v={fmtD(f.report_date)} />
+                <KV k={tr("ไลน์")} v={f.line_name} />
+                <KV k={tr("ส่วน / แผนก")} v={[f.section, f.dept].filter(Boolean).join(' / ')} />
                 <KV k="Storage Location" v={f.storage_location} />
-                <KV k="ประเภทชิ้นงาน" v={(f.product_categories || []).map(c => catLbl[c] || c).join(', ')} />
-                <KV k="ผู้เปิดใบ" v={f.created_by} />
+                <KV k={tr("ประเภทชิ้นงาน")} v={(f.product_categories || []).map(c => catLbl[c] || c).join(', ')} />
+                <KV k={tr("ผู้เปิดใบ")} v={f.created_by} />
                 <div><div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{tr('สถานะ')}</div>
                   <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 9px', borderRadius: 'var(--r-pill)', color: sm?.color, background: `${tint(sm?.color, 'dim')}`, border: `1px solid ${tint(sm?.color, 'line')}` }}>{tr(sm?.label) || f.status || '—'}</span></div>
               </div>
@@ -950,7 +950,7 @@ export default function ScrapReport() {
               <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 820 }}>
                   <thead><tr>
-                    {['#', 'รูป', 'ชิ้นงาน', 'Code', 'จำนวน', 'ยืนยัน', 'สาเหตุ (4M)', 'ช่วง', 'รหัสงานเสีย'].map(h => <th key={h} style={thSt}>{tr(h)}</th>)}
+                    {['#', tr("รูป"), tr("ชิ้นงาน"), 'Code', tr("จำนวน"), tr("ยืนยัน"), tr("สาเหตุ (4M)"), tr("ช่วง"), tr("รหัสงานเสีย")].map(h => <th key={h} style={thSt}>{tr(h)}</th>)}
                   </tr></thead>
                   <tbody>
                     {its.map((it, i) => (
@@ -982,7 +982,7 @@ export default function ScrapReport() {
       )}
 
       {editor && (
-        <Modal title={editor.report.id ? `✏️ ${tr("แก้ใบ")} ${editor.report.doc_no || ''}` : '➕ เปิดใบรายงานของเสียใหม่'} onClose={closeEditor} width={1180}>
+        <Modal title={editor.report.id ? `✏️ ${tr("แก้ใบ")} ${editor.report.doc_no || ''}` : tr("➕ เปิดใบรายงานของเสียใหม่")} onClose={closeEditor} width={1180}>
           {/* 🪜 ถึงขั้นไหน — กฎ scrapReportFlow() (utils/stepFlow.js) · UI §6.30 */}
           {editor.report.id && (() => { const f = scrapReportFlow(editor.report); return <div style={{ marginBottom: 12 }}><StepFlow steps={f.steps} waiting={f.waiting} unknown={!f.known} /></div>; })()}
           {/* หัวใบ */}
@@ -1106,7 +1106,7 @@ export default function ScrapReport() {
                         <td style={tdSt} data-l="MAT SAP" className="sr-c sr-full">
                           <div style={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
                             <ProductSelect value={it.mat_no} extraOptions={sapExtra} history={itemMatHist} lines={editor.report.line_name ? getLineFamilyNames(allLines, editor.report.line_name) : undefined}
-                              allowFree freeHint="พาร์ทที่ไม่อยู่ในทะเบียน / master กรอกเลขเครื่อง" placeholder="MAT SAP"
+                              allowFree freeHint={tr("พาร์ทที่ไม่อยู่ในทะเบียน / master กรอกเลขเครื่อง")} placeholder="MAT SAP"
                               style={{ width: 150 }} inputStyle={{ padding: '5px 26px 5px 7px', fontSize: 12 }}
                               onChange={r => pickSapForItem(it._key, r)} />
                             <button style={{ ...ghostBtn, padding: '4px 6px' }} title={tr('เลือกจาก SAP/BOM')} onClick={() => { setSapPicker({ itemKey: it._key }); setSapSearch(''); }}>🔍</button>
@@ -1209,7 +1209,7 @@ export default function ScrapReport() {
       {sapPicker && (
         <Modal title={tr('เลือกจาก SAP / BOM')} onClose={() => { setSapPicker(null); setSapSearch(''); }} width={520}>
           <input autoFocus style={inputSt} value={sapSearch} onChange={e => setSapSearch(e.target.value)}
-            placeholder={sapOptions === null ? 'กำลังโหลด…' : `${tr("พิมพ์ค้นหา MAT SAP / Part No / ชื่อ")} (${sapOptions.length})`} />
+            placeholder={sapOptions === null ? tr("กำลังโหลด…") : `${tr("พิมพ์ค้นหา MAT SAP / Part No / ชื่อ")} (${sapOptions.length})`} />
           <div style={{ marginTop: 10, maxHeight: 340, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
             {sapMatches.map((o, i) => (
               <button key={i} onClick={() => applySap(o)} style={{ textAlign: 'left', padding: '8px 10px', borderRadius: 'var(--r-md)', cursor: 'pointer', background: 'var(--card-surf)', border: '1px solid var(--border)', display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -1244,7 +1244,7 @@ export default function ScrapReport() {
                   background: 'var(--card-surf)', border: `1px solid ${mine ? 'var(--blue)' : 'var(--border)'}`,
                 }}>
                   <div style={{ fontSize: 12.5, fontWeight: 700 }}>
-                    {r.doc_no || '(ไม่มีเลขที่)'}
+                    {r.doc_no || tr("(ไม่มีเลขที่)")}
                     <span style={{ color: st.color, fontWeight: 700, marginLeft: 8, fontSize: 11.5 }}>{tr(st.label)}</span>
                     {mine && <span style={{ color: 'var(--blue)', marginLeft: 6, fontSize: 11 }}>{tr('· ไลน์นี้')}</span>}
                   </div>

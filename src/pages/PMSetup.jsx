@@ -1143,7 +1143,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
                       )}
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 6 }}>
                         {/* ตัวกรองลิสต์ติ๊กหลายเครื่อง ⇒ ใช้ <SearchInput> (ไม่ใช่ MachineSelect ซึ่งเลือกได้ตัวเดียว) · UI-STANDARD §4 */}
-                        <SearchInput value={copyQ} onChange={setCopyQ} fields="เลขเครื่อง / ไลน์" grow={false} />
+                        <SearchInput value={copyQ} onChange={setCopyQ} fields={tr("เลขเครื่อง / ไลน์")} grow={false} />
                         <button type="button" onClick={() => setCopyTo(shown.map(e => e.id))} style={S.btnSm('var(--blue)')}>
                           {tr('เลือกที่เห็นทั้งหมด (')}{shown.length})
                         </button>
@@ -1160,7 +1160,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
                         {tr("แสดง")} <b style={{ color: 'var(--text2)' }}>{shown.length}</b> {tr('จาก')} {cands.length}
                         {!q && cands.length > shown.length
                           ? <> {tr('· ซ่อนเครื่องชนิดอื่น')} {cands.length - shown.length} {tr('ตัว —')} <b>{tr('พิมพ์ค้นเพื่อดูทุกชนิด')}</b></>
-                          : q ? ' · กรองด้วยคำค้น (ทุกชนิด)' : ' · ครบทุกเครื่องแล้ว'}
+                          : q ? tr(" · กรองด้วยคำค้น (ทุกชนิด)") : tr(" · ครบทุกเครื่องแล้ว")}
                         {/* 🔴 "ค้นไม่เจอ" กับ "ยังไม่ได้เพิ่มเข้า PM" คนละเรื่อง — ต้องแยกให้เห็น */}
                         {!!notPmYet.length && <> · <b style={{ color: 'var(--accent2)' }}>{tr('อีก')} {notPmYet.length} {tr("เครื่องที่ค้นเจอในทะเบียนเครื่องจักร ยังไม่ได้เพิ่มเป็นอุปกรณ์")} PM</b> {tr('จึงยังคัดลอกไปไม่ได้')}</>}
                       </div>
@@ -1182,7 +1182,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
                           )
                         })}
                         {!shown.length && <span style={{ fontSize: 11.5, color: 'var(--muted)', padding: 4, lineHeight: 1.7 }}>
-                          {!q ? 'ไม่มีเครื่องชนิดเดียวกันตัวอื่น — พิมพ์ค้นเพื่อดูเครื่องชนิดอื่น'
+                          {!q ? tr("ไม่มีเครื่องชนิดเดียวกันตัวอื่น — พิมพ์ค้นเพื่อดูเครื่องชนิดอื่น")
                             : notPmYet.length ? <>{tr('ไม่พบใน')}<b>{tr('ทะเบียนอุปกรณ์ PM')}</b> {tr('— แต่เจอ')} <b style={{ color: 'var(--accent2)' }}>{notPmYet.length} {tr('เครื่อง')}</b> {tr("ใน ทะเบียนเครื่องจักร")} ({notPmYet.slice(0, 4).map(m => m.machine_no || m.machine_name).join(' · ')}{notPmYet.length > 4 ? ' …' : ''})
                                 <br />{tr('⇒ เครื่องพวกนี้')}<b>{tr('ยังไม่ได้ถูกเพิ่มเป็นอุปกรณ์ PM')}</b> {tr("จึงยังไม่มีให้ติ๊ก — ปิดหน้าต่างนี้แล้วกด")} <b>{tr('“+ เพิ่มอุปกรณ์”')}</b> {tr('ให้เครื่องนั้นก่อน แล้วค่อยกลับมาคัดลอก')}</>
                             : <>{tr('ไม่พบ “')}{copyQ.trim()}{tr('” ทั้งใน')}<b>{tr('ทะเบียนอุปกรณ์ PM')}</b>{tr('และ')}<b>{tr('ทะเบียนเครื่องจักร')}</b> {tr('— ตรวจว่าพิมพ์เลขเครื่องถูกไหม')}</>}</span>}
@@ -1225,7 +1225,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
                 <button onClick={() => handleModeSwitch('manual')} style={S.modeBtn(addMode === 'manual')}>{tr('Facility / อื่นๆ')}</button>
               </div>
               <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
-                {addMode === 'workstation' ? 'เลือกเครื่องจักรจริงจาก Daily Report Machine Master' : 'เพิ่มเครื่องจักร/JIG ที่ไม่ได้อยู่ใน Machine Master เช่น Air Pump, Compressor'}
+                {addMode === 'workstation' ? tr("เลือกเครื่องจักรจริงจาก Daily Report Machine Master") : tr("เพิ่มเครื่องจักร/JIG ที่ไม่ได้อยู่ใน Machine Master เช่น Air Pump, Compressor")}
               </p>
             </div>
           )}
@@ -1257,7 +1257,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
                   (ของเดิมเป็น <select> ที่ optgroup ตามไลน์อยู่แล้ว — ตอนเปลี่ยนเป็นช่องค้นหาแล้วกลุ่มหายไป)
                   maxRows สูง เพราะจอนี้คน "ไล่ดูตามไลน์" ไม่ได้พิมพ์ค้นอย่างเดียว */}
               <MachineSelect valueKey="id" value={machineId ?? ''} machines={machineOptionsShown} groupByLine maxRows={999}
-                placeholder={kindFilter === 'all' ? '— ค้นหา / เลือกอุปกรณ์ (รหัส · ชื่อ · ไลน์) —' : `— ${tr("ค้นหา / เลือก")}${EQUIP_TYPE_LABEL[kindFilter] ?? ''} (${tr("รหัส · ชื่อ · ไลน์")}) —`}
+                placeholder={kindFilter === 'all' ? tr("— ค้นหา / เลือกอุปกรณ์ (รหัส · ชื่อ · ไลน์) —") : `— ${tr("ค้นหา / เลือก")}${EQUIP_TYPE_LABEL[kindFilter] ?? ''} (${tr("รหัส · ชื่อ · ไลน์")}) —`}
                 onChange={({ id }) => { const v = id || null; if (v !== (machineId ?? null)) handleMachineSelect(v) }} />
               {machineId && (
                 <div style={{ marginTop: 8, padding: '8px 12px', background: 'var(--bg3)', borderRadius: 'var(--r-md)', fontSize: 12, color: 'var(--text2)' }}>
@@ -1337,7 +1337,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
             <div><label style={S.label}>Machine No.</label>
               <MachineSelect value={machineNo} machines={machineOptions} lines={lineName ? [lineName] : undefined} groupByLine allowFree history={jigMachineHist}
                 disabled={addMode === 'workstation' && !isEdit}
-                freeHint="(อุปกรณ์ที่ไม่อยู่ใน Machine Master — จะไม่ผูก machine_id)"
+                freeHint={tr("(อุปกรณ์ที่ไม่อยู่ใน Machine Master — จะไม่ผูก machine_id)")}
                 onChange={res => {
                   setMachineNo(res.machine_no || '')
                   setMachineId(res.opt ? res.id : null)
@@ -1352,7 +1352,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
             {/* ค้นพาร์ทจาก Product Master → เติม Part Name/No. ให้ (jigs ไม่เก็บ mat_no) · พิมพ์ทับได้ = จิ๊กที่ใช้กับหลายพาร์ท · 2026-09-07 */}
             <div style={{ gridColumn: '1 / -1' }}><label style={S.label}>{tr('เลือกพาร์ทจาก Product Master (เติม Part Name / Part No. ให้)')}</label>
               <ProductSelect value={partMat} lines={lineName ? [lineName] : undefined} allowFree
-                freeHint="(พาร์ทที่ยังไม่อยู่ใน Product Master — กรอก Part Name/No. เองด้านบน)"
+                freeHint={tr("(พาร์ทที่ยังไม่อยู่ใน Product Master — กรอก Part Name/No. เองด้านบน)")}
                 onChange={res => {
                   setPartMat(res.mat_no || '')
                   if (res.opt) { setPartName(res.name || res.mat_no || ''); setPartNo(res.p_no || res.mat_no || '') }
@@ -1365,7 +1365,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
               {/* <LineSelect> แทนช่องพิมพ์เอง — jigs.line_name เป็นคีย์จัดกลุ่ม DailyPM/PMSchedule/FactoryMap · พื้นที่ facility
                   แยก optgroup จาก pm_facility_areas · ค่าเก่าที่ไม่อยู่ในทะเบียนยังโชว์ ⚠ ไม่หายเงียบ · 2026-09-07 */}
               <LineSelect lines={lineOptions} value={lineName} onChange={setLineName} placeholder={tr('— เลือกไลน์ / พื้นที่ —')} includeRetired
-                extraGroups={[{ label: 'พื้นที่ Facility / Utility', options: facilityAreas.filter(a => !lineOptions.some(l => l.name === a.name)).map(a => ({ value: a.name, label: a.name })) }]}
+                extraGroups={[{ label: tr("พื้นที่ Facility / Utility"), options: facilityAreas.filter(a => !lineOptions.some(l => l.name === a.name)).map(a => ({ value: a.name, label: a.name })) }]}
                 style={{ width: '100%' }} />
             </div>
           )}
@@ -1387,8 +1387,8 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
             </div>
             <div style={{ marginTop: 6, fontSize: 11.5, color: Number(cycleDays) > 0 ? 'var(--muted)' : '#f59a3f' }}>
               {Number(cycleDays) > 0
-                ? <>{tr('รอบ:')} <b style={{ color: 'var(--accent)' }}>{cycleLabel(null, Number(cycleDays))}</b> · {tr("ครบกำหนด")} = {nextDue ? 'วันที่กำหนดไว้ แล้วหลังตรวจจริง = วันตรวจ + รอบ' : 'วันตรวจล่าสุด + รอบ (ยังไม่เคยตรวจ = ใส่วัน PM ครั้งถัดไปเพื่อให้ระบบเตือนได้)'}</>
-                : <>⚠️ {tr("ยังไม่ตั้งรอบ = ระบบคิดวันครบกำหนดและเตือนล่วงหน้าไม่ได้")}{planType === 'usage' ? ' (แผนตามการใช้งานอย่างเดียวไม่ต้องมีรอบวันก็ได้)' : ''}</>}
+                ? <>{tr('รอบ:')} <b style={{ color: 'var(--accent)' }}>{cycleLabel(null, Number(cycleDays))}</b> · {tr("ครบกำหนด")} = {nextDue ? tr("วันที่กำหนดไว้ แล้วหลังตรวจจริง = วันตรวจ + รอบ") : tr("วันตรวจล่าสุด + รอบ (ยังไม่เคยตรวจ = ใส่วัน PM ครั้งถัดไปเพื่อให้ระบบเตือนได้)")}</>
+                : <>⚠️ {tr("ยังไม่ตั้งรอบ = ระบบคิดวันครบกำหนดและเตือนล่วงหน้าไม่ได้")}{planType === 'usage' ? tr(" (แผนตามการใช้งานอย่างเดียวไม่ต้องมีรอบวันก็ได้)") : ''}</>}
             </div>
           </div>
 
@@ -1444,7 +1444,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
             {[...new Set(checkpoints.map(c => (c.group_name || '').trim()).filter(Boolean))].map(g => <option key={g} value={g} />)}
           </datalist>
           <PinWorkspace twoCol={twoColSetup} stickyRef={jumpStickyRef}
-            boardTitle="รูปอุปกรณ์ (หลายมุม) + จุดตรวจ"
+            boardTitle={tr("รูปอุปกรณ์ (หลายมุม) + จุดตรวจ")}
             boardBadge={frames.length > 0 && pinnedCount > 0 ? `📍 ${pinnedCount}/${checkpoints.length} ${tr("จุดวางแล้ว")}` : null}
             board={layoutType === 'image_pin' && (
                 <SpinAnnotator
@@ -1477,7 +1477,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
                      ถ้าพลิก aspect เฉยๆ cap จะตกจาก 1200 เหลือ 900 = รูปเก่าคมกว่ารูปใหม่ */
                   file={cropQueue[0]} aspect={4 / 3} outputSize={1200} quality={0.82}
                   /* ไม่ใส่ fullDefault — จอนี้ส่วนใหญ่ครอบเฉพาะจุดตรวจ พฤติกรรมเดิมคือเริ่มที่โหมดครอบ */
-                  allowFull fullHint="เก็บทั้งภาพไว้ — สำหรับรูปภาพรวมเครื่องที่จุดตรวจกระจายทั้งภาพ"
+                  allowFull fullHint={tr("เก็บทั้งภาพไว้ — สำหรับรูปภาพรวมเครื่องที่จุดตรวจกระจายทั้งภาพ")}
                   title={`${tr("จัดกรอบรูป")}${cropQueue.length > 1 ? ` (${tr("เหลืออีก")} ${cropQueue.length - 1} ${tr("รูป")})` : ''}`}
                   onCancel={() => setCropQueue(q => q.slice(1))}
                   onConfirm={pushFrame} />
@@ -1494,7 +1494,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
                             borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)' }}>
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', fontSize: 11.5, color: 'var(--text2)' }}>
                   <b style={{ color: comp.done ? 'var(--accent)' : 'var(--text)' }}>
-                    {comp.done ? '✅ ใบนี้ครบตามแพทเทินแล้ว' : '📋 ความครบของใบนี้'}
+                    {comp.done ? tr("✅ ใบนี้ครบตามแพทเทินแล้ว") : tr("📋 ความครบของใบนี้")}
                   </b>
                   <span>{tr('มุม')} <b>{comp.frames}</b></span>
                   <span>{tr('จุดตรวจ')} <b>{comp.cps}</b></span>
@@ -1631,7 +1631,7 @@ function EquipmentTable({ groups, canSetup, onEdit, onDelete }) {
                       {r.cpCount}{r.hasPins && <span title={tr('ปักหมุดบนรูปแล้ว')} style={{ marginLeft: 4 }}>📍</span>}
                     </td>
                     <td style={{ whiteSpace: 'nowrap', fontSize: 12, fontWeight: 700, color: st?.color ?? 'var(--muted)' }}>
-                      {st ? `${st.icon} ${st.label}` : '✓ พร้อม'}
+                      {st ? `${st.icon} ${tr(st.label)}` : tr("✓ พร้อม")}
                       {r.status === 'am_pending' && <> · <Link to="/daily-checker?tab=pm" onClick={e => e.stopPropagation()} style={{ color: st.color, textDecoration: 'underline' }}>{tr('ลงทะเบียน')}</Link></>}
                     </td>
                     {canSetup && (
@@ -1873,7 +1873,7 @@ export default function PMSetup() {
           <select value={fStatus} onChange={e => setFStatus(e.target.value)} aria-label={tr('สถานะ')}>
             {statusOptions.map(o => <option key={o.value} value={o.value} title={o.title}>{tr(o.label)}</option>)}
           </select>
-          <SearchInput value={fQ} onChange={setFQ} fields="ชื่อ / No. / เลขเครื่อง / ไลน์" />
+          <SearchInput value={fQ} onChange={setFQ} fields={tr("ชื่อ / No. / เลขเครื่อง / ไลน์")} />
           <span style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap' }}>
             {tr("แสดง")} <b style={{ color: 'var(--text)' }}>{shownRows.length}</b> {tr('จาก')} {allRows.length}
           </span>
@@ -1882,8 +1882,8 @@ export default function PMSetup() {
         actions={canSetup && <>
           {/* ปุ่มตายตัว ≤2 (UI §6.35): [+ เพิ่มอุปกรณ์] · ทะเบียนประเภท/วิธีตรวจ → ⋯ */}
           <OverflowMenu items={[
-            { key: 'cat', icon: '⚙️', label: 'ทะเบียนประเภท', onClick: () => setTaxModal('category') },
-            { key: 'method', icon: '📋', label: 'ทะเบียนวิธีตรวจ', onClick: () => setTaxModal('method') },
+            { key: 'cat', icon: '⚙️', label: tr("ทะเบียนประเภท"), onClick: () => setTaxModal('category') },
+            { key: 'method', icon: '📋', label: tr("ทะเบียนวิธีตรวจ"), onClick: () => setTaxModal('method') },
           ]} />
           <button type="button" className="pg-btn primary" onClick={openCreate}>{tr('+ เพิ่มอุปกรณ์')}</button>
         </>} />

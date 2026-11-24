@@ -43,7 +43,7 @@ import {
   buildMaintenanceLevels, summarizeItems, actionsOf, splitWindows,
   PRIORITY, TREND_META, THRESH, WINDOW,
 } from '../utils/maintenanceLevels';
-import { tr as trI18n } from '../utils/i18n';
+import { tr as trI18n, dateLocale } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 import TabBar from '../components/TabBar';   // แถบเลือกมุมมอง = แท็บเส้นใต้มาตรฐาน (UI §6.36 ข้อ 0)
 
@@ -64,10 +64,10 @@ const pvMeta = (s) => STATUS_META[s] || PV_EXTRA[s] || { label: s, color: '#9aa3
 const fmtYmd = (ymd) => {
   if (!ymd) return '—';
   const [y, m, d] = ymd.split('-').map(Number);
-  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('th-TH', { timeZone: 'UTC', day: 'numeric', month: 'short' });
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString(dateLocale(), { timeZone: 'UTC', day: 'numeric', month: 'short' });
 };
-const fmtMs = (ms) => (ms ? new Date(ms).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short' }) : '—');
-const n1 = (v) => (v == null ? '—' : Number(v).toLocaleString('th-TH', { maximumFractionDigits: 1 }));
+const fmtMs = (ms) => (ms ? new Date(ms).toLocaleDateString(dateLocale(), { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short' }) : '—');
+const n1 = (v) => (v == null ? '—' : Number(v).toLocaleString(dateLocale(), { maximumFractionDigits: 1 }));
 
 function Chip({ color, children, title }) {
   return (
@@ -171,7 +171,7 @@ export default function MaintenanceLevels() {
       if (!alive) return;
       const NAMES = ['ทะเบียนเครื่อง', 'downtime', 'กะการผลิต', 'นโยบายพัก', 'ใบตรวจ PM', 'อุปกรณ์ PM', 'แผน PM', 'ผลตรวจ'];
       const errs = res.map((r, i) => (r.error ? NAMES[i] : null)).filter(Boolean);
-      if (spareRes.error) errs.push('อะไหล่ของแผน PM (คำแนะนำเรื่องอะไหล่ไม่ครบ)');
+      if (spareRes.error) errs.push(trI18n("อะไหล่ของแผน PM (คำแนะนำเรื่องอะไหล่ไม่ครบ)"));
       if (errs.length) {
         setLoadErr(`${trI18n("โหลดไม่สำเร็จ")}: ${errs.join(' · ')} — ${trI18n("ตัวเลขบนจอไม่ครบ")}`);
         toast.error(`${trI18n("โหลดข้อมูลไม่ครบ")}: ${errs.join(' · ')}`);
@@ -266,7 +266,7 @@ export default function MaintenanceLevels() {
           { value: 'todo', label: `🎯 ${trI18n("สิ่งที่ควรทำ")} (${actionsOf(scoped).length})` },
           { value: 'equip', label: `📋 ${trI18n("รายอุปกรณ์")} (${scoped.length})` },
         ]} />
-        <SearchInput value={q} onChange={setQ} fields="เลขเครื่อง / ชื่อ / ไลน์" ariaLabel="ค้นหาอุปกรณ์" />
+        <SearchInput value={q} onChange={setQ} fields={trI18n("เลขเครื่อง / ชื่อ / ไลน์")} ariaLabel={trI18n("ค้นหาอุปกรณ์")} />
         <span className="spacer" />
         <button onClick={() => setReloadKey(k => k + 1)} style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', color: 'var(--text2)', borderRadius: 'var(--r-md)', padding: '0 12px', fontSize: 13, cursor: 'pointer', fontWeight: 700 }}>{trI18n('รีเฟรช')}</button>
       </FilterBar>
@@ -275,10 +275,10 @@ export default function MaintenanceLevels() {
       {/* ── บันได 3 ขั้น ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12, alignContent: 'start' }}>
         <LevelCard step="1" title={trI18n('Preventive — ป้องกันตามแผน')} en="Time-based PM" color="#4a90e0"
-          question="แผนบอกว่าถึงเวลาหรือยัง"
+          question={trI18n("แผนบอกว่าถึงเวลาหรือยัง")}
           foot={sum.preventive.failingNoPlan > 0
             ? `${trI18n("ช่องว่าง")}: ${sum.preventive.failingNoPlan} ${trI18n("อุปกรณ์เสีย")} ≥${THRESH.minStops} ${trI18n("ครั้ง/30 วัน แต่ยังไม่มีแผน PM ที่มีรอบ")}`
-            : 'แผนที่เป็น "ตามรอบ" ไม่มีวันครบกำหนด = ระบบเตือนล่วงหน้าไม่ได้'}>
+            : trI18n("แผนที่เป็น \"ตามรอบ\" ไม่มีวันครบกำหนด = ระบบเตือนล่วงหน้าไม่ได้")}>
           <Stat label={trI18n('มีแผน PM')} value={sum.preventive.withPlan} sub={`(${trI18n("มีรอบจริง")} ${sum.preventive.withCycle})`} />
           <Stat label={trI18n('เลยกำหนด')} value={sum.preventive.overdue} color={sum.preventive.overdue ? 'var(--red)' : undefined} />
           <Stat label={trI18n('ใกล้ครบกำหนด')} value={sum.preventive.dueSoon} color={sum.preventive.dueSoon ? '#f59a3f' : undefined} />
@@ -286,7 +286,7 @@ export default function MaintenanceLevels() {
         </LevelCard>
 
         <LevelCard step="2" title={trI18n('Predictive — ดูจากข้อมูลจริง')} en="Reliability-based (downtime)" color="var(--blue)"
-          question="เครื่องกำลังเสียบ่อยขึ้นไหม · จะเสียอีกเมื่อไหร่"
+          question={trI18n("เครื่องกำลังเสียบ่อยขึ้นไหม · จะเสียอีกเมื่อไหร่")}
           foot={`${trI18n("เทียบ")} ${WINDOW.recentDays} ${trI18n("วันล่าสุด (ตั้งแต่")} ${fmtYmd(cov?.recentFrom)}) ${trI18n("กับ")} ${WINDOW.baseDays} ${trI18n("วันก่อนหน้า · ต่อชั่วโมงเดินเครื่องจริง (หักพักแล้ว")})`}>
           <Stat label={trI18n('วิเคราะห์ได้')} value={sum.predictive.analysed} sub={sum.predictive.nodata ? `(${trI18n("ไม่รู้ชั่วโมงเดิน")} ${sum.predictive.nodata})` : ''} />
           <Stat label={trI18n('แนวโน้มแย่ลง')} value={sum.predictive.worse} color={sum.predictive.worse ? 'var(--red)' : undefined} />
@@ -298,8 +298,8 @@ export default function MaintenanceLevels() {
         </LevelCard>
 
         <LevelCard step="3" title={trI18n('Prescriptive — บอกว่าควรทำอะไร')} en="Recommended actions" color="#3dd65c"
-          question="ควรทำอะไร ภายในเมื่อไหร่ เพราะอะไร"
-          foot="กฎที่อ่านออกได้ ไม่ใช่ AI — ทุกข้อบอกเหตุผลเป็นตัวเลข · ระบบไม่เลื่อนแผนให้เอง ช่างเป็นคนตัดสิน">
+          question={trI18n("ควรทำอะไร ภายในเมื่อไหร่ เพราะอะไร")}
+          foot={trI18n("กฎที่อ่านออกได้ ไม่ใช่ AI — ทุกข้อบอกเหตุผลเป็นตัวเลข · ระบบไม่เลื่อนแผนให้เอง ช่างเป็นคนตัดสิน")}>
           <Stat label={trI18n('คำแนะนำทั้งหมด')} value={sum.prescriptive.total} sub={`(${sum.prescriptive.equip} ${trI18n("อุปกรณ์")})`} />
           <Stat label={trI18n(PRIORITY[1].label)} value={sum.prescriptive.p1} color={sum.prescriptive.p1 ? PRIORITY[1].color : undefined} />
           <Stat label={trI18n(PRIORITY[2].label)} value={sum.prescriptive.p2} color={sum.prescriptive.p2 ? PRIORITY[2].color : undefined} />
@@ -308,22 +308,22 @@ export default function MaintenanceLevels() {
       </div>
 
       {/* ชนิดอุปกรณ์ = แท็บเส้นใต้ · ความสำคัญ (todo) = Segmented ปลายแถว (UI §6.36 ข้อ 0 · 06/11) */}
-      <TabBar size="sm" value={kind} onChange={setKind} tabs={KIND_CHIPS.map(c => ({ key: c.key, label: c.label }))}
+      <TabBar size="sm" value={kind} onChange={setKind} tabs={KIND_CHIPS.map(c => ({ key: c.key, label: trI18n(c.label) }))}
         right={view === 'todo' && (
           <Segmented size="sm" label={trI18n('ความสำคัญ')} value={prio} onChange={setPrio}
-            options={[0, 1, 2, 3].map(p => ({ value: p, label: p ? PRIORITY[p].label : ALL.priority }))} />
+            options={[0, 1, 2, 3].map(p => ({ value: p, label: p ? trI18n(PRIORITY[p].label) : ALL.priority }))} />
         )} />
 
       {/* ── ตาราง ── */}
       {!shownRows.length ? (
         <div style={{ ...card, textAlign: 'center', color: 'var(--muted)', fontSize: 13, padding: 30 }}>
-          {view === 'todo' ? 'ไม่มีคำแนะนำในตัวกรองนี้ ✅' : 'ไม่มีอุปกรณ์ในตัวกรองนี้ (อุปกรณ์ที่ไม่มีแผน PM และไม่เคยเสียใน 90 วัน ไม่ขึ้นรายการ)'}
+          {view === 'todo' ? trI18n("ไม่มีคำแนะนำในตัวกรองนี้ ✅") : trI18n("ไม่มีอุปกรณ์ในตัวกรองนี้ (อุปกรณ์ที่ไม่มีแผน PM และไม่เคยเสียใน 90 วัน ไม่ขึ้นรายการ)")}
         </div>
       ) : view === 'todo' ? (
         <div className="table-sticky" style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
             <thead><tr style={{ background: 'var(--bg3)' }}>
-              {['ความด่วน', 'อุปกรณ์', 'ควรทำ', 'เพราะอะไร (ข้อมูลจริง)', 'ภายใน', ''].map(h => <th key={h} style={th}>{trI18n(h)}</th>)}
+              {[trI18n("ความด่วน"), trI18n("อุปกรณ์"), trI18n("ควรทำ"), trI18n("เพราะอะไร (ข้อมูลจริง)"), trI18n("ภายใน"), ''].map(h => <th key={h} style={th}>{trI18n(h)}</th>)}
             </tr></thead>
             <tbody>
               {acts.slice(0, limit).map(a => (
@@ -347,7 +347,7 @@ export default function MaintenanceLevels() {
         <div className="table-sticky" style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1080 }}>
             <thead><tr style={{ background: 'var(--bg3)' }}>
-              {['อุปกรณ์', '① แผน PM', '② เสีย 30 วัน', 'ต่อ 100 ชม.เดิน', 'แนวโน้ม', 'MTBF', 'คาดเสียครั้งถัดไป', 'เวลาหยุดที่คาด 30 วัน', '≈ มูลค่า', '③ คำแนะนำ'].map(h => <th key={h} style={th}>{trI18n(h)}</th>)}
+              {[trI18n("อุปกรณ์"), trI18n("① แผน PM"), trI18n("② เสีย 30 วัน"), trI18n("ต่อ 100 ชม.เดิน"), trI18n("แนวโน้ม"), 'MTBF', trI18n("คาดเสียครั้งถัดไป"), trI18n("เวลาหยุดที่คาด 30 วัน"), trI18n("≈ มูลค่า"), trI18n("③ คำแนะนำ")].map(h => <th key={h} style={th}>{trI18n(h)}</th>)}
             </tr></thead>
             <tbody>
               {scoped.slice(0, limit).map(it => {
@@ -408,7 +408,7 @@ export default function MaintenanceLevels() {
         {trI18n("แม่พิมพ์/จิ๊ก ใช้ชั่วโมงเดินของไลน์แทนเวลาที่ถูกใช้จริง (อัตราเสียต่ำกว่าจริง) · ยังไม่มีผลวัดค่า SPC จากใบตรวจ ⇒ ยังทำ predictive จากสภาพเครื่อง (condition-based) ไม่ได้")} ·
         {cov?.unmatched ? ` ${trI18n("เลขเครื่องที่กรอกแต่ไม่อยู่ในทะเบียน")} ${cov.unmatched} ${trI18n("เลข (ติดป้าย \"นอกทะเบียน")}") ·` : ''}
         {cov?.unknownShifts ? ` ${trI18n("กะที่หาชั่วโมงไม่ได้")} ${cov.unknownShifts} ${trI18n("กะ (ชั่วโมงเดินต่ำกว่าจริง")}) ·` : ''}
-        {cov && !cov.hasBreakPolicy ? ' ⚠️ ไม่พบนโยบายเวลาพัก — ชั่วโมงเดินสูงกว่าจริง ·' : ''}
+        {cov && !cov.hasBreakPolicy ? trI18n(" ⚠️ ไม่พบนโยบายเวลาพัก — ชั่วโมงเดินสูงกว่าจริง ·") : ''}
         {cov?.checklistNoEquip ? ` ${trI18n("ใบตรวจ PM ที่หาอุปกรณ์ไม่เจอ")} ${cov.checklistNoEquip} ${trI18n("ใบ")} ·` : ''}
         {cov?.amChecklists ? ` ${trI18n("ใบตรวจ AM (ผลิตตรวจเอง")}) ${cov.amChecklists} ${trI18n("ใบ ไม่นับในชั้น Preventive — ดูที่จอ")} AM ·` : ''}
         {' '}{trI18n("อุปกรณ์ที่ไม่มีแผน PM และไม่เสียเลยใน 90 วันไม่ขึ้นรายการ")}

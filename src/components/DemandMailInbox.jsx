@@ -4,7 +4,7 @@ import { toast } from './Toast';
 import { checkWrite } from '../utils/dbWrite';
 import { mailsMissingFiles } from '../utils/mailInbox';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
 /* ─── 📬 ไฟล์จากเมลรอนำเข้า (2026-09-30) ─────────────────────────────────────
    แถวในคิว `demand_mail_inbox` (DR) เกิดจากสคริปต์ Outlook บนเครื่อง user
@@ -18,7 +18,7 @@ const STALE_H = 24;
 /** ชนิดไฟล์จากชื่อ (`830_…` / `862_…`) — ไว้เทียบว่าใบไหนใหม่กว่า · ไม่รู้ = null (ไม่เตือน) */
 const kindOf = (name) => (String(name || '').match(/^(830|862)[_ .-]/) || [])[1] || null;
 const tsOf = (r) => new Date(r.received_at || r.created_at).getTime();
-const fmtTime = (iso) => (iso ? new Date(iso).toLocaleString('th-TH', {
+const fmtTime = (iso) => (iso ? new Date(iso).toLocaleString(dateLocale(), {
   timeZone: 'Asia/Bangkok', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
 }) : '—');
 
@@ -116,7 +116,7 @@ export default function DemandMailInbox({ refreshKey, onOpen, fullName }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: rows.length ? 8 : 0 }}>
         <span style={{ fontWeight: 800, fontSize: 13, color: 'var(--text)' }}>{tr('ไฟล์จากเมลรอนำเข้า')}</span>
         <span style={{ fontSize: 12, color: rows.length ? 'var(--accent2)' : 'var(--muted)', fontWeight: 700 }}>
-          {err ? '' : rows.length ? `${rows.length} ${tr("ไฟล์")}` : 'ไม่มีไฟล์ค้าง'}
+          {err ? '' : rows.length ? `${rows.length} ${tr("ไฟล์")}` : tr("ไม่มีไฟล์ค้าง")}
         </span>
         <button type="button" onClick={load} style={{ marginLeft: 'auto', fontSize: 12, padding: '4px 10px', borderRadius: 'var(--r-md)',
           background: 'var(--card-surf)', border: '1px solid var(--border)', color: 'var(--text2)', cursor: 'pointer' }}>↻</button>
@@ -129,7 +129,7 @@ export default function DemandMailInbox({ refreshKey, onOpen, fullName }) {
         <div key={m.message_id || m.subject} style={{ fontSize: 12, color: '#ef4444', fontWeight: 700, marginTop: 4,
           padding: '6px 8px', borderRadius: 'var(--r-md)', border: '1px solid rgba(239,68,68,0.5)', background: 'var(--card-surf)' }}>
           {tr("เมล")} "{m.subject}" ({fmtTime(m.received_at)}) {tr("หัวเรื่องบอกว่ามีไฟล์")} {m.missing.join(' + ')} {tr("แต่ระบบได้รับแค่")}
-          {m.got.length ? ` ${m.got.join(' + ')}` : 'ไม่มีไฟล์'} {tr('— ข้อมูล')} {m.missing.join('/')} {tr("ของวันนั้นยังไม่เข้าระบบ · เช็คเมลต้นทางว่าแนบมาครบไหม (ชื่อไฟล์ต้องขึ้นต้น")} {m.missing.map(k => `${k}_`).join(' / ')}) {tr("หรือลากไฟล์มาอัพเองด้านล่าง")}
+          {m.got.length ? ` ${m.got.join(' + ')}` : tr("ไม่มีไฟล์")} {tr('— ข้อมูล')} {m.missing.join('/')} {tr("ของวันนั้นยังไม่เข้าระบบ · เช็คเมลต้นทางว่าแนบมาครบไหม (ชื่อไฟล์ต้องขึ้นต้น")} {m.missing.map(k => `${k}_`).join(' / ')}) {tr("หรือลากไฟล์มาอัพเองด้านล่าง")}
         </div>
       ))}
       {rows.map(r => {
@@ -155,7 +155,7 @@ export default function DemandMailInbox({ refreshKey, onOpen, fullName }) {
             }}
               style={{ fontSize: 12, fontWeight: 700, padding: '6px 12px', borderRadius: 'var(--r-md)', cursor: 'pointer',
                 background: 'var(--accent)', color: 'var(--accent-ink)', border: '1px solid var(--accent)' }}>
-              {busy === r.id ? 'กำลังเปิด…' : '📥 เปิดเพื่อนำเข้า'}
+              {busy === r.id ? tr("กำลังเปิด…") : tr("📥 เปิดเพื่อนำเข้า")}
             </button>
             <button type="button" onClick={() => skip(r)}
               style={{ fontSize: 12, padding: '6px 10px', borderRadius: 'var(--r-md)', cursor: 'pointer',

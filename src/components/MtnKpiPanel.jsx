@@ -95,7 +95,7 @@ export default function MtnKpiPanel({ orders = [], scopeLines = null, lineObjs =
     const satOverall = rated.length ? rated.reduce((s, o) => s + satAvg(o.satisfaction), 0) / rated.length : null;
     const satByDim = SAT_DIMS.map(d => {
       const vs = rated.map(o => Number(o.satisfaction?.[d.key])).filter(v => v >= 1 && v <= 3);
-      return { label: d.label, avg: vs.length ? vs.reduce((a, b) => a + b, 0) / vs.length : null, n: vs.length };
+      return { label: trI18n(d.label), avg: vs.length ? vs.reduce((a, b) => a + b, 0) / vs.length : null, n: vs.length };
     });
     return { n: rows.length, resp: avg(resp), ttr: avg(ttr), bd: avg(bd),
              respBox: box(resp), ttrBox: box(ttr), bdBox: box(bd), lateN, lateHr: LATE_MIN / 60,
@@ -167,16 +167,16 @@ export default function MtnKpiPanel({ orders = [], scopeLines = null, lineObjs =
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
         {/* 📏 ใบนี้คือ **ฐานของค่าเฉลี่ยทุกใบทางขวา** — เขียนไว้ให้ชัด ไม่งั้น MTTR ที่คิดจาก 2 ใบ
             กับที่คิดจาก 200 ใบ ดูน่าเชื่อถือเท่ากันบนจอ (UI §6.18 ข้อ 4) */}
-        <Card t="งานที่ปิด (ในช่วง)" v={`${stat.n} ${trI18n("ใบ")}`} h="ฐานที่ใช้คิด MTTA / MTTR / MDT ทุกตัวทางขวา" />
+        <Card t={trI18n("งานที่ปิด (ในช่วง)")} v={`${stat.n} ${trI18n("ใบ")}`} h={trI18n("ฐานที่ใช้คิด MTTA / MTTR / MDT ทุกตัวทางขวา")} />
         {/* 📐 ค่ากลางเป็นตัวหลัก เฉลี่ยอยู่ในบรรทัดคำอธิบาย (11/11 · คำสั่ง user)
             ใบที่กดปุ่มย้อนหลังดันค่าเฉลี่ยพุ่ง แต่ไม่สะเทือนค่ากลาง ⇒ 2 ตัวห่างกันมาก = สัญญาณ */}
-        <Card t="MTTA — เข้าดำเนินการ (ค่ากลาง)" v={fmtMin(stat.respBox.p50)} c="#3b82f6"
+        <Card t={trI18n("MTTA — เข้าดำเนินการ (ค่ากลาง)")} v={fmtMin(stat.respBox.p50)} c="#3b82f6"
           h={`${trI18n("เฉลี่ย")} ${fmtMin(stat.respBox.avg)} · ${trI18n("ช้าสุด 10% เกิน")} ${fmtMin(stat.respBox.p90)}`}
           def={trI18n('Mean Time To Acknowledge = แจ้ง → ช่างรับงาน')} />
-        <Card t="MTTR — เวลาซ่อม (ค่ากลาง)" v={fmtMin(stat.ttrBox.p50)} c="#f59e0b"
+        <Card t={trI18n("MTTR — เวลาซ่อม (ค่ากลาง)")} v={fmtMin(stat.ttrBox.p50)} c="#f59e0b"
           h={`${trI18n("เฉลี่ย")} ${fmtMin(stat.ttrBox.avg)} · ${trI18n("ช้าสุด 10% เกิน")} ${fmtMin(stat.ttrBox.p90)}`}
           def={trI18n('Mean Time To Repair = รับงาน → ซ่อมเสร็จ (ไม่รวมเวลารอช่าง · หักช่วงส่งซ่อมนอกแล้ว)')} />
-        <Card t="MDT — หยุดรวม (ค่ากลาง)" v={fmtMin(stat.bdBox.p50)} c="#ef4444"
+        <Card t={trI18n("MDT — หยุดรวม (ค่ากลาง)")} v={fmtMin(stat.bdBox.p50)} c="#ef4444"
           h={`${trI18n("เฉลี่ย")} ${fmtMin(stat.bdBox.avg)} · ${trI18n("ช้าสุด 10% เกิน")} ${fmtMin(stat.bdBox.p90)}`}
           def={trI18n('Mean Down Time = แจ้ง → ซ่อมเสร็จ (MTTA + MTTR)')} />
         <Card t={`${trI18n("ความพึงพอใจเฉลี่ย")} (${stat.satN} ${trI18n("ใบ")})`} v={stat.satOverall != null ? `${Math.round(stat.satOverall / 3 * 100)}%` : '—'}

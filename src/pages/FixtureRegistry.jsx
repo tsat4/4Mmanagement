@@ -134,10 +134,10 @@ export default function FixtureRegistry() {
       supabaseDR.from('jig_images').select('jig_id'),   // แค่รู้ว่าตัวไหนมีรูป — ป้าย 📷 ให้เลือกตัวที่ปักหมุดได้ก่อน
     ]);
 
-    if (ln.error) warn.push('ไลน์');
-    if (mc.error) warn.push('เครื่องจักร');
-    if (pr.error) warn.push('สินค้า');
-    if (fp.error) warn.push('ทะเบียนจุด');
+    if (ln.error) warn.push(tr("ไลน์"));
+    if (mc.error) warn.push(tr("เครื่องจักร"));
+    if (pr.error) warn.push(tr("สินค้า"));
+    if (fp.error) warn.push(tr("ทะเบียนจุด"));
     setLines(ln.data || []);
     setMachines(mc.data || []);
     setJigsShadow(jg.data || []);
@@ -412,7 +412,7 @@ export default function FixtureRegistry() {
           🔴 prop ชื่อ `tab` ไม่ใช่ `activeTab` — เดิมส่งผิดชื่อ ⇒ **แท็บไม่เคยไฮไลต์เลยสักอัน**
              (PageHeader ไม่มี `activeTab` มันเลยอ่าน `tab` ได้ undefined เงียบๆ · แก้ 22/09) */}
       <PageHeader title="JIG / Fixture" icon="📐"
-        tabs={TABS.map(t => ({ key: t.k, label: `${t.icon} ${t.label}` }))}
+        tabs={TABS.map(t => ({ key: tr(t.k), label: `${t.icon} ${tr(t.label)}` }))}
         tab={tab} onTab={setTab}
       />
 
@@ -423,7 +423,7 @@ export default function FixtureRegistry() {
       {(tab === 'points' || tab === 'shim') && (
         <>
           <FilterBar>
-            <SearchInput value={q} onChange={setQ} fields="ฟิกเจอร์" grow={false} />
+            <SearchInput value={q} onChange={setQ} fields={tr("ฟิกเจอร์")} grow={false} />
             <select value={fxId} onChange={e => setFxId(e.target.value)}>
               <option value="">{tr('— เลือกจิ๊ก / ฟิกเจอร์ (')}{shownFixtures.length}) —</option>
               {shownFixtures.map(f => (
@@ -476,7 +476,7 @@ export default function FixtureRegistry() {
         <div style={{ fontSize: 13, color: 'var(--muted)' }}>{tr('กำลังโหลด…')}</div>
       ) : tab === 'classify' ? (
         <>
-          <ReadOnlyNote show={!canClassify} role={role} what="เปลี่ยนชนิดอุปกรณ์" permKey="machines:edit" />
+          <ReadOnlyNote show={!canClassify} role={role} what={tr("เปลี่ยนชนิดอุปกรณ์")} permKey="machines:edit" />
           <FixtureClassify machines={machines} mapKeys={mapKeys} canEdit={canClassify}
                            lines={lines} onSaved={load} />
         </>
@@ -500,7 +500,7 @@ export default function FixtureRegistry() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
                 <thead style={{ background: 'var(--bg2)' }}>
                   <tr style={{ textAlign: 'left' }}>
-                    {['ฟิกเจอร์', 'จุด', 'ชิม (รวม/เพดาน)', 'กำหนดตรวจ', 'สิ่งที่ต้องทำ'].map(h =>
+                    {[tr("ฟิกเจอร์"), tr("จุด"), tr("ชิม (รวม/เพดาน)"), tr("กำหนดตรวจ"), tr("สิ่งที่ต้องทำ")].map(h =>
                       <th key={h} style={{ padding: '8px 10px' }}>{tr(h)}</th>)}
                   </tr>
                 </thead>
@@ -521,9 +521,9 @@ export default function FixtureRegistry() {
                         {due.text}
                       </td>
                       <td style={{ padding: '7px 10px' }}>
-                        {st.level === 'over' ? '🔴 เกินเพดาน — เปิดใบซ่อมเปลี่ยนชิ้นส่วน'
-                          : due.due ? '🟠 ถึงกำหนดตรวจ'
-                          : st.level === 'warn' ? '🟠 ใกล้เพดานชิม' : '⏳ ใกล้ครบกำหนด'}
+                        {st.level === 'over' ? tr("🔴 เกินเพดาน — เปิดใบซ่อมเปลี่ยนชิ้นส่วน")
+                          : due.due ? tr("🟠 ถึงกำหนดตรวจ")
+                          : st.level === 'warn' ? tr("🟠 ใกล้เพดานชิม") : tr("⏳ ใกล้ครบกำหนด")}
                       </td>
                     </tr>
                   ))}
@@ -543,7 +543,7 @@ export default function FixtureRegistry() {
         </div>
       ) : tab === 'shim' ? (
         <>
-          <ReadOnlyNote show={!canRecord} role={role} what="บันทึกการใส่/ถอดชิม" permKey="fixture_shim:record" />
+          <ReadOnlyNote show={!canRecord} role={role} what={tr("บันทึกการใส่/ถอดชิม")} permKey="fixture_shim:record" />
           <FixtureShimPanel
             points={points} pointId={pointId} onPickPoint={setPointId}
             canRecord={canRecord} canApprove={canApprove} canManage={canManage}
@@ -553,7 +553,7 @@ export default function FixtureRegistry() {
         </>
       ) : (
         <div style={{ display: 'grid', gap: 12 }}>
-          <ReadOnlyNote show={!canManage} role={role} what="จัดการทะเบียนจุด/baseline/เกณฑ์"
+          <ReadOnlyNote show={!canManage} role={role} what={tr("จัดการทะเบียนจุด/baseline/เกณฑ์")}
                         permKey="fixture_point:manage" />
           {canManage && (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -619,7 +619,7 @@ export default function FixtureRegistry() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
                 <thead style={{ background: 'var(--bg2)' }}>
                   <tr style={{ textAlign: 'left' }}>
-                    {['จุด', 'ชนิด', 'บนรูป', 'baseline', 'ปัจจุบัน', 'เพดาน', 'ความถี่ตรวจ', 'อายุชิ้นส่วน', ''].map(h =>
+                    {[tr("จุด"), tr("ชนิด"), tr("บนรูป"), 'baseline', tr("ปัจจุบัน"), tr("เพดาน"), tr("ความถี่ตรวจ"), tr("อายุชิ้นส่วน"), ''].map(h =>
                       <th key={h} style={{ padding: '8px 10px' }}>{tr(h)}</th>)}
                   </tr>
                 </thead>
@@ -637,7 +637,7 @@ export default function FixtureRegistry() {
                         <td style={{ padding: '7px 10px' }}>{kindMeta(p.kind_code).icon} {kindMeta(p.kind_code).label}</td>
                         <td style={{ padding: '7px 10px', whiteSpace: 'nowrap', fontSize: 11.5 }}>
                           {(() => { const pin = pointPin(p, cpById); return pin
-                            ? <span style={{ color: 'var(--blue)', fontWeight: 700 }} title={pin.source === 'checkpoint' ? tr('ยืมหมุดจากจุดตรวจ PM') : tr('หมุดของจุดนี้เอง')}>{pin.source === 'checkpoint' ? 'จาก PM' : `${tr("เฟรม")} ${Math.max(1, frames.findIndex(f => f._key === (pin.imageId ?? frames[0]?._key)) + 1)}`}</span>
+                            ? <span style={{ color: 'var(--blue)', fontWeight: 700 }} title={pin.source === 'checkpoint' ? tr('ยืมหมุดจากจุดตรวจ PM') : tr('หมุดของจุดนี้เอง')}>{pin.source === 'checkpoint' ? tr("จาก PM") : `${tr("เฟรม")} ${Math.max(1, frames.findIndex(f => f._key === (pin.imageId ?? frames[0]?._key)) + 1)}`}</span>
                             : <span style={{ color: 'var(--muted)' }}>—</span>; })()}
                           {canManage && frames.length > 0 && (
                             <button onClick={() => setArmPoint(a => a === p.id ? '' : p.id)} title={tr('วางตำแหน่งบนรูป')}
@@ -736,7 +736,7 @@ export default function FixtureRegistry() {
           <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)',
                         padding: 18, width: 'min(620px,100%)', maxHeight: '90vh', overflow: 'auto' }}>
             <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 12 }}>
-              {editing.id ? `${tr("แก้ไขจุด")} ${editing.point_no}` : 'เพิ่มจุดใหม่'} · {fx?.machine_no}
+              {editing.id ? `${tr("แก้ไขจุด")} ${editing.point_no}` : tr("เพิ่มจุดใหม่")} · {fx?.machine_no}
             </div>
             <div className="mgrid" style={{ display: 'grid', gap: 10,
                                             gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))' }}>

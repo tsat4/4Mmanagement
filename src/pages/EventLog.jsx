@@ -391,7 +391,7 @@ function CreateEventForm({ form, setForm, groupedEvents, lines, matrix, checkIte
           <div>
             <label style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Station Number</label>
             {/* station = เลขเครื่อง (SP-67) จากทะเบียน machines (DR) — ออกรายงาน CQI-15 ให้ลูกค้าตรวจ ต้องสะกดตรงทะเบียน (2026-09-07) */}
-            <MachineSelect value={form.station_number || ''} lines={famNames} allowFree history={stationHist} freeHint="สถานีที่ยังไม่มีในทะเบียนเครื่อง /machines"
+            <MachineSelect value={form.station_number || ''} lines={famNames} allowFree history={stationHist} freeHint={tr("สถานีที่ยังไม่มีในทะเบียนเครื่อง /machines")}
               placeholder={tr('เช่น SP-67')} onChange={r => f('station_number', r.machine_no)} />
           </div>
           <div>
@@ -900,7 +900,7 @@ function EventList({ logs, loading, onSelect, role, eventDefs }) {
               {k.value}<span style={{ fontSize: k.primary ? 17 : 13, fontWeight: 500, color: 'var(--text2)', marginLeft: 4 }}>{tr('ใบ')}</span>
             </div>
             <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 3 }}>
-              {k.sub ?? (stats.total > 0 ? `${Math.round(k.value / stats.total * 100)}% ${tr("ของ")} ${stats.total} ${tr("ใบ")}` : 'ยังไม่มีใบในช่วงนี้')}
+              {k.sub ?? (stats.total > 0 ? `${Math.round(k.value / stats.total * 100)}% ${tr("ของ")} ${stats.total} ${tr("ใบ")}` : tr("ยังไม่มีใบในช่วงนี้"))}
             </div>
           </div>
         ))}
@@ -1171,7 +1171,7 @@ function EventDetailModal({ log, matrix, checkItems, eventDefs, role: roleProp, 
               <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 'var(--r-pill)', background: sm.bg, color: sm.color }}>{tr(sm.label)}</span>
             </div>
             <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>Event #{def?.event_no} · {def?.name_th}</div>
-            <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>{log.line_name} · {log.station_number || 'ไม่ระบุ Station'} · {fmtDate(log.work_date)} {log.event_time || ''}</div>
+            <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>{log.line_name} · {log.station_number || tr("ไม่ระบุ Station")} · {fmtDate(log.work_date)} {log.event_time || ''}</div>
             {(() => {
               const approvedAt = finalApprovedAt;
               if (!approvedAt) return null;
@@ -1260,7 +1260,7 @@ function EventDetailModal({ log, matrix, checkItems, eventDefs, role: roleProp, 
                     <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--r-pill)',
                       background: appr.status === 'approved' ? rm.bg : appr.status === 'rejected' ? 'var(--red-dim)' : 'var(--bg3)',
                       color: appr.status === 'approved' ? rm.color : appr.status === 'rejected' ? 'var(--red)' : 'var(--muted)' }}>
-                      {appr.status === 'approved' ? '✓ อนุมัติ' : appr.status === 'rejected' ? '✗ ปฏิเสธ' : '⋯ รอ'}
+                      {appr.status === 'approved' ? tr("✓ อนุมัติ") : appr.status === 'rejected' ? tr("✗ ปฏิเสธ") : tr("⋯ รอ")}
                     </span>
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 10 }}>{tr(rm.label)}</div>

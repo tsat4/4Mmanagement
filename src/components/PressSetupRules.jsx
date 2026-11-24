@@ -15,7 +15,7 @@ import { toast } from './Toast';
 import { checkWrite } from '../utils/dbWrite';
 import { resolveSetupRule, sequenceSetup, orderByDieHeight, setupDataReadiness } from '../utils/pressSetup';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
 const COLS = 'id, scope_kind, scope_value, per_mm_sec, base_min, same_die_min, height_steps, note, is_active, updated_by_name, updated_at';
 const SCOPES = [
@@ -30,7 +30,7 @@ const btn = (bg, color = '#fff') => ({ padding: '5px 10px', borderRadius: 6, fon
 const numOrNull = (v) => (v === '' || v == null || Number.isNaN(Number(v)) ? null : Number(v));
 
 /* ปัดเศษนาทีให้อ่านรู้เรื่อง — นาทีที่มาจากวินาที/60 เป็นทศนิยมยาว (ห้ามโชว์ดิบ) */
-const fmtMin = (v) => (v == null ? '—' : (Math.abs(v) < 10 ? Math.round(v * 10) / 10 : Math.round(v)).toLocaleString('th-TH'));
+const fmtMin = (v) => (v == null ? '—' : (Math.abs(v) < 10 ? Math.round(v * 10) / 10 : Math.round(v)).toLocaleString(dateLocale()));
 
 /* แปลงกฎผลของความสูงเป็นข้อความอ่านง่าย — อัตราต่อมม. + ขั้นบันได (ถ้ามี) */
 function heightRuleText(rule) {
@@ -206,7 +206,7 @@ export default function PressSetupRules({ dies = [], lineNames = [], canEdit = f
         <div style={{ display: 'grid', gap: 8 }}>
           {rows.length === 0 && (
             <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-              {tr("ยังไม่มีกฎในทะเบียน")} — {canEdit ? 'กด "+ เพิ่มกฎ" เพื่อกรอกตัวเลขที่ช่างปั๊มให้มา' : 'ให้ผู้มีสิทธิ์แก้ทะเบียนเป็นคนกรอก'}
+              {tr("ยังไม่มีกฎในทะเบียน")} — {canEdit ? tr("กด \"+ เพิ่มกฎ\" เพื่อกรอกตัวเลขที่ช่างปั๊มให้มา") : tr("ให้ผู้มีสิทธิ์แก้ทะเบียนเป็นคนกรอก")}
             </div>
           )}
           {rows.map(r => {
@@ -340,7 +340,7 @@ export default function PressSetupRules({ dies = [], lineNames = [], canEdit = f
                 {tr("เวลาปรับ shut height ตามลำดับทะเบียนตอนนี้")} ({preview.list.length} {tr("ตัว")}) = <b>{fmtMin(a)}</b> {tr("นาที · เรียงตามความสูง")} = <b>{fmtMin(b)}</b> {tr("นาที")}
                 {save != null && (
                   <div style={{ color: save > 0.05 ? 'var(--accent)' : 'var(--muted)', fontWeight: 700 }}>
-                    {save > 0.05 ? `⇒ ${tr("จัดลำดับใหม่ประหยัดได้")} ~${fmtMin(save)} ${tr("นาที/รอบ")}` : '⇒ ลำดับที่เป็นอยู่ดีอยู่แล้ว (เรียงใหม่ไม่ช่วย)'}
+                    {save > 0.05 ? `⇒ ${tr("จัดลำดับใหม่ประหยัดได้")} ~${fmtMin(save)} ${tr("นาที/รอบ")}` : tr("⇒ ลำดับที่เป็นอยู่ดีอยู่แล้ว (เรียงใหม่ไม่ช่วย)")}
                   </div>
                 )}
                 {preview.sortedSeq.baseUnknown && (

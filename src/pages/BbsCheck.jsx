@@ -526,7 +526,7 @@ export default function BbsCheck() {
 
   return (
     <Page width="full">
-      <ReadOnlyNote show={!canRecord} role={role} what="บันทึกผลสังเกต BBS" permKey="bbs:record" />
+      <ReadOnlyNote show={!canRecord} role={role} what={tr("บันทึกผลสังเกต BBS")} permKey="bbs:record" />
 
       {canRecord && lineObj && !lineWrite.ok && (
         <NoticeBar tone="warn" style={{ marginBottom: 12 }}>🔒 {writeBlockText(lineWrite, { what: `${tr("ใบ BBS ของไลน์")} ${lineObj.name}`, unit: lineObj.section || '' })}</NoticeBar>
@@ -539,7 +539,7 @@ export default function BbsCheck() {
       <PageHeader title={tr('สังเกตพฤติกรรมความปลอดภัย (BBS)')} icon="🦺"
         actions={<>
           {/* ปุ่มตายตัว ≤2 (UI §6.35): [เติมจากผลตรวจ PPE] [พิมพ์/PDF] · ข้อตกลง → ⋯ */}
-          <OverflowMenu items={[{ key: 'agree', icon: '📋', label: 'ข้อตกลง', badge: agreements.length, onClick: () => setShowAgree(true) }]} />
+          <OverflowMenu items={[{ key: 'agree', icon: '📋', label: tr("ข้อตกลง"), badge: agreements.length, onClick: () => setShowAgree(true) }]} />
           {canRecord && (
             <button type="button" className="pg-btn primary" onClick={autoFill} disabled={busy || !emps.length}>
               {busy ? tr('กำลังเติม…') : tr('เติมจากผลตรวจ PPE')}
@@ -590,7 +590,7 @@ export default function BbsCheck() {
             {shownSig
               ? <img src={shownSig} alt={tr("ลายเซ็น")} style={{ height: 34, background: '#fff', borderRadius: 4, padding: 2 }} />
               : <div style={{ fontSize: 11, color: 'var(--muted)', padding: '9px 0' }}>
-                  {signers.length ? 'ยังไม่เลือกผู้ตรวจ' : 'ยังไม่มีใครบันทึกลายเซ็นในโปรไฟล์'}
+                  {signers.length ? tr("ยังไม่เลือกผู้ตรวจ") : tr("ยังไม่มีใครบันทึกลายเซ็นในโปรไฟล์")}
                 </div>}
           </div>
         </div>
@@ -899,7 +899,7 @@ function AgreementsModal({ agreements, canManage, role, onClose }) {
         </p>
 
         <ReadOnlyNote show={!canManage} role={role} compact
-          what="แก้ข้อตกลงด้านความปลอดภัย" permKey="bbs:manage" />
+          what={tr("แก้ข้อตกลงด้านความปลอดภัย")} permKey="bbs:manage" />
 
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
           <thead><tr>

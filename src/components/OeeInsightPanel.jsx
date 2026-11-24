@@ -12,7 +12,7 @@ import useTimeRange from '../utils/useTimeRange';
 import { rangeDays } from '../utils/timeRange';
 import { BREAK_POLICY_COLS } from '../utils/oeeMasters';
 
-import { tr as trI18n } from '../utils/i18n';
+import { tr as trI18n, getLang } from '../utils/i18n';
 /* ── 🧠 OEE Insight Engine — วิเคราะห์ภาพรวมอัตโนมัติ (rule-based + สถิติ) ──
    ตอบ 2 คำถามหลักของ user (2026-07-14):
    1. "ทำไมยอดงานไม่ได้ตามเป้า" → แตกเป้าที่หายไปเป็นชิ้น: Downtime นอกแผน / NG / ความเร็วต่ำกว่า CT
@@ -31,6 +31,8 @@ const todayWorkDate = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 const DOW_TH = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์'];
+const DOW_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const dowName = (i) => (getLang() === 'th' ? DOW_TH : DOW_EN)[i];
 const avg = (a) => (a.length ? a.reduce((s, v) => s + v, 0) / a.length : 0);
 // เฉลี่ย OEE/A/P ข้ามกะ ต้องถ่วงด้วยเวลารับภาระ (กฎ OEE · util กลาง oeeAvg.js) — เดิม avg() ธรรมดา
 // ทำให้ insight อ้างตัวเลข "เฉลี่ยกะเช้า vs ดึก" ไม่ตรงกับ KPI ในหน้าเดียวกัน (แก้ 2026-08-05)
@@ -257,7 +259,7 @@ export default function OeeInsightPanel({ lines, ccRates = [], initLine = '', se
         if (med > 0 && worst.perDay > med * 1.6) {
           out.push({
             sev: 'med', icon: '📅',
-            title: `${trI18n("วัน")}${DOW_TH[worst.dow]} Downtime ${trI18n("นอกแผนสูงผิดปกติ")}`,
+            title: `${trI18n("วัน")}${dowName(worst.dow)} Downtime ${trI18n("นอกแผนสูงผิดปกติ")}`,
             detail: `${trI18n("เฉลี่ย")} ${Math.round(worst.perDay)} ${trI18n("นาที/วัน (จาก")} ${worst.n} ${trI18n("วัน) เทียบค่ากลางวันอื่น")} ${Math.round(med)} ${trI18n("นาที — เช็คกิจกรรมประจำวันนั้น (เริ่มสัปดาห์/สลับแผน/วัตถุดิบเข้า ฯลฯ")})`,
             impact: worst.perDay,
           });
@@ -422,7 +424,7 @@ export default function OeeInsightPanel({ lines, ccRates = [], initLine = '', se
             {perHr == null && (
               <div style={{ fontSize: 11, color: '#f59e0b', marginBottom: 8, lineHeight: 1.55 }}>
                 {trI18n("ยังตีเป็นเงินไม่ได้")} — {!selLine
-                  ? 'เลือกไลน์เจาะจง (แต่ละไลน์คนละ activity rate จึงรวมเป็นเงินก้อนเดียวไม่ได้)'
+                  ? trI18n("เลือกไลน์เจาะจง (แต่ละไลน์คนละ activity rate จึงรวมเป็นเงินก้อนเดียวไม่ได้)")
                   : `${trI18n("ไลน์")} ${selLine} ${trI18n("ยังไม่ตั้ง cost center หรือยังไม่มี activity rate — ตั้งที่ ผังองค์กร")} → 💰 Activity Rate`}
               </div>
             )}
@@ -433,7 +435,7 @@ export default function OeeInsightPanel({ lines, ccRates = [], initLine = '', se
                   <div key={i}>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', fontSize: 12.5 }}>
                       <span style={{ fontWeight: 700, color: r.meta ? 'var(--text)' : 'var(--muted)' }}>
-                        {r.meta ? `${r.meta.icon} ${r.meta.label}` : '❔ ยังไม่จัดหมวด'}
+                        {r.meta ? `${r.meta.icon} ${r.meta.label}` : trI18n("❔ ยังไม่จัดหมวด")}
                       </span>
                       {r.meta?.oee && <span style={{ fontSize: 11, fontWeight: 800, color: c }}>{trI18n('กระทบ')} {r.meta.oee}</span>}
                       <span style={{ marginLeft: 'auto', fontVariantNumeric: 'tabular-nums', color: 'var(--text2)' }}>
@@ -464,7 +466,7 @@ export default function OeeInsightPanel({ lines, ccRates = [], initLine = '', se
         <div style={{ textAlign: 'center', padding: 30, color: '#ef4444', fontSize: 12 }}>{trI18n('วิเคราะห์ไม่สำเร็จ:')} {meta.error}</div>
       ) : !insights?.length ? (
         <div style={{ textAlign: 'center', padding: 30, color: 'var(--muted)', fontSize: 13 }}>
-          {meta && meta.nSess < 3 ? `${trI18n("ข้อมูลยังไม่พอวิเคราะห์ (มี")} ${meta?.nSess ?? 0} ${trI18n("กะในช่วงนี้ — ต้องอย่างน้อย 3 กะ")})` : 'ไม่พบ pattern ผิดปกติในช่วงนี้ 🎉 (เป้าครบ/ไม่มีปัญหาซ้ำ)'}
+          {meta && meta.nSess < 3 ? `${trI18n("ข้อมูลยังไม่พอวิเคราะห์ (มี")} ${meta?.nSess ?? 0} ${trI18n("กะในช่วงนี้ — ต้องอย่างน้อย 3 กะ")})` : trI18n("ไม่พบ pattern ผิดปกติในช่วงนี้ 🎉 (เป้าครบ/ไม่มีปัญหาซ้ำ)")}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

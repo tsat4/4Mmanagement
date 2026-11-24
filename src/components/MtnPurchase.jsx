@@ -136,7 +136,7 @@ function GlPicker({ category, value, glCodes, onChange }) {
   return (
     <select value={value || ''} onChange={e => onChange(e.target.value)} style={inp}>
       <option value="">{tr('— ยังไม่ระบุ GL —')}</option>
-      {rows.map(g => <option key={g.id} value={g.gl_code}>{g.gl_code}{g.name ? ` · ${g.name}` : ''}{g.is_default ? ' (ตั้งต้น)' : ''}</option>)}
+      {rows.map(g => <option key={g.id} value={g.gl_code}>{g.gl_code}{g.name ? ` · ${g.name}` : ''}{g.is_default ? tr(" (ตั้งต้น)") : ''}</option>)}
       {others.length > 0 && <optgroup label={tr('หมวดอื่น')}>{others.map(g => <option key={g.id} value={g.gl_code}>{g.gl_code}{g.name ? ` · ${g.name}` : ''} · {glCategoryLabel(g.category)}</option>)}</optgroup>}
     </select>
   );
@@ -199,7 +199,7 @@ function PrRow({ pr, canEdit, fullName, onChanged, showSource, mo = null, own = 
         {pr.pr_no
           ? <b style={{ fontFamily: 'monospace', fontSize: 13 }}>PR {pr.pr_no}</b>
           : <b style={{ fontSize: 12, color: waitNo ? '#f59e0b' : 'var(--muted)' }}>{waitNo ? tr('⏳ รอเลข PR จาก SAP') : tr('(ไม่มีเลข PR)')}</b>}
-        {mo && <a href={`/mtn-repair?mo=${encodeURIComponent(mo.id)}`} style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 700 }} title={tr('เปิดใบ MO')}>{mo.mo_no || 'ใบ MO (ยังไม่มีเลข)'}{mo.machine_no ? ` · ${mo.machine_no}` : ''}</a>}
+        {mo && <a href={`/mtn-repair?mo=${encodeURIComponent(mo.id)}`} style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 700 }} title={tr('เปิดใบ MO')}>{mo.mo_no || tr("ใบ MO (ยังไม่มีเลข)")}{mo.machine_no ? ` · ${mo.machine_no}` : ''}</a>}
         <span style={{ fontSize: 11, fontWeight: 700, color: st.color }}>{tr(st.label)}</span>
         {showSource && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{PR_SOURCE_LABEL[pr.source] || pr.source}</span>}
         <span style={{ flex: 1, minWidth: 140 }}>{pr.item_name} × <b>{pr.qty}</b> {pr.unit || ''}</span>
@@ -213,7 +213,7 @@ function PrRow({ pr, canEdit, fullName, onChanged, showSource, mo = null, own = 
         {pr.ordered_at ? ` · ${tr("สั่ง")} ${fmtDateTime(pr.ordered_at)}${pr.po_no ? ` (PO ${pr.po_no})` : ''}` : ''}
         {pr.received_at ? ` · ${tr("รับ")} ${fmtDateTime(pr.received_at)} ${pr.received_qty ?? ''} ${pr.unit || ''}${pr.received_by ? ` ${tr("โดย")} ${pr.received_by}` : ''}${pr.invoice_no ? ` · Inv ${pr.invoice_no}` : ''}` : ''}
         {pr.cancelled_at ? ` · ${tr("ยกเลิก")}: ${pr.cancel_reason || '-'}` : ''}
-        {!pr.part_id && pr.status !== 'cancelled' ? ' · ไม่ผูกอะไหล่ในทะเบียน (รับแล้วไม่เข้าสต็อก)' : ''}
+        {!pr.part_id && pr.status !== 'cancelled' ? tr(" · ไม่ผูกอะไหล่ในทะเบียน (รับแล้วไม่เข้าสต็อก)") : ''}
         {pr.note ? ` · ${pr.note}` : ''}
       </div>
       {/* 🧾 ใบเสนอราคา (18/11) — 🔴 "ลบไฟล์แล้ว" ต้องยังเห็นว่าเคยมี ห้ามเงียบเหมือนไม่เคยแนบ
@@ -333,7 +333,7 @@ function NewPrForm({ parts = [], glCodes = [], defaults = {}, fullName, onDone, 
         <b> {tr('② พิมพ์รายการเอง')}</b> {tr('(ของนอกทะเบียน/งานบริการ)')} ·
         <b> {tr('③ แนบใบเสนอราคา')}</b> {tr('(ของที่ซื้อไม่บ่อย — ช่องล่างสุด)')}
       </div>
-      <SearchSelect value={f.part_id} text={f.item_name} options={partOpts} allowFree freeHint="ไม่เข้าสต็อก"
+      <SearchSelect value={f.part_id} text={f.item_name} options={partOpts} allowFree freeHint={tr("ไม่เข้าสต็อก")}
         placeholder={tr('ค้นอะไหล่ — ชื่อ / รหัส / ชั้นวาง หรือพิมพ์รายการเอง')}
         onChange={({ id, text }) => {
           const p = (parts || []).find(x => x.id === id);
@@ -554,7 +554,7 @@ export function MtnPrPanel({ order, parts = [], fullName, canEdit = false, canAd
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', fontSize: 11.5, padding: '6px 9px', borderRadius: 'var(--r-md)', marginBottom: 6,
           background: held ? 'rgba(245,158,11,0.10)' : 'var(--bg)', border: `1px solid ${held ? 'rgba(245,158,11,0.45)' : 'var(--border)'}` }}>
           <span style={{ flex: 1, minWidth: 200, lineHeight: 1.6 }}>
-            {held ? '⏸️ หยุดนับ MTTR ช่างอยู่' : '⏸️ เคยหยุดนับ MTTR'} {tr('— ตั้งแต่ MTN ตัดสิน')} {fmtDateTime(order.mttr_hold_from)}
+            {held ? tr("⏸️ หยุดนับ MTTR ช่างอยู่") : tr("⏸️ เคยหยุดนับ MTTR")} {tr('— ตั้งแต่ MTN ตัดสิน')} {fmtDateTime(order.mttr_hold_from)}
             {order.mttr_hold_to ? ` ${tr("ถึง")} ${fmtDateTime(order.mttr_hold_to)}` : ''} {tr('· รวม')} {mttrHoldMin(order, Date.now(), new Date(order.mttr_hold_from).getTime(), order.mttr_hold_to ? new Date(order.mttr_hold_to).getTime() : Date.now())} {tr("นาที")}
             <span style={{ color: 'var(--muted)' }}> {tr('· downtime ของเครื่องยังนับเต็ม')}</span>
           </span>
@@ -743,7 +743,7 @@ export function MtnPrBoard({ parts = [], fullName, canEdit = false, onStockChang
           ? <RowFold rows={hasNoList} unit={tr("ใบ")}>{pr => <PrRow key={pr.id} pr={pr} canEdit={canEdit} own={ownOf(pr)} fullName={fullName} onChanged={reload} showSource mo={mos[pr.order_id] || null} />}</RowFold>
           : <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{tr('ไม่มี PR ค้าง')}</div>}
 
-        <button onClick={() => setShowDone(v => !v)} style={{ ...btnGhost, marginTop: 6 }}>{showDone ? 'ซ่อน' : 'ดู'} {tr('PR ที่จบแล้ว (50 ล่าสุด)')}</button>
+        <button onClick={() => setShowDone(v => !v)} style={{ ...btnGhost, marginTop: 6 }}>{showDone ? tr("ซ่อน") : tr("ดู")} {tr('PR ที่จบแล้ว (50 ล่าสุด)')}</button>
         {showDone && <div style={{ marginTop: 6 }}>
           <RowFold rows={doneList} unit={tr("ใบ")}>{pr => <PrRow key={pr.id} pr={pr} canEdit={false} fullName={fullName} showSource />}</RowFold>
         </div>}

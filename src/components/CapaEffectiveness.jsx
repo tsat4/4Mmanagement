@@ -334,7 +334,7 @@ export default function CapaEffectiveness({ capa, onChange, canEdit, canWriteRes
 
         <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.6, borderTop: '1px dashed var(--border2)', paddingTop: 8 }}>
           {tr("หารด้วย")} <b>{tr('จำนวนวันที่ไลน์ผลิตจริง')}</b> {tr("ไม่ใช่วันปฏิทิน (ไลน์หยุด ของเสียเป็น 0 ไม่ได้แปลว่าได้ผล")}) ·
-          {noTrial ? '' : 'ไม่นับ'}<b>{tr('งานทดลอง')}</b>{noTrial ? ' ถูกนับรวมอยู่' : ' (try-out)'} {tr('· ตัวเลขนี้เป็น')}<b>{tr('สัญญาณ ไม่ใช่คำตัดสิน')}</b> — {tr("คนเป็นผู้สรุป")}
+          {noTrial ? '' : tr("ไม่นับ")}<b>{tr('งานทดลอง')}</b>{noTrial ? tr(" ถูกนับรวมอยู่") : ' (try-out)'} {tr('· ตัวเลขนี้เป็น')}<b>{tr('สัญญาณ ไม่ใช่คำตัดสิน')}</b> — {tr("คนเป็นผู้สรุป")}
         </div>
       </div>
     </div>

@@ -16,6 +16,7 @@ import {
 import { jphTable, jphSummary } from '../utils/jph';
 
 import { tr } from '../utils/i18n';
+import { monthsShort, yearDisplay } from '../utils/dateFormat';
 /* ─── 📊 Capacity — แท็บใน /production-plan (2026-09-24) ────────────────────────
    user ส่งสไลด์ `Capacity_TSATP.4_update_June_26.pptx` มาพร้อมภาพหน้านี้ แล้วบอกว่า
    *"capacity โรงงานเราดูกันแบบนี้ แต่ในโปรแกรมเราเป็นแบบนี้ คนจะดูไม่เข้าใจ"*
@@ -47,7 +48,7 @@ const FLAG_META = {
 };
 const monthLabel = (mk) => {
   const [y, m] = mk.split('-');
-  return `${['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'][Number(m) - 1]} ${String(Number(y) + 543).slice(-2)}`;
+  return `${monthsShort()[Number(m) - 1]} ${String(yearDisplay(Number(y))).slice(-2)}`;
 };
 
 export default function CapacityBoard({ role, scope, lines, months, calMap, demandByMonth, ctOf, lineOfMat, pairOf, lineOee, estOf, netMin, customerOf, nameOfMat }) {
@@ -212,7 +213,7 @@ export default function CapacityBoard({ role, scope, lines, months, calMap, dema
         <div>
           <div style={{ fontSize:11, color:'var(--muted)' }}>{tr('OEE จริง (median 60 วัน)')}</div>
           <div style={{ fontSize:20, fontWeight:800, color: oee.hasActual ? '#22c55e' : 'var(--muted)' }}>
-            {oee.hasActual ? `${(oee.actual * 100).toFixed(1)}%` : 'ยังไม่มีประวัติ'}
+            {oee.hasActual ? `${(oee.actual * 100).toFixed(1)}%` : tr("ยังไม่มีประวัติ")}
           </div>
         </div>
         <div style={{ fontSize:18, color:'var(--muted)' }}>vs</div>
@@ -223,7 +224,7 @@ export default function CapacityBoard({ role, scope, lines, months, calMap, dema
         </div>
         {oee.hasActual && (
           <div style={{ fontSize:12, color: oee.actual >= oee.target ? '#22c55e' : '#ef4444', fontWeight:700 }}>
-            {oee.actual >= oee.target ? '▲ ถึงเป้า' : `▼ ${tr("ต่ำกว่าเป้า")} ${((oee.target - oee.actual) * 100).toFixed(1)} ${tr("จุด")}`}
+            {oee.actual >= oee.target ? tr("▲ ถึงเป้า") : `▼ ${tr("ต่ำกว่าเป้า")} ${((oee.target - oee.actual) * 100).toFixed(1)} ${tr("จุด")}`}
           </div>
         )}
         <div style={{ fontSize:11, color:'var(--muted)', marginLeft:'auto', maxWidth:340, lineHeight:1.6 }}>
@@ -293,7 +294,7 @@ export default function CapacityBoard({ role, scope, lines, months, calMap, dema
           {canEdit && !patErr && (
             <button style={{ ...btn('var(--accent)'), marginTop:10, opacity: saving || !Object.keys(draft).length ? 0.5 : 1 }}
               disabled={saving || !Object.keys(draft).length} onClick={saveReg}>
-              {saving ? 'กำลังบันทึก…' : `💾 ${tr("บันทึก")} (${Object.keys(draft).length})`}
+              {saving ? tr("กำลังบันทึก…") : `💾 ${tr("บันทึก")} (${Object.keys(draft).length})`}
             </button>
           )}
         </div>

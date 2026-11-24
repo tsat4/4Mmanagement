@@ -16,7 +16,7 @@ import {
 import {
   IEC_TEAMS, CUSTOMERS, PROJECTS, SPTT_REQUIREMENTS, TMA_SPTT_DOCS, SOURCE_DATE,
 } from '../data/nmBoard737D';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 
 /* ══ 🧭 บอร์ด New Model (IEC) — บอร์ด OBEYA ของงานพาร์ทรุ่นใหม่ในเวอร์ชันออนไลน์ ═════════
@@ -265,7 +265,7 @@ function NpiLinkCard({ proj, isMobile }) {
         <NpiStat label={tr('ECI ยังไม่จบ')} value={sum.eciOpen} suffix={sum.eciTotal != null ? `/ ${sum.eciTotal}` : ''}
           tone={sum.eciOpen ? 'var(--amber)' : undefined} />
         <NpiStat label={tr('ถึง SOP')} value={sum.sopIn == null ? null : (sum.sopIn >= 0 ? sum.sopIn : -sum.sopIn)}
-          suffix={sum.sopIn == null ? '' : (sum.sopIn >= 0 ? 'วัน' : 'วัน (เลยแล้ว)')}
+          suffix={sum.sopIn == null ? '' : (sum.sopIn >= 0 ? tr("วัน") : tr("วัน (เลยแล้ว)"))}
           tone={sum.sopIn != null && sum.sopIn < 0 ? 'var(--red)' : undefined} />
       </div>
       <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 9, lineHeight: 1.5 }}>
@@ -359,7 +359,7 @@ function LevelOverview({ data, go }) {
     <>
       <div style={{ display: 'grid', gap: 10, alignContent: 'start', marginBottom: 14,
         gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(230px, 1fr))' }}>
-        {axes.map(a => <EvaBadge key={a.key} big eva={a.eva} label={tr(a.label)} note={a.hint} />)}
+        {axes.map(a => <EvaBadge key={a.key} big eva={a.eva} label={tr(a.label)} note={tr(a.hint)} />)}
       </div>
 
       <div style={{ fontSize: 13, fontWeight: 700, margin: '4px 0 8px' }}>{tr('ลูกค้า')}</div>
@@ -378,7 +378,7 @@ function LevelOverview({ data, go }) {
                 <span style={{ fontSize: 14.5, fontWeight: 700 }}>{c.name}</span>
               </div>
               <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-                {c.projects.length ? `${c.projects.length} ${tr("รุ่นในระบบ")}` : 'ยังไม่มีโปรเจคในระบบ'}
+                {c.projects.length ? `${c.projects.length} ${tr("รุ่นในระบบ")}` : tr("ยังไม่มีโปรเจคในระบบ")}
               </div>
               {!!c.projects.length && (
                 <div style={{ fontSize: 11.5, color: 'var(--text2)' }}>
@@ -387,7 +387,7 @@ function LevelOverview({ data, go }) {
               )}
               {worst && <div style={{ fontSize: 11.5, color: 'var(--red)' }}>🔴 {worst.title}</div>}
               <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                {tr('ทีม')} {teams.join(' · ') || '–'} {tr('· ด่าน')} {c.milestones.length ? c.milestones.join(' → ') : 'ยังไม่ตั้งแม่แบบ'}
+                {tr('ทีม')} {teams.join(' · ') || '–'} {tr('· ด่าน')} {c.milestones.length ? c.milestones.join(' → ') : tr("ยังไม่ตั้งแม่แบบ")}
               </div>
             </button>
           );
@@ -512,7 +512,7 @@ function BucketBar({ proj, leaves, go, isMobile }) {
                 <span style={{ fontSize: 13, fontWeight: 700 }}>{tr(b.label)}</span>
               </div>
               <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.4 }}>
-                {n ? 'กดเพื่อดูรายการ' : 'ยังไม่มีหัวข้อในถังนี้'}
+                {n ? tr("กดเพื่อดูรายการ") : tr("ยังไม่มีหัวข้อในถังนี้")}
               </div>
             </button>
           );
@@ -572,7 +572,7 @@ function PopTable({ proj, go }) {
                       {kids.length ? `${kids.length} ${tr("หัวข้อ")}` : '—'}
                     </td>
                     <td style={{ ...td, fontSize: 11.5, color: 'var(--text2)' }}>
-                      {kc ? countsLabel(kc) : (m.note || (eva === 'none' ? 'ยังไม่ประเมิน' : evaMeta(eva).label))}
+                      {kc ? countsLabel(kc) : (m.note || (eva === 'none' ? tr("ยังไม่ประเมิน") : evaMeta(eva).label))}
                     </td>
                   </tr>
                 );
@@ -766,7 +766,7 @@ function LevelBucket({ proj, bucket, go }) {
                       {l.path === l.mainKey ? '—' : l.mainLabel}
                     </td>
                     <td style={{ ...td, fontSize: 11.5, color: l.note ? 'var(--text2)' : 'var(--red)' }}>
-                      {l.note || (l.eva === 'R' ? '⚠️ แดงแต่ยังไม่มีคำอธิบาย' : '—')}
+                      {l.note || (l.eva === 'R' ? tr("⚠️ แดงแต่ยังไม่มีคำอธิบาย") : '—')}
                     </td>
                   </tr>
                 ))}
@@ -837,7 +837,7 @@ function LevelPop({ proj, main, go }) {
                       <td style={{ ...td, fontSize: 11.5, color: 'var(--text2)' }}>
                         {s.fromStage ? `${tr("ด่าน")} ${s.fromStage}`
                           : s.panel ? `${tr("แผง")} ${proj.panels.find(p => p.key === s.panel)?.label || s.panel}`
-                          : 'ยังไม่มีหลักฐานผูกไว้'}
+                          : tr("ยังไม่มีหลักฐานผูกไว้")}
                       </td>
                     </tr>
                   );
@@ -880,7 +880,7 @@ function LevelPopSub({ proj, main, sub, go }) {
                     <td style={td}><Dot eva={t.eva} /></td>
                     <td style={{ ...td, fontWeight: 700 }}>{tr(t.label)}</td>
                     <td style={{ ...td, fontSize: 11.5, color: 'var(--muted)' }}>
-                      {t.panel ? `${tr("แผง")} ${proj.panels.find(p => p.key === t.panel)?.label || t.panel} →` : 'ยังไม่ผูก'}
+                      {t.panel ? `${tr("แผง")} ${proj.panels.find(p => p.key === t.panel)?.label || t.panel} →` : tr("ยังไม่ผูก")}
                     </td>
                     <td style={{ ...td, fontSize: 11.5, color: 'var(--text2)' }}>{t.note || '—'}</td>
                   </tr>
@@ -968,7 +968,7 @@ function PanelIssues({ p }) {
     <Scroller>
       <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 760 }}>
         <thead><tr>
-          {['#', 'วันที่', 'หมวด', 'ปัญหา', 'สาเหตุ', 'มาตรการ', 'ผู้รับผิดชอบ', 'กำหนด', 'สถานะ'].map(c => <th key={c} style={th}>{tr(c)}</th>)}
+          {['#', tr("วันที่"), tr("หมวด"), tr("ปัญหา"), tr("สาเหตุ"), tr("มาตรการ"), tr("ผู้รับผิดชอบ"), tr("กำหนด"), tr("สถานะ")].map(c => <th key={c} style={th}>{tr(c)}</th>)}
         </tr></thead>
         <tbody>
           {p.rows.map(r => (
@@ -1009,7 +1009,7 @@ function PanelDoc({ p }) {
       {!!p.tree?.length && (
         <Scroller>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 520 }}>
-            <thead><tr>{['ลำดับ', 'ชื่อชิ้นงาน', 'เลขพาร์ท', 'สเปกวัสดุ'].map(c => <th key={c} style={th}>{tr(c)}</th>)}</tr></thead>
+            <thead><tr>{[tr("ลำดับ"), tr("ชื่อชิ้นงาน"), tr("เลขพาร์ท"), tr("สเปกวัสดุ")].map(c => <th key={c} style={th}>{tr(c)}</th>)}</tr></thead>
             <tbody>{p.tree.map(t => (
               <tr key={t.seq}>
                 <td style={{ ...td, whiteSpace: 'nowrap', color: 'var(--muted)' }}>{t.seq}</td>
@@ -1091,7 +1091,7 @@ function LevelPanel({ proj, panel }) {
           <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>{tr('เกณฑ์ผ่านของแต่ละด่าน (Requirement of SPTT Milestone)')}</div>
           <Scroller>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 700 }}>
-              <thead><tr>{['SPTT', 'ด่านลูกค้า', 'Off-Tool', 'Off-Process', 'คุณภาพที่ต้องได้', 'กำลังผลิตที่ต้องได้'].map(c => <th key={c} style={th}>{tr(c)}</th>)}</tr></thead>
+              <thead><tr>{['SPTT', tr("ด่านลูกค้า"), 'Off-Tool', 'Off-Process', tr("คุณภาพที่ต้องได้"), tr("กำลังผลิตที่ต้องได้")].map(c => <th key={c} style={th}>{tr(c)}</th>)}</tr></thead>
               <tbody>{SPTT_REQUIREMENTS.map(r => (
                 <tr key={r.sptt}>
                   <td style={{ ...td, whiteSpace: 'nowrap', fontWeight: 700 }}>{r.sptt}</td>
@@ -1111,7 +1111,7 @@ function LevelPanel({ proj, panel }) {
           <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>{tr("ชุดเอกสารที่ลูกค้าบังคับต่อด่าน (TMA SPTT Document · ตัวเลข = จำนวนหน้า")})</div>
           <Scroller>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 660 }}>
-              <thead><tr>{['#', 'เอกสาร', 'CV 1st', 'CV 2nd', '1A (LVPT)', 'MPT (HVPT)', 'QCS', 'SOP'].map(c => <th key={c} style={th}>{tr(c)}</th>)}</tr></thead>
+              <thead><tr>{['#', tr("เอกสาร"), 'CV 1st', 'CV 2nd', '1A (LVPT)', 'MPT (HVPT)', 'QCS', 'SOP'].map(c => <th key={c} style={th}>{tr(c)}</th>)}</tr></thead>
               <tbody>{TMA_SPTT_DOCS.map(d => (
                 <tr key={d.seq}>
                   <td style={td}>{d.seq}</td>
@@ -1174,7 +1174,7 @@ function TvView({ projects, index, onIndex, onExit, openPanelKey, onPick, onClos
   };
   const openPanel = proj.panels.find(p => p.key === openPanelKey) || null;
   const counts = evaCounts(proj.panels);
-  const clock = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' });
+  const clock = now.toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' });
 
   const F = { // ขนาดตัวอักษรอิงความกว้างจอ — 70" ดูจากระยะไกล ต้องใหญ่กว่าจอ PC มาก
     title: 'clamp(20px, 2.1vw, 58px)',
@@ -1464,7 +1464,7 @@ export default function NewModelBoard() {
     { label: 'ภาพรวม', onClick: (cust || proj || deep) ? () => go({}) : null },
     cust && { label: cust.name, onClick: (proj || deep) ? () => go({ cust: cust.code }) : null },
     proj && { label: proj.title, onClick: deep ? () => go({ cust: cust.code, proj: proj.id }) : null },
-    bucket && { label: BUCKETS.find(b => b.key === bucket)?.label },
+    bucket && { label: tr(BUCKETS.find(b => b.key === bucket)?.label) },
     popMain && { label: `${popMain.no}. ${popMain.label}`,
       onClick: popSub ? () => go({ cust: cust.code, proj: proj.id, pop: popMain.key }) : null },
     popSub && { label: `${popSub.no} ${popSub.label}` },
@@ -1473,7 +1473,7 @@ export default function NewModelBoard() {
 
   const sub = popSub ? `${popSub.no} ${popSub.label} · ${proj.title}`
     : popMain ? `POP ${tr("ข้อ")} ${popMain.no} · ${proj.title}`
-    : bucket ? `${BUCKETS.find(b => b.key === bucket)?.label} · ${proj.title}`
+    : bucket ? `${tr(BUCKETS.find(b => b.key === bucket)?.label)} · ${proj.title}`
     : panel ? `${tr("แผงบนบอร์ดของ")} ${proj.title}`
     : proj ? `${proj.title} · ${tr("ด่าน")} ${proj.stage} · ${tr("ทีม")} ${proj.team} · ${tr("ผู้นำโปรเจค")} ${proj.leader}`
     : cust ? `${tr("รุ่นของ")} ${cust.name} ${tr("ที่อยู่ในระบบ")}`

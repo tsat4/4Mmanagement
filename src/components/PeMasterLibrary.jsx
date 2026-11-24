@@ -120,12 +120,12 @@ export default function PeMasterLibrary({ masters, masterItems, proposals, usage
   return (
     <div>
       {unconfirmed > 0 && <WarnBar color="#f59e0b">{tr('ระบบจับกลุ่ม OP ชื่อเดียวกันข้ามพาร์ทให้')} {unconfirmed} {tr('กระบวนการ ยังรอ PE ยืนยันว่าเป็นกระบวนการเดียวกันจริง — กระบวนการที่ยังไม่ยืนยันดึงไปใช้ได้แต่จะติดป้ายเตือน')}</WarnBar>}
-      {pending.length > 0 && <WarnBar color="#a855f7">{tr('📬 มีข้อเสนออัพเดท master ค้าง')} {pending.length} {tr('รายการ')}{canApprove ? '' : ' (ต้องมี pe:approve จึงตัดสินได้)'}</WarnBar>}
+      {pending.length > 0 && <WarnBar color="#a855f7">{tr('📬 มีข้อเสนออัพเดท master ค้าง')} {pending.length} {tr('รายการ')}{canApprove ? '' : tr(" (ต้องมี pe:approve จึงตัดสินได้)")}</WarnBar>}
       <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: 'minmax(260px, 1fr) minmax(0, 2fr)', gap: 12, alignItems: 'start' }}>
         {/* ── รายการกระบวนการมาตรฐาน ── */}
         <div style={card}>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8, flexWrap: 'wrap' }}>
-            <SearchInput value={q} onChange={setQ} fields="กระบวนการ / tag" style={{ minWidth: 140 }} />
+            <SearchInput value={q} onChange={setQ} fields={tr("กระบวนการ / tag")} style={{ minWidth: 140 }} />
             <label style={{ fontSize: 11.5, whiteSpace: 'nowrap' }}><input type="checkbox" checked={onlyUnconfirmed} onChange={e => setOnlyUnconfirmed(e.target.checked)} /> {tr('รอยืนยัน')}</label>
             {canApprove && <button style={btn()} onClick={() => setMpModal({ name: '', kind: 'process', process_type: '', tags: '', description: '', is_active: true })}>{tr('+ กระบวนการ')}</button>}
           </div>
@@ -161,7 +161,7 @@ export default function PeMasterLibrary({ masters, masterItems, proposals, usage
                     <div style={{ fontSize: 15, fontWeight: 900 }}>{cur.name} <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>v{cur.version} · {cur.key}</span></div>
                     <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 3 }}>
                       {KIND_LABEL[cur.kind]}{cur.process_type ? ` · ${cur.process_type}` : ''}{cur.family_tags?.length ? ` · ${tr("ตระกูล")}: ${cur.family_tags.join(', ')}` : ''}
-                      {cur.confirmed_at ? ` · ${tr("ยืนยันโดย")} ${cur.confirmed_by} ${fmtDate(cur.confirmed_at)}` : ' · ⚠️ ยังไม่ยืนยัน'}
+                      {cur.confirmed_at ? ` · ${tr("ยืนยันโดย")} ${cur.confirmed_by} ${fmtDate(cur.confirmed_at)}` : tr(" · ⚠️ ยังไม่ยืนยัน")}
                     </div>
                     {cur.description && <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 4 }}>{cur.description}</div>}
                   </div>
@@ -187,7 +187,7 @@ export default function PeMasterLibrary({ masters, masterItems, proposals, usage
                         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                           <Pill label={p.kind === 'improve' ? tr('ปรับปรุง') : tr('รายการใหม่')} color={p.kind === 'improve' ? '#a855f7' : '#3b82f6'} small />
                           <b style={{ fontSize: 12.5 }}>{p.kind === 'improve' ? (itemById[p.master_item_id]?.failure_mode || tr('(master item หาย)')) : p.after?.failure_mode}</b>
-                          <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('จาก')} {setById[p.source_set_id]?.part_no || '—'} · {fmtDate(p.created_at)} · {p.created_by_name || 'ระบบ'}</span>
+                          <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('จาก')} {setById[p.source_set_id]?.part_no || '—'} · {fmtDate(p.created_at)} · {p.created_by_name || tr("ระบบ")}</span>
                         </div>
                         <div style={{ fontSize: 12, marginTop: 3 }}>
                           RPN <b style={{ color: rpnColor(p.rpn_before) }}>{p.rpn_before ?? '—'}</b> → <b style={{ color: rpnColor(p.rpn_after) }}>{p.rpn_after ?? '—'}</b>
@@ -252,7 +252,7 @@ export default function PeMasterLibrary({ masters, masterItems, proposals, usage
         </Modal>
       )}
       {itemModal && (
-        <Modal title={itemModal.id ? `${tr("แก้")} master: ${itemModal.failure_mode}` : 'เพิ่ม failure mode มาตรฐาน'} onClose={() => setItemModal(null)} width={760}
+        <Modal title={itemModal.id ? `${tr("แก้")} master: ${itemModal.failure_mode}` : tr("เพิ่ม failure mode มาตรฐาน")} onClose={() => setItemModal(null)} width={760}
           footer={<><button style={ghost} onClick={() => setItemModal(null)}>{tr('ยกเลิก')}</button><button style={btn()} disabled={saving} onClick={saveItem}>{tr('บันทึก')}{itemModal.id ? ` (→ v${(itemModal.version || 1) + 1})` : ''}</button></>}>
           <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, alignItems: 'start' }}>
             <Field label={tr('ลำดับ')}><input type="number" style={inp} value={itemModal.seq} onChange={e => setItemModal({ ...itemModal, seq: e.target.value })} /></Field>

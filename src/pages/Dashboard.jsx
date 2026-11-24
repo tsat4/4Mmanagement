@@ -50,7 +50,7 @@ import Segmented from '../components/Segmented';
 import TabBar from '../components/TabBar';
 import { urlPick, urlBool, urlParam } from '../utils/urlInit';
 import SectionScopeSelect from '../components/SectionScopeSelect';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 
 /* เกณฑ์ "อัตราการมาทำงาน" ของจอนี้ — การ์ดบนสุดกับการ์ดรายไลน์ต้องใช้ชุดเดียวกัน (2026-10-19)
@@ -995,8 +995,8 @@ export default function Dashboard({ view = 'timeline' }) {
       {(scopeFellBack || scopeUnsure) && (
         <div role="status" style={{ margin: '0 0 12px', padding: '8px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--amber-line)', background: 'var(--amber-dim)', color: 'var(--amber)', fontSize: 13, fontWeight: 700 }}>
           {scopeFellBack
-            ? '⚠ ตัดขอบเขตไม่ได้ — แสดงทั้งโรงงาน (ขอบเขตของบัญชีไม่ตรงกับไลน์ในทะเบียน · ตั้งที่หน้าผู้ใช้)'
-            : '⚠ หาไลน์ของบัญชีนี้ไม่เจอ — แสดงตามส่วนงานของบัญชีแทน'}
+            ? tr("⚠ ตัดขอบเขตไม่ได้ — แสดงทั้งโรงงาน (ขอบเขตของบัญชีไม่ตรงกับไลน์ในทะเบียน · ตั้งที่หน้าผู้ใช้)")
+            : tr("⚠ หาไลน์ของบัญชีนี้ไม่เจอ — แสดงตามส่วนงานของบัญชีแทน")}
         </div>
       )}
       {prodErr && (
@@ -1010,7 +1010,7 @@ export default function Dashboard({ view = 'timeline' }) {
       <div className="ph-chrome" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28, gap: 16, flexWrap: 'wrap' }}>
         <motion.div {...stagger(0)}>
           <h1 style={{ margin: 0, fontSize: 'clamp(18px,3vw,24px)', fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--text)', letterSpacing: '-0.5px' }}>
-            {isPeople ? 'ภาพรวมกำลังคน' : (lineSeedShown.length ? `${tr("ไทม์ไลน์ผลิต")} · ${lineSeedShown.join(' · ')}` : 'ไทม์ไลน์ผลิตทุกไลน์')}
+            {isPeople ? tr("ภาพรวมกำลังคน") : (lineSeedShown.length ? `${tr("ไทม์ไลน์ผลิต")} · ${lineSeedShown.join(' · ')}` : tr("ไทม์ไลน์ผลิตทุกไลน์"))}
           </h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6, flexWrap: 'wrap' }}>
             {selectedShift !== 'all' && (
@@ -1020,13 +1020,13 @@ export default function Dashboard({ view = 'timeline' }) {
                 color: selectedShift === 'day' ? 'var(--amber)' : 'var(--blue)',
                 border: `1px solid ${selectedShift === 'day' ? 'var(--amber-line)' : 'var(--blue-line)'}`,
               }}>
-                {selectedShift === 'day' ? '☀️ กะเช้า' : '🌙 กะดึก'}
+                {selectedShift === 'day' ? tr("☀️ กะเช้า") : tr("🌙 กะดึก")}
                 {isToday && selectedShift === (shiftInfo.isDay ? 'day' : 'night') && ' · กะปัจจุบัน'}
               </span>
             )}
             <span style={{ fontSize: 14, color: 'var(--muted)', fontFamily: 'var(--font-display)' }}>
               {isToday
-                ? now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                ? now.toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit', second: '2-digit' })
                 : selectedDate}
             </span>
           </div>
@@ -1040,7 +1040,7 @@ export default function Dashboard({ view = 'timeline' }) {
           )}
           {/* Shift toggle = <Segmented> มาตรฐาน (06/11 · เดิมวาดเอง มุม 7px) · สีกะอยู่ที่ป้ายใต้ชื่อหน้าแทน */}
           <Segmented label={tr('กะ')} value={selectedShift} onChange={setSelectedShift}
-            options={[{ value: 'all', label: ALL.shift }, { value: 'day', label: 'กะเช้า' }, { value: 'night', label: 'กะดึก' }]} />
+            options={[{ value: 'all', label: ALL.shift }, { value: 'day', label: tr("กะเช้า") }, { value: 'night', label: tr("กะดึก") }]} />
           {/* Date picker */}
           <div style={{
             display: 'flex', alignItems: 'center', gap: 8,
@@ -1292,8 +1292,8 @@ export default function Dashboard({ view = 'timeline' }) {
                 const judgeable = line.lineTotal > 0 && line.lineChecked > 0;
                 const color   = statusColor(judgeable ? attendTone(line.rate) : 'none');
                 const over    = line.linePresent - line.lineTotal;
-                const attendText = line.lineTotal === 0 ? 'ไม่ได้ตั้งกำลังคนมาตรฐาน'
-                  : line.lineChecked === 0 ? 'ยังไม่มีใครเช็คชื่อ'
+                const attendText = line.lineTotal === 0 ? tr("ไม่ได้ตั้งกำลังคนมาตรฐาน")
+                  : line.lineChecked === 0 ? tr("ยังไม่มีใครเช็คชื่อ")
                   : `${tr("มาทำงาน")} ${Math.min(line.rate, 100)}%${over > 0 ? ` · ${tr("เกินมาตรฐาน")} ${over} ${tr("คน")}` : ''}`;
                 const isExpanded = line._hasChildren && expandedLines.has(line.name);
                 // downtime alarm ของไลน์นี้ + ไลน์ย่อยที่ถูกรวมเข้าการ์ดเดียวกัน
@@ -1368,7 +1368,7 @@ export default function Dashboard({ view = 'timeline' }) {
                               background: 'var(--accent-dim)', border: '1px solid var(--accent)',
                               borderRadius: 'var(--r-md)', padding: '4px 10px',
                             }}>
-                            {isExpanded ? 'ซ่อนไลน์ย่อย' : 'ดูไลน์ย่อย'}
+                            {isExpanded ? tr("ซ่อนไลน์ย่อย") : tr("ดูไลน์ย่อย")}
                             <span style={{ transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>▾</span>
                           </button>
                         )}
@@ -1441,7 +1441,7 @@ export default function Dashboard({ view = 'timeline' }) {
                               </div>
                               <MiniBar value={pl.staffed} max={pl.total || 1} color={cColor} />
                               <div style={{ marginTop: 6, fontSize: 11, fontWeight: 700, color: cColor }}>
-                                {pl.total === 0 ? `${pl.people} ${tr("คนบนไลน์")}` : pl.staffed >= pl.total ? '✓ เข้าครบทุกจุด' : `⚠ ${tr("เข้า")} ${pl.staffed}/${pl.total} ${tr("จุด")}`}
+                                {pl.total === 0 ? `${pl.people} ${tr("คนบนไลน์")}` : pl.staffed >= pl.total ? tr("✓ เข้าครบทุกจุด") : `⚠ ${tr("เข้า")} ${pl.staffed}/${pl.total} ${tr("จุด")}`}
                                 {cs.lineAlerts > 0 ? ' · ⚠ Risk' : ''}
                               </div>
                             </div>
@@ -1587,7 +1587,7 @@ export default function Dashboard({ view = 'timeline' }) {
                     <TabBar size="sm" value={effSel} onChange={setBoardLineSel}
                       tabs={[{ key: '', label: `${tr("ทุกไลน์")} (${lineNames.length})` }, ...lineNames.map(n => ({ key: n, label: n }))]}
                       right={<>
-                        <SearchInput value={boardQuery} onChange={setBoardQuery} fields="พาร์ท / MAT / เลขใบ" grow={false}
+                        <SearchInput value={boardQuery} onChange={setBoardQuery} fields={tr("พาร์ท / MAT / เลขใบ")} grow={false}
                           style={{ width: 210 }} inputStyle={{ fontSize: 12.5, background: 'var(--bg2)' }} />
                         {(effSel || boardQuery) && (
                           <button type="button" onClick={() => { setBoardLineSel(''); setBoardQuery(''); }}
@@ -1700,7 +1700,7 @@ export default function Dashboard({ view = 'timeline' }) {
                               color: anyOpen ? 'var(--green)' : 'var(--muted)' }}>
                               {multi && <span style={{ fontWeight: 800 }}>{ln} · </span>}
                               {list.map(s => `${s.shift === 'day' ? '☀️' : '🌙'}${s.status === 'open' ? '●' : '✓'}`).join(' ')}
-                              {anyOpen ? ' Live' : ' ปิดแล้ว'}
+                              {anyOpen ? ' Live' : tr(" ปิดแล้ว")}
                             </span>
                           );
                         });
@@ -2118,8 +2118,8 @@ export default function Dashboard({ view = 'timeline' }) {
                             หัวชั่วโมงแสดงเวลาคู่บน-ล่างในคอลัมน์เดียวกัน (โครงเดียวกับบอร์ดหน้าจัดการไลน์) */}
                         <div style={{ display: 'flex', borderBottom: '1px solid var(--border2)', background: 'var(--bg2)', position: 'relative' }}>
                           <div style={{ width: LEFT_W, flexShrink: 0, borderRight: '1px solid var(--border2)', padding: '4px 8px', fontSize: T(11, 17), fontWeight: 700, color: tv ? 'var(--text2)' : 'var(--muted)', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 1, ...(isMobile ? { position: 'sticky', left: 0, zIndex: 6, background: 'var(--bg2)' } : null) }}>
-                            <span>{tr('กะเช้า')}{isMobile ? '' : ' (แถบบน)'}</span>
-                            <span>{tr('กะดึก')}{isMobile ? '' : ' (แถบล่าง)'}</span>
+                            <span>{tr('กะเช้า')}{isMobile ? '' : tr(" (แถบบน)")}</span>
+                            <span>{tr('กะดึก')}{isMobile ? '' : tr(" (แถบล่าง)")}</span>
                           </div>
                           {/* ป้ายเวลาปัจจุบัน ลอยตรงตำแหน่ง playhead (คอลัมน์ใช้ร่วม 2 กะ — ไอคอนบอกว่าอยู่กะไหน) */}
                           {(() => {
@@ -2153,7 +2153,7 @@ export default function Dashboard({ view = 'timeline' }) {
                         {/* แถวที่ถูกกรองซ่อน — บอกจำนวนเสมอ ห้ามหายเงียบ */}
                         {hiddenRowCount > 0 && (
                           <div style={{ padding: '6px 12px', fontSize: 12, color: 'var(--muted)', background: 'var(--bg2)', borderBottom: '1px solid var(--border)' }}>
-                            {tr("ตัวกรอง")} "{boardQuery.trim()}" — {tr("ซ่อน")} {hiddenRowCount} {tr('พาร์ทของไลน์นี้')}{qRows.length === 0 ? ' (ไม่มีพาร์ทที่ตรง)' : ''}
+                            {tr("ตัวกรอง")} "{boardQuery.trim()}" — {tr("ซ่อน")} {hiddenRowCount} {tr('พาร์ทของไลน์นี้')}{qRows.length === 0 ? tr(" (ไม่มีพาร์ทที่ตรง)") : ''}
                           </div>
                         )}
                         {/* ✍️ ใบเปิดเอง — ยุบไว้ แต่ **ห้ามซ่อนเงียบ** ต้องบอกจำนวน + กดกางได้เสมอ
@@ -2167,7 +2167,7 @@ export default function Dashboard({ view = 'timeline' }) {
                             <span style={{ fontWeight: 800, color: 'var(--text2)' }}>{showManualRows ? '▼' : '▶'}</span>
                             <span>{tr('✍️ ใบเปิดเอง (ไม่มีบัตรคัมบังให้สแกน) ·')} {manualRows.length} {tr('พาร์ท')}</span>
                             <span style={{ marginLeft: 'auto', fontWeight: 700, color: 'var(--accent)' }}>
-                              {showManualRows ? 'ยุบเก็บ (ทั้งบอร์ด)' : 'กางดู (ทั้งบอร์ด)'}
+                              {showManualRows ? tr("ยุบเก็บ (ทั้งบอร์ด)") : tr("กางดู (ทั้งบอร์ด)")}
                             </span>
                           </div>
                         )}
@@ -2339,7 +2339,7 @@ export default function Dashboard({ view = 'timeline' }) {
       {visibleProdStatus.length === 0 && !loading && (
         <div style={{ marginBottom: 24, padding: '18px 20px', borderRadius: 'var(--r-lg)', border: '1px dashed var(--border2)',
           background: 'var(--card-surf)', color: 'var(--muted)', fontSize: 15, fontWeight: 600 }}>
-          {tr("ยังไม่มีไลน์ไหนเปิดกะของวันที่")} {boardDate}{!passAll ? ' (ในขอบเขต/ส่วนงานที่เลือก)' : ''}
+          {tr("ยังไม่มีไลน์ไหนเปิดกะของวันที่")} {boardDate}{!passAll ? tr(" (ในขอบเขต/ส่วนงานที่เลือก)") : ''}
         </div>
       )}
       </>)}
@@ -2464,7 +2464,7 @@ export default function Dashboard({ view = 'timeline' }) {
                           </div>
                           {log.created_at && (
                             <div style={{ fontSize: T(12, 18), color: 'var(--muted)', marginTop: 4 }}>
-                              {new Date(log.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                              {new Date(log.created_at).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit' })}
                             </div>
                           )}
                         </div>
@@ -2487,7 +2487,7 @@ export default function Dashboard({ view = 'timeline' }) {
         const dts = andonLine.names.flatMap(n => dtAlarmByLine[n] || []);
         const fms = fourMLogs.filter(f => andonLine.names.includes(f.line_name));
         const CAT_ICON = { Man: '👤', Machine: '⚙️', Material: '📦', Method: '📋' };
-        const fmtTime = (ts) => ts ? new Date(ts).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '—';
+        const fmtTime = (ts) => ts ? new Date(ts).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit' }) : '—';
         // ── ระดับไฟ Andon: แดง = เครื่องหยุดค้างอยู่ · เหลือง = มีรายการรอดำเนินการ · เขียว = อนุมัติครบ/ปกติ ──
         const hasOngoingDT = dts.some(d => !d.ended_at && d.duration_min == null);
         const hasPendingFM = fms.some(f => f.status !== 'approved' && f.status !== 'rejected');
@@ -2636,7 +2636,7 @@ export default function Dashboard({ view = 'timeline' }) {
                         background: f.status === 'approved' ? 'var(--green-dim)' : f.status === 'rejected' ? 'var(--red-dim)' : 'var(--amber-dim)',
                         color: f.status === 'approved' ? 'var(--green)' : f.status === 'rejected' ? 'var(--red)' : 'var(--amber)',
                       }}>
-                        {f.status === 'approved' ? '✓ อนุมัติแล้ว' : f.status === 'rejected' ? '✕ ปฏิเสธ' : f.status === 'pending_qa' ? '🔍 รอ QA' : f.status === 'pending_doc' ? '📎 รอแนบเอกสาร' : '⏳ รออนุมัติ'}
+                        {f.status === 'approved' ? tr("✓ อนุมัติแล้ว") : f.status === 'rejected' ? tr("✕ ปฏิเสธ") : f.status === 'pending_qa' ? tr("🔍 รอ QA") : f.status === 'pending_doc' ? tr("📎 รอแนบเอกสาร") : tr("⏳ รออนุมัติ")}
                       </span>
                       {f.description && <span style={{ fontSize: 13, color: 'var(--text)', width: '100%' }}>{f.description}</span>}
                     </div>
@@ -2823,7 +2823,7 @@ export default function Dashboard({ view = 'timeline' }) {
                                 background: pAlarm.kind === 'red' ? 'var(--red-line)' : 'var(--amber-line)',
                                 padding: '1px 6px', borderRadius: 'var(--r-xs)', marginTop: 2,
                               }}>
-                                {pAlarm.icon} {pAlarm.kind === 'red' ? 'PPE ไม่ครบ' : 'รอ 4M'}
+                                {pAlarm.icon} {pAlarm.kind === 'red' ? tr("PPE ไม่ครบ") : tr("รอ 4M")}
                               </div>
                             )}
                             </div>
@@ -2943,7 +2943,7 @@ function AttendCol({ title, tone = 'info', items, absent }) {
                 {l.employees?.name || '—'}
               </div>
               <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-                {absent ? 'ขาดงาน' : (l.has_helmet && l.has_boots && l.has_gloves ? '🟢 PPE ครบ' : '🟡 PPE ไม่ครบ')}
+                {absent ? tr("ขาดงาน") : (l.has_helmet && l.has_boots && l.has_gloves ? tr("🟢 PPE ครบ") : tr("🟡 PPE ไม่ครบ"))}
               </div>
             </div>
           </div>

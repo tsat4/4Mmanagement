@@ -21,6 +21,7 @@ import { layoutLots, reorderTo, UNKNOWN_BOX_MIN_PCT, lotTone, PLAN_SURFACE } fro
 import { sliceBySegments, visibleRows, rowTicks, SHIFT_LABEL } from '../utils/planHorizon';
 import { qtyText, isTrialLot, lotKeyText } from '../utils/planLots';
 
+import { MoreMark } from './InfoMore';
 import { tr } from '../utils/i18n';
 const fmtHm = (ms) => { const d = new Date(ms); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
 /* ข้ามวัน = บอกเวลาเปล่าๆ ไม่พอ ("22:34" ของวันไหน?) */
@@ -196,7 +197,7 @@ export default function PlanTimeline({
                                 {run.cutLeft && '↩ '}{isTrial && '🧪 '}{b.pairedWithPrev && '👯 '}#{b.seq} {lotKeyText(b.lot)}
                               </div>
                               <div style={{ fontSize: 11, color: 'var(--text2)', whiteSpace: 'nowrap', pointerEvents: 'none' }}>
-                                {isUnknown ? '⚠ ไม่มี CT'
+                                {isUnknown ? tr("⚠ ไม่มี CT")
                                   /* ยังไม่จบในกะนี้ — ในโหมดกะเดียวไม่มี "กะถัดไป" ให้ไหลไป จึงบอกเวลาตามเดิม */
                                   : run.cutRight ? (multi ? `${qtyText(b.lot.qty_plan)} ${tr("ชิ้น · ทำต่อกะถัดไป")} ↪`
                                                           : `${qtyText(b.lot.qty_plan)} ${tr("ชิ้น")} · ${fmtMin(b.runMin)}`)
@@ -288,7 +289,9 @@ export default function PlanTimeline({
         </span>
         {lay.unknownCount > 0 && (
           <span style={{ color: '#f59e0b', fontWeight: 700 }}>
-            ⚠️ {lay.unknownCount} {tr("ล็อตไม่มี CT — คำนวณความยาวไม่ได้ (กล่องลายทแยง) · เวลาหลังจากนั้นเชื่อไม่ได้")}
+            {/* 🔴 จำนวน + ผลที่ตามมา อยู่บนจอ · ส่วนที่เป็น "คำอธิบายภาพ" → tooltip (UI §6.10 · textsweep 23/11) */}
+            ⚠️ {lay.unknownCount} {tr("ล็อตไม่มี CT — เวลาหลังจากนั้นเชื่อไม่ได้")}
+            <MoreMark text={tr('กล่องลายทแยง = ล็อตที่คำนวณความยาวไม่ได้ เพราะยังไม่มี cycle time')} />
           </span>
         )}
         {lay.setupUnknownCount > 0 && (

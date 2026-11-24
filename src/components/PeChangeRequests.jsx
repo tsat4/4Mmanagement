@@ -309,7 +309,7 @@ export default function PeChangeRequests({
                         <Pill label={DOC_LABEL[x.doc_type]} color="#4d9fff" />
                         {LEG_META[x.leg] && <Pill label={tr(LEG_META[x.leg].short)} color={LEG_META[x.leg].color} title={tr(LEG_META[x.leg].hint)} />}
                         <span style={{ fontSize: 11, color: x.confidence >= 0.6 ? '#22c55e' : x.confidence > 0 ? '#f59e0b' : '#ef4444' }}>
-                          {x.confidence > 0 ? `${tr("ความมั่นใจ")} ${Math.round(x.confidence * 100)}%` : 'ไม่พบในเอกสาร'}
+                          {x.confidence > 0 ? `${tr("ความมั่นใจ")} ${Math.round(x.confidence * 100)}%` : tr("ไม่พบในเอกสาร")}
                         </span>
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--muted)' }}>{x.match_note}</div>

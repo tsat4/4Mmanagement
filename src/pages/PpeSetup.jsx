@@ -158,7 +158,7 @@ export default function PpeSetup() {
     setSaving('');
   };
 
-  const scopeName = kind === 'plant' ? 'ทั้งโรงงาน'
+  const scopeName = kind === 'plant' ? tr("ทั้งโรงงาน")
     : kind === 'section' ? (secKey || '—')
     : kind === 'line' ? (lineById[String(lineKey)]?.name || '—')
     : (stations.find(st => String(st.id) === String(stKey))?.station_name || '—');
@@ -187,10 +187,10 @@ export default function PpeSetup() {
             {kind === 'station' && (
               <select value={stKey} onChange={e => setStKey(e.target.value)} disabled={!lineKey || !stations.length}>
                 <option value="">
-                  {!lineKey ? 'เลือกไลน์ก่อน'
-                    : stFail ? '⚠ อ่านทะเบียนจุดงานไม่ได้'
-                    : !stations.length ? 'ไลน์นี้ยังไม่มีจุดงาน'
-                    : '— เลือกจุดงาน —'}
+                  {!lineKey ? tr("เลือกไลน์ก่อน")
+                    : stFail ? tr("⚠ อ่านทะเบียนจุดงานไม่ได้")
+                    : !stations.length ? tr("ไลน์นี้ยังไม่มีจุดงาน")
+                    : tr("— เลือกจุดงาน —")}
                 </option>
                 {stations.map(st => <option key={st.id} value={st.id}>{st.station_name || tr('(ไม่มีชื่อ)')}</option>)}
               </select>
@@ -258,7 +258,7 @@ export default function PpeSetup() {
                   <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 1 }}>
                     {v === 'inherit'
                       ? (inhSrc ? `${inhOn ? tr('บังคับ') : tr('ยกเว้น')} — ${ppeSourceText(inhSrc, { nameOfLine: id => lineById[String(id)]?.name })}`
-                        : 'ไม่มีชั้นไหนบังคับ')
+                        : tr("ไม่มีชั้นไหนบังคับ"))
                       : `${tr("ตั้งไว้ที่")}${PPE_SCOPE_LABEL[kind]}${tr("นี้เอง")}`}
                   </div>
                 </div>

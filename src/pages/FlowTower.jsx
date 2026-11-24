@@ -347,7 +347,7 @@ export default function FlowTower() {
             {tr("จุดที่ความต้องการค้าง ไม่กลายเป็นใบสั่ง")}
           </div>
           <div style={{ fontSize: 12, color: S.blocks?.length ? 'var(--red)' : 'var(--green)', fontWeight: 800 }}>
-            {S.blocks?.length ? `${fmt(S.blocks.length)} ${tr("พาร์ท")} · ${fmt(S.blockQty)} ${tr("ชิ้น")}` : 'ไม่มีจุดตัน'}
+            {S.blocks?.length ? `${fmt(S.blocks.length)} ${tr("พาร์ท")} · ${fmt(S.blockQty)} ${tr("ชิ้น")}` : tr("ไม่มีจุดตัน")}
           </div>
         </div>
         <InfoMore label={tr('ทำไมยังออกใบสั่งไม่ได้')} size={11.5} style={{ marginBottom: 10 }}>
@@ -360,7 +360,7 @@ export default function FlowTower() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                   <thead><tr style={{ background: 'var(--bg2)' }}>
                     {/* ยุบ "ชื่อพาร์ท + MAT" เป็นคอลัมน์เดียว — <MatLabel> ให้ครบ Part No./ชื่อ/MAT (30/09) */}
-                    {['ชิ้นงาน', 'ค้างสะสม', 'ปลายทาง', 'ค่าที่เสนอ', ''].map((h, i) => (
+                    {[tr("ชิ้นงาน"), tr("ค้างสะสม"), tr("ปลายทาง"), tr("ค่าที่เสนอ"), ''].map((h, i) => (
                       <th key={h} style={{ padding: '7px 12px', fontSize: 11, fontWeight: 800, color: 'var(--muted)', textAlign: i === 2 || i === 4 ? 'right' : 'left', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>{tr(h)}</th>
                     ))}
                   </tr></thead>
@@ -370,7 +370,7 @@ export default function FlowTower() {
                         <td style={{ padding: '7px 12px', maxWidth: 340 }}><MatLabel mat={b.mat_no} name={b.part_name} /></td>
                         <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 800, color: 'var(--red)' }}>{fmt(b.pending_qty)}</td>
                         <td style={{ padding: '7px 12px', fontSize: 11, color: 'var(--muted)' }}>
-                          {b.demand_kind === 'purchase' ? '🚛 สั่งซื้อ' : `🔨 ${tr("ผลิตเอง")}${b.maker_line ? ` · ${b.maker_line}` : ''}`}
+                          {b.demand_kind === 'purchase' ? tr("🚛 สั่งซื้อ") : `🔨 ${tr("ผลิตเอง")}${b.maker_line ? ` · ${b.maker_line}` : ''}`}
                         </td>
                         <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 700 }}>{b.suggested_lot ? fmt(b.suggested_lot) : '—'}</td>
                         <td style={{ padding: '7px 12px' }}>
@@ -401,7 +401,7 @@ export default function FlowTower() {
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead><tr style={{ background: 'var(--bg2)' }}>
-              {['ช่วง', 'กลไก', 'สถานะ', 'หลักฐานจากข้อมูลจริง'].map(h => (
+              {[tr("ช่วง"), tr("กลไก"), tr("สถานะ"), tr("หลักฐานจากข้อมูลจริง")].map(h => (
                 <th key={h} style={{ padding: '7px 12px', fontSize: 11, fontWeight: 800, color: 'var(--muted)', textAlign: 'left', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{tr(h)}</th>
               ))}
             </tr></thead>

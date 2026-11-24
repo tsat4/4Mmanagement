@@ -15,7 +15,7 @@
 import { LIVE_STATUS } from '../lib/vsmLive';
 import { fmtMct, fmtMinSec } from '../lib/vsmModel';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 export const PALETTE_LIGHT = {
   bg: '#ffffff', ink: '#111827', sub: '#4b5563', line: '#374151', faint: '#9ca3af',
   box: '#ffffff', boxHead: '#dbeafe', data: '#f9fafb', inv: '#fde68a', invInk: '#78350f',
@@ -98,7 +98,7 @@ const Y_TOP = 16;
 const FEED_H = 78;                    // ความสูงต่อสายป้อน 1 สาย
 const FEED_BOX_W = 132, FEED_BOX_H = 40;
 
-const fmt = (v, d = 0) => (v == null ? '—' : Number(v).toLocaleString('th-TH', { maximumFractionDigits: d }));
+const fmt = (v, d = 0) => (v == null ? '—' : Number(v).toLocaleString(dateLocale(), { maximumFractionDigits: d }));
 
 /* ── ชิ้นส่วนย่อย ─────────────────────────────────────────────────────────── */
 const Fact = ({ x, y, P, title, sub, sub2, w = FACT_W }) => (
@@ -167,7 +167,7 @@ const InvPoint = ({ cx, y, P, inv }) => {
         strokeWidth="1.3" strokeDasharray={missing ? '3 2' : undefined} />
       <text x={cx} y={y + 23} fontSize="9" fontWeight="700" fill={missing ? P.nva : P.invInk} textAnchor="middle">I</text>
       <text x={cx} y={y + 39} fontSize="10" fontWeight="700" fill={P.ink} textAnchor="middle">
-        {missing ? 'ยังไม่กรอก' : `${fmt(inv.qty)} ${inv.uom || 'pcs'}`}
+        {missing ? tr("ยังไม่กรอก") : `${fmt(inv.qty)} ${inv.uom || 'pcs'}`}
       </text>
       {inv?.days != null && <text x={cx} y={y + 51} fontSize="9.5" fill={P.sub} textAnchor="middle">{fmt(inv.days, 2)} {tr('วัน')}</text>}
       {isPull && inv.kanban?.total_kanban != null && (
@@ -341,18 +341,18 @@ export default function VsmCanvas({ model, palette = PALETTE_DARK, width = null,
       {(() => {
         const oldSnap = I.forecastMonths === undefined && I.orderCount === undefined;
         const fcTxt = I.forecastMonths ? `Forecast ${fmt(I.forecastMonths)} ${tr("เดือน")} (${I.forecastSource})`
-          : (oldSnap && I.demandSource === 'forecast') ? 'Forecast: มีในระบบ'
-          : 'Forecast: ยังไม่มีในระบบ';
+          : (oldSnap && I.demandSource === 'forecast') ? tr("Forecast: มีในระบบ")
+          : tr("Forecast: ยังไม่มีในระบบ");
         const soTxt = I.orderCount ? `Order ${tr("เดือนนี้")} ${fmt(I.orderCount)} ${tr("ใบ")}${I.orderSource ? ` (${I.orderSource})` : ''}`
-          : (oldSnap && I.demandSource === 'order') ? 'Order: มีในระบบ'
-          : 'Order เดือนนี้: ยังไม่มีในระบบ';
+          : (oldSnap && I.demandSource === 'order') ? tr("Order: มีในระบบ")
+          : tr("Order เดือนนี้: ยังไม่มีในระบบ");
         const hasFc = !fcTxt.includes('ยังไม่มี'), hasSo = !soTxt.includes('ยังไม่มี');
         const custLabel = hasFc || hasSo
           ? [hasFc && 'Forecast', hasSo && 'Order'].filter(Boolean).join(' / ')
-          : 'ยังไม่มี forecast/order ในระบบ';
-        const planLabel = I.planDays === undefined ? 'สั่งผลิตรายวัน'      // snapshot เก่า — ไม่รู้ ไม่อ้างเลข
+          : tr("ยังไม่มี forecast/order ในระบบ");
+        const planLabel = I.planDays === undefined ? tr("สั่งผลิตรายวัน")      // snapshot เก่า — ไม่รู้ ไม่อ้างเลข
           : I.planDays ? `${tr("สั่งผลิตรายวัน (เปิดกะ")} ${fmt(I.planDays)} ${tr("วันในเดือน")})`
-          : 'สั่งผลิต: เดือนนี้ยังไม่มีกะปิด';
+          : tr("สั่งผลิต: เดือนนี้ยังไม่มีกะปิด");
         return <>
           <g>
             <rect x={planX} y={Y_TOP} width={PLAN_W} height={PLAN_H} fill={P.box} stroke={P.line} strokeWidth="1.4" />
@@ -375,7 +375,7 @@ export default function VsmCanvas({ model, palette = PALETTE_DARK, width = null,
 
       <Fact x={custX} y={Y_TOP} P={P}
         title={model.customer.name || model.header.customer || 'CUSTOMER'}
-        sub={model.customer.pattern || (model.customer.roundsPerDay ? `${model.customer.roundsPerDay} ${tr("รอบส่ง/วัน")}` : 'รอบส่ง: ยังไม่กรอก')} />
+        sub={model.customer.pattern || (model.customer.roundsPerDay ? `${model.customer.roundsPerDay} ${tr("รอบส่ง/วัน")}` : tr("รอบส่ง: ยังไม่กรอก"))} />
       {n > 1 && <InfoLine P={P} electronic={false}
         pts={[[planCx, Y_PROC - 34], [colX(n - 1) + BOX_W / 2, Y_PROC - 34], [colX(n - 1) + BOX_W / 2, Y_PROC - 6]]} />}
 

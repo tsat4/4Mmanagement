@@ -60,7 +60,7 @@ export default function PeSetFromMasterModal({ masters, masterItems, lines, role
 
   return (
     <Modal title={tr('➕ สร้างชุด PFC/FMEA/CP จากคลัง PFMEA กลาง')} onClose={onClose} width={860}
-      footer={<><button style={ghost} onClick={onClose}>{tr('ยกเลิก')}</button><button style={btn()} disabled={saving} onClick={create}>{saving ? 'กำลังสร้าง…' : `💾 ${tr("สร้างชุด")} (${chosen.length} OP)`}</button></>}>
+      footer={<><button style={ghost} onClick={onClose}>{tr('ยกเลิก')}</button><button style={btn()} disabled={saving} onClick={create}>{saving ? tr("กำลังสร้าง…") : `💾 ${tr("สร้างชุด")} (${chosen.length} OP)`}</button></>}>
       {!active.length && <WarnBar color="#f59e0b">{tr('คลังยังว่าง — apply migration 20260915_pe_fmea_master_main หรือเพิ่มกระบวนการที่แท็บ 📚 คลัง PFMEA ก่อน')}</WarnBar>}
       <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, alignItems: 'start', marginBottom: 12 }}>
         <Field label="Part No. *"><input style={{ ...inp, fontFamily: 'monospace' }} value={form.part_no} onChange={e => setForm({ ...form, part_no: e.target.value })} placeholder="MB3B-16E060-CH" /></Field>

@@ -284,7 +284,7 @@ export default function ShiftAutoFillModal({ weekStart, lines = [], deptRows = [
               fontSize: 13, fontWeight: 700, cursor: (saving || !ready.length) ? 'not-allowed' : 'pointer',
               opacity: (saving || loading || !ready.length) ? 0.5 : 1,
             }}>
-            {saving ? 'กำลังเติม...' : `✓ ${tr("เติม")} ${rowCount} ${tr("แถว")}`}
+            {saving ? tr("กำลังเติม...") : `✓ ${tr("เติม")} ${rowCount} ${tr("แถว")}`}
           </button>
         </div>
       </div>

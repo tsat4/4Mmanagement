@@ -29,7 +29,7 @@ import { LIVE } from '../utils/refreshRates';
 import { coalesce } from '../utils/liveRefresh';
 import PartCard, { partCardGrid } from '../components/PartCard';
 import { storeBtn } from '../utils/storeUi';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 import { askConfirm } from '../utils/askConfirm';
 
@@ -59,7 +59,7 @@ function timeAgo(iso) {
   if (mins < 60) return `${mins} ${tr("นาทีที่แล้ว")}`;
   const hrs = Math.round(mins / 60);
   if (hrs < 24) return `${hrs} ${tr("ชม.ที่แล้ว")}`;
-  return new Date(iso).toLocaleDateString('th-TH');
+  return new Date(iso).toLocaleDateString(dateLocale());
 }
 
 const EMPTY_FORM = { line_name: '', container_type_id: '', qty: '1', note: '' };
@@ -182,7 +182,7 @@ export default function RackCenter() {
     [requests, scopedNames, allLineNames]);
   const pkgScoped = useMemo(() => filterRowsByLineScope(pkgReqs, { scopedNames, lineNames: allLineNames, nameOf: p => p?.source_line }),
     [pkgReqs, scopedNames, allLineNames]);
-  const scopeLabel = (sections || []).filter(Boolean).join(' · ') || 'ไลน์ของคุณ';
+  const scopeLabel = (sections || []).filter(Boolean).join(' · ') || tr("ไลน์ของคุณ");
 
   const filtered = useMemo(() => {
     const rows = reqScoped.rows;
@@ -330,7 +330,7 @@ export default function RackCenter() {
     <Page>
       {/* ⚠️ rack_center:operate seed ไว้ตั้งแต่ 2026-07-08 (ก่อนมี role mtn/engineer/planner_store/dept_admin)
           → role ที่เพิ่มทีหลังเปิดหน้านี้ได้แต่เรียกภาชนะไม่ได้ ต้องบอกให้ชัด */}
-      <ReadOnlyNote show={!canOperate} role={role} what="เรียกภาชนะ/รับงาน"
+      <ReadOnlyNote show={!canOperate} role={role} what={tr("เรียกภาชนะ/รับงาน")}
         permKey="rack_center:operate" />
       {/* UI-STANDARD 2026-09-24: หัวเพจ + แท็บ ผ่าน PageHeader (เดิมวาด h1/แถบปุ่มเอง) · แท็บผูก ?tab= */}
       <PageHeader title={tr('ภาชนะ & Packaging — เรียกภาชนะ')} icon="🗃️"
@@ -338,7 +338,7 @@ export default function RackCenter() {
         actions={canOperate ? (
           <>
             {/* ปุ่มตายตัว ≤2 (UI §6.35): [สแกน] [เรียกภาชนะ] · ป้าย QR → ⋯ */}
-            <OverflowMenu items={[{ key: 'qr', icon: '🏷️', label: 'ป้าย QR', onClick: () => setQrOpen(true), title: 'พิมพ์แผ่นป้าย QR ไปแปะหน้างาน' }]} />
+            <OverflowMenu items={[{ key: 'qr', icon: '🏷️', label: tr("ป้าย QR"), onClick: () => setQrOpen(true), title: tr("พิมพ์แผ่นป้าย QR ไปแปะหน้างาน") }]} />
             <button type="button" className="pg-btn" onClick={() => setScanOpen(true)} title={tr('สแกน QR ที่แปะหน้างาน — กล้องในแอป หรือปืนยิงสแกน')}>{tr('สแกน')}</button>
             <button type="button" className="pg-btn primary" onClick={() => { setForm({ ...EMPTY_FORM, line_name: lineFilter }); setShowForm(true); }}>{tr('เรียกภาชนะ')}</button>
           </>
@@ -353,7 +353,7 @@ export default function RackCenter() {
         </label>
       </FilterBar>
       {(scopedNames || viewScope.unsure) && (reqScoped.hidden + pkgScoped.hidden > 0 || viewScope.unsure) && (
-        <div title={viewScope.unsure ? 'ตัดขอบเขตของบัญชีนี้ไม่ได้ (ทะเบียนไลน์ยังไม่โหลด/ส่วนงานไม่ตรงผัง)' : `${tr("ขอบเขตของบัญชีนี้")}: ${scopeLabel}`}
+        <div title={viewScope.unsure ? tr("ตัดขอบเขตของบัญชีนี้ไม่ได้ (ทะเบียนไลน์ยังไม่โหลด/ส่วนงานไม่ตรงผัง)") : `${tr("ขอบเขตของบัญชีนี้")}: ${scopeLabel}`}
           style={{ display: 'inline-block', margin: '0 0 12px', padding: '4px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700,
             color: viewScope.unsure ? 'var(--amber)' : 'var(--accent)',
             background: viewScope.unsure ? 'var(--amber-dim)' : 'var(--accent-dim)',
@@ -361,7 +361,7 @@ export default function RackCenter() {
           {viewScope.unsure
             ? (scopedNames
               ? `⚠ ${tr("ขอบเขตไม่ชัด — แสดงเฉพาะ")} ${scopeLabel} · ${tr("ซ่อน")} ${reqScoped.hidden + pkgScoped.hidden} ${tr("ใบนอกขอบเขต")}`
-              : '⚠ ตัดขอบเขตไม่ได้ — แสดงทั้งโรงงาน')
+              : tr("⚠ ตัดขอบเขตไม่ได้ — แสดงทั้งโรงงาน"))
             : `🔭 ${tr("เฉพาะ")} ${scopeLabel} · ${tr("ซ่อน")} ${reqScoped.hidden} ${tr("ใบเรียกภาชนะ")}${pkgScoped.hidden ? ` + ${pkgScoped.hidden} ${tr("ใบเบิก")} packaging` : ''} ${tr("นอกขอบเขต")}`}
         </div>
       )}
@@ -384,12 +384,12 @@ export default function RackCenter() {
                    แต่โครงการ์ด/ปุ่ม/ระยะ ใช้ของกลางตัวเดียวกับคิวสโตร์ (UI §6.23) */
                 <PartCard key={p.id}
                   code={p.packaging_code} name={p.packaging_name} showImg={false}
-                  status={{ label: 'รอจ่าย', color: 'var(--amber)', bg: 'var(--amber-dim)', border: 'var(--amber-line)' }}
-                  metric={{ label: 'จำนวนที่ต้องจ่าย', value: p.qty, unit: '' }}
+                  status={{ label: tr("รอจ่าย"), color: 'var(--amber)', bg: 'var(--amber-dim)', border: 'var(--amber-line)' }}
+                  metric={{ label: tr("จำนวนที่ต้องจ่าย"), value: p.qty, unit: '' }}
                   aside={p.source_line ? { label: 'ไลน์ที่ขอ', value: p.source_line } : null}
                   rows={[
-                    { k: 'สินค้า', v: p.product_name || null },
-                    { k: 'ใบ FG', v: p.source_prod_no || null },
+                    { k: tr("สินค้า"), v: p.product_name || null },
+                    { k: tr("ใบ FG"), v: p.source_prod_no || null },
                   ]}
                   footer={canOperate
                     ? (
@@ -432,7 +432,7 @@ export default function RackCenter() {
           sub: `${byLine[lnName].length} ${tr("รายการ")} · ✅ ${byLine[lnName].filter(x => x.status === 'received').length}`,
           items: byLine[lnName].map(r => {
             const tm = frameMinFromIso(r.requested_at);
-            const hhmm = new Date(r.requested_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+            const hhmm = new Date(r.requested_at).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit' });
             return { id: r.id, timeMin: tm ?? 480, color: colorOf(r), text: `${hhmm}${r.status === 'received' ? ' ✅' : ''}`,
               title: `${hhmm} · ${r.container_name} ×${r.qty} · ${r.line_name}`, data: r };
           }),
@@ -697,7 +697,7 @@ function QrLabelModal({ lines, containerTypes, onClose, onPrint }) {
           <button disabled={printing || !selLines.size || !selTypes.size}
             onClick={async () => { setPrinting(true); try { await onPrint([...selLines], [...selTypes]); } finally { setPrinting(false); } }}
             style={{ ...btn(selLines.size && selTypes.size ? 'var(--accent)' : 'var(--bg2)', selLines.size && selTypes.size ? 'var(--accent-ink)' : 'var(--muted)'), cursor: selLines.size && selTypes.size ? 'pointer' : 'not-allowed' }}>
-            {printing ? '...' : 'พิมพ์ป้าย'}
+            {printing ? '...' : tr("พิมพ์ป้าย")}
           </button>
         </div>
       </div>

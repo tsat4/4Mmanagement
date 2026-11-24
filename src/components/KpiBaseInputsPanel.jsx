@@ -16,9 +16,9 @@ import { isPlant } from '../utils/orgScope';
 import { BASE_VARS_BY_LEVEL, baseScopeKeyOf, baseScopeColumns, buildBaseIndex, formulasUsingVar, PLANT_BASE_KEY } from '../utils/kpiFormula';
 import KpiBaseImportModal from './KpiBaseImportModal';
 
-import { tr } from '../utils/i18n';
-const MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-const fmt = (v) => (v == null ? '' : Number(v).toLocaleString('th-TH', { maximumFractionDigits: 2 }));
+import { tr, dateLocale } from '../utils/i18n';
+import { monthsShort } from '../utils/dateFormat';
+const fmt = (v) => (v == null ? '' : Number(v).toLocaleString(dateLocale(), { maximumFractionDigits: 2 }));
 
 function Cell({ value, auto, disabled, onCommit }) {
   const [v, setV] = useState(value == null ? '' : String(value));
@@ -51,7 +51,7 @@ export default function KpiBaseInputsPanel({ year, scope, org, rows = [], base: 
   const base = baseIn || buildBaseIndex(rows);
   const [importing, setImporting] = useState(false);
   const mySk = baseScopeKeyOf(scope);
-  const label = plant ? 'ทั้งโรงงาน' : org.labelOf(scope.kind, scope.value);
+  const label = plant ? tr("ทั้งโรงงาน") : org.labelOf(scope.kind, scope.value);
   const [busy, setBusy] = useState('');
 
   const save = async (varKey, sk, month, raw) => {
@@ -62,7 +62,7 @@ export default function KpiBaseInputsPanel({ year, scope, org, rows = [], base: 
     const prev = existing?.value == null ? null : Number(existing.value);
     if (prev === value) return;
     if (!existing && value == null) return;
-    const tag = `${tr("ตัวเลขฐาน")} ${varKey} ${MONTHS[month - 1]}`;
+    const tag = `${tr("ตัวเลขฐาน")} ${varKey} ${monthsShort()[month - 1]}`;
     setBusy(`${sk}|${varKey}|${month}`);
     const ok = existing
       ? checkWriteRows(await supabase.from('kpi_base_inputs').update({ value }).eq('id', existing.id).select('id'), tag)
@@ -94,7 +94,7 @@ export default function KpiBaseInputsPanel({ year, scope, org, rows = [], base: 
         const existing = base.row(sk, varKey, month);
         const prev = existing?.value == null ? null : Number(existing.value);
         if (prev === value) continue;
-        const tag = `${tr("นำเข้า")} ${varKey} ${MONTHS[month - 1]}`;
+        const tag = `${tr("นำเข้า")} ${varKey} ${monthsShort()[month - 1]}`;
         const ok = existing
           ? checkWriteRows(await supabase.from('kpi_base_inputs').update({ value }).eq('id', existing.id).select('id'), tag)
           : checkWriteRows(await supabase.from('kpi_base_inputs').insert({ year, month, var_key: varKey, value, ...cols, ...(await stamp()) }).select('id'), tag);
@@ -118,7 +118,7 @@ export default function KpiBaseInputsPanel({ year, scope, org, rows = [], base: 
       </div>
       <div style={{ overflowX: 'auto' }}>
         <table style={{ borderCollapse: 'collapse', fontSize: 12, width: '100%' }}>
-          <thead><tr><th style={{ ...th, textAlign: 'left' }}>{tr('ตัวแปร')}</th>{MONTHS.map(m => <th key={m} style={th}>{tr(m)}</th>)}</tr></thead>
+          <thead><tr><th style={{ ...th, textAlign: 'left' }}>{tr('ตัวแปร')}</th>{monthsShort().map(m => <th key={m} style={th}>{tr(m)}</th>)}</tr></thead>
           <tbody>
             {vars.map(v => (
               <tr key={v.key}>
@@ -128,7 +128,7 @@ export default function KpiBaseInputsPanel({ year, scope, org, rows = [], base: 
                     <div style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('ใช้ในสูตร:')} {formulasUsingVar(v.key).join(' · ')}</div>
                   )}
                 </td>
-                {MONTHS.map((_, i) => {
+                {monthsShort().map((_, i) => {
                   const r = base.row(sk, v.key, i + 1);
                   const val = r?.value == null ? null : Number(r.value);
                   const k = `${sk}|${v.key}|${i + 1}`;

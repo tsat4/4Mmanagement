@@ -192,7 +192,7 @@ export default function PullRoundsPanel({ canEdit, shipToMap, fullName }) {
         <div key={`${g.ship_to}|${g.dock_code}|${g.pattern}`} style={{ marginBottom: 12 }}>
           <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 4 }}>
             {shipToMap?.[g.ship_to]?.customer_name || g.ship_to}
-            {g.dock_code ? <> · Dock <b>{g.dock_code}</b></> : ' · ทุก Dock'}
+            {g.dock_code ? <> · Dock <b>{g.dock_code}</b></> : tr(" · ทุก Dock")}
             <span style={{ color: 'var(--muted)', fontWeight: 600 }}> · {patLabel(g.pattern)}</span>
           </div>
           <div style={{ overflowX: 'auto' }}>

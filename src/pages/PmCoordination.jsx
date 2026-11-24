@@ -211,7 +211,7 @@ export default function PmCoordination() {
 
   return (
     <Page>
-      <ReadOnlyNote show={!canManage} role={role} what="สร้าง/แก้แผนประสานงาน PM"
+      <ReadOnlyNote show={!canManage} role={role} what={tr("สร้าง/แก้แผนประสานงาน PM")}
         permKey="pm_coord:manage" hint={tr('ฝ่ายผลิตดูแผนที่ถูกนัดและพิมพ์ใบได้ตามปกติ (ตั้งใจให้เห็นทุก role)')} />
       <PageHeader title={tr('แผนประสานงาน PM / งานเครื่องจักร')} icon="🗓️"
         sub={tr('งาน PM/แก้เครื่องหลายวัน · แจ้ง Production ล่วงหน้า')}
@@ -220,12 +220,12 @@ export default function PmCoordination() {
       {/* UI-STANDARD 2026-09-24 — ตัวเลือกสถานะ 4 ตัว = Segmented · "ทุกสถานะ" ซ้ายสุด (state 'all' เดิม) */}
       <FilterBar>
         <Segmented value={fStatus} onChange={setFStatus} label={tr('สถานะแผน')} options={[
-          { value: 'all', label: ALL.status }, { value: 'active', label: 'กำลังดำเนินการ' },
-          { value: 'notified', label: 'แจ้งแล้ว' }, { value: 'done', label: 'เสร็จ' },
+          { value: 'all', label: ALL.status }, { value: 'active', label: tr("กำลังดำเนินการ") },
+          { value: 'notified', label: tr("แจ้งแล้ว") }, { value: 'done', label: tr("เสร็จ") },
         ]} />
         <LineScopeSelect lines={scopeLineList} section={fScope.section} line={fScope.line}
           onChange={(section, line, info) => setFScope({ section, line, names: info?.lines?.length ? info.lines : (section || line ? [line || section] : null) })} />
-        <SearchInput value={fQ} onChange={setFQ} fields="ชื่อแผน / เครื่อง / ไลน์ / งาน" />
+        <SearchInput value={fQ} onChange={setFQ} fields={tr("ชื่อแผน / เครื่อง / ไลน์ / งาน")} />
         <span className="spacer" />
         <span className="filter-count">{shown.length} {tr('แผน')}{noLineHidden ? ` · ${tr("ซ่อนแผนไม่ระบุไลน์")} ${noLineHidden}` : ''}</span>
         <button type="button" onClick={load} style={{ ...btnGhost, padding: '5px 11px', fontSize: 12 }}>{tr('รีเฟรช')}</button>
@@ -257,13 +257,13 @@ export default function PmCoordination() {
           แถวแดง = มีงานเลยวันแล้วยังไม่ติ๊ก (แผนที่ยังไม่ปิด) */}
       {!shown.length ? (
         <div style={{ color: 'var(--muted)', padding: 24, textAlign: 'center' }}>
-          {plans.length ? 'ไม่มีแผนที่ตรงกับตัวกรอง' : loadErr ? 'อ่านข้อมูลไม่ได้ — ดูแถบแดงด้านบน' : 'ยังไม่มีแผน'}
+          {plans.length ? tr("ไม่มีแผนที่ตรงกับตัวกรอง") : loadErr ? tr("อ่านข้อมูลไม่ได้ — ดูแถบแดงด้านบน") : tr("ยังไม่มีแผน")}
         </div>
       ) : (
         <div className="table-sticky" style={{ overflowX: 'auto', maxHeight: 'calc(100vh - 260px)', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)' }}>
           <table className="rec-list" style={{ width: '100%', borderCollapse: 'collapse', minWidth: 860 }}>
             <thead>
-              <tr>{['แผน', 'เครื่อง', 'ไลน์', 'ช่วงวันที่', 'งานถัดไป', 'ความคืบหน้า', 'สถานะ', ''].map((h, i) => <th key={i} style={{ textAlign: 'left' }}>{tr(h)}</th>)}</tr>
+              <tr>{[tr("แผน"), tr("เครื่อง"), tr("ไลน์"), tr("ช่วงวันที่"), tr("งานถัดไป"), tr("ความคืบหน้า"), tr("สถานะ"), ''].map((h, i) => <th key={i} style={{ textAlign: 'left' }}>{tr(h)}</th>)}</tr>
             </thead>
             <tbody>
               {shown.map(({ p, sum }) => (

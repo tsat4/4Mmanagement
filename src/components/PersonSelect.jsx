@@ -49,7 +49,7 @@ export default function PersonSelect({ scan,
   return (
     <SearchSelect
       value={sel ? sel.id : ''} text={value || ''} options={options} onChange={emit}
-      scan={scan === false ? undefined : (scan || 'บัตรพนักงาน')}   /* 📷 มือถือ: สแกนเพื่อเลือก (27/10) · scan={false} = ปิด */
+      scan={scan === false ? undefined : (scan || tr("บัตรพนักงาน"))}   /* 📷 มือถือ: สแกนเพื่อเลือก (27/10) · scan={false} = ปิด */
       allowFree={allowFree} placeholder={placeholder} freeHint={freeHint}
       emptyText={emptyText || (failed ? tr('โหลดทะเบียนคนไม่สำเร็จ') : tr('ไม่พบชื่อที่ค้นหา'))}
       disabled={disabled} inputStyle={inputStyle} style={style} wrapRows={wrapRows} maxRows={maxRows}

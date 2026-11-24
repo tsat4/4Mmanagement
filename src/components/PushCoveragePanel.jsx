@@ -137,7 +137,7 @@ export default function PushCoveragePanel() {
                           title={`${tr("แจ้งเตือนใน")} ${DAYS} ${tr("วัน")} ${r.n_notif} ${tr("รายการ (ใบซ่อม")} ${r.n_mtn}) · ${tr("ยังไม่มีเครื่องผูกไว้")}`}
                           style={{ fontSize: 11, padding: '2px 7px', borderRadius: 'var(--r-pill)',
                                    border: '1px solid var(--border)', background: 'var(--card-surf)', whiteSpace: 'nowrap' }}>
-                          {r.full_name || '(ไม่มีชื่อ)'}
+                          {r.full_name || tr("(ไม่มีชื่อ)")}
                           <b style={{ color: 'var(--muted)', fontWeight: 600 }}> · {r.n_notif}</b>
                         </span>
                       ))}
@@ -148,7 +148,7 @@ export default function PushCoveragePanel() {
                   <button onClick={() => setShowAll(v => !v)}
                     style={{ alignSelf: 'flex-start', fontSize: 11, color: 'var(--accent)', background: 'none',
                              border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}>
-                    {showAll ? 'ย่อ' : `${tr("ดูอีก")} ${bySection.length - 4} ${tr("ส่วนงาน")}`}
+                    {showAll ? tr("ย่อ") : `${tr("ดูอีก")} ${bySection.length - 4} ${tr("ส่วนงาน")}`}
                   </button>
                 )}
               </div>

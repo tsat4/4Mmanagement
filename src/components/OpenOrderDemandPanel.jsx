@@ -35,8 +35,8 @@ export default function OpenOrderDemandPanel({ q = '' }) {
         .eq('status', 'open').in('production_sessions.status', SESSION_STATUSES_LIVE)),
       loadProductsMaster().catch(() => null),
     ]);
-    if (ordRes.error || ordRes.truncated) errs.push('ใบผลิตที่เปิดอยู่');
-    if (!prods) errs.push('ทะเบียนสินค้า');
+    if (ordRes.error || ordRes.truncated) errs.push(tr("ใบผลิตที่เปิดอยู่"));
+    if (!prods) errs.push(tr("ทะเบียนสินค้า"));
     const orders = (ordRes.rows || []).map(o => ({ ...o, line_name: o.production_sessions?.line_name || '' }));
     const products = prods || [];
     const fgMats = new Set(orders.map(o => String(o.mat_no || '').trim()));
@@ -51,7 +51,7 @@ export default function OpenOrderDemandPanel({ q = '' }) {
       ? await fetchByIds(childMats, ms => supabaseDR.from('line_stock_summary')
           .select('line_name, mat_no, qty_on_hand').in('mat_no', ms), { orderBy: 'mat_no' })
       : { rows: [] };
-    if (stkRes.error || stkRes.truncated) errs.push('ยอดสต็อก');
+    if (stkRes.error || stkRes.truncated) errs.push(tr("ยอดสต็อก"));
     if (my !== reqRef.current) return;
     const stock = new Map();
     for (const s of stkRes.rows || []) stock.set(`${s.line_name}\u0001${s.mat_no}`, Number(s.qty_on_hand));
@@ -117,7 +117,7 @@ export default function OpenOrderDemandPanel({ q = '' }) {
         {groups.map(([line, rs]) => (
           <div key={line} style={{ ...card, padding: 0, overflow: 'hidden' }}>
             <div style={{ padding: '10px 16px', background: 'var(--bg2)', borderBottom: '1px solid var(--border)', fontWeight: 800, fontSize: 14 }}>
-              {line || '(ไม่ระบุไลน์)'} <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--muted)' }}>· {rs.length} {tr('ชิ้นส่วน')}</span>
+              {line || tr("(ไม่ระบุไลน์)")} <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--muted)' }}>· {rs.length} {tr('ชิ้นส่วน')}</span>
             </div>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -143,7 +143,7 @@ export default function OpenOrderDemandPanel({ q = '' }) {
                         <td style={td}>{fmt(r.need)} <span style={{ fontSize: 11, color: 'var(--muted)' }}>{r.uom}</span></td>
                         <td style={td}>{r.atLine == null ? <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('ไม่มียอด')}</span> : fmt(r.atLine)}</td>
                         <td style={{ ...td, fontWeight: 800, color: lack > 0 ? 'var(--amber)' : 'var(--green)' }}>
-                          {lack > 0 ? fmt(lack) : '✅ พอ'}
+                          {lack > 0 ? fmt(lack) : tr("✅ พอ")}
                           {r.shortAtLine == null && <div style={{ fontSize: 11, fontWeight: 400, color: 'var(--muted)' }}>{tr('(ไม่รู้ยอดหน้าไลน์ — แสดงเต็มจำนวน)')}</div>}
                         </td>
                         <td style={{ ...td, color: storeShort ? 'var(--red)' : 'var(--text)', fontWeight: storeShort ? 800 : 400 }}>

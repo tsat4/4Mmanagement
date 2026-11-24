@@ -146,11 +146,11 @@ export default function StoreMonitor() {
           <LineSelect
             lines={prodLines.filter(l => lines.includes(l.name))}
             value={lineFilter} onChange={setLineFilter} placeholder={ALL.line}
-            extraGroups={[{ label: 'คลัง', options: lines.filter(n => !prodLines.some(l => l.name === n)).map(n => ({ value: n })) }]}
+            extraGroups={[{ label: tr("คลัง"), options: lines.filter(n => !prodLines.some(l => l.name === n)).map(n => ({ value: n })) }]}
           />
         )}
         <Segmented value={kindFilter} onChange={setKindFilter} label={tr('ชนิดความผิดปกติ')}
-          options={[{ value: 'all', label: ALL.type }, { value: 'shortage', label: 'จะขาด' }, { value: 'over', label: 'ล้น' }]} />
+          options={[{ value: 'all', label: ALL.type }, { value: 'shortage', label: tr("จะขาด") }, { value: 'over', label: tr("ล้น") }]} />
       </FilterBar>
 
       {/* 🔴 การ์ดนับ = **เนื้อหา** ต้องอยู่ใต้แถบกรอง (UI-STANDARD §2.1) — ย้ายลงมา 20/10
@@ -202,7 +202,7 @@ export default function StoreMonitor() {
                    ("ต่ำกว่า Min" + "จะขาด") ซึ่งพูดเรื่องเดียวกัน · สีบอก shortage/over อยู่แล้ว */
                 status={{ label: f.title, color: tone, bg: `${tint(tone, 'dim')}`, border: `${tint(tone, 'line')}` }}
                 aside={{ label: red ? 'ไลน์ที่จะขาด' : 'ไลน์ที่ล้น', value: f.line || 'ทุกไลน์รวมกัน' }}
-                rows={[{ k: 'เคส', v: `${f.code} · ${red ? 'Shortage' : 'Over stock'}` }]}
+                rows={[{ k: tr("เคส"), v: `${f.code} · ${red ? 'Shortage' : 'Over stock'}` }]}
                 note={f.detail}
                 alert={blink} />
             );

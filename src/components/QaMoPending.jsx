@@ -85,7 +85,7 @@ export default function QaMoPending() {
             {busy ? tr('กำลังโหลด…') : tr('โหลดใหม่')}
           </button>
           <div style={{ marginLeft: 'auto', minWidth: 190 }}>
-            <SearchInput value={q} onChange={setQ} fields="เลข MO / ไลน์ / เครื่อง / อุปกรณ์" />
+            <SearchInput value={q} onChange={setQ} fields={tr("เลข MO / ไลน์ / เครื่อง / อุปกรณ์")} />
           </div>
         </div>
 
@@ -125,7 +125,7 @@ export default function QaMoPending() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
               <tr style={{ background: 'var(--bg2)', textAlign: 'left' }}>
-                {['เลข MO', 'วันที่แจ้ง', 'ค้าง', 'ส่วนงาน', 'ไลน์ / เครื่อง', 'อุปกรณ์', 'อาการ'].map(h => (
+                {[tr("เลข MO"), tr("วันที่แจ้ง"), tr("ค้าง"), tr("ส่วนงาน"), tr("ไลน์ / เครื่อง"), tr("อุปกรณ์"), tr("อาการ")].map(h => (
                   <th key={h} style={{ padding: '7px 9px', fontWeight: 800, whiteSpace: 'nowrap',
                                        borderBottom: '1px solid var(--border)' }}>{tr(h)}</th>
                 ))}
@@ -137,7 +137,7 @@ export default function QaMoPending() {
                   <td style={{ padding: '6px 9px', whiteSpace: 'nowrap' }}>
                     <Link to={`/mtn-repair?mo=${encodeURIComponent(r.id)}`}
                       style={{ color: 'var(--accent)', fontWeight: 700, textDecoration: 'none' }}>
-                      {r.mo_no || '(ยังไม่มีเลข)'}
+                      {r.mo_no || tr("(ยังไม่มีเลข)")}
                     </Link>
                   </td>
                   <td style={{ padding: '6px 9px', whiteSpace: 'nowrap' }}>{r.work_date || '—'}</td>

@@ -71,7 +71,7 @@ export function RfqFilesCard({ rfq, files, canEdit, canAssess, fullName, onReloa
   return (
     <div style={{ ...card, gridColumn: '1 / -1' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
-        <div style={{ fontWeight: 800 }}>📎 {tr("เอกสารแนบ")} <span style={{ color: 'var(--muted)', fontWeight: 400 }}>· {files.length} {tr("ไฟล์")}{!canEdit ? ' · ชนิดราคา (cost/ใบเสนอราคา) เห็นเฉพาะ Marketing' : ''}</span></div>
+        <div style={{ fontWeight: 800 }}>📎 {tr("เอกสารแนบ")} <span style={{ color: 'var(--muted)', fontWeight: 400 }}>· {files.length} {tr("ไฟล์")}{!canEdit ? tr(" · ชนิดราคา (cost/ใบเสนอราคา) เห็นเฉพาะ Marketing") : ''}</span></div>
         {canUpload && (
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
             <select value={kind} onChange={e => setKind(e.target.value)} style={{ ...inp, width: 'auto', fontSize: 12 }}>
@@ -81,7 +81,7 @@ export function RfqFilesCard({ rfq, files, canEdit, canAssess, fullName, onReloa
           </div>
         )}
       </div>
-      {!files.length ? <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{tr("ยังไม่มีเอกสารแนบ")}{canUpload ? ' — เลือกชนิดแล้วแนบไฟล์ (ใบ RFQ ลูกค้า · แบบ · CAD · สเปค · volume sheet)' : ''}</div> : (
+      {!files.length ? <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{tr("ยังไม่มีเอกสารแนบ")}{canUpload ? tr(" — เลือกชนิดแล้วแนบไฟล์ (ใบ RFQ ลูกค้า · แบบ · CAD · สเปค · volume sheet)") : ''}</div> : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 8, alignContent: 'start' }}>
           {groups.map(g => (
             <div key={g.k} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '6px 10px' }}>
@@ -194,12 +194,12 @@ export function RfqAssessCard({ rfq, assessments, canEdit, canAssess, fullName, 
     <div style={{ ...card, gridColumn: '1 / -1' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
         <div style={{ fontWeight: 800 }}>📐 {tr("ประเมินความเป็นไปได้")} (IEC)
-          {latest && <Pill label={`${tr("รอบ")} ${latest.round} · ${ASSESS_STATUS[latest.status]?.label || latest.status}`} color={statusColor(ASSESS_STATUS[latest.status]?.tone || 'none')} small />}
-          {latest?.status === 'submitted' && latest.feasible && <Pill label={FEASIBLE[latest.feasible]?.label || latest.feasible} color={statusColor(FEASIBLE[latest.feasible]?.tone || 'none')} small />}
+          {latest && <Pill label={`${tr("รอบ")} ${latest.round} · ${tr(ASSESS_STATUS[latest.status]?.label) || latest.status}`} color={statusColor(ASSESS_STATUS[latest.status]?.tone || 'none')} small />}
+          {latest?.status === 'submitted' && latest.feasible && <Pill label={tr(FEASIBLE[latest.feasible]?.label) || latest.feasible} color={statusColor(FEASIBLE[latest.feasible]?.tone || 'none')} small />}
         </div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {canEdit && !isClosed(rfq.status) && latest?.status !== 'draft' && (
-            <button style={btn()} disabled={busy} onClick={request}>{latest ? `${tr("ขอประเมินใหม่ (รอบ")} ${nextAssessmentRound(assessments)})` : 'ส่งให้ IEC ประเมิน'}</button>
+            <button style={btn()} disabled={busy} onClick={request}>{latest ? `${tr("ขอประเมินใหม่ (รอบ")} ${nextAssessmentRound(assessments)})` : tr("ส่งให้ IEC ประเมิน")}</button>
           )}
         </div>
       </div>
@@ -222,7 +222,7 @@ export function RfqAssessCard({ rfq, assessments, canEdit, canAssess, fullName, 
       {form && (
         <div>
           <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>
-            {tr("รอบ")} {latest.round} · {tr("ส่งมาโดย")} {latest.requested_by_name || 'Marketing'} {latest.requested_at ? fmtDateTime(latest.requested_at) : ''} · {tr("ชนิดงานที่ MKT ตั้ง")}: <b>{JOB_TYPES[rfq.job_type] || 'ไม่ระบุ'}</b>
+            {tr("รอบ")} {latest.round} · {tr("ส่งมาโดย")} {latest.requested_by_name || 'Marketing'} {latest.requested_at ? fmtDateTime(latest.requested_at) : ''} · {tr("ชนิดงานที่ MKT ตั้ง")}: <b>{JOB_TYPES[rfq.job_type] || tr("ไม่ระบุ")}</b>
             {rfq.customer_target_price != null && <> · 🔒 {tr("ราคาเป้าหมายลูกค้ามีอยู่ (MKT เห็นตัวเลข) — ต้องตอบว่าเป็นไปได้ไหม")}</>}
           </div>
           <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 10, alignItems: 'start' }}>
@@ -236,10 +236,10 @@ export function RfqAssessCard({ rfq, assessments, canEdit, canAssess, fullName, 
                 <option value="">{tr('— ไม่ระบุ —')}</option>{Object.entries(JOB_TYPES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select>
             </Field>
-            <Field label={tr("ไลน์อ้างอิงที่จะผลิต")} hint={form.feasible === 'no' ? 'ไม่บังคับเมื่อผลิตไม่ได้' : 'บังคับ'}>
+            <Field label={tr("ไลน์อ้างอิงที่จะผลิต")} hint={form.feasible === 'no' ? tr("ไม่บังคับเมื่อผลิตไม่ได้") : tr("บังคับ")}>
               <LineSelect lines={lines} value={form.ref_line_name} onChange={v => setF('ref_line_name', v)} role={role} lineId={lineId} sections={sections} scopeIdx={scopeIdx} style={inp} placeholder={tr('— เลือกไลน์ —')} />
             </Field>
-            <Field label={form.feasible === 'no' ? 'เหตุผลที่ผลิตไม่ได้ *' : 'เงื่อนไข / หมายเหตุผลประเมิน'} span={3}>
+            <Field label={form.feasible === 'no' ? tr("เหตุผลที่ผลิตไม่ได้ *") : tr("เงื่อนไข / หมายเหตุผลประเมิน")} span={3}>
               <textarea style={{ ...inp, minHeight: 48 }} value={form.feasible_note} onChange={e => setF('feasible_note', e.target.value)} />
             </Field>
           </div>
@@ -257,7 +257,7 @@ export function RfqAssessCard({ rfq, assessments, canEdit, canAssess, fullName, 
                     <td style={tdSt}><input style={inp} value={r.op} onChange={e => setRow(i, 'op', e.target.value)} /></td>
                     <td style={tdSt}><input style={inp} value={r.process} onChange={e => setRow(i, 'process', e.target.value)} placeholder={tr('เช่น Blanking · Draw · Spot weld')} /></td>
                     <td style={tdSt}><LineSelect lines={lines} value={r.line_name} onChange={v => setRow(i, 'line_name', v)} role={role} lineId={lineId} sections={sections} scopeIdx={scopeIdx} style={inp} placeholder="—" /></td>
-                    <td style={tdSt}><MachineSelect value={r.machine_no} onChange={(m) => setRow(i, 'machine_no', m?.machine_no ?? m ?? '')} allowFree freeHint="เครื่องใหม่ที่ยังไม่มีในทะเบียน" inputStyle={inp} placeholder={tr('เลขเครื่อง')} /></td>
+                    <td style={tdSt}><MachineSelect value={r.machine_no} onChange={(m) => setRow(i, 'machine_no', m?.machine_no ?? m ?? '')} allowFree freeHint={tr("เครื่องใหม่ที่ยังไม่มีในทะเบียน")} inputStyle={inp} placeholder={tr('เลขเครื่อง')} /></td>
                     <td style={tdSt}><input type="number" style={inp} value={r.ct_sec} onChange={e => setRow(i, 'ct_sec', e.target.value)} /></td>
                     <td style={tdSt}><input style={inp} value={r.note} onChange={e => setRow(i, 'note', e.target.value)} /></td>
                     <td style={{ ...tdSt, textAlign: 'right' }}><DeleteButton onClick={() => delRow(i)} title={tr("ลบขั้น")} /></td>
@@ -270,7 +270,7 @@ export function RfqAssessCard({ rfq, assessments, canEdit, canAssess, fullName, 
           <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 10, alignItems: 'start', marginTop: 10 }}>
             <Field label={tr("ต้องลงทุนเพิ่ม (เครื่อง / แม่พิมพ์ / JIG)")}><textarea style={{ ...inp, minHeight: 56 }} value={form.new_investment} onChange={e => setF('new_investment', e.target.value)} /></Field>
             <Field label={tr("ความเสี่ยง (คุณภาพ · กำลังผลิต · supplier)")}><textarea style={{ ...inp, minHeight: 56 }} value={form.risks} onChange={e => setF('risks', e.target.value)} /></Field>
-            <Field label={tr("เวลาเตรียมการ เทียบ SOP ลูกค้า")} hint={rfq.sop_date_customer ? `SOP ${fmtDate(rfq.sop_date_customer)}` : 'ยังไม่ระบุ SOP'}><textarea style={{ ...inp, minHeight: 56 }} value={form.lead_time_note} onChange={e => setF('lead_time_note', e.target.value)} /></Field>
+            <Field label={tr("เวลาเตรียมการ เทียบ SOP ลูกค้า")} hint={rfq.sop_date_customer ? `SOP ${fmtDate(rfq.sop_date_customer)}` : tr("ยังไม่ระบุ SOP")}><textarea style={{ ...inp, minHeight: 56 }} value={form.lead_time_note} onChange={e => setF('lead_time_note', e.target.value)} /></Field>
             <Field label={`${tr("ราคาเป้าหมายลูกค้าเป็นไปได้ไหม")}${rfq.customer_target_price != null ? ' *' : ''}`} hint={tr("ตอบจากประสบการณ์ — ตัวเลขจริงรอคิดต้นทุน")}>
               <select style={inp} value={form.target_price_feasible} onChange={e => setF('target_price_feasible', e.target.value)}>
                 <option value="">{tr('— เลือก —')}</option>{Object.entries(TARGET_PRICE_FEASIBLE).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
@@ -291,7 +291,7 @@ export function RfqAssessCard({ rfq, assessments, canEdit, canAssess, fullName, 
       {latest?.status === 'submitted' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: '0 16px', alignItems: 'start' }} className="mgrid">
           <div>
-            {row('ผล', <Pill label={FEASIBLE[latest.feasible]?.label || latest.feasible || '—'} color={statusColor(FEASIBLE[latest.feasible]?.tone || 'none')} small />)}
+            {row('ผล', <Pill label={tr(FEASIBLE[latest.feasible]?.label) || latest.feasible || '—'} color={statusColor(FEASIBLE[latest.feasible]?.tone || 'none')} small />)}
             {latest.feasible_note && row(latest.feasible === 'no' ? 'เหตุผล' : 'เงื่อนไข', latest.feasible_note)}
             {row('ชนิดงานในมุม IEC', latest.job_type_view ? <>{JOB_TYPES[latest.job_type_view]}{rfq.job_type && latest.job_type_view !== rfq.job_type && <span style={{ color: statusColor('warn') }}> · {tr("ต่างจากที่ MKT ตั้ง")} ({JOB_TYPES[rfq.job_type]})</span>}</> : '—')}
             {row('ไลน์อ้างอิง', latest.ref_line_name)}
@@ -299,8 +299,8 @@ export function RfqAssessCard({ rfq, assessments, canEdit, canAssess, fullName, 
             {row('ความเสี่ยง', latest.risks)}
             {row('เวลาเตรียมการ', latest.lead_time_note)}
             {row('ราคาเป้าหมายลูกค้า', latest.target_price_feasible
-              ? <><Pill label={TARGET_PRICE_FEASIBLE[latest.target_price_feasible]?.label || latest.target_price_feasible} color={statusColor(TARGET_PRICE_FEASIBLE[latest.target_price_feasible]?.tone || 'none')} small />{latest.target_price_note ? ` ${latest.target_price_note}` : ''}</>
-              : <span style={{ color: 'var(--muted)' }}>{tr("ไม่ได้ตอบ")}{rfq.customer_target_price == null ? ' (RFQ ไม่มีราคาเป้าหมาย)' : ''}</span>)}
+              ? <><Pill label={tr(TARGET_PRICE_FEASIBLE[latest.target_price_feasible]?.label) || latest.target_price_feasible} color={statusColor(TARGET_PRICE_FEASIBLE[latest.target_price_feasible]?.tone || 'none')} small />{latest.target_price_note ? ` ${latest.target_price_note}` : ''}</>
+              : <span style={{ color: 'var(--muted)' }}>{tr("ไม่ได้ตอบ")}{rfq.customer_target_price == null ? tr(" (RFQ ไม่มีราคาเป้าหมาย)") : ''}</span>)}
             {row('ประเมินโดย', `${latest.assessed_by_name || '—'} · ${latest.submitted_at ? fmtDateTime(latest.submitted_at) : '—'}`)}
           </div>
           <div>
@@ -309,7 +309,7 @@ export function RfqAssessCard({ rfq, assessments, canEdit, canAssess, fullName, 
           </div>
         </div>
       )}
-      {assessments.length > 1 && <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 6 }}>{tr("ประวัติ")}: {assessments.slice().sort((a, b) => a.round - b.round).map(a => `${tr("รอบ")} ${a.round} ${ASSESS_STATUS[a.status]?.label || a.status}${a.feasible ? ` (${FEASIBLE[a.feasible]?.label})` : ''}`).join(' → ')}</div>}
+      {assessments.length > 1 && <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 6 }}>{tr("ประวัติ")}: {assessments.slice().sort((a, b) => a.round - b.round).map(a => `${tr("รอบ")} ${a.round} ${tr(ASSESS_STATUS[a.status]?.label) || a.status}${a.feasible ? ` (${tr(FEASIBLE[a.feasible]?.label)})` : ''}`).join(' → ')}</div>}
       {latest?.status === 'draft' && canEdit && <WarnBar color="var(--amber)">{tr("สถานะ RFQ จะเดินต่อขั้น 3 ขึ้นไปได้ หลัง IEC ส่งผลรอบนี้กลับมา")}</WarnBar>}
     </div>
   );

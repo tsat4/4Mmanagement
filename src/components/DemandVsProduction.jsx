@@ -129,7 +129,7 @@ export default function DemandVsProduction({ products, prodByDay, today }) {
     const pn = mats[0]?.p_no;
     return (
       <div style={{ padding: '10px 13px', borderRadius: 'var(--r-md)', border: '1px solid #f59e0b55', background: '#f59e0b14', fontSize: 12, color: '#f59e0b', lineHeight: 1.7 }}>
-        ⚠️ <b>{tr('ยังเทียบกับความต้องการลูกค้าไม่ได้')}</b> {tr('— ไม่พบออเดอร์/forecast ที่ผูกกับ')}{group ? 'สินค้าในกลุ่มนี้' : 'สินค้านี้'}
+        ⚠️ <b>{tr('ยังเทียบกับความต้องการลูกค้าไม่ได้')}</b> {tr('— ไม่พบออเดอร์/forecast ที่ผูกกับ')}{group ? tr("สินค้าในกลุ่มนี้") : tr("สินค้านี้")}
         <div style={{ color: 'var(--muted)', marginTop: 4 }}>
           {tr("ออเดอร์จากลูกค้าอ้าง")} <b>{tr('เลขพาร์ทลูกค้า')}</b> {tr('แต่ยอดผลิตอ้าง')} <b>{tr('เลข SAP')}</b> {tr('— ต้องมี')} <code>P/N</code> {tr("ตรงกับที่ลูกค้าใช้ ระบบถึงจับคู่ได้")}
           {pn ? <> {tr('· ตอนนี้ตั้งไว้เป็น')} <b>{pn}</b></> : <> · <b>{tr('ตอนนี้ยังไม่ได้ตั้ง P/N เลย')}</b></>}
@@ -160,12 +160,12 @@ export default function DemandVsProduction({ products, prodByDay, today }) {
         <>
           <div style={{ padding: '11px 13px', borderRadius: 'var(--r-md)', border: `1px solid ${shortList.length ? '#ef4444' : '#22c55e'}66`, background: `${shortList.length ? '#ef4444' : '#22c55e'}14` }}>
             <div style={{ fontSize: 13.5, fontWeight: 900, color: shortList.length ? '#ef4444' : '#22c55e' }}>
-              {shortList.length ? `🔴 ${tr("มี")} ${shortList.length} ${tr("เลข SAP ที่ของจะขาด")}` : '🟢 ทุกเลข SAP ในกลุ่มมีของพอ'}
+              {shortList.length ? `🔴 ${tr("มี")} ${shortList.length} ${tr("เลข SAP ที่ของจะขาด")}` : tr("🟢 ทุกเลข SAP ในกลุ่มมีของพอ")}
             </div>
             <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 3, lineHeight: 1.7 }}>
               {shortList.length
                 ? <>{tr('ต้องเร่ง:')} <b>{shortList.map((x) => x.p.mat_no).join(' · ')}</b></>
-                : 'ไม่มีเลขไหนที่สต็อกจะติดลบในช่วงที่ดู'}
+                : tr("ไม่มีเลขไหนที่สต็อกจะติดลบในช่วงที่ดู")}
               {/* ⚠️ ห้ามบอกว่า "รวมกลุ่มแล้วพอ" — สลับขายข้ามเลข SAP ไม่ได้ในทางปฏิบัติ */}
               {shortList.length > 0 && excessList.length > 0 && (
                 <div style={{ marginTop: 5, padding: '6px 9px', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)', border: '1px dashed var(--border2)', color: 'var(--muted)' }}>
@@ -233,12 +233,12 @@ export default function DemandVsProduction({ products, prodByDay, today }) {
       )}
 
       <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-        <Stat label={group ? `${tr("สต็อก")} ${focus.p.mat_no}` : 'สต็อกตอนนี้'} value={focus.stock == null ? '—' : fmt(focus.stock)} unit={tr("ชิ้น")}
+        <Stat label={group ? `${tr("สต็อก")} ${focus.p.mat_no}` : tr("สต็อกตอนนี้")} value={focus.stock == null ? '—' : fmt(focus.stock)} unit={tr("ชิ้น")}
           sub={focus.stock == null ? tr('ไม่มีข้อมูลสต็อกของเลขนี้') : tr('จากคลัง FG')} color={focus.stock == null ? 'var(--muted)' : undefined} />
         <Stat label={tr('ต้องส่ง (ในช่วงที่ดู)')} value={fmt(focus.sim?.cumDem)} unit={tr("ชิ้น")}
-          sub={focus.D.hasOrder ? `${tr("ออเดอร์จริง")}${focus.D.hasForecast ? ' + forecast' : ''}` : 'forecast เท่านั้น (ยังไม่มีออเดอร์)'} color="#f59e0b" />
+          sub={focus.D.hasOrder ? `${tr("ออเดอร์จริง")}${focus.D.hasForecast ? ' + forecast' : ''}` : tr("forecast เท่านั้น (ยังไม่มีออเดอร์)")} color="#f59e0b" />
         <Stat label={tr('ผลิตได้ (ในช่วงที่ดู)')} value={fmt(focus.sim?.cumProd)} unit={tr("ชิ้น")} color="var(--accent)"
-          sub={focus.rate ? `${tr("เฉลี่ย")} ${fmt(focus.rate)} ${tr("ชิ้น/วันผลิต")}` : 'ยังไม่มีการผลิตในช่วงนี้'} />
+          sub={focus.rate ? `${tr("เฉลี่ย")} ${fmt(focus.rate)} ${tr("ชิ้น/วันผลิต")}` : tr("ยังไม่มีการผลิตในช่วงนี้")} />
         <Stat label={tr('ปลายช่วงเหลือ')} value={fmt(focus.sim?.endStock)} unit={tr("ชิ้น")}
           color={focus.sim?.endStock < 0 ? '#ef4444' : focus.sim?.endStock > 0 ? 'var(--accent)' : undefined}
           sub={(focus.sim?.days || []).some((x) => x.stock < 0) ? tr('⚠️ มีวันที่ของไม่พอ') : tr('ไม่มีวันที่ของขาด')} />

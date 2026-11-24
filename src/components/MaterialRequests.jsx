@@ -365,7 +365,7 @@ export default function MaterialRequests() {
 
   return (
     <div style={wrap}>
-      <ReadOnlyNote show={!canRecord} role={role} what="ออกใบเบิก/คืนสินค้าคงคลัง" permKey="scrap:record" />
+      <ReadOnlyNote show={!canRecord} role={role} what={tr("ออกใบเบิก/คืนสินค้าคงคลัง")} permKey="scrap:record" />
 
       {warn && (
         <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid #ef4444', borderRadius: 'var(--r-md)', padding: '8px 12px', marginBottom: 12, fontSize: 12.5 }}>
@@ -406,7 +406,7 @@ export default function MaterialRequests() {
         <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 760 }}>
             <thead><tr>
-              {['เลขที่', 'วันที่เบิก', 'ประเภท', 'ผู้ขอเบิก', 'หน่วยงาน', 'รายละเอียด', 'สถานะ', ''].map((h, i) =>
+              {[tr("เลขที่"), tr("วันที่เบิก"), tr("ประเภท"), tr("ผู้ขอเบิก"), tr("หน่วยงาน"), tr("รายละเอียด"), tr("สถานะ"), ''].map((h, i) =>
                 <th key={i} style={thSt}>{tr(h)}</th>)}
             </tr></thead>
             <tbody>
@@ -565,7 +565,7 @@ function Editor({ editor, setReq, setItem, addItem, delItem, canRecord, role, si
 
   return (
     <Modal title={`${req.id ? tr('แก้ไข') : tr('ออก')}${tr("ใบขอ")}${KIND_LABEL[req.kind]}${tr("สินค้าคงคลัง")} (FM-STO-003)`} onClose={onClose} width={1020}>
-      <ReadOnlyNote show={ro} role={role} compact what="แก้ใบเบิก" permKey="scrap:record" />
+      <ReadOnlyNote show={ro} role={role} compact what={tr("แก้ใบเบิก")} permKey="scrap:record" />
       {/* 🪜 ถึงขั้นไหน — กฎ matReqFlow() (utils/materialRequest.js) · UI §6.30 */}
       {req.id && (() => { const f = matReqFlow(req); return <div style={{ marginBottom: 12 }}><StepFlow steps={f.steps} waiting={f.waiting} unknown={!f.known} /></div>; })()}
 
@@ -629,7 +629,7 @@ function Editor({ editor, setReq, setItem, addItem, delItem, canRecord, role, si
       <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 820 }}>
           <thead><tr>
-            {['#', 'รหัสสินค้าคงคลัง', 'รายละเอียด', 'จำนวนที่ขอ', 'หน่วย', 'จ่าย/รับคืนจริง', 'วันที่ผลิต', 'Batch No.', ''].map((h, i) =>
+            {['#', tr("รหัสสินค้าคงคลัง"), tr("รายละเอียด"), tr("จำนวนที่ขอ"), tr("หน่วย"), tr("จ่าย/รับคืนจริง"), tr("วันที่ผลิต"), 'Batch No.', ''].map((h, i) =>
               <th key={i} style={thSt}>{tr(h)}</th>)}
           </tr></thead>
           <tbody>
@@ -667,21 +667,21 @@ function Editor({ editor, setReq, setItem, addItem, delItem, canRecord, role, si
       <div style={{ margin: '14px 0 6px', fontSize: 13, fontWeight: 700 }}>{tr('ลายเซ็น')}</div>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         {SIGS.map(s => (
-          <div key={s.k} style={{ flex: '1 1 180px', minWidth: 170, border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 8 }}>
+          <div key={tr(s.k)} style={{ flex: '1 1 180px', minWidth: 170, border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 8 }}>
             <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700, marginBottom: 3 }}>
               {tr(s.label)} <span style={{ fontWeight: 400 }}>({s.group === 'req' ? tr('ผู้เบิก/คืน') : tr('ผู้จ่ายสินค้า')})</span>
             </div>
-            <SearchSelect disabled={ro} value={signers.find(x => x.full_name === req[`${s.k}_name`])?.id || ''} placeholder={tr('— เลือก (พิมพ์ค้นหาชื่อ) —')}
-              inputStyle={inpSt} options={signers.map(x => ({ id: x.id, label: x.full_name }))} onChange={({ id }) => pickSigner(s.k, id)} />
-            <input type="date" disabled={ro} value={req[`${s.k}_date`] || ''}
-              onChange={e => setReq({ [`${s.k}_date`]: e.target.value || null })} style={{ ...inpSt, width: '100%', marginTop: 4 }} />
-            {req[`${s.k}_sig_url`] &&
-              <img src={req[`${s.k}_sig_url`]} alt="" style={{ height: 26, marginTop: 4, background: '#fff', borderRadius: 4, padding: 2 }} />}
-            {!req[`${s.k}_sig_url`] && req[`${s.k}_name`] && (isSelfName(req[`${s.k}_name`], fullName)
+            <SearchSelect disabled={ro} value={signers.find(x => x.full_name === req[`${tr(s.k)}_name`])?.id || ''} placeholder={tr('— เลือก (พิมพ์ค้นหาชื่อ) —')}
+              inputStyle={inpSt} options={signers.map(x => ({ id: x.id, label: x.full_name }))} onChange={({ id }) => pickSigner(tr(s.k), id)} />
+            <input type="date" disabled={ro} value={req[`${tr(s.k)}_date`] || ''}
+              onChange={e => setReq({ [`${tr(s.k)}_date`]: e.target.value || null })} style={{ ...inpSt, width: '100%', marginTop: 4 }} />
+            {req[`${tr(s.k)}_sig_url`] &&
+              <img src={req[`${tr(s.k)}_sig_url`]} alt="" style={{ height: 26, marginTop: 4, background: '#fff', borderRadius: 4, padding: 2 }} />}
+            {!req[`${tr(s.k)}_sig_url`] && req[`${tr(s.k)}_name`] && (isSelfName(req[`${tr(s.k)}_name`], fullName)
               ? (mySig && !ro
-                  ? <button onClick={() => setReq({ [`${s.k}_sig_url`]: mySig })} style={{ ...btnSt(), marginTop: 4, fontSize: 11, padding: '3px 9px' }}>✍️ {tr("เซ็นช่องนี้")}</button>
-                  : <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 3 }}>{mySig ? '' : 'โปรไฟล์ของคุณยังไม่มีลายเซ็น'}</div>)
-              : <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 3 }}>{tr("รอ")} {req[`${s.k}_name`]} login {tr("มาเซ็นเอง")}</div>)}
+                  ? <button onClick={() => setReq({ [`${tr(s.k)}_sig_url`]: mySig })} style={{ ...btnSt(), marginTop: 4, fontSize: 11, padding: '3px 9px' }}>✍️ {tr("เซ็นช่องนี้")}</button>
+                  : <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 3 }}>{mySig ? '' : tr("โปรไฟล์ของคุณยังไม่มีลายเซ็น")}</div>)
+              : <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 3 }}>{tr("รอ")} {req[`${tr(s.k)}_name`]} login {tr("มาเซ็นเอง")}</div>)}
           </div>
         ))}
       </div>
@@ -834,7 +834,7 @@ function BomKidsStep({ root, onBack, onClose, onApply }) {
         <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', maxHeight: '55vh', overflowY: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 600 }}>
             <thead><tr>
-              {['ใช้', 'ชั้น', 'ลูก', 'ต่อ 1 แม่', 'จำนวนเบิก', 'หน่วย'].map(h => <th key={h} style={thSt}>{tr(h)}</th>)}
+              {[tr("ใช้"), tr("ชั้น"), tr("ลูก"), tr("ต่อ 1 แม่"), tr("จำนวนเบิก"), tr("หน่วย")].map(h => <th key={h} style={thSt}>{tr(h)}</th>)}
             </tr></thead>
             <tbody>
               {rows.map(r => (

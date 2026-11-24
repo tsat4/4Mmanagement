@@ -26,7 +26,7 @@ import ParetoAbcChart from '../components/ParetoAbcChart';
 import PageHeader from '../components/PageHeader';
 import Segmented from '../components/Segmented';
 import Page from '../components/Page';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { useWorkDate } from '../utils/useWorkDate';   // 📅 จอเปิดค้างข้ามวัน (12/11)
 /* 🚨 จอเฝ้าระวัง (MtnAndonBoard) ย้ายไปหน้า `/tv` แล้ว (nav audit 2026-08-28)
    หน้านี้ = "คิวงานที่กดไปทำ" · `/tv` = "จอแขวน" — mount บอร์ดเดียวกัน 2 ที่คือทางเข้าซ้ำ */
@@ -51,7 +51,7 @@ import { useWorkDate } from '../utils/useWorkDate';   // 📅 จอเปิด
 /* บวกวันบน 'YYYY-MM-DD' แบบ local — ห้าม toISOString (UTC เพี้ยน 1 วันช่วง 00:00-07:00 ไทย) */
 const dayAdd = (s, n) => { const d = new Date(`${s}T00:00:00`); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const fmtNum = (n) => (n == null ? '—' : Math.round(n).toLocaleString('en-US'));
-const fmtDate = (s) => { try { return new Date(`${s}T00:00:00`).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }); } catch { return s; } };
+const fmtDate = (s) => { try { return new Date(`${s}T00:00:00`).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' }); } catch { return s; } };
 /* สี OEE เทียบเป้ากลุ่มจริง (oeeTargetForLines + statusOf/valueInk) — คิดใน ProductionView · 05/10 เดิม 80/65 ตายตัว */
 const pctCol = (p) => p == null ? 'var(--muted)' : p >= 95 ? 'var(--green)' : p >= 80 ? 'var(--amber)' : 'var(--red)';
 const daysSince = (iso) => iso ? Math.floor((Date.now() - new Date(iso)) / 86400000) : null;
@@ -372,7 +372,7 @@ function ProductionView({ d, ctx }) {
       <Kpi label={`AM ${tr("ตรวจเครื่องแล้ว")} (${d.am?.shift?.label || tr('กะนี้')})`}
         value={d.amErr ? '—' : amTotal ? `${amChecked}/${amTotal}` : '0'} unit={d.amErr || !amTotal ? '' : 'เครื่อง'}
         color={d.amErr ? undefined : amNg || amLate ? 'var(--red)' : amWait ? 'var(--amber)' : amTotal && amChecked === amTotal ? 'var(--green)' : undefined}
-        sub={d.amErr ? 'โหลดสถานะ AM ไม่ได้' : !amTotal ? 'ไลน์ในขอบเขตยังไม่ลงทะเบียนเครื่อง AM' : `${tr("เลยเวลา")} ${amLate} · ${tr("รอตรวจ")} ${amWait} · ${tr("ยังไม่เริ่มผลิต")} ${amNotStarted}${amNg ? ` · ${tr("ผิดปกติ")} ${amNg}` : ''}`} />
+        sub={d.amErr ? tr("โหลดสถานะ AM ไม่ได้") : !amTotal ? tr("ไลน์ในขอบเขตยังไม่ลงทะเบียนเครื่อง AM") : `${tr("เลยเวลา")} ${amLate} · ${tr("รอตรวจ")} ${amWait} · ${tr("ยังไม่เริ่มผลิต")} ${amNotStarted}${amNg ? ` · ${tr("ผิดปกติ")} ${amNg}` : ''}`} />
       <Kpi label={liveN ? tr('OEE วันนี้ (รวมค่าสด)') : tr('OEE วันนี้')} value={oeeToday == null ? '—' : +oeeToday.toFixed(1)} unit={oeeToday == null ? '' : '%'} color={oeeCol(oeeToday, today.rows.map(r => r.line))}
         delta={oeeToday != null && oeePrev != null ? +(oeeToday - oeePrev).toFixed(1) : null}
         sub={`${liveN ? `${tr("รวมค่าสด")} ${liveN} ${tr("กะที่ยังเดิน (ยืนยันตอนปิดกะ")}) · ` : ''}${oeePrev == null ? tr('ไม่มีข้อมูลเมื่อวานให้เทียบ') : `${tr("เมื่อวาน")} ${oeePrev}%`}`} />
@@ -408,7 +408,7 @@ function ProductionView({ d, ctx }) {
     </Section>
 
     <ParetoAbcChart title={tr('Downtime นอกแผน 7 วัน (ABC)')} records={dtRecords} unit={tr("นาที")}
-      dims={[{ key: 'machine', label: 'เครื่องจักร' }, { key: 'line', label: 'ไลน์' }, { key: 'shift', label: 'กะ' }, { key: 'date', label: 'วัน' }, { key: 'note', label: 'หมายเหตุ', cluster: true }]}
+      dims={[{ key: 'machine', label: tr("เครื่องจักร") }, { key: 'line', label: tr("ไลน์") }, { key: 'shift', label: tr("กะ") }, { key: 'date', label: tr("วัน") }, { key: 'note', label: tr("หมายเหตุ"), cluster: true }]}
       sectionStyle={cardSt} emptyText={tr('ไม่มี downtime นอกแผนใน 7 วัน')} />
 
     <Section title={tr('ทางลัด')}>
@@ -535,7 +535,7 @@ function MaintenanceView({ d, ctx }) {
 
     <div style={KPI_GRID(isMobile)}>
       <Kpi label={tr('ใบซ่อมเปิดอยู่')} value={scopedMo.length} unit={tr("ใบ")} color={scopedMo.length ? 'var(--amber)' : 'var(--green)'}
-        sub={Object.entries(byStep).map(([k, v]) => `${k} ${v}`).join(' · ') || 'ไม่มีใบค้าง'} />
+        sub={Object.entries(byStep).map(([k, v]) => `${k} ${v}`).join(' · ') || tr("ไม่มีใบค้าง")} />
       <Kpi label={tr('⏳ ค้างเกิน 3 วัน')} value={stale.length} unit={tr("ใบ")} color={stale.length ? 'var(--red)' : 'var(--green)'} sub={tr('นับจากวันที่แจ้ง')} />
       <Kpi label={tr('PM เกินกำหนด')} value={overdue.length} unit={tr("แผน")} color={overdue.length ? 'var(--red)' : (pmNever.length || pmNoCycle.length) ? 'var(--amber)' : 'var(--green)'}
         sub={`${tr("ใกล้ครบใน 14 วัน")} ${dueSoon.length}${pmNever.length ? ` · ${tr("ไม่เคยตรวจ")} ${pmNever.length}` : ''}${pmNoCycle.length ? ` · ${tr("ไม่ตั้งรอบ")} ${pmNoCycle.length}` : ''}`} />
@@ -868,22 +868,22 @@ function QaView({ d, ctx }) {
       <Kpi label={tr('การตรวจ LPA')} value={d.lpa.length} unit={tr("ครั้ง")} sub={tr('30 วันล่าสุด')} />
       <Kpi label={tr('เคลมลูกค้าที่ยังไม่ปิด')} value={claimOpen.length} unit={tr("ใบ")}
         color={claimLate.length ? 'var(--red)' : claimOpen.length ? 'var(--amber)' : 'var(--green)'}
-        sub={claimLate.length ? `${tr("เลยกำหนดตอบ")} ${claimLate.length} ${tr("ใบ")}` : (claimNo8D.length ? `${tr("ยังไม่เปิด")} 8D ${claimNo8D.length} ${tr("ใบ")}` : 'ไม่มีค้าง')} />
+        sub={claimLate.length ? `${tr("เลยกำหนดตอบ")} ${claimLate.length} ${tr("ใบ")}` : (claimNo8D.length ? `${tr("ยังไม่เปิด")} 8D ${claimNo8D.length} ${tr("ใบ")}` : tr("ไม่มีค้าง"))} />
       <Kpi label={tr('8D ปิดแล้ว เอกสารตามครบ')} value={peRate == null ? '—' : `${peRate}%`}
         color={peRate == null ? undefined : peRate >= 90 ? 'var(--green)' : peRate >= 50 ? 'var(--amber)' : 'var(--red)'}
-        sub={capaClosed.length ? `${peDone}/${capaClosed.length} ${tr("ใบ")} · IATF §10.2.4` : 'ยังไม่มี 8D ที่ปิด'} />
+        sub={capaClosed.length ? `${peDone}/${capaClosed.length} ${tr("ใบ")} · IATF §10.2.4` : tr("ยังไม่มี 8D ที่ปิด")} />
       <Kpi label={tr('8D ค้างดำเนินการ')} value={capaOpen.length} unit={tr("ใบ")} color={capaOpen.length ? 'var(--amber)' : 'var(--green)'}
-        sub={d.crOpen ? `${tr("คำขอแก้เอกสารค้าง")} ${d.crOpen}` : 'ไม่มีคำขอแก้เอกสารค้าง'} />
+        sub={d.crOpen ? `${tr("คำขอแก้เอกสารค้าง")} ${d.crOpen}` : tr("ไม่มีคำขอแก้เอกสารค้าง")} />
       {/* วัดจาก defect_logs จริง ไม่ใช่ข้อความที่คนพิมพ์ — ใบที่ยังวัดไม่ได้ ไม่ถูกนับเป็นทั้งได้ผล/ไม่ได้ผล */}
       <Kpi label={tr('8D ที่ของเสียลดจริง')} value={effRate == null ? '—' : `${effRate}%`}
         color={effRate == null ? undefined : effRate >= 80 ? 'var(--green)' : effRate >= 50 ? 'var(--amber)' : 'var(--red)'}
         sub={capaMeasured.length
           ? `${tr("วัดได้")} ${capaMeasured.length} ${tr("ใบ")}${capaBadEff.length ? ` · ${tr("ยังไม่ลด")} ${capaBadEff.length}` : ''}`
-          : 'ยังไม่มีใบที่วัดผลได้ — ต้องกรอกวันที่มาตรการมีผล'} />
+          : tr("ยังไม่มีใบที่วัดผลได้ — ต้องกรอกวันที่มาตรการมีผล")} />
     </div>
 
     <ParetoAbcChart title={tr('ของเสีย 7 วัน แยกตามประเภท (ABC)')} records={defRecords} unit={tr("ชิ้น")}
-      dims={[{ key: 'line', label: 'ไลน์' }, { key: 'product', label: 'ชิ้นงาน' }, { key: 'shift', label: 'กะ' }, { key: 'date', label: 'วัน' }, { key: 'note', label: 'หมายเหตุ', cluster: true }]}
+      dims={[{ key: 'line', label: tr("ไลน์") }, { key: 'product', label: tr("ชิ้นงาน") }, { key: 'shift', label: tr("กะ") }, { key: 'date', label: tr("วัน") }, { key: 'note', label: tr("หมายเหตุ"), cluster: true }]}
       sectionStyle={cardSt} emptyText={tr('ไม่มีบันทึกของเสียใน 7 วัน — ตรวจสอบว่าลงบันทึกครบหรือยัง')} />
 
     <Section title={tr('ทางลัด')}>
@@ -990,7 +990,7 @@ export default function DeptDashboard({ embedded = false, tabs, tab: hubTab, onT
   }, [cfg, ctx, lines.length]);
   useEffect(() => { load(); }, [load]);
 
-  const scopeText = scopeSet ? `${scopeSet.size} ${tr("ไลน์ในขอบเขตของคุณ")}` : 'ทุกไลน์';
+  const scopeText = scopeSet ? `${scopeSet.size} ${tr("ไลน์ในขอบเขตของคุณ")}` : tr("ทุกไลน์");
 
   return (
     <Page style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -1012,7 +1012,7 @@ export default function DeptDashboard({ embedded = false, tabs, tab: hubTab, onT
           filters={view === 'now' ? (<>
             <span className="filter-label">{tr('มุมมอง')}</span>
             <Segmented label={tr('มุมมองฝ่าย')} value={dept} onChange={setDept}
-              options={DEPTS.map(t => ({ value: t.key, label: `${t.icon} ${t.label}` }))} />
+              options={DEPTS.map(t => ({ value: t.key, label: `${t.icon} ${tr(t.label)}` }))} />
             <span className="spacer" />
             {/* 📺 จอเฝ้าระวังย้ายไปหน้า `/tv` แล้ว (nav audit 2026-08-28) — ปุ่มนี้คงทางเข้าเดิมไว้ (ห้ามตัดทางออกของใคร) */}
             <button className="ctl-btn" onClick={() => navigate(`/tv?dept=${dept === 'store' ? 'store' : dept === 'production' ? 'production' : 'maintenance'}`)}

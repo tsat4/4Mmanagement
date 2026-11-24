@@ -141,7 +141,7 @@ export default function CustomerFileFormats({ canManage, onChanged }) {
               <span style={{ fontSize: 11.5, fontFamily: 'monospace', color: 'var(--muted)', minWidth: 90 }}>{r.code}</span>
               <span style={{ fontSize: 12.5, fontWeight: 700 }}>{r.name || r.code}</span>
               <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-                {r.customer_name || 'ไม่ระบุลูกค้า'} · {KINDS.find(k => k.value === r.kind)?.label || r.kind}
+                {r.customer_name || tr("ไม่ระบุลูกค้า")} · {tr(KINDS.find(k => k.value === r.kind)?.label) || r.kind}
               </span>
               <span style={{ fontSize: 11, color: 'var(--muted)' }}>
                 {FIELDS.filter(f => (r.col_map?.[f.key] || []).length).length}/{FIELDS.length} {tr("ช่อง")}
@@ -194,7 +194,7 @@ export default function CustomerFileFormats({ canManage, onChanged }) {
                 {tr(f.label)}{f.required && <span style={{ color: '#ef4444' }}> *</span>}
                 <input value={D.col_map?.[f.key] || ''} placeholder={(FALLBACK_EDI_DICT[f.key] || []).slice(0, 2).join(', ')}
                   onChange={e => setDraft({ ...D, col_map: { ...D.col_map, [f.key]: e.target.value } })} style={inp} />
-                {f.hint && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{tr(f.hint)}</div>}
+                {tr(f.hint) && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{tr(f.hint)}</div>}
               </label>
             ))}
           </div>

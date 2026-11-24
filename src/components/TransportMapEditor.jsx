@@ -388,7 +388,7 @@ export default function TransportMapEditor() {
           <button onClick={hist.redo} disabled={!hist.canRedo || hist.busy || busy} style={undoBtnStyle(hist.canRedo && !hist.busy && !busy)} title={tr('ทำซ้ำ (Ctrl+Y)')}>↪️ Redo</button>
           <span style={{ fontSize: 12, color: 'var(--muted)', marginLeft: 'auto' }}>
             {nodes.length} {tr('จุด ·')} {edges.length} {tr('เส้น ·')} {graphStat.stops} {tr('จุดจอด')}{graphStat.isolated ? ` · ⚠ ${graphStat.isolated} ${tr("จุดยังไม่เชื่อมถนน")}` : ''}
-            {mpu ? ` · 1 ${tr("หน่วย")} ≈ ${mpu.toFixed(2)} ${tr("ม.")}` : ' · ยังไม่ตั้งมาตราส่วน'}
+            {mpu ? ` · 1 ${tr("หน่วย")} ≈ ${mpu.toFixed(2)} ${tr("ม.")}` : tr(" · ยังไม่ตั้งมาตราส่วน")}
           </span>
         </div>
       ) : (
@@ -500,20 +500,20 @@ export default function TransportMapEditor() {
           {canEdit && selNode && (
             <div style={{ background: 'var(--card-surf)', border: '1px solid var(--accent)', borderRadius: 'var(--r-md)', padding: 12 }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>{tr('✏️ แก้ไขจุด')}</div>
-              <FieldLbl t="ชื่อจุด">
+              <FieldLbl t={tr("ชื่อจุด")}>
                 <input value={selNode.name || ''} onChange={e => patchNode(selNode.id, { name: e.target.value })} placeholder={tr('เช่น STORE-IN, แยก A')} style={inp} />
               </FieldLbl>
-              <FieldLbl t="ชนิด">
+              <FieldLbl t={tr("ชนิด")}>
                 <select value={selNode.kind} onChange={e => patchNode(selNode.id, { kind: e.target.value })} style={inp}>
                   {NODE_KINDS.map(n => <option key={n.key} value={n.key}>{n.icon} {tr(n.label)}</option>)}
                 </select>
               </FieldLbl>
-              <FieldLbl t="ผูกไลน์/สโตร์ (optional)">
+              <FieldLbl t={tr("ผูกไลน์/สโตร์ (optional)")}>
                 {/* line_name เป็น join key ที่ Transport.jsx ใช้จับจุดจอดของรอบ (isOfLine) — สะกดผิด = รอบหาจุดไม่เจอ
                     → เลือกจากทะเบียนไลน์ + คลังกลาง/โซนคลังเท่านั้น (2026-09-07 แทน datalist พิมพ์เอง) */}
                 <LineSelect lines={lines} value={selNode.line_name || ''} onChange={v => patchNode(selNode.id, { line_name: v || null })}
                   placeholder={tr('— ไม่ผูก —')} style={inp}
-                  extraGroups={[{ label: 'คลัง / โซนคลัง', options: [...new Set([...WAREHOUSE_LOCATIONS, ...storeZoneNames])].map(n => ({ value: n })) }]} />
+                  extraGroups={[{ label: tr("คลัง / โซนคลัง"), options: [...new Set([...WAREHOUSE_LOCATIONS, ...storeZoneNames])].map(n => ({ value: n })) }]} />
               </FieldLbl>
               <label style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--text2)', margin: '6px 0', cursor: 'pointer' }}>
                 <input type="checkbox" checked={selNode.is_active !== false} onChange={e => patchNode(selNode.id, { is_active: e.target.checked })} style={{ width: 'auto' }} /> {tr('ใช้งาน')}
@@ -525,7 +525,7 @@ export default function TransportMapEditor() {
             <div style={{ background: 'var(--card-surf)', border: '1px solid var(--accent)', borderRadius: 'var(--r-md)', padding: 12 }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>{tr('✏️ แก้ไขถนน')}</div>
               <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>
-                {(nById[selEdge.a_node]?.name || 'จุด')} ↔ {(nById[selEdge.b_node]?.name || 'จุด')}<br />
+                {(nById[selEdge.a_node]?.name || tr("จุด"))} ↔ {(nById[selEdge.b_node]?.name || tr("จุด"))}<br />
                 {tr("ระยะ (หน่วยผัง")}) ≈ {edgeWeight(selEdge, nById).toFixed(1)}
               </div>
               <label style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--text2)', margin: '6px 0', cursor: 'pointer' }}>

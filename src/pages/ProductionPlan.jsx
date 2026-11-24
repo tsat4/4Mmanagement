@@ -674,11 +674,11 @@ export default function ProductionPlan() {
       <PageHeader
         title={tr('วางแผนการผลิต')} icon="🗓️"
         tabs={[
-          { key: 'plan', label: 'กำลังการผลิต' },
+          { key: 'plan', label: tr("กำลังการผลิต") },
           /* 📋 แท็บเดียวของหน้านี้ที่ **เขียน DB** — แท็บกำลังการผลิตวิเคราะห์อย่างเดียว
              (งาน lot size ที่ไม่ได้เดินตามคัมบัง ต้องมีคนวางคิวให้ ไม่ใช่ first come first serve) */
-          { key: 'lots', label: 'แผนสั่งงาน (ล็อต)' },
-          { key: 'settings', label: 'ตั้งค่า' },
+          { key: 'lots', label: tr("แผนสั่งงาน (ล็อต)") },
+          { key: 'settings', label: tr("ตั้งค่า") },
         ]}
         tab={tab} onTab={setTab}
       />
@@ -702,8 +702,8 @@ export default function ProductionPlan() {
         <span className="spacer" />
         <span className="filter-label">{tr('วางแผนที่กำลัง:')}</span>
         <Segmented value={capMode} onChange={setCapMode} label={tr('วางแผนที่กำลัง')} options={[
-          { value: 'median', label: 'ปกติ (median)', title: 'ใช้ median ของยอดที่เคยทำได้จริง (สมจริง)' },
-          { value: 'safe', label: 'ปลอดภัย (P25)', title: 'ใช้ P25 — เผื่อวันที่ทำได้น้อย (ปลอดภัยไว้ก่อน)' },
+          { value: 'median', label: tr("ปกติ (median)"), title: tr("ใช้ median ของยอดที่เคยทำได้จริง (สมจริง)") },
+          { value: 'safe', label: tr("ปลอดภัย (P25)"), title: tr("ใช้ P25 — เผื่อวันที่ทำได้น้อย (ปลอดภัยไว้ก่อน)") },
         ]} />
       </FilterBar>
 
@@ -775,40 +775,41 @@ export default function ProductionPlan() {
         const mine = late.filter(l => lineOfMat(l.mat_no));      // เฉพาะที่เป็นงานของไลน์ใน scope
         const show = (mine.length ? mine : late).slice(0, 6);
         return (
-          <div style={{ background: 'var(--red-dim)', border: '1px solid var(--red-line)', borderRadius: 'var(--r-md)', padding: '9px 12px', fontSize: 12.5, color: 'var(--text)' }}>
-            🚨 <b style={{ color: 'var(--red)' }}>{tr('สายแล้ว')} {late.length} {tr('รายการ')}</b> — {tr("ไล่ย้อนจากวันส่งแล้ว ต้องเริ่มผลิตตั้งแต่ก่อนวันนี้")}
-            <div style={{ marginTop: 4, color: 'var(--muted)', fontSize: 11.5, display: 'grid', gap: 2 }}>
+          /* UI §6.35 ข้อ 2 — หนึ่งเรื่องหนึ่งแถบ บรรทัดเดียว · ตัวเลข "สายแล้ว N" + "ไม่ได้หายไป"
+             อยู่บนจอเสมอ (ห้ามพับ · กฎความซื่อสัตย์) · **รายการ** เป็นรายละเอียด → InfoMore */
+          <NoticeBar tone="bad" style={{ marginBottom: 0 }}>
+            <b style={{ color: 'var(--red)' }}>{tr('สายแล้ว')} {late.length} {tr('รายการ')}</b> — {tr("ไล่ย้อนจากวันส่งแล้ว ต้องเริ่มผลิตตั้งแต่ก่อนวันนี้")}
+            {/* "ไม่ได้หายไป" = คำตอบของสิ่งที่ผู้วางแผนกลัวที่สุด ⇒ ห้ามพับ (user 18/11) */}
+            {' · '}{tr('ยกมาเป็นยอดค้างของวันแรกในแผนแล้ว (ไม่ได้หายไป)')}
+            <MoreMark text={tr('ต้องเร่ง/เพิ่มกะ หรือเลื่อนดิวกับลูกค้า')} />
+            <InfoMore id="pp-late-list" label={`${tr('ดูรายการ')} (${late.length})`}>
+            <div style={{ color: 'var(--muted)', fontSize: 11.5, display: 'grid', gap: 2 }}>
               {show.map((l, i) => (
                 <div key={`${l.mat_no}-${l.needBy}-${i}`}>
                   <b style={{ color: 'var(--text2)' }}>{l.mat_no}</b> {Math.round(l.qty).toLocaleString()} {tr("ชิ้น · ต้องเริ่ม")} <b style={{ color: 'var(--red)' }}>{fmtDate(l.needBy)}</b> {tr('เพื่อให้ทันดิว')} {fmtDate(l.dueOfParent)}
-                  {l.days > 1 && <span> {tr('· ใช้เวลาผลิต ~')}{l.days} {tr('วัน')}{l.capped ? ' (ตัดที่เพดาน 60 วัน — กำลังผลิตที่ระบบรู้ต่ำผิดปกติ ตรวจ CT/ประวัติพาร์ทนี้)' : ''}</span>}
+                  {l.days > 1 && <span> {tr('· ใช้เวลาผลิต ~')}{l.days} {tr('วัน')}{l.capped ? tr(" (ตัดที่เพดาน 60 วัน — กำลังผลิตที่ระบบรู้ต่ำผิดปกติ ตรวจ CT/ประวัติพาร์ทนี้)") : ''}</span>}
                   {l.root !== l.mat_no && <span> {tr('(ของใบ')} {l.root})</span>}
                 </div>
               ))}
               {late.length > show.length && <div>{tr('… อีก')} {late.length - show.length} {tr('รายการ')}</div>}
             </div>
-            {/* "ไม่ได้หายไป" = คำตอบของสิ่งที่ผู้วางแผนกลัวที่สุด ⇒ อยู่บนจอ · ทางเลือกที่ทำได้ → tooltip · user 18/11 */}
-            <div style={{ marginTop: 3, color: 'var(--muted)', fontSize: 11.5 }}
-              title={tr('ต้องเร่ง/เพิ่มกะ หรือเลื่อนดิวกับลูกค้า')}>
-              → {tr('งานพวกนี้ถูกยกมาเป็นยอดค้างของวันแรกในแผนแล้ว (ไม่ได้หายไป)')}{' '}
-              <MoreMark text={tr('ต้องเร่ง/เพิ่มกะ หรือเลื่อนดิวกับลูกค้า')} />
-            </div>
-          </div>
+            </InfoMore>
+          </NoticeBar>
         );
       })()}
 
       {/* 🧹 worklist ให้ PE/Planning — ระบบไม่แก้ข้อมูลให้เอง (กฎของ bomTree.js) */}
       {!loading && useBom && demandPcs.bom?.flatDupes?.length > 0 && (
-        <div style={{ background: 'var(--amber-dim)', border: '1px solid var(--amber-line)', borderRadius: 'var(--r-md)', padding: '9px 12px', fontSize: 12.5, color: 'var(--text)' }}>
-          🧹 <b>{tr('BOM แบนซ้ำ')} {demandPcs.bom.flatDupes.length} {tr('จุด')}</b> — {tr("ชิ้นเดียวกันถูกใส่ไว้ทั้งชั้น 1 และในชั้นลึกของใบเดียวกัน")}
-          <div style={{ marginTop: 3, color: 'var(--muted)', fontSize: 11.5 }}>
-            {tr("แผนนี้")} <b>{tr('ต่อโซ่แบบ SAP')}</b> ({tr("นับครั้งเดียว ไม่นับแถวชั้น 1 ที่ซ้ำ) — ตัวเลขจึงถูกแล้ว แต่ข้อมูลยังซ้ำอยู่ ⇒ ให้ PE/Planning ไปเก็บที่")} <b>{tr('/products แท็บ BOM')}</b>
-          </div>
-          <div style={{ marginTop: 4, color: 'var(--muted)', fontSize: 11.5, wordBreak: 'break-word' }}>
-            {demandPcs.bom.flatDupes.slice(0, 6).map(f => `${f.root} → ${f.mat_no}`).join(' · ')}
-            {demandPcs.bom.flatDupes.length > 6 ? ` … ${tr("อีก")} ${demandPcs.bom.flatDupes.length - 6} ${tr("จุด")}` : ''}
-          </div>
-        </div>
+        <NoticeBar tone="warn" icon="🧹" style={{ marginBottom: 0 }}>
+          <b>{tr('BOM แบนซ้ำ')} {demandPcs.bom.flatDupes.length} {tr('จุด')}</b> — {tr('ตัวเลขแผนถูกแล้ว (ต่อโซ่แบบ SAP นับครั้งเดียว) แต่ข้อมูลยังซ้ำ')}
+          <InfoMore id="pp-bom-dupes" label={tr('ซ้ำที่ไหน')}>
+            {tr("ชิ้นเดียวกันถูกใส่ไว้ทั้งชั้น 1 และในชั้นลึกของใบเดียวกัน ⇒ ให้ PE/Planning ไปเก็บที่")} <b>{tr('/products แท็บ BOM')}</b>
+            <div style={{ marginTop: 4, wordBreak: 'break-word' }}>
+              {demandPcs.bom.flatDupes.slice(0, 6).map(f => `${f.root} → ${f.mat_no}`).join(' · ')}
+              {demandPcs.bom.flatDupes.length > 6 ? ` … ${tr("อีก")} ${demandPcs.bom.flatDupes.length - 6} ${tr("จุด")}` : ''}
+            </div>
+          </InfoMore>
+        </NoticeBar>
       )}
       {!loading && useBom && demandPcs.bom?.cycles > 0 && (
         <NoticeBar tone="bad" style={{ marginBottom: 0 }}>
@@ -817,26 +818,30 @@ export default function ProductionPlan() {
       )}
 
       {!loading && demandGaps.noLine > 0 && (
-        <div style={{ background: 'var(--amber-dim)', border: '1px solid var(--amber-line)', borderRadius: 'var(--r-md)', padding: '9px 12px', fontSize: 12.5, color: 'var(--text)' }}>
-          ⚠️ <b>{demandGaps.noLine} {tr('รายการความต้องการยังไม่ถูกนับในแผน')}</b> {tr('— พาร์ท')} {demandGaps.noLineParts.size} {tr('ตัวนี้')}<b>{tr('ยังไม่ได้ผูกไลน์ผลิต')}</b> ({tr("หรือชื่อไลน์ไม่มีในทะเบียนไลน์")})
-          <div style={{ marginTop: 4, color: 'var(--muted)', fontSize: 11.5, wordBreak: 'break-word' }}>
-            {[...demandGaps.noLineParts].slice(0, 8).join(' · ')}{demandGaps.noLineParts.size > 8 ? ' …' : ''}
-          </div>
-          <div style={{ marginTop: 3, color: 'var(--muted)', fontSize: 11.5 }}>{tr('→ ตั้งไลน์ผลิตให้พาร์ทที่หน้า Product Master (ช่อง “ไลน์”)')}</div>
-        </div>
+        <NoticeBar tone="warn" style={{ marginBottom: 0 }}>
+          <b>{demandGaps.noLine} {tr('รายการความต้องการยังไม่ถูกนับในแผน')}</b> {tr('— พาร์ท')} {demandGaps.noLineParts.size} {tr('ตัวยัง')}<b>{tr('ไม่ได้ผูกไลน์ผลิต')}</b>
+          <InfoMore id="pp-gap-noline" label={tr('พาร์ทไหน · แก้ยังไง')}>
+            {tr('(หรือชื่อไลน์ไม่มีในทะเบียนไลน์) → ตั้งไลน์ผลิตให้พาร์ทที่หน้า Product Master (ช่อง “ไลน์”)')}
+            <div style={{ marginTop: 4, wordBreak: 'break-word' }}>
+              {[...demandGaps.noLineParts].slice(0, 8).join(' · ')}{demandGaps.noLineParts.size > 8 ? ' …' : ''}
+            </div>
+          </InfoMore>
+        </NoticeBar>
       )}
       {!loading && demandGaps.outScope > 0 && (
-        <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-          ℹ️ {tr("ซ่อนไว้ตามตัวกรองส่วนงาน")}: {demandGaps.outScope} {tr("รายการความต้องการอยู่ไลน์นอกขอบเขตที่เลือก")}
-        </div>
+        <NoticeBar tone="info" style={{ marginBottom: 0 }}>
+          {tr("ซ่อนไว้ตามตัวกรองส่วนงาน")}: <b>{demandGaps.outScope}</b> {tr("รายการความต้องการอยู่ไลน์นอกขอบเขตที่เลือก")}
+        </NoticeBar>
       )}
 
       {!loading && (unmapped.orders > 0 || unmapped.fcParts.size > 0) && (
-        <div style={{ background: 'var(--amber-dim)', border: '1px solid var(--amber-line)', borderRadius: 'var(--r-md)', padding: '9px 12px', fontSize: 12.5, color: 'var(--text)' }}>
-          ⚠️ <b>{tr('ยังจับคู่เลข SAP ไม่ได้')} {unmapped.orders} {tr('ออเดอร์ ·')} {unmapped.parts.size} {tr('พาร์ท')}{unmapped.fcParts.size > 0 ? ` · forecast ${unmapped.fcParts.size} ${tr("พาร์ท")}` : ''}</b> — {tr("พาร์ทเหล่านี้**ไม่ถูกนับในแผน** (ยังไม่ได้ตั้ง `p_no`/SAP ใน Product Master ให้ตรงเลขลูกค้า")})
-          {unmapped.parts.size > 0 && <div style={{ marginTop: 4, color: 'var(--muted)', fontSize: 11.5, wordBreak: 'break-word' }}>{tr('ตัวอย่าง:')} {[...unmapped.parts].slice(0, 8).join(' · ')}{unmapped.parts.size > 8 ? ' …' : ''}</div>}
-          <div style={{ marginTop: 3, color: 'var(--muted)', fontSize: 11.5 }}>→ ไปตั้ง p_no ที่หน้า Product Master หรือใช้ปุ่ม 🔗 จับคู่เลข SAP ในหน้า Planner &amp; Sales</div>
-        </div>
+        <NoticeBar tone="warn" style={{ marginBottom: 0 }}>
+          <b>{tr('ยังจับคู่เลข SAP ไม่ได้')} {unmapped.orders} {tr('ออเดอร์ ·')} {unmapped.parts.size} {tr('พาร์ท')}{unmapped.fcParts.size > 0 ? ` · forecast ${unmapped.fcParts.size} ${tr("พาร์ท")}` : ''}</b> — {tr('พาร์ทเหล่านี้ไม่ถูกนับในแผน')}
+          <InfoMore id="pp-gap-sap" label={tr('พาร์ทไหน · แก้ยังไง')}>
+            {tr('ยังไม่ได้ตั้ง `p_no`/SAP ใน Product Master ให้ตรงเลขลูกค้า → ไปตั้ง p_no ที่หน้า Product Master หรือใช้ปุ่ม 🔗 จับคู่เลข SAP ในหน้า Planner & Sales')}
+            {unmapped.parts.size > 0 && <div style={{ marginTop: 4, wordBreak: 'break-word' }}>{tr('ตัวอย่าง:')} {[...unmapped.parts].slice(0, 8).join(' · ')}{unmapped.parts.size > 8 ? ' …' : ''}</div>}
+          </InfoMore>
+        </NoticeBar>
       )}
 
       {/* 🌑 ไลน์ที่ไม่มีความต้องการในระบบเลย — เดิมถูกกรองทิ้งทั้งไลน์ ⇒ จอว่างอ่านได้ว่า "ไลน์ว่าง"
@@ -866,7 +871,7 @@ export default function ProductionPlan() {
             value={cap} onChange={setCap}
             options={[
               { value: 'day', label: `📅 ${tr("รายวัน")} (${DAILY_HORIZON} ${tr("วัน · ออเดอร์จริง")})` },
-              { value: 'month', label: 'รายเดือน (Forecast)' },
+              { value: 'month', label: tr("รายเดือน (Forecast)") },
             ]}
           />
           <button type="button" onClick={() => setMode(mode === 'slide' ? 'chart' : 'slide')}
@@ -878,7 +883,7 @@ export default function ProductionPlan() {
               background: mode === 'slide' ? 'var(--accent-dim)' : 'var(--bg2)',
               color: mode === 'slide' ? 'var(--accent)' : 'var(--text2)',
             }}>
-            {mode === 'slide' ? 'กลับไปดูกราฟ' : 'โหมดสไลด์โรงงาน'}
+            {mode === 'slide' ? tr("กลับไปดูกราฟ") : tr("โหมดสไลด์โรงงาน")}
           </button>
         </div>
       ) : null}
@@ -895,8 +900,8 @@ export default function ProductionPlan() {
           help={tr('ตัวเลือกในหน้าต่าง 🧪 จองเครื่องทดลอง (แท็บแผนสั่งงาน) — ใบจองเก็บข้อความเหตุผลนี้ · ยังเลือก \'อื่นๆ (พิมพ์เอง)\' ได้เสมอ')}
           keyFrom={r => String(r.label || '').trim().toUpperCase().replace(/\s+/g, ' ')}
           fields={[
-            { key: 'label', label: 'เหตุผล', required: true },
-            { key: 'note', label: 'หมายเหตุ' },
+            { key: 'label', label: tr("เหตุผล"), required: true },
+            { key: 'note', label: tr("หมายเหตุ") },
           ]} />
       ) : loading ? (
         <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>{tr('กำลังวิเคราะห์กำลังผลิต…')}</div>
@@ -978,7 +983,7 @@ export default function ProductionPlan() {
                 const top = d.plan.includes('holiday_work') ? PLAN_META.holiday_work : d.plan.includes('recall75') ? PLAN_META.recall75 : d.plan.includes('night') ? PLAN_META.night : d.plan.includes('ot') ? PLAN_META.ot : d.plan.includes('day') ? PLAN_META.day : null;
                 const dd = new Date(`${d.date}T12:00:00`);
                 return (
-                  <div key={d.date} title={`${fmtDate(d.date)}${d.sd75 ? tr(' (หยุดจ่าย 75% — ม.75)') : d.holiday ? tr(' (วันหยุด)') : ''}\n${tr("ดิววันนี้")} ${Math.round(d.duePcs).toLocaleString()} ${tr("ชิ้น")} (${d.dueLoad.toFixed(2)} ${tr("กะ)\\nแผน")}: ${d.plan.map(p => PLAN_META[p]?.label || p).join(' ') || (d.holiday ? tr('หยุด') : tr('ว่าง'))}\n${tr("ค้างยกไป")} ${d.backlog.toFixed(2)} ${tr("กะ")}`}
+                  <div key={d.date} title={`${fmtDate(d.date)}${d.sd75 ? tr(' (หยุดจ่าย 75% — ม.75)') : d.holiday ? tr(' (วันหยุด)') : ''}\n${tr("ดิววันนี้")} ${Math.round(d.duePcs).toLocaleString()} ${tr("ชิ้น")} (${d.dueLoad.toFixed(2)} ${tr("กะ)\\nแผน")}: ${d.plan.map(p => tr(PLAN_META[p]?.label) || p).join(' ') || (d.holiday ? tr('หยุด') : tr('ว่าง'))}\n${tr("ค้างยกไป")} ${d.backlog.toFixed(2)} ${tr("กะ")}`}
                     style={{ flexShrink: 0, width: 40, textAlign: 'center' }}>
                     <div style={{ fontSize: 11, color: d.sd75 ? 'var(--blue)' : d.holiday ? 'var(--red)' : 'var(--muted)' }}>{['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'][dd.getDay()]}</div>
                     <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)' }}>{dd.getDate()}</div>
@@ -999,7 +1004,7 @@ export default function ProductionPlan() {
         monthly.length === 0 ? <div style={{ ...card, color: 'var(--muted)', fontSize: 13 }}>{tr('ไม่มี forecast สำหรับไลน์ใน scope')}</div> :
         monthly.map(({ line, rows }) => (
           <div key={line.id} style={card}>
-            <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginBottom: 6 }}>{line.name} <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400 }}>{line.section}{hasNightShift(viewLines, line.name) ? ' · มีกะดึก' : ' · กะเช้าอย่างเดียว'}</span></div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginBottom: 6 }}>{line.name} <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400 }}>{line.section}{hasNightShift(viewLines, line.name) ? tr(" · มีกะดึก") : tr(" · กะเช้าอย่างเดียว")}</span></div>
             {/* 📊 เดือนไหนงานล้นกำลัง — เห็นจากกราฟก่อน แล้วค่อยอ่านเลขในตาราง
                 🔴 เดือนที่ไม่มี forecast ต้องไม่กลายเป็นแท่ง 0 (= "ไม่มีงาน") ⇒ กรองออกจากกราฟ
                    แล้วตารางยังโชว์ "—" ให้เห็นว่าเดือนนั้นไม่มีข้อมูล */}

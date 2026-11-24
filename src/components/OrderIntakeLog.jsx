@@ -153,7 +153,7 @@ export default function OrderIntakeLog({ shipToMap, custLabel }) {
             <option key={c} value={c}>{custLabel ? custLabel(c) : c}</option>
           ))}
         </select>
-        <SearchInput value={q} onChange={setQ} fields="ชื่อไฟล์ / MAT / คนทำ" />
+        <SearchInput value={q} onChange={setQ} fields={trI18n("ชื่อไฟล์ / MAT / คนทำ")} />
       </TimeRangeBar>
       <div style={card}>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>

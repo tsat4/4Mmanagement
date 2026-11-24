@@ -129,7 +129,7 @@ export default function QaInspectorScopes({ canManage = false }) {
                   const e = empById.get(r.employee_id);
                   return (
                     <span key={r.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '2px 4px 2px 10px', border: '1px solid var(--border2)', borderRadius: 'var(--r-pill)', background: 'var(--bg2-surf)', fontSize: 13 }}>
-                      {e ? e.name : '(ไม่อยู่ในทะเบียน active)'}
+                      {e ? e.name : tr("(ไม่อยู่ในทะเบียน active)")}
                       {e?.position && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{positionLabel(e.position)}</span>}
                       {canManage && <DeleteButton disabled={busy} onClick={() => remove(r)} title={`${tr("เอา")} ${e?.name || ''} ${tr("ออกจาก")} ${u.code || u.name}`} style={{ width: 26, height: 26 }} />}
                     </span>

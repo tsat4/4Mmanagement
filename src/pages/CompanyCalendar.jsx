@@ -213,7 +213,7 @@ export default function CompanyCalendar() {
                       key={i}
                       className="cal-day"
                       onClick={() => cycleDay(dateStr)}
-                      title={isDirty ? `${meta.label} (${tr("ยังไม่บันทึก")})` : meta.label}
+                      title={isDirty ? `${tr(meta.label)} (${tr("ยังไม่บันทึก")})` : tr(meta.label)}
                       style={{
                         position: 'relative',
                         fontSize: 11, textAlign: 'center', padding: '4px 0', borderRadius: 'var(--r-xs)',
@@ -251,7 +251,7 @@ export default function CompanyCalendar() {
           </span>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={handleDiscardDraft} disabled={saving} style={cancelBtnSt}>{tr('ยกเลิก')}</button>
-            <button onClick={handleSaveDraft} disabled={saving} style={saveBtnSt}>{saving ? 'กำลังบันทึก...' : `${tr("บันทึก")} (${pendingCount})`}</button>
+            <button onClick={handleSaveDraft} disabled={saving} style={saveBtnSt}>{saving ? tr("กำลังบันทึก...") : `${tr("บันทึก")} (${pendingCount})`}</button>
           </div>
         </div>
       )}

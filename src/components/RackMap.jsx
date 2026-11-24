@@ -574,7 +574,7 @@ function GridModal({ rackId, existing, onClose, onDone, onBeforeSave }) {
         </div>
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <button onClick={onClose} style={btnGhost}>{tr('ยกเลิก')}</button>
-          <button onClick={save} disabled={saving} style={{ ...btnPri, opacity: saving ? 0.5 : 1 }}>{saving ? 'กำลังสร้าง…' : `${tr("สร้าง")} ${preview.length - dup} ${tr("ช่อง")}`}</button>
+          <button onClick={save} disabled={saving} style={{ ...btnPri, opacity: saving ? 0.5 : 1 }}>{saving ? tr("กำลังสร้าง…") : `${tr("สร้าง")} ${preview.length - dup} ${tr("ช่อง")}`}</button>
         </div>
       </div>
     </div>

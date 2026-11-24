@@ -37,7 +37,7 @@ export default function ConnBanner() {
     }}>
       <span>{tr('⚠️ เชื่อมต่อฐานข้อมูลไม่ได้ — ข้อมูลบนจอตอนนี้อาจไม่ใช่ล่าสุด')}</span>
       <span style={{ opacity: 0.85, fontWeight: 500 }}>
-        {left > 0 ? `${tr("ระบบจะลองใหม่ให้เองใน")} ${left} ${tr("วิ")}` : 'กำลังลองใหม่…'}
+        {left > 0 ? `${tr("ระบบจะลองใหม่ให้เองใน")} ${left} ${tr("วิ")}` : tr("กำลังลองใหม่…")}
       </span>
       <button onClick={connRetryNow} style={{
         background: '#fff', color: '#7f1d1d', border: 'none', borderRadius: 'var(--r-md)',

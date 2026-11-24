@@ -16,7 +16,7 @@ import { supabaseDR } from '../supabaseClient';
 import StepFlow from './StepFlow';
 import { PointThumb } from './inspect/PointZoom';
 import { decisionOf, binTagAge, ncFlow, ncStep, SPECIAL_USE_FORM } from '../utils/qualityBin';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 
 /* คอลัมน์ที่ใช้จริง — ห้าม select('*') (กฎเขียน DB ข้อ 11) */
 const DEFECT_COLS = 'id, qty_ng, qty_suspect, qty_repair, description, reported_by_name, logged_at, is_trial, '
@@ -24,7 +24,7 @@ const DEFECT_COLS = 'id, qty_ng, qty_suspect, qty_repair, description, reported_
   + 'dr_defect_types(name_th), prod_orders(prod_no, mat_no, part_name, machine_no), '
   + 'production_sessions(work_date, shift, line_name)';
 
-const fmtTs = (v) => (v ? new Date(v).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'medium', timeStyle: 'short' }) : '');
+const fmtTs = (v) => (v ? new Date(v).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', dateStyle: 'medium', timeStyle: 'short' }) : '');
 const SHIFT_TH = { day: 'กะเช้า', night: 'กะดึก' };
 
 function Row({ k, v, strong, color }) {
@@ -162,14 +162,14 @@ export default function QualityBinDetailModal({ row, hasRedChild = false, scrapD
               )}
             </Section>
             <Section title={tr("📋 รายการ")}>
-              <Row k="วันที่ลงถัง" v={row.work_date} />
-              <Row k="อายุแท็ก" v={age ? `${age.days} / ${age.limit} ${tr("วัน")}${age.over && st.key !== 'done' ? ` · ${tr("เกิน")} ${age.overBy} ${tr("วัน")}` : ''}` : '—'}
+              <Row k={tr("วันที่ลงถัง")} v={row.work_date} />
+              <Row k={tr("อายุแท็ก")} v={age ? `${age.days} / ${age.limit} ${tr("วัน")}${age.over && st.key !== 'done' ? ` · ${tr("เกิน")} ${age.overBy} ${tr("วัน")}` : ''}` : '—'}
                 color={age?.over && st.key !== 'done' ? 'var(--red)' : undefined} strong={age?.over && st.key !== 'done'} />
-              <Row k="ไลน์" v={row.line_name || '—'} />
-              <Row k="สาเหตุ" v={row.cause || '—'} />
-              <Row k="ผู้แจ้ง" v={row.reported_by || '—'} />
-              <Row k="หมายเหตุ" v={row.note} />
-              {!isY && row.from_yellow_id && <Row k="ที่มา" v={tr('🟡 ย้ายมาจากถังเหลือง')} />}
+              <Row k={tr("ไลน์")} v={row.line_name || '—'} />
+              <Row k={tr("สาเหตุ")} v={row.cause || '—'} />
+              <Row k={tr("ผู้แจ้ง")} v={row.reported_by || '—'} />
+              <Row k={tr("หมายเหตุ")} v={row.note} />
+              {!isY && row.from_yellow_id && <Row k={tr("ที่มา")} v={tr('🟡 ย้ายมาจากถังเหลือง')} />}
             </Section>
           </div>
 
@@ -183,39 +183,39 @@ export default function QualityBinDetailModal({ row, hasRedChild = false, scrapD
               ) : !dl ? (
                 <div style={{ fontSize: 12.5, color: 'var(--muted)', paddingTop: 4 }}>{tr('กำลังโหลด…')}</div>
               ) : (<>
-                <Row k="กะ" v={sess ? [sess.work_date, SHIFT_TH[sess.shift] || sess.shift, sess.line_name].filter(Boolean).join(' · ') : null} />
-                <Row k="เวลาที่บันทึก" v={fmtTs(dl.logged_at)} />
-                <Row k="ผู้บันทึก" v={dl.reported_by_name} />
-                <Row k="ใบสั่งผลิต" v={po ? [po.prod_no, po.mat_no, po.part_name].filter(Boolean).join(' · ') : null} />
-                <Row k="เครื่อง" v={po?.machine_no} />
-                <Row k="ชิ้นส่วนย่อย" v={dl.child_part_name} />
-                <Row k="ประเภทของเสีย" v={dl.dr_defect_types?.name_th} />
-                <Row k="รายละเอียด" v={dl.description} />
-                <Row k="จำนวน" v={[
+                <Row k={tr("กะ")} v={sess ? [sess.work_date, SHIFT_TH[sess.shift] || sess.shift, sess.line_name].filter(Boolean).join(' · ') : null} />
+                <Row k={tr("เวลาที่บันทึก")} v={fmtTs(dl.logged_at)} />
+                <Row k={tr("ผู้บันทึก")} v={dl.reported_by_name} />
+                <Row k={tr("ใบสั่งผลิต")} v={po ? [po.prod_no, po.mat_no, po.part_name].filter(Boolean).join(' · ') : null} />
+                <Row k={tr("เครื่อง")} v={po?.machine_no} />
+                <Row k={tr("ชิ้นส่วนย่อย")} v={dl.child_part_name} />
+                <Row k={tr("ประเภทของเสีย")} v={dl.dr_defect_types?.name_th} />
+                <Row k={tr("รายละเอียด")} v={dl.description} />
+                <Row k={tr("จำนวน")} v={[
                   dl.qty_ng ? `เสีย ${dl.qty_ng}` : '', dl.qty_suspect ? `สงสัย ${dl.qty_suspect}` : '',
                   dl.qty_repair ? `ซ่อม ${dl.qty_repair}` : '', dl.is_trial ? 'งานทดลอง' : '',
                 ].filter(Boolean).join(' · ')} />
-                <Row k="วิธีแก้ไข" v={dl.fix_action ? `${dl.fix_action}${dl.fix_by ? ` (${dl.fix_by})` : ''}` : null} />
+                <Row k={tr("วิธีแก้ไข")} v={dl.fix_action ? `${dl.fix_action}${dl.fix_by ? ` (${dl.fix_by})` : ''}` : null} />
               </>)}
             </Section>
 
             {isY ? (
               <Section title={tr("✍️ ผลพิจารณา QA / การซ่อม")}>
-                <Row k="ผล QA" v={dec ? tr(dec.label) : tr('⏳ ยังไม่พิจารณา')} color={dec ? dec.color : 'var(--amber)'} strong />
-                <Row k="ผู้พิจารณา" v={row.qa_by ? `${row.qa_by}${row.qa_decision_at ? ` · ${fmtTs(row.qa_decision_at)}` : ''}` : null} />
+                <Row k={tr("ผล QA")} v={dec ? tr(dec.label) : tr('⏳ ยังไม่พิจารณา')} color={dec ? dec.color : 'var(--amber)'} strong />
+                <Row k={tr("ผู้พิจารณา")} v={row.qa_by ? `${row.qa_by}${row.qa_decision_at ? ` · ${fmtTs(row.qa_decision_at)}` : ''}` : null} />
                 {row.qa_decision === 'use_as_is' && <Row k={`${tr("เลขใบ")} ${SPECIAL_USE_FORM}`} v={row.special_use_doc_no || tr('⏳ ยังไม่กรอก')} />}
-                <Row k="ซ่อมเมื่อ" v={row.repair_date ? `${row.repair_date}${row.repair_by ? ` · ${row.repair_by}` : ''}` : null} />
-                <Row k="รายละเอียดการซ่อม" v={row.repair_detail} />
-                <Row k="ผลซ่อม" v={row.qty_ok != null || row.qty_ng != null ? `${tr("ดี")} ${row.qty_ok ?? 0} · ${tr("ซ่อมไม่ได้")} ${row.qty_ng ?? 0}` : null} />
-                <Row k="ตีกลับล่าสุด" v={row.repair_reject_note ? `${row.repair_reject_note}${row.repair_reject_count ? ` (${tr("ครั้งที่")} ${row.repair_reject_count})` : ''}` : null} color="var(--red)" />
-                <Row k="QA ตรวจรับ" v={row.repair_accepted_by ? `${row.repair_accepted_by}${row.repair_accepted_at ? ` · ${fmtTs(row.repair_accepted_at)}` : ''}` : null} />
-                <Row k="กลับเข้ากระบวนการ" v={row.return_date} color="var(--green)" strong />
+                <Row k={tr("ซ่อมเมื่อ")} v={row.repair_date ? `${row.repair_date}${row.repair_by ? ` · ${row.repair_by}` : ''}` : null} />
+                <Row k={tr("รายละเอียดการซ่อม")} v={row.repair_detail} />
+                <Row k={tr("ผลซ่อม")} v={row.qty_ok != null || row.qty_ng != null ? `${tr("ดี")} ${row.qty_ok ?? 0} · ${tr("ซ่อมไม่ได้")} ${row.qty_ng ?? 0}` : null} />
+                <Row k={tr("ตีกลับล่าสุด")} v={row.repair_reject_note ? `${row.repair_reject_note}${row.repair_reject_count ? ` (${tr("ครั้งที่")} ${row.repair_reject_count})` : ''}` : null} color="var(--red)" />
+                <Row k={tr("QA ตรวจรับ")} v={row.repair_accepted_by ? `${row.repair_accepted_by}${row.repair_accepted_at ? ` · ${fmtTs(row.repair_accepted_at)}` : ''}` : null} />
+                <Row k={tr("กลับเข้ากระบวนการ")} v={row.return_date} color="var(--green)" strong />
               </Section>
             ) : (
               <Section title={tr("🗑️ การกำจัดทำลาย (DOA)")}>
                 <Row k="QA" v={row.qa_by || '—'} />
-                <Row k="ผู้กำจัดทำลาย" v={row.disposed_by ? `${row.disposed_by}${row.disposed_position ? ` · ${row.disposed_position}` : ''}` : tr('— ยังไม่กรอก')} />
-                <Row k="ใบรายงานของเสีย" v={row.scrap_report_id ? `${scrapDoc?.doc_no || tr('ออกใบแล้ว')}${scrapDoc?.status === 'draft' ? ` · ${tr('ร่าง ยังไม่ส่งอนุมัติ')}` : ''}` : tr('⏳ ยังไม่ออกใบ')}
+                <Row k={tr("ผู้กำจัดทำลาย")} v={row.disposed_by ? `${row.disposed_by}${row.disposed_position ? ` · ${row.disposed_position}` : ''}` : tr('— ยังไม่กรอก')} />
+                <Row k={tr("ใบรายงานของเสีย")} v={row.scrap_report_id ? `${scrapDoc?.doc_no || tr('ออกใบแล้ว')}${scrapDoc?.status === 'draft' ? ` · ${tr('ร่าง ยังไม่ส่งอนุมัติ')}` : ''}` : tr('⏳ ยังไม่ออกใบ')}
                   color={row.scrap_report_id && scrapDoc?.status !== 'draft' ? 'var(--green)' : 'var(--amber)'} strong />
               </Section>
             )}

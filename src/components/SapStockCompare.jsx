@@ -13,7 +13,7 @@ import FilterBar from './FilterBar';
 import SearchInput from './SearchInput';
 import MatLabel from './MatLabel';
 import InfoMore from './InfoMore';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { ImportButton, ImportInfo, WrongFileNote } from './ImportKit';
 import { importLabel, whichImport, rowsFromText } from '../utils/importRegistry';
 import { decodeSapExport } from '../utils/sapBomImport';
@@ -29,7 +29,7 @@ import { decodeSapExport } from '../utils/sapBomImport';
 const UP_COLS = 'id, created_at, cutoff_at, report_date, file_name, slocs, sap_rows, uploaded_by';
 const CMP_COLS = 'id, sloc, mat_no, part_name, bun, sap_qty, sap_qi, sap_blocked, sap_src_rows, esm_qty, esm_basis, hint_gap, hint_rcpt, hint_po';
 const fmt = (n) => (n == null ? '—' : Number(n).toLocaleString(undefined, { maximumFractionDigits: 3 }));
-const when = (iso) => (iso ? new Date(iso).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—');
+const when = (iso) => (iso ? new Date(iso).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—');
 
 /* 📥 แกะไม่ผ่าน ⇒ ถามทะเบียนกลางว่าเป็นไฟล์ของจุดนำเข้าอื่นไหม (`wrong` · ไม่รู้จัก = null) */
 async function readFile(file) {

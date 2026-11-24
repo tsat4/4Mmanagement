@@ -246,7 +246,7 @@ export default function StockCountSheet({ role, scope }) {
             lines={lines} value={lineFilter} onChange={changeLine} {...scope}
             placeholder={tr('— เลือกไลน์/คลังที่จะนับ —')}
             style={{ width: isMobile ? '100%' : 260, padding:'6px 8px', borderRadius:6, border:'1px solid var(--border)', background: 'var(--bg2-surf)', color:'var(--text)', fontSize: isMobile ? 16 : 13 }}
-            extraGroups={[{ label: 'คลัง', options: warehouseNames.map(n => ({ value: n })) }]}
+            extraGroups={[{ label: tr("คลัง"), options: warehouseNames.map(n => ({ value: n })) }]}
           />
           <label style={{ fontSize:12, color:'var(--muted)' }}>
             {tr('วันที่นับ')}{' '}
@@ -284,7 +284,7 @@ export default function StockCountSheet({ role, scope }) {
                           value={counts[r.mat_no] ?? ''}
                           onChange={e => setCounts(c => ({ ...c, [r.mat_no]: e.target.value }))} />
                         <div className="sc-diff" style={{ color: !d ? (typed ? 'var(--accent)' : 'var(--muted)') : d.dir === 'up' ? '#22c55e' : '#ef4444' }}>
-                          {!d ? (typed ? 'ตรง' : '—') : `${d.delta > 0 ? '+' : ''}${n0(d.delta)}`}
+                          {!d ? (typed ? tr("ตรง") : '—') : `${d.delta > 0 ? '+' : ''}${n0(d.delta)}`}
                         </div>
                       </div>
                     </div>
@@ -316,7 +316,7 @@ export default function StockCountSheet({ role, scope }) {
                         </td>
                         <td style={{ ...td, textAlign:'right', fontWeight:800,
                           color: !d ? (typed ? 'var(--accent)' : 'var(--muted)') : d.dir === 'up' ? '#22c55e' : '#ef4444' }}>
-                          {!d ? (typed ? 'ตรง' : '—') : `${d.delta > 0 ? '+' : ''}${n0(d.delta)}`}
+                          {!d ? (typed ? tr("ตรง") : '—') : `${d.delta > 0 ? '+' : ''}${n0(d.delta)}`}
                         </td>
                       </tr>
                     );
@@ -366,7 +366,7 @@ export default function StockCountSheet({ role, scope }) {
               {canCount ? (
                 <button style={{ ...btn('var(--accent)'), opacity: saving || !summary.changed ? 0.5 : 1 }}
                   disabled={saving || !summary.changed} onClick={save}>
-                  {saving ? 'กำลังบันทึก…' : `💾 ${tr("บันทึกผลตรวจนับ")} (${summary.changed})`}
+                  {saving ? tr("กำลังบันทึก…") : `💾 ${tr("บันทึกผลตรวจนับ")} (${summary.changed})`}
                 </button>
               ) : (
                 <span style={{ fontSize:12, color:'var(--muted)' }}>{tr('ดูอย่างเดียว — ต้องมีสิทธิ์ line_stock:issue จึงบันทึกได้')}</span>
@@ -390,12 +390,12 @@ export default function StockCountSheet({ role, scope }) {
           <div style={{ marginLeft:'auto', display:'flex', flexWrap:'wrap', gap:8 }}>
             {canCount && !!shipGap.open.length && (
               <button style={{ ...btn('#ef4444'), opacity: cutting ? 0.6 : 1 }} disabled={cutting} onClick={postMissingCuts}>
-                {cutting ? 'กำลังหัก…' : `🚚 ${tr("หักย้อนหลัง")} ${shipGap.open.length} ${tr("ใบ")} (${n0(openQty)} ${tr("ชิ้น")})`}
+                {cutting ? tr("กำลังหัก…") : `🚚 ${tr("หักย้อนหลัง")} ${shipGap.open.length} ${tr("ใบ")} (${n0(openQty)} ${tr("ชิ้น")})`}
               </button>
             )}
             {!!(shipGap.open.length || shipGap.unresolved.length) && (
               <button style={btn('var(--bg3)', 'var(--text)')} onClick={() => setShowGap(v => !v)}>
-                {showGap ? '▲ ซ่อนรายการ' : `▼ ${tr("ดูรายการ")} (${shipGap.open.length + shipGap.unresolved.length})`}
+                {showGap ? tr("▲ ซ่อนรายการ") : `▼ ${tr("ดูรายการ")} (${shipGap.open.length + shipGap.unresolved.length})`}
               </button>
             )}
           </div>
@@ -420,7 +420,7 @@ export default function StockCountSheet({ role, scope }) {
               <div style={{ overflowX:'auto', overflowY:'auto', maxHeight:'42vh', marginBottom:10, border:'1px solid var(--border2)', borderRadius: 'var(--r-md)' }}>
                 <table style={{ width:'100%', borderCollapse:'collapse', minWidth:640 }}>
                   <thead><tr>
-                    {['วันส่ง', 'ลูกค้า', 'MAT', 'จำนวน', 'คงเหลือหลังหัก'].map((h, i) => (
+                    {[tr("วันส่ง"), tr("ลูกค้า"), 'MAT', tr("จำนวน"), tr("คงเหลือหลังหัก")].map((h, i) => (
                       <th key={h} style={{ ...th, position:'sticky', top:0, background:'var(--card)', zIndex:1,
                         textAlign: i >= 3 ? 'right' : 'left' }}>{tr(h)}</th>
                     ))}

@@ -251,7 +251,7 @@ export default function SkillRadarPanel({ emp, skillDefs, subItemsByskill = {}, 
             border: `1px solid ${glowColor}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
             opacity: printing ? 0.6 : 1,
           }}>
-            {printing ? 'กำลังเตรียม...' : '🖨️ พิมพ์ใบประเมินทักษะรายบุคคล (F-PRS-P1-119)'}
+            {printing ? tr("กำลังเตรียม...") : tr("🖨️ พิมพ์ใบประเมินทักษะรายบุคคล (F-PRS-P1-119)")}
           </button>
         </div>
         </div>{/* /left column */}

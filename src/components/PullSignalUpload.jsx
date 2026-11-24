@@ -513,7 +513,7 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
             {file ? `📄 ${file.name}` : tr('เลือกไฟล์ e-SMART (.csv / .xlsx)')}
           </span>
           <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-            {file ? 'คลิกเพื่อเปลี่ยนไฟล์' : 'ระบบอ่านหัวไฟล์เพื่อรู้ช่วงเวลาและรูปแบบเอง'}
+            {file ? tr("คลิกเพื่อเปลี่ยนไฟล์") : tr("ระบบอ่านหัวไฟล์เพื่อรู้ช่วงเวลาและรูปแบบเอง")}
           </div>
         </label>
 
@@ -540,7 +540,7 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
                 const lag = Math.round((Date.now() - made.getTime()) / 60000);
                 return <div style={{ marginTop: 4 }}>
                   {tr("ไฟล์ออกเมื่อ")} <b>{dateStr(made)} {timeStr(made)}</b>
-                  {lag >= 0 && <span style={{ color: lag > 120 ? '#f59e0b' : 'var(--muted)' }}> {tr('· ผ่านมาแล้ว')} {lag} {tr('นาที')}{lag > 120 ? ' (ข้อมูลอาจเก่า)' : ''}</span>}
+                  {lag >= 0 && <span style={{ color: lag > 120 ? '#f59e0b' : 'var(--muted)' }}> {tr('· ผ่านมาแล้ว')} {lag} {tr('นาที')}{lag > 120 ? tr(" (ข้อมูลอาจเก่า)") : ''}</span>}
                 </div>;
               })()}
             </div>
@@ -568,8 +568,8 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
                 </div>
                 {dupUploads.slice(0, 3).map(({ batch: b, reason }) => (
                   <div key={b.id} style={{ fontSize: 12, marginTop: 3 }}>
-                    • {reason === 'same_file' ? 'ชื่อไฟล์เดียวกัน' : 'ช่วงเวลาเดียวกัน (คนละชื่อไฟล์)'}
-                    {' — '}{whenText(b.uploaded_at)} {tr('โดย')} {b.uploaded_by || 'ไม่ระบุ'}
+                    • {reason === 'same_file' ? tr("ชื่อไฟล์เดียวกัน") : tr("ช่วงเวลาเดียวกัน (คนละชื่อไฟล์)")}
+                    {' — '}{whenText(b.uploaded_at)} {tr('โดย')} {b.uploaded_by || tr("ไม่ระบุ")}
                     {b.ship_time && ` · ${tr("ลงรอบ")} ${b.ship_time}`}
                     {' → '}{tr('อัพเดท')} {fmt(b.orders_updated)} {tr('ใบ · สร้าง')} {fmt(b.orders_created)} {tr("ใบ")}
                   </div>
@@ -662,7 +662,7 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
                 {legs.map(l => (
                   <div key={l.dock || '-'}>
                     • Dock <b>{l.dock || '—'}</b> {l.rows.length} {tr('แถว → รอบ')} <b>{l.shipTime || '—'}</b> {tr('วันงาน')} <b>{l.workDate || '—'}</b>
-                    {l.primary ? ' (ช่องด้านบน)' : l.fromLead ? ' ⚠ ไม่มีตารางรอบรับ ใช้สูตรปลายช่วง' : ` (${tr("ตารางรอบรับ")} ${String(l.round?.pickup_time || '').slice(0, 5)})`}
+                    {l.primary ? tr(" (ช่องด้านบน)") : l.fromLead ? tr(" ⚠ ไม่มีตารางรอบรับ ใช้สูตรปลายช่วง") : ` (${tr("ตารางรอบรับ")} ${String(l.round?.pickup_time || '').slice(0, 5)})`}
                   </div>
                 ))}
               </div>
@@ -719,7 +719,7 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
                   })}
                   {!plan.length && (
                     <tr><td colSpan={8} style={{ ...td, textAlign: 'center', color: 'var(--muted)' }}>
-                      {dupCount > 0 ? 'ทุกแถวในไฟล์นี้เคยนำเข้าไปแล้ว — ไม่มีอะไรต้องอัพเดท' : 'ไม่มีรายการ'}
+                      {dupCount > 0 ? tr("ทุกแถวในไฟล์นี้เคยนำเข้าไปแล้ว — ไม่มีอะไรต้องอัพเดท") : tr("ไม่มีรายการ")}
                     </td></tr>
                   )}
                 </tbody>
@@ -741,8 +741,8 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
                   background: willWrite && !blockedByDup ? 'var(--accent)' : 'var(--bg3)',
                   color: willWrite && !blockedByDup ? '#08130a' : 'var(--muted)',
                 }}>
-                {saving ? 'กำลังบันทึก…'
-                  : blockedByDup ? '🚨 ติ๊กรับทราบไฟล์ซ้ำก่อน'
+                {saving ? tr("กำลังบันทึก…")
+                  : blockedByDup ? tr("🚨 ติ๊กรับทราบไฟล์ซ้ำก่อน")
                   : `✅ ${tr("ยืนยันอัพเดท")} (${willWrite})`}
               </button>
             </div>

@@ -25,15 +25,15 @@ import {
   summarizeMachineFacts, compareWithSessions, reasonRows, tagRows, suggestDowntimeType, stopTotals, STATE_META, STATE_ORDER,
 } from '../utils/machineFacts';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
 const DAYS = 7;
 const card = { background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 14, boxShadow: 'var(--shadow-sm)', minWidth: 0 };
 const th = { textAlign: 'left', padding: '6px 8px', fontSize: 12, color: 'var(--muted)', fontWeight: 700, borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' };
 const td = { padding: '6px 8px', fontSize: 12.5, borderBottom: '1px solid var(--border)', verticalAlign: 'top' };
 const KIND_LABEL = { onplan: 'หยุดตามแผน (OnplanMaster)', alarm: 'Alarm (AlarmMaster)', unplan: 'หยุดนอกแผน/รอ (UnplanMaster)' };
-const fmtTime = (ms) => (ms ? new Date(ms).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—');
-const fmtDate = (d) => new Date(`${d}T00:00:00+07:00`).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok', weekday: 'short', day: 'numeric', month: 'short' });
+const fmtTime = (ms) => (ms ? new Date(ms).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—');
+const fmtDate = (d) => new Date(`${d}T00:00:00+07:00`).toLocaleDateString(dateLocale(), { timeZone: 'Asia/Bangkok', weekday: 'short', day: 'numeric', month: 'short' });
 const minTxt = (sec) => (sec == null ? '–' : `${Math.round(sec / 60).toLocaleString()}`);
 const num = (v) => (v == null ? '–' : Number(v).toLocaleString());
 
@@ -222,7 +222,7 @@ export default function MachineFactsPanel({ src, canManage, callAdmin }) {
                         ) : canManage ? (
                           <div style={{ display: 'grid', gap: 6 }}>
                             <SearchSelect value={cur} options={dtOptions} placeholder={tr('ค้นประเภท downtime…')}
-                              loadFail={data.errs.includes('ประเภท downtime') ? 'โหลดประเภท downtime ไม่สำเร็จ' : ''}
+                              loadFail={data.errs.includes('ประเภท downtime') ? tr("โหลดประเภท downtime ไม่สำเร็จ") : ''}
                               onChange={({ id }) => id && id !== cur && save(k, 'map_reason', { ...base, downtime_type_id: id }, `${tr("จับคู่เหตุผล")} ${r.code}`)} />
                             {cur && !dtById.has(cur) && !data.errs.includes('ประเภท downtime') && (
                               <span style={{ fontSize: 12, color: 'var(--red)' }}>{tr('⚠ ประเภทที่จับคู่ไว้ถูกลบจากทะเบียนแล้ว — เลือกใหม่หรือล้าง')}</span>
@@ -249,7 +249,7 @@ export default function MachineFactsPanel({ src, canManage, callAdmin }) {
                             </div>
                           </div>
                         ) : (
-                          r.map ? (cur ? <b>{dtById.get(cur)?.name_th || tr('⚠ ประเภทนี้ถูกลบแล้ว')}</b> : 'ไม่มีตัวตรงใน ESM')
+                          r.map ? (cur ? <b>{dtById.get(cur)?.name_th || tr('⚠ ประเภทนี้ถูกลบแล้ว')}</b> : tr("ไม่มีตัวตรงใน ESM"))
                             : <span style={{ color: 'var(--amber)' }}>{tr('ยังไม่จับคู่')}</span>
                         )}
                       </td>
@@ -293,7 +293,7 @@ export default function MachineFactsPanel({ src, canManage, callAdmin }) {
                     return ms.map((m, i) => (
                       <tr key={`${r.key}|${m?.tag || '-'}`}>
                         {i === 0 && <>
-                          <td style={{ ...td, whiteSpace: 'nowrap', fontWeight: 700 }} rowSpan={ms.length}>{fmtDate(r.workDate)} · {r.shift === 'day' ? 'เช้า' : 'ดึก'}</td>
+                          <td style={{ ...td, whiteSpace: 'nowrap', fontWeight: 700 }} rowSpan={ms.length}>{fmtDate(r.workDate)} · {r.shift === 'day' ? tr("เช้า") : tr("ดึก")}</td>
                           <td style={{ ...td, whiteSpace: 'nowrap' }} rowSpan={ms.length}>{r.line}</td>
                           <td style={td} rowSpan={ms.length}>
                             {r.session ? <b>{num(r.session.actual_qty)}</b> : <span style={{ color: 'var(--muted)' }}>{tr('ไม่มีใบผลิต')}</span>}

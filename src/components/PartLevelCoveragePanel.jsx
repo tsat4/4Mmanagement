@@ -128,7 +128,7 @@ export default function PartLevelCoveragePanel() {
 
           {rows.length === 0 ? (
             <div style={{ ...card, padding: '26px 16px', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
-              {data.rows.length === 0 ? 'ยังไม่มียอดสต็อกหน้าไลน์ให้ตรวจ' : `${tr("ไม่มีไลน์/พาร์ทที่ตรงกับ")} "${q}"`}
+              {data.rows.length === 0 ? tr("ยังไม่มียอดสต็อกหน้าไลน์ให้ตรวจ") : `${tr("ไม่มีไลน์/พาร์ทที่ตรงกับ")} "${q}"`}
             </div>
           ) : rows.map(g => {
             const folded = !open.has(g.line_name);

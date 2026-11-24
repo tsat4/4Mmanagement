@@ -53,7 +53,7 @@ import {
 } from '../utils/obeyaYear';
 import { ST, worstStatus, safetyKind, isInjury, ymd } from '../utils/obeya';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 /* ══ 📋 OBEYA — บอร์ด KPI ส่วนงาน · 2026-08-27 → 2026-09-23 (วาดใหม่เป็น "แผ่น A4" ชุดเดียวกับจอ SQDCM) ═══
    แทนกระดาษ "OBEYA KPI monitoring" ที่แปะผนังห้องประชุมหน้างาน (คำสั่งนายใหญ่ผ่าน user 2026-08-27)
    user เคาะ 3 ข้อ: ① แยกรายส่วนงาน ② ตัวไหนวิ่งทุกกะให้อัพเดทรายวัน ③ มีแกน Safety
@@ -135,7 +135,7 @@ const LAMP_LABEL = { good: 'ตามเป้า', warn: 'ถึง Commitment'
 const SRC_PAGE_NAMES = { '/oee-analytics': 'OEE Analytics', '/safety': 'Safety', '/bbs': 'BBS' };
 const srcPageName = (to) => SRC_PAGE_NAMES[String(to || '').split('?')[0]] || String(to || '').split('?')[0].replace(/^\//, '');
 /* ตัวเลขฐานของสูตรบนจอ — บาท ≥ 1 ล้าน = MB · ไม่งั้น บ. · ตัวแปรอื่นตามหน่วยของมัน (ใช้ร่วมบรรทัดรอง 🧮 + insight 🔍) */
-const fmtInVar = (v, x) => { const u = baseVarOf(v)?.unit || ''; if (x == null) return '—'; if (u === 'บาท') return Math.abs(x) >= 1e6 ? `${(x / 1e6).toLocaleString('th-TH', { maximumFractionDigits: 1 })} MB` : `${Math.round(x).toLocaleString('th-TH')} ${tr("บ.")}`; return `${Number(x).toLocaleString('th-TH', { maximumFractionDigits: 1 })} ${u}`; };
+const fmtInVar = (v, x) => { const u = baseVarOf(v)?.unit || ''; if (x == null) return '—'; if (u === 'บาท') return Math.abs(x) >= 1e6 ? `${(x / 1e6).toLocaleString(dateLocale(), { maximumFractionDigits: 1 })} MB` : `${Math.round(x).toLocaleString(dateLocale())} ${tr("บ.")}`; return `${Number(x).toLocaleString(dateLocale(), { maximumFractionDigits: 1 })} ${u}`; };
 const toLamp = (st, why) => ({ status: st === ST.unknown ? 'none' : st, label: st === ST.unknown ? (why?.startsWith('ยังไม่มี') || why?.startsWith('ยังไม่กรอก') ? tr('ยังไม่มีข้อมูล') : tr('ไม่มีเป้า')) : LAMP_LABEL[st], why: why || '' });
 
 /* แผ่น KPI บนมือถือ: หัว (ชื่อ·ตัวเลขใหญ่·ไฟ) ~90px + กราฟ ~200px + ท้าย — อ่านออก ไม่ต้องเลื่อนในแผ่น */
@@ -293,7 +293,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
     try {
       // 1) ผลรวมรายเดือนทั้งปีของทุกไลน์ (กรอง scope/กลุ่มฝั่ง client — สลับกลุ่มไม่ยิง DB ใหม่)
       const yr = names.length ? await supabaseDR.rpc('obeya_year_rollup', { p_from: `${year}-01-01`, p_to: date }) : { data: {} };
-      if (yr.error) warn.push('ผลรวมรายเดือน (OEE/PPM)');
+      if (yr.error) warn.push(tr("ผลรวมรายเดือน (OEE/PPM)"));
       const roll = yr.data || {};
       // 2) กะที่ยังเปิดค้างของวันที่ดู — ตัวเลขวันนี้ยังไม่ครบ ต้องบอก
       /* `.in()` ยาวทะลุเพดาน URL = คืนว่างเงียบ (กฎเหล็ก DB ข้อ 5) → ซอยก้อนผ่าน fetchByIds แทน `slice(0, 200)` เดิม
@@ -301,23 +301,23 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
       const op = names.length ? await fetchByIds(names, part => supabaseDR.from('production_sessions').select('id')
         /* 🔴 ระบุสถานะรายตัว ห้าม `.neq('status','closed')` — ใบโมฆะจะถูกนับเป็น "กะเปิดค้าง" (08/10 · มีด่าน) */
         .eq('work_date', date).in('status', SESSION_STATUSES_LIVE).in('line_name', part)) : { rows: [] };
-      if (op.error || op.truncated) warn.push('กะที่เปิดค้าง');
+      if (op.error || op.truncated) warn.push(tr("กะที่เปิดค้าง"));
       // 3) เป้า OEE (A×P×Q รายกรุ๊ป)
       const tg = await supabase.from('oee_targets').select('group_name, target_a, target_p, target_q');
-      if (tg.error) warn.push('เป้า OEE');
+      if (tg.error) warn.push(tr("เป้า OEE"));
       // 4) ความปลอดภัย — ทั้งหมดของส่วนงาน ≤ วันที่ดู (ใช้ทั้งนับต่อเดือน + งานค้าง)
       const sf = await supabase.from('safety_events')
         .select('*').eq('is_active', true).gte('event_date', `${year}-01-01`).lte('event_date', date)
         .order('event_date', { ascending: false }).limit(500);
       const safetyMissing = (sf.error?.code || '') === '42P01';
-      if (sf.error && !safetyMissing) warn.push('เหตุการณ์ความปลอดภัย');
+      if (sf.error && !safetyMissing) warn.push(tr("เหตุการณ์ความปลอดภัย"));
       const safety = (sf.data || []).filter(e => secOk(e.section));
       // 5) งานที่ต้องตามแก้จากประชุมเช้า/ห้อง Obeya — "บอร์ดที่มีแต่กราฟ ไม่มี action = ไม่ใช่ Obeya"
       const acts = await supabase.from('meeting_action_items')
         .select('id, meeting_date, section, line_name, problem, assignee, due_date, status, source')
         .in('status', ['open', 'doing']).order('due_date', { ascending: true, nullsFirst: false }).limit(60);
       const actsMissing = (acts.error?.code || '') === '42P01';
-      if (acts.error && !actsMissing) warn.push('งานติดตาม');
+      if (acts.error && !actsMissing) warn.push(tr("งานติดตาม"));
       const actions = (acts.data || []).filter(a => secOk(a.section));
       // 6) นิยาม KPI ของปี + ค่ารายเดือน (กรอกมือ / เป้าของแถว auto)
       let kdRes = await supabase.from('kpi_definitions')
@@ -326,7 +326,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
         kdRes = await supabase.from('kpi_definitions').select('*').eq('year', year).eq('is_active', true);
       }
       const kpiMissing = (kdRes.error?.code || '') === '42P01';
-      if (kdRes.error && !kpiMissing) warn.push('นิยาม KPI');
+      if (kdRes.error && !kpiMissing) warn.push(tr("นิยาม KPI"));
       // นิยามของ "ขอบเขตที่เลือก + บรรพบุรุษ" — นิยามระดับแม่ตกทอดถึงลูก (ตกลงรุ่นเดียวกับแท็บ ⚙️)
       const sel = parseScopeKey(scopeKeyStr);
       const kSel = canonicalScope(org, sel);   // 💰 15/10: โน้ต/ลำดับแผ่นของรหัส CC = ของหน่วยเจ้าของรหัส (คีย์เดียว ไม่แยก 2 ชุด)
@@ -340,41 +340,41 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
       if (kdefs.length || kdefsBelow.length) {
         const ke = await fetchByIds([...kdefs, ...kdefsBelow].map(d => d.id), part => supabase
           .from('kpi_manual_entries').select('kpi_id, month, value').in('kpi_id', part));
-        if (ke.error) warn.push('ค่า KPI รายเดือน');
+        if (ke.error) warn.push(tr("ค่า KPI รายเดือน"));
         kentries = ke.rows;
         /* 📅 แผนรายเดือน — ใช้คาดการณ์ปลายปี (ผลจริง + แผนที่เหลือ) · ตารางยังไม่มี = ไม่มีแผน ไม่ใช่บอร์ดล่ม */
         const kp = await fetchByIds(kdefs.map(d => d.id), part => supabase
           .from('kpi_month_plans').select('kpi_id, month, plan_value').in('kpi_id', part));
-        if (kp.error && !/42P01/.test(String(kp.error))) warn.push('แผนรายเดือน');
+        if (kp.error && !/42P01/.test(String(kp.error))) warn.push(tr("แผนรายเดือน"));
         kplans = kp.rows || [];
       }
       /* 💰 ตัวเลขฐาน (ยอดขายกลางของโรงงาน + ยอดเงินของหน่วย) — นิยาม provider='formula' คำนวณค่ารายเดือนจากตรงนี้ (15/10) · ตารางยังไม่มี = ไม่มีสูตร */
       /* cap-ok: kpi_base_inputs ต่อปี สูงสุด 63 แถว (วัด 20/10) */
       const kb = await supabase.from('kpi_base_inputs').select('id, month, scope_kind, scope_value, var_key, value').eq('year', year).limit(5000);
-      if (kb.error && (kb.error.code || '') !== '42P01') warn.push('ตัวเลขฐาน KPI');
+      if (kb.error && (kb.error.code || '') !== '42P01') warn.push(tr("ตัวเลขฐาน KPI"));
       const kbase = kb.data || [];
       /* 👥 ทะเบียนพนักงาน active — ตัวหาร manpower ของ "ยอดขาย/หัว" เมื่อไม่มีใครกรอก (ค่ากรอกมือชนะ) */
       /* cap-ok: employees ทั้งโรงงาน 351 คน (วัด 20/10) */
       const em = await supabase.from('employees').select('id, section, department, is_active, start_date').eq('is_active', true).limit(5000);
-      if (em.error) warn.push('ทะเบียนพนักงาน');
+      if (em.error) warn.push(tr("ทะเบียนพนักงาน"));
       const kemps = em.data || [];
       /* 📝 หมายเหตุรายเดือนของขอบเขตที่ดู (remark/action/note) — ตารางยังไม่มี = ไม่มีโน้ต ไม่ใช่บอร์ดล่ม */
       const kn = await supabase.from('kpi_month_notes')
         .select('id, month, row_key, kind, text, image_url, created_by_name, created_at')
         .eq('year', year).eq('scope_kind', kSel.kind || 'plant').eq('scope_value', kSel.value || '').eq('is_active', true)
         .order('created_at', { ascending: true }).limit(1000);
-      if (kn.error && (kn.error.code || '') !== '42P01') warn.push('หมายเหตุรายเดือน');
+      if (kn.error && (kn.error.code || '') !== '42P01') warn.push(tr("หมายเหตุรายเดือน"));
       const knotes = kn.data || [];
       /* 🧩 ลำดับแผ่นที่หน่วยนี้จัดเอง (09/10 · user PD2 "อยากจัดตำแหน่ง card เอง") — ไม่มีแถว/ตารางยังไม่มี = ลำดับ template */
       const kl = await supabase.from('kpi_board_layouts').select('row_keys')
         .eq('year', year).eq('scope_kind', kSel.kind || 'plant').eq('scope_value', kSel.value || '').maybeSingle();
-      if (kl.error && (kl.error.code || '') !== '42P01') warn.push('ลำดับแผ่น');
+      if (kl.error && (kl.error.code || '') !== '42P01') warn.push(tr("ลำดับแผ่น"));
       const layoutKeys = Array.isArray(kl.data?.row_keys) ? kl.data.row_keys : [];
       /* ⚡ KPI ช่าง — RPC คืน Σ รายเดือน (mo/dt/machines) แล้ว utils/kpiAuto คำนวณ (RPC ห้ามคำนวณ KPI) · ไม่มีทีมช่าง = ไม่ยิง */
       let mtnRoll = null;
       if (mtnTeamKey) {
         const mr = await supabaseDR.rpc('kpi_mtn_rollup', { p_from: `${year}-01-01`, p_to: `${year}-12-31` });
-        if (mr.error) warn.push('KPI ช่างอัตโนมัติ'); else mtnRoll = mr.data || {};
+        if (mr.error) warn.push(tr("KPI ช่างอัตโนมัติ")); else mtnRoll = mr.data || {};
       }
       if (seq !== reqRef.current) return;                 // มีคำขอใหม่แล้ว — ทิ้งผลเก่า
       setData({
@@ -855,7 +855,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
       <div style={style} title={`${tr("ผลจริง")} ${f.actualMonths} ${tr("เดือน")}${f.planMonths ? ` + ${tr("แผน")} ${f.planMonths} ${tr("เดือน")}` : ''}${nAs ? ` + ${assumeTxt}` : ''} ${tr("รวมด้วยวิธี")} "${summaryShort(f.mode)}"${f.approx ? tr(' (โดยประมาณ — KPI นี้คิดจากยอดดิบทั้งปี แต่แผนไม่มียอดดิบ)') : ''}`}>
         {tr("ปลายปี")} {f.approx || nAs ? '≈ ' : ''}<b style={{ color: 'var(--text2)' }}>{nf(f.value, r.dec)}{r.unit ? ' ' + r.unit : ''}</b>
         {' '}({nAs ? `${tr("จริง")} ${f.actualMonths}+${tr("คาด")} ${nAs}${f.planMonths ? `+${tr("แผน")} ${f.planMonths}` : ''} ${tr("ด.")}` : f.planMonths ? `${tr("จริง")} ${f.actualMonths}+${tr("แผน")} ${f.planMonths} ${tr("ด.")}` : `${tr("จริงครบ")} ${f.actualMonths} ${tr("ด.")}`})
-        {verdict ? <> · <b style={{ color: verdict.c }}>{verdict.t}</b></> : (f.hasTarget ? '' : ' · ไม่มีเป้า')}
+        {verdict ? <> · <b style={{ color: verdict.c }}>{verdict.t}</b></> : (f.hasTarget ? '' : tr(" · ไม่มีเป้า"))}
       </div>
     );
   };
@@ -1204,7 +1204,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
       <span className="sep" />
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
         <button onClick={() => shiftMonth(-1)} title={tr('เดือนก่อน')} style={navBtn}>◀</button>
-        <b style={{ fontSize: 13, minWidth: 92, textAlign: 'center' }} title={live ? 'เดือนปัจจุบัน — ตามวันจริง ข้ามเดือนแล้วเลื่อนเอง' : `${tr("ปักดูเดือน")} ${monthText} ${tr("อยู่ — กด \"สด\" เพื่อกลับเดือนปัจจุบัน")}`}>
+        <b style={{ fontSize: 13, minWidth: 92, textAlign: 'center' }} title={live ? tr("เดือนปัจจุบัน — ตามวันจริง ข้ามเดือนแล้วเลื่อนเอง") : `${tr("ปักดูเดือน")} ${monthText} ${tr("อยู่ — กด \"สด\" เพื่อกลับเดือนปัจจุบัน")}`}>
           {monthText}{live && <span style={{ marginLeft: 5, fontSize: 11, fontWeight: 800, color: 'var(--green)', verticalAlign: 'middle' }}>{tr('● สด')}</span>}
         </b>
         <button onClick={() => shiftMonth(1)} disabled={live} title={live ? tr('อยู่เดือนปัจจุบันแล้ว') : tr('เดือนถัดไป')} style={navBtn}>▶</button>
@@ -1213,8 +1213,8 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
       <span className="sep" />
       {/* 🎯 โฟกัสช่วงค่า — ยกพื้นแกน Y ให้เห็น gap T/C (แกนไม่เริ่ม 0 ⇒ แผ่นเขียนบอกเอง) */}
       <button onClick={() => setParam('yfocus', yFocus ? '' : '1')} style={pill(yFocus)} aria-pressed={yFocus}
-        title={yFocus ? 'กำลังโฟกัสช่วงค่า: แกน Y เริ่มใกล้ค่าต่ำสุด ให้เห็นระยะห่าง Target/Commitment ชัด · กดเพื่อกลับแกนเริ่ม 0'
-          : 'โฟกัสช่วงค่า: ตัดที่ว่างใต้กราฟ ยกพื้นแกน Y ขึ้นใกล้ค่าต่ำสุด ให้เห็นระยะห่าง Target/Commitment ชัดขึ้น (แผ่นจะเขียนบอกว่าแกนไม่เริ่ม 0)'}>
+        title={yFocus ? tr("กำลังโฟกัสช่วงค่า: แกน Y เริ่มใกล้ค่าต่ำสุด ให้เห็นระยะห่าง Target/Commitment ชัด · กดเพื่อกลับแกนเริ่ม 0")
+          : tr("โฟกัสช่วงค่า: ตัดที่ว่างใต้กราฟ ยกพื้นแกน Y ขึ้นใกล้ค่าต่ำสุด ให้เห็นระยะห่าง Target/Commitment ชัดขึ้น (แผ่นจะเขียนบอกว่าแกนไม่เริ่ม 0)")}>
         {yFocus ? tr('โฟกัสช่วงค่า') : tr('แกนเริ่ม 0')}
       </button>
       {/* ✒️ 20/11 (user: "กรอก/ตั้งเป้า ทุกการ์ดกดแล้วเด้งไปหน้าเดียวกัน ⇒ รวมเป็นปุ่มเดียวปลายแถบ") — แผ่น KPI ไม่มีปุ่มมุม/ปุ่มกรอกแล้ว
@@ -1252,8 +1252,8 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
               )}
               <button type="button" className="pg-btn" onClick={() => goBoard(true)}>{tr('โหมดจอ TV')}</button>
               <OverflowMenu items={[
-                { key: 'arrange', icon: '⇅', label: 'จัดเรียงแผ่น KPI', onClick: () => setArrange(true), hidden: !canNote || arrange,
-                  title: 'จัดลำดับแผ่น KPI ของขอบเขตนี้เอง (บันทึกต่อขอบเขต)' },
+                { key: 'arrange', icon: '⇅', label: tr("จัดเรียงแผ่น KPI"), onClick: () => setArrange(true), hidden: !canNote || arrange,
+                  title: tr("จัดลำดับแผ่น KPI ของขอบเขตนี้เอง (บันทึกต่อขอบเขต)") },
               ]} />
             </>
           )}
@@ -1324,9 +1324,9 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
                   ? (overdue ? { status: 'bad', label: `${tr("เกินกำหนด")} ${overdue}`, why: `${tr("มี")} ${overdue} ${tr("รายการเลยวันครบกำหนดแล้วยังไม่ปิด")}` }
                     : { status: 'warn', label: `${tr("ค้าง")} ${todo.length}`, why: 'ยังมีงานค้างที่ยังไม่ปิด' })
                   : { status: 'none', label: 'ไม่มีงานค้าง', why: 'ไม่มี action/เหตุความปลอดภัยที่ค้างในส่วนงานนี้ — ถ้าเพิ่งเปิดใช้ ตรวจว่ามีการบันทึกจริงไหม' }}
-                link="ไปหน้าประชุมเช้า" onLink={() => goTo('/morning-meeting')}>
+                link={tr("ไปหน้าประชุมเช้า")} onLink={() => goTo('/morning-meeting')}>
                 <div style={{ height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 3, padding: '0 4px' }}>
-                  <ReadOnlyNote show={!canRecord} role={role} compact what="บันทึกเหตุการณ์ความปลอดภัย" permKey="safety:record" />
+                  <ReadOnlyNote show={!canRecord} role={role} compact what={tr("บันทึกเหตุการณ์ความปลอดภัย")} permKey="safety:record" />
                   {!todo.length ? (
                     <div style={{ fontSize: fs(11), color: 'var(--muted)', lineHeight: 1.4, padding: 6 }}>
                       {tr("ไม่มีงานค้างในส่วนงานนี้ — ตัวเลขหลุดเป้าบนแผ่นไหน ให้ตั้ง Action ที่แท็บ 🖥️ จอ")} SQDCM

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { toast } from './Toast';
 import { DIE_STATUSES, dieStatusMeta, saveDieStatus, MIGRATION_HINT } from '../utils/dieStatus';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 /* ═══ DieStatusEditor — ตัวเปลี่ยนสถานะแม่พิมพ์ (ใช้ร่วมแท็บ 🗺️ ผังจัดเก็บ + 📊 สถานะ) ═══
    สถานะ manual เท่านั้น — สถานะ "มีใบซ่อมค้าง" derive จาก MO เสมอ ไม่ให้คนตั้งเองที่นี่
    (die = แถว machines พร้อม .ext) · เขียนสำเร็จแล้วเรียก onSaved(patch) ให้หน้าแม่ update state */
@@ -48,7 +48,7 @@ export default function DieStatusEditor({ die, canEdit, fullName, ready, onSaved
         {ext.status_note && <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{ext.status_note}</div>}
         {ext.status_updated_at && (
           <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-            {tr("อัพเดท")} {new Date(ext.status_updated_at).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}
+            {tr("อัพเดท")} {new Date(ext.status_updated_at).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok' })}
             {ext.status_updated_by_name ? ` · ${ext.status_updated_by_name}` : ''}
           </div>
         )}
@@ -68,7 +68,7 @@ export default function DieStatusEditor({ die, canEdit, fullName, ready, onSaved
       <input value={note} onChange={e => setNote(e.target.value)} placeholder={tr('หมายเหตุ (เช่น ซ่อมคมตัด OP20 / ส่งบริษัท xxx)')} style={inp} />
       {ext.status_updated_at && (
         <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-          {tr("ล่าสุด")} {new Date(ext.status_updated_at).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}
+          {tr("ล่าสุด")} {new Date(ext.status_updated_at).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok' })}
           {ext.status_updated_by_name ? ` · ${ext.status_updated_by_name}` : ''}
         </div>
       )}

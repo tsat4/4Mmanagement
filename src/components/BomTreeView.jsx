@@ -254,7 +254,7 @@ export default function BomTreeView({ rootMat, rootName, bomOf, sheetFor, ownShe
                   <td style={{ ...td, textAlign: 'right', fontWeight: 700, whiteSpace: 'nowrap' }}>{fmtQty(r.qty)}</td>
                   {/* หน่วยต้องมีเสมอ — ไม่มีในฐาน = บอกตรงๆ ห้ามเดา */}
                   <td style={{ ...td, whiteSpace: 'nowrap', color: r.uom ? 'var(--text2)' : TONE.warn, fontWeight: 700 }}>
-                    {uomLabel(r.uom) || '⚠ ไม่ระบุ'}
+                    {uomLabel(r.uom) || tr("⚠ ไม่ระบุ")}
                   </td>
                   <td style={{ ...td, fontFamily: 'monospace', whiteSpace: 'nowrap', color: r.storage_location ? '#a855f7' : 'var(--muted)', fontWeight: r.storage_location ? 700 : 400 }}>
                     {slocLabel(r.storage_location) || '—'}

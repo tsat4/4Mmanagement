@@ -36,11 +36,12 @@ import { fmtAxis } from '../utils/chartAxis';
 import { loadDocForms } from '../utils/docForms';
 import { downloadCsvDoc } from '../utils/csvDoc';
 import NoticeBar from '../components/NoticeBar';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import InfoMore from '../components/InfoMore';   // ⓘ คำอธิบายพับ (UI §6.10)
 import { ImportButton, ImportInfo, WrongFileNote } from '../components/ImportKit';
 import { whichImport } from '../utils/importRegistry';
 import { askConfirm } from '../utils/askConfirm';
+import { monthsShort, yearDisplay } from '../utils/dateFormat';
 
 /* ─── PLANNER & SALES — Forecast Planner + อัพโหลดไฟล์จากลูกค้า ──────────────
    Sales อัพโหลด Excel 2 แบบ: (1) Forecast ล่วงหน้าจากลูกค้า (2) Order + รอบเวลาส่งงาน
@@ -68,8 +69,7 @@ const workDateStr = () => { const d = new Date(); if (d.getHours() < 8) d.setDat
 const monthFirst = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
 const monthLabel = (iso) => {
   const [y, m] = iso.split('-').map(Number);
-  const TH = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-  return `${TH[m - 1]} ${y + 543}`;
+  return `${monthsShort()[m - 1]} ${yearDisplay(y)}`;
 };
 const fmt = (n) => Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 1 });
 
@@ -931,7 +931,7 @@ function UploadTab({ canUpload, fullName, onImported, custLabel }) {
           {edi && (
             <div style={{ border: '1px solid var(--blue-line)', background: 'var(--blue-dim)', borderRadius: 'var(--r-md)', padding: 14, marginBottom: 4 }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--blue)', marginBottom: 8 }}>
-                EDI {ediKind === 'orders' ? '862 — Shipping Schedule (รอบส่งงาน)' : '830 — Planning Forecast'}
+                EDI {ediKind === 'orders' ? tr("862 — Shipping Schedule (รอบส่งงาน)") : '830 — Planning Forecast'}
               </div>
 
               {/* 🔴 ผลการเดาชนิดต้องขึ้นจอ + แก้ได้ (2026-09-17)
@@ -945,7 +945,7 @@ function UploadTab({ canUpload, fullName, onImported, custLabel }) {
                 border: `1px solid ${edi.kindGuess?.sure ? 'var(--green-line)' : 'var(--amber-line)'}`,
               }}>
                 <span style={{ color: edi.kindGuess?.sure ? 'var(--green)' : 'var(--amber)', fontWeight: 700 }}>
-                  {edi.kindGuess?.sure ? '✓ ระบบอ่านชนิดได้' : '⚠️ ระบบแยกชนิดไม่ชัด'}
+                  {edi.kindGuess?.sure ? tr("✓ ระบบอ่านชนิดได้") : tr("⚠️ ระบบแยกชนิดไม่ชัด")}
                 </span>
                 <span style={{ color: 'var(--text2)' }}>{edi.kindGuess?.reason}</span>
                 <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -1010,7 +1010,7 @@ function UploadTab({ canUpload, fullName, onImported, custLabel }) {
                 onSaved={async () => { const l = lastFilesRef.current; if (l) await handleFiles(l.files, l.kind); }} />
               <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 10 }}>
                 {tr("การนำเข้าจะ")}<strong>{tr('แทนที่')}</strong>{tr("ข้อมูล EDI ฉบับเดิมของ ship-to เดียวกัน (อัพใหม่ทุกวันได้ ยอดไม่ทบซ้ำ")})
-                {ediKind === 'orders' ? ' · รอบที่เตรียม/ส่งไปแล้วจะไม่ถูกแตะ' : ''}
+                {ediKind === 'orders' ? tr(" · รอบที่เตรียม/ส่งไปแล้วจะไม่ถูกแตะ") : ''}
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button onClick={doImportEdi} disabled={saving}
@@ -1057,7 +1057,7 @@ function UploadTab({ canUpload, fullName, onImported, custLabel }) {
               </div>
               <button onClick={doImport} disabled={saving}
                 style={{ padding: '10px 24px', borderRadius: 'var(--r-md)', border: 'none', background: 'var(--accent)', color: 'var(--accent-ink)', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'var(--font-body)', opacity: saving ? 0.6 : 1 }}>
-                {saving ? 'กำลังนำเข้า...' : `${tr("นำเข้าข้อมูล")} ${kind === 'forecast' ? 'Forecast' : 'Orders'}`}
+                {saving ? tr("กำลังนำเข้า...") : `${tr("นำเข้าข้อมูล")} ${kind === 'forecast' ? 'Forecast' : 'Orders'}`}
               </button>
             </>
           )}
@@ -1072,7 +1072,7 @@ function UploadTab({ canUpload, fullName, onImported, custLabel }) {
               <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'var(--bg2-surf)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)' }}>
                 <div style={{ fontSize: 12, color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {b.kind === 'forecast' ? '📈' : '🚚'} <strong>{b.file_name || tr('(ไม่มีชื่อไฟล์)')}</strong>
-                  <span style={{ color: 'var(--muted)' }}> · {b.row_count} {tr('แถว ·')} {b.uploaded_by} · {new Date(b.uploaded_at).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}</span>
+                  <span style={{ color: 'var(--muted)' }}> · {b.row_count} {tr('แถว ·')} {b.uploaded_by} · {new Date(b.uploaded_at).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok' })}</span>
                 </div>
                 {canUpload && (
                   <button onClick={() => deleteBatch(b)} style={{ padding: '4px 10px', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 700, cursor: 'pointer', background: 'var(--red-dim)', color: 'var(--red)', border: '1px solid var(--red-line)', flexShrink: 0, fontFamily: 'var(--font-body)' }}>{tr('ลบ')}</button>
@@ -1231,7 +1231,7 @@ function PlannerTab({ refreshKey, custLabel }) {
                       {r.coverage == null ? '—' : `${fmt(r.coverage)}%`}
                     </td>
                     <td style={{ padding: '7px 12px', borderTop: '1px solid var(--border)', fontSize: 12, fontWeight: 700, textAlign: 'right', color: r.loadHours == null ? 'var(--amber)' : 'var(--text)' }}>
-                      {r.loadHours == null ? 'ไม่มี CT' : fmt(r.loadHours)}
+                      {r.loadHours == null ? tr("ไม่มี CT") : fmt(r.loadHours)}
                     </td>
                   </tr>
                 ))}
@@ -1667,7 +1667,7 @@ function KanbanCalcTab({ canApply, fullName, custLabel }) {
           /* ไลน์ที่มีพาร์ทในตาราง — จัดลำดับชั้นตามผัง (แม่→ลูก) แทนลิสต์แบนเรียงตัวอักษร */
           <LineSelect lines={prodLines.filter(l => lines.includes(l.name))}
             value={lineFilter} onChange={setLineFilter} placeholder={ALL.line}
-            extraGroups={[{ label: 'ไม่มีในทะเบียนไลน์', options: lines.filter(n => !prodLines.some(l => l.name === n)).map(n => ({ value: n })) }]}
+            extraGroups={[{ label: tr("ไม่มีในทะเบียนไลน์"), options: lines.filter(n => !prodLines.some(l => l.name === n)).map(n => ({ value: n })) }]}
           />
         )}
         <span className="filter-label">{tr('เดือน Forecast ที่ใช้คำนวณ')}</span>
@@ -1694,8 +1694,8 @@ function KanbanCalcTab({ canApply, fullName, custLabel }) {
 
       <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>
         {calcType === 'production'
-          ? '📖 Production Kanban (คัมบังสั่งผลิต press). Vol/Day = ⌈forecast/วันทำงาน⌉ · Kanban(sys) = ⌈(Info+Process+Safety)/CT/pkg⌉ · Min = Safety · Max = Min + Kanban/Lot · แก้ param แล้วค่าคำนวณอัปเดตทันที · มีสรุปภาระการผลิต (%load) ด้านล่าง'
-          : '📖 Withdrawal Kanban (คัมบังเบิกถอน FG). Order/เดือน = ผลรวม forecast ของเดือนที่เลือก · แก้ param ในตารางแล้วค่าคำนวณอัปเดตทันที · Apply = เขียนเข้า kanban_standards (ระบบดึงใช้ต่อ)'}
+          ? tr("📖 Production Kanban (คัมบังสั่งผลิต press). Vol/Day = ⌈forecast/วันทำงาน⌉ · Kanban(sys) = ⌈(Info+Process+Safety)/CT/pkg⌉ · Min = Safety · Max = Min + Kanban/Lot · แก้ param แล้วค่าคำนวณอัปเดตทันที · มีสรุปภาระการผลิต (%load) ด้านล่าง")
+          : tr("📖 Withdrawal Kanban (คัมบังเบิกถอน FG). Order/เดือน = ผลรวม forecast ของเดือนที่เลือก · แก้ param ในตารางแล้วค่าคำนวณอัปเดตทันที · Apply = เขียนเข้า kanban_standards (ระบบดึงใช้ต่อ)")}
       </div>
 
       {/* CAP/ชม. ที่กรอก vs กำลังจริงจาก OEE — ไม่แทนค่าให้เอง แต่ต้องเห็นว่าห่างกันแค่ไหน */}
@@ -1763,7 +1763,7 @@ function KanbanCalcTab({ canApply, fullName, custLabel }) {
                               → ต้องเห็นตัวเลขที่จะถูกบันทึกจริงตรงนี้ ห้ามให้ไปรู้ตอนของระเบิดแล้ว */}
                           {c === 'lot_size' && (
                             <div style={{ fontSize: 11, marginTop: 2, whiteSpace: 'nowrap', color: lotPcsOf(calcType, row.pp) > 0 ? 'var(--muted)' : 'var(--amber)' }}>
-                              {lotPcsOf(calcType, row.pp) > 0 ? `= ${fmt(lotPcsOf(calcType, row.pp))} ${tr("ชิ้น")}` : 'ต้องมี Pkg'}
+                              {lotPcsOf(calcType, row.pp) > 0 ? `= ${fmt(lotPcsOf(calcType, row.pp))} ${tr("ชิ้น")}` : tr("ต้องมี Pkg")}
                             </div>
                           )}
                           {/* CAP ที่กรอกเป็นกำลังทางทฤษฎี — โชว์กำลังจริงจาก OEE ให้เทียบ กดแล้วเติมให้ (คนกดเอง) */}
@@ -1961,8 +1961,8 @@ export default function PlannerSales() {
         sub={tr('Sales อัพโหลด Forecast/Order จากลูกค้า → ระบบวางแผนภาระการผลิตล่วงหน้า · ติดตามรอบส่งงานรายวันที่หน้า 🚚 Delivery')}
         tabs={[
           { key: 'planner', label: 'Forecast Planner' },
-          { key: 'kanban', label: 'คำนวณ Kanban' },
-          { key: 'upload', label: 'อัพโหลด (Sales)' },
+          { key: 'kanban', label: tr("คำนวณ Kanban") },
+          { key: 'upload', label: tr("อัพโหลด (Sales)") },
           { key: 'monitoring', label: 'Monitoring (Planning)' },
         ]}
         tab={tab} onTab={setTab}

@@ -93,7 +93,7 @@ export default function MachineFaultGaps({ session, orders = [], downtimes = [],
           <span>{hm(g.startMs)}–{hm(g.endMs)}</span>
           <span style={{ color: 'var(--red)', fontWeight: 700 }}>{Math.round(g.min)} {tr("นาที")}</span>
           <span style={{ color: 'var(--muted)' }}>
-            {g.reasonText ? `${tr("เหตุที่กดหน้าเครื่อง")}: ${g.reasonText}` : 'ไม่ได้กดเหตุผลที่หน้าเครื่อง'}
+            {g.reasonText ? `${tr("เหตุที่กดหน้าเครื่อง")}: ${g.reasonText}` : tr("ไม่ได้กดเหตุผลที่หน้าเครื่อง")}
           </span>
           {canEdit && (
             <button type="button" className="pg-btn" style={{ marginLeft: 'auto' }}

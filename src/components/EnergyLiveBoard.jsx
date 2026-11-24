@@ -19,7 +19,7 @@ import useIsMobile from '../utils/useIsMobile';
 import { fetchReadingsSince } from '../lib/energyReadings';
 import EnergyMeterDetail from './EnergyMeterDetail';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 /* สีผ่าน token เท่านั้น (ด่าน colorRatchet · พาเลต ≤5 สี) */
 const GOOD = 'var(--green)', WARN = 'var(--amber)', BAD = 'var(--red)', IDLE = 'var(--muted)', ACC = 'var(--accent2)', INFO = 'var(--blue)';
 const EVENTS_SHOW = 50;
@@ -28,7 +28,7 @@ const card = { background: 'var(--card)', border: '1px solid var(--border)', bor
 const fmt = (v, d = 1) => (v == null || !Number.isFinite(Number(v)) ? '—'
   : Number(v).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d }));
 const timeTh = (ms) => (ms == null ? '—'
-  : new Date(ms).toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit' }));
+  : new Date(ms).toLocaleTimeString(dateLocale(), { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit' }));
 const statusMeta = (m) => (
   m.status === 'never' ? { label: 'ยังไม่เคยได้รับค่า', color: IDLE }
     : m.status === 'offline' ? { label: `${tr("ขาดการติดต่อ")} ${m.ageMin} ${tr("นาที")}`, color: WARN }
@@ -190,7 +190,7 @@ export default function EnergyLiveBoard() {
         </div>
         <button type="button" className="pg-btn" style={{ marginLeft: 'auto' }} onClick={() => openHistory(null)}>📈 {tr('ประวัติ & Excel')}</button>
         <div style={{ ...card, padding: '6px 12px', fontSize: 12.5, color: 'var(--text2)' }}>
-          {tr("รับข้อมูลล่าสุด")} {lastRecv ? new Date(lastRecv).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'}
+          {tr("รับข้อมูลล่าสุด")} {lastRecv ? new Date(lastRecv).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'}
         </div>
       </div>
 
@@ -200,11 +200,11 @@ export default function EnergyLiveBoard() {
           sub={<>{tr('ออนไลน์')} {t.online}/{t.total} {tr('เครื่อง')}{allPeak.length > 0 && <> {tr('· สูงสุดวันนี้')} {fmt(Math.max(...allPeak.map(p => p.kw)))} kW ({timeTh(allPeak.reduce((a, b) => (b.kw > a.kw ? b : a)).at)})</>}</>} />
         <Kpi color={INFO} label={tr('ใช้ไฟวันนี้')} value={fmt(t.todayKwh)} unit="kWh" sub={tr('นับจากเลขมิเตอร์ ตั้งแต่ 00:00 น.')} />
         <Kpi color={INFO} label={tr('ใช้ไฟเดือนนี้')} value={fmt(t.monthKwh, 0)} unit="kWh"
-          sub={t.avgPerDay != null ? `${tr("เฉลี่ยวันละ")} ${fmt(t.avgPerDay)} kWh (${t.monthDays} ${tr("วันที่มีข้อมูล")})` : 'ยังไม่มีข้อมูลของเดือนนี้'} />
+          sub={t.avgPerDay != null ? `${tr("เฉลี่ยวันละ")} ${fmt(t.avgPerDay)} kWh (${t.monthDays} ${tr("วันที่มีข้อมูล")})` : tr("ยังไม่มีข้อมูลของเดือนนี้")} />
         <Kpi color={t.offline || t.never ? WARN : GOOD} label={tr('สถานะมิเตอร์')} value={t.online} unit={`/ ${t.total} ${tr("ออนไลน์")}`}
           sub={<><span style={{ color: WARN }}>{tr('ขาดการติดต่อ')} {t.offline}</span> · <span style={{ color: 'var(--muted)' }}>{tr('ยังไม่เคยส่ง')} {t.never}</span></>} />
         <Kpi color={t.alerts.length ? BAD : GOOD} label={tr('เกินลิมิตตอนนี้')} value={t.alerts.length} unit={tr("เครื่อง")}
-          sub={t.alerts.length ? `${tr("ที่")} ${t.alerts.map(m => m.label).join(', ')}` : 'ทุกเครื่องอยู่ในลิมิต (นับเฉพาะเครื่องที่ออนไลน์)'} />
+          sub={t.alerts.length ? `${tr("ที่")} ${t.alerts.map(m => m.label).join(', ')}` : tr("ทุกเครื่องอยู่ในลิมิต (นับเฉพาะเครื่องที่ออนไลน์)")} />
       </div>
 
       {/* ── เส้นทางจ่ายไฟ ── */}
@@ -272,7 +272,7 @@ function EventsPanel({ events }) {
             return (
               <div key={e.source_id} style={{ display: 'grid', gridTemplateColumns: '64px 92px 76px 1fr', gap: 8, alignItems: 'center', fontSize: 12.5, padding: '5px 6px', borderLeft: `3px solid ${L.color}`, background: 'var(--bg2)', borderRadius: 4 }}>
                 <span style={{ color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>
-                  {new Date(e.ev_time).toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  {new Date(e.ev_time).toLocaleTimeString(dateLocale(), { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                 </span>
                 <b style={{ color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.scope_name}</b>
                 <span style={{ color: L.color, fontWeight: 700, fontSize: 11.5 }}>{tr(L.label)}</span>
@@ -341,7 +341,7 @@ function TreeFlow({ panel, byKey, onOpen }) {
     <div style={{ ...card }}>
       <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{tr('เส้นทางจ่ายไฟจากตู้')} {panel.panel}</div>
       <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-        {tr("ความเร็วเส้นแปรตามกำลังไฟที่ใช้ · ยอดตู้ = ชั้นบนสุดที่ออนไลน์")} ({panel.online}/{panel.total}{panel.partial ? ' · ยอดไม่ครบ' : ''}) · {tr("ลูกอยู่ในยอดแม่แล้ว ไม่นับซ้ำ · กรอบประ = ไฟที่ไม่มีมิเตอร์วัด")}
+        {tr("ความเร็วเส้นแปรตามกำลังไฟที่ใช้ · ยอดตู้ = ชั้นบนสุดที่ออนไลน์")} ({panel.online}/{panel.total}{panel.partial ? tr(" · ยอดไม่ครบ") : ''}) · {tr("ลูกอยู่ในยอดแม่แล้ว ไม่นับซ้ำ · กรอบประ = ไฟที่ไม่มีมิเตอร์วัด")}
       </div>
       {isMobile ? (
         <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
@@ -463,7 +463,7 @@ function MeterCard({ m, pts, machines, onOpen }) {
 
       <Spark pts={pts} limit={m.limitKw} />
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, color: 'var(--muted)', marginTop: 4, gap: 8 }}>
-        <span>{m.ageMin == null ? 'ยังไม่เคยได้รับค่า' : m.ageMin < 1 ? 'อัปเดตเมื่อสักครู่' : `${tr("อัปเดต")} ${m.ageMin} ${tr("นาทีที่แล้ว")}`}</span>
+        <span>{m.ageMin == null ? tr("ยังไม่เคยได้รับค่า") : m.ageMin < 1 ? tr("อัปเดตเมื่อสักครู่") : `${tr("อัปเดต")} ${m.ageMin} ${tr("นาทีที่แล้ว")}`}</span>
         <span>{m.peakKw != null ? `${tr("สูงสุดวันนี้")} ${fmt(m.peakKw)} kW (${timeTh(Date.parse(m.peakAt))})` : ''}</span>
       </div>
     </div>

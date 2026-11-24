@@ -366,7 +366,7 @@ export default function PEDocs() {
         ]}
         tab={tab} onTab={setTab} />
 
-      <ReadOnlyNote show={!canEdit} role={role} what="แก้เอกสาร PE"
+      <ReadOnlyNote show={!canEdit} role={role} what={tr("แก้เอกสาร PE")}
         permKey="pe:edit"
         hint={tr('ดูเอกสาร/นำเข้า/ส่งออกได้ตามปกติ — ที่ปิดคือการเพิ่ม/แก้/ลบแถวในเอกสาร')} />
 
@@ -397,7 +397,7 @@ export default function PEDocs() {
         {curSet && (tab === 'fmea' || tab === 'cp') && (
           <button style={btnSm} onClick={doExport} disabled={exporting}
             title={`${tr("สร้างไฟล์ .xlsx ตามฟอร์ม")} ${tab === 'fmea' ? 'FM-PE1-018 (PFMEA)' : 'FM-PE1-019 (Control Plan)'} — 1 ${tr("ชีทต่อ OP พร้อมตั้งค่าพิมพ์ A4 แนวนอน")}`}>
-            {exporting ? 'กำลังสร้างไฟล์...' : `${tr("ดาวน์โหลด")} Excel (${tab === 'fmea' ? 'PFMEA' : 'Control Plan'})`}
+            {exporting ? tr("กำลังสร้างไฟล์...") : `${tr("ดาวน์โหลด")} Excel (${tab === 'fmea' ? 'PFMEA' : 'Control Plan'})`}
           </button>
         )}
         {canEdit && <ImportButton k="pe_form" tone="quiet" onClick={() => setImportOpen(true)} title={tr('อัพโหลดไฟล์ Excel ฟอร์ม TSAT ที่มีอยู่แล้ว ไม่ต้องพิมพ์ใหม่')}
@@ -426,7 +426,7 @@ export default function PEDocs() {
       ) : !curSet ? (
         <div style={{ textAlign: 'center', padding: 48, color: 'var(--muted)', fontSize: 13 }}>
           {/* จอว่าง — สิ่งที่ต้องลงมืออยู่บนจอ · นิยาม "1 ชุด" พับได้ · 19/11 */}
-          {tr("เลือกพาร์ทด้านบน")}{canEdit ? ' หรือกด "➕ ชุดเอกสารใหม่" เพื่อเริ่มพาร์ทแรก' : ''}{' '}
+          {tr("เลือกพาร์ทด้านบน")}{canEdit ? tr(" หรือกด \"➕ ชุดเอกสารใหม่\" เพื่อเริ่มพาร์ทแรก") : ''}{' '}
           <MoreMark text={tr('1 ชุด = PFC + PFMEA + Control Plan ของพาร์ทนั้น')} />
         </div>
       ) : detailLoading ? (
@@ -530,7 +530,7 @@ export default function PEDocs() {
               <div className="table-sticky" style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
                   <thead style={{ background: 'var(--bg2)' }}>
-                    <tr>{['OP', 'ชนิด', 'ชื่อกระบวนการ', 'รูป', 'เครื่อง', 'ไลน์/พื้นที่', 'Child part / Nut', 'CC/SC', 'เชื่อม', 'FMEA', 'CP', ''].map((h, i) => <th key={i} style={thSt}>{tr(h)}</th>)}</tr>
+                    <tr>{['OP', tr("ชนิด"), tr("ชื่อกระบวนการ"), tr("รูป"), tr("เครื่อง"), tr("ไลน์/พื้นที่"), 'Child part / Nut', 'CC/SC', tr("เชื่อม"), 'FMEA', 'CP', ''].map((h, i) => <th key={i} style={thSt}>{tr(h)}</th>)}</tr>
                   </thead>
                   <tbody>
                     {procs.length === 0 && <tr><td colSpan={12} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)', fontSize: 12 }}>{tr('ยังไม่มี process — เริ่มจากเพิ่ม OP ตามผัง flow (10, 20, ... หรือ 100.1)')}</td></tr>}
@@ -578,7 +578,7 @@ export default function PEDocs() {
                 </button>
               )}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {fmeaView.length === 0 && <div style={{ padding: 24, textAlign: 'center', color: 'var(--muted)', fontSize: 12 }}>{tr('ยังไม่มีแถว FMEA')}{rpnOnly ? ' ที่ RPN ≥ 100' : ''}</div>}
+                {fmeaView.length === 0 && <div style={{ padding: 24, textAlign: 'center', color: 'var(--muted)', fontSize: 12 }}>{tr('ยังไม่มีแถว FMEA')}{rpnOnly ? tr(" ที่ RPN ≥ 100") : ''}</div>}
                 {fmeaView.map(it => {
                   const p = procById[it.process_id];
                   return (
@@ -600,7 +600,7 @@ export default function PEDocs() {
                           const meta = CMP_META[c.state];
                           const extra = c.state === 'better' ? ` ${c.rpnItem} < ${c.rpnMaster}` : c.state === 'behind' ? ` → v${mItem?.version}` : c.state === 'diverged' ? ` (master ${c.rpnMaster ?? '—'})` : '';
                           return <>
-                            <span title={`${meta.label}${mItem ? ` · master v${mItem.version} RPN ${c.rpnMaster ?? '—'}` : ''}`} style={{ fontSize: 11, fontWeight: 800, color: meta.color, border: `1px solid ${tint(meta.color, 'line')}`, borderRadius: 'var(--r-xs)', padding: '1px 6px', whiteSpace: 'nowrap' }}>{meta.icon} {tr(meta.label)}{extra}</span>
+                            <span title={`${tr(meta.label)}${mItem ? ` · master v${mItem.version} RPN ${c.rpnMaster ?? '—'}` : ''}`} style={{ fontSize: 11, fontWeight: 800, color: meta.color, border: `1px solid ${tint(meta.color, 'line')}`, borderRadius: 'var(--r-xs)', padding: '1px 6px', whiteSpace: 'nowrap' }}>{meta.icon} {tr(meta.label)}{extra}</span>
                             {pendingSrc.has(it.id) ? <span style={{ fontSize: 11, color: 'var(--blue)', fontWeight: 700 }}>{tr('เสนอแล้ว')}</span>
                               : canEdit && (c.state === 'better' || c.state === 'unlinked') && <button style={btnSm} onClick={() => proposeOne(it)}>{c.state === 'better' ? tr('เสนอเข้า master') : tr('เสนอเป็นรายการใหม่')}</button>}
                           </>;
@@ -643,7 +643,7 @@ export default function PEDocs() {
               <div className="table-sticky" style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1100 }}>
                   <thead style={{ background: 'var(--bg2)' }}>
-                    <tr>{['OP', 'No.', 'Characteristics (Product / Process)', 'CC/SC', 'ผู้คุม', 'Spec/Tolerance', 'วิธีวัด', 'Sample', 'ความถี่', 'Control method', 'Reaction plan', ''].map((h, i) => <th key={i} style={thSt}>{tr(h)}</th>)}</tr>
+                    <tr>{['OP', 'No.', 'Characteristics (Product / Process)', 'CC/SC', tr("ผู้คุม"), 'Spec/Tolerance', tr("วิธีวัด"), 'Sample', tr("ความถี่"), 'Control method', 'Reaction plan', ''].map((h, i) => <th key={i} style={thSt}>{tr(h)}</th>)}</tr>
                   </thead>
                   <tbody>
                     {cpView.length === 0 && <tr><td colSpan={12} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)', fontSize: 12 }}>{tr('ยังไม่มีจุดควบคุม')}</td></tr>}
@@ -695,7 +695,7 @@ export default function PEDocs() {
               <div className="table-sticky" style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
                   <thead style={{ background: 'var(--bg2)' }}>
-                    <tr>{['เอกสาร', 'Rev', 'วันที่', 'Suffix (Part no.)', 'ECN', 'เนื้อหาการแก้ไข', 'ต้นเหตุ', 'ออก/ตรวจ/รับรอง', ''].map((h, i) => <th key={i} style={thSt}>{tr(h)}</th>)}</tr>
+                    <tr>{[tr("เอกสาร"), 'Rev', tr("วันที่"), 'Suffix (Part no.)', 'ECN', tr("เนื้อหาการแก้ไข"), tr("ต้นเหตุ"), tr("ออก/ตรวจ/รับรอง"), ''].map((h, i) => <th key={i} style={thSt}>{tr(h)}</th>)}</tr>
                   </thead>
                   <tbody>
                     {revs.length === 0 && <tr><td colSpan={9} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)', fontSize: 12 }}>{tr('ยังไม่มีประวัติ revision')}</td></tr>}
@@ -821,7 +821,7 @@ export default function PEDocs() {
       {procModal && (
         <div className="overlay"><div className="modal" style={{ width: 'min(640px, 95vw)', maxHeight: '90vh', overflowY: 'auto' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>{procModal.id ? `✏️ ${tr("แก้")} OP ${procModal.op_no}` : '➕ เพิ่ม Process (OP)'}</h3>
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>{procModal.id ? `✏️ ${tr("แก้")} OP ${procModal.op_no}` : tr("➕ เพิ่ม Process (OP)")}</h3>
             <button onClick={() => setProcModal(null)} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 20, cursor: 'pointer' }}>×</button>
           </div>
           <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -831,11 +831,11 @@ export default function PEDocs() {
             <div style={{ ...lbl, gridColumn: '1 / -1' }}>{tr("กระบวนการมาตรฐาน (คลัง")} PFMEA)
               <select value={procModal.master_process_id || ''} onChange={e => setProcModal({ ...procModal, master_process_id: e.target.value })} style={{ marginTop: 4 }}>
                 <option value="">{tr('— ไม่ผูก —')}</option>
-                {masters.filter(m => m.is_active !== false).map(m => <option key={m.id} value={m.id}>{m.name}{m.confirmed_at ? '' : ' (รอยืนยัน)'}</option>)}
+                {masters.filter(m => m.is_active !== false).map(m => <option key={m.id} value={m.id}>{m.name}{m.confirmed_at ? '' : tr(" (รอยืนยัน)")}</option>)}
               </select>
               {!procModal.master_process_id && (() => {
                 const sg = suggestMaster(procModal.name, procModal.kind, masters);
-                return sg.master ? <div onClick={() => setProcModal({ ...procModal, master_process_id: sg.master.id })} style={{ fontSize: 11, color: 'var(--blue)', marginTop: 3, cursor: 'pointer' }}>{tr('ชื่อ')}{sg.exact ? 'ตรงกับ' : 'คล้าย'} "{sg.master.name}" — {tr("คลิกเพื่อผูก")}</div> : null;
+                return sg.master ? <div onClick={() => setProcModal({ ...procModal, master_process_id: sg.master.id })} style={{ fontSize: 11, color: 'var(--blue)', marginTop: 3, cursor: 'pointer' }}>{tr('ชื่อ')}{sg.exact ? tr("ตรงกับ") : tr("คล้าย")} "{sg.master.name}" — {tr("คลิกเพื่อผูก")}</div> : null;
               })()}
               {procModal.master_process_id && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>{tr('ผูกแล้วดึง failure mode มาตรฐานได้ที่แท็บ PFMEA → 📚 เติมจาก master')}</div>}
             </div>
@@ -846,7 +846,7 @@ export default function PEDocs() {
             </label>
             {/* machine_no ไหลต่อไป part_routings (PeRoutingSuggest) → กล่อง VSM — เลือกจากทะเบียน machines (DR) แทน datalist (2026-09-07) */}
             <div style={lbl}>{tr("เครื่องจักร")} (M/C No.)
-              <MachineSelect value={procModal.machine_no || ''} lines={procFam} allowFree history={mcHist} freeHint="เครื่องที่ยังไม่ลงทะเบียน /machines"
+              <MachineSelect value={procModal.machine_no || ''} lines={procFam} allowFree history={mcHist} freeHint={tr("เครื่องที่ยังไม่ลงทะเบียน /machines")}
                 placeholder="SP-82" style={{ marginTop: 4 }} onChange={r => setProcModal({ ...procModal, machine_no: r.machine_no })} />
             </div>
             <label style={lbl}>{tr('ไลน์/พื้นที่')}

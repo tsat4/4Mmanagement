@@ -12,7 +12,7 @@ import FilterBar from './FilterBar';
 import SearchInput from './SearchInput';
 import LineSelect from './LineSelect';
 import MatLabel from './MatLabel';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { storeBtn } from '../utils/storeUi';
 import InfoMore from './InfoMore';
 
@@ -32,7 +32,7 @@ const fmt = (n) => Number(n || 0).toLocaleString();
 const when = (iso) => {
   if (!iso) return tr('ไม่ทราบเวลา');
   const d = new Date(iso);
-  return isNaN(d) ? '—' : d.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  return isNaN(d) ? '—' : d.toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 };
 
 /* 📋 24/11 (คำสั่ง user) — `embedded` = อยู่ในแท็บย่อยของ Stock Management › ส่งของเข้าไลน์

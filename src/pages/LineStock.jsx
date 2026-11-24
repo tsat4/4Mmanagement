@@ -61,7 +61,7 @@ import { sapEquivalent } from '../utils/sapView';   // 🔩 มุม SAP (09/11
 import { loadProductsMaster } from '../utils/useProducts';
 import { INFLOW_MODES, inflowModeOf, inflowPatchFor, inflowModesFor } from '../utils/stockReceipts';
 import { IconButton, DeleteButton } from '../components/IconButton';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { directSheetRows } from '../utils/bomTree';   // 🌳 ลูกตรงแบบ SAP (19/11)
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 import { askConfirm } from '../utils/askConfirm';
@@ -421,7 +421,7 @@ function StockTab({ role, scope }) {
   const exportTxns = () => {
     if (!txnRows.length) { toast.info('ไม่มีรายการให้ export'); return; }
     const head = ['วันที่งาน', 'เวลาบันทึก', 'ไลน์/คลัง', 'Part Name', 'MAT', 'ประเภท', 'จำนวน', 'สถานะ', 'หมายเหตุ', 'โดย'];
-    const body = txnRows.map(t => [t.work_date, t.created_at ? new Date(t.created_at).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' }) : '',
+    const body = txnRows.map(t => [t.work_date, t.created_at ? new Date(t.created_at).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok' }) : '',
       t.line_name, t.part_name || '', t.mat_no, TYPE_LABEL[t.type] || t.type, signedQty(t), STATUS_LABEL[t.status] || t.status || '', t.note || '', t.created_by || '']
       .map(csvCell).join(','));
     // CSV = เอกสาร ⇒ ชื่อไฟล์ผ่านทะเบียน /doc-forms (csv_line_stock_txn)
@@ -543,7 +543,7 @@ function StockTab({ role, scope }) {
 
   return (
     <>
-      <ReadOnlyNote show={!canIssue} role={role} what="จ่าย/รับของเข้าสโตร์"
+      <ReadOnlyNote show={!canIssue} role={role} what={tr("จ่าย/รับของเข้าสโตร์")}
         permKey="line_stock:issue" hint={tr('ยังดูยอดคงเหลือ/ประวัติได้ตามปกติ')} />
       {/* UI-STANDARD 2026-09-24 — แถบกรองเดียว ใต้แท็บทันที: ไลน์/คลัง (ขอบเขต) → ฝั่งงาน → ปุ่มคำสั่งชิดขวา (UI-STANDARD §2.1) */}
       <FilterBar>
@@ -568,7 +568,7 @@ function StockTab({ role, scope }) {
           </select>
         )}
         {!showTxn && (
-          <SearchInput value={stockQ} onChange={setStockQ} fields="MAT / Part No. / ชื่อพาร์ท" ariaLabel="ค้นหาพาร์ทในสต็อก" grow={false} />
+          <SearchInput value={stockQ} onChange={setStockQ} fields={tr("MAT / Part No. / ชื่อพาร์ท")} ariaLabel={tr("ค้นหาพาร์ทในสต็อก")} grow={false} />
         )}
         <span className="spacer" />
         {(pendingMine.length > 0 || canApprove) && (
@@ -608,7 +608,7 @@ function StockTab({ role, scope }) {
                 {' '}{tr('· ซ่อน')} {pendingHidden} {tr('ใบของส่วนงานอื่น (ดูได้ที่ประวัติ แต่อนุมัติไม่ได้)')}</span>}
             </div>
             <div style={{ fontSize:11, color:'var(--muted)' }}>
-              {canApprove ? 'อนุมัติแล้วจึงมีผลต่อ stock คงเหลือ' : 'เฉพาะผู้มีสิทธิ์ (admin/manager) อนุมัติได้'}
+              {canApprove ? tr("อนุมัติแล้วจึงมีผลต่อ stock คงเหลือ") : tr("เฉพาะผู้มีสิทธิ์ (admin/manager) อนุมัติได้")}
             </div>
           </div>
           <div style={{ overflowX:'auto' }}>
@@ -713,7 +713,7 @@ function StockTab({ role, scope }) {
         return (
           <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10, flexWrap:'wrap' }}>
             <Segmented value={groupMode} onChange={pickGroupBy}
-              options={[{ value:'sloc', label: 'ตามพื้นที่ SAP' }, { value:'line', label: 'ตามไลน์' }]} />
+              options={[{ value:'sloc', label: tr("ตามพื้นที่ SAP") }, { value:'line', label: tr("ตามไลน์") }]} />
             {keys.length > 1 && !forceOpen && (
               <button type="button" onClick={() => persistCollapsed(allFolded ? new Set() : new Set(keys))}
                 style={{ ...inputSt, width:'auto', cursor:'pointer', fontSize:12, padding:'6px 12px' }}>
@@ -721,19 +721,19 @@ function StockTab({ role, scope }) {
               </button>
             )}
             <span style={{ fontSize:11, color:'var(--muted)' }}>
-              {keys.length} {groupMode === 'sloc' ? 'พื้นที่' : 'ไลน์/คลัง'}
-              {forceOpen ? ` · ${tr("แสดง")} ${shownPartCount.toLocaleString()} ${tr("จาก")} ${allPartCount.toLocaleString()} ${tr("รายการ")}` : ' · แตะหัวกลุ่มเพื่อย่อ-กาง'}
+              {keys.length} {groupMode === 'sloc' ? tr("พื้นที่") : tr("ไลน์/คลัง")}
+              {forceOpen ? ` · ${tr("แสดง")} ${shownPartCount.toLocaleString()} ${tr("จาก")} ${allPartCount.toLocaleString()} ${tr("รายการ")}` : tr(" · แตะหัวกลุ่มเพื่อย่อ-กาง")}
               {groupMode === 'sloc' && ' · ยอดในพื้นที่เดียวกันรวมข้ามไลน์แล้ว (MIN/MAX เป็นค่าต่อ MAT ระดับพื้นที่)'}
             </span>
             {groupMode === 'sloc' && homeSloc.error && (
               <span style={{ fontSize:11, color:'var(--red)', fontWeight:700 }}>
-                {homeSloc.error === 'not_ready' ? 'ยังไม่มีช่องที่จัดเก็บหลักในฐานข้อมูล' : `${tr("โหลดที่จัดเก็บหลักไม่สำเร็จ")} (${homeSloc.error})`} — {tr("ยอดในสโตร์/คลังจะอยู่กลุ่ม \"ยังไม่ตั้ง")}"
+                {homeSloc.error === 'not_ready' ? tr("ยังไม่มีช่องที่จัดเก็บหลักในฐานข้อมูล") : `${tr("โหลดที่จัดเก็บหลักไม่สำเร็จ")} (${homeSloc.error})`} — {tr("ยอดในสโตร์/คลังจะอยู่กลุ่ม \"ยังไม่ตั้ง")}"
               </span>
             )}
             {/* ทะเบียนใช้ไม่ได้ = ต้องบอกว่าทำไมปุ่มพื้นที่ไม่ทำงาน ห้ามเงียบ */}
             {!slocUsable && (
               <span style={{ fontSize:11, color:'var(--amber)', fontWeight:700 }}>
-                {slocReg.failed ? 'โหลดทะเบียนรหัสคลังไม่สำเร็จ' : 'ยังไม่มีรหัสคลังที่ผูกไลน์ไว้'} — {tr("แสดงตามไลน์ไปก่อน (ตั้งที่แท็บ 🏬 โซนคลัง")})
+                {slocReg.failed ? tr("โหลดทะเบียนรหัสคลังไม่สำเร็จ") : tr("ยังไม่มีรหัสคลังที่ผูกไลน์ไว้")} — {tr("แสดงตามไลน์ไปก่อน (ตั้งที่แท็บ 🏬 โซนคลัง")})
               </span>
             )}
           </div>
@@ -750,7 +750,7 @@ function StockTab({ role, scope }) {
         <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
           {shownGroups.length === 0 && groups.length > 0 ? (
             <div style={{ ...card, padding:'40px 20px', textAlign:'center', color:'var(--muted)', fontSize:14 }}>
-              {tr("ไม่พบพาร์ทที่ตรงกับ")} “{stockQ.trim()}”{areaActive ? ' ในพื้นที่ที่เลือก' : ''} {tr('— มีทั้งหมด')} {allPartCount.toLocaleString()} {tr("รายการที่ถูกกรองออก")}
+              {tr("ไม่พบพาร์ทที่ตรงกับ")} “{stockQ.trim()}”{areaActive ? tr(" ในพื้นที่ที่เลือก") : ''} {tr('— มีทั้งหมด')} {allPartCount.toLocaleString()} {tr("รายการที่ถูกกรองออก")}
             </div>
           ) : groups.length === 0 ? (
             <div style={{ ...card, padding:'40px 20px', textAlign:'center', color:'var(--muted)', fontSize:14 }}>
@@ -849,7 +849,7 @@ function StockTab({ role, scope }) {
                                       {tr("หักผ่าน")} Delivery
                                     </span>
                                   ) : (
-                                    <button title={oneLine ? `${tr("จ่ายเข้า")} ${oneLine}` : 'พาร์ทนี้อยู่หลายไลน์ในพื้นที่เดียวกัน — เลือกไลน์ปลายทางในฟอร์ม'}
+                                    <button title={oneLine ? `${tr("จ่ายเข้า")} ${oneLine}` : tr("พาร์ทนี้อยู่หลายไลน์ในพื้นที่เดียวกัน — เลือกไลน์ปลายทางในฟอร์ม")}
                                       onClick={() => { setForm({ ...EMPTY_FORM, line_name: oneLine, mat_no: p.mat_no, part_name: name || '', type:'issue', work_date:getToday() }); setShowForm(true); }}
                                       style={{ ...btn('var(--green-dim)', 'var(--green)'), padding:'4px 10px', fontSize:11, border:'1px solid var(--green-line)' }}>
                                       + {tr("จ่าย")}
@@ -905,7 +905,7 @@ function StockTab({ role, scope }) {
         <div style={{ ...card, padding:0, overflow:'hidden' }}>
           <div style={{ padding:'12px 16px', background:'var(--bg2)', borderBottom:'1px solid var(--border)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
             <div style={{ fontWeight:700, fontSize:14 }}>
-              {tr("ประวัติ")} Transaction {txnTr.from} – {txnTr.to} · {txnLoading ? 'กำลังโหลด…' : `${txnRows.length.toLocaleString()} ${tr("รายการ")}`}
+              {tr("ประวัติ")} Transaction {txnTr.from} – {txnTr.to} · {txnLoading ? tr("กำลังโหลด…") : `${txnRows.length.toLocaleString()} ${tr("รายการ")}`}
               {txnQ.trim() && !txnLoading ? <span style={{ fontWeight:400, fontSize:12, color:'var(--muted)' }}> {tr('(ซ่อน')} {(txnScoped.rows.length - txnRows.length).toLocaleString()} {tr("ที่ไม่ตรงคำค้น")})</span> : null}
             </div>
             {canIssue && (
@@ -922,7 +922,7 @@ function StockTab({ role, scope }) {
           <div style={{ padding:'10px 16px', borderBottom:'1px solid var(--border)' }}>
             <TimeRangeBar scale={txnTr.scale} from={txnTr.from} to={txnTr.to} today={txnTr.today} scales={null}
               onFrom={txnTr.setFrom} onTo={txnTr.setTo} onPreset={txnTr.setPreset} onReload={loadTxns} loading={txnLoading}>
-              <SearchInput value={txnQ} onChange={setTxnQ} fields="MAT / ชื่อพาร์ท / ไลน์ / หมายเหตุ / ผู้บันทึก" ariaLabel="ค้นหาประวัติ transaction" />
+              <SearchInput value={txnQ} onChange={setTxnQ} fields={tr("MAT / ชื่อพาร์ท / ไลน์ / หมายเหตุ / ผู้บันทึก")} ariaLabel={tr("ค้นหาประวัติ transaction")} />
               <button onClick={exportTxns} disabled={!txnRows.length} style={{ ...btn('var(--bg)', 'var(--text)'), border:'1px solid var(--border2)', fontSize:12 }}>Export CSV</button>
             </TimeRangeBar>
             {txnErr && <div style={{ marginTop:8, fontSize:12.5, color:'var(--red)', fontWeight:700 }}>{txnErr}</div>}
@@ -931,7 +931,7 @@ function StockTab({ role, scope }) {
             <table style={{ width:'100%', borderCollapse:'collapse' }}>
               <thead>
                 <tr style={{ background:'var(--bg2)' }}>
-                  {['วันที่','ไลน์','ชิ้นงาน','ประเภท','จำนวน','หมายเหตุ','โดย'].map(h => (
+                  {[tr("วันที่"),tr("ไลน์"),tr("ชิ้นงาน"),tr("ประเภท"),tr("จำนวน"),tr("หมายเหตุ"),tr("โดย")].map(h => (
                     <th key={h} style={{ padding:'8px 12px', fontSize:11, fontWeight:800, color:'var(--muted)', textAlign:'left', whiteSpace:'nowrap', textTransform:'uppercase' }}>{tr(h)}</th>
                   ))}
                 </tr>
@@ -1004,7 +1004,7 @@ function StockTab({ role, scope }) {
                   <LineSelect
                     lines={lines} value={form.line_name} {...scope} style={inputSt} placeholder={tr('เลือกไลน์...')}
                     onChange={v => setForm(f => ({ ...f, line_name: v }))}
-                    extraGroups={[{ label: 'คลัง', options: warehouseNames.map(n => ({ value: n })) }]}
+                    extraGroups={[{ label: tr("คลัง"), options: warehouseNames.map(n => ({ value: n })) }]}
                   />
                   {/* ⚠️ ไลน์แม่ = ระดับแผนก งานผลิตเปิดกะที่ไลน์ลูก — ของที่ฝากไว้ที่ไลน์แม่
                       จะถูกหักตอนปิดใบผลิตไม่ได้เลย (backflush หาด้วยชื่อไลน์ที่เปิดกะ)
@@ -1076,7 +1076,7 @@ function StockTab({ role, scope }) {
                 <label style={{ fontSize:11, fontWeight:700, color:'var(--muted)', display:'block', marginBottom:4 }}>MAT SAP *</label>
                 <ProductSelect value={form.mat_no} allowFree extraOptions={matExtraOptions} history={txnMatHist}
                   lines={form.line_name ? [form.line_name] : undefined}
-                  placeholder={tr('ค้น MAT / ชื่อพาร์ท…')} freeHint="MAT นอกทะเบียนต้องยืนยันอีกครั้งตอนบันทึก"
+                  placeholder={tr('ค้น MAT / ชื่อพาร์ท…')} freeHint={tr("MAT นอกทะเบียนต้องยืนยันอีกครั้งตอนบันทึก")}
                   inputStyle={{ fontWeight:700 }}
                   onChange={({ mat_no, name }) => setForm(f => ({ ...f, mat_no, part_name: name || bomMap[mat_no] || f.part_name }))} />
               </div>
@@ -1331,7 +1331,7 @@ function DeliveryRoundsTab({ canEdit, fullName, scope }) {
                 <table style={{ width:'100%', borderCollapse:'collapse' }}>
                   <thead>
                     <tr style={{ background:'var(--bg2)' }}>
-                      {['กะ','รอบที่','ตัดยอด','เตรียม','ส่ง','จุด','เสร็จ~','หมายเหตุ'].map(h => (
+                      {[tr("กะ"),tr("รอบที่"),tr("ตัดยอด"),tr("เตรียม"),tr("ส่ง"),tr("จุด"),tr("เสร็จ~"),tr("หมายเหตุ")].map(h => (
                         <th key={h} style={{ padding:'8px 14px', fontSize:11, fontWeight:800, color:'var(--muted)', textAlign:'left', whiteSpace:'nowrap', textTransform:'uppercase' }}>{tr(h)}</th>
                       ))}
                       {canEdit && <th style={{ padding:'8px 14px', width:100 }}></th>}
@@ -1391,7 +1391,7 @@ function DeliveryRoundsTab({ canEdit, fullName, scope }) {
         <div style={{ position:'fixed', inset:0, background:'var(--scrim)', WebkitBackdropFilter:'var(--scrim-blur)', backdropFilter:'var(--scrim-blur)', zIndex:2000, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
           <div style={{ background: 'var(--bg3-surf)', border:'1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding:24, width:'min(760px,96vw)', maxHeight:'90vh', overflowY:'auto' }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize:15, fontWeight:800, color:'var(--text)', marginBottom:16, fontFamily:'var(--font-display)' }}>
-              ⏰ {editId ? 'แก้ไขรอบจัดส่ง' : 'เพิ่มรอบจัดส่งใหม่'}
+              ⏰ {editId ? tr("แก้ไขรอบจัดส่ง") : tr("เพิ่มรอบจัดส่งใหม่")}
             </div>
             <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
               <div>
@@ -1761,7 +1761,7 @@ function InflowRulesTab({ canEdit }) {
        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
         <table style={{ width: '100%', minWidth: 560, borderCollapse: 'collapse' }}>
           <thead><tr style={{ background: 'var(--bg2)' }}>
-            {['เงื่อนไข MAT No.', 'ปลายทาง (line_name)', 'วิธีรับเข้า', ''].map(h => (
+            {[tr("เงื่อนไข MAT No."), tr("ปลายทาง (line_name)"), tr("วิธีรับเข้า"), ''].map(h => (
               <th key={h} style={{ padding: '9px 14px', fontSize: 11, fontWeight: 800, color: 'var(--muted)', textAlign: 'left' }}>{tr(h)}</th>
             ))}
           </tr></thead>
@@ -1829,7 +1829,7 @@ function InflowRulesTab({ canEdit }) {
                   พิมพ์ผิด = "ไลน์ผี" ที่มีของแต่ไม่มีใครเห็น → เลือกจากทะเบียนไลน์ + คลังกลางเท่านั้น (2026-09-07 · บั๊กคลาสเดียวกับรอบจัดส่ง) */}
               <LineSelect lines={lines} value={form.dest_line_name} onChange={v => setForm(f => ({ ...f, dest_line_name: v }))} {...scope}
                 placeholder={tr('— เลือกปลายทาง —')} style={{ ...inputSt, width: 240 }}
-                extraGroups={[{ label: 'คลัง', options: [...new Set([...WAREHOUSE_LOCATIONS, ...dests.filter(d => !lines.some(l => l.name === d))])].sort().map(n => ({ value: n })) }]} />
+                extraGroups={[{ label: tr("คลัง"), options: [...new Set([...WAREHOUSE_LOCATIONS, ...dests.filter(d => !lines.some(l => l.name === d))])].sort().map(n => ({ value: n })) }]} />
             </div>
             <button onClick={addRule} disabled={saving} style={{ ...btn('var(--accent)', 'var(--accent-ink)'), opacity: saving ? 0.6 : 1 }}>
               {saving ? '...' : tr('บันทึก')}

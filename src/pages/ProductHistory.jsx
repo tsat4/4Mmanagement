@@ -17,7 +17,7 @@ import TimeRangeBar from '../components/TimeRangeBar';
 import useTimeRange from '../utils/useTimeRange';
 
 import NoticeBar from '../components/NoticeBar';
-import { tr as trI18n } from '../utils/i18n';
+import { tr as trI18n, dateLocale } from '../utils/i18n';
 // ประวัติผลิตราย Product — ดูย้อนหลังว่าสินค้าตัวหนึ่งผลิตที่ไลน์ไหน/กะไหน เท่าไหร่ เสียเท่าไหร่ (2026-07-24)
 // + ประวัติการแก้ master data ของสินค้านั้น (audit_log — ใครแก้ line_name/CT เมื่อไหร่)
 
@@ -27,9 +27,9 @@ const todayStr = () => {
 };
 const addDays = (s, n) => { const [y, m, d] = s.split('-').map(Number); const dt = new Date(y, m - 1, d); dt.setDate(dt.getDate() + n); return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`; };
 const fmtDate = s => { if (!s) return '—'; const [, m, d] = s.split('-'); return `${+d}/${+m}`; };
-const fmtDayFull = s => { if (!s) return '—'; const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString('th-TH', { weekday: 'short', day: '2-digit', month: '2-digit' }); };
+const fmtDayFull = s => { if (!s) return '—'; const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString(dateLocale(), { weekday: 'short', day: '2-digit', month: '2-digit' }); };
 const STATUS_TH = s => s === 'confirmed' ? '✓ ปิด' : s === 'carry_over' ? '➡ ยกยอด' : s === 'cancelled' ? '✕ ยกเลิก' : s === 'open' ? '● ผลิต' : s;
-const fmtDT = t => t ? new Date(t).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
+const fmtDT = t => t ? new Date(t).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
 const AUDIT_FIELD_TH = { line_name: 'ไลน์', cycle_time_sec: 'Cycle Time', name: 'ชื่อ', p_no: 'P/N', pair_mat_no: 'คู่ RH/LH', is_active: 'สถานะใช้งาน', customer: 'ลูกค้า' };
 
 const card = { background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 16px' };
@@ -295,8 +295,8 @@ export default function ProductHistory() {
         {/* <LineSelect> กลาง (ลำดับชั้น + scope + ตัดปลดระวาง) — เฉพาะไลน์ที่มีสินค้าจริง · ชื่อนอกทะเบียนแยก optgroup ห้ามซ่อน (2026-09-07) */}
         <LineSelect lines={lines.filter(l => lineGroups.inUse.has(l.name))} value={filterLine} onChange={setFilterLine}
           role={role} lineId={lineId} sections={sections} placeholder={ALL.line}
-          extraGroups={[{ label: 'นอกผัง (ชื่อไลน์ไม่ตรงทะเบียนไลน์ผลิต)', options: lineGroups.off.map(n => ({ value: n })) }]} />
-        <SearchInput value={search} onChange={setSearch} fields="MAT.NO / ชื่อ / P/N" />
+          extraGroups={[{ label: trI18n("นอกผัง (ชื่อไลน์ไม่ตรงทะเบียนไลน์ผลิต)"), options: lineGroups.off.map(n => ({ value: n })) }]} />
+        <SearchInput value={search} onChange={setSearch} fields={trI18n("MAT.NO / ชื่อ / P/N")} />
       </TimeRangeBar>
 
       <div style={{ ...card, marginBottom: 16 }}>
@@ -305,8 +305,8 @@ export default function ProductHistory() {
           <div onClick={() => setPickerOpen(o => !o)}
             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', userSelect: 'none', marginBottom: 6 }}>
             <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-              {trI18n("พบ")} <b>{filteredProducts.length.toLocaleString()}</b> {trI18n('รายการ')}{filteredProducts.length > 300 ? ' · แสดง 300 แรก — พิมพ์ค้นหา/เลือกไลน์เพื่อกรองเพิ่ม' : ''}
-              {pickerOpen ? ' · คลิกสินค้าเพื่อดูประวัติ' : selMat ? ` · ${trI18n("เลือกอยู่")}: ${selMat.mat_no} — ${trI18n("กดเพื่อเปลี่ยนสินค้า")}` : ' · กดเพื่อแสดงรายการ'}
+              {trI18n("พบ")} <b>{filteredProducts.length.toLocaleString()}</b> {trI18n('รายการ')}{filteredProducts.length > 300 ? trI18n(" · แสดง 300 แรก — พิมพ์ค้นหา/เลือกไลน์เพื่อกรองเพิ่ม") : ''}
+              {pickerOpen ? trI18n(" · คลิกสินค้าเพื่อดูประวัติ") : selMat ? ` · ${trI18n("เลือกอยู่")}: ${selMat.mat_no} — ${trI18n("กดเพื่อเปลี่ยนสินค้า")}` : trI18n(" · กดเพื่อแสดงรายการ")}
             </div>
             <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700 }}>{pickerOpen ? '▲' : '▼'}</span>
           </div>
@@ -451,7 +451,7 @@ export default function ProductHistory() {
           {/* ── ผลิตเทียบกับความต้องการลูกค้า (2026-08-19 · คำสั่ง user) ──
               ตอบ "ผลิตพอกับที่ลูกค้าสั่งไหม · ต้องเร่งหรือชะลอ" ซึ่งเดิมดูไม่ได้เลย
               ⚠️ ไม่ผูกกับ daily.length — ไม่มีการผลิตเลย ยิ่งต้องเห็นว่าลูกค้าสั่งอยู่เท่าไหร่ */}
-          <CollapseCard id="demand" title={trI18n('ผลิตเทียบกับความต้องการลูกค้า')} count="ออเดอร์ + forecast">
+          <CollapseCard id="demand" title={trI18n('ผลิตเทียบกับความต้องการลูกค้า')} count={trI18n("ออเดอร์ + forecast")}>
             <DemandVsProduction products={activeMats} prodByDay={prodByDay} today={todayStr()} />
           </CollapseCard>
 
@@ -505,7 +505,7 @@ export default function ProductHistory() {
                           return (
                             <Fragment key={sk}>
                               <tr onClick={() => toggleSet(setOpenShifts, sk)} style={{ cursor: 'pointer', background: 'var(--bg2)' }}>
-                                <td style={{ ...td, paddingLeft: 28, fontWeight: 700 }}>{sOpen ? '▾' : '▸'} {s.shift === 'day' ? '☀️ กะเช้า' : '🌙 กะดึก'} · {s.line || '—'}</td>
+                                <td style={{ ...td, paddingLeft: 28, fontWeight: 700 }}>{sOpen ? '▾' : '▸'} {s.shift === 'day' ? trI18n("☀️ กะเช้า") : trI18n("🌙 กะดึก")} · {s.line || '—'}</td>
                                 <td style={{ ...td, textAlign: 'right' }}>{s.items.length}</td>
                                 <td style={{ ...td, textAlign: 'right' }}>{s.target.toLocaleString()}</td>
                                 <td style={{ ...td, textAlign: 'right', fontWeight: 700, color: 'var(--green)' }}>{s.produced.toLocaleString()}</td>
@@ -514,7 +514,7 @@ export default function ProductHistory() {
                               </tr>
                               {sOpen && s.items.map(r => (
                                 <tr key={r.id}>
-                                  <td style={{ ...td, paddingLeft: 52, color: 'var(--muted)' }}>└ {r.prod_no || 'ใบผลิต'}{r.machine_no ? ` · ${r.machine_no}` : ''}</td>
+                                  <td style={{ ...td, paddingLeft: 52, color: 'var(--muted)' }}>└ {r.prod_no || trI18n("ใบผลิต")}{r.machine_no ? ` · ${r.machine_no}` : ''}</td>
                                   <td style={td}></td>
                                   <td style={{ ...td, textAlign: 'right' }}>{(r.target || 0).toLocaleString()}</td>
                                   <td style={{ ...td, textAlign: 'right', color: 'var(--green)' }}>{(r.produced || 0).toLocaleString()}</td>

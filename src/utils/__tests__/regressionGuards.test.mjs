@@ -549,6 +549,25 @@ const RULES = [
     allow: {},
   },
   {
+    id: 'date-locale-no-th-TH',
+    scan: ['src/pages', 'src/components', 'src/utils'], ext: ['.jsx', '.js'],
+    /* วันที่/เวลาที่โชว์บนจอต้องตามภาษา — ไทย = th-TH (พ.ศ.) · อังกฤษ = en-GB (ค.ศ.) ⇒ ใช้ dateLocale() จาก utils/i18n
+       (คำสั่ง user 24/11 "โหมด en เป็น ค.ศ. โหมดไทยเป็น พ.ศ.") · src/lib (ใบพิมพ์/Excel) ยังไทยเสมอ ไม่เข้าด่าน */
+    re: /toLocale(?:Date|Time)?String\(\s*'th-TH'/g,
+    why: 'สลับเป็น EN แล้ววันที่ยังเป็น "4 ส.ค. 69" (วัดจาก harness 24/11: 94 ชุด) — hardcode locale = ไม่ตามภาษา',
+    fix: "toLocale*String(dateLocale(), …) · import { dateLocale } from utils/i18n (📄 docs/modules/date-time-rules.md §ภาษา)",
+    allow: { 'src/utils/i18n.js': 'เจ้าของกฎ' },
+  },
+  {
+    id: 'date-no-hand-month-array',
+    scan: ['src/pages', 'src/components', 'src/utils'], ext: ['.jsx', '.js'],
+    /* อาร์เรย์ตัวย่อเดือนไทยที่ประกาศเองในหน้า = ไม่ตามภาษา + ปีไม่ตรงกฎ ⇒ ใช้ monthsShort()/yearDisplay() จาก utils/dateFormat */
+    re: /\[\s*'ม\.ค\.'\s*,\s*'ก\.พ\.'/g,
+    why: 'เจอ 12 ไฟล์ประกาศ [\'ม.ค.\',…] ซ้ำ (24/11) — บางตัว +543 บางตัว ค.ศ. · โหมด EN ยังไทย',
+    fix: "monthsShort()[i] + yearDisplay(y) จาก utils/dateFormat (ใบพิมพ์ไทยเสมอใช้ MONTHS_SHORT_TH)",
+    allow: { 'src/utils/dateFormat.js': 'เจ้าของกฎ', 'src/utils/kpiBaseImport.js': 'ตัวแกะหัวคอลัมน์ไฟล์ Excel (parser ไม่ใช่การแสดงผล)', 'src/utils/askBot.js': 'ตัวแกะข้อความถาม (parser)' },
+  },
+  {
     id: 'i18n-import-path-depth',
     scan: ['src/components/inspect'], ext: ['.jsx'],   // เฉพาะโฟลเดอร์ย่อย — ไฟล์ตรงใต้ pages/components ใช้ '../utils/i18n' ถูกแล้ว
     /* ไฟล์ในโฟลเดอร์ย่อย (src/components/inspect/…) เขียน import '../utils/i18n' = ชี้ผิดชั้น — lint ไม่จับ (resolve ตอน bundle)
@@ -3631,7 +3650,7 @@ test('🛡️ /register: ช่องกลุ่มต้องเก็บ "�
     + '   ทำไมห้าม: org_nodes(kind=line).code บางตัวคนละสตริงกับชื่อ (ของจริง 06/10:\n'
     + '              ASSEMBLY 1 → code \'Assembly Line D1\') ⇒ คนลงทะเบียนใหม่แยกออกจาก\n'
     + '              เพื่อนร่วมกลุ่ม 35 คนในทุกตัวกรอง และ /operator โชว์ว่า "(นอกผัง)"\n');
-  assert.ok(/ref_line_id\s*\?\s*''\s*:\s*'\s*⚠ ยังไม่ผูกไลน์'/.test(code) && /จะไม่ขึ้นในหน้าเช็คชื่อ/.test(code),
+  assert.ok(/ref_line_id\s*\?\s*''\s*:\s*(?:tr\()?["']\s*⚠ ยังไม่ผูกไลน์["']/.test(code) && /จะไม่ขึ้นในหน้าเช็คชื่อ/.test(code),
     '\n\n❌ Register.jsx ไม่เตือนตอนเลือกกลุ่มที่ยังไม่ผูกไลน์ผลิต\n'
     + '   ทำไมห้าม: ref_line_id ว่าง ⇒ line_id = null ⇒ พนักงานใหม่ไม่ขึ้นหน้าเช็คชื่อ เงียบสนิท\n'
     + '              (เคสจริง 05/10 PD2 35 คน — /operator เตือนแล้ว หน้าลงทะเบียนต้องเตือนด้วย)\n');
@@ -5920,7 +5939,8 @@ test('🛡️ lpa-stale-draft-guard — ใบตรวจ/แผน LPA ต้�
 
   const lpa = stripComments(readFileSync(join(ROOT, 'src/pages/LayerProcessAudit.jsx'), 'utf8'));
   // ชั้น ① — ทิ้งคำตอบที่มาช้า (loadMonth · loadQuarter 2 จุด · ใบร่าง)
-  const drops = (lpa.match(/(?:monthKeyRef|draftKeyRef)\.current !== key/g) || []).length;
+  // 23/11: แผนไตรมาสผูกคีย์ "ไตรมาส" (quarterKeyRef) แทนเดือน — เลือกเดือนในไตรมาสเดิมต้องไม่โหลดทับ (P1)
+  const drops = (lpa.match(/(?:monthKeyRef|draftKeyRef|quarterKeyRef)\.current !== key/g) || []).length;
   if (drops < 4) bad.push(`LayerProcessAudit.jsx (ด่านทิ้งคำตอบที่มาช้าเหลือ ${drops} จุด — ต้องมีทุก loader ที่ setState หลัง await)`);
   if (!/setDraft\(\{ key, id: existing\.id/.test(lpa) || !/setDraft\(\{ key, id: null/.test(lpa))
     bad.push('LayerProcessAudit.jsx (ใบร่างไม่ได้พก key ของตัวเอง ⇒ ด่านชั้น 2 เช็คไม่ได้)');
@@ -5931,7 +5951,7 @@ test('🛡️ lpa-stale-draft-guard — ใบตรวจ/แผน LPA ต้�
     ['saveAudit', /const saveAudit = async \(\) => \{[\s\S]{0,200}?draftMismatch\(\)/],
     ['deleteAudit', /const deleteAudit = async \(\) => \{[\s\S]{0,200}?draftMismatch\(\)/],
     ['savePlan', /const savePlan = async \(\) => \{[\s\S]{0,200}?monthMismatch\(/],
-    ['saveQuarter', /const saveQuarter = async \(\) => \{[\s\S]{0,200}?monthMismatch\(/],
+    ['saveQuarter', /const saveQuarter = async \(\) => \{[\s\S]{0,200}?isStale\(qLoadedKey, quarterKey\)/],
   ]) {
     if (!re.test(lpa)) bad.push(`LayerProcessAudit.jsx (${fn} ไม่ได้เช็คว่าของบนจอเป็นของที่เลือกอยู่ก่อนเขียน)`);
   }
@@ -12625,6 +12645,85 @@ test('🚩 fail-needs-reason-all-checks — ทุกใบตรวจ: ตอ�
   assert.deepEqual(bad, [], `\n\n❌ ${bad.length} จุดที่ใบตรวจไม่บังคับเหตุผล (หรือเขียนเกณฑ์เอง)\n   ${bad.join('\n   ')}\n`);
 });
 
+test('🛡️ am-approve-confirm-cas — อนุมัติ/ตีกลับใบตรวจ AM/PM: ถามยืนยัน · CAS pending · ใบพิมพ์ไม่เอาคนตีกลับเป็นผู้อนุมัติ', () => {
+  /* 23/11 (คำสั่ง user — ไล่ Daily Checker ข้อ A1/A2/A3)
+     A2 ปุ่ม "อนุมัติ" เขียน DB ทันทีไม่ถาม (ผิดกฎ signConfirm §4M)
+     A3 update `.eq('id')` อย่างเดียว ⇒ คนที่เปิดจอค้างกดอนุมัติทับใบที่อีกคนเพิ่งตีกลับ (reject_reason หายเงียบ)
+     A1 ตีกลับเขียน `approved_by` = คนตีกลับ ⇒ ใบพิมพ์ใบที่ถูกตีกลับมีลายเซ็นช่อง APPROVED */
+  const src = stripComments(readFileSync(join(ROOT, 'src/pages/PMCheckData.jsx'), 'utf8'));
+  const bad = [];
+  const body = (name) => { const i = src.indexOf(`const ${name} = async`); return i > 0 ? src.slice(i, i + 2500) : ''; };
+  const ap = body('handleApprove'), rj = body('handleReject');
+  if (!ap || !rj) bad.push('หา handleApprove/handleReject ไม่เจอ — เปลี่ยนชื่อแล้วต้องแก้ด่านนี้');
+  const cAt = ap.indexOf('await confirmSign('), uAt = ap.indexOf('.update(');
+  if (!(cAt > 0 && uAt > 0 && cAt < uAt)) bad.push('handleApprove: ต้อง `if (!await confirmSign({...})) return` ก่อน .update( (ลืม await = Promise truthy = ไม่กันอะไรเลย)');
+  for (const [n, b] of [['handleApprove', ap], ['handleReject', rj]])
+    if (!/\.update\([\s\S]{0,400}?\.eq\('approval_status', 'pending'\)/.test(b)) bad.push(`${n}: update ต้องมี .eq('approval_status', 'pending') (compare-and-swap)`);
+  if (!/const approver = \(insp\.approval_status === 'approved' && insp\.approved_by\)/.test(src))
+    bad.push("buildExportArgs: ช่องผู้อนุมัติต้องเช็ค approval_status === 'approved' (approved_by ของใบตีกลับ = คนตีกลับ)");
+  assert.deepEqual(bad, [], `\n\n❌ ${bad.length} จุด\n   ${bad.join('\n   ')}\n`);
+});
+
+test('🛡️ lpa-quarter-plan-no-silent-loss — แผน LPA ไตรมาส: แก้ค้างห้ามหายเงียบ · อ่านแผนไม่ได้ห้ามบันทึก', () => {
+  /* 23/11 (คำสั่ง user — ข้อ P1/P2)
+     P1 เปลี่ยนเดือน/ไลน์/กะ ⇒ loadQuarter() ทับ qData ที่แก้ค้างโดยไม่เตือน · พิมพ์ได้ทั้งที่ใบไม่ตรงจอ
+     P2 อ่าน lpa_plans ไม่ได้ แต่ยังกดบันทึก ⇒ upsert ชื่อผู้ตรวจ null + ลบ lpa_plan_days เดิม */
+  const src = stripComments(readFileSync(join(ROOT, 'src/pages/LayerProcessAudit.jsx'), 'utf8'));
+  const bad = [];
+  for (const [re, why] of [
+    [/onChange=\{changeLine\}/, 'ช่องไลน์ต้องผ่าน changeLine (ถามก่อนทิ้งแผนที่แก้ค้าง)'],
+    [/onChange=\{changeShift\}/, 'ช่องกะต้องผ่าน changeShift'],
+    [/changeMonth\(e\.target\.value\)/, 'ช่องเดือนต้องผ่าน changeMonth'],
+    [/changeMonth\(shiftMonth\(qMonths\[0\], -3\)\)/, 'ปุ่มไตรมาสก่อนต้องผ่าน changeMonth'],
+    [/changeMonth\(shiftMonth\(qMonths\[0\], 3\)\)/, 'ปุ่มไตรมาสถัดไปต้องผ่าน changeMonth'],
+    [/\}, \[quarterKey, tab\]\)/, 'effect โหลดแผนไตรมาสต้องผูกกับ quarterKey ไม่ใช่ selMonth (เลือกเดือนในไตรมาสเดิมห้ามโหลดทับ)'],
+    [/const saveQuarter = async[\s\S]{0,900}?if \(qPlanErr\)[^\n]*return;/, 'saveQuarter ต้องหยุดเมื่ออ่านแผนเดิมไม่สำเร็จ (fail-closed)'],
+    [/const printPlan = async \(\) => \{\s*if \(qDirtyRef\.current\)/, 'printPlan ต้องหยุดเมื่อยังมีแผนแก้ค้าง (ใบพิมพ์อ่านจาก DB)'],
+  ]) if (!re.test(src)) bad.push(why);
+  assert.deepEqual(bad, [], `\n\n❌ ${bad.length} จุด\n   ${bad.join('\n   ')}\n`);
+});
+
+test('🔎 min-alert-elsewhere-single-entry — "ของขยับจริงที่ไหน" ต้องตัดสินใน replenish.js ที่เดียว', () => {
+  /* 🔴 18/11 วัดจริง: 41 คู่ที่ตั้ง min → **35 คู่ของจริงถูกกินที่อื่น** ไม่ใช่ไลน์ในทะเบียน
+       (STORE 28 · ไลน์ประกอบอื่น 7) เพราะโซ่จริงคือ
+       ไลน์ปั๊ม ──issue──▶ STORE ──ใบขอเติม──▶ ไลน์ประกอบ ──คอนเฟิร์ม FG──▶ consume
+       ทะเบียนตั้ง min ไว้ที่ไลน์ปั๊ม ⇒ บัญชีที่นั่นนิ่งถาวร ⇒ จอขึ้น "ตอบไม่ได้" 35 แถวตลอดกาล
+     ⇒ กฎ: เทียบ "ไลน์ในทะเบียน vs ที่ของขยับจริง" ต้องอยู่ใน `minAlerts` (utils/replenish.js)
+       จอ/loader ห้ามเทียบเอง — เทียบ 2 ที่แล้วดริฟท์ = 2 จอบอกคนละเรื่องว่าทะเบียนผิดที่ไหม
+     🔑 ตัวจับ: ไฟล์นอก replenish.js ที่อ่าน `.wrongPlace`/`.elsewhere` ได้ (วาดอย่างเดียว)
+       แต่ถ้าไฟล์นั้น **ตั้งค่า** `wrongPlace:` เอง = ตัดสินเอง = ผิด */
+  const bad = [];
+  for (const f of walk(join(ROOT, 'src'), ['.js', '.jsx'])) {
+    if (f.includes('__tests__')) continue;
+    /* 🔴 ROOT ลงท้าย '/' อยู่แล้ว — `ROOT + '/'` ไม่เคยแมตช์ ⇒ ยกเว้นด้วย endsWith */
+    if (f.endsWith('src/utils/replenish.js')) continue;
+    const src = readFileSync(f, 'utf8');
+    if (/\bwrongPlace\s*:/.test(src)) bad.push(`${f.replace(ROOT, '')}  — ตั้ง wrongPlace: เอง`);
+  }
+  assert.deepEqual(bad, [], '\n\n❌ มีไฟล์ตัดสิน "ทะเบียนตั้งผิดที่" เอง นอก utils/replenish.js\n'
+    + bad.join('\n')
+    + '\nfix: ส่ง `movesElsewhereOf` เข้า minAlerts() แล้วอ่าน r.wrongPlace / r.elsewhere มาวาด\n');
+});
+
+test('🔎 min-alert-elsewhere-no-autofix — ห้ามย้ายทะเบียน line_part_levels ให้เองจากธง wrongPlace', () => {
+  /* 🔴 "ระบบเสนอ คนตัดสิน" (CLAUDE.md) · ธง wrongPlace เป็น **ข้อเสนอ**
+       ย้ายทะเบียนอัตโนมัติ = ย้ายของไปไลน์ที่ consume ล่าสุด ซึ่งอาจเป็น "ร้านชุบ"/"ผลต่างรอเคลียร์"
+       (วัดจริง 18/11: 1 คู่ชี้ไป `ร้านชุบ · บจก. จรูญรัตน์ โปรดักส์`) ⇒ ทะเบียนเพี้ยนเงียบ
+     ⇒ กฎ: ไฟล์ที่อ่าน `wrongPlace`/`elsewhere` ห้ามเขียน `line_part_levels` ในไฟล์เดียวกัน */
+  const bad = [];
+  for (const f of walk(join(ROOT, 'src'), ['.js', '.jsx'])) {
+    if (f.includes('__tests__')) continue;
+    const src = readFileSync(f, 'utf8');
+    if (!/\bwrongPlace\b|\belsewhere\?\.|\belsewhere\./.test(src)) continue;
+    if (/from\('line_part_levels'\)\s*\.\s*(update|upsert|insert|delete)/.test(src)) {
+      bad.push(f.replace(ROOT, ''));
+    }
+  }
+  assert.deepEqual(bad, [], '\n\n❌ ไฟล์ที่อ่านธง "ทะเบียนตั้งผิดที่" ไปเขียน line_part_levels ด้วย\n'
+    + bad.join('\n')
+    + '\n   ธงนี้เป็นข้อเสนอ — คนต้องกดย้ายเองที่ /line-stock (ที่ของขยับล่าสุดอาจเป็นร้านชุบ/คลังพัก)\n');
+});
+
 test('🔴 restamp-lane-needs-machine-no — หารเลนต้องมี machine_no ใน dump', () => {
   /* 23/11: เพิ่ม --lines ให้สคริปต์ restamp ทำไลน์เครื่องขนานได้ (LASER-345/789 · 3 เลน)
      🔴 `laneWeightFn` ตัดสินจาก `d.machine_no` — dump ที่ไม่มีคอลัมน์นี้ ทุกแถวจะถูกนับเป็น
@@ -12640,4 +12739,25 @@ test('🔴 restamp-lane-needs-machine-no — หารเลนต้องม�
      ไม่งั้นไลน์ 3 เลนจะถูกข้ามทุกกะ (ดิบเกินเวลากะเป็นเรื่องปกติของไลน์ขนาน) */
   assert.match(sc, /laneN > 1[\s\S]{0,200}?1 \/ laneN/,
     '\n\n❌ ด่าน DT-เกินเวลากะ ยังเทียบด้วยนาทีดิบ — ไลน์เครื่องขนานจะถูกข้ามทุกกะ\n');
+});
+
+test('🔴 part-oee-range-clamp-visible — ตัดช่วงให้สั้นลงแล้วต้องเขียนบนจอ', () => {
+  /* 24/11: แท็บ "รายพาร์ท" คิด `computeSessionOee()` **ทีละกะ** ⇒ ต้องมีเพดานช่วง (PART_MAX_DAYS)
+     🔴 กับดัก: ตัดช่วงเงียบๆ = คนเลือก "ปีนี้" แล้วอ่านเลขของ 31 วันโดยคิดว่าเป็นทั้งปี
+        (คลาสเดียวกับ `.slice(0,10)` ก่อนคิด % สะสมของพาเรโต — จอโกหกโดยไม่พัง)
+     ⇒ ไฟล์ที่ใช้เพดานตัดช่วง ต้องมีทั้งธง `clamped` และการ render ธงนั้น
+     + ตัวรวมหลายกะต้องมีชุดเดียว (`aggregateByProduct`) ห้ามเขียนลูปรวมชุดที่ 2 ในหน้า */
+  const rel = 'src/pages/OEEAnalytics.jsx';
+  const raw = readFileSync(join(ROOT, rel), 'utf8');
+  assert.match(raw, /PART_MAX_DAYS/, `\n\n❌ ${rel} ไม่มีเพดานช่วงของแท็บรายพาร์ท\n`);
+  assert.match(raw, /clamped:\s*true/, `\n\n❌ ${rel} ตัดช่วงแล้วไม่ตั้งธง clamped\n`);
+  assert.match(raw, /partWin\.clamped\s*&&/,
+    `\n\n❌ ${rel} มีเพดานช่วงแต่ไม่ render ธง clamped — ตัดช่วงเงียบ = จอโกหก\n`);
+  /* สูตร %A/%P/%Q ของ "รายพาร์ทรวมหลายกะ" ต้องมีชุดเดียว = ในตัวรวมกลาง */
+  const code = stripComments(raw);
+  assert.match(code, /function aggregateByProduct\(/,
+    `\n\n❌ ${rel} ไม่มีตัวรวมกลาง aggregateByProduct()\n`);
+  const hits = (code.match(/netAvailMin\s*>\s*0\s*\?/g) || []).length;
+  assert.equal(hits, 1,
+    `\n\n❌ ${rel} มีสูตร %A รายพาร์ท ${hits} ชุด — ต้องอยู่ที่ aggregateByProduct() ที่เดียว\n   (กฎการรวมหลายกะ: ตัวตั้งรวม ÷ ตัวหารรวม · ห้ามเฉลี่ย % รายกะ)\n`);
 });

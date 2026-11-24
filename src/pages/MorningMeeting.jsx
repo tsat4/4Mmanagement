@@ -41,7 +41,7 @@ import { SESSION_STATUSES_REAL } from '../utils/sessionStatus';
 import { machineLaneCount } from '../utils/machineAssets';
 import { BREAK_POLICY_COLS } from '../utils/oeeMasters';
 import SectionScopeSelect from '../components/SectionScopeSelect';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 loadDocForms(); // ทะเบียนเอกสาร — แถบเลขฟอร์มท้ายใบพิมพ์ (ตั้งที่ /doc-forms · 2026-07-30)
 
 // Gesture Mode (MediaPipe) — lazy ทั้ง component และโค้ด MediaPipe ข้างใน: โหลดเฉพาะตอนผู้ใช้กด 📷
@@ -558,7 +558,7 @@ export default function MorningMeeting() {
   };
 
   /* ── ส่งสรุปเข้า Telegram ── */
-  const scopeLabel = secFilter || (sectionOpts.length ? sectionOpts.join('+') : 'ทุกส่วนงาน');
+  const scopeLabel = secFilter || (sectionOpts.length ? sectionOpts.join('+') : tr("ทุกส่วนงาน"));
   const sendTelegram = async () => {
     setSendingTg(true);
     try {
@@ -615,7 +615,7 @@ export default function MorningMeeting() {
 <table><tr><th style="${td}">${tr('สาเหตุ')}</th><th style="${td}">${tr('นาที')}</th><th style="${td}">${tr('ครั้ง')}</th><th style="${td}">${tr('เครื่อง')}</th></tr>${dtRows || `<tr><td colspan="4" style="${td}">— ไม่มี —</td></tr>`}</table>
 <h2>📌 Action Items</h2>
 <table><tr><th style="${td}">${tr('จากวัน')}</th><th style="${td}">${tr('ไลน์')}</th><th style="${td}">${tr('เรื่อง')}</th><th style="${td}">${tr('ผู้รับผิดชอบ')}</th><th style="${td}">${tr('กำหนด')}</th><th style="${td}">${tr('สถานะ')}</th></tr>${actRows || `<tr><td colspan="6" style="${td}">— ไม่มี —</td></tr>`}</table>
-<p style="margin-top:18px;color:#888">พิมพ์จาก ESM Morning Meeting · ${new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}</p>
+<p style="margin-top:18px;color:#888">พิมพ์จาก ESM Morning Meeting · ${new Date().toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok' })}</p>
 <script>window.onload = () => window.print();</script></body></html>`;
     const w = window.open('', '_blank'); w.document.write(withDocFoot(html, 'morning_meeting')); w.document.close();
   };
@@ -909,7 +909,7 @@ export default function MorningMeeting() {
                   </span>
                   <button type="button" className="pg-btn sm" onClick={() => setShowRoutineMoves(v => !v)}
                     style={{ marginLeft: 'auto', whiteSpace: 'nowrap' }}>
-                    {showRoutineMoves ? 'ซ่อนรายชื่อ' : `${tr("ดูรายชื่อ")} (${routine.length})`}
+                    {showRoutineMoves ? tr("ซ่อนรายชื่อ") : `${tr("ดูรายชื่อ")} (${routine.length})`}
                   </button>
                 </div>
                 {showRoutineMoves && (
@@ -1000,7 +1000,7 @@ export default function MorningMeeting() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                   {a.assignee && <span style={chip('var(--blue)')}>{a.assignee}</span>}
-                  {a.due_date && <span style={chip(overdue ? 'var(--red)' : 'var(--muted)')}>{overdue ? '⚠ เลยกำหนด ' : '📅 '}{fmtDate(a.due_date)}</span>}
+                  {a.due_date && <span style={chip(overdue ? 'var(--red)' : 'var(--muted)')}>{overdue ? tr("⚠ เลยกำหนด ") : '📅 '}{fmtDate(a.due_date)}</span>}
                   <span style={chip(st.color)}>{tr(st.label)}</span>
                   {canRecord && ['open', 'doing'].includes(a.status) && (
                     <>
@@ -1076,7 +1076,7 @@ export default function MorningMeeting() {
       <PageHeader title={tr('ประชุมแถวเช้า')} icon="🌅" sub={`${tr("สรุปวันงาน")} ${fmtDate(meetingDate)}`}
         actions={<>
           {/* ปุ่มตายตัว ≤2 (UI §6.35): [โหมดประชุม] [ส่งสรุป Telegram] · พิมพ์ → ⋯ */}
-          <OverflowMenu items={[{ key: 'print', icon: '📄', label: 'พิมพ์', onClick: handlePrint, title: 'พิมพ์สรุปเป็นเอกสาร' }]} />
+          <OverflowMenu items={[{ key: 'print', icon: '📄', label: tr("พิมพ์"), onClick: handlePrint, title: tr("พิมพ์สรุปเป็นเอกสาร") }]} />
           <button type="button" className="pg-btn" onClick={() => { setSlide(0); setTvMode(true); }} title={tr('โหมดจอ TV — ไล่วาระทีละหน้า (◀ ▶ เปลี่ยน, Esc ออก)')}>{tr('โหมดประชุม')}</button>
           {canRecord && (
             <button type="button" className="pg-btn primary" onClick={sendTelegram} disabled={sendingTg} style={{ opacity: sendingTg ? 0.6 : 1 }} title={tr('ส่งสรุปประชุมเข้า Telegram')}>
@@ -1130,7 +1130,7 @@ export default function MorningMeeting() {
               <button onClick={() => setSlide(s => Math.min(slides.length - 1, s + 1))} disabled={slide === slides.length - 1} style={{ ...btnSt(false), fontSize: 16, opacity: slide === slides.length - 1 ? 0.4 : 1 }}>▶</button>
               <button onClick={() => setGestureOn(v => !v)} style={{ ...btnSt(gestureOn), position: 'relative' }}
                 title={'ควบคุมด้วยท่ามือผ่านกล้อง (ประมวลผลในเครื่อง ไม่ส่งภาพออกไปไหน)\n☝️ ชี้นิ้ว ◀/▶ ค้าง = เปลี่ยนวาระ · ชี้ ▲/▼ ค้าง = เลื่อนหน้า\n✋ ปัดซ้าย/ขวา = เปลี่ยนวาระ · ค้าง = ถัดไป · ✊ ค้าง = ออกจากโหมด'}>
-                {gestureOn ? 'ปิดท่ามือ' : 'คุมด้วยท่ามือ'}
+                {gestureOn ? tr("ปิดท่ามือ") : tr("คุมด้วยท่ามือ")}
                 <ToggleDot on={gestureOn} />
               </button>
               <button onClick={() => { setTvMode(false); setGestureOn(false); }} style={{ ...btnSt(false), fontSize: 14 }} title={tr('ออกจากโหมดประชุม (Esc)')}>✕</button>

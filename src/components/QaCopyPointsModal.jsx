@@ -91,7 +91,7 @@ export default function QaCopyPointsModal({ part, itemCount, parts, lines, wctx,
     <InspectEditorModal title={`${tr("คัดลอกจุดตรวจของ")} ${partLabel(part)} ${tr("ไปพาร์ทอื่น")}`}
       subtitle={`${itemCount} ${tr("จุด · สเปค/Rank/Stage/ความถี่ไปครบ · รูปโคลสอัพคัดลอกไปด้วย")}`}
       onClose={onClose} onSave={run} saving={busy}
-      saveLabel={picked.length ? `📋 ${tr("คัดลอกไป")} ${picked.length} ${tr("พาร์ท")}` : 'เลือกพาร์ทปลายทาง'}>
+      saveLabel={picked.length ? `📋 ${tr("คัดลอกไป")} ${picked.length} ${tr("พาร์ท")}` : tr("เลือกพาร์ทปลายทาง")}>
       <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.7, background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 12px' }}>
         {tr("ใช้กับพาร์ทพี่น้องที่สเปคเหมือนกัน (เช่น RH/LH · ต่างลูกค้า) — ตั้งพาร์ทเดียวแล้วคัดลอก ไม่ต้องพิมพ์ซ้ำ")}
         <br />📍 <b>{tr('หมุด')}</b>: {tr("พาร์ทปลายทางใช้แบบคนละแผ่น ⇒ หมุดถูกถอดออก จุดตรวจขึ้นเป็น \"ยังไม่วางตำแหน่ง\" ให้ปักใหม่ใน")} 🎯
@@ -125,7 +125,7 @@ export default function QaCopyPointsModal({ part, itemCount, parts, lines, wctx,
                 </div>
               </div>
               <span style={{ fontSize: 11, color: has ? 'var(--accent2)' : 'var(--muted)', whiteSpace: 'nowrap', textAlign: 'right' }}>
-                {!counts ? '…' : c?.items == null ? 'นับไม่ได้' : has ? `${tr("มี")} ${c.items} ${tr("จุดแล้ว")}` : 'ยังไม่มีจุด'}
+                {!counts ? '…' : c?.items == null ? tr("นับไม่ได้") : has ? `${tr("มี")} ${c.items} ${tr("จุดแล้ว")}` : tr("ยังไม่มีจุด")}
                 {counts && c?.dwgs != null && <><br />{tr('แบบ')} {c.dwgs} {tr('แผ่น')}</>}
               </span>
             </div>
@@ -139,7 +139,7 @@ export default function QaCopyPointsModal({ part, itemCount, parts, lines, wctx,
           <b style={{ color: 'var(--accent)' }}>{tr('✅ คัดลอกสำเร็จ')} {ok.length} {tr('พาร์ท')}</b>
           {ok.map(r => (
             <div key={r.partId}>
-              · {r.label} — {r.count} {tr('จุด')}{r.drawings ? ` + ${tr("แบบ")} ${r.drawings} ${tr("แผ่น (หมุดตามเดิม")})` : ' · ต้องปักหมุดใหม่'}
+              · {r.label} — {r.count} {tr('จุด')}{r.drawings ? ` + ${tr("แบบ")} ${r.drawings} ${tr("แผ่น (หมุดตามเดิม")})` : tr(" · ต้องปักหมุดใหม่")}
               {onOpenPart && <button onClick={() => onOpenPart(r.partId)} style={{ marginLeft: 8, fontSize: 11, padding: '1px 8px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--card-surf)', color: 'var(--text2)', cursor: 'pointer' }}>{tr('เปิดพาร์ทนี้ →')}</button>}
             </div>
           ))}

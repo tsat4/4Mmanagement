@@ -119,7 +119,7 @@ export default function ProdRoutineCard({ data, navigate, big = 1 }) {
     {!loaded && !errs.length && <div style={{ ...card, color: 'var(--muted)', fontSize: 12.5 }}>{tr('กำลังโหลดงานประจำกะ…')}</div>}
     {loaded && !errs.length && !rows.length && (
       <div style={{ ...card, textAlign: 'center', padding: 18, fontSize: 13 * big, fontWeight: 800, color: openInScope ? good : 'var(--muted)' }}>
-        {openInScope ? '✅ ไลน์ที่เปิดกะทำงานประจำครบแล้ว' : 'ยังไม่มีไลน์ไหนเปิดกะ — ยังไม่ต้องทำงานประจำกะ'}
+        {openInScope ? tr("✅ ไลน์ที่เปิดกะทำงานประจำครบแล้ว") : tr("ยังไม่มีไลน์ไหนเปิดกะ — ยังไม่ต้องทำงานประจำกะ")}
       </div>
     )}
     {rows.slice(0, SHOW).map(r => {

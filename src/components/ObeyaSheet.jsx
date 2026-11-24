@@ -315,8 +315,8 @@ export function WarnNote({ k, text, tone = 'warn', title }) {
    วางในกล่อง position:relative ที่ครอบกราฟ · `fixed` = กราฟที่โฟกัสถาวร (ค่ากระจุกใกล้ 100 เช่น %Q) ไม่มีปุ่มปิด */
 export const FocusAxisNote = ({ k, loText, fixed = false }) => (
   <div title={fixed
-    ? 'กราฟนี้ขยายช่วงค่าถาวรให้เห็นความต่าง (ไม่มีปุ่มปิด) — ความสูงแท่ง/เส้นเทียบสัดส่วนกับ 0 ไม่ได้'
-    : 'โหมดโฟกัส: ยกพื้นแกนขึ้นเพื่อขยายช่วงที่ค่ากระจุกอยู่ — ความสูงแท่งเทียบสัดส่วนกันไม่ได้ (กดปุ่ม 🎯 บนแถบกรองเพื่อปิด)'}
+    ? tr("กราฟนี้ขยายช่วงค่าถาวรให้เห็นความต่าง (ไม่มีปุ่มปิด) — ความสูงแท่ง/เส้นเทียบสัดส่วนกับ 0 ไม่ได้")
+    : tr("โหมดโฟกัส: ยกพื้นแกนขึ้นเพื่อขยายช่วงที่ค่ากระจุกอยู่ — ความสูงแท่งเทียบสัดส่วนกันไม่ได้ (กดปุ่ม 🎯 บนแถบกรองเพื่อปิด)")}
     style={{ position: 'absolute', top: 0, right: 6, zIndex: 1, fontSize: Math.max(11, Math.round(9.5 * k)), fontWeight: 700, color: 'var(--amber)',
       background: 'var(--card-surf)', border: '1px solid var(--amber)55', borderRadius: 'var(--r-xs)', padding: '0 5px', lineHeight: 1.5 }}>
     {tr("แกนเริ่ม")} {loText} {tr("ไม่ใช่")} 0

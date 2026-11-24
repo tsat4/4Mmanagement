@@ -311,7 +311,7 @@ export default function StoreLotQueue({ lineName, lines = [], role }) {
         )}
 
         <ReadOnlyNote show={!canOperate && lots.length > 0} role={role} compact
-          what="กดรับงานล็อตจากสโตร์" permKey="heijunka:operate" />
+          what={tr("กดรับงานล็อตจากสโตร์")} permKey="heijunka:operate" />
 
         {/* 📦 1 การ์ด = 1 พาร์ท (ไม่ใช่ 1 ล็อต) · เลขระดับพาร์ทพิมพ์ครั้งเดียว
             ⚠️ maxHeight + overflowY = แผงยาวไม่ดันหน้าลงไปเรื่อยๆ (user 2026-09-10 "เปิดก็ยาวเกิน")
@@ -369,7 +369,7 @@ export default function StoreLotQueue({ lineName, lines = [], role }) {
                     <span>{tr('· ปั๊มไปแล้ว')} <b style={{ color: 'var(--text2)' }}>{fmt(madeQty)}</b> {tr('/ สั่งค้าง')} {fmt(ordered)} {tr('ชิ้น')}</span>
                     <button onClick={() => setOpenMat(o => ({ ...o, [g.mat]: !o[g.mat] }))}
                       style={{ marginLeft: 'auto', background: 'transparent', color: 'var(--muted)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '2px 9px', fontSize: 11, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                      {detail ? '▾ ซ่อนรายล็อต' : `▸ ${tr("รายล็อต")} (${g.lots.length})`}
+                      {detail ? tr("▾ ซ่อนรายล็อต") : `▸ ${tr("รายล็อต")} (${g.lots.length})`}
                     </button>
                   </div>
 
@@ -396,7 +396,7 @@ export default function StoreLotQueue({ lineName, lines = [], role }) {
                             <span style={{ fontWeight: 700, color: 'var(--text2)' }}>{fmt(lot.lot_qty)} {tr('ชิ้น')}</span>
                             <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                               title={lot.source_prod_no || ''}>
-                              {lot.source_prod_no ? `· FG ${lot.source_prod_no}` : '· ไม่ระบุ FG ต้นทาง'}
+                              {lot.source_prod_no ? `· FG ${lot.source_prod_no}` : tr("· ไม่ระบุ FG ต้นทาง")}
                             </span>
                             {canOperate && lot.status === 'pending' && (
                               <button onClick={() => takeLot(lot)} disabled={busy === lot.id}

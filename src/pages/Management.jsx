@@ -1189,7 +1189,7 @@ export default function Management() {
             {isMobile ? (worker.employees?.name ?? '?') : (worker.employees?.name?.split(' ')[0] ?? '?')}
           </div>
           <div style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 700, background: 'var(--amber-dim)', borderRadius: 'var(--r-xs)', padding: isMobile ? '2px 6px' : '1px 6px', marginTop: 2, display: isMobile ? 'inline-block' : 'block', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: isMobile ? 140 : '100%', whiteSpace: 'nowrap', textAlign: 'center' }}>
-            {task?.task_type || 'งานพิเศษ'}
+            {task?.task_type || tr("งานพิเศษ")}
           </div>
           {worker.employees?.section && (
             <div style={{ fontSize: 11, color: 'var(--blue)', background: 'var(--blue-dim)', borderRadius: 'var(--r-xs)', padding: isMobile ? '1px 6px' : '1px 6px', marginTop: 2, display: isMobile ? 'inline-block' : 'block', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: isMobile ? 140 : '100%', whiteSpace: 'nowrap', textAlign: 'center' }}>
@@ -1417,17 +1417,17 @@ export default function Management() {
           <LineSelect lines={lines} value={selectedLine} placeholder={null} onChange={setSelectedLine} includeSupport />
           {selectedLine && (
             <Segmented value={viewShift} onChange={setViewShift} label={tr('กะที่ดู')}
-              options={[{ value: 'day', label: 'กะเช้า' }, { value: 'night', label: 'กะดึก' }]} />
+              options={[{ value: 'day', label: tr("กะเช้า") }, { value: 'night', label: tr("กะดึก") }]} />
           )}
           {selectedLine && (
             <span title={tr('เปลี่ยนวันที่ได้ที่แถบ Heijunka')} style={{ fontSize: 12, color: isLiveView ? 'var(--muted)' : 'var(--blue)', fontWeight: isLiveView ? 400 : 700, whiteSpace: 'nowrap' }}>
-              {boardDate}{boardDate === todayWorkDate ? ' (วันนี้)' : ' · ย้อนหลัง'}
+              {boardDate}{boardDate === todayWorkDate ? tr(" (วันนี้)") : tr(" · ย้อนหลัง")}
             </span>
           )}
           {boardWouldSquish && (
             <span title={tr('kanban เยอะ — สลับดูทีละมุมเต็มจอ')} style={{ display: 'contents' }}>
               <Segmented value={mainView} onChange={switchView} label={tr('มุมมอง')}
-                options={[{ value: 'map', label: 'ผังไลน์ + คน' }, { value: 'heijunka', label: 'Heijunka' }]} />
+                options={[{ value: 'map', label: tr("ผังไลน์ + คน") }, { value: 'heijunka', label: 'Heijunka' }]} />
             </span>
           )}
         </>} />
@@ -1983,7 +1983,7 @@ export default function Management() {
                           color: anyOpen ? 'var(--green)' : '#888' }}>
                           {multi && <span style={{ fontWeight: 800 }}>{ln} · </span>}
                           {list.map(sx => `${sx.shift === 'day' ? '☀️' : '🌙'}${sx.status === 'open' ? '●' : '✓'}`).join(' ')}
-                          {anyOpen ? ' Live' : ' ปิด'}
+                          {anyOpen ? ' Live' : tr(" ปิด")}
                         </span>
                       );
                     });
@@ -2180,8 +2180,8 @@ export default function Management() {
                     {/* Hour header — เวลาคู่: บรรทัดบน ☀️ 08–19 / บรรทัดล่าง 🌙 20–07 คอลัมน์เดียวกัน */}
                     <div style={{ display: 'flex', borderBottom: '1px solid var(--border2)', background: 'var(--bg2)', position: 'relative' }}>
                       <div style={{ width: LEFT_W, flexShrink: 0, borderRight: '1px solid var(--border2)', padding: '3px 8px', fontSize: 11, fontWeight: 700, color: 'var(--muted)', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 1, ...(isMobile ? { position: 'sticky', left: 0, zIndex: 3, background: 'var(--bg2)' } : null) }}>
-                        <span>{tr('กะเช้า')}{isMobile ? '' : ' (แถบบน)'}</span>
-                        <span>{tr('กะดึก')}{isMobile ? '' : ' (แถบล่าง)'}</span>
+                        <span>{tr('กะเช้า')}{isMobile ? '' : tr(" (แถบบน)")}</span>
+                        <span>{tr('กะดึก')}{isMobile ? '' : tr(" (แถบล่าง)")}</span>
                       </div>
                       {/* ป้ายเวลาปัจจุบัน ลอยตรงตำแหน่ง playhead (คอลัมน์ใช้ร่วม 2 กะ — ไอคอนบอกว่าอยู่กะไหน) */}
                       {(() => {
@@ -3126,7 +3126,7 @@ export default function Management() {
                   setIsSavingDoc(false);
                 }
               }} style={{ flex: 2, padding: 12, background: 'var(--accent)', color: 'var(--accent-ink)', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 14, opacity: isSavingDoc ? 0.6 : 1, cursor: isSavingDoc ? 'not-allowed' : 'pointer' }}>
-                {isSavingDoc ? 'กำลังบันทึก...' : 'ส่งอนุมัติ'}
+                {isSavingDoc ? tr("กำลังบันทึก...") : tr("ส่งอนุมัติ")}
               </button>
               <button onClick={() => { if (!isSavingDoc) { setPendingDocModal(null); setDocImageFile(null); setDocImagePreview(null); } }}
                 style={{ flex: 1, padding: 12, background: 'var(--bg3-surf)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
@@ -3206,8 +3206,8 @@ export default function Management() {
                     background: log4MForm.subtype === 'replace' ? 'var(--green-dim)' : 'var(--red-dim)',
                     color: log4MForm.subtype === 'replace' ? 'var(--green)' : 'var(--red)' }}>
                     {log4MForm.subtype === 'replace'
-                      ? '✅ ระดับ: ไม่รุนแรง — หัวหน้างานอนุมัติได้'
-                      : '🔴 ระดับ: รุนแรง — ต้องผ่าน QA'}
+                      ? tr("✅ ระดับ: ไม่รุนแรง — หัวหน้างานอนุมัติได้")
+                      : tr("🔴 ระดับ: รุนแรง — ต้องผ่าน QA")}
                   </div>
                 </div>
               )}
@@ -3226,7 +3226,7 @@ export default function Management() {
                 return (
                   <div>
                     <label style={{ ...labelSt, color: 'var(--blue)' }}>
-                      {log4MForm.category === 'Man' ? 'รูปหลักฐาน OJT' : 'รูปรายละเอียดการเปลี่ยนแปลง'} <span style={{ color: 'var(--red)' }}>*</span>
+                      {log4MForm.category === 'Man' ? tr("รูปหลักฐาน OJT") : tr("รูปรายละเอียดการเปลี่ยนแปลง")} <span style={{ color: 'var(--red)' }}>*</span>
                     </label>
                     <div style={{ border: `2px dashed ${reqImageFile ? 'var(--blue)' : 'var(--border2)'}`, borderRadius: 'var(--r-md)', padding: '10px 12px', background: reqImageFile ? 'var(--blue-dim)' : 'var(--bg2)', cursor: 'pointer', textAlign: 'center', position: 'relative' }}
                       onClick={() => document.getElementById('req-img-input').click()}>

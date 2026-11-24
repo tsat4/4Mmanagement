@@ -364,7 +364,7 @@ export default function MachineDatabase() {
 
   return (
     <Page>
-      <ReadOnlyNote show={!canEdit && !canCreate} role={role} what="แก้ทะเบียนเครื่องจักร"
+      <ReadOnlyNote show={!canEdit && !canCreate} role={role} what={tr("แก้ทะเบียนเครื่องจักร")}
         permKey="machines:edit, machines:create" />
       {/* 🧩 เป็นแท็บของ `/equipment` — PageHeader ใน <Hub> ไม่วาดชื่อหน้าซ้ำ เหลือคำอธิบาย + ปุ่ม (UI-STANDARD 2026-09-24)
           (เดิมวาด <h1> เองด้วย ⇒ แท็บเครื่องจักรมีหัวเรื่อง 2 ชั้นและไม่มี breadcrumb · ภาพ user 22/09) */}
@@ -373,7 +373,7 @@ export default function MachineDatabase() {
         actions={(canEdit || canCreate) ? (
           <>
             {/* ปุ่มตายตัว ≤2 (UI §6.35): [จัดการประเภท] [+ เพิ่มเครื่องจักร] · แยกยี่ห้อจากชื่อ → ⋯ (มี badge จำนวนที่ค้าง) */}
-            <OverflowMenu items={[{ key: 'brand', icon: '🏷️', label: 'แยกยี่ห้อจากชื่อ', badge: brandTodo.length, onClick: () => setShowBrandReview(true),
+            <OverflowMenu items={[{ key: 'brand', icon: '🏷️', label: tr("แยกยี่ห้อจากชื่อ"), badge: brandTodo.length, onClick: () => setShowBrandReview(true),
               hidden: !(canEdit && hasBrandCol && brandTodo.length > 0) }]} />
             {canEdit && <button type="button" className="pg-btn" onClick={() => setShowTypeManager(true)}>{tr('จัดการประเภทเครื่องจักร')}</button>}
             {canCreate && <button type="button" className="pg-btn primary" onClick={() => openEdit()}>{tr('+ เพิ่มเครื่องจักร')}</button>}
@@ -413,7 +413,7 @@ export default function MachineDatabase() {
           <input type="checkbox" checked={showInactive} onChange={e => setShowInactive(e.target.checked)} />
           {tr('แสดงที่ปิดใช้งาน')}
         </label>
-        <SearchInput value={search} onChange={setSearch} fields="หมายเลข/ชื่อเครื่อง" />
+        <SearchInput value={search} onChange={setSearch} fields={tr("หมายเลข/ชื่อเครื่อง")} />
         <span className="spacer" />
         {grouped.length > 1 && (
           <button type="button" className="pg-btn sm" onClick={() => {
@@ -422,7 +422,7 @@ export default function MachineDatabase() {
             setCollapsedGroups(next);
             try { localStorage.setItem('md_group_collapse', JSON.stringify([...next])); } catch { /* ignore */ }
           }}>
-            {grouped.every(([n]) => collapsedGroups.has(n)) ? 'กางทั้งหมด' : 'ย่อทั้งหมด'}
+            {grouped.every(([n]) => collapsedGroups.has(n)) ? tr("กางทั้งหมด") : tr("ย่อทั้งหมด")}
           </button>
         )}
         <div className="filter-count" style={{ textAlign: 'right' }}>
@@ -504,7 +504,7 @@ export default function MachineDatabase() {
         <div className="overlay" style={{ zIndex: 2000 }}>
           <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 24, width: 'min(95vw,420px)' }}>
             <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 20, color: 'var(--text)' }}>
-              {editing.id ? `${tr("แก้ไข")}${kindLabel(editing.equipment_kind)}` : '+ เพิ่มอุปกรณ์'}
+              {editing.id ? `${tr("แก้ไข")}${kindLabel(editing.equipment_kind)}` : tr("+ เพิ่มอุปกรณ์")}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {/* ชนิดอุปกรณ์ — แกนคนละแกนกับ "หมวด" (ผลิต/facility) · แม่พิมพ์ไม่ใช่เครื่องจักร */}
@@ -690,7 +690,7 @@ export default function MachineDatabase() {
                         );
                       }
                       return (
-                        <Field label={laneN > 1 ? `🔀 ${tr("หยุดแล้วกระทบกี่เลน (ไลน์นี้มี")} ${laneN} ${tr("เลน")})` : '🏭 ของกลางของสาย'}>
+                        <Field label={laneN > 1 ? `🔀 ${tr("หยุดแล้วกระทบกี่เลน (ไลน์นี้มี")} ${laneN} ${tr("เลน")})` : tr("🏭 ของกลางของสาย")}>
                           <label style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', marginBottom: laneN > 1 ? 6 : 0 }}>
                             <input type="checkbox" checked={editing.stops_whole_line === true}
                               onChange={e => setEditing(f => ({ ...f, stops_whole_line: e.target.checked }))} />
@@ -809,7 +809,7 @@ function BrandReviewModal({ proposals, onClose, onDone }) {
         </div>
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <button onClick={onClose} style={cancelBtnStyle}>{tr('ยกเลิก')}</button>
-          <button onClick={save} disabled={busy || !picked.length} style={{ ...saveBtnStyle, opacity: busy || !picked.length ? 0.6 : 1 }}>{busy ? 'กำลังบันทึก…' : `${tr("บันทึกยี่ห้อ")} ${picked.length} ${tr("เครื่อง")}`}</button>
+          <button onClick={save} disabled={busy || !picked.length} style={{ ...saveBtnStyle, opacity: busy || !picked.length ? 0.6 : 1 }}>{busy ? tr("กำลังบันทึก…") : `${tr("บันทึกยี่ห้อ")} ${picked.length} ${tr("เครื่อง")}`}</button>
         </div>
       </div>
     </div>
@@ -882,7 +882,7 @@ function MachineTypeManager({ types, canEdit, onClose, onChange }) {
             <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 0', borderBottom: '1px solid var(--border)' }}>
               <span style={{ width: 12, height: 12, borderRadius: 'var(--r-xs)', background: t.color, flexShrink: 0 }} />
               <span style={{ fontSize: 13, color: 'var(--text)', flex: 1 }}>{t.icon || ''} {tr(t.label)}
-                {hasMoCol && <span style={{ fontSize: 11, color: t.mo_item_type ? 'var(--text2)' : 'var(--muted)', marginLeft: 6 }}>{t.mo_item_type ? `→ ${tr("ใบ")} MO: ${t.mo_item_type}` : '· ยังไม่ผูกชนิดในใบ MO'}</span>}</span>
+                {hasMoCol && <span style={{ fontSize: 11, color: t.mo_item_type ? 'var(--text2)' : 'var(--muted)', marginLeft: 6 }}>{t.mo_item_type ? `→ ${tr("ใบ")} MO: ${t.mo_item_type}` : tr("· ยังไม่ผูกชนิดในใบ MO")}</span>}</span>
               {canEdit && (
                 <>
                   <button type="button" className="pg-btn sm" onClick={() => startEdit(t)}>{tr('แก้ไข')}</button>

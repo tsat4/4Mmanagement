@@ -149,7 +149,7 @@ export default function EnergyMqttTopics({ points, canEdit }) {
                 placeholder="plant/utility/steel/power" style={{ ...inp, fontFamily: 'monospace' }} /></label>
             <label style={{ fontSize: 11.5, color: 'var(--muted)', flex: '1 1 170px' }}>{tr('ค่าที่อ่าน')}<br />
               <select value={form.field} onChange={e => setForm(f => ({ ...f, field: e.target.value }))} style={inp}>
-                {MQTT_FIELDS.map(f => <option key={f.key} value={f.key}>{tr(f.label)}{f.unit ? ` (${f.unit})` : ''}</option>)}
+                {MQTT_FIELDS.map(f => <option key={f.key} value={f.key}>{tr(f.label)}{tr(f.unit) ? ` (${tr(f.unit)})` : ''}</option>)}
               </select></label>
             <label style={{ fontSize: 11.5, color: 'var(--muted)', flex: '2 1 220px' }}>{tr('ผูกกับจุดวัด')}<br />
               <select value={form.scope_name ? `${form.scope_kind}::${form.scope_name}` : ''}
@@ -217,7 +217,7 @@ export default function EnergyMqttTopics({ points, canEdit }) {
         <div style={{ ...secTitle, padding: '12px 14px 0' }}>{tr('topic ที่ตั้งไว้ (')}{rows.length})</div>
         {rows.length === 0 ? (
           <div style={{ padding: 14, fontSize: 12.5, color: 'var(--muted)' }}>
-            {tr("ยังไม่มี")} topic — {canEdit ? 'เพิ่มจากฟอร์มด้านบน' : 'ต้องมีสิทธิ์บันทึกถึงจะเพิ่มได้'}
+            {tr("ยังไม่มี")} topic — {canEdit ? tr("เพิ่มจากฟอร์มด้านบน") : tr("ต้องมีสิทธิ์บันทึกถึงจะเพิ่มได้")}
           </div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>

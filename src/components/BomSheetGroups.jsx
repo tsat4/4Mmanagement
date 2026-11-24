@@ -97,9 +97,9 @@ export default function BomSheetGroups({ groups = [], counts = {}, search = '', 
       {!shown.length ? (
         <div style={{ padding: 18, textAlign: 'center', fontSize: 12.5, color: 'var(--muted)',
           border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)' }}>
-          {!counts.total ? '✅ ไม่มีพาร์ทไหนถูกนิยามลูกไว้เกิน 1 ใบ'
-            : gFilter === 'open' ? '✅ ทุกพาร์ทที่นิยามหลายใบ เขียนตรงกันหมด (กด "ทั้งหมด" เพื่อดูรายการ)'
-            : 'ไม่มีพาร์ทที่ตรงคำค้น'}
+          {!counts.total ? tr("✅ ไม่มีพาร์ทไหนถูกนิยามลูกไว้เกิน 1 ใบ")
+            : gFilter === 'open' ? tr("✅ ทุกพาร์ทที่นิยามหลายใบ เขียนตรงกันหมด (กด \"ทั้งหมด\" เพื่อดูรายการ)")
+            : tr("ไม่มีพาร์ทที่ตรงคำค้น")}
         </div>
       ) : (
         <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>

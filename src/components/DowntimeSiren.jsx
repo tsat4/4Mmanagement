@@ -209,7 +209,7 @@ export default function DowntimeSiren({ mode = 'open_15min', team = null, lineNa
           <div className="andon-bar-msg" style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13.5, fontWeight: 800, color: '#fff' }}>{tr(m.label)}</div>
             <div style={{ fontSize: 12, color: '#f0c9c2' }}>
-              <b>{a.production_sessions?.line_name || '—'}</b> · {a.machine_no || 'ไม่ระบุเครื่อง'} · {a.dr_downtime_types?.name_th || 'Downtime'}
+              <b>{a.production_sessions?.line_name || '—'}</b> · {a.machine_no || tr("ไม่ระบุเครื่อง")} · {a.dr_downtime_types?.name_th || 'Downtime'}
               {a.description ? ` — ${a.description}` : ''}
             </div>
           </div>

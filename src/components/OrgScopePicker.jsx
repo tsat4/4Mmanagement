@@ -155,7 +155,7 @@ export default function OrgScopePicker({
       value={isCc ? curKey : ''} disabled={disabled}
       title={isCc
         ? `${tr("กำลังกรองด้วยรหัสนี้ (หน่วยเจ้าของ")} = ${ccOwner ? index.labelOf(ccOwner.kind, ccOwner.value) : tr('ผังยังไม่ผูกหน่วย')}) · ${tr("เลือก \"ทุกรหัส\" = กลับไปดูทั้งหน่วยเจ้าของ")}`
-        : 'Cost Center — แกนคนละสายกับผังองค์กร (1 กลุ่มไลน์ครอบหลายรหัสได้ และหลายไลน์ใช้รหัสเดียวกันได้)'}
+        : tr("Cost Center — แกนคนละสายกับผังองค์กร (1 กลุ่มไลน์ครอบหลายรหัสได้ และหลายไลน์ใช้รหัสเดียวกันได้)")}
       /* "ทุกรหัส" ตอนกรองด้วย cc อยู่ = ถอยไปหน่วยเจ้าของ (ไม่ใช่กระโดดไปทั้งโรงงาน) */
       onChange={e => (e.target.value ? emit(e.target.value) : emit(ownerKey || 'plant'))}
       style={{ width: 210, fontSize: 13, ...inputStyle, ...(isCc ? { borderColor: 'var(--accent)', boxShadow: '0 0 0 1px var(--accent)' } : null) }}>
