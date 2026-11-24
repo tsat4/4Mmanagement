@@ -1279,16 +1279,15 @@ export default function PMCheckData({ mode = 'pm' }) {
            แต่ `can()` ที่นี่ยังอ่าน role จริงจากฐาน ⇒ เห็นปุ่มครบ แล้วสรุปผลทดสอบผิด
      🔴 `userId` ยังต้องเป็น **auth uid จริง** เสมอ (คนตรวจ/คนอนุมัติ/คนสั่ง export ในใบ)
         ห้ามเอา role ที่ถูกสวมไปปนกับตัวตนคนเซ็น */
-  const { role: userRole, fullName, mtnTeams: myMtnTeams, sections: mySections, allUnits, position: myPosition, isSharedAccount, lineId: myLineId, scopeIdx,
-    section: homeSection, respCostCenters, writeUnits } = useContext(UserContext)
+  const { role: userRole, fullName, mtnTeams: myMtnTeams, sections: mySections, allUnits, position: myPosition, isSharedAccount, lineId: myLineId, scopeIdx, section: homeSection, respCostCenters, writeUnits } = useContext(UserContext)
   /* ══ 🔐 "ทีมที่เปิดอยู่ (?dept=) เป็นทีมของเราไหม" (15/10 · คำสั่ง user) ══════════════════
      เดิมคีย์ที่ใช้ตัดสินมาจาก `?dept=` ตรงๆ ⇒ ช่างทีมหนึ่งสลับ URL ไปอีกทีม แล้วลงผลตรวจ /
      อนุมัติ / **เลื่อนรอบ PM** ของอุปกรณ์ทีมนั้นได้ (audit 15/10 · ระดับ A)
      🔴 ฝั่งช่างใช้ "ทีม" เป็นแกน ไม่ใช่ส่วนงาน — ช่างซ่อมข้ามไลน์เป็นงานปกติ
      🔴 ไม่ผูกทีม = ไม่บล็อก (ไม่รู้ ≠ ปฏิเสธ) — วัด 15/10 ช่าง 16/16 ตั้งทีมแล้ว ด่านกัดจริง */
   const myTeams = useMemo(() => teamsForUser(myMtnTeams, mySections), [myMtnTeams, mySections])
-  const deptWrite = useMemo(() => canWriteTeam(myTeams, department, { allUnits, role: userRole }),
-    [myTeams, department, allUnits, userRole])
+  const deptWrite = useMemo(() => canWriteTeam(myTeams, department, { allUnits, role: userRole, respCostCenters, scopeIdx }),   // แกนทีม (CC ไม่ใช้ในด่านนี้ — ส่ง ctx ชุดเดียวกับด่านไลน์)
+    [myTeams, department, allUnits, userRole, respCostCenters, scopeIdx])
   /* 🔴 A4 (24/11 · คำสั่ง user "อนุมัติ AM ต้องอยู่ในไลน์/ส่วนงานตัวเอง"): ใบ AM เป็นของ "ไลน์" ไม่ใช่ทีมช่าง
      ⇒ แกนทีม (`canWriteTeam`) ปล่อยหัวหน้าฝ่ายผลิตที่ไม่มีทีม (no_team_anchor = ok) อนุมัติได้ทุกไลน์
      ⇒ ชั้น ③ ของใบ AM = `canWriteLine` (ctx ครบ 2 แกน respCostCenters + scopeIdx) · ไม่รู้ไลน์ = บล็อก

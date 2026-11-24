@@ -977,7 +977,7 @@ table{border-collapse:collapse}
     <div style="margin-top:2px"><span style="font-size:14px;vertical-align:middle">⊗</span> Audit Not Completed</div>
     <div style="margin-top:2px"><span style="font-size:13px;vertical-align:middle">◐</span> Audited, not signed</div>
     <div style="margin-top:2px"><span style="font-size:13px;vertical-align:middle">–</span> No production · <span style="font-size:13px">?</span> Unknown</div>
-    <div style="margin-top:2px;color:#333">SV/MGR/GM = per week/month/quarter</div>
+    <div style="margin-top:2px">SV/MGR/GM = per week/month/quarter</div>
   </td>
 </tr></table>
 <table style="width:100%">
