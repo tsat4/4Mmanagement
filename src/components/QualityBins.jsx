@@ -1292,10 +1292,10 @@ export default function QualityBins({ mode = 'full' }) {
             emptyText={trI18n('ยังไม่มีรายการ — เพิ่มจากตัว WI-PD3-069 §6')}
             offNote={trI18n("รายการนี้จะไม่ถูกแนะนำในโมดัลลงวิธีแก้ไขอีก (บันทึกเก่าที่อ้าง WI นี้ไว้แล้วไม่กระทบ)")}
             fields={[
-              { key: 'symptom',   label: 'อาการ', required: true, placeholder: 'Missing nut' },
-              { key: 'wi_no',     label: 'WI ซ่อม', required: true, mono: true, placeholder: 'WI-PD3-018 (หลายเล่มคั่นด้วย , )' },
-              { key: 'part_name', label: 'ชื่อชิ้นงาน' },
-              { key: 'note',      label: 'หมายเหตุ' },
+              { key: 'symptom',   label: trI18n("อาการ"), required: true, placeholder: 'Missing nut' },
+              { key: 'wi_no',     label: trI18n("WI ซ่อม"), required: true, mono: true, placeholder: 'WI-PD3-018 (หลายเล่มคั่นด้วย , )' },
+              { key: 'part_name', label: trI18n("ชื่อชิ้นงาน") },
+              { key: 'note',      label: trI18n("หมายเหตุ") },
             ]}
           />
         </div>

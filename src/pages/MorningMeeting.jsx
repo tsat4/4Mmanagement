@@ -1076,7 +1076,7 @@ export default function MorningMeeting() {
       <PageHeader title={tr('ประชุมแถวเช้า')} icon="🌅" sub={`${tr("สรุปวันงาน")} ${fmtDate(meetingDate)}`}
         actions={<>
           {/* ปุ่มตายตัว ≤2 (UI §6.35): [โหมดประชุม] [ส่งสรุป Telegram] · พิมพ์ → ⋯ */}
-          <OverflowMenu items={[{ key: 'print', icon: '📄', label: 'พิมพ์', onClick: handlePrint, title: 'พิมพ์สรุปเป็นเอกสาร' }]} />
+          <OverflowMenu items={[{ key: 'print', icon: '📄', label: tr("พิมพ์"), onClick: handlePrint, title: tr("พิมพ์สรุปเป็นเอกสาร") }]} />
           <button type="button" className="pg-btn" onClick={() => { setSlide(0); setTvMode(true); }} title={tr('โหมดจอ TV — ไล่วาระทีละหน้า (◀ ▶ เปลี่ยน, Esc ออก)')}>{tr('โหมดประชุม')}</button>
           {canRecord && (
             <button type="button" className="pg-btn primary" onClick={sendTelegram} disabled={sendingTg} style={{ opacity: sendingTg ? 0.6 : 1 }} title={tr('ส่งสรุปประชุมเข้า Telegram')}>

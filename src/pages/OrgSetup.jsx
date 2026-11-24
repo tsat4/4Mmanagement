@@ -372,8 +372,8 @@ export default function OrgSetup() {
     <Page>
       <PageHeader title={tr('แผนผังองค์กร')} icon="🏢"
         sub={tr('จัดการโครงสร้าง Section/ส่วน → Department/แผนก → Group/กลุ่ม พร้อม Cost Center (master data ที่หน้าอื่นใช้อ้างอิง)')}
-        tabs={[{ key: 'tree', label: 'มุมมองผัง' }, { key: 'manage', label: 'จัดการหน่วยงาน' },
-               { key: 'teams', label: 'ทีม (จัดกะ)' }]}
+        tabs={[{ key: 'tree', label: tr("มุมมองผัง") }, { key: 'manage', label: tr("จัดการหน่วยงาน") },
+               { key: 'teams', label: tr("ทีม (จัดกะ)") }]}
         tab={tab} onTab={setTab} />
 
       {/* ซ่อนปุ่มได้ ห้ามซ่อนเหตุผล (UI-CONVENTIONS §6.9) — ต้องรู้ว่าแก้อะไรได้/ไม่ได้ และต้องไปขอใคร */}

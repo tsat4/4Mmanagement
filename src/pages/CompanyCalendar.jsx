@@ -213,7 +213,7 @@ export default function CompanyCalendar() {
                       key={i}
                       className="cal-day"
                       onClick={() => cycleDay(dateStr)}
-                      title={isDirty ? `${meta.label} (${tr("ยังไม่บันทึก")})` : meta.label}
+                      title={isDirty ? `${tr(meta.label)} (${tr("ยังไม่บันทึก")})` : tr(meta.label)}
                       style={{
                         position: 'relative',
                         fontSize: 11, textAlign: 'center', padding: '4px 0', borderRadius: 'var(--r-xs)',

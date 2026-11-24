@@ -1157,7 +1157,7 @@ export default function Operator() {
                     padding: '4px 11px', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 700, cursor: 'pointer',
                     border: `1px solid ${active ? g.border : 'var(--border2)'}`,
                     background: active ? g.badge : 'var(--bg3)',
-                    color: active ? g.text : 'var(--muted)',
+                    color: active ? tr(g.text) : 'var(--muted)',
                     transition: 'all 0.15s',
                   }}>
                   {icon} {tr(g.label)}

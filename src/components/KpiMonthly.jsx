@@ -592,7 +592,7 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
      ตอนนี้ `scoreDef` parse ข้อความนั้นกลับเป็นบาร์ ⇒ ใบที่กรอก "≤ 1.452%" ไว้ได้ขั้น 0.5 คืนเอง */
   /* สัญลักษณ์ตรงกับใบจริง: ○ Achieve (1) · △ Improvement (0.5) · ✗ Miss goal (0) */
   const LvMark = ({ lv, small }) => (lv == null ? null : (
-    <b title={`${KPI_LEVELS[lv]?.label || ''} (${lv} ${tr("คะแนน")})`}
+    <b title={`${tr(KPI_LEVELS[lv]?.label) || ''} (${lv} ${tr("คะแนน")})`}
       style={{ marginLeft: small ? 2 : 4, fontSize: small ? 11 : undefined,
         color: lv === 1 ? '#22c55e' : lv === 0.5 ? '#f59e0b' : '#ef4444' }}>
       {lv === 1 ? '○' : lv === 0.5 ? '△' : '✗'}
@@ -1468,8 +1468,8 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
                 title={`🔧 ${tr('ชั่วโมงเดียวกันนี้ เป็นเครื่องเสียของช่างเท่าไหร่')} (${tr('ปี')} ${year + 543})`}
                 total={mtnOwner.totalHr}
                 parts={[
-                  { key: 'yes', label: 'ของช่าง (เครื่องเสีย)', hr: mtnOwner.yesHr, color: 'var(--red)' },
-                  { key: 'no', label: 'ไม่ใช่ของช่าง (คุณภาพ · ปรับตั้ง · รอของ)', hr: mtnOwner.noHr, color: 'var(--green)' },
+                  { key: 'yes', label: tr("ของช่าง (เครื่องเสีย)"), hr: mtnOwner.yesHr, color: 'var(--red)' },
+                  { key: 'no', label: tr("ไม่ใช่ของช่าง (คุณภาพ · ปรับตั้ง · รอของ)"), hr: mtnOwner.noHr, color: 'var(--green)' },
                 ]}
                 unknownHr={mtnOwner.unsetHr}
                 unknownLabel={tr("ยังไม่ระบุ (ไม่มีใครติ๊กธงในทะเบียน)")}
@@ -2087,7 +2087,7 @@ function CatalogModal({ rows, canManage, usedNames = [], onClose, onChanged, onP
                           <select style={{ ...mini, width: 190 }} value={r.amount_var || ''} disabled={!canManage || busy === r.id}
                             onChange={e => patch(r, 'amount_var', e.target.value || null, 'ยอดเงินคู่กัน')}>
                             <option value="">{tr('— ไม่โชว์ยอดเงิน —')}</option>
-                            {KPI_BASE_VARS.filter(v => v.unit === 'บาท').map(v => <option key={v.key} value={v.key}>{tr(v.label)}</option>)}
+                            {KPI_BASE_VARS.filter(v => tr(v.unit) === 'บาท').map(v => <option key={v.key} value={v.key}>{tr(v.label)}</option>)}
                           </select>
                         </label>
                         {/* 🧱 20/11 (user: "เดือนที่เหลือ ถ้าเป็นไปไม่ได้ ไม่ควรคาดการณ์ — OEE > 100 % · MTTR ติดลบ") — ช่วงค่าที่เป็นไปได้ของตัวตน KPI

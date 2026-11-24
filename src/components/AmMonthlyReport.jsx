@@ -347,7 +347,7 @@ export default function AmMonthlyReport({ lines = [], scopedLines = [] }) {
                         {r.cells.map(c => {
                           const m = CHECK_DAY_META[c.state]
                           return (
-                            <td key={c.date} title={`${c.date} · ${m.label}${c.due ? ` · ${tr("ตรวจ")} ${c.checked}/${c.due} ${tr("เครื่อง")}` : ''}${c.ng ? ` · NG ${c.ng}` : ''}`}
+                            <td key={c.date} title={`${c.date} · ${tr(m.label)}${c.due ? ` · ${tr("ตรวจ")} ${c.checked}/${c.due} ${tr("เครื่อง")}` : ''}${c.ng ? ` · NG ${c.ng}` : ''}`}
                               style={{ ...cell, background: m.tint || undefined }}>
                               {c.state === CHECK_DAY.done
                                 ? <b style={{ color: c.ng ? 'var(--red)' : 'var(--green)' }}>{c.ng ? `NG${c.ng > 1 ? c.ng : ''}` : `${c.checked}/${c.due}`}</b>
@@ -371,7 +371,7 @@ export default function AmMonthlyReport({ lines = [], scopedLines = [] }) {
                           const m = CHECK_DAY_META[c.state]
                           const res = c.state === CHECK_DAY.done ? AM_RESULT_META[c.result] : null
                           return (
-                            <td key={c.date} title={`${c.date} · ${res ? res.label : m.label}`} style={{ ...cell, background: m.tint || undefined }}>
+                            <td key={c.date} title={`${c.date} · ${res ? res.label : tr(m.label)}`} style={{ ...cell, background: m.tint || undefined }}>
                               {c.state === CHECK_DAY.done
                                 ? <b style={{ color: res?.color || 'var(--text)' }}>{res?.mark || 'OK'}</b>
                                 : <StateChip state={c.state} />}

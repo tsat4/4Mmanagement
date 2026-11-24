@@ -713,7 +713,7 @@ function StockTab({ role, scope }) {
         return (
           <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10, flexWrap:'wrap' }}>
             <Segmented value={groupMode} onChange={pickGroupBy}
-              options={[{ value:'sloc', label: 'ตามพื้นที่ SAP' }, { value:'line', label: 'ตามไลน์' }]} />
+              options={[{ value:'sloc', label: tr("ตามพื้นที่ SAP") }, { value:'line', label: tr("ตามไลน์") }]} />
             {keys.length > 1 && !forceOpen && (
               <button type="button" onClick={() => persistCollapsed(allFolded ? new Set() : new Set(keys))}
                 style={{ ...inputSt, width:'auto', cursor:'pointer', fontSize:12, padding:'6px 12px' }}>
@@ -931,7 +931,7 @@ function StockTab({ role, scope }) {
             <table style={{ width:'100%', borderCollapse:'collapse' }}>
               <thead>
                 <tr style={{ background:'var(--bg2)' }}>
-                  {['วันที่','ไลน์','ชิ้นงาน','ประเภท','จำนวน','หมายเหตุ','โดย'].map(h => (
+                  {[tr("วันที่"),tr("ไลน์"),tr("ชิ้นงาน"),tr("ประเภท"),tr("จำนวน"),tr("หมายเหตุ"),tr("โดย")].map(h => (
                     <th key={h} style={{ padding:'8px 12px', fontSize:11, fontWeight:800, color:'var(--muted)', textAlign:'left', whiteSpace:'nowrap', textTransform:'uppercase' }}>{tr(h)}</th>
                   ))}
                 </tr>
@@ -1004,7 +1004,7 @@ function StockTab({ role, scope }) {
                   <LineSelect
                     lines={lines} value={form.line_name} {...scope} style={inputSt} placeholder={tr('เลือกไลน์...')}
                     onChange={v => setForm(f => ({ ...f, line_name: v }))}
-                    extraGroups={[{ label: 'คลัง', options: warehouseNames.map(n => ({ value: n })) }]}
+                    extraGroups={[{ label: tr("คลัง"), options: warehouseNames.map(n => ({ value: n })) }]}
                   />
                   {/* ⚠️ ไลน์แม่ = ระดับแผนก งานผลิตเปิดกะที่ไลน์ลูก — ของที่ฝากไว้ที่ไลน์แม่
                       จะถูกหักตอนปิดใบผลิตไม่ได้เลย (backflush หาด้วยชื่อไลน์ที่เปิดกะ)
@@ -1331,7 +1331,7 @@ function DeliveryRoundsTab({ canEdit, fullName, scope }) {
                 <table style={{ width:'100%', borderCollapse:'collapse' }}>
                   <thead>
                     <tr style={{ background:'var(--bg2)' }}>
-                      {['กะ','รอบที่','ตัดยอด','เตรียม','ส่ง','จุด','เสร็จ~','หมายเหตุ'].map(h => (
+                      {[tr("กะ"),tr("รอบที่"),tr("ตัดยอด"),tr("เตรียม"),tr("ส่ง"),tr("จุด"),tr("เสร็จ~"),tr("หมายเหตุ")].map(h => (
                         <th key={h} style={{ padding:'8px 14px', fontSize:11, fontWeight:800, color:'var(--muted)', textAlign:'left', whiteSpace:'nowrap', textTransform:'uppercase' }}>{tr(h)}</th>
                       ))}
                       {canEdit && <th style={{ padding:'8px 14px', width:100 }}></th>}
@@ -1761,7 +1761,7 @@ function InflowRulesTab({ canEdit }) {
        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
         <table style={{ width: '100%', minWidth: 560, borderCollapse: 'collapse' }}>
           <thead><tr style={{ background: 'var(--bg2)' }}>
-            {['เงื่อนไข MAT No.', 'ปลายทาง (line_name)', 'วิธีรับเข้า', ''].map(h => (
+            {[tr("เงื่อนไข MAT No."), tr("ปลายทาง (line_name)"), tr("วิธีรับเข้า"), ''].map(h => (
               <th key={h} style={{ padding: '9px 14px', fontSize: 11, fontWeight: 800, color: 'var(--muted)', textAlign: 'left' }}>{tr(h)}</th>
             ))}
           </tr></thead>
@@ -1829,7 +1829,7 @@ function InflowRulesTab({ canEdit }) {
                   พิมพ์ผิด = "ไลน์ผี" ที่มีของแต่ไม่มีใครเห็น → เลือกจากทะเบียนไลน์ + คลังกลางเท่านั้น (2026-09-07 · บั๊กคลาสเดียวกับรอบจัดส่ง) */}
               <LineSelect lines={lines} value={form.dest_line_name} onChange={v => setForm(f => ({ ...f, dest_line_name: v }))} {...scope}
                 placeholder={tr('— เลือกปลายทาง —')} style={{ ...inputSt, width: 240 }}
-                extraGroups={[{ label: 'คลัง', options: [...new Set([...WAREHOUSE_LOCATIONS, ...dests.filter(d => !lines.some(l => l.name === d))])].sort().map(n => ({ value: n })) }]} />
+                extraGroups={[{ label: tr("คลัง"), options: [...new Set([...WAREHOUSE_LOCATIONS, ...dests.filter(d => !lines.some(l => l.name === d))])].sort().map(n => ({ value: n })) }]} />
             </div>
             <button onClick={addRule} disabled={saving} style={{ ...btn('var(--accent)', 'var(--accent-ink)'), opacity: saving ? 0.6 : 1 }}>
               {saving ? '...' : tr('บันทึก')}

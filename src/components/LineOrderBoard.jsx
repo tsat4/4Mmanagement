@@ -131,7 +131,7 @@ export default function LineOrderBoard({ lineName, family, date, lines, onSelect
                     {r.cards.map(c => {
                       const m = CARD_STATE_META[c._state]; const k = String(orderKeyOf(c)); const on = k === selKey;
                       return (
-                        <button key={k} onClick={() => setSelKey(on ? null : k)} title={`${c.prod_no || ''} · ${m.label}`}
+                        <button key={k} onClick={() => setSelKey(on ? null : k)} title={`${c.prod_no || ''} · ${tr(m.label)}`}
                           style={{ minWidth: 74, padding: '4px 7px', borderRadius: 'var(--r-md)', cursor: 'pointer', textAlign: 'left',
                             background: 'var(--card)', backgroundImage: `linear-gradient(${m.color}26, ${m.color}26)`,
                             border: `1.5px solid ${m.color}`, boxShadow: on ? `0 0 0 2px var(--text)` : 'none', color: 'var(--text)' }}>

@@ -886,7 +886,7 @@ table{border-collapse:collapse;width:100%}
           `daily_${date}_${shift}.csv`,
           ['วันที่', 'ประเภทวัน', 'กะ', 'รหัสพนักงาน', 'ชื่อ', 'แผนก', 'ทีม', 'หมวก', 'รองเท้า', 'ถุงมือ', 'OT'],
           // fallback กะจาก team: C = กะเช้าตลอด · A/B หมุนกะ ไม่รู้รอบจริง = เว้นว่าง (เดิมเดา A=เช้า B=ดึกตายตัว — ผิดครึ่งสัปดาห์)
-          filteredLogs.map(l => [date, DAY_TYPE_META[getDayType(date)]?.label || '', l.shift || (l.employees?.team === 'C' ? 'day' : ''), l.employees?.employee_id_code, l.employees?.name, l.employees?.department || '', l.employees?.team || '', l.has_helmet ? '✓' : '✗', l.has_boots ? '✓' : '✗', l.has_gloves ? '✓' : '✗', l.has_ot ? '✓' : ''])
+          filteredLogs.map(l => [date, trI18n(DAY_TYPE_META[getDayType(date)]?.label) || '', l.shift || (l.employees?.team === 'C' ? 'day' : ''), l.employees?.employee_id_code, l.employees?.name, l.employees?.department || '', l.employees?.team || '', l.has_helmet ? '✓' : '✗', l.has_boots ? '✓' : '✗', l.has_gloves ? '✓' : '✗', l.has_ot ? '✓' : ''])
         )} />
       </FilterBar>
       {loading ? <Loader /> : (
@@ -1071,7 +1071,7 @@ table{border-collapse:collapse;width:100%}
             `employee_${emp?.employee_id_code || selected}_${month}.csv`,
             ['วันที่', 'ประเภทวัน', 'มาทำงาน', 'หมวก', 'รองเท้า', 'ถุงมือ', 'จุดงาน'],
             // assigned_line เก็บ id จุดงาน — ต้อง map เป็นชื่อสถานีเหมือนหน้าจอ/PDF (เดิม CSV ออกเป็น uuid ดิบ)
-            logs.map(l => [l.work_date, DAY_TYPE_META[getDayType(l.work_date)]?.label || '', l.is_present ? '✓' : '✗', l.has_helmet ? '✓' : '✗', l.has_boots ? '✓' : '✗', l.has_gloves ? '✓' : '✗', stationMap[String(l.assigned_line)] || l.assigned_line || ''])
+            logs.map(l => [l.work_date, trI18n(DAY_TYPE_META[getDayType(l.work_date)]?.label) || '', l.is_present ? '✓' : '✗', l.has_helmet ? '✓' : '✗', l.has_boots ? '✓' : '✗', l.has_gloves ? '✓' : '✗', stationMap[String(l.assigned_line)] || l.assigned_line || ''])
           );
         }} />
       </FilterBar>
@@ -1277,7 +1277,7 @@ table{border-collapse:collapse;width:100%}
           'csv_station_attendance',
           `station_${station?.station_name || selectedStation}_${from}_${to}.csv`,
           ['วันที่', 'ประเภทวัน', 'รหัส', 'ชื่อ', 'ทีม', 'กะ', 'สังกัด', 'มาทำงาน', 'PPE ครบ'],
-          filteredRows.map(r => [r.work_date, DAY_TYPE_META[getDayType(r.work_date)].label, r.employees?.employee_id_code, r.employees?.name, r.employees?.team || '', r.shift || '', r.employees?.section || '', r.is_present ? '✓' : '✗', (r.has_helmet && r.has_boots && r.has_gloves) ? '✓' : '✗'])
+          filteredRows.map(r => [r.work_date, trI18n(DAY_TYPE_META[getDayType(r.work_date)].label), r.employees?.employee_id_code, r.employees?.name, r.employees?.team || '', r.shift || '', r.employees?.section || '', r.is_present ? '✓' : '✗', (r.has_helmet && r.has_boots && r.has_gloves) ? '✓' : '✗'])
         )} />
       </TimeRangeBar>
 
@@ -1987,12 +1987,12 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
           `4m_changes_${from}_${to}.csv`,
           ['วันที่', 'ประเภทวัน', 'ไลน์', 'ประเภท', 'ประเภทย่อย', 'รายละเอียด', 'สถานะ', 'เวลาสร้าง'],
           // export ชุดเดียวกับตารางบนจอ (ผ่าน filter ส่วนงาน) — เดิมใช้ logs ดิบ CSV ไม่ตรงจอ
-          fourMFilteredLogs.map(l => [l.work_date, DAY_TYPE_META[getDayType(l.work_date)]?.label || '', l.line_name, l.category, l.change_subtype || '', l.description, l.status, l.created_at ? fmtDateTime(l.created_at) : ''])
+          fourMFilteredLogs.map(l => [l.work_date, trI18n(DAY_TYPE_META[getDayType(l.work_date)]?.label) || '', l.line_name, l.category, l.change_subtype || '', l.description, l.status, l.created_at ? fmtDateTime(l.created_at) : ''])
         )} />
         <span className="sep" />
         {/* 📅 สลับ "รายการใบ" ↔ "ใบ Changing Point" (แบบกระดาษ FM-PD2-037) — ดูบนจอได้ ไม่ต้องกด Export (05/11) */}
         <Segmented value={fourMView} onChange={setFourMView} label={trI18n('มุมมอง')}
-          options={[{ value: 'table', label: 'ตาราง' }, { value: 'sheet', label: 'ใบ Changing Point' }]} />
+          options={[{ value: 'table', label: trI18n("ตาราง") }, { value: 'sheet', label: trI18n("ใบ Changing Point") }]} />
         <span className="filter-label">{trI18n('เดือนของใบ')}</span>
         <input type="month" value={cpcMonth} onChange={e => setCpcMonth(e.target.value)} />
         {canExport && (
@@ -2611,7 +2611,7 @@ ${catHeaderCells}
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
         {SKILL_LEVELS.filter(lv => lv.min > 0).map(lv => (
-          <span key={lv.label} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 'var(--r-xs)', background: lv.bg, color: lv.color, border: `1px solid ${tint(lv.color, 'line')}` }}>
+          <span key={trI18n(lv.label)} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 'var(--r-xs)', background: lv.bg, color: lv.color, border: `1px solid ${tint(lv.color, 'line')}` }}>
             {trI18n(lv.label)} ≥{lv.min}
           </span>
         ))}

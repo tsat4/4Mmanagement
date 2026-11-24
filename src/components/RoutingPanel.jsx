@@ -237,7 +237,7 @@ export default function RoutingPanel({ canEdit, lines = [] }) {
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 760 }}>
                 <thead><tr style={{ background: 'var(--bg2)' }}>
-                  {['#', 'กระบวนการ', 'ไลน์ / ผู้รับจ้าง', 'C/T', 'C/O', 'LOT', 'คน', 'จุดพักหลังขั้นนี้', ''].map((h, i) =>
+                  {['#', tr("กระบวนการ"), tr("ไลน์ / ผู้รับจ้าง"), 'C/T', 'C/O', 'LOT', tr("คน"), tr("จุดพักหลังขั้นนี้"), ''].map((h, i) =>
                     <th key={i} style={{ padding: '7px 8px', fontSize: 11.5, color: 'var(--muted)', textAlign: 'left', whiteSpace: 'nowrap' }}>{tr(h)}</th>)}
                 </tr></thead>
                 <tbody>

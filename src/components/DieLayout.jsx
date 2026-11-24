@@ -297,7 +297,7 @@ export default function DieLayout({
   }
 
   const legendItems = [
-    ...DIE_STATUSES.map(s => [s.color, `${s.icon} ${s.label}`]),
+    ...DIE_STATUSES.map(s => [s.color, `${s.icon} ${tr(s.label)}`]),
     [DIE_STATUS_UNSET.color, `${DIE_STATUS_UNSET.icon} ${tr("ยังไม่ระบุ")}`],
     ['#ef4444', '🔧 มีใบซ่อม MO ค้าง (รอรับงาน = กระพริบ)'],
     ['#facc15', '🔍 ผลการค้นหา'],

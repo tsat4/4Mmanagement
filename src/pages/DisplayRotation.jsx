@@ -349,7 +349,7 @@ export default function DisplayRotation() {
                 </Field>
                 <Field label={tr('รีโหลดเต็มหน้า (ล้างหน่วยความจำทีวี)')}>
                   <select value={form.reload_min ?? ''} disabled={!canEdit} onChange={e => setF('reload_min', e.target.value === '' ? '' : Number(e.target.value))}>
-                    {RELOAD_OPTS.map(o => <option key={o.label} value={o.v}>{tr(o.label)}</option>)}
+                    {RELOAD_OPTS.map(o => <option key={tr(o.label)} value={o.v}>{tr(o.label)}</option>)}
                   </select>
                 </Field>
               </div>
@@ -552,7 +552,7 @@ function ItemRow({ i, it, n, canEdit, focused, onFocus, pageOptions, defaultSec,
         style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 'var(--r-md)', cursor: 'pointer',
           border: '1px solid var(--border2)', background: 'var(--bg2-surf)', minWidth: 0 }}>
         <b style={{ width: 22, textAlign: 'center', fontSize: 13 }}>{i + 1}</b>
-        <span style={{ fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }}>{meta ? `${meta.icon} ${meta.label}` : (it.path || tr("— ยังไม่เลือกหน้า —"))}</span>
+        <span style={{ fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }}>{meta ? `${meta.icon} ${tr(meta.label)}` : (it.path || tr("— ยังไม่เลือกหน้า —"))}</span>
         <span style={{ flex: 1, minWidth: 0, fontSize: 12, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {summary.join(' · ')}
         </span>

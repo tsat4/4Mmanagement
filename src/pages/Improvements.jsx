@@ -975,9 +975,9 @@ export default function Improvements() {
       <FilterBar style={{ marginBottom: 8 }}>
         <Segmented value={statusFilter} onChange={setStatusFilter} label={tr('สถานะ')} options={[
           { value: 'all', label: ALL.status },
-          { value: 'monitoring', label: 'กำลังติดตามผล' },
-          { value: 'done', label: 'สำเร็จ' },
-          { value: 'cancelled', label: 'ยกเลิก' },
+          { value: 'monitoring', label: tr("กำลังติดตามผล") },
+          { value: 'done', label: tr("สำเร็จ") },
+          { value: 'cancelled', label: tr("ยกเลิก") },
         ]} />
       </FilterBar>
 

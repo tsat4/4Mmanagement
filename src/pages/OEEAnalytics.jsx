@@ -1485,11 +1485,11 @@ export default function OEEAnalytics() {
         title="OEE Analytics" icon="📈"
         sub={trI18n('วิเคราะห์ประสิทธิภาพการผลิต — Availability · Performance · Quality')}
         tabs={[
-          { key: 'today', label: 'ภาพรวมวันนี้' },
-          { key: 'part', label: 'รายพาร์ท' },
-          { key: 'trend', label: 'แนวโน้ม/ประวัติ' },
-          { key: 'insight', label: 'วิเคราะห์สาเหตุ' },
-          { key: 'machine', label: 'รายเครื่อง (จากเครื่องจักร)' },
+          { key: 'today', label: trI18n("ภาพรวมวันนี้") },
+          { key: 'part', label: trI18n("รายพาร์ท") },
+          { key: 'trend', label: trI18n("แนวโน้ม/ประวัติ") },
+          { key: 'insight', label: trI18n("วิเคราะห์สาเหตุ") },
+          { key: 'machine', label: trI18n("รายเครื่อง (จากเครื่องจักร)") },
         ]}
         tab={viewTab} onTab={setViewTab}
         actions={<>
@@ -2004,7 +2004,7 @@ export default function OEEAnalytics() {
                     ) : (
                       <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 620 }}>
                         <thead><tr style={{ background: 'var(--bg2)' }}>
-                          {['ไลน์', 'กะ', 'เวลา', 'เครื่อง', 'ชิ้นงาน', 'นาที', 'หมายเหตุ / ผู้บันทึก'].map((h, i) =>
+                          {[trI18n("ไลน์"), trI18n("กะ"), trI18n("เวลา"), trI18n("เครื่อง"), trI18n("ชิ้นงาน"), trI18n("นาที"), trI18n("หมายเหตุ / ผู้บันทึก")].map((h, i) =>
                             <th key={i} style={th}>{trI18n(h)}</th>)}
                         </tr></thead>
                         <tbody>
@@ -2138,7 +2138,7 @@ export default function OEEAnalytics() {
       >
         {/* ทะเบียนไลน์ (scope แล้ว) ผ่าน <LineSelect> กลาง — เดิมสร้างจากชื่อใน sessions: ไลน์ที่ rename แล้วโชว์ชื่อเก่า / ไลน์ที่ยังไม่มี session หาย (2026-09-07) */}
         <LineSelect lines={linesFull} value={selLine} onChange={setSelLine} placeholder={ALL.line}
-          extraGroups={[{ label: 'นอกทะเบียน (ชื่อใน sessions ไม่ตรงทะเบียนไลน์)', options: trOrphanLines.map(n => ({ value: n })) }]} />
+          extraGroups={[{ label: trI18n("นอกทะเบียน (ชื่อใน sessions ไม่ตรงทะเบียนไลน์)"), options: trOrphanLines.map(n => ({ value: n })) }]} />
         <Segmented value={selShift} onChange={setSelShift} options={SHIFT_OPTIONS} label={trI18n('กะ')} />
       </TimeRangeBar>
 

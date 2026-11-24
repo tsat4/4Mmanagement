@@ -147,7 +147,7 @@ export function PlanSparesModal({ row, canEdit, canIssue, byName, byUid, onClose
         <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 520 }}>
             <thead><tr style={{ background: 'var(--bg3)' }}>
-              {['อะไหล่', 'ใช้ต่อรอบ', 'คงเหลือ', 'สถานะ', ''].map(h => <th key={h} style={th}>{tr(h)}</th>)}
+              {[tr("อะไหล่"), tr("ใช้ต่อรอบ"), tr("คงเหลือ"), tr("สถานะ"), ''].map(h => <th key={h} style={th}>{tr(h)}</th>)}
             </tr></thead>
             <tbody>
               {!ready.items.length && (
@@ -275,7 +275,7 @@ function SpareDemandModal({ demand, error, onClose, onOpenPlan }) {
       <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 760 }}>
           <thead><tr style={{ background: 'var(--bg3)' }}>
-            {['อะไหล่', 'ต้องใช้', 'คงเหลือ', 'หลังใช้', 'ใช้ครั้งแรก', 'เริ่มขาด', 'ต้องสั่งภายใน', 'PM ที่ใช้'].map(h => <th key={h} style={th}>{tr(h)}</th>)}
+            {[tr("อะไหล่"), tr("ต้องใช้"), tr("คงเหลือ"), tr("หลังใช้"), tr("ใช้ครั้งแรก"), tr("เริ่มขาด"), tr("ต้องสั่งภายใน"), tr("PM ที่ใช้")].map(h => <th key={h} style={th}>{tr(h)}</th>)}
           </tr></thead>
           <tbody>
             {demand.rows.map(r => (

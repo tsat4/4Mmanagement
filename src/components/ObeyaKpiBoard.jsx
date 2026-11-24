@@ -1252,8 +1252,8 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
               )}
               <button type="button" className="pg-btn" onClick={() => goBoard(true)}>{tr('โหมดจอ TV')}</button>
               <OverflowMenu items={[
-                { key: 'arrange', icon: '⇅', label: 'จัดเรียงแผ่น KPI', onClick: () => setArrange(true), hidden: !canNote || arrange,
-                  title: 'จัดลำดับแผ่น KPI ของขอบเขตนี้เอง (บันทึกต่อขอบเขต)' },
+                { key: 'arrange', icon: '⇅', label: tr("จัดเรียงแผ่น KPI"), onClick: () => setArrange(true), hidden: !canNote || arrange,
+                  title: tr("จัดลำดับแผ่น KPI ของขอบเขตนี้เอง (บันทึกต่อขอบเขต)") },
               ]} />
             </>
           )}

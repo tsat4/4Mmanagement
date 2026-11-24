@@ -103,7 +103,7 @@ export default function Integrations() {
   const header = (
     <PageHeader icon="🔌" title={tr('การเชื่อมต่อ Node-RED / เครื่องจักร')}
       sub={tr('ที่เดียวสำหรับทุกระบบที่ส่งข้อมูลเข้า ESM · ต้นทางส่งข้อเท็จจริง สูตรและการตัดสินอยู่ที่ ESM')}
-      tabs={[{ key: 'sources', label: 'แหล่งต้นทาง' }, { key: 'kinds', label: 'ชนิดข้อมูล' }, { key: 'guide', label: 'คู่มือ (WI)' }]}
+      tabs={[{ key: 'sources', label: tr("แหล่งต้นทาง") }, { key: 'kinds', label: tr("ชนิดข้อมูล") }, { key: 'guide', label: tr("คู่มือ (WI)") }]}
       tab={tab} onTab={(k) => { openSrc(null); setTab(k); }}
       actions={canManage && !srcCode && tab === 'sources'
         ? <button type="button" className="pg-btn primary" onClick={() => setCreating(true)}>{tr('+ เพิ่มการเชื่อมต่อ')}</button> : null} />

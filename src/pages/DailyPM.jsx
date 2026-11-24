@@ -282,7 +282,7 @@ export default function DailyPM() {
           AM {tr("ตรวจเครื่อง/POKA-YOKE ต้นกะ")} · {shiftInfo.label} · {shiftInfo.workDateStr}
           {' · '}{tr('เตือนเมื่อเกิน')} {DAILY_PM_WINDOW_MIN} {tr("นาทีหลังเปิดใบผลิตใบแรก")}
         </>}
-        tabs={[{ key: 'status', label: 'สถานะวันนี้' }, { key: 'monthly', label: 'รายงานรายเดือน' }, { key: 'registry', label: 'ลงทะเบียนเครื่องตรวจ' }, { key: 'stations', label: 'สถานี (ใบรวม)' }]}
+        tabs={[{ key: 'status', label: tr("สถานะวันนี้") }, { key: 'monthly', label: tr("รายงานรายเดือน") }, { key: 'registry', label: tr("ลงทะเบียนเครื่องตรวจ") }, { key: 'stations', label: tr("สถานี (ใบรวม)") }]}
         tab={tab} onTab={setTab} />
 
       {tab === 'status' && amSt.err && (

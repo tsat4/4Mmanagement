@@ -449,7 +449,7 @@ export default function MtnMachineLayout({ setupMode = false }) {
         )}
         tabs={[
           !setupMode && { key: 'overview', label: 'ภาพรวมทั้งโรงงาน' },
-          { key: 'production', label: 'ไลน์ผลิต' },
+          { key: 'production', label: tr("ไลน์ผลิต") },
           { key: 'facility', label: 'Facility / Utility' },
         ]}
         tab={view} onTab={k => { setView(k); setSelId(null) }} />

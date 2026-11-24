@@ -627,7 +627,7 @@ export default function ScanLanding() {
           <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 6 }}>{tr('⚠️ ไม่พบสิ่งที่ตรงกับป้ายนี้')}</div>
           <div style={{ fontSize: 12.5, color: 'var(--text2)', lineHeight: 1.8 }}>
             {tr("รหัสที่อ่านได้")}: <code style={{ background: 'var(--bg3)', padding: '1px 6px', borderRadius: 4 }}>{scan?.raw || raw}</code><br />
-            {tr("ชนิดป้าย")}: {scan?.typed ? `${QR_KINDS[scan.kind]?.icon ?? ''} ${QR_KINDS[scan.kind]?.label ?? scan.kind}` : tr("เลขเปล่า (ไม่ใช่ป้ายของระบบ)")}
+            {tr("ชนิดป้าย")}: {scan?.typed ? `${QR_KINDS[scan.kind]?.icon ?? ''} ${tr(QR_KINDS[scan.kind]?.label) ?? scan.kind}` : tr("เลขเปล่า (ไม่ใช่ป้ายของระบบ)")}
             {/* 🗒️ ป้ายเฟส 2 ที่หาแถวไม่เจอ (ถูกลบ/ปิด) — บอกว่าป้ายใช้ที่ไหน ไม่ปล่อยให้คิดว่าป้ายเสีย (28/10) */}
             {['line', 'downtime_type', 'defect_type', 'storage'].includes(scan?.kind) && (
               <><br />{tr('ป้ายชนิดนี้ถูกต้อง แต่')}<b>{tr('ไม่พบแถวในทะเบียน')}</b> {tr('(อาจถูกลบ/เปลี่ยนรหัส) — พิมพ์ป้ายใหม่จากหน้า QR Labels')}</>

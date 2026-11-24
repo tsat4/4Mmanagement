@@ -1040,7 +1040,7 @@ export default function Dashboard({ view = 'timeline' }) {
           )}
           {/* Shift toggle = <Segmented> มาตรฐาน (06/11 · เดิมวาดเอง มุม 7px) · สีกะอยู่ที่ป้ายใต้ชื่อหน้าแทน */}
           <Segmented label={tr('กะ')} value={selectedShift} onChange={setSelectedShift}
-            options={[{ value: 'all', label: ALL.shift }, { value: 'day', label: 'กะเช้า' }, { value: 'night', label: 'กะดึก' }]} />
+            options={[{ value: 'all', label: ALL.shift }, { value: 'day', label: tr("กะเช้า") }, { value: 'night', label: tr("กะดึก") }]} />
           {/* Date picker */}
           <div style={{
             display: 'flex', alignItems: 'center', gap: 8,

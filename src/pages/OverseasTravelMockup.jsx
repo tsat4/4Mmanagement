@@ -461,14 +461,14 @@ export default function OverseasTravelMockup() {
             const a = r.admin;
             const blockers = readyBlockers(r);
             const tick = (k, label) => upd(r.id, n => { n.admin[k] = true; return n; }, `Admin: ${label}`);
-            const nextStep = ADMIN_STEPS.find(x => !a[x.k]);
+            const nextStep = ADMIN_STEPS.find(x => !a[tr(x.k)]);
             return reqCard(r, (
               <div style={{ display: 'grid', gap: 6 }}>
                 <Check ok={a.passport}>{tr('ตรวจ Passport (อายุ / ความถูกต้อง)')}</Check>
                 <Check ok={a.visaReq != null}>{tr('ต้องใช้ Visa หรือไม่:')} {a.visaReq == null ? '—' : a.visaReq ? tr("ต้องใช้") : tr("ไม่ต้องใช้")}</Check>
                 {a.visaReq && <Check ok={r.visaDocsSent}>{tr('ผู้เดินทางส่งเอกสาร Visa')}</Check>}
                 {a.visaReq && <Check ok={a.visaApplied}>{tr('Admin ยื่น Visa และติดตามผล')}</Check>}
-                {ADMIN_STEPS.map(x => <Check key={x.k} ok={a[x.k]}>{tr(x.label)}</Check>)}
+                {ADMIN_STEPS.map(x => <Check key={tr(x.k)} ok={a[tr(x.k)]}>{tr(x.label)}</Check>)}
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                   {!a.passport && <button type="button" style={btnPrimary} onClick={() => tick('passport', 'ตรวจ Passport ผ่าน')}>{tr('ตรวจ Passport ผ่าน')}</button>}
                   {a.passport && a.visaReq == null && (<>
@@ -479,7 +479,7 @@ export default function OverseasTravelMockup() {
                     ? <button type="button" style={btnPrimary} onClick={() => tick('visaApplied', 'ยื่น Visa และติดตามผล')}>{tr('ยื่น Visa แล้ว')}</button>
                     : <span style={muted}>{tr('รอผู้เดินทางส่งเอกสาร Visa')}</span>)}
                   {a.passport && a.visaReq != null && (!a.visaReq || a.visaApplied) && nextStep && (
-                    <button type="button" style={btnPrimary} onClick={() => tick(nextStep.k, nextStep.label)}>{tr(nextStep.label)}</button>
+                    <button type="button" style={btnPrimary} onClick={() => tick(tr(nextStep.k), tr(nextStep.label))}>{tr(nextStep.label)}</button>
                   )}
                 </div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', borderTop: '1px dashed var(--border)', paddingTop: 8 }}>

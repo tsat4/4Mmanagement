@@ -2682,7 +2682,7 @@ export default function PMCheckData({ mode = 'pm' }) {
                             const am = isAmTeam(clDeptById[insp.checklist_id] ?? department)
                             const nx = am ? amNextApprover(positionRank(inspectorOf(insp).position)) : null
                             // ใบช่าง (PM) = รอหัวหน้าผู้ตรวจยืนยัน (ขั้น 2 · 11/11)
-                            return <span style={{ fontSize: 11, color: 'var(--muted)' }}>{nx ? (nx.step ? `${tr("รอ")}${nx.step.label}` : tr("รอผู้จัดการรับทราบ")) : `${tr("รอ")}${PM_HEAD_STEP.label}${tr("ยืนยัน")}`}</span>
+                            return <span style={{ fontSize: 11, color: 'var(--muted)' }}>{nx ? (nx.step ? `${tr("รอ")}${nx.step.label}` : tr("รอผู้จัดการรับทราบ")) : `${tr("รอ")}${tr(PM_HEAD_STEP.label)}${tr("ยืนยัน")}`}</span>
                           })()}
                           {/* NG ใบนี้ถูกส่งซ่อมหรือยัง — ตอบคำถาม "ที่เจอเมื่อวาน แก้แล้วรึยัง" ได้จากตรงนี้เลย */}
                           {moByInsp[insp.id] && (

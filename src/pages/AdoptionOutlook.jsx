@@ -978,7 +978,7 @@ function LadderTab({ c, navigate, isMobile }) {
 
       {LEVELS.map(L => {
         const nowAt = all.filter(q => q.now === L.n);
-        const fullAt = all.filter(q => q.full === L.n);
+        const fullAt = all.filter(q => tr(q.full) === L.n);
         const c0 = col[L.n - 1];
         return (
           <div key={L.n} style={{ ...cardSt, borderLeft: `4px solid ${c0}` }}>
@@ -1366,7 +1366,7 @@ function DeepDiveTab({ dd, err, demoOn, navigate, isMobile }) {
   const linkedDefs = dd.def.map(f => {
     const t = `${f.def_type || ''} ${f.description || ''}`.toLowerCase();
     const g = machEquip.find(g => g.w.some(w => t.includes(w)));
-    return g ? { f, equip: g.name } : null;
+    return g ? { f, equip: tr(g.name) } : null;
   }).filter(Boolean);
 
   const shiftTh = S.shift === 'night' ? tr("กะดึก") : tr("กะเช้า");
@@ -1780,11 +1780,11 @@ export default function AdoptionOutlook() {
         title={tr('ภาพเมื่อข้อมูลเชื่อมกันทั้งองค์กร')} icon="🔮"
         sub={`${tr("ข้อมูล ณ")} ${d.loss.to} · ${tr("ฝั่ง \"วันนี้\" นับสดจากฐานจริงทั้งหมด ไม่มีตัวเลขสมมติ")}`}
         tabs={[
-          { key: 'dim', label: 'มิติที่มองเห็นได้' },
-          { key: 'deep', label: 'เจาะ 1 กะจริง' },
-          { key: 'ladder', label: '4 ระดับ (ถึง Prescriptive)' },
-          { key: 'dept', label: 'ก่อน-หลัง รายแผนก' },
-          { key: 'roi', label: 'เงินที่ประหยัดได้' },
+          { key: 'dim', label: tr("มิติที่มองเห็นได้") },
+          { key: 'deep', label: tr("เจาะ 1 กะจริง") },
+          { key: 'ladder', label: tr("4 ระดับ (ถึง Prescriptive)") },
+          { key: 'dept', label: tr("ก่อน-หลัง รายแผนก") },
+          { key: 'roi', label: tr("เงินที่ประหยัดได้") },
         ]}
         tab={tab} onTab={setTab}
         actions={

@@ -412,7 +412,7 @@ export default function FixtureRegistry() {
           🔴 prop ชื่อ `tab` ไม่ใช่ `activeTab` — เดิมส่งผิดชื่อ ⇒ **แท็บไม่เคยไฮไลต์เลยสักอัน**
              (PageHeader ไม่มี `activeTab` มันเลยอ่าน `tab` ได้ undefined เงียบๆ · แก้ 22/09) */}
       <PageHeader title="JIG / Fixture" icon="📐"
-        tabs={TABS.map(t => ({ key: t.k, label: `${t.icon} ${t.label}` }))}
+        tabs={TABS.map(t => ({ key: tr(t.k), label: `${t.icon} ${tr(t.label)}` }))}
         tab={tab} onTab={setTab}
       />
 
@@ -500,7 +500,7 @@ export default function FixtureRegistry() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
                 <thead style={{ background: 'var(--bg2)' }}>
                   <tr style={{ textAlign: 'left' }}>
-                    {['ฟิกเจอร์', 'จุด', 'ชิม (รวม/เพดาน)', 'กำหนดตรวจ', 'สิ่งที่ต้องทำ'].map(h =>
+                    {[tr("ฟิกเจอร์"), tr("จุด"), tr("ชิม (รวม/เพดาน)"), tr("กำหนดตรวจ"), tr("สิ่งที่ต้องทำ")].map(h =>
                       <th key={h} style={{ padding: '8px 10px' }}>{tr(h)}</th>)}
                   </tr>
                 </thead>
@@ -619,7 +619,7 @@ export default function FixtureRegistry() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
                 <thead style={{ background: 'var(--bg2)' }}>
                   <tr style={{ textAlign: 'left' }}>
-                    {['จุด', 'ชนิด', 'บนรูป', 'baseline', 'ปัจจุบัน', 'เพดาน', 'ความถี่ตรวจ', 'อายุชิ้นส่วน', ''].map(h =>
+                    {[tr("จุด"), tr("ชนิด"), tr("บนรูป"), 'baseline', tr("ปัจจุบัน"), tr("เพดาน"), tr("ความถี่ตรวจ"), tr("อายุชิ้นส่วน"), ''].map(h =>
                       <th key={h} style={{ padding: '8px 10px' }}>{tr(h)}</th>)}
                   </tr>
                 </thead>

@@ -1011,8 +1011,8 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
             <span className="sep" />
             <span className="filter-label">{tr('เรียง:')}</span>
             <Segmented value={sortMode} onChange={setSortMode} label={tr('เรียงลำดับ')} options={[
-              { value: 'urgent', label: 'ใกล้ดิวก่อน', title: 'ใบที่หลุดเฟส/deadline ใกล้สุดขึ้นแถวบน' },
-              { value: 'time',   label: 'ตามเวลาส่ง' },
+              { value: 'urgent', label: tr("ใกล้ดิวก่อน"), title: tr("ใบที่หลุดเฟส/deadline ใกล้สุดขึ้นแถวบน") },
+              { value: 'time',   label: tr("ตามเวลาส่ง") },
             ]} />
             <span className="spacer" />
             <span className="filter-count">{orders.length} {tr('รอบส่ง')}</span>
@@ -1053,13 +1053,13 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
                     code={sap} name={o.part_name}
                     img={imgOf(sap)}
                     status={{ label: plan ? '📋 แผน 862 · รอ e-SMART' : od ? '🔴 เลยเวลา' : pl ? '🟠 หลุดเฟส' : statusLabel(o), color: cardColor }}
-                    metric={{ label: 'จำนวนส่ง', value: fmt(o.qty), unit: 'ชิ้น' }}
-                    aside={{ label: 'รอบส่ง', value: `🕐 ${o.ship_time ? o.ship_time.slice(0, 5) : 'ไม่ระบุเวลา'}${o.due_date !== day ? ` (เช้า ${(o.due_date || '').slice(5)})` : ''} · ${o.customer ? (custLabel ? custLabel(o.customer) : o.customer) : '—'}` }}
+                    metric={{ label: tr("จำนวนส่ง"), value: fmt(o.qty), unit: 'ชิ้น' }}
+                    aside={{ label: tr("รอบส่ง"), value: `🕐 ${o.ship_time ? o.ship_time.slice(0, 5) : 'ไม่ระบุเวลา'}${o.due_date !== day ? ` (เช้า ${(o.due_date || '').slice(5)})` : ''} · ${o.customer ? (custLabel ? custLabel(o.customer) : o.customer) : '—'}` }}
                     rows={[
-                      { k: 'เลขลูกค้า', v: o.customer_part_no && o.customer_part_no !== sap ? o.customer_part_no : null },
+                      { k: tr("เลขลูกค้า"), v: o.customer_part_no && o.customer_part_no !== sap ? o.customer_part_no : null },
                       { k: 'PO / Dock', v: [o.order_no && `PO ${o.order_no}`, o.dock_code && `Dock ${o.dock_code}`].filter(Boolean).join(' · ') || null },
-                      { k: 'สต็อก', v: covEl },
-                      { k: 'ส่งโดย', v: o.shipped_by ? `✓ ${o.shipped_by}${o.shipped_at ? ` · ${new Date(o.shipped_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' })}` : ''}` : null },
+                      { k: tr("สต็อก"), v: covEl },
+                      { k: tr("ส่งโดย"), v: o.shipped_by ? `✓ ${o.shipped_by}${o.shipped_at ? ` · ${new Date(o.shipped_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' })}` : ''}` : null },
                     ]}
                     note={plan ? tr("ลูกค้ายืนยันรอบจริงด้วย e-SMART — อัพไฟล์แล้วใบนี้จะถูกแทนด้วยยอดจริง") : null}
                     alert={od}
@@ -1226,7 +1226,7 @@ function WorkflowSection({ canEdit }) {
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 700 }}>
           <thead><tr style={{ background: 'var(--bg2)' }}>
-            {['ลำดับ', 'ชื่อเฟส', 'ก่อนเวลาส่ง (นาที)', 'ต้องถึงสถานะ', '📦 หักสต็อก', ''].map(h => (
+            {[tr("ลำดับ"), tr("ชื่อเฟส"), tr("ก่อนเวลาส่ง (นาที)"), tr("ต้องถึงสถานะ"), tr("📦 หักสต็อก"), ''].map(h => (
               <th key={h} style={{ padding: '8px 10px', fontSize: 11, fontWeight: 800, color: 'var(--muted)', textAlign: 'left' }}>{tr(h)}</th>
             ))}
           </tr></thead>
@@ -1358,7 +1358,7 @@ function ShipToTab({ canEdit, onChanged, fullName }) {
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
           <thead><tr style={{ background: 'var(--bg2)' }}>
-            {['ลำดับในชาร์ต', 'Code', 'ชื่อลูกค้า *', 'โรงงาน/ท่า', 'หมายเหตุ', ''].map(h => (
+            {[tr("ลำดับในชาร์ต"), 'Code', tr("ชื่อลูกค้า *"), tr("โรงงาน/ท่า"), tr("หมายเหตุ"), ''].map(h => (
               <th key={h} style={{ padding: '8px 10px', fontSize: 11, fontWeight: 800, color: 'var(--muted)', textAlign: 'left' }}>{tr(h)}</th>
             ))}
           </tr></thead>
@@ -1442,7 +1442,7 @@ export default function CustomerDemand() {
         sub={tr('Logistic ติดตามรอบส่งงานรายวันตาม standard workflow · Forecast/อัพโหลดไฟล์ของ Sales อยู่หน้า 📈 Planner & Sales')}
         tabs={[
           { key: 'shipping', label: 'Shipping Chart' },
-          { key: 'log', label: 'ประวัติ order เข้าระบบ' },
+          { key: 'log', label: tr("ประวัติ order เข้าระบบ") },
           { key: 'shipto', label: 'Ship-to Config' },   // ⚠️ แท็บตั้งค่าอยู่ท้ายสุดเสมอ (UI-CONVENTIONS §6.8 ข้อ 4)
         ]}
         tab={tab} onTab={setTab}

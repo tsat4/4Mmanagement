@@ -3183,7 +3183,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
   const qa5 = mtnForm ? 'none' : moQaState(o);
   const qa5Note = qa5 === 'skipped' ? (
     <div style={{ fontSize: 12, color: 'var(--amber)', background: 'var(--amber-dim)', border: '1px solid var(--amber-line)', borderRadius: 'var(--r-md)', padding: '6px 9px', marginBottom: 6, lineHeight: 1.6 }}>
-      ⏭ <b>{trI18n('ไม่ต้องตรวจ QA —')} {mtnForm ? trI18n("ใบซ่อมของทีม MTN ไม่มีขั้น QA ในลูป") : qaAppliesTo(o) ? trI18n("งานนี้ไม่เกี่ยวกับคุณภาพ") : `${trI18n("งาน")}${PURPOSES.find(x => x.key === o.purpose)?.label || ''} ${trI18n("ไม่ต้องผ่านการตรวจคุณภาพ")}`}</b>
+      ⏭ <b>{trI18n('ไม่ต้องตรวจ QA —')} {mtnForm ? trI18n("ใบซ่อมของทีม MTN ไม่มีขั้น QA ในลูป") : qaAppliesTo(o) ? trI18n("งานนี้ไม่เกี่ยวกับคุณภาพ") : `${trI18n("งาน")}${trI18n(PURPOSES.find(x => x.key === o.purpose)?.label) || ''} ${trI18n("ไม่ต้องผ่านการตรวจคุณภาพ")}`}</b>
       <div style={{ color: 'var(--text2)' }}>
         {/* 4 ที่มาของ "ข้าม" ต้องแยกให้ออก: ฟอร์ม MTN ไม่มี QA เลย · QA กดเอง · ใบเก่าที่ขั้น 4 เลือกไว้ · จุดประสงค์ของงาน */}
         {mtnForm
@@ -3467,7 +3467,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
         <div style={{ marginBottom: 10, padding: '8px 11px', borderRadius: 'var(--r-md)', background: appr.blocked ? 'var(--red-dim)' : 'var(--bg2)', border: `1px solid ${appr.blocked ? 'var(--red)' : 'var(--border)'}` }}>
           <div style={{ fontSize: 12, fontWeight: 800, color: appr.blocked ? 'var(--red)' : 'var(--text)' }}>
             {appr.blocked
-              ? `🔒 ${trI18n("งาน")}${PURPOSES.find(x => x.key === appr.purpose)?.label || ''} — ${trI18n("ต้องอนุมัติก่อนช่างเริ่มงาน")}`
+              ? `🔒 ${trI18n("งาน")}${trI18n(PURPOSES.find(x => x.key === appr.purpose)?.label) || ''} — ${trI18n("ต้องอนุมัติก่อนช่างเริ่มงาน")}`
               : appr.ackPending ? trI18n("✍️ รอผู้จัดการเซ็นรับทราบ (ไม่บล็อกงาน — ช่างทำงานต่อได้เลย)") : trI18n("✅ ลายเซ็นผู้จัดการครบแล้ว")}
           </div>
           <div style={{ fontSize: 11.5, color: 'var(--text2)', marginTop: 3, lineHeight: 1.7 }}>
@@ -3755,14 +3755,14 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
         {/* ปุ่มตายตัว ≤2 (UI §6.35): [ขั้นถัดไป (primary)] [ปิด] + ⋯ (ประวัติเครื่อง · โปรเจคปรับปรุง · พิมพ์ · QA ข้าม · ลบ/ยกเลิก) */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           <OverflowMenu drop="up" items={[
-            { key: 'hist', icon: '📜', label: 'ประวัติเครื่องนี้', onClick: () => setShowHist(true), hidden: !o.machine_no,
-              title: 'ใบแจ้งซ่อมทุกใบของเครื่องนี้ · ค่าใช้จ่าย · PR · เวลาซ่อม' },
+            { key: 'hist', icon: '📜', label: trI18n("ประวัติเครื่องนี้"), onClick: () => setShowHist(true), hidden: !o.machine_no,
+              title: trI18n("ใบแจ้งซ่อมทุกใบของเครื่องนี้ · ค่าใช้จ่าย · PR · เวลาซ่อม") },
             { key: 'improve', icon: '💡', label: repeatIssue ? 'เปิดโปรเจคปรับปรุง (ปัญหาซ้ำ)' : 'เปิดโปรเจคปรับปรุง', onClick: () => onOpenImprovement(o),
               hidden: !can('improvements', 'manage', role) },
-            { key: 'print', icon: '📄', label: 'พิมพ์ / บันทึก PDF', onClick: doPrint },
-            { key: 'skipqa', icon: '✅', label: 'QA ระบุว่าไม่เกี่ยวกับคุณภาพ — ไปขั้น 6', onClick: () => onStep(5, false, { skipQa: true }),
+            { key: 'print', icon: '📄', label: trI18n("พิมพ์ / บันทึก PDF"), onClick: doPrint },
+            { key: 'skipqa', icon: '✅', label: trI18n("QA ระบุว่าไม่เกี่ยวกับคุณภาพ — ไปขั้น 6"), onClick: () => onStep(5, false, { skipQa: true }),
               hidden: isMobile || !skipQa.ok,
-              title: 'QA ตัดสินว่างานนี้ไม่เกี่ยวกับคุณภาพชิ้นงาน — ไม่ต้องตรวจ ส่งไปรับมอบ/ติดตามผลเลย (เฉพาะ QA กดได้)' },
+              title: trI18n("QA ตัดสินว่างานนี้ไม่เกี่ยวกับคุณภาพชิ้นงาน — ไม่ต้องตรวจ ส่งไปรับมอบ/ติดตามผลเลย (เฉพาะ QA กดได้)") },
             { key: 'remove', icon: '🗑', label: removeMode === MO_REMOVE_DELETE ? 'ลบใบนี้' : 'ยกเลิกใบนี้', onClick: del, danger: true,
               title: removeWhy, hidden: (!canRemoveAsBoss && !ownCancel) || removeMode === MO_REMOVE_BLOCKED },
           ]} />

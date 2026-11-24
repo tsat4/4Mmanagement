@@ -304,11 +304,11 @@ export default function ManpowerBoard() {
         title="Manpower Control Board" icon="🧑‍🤝‍🧑"
         sub={trI18n('ผังกำลังคน · ผังจุดงาน · ป้ายสถานะ 4M ของส่วนงาน — อ่านอย่างเดียว ตามทะเบียนพนักงาน/ตารางกะ/เช็คชื่อวันนี้')}
         tabs={[
-          { key: 'org', label: 'ผังกำลังคน' },
-          { key: 'layout', label: 'ผัง LAYOUT' },
-          { key: 'fourm', label: 'ป้ายสถานะ 4M' },
-          { key: 'staffing', label: 'แผน vs มาจริง' },
-          { key: 'history', label: 'ประวัติการเปลี่ยนช่อง' },
+          { key: 'org', label: trI18n("ผังกำลังคน") },
+          { key: 'layout', label: trI18n("ผัง LAYOUT") },
+          { key: 'fourm', label: trI18n("ป้ายสถานะ 4M") },
+          { key: 'staffing', label: trI18n("แผน vs มาจริง") },
+          { key: 'history', label: trI18n("ประวัติการเปลี่ยนช่อง") },
         ]}
         tab={tab} onTab={setTab}
         filters={filters}
@@ -385,7 +385,7 @@ function Photo({ p, size = 44 }) {
 
 function AttendDot({ p }) {
   const m = ATTEND_META[p.attend];
-  const label = p.attend === 'leave' && p.log?.leave_type ? `${trI18n("ลา")} (${p.log.leave_type})` : m.label;
+  const label = p.attend === 'leave' && p.log?.leave_type ? `${trI18n("ลา")} (${p.log.leave_type})` : trI18n(m.label);
   return <span title={label} style={{ fontSize: 11, fontWeight: 700, color: m.color, whiteSpace: 'nowrap' }}>● {label}</span>;
 }
 
@@ -1326,7 +1326,7 @@ function LayoutMap({ layout, placed, reserve = 12, fit = null, focus = null, onO
                     const dim = away || attend === 'leave' || attend === 'absent';
                     const fs = !tv && fit ? personFitState(x, p, fit) : null;
                     return (
-                      <div key={emp.id} title={`${emp.name} · ${shiftMeta(shift).label} · ${ATTEND_META[attend].label}${temp ? trI18n(' · ย้ายมาวันนี้') : ''}${away ? trI18n(' · วันนี้ไปยืนจุดอื่น') : ''}`}
+                      <div key={emp.id} title={`${emp.name} · ${shiftMeta(shift).label} · ${trI18n(ATTEND_META[attend].label)}${temp ? trI18n(' · ย้ายมาวันนี้') : ''}${away ? trI18n(' · วันนี้ไปยืนจุดอื่น') : ''}`}
                         style={{ position: 'relative', width: sz, height: sz }}>
                         <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', background: '#1a1a1a',
                           border: `${ms?.ring || 2}px ${temp ? 'dashed' : 'solid'} ${c}`, opacity: dim ? 0.4 : 1, filter: dim ? 'grayscale(1)' : undefined }}>

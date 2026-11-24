@@ -442,7 +442,7 @@ export default function PMSchedule() {
       {!loading && rows.length > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
           <Segmented value={view} onChange={setView} label={tr('มุมมอง')}
-            options={VIEW_OPTIONS.map(v => ({ value: v.key, label: v.label }))} />
+            options={VIEW_OPTIONS.map(v => ({ value: v.key, label: tr(v.label) }))} />
           <button onClick={() => setScanOpen(true)} title={tr('สแกนป้าย QR ที่เครื่อง → ดูเฉพาะแผนของเครื่องนั้น')}
             style={{ ...S.actionBtn(deptColor), fontSize: 13, fontWeight: 800, minHeight: 36 }}>{tr('สแกนเครื่อง')}</button>
           {focusEq && (

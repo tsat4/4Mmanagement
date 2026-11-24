@@ -360,7 +360,7 @@ export default function FlowTower() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                   <thead><tr style={{ background: 'var(--bg2)' }}>
                     {/* ยุบ "ชื่อพาร์ท + MAT" เป็นคอลัมน์เดียว — <MatLabel> ให้ครบ Part No./ชื่อ/MAT (30/09) */}
-                    {['ชิ้นงาน', 'ค้างสะสม', 'ปลายทาง', 'ค่าที่เสนอ', ''].map((h, i) => (
+                    {[tr("ชิ้นงาน"), tr("ค้างสะสม"), tr("ปลายทาง"), tr("ค่าที่เสนอ"), ''].map((h, i) => (
                       <th key={h} style={{ padding: '7px 12px', fontSize: 11, fontWeight: 800, color: 'var(--muted)', textAlign: i === 2 || i === 4 ? 'right' : 'left', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>{tr(h)}</th>
                     ))}
                   </tr></thead>
@@ -401,7 +401,7 @@ export default function FlowTower() {
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead><tr style={{ background: 'var(--bg2)' }}>
-              {['ช่วง', 'กลไก', 'สถานะ', 'หลักฐานจากข้อมูลจริง'].map(h => (
+              {[tr("ช่วง"), tr("กลไก"), tr("สถานะ"), tr("หลักฐานจากข้อมูลจริง")].map(h => (
                 <th key={h} style={{ padding: '7px 12px', fontSize: 11, fontWeight: 800, color: 'var(--muted)', textAlign: 'left', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{tr(h)}</th>
               ))}
             </tr></thead>

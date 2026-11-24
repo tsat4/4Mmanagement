@@ -210,8 +210,8 @@ export default function MachineReliability({ machines = [], lineObjs = [], scope
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 700 }}>{trI18n('นับแบบ:')}</span>
         <Segmented value={mode} onChange={setMode} label={trI18n('นับแบบ')} options={[
-          { value: 'full', label: 'มุมเครื่อง (นาทีเต็ม)', title: 'เครื่องตัวนั้นหยุดจริงกี่นาที — ใช้ตัดสินใจงานซ่อม/อะไหล่' },
-          { value: 'line', label: 'มุมไลน์ (ถ่วง 1/N)', title: 'ไลน์เสียเวลาไปเท่าไหร่ — สูตรเดียวกับ %A ใน Daily Report (เครื่องขนาน N ตัว หยุด 1 ตัว = ไลน์เสีย 1/N)' },
+          { value: 'full', label: trI18n("มุมเครื่อง (นาทีเต็ม)"), title: trI18n("เครื่องตัวนั้นหยุดจริงกี่นาที — ใช้ตัดสินใจงานซ่อม/อะไหล่") },
+          { value: 'line', label: trI18n("มุมไลน์ (ถ่วง 1/N)"), title: trI18n("ไลน์เสียเวลาไปเท่าไหร่ — สูตรเดียวกับ %A ใน Daily Report (เครื่องขนาน N ตัว หยุด 1 ตัว = ไลน์เสีย 1/N)") },
         ]} />
         {summary.parallelLines > 0 && (
           <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>

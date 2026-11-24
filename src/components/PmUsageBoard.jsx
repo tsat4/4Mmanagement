@@ -165,7 +165,7 @@ export default function PmUsageBoard({ daily = [], lines = [], plans = [], today
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 780 }}>
             <thead>
               <tr style={{ background: 'var(--bg3)', color: 'var(--muted)', textAlign: 'left' }}>
-                {['ไลน์', 'อุปกรณ์', '30 วัน (ชิ้น)', '90 วัน', 'ทั้งช่วง', 'อัตรา/วันเดินงาน', 'วันเดินงาน 30 วัน', 'ผลิตล่าสุด'].map(h => <th key={h} style={th}>{tr(h)}</th>)}
+                {[tr("ไลน์"), tr("อุปกรณ์"), tr("30 วัน (ชิ้น)"), tr("90 วัน"), tr("ทั้งช่วง"), tr("อัตรา/วันเดินงาน"), tr("วันเดินงาน 30 วัน"), tr("ผลิตล่าสุด")].map(h => <th key={h} style={th}>{tr(h)}</th>)}
               </tr>
             </thead>
             <tbody>
@@ -192,7 +192,7 @@ export default function PmUsageBoard({ daily = [], lines = [], plans = [], today
                           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                             <thead>
                               <tr style={{ color: 'var(--muted)', textAlign: 'left' }}>
-                                {['อุปกรณ์', 'ชนิด', 'ยอดตั้งแต่ PM ล่าสุด', 'เกณฑ์ PM', 'ความคืบหน้า', 'คาดถึงเกณฑ์'].map(h => <th key={h} style={{ padding: '4px 8px', fontWeight: 700 }}>{tr(h)}</th>)}
+                                {[tr("อุปกรณ์"), tr("ชนิด"), tr("ยอดตั้งแต่ PM ล่าสุด"), tr("เกณฑ์ PM"), tr("ความคืบหน้า"), tr("คาดถึงเกณฑ์")].map(h => <th key={h} style={{ padding: '4px 8px', fontWeight: 700 }}>{tr(h)}</th>)}
                               </tr>
                             </thead>
                             <tbody>

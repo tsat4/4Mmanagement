@@ -1667,7 +1667,7 @@ function KanbanCalcTab({ canApply, fullName, custLabel }) {
           /* ไลน์ที่มีพาร์ทในตาราง — จัดลำดับชั้นตามผัง (แม่→ลูก) แทนลิสต์แบนเรียงตัวอักษร */
           <LineSelect lines={prodLines.filter(l => lines.includes(l.name))}
             value={lineFilter} onChange={setLineFilter} placeholder={ALL.line}
-            extraGroups={[{ label: 'ไม่มีในทะเบียนไลน์', options: lines.filter(n => !prodLines.some(l => l.name === n)).map(n => ({ value: n })) }]}
+            extraGroups={[{ label: tr("ไม่มีในทะเบียนไลน์"), options: lines.filter(n => !prodLines.some(l => l.name === n)).map(n => ({ value: n })) }]}
           />
         )}
         <span className="filter-label">{tr('เดือน Forecast ที่ใช้คำนวณ')}</span>
@@ -1961,8 +1961,8 @@ export default function PlannerSales() {
         sub={tr('Sales อัพโหลด Forecast/Order จากลูกค้า → ระบบวางแผนภาระการผลิตล่วงหน้า · ติดตามรอบส่งงานรายวันที่หน้า 🚚 Delivery')}
         tabs={[
           { key: 'planner', label: 'Forecast Planner' },
-          { key: 'kanban', label: 'คำนวณ Kanban' },
-          { key: 'upload', label: 'อัพโหลด (Sales)' },
+          { key: 'kanban', label: tr("คำนวณ Kanban") },
+          { key: 'upload', label: tr("อัพโหลด (Sales)") },
           { key: 'monitoring', label: 'Monitoring (Planning)' },
         ]}
         tab={tab} onTab={setTab}

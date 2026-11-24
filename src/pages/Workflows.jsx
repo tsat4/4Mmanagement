@@ -44,7 +44,7 @@ function fireNotify(res, ref) {
 function StatusChip({ status }) {
   const m = WF_STATUS[status];
   const c = statusColor(m?.tone || 'none');
-  return <span style={{ fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 999, color: c, border: `1px solid ${c}`, whiteSpace: 'nowrap' }}>{tr(m?.label || 'สถานะไม่รู้จัก')}</span>;
+  return <span style={{ fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 999, color: c, border: `1px solid ${c}`, whiteSpace: 'nowrap' }}>{tr(tr(m?.label) || 'สถานะไม่รู้จัก')}</span>;
 }
 
 export default function Workflows() {
@@ -112,7 +112,7 @@ export default function Workflows() {
   const header = (
     <PageHeader title={tr('ใบงานออนไลน์ (e-Workflow)')} icon="✍️"
       sub={tr('เปิดใบ · อนุมัติ · ติดตามสถานะ — แบบฟอร์มและสายอนุมัติตั้งที่หน้า "ออกแบบใบงาน"')}
-      tabs={TABS.map(t => ({ ...t, label: t.key === 'inbox' && inbox.length ? `${t.label} (${inbox.length})` : t.label }))} tab={tab} onTab={setTab} />
+      tabs={TABS.map(t => ({ ...t, label: t.key === 'inbox' && inbox.length ? `${tr(t.label)} (${inbox.length})` : tr(t.label) }))} tab={tab} onTab={setTab} />
   );
 
   return (

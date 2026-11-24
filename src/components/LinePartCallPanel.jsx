@@ -912,7 +912,7 @@ export default function LinePartCallPanel({ lineName, lines = [], role, fullName
                   <span title={r.delivered_override_reason || ''} style={{ fontSize: 11, fontWeight: 700, color: DELIVER_GATES[r.delivered_gate].color }}>
                     {/* 🔴 ป้ายนี้คือ "ตอนส่งผ่านด่านทางไหน" (ประวัติ) ไม่ใช่สถานะทะเบียนวันนี้ —
                         ไลน์ที่เพิ่งตั้งจุดส่งทีหลัง ใบเก่ายังขึ้น "ยังไม่ตั้งจุดส่ง" ตลอดไป ต้องเขียนให้ชัด */}
-                    {DELIVER_GATES[r.delivered_gate].icon} {r.delivered_gate === 'scanned' ? (r.delivered_point_name || DELIVER_GATES.scanned.label) : `${DELIVER_GATES[r.delivered_gate].label} ${tr("ตอนส่ง")}`}
+                    {DELIVER_GATES[r.delivered_gate].icon} {r.delivered_gate === 'scanned' ? (r.delivered_point_name || tr(DELIVER_GATES.scanned.label)) : `${tr(DELIVER_GATES[r.delivered_gate].label)} ${tr("ตอนส่ง")}`}
                   </span>
                 )}
                 {/* 📭 05/11 — ส่งแล้วยังไม่กดรับ ต้องเห็นว่าค้างมานานแค่ไหน (`unreceivedAge` · replenishGate.js) */}

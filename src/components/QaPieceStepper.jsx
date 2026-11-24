@@ -197,7 +197,7 @@ export default function QaPieceStepper({
               style={{ padding: '3px 9px', borderRadius: 'var(--r-pill)', fontWeight: 700,
                 background: p.result === 'pass' ? 'rgba(34,197,94,0.14)' : 'rgba(239,68,68,0.14)',
                 color: p.result === 'pass' ? '#22c55e' : '#ef4444', border: `1px solid ${p.result === 'pass' ? '#22c55e55' : '#ef444455'}` }}>
-              {tr("ชิ้น")} {p.piece_no} {p.result === 'pass' ? '✓' : `✕${p.disposition ? ` · ${DISPOSITION[p.disposition]?.label?.split(' ')[1] || p.disposition}` : ''}`}
+              {tr("ชิ้น")} {p.piece_no} {p.result === 'pass' ? '✓' : `✕${p.disposition ? ` · ${tr(DISPOSITION[p.disposition]?.label)?.split(' ')[1] || p.disposition}` : ''}`}
               {p.round_no > 1 ? ` (${tr("รอบ")} ${p.round_no})` : ''}
             </span>
           ))}
@@ -311,7 +311,7 @@ export default function QaPieceStepper({
                     </div>
                   )}
                   {needValue && j && (
-                    <span style={{ fontSize: 12, fontWeight: 700, color: JUDGE[j].color, whiteSpace: 'nowrap' }}>{j === 'na' ? tr("ข้าม") : `${tr("อัตโนมัติ")}: ${JUDGE[j].label}`}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: JUDGE[j].color, whiteSpace: 'nowrap' }}>{j === 'na' ? tr("ข้าม") : `${tr("อัตโนมัติ")}: ${tr(JUDGE[j].label)}`}</span>
                   )}
                   {/* จุดคำนวณข้ามเองเมื่อจุด A/B ถูกข้าม — ไม่มีปุ่มข้ามของตัวเอง */}
                   {!calcOf(i) && (<button className="tbtn" title={tr('ไม่ได้ตรวจจุดนี้ในชิ้นนี้')} onClick={() => setD(i.id, { judge: d.judge === 'na' ? null : 'na', value: d.judge === 'na' ? d.value : '' })}

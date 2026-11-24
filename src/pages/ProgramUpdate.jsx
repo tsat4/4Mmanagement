@@ -108,8 +108,8 @@ export default function ProgramUpdate() {
   const segOpts = [
     { value: 'user', label: `${trI18n("สำหรับผู้ใช้")} ${userN}`, title: 'ฟีเจอร์ใหม่ · แก้ปัญหา · ปรับปรุง (ไม่รวมเอกสาร/งานระบบ)' },
     { value: 'all', label: `${trI18n("ทั้งหมด")} ${inRange.length}` },
-    ...KINDS.map(k => ({ value: k.key, label: `${k.icon} ${k.label}${counts[k.key] ? ` ${counts[k.key]}` : ''}`,
-      disabled: !counts[k.key], title: k.hint })),
+    ...KINDS.map(k => ({ value: k.key, label: `${k.icon} ${trI18n(k.label)}${counts[k.key] ? ` ${counts[k.key]}` : ''}`,
+      disabled: !counts[k.key], title: trI18n(k.hint) })),
   ];
 
   return (

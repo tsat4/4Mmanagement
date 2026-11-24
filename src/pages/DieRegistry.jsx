@@ -614,9 +614,9 @@ export default function DieRegistry() {
         title={tr('ทะเบียนแม่พิมพ์')} icon="🔨"
         sub={`${tr("แม่พิมพ์ 1 ตัว = 1 OP (เลข D-xxxx) · ชุด = รวม OP เป็นพาร์ท (ยืมแม่พิมพ์ข้ามชุดได้) · ตัวตนอยู่ฐานเดียวกับเครื่องจักร (QR/ประวัติซ่อมใช้ร่วมกัน")})${scopeActive ? tr(' · เห็นเฉพาะส่วนงานของคุณ') : ''}`}
         tabs={[
-          { key: 'registry', label: 'ทะเบียน' },
-          { key: 'layout', label: 'ผังจัดเก็บ' },
-          { key: 'status', label: 'สถานะ', badge: moDieCount ? `🔧 ${moDieCount}` : null },
+          { key: 'registry', label: tr("ทะเบียน") },
+          { key: 'layout', label: tr("ผังจัดเก็บ") },
+          { key: 'status', label: tr("สถานะ"), badge: moDieCount ? `🔧 ${moDieCount}` : null },
         ]}
         tab={tab} onTab={setTab}
       />
@@ -930,10 +930,10 @@ export default function DieRegistry() {
           stampCol="updated_by_name" stampName={fullName} onChanged={invalidateDiePressLines}
           help={tr('ชื่อในทะเบียนนี้คือค่าที่เก็บใน die_sets.line_name / machines.line_name (text) — แยกจากทะเบียนไลน์ผลิต (production_lines) ตั้งใจไม่ให้ชื่อเครื่องปั๊มโผล่ใน dropdown ไลน์ผลิตทุกหน้า · ปิดใช้ = ไม่โผล่ให้เลือกใหม่ (ชุดเก่ายังอ่านออก)')}
           fields={[
-            { key: 'name', label: 'ชื่อกลุ่ม/ไลน์', required: true, placeholder: 'เช่น LINE A ( 800 Ton )' },
+            { key: 'name', label: tr("ชื่อกลุ่ม/ไลน์"), required: true, placeholder: 'เช่น LINE A ( 800 Ton )' },
             { key: 'tonnage', label: 'Tonnage', type: 'text', placeholder: 'เช่น 800 Ton', width: 120 },
-            { key: 'ref_production_line', label: 'ไลน์ผลิตอ้างอิง', placeholder: 'เช่น HDF1 (ถ้าเป็นไลน์ผลิตจริง)' },
-            { key: 'note', label: 'หมายเหตุ' },
+            { key: 'ref_production_line', label: tr("ไลน์ผลิตอ้างอิง"), placeholder: 'เช่น HDF1 (ถ้าเป็นไลน์ผลิตจริง)' },
+            { key: 'note', label: tr("หมายเหตุ") },
           ]} />
       </CollapseCard>
 
@@ -950,8 +950,8 @@ export default function DieRegistry() {
           onChanged={() => { invalidateDieSetKinds(); load(); }}
           help={tr('ประเภท OP = หน้าที่ของแม่พิมพ์ตัวนั้น (ตั้งที่ปุ่มแก้แม่พิมพ์รายตัว) · &quot;ชนิดอุปกรณ์ในใบแจ้งซ่อม&quot; ที่ตั้งตรงนี้ **ชนะ** ค่าของรูปแบบชุด — ใช้กับชุดที่มีแม่พิมพ์ต่างหน้าที่กันในชุดเดียว (เช่น HDF: HYDRO / BENDING / PREFORM) · ว่าง = ใช้ค่าของรูปแบบชุด · ปิดใช้ = ไม่โผล่ให้เลือกใหม่ (แม่พิมพ์เก่ายังอ่านออก)')}
           fields={[
-            { key: 'label', label: 'ชื่อที่หน้างานเรียก', required: true, placeholder: 'เช่น Hydroform / ดัด' },
-            { key: 'mo_item_type', label: 'ชนิดอุปกรณ์ในใบแจ้งซ่อม', type: 'select', options: dieItemTypeOpts, width: 190 },
+            { key: 'label', label: tr("ชื่อที่หน้างานเรียก"), required: true, placeholder: 'เช่น Hydroform / ดัด' },
+            { key: 'mo_item_type', label: tr("ชนิดอุปกรณ์ในใบแจ้งซ่อม"), type: 'select', options: dieItemTypeOpts, width: 190 },
           ]} />
       </CollapseCard>
 
@@ -963,9 +963,9 @@ export default function DieRegistry() {
           onChanged={() => { invalidateDieSetKinds(); setKindsVer(v => v + 1); }}
           help={tr('ตั้งชื่อเป็นคำที่หน้างานเรียกจริงได้เลย (แก้ชื่อทีหลังได้ ชุดเดิมไม่กระทบ) · &quot;ชนิดอุปกรณ์ในใบแจ้งซ่อม&quot; = ค่าที่ใบ MO เติมให้เองเมื่อผู้แจ้งเลือกแม่พิมพ์ในชุดแบบนี้ (ว่าง = ให้ผู้แจ้งเลือกเอง · เพิ่มชื่อใหม่ได้ที่ /mtn-repair แท็บข้อมูลหลัก › ชนิดอุปกรณ์) · ปิดใช้ = ไม่โผล่ให้เลือกใหม่ (ชุดเก่ายังอ่านออก)')}
           fields={[
-            { key: 'label', label: 'ชื่อที่หน้างานเรียก', required: true, placeholder: 'เช่น HYDROFORM DIE / แม่พิมพ์ดัด' },
-            { key: 'description', label: 'คำอธิบาย (ภาษาบ้านๆ)', placeholder: 'โชว์ใต้ช่องเลือกตอนแก้ชุด' },
-            { key: 'mo_item_type', label: 'ชนิดอุปกรณ์ในใบแจ้งซ่อม', type: 'select', options: dieItemTypeOpts, width: 190 },
+            { key: 'label', label: tr("ชื่อที่หน้างานเรียก"), required: true, placeholder: 'เช่น HYDROFORM DIE / แม่พิมพ์ดัด' },
+            { key: 'description', label: tr("คำอธิบาย (ภาษาบ้านๆ)"), placeholder: 'โชว์ใต้ช่องเลือกตอนแก้ชุด' },
+            { key: 'mo_item_type', label: tr("ชนิดอุปกรณ์ในใบแจ้งซ่อม"), type: 'select', options: dieItemTypeOpts, width: 190 },
           ]} />
       </CollapseCard>
 

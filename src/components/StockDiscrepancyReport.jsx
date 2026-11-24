@@ -179,7 +179,7 @@ export default function StockDiscrepancyReport() {
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <Segmented value={view} onChange={setView} label={tr('สถานะ')}
-          options={[{ value: 'open', label: 'ยังไม่เคลียร์' }, { value: 'done', label: 'เคลียร์แล้ว' }, { value: 'all', label: 'ทั้งหมด' }]} />
+          options={[{ value: 'open', label: tr("ยังไม่เคลียร์") }, { value: 'done', label: tr("เคลียร์แล้ว") }, { value: 'all', label: tr("ทั้งหมด") }]} />
         <SearchInput value={q} onChange={setQ} fields={tr("MAT / ชื่อพาร์ท / ไลน์ / เลข SAP / หมายเหตุ")} grow={false} />
         {month && <span style={{ fontSize: 12, color: 'var(--text2)' }}>{tr('เดือน')} {month} <button className="tbtn" onClick={() => setMonth('')} style={btn(false)}>{tr('✕ ทุกเดือน')}</button></span>}
         <div style={{ flex: 1 }} />

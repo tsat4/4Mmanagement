@@ -351,13 +351,13 @@ export default function DailyReport() {
         title="Daily Production Report" icon="📊"
         sub={tr('บันทึกผลผลิตและ Downtime แบบ Real-time รายกะ')}
         tabs={[
-          { key: 'live', label: 'Live กะนี้' },
+          { key: 'live', label: tr("Live กะนี้") },
           // ไม่มีกะค้าง = ไม่ต้องมีแท็บให้รก · โหลดไม่สำเร็จก็ต้องโชว์ (จะได้เข้าไปเห็นสาเหตุ ห้ามเงียบ)
           ...((stale.rows.length || stale.error) ? [{
             key: 'stale',
             label: stale.error ? '⏰ กะค้าง ⚠' : `⏰ ${tr("กะค้าง")} ${stale.rows.length}${staleOver ? ` · ${tr("เกิน")} ${STALE_SESSION_DAYS} ${tr("วัน")} ${staleOver}` : ''}`,
           }] : []),
-          { key: 'history', label: 'ประวัติ' },
+          { key: 'history', label: tr("ประวัติ") },
           { key: 'export', label: 'Export' },
           ...(canSetup ? [{ key: 'setup', label: 'ตั้งค่า' }] : []),
         ]}
@@ -3817,7 +3817,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
           const over7 = overdueAlert.filter(o => o.age > STALE_SESSION_DAYS);
           const oldest = overdueAlert[0]?.age || 0;
           return (
-            <NoticeBar tone="warn" action={{ label: 'ไปไล่ปิด →', onClick: onGoStale, title: 'เปิดแท็บ กะค้าง — ไล่ปิด/อนุมัติทีละกะ' }}>
+            <NoticeBar tone="warn" action={{ label: tr("ไปไล่ปิด →"), onClick: onGoStale, title: tr("เปิดแท็บ กะค้าง — ไล่ปิด/อนุมัติทีละกะ") }}>
               <b>{tr('กะค้างยังไม่ปิด')} {overdueAlert.length} {tr('กะ')}</b>
               {over7.length > 0 && <> {tr('· เกิน')} {STALE_SESSION_DAYS} {tr('วัน')} {over7.length} {tr('กะ · เก่าสุด')} {oldest} {tr('วัน')}</>}
               {' '}— {tr("ไม่เกี่ยวกับกะที่กำลังทำอยู่ เริ่มกะใหม่ได้ตามปกติ")}

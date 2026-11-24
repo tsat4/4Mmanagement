@@ -534,7 +534,7 @@ function QualityDashboard() {
         <span className="filter-label">{trI18n('ไลน์')}</span>
         <LineSelect lines={allLines.filter(l => lineOptions.includes(l.name))} includeRetired
           value={lineFilter} onChange={setLineFilter} placeholder={ALL.line} extraAt="end"
-          extraGroups={[{ label: 'ไม่อยู่ในทะเบียนไลน์', options: lineOptions.filter(n => !allLines.some(l => l.name === n)).map(n => ({ value: n })) }]} />
+          extraGroups={[{ label: trI18n("ไม่อยู่ในทะเบียนไลน์"), options: lineOptions.filter(n => !allLines.some(l => l.name === n)).map(n => ({ value: n })) }]} />
         <span className="filter-label">{trI18n('ชิ้นงาน')}</span>
         <SearchSelect value={productFilter || ''} placeholder={allOf('ชิ้นงาน')} style={{ minWidth: 200, maxWidth: 320 }}
           options={productOptions.map(p => ({ id: p.key, label: p.label, sub: p.key !== p.label ? p.key : '', keywords: p.key }))}

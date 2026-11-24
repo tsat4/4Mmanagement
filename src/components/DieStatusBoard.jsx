@@ -146,7 +146,7 @@ export default function DieStatusBoard({
         <LineSelect
           lines={prodLines.filter(l => lineNames.includes(l.name))}
           value={fLine} onChange={setFLine} placeholder={ALL.line}
-          extraGroups={[{ label: 'กลุ่มเครื่องปั๊ม', options: lineNames.filter(n => !prodLines.some(l => l.name === n)).map(n => ({ value: n })) }]}
+          extraGroups={[{ label: tr("กลุ่มเครื่องปั๊ม"), options: lineNames.filter(n => !prodLines.some(l => l.name === n)).map(n => ({ value: n })) }]}
         />
         {/* ชิปสถานะ = ตัวกรอง (กดเพื่อกรอง) ⇒ อยู่ "ใน" แถบกรอง ไม่ใช่แถวการ์ดเหนือมัน (UI-STANDARD §2.1) */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -155,7 +155,7 @@ export default function DieStatusBoard({
             color: counts.mo ? '#ef4444' : 'var(--text)', border: counts.mo ? 'rgba(239,68,68,0.5)' : 'var(--border)',
             active: fStatus === 'mo', onClick: () => setFStatus(v => v === 'mo' ? '' : 'mo'),
           })}
-          {DIE_STATUSES.map(s => chip(`${s.icon} ${s.label}`, counts.per[s.key] || 0, {
+          {DIE_STATUSES.map(s => chip(`${s.icon} ${tr(s.label)}`, counts.per[s.key] || 0, {
             color: s.color, active: fStatus === s.key, onClick: () => setFStatus(v => v === s.key ? '' : s.key),
           }))}
           {chip(`${DIE_STATUS_UNSET.icon} ${tr("ยังไม่ระบุ")}`, counts.unset, {

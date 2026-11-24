@@ -94,14 +94,14 @@ export default function IntegrationGuide() {
       </div>
 
       {STEPS.map((s, i) => (
-        <div key={s.title} style={{ ...card, display: 'grid', gridTemplateColumns: '44px minmax(0, 1fr)', gap: 12 }}>
+        <div key={tr(s.title)} style={{ ...card, display: 'grid', gridTemplateColumns: '44px minmax(0, 1fr)', gap: 12 }}>
           <div style={{ width: 36, height: 36, borderRadius: 999, background: 'var(--accent)', color: 'var(--bg)', display: 'grid', placeItems: 'center', fontSize: 17, fontWeight: 800 }}>{i + 1}</div>
           <div style={{ display: 'grid', gap: 6, minWidth: 0 }}>
             <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{tr(s.title)}</div>
             <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('ผู้ทำ:')} {tr(s.who)}</div>
             {s.lines && <ul style={{ margin: 0, paddingLeft: 20, display: 'grid', gap: 4, fontSize: 13, color: 'var(--text2)' }}>{s.lines.map(l => <li key={l}>{tr(l)}</li>)}</ul>}
             {s.groups && s.groups.map(g => (
-              <div key={g.head} style={{ display: 'grid', gap: 4 }}>
+              <div key={tr(g.head)} style={{ display: 'grid', gap: 4 }}>
                 <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>{tr(g.head)}</div>
                 <ul style={{ margin: 0, paddingLeft: 20, display: 'grid', gap: 4, fontSize: 13, color: 'var(--text2)' }}>{g.lines.map(l => <li key={l}>{tr(l)}</li>)}</ul>
               </div>

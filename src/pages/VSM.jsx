@@ -690,7 +690,7 @@ export default function VSM() {
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
             <thead><tr style={{ background: 'var(--bg2)' }}>
-              {['ขั้น', 'กระบวนการ', 'ไลน์', 'C/T (sec)', 'C/O (sec)', '%OEE', 'LOT', 'คน', 'คงคลังหลังขั้นนี้ (pcs)'].map(h =>
+              {[tr("ขั้น"), tr("กระบวนการ"), tr("ไลน์"), 'C/T (sec)', 'C/O (sec)', '%OEE', 'LOT', tr("คน"), tr("คงคลังหลังขั้นนี้ (pcs)")].map(h =>
                 <th key={h} style={{ padding: '7px 8px', fontSize: 11.5, color: 'var(--muted)', textAlign: 'left', whiteSpace: 'nowrap' }}>{tr(h)}</th>)}
             </tr></thead>
             <tbody>

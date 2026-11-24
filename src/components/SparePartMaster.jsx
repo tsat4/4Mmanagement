@@ -73,7 +73,7 @@ function RankChip({ rank, overridden, size = 'md' }) {
   const m = RANK_META[rank];
   const pad = size === 'sm' ? '1px 7px' : '2px 9px';
   return (
-    <span title={`Rank ${rank} · ${m.desc}${overridden ? tr(' (กำหนดเอง)') : ''}`}
+    <span title={`Rank ${rank} · ${tr(m.desc)}${overridden ? tr(' (กำหนดเอง)') : ''}`}
       style={{ display: 'inline-block', padding: pad, borderRadius: 'var(--r-xs)', background: m.bg, color: m.color, border: `1px solid ${m.color}`, fontSize: size === 'sm' ? 11 : 12, fontWeight: 800, whiteSpace: 'nowrap' }}>
       {tr(m.label)}{overridden ? ' ✎' : ''}
     </span>
@@ -523,7 +523,7 @@ function StockMoveModal({ part, type, fullName, onClose, onDone }) {
           {part.shelf ? ` · ${tr("ชั้นวาง")} ${part.shelf}` : ''}
         </div>
         <div style={{ display: 'grid', gap: 10 }}>
-          <Field label={tr(m.label)} required hint={m.note}>
+          <Field label={tr(m.label)} required hint={tr(m.note)}>
             <input type="number" min="0" step="any" autoFocus value={qty} onChange={e => setQty(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && valid && !notEnough && save()} style={inp} />
           </Field>
@@ -1074,7 +1074,7 @@ function ImportModal({ parts, cats, teams, fullName, ownOf = () => ({ ok: true }
     <div /* ⚠️ ฟอร์มกรอกข้อมูล — ไม่ปิดจาก backdrop กันเผลอแตะแล้วข้อมูลหาย (UI-CONVENTIONS §5) */  style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'grid', placeItems: 'center', zIndex: 2000, padding: 16 }}>
       <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(820px, 96vw)', maxHeight: '92vh', overflow: 'auto' }}>
         <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>📥 {tr(importLabel('spare'))}</div>
-        <div style={{ marginBottom: 10 }}><ImportInfo k="spare" sample={{ label: 'ดาวน์โหลดไฟล์ตัวอย่าง', onClick: template }} /></div>
+        <div style={{ marginBottom: 10 }}><ImportInfo k="spare" sample={{ label: tr("ดาวน์โหลดไฟล์ตัวอย่าง"), onClick: template }} /></div>
         <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 14 }}>
           {tr("รองรับ .xlsx / .csv · หัวคอลัมน์ไทยหรืออังกฤษก็ได้")} · <b>{tr('อัพโหลดไฟล์เดิมซ้ำได้เรื่อยๆ')}</b> {tr("ระบบจะอัพเดททับตามคีย์ ไม่สร้างรายการซ้ำ")}
         </div>

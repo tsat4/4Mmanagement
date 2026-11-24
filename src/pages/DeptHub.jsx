@@ -693,7 +693,7 @@ export default function DeptHub({ onLogout, theme, onToggleTheme, userFullName, 
                    — จางลง + `<หมวดบ้าน>` ท้ายชิป · ไม่งั้นการ์ดดูเหมือนเป็นเจ้าของหน้านั้นด้วย
                    แล้วคำถาม "หน้านี้อยู่หมวดไหน" มี 2 คำตอบ (24/09 · คำสั่ง user — ดู `isNavGuest`) */
                 const guest = isNavGuest(item, d.group);
-                const homeShort = NAV_GROUP_META[item.group]?.short || item.group;
+                const homeShort = tr(NAV_GROUP_META[item.group]?.short) || item.group;
                 return (
                   <button key={item.to} type="button" className="dept-chip"
                     title={guest ? `${tr("เปิด")} ${item.label} — ${tr("ทางลัด · เมนูนี้อยู่หมวด")} "${item.group}"` : `${tr("เปิด")} ${item.label}`}

@@ -950,7 +950,7 @@ export default function ScrapReport() {
               <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 820 }}>
                   <thead><tr>
-                    {['#', 'รูป', 'ชิ้นงาน', 'Code', 'จำนวน', 'ยืนยัน', 'สาเหตุ (4M)', 'ช่วง', 'รหัสงานเสีย'].map(h => <th key={h} style={thSt}>{tr(h)}</th>)}
+                    {['#', tr("รูป"), tr("ชิ้นงาน"), 'Code', tr("จำนวน"), tr("ยืนยัน"), tr("สาเหตุ (4M)"), tr("ช่วง"), tr("รหัสงานเสีย")].map(h => <th key={h} style={thSt}>{tr(h)}</th>)}
                   </tr></thead>
                   <tbody>
                     {its.map((it, i) => (

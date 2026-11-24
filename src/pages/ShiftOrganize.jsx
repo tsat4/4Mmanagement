@@ -1033,7 +1033,7 @@ export default function ShiftOrganize() {
                   options={employees.map(emp => {
                     /* 🔧🗂️ ติดป้ายกลุ่มให้คนที่ไม่ใช่หน้างาน — จอนี้เห็นครบทุกกลุ่มแล้ว (ไม่กรอง) ⇒ ต้องแยกออกด้วยตา */
                     const g = staffGroupOf(emp);
-                    const tag = g === STAFF_SHOPFLOOR ? '' : ` · ${STAFF_KINDS.find(k => k.key === g)?.label || ''}`;
+                    const tag = g === STAFF_SHOPFLOOR ? '' : ` · ${tr(STAFF_KINDS.find(k => k.key === g)?.label) || ''}`;
                     return { id: String(emp.id), label: `${emp.employee_id_code} — ${emp.name}${tag}`, keywords: emp.employee_id_code };
                   })}
                   onChange={({ id }) => setOvrEmpId(id)} />

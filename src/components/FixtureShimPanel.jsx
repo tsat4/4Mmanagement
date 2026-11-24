@@ -328,7 +328,7 @@ export default function FixtureShimPanel({
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                   <thead style={{ position: 'sticky', top: 0, background: 'var(--bg2)' }}>
                     <tr style={{ textAlign: 'left' }}>
-                      {['เมื่อ', 'ทำอะไร', 'ก่อน → หลัง', 'เหตุผล', 'ผู้ทำ', 'อนุมัติ'].map(h => (
+                      {[tr("เมื่อ"), tr("ทำอะไร"), tr("ก่อน → หลัง"), tr("เหตุผล"), tr("ผู้ทำ"), tr("อนุมัติ")].map(h => (
                         <th key={h} style={{ padding: '7px 10px' }}>{tr(h)}</th>
                       ))}
                     </tr>
@@ -345,7 +345,7 @@ export default function FixtureShimPanel({
                           {ev.plates_text && <span style={{ color: 'var(--muted)' }}> ({ev.plates_text})</span>}
                         </td>
                         <td style={{ padding: '6px 10px' }}>
-                          {SHIM_REASONS.find(r => r.key === ev.reason)?.label || ev.reason || '—'}
+                          {tr(SHIM_REASONS.find(r => r.key === ev.reason)?.label) || ev.reason || '—'}
                           {ev.note && <div style={{ color: 'var(--muted)', fontSize: 11 }}>{ev.note}</div>}
                         </td>
                         <td style={{ padding: '6px 10px' }}>{ev.by_name || '—'}</td>

@@ -408,7 +408,7 @@ function ProductionView({ d, ctx }) {
     </Section>
 
     <ParetoAbcChart title={tr('Downtime นอกแผน 7 วัน (ABC)')} records={dtRecords} unit={tr("นาที")}
-      dims={[{ key: 'machine', label: 'เครื่องจักร' }, { key: 'line', label: 'ไลน์' }, { key: 'shift', label: 'กะ' }, { key: 'date', label: 'วัน' }, { key: 'note', label: 'หมายเหตุ', cluster: true }]}
+      dims={[{ key: 'machine', label: tr("เครื่องจักร") }, { key: 'line', label: tr("ไลน์") }, { key: 'shift', label: tr("กะ") }, { key: 'date', label: tr("วัน") }, { key: 'note', label: tr("หมายเหตุ"), cluster: true }]}
       sectionStyle={cardSt} emptyText={tr('ไม่มี downtime นอกแผนใน 7 วัน')} />
 
     <Section title={tr('ทางลัด')}>
@@ -883,7 +883,7 @@ function QaView({ d, ctx }) {
     </div>
 
     <ParetoAbcChart title={tr('ของเสีย 7 วัน แยกตามประเภท (ABC)')} records={defRecords} unit={tr("ชิ้น")}
-      dims={[{ key: 'line', label: 'ไลน์' }, { key: 'product', label: 'ชิ้นงาน' }, { key: 'shift', label: 'กะ' }, { key: 'date', label: 'วัน' }, { key: 'note', label: 'หมายเหตุ', cluster: true }]}
+      dims={[{ key: 'line', label: tr("ไลน์") }, { key: 'product', label: tr("ชิ้นงาน") }, { key: 'shift', label: tr("กะ") }, { key: 'date', label: tr("วัน") }, { key: 'note', label: tr("หมายเหตุ"), cluster: true }]}
       sectionStyle={cardSt} emptyText={tr('ไม่มีบันทึกของเสียใน 7 วัน — ตรวจสอบว่าลงบันทึกครบหรือยัง')} />
 
     <Section title={tr('ทางลัด')}>
@@ -1012,7 +1012,7 @@ export default function DeptDashboard({ embedded = false, tabs, tab: hubTab, onT
           filters={view === 'now' ? (<>
             <span className="filter-label">{tr('มุมมอง')}</span>
             <Segmented label={tr('มุมมองฝ่าย')} value={dept} onChange={setDept}
-              options={DEPTS.map(t => ({ value: t.key, label: `${t.icon} ${t.label}` }))} />
+              options={DEPTS.map(t => ({ value: t.key, label: `${t.icon} ${tr(t.label)}` }))} />
             <span className="spacer" />
             {/* 📺 จอเฝ้าระวังย้ายไปหน้า `/tv` แล้ว (nav audit 2026-08-28) — ปุ่มนี้คงทางเข้าเดิมไว้ (ห้ามตัดทางออกของใคร) */}
             <button className="ctl-btn" onClick={() => navigate(`/tv?dept=${dept === 'store' ? 'store' : dept === 'production' ? 'production' : 'maintenance'}`)}

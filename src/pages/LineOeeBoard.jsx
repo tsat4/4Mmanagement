@@ -594,7 +594,7 @@ export default function LineOeeBoard() {
               {!C.history.length ? <div style={{ fontSize: T(12.5, 24), color: 'var(--muted)', padding: '26px 0', textAlign: 'center' }}>{tr('ไม่มีรายการหยุดในช่วงนี้')}</div> : (
                 <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 4, ...(tv ? { tableLayout: 'fixed' } : {}) }}>
                   {tv && <colgroup><col style={{ width: '22%' }} /><col /><col style={{ width: '16%' }} /><col style={{ width: '11%' }} /><col style={{ width: '20%' }} /></colgroup>}
-                  <thead><tr>{['เวลา', 'รายการ', 'เครื่อง', 'นาที', 'สถานะ'].map(h => (
+                  <thead><tr>{[tr("เวลา"), tr("รายการ"), tr("เครื่อง"), tr("นาที"), tr("สถานะ")].map(h => (
                     <th key={h} style={{ fontSize: T(11, 20), color: 'var(--muted)', textAlign: 'left', padding: tv ? '4px 6px' : '3px 6px', borderBottom: '1px solid var(--border2)' }}>{tr(h)}</th>))}
                   </tr></thead>
                   {/* จอประชุม: 5 แถวล่าสุด ตัวใหญ่ · ตัดคำอธิบายย่อย (คนยืนห่าง 2–3 ม. อ่านไม่ทัน) */}
@@ -627,7 +627,7 @@ export default function LineOeeBoard() {
                                "ยังหยุดอยู่" (กระพริบค้างเป็นเดือน) และห้ามแปลงเป็น "กลับมาแล้ว" (ไม่มีใครไปตามปิด) */
                             : kind === 'forgotten'
                               ? <b style={{ color: meta.color }} title={`${tr("กะ")} ${d2._sessStatus === 'closed' ? tr('ปิดแล้ว') : d2._sessStatus} ${tr("แต่รายการนี้ยังไม่ถูกปิด — นาทีที่หยุดไม่ได้ถูกหักใน %A ของกะนั้น")}`}>
-                                  {meta.icon} {tv ? tr(meta.short) : meta.text}
+                                  {meta.icon} {tv ? tr(meta.short) : tr(meta.text)}
                                 </b>
                               : <span style={{ color: 'var(--green)' }}>{tv ? tr('✓ กลับมา') : tr('✓ กลับมาแล้ว')}</span>}
                           {d2.call_mtn && <span style={{ color: 'var(--amber)' }}> 📞</span>}

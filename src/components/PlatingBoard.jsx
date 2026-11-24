@@ -388,15 +388,15 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
             <PartCard key={o.id} code={o.after_mat} name={o.part_name} img={imgOf(o.after_mat) || imgOf(o.before_mat)} alert={zone === 'late'}
               status={isOpen ? (zone === 'late' ? { label: '⏰ เกินกำหนด', color: '#ef4444' } : { label: 'ที่ร้าน', color: '#06b6d4' }) : { label: '✅ ปิดแล้ว', color: '#22c55e' }}
               metric={{ label: isOpen ? 'ค้างที่ร้าน' : 'รับกลับแล้ว', value: fmt(isOpen ? open : o.qty_received), unit: 'ชิ้น' }}
-              aside={{ label: 'ร้าน', value: o.vendor }}
+              aside={{ label: tr("ร้าน"), value: o.vendor }}
               dim={!isOpen}
               rows={[
-                { k: 'ส่งไปเป็น', v: o.before_mat },
-                { k: 'ส่ง / รับแล้ว', v: `${fmt(o.qty_sent)} / ${fmt(o.qty_received)}${Number(o.qty_written_off) > 0 ? ` · ${tr("ตัด")} ${fmt(o.qty_written_off)}` : ''}` },
-                { k: 'ส่งเมื่อ', v: `${dmy(o.sent_at)}${age != null ? ` · ${age} ${tr("วันที่แล้ว")}` : ''}${o.sent_by_name ? ` · ${o.sent_by_name}` : ''}` },
-                { k: 'ใบส่งของ', v: o.doc_no },
-                { k: 'รับเข้า', v: isOpen ? (toLoc || '⚠ ไม่มีกฎรับเข้าคลัง') : null },
-                { k: 'ปิดใบ', v: !isOpen ? `${dmy(o.closed_at)} · ${o.closed_reason || o.status}` : null },
+                { k: tr("ส่งไปเป็น"), v: o.before_mat },
+                { k: tr("ส่ง / รับแล้ว"), v: `${fmt(o.qty_sent)} / ${fmt(o.qty_received)}${Number(o.qty_written_off) > 0 ? ` · ${tr("ตัด")} ${fmt(o.qty_written_off)}` : ''}` },
+                { k: tr("ส่งเมื่อ"), v: `${dmy(o.sent_at)}${age != null ? ` · ${age} ${tr("วันที่แล้ว")}` : ''}${o.sent_by_name ? ` · ${o.sent_by_name}` : ''}` },
+                { k: tr("ใบส่งของ"), v: o.doc_no },
+                { k: tr("รับเข้า"), v: isOpen ? (toLoc || '⚠ ไม่มีกฎรับเข้าคลัง') : null },
+                { k: tr("ปิดใบ"), v: !isOpen ? `${dmy(o.closed_at)} · ${o.closed_reason || o.status}` : null },
               ]}
               footer={isOpen && canReceive ? (editing ? (
                 <div style={{ display: 'grid', gap: 8 }}>
@@ -452,7 +452,7 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
                   rows={[
                     ...direct.map(t => ({ k: 'แปลงเป็น', v: `${t.fg} ${t.name}${t.qpu !== 1 ? ` (${tr("ใช้")} ${t.qpu} ${tr("ต่อ")} 1)` : ''}` })),
                     ...asm.map(t => ({ k: 'ประกอบที่', v: `${t.line || tr('ไลน์ (ยังไม่ระบุ)')} → ${t.fg}` })),
-                    { k: 'หมายเหตุ', v: a.targets.length ? null : 'ยังไม่มี FG ใช้เลขนี้ใน BOM' },
+                    { k: tr("หมายเหตุ"), v: a.targets.length ? null : 'ยังไม่มี FG ใช้เลขนี้ใน BOM' },
                   ]}
                   footer={direct.length > 0 && canToWh ? (
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>

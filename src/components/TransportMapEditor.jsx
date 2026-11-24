@@ -513,7 +513,7 @@ export default function TransportMapEditor() {
                     → เลือกจากทะเบียนไลน์ + คลังกลาง/โซนคลังเท่านั้น (2026-09-07 แทน datalist พิมพ์เอง) */}
                 <LineSelect lines={lines} value={selNode.line_name || ''} onChange={v => patchNode(selNode.id, { line_name: v || null })}
                   placeholder={tr('— ไม่ผูก —')} style={inp}
-                  extraGroups={[{ label: 'คลัง / โซนคลัง', options: [...new Set([...WAREHOUSE_LOCATIONS, ...storeZoneNames])].map(n => ({ value: n })) }]} />
+                  extraGroups={[{ label: tr("คลัง / โซนคลัง"), options: [...new Set([...WAREHOUSE_LOCATIONS, ...storeZoneNames])].map(n => ({ value: n })) }]} />
               </FieldLbl>
               <label style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--text2)', margin: '6px 0', cursor: 'pointer' }}>
                 <input type="checkbox" checked={selNode.is_active !== false} onChange={e => patchNode(selNode.id, { is_active: e.target.checked })} style={{ width: 'auto' }} /> {tr('ใช้งาน')}

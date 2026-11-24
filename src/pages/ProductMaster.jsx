@@ -953,7 +953,7 @@ export default function ProductMaster() {
       <FilterBar style={{ marginBottom: 16 }}>
         {/* 2026-09-07: กรองไลน์ผ่าน <LineSelect> (ลำดับชั้น/ตัดปลดระวาง) แทนลิสต์แบนจากแถวสินค้า */}
         <LineSelect lines={lines} value={lineFilter} onChange={setLineFilter} placeholder={ALL.line}
-          extraGroups={[{ label: 'ไม่มีในทะเบียนไลน์', options: orphanLineOpts }]} />
+          extraGroups={[{ label: tr("ไม่มีในทะเบียนไลน์"), options: orphanLineOpts }]} />
         {/* ✅ ตัวกรองความครบ (2026-09-22) — แยก "บังคับแล้ว" กับ "อนาคตบังคับ" คนละตัวเลือก
             ถ้ารวมเป็นตัวเดียว = เกือบทั้งฐานเด้งขึ้นมา (101 ตัวยังไม่มี routing · 106 ยังไม่มี packaging)
             ⇒ ตัวกรองที่ไม่เคยกรองอะไรออก = คนเลิกใช้ */}
@@ -1058,7 +1058,7 @@ export default function ProductMaster() {
             background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text2)' }}>{tr('✅ ความครบข้อมูล (')}{rs.length} {tr("สินค้าที่ใช้งาน")})</span>
             <TabBar size="sm" value={readyFilter || ''} onChange={k => setReadyFilter(k)} style={{ flex: 1, minWidth: 260 }}
-              tabs={[{ key: '', label: 'ทั้งหมด' }, { key: 'req', label: 'ยังขาด (บังคับแล้ว)', badge: need }, { key: 'any', label: 'รอ Routing/Packaging', badge: wait }]} />
+              tabs={[{ key: '', label: tr("ทั้งหมด") }, { key: 'req', label: tr("ยังขาด (บังคับแล้ว)"), badge: need }, { key: 'any', label: tr("รอ Routing/Packaging"), badge: wait }]} />
             <span style={{ fontSize: 12, color: 'var(--green)', fontWeight: 700 }}>{tr('ครบ')} {full}</span>
             <InfoMore label={tr('ลำดับที่ต้องทำ')} size={11.5}>
               {tr("ลำดับที่ต้องทำ")}: Material Master → BOM → Production → Routing → Packaging → Kanban
@@ -1636,9 +1636,9 @@ export default function ProductMaster() {
           help={tr('คอลัมน์ customer ของสินค้า/เอกสารเก็บชื่อนี้เป็น text · alias ใช้แม็ปสะกดเก่าเข้าชื่อหลัก · ปิดใช้ = ไม่โผล่ให้เลือกใหม่')}
           keyFrom={r => String(r.name || '').trim().toUpperCase().replace(/\s+/g, ' ')}
           fields={[
-            { key: 'name', label: 'ชื่อลูกค้า (สะกดหลัก)', required: true },
-            { key: 'aliases', label: 'สะกดอื่นที่เคยใช้', type: 'tags', placeholder: 'คั่นด้วย , เช่น FVL, F.V.L.' },
-            { key: 'note', label: 'หมายเหตุ' },
+            { key: 'name', label: tr("ชื่อลูกค้า (สะกดหลัก)"), required: true },
+            { key: 'aliases', label: tr("สะกดอื่นที่เคยใช้"), type: 'tags', placeholder: 'คั่นด้วย , เช่น FVL, F.V.L.' },
+            { key: 'note', label: tr("หมายเหตุ") },
           ]} />
       )}
       {mainTab === 'suppliers' && (
@@ -1649,12 +1649,12 @@ export default function ProductMaster() {
           help={tr('ใช้กับช่อง Supplier ใน Material Master · Packaging · Routing (จ้างนอก) · คลังอะไหล่ · NPI Tooling — คอลัมน์ปลายทางเก็บชื่อเป็น text · ชนิด (kind) ช่วยจัดลำดับตัวเลือกให้ตรงงาน · ปิดใช้ = ไม่โผล่ให้เลือกใหม่')}
           keyFrom={r => String(r.name || '').trim().toUpperCase().replace(/\s+/g, ' ')}
           fields={[
-            { key: 'name', label: 'ชื่อ Supplier', required: true },
-            { key: 'kind', label: 'ชนิด', type: 'select', required: true, options: Object.entries(SUPPLIER_KINDS).map(([value, k]) => ({ value, label: `${k.icon} ${k.label}` })), width: 150 },
-            { key: 'contact', label: 'ผู้ติดต่อ' },
-            { key: 'phone', label: 'โทร', width: 120 },
-            { key: 'lead_time_days', label: 'Lead time (วัน)', type: 'number', width: 100 },
-            { key: 'note', label: 'หมายเหตุ' },
+            { key: 'name', label: tr("ชื่อ Supplier"), required: true },
+            { key: 'kind', label: tr("ชนิด"), type: 'select', required: true, options: Object.entries(SUPPLIER_KINDS).map(([value, k]) => ({ value, label: `${k.icon} ${k.label}` })), width: 150 },
+            { key: 'contact', label: tr("ผู้ติดต่อ") },
+            { key: 'phone', label: tr("โทร"), width: 120 },
+            { key: 'lead_time_days', label: tr("Lead time (วัน)"), type: 'number', width: 100 },
+            { key: 'note', label: tr("หมายเหตุ") },
           ]} />
       )}
       {/* 📏 ทะเบียนหน่วยนับ (05/11 · คำสั่ง user) — parts_master.uom / bom_items.uom / material_request_items.unit
@@ -1667,9 +1667,9 @@ export default function ProductMaster() {
           help={tr('ใช้กับช่องหน่วยใน Material Master · นำเข้า BOM จาก SAP · ใบเบิกวัสดุ — คอลัมน์ปลายทางเก็บรหัสนี้เป็น text · สะกดอื่น (เช่น EA, PCS ของ PC) ถูกแม็ปเข้ารหัสหลักตอนบันทึก/นำเข้า')}
           /* รหัสกรอกเอง (PC/KG…) — DB บังคับตัวพิมพ์ใหญ่ไม่มีช่องว่าง (CHECK uom_units_code_upper) */
           fields={[
-            { key: 'name', label: 'ชื่อหน่วย', required: true },
-            { key: 'aliases', label: 'สะกดอื่นที่แม็ปเข้ารหัสนี้', type: 'tags', placeholder: 'คั่นด้วย , เช่น EA, PCS' },
-            { key: 'note', label: 'หมายเหตุ' },
+            { key: 'name', label: tr("ชื่อหน่วย"), required: true },
+            { key: 'aliases', label: tr("สะกดอื่นที่แม็ปเข้ารหัสนี้"), type: 'tags', placeholder: 'คั่นด้วย , เช่น EA, PCS' },
+            { key: 'note', label: tr("หมายเหตุ") },
           ]} />
       )}
       {mainTab === 'export' && <ExportPanel />}
@@ -3391,7 +3391,7 @@ function BOMPanel({ canCreate, canEdit, mayDelete, fullName, guard }) {
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead><tr style={{ position: 'sticky', top: 0, background: 'var(--bg2)' }}>
                     {/* ลำดับคอลัมน์ตามกฎ 30/09: Part Name ก่อน MAT SAP (เลข MAT เป็นรหัสภายใน) */}
-                    {['', 'ชั้น', 'ITEM', 'รายละเอียด', 'Part No. (เสนอ)', 'MAT SAP', 'จำนวน', 'หน่วย', 'QTY/PKG', 'ลงใบ', 'Prod.SLoc', 'Stor.Loc'].map(h =>
+                    {['', tr("ชั้น"), 'ITEM', tr("รายละเอียด"), tr("Part No. (เสนอ)"), 'MAT SAP', tr("จำนวน"), tr("หน่วย"), 'QTY/PKG', tr("ลงใบ"), 'Prod.SLoc', 'Stor.Loc'].map(h =>
                       <th key={h} style={{ ...cell, textAlign: 'left', fontWeight: 700, color: 'var(--muted)' }}>{tr(h)}</th>)}
                   </tr></thead>
                   <tbody>
@@ -4310,8 +4310,8 @@ function PackagingPanel({ canCreate, canEdit, mayDelete, fullName }) {
                 title={tr('ประเภทภาชนะ')} maxHeight={220}
                 help={tr('ตัวเลือกช่อง \'ประเภท\' ด้านบน — รหัสตัวพิมพ์ใหญ่ (เช่น BOX, RACK)')}
                 fields={[
-                  { key: 'name', label: 'ชื่อประเภท', required: true },
-                  { key: 'note', label: 'หมายเหตุ' },
+                  { key: 'name', label: tr("ชื่อประเภท"), required: true },
+                  { key: 'note', label: tr("หมายเหตุ") },
                 ]} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
@@ -4416,7 +4416,7 @@ function KanbanStdPanel({ canEdit, fullName }) {
             <thead>
               <tr style={{ background: 'var(--bg2)' }}>
                 {/* ยุบ "Part Name + Mat No." เป็นคอลัมน์เดียว — <MatLabel> ให้ครบ Part No./ชื่อ/MAT (30/09) */}
-                {['ชิ้นงาน', 'Supplier', 'UOM', 'Qty/Pkg', 'Qty/Kanban', 'Min', 'Max', 'Lot size', 'อัปเดต'].map(h => (
+                {[tr("ชิ้นงาน"), 'Supplier', 'UOM', 'Qty/Pkg', 'Qty/Kanban', 'Min', 'Max', 'Lot size', tr("อัปเดต")].map(h => (
                   <th key={h} style={{ padding: '9px 14px', fontSize: 11, fontWeight: 800, color: 'var(--muted)', textAlign: 'left', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>{tr(h)}</th>
                 ))}
                 {canEdit && <th style={{ padding: '9px 14px', width: 80 }}></th>}

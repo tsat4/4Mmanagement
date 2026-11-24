@@ -197,7 +197,7 @@ export default function KpiBaseImportModal({ year, unitLabel, unitSk, base, canP
                         <input type="checkbox" checked={!!on[v.key] && ok && row != null} disabled={!ok || row == null} onChange={e => setOn(p => ({ ...p, [v.key]: e.target.checked }))} />
                       </td>
                       <td style={{ ...td, textAlign: 'left', whiteSpace: 'normal', minWidth: 190 }}>
-                        <b>{tr(v.label)}</b> <span style={{ color: 'var(--muted)' }}>({v.unit})</span>
+                        <b>{tr(v.label)}</b> <span style={{ color: 'var(--muted)' }}>({tr(v.unit)})</span>
                         <div style={{ fontSize: 11, color: ok ? 'var(--muted)' : '#f59e0b' }}>→ {targetOf(v)}{!ok ? (v.level === 'plant' ? tr(" · นำเข้าได้เฉพาะตอนดู ทั้งโรงงาน") : tr(" · ไม่มีสิทธิ์เขียนขอบเขตนี้")) : ''}</div>
                       </td>
                       <td style={{ ...td, textAlign: 'left' }}>
