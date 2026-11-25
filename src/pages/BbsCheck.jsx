@@ -49,6 +49,7 @@ import { tr } from '../utils/i18n';
 import { pickSignerPatch } from '../utils/selfSign';
 import { createBurstTracker, normScanCode } from '../utils/scanWedge';   // 🔫 แยก "สแกนบัตร" ออกจาก "พิมพ์รหัส" (A6 · 24/11)
 import { askConfirm } from '../utils/askConfirm';
+import { notifyEvent } from '../utils/notifyEvent';   // 🔔 25/11: พบพฤติกรรมไม่ปลอดภัย = แจ้ง (เดิมเงียบ)
 /* ⚠️ ห้าม import SHIFT_OPTIONS มาใช้ที่นี่ (เคยพลาดมาแล้ว — ดูหัวข้อ SHEET_SHIFT_OPTIONS ด้านล่าง) */
 
 const thisMonth = () => {
@@ -326,6 +327,28 @@ export default function BbsCheck() {
       .upsert(payload, { onConflict: 'sheet_id,employee_id,day' }).select().single();
     if (error) return toast.error(`${tr("บันทึกไม่สำเร็จ")}: ${error.message}`);
     setCells(c => ({ ...c, [key]: data }));
+    /* 🔔 25/11 (คำสั่ง user "BBS แจ้งเตือนด้วย"): ทาช่อง "ไม่เหมาะสม" = แจ้งทันที — เฉพาะตอนเป็นของใหม่
+       (เดิมไม่ใช่ ng หรือเปลี่ยนเลขข้อ) · ทาซ้ำ/แก้ช่องเดิม = ไม่ยิงซ้ำ · ผู้รับตามทะเบียน `bbs_unsafe` */
+    if (brush === 'ng' && !(cur?.mark === 'ng' && cur?.agreement_seq === brushSeq)) {
+      notifyBbsUnsafe([{ name: emp.name, day, seq: brushSeq }]);
+    }
+  };
+
+  /** 🔔 แจ้ง `bbs_unsafe` 1 การ์ดต่อการบันทึก (ทาช่องเดียว หรือเติมอัตโนมัติหลายช่อง = รวมใบเดียว) */
+  const notifyBbsUnsafe = (items) => {
+    if (!items.length || !lineObj?.name) return;
+    const agText = (seq) => agreements.find(a => a.seq === seq)?.text || '';
+    notifyEvent({
+      event: 'bbs_unsafe', type: 'error', ref_table: 'bbs_sheets',
+      line_name: lineObj.name, actor: fullName,
+      link: `/daily-checker?tab=bbs`,
+      title: `🦺 BBS พบพฤติกรรมไม่ปลอดภัย ${items.length} ช่อง — ${lineObj.name}`,
+      lines: [
+        `🏭 ${tr("ไลน์")}: ${lineObj.name} · 📅 ${month}`,
+        ...items.slice(0, 8).map(it => `  • ${it.name || '-'} (${tr("วันที่")} ${it.day}) — ${tr("ข้อ")} ${it.seq ?? '-'} ${agText(it.seq)}`.trim()),
+        items.length > 8 ? `  • …${tr("และอีก")} ${items.length - 8} ${tr("ช่อง")}` : '',
+      ],
+    });
   };
 
   /* ── หมายเหตุท้ายแถว (คอลัมน์ "หมายเหตุ" ในใบกระดาษ) ── */
@@ -410,6 +433,10 @@ export default function BbsCheck() {
         return n;
       });
       const ng = rows.filter(r => r.mark === 'ng').length;
+      // 🔔 25/11: ช่อง "ไม่สวม PPE" ที่เพิ่งเติม (ไม่ใช่ ng เดิมอยู่แล้ว) = แจ้งรวมใบเดียว
+      const empName = (id) => emps.find(e => e.id === id)?.name;
+      const newNg = rows.filter(r => r.mark === 'ng' && cells[cellKey(r.employee_id, r.day)]?.mark !== 'ng');
+      notifyBbsUnsafe(newNg.map(r => ({ name: empName(r.employee_id), day: r.day, seq: r.agreement_seq })));
       toast.success(`${tr("เติม")} ${data?.length ?? 0} ${tr("ช่อง (พบไม่สวม")} PPE ${ng} ${tr("ช่อง")})`
         + (skipManual ? ` · ${tr("ข้ามของที่กรอกเอง")} ${skipManual} ${tr("ช่อง")}` : ''));
     } finally { setBusy(false); }
