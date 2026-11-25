@@ -8,10 +8,11 @@ let state = {};                 // `${path}|${tab}` → { query, items }
 const subs = new Set();
 const emit = () => subs.forEach(fn => fn());
 
-export function setNavSubItems(path, tab, query, items) {
+export function setNavSubItems(path, tab, query, items, opts) {
   const k = `${path}|${tab}`;
   if (!items) { if (!(k in state)) return; const { [k]: _drop, ...rest } = state; state = rest; emit(); return; }
-  state = { ...state, [k]: { query, items } };
+  // `all:false` (25/11 หน้ากิจกรรม) = รายการเป็น "ส่วนของหน้า" ไม่ใช่ตัวกรอง ⇒ ไม่มีปุ่ม "ทั้งหมด" · ไม่เลือก = ตัวแรก
+  state = { ...state, [k]: { query, items, all: opts?.all !== false } };
   emit();
 }
 
@@ -20,10 +21,10 @@ export function useNavSubItemsStore() {
 }
 
 /* `items` ต้องเป็นค่าที่ useMemo แล้ว · ส่ง null = ไม่มีชั้นที่ 3 ตอนนี้ */
-export function useNavSubItems(path, tab, query, items) {
+export function useNavSubItems(path, tab, query, items, opts) {
   const sig = items ? items.map(i => `${i.key}\u0001${i.label}`).join('\u0002') : null;
   useEffect(() => {
-    setNavSubItems(path, tab, query, items);
+    setNavSubItems(path, tab, query, items, opts);
     return () => setNavSubItems(path, tab, query, null);
-  }, [path, tab, query, sig]);   // eslint-disable-line react-hooks/exhaustive-deps
+  }, [path, tab, query, sig, opts?.all]);   // eslint-disable-line react-hooks/exhaustive-deps
 }
