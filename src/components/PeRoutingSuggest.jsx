@@ -148,7 +148,7 @@ export default function PeRoutingSuggest({ set, procs, lines = [], onClose }) {
           <span style={{ color: 'var(--muted)' }}>
             {how === 'set_mat' ? tr(" (จากชุดเอกสาร)") : how === 'p_no' ? ` (${tr("จับคู่")} p_no ${set.part_no})` : ''}
           </span>
-          {!matched && <span style={{ color: '#f59e0b' }}> {tr('· ⚠ เลขนี้ยังไม่มีใน Product Master — ใบ VSM จะยังเลือกไม่ได้จนกว่าจะเพิ่มสินค้า')}</span>}
+          {!matched && <span style={{ color: 'var(--amber)' }}> {tr('· ⚠ เลขนี้ยังไม่มีใน Product Master — ใบ VSM จะยังเลือกไม่ได้จนกว่าจะเพิ่มสินค้า')}</span>}
         </div>
 
         {existing.length > 0 && (
@@ -158,7 +158,7 @@ export default function PeRoutingSuggest({ set, procs, lines = [], onClose }) {
           </div>
         )}
         {included > 10 && (
-          <div style={{ fontSize: 11.5, color: '#f59e0b', marginBottom: 8 }}>
+          <div style={{ fontSize: 11.5, color: 'var(--amber)', marginBottom: 8 }}>
             {tr("ติ๊กไว้")} {included} {tr("ขั้น — ใบ VSM ที่อ่านง่ายมักมี 5–8 กล่อง ลองติ๊กออกขั้นย่อย (เช่นจุดตรวจ/สปอตซ้ำๆ) ให้เหลือขั้นหลัก")}
           </div>
         )}

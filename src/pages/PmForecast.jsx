@@ -231,7 +231,7 @@ export default function PmForecast() {
         </div>
       )}
       {partErr && !loadErr && (
-        <div role="alert" style={{ padding: '8px 12px', borderRadius: 'var(--r-md)', border: '1px solid #f59a3f', color: '#f59a3f', fontSize: 12.5, fontWeight: 700 }}>
+        <div role="alert" style={{ padding: '8px 12px', borderRadius: 'var(--r-md)', border: '1px solid #f59a3f', color: 'var(--amber)', fontSize: 12.5, fontWeight: 700 }}>
           ⚠️ {tr("โหลด")} {partErr} {tr("ไม่สำเร็จ — อัตรา/วันทุกแถวถอยไปใช้ยอดผลิตจริง 30 วันแทน")} forecast
         </div>
       )}
@@ -249,10 +249,10 @@ export default function PmForecast() {
         </select>
         <SearchInput value={fQ} onChange={setFQ} fields={tr("ไลน์ / อุปกรณ์")} />
         <span className="filter-count">{tr('แสดง')} {shown.length} {tr('จาก')} {rows.length}</span>
-        {droppedNoLine > 0 && <span className="filter-count" style={{ color: '#f59a3f' }} title={tr('ชื่อไลน์ของแผนไม่ตรงทะเบียนไลน์ผลิต — กรองตามไลน์ไม่ได้')}>{tr('⚠ อีก')} {droppedNoLine} {tr('แผนไลน์ไม่ตรงทะเบียน')}</span>}
+        {droppedNoLine > 0 && <span className="filter-count" style={{ color: 'var(--amber)' }} title={tr('ชื่อไลน์ของแผนไม่ตรงทะเบียนไลน์ผลิต — กรองตามไลน์ไม่ได้')}>{tr('⚠ อีก')} {droppedNoLine} {tr('แผนไลน์ไม่ตรงทะเบียน')}</span>}
         {filtered && <button type="button" onClick={clearFilters} style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', color: 'var(--text2)', borderRadius: 'var(--r-md)', padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}>{tr('ล้างตัวกรอง')}</button>}
         <span className="spacer" />
-        {noLineN > 0 && <span className="filter-count" title={tr('แผนที่ทั้งตัวแผน (usage_source_line) และเครื่อง (line_name) ไม่มีไลน์ — คิดยอดผลิต/วัน PM ไม่ได้ ไปตั้งไลน์ให้เครื่องที่ทะเบียนอุปกรณ์')} style={{ color: '#f59a3f', fontWeight: 700 }}>⚠ {noLineN} {tr('แผนไม่มีไลน์ — ไม่แสดง')}</span>}
+        {noLineN > 0 && <span className="filter-count" title={tr('แผนที่ทั้งตัวแผน (usage_source_line) และเครื่อง (line_name) ไม่มีไลน์ — คิดยอดผลิต/วัน PM ไม่ได้ ไปตั้งไลน์ให้เครื่องที่ทะเบียนอุปกรณ์')} style={{ color: 'var(--amber)', fontWeight: 700 }}>⚠ {noLineN} {tr('แผนไม่มีไลน์ — ไม่แสดง')}</span>}
         {totalBuffer > 0 && <span className="filter-count" style={{ color: 'var(--accent2)', fontWeight: 700 }}>{tr('Σ buffer ที่ต้องเตรียม ≈')} {totalBuffer.toLocaleString()} {tr('ชิ้น')}</span>}
       </FilterBar>
 

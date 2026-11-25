@@ -87,12 +87,12 @@ export default function PartLevelCoveragePanel() {
       </div>
 
       {loadErr.length > 0 && (
-        <div style={{ ...card, padding: '10px 14px', borderColor: '#ef4444', color: '#ef4444', fontSize: 12, fontWeight: 700 }}>
+        <div style={{ ...card, padding: '10px 14px', borderColor: '#ef4444', color: 'var(--red)', fontSize: 12, fontWeight: 700 }}>
           ⚠ {tr("โหลดไม่ครบ")}: {loadErr.join(' · ')} — {tr("ตัวเลขข้างล่างอาจต่ำกว่าจริง (กดรีเฟรชหน้าอีกครั้ง")})
         </div>
       )}
       {data?.linesUnknown && (
-        <div style={{ ...card, padding: '10px 14px', borderColor: '#f59e0b', color: '#f59e0b', fontSize: 12, fontWeight: 700 }}>
+        <div style={{ ...card, padding: '10px 14px', borderColor: '#f59e0b', color: 'var(--amber)', fontSize: 12, fontWeight: 700 }}>
           ⚠ {tr("อ่านทะเบียนไลน์ไม่ได้ — แยก “ไลน์ผลิต” ออกจาก “คลัง” ไม่ได้ จึงแสดงทุกชื่อปลายทางไปก่อน")}
         </div>
       )}
@@ -143,9 +143,9 @@ export default function PartLevelCoveragePanel() {
                   </div>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                     {done
-                      ? <span style={{ fontSize: 11, padding: '2px 9px', borderRadius: 'var(--r-md)', background: 'rgba(34,197,94,0.12)', color: '#22c55e', fontWeight: 700 }}>{tr('✅ ตั้งครบ')} {g.consume} {tr('พาร์ท')}</span>
-                      : <span style={{ fontSize: 11, padding: '2px 9px', borderRadius: 'var(--r-md)', background: 'rgba(239,68,68,0.12)', color: '#ef4444', fontWeight: 700 }}>{tr('🔴 ยังไม่ตั้ง')} {g.unwatched} / {g.consume} {tr('พาร์ท')}</span>}
-                    {g.rowNoMin > 0 && <span style={{ fontSize: 11, padding: '2px 9px', borderRadius: 'var(--r-md)', background: 'rgba(245,158,11,0.12)', color: '#f59e0b', fontWeight: 700 }}>🟡 {g.rowNoMin} {tr('แถวไม่ใส่ min')}</span>}
+                      ? <span style={{ fontSize: 11, padding: '2px 9px', borderRadius: 'var(--r-md)', background: 'rgba(34,197,94,0.12)', color: 'var(--green)', fontWeight: 700 }}>{tr('✅ ตั้งครบ')} {g.consume} {tr('พาร์ท')}</span>
+                      : <span style={{ fontSize: 11, padding: '2px 9px', borderRadius: 'var(--r-md)', background: 'rgba(239,68,68,0.12)', color: 'var(--red)', fontWeight: 700 }}>{tr('🔴 ยังไม่ตั้ง')} {g.unwatched} / {g.consume} {tr('พาร์ท')}</span>}
+                    {g.rowNoMin > 0 && <span style={{ fontSize: 11, padding: '2px 9px', borderRadius: 'var(--r-md)', background: 'rgba(245,158,11,0.12)', color: 'var(--amber)', fontWeight: 700 }}>🟡 {g.rowNoMin} {tr('แถวไม่ใส่ min')}</span>}
                     {g.produce > 0 && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('ผลิตเอง')} {g.produce}</span>}
                   </div>
                 </div>
@@ -170,10 +170,10 @@ export default function PartLevelCoveragePanel() {
                           </td>
                           <td style={{ padding: '9px 14px', borderTop: '1px solid var(--border)', fontSize: 11.5 }}>
                             {p.watched
-                              ? <span style={{ color: '#22c55e', fontWeight: 700 }}>{tr('✅ ตั้งแล้ว')}</span>
+                              ? <span style={{ color: 'var(--green)', fontWeight: 700 }}>{tr('✅ ตั้งแล้ว')}</span>
                               : p.hasRowNoMin
-                                ? <span style={{ color: '#f59e0b', fontWeight: 700 }}>{tr('🟡 มีแถวแต่ไม่ได้ใส่ min — ระบบไม่เตือน')}</span>
-                                : <span style={{ color: '#ef4444', fontWeight: 700 }}>{tr('🔴 ยังไม่ตั้ง')}</span>}
+                                ? <span style={{ color: 'var(--amber)', fontWeight: 700 }}>{tr('🟡 มีแถวแต่ไม่ได้ใส่ min — ระบบไม่เตือน')}</span>
+                                : <span style={{ color: 'var(--red)', fontWeight: 700 }}>{tr('🔴 ยังไม่ตั้ง')}</span>}
                           </td>
                         </tr>
                       ))}

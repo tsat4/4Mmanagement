@@ -223,7 +223,7 @@ export default function PullRoundsPanel({ canEdit, shipToMap, fullName }) {
                       {canEdit
                         ? <input type="time" value={hhmm(val(r, 'pickup_time'))} onChange={e => setVal(r, 'pickup_time', e.target.value)} style={{ ...inp, width: 80 }} />
                         : hhmm(r.pickup_time)}
-                      {Number(r.pickup_day_offset) ? <span style={{ color: '#f59e0b', fontSize: 11 }}> (+{r.pickup_day_offset}{tr("ว")})</span> : null}
+                      {Number(r.pickup_day_offset) ? <span style={{ color: 'var(--amber)', fontSize: 11 }}> (+{r.pickup_day_offset}{tr("ว")})</span> : null}
                     </td>
                     <td style={{ ...td, color: 'var(--muted)' }}>
                       {canEdit

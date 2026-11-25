@@ -96,7 +96,7 @@ export default function NpiTemplates({ templates, onChanged }) {
                 </tr>
               ))}</tbody>
             </table>
-            {!phases.length && <div style={{ fontSize: 12, color: '#f59e0b', fontWeight: 700 }}>{tr('ยังไม่มีเฟส — พาร์ทที่ใช้แม่แบบนี้จะไม่มีเฟส/รายการ')}</div>}
+            {!phases.length && <div style={{ fontSize: 12, color: 'var(--amber)', fontWeight: 700 }}>{tr('ยังไม่มีเฟส — พาร์ทที่ใช้แม่แบบนี้จะไม่มีเฟส/รายการ')}</div>}
           </div>
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
@@ -108,7 +108,7 @@ export default function NpiTemplates({ templates, onChanged }) {
                 <thead><tr><th style={thSt}>{tr('เฟส')}</th><th style={thSt}>#</th><th style={thSt}>{tr('รายการ')}</th><th style={thSt}>{tr('ชนิด')}</th><th style={thSt}>{tr('เจ้าของ')}</th><th style={thSt}>{tr('บังคับ')}</th><th style={thSt}>PPAP</th><th style={thSt}></th></tr></thead>
                 <tbody>{delivs.map(d => (
                   <tr key={d.id} style={{ opacity: d.is_active === false ? 0.5 : 1 }}>
-                    <td style={tdSt}>{phases.find(p => p.code === d.phase_code)?.label || <span style={{ color: '#f59e0b' }}>{d.phase_code} {tr('(ไม่มีเฟส)')}</span>}</td>
+                    <td style={tdSt}>{phases.find(p => p.code === d.phase_code)?.label || <span style={{ color: 'var(--amber)' }}>{d.phase_code} {tr('(ไม่มีเฟส)')}</span>}</td>
                     <td style={tdSt}>{d.seq}</td>
                     <td style={tdSt}><b style={{ color: 'var(--text)' }}>{tr(d.label)}</b><div style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--muted)' }}>{d.code}</div></td>
                     <td style={tdSt}>{DOC_KIND[d.doc_kind]?.icon} {tr(DOC_KIND[d.doc_kind]?.label)}</td>
@@ -123,7 +123,7 @@ export default function NpiTemplates({ templates, onChanged }) {
           </div>
         </div>
       )}
-      {!templates.length && <div style={{ color: '#f59e0b', fontSize: 12.5, fontWeight: 700 }}>{tr('ยังไม่มีแม่แบบ — apply migration 20260907_npi_apqp_main จะได้ APQP (AIAG) + Toyota SPTT มาให้')}</div>}
+      {!templates.length && <div style={{ color: 'var(--amber)', fontSize: 12.5, fontWeight: 700 }}>{tr('ยังไม่มีแม่แบบ — apply migration 20260907_npi_apqp_main จะได้ APQP (AIAG) + Toyota SPTT มาให้')}</div>}
 
       {tplModal && (
         <Modal title={tplModal.id ? tr('แก้ไขแม่แบบ') : tr('สร้างแม่แบบ (ลูกค้าใหม่)')} onClose={() => setTplModal(null)} width={560}

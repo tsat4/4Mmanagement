@@ -87,7 +87,7 @@ export default function ViewAsModal({ current, onClose, onApply }) {
         </label>
 
         {role !== 'display' && (
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: '#eab308', marginBottom: 12, cursor: 'pointer' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: 'var(--amber)', marginBottom: 12, cursor: 'pointer' }}>
             <input type="checkbox" checked={deptAdmin} onChange={e => setDeptAdmin(e.target.checked)}
               style={{ width: 16, height: 16, accentColor: '#eab308' }} />
             {tr('🛡️ เป็นแอดมินหน่วยงานด้วย (ได้ action เพิ่มตามคอลัมน์ในหน้าจัดการสิทธิ์)')}

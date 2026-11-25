@@ -57,7 +57,7 @@ const btnGhost = { background: 'var(--bg3)', color: 'var(--text)', border: '1px 
 const th = { textAlign: 'left', padding: '8px 8px', fontSize: 11.5, fontWeight: 800, color: 'var(--text2)', whiteSpace: 'nowrap', borderBottom: '1px solid var(--border)' };
 const td = { padding: '7px 8px', fontSize: 12.5, borderBottom: '1px solid var(--border)', verticalAlign: 'middle' };
 const Field = ({ label, required, hint, children }) => (
-  <div><label style={lbl}>{label}{required && <span style={{ color: '#ef4444' }}> *</span>}</label>{children}
+  <div><label style={lbl}>{label}{required && <span style={{ color: 'var(--red)' }}> *</span>}</label>{children}
     {hint && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>{hint}</div>}</div>
 );
 const num = (v) => (v === '' || v == null ? null : Number(v));
@@ -425,20 +425,20 @@ export default function SparePartMaster({ parts = [], reload, fullName, role, my
                   </td>
                   <td style={{ ...td, textAlign: 'center', fontSize: 11.5, color: 'var(--muted)', whiteSpace: 'nowrap' }}>
                     {fmtNum(p.min_qty)} / {Number(p.max_qty) > 0 ? fmtNum(p.max_qty) : '—'}
-                    {p._safety?.level === 'warn' && <div style={{ color: '#f59e0b', fontSize: 11 }}>{tr('⚠️ ไม่มี Safety')}</div>}
+                    {p._safety?.level === 'warn' && <div style={{ color: 'var(--amber)', fontSize: 11 }}>{tr('⚠️ ไม่มี Safety')}</div>}
                   </td>
                   <td style={{ ...td, textAlign: 'center' }}><RankChip rank={rk.rank} overridden={rk.overridden} /></td>
                   <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
                     <span style={{ fontWeight: 700 }}>{fmtNum(rk.avgPerMonth, 1)}</span>
                     <div style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('ใช้')} {fmtNum(rk.totalUsed)} / {rk.months} {tr('ด.')}</div>
                   </td>
-                  <td style={{ ...td, textAlign: 'right' }}>{p.lead_time_days ?? <span style={{ color: '#f59e0b' }} title={tr('ยังไม่ได้กรอก leadtime — คำนวณ Rank ไม่ได้')}>—</span>}</td>
+                  <td style={{ ...td, textAlign: 'right' }}>{p.lead_time_days ?? <span style={{ color: 'var(--amber)' }} title={tr('ยังไม่ได้กรอก leadtime — คำนวณ Rank ไม่ได้')}>—</span>}</td>
                   <td style={{ ...td, fontSize: 11.5 }}>{p.supplier || '—'}</td>
                   <td style={{ ...td, textAlign: 'right' }}>{p.unit_price != null ? `${tr("฿")}${fmtNum(p.unit_price, 2)}` : '—'}</td>
                   <td style={{ ...td, whiteSpace: 'nowrap' }}>
                     {canMove && <>
-                      <button className="tbtn" onClick={() => setMovePart({ part: p, type: 'in' })} title={tr('รับเข้า')} style={{ ...btnGhost, padding: '5px 9px', fontSize: 12, color: '#22c55e' }}>➕</button>
-                      <button className="tbtn" onClick={() => setMovePart({ part: p, type: 'issue' })} title={tr('เบิกออก')} style={{ ...btnGhost, padding: '5px 9px', fontSize: 12, color: '#f59e0b', marginLeft: 4 }}>➖</button>
+                      <button className="tbtn" onClick={() => setMovePart({ part: p, type: 'in' })} title={tr('รับเข้า')} style={{ ...btnGhost, padding: '5px 9px', fontSize: 12, color: 'var(--green)' }}>➕</button>
+                      <button className="tbtn" onClick={() => setMovePart({ part: p, type: 'issue' })} title={tr('เบิกออก')} style={{ ...btnGhost, padding: '5px 9px', fontSize: 12, color: 'var(--amber)', marginLeft: 4 }}>➖</button>
                       <button className="tbtn" onClick={() => setMovePart({ part: p, type: 'adjust' })} title={tr('ปรับยอด (นับจริง)')} style={{ ...btnGhost, padding: '5px 9px', fontSize: 12, marginLeft: 4 }}>⚖</button>
                     </>}
                     <button className="tbtn" onClick={() => setHistPart(p)} title={tr('ประวัติเคลื่อนไหว')} style={{ ...btnGhost, padding: '5px 9px', fontSize: 12, marginLeft: 4 }}>📜</button>
@@ -485,8 +485,8 @@ export default function SparePartMaster({ parts = [], reload, fullName, role, my
    รับเข้า / เบิก / ปรับยอด — ผ่าน RPC เท่านั้น
    ══════════════════════════════════════════════════════════════════════════ */
 const MOVE_META = {
-  in: { title: '➕ รับเข้าคลัง', label: 'จำนวนที่รับเข้า', color: '#22c55e', note: 'เช่น รับของจากผู้ขาย / คืนของที่ไม่ได้ใช้' },
-  issue: { title: '➖ เบิกออก', label: 'จำนวนที่เบิก', color: '#f59e0b', note: 'เบิกไปใช้นอกใบซ่อม (ถ้าเบิกในใบ MO ระบบหักให้เองตอนบันทึกขั้นซ่อม)' },
+  in: { title: '➕ รับเข้าคลัง', label: 'จำนวนที่รับเข้า', color: 'var(--green)', note: 'เช่น รับของจากผู้ขาย / คืนของที่ไม่ได้ใช้' },
+  issue: { title: '➖ เบิกออก', label: 'จำนวนที่เบิก', color: 'var(--amber)', note: 'เบิกไปใช้นอกใบซ่อม (ถ้าเบิกในใบ MO ระบบหักให้เองตอนบันทึกขั้นซ่อม)' },
   adjust: { title: 'ปรับยอด (นับจริง)', label: 'ยอดคงเหลือที่นับได้จริง', color: 'var(--accent2)', note: 'ใช้ตอนตรวจนับสต๊อก — ระบบจะบันทึกส่วนต่างให้เอง' },
 };
 function StockMoveModal({ part, type, fullName, onClose, onDone }) {
@@ -531,7 +531,7 @@ function StockMoveModal({ part, type, fullName, onClose, onDone }) {
           {valid && (
             <div style={{ fontSize: 12.5, background: 'var(--bg3-surf)', border: `1px solid ${notEnough ? '#ef4444' : 'var(--border)'}`, borderRadius: 'var(--r-md)', padding: '8px 11px' }}>
               {notEnough
-                ? <span style={{ color: '#ef4444', fontWeight: 700 }}>{tr('❌ สต๊อกไม่พอ — คงเหลือ')} {fmtNum(cur)} {tr('เบิก')} {fmtNum(n)} {tr('ไม่ได้')}</span>
+                ? <span style={{ color: 'var(--red)', fontWeight: 700 }}>{tr('❌ สต๊อกไม่พอ — คงเหลือ')} {fmtNum(cur)} {tr('เบิก')} {fmtNum(n)} {tr('ไม่ได้')}</span>
                 : <>{tr('คงเหลือหลังทำรายการ:')} <b style={{ color: 'var(--accent)', fontSize: 14 }}>{fmtNum(after)} {part.unit || ''}</b>
                   {type === 'adjust' && <span style={{ color: 'var(--muted)' }}> {tr('· ส่วนต่าง')} {after - cur > 0 ? '+' : ''}{fmtNum(after - cur)}</span>}</>}
             </div>
@@ -723,10 +723,10 @@ function PartEditModal({ part, cats, teams, shelfOpts, rackCells = [], secOpts =
                   const g = guessSectionFromCode(f.code, orgSecs);
                   if (!g || sectionKeyOf(f.section) === g) return null;
                   return (
-                    <div style={{ fontSize: 11, color: '#f59e0b', marginTop: 4 }}>
+                    <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 4 }}>
                       {tr("รหัสขึ้นต้นด้วย")} <b>{g}</b> —{' '}
                       <button type="button" onClick={() => set('section', g)}
-                        style={{ background: 'none', border: 'none', color: '#f59e0b', textDecoration: 'underline', cursor: 'pointer', font: 'inherit', padding: 0 }}>
+                        style={{ background: 'none', border: 'none', color: 'var(--amber)', textDecoration: 'underline', cursor: 'pointer', font: 'inherit', padding: 0 }}>
                         {tr('ใช้')} {g} {tr('เป็นหน่วยงานเจ้าของ')}
                       </button>
                     </div>
@@ -781,7 +781,7 @@ function PartEditModal({ part, cats, teams, shelfOpts, rackCells = [], secOpts =
                       {preview.leadTimeDays != null && <> · leadtime <b style={{ color: 'var(--text)' }}>{preview.leadTimeDays}</b> {tr('วัน')}</>}
                     </span></>
                 ) : (
-                  <span style={{ color: '#f59e0b' }}>
+                  <span style={{ color: 'var(--amber)' }}>
                     ⚠️ {tr("ยังคำนวณ Rank ไม่ได้")} — {preview.missing === 'lead_time'
                       ? tr("ต้องกรอก Leadtime (วัน) ก่อน")
                       : tr("ยังไม่มีประวัติการใช้ — คีย์ยอดใช้ย้อนหลังจาก Excel ด้านล่าง หรือรอให้ระบบสะสมเองจากการเบิกใช้")}
@@ -834,7 +834,7 @@ function PartEditModal({ part, cats, teams, shelfOpts, rackCells = [], secOpts =
                   {img
                     ? <div style={{ position: 'relative' }}>
                       <img src={img} alt="" style={{ width: 140, height: 140, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border)' }} />
-                      <button onClick={() => setImg('')} className="tbtn" style={{ ...btnGhost, position: 'absolute', top: 4, right: 4, padding: '3px 8px', fontSize: 12, color: '#ef4444' }}>✕</button>
+                      <button onClick={() => setImg('')} className="tbtn" style={{ ...btnGhost, position: 'absolute', top: 4, right: 4, padding: '3px 8px', fontSize: 12, color: 'var(--red)' }}>✕</button>
                     </div>
                     : <label style={{ ...btnGhost, display: 'grid', placeItems: 'center', width: 140, height: 140, cursor: 'pointer', fontSize: 12, color: 'var(--muted)' }}>
                       {tr('เลือกรูป')}<input type="file" accept="image/*" onChange={onPick} style={{ display: 'none' }} />
@@ -862,9 +862,9 @@ function PartEditModal({ part, cats, teams, shelfOpts, rackCells = [], secOpts =
    ประวัติเคลื่อนไหว + การใช้รายเดือน
    ══════════════════════════════════════════════════════════════════════════ */
 const TXN_META = {
-  in: { label: 'รับเข้า', color: '#22c55e' },
-  issue: { label: 'เบิกออก', color: '#f59e0b' },
-  consume: { label: 'เบิกใช้ (ใบซ่อม)', color: '#f59e0b' },
+  in: { label: 'รับเข้า', color: 'var(--green)' },
+  issue: { label: 'เบิกออก', color: 'var(--amber)' },
+  consume: { label: 'เบิกใช้ (ใบซ่อม)', color: 'var(--amber)' },
   adjust: { label: 'ปรับยอด', color: 'var(--text2)' },
 };
 function HistoryModal({ part, usageRows, onClose }) {
@@ -1147,7 +1147,7 @@ function ImportModal({ parts, cats, teams, fullName, ownOf = () => ({ ok: true }
                       <tr key={i} style={{ opacity: r.action === 'skip' ? 0.55 : 1 }}>
                         <td style={{ ...td, color: 'var(--muted)', fontSize: 11.5 }}>{r.rowNo}</td>
                         <td style={td}><span style={{ fontSize: 11, fontWeight: 800, color: b.c, border: `1px solid ${b.c}`, borderRadius: 'var(--r-xs)', padding: '1px 6px', whiteSpace: 'nowrap' }}>{b.t}</span></td>
-                        <td style={{ ...td, fontWeight: 600 }}>{r.data.name || <span style={{ color: '#ef4444' }}>{tr('(ไม่มีชื่อ)')}</span>}</td>
+                        <td style={{ ...td, fontWeight: 600 }}>{r.data.name || <span style={{ color: 'var(--red)' }}>{tr('(ไม่มีชื่อ)')}</span>}</td>
                         <td style={{ ...td, fontSize: 11.5 }}>{r.data.code || '—'}</td>
                         <td style={{ ...td, fontSize: 11.5 }}>{r.data.mat_no || '—'}</td>
                         <td style={{ ...td, fontSize: 11.5, fontWeight: 700 }}>{r.data.shelf || '—'}</td>

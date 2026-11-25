@@ -202,7 +202,7 @@ export default function FixtureShimPanel({
           </div>
 
           {shotAssumed && (
-            <div style={{ fontSize: 11.5, color: '#f59e0b' }}>
+            <div style={{ fontSize: 11.5, color: 'var(--amber)' }}>
               ⚠️ shot {tr("สะสมเป็นค่าประมาณจากยอดผลิต (ยังไม่ตั้ง “ชิ้นต่อ 1 ครั้ง” ของฟิกเจอร์นี้ — ระบบถือว่า")} 1:1)
             </div>
           )}
@@ -273,7 +273,7 @@ export default function FixtureShimPanel({
                       {preview.delta != null && `, ${preview.delta > 0 ? '+' : ''}${preview.delta} mm`})
                     </span>
                     {afterStack?.level === 'over' && (
-                      <div style={{ color: '#ef4444', fontWeight: 700, marginTop: 4 }}>
+                      <div style={{ color: 'var(--red)', fontWeight: 700, marginTop: 4 }}>
                         🔴 {tr("เกินเพดาน")} {point.max_shim_mm} mm — {tr("ชิมชดเชยต่อไม่ไหว ควรเปิดใบซ่อมเปลี่ยนชิ้นส่วนจริง")}
                       </div>
                     )}
@@ -351,13 +351,13 @@ export default function FixtureShimPanel({
                         <td style={{ padding: '6px 10px' }}>{ev.by_name || '—'}</td>
                         <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
                           {ev.approved_by ? (
-                            <span style={{ color: '#22c55e' }}>✓ {ev.approved_by}</span>
+                            <span style={{ color: 'var(--green)' }}>✓ {ev.approved_by}</span>
                           ) : canApprove ? (
                             <button onClick={() => approve(ev)}
                                     style={{ padding: '3px 10px', borderRadius: 'var(--r-md)', fontSize: 11.5, cursor: 'pointer',
                                              background: '#16a34a', color: '#fff', border: 'none' }}>{tr('อนุมัติ')}</button>
                           ) : (
-                            <span style={{ color: '#f59e0b' }}>{tr('รออนุมัติ')}</span>
+                            <span style={{ color: 'var(--amber)' }}>{tr('รออนุมัติ')}</span>
                           )}
                         </td>
                       </tr>

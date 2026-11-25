@@ -132,12 +132,12 @@ export default function MachineRepairHistory({ machineNo, onClose, onOpenOrder }
                   ))}
                 </select>
                 {hidden > 0 && (
-                  <span style={{ fontSize: 11, color: '#f59e0b' }}>
+                  <span style={{ fontSize: 11, color: 'var(--amber)' }}>
                     ⚠️ {tr("ซ่อนไป")} <b>{hidden}</b> {tr("ใบของทีมอื่น — สรุป/ตาราง/Excel นับเฉพาะที่เห็นอยู่")}
                   </span>
                 )}
                 {team !== 'all' && !shown.length && state.orders.length > 0 && (
-                  <span style={{ fontSize: 11, color: '#f59e0b' }}>⚠️ {tr("เครื่องนี้ไม่มีใบของทีมที่เลือก — ลองเลือก \"ทุกทีม")}"</span>
+                  <span style={{ fontSize: 11, color: 'var(--amber)' }}>⚠️ {tr("เครื่องนี้ไม่มีใบของทีมที่เลือก — ลองเลือก \"ทุกทีม")}"</span>
                 )}
               </div>
             )}
@@ -160,11 +160,11 @@ export default function MachineRepairHistory({ machineNo, onClose, onOpenOrder }
         </div>
         <div style={{ overflow: 'auto', padding: 14 }}>
           {state.loading && <div style={{ color: 'var(--muted)', fontSize: 13 }}>{tr('⏳ กำลังโหลดประวัติ…')}</div>}
-          {state.err && <div style={{ color: '#ef4444', fontSize: 13 }}>{tr('⚠ โหลดประวัติไม่สำเร็จ:')} {state.err}</div>}
+          {state.err && <div style={{ color: 'var(--red)', fontSize: 13 }}>{tr('⚠ โหลดประวัติไม่สำเร็จ:')} {state.err}</div>}
           {!state.loading && !state.err && (<>
-            {state.subErr && <div style={{ color: '#f59e0b', fontSize: 12, marginBottom: 8 }}>{tr('⚠ โหลด')} {state.subErr} {tr('ไม่ครบ — ช่องนั้นอาจไม่ครบ (ค่าใช้จ่ายถอยไปใช้ยอดรวมในใบ)')}</div>}
+            {state.subErr && <div style={{ color: 'var(--amber)', fontSize: 12, marginBottom: 8 }}>{tr('⚠ โหลด')} {state.subErr} {tr('ไม่ครบ — ช่องนั้นอาจไม่ครบ (ค่าใช้จ่ายถอยไปใช้ยอดรวมในใบ)')}</div>}
             {/* 🔴 ถูกตัดที่เพดาน = ตัวเลขสรุปทุกการ์ดต่ำกว่าจริง ห้ามเงียบ */}
-            {state.cut && <div style={{ color: '#ef4444', fontSize: 12, marginBottom: 8, fontWeight: 700 }}>
+            {state.cut && <div style={{ color: 'var(--red)', fontSize: 12, marginBottom: 8, fontWeight: 700 }}>
               ⚠ {tr("เครื่องนี้มีใบแจ้งซ่อมเกิน 500 ใบ — แสดง/สรุปจาก")} <b>{tr('500 ใบล่าสุด')}</b> {tr("เท่านั้น (เวลาซ่อมเฉลี่ย · ค่าใช้จ่ายรวม · ปัญหาที่เจอบ่อย ยังไม่ครบทั้งหมด")})
             </div>}
             {!sum.total && !sum.rejected && <div style={{ color: 'var(--muted)', fontSize: 13 }}>{tr('ยังไม่มีใบแจ้งซ่อมของเครื่องนี้')}</div>}

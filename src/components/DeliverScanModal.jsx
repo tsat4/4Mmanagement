@@ -103,8 +103,8 @@ export default function DeliverScanModal({ request, points = [], canOverride = f
               <div style={{ fontSize: 20, fontWeight: 900, color: 'var(--text)' }}>{fmt(request?.request_qty)}</div>
             </div>
             <div style={{ background: 'rgba(59,130,246,0.12)', borderRadius: 'var(--r-md)', padding: '8px 10px' }}>
-              <div style={{ fontSize: 11, color: '#3b82f6' }}>{tr('ปลายทาง')}</div>
-              <div style={{ fontSize: 14, fontWeight: 900, color: '#3b82f6' }}>➜ {request?.line_name || '—'}</div>
+              <div style={{ fontSize: 11, color: 'var(--blue)' }}>{tr('ปลายทาง')}</div>
+              <div style={{ fontSize: 14, fontWeight: 900, color: 'var(--blue)' }}>➜ {request?.line_name || '—'}</div>
             </div>
           </div>
 
@@ -132,7 +132,7 @@ export default function DeliverScanModal({ request, points = [], canOverride = f
           {noPoint ? (
             /* ไม่รู้ = ห้ามบล็อก — ไลน์ยังไม่ตั้งจุดส่ง ปล่อยผ่านแต่ต้องบอกให้ไปตั้ง */
             <div style={{ marginTop: 14 }}>
-              <div style={{ fontSize: 12.5, color: '#f59e0b', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 'var(--r-md)', padding: '9px 12px' }}>
+              <div style={{ fontSize: 12.5, color: 'var(--amber)', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 'var(--r-md)', padding: '9px 12px' }}>
                 ⚪ <b>{request?.line_name}</b> {tr("ยังไม่ตั้งจุดส่งงาน — ระบบตรวจไม่ได้ว่าวางถูกจุดไหม (ใบจะถูกมาร์ก \"ไลน์ยังไม่ตั้งจุดส่ง")}")<br />
                 <span style={{ color: 'var(--text2)' }}>{tr('ให้หัวหน้าไลน์ตั้งที่ ⚙️ ตั้งค่าผังไลน์ → 🎯 จุดส่งงาน แล้วพิมพ์ป้ายที่ 🏷️ พิมพ์ป้าย QR')}</span>
               </div>
@@ -145,17 +145,17 @@ export default function DeliverScanModal({ request, points = [], canOverride = f
             <div style={{ marginTop: 14 }}>
               <div style={{ fontSize: 12, color: 'var(--text2)' }}>
                 {tr("ใบนี้ต้องวางที่")}: {serving.map(p => (
-                  <span key={p.id} style={{ display: 'inline-block', margin: '2px 4px 0 0', padding: '2px 8px', borderRadius: 'var(--r-md)', background: 'rgba(34,197,94,0.12)', color: '#22c55e', fontWeight: 700, fontSize: 12 }}>{pointLabel(p)}</span>
+                  <span key={p.id} style={{ display: 'inline-block', margin: '2px 4px 0 0', padding: '2px 8px', borderRadius: 'var(--r-md)', background: 'rgba(34,197,94,0.12)', color: 'var(--green)', fontWeight: 700, fontSize: 12 }}>{pointLabel(p)}</span>
                 ))}
               </div>
 
               {ok && (
-                <div style={{ marginTop: 10, fontSize: 13, color: '#22c55e', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.35)', borderRadius: 'var(--r-md)', padding: '9px 12px', fontWeight: 700 }}>
+                <div style={{ marginTop: 10, fontSize: 13, color: 'var(--green)', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.35)', borderRadius: 'var(--r-md)', padding: '9px 12px', fontWeight: 700 }}>
                   {result.message}
                 </div>
               )}
               {blocked && !ok && (
-                <div style={{ marginTop: 10, fontSize: 13, color: '#ef4444', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 'var(--r-md)', padding: '9px 12px' }}>
+                <div style={{ marginTop: 10, fontSize: 13, color: 'var(--red)', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 'var(--r-md)', padding: '9px 12px' }}>
                   🔴 {result.message}
                 </div>
               )}
@@ -180,12 +180,12 @@ export default function DeliverScanModal({ request, points = [], canOverride = f
                   {canOverride ? (
                     !overriding ? (
                       <button onClick={() => setOverriding(true)} disabled={busy}
-                        style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: 12, fontWeight: 700, cursor: 'pointer', padding: 0 }}>
+                        style={{ background: 'none', border: 'none', color: 'var(--red)', fontSize: 12, fontWeight: 700, cursor: 'pointer', padding: 0 }}>
                         {tr('สแกนไม่ได้ / ป้ายหาย → ปลดบล็อกโดยหัวหน้า (บันทึกชื่อ+เหตุผล)')}
                       </button>
                     ) : (
                       <div>
-                        <div style={{ fontSize: 12.5, fontWeight: 800, color: '#ef4444' }}>{tr('ปลดบล็อก — ระบุเหตุผล (ถูกบันทึกเป็นข้อมูล ไปแก้ต้นเหตุทีหลัง)')}</div>
+                        <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--red)' }}>{tr('ปลดบล็อก — ระบุเหตุผล (ถูกบันทึกเป็นข้อมูล ไปแก้ต้นเหตุทีหลัง)')}</div>
                         <select value={reasonKey} onChange={e => setReasonKey(e.target.value)}
                           style={{ width: '100%', marginTop: 6, padding: '8px 10px', borderRadius: 'var(--ctl-r)', border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)', fontSize: 13 }}>
                           <option value="">{tr('— เลือกเหตุผล —')}</option>
