@@ -61,7 +61,7 @@ import StoreLotQueue from '../components/StoreLotQueue';
 import LineWipPanel from '../components/LineWipPanel';
 import LinePartCallPanel from '../components/LinePartCallPanel';
 import ProcessTypeSetup from '../components/ProcessTypeSetup';
-import { affectsLanesMap, computeSessionOee, sessionProducedQty, strictOee, strictGap, STRICT_WARN_SHARE_PCT, policyBreakOverlapMin, breakIntervalsIn, breakBandsIn, breakBandName, breakBandTitle, dtMinOutsideBreaks, overlapMinutesWith, buildCtMap, ctForMat, groupSameProductKeys, shiftFrameOf, shiftStartDate, clampWinToShift, unionIv, dtMinOutsideWork, SIX_BIG_LOSSES, EIGHT_WASTES, sumDefectQty, isTrialDefect, splitDefectQty, QBIN_EMBED, sumSuspectPending, orderCloseMs, matRawWindow } from '../utils/oee';
+import { affectsLanesMap, computeSessionOee, sessionProducedQty, strictOee, strictGap, STRICT_WARN_SHARE_PCT, policyBreakOverlapMin, breakIntervalsIn, breakBandsIn, breakBandName, breakBandTitle, dtMinOutsideBreaks, overlapMinutesWith, buildCtMap, ctForMat, groupSameProductKeys, shiftFrameOf, shiftStartDate, clampWinToShift, unionIv, dtMinOutsideWork, SIX_BIG_LOSSES, EIGHT_WASTES, sumDefectQty, isTrialDefect, splitDefectQty, QBIN_EMBED, sumSuspectPending, sumReworkPending, orderCloseMs, matRawWindow } from '../utils/oee';
 import { planMatTimeWrites, MAT_TIME_SKIP_OPEN } from '../utils/matTimeEdit';
 import { resolveShiftTime, checkShiftTime, shiftWindow, windowLabel, fmtOffset, MAX_SHIFT_MIN, checkCloseTime, dtCoverMin } from '../utils/shiftWindow';
 import { handoverOf, handoverBlockText, sessionLabel as hoSessionLabel } from '../utils/sessionHandover';
@@ -255,7 +255,7 @@ const STALE_BUCKET_KEY = '__stale_bucket__';
 const AUTO_COLLAPSE_ROWS = 8;
 /* ตัวกรองชนิดของช่อง "เครื่องจักร" ในฟอร์ม Downtime — ป้ายชนิดตรงกับ EQUIPMENT_KINDS (utils/equipmentKinds) */
 const DT_KIND_OPTS = [
-  { value: 'all', label: 'ทั้งหมด' }, { value: 'machine', label: '🏭 เครื่องจักร' },
+  { value: 'all', label: 'ทั้งหมด' }, { value: 'machine', label: 'เครื่องจักร' },
   { value: 'jig', label: '🧩 จิ๊ก' }, { value: 'die', label: '🔨 แม่พิมพ์' }, { value: 'other', label: 'อื่นๆ' },
 ];
 const DIE_CAND_GROUP = {
@@ -355,7 +355,7 @@ export default function DailyReport() {
           // ไม่มีกะค้าง = ไม่ต้องมีแท็บให้รก · โหลดไม่สำเร็จก็ต้องโชว์ (จะได้เข้าไปเห็นสาเหตุ ห้ามเงียบ)
           ...((stale.rows.length || stale.error) ? [{
             key: 'stale',
-            label: stale.error ? '⏰ กะค้าง ⚠' : `⏰ ${tr("กะค้าง")} ${stale.rows.length}${staleOver ? ` · ${tr("เกิน")} ${STALE_SESSION_DAYS} ${tr("วัน")} ${staleOver}` : ''}`,
+            label: stale.error ? `${tr("กะค้าง")} ⚠` : `${tr("กะค้าง")} ${stale.rows.length}${staleOver ? ` · ${tr("เกิน")} ${STALE_SESSION_DAYS} ${tr("วัน")} ${staleOver}` : ''}`,
           }] : []),
           { key: 'history', label: tr("ประวัติ") },
           { key: 'export', label: 'Export' },
@@ -1485,7 +1485,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
           : `${tr("เลยเวลาปิดกะ")} ${fmtOffset(chk.minutesOff)}`;
         if (chk.suggestHHmm) {
           const ok = await askConfirm(
-            `⏰ ${tr("เวลาที่กรอก")} ${at} ${tr("น. อยู่นอกกรอบกะ")} (${whereTxt})\n` +
+            `${tr("เวลาที่กรอก")} ${at} ${tr("น. อยู่นอกกรอบกะ")} (${whereTxt})\n` +
             `${tr("กะนี้")}: ${win}\n\n` +
             `💡 ${tr("น่าจะหมายถึง")} ${chk.suggestHHmm} ${tr("น. — ต่างกัน 12 ชม. พอดี (ช่องเวลาบนมือถือ/จอที่ตั้งเป็นแบบ")} AM-PM\n` +
             `   ${tr("ถ้าไม่แตะช่อง AM/PM มันจะค้างที่ AM เช่น ตั้งใจ 16:19 แต่ได้")} 04:19)\n\n` +
@@ -1507,7 +1507,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
         }
         if (chk.kind === 'before' && chk.minutesOff <= 60) {
           const ok = await askConfirm(
-            `⏰ ${tr("เวลาเริ่ม")} ${at} ${tr("น. อยู่")}${whereTxt}\n${tr("กะนี้")}: ${win}\n\n` +
+            `${tr("เวลาเริ่ม")} ${at} ${tr("น. อยู่")}${whereTxt}\n${tr("กะนี้")}: ${win}\n\n` +
             `${tr("ถ้าไลน์เริ่มเดินก่อนเวลาที่ลงไว้จริง กด \"ตกลง\" เพื่อบันทึก")}\n` +
             `${tr("ถ้าเวลาเปิดกะตั้งไว้ผิด ให้กด \"ยกเลิก\" แล้วไปแก้ที่ปุ่ม \"✏️ แก้เวลากะ")}"`);
           if (!ok) return;
@@ -1986,14 +1986,14 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
     setStoreBarBusy(true);
     try {
       const r = await confirmAndSyncLineDemand({ lineName: b.lineName, role, focus: b.mats,
-        title: `📦 ${tr("เปิดใบผลิต")} ${b.mats.join(', ')} ${tr("ที่")} ${b.lineName} — ${tr("ต้องเบิกจากสโตร์ตาม")} BOM:` });
+        title: `${tr("เปิดใบผลิต")} ${b.mats.join(', ')} ${tr("ที่")} ${b.lineName} — ${tr("ต้องเบิกจากสโตร์ตาม")} BOM:` });
       storeBarReq.current++;          // ผลคำนวณที่ค้างอยู่ห้ามทับหลังกดแล้ว
       setStoreBar(null);
       if (r.cancelled) { toast.info('ยังไม่แจ้งสโตร์ — กด 🔁 คำนวณ + แจ้งสโตร์ ที่แผงเรียกชิ้นส่วนได้ภายหลัง'); return; }
       if (r.nothingToSend) return;
       const t = syncSummaryText(r);
       if (r.error || r.writeErrors?.length) toast.error(`${tr("แจ้งสโตร์ไม่สำเร็จ")} — ${t}`);
-      else toast.info(`📦 ${tr("แจ้งสโตร์")}: ${t}`);
+      else toast.info(`${tr("แจ้งสโตร์")}: ${t}`);
     } catch (e) { toast.error(`${tr("แจ้งสโตร์ไม่สำเร็จ")} — ${e?.message || e}`); }
     finally { setStoreBarBusy(false); setTimeout(() => openProdInputRef.current?.focus(), 30); }
   };
@@ -3624,7 +3624,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                 ? <><b>{selSession.line_name}</b><span>{selSession.shift === 'day' ? tr("กะเช้า") : tr("กะดึก")} · {fmtDate(selSession.work_date)}</span></>
                 : <b>{tr('เลือกกะที่จะบันทึก')}</b>}
             </span>
-            <span className="dr-mpick-act">{tr('เปลี่ยนกะ (')}{sessions.length}){staleSessions.length ? ` · ⏰${staleSessions.length}` : ''} {(mPickOpen || !selSession) ? '▴' : '▾'}</span>
+            <span className="dr-mpick-act">{tr('เปลี่ยนกะ (')}{sessions.length}){staleSessions.length ? ` · ${tr('ค้าง')} ${staleSessions.length}` : ''} {(mPickOpen || !selSession) ? '▴' : '▾'}</span>
           </button>
         )}
         {sessListHidden && (
@@ -3745,7 +3745,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                           style={{ fontSize: 11, fontWeight: 800, padding: '1px 5px', borderRadius: 'var(--r-md)', whiteSpace: 'nowrap',
                             background: late ? 'var(--red-dim)' : 'var(--amber-dim)',
                             color: late ? 'var(--red)' : 'var(--amber)',
-                            border: `1px solid ${late ? 'var(--red-line)' : 'var(--amber-line)'}` }}>⏰ {age}{tr('ว')}</span>;
+                            border: `1px solid ${late ? 'var(--red-line)' : 'var(--amber-line)'}` }}>{age}{tr('ว')}</span>;
                       })()}
                     </div>
                   </button>
@@ -3783,7 +3783,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                         fontSize: 11, fontWeight: 800, padding: '6px 8px', borderRadius: 'var(--r-md)', letterSpacing: '0.3px',
                         background: 'var(--amber-dim)', border: '1px solid var(--amber-line)', color: 'var(--amber)' }}>
                       <span style={{ fontSize: 11 }}>{staleOpen ? '▼' : '▶'}</span>
-                      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tr('⏰ ค้างจากวันก่อน')}</span>
+                      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tr('ค้างจากวันก่อน')}</span>
                       <span style={{ fontWeight: 700 }}>{staleSessions.length}</span>
                     </button>
                     {staleOpen && (() => {
@@ -3900,7 +3900,9 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
 
               /* ── หัวกะ (LIVE · ชื่อไลน์ · ปุ่มคำสั่ง) ── */
               const sessionHeaderEl = (
-                <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: '16px 20px', marginBottom: isMobile ? 16 : 0 }}>
+                <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: '16px 20px', marginBottom: isMobile ? 16 : 0,
+                  /* 🔴 สูงเต็มแถว — แถวบนสุดเป็น "แถบเดียว" ขอบบน/ล่างตรงกับการ์ด KPI (UI §6.45) */
+                  ...(isMobile ? null : { height: '100%', boxSizing: 'border-box' }) }}>
                   {/* ── 🔁 กะนี้ถูกส่งต่อไปแล้ว (17/11 · หัวหน้าแจ้ง "ยอดกะ02 ไปขึ้นกะ01 ที่ลืมปิด") ──
                       จอที่เปิดค้างจากกะก่อนยังผูกกับกะเดิม ⇒ ต้องเห็นชัดก่อนยิงใบ + สลับได้ในคลิกเดียว
                       🔴 อ่านเวลาเริ่มกะไม่ได้ = เช็คไม่ได้ ต้องเขียนบนจอ ห้ามเงียบ (กฎความซื่อสัตย์ของจอ) */}
@@ -3933,7 +3935,9 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                           <span style={{ fontSize: 11, fontWeight: 800, padding: '3px 10px', borderRadius: 'var(--r-pill)', background: 'var(--green-dim)', color: 'var(--green)' }}>● LIVE</span>
                         )}
                         <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-                          {selSession.shift === 'day' ? tr("☀️ กะเช้า") : tr("🌙 กะดึก")} · {fmtDate(selSession.work_date)} {tr('· เริ่ม')} {selSession.start_time}
+                          {/* ☼ ☾ ไอคอนกะ = เส้นโมโนโครม ห้ามอีโมจิ ☀️/🌙 (UI §6.41 · ด่าน shift-glyph-no-emoji) */}
+                          <ShiftGlyph shift={selSession.shift} size={12} title={selSession.shift === 'day' ? tr("กะเช้า") : tr("กะดึก")} />
+                          {' '}{selSession.shift === 'day' ? tr("กะเช้า") : tr("กะดึก")} · {fmtDate(selSession.work_date)} {tr('· เริ่ม')} {selSession.start_time}
                         </span>
                       </div>
                       <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>{selSession.line_name}</div>
@@ -4110,13 +4114,17 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
               return (
                 <>
                   {isMobile && sessionHeaderEl}
-                  <div style={isMobile ? undefined : { display: 'flex', flexDirection: 'row-reverse', flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'flex-end', gap: 16, marginBottom: 10 }}>
+                  {/* 🔴 `alignItems:'stretch'` — เดิม `'flex-end'` = 2 ก้อนชิดล่างแล้ว **ขอบบนไม่ตรงกัน**
+                      (ก้อนไหนเนื้อหาน้อยกว่าจะมีช่องว่างเหนือหัว · เห็นชัดเวลาหัวกะมีแบนเนอร์เตือน)
+                      กฎ: การ์ดในแถวเดียวกันต้องสูงเท่ากัน (UI-CONVENTIONS §6.45) */}
+                  <div style={isMobile ? undefined : { display: 'flex', flexDirection: 'row-reverse', flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'stretch', gap: 16, marginBottom: 10 }}>
                   {!isMobile && <div style={{ flex: '1 1 420px', minWidth: 0 }}>{sessionHeaderEl}</div>}
-                  <div style={isMobile ? undefined : { flex: '0 0 auto' }}>
+                  <div style={isMobile ? undefined : { flex: '0 0 auto', display: 'flex', flexDirection: 'column' }}>
                   {overviewTitle}
                   {/* 📊 การ์ดโครงเดียว (KpiTile · UI §6.35) — เดิม 7 ใบ 5 สี ⇒ 5 ใบ ตัวเลขสีเดียว ข้อมูลเดิมครบ
                       (เป้ารวม → บรรทัดใต้ "ผลิตได้" · เปิด/ปิดแล้ว → "ใบผลิต" · นอกแผน → บรรทัดใต้ "Downtime") */}
-                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(auto-fit,minmax(150px,1fr))' : 'repeat(4, 160px)', gap: 10, marginBottom: isMobile ? 16 : 0 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(auto-fit,minmax(150px,1fr))' : 'repeat(4, 160px)', gap: 10, marginBottom: isMobile ? 16 : 0,
+                    ...(isMobile ? null : { flex: 1, alignContent: 'stretch' }) }}>
                     <KpiTile label={tr('ผลิตได้')} value={totalConfirmed} unit={tr("ชิ้น")}
                       note={totalTarget > 0 ? `${pct}% ${tr("ของเป้า")} ${totalTarget.toLocaleString()}` : tr("ยังไม่มีเป้า (ไม่มีใบผลิต)")}
                       tone={totalTarget > 0 ? (pct >= 100 ? 'ok' : pct >= 60 ? 'warn' : 'info') : undefined} />
@@ -4202,7 +4210,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: prodOrdersOpen ? 12 : 0, flexWrap: 'wrap', gap: 8 }}>
                 <div onClick={() => toggleLiveCollapse('prod_orders', prodOrdersAuto)} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: 'var(--text)', cursor: 'pointer', userSelect: 'none' }}>
                   <span style={{ fontSize: 11, color: 'var(--muted)', transform: prodOrdersOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s', display: 'inline-block' }}>▶</span>
-                  📦 Prod Orders ({prodOrders.length} {tr("ใบ")})
+                  Prod Orders ({prodOrders.length} {tr("ใบ")})
                 </div>
                 {/* 👯 งานคู่ RH/LH ที่ยังขาดอีกข้าง — ต้นเหตุของ "คอนเฟิร์มยอดแล้วได้งานข้างเดียว" (02/10)
                     วัดจริง 60 วัน: ใบของสินค้างานคู่ 676 ใบ · ไม่มีใบอีกข้างเลย 111 ใบ · มีแต่ไม่ผูก 128 ใบ
@@ -4769,15 +4777,28 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
             {defectLogs.length > 0 && (() => {
               const defAuto = defectLogs.length > AUTO_COLLAPSE_ROWS;
               const defOpen = !liveCollapsed('defects', defAuto);
+              /* 🎨 25/11 (คำสั่ง user "สีสันเยอะจนดูไม่ formal") — เดิมแผงนี้แดง 3 ชั้น
+                 (ขอบแดง + หัวข้อแดง + ตัวเลขในแถว) สำหรับข้อเท็จจริงเดียว = "กะนี้มีของเสีย"
+                 ⇒ เหลือ **แดงจุดเดียวที่ตัวเลข NG** · โครงการ์ดเท่ากับแผง Downtime/Prod Orders
+                 (UI §6.17 สี = ความหมาย · §6.35 ชิปสี ≤ 1 สีต่อแถว)
+                 🔴 คอมเมนต์ต้องอยู่ **ก่อน** `return (` — คอมเมนต์แบบ JSX ใต้ `return (` = parse error */
               return (
-              <div style={{ background: 'var(--card-surf)', border: '1px solid var(--red-line)', borderRadius: 'var(--r-md)', padding: '14px 16px', marginBottom: 16 }}>
+              <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '14px 16px', marginBottom: 16 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: defOpen ? 10 : 0 }}>
-                  <div onClick={() => toggleLiveCollapse('defects', defAuto)} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: 'var(--red)', cursor: 'pointer', userSelect: 'none' }}>
+                  <div onClick={() => toggleLiveCollapse('defects', defAuto)} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: 'var(--text)', cursor: 'pointer', userSelect: 'none' }}>
                     <span style={{ fontSize: 11, color: 'var(--muted)', transform: defOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s', display: 'inline-block' }}>▶</span>
-                    🔴 {tr("บันทึกงานเสีย")} ({defectLogs.length} {tr("รายการ")})
-                    <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400, marginLeft: 8 }}>
-                      NG: {defectLogs.reduce((s,d)=>s+(d.qty_ng||0),0)} {tr('· สงสัย:')} {defectLogs.reduce((s,d)=>s+(d.qty_suspect||0),0)} {tr('· ซ่อม:')} {defectLogs.reduce((s,d)=>s+(d.qty_repair||0),0)}
-                    </span>
+                    {tr("บันทึกงานเสีย")} ({defectLogs.length} {tr("รายการ")})
+                    {(() => {
+                      const ng = defectLogs.reduce((s, d) => s + (d.qty_ng || 0), 0);
+                      const sus = defectLogs.reduce((s, d) => s + (d.qty_suspect || 0), 0);
+                      const rep = defectLogs.reduce((s, d) => s + (d.qty_repair || 0), 0);
+                      return (
+                        <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400, marginLeft: 8 }}>
+                          NG: <b style={{ color: ng > 0 ? 'var(--red)' : 'var(--muted)' }}>{ng}</b>
+                          {' '}{tr('· สงสัย:')} {sus} {tr('· ซ่อม:')} {rep}
+                        </span>
+                      );
+                    })()}
                   </div>
                   {/* 🗑️ งานค้าง "ยังไม่ลงถัง" (05/11) — ข้ามขั้นลงถังได้ แต่ห้ามให้มันหายไปเงียบ
                       วัดจริง 90 วัน: ของเสีย 252 รายการ ผูกใบถังแค่ 46 (18%) ⇒ อีก 82% ไม่มีใครเห็นว่าค้าง
@@ -5637,7 +5658,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                   ⚠️ {tr("ทวน Downtime ที่ยังเปิดค้าง")} {rows.length} {tr("รายการ")}
                 </div>
                 <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 12, lineHeight: 1.7 }}>
-                  {tr("ปิดกะ")} <b style={{ color: 'var(--text)' }}>{selSession.line_name} · {selSession.shift === 'night' ? tr("🌙 กะดึก") : tr("☀️ กะเช้า")} {fmtDate(selSession.work_date)}</b>
+                  {tr("ปิดกะ")} <b style={{ color: 'var(--text)' }}>{selSession.line_name} · {selSession.shift === 'night' ? tr("กะดึก") : tr("กะเช้า")} {fmtDate(selSession.work_date)}</b>
                   {' '}— {tr("ยืนยันว่าแต่ละรายการจะถูกจัดการแบบนี้")}
                   <br />{tr("รายการที่ไม่ได้ปิด = นาทีที่หยุด")} <b style={{ color: 'var(--amber)' }}>{tr('ไม่ถูกหักใน %A')}</b> {tr("และจะค้างกระพริบบนจอ OEE รายไลน์ตลอด")}
                 </div>
@@ -5695,7 +5716,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                   🛡️ {tr("รีเช็คก่อน")}{closeIsRequest ? tr("ส่งขอปิดกะ") : tr("ปิดกะ")} — {must.length} {tr("เรื่อง")}
                 </div>
                 <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 12, lineHeight: 1.7 }}>
-                  <b style={{ color: 'var(--text)' }}>{selSession.line_name} · {selSession.shift === 'night' ? tr("🌙 กะดึก") : tr("☀️ กะเช้า")} {fmtDate(selSession.work_date)}</b>
+                  <b style={{ color: 'var(--text)' }}>{selSession.line_name} · {selSession.shift === 'night' ? tr("กะดึก") : tr("กะเช้า")} {fmtDate(selSession.work_date)}</b>
                   {' '}{tr('— ข้อมูลพวกนี้')}<b style={{ color: 'var(--amber)' }}>{tr('ขัดกันเอง')}</b> {tr("ปิดกะแล้วตัวเลขจะถูกบันทึกถาวร")}
                   <br />{tr("แก้ตอนนี้ใช้เวลาไม่กี่นาที · ไปแก้ย้อนหลังอีกหลายวันจะไม่มีใครจำได้ว่าวันนี้เกิดอะไร")}
                 </div>
@@ -5761,6 +5782,8 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
           const ng = sumDefectQty(defectLogs, 'line');
           /* ของสงสัยที่ QA ยังไม่ตัดสิน — ไม่อยู่ใน `ng` ข้างบน (กฎ §7.1) แต่ต้องขึ้นบนจอ */
           const suspendPendingQty = sumSuspectPending(defectLogs);
+          /* 🔧 ชิ้นที่รอซ่อม — อยู่นอกทั้ง %Q และยอดสแกน (oee.js §7.2.1) ⇒ ต้องขึ้นบนจอเหมือนของสงสัย */
+          const reworkPendingN = sumReworkPending(defectLogs);
           // Downtime เปิดค้าง: ถ้าตัดสินใจแล้ว ให้ OEE preview คิดนาทีตามการตัดสินใจทันที (ยังไม่เขียน DB จนกดปิดกะ)
           const modalOpenDT = dtLogs.filter(d => d.duration_min == null);
           /* 🔴 สูตรเดียวกับที่ด่าน poka-yoke ก่อนปิดกะใช้ (`decidedDtLogs`) — ห้ามเขียนซ้ำในหน้า
@@ -5790,14 +5813,26 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                 </div>
                 {/* 🔴 ของสงสัยที่ QA ยังไม่พิจารณา ไม่ถูกนับเข้า %Q (กฎ §7.1 ของ oee.js)
                     ⇒ คนที่กำลังจะปิดกะ **ต้องเห็นว่า %Q ที่กำลัง stamp นี้ยังไม่ใช่ตัวสรุป** ห้ามเงียบ */}
-                {suspendPendingQty > 0 && (
+                {(suspendPendingQty > 0 || reworkPendingN > 0) && (
                   <div style={{ background: 'var(--card-surf)', border: '1px solid var(--amber-line)', borderLeft: '4px solid var(--amber)',
                                 borderRadius: 'var(--r-md)', padding: '8px 12px', marginBottom: 14, fontSize: 12, lineHeight: 1.6, color: 'var(--text2)' }}>
-                    ⏳ {tr("กะนี้มีของ")}<b>{tr('รอพิจารณา (ถังเหลือง)')} {suspendPendingQty.toLocaleString()} {tr('ชิ้น')}</b> {tr("ที่ QA ยังไม่ตัดสิน")} —
-                    <b> {tr('%Q ด้านล่างจึงยังไม่ใช่ตัวสรุป')}</b>
-                    <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                      {tr("ระบบ")}<b>{tr('ยังไม่นับเป็นของเสีย')}</b> {tr("เพราะยังไม่รู้ว่าดีหรือเสีย (นับเลยก็ลงโทษไลน์เกินจริง) · ปิดกะได้ตามปกติ · พอ QA ตัดสินว่า “ทำลาย” ของก้อนนี้จะกลายเป็นของเสียและ %Q จะต่ำลง — ลงถังเหลืองที่รายการของเสีย ดูต่อได้ที่ ♻️ ของเสีย › ถังเหลือง/แดง (ฝ่ายผลิต) แล้วให้ QA พิจารณา")}
-                    </div>
+                    {suspendPendingQty > 0 && (<>
+                      ⏳ {tr("กะนี้มีของ")}<b>{tr('รอพิจารณา (ถังเหลือง)')} {suspendPendingQty.toLocaleString()} {tr('ชิ้น')}</b> {tr("ที่ QA ยังไม่ตัดสิน")} —
+                      <b> {tr('%Q ด้านล่างจึงยังไม่ใช่ตัวสรุป')}</b>
+                      <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+                        {tr("ระบบ")}<b>{tr('ยังไม่นับเป็นของเสีย')}</b> {tr("เพราะยังไม่รู้ว่าดีหรือเสีย (นับเลยก็ลงโทษไลน์เกินจริง) · ปิดกะได้ตามปกติ · พอ QA ตัดสินว่า “ทำลาย” ของก้อนนี้จะกลายเป็นของเสียและ %Q จะต่ำลง — ลงถังเหลืองที่รายการของเสีย ดูต่อได้ที่ ♻️ ของเสีย › ถังเหลือง/แดง (ฝ่ายผลิต) แล้วให้ QA พิจารณา")}
+                      </div>
+                    </>)}
+                    {/* 🔧 รอซ่อม — เครื่องทำออกมาแล้ว (อยู่ในตัวเศษ %P) แต่ยังไม่ใช่ของดี (ไม่อยู่ในยอดสแกน/%Q) */}
+                    {reworkPendingN > 0 && (
+                      <div style={{ marginTop: suspendPendingQty > 0 ? 8 : 0 }}>
+                        ⏳ {tr("กะนี้มีของ")}<b>{tr('รอซ่อม')} {reworkPendingN.toLocaleString()} {tr('ชิ้น')}</b> —
+                        <b> {tr('ยังไม่นับเป็นของดี และยังไม่นับเป็นของเสีย')}</b>
+                        <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+                          {tr("นับเข้า %P แล้ว (เครื่องเดินทำออกมาจริง) · ไม่อยู่ในยอดสแกนและไม่หัก %Q · ซ่อมเสร็จแล้วให้สแกนปิดใบในกะที่ซ่อม — ถ้าปล่อยไว้ ของก้อนนี้จะไม่ถูกนับเป็นงานดีของกะไหนเลย")}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
                 {/* %P ตันเพดาน — งานที่บันทึกมากกว่าเวลาเครื่องที่มีจริง แปลว่าข้อมูลมีอะไรผิด
@@ -6961,7 +6996,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                         </div>
                       </div>
                       <div style={{ marginTop: 8, fontSize: 11, color: 'var(--muted)', background: 'var(--green-dim)', borderRadius: 'var(--r-md)', padding: '6px 10px' }}>
-                        ✅ {tr("ยืนยัน")} <strong style={{ color: 'var(--green)' }}>{closeMatch.qty} {tr('ชิ้น')}</strong> {tr("เป็น OK ทั้งหมด · หากมีงานเสียให้กด")} <strong>{tr('🔴 บันทึกงานเสีย')}</strong> {tr("แยกต่างหาก")}
+                        ✅ {tr("ยืนยัน")} <strong style={{ color: 'var(--green)' }}>{closeMatch.qty} {tr('ชิ้น')}</strong> {tr("เป็น OK ทั้งหมด · หากมีงานเสียให้กด")} <strong>{tr('บันทึกงานเสีย')}</strong> {tr("แยกต่างหาก")}
                       </div>
                     </>
                   ) : prodOrders.find(o => o.prod_no === closeProdNo && o.status === 'confirmed') ? (
@@ -7060,7 +7095,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                 <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--red)' }}>🔴 {defectForm.id ? tr("แก้ไขงานเสีย") : tr("บันทึกงานเสีย")}</div>
                 <div style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'right' }}>
                   <div style={{ color: 'var(--blue)', fontWeight: 700 }}>{selSession.line_name}</div>
-                  <div>{selSession.shift === 'day' ? tr("☀️ กะเช้า") : tr("🌙 กะดึก")} · {fmtDate(selSession.work_date)}</div>
+                  <div>{selSession.shift === 'day' ? tr("กะเช้า") : tr("กะดึก")} · {fmtDate(selSession.work_date)}</div>
                 </div>
               </div>
               <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 16 }}>
@@ -7324,7 +7359,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
           const dtMachineOptions = (() => {
             const line = (selSession?.line_name || '').trim().toLowerCase();
             const fam = new Set(getLineFamilyNames(lines, selSession?.line_name || '').map(n => (n || '').trim().toLowerCase()));
-            const G = ['🏭 เครื่องในไลน์นี้', '🔗 เครื่องในกลุ่มไลน์', '🏢 เครื่องอื่นในโรงงาน', '🔨 แม่พิมพ์'];
+            const G = ['เครื่องในไลน์นี้', 'เครื่องในกลุ่มไลน์', 'เครื่องอื่นในโรงงาน', 'แม่พิมพ์'];
             const inFam = (m) => { const s = (m.line_name || '').trim().toLowerCase(); return !!s && (s === line || fam.has(s)); };
             const rank = (m) => {
               if (m.equipment_kind === 'die') return 3;      // แม่พิมพ์ผูกชื่อกลุ่มเครื่องปั๊ม ไม่ใช่ไลน์ผลิต
@@ -7375,7 +7410,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                   <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>⏱ {dtForm.id ? tr("แก้ไข Downtime") : tr("บันทึก Downtime")}</div>
                   <div style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'right' }}>
                     <div style={{ color: 'var(--blue)', fontWeight: 700 }}>{selSession.line_name}</div>
-                    <div>{selSession.shift === 'day' ? tr("☀️ กะเช้า") : tr("🌙 กะดึก")} · {fmtDate(selSession.work_date)}</div>
+                    <div>{selSession.shift === 'day' ? tr("กะเช้า") : tr("กะดึก")} · {fmtDate(selSession.work_date)}</div>
                   </div>
                 </div>
 
@@ -7754,7 +7789,7 @@ function StaleTab({ stale, onOpenSession, role }) {
     <div>
       <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: '14px 18px', marginBottom: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
-          <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{tr('⏰ กะค้างยังไม่ปิด')} {rows.length} {tr('กะ')}</div>
+          <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{tr('กะค้างยังไม่ปิด')} {rows.length} {tr('กะ')}</div>
           {over.length > 0 && (
             <span style={{ fontSize: 11.5, fontWeight: 800, padding: '3px 10px', borderRadius: 'var(--r-md)', background: 'var(--red-dim)', color: 'var(--red)', border: '1px solid var(--red-line)' }}>
               {tr("เกินเป้า")} {STALE_SESSION_DAYS} {tr('วัน')} {over.length} {tr('กะ · เก่าสุด')} {rows[0]?.age} {tr("วัน")}
@@ -7836,7 +7871,7 @@ function StaleTab({ stale, onOpenSession, role }) {
                 style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', width: '100%', textAlign: 'left', cursor: 'pointer',
                   background: 'var(--card-surf)', border: `1px solid ${late ? 'var(--red-line)' : 'var(--border2)'}`, borderLeft: `4px solid ${late ? 'var(--red)' : 'var(--amber)'}`,
                   borderRadius: 'var(--r-md)', padding: '11px 14px' }}>
-                <span style={{ fontSize: 12, fontWeight: 900, minWidth: 78, color: late ? 'var(--red)' : 'var(--amber)', fontVariantNumeric: 'tabular-nums' }}>{tr('⏰ ค้าง')} {o.age} {tr('วัน')}</span>
+                <span style={{ fontSize: 12, fontWeight: 900, minWidth: 78, color: late ? 'var(--red)' : 'var(--amber)', fontVariantNumeric: 'tabular-nums' }}>{tr('ค้าง')} {o.age} {tr('วัน')}</span>
                 <span style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--text)' }}>{o.line_name}</span>
                 {o.group && o.group !== o.line_name && <span style={{ fontSize: 11, color: 'var(--muted)' }}>({o.group})</span>}
                 <span style={{ fontSize: 12, color: 'var(--muted)' }}>{o.shift === 'day' ? tr("กะเช้า") : tr("กะดึก")} · {fmtDate(o.work_date)}</span>
@@ -9540,7 +9575,7 @@ function BreakPolicySetup({ role }) {
     load();
   };
 
-  const SHIFT_LABEL = { day: '☀️ กะเช้า', night: '🌙 กะดึก', both: '⏰ ทั้งสองกะ' };
+  const SHIFT_LABEL = { day: 'กะเช้า', night: 'กะดึก', both: 'ทั้งสองกะ' };
   /* ⚠️ พักบางรายการเกิด "อย่างใดอย่างหนึ่ง" ระหว่างวันทำโอ/ไม่ทำโอ (เช่น พักเบรค OT)
      ตั้งผิด = หักพักซ้ำ → %A ของทุกจอเพี้ยน (เคสจริง 2026-09-14) · ดู migration 20260914_break_policies_ot_scope
      🔚 20/10 — พักที่ "เลื่อนตามเวลาเลิกกะ" (5ส.) ใช้ anchor='shift_end' แทนการแตกแถวตาม ot_scope
