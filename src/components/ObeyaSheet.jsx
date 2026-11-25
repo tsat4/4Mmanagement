@@ -181,7 +181,8 @@ export function Sheet({ k, cw = 0, span = 1, icon, title, sub, subFull = null, b
   const bigNum = !onClose && /^-?[\d,]+(?:\.\d+)?$/.test(bigStr) ? Number(bigStr.replace(/,/g, '')) : null;
   const bigDec = bigNum != null && bigStr.includes('.') ? bigStr.split('.')[1].length : 0;
   const bigRun = useCountUp(bigNum);
-  const bigShown = bigNum == null ? big : bigRun.toLocaleString(undefined, { minimumFractionDigits: bigDec, maximumFractionDigits: bigDec });
+  // 🛡️ ชั้นที่ 2 (25/11): hook คืนตัวเลขเสมอเมื่อ bigNum เป็นตัวเลขแล้ว แต่ถ้าไม่ใช่ตัวเลขด้วยเหตุใด = โชว์ `big` ตามเดิม ห้ามล้มทั้งหน้า
+  const bigShown = bigNum == null || typeof bigRun !== 'number' ? big : bigRun.toLocaleString(undefined, { minimumFractionDigits: bigDec, maximumFractionDigits: bigDec });
   /* 📱 มือถือ: กริดเหลือ 1 คอลัมน์ ⇒ แผ่นกว้าง 2 ช่อง (OEE · ACTION BOARD) ต้องเป็น 1 ช่อง
      ไม่งั้นเกิดคอลัมน์แฝงที่ 2 กว้าง ~0 = ที่ว่างประหลาด + แผ่นถัดไปเบียด (15/10) · จอคอมเดิม */
   const isMobile = useIsMobile();
