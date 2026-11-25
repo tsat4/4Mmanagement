@@ -466,7 +466,7 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
     const seq = ++loadSeq.current;
     const alive = () => seq === loadSeq.current;
         /* 🔴 ต้องดึง `summary_mode` + `decimals` มาด้วย — ขาดไปแถวทุกตัวตกเป็น "เฉลี่ย" / ทศนิยม 2 เงียบๆ */
-    const CAT_EMBED = '*, kpi_catalog(id, name, unit, category, formula_text, scope_text, direction, decimals, summary_mode, value_scope, board_slot, amount_var, value_min, value_max)';
+    const CAT_EMBED = '*, kpi_catalog(id, name, unit, category, formula_text, scope_text, direction, decimals, summary_mode, value_scope, board_slot, amount_var, value_min, value_max, rollup_mode)';
     const run = (cols) => supabase.from('kpi_definitions').select(cols)
       .eq('year', year).eq('is_active', true)
       .order('category').order('seq').order('created_at');
@@ -2088,6 +2088,17 @@ function CatalogModal({ rows, canManage, usedNames = [], onClose, onChanged, onP
                             onChange={e => patch(r, 'amount_var', e.target.value || null, 'ยอดเงินคู่กัน')}>
                             <option value="">{tr('— ไม่โชว์ยอดเงิน —')}</option>
                             {KPI_BASE_VARS.filter(v => tr(v.unit) === 'บาท').map(v => <option key={v.key} value={v.key}>{tr(v.label)}</option>)}
+                          </select>
+                        </label>
+                        {/* ⬆ 25/11 (user: "ค่าที่ไม่ใช่ของส่วนกลาง ควรรวมระดับส่วนทั้งหมดที่มีข้อมูลมาโชว์") — วิธีรวมข้ามหน่วยขึ้นแผ่นรวมของแม่/โรงงาน · ว่าง = อัตโนมัติ (kpiRollup.rollupModeOf) */}
+                        <label style={miniLbl} title={tr('แผ่นรวมของหน่วยแม่/ทั้งโรงงาน รวมค่าของหน่วยลูกอย่างไร · อัตโนมัติ: นิยามสูตร = Σ ตัวตั้งของทุกหน่วย ÷ ค่ากลาง · วิธีรวม 12 เดือน = ผลรวม → ผลรวม · อื่น = เฉลี่ยไม่ถ่วงน้ำหนัก (≈) · DSI/Inventory ตั้ง "ผลรวม" (รายแผนกบวกกันได้)')}>
+                          {tr('รวมข้ามหน่วย')}
+                          <select style={{ ...mini, width: 190 }} value={r.rollup_mode || ''} disabled={!canManage || busy === r.id}
+                            onChange={e => patch(r, 'rollup_mode', e.target.value || null, 'รวมข้ามหน่วย')}>
+                            <option value="">{tr('— อัตโนมัติ —')}</option>
+                            <option value="sum">{tr('ผลรวมของทุกหน่วย')}</option>
+                            <option value="average">{tr('เฉลี่ยไม่ถ่วงน้ำหนัก (≈)')}</option>
+                            <option value="formula">{tr('Σ ตัวตั้ง ÷ ค่ากลาง แล้วคิดสูตร')}</option>
                           </select>
                         </label>
                         {/* 🧱 20/11 (user: "เดือนที่เหลือ ถ้าเป็นไปไม่ได้ ไม่ควรคาดการณ์ — OEE > 100 % · MTTR ติดลบ") — ช่วงค่าที่เป็นไปได้ของตัวตน KPI

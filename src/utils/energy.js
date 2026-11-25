@@ -214,7 +214,7 @@ export const MQTT_FIELDS = [
   { key: 'kvar',       label: 'กำลังรีแอกทีฟ',     unit: 'kVAr', desc: 'ไว้ดู power factor' },
   { key: 'pf',         label: 'เพาเวอร์แฟกเตอร์',  unit: '',     desc: 'ต่ำ = โดนค่าปรับ' },
   { key: 'v',          label: 'แรงดัน',            unit: 'V',    desc: 'Die Shop ส่งค่าเฉลี่ย 3 เฟส' },
-  { key: 'a',          label: 'กระแส',             unit: 'A',    desc: 'Die Shop ส่งเฟสที่สูงสุด (เทียบลิมิตเบรกเกอร์)' },
+  { key: 'a',          label: 'กระแส',             unit: 'A',    desc: 'flow จากศูนย์เชื่อมต่อ = เฉลี่ย 3 เฟส ค่าล่าสุด (ลิมิตเบรกเกอร์เทียบเฟสที่สูงสุด)' },
 ]
 export const mqttField = (k) => MQTT_FIELDS.find(f => f.key === k) || { key: k, label: k, unit: '' }
 
@@ -409,7 +409,11 @@ export function buildLiveBoard({ meters = [], live = [], daily = [], today, nowM
       const kw = numOrNull(f.kw?.value), a = numOrNull(f.a?.value)
       // ค่าเก่าเกินเกณฑ์ไม่ตัดสินเกินลิมิต — ไม่รู้ว่าตอนนี้เป็นยังไง
       const overKw = status === 'online' && kw != null && limitKw != null && kw > limitKw
-      const overA = status === 'online' && a != null && limitA != null && a > limitA
+      // 🔌 ลิมิตเบรกเกอร์เทียบ "เฟสที่สูงสุด" (25/11) — flow ใหม่ส่ง A = เฉลี่ย 3 เฟส ซึ่งต่ำกว่าเฟสที่หนักสุด
+      //    มีค่ารายเฟสครบ = ใช้เฟสสูงสุด · ไม่มี = ใช้ A ที่ส่งมา (พฤติกรรมเดิม)
+      const ph = ['a1', 'a2', 'a3'].map(x => numOrNull(f[x]?.value))
+      const aLimitBasis = ph.every(x => x != null) ? Math.max(...ph) : a
+      const overA = status === 'online' && aLimitBasis != null && limitA != null && aLimitBasis > limitA
       return {
         key: k, name: m.scope_name, panel: m.panel || '—', subtitle: m.subtitle || '',
         // 🏷️ ชื่อบนจอ (display_name · ตั้งที่แท็บ "ตั้งค่าตู้" 23/11) — `name` ยังเป็นคีย์ข้อมูล/แม่-ลูก/URL ห้ามสลับ
@@ -418,6 +422,7 @@ export function buildLiveBoard({ meters = [], live = [], daily = [], today, nowM
         limitKw, limitA,
         gaugeMax: numOrNull(m.gauge_max_kw) ?? (limitKw != null ? limitKw * 1.5 : null),
         kw, a, v: numOrNull(f.v?.value), kwhTotal: numOrNull(f.kwh_total?.value),
+        pf: numOrNull(f.pf?.value),   // ⚡ Power Factor ล่าสุด (topic `<ตู้>/pf` · 25/11) — ไม่ส่ง = null
         // 🔌 ค่ารายเฟสล่าสุด (v1-3 = แรงดันระหว่างสาย L1-L2/L2-L3/L3-L1 · a1-3 = กระแส L1/L2/L3 · ingest v9) — ไม่มี = null
         phase: phaseInfo(['v1', 'v2', 'v3'].map(x => numOrNull(f[x]?.value)), ['a1', 'a2', 'a3'].map(x => numOrNull(f[x]?.value)), kw),
         receivedAt: recv, ageMin: liveAgeMin(recv, nowMs), status,
@@ -755,12 +760,19 @@ export function minuteKwh(readings) {
  * @param {{ readings, daily, names:string[], scale, from, to, nowMs }} p
  * @returns {{ axis:{key,label}[], kwh: Record<name, Record<key, number|null>>, totalKwh, kpi:{avgKw, peakKw, peakAt, vAvg, aMax, coverage}, minuteOk }}
  */
-export function energyHistory({ readings = [], daily = [], names = [], scale = 'day', from, to, nowMs = Date.now() } = {}) {
-  const keys = bucketAxis(from, to, scale)
+export function energyHistory({ readings = [], daily = [], names = [], scale = 'day', from, to, nowMs = Date.now(), win = null } = {}) {
+  /* ⏱️ win = { a, b } (ms) — ดูเฉพาะช่วงชั่วโมง (เช่น "1 ชม. ล่าสุด" · 25/11 คำสั่ง user) ⇒ ใช้รายนาทีล้วน
+     แกนเหลือเฉพาะชั่วโมงในช่วง · ความครบคิดจากช่วงนี้ · ไม่มี win = พฤติกรรมเดิมเป๊ะ */
+  const inWin = (t) => !win || (t >= win.a && t < win.b)
+  const allReadings = readings
+  if (win) { readings = readings.filter(r => inWin(Date.parse(r.bucket_at))); daily = []; scale = 'hour' }
+  let keys = bucketAxis(from, to, scale)
+  if (win) { const ka = bkkHourKey(win.a), kb = bkkHourKey(win.b - 1); keys = keys.filter(k => k >= ka && k <= kb) }
   const axis = keys.map(k => ({ key: k, label: bucketLabel(k, scale) }))
   const kwh = Object.fromEntries(names.map(n => [n, Object.fromEntries(keys.map(k => [k, null]))]))
   const add = (n, k, v) => { if (kwh[n] && k in kwh[n] && v != null) kwh[n][k] = (kwh[n][k] ?? 0) + v }
-  if (scale === 'hour') for (const x of minuteKwh(readings)) add(x.name, bkkHourKey(x.t), x.kwh)
+  // ส่วนต่างรายนาทีคิดจากแถวทั้งหมดก่อนตัดช่วง (นาทีแรกของช่วงต้องมีจุดก่อนหน้าเป็นฐาน)
+  if (scale === 'hour') for (const x of minuteKwh(allReadings)) { if (inWin(x.t)) add(x.name, bkkHourKey(x.t), x.kwh) }
   else for (const d of daily || []) add(d.scope_name, bucketKey(String(d.day).slice(0, 10), scale), numOrNull(d.kwh))
   const all = Object.values(kwh).flatMap(o => Object.values(o)).filter(v => v != null)
   const totalKwh = all.length ? all.reduce((s, v) => s + v, 0) : null
@@ -787,7 +799,8 @@ export function energyHistory({ readings = [], daily = [], names = [], scale = '
     }
   }
   /* ความครบ = นาทีที่มีข้อมูล ÷ นาทีที่ควรมี (ช่วง 08:00 วันแรก → 08:00 หลังวันสุดท้าย ตัดที่ "ตอนนี้") */
-  const winA = Date.parse(`${from}T08:00:00+07:00`), winB = Math.min(Date.parse(`${to}T08:00:00+07:00`) + 86400000, nowMs)
+  const winA = win ? win.a : Date.parse(`${from}T08:00:00+07:00`)
+  const winB = Math.min(win ? win.b : Date.parse(`${to}T08:00:00+07:00`) + 86400000, nowMs)
   const expect = names.length && winB > winA ? Math.floor((winB - winA) / 60000) * names.length : 0
   return {
     axis, kwh, totalKwh, minuteOk,
@@ -799,4 +812,68 @@ export function energyHistory({ readings = [], daily = [], names = [], scale = '
       coverage: minuteOk && expect ? Math.min(1, minutes.size / expect) : null,
     },
   }
+}
+
+/* ══ ⚡ Demand 15 นาที (25/11 · คำสั่ง user "ทำ Demand 15 นาที · เป้า 1600 kW") ══════════════════
+   ค่าที่การไฟฟ้าใช้คิด Demand Charge = กำลังไฟ "เฉลี่ย" ของแต่ละช่วง 15 นาทีตามนาฬิกา (:00 :15 :30 :45)
+   คิดจาก **ส่วนต่างเลขมิเตอร์ kWh** (ไม่ใช่ค่า kW ที่สุ่มรายนาที — โหลดกระชากทำให้เพี้ยน) ของ "ชั้นบนสุดของตู้"
+   · แถวรายนาที bucket b ≈ เลขมิเตอร์ปลายนาที b ⇒ พลังงานช่วง [s, s+15) = kwh(s+14) − kwh(s−1)
+   · มิเตอร์ใดขาดจุดขอบช่วง (ยอมถอยได้ ≤ 2 นาที) / เลขถอยหลัง = ช่วงนั้น null (ห้ามเดา)
+   · ช่วงปัจจุบัน: เฉลี่ยถึงนาทีล่าสุดที่ "ทุกมิเตอร์" มีค่า · คาดการณ์จบช่วง = (พลังงานแล้ว + kW ตอนนี้ × เวลาที่เหลือ) ÷ 15 นาที */
+export const DEMAND_WINDOW_MIN = 15
+const MIN_MS = 60000
+
+/**
+ * @param {{ readings:Array<{scope_name,bucket_at,kwh_total}>, names:string[], nowMs:number, dayStartMs:number, kwNow?:number|null }} p
+ * @returns {null | { current:{start,end,elapsedMin,avgKw,projectedKw}, prev:{start,kw}|null, todayMax:{start,kw}|null, windows:Array<{start,kw}>, missing:string[] }}
+ *   missing = มิเตอร์ชั้นบนสุดที่ไม่มีเลขมิเตอร์เลยในข้อมูลที่ส่งมา (จอต้องเขียนบอกว่าทำไมเป็น —)
+ */
+export function demandWindows({ readings = [], names = [], nowMs = Date.now(), dayStartMs, kwNow = null, windowMin = DEMAND_WINDOW_MIN } = {}) {
+  if (!names.length) return null
+  const W = windowMin * MIN_MS
+  const by = new Map(names.map(n => [n, new Map()]))
+  for (const r of readings || []) {
+    const m = by.get(r.scope_name)
+    const t = Date.parse(r.bucket_at), k = numOrNull(r.kwh_total)
+    if (m && Number.isFinite(t) && k != null) m.set(t, k)
+  }
+  const at = (m, t) => { for (let d = 0; d <= 2; d++) { const v = m.get(t - d * MIN_MS); if (v != null) return v } return null }
+  /** พลังงานรวมทุกมิเตอร์ ระหว่างปลายนาที a ถึงปลายนาที b · ขาด/ถอยหลัง = null */
+  const energy = (a, b) => {
+    let sum = 0
+    for (const m of by.values()) {
+      const x = at(m, a), y = at(m, b)
+      if (x == null || y == null || y < x) return null
+      sum += y - x
+    }
+    return sum
+  }
+  const curStart = Math.floor(nowMs / W) * W
+  const windows = []
+  for (let s = Math.ceil((dayStartMs ?? curStart) / W) * W; s < curStart; s += W) {
+    const e = energy(s - MIN_MS, s + W - MIN_MS)
+    windows.push({ start: s, kw: e == null ? null : e / (windowMin / 60) })
+  }
+  // ช่วงปัจจุบัน — นาทีล่าสุดที่ทุกมิเตอร์มีค่า
+  let tc = Infinity
+  for (const m of by.values()) {
+    let last = null
+    for (const t of m.keys()) if (t >= curStart && (last == null || t > last)) last = t
+    tc = last == null ? -Infinity : Math.min(tc, last)
+  }
+  let elapsedMin = null, avgKw = null, projectedKw = null
+  if (Number.isFinite(tc) && tc >= curStart) {
+    elapsedMin = Math.min(windowMin, (tc - curStart) / MIN_MS + 1)
+    const e = energy(curStart - MIN_MS, tc)
+    if (e != null) {
+      avgKw = e / (elapsedMin / 60)
+      const rest = windowMin - elapsedMin
+      projectedKw = rest <= 0 ? avgKw : (kwNow == null ? null : (e + Math.max(0, kwNow) * (rest / 60)) / (windowMin / 60))
+    }
+  }
+  const done = windows.filter(w => w.kw != null)
+  const todayMax = done.length ? done.reduce((a, b) => (b.kw > a.kw ? b : a)) : null
+  const prev = windows.length ? windows[windows.length - 1] : null
+  const missing = names.filter(n => !by.get(n).size)
+  return { current: { start: curStart, end: curStart + W, elapsedMin, avgKw, projectedKw }, prev, todayMax, windows, missing }
 }

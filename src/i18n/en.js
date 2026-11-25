@@ -18357,6 +18357,36 @@ const EN = {
   "%A/%P/%Q ของช่วง = ตัวตั้งรวม ÷ ตัวหารรวม (ไม่ใช่เฉลี่ยรายกะ) — กะที่ผลิตน้อยจึงไม่ถ่วงเท่ากะที่ผลิตเยอะ": "%A/%P/%Q of the range = total numerator ÷ total denominator (not a per-shift average) — low-output shifts weigh less than high-output ones",
   "ข้อมูลบางส่วนถูกตัด (ช่วงยาวเกิน)": "Some data was cut (range too long)",
 
+  'กระแส (A)': 'Current (A)',
+  'สูงสุดในนาที': 'Max in minute',
+  'ชม. ล่าสุด': 'h latest',
+  'ช่วงชั่วโมงล่าสุด': 'Latest hours',
+  'เฉลี่ย 3 เฟส · ลิมิต': '3-phase avg · limit',
+  'จุด = 1 นาที (ค่าที่มิเตอร์ส่งมาในนาทีนั้น) · เส้นประแดง = ลิมิต · มิเตอร์หลุดเกิน 5 นาทีเส้นขาด': 'Dot = 1 minute (value the meter sent that minute) · red dashed = limit · meter offline over 5 minutes breaks the line',
+  'ทุกตัวเลข กราฟ เหตุการณ์ และไฟล์ Excel คิดเฉพาะช่วงนี้': 'All figures, charts, events and the Excel file cover this window only',
+  'กำลังไฟ (kW) — เส้นทึบ = ค่าที่มิเตอร์ส่งมาในนาที · เส้นประ = สูงสุดในนาที': 'Power (kW) — solid = value sent that minute · dashed = max in minute',
+  'กำลังไฟ (ค่าล่าสุด)': 'Power (latest)',
+  'ยังไม่มีค่ารายนาทีใน': 'No per-minute values in the',
+  "เฉลี่ยตั้งแต่ต้นช่วง": "avg since window start",
+  "ผ่านไป": "Elapsed",
+  "คาดการณ์จบช่วง": "Projected at window end",
+  "คาดว่าจะเกินเป้า": "projected over target",
+  "อ่านเป้าไม่ได้": "cannot read target",
+  "ยังไม่ได้ตั้งเป้า (แท็บตั้งค่าตู้)": "no target set (Panel settings tab)",
+  "ช่วงก่อน": "Previous window",
+  "มิเตอร์ชั้นบนสุดออนไลน์ไม่ครบ — ไม่คาดการณ์": "not all top-level meters online — no projection",
+  "แท่งละ 15 นาที · 6 ชม. ล่าสุดของวันนี้ · กรอบประ = ไม่มีข้อมูล": "1 bar = 15 min · last 6 h of today · dashed box = no data",
+  "เส้นประแดง = เป้า": "red dashed = target",
+  "คิดจากส่วนต่างเลขมิเตอร์ (kWh) ของมิเตอร์ชั้นบนสุดของตู้ — บิลการไฟฟ้าคิดจากมิเตอร์ของการไฟฟ้า ตัวเลขอาจต่างเล็กน้อย": "From the kWh meter difference of the panel top-level meters — the utility bill uses the utility meter, so figures may differ slightly",
+  "บันทึกเป้า Demand ตู้": "Saved demand target for panel",
+  "เป้า Demand 15 นาที ต่อตู้": "15-min demand target per panel",
+  "ใช้กับการ์ด Demand 15 นาทีบนแท็บค่าไฟสด · ว่าง = ไม่ตั้งเป้า (การ์ดไม่ตัดสินเกิน/ไม่เกิน)": "Used by the 15-min demand card on the Live tab · blank = no target (card does not judge over/under)",
+  "อ่านเป้า Demand ไม่ได้ — ลองโหลดใหม่": "Cannot read demand targets — try reloading",
+  "ไม่ตั้งเป้า": "No target",
+  "เป้า Demand": "Demand target",
+  "แก้ล่าสุดโดย": "Last edited by",
+  "ยังไม่มีเลขมิเตอร์ (kWh) ของ": "No kWh meter reading yet for",
+  "คิด Demand ของตู้นี้ไม่ได้": "cannot compute demand for this panel",
   /* ── 🌐 รอบ 10 (25/11) — ตารางตัดสินใจ: user เคาะ "แปลทุกแถวที่เป็น UI รวมศัพท์หน้างาน" (AdoptionOutlook · FlowTower · mockup · PPE · ป้าย utils) ── */
   "JIG มีปัญหา (ชำรุด/ปรับแก้)": "JIG problem (damaged/adjusted)",
   "Stationary มีปัญหา": "Stationary problem",
@@ -18648,6 +18678,11 @@ const EN = {
   "เลิกทำ": "Undo",
   "ทำซ้ำ": "Redo",
   "ตามรอบ": "Periodic",
+
+  /* ── รอบ 10d (25/11) — merge main: กลุ่มเครื่องใน Daily Report ── */
+  "เครื่องในไลน์นี้": "Machines in this line",
+  "เครื่องในกลุ่มไลน์": "Machines in the line group",
+  "เครื่องอื่นในโรงงาน": "Other machines in the plant",
 
 };
 

@@ -23,7 +23,8 @@ import NoticeBar from '../components/NoticeBar';
 import { tr } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 import { askConfirm } from '../utils/askConfirm';
-import { notifyEvent } from '../utils/notifyEvent';   // 🔔 N3 (24/11): ทดสอบไม่ผ่าน = แจ้ง (เดิมเงียบ)
+import { notifyEvent } from '../utils/notifyEvent';
+import WfRoundPanel from '../components/WfRoundPanel';   // ✍️ การเซ็นของรอบ (e-Workflow โหมดผูกเอกสาร · 25/11)   // 🔔 N3 (24/11): ทดสอบไม่ผ่าน = แจ้ง (เดิมเงียบ)
 import { checkWriteRows } from '../utils/dbWrite';
 import { canWriteLine, writeBlockText } from '../utils/writeScope';   // 🔐 ชั้น ③ (19/11 · ออดิท check sheet)
 const NO_LINES = [];
@@ -262,6 +263,11 @@ export default function PokaYokeCheck() {
           {tr("อ่านข้อมูลการเปิดกะไม่สำเร็จ — บอกไม่ได้ว่ากะนี้ไลน์นี้เดินหรือไม่ ⇒ ที่ว่างอยู่อาจเป็น \"ไม่ได้ผลิต\" ไม่ใช่ \"ขาดตรวจ")}"
         </NoticeBar>
       )}
+
+      {/* ✍️ 25/11 (คำสั่ง user "ทุกเอกสาร issued/checked/approved คุมด้วย e-workflow"): ใครเซ็น/ความถี่ไหน = ตั้งที่ /workflow-designer
+          · เซ็นแล้ว = ผลทดสอบในรอบนั้นถูกล็อกฝั่ง DB (trigger) · แก้ = ผู้มีสิทธิ์กดเพิกถอนพร้อมเหตุผล */}
+      <WfRoundPanel subject="pokayoke" line={selLine} date={selDate} shift={selShift}
+        hasData={done > 0} summary={`${tr('ทดสอบแล้ว')} ${done}/${activeDevs.length}${failN ? ` · ${tr('ไม่ผ่าน')} ${failN}` : ''}`} />
 
       {/* สรุป */}
       {activeDevs.length > 0 && (

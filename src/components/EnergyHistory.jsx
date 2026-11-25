@@ -24,6 +24,8 @@ import NoticeBar from './NoticeBar';
 import { toast } from './Toast';
 import { tr, dateLocale } from '../utils/i18n';
 import useIsMobile from '../utils/useIsMobile';
+import Segmented from './Segmented';
+import { bkkHourKey } from '../utils/timeRange';
 
 const GOOD = 'var(--green)', WARN = 'var(--amber)', BAD = 'var(--red)', ACC = 'var(--accent2)', INFO = 'var(--blue)', IDLE = 'var(--muted)';
 const SERIES = [ACC, INFO, GOOD, WARN, 'var(--blue-line)', IDLE];
@@ -33,6 +35,9 @@ const MINUTE_MAX_DAYS = 3;        // เกินนี้ไม่ดึงร�
 const EVENTS_MAX = 1000;
 const fmt = (v, d = 1) => (v == null || !Number.isFinite(Number(v)) ? '—'
   : Number(v).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d }));
+/* ⏱️ ดูเฉพาะ N ชม. ล่าสุด (25/11 คำสั่ง user · แบบ Node-RED 1/6/24 ชม.) — `?hw=` · ใช้ได้เมื่อช่วงจบที่วันนี้ */
+const HOUR_WINDOWS = [{ value: 'all', label: 'ทั้งช่วง' }, { value: '1', label: '1 ชม.' }, { value: '6', label: '6 ชม.' }, { value: '24', label: '24 ชม.' }];
+const workDateOf = (ms) => (bkkHourKey(ms - 8 * 3600000) || '').slice(0, 10);   // วันทำงาน (ก่อน 08:00 = วันก่อน)
 const tLabel = (ms) => new Date(ms).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
 export default function EnergyHistory() {
@@ -58,6 +63,9 @@ export default function EnergyHistory() {
   /* รายนาทีใช้ได้เมื่อช่วงทั้งหมดอยู่ใน 7 วันล่าสุด และไม่เกิน 3 วัน */
   const today = range.today;
   const minuteWanted = rangeDays(from, to) <= MINUTE_MAX_DAYS && from >= addDays(today, -(KEEP_DAYS - 1));
+  const winOk = to === today;                                  // "N ชม. ล่าสุด" มีความหมายเมื่อช่วงจบที่วันนี้
+  const hw = winOk && ['1', '6', '24'].includes(sp.get('hw')) ? sp.get('hw') : 'all';
+  const pickHw = (v) => setSp(p => { const n = new URLSearchParams(p); if (v === 'all') n.delete('hw'); else n.set('hw', v); return n; }, { replace: true });
 
   const load = useCallback(async () => {
     const id = ++req.current;
@@ -73,10 +81,14 @@ export default function EnergyHistory() {
     const all = reg.map(m => m.scope_name);
     const ns = compare ? all : (all.includes(hm) ? [hm] : all.slice(0, 1));
     if (!ns.length) { setData({ empty: true }); return; }
-    const a = new Date(Date.parse(`${from}T08:00:00+07:00`)).toISOString();
-    const b = new Date(Date.parse(`${to}T08:00:00+07:00`) + 86400000).toISOString();
+    const nowMs = Date.now();
+    const hwN = hw === 'all' ? 0 : Number(hw);
+    const win = hwN ? { a: nowMs - hwN * 3600000, b: nowMs + 60000 } : null;
+    // มีช่วงชั่วโมง = ดึงเฉพาะช่วงนั้น (+5 นาทีก่อนหน้าเป็นฐานส่วนต่างเลขมิเตอร์)
+    const a = new Date(win ? win.a - 5 * 60000 : Date.parse(`${from}T08:00:00+07:00`)).toISOString();
+    const b = new Date(win ? win.b : Date.parse(`${to}T08:00:00+07:00`) + 86400000).toISOString();
     const [rd, dy, ev] = await Promise.all([
-      minuteWanted ? fetchAllRows(supabaseDR, 'energy_readings', 'scope_name, bucket_at, kw, kw_max, kwh_total, v, a, a_max',
+      (minuteWanted || win) ? fetchAllRows(supabaseDR, 'energy_readings', 'scope_name, bucket_at, kw, kw_max, kwh_total, v, a, a_max',
         q => q.eq('scope_kind', 'zone').in('scope_name', ns).gte('bucket_at', a).lt('bucket_at', b).order('bucket_at').order('scope_name'))
         : Promise.resolve({ data: [], error: null }),
       fetchAllRows(supabaseDR, 'energy_daily', 'scope_name, day, kwh, peak_kw, peak_at',
@@ -88,14 +100,16 @@ export default function EnergyHistory() {
     setData({
       names: ns, readings: rd.data || [], daily: dy.data || [], events: ev.data || [],
       errors: [rd.error && 'ค่ารายนาที', dy.error && 'ยอดรายวัน', ev.error && 'เหตุการณ์'].filter(Boolean),
-      evCapped: (ev.data || []).length >= EVENTS_MAX, at: Date.now(),
+      evCapped: (ev.data || []).length >= EVENTS_MAX, at: nowMs, win,
     });
-  }, [from, to, hm, compare, minuteWanted, meters]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [from, to, hm, compare, minuteWanted, meters, hw]); // eslint-disable-line react-hooks/exhaustive-deps
   usePolling(load, RATE.ANALYTIC);
 
   const h = useMemo(() => (data?.names ? energyHistory({
-    readings: data.readings, daily: data.daily, names: data.names, scale, from, to, nowMs: data.at,
+    readings: data.readings, daily: data.daily, names: data.names, scale, nowMs: data.at, win: data.win,
+    from: data.win ? workDateOf(data.win.a) : from, to,
   }) : null), [data, scale, from, to]);
+  const inWin = (t) => !data?.win || (t >= data.win.a && t < data.win.b);
 
   /* กราฟเส้นรายนาที — 1 แถวต่อนาที รวมทุกตู้ (คีย์ = ชื่อตู้) */
   const minuteRows = useMemo(() => {
@@ -103,21 +117,23 @@ export default function EnergyHistory() {
     const by = new Map();
     for (const r of data.readings) {
       const t = Date.parse(r.bucket_at);
+      if (!inWin(t)) continue;
       if (!by.has(t)) by.set(t, { t });
       const o = by.get(t);
       o[`kw:${r.scope_name}`] = r.kw == null ? null : Number(r.kw);
+      o[`kwmax:${r.scope_name}`] = r.kw_max == null ? null : Number(r.kw_max);
       o[`v:${r.scope_name}`] = r.v == null ? null : Number(r.v);
       o[`a:${r.scope_name}`] = r.a == null ? null : Number(r.a);
     }
     return [...by.values()].sort((x, y) => x.t - y.t);
   }, [data]);
   const kwhRows = useMemo(() => (h ? h.axis.map(x => ({ label: x.label, ...Object.fromEntries((data?.names || []).map(n => [n, h.kwh[n]?.[x.key] ?? null])) })) : []), [h, data]);
-  const events = useMemo(() => (data?.events || []).filter(e => {
+  const events = useMemo(() => (data?.events || []).filter(e => inWin(Date.parse(e.ev_time))).filter(e => {
     const ok = e.kind === 'CLEAR' || e.level === 'ok';
     return evFilter === 'all' || (evFilter === 'warn' ? !ok : ok);
   }), [data, evFilter]);
   const evCount = useMemo(() => {
-    const all = data?.events || [];
+    const all = (data?.events || []).filter(e => inWin(Date.parse(e.ev_time)));
     const ok = all.filter(e => e.kind === 'CLEAR' || e.level === 'ok').length;
     return { all: all.length, warn: all.length - ok, ok };
   }, [data]);
@@ -128,15 +144,17 @@ export default function EnergyHistory() {
     const ns = data.names;
     const headers = ['ช่วง', ...ns.map(n => `${n} (kWh)`)];
     const body = h.axis.map(x => [x.label, ...ns.map(n => (h.kwh[n]?.[x.key] == null ? '' : Math.round(h.kwh[n][x.key] * 1000) / 1000))]);
-    if (data.readings.length) {
+    const rows = data.readings.filter(r => inWin(Date.parse(r.bucket_at)));
+    if (rows.length) {
       body.push([], ['รายนาที', 'ตู้', 'kW', 'V', 'A', 'เลขมิเตอร์ (kWh)']);
-      for (const r of data.readings) body.push([tLabel(Date.parse(r.bucket_at)), r.scope_name, r.kw ?? '', r.v ?? '', r.a ?? '', r.kwh_total ?? '']);
+      for (const r of rows) body.push([tLabel(Date.parse(r.bucket_at)), r.scope_name, r.kw ?? '', r.v ?? '', r.a ?? '', r.kwh_total ?? '']);
     }
     downloadCsvDoc('csv_energy_history', `energy-history_${compare ? 'all' : ns[0]}_${from}_${to}.csv`, csvText(headers, body));
     toast.success(`${tr("ส่งออก")} ${body.length} ${tr("แถว")}`);
   };
 
   const single = !compare && data?.names?.length === 1;
+  const hasKwMax = minuteRows.some(r => Object.keys(r).some(k => k.startsWith('kwmax:') && r[k] != null));
   const yW = alignedYWidth(minuteRows.flatMap(r => Object.entries(r).filter(([k]) => k !== 't').map(([, v]) => v)).filter(v => v != null).map(v => fmtAxis(Math.ceil(v))));
   const lineChart = (prefix, unit, title, color) => (
     <div style={card}>
@@ -147,11 +165,16 @@ export default function EnergyHistory() {
           <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
           <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={tLabel} tick={axisTick()} minTickGap={60} />
           <YAxis width={yW} tick={axisTick()} tickFormatter={fmtAxis} domain={['auto', 'auto']} />
-          <Tooltip {...tooltipProps()} labelFormatter={tLabel} formatter={(v, k) => [`${fmt(v, 1)} ${unit}`, String(k).split(':')[1]]} />
+          <Tooltip {...tooltipProps()} labelFormatter={tLabel} formatter={(v, k) => [`${fmt(v, 1)} ${unit}`, String(k).startsWith(tr('สูงสุดในนาที')) ? `${tr('สูงสุดในนาที')} · ${String(k).split(':')[1]}` : String(k).split(':')[1]]} />
           {(data?.names || []).length > 1 && <Legend wrapperStyle={{ fontSize: 12 }} formatter={(k) => String(k).split(':')[1]} />}
           {(data?.names || []).map((n, i) => (
-            <Line key={n} type="monotone" dataKey={`${prefix}:${n}`} stroke={single ? color : SERIES[i % SERIES.length]} dot={false} strokeWidth={1.6} {...chartAnim()} connectNulls={false} />
+            <Line key={n} type="monotone" dataKey={`${prefix}:${n}`} name={`${prefix}:${n}`} stroke={single ? color : SERIES[i % SERIES.length]} dot={false} strokeWidth={1.6} {...chartAnim()} connectNulls={false} />
           ))}
+          {/* 📈 เส้นประ = สูงสุดในนาที (kw_max · ingest v10 + flow ใหม่ 23/11) — ตู้เดียว และมีค่าเท่านั้น */}
+          {prefix === 'kw' && single && hasKwMax && (
+            <Line type="monotone" dataKey={`kwmax:${data.names[0]}`} name={`${tr('สูงสุดในนาที')}:${data.names[0]}`} stroke={color} strokeDasharray="5 4" strokeOpacity={0.7}
+              dot={false} strokeWidth={1.2} {...chartAnim()} connectNulls={false} />
+          )}
         </LineChart>
       </ResponsiveContainer>
     </div>
@@ -170,8 +193,14 @@ export default function EnergyHistory() {
             <button type="button" role="radio" aria-checked={compare} className={`pg-btn${compare ? ' primary' : ''}`} onClick={() => pick('*')}>⇆ {tr('เทียบทุกตู้')}</button>
           )}
         </div>
+        {winOk && <Segmented value={hw} onChange={pickHw} options={HOUR_WINDOWS} label={tr('ช่วงชั่วโมงล่าสุด')} />}
         <button type="button" className="pg-btn" onClick={exportCsv} disabled={!h}>⬇ {tr('Excel (CSV)')}</button>
       </TimeRangeBar>
+      {data?.win && (
+        <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+          {tr('ดูเฉพาะ')} {hw} {tr('ชม. ล่าสุด')} ({tLabel(data.win.a)} → {tr('ตอนนี้')}) · {tr('ทุกตัวเลข กราฟ เหตุการณ์ และไฟล์ Excel คิดเฉพาะช่วงนี้')}
+        </div>
+      )}
 
       {data?.err && <NoticeBar tone="bad">{data.err}</NoticeBar>}
       {data?.empty && <NoticeBar tone="warn">{tr('ยังไม่มีตู้ในทะเบียนบอร์ดสด')}</NoticeBar>}
@@ -191,12 +220,13 @@ export default function EnergyHistory() {
 
         {!h.minuteOk && (
           <NoticeBar tone="info">
-            {tr('กราฟแรงดัน / กระแส / กำลังไฟรายนาที ดูได้เมื่อช่วงอยู่ใน 7 วันล่าสุดและไม่เกิน 3 วัน — ช่วงนี้แสดงยอดหน่วยไฟจากยอดรายวัน')}
+            {data.win ? `${tr('ยังไม่มีค่ารายนาทีใน')} ${hw} ${tr('ชม. ล่าสุด')}`
+              : tr('กราฟแรงดัน / กระแส / กำลังไฟรายนาที ดูได้เมื่อช่วงอยู่ใน 7 วันล่าสุดและไม่เกิน 3 วัน — ช่วงนี้แสดงยอดหน่วยไฟจากยอดรายวัน')}
           </NoticeBar>
         )}
-        {h.minuteOk && lineChart('kw', 'kW', tr('กำลังไฟ (kW)'), GOOD)}
+        {h.minuteOk && lineChart('kw', 'kW', single && hasKwMax ? tr('กำลังไฟ (kW) — เส้นทึบ = ค่าที่มิเตอร์ส่งมาในนาที · เส้นประ = สูงสุดในนาที') : tr('กำลังไฟ (kW)'), GOOD)}
         {h.minuteOk && single && lineChart('v', 'V', tr('แรงดัน (V) — เฉลี่ย 3 เฟส'), INFO)}
-        {h.minuteOk && single && lineChart('a', 'A', tr('กระแส (A) — เฟสที่สูงสุด'), ACC)}
+        {h.minuteOk && single && lineChart('a', 'A', tr('กระแส (A)'), ACC)}
 
         <div style={card}>
           <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{tr('หน่วยไฟที่ใช้ (kWh)')}</div>

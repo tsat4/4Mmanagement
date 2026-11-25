@@ -796,17 +796,24 @@ export default function Operator() {
        ⇒ ใช้ `canDelete()` ของกลาง (คุม "บัญชีกลางห้ามลบ" ให้ด้วย) ไม่ใช่ `can()` เปล่า */
     if (!canDeleteUtil('skills', 'delete', role)) { toast.error('ลบสกิลต้องมีสิทธิ์ skills:delete'); return; }
     if (!sdGuard(sd.scope_section, `${tr("สกิล")} "${sd.label}"`)) return;   // ชั้นที่ 3 — ลบของส่วนงานอื่นไม่ได้
-    if (!await askConfirm(`${tr("ลบสกิล")} "${sd.label}"?\n${tr("คะแนนสกิลนี้ของพนักงานและ requirement ทุก station จะถูกลบด้วย")}`)) return;
-    // ลบลูกก่อน (คะแนน + requirement) แล้วค่อยลบนิยามสกิล + เช็ค error ทุกสเตป
-    // ไม่งั้นถ้าลบลูกไม่สำเร็จแต่ลบนิยามไปแล้ว จะเหลือ skill_name ค้างที่อ้างสกิลที่ไม่มี
-    const e1 = (await supabase.from('employee_skills').delete().eq('skill_name', sd.name)).error;
-    if (e1) { toast.error((tr('ลบคะแนนสกิลไม่สำเร็จ') + ': ') + e1.message); return; }
+    /* 🛡️ ห้ามลบสกิลที่ยังมีคะแนนพนักงาน (user 25/11) — เดิมลบคะแนนทุกคนพ่วงไปด้วย ·
+       ด่านจริงอยู่ฝั่ง DB (trigger `trg_skill_def_delete_guard`) — ที่นี่นับก่อนเพื่อบอกเป็นภาษาคน
+       · นับไม่ได้ = ไม่ลบ (fail-closed) · 📄 docs/modules/employee-skills-exp.md §25/11 */
+    const { count: nScore, error: eCnt } = await supabase.from('employee_skills')
+      .select('id', { count: 'exact', head: true }).eq('skill_name', sd.name);
+    if (eCnt || nScore == null) { toast.error(`${tr('นับคะแนนสกิลไม่ได้ — ยังไม่ลบ')}${eCnt ? `: ${eCnt.message}` : ''}`); return; }
+    if (nScore > 0) {
+      toast.error(`${tr('ลบสกิล')} "${sd.label}" ${tr('ไม่ได้ — ยังมีคะแนนของพนักงาน')} ${nScore} ${tr('แถว (ลบได้เฉพาะสกิลที่ยังไม่มีใครมีคะแนน)')}`);
+      return;
+    }
+    if (!await askConfirm(`${tr("ลบสกิล")} "${sd.label}"?\n${tr("ยังไม่มีพนักงานมีคะแนนสกิลนี้ · requirement ทุก station จะถูกลบด้วย")}`)) return;
+    // ลบ requirement ก่อน แล้วค่อยลบนิยามสกิล + เช็ค error ทุกสเตป (คะแนนไม่ต้องลบ — นับแล้วว่าเป็น 0)
     const e2 = (await supabase.from('station_requirements').delete().eq('skill_name', sd.name)).error;
     if (e2) { toast.error((tr('ลบ requirement ไม่สำเร็จ') + ': ') + e2.message); return; }
     /* 🔴 นับแถว — RLS ปฏิเสธ DELETE = 0 แถวไม่มี error (กฎเขียน DB ข้อ 2) · เคส 13/11: ถือ `skills:delete`
        อย่างเดียว ลบคะแนน/requirement ไปแล้วแต่นิยามยังอยู่เงียบๆ = ลบครึ่งเดียว */
     if (!checkWriteRows(await supabase.from('skill_definitions').delete().eq('id', sd.id).select('id'),
-      `${tr("ลบสกิล")} "${sd.label}" (${tr("คะแนน/requirement ถูกลบไปแล้ว — ให้ admin ลบนิยามที่เหลือ")})`)) return;
+      `${tr("ลบสกิล")} "${sd.label}" (${tr("requirement ถูกลบไปแล้ว — ให้ admin ลบนิยามที่เหลือ")})`)) return;
     fetchSkillDefs();
     fetchEmployees();
   };

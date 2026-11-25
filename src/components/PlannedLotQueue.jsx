@@ -20,8 +20,10 @@ import { qtyText, splitPlanForSession, matchPlanToActual } from '../utils/planLo
 import { fetchAllPages } from '../utils/fetchByIds';
 
 import { tr } from '../utils/i18n';
-const shiftLabel = (sh) => (sh === 'night' ? 'กะดึก' : tr("กะเช้า"));
-const STATE_COLOR = { done: '#22c55e', partial: '#4d9fff', pending: 'var(--border2)' };
+const shiftLabel = (sh) => (sh === 'night' ? tr("กะดึก") : tr("กะเช้า"));
+/* 🎨 25/11 สีดิบ → token · `pending` เดิมใช้ `--border2` **เป็นสีตัวอักษร** = #343b4b บนพื้นเข้ม
+   (อ่านไม่ออกจริงๆ — วัดจากจอ 26 จุด) ⇒ ใช้ `--muted` ซึ่งเป็นสีข้อความรองจริง */
+const STATE_COLOR = { done: 'var(--green)', partial: 'var(--blue)', pending: 'var(--muted)' };
 
 export default function PlannedLotQueue({ session, orders = [] }) {
   const [lots, setLots] = useState([]);
@@ -74,11 +76,11 @@ export default function PlannedLotQueue({ session, orders = [] }) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap', fontSize: 12,
         padding: '4px 8px', background: 'var(--bg2)', borderRadius: 'var(--r-md)',
-        borderLeft: `3px solid ${carried && r.state === 'pending' ? '#f59e0b' : STATE_COLOR[r.state]}` }}>
+        borderLeft: `3px solid ${carried && r.state === 'pending' ? 'var(--amber)' : STATE_COLOR[r.state]}` }}>
         <b style={{ minWidth: 18, textAlign: 'center', color: 'var(--muted)' }}>{l.seq}</b>
         <MatLabel mat={l.mat_no} name={l.part_name} size={12} />
-        {l.machine_no && <span style={{ fontSize: 11, color: '#94a3b8' }}>{l.machine_no}</span>}
-        {l.die_no && <span style={{ fontSize: 11, color: '#94a3b8' }}>{l.die_no}</span>}
+        {l.machine_no && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{l.machine_no}</span>}
+        {l.die_no && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{l.die_no}</span>}
         <span style={{ flex: 1 }} />
         <span style={{ fontSize: 12 }}>
           <b style={{ color: STATE_COLOR[r.state] }}>{qtyText(r.donePcs)}</b>
@@ -96,7 +98,7 @@ export default function PlannedLotQueue({ session, orders = [] }) {
 
   return (
     <div style={{ marginBottom: 10, padding: '10px 14px', background: 'rgba(77,159,255,0.07)', border: '1px solid rgba(77,159,255,0.3)', borderRadius: 'var(--r-md)' }}>
-      <div style={{ fontSize: 12.5, fontWeight: 800, color: '#4d9fff', marginBottom: 2 }}>
+      <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--text)', marginBottom: 2 }}>
         {tr("กรอบแผนจากทีมวางแผน")}
         {m.planPcs > 0 && (
           <span style={{ color: 'var(--text2)', fontWeight: 700 }}>
@@ -108,7 +110,7 @@ export default function PlannedLotQueue({ session, orders = [] }) {
         {tr("แผนเป็น")}<b>{tr('กรอบ')}</b> {tr("ไม่ได้สั่งให้เปิดใบ — หน้างานสแกนคัมบัง/เปิดเป้าตามปกติ ระบบรวมยอดทุกกะของวันมาเทียบให้เอง")}
       </div>
       {dayErr && (
-        <div style={{ fontSize: 11.5, color: '#f59e0b', marginBottom: 6 }}>
+        <div style={{ fontSize: 11.5, color: 'var(--amber)', marginBottom: 6 }}>
           ⚠️ {tr("โหลดยอดทั้งวันไม่ได้")} ({dayErr}) — {tr("ตัวเลขด้านล่างนับเฉพาะใบของกะนี้ ล็อตที่กะอื่นทำไปแล้วอาจขึ้นว่ายังไม่เริ่ม")}
         </div>
       )}
@@ -122,7 +124,7 @@ export default function PlannedLotQueue({ session, orders = [] }) {
       {/* แผนของกะก่อนที่ยังไม่ได้ทำ — กะนี้ทำต่อได้ (ยอดปันข้ามกะให้แล้ว) */}
       {carriedRows.length > 0 && (
         <div style={{ marginTop: 8, paddingTop: 7, borderTop: '1px dashed var(--border2)' }}>
-          <div style={{ fontSize: 12, fontWeight: 800, color: '#f59e0b', marginBottom: 5 }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--amber)', marginBottom: 5 }}>
             ⤵ {tr("ค้างจาก")}{shiftLabel(carriedRows[0].lot.shift)} {carriedRows.length} {tr("ล็อต — ยังไม่ครบกรอบ กะนี้ทำต่อได้")}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>

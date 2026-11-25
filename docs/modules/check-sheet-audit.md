@@ -73,3 +73,9 @@ workDate กลางใน LPA/Poka-Yoke/`/checkin` · สี hex ดิบ →
 - `PokaYokeCheck.jsx` `saveCheck`: เปลี่ยนเป็น `fail` (จากไม่ใช่ fail) ⇒ `notifyEvent('pokayoke_fail')` · ผู้รับตามทะเบียน (supervisor + QA ส่วนงานไลน์ · ตั้งที่ `/notification-config`)
 - บันทึกซ้ำ/แก้โน้ตของผลที่ไม่ผ่านอยู่แล้ว = ไม่ยิงซ้ำ · migration `20261124_daily_checker_notify_rules_main.sql` (Main · apply แล้ว)
 - BBS มีแจ้งเตือนแล้ว 25/11 (`bbs_unsafe` · 📄 `bbs-safety.md`)
+
+## ✍️ Poka-Yoke ลงนามผ่าน e-Workflow (2026-11-25 · คำสั่ง user)
+- Leader รับทราบ **รายวัน แยกกะ** · Supervisor อนุมัติ **รายสัปดาห์** (บล็อก 1-7/8-14/15-21/22-สิ้นเดือน · หลังจบรอบ)
+- ความถี่/ผู้เซ็น ตั้งที่ `/workflow-designer` (ใบ `pokayoke_daily` · `pokayoke_weekly`) · แผงบนจอ = `<WfRoundPanel subject="pokayoke">`
+- เซ็นแล้วแก้ผลทดสอบในรอบนั้นไม่ได้ (trigger `trg_pokayoke_checks_wf_lock`) · แก้ = เพิกถอนพร้อมเหตุผล · 📄 `e-workflow.md` §โหมดผูกเอกสาร
+

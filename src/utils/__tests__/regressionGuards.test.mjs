@@ -6291,7 +6291,7 @@ test('🗑️ ทะเบียนข้อความ (SimpleMasterPanel) ต
   /* ทะเบียนที่ปลายทางเก็บเป็น "ข้อความ" ไม่ผูก FK ⇒ ลบแล้วไม่มีใครเตือน — ต้องมีด่านทุกตัว
      (cost_centers ใช้ util เฉพาะของตัวเอง `costCenterRefs.js` ตั้งแต่ 06/10) */
   const MUST_GUARD = ['customers', 'suppliers', 'die_press_lines', 'die_op_types',
-                      'die_set_kinds', 'repair_wi_registry', 'cost_centers'];
+                      'die_set_kinds', 'repair_wi_registry', 'cost_centers', 'companies'];
 
   for (const f of walk(join(ROOT, 'src'), ['.jsx', '.js'])) {
     const src = stripComments(readFileSync(f, 'utf8'));
@@ -12141,13 +12141,29 @@ test('☼☾ shift-glyph-no-emoji — ลิสต์กะใช้ <ShiftGlyph
   const src = stripComments(readFileSync(join(ROOT, 'src/pages/DailyReport.jsx'), 'utf8'))
   assert.match(src, /<ShiftGlyph shift=/,
     '\n\n❌ ลิสต์กะไม่ได้ใช้ <ShiftGlyph> — หน้างานแยกกะกลางวัน/กลางคืนไม่ออก (แจ้ง 17/11)\n')
-  /* ขอบเขตของกฎ = **แถวในลิสต์กะ** (ตัวแปรแถวชื่อ `s`) ที่หน้างานต้องไล่สายตาเร็ว
-     ประโยคที่พูดถึง "กะที่เลือกอยู่" (`selSession`) ไม่เข้าข่าย — อีโมจิในประโยคไม่ได้ทำให้ลิสต์รก */
-  const SUN_MOON = /s\.shift === '(?:day|night)' \? '[^']*(?:\u2600|\uD83C\uDF1E|\uD83C\uDF19|\uD83C\uDF12)/g
-  const emoji = (src.match(SUN_MOON) || [])
+  /* 🔴 25/11 (คำสั่ง user "ยังมี emoji สีสันซ่อนอยู่") — ขอบเขตเดิมคือ **แถวในลิสต์กะ** เท่านั้น
+     ⇒ ☀️/🌙 ที่ประโยค "กะที่เลือกอยู่" (หัวการ์ด LIVE · หัวโมดัลปิดกะ) รอดมาตลอดและ user เห็น
+     ⇒ ขยายเป็น **ทั้งไฟล์** · ข้อความที่ส่งออกนอกจอ (Telegram) ไม่เข้าข่าย — ที่นั่นใช้อีโมจิได้ */
+  const SUN_MOON = /(?:\u2600\uFE0F?|\uD83C\uDF1E|\uD83C\uDF19|\uD83C\uDF12)/g
+  const uiLines = src.split('\n').filter(l => !/notify|telegram|sendMessage/i.test(l))
+  const emoji = (uiLines.join('\n').match(SUN_MOON) || [])
   assert.deepEqual(emoji, [],
-    '\n\n❌ แถวในลิสต์กะกลับไปใช้อีโมจิพระอาทิตย์/พระจันทร์แล้ว:\n   '
-    + emoji.join(' · ') + '\n   ⇒ ใช้ <ShiftGlyph shift={s.shift} size={12} /> แทน (UI-CONVENTIONS §6.41)\n')
+    '\n\n❌ DailyReport กลับไปใช้อีโมจิพระอาทิตย์/พระจันทร์แล้ว (' + emoji.length + ' จุด)'
+    + '\n   ⇒ ใช้ <ShiftGlyph shift={…} size={12} /> + ข้อความ "กะเช้า/กะดึก" แทน (UI-CONVENTIONS §6.41)\n')
+
+  /* 🔴 อีโมจิประดับที่หน้างานเห็นแล้วทักว่า "ดูไม่เป็นโปรแกรม" (25/11) — ห้ามกลับมาอีก
+     ⏰ ไม่อยู่ในลิสต์ "สัญลักษณ์สถานะ" ที่อนุญาต (§6.36 ข้อ 4 · ที่อนุญาตคือ ⏳ ⏱) */
+  /* `[ch, คำอธิบาย, เป็นคำนำหน้าเท่านั้น?]` — ตัวที่ติด `prefixOnly` ยังใช้เป็น **ไอคอนเดี่ยว**
+     ในทะเบียนได้ (`icon: '📦'` → `<Icon glyph>` วาดเป็นเส้น) ห้ามเฉพาะตอนนำหน้าข้อความ */
+  const BANNED = [
+    ['\u23F0', 'นาฬิกาปลุก (ใช้สีของชิปบอกความเร่งด่วนพอแล้ว · ที่อนุญาตคือ ⏳ ⏱)', false],
+    ['\uD83D\uDCE6', 'กล่องพัสดุนำหน้าข้อความ (หัวข้อ Prod Orders · toast แจ้งสโตร์)', true],
+  ]
+  const bad = BANNED.filter(([ch, , prefixOnly]) => src.includes(prefixOnly ? ch + ' ' : ch))
+    .map(([ch, why]) => `${ch} = ${why}`)
+  assert.deepEqual(bad, [],
+    '\n\n❌ DailyReport มีอีโมจิประดับที่ถอดออกไปแล้ว:\n   ' + bad.join('\n   ')
+    + '\n   ⇒ หัวข้อ/ชิป/ข้อความห้ามมีอีโมจิประดับนำหน้า (UI-CONVENTIONS §6.36 ข้อ 4)\n')
   assert.ok((src.match(/<ShiftGlyph shift=/g) || []).length >= 2,
     '\n\n❌ ลิสต์กะมี 2 ที่ (แถบซ้าย + กะค้าง) ต้องใช้ <ShiftGlyph> ทั้งคู่ ไม่งั้น 2 จอหน้าตาไม่ตรงกัน\n')
 })
@@ -12838,4 +12854,58 @@ test('🛡️ order-trace-stations-by-name — สอบกลับใบผล
   assert.ok(/from\(\s*'workstations'\s*\)\s*\.select\(\s*wsCols\s*\)\s*\.in\(\s*'line_name'\s*,\s*famNames\s*\)/.test(code),
     '\n🗺️ OrderTrace.jsx ต้องหาจุดงานด้วย .in(\'line_name\', famNames) ควบคู่ line_id — '
     + 'จุดของไลน์ลูกผูกด้วยชื่อ (line_id = null) · เดิมได้ 0 จุด ช่อง "จุดประจำ" ขึ้น "—" (📄 docs/modules/order-trace.md §24/11)\n');
+});
+
+test('🔗 wf-bound-signoff — เอกสารที่ผูก e-Workflow ต้องเซ็นผ่านแผงกลาง + RPC (25/11 · คำสั่ง user)', () => {
+  const bad = [];
+  const rd = (f) => stripComments(readFileSync(join(ROOT, f), 'utf8'));
+  const py = rd('src/pages/PokaYokeCheck.jsx');
+  if (!/<WfRoundPanel subject="pokayoke"/.test(py)) bad.push('PokaYokeCheck: ต้องฝัง <WfRoundPanel subject="pokayoke"> (การเซ็นอยู่ที่ e-Workflow ห้ามทำตารางลงนามแยก)');
+  const panel = rd('src/components/WfRoundPanel.jsx');
+  if (!/await confirmSign\(/.test(panel)) bad.push('WfRoundPanel: ปุ่มอนุมัติ/รับทราบต้อง await confirmSign()');
+  if (/from\('wf_(instances|tasks|actions)'\)\.(insert|update|delete|upsert)/.test(panel)) bad.push('WfRoundPanel: ห้ามเขียนตาราง wf_* ตรง — ผ่าน RPC');
+  for (const f of ['wf_bound_ensure', 'wf_act', 'wf_revoke']) if (!panel.includes(`'${f}'`)) bad.push(`WfRoundPanel: ต้องเรียก RPC ${f}`);
+  const mig = readFileSync(join(ROOT, 'supabase/migrations/20261125b_e_workflow_bound_main.sql'), 'utf8');
+  if (!/create trigger trg_pokayoke_checks_wf_lock/.test(mig)) bad.push('migration: ต้องมี trigger ล็อกผลทดสอบที่เซ็นแล้ว');
+  assert.deepEqual(bad, [], `\n\n❌ ${bad.length} จุด\n   ${bad.join('\n   ')}\n`);
+});
+
+test('🏬 store-leg-always-written — ใบขอเติมต้องเขียน "ออกจาก STORE" เสมอ ห้ามมีเงื่อนไข', () => {
+  /* 🔴 วัดจริง 25/11: ใบขอเติม 726 ใบ → **174 ใบมีแต่ขาเข้าไลน์ ไม่มีขาออกจาก STORE** (116,878 ชิ้น)
+       ต้นเหตุ: โค้ดก่อน 19/11 เขียนว่า
+         else if (!st) note = 'STORE ไม่มีแถวสต็อกของพาร์ทนี้ — บวกเข้าไลน์แล้ว แต่ไม่หัก STORE'
+         else rows.push({ line_name: 'STORE', type: 'consume' })
+       ⇒ พาร์ทที่ STORE ยังไม่มีแถวสรุป (วัตถุดิบซื้อ 3xxx/5xxx แทบทั้งหมด) **ข้ามขาออกทั้งดุ้น**
+       ของโผล่ที่ไลน์โดยไม่ออกจากที่ไหน ⇒ ยอด STORE พองขึ้นเรื่อยๆ **เงียบสนิท ไม่มี error**
+       กว่าจะรู้ = 2 เดือน · คำสั่ง user 19/11 "ตัดเต็มและติดลบ" แก้แล้ว (20/11 เป็นต้นมา 0 ใบ)
+     ⇒ กฎ: การย้ายของต้องเขียน **คู่เสมอ** — ปลายทาง +qty และต้นทาง −qty
+       ไม่มีของให้หัก = **ติดลบไว้** แล้วเขียนเหตุผลบนใบ ห้ามข้ามแถว
+     🔑 ตัวจับ: บรรทัดที่ push แถว STORE ต้องไม่ขึ้นต้นด้วย else/if ในบรรทัดเดียวกัน */
+  const src = readFileSync(join(ROOT, 'src/pages/HeijunkaKanban.jsx'), 'utf8');
+  const bad = [];
+  src.split('\n').forEach((ln, i) => {
+    if (!/rows\.push\(\{[^}]*line_name:\s*'STORE'[^}]*type:\s*'consume'/.test(ln)) return;
+    if (/^\s*(else|if|\}\s*else)\b/.test(ln)) bad.push(`HeijunkaKanban.jsx:${i + 1}  ${ln.trim().slice(0, 100)}`);
+  });
+  assert.deepEqual(bad, [], '\n\n❌ แถว "ออกจาก STORE" ของใบขอเติมถูกเขียนแบบมีเงื่อนไข\n'
+    + bad.join('\n')
+    + '\n   ⇒ พาร์ทที่ไม่เข้าเงื่อนไขจะได้ของเข้าไลน์โดยไม่มีใครหัก = ยอด STORE พองเงียบๆ\n'
+    + '   fix: push เสมอ · ไม่พอให้ติดลบ แล้วแจ้งเหตุผลใน note/toast (กฎ 19/11 "ตัดเต็มและติดลบ")\n');
+});
+
+/* ── 🛡️ skill-delete-keeps-scores (25/11 · user "ทำด่านกันลบสกิลที่ยังมีคะแนนด้วย") ──────
+   เดิมปุ่มลบสกิลที่ /operator ลบคะแนนพนักงานทุกคนพ่วงไปด้วย · คะแนนค้างไร้นิยาม 22 รหัสขึ้นการ์ดเป็นรหัส
+   ด่านจริงอยู่ DB (trg_skill_def_delete_guard) — ด่านนี้กันจอกลับไปลบคะแนนพ่วง */
+test('🛡️ skill-delete-keeps-scores — ปุ่มลบสกิลห้ามลบคะแนนพนักงานพ่วง', () => {
+  const src = stripComments(readFileSync(join(ROOT, 'src/pages/operator.jsx'), 'utf8'));
+  /* เฉพาะตัวลบสกิล — ฟอร์มแก้พนักงาน (ล้างคะแนนรายคน) ยังลบแถวของคนนั้นได้ตามปกติ */
+  const start = src.indexOf('const handleDeleteSkill');
+  assert.ok(start >= 0, 'หา handleDeleteSkill ใน operator.jsx ไม่เจอ — ย้าย/เปลี่ยนชื่อแล้วต้องตามแก้ด่านนี้');
+  const code = src.slice(start, src.indexOf('const handleUpdateSkill', start));
+  assert.ok(/employee_skills[\s\S]*count:\s*'exact'/.test(code), 'handleDeleteSkill ต้องนับคะแนนก่อนลบ');
+  assert.ok(!/from\(\s*'employee_skills'\s*\)\s*\.delete\(/.test(code),
+    '\n🛡️ operator.jsx ห้าม .from(\'employee_skills\').delete() — ลบสกิลได้เฉพาะตัวที่ยังไม่มีใครมีคะแนน '
+    + '(นับก่อน + trigger trg_skill_def_delete_guard ฝั่ง DB · 📄 docs/modules/employee-skills-exp.md §25/11)\n');
+  const mig = readFileSync(join(ROOT, 'supabase/migrations/20261125b_skill_def_delete_guard.sql'), 'utf8');
+  assert.ok(/before delete on public\.skill_definitions/.test(mig), 'migration ด่านลบสกิลต้องมี trigger before delete');
 });
