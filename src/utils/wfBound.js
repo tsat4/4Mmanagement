@@ -9,9 +9,11 @@
    Pure — ไม่แตะ supabase
    ═══════════════════════════════════════════════════════════════════════════════ */
 
-/** เอกสารที่ผูกได้ — โปรแกรมเมอร์ลงทะเบียน (ต้องมีตัวล็อก/ตัวสแกนฝั่ง DB ด้วย) */
+/** เอกสารที่ผูกได้ — โปรแกรมเมอร์ลงทะเบียน (ต้องมีตัวล็อก/ตัวสแกนฝั่ง DB ด้วย)
+    `docKey` = แถวในทะเบียนเอกสาร /doc-forms (เลขฟอร์ม/Rev/โลโก้) · ช่องเซ็นบนใบพิมพ์มาจากขั้นของใบงาน (25/11 · BBS) */
 export const BOUND_SUBJECTS = Object.freeze([
-  { subject: 'pokayoke', label: 'Poka-Yoke Check', recordPerm: 'pokayoke:record', link: '/daily-checker?tab=pokayoke' },
+  { subject: 'pokayoke', label: 'Poka-Yoke Check', recordPerm: 'pokayoke:record', link: '/daily-checker?tab=pokayoke', docKey: null },
+  { subject: 'bbs', label: 'BBS — สังเกตพฤติกรรมความปลอดภัย', recordPerm: 'bbs:record', link: '/daily-checker?tab=bbs', docKey: 'bbs_observation' },
 ]);
 
 export const PERIODS = Object.freeze([
@@ -72,4 +74,16 @@ export function roundState({ instance, ensureStatus, hasData } = {}) {
   if (ensureStatus === 'not_active') return 'not_active';
   if (hasData === false) return 'no_data';
   return 'unknown';
+}
+
+/** ช่องเซ็นบนใบพิมพ์ จากขั้นของใบงาน + ลายเซ็นที่เกิดขึ้นจริง (25/11 · BBS นำร่อง)
+    · ชื่อช่อง = `step.sig_label` (ออกโดย/ตรวจสอบโดย/อนุมัติโดย) ไม่ตั้ง = ชื่อขั้น
+    · ผู้เซ็น = การ "approve" ล่าสุดของขั้นนั้นในใบนี้ · ยังไม่เซ็น = ช่องว่าง (name null) ห้ามเดาชื่อ
+    @returns [{ label, name, at, actorId }] */
+export function signoffRows(flow, actions = []) {
+  return (flow?.steps || []).map((st, i) => {
+    const a = (actions || []).filter(x => x.action === 'approve' && x.step_index === i)
+      .sort((p, q) => String(q.acted_at).localeCompare(String(p.acted_at)))[0];
+    return { label: st.sig_label || st.label || `ขั้นที่ ${i + 1}`, name: a?.actor_name || null, at: a?.acted_at || null, actorId: a?.actor_id || null };
+  });
 }
