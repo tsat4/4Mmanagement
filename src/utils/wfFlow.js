@@ -11,6 +11,7 @@ export const WF_STATUS = {
   approved:    { label: 'อนุมัติครบ',  tone: 'good' },
   rejected:    { label: 'ตีกลับ',      tone: 'bad' },
   cancelled:   { label: 'ยกเลิก',      tone: 'none' },
+  revoked:     { label: 'เพิกถอนลายเซ็น', tone: 'none' },   // ใบรอบเอกสาร (โหมดผูกเอกสาร · 25/11)
 };
 
 /** @param inst แถว wf_instances · @param flow flow_schema ของเวอร์ชันที่ใบตรึงไว้ */

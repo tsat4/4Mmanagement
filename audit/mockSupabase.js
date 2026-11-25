@@ -740,6 +740,15 @@ const TABLE_ROWS = {
     if (i >= 8 && i < 14) return { ...r, scope_kind: 'zone', scope_name: 'DB-LASER', field: PH[i - 8][0], value: PH[i - 8][1], received_at: new Date().toISOString() };
     return { ...r, scope_kind: 'zone', scope_name: N[i % 8], field: i < 8 ? 'kw' : 'a', value: i < 8 ? KW[i] : 50, received_at: new Date().toISOString() };
   },
+  /* ⚡ Demand 15 นาที (2026-11-25 · ห้ามถอด) — แถวรายนาทีของตู้ MDB ต่อเนื่องถึงนาทีนี้ (เลขมิเตอร์เพิ่ม 15 kWh/นาที = 900 kW)
+     + เป้าตู้ MDB ⇒ DemandCard วาดครบทั้งค่าเฉลี่ย/คาดการณ์/แท่ง ใน crashsweep (เดิมไม่มี kwh_total = การ์ดเป็น "—" ล้วน) */
+  energy_readings: (r, i) => {
+    // ตู้ MDB ใน mock มีชั้นบนสุด 2 ตัว (MDB · MDB-10) ⇒ สลับกัน นาทีเดียวกันได้ทั้งคู่ (7 นาทีล่าสุด)
+    const t = Math.floor(Date.now() / 60000) * 60000 - Math.floor((14 - i) / 2) * 60000;
+    const k = Math.floor(i / 2);
+    return { ...r, scope_kind: 'zone', scope_name: i % 2 ? 'MDB-10' : 'MDB', bucket_at: new Date(t).toISOString(), kw: 900, kw_max: 980, kwh_total: (i % 2 ? 5000 : 1000) + k * 15 };
+  },
+  energy_panel_settings: (r, i) => ({ ...r, panel: i % 2 ? 'MDB-03' : 'MDB', demand_target_kw: i % 2 ? null : 1600 }),
   integration_sources: (r, i) => ({
     ...r, kinds: i % 2 ? ['energy_readings', 'energy_events'] : ['machine_state', 'piece_count'],
     legacy_secret: false, key_hint: i % 3 ? 'ab12' : null,

@@ -23,6 +23,7 @@ import { useOrgSections } from '../utils/useOrgSections';
 import { ROLE_OPTIONS, roleLabel } from '../utils/roleMeta';
 import { FIELD_TYPES, STEP_KINDS, ASSIGNEE_RULES, validateDef, nextKey, TEMPLATE_4M } from '../utils/wfSchema';
 import { wfFlow } from '../utils/wfFlow';
+import { BOUND_SUBJECTS, PERIODS } from '../utils/wfBound';   // 🔗 ใบรอบเอกสาร (โหมดผูกเอกสาร · 25/11)
 import { useSearchParams } from 'react-router-dom';
 import { tr } from '../utils/i18n';
 
@@ -33,7 +34,7 @@ const TABS = [
 ];
 const VSTATUS = { draft: 'ร่าง', pending_publish: 'รอ admin เผยแพร่', published: 'เผยแพร่แล้ว' };
 const DSTATUS = { draft: 'ยังไม่เคยเผยแพร่', active: 'ใช้งาน', retired: 'เลิกใช้' };
-const EMPTY = { defId: null, key: '', name: '', description: '', ownerSection: '', numberPrefix: '', fields: [], steps: [], startRoles: [], onReturn: 'first' };
+const EMPTY = { defId: null, key: '', name: '', description: '', ownerSection: '', numberPrefix: '', fields: [], steps: [], startRoles: [], onReturn: 'first', binding: null };
 
 function fire(res) {
   for (const n of res?.notify || []) {
@@ -127,7 +128,7 @@ function Editor({ def, latest, canDesign, canPublish, mySection, onSaved }) {
   const [s, setS] = useState(() => def && latest ? {
     defId: def.id, key: def.key, name: def.name, description: def.description || '', ownerSection: def.owner_section,
     numberPrefix: def.number_prefix || '', fields: latest.form_schema?.fields || [], steps: latest.flow_schema?.steps || [],
-    startRoles: latest.start_roles || [], onReturn: latest.flow_schema?.onReturn || 'first',
+    startRoles: latest.start_roles || [], onReturn: latest.flow_schema?.onReturn || 'first', binding: latest.flow_schema?.binding || null,
   } : { ...EMPTY, ownerSection: mySection || '' });
   const [perms, setPerms] = useState([]);
   const [busy, setBusy] = useState(false);
@@ -145,14 +146,14 @@ function Editor({ def, latest, canDesign, canPublish, mySection, onSaved }) {
   const locked = latest?.status === 'pending_publish';
   const readOnly = !canDesign || locked;
   const published = !!def?.current_version_id;
-  const errs = validateDef({ key: s.key, name: s.name, ownerSection: s.ownerSection, form: { fields: s.fields }, flow: { steps: s.steps }, startRoles: s.startRoles });
+  const errs = validateDef({ key: s.key, name: s.name, ownerSection: s.ownerSection, form: { fields: s.fields }, flow: { steps: s.steps, binding: s.binding }, startRoles: s.startRoles });
   const up = (patch) => setS(x => ({ ...x, ...patch }));
   const setField = (i, patch) => up({ fields: s.fields.map((f, j) => (j === i ? { ...f, ...patch } : f)) });
   const setStep = (i, patch) => up({ steps: s.steps.map((f, j) => (j === i ? { ...f, ...patch } : f)) });
   const move = (arr, i, d) => { const a = [...arr]; const j = i + d; if (j < 0 || j >= a.length) return a; [a[i], a[j]] = [a[j], a[i]]; return a; };
   const payload = () => ({
     def_id: s.defId, key: s.key.trim(), name: s.name, description: s.description, owner_section: s.ownerSection, number_prefix: s.numberPrefix,
-    form_schema: { fields: s.fields }, flow_schema: { steps: s.steps, onReturn: s.onReturn }, start_roles: s.startRoles,
+    form_schema: { fields: s.fields }, flow_schema: { steps: s.steps, onReturn: s.onReturn, ...(s.binding ? { binding: s.binding } : {}) }, start_roles: s.startRoles,
   });
   const save = async () => {
     setBusy(true);
@@ -215,8 +216,31 @@ function Editor({ def, latest, canDesign, canPublish, mySection, onSaved }) {
         </div>
       </div>
 
+      {/* 🔗 25/11 (คำสั่ง user "ทุกเอกสาร issued/checked/approved คุมด้วย e-workflow · ความถี่แต่ละเอกสารต่างกัน · ตั้งในหน้าจอได้")
+          ผูกใบงานกับเอกสารในระบบ ⇒ 1 ใบ = 1 รอบ (ไลน์ × ช่วงวัน × กะ) · ระบบเปิดใบเอง · เซ็นครบ = ล็อกข้อมูลรอบนั้น */}
       <div style={card}>
-        <div style={{ fontWeight: 800, marginBottom: 10 }}>② {tr('ช่องกรอกในฟอร์ม')}</div>
+        <div style={{ fontWeight: 800, marginBottom: 6 }}>🔗 {tr('ผูกกับเอกสารในระบบ (ใบรอบ)')}</div>
+        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>{tr('ไม่ผูก = ใบฟอร์มทั่วไป (คนกดเปิดใบเอง) · ผูก = ระบบเปิดใบให้ทุกรอบตามความถี่ แล้วส่งให้ผู้เซ็นตามขั้นด้านล่าง')}</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8, alignItems: 'end' }}>
+          <Field label={tr('เอกสาร')}>
+            <select value={s.binding?.subject || ''} disabled={readOnly} onChange={e => up({ binding: e.target.value ? { period: 'day', perShift: false, ...(s.binding || {}), subject: e.target.value } : null })} style={inp}>
+              <option value="">{tr('— ไม่ผูก (ใบฟอร์มทั่วไป) —')}</option>
+              {BOUND_SUBJECTS.map(b => <option key={b.subject} value={b.subject}>{b.label}</option>)}
+            </select></Field>
+          {s.binding && <>
+            <Field label={tr('ความถี่การเซ็น')}>
+              <select value={s.binding.period || ''} disabled={readOnly} onChange={e => up({ binding: { ...s.binding, period: e.target.value } })} style={inp}>
+                {PERIODS.map(p => <option key={p.period} value={p.period}>{tr(p.label)}</option>)}
+              </select></Field>
+            <label style={{ fontSize: 12, display: 'flex', gap: 6, alignItems: 'center' }}>
+              <input type="checkbox" disabled={readOnly} checked={!!s.binding.perShift} onChange={e => up({ binding: { ...s.binding, perShift: e.target.checked } })} />
+              {tr('แยกใบตามกะ (เช้า/ดึก)')}</label>
+          </>}
+        </div>
+      </div>
+
+      <div style={card}>
+        <div style={{ fontWeight: 800, marginBottom: 10 }}>② {tr('ช่องกรอกในฟอร์ม')}{s.binding && <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--muted)' }}> · {tr('ใบรอบเอกสารไม่ต้องมีช่องกรอก (ข้อมูลอยู่ที่ตัวเอกสาร)')}</span>}</div>
         {s.fields.map((f, i) => {
           const meta = FIELD_TYPES.find(t => t.type === f.type);
           return (
@@ -255,10 +279,22 @@ function Editor({ def, latest, canDesign, canPublish, mySection, onSaved }) {
                   {STEP_KINDS.map(k => <option key={k.kind} value={k.kind}>{tr(k.label)}</option>)}
                 </select></Field>
               <Field label={tr('ใครทำขั้นนี้')}>
-                <select value={a.rule || ''} disabled={readOnly} onChange={e => setStep(i, { assignee: { rule: e.target.value, unit: e.target.value === 'perm_in_unit' ? 'instance' : undefined } })} style={inp}>
+                <select value={a.rule || ''} disabled={readOnly} onChange={e => setStep(i, { assignee: { rule: e.target.value, unit: e.target.value === 'perm_in_unit' ? 'instance' : undefined, match: e.target.value === 'perm_in_line' ? 'line' : undefined } })} style={inp}>
                   <option value="">{tr('— เลือก —')}</option>
-                  {ASSIGNEE_RULES.map(r => <option key={r.rule} value={r.rule}>{tr(r.label)}</option>)}
+                  {ASSIGNEE_RULES.filter(r => !r.boundOnly || s.binding || a.rule === r.rule).map(r => <option key={r.rule} value={r.rule}>{tr(r.label)}</option>)}
                 </select></Field>
+              {a.rule === 'perm_in_line' && <>
+                <Field label={tr('คีย์สิทธิ์')}>
+                  <select value={a.perm || ''} disabled={readOnly} onChange={e => setA({ perm: e.target.value })} style={inp}>
+                    <option value="">{tr('— เลือก —')}</option>
+                    {[...new Set([a.perm, ...perms.map(p => p.key)].filter(Boolean))].map(k => <option key={k} value={k}>{perms.find(p => p.key === k)?.label || k}</option>)}
+                  </select></Field>
+                <Field label={tr('จับคนจาก')}>
+                  <select value={a.match || 'line'} disabled={readOnly} onChange={e => setA({ match: e.target.value })} style={inp}>
+                    <option value="line">{tr('คนที่ผูกไลน์นี้/ไลน์แม่ (ไม่เจอ = ทั้งส่วนงาน)')}</option>
+                    <option value="section">{tr('ทุกคนในส่วนงานของไลน์')}</option>
+                  </select></Field>
+              </>}
               {a.rule === 'perm_in_unit' && <>
                 <Field label={tr('คีย์สิทธิ์')}>
                   <select value={a.perm || ''} disabled={readOnly} onChange={e => setA({ perm: e.target.value })} style={inp}>
@@ -298,6 +334,7 @@ function Editor({ def, latest, canDesign, canPublish, mySection, onSaved }) {
 
       <div style={card}>
         <div style={{ fontWeight: 800, marginBottom: 6 }}>④ {tr('ใครเปิดใบนี้ได้ (role)')}</div>
+        {s.binding && <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>{tr('ใบรอบเอกสาร: ระบบเปิดใบเองทุกรอบ (คนบันทึกเอกสารเปิดรอบได้จากหน้าจอเอกสาร) — ไม่ต้องเลือก role')}</div>}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
           {ROLE_OPTIONS.filter(r => r.value !== 'display').map(r => (
             <label key={r.value} style={{ fontSize: 12, display: 'flex', gap: 5, alignItems: 'center' }}>

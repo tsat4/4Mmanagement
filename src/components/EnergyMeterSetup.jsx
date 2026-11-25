@@ -49,13 +49,20 @@ export default function EnergyMeterSetup() {
   const [err, setErr] = useState('');
   const [drafts, setDrafts] = useState({});
   const [busy, setBusy] = useState('');
+  const [panelCfg, setPanelCfg] = useState(undefined);   // undefined = ยังโหลด · null = อ่านไม่ได้
+  const [targetDraft, setTargetDraft] = useState({});
   const [add, setAdd] = useState({ scope: '', panel: '', parent_name: '', display_name: '' });
 
   const load = useCallback(async () => {
-    const [m, t] = await Promise.all([
+    const [m, t, ps] = await Promise.all([
       supabaseDR.from('energy_live_meters').select(COLS).order('panel').order('sort_order').order('scope_name'),
       supabaseDR.from('energy_meter_topics').select('scope_kind, scope_name').limit(1000),
+      supabaseDR.from('energy_panel_settings').select('panel, demand_target_kw, updated_by'),
     ]);
+    // 🎯 เป้า Demand ต่อตู้ — อ่านไม่ได้ = null (ช่องเป้าล็อก + เขียนบอก · ห้ามโชว์ว่างเหมือนไม่ได้ตั้ง)
+    const pmap = ps.error ? null : Object.fromEntries((ps.data || []).map(x => [x.panel, x]));
+    setPanelCfg(pmap);
+    setTargetDraft(pmap ? Object.fromEntries(Object.entries(pmap).map(([k, v]) => [k, v.demand_target_kw ?? ''])) : {});
     if (m.error) { setErr(m.error.message); setRows(null); return; }
     setErr(t.error ? `อ่านรายชื่อมิเตอร์ที่ผูก topic ไม่ได้: ${t.error.message}`
       : (t.data || []).length >= 1000 ? 'รายชื่อ topic เกิน 1,000 แถว — ตัวเลือก "เพิ่มตู้" อาจไม่ครบ' : '');
@@ -96,6 +103,14 @@ export default function EnergyMeterSetup() {
       toast.success(`${tr('เอาออกจากบอร์ดแล้ว')}: ${labelOf(r)}`);
       await load();
     } catch (e) { toast.error(`${tr('ลบไม่สำเร็จ')}: ${e.message}`); } finally { setBusy(''); }
+  };
+  const saveTarget = async (panel) => {
+    setBusy(`t|${panel}`);
+    try {
+      await callAdmin('panel_target', { panel, demand_target_kw: targetDraft[panel] ?? '' });
+      toast.success(`${tr('บันทึกเป้า Demand ตู้')} ${panel}`);
+      await load();
+    } catch (e) { toast.error(`${tr('บันทึกไม่สำเร็จ')}: ${e.message}`); } finally { setBusy(''); }
   };
   const create = async () => {
     const s = freeScopes.find(x => keyOf(x) === add.scope);
@@ -168,6 +183,31 @@ export default function EnergyMeterSetup() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      <div style={card}>
+        <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{tr('เป้า Demand 15 นาที ต่อตู้')}</div>
+        <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 8 }}>
+          {tr('ใช้กับการ์ด Demand 15 นาทีบนแท็บค่าไฟสด · ว่าง = ไม่ตั้งเป้า (การ์ดไม่ตัดสินเกิน/ไม่เกิน)')}
+        </div>
+        {panelCfg === null ? <NoticeBar tone="warn">{tr('อ่านเป้า Demand ไม่ได้ — ลองโหลดใหม่')}</NoticeBar> : (
+          <div style={{ display: 'grid', gap: 6 }}>
+            {panels.map(p => {
+              const cur = panelCfg?.[p]?.demand_target_kw ?? '';
+              const dirty = String(targetDraft[p] ?? '') !== String(cur);
+              return (
+                <div key={p} style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span style={{ minWidth: 140, fontWeight: 700, color: 'var(--text)' }}>{tr('ตู้')} {p}</span>
+                  <input type="number" min="0" style={{ ...inp, width: 140 }} value={targetDraft[p] ?? ''} disabled={!canEdit || panelCfg === undefined}
+                    placeholder={tr('ไม่ตั้งเป้า')} onChange={e => setTargetDraft(x => ({ ...x, [p]: e.target.value }))} aria-label={`${tr('เป้า Demand')} ${p}`} />
+                  <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>kW</span>
+                  {canEdit && <button type="button" className="pg-btn primary" disabled={!dirty || busy === `t|${p}`} onClick={() => saveTarget(p)}>{busy === `t|${p}` ? '…' : tr('บันทึก')}</button>}
+                  {panelCfg?.[p]?.updated_by && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('แก้ล่าสุดโดย')} {panelCfg[p].updated_by}</span>}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {canEdit && (
