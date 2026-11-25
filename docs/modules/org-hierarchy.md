@@ -573,6 +573,30 @@
   · ยังไม่มี UI แก้/เพิ่มชั้นบน (แก้ผ่าน migration) · ใบพิมพ์ผัง (`orgChartPrint`) ยังวาดแค่ชั้นหน่วย (หัวใบ = ทั้งโรงงาน)
   · แผนต่อ (ขั้น 1–4) + การคิดเรื่องตัวกรองผู้ใช้/การยืนยันตัวตนตอนขยายหลายโรงงาน → `docs/ORG-SCALE-GLOBAL-DESIGN.md` §7
 
+## 🏢 ทะเบียนบริษัทในกลุ่ม `companies` (Main) — จาก template Com Code (2026-11-25 · คำสั่ง user "ลุยเลย ต้องไม่กระทบงานเดิม")
+
+user ส่ง template Com Code ของกลุ่มอีกครั้ง 25/11 (เคยคุย 03/11) ถาม "พร้อมรองรับรึยัง" — ก่อนหน้านี้ระบบรู้จักบริษัทแค่ 2 ทาง
+(โหนด company `2100` ในผัง + ชื่อย่อใน `cost_centers.company` 12 ค่า) ไม่มีที่เดียวที่ตอบว่า "บริษัทนี้อยู่ SPG ไหน · SAP/Com Code/B1 อะไร"
+⇒ migration `20261125_companies_registry_main.sql` (**MAIN**) สร้างตาราง `companies` + seed **26 บริษัท 8 SPG** จาก template
+
+- **คอลัมน์:** `code` (ชื่อย่อ = คีย์ · ตรงกับ `cost_centers.company`) · `spg_no`/`spg_name` · `sap_code` 4 หลัก (null = บริษัทที่ใช้ SAP B1) ·
+  `sap_b1_code` 3 หลัก · `com_code` 3 หลัก (= 3 หลักแรกของรหัสพนักงาน · บริษัท SAP = 3 หลักแรกของ SAP · บริษัท B1 = รหัส B1) · `name` ว่างให้ HR เติม
+  · CHECK รูปแบบเลข + ต้องมี SAP หรือ B1 อย่างน้อยหนึ่ง · unique partial บน sap_code/sap_b1_code
+- 🔴 **ไม่มี FK — "ไม่กระทบงานเดิม" คือกติกาหลัก:** `org_nodes(company).code` · `cost_centers.company` · `employees.employee_id_code` ยังเป็น text เหมือนเดิม
+  ไม่มี validation ใหม่ที่บล็อกการบันทึกที่ไหน · ทะเบียนนี้เป็น "ที่อ้างอิง" แบบเดียวกับ `customers`/`suppliers`
+  ⇒ ลบ/เปลี่ยนรหัสผ่าน `masterDeleteGuard(supabase, 'companies')` — spec ใน `MASTER_REF_SPECS.companies` นับ 2 ปลายทาง (Main):
+  `org_nodes.code where kind='company'` ด้วย `sap_code` · `cost_centers.company` ด้วย `code` (ต่างชั้นใช้คีย์ต่างกัน) · **ไม่นับรหัสพนักงาน**
+  (ขึ้นต้นด้วย com_code แต่ไม่ใช่ค่าเท่ากัน — ลบบริษัทไม่ทำให้รหัสพนักงานเสีย)
+- **อ่าน:** `src/utils/useCompanies.js` — `useCompanies()`/`useCompaniesState()`/`loadCompanies()` (cachedMaster + useMasterRows) ·
+  `companyOfEmployeeCode('2101990', rows)` → แถว TSAT (ไม่ใช่ 7 หลัก / ไม่เจอ / บริษัทปิดใช้ = `null` ห้ามเดา — ผู้รับเหมา STM/PTA ไม่อยู่ใน template) ·
+  `groupBySpg()` · เทส `__tests__/useCompanies.test.mjs` (รวมด่านนับแถว seed = 26 จากไฟล์ migration)
+- **จัดการ:** `/org-setup?tab=companies` (`SimpleMasterPanel` · เขียน = `org:manage_divisions` คีย์เดียวกับ RLS · อ่าน = ทุกคนที่ login)
+  · audit ผ่าน `fn_audit()` + `updated_at` trigger เหมือน `cost_centers`
+- **ยังไม่ทำ (รอคำสั่ง):** โหนดผังของบริษัทอื่น (ผังเรายังเป็นสาย P4 · ขั้น 4 ใน `docs/ORG-SCALE-GLOBAL-DESIGN.md` §7) ·
+  ด่าน "รหัสพนักงานใหม่ต้องขึ้นต้นด้วย com_code ของบริษัทที่เลือก" ที่ `/register`/`/add-user` (จะเป็น validation ใหม่ = กระทบงานเดิม ต้องให้ user เคาะ) ·
+  picker `<CompanySelect>` (ยังไม่มีช่องไหนรับ "บริษัท" เป็น input นอก cost_centers)
+- ย้อนกลับ: `drop table public.companies;` (ไม่มีใครอ้างด้วย FK · โค้ดฝั่งจอเจอ 42P01 = `mrows` คืน [] + แผงขึ้น emptyText)
+
 ## 🏭 ทะเบียน `cost_centers` ครบทุกโรงงานในเครือ — จากไฟล์บัญชี "Activity Rate 2027" (2026-11-03)
 
 user ส่ง `cost_center.xlsx` (Activity Rate 2027 · 4,795 แถว = cost center × activity type) + template Com Code ของกลุ่ม
