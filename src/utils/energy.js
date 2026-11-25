@@ -822,6 +822,8 @@ export function energyHistory({ readings = [], daily = [], names = [], scale = '
    · ช่วงปัจจุบัน: เฉลี่ยถึงนาทีล่าสุดที่ "ทุกมิเตอร์" มีค่า · คาดการณ์จบช่วง = (พลังงานแล้ว + kW ตอนนี้ × เวลาที่เหลือ) ÷ 15 นาที */
 export const DEMAND_WINDOW_MIN = 15
 const MIN_MS = 60000
+/** kWh ของช่วง → kW เฉลี่ยของช่วง (ที่เดียว — การ์ด/ค่าสูงสุดเดือนจาก fn_energy_demand_month ใช้ตัวนี้) · null = null */
+export const demandKwFromKwh = (kwh, windowMin = DEMAND_WINDOW_MIN) => (kwh == null || !Number.isFinite(Number(kwh)) ? null : Number(kwh) / (windowMin / 60))
 
 /**
  * @param {{ readings:Array<{scope_name,bucket_at,kwh_total}>, names:string[], nowMs:number, dayStartMs:number, kwNow?:number|null }} p
@@ -852,7 +854,7 @@ export function demandWindows({ readings = [], names = [], nowMs = Date.now(), d
   const windows = []
   for (let s = Math.ceil((dayStartMs ?? curStart) / W) * W; s < curStart; s += W) {
     const e = energy(s - MIN_MS, s + W - MIN_MS)
-    windows.push({ start: s, kw: e == null ? null : e / (windowMin / 60) })
+    windows.push({ start: s, kw: demandKwFromKwh(e, windowMin) })
   }
   // ช่วงปัจจุบัน — นาทีล่าสุดที่ทุกมิเตอร์มีค่า
   let tc = Infinity

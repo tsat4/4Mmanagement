@@ -18387,6 +18387,10 @@ const EN = {
   "แก้ล่าสุดโดย": "Last edited by",
   "ยังไม่มีเลขมิเตอร์ (kWh) ของ": "No kWh meter reading yet for",
   "คิด Demand ของตู้นี้ไม่ได้": "cannot compute demand for this panel",
+  "สูงสุดเดือนนี้": "Month max",
+  "อ่านไม่ได้": "unreadable",
+  "ข้อมูลเริ่ม": "data starts",
+  "ช่วงที่ครบ": "complete windows",
 };
 
 export default EN;
