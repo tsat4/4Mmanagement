@@ -18739,6 +18739,10 @@ const EN = {
   "เครื่องในกลุ่มไลน์": "Machines in the line group",
   "เครื่องอื่นในโรงงาน": "Other machines in the plant",
 
+  'นิยามระดับแม่/โรงงานที่ตกทอดมาให้เห็น — ไม่ใช่ KPI ของใบนี้ ไม่นับน้ำหนักใบนี้ แก้เป้า/น้ำหนักที่ขอบเขตนั้น': 'Parent/plant definitions shown for reference — not this sheet\'s KPIs, not counted in its weight; edit target/weight at that scope',
+  'ตกทอดจากระดับแม่/โรงงาน': 'Inherited from parent/plant',
+  'อ่านอย่างเดียว · ไม่นับน้ำหนักของใบนี้': 'read-only · not counted in this sheet\'s weight',
+  'แก้เป้า/น้ำหนักที่ขอบเขตนั้น': 'edit target/weight at that scope',
 };
 
 export default EN;
