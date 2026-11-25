@@ -319,7 +319,7 @@ export default function MonitoringUpload({ canUpload, canBoard = true, fullName,
           </div>
         </div>
         {!canUpload && (
-          <div style={{ marginTop: 10, fontSize: 12, color: '#f59e0b' }}>
+          <div style={{ marginTop: 10, fontSize: 12, color: 'var(--amber)' }}>
             ⚠️ {tr("บัญชีนี้ไม่มีสิทธิ์อัพโหลด (ขอสิทธิ์")} <code>demand:upload</code> {tr("ที่หน้าจัดการสิทธิ์")})
           </div>
         )}
@@ -395,7 +395,7 @@ function PreviewPanel({ p, canBoard, onCancel, onConfirm, busy, card, warnBox })
               <tr key={r.sheet + r.kind}>
                 <td style={{ padding: '4px 8px', fontSize: 12, fontWeight: 700, borderBottom: '1px solid var(--border2)' }}>
                   {r.sheet}
-                  {r.note && <div style={{ fontWeight: 400, fontSize: 11, color: '#f59e0b', whiteSpace: 'normal' }}>⚠️ {r.note}</div>}
+                  {r.note && <div style={{ fontWeight: 400, fontSize: 11, color: 'var(--amber)', whiteSpace: 'normal' }}>⚠️ {r.note}</div>}
                 </td>
                 <td style={{ padding: '4px 8px', fontSize: 12, color: 'var(--muted)', borderBottom: '1px solid var(--border2)' }}>{r.kind}</td>
                 <td style={{ padding: '4px 8px', fontSize: 12, borderBottom: '1px solid var(--border2)',
@@ -448,7 +448,7 @@ function PreviewPanel({ p, canBoard, onCancel, onConfirm, busy, card, warnBox })
       )}
       {!!rec.stockNegative?.length && (
         <div style={warnBox('#7f1d1d22', '#ef4444')}>
-          <b style={{ fontSize: 12, color: '#ef4444' }}>{tr('ยอดคงเหลือติดลบ')} {rec.stockNegative.length} {tr('พาร์ท — ไม่เอาไปตั้งยอดสต็อก')}</b>
+          <b style={{ fontSize: 12, color: 'var(--red)' }}>{tr('ยอดคงเหลือติดลบ')} {rec.stockNegative.length} {tr('พาร์ท — ไม่เอาไปตั้งยอดสต็อก')}</b>
           <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 4 }}>
             {tr("ในไฟล์นี้ยอดติดลบแปลว่า")} <b>{tr('ความต้องการที่ยังไม่ได้ผลิต')}</b> {tr("ไม่ใช่ของติดลบในคลัง — เขียนทับสต็อกจริงไม่ได้ · ตัวอย่าง")}: {rec.stockNegative.slice(0, 5).map(s => `${s.mat_no} (${fmt(s.qty)})`).join(' · ')}
           </div>
@@ -471,7 +471,7 @@ function PreviewPanel({ p, canBoard, onCancel, onConfirm, busy, card, warnBox })
           <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 4 }}>
             {tr("พาร์ทเดียวเขียนหลายบรรทัด (เช่น 300T MAT 20059152 คว่ำครีบ/หงายครีบ — FC เดือนเป็นของพาร์ทเดียวกัน) · ไม่ยุบ = ยอดพยากรณ์ 2 เท่า และ MIN/MAX เขียนไม่ลงทั้งก้อน")}
             {!!(rec.forecastConflicts || rec.levelConflicts) && (
-              <div style={{ color: '#f59e0b', fontWeight: 700, marginTop: 4 }}>
+              <div style={{ color: 'var(--amber)', fontWeight: 700, marginTop: 4 }}>
                 ⚠️ {tr("ในนั้น")} <b>{tr('ค่าไม่ตรงกัน')} {rec.forecastConflicts + rec.levelConflicts} {tr('คู่')}</b> — {tr("ระบบเลือกค่ามากสุดให้ก่อน แต่ควรไปแก้ไฟล์ต้นทางให้เหลือค่าเดียว")}
               </div>
             )}

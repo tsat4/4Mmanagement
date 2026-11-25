@@ -190,10 +190,10 @@ export default function ImageSqueezePanel({ canRun = false, onDone }) {
             {result.marked > 0 && (<><br /><span style={{ color: 'var(--muted)' }}>
               {tr("จดไว้ว่า “ตรวจแล้วไม่ต้องบีบ")}” {result.marked.toLocaleString()} {tr("ใบ — รอบหน้าจะไม่ถูกหยิบมาโหลดซ้ำ")}
             </span></>)}
-            {result.markError && (<><br /><span style={{ color: '#ef4444' }}>
+            {result.markError && (<><br /><span style={{ color: 'var(--red)' }}>
               {tr("จดทะเบียน “ตรวจแล้ว” ไม่สำเร็จ")} ({result.markError}) — {tr("เลขที่เหลือจะยังไม่ลด")}
             </span></>)}
-            {result.error > 0 && (<><br /><span style={{ color: '#ef4444' }}>{tr('ไม่สำเร็จ')} {result.error} {tr('ใบ')}</span></>)}
+            {result.error > 0 && (<><br /><span style={{ color: 'var(--red)' }}>{tr('ไม่สำเร็จ')} {result.error} {tr('ใบ')}</span></>)}
             {result.remaining > 0 && (<><br />{tr('เหลืออีก')} <b>{result.remaining.toLocaleString()} {tr('ใบ')}</b>{result.stalled ? tr(' — หยุดไว้เพราะรอบล่าสุดไม่คืบหน้า (มีไฟล์เสีย)') : tr(' — กดซ้ำได้')}</>)}
           </div>
           {result.errors.length > 0 && (

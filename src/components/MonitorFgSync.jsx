@@ -178,7 +178,7 @@ export default function MonitorFgSync({ onClose, fullName, onSynced }) {
             style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--muted)', fontSize: 18, cursor: 'pointer' }}>✕</button>
         </div>
 
-        {err ? <div style={{ ...card, borderColor: '#ef4444', color: '#ef4444', fontSize: FS + 1 }}>🔴 {err}</div> : null}
+        {err ? <div style={{ ...card, borderColor: '#ef4444', color: 'var(--red)', fontSize: FS + 1 }}>🔴 {err}</div> : null}
 
         {busy && !preview ? (
           <div style={{ ...card, fontSize: FS + 1, color: 'var(--muted)' }}>{tr('กำลังอ่านออเดอร์ลูกค้า…')}</div>

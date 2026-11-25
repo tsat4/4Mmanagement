@@ -217,7 +217,7 @@ export function BoardPlanPreview({ made = [], skipped = [] }) {
             </div>
           ))}
           {skipped.some((s) => !s.intentional) ? (
-            <div style={{ color: '#f87171', marginTop: 2 }}>
+            <div style={{ color: 'var(--red)', marginTop: 2 }}>
               {tr("ชีทที่ขึ้น 🔴 คือระบบแกะโครงไม่ได้ ไม่ใช่ของที่ตั้งใจข้าม — ถ้าเป็นชีทที่ต้องใช้ ให้แจ้งไว้")}
             </div>
           ) : null}

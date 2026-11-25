@@ -235,7 +235,7 @@ export default function DieStatusBoard({
                     </td>
                     <td style={tdStyle}>
                       {mos.length ? mos.map(o => (
-                        <div key={o.id} style={{ fontSize: 11.5, color: '#ef4444', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                        <div key={o.id} style={{ fontSize: 11.5, color: 'var(--red)', fontWeight: 700, whiteSpace: 'nowrap' }}>
                           {o.mo_no || tr("(ยังไม่ออกเลข MO)")} <span style={{ fontWeight: 400 }}>· {moStatusLabel(o)}</span>
                         </div>
                       )) : <span style={{ color: 'var(--muted)' }}>—</span>}
@@ -247,7 +247,7 @@ export default function DieStatusBoard({
                           {areaNameOf(e.area_id) || tr('ดูบนผัง')}
                         </button>
                       ) : (
-                        <span style={{ fontSize: 11.5, color: '#f59e0b' }} title={tr('ไปวางที่แท็บผังจัดเก็บ')}>{tr('ยังไม่วางบนผัง')}</span>
+                        <span style={{ fontSize: 11.5, color: 'var(--amber)' }} title={tr('ไปวางที่แท็บผังจัดเก็บ')}>{tr('ยังไม่วางบนผัง')}</span>
                       )}
                     </td>
                     <td style={{ ...tdStyle, fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>

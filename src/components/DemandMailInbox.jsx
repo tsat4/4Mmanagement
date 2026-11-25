@@ -121,12 +121,12 @@ export default function DemandMailInbox({ refreshKey, onOpen, fullName }) {
         <button type="button" onClick={load} style={{ marginLeft: 'auto', fontSize: 12, padding: '4px 10px', borderRadius: 'var(--r-md)',
           background: 'var(--card-surf)', border: '1px solid var(--border)', color: 'var(--text2)', cursor: 'pointer' }}>↻</button>
       </div>
-      {err && <div style={{ fontSize: 12, color: '#ef4444' }}>{tr('⚠ โหลดคิวไฟล์จากเมลไม่ได้:')} {err}</div>}
-      {doneErr && <div style={{ fontSize: 12, color: '#ef4444', fontWeight: 700 }}>
+      {err && <div style={{ fontSize: 12, color: 'var(--red)' }}>{tr('⚠ โหลดคิวไฟล์จากเมลไม่ได้:')} {err}</div>}
+      {doneErr && <div style={{ fontSize: 12, color: 'var(--red)', fontWeight: 700 }}>
         ⚠ {tr("ตรวจไม่ได้ว่าไฟล์ไหนมีฉบับใหม่กว่านำเข้าไปแล้ว")} ({doneErr}) — {tr("ทุกใบจะถามยืนยันก่อนเปิด")}
       </div>}
       {missing.map(m => (
-        <div key={m.message_id || m.subject} style={{ fontSize: 12, color: '#ef4444', fontWeight: 700, marginTop: 4,
+        <div key={m.message_id || m.subject} style={{ fontSize: 12, color: 'var(--red)', fontWeight: 700, marginTop: 4,
           padding: '6px 8px', borderRadius: 'var(--r-md)', border: '1px solid rgba(239,68,68,0.5)', background: 'var(--card-surf)' }}>
           {tr("เมล")} "{m.subject}" ({fmtTime(m.received_at)}) {tr("หัวเรื่องบอกว่ามีไฟล์")} {m.missing.join(' + ')} {tr("แต่ระบบได้รับแค่")}
           {m.got.length ? ` ${m.got.join(' + ')}` : tr("ไม่มีไฟล์")} {tr('— ข้อมูล')} {m.missing.join('/')} {tr("ของวันนั้นยังไม่เข้าระบบ · เช็คเมลต้นทางว่าแนบมาครบไหม (ชื่อไฟล์ต้องขึ้นต้น")} {m.missing.map(k => `${k}_`).join(' / ')}) {tr("หรือลากไฟล์มาอัพเองด้านล่าง")}
@@ -148,7 +148,7 @@ export default function DemandMailInbox({ refreshKey, onOpen, fullName }) {
             </div>
             {newer && <span style={{ fontSize: 12, color: 'var(--accent2)', fontWeight: 700 }}
               title={tr('ไฟล์ 862/830 ฉบับใหม่แทนที่ฉบับเก่าทั้งช่วง — นำเข้าฉบับเก่าทีหลังจะดึงยอดถอยหลัง')}>⚠ {newer} {tr('— ควรกดข้าม')}</span>}
-            {stale && <span style={{ fontSize: 12, color: '#ef4444', fontWeight: 700 }}>{tr('ค้าง')} {Math.floor(ageH)} {tr('ชม.')}</span>}
+            {stale && <span style={{ fontSize: 12, color: 'var(--red)', fontWeight: 700 }}>{tr('ค้าง')} {Math.floor(ageH)} {tr('ชม.')}</span>}
             <button type="button" disabled={busy === r.id} onClick={async () => {
               if (newer && !await askConfirm(`${r.file_name}: ${newer}\n${tr("นำเข้าฉบับเก่าจะแทนที่ข้อมูลที่ใหม่กว่า — ยืนยันเปิด")}?`)) return;
               open(r);

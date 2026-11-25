@@ -97,7 +97,7 @@ export default function PeSetFromMasterModal({ masters, masterItems, lines, role
                   <span style={{ fontSize: 11, color: 'var(--muted)' }}>{count(c.id)} FM</span>
                   <button className="tbtn" style={{ ...ghost, padding: '2px 6px' }} onClick={() => move(i, -1)}>↑</button>
                   <button className="tbtn" style={{ ...ghost, padding: '2px 6px' }} onClick={() => move(i, 1)}>↓</button>
-                  <button className="tbtn" style={{ ...ghost, padding: '2px 6px', color: '#ef4444' }} onClick={() => setChosen(cs => cs.filter(x => x.id !== c.id))}>✕</button>
+                  <button className="tbtn" style={{ ...ghost, padding: '2px 6px', color: 'var(--red)' }} onClick={() => setChosen(cs => cs.filter(x => x.id !== c.id))}>✕</button>
                 </div>
               );
             })}

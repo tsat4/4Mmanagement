@@ -153,10 +153,10 @@ export default function WipBetweenSteps() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{ ...card, background: 'rgba(14,165,233,0.06)', borderColor: 'rgba(14,165,233,0.3)', fontSize: 12.5, lineHeight: 1.7 }}>
-        <b style={{ color: '#0ea5e9' }}>{tr('ยอดค้างระหว่างขั้น (คำนวณอัตโนมัติจากใบผลิต — ไม่ต้องคีย์รับ-จ่าย)')}</b><br />
+        <b style={{ color: 'var(--blue)' }}>{tr('ยอดค้างระหว่างขั้น (คำนวณอัตโนมัติจากใบผลิต — ไม่ต้องคีย์รับ-จ่าย)')}</b><br />
         {tr("ค้าง = ยอดสะสมที่ผ่านขั้นนั้น − ยอดปลายทางที่ประกอบ/ผลิตแล้ว (ทุกชิ้น 1:1 กับปลายทาง) · เป็นบัญชี")}<b>{tr('ภายในแผนก')}</b>{tr("ไว้ดูจังหวะงาน ไม่เกี่ยว SAP/สต็อกทางการ · ของเสียระหว่างทางทำตัวเลขคลาดได้ → กด")} <b>{tr('นับจริง')}</b> {tr("เพื่อตั้งต้นใหม่เป็นระยะ")}
         {baselineTableMissing && (
-          <div style={{ marginTop: 6, color: '#f59e0b', fontWeight: 700 }}>
+          <div style={{ marginTop: 6, color: 'var(--amber)', fontWeight: 700 }}>
             ⚠ {tr("ยังไม่ได้")} apply migration <code>20260818_wip_adjustments_dr</code> (DR) — {tr("ตัวเลขคิดจากใบผลิตทั้งหมดตั้งแต่เริ่มระบบ และปุ่มนับจริงยังบันทึกไม่ได้")}
           </div>
         )}
@@ -254,7 +254,7 @@ export default function WipBetweenSteps() {
                           <b style={{ fontSize: 15 }}>{r.stepThrough.toLocaleString()} <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400 }}>{tr('สะสม')}</span></b>
                         )}
                         {r.inFlight < 0 && chainView.parentIsProduced && (
-                          <div style={{ fontSize: 11, color: '#f59e0b' }}>{tr('⚠ ติดลบ — กดนับจริงเพื่อตั้งต้นใหม่')}</div>
+                          <div style={{ fontSize: 11, color: 'var(--amber)' }}>{tr('⚠ ติดลบ — กดนับจริงเพื่อตั้งต้นใหม่')}</div>
                         )}
                         {r.baseline && (
                           <div style={{ fontSize: 11, color: 'var(--muted)' }}>
@@ -265,7 +265,7 @@ export default function WipBetweenSteps() {
                       {net && (
                         <td style={{ padding: '7px 8px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                           {net.perStep[r.mat] > 0
-                            ? <b style={{ fontSize: 15, color: '#f59e0b' }}>{net.perStep[r.mat].toLocaleString()}</b>
+                            ? <b style={{ fontSize: 15, color: 'var(--amber)' }}>{net.perStep[r.mat].toLocaleString()}</b>
                             : <span style={chip('rgba(61,214,92,0.12)', 'var(--accent)')}>{tr('พอแล้ว ✓')}</span>}
                         </td>
                       )}

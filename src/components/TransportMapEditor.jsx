@@ -567,7 +567,7 @@ export default function TransportMapEditor() {
 }
 
 const inp = { width: '100%', padding: '6px 9px', borderRadius: 7, fontSize: 12.5, background: 'var(--bg2-surf)', border: '1px solid var(--border)', color: 'var(--text)', marginTop: 3 }
-const delBtn = { marginTop: 8, width: '100%', padding: '7px', borderRadius: 8, cursor: 'pointer', fontSize: 12.5, fontWeight: 700, background: 'rgba(239,68,68,0.12)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.4)' }
+const delBtn = { marginTop: 8, width: '100%', padding: '7px', borderRadius: 8, cursor: 'pointer', fontSize: 12.5, fontWeight: 700, background: 'rgba(239,68,68,0.12)', color: 'var(--red)', border: '1px solid rgba(239,68,68,0.4)' }
 function FieldLbl({ t, children }) {
   return <div style={{ marginBottom: 7 }}><span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--muted)' }}>{t}</span>{children}</div>
 }

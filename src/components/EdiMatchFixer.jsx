@@ -41,7 +41,7 @@ const btn = (primary) => ({
 const LIMIT = 8;
 const soldBtn = {
   fontSize: 12, fontWeight: 800, padding: '5px 10px', borderRadius: 6, cursor: 'pointer',
-  background: 'rgba(34,197,94,0.14)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.5)', fontFamily: 'var(--font-body)',
+  background: 'rgba(34,197,94,0.14)', color: 'var(--green)', border: '1px solid rgba(34,197,94,0.5)', fontFamily: 'var(--font-body)',
 };
 
 export default function EdiMatchFixer({ edi, canEdit, custLabel, onSaved }) {

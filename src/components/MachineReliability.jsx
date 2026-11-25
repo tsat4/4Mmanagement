@@ -366,7 +366,7 @@ export default function MachineReliability({ machines = [], lineObjs = [], scope
                         </div>
                       )}
                       {r.openStops > 0 && <div style={{ fontSize: 11, color: 'var(--red)', fontWeight: 700 }}>{trI18n('🔴 ยังเปิดค้าง')} {r.openStops} {trI18n('ครั้ง')}</div>}
-                      {r.neverFailed && <div style={{ fontSize: 11, color: '#22c55e', fontWeight: 700 }}>{trI18n('✅ ไม่เคยเสียในช่วงนี้')}</div>}
+                      {r.neverFailed && <div style={{ fontSize: 11, color: 'var(--green)', fontWeight: 700 }}>{trI18n('✅ ไม่เคยเสียในช่วงนี้')}</div>}
                     </td>
                     <td style={td}>
                       {meta

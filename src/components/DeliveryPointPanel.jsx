@@ -154,11 +154,11 @@ export default function DeliveryPointPanel({ lineName, lines = [] }) {
           <ReadOnlyNote show={!canManage} role={role} what={tr("ตั้งจุดส่งงานของไลน์")} permKey="delivery_point:manage" compact />
 
           {missing && (
-            <div style={{ fontSize: 12.5, color: '#f59e0b', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 'var(--r-md)', padding: '8px 12px' }}>
+            <div style={{ fontSize: 12.5, color: 'var(--amber)', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 'var(--r-md)', padding: '8px 12px' }}>
               ⚠️ {tr("ยังไม่ได้")} apply migration <code>20260903_line_delivery_points.sql</code> (DR) — {tr("ตั้งจุดส่งยังไม่ได้ แจ้ง")} admin
             </div>
           )}
-          {loadErr && <div style={{ fontSize: 12.5, color: '#ef4444' }}>{tr('โหลดจุดส่งไม่สำเร็จ:')} {loadErr}</div>}
+          {loadErr && <div style={{ fontSize: 12.5, color: 'var(--red)' }}>{tr('โหลดจุดส่งไม่สำเร็จ:')} {loadErr}</div>}
 
           {/* ไลน์แม่ที่มีลูก = แผนก ไม่ใช่จุดวางของ ⇒ `line_names` เก็บ**ชื่อไลน์ลูก**เสมอ
               (เก็บชื่อไลน์แม่ = ขอบเขตของจุดเปลี่ยนเองเงียบๆ วันที่มีคนเพิ่มไลน์ใหม่เข้าใต้แม่
@@ -195,7 +195,7 @@ export default function DeliveryPointPanel({ lineName, lines = [] }) {
           )}
 
           {isLeaf && !missing && rows.length === 0 && !form && (
-            <div style={{ fontSize: 12.5, color: '#f59e0b' }}>
+            <div style={{ fontSize: 12.5, color: 'var(--amber)' }}>
               ⚠️ {tr("ไลน์นี้ยังไม่มีจุดส่งงาน — สโตร์กด \"จัดส่งแล้ว\" ได้แต่ระบบ")}<b>{tr('ตรวจไม่ได้')}</b>{tr("ว่าวางถูกจุดไหม (ใบจะถูกมาร์ก \"ไลน์ยังไม่ตั้งจุดส่ง")}")
             </div>
           )}
@@ -214,18 +214,18 @@ export default function DeliveryPointPanel({ lineName, lines = [] }) {
                       {r.code && <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: 13, color: off ? 'var(--muted)' : '#22c55e' }}>{r.code}</span>}
                       <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', flex: '1 1 120px' }}>{r.name}</span>
                       {r.storage_location
-                        ? <span title={tr('พื้นที่ SAP (Storage Location) ของไลน์ที่จุดนี้รับของให้')} style={{ fontFamily: 'monospace', fontSize: 11, fontWeight: 800, padding: '1px 7px', borderRadius: 'var(--r-md)', background: 'rgba(34,197,94,0.12)', color: '#22c55e' }}>{r.storage_location}</span>
+                        ? <span title={tr('พื้นที่ SAP (Storage Location) ของไลน์ที่จุดนี้รับของให้')} style={{ fontFamily: 'monospace', fontSize: 11, fontWeight: 800, padding: '1px 7px', borderRadius: 'var(--r-md)', background: 'rgba(34,197,94,0.12)', color: 'var(--green)' }}>{r.storage_location}</span>
                         /* 🔴 จุดที่ไม่มีรหัสคลัง = ด่าน "ส่งถูกพื้นที่ SAP ไหม" ไม่ทำงานกับจุดนี้
                            ต้องเขียนบนจอ ห้ามเงียบ — **ไม่ใช่ "ลืมกด backfill" ต้องมีคนลงทะเบียนพื้นที่ก่อน**
                            วัดจริง 13/10: ไลน์ปั๊ม A/B/C/D ลงทะเบียนแล้ว (P407/P406/P401/P405) จุดได้รหัสครบ
                            · ที่ยังว่าง = 7 จุดของ PD2 (ASSEMBLY 1 + Line D1–D6 + SPARE PART) ที่ยังไม่มี SLoc */
-                        : <span title={tr('จุดนี้ยังไม่ผูกพื้นที่ SAP — ระบบตรวจไม่ได้ว่าสโตร์ส่งถูกพื้นที่ไหม')} style={{ fontSize: 11, fontWeight: 800, padding: '1px 7px', borderRadius: 'var(--r-md)', background: 'rgba(245,158,11,0.12)', color: '#f59e0b' }}>{tr('ไม่ผูกพื้นที่ SAP')}</span>}
+                        : <span title={tr('จุดนี้ยังไม่ผูกพื้นที่ SAP — ระบบตรวจไม่ได้ว่าสโตร์ส่งถูกพื้นที่ไหม')} style={{ fontSize: 11, fontWeight: 800, padding: '1px 7px', borderRadius: 'var(--r-md)', background: 'rgba(245,158,11,0.12)', color: 'var(--amber)' }}>{tr('ไม่ผูกพื้นที่ SAP')}</span>}
                       {off && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('⏸ ปิดใช้งาน')}</span>}
                     </div>
                     {!r.storage_location && (
-                      <div style={{ fontSize: 11, color: '#f59e0b', marginTop: 3, lineHeight: 1.45 }}>
+                      <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 3, lineHeight: 1.45 }}>
                         {tr("ด่าน \"ส่งถูกพื้นที่ไหม\" ยังไม่ทำงานกับจุดนี้ — ลงทะเบียนพื้นที่ของไลน์ที่")}
-                        <Link to="/line-stock?tab=settings&set=zones" style={{ color: '#f59e0b', fontWeight: 800 }}> {tr('📦 Stock Management → ตั้งค่า → พื้นที่ SAP / โซนคลัง → “ทะเบียนรหัสคลัง”')}</Link> {tr("แล้วกด ✏️ แก้ + บันทึกจุดนี้ซ้ำ")}
+                        <Link to="/line-stock?tab=settings&set=zones" style={{ color: 'var(--amber)', fontWeight: 800 }}> {tr('📦 Stock Management → ตั้งค่า → พื้นที่ SAP / โซนคลัง → “ทะเบียนรหัสคลัง”')}</Link> {tr("แล้วกด ✏️ แก้ + บันทึกจุดนี้ซ้ำ")}
                       </div>
                     )}
                     {others.length > 0 && (
@@ -270,10 +270,10 @@ export default function DeliveryPointPanel({ lineName, lines = [] }) {
               <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text2)' }}>{tr('ไลน์ที่รับของที่จุดนี้ (ไลน์ย่อยที่สุดเท่านั้น · จุดเดียวใช้หลายไลน์ได้)')}</div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginTop: 5 }}>
                 {(form.line_names || []).map(n => (
-                  <span key={n} style={{ fontSize: 12, fontWeight: 700, padding: '3px 9px', borderRadius: 'var(--r-lg)', background: 'rgba(59,130,246,0.12)', color: '#3b82f6', display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+                  <span key={n} style={{ fontSize: 12, fontWeight: 700, padding: '3px 9px', borderRadius: 'var(--r-lg)', background: 'rgba(59,130,246,0.12)', color: 'var(--blue)', display: 'inline-flex', gap: 6, alignItems: 'center' }}>
                     {n}
                     {(form.line_names || []).length > 1 && (
-                      <button onClick={() => setForm(f => ({ ...f, line_names: f.line_names.filter(x => x !== n) }))} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: 0, fontSize: 13, lineHeight: 1 }}>✕</button>
+                      <button onClick={() => setForm(f => ({ ...f, line_names: f.line_names.filter(x => x !== n) }))} style={{ background: 'none', border: 'none', color: 'var(--blue)', cursor: 'pointer', padding: 0, fontSize: 13, lineHeight: 1 }}>✕</button>
                     )}
                   </span>
                 ))}
@@ -295,7 +295,7 @@ export default function DeliveryPointPanel({ lineName, lines = [] }) {
                       : codes.length === 1
                         ? <>{tr('🏬 พื้นที่ SAP:')} <b style={{ fontFamily: 'monospace' }}>{codes[0]}</b>{info.find(i => i.s)?.s.via !== info.find(i => i.s)?.n ? ` (${tr("ตกทอดจาก")} ${info.find(i => i.s).s.via})` : ''}</>
                         : null}
-                    {unmapped.length > 0 && <span style={{ color: '#f59e0b' }}>{codes.length ? ' · ' : ''}⚠ {unmapped.join(', ')} {tr('ยังไม่ผูกรหัสคลัง SAP (ผูกที่ 📦 Stock Management → ตั้งค่า → พื้นที่ SAP / โซนคลัง → “ทะเบียนรหัสคลัง” กด ✏️ ที่รหัสแล้วติ๊กไลน์)')}</span>}
+                    {unmapped.length > 0 && <span style={{ color: 'var(--amber)' }}>{codes.length ? ' · ' : ''}⚠ {unmapped.join(', ')} {tr('ยังไม่ผูกรหัสคลัง SAP (ผูกที่ 📦 Stock Management → ตั้งค่า → พื้นที่ SAP / โซนคลัง → “ทะเบียนรหัสคลัง” กด ✏️ ที่รหัสแล้วติ๊กไลน์)')}</span>}
                   </div>
                 );
               })()}

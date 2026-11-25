@@ -227,7 +227,7 @@ export default function SafetyEventModal({ init, section, date, lineRows = [], s
         <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
           {editing && (
             <button onClick={remove} disabled={busy}
-              style={{ padding: '7px 14px', borderRadius: 'var(--r-md)', border: '1px solid #ef4444', background: 'transparent', color: '#ef4444', cursor: 'pointer', fontSize: 12.5 }}>
+              style={{ padding: '7px 14px', borderRadius: 'var(--r-md)', border: '1px solid #ef4444', background: 'transparent', color: 'var(--red)', cursor: 'pointer', fontSize: 12.5 }}>
               {tr('ซ่อนออกจากบอร์ด')}
             </button>
           )}

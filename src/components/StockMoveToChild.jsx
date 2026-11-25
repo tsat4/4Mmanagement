@@ -141,13 +141,13 @@ export default function StockMoveToChild({ lines, stock, products, productBom, c
   return (
     <div style={{ background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.4)', borderRadius: 'var(--r-md)', padding: 12, marginBottom: 14 }}>
       <div onClick={() => setOpen(o => !o)} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-        <span style={{ fontSize: 13, fontWeight: 800, color: '#f59e0b' }}>
+        <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--amber)' }}>
           {open ? '▼' : '▶'} {tr('🔀 มีสต๊อกค้างอยู่ที่ “ไลน์แม่”')} {rows.length} {tr("พาร์ท — ระบบหักตอนผลิตไม่ได้")}
         </span>
         <span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 'auto' }}>
           {tr("ชี้ปลายทางชัดเจน")} {sureCount} {tr('· ต้องเลือกเอง')} {rows.length - sureCount}
           {coveredCount > 0 && <> {tr('· ไม่นับ')} {coveredCount} {tr('รายการที่อยู่พื้นที่ SAP เดียวกับไลน์ลูก (ระบบหักได้แล้ว)')}</>}
-          {wrongDept > 0 && <b style={{ color: '#ef4444' }}> {tr('· 🔴 อยู่ผิดแผนก')} {wrongDept}</b>}
+          {wrongDept > 0 && <b style={{ color: 'var(--red)' }}> {tr('· 🔴 อยู่ผิดแผนก')} {wrongDept}</b>}
         </span>
       </div>
 
@@ -159,7 +159,7 @@ export default function StockMoveToChild({ lines, stock, products, productBom, c
             <br />{tr('ปลายทางเป็นการ')} <b>{tr('เสนอลำดับ ไม่ใช่ข้อสรุป')}</b> {tr('— dropdown แสดง')}<b>{tr('ทุกไลน์ที่เป็นไปได้')}</b> {tr("พร้อมเหตุผลของแต่ละกลุ่ม (BOM ชี้ / ไลน์ขึ้นรูป / ไลน์ที่ผลิตพาร์ทนี้) พาร์ทที่ใช้หลายไลน์ต้องเลือก/แบ่งเอง")}
             <br />⚠️ <b>{tr('วัตถุดิบ (5xx) และงาน blank ต้องเข้าไลน์ขึ้นรูปก่อนเสมอ')}</b> — BOM {tr("ในระบบ“แบน” (5xx ผูกใต้ FG โดยตรง) และชั้น OP ไม่อยู่ใน BOM ⇒ BOM จะชี้ไป")} <b>{tr('ขั้นถัดไป')}</b> ({tr("เลเซอร์/ประกอบ) ไม่ใช่ที่รับวัตถุดิบ")}
             {wrongDept > 0 && (
-              <><br /><b style={{ color: '#ef4444' }}>🔴 {wrongDept} {tr('รายการอยู่ผิดแผนก')}</b> — {tr("แผนกที่ของค้างอยู่ไม่มีไลน์ขึ้นรูปเลย ระบบจึงเสนอไลน์ขึ้นรูปของแผนกอื่นให้ (ย้ายข้ามแผนกต้องยืนยันอีกชั้น")})</>
+              <><br /><b style={{ color: 'var(--red)' }}>🔴 {wrongDept} {tr('รายการอยู่ผิดแผนก')}</b> — {tr("แผนกที่ของค้างอยู่ไม่มีไลน์ขึ้นรูปเลย ระบบจึงเสนอไลน์ขึ้นรูปของแผนกอื่นให้ (ย้ายข้ามแผนกต้องยืนยันอีกชั้น")})</>
             )}
           </div>
           <div style={{ overflowX: 'auto', maxHeight: 340, overflowY: 'auto' }}>
@@ -192,12 +192,12 @@ export default function StockMoveToChild({ lines, stock, products, productBom, c
                         </select>
                         {/* 🔴 ของอยู่ผิดแผนก ไม่ใช่แค่ผิดชั้น — ปลายทางที่ถูกอยู่คนละแผนก */}
                         {r.warn && (
-                          <div style={{ fontSize: 11, color: '#ef4444', marginTop: 3, fontWeight: 700, maxWidth: 210, whiteSpace: 'normal', lineHeight: 1.45 }}>
+                          <div style={{ fontSize: 11, color: 'var(--red)', marginTop: 3, fontWeight: 700, maxWidth: 210, whiteSpace: 'normal', lineHeight: 1.45 }}>
                             🔴 {r.warn.text}
                           </div>
                         )}
                         {!r.sure && !r.warn && (
-                          <div style={{ fontSize: 11, color: '#f59e0b', marginTop: 2 }}>{tr('⚠ มีหลายปลายทาง — เลือกเอง')}</div>
+                          <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 2 }}>{tr('⚠ มีหลายปลายทาง — เลือกเอง')}</div>
                         )}
                         {sel && hint?.note && (
                           <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{tr(hint.label)} — {hint.note}</div>

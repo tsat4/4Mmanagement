@@ -146,7 +146,7 @@ export default function CustomerFileFormats({ canManage, onChanged }) {
               <span style={{ fontSize: 11, color: 'var(--muted)' }}>
                 {FIELDS.filter(f => (r.col_map?.[f.key] || []).length).length}/{FIELDS.length} {tr("ช่อง")}
               </span>
-              {!r.is_active && <span style={{ fontSize: 11, color: '#f59e0b', fontWeight: 700 }}>{tr('ปิดใช้')}</span>}
+              {!r.is_active && <span style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 700 }}>{tr('ปิดใช้')}</span>}
               {canManage && !editing && (
                 <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
                   <button onClick={() => startEdit(r)} style={btn('var(--bg2)', 'var(--text)')}>{tr('✎ แก้')}</button>
@@ -156,7 +156,7 @@ export default function CustomerFileFormats({ canManage, onChanged }) {
             </div>
           ))}
           {!rows.length && (
-            <div style={{ fontSize: 12, color: '#f59e0b' }}>
+            <div style={{ fontSize: 12, color: 'var(--amber)' }}>
               ⚠ {tr("ทะเบียนว่าง — ระบบใช้ชื่อคอลัมน์ค่าสำรองในโค้ด (อ่านไฟล์ Ford 830/862 ได้ตามเดิม")})
             </div>
           )}
@@ -191,7 +191,7 @@ export default function CustomerFileFormats({ canManage, onChanged }) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 8 }}>
             {FIELDS.map(f => (
               <label key={f.key} style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-                {tr(f.label)}{f.required && <span style={{ color: '#ef4444' }}> *</span>}
+                {tr(f.label)}{f.required && <span style={{ color: 'var(--red)' }}> *</span>}
                 <input value={D.col_map?.[f.key] || ''} placeholder={(FALLBACK_EDI_DICT[f.key] || []).slice(0, 2).join(', ')}
                   onChange={e => setDraft({ ...D, col_map: { ...D.col_map, [f.key]: e.target.value } })} style={inp} />
                 {tr(f.hint) && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{tr(f.hint)}</div>}
