@@ -16,7 +16,7 @@
 --    ย้อน:
 --      insert into public.employee_skills select * from archive.employee_skills_orphan_20261125;
 --    ⛔ ห้ามรันซ้ำ (บล็อกด้วย archive table)
---    ⏳ สถานะ 25/11: ยังไม่ apply (หน้าต่างยืนยันของ Supabase หมดเวลา) — รอ user ยืนยัน
+--    ✅ apply แล้ว 25/11 ผ่าน MCP (ตรวจกลับ: archive 96 แถว/22 รหัส · เหลือคะแนนไร้ชื่อ 0 · ใบขึ้นขั้น 15 ใบยังอยู่)
 -- ═══════════════════════════════════════════════════════════════════════════════════════════
 
 create schema if not exists archive;
