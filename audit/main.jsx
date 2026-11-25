@@ -101,10 +101,13 @@ function ShellPage(){
 }
 /* ?p=__sidebar2 — 24/11 ต้นแบบ "ราง 260px ย่อเหลือ 72px" แบบรีล Sidebar v2 (ระดับหนัก) ด้วย token ของเรา · หมวดจาก NAV_GROUP_ORDER จริง
    หน้าจริงโหลดผ่าน ShellPage · เป็นแค่แล็บสำหรับเคาะดีไซน์ — Sidebar จริงยังเป็น rail 64px + แผงลอย */
-function WideSidebarLab(){
+/* ?p=__sidebar3 — 25/11 ข้อ 3 "แบบผสม": รางกว้างแสดง *เฉพาะหมวด* (ย่อ 260→72) + เมนูย่อยเป็น **แผงลอย** ข้างราง (ไม่ดันหมวดอื่นลง)
+   หมวด 17 หน้า (ตั้งค่า) เลื่อนในแผงเอง · กดหน้า = แผงปิด · ย่อแล้วแผงยังโผล่ข้างไอคอน */
+function WideSidebarLab({ panel = false }){
   const [min, setMin] = useState(false)
   const [group, setGroup] = useState('ภาพรวม')
   const [path, setPath] = useState('/')
+  const [open, setOpen] = useState(null)   // หมวดที่แผงลอยเปิดอยู่ (เฉพาะโหมด panel)
   const items = NAV_ITEMS.filter(i => i.group === group)
   const W = min ? 72 : 260
   const nav = (p) => { setPath(p); window.history.replaceState(null, '', '?p=__sidebar2&role=admin&go=' + encodeURIComponent(p)) }
@@ -122,7 +125,7 @@ function WideSidebarLab(){
             </div>
             <div style={{ fontSize:11, color:'var(--muted)', padding:'4px 10px 2px', whiteSpace:'nowrap' }}>{min ? '•' : 'หมวด'}</div>
             {[...new Set(NAV_GROUP_ORDER)].map(g => { const m = NAV_GROUP_META[g] || {}; const cur = g === group; return (
-              <button key={g} onClick={()=>{ setGroup(g); const first = NAV_ITEMS.find(i => i.group === g); if (first) nav(first.to) }} aria-current={cur ? 'page' : undefined} title={g}
+              <button key={g} onClick={()=>{ if (panel) { setOpen(o => o === g ? null : g); return } setGroup(g); const first = NAV_ITEMS.find(i => i.group === g); if (first) nav(first.to) }} aria-current={cur ? 'page' : undefined} title={g}
                 style={{ position:'relative', display:'flex', alignItems:'center', gap:12, height:40, padding:'0 12px', borderRadius:12, border:'none', background:'transparent', color: cur ? 'var(--accent)' : 'var(--muted)', fontWeight: cur ? 600 : 400, cursor:'pointer', fontSize:13, whiteSpace:'nowrap', textAlign:'left', width:'100%' }}>
                 {cur && <motion.span layoutId="wide-active" transition={railPill()} aria-hidden="true" className="neon-row" style={{ position:'absolute', inset:0, borderRadius:12, background:'var(--accent-dim)', pointerEvents:'none' }}>
                   <span className="neon-bar" style={{ position:'absolute', left:-10, top:8, bottom:8, width:4, borderRadius:'0 4px 4px 0', background:'var(--accent)' }} />
@@ -130,7 +133,7 @@ function WideSidebarLab(){
                 <Icon glyph={m.icon || '•'} size={19} style={{ position:'relative', zIndex:1, flex:'0 0 20px' }} />   {/* ไอคอนเส้นชุดเดียวกับ sidebar จริง (UI §6.36) */}
                 <span style={{ position:'relative', zIndex:1, opacity: min ? 0 : 1, transform: min ? 'translateX(-8px)' : 'none', transition:'opacity .18s, transform .25s', overflow:'hidden', textOverflow:'ellipsis' }}>{m.short || g}</span>
               </button>) })}
-            {!min && items.length > 1 && <div style={{ marginTop:8, paddingLeft:8, borderLeft:'1px solid var(--border)', display:'flex', flexDirection:'column', gap:2 }}>
+            {!panel && !min && items.length > 1 && <div style={{ marginTop:8, paddingLeft:8, borderLeft:'1px solid var(--border)', display:'flex', flexDirection:'column', gap:2 }}>
               {items.slice(0, 8).map(i => <button key={i.to} onClick={()=>nav(i.to)} aria-current={path === i.to ? 'page' : undefined}
                 style={{ display:'flex', alignItems:'center', gap:8, height:30, padding:'0 10px', borderRadius:8, border:'none', background: path === i.to ? 'var(--accent-dim)' : 'transparent', color: path === i.to ? 'var(--accent)' : 'var(--muted)', fontSize:12, cursor:'pointer', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', textAlign:'left' }}><Icon glyph={i.icon} size={15} /><span style={{ overflow:'hidden', textOverflow:'ellipsis' }}>{i.label}</span></button>)}
             </div>}
@@ -140,6 +143,21 @@ function WideSidebarLab(){
               <span style={{ opacity: min ? 0 : 1, transition:'opacity .18s' }}>ทดสอบ ระบบ · PD1</span>
             </div>
           </aside>
+          {panel && open && (() => { const list = NAV_ITEMS.filter(i => i.group === open); const top = 14 + 40 + 6 + 20 + [...new Set(NAV_GROUP_ORDER)].indexOf(open) * 44; return (
+            <>
+              <div onClick={()=>setOpen(null)} style={{ position:'fixed', inset:0, zIndex:55 }} />
+              <motion.div key={open} initial={{ opacity:0, x:-8 }} animate={{ opacity:1, x:0 }} transition={{ duration:.18, ease:'easeOut' }}
+                style={{ position:'fixed', left:W + 8, top: (() => { const t = Math.min(top, window.innerHeight - 16 - Math.min(list.length * 36 + 40, 440)); return Math.max(8, t) })(), transform:'translateY(-8px)', width:230, maxHeight:'calc(100vh - 24px)', overflowY:'auto', zIndex:60, padding:'8px 6px', borderRadius:14,
+                  background:'var(--card)', border:'1px solid var(--border)', boxShadow:'var(--shadow-float)', display:'flex', flexDirection:'column', gap:2 }}>
+                <div style={{ fontSize:11, color:'var(--muted)', padding:'4px 10px 6px' }}>{open} · {list.length} หน้า</div>
+                {list.map(i => { const cur = path === i.to; return (
+                  <button key={i.to} onClick={()=>{ setGroup(open); nav(i.to); setOpen(null) }} aria-current={cur ? 'page' : undefined}
+                    style={{ position:'relative', display:'flex', alignItems:'center', gap:9, height:34, padding:'0 12px', borderRadius:9, border:'none', background:'transparent', color: cur ? 'var(--accent)' : 'var(--text)', fontWeight: cur ? 600 : 400, fontSize:12.5, cursor:'pointer', whiteSpace:'nowrap', overflow:'hidden', textAlign:'left' }}>
+                    {cur && <span className="neon-row" aria-hidden="true" style={{ position:'absolute', inset:0, borderRadius:'inherit', background:'var(--accent-dim)', pointerEvents:'none' }}><span className="neon-bar" style={{ position:'absolute', left:0, top:7, bottom:7, width:3, borderRadius:'0 3px 3px 0', background:'var(--accent)' }} /></span>}
+                    <Icon glyph={i.icon} size={15} style={{ position:'relative', zIndex:1, flex:'0 0 16px' }} /><span style={{ position:'relative', zIndex:1, overflow:'hidden', textOverflow:'ellipsis' }}>{i.label}</span>
+                  </button>) })}
+              </motion.div>
+            </>) })()}
           <main id="mainbox" className="app-sheet" style={{ flex:1, marginLeft:W, minHeight:'100vh', paddingTop:14, background:'var(--bg)', overflowY:'auto', overflowX:'hidden', minWidth:0, transition:'margin-left .32s cubic-bezier(.2,.8,.2,1)' }}>
             <ShellPage />
           </main>
@@ -243,4 +261,4 @@ function BellLab(){
 window.__PAGES = NAMES
 const only = new URLSearchParams(location.search).get('p')
 createRoot(document.getElementById('root')).render(
-  only === '__sidebar' ? <SidebarLab/> : only === '__sidebar2' ? <WideSidebarLab/> : only === '__feedback' ? <FeedbackLab/> : only === '__bell' ? <BellLab/> : <App/>)
+  only === '__sidebar' ? <SidebarLab/> : only === '__sidebar2' ? <WideSidebarLab/> : only === '__sidebar3' ? <WideSidebarLab panel /> : only === '__feedback' ? <FeedbackLab/> : only === '__bell' ? <BellLab/> : <App/>)
