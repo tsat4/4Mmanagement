@@ -12141,13 +12141,29 @@ test('☼☾ shift-glyph-no-emoji — ลิสต์กะใช้ <ShiftGlyph
   const src = stripComments(readFileSync(join(ROOT, 'src/pages/DailyReport.jsx'), 'utf8'))
   assert.match(src, /<ShiftGlyph shift=/,
     '\n\n❌ ลิสต์กะไม่ได้ใช้ <ShiftGlyph> — หน้างานแยกกะกลางวัน/กลางคืนไม่ออก (แจ้ง 17/11)\n')
-  /* ขอบเขตของกฎ = **แถวในลิสต์กะ** (ตัวแปรแถวชื่อ `s`) ที่หน้างานต้องไล่สายตาเร็ว
-     ประโยคที่พูดถึง "กะที่เลือกอยู่" (`selSession`) ไม่เข้าข่าย — อีโมจิในประโยคไม่ได้ทำให้ลิสต์รก */
-  const SUN_MOON = /s\.shift === '(?:day|night)' \? '[^']*(?:\u2600|\uD83C\uDF1E|\uD83C\uDF19|\uD83C\uDF12)/g
-  const emoji = (src.match(SUN_MOON) || [])
+  /* 🔴 25/11 (คำสั่ง user "ยังมี emoji สีสันซ่อนอยู่") — ขอบเขตเดิมคือ **แถวในลิสต์กะ** เท่านั้น
+     ⇒ ☀️/🌙 ที่ประโยค "กะที่เลือกอยู่" (หัวการ์ด LIVE · หัวโมดัลปิดกะ) รอดมาตลอดและ user เห็น
+     ⇒ ขยายเป็น **ทั้งไฟล์** · ข้อความที่ส่งออกนอกจอ (Telegram) ไม่เข้าข่าย — ที่นั่นใช้อีโมจิได้ */
+  const SUN_MOON = /(?:\u2600\uFE0F?|\uD83C\uDF1E|\uD83C\uDF19|\uD83C\uDF12)/g
+  const uiLines = src.split('\n').filter(l => !/notify|telegram|sendMessage/i.test(l))
+  const emoji = (uiLines.join('\n').match(SUN_MOON) || [])
   assert.deepEqual(emoji, [],
-    '\n\n❌ แถวในลิสต์กะกลับไปใช้อีโมจิพระอาทิตย์/พระจันทร์แล้ว:\n   '
-    + emoji.join(' · ') + '\n   ⇒ ใช้ <ShiftGlyph shift={s.shift} size={12} /> แทน (UI-CONVENTIONS §6.41)\n')
+    '\n\n❌ DailyReport กลับไปใช้อีโมจิพระอาทิตย์/พระจันทร์แล้ว (' + emoji.length + ' จุด)'
+    + '\n   ⇒ ใช้ <ShiftGlyph shift={…} size={12} /> + ข้อความ "กะเช้า/กะดึก" แทน (UI-CONVENTIONS §6.41)\n')
+
+  /* 🔴 อีโมจิประดับที่หน้างานเห็นแล้วทักว่า "ดูไม่เป็นโปรแกรม" (25/11) — ห้ามกลับมาอีก
+     ⏰ ไม่อยู่ในลิสต์ "สัญลักษณ์สถานะ" ที่อนุญาต (§6.36 ข้อ 4 · ที่อนุญาตคือ ⏳ ⏱) */
+  /* `[ch, คำอธิบาย, เป็นคำนำหน้าเท่านั้น?]` — ตัวที่ติด `prefixOnly` ยังใช้เป็น **ไอคอนเดี่ยว**
+     ในทะเบียนได้ (`icon: '📦'` → `<Icon glyph>` วาดเป็นเส้น) ห้ามเฉพาะตอนนำหน้าข้อความ */
+  const BANNED = [
+    ['\u23F0', 'นาฬิกาปลุก (ใช้สีของชิปบอกความเร่งด่วนพอแล้ว · ที่อนุญาตคือ ⏳ ⏱)', false],
+    ['\uD83D\uDCE6', 'กล่องพัสดุนำหน้าข้อความ (หัวข้อ Prod Orders · toast แจ้งสโตร์)', true],
+  ]
+  const bad = BANNED.filter(([ch, , prefixOnly]) => src.includes(prefixOnly ? ch + ' ' : ch))
+    .map(([ch, why]) => `${ch} = ${why}`)
+  assert.deepEqual(bad, [],
+    '\n\n❌ DailyReport มีอีโมจิประดับที่ถอดออกไปแล้ว:\n   ' + bad.join('\n   ')
+    + '\n   ⇒ หัวข้อ/ชิป/ข้อความห้ามมีอีโมจิประดับนำหน้า (UI-CONVENTIONS §6.36 ข้อ 4)\n')
   assert.ok((src.match(/<ShiftGlyph shift=/g) || []).length >= 2,
     '\n\n❌ ลิสต์กะมี 2 ที่ (แถบซ้าย + กะค้าง) ต้องใช้ <ShiftGlyph> ทั้งคู่ ไม่งั้น 2 จอหน้าตาไม่ตรงกัน\n')
 })

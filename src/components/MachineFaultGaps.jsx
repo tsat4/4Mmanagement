@@ -73,7 +73,7 @@ export default function MachineFaultGaps({ session, orders = [], downtimes = [],
   if (!res.err && !gaps.length) {
     return (
       <div style={{ fontSize: 12, color: 'var(--muted)', padding: '6px 2px', ...style }}>
-        🏭 {tr("ข้อมูลจากเครื่อง: ไม่มีเครื่องเสีย (FAULT) นานกว่า")} {FAULT_GAP_MIN} {tr("นาที ที่ยังไม่ลง")} downtime
+        {tr("ข้อมูลจากเครื่อง: ไม่มีเครื่องเสีย (FAULT) นานกว่า")} {FAULT_GAP_MIN} {tr("นาที ที่ยังไม่ลง")} downtime
       </div>
     );
   }
