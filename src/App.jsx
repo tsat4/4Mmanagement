@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect, useRef, useMemo, lazy, Suspense, useCallback } from 'react';
 import { fmtDateTime } from './utils/dateFormat';
 import { motion } from 'framer-motion';
+import TabBody from './components/TabBody';   // 24/11: เปลี่ยนหน้าแบบมีจังหวะ (รีล CRM V10)
+import Skeleton from './components/Skeleton';
 import { railPill, markView } from './utils/motion';   // 18/11: pill เมนู "ไหล" ไปตำแหน่งใหม่ (นิ่งเองบน TV / reduced-motion)
 import tsLogo from './assets/TS logo transparent.png';   // splash: พื้นโปร่งใส (06/11)
 import { BrowserRouter as Router, Routes, Route, Link, Navigate, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
@@ -825,9 +827,12 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
         onClick={onClick}
       >
         {cur && !guest && (
-          <motion.span layoutId="nav-active" transition={railPill()} aria-hidden="true" style={{
-            position: 'absolute', inset: 0, borderRadius: 'inherit', background: 'var(--accent-dim)', borderLeft: '2px solid var(--accent)', pointerEvents: 'none',
-          }} />
+          <motion.span layoutId="nav-active" transition={railPill()} aria-hidden="true" className="neon-row" style={{
+            /* 24/11 ทดลอง (รีล Sidebar v2): พื้นไล่จาก accent-dim → โปร่ง + แท่งซ้าย 3px เรืองแสง (.neon-bar · index.css) */
+            position: 'absolute', inset: 0, borderRadius: 'inherit', background: 'var(--accent-dim)', pointerEvents: 'none',
+          }}>
+            <span className="neon-bar" style={{ position: 'absolute', left: 0, top: 7, bottom: 7, width: 3, borderRadius: '0 3px 3px 0', background: 'var(--accent)' }} />
+          </motion.span>
         )}
         <Icon glyph={item.icon} size={17} style={{ opacity: guest ? 0.7 : 1, position: 'relative', zIndex: 1 }} />
         <span style={{ position: 'relative', zIndex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tr(item.label)}</span>
@@ -941,9 +946,10 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
             · นิ่งเมื่อ reduced-motion / จอ TV (`railPill()` คืน duration 0) · ตัวตรวจ "คุณอยู่ตรงนี้" ดู aria-current ไม่ใช่สี */}
         {isCurrent && (
           <motion.span layoutId="rail-active" transition={railPill()} aria-hidden="true" style={{
-            position: 'absolute', inset: 0, borderRadius: 10, background: 'var(--accent-dim)', pointerEvents: 'none',
+            /* 24/11: pill สีเดียวกับแผ่นเนื้อหา (.app-sheet) และยื่นขวาจนชนแผ่น ⇒ "แท็บที่ติดกับหน้า" (รีล CRM V10) · แถบ accent ซ้าย + ตัวอักษร accent คงเดิม (UI-STANDARD §4.5) */
+            position: 'absolute', top: 0, bottom: 0, left: 0, right: -4, borderRadius: '10px 0 0 10px', background: 'var(--bg)', pointerEvents: 'none',
           }}>
-            <span style={{ position: 'absolute', left: 0, top: 6, bottom: 6, width: 3, borderRadius: '0 3px 3px 0', background: 'var(--accent)' }} />
+            <span className="neon-bar" style={{ position: 'absolute', left: 0, top: 6, bottom: 6, width: 3, borderRadius: '0 3px 3px 0', background: 'var(--accent)' }} />
           </motion.span>
         )}
         <Icon glyph={icon} size={19} style={{ position: 'relative', zIndex: 1 }} />
@@ -958,7 +964,7 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
           position: 'fixed', top: 0, left: 0, height: '100vh',
           width: isOpen ? 'var(--rail-w)' : '0px',
           background: 'linear-gradient(180deg, var(--rail-top) 0%, var(--rail-bot) 100%)',   // 🪪 20/11 ไล่เฉดสีเดียว (token)
-          borderRight: isOpen ? '1px solid var(--border)' : 'none',
+          borderRight: 'none',   // 24/11: ไม่มีเส้นคั่นราง-แผ่น (pill ของหมวดที่เปิดอยู่ต้องไหลเข้าแผ่นได้)
           display: 'flex', flexDirection: 'column', alignItems: 'center',
           padding: isOpen ? '10px 0 8px' : '10px 0',
           gap: 4, zIndex: 1000, overflow: 'hidden',
@@ -2258,7 +2264,7 @@ function ProtectedLayout({ session, theme, onToggleTheme, userRole, realRole, vi
         <AutoLogoutWarning secsLeft={warnSecsLeft} onStay={dismissWarning} onLogout={handleLogout} />
       )}
       {isMobile && <ShiftEndBanner minLeft={shiftLeftMin} />}
-      <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)' }}>
+      <div className="app-frame" style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)' }}>
         {/* มือถือ: ☰ ย้ายไปแถบล่าง (นิ้วโป้งถึง · ไม่ลอยทับเนื้อหา) — จอคอมเหมือนเดิม (docs/MOBILE-UX-STANDARD.md §3) */}
         {!isMobile && !tvShell && <ToggleBtn isOpen={isOpen} onClick={() => setIsOpen(true)} />}
         {!tvShell && <NotificationBell userId={userId} role={role} />}
@@ -2307,7 +2313,7 @@ function ProtectedLayout({ session, theme, onToggleTheme, userRole, realRole, vi
         {viewAsBanner}
         {viewAsModal}
 
-        <main style={{
+        <main className="app-sheet" style={{   /* 24/11: แผ่นเนื้อหาต่อกับราง (index.css .app-sheet) */
           flex: 1,
           marginLeft,
           minHeight: 'calc(100vh - var(--tvbar-h, 0px))',   // กรอบจอ TV: แถบบนกินที่ไปแล้ว (body padding-top)
@@ -2332,7 +2338,8 @@ function ProtectedLayout({ session, theme, onToggleTheme, userRole, realRole, vi
           {/* 🏭 ทะเบียนไลน์โหลดไม่สำเร็จ = dropdown ไลน์ว่างทั้งแอป — ต้องบอก ห้ามปล่อยให้เดาเอง
               (82 จาก 89 จุดที่เรียก loadLinesRes() ทิ้ง error ทิ้ง ⇒ ตาข่ายต้องอยู่ที่เดียวตรงนี้) */}
           <LineRegistryAlert />
-          <Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--muted)', fontSize: 14 }}>กำลังโหลด...</div>}>
+          <Suspense fallback={<Skeleton cards={6} style={{ padding: '24px 24px 0' }} />}>   {/* 24/11: โครงเทาวิบแทน "กำลังโหลด..." */}
+          <TabBody tab={location.pathname}>   {/* 24/11: เปลี่ยนหน้า = เก่าจาง ใหม่ขึ้น (utils/motion tabSwitch · นิ่งบน TV) */}
             {/* 🔁 key จากจอวนหน้า — หน้าเดิมที่เปลี่ยนแค่ ?query (เช่น ผังโรงงาน metric=oee → metric=ng) ต้อง remount
                 ไม่งั้นค่าตั้งต้นจากลิงก์ (utils/urlInit) ไม่ถูกอ่านใหม่ · ค่าว่าง = นำทางปกติ ไม่ remount */}
             <Routes key={location.state?.[ROT_NAV_STATE] || 'r'}>
@@ -2593,6 +2600,7 @@ function ProtectedLayout({ session, theme, onToggleTheme, userRole, realRole, vi
                   **ห้ามย้ายขึ้นก่อน route อื่น** (จะกินทุกที่อยู่) */}
               <Route path="*" element={<NotFound />} />
             </Routes>
+          </TabBody>
           </Suspense>
         </main>
       </div>

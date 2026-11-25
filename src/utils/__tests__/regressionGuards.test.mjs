@@ -12804,6 +12804,7 @@ test('🛡️ daily-checker-2411 — แผน/อนุมัติ/ลาย�
   if (!/lineWrite=\{isAmTeam\(/.test(pm) || !/lineWrite && !lineWrite\.ok/.test(pm)) bad.push('A4: อนุมัติใบ AM ต้องผ่าน canWriteLine ของไลน์อุปกรณ์');
   const py = rd('src/pages/PokaYokeCheck.jsx');
   if (!/event: 'pokayoke_fail'/.test(py)) bad.push("N3: Poka-Yoke ไม่ผ่านต้องยิง 'pokayoke_fail'");
+  if (!/event: 'bbs_unsafe'/.test(bbs) || !/notifyBbsUnsafe\(newNg/.test(bbs)) bad.push("25/11: BBS ไม่เหมาะสม (ทามือ + เติมจาก PPE) ต้องยิง 'bbs_unsafe'");
   const mq = rd('src/utils/myQueue.js');
   if (!/key: `amappr:\$\{g\.line\}`/.test(mq)) bad.push('A5: ใบ AM รออนุมัติต้องอยู่ในคิวงาน (บรรทัดเดียวต่อไลน์)');
   assert.deepEqual(bad, [], `\n\n❌ ${bad.length} จุด\n   ${bad.join('\n   ')}\n`);

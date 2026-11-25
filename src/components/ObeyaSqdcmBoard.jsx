@@ -85,6 +85,7 @@ import {
 } from '../utils/obeyaYear';
 
 import { tr } from '../utils/i18n';
+import Skeleton from './Skeleton';
 /* วันที่งาน (ตัด 08:00 — งานกะดึกข้ามวันนับเป็นวันก่อนหน้า)
    ⚠️ ห้ามใช้ toISOString() — คืน UTC ทำให้วันที่เพี้ยนสำหรับไทย (กฎ Date/Time ใน CLAUDE.md) */
 const getWorkDate = () => {
@@ -868,13 +869,13 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
       {/* 🔴 `clip` เมื่อคุมความสูงได้ · ที่ไม่พอจริง = ถอยไป `auto` ยอมให้เลื่อน (ดู useFitHeight) */}
       <div ref={wrapRef} style={{ flex: 1, minWidth: 0, minHeight: 0, overflow: fitOn || shortScreen ? 'clip' : 'auto' }}>
         {loading && (isYear ? !yr : !fSess.length) ? (
-          <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>{tr('กำลังโหลดข้อมูล…')}</div>
+          <Skeleton cards={6} style={{ padding: '8px 0' }} />   /* 24/11: โครงเทาวิบแทนข้อความลอย (components/Skeleton) */
         ) : (
         <div style={sheetsBox}>
 
           {/* ═══ S — ความปลอดภัย ═══ */}
           {has('S') && (
-          <Sheet k={k} cw={cw} icon={axisSheet('S').icon} title={tr('S ความปลอดภัย')}
+          <Sheet k={k} cw={cw} idx={0} icon={axisSheet('S').icon} title={tr('S ความปลอดภัย')}
             sub={`${ytdTag}${tr("ใส่ PPE ครบตอนเช็คชื่อ")} (leading)`} big={kS.value ?? '—'} unit={kS.value != null ? '%' : ''}
             stat={statusWhy(kS.value, kS.target, 'up', '%')}
             foot={<WarnNote k={k} text={kS.note} tone="bad" />}
@@ -902,7 +903,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
               %Q กระจุกใกล้ 100 ⇒ ขยายช่วงถาวรด้วย `focusDomain()` (เดิมเขียน domain เองว่า 95–100 โดยไม่มีป้าย = ผิดกติกาความซื่อสัตย์ 05/10)
               🔴 แกนไม่เริ่ม 0 ต้องมี <FocusAxisNote> เสมอ · ค่าที่มี 0 จริง = focusDomain คืน null = แกน 0–100 ตามปกติ */}
           {has('Q') && (() => { const qFocus = focusDomain([...(kQ.series || []).map(p => p.v), kQ.target], { max: 100 }); const qDom = qFocus ? qFocus.domain : [0, 100]; const qNote = (node) => (node ? <div style={{ position: 'relative', width: '100%', height: '100%' }}>{qFocus && <FocusAxisNote k={k} loText={String(qFocus.domain[0])} fixed />}{node}</div> : null); return (
-          <Sheet k={k} cw={cw} icon={axisSheet('Q').icon} title={tr('Q คุณภาพ')}
+          <Sheet k={k} cw={cw} idx={1} icon={axisSheet('Q').icon} title={tr('Q คุณภาพ')}
             sub={`${ytdTag}%Q ${tr("ถ่วงด้วยจำนวนผลิต")} · NG ${ngTotal.toLocaleString()} ${tr("ชิ้น")}`}
             big={kQ.value ?? '—'} unit={kQ.value != null ? '%' : ''}
             delta={gapToTarget(kQ.value, kQ.target, 'up')} stat={statusWhy(kQ.value, kQ.target, 'up', '%')}
@@ -925,7 +926,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
 
           {/* ═══ D — ส่งมอบ ═══ */}
           {has('D') && (
-          <Sheet k={k} cw={cw} icon={axisSheet('D').icon} title={tr('D ส่งมอบ')}
+          <Sheet k={k} cw={cw} idx={2} icon={axisSheet('D').icon} title={tr('D ส่งมอบ')}
             sub={`${ytdTag}${tr("ผลิตได้ตามแผนในใบงาน")}`} big={kD.value ?? '—'} unit={kD.value != null ? '%' : ''}
             delta={gapToTarget(kD.value, kD.target, 'up')} stat={statusWhy(kD.value, kD.target, 'up', '%')}
             foot={kD.note ? <WarnNote k={k} text={kD.note} />
@@ -952,7 +953,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
 
           {/* ═══ C — ต้นทุน ═══ */}
           {has('C') && (
-          <Sheet k={k} cw={cw} icon={axisSheet('C').icon} title={tr('C ต้นทุนที่เสียไป')}
+          <Sheet k={k} cw={cw} idx={3} icon={axisSheet('C').icon} title={tr('C ต้นทุนที่เสียไป')}
             sub={`${isYear ? tr("รวมทั้งปี · ") : ""}${tr("เครื่องหยุดนอกแผน + ของเสีย")}`}
             big={kC.value != null ? fmtBaht(kC.value) : '—'}
             stat={costStat}
@@ -976,7 +977,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
 
           {/* ═══ M — กำลังคน ═══ */}
           {has('M') && (
-          <Sheet k={k} cw={cw} icon={axisSheet('M').icon} title={tr('M กำลังคน')}
+          <Sheet k={k} cw={cw} idx={4} icon={axisSheet('M').icon} title={tr('M กำลังคน')}
             sub={`${ytdTag}${tr("มา")} ${kM.present ?? 0} · ${tr("ขาด")} ${kM.absent ?? 0}${kM.ot ? ` · OT ${kM.ot}` : ''}`}
             big={kM.value ?? '—'} unit={kM.value != null ? '%' : ''}
             delta={gapToTarget(kM.value, kM.target, 'up')} stat={statusWhy(kM.value, kM.target, 'up', '%')}
@@ -1000,7 +1001,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
 
           {/* ═══ OEE — แผ่นแนวนอน (2 ช่อง) ═══ */}
           {has('oee') && (
-          <Sheet k={k} cw={cw} span={2} icon="⚙️" title={tr('OEE เทียบเป้า')}
+          <Sheet k={k} cw={cw} idx={5} span={2} icon="⚙️" title={tr('OEE เทียบเป้า')}
             sub={`${ytdTag}A ${kOee.a ?? '—'} · P ${kOee.p ?? '—'} · Q ${kOee.q ?? '—'}  |  ${tr("เป้า")} A${target.a}/P${target.p}/Q${target.q}`}
             big={kOee.value ?? '—'} unit={kOee.value != null ? '%' : ''}
             delta={gapToTarget(kOee.value, kOee.target, 'up')}
@@ -1035,7 +1036,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
 
           {/* ═══ ทำไมหลุดเป้า — Pareto ═══ */}
           {has('why') && (
-          <Sheet k={k} cw={cw} icon="🔎" title={tr('ทำไมถึงหลุดเป้า')}
+          <Sheet k={k} cw={cw} idx={6} icon="🔎" title={tr('ทำไมถึงหลุดเป้า')}
             sub={`${isYear ? tr('รวมทั้งปี · ') : ''}${tr("เวลาเครื่องหยุดนอกแผน (นาที")})`}
             big={pareto.total ? pareto.total.toLocaleString() : '—'} unit={pareto.total ? 'นาที' : ''}
             stat={paretoStat}
@@ -1064,7 +1065,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
 
           {/* ═══ ACTION BOARD — แผ่นแนวนอน (2 ช่อง) · ที่เดียวของหน้าที่เขียนข้อมูลได้ ═══ */}
           {has('action') && (
-          <Sheet k={k} cw={cw} span={2} icon="📋" title={tr('ACTION BOARD — สิ่งที่ตกลงกันว่าจะแก้')}
+          <Sheet k={k} cw={cw} idx={7} span={2} icon="📋" title={tr('ACTION BOARD — สิ่งที่ตกลงกันว่าจะแก้')}
             sub={`${health.empty ? tr('ยังไม่มีใครบันทึกสักใบ') : `${tr("เป็นๆ")} ${health.liveCount} ${tr("ใบ · ปิดแล้ว")} ${health.done.length} ${tr("ใบ")}${health.closeRate != null ? ` (${health.closeRate}%)` : ''}`}${scopedActs.hidden ? ` · ${tr("นอกขอบเขต")} ${scopedActs.hidden} ${tr("ใบ")}` : ''}`}
             big={health.overdue.length || (health.empty ? '0' : health.liveCount)}
             unit={health.overdue.length ? 'ใบเกินกำหนด' : 'ใบค้าง'}
