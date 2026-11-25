@@ -2787,6 +2787,15 @@ pseudo ตัวนี้ `position:absolute` **โปร่งใส มอง�
    · `liftHover()` (`utils/motion.js`) + `className="lift-card"` — ยก 4px + เงา `--shadow-float` **เฉพาะอุปกรณ์มีเมาส์** (`hover:hover` + `pointer:fine`) · ใช้กับการ์ด/แผ่นที่กดต่อได้ · ห้ามใส่แถวตาราง/Andon
    · `useCountUp(n)` (`utils/useCountUp.js`) — เลขวิ่งขึ้นครั้งเดียวต่อสิ่งที่ดู (หน้าต่างเดียวกับ `chartAnim()`) · รีเฟรชตามรอบไม่วิ่งซ้ำ · `null` ยังเป็น "—" · ใบ popup ไม่วิ่ง
    · ทั้ง 4 ตัว**นิ่งเองเมื่อ `motionOff()`** (จอ TV lite / reduced-motion) · **ไม่เอาพื้นผิวกระจก/blur ของรีล** (§6.17 ΔL ≤ 5% · §7 ข้อ 6 TV) — เอามาแค่จังหวะ
+7. 🗂 **เปลือกแอป "แผ่นเนื้อหาต่อกับราง" (2026-11-25 · user เคาะหลังดูเดโม 2 ธีม · รีล CRM Dashboard V10 + Sidebar v2)**
+   · `<main className="app-sheet">` ใน App.jsx + wrapper `.app-frame` (CSS ใน `index.css`) — เนื้อหาเป็นแผ่นมุมโค้งซ้าย 16px ลอยบน "กรอบ" สีเดียวกับราง (`--rail-top/bot`) ·
+     pill หมวดบนราง (`layoutId="rail-active"`) พื้น = `--bg` เดียวกับแผ่น และยื่นขวา 4px จนชนแผ่น ⇒ อ่านเป็น "แท็บที่ติดกับหน้า" · รางไม่มี `borderRight`
+   · **มือถือ (`≤768px`) และ TV (`body.esm-tv-shell`) = ไม่มีมุม ไม่มีขอบ ไม่มี margin** (จอเต็มเหมือนเดิม) — ห้ามเพิ่ม breakpoint ที่ 3
+   · ธีมสว่าง `--rail-top/bot` ตั้งใจเข้มกว่า `--bg` หนึ่งขั้น (`#eceef2→#e6e8ec`) ให้แผ่นลอยเห็น — ห้ามตั้งกลับเป็นขาวโดยไม่รู้เหตุผลนี้ (ΔL ภายใน gradient ยัง ≤ 5%)
+   · `<Routes>` ห่อด้วย `<TabBody tab={location.pathname}>` (เปลี่ยนหน้า = เก่าจาง/ใหม่ขึ้น) · `<Suspense fallback={<Skeleton cards={6}>}>` แทน "กำลังโหลด..."
+   · **แท่ง active "นีออน"** = `className="neon-bar"` บนแถบ accent ของ pill ทั้งราง (`rail-active`) และแผงลอย (`nav-active`) · พื้นแถว = `className="neon-row"` (accent-dim → โปร่ง)
+     เงาสี accent offset 0 = "สัญญาณ" อยู่ในข้อยกเว้นของด่าน `card-shadow-via-token` โดยเจตนา · **TV lite / reduced-motion = ไม่มีเงา** (CSS) · ห้ามเขียน box-shadow สี accent เองในหน้า ใช้ class นี้
+   · ❌ **ไม่เอา**: รางกว้าง 260px ย่อ/ขยาย (ต้นแบบในแล็บ `?p=__sidebar2` / `__sidebar3` ใน `audit/main.jsx` เก็บไว้ดูได้ — user เคาะ "เอาแบบ 1 พอ ไม่เปลี่ยนเยอะ" 25/11 · หมวด 17 หน้าจะดันลิสต์)
 
 ## 6.34c 📈 อนิเมชันกราฟ — มาตรฐานเดียวทั้งระบบ (2026-11-20 · user: "อนิเมชั่นกราฟสวยๆ … ต้องมีมาตรฐานและใช้เหมือนกันทั้งหมด")
 
