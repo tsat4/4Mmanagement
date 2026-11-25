@@ -101,7 +101,7 @@ export default function AuditLogViewer({ client, tables, limit = 300, intro, fmt
 
       {/* โหลดไม่ได้ ≠ ไม่มีประวัติ — ต้องแยกให้ขาด */}
       {!!err && (
-        <div style={{ color: '#f59e0b', padding: 12, fontSize: 12.5, background: 'rgba(245,158,11,0.1)', border: '1px solid #f59e0b', borderRadius: 'var(--r-md)' }}>
+        <div style={{ color: 'var(--amber)', padding: 12, fontSize: 12.5, background: 'rgba(245,158,11,0.1)', border: '1px solid #f59e0b', borderRadius: 'var(--r-md)' }}>
           ⚠️ {tr("โหลดประวัติไม่ได้")}: {err}
           <br />{tr('(ถ้าเป็นเพราะตาราง')} <code>audit_log</code> {tr('ไม่มี — ต้อง apply migration')} <code>20260724_audit_log_main.sql</code> / <code>_dr.sql</code> {tr("ก่อน")})
         </div>

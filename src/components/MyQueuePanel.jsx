@@ -373,14 +373,14 @@ export default function MyQueuePanel({ q, busy, onGo }) {
   return (
     <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: 6, marginBottom: 6 }}>
       {q?.partial && (
-        <div style={{ fontSize: 11, color: '#f59e0b', padding: '4px 8px', lineHeight: 1.4 }}>
+        <div style={{ fontSize: 11, color: 'var(--amber)', padding: '4px 8px', lineHeight: 1.4 }}>
           ⚠️ {tr("โหลดข้อมูลไม่ครบ — รายการด้านล่าง")}<b>{tr('ไม่ใช่ทั้งหมด')}</b> {tr("อย่าเพิ่งสรุปว่าไม่มีงานค้าง")}
         </div>
       )}
       {/* 🔴 แถวที่ระบุส่วนงานไม่ได้ = ตกจากคิวของ**ทุกคน** ⇒ ต้องเขียนบอก ไม่ใช่ `partial` (คิวรีไม่ได้ล่ม
           ข้อมูลไม่ครบที่ต้นทาง) · วัดจริง 06/10: ใบรอ QA 36 จาก 188 ใบ `dept_section` ว่าง */}
       {q && q.unattributed > 0 && (
-        <div style={{ fontSize: 11, color: '#f59e0b', padding: '4px 8px', lineHeight: 1.4 }}>
+        <div style={{ fontSize: 11, color: 'var(--amber)', padding: '4px 8px', lineHeight: 1.4 }}>
           ⚠️ {tr("อีก")} <b>{q.unattributed}</b> {tr('รายการ')}<b>{tr('ระบุส่วนงานไม่ได้')}</b> {tr("จึงไม่เข้าคิวของใครเลย — ต้องเติมส่วนงานในใบก่อน ถึงจะโผล่ในคิวของหน่วยงานที่รับผิดชอบ")}
         </div>
       )}

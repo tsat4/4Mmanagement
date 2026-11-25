@@ -200,7 +200,7 @@ export default function PurchaseBulkModal({ group, next, nextLabel, fullName, wo
         {slips === null && <div style={{ padding: 20, textAlign: 'center', color: 'var(--muted)', fontSize: 12.5 }}>{tr('กำลังอ่านใบจริง…')}</div>}
 
         {err && (
-          <div style={{ ...box, borderColor: 'rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.07)', color: '#ef4444', fontSize: 12 }}>
+          <div style={{ ...box, borderColor: 'rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.07)', color: 'var(--red)', fontSize: 12 }}>
             🔴 {tr("อ่านใบสั่งซื้อไม่สำเร็จ")} — {err}
           </div>
         )}
@@ -255,7 +255,7 @@ export default function PurchaseBulkModal({ group, next, nextLabel, fullName, wo
           {noDest && next === 'received' && (
             <div style={{ ...box, borderColor: 'rgba(245,158,11,0.4)', background: 'rgba(245,158,11,0.07)',
               fontSize: 12, color: 'var(--text2)', marginBottom: 10 }}>
-              ⚠️ <b style={{ color: '#f59e0b' }}>{fmt(noDest.slips)} {tr('ใบ ไม่ได้ระบุปลายทางสโตร์')}</b> — {tr("ใบจะถูกเลื่อนเป็นรับเข้า แต่")} <b>{tr('สต็อกส่วนนั้น (')}{fmt(noDest.qty)} {tr("ชิ้น) จะไม่ถูกเติม")}</b> {tr("ต้องไปบันทึกรับเข้าเองที่")} 📦 Line Stock
+              ⚠️ <b style={{ color: 'var(--amber)' }}>{fmt(noDest.slips)} {tr('ใบ ไม่ได้ระบุปลายทางสโตร์')}</b> — {tr("ใบจะถูกเลื่อนเป็นรับเข้า แต่")} <b>{tr('สต็อกส่วนนั้น (')}{fmt(noDest.qty)} {tr("ชิ้น) จะไม่ถูกเติม")}</b> {tr("ต้องไปบันทึกรับเข้าเองที่")} 📦 Line Stock
             </div>
           )}
 

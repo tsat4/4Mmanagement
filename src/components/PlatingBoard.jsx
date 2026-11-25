@@ -45,12 +45,12 @@ const box = { background: 'var(--card)', border: '1px solid var(--border)', bord
 const h3 = { fontSize: 15, fontWeight: 800, margin: '0 0 8px', color: 'var(--text)' };
 const muted = { fontSize: 12, color: 'var(--muted)' };
 const inp = { minHeight: 40, padding: '6px 10px', borderRadius: 'var(--radius)', border: '1px solid var(--border2)', background: 'var(--bg2)', color: 'var(--text)', fontSize: 13.5, fontFamily: 'var(--font-body)', boxSizing: 'border-box' };
-const warnTxt = { fontSize: 12, color: '#f59e0b', fontWeight: 700 };
-const errTxt = { fontSize: 12, color: '#ef4444', fontWeight: 700 };
+const warnTxt = { fontSize: 12, color: 'var(--amber)', fontWeight: 700 };
+const errTxt = { fontSize: 12, color: 'var(--red)', fontWeight: 700 };
 const ZONES = (withDone) => [
-  { key: 'late', statuses: ['late'], label: '⏰ เกิน lead time ของร้าน', color: '#ef4444', hint: 'ส่งไปนานเกินกำหนดแล้ว — ตามร้าน' },
+  { key: 'late', statuses: ['late'], label: '⏰ เกิน lead time ของร้าน', color: 'var(--red)', hint: 'ส่งไปนานเกินกำหนดแล้ว — ตามร้าน' },
   { key: 'vendor', statuses: ['vendor'], label: 'อยู่ที่ร้านชุบ · รอรับกลับ', color: '#06b6d4', hint: 'งานกลับมา → นับของจริงแล้วกดรับ · ทยอยรับได้' },
-  ...(withDone ? [{ key: 'closed', statuses: ['closed'], label: '✅ ปิดแล้ว (ล่าสุด)', color: '#22c55e', hint: '' }] : []),
+  ...(withDone ? [{ key: 'closed', statuses: ['closed'], label: '✅ ปิดแล้ว (ล่าสุด)', color: 'var(--green)', hint: '' }] : []),
 ];
 const dmy = (iso) => {
   const d = iso ? new Date(iso) : null;
@@ -386,7 +386,7 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
           const age = daysAgo(o.sent_at, now.getTime());
           return (
             <PartCard key={o.id} code={o.after_mat} name={o.part_name} img={imgOf(o.after_mat) || imgOf(o.before_mat)} alert={zone === 'late'}
-              status={isOpen ? (zone === 'late' ? { label: '⏰ เกินกำหนด', color: '#ef4444' } : { label: 'ที่ร้าน', color: '#06b6d4' }) : { label: '✅ ปิดแล้ว', color: '#22c55e' }}
+              status={isOpen ? (zone === 'late' ? { label: '⏰ เกินกำหนด', color: 'var(--red)' } : { label: 'ที่ร้าน', color: '#06b6d4' }) : { label: '✅ ปิดแล้ว', color: 'var(--green)' }}
               metric={{ label: isOpen ? 'ค้างที่ร้าน' : 'รับกลับแล้ว', value: fmt(isOpen ? open : o.qty_received), unit: 'ชิ้น' }}
               aside={{ label: tr("ร้าน"), value: o.vendor }}
               dim={!isOpen}

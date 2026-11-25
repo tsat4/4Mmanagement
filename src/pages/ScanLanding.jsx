@@ -61,11 +61,16 @@ const card = {
 
 /* ปุ่มลงมือ — เป้ากด 44px ตาม UI §6.24 (คนถือมือถือ ใส่ถุงมือ ยืนหน้าเครื่อง) */
 function ActionLink({ to, icon, label, sub, tone = 'var(--accent)' }) {
+  /* 🔴 25/11 — เดิมเขียน `linear-gradient(${tone}14, …)` โดยที่ `tone` เป็น **token** (`var(--green)`)
+     ⇒ ได้ `var(--green)14` ที่ **parse ไม่ได้ = เบราว์เซอร์ทิ้งทั้งบรรทัด** ⇒ พื้นจางของปุ่มนี้
+     **ไม่เคยขึ้นเลย** (ท่า alpha-hex ใช้ได้เฉพาะสีดิบ · CLAUDE.md §เพดานเบราว์เซอร์)
+     ⇒ ใช้ token โทนจางที่เป็น rgba อยู่แล้ว (`--x-dim`) · ด่าน `no-var-alpha-hex` */
+  const dim = tone.replace(/^var\(--([\w-]+)\)$/, 'var(--$1-dim)');
   return (
     <Link to={to} style={{
       display: 'flex', alignItems: 'center', gap: 12, minHeight: 56, padding: '10px 14px',
       borderRadius: 10, border: `1px solid ${tone}`, background: 'var(--bg2)',
-      backgroundImage: `linear-gradient(${tone}14, ${tone}14)`, textDecoration: 'none', color: 'var(--text)',
+      backgroundImage: `linear-gradient(${dim}, ${dim})`, textDecoration: 'none', color: 'var(--text)',
     }}>
       <span style={{ fontSize: 22 }}>{icon}</span>
       <span style={{ minWidth: 0 }}>
@@ -461,14 +466,17 @@ export default function ScanLanding() {
               )}
               {/* ผลลัพธ์ — ✓ ขึ้นเฉพาะตอนเขียนติดจริง (ล้ม = แดง ห้ามขึ้น ✓ ให้เข้าใจผิดว่าเช็คแล้ว) */}
               {ckResult && ckResult !== 'busy' && (() => {
+                /* คู่ `tone`/`toneDim` — พื้นจางต้องเป็น token rgba (`--x-dim`)
+                   ต่อ alpha-hex ท้าย `var(--x)` ไม่ได้ (ด่าน `no-var-alpha-hex`) */
                 const tone = ckResult.kind === 'saved' ? 'var(--green)'
                   : ckResult.kind === 'already' ? 'var(--blue)' : 'var(--red)';
+                const toneDim = tone.replace(/^var\(--([\w-]+)\)$/, 'var(--$1-dim)');
                 const head = ckResult.kind === 'saved' ? `✓ ${tr("เช็คชื่อสำเร็จ")} — ${emp.name}`
                   : ckResult.kind === 'already' ? `✓ ${emp.name} — ${tr("เช็คมางานไว้แล้ว")}`
                   : `✕ ${tr("ยังไม่ได้เช็คชื่อ")} — ${emp.name}`;
                 return (
                   <div style={{ borderRadius: 10, border: `1px solid ${tone}`, background: 'var(--bg2)',
-                    backgroundImage: `linear-gradient(${tone}14, ${tone}14)`, padding: '12px 14px' }}>
+                    backgroundImage: `linear-gradient(${toneDim}, ${toneDim})`, padding: '12px 14px' }}>
                     <div style={{ fontSize: 16, fontWeight: 800, color: tone, lineHeight: 1.3 }}>{head}</div>
                     <div style={{ fontSize: 12.5, color: 'var(--text2)', marginTop: 3, lineHeight: 1.6 }}>{ckResult.text}</div>
                     {ckResult.kind === 'already' && (

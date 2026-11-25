@@ -73,7 +73,7 @@ const DEPT_COLORS = {
 
 const CATEGORY_TYPE_META = {
   production: { label: 'Production', color: '#3dd65c', icon: '🏭' },
-  facility:   { label: 'Facility',   color: '#f59a3f', icon: '🔧' },
+  facility:   { label: 'Facility',   color: 'var(--amber)', icon: '🔧' },
   utility:    { label: 'Utility',    color: '#9b8de8', icon: '⚡' },
 }
 
@@ -278,8 +278,8 @@ function CheckpointCard({ cp, label, onChange, onDelete, onDuplicate, onCpImage,
             <div><label style={{ ...S.label, color: 'var(--red)' }}>USL</label><input type="number" value={cp.usl} onChange={e => onChange({ usl: e.target.value })} placeholder="—" /></div>
           </div>
           <div className="mgrid" style={S.inputRow}>
-            <div><label style={{ ...S.label, color: '#f59a3f' }}>LCL</label><input type="number" value={cp.lcl} onChange={e => onChange({ lcl: e.target.value })} placeholder="—" /></div>
-            <div><label style={{ ...S.label, color: '#f59a3f' }}>UCL</label><input type="number" value={cp.ucl} onChange={e => onChange({ ucl: e.target.value })} placeholder="—" /></div>
+            <div><label style={{ ...S.label, color: 'var(--amber)' }}>LCL</label><input type="number" value={cp.lcl} onChange={e => onChange({ lcl: e.target.value })} placeholder="—" /></div>
+            <div><label style={{ ...S.label, color: 'var(--amber)' }}>UCL</label><input type="number" value={cp.ucl} onChange={e => onChange({ ucl: e.target.value })} placeholder="—" /></div>
           </div>
         </div>
       )}

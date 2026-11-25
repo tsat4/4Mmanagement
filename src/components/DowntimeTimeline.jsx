@@ -183,7 +183,7 @@ export default function DowntimeTimeline({ sessions = [], downtimes = [], workDa
                   </div>
                   {unaccMin > CLOSE_AHEAD_WARN_MIN && (
                     <div title={`${tr("กะนี้ปิดไปแล้ว แต่ \"เวลาปิดกะ\" ที่บันทึกไว้ล้ำหน้าเวลาที่กดปิดจริง และช่วงที่ล้ำ")} ${fmtOffset(unaccMin)} ${tr("ไม่มีใบ Downtime รองรับเลย\\nแถบเขียวจึงลากไปในอนาคต และเวลาเดินเครื่อง (ฐานของ %A/%P) ถูกคิดเกินจริงเท่านั้น\\n→ แก้ที่หน้า Daily Report ปุ่มแก้เวลาเริ่ม-ปิดกะ หรือลง Downtime คลุมช่วงที่ไม่ได้ผลิต")}`}
-                      style={{ fontSize: 11, fontWeight: 800, color: '#f59e0b', cursor: 'help' }}>
+                      style={{ fontSize: 11, fontWeight: 800, color: 'var(--amber)', cursor: 'help' }}>
                       ⚠️ {tr("ปลายกะไม่มีอะไรรองรับ")} {fmtOffset(unaccMin)}
                     </div>
                   )}
@@ -216,7 +216,7 @@ export default function DowntimeTimeline({ sessions = [], downtimes = [], workDa
                 {/* กรอกแค่จำนวนนาที = วางบนแกนไม่ได้ — ต้องเห็น ห้ามหายเงียบ */}
                 {r.untimed > 0 && (
                   <div title={tr('รายการที่กรอกแค่จำนวนนาที ไม่มีเวลาเริ่ม — วางบนไทม์ไลน์ไม่ได้ (ยอดรวม/พาเรโต้ยังนับให้ครบ)')}
-                    style={{ marginLeft: 6, flexShrink: 0, fontSize: 11, fontWeight: 700, color: '#f59e0b', whiteSpace: 'nowrap' }}>
+                    style={{ marginLeft: 6, flexShrink: 0, fontSize: 11, fontWeight: 700, color: 'var(--amber)', whiteSpace: 'nowrap' }}>
                     ⏱ +{r.untimed} ({r.untimedMin} {tr("น.")})
                   </div>
                 )}
@@ -232,7 +232,7 @@ export default function DowntimeTimeline({ sessions = [], downtimes = [], workDa
           {' '}<span style={{ color: 'var(--muted)' }}>{sel.line}</span>
           {sel.machine && <> {tr('· เครื่อง')} <b>{sel.machine}</b></>}
           <div style={{ color: 'var(--text2)' }}>
-            {hhmm(sel.st)} – {sel.open ? <b style={{ color: '#ef4444' }}>{tr('ยังหยุดอยู่')}</b> : hhmm(sel.en)} · <b>{sel.mins}</b> {tr("นาที")}
+            {hhmm(sel.st)} – {sel.open ? <b style={{ color: 'var(--red)' }}>{tr('ยังหยุดอยู่')}</b> : hhmm(sel.en)} · <b>{sel.mins}</b> {tr("นาที")}
           </div>
           {sel.note && <div style={{ color: 'var(--text2)' }}>{sel.note}</div>}
           <button onClick={() => setSel(null)} style={{ marginTop: 4, background: 'transparent', border: 'none', color: 'var(--muted)', fontSize: 11, cursor: 'pointer', padding: 0 }}>{tr('✕ ปิด')}</button>

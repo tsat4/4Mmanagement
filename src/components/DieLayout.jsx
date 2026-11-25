@@ -493,13 +493,13 @@ export default function DieLayout({
                         {selDie.line_name && <>{tr('เครื่องปั๊ม')} {selDie.line_name} · </>}
                         {tr("ตัน")} {e.tonnage_ton ?? '—'} · shot {Number(e.shot_total || 0).toLocaleString()} ·
                         {tr("เจียร")} {e.regrind_count || 0}{e.regrind_limit ? `/${e.regrind_limit}` : ''}
-                        {regrindOver(e) && <b style={{ color: '#ef4444' }}> {tr('⚠️ เจียรครบเกณฑ์แล้ว')}</b>}
+                        {regrindOver(e) && <b style={{ color: 'var(--red)' }}> {tr('⚠️ เจียรครบเกณฑ์แล้ว')}</b>}
                       </div>
 
                       {/* ใบซ่อมค้าง — derive จากระบบ MO จริง */}
                       {mos.length > 0 && (
                         <div style={{ border: '1px solid #ef4444', background: 'rgba(239,68,68,0.1)', borderRadius: 'var(--r-md)', padding: '7px 9px' }}>
-                          <div style={{ fontSize: 12, fontWeight: 800, color: '#ef4444', marginBottom: 3 }}>{tr('ใบซ่อม MO ค้าง')} {mos.length} {tr('ใบ')}</div>
+                          <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--red)', marginBottom: 3 }}>{tr('ใบซ่อม MO ค้าง')} {mos.length} {tr('ใบ')}</div>
                           {mos.map(o => (
                             <div key={o.id} style={{ fontSize: 11.5, lineHeight: 1.7 }}>
                               <b>{o.mo_no || tr('(ยังไม่ออกเลข MO)')}</b> · {moStatusLabel(o)}
@@ -525,7 +525,7 @@ export default function DieLayout({
                             {placed ? tr('วางตำแหน่งใหม่') : tr('วางบนผังนี้')}
                           </button>
                           {placed && (
-                            <button onClick={() => removeFromMap(selDie)} style={{ ...btnGhost, padding: '5px 10px', fontSize: 12, color: '#ef4444' }}>
+                            <button onClick={() => removeFromMap(selDie)} style={{ ...btnGhost, padding: '5px 10px', fontSize: 12, color: 'var(--red)' }}>
                               {tr('✕ เอาออกจากผัง')}
                             </button>
                           )}
@@ -544,7 +544,7 @@ export default function DieLayout({
             {/* worklist — แม่พิมพ์ที่ยังไม่ได้วางบนผังไหนเลย ห้ามซ่อน */}
             {unplaced.length > 0 && (
               <div style={{ background: 'var(--card-surf)', border: '1px solid #f59e0b', borderRadius: 'var(--r-md)', padding: 12 }}>
-                <div style={{ fontSize: 12.5, fontWeight: 800, color: '#f59e0b', marginBottom: 6 }}>
+                <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--amber)', marginBottom: 6 }}>
                   ⚠️ {tr("ยังไม่ได้วางบนผัง")} {unplaced.length} {tr("ตัว")}
                 </div>
                 <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 6 }}>
@@ -649,12 +649,12 @@ function AreaFormModal({ mode, area, onClose, onSaved }) {
       <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(440px, 96vw)' }}>
         <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 14 }}>{mode === 'new' ? tr('➕ สร้างผังจัดเก็บแม่พิมพ์') : tr('⚙️ แก้ไขผังจัดเก็บ')}</div>
         <div style={{ display: 'grid', gap: 10 }}>
-          <div><label style={lbl}>{tr('ชื่อผัง')} <span style={{ color: '#ef4444' }}>*</span></label>
+          <div><label style={lbl}>{tr('ชื่อผัง')} <span style={{ color: 'var(--red)' }}>*</span></label>
             <input value={name} onChange={e => setName(e.target.value)} placeholder={tr('เช่น คลังแม่พิมพ์หลัก / โซนข้าง LINE A (800 Ton)')} style={inp} /></div>
           <div><label style={lbl}>{tr('หมายเหตุ')}</label><input value={note} onChange={e => setNote(e.target.value)} style={inp} /></div>
         </div>
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
-          {mode === 'edit' && <button onClick={del} style={{ ...btnGhost, color: '#ef4444', marginRight: 'auto' }}>{tr('ลบผัง')}</button>}
+          {mode === 'edit' && <button onClick={del} style={{ ...btnGhost, color: 'var(--red)', marginRight: 'auto' }}>{tr('ลบผัง')}</button>}
           <button onClick={onClose} style={btnGhost}>{tr('ยกเลิก')}</button>
           <button onClick={save} disabled={saving} style={{ ...btnPri, opacity: saving ? 0.5 : 1 }}>{tr('บันทึก')}</button>
         </div>

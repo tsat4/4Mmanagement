@@ -381,7 +381,7 @@ export default function PMSchedule() {
 
       {/* ไลน์ว่าง/ไม่อยู่ทะเบียน หลุดจากตัวกรองไลน์ — ต้องบอก ห้ามหายเงียบ (ตะกร้ารับท้ายลิสต์) */}
       {droppedNoLine > 0 && (
-        <div style={{ fontSize: 12.5, color: '#f59a3f', marginBottom: 12 }}>
+        <div style={{ fontSize: 12.5, color: 'var(--amber)', marginBottom: 12 }}>
           ⚠️ {tr("อีก")} {droppedNoLine} {tr("แผนไม่แสดงเพราะอุปกรณ์ไม่ได้ระบุไลน์ หรือชื่อไลน์ไม่ตรงทะเบียน — กรองตามไลน์ไม่ได้ (ล้างตัวกรองไลน์เพื่อดู")})
         </div>
       )}
@@ -414,7 +414,7 @@ export default function PMSchedule() {
             {idleRows.length > 0 && <> {tr('· วันนี้')} <b style={{ color: 'var(--text)' }}>{idleRows.length}</b> {tr('รายการไม่ได้ผลิต (กันออกจากคิวและจาก %ความครบถ้วน)')}</>}
           </span>
           {unknownUsageRows.length > 0 && (
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#f59a3f' }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--amber)' }}>
               ⚠️ {tr("โหลดยอดผลิตไม่ได้")} {unknownUsageRows.length} {tr("รายการ — ใช้รอบปฏิทินไปก่อน")}
             </span>
           )}
@@ -447,7 +447,7 @@ export default function PMSchedule() {
             style={{ ...S.actionBtn(deptColor), fontSize: 13, fontWeight: 800, minHeight: 36 }}>{tr('สแกนเครื่อง')}</button>
           {focusEq && (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12.5, padding: '4px 6px 4px 12px', borderRadius: 'var(--r-pill)', border: '1px solid var(--accent)', background: 'var(--bg3-surf)' }}>
-              {focusName ? <>{tr('เฉพาะ')} <b>{focusName}</b> ({shownRows.length} {tr("แผน")})</> : <b style={{ color: '#f59a3f' }}>{tr('ไม่พบแผนของอุปกรณ์นี้ในทีมนี้')}</b>}
+              {focusName ? <>{tr('เฉพาะ')} <b>{focusName}</b> ({shownRows.length} {tr("แผน")})</> : <b style={{ color: 'var(--amber)' }}>{tr('ไม่พบแผนของอุปกรณ์นี้ในทีมนี้')}</b>}
               <button onClick={() => setParams({ focus: null })} style={{ fontSize: 12, padding: '2px 10px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--card-surf)', color: 'var(--text2)', cursor: 'pointer' }}>{tr('ทั้งหมด')}</button>
             </span>
           )}
@@ -529,7 +529,7 @@ export default function PMSchedule() {
                         : <>
                             {nextDue ? nextDue.toLocaleDateString(dateLocale(), { timeZone: 'Asia/Bangkok' }) : <span style={{ color: 'var(--muted)' }}>—</span>}
                             {isOverdue && nextDue && (
-                              <div style={{ fontSize: 11, color: '#e05c4a' }}>
+                              <div style={{ fontSize: 11, color: 'var(--red)' }}>
                                 {tr("เกิน")} {Math.abs(daysUntilDue(nextDue))} {tr("วัน")}
                               </div>
                             )}
@@ -712,7 +712,7 @@ function CycleModal({ rows, byName, byUid, deptWrite, onClose, onSaved }) {
             </label>
             <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 6, lineHeight: 1.6 }}>
               {tr("เครื่องที่จอดนานต้องตรวจ")} <b>{tr('มากกว่า')}</b> {tr("ปกติ ไม่ใช่น้อยกว่า · เว้นว่าง = ไม่บังคับ")}
-              {!idleValid && <span style={{ color: '#e05c4a' }}> {tr('· ใส่ 1-3650 หรือเว้นว่าง')}</span>}
+              {!idleValid && <span style={{ color: 'var(--red)' }}> {tr('· ใส่ 1-3650 หรือเว้นว่าง')}</span>}
             </div>
           </div>
         )}
@@ -846,7 +846,7 @@ function RunDayCell({ res, cycle }) {
       </span>
       <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
         {tr("ทุก")} {cycle || '—'} {tr("วันเดินเครื่อง")}
-        {res.unknownUsage && <span style={{ color: '#f59a3f' }}> {tr('· ยังไม่รู้ยอดผลิต')}</span>}
+        {res.unknownUsage && <span style={{ color: 'var(--amber)' }}> {tr('· ยังไม่รู้ยอดผลิต')}</span>}
       </div>
     </>
   )
@@ -963,7 +963,7 @@ function CalendarView({ rows, insps = [], today, onCheck }) {
         <div onClick={() => setDaySel({ label: `${tr("เกินกำหนด")} (${overdue.length} ${tr("รายการ")})`, items: overdue })}
           style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(224,92,74,0.1)', border: '1px solid #e05c4a55', borderRadius: 'var(--r-md)', padding: '8px 14px', marginBottom: 12, cursor: 'pointer' }}>
           <span style={{ fontSize: 15 }}>🔴</span>
-          <span style={{ fontSize: 12.5, fontWeight: 700, color: '#e05c4a' }}>{tr('เกินกำหนดแล้ว')} {overdue.length} {tr('รายการ')}</span>
+          <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--red)' }}>{tr('เกินกำหนดแล้ว')} {overdue.length} {tr('รายการ')}</span>
           <span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 'auto' }}>{tr('คลิกดูรายการ →')}</span>
         </div>
       )}
@@ -1072,7 +1072,7 @@ function DayModal({ sel, onClose, onCheck }) {
 
         {/* ⚠️ วันที่เลยมาแล้ว มีแผน แต่ไม่มีผลตรวจเลย = ตกไปจริงๆ ต้องพูดออกมา ห้ามเงียบ */}
         {sel.items.some(r => r.status === 'overdue') && (sel.done?.length ?? 0) === 0 && (
-          <div style={{ marginTop: 12, padding: '9px 12px', borderRadius: 'var(--r-md)', background: 'rgba(224,92,74,0.12)', border: '1px solid #e05c4a55', fontSize: 12, color: '#e05c4a', lineHeight: 1.6 }}>
+          <div style={{ marginTop: 12, padding: '9px 12px', borderRadius: 'var(--r-md)', background: 'rgba(224,92,74,0.12)', border: '1px solid #e05c4a55', fontSize: 12, color: 'var(--red)', lineHeight: 1.6 }}>
             🔴 <b>{tr('ยังไม่มีผลตรวจของวันนี้')}</b> — {tr("แผนเลยกำหนดมาแล้วและไม่มีใครบันทึกว่าทำ")}
             <div style={{ color: 'var(--muted)', marginTop: 3 }}>{tr('ทำแล้วให้กด “✓ ตรวจ” เพื่อบันทึกผล · ทำไม่ได้ให้เลื่อนแผนพร้อมเหตุผล จะได้ไม่ค้างแดงไปเรื่อยๆ')}</div>
           </div>
@@ -1100,8 +1100,8 @@ function BucketView({ rows, today, onCheck }) {
     else b.later.push(r)
   })
   const cols = [
-    { key: 'overdue', label: 'เกินกำหนด', color: '#e05c4a' },
-    { key: 'week', label: 'ครบใน 7 วัน', color: '#f59a3f' },
+    { key: 'overdue', label: 'เกินกำหนด', color: 'var(--red)' },
+    { key: 'week', label: 'ครบใน 7 วัน', color: 'var(--amber)' },
     { key: 'month', label: 'ครบในเดือนนี้', color: '#e0b34a' },
     { key: 'later', label: 'ถัดไป', color: '#3dd65c' },
     { key: 'run', label: 'ตามวันเดินเครื่อง', color: '#527855' },

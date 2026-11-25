@@ -200,7 +200,7 @@ export default function ScanModal({
             </>
           )}
         </div>
-        {camErr && <div style={{ marginTop: 8, fontSize: 12, color: '#f59e0b' }}>⚠️ {camErr}</div>}
+        {camErr && <div style={{ marginTop: 8, fontSize: 12, color: 'var(--amber)' }}>⚠️ {camErr}</div>}
 
         {/* เครื่องยิง / พิมพ์เอง */}
         <div style={{ marginTop: 14 }}>
@@ -236,11 +236,11 @@ export default function ScanModal({
         </div>
 
         {busy && <div style={{ marginTop: 10, fontSize: 13.5, fontWeight: 700, color: 'var(--amber)', background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 11px' }}>{tr('⏳ กำลังบันทึก…')}</div>}
-        {!busy && err && <div style={{ marginTop: 10, fontSize: 13, color: '#ef4444', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 'var(--r-md)', padding: '8px 11px' }}>✕ {err}</div>}
+        {!busy && err && <div style={{ marginTop: 10, fontSize: 13, color: 'var(--red)', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 'var(--r-md)', padding: '8px 11px' }}>✕ {err}</div>}
         {footer}
         {ok && !err && !busy && (okMsg
-          ? <div style={{ marginTop: 10, fontSize: 15, fontWeight: 800, color: '#22c55e', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.35)', borderRadius: 'var(--r-md)', padding: '8px 11px' }}>{okMsg}</div>
-          : <div style={{ marginTop: 10, fontSize: 13, color: '#22c55e' }}>{tr('✓ อ่านได้:')} <span style={{ fontFamily: 'monospace' }}>{ok}</span></div>)}
+          ? <div style={{ marginTop: 10, fontSize: 15, fontWeight: 800, color: 'var(--green)', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.35)', borderRadius: 'var(--r-md)', padding: '8px 11px' }}>{okMsg}</div>
+          : <div style={{ marginTop: 10, fontSize: 13, color: 'var(--green)' }}>{tr('✓ อ่านได้:')} <span style={{ fontFamily: 'monospace' }}>{ok}</span></div>)}
       </div>
     </div>
   );

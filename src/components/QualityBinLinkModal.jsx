@@ -184,7 +184,7 @@ export default function QualityBinLinkModal({ defect, session, actorName, existi
 
               {had > 0 && (
                 // เคยลงไปแล้ว = เตือนเสมอ ห้ามให้ลงซ้ำโดยไม่รู้ตัว (แต่ไม่บล็อก — ทยอยลงถังได้จริง)
-                <div style={{ fontSize: 11.5, color: '#f59e0b', marginTop: 7 }}>
+                <div style={{ fontSize: 11.5, color: 'var(--amber)', marginTop: 7 }}>
                   ⚠ {tr("บันทึกงานเสียรายการนี้เคยลง")}{tr(b.name)}{tr('ไปแล้ว')} {had.toLocaleString(dateLocale())} {tr("ชิ้น — ติ๊กใหม่ = ลงเพิ่มอีกใบ")}
                 </div>
               )}
@@ -258,7 +258,7 @@ export default function QualityBinLinkModal({ defect, session, actorName, existi
         {created && (
           <div style={{ border: '1px solid rgba(34,197,94,0.45)', background: 'rgba(34,197,94,0.1)',
             borderRadius: 'var(--r-md)', padding: 14, fontSize: 12.5, color: 'var(--text)', lineHeight: 1.7 }}>
-            <b style={{ color: '#22c55e', fontSize: 13.5 }}>{tr('✅ ลงถังเรียบร้อย')}</b>
+            <b style={{ color: 'var(--green)', fontSize: 13.5 }}>{tr('✅ ลงถังเรียบร้อย')}</b>
             {created.map(c => (
               <div key={c.key}>{c.icon} {c.name} — {c.qty.toLocaleString(dateLocale())} {tr('ชิ้น')}</div>
             ))}

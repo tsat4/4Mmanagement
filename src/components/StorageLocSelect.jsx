@@ -36,7 +36,7 @@ export default function StorageLocSelect({ scan, value = '', onChange, allowFree
         emptyText={tr('ไม่พบรหัสคลังนี้ในทะเบียน')} disabled={disabled}
         loadFail={failed ? registryFailText('ทะเบียนรหัสคลัง', stale) : ''}
         inputStyle={{ fontFamily: 'monospace', textTransform: 'uppercase', ...(bad ? { borderColor: '#ef4444' } : {}), ...inputStyle }} />
-      {bad && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 2 }}>{tr('✗ รูปแบบรหัสคลังไม่ถูกต้อง (เช่น S401 / P402)')}</div>}
+      {bad && <div style={{ fontSize: 11, color: 'var(--red)', marginTop: 2 }}>{tr('✗ รูปแบบรหัสคลังไม่ถูกต้อง (เช่น S401 / P402)')}</div>}
     </div>
   );
 }

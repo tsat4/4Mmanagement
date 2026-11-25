@@ -181,7 +181,7 @@ export default function BomTreeView({ rootMat, rootName, bomOf, sheetFor, ownShe
                   <td style={{ ...td, fontFamily: 'monospace', color: r.item_no ? 'var(--text2)' : 'var(--muted)', whiteSpace: 'nowrap' }}>
                     {itemNoLabel(r.item_no) || '—'}
                   </td>
-                  <td style={{ ...td, fontFamily: 'monospace', fontWeight: 700, color: '#0ea5e9', whiteSpace: 'nowrap',
+                  <td style={{ ...td, fontFamily: 'monospace', fontWeight: 700, color: 'var(--blue)', whiteSpace: 'nowrap',
                     paddingLeft: 9 + (r.level - 1) * 14 }}>
                     {r.level > 1 && <span style={{ color: 'var(--muted)' }}>└ </span>}
                     {/* 📄 แถวที่ลูกมาจาก "ใบของตัวมันเอง" — กดแล้วไปเปิดใบนั้นเลย

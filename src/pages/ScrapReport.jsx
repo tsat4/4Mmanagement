@@ -749,7 +749,7 @@ export default function ScrapReport() {
       && !await askConfirm('ปิดใบนี้โดยไม่บันทึก? — ที่กรอก/แก้ไว้จะหายทั้งหมด')) return;
     setEditor(null);
   };
-  const STATUS_META = { draft: { label: 'ร่าง', color: '#6b7280' }, submitted: { label: 'ส่งอนุมัติ', color: '#f59e0b' }, approved: { label: 'อนุมัติแล้ว', color: '#22c55e' } };
+  const STATUS_META = { draft: { label: 'ร่าง', color: 'var(--muted)' }, submitted: { label: 'ส่งอนุมัติ', color: 'var(--amber)' }, approved: { label: 'อนุมัติแล้ว', color: 'var(--green)' } };
   /* รายการที่ผ่านตัวกรอง C4 — ไลน์เทียบชื่อตรงตัว (ตัวเลือกมาจากทะเบียนไลน์เดียวกับที่เขียนลงใบ) */
   const ql = q.trim().toLowerCase();
   const shown = reports.filter(rep => (!stFilter || rep.status === stFilter)

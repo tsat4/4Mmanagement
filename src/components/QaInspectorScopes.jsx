@@ -102,11 +102,11 @@ export default function QaInspectorScopes({ canManage = false }) {
           </div>
           <div style={{ marginTop: 4 }}>{tr("ตั้งที่ชั้นไหนก็ได้ — ตั้ง \"ส่วนงาน\" = รับตรวจทุกแผนก/กลุ่มที่อยู่ใต้ลงไป")}</div>
         </div>
-        {loadFail && <div style={{ marginTop: 8, fontSize: 12, color: '#f59e0b' }}>⚠️ {loadFail}</div>}
+        {loadFail && <div style={{ marginTop: 8, fontSize: 12, color: 'var(--amber)' }}>⚠️ {loadFail}</div>}
         {!canManage && <div style={{ marginTop: 8, fontSize: 12, color: 'var(--muted)' }}>{tr('ดูได้อย่างเดียว — แก้ได้เฉพาะบัญชีที่มีสิทธิ์จัดการ QA')}</div>}
         {/* 🔴 "ยังไม่ได้ตั้ง" ≠ "ไม่รับผิดชอบอะไรเลย" — ต้องเขียนบนจอ (qaScope.js §UNSET) */}
         {unsetCount > 0 && (
-          <div style={{ marginTop: 8, fontSize: 12, color: '#f59e0b' }}>
+          <div style={{ marginTop: 8, fontSize: 12, color: 'var(--amber)' }}>
             ⚠️ {tr("มีคนในส่วน QA อีก")} <b>{unsetCount}</b> {tr("คนที่ยังไม่ได้ตั้งว่ารับตรวจหน่วยไหน")}
           </div>
         )}

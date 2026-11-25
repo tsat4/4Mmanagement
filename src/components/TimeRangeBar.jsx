@@ -191,7 +191,7 @@ export default function TimeRangeBar({
 
       {/* เตือนเท่านั้น — ไม่บล็อก ไม่แก้สเกลให้เอง (ข้อ 2 ด้านบน) */}
       {warn && !isMobile && (
-        <div style={{ fontSize: 11.5, color: '#f59e0b', lineHeight: 1.6 }}>⚠️ {warn}</div>
+        <div style={{ fontSize: 11.5, color: 'var(--amber)', lineHeight: 1.6 }}>⚠️ {warn}</div>
       )}
       {note && <div style={{ fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.6 }}>{note}</div>}
   </>);
@@ -203,7 +203,7 @@ export default function TimeRangeBar({
           summary={`${dm(from)}–${dm(to)}${days != null ? ` (${days.toLocaleString()} ${tr("วัน")})` : ''}`}>
           {rows(split.fold)}
         </MobileFilterFold>
-        {warn && <div style={{ fontSize: 11.5, color: '#f59e0b', lineHeight: 1.6 }}>⚠️ {warn}</div>}
+        {warn && <div style={{ fontSize: 11.5, color: 'var(--amber)', lineHeight: 1.6 }}>⚠️ {warn}</div>}
         {!noClear && <ClearFiltersBtn keep={clearKeep} onClear={onClear} />}
       </div>
     );

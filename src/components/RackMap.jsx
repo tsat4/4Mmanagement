@@ -42,11 +42,11 @@ const removeRackImg = (url) => { const p = rackImgPath(url); if (p) supabaseDR.s
 /* สีของช่อง: ว่าง=เทา · ปกติ=เขียว · มีของต่ำกว่าขั้นต่ำ=เหลือง · มีของหมด=แดง
    (ตาม Andon: ไม่กระพริบ — นี่เป็นสถานะคลัง ไม่ใช่เหตุฉุกเฉินเครื่องหยุด) */
 function cellStatus(parts) {
-  if (!parts.length) return { key: 'empty', color: '#6b7280', bg: 'rgba(107,114,128,0.18)', label: 'ว่าง' };
+  if (!parts.length) return { key: 'empty', color: 'var(--muted)', bg: 'rgba(107,114,128,0.18)', label: 'ว่าง' };
   const st = parts.map(p => stockState(p).key);
-  if (st.includes('out')) return { key: 'out', color: '#ef4444', bg: 'rgba(239,68,68,0.3)', label: 'มีของหมด' };
-  if (st.includes('low')) return { key: 'low', color: '#f59e0b', bg: 'rgba(245,158,11,0.28)', label: 'ต่ำกว่าขั้นต่ำ' };
-  return { key: 'ok', color: '#22c55e', bg: 'rgba(34,197,94,0.24)', label: 'ปกติ' };
+  if (st.includes('out')) return { key: 'out', color: 'var(--red)', bg: 'rgba(239,68,68,0.3)', label: 'มีของหมด' };
+  if (st.includes('low')) return { key: 'low', color: 'var(--amber)', bg: 'rgba(245,158,11,0.28)', label: 'ต่ำกว่าขั้นต่ำ' };
+  return { key: 'ok', color: 'var(--green)', bg: 'rgba(34,197,94,0.24)', label: 'ปกติ' };
 }
 
 export default function RackMap({ parts = [], canEdit, myTeams = [], mySection = '' }) {
@@ -434,7 +434,7 @@ export default function RackMap({ parts = [], canEdit, myTeams = [], mySection =
                 {edit && (
                   <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
                     <button onClick={() => renameCell(selCell)} style={{ ...btnGhost, padding: '5px 10px', fontSize: 12 }}>{tr('✏️ เปลี่ยนรหัส')}</button>
-                    <button onClick={() => delCell(selCell)} style={{ ...btnGhost, padding: '5px 10px', fontSize: 12, color: '#ef4444' }}>{tr('ลบช่อง')}</button>
+                    <button onClick={() => delCell(selCell)} style={{ ...btnGhost, padding: '5px 10px', fontSize: 12, color: 'var(--red)' }}>{tr('ลบช่อง')}</button>
                   </div>
                 )}
                 {(() => {
@@ -473,7 +473,7 @@ export default function RackMap({ parts = [], canEdit, myTeams = [], mySection =
             {/* ของที่ยังไม่มีตำแหน่งบนผัง — ห้ามปล่อยหายเงียบ */}
             {(!!unplaced.withShelf.length || !!unplaced.noShelf.length) && (
               <div style={{ background: 'var(--card-surf)', border: '1px solid #f59e0b', borderRadius: 'var(--r-md)', padding: 12 }}>
-                <div style={{ fontSize: 12.5, fontWeight: 800, color: '#f59e0b', marginBottom: 6 }}>{tr('⚠️ ยังหาบนผังไม่เจอ')}</div>
+                <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--amber)', marginBottom: 6 }}>{tr('⚠️ ยังหาบนผังไม่เจอ')}</div>
                 {!!unplaced.noShelf.length && (
                   <div style={{ fontSize: 12, marginBottom: 6 }}>
                     <b>{unplaced.noShelf.length}</b> {tr('รายการ')} <span style={{ color: 'var(--muted)' }}>{tr('ยังไม่ได้กรอกตำแหน่งชั้นวาง')}</span>
@@ -563,7 +563,7 @@ function GridModal({ rackId, existing, onClose, onDone, onBeforeSave }) {
         <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 10, marginBottom: 12 }}>
           <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>
             {tr("จะสร้าง")} <b style={{ color: 'var(--text)' }}>{preview.length}</b> {tr('ช่อง — ตัวอย่างรหัส:')} <b style={{ color: 'var(--accent)' }}>{preview[0]?.shelf_code}</b> … <b style={{ color: 'var(--accent)' }}>{preview[preview.length - 1]?.shelf_code}</b>
-            {!!dup && <span style={{ color: '#f59e0b' }}> {tr('· ข้าม')} {dup} {tr('ช่องที่รหัสซ้ำของเดิม')}</span>}
+            {!!dup && <span style={{ color: 'var(--amber)' }}> {tr('· ข้าม')} {dup} {tr('ช่องที่รหัสซ้ำของเดิม')}</span>}
           </div>
           {/* พรีวิวสัดส่วนจริง */}
           <div style={{ position: 'relative', width: '100%', paddingTop: '56%', background: 'var(--bg)', borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
@@ -618,7 +618,7 @@ function RackFormModal({ mode, rack, teams, myTeams, secOpts = [], defSection = 
       <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(440px, 96vw)' }}>
         <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 14 }}>{mode === 'new' ? tr('➕ สร้างผังชั้นวาง') : tr('⚙️ แก้ไขผังชั้นวาง')}</div>
         <div style={{ display: 'grid', gap: 10 }}>
-          <div><label style={lbl}>{tr('ชื่อผัง')} <span style={{ color: '#ef4444' }}>*</span></label>
+          <div><label style={lbl}>{tr('ชื่อผัง')} <span style={{ color: 'var(--red)' }}>*</span></label>
             <input value={name} onChange={e => setName(e.target.value)} placeholder={tr('เช่น ชั้นวาง A (ห้องอะไหล่ JIG)')} style={inp} /></div>
           <div><label style={lbl}>{tr('ทีมที่ดูแล')}</label>
             <select value={team} onChange={e => setTeam(e.target.value)} style={inp}>
@@ -636,7 +636,7 @@ function RackFormModal({ mode, rack, teams, myTeams, secOpts = [], defSection = 
           <div><label style={lbl}>{tr('หมายเหตุ')}</label><input value={note} onChange={e => setNote(e.target.value)} style={inp} /></div>
         </div>
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
-          {mode === 'edit' && <button onClick={del} style={{ ...btnGhost, color: '#ef4444', marginRight: 'auto' }}>{tr('ลบผัง')}</button>}
+          {mode === 'edit' && <button onClick={del} style={{ ...btnGhost, color: 'var(--red)', marginRight: 'auto' }}>{tr('ลบผัง')}</button>}
           <button onClick={onClose} style={btnGhost}>{tr('ยกเลิก')}</button>
           <button onClick={save} disabled={saving} style={{ ...btnPri, opacity: saving ? 0.5 : 1 }}>{tr('บันทึก')}</button>
         </div>

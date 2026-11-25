@@ -299,7 +299,7 @@ export default function SymptomSearch({ inScope, onOpenOrder, machine = null, on
           )}
 
           {res.hitCap && (
-            <div style={{ ...box, borderColor: '#f59e0b', color: '#fbbf24', fontSize: 12.5 }}>
+            <div style={{ ...box, borderColor: '#f59e0b', color: 'var(--amber)', fontSize: 12.5 }}>
               ⚠️ {trI18n("ผลค้นชนเพดาน")} {ROW_LIMIT} {trI18n("รายการต่อชนิด — ที่แสดงอาจไม่ครบ ให้แคบช่วงวันลงแล้วค้นใหม่")}
             </div>
           )}

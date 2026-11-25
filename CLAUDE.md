@@ -565,6 +565,11 @@ Realtime + Edge Functions/Deno) · Telegram Bot API · deploy = Render.com (Stat
 - **📱 `node audit/mobilesweep.mjs` (ทุกหน้า @390px)** — **แตะ layout ที่มี `isMobile` หรือ `position:sticky`
   ต้องรันก่อน merge** (จับ sticky ทับเนื้อหา · ของล้นแล้วปัดไม่ได้ · ข้อความถูกบีบกว้าง 0)
   · `ONLY='Page&tab=x' node audit/mobilesweep.mjs` = เฉพาะหน้าที่ระบุ (เหมือน crashsweep · 24/11)
+- **🎨 `node audit/colorsweep.mjs` (ทุกหน้า @1600px · 25/11)** — **แตะสี/ชิป/ป้ายสถานะ ต้องรันก่อน merge**
+  🔴 **`นอกพาเลต` และ `สีเส้นขอบ` ต้องเป็น 0** (สีดิบ = เฉดเพี้ยน + ธีมสว่างไม่เปลี่ยนตาม ·
+  เอา `--border*` มาเป็นสีตัวอักษร = ตัวหนังสือจมพื้น) · `จุดมีสี` ใช้เทียบก่อน/หลังของหน้าเดียวกัน ไม่ใช่เกณฑ์ตัดสิน
+  🔴 **แปลงสีดิบ → token ห้ามแตะค่าที่ถูกต่อ alpha-hex** (`${c}14`) — `var(--x)14` = CSS ทิ้งทั้งบรรทัด
+  ให้ใช้ `--x-dim`/`--x-line` (ด่าน `no-var-alpha-hex`) · 📄 `audit/README.md`
 
 ### QC Agent — `/qc-audit` (subagent `qc-project-rules` · read-only)
 

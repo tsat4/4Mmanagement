@@ -52,7 +52,7 @@ export default function PeMasterPullModal({ procs, fmea, masters, masterItems, i
                       <span style={{ fontSize: 11, color: 'var(--muted)' }}>S{r.severity ?? '—'}·O{r.occurrence ?? '—'}·D{r.detection ?? '—'} · RPN {rpnOf(r) ?? '—'} · v{r.master_version}</span>
                     </div>
                     {(r.prevention || r.detection_ctrl) && <div style={{ fontSize: 11, color: 'var(--text2)' }}>{r.prevention ? `🛡 ${r.prevention} ` : ''}{r.detection_ctrl ? `🔍 ${r.detection_ctrl}` : ''}</div>}
-                    {r.recommended_action && <div style={{ fontSize: 11, color: '#22c55e' }}>✔ best practice: {r.recommended_action}</div>}
+                    {r.recommended_action && <div style={{ fontSize: 11, color: 'var(--green)' }}>✔ best practice: {r.recommended_action}</div>}
                   </div>
                 </label>
               );

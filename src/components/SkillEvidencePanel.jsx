@@ -116,7 +116,7 @@ export default function SkillEvidencePanel({ ev, cfg, currentScore = null, compa
       {missing.length > 0 && (
         <div style={{ marginTop: 8, padding: '7px 10px', borderRadius: 'var(--r-md)', fontSize: 12,
                       background: 'var(--bg2-surf)', border: '1px solid rgba(245,158,11,0.35)' }}>
-          <span style={{ color: '#f59e0b', fontWeight: 700 }}>{tr('ยังขาด:')}</span>{' '}
+          <span style={{ color: 'var(--amber)', fontWeight: 700 }}>{tr('ยังขาด:')}</span>{' '}
           <span style={{ color: 'var(--text2)' }}>{missing.join(' · ')}</span>
         </div>
       )}

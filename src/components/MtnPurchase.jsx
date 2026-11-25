@@ -205,7 +205,7 @@ function PrRow({ pr, canEdit, fullName, onChanged, showSource, mo = null, own = 
         <span style={{ flex: 1, minWidth: 140 }}>{pr.item_name} × <b>{pr.qty}</b> {pr.unit || ''}</span>
         {pr.gl_code
           ? <span style={{ fontSize: 11, color: 'var(--text2)' }}>GL {pr.gl_code}</span>
-          : <span style={{ fontSize: 11, color: '#f59e0b' }}>{tr('⚠ ยังไม่ระบุ GL')}</span>}
+          : <span style={{ fontSize: 11, color: 'var(--amber)' }}>{tr('⚠ ยังไม่ระบุ GL')}</span>}
       </div>
       <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3, lineHeight: 1.6 }}>
         {tr("ขอ")} {fmtDateTime(pr.requested_at)}{pr.requested_by ? ` · ${pr.requested_by}` : ''}
@@ -235,9 +235,9 @@ function PrRow({ pr, canEdit, fullName, onChanged, showSource, mo = null, own = 
       {canEdit && own.ok && isPrOpen(pr) && !mode && (
         <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
           <button disabled={busy} onClick={() => { setVal(pr.pr_no || ''); setMode('prno'); }}
-            style={waitNo ? { ...btnGhost, color: '#f59e0b', borderColor: '#f59e0b', fontWeight: 800 } : btnGhost}>{waitNo ? tr('✏️ กรอกเลข PR (SAP)') : tr('✏️ แก้เลข PR')}</button>
-          {pr.status === 'requested' && <button disabled={busy} onClick={() => { setVal(''); setMode('order'); }} style={{ ...btnGhost, color: '#0ea5e9', borderColor: '#0ea5e9' }}>{tr('สั่งแล้ว')}</button>}
-          <button disabled={busy} onClick={() => { setVal(String(pr.qty ?? '')); setInv(pr.invoice_no || ''); setMode('receive'); }} style={{ ...btnGhost, color: '#22c55e', borderColor: '#22c55e' }}>{tr('รับของเข้า')}</button>
+            style={waitNo ? { ...btnGhost, color: 'var(--amber)', borderColor: '#f59e0b', fontWeight: 800 } : btnGhost}>{waitNo ? tr('✏️ กรอกเลข PR (SAP)') : tr('✏️ แก้เลข PR')}</button>
+          {pr.status === 'requested' && <button disabled={busy} onClick={() => { setVal(''); setMode('order'); }} style={{ ...btnGhost, color: 'var(--blue)', borderColor: '#0ea5e9' }}>{tr('สั่งแล้ว')}</button>}
+          <button disabled={busy} onClick={() => { setVal(String(pr.qty ?? '')); setInv(pr.invoice_no || ''); setMode('receive'); }} style={{ ...btnGhost, color: 'var(--green)', borderColor: '#22c55e' }}>{tr('รับของเข้า')}</button>
           <button disabled={busy} onClick={() => { setVal(''); setMode('cancel'); }} style={{ ...btnGhost, color: 'var(--muted)' }}>{tr('✖ ยกเลิก')}</button>
         </div>
       )}
@@ -353,7 +353,7 @@ function NewPrForm({ parts = [], glCodes = [], defaults = {}, fullName, onDone, 
         </label>
         <label style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('รหัส GL')}<GlPicker category={f.gl_category} value={f.gl_code} glCodes={glCodes} onChange={v => set('gl_code', v)} /></label>
       </div>
-      {!glCodes.length && <div style={{ fontSize: 11, color: '#f59e0b', marginTop: 4 }}>{tr('⚠ ทะเบียนรหัส GL ยังว่าง — เพิ่มที่ /mtn-repair → ⚙️ ข้อมูลหลัก → 💳 รหัส GL (PR ยังเปิดได้ เติม GL ทีหลัง)')}</div>}
+      {!glCodes.length && <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 4 }}>{tr('⚠ ทะเบียนรหัส GL ยังว่าง — เพิ่มที่ /mtn-repair → ⚙️ ข้อมูลหลัก → 💳 รหัส GL (PR ยังเปิดได้ เติม GL ทีหลัง)')}</div>}
       <div style={{ marginTop: 6 }}>
         <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 2 }}>{tr('ผู้ขาย / ผู้รับจ้าง (ถ้ารู้)')}</div>
         <SupplierSelect value={f.supplier} onChange={res => set('supplier', res.supplier || '')} placeholder={tr('ค้นชื่อผู้ขาย — พิมพ์เองได้')} inputStyle={{ background: 'var(--bg)' }} />
@@ -558,7 +558,7 @@ export function MtnPrPanel({ order, parts = [], fullName, canEdit = false, canAd
             {order.mttr_hold_to ? ` ${tr("ถึง")} ${fmtDateTime(order.mttr_hold_to)}` : ''} {tr('· รวม')} {mttrHoldMin(order, Date.now(), new Date(order.mttr_hold_from).getTime(), order.mttr_hold_to ? new Date(order.mttr_hold_to).getTime() : Date.now())} {tr("นาที")}
             <span style={{ color: 'var(--muted)' }}> {tr('· downtime ของเครื่องยังนับเต็ม')}</span>
           </span>
-          {held && canEdit && <button onClick={resumeRepair} style={{ ...btnGhost, color: '#22c55e', borderColor: '#22c55e' }}>{tr('▶ กลับมาซ่อมต่อ')}</button>}
+          {held && canEdit && <button onClick={resumeRepair} style={{ ...btnGhost, color: 'var(--green)', borderColor: '#22c55e' }}>{tr('▶ กลับมาซ่อมต่อ')}</button>}
         </div>
       )}
       {held && <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 6 }}>{tr("อะไหล่ PR ของใบนี้รับครบ = ระบบเริ่มนับต่อให้เอง")}</div>}
@@ -569,9 +569,9 @@ export function MtnPrPanel({ order, parts = [], fullName, canEdit = false, canAd
         </div>
       )}
       {meta?.needsPr && !prs.some(p => p.status !== 'cancelled') && (
-        <div style={{ fontSize: 11, color: '#f59e0b', marginBottom: 6 }}>{tr('⚠ เส้นทางนี้ต้องเปิด PR — ยังไม่มีใบ')}</div>
+        <div style={{ fontSize: 11, color: 'var(--amber)', marginBottom: 6 }}>{tr('⚠ เส้นทางนี้ต้องเปิด PR — ยังไม่มีใบ')}</div>
       )}
-      {loadErr && <div style={{ fontSize: 11, color: '#ef4444', marginBottom: 6 }}>{tr('⚠ โหลดใบขอซื้อไม่สำเร็จ:')} {loadErr}</div>}
+      {loadErr && <div style={{ fontSize: 11, color: 'var(--red)', marginBottom: 6 }}>{tr('⚠ โหลดใบขอซื้อไม่สำเร็จ:')} {loadErr}</div>}
       {/* ใบ MO ปิดแล้วแต่ยังทำ PR ต่อได้ — ต้องเขียนบนจอ ไม่งั้นคนไม่กล้ากด (หรือนึกว่าระบบพัง) */}
       {canEdit && !mayAdd && prs.some(isPrOpen) && (
         <div style={{ fontSize: 11, color: 'var(--text2)', background: 'var(--bg3-surf)', border: '1px solid var(--border2)',
@@ -689,7 +689,7 @@ export function MtnPrBoard({ parts = [], fullName, canEdit = false, onStockChang
           {tr("ลูปเดียวกับสโตร์")} purchase part: <b>{tr("ติด Min / ใบ MO ขอซื้อ → แอดมินช่างกรอกเลข PR จาก SAP → สั่งแล้ว (PO) → ของเข้า กดรับ = เข้าสต็อกอัตโนมัติ")}</b>
           · {tr("จำนวนเสนอ = เติมถึง Max (ไม่ตั้ง Max = 2×Min) หักยอดที่เปิด PR ค้างไว้แล้ว · Min ว่าง/0 = ไม่ตรวจ")}
         </div>
-        {err && <div style={{ fontSize: 11, color: '#ef4444', marginBottom: 6 }}>{tr('⚠ โหลดใบขอซื้อไม่สำเร็จ:')} {err} {tr('— ตัวนับข้างบนอาจไม่ครบ')}</div>}
+        {err && <div style={{ fontSize: 11, color: 'var(--red)', marginBottom: 6 }}>{tr('⚠ โหลดใบขอซื้อไม่สำเร็จ:')} {err} {tr('— ตัวนับข้างบนอาจไม่ครบ')}</div>}
         {canEdit && <button onClick={() => setFreeForm(v => !v)} style={{ ...btnGhost, marginBottom: 8 }}>{freeForm ? tr('ปิดฟอร์ม') : tr('+ เปิด PR เอง')}</button>}
         {freeForm && canEdit && <NewPrForm parts={parts} glCodes={glCodes} fullName={fullName}
           defaults={{ source: 'manual' }} onCancel={() => setFreeForm(false)} onDone={() => { setFreeForm(false); reload(); }} />}
@@ -701,12 +701,12 @@ export function MtnPrBoard({ parts = [], fullName, canEdit = false, onStockChang
               <div key={p.id}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', fontSize: 12, padding: '4px 0', borderBottom: '1px dashed var(--border)' }}>
                   <span style={{ flex: 1, minWidth: 160 }}><b>{p.name}</b>{p.code ? <span style={{ color: 'var(--muted)', fontFamily: 'monospace' }}> · {p.code}</span> : null}</span>
-                  <span style={{ color: '#ef4444' }}>{tr('คงเหลือ')} {p.stock_qty ?? 0}</span>
+                  <span style={{ color: 'var(--red)' }}>{tr('คงเหลือ')} {p.stock_qty ?? 0}</span>
                   <span style={{ color: 'var(--muted)' }}>Min {p.min_qty}{p.max_qty ? ` · Max ${p.max_qty}` : ''}</span>
-                  {open > 0 && <span style={{ color: '#0ea5e9' }}>{tr('PR ค้าง')} {open}</span>}
+                  {open > 0 && <span style={{ color: 'var(--blue)' }}>{tr('PR ค้าง')} {open}</span>}
                   {need > 0
                     ? (canEdit && <button onClick={() => setOpenFor(openFor === p.id ? null : p.id)} style={{ ...btnGhost, color: 'var(--accent)', borderColor: 'var(--accent)' }}>{tr('เปิด PR')} {need} {p.unit || ''}</button>)
-                    : <span style={{ fontSize: 11, color: '#22c55e' }}>{tr('✓ PR ค้างครอบแล้ว')}</span>}
+                    : <span style={{ fontSize: 11, color: 'var(--green)' }}>{tr('✓ PR ค้างครอบแล้ว')}</span>}
                 </div>
                 {openFor === p.id && <NewPrForm parts={parts} glCodes={glCodes} fullName={fullName}
                   defaults={{ source: 'spare_min', part_id: p.id, item_name: p.name, qty: need, unit: p.unit, unit_price: p.unit_price, supplier: p.supplier, team: p.team, section: p.section, gl_category: 'spare_part' }}
@@ -782,7 +782,7 @@ export function MtnGlMaster({ canEdit = false, fullName }) {
         {tr("รหัส GL ของงานช่าง — ใบขอซื้อ (PR) เติมรหัส")} <b>{tr('ตั้งต้นของหมวด')}</b> {tr("ให้เอง (แก้ทับในใบได้")}):
         <b> {tr('งานบริการ')}</b> = {tr("จ้างภายนอก/ส่งซ่อม")} · <b>{tr('อะไหล่โรงงาน')}</b> = {tr("ซื้ออะไหล่เข้าคลัง · รอไฟล์ GL จากฝ่ายบัญชี/MTN มาเติม · ลบ = ปิดใช้งาน (PR เก่ายังอ่านรหัสเดิมได้")})
       </div>
-      {err && <div style={{ color: '#ef4444', fontSize: 12, marginBottom: 8 }}>{tr('⚠ โหลดทะเบียน GL ไม่สำเร็จ:')} {err}</div>}
+      {err && <div style={{ color: 'var(--red)', fontSize: 12, marginBottom: 8 }}>{tr('⚠ โหลดทะเบียน GL ไม่สำเร็จ:')} {err}</div>}
       {canEdit && (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
           <select value={n.category} onChange={e => setN(p => ({ ...p, category: e.target.value }))} style={{ ...inp, width: 210 }}>
@@ -798,7 +798,7 @@ export function MtnGlMaster({ canEdit = false, fullName }) {
         return (
           <div key={c.key} style={{ marginBottom: 10 }}>
             <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 4 }}>{tr(c.label)} ({list.length})</div>
-            {!list.length && <div style={{ fontSize: 11.5, color: '#f59e0b' }}>{tr('⚠ ยังไม่มีรหัสในหมวดนี้')}</div>}
+            {!list.length && <div style={{ fontSize: 11.5, color: 'var(--amber)' }}>{tr('⚠ ยังไม่มีรหัสในหมวดนี้')}</div>}
             {list.map(g => (
               <div key={g.id} style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', padding: '5px 8px', background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', marginBottom: 4 }}>
                 <input defaultValue={g.gl_code} disabled={!canEdit} onBlur={e => e.target.value.trim() && e.target.value.trim() !== g.gl_code && upd(g.id, { gl_code: e.target.value.trim() })} style={{ ...inp, width: 140, fontFamily: 'monospace', fontWeight: 700 }} />

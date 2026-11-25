@@ -64,8 +64,8 @@ export default function DowntimeSiren({ mode = 'open_15min', team = null, lineNa
      "เรียกช่างแล้วยังไม่รับทราบ" ชนะเสมอ (ด่วนกว่า + ปุ่มรับทราบต้องไปลงช่องที่ถูก) */
   const kindOf = (d) => (d.call_mtn && !d.call_mtn_ack_at ? 'call' : 'open')
   const META = {
-    call: { ackField: 'call_mtn_ack_at', label: 'เรียกช่าง MTN เข้าหน้างาน', color: '#e05c4a', icon: '🔧' },  // ป้ายจริงเติมชื่อทีมใน metaOf
-    open: { ackField: 'open_ack_at',     label: 'เครื่องหยุดเกินกำหนด',      color: '#f59a3f', icon: '🚨' },
+    call: { ackField: 'call_mtn_ack_at', label: 'เรียกช่าง MTN เข้าหน้างาน', color: 'var(--red)', icon: '🔧' },  // ป้ายจริงเติมชื่อทีมใน metaOf
+    open: { ackField: 'open_ack_at',     label: 'เครื่องหยุดเกินกำหนด',      color: 'var(--amber)', icon: '🚨' },
   }
   /* 🔴 แถบเตือน "เรียกช่าง" ต้องบอกทีมที่ถูกเรียก (06/10 · ทีม MTN: "จะรู้ได้ยังไงว่าเค้าเรียกเรา")
      ไม่ระบุทีม = เขียนตรงๆ ว่าไม่ระบุ ห้ามเดาให้ */
@@ -173,7 +173,7 @@ export default function DowntimeSiren({ mode = 'open_15min', team = null, lineNa
       <div style={{ position: 'fixed', bottom: 'calc(12px + var(--mnav-h, 0px))', right: 12, zIndex: 4000,
                     display: 'flex', alignItems: 'center', gap: 7, background: 'rgba(28,10,10,0.95)',
                     border: '1px solid rgba(239,68,68,0.6)', borderRadius: 'var(--r-md)', padding: '7px 11px',
-                    fontSize: 11.5, fontWeight: 800, color: '#f87171', boxShadow: 'var(--shadow-lg)' }}>
+                    fontSize: 11.5, fontWeight: 800, color: 'var(--red)', boxShadow: 'var(--shadow-lg)' }}>
         ⚠️ {tr("อ่านรายการเครื่องหยุดไม่ได้ — ยังบอกไม่ได้ว่ามีเครื่องหยุดหรือไม่")}
       </div>
     )
@@ -193,7 +193,7 @@ export default function DowntimeSiren({ mode = 'open_15min', team = null, lineNa
         style={{ position: 'fixed', bottom: 'calc(12px + var(--mnav-h, 0px))', right: 12, zIndex: 4000, cursor: 'pointer',
                  display: 'flex', alignItems: 'center', gap: 7, background: 'rgba(20,16,6,0.94)',
                  border: '1px solid rgba(251,191,36,0.5)', borderRadius: 'var(--r-md)', padding: '7px 11px',
-                 fontSize: 11.5, fontWeight: 800, color: '#fbbf24', boxShadow: 'var(--shadow-lg)' }}>
+                 fontSize: 11.5, fontWeight: 800, color: 'var(--amber)', boxShadow: 'var(--shadow-lg)' }}>
         {tr("เสียงเตือนยังไม่พร้อม — แตะที่นี่ 1 ครั้ง")}
       </div>
     )
@@ -215,7 +215,7 @@ export default function DowntimeSiren({ mode = 'open_15min', team = null, lineNa
           </div>
           {muted && (
             <span onClick={unlockNow}
-              title={tr('เบราว์เซอร์บล็อกเสียงจนกว่าจะมีคนแตะจอ')} style={{ flexShrink: 0, fontSize: 11.5, fontWeight: 800, color: '#fbbf24', cursor: 'pointer' }}>
+              title={tr('เบราว์เซอร์บล็อกเสียงจนกว่าจะมีคนแตะจอ')} style={{ flexShrink: 0, fontSize: 11.5, fontWeight: 800, color: 'var(--amber)', cursor: 'pointer' }}>
               {tr("แตะเพื่อเปิดเสียง")}
             </span>
           )}

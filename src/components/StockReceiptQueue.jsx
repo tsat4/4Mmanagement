@@ -42,9 +42,9 @@ const COLS = 'id, prod_order_id, prod_no, mat_no, part_name, qty_expected, dest_
   + 'partial_reason, status, qty_received, diff_reason, received_by, received_at, created_at';
 
 const ZONES = (withDone) => [
-  { key: 'stale', statuses: ['stale'], label: '⏰ ค้างเกินกำหนด', color: '#ef4444', hint: 'ปิดใบผลิตนานแล้วยังไม่มีใครรับ — ตามของก่อน' },
-  { key: 'pending', statuses: ['pending'], label: 'รอรับเข้า', color: '#f59e0b', hint: 'นับของจริง → ตรงกดรับ · ไม่ตรงกรอกยอดที่นับได้' },
-  ...(withDone ? [{ key: 'received', statuses: ['received'], label: '✅ รับแล้ว (วันนี้)', color: '#22c55e', hint: '' }] : []),
+  { key: 'stale', statuses: ['stale'], label: '⏰ ค้างเกินกำหนด', color: 'var(--red)', hint: 'ปิดใบผลิตนานแล้วยังไม่มีใครรับ — ตามของก่อน' },
+  { key: 'pending', statuses: ['pending'], label: 'รอรับเข้า', color: 'var(--amber)', hint: 'นับของจริง → ตรงกดรับ · ไม่ตรงกรอกยอดที่นับได้' },
+  ...(withDone ? [{ key: 'received', statuses: ['received'], label: '✅ รับแล้ว (วันนี้)', color: 'var(--green)', hint: '' }] : []),
 ];
 const hhmm = (iso) => {
   const d = iso ? new Date(iso) : null;
@@ -226,7 +226,7 @@ export default function StockReceiptQueue({ banner = null, table = false }) {
         ))}
       </div>
 
-      {loadErr && <div style={{ fontSize: 12.5, color: '#ef4444' }}>{tr('⚠ โหลดคิวไม่ครบ —')} {loadErr} {tr('· ตัวเลขบนจออาจขาด')}</div>}
+      {loadErr && <div style={{ fontSize: 12.5, color: 'var(--red)' }}>{tr('⚠ โหลดคิวไม่ครบ —')} {loadErr} {tr('· ตัวเลขบนจออาจขาด')}</div>}
 
       {byGroup && (groups.length === 0
         ? <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
@@ -327,8 +327,8 @@ export default function StockReceiptQueue({ banner = null, table = false }) {
             return (
               <PartCard key={r.id} code={r.mat_no} name={r.part_name} img={imgOf(r.mat_no)} alert={stale}
                 status={pending
-                  ? (stale ? { label: '⏰ ค้าง', color: '#ef4444' } : { label: 'รอรับ', color: '#f59e0b' })
-                  : { label: '✅ รับแล้ว', color: '#22c55e' }}
+                  ? (stale ? { label: '⏰ ค้าง', color: 'var(--red)' } : { label: 'รอรับ', color: 'var(--amber)' })
+                  : { label: '✅ รับแล้ว', color: 'var(--green)' }}
                 metric={{ label: pending ? 'ยอดตามใบผลิต' : 'รับเข้าจริง', value: fmt(pending ? r.qty_expected : r.qty_received), unit: 'ชิ้น' }}
                 aside={{ label: tr("เข้าคลัง"), value: r.dest_line_name }}
                 dim={!pending}

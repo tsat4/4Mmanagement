@@ -83,7 +83,7 @@ export default function SkillEditHistory({ employeeId, limit = 30 }) {
           {loading && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('กำลังโหลด…')}</div>}
 
           {err && (
-            <div style={{ fontSize: 12, color: '#ef4444', background: '#ef444415', border: '1px solid #ef444440', borderRadius: 'var(--r-md)', padding: '7px 9px' }}>
+            <div style={{ fontSize: 12, color: 'var(--red)', background: '#ef444415', border: '1px solid #ef444440', borderRadius: 'var(--r-md)', padding: '7px 9px' }}>
               ⚠️ {tr("โหลดประวัติไม่สำเร็จ")} — {err}
               <button type="button" onClick={load}
                 style={{ marginLeft: 8, fontSize: 11, padding: '2px 8px', width: 'auto', cursor: 'pointer' }}>{tr('ลองใหม่')}</button>
