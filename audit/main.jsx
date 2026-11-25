@@ -4,6 +4,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom'
 import { UserContext, Sidebar, NAV_ITEMS, NAV_GROUP_ORDER, NAV_GROUP_META, NotificationBell } from '../src/App'
 import { motion } from 'framer-motion'
 import { railPill } from '../src/utils/motion'
+import Icon from '../src/components/Icon'
 import { markView } from '../src/utils/motion'
 import TabBody from '../src/components/TabBody'
 import Skeleton from '../src/components/Skeleton'
@@ -126,12 +127,12 @@ function WideSidebarLab(){
                 {cur && <motion.span layoutId="wide-active" transition={railPill()} aria-hidden="true" className="neon-row" style={{ position:'absolute', inset:0, borderRadius:12, background:'var(--accent-dim)', pointerEvents:'none' }}>
                   <span className="neon-bar" style={{ position:'absolute', left:-10, top:8, bottom:8, width:4, borderRadius:'0 4px 4px 0', background:'var(--accent)' }} />
                 </motion.span>}
-                <span style={{ position:'relative', zIndex:1, flex:'0 0 20px', fontSize:16, textAlign:'center' }}>{m.icon || '•'}</span>
+                <Icon glyph={m.icon || '•'} size={19} style={{ position:'relative', zIndex:1, flex:'0 0 20px' }} />   {/* ไอคอนเส้นชุดเดียวกับ sidebar จริง (UI §6.36) */}
                 <span style={{ position:'relative', zIndex:1, opacity: min ? 0 : 1, transform: min ? 'translateX(-8px)' : 'none', transition:'opacity .18s, transform .25s', overflow:'hidden', textOverflow:'ellipsis' }}>{m.short || g}</span>
               </button>) })}
             {!min && items.length > 1 && <div style={{ marginTop:8, paddingLeft:8, borderLeft:'1px solid var(--border)', display:'flex', flexDirection:'column', gap:2 }}>
               {items.slice(0, 8).map(i => <button key={i.to} onClick={()=>nav(i.to)} aria-current={path === i.to ? 'page' : undefined}
-                style={{ display:'flex', alignItems:'center', gap:8, height:30, padding:'0 10px', borderRadius:8, border:'none', background: path === i.to ? 'var(--accent-dim)' : 'transparent', color: path === i.to ? 'var(--accent)' : 'var(--muted)', fontSize:12, cursor:'pointer', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', textAlign:'left' }}>{i.label}</button>)}
+                style={{ display:'flex', alignItems:'center', gap:8, height:30, padding:'0 10px', borderRadius:8, border:'none', background: path === i.to ? 'var(--accent-dim)' : 'transparent', color: path === i.to ? 'var(--accent)' : 'var(--muted)', fontSize:12, cursor:'pointer', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', textAlign:'left' }}><Icon glyph={i.icon} size={15} /><span style={{ overflow:'hidden', textOverflow:'ellipsis' }}>{i.label}</span></button>)}
             </div>}
             <div style={{ flex:1 }} />
             <div style={{ display:'flex', alignItems:'center', gap:10, height:42, padding:'0 8px', borderRadius:12, background:'var(--accent-dim)', color:'var(--text)', fontSize:12, whiteSpace:'nowrap', overflow:'hidden' }}>
