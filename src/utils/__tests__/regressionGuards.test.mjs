@@ -12867,6 +12867,17 @@ test('🔗 wf-bound-signoff — เอกสารที่ผูก e-Workflow 
   for (const f of ['wf_bound_ensure', 'wf_act', 'wf_revoke']) if (!panel.includes(`'${f}'`)) bad.push(`WfRoundPanel: ต้องเรียก RPC ${f}`);
   const mig = readFileSync(join(ROOT, 'supabase/migrations/20261125b_e_workflow_bound_main.sql'), 'utf8');
   if (!/create trigger trg_pokayoke_checks_wf_lock/.test(mig)) bad.push('migration: ต้องมี trigger ล็อกผลทดสอบที่เซ็นแล้ว');
+  /* 🦺 25/11 BBS เข้า e-Workflow (ใบรายเดือน ผู้ตรวจ→SV→Manager) — เซ็นบนใบ BBS เอง ไม่ออกใบแยก
+     · ทุกขาเขียนผ่าน ensureSheet ⇒ ต้องเช็ค wfLock ที่นั่น (DB trigger เป็นตัวตัดสิน · จอบอกก่อนกด)
+     · ใบพิมพ์ต้องเอาช่องเซ็นจากสายเซ็น (loadRoundSignoff → signoff) ห้ามกลับไปใช้ช่อง "ผู้ตรวจสอบ" ช่องเดียว */
+  const bbs = rd('src/pages/BbsCheck.jsx');
+  if (!/<WfRoundPanel subject="bbs"/.test(bbs)) bad.push('BbsCheck: ต้องฝัง <WfRoundPanel subject="bbs">');
+  if (!/const ensureSheet = useCallback\(async \(\) => \{[\s\S]{0,400}if \(wfLock\)/.test(bbs)) bad.push('BbsCheck: ensureSheet ต้องบล็อกเมื่อใบเดือนนี้เซ็นแล้ว (wfLock)');
+  if (!/loadRoundSignoff\(/.test(bbs) || !/signoff:/.test(bbs)) bad.push('BbsCheck: พิมพ์ใบต้องส่งลายเซ็นตามสายเซ็น (loadRoundSignoff → signoff)');
+  if (!/signoff\?\.rows/.test(rd('src/lib/bbsPrint.js'))) bad.push('bbsPrint: ต้องวาดช่องเซ็นจาก signoff.rows');
+  const migC = readFileSync(join(ROOT, 'supabase/migrations/20261125c_e_workflow_bbs_monthly_main.sql'), 'utf8');
+  for (const t of ['trg_bbs_obs_wf_lock', 'trg_bbs_notes_wf_lock', 'trg_bbs_sheets_wf_lock'])
+    if (!migC.includes(`create trigger ${t}`)) bad.push(`migration 20261125c: ต้องมี trigger ${t}`);
   assert.deepEqual(bad, [], `\n\n❌ ${bad.length} จุด\n   ${bad.join('\n   ')}\n`);
 });
 
