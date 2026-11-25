@@ -12839,3 +12839,18 @@ test('🛡️ order-trace-stations-by-name — สอบกลับใบผล
     '\n🗺️ OrderTrace.jsx ต้องหาจุดงานด้วย .in(\'line_name\', famNames) ควบคู่ line_id — '
     + 'จุดของไลน์ลูกผูกด้วยชื่อ (line_id = null) · เดิมได้ 0 จุด ช่อง "จุดประจำ" ขึ้น "—" (📄 docs/modules/order-trace.md §24/11)\n');
 });
+
+test('🔗 wf-bound-signoff — เอกสารที่ผูก e-Workflow ต้องเซ็นผ่านแผงกลาง + RPC (25/11 · คำสั่ง user)', () => {
+  const bad = [];
+  const rd = (f) => stripComments(readFileSync(join(ROOT, f), 'utf8'));
+  const py = rd('src/pages/PokaYokeCheck.jsx');
+  if (!/<WfRoundPanel subject="pokayoke"/.test(py)) bad.push('PokaYokeCheck: ต้องฝัง <WfRoundPanel subject="pokayoke"> (การเซ็นอยู่ที่ e-Workflow ห้ามทำตารางลงนามแยก)');
+  const panel = rd('src/components/WfRoundPanel.jsx');
+  if (!/await confirmSign\(/.test(panel)) bad.push('WfRoundPanel: ปุ่มอนุมัติ/รับทราบต้อง await confirmSign()');
+  if (/from\('wf_(instances|tasks|actions)'\)\.(insert|update|delete|upsert)/.test(panel)) bad.push('WfRoundPanel: ห้ามเขียนตาราง wf_* ตรง — ผ่าน RPC');
+  for (const f of ['wf_bound_ensure', 'wf_act', 'wf_revoke']) if (!panel.includes(`'${f}'`)) bad.push(`WfRoundPanel: ต้องเรียก RPC ${f}`);
+  const mig = readFileSync(join(ROOT, 'supabase/migrations/20261125b_e_workflow_bound_main.sql'), 'utf8');
+  if (!/create trigger trg_pokayoke_checks_wf_lock/.test(mig)) bad.push('migration: ต้องมี trigger ล็อกผลทดสอบที่เซ็นแล้ว');
+  assert.deepEqual(bad, [], `\n\n❌ ${bad.length} จุด\n   ${bad.join('\n   ')}\n`);
+});
+
