@@ -1171,3 +1171,10 @@ migration `20261014_rls_round10_tier_b_final_main.sql` (**apply แล้ว 202
   `section` เดิม ⇒ ไม่มีใครแคบลง · รายละเอียด `docs/ORG-SCALE-GLOBAL-DESIGN.md` §4.8
 - ด่าน `assignment-overlay-widen-only` (regressionGuards) — ห้ามเขียนกฎวันที่เองใน App.jsx · ห้ามให้ overlay แตะ DB
 - ⚠️ งานข้อมูลที่เหลือ: 21 คนที่ตำแหน่ง HR ต่ำกว่าสิทธิ์ยังไม่มีแถวมอบหมาย — ลงที่ `/org-setup › มอบหมายหน่วย` (ใส่วันสิ้นสุด)
+
+## 🧪 มาตรฐาน role ฝ่าย QA/QC (2026-11-25 · คำสั่ง user)
+
+ทุกคนในฝ่าย QA = role `qa` + ใบผ่าน `all_units` · หัวหน้า = `qa` + ติ๊กแอดมินหน่วยงาน (`is_dept_admin`) · ผจก. = `manager` (+ `qa:bin_decide`) ·
+**ห้ามตั้ง role ผลิต (leader/supervisor) หรือ admin ให้คน QA เพื่อ "ให้แก้ได้"** — ขาดคีย์ไหนให้เติมที่ role `qa` ใน /permissions
+· เคสจริง + คีย์ที่เสีย/ได้ + วิธีย้อน → `permission-scope-audit.md` §16.3 · migration `20261125_qa_roles_standard_main.sql`
+

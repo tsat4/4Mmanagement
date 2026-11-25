@@ -1199,3 +1199,21 @@ line_id: emp.line_id ?? ident.line_id
 - ทำไมเมื่อคืนตรวจไม่เจอ: วัดจาก `audit_log` ซึ่งไม่ครอบตาราง qa_parts/ทะเบียนพาร์ท ⇒ **บทเรียน: การพิสูจน์ด้วย audit_log ครอบเฉพาะตารางที่มี trigger audit**
   ต้องไล่ "role ที่เสียใบผ่าน × จอที่มีด่านหน่วย" เป็นรายจอด้วย (ลิสต์จอ: grep canWriteUnit/canWriteLine/writableRows)
 - ✅ 24/11: `qaWriteCtx` นับเฉพาะไลน์ผลิต (`isProductionUnit` · utils/unitKind.js) — หน่วยสนับสนุนในทะเบียนไม่ทำให้ QA "มีไลน์" · เทสใน `qaViewScope.test.mjs` · ใบผ่านรายคนของ QA ยังคงไว้ (ชั้นกันซ้อน)
+
+### 16.3 · 25/11 — มาตรฐาน role ของฝ่าย QA/QC: ทุกคน `qa` · หัวหน้าติ๊กแอดมินหน่วยงาน · ตำแหน่งไม่ตัดสิทธิ์ (`20261125_qa_roles_standard_main.sql`)
+
+user ถาม "คน QA ควรตั้ง role แบบไหน — ทุกคนเป็น QA แล้วตัดกันที่ตำแหน่ง?" (feedback: บางคนดูได้อย่างเดียว · บางคน over scope)
+- **คำตอบที่ใช้:** role = ชุดสิทธิ์ตามสายงาน ⇒ ฝ่าย QA ใช้ `qa` ตัวเดียวทุกคน + ใบผ่านข้ามหน่วย `all_units` (งาน QA ข้ามไลน์โดยธรรมชาติ) ·
+  **หัวหน้า** = `qa` + `is_dept_admin` (ได้ชุดจัดการคนของหน่วยตัวเอง: เช็คชื่อ/จัดกะ/ทะเบียนพนักงาน/ทักษะ/LPA — ไม่ต้องยืม role ผลิต) ·
+  ผจก. = `manager` ตามเดิม + เติม `qa:bin_decide` ให้ role manager · **ตำแหน่ง (position) ไม่ใช่ตัวตัดสิทธิ์** (ล็อกแค่ช่องเซ็น MO)
+- **ที่ผิดจริงในทะเบียน (26 บัญชี):** หัวหน้า Inspection/PQA-Press 3 คน = `leader` · เจ้าหน้าที่/หัวหน้าส่วน 2 คน = `supervisor` ⇒ ไม่มี
+  `qa:manage`/`qa:bin_decide`/`four_m:approve_qa`/`page:/qa-setup` = "ดูได้อย่างเดียว" บนจอคุณภาพ · วิศวกร 1 คน = `admin` = over scope ·
+  ผจก. ตัดสินถังเหลืองไม่ได้ (`qa:bin_decide` มีแต่ใน `qa`)
+- **สิ่งที่คนจาก role ผลิตเสียไป (ยอมรับ):** `daily_report:open_shift`/`close_shift` · `four_m:approve_sv` · `bbs:record` · `obeya:record` · `wip_*` ·
+  หน้า manpower-board/workforce-insight/production-plan · supervisor เสียเพิ่ม `org:manage_divisions` · `skills:approve_levelup` · `pm:monthly_approve`
+  — ถ้าหน้างานแจ้งว่าต้องใช้ตัวไหน = เติมเป็น**คีย์ของ role qa** ที่ /permissions ไม่ใช่สลับ role กลับ
+- **พิสูจน์ฝั่ง DB** (จำลอง JWT 8 บัญชี): คีย์คุณภาพ 4 ตัว true ทุกคน · `app_all_units()` true (ผจก. false ตามเดิม — จอคุณภาพผ่าน `qaWriteCtx` ซึ่งไม่ดู role) ·
+  `employees:edit` true เฉพาะผู้ติ๊กแอดมินหน่วยงาน · backup `archive.bk_qa_roles_20261125` (SQL ย้อนอยู่หัวไฟล์ migration)
+- **ค้าง (เป็นดีไซน์เดิม ไม่ใช่บั๊ก):** role `qa` มี `page:/bbs` แต่ไม่มี `bbs:record` · มี `page:/shift-organize` แต่คนที่ไม่ติ๊กแอดมินหน่วยงานแก้กะไม่ได้ ·
+  QC 3 บัญชี (ขอบเขต PD3 · ไม่มี CC) ไม่เข้าใช้ตั้งแต่ ก.ย./ต.ค. — รอ user ยืนยันว่ายังทำงานไหม
+
