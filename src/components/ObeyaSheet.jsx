@@ -172,7 +172,10 @@ const SheetIconBtn = ({ fs, title, onClick, children, className }) => (
    · บรรทัดรอง (`sub`) = **1 บรรทัดเสมอ** ตัดท้าย … · ข้อความเต็มอยู่ใน tooltip (`subFull` ถ้าส่ง ไม่งั้น = sub) · ใน popup 🔍 วาดเต็ม
    · ท้ายแผ่น = **แถวเดียวความสูงคงที่** (คาดปลายปี 1 บรรทัดซ้าย + ปุ่มลิงก์ขวา) และ **มีเสมอ** แม้ว่าง ⇒ หัว/ท้ายสูงเท่ากันทุกแผ่น → กราฟสูงเท่ากัน · ตัวเลขใหญ่อยู่ตำแหน่งเดียวกัน
    · ใน popup (`onClose`) ท้ายแผ่นยังเป็นชั้น/รางของ insight เหมือนเดิม */
-export function Sheet({ k, cw = 0, span = 1, icon, title, sub, subFull = null, big, unit, bigNote, delta, stat, foot, link, linkTitle = null, onLink, zoom = true, onClose, statZoom = false, goals = null, footAside = false, idx = 0, children }) {
+/* 🎞 `enter` (25/11 · user: "เปลี่ยนไลน์แล้ว animation ดูพังๆ เด้งไปมา") — fade-up ทีละใบ (`stagger`) เล่นเฉพาะ **ครั้งแรกที่บอร์ดโผล่**
+   แผ่นที่ remount เพราะเปลี่ยนขอบเขต/ปี (คีย์ = def id ของขอบเขตใหม่) ส่ง `enter={false}` ⇒ โผล่ทันทีในกริดที่ cross-fade ทั้งกระดาน
+   ไม่งั้น 9 ใบไหลขึ้นคนละจังหวะ + เลขวิ่ง + แท่งยืด พร้อมกัน = "เด้งไปมา" */
+export function Sheet({ k, cw = 0, span = 1, icon, title, sub, subFull = null, big, unit, bigNote, delta, stat, foot, link, linkTitle = null, onLink, zoom = true, onClose, statZoom = false, goals = null, footAside = false, idx = 0, enter = true, children }) {
   const fs = (n) => Math.max(11, Math.round(n * k));
   const status = stat?.status;
   /* 🔢 ตัวเลขใหญ่วิ่งขึ้น (24/11 · useCountUp) — `big` มาเป็นสตริงจัดรูปแล้ว ("1,105,886" · "98.4") ⇒ แกะเลข · วิ่ง · จัดรูปกลับทศนิยมเท่าเดิม
@@ -229,7 +232,7 @@ export function Sheet({ k, cw = 0, span = 1, icon, title, sub, subFull = null, b
     </div>
   );
   return (<>
-    <motion.div {...(onClose ? {} : stagger(Math.min(idx, 9)))} {...(onClose ? {} : liftHover())} className={onClose ? undefined : 'lift-card'} style={{
+    <motion.div {...(onClose ? {} : enter ? stagger(Math.min(idx, 9)) : { initial: false })} {...(onClose ? {} : liftHover())} className={onClose ? undefined : 'lift-card'} style={{
       gridColumn: `span ${span}`,
       /* ❌ ไม่มีแถบสีบนหัวแผ่นอีกแล้ว (คำสั่ง user 21/09 "สีสันของเส้นแต่ละ box ไม่เอา")
          สีบนแผ่นเหลือความหมายเดียว = **สถานะ** (ไฟดวงบนหัว + สีแท่งกราฟ) ไม่ใช่ "สีประจำแกน"
