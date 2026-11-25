@@ -2786,6 +2786,9 @@ pseudo ตัวนี้ `position:absolute` **โปร่งใส มอง�
    · `<Skeleton cards|rows>` (`components/Skeleton.jsx` · CSS `.skel`) แทน "กำลังโหลด…" ลอยๆ **เฉพาะที่รู้ว่าเนื้อหาเป็นการ์ด/แถว** · สี = `--bg3`/`--bg2` เดิม · ห้ามใช้แทน "ไม่มีข้อมูล"
    · `liftHover()` (`utils/motion.js`) + `className="lift-card"` — ยก 4px + เงา `--shadow-float` **เฉพาะอุปกรณ์มีเมาส์** (`hover:hover` + `pointer:fine`) · ใช้กับการ์ด/แผ่นที่กดต่อได้ · ห้ามใส่แถวตาราง/Andon
    · `useCountUp(n)` (`utils/useCountUp.js`) — เลขวิ่งขึ้นครั้งเดียวต่อสิ่งที่ดู (หน้าต่างเดียวกับ `chartAnim()`) · รีเฟรชตามรอบไม่วิ่งซ้ำ · `null` ยังเป็น "—" · ใบ popup ไม่วิ่ง
+     🔴 **ค่าที่คืนห้ามตามหลัง target "ข้ามชนิด"** (25/11 · production ล้มตอนเปลี่ยน cost center บน /obeya) — state ของ hook อัปเดตใน effect = ช้า 1 เฟรม
+     แผ่นที่เมื่อกี้เป็น "—" แล้วเพิ่งได้ตัวเลข เฟรมแรกได้ `null` → ผู้เรียก `.toLocaleString()` ล้มทั้งหน้า ⇒ hook ตัดสินผ่าน `countUpShown()` (pure · มีเทส)
+     และผู้เรียกต้องเช็ค `typeof shown === 'number'` ก่อนจัดรูปเสมอ (ชั้นที่ 2 · ObeyaSheet)
    · ทั้ง 4 ตัว**นิ่งเองเมื่อ `motionOff()`** (จอ TV lite / reduced-motion) · **ไม่เอาพื้นผิวกระจก/blur ของรีล** (§6.17 ΔL ≤ 5% · §7 ข้อ 6 TV) — เอามาแค่จังหวะ
 7. 🗂 **เปลือกแอป "แผ่นเนื้อหาต่อกับราง" (2026-11-25 · user เคาะหลังดูเดโม 2 ธีม · รีล CRM Dashboard V10 + Sidebar v2)**
    · `<main className="app-sheet">` ใน App.jsx + wrapper `.app-frame` (CSS ใน `index.css`) — เนื้อหาเป็นแผ่นมุมโค้งซ้าย 16px ลอยบน "กรอบ" สีเดียวกับราง (`--rail-top/bot`) ·
