@@ -12903,6 +12903,35 @@ test('🏬 store-leg-always-written — ใบขอเติมต้องเ�
     + '   fix: push เสมอ · ไม่พอให้ติดลบ แล้วแจ้งเหตุผลใน note/toast (กฎ 19/11 "ตัดเต็มและติดลบ")\n');
 });
 
+/* ── 🧭 count-progress-physical-only (25/11 · ขั้น ② นับที่ไลน์ปลายทาง) ──────────
+   `line_stock_transactions.type='adjust'` เป็นถุงรวม: "ตรวจนับ:" (คนไปนับของจริง) ปนกับ
+   "ตั้งยอดให้ตรงไฟล์ Monitoring" (191+102+88 แถว) · "ตั้งต้นใหม่ 01/10" · "ย้ายยอด…" · "แก้ย้อนหลัง…"
+   เอามารวมกันตอบ "ไลน์นี้นับล่าสุดเมื่อไหร่" = จอบอกว่า LINE D นับแล้ว 03/11 ทั้งที่วันนั้นตั้งยอดตามไฟล์
+   (ยอด −100,212 ของ LINE D เกิดจากการตั้งยอดทับกันหลายรอบ ไม่ใช่การผลิต)
+   ⇒ ความคืบหน้ารอบนับต้องใช้ `lastPhysicalCountAt` · เส้นห้ามหักใบส่งย้อนหลังยังใช้ `lastCountAt` (fail-closed คนละทาง)
+   🔴 ห้ามยุบ 2 ฟังก์ชันนี้เป็นตัวเดียว */
+test('🛡️ count-progress-physical-only — ความคืบหน้ารอบนับห้ามนับ "ปรับยอด" เป็นการนับ', () => {
+  const rel = 'src/utils/stockCount.js';
+  const code = stripComments(readFileSync(join(ROOT, rel), 'utf8'));
+  assert.match(code, /export function lastCountAt\(/, `\n\n❌ ${rel} ไม่มี lastCountAt() — เส้นห้ามหักใบส่งย้อนหลังหายไป\n`);
+  assert.match(code, /export function lastPhysicalCountAt\(/,
+    `\n\n❌ ${rel} ไม่มี lastPhysicalCountAt() — ความคืบหน้ารอบนับจะไปใช้ adjust ทุกแบบ = จอโกหก\n`);
+  /* ตัวตัดสิน "นี่คือการนับของจริงไหม" ต้องดูที่ note prefix ห้ามถือว่า adjust ทุกใบคือการนับ */
+  assert.match(code, /startsWith\(COUNT_NOTE_PREFIX\)/,
+    `\n\n❌ ${rel}: isPhysicalCount ต้องตัดสินจาก note "ตรวจนับ:" (COUNT_NOTE_PREFIX)\n`);
+  const body = code.slice(code.indexOf('export function countRoundRows('));
+  assert.match(body, /lastPhysicalCountAt\(/,
+    `\n\n❌ ${rel}: countRoundRows() ต้องใช้ lastPhysicalCountAt()\n`);
+  assert.ok(!/\blastCountAt\(/.test(body),
+    `\n\n❌ ${rel}: countRoundRows() เรียก lastCountAt() — "ตั้งยอดตามไฟล์" จะถูกนับเป็นการนับของจริง\n`);
+  /* แผงบนจอต้องอ่านตัวเลขจากของกลาง ห้ามไล่นับ negative/วันนับเองในหน้า */
+  const ui = 'src/components/StockCountSheet.jsx';
+  const uic = stripComments(readFileSync(join(ROOT, ui), 'utf8'));
+  assert.match(uic, /countRoundRows\(/, `\n\n❌ ${ui} ไม่ได้ใช้ countRoundRows() — ตัวเลขรอบนับต้องมีชุดเดียว\n`);
+  assert.ok(!/lastPhysicalCountAt\(/.test(uic),
+    `\n\n❌ ${ui} ไล่หาวันนับเองในหน้า — ให้ผ่าน countRoundRows() ที่เดียว\n`);
+});
+
 /* ── 🛡️ skill-delete-keeps-scores (25/11 · user "ทำด่านกันลบสกิลที่ยังมีคะแนนด้วย") ──────
    เดิมปุ่มลบสกิลที่ /operator ลบคะแนนพนักงานทุกคนพ่วงไปด้วย · คะแนนค้างไร้นิยาม 22 รหัสขึ้นการ์ดเป็นรหัส
    ด่านจริงอยู่ DB (trg_skill_def_delete_guard) — ด่านนี้กันจอกลับไปลบคะแนนพ่วง */
