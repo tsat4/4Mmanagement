@@ -1,7 +1,7 @@
 /* ⚡ Demand 15 นาที (demandWindows · 25/11) — ส่วนต่างเลขมิเตอร์ ÷ 0.25 ชม. · ขาดจุด = null ห้ามเดา */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { demandWindows } from '../energy.js';
+import { demandWindows, demandKwFromKwh } from '../energy.js';
 
 const DAY = Date.parse('2026-11-25T00:00:00+07:00');
 const T = (h, m) => DAY + (h * 60 + m) * 60000;
@@ -49,4 +49,10 @@ test('ช่วงที่โหลดสูง = สูงสุดวัน�
 
 test('ไม่มีมิเตอร์ = null', () => {
   assert.equal(demandWindows({ readings: [], names: [], nowMs: T(1, 0), dayStartMs: DAY }), null);
+});
+
+test('kWh ของช่วง 15 นาที → kW เฉลี่ย (ใช้ร่วมกับค่าสูงสุดเดือนจาก DB) · ไม่รู้ = null', () => {
+  assert.equal(demandKwFromKwh(309), 1236);
+  assert.equal(demandKwFromKwh(null), null);
+  assert.equal(demandKwFromKwh('x'), null);
 });
