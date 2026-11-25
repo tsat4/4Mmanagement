@@ -12919,3 +12919,12 @@ test('🛡️ skill-delete-keeps-scores — ปุ่มลบสกิลห้
   const mig = readFileSync(join(ROOT, 'supabase/migrations/20261125b_skill_def_delete_guard.sql'), 'utf8');
   assert.ok(/before delete on public\.skill_definitions/.test(mig), 'migration ด่านลบสกิลต้องมี trigger before delete');
 });
+
+/* ── 🎛️ scope-select-merged-group (25/11 · user "ยังเด้งมั่วอยู่เห็นมั้ย") ──────
+   กดกรอบ APRON บนภาพรวม Manpower Board ⇒ lline = กลุ่มที่ถูกซ่อน (ชื่อซ้ำแผนก) ⇒ ช่องขึ้น "⚠ ไม่อยู่ในตัวเลือก" */
+test('🛡️ scope-select-merged-group — ไลน์ที่เป็นกลุ่มซ่อน (merged) ต้องชี้แผนก', () => {
+  const code = stripComments(readFileSync(join(ROOT, 'src/components/SectionScopeSelect.jsx'), 'utf8'));
+  assert.ok(/optionOf\?\.\(\s*'line_group'[\s\S]{0,80}\.merged/.test(code),
+    '\n🎛️ SectionScopeSelect (pickLine) ต้องเช็ค optionOf(\'line_group\', line).merged แล้วชี้แผนก — '
+    + 'กลุ่มชื่อซ้ำแผนกถูกซ่อนในลิสต์ (📄 docs/modules/manpower-board.md §25/11)\n');
+});
