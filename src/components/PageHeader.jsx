@@ -162,16 +162,19 @@ function HeaderSearch({ rootRef, tabKey }) {
 const TOOL_ORDER = ['search', 'add', 'edit', 'delete'];
 const TOOL_TONE = { search: null, add: 'var(--green)', edit: 'var(--amber)', delete: 'var(--red)' };
 const TOOL_DIM  = { search: null, add: 'var(--green-dim)', edit: 'var(--amber-dim)', delete: 'var(--red-dim)' };
-function ToolBar({ tools }) {
+const TOOL_GLYPH = { search: '🔍', add: '➕', edit: '📝', delete: '🗑️' };
+/* 📱 มือถือ (25/11 "เหมือนจอคอม"): ปุ่มเหลือไอคอน (ป้ายเต็มอยู่ใน title/aria-label) — ไม่งั้น 4 ปุ่มกินทั้งแถวจน Detail Bar เหลือ 0 */
+function ToolBar({ tools, iconOnly = false }) {
   const { tr } = useLang();
   const list = [...tools].sort((a, b) => TOOL_ORDER.indexOf(a.key) - TOOL_ORDER.indexOf(b.key));
   return (
     <span data-ph="toolbar" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 8 }}>
       {list.map(t => (
-        <button key={t.key} type="button" data-tool={t.key} onClick={t.onClick} disabled={!!t.disabled} title={tr(t.label)}
-          style={{ height: 30, padding: '0 12px', borderRadius: 'var(--r-md)', fontSize: 13, fontWeight: 600, cursor: t.disabled ? 'default' : 'pointer',
+        <button key={t.key} type="button" data-tool={t.key} onClick={t.onClick} disabled={!!t.disabled} title={tr(t.label)} aria-label={tr(t.label)}
+          style={{ height: 30, padding: iconOnly ? '0 8px' : '0 12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--r-md)', fontSize: 13, fontWeight: 600, cursor: t.disabled ? 'default' : 'pointer',
             border: `1px solid ${TOOL_TONE[t.key] || 'var(--border2)'}`, background: TOOL_DIM[t.key] || 'var(--card)',
-            color: TOOL_TONE[t.key] || 'var(--text)', opacity: t.disabled ? 0.5 : 1, whiteSpace: 'nowrap' }}>{tr(t.label)}</button>
+            color: TOOL_TONE[t.key] || 'var(--text)', opacity: t.disabled ? 0.5 : 1, whiteSpace: 'nowrap' }}>
+          {iconOnly ? <Icon glyph={TOOL_GLYPH[t.key]} size={16} /> : tr(t.label)}</button>
       ))}
     </span>
   );
@@ -205,7 +208,8 @@ export default function PageHeader({
      · ไม่เข้าเงื่อนไข = ไม่มี style เพิ่มเลย (หน้าอื่นเหมือนเดิมเป๊ะ) */
   /* 🗜️ 24/11 (คำสั่ง user) เงื่อนไขเดียวกันนี้ = "หัวเพจกะทัดรัด" ด้วย: ไม่มี breadcrumb · ไม่มีคำบรรยาย (`sub`) ·
      ชื่อหน้าอยู่บนสุด · แถบแท็บแถวเดียว (ล้น = ปุ่ม ◀ ▶) · ปุ่ม 🔍 ท้ายแถบ (`HeaderSearch`) */
-  const compact = !inHub && !isMobile && !filters && !!navItem && inNavGroup(navItem, STICKY_TAB_GROUPS);
+  /* 25/11 (คำสั่ง user "ขยายผลไปขนาดหน้าจออื่นด้วย · มือถือเหมือนจอคอม") — ไม่ผูกกับจอคอมแล้ว ทุกขนาดจอได้โหมดเดียวกัน */
+  const compact = !inHub && !filters && !!navItem && inNavGroup(navItem, STICKY_TAB_GROUPS);
   /* 🗂️ 24/11 (คำสั่ง user "ย้าย Detail bar ไป Sub bar เป็นข้อย่อย") — หน้าที่อยู่ในทะเบียน `NAV_SUB_TABS` เปลี่ยนแท็บที่แผงเมนู
      ⇒ ไม่วาดแถบแท็บในหน้า · ปุ่ม 🔍 ย้ายไปแถวชื่อหน้า · ไม่อยู่ในทะเบียน = แถบแท็บตรึงบนแบบเดิม (แท็บไม่มีวันหายเฉยๆ) */
   const tabsInNav = compact && !!NAV_SUB_TABS[pathname];
@@ -221,11 +225,17 @@ export default function PageHeader({
   /* 📌 ค้างทั้งก้อน (25/11 หมวดกิจกรรม · `FULL_STICKY_GROUPS`) — Header + Detail Bar + Tool Bar ค้างที่ขอบบน top:0
      (ไม่ใช่ top ติดลบแบบ "ค้างเฉพาะแถบ") · ต้องอยู่ในโหมดกะทัดรัดอยู่แล้ว */
   const fullSticky = compact && inNavGroup(navItem, FULL_STICKY_GROUPS);
-  const sticky = compact && ((!!topTabs.length && !tabsInNav) || !!detailItems || fullSticky);
+  /* 📍 แถว Detail Bar มีเสมอในโหมดกะทัดรัดเมื่อหัวเพจไม่มีแถบแท็บ (25/11 · "บางหน้าไม่มี") — ไม่มีรายการ = แถวเปล่าที่มีแค่ 🔍/Tool Bar ชิดขวา
+     (ห้ามเดารายการให้หน้า — รายการมาจาก `useNavSubItems` ของหน้าเท่านั้น) ⇒ ทุกหน้าในหมวดมีแถวค้างบนจอ + ปุ่มค้นหาเสมอ */
+  const headerTabsShown = !!topTabs.length && !tabsInNav;
+  const detailRow = compact && !headerTabsShown;
+  const sticky = compact && (headerTabsShown || detailRow || fullSticky);
+  /* 📱 มือถือ: แถวที่ติดขอบบนต้องเว้นซ้ายพ้นปุ่ม ☰ (fixed top:10 left:14 · 36px) — ค้างทั้งก้อน = เว้นที่ราก */
+  const detailPadM = isMobile && !fullSticky ? { paddingLeft: 50 } : undefined;
   /* 🧰 Tool Bar (25/11) — ปุ่มคำสั่งชุดมาตรฐาน ตำแหน่งตายตัวขวาสุดของแถว Detail Bar (ลำดับ ค้นหา · เพิ่ม · แก้ไข · ลบ)
      · หน้าส่ง `tools=[{ key:'search'|'add'|'edit'|'delete', label, onClick, disabled }]` · ไม่ส่ง = ไม่มี (ปุ่ม 🔍 แบบเดิม)
      · ลำดับเรียงตาม `TOOL_ORDER` เสมอ ไม่ว่าหน้าส่งมาลำดับไหน (ผู้ใช้จำตำแหน่งได้ — คำสั่ง user) */
-  const toolBar = compact && tools && tools.length ? <ToolBar tools={tools} /> : null;
+  const toolBar = compact && tools && tools.length ? <ToolBar tools={tools} iconOnly={isMobile} /> : null;
   const rootRef = useRef(null);
   const [stickTop, setStickTop] = useState(0);
   useLayoutEffect(() => {
@@ -310,13 +320,16 @@ export default function PageHeader({
           (เจอจริง 20/10: รายงาน 19 มุมมอง ซึ่งส่วนใหญ่เป็น false positive จากเหตุนี้) */
     <div data-ph-root="1" ref={rootRef} style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 'var(--ph-mb, 12px)',
       /* 📌 sticky: พื้นทึบกันเนื้อหาทะลุ · z ต่ำกว่าแผงเมนู (997+) / กระดิ่ง (1200) · เว้นขวาพ้น 🔔 ให้แถบแท็บ (ชื่อหน้าย้ายมาเว้นที่นี่แทน) */
-      ...(sticky ? { position: 'sticky', top: stickTop, zIndex: 50, background: 'var(--bg)', paddingRight: 52 } : null) }}>
+      ...(sticky ? { position: 'sticky', top: stickTop, zIndex: 50, background: 'var(--bg)',
+        /* ค้างทั้งก้อน: แถวชื่อหน้าเป็นแถวบนสุด ⇒ เว้น 🔔/☰ ที่แถวชื่อหน้าแทน แถว Detail Bar ได้ความกว้างเต็ม (สำคัญบนมือถือ) */
+        ...(fullSticky ? null : { paddingRight: 52 }) } : null) }}>
       {!compact && crumbs}
 
       {(!inHub || sub || actions) && (
       <div className="ph-chrome" style={{
         display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center',
-        justifyContent: 'space-between', paddingRight: (inHub || sticky) ? 0 : 52,   // กัน 🔔 ทับ (UI §7) — ใน hub หัวของแม่กันให้แล้ว · sticky = รากเว้นให้แล้ว
+        justifyContent: 'space-between', paddingRight: (inHub || (sticky && !fullSticky)) ? 0 : 52,
+        ...(isMobile && fullSticky ? { paddingLeft: 50 } : null),   // มือถือ: พ้นปุ่ม ☰ (fixed top:10 left:14)   // กัน 🔔 ทับ (UI §7) — ใน hub หัวของแม่กันให้แล้ว · sticky = รากเว้นให้แล้ว
       }}>
         <div style={{ minWidth: 0 }}>
           {!inHub && (
@@ -339,15 +352,21 @@ export default function PageHeader({
             ตัวกรองต้องอยู่ `filters` ⇒ ลงใต้แถบแท็บเสมอ (UI-STANDARD §2 ลำดับแนวตั้ง · stdsweep ตรวจ data-ph) */}
         {actions && <div data-ph="actions" style={{ display: 'flex', flexWrap: 'wrap', gap: 7, alignItems: 'center' }}>{actions}</div>}
         {/* 🔍 หัวเพจกะทัดรัดที่ไม่มีแถบแท็บในหน้า = ปุ่มค้นหาอยู่ท้ายแถวชื่อหน้า (มีแถบแท็บ = อยู่ท้ายแถบแท็บ) */}
-        {compact && !sticky && !detailItems && (toolBar || <HeaderSearch rootRef={rootRef} tabKey={String(tab ?? '')} />)}
+        {/* 🔍/Tool Bar ในโหมดกะทัดรัดอยู่ที่แถว Detail Bar เสมอ (25/11) — แถวชื่อหน้าไม่มีแล้ว */}
       </div>
       )}
 
       {compact && crumbs}
 
       {/* 📍 Detail Bar — ใต้ breadcrumb (ดูคอมเมนต์ `detail` ข้างบน) · "ทั้งหมด" = ล้างตัวกรอง */}
-      {detailItems && (
-        <div data-detailbar="1" className="ph-chrome">
+      {detailRow && !detailItems && (
+        <div data-detailbar="1" className="ph-chrome" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+          minHeight: 36, paddingBottom: 2, borderBottom: '1px solid var(--border)', ...detailPadM }}>
+          {toolBar || <HeaderSearch rootRef={rootRef} tabKey={String(tab ?? '')} />}
+        </div>
+      )}
+      {detailRow && detailItems && (
+        <div data-detailbar="1" className="ph-chrome" style={detailPadM}>
           <TabBar scroller
             tabs={[...(detail.all ? [{ key: '__all', label: tr('ทั้งหมด') }] : []), ...detailItems.map(it => ({ key: String(it.key), label: it.label, title: it.label }))]}
             value={detailCur || (detail.all ? '__all' : String(detailItems[0].key))}
