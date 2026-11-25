@@ -193,7 +193,7 @@ export default function PeMasterLibrary({ masters, masterItems, proposals, usage
                           RPN <b style={{ color: rpnColor(p.rpn_before) }}>{p.rpn_before ?? '—'}</b> → <b style={{ color: rpnColor(p.rpn_after) }}>{p.rpn_after ?? '—'}</b>
                           {p.kind === 'improve' && <span style={{ color: 'var(--muted)' }}> · {ctlDiff(p)}</span>}
                         </div>
-                        {p.after?.best_practice && <div style={{ fontSize: 11.5, color: '#22c55e', marginTop: 2 }}>✔ {p.after.best_practice}</div>}
+                        {p.after?.best_practice && <div style={{ fontSize: 11.5, color: 'var(--green)', marginTop: 2 }}>✔ {p.after.best_practice}</div>}
                         {p.after?.prevention && p.before?.prevention !== p.after?.prevention && <div style={{ fontSize: 11, color: 'var(--text2)' }}>Prevention: {p.after.prevention}</div>}
                         {p.after?.detection_ctrl && p.before?.detection_ctrl !== p.after?.detection_ctrl && <div style={{ fontSize: 11, color: 'var(--text2)' }}>Detection: {p.after.detection_ctrl}</div>}
                         {p.note && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{p.note}</div>}
@@ -222,7 +222,7 @@ export default function PeMasterLibrary({ masters, masterItems, proposals, usage
                       <tr key={it.id} style={{ opacity: it.is_active === false ? 0.5 : 1 }}>
                         <td style={tdSt}>{it.seq}</td>
                         <td style={{ ...tdSt, minWidth: 180 }}><b style={{ color: 'var(--text)' }}>{it.failure_mode}</b>{it.classification && <Pill label={it.classification} color={it.classification === 'CC' ? '#ef4444' : '#f59e0b'} small />}{it.effects && <div style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'pre-wrap' }}>{it.effects}</div>}</td>
-                        <td style={{ ...tdSt, minWidth: 200, fontSize: 11.5 }}>{it.causes && <div>⚠ {it.causes}</div>}{it.prevention && <div>{it.prevention}</div>}{it.detection_ctrl && <div>{it.detection_ctrl}</div>}{it.best_practice && <div style={{ color: '#22c55e' }}>✔ {it.best_practice}</div>}</td>
+                        <td style={{ ...tdSt, minWidth: 200, fontSize: 11.5 }}>{it.causes && <div>⚠ {it.causes}</div>}{it.prevention && <div>{it.prevention}</div>}{it.detection_ctrl && <div>{it.detection_ctrl}</div>}{it.best_practice && <div style={{ color: 'var(--green)' }}>✔ {it.best_practice}</div>}</td>
                         <td style={{ ...tdSt, textAlign: 'center', whiteSpace: 'nowrap' }}>{it.severity ?? '—'}·{it.occurrence ?? '—'}·{it.detection ?? '—'}</td>
                         <td style={{ ...tdSt, textAlign: 'right', fontWeight: 800, color: rpnColor(rpnOf(it)) }}>{rpnOf(it) ?? '—'}</td>
                         <td style={tdSt}>v{it.version}</td>

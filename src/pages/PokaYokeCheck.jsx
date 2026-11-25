@@ -227,7 +227,7 @@ export default function PokaYokeCheck() {
   return (
     <Page>
       <PageHeader title="Poka-Yoke Check" icon="🛡️"
-        sub={`${tr("ทดสอบ error-proofing ด้วยชิ้น master NG ทุกกะ — จับ NG ได้ = ผ่าน")} · ${SHIFT_LABEL[selShift]}`} />
+        sub={`${tr("ทดสอบ error-proofing ด้วยชิ้น master NG ทุกกะ — จับ NG ได้ = ผ่าน")} · ${tr(SHIFT_LABEL[selShift])}`} />
 
       {/* ตัวเลือก — UI-STANDARD 2026-09-24: FilterBar · กะ 2 ตัวเลือก = Segmented */}
       <FilterBar style={{ marginBottom: 12 }}>
@@ -235,7 +235,7 @@ export default function PokaYokeCheck() {
         {/* <LineSelect> — visibleLines กรอง scope แล้ว (ไม่มี option ว่าง เหมือนเดิม) · 2026-09-07 */}
         <LineSelect lines={visibleLines} value={selLine} onChange={setSelLine} placeholder={null} />
         <Segmented value={selShift} onChange={setSelShift} label={tr('กะ')}
-          options={[{ value: 'day', label: SHIFT_LABEL.day }, { value: 'night', label: SHIFT_LABEL.night }]} />
+          options={[{ value: 'day', label: tr(SHIFT_LABEL.day) }, { value: 'night', label: tr(SHIFT_LABEL.night) }]} />
         <span className="filter-label">{tr('วันที่')}</span>
         <input type="date" value={selDate} onChange={e => setSelDate(e.target.value)} />
         <span className="filter-label">{tr('ผู้ตรวจ')}</span>
@@ -254,7 +254,7 @@ export default function PokaYokeCheck() {
       {ran === false && (
         <div style={{ padding: '9px 13px', borderRadius: 'var(--r-md)', marginBottom: 10, fontSize: 12.5,
           background: 'rgba(148,163,184,0.10)', border: '1px solid var(--border)', color: 'var(--muted)' }}>
-          ⚪ <b>{selLine}</b> {tr('ไม่ได้เปิดกะใน')} {SHIFT_LABEL[selShift]} {tr('วันที่')} {selDate} — <b>{tr('ยังไม่ต้องทดสอบ')}</b> ·
+          ⚪ <b>{selLine}</b> {tr('ไม่ได้เปิดกะใน')} {tr(SHIFT_LABEL[selShift])} {tr('วันที่')} {selDate} — <b>{tr('ยังไม่ต้องทดสอบ')}</b> ·
           {tr("อุปกรณ์ที่ยังว่างอยู่ไม่นับเป็นขาดตรวจ")}
         </div>
       )}

@@ -99,7 +99,7 @@ export default function IntegrationGuide() {
           <div style={{ display: 'grid', gap: 6, minWidth: 0 }}>
             <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{tr(s.title)}</div>
             <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('ผู้ทำ:')} {tr(s.who)}</div>
-            {s.lines && <ul style={{ margin: 0, paddingLeft: 20, display: 'grid', gap: 4, fontSize: 13, color: 'var(--text2)' }}>{s.lines.map(l => <li key={l}>{tr(l)}</li>)}</ul>}
+            {tr(s.lines) && <ul style={{ margin: 0, paddingLeft: 20, display: 'grid', gap: 4, fontSize: 13, color: 'var(--text2)' }}>{s.lines.map(l => <li key={l}>{tr(l)}</li>)}</ul>}
             {s.groups && s.groups.map(g => (
               <div key={tr(g.head)} style={{ display: 'grid', gap: 4 }}>
                 <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>{tr(g.head)}</div>

@@ -184,7 +184,7 @@ export default function OrgTreeView({ nodes = [], scopeCtx = {}, canEdit = false
             {/* สีเป็น token (var) ⇒ ต่อท้าย alpha แบบป้ายชั้นหน่วยไม่ได้ — ใช้กรอบเส้นแทน */}
             <span style={{ fontSize: 11, fontWeight: 700, padding: '0 6px', borderRadius: 'var(--r-xs)',
               color: meta.color, border: `1px solid ${meta.color}` }}>
-              {meta.th} · {tr("เลเวล")} {meta.level}
+              {tr(meta.th)} · {tr("เลเวล")} {meta.level}
             </span>
             {deepCount === null
               ? <span style={{ fontSize: 11, color: 'var(--muted)' }}>👤 …</span>
@@ -215,7 +215,7 @@ export default function OrgTreeView({ nodes = [], scopeCtx = {}, canEdit = false
           )}
           <span style={{ fontSize: 11, fontWeight: 700, padding: '0 6px', borderRadius: 'var(--r-xs)',
             background: `${meta.color}1f`, color: meta.color, border: `1px solid ${meta.color}55` }}>
-            {meta.th}{meta.level ? ` · ${tr("เลเวล")} ${meta.level}` : ''}
+            {tr(meta.th)}{meta.level ? ` · ${tr("เลเวล")} ${meta.level}` : ''}
           </span>
           {cc?.cc ? (
             <span title={inherited ? `${tr("ตกทอดจาก")} ${cc.from?.name || tr('หน่วยแม่')}` : tr("รหัสของหน่วยนี้เอง")}

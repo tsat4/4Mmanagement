@@ -60,8 +60,8 @@ export default function DelayBlameBar({ day, chains = [], size = 12, maxChains =
               (วัดจริง 25/09: ใบ manual ที่เปิดคลุมทั้งกะกินเกิน 270–806 น. โดยไม่มีใบต่อท้ายเลย
                ถ้าพาดหัวว่า "ต้นเหตุ" คนจะไปไล่เบี้ยผิดใบ) · อันดับจัดโดย pushChainOf แล้ว */}
           {c.victimCount > 0
-            ? <span style={{ fontWeight: 800, color: '#ef4444' }}>{tr('ต้นเหตุ')}</span>
-            : <span style={{ fontWeight: 800, color: '#f59e0b' }}>{tr('⏰ กินเวลาเกินกรอบ')}</span>}
+            ? <span style={{ fontWeight: 800, color: 'var(--red)' }}>{tr('ต้นเหตุ')}</span>
+            : <span style={{ fontWeight: 800, color: 'var(--amber)' }}>{tr('⏰ กินเวลาเกินกรอบ')}</span>}
           {c.root?.prod_no && (
             <span title={tr('เลขใบผลิต (บาร์โค้ดบัตรคัมบัง)')} style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--text)' }}>
               #{c.root.prod_no}

@@ -19,6 +19,7 @@ import { dtBucketName, buildDtIndex, dtTrashStats } from './downtimeCategory.js'
 import { collapseOps } from './pairTotals.js';
 import { partCoreOf } from './partGroup.js';
 import { weekMonday } from './timeRange.js';
+import { tr } from './i18n.js';
 
 /* ── 1) ช่วงเวลา ─────────────────────────────────────────────────────────── */
 /* 🔴 ไม่รับตัวย่อแบบไม่มีจุด ("มค" "กค") — เป็นข้อความย่อยของคำทั่วไปได้ ("ซ่อมค้าง" มี "มค")
@@ -172,7 +173,7 @@ export function parseQuestion(text, today, { shiftNow = null } = {}) {
   const it = INTENTS.find(i => i.re.test(t)) || null;
   const sh = shiftFromText(t, shiftNow, today);
   let p = periodFromText(t, today);
-  if (!p && sh?.isNow) p = periodFromText('วันนี้', today);     // กะนี้ = วันนี้
+  if (!p && sh?.isNow) p = periodFromText(tr("วันนี้"), today);     // กะนี้ = วันนี้
   if (!p && sh?.prevDate) p = { from: sh.prevDate, to: sh.prevDate, label: sh.prevDate, explicit: true };   // เมื่อกี้ = วันของกะก่อนหน้า
   const subject = subjectOf(t);
   if (!it) return { intent: null, period: null, periodDefault: null, subject, shift: null };
@@ -185,7 +186,7 @@ export function parseQuestion(text, today, { shiftNow = null } = {}) {
 
 /** ค่าตั้งต้นของช่วง (เมื่อคำถามไม่ได้บอก) — จอต้องเขียนว่า "ไม่ได้ระบุช่วง ใช้…" */
 export function defaultPeriod(key, today) {
-  const p = periodFromText(key === 'today' ? 'วันนี้' : key === 'week' ? 'สัปดาห์นี้' : 'เดือนนี้', today);
+  const p = periodFromText(key === 'today' ? tr("วันนี้") : key === 'week' ? 'สัปดาห์นี้' : 'เดือนนี้', today);
   return { ...p, explicit: false };
 }
 
@@ -325,7 +326,7 @@ export function openDowntimeList(rows = [], nowMs, kindOf) {
     const k = kindOf(d);
     if (k === 'done') continue;
     const e = { machine: d.machine_no || 'ไม่ระบุเครื่อง', line: d.production_sessions?.line_name || 'ไม่ระบุไลน์',
-      type: dtTypeName(d) || 'ไม่ระบุประเภท', planned: d?.dr_downtime_types?.category === 'planned',
+      type: dtTypeName(d) || tr("ไม่ระบุประเภท"), planned: d?.dr_downtime_types?.category === 'planned',
       /* ไม่มีเวลาเริ่ม = ไม่รู้ว่าหยุดมานานเท่าไหร่ ⇒ null (จอเขียน "ไม่ทราบเวลาเริ่ม") ห้ามโชว์ 0 นาที */
       min: d.started_at ? dtRawMin(d, nowMs) : null };
     (k === 'forgotten' ? forgotten : open).push(e);

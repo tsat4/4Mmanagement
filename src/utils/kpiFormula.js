@@ -10,6 +10,7 @@
 import { KPI_BASE_VARS, baseVarOf, formulaOf, evalFormula, fmtKpi } from './kpiSetup.js';
 import { scopeKey, scopeOfDef, canonicalScope, isPlant } from './orgScope.js';
 import { dateLocale } from './i18n.js';
+import { tr } from './i18n.js';
 
 export const PLANT_BASE_KEY = 'plant';
 /** คีย์ขอบเขตของตัวเลขฐาน — ทั้งโรงงาน = 'plant' · อื่นๆ = `kind:value` (ต้อง canonical ก่อนส่งเข้า) */
@@ -119,7 +120,7 @@ export const formulaMonthMode = (info, month) => {
 };
 
 const fmtBaht = (v) => (v == null ? '–' : Number(v).toLocaleString(dateLocale(), { maximumFractionDigits: 2 }));
-const scopeText = (sk, labelOf) => (sk === PLANT_BASE_KEY ? 'ทั้งโรงงาน' : (labelOf ? labelOf(sk) : sk));
+const scopeText = (sk, labelOf) => (sk === PLANT_BASE_KEY ? tr("ทั้งโรงงาน") : (labelOf ? labelOf(sk) : sk));
 
 /** ข้อความอธิบาย 1 เดือน — คำนวณได้: "DL 1,200,000 + OH 800,000 ÷ ยอดขายจากสินค้า 150,000,000 (ทั้งโรงงาน)" · ขาด: "ขาด ยอดขายจากสินค้า (ทั้งโรงงาน)" */
 export function formulaNoteText(info, month, { labelOf = null, def = null } = {}) {

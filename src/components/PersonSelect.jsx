@@ -30,7 +30,7 @@ export { personOptions };
 export default function PersonSelect({ scan,
   value = '', onChange, source = 'profiles',
   lines, lineIds, section, roles, teams, levels, strict = false,
-  allowFree = true, placeholder = 'ค้นชื่อ / รหัสพนักงาน…', freeHint = '', emptyText,
+  allowFree = true, placeholder = tr("ค้นชื่อ / รหัสพนักงาน…"), freeHint = '', emptyText,
   history = [],          // ชื่อที่เคยบันทึกในคอลัมน์ปลายทาง (useColumnHistory) — คนนอกทะเบียนที่เคยกรอกยังเลือกซ้ำได้ (กลุ่ม 📜)
   disabled, inputStyle, style, wrapRows = false, maxRows = 60,
 }) {

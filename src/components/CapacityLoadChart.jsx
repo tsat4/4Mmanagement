@@ -1,4 +1,5 @@
 import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer } from 'recharts';
+import { tr } from '../utils/i18n';
 import { chartAnim } from '../utils/motion';
 import {
   AXIS_FS, CELL_BAR_FILL, tooltipProps, axisTick, CHART_MARGIN, axisUnitLabel, axisUnitTop,
@@ -30,7 +31,7 @@ export default function CapacityLoadChart({
   capacity = null,      // กะที่มีตามปกติ (กะเช้า) · null = ไม่รู้ ⇒ ไม่วาดเส้น
   capacityMax = null,   // กะที่มีถ้าเปิดเต็มที่ (เช้า+ดึก) · null = ไม่รู้
   height = 150,
-  unit = 'กะ',
+  unit = tr("กะ"),
 }) {
   if (!data.length) return null;
   const colorOf = (v) => {

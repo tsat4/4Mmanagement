@@ -169,7 +169,7 @@ export default function MaintenanceLevels() {
          ล้ม = กฎนี้ไม่ทำงาน แต่ต้องบอกบนจอ (ห้ามแปลว่า "อะไหล่พอ") */
       const spareRes = await sparePromise;
       if (!alive) return;
-      const NAMES = ['ทะเบียนเครื่อง', 'downtime', 'กะการผลิต', 'นโยบายพัก', 'ใบตรวจ PM', 'อุปกรณ์ PM', 'แผน PM', 'ผลตรวจ'];
+      const NAMES = ['ทะเบียนเครื่อง', 'downtime', 'กะการผลิต', 'นโยบายพัก', 'ใบตรวจ PM', 'อุปกรณ์ PM', trI18n("แผน PM"), 'ผลตรวจ'];
       const errs = res.map((r, i) => (r.error ? NAMES[i] : null)).filter(Boolean);
       if (spareRes.error) errs.push(trI18n("อะไหล่ของแผน PM (คำแนะนำเรื่องอะไหล่ไม่ครบ)"));
       if (errs.length) {

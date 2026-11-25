@@ -130,7 +130,7 @@ export default function EventComments({ refKind, refId, contextLabel = 'รา�
                   <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--accent)' }}>{c.author_name}</span>
                   <span style={{ fontSize: 11, color: 'var(--muted)' }}>{fmtDateTime(c.created_at)}</span>
                   {(c.mentions || []).map((m, i) => (
-                    <span key={i} style={{ fontSize: 11, fontWeight: 700, color: '#4d9fff', background: 'rgba(77,159,255,0.12)', borderRadius: 'var(--r-pill)', padding: '1px 8px' }}>{m.name}</span>
+                    <span key={i} style={{ fontSize: 11, fontWeight: 700, color: 'var(--blue)', background: 'rgba(77,159,255,0.12)', borderRadius: 'var(--r-pill)', padding: '1px 8px' }}>{m.name}</span>
                   ))}
                 </div>
                 <div style={{ fontSize: 13, color: 'var(--text)', marginTop: 2, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{c.body}</div>
@@ -141,10 +141,10 @@ export default function EventComments({ refKind, refId, contextLabel = 'รา�
           {/* ชิปคนที่จะแจ้งเตือน + ปุ่มเลือก */}
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 6 }}>
             {mentions.map(m => (
-              <span key={m.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: '#4d9fff', background: 'rgba(77,159,255,0.12)', border: '1px solid rgba(77,159,255,0.35)', borderRadius: 'var(--r-pill)', padding: '3px 10px' }}>
+              <span key={m.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: 'var(--blue)', background: 'rgba(77,159,255,0.12)', border: '1px solid rgba(77,159,255,0.35)', borderRadius: 'var(--r-pill)', padding: '3px 10px' }}>
                 {m.full_name}
                 <button onClick={() => setMentions(x => x.filter(y => y.id !== m.id))}
-                  style={{ background: 'none', border: 'none', color: '#4d9fff', cursor: 'pointer', fontSize: 12, padding: 0, lineHeight: 1 }}>✕</button>
+                  style={{ background: 'none', border: 'none', color: 'var(--blue)', cursor: 'pointer', fontSize: 12, padding: 0, lineHeight: 1 }}>✕</button>
               </span>
             ))}
             {users.length > 0 && (

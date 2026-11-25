@@ -12975,3 +12975,48 @@ test('🛡️ count-blocks-pending-adjust — ใบนับต้องกั�
   assert.match(save, /blocked\.length/,
     `\n\n❌ ${ui}: กันแถวออกแล้วต้องเขียนบนจอว่ากันไว้กี่พาร์ท (ห้ามทิ้งเงียบ)\n`);
 });
+
+test('🎨 no-var-alpha-hex — ห้ามเอา var(--x) ไปต่อ alpha-hex (`${c}14`)', () => {
+  /* 25/11: รอบไล่สีดิบ → token เผลอแปลงค่าที่ถูกเอาไป **ต่อ 2 หลักท้ายเป็น alpha**
+     (`linear-gradient(${c}14, ${c}14)` = ท่าแทน color-mix() ของโปรเจคนี้ · CLAUDE.md §เพดานเบราว์เซอร์)
+     ⇒ ได้ `var(--green)14` ซึ่ง **parse ไม่ได้ = เบราว์เซอร์ทิ้งทั้งบรรทัด declaration**
+     พื้น/ขอบหายเงียบๆ ไม่มี error ไม่มีจอพัง — build/lint/เทส/crashsweep จับไม่ได้เลย
+     (เกิดจริงกับ `PlanFrameRow.jsx` และ**หลุดขึ้น main ไปแล้ว 1 รอบ** ก่อนจะจับได้)
+     ⇒ โทนจางต้องใช้ token ที่เป็น rgba อยู่แล้ว: `--x-dim` (พื้น 12%) · `--x-line` (เส้น 40%)
+
+     วิธีตรวจ: หา `${…}NN` (NN = 2 หลัก hex) แล้วไล่ดูว่า "ค่าที่ไหลมาถึงตรงนั้น" เป็น `var(--…)` ไหม
+     · `${NAME}NN`      → ดู `const NAME =` / `NAME =` (ไม่ดู `NAME:` เพราะชนกับ style prop ทั่วไป)
+     · `${obj.PROP}NN`  → ดูทุก `PROP: '…'` ในไฟล์ (ทะเบียนสถานะมักเขียนแบบนี้ — เคส PlanFrameRow) */
+  const alpha = /\$\{([^}]{1,60})\}([0-9a-fA-F]{2})\b/g
+  const bad = []
+  for (const file of walk(join(ROOT, 'src'), ['.jsx', '.js'])) {
+    const rel = relative(ROOT, file)
+    const code = stripComments(readFileSync(file, 'utf8'))
+    let m
+    while ((m = alpha.exec(code))) {
+      const expr = m[1].trim()
+      const parts = expr.split('.')
+      const head = parts[0]
+      if (!/^[A-Za-z_$][\w$]*$/.test(head)) continue
+      let isVar = false
+      if (parts.length > 1 && /^[A-Za-z_$][\w$]*$/.test(parts[1])) {
+        /* `${st.c}14` — ทะเบียนเขียนเป็น `c: 'var(--green)'`
+           🔴 ชื่อ prop ที่ตรงกับชื่อ CSS property (`color`, `background`, …) **ข้าม** —
+              ไฟล์เดียวกันมักมี `color: 'var(--muted)'` ใน inline style อยู่แล้ว = false positive
+              ⇒ ด่านนี้จับ "ทะเบียนที่ตั้งชื่อ prop เอง" (c/clr/tone/bg) ซึ่งเป็นรูปที่พลาดจริง
+              (รูป `color:` ยังต้องอาศัยคนรีวิว — เขียนไว้ตรงนี้ให้รู้ว่าเป็นช่องโหว่ที่ยอมรับ) */
+        const CSSPROP = ['color', 'background', 'backgroundColor', 'borderColor', 'fill', 'stroke', 'bg'];
+        isVar = !CSSPROP.includes(parts[1])
+          && new RegExp(`\\b${parts[1]}\\s*:\\s*'var\\(--`).test(code)
+      } else {
+        isVar = new RegExp(`(?:const|let|var)\\s+${head}\\s*=\\s*'var\\(--`).test(code)
+          || new RegExp(`(?<![:\\w])${head}\\s*=\\s*'var\\(--`).test(code)
+      }
+      if (isVar) bad.push(`${rel}: \${${expr}}${m[2]}`)
+    }
+  }
+  assert.deepEqual([...new Set(bad)], [],
+    '\n\n❌ เอา var(--x) ไปต่อ alpha-hex — CSS ทิ้งทั้งบรรทัด (พื้น/ขอบหายเงียบ):\n   '
+    + [...new Set(bad)].join('\n   ')
+    + '\n   ⇒ ใช้ var(--x-dim) (พื้น 12%) / var(--x-line) (เส้น 40%) แทน\n')
+})

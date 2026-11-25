@@ -250,7 +250,7 @@ export default function RoutingPanel({ canEdit, lines = [] }) {
                       </td>
                       <td style={{ padding: '7px 8px', fontSize: 12, color: 'var(--text)', borderTop: '1px solid var(--border)' }}>
                         {r.is_outsourced
-                          ? <span style={{ color: '#a78bfa' }}>{tr('จ้างนอก ·')} {r.vendor_name}</span>
+                          ? <span style={{ color: 'var(--purple)' }}>{tr('จ้างนอก ·')} {r.vendor_name}</span>
                           : (r.line_name || '—')}
                       </td>
                       {[r.ct_sec, r.setup_sec, r.lot_size, r.operators].map((v, k) => (

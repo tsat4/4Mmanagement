@@ -91,7 +91,7 @@ function getShiftInfo() {
   return {
     shift:       isDay ? 'day' : 'night',
     workDateStr: toLocalDateStr(workDate),
-    label:       isDay ? '☀️ กะเช้า' : '🌙 กะดึก',
+    label:       isDay ? tr("☀️ กะเช้า") : '🌙 กะดึก',
     timeRange:   isDay ? '08:00–17:30 · OT 17:30–20:00' : 'OT 20:00–22:30 · 22:30–07:59',
   };
 }
@@ -649,7 +649,7 @@ export default function Checkin() {
       return 'ยังไม่กำหนดไลน์/ส่วนงาน';
     }
     if (scopeSecs.length) return `${tr("ส่วนงาน")} ${scopeSecs.join(', ')}`;
-    return 'ทุกส่วนงาน';
+    return tr("ทุกส่วนงาน");
   })();
 
   const handleSwitchUser = async () => {
@@ -987,7 +987,7 @@ export default function Checkin() {
         }).join('\n');
         post('ot_booking', { booking: {
           line_name: lineNamesText, work_date: bookDate, date_label: shortDateLabel(bookDate),
-          shift: otShift, shift_label: otShift === 'night' ? '🌙 กะดึก' : '☀️ กะเช้า',
+          shift: otShift, shift_label: otShift === 'night' ? '🌙 กะดึก' : tr("☀️ กะเช้า"),
           count: bookedEmps.length, booked_by: fullName || 'SV', items,
         } });
       }
@@ -1157,7 +1157,7 @@ export default function Checkin() {
       const { registerThaiFont } = await import('../lib/pdfThaiFont');
       const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
       registerThaiFont(doc);
-      const deptLabel = exportSection || 'ทุกส่วนงาน';
+      const deptLabel = exportSection || tr("ทุกส่วนงาน");
 
       // เลขฟอร์ม/Rev/ป้ายช่องลายเซ็น/legend อ่านจากทะเบียนเอกสารกลาง (/doc-forms) — fallback = ค่าเดิมในโค้ด
       // จำนวนช่องลายเซ็นต้องเท่า layout เดิมเสมอ (ทะเบียนเปลี่ยนได้เฉพาะข้อความ) → fitSigs ตัด/เติมให้ครบ
@@ -1258,7 +1258,7 @@ export default function Checkin() {
           const log = logs[dateStr];
           if (!log) return '';
           if (log.leave_type) return ATT_CODE[log.leave_type] || 'ล';
-          if (!log.is_present) return 'ขาด';
+          if (!log.is_present) return tr("ขาด");
           if (log.has_extended_ot) return '/OT+';
           if (log.has_ot) return '/OT';
           return '/';

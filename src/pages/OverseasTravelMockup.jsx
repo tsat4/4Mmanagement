@@ -81,16 +81,16 @@ function newRecord(id, f, today) {
     trip: { started: false, ended: false, activities: [] },
     claim: { lines: [], submitted: false }, report: { text: '', submitted: false },
     fin: { verified: false, finalOk: false, posted: false, archived: false },
-    log: [{ at: today, text: 'ผู้เดินทางยื่นคำขอ' }],
+    log: [{ at: today, text: tr("ผู้เดินทางยื่นคำขอ") }],
   };
 }
 
 function seed(today) {
-  const a = newRecord(1, { traveler: 'สมชาย (ตัวอย่าง)', purpose: 'ประชุมทบทวนแม่พิมพ์กับลูกค้า', country: 'ญี่ปุ่น', from: addDaysStr(today, 10), to: addDaysStr(today, 13), budget: 85000, advReq: true, advAmount: 20000 }, today);
-  const b = newRecord(2, { traveler: 'สุดา (ตัวอย่าง)', purpose: 'อบรมระบบเชื่อมที่ผู้ผลิตเครื่อง', country: 'จีน', from: addDaysStr(today, 5), to: addDaysStr(today, 9), budget: 60000, advReq: false }, today);
+  const a = newRecord(1, { traveler: 'สมชาย (ตัวอย่าง)', purpose: tr("ประชุมทบทวนแม่พิมพ์กับลูกค้า"), country: tr("ญี่ปุ่น"), from: addDaysStr(today, 10), to: addDaysStr(today, 13), budget: 85000, advReq: true, advAmount: 20000 }, today);
+  const b = newRecord(2, { traveler: tr("สุดา (ตัวอย่าง)"), purpose: tr("อบรมระบบเชื่อมที่ผู้ผลิตเครื่อง"), country: tr("จีน"), from: addDaysStr(today, 5), to: addDaysStr(today, 9), budget: 60000, advReq: false }, today);
   Object.assign(b, { appr: { lm: true, dh: true, exec: true }, budgetOk: true, hrOk: true, compOk: true });
   b.admin = { ...b.admin, passport: true, visaReq: true };
-  const c = newRecord(3, { traveler: 'วิชัย (ตัวอย่าง)', purpose: 'Audit supplier ชิ้นส่วนกด', country: 'เวียดนาม', from: addDaysStr(today, -8), to: addDaysStr(today, -5), budget: 45000, advReq: true, advAmount: 10000 }, today);
+  const c = newRecord(3, { traveler: tr("วิชัย (ตัวอย่าง)"), purpose: tr("Audit supplier ชิ้นส่วนกด"), country: tr("เวียดนาม"), from: addDaysStr(today, -8), to: addDaysStr(today, -5), budget: 45000, advReq: true, advAmount: 10000 }, today);
   Object.assign(c, {
     appr: { lm: true, dh: true, exec: true }, budgetOk: true, hrOk: true, compOk: true, ready: true,
     admin: { passport: true, visaReq: false, visaApplied: false, quote: true, flight: true, hotel: true, insurance: true, esim: true },
@@ -182,7 +182,7 @@ function PhaseBar({ r }) {
                 fontSize: 11, fontWeight: 800, background: done || bad ? c : 'var(--card)', border: `${cur ? 3 : 2}px solid ${c}`, color: done || bad ? '#fff' : c }}>
               {bad ? '✕' : done ? '✓' : i + 1}
             </span>
-            <span style={{ fontSize: 11, fontWeight: done || cur || bad ? 700 : 400, color: c }}>{label}</span>
+            <span style={{ fontSize: 11, fontWeight: done || cur || bad ? 700 : 400, color: c }}>{tr(label)}</span>
           </div>
         );
       })}

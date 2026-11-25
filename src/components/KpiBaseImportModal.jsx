@@ -102,7 +102,7 @@ export default function KpiBaseImportModal({ year, unitLabel, unitSk, base, canP
   }, [grid, sheet, labels, fileMonth]);
 
   const writable = (v) => (v.level === 'plant' ? canPlant : canUnit);
-  const targetOf = (v) => (v.level === 'plant' ? 'ทั้งโรงงาน' : unitLabel);
+  const targetOf = (v) => (v.level === 'plant' ? tr("ทั้งโรงงาน") : unitLabel);
   const skOf = (v) => (v.level === 'plant' ? PLANT_BASE_KEY : unitSk);
   const chosen = KPI_BASE_VARS.filter(v => on[v.key] && values[v.key] && writable(v));
   const nCells = chosen.reduce((a, v) => a + Object.keys(values[v.key]).length, 0);
@@ -157,21 +157,21 @@ export default function KpiBaseImportModal({ year, unitLabel, unitSk, base, canP
             </>
           )}
         </div>
-        {err && <div style={{ marginTop: 8, color: '#ef4444', fontSize: 12.5 }}>{err}</div>}
+        {err && <div style={{ marginTop: 8, color: 'var(--red)', fontSize: 12.5 }}>{err}</div>}
         {wrong && <div style={{ marginTop: 8 }}><WrongFileNote k={wrong} here="kpi_acct" onGo={onClose} /></div>}
         {wb && monthInfo?.subRow != null && (
-          <div style={{ marginTop: 6, fontSize: 12, color: '#38bdf8' }}>{tr('ℹ️ หัวเดือนคร่อมบล็อก PLAN | Rolling | ACTUAL — ใช้คอลัมน์')} <b>ACTUAL → Amount</b> {tr('ของแต่ละเดือน (แถว')} {monthInfo.subRow + 1})</div>
+          <div style={{ marginTop: 6, fontSize: 12, color: 'var(--blue)' }}>{tr('ℹ️ หัวเดือนคร่อมบล็อก PLAN | Rolling | ACTUAL — ใช้คอลัมน์')} <b>ACTUAL → Amount</b> {tr('ของแต่ละเดือน (แถว')} {monthInfo.subRow + 1})</div>
         )}
         {wb && rollingM.length > 0 && (
-          <div style={{ marginTop: 6, fontSize: 12.5, color: '#f59e0b' }}>{tr('⚠ เดือน')} {rollingM.map(m => monthsShort()[m - 1]).join(' · ')} {tr('ไม่มีคอลัมน์ ACTUAL — ใช้')} <b>Rolling</b> {tr("แทน (เดือนที่ยังไม่ปิด Rolling = แผน) · ลด \"ถึงเดือน\" ถ้าไม่ใช่ตัวเลขจริง")}</div>
+          <div style={{ marginTop: 6, fontSize: 12.5, color: 'var(--amber)' }}>{tr('⚠ เดือน')} {rollingM.map(m => monthsShort()[m - 1]).join(' · ')} {tr('ไม่มีคอลัมน์ ACTUAL — ใช้')} <b>Rolling</b> {tr("แทน (เดือนที่ยังไม่ปิด Rolling = แผน) · ลด \"ถึงเดือน\" ถ้าไม่ใช่ตัวเลขจริง")}</div>
         )}
-        {wb && magWarn && <div style={{ marginTop: 6, fontSize: 12.5, color: '#f59e0b' }}>{magWarn}</div>}
-        {wb && zeroWarn && <div style={{ marginTop: 6, fontSize: 12.5, color: '#ef4444', fontWeight: 700 }}>{zeroWarn} <button type="button" onClick={() => setMaxMonth(closedM)} style={{ ...inp, cursor: 'pointer', marginLeft: 6 }}>{tr('ตั้งเป็น')} {monthsShort()[closedM - 1]}</button></div>}
+        {wb && magWarn && <div style={{ marginTop: 6, fontSize: 12.5, color: 'var(--amber)' }}>{magWarn}</div>}
+        {wb && zeroWarn && <div style={{ marginTop: 6, fontSize: 12.5, color: 'var(--red)', fontWeight: 700 }}>{zeroWarn} <button type="button" onClick={() => setMaxMonth(closedM)} style={{ ...inp, cursor: 'pointer', marginLeft: 6 }}>{tr('ตั้งเป็น')} {monthsShort()[closedM - 1]}</button></div>}
         {wb && grid && sheetKind(grid, sheet) === 'inventory' && (
           <div style={{ marginTop: 6, fontSize: 12, color: 'var(--muted)' }}>ℹ️ {tr("ชีทสต็อก — จับให้เฉพาะ \"มูลค่าสินค้าคงคลัง\" (แถว Inventory Balance All) · COGS/RM/ยอดขายในชีทนี้เป็นคนละฐานกับ PL Summary จึงไม่จับอัตโนมัติ (เลือกเองได้ถ้าบัญชียืนยัน")})</div>
         )}
         {wb && !Object.keys(monthInfo?.cols || {}).length && (
-          <div style={{ marginTop: 8, fontSize: 12.5, color: '#f59e0b' }}>⚠ {tr("ยังหาแถวหัวเดือนไม่เจอ (ต้องมีช่อง Jan/Feb… หรือ ม.ค./ก.พ.… หรือเลข 1–12 อย่างน้อย 6 ช่อง) — เลือกแถวเองจากช่อง \"แถวหัวเดือน")}"</div>
+          <div style={{ marginTop: 8, fontSize: 12.5, color: 'var(--amber)' }}>⚠ {tr("ยังหาแถวหัวเดือนไม่เจอ (ต้องมีช่อง Jan/Feb… หรือ ม.ค./ก.พ.… หรือเลข 1–12 อย่างน้อย 6 ช่อง) — เลือกแถวเองจากช่อง \"แถวหัวเดือน")}"</div>
         )}
         {grid && (
           <div style={{ overflowX: 'auto', marginTop: 10 }}>

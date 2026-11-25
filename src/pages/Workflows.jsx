@@ -270,9 +270,9 @@ function InstanceModal({ id, me, defById, onClose, onChanged }) {
     reloadAll();
   };
   const approve = async () => {
-    if (!await confirmSign({ what: isAck ? 'รับทราบ' : 'อนุมัติ', orderNo: inst.doc_no, docLabel: def?.name || 'ใบงาน', actor: fullName, as: step?.label,
+    if (!await confirmSign({ what: isAck ? 'รับทราบ' : tr("อนุมัติ"), orderNo: inst.doc_no, docLabel: def?.name || 'ใบงาน', actor: fullName, as: step?.label,
       effect: (inst.current_step + 1 >= (version?.flow_schema?.steps?.length || 0)) ? 'ใบจบ (อนุมัติครบ)' : 'ส่งต่อขั้นถัดไป' })) return;
-    run(() => supabase.rpc('wf_act', { p_task: myTask.id, p_action: 'approve', p_comment: null, p_expected_rev: inst.step_rev }), isAck ? 'รับทราบ' : 'อนุมัติ');
+    run(() => supabase.rpc('wf_act', { p_task: myTask.id, p_action: 'approve', p_comment: null, p_expected_rev: inst.step_rev }), isAck ? 'รับทราบ' : tr("อนุมัติ"));
   };
   const withReason = () => {
     if (!reason.trim()) { toast.error(tr('ต้องใส่เหตุผล')); return; }

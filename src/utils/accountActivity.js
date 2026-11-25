@@ -84,7 +84,7 @@ export function activitySummary(rows, { now, dormantDays = DORMANT_DAYS } = {}) 
  */
 export function activitySummaryText(s) {
   if (!s || !s.total) return null;
-  if (s.unknown === s.total) return 'อ่านประวัติการเข้าใช้ไม่ได้ — ตัวเลขด้านล่างไม่รวมเรื่องนี้';
+  if (s.unknown === s.total) return tr("อ่านประวัติการเข้าใช้ไม่ได้ — ตัวเลขด้านล่างไม่รวมเรื่องนี้");
   const parts = [];
   if (s.never)   parts.push(`ไม่เคยเข้าใช้ ${s.never} ใบ`);
   if (s.dormant) parts.push(`ค้างเกิน ${DORMANT_DAYS} วัน ${s.dormant} ใบ`);

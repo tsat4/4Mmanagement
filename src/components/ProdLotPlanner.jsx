@@ -85,7 +85,7 @@ function DieMatLinkNote({ lot, dies, role, mayWrite, onDone }) {
   if (mats.includes(String(lot.mat_no).trim().toUpperCase())) return null;   // ผูกไว้แล้ว
   /* ทะเบียนบอกว่าชุดนี้ทำพาร์ทอื่น — อาจเป็นเรื่องจริง (gang die) หรือเลือกผิดชุด · คนตัดสิน */
   if (mats.length) return (
-    <div style={{ fontSize: 11, color: '#f59e0b' }}>
+    <div style={{ fontSize: 11, color: 'var(--amber)' }}>
       ⚠ {tr("ทะเบียนบอกว่าชุดนี้ทำ")} {mats.join(' + ')} — {tr("ถ้าปั๊มคู่กับพาร์ทนี้จริง เพิ่มช่องที่ 2 ที่")} /equipment?tab=die
     </div>
   );
@@ -461,7 +461,7 @@ export default function ProdLotPlanner({
         )}
       </FilterBar>
       {ordersErr && (
-        <div style={{ fontSize: 12, color: '#f59e0b', padding: '6px 10px', border: '1px solid rgba(245,158,11,0.4)', borderRadius: 'var(--r-md)' }}>
+        <div style={{ fontSize: 12, color: 'var(--amber)', padding: '6px 10px', border: '1px solid rgba(245,158,11,0.4)', borderRadius: 'var(--r-md)' }}>
           ⚠️ {ordersErr} — {tr("ยอดที่ผลิตจริงของล็อตด้านล่างอาจต่ำกว่าจริง (ไม่ใช่ \"ยังไม่เริ่ม")}")
         </div>
       )}
@@ -486,7 +486,7 @@ export default function ProdLotPlanner({
         <span style={{ fontSize: 13, fontWeight: 800, color: overflowCount > 0 ? '#ef4444' : 'var(--text)' }}>
           {tr("คาดจบ")} <b>{hz.finishMs == null ? '—' : fmtDayTime(hz.finishMs)}</b>
           {hz.shiftsUsed != null && <span style={{ fontWeight: 600, color: 'var(--text2)' }}> {tr('· กิน')} {hz.shiftsUsed} {tr("กะ")}
-            {hz.lastSegment && ` (${tr("ยาวถึง")} ${SHIFT_LABEL[hz.lastSegment.shift]} ${hz.lastSegment.workDate.slice(8)}/${hz.lastSegment.workDate.slice(5, 7)})`}</span>}
+            {hz.lastSegment && ` (${tr("ยาวถึง")} ${tr(SHIFT_LABEL[hz.lastSegment.shift])} ${hz.lastSegment.workDate.slice(8)}/${hz.lastSegment.workDate.slice(5, 7)})`}</span>}
         </span>
         {summary.trialCount > 0 && (
           <span style={{ fontSize: 12.5, color: '#22d3ee', fontWeight: 700 }}
@@ -564,7 +564,7 @@ export default function ProdLotPlanner({
           />
           {/* 🔴 ปฏิทินยังไม่โหลด = ยังไม่ได้เช็ควันหยุด ต้องเขียนบนจอ ห้ามเงียบ */}
           {horizon.calendarUnknown && (
-            <div style={{ fontSize: 11.5, color: '#f59e0b', marginTop: 5 }}>
+            <div style={{ fontSize: 11.5, color: 'var(--amber)', marginTop: 5 }}>
               ⚠️ {tr("ยังไม่ได้เช็คปฏิทินบริษัท — ขอบเขตนี้ใช้กติกา จ-ศ ไปก่อน")} <b>{tr('วันหยุดพิเศษอาจยังไม่ถูกข้าม')}</b>
             </div>
           )}
@@ -643,13 +643,13 @@ export default function ProdLotPlanner({
                     {/* 🔗 กะที่งานใบนี้ตกไปอยู่ — "—" = ยังตอบไม่ได้ **ไม่ใช่กะแรก** */}
                     <td style={td}>{(() => {
                       const at = landingOf[l.id];
-                      if (!at || at.overflow) return <span style={{ color: '#ef4444' }} title={tr('งานล้นเลยขอบเขตที่วางแผนไว้ — ยังไม่มีที่ลง')}>{tr('ล้นขอบเขต')}</span>;
-                      if (!at.sure) return <span style={{ color: '#f59e0b' }} title={tr('เวลาเชื่อไม่ได้ (ไม่มี CT หรือมีล็อตที่ไม่มี CT อยู่ก่อนหน้า) — บันทึกแล้วจะคงกะเดิมไว้')}>{tr('⚠ ยังจัดไม่ได้')}</span>;
+                      if (!at || at.overflow) return <span style={{ color: 'var(--red)' }} title={tr('งานล้นเลยขอบเขตที่วางแผนไว้ — ยังไม่มีที่ลง')}>{tr('ล้นขอบเขต')}</span>;
+                      if (!at.sure) return <span style={{ color: 'var(--amber)' }} title={tr('เวลาเชื่อไม่ได้ (ไม่มี CT หรือมีล็อตที่ไม่มี CT อยู่ก่อนหน้า) — บันทึกแล้วจะคงกะเดิมไว้')}>{tr('⚠ ยังจัดไม่ได้')}</span>;
                       const same = at.workDate === l.work_date && at.shift === l.shift;
                       return (
                         <span style={{ color: same ? 'var(--text2)' : 'var(--accent)' }}
                           title={same ? tr("ตรงกับที่บันทึกไว้") : `${tr("จะถูกย้ายจาก")} ${l.shift === 'night' ? tr('กะดึก') : tr('กะเช้า')} ${l.work_date} ${tr("ตอนกดบันทึก")}`}>
-                          {SHIFT_LABEL[at.shift]} {at.workDate.slice(8)}/{at.workDate.slice(5, 7)}{same ? '' : ' ✧'}
+                          {tr(SHIFT_LABEL[at.shift])} {at.workDate.slice(8)}/{at.workDate.slice(5, 7)}{same ? '' : ' ✧'}
                         </span>
                       );
                     })()}</td>
@@ -687,11 +687,11 @@ export default function ProdLotPlanner({
                       <DieMatLinkNote lot={l} dies={dies} role={role} mayWrite={mayWrite} onDone={load} />
                     </td>
                     <td style={td}>
-                      {l.status === 'cancelled' ? <span style={{ color: '#ef4444' }}>{tr('✕ ยกเลิก')}</span>
+                      {l.status === 'cancelled' ? <span style={{ color: 'var(--red)' }}>{tr('✕ ยกเลิก')}</span>
                         /* 🧪 ไม่มีพาร์ทให้จับคู่ยอดจริง ⇒ บอกตรงๆ ว่า "จองเครื่องไว้" ห้ามขึ้น "รอคิว" ค้างตลอดกาล */
                         : r.state === 'trial' ? <span style={{ color: '#22d3ee' }}>{tr('จองเครื่องไว้')}</span>
                         : r.state === 'done' ? <span style={{ color: 'var(--accent)' }}>{tr('✓ ครบตามกรอบ')}</span>
-                        : r.state === 'partial' ? <span style={{ color: '#4d9fff' }}>{tr('▶ กำลังทำ')}</span>
+                        : r.state === 'partial' ? <span style={{ color: 'var(--blue)' }}>{tr('▶ กำลังทำ')}</span>
                         : <span style={{ color: 'var(--muted)' }}>{tr('ยังไม่เริ่ม')}</span>}
                       {l.cancel_reason && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{l.cancel_reason}</div>}
                     </td>
@@ -717,7 +717,7 @@ export default function ProdLotPlanner({
       {/* ── ของจริงที่อยู่นอกกรอบแผน — ต้องเห็น ห้ามกลืน (Layer 2 ไม่ได้ผิด แค่ต่างจากกรอบ) ── */}
       {(rec.offPlan.length > 0 || rec.over.length > 0) && (
         <div style={{ ...card, borderColor: '#f59e0b66' }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: '#f59e0b', marginBottom: 5 }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--amber)', marginBottom: 5 }}>
             ⚠️ {tr("ของจริงที่อยู่นอกกรอบแผน")}
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 14px', fontSize: 12 }}>

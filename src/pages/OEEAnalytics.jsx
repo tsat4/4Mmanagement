@@ -1479,7 +1479,7 @@ export default function OEEAnalytics() {
       // หยุดตามแผนไม่ใช่ loss → ไม่ตีเป็นเงิน (กฎเดียวกับ dtCost) แต่ยังอยู่ในพาเรโตตอนติ๊ก "รวมในแผน"
       baht: d.dr_downtime_types?.category === 'planned' ? null : priceMin(min, s.line_name, s.work_date),
       machine: d.machine_no || '', line: s.line_name || '',
-      product: d.mat_no || '', shift: s.shift === 'day' ? 'กะเช้า' : s.shift === 'night' ? 'กะดึก' : '',
+      product: d.mat_no || '', shift: s.shift === 'day' ? trI18n("กะเช้า") : s.shift === 'night' ? 'กะดึก' : '',
       man: d.reported_by_name || '', date: s.work_date || '',
       note: d.description || '',
     };
@@ -1524,7 +1524,7 @@ export default function OEEAnalytics() {
       // พาร์ทที่ยังไม่กรอกต้นทุนใน Material Master = null (ตีมูลค่าไม่ได้) ห้ามเดาเป็น 0
       baht: unitCost == null ? null : qty * unitCost,
       product: d.prod_orders?.mat_no || '', line: s.line_name || '',
-      shift: s.shift === 'day' ? 'กะเช้า' : s.shift === 'night' ? 'กะดึก' : '',
+      shift: s.shift === 'day' ? trI18n("กะเช้า") : s.shift === 'night' ? 'กะดึก' : '',
       man: d.reported_by_name || '', date: s.work_date || '',
       note: d.description || '',
     };
@@ -1578,14 +1578,14 @@ export default function OEEAnalytics() {
   const NOTE_DIM = { key: 'note', label: 'หมายเหตุ (จับกลุ่มคำ)', cluster: true };
   const DT_DIMS = [
     NOTE_DIM,
-    { key: 'machine', label: 'เครื่องจักร' }, { key: 'line', label: 'ไลน์' },
-    { key: 'product', label: 'ชิ้นงาน' }, { key: 'shift', label: 'กะ' },
+    { key: 'machine', label: 'เครื่องจักร' }, { key: 'line', label: trI18n("ไลน์") },
+    { key: 'product', label: 'ชิ้นงาน' }, { key: 'shift', label: trI18n("กะ") },
     { key: 'man', label: 'ผู้บันทึก' }, { key: 'date', label: 'วัน' },
   ];
   const DEF_DIMS = [
     NOTE_DIM,
-    { key: 'product', label: 'ชิ้นงาน' }, { key: 'line', label: 'ไลน์' },
-    { key: 'shift', label: 'กะ' }, { key: 'man', label: 'ผู้บันทึก' }, { key: 'date', label: 'วัน' },
+    { key: 'product', label: 'ชิ้นงาน' }, { key: 'line', label: trI18n("ไลน์") },
+    { key: 'shift', label: trI18n("กะ") }, { key: 'man', label: 'ผู้บันทึก' }, { key: 'date', label: 'วัน' },
   ];
 
   // ── Styles ─────────────────────────────────────────────────────

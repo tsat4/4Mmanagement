@@ -204,7 +204,7 @@ export default function ParetoChart({
           <span style={{ color: 'var(--muted)' }}>{tr('แสดงครบทั้ง')} {rows.length} {tr('รายการ')}</span>
         )}
         {tiny.length > 0 && (
-          <span style={{ color: '#f59e0b', fontWeight: 700 }}>
+          <span style={{ color: 'var(--amber)', fontWeight: 700 }}>
             ⚠️ {tiny.length} {tr('แท่งท้ายเตี้ยกว่า 1 พิกเซล (ต่ำสุด')} {fmtV(tinyMin)} {unit}) — <u>{tr('ไม่ใช่ 0')}</u>
             {showAll ? tr(" · กด “ย่อหางยาว” เพื่อรวมเป็นแท่งเดียว") : ''}
           </span>

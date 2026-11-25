@@ -580,7 +580,7 @@ export default function StockCountSheet({ role, scope }) {
         <div style={{ display:'flex', flexWrap:'wrap', gap:10, alignItems:'center', marginBottom:8 }}>
           <div style={{ fontSize:15, fontWeight:800 }}>{tr('ส่งลูกค้าแล้ว แต่ยังไม่ถูกหักออกจากคลัง')}</div>
           {!!shipGap.open.length && (
-            <span style={{ fontSize:12, fontWeight:800, background:'#ef444422', color:'#ef4444', padding:'3px 10px', borderRadius: 'var(--r-pill)' }}>
+            <span style={{ fontSize:12, fontWeight:800, background:'#ef444422', color: 'var(--red)', padding:'3px 10px', borderRadius: 'var(--r-pill)' }}>
               {shipGap.open.length} {tr('ใบ ·')} {n0(openQty)} {tr("ชิ้น")}
             </span>
           )}
@@ -606,7 +606,7 @@ export default function StockCountSheet({ role, scope }) {
         </div>
 
         {!fgDest ? (
-          <div style={{ fontSize:13, color:'#f59e0b' }}>
+          <div style={{ fontSize:13, color: 'var(--amber)' }}>
             ⚠️ {tr("ยังไม่มีกฎรับเข้าอัตโนมัติของ FG (เลขขึ้นต้น 1) — ตั้งที่แท็บ ⚙️ รับเข้าอัตโนมัติ ก่อน ระบบจึงจะรู้ว่าต้องหักออกจากคลังไหน")}
           </div>
         ) : !shipGap.open.length && !shipGap.unresolved.length ? (
@@ -652,7 +652,7 @@ export default function StockCountSheet({ role, scope }) {
             )}
 
             {showGap && !!shipGap.unresolved.length && (
-              <div style={{ fontSize:12, color:'#f59e0b', marginBottom:10, lineHeight:1.6 }}>
+              <div style={{ fontSize:12, color: 'var(--amber)', marginBottom:10, lineHeight:1.6 }}>
                 ⚠️ {tr("อีก")} {shipGap.unresolved.length} {tr('ใบ (')}{n0(shipGap.unresolved.reduce((s, o) => s + (Number(o.qty) || 0), 0))} {tr("ชิ้น) จับคู่เลข SAP ไม่ได้ — ระบบไม่เดาให้ ต้องแก้ p_no ที่ Product Master ก่อน เช่น")}{' '}
                 {shipGap.unresolved.slice(0, 3).map(o => o.mat_no).join(', ')}
                 <div style={{ marginTop:2 }}>

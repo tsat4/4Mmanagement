@@ -341,7 +341,7 @@ export default function DailyPM() {
                         : row.status === 'idle'
                         ? (row.hasSession === true ? tr("เปิดกะแล้ว · ยังไม่มีใบผลิต")
                           : row.hasSession === false ? tr("ยังไม่เปิดกะ") : tr("❔ ไม่รู้ว่าเปิดกะหรือไม่"))
-                        : meta.label}
+                        : tr(meta.label)}
                     </span>
                   </div>
                   <div style={{ marginTop: 10, fontSize: 13, color: 'var(--text2)' }}>
@@ -369,13 +369,13 @@ export default function DailyPM() {
                     </div>
                   )}
                   {row.status === 'orange' && dueDiffMin != null && (
-                    <div style={{ marginTop: 4, fontSize: 12, fontWeight: 800, color: '#f59a3f' }}>
+                    <div style={{ marginTop: 4, fontSize: 12, fontWeight: 800, color: 'var(--amber)' }}>
                       ⚠ {tr("เกินกำหนดมาแล้ว")} {fmtDur(Math.abs(dueDiffMin))}
                     </div>
                   )}
                   {row.ng.length > 0 && (
                     <div style={{ marginTop: 8 }}>
-                      <div style={{ fontSize: 11, color: '#e05c4a', fontWeight: 700 }}>{tr('⚠ ผิดปกติ')}</div>
+                      <div style={{ fontSize: 11, color: 'var(--red)', fontWeight: 700 }}>{tr('⚠ ผิดปกติ')}</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 3 }}>
                         {row.ng.map(n => <span key={n.jig_id} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 'var(--r-md)', background: 'var(--red-dim)', color: 'var(--red)' }}>
                           {n.machine_no ? `${n.machine_no} · ` : ''}{n.name}

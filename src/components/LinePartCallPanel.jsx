@@ -65,10 +65,10 @@ const OPEN_STATUSES = ['suggested', 'hold', 'pending', 'preparing', 'delivered']
 const WAIT_LEADER   = ['suggested', 'hold'];
 
 const ST = {
-  hold:      { label: '⏸ พักไว้ก่อน',    color: '#f59e0b' },
-  pending:   { label: '⏳ รอสโตร์หยิบ',   color: '#f59e0b' },
-  preparing: { label: 'สโตร์กำลังจัด', color: '#38bdf8' },
-  delivered: { label: 'ส่งถึงไลน์แล้ว', color: '#22c55e' },
+  hold:      { label: '⏸ พักไว้ก่อน',    color: 'var(--amber)' },
+  pending:   { label: '⏳ รอสโตร์หยิบ',   color: 'var(--amber)' },
+  preparing: { label: 'สโตร์กำลังจัด', color: 'var(--blue)' },
+  delivered: { label: 'ส่งถึงไลน์แล้ว', color: 'var(--green)' },
 };
 
 const fmtQty = (v) => (v == null ? '—' : Number(v).toLocaleString());
@@ -683,7 +683,7 @@ export default function LinePartCallPanel({ lineName, lines = [], role, fullName
         </button>
       ) : (
         <div style={{ background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 'var(--r-md)', padding: '10px 12px' }}>
-          <div style={{ fontSize: 11.5, fontWeight: 800, color: '#22c55e', marginBottom: 6 }}>
+          <div style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--green)', marginBottom: 6 }}>
             ➕ {tr("ขอเบิกพาร์ทนี้เลย")} <span style={{ fontWeight: 400, color: 'var(--muted)' }}>· {tr("เลือกพาร์ทที่ไลน์นี้ผลิต = ใส่ยอดที่จะผลิต ระบบแตก BOM เป็นชิ้นส่วนที่ต้องเบิกให้")}</span>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -766,7 +766,7 @@ export default function LinePartCallPanel({ lineName, lines = [], role, fullName
 
       {/* โหลดไม่สำเร็จ = ต้องบอก ห้ามแสดงเป็น "ไม่มีอะไรต้องเบิก" */}
       {err?.msg && (
-        <div style={{ fontSize: 12, color: '#ef4444', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 'var(--r-md)', padding: '8px 11px', marginBottom: 10 }}>
+        <div style={{ fontSize: 12, color: 'var(--red)', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 'var(--r-md)', padding: '8px 11px', marginBottom: 10 }}>
           ⚠ {tr("โหลดข้อมูลไม่สำเร็จ")} — {err.msg} · {tr("ตัวเลขด้านล่างอาจไม่ครบ")}
         </div>
       )}
@@ -776,7 +776,7 @@ export default function LinePartCallPanel({ lineName, lines = [], role, fullName
       {/* 🙈 05/11 (คำสั่ง user) — ไม่โชว์ "ของค้างที่ไลน์แม่" แล้ว: การเบิกคิดรวมทั้งพื้นที่ SAP (แม่-ลูกนับที่เดียวกัน) */}
       {SHOW_LEVEL_REFILL && stuckUp.length > 0 && (
         <div style={{ fontSize: 11.5, color: 'var(--text2)', background: 'rgba(245,158,11,0.09)', border: '1px solid rgba(245,158,11,0.35)', borderRadius: 'var(--r-md)', padding: '8px 11px', marginBottom: 10, lineHeight: 1.7 }}>
-          <b style={{ color: '#f59e0b' }}>{tr('⬆ ของ')} {stuckUp.length} {tr('พาร์ทยังอยู่ที่ไลน์แม่ ไม่ได้อยู่หน้าไลน์นี้')}</b>
+          <b style={{ color: 'var(--amber)' }}>{tr('⬆ ของ')} {stuckUp.length} {tr('พาร์ทยังอยู่ที่ไลน์แม่ ไม่ได้อยู่หน้าไลน์นี้')}</b>
           <br />{tr('ระบบนับเฉพาะของที่อยู่ที่')} <b>{lineName}</b> {tr("จริง (หน่วยย่อยที่สุด) — ของที่ไลน์แม่จึงไม่ถูกนับให้")}
           <div style={{ marginTop: 5, display: 'flex', flexWrap: 'wrap', gap: 5 }}>
             {stuckUp.slice(0, 8).map(s => (
@@ -791,7 +791,7 @@ export default function LinePartCallPanel({ lineName, lines = [], role, fullName
       )}
 
       {whErr && (
-        <div style={{ fontSize: 12, color: '#ef4444', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 'var(--r-md)', padding: '8px 11px', marginBottom: 10 }}>
+        <div style={{ fontSize: 12, color: 'var(--red)', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 'var(--r-md)', padding: '8px 11px', marginBottom: 10 }}>
           ⚠ {tr("โหลดยอดคลัง (FG WAREHOUSE / STORE) ไม่สำเร็จ")} — {whErr} · {tr("พาร์ทที่ไลน์นี้ผลิตเองอาจถูกเทียบกับยอดหน้าไลน์แทน กด ↻ อีกครั้ง")}
         </div>
       )}
@@ -801,7 +801,7 @@ export default function LinePartCallPanel({ lineName, lines = [], role, fullName
         <div style={{ marginBottom: 12 }}>
           {split.produceDue.length > 0 && (
             <>
-              <div style={{ fontSize: 11.5, fontWeight: 800, color: '#38bdf8', marginBottom: 6 }}>
+              <div style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--blue)', marginBottom: 6 }}>
                 {tr("ยอดคลังต่ำกว่าขั้นต่ำ (แท็บคำนวณ")} Kanban) {split.produceDue.length} {tr("พาร์ท — ต้องผลิตเติม")}
               </div>
               {split.produceDue.map(s => {
@@ -841,7 +841,7 @@ export default function LinePartCallPanel({ lineName, lines = [], role, fullName
       {/* ── ถึงจุดเรียกเติม → ระบบเสนอ คนตัดสิน ── */}
       {SHOW_LEVEL_REFILL && suggest.length > 0 && (
         <div style={{ marginBottom: holds.length || inFlight.length ? 12 : 0 }}>
-          <div style={{ fontSize: 11.5, fontWeight: 800, color: '#f59e0b', marginBottom: 6 }}>
+          <div style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--amber)', marginBottom: 6 }}>
             ⚠️ {tr("ถึงจุดเรียกเติม")} {suggest.length} {tr("พาร์ท — จะเบิกหรือพักไว้ก่อน")}?
           </div>
           {suggest.map(s => (
@@ -859,7 +859,7 @@ export default function LinePartCallPanel({ lineName, lines = [], role, fullName
       {/* ── พักไว้ก่อน — ต้องเห็นเสมอ ห้ามซ่อน (ต้นเหตุ "ลืมเบิกจนไลน์หยุด") ── */}
       {holds.length > 0 && (
         <div style={{ marginBottom: inFlight.length ? 12 : 0 }}>
-          <div style={{ fontSize: 11.5, fontWeight: 800, color: '#f59e0b', marginBottom: 6 }}>
+          <div style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--amber)', marginBottom: 6 }}>
             ⏸ {tr("พักไว้ก่อน")} {holds.length} {tr("พาร์ท — ยังไม่ได้เบิก (ความต้องการยังอยู่")})
           </div>
           {holds.map(r => (
@@ -905,7 +905,7 @@ export default function LinePartCallPanel({ lineName, lines = [], role, fullName
                 )}
                 {/* ขั้น 5 — สโตร์หยิบได้ไม่ครบต้องเห็นตั้งแต่ก่อนของมาถึง (ไม่ใช่เพิ่งรู้ตอนนับ) */}
                 {['preparing', 'delivered'].includes(r.status) && r.picked_qty != null && Number(r.picked_qty) < Number(r.request_qty) && (
-                  <span style={{ fontSize: 11, fontWeight: 800, color: '#f59e0b' }}>{tr('⚠ สโตร์หยิบได้')} {fmtQty(r.picked_qty)} / {fmtQty(r.request_qty)}</span>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--amber)' }}>{tr('⚠ สโตร์หยิบได้')} {fmtQty(r.picked_qty)} / {fmtQty(r.request_qty)}</span>
                 )}
                 {/* เฟส 4 — ของถูกวางที่ไหน/ผ่านด่านทางไหน: สแกนจุด · ไลน์ยังไม่ตั้งจุด · หัวหน้าปลดบล็อก (override ต้องเห็น ห้ามซ่อน) */}
                 {r.status === 'delivered' && r.delivered_gate && DELIVER_GATES[r.delivered_gate] && (
@@ -933,7 +933,7 @@ export default function LinePartCallPanel({ lineName, lines = [], role, fullName
 
       {/* ── worklist: ไลน์ยังไม่ตั้ง "จุดส่งงาน" — สโตร์ส่งได้ แต่ระบบตรวจไม่ได้ว่าวางถูกจุดไหม (เฟส 4 · ไม่รู้ = ห้ามบล็อก แต่ห้ามเงียบ) ── */}
       {!hasDeliveryPoint && (
-        <div style={{ marginTop: 10, fontSize: 11, color: '#f59e0b' }}>
+        <div style={{ marginTop: 10, fontSize: 11, color: 'var(--amber)' }}>
           {tr("ไลน์นี้ยังไม่ตั้งจุดส่งงาน — สโตร์ยิง QR ยืนยันจุดวางของไม่ได้ · ตั้งที่")} <b>{tr('ตั้งค่าผังไลน์ → 🎯 จุดส่งงาน')}</b> {tr("แล้วพิมพ์ป้ายที่ 🏷️ พิมพ์ป้าย")} QR
         </div>
       )}
@@ -942,7 +942,7 @@ export default function LinePartCallPanel({ lineName, lines = [], role, fullName
       {SHOW_LEVEL_REFILL && noLevel.length > 0 && (
         <div style={{ marginTop: 10, fontSize: 11, color: 'var(--muted)' }}>
           <button onClick={() => setShowNoLevel(v => !v)}
-            style={{ background: 'none', border: 'none', color: '#f59e0b', cursor: 'pointer', fontSize: 11, fontWeight: 700, padding: 0 }}>
+            style={{ background: 'none', border: 'none', color: 'var(--amber)', cursor: 'pointer', fontSize: 11, fontWeight: 700, padding: 0 }}>
             {showNoLevel ? '▾' : '▸'} {tr('⚠️ ยังไม่ได้ตั้งจุดเรียกเติม')} {noLevel.length} {tr('พาร์ท — ระบบจะไม่เตือนพาร์ทพวกนี้')}
           </button>
           {showNoLevel && (

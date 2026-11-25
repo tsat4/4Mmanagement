@@ -153,7 +153,7 @@ export default function KpiBaseInputsPanel({ year, scope, org, rows = [], base: 
     <div style={{ marginTop: 8 }}>
       <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--text)', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
         {title}
-        {hint && <span style={{ fontSize: 11.5, fontWeight: 500, color: '#f59e0b' }}>{hint}</span>}
+        {hint && <span style={{ fontSize: 11.5, fontWeight: 500, color: 'var(--amber)' }}>{hint}</span>}
       </div>
       <div style={{ overflowX: 'auto' }}>
         <table style={{ borderCollapse: 'collapse', fontSize: 12, width: '100%' }}>
