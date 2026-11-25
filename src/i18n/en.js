@@ -18387,6 +18387,10 @@ const EN = {
   "แก้ล่าสุดโดย": "Last edited by",
   "ยังไม่มีเลขมิเตอร์ (kWh) ของ": "No kWh meter reading yet for",
   "คิด Demand ของตู้นี้ไม่ได้": "cannot compute demand for this panel",
+  "สูงสุดเดือนนี้": "Month max",
+  "อ่านไม่ได้": "unreadable",
+  "ข้อมูลเริ่ม": "data starts",
+  "ช่วงที่ครบ": "complete windows",
   /* ── 🌐 รอบ 10 (25/11) — ตารางตัดสินใจ: user เคาะ "แปลทุกแถวที่เป็น UI รวมศัพท์หน้างาน" (AdoptionOutlook · FlowTower · mockup · PPE · ป้าย utils) ── */
   "JIG มีปัญหา (ชำรุด/ปรับแก้)": "JIG problem (damaged/adjusted)",
   "Stationary มีปัญหา": "Stationary problem",
