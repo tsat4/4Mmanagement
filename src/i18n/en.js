@@ -18688,6 +18688,10 @@ const EN = {
   "เครื่องในกลุ่มไลน์": "Machines in the line group",
   "เครื่องอื่นในโรงงาน": "Other machines in the plant",
 
+  "CO₂ ที่ปล่อยวันนี้": "CO₂ emitted today",
+  "อ่านค่าการปล่อย (EF) ไม่ได้": "Cannot read emission factor (EF)",
+  "ยังไม่ได้ตั้งค่าการปล่อย (EF) — แท็บค่าการปล่อย": "No emission factor (EF) set — Emission factor tab",
+  "จากมิเตอร์บนบอร์ด (Scope 2) · แท็บรายเดือนใช้ยอดบิลเมื่อมี": "From board meters (Scope 2) · monthly tab uses the bill when available",
 };
 
 export default EN;
