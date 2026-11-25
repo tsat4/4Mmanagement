@@ -12,14 +12,20 @@
 -- สำรองก่อนแก้: archive.line_stock_summary_bak_20261125 (ยอดคงเหลือทุกคู่ ก่อนแก้)
 -- ย้อนกลับ: ลบแถวที่ created_by in ('system:store-leg-fix','system:store-dest-fix')
 --
--- ผลที่วัดได้หลังรัน (25/11):
---   ① 174 ใบ · หัก STORE คืน 116,877.8 ชิ้น (= ยอดที่ขาดเป๊ะ) · เหลือ 0 ใบ
---   ②+③ 27 คู่ (ไลน์,mat) · 54 แถวจับคู่ · สุทธิ 0 · เหลือ 0 คู่
---   STORE 4,632,242 → 6,030,341 (+1,398,099)
+-- 🔴🔴 **กับดักที่เกือบพลาด — ต้องกันแถวที่ "ล้างยอด 01/10" จัดการไปแล้ว**
+--    `created_by = 'ระบบ · ตั้งต้นใหม่ 01/10'` ล้างยอดคงเหลือเป็น 0 ทั้งกระดาน (คำสั่ง user)
+--    ⇒ แถวต้นทางที่ลง **ก่อน 01/10** ถูกล้างไปแล้ว · หักอีกรอบ = **หักซ้ำ**
+--    รอบแรกผม (AI) หักซ้ำไป 1,338,130 ชิ้น แล้วถอนออก — Assy GOR เคยเพี้ยนไป −756,283
+--    ⇒ **เงื่อนไข `max(created_at) >= '2026-10-01'` ห้ามถอด**
 --
--- ⚠️ **ผลข้างเคียงที่ตั้งใจ**: ยอดที่ไลน์ติดลบหนักขึ้น (Assy GOR −756,283 · Line 61 −355,753 ฯลฯ)
---    = ไลน์กินของที่ระบบไม่เคยบันทึกว่าจ่ายเข้าไลน์ (ลูปใบขอเติมเพิ่งเริ่มใช้ทีหลัง)
---    **ติดลบที่ซื่อสัตย์ ดีกว่ายอดบวกที่ผิด** · เคลียร์ด้วยการนับของจริงตั้งต้น (ขั้น ② ของแผน min/max)
+-- ผลที่วัดได้หลังรัน (25/11):
+--   ① 172 ใบ · หัก STORE คืน 114,747.8 ชิ้น · เหลือ 0 ใบ
+--   ②+③ 17 คู่ (ไลน์,mat) · 34 แถวจับคู่ · สุทธิ 0 · เหลือ 0 คู่
+--   STORE 4,632,242 → 4,695,211 (+62,969) · Assy GOR ไม่ขยับ (ต่าง 0)
+--
+-- ⚠️ **ผลข้างเคียงที่ตั้งใจ**: LINE D −5,412 → −100,212 · LINE C +7,200 → −19,400
+--    = ของที่ note บอก "เข้าสโตร์" ถูกย้ายออกจากไลน์ไป STORE ตามจริง แต่ไลน์ยังกินเท่าเดิม
+--    **ติดลบที่ซื่อสัตย์ ดีกว่ายอดบวกที่ผิด** · เคลียร์ด้วยการนับของจริง (ขั้น ② ของแผน min/max)
 -- ═══════════════════════════════════════════════════════════════════════════════════
 
 create schema if not exists archive;
@@ -33,7 +39,9 @@ with tx as (
          substring(note from 'ใบ ([0-9a-f]{8})\)') as slip
     from public.line_stock_transactions
    where note ~ 'ใบ [0-9a-f]{8}\)' and status = 'approved'),
-s as (select slip from tx where slip is not null group by slip having not bool_or(type = 'consume'))
+-- 🔴 เฉพาะใบที่ลง **ตั้งแต่ 01/10** — ก่อนหน้านั้นถูก "ล้างยอด 01/10" จัดการไปแล้ว (หักซ้ำ)
+s as (select slip from tx where slip is not null
+       group by slip having not bool_or(type = 'consume') and min(created_at) >= date '2026-10-01')
 insert into public.line_stock_transactions
   (line_name, mat_no, part_name, qty, type, status, work_date, note, created_by)
 select 'STORE', t.mat_no, t.part_name, -t.qty, 'adjust', 'approved', t.work_date,
@@ -50,7 +58,9 @@ with bad as (
     from public.line_stock_transactions
    where type = 'issue' and status = 'approved'
      and note ~* 'เข้า\s*(สโตร์|STORE)' and line_name <> 'STORE'
-   group by 1, 2),
+   group by 1, 2
+   -- 🔴 คู่ที่แถวต้นทางลงก่อน 01/10 ทั้งหมด = ถูกล้างยอดไปแล้ว ห้ามหักซ้ำ
+   having max(created_at) >= date '2026-10-01'),
 fixed as (
   select mat_no, line_name, -sum(qty) as moved
     from public.line_stock_transactions
