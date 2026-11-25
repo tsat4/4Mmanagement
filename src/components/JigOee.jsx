@@ -598,7 +598,7 @@ export function JigDrilldown({ j, trendRows = null, target = 0.85 }) {
                 {o.pieces != null && ` · ${tr("ต่างกัน")} ${o.pieces - j.confirmedQty} (${tr("ใบที่ยังไม่ปิด/งานรอยืนยัน")})`}
               </div>
             </div>
-          ) : <div style={{ fontSize: 12.5, color: 'var(--amber)' }}>{WHY_TEXT.no_order}</div>
+          ) : <div style={{ fontSize: 12.5, color: 'var(--amber)' }}>{tr(WHY_TEXT.no_order)}</div>
         ))}
       {sec('การหยุดล่าสุด', 'ไม่รวมหยุดสั้น และช่วงไม่มีแผน', <StopTable stops={j.stops} />)}
       {trendRows && sec('แนวโน้มรายกะ', `A / P / Q / OEE ${tr("จากเครื่อง")} · ${trendRows.length} ${tr("กะล่าสุด")}`, <ShiftTrendChart rows={trendRows} target={target} />)}

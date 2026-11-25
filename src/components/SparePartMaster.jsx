@@ -339,7 +339,7 @@ export default function SparePartMaster({ parts = [], reload, fullName, role, my
 
       {/* ── สรุป ── */}
       <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 12 }}>
-        {chip('รายการ', summary.total)}
+        {chip(tr("รายการ"), summary.total)}
         {chip('Rank A', summary.A, RANK_META.A.color)}
         {chip('Rank B', summary.B, RANK_META.B.color)}
         {chip('Rank C', summary.C, RANK_META.C.color)}
@@ -554,7 +554,7 @@ function StockMoveModal({ part, type, fullName, onClose, onDone }) {
 function PartEditModal({ part, cats, teams, shelfOpts, rackCells = [], secOpts = [], orgSecs = [], defSection = '', defTeam = '', usageRows, count, onClose, onSaved }) {
   const isNew = !part;
   const [f, setF] = useState(() => ({
-    code: part?.code || '', name: part?.name || '', unit: part?.unit || 'ชิ้น',
+    code: part?.code || '', name: part?.name || '', unit: part?.unit || tr("ชิ้น"),
     team: part?.team || defTeam || 'maintenance', mat_no: part?.mat_no || '', part_no: part?.part_no || '',
     // หน่วยงานเจ้าของ — ของใหม่ตั้งต้นจากหน่วยงานที่กำลังกรอง/ของผู้ใช้เอง · ว่าง = ของกลาง
     section: part?.section || (part ? '' : sectionKeyOf(defSection)),
@@ -640,7 +640,7 @@ function PartEditModal({ part, cats, teams, shelfOpts, rackCells = [], secOpts =
     if (f.rank_override && !f.rank_note.trim()) return toast.error('กำหนด Rank เองต้องระบุเหตุผล');
     setSaving(true);
     const payload = {
-      code: f.code.trim() || null, name: f.name.trim(), unit: f.unit.trim() || 'ชิ้น',
+      code: f.code.trim() || null, name: f.name.trim(), unit: f.unit.trim() || tr("ชิ้น"),
       team: f.team, section: sectionKeyOf(f.section) || null, mat_no: f.mat_no.trim() || null, part_no: f.part_no.trim() || null,
       supplier: (f.supplier || '').trim() || null, category: f.category || null, shelf: f.shelf.trim() || null,
       min_qty: Number(f.min_qty) || 0, max_qty: Number(f.max_qty) || 0,
@@ -997,7 +997,7 @@ function ImportModal({ parts, cats, teams, fullName, ownOf = () => ({ ok: true }
     const XLSX = await import('xlsx');
     const ws = XLSX.utils.aoa_to_sheet([
       TEMPLATE_HEADERS,
-      ['SP-001', 'โซลินอยด์วาล์ว SMC', 'ชิ้น', teams[0]?.dept_name || 'MTN', '', 'VQ1000', 'SMC', cats[0]?.key || '', 'A-01-1', 5, 2, 10, 850, 30, 'RB-104', ''],
+      ['SP-001', 'โซลินอยด์วาล์ว SMC', tr("ชิ้น"), teams[0]?.dept_name || 'MTN', '', 'VQ1000', 'SMC', cats[0]?.key || '', 'A-01-1', 5, 2, 10, 850, 30, 'RB-104', ''],
     ]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'spare parts');

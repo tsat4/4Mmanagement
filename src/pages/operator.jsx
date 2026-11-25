@@ -1117,7 +1117,7 @@ export default function Operator() {
               // เปลี่ยนตัวแม่ = ล้างตัวลูก (กันค้างค่าที่ไม่อยู่ใน scope ใหม่แล้วตารางว่างงงๆ)
               { label: 'Section', all: ALL.section,    value: filterSection, opts: sectionOpts, set: (v) => { setFilterSection(v); setFilterDept(''); setFilterGroup(''); } },
               { label: 'Dept',    all: ALL.dept,       value: filterDept,    opts: deptOpts,    set: (v) => { setFilterDept(v); setFilterGroup(''); } },
-              { label: 'Group',   all: allOf('กลุ่ม'), value: filterGroup,   opts: groupOpts,   set: setFilterGroup },
+              { label: 'Group',   all: allOf(tr("กลุ่ม")), value: filterGroup,   opts: groupOpts,   set: setFilterGroup },
               { label: 'Team',    all: ALL.team,       value: filterTeam,    opts: teamOpts,    set: setFilterTeam },
             ];
             const scopeSel = (f) => (
@@ -1179,9 +1179,9 @@ export default function Operator() {
                 ส่วน Direct/Indirect ข้างล่าง = ประเภทแรงงานเชิงต้นทุน (derive จากแผนกในผังองค์กร) */}
             <span style={{ width: 1, height: 20, background: 'var(--border2)', margin: '0 2px' }} />
             {[
-              { k: 'shopfloor',  icon: '🧑‍🏭', label: 'หน้างาน',  color: 'var(--green)', title: 'พนักงานหน้าไลน์ — เช็คชื่อ · นับเป็นกำลังคนของไลน์' },
-              { k: 'technician', icon: '🔧', label: 'ช่าง',     color: 'var(--blue)', title: 'ช่างซ่อมบำรุง/จิ๊ก/แม่พิมพ์ — เช็คชื่อได้ แต่ไม่นับเป็นกำลังคนของไลน์ (ซ่อมข้ามไลน์)' },
-              { k: 'support',    icon: '🗂️', label: 'สนับสนุน', color: 'var(--blue)', title: 'QA · วิศวกรรม · ธุรการ · สโตร์ — เช็คชื่อได้ ไม่นับกำลังคนของไลน์' },
+              { k: 'shopfloor',  icon: '🧑‍🏭', label: 'หน้างาน',  color: 'var(--green)', title: tr("พนักงานหน้าไลน์ — เช็คชื่อ · นับเป็นกำลังคนของไลน์") },
+              { k: 'technician', icon: '🔧', label: 'ช่าง',     color: 'var(--blue)', title: tr("ช่างซ่อมบำรุง/จิ๊ก/แม่พิมพ์ — เช็คชื่อได้ แต่ไม่นับเป็นกำลังคนของไลน์ (ซ่อมข้ามไลน์)") },
+              { k: 'support',    icon: '🗂️', label: 'สนับสนุน', color: 'var(--blue)', title: tr("QA · วิศวกรรม · ธุรการ · สโตร์ — เช็คชื่อได้ ไม่นับกำลังคนของไลน์") },
             ].map(t => {
               const active = filterStaffKind === t.k;
               return (
@@ -1440,9 +1440,9 @@ export default function Operator() {
                       ); })()}
                     </td>
                     {/* ค่าที่ไม่มีในผังองค์กรทำเป็นสีเหลืองนิ่ง + tooltip บอกเหตุผล (ไม่กระพริบ — ไม่ใช่ alarm) */}
-                    <td style={{ fontSize: 12, color: offOrg.some(r => r.includes('แผนก')) ? '#f59e0b' : 'var(--text2)' }}
-                      title={offOrg.find(r => r.includes('แผนก')) || ''}>
-                      {offOrg.some(r => r.includes('แผนก')) && '⚠ '}
+                    <td style={{ fontSize: 12, color: offOrg.some(r => r.includes(tr("แผนก"))) ? '#f59e0b' : 'var(--text2)' }}
+                      title={offOrg.find(r => r.includes(tr("แผนก"))) || ''}>
+                      {offOrg.some(r => r.includes(tr("แผนก"))) && '⚠ '}
                       {emp.department
                         || (needsDepartment(emp.position)
                             ? '—'
@@ -1450,9 +1450,9 @@ export default function Operator() {
                             : <span title={tr('ตำแหน่งระดับส่วนงาน — ดูแลทั้งส่วน ไม่ได้สังกัดแผนกใดแผนกหนึ่ง')}
                                 style={{ color: 'var(--muted)' }}>{tr('ทั้งส่วนงาน')}</span>)}
                     </td>
-                    <td style={{ fontSize: 12, color: offOrg.some(r => r.includes('กลุ่ม')) ? '#f59e0b' : 'var(--text2)' }}
-                      title={offOrg.find(r => r.includes('กลุ่ม')) || ''}>
-                      {offOrg.some(r => r.includes('กลุ่ม')) && '⚠ '}{emp.group_name || '—'}
+                    <td style={{ fontSize: 12, color: offOrg.some(r => r.includes(tr("กลุ่ม"))) ? '#f59e0b' : 'var(--text2)' }}
+                      title={offOrg.find(r => r.includes(tr("กลุ่ม"))) || ''}>
+                      {offOrg.some(r => r.includes(tr("กลุ่ม"))) && '⚠ '}{emp.group_name || '—'}
                     </td>
                     <td style={{ fontSize: 12, color: 'var(--text2)' }}>{emp.team       || '—'}</td>
                     <td style={{ fontSize: 12, color: 'var(--text2)', whiteSpace: 'nowrap' }}>

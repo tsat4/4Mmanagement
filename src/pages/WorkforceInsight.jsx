@@ -241,7 +241,7 @@ function ManpowerTab({ employees, empById, lines, sectionsList, secFilter, setSe
         <Segmented value={shift} onChange={setShift} options={SHIFT_SEG} label={trI18n('กะ')} />
         <span className="spacer" />
         <button onClick={() => downloadCSV('csv_manpower_daily', `manpower_${from}_${to}.csv`,
-          ['วันที่', 'มาทำงาน', 'ลา', 'ขาด(ไม่ระบุเหตุ)', 'OT', 'รวมเช็คชื่อ'],
+          ['วันที่', trI18n("มาทำงาน"), trI18n("ลา"), 'ขาด(ไม่ระบุเหตุ)', 'OT', 'รวมเช็คชื่อ'],
           daily.map(d => [d.date, d.present, d.leave, d.absent, d.ot, d.total]))}
           style={csvBtnSt}>
           CSV
@@ -277,9 +277,9 @@ function ManpowerTab({ employees, empById, lines, sectionsList, secFilter, setSe
                 <ReferenceLine y={stdTotal} stroke="var(--amber)" strokeDasharray="6 4"
                   label={{ value: `มาตรฐาน ${stdTotal} คน`, position: 'insideTopRight', fill: 'var(--amber)', fontSize: 11, fontWeight: 800 }} />
               )}
-              <Bar dataKey="present" name="มาทำงาน" fill="var(--accent)" radius={[3, 3, 0, 0]} {...chartAnim()} />
-              <Bar dataKey="leave" name="ลา" fill="var(--amber)" radius={[3, 3, 0, 0]} {...chartAnim()} />
-              <Bar dataKey="absent" name="ขาด" fill="var(--red)" radius={[3, 3, 0, 0]} {...chartAnim()} />
+              <Bar dataKey="present" name={trI18n("มาทำงาน")} fill="var(--accent)" radius={[3, 3, 0, 0]} {...chartAnim()} />
+              <Bar dataKey="leave" name={trI18n("ลา")} fill="var(--amber)" radius={[3, 3, 0, 0]} {...chartAnim()} />
+              <Bar dataKey="absent" name={trI18n("ขาด")} fill="var(--red)" radius={[3, 3, 0, 0]} {...chartAnim()} />
             </ComposedChart>
           </ResponsiveContainer>
           <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
@@ -400,7 +400,7 @@ function MovesTab({ empById, sectionsList, secFilter, setSecFilter, inScope, org
         <SectionScopeSelect index={orgIndex} failed={orgFail} value={secFilter} onChange={s => setSecFilter(s)} only={sectionsList} />
         <span className="spacer" />
         <button onClick={() => downloadCSV('csv_station_moves', `station_moves_${from}_${to}.csv`,
-          ['วันที่', 'กะ', 'รหัส', 'ชื่อ', 'ไลน์', 'จุดเดิม', 'จุดใหม่', 'เวลา', 'ผู้มอบหมาย'],
+          ['วันที่', trI18n("กะ"), 'รหัส', 'ชื่อ', trI18n("ไลน์"), 'จุดเดิม', 'จุดใหม่', 'เวลา', 'ผู้มอบหมาย'],
           moves.map(mv => [mv.work_date, mv.shift, empById[mv.employee_id]?.employee_id_code, empById[mv.employee_id]?.name, mv.line_name, mv.from, mv.to, mv.at, mv.by]))}
           style={csvBtnSt}>
           CSV
@@ -816,7 +816,7 @@ function OtMonthlyTab({ empById, sectionsList, secFilter, setSecFilter, inScope,
   const doCSV = () => {
     if (!shown.length) { toast.info('ไม่มีข้อมูลให้ export'); return; }
     downloadCSV('csv_ot_individual', `OT-${trI18n("รายบุคคล")}-${month}.csv`,
-      ['ลำดับ', 'รหัสพนักงาน', 'ชื่อ-นามสกุล', 'ตำแหน่ง', 'ส่วน', 'ฝ่าย', 'OT วันทำงาน', 'OT วันหยุด', 'Total (วัน)', 'หมายเหตุ'],
+      ['ลำดับ', 'รหัสพนักงาน', 'ชื่อ-นามสกุล', 'ตำแหน่ง', 'ส่วน', 'ฝ่าย', 'OT วันทำงาน', 'OT วันหยุด', 'Total (วัน)', trI18n("หมายเหตุ")],
       exportRows().map((r, i) => [i + 1, r.code, r.name, r.position, r.section, r.department, r.working, r.holiday, r.total, r.reason]));
   };
 

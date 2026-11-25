@@ -5,6 +5,7 @@
    applyFormulaEntries · คาดปลายปีจาก yearForecast · อัตราที่ต้องทำจาก neededRunRate) ตัวนี้แค่ "เรียบเรียง" **ไม่คิดเกณฑ์เอง**
    🔴 กฎความซื่อสัตย์: ไม่มีข้อมูลข้อไหน = ไม่เขียนข้อนั้น (ไม่เดา) · การคาดการณ์ต้องบอกสมมติฐานทุกครั้ง */
 import { baseVarOf, formulaOf } from './kpiSetup.js';
+import { tr } from './i18n.js';
 
 const num = (v) => (v == null || v === '' || Number.isNaN(Number(v)) ? null : Number(v));
 const pct = (a, b) => (a == null || b == null || b === 0 ? null : ((a - b) / Math.abs(b)) * 100);
@@ -33,8 +34,8 @@ export function formulaDrivers(info, month, prevMonth, { fmtIn = (v, x) => Strin
     driver = {
       numLabel, denLabel: den.label, numChg, denChg, main,
       text: main === 'num'
-        ? `ตัวตั้ง (${numLabel}) ${numUp ? 'เพิ่ม' : 'ลด'} ${Math.abs(numChg).toFixed(1)}% แรงกว่าตัวหาร (${den.label}) ${denUp ? 'เพิ่ม' : 'ลด'} ${Math.abs(denChg ?? 0).toFixed(1)}% ⇒ ค่าขยับเพราะ${numLabel}เป็นหลัก`
-        : `ตัวหาร (${den.label}) ${denUp ? 'เพิ่ม' : 'ลด'} ${Math.abs(denChg).toFixed(1)}% แรงกว่าตัวตั้ง (${numLabel}) ${numUp ? 'เพิ่ม' : 'ลด'} ${Math.abs(numChg ?? 0).toFixed(1)}% ⇒ ค่าขยับเพราะ${den.label}${denUp ? 'โต' : 'หด'}เป็นหลัก`,
+        ? `ตัวตั้ง (${numLabel}) ${numUp ? tr("เพิ่ม") : 'ลด'} ${Math.abs(numChg).toFixed(1)}% แรงกว่าตัวหาร (${den.label}) ${denUp ? tr("เพิ่ม") : 'ลด'} ${Math.abs(denChg ?? 0).toFixed(1)}% ⇒ ค่าขยับเพราะ${numLabel}เป็นหลัก`
+        : `ตัวหาร (${den.label}) ${denUp ? tr("เพิ่ม") : 'ลด'} ${Math.abs(denChg).toFixed(1)}% แรงกว่าตัวตั้ง (${numLabel}) ${numUp ? tr("เพิ่ม") : 'ลด'} ${Math.abs(numChg ?? 0).toFixed(1)}% ⇒ ค่าขยับเพราะ${den.label}${denUp ? 'โต' : 'หด'}เป็นหลัก`,
     };
   }
   return { vars, driver, lines: vars.map(v => `${v.label} ${fmtIn(v.key, v.prev)} → ${fmtIn(v.key, v.cur)} (${sgn(v.chg)}%)`) };
@@ -134,7 +135,7 @@ export function buildInsight({
     const assume = f.basis === 'plan' ? `แผนรายเดือน ${f.planMonths} ด.`
       : f.assumed?.kind === 'slope' ? `เดือนที่เหลือ ${f.assumedMonths.length} ด. เพิ่มต่อเท่าอัตราเดิม${f.planMonths ? ` + แผน ${f.planMonths} ด.` : ''}`
       : f.assumed ? `เดือนที่เหลือ ${f.assumedMonths.length} ด. ทำได้เท่าค่าเฉลี่ย ${fmt(f.assumed.rate)}${f.planMonths ? ` + แผน ${f.planMonths} ด.` : ''}` : 'ครบ 12 เดือนจริง';
-    const verdict = f.status === 'good' ? '✅ คาดถึงเป้า' : f.status === 'warn' ? '🟡 ถึงแค่ Commitment' : f.status === 'bad' ? '❌ คาดไม่ถึงเป้า' : 'ยังไม่มีเป้าให้ตัดสิน';
+    const verdict = f.status === 'good' ? tr("✅ คาดถึงเป้า") : f.status === 'warn' ? '🟡 ถึงแค่ Commitment' : f.status === 'bad' ? tr("❌ คาดไม่ถึงเป้า") : 'ยังไม่มีเป้าให้ตัดสิน';
     out.push({ icon: '🔮', tone: f.status === 'good' ? 'good' : f.status === 'bad' ? 'bad' : 'warn', kind: 'forecast',
       data: { value: f.value, status: f.status, basis: f.basis, assumed: f.assumed, actualMonths: f.actualMonths, assumedMonths: f.assumedMonths, planMonths: f.planMonths, approx: f.approx, assume, verdict },
       prio: f.status === 'bad' ? INSIGHT_PRIO.fcBad : f.status === 'good' ? INSIGHT_PRIO.fcGood : INSIGHT_PRIO.fcWarn,

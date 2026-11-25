@@ -486,7 +486,7 @@ export default function ProdLotPlanner({
         <span style={{ fontSize: 13, fontWeight: 800, color: overflowCount > 0 ? '#ef4444' : 'var(--text)' }}>
           {tr("คาดจบ")} <b>{hz.finishMs == null ? '—' : fmtDayTime(hz.finishMs)}</b>
           {hz.shiftsUsed != null && <span style={{ fontWeight: 600, color: 'var(--text2)' }}> {tr('· กิน')} {hz.shiftsUsed} {tr("กะ")}
-            {hz.lastSegment && ` (${tr("ยาวถึง")} ${SHIFT_LABEL[hz.lastSegment.shift]} ${hz.lastSegment.workDate.slice(8)}/${hz.lastSegment.workDate.slice(5, 7)})`}</span>}
+            {hz.lastSegment && ` (${tr("ยาวถึง")} ${tr(SHIFT_LABEL[hz.lastSegment.shift])} ${hz.lastSegment.workDate.slice(8)}/${hz.lastSegment.workDate.slice(5, 7)})`}</span>}
         </span>
         {summary.trialCount > 0 && (
           <span style={{ fontSize: 12.5, color: '#22d3ee', fontWeight: 700 }}
@@ -649,7 +649,7 @@ export default function ProdLotPlanner({
                       return (
                         <span style={{ color: same ? 'var(--text2)' : 'var(--accent)' }}
                           title={same ? tr("ตรงกับที่บันทึกไว้") : `${tr("จะถูกย้ายจาก")} ${l.shift === 'night' ? tr('กะดึก') : tr('กะเช้า')} ${l.work_date} ${tr("ตอนกดบันทึก")}`}>
-                          {SHIFT_LABEL[at.shift]} {at.workDate.slice(8)}/{at.workDate.slice(5, 7)}{same ? '' : ' ✧'}
+                          {tr(SHIFT_LABEL[at.shift])} {at.workDate.slice(8)}/{at.workDate.slice(5, 7)}{same ? '' : ' ✧'}
                         </span>
                       );
                     })()}</td>

@@ -23,7 +23,7 @@ const SCOPES = [
   { key: 'line', label: 'เฉพาะไลน์' },
   { key: 'machine', label: 'เฉพาะเครื่อง' },
 ];
-const scopeLabel = (r) => (r.scope_kind === 'global' ? 'ทั้งโรงงาน' : `${r.scope_kind === 'line' ? tr('ไลน์') : tr('เครื่อง')} ${r.scope_value || '—'}`);
+const scopeLabel = (r) => (r.scope_kind === 'global' ? tr("ทั้งโรงงาน") : `${r.scope_kind === 'line' ? tr('ไลน์') : tr('เครื่อง')} ${r.scope_value || '—'}`);
 
 const inp = { padding: '5px 8px', borderRadius: 6, fontSize: 12, border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text)', width: '100%', boxSizing: 'border-box' };
 const btn = (bg, color = '#fff') => ({ padding: '5px 10px', borderRadius: 6, fontSize: 11.5, fontWeight: 700, cursor: 'pointer', background: bg, color, border: '1px solid var(--border)', whiteSpace: 'nowrap' });

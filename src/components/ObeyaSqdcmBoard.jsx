@@ -192,7 +192,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
     [role, homeSection, sections, allUnits, respCostCenters, scopeIdx, secFilter]);
   /* ส่วนงานทั้งหมดที่อยู่ใต้ขอบเขตที่เลือก (ฝ่าย = หลายส่วนงาน) — ใช้กรองใบ Action ที่ระบุแค่ส่วนงาน · null = ทั้งโรงงาน */
   const scopeSecs = useMemo(() => (isPlant(scope) ? null : org.sectionsOf(scope.kind, scope.value)), [scope, org]);
-  const scopeText = scopePathText(org, scope, 'ทุกส่วนงาน');   // CC = เส้นทางหน่วยเจ้าของ › 💰 รหัส (12/10)
+  const scopeText = scopePathText(org, scope, tr("ทุกส่วนงาน"));   // CC = เส้นทางหน่วยเจ้าของ › 💰 รหัส (12/10)
   const [targets, setTargets] = useState({});
   const [ccRates, setCcRates] = useState([]);
   /* daily_production_logs.assigned_line = **id จุดงาน (workstations.id)** ไม่ใช่ชื่อไลน์ (docs/modules/morning-meeting.md)
@@ -702,7 +702,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
           <YAxis domain={stacked ? undefined : domain} ticks={stacked ? undefined : ticks} allowDataOverflow={!stacked && !!ticks} tick={tickY} width="auto"
             tickFormatter={stacked ? (v => (v >= 1000 ? `${Math.round(v / 1000)}k` : v)) : undefined} />
           <Tooltip {...chartTip} formatter={stacked
-            ? ((v, nm) => [fmtBaht(v), nm === 'dt' ? 'เครื่องหยุด' : 'ของเสีย'])
+            ? ((v, nm) => [fmtBaht(v), nm === 'dt' ? tr("เครื่องหยุด") : 'ของเสีย'])
             : (v => [fmt(v), name])}
             labelFormatter={(l, pl) => (pl?.[0]?.payload?.summary
               ? `${tr("สรุปปี")} ${year} (${pl[0].payload.kind === 'sum' ? tr('รวมทั้งปี') : tr('เฉลี่ยถ่วงน้ำหนักทั้งปี')})`
@@ -966,7 +966,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                   <XAxis dataKey="label" tick={axisTick} interval="preserveStartEnd" />
                   <YAxis tick={axisTick} width="auto" tickFormatter={v => (v >= 1000 ? `${Math.round(v / 1000)}k` : v)} />
-                  <Tooltip {...chartTip} formatter={(v, n) => [fmtBaht(v), n === 'dt' ? 'เครื่องหยุด' : 'ของเสีย']} />
+                  <Tooltip {...chartTip} formatter={(v, n) => [fmtBaht(v), n === 'dt' ? tr("เครื่องหยุด") : 'ของเสีย']} />
                   <Bar {...chartAnim()} dataKey="dt" stackId="c" fill="var(--amber)" />
                   <Bar {...chartAnim()} dataKey="ng" stackId="c" fill="var(--blue)" radius={[2, 2, 0, 0]} />
                 </BarChart>
@@ -990,7 +990,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                   <XAxis dataKey="label" tick={axisTick} interval="preserveStartEnd" />
                   <YAxis tickFormatter={fmtAxis} domain={[0, 100]} tick={axisTick} width="auto" />
-                  <Tooltip {...chartTip} formatter={(v, n) => (n === 'v' ? [`${v}%`, 'มาทำงาน'] : [v, 'คน'])} />
+                  <Tooltip {...chartTip} formatter={(v, n) => (n === 'v' ? [`${v}%`, tr("มาทำงาน")] : [v, tr("คน")])} />
                   <ReferenceLine y={kM.target} stroke="var(--red)" strokeDasharray="4 3" />
                   <Bar {...chartAnim()} dataKey="v" fill={axisSheet('M').color} radius={[2, 2, 0, 0]} />
                 </ComposedChart>

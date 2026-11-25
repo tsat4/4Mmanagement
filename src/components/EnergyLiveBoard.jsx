@@ -13,7 +13,7 @@ import { supabaseDR } from '../supabaseClient';
 import { usePolling } from '../utils/usePolling';
 import { RATE } from '../utils/refreshRates';
 import { bkkDateStr } from '../utils/workDate';
-import { buildLiveBoard, liveSeries, METER_OFFLINE_MIN, demandWindows, DEMAND_WINDOW_MIN } from '../utils/energy';
+import { buildLiveBoard, liveSeries, METER_OFFLINE_MIN, demandWindows, DEMAND_WINDOW_MIN, demandKwFromKwh } from '../utils/energy';
 import NoticeBar from './NoticeBar';
 import useIsMobile from '../utils/useIsMobile';
 import { fetchReadingsSince } from '../lib/energyReadings';
@@ -541,6 +541,27 @@ function DemandCard({ panel, readings, nowMs, today, cfg }) {
     readings, names, nowMs, dayStartMs: Date.parse(`${today}T00:00:00+07:00`),
     kwNow: panel.partial ? null : panel.kw,           // ตู้ออนไลน์ไม่ครบ = kW ตอนนี้ต่ำกว่าจริง ⇒ ไม่คาดการณ์
   }), [readings, names, nowMs, today, panel]);
+  /* 📅 สูงสุดเดือนนี้ (25/11) — รายนาทีเก็บแค่ 7 วัน ⇒ อ่านจาก energy_demand_15m (trigger เติมทุกนาที) ผ่าน RPC
+     โหลดเมื่อเปลี่ยนตู้/เดือน + ทุก 15 นาที · อ่านไม่ได้ = เขียนบอก ห้ามโชว์ค่าว่างเหมือนไม่มี */
+  const namesKey = names.join('|');
+  const monthKey = today.slice(0, 7);
+  const [mon, setMon] = useState(null);           // null = ยังโหลด · { err } · { kw, at, first, n }
+  const monReq = useRef(0);
+  const loadMonth = useCallback(async () => {
+    const id = ++monReq.current;
+    const [y, m] = monthKey.split('-').map(Number);
+    const next = `${m === 12 ? y + 1 : y}-${String(m === 12 ? 1 : m + 1).padStart(2, '0')}`;
+    const { data, error } = await supabaseDR.rpc('fn_energy_demand_month', {
+      p_names: namesKey.split('|'), p_from: `${monthKey}-01T00:00:00+07:00`, p_to: `${next}-01T00:00:00+07:00`,
+    });
+    if (id !== monReq.current) return;
+    const r = Array.isArray(data) ? data[0] : data;
+    setMon(error ? { err: error.message } : {
+      kw: demandKwFromKwh(r?.kwh), at: r?.window_start ? Date.parse(r.window_start) : null,
+      first: r?.first_window ? Date.parse(r.first_window) : null, n: r?.windows_n ?? 0,
+    });
+  }, [namesKey, monthKey]);
+  usePolling(loadMonth, RATE.BOARD);
   if (!d) return null;
   const target = cfg?.err ? null : (cfg?.[panel.panel]?.demand_target_kw != null ? Number(cfg[panel.panel].demand_target_kw) : null);
   const c = d.current;
@@ -548,6 +569,7 @@ function DemandCard({ panel, readings, nowMs, today, cfg }) {
   const bars = d.windows.slice(-DEMAND_BARS);
   const top = Math.max(target || 0, ...bars.map(b => b.kw || 0), c.avgKw || 0, 1);
   const hm = (ms) => timeTh(ms);
+  const dShort = (ms) => new Date(ms).toLocaleDateString(dateLocale(), { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short' });
   return (
     <div style={{ ...card, borderLeft: `4px solid ${over(c.avgKw) ? BAD : GOOD}` }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
@@ -569,6 +591,12 @@ function DemandCard({ panel, readings, nowMs, today, cfg }) {
             {' · '}{tr('เป้า')} {target == null ? <span style={{ color: 'var(--muted)' }}>{cfg?.err ? tr('อ่านเป้าไม่ได้') : tr('ยังไม่ได้ตั้งเป้า (แท็บตั้งค่าตู้)')}</span> : `${fmt(target, 0)} kW`}
             <br />
             {tr('ช่วงก่อน')} {fmt(d.prev?.kw)} kW · {tr('สูงสุดวันนี้')} {fmt(d.todayMax?.kw)} kW{d.todayMax ? ` (${hm(d.todayMax.start)})` : ''}
+            {' · '}{tr('สูงสุดเดือนนี้')}{' '}
+            {mon == null ? '…' : mon.err ? <span style={{ color: WARN }}>{tr('อ่านไม่ได้')}</span>
+              : <><b style={{ color: over(mon.kw) ? BAD : 'var(--text)' }}>{fmt(mon.kw)} kW</b>{mon.at ? ` (${dShort(mon.at)} ${hm(mon.at)})` : ''}</>}
+            {mon?.first != null && mon.first > Date.parse(`${monthKey}-01T00:15:00+07:00`) && (
+              <span style={{ color: 'var(--muted)' }}> · {tr('ข้อมูลเริ่ม')} {dShort(mon.first)} ({mon.n} {tr('ช่วงที่ครบ')})</span>
+            )}
             {panel.partial && <span style={{ color: WARN }}> · {tr('มิเตอร์ชั้นบนสุดออนไลน์ไม่ครบ — ไม่คาดการณ์')}</span>}
             {d.missing.length > 0 && <><br /><span style={{ color: WARN }}>{tr('ยังไม่มีเลขมิเตอร์ (kWh) ของ')} {d.missing.join(', ')} — {tr('คิด Demand ของตู้นี้ไม่ได้')}</span></>}
           </div>

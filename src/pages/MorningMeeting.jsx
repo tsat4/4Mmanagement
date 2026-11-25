@@ -270,7 +270,7 @@ export default function MorningMeeting() {
         ]);
         const pm = await loadPairMap();   // คู่ RH/LH จาก cache ทะเบียนสินค้ากลาง (25/09) — แหล่งเดียวกับทุกจอ
         if (!live()) return;
-        const dt = chk(dtRes, 'เครื่องหยุด'), def = chk(defRes, 'ของเสีย'), po = chk(poRes, 'ใบผลิต');
+        const dt = chk(dtRes, tr("เครื่องหยุด")), def = chk(defRes, 'ของเสีย'), po = chk(poRes, 'ใบผลิต');
         setDowntimes(dt || []); setDefects(def || []); setOrders(po || []);
         setPairMat(pm || {});
       } else {
@@ -633,7 +633,7 @@ export default function MorningMeeting() {
         sum.target > 0
           ? { label: 'ผลิตรวม (ชิ้น)', value: `${sum.actual.toLocaleString()}/${sum.target.toLocaleString()}`, sub: `${sum.achieve}% ${tr("ของเป้า")}`, color: achieveColor(sum.achieve) }
           : { label: 'ผลิตรวม (ชิ้น)', value: sum.actual.toLocaleString(), sub: 'ไม่มีเป้าให้เทียบ (ยังไม่ตั้ง target/std)', color: 'var(--text)' },
-        { label: 'OEE เฉลี่ย', value: sum.oeeAvg != null ? `${sum.oeeAvg}%` : '—', sub: 'เฉพาะกะที่ปิดแล้ว', color: sum.oeeAvg == null ? 'var(--muted)' : sum.oeeAvg >= 85 ? 'var(--green)' : sum.oeeAvg >= 65 ? 'var(--amber)' : 'var(--red)' },
+        { label: 'OEE เฉลี่ย', value: sum.oeeAvg != null ? `${sum.oeeAvg}%` : '—', sub: tr("เฉพาะกะที่ปิดแล้ว"), color: sum.oeeAvg == null ? 'var(--muted)' : sum.oeeAvg >= 85 ? 'var(--green)' : sum.oeeAvg >= 65 ? 'var(--amber)' : 'var(--red)' },
         // ผลรวมนาทีของ "ทุกรายการทุกเครื่องทุกไลน์" (เวลาซ้อนกันได้) เทียบกับฐานเวลาเครื่องรวม
         // ที่มีจริงของวันนั้น → % ทำให้เห็นทันทีว่าเยอะหรือน้อย (เกณฑ์สี: <3% เขียว · 3-8% เหลือง · >8% แดง)
         sum.dtPct != null
@@ -645,8 +645,8 @@ export default function MorningMeeting() {
               color: sum.dtMin === 0 ? 'var(--green)' : sum.dtPct > 8 ? 'var(--red)' : sum.dtPct >= 3 ? 'var(--amber)' : 'var(--green)',
             }
           : { label: 'Downtime นอกแผน', value: `${sum.dtMin.toLocaleString()} นาที`, sub: `${sum.dtCount} ${tr("ครั้ง — รวมทุกไลน์/เครื่อง เวลาซ้อนกันได้")}`, color: sum.dtMin > 0 ? 'var(--red)' : 'var(--green)' },
-        { label: 'ของเสีย (NG)', value: sum.ng.toLocaleString(), sub: 'จากทุกกะ', color: sum.ng > 0 ? 'var(--red)' : 'var(--green)' },
-        { label: 'เข้างาน', value: `${sum.present}/${sum.attTotal}`, sub: sum.attTotal ? `${pctStr(sum.present, sum.attTotal)}%` : 'ไม่มีข้อมูลเช็คชื่อวันนั้น', color: 'var(--blue)' },
+        { label: 'ของเสีย (NG)', value: sum.ng.toLocaleString(), sub: tr("จากทุกกะ"), color: sum.ng > 0 ? 'var(--red)' : 'var(--green)' },
+        { label: 'เข้างาน', value: `${sum.present}/${sum.attTotal}`, sub: sum.attTotal ? `${pctStr(sum.present, sum.attTotal)}%` : tr("ไม่มีข้อมูลเช็คชื่อวันนั้น"), color: 'var(--blue)' },
       ].map(k => (
         <div key={k.label} title={k.title || undefined} style={{ ...card, height: '100%', minHeight: 92, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 4, minWidth: 0 }}>
           <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 700 }}>{tr(k.label)}</div>
@@ -726,7 +726,7 @@ export default function MorningMeeting() {
                 </div>
                 {notClosed.length > 0 && (
                   <div style={{ marginTop: 'auto' }}>
-                    <span style={chip('var(--amber)')}>{tr('⏳ ยังไม่ปิดกะ:')} {notClosed.map(sh => (sh === 'day' ? 'กะเช้า' : 'กะดึก')).join(' + ')}</span>
+                    <span style={chip('var(--amber)')}>{tr('⏳ ยังไม่ปิดกะ:')} {notClosed.map(sh => (sh === 'day' ? tr("กะเช้า") : 'กะดึก')).join(' + ')}</span>
                   </div>
                 )}
               </>

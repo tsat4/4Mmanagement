@@ -46,7 +46,7 @@ function cellStatus(parts) {
   const st = parts.map(p => stockState(p).key);
   if (st.includes('out')) return { key: 'out', color: '#ef4444', bg: 'rgba(239,68,68,0.3)', label: 'มีของหมด' };
   if (st.includes('low')) return { key: 'low', color: '#f59e0b', bg: 'rgba(245,158,11,0.28)', label: 'ต่ำกว่าขั้นต่ำ' };
-  return { key: 'ok', color: '#22c55e', bg: 'rgba(34,197,94,0.24)', label: 'ปกติ' };
+  return { key: 'ok', color: '#22c55e', bg: 'rgba(34,197,94,0.24)', label: tr("ปกติ") };
 }
 
 export default function RackMap({ parts = [], canEdit, myTeams = [], mySection = '' }) {
@@ -336,8 +336,8 @@ export default function RackMap({ parts = [], canEdit, myTeams = [], mySection =
         <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid #f59e0b', borderRadius: 'var(--r-md)', padding: '8px 12px', marginBottom: 10, fontSize: 12.5 }}>
           ✏️ <b>{tr('โหมดแก้ผัง')}</b> {tr('— ลากบน')}<b>{tr('พื้นที่ว่าง')}</b>{tr('เพื่อสร้างช่องใหม่ · ลาก')}<b>{tr('ตัวช่อง')}</b>{tr('เพื่อย้าย · ลาก')}<b>{tr('มุมขวาล่าง')}</b>{tr("เพื่อปรับขนาด · กดช่องแล้วเปลี่ยนรหัส/ลบได้ที่แผงขวา")}
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginTop: 8 }}>
-            <button onClick={hist.undo} disabled={!hist.canUndo || hist.busy} style={undoBtnStyle(hist.canUndo && !hist.busy)} title="Ctrl+Z">↩️ Undo</button>
-            <button onClick={hist.redo} disabled={!hist.canRedo || hist.busy} style={undoBtnStyle(hist.canRedo && !hist.busy)} title="Ctrl+Y">↪️ Redo</button>
+            <button onClick={hist.undo} disabled={!hist.canUndo || hist.busy} style={undoBtnStyle(hist.canUndo && !hist.busy)} title="Ctrl+Z">↩️ {tr('เลิกทำ')}</button>
+            <button onClick={hist.redo} disabled={!hist.canRedo || hist.busy} style={undoBtnStyle(hist.canRedo && !hist.busy)} title="Ctrl+Y">↪️ {tr('ทำซ้ำ')}</button>
             {rack && <button onClick={() => setShowGrid(true)} style={{ ...btnGhost, padding: '6px 11px', fontSize: 12 }}>{tr('⊞ สร้างตารางอัตโนมัติ')}</button>}
           </div>
         </div>
@@ -416,7 +416,7 @@ export default function RackMap({ parts = [], canEdit, myTeams = [], mySection =
 
             {/* legend */}
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 8, fontSize: 11.5, color: 'var(--muted)' }}>
-              {[['#22c55e', 'ปกติ'], ['#f59e0b', 'ต่ำกว่าขั้นต่ำ'], ['#ef4444', 'มีของหมด'], ['#6b7280', 'ว่าง'], ['#facc15', 'ผลการค้นหา']].map(([c, t]) => (
+              {[['#22c55e', tr("ปกติ")], ['#f59e0b', 'ต่ำกว่าขั้นต่ำ'], ['#ef4444', 'มีของหมด'], ['#6b7280', 'ว่าง'], ['#facc15', 'ผลการค้นหา']].map(([c, t]) => (
                 <span key={t}><span style={{ display: 'inline-block', width: 10, height: 10, background: c, borderRadius: 'var(--r-xs)', marginRight: 4 }} />{t}</span>
               ))}
               <span style={{ marginLeft: 'auto' }}>{cells.length} {tr('ช่อง')}</span>

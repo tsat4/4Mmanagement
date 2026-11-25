@@ -1328,7 +1328,7 @@ export default function Management() {
   const vacantStationCount = dynamicStations.filter(st => !workers.some(w => String(w.assigned_line) === String(st.id))).length;
 
   const STATUS_FILTERS = [
-    { key: 'man',     on: filterMan,     toggle: () => setFilterMan(v => !v),     label: 'MAN',     icon: '👤', color: 'var(--blue)', count: vacantStationCount, title: 'แสดง/ซ่อนจุดงาน (คน) บนผัง — ตัวเลข = จุดที่ยังไม่มีคนประจำ' },
+    { key: 'man',     on: filterMan,     toggle: () => setFilterMan(v => !v),     label: 'MAN',     icon: '👤', color: 'var(--blue)', count: vacantStationCount, title: tr("แสดง/ซ่อนจุดงาน (คน) บนผัง — ตัวเลข = จุดที่ยังไม่มีคนประจำ") },
     // Machine กับ Jig/Fixture โชว์ทีละชั้น — เปิดชั้นหนึ่ง = ปิดอีกชั้น (robot ติดจิ๊กปลายแขน วาดพร้อมกันหมุดทับกันจนอ่านไม่ออก)
     { key: 'machine', on: filterMachine, toggle: () => { setFilterMachine(v => !v); setFilterJig(false); }, label: 'MACHINE', icon: '⚙️', color: 'var(--amber)', count: 0,
       title: `${tr("ชั้นเครื่องจักร (ทีม")} MTN) — ${mcSplit.machine.length} ${tr("จุด")}${mcSplit.unknown.length ? `\n⚠️ ${mcSplit.unknown.length} ${tr("จุดไม่อยู่ในทะเบียนเครื่อง/ไม่ระบุชนิด → วาดในชั้นนี้ (กรอบประ")})` : ''}${kindErr ? `\n⚠️ ${tr("โหลดชนิดอุปกรณ์ไม่ได้")} (${kindErr}) — ${tr("แยกชั้นไม่ได้")}` : ''}\n${tr("เปิดชั้นนี้ = ปิดชั้น")} Jig/Fixture` },
@@ -2011,7 +2011,7 @@ export default function Management() {
               {(!isMobile || showLegendMobile) && (
               <div style={{ padding: '6px 14px', borderBottom: '1px solid var(--border2)', display: 'flex', gap: 14, flexWrap: 'wrap', background: 'var(--bg)' }}>
                 {[
-                  { c: 'var(--blue)', icon: '▶', label: 'กำลังผลิต' },
+                  { c: 'var(--blue)', icon: '▶', label: tr("กำลังผลิต") },
                   { c: 'var(--green)', icon: '✓', label: 'เสร็จแล้ว' },
                   { c: 'var(--amber)', icon: '✓!', label: 'เสร็จ (ช้ากว่ากำหนด)' },
                   { c: 'var(--red)', icon: '!', label: 'ล่าช้า' },

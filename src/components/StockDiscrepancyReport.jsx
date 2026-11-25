@@ -127,7 +127,7 @@ export default function StockDiscrepancyReport() {
 
   const exportCsv = () => {
     if (!list.length) { toast.info('ไม่มีรายการให้ export'); return; }
-    const head = ['วันที่งาน', 'ไลน์', 'Part Name', 'MAT', 'ส่ง', 'รับจริง', 'ขาด', 'สถานะ', 'ผลที่เสนอ', 'เสนอโดย', 'ยืนยันโดย', 'เลข SAP', 'หมายเหตุ', 'แจ้งโดย', 'ที่มา'];
+    const head = ['วันที่งาน', tr("ไลน์"), 'Part Name', 'MAT', 'ส่ง', 'รับจริง', tr("ขาด"), 'สถานะ', 'ผลที่เสนอ', 'เสนอโดย', 'ยืนยันโดย', 'เลข SAP', tr("หมายเหตุ"), 'แจ้งโดย', 'ที่มา'];
     const body = list.map(r => [r.work_date, r.line_name, r.part_name || '', r.mat_no, r.sent_qty, r.received_qty, r.short_qty,
       STATUS_LABEL[r.status] || r.status, outcomeLabel(r.proposed_outcome, r), r.proposed_by || '', r.confirmed_by || '',
       r.sap_doc || '', r.resolve_note || r.note || '', r.reported_by || '', r.source].map(csvCell).join(','));

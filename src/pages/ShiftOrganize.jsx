@@ -970,7 +970,7 @@ export default function ShiftOrganize() {
               <div>
                 <label style={labelSt}>{tr('เปลี่ยนทุกคนใน scope นี้เป็น')}</label>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  {[['day', '☀️ กะเช้า'], ['night', '🌙 กะดึก']].map(([val, label]) => (
+                  {[['day', tr("☀️ กะเช้า")], ['night', '🌙 กะดึก']].map(([val, label]) => (
                     <button key={val} onClick={() => setMrgShift(val)}
                       style={{
                         flex: 1, padding: '10px 0', borderRadius: 'var(--r-md)', fontSize: 13, fontWeight: 700, cursor: 'pointer',

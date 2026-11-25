@@ -318,7 +318,7 @@ function ProductionView({ d, ctx }) {
     const names = (arr) => arr.slice(0, 3).map(t => t.machine_no || t.name).join(', ') + (arr.length > 3 ? ` +${arr.length - 3}` : '');
     const out = [];
     if (l.ngN) out.push({ icon: '🔴', title: `AM ${tr("พบผิดปกติ")} ${l.ngN} ${tr("เครื่อง")} — ${l.line}`, detail: names(l.ng), tag: 'ผิดปกติ', tagColor: 'var(--red)', to: '/daily-checker?tab=pm' });
-    if (l.late) out.push({ icon: '🔍', title: `AM ${tr("ยังไม่ตรวจ")} ${l.late} ${tr("เครื่อง")} — ${l.line}`, detail: `${tr("เลยกรอบ 60 นาทีหลังเริ่มผลิต")} · ${names(l.missing)}`, tag: 'เลยเวลา', tagColor: 'var(--red)', to: '/daily-checker?tab=pm' });
+    if (l.late) out.push({ icon: '🔍', title: `AM ${tr("ยังไม่ตรวจ")} ${l.late} ${tr("เครื่อง")} — ${l.line}`, detail: `${tr("เลยกรอบ 60 นาทีหลังเริ่มผลิต")} · ${names(l.missing)}`, tag: tr("เลยเวลา"), tagColor: 'var(--red)', to: '/daily-checker?tab=pm' });
     else if (l.wait) out.push({ icon: '🔍', title: `AM ${tr("รอตรวจ")} ${l.wait} ${tr("เครื่อง")} — ${l.line}`, detail: `${tr("ยังอยู่ในกรอบ 60 นาที")} · ${names(l.missing)}`, tag: 'รอตรวจ', tagColor: 'var(--amber)', to: '/daily-checker?tab=pm' });
     return out;
   });
@@ -333,12 +333,12 @@ function ProductionView({ d, ctx }) {
       tag: staleOver7.length ? `${tr("เกิน 7 วัน")} (${staleOver7.length})` : 'ค้างจากวันก่อน',
       tagColor: staleOver7.length ? 'var(--red)' : 'var(--amber)', to: '/daily-report',
     }] : []),
-    ...pendingClose.map(r => ({ icon: '📋', title: `${tr("คำขอปิดกะ")} — ${r.line}`, detail: r.shift === 'night' ? 'กะดึก' : 'กะเช้า', tag: 'รออนุมัติ', tagColor: 'var(--amber)', to: '/daily-report' })),
-    ...openDT.map(x => ({ icon: '🔴', title: `${x.dr_downtime_types?.name_th || 'Downtime'} ${tr("ยังไม่ปิด")}`, detail: x.machine_no || x.description || '', tag: 'เครื่องหยุด', tagColor: 'var(--red)', to: '/daily-report' })),
+    ...pendingClose.map(r => ({ icon: '📋', title: `${tr("คำขอปิดกะ")} — ${r.line}`, detail: r.shift === 'night' ? 'กะดึก' : tr("กะเช้า"), tag: 'รออนุมัติ', tagColor: 'var(--amber)', to: '/daily-report' })),
+    ...openDT.map(x => ({ icon: '🔴', title: `${x.dr_downtime_types?.name_th || 'Downtime'} ${tr("ยังไม่ปิด")}`, detail: x.machine_no || x.description || '', tag: tr("เครื่องหยุด"), tagColor: 'var(--red)', to: '/daily-report' })),
     ...forgottenDT.map(x => ({ icon: '⚠️', title: `${x.dr_downtime_types?.name_th || 'Downtime'} — ${tr("ไม่ได้ปิดรายการ")}`, detail: `${x.machine_no || x.description || ''} · ${tr("กะปิดไปแล้ว นาทีที่หยุดไม่ได้ถูกหักใน")} %A`.trim(), tag: 'ลืมปิดรายการ', tagColor: 'var(--amber)', to: '/daily-report' })),
     ...amActions,
     ...(d.amErr ? [{ icon: '⚠️', title: 'โหลดสถานะตรวจเครื่อง AM ไม่ได้', detail: 'ยังไม่รู้ว่ากะนี้ตรวจครบไหม — เปิดจอ AM ตรวจสอบ', tag: 'ไม่ทราบ', tagColor: 'var(--amber)', to: '/daily-checker?tab=pm' }] : []),
-    ...d.fourM.map(f => ({ icon: '📝', title: `4M ${f.category} — ${f.line_name || '-'}`, detail: (f.description || '').slice(0, 40), age: daysSince(`${f.work_date}T08:00:00`), tag: f.status === 'pending_qa' ? 'รอ QA' : 'รอ SV', tagColor: 'var(--amber)', to: fourMLink(f) })),
+    ...d.fourM.map(f => ({ icon: '📝', title: `4M ${f.category} — ${f.line_name || '-'}`, detail: (f.description || '').slice(0, 40), age: daysSince(`${f.work_date}T08:00:00`), tag: f.status === 'pending_qa' ? 'รอ QA' : tr("รอ SV"), tagColor: 'var(--amber)', to: fourMLink(f) })),
   ];
 
   const lineRows = Object.values(today.lines).map(l => {
@@ -352,7 +352,7 @@ function ProductionView({ d, ctx }) {
     return d.dt7.filter(x => x.dr_downtime_types?.category !== 'planned').map(x => ({
       cat: dtBucketName(x, dtIdx), value: dtMinOf(x),   // 🗑️ เดาจากคำ → ไม่ได้ก็แตกตามเครื่อง
       machine: x.machine_no || '(ไม่ระบุเครื่อง)', line: sMap[x.session_id]?.line_name || '-',
-      shift: sMap[x.session_id]?.shift === 'night' ? 'กะดึก' : 'กะเช้า', date: sMap[x.session_id]?.work_date, note: x.description || '',
+      shift: sMap[x.session_id]?.shift === 'night' ? 'กะดึก' : tr("กะเช้า"), date: sMap[x.session_id]?.work_date, note: x.description || '',
     })).filter(r => r.value > 0);
   }, [d]);
 
@@ -371,7 +371,7 @@ function ProductionView({ d, ctx }) {
       <Kpi label={tr('ผลิตวันนี้ / เป้า')} value={fmtNum(act)} color={pctCol(pct)} sub={`${tr("เป้า")} ${fmtNum(tgt)} · ${pct == null ? '—' : pct + '%'}`} />
       {/* 🔍 AM กะนี้ — ไม่มีทะเบียน ≠ ตรวจครบ · โหลดไม่ได้ = — (กฎความซื่อสัตย์ของจอ) */}
       <Kpi label={`AM ${tr("ตรวจเครื่องแล้ว")} (${d.am?.shift?.label || tr('กะนี้')})`}
-        value={d.amErr ? '—' : amTotal ? `${amChecked}/${amTotal}` : '0'} unit={d.amErr || !amTotal ? '' : 'เครื่อง'}
+        value={d.amErr ? '—' : amTotal ? `${amChecked}/${amTotal}` : '0'} unit={d.amErr || !amTotal ? '' : tr("เครื่อง")}
         color={d.amErr ? undefined : amNg || amLate ? 'var(--red)' : amWait ? 'var(--amber)' : amTotal && amChecked === amTotal ? 'var(--green)' : undefined}
         sub={d.amErr ? tr("โหลดสถานะ AM ไม่ได้") : !amTotal ? tr("ไลน์ในขอบเขตยังไม่ลงทะเบียนเครื่อง AM") : `${tr("เลยเวลา")} ${amLate} · ${tr("รอตรวจ")} ${amWait} · ${tr("ยังไม่เริ่มผลิต")} ${amNotStarted}${amNg ? ` · ${tr("ผิดปกติ")} ${amNg}` : ''}`} />
       <Kpi label={liveN ? tr('OEE วันนี้ (รวมค่าสด)') : tr('OEE วันนี้')} value={oeeToday == null ? '—' : +oeeToday.toFixed(1)} unit={oeeToday == null ? '' : '%'} color={oeeCol(oeeToday, today.rows.map(r => r.line))}
@@ -413,7 +413,7 @@ function ProductionView({ d, ctx }) {
       sectionStyle={cardSt} emptyText={tr('ไม่มี downtime นอกแผนใน 7 วัน')} />
 
     <Section title={tr('ทางลัด')}>
-      <Links navigate={navigate} items={[['/daily-report', '📊 Daily Report'], ['/factory-map', '🗺️ ผังรวมโรงงาน'], ['/oee-analytics', '📈 OEE'], ['/morning-meeting', '🌅 ประชุมเช้า'], ['/management', '🔄 จัดการไลน์']]} />
+      <Links navigate={navigate} items={[['/daily-report', '📊 Daily Report'], ['/factory-map', tr("🗺️ ผังรวมโรงงาน")], ['/oee-analytics', '📈 OEE'], ['/morning-meeting', tr("🌅 ประชุมเช้า")], ['/management', tr("🔄 จัดการไลน์")]]} />
     </Section>
   </>);
 }
@@ -478,7 +478,7 @@ function MaintenanceView({ d, ctx }) {
       const cl = clById[p.checklist_id];
       const j = jigById[cl?.equipment_id];
       const { bucket, daysTo } = planDueBucket(p, workDate, { soonDays: 14 });
-      return { ...p, am: isAmTeam(cl?.department), bucket, name: j?.name || j?.jig_no || j?.machine_no || 'อุปกรณ์ (ไม่พบชื่อ)', line: j?.line_name || '', days: daysTo };
+      return { ...p, am: isAmTeam(cl?.department), bucket, name: j?.name || j?.jig_no || j?.machine_no || tr("อุปกรณ์ (ไม่พบชื่อ)"), line: j?.line_name || '', days: daysTo };
     }).sort((a, b) => (a.days ?? 9e9) - (b.days ?? 9e9));
   }, [d, workDate]);
   /* 🔭 กรองแผน PM ตามขอบเขต user ด้วย (12/10 · user: "user PD2 ดูของช่างก็ต้องเป็นงานช่างที่เกี่ยวกับ PD2") — เดิมนับทั้งโรงงาน
@@ -589,7 +589,7 @@ function MaintenanceView({ d, ctx }) {
     </Section>
 
     <Section title={tr('ทางลัด')}>
-      <Links navigate={navigate} items={[['/tv?dept=maintenance', '📺 Andon Board (จอแขวน)', callMtn.length || null], ['/mtn-repair', '🛠️ แจ้งซ่อม MO', scopedMo.length], ['/pm?tab=plan', '📅 แผน PM', overdue.length], ['/pm?tab=forecast', '🔧 PM ล่วงหน้า'], ['/daily-checker', '✅ Daily Checker'], ['/mtn-layout', '🗺️ ผังเครื่องจักร']]} />
+      <Links navigate={navigate} items={[['/tv?dept=maintenance', '📺 Andon Board (จอแขวน)', callMtn.length || null], ['/mtn-repair', '🛠️ แจ้งซ่อม MO', scopedMo.length], ['/pm?tab=plan', ("📅 " + tr("แผน PM")), overdue.length], ['/pm?tab=forecast', '🔧 PM ล่วงหน้า'], ['/daily-checker', '✅ Daily Checker'], ['/mtn-layout', '🗺️ ผังเครื่องจักร']]} />
     </Section>
   </>);
 }
@@ -814,9 +814,9 @@ function QaView({ d, ctx }) {
   const claimNo8D = claimOpen.filter(c => !c.capa_id);
 
   const defRecords = d.defs.map(x => ({
-    cat: x.dr_defect_types?.name_th || 'ไม่ระบุประเภท', value: (+x.qty_ng || 0) + (+x.qty_suspect || 0),
+    cat: x.dr_defect_types?.name_th || tr("ไม่ระบุประเภท"), value: (+x.qty_ng || 0) + (+x.qty_suspect || 0),
     line: sMap[x.session_id]?.line_name || '-', product: x.prod_orders?.mat_no || '(ไม่ระบุ)',
-    shift: sMap[x.session_id]?.shift === 'night' ? 'กะดึก' : 'กะเช้า', date: sMap[x.session_id]?.work_date, note: x.description || '',
+    shift: sMap[x.session_id]?.shift === 'night' ? 'กะดึก' : tr("กะเช้า"), date: sMap[x.session_id]?.work_date, note: x.description || '',
   })).filter(r => r.value > 0);
 
   const actions = [

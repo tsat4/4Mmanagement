@@ -102,7 +102,7 @@ export default function KpiBaseImportModal({ year, unitLabel, unitSk, base, canP
   }, [grid, sheet, labels, fileMonth]);
 
   const writable = (v) => (v.level === 'plant' ? canPlant : canUnit);
-  const targetOf = (v) => (v.level === 'plant' ? 'ทั้งโรงงาน' : unitLabel);
+  const targetOf = (v) => (v.level === 'plant' ? tr("ทั้งโรงงาน") : unitLabel);
   const skOf = (v) => (v.level === 'plant' ? PLANT_BASE_KEY : unitSk);
   const chosen = KPI_BASE_VARS.filter(v => on[v.key] && values[v.key] && writable(v));
   const nCells = chosen.reduce((a, v) => a + Object.keys(values[v.key]).length, 0);

@@ -369,7 +369,7 @@ export default function TransportMapEditor() {
       {canEdit ? (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           {MODES.map(([k, l]) => (
-            <button key={k} onClick={() => { setMode(k); setEdgeFrom(null); setSel(null); resetChain() }} style={btn(mode === k)}>{l}</button>
+            <button key={k} onClick={() => { setMode(k); setEdgeFrom(null); setSel(null); resetChain() }} style={btn(mode === k)}>{tr(l)}</button>
           ))}
           {mode === 'draw' && chainLast && (
             <button onClick={resetChain} style={{ padding: '7px 13px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontSize: 12.5, fontWeight: 700, border: '1.5px solid var(--accent)', background: 'var(--accent)', color: 'var(--accent-ink)' }}>{tr('✓ จบเส้น (Esc)')}</button>

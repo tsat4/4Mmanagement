@@ -346,7 +346,7 @@ export default function PMSchedule() {
   }, {})
   const statusOptions = [
     { value: '', label: `${tr("ทุกสถานะ")} (${baseRows.length})` },
-    ...Object.entries(STATUS_META).filter(([k]) => counts[k]).map(([k, m]) => ({ value: k, label: `${m.label} (${counts[k]})` })),
+    ...Object.entries(STATUS_META).filter(([k]) => counts[k]).map(([k, m]) => ({ value: k, label: `${tr(m.label)} (${counts[k]})` })),
   ]
   const focusName = focusEq ? (rows.find(r => r.cl.equipment_id === focusEq)?.eq?.name ?? null) : null
   const onScanEquip = (parsed) => {
@@ -360,7 +360,7 @@ export default function PMSchedule() {
   return (
     <Page style={S.page}>
       <PageHeader title={tr('ปฏิทินแผน PM')} icon="📅"
-        sub={`${tr("ตารางการตรวจสอบ")} · ${teamMeta?.label ?? DEPT_LABEL[department] ?? department}`}
+        sub={`${tr("ตารางการตรวจสอบ")} · ${tr(teamMeta?.label ?? DEPT_LABEL[department] ?? department)}`}
         filters={<>
           {/* ทีม = ตัวเลือกแรกของแถบกรอง (UI-STANDARD: ชื่อ → แท็บ → แถบกรอง → เนื้อหา · เดิมเป็นแถวปุ่มใต้หัวเพจ) */}
           <Segmented label={tr('ทีม')} value={department} onChange={setDept}
@@ -979,7 +979,7 @@ function CalendarView({ rows, insps = [], today, onCheck }) {
         <button onClick={() => setCursor(new Date(today.getFullYear(), today.getMonth(), 1))} style={{ ...navBtn, width: 'auto', padding: '0 14px', fontSize: 12, fontWeight: 700 }}>{tr('วันนี้')}</button>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 6, background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 10 }}>
-        {DOW_TH.map(d => <div key={d} style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'var(--muted)', padding: '2px 0' }}>{d}</div>)}
+        {DOW_TH.map(d => <div key={d} style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'var(--muted)', padding: '2px 0' }}>{tr(d)}</div>)}
         {cells.map((date, i) => {
           if (!date) return <div key={i} />
           const k = dayKey(date)

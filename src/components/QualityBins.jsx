@@ -850,7 +850,7 @@ export default function QualityBins({ mode = 'full' }) {
   const stepLine = (r) => {
     const st = ncStep(r, { hasRedChild: redChildOf.has(r.id) });
     if (!st.step) return st.label;
-    const who = st.owner === 'qa' ? 'QA' : st.owner === 'prod' ? 'ฝ่ายผลิต' : '';
+    const who = st.owner === 'qa' ? 'QA' : st.owner === 'prod' ? trI18n("ฝ่ายผลิต") : '';
     const sayWho = who && !st.label.replace(/\s/g, '').includes(`${trI18n("รอ")}${who}`.replace(/\s/g, ''));
     return `${trI18n("ขั้น")} ${st.step}/5 · ${st.label}${sayWho ? ` · ${trI18n("รอ")}${who}` : ''}`;
   };
@@ -1306,8 +1306,8 @@ export default function QualityBins({ mode = 'full' }) {
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1000 }}>
           <thead><tr style={{ background: 'var(--bg2)' }}>
             {(isY
-              ? ['วันที่ลงถัง', 'อายุแท็ก', 'ชิ้นงาน', 'ไลน์', 'จำนวน', 'สาเหตุ', 'ผู้แจ้ง', 'ขั้น / ผล QA', 'ดำเนินการ']
-              : ['วันที่ลงถัง', 'อายุแท็ก', 'ชิ้นงาน', 'ไลน์', 'จำนวนเสีย', 'สาเหตุ', 'ผู้แจ้ง', 'ผู้กำจัดทำลาย', 'ใบรายงานของเสีย', 'ดำเนินการ']
+              ? ['วันที่ลงถัง', 'อายุแท็ก', 'ชิ้นงาน', trI18n("ไลน์"), 'จำนวน', 'สาเหตุ', 'ผู้แจ้ง', 'ขั้น / ผล QA', 'ดำเนินการ']
+              : ['วันที่ลงถัง', 'อายุแท็ก', 'ชิ้นงาน', trI18n("ไลน์"), 'จำนวนเสีย', 'สาเหตุ', 'ผู้แจ้ง', 'ผู้กำจัดทำลาย', 'ใบรายงานของเสีย', 'ดำเนินการ']
             ).map((h, i) => <th key={i} style={th}>{trI18n(h)}</th>)}
           </tr></thead>
           <tbody>

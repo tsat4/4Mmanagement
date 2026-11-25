@@ -24,7 +24,7 @@ const hasNativeDetector = () => typeof window !== 'undefined' && 'BarcodeDetecto
 
 export default function ScanModal({
   title = 'สแกน QR / บาร์โค้ด',
-  hint = 'ส่องกล้องที่ป้าย QR หรือยิงด้วยเครื่องสแกน',
+  hint = tr("ส่องกล้องที่ป้าย QR หรือยิงด้วยเครื่องสแกน"),
   footer = null,   // ของที่หน้าอยากโชว์ใต้ผลสแกน (เช่น ตัวนับ "เช็คแล้ว 12/20 คน")
   onScan,          // (parsed) => void | string | { ok } — string = ข้อความ error (เช่น "ไม่พบเครื่องนี้") · { ok } = ข้อความสำเร็จของหน้าเอง
   onClose,

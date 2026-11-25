@@ -12,6 +12,7 @@ import useTabParam from '../utils/useTabParam';
 import { useNavSubItems } from '../utils/navSubItems';
 import { ACTIVITY_TABS, ACTIVITY_SAMPLE_SECTIONS, activityByPath } from '../utils/activityPages';
 import useLang from '../utils/useLang';
+import { tr } from '../utils/i18n';
 
 export default function Activity() {
   const { tr } = useLang();
@@ -27,9 +28,9 @@ export default function Activity() {
   const notYet = (what) => () => toast.info(`${tr(what)} — ${tr('ยังไม่เชื่อมฐานข้อมูล (หน้ากิจกรรมยังเป็นโครง)')}`);
   const tools = [
     { key: 'search', label: 'ค้นหา', onClick: notYet('ค้นหา') },
-    { key: 'add',    label: 'เพิ่ม',  onClick: notYet('เพิ่ม') },
-    { key: 'edit',   label: 'แก้ไข', onClick: notYet('แก้ไข') },
-    { key: 'delete', label: 'ลบ',    onClick: notYet('ลบ') },
+    { key: 'add',    label: tr("เพิ่ม"),  onClick: notYet(tr("เพิ่ม")) },
+    { key: 'edit',   label: tr("แก้ไข"), onClick: notYet(tr("แก้ไข")) },
+    { key: 'delete', label: tr("ลบ"),    onClick: notYet(tr("ลบ")) },
   ];
 
   return (

@@ -584,7 +584,7 @@ export default function KpiMonthly({ lines, scopeSet, isMobile }) {
   const fx = useMemo(() => applyFormulaEntries([...(allDefs || []), ...(belowDefs || [])], entries, baseIndex, org), [allDefs, belowDefs, entries, baseIndex, org]);
   const entriesFx = fx.entries;
   const fInfo = fx.info;
-  const skLabel = useCallback((sk) => { const i = String(sk).indexOf(':'); return i < 0 ? 'ทั้งโรงงาน' : org.labelOf(sk.slice(0, i), sk.slice(i + 1)); }, [org]);
+  const skLabel = useCallback((sk) => { const i = String(sk).indexOf(':'); return i < 0 ? tr("ทั้งโรงงาน") : org.labelOf(sk.slice(0, i), sk.slice(i + 1)); }, [org]);
   const reloadBase = useCallback(async () => {
     /* cap-ok: kpi_base_inputs ต่อปี สูงสุด 63 แถว (วัด 20/10) */
     const kb = await supabase.from('kpi_base_inputs').select('id, year, month, scope_kind, scope_value, var_key, value').eq('year', year).limit(5000);
@@ -2323,7 +2323,7 @@ function DefModal({ init, year, scope, org, orgFailed = '', scopeSet, userSectio
                   {f.provider === 'formula' && (
                     <select style={{ ...inp, width: 'auto' }} value={f.formula} onChange={e => set('formula', e.target.value)}>
                       <option value="">{tr('— เลือกสูตร —')}</option>
-                      {KPI_FORMULAS.map(x => <option key={x.key} value={x.key}>{tr(x.label)} = {x.expr}</option>)}
+                      {KPI_FORMULAS.map(x => <option key={x.key} value={x.key}>{tr(x.label)} = {tr(x.expr)}</option>)}
                     </select>
                   )}
                 </div>

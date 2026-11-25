@@ -34,7 +34,7 @@ export function ImportButton({ k, onClick, disabled, busy, tone = 'primary', tit
 export function ImportInfo({ k, sample, compact }) {
   const d = IMPORTS[k];
   if (!d) return null;
-  const facts = [['ไฟล์ที่รับ', d.file], ['ได้มาจาก', d.from], ['ต้องมีคอลัมน์', d.cols]];
+  const facts = [['ไฟล์ที่รับ', tr(d.file)], ['ได้มาจาก', tr(d.from)], ['ต้องมีคอลัมน์', tr(d.cols)]];
   return (
     <div style={{ display: 'grid', gridTemplateColumns: compact ? 'minmax(0,1fr)' : 'repeat(auto-fit, minmax(220px, 1fr))',
       gap: 8, alignContent: 'start' }}>

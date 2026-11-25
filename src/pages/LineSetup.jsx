@@ -1056,8 +1056,8 @@ export default function LineSetup({ embedded = false } = {}) {
           ))}
           {canEdit && (
             <>
-              <button onClick={hist.undo} disabled={!hist.canUndo || hist.busy} style={{ ...undoBtnStyle(hist.canUndo && !hist.busy), marginLeft: 'auto' }} title={tr('ย้อนกลับ — จุดบนผังไลน์นี้ (Ctrl+Z)')}>Undo</button>
-              <button onClick={hist.redo} disabled={!hist.canRedo || hist.busy} style={undoBtnStyle(hist.canRedo && !hist.busy)} title={tr('ทำซ้ำ (Ctrl+Y)')}>Redo</button>
+              <button onClick={hist.undo} disabled={!hist.canUndo || hist.busy} style={{ ...undoBtnStyle(hist.canUndo && !hist.busy), marginLeft: 'auto' }} title={tr('ย้อนกลับ — จุดบนผังไลน์นี้ (Ctrl+Z)')}>{tr('เลิกทำ')}</button>
+              <button onClick={hist.redo} disabled={!hist.canRedo || hist.busy} style={undoBtnStyle(hist.canRedo && !hist.busy)} title={tr('ทำซ้ำ (Ctrl+Y)')}>{tr('ทำซ้ำ')}</button>
             </>
           )}
           <button
@@ -1838,7 +1838,7 @@ export default function LineSetup({ embedded = false } = {}) {
                 {lineHeads.rows.length ? (
                   <>
                     <div style={{ display: 'grid', gap: 4 }}>
-                      {[['day', '🌞 กะเช้า'], ['night', '🌙 กะดึก'], ['unknown', '❔ ยังไม่รู้กะ']].map(([k, label]) => (
+                      {[['day', ("🌞 " + tr("กะเช้า"))], ['night', '🌙 กะดึก'], ['unknown', '❔ ยังไม่รู้กะ']].map(([k, label]) => (
                         lineHeads.byShift[k].length ? (
                           <div key={k} style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'baseline', fontSize: 13 }}>
                             <span style={{ color: 'var(--muted)', minWidth: 78 }}>{label}</span>
