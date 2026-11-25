@@ -323,14 +323,15 @@ export function Sheet({ k, cw = 0, span = 1, icon, title, sub, subFull = null, b
 /* 📺 จอประชุม = ชิปบรรทัดเดียว (ตัดท้าย … · ข้อความเต็มอยู่ใน title) — ยังเห็นว่า "มีข้อมูลขาด" แต่ไม่กินที่กราฟ
    `tvHide` = WarnNote ที่เป็นแค่คำอธิบาย (ไม่ใช่ข้อมูลขาด) ⇒ `<Sheet>` ไม่วาดบนจอประชุม */
 /* `tone` = คีย์ good|warn|bad|info|none (04/11: เดิมรับ hex แล้วต่อ alpha — ใช้กับ token ไม่ได้) */
-export function WarnNote({ k, text, tone = 'warn', title }) {
+/* 📐 25/11 (มาตรฐาน layout แผ่น): ในกริดเป็นชิป **1 บรรทัดตัดท้าย …** ทุกจอ (ไม่ใช่แค่ TV) ข้อความเต็มอยู่ใน title · `wrap` = ใน popup/รายละเอียด ให้ขึ้นบรรทัดใหม่ได้ */
+export function WarnNote({ k, text, tone = 'warn', title, wrap = false }) {
   const tv = useTvShell();
   return (
-    <div data-warn="1" title={title || (tv ? String(text) : undefined)} style={{
+    <div data-warn="1" title={title || String(text)} style={{
       fontSize: Math.max(11, Math.round(10.5 * k)), lineHeight: 1.3, color: toneVar(tone), fontWeight: 600,
       background: 'var(--bg3)', backgroundImage: `linear-gradient(${toneDim(tone)}, ${toneDim(tone)})`,
-      border: `1px solid ${toneLine(tone)}`, borderRadius: 'var(--r-xs)', padding: '3px 6px',
-      ...(tv ? { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } : null),
+      border: `1px solid ${toneLine(tone)}`, borderRadius: 'var(--r-xs)', padding: '3px 6px', maxWidth: '100%', boxSizing: 'border-box',
+      ...(tv || !wrap ? { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'inline-block', verticalAlign: 'middle' } : null),
     }}>⚠️ {text}</div>
   );
 }
