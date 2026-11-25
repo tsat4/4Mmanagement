@@ -894,7 +894,6 @@ function FactoryStaffView({ lines, depts, attendance, maps, stationPlans, skills
 /* ── 📍 ผังรายไลน์ ── */
 function LineLayoutView({ board, depts, lines, attendance, maps, tv, stationPlans, skills, viewSwitch, employees, allWs }) {
   const [params] = useSearchParams();
-  const merge = useMergeParams();
   const isMobile = useIsMobile();
   const [layouts, setLayouts] = useState([]);
   const [stations, setStations] = useState([]);
@@ -947,11 +946,9 @@ function LineLayoutView({ board, depts, lines, attendance, maps, tv, stationPlan
   // 🔴 ไลน์ที่ขอมาไม่มีรูปผัง = บอกตรงๆ ห้ามแอบโชว์ผังไลน์อื่นแทน
   const llineMissing = !tv && !!llineKey && layouts.length > 0 && !layout;
   // 🎛️ เลือกผังผ่านช่อง "ส่วนงาน/ไลน์" บนหัวเพจช่องเดียว (user 24/11 — เดิมมีช่องเลือกผังซ้อนอีกช่อง แล้ว 2 ช่องไม่ตามกัน)
-  //    ยังไม่ระบุไลน์ = ตั้ง ?lline= เป็นผังแรกให้เอง ⇒ ช่องบนบอกเสมอว่ากำลังดูผังของไลน์ไหน (replace — ไม่เพิ่มประวัติย้อนกลับ)
-  const firstLayoutName = layouts[0]?.line_name || '';
-  useEffect(() => {
-    if (!tv && !llineKey && firstLayoutName) merge({ lline: firstLayoutName }, { replace: true });
-  }, [tv, llineKey, firstLayoutName, merge]);
+  //    🔴 ห้ามเขียน ?lline= ให้เองตอนยังไม่ระบุไลน์ (user 25/11 "ช่องเด้งข้ามไปไลน์ลูก ตอนเลือกไลน์แม่") —
+  //       เลือกแผนก = ล้าง lline แล้วตัวตั้งค่าเองเขียนผังแรกกลับ ⇒ ช่องเด้งไป Laser GOR · ไม่ระบุ = ผังแรก + เขียนบอกบนจอแทน
+  const autoLayout = !tv && !llineKey && layouts.length > 0 ? layout : null;
   // 🔴 จุดบนผัง = จุดของไลน์เจ้าของผัง "+ ไลน์ลูกทั้งหมด" — ไลน์ลูกไม่มีรูปผังของตัวเอง แต่วางพิกัดบนผังไลน์แม่
   //    (จุดไลน์ลูกผูกด้วย line_name · line_id ว่าง) · เดิมโหลดแค่ชื่อไลน์แม่ ⇒ ผัง LINE APRON ASSY ขึ้นแค่ Supervisor
   //    (user 24/11 "จุดงานก็ไม่ขึ้น") · จับคู่ผ่าน stationsOfLineFamily ตัวเดียวกับสถานะกลุ่ม
@@ -1033,6 +1030,7 @@ function LineLayoutView({ board, depts, lines, attendance, maps, tv, stationPlan
         {tv && legend}
       </FilterBar>
       {err && <div style={{ fontSize: 12, color: 'var(--red)' }}>⚠️ {err}</div>}
+      {autoLayout && <div style={{ fontSize: 12, color: 'var(--blue)' }}>ℹ️ {trI18n('แสดงผัง')} <b>{autoLayout.line_name}</b>{layouts.length > 1 ? ` ${trI18n('(ผังแรกจาก')} ${layouts.length} ${trI18n('ผังในขอบเขตนี้ — เลือกไลน์จากช่องด้านบนเพื่อดูผังอื่น)')}` : ''}</div>}
       {viaParent && layout && <div style={{ fontSize: 12, color: 'var(--blue)' }}>ℹ️ {trI18n('ไลน์')} <b>{lline}</b> {trI18n('ไม่มีรูปผังของตัวเอง — แสดงผังของไลน์แม่')} <b>{viaParent}</b> {trI18n('(จุดงานของไลน์ลูกอยู่บนผังนี้)')}</div>}
       {llineMissing ? (
         <div className="card" style={{ padding: 24, color: 'var(--amber)' }}>
