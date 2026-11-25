@@ -57,7 +57,7 @@ import { lineChainIds } from '../utils/lineHierarchy';
 import useIsMobile from '../utils/useIsMobile';
 
 import SectionScopeSelect from '../components/SectionScopeSelect';
-import { tr as trI18n } from '../utils/i18n';
+import { tr as trI18n, dateLocale } from '../utils/i18n';
 /* ═══════════════════════════════════════════════════════════════════════════════════════
    🧑‍🤝‍🧑 Manpower Control Board — /manpower-board (2026-10-06 · คำสั่ง user)
 
@@ -267,7 +267,7 @@ export default function ManpowerBoard() {
           (แท็บผัง LAYOUT เปิดผังของไลน์นั้น — ไลน์ลูกไม่มีรูปผัง = ผังแม่ + เขียนบอก) · เลือกส่วนงาน/แผนก = ล้าง `?lline=` */}
       <SectionScopeSelect lines={scopeNames ? viewScope.lines : lines} pickDept pickLine line={params.get('lline') || ''}
         value={section ? orgKey(section) : ''} dept={deptNode ? orgKey(deptNode) : ''}
-        allLabel={sectionNodes.length ? '— เลือกส่วนงาน —' : '— ไม่มีส่วนงานในขอบเขต —'} width={300}
+        allLabel={sectionNodes.length ? trI18n("— เลือกส่วนงาน —") : trI18n("— ไม่มีส่วนงานในขอบเขต —")} width={300}
         onChange={(sec, info) => {
           const deptOf = (unit) => {
             const cands = nodes.filter(n => n.kind === 'department' && orgKey(n) === unit);
@@ -288,8 +288,8 @@ export default function ManpowerBoard() {
         <span style={{ fontSize: 12, fontWeight: 700, borderRadius: 'var(--r-md)', padding: '3px 8px', whiteSpace: 'nowrap',
           color: viewScope.unsure || deptIgnored ? 'var(--amber)' : 'var(--accent)',
           background: viewScope.unsure || deptIgnored ? 'var(--amber)1a' : 'var(--accent-dim)' }}>
-          {viewScope.unsure ? '⚠ ตัดขอบเขตบัญชีไม่ได้ — แสดงตามที่ตั้งไว้'
-            : deptIgnored ? '⚠ แผนกในลิงก์อยู่นอกขอบเขตของบัญชี — แสดงแผนกที่เห็นได้แทน'
+          {viewScope.unsure ? trI18n("⚠ ตัดขอบเขตบัญชีไม่ได้ — แสดงตามที่ตั้งไว้")
+            : deptIgnored ? trI18n("⚠ แผนกในลิงก์อยู่นอกขอบเขตของบัญชี — แสดงแผนกที่เห็นได้แทน")
             : `🔭 ${trI18n("เฉพาะแผนกในขอบเขต · ซ่อน")} ${scopeHiddenDepts} ${trI18n("แผนก")}`}
         </span>
       )}
@@ -304,11 +304,11 @@ export default function ManpowerBoard() {
         title="Manpower Control Board" icon="🧑‍🤝‍🧑"
         sub={trI18n('ผังกำลังคน · ผังจุดงาน · ป้ายสถานะ 4M ของส่วนงาน — อ่านอย่างเดียว ตามทะเบียนพนักงาน/ตารางกะ/เช็คชื่อวันนี้')}
         tabs={[
-          { key: 'org', label: 'ผังกำลังคน' },
-          { key: 'layout', label: 'ผัง LAYOUT' },
-          { key: 'fourm', label: 'ป้ายสถานะ 4M' },
-          { key: 'staffing', label: 'แผน vs มาจริง' },
-          { key: 'history', label: 'ประวัติการเปลี่ยนช่อง' },
+          { key: 'org', label: trI18n("ผังกำลังคน") },
+          { key: 'layout', label: trI18n("ผัง LAYOUT") },
+          { key: 'fourm', label: trI18n("ป้ายสถานะ 4M") },
+          { key: 'staffing', label: trI18n("แผน vs มาจริง") },
+          { key: 'history', label: trI18n("ประวัติการเปลี่ยนช่อง") },
         ]}
         tab={tab} onTab={setTab}
         filters={filters}
@@ -323,7 +323,7 @@ export default function ManpowerBoard() {
             style={{ padding: '7px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
               border: `1px solid ${tv ? 'var(--accent)' : 'var(--border2)'}`, background: tv ? 'var(--accent-dim)' : 'var(--bg2)', color: tv ? 'var(--accent)' : 'var(--text2)' }}
             title={trI18n('จอ TV ไม่มีเมาส์: ไม่เลื่อน แบ่งเป็นหน้า เปลี่ยนหน้าเองทุก 20 วิ (← → หรือรีโมตก็ได้)')}>
-            {tv ? 'ออกจากโหมดจอ TV' : 'โหมดจอ TV'}
+            {tv ? trI18n("ออกจากโหมดจอ TV") : trI18n("โหมดจอ TV")}
           </button>
         </>)}
       />
@@ -385,7 +385,7 @@ function Photo({ p, size = 44 }) {
 
 function AttendDot({ p }) {
   const m = ATTEND_META[p.attend];
-  const label = p.attend === 'leave' && p.log?.leave_type ? `${trI18n("ลา")} (${p.log.leave_type})` : m.label;
+  const label = p.attend === 'leave' && p.log?.leave_type ? `${trI18n("ลา")} (${p.log.leave_type})` : trI18n(m.label);
   return <span title={label} style={{ fontSize: 11, fontWeight: 700, color: m.color, whiteSpace: 'nowrap' }}>● {label}</span>;
 }
 
@@ -408,7 +408,7 @@ function HelperTag({ p }) {
 function FlexTag({ p }) {
   const f = p.flexFrom;
   if (!f) return null;
-  const home = f.nodeName || 'หน่วยอื่น';
+  const home = f.nodeName || trI18n("หน่วยอื่น");
   const cc = f.costCenter ? ` · cost center ${f.costCenter}` : '';
   return (
     <span title={`${trI18n("ต้นสังกัด")}: ${home}${cc}${f.note ? ` · ${f.note}` : ''} — ${trI18n("มาช่วยแผนกนี้ประจำ ไม่ได้ย้ายสังกัด และไม่นับเป็นกำลังคนของแผนกนี้")}`}
@@ -438,7 +438,7 @@ function PersonChip({ p }) {
       <Photo p={p} size={34} />
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
-        <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{positionLabel(p.position) || 'ไม่ระบุตำแหน่ง'}{p.team ? ` · ${trI18n("ทีม")} ${p.team}` : ''}{p.external && p.department ? ` · ${trI18n("สังกัด")} ${p.department}` : ''}</div>
+        <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{positionLabel(p.position) || trI18n("ไม่ระบุตำแหน่ง")}{p.team ? ` · ${trI18n("ทีม")} ${p.team}` : ''}{p.external && p.department ? ` · ${trI18n("สังกัด")} ${p.department}` : ''}</div>
         {p.linkedLines?.length > 0 && (
           <div style={{ fontSize: 11, color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={`${trI18n("ช่างประจำไลน์")}: ${p.linkedLines.join(', ')}`}>{p.linkedLines.join(', ')}</div>
         )}
@@ -517,7 +517,7 @@ function SkillCard({ p, skills }) {
 /** ช่องว่าง — รู้จุดงาน (ช่องระดับจุดงาน) = เขียนชื่อจุดด้วย หัวหน้าจะได้รู้ว่าต้องหาคนลงตรงไหน */
 function EmptySlot({ station, h }) {
   return (
-    <div title={station ? `${trI18n("จุด")} ${station} ${trI18n("ยังขาดคนประจำ")}` : 'ช่องว่าง'} style={{ border: '2px dashed var(--border2)', borderRadius: 'var(--r-md)', minHeight: h || 92, height: h,
+    <div title={station ? `${trI18n("จุด")} ${station} ${trI18n("ยังขาดคนประจำ")}` : trI18n("ช่องว่าง")} style={{ border: '2px dashed var(--border2)', borderRadius: 'var(--r-md)', minHeight: h || 92, height: h,
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, padding: 4, overflow: 'hidden',
       color: 'var(--muted)', fontSize: 12, fontWeight: 700, textAlign: 'center' }}>
       {trI18n("ช่องว่าง")}
@@ -542,7 +542,7 @@ function TeamColumn({ c, skills }) {
     <div style={{ flex: '1 1 260px', minWidth: 0, maxWidth: '100%', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 8, background: 'var(--bg2-surf)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
         <RoleTag>{trI18n('หัวหน้ากลุ่ม')}</RoleTag>
-        <strong style={{ fontSize: 14 }}>{c.team ? `${trI18n("ทีม")} ${c.team}` : 'ไม่ระบุทีม'}</strong>
+        <strong style={{ fontSize: 14 }}>{c.team ? `${trI18n("ทีม")} ${c.team}` : trI18n("ไม่ระบุทีม")}</strong>
         <span style={{ fontSize: 12, fontWeight: 700, color: sm.color }}>● {c.shift ? `${sm.label}${trI18n("วันนี้")}` : sm.label}</span>
         <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--muted)' }}>
           {c.ops.length} {trI18n('คน')}{slotText(c)}
@@ -640,7 +640,7 @@ function OrgTab({ board, depts, skills }) {
               <span style={{ display: 'inline-block', fontSize: 11.5, fontWeight: 800, padding: '2px 8px', borderRadius: 'var(--r-xs)', border: '1px solid var(--border2)', background: 'var(--bg2-surf)', color: 'var(--text2)' }}>
                 {trI18n("วิ่งข้ามมาช่วยประจำ")} {d.flex.length} {trI18n('คน')}</span>
               <span style={{ fontSize: 12, color: 'var(--muted)', marginLeft: 8 }}>
-                ไม่นับรวมในทะเบียนของแผนก · cost center ยังอยู่ที่หน่วยต้นสังกัด
+                {trI18n("ไม่นับรวมในทะเบียนของแผนก · cost center ยังอยู่ที่หน่วยต้นสังกัด")}
               </span>
               <div style={{ ...CARD_GRID, marginTop: 6 }}>
                 {d.flex.map(p => <SkillCard key={p.id} p={p} skills={skills} />)}
@@ -946,15 +946,23 @@ function LineLayoutView({ board, depts, lines, attendance, maps, tv, stationPlan
     : (llineKey ? layoutByName(viaParent || lline) : layouts[0] || null);
   // 🔴 ไลน์ที่ขอมาไม่มีรูปผัง = บอกตรงๆ ห้ามแอบโชว์ผังไลน์อื่นแทน
   const llineMissing = !tv && !!llineKey && layouts.length > 0 && !layout;
+  // 🎛️ เลือกผังผ่านช่อง "ส่วนงาน/ไลน์" บนหัวเพจช่องเดียว (user 24/11 — เดิมมีช่องเลือกผังซ้อนอีกช่อง แล้ว 2 ช่องไม่ตามกัน)
+  //    ยังไม่ระบุไลน์ = ตั้ง ?lline= เป็นผังแรกให้เอง ⇒ ช่องบนบอกเสมอว่ากำลังดูผังของไลน์ไหน (replace — ไม่เพิ่มประวัติย้อนกลับ)
+  const firstLayoutName = layouts[0]?.line_name || '';
+  useEffect(() => {
+    if (!tv && !llineKey && firstLayoutName) merge({ lline: firstLayoutName }, { replace: true });
+  }, [tv, llineKey, firstLayoutName, merge]);
+  // 🔴 จุดบนผัง = จุดของไลน์เจ้าของผัง "+ ไลน์ลูกทั้งหมด" — ไลน์ลูกไม่มีรูปผังของตัวเอง แต่วางพิกัดบนผังไลน์แม่
+  //    (จุดไลน์ลูกผูกด้วย line_name · line_id ว่าง) · เดิมโหลดแค่ชื่อไลน์แม่ ⇒ ผัง LINE APRON ASSY ขึ้นแค่ Supervisor
+  //    (user 24/11 "จุดงานก็ไม่ขึ้น") · จับคู่ผ่าน stationsOfLineFamily ตัวเดียวกับสถานะกลุ่ม
   useEffect(() => {
     let alive = true;
     if (!layout) { setStations([]); return undefined; }
     // 🎯 ทักษะที่จุดต้องการ (station_requirements) มากับจุดเลย — ใช้ตอบ "ยืนจุดที่ฝีมือถึงไหม"
-    const q = supabase.from('workstations').select('id, line_name, line_id, station_name, pos_top, pos_left, station_requirements(skill_name, min_score)');
-    (layout.line_id != null ? q.or(`line_id.eq.${layout.line_id},line_name.eq."${layout.line_name}"`) : q.eq('line_name', layout.line_name))
-      .then(({ data, error }) => { if (alive) { setStations(data || []); if (error) setErr(error.message); } });
+    fetchAllPages(() => supabase.from('workstations').select('id, line_name, line_id, station_name, pos_top, pos_left, station_requirements(skill_name, min_score)'))
+      .then((r) => { if (!alive) return; setStations(stationsOfLineFamily(lines, layout.line_name, r.rows || [])); if (r.error) setErr(String(r.error)); });
     return () => { alive = false; };
-  }, [layout?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [layout?.id, lines.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const empById = useMemo(() => {
     const m = {};
@@ -1002,9 +1010,9 @@ function LineLayoutView({ board, depts, lines, attendance, maps, tv, stationPlan
   const legend = (
     <span style={{ display: 'flex', gap: 12, fontSize: 12, flexWrap: 'wrap' }}>
       {Object.entries(SHIFT_META).map(([k, m]) => <span key={k} style={{ color: m.color, fontWeight: 700 }}>● {trI18n(m.label)}</span>)}
-      <span style={{ color: 'var(--muted)' }}>จาง = ลา/ขาด · ✳ = ย้ายมาวันนี้ · ↗ = วันนี้ไปจุดอื่น · วงประ + สีกะ = ขาดคนประจำกะนั้น</span>
+      <span style={{ color: 'var(--muted)' }}>{trI18n("จาง = ลา/ขาด · ✳ = ย้ายมาวันนี้ · ↗ = วันนี้ไปจุดอื่น · วงประ + สีกะ = ขาดคนประจำกะนั้น")}</span>
       {!tv && <span style={{ color: 'var(--muted)' }}>
-        จุดมุมหมุด = ทักษะ: <b style={{ color: FIT_DOT.ok }}>●</b> ผ่าน · <b style={{ color: FIT_DOT.gap }}>●</b> ไม่ถึง · <b style={{ color: FIT_DOT.noreq }}>●</b> จุดยังไม่ตั้งทักษะ · กดหมุด = รายละเอียด
+        {trI18n("จุดมุมหมุด = ทักษะ")}: <b style={{ color: FIT_DOT.ok }}>●</b> {trI18n("ผ่าน")} · <b style={{ color: FIT_DOT.gap }}>●</b> {trI18n("ไม่ถึง")} · <b style={{ color: FIT_DOT.noreq }}>●</b> {trI18n("จุดยังไม่ตั้งทักษะ · กดหมุด = รายละเอียด")}
       </span>}
     </span>
   );
@@ -1021,12 +1029,6 @@ function LineLayoutView({ board, depts, lines, attendance, maps, tv, stationPlan
     <div style={{ display: 'grid', gap: 10 }}>
       <FilterBar bare>
         {viewSwitch}
-        {!tv && (layouts.length > 1 || llineMissing) && (
-          <select value={layout?.line_name ?? ''} onChange={e => merge({ lline: e.target.value || null })} aria-label={trI18n('ผังไลน์')}>
-            {llineMissing && <option value="">{lline} — {trI18n('ไม่มีรูปผัง')}</option>}
-            {layouts.map(l => <option key={l.id} value={l.line_name}>{trI18n(l.line_name)}</option>)}
-          </select>
-        )}
         <span className="spacer" />
         {tv && legend}
       </FilterBar>
@@ -1099,9 +1101,9 @@ function LineSidePanel({ sum, stationsN, emptyStations, slotShort, placed, fit, 
       {sum.group && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{trI18n('ตัดสินทั้งกลุ่ม')} <b style={{ color: 'var(--text)' }}>{sum.group}</b></div>}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
         <Stat label={`${trI18n("มา")}${sum.shift === 'night' ? trI18n('กะดึก') : trI18n('กะเช้า')} / std`} value={sum.std == null ? '—' : `${sum.onFloor}/${sum.std}`} />
-        <Stat label="ขาด (คน)" value={sum.short == null ? '—' : sum.short} tone={sum.short >= 3 ? 'var(--red)' : sum.short ? 'var(--amber)' : undefined} />
-        <Stat label="ทักษะไม่ถึง (กะนี้ ทั้งกลุ่ม)" value={`${sum.gapPeople} ${trI18n("คน")}`} tone={sum.gapPeople ? 'var(--amber)' : undefined} />
-        <Stat label="จุดงาน (ยังไม่มีคนประจำ)" value={`${stationsN} (${emptyStations})`} />
+        <Stat label={trI18n("ขาด (คน)")} value={sum.short == null ? '—' : sum.short} tone={sum.short >= 3 ? 'var(--red)' : sum.short ? 'var(--amber)' : undefined} />
+        <Stat label={trI18n("ทักษะไม่ถึง (กะนี้ ทั้งกลุ่ม)")} value={`${sum.gapPeople} ${trI18n("คน")}`} tone={sum.gapPeople ? 'var(--amber)' : undefined} />
+        <Stat label={trI18n("จุดงาน (ยังไม่มีคนประจำ)")} value={`${stationsN} (${emptyStations})`} />
       </div>
       <div style={{ fontSize: 12, color: 'var(--muted)' }}>
         {trI18n('สีไลน์ = คนที่มากะนี้เทียบกำลังคนตามผัง (std) · จุดงานเยอะกว่าคนได้ปกติ (คนเดียวหมุนหลายจุด) จึงไม่นับจุดว่างเป็นการขาด')}
@@ -1286,9 +1288,7 @@ function SkillGapTable({ gaps, defs }) {
         </tbody>
       </table>
       <div style={{ padding: '8px 12px', fontSize: 12, color: 'var(--muted)' }}>
-        กรอบทึบ = ประเมินแล้วแต่คะแนนยังไม่ถึง (มี/ต้องการ) · กรอบประ = ยังไม่เคยประเมินทักษะนั้น (นับเป็น 0) ·
-        ⏳ = ได้ขั้นแล้วจากการสะสม EXP แต่รอหัวหน้าอนุมัติ (สีฟ้า = อนุมัติแล้วจะผ่านจุดนี้ทันที) ·
-        ประเมิน/ปรับคะแนนที่ /operator · ตั้งทักษะที่จุดต้องการที่ /line-setup
+        {trI18n("กรอบทึบ = ประเมินแล้วแต่คะแนนยังไม่ถึง (มี/ต้องการ) · กรอบประ = ยังไม่เคยประเมินทักษะนั้น (นับเป็น 0) · ⏳ = ได้ขั้นแล้วจากการสะสม EXP แต่รอหัวหน้าอนุมัติ (สีฟ้า = อนุมัติแล้วจะผ่านจุดนี้ทันที) · ประเมิน/ปรับคะแนนที่ /operator · ตั้งทักษะที่จุดต้องการที่")} /line-setup
       </div>
     </div>
   );
@@ -1328,7 +1328,7 @@ function LayoutMap({ layout, placed, reserve = 12, fit = null, focus = null, onO
                     const dim = away || attend === 'leave' || attend === 'absent';
                     const fs = !tv && fit ? personFitState(x, p, fit) : null;
                     return (
-                      <div key={emp.id} title={`${emp.name} · ${shiftMeta(shift).label} · ${ATTEND_META[attend].label}${temp ? trI18n(' · ย้ายมาวันนี้') : ''}${away ? trI18n(' · วันนี้ไปยืนจุดอื่น') : ''}`}
+                      <div key={emp.id} title={`${emp.name} · ${shiftMeta(shift).label} · ${trI18n(ATTEND_META[attend].label)}${temp ? trI18n(' · ย้ายมาวันนี้') : ''}${away ? trI18n(' · วันนี้ไปยืนจุดอื่น') : ''}`}
                         style={{ position: 'relative', width: sz, height: sz }}>
                         <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', background: '#1a1a1a',
                           border: `${ms?.ring || 2}px ${temp ? 'dashed' : 'solid'} ${c}`, opacity: dim ? 0.4 : 1, filter: dim ? 'grayscale(1)' : undefined }}>
@@ -1391,12 +1391,12 @@ function FourMCard({ d, logs, tv }) {
               <div style={{ background: m.color, color: m.key === 'machine' ? '#1f2937' : '#fff', fontWeight: 800, fontSize: 14, borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 4px' }}>{trI18n(m.label)}</div>
               <div style={{ border: `2px solid ${tone}`, borderRadius: 'var(--r-md)', padding: '6px 10px', minWidth: 0 }}>
                 <div style={{ fontWeight: 800, fontSize: 16, color: tone }}>
-                  {!d.lines.length ? 'ไม่รู้' : bad ? `${trI18n("ผิดปกติ")} · ${s.rows.length} ${trI18n("ใบ")}` : 'ปกติ'}
+                  {!d.lines.length ? trI18n("ไม่รู้") : bad ? `${trI18n("ผิดปกติ")} · ${s.rows.length} ${trI18n("ใบ")}` : trI18n("ปกติ")}
                   {bad && s.pending > 0 && <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', marginLeft: 6 }}>{trI18n('(รออนุมัติ')} {s.pending})</span>}
                 </div>
                 {s.rows.slice(0, descMax).map(r => (
                   <div key={r.id} style={{ fontSize: 12, color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.description}>
-                    · {r.line_name} — {r.description || '(ไม่มีรายละเอียด)'}
+                    · {r.line_name} — {r.description || trI18n("(ไม่มีรายละเอียด)")}
                   </div>
                 ))}
                 {s.rows.length > descMax && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{trI18n('+ อีก')} {s.rows.length - descMax} {trI18n('ใบ')}</div>}
@@ -1582,12 +1582,12 @@ function OrgTv({ board, depts, skills }) {
                   <div key={c.team || '-'} style={{ flex: '1 1 0', minWidth: 0, border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 8, background: 'var(--bg2-surf)', overflow: 'hidden' }}>
                     <div style={{ height: TV_COLHEAD_H, display: 'flex', flexDirection: 'column', justifyContent: 'center', overflow: 'hidden' }}>
                       <div style={{ display: 'flex', gap: 8, alignItems: 'center', whiteSpace: 'nowrap' }}>
-                        <strong style={{ fontSize: 15 }}>{c.team ? `${trI18n("ทีม")} ${c.team}` : 'ไม่ระบุทีม'}</strong>
+                        <strong style={{ fontSize: 15 }}>{c.team ? `${trI18n("ทีม")} ${c.team}` : trI18n("ไม่ระบุทีม")}</strong>
                         <span style={{ fontSize: 12.5, fontWeight: 700, color: sm.color }}>● {c.shift ? `${sm.label}${trI18n("วันนี้")}` : sm.label}</span>
                         <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--muted)' }}>{c.ops.length} {trI18n('คน')}{slotText(c)}</span>
                       </div>
                       <div style={{ fontSize: 12, color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {trI18n("หัวหน้ากลุ่ม")}: {c.leaders.length ? c.leaders.map(p => p.name).join(', ') : '— ยังไม่มีในทะเบียน'}
+                        {trI18n("หัวหน้ากลุ่ม")}: {c.leaders.length ? c.leaders.map(p => p.name).join(', ') : trI18n("— ยังไม่มีในทะเบียน")}
                       </div>
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignContent: 'flex-start' }}>
@@ -1762,11 +1762,9 @@ function StaffingTab({ section, deptParam, today, nodes, employees, lines, slotP
               </tbody>
             </table>
             <div style={{ padding: '8px 12px', fontSize: 12, color: 'var(--muted)' }}>
-              🧑 <b>{trI18n('ขาดคน')}</b> = ลา + ขาดงาน + ยังไม่เช็ค + ถูกยืมออก − ยืมเข้า (นับเฉพาะกะที่ขาด) · <b>"กะที่ขาดคน" นับจากช่องนี้เท่านั้น</b> ·
-              🪑 <b>{trI18n('ช่องว่างอัตรากำลัง')}</b> คนละเรื่องกัน — ไม่ใช่ "วันนี้มีคนไม่มา" แต่คือตำแหน่งที่ยังไม่มีคนประจำ ·
-              "คิดไม่ได้ N กะ" = ยืนยันไม่ได้ว่าไลน์เดินกะนั้น (ไม่มีกะผลิตที่ปิดแล้ว) จึงไม่นับช่องว่าง — <b>{trI18n('ไม่รู้ ≠ ไม่ขาด')}</b> ·
-              "ตัดตามผัง N" = ช่องว่างดิบจากจุดงานเกินกำลังคนตามผัง (std − คนที่มาจริง) จึงถูกตัด — จุดที่ใช้คนวนๆ ไม่ใช่ช่องว่างถาวร ·
-              "⚠️ ไม่รู้กำลังคนผัง N กะ" = ไลน์ของแผนกนี้ยังไม่ได้ตั้ง std (ตั้งที่ /line-setup) ⇒ <b>{trI18n('ไม่ได้ตัดเพดาน')}</b> ช่องว่างอาจสูงกว่าจริง
+              🧑 <b>{trI18n('ขาดคน')}</b> = {trI18n("ลา + ขาดงาน + ยังไม่เช็ค + ถูกยืมออก − ยืมเข้า (นับเฉพาะกะที่ขาด")}) · <b>"{trI18n("กะที่ขาดคน\" นับจากช่องนี้เท่านั้น")}</b> ·
+              🪑 <b>{trI18n('ช่องว่างอัตรากำลัง')}</b> {trI18n("คนละเรื่องกัน — ไม่ใช่ \"วันนี้มีคนไม่มา\" แต่คือตำแหน่งที่ยังไม่มีคนประจำ · \"คิดไม่ได้ N กะ\" = ยืนยันไม่ได้ว่าไลน์เดินกะนั้น (ไม่มีกะผลิตที่ปิดแล้ว) จึงไม่นับช่องว่าง")} — <b>{trI18n('ไม่รู้ ≠ ไม่ขาด')}</b> ·
+              "{trI18n("ตัดตามผัง N\" = ช่องว่างดิบจากจุดงานเกินกำลังคนตามผัง (std − คนที่มาจริง) จึงถูกตัด — จุดที่ใช้คนวนๆ ไม่ใช่ช่องว่างถาวร · \"⚠️ ไม่รู้กำลังคนผัง N กะ\" = ไลน์ของแผนกนี้ยังไม่ได้ตั้ง std (ตั้งที่")} /line-setup) ⇒ <b>{trI18n('ไม่ได้ตัดเพดาน')}</b> {trI18n("ช่องว่างอาจสูงกว่าจริง")}
             </div>
           </div>
 
@@ -1800,15 +1798,12 @@ function StaffingTab({ section, deptParam, today, nodes, employees, lines, slotP
               </tbody>
             </table>
             <div style={{ padding: '8px 12px', fontSize: 12, color: 'var(--muted)', lineHeight: 1.6 }}>
-              <b>{trI18n('ปกติ')}</b> = มัธยฐานของคนยืนจริงต่อกะของแผนกนั้นเอง (ไม่ใช่ที่นั่งตาม std — std บางไลน์ยังตั้งสูงกว่าคนในทะเบียน จนเกือบทุกกะดู "ขาด") ·
-              นับเฉพาะกะที่เช็คชื่อแล้วและมีกะผลิตปิดแล้ว · OEE/%P = ค่าที่ระบบบันทึกตอนปิดกะของทุกไลน์ในแผนก (ถ่วงด้วยเวลา) ·
-              ไม่รวมยอดชิ้นข้ามไลน์เพราะไลน์ย่อยป้อนงานต่อกัน บวกกันจะนับซ้ำ ·
-              ⚠️ เป็น<b>{trI18n('ความสัมพันธ์')}</b> ไม่ใช่ข้อพิสูจน์ว่าคนน้อยเป็นสาเหตุ — กะนั้นอาจมีเครื่องเสีย/ของขาดด้วย ดูต้นเหตุที่ Daily Report ของกะนั้น
+              <b>{trI18n('ปกติ')}</b> = {trI18n("มัธยฐานของคนยืนจริงต่อกะของแผนกนั้นเอง (ไม่ใช่ที่นั่งตาม std — std บางไลน์ยังตั้งสูงกว่าคนในทะเบียน จนเกือบทุกกะดู \"ขาด\") · นับเฉพาะกะที่เช็คชื่อแล้วและมีกะผลิตปิดแล้ว · OEE/%P = ค่าที่ระบบบันทึกตอนปิดกะของทุกไลน์ในแผนก (ถ่วงด้วยเวลา) · ไม่รวมยอดชิ้นข้ามไลน์เพราะไลน์ย่อยป้อนงานต่อกัน บวกกันจะนับซ้ำ · ⚠️ เป็น")}<b>{trI18n('ความสัมพันธ์')}</b> {trI18n("ไม่ใช่ข้อพิสูจน์ว่าคนน้อยเป็นสาเหตุ — กะนั้นอาจมีเครื่องเสีย/ของขาดด้วย ดูต้นเหตุที่ Daily Report ของกะนั้น")}
             </div>
           </div>
 
           <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
-            <div style={{ padding: '10px 12px', fontWeight: 800 }}>{trI18n('รายวัน — คนขาดกี่คน')} <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--muted)' }}>(ตัวเลข = คนขาด (ลา/ขาดงาน/ยังไม่เช็ค/ถูกยืมออก) · +n = คนเกิน · ✓ = มากันครบ · · = ไม่ได้เช็คชื่อ · ชี้ที่ช่องเพื่อดูสาเหตุ + ช่องว่างอัตรากำลัง)</span></div>
+            <div style={{ padding: '10px 12px', fontWeight: 800 }}>{trI18n('รายวัน — คนขาดกี่คน')} <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--muted)' }}>({trI18n("ตัวเลข = คนขาด (ลา/ขาดงาน/ยังไม่เช็ค/ถูกยืมออก) · +n = คนเกิน · ✓ = มากันครบ · · = ไม่ได้เช็คชื่อ · ชี้ที่ช่องเพื่อดูสาเหตุ + ช่องว่างอัตรากำลัง")})</span></div>
             <table style={{ borderCollapse: 'collapse' }}>
               <thead><tr>
                 <th style={{ ...th, position: 'sticky', left: 0, background: 'var(--card)', zIndex: 1 }}>{trI18n('แผนก · กะ')}</th>
@@ -1918,8 +1913,8 @@ function HistoryTab({ section, dept, deptParam, nodes, lines, stations, employee
   const th = { textAlign: 'left', fontSize: 12, padding: '8px 10px', color: 'var(--muted)', whiteSpace: 'nowrap' };
   const td = { padding: '7px 10px', fontSize: 13, borderTop: '1px solid var(--border)', verticalAlign: 'top' };
   const signed = (n) => (n > 0 ? `+${n}` : String(n));
-  const fmtAt = (t) => new Date(t).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' });
-  const monthTh = (ym) => { const [y, m] = ym.split('-'); return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString('th-TH', { month: 'short', year: 'numeric' }); };
+  const fmtAt = (t) => new Date(t).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' });
+  const monthTh = (ym) => { const [y, m] = ym.split('-'); return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString(dateLocale(), { month: 'short', year: 'numeric' }); };
   return (
     <div style={{ display: 'grid', gap: 12 }}>
       <TimeRangeBar scale={tr.scale} from={from} to={to} today={tr.today} scales={null}
@@ -1934,7 +1929,7 @@ function HistoryTab({ section, dept, deptParam, nodes, lines, stations, employee
         <div style={{ fontSize: 12, color: 'var(--muted)' }}>{trI18n('ℹ️ อีก')} {scoped.unattributed} {trI18n("รายการเป็นจุดงานที่ถูกลบไปแล้ว สืบไม่ได้ว่าเป็นของแผนกไหน — ไม่ได้แสดงในตัวกรองแผนก (เลือก")} "{ALL.dept}" {trI18n("เพื่อดู")})</div>
       )}
       {state.loading ? <div style={{ padding: 24, color: 'var(--muted)' }}>{trI18n('กำลังโหลด…')}</div> : !list.length ? (
-        <div className="card" style={{ padding: 24, color: 'var(--muted)' }}>{trI18n('ไม่มีการเปลี่ยนช่อง/คนต่อกะ/ช่างประจำไลน์ของ')}{deptParam ? 'แผนก' : 'ส่วนงาน'}{trI18n('นี้ในช่วงที่เลือก')}</div>
+        <div className="card" style={{ padding: 24, color: 'var(--muted)' }}>{trI18n('ไม่มีการเปลี่ยนช่อง/คนต่อกะ/ช่างประจำไลน์ของ')}{deptParam ? trI18n("แผนก") : trI18n("ส่วนงาน")}{trI18n('นี้ในช่วงที่เลือก')}</div>
       ) : (
         <>
           <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
@@ -1959,7 +1954,7 @@ function HistoryTab({ section, dept, deptParam, nodes, lines, stations, employee
               </tbody>
             </table>
             <div style={{ padding: '6px 12px 10px', fontSize: 12, color: 'var(--muted)' }}>
-              สุทธิ = ผลรวมของ (ค่าใหม่ − ค่าเดิม) · ล้างค่า = ลดเท่าค่าเดิม (บอร์ดกลับไปใช้ค่าถัดไปในลำดับ: ช่องต่อทีม → จุดงาน → std)
+              {trI18n("สุทธิ = ผลรวมของ (ค่าใหม่ − ค่าเดิม) · ล้างค่า = ลดเท่าค่าเดิม (บอร์ดกลับไปใช้ค่าถัดไปในลำดับ: ช่องต่อทีม → จุดงาน")} → std)
             </div>
           </div>
           <div className="card table-sticky" style={{ padding: 0, overflowX: 'auto' }}>
@@ -1975,7 +1970,7 @@ function HistoryTab({ section, dept, deptParam, nodes, lines, stations, employee
                     <td style={td}>{c.actor}</td>
                     <td style={{ ...td, whiteSpace: 'nowrap' }}>{SLOT_KIND_META[c.kind].icon} {trI18n(SLOT_KIND_META[c.kind].label)}</td>
                     <td style={td}>{c.where}</td>
-                    <td style={{ ...td, whiteSpace: 'nowrap' }}>{c.kind === 'team' ? (c.team ? `${trI18n("ทีม")} ${c.team}` : 'ไม่ระบุทีม') : '–'}</td>
+                    <td style={{ ...td, whiteSpace: 'nowrap' }}>{c.kind === 'team' ? (c.team ? `${trI18n("ทีม")} ${c.team}` : trI18n("ไม่ระบุทีม")) : '–'}</td>
                     {/* ไม่ใส่สีเขียว/แดง — ช่องเพิ่มไม่ได้แปลว่า "ดี" (UI §6.17 สี = ความหมาย) */}
                     <td style={{ ...td, fontWeight: 700 }}>{c.text}</td>
                   </tr>

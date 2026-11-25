@@ -250,7 +250,7 @@ export default function CapaEffectiveness({ capa, onChange, canEdit, canWriteRes
               </select>
             </label>
             <label style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700 }}>
-              ประเภทของเสียที่วัด (ว่าง = ทุกประเภทของพาร์ทนี้)
+              {tr("ประเภทของเสียที่วัด (ว่าง = ทุกประเภทของพาร์ทนี้")})
               <select style={{ ...inputSt, marginTop: 4 }} value={capa.eff_defect_type_id || ''} disabled={!canEdit}
                 onChange={(e) => {
                   const t = types.find((x) => x.id === e.target.value);
@@ -293,7 +293,7 @@ export default function CapaEffectiveness({ capa, onChange, canEdit, canWriteRes
               {tr(V.label)}{judged.reason ? ` — ${judged.reason}` : ''}
               {judged.verdict === 'worse' || judged.verdict === 'not_effective' ? (
                 <div style={{ fontWeight: 600, marginTop: 3 }}>
-                  ต้องกลับไปทบทวน D4 (สาเหตุราก) — สาเหตุที่ระบุอาจไม่ใช่ตัวจริง หรือมาตรการยังไม่ถูกทำจริงหน้างาน
+                  {tr("ต้องกลับไปทบทวน D4 (สาเหตุราก) — สาเหตุที่ระบุอาจไม่ใช่ตัวจริง หรือมาตรการยังไม่ถูกทำจริงหน้างาน")}
                 </div>
               ) : null}
             </div>
@@ -334,7 +334,7 @@ export default function CapaEffectiveness({ capa, onChange, canEdit, canWriteRes
 
         <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.6, borderTop: '1px dashed var(--border2)', paddingTop: 8 }}>
           {tr("หารด้วย")} <b>{tr('จำนวนวันที่ไลน์ผลิตจริง')}</b> {tr("ไม่ใช่วันปฏิทิน (ไลน์หยุด ของเสียเป็น 0 ไม่ได้แปลว่าได้ผล")}) ·
-          {noTrial ? '' : 'ไม่นับ'}<b>{tr('งานทดลอง')}</b>{noTrial ? ' ถูกนับรวมอยู่' : ' (try-out)'} {tr('· ตัวเลขนี้เป็น')}<b>{tr('สัญญาณ ไม่ใช่คำตัดสิน')}</b> — {tr("คนเป็นผู้สรุป")}
+          {noTrial ? '' : tr("ไม่นับ")}<b>{tr('งานทดลอง')}</b>{noTrial ? tr(" ถูกนับรวมอยู่") : ' (try-out)'} {tr('· ตัวเลขนี้เป็น')}<b>{tr('สัญญาณ ไม่ใช่คำตัดสิน')}</b> — {tr("คนเป็นผู้สรุป")}
         </div>
       </div>
     </div>

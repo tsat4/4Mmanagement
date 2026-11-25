@@ -64,7 +64,7 @@ export default function SapViewConsumption() {
         onFrom={t.setFrom} onTo={t.setTo} onPreset={t.setPreset} onReload={load} loading={loading}
       >
         <Segmented value={view} onChange={setView} options={VIEWS.map(v => ({ value: v.key, label: tr(v.label) }))} />
-        <SearchInput value={q} onChange={setQ} fields="MAT / ชื่อพาร์ท" />
+        <SearchInput value={q} onChange={setQ} fields={tr("MAT / ชื่อพาร์ท")} />
       </TimeRangeBar>
 
       <NoticeBar tone="info">

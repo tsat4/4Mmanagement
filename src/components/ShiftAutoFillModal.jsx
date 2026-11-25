@@ -268,7 +268,7 @@ export default function ShiftAutoFillModal({ weekStart, lines = [], deptRows = [
 
             {ready.length === 0 && blocked.every(b => b.done) && blocked.length > 0 && (
               <div style={{ padding: '10px 14px', borderRadius: 'var(--r-md)', marginBottom: 14, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.4)', fontSize: 12.5, color: '#22c55e' }}>
-                ✅ ตั้งกะครบทุกสัปดาห์ในช่วงนี้แล้ว ไม่มีอะไรต้องเติม
+                ✅ {tr("ตั้งกะครบทุกสัปดาห์ในช่วงนี้แล้ว ไม่มีอะไรต้องเติม")}
               </div>
             )}
           </>
@@ -284,7 +284,7 @@ export default function ShiftAutoFillModal({ weekStart, lines = [], deptRows = [
               fontSize: 13, fontWeight: 700, cursor: (saving || !ready.length) ? 'not-allowed' : 'pointer',
               opacity: (saving || loading || !ready.length) ? 0.5 : 1,
             }}>
-            {saving ? 'กำลังเติม...' : `✓ ${tr("เติม")} ${rowCount} ${tr("แถว")}`}
+            {saving ? tr("กำลังเติม...") : `✓ ${tr("เติม")} ${rowCount} ${tr("แถว")}`}
           </button>
         </div>
       </div>

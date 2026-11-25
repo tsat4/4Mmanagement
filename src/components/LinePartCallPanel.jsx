@@ -621,7 +621,7 @@ export default function LinePartCallPanel({ lineName, lines = [], role, fullName
         {plan == null && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('กำลังคำนวณ…')}</span>}
         {plan && !plan.error && (
           <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-            {plan.area?.code ? `${tr("พื้นที่")} ${plan.area.code} (${(plan.area.lines || []).join(' · ')})` : 'ไลน์นี้ยังไม่ผูกพื้นที่ SAP — คิดเฉพาะไลน์นี้'}
+            {plan.area?.code ? `${tr("พื้นที่")} ${plan.area.code} (${(plan.area.lines || []).join(' · ')})` : tr("ไลน์นี้ยังไม่ผูกพื้นที่ SAP — คิดเฉพาะไลน์นี้")}
             {` · ${tr("ใบผลิตเปิดอยู่")} ${plan.orders ?? 0} ${tr("ใบ")}`}
             {planRows.length ? ` · ${tr("ลูกที่ต้องใช้")} ${planRows.length} ${tr("พาร์ท")}` : ''}
             {planSend.length ? <> · <b style={{ color: 'var(--amber)' }}>{tr('ยังไม่ได้แจ้งสโตร์')} {planSend.length}</b></> : null}
@@ -684,7 +684,7 @@ export default function LinePartCallPanel({ lineName, lines = [], role, fullName
       ) : (
         <div style={{ background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 'var(--r-md)', padding: '10px 12px' }}>
           <div style={{ fontSize: 11.5, fontWeight: 800, color: '#22c55e', marginBottom: 6 }}>
-            ➕ ขอเบิกพาร์ทนี้เลย <span style={{ fontWeight: 400, color: 'var(--muted)' }}>· เลือกพาร์ทที่ไลน์นี้ผลิต = ใส่ยอดที่จะผลิต ระบบแตก BOM เป็นชิ้นส่วนที่ต้องเบิกให้</span>
+            ➕ {tr("ขอเบิกพาร์ทนี้เลย")} <span style={{ fontWeight: 400, color: 'var(--muted)' }}>· {tr("เลือกพาร์ทที่ไลน์นี้ผลิต = ใส่ยอดที่จะผลิต ระบบแตก BOM เป็นชิ้นส่วนที่ต้องเบิกให้")}</span>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
             {/* ช่องรับรหัสพาร์ทต้องเป็น picker กลาง ห้าม input เปล่า (UI-CONVENTIONS §5.1.2) */}
@@ -812,10 +812,10 @@ export default function LinePartCallPanel({ lineName, lines = [], role, fullName
                     border: `1px solid ${short ? 'rgba(239,68,68,0.35)' : 'rgba(56,189,248,0.3)'}`, borderRadius: 'var(--r-md)' }}>
                     <MatLabel mat={s.mat_no} size={12.5} />
                     <span style={{ fontSize: 11.5, color: short ? '#ef4444' : 'var(--muted)', fontWeight: short ? 800 : 400 }}>
-                      {s.loc} {tr('เหลือ')} {fmtQty(s.have)} {tr('/ ขั้นต่ำ')} {fmtQty(s.min)}{short ? ' · หมดแล้ว' : ''}
+                      {s.loc} {tr('เหลือ')} {fmtQty(s.have)} {tr('/ ขั้นต่ำ')} {fmtQty(s.min)}{short ? tr(" · หมดแล้ว") : ''}
                     </span>
                     <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 800, color: 'var(--text)' }}>
-                      {s.suggestQty ? `${tr("ควรผลิต")} ${fmtQty(s.suggestQty)}` : 'Kanban ยังไม่ตั้ง max — กำหนดยอดผลิตเอง'}
+                      {s.suggestQty ? `${tr("ควรผลิต")} ${fmtQty(s.suggestQty)}` : tr("Kanban ยังไม่ตั้ง max — กำหนดยอดผลิตเอง")}
                     </span>
                   </div>
                 );
@@ -850,7 +850,7 @@ export default function LinePartCallPanel({ lineName, lines = [], role, fullName
           ))}
           {!canDecide && (
             <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-              ดูอย่างเดียว — คนตัดสินใจเบิกคือหัวหน้ากลุ่มของไลน์ (สิทธิ์ <code>wip_request:decide</code>)
+              {tr("ดูอย่างเดียว — คนตัดสินใจเบิกคือหัวหน้ากลุ่มของไลน์ (สิทธิ์")} <code>wip_request:decide</code>)
             </div>
           )}
         </div>
@@ -912,7 +912,7 @@ export default function LinePartCallPanel({ lineName, lines = [], role, fullName
                   <span title={r.delivered_override_reason || ''} style={{ fontSize: 11, fontWeight: 700, color: DELIVER_GATES[r.delivered_gate].color }}>
                     {/* 🔴 ป้ายนี้คือ "ตอนส่งผ่านด่านทางไหน" (ประวัติ) ไม่ใช่สถานะทะเบียนวันนี้ —
                         ไลน์ที่เพิ่งตั้งจุดส่งทีหลัง ใบเก่ายังขึ้น "ยังไม่ตั้งจุดส่ง" ตลอดไป ต้องเขียนให้ชัด */}
-                    {DELIVER_GATES[r.delivered_gate].icon} {r.delivered_gate === 'scanned' ? (r.delivered_point_name || DELIVER_GATES.scanned.label) : `${DELIVER_GATES[r.delivered_gate].label} ${tr("ตอนส่ง")}`}
+                    {DELIVER_GATES[r.delivered_gate].icon} {r.delivered_gate === 'scanned' ? (r.delivered_point_name || tr(DELIVER_GATES.scanned.label)) : `${tr(DELIVER_GATES[r.delivered_gate].label)} ${tr("ตอนส่ง")}`}
                   </span>
                 )}
                 {/* 📭 05/11 — ส่งแล้วยังไม่กดรับ ต้องเห็นว่าค้างมานานแค่ไหน (`unreceivedAge` · replenishGate.js) */}
@@ -934,7 +934,7 @@ export default function LinePartCallPanel({ lineName, lines = [], role, fullName
       {/* ── worklist: ไลน์ยังไม่ตั้ง "จุดส่งงาน" — สโตร์ส่งได้ แต่ระบบตรวจไม่ได้ว่าวางถูกจุดไหม (เฟส 4 · ไม่รู้ = ห้ามบล็อก แต่ห้ามเงียบ) ── */}
       {!hasDeliveryPoint && (
         <div style={{ marginTop: 10, fontSize: 11, color: '#f59e0b' }}>
-          ไลน์นี้ยังไม่ตั้งจุดส่งงาน — สโตร์ยิง QR ยืนยันจุดวางของไม่ได้ · ตั้งที่ <b>{tr('ตั้งค่าผังไลน์ → 🎯 จุดส่งงาน')}</b> แล้วพิมพ์ป้ายที่ 🏷️ พิมพ์ป้าย QR
+          {tr("ไลน์นี้ยังไม่ตั้งจุดส่งงาน — สโตร์ยิง QR ยืนยันจุดวางของไม่ได้ · ตั้งที่")} <b>{tr('ตั้งค่าผังไลน์ → 🎯 จุดส่งงาน')}</b> {tr("แล้วพิมพ์ป้ายที่ 🏷️ พิมพ์ป้าย")} QR
         </div>
       )}
 
@@ -970,12 +970,12 @@ function SuggestRow({ s, canDecide, busy, onPlace, onHold, btn }) {
       border: `1px solid ${short ? 'rgba(239,68,68,0.35)' : 'rgba(245,158,11,0.3)'}`, borderRadius: 'var(--r-md)' }}>
       <MatLabel mat={s.mat_no} size={12.5} />
       <span style={{ fontSize: 11.5, color: short ? '#ef4444' : 'var(--muted)', fontWeight: short ? 800 : 400 }}>
-        {tr("เหลือ")} {fmtQty(s.have)} {tr('/ จุดเรียกเติม')} {fmtQty(s.min)}{short ? ' · หมดแล้ว' : ''}
+        {tr("เหลือ")} {fmtQty(s.have)} {tr('/ จุดเรียกเติม')} {fmtQty(s.min)}{short ? tr(" · หมดแล้ว") : ''}
       </span>
       {canDecide && (
         <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
           <input type="number" value={qty} onChange={e => setQty(e.target.value)} placeholder={tr('จำนวน')}
-            title={s.suggestQty ? `${tr("ระบบเสนอ")} ${s.suggestQty} (${tr("เติมให้ถึง")} max)` : 'ยังไม่ได้ตั้ง max/จำนวนเบิก — กรอกเอง'}
+            title={s.suggestQty ? `${tr("ระบบเสนอ")} ${s.suggestQty} (${tr("เติมให้ถึง")} max)` : tr("ยังไม่ได้ตั้ง max/จำนวนเบิก — กรอกเอง")}
             style={{ width: 84, padding: '4px 8px', borderRadius: 'var(--ctl-r)', fontSize: 12 }} />
           <button disabled={busy} onClick={() => onPlace(s, qty)} style={btn('#22c55e', '#04140a')}>{tr('เบิก')}</button>
           <button disabled={busy} onClick={() => onHold(s)} style={btn('transparent', '#f59e0b', 'rgba(245,158,11,0.5)')}>{tr('⏸ พักไว้')}</button>
@@ -1093,11 +1093,11 @@ function LevelSetupModal({ lineName, lines = [], upMats = [], levels, onHand, re
                     </td>
                     <td style={{ textAlign: 'right', color: 'var(--muted)', paddingRight: 10 }}>
                       {r.have == null ? <span title={tr('ไม่มีแถวสต็อก — ยังเช็คไม่ได้ ไม่ใช่ของหมด')}>—</span> : fmtQty(r.have)}
-                      <div style={{ fontSize: 11, color: r.loc ? '#38bdf8' : 'var(--muted)' }}>{r.loc ? `🏭 ${r.loc}` : 'หน้าไลน์'}</div>
+                      <div style={{ fontSize: 11, color: r.loc ? '#38bdf8' : 'var(--muted)' }}>{r.loc ? `🏭 ${r.loc}` : tr("หน้าไลน์")}</div>
                     </td>
                     {r.std ? (
                       <td colSpan={3} style={{ padding: '3px 4px 3px 0', fontSize: 11.5, color: 'var(--text2)' }}>
-                        {r.std.min != null ? `${tr("ขั้นต่ำ")} ${fmtQty(r.std.min)} · ${tr("สูงสุด")} ${fmtQty(r.std.max)}` : 'ยังไม่ตั้งในแท็บคำนวณ Kanban'}
+                        {r.std.min != null ? `${tr("ขั้นต่ำ")} ${fmtQty(r.std.min)} · ${tr("สูงสุด")} ${fmtQty(r.std.max)}` : tr("ยังไม่ตั้งในแท็บคำนวณ Kanban")}
                         <span style={{ color: 'var(--muted)' }}> {tr('— แก้ที่แท็บคำนวณ Kanban')}</span>
                       </td>
                     ) : ['min_qty', 'max_qty', 'reorder_qty'].map(k => (

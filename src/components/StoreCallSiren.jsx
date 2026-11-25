@@ -154,7 +154,7 @@ export default function StoreCallSiren({ slot = 0, variant = 'float', here = fal
       <div style={fixed({ bottom: chipBottom, right: 12, display: 'flex', alignItems: 'center', gap: 7,
         background: 'rgba(28,10,10,0.95)', border: '1px solid rgba(239,68,68,0.6)', borderRadius: 'var(--r-md)',
         padding: '7px 11px', fontSize: 11.5, fontWeight: 800, color: '#f87171', boxShadow: 'var(--shadow-lg)' })}>
-        ⚠️ อ่านใบขอเบิกจากไลน์ไม่ได้ — ยังบอกไม่ได้ว่ามีไลน์เรียกของหรือไม่
+        ⚠️ {tr("อ่านใบขอเบิกจากไลน์ไม่ได้ — ยังบอกไม่ได้ว่ามีไลน์เรียกของหรือไม่")}
       </div>
     );
     if (!muted) return null;
@@ -164,7 +164,7 @@ export default function StoreCallSiren({ slot = 0, variant = 'float', here = fal
         style={fixed({ bottom: chipBottom, right: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7,
           background: 'rgba(20,16,6,0.94)', border: '1px solid rgba(251,191,36,0.5)', borderRadius: 'var(--r-md)',
           padding: '7px 11px', fontSize: 11.5, fontWeight: 800, color: '#fbbf24', boxShadow: 'var(--shadow-lg)' })}>
-        เสียงเตือน "ไลน์เรียกของ" ยังไม่พร้อม — แตะที่นี่ 1 ครั้ง
+        {tr("เสียงเตือน \"ไลน์เรียกของ\" ยังไม่พร้อม — แตะที่นี่ 1 ครั้ง")}
       </div>
     );
   }
@@ -190,7 +190,7 @@ export default function StoreCallSiren({ slot = 0, variant = 'float', here = fal
           <button type="button" onClick={() => goPrep(a)} style={{ background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 'var(--r-md)',
             padding: '5px 12px', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>{tr('ไปเตรียมงาน')}</button>
           <button type="button" onClick={() => ack(a)}
-            title={canAck ? 'หยุดเสียงเท่านั้น — ใบยังรอหยิบอยู่ในคิวสโตร์เหมือนเดิม' : 'บัญชีนี้ไม่มีสิทธิ์บันทึกรับทราบ (heijunka:operate) — ปิดได้เฉพาะเสียงบนจอนี้'}
+            title={canAck ? tr("หยุดเสียงเท่านั้น — ใบยังรอหยิบอยู่ในคิวสโตร์เหมือนเดิม") : tr("บัญชีนี้ไม่มีสิทธิ์บันทึกรับทราบ (heijunka:operate) — ปิดได้เฉพาะเสียงบนจอนี้")}
             style={{ background: 'var(--bg2-surf)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)',
               padding: '5px 12px', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
             {canAck ? tr('รับทราบ · หยุดเสียง') : tr('🔇 ปิดเสียงเฉพาะจอนี้')}
@@ -218,7 +218,7 @@ export default function StoreCallSiren({ slot = 0, variant = 'float', here = fal
             <span style={{ fontSize: 22 }}>📦</span>
             <div className="andon-bar-msg" style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13.5, fontWeight: 800, color: '#fff' }}>
-                {tr("ไลน์เรียกของ")} — {a.line_name || 'ไม่ระบุไลน์'}
+                {tr("ไลน์เรียกของ")} — {a.line_name || tr("ไม่ระบุไลน์")}
               </div>
               {/* ชื่อชิ้นงานต้องผ่าน <MatLabel> — Part No. → Part Name → MAT SAP (ด่าน matOrderSweep) */}
               <MatLabel mat={a.mat_no} name={a.part_name} size={12.5} />
@@ -232,7 +232,7 @@ export default function StoreCallSiren({ slot = 0, variant = 'float', here = fal
             {muted && (
               <span onClick={unlockNow} title={tr('เบราว์เซอร์บล็อกเสียงจนกว่าจะมีคนแตะจอ')}
                 style={{ flexShrink: 0, fontSize: 11.5, fontWeight: 800, color: '#fbbf24', cursor: 'pointer' }}>
-                แตะเพื่อเปิดเสียง
+                {tr("แตะเพื่อเปิดเสียง")}
               </span>
             )}
             <button onClick={() => goPrep(a)} title={tr('ไปหน้าเตรียมงาน — Stock Management › 📤 ส่งของเข้าไลน์ › ตู้ตามเลขพาร์ท (กรองเฉพาะพาร์ทนี้)')}
@@ -241,8 +241,8 @@ export default function StoreCallSiren({ slot = 0, variant = 'float', here = fal
               {tr('ไปเตรียมงาน')}
             </button>
             <button onClick={() => ack(a)}
-              title={canAck ? 'หยุดเสียงเท่านั้น — ใบยังรอหยิบอยู่ในคิวสโตร์เหมือนเดิม'
-                            : 'บัญชีนี้ไม่มีสิทธิ์บันทึกรับทราบ (heijunka:operate) — ปิดได้เฉพาะเสียงบนจอนี้ รีโหลดแล้วดังใหม่'}
+              title={canAck ? tr("หยุดเสียงเท่านั้น — ใบยังรอหยิบอยู่ในคิวสโตร์เหมือนเดิม")
+                            : tr("บัญชีนี้ไม่มีสิทธิ์บันทึกรับทราบ (heijunka:operate) — ปิดได้เฉพาะเสียงบนจอนี้ รีโหลดแล้วดังใหม่")}
               style={{ flexShrink: 0, background: canAck ? '#22c55e' : 'var(--bg3)', color: canAck ? '#04140a' : 'var(--text2)',
                 border: canAck ? 'none' : '1px solid var(--border2)', borderRadius: 'var(--r-md)',
                 padding: '7px 14px', fontSize: 12.5, fontWeight: 800, cursor: 'pointer' }}>

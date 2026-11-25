@@ -24,6 +24,7 @@
    ══════════════════════════════════════════════════════════════════════════════════════════ */
 import { useState, useEffect, useMemo, useCallback, useContext, useRef } from 'react';
 import { MoreMark } from './InfoMore';
+import NoticeBar from './NoticeBar';
 import { supabaseDR } from '../supabaseClient';
 import { UserContext } from '../App';
 import { can, canSeeded } from '../utils/permissions';
@@ -107,13 +108,13 @@ function DieMatLinkNote({ lot, dies, role, mayWrite, onDone }) {
   }
 
   if (!can('machines', 'edit', role)) return (
-    <div style={{ fontSize: 11, color: 'var(--muted)' }}>ยังไม่ผูก MAT — ผูกได้ที่ /equipment?tab=die</div>
+    <div style={{ fontSize: 11, color: 'var(--muted)' }}>{tr("ยังไม่ผูก MAT — ผูกได้ที่")} /equipment?tab=die</div>
   );
   return (
     <button type="button" onClick={link} disabled={busy}
       style={{ marginTop: 2, fontSize: 11, padding: '1px 6px', borderRadius: 'var(--r-md)', cursor: busy ? 'default' : 'pointer',
         background: 'var(--card-surf)', border: '1px solid var(--border)', color: 'var(--accent)' }}>
-      {busy ? 'กำลังผูก…' : `🔗 ${tr("ผูก MAT นี้กับ")} ${set.set_code}`}
+      {busy ? tr("กำลังผูก…") : `🔗 ${tr("ผูก MAT นี้กับ")} ${set.set_code}`}
     </button>
   );
 }
@@ -422,7 +423,7 @@ export default function ProdLotPlanner({
         <input type="date" value={date} onChange={e => setDate(e.target.value)} />
         {/* 🔗 ไม่ใช่ "ดูกะไหน" อีกต่อไป — คิวไหลข้ามกะเอง ช่องนี้แค่บอกว่า**เริ่มวาง**ที่กะไหน */}
         <Segmented value={shift} onChange={setShift} label={tr('เริ่มที่')} options={[
-          { value: 'day', label: 'กะเช้า' }, { value: 'night', label: 'กะดึก' },
+          { value: 'day', label: tr("กะเช้า") }, { value: 'night', label: tr("กะดึก") },
         ]} />
         <label style={{ fontSize: 12, color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 5 }}
           title={tr('คิวจะไหลต่อไปได้กี่กะ — ไม่พอก็ยืดเพิ่ม (งานที่ล้นเลยขอบเขตจะขึ้นเตือน ไม่ถูกยัดลงกะสุดท้าย)')}>
@@ -479,8 +480,8 @@ export default function ProdLotPlanner({
         <span style={{ fontSize: 12.5, color: 'var(--text2)' }}>{tr('⏱️ เวลาผลิต')} <b>{fmtMin(summary.runMin)}</b></span>
         <span style={{ fontSize: 12.5, color: 'var(--text2)' }}
           title={summary.setupNoDie ? tr('ยังไม่ได้ระบุแม่พิมพ์ในล็อตไหนเลย — ประเมินเวลาเปลี่ยนรุ่นไม่ได้ (ไม่ใช่ "ไม่ต้องเปลี่ยน")') : ''}>
-          เปลี่ยนรุ่น <b>{summary.setupMin == null ? '—' : fmtMin(summary.setupMin)}</b>
-          <span style={{ color: 'var(--muted)' }}> ({summary.setupNoDie ? 'ยังไม่ระบุแม่พิมพ์' : `${summary.changeCount} ${tr("ครั้ง")}`})</span>
+          {tr("เปลี่ยนรุ่น")} <b>{summary.setupMin == null ? '—' : fmtMin(summary.setupMin)}</b>
+          <span style={{ color: 'var(--muted)' }}> ({summary.setupNoDie ? tr("ยังไม่ระบุแม่พิมพ์") : `${summary.changeCount} ${tr("ครั้ง")}`})</span>
         </span>
         <span style={{ fontSize: 13, fontWeight: 800, color: overflowCount > 0 ? '#ef4444' : 'var(--text)' }}>
           {tr("คาดจบ")} <b>{hz.finishMs == null ? '—' : fmtDayTime(hz.finishMs)}</b>
@@ -497,56 +498,59 @@ export default function ProdLotPlanner({
         {summary.started > 0 && <span style={{ fontSize: 12, color: 'var(--accent)' }}>{tr('▶ เริ่มแล้ว')} {summary.started} {tr('· ปิดแล้ว')} {summary.closed}</span>}
       </div>
 
-      {/* 🔴 งานที่ยังหาที่ลงไม่ได้ / ยังจัดกะให้ไม่ได้ — 2 เรื่องคนละสาเหตุ ห้ามยุบรวม ห้ามซ่อน */}
-      {(overflowCount > 0 || unsureCount > 0) && (
-        <div style={{ ...card, borderColor: overflowCount > 0 ? '#ef444466' : '#f59e0b66', fontSize: 12, color: 'var(--text2)', display: 'grid', gap: 3 }}>
-          {overflowCount > 0 && (
-            <div>🚨 <b style={{ color: '#ef4444' }}>{overflowCount} {tr('ล็อตล้นเลยขอบเขต')} {horizon.segments.length} {tr('กะ')}</b> —
-              งานยังไม่มีที่ลงจริง · ยืด "ไหลต่อได้" ให้ยาวขึ้น หรือลดงาน/เพิ่มกำลังผลิต
-              <b> {tr('ระบบไม่ยัดลงกะสุดท้ายให้')}</b></div>
-          )}
-          {/* 18/11 · user "ข้อความสีเทาแบบนั้นอยากให้เป็น tooltip มากกว่าโชว์มาเยอะๆ"
-              🔴 หัวคำเตือน + ผลที่ตามมา อยู่บนจอ · **เหตุผล**ย้ายไป title (ขาดไปก็ยังลงมือถูก) */}
-          {unsureCount > 0 && (
-            <div title={tr('เวลาเชื่อไม่ได้ เพราะไม่มี cycle time หรือมีล็อตที่ไม่มี CT อยู่ก่อนหน้า')}>
-              ⚠️ <b>{unsureCount} {tr('ล็อตยังจัดกะให้ไม่ได้')}</b> · <b>{tr('คงกะเดิมตอนบันทึก ไม่ถูกย้าย')}</b>{' '}
-              <MoreMark text={tr('เวลาเชื่อไม่ได้ เพราะไม่มี cycle time หรือมีล็อตที่ไม่มี CT อยู่ก่อนหน้า')} /></div>
-          )}
-        </div>
+      {/* 🔴 งานที่ยังหาที่ลงไม่ได้ / ยังจัดกะให้ไม่ได้ — 2 เรื่องคนละสาเหตุ ห้ามยุบรวม ห้ามซ่อน
+          UI §6.35 ข้อ 2 (23/11): หนึ่งเรื่อง = หนึ่ง <NoticeBar> บรรทัดเดียว — เดิมเป็นการ์ดขอบ hex ดิบ
+          ซึ่งเป็นภาษาภาพคนละชุดกับแถบของหน้าแม่ (และผิดกฎ token สี) */}
+      {overflowCount > 0 && (
+        <NoticeBar tone="bad" style={{ marginBottom: 0 }}>
+          <b>{overflowCount} {tr('ล็อตล้นเลยขอบเขต')} {horizon.segments.length} {tr('กะ')}</b> — {tr('งานยังไม่มีที่ลงจริง')} ·
+          <b> {tr('ระบบไม่ยัดลงกะสุดท้ายให้')}</b>
+          <MoreMark text={tr('ยืด "ไหลต่อได้" ให้ยาวขึ้น หรือลดงาน/เพิ่มกำลังผลิต')} />
+        </NoticeBar>
+      )}
+      {/* 18/11 · user "ข้อความสีเทาแบบนั้นอยากให้เป็น tooltip มากกว่าโชว์มาเยอะๆ"
+          🔴 หัวคำเตือน + ผลที่ตามมา อยู่บนจอ · **เหตุผล**ย้ายไป tooltip (ขาดไปก็ยังลงมือถูก) */}
+      {unsureCount > 0 && (
+        <NoticeBar tone="warn" style={{ marginBottom: 0 }}>
+          <b>{unsureCount} {tr('ล็อตยังจัดกะให้ไม่ได้')}</b> · <b>{tr('คงกะเดิมตอนบันทึก ไม่ถูกย้าย')}</b>
+          <MoreMark text={tr('เวลาเชื่อไม่ได้ เพราะไม่มี cycle time หรือมีล็อตที่ไม่มี CT อยู่ก่อนหน้า')} />
+        </NoticeBar>
       )}
 
-      {/* 🔴 ความซื่อสัตย์: อะไรที่ประเมินไม่ได้ ต้องเขียนบนจอ ห้ามปล่อยให้ตัวเลขดูสวย */}
-      {(summary.noCtMats.length > 0 || summary.setupUnknown || noHeight > 0 || summary.noTimeLots > 0) && (
-        <div style={{ ...card, borderColor: '#f59e0b66', fontSize: 12, color: 'var(--text2)', display: 'grid', gap: 3 }}>
-          {summary.noTimeLots > 0 && (
-            <div>🧪 <b>{summary.noTimeLots} {tr('ใบทดลองยังไม่ได้ระบุเวลาที่ขอ')}</b> — วางบนไทม์ไลน์ไม่ได้
-              และทำให้เวลาของใบที่อยู่หลังจากนั้น<b>{tr('เชื่อไม่ได้ทั้งหมด')}</b> · แก้ที่ช่อง "ขอใช้เครื่อง"</div>
-          )}
-          {/* รายชื่อ MAT ไป title — บนจอเหลือ "กี่ตัว + กระทบอะไร" ซึ่งพอให้ตัดสินใจได้แล้ว */}
-          {summary.noCtMats.length > 0 && (
-            <div title={`${tr('พาร์ทที่ยังไม่มี cycle time')}: ${summary.noCtMats.join(' · ')}`}>
-              ⚠️ <b>{summary.noCtMats.length} {tr('พาร์ทยังไม่มี cycle time')}</b>{' '}
-              <MoreMark text={`${tr('พาร์ทที่ยังไม่มี cycle time')}: ${summary.noCtMats.join(' · ')}`} />
-              — {tr("เวลาผลิตข้างบน")}<b>{tr('ต่ำกว่าจริง')}</b> {tr('· ไปกรอกที่ Product Master')}</div>
-          )}
-          {summary.setupUnknown && (
-            <div>⚠️ <b>{tr('ยังตอบเวลาเปลี่ยนรุ่นรวมไม่ได้')}</b> — {
-              summary.setupNoDie ? 'ยังไม่ได้ระบุแม่พิมพ์ในล็อตไหนเลย (ช่อง "แม่พิมพ์" ในตารางด้านล่าง)'
-                : rule ? 'ยังไม่ได้กรอกเวลาฐานยก-ลงแม่พิมพ์' : 'ยังไม่มีกฎเวลาเปลี่ยนรุ่นของไลน์นี้'}
-              {' '}{tr('(ตั้งที่')} <code>/equipment?tab=die</code>) · <b>"—" แปลว่าไม่รู้ ไม่ใช่ 0</b></div>
-          )}
-          {noHeight > 0 && (
-            <div>📏 <b>{tr('แม่พิมพ์')} {noHeight} {tr('ตัวยังไม่ได้กรอกความสูง')}</b> — ระบบจึงเรียงลำดับให้ประหยัดเวลาเปลี่ยนรุ่นไม่ได้
-              (ตัวที่ไม่รู้ความสูงถูกต่อท้ายลำดับ <b>{tr('ไม่ได้ตัดทิ้ง')}</b>)</div>
-          )}
-        </div>
+      {/* 🔴 ความซื่อสัตย์: อะไรที่ประเมินไม่ได้ ต้องเขียนบนจอ ห้ามปล่อยให้ตัวเลขดูสวย
+          ⇒ **ตัวเลข + ผลที่ตามมา อยู่บนแถบเสมอ ห้ามพับ** · เหตุผล/รายชื่อ → tooltip (UI §6.10) */}
+      {summary.noTimeLots > 0 && (
+        <NoticeBar tone="warn" icon="🧪" style={{ marginBottom: 0 }}>
+          <b>{summary.noTimeLots} {tr('ใบทดลองยังไม่ได้ระบุเวลาที่ขอ')}</b> — {tr('วางบนไทม์ไลน์ไม่ได้ · เวลาของใบหลังจากนั้น')}<b>{tr('เชื่อไม่ได้ทั้งหมด')}</b>
+          <MoreMark text={tr('แก้ที่ช่อง "ขอใช้เครื่อง"')} />
+        </NoticeBar>
+      )}
+      {/* รายชื่อ MAT ไป tooltip — บนจอเหลือ "กี่ตัว + กระทบอะไร" ซึ่งพอให้ตัดสินใจได้แล้ว */}
+      {summary.noCtMats.length > 0 && (
+        <NoticeBar tone="warn" style={{ marginBottom: 0 }}>
+          <b>{summary.noCtMats.length} {tr('พาร์ทยังไม่มี cycle time')}</b> — {tr("เวลาผลิตข้างบน")}<b>{tr('ต่ำกว่าจริง')}</b>
+          <MoreMark text={`${tr('ไปกรอกที่ Product Master')} · ${tr('พาร์ทที่ยังไม่มี cycle time')}: ${summary.noCtMats.join(' · ')}`} />
+        </NoticeBar>
+      )}
+      {summary.setupUnknown && (
+        <NoticeBar tone="warn" style={{ marginBottom: 0 }}>
+          <b>{tr('ยังตอบเวลาเปลี่ยนรุ่นรวมไม่ได้')}</b> · <b>{tr('"—" แปลว่าไม่รู้ ไม่ใช่ 0')}</b>
+          <MoreMark text={`${summary.setupNoDie ? tr('ยังไม่ได้ระบุแม่พิมพ์ในล็อตไหนเลย (ช่อง "แม่พิมพ์" ในตารางด้านล่าง)')
+            : rule ? tr('ยังไม่ได้กรอกเวลาฐานยก-ลงแม่พิมพ์') : tr('ยังไม่มีกฎเวลาเปลี่ยนรุ่นของไลน์นี้')} · ${tr('ตั้งที่')} /equipment?tab=die`} />
+        </NoticeBar>
+      )}
+      {noHeight > 0 && (
+        <NoticeBar tone="warn" icon="📏" style={{ marginBottom: 0 }}>
+          <b>{tr('แม่พิมพ์')} {noHeight} {tr('ตัวยังไม่ได้กรอกความสูง')}</b> — {tr('เรียงลำดับให้ประหยัดเวลาเปลี่ยนรุ่นไม่ได้')}
+          <MoreMark text={tr('ตัวที่ไม่รู้ความสูงถูกต่อท้ายลำดับ ไม่ได้ตัดทิ้ง')} />
+        </NoticeBar>
       )}
 
       {/* ── 🧲 ไทม์ไลน์จัดแผน (ลากสลับก่อนหลัง) ── */}
       {rec.rows.length > 0 && frame.startMs && (
         <div style={card}>
           <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8 }}>
-            ไทม์ไลน์ — 1 บรรทัด = 1 กะ <span
+            {tr("ไทม์ไลน์ — 1 บรรทัด = 1 กะ")} <span
               title={tr('ความยาวกล่อง = เวลาที่ต้องใช้จริง · งานล้นกะไหลลงบรรทัดถัดไปเอง · ดูทั้งสัปดาห์ = ตั้ง "ไหลต่อได้" เป็น 7 วัน')}
               style={{ color: 'var(--muted)', fontWeight: 600, fontSize: 11.5 }}>({tr("ลากเพื่อสลับลำดับ")}){' '}
               <MoreMark text={tr('ความยาวกล่อง = เวลาที่ต้องใช้จริง · งานล้นกะไหลลงบรรทัดถัดไปเอง · ดูทั้งสัปดาห์ = ตั้ง "ไหลต่อได้" เป็น 7 วัน')} /></span>
@@ -561,7 +565,7 @@ export default function ProdLotPlanner({
           {/* 🔴 ปฏิทินยังไม่โหลด = ยังไม่ได้เช็ควันหยุด ต้องเขียนบนจอ ห้ามเงียบ */}
           {horizon.calendarUnknown && (
             <div style={{ fontSize: 11.5, color: '#f59e0b', marginTop: 5 }}>
-              ⚠️ ยังไม่ได้เช็คปฏิทินบริษัท — ขอบเขตนี้ใช้กติกา จ-ศ ไปก่อน <b>{tr('วันหยุดพิเศษอาจยังไม่ถูกข้าม')}</b>
+              ⚠️ {tr("ยังไม่ได้เช็คปฏิทินบริษัท — ขอบเขตนี้ใช้กติกา จ-ศ ไปก่อน")} <b>{tr('วันหยุดพิเศษอาจยังไม่ถูกข้าม')}</b>
             </div>
           )}
         </div>
@@ -605,7 +609,7 @@ export default function ProdLotPlanner({
                           <b style={{ fontFamily: 'monospace', fontSize: 12 }}>{lotKeyText(l)}</b>
                           {l.trial_part_name && l.trial_part_no && <span style={{ color: 'var(--text2)', fontSize: 11 }}> · {l.trial_part_name}</span>}
                           <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                            {[l.trial_customer, l.trial_reason, l.requested_by && `ขอโดย ${l.requested_by}`].filter(Boolean).join(' · ') || 'ยังไม่ระบุที่มา'}
+                            {[l.trial_customer, l.trial_reason, l.requested_by && `ขอโดย ${l.requested_by}`].filter(Boolean).join(' · ') || tr("ยังไม่ระบุที่มา")}
                           </div>
                         </>
                       ) : (
@@ -644,7 +648,7 @@ export default function ProdLotPlanner({
                       const same = at.workDate === l.work_date && at.shift === l.shift;
                       return (
                         <span style={{ color: same ? 'var(--text2)' : 'var(--accent)' }}
-                          title={same ? 'ตรงกับที่บันทึกไว้' : `${tr("จะถูกย้ายจาก")} ${l.shift === 'night' ? tr('กะดึก') : tr('กะเช้า')} ${l.work_date} ${tr("ตอนกดบันทึก")}`}>
+                          title={same ? tr("ตรงกับที่บันทึกไว้") : `${tr("จะถูกย้ายจาก")} ${l.shift === 'night' ? tr('กะดึก') : tr('กะเช้า')} ${l.work_date} ${tr("ตอนกดบันทึก")}`}>
                           {SHIFT_LABEL[at.shift]} {at.workDate.slice(8)}/{at.workDate.slice(5, 7)}{same ? '' : ' ✧'}
                         </span>
                       );
@@ -679,7 +683,7 @@ export default function ProdLotPlanner({
                         );
                       })() : (l.die_no || <span style={{ color: 'var(--muted)' }}>—</span>)}
                       {die && <div style={{ fontSize: 11, color: die.die_height_mm == null ? '#f59e0b' : 'var(--muted)' }}>
-                        {die.die_height_mm == null ? '⚠ ไม่รู้ความสูง' : `${tr("สูง")} ${die.die_height_mm} ${tr("มม.")}`}</div>}
+                        {die.die_height_mm == null ? tr("⚠ ไม่รู้ความสูง") : `${tr("สูง")} ${die.die_height_mm} ${tr("มม.")}`}</div>}
                       <DieMatLinkNote lot={l} dies={dies} role={role} mayWrite={mayWrite} onDone={load} />
                     </td>
                     <td style={td}>
@@ -714,14 +718,14 @@ export default function ProdLotPlanner({
       {(rec.offPlan.length > 0 || rec.over.length > 0) && (
         <div style={{ ...card, borderColor: '#f59e0b66' }}>
           <div style={{ fontSize: 13, fontWeight: 800, color: '#f59e0b', marginBottom: 5 }}>
-            ⚠️ ของจริงที่อยู่นอกกรอบแผน
+            ⚠️ {tr("ของจริงที่อยู่นอกกรอบแผน")}
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 14px', fontSize: 12 }}>
             {[...rec.over.map(o => ({ ...o, kind: 'over' })), ...rec.offPlan.map(o => ({ ...o, kind: 'off' }))].slice(0, 15).map(o => (
               <span key={`${o.kind}-${o.mat_no}`} style={{ color: 'var(--text2)' }}>
                 {o.kind === 'over' ? '➕' : '🆕'} <MatLabel mat={o.mat_no} size={11.5} />{' '}
                 <span style={{ color: 'var(--muted)' }}>
-                  {qtyText(o.pcs)} {tr('ชิ้น ·')} {o.orders} {tr('ใบ')}{o.kind === 'over' ? ' (เกินกรอบ)' : ' (ไม่มีในแผน)'}
+                  {qtyText(o.pcs)} {tr('ชิ้น ·')} {o.orders} {tr('ใบ')}{o.kind === 'over' ? tr(" (เกินกรอบ)") : tr(" (ไม่มีในแผน)")}
                 </span>
               </span>
             ))}
@@ -747,7 +751,7 @@ export default function ProdLotPlanner({
       {/* ── ความต้องการที่ยังไม่ได้วางแผน ── */}
       <div style={card}>
         <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 6 }}>
-          ความต้องการของไลน์นี้ที่ยังไม่ได้วางแผน <span style={{ color: 'var(--muted)', fontWeight: 600, fontSize: 11.5 }}>{tr('(ค้างส่ง + ถึงกำหนดภายใน')} {lastDate})</span>
+          {tr("ความต้องการของไลน์นี้ที่ยังไม่ได้วางแผน")} <span style={{ color: 'var(--muted)', fontWeight: 600, fontSize: 11.5 }}>{tr('(ค้างส่ง + ถึงกำหนดภายใน')} {lastDate})</span>
         </div>
         {unplanned.length === 0 ? (
           <div style={{ color: 'var(--muted)', fontSize: 12.5 }}>{tr('— วางแผนครบทุกพาร์ทที่มีความต้องการแล้ว —')}</div>
@@ -781,7 +785,7 @@ export default function ProdLotPlanner({
               ))}
             </div>
             <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
-              จำนวนตั้งต้น 1 ชิ้น — แก้ยอดในแถวแผนหลังกดเข้าแผน
+              {tr("จำนวนตั้งต้น 1 ชิ้น — แก้ยอดในแถวแผนหลังกดเข้าแผน")}
             </div>
           </details>
         )}

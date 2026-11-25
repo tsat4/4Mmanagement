@@ -201,7 +201,7 @@ export default function QaClaims({ lines = [], scopeNames = null, role, lineId, 
   if (missing) {
     return (
       <div style={{ padding: 22, textAlign: 'center', color: 'var(--muted)', fontSize: 13, border: '1px dashed var(--border2)', borderRadius: 'var(--r-lg)' }}>
-        ยังไม่ได้ติดตั้งทะเบียนเคลมลูกค้า — แจ้ง admin ให้ apply migration <b>20260817_qa_customer_claims</b>
+        {tr("ยังไม่ได้ติดตั้งทะเบียนเคลมลูกค้า — แจ้ง admin ให้")} apply migration <b>20260817_qa_customer_claims</b>
       </div>
     );
   }
@@ -211,7 +211,7 @@ export default function QaClaims({ lines = [], scopeNames = null, role, lineId, 
       {/* UI-STANDARD 2026-09-24: 3 ตัวเลือกเท่ากัน → Segmented · "ทุก…" ซ้ายสุด (state 'all' เดิม) */}
       <FilterBar>
         <Segmented label={tr('สถานะ')} value={filter} onChange={setFilter} options={[
-          { value: 'all', label: ALL.status }, { value: 'active', label: 'ยังไม่ปิด' }, { value: 'closed', label: 'ปิดแล้ว' }, { value: 'cancelled', label: 'ยกเลิก' },
+          { value: 'all', label: ALL.status }, { value: 'active', label: tr("ยังไม่ปิด") }, { value: 'closed', label: tr("ปิดแล้ว") }, { value: 'cancelled', label: tr("ยกเลิก") },
         ]} />
         <span className="spacer" />
         {canRecord && <button style={btnSt()} onClick={() => setDetail(EMPTY())}>{tr('รับเคลมใหม่')}</button>}
@@ -241,7 +241,7 @@ export default function QaClaims({ lines = [], scopeNames = null, role, lineId, 
           </div>}
           {maybeIds.size > 0 && <div style={{ color: '#f59e0b', marginTop: sureIds.size ? 5 : 0 }}>
             ❓ <b>{tr('อาจซ้ำอีก')} {maybeIds.size} {tr('ใบ')}</b>
-            <span style={{ color: 'var(--text2)' }}> — พาร์ทเดิมและพูดถึงชิ้นส่วนเดียวกัน แต่ข้อความไม่ตรงพอจะฟันธง (เช่น "นัทไม่มี" กับ "นัทเชื่อมเยื้องศูนย์" คนละอาการ) <b>{tr('ต้องเปิดดูเอง')}</b></span>
+            <span style={{ color: 'var(--text2)' }}> — {tr("พาร์ทเดิมและพูดถึงชิ้นส่วนเดียวกัน แต่ข้อความไม่ตรงพอจะฟันธง (เช่น \"นัทไม่มี\" กับ \"นัทเชื่อมเยื้องศูนย์\" คนละอาการ")}) <b>{tr('ต้องเปิดดูเอง')}</b></span>
           </div>}
         </div>
       )}
@@ -254,7 +254,7 @@ export default function QaClaims({ lines = [], scopeNames = null, role, lineId, 
       <div className="table-sticky" style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 980 }}>
           <thead style={{ background: 'var(--bg2)' }}>
-            <tr>{['เลขเคลม', 'วันที่', 'ลูกค้า', 'พาร์ท', 'อาการ', 'จำนวน', 'กำหนดตอบ', 'สถานะ', 'งานแก้ไข'].map((h) => <th key={h} style={thSt}>{tr(h)}</th>)}</tr>
+            <tr>{[tr("เลขเคลม"), tr("วันที่"), tr("ลูกค้า"), tr("พาร์ท"), tr("อาการ"), tr("จำนวน"), tr("กำหนดตอบ"), tr("สถานะ"), tr("งานแก้ไข")].map((h) => <th key={h} style={thSt}>{tr(h)}</th>)}</tr>
           </thead>
           <tbody>
             {shown.map((c) => {
@@ -325,7 +325,7 @@ function ClaimModal({ detail, setDetail, lines, role, lineId, sections, partOpts
               </div>
               {sure.length > 0 && (
                 <div style={{ color: '#f59e0b', marginTop: 5 }}>
-                  มาตรการจาก 8D ครั้งก่อน<b>{tr('ยังไม่ได้ผลจริง')}</b> — ทบทวนของเดิมก่อน อย่าเปิด 8D ใบใหม่ด้วยวิธีเดิม (IATF §10.2.3 effectiveness)
+                  {tr("มาตรการจาก 8D ครั้งก่อน")}<b>{tr('ยังไม่ได้ผลจริง')}</b> — {tr("ทบทวนของเดิมก่อน อย่าเปิด 8D ใบใหม่ด้วยวิธีเดิม")} (IATF §10.2.3 effectiveness)
                 </div>
               )}
             </div>

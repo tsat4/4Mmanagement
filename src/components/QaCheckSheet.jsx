@@ -864,9 +864,7 @@ export default function QaCheckSheet({ canRecord }) {
           ...cardSt, marginBottom: 12, borderColor: '#f59e0b',
           background: 'rgba(245,158,11,0.10)', color: 'var(--text2)', fontSize: 12.5,
         }}>
-          ⚠️ <b>{tr('ยังใช้บันทึกผลไม่ได้')}</b> — ตารางใบตรวจยังไม่ถูกสร้างในฐานข้อมูล
-          (ต้อง apply migration <code>20260804_qa_inspection_check_sheet.sql</code> ที่ Supabase project หลักก่อน)
-          · ระหว่างนี้ยังดูมาตรฐาน/จุดตรวจของแต่ละพาร์ทได้ตามปกติ
+          ⚠️ <b>{tr('ยังใช้บันทึกผลไม่ได้')}</b> — {tr("ตารางใบตรวจยังไม่ถูกสร้างในฐานข้อมูล (ต้อง")} apply migration <code>20260804_qa_inspection_check_sheet.sql</code> {tr("ที่ Supabase project หลักก่อน) · ระหว่างนี้ยังดูมาตรฐาน/จุดตรวจของแต่ละพาร์ทได้ตามปกติ")}
         </div>
       )}
 
@@ -1030,7 +1028,7 @@ export default function QaCheckSheet({ canRecord }) {
                               size={BK} label={i.balloon_no} color={pinColor(i)} selected={selItemId === i.id}
                               hollow={!pinJudged(i)}
                               offX={i.label_dx} offY={i.label_dy} badge={i.image_path ? '🔍' : null}
-                              title={`#${i.balloon_no} ${i.characteristic}${i.rank ? ` · ${i.rank}` : ''} — ${pinJudged(i) ? (JUDGE[resById.get(i.id).judgement]?.label || '') : tr('ยังไม่ตรวจ')}${i.image_path ? tr(' · แตะเพื่อดูรูปซูมจุดนี้') : ''}`}
+                              title={`#${i.balloon_no} ${i.characteristic}${i.rank ? ` · ${i.rank}` : ''} — ${pinJudged(i) ? (tr(JUDGE[resById.get(i.id).judgement]?.label) || '') : tr('ยังไม่ตรวจ')}${i.image_path ? tr(' · แตะเพื่อดูรูปซูมจุดนี้') : ''}`}
                               onClick={() => focusItem(i.id)} />
                           ))}
                         </div>
@@ -1039,11 +1037,11 @@ export default function QaCheckSheet({ canRecord }) {
                         {/* legend ต้องบอก "ทรง" ด้วย ไม่ใช่แค่สี — สี rank กับสีผลตรวจใช้สีเดียวกันได้ */}
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                           <span style={{ width: 12, height: 12, borderRadius: '50%', background: 'rgba(12,18,15,0.82)', border: '2px dashed #4d9fff' }} />
-                          วงโปร่ง = ยังไม่ตรวจ (สีขอบ = rank)
+                          {tr("วงโปร่ง = ยังไม่ตรวจ (สีขอบ")} = rank)
                         </span>
-                        <span>🟢 ทึบเขียว = ผ่าน</span><span>🔴 ทึบแดง = ไม่ผ่าน</span><span>⚪ ทึบเทา = ข้าม</span>
+                        <span>🟢 {tr("ทึบเขียว = ผ่าน")}</span><span>🔴 {tr("ทึบแดง = ไม่ผ่าน")}</span><span>⚪ {tr("ทึบเทา = ข้าม")}</span>
                         <span>{tr('· แตะหมุดเพื่อไปที่จุดนั้น')}</span>
-                        {pinItems.some(i => i.image_path) && <span>· 🔍 = มีรูปซูมของจุด แตะหมุดเพื่อดู</span>}
+                        {pinItems.some(i => i.image_path) && <span>· 🔍 = {tr("มีรูปซูมของจุด แตะหมุดเพื่อดู")}</span>}
                       </div>
                     </div>
                   )}
@@ -1071,7 +1069,7 @@ export default function QaCheckSheet({ canRecord }) {
               {(() => { const ng = results.filter(r => r.judgement === 'ng').length; return ng ? <span style={{ color: 'var(--red)', fontSize: 12 }}> · {tr('ไม่ผ่าน')} {ng} {tr('จุด (เปิด NCR ได้ในนี้)')}</span> : null; })()}
               {loading && <span style={{ fontWeight: 400, color: 'var(--muted)', fontSize: 12 }}> {tr('· กำลังโหลด…')}</span>}
               <span style={{ fontWeight: 400, color: 'var(--muted)', fontSize: 12 }}>
-                {' '}· {readOnly && canRecord ? 'ใบปิดแล้ว' : !canRecord ? 'ไม่มีสิทธิ์บันทึก — ดูอย่างเดียว' : 'บันทึกที่แผงตรวจทีละชิ้นด้านบน'}
+                {' '}· {readOnly && canRecord ? tr("ใบปิดแล้ว") : !canRecord ? tr("ไม่มีสิทธิ์บันทึก — ดูอย่างเดียว") : tr("บันทึกที่แผงตรวจทีละชิ้นด้านบน")}
               </span>
             </div>
             {showSummary && <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -1181,7 +1179,7 @@ function ItemRow({ item, res, draft, selected, readOnly, canRecord, busy, isMobi
             </div>
             {auto && (
               <div style={{ fontSize: 11.5, marginTop: 3, color: JUDGE[auto].color, fontWeight: 700 }}>
-                {tr("ตัดสินอัตโนมัติ")}: {JUDGE[auto].label}
+                {tr("ตัดสินอัตโนมัติ")}: {tr(JUDGE[auto].label)}
               </div>
             )}
           </div>
@@ -1201,7 +1199,7 @@ function ItemRow({ item, res, draft, selected, readOnly, canRecord, busy, isMobi
                 onSave('ok', { values: values.filter(v => v !== '') });
               }}
               style={{ ...ghostBtn, padding: isMobile ? '10px 14px' : '7px 12px', background: judged === 'ok' ? JUDGE.ok.color : 'var(--bg3)', color: judged === 'ok' ? '#fff' : JUDGE.ok.color, borderColor: JUDGE.ok.color, fontWeight: 800 }}>
-              ✓ ผ่าน
+              ✓ {tr("ผ่าน")}
             </button>
             <button className="tbtn" disabled={busy}
               onClick={() => onDraft({ judgement: 'ng', values })}

@@ -66,8 +66,8 @@ export default function MoTvBoard({ inScope, isMobile = false }) {
   }), [rows, group, team, inScope, now]);
 
   const g = moTvGroupMeta(group);
-  const title = g ? `${g.icon} ${g.label}` : '🧾 ใบแจ้งซ่อม MO ที่ยังไม่ปิด · ทุกขั้น';
-  const teamLabel = team ? deptNameOf(team) : 'ทุกทีมช่าง';
+  const title = g ? `${g.icon} ${g.label}` : tr("🧾 ใบแจ้งซ่อม MO ที่ยังไม่ปิด · ทุกขั้น");
+  const teamLabel = team ? deptNameOf(team) : tr("ทุกทีมช่าง");
 
   const boxRef = useRef(null);
   const pager = useTvPager(boxRef, {
@@ -139,7 +139,7 @@ export default function MoTvBoard({ inScope, isMobile = false }) {
       <div ref={boxRef}>
         {rows && board.rows.length === 0 && !err && (
           <div data-tv-item style={{ textAlign: 'center', padding: tv ? 48 : 28, color: 'var(--text2)', fontSize: fz(15, 32), fontWeight: 800 }}>
-            ✅ ไม่มีใบค้างในกองนี้
+            ✅ {tr("ไม่มีใบค้างในกองนี้")}
           </div>
         )}
         {!rows && !err && <div style={{ textAlign: 'center', padding: 28, color: 'var(--muted)', fontSize: fz(14, 26) }}>{tr('กำลังโหลด...')}</div>}

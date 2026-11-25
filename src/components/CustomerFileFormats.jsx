@@ -123,7 +123,7 @@ export default function CustomerFileFormats({ canManage, onChanged }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
         <b style={{ fontSize: 13 }}>{tr('ฟอร์แมตไฟล์ความต้องการของลูกค้า')}</b>
         <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-          ลูกค้าเจ้าใหม่ที่ส่งไฟล์คนละหน้าตา — เพิ่มที่นี่ ไม่ต้องแก้โปรแกรม
+          {tr("ลูกค้าเจ้าใหม่ที่ส่งไฟล์คนละหน้าตา — เพิ่มที่นี่ ไม่ต้องแก้โปรแกรม")}
         </span>
         {canManage && !editing && (
           <button onClick={() => { setDraft(blankDraft()); setAdding(true); }} style={{ ...btn('var(--accent)'), marginLeft: 'auto' }}>{tr('+ เพิ่มฟอร์แมต')}</button>
@@ -141,7 +141,7 @@ export default function CustomerFileFormats({ canManage, onChanged }) {
               <span style={{ fontSize: 11.5, fontFamily: 'monospace', color: 'var(--muted)', minWidth: 90 }}>{r.code}</span>
               <span style={{ fontSize: 12.5, fontWeight: 700 }}>{r.name || r.code}</span>
               <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-                {r.customer_name || 'ไม่ระบุลูกค้า'} · {KINDS.find(k => k.value === r.kind)?.label || r.kind}
+                {r.customer_name || tr("ไม่ระบุลูกค้า")} · {tr(KINDS.find(k => k.value === r.kind)?.label) || r.kind}
               </span>
               <span style={{ fontSize: 11, color: 'var(--muted)' }}>
                 {FIELDS.filter(f => (r.col_map?.[f.key] || []).length).length}/{FIELDS.length} {tr("ช่อง")}
@@ -157,7 +157,7 @@ export default function CustomerFileFormats({ canManage, onChanged }) {
           ))}
           {!rows.length && (
             <div style={{ fontSize: 12, color: '#f59e0b' }}>
-              ⚠ ทะเบียนว่าง — ระบบใช้ชื่อคอลัมน์ค่าสำรองในโค้ด (อ่านไฟล์ Ford 830/862 ได้ตามเดิม)
+              ⚠ {tr("ทะเบียนว่าง — ระบบใช้ชื่อคอลัมน์ค่าสำรองในโค้ด (อ่านไฟล์ Ford 830/862 ได้ตามเดิม")})
             </div>
           )}
         </div>
@@ -186,7 +186,7 @@ export default function CustomerFileFormats({ canManage, onChanged }) {
           </div>
 
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 6 }}>
-            ชื่อหัวคอลัมน์ในไฟล์ของลูกค้า — ใส่ได้หลายชื่อคั่นด้วยจุลภาค (ระบบเทียบแบบไม่สนตัวพิมพ์/เว้นวรรค/ขีด)
+            {tr("ชื่อหัวคอลัมน์ในไฟล์ของลูกค้า — ใส่ได้หลายชื่อคั่นด้วยจุลภาค (ระบบเทียบแบบไม่สนตัวพิมพ์/เว้นวรรค/ขีด")})
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 8 }}>
             {FIELDS.map(f => (
@@ -194,7 +194,7 @@ export default function CustomerFileFormats({ canManage, onChanged }) {
                 {tr(f.label)}{f.required && <span style={{ color: '#ef4444' }}> *</span>}
                 <input value={D.col_map?.[f.key] || ''} placeholder={(FALLBACK_EDI_DICT[f.key] || []).slice(0, 2).join(', ')}
                   onChange={e => setDraft({ ...D, col_map: { ...D.col_map, [f.key]: e.target.value } })} style={inp} />
-                {f.hint && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{tr(f.hint)}</div>}
+                {tr(f.hint) && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{tr(f.hint)}</div>}
               </label>
             ))}
           </div>
@@ -207,8 +207,7 @@ export default function CustomerFileFormats({ canManage, onChanged }) {
       )}
 
       <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8 }}>
-        ชื่อคอลัมน์จากทุกแถวถูกรวมเป็นพจนานุกรมเดียวตอนอ่านไฟล์ — ระบบยังแยก "ใบส่ง" กับ "แผนล่วงหน้า"
-        ด้วยสัญญาณในไฟล์เอง (มีคอลัมน์เวลา/ท่ารับ = ใบส่ง · ไม่มีและวันที่ยิงยาวข้ามปี = แผน) แล้วให้คนยืนยันก่อนนำเข้าเสมอ
+        {tr("ชื่อคอลัมน์จากทุกแถวถูกรวมเป็นพจนานุกรมเดียวตอนอ่านไฟล์ — ระบบยังแยก \"ใบส่ง\" กับ \"แผนล่วงหน้า\" ด้วยสัญญาณในไฟล์เอง (มีคอลัมน์เวลา/ท่ารับ = ใบส่ง · ไม่มีและวันที่ยิงยาวข้ามปี = แผน) แล้วให้คนยืนยันก่อนนำเข้าเสมอ")}
       </div>
     </div>
   );

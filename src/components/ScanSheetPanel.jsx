@@ -8,7 +8,7 @@ import { lineProcessTypes, typeFitsLine, defaultSheetPicks } from '../utils/scan
 import { buildScanSheetHtml } from '../lib/scanSheetPrint';
 import { withDocFoot, docFormSync, fullCode } from '../utils/docForms';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 /* 🗒️ แท็บ "ใบสแกนประจำไลน์ (A4)" ใน /qr-labels — เฟส 2 (2026-10-28 · คำสั่ง user: A4 แผ่นแยกตามไลน์)
    เลือกไลน์ → ระบบติ๊กประเภท Downtime/งานเสียที่เป็นของไลน์นั้นไว้ให้ (กติกาเดียวกับ dropdown ใน Daily Report)
    → ติ๊กเพิ่ม/เอาออก → พิมพ์ · กติกา `utils/scanSheet.js` · ตัวพิมพ์ `lib/scanSheetPrint.js` · ทะเบียนเอกสาร `scan_sheet` */
@@ -65,7 +65,7 @@ export default function ScanSheetPanel({ lines, canPrint }) {
         downtime: dt.filter(t => pickDt.has(String(t.id))),
         defects: ng.filter(t => pickNg.has(String(t.id))),
         formCode: fullCode(df),
-        printedAt: new Date().toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' }),
+        printedAt: new Date().toLocaleDateString(dateLocale(), { timeZone: 'Asia/Bangkok' }),
         toSvg: (p) => QR.toString(p, { type: 'svg', margin: 0, errorCorrectionLevel: 'M' }),
       });
       const w = window.open('', '_blank');
@@ -114,12 +114,12 @@ export default function ScanSheetPanel({ lines, canPrint }) {
       {loadErr && <div style={{ fontSize: 12.5, color: 'var(--red)', marginBottom: 10 }}>⚠️ {loadErr} {tr('— ยังพิมพ์ไม่ได้')}</div>}
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
         <LineSelect lines={visLines} value={lineName} onChange={setLineName} placeholder={tr('— เลือกไลน์ —')} />
-        {line && <span style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('กระบวนการของไลน์:')} {pts.size ? [...pts].join(', ') : 'ไม่พบ (ติ๊กเฉพาะประเภทกลาง)'}</span>}
+        {line && <span style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('กระบวนการของไลน์:')} {pts.size ? [...pts].join(', ') : tr("ไม่พบ (ติ๊กเฉพาะประเภทกลาง)")}</span>}
         <span style={{ marginLeft: 'auto' }} />
         {canPrint && (
           <button type="button" onClick={print} disabled={!line || busy || !!loadErr}
             style={{ padding: '8px 18px', borderRadius: 'var(--r-md)', border: 'none', fontSize: 13.5, fontWeight: 800, cursor: line && !busy ? 'pointer' : 'not-allowed', background: line && !loadErr ? 'var(--accent)' : 'var(--bg3)', color: line && !loadErr ? 'var(--accent-ink)' : 'var(--muted)' }}>
-            {busy ? 'กำลังสร้าง…' : `🖨️ ${tr("พิมพ์ใบสแกน")} (${pickDt.size + pickNg.size} ${tr("ช่อง")})`}
+            {busy ? tr("กำลังสร้าง…") : `🖨️ ${tr("พิมพ์ใบสแกน")} (${pickDt.size + pickNg.size} ${tr("ช่อง")})`}
           </button>
         )}
       </div>

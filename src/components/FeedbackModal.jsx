@@ -12,7 +12,7 @@ import { looksLikeImage, isGifFile } from '../utils/imageFileKind';
 import { takeFeedbackPrefill } from '../utils/feedbackPrefill';
 import { usePerms } from '../utils/usePerms';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 /*
   💬 กล่องรับ feedback จากผู้ใช้หน้างาน (2026-08-14 · คำขอ user)
   เดิม feedback วิ่งผ่าน LINE → ตกหล่น ค้นย้อนไม่ได้ ไม่รู้ว่าเรื่องไหนแก้แล้ว
@@ -55,7 +55,7 @@ const STATUS = {
   done:    { label: '✅ แก้แล้ว',   color: '#22c55e' },
   wontfix: { label: '⏸ ยังไม่ทำ',  color: 'var(--muted)' },
 };
-const fmt = (t) => t ? new Date(t).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
+const fmt = (t) => t ? new Date(t).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
 
 export default function FeedbackModal({ onClose }) {
   const { role, fullName } = useContext(UserContext);
@@ -306,7 +306,7 @@ export default function FeedbackModal({ onClose }) {
         <div style={{ padding: 18, overflowY: 'auto', flex: 1 }}>
           {notReady && (
             <div style={{ fontSize: 12, color: '#f59e0b', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 'var(--r-md)', padding: '8px 10px', marginBottom: 12 }}>
-              ⚠ ยังใช้งานไม่ได้ — ยังไม่ได้ apply migration <code>20260814_user_feedback.sql</code> (แจ้ง admin)
+              ⚠ {tr("ยังใช้งานไม่ได้ — ยังไม่ได้")} apply migration <code>20260814_user_feedback.sql</code> ({tr("แจ้ง")} admin)
             </div>
           )}
 
@@ -371,7 +371,7 @@ export default function FeedbackModal({ onClose }) {
               <button onClick={send} disabled={saving || !msg.trim()}
                 style={{ marginTop: 14, width: '100%', padding: '10px 0', borderRadius: 'var(--r-md)', border: 'none', cursor: (saving || !msg.trim()) ? 'default' : 'pointer',
                   background: 'var(--accent)', color: 'var(--accent-ink)', fontWeight: 800, fontSize: 14, opacity: (saving || !msg.trim()) ? 0.5 : 1 }}>
-                {saving ? (shots.length ? `${tr("กำลังอัปรูป")} ${shots.length} ${tr("รูป...")}` : 'กำลังส่ง...') : '📨 ส่งให้ทีมงาน'}
+                {saving ? (shots.length ? `${tr("กำลังอัปรูป")} ${shots.length} ${tr("รูป...")}` : tr("กำลังส่ง...")) : tr("📨 ส่งให้ทีมงาน")}
               </button>
             </>
           ) : (
@@ -390,7 +390,7 @@ export default function FeedbackModal({ onClose }) {
 
               {loading ? <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('กำลังโหลด...')}</div>
                 : !shown.length ? <div style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'center', padding: 20 }}>
-                    {rows.length ? 'ไม่มีเรื่องที่ยังไม่ปิด 👍' : 'ยังไม่มีเรื่องที่ส่งเข้ามา'}
+                    {rows.length ? tr("ไม่มีเรื่องที่ยังไม่ปิด 👍") : tr("ยังไม่มีเรื่องที่ส่งเข้ามา")}
                   </div>
                 : shown.map(r => {
                   const k = KINDS.find(x => x.key === r.kind) || KINDS[0];

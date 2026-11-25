@@ -7,7 +7,7 @@ import SearchInput from './SearchInput';
 import useTimeRange from '../utils/useTimeRange';
 import { machineKey, machineNoLikePattern } from '../utils/machineNo';
 
-import { tr as trI18n } from '../utils/i18n';
+import { tr as trI18n, dateLocale } from '../utils/i18n';
 /* ── 🔎 ค้นด้วย "อาการ" — สอบกลับจากปลายทางเข้าหาต้นเหตุ (2026-08-26 · คำถามหน้างาน) ────
    *"ลูกค้าแจ้ง ปัญหาตัดไม่ขาด — หา downtime/defect ที่เกี่ยวกับอาการนี้ได้มั้ย"*
 
@@ -44,7 +44,7 @@ const MAX_PATTERNS = 8;             // .or() ยาวเกินไป = URL �
 const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const todayWork = () => { const d = new Date(); if (d.getHours() < 8) d.setDate(d.getDate() - 1); return ymd(d); };
 const backDays = (n) => { const d = new Date(); if (d.getHours() < 8) d.setDate(d.getDate() - 1); d.setDate(d.getDate() - n); return ymd(d); };
-const fmtDay = (s) => { if (!s) return '—'; const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: '2-digit' }); };
+const fmtDay = (s) => { if (!s) return '—'; const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString(dateLocale(), { day: '2-digit', month: '2-digit', year: '2-digit' }); };
 const flat = (s) => String(s || '').toLowerCase().replace(/\s+/g, '');
 
 /* ชิ้นส่วนของคำค้นสำหรับ ilike
@@ -222,7 +222,7 @@ export default function SymptomSearch({ inScope, onOpenOrder, machine = null, on
         onFrom={tr.setFrom} onTo={tr.setTo} onPreset={tr.setPreset}
       >
         <SearchInput value={q} onChange={setQ} onKeyDown={(e) => { if (e.key === 'Enter') run(); }}
-          fields="อาการ เช่น ตัดไม่ขาด · นัทไม่มี · เป็นครีบ · โรบอทชนจิ๊ก" />
+          fields={trI18n("อาการ เช่น ตัดไม่ขาด · นัทไม่มี · เป็นครีบ · โรบอทชนจิ๊ก")} />
         <button onClick={run} disabled={busy || noInput}
           style={{ padding: '0 18px', borderRadius: 'var(--r-md)', border: 'none', fontWeight: 800, fontSize: 13,
                    background: busy || noInput ? 'var(--bg3)' : 'var(--accent)', color: busy || noInput ? 'var(--muted)' : '#fff',
@@ -234,8 +234,7 @@ export default function SymptomSearch({ inScope, onOpenOrder, machine = null, on
         <div style={{ ...box, borderColor: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 13, fontWeight: 800 }}>{trI18n('เฉพาะเครื่อง')} <b style={{ fontSize: 15 }}>{machine}</b></span>
           <span style={{ fontSize: 11.5, color: 'var(--muted)', flex: '1 1 260px', lineHeight: 1.55 }}>
-            กด 🔎 ค้นหาได้เลยโดยไม่ต้องพิมพ์อาการ (= ทุกเหตุการณ์ของเครื่องนี้ในช่วงวัน) · พิมพ์อาการเพื่อแคบลง
-            · ของเสียเห็นเฉพาะใบที่ระบุเครื่องตอนเปิดใบ (ไลน์เครื่องขนาน) — ไลน์ไหลทีละชิ้นไม่ได้ผูกของเสียกับเครื่อง
+            {trI18n("กด 🔎 ค้นหาได้เลยโดยไม่ต้องพิมพ์อาการ (= ทุกเหตุการณ์ของเครื่องนี้ในช่วงวัน) · พิมพ์อาการเพื่อแคบลง · ของเสียเห็นเฉพาะใบที่ระบุเครื่องตอนเปิดใบ (ไลน์เครื่องขนาน) — ไลน์ไหลทีละชิ้นไม่ได้ผูกของเสียกับเครื่อง")}
           </span>
           {onClearMachine && (
             <button onClick={() => { onClearMachine(); setRes(null); }}
@@ -263,7 +262,7 @@ export default function SymptomSearch({ inScope, onOpenOrder, machine = null, on
         <div style={{ ...box, fontSize: 12.5, lineHeight: 1.7 }}>
           <b>{trI18n('ไม่พบรายการที่ตรงกับ “')}{res.term}”</b> {trI18n('ในช่วง')} {fmtDay(from)} – {fmtDay(to)}
           <div style={{ color: 'var(--muted)', marginTop: 6 }}>
-            ⚠️ <b>{trI18n('ไม่เจอ ≠ ไม่เคยเกิด')}</b> — อาจเกิดจริงแต่ถูกบันทึกด้วยคำอื่น หรือลงเป็นประเภทกว้างๆ โดยไม่ได้กรอกรายละเอียด
+            ⚠️ <b>{trI18n('ไม่เจอ ≠ ไม่เคยเกิด')}</b> — {trI18n("อาจเกิดจริงแต่ถูกบันทึกด้วยคำอื่น หรือลงเป็นประเภทกว้างๆ โดยไม่ได้กรอกรายละเอียด")}
             <div style={{ marginTop: 4 }}>{trI18n('ลอง: ใช้คำสั้นลง (เช่น “ตัดไม่ขาด” → “ตัดไม่”) · ขยายช่วงวัน · ลองคำที่หน้างานใช้จริง')}</div>
           </div>
         </div>
@@ -294,7 +293,7 @@ export default function SymptomSearch({ inScope, onOpenOrder, machine = null, on
                 ))}
               </div>
               <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 6 }}>
-                ใช้เป็นคำค้นรอบหน้าได้ — สำนวนที่ต่างกันมากอาจหลุดจากผลค้นครั้งนี้
+                {trI18n("ใช้เป็นคำค้นรอบหน้าได้ — สำนวนที่ต่างกันมากอาจหลุดจากผลค้นครั้งนี้")}
               </div>
             </div>
           )}

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 /**
  * ประวัติการแก้คะแนนทักษะของพนักงาน 1 คน — อ่านจาก `audit_log` (Main)
  *
@@ -36,7 +36,7 @@ export default function SkillEditHistory({ employeeId, limit = 30 }) {
 
   const fmt = ts => {
     try {
-      return new Date(ts).toLocaleString('th-TH', {
+      return new Date(ts).toLocaleString(dateLocale(), {
         timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', year: '2-digit',
         hour: '2-digit', minute: '2-digit',
       });
@@ -54,7 +54,7 @@ export default function SkillEditHistory({ employeeId, limit = 30 }) {
     if (ch.includes('score')) parts.push(`${tr("คะแนน")} ${r.old_data?.score ?? '—'} → ${r.new_data?.score ?? '—'}`);
     if (ch.includes('pending_level')) {
       const p = r.new_data?.pending_level;
-      parts.push(p ? `${tr("ตั้งรออนุมัติ")} Lv.${p}` : 'เคลียร์สถานะรออนุมัติ');
+      parts.push(p ? `${tr("ตั้งรออนุมัติ")} Lv.${p}` : tr("เคลียร์สถานะรออนุมัติ"));
     }
     // ฟิลด์อื่นที่ไม่ได้แปลเป็นภาษาคน — แสดงชื่อดิบไว้ ดีกว่าเงียบ
     const rest = ch.filter(k => !['score', 'pending_level', 'last_daily_farm_date'].includes(k));
@@ -77,7 +77,7 @@ export default function SkillEditHistory({ employeeId, limit = 30 }) {
       {open && (
         <div style={{ marginTop: 8 }}>
           <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8, lineHeight: 1.5 }}>
-            แสดงเฉพาะการแก้ด้วยมือในระบบ — การสะสม EXP อัตโนมัติรายวัน/รายสัปดาห์ไม่ถูกบันทึกที่นี่
+            {tr("แสดงเฉพาะการแก้ด้วยมือในระบบ — การสะสม EXP อัตโนมัติรายวัน/รายสัปดาห์ไม่ถูกบันทึกที่นี่")}
           </div>
 
           {loading && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('กำลังโหลด…')}</div>}
@@ -105,7 +105,7 @@ export default function SkillEditHistory({ employeeId, limit = 30 }) {
                       <span style={{ color: 'var(--text2)' }}>{text}</span>
                     </div>
                     <div style={{ color: 'var(--muted)', fontSize: 11, marginTop: 2 }}>
-                      {fmt(r.changed_at)} · {r.actor || 'ไม่ทราบผู้แก้'}
+                      {fmt(r.changed_at)} · {r.actor || tr("ไม่ทราบผู้แก้")}
                     </div>
                   </div>
                 );

@@ -21,13 +21,13 @@ import SearchSelect from './SearchSelect'
 import { planReadiness, SPARE_HORIZON_DAYS } from '../utils/pmSpares'
 import { loadSpareParts, loadPmSpareDemand } from '../lib/pmSpareData'
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
-const fmtN = (n) => (n == null ? '—' : Number(n).toLocaleString('th-TH', { maximumFractionDigits: 2 }))
+const fmtN = (n) => (n == null ? '—' : Number(n).toLocaleString(dateLocale(), { maximumFractionDigits: 2 }))
 const fmtYmd = (ymd) => {
   if (!ymd) return '—'
   const [y, m, d] = ymd.split('-').map(Number)
-  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('th-TH', { timeZone: 'UTC', day: 'numeric', month: 'short' })
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString(dateLocale(), { timeZone: 'UTC', day: 'numeric', month: 'short' })
 }
 const inp = { padding: '7px 9px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', fontSize: 13, boxSizing: 'border-box' }
 const btn = (c, solid) => ({ padding: '7px 14px', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', border: solid ? 'none' : `1px solid ${c}55`, background: solid ? c : `${c}14`, color: solid ? '#fff' : c })
@@ -141,18 +141,18 @@ export function PlanSparesModal({ row, canEdit, canIssue, byName, byUid, onClose
 
   return (
     <Shell title={tr('อะไหล่ที่ใช้ใน PM รอบหนึ่ง')} onClose={onClose}
-      sub={<>{eqLabel || '—'}{row.eq?.line_name ? ` · ${row.eq.line_name}` : ''} {tr('· รอบ:')} <b>{row.cycleText || '—'}</b>{row.nextDue ? ` · PM ${tr("ครั้งถัดไป")} ${row.nextDue.toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short' })}` : ''}</>}>
+      sub={<>{eqLabel || '—'}{row.eq?.line_name ? ` · ${row.eq.line_name}` : ''} {tr('· รอบ:')} <b>{row.cycleText || '—'}</b>{row.nextDue ? ` · PM ${tr("ครั้งถัดไป")} ${row.nextDue.toLocaleDateString(dateLocale(), { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short' })}` : ''}</>}>
       {loadErr && <div style={{ color: '#ef4444', fontSize: 12.5, fontWeight: 700, marginBottom: 8 }}>⚠️ {loadErr}</div>}
       {loading ? <div style={{ padding: 24, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('กำลังโหลด…')}</div> : (<>
         <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 520 }}>
             <thead><tr style={{ background: 'var(--bg3)' }}>
-              {['อะไหล่', 'ใช้ต่อรอบ', 'คงเหลือ', 'สถานะ', ''].map(h => <th key={h} style={th}>{tr(h)}</th>)}
+              {[tr("อะไหล่"), tr("ใช้ต่อรอบ"), tr("คงเหลือ"), tr("สถานะ"), ''].map(h => <th key={h} style={th}>{tr(h)}</th>)}
             </tr></thead>
             <tbody>
               {!ready.items.length && (
                 <tr><td colSpan={5} style={{ ...td, textAlign: 'center', color: 'var(--muted)', padding: 18 }}>
-                  ยังไม่ได้ผูกอะไหล่ — เพิ่มอะไหล่ที่ใช้ใน PM รอบหนึ่งด้านล่าง แล้วระบบจะรวมความต้องการล่วงหน้าให้เอง
+                  {tr("ยังไม่ได้ผูกอะไหล่ — เพิ่มอะไหล่ที่ใช้ใน PM รอบหนึ่งด้านล่าง แล้วระบบจะรวมความต้องการล่วงหน้าให้เอง")}
                 </td></tr>
               )}
               {ready.items.map(i => (
@@ -188,8 +188,8 @@ export function PlanSparesModal({ row, canEdit, canIssue, byName, byUid, onClose
 
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginTop: 14, padding: '10px 12px', borderRadius: 'var(--r-md)', background: 'var(--bg3)' }}>
           <span style={{ flex: '1 1 240px', fontSize: 12.5, color: 'var(--text2)' }}>
-            {ready.allOk == null ? 'ผูกอะไหล่ก่อน แล้วจึงเบิกตามแผนได้'
-              : ready.allOk ? '✅ อะไหล่พร้อมสำหรับ PM รอบถัดไป'
+            {ready.allOk == null ? tr("ผูกอะไหล่ก่อน แล้วจึงเบิกตามแผนได้")
+              : ready.allOk ? tr("✅ อะไหล่พร้อมสำหรับ PM รอบถัดไป")
                 : <span style={{ color: '#ef4444', fontWeight: 700 }}>{tr('⚠️ ขาด')} {ready.shortCount} {tr('รายการ — เบิกทั้งชุดไม่ได้จนกว่าจะรับของเข้า')}</span>}
           </span>
           {canIssue
@@ -203,8 +203,8 @@ export function PlanSparesModal({ row, canEdit, canIssue, byName, byUid, onClose
             <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--text2)', marginBottom: 4 }}>{tr('ประวัติเบิกให้ PM ใบนี้')}</div>
             {history.slice(0, 8).map(h => (
               <div key={h.id} style={{ fontSize: 12, color: 'var(--muted)', padding: '3px 0', borderTop: '1px dashed var(--border)' }}>
-                {new Date(h.created_at).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                {' · '}{partById.get(h.part_id)?.name || 'อะไหล่'} × {fmtN(Math.abs(Number(h.qty)))}{h.by_name ? ` · ${h.by_name}` : ''}
+                {new Date(h.created_at).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                {' · '}{partById.get(h.part_id)?.name || tr("อะไหล่")} × {fmtN(Math.abs(Number(h.qty)))}{h.by_name ? ` · ${h.by_name}` : ''}
               </div>
             ))}
           </div>
@@ -275,7 +275,7 @@ function SpareDemandModal({ demand, error, onClose, onOpenPlan }) {
       <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 760 }}>
           <thead><tr style={{ background: 'var(--bg3)' }}>
-            {['อะไหล่', 'ต้องใช้', 'คงเหลือ', 'หลังใช้', 'ใช้ครั้งแรก', 'เริ่มขาด', 'ต้องสั่งภายใน', 'PM ที่ใช้'].map(h => <th key={h} style={th}>{tr(h)}</th>)}
+            {[tr("อะไหล่"), tr("ต้องใช้"), tr("คงเหลือ"), tr("หลังใช้"), tr("ใช้ครั้งแรก"), tr("เริ่มขาด"), tr("ต้องสั่งภายใน"), tr("PM ที่ใช้")].map(h => <th key={h} style={th}>{tr(h)}</th>)}
           </tr></thead>
           <tbody>
             {demand.rows.map(r => (
@@ -327,8 +327,7 @@ function SpareDemandModal({ demand, error, onClose, onOpenPlan }) {
         </div>
       )}
       <div style={{ marginTop: 10, fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.6 }}>
-        * PM ที่เลยกำหนดนับเป็นวันนี้ · "ต้องสั่งภายใน" = วันที่เริ่มขาด − leadtime ของอะไหล่ (ตั้งที่ทะเบียนอะไหล่) ·
-        safety = จำนวนขั้นต่ำ (min) ตาม WI-JIG-010 · ใช้จริงจะตัดสต็อกเมื่อกด "เบิกอะไหล่ตามแผน PM" หรือเบิกในใบ MO
+        * PM {tr("ที่เลยกำหนดนับเป็นวันนี้ · \"ต้องสั่งภายใน\" = วันที่เริ่มขาด − leadtime ของอะไหล่ (ตั้งที่ทะเบียนอะไหล่) · safety = จำนวนขั้นต่ำ (min) ตาม WI-JIG-010 · ใช้จริงจะตัดสต็อกเมื่อกด \"เบิกอะไหล่ตามแผน PM\" หรือเบิกในใบ")} MO
       </div>
     </Shell>
   )

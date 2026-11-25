@@ -16,7 +16,7 @@ import {
 import {
   IEC_TEAMS, CUSTOMERS, PROJECTS, SPTT_REQUIREMENTS, TMA_SPTT_DOCS, SOURCE_DATE,
 } from '../data/nmBoard737D';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 
 /* ══ 🧭 บอร์ด New Model (IEC) — บอร์ด OBEYA ของงานพาร์ทรุ่นใหม่ในเวอร์ชันออนไลน์ ═════════
@@ -227,7 +227,7 @@ function NpiLinkCard({ proj, isMobile }) {
     return (
       <div className="nmb-card" data-eva="R" style={{ ...CARD, marginBottom: 12, padding: '12px 13px 12px 17px', borderRadius: 'var(--r-md)',
         '--nmb-color': 'var(--red)', fontSize: 12.5 }}>
-        <b>{tr('อ่านข้อมูล NPI ไม่สำเร็จ')}</b> — ตัวเลขฝั่ง NPI จึงยังไม่แสดง (ไม่ได้แปลว่ารุ่นนี้ยังไม่ผูก)
+        <b>{tr('อ่านข้อมูล NPI ไม่สำเร็จ')}</b> — {tr("ตัวเลขฝั่ง NPI จึงยังไม่แสดง (ไม่ได้แปลว่ารุ่นนี้ยังไม่ผูก")})
         <div style={{ color: 'var(--muted)', fontSize: 11.5, marginTop: 3 }}>{error}</div>
       </div>
     );
@@ -235,7 +235,7 @@ function NpiLinkCard({ proj, isMobile }) {
   if (!sum) {
     return (
       <div className="nmb-card" data-eva="none" style={{ ...CARD, marginBottom: 12, padding: '12px 13px 12px 17px', borderRadius: 'var(--r-md)', fontSize: 12.5, lineHeight: 1.6 }}>
-        🔗 <b>{tr('รุ่นนี้ยังไม่ผูกกับโปรเจค NPI')}</b> — บอร์ดจึงแสดงได้แค่สิ่งที่ถอดจากบอร์ดกระดาษ
+        🔗 <b>{tr('รุ่นนี้ยังไม่ผูกกับโปรเจค NPI')}</b> — {tr("บอร์ดจึงแสดงได้แค่สิ่งที่ถอดจากบอร์ดกระดาษ")}
         <div style={{ color: 'var(--text2)', marginTop: 4 }}>
           {tr("ผูกที่")} <a href="/npi" style={{ color: 'var(--accent)' }}>{tr('พาร์ทใหม่ APQP / PPAP')}</a> {tr('→ เลือกโปรเจค →')} <b>{tr('✏️ โปรเจค')}</b> → {tr("ช่อง")}
           <b> {tr('“🧭 รุ่นบนบอร์ด New Model”')}</b> {tr('→ เลือก')} <b>{proj.title}</b>
@@ -255,17 +255,17 @@ function NpiLinkCard({ proj, isMobile }) {
         <b style={{ fontSize: 13 }}>{sum.code || tr('(ไม่มีรหัสโปรเจค)')}</b>
         <span style={{ fontSize: 12, color: 'var(--text2)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sum.name}</span>
         <a href={`/npi?project=${encodeURIComponent(sum.projectId)}`} style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--accent)', whiteSpace: 'nowrap' }}>
-          เปิดใน /npi →
+          {tr("เปิดใน")} /npi →
         </a>
       </div>
       <div style={st}>
-        <NpiStat label={tr('พาร์ท')} value={sum.parts} suffix="ตัว" />
+        <NpiStat label={tr('พาร์ท')} value={sum.parts} suffix={tr("ตัว")} />
         <NpiStat label={tr('PPAP ผ่าน')} value={sum.ppapApproved} suffix={sum.parts != null ? `/ ${sum.parts}` : ''} />
         <NpiStat label={tr('เอกสารครบ')} value={sum.docPct} suffix="%" />
         <NpiStat label={tr('ECI ยังไม่จบ')} value={sum.eciOpen} suffix={sum.eciTotal != null ? `/ ${sum.eciTotal}` : ''}
           tone={sum.eciOpen ? 'var(--amber)' : undefined} />
         <NpiStat label={tr('ถึง SOP')} value={sum.sopIn == null ? null : (sum.sopIn >= 0 ? sum.sopIn : -sum.sopIn)}
-          suffix={sum.sopIn == null ? '' : (sum.sopIn >= 0 ? 'วัน' : 'วัน (เลยแล้ว)')}
+          suffix={sum.sopIn == null ? '' : (sum.sopIn >= 0 ? tr("วัน") : tr("วัน (เลยแล้ว)"))}
           tone={sum.sopIn != null && sum.sopIn < 0 ? 'var(--red)' : undefined} />
       </div>
       <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 9, lineHeight: 1.5 }}>
@@ -359,7 +359,7 @@ function LevelOverview({ data, go }) {
     <>
       <div style={{ display: 'grid', gap: 10, alignContent: 'start', marginBottom: 14,
         gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(230px, 1fr))' }}>
-        {axes.map(a => <EvaBadge key={a.key} big eva={a.eva} label={tr(a.label)} note={a.hint} />)}
+        {axes.map(a => <EvaBadge key={a.key} big eva={a.eva} label={tr(a.label)} note={tr(a.hint)} />)}
       </div>
 
       <div style={{ fontSize: 13, fontWeight: 700, margin: '4px 0 8px' }}>{tr('ลูกค้า')}</div>
@@ -378,7 +378,7 @@ function LevelOverview({ data, go }) {
                 <span style={{ fontSize: 14.5, fontWeight: 700 }}>{c.name}</span>
               </div>
               <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-                {c.projects.length ? `${c.projects.length} ${tr("รุ่นในระบบ")}` : 'ยังไม่มีโปรเจคในระบบ'}
+                {c.projects.length ? `${c.projects.length} ${tr("รุ่นในระบบ")}` : tr("ยังไม่มีโปรเจคในระบบ")}
               </div>
               {!!c.projects.length && (
                 <div style={{ fontSize: 11.5, color: 'var(--text2)' }}>
@@ -387,7 +387,7 @@ function LevelOverview({ data, go }) {
               )}
               {worst && <div style={{ fontSize: 11.5, color: 'var(--red)' }}>🔴 {worst.title}</div>}
               <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                {tr('ทีม')} {teams.join(' · ') || '–'} {tr('· ด่าน')} {c.milestones.length ? c.milestones.join(' → ') : 'ยังไม่ตั้งแม่แบบ'}
+                {tr('ทีม')} {teams.join(' · ') || '–'} {tr('· ด่าน')} {c.milestones.length ? c.milestones.join(' → ') : tr("ยังไม่ตั้งแม่แบบ")}
               </div>
             </button>
           );
@@ -512,7 +512,7 @@ function BucketBar({ proj, leaves, go, isMobile }) {
                 <span style={{ fontSize: 13, fontWeight: 700 }}>{tr(b.label)}</span>
               </div>
               <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.4 }}>
-                {n ? 'กดเพื่อดูรายการ' : 'ยังไม่มีหัวข้อในถังนี้'}
+                {n ? tr("กดเพื่อดูรายการ") : tr("ยังไม่มีหัวข้อในถังนี้")}
               </div>
             </button>
           );
@@ -523,7 +523,7 @@ function BucketBar({ proj, leaves, go, isMobile }) {
             <span style={{ fontSize: 13, fontWeight: 700 }}>{tr('ยังไม่ประเมิน')}</span>
           </div>
           <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.4 }}>
-            ยังไม่ถึงด่าน หรือยังไม่มีใครตั้งสี — <b>{tr('ไม่ใช่ผ่าน')}</b>
+            {tr("ยังไม่ถึงด่าน หรือยังไม่มีใครตั้งสี")} — <b>{tr('ไม่ใช่ผ่าน')}</b>
           </div>
         </div>
       </div>
@@ -543,7 +543,7 @@ function PopTable({ proj, go }) {
     return (
       <div style={{ marginBottom: 14 }}>
         <SectionHead n="②" title="POP STATUS" />
-        <Empty text="รุ่นนี้ยังไม่ได้ผูกใบ POP เข้าระบบ" />
+        <Empty text={tr("รุ่นนี้ยังไม่ได้ผูกใบ POP เข้าระบบ")} />
       </div>
     );
   }
@@ -572,7 +572,7 @@ function PopTable({ proj, go }) {
                       {kids.length ? `${kids.length} ${tr("หัวข้อ")}` : '—'}
                     </td>
                     <td style={{ ...td, fontSize: 11.5, color: 'var(--text2)' }}>
-                      {kc ? countsLabel(kc) : (m.note || (eva === 'none' ? 'ยังไม่ประเมิน' : evaMeta(eva).label))}
+                      {kc ? countsLabel(kc) : (m.note || (eva === 'none' ? tr("ยังไม่ประเมิน") : evaMeta(eva).label))}
                     </td>
                   </tr>
                 );
@@ -744,10 +744,10 @@ function LevelBucket({ proj, bucket, go }) {
       <div style={{ ...CARD, marginBottom: 12, borderLeft: `3px solid ${evaMeta(b?.eva).color}`, fontSize: 12.5, lineHeight: 1.55 }}>
         <b>{tr(b?.label)}</b> — {tr(b?.hint)}
         <div style={{ color: 'var(--muted)', fontSize: 11.5, marginTop: 3 }}>
-          ข้ามจากหัวบอร์ดมาที่นี่โดยไม่ต้องไล่ทีละชั้น (ทางลัดที่ IEC ขอไว้ใน work flow)
+          {tr("ข้ามจากหัวบอร์ดมาที่นี่โดยไม่ต้องไล่ทีละชั้น (ทางลัดที่ IEC ขอไว้ใน")} work flow)
         </div>
       </div>
-      {!leaves.length ? <Empty text="ไม่มีหัวข้อในถังนี้" /> : (
+      {!leaves.length ? <Empty text={tr("ไม่มีหัวข้อในถังนี้")} /> : (
         <div style={CARD}>
           <Scroller>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 520 }}>
@@ -766,7 +766,7 @@ function LevelBucket({ proj, bucket, go }) {
                       {l.path === l.mainKey ? '—' : l.mainLabel}
                     </td>
                     <td style={{ ...td, fontSize: 11.5, color: l.note ? 'var(--text2)' : 'var(--red)' }}>
-                      {l.note || (l.eva === 'R' ? '⚠️ แดงแต่ยังไม่มีคำอธิบาย' : '—')}
+                      {l.note || (l.eva === 'R' ? tr("⚠️ แดงแต่ยังไม่มีคำอธิบาย") : '—')}
                     </td>
                   </tr>
                 ))}
@@ -791,7 +791,7 @@ function LevelPop({ proj, main, go }) {
           <b style={{ fontSize: 14 }}>{main.no}. {tr(main.label)}</b>
         </div>
         <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 5, lineHeight: 1.5 }}>
-          ไฟของหัวข้อใหญ่ = <b>{tr('แย่สุดของหัวข้อย่อยชนะ')}</b> — IEC เขียนไว้ว่า
+          {tr("ไฟของหัวข้อใหญ่")} = <b>{tr('แย่สุดของหัวข้อย่อยชนะ')}</b> — IEC เขียนไว้ว่า
           &ldquo;ถ้ามี 1 ตัวเป็นสีแดง ต้องโชว์แดงเลย&rdquo;
         </div>
         <RuleNote ruleKey="pop" />
@@ -837,7 +837,7 @@ function LevelPop({ proj, main, go }) {
                       <td style={{ ...td, fontSize: 11.5, color: 'var(--text2)' }}>
                         {s.fromStage ? `${tr("ด่าน")} ${s.fromStage}`
                           : s.panel ? `${tr("แผง")} ${proj.panels.find(p => p.key === s.panel)?.label || s.panel}`
-                          : 'ยังไม่มีหลักฐานผูกไว้'}
+                          : tr("ยังไม่มีหลักฐานผูกไว้")}
                       </td>
                     </tr>
                   );
@@ -865,7 +865,7 @@ function LevelPopSub({ proj, main, sub, go }) {
         </div>
         <RuleNote ruleKey="doc" />
       </div>
-      {!topics.length ? <Empty text="ยังไม่มีรายการหัวข้อของเอกสารชุดนี้" /> : (
+      {!topics.length ? <Empty text={tr("ยังไม่มีรายการหัวข้อของเอกสารชุดนี้")} /> : (
         <div style={CARD}>
           <Scroller>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 500 }}>
@@ -880,7 +880,7 @@ function LevelPopSub({ proj, main, sub, go }) {
                     <td style={td}><Dot eva={t.eva} /></td>
                     <td style={{ ...td, fontWeight: 700 }}>{tr(t.label)}</td>
                     <td style={{ ...td, fontSize: 11.5, color: 'var(--muted)' }}>
-                      {t.panel ? `${tr("แผง")} ${proj.panels.find(p => p.key === t.panel)?.label || t.panel} →` : 'ยังไม่ผูก'}
+                      {t.panel ? `${tr("แผง")} ${proj.panels.find(p => p.key === t.panel)?.label || t.panel} →` : tr("ยังไม่ผูก")}
                     </td>
                     <td style={{ ...td, fontSize: 11.5, color: 'var(--text2)' }}>{t.note || '—'}</td>
                   </tr>
@@ -956,7 +956,7 @@ function PanelMatrix({ p }) {
         </tbody>
       </table>
       <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 8 }}>
-        ⚪ = ยังไม่ถึงด่าน (ไม่ใช่ไม่ผ่าน) — บนบอร์ดกระดาษคือบล็อกที่ยังเว้นว่างไว้
+        ⚪ = {tr("ยังไม่ถึงด่าน (ไม่ใช่ไม่ผ่าน) — บนบอร์ดกระดาษคือบล็อกที่ยังเว้นว่างไว้")}
       </div>
     </Scroller>
   );
@@ -968,7 +968,7 @@ function PanelIssues({ p }) {
     <Scroller>
       <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 760 }}>
         <thead><tr>
-          {['#', 'วันที่', 'หมวด', 'ปัญหา', 'สาเหตุ', 'มาตรการ', 'ผู้รับผิดชอบ', 'กำหนด', 'สถานะ'].map(c => <th key={c} style={th}>{tr(c)}</th>)}
+          {['#', tr("วันที่"), tr("หมวด"), tr("ปัญหา"), tr("สาเหตุ"), tr("มาตรการ"), tr("ผู้รับผิดชอบ"), tr("กำหนด"), tr("สถานะ")].map(c => <th key={c} style={th}>{tr(c)}</th>)}
         </tr></thead>
         <tbody>
           {p.rows.map(r => (
@@ -1009,7 +1009,7 @@ function PanelDoc({ p }) {
       {!!p.tree?.length && (
         <Scroller>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 520 }}>
-            <thead><tr>{['ลำดับ', 'ชื่อชิ้นงาน', 'เลขพาร์ท', 'สเปกวัสดุ'].map(c => <th key={c} style={th}>{tr(c)}</th>)}</tr></thead>
+            <thead><tr>{[tr("ลำดับ"), tr("ชื่อชิ้นงาน"), tr("เลขพาร์ท"), tr("สเปกวัสดุ")].map(c => <th key={c} style={th}>{tr(c)}</th>)}</tr></thead>
             <tbody>{p.tree.map(t => (
               <tr key={t.seq}>
                 <td style={{ ...td, whiteSpace: 'nowrap', color: 'var(--muted)' }}>{t.seq}</td>
@@ -1091,7 +1091,7 @@ function LevelPanel({ proj, panel }) {
           <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>{tr('เกณฑ์ผ่านของแต่ละด่าน (Requirement of SPTT Milestone)')}</div>
           <Scroller>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 700 }}>
-              <thead><tr>{['SPTT', 'ด่านลูกค้า', 'Off-Tool', 'Off-Process', 'คุณภาพที่ต้องได้', 'กำลังผลิตที่ต้องได้'].map(c => <th key={c} style={th}>{tr(c)}</th>)}</tr></thead>
+              <thead><tr>{['SPTT', tr("ด่านลูกค้า"), 'Off-Tool', 'Off-Process', tr("คุณภาพที่ต้องได้"), tr("กำลังผลิตที่ต้องได้")].map(c => <th key={c} style={th}>{tr(c)}</th>)}</tr></thead>
               <tbody>{SPTT_REQUIREMENTS.map(r => (
                 <tr key={r.sptt}>
                   <td style={{ ...td, whiteSpace: 'nowrap', fontWeight: 700 }}>{r.sptt}</td>
@@ -1108,10 +1108,10 @@ function LevelPanel({ proj, panel }) {
       )}
       {panel.key === 'pop' && (
         <div style={{ ...CARD, marginTop: 12 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>ชุดเอกสารที่ลูกค้าบังคับต่อด่าน (TMA SPTT Document · ตัวเลข = จำนวนหน้า)</div>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>{tr("ชุดเอกสารที่ลูกค้าบังคับต่อด่าน (TMA SPTT Document · ตัวเลข = จำนวนหน้า")})</div>
           <Scroller>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 660 }}>
-              <thead><tr>{['#', 'เอกสาร', 'CV 1st', 'CV 2nd', '1A (LVPT)', 'MPT (HVPT)', 'QCS', 'SOP'].map(c => <th key={c} style={th}>{tr(c)}</th>)}</tr></thead>
+              <thead><tr>{['#', tr("เอกสาร"), 'CV 1st', 'CV 2nd', '1A (LVPT)', 'MPT (HVPT)', 'QCS', 'SOP'].map(c => <th key={c} style={th}>{tr(c)}</th>)}</tr></thead>
               <tbody>{TMA_SPTT_DOCS.map(d => (
                 <tr key={d.seq}>
                   <td style={td}>{d.seq}</td>
@@ -1174,7 +1174,7 @@ function TvView({ projects, index, onIndex, onExit, openPanelKey, onPick, onClos
   };
   const openPanel = proj.panels.find(p => p.key === openPanelKey) || null;
   const counts = evaCounts(proj.panels);
-  const clock = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' });
+  const clock = now.toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' });
 
   const F = { // ขนาดตัวอักษรอิงความกว้างจอ — 70" ดูจากระยะไกล ต้องใหญ่กว่าจอ PC มาก
     title: 'clamp(20px, 2.1vw, 58px)',
@@ -1327,7 +1327,7 @@ function TvView({ projects, index, onIndex, onExit, openPanelKey, onPick, onClos
                   ) : hot ? (
                     /* กฎ IEC ข้อ 2: แดงต้องมีข้อความ — ยังไม่เขียน = ฟ้องบนจอ ห้ามย่อการ์ดให้เนียน */
                     <div style={{ fontSize: F.noteHot, color: '#fca5a5', lineHeight: 1.32 }}>
-                      ⚠️ แดงแต่ยังไม่เขียนว่าเกิดอะไร / จะแก้ยังไง
+                      ⚠️ {tr("แดงแต่ยังไม่เขียนว่าเกิดอะไร / จะแก้ยังไง")}
                     </div>
                   ) : null}
                   {/* ใบเล็กที่มีตัวเลขแล้ว ยุบบรรทัดนี้ไปรวมกับแถวที่มา (ประหยัด 1 บรรทัด ไม่ให้ล้นการ์ด) */}
@@ -1464,7 +1464,7 @@ export default function NewModelBoard() {
     { label: 'ภาพรวม', onClick: (cust || proj || deep) ? () => go({}) : null },
     cust && { label: cust.name, onClick: (proj || deep) ? () => go({ cust: cust.code }) : null },
     proj && { label: proj.title, onClick: deep ? () => go({ cust: cust.code, proj: proj.id }) : null },
-    bucket && { label: BUCKETS.find(b => b.key === bucket)?.label },
+    bucket && { label: tr(BUCKETS.find(b => b.key === bucket)?.label) },
     popMain && { label: `${popMain.no}. ${popMain.label}`,
       onClick: popSub ? () => go({ cust: cust.code, proj: proj.id, pop: popMain.key }) : null },
     popSub && { label: `${popSub.no} ${popSub.label}` },
@@ -1473,7 +1473,7 @@ export default function NewModelBoard() {
 
   const sub = popSub ? `${popSub.no} ${popSub.label} · ${proj.title}`
     : popMain ? `POP ${tr("ข้อ")} ${popMain.no} · ${proj.title}`
-    : bucket ? `${BUCKETS.find(b => b.key === bucket)?.label} · ${proj.title}`
+    : bucket ? `${tr(BUCKETS.find(b => b.key === bucket)?.label)} · ${proj.title}`
     : panel ? `${tr("แผงบนบอร์ดของ")} ${proj.title}`
     : proj ? `${proj.title} · ${tr("ด่าน")} ${proj.stage} · ${tr("ทีม")} ${proj.team} · ${tr("ผู้นำโปรเจค")} ${proj.leader}`
     : cust ? `${tr("รุ่นของ")} ${cust.name} ${tr("ที่อยู่ในระบบ")}`
@@ -1498,7 +1498,7 @@ export default function NewModelBoard() {
           <button type="button" className="pg-btn" onClick={() => { setTvIndex(Math.max(0, data.projects.findIndex(p => p.id === proj.id))); go({ cust: cust.code, proj: proj.id, tv: '1' }); }}
             style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', color: 'var(--text)',
               borderRadius: 8, padding: '7px 13px', cursor: 'pointer', fontSize: 12.5 }}>
-            📺 เปิดโหมดจอ TV (70 นิ้ว)
+            📺 {tr("เปิดโหมดจอ TV (70 นิ้ว")})
           </button>
         ) : null} />
       <Trail items={trail} />

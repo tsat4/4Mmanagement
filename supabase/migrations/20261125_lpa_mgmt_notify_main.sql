@@ -68,7 +68,9 @@
    · 🔴 **ห้ามใส่ `exception when others then return null`** — อ่านฐานไม่ได้ต้องให้ cron
      บันทึกว่าล้ม ไม่ใช่เงียบแล้วตอบ ok (กฎ "ห้ามล้มเหลวเงียบ")
    · ลิงก์ใช้ route จริง `/daily-checker?tab=lpa&sub=…` (`/lpa` เป็น LegacyTabRedirect)
-     🔴 **ห้ามใส่ `&line=` — หน้า LPA ยังไม่อ่าน param นี้** (ของเดิมใส่ไว้ แต่มันตกพื้น)
+     + `&line=&shift=&date=` ลงใบตรงๆ (จออ่านครั้งเดียวตอนเปิด · ของกลางเดียวกับ `lpa_finding` N5)
+     🔴 **ชื่อไลน์ต้อง encode** — มีช่องว่างและ `&` (เช่น 'Assembly Line D - GWM&RA')
+       ไม่ encode = param ที่ตามหลังขาดหายเงียบๆ
 
    ── ย้อนกลับ (rollback) ─────────────────────────────────────────────────────
      select cron.unschedule('lpa-mgmt-scan-day');
@@ -227,7 +229,10 @@ begin
           'line_name', r.line_name,
           'type',      'info',
           'ref_table', 'lpa_audits',
-          'link',      '/daily-checker?tab=lpa',
+          /* 🔗 ลงใบตรงๆ — จออ่าน ?line=&shift=&date= ครั้งเดียวตอนเปิด (ของกลางเดียวกับ lpa_finding N5)
+             🔴 ชื่อไลน์ต้อง encode: มีช่องว่างและ `&` (เช่น 'Assembly Line D - GWM&RA') */
+          'link',      '/daily-checker?tab=lpa&line=' || replace(replace(replace(replace(replace(r.line_name, '%', '%25'), '&', '%26'), '#', '%23'), '+', '%2B'), ' ', '%20')
+                         || '&shift=' || v_shift || '&date=' || to_char(v_wd, 'YYYY-MM-DD'),
           'lines',     to_jsonb(array[
                          '📅 ' || to_char(v_wd, 'DD/MM/YYYY') || ' · ' || v_shift_th
                            || ' · ชั้น ' || r.layers || ' ยังไม่มีใบตรวจ',
@@ -269,7 +274,8 @@ begin
             'line_name', r.line_name,
             'type',      'warning',
             'ref_table', 'lpa_audits',
-            'link',      '/daily-checker?tab=lpa&sub=report',
+            'link',      '/daily-checker?tab=lpa&sub=report&line=' || replace(replace(replace(replace(replace(r.line_name, '%', '%25'), '&', '%26'), '#', '%23'), '+', '%2B'), ' ', '%20')
+                           || '&shift=' || v_shift,
             'lines',     to_jsonb(array_remove(array[
                            'เดือน ' || v_month || ' · ' || v_shift_th || ' · ชั้น ' || r.layers
                              || ' — วางแผนไว้แต่ยังไม่มีใบตรวจ ' || r.n || ' วัน',

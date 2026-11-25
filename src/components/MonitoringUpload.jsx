@@ -311,7 +311,7 @@ export default function MonitoringUpload({ canUpload, canBoard = true, fullName,
           <b>{tr('ออเดอร์ล่วงหน้า')}</b>{tr('ของชีทลูกค้า/Argen ·')} <b>{tr('ยอดคงเหลือ')}</b> · <b>{tr('ประวัติการส่ง')}</b>
           — {tr("แล้วขึ้นสรุปให้ตรวจก่อนเขียนเสมอ")}
           <div style={{ marginTop: 6, color: 'var(--muted)' }}>
-            ⏱️ ยอดคงเหลืออ่าน <b>{tr('ณ วันที่')} {getWorkDate()}</b> · ช่องวันอนาคตในไฟล์เป็นยอดพยากรณ์ ไม่ใช่ของจริง
+            ⏱️ {tr("ยอดคงเหลืออ่าน")} <b>{tr('ณ วันที่')} {getWorkDate()}</b> · {tr("ช่องวันอนาคตในไฟล์เป็นยอดพยากรณ์ ไม่ใช่ของจริง")}
           </div>
           {/* 🔴 จุดอัพโหลดมีจุดเดียว เขียนครบทุกชั้นในครั้งเดียว (08/10 คำสั่ง user) — ห้ามแยกกลับเป็น 2 ปุ่ม */}
           <div style={{ marginTop: 6, color: 'var(--text2)' }}>
@@ -320,7 +320,7 @@ export default function MonitoringUpload({ canUpload, canBoard = true, fullName,
         </div>
         {!canUpload && (
           <div style={{ marginTop: 10, fontSize: 12, color: '#f59e0b' }}>
-            ⚠️ บัญชีนี้ไม่มีสิทธิ์อัพโหลด (ขอสิทธิ์ <code>demand:upload</code> ที่หน้าจัดการสิทธิ์)
+            ⚠️ {tr("บัญชีนี้ไม่มีสิทธิ์อัพโหลด (ขอสิทธิ์")} <code>demand:upload</code> {tr("ที่หน้าจัดการสิทธิ์")})
           </div>
         )}
         <div style={{ marginTop: 12 }}>
@@ -377,7 +377,7 @@ function PreviewPanel({ p, canBoard, onCancel, onConfirm, busy, card, warnBox })
   return (
     <div style={{ ...card, borderColor: 'var(--accent)' }}>
       <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>
-        ตรวจก่อนเขียน — <span style={{ color: 'var(--accent)' }}>{fileName}</span>
+        {tr("ตรวจก่อนเขียน")} — <span style={{ color: 'var(--accent)' }}>{fileName}</span>
       </div>
       {/* 🔎 สรุปรายชีท — บังคับโชว์เสมอ (24/09)
           เดิมบอกแค่ยอดรวม "ออเดอร์ 232 ใบ" ⇒ คนเข้าใจว่าครบทุกลูกค้า
@@ -385,7 +385,7 @@ function PreviewPanel({ p, canBoard, onCancel, onConfirm, busy, card, warnBox })
       <div style={{ overflowX: 'auto', marginBottom: 10 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
           <thead><tr>
-            {['ชีท', 'ชนิด', 'ลูกค้า', 'พาร์ท', 'ออเดอร์', 'ถึงวันที่'].map((h, i) => (
+            {[tr("ชีท"), tr("ชนิด"), tr("ลูกค้า"), tr("พาร์ท"), tr("ออเดอร์"), tr("ถึงวันที่")].map((h, i) => (
               <th key={h} style={{ textAlign: i >= 3 ? 'right' : 'left', padding: '4px 8px', fontSize: 11,
                                    color: 'var(--muted)', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>{tr(h)}</th>
             ))}
@@ -400,12 +400,12 @@ function PreviewPanel({ p, canBoard, onCancel, onConfirm, busy, card, warnBox })
                 <td style={{ padding: '4px 8px', fontSize: 12, color: 'var(--muted)', borderBottom: '1px solid var(--border2)' }}>{r.kind}</td>
                 <td style={{ padding: '4px 8px', fontSize: 12, borderBottom: '1px solid var(--border2)',
                              color: r.customer ? 'var(--text)' : 'var(--muted)' }}>
-                  {r.customer || (r.kind === 'ลูกค้า' ? '— ไม่มีในทะเบียน —' : '—')}
+                  {r.customer || (r.kind === 'ลูกค้า' ? tr("— ไม่มีในทะเบียน —") : '—')}
                 </td>
                 <td style={{ padding: '4px 8px', fontSize: 12, textAlign: 'right', borderBottom: '1px solid var(--border2)' }}>{r.parts}</td>
                 <td style={{ padding: '4px 8px', fontSize: 12, textAlign: 'right', fontWeight: 700,
                              color: r.orders ? 'var(--accent)' : '#ef4444', borderBottom: '1px solid var(--border2)' }}>
-                  {r.orders ? `${r.orders} ${tr("ใบ")} · ${r.orderQty.toLocaleString()}` : '0 ใบ'}
+                  {r.orders ? `${r.orders} ${tr("ใบ")} · ${r.orderQty.toLocaleString()}` : tr("0 ใบ")}
                 </td>
                 <td style={{ padding: '4px 8px', fontSize: 12, textAlign: 'right', whiteSpace: 'nowrap',
                              color: r.staleDays > 0 ? '#f59e0b' : 'var(--muted)', borderBottom: '1px solid var(--border2)' }}>
@@ -458,7 +458,7 @@ function PreviewPanel({ p, canBoard, onCancel, onConfirm, busy, card, warnBox })
         <div style={warnBox('#78350f22', '#f59e0b')}>
           <b style={{ fontSize: 12 }}>{tr('บล็อกซ้ำในไฟล์')} {rec.orderDupes} {tr('แถว — ยุบให้แล้ว')}</b>
           <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 4 }}>
-            พาร์ทเดียวถูกเขียนไว้หลายบล็อกในชีทเดียวกัน · ถ้าไม่ยุบ ความต้องการจะกลายเป็น 2 เท่า
+            {tr("พาร์ทเดียวถูกเขียนไว้หลายบล็อกในชีทเดียวกัน · ถ้าไม่ยุบ ความต้องการจะกลายเป็น 2 เท่า")}
           </div>
         </div>
       )}
@@ -472,8 +472,7 @@ function PreviewPanel({ p, canBoard, onCancel, onConfirm, busy, card, warnBox })
             {tr("พาร์ทเดียวเขียนหลายบรรทัด (เช่น 300T MAT 20059152 คว่ำครีบ/หงายครีบ — FC เดือนเป็นของพาร์ทเดียวกัน) · ไม่ยุบ = ยอดพยากรณ์ 2 เท่า และ MIN/MAX เขียนไม่ลงทั้งก้อน")}
             {!!(rec.forecastConflicts || rec.levelConflicts) && (
               <div style={{ color: '#f59e0b', fontWeight: 700, marginTop: 4 }}>
-                ⚠️ ในนั้น <b>{tr('ค่าไม่ตรงกัน')} {rec.forecastConflicts + rec.levelConflicts} {tr('คู่')}</b> — ระบบเลือกค่ามากสุดให้ก่อน
-                แต่ควรไปแก้ไฟล์ต้นทางให้เหลือค่าเดียว
+                ⚠️ {tr("ในนั้น")} <b>{tr('ค่าไม่ตรงกัน')} {rec.forecastConflicts + rec.levelConflicts} {tr('คู่')}</b> — {tr("ระบบเลือกค่ามากสุดให้ก่อน แต่ควรไปแก้ไฟล์ต้นทางให้เหลือค่าเดียว")}
               </div>
             )}
           </div>
@@ -485,23 +484,22 @@ function PreviewPanel({ p, canBoard, onCancel, onConfirm, busy, card, warnBox })
         <div style={warnBox('#1e3a8a22', '#60a5fa')}>
           <b style={{ fontSize: 12 }}>{tr('เทียบกับทะเบียน kanban —')} <u>{tr('ระบบไม่แก้ให้')}</u></b>
           <div style={{ fontSize: 12, color: 'var(--text2)', margin: '4px 0 8px' }}>
-            ทะเบียน kanban ใช้ร่วมกับบัตรคานบัง · OEE · Heijunka · ป้าย QR — เขียนทับอัตโนมัติกระทบกว้างเกินไป
-            ให้ไปแก้เองที่ <b>/products → 🎴 Kanban Std</b> ถ้ายืนยันว่าค่าในไฟล์ถูกกว่า
+            {tr("ทะเบียน kanban ใช้ร่วมกับบัตรคานบัง · OEE · Heijunka · ป้าย QR — เขียนทับอัตโนมัติกระทบกว้างเกินไป ให้ไปแก้เองที่")} <b>/products → 🎴 Kanban Std</b> {tr("ถ้ายืนยันว่าค่าในไฟล์ถูกกว่า")}
           </div>
           <KbDiffTable
             title={`LOT size ${tr("ไม่ตรง")} ${kbDiff.lot.length} ${tr("พาร์ท")}`}
-            why="ขนาดล็อตผลิต — คุมว่าสะสมครบเท่าไหร่ถึงออกใบสั่งผลิต + เข้าสูตรจำนวนบัตร"
+            why={tr("ขนาดล็อตผลิต — คุมว่าสะสมครบเท่าไหร่ถึงออกใบสั่งผลิต + เข้าสูตรจำนวนบัตร")}
             rows={kbDiff.lot} />
           <KbDiffTable
             title={`Packing ${tr("ไม่ตรง")} ${kbDiff.pack.length} ${tr("พาร์ท")}`}
-            why="จำนวนชิ้นต่อกล่อง/ต่อบัตร — คุมการบรรจุและการส่ง ไม่เกี่ยวกับจังหวะเปิดใบผลิต"
+            why={tr("จำนวนชิ้นต่อกล่อง/ต่อบัตร — คุมการบรรจุและการส่ง ไม่เกี่ยวกับจังหวะเปิดใบผลิต")}
             rows={kbDiff.pack} />
           {!!kbDiff.noStd.length && (
             <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 8 }}>
               ⚪ <b>{tr('ยังไม่มีในทะเบียน kanban')} {kbDiff.noStd.length} {tr('พาร์ท')}</b> —
               {' '}{kbDiff.noStd.slice(0, 8).map(l => l.mat_no).join(' · ')}
               {kbDiff.noStd.length > 8 ? ` … ${tr("อีก")} ${kbDiff.noStd.length - 8}` : ''}
-              <div style={{ color: 'var(--muted)' }}>คนละเรื่องกับ "ไม่ตรง" — ตัวนี้คือยังไม่เคยตั้งค่าเลย</div>
+              <div style={{ color: 'var(--muted)' }}>{tr("คนละเรื่องกับ \"ไม่ตรง\" — ตัวนี้คือยังไม่เคยตั้งค่าเลย")}</div>
             </div>
           )}
         </div>
@@ -511,7 +509,7 @@ function PreviewPanel({ p, canBoard, onCancel, onConfirm, busy, card, warnBox })
         <div style={{ ...warnBox('var(--bg2)', 'var(--border)') }}>
           <b style={{ fontSize: 12 }}>{tr('ตารางบอร์ด —')} {boardMade.length} {tr('บอร์ด ·')} {fmt(boardParts)} {tr('พาร์ท')}</b>
           <div style={{ fontSize: 11, color: 'var(--muted)', margin: '3px 0 7px' }}>
-            คือตารางที่เห็นในหน้า <b>{tr('Monitoring แผน-สต๊อก')}</b> · นำเข้าซ้ำ = อัพเดทบอร์ดเดิม ไม่สร้างซ้ำ
+            {tr("คือตารางที่เห็นในหน้า")} <b>{tr('Monitoring แผน-สต๊อก')}</b> · {tr("นำเข้าซ้ำ = อัพเดทบอร์ดเดิม ไม่สร้างซ้ำ")}
           </div>
           <BoardPlanPreview made={boardMade} skipped={p.board?.skipped || []} />
         </div>

@@ -683,7 +683,7 @@ export default function Monitoring() {
   }, [canEdit, board, fullName, syncRackOrder]);
 
   const countOf = (kinds) => boards.filter(b => kinds.includes(b.kind)).length;
-  const groupTabs = BOARD_GROUPS.map(g => ({ key: g.key, label: g.label }));
+  const groupTabs = BOARD_GROUPS.map(g => ({ key: g.key, label: tr(g.label) }));
   const subTabs = groupDef.subs.map(sd => {
     const full = MON_SUBS.find(x => x.key === sd.key);
     const n = countOf(full.kinds);
@@ -749,12 +749,12 @@ export default function Monitoring() {
             <NoteLine text={isFg
               ? (bCust
                 ? `${tr("ผูกลูกค้า")} ${bCust} ⇒ ${tr("ยอดยกมา = ของพร้อมส่งในคลัง FG · ลูกค้าสั่งจาก EDI 862/830 (รวมใบค้างส่งไว้คอลัมน์แรก) · ผลิตเข้านับจากใบผลิตทุกไลน์")}${sysNote ? ` · ${sysNote}` : ''}`
-                : '⚠️ บอร์ด FG ใบนี้ยังไม่ผูกลูกค้า ⇒ ระบบดึงยอดลูกค้าสั่งให้ไม่ได้ — กด "📦 สร้างบอร์ด FG จากออเดอร์" ใหม่อีกครั้ง')
+                : tr("⚠️ บอร์ด FG ใบนี้ยังไม่ผูกลูกค้า ⇒ ระบบดึงยอดลูกค้าสั่งให้ไม่ได้ — กด \"📦 สร้างบอร์ด FG จากออเดอร์\" ใหม่อีกครั้ง"))
               : isGreat
                 ? `${tr("ส่งเกรท (รายสัปดาห์) ⇒ ระบบเติมของเข้าให้ · ส่งลูกค้ากรอกเอง")}${sysNote ? ` · ${sysNote}` : ''}${lockNote}`
               : board?.line_name
                 ? `${tr("ผูกไลน์")} ${board.line_name} ⇒ ${tr("ระบบเติมของเข้า/ออก/ขั้นต่ำให้")}${sysNote ? ` · ${sysNote}` : ''}${lockNote}`
-                : 'ยังไม่ผูกไลน์ ⇒ ทุกช่องต้องกรอกเอง'} fs={FS} />
+                : tr("ยังไม่ผูกไลน์ ⇒ ทุกช่องต้องกรอกเอง")} fs={FS} />
           </FilterBar>
         ) : null}
       />
@@ -801,7 +801,7 @@ export default function Monitoring() {
           {tr("ยังไม่มีบอร์ดในหมวดนี้")} ({subDef.kinds.map(k => BOARD_TABS.find(t => t.key === k)?.sheets).filter(Boolean).join(' · ')})
           {canEdit
             ? <> {tr('— กด')} <b>📥 {tr(importLabel('planner_monitoring'))}</b> {tr('แล้วเลือกไฟล์')} <code>1.Monitoring-&lt;เดือน&gt;.xlsx</code> {tr('ระบบจะสร้างบอร์ดให้ตามชีทในไฟล์')}</>
-            : ' — ต้องมีสิทธิ์จัดการบอร์ดจึงจะนำเข้าได้'}
+            : tr(" — ต้องมีสิทธิ์จัดการบอร์ดจึงจะนำเข้าได้")}
         </div>
       ) : loading && !parts.length ? (
         <div style={{ ...card, fontSize: FS + 1, color: 'var(--muted)' }}>{tr('กำลังโหลด…')}</div>

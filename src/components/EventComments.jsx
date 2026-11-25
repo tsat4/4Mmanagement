@@ -116,7 +116,7 @@ export default function EventComments({ refKind, refId, contextLabel = 'รา�
 
       {unavailable ? (
         <div style={{ fontSize: 12, color: 'var(--muted)', padding: '4px 0' }}>
-          ⚠️ ระบบคอมเมนต์ยังไม่เปิดใช้ (ยังไม่ run migration <code style={{ fontSize: 11 }}>20260716_event_comments.sql</code>)
+          ⚠️ {tr("ระบบคอมเมนต์ยังไม่เปิดใช้ (ยังไม่")} run migration <code style={{ fontSize: 11 }}>20260716_event_comments.sql</code>)
         </div>
       ) : (
         <>

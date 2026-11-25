@@ -169,17 +169,17 @@ function SignQueueModal({ queue, onCancel, onDone }) {
         </div>
         {/* ชื่อใหญ่ — คนที่รับแท็บเล็ตต่อต้องรู้ทันทีว่าช่องนี้ของตัวเองหรือเปล่า */}
         <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--text)', lineHeight: 1.25, marginBottom: 2 }}>{cur.name}</div>
-        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 10 }}>{tr('รหัส')} {cur.code || '—'}{cur.hadSign ? ' · มีลายเซ็นเดิมอยู่แล้ว (เซ็นใหม่จะทับของเดิม)' : ''}</div>
+        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 10 }}>{tr('รหัส')} {cur.code || '—'}{cur.hadSign ? tr(" · มีลายเซ็นเดิมอยู่แล้ว (เซ็นใหม่จะทับของเดิม)") : ''}</div>
         <SignCanvas ref={pad} height={190} />
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end', marginTop: 12 }}>
           <button onClick={() => pad.current?.clear()} style={padBtn('var(--bg3)', 'var(--text2)')}>{tr('ล้าง')}</button>
           <button onClick={() => { pad.current?.clear(); go(done); }} style={padBtn('var(--bg3)', 'var(--muted)')}>{tr('ข้ามคนนี้')}</button>
           <button onClick={() => onDone(done)} style={padBtn('var(--bg3)', 'var(--text2)')}>
-            {done.size ? `${tr("หยุดแล้วบันทึก")} ${done.size} ${tr("ลายเซ็น")}` : 'ปิด'}
+            {done.size ? `${tr("หยุดแล้วบันทึก")} ${done.size} ${tr("ลายเซ็น")}` : tr("ปิด")}
           </button>
           <button onClick={async () => { const m = await keep(); if (m) go(m); }}
             style={{ ...padBtn('var(--accent)', 'var(--accent-ink)', 'none'), padding: '7px 20px', fontWeight: 800 }}>
-            {pos + 1 < total ? 'ถัดไป →' : 'เสร็จสิ้น'}
+            {pos + 1 < total ? tr("ถัดไป →") : tr("เสร็จสิ้น")}
           </button>
         </div>
       </div>
@@ -896,7 +896,7 @@ ${printImgs.map((f, i) => attachData[i] ? `<div style="page-break-before:always;
             {editing[S.sigKey] && <img src={editing[S.sigKey]} alt="" style={{ height: 30, background: '#fff', borderRadius: 4, padding: 2, alignSelf: 'flex-start' }} />}
             {!editing[S.uidKey] && (
               <div style={{ fontSize: 11, color: 'var(--amber)' }}>
-                ⚠️ {tr("ลายเซ็นเดิม — ระบบไม่ได้บันทึกว่าใครกด")}{editing[S.atKey] ? '' : ' และไม่มีเวลา'} ({tr("ใบก่อนเปลี่ยนเป็นเซ็นเอง) ตรวจย้อนไม่ได้")}
+                ⚠️ {tr("ลายเซ็นเดิม — ระบบไม่ได้บันทึกว่าใครกด")}{editing[S.atKey] ? '' : tr(" และไม่มีเวลา")} ({tr("ใบก่อนเปลี่ยนเป็นเซ็นเอง) ตรวจย้อนไม่ได้")}
               </div>
             )}
             {mayDelete && (
@@ -912,7 +912,7 @@ ${printImgs.map((f, i) => attachData[i] ? `<div style="page-break-before:always;
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             <button onClick={() => signSelfOjt(kind)} style={{ alignSelf: 'flex-start', padding: '6px 12px', borderRadius: 'var(--r-md)', border: 'none', background: 'var(--accent)', color: 'var(--accent-ink)', fontWeight: 700, cursor: 'pointer', fontSize: 12 }}>
-              {S.verb} {tr('(ในนาม')} {fullName || 'คุณ'})
+              {S.verb} {tr('(ในนาม')} {fullName || tr("คุณ")})
             </button>
             {S.gated && posRank == null && (
               <div style={{ fontSize: 11, color: 'var(--amber)' }}>{tr('⚠️ บัญชีนี้ยังไม่ได้ตั้งตำแหน่ง — ระบบ')}<b>{tr('ไม่ได้ตรวจ')}</b>{tr('ว่าถึงระดับที่เซ็นช่องนี้ได้ (ตั้งที่ /add-user)')}</div>
@@ -935,7 +935,7 @@ ${printImgs.map((f, i) => attachData[i] ? `<div style="page-break-before:always;
       {!editing[sigKey] && editing[nameKey] && (isSelfName(editing[nameKey], fullName)
         ? (mySigOjt
             ? <button onClick={() => setEditing(prev => ({ ...prev, [sigKey]: mySigOjt }))} style={{ marginTop: 4, padding: '3px 9px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)', cursor: 'pointer', fontSize: 11 }}>✍️ {tr("เซ็นเป็น")}{label}</button>
-            : <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 3 }}>โปรไฟล์ของคุณยังไม่มีลายเซ็น — อัปโหลดที่เมนูโปรไฟล์ก่อน</div>)
+            : <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 3 }}>{tr("โปรไฟล์ของคุณยังไม่มีลายเซ็น — อัปโหลดที่เมนูโปรไฟล์ก่อน")}</div>)
         : <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 3 }}>{tr("รอ")} {editing[nameKey]} login {tr("มาเซ็นเอง")}</div>)}
     </div>
   );
@@ -956,7 +956,7 @@ ${printImgs.map((f, i) => attachData[i] ? `<div style="page-break-before:always;
 
   return (
     <Page>
-      <ReadOnlyNote show={!canRecord} role={role} what="สร้าง/แก้ใบอบรม OJT"
+      <ReadOnlyNote show={!canRecord} role={role} what={tr("สร้าง/แก้ใบอบรม OJT")}
         permKey="ojt:record" hint={tr('ยังเปิดดูใบเดิมและพิมพ์ได้ตามปกติ')} />
       {/* PageHeader เว้นที่ให้ 🔔 (fixed top-right) เอง — ไม่ทับปุ่ม ➕ สร้างใบอบรม */}
       <PageHeader title={tr('อบรมสอนงาน OJT')} icon="📖"
@@ -970,8 +970,8 @@ ${printImgs.map((f, i) => attachData[i] ? `<div style="page-break-before:always;
 
       {filesOff && (
         <div style={{ background: 'var(--amber-dim)', border: '1px solid var(--amber-line)', color: 'var(--amber)', borderRadius: 'var(--r-md)', padding: '8px 12px', fontSize: 12.5, fontWeight: 700, marginBottom: 10 }}>
-          ไฟล์แนบยังใช้ไม่ได้ — ตาราง <code>ojt_training_files</code> ยังไม่มีในฐานข้อมูล (ยังไม่ได้รัน migration
-          <code> 20261101_ojt_attachments_main.sql</code>) · ใบอบรม/รายชื่อ/ลายเซ็น/พิมพ์ PDF ใช้ได้ปกติทุกอย่าง
+          {tr("ไฟล์แนบยังใช้ไม่ได้ — ตาราง")} <code>ojt_training_files</code> {tr("ยังไม่มีในฐานข้อมูล (ยังไม่ได้รัน")} migration
+          <code> 20261101_ojt_attachments_main.sql</code>) · {tr("ใบอบรม/รายชื่อ/ลายเซ็น/พิมพ์ PDF ใช้ได้ปกติทุกอย่าง")}
           <div style={{ fontWeight: 400, fontSize: 11.5, marginTop: 2 }}>{tr('รายละเอียด:')} {filesOff}</div>
         </div>
       )}
@@ -1021,7 +1021,7 @@ ${printImgs.map((f, i) => attachData[i] ? `<div style="page-break-before:always;
                 </tr>
               ))}
               {visibleTrainings.length === 0 && (
-                <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--muted)', padding: 30, fontSize: 13 }}>ยังไม่มีใบอบรม — กด "➕ สร้างใบอบรม" เพื่อเริ่ม</td></tr>
+                <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--muted)', padding: 30, fontSize: 13 }}>{tr("ยังไม่มีใบอบรม — กด \"➕ สร้างใบอบรม\" เพื่อเริ่ม")}</td></tr>
               )}
             </tbody>
           </table>
@@ -1033,7 +1033,7 @@ ${printImgs.map((f, i) => attachData[i] ? `<div style="page-break-before:always;
         <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 3000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', overflowY: 'auto', padding: '3vh 2vw' }}>
           <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', width: 'min(96vw, 1150px)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{editing.isNew ? 'สร้าง' : 'แก้ไข'}{tr('ใบอบรมสอนงาน OJT')}</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{editing.isNew ? tr("สร้าง") : tr("แก้ไข")}{tr('ใบอบรมสอนงาน OJT')}</div>
               <button onClick={closeEdit} style={{ background: 'none', border: 'none', fontSize: 22, color: 'var(--muted)', cursor: 'pointer', lineHeight: 1 }}>✕</button>
             </div>
             {/* 🪜 ถึงขั้นไหน — กฎ ojtFlow() (utils/stepFlow.js · ตัดสินจากช่องเซ็นจริง) · UI §6.30 */}
@@ -1141,7 +1141,7 @@ ${printImgs.map((f, i) => attachData[i] ? `<div style="page-break-before:always;
                           </div>
                         </a>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 4 }}>
-                          <span style={{ fontSize: 11, color: 'var(--muted)' }}>{kbText(f.size_bytes)}{f._new ? ' · ยังไม่บันทึก' : ''}</span>
+                          <span style={{ fontSize: 11, color: 'var(--muted)' }}>{kbText(f.size_bytes)}{f._new ? tr(" · ยังไม่บันทึก") : ''}</span>
                           {canRecord && (
                             <button onClick={() => removeFile(idx)} title={tr('เอาไฟล์นี้ออก')}
                               style={{ background: 'transparent', border: 'none', color: 'var(--red)', cursor: 'pointer', fontSize: 13, padding: 0 }}>✕</button>
@@ -1185,13 +1185,13 @@ ${printImgs.map((f, i) => attachData[i] ? `<div style="page-break-before:always;
                       <button onClick={() => setSignQueue(mk(rest.length ? rest : editing.attendees.map((a, idx) => ({ idx, a }))))}
                         disabled={signingQueue}
                         style={{ padding: '8px 16px', borderRadius: 'var(--r-md)', border: 'none', background: 'var(--accent)', color: 'var(--accent-ink)', fontWeight: 800, fontSize: 13, cursor: signingQueue ? 'wait' : 'pointer' }}>
-                        {signingQueue ? 'กำลังอัปลายเซ็น…' : `${tr("ส่งแท็บเล็ตวนเซ็น")} (${rest.length || total} ${tr("คน")})`}
+                        {signingQueue ? tr("กำลังอัปลายเซ็น…") : `${tr("ส่งแท็บเล็ตวนเซ็น")} (${rest.length || total} ${tr("คน")})`}
                       </button>
                       <span style={{ fontSize: 12, fontWeight: 700, color: signed === total ? 'var(--green)' : 'var(--muted)' }}>
-                        {tr("เซ็นแล้ว")} {signed}/{total}{signed < total ? ` · ${tr("ยังขาด")} ${total - signed}` : ' ✔ ครบแล้ว'}
+                        {tr("เซ็นแล้ว")} {signed}/{total}{signed < total ? ` · ${tr("ยังขาด")} ${total - signed}` : tr(" ✔ ครบแล้ว")}
                       </span>
                       <span style={{ fontSize: 11, color: 'var(--muted)' }}>
-                        เซ็นจนครบแล้วค่อยปล่อยเน็ตทีเดียว — เซ็นกลางคันแล้วปิดก็เก็บเท่าที่เซ็นไป
+                        {tr("เซ็นจนครบแล้วค่อยปล่อยเน็ตทีเดียว — เซ็นกลางคันแล้วปิดก็เก็บเท่าที่เซ็นไป")}
                       </span>
                     </div>
                   );

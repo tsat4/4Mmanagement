@@ -59,13 +59,12 @@ export default function BomSheetGroups({ groups = [], counts = {}, search = '', 
       <div style={{ marginBottom: 10, padding: '10px 14px', borderRadius: 'var(--r-md)', fontSize: 12, lineHeight: 1.65,
         color: 'var(--text2)', border: '1px solid var(--border)', background: 'var(--bg2-surf)' }}>
         <div style={{ fontWeight: 800, color: 'var(--text)', marginBottom: 2 }}>
-          พาร์ทที่ถูกนิยามลูกไว้หลายใบ — เทียบ “ทุกใบ” พร้อมกัน
+          {tr("พาร์ทที่ถูกนิยามลูกไว้หลายใบ — เทียบ “ทุกใบ” พร้อมกัน")}
         </div>
-        ตารางคู่ด้านบนเทียบได้แค่ <b>{tr('2 ใบ')}</b> ⇒ ตกไป 2 แบบ ซึ่งมาโผล่ที่นี่:
-        <b style={{ color: BAD }}> {tr('พาร์ทที่ไม่มีใบ BOM ของตัวเองเลย')}</b> (ตารางคู่ข้ามทั้งหมด) และ
-        <b style={{ color: BAD }}> {tr('ใบที่ 3 ขึ้นไป')}</b> (2 ใบตรงกันเป๊ะ แต่ใบที่ 3 คนละค่า —
-        ยุบแล้วเส้นทางไปอ่านใบนั้น ตัวเลขเปลี่ยนเงียบ) ·
-        <b> {tr('ตารางนี้อ่านอย่างเดียว')}</b> กดตรวจแล้วที่ตารางคู่ด้านบน
+        {tr("ตารางคู่ด้านบนเทียบได้แค่")} <b>{tr('2 ใบ')}</b> ⇒ {tr("ตกไป 2 แบบ ซึ่งมาโผล่ที่นี่")}:
+        <b style={{ color: BAD }}> {tr('พาร์ทที่ไม่มีใบ BOM ของตัวเองเลย')}</b> ({tr("ตารางคู่ข้ามทั้งหมด) และ")}
+        <b style={{ color: BAD }}> {tr('ใบที่ 3 ขึ้นไป')}</b> (2 {tr("ใบตรงกันเป๊ะ แต่ใบที่ 3 คนละค่า — ยุบแล้วเส้นทางไปอ่านใบนั้น ตัวเลขเปลี่ยนเงียบ")}) ·
+        <b> {tr('ตารางนี้อ่านอย่างเดียว')}</b> {tr("กดตรวจแล้วที่ตารางคู่ด้านบน")}
       </div>
 
       {/* ── ตัวนับ: ต้องตอบได้ว่าของ 2 คลาสนั้นมีกี่ตัว ── */}
@@ -98,9 +97,9 @@ export default function BomSheetGroups({ groups = [], counts = {}, search = '', 
       {!shown.length ? (
         <div style={{ padding: 18, textAlign: 'center', fontSize: 12.5, color: 'var(--muted)',
           border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)' }}>
-          {!counts.total ? '✅ ไม่มีพาร์ทไหนถูกนิยามลูกไว้เกิน 1 ใบ'
-            : gFilter === 'open' ? '✅ ทุกพาร์ทที่นิยามหลายใบ เขียนตรงกันหมด (กด "ทั้งหมด" เพื่อดูรายการ)'
-            : 'ไม่มีพาร์ทที่ตรงคำค้น'}
+          {!counts.total ? tr("✅ ไม่มีพาร์ทไหนถูกนิยามลูกไว้เกิน 1 ใบ")
+            : gFilter === 'open' ? tr("✅ ทุกพาร์ทที่นิยามหลายใบ เขียนตรงกันหมด (กด \"ทั้งหมด\" เพื่อดูรายการ)")
+            : tr("ไม่มีพาร์ทที่ตรงคำค้น")}
         </div>
       ) : (
         <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
@@ -124,7 +123,7 @@ export default function BomSheetGroups({ groups = [], counts = {}, search = '', 
                       {/* 🔴 2 ป้ายนี้คือเหตุผลที่แถวนี้มาอยู่ที่นี่ที่เดียว — ห้ามตัดออก */}
                       {!g.hasOwn && (
                         <div style={{ fontSize: 11, color: BAD, fontWeight: 800, marginTop: 3 }}>
-                          ไม่มีใบ BOM ของตัวเอง
+                          {tr("ไม่มีใบ BOM ของตัวเอง")}
                         </div>
                       )}
                       {g.nSheets >= 3 && (
@@ -174,7 +173,7 @@ export default function BomSheetGroups({ groups = [], counts = {}, search = '', 
                       ))}
                       {g.verdict === 'pair_shot' && (
                         <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.5 }}>
-                          งานคู่ปั๊มทีเดียวได้ 2 ชิ้น — ใบหนึ่งน่าจะกรอกต่อ shot อีกใบต่อชิ้น
+                          {tr("งานคู่ปั๊มทีเดียวได้ 2 ชิ้น — ใบหนึ่งน่าจะกรอกต่อ shot อีกใบต่อชิ้น")}
                         </div>
                       )}
                     </td>

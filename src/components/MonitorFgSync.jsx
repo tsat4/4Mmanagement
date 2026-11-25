@@ -190,7 +190,7 @@ export default function MonitorFgSync({ onClose, fullName, onSynced }) {
               {tr("อ่านออเดอร์ที่มีวันส่งตั้งแต่")} <b>{preview.from}</b> {tr('ถึงปัจจุบันขึ้นไป (')}{BACK_DAYS} {tr("วันย้อนหลัง) — เจอ")} FG <b>{fmt(totMats)}</b> {tr('พาร์ท /')} <b>{preview.groups.length}</b> {tr("ลูกค้า")}
               {' · '}{tr('จะเพิ่มขึ้นบอร์ดใหม่')} <b style={{ color: 'var(--accent)' }}>{fmt(totFresh)}</b> {tr("พาร์ท")}
               <div style={{ color: 'var(--muted)', fontSize: FS }}>
-                เพิ่มอย่างเดียว ไม่ลบของเดิม · ยอดลูกค้าสั่ง/ผลิตเข้า ระบบอ่านสดทุกครั้ง ไม่ได้ก๊อปมาเก็บ
+                {tr("เพิ่มอย่างเดียว ไม่ลบของเดิม · ยอดลูกค้าสั่ง/ผลิตเข้า ระบบอ่านสดทุกครั้ง ไม่ได้ก๊อปมาเก็บ")}
               </div>
               {(preview.noCustomer || preview.noMat) ? (
                 <div style={{ color: 'var(--accent2)', marginTop: 4 }}>
@@ -209,7 +209,7 @@ export default function MonitorFgSync({ onClose, fullName, onSynced }) {
                     <b>{g.customer}</b>
                     <span style={{ color: 'var(--muted)' }}>{fmt(g.mats.length)} {tr('พาร์ท · ออเดอร์')} {fmt(g.orderRows)} {tr('แถว')}</span>
                     <span style={{ marginLeft: 'auto', fontWeight: 800, color: g.fresh.length ? 'var(--accent)' : 'var(--muted)' }}>
-                      {g.board ? (g.fresh.length ? `+${fmt(g.fresh.length)} ${tr("พาร์ทใหม่")}` : 'ครบแล้ว') : '🆕 บอร์ดใหม่'}
+                      {g.board ? (g.fresh.length ? `+${fmt(g.fresh.length)} ${tr("พาร์ทใหม่")}` : tr("ครบแล้ว")) : tr("🆕 บอร์ดใหม่")}
                     </span>
                   </div>
                   {g.fresh.length ? (
@@ -222,7 +222,7 @@ export default function MonitorFgSync({ onClose, fullName, onSynced }) {
               ))}
               {!preview.groups.length ? (
                 <div style={{ ...card, fontSize: FS + 1, color: 'var(--muted)' }}>
-                  ไม่พบออเดอร์ลูกค้าในช่วงนี้ — นำเข้าไฟล์ 862/830 ที่หน้า Customer Demand ก่อน
+                  {tr("ไม่พบออเดอร์ลูกค้าในช่วงนี้ — นำเข้าไฟล์ 862/830 ที่หน้า Customer Demand ก่อน")}
                 </div>
               ) : null}
             </div>

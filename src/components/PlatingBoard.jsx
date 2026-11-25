@@ -22,7 +22,7 @@ import {
   sendBlockReason, sendStockWarn, openQtyOf, receiveBlockReason, orderZone, OUTSOURCE_LINE_TYPE,
 } from '../utils/plating';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
 /* ═══ 🧪 งานชุบภายนอก — แท็บในตู้ Kanban รวม (/heijunka) · 2026-10-13 คำสั่ง user
 
@@ -54,7 +54,7 @@ const ZONES = (withDone) => [
 ];
 const dmy = (iso) => {
   const d = iso ? new Date(iso) : null;
-  return d && !isNaN(d) ? d.toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok', day: '2-digit', month: 'short' }) : '—';
+  return d && !isNaN(d) ? d.toLocaleDateString(dateLocale(), { timeZone: 'Asia/Bangkok', day: '2-digit', month: 'short' }) : '—';
 };
 const daysAgo = (iso, nowMs) => {
   const t = Date.parse(iso);
@@ -172,7 +172,7 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
   };
   const filled = sendLines.filter(l => l.after || l.qty);
   const infos = filled.map(l => ({ l, i: lineInfo(l) }));
-  const sendBlock = !vendor.trim() ? 'เลือกร้านชุบ' : !filled.length ? 'เพิ่มรายการที่จะส่ง' : (infos.find(x => x.i.block)?.i.block || null);
+  const sendBlock = !vendor.trim() ? tr("เลือกร้านชุบ") : !filled.length ? tr("เพิ่มรายการที่จะส่ง") : (infos.find(x => x.i.block)?.i.block || null);
   const doSend = async () => {
     if (sendBlock) { toast.error(sendBlock); return; }
     let ok = 0;
@@ -277,8 +277,7 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
       {liveErr && <div style={errTxt}>{tr('⚠ โหลดใบส่งชุบ/ยอดคลังไม่ครบ —')} {liveErr} {tr('· ตัวเลขบนจออาจขาด')}</div>}
       {masterReady && !platList.length && (
         <div style={warnTxt}>
-          ยังไม่มีสินค้าหลังชุบ — ระบบนับสินค้าที่อยู่บน "ไลน์ประเภท 🧪 จ้างนอก" เป็นงานหลังชุบ ·
-          ตั้งประเภทไลน์ที่ /line-setup (เช่นไลน์ Coating) แล้วสร้างสินค้าหลังชุบไว้บนไลน์นั้นที่ /products
+          {tr("ยังไม่มีสินค้าหลังชุบ — ระบบนับสินค้าที่อยู่บน \"ไลน์ประเภท 🧪 จ้างนอก\" เป็นงานหลังชุบ · ตั้งประเภทไลน์ที่ /line-setup (เช่นไลน์ Coating) แล้วสร้างสินค้าหลังชุบไว้บนไลน์นั้นที่")} /products
         </div>
       )}
 
@@ -293,7 +292,7 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
               <div style={{ fontSize: 13, fontWeight: 800 }}>{g.vendor}</div>
               <div style={{ fontSize: 22, fontWeight: 800, fontFamily: 'var(--font-display)' }}>{fmt(g.open)} <span style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('ชิ้นอยู่ที่ร้าน')}</span></div>
               <div style={muted}>{g.orders} {tr('ใบ ·')} {g.items.length} {tr('พาร์ท · เก่าสุด')} {oldest} {tr("วัน")}
-                {g.leadDays == null ? ' · ยังไม่ตั้ง lead time ร้าน (ทะเบียน Supplier)' : ` · lead time ${g.leadDays} ${tr("วัน")}`}</div>
+                {g.leadDays == null ? tr(" · ยังไม่ตั้ง lead time ร้าน (ทะเบียน Supplier)") : ` · lead time ${g.leadDays} ${tr("วัน")}`}</div>
               {late && <div style={errTxt}>{tr('มีงานเกิน lead time')}</div>}
             </div>
           );
@@ -338,7 +337,7 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
                       {i.cands.length > 1 || (i.cands.length === 1 && !i.cands[0].linked) ? (
                         <select value={i.before} onChange={e => setLine(l.key, { before: e.target.value })} style={{ ...inp, minHeight: 36 }} aria-label={tr('เลขก่อนชุบ')}>
                           <option value="">{tr('— เลือก —')}</option>
-                          {i.cands.map(c => <option key={c.mat} value={c.mat}>{c.mat} {c.name}{c.linked ? '' : ' (P/N ตรง · ยังไม่ผูก BOM)'}</option>)}
+                          {i.cands.map(c => <option key={c.mat} value={c.mat}>{c.mat} {c.name}{c.linked ? '' : tr(" (P/N ตรง · ยังไม่ผูก BOM)")}</option>)}
                         </select>
                       ) : i.cands.length === 1 ? <b>{i.cands[0].mat} {i.cands[0].name}</b> : (
                         <div style={{ flex: '1 1 240px', minWidth: 0 }}>
@@ -348,7 +347,7 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
                       {i.before && !i.linked && <span style={warnTxt}>{tr('ส่งครั้งแรก ระบบจะผูก BOM')} {l.after} ← {i.before} {tr('ให้')}</span>}
                     </div>
                   )}
-                  {i.before && <div style={muted}>{tr('ตัดของจาก')} <b>{i.fromLoc || '—'}</b>{i.fromLoc && <> {tr('· ระบบเห็นคงเหลือ')} {i.have == null ? 'ไม่มีข้อมูลสต็อก' : `${fmt(i.have)} ${tr("ชิ้น")}`}</>}</div>}
+                  {i.before && <div style={muted}>{tr('ตัดของจาก')} <b>{i.fromLoc || '—'}</b>{i.fromLoc && <> {tr('· ระบบเห็นคงเหลือ')} {i.have == null ? tr("ไม่มีข้อมูลสต็อก") : `${fmt(i.have)} ${tr("ชิ้น")}`}</>}</div>}
                   {i.block && l.qty !== '' && l.after && <div style={errTxt}>{i.block}</div>}
                   {i.warn && <div style={warnTxt}>{i.warn}</div>}
                 </div>
@@ -359,7 +358,7 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
             <button type="button" onClick={() => setSendLines(ls => [...ls, blankLine()])} style={storeBtn('secondary')}>{tr('+ เพิ่มรายการ')}</button>
             <button type="button" disabled={!!sendBlock || String(busy || '').startsWith('send|')} onClick={doSend}
               style={storeBtn('primary', { opacity: sendBlock ? 0.5 : 1 })}>
-              {String(busy || '').startsWith('send|') ? 'กำลังบันทึก…' : `📤 ${tr("ส่ง")} ${filled.length} ${tr("รายการ")} · ${fmt(filled.reduce((a, l) => a + Number(l.qty || 0), 0))} ${tr("ชิ้น")}`}
+              {String(busy || '').startsWith('send|') ? tr("กำลังบันทึก…") : `📤 ${tr("ส่ง")} ${filled.length} ${tr("รายการ")} · ${fmt(filled.reduce((a, l) => a + Number(l.qty || 0), 0))} ${tr("ชิ้น")}`}
             </button>
             {sendBlock && filled.length > 0 && <span style={muted}>{sendBlock}</span>}
           </div>
@@ -375,7 +374,7 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
       </div>
       {cards.length === 0 ? (
         <div style={{ padding: 24, textAlign: 'center', ...muted }}>
-          {orders.length === 0 && !s ? 'ไม่มีงานรอรับกลับจากร้านชุบ' : `${tr("ไม่มีใบที่ตรงคำค้น")}${s ? ` "${q}"` : ''}`}
+          {orders.length === 0 && !s ? tr("ไม่มีงานรอรับกลับจากร้านชุบ") : `${tr("ไม่มีใบที่ตรงคำค้น")}${s ? ` "${q}"` : ''}`}
         </div>
       ) : (
         <StatusZones layout={table ? 'table' : 'cards'} rows={cards} zones={ZONES(showDone)} statusOf={zoneOf} renderCard={o => {
@@ -389,15 +388,15 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
             <PartCard key={o.id} code={o.after_mat} name={o.part_name} img={imgOf(o.after_mat) || imgOf(o.before_mat)} alert={zone === 'late'}
               status={isOpen ? (zone === 'late' ? { label: '⏰ เกินกำหนด', color: '#ef4444' } : { label: 'ที่ร้าน', color: '#06b6d4' }) : { label: '✅ ปิดแล้ว', color: '#22c55e' }}
               metric={{ label: isOpen ? 'ค้างที่ร้าน' : 'รับกลับแล้ว', value: fmt(isOpen ? open : o.qty_received), unit: 'ชิ้น' }}
-              aside={{ label: 'ร้าน', value: o.vendor }}
+              aside={{ label: tr("ร้าน"), value: o.vendor }}
               dim={!isOpen}
               rows={[
-                { k: 'ส่งไปเป็น', v: o.before_mat },
-                { k: 'ส่ง / รับแล้ว', v: `${fmt(o.qty_sent)} / ${fmt(o.qty_received)}${Number(o.qty_written_off) > 0 ? ` · ${tr("ตัด")} ${fmt(o.qty_written_off)}` : ''}` },
-                { k: 'ส่งเมื่อ', v: `${dmy(o.sent_at)}${age != null ? ` · ${age} ${tr("วันที่แล้ว")}` : ''}${o.sent_by_name ? ` · ${o.sent_by_name}` : ''}` },
-                { k: 'ใบส่งของ', v: o.doc_no },
-                { k: 'รับเข้า', v: isOpen ? (toLoc || '⚠ ไม่มีกฎรับเข้าคลัง') : null },
-                { k: 'ปิดใบ', v: !isOpen ? `${dmy(o.closed_at)} · ${o.closed_reason || o.status}` : null },
+                { k: tr("ส่งไปเป็น"), v: o.before_mat },
+                { k: tr("ส่ง / รับแล้ว"), v: `${fmt(o.qty_sent)} / ${fmt(o.qty_received)}${Number(o.qty_written_off) > 0 ? ` · ${tr("ตัด")} ${fmt(o.qty_written_off)}` : ''}` },
+                { k: tr("ส่งเมื่อ"), v: `${dmy(o.sent_at)}${age != null ? ` · ${age} ${tr("วันที่แล้ว")}` : ''}${o.sent_by_name ? ` · ${o.sent_by_name}` : ''}` },
+                { k: tr("ใบส่งของ"), v: o.doc_no },
+                { k: tr("รับเข้า"), v: isOpen ? (toLoc || '⚠ ไม่มีกฎรับเข้าคลัง') : null },
+                { k: tr("ปิดใบ"), v: !isOpen ? `${dmy(o.closed_at)} · ${o.closed_reason || o.status}` : null },
               ]}
               footer={isOpen && canReceive ? (editing ? (
                 <div style={{ display: 'grid', gap: 8 }}>
@@ -411,12 +410,12 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
                     onChange={e => setForm(f => ({ ...f, reason: e.target.value }))} style={inp} aria-label={tr('รายละเอียด')} />
                   <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 12.5 }}>
                     <input type="checkbox" checked={form.close} onChange={e => setForm(f => ({ ...f, close: e.target.checked }))} />
-                    ปิดใบนี้ — ส่วนที่ขาดไม่กลับแล้ว (ไม่ติ๊ก = ส่วนที่เหลือยังค้างร้าน ทยอยรับได้)
+                    {tr("ปิดใบนี้ — ส่วนที่ขาดไม่กลับแล้ว (ไม่ติ๊ก = ส่วนที่เหลือยังค้างร้าน ทยอยรับได้")})
                   </label>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button type="button" disabled={busy === `recv|${o.id}`} style={storeBtn('primary', { flex: 1 })}
                       onClick={async () => { if (await receive(o, form.qty, form.reason.trim(), form.close)) setDiffFor(null); }}>
-                      {busy === `recv|${o.id}` ? 'กำลังบันทึก…' : `✅ ${tr("รับเข้า")} ${form.qty === '' ? '' : fmt(form.qty)}`}
+                      {busy === `recv|${o.id}` ? tr("กำลังบันทึก…") : `✅ ${tr("รับเข้า")} ${form.qty === '' ? '' : fmt(form.qty)}`}
                     </button>
                     <button type="button" style={storeBtn('secondary')} onClick={() => setDiffFor(null)}>{tr('ยกเลิก')}</button>
                   </div>
@@ -425,7 +424,7 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button type="button" disabled={busy === `recv|${o.id}` || !toLoc} style={storeBtn('primary', { flex: 1, opacity: toLoc ? 1 : 0.5 })}
                     onClick={() => receive(o, open, '', false)}>
-                    {busy === `recv|${o.id}` ? 'กำลังบันทึก…' : `✅ ${tr("นับแล้วครบ · รับ")} ${fmt(open)}`}
+                    {busy === `recv|${o.id}` ? tr("กำลังบันทึก…") : `✅ ${tr("นับแล้วครบ · รับ")} ${fmt(open)}`}
                   </button>
                   <button type="button" style={storeBtn('secondary')}
                     onClick={() => { setDiffFor(o.id); setForm({ qty: String(open), reason: '', close: false }); }}>{tr('✏️ ไม่ครบ')}</button>
@@ -453,7 +452,7 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
                   rows={[
                     ...direct.map(t => ({ k: 'แปลงเป็น', v: `${t.fg} ${t.name}${t.qpu !== 1 ? ` (${tr("ใช้")} ${t.qpu} ${tr("ต่อ")} 1)` : ''}` })),
                     ...asm.map(t => ({ k: 'ประกอบที่', v: `${t.line || tr('ไลน์ (ยังไม่ระบุ)')} → ${t.fg}` })),
-                    { k: 'หมายเหตุ', v: a.targets.length ? null : 'ยังไม่มี FG ใช้เลขนี้ใน BOM' },
+                    { k: tr("หมายเหตุ"), v: a.targets.length ? null : 'ยังไม่มี FG ใช้เลขนี้ใน BOM' },
                   ]}
                   footer={direct.length > 0 && canToWh ? (
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>

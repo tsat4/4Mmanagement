@@ -111,8 +111,7 @@ export default function PushCoveragePanel() {
                   </>
                 )}
                 <InfoMore label={tr('ตัวเลขนี้นับจากอะไร')} id="push-cov-def" size={11.5} style={{ marginTop: 3 }}>
-                  นับจาก <b>{tr('คนที่ได้รับแจ้งเตือนในแอปจริงใน')} {DAYS} {tr('วันล่าสุด')}</b> ไม่ใช่พนักงานทั้งหมด ·
-                  คนที่ไม่มีเครื่องยัง<b>{tr('เห็นกระดิ่งในแอปครบ')}</b> แต่มือถือไม่เด้ง
+                  {tr("นับจาก")} <b>{tr('คนที่ได้รับแจ้งเตือนในแอปจริงใน')} {DAYS} {tr('วันล่าสุด')}</b> {tr("ไม่ใช่พนักงานทั้งหมด · คนที่ไม่มีเครื่องยัง")}<b>{tr('เห็นกระดิ่งในแอปครบ')}</b> {tr("แต่มือถือไม่เด้ง")}
                 </InfoMore>
               </>
             )}
@@ -122,7 +121,7 @@ export default function PushCoveragePanel() {
             <>
               <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)',
                             border: '1px solid var(--border)', fontSize: 11.5, color: 'var(--text2)', lineHeight: 1.6 }}>
-                {tr("วิธีให้เขาเปิดเอง: เปิดเว็บ")} ESM <b>{tr('บนมือถือเครื่องนั้น')}</b> {tr('→ กดกระดิ่ง 🔔 ที่หัวจอ → กดปุ่ม')} <b>"เปิด"</b> {tr("ในแถบ \"📲 เด้งแจ้งเตือนเข้ามือถือ\" → กด")} <b>"ทดสอบส่ง"</b> {tr('เพื่อพิสูจน์ว่าเด้งถึงจริง')}<br />
+                {tr("วิธีให้เขาเปิดเอง: เปิดเว็บ")} ESM <b>{tr('บนมือถือเครื่องนั้น')}</b> {tr('→ กดกระดิ่ง 🔔 ที่หัวจอ → กดปุ่ม')} <b>"{tr("เปิด")}"</b> {tr("ในแถบ \"📲 เด้งแจ้งเตือนเข้ามือถือ\" → กด")} <b>"{tr("ทดสอบส่ง")}"</b> {tr('เพื่อพิสูจน์ว่าเด้งถึงจริง')}<br />
                 <b>iPhone</b> {tr("ต้องกด \"แชร์ → เพิ่มไปยังหน้าจอโฮม\" แล้วเปิดจากไอคอนนั้นก่อน (iOS บังคับ")})
               </div>
 
@@ -138,7 +137,7 @@ export default function PushCoveragePanel() {
                           title={`${tr("แจ้งเตือนใน")} ${DAYS} ${tr("วัน")} ${r.n_notif} ${tr("รายการ (ใบซ่อม")} ${r.n_mtn}) · ${tr("ยังไม่มีเครื่องผูกไว้")}`}
                           style={{ fontSize: 11, padding: '2px 7px', borderRadius: 'var(--r-pill)',
                                    border: '1px solid var(--border)', background: 'var(--card-surf)', whiteSpace: 'nowrap' }}>
-                          {r.full_name || '(ไม่มีชื่อ)'}
+                          {r.full_name || tr("(ไม่มีชื่อ)")}
                           <b style={{ color: 'var(--muted)', fontWeight: 600 }}> · {r.n_notif}</b>
                         </span>
                       ))}
@@ -149,7 +148,7 @@ export default function PushCoveragePanel() {
                   <button onClick={() => setShowAll(v => !v)}
                     style={{ alignSelf: 'flex-start', fontSize: 11, color: 'var(--accent)', background: 'none',
                              border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}>
-                    {showAll ? 'ย่อ' : `${tr("ดูอีก")} ${bySection.length - 4} ${tr("ส่วนงาน")}`}
+                    {showAll ? tr("ย่อ") : `${tr("ดูอีก")} ${bySection.length - 4} ${tr("ส่วนงาน")}`}
                   </button>
                 )}
               </div>

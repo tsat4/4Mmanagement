@@ -33,7 +33,7 @@ import { issueProductionOrder, reprintProductionOrder } from '../lib/mktProducti
 import { inp, card, btn, ghost, thSt, tdSt, Field, Pill, Modal, WarnBar } from '../components/NpiUi';
 import { DeleteButton } from '../components/IconButton';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
 /* ═══════════════════════════════════════════════════════════════════════════
    💼 RFQ / เสนอราคา — Marketing (Q-neX เฟส 1) — /rfq · 2026-10-30
@@ -64,7 +64,7 @@ const emptyRfq = { rfq_no: '', customer: '', model: '', title: '', process_type:
   model_life_years: '', job_type: '' };
 const emptyPart = { part_no: '', part_name: '', parent_part_id: '', material_spec: '', thickness_mm: '', qty_per: 1, coating: '', cad_revision: '', remark: '' };
 const num = (v) => (v === '' || v == null ? null : Number(v));
-const fmtN = (v, d = 0) => (v == null || v === '' ? '—' : Number(v).toLocaleString('th-TH', { minimumFractionDigits: d, maximumFractionDigits: d }));
+const fmtN = (v, d = 0) => (v == null || v === '' ? '—' : Number(v).toLocaleString(dateLocale(), { minimumFractionDigits: d, maximumFractionDigits: d }));
 
 export default function Rfq() {
   const { role, fullName } = useContext(UserContext);
@@ -82,7 +82,7 @@ export default function Rfq() {
      นับไว้เขียนใต้ช่องว่าลิสต์แคบเพราะอะไร (UI §6.26: ว่างต้องบอกเหตุ) */
   const mktPeople = usePeople();
   const mktPeopleCount = mktPeople.failed ? null : mktPeople.profiles.filter(p => MKT_PEOPLE_ROLES.includes(String(p.role))).length;
-  const mktPeopleHint = mktPeople.failed ? 'โหลดทะเบียนบัญชีไม่สำเร็จ'
+  const mktPeopleHint = mktPeople.failed ? tr("โหลดทะเบียนบัญชีไม่สำเร็จ")
     : `${tr("ลิสต์ = บัญชี role การตลาด")} ${mktPeopleCount} ${tr("คน (ตั้งที่ /add-user) · ชื่ออื่นพิมพ์เองได้")}`;
 
   const [rfqs, setRfqs] = useState([]);
@@ -333,13 +333,10 @@ export default function Rfq() {
         tabs={TABS} tab={tab} onTab={setTab} />
 
       <WarnBar>{warn}</WarnBar>
-      <ReadOnlyNote show={!canEdit} role={role} what="สร้าง/แก้ RFQ · พาร์ท · ส่ง CRD / ผูกโปรเจค NPI" permKey="rfq:edit" />
-      {canEdit && !canAward && <ReadOnlyNote role={role} what="บันทึกผลได้งาน/ไม่ได้งาน · ออกใบแจ้งจัดทำ" permKey="rfq:award" compact />}
-      <InfoMore id="rfq_help" lead="ต้นน้ำของสายธาร Marketing → New Model → โรงงาน (Q-neX เฟส 1)">
-        รับ RFQ จากลูกค้า → บันทึกพาร์ท/volume → <b>{tr('ส่ง CRD')}</b> ให้ IEC = สร้างโปรเจค NPI จากหน้านี้ (ระบบเสนอชื่อ/พาร์ท คนยืนยัน) →
-        ลูกค้าตัดสิน → <b>{tr('ได้งาน')}</b> = ออก <b>{tr('ใบแจ้งจัดทำ F-MKT-001/002')}</b> ให้ฝ่ายโรงงาน (ออกเลขแล้วพิมพ์ซ้ำได้ ใบเดิมเสมอ) ·
-        ยอดขาย/ปี = volume × ราคาชิ้น (ขาดตัวใดตัวหนึ่ง = ไม่คิด ไม่ใช่ 0) · volume ต้องบอกที่มาเสมอ (RFQ มี 3 ชุดคนละค่า) ·
-        เฟส 2a (13/11): แนบเอกสาร RFQ · model life · job type · <b>ส่งให้ IEC ประเมิน</b> → IEC ตอบ ผลิตได้ไหม/process flow/ราคาเป้าหมาย → สถานะเดินต่อได้ · ยังไม่ทำ (เฟส 2b-3): มอบงานแผนกอื่น · checklist gate · คำนวณต้นทุน ①–⑤ · ใบเสนอราคา 2 ชั้นอนุมัติ
+      <ReadOnlyNote show={!canEdit} role={role} what={tr("สร้าง/แก้ RFQ · พาร์ท · ส่ง CRD / ผูกโปรเจค NPI")} permKey="rfq:edit" />
+      {canEdit && !canAward && <ReadOnlyNote role={role} what={tr("บันทึกผลได้งาน/ไม่ได้งาน · ออกใบแจ้งจัดทำ")} permKey="rfq:award" compact />}
+      <InfoMore id="rfq_help" lead={tr("ต้นน้ำของสายธาร Marketing → New Model → โรงงาน (Q-neX เฟส 1)")}>
+        {tr("รับ RFQ จากลูกค้า → บันทึกพาร์ท")}/volume → <b>{tr('ส่ง CRD')}</b> {tr("ให้ IEC = สร้างโปรเจค NPI จากหน้านี้ (ระบบเสนอชื่อ/พาร์ท คนยืนยัน) → ลูกค้าตัดสิน")} → <b>{tr('ได้งาน')}</b> = {tr("ออก")} <b>{tr('ใบแจ้งจัดทำ F-MKT-001/002')}</b> {tr("ให้ฝ่ายโรงงาน (ออกเลขแล้วพิมพ์ซ้ำได้ ใบเดิมเสมอ) · ยอดขาย/ปี = volume × ราคาชิ้น (ขาดตัวใดตัวหนึ่ง = ไม่คิด ไม่ใช่ 0) · volume ต้องบอกที่มาเสมอ (RFQ มี 3 ชุดคนละค่า) · เฟส 2a (13/11): แนบเอกสาร")} RFQ · model life · job type · <b>{tr("ส่งให้ IEC ประเมิน")}</b> → IEC {tr("ตอบ ผลิตได้ไหม/process flow/ราคาเป้าหมาย → สถานะเดินต่อได้ · ยังไม่ทำ (เฟส 2b-3): มอบงานแผนกอื่น · checklist gate · คำนวณต้นทุน ①–⑤ · ใบเสนอราคา 2 ชั้นอนุมัติ")}
       </InfoMore>
 
       {loading ? <div style={{ color: 'var(--muted)', padding: 30 }}>{tr('กำลังโหลด…')}</div> : tab === 'report' ? (
@@ -358,7 +355,7 @@ export default function Rfq() {
       {rfqId && !rfq && !loading && <WarnBar color="var(--amber)">{tr('ไม่พบ RFQ ตามลิงก์นี้ (อาจถูกลบ หรือคุณไม่มีสิทธิ์เห็น) —')} <button style={ghost} onClick={() => setRfq('')}>{tr('กลับไปรายการ')}</button></WarnBar>}
 
       {rfqModal && (
-        <Modal title={rfqModal.id ? `✏️ ${rfqModal.rfq_no}` : '+ RFQ ใหม่'} onClose={() => setRfqModal(null)} width={760}
+        <Modal title={rfqModal.id ? `✏️ ${rfqModal.rfq_no}` : tr("+ RFQ ใหม่")} onClose={() => setRfqModal(null)} width={760}
           footer={<><button style={ghost} onClick={() => setRfqModal(null)}>{tr('ยกเลิก')}</button><button style={btn()} disabled={saving} onClick={saveRfq}>{tr('บันทึก')}</button></>}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 10, alignItems: 'start' }}>
             <Field label={tr('เลข RFQ')} hint={tr('ระบบออกให้ แก้ได้')}><input style={inp} value={rfqModal.rfq_no} onChange={e => setRfqModal({ ...rfqModal, rfq_no: e.target.value })} /></Field>
@@ -368,12 +365,12 @@ export default function Rfq() {
             <Field label={tr('ชนิดงาน')}><select style={inp} value={rfqModal.process_type} onChange={e => setRfqModal({ ...rfqModal, process_type: e.target.value })}>{Object.entries(PROCESS_TYPES).map(([k, v]) => <option key={k} value={k}>{tr(v)}</option>)}</select></Field>
             <Field label={tr('ความเร่งด่วน')}><select style={inp} value={rfqModal.priority} onChange={e => setRfqModal({ ...rfqModal, priority: e.target.value })}>{Object.entries(PRIORITIES).map(([k, v]) => <option key={k} value={k}>{tr(v)}</option>)}</select></Field>
             <Field label="Make-to-print / Co-design" hint="Q-neX job type"><select style={inp} value={rfqModal.job_type || ''} onChange={e => setRfqModal({ ...rfqModal, job_type: e.target.value })}><option value="">{tr('— ยังไม่ระบุ —')}</option>{Object.entries(JOB_TYPES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></Field>
-            <Field label="Model life (ปี)" hint="ยอดรวมตลอดอายุ = volume/ปี × ปี"><input type="number" step="0.5" style={inp} value={rfqModal.model_life_years ?? ''} onChange={e => setRfqModal({ ...rfqModal, model_life_years: e.target.value })} /></Field>
+            <Field label={tr("Model life (ปี)")} hint={tr("ยอดรวมตลอดอายุ = volume/ปี × ปี")}><input type="number" step="0.5" style={inp} value={rfqModal.model_life_years ?? ''} onChange={e => setRfqModal({ ...rfqModal, model_life_years: e.target.value })} /></Field>
             <Field label={tr('ผู้รับผิดชอบ (MKT Engineer)')} hint={mktPeopleHint}>
               <PersonSelect value={rfqModal.owner_name} onChange={(v) => setRfqModal({ ...rfqModal, owner_name: typeof v === 'string' ? v : (v?.name || '') })}
                 history={ownerHist} roles={MKT_PEOPLE_ROLES} strict placeholder={tr('ค้นชื่อทีม Marketing…')}
                 emptyText={mktPeopleCount === 0 ? tr('ยังไม่มีบัญชี role การตลาดในระบบ — เพิ่มที่ /add-user หรือพิมพ์ชื่อเอง') : undefined}
-                freeHint="ไม่ได้อยู่ในลิสต์ทีม Marketing" />
+                freeHint={tr("ไม่ได้อยู่ในลิสต์ทีม Marketing")} />
             </Field>
             <Field label={tr('วันรับ RFQ')}><input type="date" style={inp} value={rfqModal.received_date || ''} onChange={e => setRfqModal({ ...rfqModal, received_date: e.target.value })} /></Field>
             <Field label={tr('กำหนดส่งใบเสนอราคา')}><input type="date" style={inp} value={rfqModal.due_date || ''} onChange={e => setRfqModal({ ...rfqModal, due_date: e.target.value })} /></Field>
@@ -393,7 +390,7 @@ export default function Rfq() {
       )}
 
       {partModal && rfq && (
-        <Modal title={partModal.id ? `✏️ ${partModal.part_no}` : '+ พาร์ท / ชิ้นย่อย'} onClose={() => setPartModal(null)} width={720}
+        <Modal title={partModal.id ? `✏️ ${partModal.part_no}` : tr("+ พาร์ท / ชิ้นย่อย")} onClose={() => setPartModal(null)} width={720}
           footer={<><button style={ghost} onClick={() => setPartModal(null)}>{tr('ยกเลิก')}</button><button style={btn()} disabled={saving} onClick={savePart}>{tr('บันทึก')}</button></>}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 10, alignItems: 'start' }}>
             <Field label={tr('Part No. (ของลูกค้า)')} hint={tr('พาร์ทใหม่ ยังไม่มีในทะเบียน')}><input style={inp} value={partModal.part_no} onChange={e => setPartModal({ ...partModal, part_no: e.target.value })} placeholder="MB3C-2B614-AA" /></Field>
@@ -451,7 +448,7 @@ export default function Rfq() {
             </>)}
           </div>
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 10 }}>
-            สร้างแล้วเฟส/รายการเอกสารมาจากแม่แบบที่เลือก (snapshot) · สถานะ RFQ จะเลื่อนเป็น "IEC กำลังประเมิน" · ระบบ<b>{tr('ไม่')}</b>เขียนทับสิ่งที่ IEC ทำไว้ใน NPI
+            {tr("สร้างแล้วเฟส/รายการเอกสารมาจากแม่แบบที่เลือก (snapshot) · สถานะ RFQ จะเลื่อนเป็น \"IEC กำลังประเมิน\" · ระบบ")}<b>{tr('ไม่')}</b>{tr("เขียนทับสิ่งที่ IEC ทำไว้ใน")} NPI
           </div>
         </Modal>
       )}
@@ -466,7 +463,7 @@ export default function Rfq() {
               </select>
             </Field>
             <Field label={tr('วันที่ตัดสิน')}><input type="date" style={inp} value={awardModal.decided_at || ''} onChange={e => setAwardModal({ ...awardModal, decided_at: e.target.value })} /></Field>
-            <Field label={tr('Volume/ปี ที่ใช้คิดยอด')} hint={rfq.annual_volume != null ? `RFQ: ${fmtN(rfq.annual_volume)}` : 'RFQ ไม่มี volume'}><input type="number" style={inp} value={awardModal.annual_volume} onChange={e => setAwardModal({ ...awardModal, annual_volume: e.target.value })} /></Field>
+            <Field label={tr('Volume/ปี ที่ใช้คิดยอด')} hint={rfq.annual_volume != null ? `RFQ: ${fmtN(rfq.annual_volume)}` : tr("RFQ ไม่มี volume")}><input type="number" style={inp} value={awardModal.annual_volume} onChange={e => setAwardModal({ ...awardModal, annual_volume: e.target.value })} /></Field>
             <Field label={tr('ราคาชิ้น (THB/pc)')}><input type="number" step="0.01" style={inp} value={awardModal.unit_price} onChange={e => setAwardModal({ ...awardModal, unit_price: e.target.value })} /></Field>
             <Field label={tr('ราคาแม่พิมพ์/JIG (THB)')}><input type="number" step="0.01" style={inp} value={awardModal.tooling_price} onChange={e => setAwardModal({ ...awardModal, tooling_price: e.target.value })} /></Field>
             <Field label={tr('ยอดขาย/ปี (คำนวณ)')}><div style={{ ...inp, background: 'transparent', fontWeight: 800 }}>{(() => { const s = annualSales(awardModal.annual_volume, awardModal.unit_price); return s == null ? 'ยังคิดไม่ได้ (ขาด volume/ราคา)' : `${fmtN(s, 2)} THB`; })()}</div></Field>
@@ -511,7 +508,7 @@ function RfqTable({ rows, hidden, awardOf, npiOf, onPick, today }) {
                 </tr>
               );
             })}
-            {!rows.length && <tr><td colSpan={9} style={{ ...tdSt, textAlign: 'center', color: 'var(--muted)', padding: 24 }}>{hidden ? `${tr("ไม่มีรายการที่ตรงตัวกรอง (ซ่อนอยู่")} ${hidden} ${tr("รายการ")})` : 'ยังไม่มี RFQ — กด + RFQ เพื่อเริ่ม'}</td></tr>}
+            {!rows.length && <tr><td colSpan={9} style={{ ...tdSt, textAlign: 'center', color: 'var(--muted)', padding: 24 }}>{hidden ? `${tr("ไม่มีรายการที่ตรงตัวกรอง (ซ่อนอยู่")} ${hidden} ${tr("รายการ")})` : tr("ยังไม่มี RFQ — กด + RFQ เพื่อเริ่ม")}</td></tr>}
           </tbody>
         </table>
       </div>
@@ -618,7 +615,7 @@ function RfqSheet({ rfq, award, parts, mainParts, npi, canEdit, canAward, canAss
             {award?.production_order_no && <button style={ghost} onClick={onReprint}>{tr('พิมพ์ซ้ำ')} {award.production_order_no}</button>}
           </div>
         </div>
-        {!award ? <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>ยังไม่มีผล — ลูกค้าตัดสินแล้วมาบันทึกที่นี่ (ได้งาน = ออกใบแจ้งจัดทำให้โรงงานได้ทันที)</div> : (
+        {!award ? <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{tr("ยังไม่มีผล — ลูกค้าตัดสินแล้วมาบันทึกที่นี่ (ได้งาน = ออกใบแจ้งจัดทำให้โรงงานได้ทันที")})</div> : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: '0 16px', alignItems: 'start' }}>
             <div>
               {row('วันที่ตัดสิน', award.decided_at ? fmtDate(award.decided_at) : '—')}

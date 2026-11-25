@@ -113,8 +113,7 @@ export default function BomTreeView({ rootMat, rootName, bomOf, sheetFor, ownShe
             ))}
           </div>
           <div style={{ marginTop: 4, color: 'var(--muted)' }}>
-            ระบบ<b>{tr('ไม่ลบให้เอง')}</b> — ลบแถวชั้น 1 ออก = เหลือเส้นทางเดียว (ต่อโซ่ ตรงของจริง) ·
-            คงไว้ = ยอมรับว่ายอดชั้น 1 นับรวมของที่อยู่ข้างในแล้ว
+            {tr("ระบบ")}<b>{tr('ไม่ลบให้เอง')}</b> — {tr("ลบแถวชั้น 1 ออก = เหลือเส้นทางเดียว (ต่อโซ่ ตรงของจริง) · คงไว้ = ยอมรับว่ายอดชั้น 1 นับรวมของที่อยู่ข้างในแล้ว")}
           </div>
           {delRows.length > 0 && (
             <button onClick={() => doDelete(delRows)} disabled={busy}
@@ -135,10 +134,10 @@ export default function BomTreeView({ rootMat, rootName, bomOf, sheetFor, ownShe
       {flowCount > 0 && (
         <div style={{ background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.4)', borderRadius: 'var(--r-md)',
           padding: '9px 12px', fontSize: 11.5, color: 'var(--text2)', marginBottom: 8, lineHeight: 1.7 }}>
-          ⚠️ <b style={{ color: TONE.warn }}>{tr('ผิด pattern การไหล')} {flowCount} {tr('รายการ')}</b> — ดูคำอธิบายในแถว
+          ⚠️ <b style={{ color: TONE.warn }}>{tr('ผิด pattern การไหล')} {flowCount} {tr('รายการ')}</b> — {tr("ดูคำอธิบายในแถว")}
           <div style={{ marginTop: 2, color: 'var(--muted)', fontFamily: 'monospace', fontSize: 11 }}>
-            เตือนเฉพาะที่พิสูจน์ได้ — 5xx ที่อยู่ใต้พี่น้อง 2xx อยู่แล้ว (นับซ้ำ) · FG ถูกใส่เป็นชิ้นส่วน
-            <br />(5xx ไปเป็นลูกของ 1xx ตรงๆ = ปกติ ไม่เตือน — มีงานแบบนั้นจริง)
+            {tr("เตือนเฉพาะที่พิสูจน์ได้ — 5xx ที่อยู่ใต้พี่น้อง 2xx อยู่แล้ว (นับซ้ำ) · FG ถูกใส่เป็นชิ้นส่วน")}
+            <br />(5xx {tr("ไปเป็นลูกของ 1xx ตรงๆ = ปกติ ไม่เตือน — มีงานแบบนั้นจริง")})
           </div>
         </div>
       )}
@@ -240,7 +239,7 @@ export default function BomTreeView({ rootMat, rootName, bomOf, sheetFor, ownShe
                             style={{ fontSize: 11, fontWeight: 800, padding: '1px 7px', borderRadius: 'var(--r-md)',
                               cursor: busy ? 'wait' : 'pointer', background: 'rgba(239,68,68,0.15)',
                               color: TONE.crit, border: `1px solid ${TONE.crit}`, fontFamily: 'var(--font-body)' }}>
-                            🗑 ลบแถวนี้
+                            🗑 {tr("ลบแถวนี้")}
                           </button>
                         )}
                       </div>
@@ -255,7 +254,7 @@ export default function BomTreeView({ rootMat, rootName, bomOf, sheetFor, ownShe
                   <td style={{ ...td, textAlign: 'right', fontWeight: 700, whiteSpace: 'nowrap' }}>{fmtQty(r.qty)}</td>
                   {/* หน่วยต้องมีเสมอ — ไม่มีในฐาน = บอกตรงๆ ห้ามเดา */}
                   <td style={{ ...td, whiteSpace: 'nowrap', color: r.uom ? 'var(--text2)' : TONE.warn, fontWeight: 700 }}>
-                    {uomLabel(r.uom) || '⚠ ไม่ระบุ'}
+                    {uomLabel(r.uom) || tr("⚠ ไม่ระบุ")}
                   </td>
                   <td style={{ ...td, fontFamily: 'monospace', whiteSpace: 'nowrap', color: r.storage_location ? '#a855f7' : 'var(--muted)', fontWeight: r.storage_location ? 700 : 400 }}>
                     {slocLabel(r.storage_location) || '—'}

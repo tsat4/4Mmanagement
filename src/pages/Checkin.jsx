@@ -1471,7 +1471,7 @@ export default function Checkin() {
           <div className="ck-top">
             <div style={{ flex: 1, minWidth: 0 }}>{cEmp}</div>
             <div className="ck-status" style={{ color: meta.color }}>
-              {emp.assignedShift ? (emp.assignedShift === 'day' ? 'เช้า · ' : 'ดึก · ') : ''}{tr(meta.label)}
+              {emp.assignedShift ? (emp.assignedShift === 'day' ? tr("เช้า · ") : tr("ดึก · ")) : ''}{tr(meta.label)}
               {hasLeave && rec.leave_type && <div style={{ fontSize: 11, opacity: 0.85 }}>{rec.leave_type}</div>}
             </div>
           </div>
@@ -1534,7 +1534,7 @@ export default function Checkin() {
                           <div style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 700, marginTop: 2 }}>
                             → {tr("ไปช่วยไลน์")} {emp._helperOutTo} ({tr("กะนี้")}){emp._helperOutBy ? ` · ${tr("ยืมโดย")} ${emp._helperOutBy}` : ''}
                             <div style={{ fontWeight: 600, color: 'var(--muted)' }}>
-                              🔒 {emp._helperOutChecked ? `${tr("เช็คชื่อแล้วโดย")} ${emp._helperOutChecked}` : 'ยังไม่ได้เช็คชื่อ'} — {tr("ไลน์ที่ยืมเป็นคนบันทึก จอนี้แก้ไม่ได้")}
+                              🔒 {emp._helperOutChecked ? `${tr("เช็คชื่อแล้วโดย")} ${emp._helperOutChecked}` : tr("ยังไม่ได้เช็คชื่อ")} — {tr("ไลน์ที่ยืมเป็นคนบันทึก จอนี้แก้ไม่ได้")}
                             </div>
                           </div>
                         )}
@@ -1601,7 +1601,7 @@ export default function Checkin() {
                             <button
                               key={opt.value}
                               onClick={() => setField(emp.id, 'leave_period', opt.value)}
-                              title={opt.sub}
+                              title={tr(opt.sub)}
                               style={{
                                 flex: 1, padding: '3px 4px', fontSize: 11, fontWeight: 700,
                                 borderRadius: 'var(--r-md)', border: 'none', cursor: 'pointer',
@@ -1611,7 +1611,7 @@ export default function Checkin() {
                               }}
                             >
                               {tr(opt.label)}
-                              <div style={{ fontSize: 11, opacity: 0.8, fontWeight: 400 }}>{opt.sub}</div>
+                              <div style={{ fontSize: 11, opacity: 0.8, fontWeight: 400 }}>{tr(opt.sub)}</div>
                             </button>
                           ))}
                         </div>
@@ -1942,7 +1942,7 @@ export default function Checkin() {
             </div>
             {!helpersReady && (
               <NoticeBar tone="bad" style={{ marginBottom: 10 }}>
-                ระบบยืมตัวยังใช้ไม่ได้ — ยังไม่ได้ apply migration <code>20260819_line_helpers_main.sql</code> (แจ้ง admin)
+                {tr("ระบบยืมตัวยังใช้ไม่ได้ — ยังไม่ได้")} apply migration <code>20260819_line_helpers_main.sql</code> ({tr("แจ้ง")} admin)
               </NoticeBar>
             )}
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10, flexWrap: 'wrap' }}>
@@ -1952,7 +1952,7 @@ export default function Checkin() {
                 style={{ padding: '7px 10px', borderRadius: 6, fontSize: 13, width: 'auto', minWidth: 200, flex: 1 }} onChange={setBorrowLineId} />
             </div>
             <SearchInput value={borrowSearch} onChange={setBorrowSearch} autoFocus grow={false}
-              fields="ชื่อ / รหัสพนักงาน (อย่างน้อย 2 ตัวอักษร)" style={{ marginBottom: 10 }} />
+              fields={tr("ชื่อ / รหัสพนักงาน (อย่างน้อย 2 ตัวอักษร)")} style={{ marginBottom: 10 }} />
             <div style={{ flex: 1, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)', minHeight: 120 }}>
               {borrowLoading && <div style={{ padding: 14, fontSize: 13, color: 'var(--muted)' }}>{tr('⏳ กำลังค้นหา...')}</div>}
               {!borrowLoading && borrowSearch.trim().length >= 2 && borrowResults.length === 0 && (
@@ -1976,7 +1976,7 @@ export default function Checkin() {
                       <div style={{ fontSize: 11, color: 'var(--muted)' }}>{r.employee_id_code} · {homeLine}{r.team ? ` · ${tr("ทีม")} ${r.team}` : ''}</div>
                     </div>
                     {borrowedHere
-                      ? <span style={{ fontSize: 11, color: 'var(--blue)', fontWeight: 700, whiteSpace: 'nowrap' }}>{tr('ยืมแล้ว →')} {lines.find(l => l.id === already._helperToLineId)?.name || 'ไลน์ใน scope'}</span>
+                      ? <span style={{ fontSize: 11, color: 'var(--blue)', fontWeight: 700, whiteSpace: 'nowrap' }}>{tr('ยืมแล้ว →')} {lines.find(l => l.id === already._helperToLineId)?.name || tr("ไลน์ใน scope")}</span>
                       : inRoster
                         ? <span style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{tr('อยู่ในรายชื่อแล้ว')}</span>
                         : (
@@ -2010,7 +2010,7 @@ export default function Checkin() {
         filters={<>
           {/* "เฉพาะกะนี้ / ทุกคน" = ตัวกรองการดู ⇒ อยู่แถบกรองใต้แท็บ ไม่ใช่ปุ่มคำสั่ง (05/11 · UI §6.35 · เดิมเป็นปุ่ม toggle บนหัว) */}
           <Segmented value={filterShift ? 'shift' : 'all'} onChange={v => setFilterShift(v === 'shift')} label={tr('แสดงใคร')}
-            options={[{ value: 'shift', label: 'เฉพาะกะนี้' }, { value: 'all', label: 'ทุกคน' }]} />
+            options={[{ value: 'shift', label: tr("เฉพาะกะนี้") }, { value: 'all', label: tr("ทุกคน") }]} />
           {previewNight && <span data-warn="1" style={{ fontSize: 12, color: 'var(--amber)', fontWeight: 700 }}>{tr('กำลัง Preview กะดึก')}</span>}
         </>}
         actions={<>
@@ -2018,11 +2018,11 @@ export default function Checkin() {
           <OverflowMenu items={[
             { key: 'preview', icon: '🌙', label: previewNight ? 'ออกจาก Preview กะดึก' : 'Preview กะดึก', onClick: () => setPreviewNight(p => !p),
               hidden: realShiftInfo.shift !== 'day', badge: previewNight ? 'เปิดอยู่' : undefined,
-              title: 'ดูตัวอย่างหน้าจอกะดึก (รวมคอลัมน์ OT พรุ่งนี้) — ปิดปุ่มบันทึกอัตโนมัติระหว่าง preview' },
+              title: tr("ดูตัวอย่างหน้าจอกะดึก (รวมคอลัมน์ OT พรุ่งนี้) — ปิดปุ่มบันทึกอัตโนมัติระหว่าง preview") },
             { key: 'borrowsum', icon: '📊', label: `${tr("คนของเราที่ถูกยืมออก")} (${BORROW_WINDOW_DAYS} ${tr("วัน")})`, onClick: openBorrowSummary,
-              title: 'สรุปสะสมว่าคนของไลน์เราถูกยืมไปช่วยไลน์อื่นกี่วัน / ไลน์ไหน ในช่วง 30 วันทำงานล่าสุด (ป้ายบนรายชื่อบอกได้แค่กะนี้)' },
-            { key: 'export', icon: '📄', label: 'ส่งออกฟอร์ม', onClick: () => { setExportSection(selSection || ''); setShowExport(true); } },
-            { key: 'otbook', icon: '🚚', label: 'จองรถ OT', onClick: openOtBookModal, title: 'จองรถ OT วันที่/ไลน์/ทีมใดก็ได้ ไม่ต้องรอเช็คชื่อกะนั้น' },
+              title: tr("สรุปสะสมว่าคนของไลน์เราถูกยืมไปช่วยไลน์อื่นกี่วัน / ไลน์ไหน ในช่วง 30 วันทำงานล่าสุด (ป้ายบนรายชื่อบอกได้แค่กะนี้)") },
+            { key: 'export', icon: '📄', label: tr("ส่งออกฟอร์ม"), onClick: () => { setExportSection(selSection || ''); setShowExport(true); } },
+            { key: 'otbook', icon: '🚚', label: tr("จองรถ OT"), onClick: openOtBookModal, title: tr("จองรถ OT วันที่/ไลน์/ทีมใดก็ได้ ไม่ต้องรอเช็คชื่อกะนั้น") },
           ]} />
           {canRecord && (
             <button type="button" className="pg-btn" onClick={openBorrowModal}
@@ -2049,7 +2049,7 @@ export default function Checkin() {
         <Icon glyph="👤" size={20} style={{ color: 'var(--accent)' }} />
         <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
           <span style={{ fontSize: 13, color: 'var(--text)', fontWeight: 700 }}>
-            กำลังเช็คชื่อในนาม: <span style={{ color: 'var(--accent)' }}>{fullName || tr('ไม่ทราบชื่อ')}</span>
+            {tr("กำลังเช็คชื่อในนาม")}: <span style={{ color: 'var(--accent)' }}>{fullName || tr('ไม่ทราบชื่อ')}</span>
           </span>
           <span style={{ fontSize: 11, color: 'var(--muted)' }}>
             {roleLabel(role)} · {myScopeLabel}
@@ -2133,11 +2133,11 @@ export default function Checkin() {
         )}
       </div>
 
-      <DraftRestoreBar draft={ckPending} what="การเช็คชื่อกะนี้" onRestore={restoreCkDraft}
+      <DraftRestoreBar draft={ckPending} what={tr("การเช็คชื่อกะนี้")} onRestore={restoreCkDraft}
         onDiscard={() => { if (ckDraftKey) clearDraft(ckDraftKey); setCkPending(null); }} />
       {shiftChanged && (
         <NoticeBar tone="warn" style={{ marginBottom: 14 }}
-          action={{ label: 'โหลดรายชื่อกะใหม่', title: 'สิ่งที่ยังไม่บันทึกจะหาย',
+          action={{ label: tr("โหลดรายชื่อกะใหม่"), title: tr("สิ่งที่ยังไม่บันทึกจะหาย"),
             onClick: () => { setPreviewNight(false); setShiftChanged(null); setRealShiftInfo(getShiftInfo()); } }}>
           <b>{tr('เวลาข้ามเข้า')} {tr(shiftChanged.label)} ({shiftChanged.workDateStr}) {tr("แล้ว")}</b> {tr('— หน้านี้ยังเป็นรายชื่อ')}{tr(realShiftInfo.label)} ({realShiftInfo.workDateStr})
           · {tr("กดบันทึกตอนนี้ = บันทึกของกะเดิม (ถูกต้องถ้ายังกรอกกะเดิมอยู่")})
@@ -2145,8 +2145,8 @@ export default function Checkin() {
       )}
 
       {previewNight && (
-        <NoticeBar tone="bad" style={{ marginBottom: 14 }} action={{ label: 'ออกจาก Preview', onClick: () => setPreviewNight(false) }}>
-          <b>{tr('โหมด Preview กะดึก')}</b> — เวลาจริงยังเป็นกะเช้า ปุ่มบันทึกถูกปิดไว้กันข้อมูลผิดพลาด
+        <NoticeBar tone="bad" style={{ marginBottom: 14 }} action={{ label: tr("ออกจาก Preview"), onClick: () => setPreviewNight(false) }}>
+          <b>{tr('โหมด Preview กะดึก')}</b> — {tr("เวลาจริงยังเป็นกะเช้า ปุ่มบันทึกถูกปิดไว้กันข้อมูลผิดพลาด")}
         </NoticeBar>
       )}
 
@@ -2174,8 +2174,7 @@ export default function Checkin() {
           ⚠️ คนกลุ่มนี้ **ยังอยู่ในลิสต์ให้เช็คชื่อได้ตามปกติ** — คำเตือนนี้อธิบายเหตุ ไม่ได้บล็อกงาน */}
       {!noSchedule && noShiftRows.length > 0 && (
         <NoticeBar tone="bad" style={{ marginBottom: 14 }}>
-          <strong>{noShiftPeople} {tr('คนยังไม่มีกะ')}</strong> — ตารางกะสัปดาห์นี้ยังไม่มีแถวของไลน์เหล่านี้
-          (และไม่มีไลน์แม่ให้ตกทอด) · เช็คชื่อได้ตามปกติ แต่กะจะว่างและกำลังคนของไลน์นับเป็น 0
+          <strong>{noShiftPeople} {tr('คนยังไม่มีกะ')}</strong> — {tr("ตารางกะสัปดาห์นี้ยังไม่มีแถวของไลน์เหล่านี้ (และไม่มีไลน์แม่ให้ตกทอด) · เช็คชื่อได้ตามปกติ แต่กะจะว่างและกำลังคนของไลน์นับเป็น")} 0
           <div style={{ marginTop: 5, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {noShiftRows.map(([nm, n]) => (
               <span key={nm} style={{
@@ -2241,7 +2240,7 @@ export default function Checkin() {
         <div className="ck-cards">
           {displayed.map(renderCheckinRow)}
           {displayed.length === 0 && (
-            <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 24, fontSize: 13 }}>ไม่มีพนักงานในกะนี้ — ลองเลือก "ทุกคน"</div>
+            <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 24, fontSize: 13 }}>{tr("ไม่มีพนักงานในกะนี้ — ลองเลือก \"ทุกคน")}"</div>
           )}
         </div>
       ) : (
@@ -2268,7 +2267,7 @@ export default function Checkin() {
             {displayed.length === 0 && (
               <tr>
                 <td colSpan={11} style={{ textAlign: 'center', color: 'var(--muted)', padding: 24, fontSize: 13 }}>
-                  ไม่มีพนักงานในกะนี้ — ลองเลือก "ทุกคน"
+                  {tr("ไม่มีพนักงานในกะนี้ — ลองเลือก \"ทุกคน")}"
                 </td>
               </tr>
             )}
@@ -2311,10 +2310,9 @@ export default function Checkin() {
               borderRadius: 'var(--r-md)', padding: '9px 11px', marginBottom: 14,
             }}>
               <b style={{ color: 'var(--accent2)' }}>{tr('ℹ️ เช็คชื่อไม่ใช่การเปิดกะ')}</b><br />
-              ระบบ<b>{tr('ไม่เปิดกะให้อัตโนมัติ')}</b> — <b>เปิดกะ = สำหรับไลน์ที่จะลงข้อมูลการผลิตเท่านั้น</b>
-              (ยอดผลิต · Downtime · ของเสีย · OEE)<br />
-              ไลน์ที่ต้องลงข้อมูลผลิต ให้ไปกด <b>{tr('“เปิดกะ” ที่หน้า Daily Report')}</b> ของไลน์ตัวเอง ·
-              ไลน์ที่ใช้แค่เช็คชื่อ <b>{tr('ไม่ต้องเปิดกะ')}</b>
+              {tr("ระบบ")}<b>{tr('ไม่เปิดกะให้อัตโนมัติ')}</b> — <b>{tr("เปิดกะ = สำหรับไลน์ที่จะลงข้อมูลการผลิตเท่านั้น")}</b>
+              ({tr("ยอดผลิต · Downtime · ของเสีย")} · OEE)<br />
+              {tr("ไลน์ที่ต้องลงข้อมูลผลิต ให้ไปกด")} <b>{tr('“เปิดกะ” ที่หน้า Daily Report')}</b> {tr("ของไลน์ตัวเอง · ไลน์ที่ใช้แค่เช็คชื่อ")} <b>{tr('ไม่ต้องเปิดกะ')}</b>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button
@@ -2339,7 +2337,7 @@ export default function Checkin() {
           <div style={{ background: 'var(--card-surf)', borderRadius: 'var(--r-lg)', padding: 22, width: '100%', maxWidth: 640, maxHeight: '86vh', display: 'flex', flexDirection: 'column', border: '1px solid var(--border)' }}>
             <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 6, color: 'var(--text)' }}>{tr('จองรถ OT')}</div>
             <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 14, lineHeight: 1.5 }}>
-              เลือกวันที่/กะ/ไลน์/ทีมได้อิสระ ไม่ต้องรอเช็คชื่อกะนั้น — เหมาะกับกรณีทีมที่ต้องจอง OT ไม่ใช่ทีมที่กำลังเช็คชื่ออยู่ (เช่น จันทร์แรกหลังสลับกะ)
+              {tr("เลือกวันที่/กะ/ไลน์/ทีมได้อิสระ ไม่ต้องรอเช็คชื่อกะนั้น — เหมาะกับกรณีทีมที่ต้องจอง OT ไม่ใช่ทีมที่กำลังเช็คชื่ออยู่ (เช่น จันทร์แรกหลังสลับกะ")})
             </div>
 
             <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
@@ -2362,7 +2360,7 @@ export default function Checkin() {
 
             {isHolidayDate(otBookDate) && (
               <div style={{ fontSize: 12, color: 'var(--amber)', fontWeight: 700, marginBottom: 10 }}>
-                วันที่เลือกเป็นวันหยุด — เลือกช่วงเวลา OT ให้พนักงานแต่ละคน (8 ชม. / 10 ชม.)
+                {tr("วันที่เลือกเป็นวันหยุด — เลือกช่วงเวลา OT ให้พนักงานแต่ละคน (8 ชม. / 10 ชม.")})
               </div>
             )}
 
@@ -2444,7 +2442,7 @@ export default function Checkin() {
           <div style={{ background: 'var(--card-surf)', borderRadius: 'var(--r-lg)', padding: 22, width: 'min(380px, 94vw)', border: '1px solid var(--border)' }}>
             <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 14, color: 'var(--text)' }}>{tr('ส่งออกฟอร์มกระดาษ (PDF)')}</div>
             <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 14, lineHeight: 1.5 }}>
-              สร้างฟอร์ม 2 หน้า ตามฟอร์มกระดาษจริงที่ใช้หน้างาน:<br />
+              {tr("สร้างฟอร์ม 2 หน้า ตามฟอร์มกระดาษจริงที่ใช้หน้างาน")}:<br />
               1) ใบรายงานการปฏิบัติงานชดเชย/ทำ OT &nbsp; 2) บันทึกการมาทำงาน
             </div>
             <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: 4 }}>{tr('เดือน')}</label>

@@ -236,7 +236,7 @@ export default function ImageCropModal({
           {converting && (
             <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, color: 'var(--text2)', fontSize: 12, textAlign: 'center', padding: 12 }}>
               <span style={{ fontSize: 22 }}>⏳</span>
-              กำลังแปลงรูปจากกล้อง (HEIC)…<br />ครั้งแรกอาจใช้เวลาสักครู่
+              {tr("กำลังแปลงรูปจากกล้อง")} (HEIC)…<br />{tr("ครั้งแรกอาจใช้เวลาสักครู่")}
             </div>
           )}
           {imgUrl && natural.w > 0 && (
@@ -263,8 +263,8 @@ export default function ImageCropModal({
             <Segmented size="sm" label={tr('โหมดรูป')} value={useFull ? 'full' : 'crop'}
               onChange={v => setUseFull(v === 'full')}
               options={[
-                { value: 'full', label: 'ใช้ทั้งรูป' },
-                { value: 'crop', label: 'ครอบ/ซูม' },
+                { value: 'full', label: tr("ใช้ทั้งรูป") },
+                { value: 'crop', label: tr("ครอบ/ซูม") },
               ]} />
           </div>
         )}
@@ -277,10 +277,10 @@ export default function ImageCropModal({
         )}
         <div style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'center', marginTop: 6 }}>
           {isGif
-            ? '🎞️ รูปขยับ (GIF) จะถูกใช้ทั้งภาพเพื่อคงการเคลื่อนไหว — การ crop/ซูมในกรอบนี้ไม่มีผลกับไฟล์จริง'
+            ? tr("🎞️ รูปขยับ (GIF) จะถูกใช้ทั้งภาพเพื่อคงการเคลื่อนไหว — การ crop/ซูมในกรอบนี้ไม่มีผลกับไฟล์จริง")
             : useFull
-              ? (fullHint || 'เก็บทั้งภาพไว้ ไม่ตัดอะไรทิ้ง')
-              : 'ลากรูปเพื่อขยับตำแหน่ง • เลื่อนแถบเพื่อซูม — กรอบนี้คือพื้นที่จริงที่จะแสดงผล'}
+              ? (fullHint || tr("เก็บทั้งภาพไว้ ไม่ตัดอะไรทิ้ง"))
+              : tr("ลากรูปเพื่อขยับตำแหน่ง • เลื่อนแถบเพื่อซูม — กรอบนี้คือพื้นที่จริงที่จะแสดงผล")}
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
           {/* type="button" จำเป็น — modal นี้ถูก render อยู่ใน <form> ของหน้า Register/Operator

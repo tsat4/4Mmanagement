@@ -99,11 +99,10 @@ export default function ImageSqueezePanel({ canRun = false, onDone }) {
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ fontSize: 12.5, color: 'var(--text2)', lineHeight: 1.6, minWidth: 220, flex: 1 }}>
             <b style={{ color: 'var(--text)', fontSize: 14 }}>{tr('บีบรูปที่อัปไว้แล้วให้เล็กลง')}</b><br />
-            แปลงเป็น <b>WebP</b> — <b>{tr('ความละเอียดเท่าเดิม ไม่เบลอ')}</b> แต่ไฟล์เล็กลงราวครึ่งหนึ่ง
+            {tr("แปลงเป็น")} <b>WebP</b> — <b>{tr('ความละเอียดเท่าเดิม ไม่เบลอ')}</b> {tr("แต่ไฟล์เล็กลงราวครึ่งหนึ่ง")}
             <br />
             <InfoMore label={tr('แผงนี้มีไว้ทำไม')} id="squeeze-why" size={12}>
-              รูปที่อัปใหม่หลังจากนี้ถูกบีบตั้งแต่ตอนอัปอยู่แล้ว — แผงนี้มีไว้ตามเก็บ “รูปเก่า”
-              · กดซ้ำได้เรื่อยๆ ใบที่ทำแล้วถูกข้ามก่อนโหลด (ไม่เสียค่าเน็ตซ้ำ)
+              {tr("รูปที่อัปใหม่หลังจากนี้ถูกบีบตั้งแต่ตอนอัปอยู่แล้ว — แผงนี้มีไว้ตามเก็บ “รูปเก่า” · กดซ้ำได้เรื่อยๆ ใบที่ทำแล้วถูกข้ามก่อนโหลด (ไม่เสียค่าเน็ตซ้ำ")})
             </InfoMore>
           </div>
           <button
@@ -118,12 +117,12 @@ export default function ImageSqueezePanel({ canRun = false, onDone }) {
               cursor: (!canRun || busy || scanning || scan?.total === 0) ? 'default' : 'pointer',
               maxWidth: '100%', whiteSpace: 'normal', textAlign: 'center',
             }}>
-            {busy || (scanning ? 'กำลังสำรวจ…' : scan?.total === 0 ? '✅ ไม่มีรูปค้างแล้ว' : `🗜️ ${tr("เริ่มบีบ")} ${scan?.total ?? ''} ${tr("ใบ")}`)}
+            {busy || (scanning ? tr("กำลังสำรวจ…") : scan?.total === 0 ? tr("✅ ไม่มีรูปค้างแล้ว") : `🗜️ ${tr("เริ่มบีบ")} ${scan?.total ?? ''} ${tr("ใบ")}`)}
           </button>
         </div>
         {!canRun && (
           <div style={{ marginTop: 10, fontSize: 12, color: 'var(--accent2)' }}>
-            คุณดูได้แต่กดไม่ได้ — ปุ่มนี้ต้องมีสิทธิ์ <code>storage_maintain:run</code> (ตั้งที่ /permissions)
+            {tr("คุณดูได้แต่กดไม่ได้ — ปุ่มนี้ต้องมีสิทธิ์")} <code>storage_maintain:run</code> ({tr("ตั้งที่")} /permissions)
           </div>
         )}
       </div>
@@ -131,9 +130,9 @@ export default function ImageSqueezePanel({ canRun = false, onDone }) {
       {/* 📋 เหลือให้ทำกี่ใบ แยกตามกลุ่ม — กฎความซื่อสัตย์ของจอ: ยังไม่รู้ ต้องเขียนว่ายังไม่รู้ ห้ามโชว์ 0 */}
       <div style={card}>
         <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>
-          รูปที่ยังไม่ได้ตรวจ
+          {tr("รูปที่ยังไม่ได้ตรวจ")}
           <span style={{ fontWeight: 400, fontSize: 11.5, color: 'var(--muted)', marginLeft: 8 }}>
-            (นับจากแถวในฐานข้อมูล ไม่ได้โหลดรูป — ไม่มีค่าเน็ต)
+            ({tr("นับจากแถวในฐานข้อมูล ไม่ได้โหลดรูป — ไม่มีค่าเน็ต")})
           </span>
         </div>
         {scanning ? (

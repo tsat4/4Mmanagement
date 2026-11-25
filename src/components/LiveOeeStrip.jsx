@@ -86,7 +86,7 @@ export default function LiveOeeStrip({ workDate, scopeNames = null, onOpenLine }
           </span>
         )}
         <span style={{ fontSize: 11, color: 'var(--muted)' }}>
-          {d.rows.length ? 'คิดถึงตอนนี้ · ตัวเลขจริงยืนยันตอนปิดกะ · สีเทียบเป้าของกลุ่ม' : 'ยังไม่มีไลน์ไหนเปิดกะของวันงานนี้'}
+          {d.rows.length ? tr("คิดถึงตอนนี้ · ตัวเลขจริงยืนยันตอนปิดกะ · สีเทียบเป้าของกลุ่ม") : tr("ยังไม่มีไลน์ไหนเปิดกะของวันงานนี้")}
         </span>
         {d.partial && <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--amber)' }}>{tr('⚠ โหลดข้อมูลได้ไม่ครบ — บางไลน์อาจต่ำกว่าจริง')}</span>}
         {d.tgFail && <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--amber)' }}>{tr('⚠ โหลดเป้า OEE ไม่ได้ — ยังไม่ตัดสินสี')}</span>}
@@ -119,7 +119,7 @@ export default function LiveOeeStrip({ workDate, scopeNames = null, onOpenLine }
                     )}
                   </>
                 ) : (
-                  <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 3 }}>— {LIVE_OEE_REASON[r.reason] || 'ประเมินไม่ได้'}</div>
+                  <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 3 }}>— {LIVE_OEE_REASON[r.reason] || tr("ประเมินไม่ได้")}</div>
                 )}
                 {r.openCount > 1 && <div style={{ fontSize: 11, color: 'var(--amber)' }}>{tr('⚠ เปิดค้าง')} {r.openCount} {tr('กะ')}</div>}
               </div>

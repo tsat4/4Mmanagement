@@ -16,6 +16,7 @@ import {
 import { jphTable, jphSummary } from '../utils/jph';
 
 import { tr } from '../utils/i18n';
+import { monthsShort, yearDisplay } from '../utils/dateFormat';
 /* ─── 📊 Capacity — แท็บใน /production-plan (2026-09-24) ────────────────────────
    user ส่งสไลด์ `Capacity_TSATP.4_update_June_26.pptx` มาพร้อมภาพหน้านี้ แล้วบอกว่า
    *"capacity โรงงานเราดูกันแบบนี้ แต่ในโปรแกรมเราเป็นแบบนี้ คนจะดูไม่เข้าใจ"*
@@ -47,7 +48,7 @@ const FLAG_META = {
 };
 const monthLabel = (mk) => {
   const [y, m] = mk.split('-');
-  return `${['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'][Number(m) - 1]} ${String(Number(y) + 543).slice(-2)}`;
+  return `${monthsShort()[Number(m) - 1]} ${String(yearDisplay(Number(y))).slice(-2)}`;
 };
 
 export default function CapacityBoard({ role, scope, lines, months, calMap, demandByMonth, ctOf, lineOfMat, pairOf, lineOee, estOf, netMin, customerOf, nameOfMat }) {
@@ -212,7 +213,7 @@ export default function CapacityBoard({ role, scope, lines, months, calMap, dema
         <div>
           <div style={{ fontSize:11, color:'var(--muted)' }}>{tr('OEE จริง (median 60 วัน)')}</div>
           <div style={{ fontSize:20, fontWeight:800, color: oee.hasActual ? '#22c55e' : 'var(--muted)' }}>
-            {oee.hasActual ? `${(oee.actual * 100).toFixed(1)}%` : 'ยังไม่มีประวัติ'}
+            {oee.hasActual ? `${(oee.actual * 100).toFixed(1)}%` : tr("ยังไม่มีประวัติ")}
           </div>
         </div>
         <div style={{ fontSize:18, color:'var(--muted)' }}>vs</div>
@@ -223,7 +224,7 @@ export default function CapacityBoard({ role, scope, lines, months, calMap, dema
         </div>
         {oee.hasActual && (
           <div style={{ fontSize:12, color: oee.actual >= oee.target ? '#22c55e' : '#ef4444', fontWeight:700 }}>
-            {oee.actual >= oee.target ? '▲ ถึงเป้า' : `▼ ${tr("ต่ำกว่าเป้า")} ${((oee.target - oee.actual) * 100).toFixed(1)} ${tr("จุด")}`}
+            {oee.actual >= oee.target ? tr("▲ ถึงเป้า") : `▼ ${tr("ต่ำกว่าเป้า")} ${((oee.target - oee.actual) * 100).toFixed(1)} ${tr("จุด")}`}
           </div>
         )}
         <div style={{ fontSize:11, color:'var(--muted)', marginLeft:'auto', maxWidth:340, lineHeight:1.6 }}>
@@ -239,7 +240,7 @@ export default function CapacityBoard({ role, scope, lines, months, calMap, dema
         <div style={card}>
           <div style={{ fontSize:14, fontWeight:800, marginBottom:4 }}>{tr('ทะเบียนรูปแบบกะ — เพดานกำลังผลิต')}</div>
           <div style={{ fontSize:11, color:'var(--muted)', lineHeight:1.65, marginBottom:10 }}>
-            {tr("ค่าเริ่มต้นถอดจากสไลด์")} <b>Capacity_TSATP.4_update_June_26</b> {tr('— ทุกไลน์ในสไลด์ใช้')} <b>2 shift = วันทำงาน × 15.5 ชม.</b> ⇒ 1 {tr("กะ = 7.75 ชม. (465 นาที")})
+            {tr("ค่าเริ่มต้นถอดจากสไลด์")} <b>Capacity_TSATP.4_update_June_26</b> {tr('— ทุกไลน์ในสไลด์ใช้')} <b>2 shift = {tr("วันทำงาน × 15.5 ชม.")}</b> ⇒ 1 {tr("กะ = 7.75 ชม. (465 นาที")})
             <br />
             ⚠️ {tr("ตัวเลขนี้")} <b>{tr('ตั้งใจให้ต่าง')}</b> {tr("จาก 490 นาที/กะ ที่แท็บรายวันใช้ (08:00–17:30 หักพัก 80 นาที) — 490 = เวลาเดินเครื่องได้ · 465 = เวลาที่ฝ่ายวางแผนใช้คิดเพดานรายเดือน")}
             <br />
@@ -247,7 +248,7 @@ export default function CapacityBoard({ role, scope, lines, months, calMap, dema
           </div>
           {patErr && (
             <div style={{ fontSize:12, color:'#f59e0b', marginBottom:8 }}>
-              ⚠️ อ่านทะเบียนจากฐานไม่ได้ — กำลังใช้ค่าเริ่มต้นในโค้ด (แก้แล้วจะบันทึกไม่ได้ · แจ้ง admin ว่ายังไม่ได้ apply migration 20260924_capacity_shift_patterns)
+              ⚠️ {tr("อ่านทะเบียนจากฐานไม่ได้ — กำลังใช้ค่าเริ่มต้นในโค้ด (แก้แล้วจะบันทึกไม่ได้ · แจ้ง admin ว่ายังไม่ได้")} apply migration 20260924_capacity_shift_patterns)
             </div>
           )}
           <div style={{ overflowX:'auto' }}>
@@ -293,7 +294,7 @@ export default function CapacityBoard({ role, scope, lines, months, calMap, dema
           {canEdit && !patErr && (
             <button style={{ ...btn('var(--accent)'), marginTop:10, opacity: saving || !Object.keys(draft).length ? 0.5 : 1 }}
               disabled={saving || !Object.keys(draft).length} onClick={saveReg}>
-              {saving ? 'กำลังบันทึก…' : `💾 ${tr("บันทึก")} (${Object.keys(draft).length})`}
+              {saving ? tr("กำลังบันทึก…") : `💾 ${tr("บันทึก")} (${Object.keys(draft).length})`}
             </button>
           )}
         </div>
@@ -391,9 +392,9 @@ export default function CapacityBoard({ role, scope, lines, months, calMap, dema
           </table>
         </div>
         <div style={{ fontSize:11, color:'var(--muted)', marginTop:8, lineHeight:1.7 }}>
-          🔴 <b>{tr('ActWorkload คิดจากเวลามาตรฐาน (ชิ้น × CT)')}</b> ไม่ใช่กำลังผลิตจริง — ถ้าใช้ของจริงแล้วหารด้วย OEE อีก จะคิด OEE ซ้ำสองรอบ
+          🔴 <b>{tr('ActWorkload คิดจากเวลามาตรฐาน (ชิ้น × CT)')}</b> {tr("ไม่ใช่กำลังผลิตจริง — ถ้าใช้ของจริงแล้วหารด้วย OEE อีก จะคิด OEE ซ้ำสองรอบ")}
           <br />
-          🔴 งานคู่ RH/LH ถูกยุบเป็น shot เดียวแล้ว (ปั๊มทีเดียวได้ 2 ชิ้น — บวกทั้งสองข้าง = ภาระ 2 เท่า)
+          🔴 {tr("งานคู่ RH/LH ถูกยุบเป็น shot เดียวแล้ว (ปั๊มทีเดียวได้ 2 ชิ้น — บวกทั้งสองข้าง = ภาระ 2 เท่า")})
         </div>
       </div>
 

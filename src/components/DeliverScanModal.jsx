@@ -123,7 +123,7 @@ export default function DeliverScanModal({ request, points = [], canOverride = f
                   style={{ flex: 1, minWidth: 180, padding: '7px 10px', borderRadius: 'var(--ctl-r)', fontSize: 13 }} />
                 {sap.error && <div style={{ width: '100%', fontSize: 12, color: 'var(--red)', fontWeight: 700 }}>{sap.error}</div>}
                 <div style={{ width: '100%', fontSize: 11.5, color: 'var(--text2)' }}>
-                  ใบนี้ยังส่งตามปกติ · ยอดค้างไปขึ้นที่ Line Stock › 🧾 ค้างตัด SAP ให้ตามเคลียร์ (ไม่เปลี่ยนยอดสต็อกในระบบ)
+                  {tr("ใบนี้ยังส่งตามปกติ · ยอดค้างไปขึ้นที่ Line Stock › 🧾 ค้างตัด SAP ให้ตามเคลียร์ (ไม่เปลี่ยนยอดสต็อกในระบบ")})
                 </div>
               </div>
             )}
@@ -133,7 +133,7 @@ export default function DeliverScanModal({ request, points = [], canOverride = f
             /* ไม่รู้ = ห้ามบล็อก — ไลน์ยังไม่ตั้งจุดส่ง ปล่อยผ่านแต่ต้องบอกให้ไปตั้ง */
             <div style={{ marginTop: 14 }}>
               <div style={{ fontSize: 12.5, color: '#f59e0b', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 'var(--r-md)', padding: '9px 12px' }}>
-                ⚪ <b>{request?.line_name}</b> ยังไม่ตั้งจุดส่งงาน — ระบบตรวจไม่ได้ว่าวางถูกจุดไหม (ใบจะถูกมาร์ก "ไลน์ยังไม่ตั้งจุดส่ง")<br />
+                ⚪ <b>{request?.line_name}</b> {tr("ยังไม่ตั้งจุดส่งงาน — ระบบตรวจไม่ได้ว่าวางถูกจุดไหม (ใบจะถูกมาร์ก \"ไลน์ยังไม่ตั้งจุดส่ง")}")<br />
                 <span style={{ color: 'var(--text2)' }}>{tr('ให้หัวหน้าไลน์ตั้งที่ ⚙️ ตั้งค่าผังไลน์ → 🎯 จุดส่งงาน แล้วพิมพ์ป้ายที่ 🏷️ พิมพ์ป้าย QR')}</span>
               </div>
               <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'flex-end' }}>
@@ -206,7 +206,7 @@ export default function DeliverScanModal({ request, points = [], canOverride = f
                     )
                   ) : (
                     <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-                      สแกนไม่ได้/ป้ายหาย → ให้หัวหน้าที่มีสิทธิ์ <code>wip_request:override</code> มาปลดบล็อก (admin เปิดสิทธิ์ให้ role อื่นได้ที่ /permissions)
+                      {tr("สแกนไม่ได้/ป้ายหาย → ให้หัวหน้าที่มีสิทธิ์")} <code>wip_request:override</code> {tr("มาปลดบล็อก (admin เปิดสิทธิ์ให้ role อื่นได้ที่")} /permissions)
                     </div>
                   )}
                 </div>

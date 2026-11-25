@@ -28,6 +28,7 @@
 | หลักฐาน/ตัวเลขเบื้องหลัง "กฎเหล็กการเขียน DB จาก client" | `docs/modules/db-write-rules.md` |
 | 🔗 สายธารความต้องการ (Demand Flow) — `/flow-tower` (audit + หน้าจริง · 2026-08-19) | `docs/modules/demand-flow-tower.md` |
 | Deploy | `docs/modules/deploy.md` |
+| 🖥️ สเปค server บริษัทที่ต้องขอ (รองรับ 10 ปี · ใบขอสำหรับยื่น IT · 2026-11-23) | `docs/modules/onprem-server-sizing.md` |
 | 🏷️ แยก frontend ของ New Model (2 เว็บจากโค้ดชุดเดียว · edition) | `docs/modules/nm-frontend-split.md` |
 | 💼 RFQ / เสนอราคา — Marketing (Q-neX เฟส 1 · `/rfq` · 2026-10-30) | `docs/modules/mkt-rfq.md` |
 | 🧩 e-Workflow — ใบงานที่ user สร้างเอง (`/workflows` · `/workflow-designer` · เฟส 1 2026-11-13) | `docs/modules/e-workflow.md` |

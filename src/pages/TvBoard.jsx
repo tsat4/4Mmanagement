@@ -199,9 +199,9 @@ export default function TvBoard({ onOpenMenu = null }) {
           {cur.icon} Andon Board · {tr(cur.label)}
         </span>
         <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-          {cur.sub} {tr('· วันงาน')} {workDate}
+          {tr(cur.sub)} {tr('· วันงาน')} {workDate}
           {secFilter ? ` · ${tr("เฉพาะ")} ${secFilter}` : ''}
-          {scopeSet ? ` · ${scopeSet.size} ${tr("ไลน์")}` : ' · ทุกไลน์'}
+          {scopeSet ? ` · ${scopeSet.size} ${tr("ไลน์")}` : tr(" · ทุกไลน์")}
           {/* กรองตามขอบเขตบัญชีแล้วต้องบอกว่าซ่อนกี่ไลน์ · ตัดขอบเขตไม่ได้ต้องบอกว่ากำลังโชว์ทั้งโรงงาน */}
           {scopeHiddenLines > 0 && ` · ${tr("ไม่แสดงไลน์นอกขอบเขตบัญชี")} ${scopeHiddenLines} ${tr("ไลน์")}`}
         </span>
@@ -215,7 +215,7 @@ export default function TvBoard({ onOpenMenu = null }) {
 
       {barOpen && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '9px 12px' }}>
-          <TabBar size="sm" value={dept} onChange={k => setParam('dept', k)} tabs={DEPTS.map(x => ({ key: x.key, label: x.label }))} />
+          <TabBar size="sm" value={dept} onChange={k => setParam('dept', k)} tabs={DEPTS.map(x => ({ key: x.key, label: tr(x.label) }))} />
           <span style={{ width: 1, height: 20, background: 'var(--border2)' }} />
           {/* ส่วนงาน — ค่าที่ไม่มีในลิสต์ (ส่วนงานถูกเปลี่ยนชื่อ) ต้องยังเลือกเห็นได้ ห้ามหายเงียบ */}
           <SectionScopeSelect lines={lines} value={secFilter} onChange={s => setParam('sec', s)} only={secOpts} width={220}
@@ -236,7 +236,7 @@ export default function TvBoard({ onOpenMenu = null }) {
             {sp.get('sound') === 'all' ? tr('ดังทุกเครื่องหยุด') : dept === 'store' ? tr('ไม่มีเสียง') : tr('ดังเฉพาะเรียกช่าง')}
           </button>}
           <span style={{ fontSize: 11, color: 'var(--muted)' }}>
-            ตั้งเสร็จแล้ว <b>{tr('บุ๊กมาร์กหน้านี้ไว้ที่ทีวี')}</b> — ค่าอยู่ใน URL จอจะจำเอง ไม่ต้องมากดทุกเช้า
+            {tr("ตั้งเสร็จแล้ว")} <b>{tr('บุ๊กมาร์กหน้านี้ไว้ที่ทีวี')}</b> — {tr("ค่าอยู่ใน URL จอจะจำเอง ไม่ต้องมากดทุกเช้า")}
           </span>
         </div>
       )}
@@ -246,8 +246,8 @@ export default function TvBoard({ onOpenMenu = null }) {
         <div role="status" style={{ background: 'var(--card-surf)', border: '1px solid var(--amber)', color: 'var(--amber)', borderRadius: 'var(--r-md)', padding: '8px 12px', fontSize: 13, fontWeight: 700 }}>
           {/* ชุดว่าง = scopeSet เป็น null = ทั้งโรงงาน (พฤติกรรมเดิมของ scopedLineNames) — เขียนตามจริง */}
           {acctLines !== lines
-            ? '⚠ หาไลน์ของบัญชีนี้ไม่เจอ — แสดงตามส่วนงานของบัญชีแทน'
-            : '⚠ ตัดขอบเขตบัญชีไม่ได้ — กำลังแสดงทั้งโรงงาน'}
+            ? tr("⚠ หาไลน์ของบัญชีนี้ไม่เจอ — แสดงตามส่วนงานของบัญชีแทน")
+            : tr("⚠ ตัดขอบเขตบัญชีไม่ได้ — กำลังแสดงทั้งโรงงาน")}
         </div>
       )}
       {err && (
@@ -258,7 +258,7 @@ export default function TvBoard({ onOpenMenu = null }) {
       {linesState !== 'loading' && linesState !== 'ok' && (
         <div role="alert" style={{ background: 'var(--card-surf)', border: '1px solid var(--red)', color: 'var(--red)', borderRadius: 'var(--r-md)', padding: 12, fontSize: 14, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <span>⚠ {linesState === 'empty'
-            ? 'ไม่พบทะเบียนไลน์ผลิต — จอนี้แสดงอะไรไม่ได้ (ตั้งไลน์ที่หน้า ตั้งค่าไลน์ผลิต)'
+            ? tr("ไม่พบทะเบียนไลน์ผลิต — จอนี้แสดงอะไรไม่ได้ (ตั้งไลน์ที่หน้า ตั้งค่าไลน์ผลิต)")
             : `${tr("โหลดทะเบียนไลน์ไม่สำเร็จ — กำลังลองใหม่อัตโนมัติทุก 30 วินาที")} (${linesState})`}</span>
           <button onClick={() => { setLinesState('loading'); setLinesTry(n => n + 1); }}
             style={{ fontSize: 13, padding: '4px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--red)', background: 'transparent', color: 'var(--red)', cursor: 'pointer' }}>{tr('ลองใหม่')}</button>

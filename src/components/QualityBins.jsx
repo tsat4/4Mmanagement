@@ -61,7 +61,7 @@ import { DeleteButton } from './IconButton';
 import QualityBinDetailModal from './QualityBinDetailModal';
 import { PointThumb } from './inspect/PointZoom';
 
-import { tr as trI18n } from '../utils/i18n';
+import { tr as trI18n, dateLocale } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
 const BINS = [
   { key: 'yellow', label: '🟡 ถังเหลือง — ชิ้นงานต้องสงสัย', short: 'ถังเหลือง', color: '#f5b942' },
@@ -946,7 +946,7 @@ export default function QualityBins({ mode = 'full' }) {
               <button onClick={() => setPendAll(v => !v)}
                 style={{ marginTop: 8, background: 'var(--bg3-surf)', border: '1px solid var(--border2)', color: 'var(--text2)',
                   borderRadius: 'var(--r-md)', padding: '5px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-                {pendAll ? 'ย่อกลับ' : `${trI18n("แสดงอีก")} ${pend.length - 8} (${trI18n("ทั้งหมด")} ${pend.length})`}
+                {pendAll ? trI18n("ย่อกลับ") : `${trI18n("แสดงอีก")} ${pend.length - 8} (${trI18n("ทั้งหมด")} ${pend.length})`}
               </button>
             )}
             {pend.length > 0 && permNote()}
@@ -957,8 +957,8 @@ export default function QualityBins({ mode = 'full' }) {
   /** ใครกดขั้นไหนได้ — ใต้คิว/ตาราง (บัญชีนี้มีสิทธิ์ไหม) */
   const permNote = () => (
     <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 8 }}>
-      {trI18n("ขั้น 2 ตัดสิน · ขั้น 4 ตรวจรับ")} = <b>QA</b> {trI18n('(สิทธิ์ qa:bin_decide')}{canDecide ? ' ✓' : ' — บัญชีนี้ไม่มี'}) ·
-      {trI18n("ขั้น 3 ลงผลซ่อม · ย้ายลงถังแดง")} = <b>{trI18n('ฝ่ายผลิต')}</b> {trI18n('(สิทธิ์ scrap:record')}{canRecord ? ' ✓' : ' — บัญชีนี้ไม่มี'})
+      {trI18n("ขั้น 2 ตัดสิน · ขั้น 4 ตรวจรับ")} = <b>QA</b> {trI18n('(สิทธิ์ qa:bin_decide')}{canDecide ? ' ✓' : trI18n(" — บัญชีนี้ไม่มี")}) ·
+      {trI18n("ขั้น 3 ลงผลซ่อม · ย้ายลงถังแดง")} = <b>{trI18n('ฝ่ายผลิต')}</b> {trI18n('(สิทธิ์ scrap:record')}{canRecord ? ' ✓' : trI18n(" — บัญชีนี้ไม่มี")})
     </div>
   );
 
@@ -1046,7 +1046,7 @@ export default function QualityBins({ mode = 'full' }) {
           style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: 16 }}>
           <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 20, width: 'min(96vw, 720px)', maxHeight: '92vh', overflowY: 'auto' }}>
             <h3 style={{ margin: '0 0 14px', fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>
-              {editing === 'new' ? 'บันทึกรายการ' : 'แก้ไขรายการ'} — {trI18n(B.short)}
+              {editing === 'new' ? trI18n("บันทึกรายการ") : trI18n("แก้ไขรายการ")} — {trI18n(B.short)}
             </h3>
             <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, alignContent: 'start' }}>
               <div><label style={lbl}>{trI18n('วันที่ลงถัง *')}</label>
@@ -1059,7 +1059,7 @@ export default function QualityBins({ mode = 'full' }) {
 
               <div style={{ gridColumn: '1 / -1' }}><label style={lbl}>{trI18n('ชิ้นงาน (เลือกจาก Product Master หรือพิมพ์เอง)')}</label>
                 {/* 2026-09-07 <ProductSelect> — สินค้าของครอบครัวไลน์ที่เลือกขึ้นก่อน · พิมพ์เองได้ (ของที่ยังไม่อยู่ในทะเบียนมาถึงถังจริง) พร้อมป้าย */}
-                <ProductSelect value={form.mat_no} lines={famLines} allowFree freeHint="ชิ้นงานที่ยังไม่อยู่ใน Product Master" history={binMatHist}
+                <ProductSelect value={form.mat_no} lines={famLines} allowFree freeHint={trI18n("ชิ้นงานที่ยังไม่อยู่ใน Product Master")} history={binMatHist}
                   placeholder={trI18n('MAT / รหัสชิ้นงาน')} inputStyle={inp}
                   onChange={({ mat_no, name, p_no, line_name, opt, known }) => {
                     const inReg = !!opt && known !== false; // กลุ่ม 📜 เคยบันทึกไว้ = นอกทะเบียน → ปฏิบัติเหมือนพิมพ์เอง (2026-09-07)
@@ -1095,7 +1095,7 @@ export default function QualityBins({ mode = 'full' }) {
                     ยังไม่เลือก = "รอ QA พิจารณา" ซึ่งเป็นสถานะจริง ห้ามบังคับเลือก
                     เลือกแล้วกดซ้ำ = ยกเลิกการตัดสิน (QA เปลี่ยนใจได้ก่อนของออกจากถัง) */}
                 <div style={{ gridColumn: '1 / -1', borderTop: '1px solid var(--border)', paddingTop: 8, fontSize: 12, fontWeight: 700, color: 'var(--muted)' }}>
-                  ผลการพิจารณาของ QA <span style={{ fontWeight: 400 }}>(WI-PD3-069 §5.4)</span>
+                  {trI18n("ผลการพิจารณาของ")} QA <span style={{ fontWeight: 400 }}>(WI-PD3-069 §5.4)</span>
                 </div>
                 <div style={{ gridColumn: '1 / -1', display: 'flex', flexWrap: 'wrap', gap: 7 }}>
                   {QA_DECISIONS.map(d => {
@@ -1127,8 +1127,7 @@ export default function QualityBins({ mode = 'full' }) {
                 )}
                 {form.qa_decision === 'scrap' && (
                   <div style={{ gridColumn: '1 / -1', fontSize: 11.5, color: 'var(--amber)', lineHeight: 1.5 }}>
-                    ⚠ บันทึกแล้วระบบจะถามยืนยันจำนวนเพื่อย้ายลงถังแดงให้ทันที — กดยกเลิก = ใบยังค้างในคิวรอพิจารณา
-                    (“เอาของลงถังแดง” เป็นการกระทำจริงหน้างาน ต้องมีคนกดยืนยัน)
+                    ⚠ {trI18n("บันทึกแล้วระบบจะถามยืนยันจำนวนเพื่อย้ายลงถังแดงให้ทันที — กดยกเลิก = ใบยังค้างในคิวรอพิจารณา (“เอาของลงถังแดง” เป็นการกระทำจริงหน้างาน ต้องมีคนกดยืนยัน")})
                   </div>
                 )}
                 <div style={{ gridColumn: '1 / -1', borderTop: '1px solid var(--border)', paddingTop: 8, fontSize: 12, fontWeight: 700, color: 'var(--muted)' }}>{trI18n('ผลการซ่อม')}</div>
@@ -1183,7 +1182,7 @@ export default function QualityBins({ mode = 'full' }) {
       {renderRejectModal()}
       {renderDetailModal()}
       {renderEditModal()}
-      <ReadOnlyNote show={!canDecide} role={role} what="ตัดสินผลของในถังเหลือง (เฉพาะ QA)" permKey="qa:bin_decide" />
+      <ReadOnlyNote show={!canDecide} role={role} what={trI18n("ตัดสินผลของในถังเหลือง (เฉพาะ QA)")} permKey="qa:bin_decide" />
       {renderPendQueue()}
       <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 10, lineHeight: 1.8 }}>
         📄 {trI18n("เอกสารตัวจริง (ใบรายงานของเสีย · ทะเบียนถังเหลือง/ถังแดง · อายุแท็ก · ทะเบียน WI ซ่อม) อยู่ที่")}<b>{trI18n('ฝ่ายผลิต')}</b>
@@ -1195,8 +1194,8 @@ export default function QualityBins({ mode = 'full' }) {
           ? <span style={{ color: 'var(--amber)', fontWeight: 700 }}>
               ⚠️ {trI18n("ยังตัดขอบเขตไม่ชัด")} ({scopeRes.reason === 'registry_unloaded'
                 ? `${trI18n("โหลดทะเบียนไลน์ไม่สำเร็จ")}${linesErr ? `: ${linesErr}` : ''}`
-                : scopeRes.reason === 'own_line_unknown' ? 'ไม่พบไลน์ที่บัญชีนี้สังกัดในทะเบียน'
-                  : 'ส่วนงานของบัญชีนี้ไม่ตรงกับไลน์ไหนในทะเบียน'}) — {trI18n("ตัวเลขข้างบนอาจไม่ใช่ขอบเขตจริงของคุณ")}
+                : scopeRes.reason === 'own_line_unknown' ? trI18n("ไม่พบไลน์ที่บัญชีนี้สังกัดในทะเบียน")
+                  : trI18n("ส่วนงานของบัญชีนี้ไม่ตรงกับไลน์ไหนในทะเบียน")}) — {trI18n("ตัวเลขข้างบนอาจไม่ใช่ขอบเขตจริงของคุณ")}
             </span>
           : scopeNames
             ? <>{trI18n('🏷️ คิวนี้เฉพาะส่วนงานของคุณ (')}{scopeNames.length} {trI18n("ไลน์) — ของไลน์อื่นไม่ถูกนับในตัวเลขข้างบน")}</>
@@ -1210,7 +1209,7 @@ export default function QualityBins({ mode = 'full' }) {
       {renderRepairModal()}
       {renderRejectModal()}
       {renderDetailModal()}
-      <ReadOnlyNote show={!canRecord} role={role} what="บันทึกถังเหลือง/ถังแดง"
+      <ReadOnlyNote show={!canRecord} role={role} what={trI18n("บันทึกถังเหลือง/ถังแดง")}
         permKey="scrap:record" />
       {/* ── แถบควบคุม ── */}
       {/* UI-STANDARD 2026-09-24: ตัวกรองของหน้าเป็น children ของ TimeRangeBar = แถบเดียว (เดิมแยก 2 ชั้น) */}
@@ -1223,7 +1222,7 @@ export default function QualityBins({ mode = 'full' }) {
         <Segmented label={trI18n('ถัง')} value={bin} onChange={setBin}
           options={BINS.map(b => ({ value: b.key, label: `${b.key === 'yellow' ? '🟡' : '🔴'} ${trI18n(b.short)}`, title: trI18n(b.label), color: b.color }))} />
         <LineSelect lines={lineObjs} value={lineFilter} onChange={setLineFilter} placeholder={ALL.line} />
-        <SearchInput value={search} onChange={setSearch} fields="ชิ้นงาน / สาเหตุ / ผู้แจ้ง" />
+        <SearchInput value={search} onChange={setSearch} fields={trI18n("ชิ้นงาน / สาเหตุ / ผู้แจ้ง")} />
         {/* ⏱️ ของค้างเกินอายุแท็ก — ปุ่มโผล่เฉพาะเมื่อมีของค้างจริง (ปุ่มที่กดแล้วว่างเปล่าเสมอ = คนเลิกกด)
             ไม่กระพริบ: เป็นงานค้าง ไม่ใช่ alarm (Andon convention) */}
         {overdueCount > 0 && (
@@ -1248,7 +1247,7 @@ export default function QualityBins({ mode = 'full' }) {
           (อยู่ในแถบกรองแล้วดันแถบเป็น 2 บรรทัด) */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
       <div style={{ fontSize: 12.5, color: 'var(--muted)', flex: '1 1 420px', minWidth: 0 }}>
-        {loading ? 'กำลังโหลด…' : `${filtered.length} ${trI18n("รายการ · รวม")} ${totalQty.toLocaleString('th-TH')} ${trI18n("ชิ้น")}`}
+        {loading ? trI18n("กำลังโหลด…") : `${filtered.length} ${trI18n("รายการ · รวม")} ${totalQty.toLocaleString(dateLocale())} ${trI18n("ชิ้น")}`}
         {!loading && isY && !overdueOnly && (
           <span> · <b style={{ color: 'var(--amber)' }}>{trI18n('ค้างในสาย')} {pendOpen.length}</b> {trI18n('(ทุกวันที่ ไม่ขึ้นกับช่วง) · ที่ปิดแล้วแสดงตามช่วงที่เลือก')}</span>
         )}
@@ -1291,12 +1290,12 @@ export default function QualityBins({ mode = 'full' }) {
             title={trI18n('ทะเบียน QRs ↔ WI การซ่อม')}
             help={trI18n('จาก WI-PD3-069 Rev.02 §6 — อาการที่ซ่อมได้ต้องอ้าง WI เล่มที่กำหนด · หัวหน้ากลุ่มจะเห็นชิปแนะนำ WI ตอนลงวิธีแก้ไขในหน้า Daily Report')}
             emptyText={trI18n('ยังไม่มีรายการ — เพิ่มจากตัว WI-PD3-069 §6')}
-            offNote="รายการนี้จะไม่ถูกแนะนำในโมดัลลงวิธีแก้ไขอีก (บันทึกเก่าที่อ้าง WI นี้ไว้แล้วไม่กระทบ)"
+            offNote={trI18n("รายการนี้จะไม่ถูกแนะนำในโมดัลลงวิธีแก้ไขอีก (บันทึกเก่าที่อ้าง WI นี้ไว้แล้วไม่กระทบ)")}
             fields={[
-              { key: 'symptom',   label: 'อาการ', required: true, placeholder: 'Missing nut' },
-              { key: 'wi_no',     label: 'WI ซ่อม', required: true, mono: true, placeholder: 'WI-PD3-018 (หลายเล่มคั่นด้วย , )' },
-              { key: 'part_name', label: 'ชื่อชิ้นงาน' },
-              { key: 'note',      label: 'หมายเหตุ' },
+              { key: 'symptom',   label: trI18n("อาการ"), required: true, placeholder: 'Missing nut' },
+              { key: 'wi_no',     label: trI18n("WI ซ่อม"), required: true, mono: true, placeholder: 'WI-PD3-018 (หลายเล่มคั่นด้วย , )' },
+              { key: 'part_name', label: trI18n("ชื่อชิ้นงาน") },
+              { key: 'note',      label: trI18n("หมายเหตุ") },
             ]}
           />
         </div>
@@ -1314,7 +1313,7 @@ export default function QualityBins({ mode = 'full' }) {
           <tbody>
             {!loading && !filtered.length && (
               <tr><td colSpan={10} style={{ ...td, textAlign: 'center', color: 'var(--muted)', padding: 28 }}>
-                {overdueOnly ? (overdueErr ? 'โหลดรายการค้างไม่สำเร็จ — ดูข้อความเตือนด้านบน' : 'ไม่มีของค้างเกินอายุแท็ก 👍') : 'ไม่มีรายการในช่วงที่เลือก'}
+                {overdueOnly ? (overdueErr ? trI18n("โหลดรายการค้างไม่สำเร็จ — ดูข้อความเตือนด้านบน") : trI18n("ไม่มีของค้างเกินอายุแท็ก 👍")) : trI18n("ไม่มีรายการในช่วงที่เลือก")}
               </td></tr>
             )}
             {filtered.map(r => {
@@ -1362,7 +1361,7 @@ export default function QualityBins({ mode = 'full' }) {
                   </div>
                 </td>
                 <td style={td}>{r.line_name || '—'}</td>
-                <td style={{ ...td, fontWeight: 700 }}>{Number(r.qty || 0).toLocaleString('th-TH')}</td>
+                <td style={{ ...td, fontWeight: 700 }}>{Number(r.qty || 0).toLocaleString(dateLocale())}</td>
                 <td style={td}>{(isY ? r.cause : causeView(r)) || '—'}</td>
                 <td style={td}>{r.reported_by || '—'}</td>
                 {/* §5.4 ขั้น + ผลพิจารณา QA — null = "รอ QA พิจารณา" ห้ามเดาผลให้ · ขั้นตัดสินที่ ncStep()/ncFlow() */}
@@ -1398,11 +1397,11 @@ export default function QualityBins({ mode = 'full' }) {
                       </span>
                     : r.scrap_report_id
                     ? <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--green)' }}>
-                        {scrapDocs[r.scrap_report_id]?.doc_no || 'ออกใบแล้ว'}
+                        {scrapDocs[r.scrap_report_id]?.doc_no || trI18n("ออกใบแล้ว")}
                       </span>
                     : <span title={trI18n('ยังไม่ได้ออกใบรายงานของเสีย — ไปที่หน้า 🗑️ ใบรายงานของเสีย แล้วกด ⤵ ดึงจากถังแดง')}
                         style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--amber)' }}>
-                        ⏳ ยังไม่ออกใบ
+                        ⏳ {trI18n("ยังไม่ออกใบ")}
                       </span>}
                 </td>}
                 <td style={{ ...td, whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>

@@ -43,8 +43,8 @@ function AmMoChip({ follow }) {
     : st === 'mo_closed' ? `✅ ${follow.mo.mo_no || ''} · ${moStatusLabel(follow.mo)}`
     : st === 'mo_void' ? `⚠ ${tr("ใบซ่อม")} ${follow.mo.mo_no || ''} · ${moStatusLabel(follow.mo)} — ${tr("ยังไม่ได้แก้")}`
     : st === 'waived' ? `${tr("ไม่เปิดใบซ่อม")}: ${follow.reason}`
-    : st === 'no_mo' ? '⚠ ยังไม่เปิดใบแจ้งซ่อม'
-    : '❔ ไม่รู้สถานะใบซ่อม'
+    : st === 'no_mo' ? tr("⚠ ยังไม่เปิดใบแจ้งซ่อม")
+    : tr("❔ ไม่รู้สถานะใบซ่อม")
   return <span style={{ display: 'block', fontSize: 11, fontWeight: 700, marginTop: 2 }}>{txt}</span>
 }
 
@@ -282,7 +282,7 @@ export default function DailyPM() {
           AM {tr("ตรวจเครื่อง/POKA-YOKE ต้นกะ")} · {shiftInfo.label} · {shiftInfo.workDateStr}
           {' · '}{tr('เตือนเมื่อเกิน')} {DAILY_PM_WINDOW_MIN} {tr("นาทีหลังเปิดใบผลิตใบแรก")}
         </>}
-        tabs={[{ key: 'status', label: 'สถานะวันนี้' }, { key: 'monthly', label: 'รายงานรายเดือน' }, { key: 'registry', label: 'ลงทะเบียนเครื่องตรวจ' }, { key: 'stations', label: 'สถานี (ใบรวม)' }]}
+        tabs={[{ key: 'status', label: tr("สถานะวันนี้") }, { key: 'monthly', label: tr("รายงานรายเดือน") }, { key: 'registry', label: tr("ลงทะเบียนเครื่องตรวจ") }, { key: 'stations', label: tr("สถานี (ใบรวม)") }]}
         tab={tab} onTab={setTab} />
 
       {tab === 'status' && amSt.err && (
@@ -291,7 +291,7 @@ export default function DailyPM() {
       {tab === 'status' && (
         dashboard.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--muted)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-lg)' }}>
-            ยังไม่มีไลน์ที่ลงทะเบียนเครื่องตรวจ — ไปที่แท็บ “ลงทะเบียนเครื่องตรวจ” ก่อน
+            {tr("ยังไม่มีไลน์ที่ลงทะเบียนเครื่องตรวจ — ไปที่แท็บ “ลงทะเบียนเครื่องตรวจ” ก่อน")}
           </div>
         ) : (<>
           {/* แถบสรุปรวมทุกไลน์ — เรียงตามความเร่งด่วนเหมือนการ์ดด้านล่าง */}
@@ -328,19 +328,19 @@ export default function DailyPM() {
                     <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{row.line_name === '—' ? tr('⚠ ยังไม่ระบุไลน์') : row.line_name}</div>
                     <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 'var(--r-pill)', background: `${tint(meta.color, 'dim')}`, color: meta.color, border: `1px solid ${tint(meta.color, 'line')}` }}
                       title={row.status === 'idle'
-                        ? (row.hasSession === true ? 'เปิดกะแล้ว แต่ยังไม่มีใบผลิตเปิด — นาฬิกาตรวจเริ่มนับตอนเปิดใบผลิตใบแรก'
-                          : row.hasSession === false ? 'ยังไม่มีการเปิดกะของไลน์นี้ (นับไลน์ลูกด้วยแล้ว) ในกะปัจจุบัน'
-                          : 'อ่านข้อมูลการเปิดกะไม่ได้ — บอกไม่ได้ว่าไลน์นี้เดินอยู่หรือไม่')
+                        ? (row.hasSession === true ? tr("เปิดกะแล้ว แต่ยังไม่มีใบผลิตเปิด — นาฬิกาตรวจเริ่มนับตอนเปิดใบผลิตใบแรก")
+                          : row.hasSession === false ? tr("ยังไม่มีการเปิดกะของไลน์นี้ (นับไลน์ลูกด้วยแล้ว) ในกะปัจจุบัน")
+                          : tr("อ่านข้อมูลการเปิดกะไม่ได้ — บอกไม่ได้ว่าไลน์นี้เดินอยู่หรือไม่"))
                         : undefined}>
                       {row.status === 'red' && <span className="dt-alarm-icon" style={{ marginRight: 3 }}>🚨</span>}
                       {/* 🔴 idle มี 3 แบบ ต้องอ่านออกจากป้ายเลย ไม่ใช่ให้เดา (เคสจริง: กะเดินอยู่แต่จอบอกยังไม่เริ่มผลิต)
                           `hasSession === null` = "ไม่รู้" (ไม่ได้ส่ง openSessionLines มา) **ห้ามเขียนว่า "ยังไม่เปิดกะ"**
                           — เป็นคำยืนยันที่สร้างจากข้อมูลที่ไม่มี (กฎ utils/dailyCheckDay.js ข้อ 1) */}
                       {row.status === 'idle' && row.allNotRunning
-                        ? 'เครื่องที่ลงทะเบียนไม่ได้เดินกะนี้'
+                        ? tr("เครื่องที่ลงทะเบียนไม่ได้เดินกะนี้")
                         : row.status === 'idle'
-                        ? (row.hasSession === true ? 'เปิดกะแล้ว · ยังไม่มีใบผลิต'
-                          : row.hasSession === false ? 'ยังไม่เปิดกะ' : '❔ ไม่รู้ว่าเปิดกะหรือไม่')
+                        ? (row.hasSession === true ? tr("เปิดกะแล้ว · ยังไม่มีใบผลิต")
+                          : row.hasSession === false ? tr("ยังไม่เปิดกะ") : tr("❔ ไม่รู้ว่าเปิดกะหรือไม่"))
                         : meta.label}
                     </span>
                   </div>
@@ -392,7 +392,7 @@ export default function DailyPM() {
                         {row.carry.map(c => (
                           <span key={`${c.jig_id}-${c.mo.id}`} title={c.inspected_at ? `${tr("พบผิดปกติเมื่อ")} ${fmtDate(c.inspected_at)}` : undefined}
                             style={{ fontSize: 11, padding: '2px 8px', borderRadius: 'var(--r-md)', background: 'var(--amber-dim)', color: 'var(--amber)', border: '1px solid var(--amber-line)' }}>
-                            {c.machine_no ? `${c.machine_no} · ` : ''}{c.name} · {c.mo.mo_no || '(รอออกเลข)'} · {moStatusLabel(c.mo)}
+                            {c.machine_no ? `${c.machine_no} · ` : ''}{c.name} · {c.mo.mo_no || tr("(รอออกเลข)")} · {moStatusLabel(c.mo)}
                             {c.inspected_at && <> {tr('· ตั้งแต่')} {fmtDate(c.inspected_at)}</>}
                           </span>
                         ))}
@@ -434,7 +434,7 @@ export default function DailyPM() {
                       display: 'inline-block', marginTop: 10, fontSize: 12, fontWeight: 700, textDecoration: 'none',
                       padding: '6px 12px', borderRadius: 8, background: `${tint(meta.color, 'dim')}`, color: meta.color, border: `1px solid ${tint(meta.color, 'line')}`,
                     }}>
-                      📋 ไปตรวจเครื่องของไลน์นี้ →
+                      📋 {tr("ไปตรวจเครื่องของไลน์นี้")} →
                     </Link>
                   )}
                 </div>
@@ -464,7 +464,7 @@ export default function DailyPM() {
                 { n: '1', title: 'เพิ่มเครื่อง + หัวข้อตรวจ', desc: <>{tr('ที่หน้า')} <Link to="/pm?tab=setup&dept=production" style={{ color: 'var(--accent)', fontWeight: 700 }}>{tr('ตั้งค่า PM → แท็บ ฝ่ายผลิต')}</Link> ({tr("กด \"+ เพิ่มอุปกรณ์\" แล้วใส่ชื่อ/ไลน์/หัวข้อที่ต้องตรวจ")})</> },
                 { n: '2', title: 'ลงทะเบียนที่แท็บนี้', desc: 'ติ๊กเครื่องที่ "ต้องตรวจทุกต้นกะ" ของแต่ละไลน์ — ตัวเลข N ของไลน์มาจากตรงนี้' },
                 { n: '3', title: 'พนักงานตรวจต้นกะ', desc: <>{tr('ที่หน้า')} <Link to="/daily-checker?tab=amcheck" style={{ color: 'var(--accent)', fontWeight: 700 }}>{tr('แท็บ บันทึกผลตรวจ AM')}</Link> {tr('เลือกเครื่อง ติ๊กผ่าน/NG แล้วบันทึก')}</> },
-                { n: '4', title: 'ระบบเฝ้าเอง', desc: 'เปิดใบผลิตใบแรกของไลน์ → เริ่มนับ 60 นาที · ครบ+ผ่าน = 🟢 แจ้ง Telegram · พบ NG = 🔴 · เกินเวลายังไม่ครบ = 🟠' },
+                { n: '4', title: 'ระบบเฝ้าเอง', desc: 'เปิดใบผลิตใบแรกของไลน์ → เริ่มนับ 60 นาที · ครบ+ผ่าน = 🟢 · พบ NG = 🔴 แจ้งในแอปถึงทีม AM/หัวหน้า · เกินเวลายังไม่ครบ = 🟠 แจ้งในแอปถึงหัวหน้าไลน์+หัวหน้าแผนก' },
               ].map(s => (
                 <div key={s.n} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                   <span style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--accent-dim)', color: 'var(--accent)', fontSize: 11, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{s.n}</span>
@@ -484,7 +484,7 @@ export default function DailyPM() {
               { value: 'on', label: `✓ ${tr("ลงทะเบียนแล้ว")} (${regView.regN})` },
               { value: 'off', label: `${tr("ยังไม่ลงทะเบียน")} (${regView.myN - regView.regN})` },
             ]} />
-            <SearchInput value={regQ} onChange={setRegQ} fields="ชื่อเครื่อง / เลขเครื่อง / No. / ไลน์" />
+            <SearchInput value={regQ} onChange={setRegQ} fields={tr("ชื่อเครื่อง / เลขเครื่อง / No. / ไลน์")} />
             <span className="spacer" />
             <span className="filter-count">{tr('แสดง')} {regView.shownN} {tr('จาก')} {regView.myN} {tr('เครื่อง')}</span>
             {regFiltered && <button type="button" onClick={clearRegFilters} style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', color: 'var(--text2)', borderRadius: 'var(--r-md)', padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}>{tr('ล้างตัวกรอง')}</button>}
@@ -505,7 +505,7 @@ export default function DailyPM() {
             </div>
           ) : Object.keys(jigsByLine).length === 0 ? (
             <div style={{ textAlign: 'center', padding: 40, color: 'var(--muted)' }}>
-              ยังไม่มีอุปกรณ์ในระบบ — เพิ่มได้ที่หน้า <Link to="/pm?tab=setup&dept=production" style={{ color: 'var(--accent)', fontWeight: 700 }}>{tr('ตั้งค่า PM → แท็บ ฝ่ายผลิต')}</Link>
+              {tr("ยังไม่มีอุปกรณ์ในระบบ — เพิ่มได้ที่หน้า")} <Link to="/pm?tab=setup&dept=production" style={{ color: 'var(--accent)', fontWeight: 700 }}>{tr('ตั้งค่า PM → แท็บ ฝ่ายผลิต')}</Link>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxHeight: 'calc(100vh - 300px)', overflowY: 'auto', paddingRight: 4 }}>
@@ -521,7 +521,7 @@ export default function DailyPM() {
                 return (
                   <div key={g.key} style={{ background: 'var(--card-surf)', border: `1px solid ${noLine ? 'var(--amber-line)' : 'var(--border)'}`, borderRadius: 'var(--r-lg)', padding: 16 }}>
                     <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)', marginBottom: noLine ? 4 : 10 }}>
-                      {noLine ? '⚠ ยังไม่ระบุไลน์' : line} <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)' }}>{tr('· ลงทะเบียน')} {regCount}/{lineJigs.length}</span>
+                      {noLine ? tr("⚠ ยังไม่ระบุไลน์") : line} <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)' }}>{tr('· ลงทะเบียน')} {regCount}/{lineJigs.length}</span>
                     </div>
                     {noLine && (
                       <div style={{ fontSize: 12, color: 'var(--amber)', marginBottom: 10 }}>

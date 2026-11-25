@@ -280,8 +280,7 @@ export default function PeChangeRequests({
 
       {mode === 'source' && (
         <div style={{ padding: '7px 11px', fontSize: 11, color: 'var(--muted)', borderBottom: rows.length || sugs ? '1px solid var(--border)' : 'none', lineHeight: 1.6 }}>
-          IATF 16949 §10.2.3/10.2.4 — แก้ปัญหาแล้ว <b>{tr('ต้องทบทวน PFMEA และ Control Plan')}</b> ด้วย ·
-          ระบบ<b>{tr('เสนอ')}</b>ให้เท่านั้น ทีม PE เป็นผู้ตัดสินและออก revision
+          IATF 16949 §10.2.3/10.2.4 — {tr("แก้ปัญหาแล้ว")} <b>{tr('ต้องทบทวน PFMEA และ Control Plan')}</b> {tr("ด้วย · ระบบ")}<b>{tr('เสนอ')}</b>{tr("ให้เท่านั้น ทีม PE เป็นผู้ตัดสินและออก")} revision
         </div>
       )}
 
@@ -310,7 +309,7 @@ export default function PeChangeRequests({
                         <Pill label={DOC_LABEL[x.doc_type]} color="#4d9fff" />
                         {LEG_META[x.leg] && <Pill label={tr(LEG_META[x.leg].short)} color={LEG_META[x.leg].color} title={tr(LEG_META[x.leg].hint)} />}
                         <span style={{ fontSize: 11, color: x.confidence >= 0.6 ? '#22c55e' : x.confidence > 0 ? '#f59e0b' : '#ef4444' }}>
-                          {x.confidence > 0 ? `${tr("ความมั่นใจ")} ${Math.round(x.confidence * 100)}%` : 'ไม่พบในเอกสาร'}
+                          {x.confidence > 0 ? `${tr("ความมั่นใจ")} ${Math.round(x.confidence * 100)}%` : tr("ไม่พบในเอกสาร")}
                         </span>
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--muted)' }}>{x.match_note}</div>
@@ -338,7 +337,7 @@ export default function PeChangeRequests({
             <select style={{ ...inputSt, width: 'auto' }} value={manual.leg} onChange={(e) => setManual((m) => ({ ...m, leg: e.target.value }))}>
               {Object.entries(LEG_META).map(([k, v]) => <option key={k} value={k}>{tr(v.short)} — {tr(v.label)}</option>)}
             </select>
-            {!setInfo?.set && <span style={{ fontSize: 11, color: '#f59e0b', alignSelf: 'center' }}>กด "🔍 หาเอกสารที่เกี่ยว" ก่อน เพื่อจับคู่ชุดเอกสาร</span>}
+            {!setInfo?.set && <span style={{ fontSize: 11, color: '#f59e0b', alignSelf: 'center' }}>{tr("กด \"🔍 หาเอกสารที่เกี่ยว\" ก่อน เพื่อจับคู่ชุดเอกสาร")}</span>}
           </div>
           <textarea rows={3} style={inputSt} placeholder={tr('ต้องแก้อะไรในเอกสาร')} value={manual.proposal} onChange={(e) => setManual((m) => ({ ...m, proposal: e.target.value }))} />
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>

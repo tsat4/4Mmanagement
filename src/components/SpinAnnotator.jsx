@@ -120,7 +120,7 @@ export default function SpinAnnotator({
           maxWidth: '100%', margin: '0 auto', background: 'var(--bg2)' }}>
         {!cur ? (
           <div style={{ width: 'min(360px, 80vw)', height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg2)', color: 'var(--muted)', fontSize: 13 }}>
-            {subject === 'part' ? 'ยังไม่มี Drawing — กด + เพิ่มแผ่น' : 'ยังไม่มีรูป — อัปโหลดด้านล่าง'}
+            {subject === 'part' ? tr("ยังไม่มี Drawing — กด + เพิ่มแผ่น") : tr("ยังไม่มีรูป — อัปโหลดด้านล่าง")}
           </div>
         ) : isPdf ? (
           <iframe src={cur._preview} title={cur.title || 'PDF'} style={{ display: 'block', width: '100%', height: 'min(520px, 72vh)', border: 'none', background: '#fff' }} />
@@ -167,7 +167,7 @@ export default function SpinAnnotator({
           <button type="button" style={tinyBtn} onClick={() => setZoom(z => Math.min(ZOOM_MAX, +(z + 0.5).toFixed(2)))} disabled={zoom >= ZOOM_MAX || !fit} title={tr('ซูมเข้า')} aria-label={tr('ซูมเข้า')}>➕</button>
           {zoom > 1 && <button type="button" style={tinyBtn} onClick={() => setZoom(1)}>{tr('↺ พอดีกรอบ')}</button>}
           <span style={{ fontSize: 11, color: arming && zoom > 1 ? 'var(--accent)' : 'var(--muted)', fontWeight: arming && zoom > 1 ? 700 : 400 }}>
-            {arming && zoom > 1 ? '📍 แตะที่รูปเพื่อวางตำแหน่ง' : zoom > 1 ? 'เลื่อนดูส่วนอื่นในกรอบได้' : 'ซูมเข้าเพื่อวางจุดเล็กๆ ให้แม่น'}
+            {arming && zoom > 1 ? tr("📍 แตะที่รูปเพื่อวางตำแหน่ง") : zoom > 1 ? tr("เลื่อนดูส่วนอื่นในกรอบได้") : tr("ซูมเข้าเพื่อวางจุดเล็กๆ ให้แม่น")}
           </span>
         </div>
       )}
@@ -229,17 +229,17 @@ export default function SpinAnnotator({
 
       {!readOnlyFrames && <div style={{ fontSize: 11, color: 'var(--muted)' }}>
         {spinnable
-          ? (spin ? '🔄 หลายมุม — ลากรูปซ้าย/ขวาปัดดูรอบเครื่อง · หมุดผูกกับรูปที่วาง' : frames.length === 1 ? '🖼️ รูปเดียว — เพิ่มรูป (+) หลายมุมเพื่อปัดดูรอบเครื่องได้ (ไม่บังคับจำนวน)' : 'เพิ่มรูปหลายมุม (+) — 1 รูป = ปกติ, ตั้งแต่ 2 รูปปัดดูรอบเครื่องได้')
-          : '🖼️ หลายแผ่น/มุมมอง — แตะรูปย่อเพื่อสลับ · หมุดผูกกับแผ่นที่วาง'}
+          ? (spin ? tr("🔄 หลายมุม — ลากรูปซ้าย/ขวาปัดดูรอบเครื่อง · หมุดผูกกับรูปที่วาง") : frames.length === 1 ? tr("🖼️ รูปเดียว — เพิ่มรูป (+) หลายมุมเพื่อปัดดูรอบเครื่องได้ (ไม่บังคับจำนวน)") : tr("เพิ่มรูปหลายมุม (+) — 1 รูป = ปกติ, ตั้งแต่ 2 รูปปัดดูรอบเครื่องได้"))
+          : tr("🖼️ หลายแผ่น/มุมมอง — แตะรูปย่อเพื่อสลับ · หมุดผูกกับแผ่นที่วาง")}
       </div>}
       {/* ⚠️ วิธีใช้ที่ถูก (feedback หน้างาน 2026-08-21) — รูปมุมแคบอย่าอัปเป็นเฟรมแยก
          เพราะคนตรวจจะไม่รู้ว่ามันอยู่ตรงไหนของเครื่อง */}
       {!readOnlyFrames && <div style={{ fontSize: 11, color: 'var(--text2)', background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '7px 10px', lineHeight: 1.65 }}>
-        💡 <b>{tr("รูปตรงนี้ = “แผนที่” ให้เห็น")}{subject === 'part' ? 'ทั้งชิ้นงาน' : 'ทั้งเครื่อง'}{tr('แล้วปักหมุด')}</b> — {tr("ส่วนรูปโคลสอัพของแต่ละจุด ให้แนบที่ช่อง")} <b>{tr('รูปจุด')}</b> {tr("ในการ์ดจุดตรวจ (หมุดจะขึ้น 🔍 · คนตรวจแตะหมุดแล้วซูมเข้าไปดูจุดนั้นได้")})
-        {subject !== 'part' && <div style={{ marginTop: 3, opacity: 0.85 }}>อัปรูปโคลสอัพเป็นเฟรมแยกตรงนี้ = คนตรวจไม่รู้ว่าอยู่ตรงไหนของเครื่อง</div>}
+        💡 <b>{tr("รูปตรงนี้ = “แผนที่” ให้เห็น")}{subject === 'part' ? tr("ทั้งชิ้นงาน") : tr("ทั้งเครื่อง")}{tr('แล้วปักหมุด')}</b> — {tr("ส่วนรูปโคลสอัพของแต่ละจุด ให้แนบที่ช่อง")} <b>{tr('รูปจุด')}</b> {tr("ในการ์ดจุดตรวจ (หมุดจะขึ้น 🔍 · คนตรวจแตะหมุดแล้วซูมเข้าไปดูจุดนั้นได้")})
+        {subject !== 'part' && <div style={{ marginTop: 3, opacity: 0.85 }}>{tr("อัปรูปโคลสอัพเป็นเฟรมแยกตรงนี้ = คนตรวจไม่รู้ว่าอยู่ตรงไหนของเครื่อง")}</div>}
         {/* 📐 บอกตรงจุดอัป (user 23/09) — คนอัปคือคนเดียวที่แก้เรื่องนี้ได้ ตอนถ่ายเท่านั้น
             ตัวจำกัดขนาดรูปบนมือถือคือ "ความสูง" ⇒ แนวนอน 4:3/16:9 เต็มความกว้างพอดี */}
-        <div style={{ marginTop: 3, opacity: 0.85 }}>{subject === 'part' ? 'จัดแผ่น/ถ่ายรูปชิ้นงาน' : 'ถ่าย/จัดกรอบ'}{tr('เป็น')} <b>{tr('แนวนอน')}</b> {tr('รูปจะเต็มความกว้างจอมือถือตอนตรวจ — แนวตั้งจะเหลือขอบว่างข้างละครึ่งจอ')}</div>
+        <div style={{ marginTop: 3, opacity: 0.85 }}>{subject === 'part' ? tr("จัดแผ่น/ถ่ายรูปชิ้นงาน") : tr("ถ่าย/จัดกรอบ")}{tr('เป็น')} <b>{tr('แนวนอน')}</b> {tr('รูปจะเต็มความกว้างจอมือถือตอนตรวจ — แนวตั้งจะเหลือขอบว่างข้างละครึ่งจอ')}</div>
       </div>}
     </div>
   )

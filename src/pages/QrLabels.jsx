@@ -261,7 +261,7 @@ export default function QrLabels() {
   if (kind === 'sheet') {
     return (
       <Page style={{ background: 'var(--bg)', minHeight: '100%' }}>
-        <ReadOnlyNote show={!canPrint} role={role} what="พิมพ์ป้าย QR" permKey="qr_labels:print" />
+        <ReadOnlyNote show={!canPrint} role={role} what={tr("พิมพ์ป้าย QR")} permKey="qr_labels:print" />
         <PageHeader title={tr('พิมพ์ป้าย QR อุปกรณ์')} icon="🏷️" sub={tr('พิมพ์ป้าย QR ติดอุปกรณ์ แล้วส่องด้วยมือถือเพื่อเปิดเมนูของอุปกรณ์นั้น')} />
         <FilterBar>
           <Segmented value={kind} onChange={setKind} label={tr('ชนิดป้าย')} options={KIND_OPTIONS} />
@@ -273,7 +273,7 @@ export default function QrLabels() {
 
   return (
     <Page style={{ background: 'var(--bg)', minHeight: '100%' }}>
-      <ReadOnlyNote show={!canPrint} role={role} what="พิมพ์ป้าย QR" permKey="qr_labels:print" />
+      <ReadOnlyNote show={!canPrint} role={role} what={tr("พิมพ์ป้าย QR")} permKey="qr_labels:print" />
       <PageHeader title={tr('พิมพ์ป้าย QR อุปกรณ์')} icon="🏷️" sub={tr('พิมพ์ป้าย QR ติดอุปกรณ์ แล้วส่องด้วยมือถือเพื่อเปิดเมนูของอุปกรณ์นั้น')} />
 
       {/* บอกตรงๆ ว่าป้ายที่กำลังจะพิมพ์เป็นแบบไหน — ป้ายอยู่หน้างานเป็นปี พิมพ์ผิดแบบแล้วต้องรื้อใหม่ทั้งโรงงาน */}
@@ -300,9 +300,9 @@ export default function QrLabels() {
         <LineSelect
           lines={prodLines.filter(l => lineOpts.includes(l.name))}
           value={filterLine} onChange={setFilterLine} placeholder={ALL.line}
-          extraGroups={[{ label: 'อื่นๆ', options: lineOpts.filter(n => !prodLines.some(l => l.name === n)).map(n => ({ value: n })) }]}
+          extraGroups={[{ label: tr("อื่นๆ"), options: lineOpts.filter(n => !prodLines.some(l => l.name === n)).map(n => ({ value: n })) }]}
         />
-        <SearchInput value={q} onChange={setQ} fields="เลข/ชื่อ" />
+        <SearchInput value={q} onChange={setQ} fields={tr("เลข/ชื่อ")} />
         <span className="spacer" />
         <span className="filter-count">{tr('เลือก')} {sel.size} / {visible.length}</span>
         <span className="filter-label">{tr('ขนาดป้าย')}</span>
@@ -318,7 +318,7 @@ export default function QrLabels() {
       </FilterBar>
       {kind === 'delivery' && (
         <div style={{ fontSize: 12.5, color: 'var(--text2)', background: 'var(--bg2-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '9px 12px', marginBottom: 12 }}>
-          ป้ายที่สโตร์สแกนตอนวางของถึงไลน์ (ลูปเรียกชิ้นส่วนขั้น 7) — ติดที่จุดวางของจริงหน้าไลน์ · ตั้ง/แก้จุดที่ ⚙️ ตั้งค่าผังไลน์ → 🎯 จุดส่งงาน · แนะนำขนาด <b>{tr('ใหญ่ 90×60')}</b> (สแกนจากระยะแร็ค)
+          {tr("ป้ายที่สโตร์สแกนตอนวางของถึงไลน์ (ลูปเรียกชิ้นส่วนขั้น 7) — ติดที่จุดวางของจริงหน้าไลน์ · ตั้ง/แก้จุดที่ ⚙️ ตั้งค่าผังไลน์ → 🎯 จุดส่งงาน · แนะนำขนาด")} <b>{tr('ใหญ่ 90×60')}</b> ({tr("สแกนจากระยะแร็ค")})
         </div>
       )}
       {kind === 'part' && (
@@ -331,7 +331,7 @@ export default function QrLabels() {
       )}
       {kind === 'delivery' && !loading && !visible.length && (
         <NoticeBar tone="warn" style={{ marginBottom: 12 }}>
-          ยังไม่มีจุดส่งงานที่เปิดใช้ (ในขอบเขตที่คุณเห็น) — ให้หัวหน้าไลน์ตั้งที่ ⚙️ ตั้งค่าผังไลน์ ก่อน แล้วกลับมาพิมพ์
+          {tr("ยังไม่มีจุดส่งงานที่เปิดใช้ (ในขอบเขตที่คุณเห็น) — ให้หัวหน้าไลน์ตั้งที่ ⚙️ ตั้งค่าผังไลน์ ก่อน แล้วกลับมาพิมพ์")}
         </NoticeBar>
       )}
 
@@ -351,12 +351,12 @@ export default function QrLabels() {
       )}
       {kind === 'die' && !loading && !visible.length && (
         <NoticeBar tone="warn" style={{ marginBottom: 12 }}>
-          {tr("ไม่พบแม่พิมพ์")}{rows.length ? 'ตามตัวกรอง/ขอบเขตไลน์ที่เห็นได้' : 'ในทะเบียน'} — {tr("ลงทะเบียนที่ 🧰 ทะเบียนอุปกรณ์ → แท็บ 🔨 แม่พิมพ์ ก่อน แล้วกลับมาพิมพ์ป้ายได้ทันที")}
+          {tr("ไม่พบแม่พิมพ์")}{rows.length ? tr("ตามตัวกรอง/ขอบเขตไลน์ที่เห็นได้") : tr("ในทะเบียน")} — {tr("ลงทะเบียนที่ 🧰 ทะเบียนอุปกรณ์ → แท็บ 🔨 แม่พิมพ์ ก่อน แล้วกลับมาพิมพ์ป้ายได้ทันที")}
         </NoticeBar>
       )}
       {kind === 'jig' && !loading && !visible.length && (
         <NoticeBar tone="warn" style={{ marginBottom: 12 }}>
-          ยังไม่มีจิ๊ก — ลงทะเบียนที่ 🧰 ทะเบียนอุปกรณ์ → แท็บ JIG (หรือ PM Setup) ก่อน แล้วกลับมาพิมพ์ป้ายได้ทันที
+          {tr("ยังไม่มีจิ๊ก — ลงทะเบียนที่ 🧰 ทะเบียนอุปกรณ์ → แท็บ JIG (หรือ PM Setup) ก่อน แล้วกลับมาพิมพ์ป้ายได้ทันที")}
         </NoticeBar>
       )}
       {missingNo > 0 && kind !== 'delivery' && (

@@ -96,8 +96,8 @@ export default function TrialBookingModal({ lineName, dies = [], onClose, onAdd 
         </div>
         {/* 🔴 ความซื่อสัตย์: บอกตรงๆ ว่าทำไมไม่ให้เลือกจากทะเบียนสินค้า */}
         <div style={{ fontSize: 11, color: 'var(--text2)', background: 'var(--bg2)', borderRadius: 'var(--r-md)', padding: '6px 9px' }}>
-          ℹ️ งานใหม่ยังไม่มีเลข MAT (SAP ยังไม่ออก) — ระบบ<b>{tr('ไม่สร้างพาร์ทลงทะเบียนสินค้าให้')}</b>
-          เพราะพาร์ทอาจยังไม่เกิดจริง · เก็บ Part No. ไว้บนใบนี้ก่อน พอเลข MAT ออกค่อยผูกเข้าระบบทีหลัง
+          ℹ️ {tr("งานใหม่ยังไม่มีเลข MAT (SAP ยังไม่ออก) — ระบบ")}<b>{tr('ไม่สร้างพาร์ทลงทะเบียนสินค้าให้')}</b>
+          {tr("เพราะพาร์ทอาจยังไม่เกิดจริง · เก็บ Part No. ไว้บนใบนี้ก่อน พอเลข MAT ออกค่อยผูกเข้าระบบทีหลัง")}
         </div>
 
         <div style={row}>
@@ -167,7 +167,7 @@ export default function TrialBookingModal({ lineName, dies = [], onClose, onAdd 
           <span style={{ fontSize: 11.5, color: estMin > 0 ? 'var(--text2)' : '#f59e0b', marginRight: 'auto' }}>
             {estMin > 0
               ? `${tr("จะจองเวลาเครื่อง")} ${Math.floor(estMin / 60)}:${String(estMin % 60).padStart(2, '0')} ${tr("ชม. ต่อท้ายคิว")}`
-              : '⚠️ ยังไม่ได้ระบุเวลา — วางลงไทม์ไลน์ไม่ได้'}
+              : tr("⚠️ ยังไม่ได้ระบุเวลา — วางลงไทม์ไลน์ไม่ได้")}
           </span>
           <button onClick={onClose}>{tr('ยกเลิก')}</button>
           <button onClick={submit} style={{ background: 'var(--accent)', color: 'var(--accent-ink)', fontWeight: 800 }}>

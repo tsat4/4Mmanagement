@@ -76,7 +76,7 @@ const S = {
 function QaPointCard({ p, onChange, onDelete, isPinning, onPinToggle, onUnpin, hasImage, methodHist, calcOptions, calcIssues }) {
   const isVar = p.item_type === 'variable';
   return (
-    <PointCardShell label={p.balloon_no || '?'} caption="จุดตรวจชิ้นงาน" pinned={p.pos_x != null}
+    <PointCardShell label={p.balloon_no || '?'} caption={tr("จุดตรวจชิ้นงาน")} pinned={p.pos_x != null}
       isPinning={isPinning} canPin={hasImage} onPinToggle={onPinToggle} onUnpin={onUnpin} onDelete={onDelete}
       inactive={!p.is_active}
       /* 🔴 แนบรูปแล้วต้องเห็นพรีวิวทันที — เดิมเก็บแต่ `_imgFile` ⇒ จอยังเขียน "แนบรูปจุดนี้"
@@ -462,14 +462,14 @@ export default function QaPointsEditor({ part, focusItemId, methodHist, writeChe
 
   return (
     <InspectEditorModal wide={wide} bodyRef={bodyRef} onClose={onClose} onSave={handleSave} saving={saving}
-      title={`${tr("ตั้งค่าจุดตรวจ")} — ${part.part_no || part.part_name || tr('ชิ้นงาน')}`} subtitle={[part.part_name, part.customer].filter(Boolean).join(' · ') || 'ชิ้นงาน'}>
+      title={`${tr("ตั้งค่าจุดตรวจ")} — ${part.part_no || part.part_name || tr('ชิ้นงาน')}`} subtitle={[part.part_name, part.customer].filter(Boolean).join(' · ') || tr("ชิ้นงาน")}>
       {loading ? (
         <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>{tr('กำลังโหลด…')}</div>
       ) : loadErr ? (
         <div style={{ padding: 16, color: 'var(--red)', fontWeight: 700 }}>{tr('⚠️ โหลดข้อมูลไม่สำเร็จ (')}{loadErr}) — {tr("ปิดแล้วเปิดใหม่ · ยังไม่ได้แก้อะไร")}</div>
       ) : (
         <PinWorkspace twoCol={wide} stickyRef={stickyRef}
-          boardTitle="Drawing / รูปชิ้นงาน (หลายแผ่น) + จุดตรวจ"
+          boardTitle={tr("Drawing / รูปชิ้นงาน (หลายแผ่น) + จุดตรวจ")}
           boardBadge={pinnedCount > 0 ? `📍 ${pinnedCount}/${points.length} ${tr("จุดวางแล้ว")}` : null}
           board={(
             <SpinAnnotator subject="part" spinnable={false} acceptPdf
@@ -506,7 +506,7 @@ export default function QaPointsEditor({ part, focusItemId, methodHist, writeChe
           ))}
           {points.length === 0 && (
             <div style={{ padding: 20, textAlign: 'center', color: 'var(--muted)', fontSize: 13, border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)' }}>
-              ยังไม่มีจุดตรวจ — กด “+ เพิ่มจุดตรวจ” แล้วกด 🔘 วางตำแหน่ง → แตะบนรูป
+              {tr("ยังไม่มีจุดตรวจ — กด “+ เพิ่มจุดตรวจ” แล้วกด 🔘 วางตำแหน่ง → แตะบนรูป")}
             </div>
           )}
         </PinWorkspace>

@@ -132,14 +132,13 @@ export default function LineFlowPanel({ lineName, lines = [], canEdit = false })
         <div>
           {missing ? (
             <div style={{ fontSize: 12, color: '#f59e0b', lineHeight: 1.6 }}>
-              ⚠️ ยังไม่ได้ apply migration <code>20260819_line_flow_links.sql</code> — แจ้ง admin ให้รันก่อน แล้วแผงนี้จะใช้งานได้
+              ⚠️ {tr("ยังไม่ได้")} apply migration <code>20260819_line_flow_links.sql</code> — {tr("แจ้ง admin ให้รันก่อน แล้วแผงนี้จะใช้งานได้")}
             </div>
           ) : (
             <>
               <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.6, marginBottom: 10 }}>
-                ใช้ตอบว่า <b>{tr('“หยุดที่ไลน์นี้ กระทบไลน์ไหนบ้าง”')}</b> — ระบบไม่เดาให้ ต้องตั้งเอง
-                · <b>buffer</b> คือจุดพักระหว่างกลาง ยิ่งมีมาก ปลายน้ำยิ่งทนต้นน้ำหยุดได้นาน
-                (ไม่กรอก = ระบบบอกแค่ว่าเชื่อมกัน ไม่ประเมินเวลา)
+                {tr("ใช้ตอบว่า")} <b>{tr('“หยุดที่ไลน์นี้ กระทบไลน์ไหนบ้าง”')}</b> — {tr("ระบบไม่เดาให้ ต้องตั้งเอง")}
+                · <b>buffer</b> {tr("คือจุดพักระหว่างกลาง ยิ่งมีมาก ปลายน้ำยิ่งทนต้นน้ำหยุดได้นาน (ไม่กรอก = ระบบบอกแค่ว่าเชื่อมกัน ไม่ประเมินเวลา")})
               </div>
 
               <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text)', marginBottom: 2 }}>{tr('➡️ ไลน์นี้ป้อนงานให้ (')}{down.length})</div>
@@ -181,8 +180,7 @@ export default function LineFlowPanel({ lineName, lines = [], canEdit = false })
                   {(childrenOf[form.other] || []).length > 0 && (
                     /* เตือน ไม่บล็อก — แต่ต้องบอกผลที่ตามมา + เสนอไลน์ย่อยให้กดได้เลย (ห้ามเป็นทางตัน) */
                     <div style={{ fontSize: 11, color: '#f59e0b', lineHeight: 1.7, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 'var(--r-md)', padding: '7px 9px' }}>
-                      <b>⚠ {form.other} {tr('เป็นระดับแผนก ไม่ใช่ไลน์ผลิต')}</b> — งานจริงเกิดที่ไลน์ย่อย
-                      และไลน์แม่ไม่มีสินค้า/CT ของตัวเอง ⇒ ระบบจะประเมิน <b>{tr('“กันได้กี่นาที”')}</b> ให้เส้นนี้ไม่ได้เลย
+                      <b>⚠ {form.other} {tr('เป็นระดับแผนก ไม่ใช่ไลน์ผลิต')}</b> — {tr("งานจริงเกิดที่ไลน์ย่อย และไลน์แม่ไม่มีสินค้า/CT ของตัวเอง ⇒ ระบบจะประเมิน")} <b>{tr('“กันได้กี่นาที”')}</b> {tr("ให้เส้นนี้ไม่ได้เลย")}
                       <div style={{ marginTop: 5, display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
                         <span style={{ color: 'var(--muted)' }}>{tr('เลือกไลน์ย่อยแทน:')}</span>
                         {(childrenOf[form.other] || []).map(k => (
@@ -191,7 +189,7 @@ export default function LineFlowPanel({ lineName, lines = [], canEdit = false })
                         ))}
                       </div>
                       <div style={{ marginTop: 4, color: 'var(--muted)' }}>
-                        ป้อนให้หลายไลน์ = บันทึกทีละเส้น (เช่น LASER ➡️ Line 60 แล้วเพิ่ม LASER ➡️ Line 61 อีกเส้น)
+                        {tr("ป้อนให้หลายไลน์ = บันทึกทีละเส้น (เช่น LASER ➡️ Line 60 แล้วเพิ่ม LASER ➡️ Line 61 อีกเส้น")})
                       </div>
                     </div>
                   )}

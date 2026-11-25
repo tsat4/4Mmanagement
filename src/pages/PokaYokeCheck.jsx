@@ -23,6 +23,8 @@ import NoticeBar from '../components/NoticeBar';
 import { tr } from '../utils/i18n';
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 import { askConfirm } from '../utils/askConfirm';
+import { notifyEvent } from '../utils/notifyEvent';
+import WfRoundPanel from '../components/WfRoundPanel';   // ✍️ การเซ็นของรอบ (e-Workflow โหมดผูกเอกสาร · 25/11)   // 🔔 N3 (24/11): ทดสอบไม่ผ่าน = แจ้ง (เดิมเงียบ)
 import { checkWriteRows } from '../utils/dbWrite';
 import { canWriteLine, writeBlockText } from '../utils/writeScope';   // 🔐 ชั้น ③ (19/11 · ออดิท check sheet)
 const NO_LINES = [];
@@ -162,6 +164,19 @@ export default function PokaYokeCheck() {
     if (error) { toast.error((tr('บันทึกไม่สำเร็จ') + ': ') + error.message); return; }
     setChecks(m => ({ ...m, [device.id]: data }));
     dropFail(device.id);
+    /* 🔔 N3 (24/11 · คำสั่ง user): อุปกรณ์กันผิดพลาด "จับของเสียไม่ได้" = ของต้องสงสัยไหลต่อ ⇒ แจ้งทันที
+       ผู้รับตามทะเบียน `pokayoke_fail` (supervisor + QA ของส่วนงานไลน์ · แก้ที่ /notification-config)
+       · แจ้งเฉพาะตอนเปลี่ยนเป็น "ไม่ผ่าน" (บันทึกซ้ำ/แก้โน้ตของใบที่ไม่ผ่านอยู่แล้ว = ไม่ยิงซ้ำ) */
+    if (row.result === 'fail' && prev.result !== 'fail') notifyEvent({
+      event: 'pokayoke_fail', type: 'error', ref_table: 'pokayoke_checks', ref_id: data?.id,
+      line_name: device.line_name, actor: row.checker_name || fullName,
+      link: `/daily-checker?tab=pokayoke`,
+      lines: [
+        `🏭 ${tr("ไลน์")}: ${device.line_name} · ${selShift === 'night' ? tr('กะดึก') : tr('กะเช้า')} · 📅 ${selDate}`,
+        `🛡️ ${device.code ? `${device.code} · ` : ''}${device.name}${device.station ? ` (${device.station})` : ''}`,
+        `❌ ${tr("ทดสอบไม่ผ่าน")}: ${row.note || '-'}`,
+      ],
+    });
   };
 
   // ── ทะเบียนอุปกรณ์ ──
@@ -245,9 +260,14 @@ export default function PokaYokeCheck() {
       )}
       {ran == null && runs && (
         <NoticeBar tone="warn" style={{ marginBottom: 10 }}>
-          อ่านข้อมูลการเปิดกะไม่สำเร็จ — บอกไม่ได้ว่ากะนี้ไลน์นี้เดินหรือไม่ ⇒ ที่ว่างอยู่อาจเป็น "ไม่ได้ผลิต" ไม่ใช่ "ขาดตรวจ"
+          {tr("อ่านข้อมูลการเปิดกะไม่สำเร็จ — บอกไม่ได้ว่ากะนี้ไลน์นี้เดินหรือไม่ ⇒ ที่ว่างอยู่อาจเป็น \"ไม่ได้ผลิต\" ไม่ใช่ \"ขาดตรวจ")}"
         </NoticeBar>
       )}
+
+      {/* ✍️ 25/11 (คำสั่ง user "ทุกเอกสาร issued/checked/approved คุมด้วย e-workflow"): ใครเซ็น/ความถี่ไหน = ตั้งที่ /workflow-designer
+          · เซ็นแล้ว = ผลทดสอบในรอบนั้นถูกล็อกฝั่ง DB (trigger) · แก้ = ผู้มีสิทธิ์กดเพิกถอนพร้อมเหตุผล */}
+      <WfRoundPanel subject="pokayoke" line={selLine} date={selDate} shift={selShift}
+        hasData={done > 0} summary={`${tr('ทดสอบแล้ว')} ${done}/${activeDevs.length}${failN ? ` · ${tr('ไม่ผ่าน')} ${failN}` : ''}`} />
 
       {/* สรุป */}
       {activeDevs.length > 0 && (
@@ -263,7 +283,7 @@ export default function PokaYokeCheck() {
         <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>{tr('กำลังโหลด...')}</div>
       ) : activeDevs.length === 0 ? (
         <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)', background: 'var(--card-surf)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-lg)' }}>
-          {tr("ยังไม่มีอุปกรณ์ poka-yoke ของไลน์")} {selLine} — {canManage ? 'กด "➕ เพิ่มอุปกรณ์"' : 'ให้หัวหน้าลงทะเบียนอุปกรณ์ก่อน'}
+          {tr("ยังไม่มีอุปกรณ์ poka-yoke ของไลน์")} {selLine} — {canManage ? tr("กด \"➕ เพิ่มอุปกรณ์\"") : tr("ให้หัวหน้าลงทะเบียนอุปกรณ์ก่อน")}
         </div>
       ) : (
         <div style={{ display: 'grid', gap: 8 }}>
@@ -328,7 +348,7 @@ export default function PokaYokeCheck() {
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14 }}>
           <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(96vw, 560px)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-              <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{dEditing.id ? '✏️ แก้ไข' : '➕ เพิ่ม'}{tr('อุปกรณ์ Poka-Yoke —')} {dEditing.line_name}</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{dEditing.id ? tr("✏️ แก้ไข") : tr("➕ เพิ่ม")}{tr('อุปกรณ์ Poka-Yoke —')} {dEditing.line_name}</div>
               <button onClick={() => setDEditing(null)} style={{ background: 'none', border: 'none', fontSize: 20, color: 'var(--muted)', cursor: 'pointer' }}>✕</button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -338,7 +358,7 @@ export default function PokaYokeCheck() {
               </div>
               <div><div style={lb}>{tr('จุดงาน/ตำแหน่ง')}</div>
                 {/* เลือกจาก workstations ของไลน์ (ทะเบียนสถานี) — "ระบุเอง" เฉพาะอุปกรณ์ที่ไม่อยู่ประจำสถานี · ค่าเก่าที่ไม่ตรงทะเบียนโชว์ในโหมดระบุเอง · 2026-09-07 */}
-                <SelectOrFree value={dEditing.station || ''} options={stations} placeholder={tr('— ไม่ระบุสถานี —')} freeLabel="✏️ ระบุเอง (ไม่อยู่ประจำสถานี)" freePlaceholder="ระบุเอง (อุปกรณ์ที่ไม่ได้อยู่ประจำสถานี)"
+                <SelectOrFree value={dEditing.station || ''} options={stations} placeholder={tr('— ไม่ระบุสถานี —')} freeLabel={tr("✏️ ระบุเอง (ไม่อยู่ประจำสถานี)")} freePlaceholder={tr("ระบุเอง (อุปกรณ์ที่ไม่ได้อยู่ประจำสถานี)")}
                   onChange={v => setDEditing(p => ({ ...p, station: v }))} style={{ width: '100%' }} />
               </div>
               <div><div style={lb}>{tr('วิธีทดสอบ')}</div><input value={dEditing.test_method || ''} onChange={e => setDEditing(p => ({ ...p, test_method: e.target.value }))} style={{ width: '100%' }} placeholder={tr('เช่น ใส่ชิ้น NG แล้วเครื่องต้อง alarm/ไม่ปล่อยผ่าน')} /></div>

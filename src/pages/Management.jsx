@@ -1189,7 +1189,7 @@ export default function Management() {
             {isMobile ? (worker.employees?.name ?? '?') : (worker.employees?.name?.split(' ')[0] ?? '?')}
           </div>
           <div style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 700, background: 'var(--amber-dim)', borderRadius: 'var(--r-xs)', padding: isMobile ? '2px 6px' : '1px 6px', marginTop: 2, display: isMobile ? 'inline-block' : 'block', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: isMobile ? 140 : '100%', whiteSpace: 'nowrap', textAlign: 'center' }}>
-            {task?.task_type || 'งานพิเศษ'}
+            {task?.task_type || tr("งานพิเศษ")}
           </div>
           {worker.employees?.section && (
             <div style={{ fontSize: 11, color: 'var(--blue)', background: 'var(--blue-dim)', borderRadius: 'var(--r-xs)', padding: isMobile ? '1px 6px' : '1px 6px', marginTop: 2, display: isMobile ? 'inline-block' : 'block', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: isMobile ? 140 : '100%', whiteSpace: 'nowrap', textAlign: 'center' }}>
@@ -1255,7 +1255,7 @@ export default function Management() {
         {helperMap[worker.employee_id] && (
           <div title={`${tr("ยืมตัวจากไลน์")} ${allLines.find(l => l.id === worker.employees?.line_id)?.name || tr('อื่น')} ${tr("มาช่วยกะนี้")}`}
             style={{ fontSize: 11, fontWeight: 800, color: 'var(--blue)', background: 'var(--blue-dim)', borderRadius: 'var(--r-xs)', padding: '1px 6px', flexShrink: 0, whiteSpace: 'nowrap' }}>
-            ยืมตัว
+            {tr("ยืมตัว")}
           </div>
         )}
         {/* assign to special task */}
@@ -1417,17 +1417,17 @@ export default function Management() {
           <LineSelect lines={lines} value={selectedLine} placeholder={null} onChange={setSelectedLine} includeSupport />
           {selectedLine && (
             <Segmented value={viewShift} onChange={setViewShift} label={tr('กะที่ดู')}
-              options={[{ value: 'day', label: 'กะเช้า' }, { value: 'night', label: 'กะดึก' }]} />
+              options={[{ value: 'day', label: tr("กะเช้า") }, { value: 'night', label: tr("กะดึก") }]} />
           )}
           {selectedLine && (
             <span title={tr('เปลี่ยนวันที่ได้ที่แถบ Heijunka')} style={{ fontSize: 12, color: isLiveView ? 'var(--muted)' : 'var(--blue)', fontWeight: isLiveView ? 400 : 700, whiteSpace: 'nowrap' }}>
-              {boardDate}{boardDate === todayWorkDate ? ' (วันนี้)' : ' · ย้อนหลัง'}
+              {boardDate}{boardDate === todayWorkDate ? tr(" (วันนี้)") : tr(" · ย้อนหลัง")}
             </span>
           )}
           {boardWouldSquish && (
             <span title={tr('kanban เยอะ — สลับดูทีละมุมเต็มจอ')} style={{ display: 'contents' }}>
               <Segmented value={mainView} onChange={switchView} label={tr('มุมมอง')}
-                options={[{ value: 'map', label: 'ผังไลน์ + คน' }, { value: 'heijunka', label: 'Heijunka' }]} />
+                options={[{ value: 'map', label: tr("ผังไลน์ + คน") }, { value: 'heijunka', label: 'Heijunka' }]} />
             </span>
           )}
         </>} />
@@ -1460,7 +1460,7 @@ export default function Management() {
           {/* ช่องเลือกไลน์ย้ายขึ้นแถบกรองใต้หัวเพจแล้ว (09/11) — ที่นี่เหลือคำเตือนอ่านทะเบียนไม่ได้ + หมายเหตุไลน์ย่อย/ไลน์หลัก */}
           {lineLoadErr && (
             <div style={{ fontSize: 11, color: 'var(--danger)', marginTop: 5, lineHeight: 1.5 }}>
-              ⚠️ อ่านทะเบียนไลน์ผลิตไม่สำเร็จ — รายการที่เห็นอาจไม่ครบ (ไม่ใช่ว่าไลน์ถูกลบ)
+              ⚠️ {tr("อ่านทะเบียนไลน์ผลิตไม่สำเร็จ — รายการที่เห็นอาจไม่ครบ (ไม่ใช่ว่าไลน์ถูกลบ")})
               <button onClick={() => retryLinesRef.current?.()}
                 style={{ marginLeft: 6, fontSize: 11, padding: '1px 8px', borderRadius: 'var(--r-md)', cursor: 'pointer',
                          background: 'var(--bg3-surf)', color: 'var(--text)', border: '1px solid var(--border2)' }}>
@@ -1501,7 +1501,7 @@ export default function Management() {
               background: 'var(--blue-dim)', border: '1px solid var(--blue-line)' }}>
               {!isLiveView && (
                 <div style={{ fontSize: 11, color: 'var(--blue)', lineHeight: 1.5 }}>
-                  โหมดย้อนหลัง — <b>{tr('อ่านอย่างเดียว จัดคนไม่ได้')}</b> · แสดงจุดงานสุดท้ายของกะนั้น
+                  {tr("โหมดย้อนหลัง")} — <b>{tr('อ่านอย่างเดียว จัดคนไม่ได้')}</b> · {tr("แสดงจุดงานสุดท้ายของกะนั้น")}
                   <button onClick={() => { setBoardDate(todayWorkDate); setViewShift(getCurrentShift()); }}
                     style={{ marginLeft: 6, padding: '2px 9px', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 700, cursor: 'pointer', background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text2)' }}>
                     {tr('⟳ กลับมาดูสด')}
@@ -1755,8 +1755,8 @@ export default function Management() {
             }
             /* 🖼️ กรอบคิวตามอุดมคติ — สูตรเดียวทั้งระบบ (`planFramePct`) **ห้ามคิดพิกัดเองในหน้า**
                เดิมก๊อปไว้ 2 หน้าแล้วสีเพี้ยนกัน (13/11) ⇒ ย้ายมาที่เดียว · ดู heijunkaQueue.js */
-            const { planLeftPct, planWidthPct, planSlipped } = planFramePct(item, hs, pctPerMs);
-            return { o: item.o, leftPct, widthPct, tailLeftPct, tailWidthPct, realEndMs: item.endMs, isDelayed: item.isDelayed, isLateDone: item.isLateDone, startMs: item.startMs, occupiedEndMs: item.occupiedEndMs, planLeftPct, planWidthPct, planStartMs: item.planStartMs, plannedEndMs: item.plannedEndMs, planSlipped };
+            const { planLeftPct, planWidthPct, planSlipped, planUnknown } = planFramePct(item, hs, pctPerMs);
+            return { o: item.o, leftPct, widthPct, tailLeftPct, tailWidthPct, realEndMs: item.endMs, isDelayed: item.isDelayed, isLateDone: item.isLateDone, startMs: item.startMs, occupiedEndMs: item.occupiedEndMs, planLeftPct, planWidthPct, planStartMs: item.planStartMs, plannedEndMs: item.plannedEndMs, planSlipped, planUnknown };
           };
 
           // การ์ด = `buildBoardCards()` (utils/boardCards.js) ที่เดียว — ห้ามเขียน buildCards ในหน้าอีก (2026-10-19)
@@ -1983,7 +1983,7 @@ export default function Management() {
                           color: anyOpen ? 'var(--green)' : '#888' }}>
                           {multi && <span style={{ fontWeight: 800 }}>{ln} · </span>}
                           {list.map(sx => `${sx.shift === 'day' ? '☀️' : '🌙'}${sx.status === 'open' ? '●' : '✓'}`).join(' ')}
-                          {anyOpen ? ' Live' : ' ปิด'}
+                          {anyOpen ? ' Live' : tr(" ปิด")}
                         </span>
                       );
                     });
@@ -2024,6 +2024,22 @@ export default function Management() {
                     <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>{tr(item.label)}</span>
                   </div>
                 ))}
+                {/* 🖼️ 24/11 · กรอบเส้นประไม่เคยมีคำอธิบายในแถบนี้ ⇒ คนอ่านว่าเป็น "แผนจากทีมวางแผน" */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}
+                  title={tr('กรอบเส้นประ = คิวตามอุดมคติที่ระบบไล่ให้จากใบที่เปิดไว้แล้ว — ไม่ใช่แผนของทีมวางแผน')}>
+                  <span style={{ width: 18, height: 18, borderRadius: 'var(--r-xs)', border: '2px dashed var(--text)', flexShrink: 0 }} />
+                  <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>{tr('หลุดกรอบคิว')}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}
+                  title={tr('ใบนี้อยู่ในกรอบคิวที่ระบบไล่ให้ — กรอบทับแท่งพอดี')}>
+                  <span style={{ width: 18, height: 18, borderRadius: 'var(--r-xs)', border: '1px dashed var(--muted)', opacity: 0.35, flexShrink: 0 }} />
+                  <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>{tr('อยู่ในกรอบคิว')}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}
+                  title={tr('ยังไม่รู้ cycle time ⇒ คำนวณกรอบคิวให้ไม่ได้ — ไม่ใช่ "อยู่ในกรอบ"')}>
+                  <span style={{ width: 18, height: 18, borderLeft: '2px dotted var(--muted)', opacity: 0.8, flexShrink: 0 }} />
+                  <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>{tr('คำนวณกรอบคิวไม่ได้')}</span>
+                </div>
               </div>
               )}
               {/* 🧠 Smart planner — คาดการณ์เวลาเสร็จ / คำแนะนำ OT */}
@@ -2092,7 +2108,7 @@ export default function Management() {
                               const room = (i + 1 < positioned.length ? positioned[i + 1].leftPct : 100) - positioned[i].leftPct;
                               positioned[i].widthPct = Math.max(0, Math.min(Math.max(positioned[i].widthPct, Math.min(minPct, room)), room));
                             }
-                            return positioned.map(({ o, leftPct, widthPct, tailLeftPct, tailWidthPct, realEndMs, isDelayed, isLateDone, startMs, occupiedEndMs, planLeftPct, planWidthPct, planStartMs, plannedEndMs, planSlipped }, oi) => {
+                            return positioned.map(({ o, leftPct, widthPct, tailLeftPct, tailWidthPct, realEndMs, isDelayed, isLateDone, startMs, occupiedEndMs, planLeftPct, planWidthPct, planStartMs, plannedEndMs, planSlipped, planUnknown }, oi) => {
                             if (leftPct >= 100) return null;
                             const sc = isLateDone ? '#f97316' : o.isDone ? '#22c55e' : isDelayed ? '#ef4444' : o.isCarry ? '#f59e0b' : o.is_backfill ? '#6b7280' : '#4d9fff';
                             const icon = o.isDone ? (isLateDone ? '✓!' : '✓') : isDelayed ? '!' : o.isCarry ? '↷' : o.is_backfill ? '⏪' : o.is_manual ? '✍️' : '▶';
@@ -2148,6 +2164,7 @@ export default function Management() {
                               </div>
                               {/* 🖼️ กรอบคิวตามอุดมคติของใบนี้ — ตัววาดตัวเดียวทั้งระบบ (ห้ามวาดเองในหน้า) */}
                               <PlanSlipFrame planLeftPct={planLeftPct} planWidthPct={planWidthPct} planSlipped={planSlipped}
+                              planUnknown={planUnknown} leftPct={leftPct}
                                 planStartMs={planStartMs} plannedEndMs={plannedEndMs}
                                 startMs={startMs} realEndMs={realEndMs} occupiedEndMs={occupiedEndMs} fmtMs={fmtMs} />
                               {/* หางเงาแดง — ยังไม่ปิดงานแม้เลยกำหนดแล้ว ครองไลน์อยู่จนถึงตอนนี้ ดันใบถัดไปไปต่อท้าย */}
@@ -2180,8 +2197,8 @@ export default function Management() {
                     {/* Hour header — เวลาคู่: บรรทัดบน ☀️ 08–19 / บรรทัดล่าง 🌙 20–07 คอลัมน์เดียวกัน */}
                     <div style={{ display: 'flex', borderBottom: '1px solid var(--border2)', background: 'var(--bg2)', position: 'relative' }}>
                       <div style={{ width: LEFT_W, flexShrink: 0, borderRight: '1px solid var(--border2)', padding: '3px 8px', fontSize: 11, fontWeight: 700, color: 'var(--muted)', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 1, ...(isMobile ? { position: 'sticky', left: 0, zIndex: 3, background: 'var(--bg2)' } : null) }}>
-                        <span>{tr('กะเช้า')}{isMobile ? '' : ' (แถบบน)'}</span>
-                        <span>{tr('กะดึก')}{isMobile ? '' : ' (แถบล่าง)'}</span>
+                        <span>{tr('กะเช้า')}{isMobile ? '' : tr(" (แถบบน)")}</span>
+                        <span>{tr('กะดึก')}{isMobile ? '' : tr(" (แถบล่าง)")}</span>
                       </div>
                       {/* ป้ายเวลาปัจจุบัน ลอยตรงตำแหน่ง playhead (คอลัมน์ใช้ร่วม 2 กะ — ไอคอนบอกว่าอยู่กะไหน) */}
                       {(() => {
@@ -3126,11 +3143,11 @@ export default function Management() {
                   setIsSavingDoc(false);
                 }
               }} style={{ flex: 2, padding: 12, background: 'var(--accent)', color: 'var(--accent-ink)', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 14, opacity: isSavingDoc ? 0.6 : 1, cursor: isSavingDoc ? 'not-allowed' : 'pointer' }}>
-                {isSavingDoc ? 'กำลังบันทึก...' : 'ส่งอนุมัติ'}
+                {isSavingDoc ? tr("กำลังบันทึก...") : tr("ส่งอนุมัติ")}
               </button>
               <button onClick={() => { if (!isSavingDoc) { setPendingDocModal(null); setDocImageFile(null); setDocImagePreview(null); } }}
                 style={{ flex: 1, padding: 12, background: 'var(--bg3-surf)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
-                ยกเลิก
+                {tr("ยกเลิก")}
               </button>
             </div>
           </div>
@@ -3206,8 +3223,8 @@ export default function Management() {
                     background: log4MForm.subtype === 'replace' ? 'var(--green-dim)' : 'var(--red-dim)',
                     color: log4MForm.subtype === 'replace' ? 'var(--green)' : 'var(--red)' }}>
                     {log4MForm.subtype === 'replace'
-                      ? '✅ ระดับ: ไม่รุนแรง — หัวหน้างานอนุมัติได้'
-                      : '🔴 ระดับ: รุนแรง — ต้องผ่าน QA'}
+                      ? tr("✅ ระดับ: ไม่รุนแรง — หัวหน้างานอนุมัติได้")
+                      : tr("🔴 ระดับ: รุนแรง — ต้องผ่าน QA")}
                   </div>
                 </div>
               )}
@@ -3226,7 +3243,7 @@ export default function Management() {
                 return (
                   <div>
                     <label style={{ ...labelSt, color: 'var(--blue)' }}>
-                      {log4MForm.category === 'Man' ? 'รูปหลักฐาน OJT' : 'รูปรายละเอียดการเปลี่ยนแปลง'} <span style={{ color: 'var(--red)' }}>*</span>
+                      {log4MForm.category === 'Man' ? tr("รูปหลักฐาน OJT") : tr("รูปรายละเอียดการเปลี่ยนแปลง")} <span style={{ color: 'var(--red)' }}>*</span>
                     </label>
                     <div style={{ border: `2px dashed ${reqImageFile ? 'var(--blue)' : 'var(--border2)'}`, borderRadius: 'var(--r-md)', padding: '10px 12px', background: reqImageFile ? 'var(--blue-dim)' : 'var(--bg2)', cursor: 'pointer', textAlign: 'center', position: 'relative' }}
                       onClick={() => document.getElementById('req-img-input').click()}>
@@ -3260,7 +3277,7 @@ export default function Management() {
                 </button>
                 <button onClick={() => { if (!isSaving4M) { setShow4MModal(null); setLog4MForm({ category: 'Man', description: '' }); setReqImageFile(null); setReqImagePreview(null); } }}
                   style={{ flex: 1, padding: 12, background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 8, cursor: isSaving4M ? 'not-allowed' : 'pointer' }}>
-                  ยกเลิก
+                  {tr("ยกเลิก")}
                 </button>
               </div>
             </div>
@@ -3532,12 +3549,12 @@ function PointDetailCard({ detail, alarms, onClose }) {
         )}
         {notRegistered && (
           <div style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'center', background: 'var(--bg3-surf)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: '10px 12px', marginTop: infoRows.length ? 8 : 0 }}>
-            ยังไม่ลงทะเบียนในฐานข้อมูล
+            {tr("ยังไม่ลงทะเบียนในฐานข้อมูล")}
           </div>
         )}
         {machine && !loading && !jig && (
           <div style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'center', padding: '8px 0 2px' }}>
-            ยังไม่มีข้อมูล Jig/PM ผูกกับเครื่องนี้
+            {tr("ยังไม่มีข้อมูล Jig/PM ผูกกับเครื่องนี้")}
           </div>
         )}
       </div>

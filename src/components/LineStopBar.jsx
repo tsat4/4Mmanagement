@@ -15,8 +15,8 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 import React from 'react';
 
-import { tr } from '../utils/i18n';
-const fmtHr = (h) => (h == null ? '—' : `${Number(h).toLocaleString('th-TH', { maximumFractionDigits: 1 })} ${tr("ชม.")}`);
+import { tr, dateLocale } from '../utils/i18n';
+const fmtHr = (h) => (h == null ? '—' : `${Number(h).toLocaleString(dateLocale(), { maximumFractionDigits: 1 })} ${tr("ชม.")}`);
 
 /**
  * @param {object} p

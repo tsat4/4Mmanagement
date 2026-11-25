@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useContext, useRef } from 'react';
+import { TRANSPORT_TABS } from '../utils/navSubTabs';
 import ReadOnlyNote from '../components/ReadOnlyNote';
 import { supabase, supabaseDR } from '../supabaseClient';
 import { UserContext } from '../App';
@@ -15,6 +16,7 @@ import { checkWrite } from '../utils/dbWrite';
 import { useOrgSections } from '../utils/useOrgSections';
 
 import { tr } from '../utils/i18n';
+const TT = Object.fromEntries(TRANSPORT_TABS.map(t => [t.key, t.label]));
 /* ─── TRANSPORT — มอบหมายขนส่ง (Teiki-bin phase 1: ก) ─────────────────────────
    ชั้น carrier (คนขับ/ผู้ขน) + สกิลยานพาหนะ + มอบหมาย carrier ให้ "รอบส่ง" ที่มีอยู่
    ต่อยอดบน kanban_delivery_rounds ไม่สร้างคิว/บอร์ดใหม่ · ตาราง DR (anon)
@@ -28,7 +30,7 @@ export default function Transport() {
   const { role, fullName } = useContext(UserContext);
   const canManage = can('transport', 'manage', role);
 
-  const [tab, setTab] = useTabParam(['assign', 'route', 'carriers'], 'assign');
+  const [tab, setTab] = useTabParam(TRANSPORT_TABS.map(t => t.key), 'assign');
   const [vehicles, setVehicles] = useState([]);
   const [carriers, setCarriers] = useState([]);
   const [rounds, setRounds] = useState([]);
@@ -183,20 +185,21 @@ export default function Transport() {
         title={tr('มอบหมายขนส่ง (Transport)')} icon="🚚"
         sub={tr('มอบหมายคนขับ/ผู้ขน (carrier) ให้รอบส่งภายในของวันนี้ · ยึดรอบส่งที่ตั้งไว้แล้ว (📦 Line Stock → รอบจัดส่ง) · เฟส 1')}
         tabs={[
-          { key: 'assign', label: `🗓️ ${tr("มอบหมายวันนี้")} (${nAssigned}/${nRounds})` },
-          { key: 'route', label: `🗺️ ${tr("เส้นทางรอบส่ง")} (${nRoutes})` },
-          { key: 'carriers', label: `👷 ${tr("คนขับ/ยานพาหนะ")} (${carriers.filter(c => c.is_active).length})` },
+          /* ชื่อแท็บจากทะเบียนกลาง `navSubTabs.js` (24/11 — แผงเมนูวาดเป็นข้อย่อย) · ตัวนับต่อท้ายเฉพาะในหน้า */
+          { key: 'assign', label: `🗓️ ${tr(TT.assign)} (${nAssigned}/${nRounds})` },
+          { key: 'route', label: `🗺️ ${tr(TT.route)} (${nRoutes})` },
+          { key: 'carriers', label: `👷 ${tr(TT.carriers)} (${carriers.filter(c => c.is_active).length})` },
         ]}
         tab={tab} onTab={setTab}
       />
 
-      <ReadOnlyNote show={!canManage} role={role} what="มอบหมายคนขับ/แก้ทะเบียนยานพาหนะ"
+      <ReadOnlyNote show={!canManage} role={role} what={tr("มอบหมายคนขับ/แก้ทะเบียนยานพาหนะ")}
         permKey="transport:manage" />
 
       {tab === 'assign' && (
         byLine.length === 0 ? (
           <div style={{ ...card, padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
-            ยังไม่มีรอบจัดส่ง — ตั้งค่าที่ 📦 Line Stock → ⏰ รอบจัดส่ง
+            {tr("ยังไม่มีรอบจัดส่ง — ตั้งค่าที่ 📦 Line Stock → ⏰ รอบจัดส่ง")}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -228,7 +231,7 @@ export default function Transport() {
                             </select>
                           ) : (
                             <div style={{ fontSize: 12.5, fontWeight: 700, color: carrier ? 'var(--text)' : 'var(--muted)' }}>
-                              {carrier ? `👷 ${carrier.name}` : '— ยังไม่มอบหมาย —'}
+                              {carrier ? `👷 ${carrier.name}` : tr("— ยังไม่มอบหมาย —")}
                             </div>
                           )}
                           {carrier && carrier.vehicles?.length > 0 && (
@@ -263,7 +266,7 @@ export default function Transport() {
             )}
           </div>
           {carriers.length === 0 ? (
-            <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>ยังไม่มีคนขับ — กด "➕ เพิ่มคนขับ"</div>
+            <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr("ยังไม่มีคนขับ — กด \"➕ เพิ่มคนขับ")}"</div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(min(260px, 100%), 1fr))', gap: 10 }}>
               {carriers.map(c => (
@@ -273,7 +276,7 @@ export default function Transport() {
                     {canManage && <button className="tbtn" onClick={() => setEditCarrier(c)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13 }}>✏️</button>}
                   </div>
                   <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>
-                    {c.emp_code ? `${c.emp_code} · ` : ''}{SHIFTS.find(s => s[0] === c.shift)?.[1] || 'ทุกกะ'}{c.section ? ` · ${c.section}` : ''}{!c.is_active ? ' · ⛔ ปิด' : ''}
+                    {c.emp_code ? `${c.emp_code} · ` : ''}{SHIFTS.find(s => s[0] === c.shift)?.[1] || tr("ทุกกะ")}{c.section ? ` · ${c.section}` : ''}{!c.is_active ? tr(" · ⛔ ปิด") : ''}
                   </div>
                   <div style={{ fontSize: 11.5, color: 'var(--text2)', marginTop: 6 }}>
                     {c.vehicles?.length ? c.vehicles.map(vehLabel).join(' · ') : <span style={{ color: 'var(--muted)' }}>{tr('— ยังไม่ระบุยานพาหนะ —')}</span>}
@@ -420,7 +423,7 @@ function RouteTab({ byLine, stopsByRound, stopNodes, nById, nodes, edges, imageU
 
   if (!hasGraph) return (
     <div style={{ ...card, padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
-      ยังไม่มีถนน/จุดจอดบนผัง — วาดก่อนที่ <b style={{ color: 'var(--text2)' }}>{tr('ตั้งค่าผัง/Floorplan → 📦 Store / AMR')}</b>
+      {tr("ยังไม่มีถนน/จุดจอดบนผัง — วาดก่อนที่")} <b style={{ color: 'var(--text2)' }}>{tr('ตั้งค่าผัง/Floorplan → 📦 Store / AMR')}</b>
     </div>
   );
 
@@ -475,12 +478,12 @@ function RouteTab({ byLine, stopsByRound, stopNodes, nById, nodes, edges, imageU
                             background: isLoad ? 'var(--blue-dim)' : 'var(--green-dim)',
                             color: isLoad ? 'var(--blue)' : 'var(--accent)',
                             border: `1px solid ${isLoad ? 'var(--blue-line)' : 'var(--accent)'}` }}>
-                          {isLoad ? 'รับ' : 'ส่ง'}
+                          {isLoad ? tr("รับ") : tr("ส่ง")}
                         </button>
                       );
                     })()}
                     <span style={{ flex: 1, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {k.icon} {n?.name || n?.line_name || '(จุดไม่มีชื่อ)'}
+                      {k.icon} {n?.name || n?.line_name || tr("(จุดไม่มีชื่อ)")}
                       {broken && <span style={{ color: 'var(--red)', fontSize: 11 }}> {tr('· ⚠ ถนนขาด')}</span>}
                     </span>
                     {canManage && <>
@@ -513,7 +516,7 @@ function RouteTab({ byLine, stopsByRound, stopNodes, nById, nodes, edges, imageU
                             background: mine ? 'var(--accent-dim, var(--green-dim))' : 'var(--bg2)',
                             color: mine ? 'var(--accent)' : 'var(--text2)',
                             border: `1px solid ${mine ? 'var(--accent)' : 'var(--border)'}` }}>
-                          {mine ? ' ' : ''}{nodeKind(n.kind).icon} {n.name || n.line_name || 'จุด'}
+                          {mine ? ' ' : ''}{nodeKind(n.kind).icon} {n.name || n.line_name || tr("จุด")}
                         </button>
                       );
                     })}
@@ -562,7 +565,7 @@ function RouteTab({ byLine, stopsByRound, stopNodes, nById, nodes, edges, imageU
                 </div>
                 {totalMin != null ? (
                   <div style={{ fontSize: 12.5, color: 'var(--text)' }}>
-                    ⏱️ เวลา: <b>{fmtMin(totalMin)}</b>
+                    ⏱️ {tr("เวลา")}: <b>{fmtMin(totalMin)}</b>
                     <span style={{ color: 'var(--muted)' }}> {tr('(วิ่ง')} {fmtMin(moveMin)}{dwellTotal > 0 ? ` + ${tr("แวะ")} ${fmtMin(dwellTotal)}` : ''})</span>
                   </div>
                 ) : <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('⏱️ ตั้งมาตราส่วน + ความเร็ว เพื่อดูเวลา')}</div>}
@@ -600,7 +603,7 @@ function RouteTab({ byLine, stopsByRound, stopNodes, nById, nodes, edges, imageU
         {imageUrl ? (
           <>
           <div style={{ position: 'relative', borderRadius: 'var(--r-lg)', overflow: 'hidden', border: '1px solid var(--border)' }}>
-            <img src={imageUrl} alt="แผนที่เส้นทาง" style={{ display: 'block', width: '100%', height: 'auto' }} />
+            <img src={imageUrl} alt={tr("แผนที่เส้นทาง")} style={{ display: 'block', width: '100%', height: 'auto' }} />
             <div style={{ position: 'absolute', inset: 0, background: 'rgba(6,8,14,0.35)' }} />
             <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
               {/* ถนนทั้งโรงงาน — เห็นครบทุกเส้น เส้นที่ไม่ได้ใช้ = เทาบาง (คำสั่ง user 2026-08-03) */}
@@ -651,22 +654,22 @@ function RouteTab({ byLine, stopsByRound, stopNodes, nById, nodes, edges, imageU
           {/* legend ใต้แผนที่ */}
           <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center', marginTop: 7, fontSize: 11.5, color: 'var(--muted)' }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-              <span style={{ width: 22, height: 3.5, borderRadius: 'var(--r-xs)', background: 'var(--green)', display: 'inline-block' }} /> เส้นทางรอบนี้
+              <span style={{ width: 22, height: 3.5, borderRadius: 'var(--r-xs)', background: 'var(--green)', display: 'inline-block' }} /> {tr("เส้นทางรอบนี้")}
             </span>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-              <span style={{ width: 22, height: 2, borderRadius: 'var(--r-xs)', background: 'var(--muted)', opacity: 0.7, display: 'inline-block' }} /> ถนนทั้งโรงงาน (ไม่ได้ใช้รอบนี้)
+              <span style={{ width: 22, height: 2, borderRadius: 'var(--r-xs)', background: 'var(--muted)', opacity: 0.7, display: 'inline-block' }} /> {tr("ถนนทั้งโรงงาน (ไม่ได้ใช้รอบนี้")})
             </span>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-              <span style={{ width: 13, height: 13, borderRadius: '50%', background: 'var(--blue)', color: '#08130a', fontSize: 11, fontWeight: 900, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>⬆</span> รับของ (load)
+              <span style={{ width: 13, height: 13, borderRadius: '50%', background: 'var(--blue)', color: '#08130a', fontSize: 11, fontWeight: 900, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>⬆</span> {tr("รับของ")} (load)
             </span>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-              <span style={{ width: 13, height: 13, borderRadius: '50%', background: 'var(--green)', color: '#08130a', fontSize: 11, fontWeight: 900, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>⬇</span> ส่งของ (drop)
+              <span style={{ width: 13, height: 13, borderRadius: '50%', background: 'var(--green)', color: '#08130a', fontSize: 11, fontWeight: 900, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>⬇</span> {tr("ส่งของ")} (drop)
             </span>
           </div>
           </>
         ) : (
           <div style={{ ...card, padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
-            ยังไม่มีรูปผัง — อัปโหลดที่ ตั้งค่าผัง/Floorplan → 🗺️ ภาพรวมโรงงาน (คำนวณระยะยังทำได้จากพิกัดจุด)
+            {tr("ยังไม่มีรูปผัง — อัปโหลดที่ ตั้งค่าผัง/Floorplan → 🗺️ ภาพรวมโรงงาน (คำนวณระยะยังทำได้จากพิกัดจุด")})
           </div>
         )}
       </div>
@@ -735,7 +738,7 @@ function CarrierModal({ carrier, vehicles, employees = [], fullName, onClose, on
           </div>
           <div><span style={lbl}>{tr('ชื่อ *')}</span><input value={f.name} onChange={e => { setF({ ...f, name: e.target.value }); setEmpLocked(false); }} style={inp} /></div>
           <div style={{ display: 'flex', gap: 10 }}>
-            <div style={{ flex: 1 }}><span style={lbl}>{tr('รหัสพนักงาน')}{empLocked ? ' (จากทะเบียน)' : ''}</span>
+            <div style={{ flex: 1 }}><span style={lbl}>{tr('รหัสพนักงาน')}{empLocked ? tr(" (จากทะเบียน)") : ''}</span>
               <input value={f.emp_code || ''} readOnly={empLocked} onChange={e => setF({ ...f, emp_code: e.target.value })} style={{ ...inp, opacity: empLocked ? 0.75 : 1 }} /></div>
             <div style={{ flex: 1 }}><span style={lbl}>{tr('กะ')}</span>
               <select value={f.shift || ''} onChange={e => setF({ ...f, shift: e.target.value })} style={inp}>

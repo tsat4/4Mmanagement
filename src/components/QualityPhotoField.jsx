@@ -78,7 +78,7 @@ export default function QualityPhotoField({
       {cropFile && (
         <ImageCropModal
           file={cropFile} aspect={QUALITY_IMG_ASPECT} outputSize={1024} quality={0.8} webp
-          allowFull fullDefault fullHint="เก็บทั้งภาพไว้ — ค่าแนะนำสำหรับรูปหลักฐาน"
+          allowFull fullDefault fullHint={tr("เก็บทั้งภาพไว้ — ค่าแนะนำสำหรับรูปหลักฐาน")}
           title={tr('จัดกรอบรูปหลักฐานของเสีย')}
           onCancel={() => setCropFile(null)}
           onConfirm={(cropped) => { onPick(cropped); setCropFile(null); }}

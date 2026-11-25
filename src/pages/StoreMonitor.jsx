@@ -139,18 +139,18 @@ export default function StoreMonitor() {
       <FilterBar style={{ marginBottom: 14 }}>
         {/* 🔴 แถบกรองต้องเป็น **แถบเดียว** (UI-STANDARD §3.1) — เดิมชิปฝั่งขาเข้า-ขาออกเป็นแถวแยก
             เหนือแถบกรอง = ตัวกรอง 2 ชั้น · ย้ายเข้ามาเป็น child 20/10 (ต้นแบบ: /line-stock) */}
-        <SideFilterChips value={sideFilter} onChange={setSideFilter} counts={sideCounts} unit="เรื่อง" />
+        <SideFilterChips value={sideFilter} onChange={setSideFilter} counts={sideCounts} unit={tr("เรื่อง")} />
         {lines.length > 0 && (
           /* ไลน์ที่มีเรื่องเตือน — จัดลำดับชั้นตามผัง (แม่→ลูก) ส่วนคลังที่ไม่ใช่ไลน์ผลิตแยก optgroup
              scope ถูกกรองที่ `scoped` แล้ว จึงไม่ต้องส่ง role/sections ซ้ำ */
           <LineSelect
             lines={prodLines.filter(l => lines.includes(l.name))}
             value={lineFilter} onChange={setLineFilter} placeholder={ALL.line}
-            extraGroups={[{ label: 'คลัง', options: lines.filter(n => !prodLines.some(l => l.name === n)).map(n => ({ value: n })) }]}
+            extraGroups={[{ label: tr("คลัง"), options: lines.filter(n => !prodLines.some(l => l.name === n)).map(n => ({ value: n })) }]}
           />
         )}
         <Segmented value={kindFilter} onChange={setKindFilter} label={tr('ชนิดความผิดปกติ')}
-          options={[{ value: 'all', label: ALL.type }, { value: 'shortage', label: 'จะขาด' }, { value: 'over', label: 'ล้น' }]} />
+          options={[{ value: 'all', label: ALL.type }, { value: 'shortage', label: tr("จะขาด") }, { value: 'over', label: tr("ล้น") }]} />
       </FilterBar>
 
       {/* 🔴 การ์ดนับ = **เนื้อหา** ต้องอยู่ใต้แถบกรอง (UI-STANDARD §2.1) — ย้ายลงมา 20/10
@@ -183,7 +183,7 @@ export default function StoreMonitor() {
         <div style={{ ...card, padding: 40, textAlign: 'center', color: 'var(--muted)' }}>{tr('กำลังโหลด...')}</div>
       ) : shown.length === 0 ? (
         <div style={{ ...card, padding: 40, textAlign: 'center', color: 'var(--green)', fontSize: 14, fontWeight: 700 }}>
-          ✅ ไม่พบความผิดปกติ — สต๊อกอยู่ในเกณฑ์ min/max และรอบส่งปกติ
+          ✅ {tr("ไม่พบความผิดปกติ — สต๊อกอยู่ในเกณฑ์ min/max และรอบส่งปกติ")}
         </div>
       ) : (
         <div style={partCardGrid()}>
@@ -202,7 +202,7 @@ export default function StoreMonitor() {
                    ("ต่ำกว่า Min" + "จะขาด") ซึ่งพูดเรื่องเดียวกัน · สีบอก shortage/over อยู่แล้ว */
                 status={{ label: f.title, color: tone, bg: `${tint(tone, 'dim')}`, border: `${tint(tone, 'line')}` }}
                 aside={{ label: red ? 'ไลน์ที่จะขาด' : 'ไลน์ที่ล้น', value: f.line || 'ทุกไลน์รวมกัน' }}
-                rows={[{ k: 'เคส', v: `${f.code} · ${red ? 'Shortage' : 'Over stock'}` }]}
+                rows={[{ k: tr("เคส"), v: `${f.code} · ${red ? 'Shortage' : 'Over stock'}` }]}
                 note={f.detail}
                 alert={blink} />
             );
@@ -211,8 +211,7 @@ export default function StoreMonitor() {
       )}
 
       <InfoMore label={tr('แหล่งข้อมูลและขอบเขต')} size={11.5} style={{ marginTop: 16 }}>
-        แหล่งข้อมูล: on-hand (line_stock_summary) เทียบ Min/Max (kanban_standards จาก 🎴 คำนวณ Kanban) · รอบส่ง (kanban_delivery_rounds/kanban_deliveries) · สั่งซื้อ (purchase_requests) ·
-        เคส "ผิดกล่อง/pattern/pallet" ในตาราง TPS 17 เคส ต้องมีการสแกนคัมบัง/leveling pattern ก่อน = เฟสถัดไป
+        {tr("แหล่งข้อมูล: on-hand (line_stock_summary) เทียบ Min/Max (kanban_standards จาก 🎴 คำนวณ Kanban) · รอบส่ง (kanban_delivery_rounds/kanban_deliveries) · สั่งซื้อ (purchase_requests) · เคส \"ผิดกล่อง/pattern/pallet\" ในตาราง TPS 17 เคส ต้องมีการสแกนคัมบัง/leveling pattern ก่อน = เฟสถัดไป")}
       </InfoMore>
     </Page>
   );

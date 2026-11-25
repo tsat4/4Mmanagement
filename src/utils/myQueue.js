@@ -519,6 +519,54 @@ export function buildQueue(src = {}, me = {}, now = new Date()) {
     }
   }
 
+  /* ── ✍️ ใบตรวจ AM รออนุมัติ (A5 · 2026-11-24 · คำสั่ง user) ────────────────────────────
+     วัดจริง 24/11: ค้าง 326 ใบ 10 ไลน์ เก่าสุด 10/08 — ไม่เคยโผล่ในคิวใคร
+     · โหลด/นับเฉพาะคนที่อนุมัติ AM ได้ (`me.canAmApprove`) · ชั้น `unit` **บรรทัดเดียวต่อไลน์** (ห้ามแตกรายใบ)
+     · ไม่ขึ้น badge (หัวหน้าหลายคนกดได้ ไม่ได้รอ "เรา" คนเดียว) · ไลน์นอกทะเบียน = นับเป็น "ชี้ส่วนงานไม่ได้" */
+  if (me.canAmApprove) {
+    if (src?.amPendingTruncated) missing.push('am_pending_truncated');
+    const byLine = new Map();
+    for (const r of need('amPending', src.amPending)) {
+      if (!keep(r)) continue;
+      const k = r.line_name || '-';
+      const g = byLine.get(k) || { line: k, n: 0, oldest: null };
+      g.n += 1;
+      const a = ageDays(r.inspected_at, now);
+      if (a != null && (g.oldest == null || a > g.oldest)) g.oldest = a;
+      byLine.set(k, g);
+    }
+    for (const g of byLine.values()) {
+      unit.push({
+        key: `amappr:${g.line}`, icon: '✍️', tier: TIER.UNIT, count: g.n,
+        title: `ใบตรวจ AM รออนุมัติ ${g.n} ใบ — ${g.line}`,
+        detail: 'หัวหน้ากลุ่ม/หัวหน้าแผนกรับทราบผลตรวจ', age: g.oldest, tag: 'รออนุมัติ',
+        to: '/daily-checker?tab=amcheck',
+      });
+    }
+  }
+
+  /* ── ✍️ งาน e-Workflow ที่รอฉัน (25/11) — ใบรอบเอกสาร (Poka-Yoke ฯลฯ) + ใบฟอร์ม ──────────────
+     · งานถูกมอบ "ถึงตัว" แล้ว (wf_tasks.assignee_id = ฉัน) แต่หลายคนกดได้ ⇒ ชั้น `unit` ไม่ขึ้น badge
+     · บรรทัดเดียวต่อใบงาน (นิยาม) ห้ามแตกรายใบ · ไม่ส่ง = ไม่ได้โหลด (ไม่ใช่ partial) */
+  if (me.uid && src.wfTasks !== undefined) {
+    const byDef = new Map();
+    for (const t of need('wfTasks', src.wfTasks)) {
+      const g = byDef.get(t.def) || { def: t.def, n: 0, oldest: null, bound: t.bound };
+      g.n += 1;
+      const a = ageDays(t.created_at, now);
+      if (a != null && (g.oldest == null || a > g.oldest)) g.oldest = a;
+      byDef.set(t.def, g);
+    }
+    for (const g of byDef.values()) {
+      unit.push({
+        key: `wf:${g.def}`, icon: '✍️', tier: TIER.UNIT, count: g.n,
+        title: `${g.def} — รอคุณเซ็น ${g.n} ใบ`,
+        detail: g.bound ? 'ใบรอบเอกสาร (e-Workflow)' : 'ใบงาน e-Workflow', age: g.oldest, tag: 'รอเซ็น',
+        to: '/workflows?tab=inbox',
+      });
+    }
+  }
+
   if (me.canLevelUp || me.canLevelUp100) {
     const lu = need('levelUps', src.levelUps).filter(r => (Number(r.to_level) >= 100 ? me.canLevelUp100 : me.canLevelUp) && keep(r));
     if (lu.length) {

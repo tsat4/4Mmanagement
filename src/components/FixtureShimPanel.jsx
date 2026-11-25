@@ -7,7 +7,7 @@ import {
   toolLifeStatus, learnedToolLife, suggestMaxShim,
 } from '../utils/fixturePoints';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
 /* ═══════════════════════════════════════════════════════════════
    🔧 บันทึกการใส่/ถอดชิม — หัวใจของโมดูล
@@ -45,7 +45,7 @@ function Field({ label, hint, children }) {
 }
 
 const fmt = (v, unit = ' mm') => (v == null ? '—' : `${v}${unit}`);
-const dt = (s) => (s ? new Date(s).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }) : '—');
+const dt = (s) => (s ? new Date(s).toLocaleString(dateLocale(), { dateStyle: 'short', timeStyle: 'short' }) : '—');
 
 export default function FixtureShimPanel({
   points, pointId, onPickPoint, canRecord, canApprove, canManage,
@@ -143,7 +143,7 @@ export default function FixtureShimPanel({
 
   if (!points.length) {
     return <div style={{ fontSize: 13, color: 'var(--muted)' }}>
-      ยังไม่มีจุดในทะเบียนของฟิกเจอร์ตัวนี้ — ไปที่แท็บ <b>{tr('ทะเบียนจุด')}</b> เพื่อลงจุดก่อน
+      {tr("ยังไม่มีจุดในทะเบียนของฟิกเจอร์ตัวนี้ — ไปที่แท็บ")} <b>{tr('ทะเบียนจุด')}</b> {tr("เพื่อลงจุดก่อน")}
     </div>;
   }
 
@@ -157,7 +157,7 @@ export default function FixtureShimPanel({
             const s = shimStack(p);
             const mark = s.level === 'over' ? '🔴 ' : s.level === 'warn' ? '🟠 ' : '';
             return <option key={p.id} value={p.id}>
-              {mark}{p.point_no}{p.name ? ` · ${p.name}` : ''} — {s.current == null ? 'ยังไม่บันทึก' : `${s.current} mm`}
+              {mark}{p.point_no}{p.name ? ` · ${p.name}` : ''} — {s.current == null ? tr("ยังไม่บันทึก") : `${s.current} mm`}
             </option>;
           })}
         </select>
@@ -187,11 +187,11 @@ export default function FixtureShimPanel({
               <div style={{ fontSize: 17, fontWeight: 800,
                             color: life.level === 'over' ? '#ef4444' : life.level === 'warn' ? '#f59e0b'
                                  : life.level === 'unknown' ? '#94a3b8' : '#22c55e' }}>
-                {life.pct == null ? 'ประเมินไม่ได้' : `${Math.round(life.pct)}%`}
+                {life.pct == null ? tr("ประเมินไม่ได้") : `${Math.round(life.pct)}%`}
               </div>
               {life.pct == null && (
                 <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                  {point.expected_life_cycles == null ? 'ยังไม่ตั้งอายุชิ้นส่วน' : 'ยังนับ shot ไม่ได้'}
+                  {point.expected_life_cycles == null ? tr("ยังไม่ตั้งอายุชิ้นส่วน") : tr("ยังนับ shot ไม่ได้")}
                 </div>
               )}
             </div>
@@ -203,7 +203,7 @@ export default function FixtureShimPanel({
 
           {shotAssumed && (
             <div style={{ fontSize: 11.5, color: '#f59e0b' }}>
-              ⚠️ shot สะสมเป็นค่าประมาณจากยอดผลิต (ยังไม่ตั้ง “ชิ้นต่อ 1 ครั้ง” ของฟิกเจอร์นี้ — ระบบถือว่า 1:1)
+              ⚠️ shot {tr("สะสมเป็นค่าประมาณจากยอดผลิต (ยังไม่ตั้ง “ชิ้นต่อ 1 ครั้ง” ของฟิกเจอร์นี้ — ระบบถือว่า")} 1:1)
             </div>
           )}
 
@@ -269,7 +269,7 @@ export default function FixtureShimPanel({
                   <>
                     {tr("จะบันทึกเป็น")} <b style={{ fontSize: 15 }}>{preview.after} mm</b>
                     <span style={{ color: 'var(--muted)' }}>
-                      {' '}({before == null ? 'ยังไม่เคยบันทึกค่าเดิม' : `${tr("จากเดิม")} ${before} mm`}
+                      {' '}({before == null ? tr("ยังไม่เคยบันทึกค่าเดิม") : `${tr("จากเดิม")} ${before} mm`}
                       {preview.delta != null && `, ${preview.delta > 0 ? '+' : ''}${preview.delta} mm`})
                     </span>
                     {afterStack?.level === 'over' && (
@@ -328,7 +328,7 @@ export default function FixtureShimPanel({
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                   <thead style={{ position: 'sticky', top: 0, background: 'var(--bg2)' }}>
                     <tr style={{ textAlign: 'left' }}>
-                      {['เมื่อ', 'ทำอะไร', 'ก่อน → หลัง', 'เหตุผล', 'ผู้ทำ', 'อนุมัติ'].map(h => (
+                      {[tr("เมื่อ"), tr("ทำอะไร"), tr("ก่อน → หลัง"), tr("เหตุผล"), tr("ผู้ทำ"), tr("อนุมัติ")].map(h => (
                         <th key={h} style={{ padding: '7px 10px' }}>{tr(h)}</th>
                       ))}
                     </tr>
@@ -338,14 +338,14 @@ export default function FixtureShimPanel({
                       <tr key={ev.id} style={{ borderTop: '1px solid var(--border)' }}>
                         <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>{dt(ev.event_at)}</td>
                         <td style={{ padding: '6px 10px' }}>
-                          {SHIM_ACTIONS.find(a => a.key === ev.action)?.label || ev.action}
+                          {tr(SHIM_ACTIONS.find(a => a.key === ev.action)?.label) || ev.action}
                         </td>
                         <td style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
                           {fmt(n0(ev.shim_before_mm))} → <b>{fmt(n0(ev.shim_after_mm))}</b>
                           {ev.plates_text && <span style={{ color: 'var(--muted)' }}> ({ev.plates_text})</span>}
                         </td>
                         <td style={{ padding: '6px 10px' }}>
-                          {SHIM_REASONS.find(r => r.key === ev.reason)?.label || ev.reason || '—'}
+                          {tr(SHIM_REASONS.find(r => r.key === ev.reason)?.label) || ev.reason || '—'}
                           {ev.note && <div style={{ color: 'var(--muted)', fontSize: 11 }}>{ev.note}</div>}
                         </td>
                         <td style={{ padding: '6px 10px' }}>{ev.by_name || '—'}</td>

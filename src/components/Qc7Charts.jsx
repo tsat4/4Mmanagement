@@ -168,7 +168,7 @@ export function ScatterPlot({ records, xOf, yOf, labelOf, xLabel, yLabel, minN =
 export function Fishbone({ records, categoryOf, textOf, labelOf, effect = 'ปัญหา' }) {
   const [open, setOpen] = useState(null);
   const fb = fishbone(records, { categoryOf, textOf, labelOf });
-  if (!fb.n) return <NotEnough reason="ยังไม่มีเหตุการณ์ในช่วงนี้" />;
+  if (!fb.n) return <NotEnough reason={tr("ยังไม่มีเหตุการณ์ในช่วงนี้")} />;
   const max = Math.max(...fb.bones.map(b => b.count), 1);
   const cur = fb.bones.find(b => b.key === open);
   return (
@@ -176,7 +176,7 @@ export function Fishbone({ records, categoryOf, textOf, labelOf, effect = 'ป�
       {/* ⚠️ ผังนี้ส่วนใหญ่ "เดา" แกนมาจากข้อความ — ต้องบอกสัดส่วนไว้บนจอเสมอ ห้ามทำเป็นว่ารู้แน่ */}
       {fb.guessRate != null && fb.guessRate > 0 && (
         <div style={{ fontSize: 11.5, color: '#f59e0b', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.35)', borderRadius: 'var(--r-md)', padding: '6px 9px', marginBottom: 8, lineHeight: 1.6 }}>
-          ⚠️ <b>{Math.round(fb.guessRate * 100)}{tr('% ของรายการ ระบบเดาแกนให้จากข้อความ')}</b> (ไม่ได้มีคนเลือกหมวดสาเหตุไว้)
+          ⚠️ <b>{Math.round(fb.guessRate * 100)}{tr('% ของรายการ ระบบเดาแกนให้จากข้อความ')}</b> ({tr("ไม่ได้มีคนเลือกหมวดสาเหตุไว้")})
           <div style={{ color: 'var(--text2)' }}>{tr('ให้ช่างเลือก “สาเหตุเกิดจาก” ตอนบันทึกขั้นลงมือซ่อม แล้วผังนี้จะแม่นขึ้นเอง')}</div>
         </div>
       )}
@@ -225,7 +225,7 @@ export function Fishbone({ records, categoryOf, textOf, labelOf, effect = 'ป�
 /* ═══ ① ใบตรวจสอบ (ตารางนับไขว้) ═══════════════════════════════════════════ */
 export function CheckSheet({ records, rowOf, colOf, rowLabel = 'อุปกรณ์', colLabel = 'กลุ่มปัญหา', maxRows = 12, maxCols = 8 }) {
   const cs = checkSheet(records, { rowOf, colOf, maxRows, maxCols });
-  if (!cs.total) return <NotEnough reason="ยังไม่มีเหตุการณ์ในช่วงนี้" />;
+  if (!cs.total) return <NotEnough reason={tr("ยังไม่มีเหตุการณ์ในช่วงนี้")} />;
   const hot = Math.max(...cs.rows.flatMap(r => cs.cols.map(c => cs.cell[r]?.[c] || 0)), 1);
   return (
     <>
@@ -276,7 +276,7 @@ export function CheckSheet({ records, rowOf, colOf, rowLabel = 'อุปกร�
 /* ═══ ⑦ แบ่งชั้น (Stratification) ═══════════════════════════════════════════ */
 export function Stratify({ records, keyOf, valOf, unit = 'ครั้ง', top = 10, onPick }) {
   const s = stratify(records, { keyOf, valOf, top });
-  if (!s.total) return <NotEnough reason="ยังไม่มีเหตุการณ์ในช่วงนี้" />;
+  if (!s.total) return <NotEnough reason={tr("ยังไม่มีเหตุการณ์ในช่วงนี้")} />;
   const max = Math.max(...s.list.map(g => g.value), 1);
   return (
     <>
@@ -299,7 +299,7 @@ export function Stratify({ records, keyOf, valOf, unit = 'ครั้ง', top 
 /* ═══ ⑦ กราฟแนวโน้ม (Run chart) ═════════════════════════════════════════════ */
 export function RunChart({ records, keyOf, valOf, keys, unit = 'ครั้ง' }) {
   const rc = runChart(records, { keyOf, valOf, keys });
-  if (!rc.n) return <NotEnough reason="ยังไม่มีช่วงเวลาให้เทียบ" />;
+  if (!rc.n) return <NotEnough reason={tr("ยังไม่มีช่วงเวลาให้เทียบ")} />;
   const max = Math.max(rc.max || 0, 1);
   return (
     <>
@@ -317,7 +317,7 @@ export function RunChart({ records, keyOf, valOf, keys, unit = 'ครั้ง'
       <div style={{ fontSize: 11.5, color: 'var(--text2)', marginTop: 6 }}>
         {tr("รวม")} <b>{fmt(rc.total, 1)}</b> {unit} {tr('· เฉลี่ยช่วงละ')} <b>{fmt(rc.mean, 1)}</b>
         {/* ช่วงที่ไม่มีเหตุการณ์ = 0 จริง ไม่ใช่ "ไม่มีข้อมูล" — แท่งว่างต้องอยู่บนกราฟ */}
-        <span style={{ color: 'var(--muted)' }}> · ช่วงที่ไม่มีแท่ง = ไม่มีเหตุการณ์จริง (ไม่ใช่ข้อมูลหาย)</span>
+        <span style={{ color: 'var(--muted)' }}> · {tr("ช่วงที่ไม่มีแท่ง = ไม่มีเหตุการณ์จริง (ไม่ใช่ข้อมูลหาย")})</span>
       </div>
     </>
   );

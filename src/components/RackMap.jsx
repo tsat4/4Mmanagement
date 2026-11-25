@@ -440,7 +440,7 @@ export default function RackMap({ parts = [], canEdit, myTeams = [], mySection =
                 {(() => {
                   const ps = partsOf(selCell.shelf_code);
                   if (!ps.length) return <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>
-                    ช่องนี้ยังไม่มีอะไหล่ — ไปตั้ง "ตำแหน่งชั้นวาง" = <b>{selCell.shelf_code}</b> ที่แท็บคลังอะไหล่
+                    {tr("ช่องนี้ยังไม่มีอะไหล่ — ไปตั้ง \"ตำแหน่งชั้นวาง")}" = <b>{selCell.shelf_code}</b> {tr("ที่แท็บคลังอะไหล่")}
                   </div>;
                   return <div style={{ display: 'grid', gap: 6 }}>
                     {ps.map(p => {
@@ -466,7 +466,7 @@ export default function RackMap({ parts = [], canEdit, myTeams = [], mySection =
               </div>
             ) : (
               <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 12, fontSize: 12.5, color: 'var(--muted)' }}>
-                แตะช่องบนผังเพื่อดูว่ามีอะไหล่อะไรอยู่ · หรือพิมพ์ชื่อของในช่องค้นหาด้านบน แล้วช่องที่มีของจะไฮไลต์สีเหลือง
+                {tr("แตะช่องบนผังเพื่อดูว่ามีอะไหล่อะไรอยู่ · หรือพิมพ์ชื่อของในช่องค้นหาด้านบน แล้วช่องที่มีของจะไฮไลต์สีเหลือง")}
               </div>
             )}
 
@@ -574,7 +574,7 @@ function GridModal({ rackId, existing, onClose, onDone, onBeforeSave }) {
         </div>
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <button onClick={onClose} style={btnGhost}>{tr('ยกเลิก')}</button>
-          <button onClick={save} disabled={saving} style={{ ...btnPri, opacity: saving ? 0.5 : 1 }}>{saving ? 'กำลังสร้าง…' : `${tr("สร้าง")} ${preview.length - dup} ${tr("ช่อง")}`}</button>
+          <button onClick={save} disabled={saving} style={{ ...btnPri, opacity: saving ? 0.5 : 1 }}>{saving ? tr("กำลังสร้าง…") : `${tr("สร้าง")} ${preview.length - dup} ${tr("ช่อง")}`}</button>
         </div>
       </div>
     </div>

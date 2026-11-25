@@ -24,7 +24,7 @@ import PageHeader from '../components/PageHeader';
 import NoticeBar from '../components/NoticeBar';
 import Page from '../components/Page';
 import { DeleteButton } from '../components/IconButton';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
 function getWeekDates(refDate) {
   const d = new Date(refDate);
@@ -477,7 +477,7 @@ export default function ShiftOrganize() {
   const nextWeek = () => { const d = new Date(weekRef); d.setDate(d.getDate() + 7); setWeekRef(d); };
   const goToday  = () => setWeekRef(new Date());
 
-  const fmtDate = (d) => d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+  const fmtDate = (d) => d.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' });
 
   return (
     <Page>
@@ -487,7 +487,7 @@ export default function ShiftOrganize() {
           <button type="button" className="pg-btn primary"
             onClick={handleSave}
             disabled={isSaving}>
-            {isSaving ? 'กำลังบันทึก...' : `${tr("บันทึก")} (${pendingCount} ${tr("รายการ")})`}
+            {isSaving ? tr("กำลังบันทึก...") : `${tr("บันทึก")} (${pendingCount} ${tr("รายการ")})`}
           </button>
         ) : null} />
 
@@ -499,14 +499,13 @@ export default function ShiftOrganize() {
         <div style={{ background: 'var(--amber-dim)', border: '1px solid var(--amber)', borderRadius: 'var(--r-md)', padding: '10px 12px', marginBottom: 14, fontSize: 12.5, lineHeight: 1.65 }}>
           🏢 <b>{tr('บัญชีนี้แก้ได้เฉพาะตาราง “หน่วยงานสนับสนุน”')}</b>{myUnit ? <> {tr('— เฉพาะหน่วยงาน')} <b>{mySection}</b></> : ''} ({tr("ตารางล่าง) — ตารางกะไลน์ผลิตด้านบนดูได้อย่างเดียว")}
           <div style={{ color: 'var(--text2)', marginTop: 3 }}>
-            {!myUnit && <>ยังไม่ได้ตั้ง “หน่วยงาน” ให้บัญชีนี้ → แก้ได้ทุกหน่วยงานที่เห็น ·
-              ถ้าต้องการจำกัดเฉพาะหน่วยงานตัวเอง ให้ admin ตั้งช่องส่วนงานที่ <b>/add-user</b><br /></>}
+            {!myUnit && <>{tr("ยังไม่ได้ตั้ง “หน่วยงาน” ให้บัญชีนี้ → แก้ได้ทุกหน่วยงานที่เห็น · ถ้าต้องการจำกัดเฉพาะหน่วยงานตัวเอง ให้ admin ตั้งช่องส่วนงานที่")} <b>/add-user</b><br /></>}
             {tr("ถ้าต้องแก้กะไลน์ผลิต/override รายคน/ยุบกะด้วย ให้ admin เปิดสิทธิ์")}{' '}
             <code>shift_schedule:edit</code> {tr('ให้ role')} <b>{roleLabel(role)}</b> {tr("เพิ่ม")}
           </div>
         </div>
       )}
-      <ReadOnlyNote show={!canEditDept} role={role} what="แก้ตารางกะ"
+      <ReadOnlyNote show={!canEditDept} role={role} what={tr("แก้ตารางกะ")}
         permKey="shift_schedule:edit, shift_schedule:edit_dept"
         hint={tr('ค่าตั้งต้นของระบบให้เฉพาะ ผู้ดูแลระบบ / สิทธิ์ทั้งฝ่าย / สิทธิ์ระดับส่วน — role ที่เพิ่มเข้าระบบทีหลัง (เช่น ซ่อมบำรุง) จะยังไม่มีสิทธิ์นี้จนกว่าจะติ๊กเปิดเอง · edit_dept = แก้ได้เฉพาะตารางหน่วยงานสนับสนุน ไม่แตะกะไลน์ผลิต')} />
       {/* ── ตารางกะไลน์ผลิต ── */}
@@ -559,7 +558,7 @@ export default function ShiftOrganize() {
                 padding: '2px 8px', borderRadius: 'var(--r-pill)', fontSize: 11.5, fontWeight: 700,
                 background: 'var(--bg3-surf)', border: '1px solid var(--border)',
                 color: l.n ? 'var(--red)' : 'var(--muted)',
-              }}>{l.name}{l.n ? ` · ${l.n} ${tr("คน")}` : ' · ไม่มีพนักงาน'}</span>
+              }}>{l.name}{l.n ? ` · ${l.n} ${tr("คน")}` : tr(" · ไม่มีพนักงาน")}</span>
             ))}
           </div>
           <div style={{ marginTop: 5, fontSize: 11.5, color: 'var(--muted)' }}>
@@ -668,8 +667,8 @@ export default function ShiftOrganize() {
       {canEdit && (
         <InfoMore size={11} style={{ marginBottom: 24, padding: '0 4px' }} id="so_help"
           lead={<>{tr('กด ⇄ สลับ แล้วกด 💾 บันทึก — มีผลทุกวันในสัปดาห์ (จันทร์–อาทิตย์)')}</>}>
-          <b>{tr('ตั้งกะที่ไลน์แม่แล้วไลน์ลูกวิ่งตามอัตโนมัติ')}</b> (↳ ตามไลน์แม่)
-          <br />สลับกะที่ไลน์ลูกเอง = ✎ แก้เอง (ไม่ตามแม่แล้ว) · กด "↳ ตามแม่" เพื่อกลับไปตามไลน์แม่
+          <b>{tr('ตั้งกะที่ไลน์แม่แล้วไลน์ลูกวิ่งตามอัตโนมัติ')}</b> (↳ {tr("ตามไลน์แม่")})
+          <br />{tr("สลับกะที่ไลน์ลูกเอง = ✎ แก้เอง (ไม่ตามแม่แล้ว) · กด \"↳ ตามแม่\" เพื่อกลับไปตามไลน์แม่")}
         </InfoMore>
       )}
 
@@ -708,7 +707,7 @@ export default function ShiftOrganize() {
                         {d.inOrg === undefined && (
                           <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: 'var(--amber)' }}
                             title={tr('ชื่อแผนกนี้ไม่มีในผังองค์กร — พนักงานกรอกไว้เอง (ตั้งกะได้ปกติ แต่ควรจัดให้ตรงผังที่ /org-setup)')}>
-                            ⚠ นอกผัง
+                            ⚠ {tr("นอกผัง")}
                           </span>
                         )}
                         {d.orphan && <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--muted)' }} title={tr('แผนกขึ้นตรงฝ่าย ไม่สังกัดส่วนงานผลิต')}>{tr('ขึ้นตรงฝ่าย')}</span>}
@@ -743,7 +742,7 @@ export default function ShiftOrganize() {
                           {!canEditDeptRow(d) ? (
                             <span style={{ fontSize: 11, color: 'var(--muted)' }}
                               title={`${tr("หน่วยงานนี้ไม่ใช่ของคุณ — บัญชีนี้ตั้งหน่วยงานไว้เป็น")} "${mySection}"`}>
-                              ของหน่วยงานอื่น
+                              {tr("ของหน่วยงานอื่น")}
                             </span>
                           ) : (
                           <button onClick={() => toggleDept(d.name)}
@@ -813,7 +812,7 @@ export default function ShiftOrganize() {
             {overrides.length === 0 && (
               <tr>
                 <td colSpan={canEdit ? 6 : 5} style={{ textAlign: 'center', color: 'var(--muted)', padding: 24, fontSize: 13 }}>
-                  ไม่มีรายการพิเศษในสัปดาห์นี้
+                  {tr("ไม่มีรายการพิเศษในสัปดาห์นี้")}
                 </td>
               </tr>
             )}
@@ -828,7 +827,7 @@ export default function ShiftOrganize() {
                     background: o.shift === 'day' ? 'var(--amber-dim)' : 'var(--blue-dim)',
                     color: o.shift === 'day' ? 'var(--amber)' : 'var(--blue)',
                   }}>
-                    {o.shift === 'day' ? '☀️ เช้า' : '🌙 ดึก'}
+                    {o.shift === 'day' ? tr("☀️ เช้า") : tr("🌙 ดึก")}
                   </span>
                 </td>
                 <td style={{ fontSize: 12, color: 'var(--muted)' }}>{o.reason || '—'}</td>
@@ -873,7 +872,7 @@ export default function ShiftOrganize() {
             {visibleMergeEvents.length === 0 && (
               <tr>
                 <td colSpan={canEdit ? 6 : 5} style={{ textAlign: 'center', color: 'var(--muted)', padding: 24, fontSize: 13 }}>
-                  ไม่มีเหตุการณ์ยุบกะที่ใช้งานอยู่
+                  {tr("ไม่มีเหตุการณ์ยุบกะที่ใช้งานอยู่")}
                 </td>
               </tr>
             )}
@@ -898,7 +897,7 @@ export default function ShiftOrganize() {
                       background: evt.target_shift === 'day' ? 'var(--amber-dim)' : 'var(--blue-dim)',
                       color: evt.target_shift === 'day' ? 'var(--amber)' : 'var(--blue)',
                     }}>
-                      {evt.target_shift === 'day' ? '☀️ กะเช้า' : '🌙 กะดึก'}
+                      {evt.target_shift === 'day' ? tr("☀️ กะเช้า") : tr("🌙 กะดึก")}
                     </span>
                   </td>
                   <td style={{ fontSize: 12, color: 'var(--muted)' }}>{evt.reason || '—'}</td>
@@ -914,7 +913,7 @@ export default function ShiftOrganize() {
         </table>
       </div>
       <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 24, padding: '0 4px' }}>
-        เหตุการณ์ยุบกะจะ override ตาราง A/B ปกติ แต่ shift override รายบุคคลจะยังมีสิทธิ์สูงสุด
+        {tr("เหตุการณ์ยุบกะจะ override ตาราง A/B ปกติ แต่ shift override รายบุคคลจะยังมีสิทธิ์สูงสุด")}
       </div>
 
       {/* Merge Event Modal */}
@@ -995,7 +994,7 @@ export default function ShiftOrganize() {
                     ? `${tr("พนักงานทุกคนใน")} ${mrgSection} (${employees.filter(e => e.production_lines?.section === mrgSection).length} ${tr("คน")})`
                     : `${tr("พนักงานใน")} ${lines.find(l => String(l.id) === String(mrgLineId))?.name} (${employees.filter(e => String(e.line_id) === String(mrgLineId)).length} ${tr("คน")})`
                   }{' '}
-                  {tr("จะถูกย้ายเป็น")}{mrgShift === 'day' ? 'กะเช้า' : 'กะดึก'} {tr('ตั้งแต่')} {mrgStart} {tr('ถึง')} {mrgEnd}
+                  {tr("จะถูกย้ายเป็น")}{mrgShift === 'day' ? tr("กะเช้า") : tr("กะดึก")} {tr('ตั้งแต่')} {mrgStart} {tr('ถึง')} {mrgEnd}
                 </div>
               )}
 
@@ -1034,7 +1033,7 @@ export default function ShiftOrganize() {
                   options={employees.map(emp => {
                     /* 🔧🗂️ ติดป้ายกลุ่มให้คนที่ไม่ใช่หน้างาน — จอนี้เห็นครบทุกกลุ่มแล้ว (ไม่กรอง) ⇒ ต้องแยกออกด้วยตา */
                     const g = staffGroupOf(emp);
-                    const tag = g === STAFF_SHOPFLOOR ? '' : ` · ${STAFF_KINDS.find(k => k.key === g)?.label || ''}`;
+                    const tag = g === STAFF_SHOPFLOOR ? '' : ` · ${tr(STAFF_KINDS.find(k => k.key === g)?.label) || ''}`;
                     return { id: String(emp.id), label: `${emp.employee_id_code} — ${emp.name}${tag}`, keywords: emp.employee_id_code };
                   })}
                   onChange={({ id }) => setOvrEmpId(id)} />

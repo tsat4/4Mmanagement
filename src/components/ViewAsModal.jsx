@@ -73,11 +73,10 @@ export default function ViewAsModal({ current, onClose, onApply }) {
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 18, cursor: 'pointer', padding: 4 }}>✕</button>
         </div>
         <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.6, marginBottom: 12 }}>
-          ดูระบบเหมือนที่ user role นั้นเห็น (เมนู/ปุ่ม/ขอบเขตข้อมูล) — เฉพาะแท็บนี้ · ออกได้จากป้าย 🎭 ล่างจอ
+          {tr("ดูระบบเหมือนที่ user role นั้นเห็น (เมนู/ปุ่ม/ขอบเขตข้อมูล) — เฉพาะแท็บนี้ · ออกได้จากป้าย 🎭 ล่างจอ")}
         </div>
         <div style={{ padding: '8px 12px', borderRadius: 'var(--r-md)', marginBottom: 14, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', fontSize: 11.5, color: 'var(--amber)', lineHeight: 1.55 }}>
-          ⚠️ จำลองเฉพาะ "การมองเห็น" ฝั่งจอ — ถ้ากดบันทึก ระบบยังบันทึกด้วยสิทธิ์จริงของบัญชี admin
-          (ฝั่งฐานข้อมูลไม่ได้ถูกจำลอง) จึงควรใช้ดูอย่างเดียว
+          ⚠️ {tr("จำลองเฉพาะ \"การมองเห็น\" ฝั่งจอ — ถ้ากดบันทึก ระบบยังบันทึกด้วยสิทธิ์จริงของบัญชี admin (ฝั่งฐานข้อมูลไม่ได้ถูกจำลอง) จึงควรใช้ดูอย่างเดียว")}
         </div>
 
         <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', display: 'block', marginBottom: 10 }}>
@@ -117,7 +116,7 @@ export default function ViewAsModal({ current, onClose, onApply }) {
         ) : role !== 'display' && (
           <div style={{ marginBottom: 12 }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', marginBottom: 6 }}>
-              จำกัดขอบเขตส่วนงาน (ไม่ติ๊ก = ไม่จำกัด — เห็นทั้งโรงงานตามกติกา role)
+              {tr("จำกัดขอบเขตส่วนงาน (ไม่ติ๊ก = ไม่จำกัด — เห็นทั้งโรงงานตามกติกา")} role)
             </div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {orgSections.map(s => (
@@ -138,7 +137,7 @@ export default function ViewAsModal({ current, onClose, onApply }) {
         {role !== 'display' && (
           <div style={{ marginBottom: 12 }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', marginBottom: 6 }}>
-              ทีมช่างซ่อมที่สังกัด (ไม่ติ๊ก = ไม่ได้ถูกตั้งทีม — ใบซ่อมขั้น 2-4 จะทำไม่ได้)
+              {tr("ทีมช่างซ่อมที่สังกัด (ไม่ติ๊ก = ไม่ได้ถูกตั้งทีม — ใบซ่อมขั้น 2-4 จะทำไม่ได้")})
             </div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {(teamRows || []).map(t => (

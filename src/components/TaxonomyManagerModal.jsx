@@ -129,7 +129,7 @@ export default function TaxonomyManagerModal({ table, title, extraField = 'color
                     <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{tr(r.label)}</span>
                     <span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 6 }}>{r.code}</span>
                     {withEquipTypes && <span style={{ fontSize: 11, color: 'var(--accent2)', marginLeft: 6, fontWeight: 700 }}>{r.equip_types?.length ? r.equip_types.join('/') : tr('ทุกชนิด')}</span>}
-                    {withTeam && <span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 6, fontWeight: 700 }}>{r.team ? (teams.find(t => t.key === r.team)?.dept_name || r.team) : '🌐 ทุกทีม'}</span>}
+                    {withTeam && <span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 6, fontWeight: 700 }}>{r.team ? (teams.find(t => t.key === r.team)?.dept_name || r.team) : tr("🌐 ทุกทีม")}</span>}
                     {!r.is_active && <span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 6 }}>{tr('(ปิดใช้งาน)')}</span>}
                   </div>
                   {canEditRow(r) ? <>
@@ -183,8 +183,8 @@ export default function TaxonomyManagerModal({ table, title, extraField = 'color
                 <div><label style={lbl}>{tr('ใช้กับชนิดอุปกรณ์ (ว่าง = ทุกชนิด)')}</label>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     {EQUIP_TYPE_OPTS.map(o => {
-                      const on = (form.equip_types || []).includes(o.k)
-                      return <button key={o.k} onClick={() => setForm(f => { const cur = f.equip_types || []; return { ...f, equip_types: on ? cur.filter(x => x !== o.k) : [...cur, o.k] } })}
+                      const on = (form.equip_types || []).includes(tr(o.k))
+                      return <button key={tr(o.k)} onClick={() => setForm(f => { const cur = f.equip_types || []; return { ...f, equip_types: on ? cur.filter(x => x !== tr(o.k)) : [...cur, tr(o.k)] } })}
                         style={{ padding: '4px 12px', borderRadius: 'var(--r-md)', fontSize: 12, fontWeight: 700, cursor: 'pointer', border: `1.5px solid ${on ? 'var(--accent)' : 'var(--border2)'}`, background: on ? 'var(--accent-dim)' : 'var(--bg2)', color: on ? 'var(--accent)' : 'var(--muted)' }}>{o.l}</button>
                     })}
                   </div>

@@ -24,12 +24,14 @@ import MatLabel, { useMatIndex } from './MatLabel';
 import { matText } from '../utils/matLabel';
 
 import { tr } from '../utils/i18n';
-const FRAME = '#a78bfa';
+/* 🎨 25/11 — เดิมเป็นสีดิบ (#22c55e/#4d9fff/#f59e0b/#a78bfa) ⇒ เขียว/ฟ้าคนละเฉดกับทั้งแอป
+   และธีมสว่างไม่เปลี่ยนตาม ⇒ ใช้ token พาเลต 5 สีเท่านั้น (UI §6.17) */
+const FRAME = 'var(--muted)';          // กรอบแผน = เส้นอ้างอิง ไม่ใช่สถานะ (เดิมม่วง = สีที่ 6)
 const ST = {
-  done:    { c: '#22c55e', mark: '✓',  label: 'ครบตามกรอบแล้ว' },
-  partial: { c: '#4d9fff', mark: '▶',  label: 'เปิดใบแล้วบางส่วน' },
-  pending: { c: '#f59e0b', mark: '🔲', label: 'ยังไม่มีใบคัมบังเลย' },
-  trial:   { c: '#8aa0b4', mark: '🧪', label: 'ใบจองเครื่องทดลอง — ไม่มี MAT ให้จับคู่' },
+  done:    { c: 'var(--green)', mark: '✓',  label: 'ครบตามกรอบแล้ว' },
+  partial: { c: 'var(--blue)',  mark: '▶',  label: 'เปิดใบแล้วบางส่วน' },
+  pending: { c: 'var(--amber)', mark: '🔲', label: 'ยังไม่มีใบคัมบังเลย' },
+  trial:   { c: 'var(--muted)', mark: '🧪', label: 'ใบจองเครื่องทดลอง — ไม่มี MAT ให้จับคู่' },
 };
 
 /** @param lotsByShift  { day: [...], night: [...] }

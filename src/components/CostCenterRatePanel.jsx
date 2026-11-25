@@ -12,7 +12,7 @@ import { RATE_COMPONENTS, rateFor, fmtBaht } from '../utils/costSaving';
 import { loadCostCenterRefs, costCenterBlockMessage } from '../utils/costCenterRefs';
 import { DeleteButton } from './IconButton';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
 /* ═══ 💰 Activity Rate ต่อ Cost Center — แผงใน /org-setup (2026-08-11) ═══
    rate ที่บัญชีคำนวณ ต่อ cost center (ก้อนตาม RATE_COMPONENTS) — ใช้แปลงผล Improvement เป็น cost saving
@@ -25,7 +25,7 @@ const todayStr = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 /* timestamp ที่ระบบ stamp เอง (created_at/updated_at) — แสดงผลอย่างเดียว ห้ามให้กรอก */
-const fmtStamp = (v) => (v ? new Date(v).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' }) : '—');
+const fmtStamp = (v) => (v ? new Date(v).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' }) : '—');
 
 /* ⚠️ ช่อง rate ทั้งหมด generate จาก RATE_COMPONENTS — เพิ่มก้อนใหม่ที่ costSaving.js ที่เดียว
    ฟอร์ม/ตาราง/ยอดรวม ตามให้เอง ห้ามพิมพ์ชื่อคอลัมน์ rate ซ้ำในไฟล์นี้ */
@@ -152,18 +152,18 @@ export default function CostCenterRatePanel({ nodes, lines }) {
         <SimpleMasterPanel client={supabase} table="cost_centers" keyCol="code" canManage={canEdit} onChanged={invalidateCostCenters}
           onBeforeDelete={async (r) => costCenterBlockMessage(r.code, await loadCostCenterRefs(supabase, r.code))}
           fields={[
-            { key: 'name', label: 'ชื่อ/หน่วยงานที่ใช้', placeholder: 'เช่น กลุ่ม Assy 2' },
-            { key: 'section', label: 'ส่วนงาน', placeholder: 'เช่น PD5' },
-            { key: 'note', label: 'หมายเหตุ' },
+            { key: 'name', label: tr("ชื่อ/หน่วยงานที่ใช้"), placeholder: 'เช่น กลุ่ม Assy 2' },
+            { key: 'section', label: tr("ส่วนงาน"), placeholder: 'เช่น PD5' },
+            { key: 'note', label: tr("หมายเหตุ") },
           ]}
           help={tr('รหัสจากบัญชี · ไลน์/ผัง/rate เก็บรหัสนี้เป็น text · เพิ่มรหัสใหม่ที่นี่ก่อนแล้วค่อยไปตั้งที่ไลน์/ผัง')}
           emptyText={tr('ยังไม่มีรหัสในทะเบียน — กด + เพิ่ม (รหัสที่ไลน์/ผังใช้อยู่แล้วยังเลือกได้จากกลุ่ม 📜)')} />
       </CollapseCard>
       <CollapseCard id="cc_rates" storePrefix="orgsetup" count={groupList.length}
-        title={<span>{tr('Activity Rate ต่อ Cost Center')} <span style={{ fontWeight: 600, color: 'var(--muted)' }}>({RATE_COMPONENTS.map(c => c.label).join('/')} {tr("บาท/ชม. — ใช้คิด cost saving ในโปรเจคปรับปรุง")})</span></span>}>
+        title={<span>{tr('Activity Rate ต่อ Cost Center')} <span style={{ fontWeight: 600, color: 'var(--muted)' }}>({RATE_COMPONENTS.map(c => tr(c.label)).join('/')} {tr("บาท/ชม. — ใช้คิด cost saving ในโปรเจคปรับปรุง")})</span></span>}>
         <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8 }}>
           rate {tr("เป็นของ")} <b>{tr('รหัส Cost Center')}</b> {tr('(ไม่ได้ผูกกับไลน์) — ปกติบัญชีตั้งที่')} <b>{tr('ชั้นกลุ่ม')}</b> {tr("แล้วชั้นแผนก/ส่วนรวมขึ้นเองตามลำดับชั้นในผัง")}
-          · <b>บัญชีส่ง rate รอบใหม่ = กด “＋ rate ใหม่”</b> ({tr("ประวัติเดิมคงไว้ โปรเจคเก่าคำนวณด้วย rate ณ ช่วงนั้น) — ปุ่ม ✏️ ไว้แก้เฉพาะตอนกรอกตัวเลขผิด")}
+          · <b>{tr("บัญชีส่ง rate รอบใหม่ = กด “＋ rate ใหม่")}”</b> ({tr("ประวัติเดิมคงไว้ โปรเจคเก่าคำนวณด้วย rate ณ ช่วงนั้น) — ปุ่ม ✏️ ไว้แก้เฉพาะตอนกรอกตัวเลขผิด")}
           {noRateUsed > 0 && <span style={{ color: '#f59e0b', fontWeight: 700 }}> {tr('· ⚠ มี')} {noRateUsed} {tr('รหัสที่ไลน์ใช้อยู่แต่ยังไม่ตั้ง rate')}</span>}
           {otherCount > 0 && (
             <span> {tr('· ซ่อนรหัสระดับส่วน/แผนก')} {otherCount} {tr('รหัส')}{' '}
@@ -182,7 +182,7 @@ export default function CostCenterRatePanel({ nodes, lines }) {
                     (ตัวเลข IDP ไปโผล่ใต้หัว OH · ตัวเลข OH ไปอยู่ใต้ "รวม") */}
                 {[
                   { h: 'Cost Center', right: false }, { h: 'ใช้โดย', right: false },
-                  ...RATE_COMPONENTS.map(c => ({ h: c.label, right: true, title: c.full })),
+                  ...RATE_COMPONENTS.map(c => ({ h: tr(c.label), right: true, title: tr(c.full) })),
                   { h: 'รวม/ชม.', right: true }, { h: 'Effective', right: true }, { h: '', right: false },
                 ].map((c, i) => (
                   <th key={i} title={c.title} style={{ padding: '7px 10px', fontSize: 11, fontWeight: 800, color: 'var(--muted)', textAlign: c.right ? 'right' : 'left', whiteSpace: 'nowrap' }}>{tr(c.h)}</th>
@@ -276,7 +276,7 @@ export default function CostCenterRatePanel({ nodes, lines }) {
         ) : (
           /* ซ่อนปุ่มได้ ห้ามซ่อนเหตุผล — UI-CONVENTIONS §6.9 */
           <ReadOnlyNote role={role} permKey="cost_rate:manage"
-            what="แก้ Activity Rate (ค่าแรง/ค่าเสื่อม/โสหุ้ย ต่อ cost center)"
+            what={tr("แก้ Activity Rate (ค่าแรง/ค่าเสื่อม/โสหุ้ย ต่อ cost center)")}
             hint={tr('rate ชุดนี้เป็นตัวคูณของ “เงินที่ประหยัดได้” ทุกจอ (โปรเจคปรับปรุง · มูลค่าดาวไทม์/ของเสีย · เด็ครายงานเดือน) จึงเปิดให้เฉพาะผู้ดูแลระบบ/ผู้จัดการ')} />
         )}
 
@@ -324,11 +324,11 @@ export default function CostCenterRatePanel({ nodes, lines }) {
                   <div style={{ fontSize: 11, color: 'var(--muted)', background: 'var(--bg3)', borderRadius: 'var(--r-md)', padding: '6px 9px', lineHeight: 1.6 }}>
                     {dateLocked ? (
                       <>
-                        🔒 วัน Effective ล็อกกันแก้พลาด — <b>{tr('ปรับ rate รอบใหม่ให้กด ＋ rate ในตาราง')}</b> (แถวเดิมเก็บเป็นประวัติ โปรเจคที่เริ่มก่อนหน้ายังคิดด้วย rate เดิม)
+                        🔒 {tr("วัน Effective ล็อกกันแก้พลาด")} — <b>{tr('ปรับ rate รอบใหม่ให้กด ＋ rate ในตาราง')}</b> ({tr("แถวเดิมเก็บเป็นประวัติ โปรเจคที่เริ่มก่อนหน้ายังคิดด้วย rate เดิม")})
                         <button onClick={unlockDate} style={{ marginLeft: 6, background: 'none', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', color: 'var(--accent)', fontSize: 11, fontWeight: 800, cursor: 'pointer', padding: '1px 7px' }}>{tr('แก้วันที่')}</button>
                       </>
                     ) : (
-                      <span style={{ color: '#f59e0b', fontWeight: 700 }}>ปลดล็อกวันที่แล้ว — เปลี่ยนวันนี้ = เปลี่ยนย้อนหลังว่า rate นี้ครอบช่วงไหน cost saving ของโปรเจคที่คำนวณด้วย rate ช่วงนี้จะขยับตาม</span>
+                      <span style={{ color: '#f59e0b', fontWeight: 700 }}>{tr("ปลดล็อกวันที่แล้ว — เปลี่ยนวันนี้ = เปลี่ยนย้อนหลังว่า rate นี้ครอบช่วงไหน cost saving ของโปรเจคที่คำนวณด้วย rate ช่วงนี้จะขยับตาม")}</span>
                     )}
                     <div style={{ marginTop: 3, opacity: 0.85 }}>
                       {tr("เวลาที่แก้ระบบบันทึกเอง: สร้าง")} {fmtStamp(form.created_at)} {tr('· แก้ล่าสุด')} {fmtStamp(form.updated_at)} ({tr("ใครแก้ดูได้ที่")} audit log)
@@ -337,7 +337,7 @@ export default function CostCenterRatePanel({ nodes, lines }) {
                 )}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
                   {RATE_COMPONENTS.map(c => (
-                    <label key={c.key} style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)' }}>{tr(c.label)} <span style={{ fontWeight: 600 }}>({c.full})</span>
+                    <label key={c.key} style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)' }}>{tr(c.label)} <span style={{ fontWeight: 600 }}>({tr(c.full)})</span>
                       <input type="number" min="0" step="any" value={form[c.field]} onChange={e => setForm({ ...form, [c.field]: e.target.value })} placeholder={tr('บาท/ชม.')} style={{ marginTop: 4 }} />
                     </label>
                   ))}

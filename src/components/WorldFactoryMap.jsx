@@ -155,12 +155,12 @@ export default function WorldFactoryMap({
     <div>
       {/* แถบควบคุม: กลับทั้งโลก · ชิปประเทศ · ไฮไลต์กลุ่มธุรกิจ */}
       <TabBar size="sm" style={{ marginBottom: 8 }} value={zoomCc ?? ''} onChange={k => (k ? zoomToCountry(k) : zoomOut())}
-        tabs={[{ key: '', label: 'ทั้งโลก' }, ...byCc.map(c => ({ key: c.cc, label: `${c.meta.flag} ${c.meta.name}`, badge: c.list.length }))]} />
+        tabs={[{ key: '', label: tr("ทั้งโลก") }, ...byCc.map(c => ({ key: c.cc, label: `${c.meta.flag} ${c.meta.name}`, badge: c.list.length }))]} />
       {!!groups.length && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginBottom: 8 }}>
           <span style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('ไฮไลต์กลุ่มธุรกิจ:')}</span>
           <TabBar size="sm" style={{ flex: 1, minWidth: 200 }} value={gFilter ?? ''} onChange={k => setGFilter(k || null)}
-            tabs={[{ key: '', label: 'ทุกกลุ่ม' }, ...groups.map(g => ({ key: g.key, label: g.short }))]} />
+            tabs={[{ key: '', label: tr("ทุกกลุ่ม") }, ...groups.map(g => ({ key: g.key, label: g.short }))]} />
         </div>
       )}
 
@@ -283,7 +283,7 @@ export default function WorldFactoryMap({
                 </div>
               ))}
               <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-                {hover.kind === 'country' ? 'คลิกเพื่อซูมเข้าประเทศนี้' : 'คลิกเพื่อเลือกทางเข้า'}
+                {hover.kind === 'country' ? tr("คลิกเพื่อซูมเข้าประเทศนี้") : tr("คลิกเพื่อเลือกทางเข้า")}
               </div>
             </div>
           );
@@ -299,11 +299,11 @@ export default function WorldFactoryMap({
       </div>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 8, fontSize: 12, color: 'var(--muted)' }}>
-        <span><b>{tr('ขนาดวง')}</b> = ยอดผลิตของวันนั้น</span>
+        <span><b>{tr('ขนาดวง')}</b> = {tr("ยอดผลิตของวันนั้น")}</span>
         <span><b>{tr('สี:')}</b> <b style={{ color: '#22c55e' }}>●</b> {tr('ตามเป้า')} <b style={{ color: '#f59e0b' }}>●</b> {tr('เฝ้าระวัง')} <b style={{ color: '#ef4444' }}>●</b> {tr('ต้องแก้')}</span>
         {!!groups.length && <span><b>{tr('ไอคอนในหมุด:')}</b> {groups.map(g => `${g.icon} ${g.short}`).join(' · ')}</span>}
-        <span>★ = บริษัทเรา (ข้อมูลจริง)</span>
-        <span>คลิกประเทศ = ซูมเข้า · คลิกหมุด = เลือกทางเข้า</span>
+        <span>★ = {tr("บริษัทเรา (ข้อมูลจริง")})</span>
+        <span>{tr("คลิกประเทศ = ซูมเข้า · คลิกหมุด = เลือกทางเข้า")}</span>
       </div>
     </div>
   );

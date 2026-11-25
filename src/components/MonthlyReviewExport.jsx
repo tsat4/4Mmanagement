@@ -311,12 +311,11 @@ export default function MonthlyReviewExport({ onClose }) {
             <div><div style={lb}>{tr('ตำแหน่ง')}</div><input type="text" value={presPosition} onChange={e => setPresPosition(e.target.value)} style={{ width: '100%' }} /></div>
           </div>
           <div style={{ fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.6 }}>
-            สร้างเด็ค PowerPoint ตาม template TSG <b>Revision 01</b> (พื้นขาว · เขียว-ส้มชุดใหม่ · โลโก้ใหม่)
-            จากข้อมูลกะที่ปิดแล้วของเดือนที่เลือก — Executive Summary → กราฟ OEE รายไลน์ →
-            <b>{tr('PERFORMANCE TREND ย้อนหลัง')}</b> → รายส่วน/ไลน์ → Top Downtime +
-            <b>{tr('วิธีแก้ไข/ผลติดตามที่หัวหน้างานลงในระบบ')}</b> + ใบซ่อม MO →
+            {tr("สร้างเด็ค PowerPoint ตาม")} template TSG <b>Revision 01</b> ({tr("พื้นขาว · เขียว-ส้มชุดใหม่ · โลโก้ใหม่) จากข้อมูลกะที่ปิดแล้วของเดือนที่เลือก — Executive Summary → กราฟ OEE รายไลน์")} →
+            <b>{tr('PERFORMANCE TREND ย้อนหลัง')}</b> → {tr("รายส่วน/ไลน์")} → Top Downtime +
+            <b>{tr('วิธีแก้ไข/ผลติดตามที่หัวหน้างานลงในระบบ')}</b> + {tr("ใบซ่อม")} MO →
             Top Defects → <b>{tr('Loss Analysis (6 Big Losses / 8 Wastes + มูลค่าเป็นบาท)')}</b> →
-            Focus เดือนถัดไป · ไฟล์เปิดแก้/เติม story ต่อใน PowerPoint ได้ก่อนขึ้นประชุม
+            Focus {tr("เดือนถัดไป · ไฟล์เปิดแก้/เติม story ต่อใน PowerPoint ได้ก่อนขึ้นประชุม")}
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
             <button onClick={onClose} disabled={busy} style={{ padding: '9px 18px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'none', color: 'var(--text2)', cursor: 'pointer', fontWeight: 700 }}>{tr('ยกเลิก')}</button>

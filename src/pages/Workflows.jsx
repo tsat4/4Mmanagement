@@ -22,14 +22,14 @@ import { notifyEvent } from '../utils/notifyEvent';
 import { checkData } from '../utils/wfSchema';
 import { wfFlow, WF_STATUS } from '../utils/wfFlow';
 import { statusColor } from '../utils/statusTone';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 
 const TABS = [
   { key: 'inbox', label: '📥 รอฉัน' },
   { key: 'mine', label: '📄 ใบของฉัน' },
   { key: 'new', label: '➕ เปิดใบใหม่' },
 ];
-const fmt = (ts) => (ts ? new Date(ts).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' }) : '—');
+const fmt = (ts) => (ts ? new Date(ts).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' }) : '—');
 const ACTION_LABEL = { submit: 'ยื่นใบ', approve: 'อนุมัติ', reject: 'ตีกลับ', return: 'ส่งกลับให้แก้', resubmit: 'ส่งใหม่', cancel: 'ยกเลิก' };
 
 /** ยิงแจ้งเตือนในแอปตามที่ RPC บอก (fire-and-forget · ผู้รับ = เจ้าของงานตรง) */
@@ -44,7 +44,7 @@ function fireNotify(res, ref) {
 function StatusChip({ status }) {
   const m = WF_STATUS[status];
   const c = statusColor(m?.tone || 'none');
-  return <span style={{ fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 999, color: c, border: `1px solid ${c}`, whiteSpace: 'nowrap' }}>{tr(m?.label || 'สถานะไม่รู้จัก')}</span>;
+  return <span style={{ fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 999, color: c, border: `1px solid ${c}`, whiteSpace: 'nowrap' }}>{tr(tr(m?.label) || 'สถานะไม่รู้จัก')}</span>;
 }
 
 export default function Workflows() {
@@ -112,7 +112,7 @@ export default function Workflows() {
   const header = (
     <PageHeader title={tr('ใบงานออนไลน์ (e-Workflow)')} icon="✍️"
       sub={tr('เปิดใบ · อนุมัติ · ติดตามสถานะ — แบบฟอร์มและสายอนุมัติตั้งที่หน้า "ออกแบบใบงาน"')}
-      tabs={TABS.map(t => ({ ...t, label: t.key === 'inbox' && inbox.length ? `${t.label} (${inbox.length})` : t.label }))} tab={tab} onTab={setTab} />
+      tabs={TABS.map(t => ({ ...t, label: t.key === 'inbox' && inbox.length ? `${tr(t.label)} (${inbox.length})` : tr(t.label) }))} tab={tab} onTab={setTab} />
   );
 
   return (
@@ -269,8 +269,8 @@ function InstanceModal({ id, me, defById, onClose, onChanged }) {
     toast.success(`${label}${tr("แล้ว")}`);
     reloadAll();
   };
-  const approve = () => {
-    if (!confirmSign({ what: isAck ? 'รับทราบ' : 'อนุมัติ', orderNo: inst.doc_no, docLabel: def?.name || 'ใบงาน', actor: fullName, as: step?.label,
+  const approve = async () => {
+    if (!await confirmSign({ what: isAck ? 'รับทราบ' : 'อนุมัติ', orderNo: inst.doc_no, docLabel: def?.name || 'ใบงาน', actor: fullName, as: step?.label,
       effect: (inst.current_step + 1 >= (version?.flow_schema?.steps?.length || 0)) ? 'ใบจบ (อนุมัติครบ)' : 'ส่งต่อขั้นถัดไป' })) return;
     run(() => supabase.rpc('wf_act', { p_task: myTask.id, p_action: 'approve', p_comment: null, p_expected_rev: inst.step_rev }), isAck ? 'รับทราบ' : 'อนุมัติ');
   };

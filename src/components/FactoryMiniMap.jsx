@@ -163,7 +163,7 @@ export default function FactoryMiniMap({ stateOf, onPick, bottomReserve = 28, ba
            เหมือน /factory-map (สูตร 210px vs clamp 200px) → สูตรความกว้างชนะเสมอ ไม่มีทาง crop */
         maxHeight: availH ? availH + 10 : undefined,
       }}>
-        <img ref={imgRef} src={map.image_url} alt="ผังโรงงาน" onLoad={readAr}
+        <img ref={imgRef} src={map.image_url} alt={tr("ผังโรงงาน")} onLoad={readAr}
           style={{ display: 'block', width: '100%', height: 'auto', userSelect: 'none', ...(dimMap ? { filter: 'grayscale(0.75) brightness(0.55)' } : null) }} />
         <div style={{ position: 'absolute', inset: 0, background: 'rgba(6,8,14,0.14)', pointerEvents: 'none' }} />
 

@@ -112,14 +112,14 @@ export default function OrgAssignmentsPanel({ nodes = [] }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
         <h3 style={{ margin: 0, fontSize: 15, fontFamily: 'var(--font-display)' }}>{tr('ใครคุมหน่วยไหน · ตำแหน่งจริง / รักษาการ')}</h3>
         <span style={{ fontSize: 11, color: 'var(--muted)' }}>
-          ตอบ “ใครคุมหน่วยไหน” — คนละเรื่องกับ “สังกัดที่ไหน” · คนเดียวคุมได้หลายหน่วย
+          {tr("ตอบ “ใครคุมหน่วยไหน” — คนละเรื่องกับ “สังกัดที่ไหน” · คนเดียวคุมได้หลายหน่วย")}
         </span>
         {canEdit && (
           <button onClick={() => setOpen(v => !v)} style={{ marginLeft: 'auto', padding: '5px 12px',
             borderRadius: 'var(--r-md)', fontSize: 12, fontWeight: 700, cursor: 'pointer',
             background: open ? 'var(--bg3)' : 'var(--accent)', color: open ? 'var(--text2)' : '#fff',
             border: `1px solid ${open ? 'var(--border2)' : 'var(--accent)'}` }}>
-            {open ? 'ยกเลิก' : '➕ เพิ่ม'}
+            {open ? tr("ยกเลิก") : tr("➕ เพิ่ม")}
           </button>
         )}
       </div>
@@ -129,8 +129,8 @@ export default function OrgAssignmentsPanel({ nodes = [] }) {
       {canSeeOnly && (
         <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 10, padding: '7px 10px',
           background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
-          ดูได้อย่างเดียว — การแต่งตั้งผู้คุมหน่วยงาน (ตามตำแหน่ง/รักษาการ) ต้องมีสิทธิ์ <b>org:manage</b>
-          (สิทธิ์ <b>org:manage_own_unit</b> ที่บัญชีนี้มี ใช้แก้โครงผังในหน่วยของตัวเองได้ แต่ยังแต่งตั้งคนไม่ได้)
+          {tr("ดูได้อย่างเดียว — การแต่งตั้งผู้คุมหน่วยงาน (ตามตำแหน่ง/รักษาการ) ต้องมีสิทธิ์")} <b>org:manage</b>
+          ({tr("สิทธิ์")} <b>org:manage_own_unit</b> {tr("ที่บัญชีนี้มี ใช้แก้โครงผังในหน่วยของตัวเองได้ แต่ยังแต่งตั้งคนไม่ได้")})
         </div>
       )}
 
@@ -149,7 +149,7 @@ export default function OrgAssignmentsPanel({ nodes = [] }) {
           {sum.unconfirmed.length > 0 && chip('rgba(148,163,184,0.25)', 'var(--text2)',
             `❓ ${tr("ยังไม่ยืนยัน")} ${sum.unconfirmed.length}`)}
           <span style={{ color: 'var(--muted)', fontSize: 11 }}>
-            · รักษาการที่ไม่มีวันจบ = สิทธิ์ชั่วคราวที่กลายเป็นถาวรโดยไม่มีใครรู้
+            · {tr("รักษาการที่ไม่มีวันจบ = สิทธิ์ชั่วคราวที่กลายเป็นถาวรโดยไม่มีใครรู้")}
           </span>
         </div>
       )}
@@ -174,8 +174,8 @@ export default function OrgAssignmentsPanel({ nodes = [] }) {
               onChange={e => setForm(f => ({ ...f, ends_on: e.target.value }))} />
             <div style={{ fontSize: 11, color: form.kind === 'acting' && !form.ends_on ? '#f59e0b' : 'var(--muted)', marginTop: 2 }}>
               {form.kind === 'acting'
-                ? (form.ends_on ? 'วันสิ้นสุด' : '⚠️ รักษาการควรมีวันสิ้นสุด')
-                : 'วันสิ้นสุด (ไม่ใส่ก็ได้)'}
+                ? (form.ends_on ? tr("วันสิ้นสุด") : tr("⚠️ รักษาการควรมีวันสิ้นสุด"))
+                : tr("วันสิ้นสุด (ไม่ใส่ก็ได้)")}
             </div>
           </div>
           <button onClick={add} disabled={busy} style={{ padding: '7px 14px', borderRadius: 'var(--r-md)', fontWeight: 700,
@@ -187,7 +187,7 @@ export default function OrgAssignmentsPanel({ nodes = [] }) {
 
       {rows.length === 0 ? (
         <div style={{ fontSize: 12, color: 'var(--muted)', padding: '10px 2px' }}>
-          ยังไม่มีข้อมูล — กด “➕ เพิ่ม” เพื่อระบุว่าใครคุมหน่วยไหน
+          {tr("ยังไม่มีข้อมูล — กด “➕ เพิ่ม” เพื่อระบุว่าใครคุมหน่วยไหน")}
         </div>
       ) : (
         <div style={{ overflowX: 'auto' }}>
@@ -207,7 +207,7 @@ export default function OrgAssignmentsPanel({ nodes = [] }) {
                 const m = STATUS[st] || STATUS.active;
                 return (
                   <tr key={r.id}>
-                    <td>{n ? `${NODE_KIND_TH[n.kind] || n.kind} · ${n.name}` : '(หน่วยถูกลบ)'}</td>
+                    <td>{n ? `${NODE_KIND_TH[n.kind] || n.kind} · ${n.name}` : tr("(หน่วยถูกลบ)")}</td>
                     <td>{nameOf(r.profile_id)}
                       {r.note && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{r.note}</div>}</td>
                     {/* 🔴 บทบาท = **ตำแหน่งจริงของคนนั้น** ไม่ใช่คำที่ระบบประดิษฐ์ (21/10 · คำสั่ง user) */}

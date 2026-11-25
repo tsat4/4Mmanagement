@@ -1071,7 +1071,7 @@ export default function LineSetup({ embedded = false } = {}) {
               background: showPills ? 'var(--accent-dim)' : 'var(--bg2)',
               color: showPills ? 'var(--accent)' : 'var(--text2)',
             }}>
-            {showPills ? 'ซ่อนป้าย' : 'โชว์ป้าย'}
+            {showPills ? tr("ซ่อนป้าย") : tr("โชว์ป้าย")}
             <ToggleDot on={showPills} />
           </button>
         </div>
@@ -1121,7 +1121,7 @@ export default function LineSetup({ embedded = false } = {}) {
                   padding: '4px 10px', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 700,
                   zIndex: 20, boxShadow: 'var(--shadow-float)', pointerEvents: 'none',
                 }}>
-                  ใช้รูปผังจากไลน์หลัก — อัปโหลดรูปใหม่เพื่อแยกเป็นของตัวเอง
+                  {tr("ใช้รูปผังจากไลน์หลัก — อัปโหลดรูปใหม่เพื่อแยกเป็นของตัวเอง")}
                 </div>
               )}
               <img
@@ -1265,7 +1265,7 @@ export default function LineSetup({ embedded = false } = {}) {
               <p style={{ color: 'var(--muted)', marginBottom: 12 }}>{tr('ยังไม่มีรูปผังไลน์')} {selectedLine}</p>
               {canEdit && (
                 <label style={uploadBtnSt}>
-                  {isUploading ? 'อัปโหลด...' : '➕ อัปโหลดรูป'}
+                  {isUploading ? tr("อัปโหลด...") : tr("➕ อัปโหลดรูป")}
                   <input type="file" hidden onChange={handleUploadImage} disabled={isUploading} />
                 </label>
               )}
@@ -1304,7 +1304,7 @@ export default function LineSetup({ embedded = false } = {}) {
 
         <CollapseCard id="lineList" storePrefix="ls" title={tr('ทะเบียนไลน์ / หน่วย')} count={lines.length} defaultOpen={!selectedLine}>
           {lines.length > 6 && (
-            <SearchInput value={lineSearch} onChange={setLineSearch} fields="ไลน์"
+            <SearchInput value={lineSearch} onChange={setLineSearch} fields={tr("ไลน์")}
               style={{ marginBottom: 8 }} inputStyle={{ fontSize: 12.5, background: 'var(--bg3)' }} />
           )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 10 }}>
@@ -1356,7 +1356,7 @@ export default function LineSetup({ embedded = false } = {}) {
                     const col = collapsedParents.has(l.name);
                     return (
                       <span onClick={e => { e.stopPropagation(); toggleParent(l.name); }}
-                        title={col ? `${tr("กางไลน์ย่อย")} (${nKids})` : 'พับไลน์ย่อย'}
+                        title={col ? `${tr("กางไลน์ย่อย")} (${nKids})` : tr("พับไลน์ย่อย")}
                         style={{ fontSize: 11, color: 'var(--accent)', flexShrink: 0, cursor: 'pointer', padding: '2px 4px', borderRadius: 'var(--r-xs)', userSelect: 'none' }}>
                         {col ? `▶ ${nKids}` : '▼'}
                       </span>
@@ -1474,11 +1474,11 @@ export default function LineSetup({ embedded = false } = {}) {
               {!usingParentLayout && (
                 <button onClick={handleDeleteLayout}
                   style={{ fontSize: 12, color: 'var(--red)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'var(--font-body)' }}>
-                  {tr('ลบรูปผังนี้')}{lines.find(l => l.name === selectedLine)?.parent_line_name ? ' (กลับไปใช้ผังไลน์แม่)' : ''}
+                  {tr('ลบรูปผังนี้')}{lines.find(l => l.name === selectedLine)?.parent_line_name ? tr(" (กลับไปใช้ผังไลน์แม่)") : ''}
                 </button>
               )}
               <label style={{ fontSize: 12, color: 'var(--blue)', cursor: 'pointer' }}>
-                {isUploading ? 'อัปโหลด...' : '🔄 เปลี่ยนรูปภาพ'}
+                {isUploading ? tr("อัปโหลด...") : tr("🔄 เปลี่ยนรูปภาพ")}
                 <input type="file" hidden onChange={handleUploadImage} disabled={isUploading} />
               </label>
             </div>
@@ -1486,7 +1486,7 @@ export default function LineSetup({ embedded = false } = {}) {
           {activeTab === 'stations' && <>
           <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, marginBottom: 10 }}>
             <h4 style={{ margin: '0 0 10px', color: 'var(--text)', fontSize: 14, fontFamily: 'var(--font-display)' }}>
-              {formData.id ? '📝 แก้ไขจุดงาน' : '📍 เพิ่มจุดงาน'}
+              {formData.id ? tr("📝 แก้ไขจุดงาน") : tr("📍 เพิ่มจุดงาน")}
             </h4>
             {(tempPos || formData.id) ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, background: 'var(--bg2)', padding: 14, borderRadius: 'var(--r-md)' }}>
@@ -1499,7 +1499,7 @@ export default function LineSetup({ embedded = false } = {}) {
                 </label>
                 {skillDefs.length === 0 ? (
                   <div style={{ fontSize: 11, color: 'var(--muted)', padding: '8px', background: 'var(--bg3)', borderRadius: 'var(--r-md)' }}>
-                    ยังไม่มีสกิล — กำหนดสกิลได้ที่หน้า Operator
+                    {tr("ยังไม่มีสกิล — กำหนดสกิลได้ที่หน้า")} Operator
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -1573,19 +1573,19 @@ export default function LineSetup({ embedded = false } = {}) {
                   </button>
                   <button onClick={() => { setTempPos(null); setFormData({ id: null, name: '', requirements: {}, skill_allowance: false, skill_allowance_type: '' }); }}
                     style={{ padding: '9px 14px', background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)', borderRadius: 7 }}>
-                    ยกเลิก
+                    {tr("ยกเลิก")}
                   </button>
                 </div>
               </div>
             ) : (
               <div style={{ textAlign: 'center', padding: '16px', border: '2px dashed var(--border)', color: 'var(--muted)', borderRadius: 'var(--r-md)', fontSize: 12 }}>
-                {canEdit ? <>{tr('คลิกบนรูปภาพเพื่อเพิ่มจุดงาน')}<br />{tr('หรือคลิกที่จุดเดิมเพื่อแก้ไข')}</> : '👁️ โหมดดูอย่างเดียว — ไม่มีสิทธิ์แก้ไข'}
+                {canEdit ? <>{tr('คลิกบนรูปภาพเพื่อเพิ่มจุดงาน')}<br />{tr('หรือคลิกที่จุดเดิมเพื่อแก้ไข')}</> : tr("👁️ โหมดดูอย่างเดียว — ไม่มีสิทธิ์แก้ไข")}
               </div>
             )}
           </div>
           <CollapseCard id="stations" storePrefix="ls" title={tr('รายการจุดงาน')} count={stations.length} defaultOpen={stations.length > 0}>
           {stations.length > 6 && (
-            <SearchInput value={pointSearch} onChange={setPointSearch} fields="จุดงาน"
+            <SearchInput value={pointSearch} onChange={setPointSearch} fields={tr("จุดงาน")}
               style={{ marginBottom: 8 }} inputStyle={{ fontSize: 12.5, background: 'var(--bg3)' }} />
           )}
           <div>
@@ -1604,7 +1604,7 @@ export default function LineSetup({ embedded = false } = {}) {
                             const def = skillDefs.find(d => d.name === r.skill_name);
                             return `${def?.label || r.skill_name} ≥${r.min_score}%`;
                           }).join(', ')
-                        : 'ไม่มีสกิลที่กำหนด'}
+                        : tr("ไม่มีสกิลที่กำหนด")}
                     </div>
                   </div>
                   {canDel && <DeleteButton onClick={() => deleteStation(st.id)} title={tr('ลบจุดงาน')} />}
@@ -1633,7 +1633,7 @@ export default function LineSetup({ embedded = false } = {}) {
 
               {/* ── วางจุดเครื่องจักรบนผัง ── */}
               <h4 style={{ margin: '0 0 10px', color: 'var(--text)', fontSize: 14, fontFamily: 'var(--font-display)' }}>
-                {machineForm.id ? '📝 แก้ไขจุดเครื่องจักร' : '⚙️ เพิ่มจุดเครื่องจักร'}
+                {machineForm.id ? tr("📝 แก้ไขจุดเครื่องจักร") : tr("⚙️ เพิ่มจุดเครื่องจักร")}
               </h4>
               {(machineTempPos || machineForm.id) ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, background: 'var(--bg2)', padding: 14, borderRadius: 'var(--r-md)', marginBottom: 14 }}>
@@ -1660,7 +1660,7 @@ export default function LineSetup({ embedded = false } = {}) {
                       ))}
                     </datalist>
                     <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>
-                      ใส่ชื่อกลุ่มเดียวกันให้เครื่องที่ทำงานคู่ขนานแบบ balance cycle time (เช่น Laser1/2/3) — ถ้าตัวใดหยุด ระบบจะลดกำลังผลิตตามสัดส่วน (1/จำนวนเครื่องในกลุ่ม) ไม่ใช่หยุดทั้งไลน์
+                      {tr("ใส่ชื่อกลุ่มเดียวกันให้เครื่องที่ทำงานคู่ขนานแบบ balance cycle time (เช่น Laser1/2/3) — ถ้าตัวใดหยุด ระบบจะลดกำลังผลิตตามสัดส่วน (1/จำนวนเครื่องในกลุ่ม) ไม่ใช่หยุดทั้งไลน์")}
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
@@ -1669,18 +1669,18 @@ export default function LineSetup({ embedded = false } = {}) {
                     </button>
                     <button type="button" className="pg-btn sm" onClick={() => { setMachineTempPos(null); setMachineForm({ id: null, machine_no: '', redundancy_group: '' }); }}
                      >
-                      ยกเลิก
+                      {tr("ยกเลิก")}
                     </button>
                   </div>
                 </div>
               ) : (
                 <div style={{ textAlign: 'center', padding: '16px', border: '2px dashed var(--border)', color: 'var(--muted)', borderRadius: 'var(--r-md)', fontSize: 12, marginBottom: 14 }}>
-                  {canEdit ? <>{tr('คลิกบนรูปภาพเพื่อเพิ่มจุดเครื่องจักร')}<br />{tr('หรือคลิกที่จุดเดิมเพื่อแก้ไข')}</> : '👁️ โหมดดูอย่างเดียว — ไม่มีสิทธิ์แก้ไข'}
+                  {canEdit ? <>{tr('คลิกบนรูปภาพเพื่อเพิ่มจุดเครื่องจักร')}<br />{tr('หรือคลิกที่จุดเดิมเพื่อแก้ไข')}</> : tr("👁️ โหมดดูอย่างเดียว — ไม่มีสิทธิ์แก้ไข")}
                 </div>
               )}
               <CollapseCard id="machinePoints" storePrefix="ls" title={tr('รายการจุดเครื่องจักร')} count={machinePoints.length} defaultOpen={machinePoints.length > 0}>
               {machinePoints.length > 6 && (
-                <SearchInput value={pointSearch} onChange={setPointSearch} fields="เลขเครื่อง / ชื่อเครื่อง"
+                <SearchInput value={pointSearch} onChange={setPointSearch} fields={tr("เลขเครื่อง / ชื่อเครื่อง")}
                   style={{ marginBottom: 8 }} inputStyle={{ fontSize: 12.5, background: 'var(--bg3)' }} />
               )}
               <div>
@@ -1717,7 +1717,7 @@ export default function LineSetup({ embedded = false } = {}) {
                       background: connectMode ? 'var(--amber-dim)' : 'var(--bg2)',
                       color: connectMode ? 'var(--amber)' : 'var(--text2)',
                     }}>
-                    {connectMode ? 'กำลังเชื่อม' : 'เชื่อมต่อ'}
+                    {connectMode ? tr("กำลังเชื่อม") : tr("เชื่อมต่อ")}
                     <ToggleDot on={connectMode} />
                   </button>
                 )}>
@@ -1729,7 +1729,7 @@ export default function LineSetup({ embedded = false } = {}) {
                   <div style={{ fontSize: 11, color: 'var(--amber)', background: 'var(--amber-dim)', padding: '8px 10px', borderRadius: 'var(--r-md)', marginBottom: 10 }}>
                     {connectFrom
                       ? `${tr("คลิกเครื่องจักรเครื่องที่ 2 บนรูปเพื่อเชื่อมจาก")} ${machinePoints.find(p => p.id === connectFrom)?.machine_no || ''}`
-                      : 'คลิกเครื่องจักรเครื่องแรกบนรูปเพื่อเริ่มเชื่อมสายงาน'}
+                      : tr("คลิกเครื่องจักรเครื่องแรกบนรูปเพื่อเริ่มเชื่อมสายงาน")}
                   </div>
                 )}
                 <div>
@@ -1766,14 +1766,14 @@ export default function LineSetup({ embedded = false } = {}) {
                     color: mpSaving || !mpDirty ? 'var(--muted)' : '#fff',
                     border: `1px solid ${mpSaving || !mpDirty ? 'var(--border2)' : 'var(--accent)'}`,
                     borderRadius: 'var(--r-md)', fontWeight: 700, fontSize: 12, cursor: mpDirty && !mpSaving ? 'pointer' : 'default' }}>
-                  {mpSaving ? 'กำลังบันทึก...' : 'บันทึก'}
+                  {mpSaving ? tr("กำลังบันทึก...") : tr("บันทึก")}
                 </button>
               </div>
             )}>
           <div>
             {/* ══ ข้อมูลของกลุ่ม — ไลน์ย่อยที่ไม่ได้ตั้งเอง จะตกทอดค่าจากไลน์แม่ ══ */}
             <div style={groupHeadSt}>
-              ข้อมูลของกลุ่ม <span style={{ fontWeight: 400, color: 'var(--muted)' }}>{tr('· ไลน์ย่อยที่ไม่ได้ตั้งเอง จะตามไลน์แม่')}</span>
+              {tr("ข้อมูลของกลุ่ม")} <span style={{ fontWeight: 400, color: 'var(--muted)' }}>{tr('· ไลน์ย่อยที่ไม่ได้ตั้งเอง จะตามไลน์แม่')}</span>
             </div>
             {parentLineObj && (
               <div style={inheritNoteSt}>
@@ -1822,12 +1822,12 @@ export default function LineSetup({ embedded = false } = {}) {
               <div style={{ marginTop: 4 }}>
                 <CostCenterSelect value={costCenter} disabled={!canEdit} section={selLineObj?.section} history={ccCodes}
                   onChange={r => setCostCenter(r.code)}
-                  placeholder={parentLineObj?.cost_center ? `${tr("ตามไลน์แม่")}: ${parentLineObj.cost_center}` : 'ค้นรหัส / ชื่อ cost center…'}
+                  placeholder={parentLineObj?.cost_center ? `${tr("ตามไลน์แม่")}: ${parentLineObj.cost_center}` : tr("ค้นรหัส / ชื่อ cost center…")}
                   inputStyle={{ fontSize: 14, fontWeight: 600 }} />
               </div>
             </div>
             <div style={{ fontSize: 11, color: 'var(--muted)', margin: '-4px 0 12px' }}>
-              รวมกำลังคน <strong style={{ color: 'var(--text)' }}>{(parseInt(stdDay) || 0) + (parseInt(stdNight) || 0)}</strong> คน (เช้า+ดึก)
+              {tr("รวมกำลังคน")} <strong style={{ color: 'var(--text)' }}>{(parseInt(stdDay) || 0) + (parseInt(stdNight) || 0)}</strong> {tr("คน (เช้า+ดึก")})
             </div>
             {/* ══ 👨‍🔧 หัวหน้างาน — ของจริงมาจากทะเบียนพนักงาน ไม่ใช่ช่องพิมพ์ (28/10 · feedback user) ══
                 *"ไลน์นึงมีหัวหน้าได้ 2-3 คน แล้วแต่ว่ามีกี่กะการทำงาน"* ⇒ ช่องข้อความช่องเดียวตอบไม่ได้
@@ -1851,18 +1851,17 @@ export default function LineSetup({ embedded = false } = {}) {
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
                       {lineHeads.level === 'supervisor'
-                        ? '⚠️ ไลน์นี้ยังไม่มี "หัวหน้าไลน์" ในทะเบียน — ที่เห็นคือหัวหน้าแผนก'
-                        : 'มาจากทะเบียนพนักงาน (ตำแหน่ง + ทีม + ไลน์)'}
+                        ? tr("⚠️ ไลน์นี้ยังไม่มี \"หัวหน้าไลน์\" ในทะเบียน — ที่เห็นคือหัวหน้าแผนก")
+                        : tr("มาจากทะเบียนพนักงาน (ตำแหน่ง + ทีม + ไลน์)")}
                       {lineHeads.fromLineName ? ` · ${tr("ตกทอดจากไลน์แม่")} ${lineHeads.fromLineName}` : ''}
-                      {!schedRows.length ? ' · ยังไม่มีตารางกะของวันนี้ จึงยังแยกกะไม่ได้' : ''}
-                      {' · แก้ได้ที่ทะเบียนพนักงาน (/operator)'}
+                      {!schedRows.length ? tr(" · ยังไม่มีตารางกะของวันนี้ จึงยังแยกกะไม่ได้") : ''}
+                      {tr(" · แก้ได้ที่ทะเบียนพนักงาน (/operator)")}
                     </div>
                   </>
                 ) : (
                   /* 🔴 "ทะเบียนยังไม่มี" ≠ "ไลน์นี้ไม่มีหัวหน้า" — เขียนให้ตรง ห้ามโชว์ว่างเฉยๆ */
                   <div style={{ fontSize: 12.5, color: 'var(--amber)' }}>
-                    ⚠️ ยังไม่มีใครถูกตั้งเป็นหัวหน้าไลน์/หัวหน้าแผนกของไลน์นี้ในทะเบียนพนักงาน —
-                    ตั้งตำแหน่ง + ทีม + ไลน์ ให้เขาที่ <strong>/operator</strong> แล้วชื่อจะขึ้นเองทุกจอ
+                    ⚠️ {tr("ยังไม่มีใครถูกตั้งเป็นหัวหน้าไลน์/หัวหน้าแผนกของไลน์นี้ในทะเบียนพนักงาน — ตั้งตำแหน่ง + ทีม + ไลน์ ให้เขาที่")} <strong>/operator</strong> {tr("แล้วชื่อจะขึ้นเองทุกจอ")}
                   </div>
                 )}
               </div>
@@ -1886,7 +1885,7 @@ export default function LineSetup({ embedded = false } = {}) {
                     ))}
                   </ul>
                   <div style={{ color: 'var(--muted)', marginTop: 3 }}>
-                    ชื่อที่ขึ้นข้างบนยึด <strong>{tr('ตำแหน่งในทะเบียนพนักงาน')}</strong> เสมอ — สิทธิ์ของบัญชีไม่ใช่ตำแหน่งงาน
+                    {tr("ชื่อที่ขึ้นข้างบนยึด")} <strong>{tr('ตำแหน่งในทะเบียนพนักงาน')}</strong> {tr("เสมอ — สิทธิ์ของบัญชีไม่ใช่ตำแหน่งงาน")}
                   </div>
                 </div>
               )}
@@ -1902,18 +1901,18 @@ export default function LineSetup({ embedded = false } = {}) {
                   🔴 ใช้ได้แค่ "คนเดียว" ⇒ เป็นทางหนี ไม่ใช่ทางหลัก — เขียนบอกให้ชัด */}
               <details style={{ marginTop: 6 }} open={!!signerHead && lineHeads.legacyInRegistry === false}>
                 <summary style={{ fontSize: 12, color: 'var(--muted)', cursor: 'pointer' }}>
-                  ✏️ {tr("ชื่อที่พิมพ์ทับ (ของเดิม · ใส่ได้คนเดียว")}){signerHead ? ` — ${signerHead}` : ' — ยังไม่ได้ตั้ง'}
+                  ✏️ {tr("ชื่อที่พิมพ์ทับ (ของเดิม · ใส่ได้คนเดียว")}){signerHead ? ` — ${signerHead}` : tr(" — ยังไม่ได้ตั้ง")}
                 </summary>
                 <div style={{ marginTop: 6 }}>
                   <PersonSelect value={signerHead} onChange={({ name }) => setSignerHead(name)} disabled={!canEdit}
-                    placeholder={parentLineObj?.head_name ? `${tr("ตามไลน์แม่")}: ${parentLineObj.head_name}` : 'เว้นว่าง = ใช้ชื่อจากทะเบียนข้างบน'} />
+                    placeholder={parentLineObj?.head_name ? `${tr("ตามไลน์แม่")}: ${parentLineObj.head_name}` : tr("เว้นว่าง = ใช้ชื่อจากทะเบียนข้างบน")} />
                   {lineHeads.legacyInRegistry === false && (
                     <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 4 }}>
-                      ⚠️ ชื่อนี้ไม่มีในทะเบียนพนักงาน — ระบบจะเทียบกลับไม่ได้ (เช็คชื่อ/สกิล/กำลังคน ไม่รู้ว่าเป็นใคร)
+                      ⚠️ {tr("ชื่อนี้ไม่มีในทะเบียนพนักงาน — ระบบจะเทียบกลับไม่ได้ (เช็คชื่อ/สกิล/กำลังคน ไม่รู้ว่าเป็นใคร")})
                     </div>
                   )}
                   <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-                    เว้นว่างไว้ดีที่สุด — ใบค่าฝีมือจะให้เลือกจากรายชื่อจริงข้างบนตามกะที่ออกใบ
+                    {tr("เว้นว่างไว้ดีที่สุด — ใบค่าฝีมือจะให้เลือกจากรายชื่อจริงข้างบนตามกะที่ออกใบ")}
                   </div>
                 </div>
               </details>
@@ -1922,7 +1921,7 @@ export default function LineSetup({ embedded = false } = {}) {
             {/* ══ ข้อมูลเฉพาะไลน์นี้ — คุณสมบัติเครื่อง/การไหลงานจริง ไม่ตกทอดถึงไลน์ย่อย ══
                 แยกพื้นหลัง+เส้นคั่นให้เห็นชัดว่า "คนละเรื่องกับกำลังคนข้างบน" (user ทักว่าของปนกันในแผงเดียว) */}
             <div style={{ ...groupHeadSt, borderTop: '2px solid var(--border)', paddingTop: 12, marginTop: 4 }}>
-              คุณสมบัติของไลน์นี้ <span style={{ fontWeight: 400, color: 'var(--muted)' }}>{tr('· ไม่ใช่เรื่องกำลังคน · ไม่ตกทอดถึงไลน์ย่อย ตั้งแยกทุกไลน์')}</span>
+              {tr("คุณสมบัติของไลน์นี้")} <span style={{ fontWeight: 400, color: 'var(--muted)' }}>{tr('· ไม่ใช่เรื่องกำลังคน · ไม่ตกทอดถึงไลน์ย่อย ตั้งแยกทุกไลน์')}</span>
             </div>
             {/* ชนิดหน่วย ต้องมาก่อน "ประเภทไลน์" — ตอบคำถามที่ใหญ่กว่า (เป็นไลน์ผลิตไหม) */}
             <div style={{ marginBottom: 12 }}>
@@ -1940,8 +1939,8 @@ export default function LineSetup({ embedded = false } = {}) {
               </div>
               <div style={{ marginTop: 5, fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.5 }}>
                 {unitKind === UNIT_SUPPORT
-                  ? 'หน่วยนี้ใช้ เช็คชื่อ · จัดกะ · ผังองค์กร ได้ แต่ไม่โผล่ในแผนผลิต / OEE / Daily Report / ใบตรวจรายวัน'
-                  : 'มีแผนผลิต · เปิดกะ · คิด OEE · ต้องตรวจรายวัน (AM · LPA · Poka-Yoke)'}
+                  ? tr("หน่วยนี้ใช้ เช็คชื่อ · จัดกะ · ผังองค์กร ได้ แต่ไม่โผล่ในแผนผลิต / OEE / Daily Report / ใบตรวจรายวัน")
+                  : tr("มีแผนผลิต · เปิดกะ · คิด OEE · ต้องตรวจรายวัน (AM · LPA · Poka-Yoke)")}
               </div>
             </div>
             <div style={{ marginBottom: 12 }}>
@@ -1963,8 +1962,8 @@ export default function LineSetup({ embedded = false } = {}) {
               <div style={{ marginTop: 5 }}>
                 <Hint label={tr('โหมดนี้ทำอะไร')}>
                   {flowMode === 'parallel_machine'
-                    ? 'เครื่อง stand-alone หลายตัววิ่งพร้อมกันคนละรายการ (เช่น SUB APRON) — บอร์ดแตกเลนขนานตามเครื่อง + เลือกเครื่องตอนเปิด Order'
-                    : 'สายเดียวไหลทีละชิ้น — บอร์ดเรียงคิว 1 ใบต่อครั้ง (ดีฟอลต์ · งานคู่ LH/RH แยกเลนคู่ให้เองจาก pair_mat_no)'}
+                    ? tr("เครื่อง stand-alone หลายตัววิ่งพร้อมกันคนละรายการ (เช่น SUB APRON) — บอร์ดแตกเลนขนานตามเครื่อง + เลือกเครื่องตอนเปิด Order")
+                    : tr("สายเดียวไหลทีละชิ้น — บอร์ดเรียงคิว 1 ใบต่อครั้ง (ดีฟอลต์ · งานคู่ LH/RH แยกเลนคู่ให้เองจาก pair_mat_no)")}
                 </Hint>
               </div>
               <div style={{ marginTop: 8 }}>
@@ -1976,16 +1975,14 @@ export default function LineSetup({ embedded = false } = {}) {
                   placeholder={tr('เช่น 3')} style={{ marginTop: 4, width: 120 }} />
                 <div style={{ marginTop: 4 }}>
                   <Hint label={tr('N คือเลขอะไร')}>
-                    = <strong style={{ color: 'var(--text)' }}>{tr('เครื่องหลักที่เดินพร้อมกันจริงตอนเต็มกำลัง')}</strong> (ไม่ใช่จำนวนเครื่องทั้งหมดในไลน์ และไม่ใช่จำนวนคน)
-                    · ตั้งได้ทุกโหมดไหลงาน — เช่น LASER-345/789 (เลเซอร์ 3 ตัวขึ้นงานคู่ LH/RH) เป็น One-piece flow แต่ตั้ง N=3
-                    · <strong style={{ color: 'var(--text)' }}>มีผล 2 ที่: หัก Downtime 1/N ในสูตร OEE และตัวเลข "ควรผลิตได้ตอนนี้" บนผังรวมโรงงาน</strong>
+                    = <strong style={{ color: 'var(--text)' }}>{tr('เครื่องหลักที่เดินพร้อมกันจริงตอนเต็มกำลัง')}</strong> ({tr("ไม่ใช่จำนวนเครื่องทั้งหมดในไลน์ และไม่ใช่จำนวนคน) · ตั้งได้ทุกโหมดไหลงาน — เช่น LASER-345/789 (เลเซอร์ 3 ตัวขึ้นงานคู่ LH/RH) เป็น One-piece flow แต่ตั้ง")} N=3
+                    · <strong style={{ color: 'var(--text)' }}>{tr("มีผล 2 ที่: หัก Downtime 1/N ในสูตร OEE และตัวเลข \"ควรผลิตได้ตอนนี้\" บนผังรวมโรงงาน")}</strong>
                   </Hint>
                 </div>
                 {flowMode === 'parallel_machine' && !(parseInt(parallelStations) > 0) && (
                   // ⚠️ ไลน์เครื่องขนานที่ไม่ตั้ง N = ผังรวมคำนวณกำลังผลิตไม่ได้ ต้องถอยไปสูตรอัตราตามเวลา — ห้ามปล่อยเงียบ
                   <div style={{ fontSize: 11, lineHeight: 1.45, color: 'var(--amber)', background: 'var(--amber)14', border: '1px solid var(--amber)44', borderRadius: 'var(--r-md)', padding: '6px 8px', marginTop: 6 }}>
-                    ⚠️ ไลน์นี้ตั้งเป็น "เครื่องขนาน" แต่ยังไม่ได้กรอก N — ระบบไม่รู้ว่าเดินกี่เครื่องพร้อมกัน
-                    จึงคิด "ควรผลิตได้ตอนนี้" จากสัดส่วนเวลาที่ผ่านไปแทน (หยาบกว่า) และหัก Downtime เต็มเหมือนไลน์เครื่องเดียว
+                    ⚠️ {tr("ไลน์นี้ตั้งเป็น \"เครื่องขนาน\" แต่ยังไม่ได้กรอก N — ระบบไม่รู้ว่าเดินกี่เครื่องพร้อมกัน จึงคิด \"ควรผลิตได้ตอนนี้\" จากสัดส่วนเวลาที่ผ่านไปแทน (หยาบกว่า) และหัก Downtime เต็มเหมือนไลน์เครื่องเดียว")}
                   </div>
                 )}
               </div>
@@ -2000,8 +1997,8 @@ export default function LineSetup({ embedded = false } = {}) {
                 color: selLineObj.is_active === false ? 'var(--amber)' : 'var(--muted)', cursor: 'pointer' }}>
                 <input type="checkbox" checked={selLineObj.is_active === false} onChange={e => handleToggleRetire(e.target.checked)} />
                 <span>{tr('⏸ ปลดระวางไลน์นี้')} {selLineObj.is_active === false
-                  ? '(ไม่โผล่ให้เลือกใหม่แล้ว · ข้อมูลเก่ายังอ่านได้)'
-                  : '— ใช้แทนการลบ เมื่อเลิกใช้ไลน์ · มีผลทันที ไม่ต้องกดบันทึก'}</span>
+                  ? tr("(ไม่โผล่ให้เลือกใหม่แล้ว · ข้อมูลเก่ายังอ่านได้)")
+                  : tr("— ใช้แทนการลบ เมื่อเลิกใช้ไลน์ · มีผลทันที ไม่ต้องกดบันทึก")}</span>
               </label>
             )}
           </div>
@@ -2047,7 +2044,7 @@ function Hint({ children, label = 'คำอธิบาย' }) {
       <button type="button" onClick={() => setOpen(v => !v)}
         style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer',
           fontSize: 11, color: 'var(--muted)', fontFamily: 'var(--font-body)', textDecoration: 'underline dotted' }}>
-        {open ? 'ซ่อนคำอธิบาย' : `(?) ${label}`}
+        {open ? tr("ซ่อนคำอธิบาย") : `(?) ${label}`}
       </button>
       {open && (
         <div style={{ fontSize: 11, lineHeight: 1.45, color: 'var(--muted)', background: 'var(--bg2-surf)',

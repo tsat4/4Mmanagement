@@ -143,8 +143,8 @@ export default function ProdProgressStrip({ workDate, scopeNames = null, onOpenL
         )}
         <span style={{ fontSize: 11, color: 'var(--muted)' }}>
           {tr("วันงาน")} {workDate}
-          {d.noShift ? ' · ยังไม่มีไลน์ไหนเปิดกะ'
-            : open ? ' · กดชื่อไลน์เพื่อเปิดบอร์ดจริงของไลน์นั้น' : ` · ${tr("แตะดูรายไลน์")} (${d.lines.length})`}
+          {d.noShift ? tr(" · ยังไม่มีไลน์ไหนเปิดกะ")
+            : open ? tr(" · กดชื่อไลน์เพื่อเปิดบอร์ดจริงของไลน์นั้น") : ` · ${tr("แตะดูรายไลน์")} (${d.lines.length})`}
         </span>
       </div>
 

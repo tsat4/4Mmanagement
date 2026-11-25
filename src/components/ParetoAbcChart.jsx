@@ -69,7 +69,7 @@ export default function ParetoAbcChart({
   const hasMoney = useMemo(() => records.some(r => r?.baht != null), [records]);
   const money = hasMoney && measure === 'baht';
   const valOf = (d) => (money ? (d.baht || 0) : (d.value || 0));
-  const unitOf = money ? 'บาท' : unit;
+  const unitOf = money ? tr("บาท") : unit;
 
   const rows = useMemo(() => classifyAbc(groupBy(records, r => r.cat), valOf), [records, money]); // eslint-disable-line react-hooks/exhaustive-deps
   const total = rows.reduce((s, d) => s + d._val, 0);
@@ -204,7 +204,7 @@ export default function ParetoAbcChart({
           <div style={{ flexShrink: 0, display: 'flex', gap: 4, background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: 2 }}>
             {[['value', unit], ['baht', '฿ บาท']].map(([k, lb]) => (
               <button key={k} onClick={() => setMeasure(k)}
-                title={k === 'baht' ? 'เรียงตามมูลค่าความสูญเสีย (นาที/60 × activity rate ของไลน์)' : `${tr("เรียงตาม")}${unit}`}
+                title={k === 'baht' ? tr("เรียงตามมูลค่าความสูญเสีย (นาที/60 × activity rate ของไลน์)") : `${tr("เรียงตาม")}${unit}`}
                 style={{ background: measure === k ? 'var(--accent)' : 'transparent', color: measure === k ? 'var(--accent-ink)' : 'var(--text2)',
                   border: 'none', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 800, padding: '3px 9px', cursor: 'pointer' }}>{lb}</button>
             ))}
@@ -258,7 +258,7 @@ export default function ParetoAbcChart({
         {rows.length > MAX_BARS + 1 && (
           <span style={{ color: 'var(--muted)' }}>{tr('สัดส่วน A/B/C ข้างบนนับครบทุกรายการ ไม่ใช่เฉพาะแท่งที่เห็น')}</span>
         )}
-        {dims.length > 0 && <span style={{ color: 'var(--accent)', fontWeight: 700 }}>คลิกแท่ง/ชิป = เจาะลึก</span>}
+        {dims.length > 0 && <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{tr("คลิกแท่ง/ชิป = เจาะลึก")}</span>}
       </div>
       {/* เน้นกลุ่ม A — ตัวที่ต้องแก้ก่อน (คลิกเจาะได้) */}
       <div style={{ marginTop: 9, display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>

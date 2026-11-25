@@ -15,7 +15,7 @@ import { tooltipProps, axisTick, alignedYWidth, fmtAxis, CHART_MARGIN } from '..
 import NoticeBar from './NoticeBar';
 import useIsMobile from '../utils/useIsMobile';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 const GOOD = 'var(--green)', WARN = 'var(--amber)', BAD = 'var(--red)', IDLE = 'var(--muted)', ACC = 'var(--accent2)', INFO = 'var(--blue)';
 const card = { background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 14, boxShadow: 'var(--shadow-sm)' };
 const PAGE = 1000;
@@ -25,8 +25,8 @@ const EVENTS_SHOW = 50;
 
 const fmt = (v, d = 1) => (v == null || !Number.isFinite(Number(v)) ? '—'
   : Number(v).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d }));
-const hhmm = (ms) => new Date(ms).toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit' });
-const dayLabel = (ms) => (!Number.isFinite(Number(ms)) ? '—' : new Date(Number(ms)).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }));
+const hhmm = (ms) => new Date(ms).toLocaleTimeString(dateLocale(), { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit' });
+const dayLabel = (ms) => (!Number.isFinite(Number(ms)) ? '—' : new Date(Number(ms)).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }));
 
 /** แถวรายนาทีของตู้เดียว ตั้งแต่ from — วนทีละ 1000 แถว · error = throw (ห้ามกลืนเป็นกราฟว่าง) */
 async function fetchMeterReadings(scopeKind, scopeName, from, inclusive) {
@@ -170,17 +170,17 @@ export default function EnergyMeterDetail({ m, machines, boardMeters, totalToday
       {err && <NoticeBar tone="bad">{tr('โหลดข้อมูลตู้ไม่สำเร็จ:')} {err} {tr('— กราฟเป็นของรอบก่อนหน้า')}</NoticeBar>}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, alignContent: 'start' }}>
-        <Kpi color={m.overKw ? BAD : GOOD} label={tr('กำลังไฟ (สูงสุดในนาทีล่าสุด)')} value={fmt(m.kw, 2)} unit="kW"
+        <Kpi color={m.overKw ? BAD : GOOD} label={tr('กำลังไฟ (ค่าล่าสุด)')} value={fmt(m.kw, 2)} unit="kW"
           sub={`${tr("สูงสุดวันนี้")} ${fmt(m.peakKw)} kW · ${tr("ลิมิต")} ${m.limitKw ?? '—'} kW`} />
         <Kpi color={INFO} label={tr('ใช้ไฟวันนี้')} value={fmt(m.todayKwh)} unit="kWh"
-          sub={todayPct != null ? `${fmt(todayPct, 0)}% ${tr("ของไฟทุกตู้วันนี้")}` : 'ตั้งแต่ 00:00 น.'} />
+          sub={todayPct != null ? `${fmt(todayPct, 0)}% ${tr("ของไฟทุกตู้วันนี้")}` : tr("ตั้งแต่ 00:00 น.")} />
         <Kpi color={INFO} label={tr('ใช้ไฟเดือนนี้')} value={fmt(m.monthKwh, 0)} unit="kWh"
-          sub={avgDay != null ? `${tr("เฉลี่ยวันละ")} ${fmt(avgDay)} kWh (${m.monthDays} ${tr("วันที่มีข้อมูล")})` : 'ยังไม่มีข้อมูลของเดือนนี้'} />
+          sub={avgDay != null ? `${tr("เฉลี่ยวันละ")} ${fmt(avgDay)} kWh (${m.monthDays} ${tr("วันที่มีข้อมูล")})` : tr("ยังไม่มีข้อมูลของเดือนนี้")} />
         <Kpi color={INFO} label={tr('เลขมิเตอร์สะสม')} value={fmt(m.kwhTotal, 0)} unit="kWh" sub={tr('อ่านตรงจากมิเตอร์ (Active Energy)')} />
         <Kpi color={m.overA ? BAD : ACC} label={tr('แรงดัน · กระแส')} value={<><span style={{ color: INFO }}>{fmt(m.v, 0)}</span><small style={{ fontSize: 13, color: 'var(--muted)' }}> V </small><span style={{ color: m.overA ? BAD : ACC }}>{fmt(m.a)}</span></>} unit="A"
-          sub={`V ${tr("เฉลี่ย 3 เฟส · A เฟสที่สูงสุด · ลิมิต")} ${m.limitA ?? '—'} A`} />
+          sub={`V ${tr("เฉลี่ย 3 เฟส · ลิมิต")} ${m.limitA ?? '—'} A`} />
         <Kpi color={st.color} label={tr('สถานะมิเตอร์')} value={st.label} unit=""
-          sub={m.ageMin == null ? 'ยังไม่เคยได้รับข้อมูล' : m.ageMin < 1 ? 'ข้อมูลล่าสุดเมื่อสักครู่' : `${tr("ข้อมูลล่าสุด")} ${m.ageMin} ${tr("นาทีที่แล้ว")}`} />
+          sub={m.ageMin == null ? tr("ยังไม่เคยได้รับข้อมูล") : m.ageMin < 1 ? tr("ข้อมูลล่าสุดเมื่อสักครู่") : `${tr("ข้อมูลล่าสุด")} ${m.ageMin} ${tr("นาทีที่แล้ว")}`} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'minmax(0, 1fr)' : 'minmax(0, 1.6fr) minmax(280px, 1fr) minmax(280px, 1fr)', gap: 12, alignContent: 'start' }}>
@@ -194,7 +194,7 @@ export default function EnergyMeterDetail({ m, machines, boardMeters, totalToday
             </div>
           </div>
           <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-            1 จุด = 1 นาที (kW = สูงสุดของนาที · A = เฟสที่สูงสุด) · เส้นประแดง = ลิมิต · มิเตอร์หลุดเกิน 5 นาทีเส้นขาด
+            1 {tr("จุด = 1 นาที (ค่าที่มิเตอร์ส่งมาในนาทีนั้น) · เส้นประแดง = ลิมิต · มิเตอร์หลุดเกิน 5 นาทีเส้นขาด")}
           </div>
           {!loaded ? <div style={{ color: 'var(--muted)', padding: 20 }}>{tr('กำลังโหลด…')}</div>
             : shown.length < 2 ? <div style={{ color: 'var(--muted)', padding: 20, fontSize: 12.5 }}>{tr('ยังไม่มีค่ารายนาทีในช่วงนี้')}</div>
@@ -210,7 +210,7 @@ export default function EnergyMeterDetail({ m, machines, boardMeters, totalToday
                     <Line type="monotone" dataKey="kw" stroke={GOOD} dot={false} strokeWidth={1.8} {...chartAnim()} connectNulls={false} />
                   </LineChart>
                 </ResponsiveContainer>
-                <div style={{ fontSize: 12, fontWeight: 700, color: ACC, marginTop: 6 }}>{tr('กระแส เฟสที่สูงสุด (A)')}</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: ACC, marginTop: 6 }}>{tr('กระแส (A)')}</div>
                 <ResponsiveContainer width="100%" height={150}>
                   <LineChart data={shown} syncId={`meter-${m.key}`} margin={CHART_MARGIN}>
                     <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
@@ -223,7 +223,7 @@ export default function EnergyMeterDetail({ m, machines, boardMeters, totalToday
                 </ResponsiveContainer>
               </>)}
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 6 }}>
-            ℹ️ ESM เก็บค่าสรุปรายนาที (ย้อนหลัง 7 วัน) — กราฟรายวินาทียังดูได้ที่ Node-RED
+            ℹ️ ESM {tr("เก็บค่าสรุปรายนาที (ย้อนหลัง 7 วัน) — กราฟรายวินาทียังดูได้ที่")} Node-RED
           </div>
         </div>
 
@@ -275,7 +275,7 @@ export default function EnergyMeterDetail({ m, machines, boardMeters, totalToday
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'minmax(0, 1fr)' : 'minmax(0, 2fr) minmax(260px, 1fr)', gap: 12, alignContent: 'start' }}>
       <div style={{ ...card, minWidth: 0 }}>
         <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{tr('ใช้ไฟรายวัน')} {DAYS} {tr('วันล่าสุด (kWh)')}</div>
-        <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>จากเลขมิเตอร์ต้น-ท้ายวัน · วันที่ไม่มีแท่ง = ไม่มีข้อมูล (ไม่ใช่ 0)</div>
+        <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{tr("จากเลขมิเตอร์ต้น-ท้ายวัน · วันที่ไม่มีแท่ง = ไม่มีข้อมูล (ไม่ใช่")} 0)</div>
         {daily == null ? <div style={{ color: 'var(--muted)', padding: 16, fontSize: 12.5 }}>{loaded ? tr('อ่านยอดรายวันไม่ได้') : tr('กำลังโหลด…')}</div>
           : !dailyBars.length ? <div style={{ color: 'var(--muted)', padding: 16, fontSize: 12.5 }}>{tr('ยังไม่มียอดรายวัน')}</div>
             : (
@@ -284,7 +284,7 @@ export default function EnergyMeterDetail({ m, machines, boardMeters, totalToday
                   <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="day" tick={axisTick()} tickFormatter={(d) => `${Number(d.slice(8))}/${Number(d.slice(5, 7))}`} minTickGap={8} />
                   <YAxis width="auto" tick={axisTick()} tickFormatter={fmtAxis} />
-                  <Tooltip {...tooltipProps()} labelFormatter={(d) => new Date(`${d}T00:00:00+07:00`).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok', weekday: 'short', day: 'numeric', month: 'short' })}
+                  <Tooltip {...tooltipProps()} labelFormatter={(d) => new Date(`${d}T00:00:00+07:00`).toLocaleDateString(dateLocale(), { timeZone: 'Asia/Bangkok', weekday: 'short', day: 'numeric', month: 'short' })}
                     formatter={(v, k, p) => [`${fmt(v)} kWh${p?.payload?.peak != null ? ` · ${tr("สูงสุด")} ${fmt(p.payload.peak)} kW` : ''}`, 'ใช้ไฟ']} />
                   <Bar dataKey="kwh" fill={INFO} {...chartAnim()} />
                 </BarChart>
@@ -372,6 +372,10 @@ function PhasePanel({ m }) {
           </div>
         </div>
       )}
+      {/* ⚡ PF (25/11 คำสั่ง user) — แสดงค่าอย่างเดียว ไม่ตัดสินดี/เสีย (เกณฑ์ค่าปรับยังไม่มีในทะเบียน ห้ามเดา) */}
+      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text2)', marginTop: 10 }}>
+        Power Factor (PF): <span style={{ fontWeight: 800, color: m.pf == null ? 'var(--muted)' : 'var(--text)' }}>{m.pf == null ? tr('ยังไม่มีค่า') : fmt(m.pf, 2)}</span>
+      </div>
     </div>
   );
 }

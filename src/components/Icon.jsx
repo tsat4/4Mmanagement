@@ -30,6 +30,7 @@ export const ICON_MAP = {
   '🔨': Hammer, '🧑‍🤝‍🧑': UsersRound, '🧭': Compass, '🧰': Toolbox, '🎮': Gamepad2, '📷': Camera, '📸': Camera,
   '🗂️': FolderOpen, '🛡️': Shield, '🦺': ShieldCheck, '✍️': PenLine, '🌐': Globe, '🎭': Drama, '💬': MessageSquare,
   '🔕': BellOff, '🚪': LogOut, '📁': Folder, '☰': Menu, '🔳': QrCode, '☑️': ClipboardCheck, '⭐': Star, '👤': UserRound,
+  '🎯': Target,   // 25/11 หมวดกิจกรรม (Target import อยู่แล้ว)
 };
 const LUCIDE = {
   Recycle, Settings, Zap, CircleCheck, Plane, Plus, Sunrise, Kanban, Award, Landmark, House, Building2, Store, Factory,

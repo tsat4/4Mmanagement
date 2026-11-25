@@ -84,8 +84,7 @@ export default function ProcessTypeSetup({ role }) {
         {canEdit && <button onClick={() => openEdit()} style={saveBtnStyle}>{tr('+ เพิ่มกระบวนการ')}</button>}
       </div>
       <InfoMore label={tr('กระบวนการที่ตั้งไว้ที่นี่ใช้ที่ไหนบ้าง')} id="pts-usage" size={12} style={{ marginBottom: 16 }}>
-        กระบวนการที่ตั้งไว้ที่นี่ถูกใช้ร่วมกันทั้งระบบ: tag เครื่องจักร (ตั้งค่าผังไลน์) · สินค้า (Product Master) ·
-        ประเภท Downtime/งานเสีย/นโยบายพัก — ไลน์เห็นประเภทตามกระบวนการของเครื่อง/สินค้าที่มีจริงในไลน์
+        {tr("กระบวนการที่ตั้งไว้ที่นี่ถูกใช้ร่วมกันทั้งระบบ: tag เครื่องจักร (ตั้งค่าผังไลน์) · สินค้า (Product Master) · ประเภท Downtime/งานเสีย/นโยบายพัก — ไลน์เห็นประเภทตามกระบวนการของเครื่อง/สินค้าที่มีจริงในไลน์")}
       </InfoMore>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {items.map(it => (
@@ -109,7 +108,7 @@ export default function ProcessTypeSetup({ role }) {
       {editing && form && (
         <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14 }}>
           <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(96vw, 560px)' }}>
-            <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginBottom: 12 }}>{editing === 'new' ? '➕ เพิ่มกระบวนการ' : `✏️ ${tr("แก้ไข")} ${form.label}`}</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginBottom: 12 }}>{editing === 'new' ? tr("➕ เพิ่มกระบวนการ") : `✏️ ${tr("แก้ไข")} ${form.label}`}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10 }}>
                 <Field label={tr('ชื่อกระบวนการ *')}>

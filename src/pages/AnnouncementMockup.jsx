@@ -11,7 +11,7 @@ import { isPlant, scopeKey, scopeCovers, scopePathText, sameScope, PLANT } from 
 import { rint, rnd } from '../utils/seededRandom';
 import { getWorkDate, addDaysStr } from '../utils/workDate';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 /* ══ 📢 ประกาศ / ชี้แจงบริษัท — MOCKUP workflow (2026-10-29 · คำสั่ง user จากโน้ตลายมือ) ══════════
    โจทย์: "Workflow การรับประกาศของบริษัท"  Issue → Approve → Publish
      · ผู้แจ้งกรอก หัวข้อ · รายละเอียด · ผู้รับ (เลือกขอบเขตจากผังองค์กร) · Effective date
@@ -50,7 +50,7 @@ const btnPrimary = { padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWe
 const btnGhost = { padding: '6px 12px', borderRadius: 10, fontSize: 13, fontWeight: 700,
   background: 'var(--bg2)', color: 'var(--text)', border: '1px solid var(--border2)' };
 
-const fmtDate = (s) => { try { return new Date(`${s}T00:00:00`).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return s; } };
+const fmtDate = (s) => { try { return new Date(`${s}T00:00:00`).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return s; } };
 
 let seq = 3;
 const seed = (today) => ([
@@ -110,7 +110,7 @@ function FlowBar({ st, ack }) {
               {bad ? '✕' : done ? '✓' : i + 1}
             </span>
             <span style={{ fontSize: 12, fontWeight: done || cur || bad ? 700 : 400, color: c }}>Step {i + 1} · {label}</span>
-            <span style={{ fontSize: 11, color: 'var(--muted)' }}>{bad ? 'ถูกตีกลับ' : cur ? `${tr("ถึงขั้นนี้")} · ${STEP_SUB[i]}` : STEP_SUB[i]}</span>
+            <span style={{ fontSize: 11, color: 'var(--muted)' }}>{bad ? tr("ถูกตีกลับ") : cur ? `${tr("ถึงขั้นนี้")} · ${STEP_SUB[i]}` : STEP_SUB[i]}</span>
             {i === 3 && at === 3 && ack && (
               <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>
                 {tr("รับทราบ")} {ack.done} / {ack.total} {tr('คน')}{ack.total ? ` (${Math.round((ack.done / ack.total) * 100)}%)` : ''}
@@ -273,7 +273,7 @@ export default function AnnouncementMockup() {
       <PageHeader
         title={tr('ประกาศ / ชี้แจงบริษัท')}
         icon="📢"
-        sub={<span><b style={{ color: 'var(--amber)' }}>MOCKUP</b> · ข้อมูลจำลองในหน้านี้ ไม่บันทึกลงฐานข้อมูล (รีเฟรช = เริ่มใหม่)</span>}
+        sub={<span><b style={{ color: 'var(--amber)' }}>MOCKUP</b> · {tr("ข้อมูลจำลองในหน้านี้ ไม่บันทึกลงฐานข้อมูล (รีเฟรช = เริ่มใหม่")})</span>}
         tabs={tabs} tab={tab} onTab={setTab}
         filters={(
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
@@ -287,10 +287,8 @@ export default function AnnouncementMockup() {
       />
 
       <div style={{ marginBottom: 12 }}>
-        <InfoMore lead="ลำดับงาน: ผู้แจ้งกรอก → แจ้งเตือน EVP → EVP อนุมัติ (แจ้งกลับผู้แจ้ง) → ถึงวันมีผล ประกาศขึ้นให้ user ในส่วนงานที่เลือก">
-          สลับแท็บด้านบนเพื่อดูมุมของแต่ละคน · เลื่อน "วันที่จำลอง" เพื่อดูประกาศขึ้นตามวันมีผล ·
-          ผู้รับเลือกจากผังองค์กรจริง — เลือกหน่วยแม่ = ครอบหน่วยลูกทั้งหมด ·
-          ระบบจริงต้องมีตารางประกาศ + สิทธิ์ + แจ้งเตือนในแอป (ยังไม่ได้ทำ)
+        <InfoMore lead={tr("ลำดับงาน: ผู้แจ้งกรอก → แจ้งเตือน EVP → EVP อนุมัติ (แจ้งกลับผู้แจ้ง) → ถึงวันมีผล ประกาศขึ้นให้ user ในส่วนงานที่เลือก")}>
+          {tr("สลับแท็บด้านบนเพื่อดูมุมของแต่ละคน · เลื่อน \"วันที่จำลอง\" เพื่อดูประกาศขึ้นตามวันมีผล · ผู้รับเลือกจากผังองค์กรจริง — เลือกหน่วยแม่ = ครอบหน่วยลูกทั้งหมด · ระบบจริงต้องมีตารางประกาศ + สิทธิ์ + แจ้งเตือนในแอป (ยังไม่ได้ทำ")})
         </InfoMore>
       </div>
       {failed && <div style={{ ...card, borderColor: 'var(--red)', color: 'var(--red)', marginBottom: 12 }}>⚠ {failed} {tr('— ตัวเลือกผู้รับอาจไม่ครบ')}</div>}
@@ -305,7 +303,7 @@ export default function AnnouncementMockup() {
             <label style={{ display: 'grid', gap: 4, fontSize: 13 }}>{tr('รายละเอียด (Detail)')}
               <textarea rows={5} value={form.detail} onChange={e => setForm(f => ({ ...f, detail: e.target.value }))} />
             </label>
-            <div style={{ display: 'grid', gap: 6, fontSize: 13 }}>ผู้รับ (Who's receive) — เลือกจากผังองค์กร
+            <div style={{ display: 'grid', gap: 6, fontSize: 13 }}>{tr("ผู้รับ (Who's receive) — เลือกจากผังองค์กร")}
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                 <OrgScopePicker index={index} failed={failed} value={pick} onChange={setPick} costCenter={false} />
                 <button type="button" style={btnGhost} onClick={addScope}>{tr('+ เพิ่ม')}</button>
@@ -363,7 +361,7 @@ export default function AnnouncementMockup() {
         <div style={{ display: 'grid', gap: 12 }}>
           <div style={{ ...card, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <span style={{ fontSize: 13 }}>{tr('ดูในฐานะพนักงานของ')}</span>
-            <OrgScopePicker index={index} failed={failed} value={myUnit} onChange={(v) => { setMyUnit(v); setMeId(''); }} costCenter={false} plantLabel="— เลือกหน่วยงานของพนักงาน —" />
+            <OrgScopePicker index={index} failed={failed} value={myUnit} onChange={(v) => { setMyUnit(v); setMeId(''); }} costCenter={false} plantLabel={tr("— เลือกหน่วยงานของพนักงาน —")} />
             <select value={meId} onChange={e => setMeId(e.target.value)} disabled={!myPeople.length} style={{ width: 240 }}>
               <option value="">{myPeople.length ? tr('— ฉันคือ (รายชื่อจำลอง) —') : tr('หน่วยนี้ไม่มีรายชื่อจำลอง')}</option>
               {myPeople.map(e => <option key={e.id} value={e.id}>{tr(e.name)}</option>)}
@@ -381,7 +379,7 @@ export default function AnnouncementMockup() {
                   {at
                     ? <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--green)' }}>✓ {me.name} {tr('รับทราบแล้ว (')}{fmtDate(at)})</span>
                     : <button type="button" style={btnPrimary} disabled={!me} onClick={() => acknowledge(a)}>{tr('รับทราบ')}</button>}
-                  {!me && <span style={{ fontSize: 12, color: 'var(--muted)' }}>เลือก "ฉันคือ" ก่อนจึงกดรับทราบได้</span>}
+                  {!me && <span style={{ fontSize: 12, color: 'var(--muted)' }}>{tr("เลือก \"ฉันคือ\" ก่อนจึงกดรับทราบได้")}</span>}
                 </div>
               </>) })
             );

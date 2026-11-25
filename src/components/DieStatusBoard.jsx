@@ -15,7 +15,7 @@ import {
   DIE_STATUSES, DIE_STATUS_UNSET, dieStatusMeta, buildOpenMoMap, openMosOf,
   regrindOver, saveDieStatus, MIGRATION_HINT,
 } from '../utils/dieStatus';
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 import { moStatusLabel } from '../utils/mtnStepPerm';   // ป้ายสถานะใบ MO (แยกรอ QA / รอรับมอบ)
 
 const inp = { padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 13, boxSizing: 'border-box' };
@@ -128,14 +128,13 @@ export default function DieStatusBoard({
       {!ready && (
         <div data-page-note="1" style={{ ...warnBox, marginBottom: 12 }}>
           <b>{tr('⚠️ สถานะ manual ยังใช้ไม่ได้')}</b> — {MIGRATION_HINT}
-          <div style={{ marginTop: 3, color: 'var(--muted)' }}>คอลัมน์ "ใบซ่อม MO ค้าง" ยังแสดงได้ปกติ (อ่านจากระบบแจ้งซ่อมโดยตรง)</div>
+          <div style={{ marginTop: 3, color: 'var(--muted)' }}>{tr("คอลัมน์ \"ใบซ่อม MO ค้าง\" ยังแสดงได้ปกติ (อ่านจากระบบแจ้งซ่อมโดยตรง")})</div>
         </div>
       )}
 
       {counts.unset > 0 && ready && (
         <div data-page-note="1" style={{ ...warnBox, marginBottom: 12 }}>
-          ⚠️ แม่พิมพ์ <b>{counts.unset}</b> ตัวยังไม่ระบุสถานะ — ระบบไม่เดาให้ (หลักเดียวกับ backfill ทะเบียน)
-          ให้ทีม DIE MTN ไล่ตั้งสถานะจริงจากหน้างาน แล้วตัวนับนี้จะหายเอง
+          ⚠️ {tr("แม่พิมพ์")} <b>{counts.unset}</b> {tr("ตัวยังไม่ระบุสถานะ — ระบบไม่เดาให้ (หลักเดียวกับ backfill ทะเบียน) ให้ทีม DIE MTN ไล่ตั้งสถานะจริงจากหน้างาน แล้วตัวนับนี้จะหายเอง")}
         </div>
       )}
 
@@ -147,7 +146,7 @@ export default function DieStatusBoard({
         <LineSelect
           lines={prodLines.filter(l => lineNames.includes(l.name))}
           value={fLine} onChange={setFLine} placeholder={ALL.line}
-          extraGroups={[{ label: 'กลุ่มเครื่องปั๊ม', options: lineNames.filter(n => !prodLines.some(l => l.name === n)).map(n => ({ value: n })) }]}
+          extraGroups={[{ label: tr("กลุ่มเครื่องปั๊ม"), options: lineNames.filter(n => !prodLines.some(l => l.name === n)).map(n => ({ value: n })) }]}
         />
         {/* ชิปสถานะ = ตัวกรอง (กดเพื่อกรอง) ⇒ อยู่ "ใน" แถบกรอง ไม่ใช่แถวการ์ดเหนือมัน (UI-STANDARD §2.1) */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -156,7 +155,7 @@ export default function DieStatusBoard({
             color: counts.mo ? '#ef4444' : 'var(--text)', border: counts.mo ? 'rgba(239,68,68,0.5)' : 'var(--border)',
             active: fStatus === 'mo', onClick: () => setFStatus(v => v === 'mo' ? '' : 'mo'),
           })}
-          {DIE_STATUSES.map(s => chip(`${s.icon} ${s.label}`, counts.per[s.key] || 0, {
+          {DIE_STATUSES.map(s => chip(`${s.icon} ${tr(s.label)}`, counts.per[s.key] || 0, {
             color: s.color, active: fStatus === s.key, onClick: () => setFStatus(v => v === s.key ? '' : s.key),
           }))}
           {chip(`${DIE_STATUS_UNSET.icon} ${tr("ยังไม่ระบุ")}`, counts.unset, {
@@ -168,7 +167,7 @@ export default function DieStatusBoard({
             active: fStatus === 'regrind', onClick: () => setFStatus(v => v === 'regrind' ? '' : 'regrind'),
           })}
         </div>
-        <SearchInput value={q} onChange={setQ} fields="เลขแม่พิมพ์ / พาร์ท / หมายเหตุ" />
+        <SearchInput value={q} onChange={setQ} fields={tr("เลขแม่พิมพ์ / พาร์ท / หมายเหตุ")} />
         <span className="spacer" />
         <span className="filter-count">{tr('แสดง')} {rows.length} {tr('ตัว')}</span>
       </FilterBar>
@@ -237,7 +236,7 @@ export default function DieStatusBoard({
                     <td style={tdStyle}>
                       {mos.length ? mos.map(o => (
                         <div key={o.id} style={{ fontSize: 11.5, color: '#ef4444', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                          {o.mo_no || '(ยังไม่ออกเลข MO)'} <span style={{ fontWeight: 400 }}>· {moStatusLabel(o)}</span>
+                          {o.mo_no || tr("(ยังไม่ออกเลข MO)")} <span style={{ fontWeight: 400 }}>· {moStatusLabel(o)}</span>
                         </div>
                       )) : <span style={{ color: 'var(--muted)' }}>—</span>}
                     </td>
@@ -253,7 +252,7 @@ export default function DieStatusBoard({
                     </td>
                     <td style={{ ...tdStyle, fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>
                       {e.status_updated_at
-                        ? <>{new Date(e.status_updated_at).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' })}
+                        ? <>{new Date(e.status_updated_at).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' })}
                           {e.status_updated_by_name ? <div>{e.status_updated_by_name}</div> : null}</>
                         : '—'}
                     </td>
@@ -269,8 +268,8 @@ export default function DieStatusBoard({
       </div>
 
       <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 8, lineHeight: 1.7 }}>
-        • "ใบซ่อม MO ค้าง" อ่านสดจากระบบแจ้งซ่อม (/mtn-repair) — ปิด MO แล้วหายจากบอร์ดเอง ไม่ต้องมาแก้สถานะซ้ำ<br />
-        • ประวัติว่าใครเปลี่ยนสถานะ/ค่าไหน ดูได้จาก audit log ของตาราง equipment_die (⚙️ ข้อมูลตั้งต้น → 📜 ประวัติการแก้ไข ใน /mtn-repair)
+        • "{tr("ใบซ่อม MO ค้าง\" อ่านสดจากระบบแจ้งซ่อม (/mtn-repair) — ปิด MO แล้วหายจากบอร์ดเอง ไม่ต้องมาแก้สถานะซ้ำ")}<br />
+        • {tr("ประวัติว่าใครเปลี่ยนสถานะ/ค่าไหน ดูได้จาก audit log ของตาราง equipment_die (⚙️ ข้อมูลตั้งต้น → 📜 ประวัติการแก้ไข ใน")} /mtn-repair)
       </div>
     </div>
   );

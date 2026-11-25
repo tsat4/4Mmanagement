@@ -499,8 +499,7 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
 
         {profileMissing && (
           <div style={{ ...noteBox('#f59e0b'), marginBottom: 10 }}>
-            ⚠ ยังอ่านทะเบียนรูปแบบไฟล์ (<code>customer_pull_formats</code>) ไม่ได้ — ใช้ค่าสำรองของ Ford e-SMART ในโค้ดแทน ·
-            ถ้าไฟล์ลูกค้าเจ้าอื่นให้ apply migration <code>20260908_customer_pull_signals_esmart.sql</code> ก่อน
+            ⚠ {tr("ยังอ่านทะเบียนรูปแบบไฟล์")} (<code>customer_pull_formats</code>) {tr("ไม่ได้ — ใช้ค่าสำรองของ Ford e-SMART ในโค้ดแทน · ถ้าไฟล์ลูกค้าเจ้าอื่นให้")} apply migration <code>20260908_customer_pull_signals_esmart.sql</code> {tr("ก่อน")}
           </div>
         )}
 
@@ -514,7 +513,7 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
             {file ? `📄 ${file.name}` : tr('เลือกไฟล์ e-SMART (.csv / .xlsx)')}
           </span>
           <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-            {file ? 'คลิกเพื่อเปลี่ยนไฟล์' : 'ระบบอ่านหัวไฟล์เพื่อรู้ช่วงเวลาและรูปแบบเอง'}
+            {file ? tr("คลิกเพื่อเปลี่ยนไฟล์") : tr("ระบบอ่านหัวไฟล์เพื่อรู้ช่วงเวลาและรูปแบบเอง")}
           </div>
         </label>
 
@@ -541,7 +540,7 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
                 const lag = Math.round((Date.now() - made.getTime()) / 60000);
                 return <div style={{ marginTop: 4 }}>
                   {tr("ไฟล์ออกเมื่อ")} <b>{dateStr(made)} {timeStr(made)}</b>
-                  {lag >= 0 && <span style={{ color: lag > 120 ? '#f59e0b' : 'var(--muted)' }}> {tr('· ผ่านมาแล้ว')} {lag} {tr('นาที')}{lag > 120 ? ' (ข้อมูลอาจเก่า)' : ''}</span>}
+                  {lag >= 0 && <span style={{ color: lag > 120 ? '#f59e0b' : 'var(--muted)' }}> {tr('· ผ่านมาแล้ว')} {lag} {tr('นาที')}{lag > 120 ? tr(" (ข้อมูลอาจเก่า)") : ''}</span>}
                 </div>;
               })()}
             </div>
@@ -551,7 +550,7 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
                 <div style={{ fontWeight: 800, marginBottom: 4 }}>{tr('ตรวจวันที่ให้แน่ก่อนยืนยัน')}</div>
                 <div style={{ fontSize: 12, marginBottom: 6 }}>
                   {tr("วันงานที่ระบบอ่านได้คือ")} <b>{workDate || '—'}</b> {tr('รอบส่ง')} <b>{shipTime || '—'}</b> —
-                  {tr("ถ้าไม่ตรงกับไฟล์ ให้แก้ 2 ช่องด้านบนก่อน")} · <b>วันที่ผิด = ใบไปโผล่ผิดวันและสต็อกถูกตัดซ้ำ</b>
+                  {tr("ถ้าไม่ตรงกับไฟล์ ให้แก้ 2 ช่องด้านบนก่อน")} · <b>{tr("วันที่ผิด = ใบไปโผล่ผิดวันและสต็อกถูกตัดซ้ำ")}</b>
                 </div>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                   <input type="checkbox" checked={dateAck} onChange={e => setDateAck(e.target.checked)} />
@@ -569,15 +568,14 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
                 </div>
                 {dupUploads.slice(0, 3).map(({ batch: b, reason }) => (
                   <div key={b.id} style={{ fontSize: 12, marginTop: 3 }}>
-                    • {reason === 'same_file' ? 'ชื่อไฟล์เดียวกัน' : 'ช่วงเวลาเดียวกัน (คนละชื่อไฟล์)'}
-                    {' — '}{whenText(b.uploaded_at)} {tr('โดย')} {b.uploaded_by || 'ไม่ระบุ'}
+                    • {reason === 'same_file' ? tr("ชื่อไฟล์เดียวกัน") : tr("ช่วงเวลาเดียวกัน (คนละชื่อไฟล์)")}
+                    {' — '}{whenText(b.uploaded_at)} {tr('โดย')} {b.uploaded_by || tr("ไม่ระบุ")}
                     {b.ship_time && ` · ${tr("ลงรอบ")} ${b.ship_time}`}
                     {' → '}{tr('อัพเดท')} {fmt(b.orders_updated)} {tr('ใบ · สร้าง')} {fmt(b.orders_created)} {tr("ใบ")}
                   </div>
                 ))}
                 <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 6, lineHeight: 1.6 }}>
-                  ยืนยันต่อได้ถ้าตั้งใจ (เช่นรอบก่อนล้มกลางทาง) — ระบบจะ<b>{tr('ไม่สร้างใบซ้ำ')}</b> เพราะเทียบกับของจริงก่อนเขียนเสมอ
-                  และมีด่านกันซ้ำที่ฐานข้อมูลอีกชั้น · ถ้าไม่มีอะไรต้องแก้จริง ระบบจะบอกว่า “นำเข้าไปแล้ว” แล้วปิดให้เอง
+                  {tr("ยืนยันต่อได้ถ้าตั้งใจ (เช่นรอบก่อนล้มกลางทาง) — ระบบจะ")}<b>{tr('ไม่สร้างใบซ้ำ')}</b> {tr("เพราะเทียบกับของจริงก่อนเขียนเสมอ และมีด่านกันซ้ำที่ฐานข้อมูลอีกชั้น · ถ้าไม่มีอะไรต้องแก้จริง ระบบจะบอกว่า “นำเข้าไปแล้ว” แล้วปิดให้เอง")}
                 </div>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 8, cursor: 'pointer', fontSize: 12, fontWeight: 800 }}>
                   <input type="checkbox" checked={dupAck} onChange={e => setDupAck(e.target.checked)} />
@@ -648,13 +646,12 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
 
             {!shipToMap?.[shipTo] && shipTo && (
               <div style={{ ...noteBox('#f59e0b'), marginBottom: 8 }}>
-                ⚠ <b>{shipTo}</b> ไม่มีในทะเบียน Ship-to — ชาร์ต/workflow ต่อลูกค้าจะไม่ครบ ตั้งได้ที่แท็บ ⚙️ Ship-to Config
+                ⚠ <b>{shipTo}</b> {tr("ไม่มีในทะเบียน Ship-to — ชาร์ต/workflow ต่อลูกค้าจะไม่ครบ ตั้งได้ที่แท็บ")} ⚙️ Ship-to Config
               </div>
             )}
             {shipTo && !scopedByCustomer && (
               <div style={{ ...noteBox('#f59e0b'), marginBottom: 8 }}>
-                ⚠ ยังไม่ได้ตั้ง “ชื่อลูกค้า” ให้ ship-to นี้ (หรือไม่มีสินค้าไหนใช้ชื่อนั้น) — เลขพาร์ทลูกค้า 1 ตัวชี้ได้หลาย MAT
-                จึงอาจ<b>{tr('จับคู่ไม่ได้')}</b> · ตั้งที่ ⚙️ Ship-to Config ให้ตรงกับช่อง “ลูกค้า” ใน Product Master
+                ⚠ {tr("ยังไม่ได้ตั้ง “ชื่อลูกค้า” ให้ ship-to นี้ (หรือไม่มีสินค้าไหนใช้ชื่อนั้น) — เลขพาร์ทลูกค้า 1 ตัวชี้ได้หลาย MAT จึงอาจ")}<b>{tr('จับคู่ไม่ได้')}</b> · {tr("ตั้งที่ ⚙️ Ship-to Config ให้ตรงกับช่อง “ลูกค้า” ใน")} Product Master
               </div>
             )}
             {ctxError && <div style={{ ...noteBox('#ef4444'), marginBottom: 8 }}>🔴 {ctxError}</div>}
@@ -665,7 +662,7 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
                 {legs.map(l => (
                   <div key={l.dock || '-'}>
                     • Dock <b>{l.dock || '—'}</b> {l.rows.length} {tr('แถว → รอบ')} <b>{l.shipTime || '—'}</b> {tr('วันงาน')} <b>{l.workDate || '—'}</b>
-                    {l.primary ? ' (ช่องด้านบน)' : l.fromLead ? ' ⚠ ไม่มีตารางรอบรับ ใช้สูตรปลายช่วง' : ` (${tr("ตารางรอบรับ")} ${String(l.round?.pickup_time || '').slice(0, 5)})`}
+                    {l.primary ? tr(" (ช่องด้านบน)") : l.fromLead ? tr(" ⚠ ไม่มีตารางรอบรับ ใช้สูตรปลายช่วง") : ` (${tr("ตารางรอบรับ")} ${String(l.round?.pickup_time || '').slice(0, 5)})`}
                   </div>
                 ))}
               </div>
@@ -722,7 +719,7 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
                   })}
                   {!plan.length && (
                     <tr><td colSpan={8} style={{ ...td, textAlign: 'center', color: 'var(--muted)' }}>
-                      {dupCount > 0 ? 'ทุกแถวในไฟล์นี้เคยนำเข้าไปแล้ว — ไม่มีอะไรต้องอัพเดท' : 'ไม่มีรายการ'}
+                      {dupCount > 0 ? tr("ทุกแถวในไฟล์นี้เคยนำเข้าไปแล้ว — ไม่มีอะไรต้องอัพเดท") : tr("ไม่มีรายการ")}
                     </td></tr>
                   )}
                 </tbody>
@@ -744,8 +741,8 @@ export default function PullSignalUpload({ open, onClose, onApplied, fullName, s
                   background: willWrite && !blockedByDup ? 'var(--accent)' : 'var(--bg3)',
                   color: willWrite && !blockedByDup ? '#08130a' : 'var(--muted)',
                 }}>
-                {saving ? 'กำลังบันทึก…'
-                  : blockedByDup ? '🚨 ติ๊กรับทราบไฟล์ซ้ำก่อน'
+                {saving ? tr("กำลังบันทึก…")
+                  : blockedByDup ? tr("🚨 ติ๊กรับทราบไฟล์ซ้ำก่อน")
                   : `✅ ${tr("ยืนยันอัพเดท")} (${willWrite})`}
               </button>
             </div>

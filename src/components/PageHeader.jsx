@@ -1,7 +1,10 @@
-import { useContext } from 'react';
+import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { MoreMark } from './InfoMore';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { NAV_ITEMS } from '../App';
+import { NAV_ITEMS, STICKY_TAB_GROUPS, FULL_STICKY_GROUPS, inNavGroup } from '../App';
+import { NAV_SUB_TABS } from '../utils/navSubTabs';
+import { useNavSubItemsStore } from '../utils/navSubItems';   // 🗂️ Detail Bar = รายการที่หน้าประกาศตอนรัน (พื้นที่ SAP)
+import { useMergeParams } from '../utils/useTabParam';   // 🗂️ 24/11 หน้าที่แท็บย้ายไปเป็นข้อย่อยในแผงเมนู
 import useIsMobile from '../utils/useIsMobile';
 import { HubContext } from './Page';
 import MobileFilterFold, { splitFilterChildren } from './MobileFilterFold';
@@ -86,13 +89,101 @@ function SubLine({ text = '', marginTop = 3 }) {
   );
 }
 
+/* ══ 🔍 ปุ่มค้นหาท้ายแถบแท็บ — หัวเพจกะทัดรัด (หมวดใน `STICKY_TAB_GROUPS` · 24/11 คำสั่ง user) ════════════════
+   user เลือก "ค้นหาข้อมูลในแท็บที่เปิดอยู่" ⇒ ปุ่มนี้ **ไม่มีตรรกะค้นหาของตัวเอง** — มันพิมพ์ลงช่องค้นหาของแท็บ
+   (`<SearchInput>` = `input[type=search]`) ⇒ ตัวกรองของแต่ละแท็บทำงานเหมือนพิมพ์ที่ช่องเดิมเป๊ะ (single source)
+   · แถบแท็บตรึงบนจอ ⇒ เลื่อนลึกแค่ไหนก็ค้นได้ไม่ต้องเลื่อนกลับขึ้นไปหาช่อง
+   · หาช่อง: ช่อง search ตัวแรกที่มองเห็นในหน้า (นอกหัวเพจ · ไม่อยู่ในโมดัล)
+   · 🔴 แท็บไม่มีช่องค้นหา = บอกบนจอว่า "แท็บนี้ไม่มีช่องค้นหา" ห้ามเปิดช่องที่พิมพ์แล้วไม่เกิดอะไร (จอโกหก)
+   · พิมพ์ผ่าน native setter + event `input` (วิธีมาตรฐานให้ onChange ของ React รับค่า) */
+const SEARCH_SEL = 'input[type="search"]';
+function findTabSearch(root) {
+  const scope = root?.parentElement;
+  if (!scope) return null;
+  return [...scope.querySelectorAll(SEARCH_SEL)].find(el => !root.contains(el) && el.offsetParent !== null
+    && !el.closest('[role="dialog"], .modal, .modal-overlay')) || null;
+}
+function pushValue(el, v) {
+  const set = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+  if (set) set.call(el, v); else el.value = v;
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+}
+function HeaderSearch({ rootRef, tabKey }) {
+  const { tr } = useLang();
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState('');
+  const [none, setNone] = useState(false);
+  const [ph, setPh] = useState('');
+  const targetRef = useRef(null);
+  // เปลี่ยนแท็บ = ช่องเป้าหมายเปลี่ยน ⇒ ปิดแล้วเริ่มใหม่ (ห้ามพิมพ์ค้างไปลงช่องของแท็บเก่า)
+  useEffect(() => { setOpen(false); setQ(''); setNone(false); targetRef.current = null; }, [tabKey]);
+  useEffect(() => { if (!none) return undefined; const id = setTimeout(() => setNone(false), 2500); return () => clearTimeout(id); }, [none]);
+  const toggle = () => {
+    if (open) { setOpen(false); return; }
+    const el = findTabSearch(rootRef.current);
+    targetRef.current = el;
+    if (!el) { setNone(true); return; }
+    setQ(el.value || ''); setPh(el.placeholder || tr('ค้นหา')); setNone(false); setOpen(true);
+  };
+  const onChange = (v) => {
+    setQ(v);
+    const el = targetRef.current;
+    if (el && el.isConnected) pushValue(el, v);
+    else { targetRef.current = null; setOpen(false); setNone(true); }   // ช่องหายไปแล้ว (แท็บถูกถอด) — บอก ไม่พิมพ์ลอย
+  };
+  return (
+    <span data-ph="tab-search" style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+      {open && (
+        <span className="search-input" style={{ width: 240 }}>
+          <span className="search-ico" aria-hidden="true">🔍</span>
+          <input type="search" autoFocus value={q} placeholder={ph} aria-label={ph}
+            onChange={e => onChange(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Escape') setOpen(false); }}
+            style={{ paddingLeft: 30, paddingRight: 28 }} />
+          {q ? <button type="button" className="search-clear" aria-label={tr('ล้างคำค้น')} onClick={() => onChange('')}>✕</button> : null}
+        </span>
+      )}
+      <button type="button" onClick={toggle} aria-pressed={open} aria-label={tr('ค้นหาข้อมูลในแท็บนี้')} title={tr('ค้นหาข้อมูลในแท็บนี้')}
+        style={{ width: 30, height: 30, borderRadius: 'var(--r-md)', flexShrink: 0, cursor: 'pointer',
+          border: `1px solid ${open ? 'var(--accent)' : 'var(--border2)'}`, background: open ? 'var(--accent-dim)' : 'var(--card)',
+          color: open ? 'var(--accent)' : 'var(--text)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Icon glyph="🔍" size={15} />
+      </button>
+      {none && (
+        <span role="status" style={{ position: 'absolute', top: '100%', right: 0, marginTop: 6, whiteSpace: 'nowrap', zIndex: 60,
+          fontSize: 12, padding: '6px 10px', borderRadius: 'var(--r-md)', background: 'var(--card)', border: '1px solid var(--border2)',
+          color: 'var(--muted)', boxShadow: 'var(--shadow-float)' }}>{tr('แท็บนี้ไม่มีช่องค้นหา')}</span>
+      )}
+    </span>
+  );
+}
+
+/* ══ 🧰 Tool Bar — ค้นหา · เพิ่ม · แก้ไข · ลบ (2026-11-25 · คำสั่ง user "ต้องอยู่ตำแหน่งดังภาพตลอด") ══ */
+const TOOL_ORDER = ['search', 'add', 'edit', 'delete'];
+const TOOL_TONE = { search: null, add: 'var(--green)', edit: 'var(--amber)', delete: 'var(--red)' };
+const TOOL_DIM  = { search: null, add: 'var(--green-dim)', edit: 'var(--amber-dim)', delete: 'var(--red-dim)' };
+function ToolBar({ tools }) {
+  const { tr } = useLang();
+  const list = [...tools].sort((a, b) => TOOL_ORDER.indexOf(a.key) - TOOL_ORDER.indexOf(b.key));
+  return (
+    <span data-ph="toolbar" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 8 }}>
+      {list.map(t => (
+        <button key={t.key} type="button" data-tool={t.key} onClick={t.onClick} disabled={!!t.disabled} title={tr(t.label)}
+          style={{ height: 30, padding: '0 12px', borderRadius: 'var(--r-md)', fontSize: 13, fontWeight: 600, cursor: t.disabled ? 'default' : 'pointer',
+            border: `1px solid ${TOOL_TONE[t.key] || 'var(--border2)'}`, background: TOOL_DIM[t.key] || 'var(--card)',
+            color: TOOL_TONE[t.key] || 'var(--text)', opacity: t.disabled ? 0.5 : 1, whiteSpace: 'nowrap' }}>{tr(t.label)}</button>
+      ))}
+    </span>
+  );
+}
+
 export default function PageHeader({
-  title, icon, sub, actions, tabs, tab, onTab, breadcrumb = true, filters, children,
+  title, icon, sub, actions, tabs, tab, onTab, breadcrumb = true, filters, children, tools,
 }) {
   const isMobile = useIsMobile();
   const { tr } = useLang();
   const inHub = useContext(HubContext);   // หน้าลูกใน hub → ไม่วาดชื่อหน้า/breadcrumb ซ้ำ (Page.jsx)
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const navigate = useNavigate();
   const navItem = NAV_ITEMS.find(n => n.to === pathname);
   const rawTabs = (tabs || []).filter(Boolean);
@@ -107,6 +198,47 @@ export default function PageHeader({
   const topValue = activeGroup ? `grp:${activeGroup.key}` : tab;
   const onTop = (k) => { const g = String(k).startsWith('grp:') && rawTabs.find(t => Array.isArray(t.children) && `grp:${t.key}` === k); onTab && onTab(g ? g.children[0].key : k); };
   const tabList = topTabs;
+  /* 📌 Detail bar ตรึงบน (24/11 · คำสั่ง user "ข้อมูลเยอะ สไลด์ขึ้นลงใช้เวลาหานาน") — เฉพาะหน้าในหมวด `STICKY_TAB_GROUPS` (App.jsx)
+     · จอคอมเท่านั้น · หน้าเดี่ยวที่มีแท็บ และไม่มี `filters=` (ให้ค้างแค่แถบแท็บ ตามที่ user เลือก)
+     · วิธี: ก้อนหัวเพจทั้งก้อนเป็น sticky แต่ `top` ติดลบเท่าความสูงส่วนเหนือแถบแท็บ ⇒ breadcrumb/ชื่อหน้าเลื่อนหายไป เหลือแท็บติดขอบบน
+       (sticky ต้องเป็นลูกตรงของ <Page> ที่สูงเต็มหน้า — ห่อแค่แถบแท็บใน div ของหัวเพจจะเกาะได้แค่ในกล่องหัวเพจ)
+     · ไม่เข้าเงื่อนไข = ไม่มี style เพิ่มเลย (หน้าอื่นเหมือนเดิมเป๊ะ) */
+  /* 🗜️ 24/11 (คำสั่ง user) เงื่อนไขเดียวกันนี้ = "หัวเพจกะทัดรัด" ด้วย: ไม่มี breadcrumb · ไม่มีคำบรรยาย (`sub`) ·
+     ชื่อหน้าอยู่บนสุด · แถบแท็บแถวเดียว (ล้น = ปุ่ม ◀ ▶) · ปุ่ม 🔍 ท้ายแถบ (`HeaderSearch`) */
+  const compact = !inHub && !isMobile && !filters && !!navItem && inNavGroup(navItem, STICKY_TAB_GROUPS);
+  /* 🗂️ 24/11 (คำสั่ง user "ย้าย Detail bar ไป Sub bar เป็นข้อย่อย") — หน้าที่อยู่ในทะเบียน `NAV_SUB_TABS` เปลี่ยนแท็บที่แผงเมนู
+     ⇒ ไม่วาดแถบแท็บในหน้า · ปุ่ม 🔍 ย้ายไปแถวชื่อหน้า · ไม่อยู่ในทะเบียน = แถบแท็บตรึงบนแบบเดิม (แท็บไม่มีวันหายเฉยๆ) */
+  const tabsInNav = compact && !!NAV_SUB_TABS[pathname];
+  /* 📍 Detail Bar (24/11 รอบ 4 · คำสั่ง user "ถัดจาก breadcrumb = Detail Bar: S401, S402…") — ใต้ breadcrumb
+     รายการมาจากหน้า (`useNavSubItems(path, tab, query, items)` — ข้อมูลจริงของแท็บนั้น ไม่เดา) · กด = ตั้ง `?<query>=` (ตัวกรองเดียวกับช่องบนจอ)
+     · ตอนนี้มีเฉพาะแท็บที่จัดกลุ่มตามพื้นที่ SAP (user เลือก "แสดงเฉพาะหน้าที่มีพื้นที่ SAP") · ไม่มีรายการ = ไม่วาดแถบ
+     · แถวเดียว + ◀ ▶ เมื่อล้น (`TabBar scroller`) · ตรึงบนตอนเลื่อนจอ + ปุ่ม 🔍 ท้ายแถบ */
+  const navLive = useNavSubItemsStore();
+  const setUrl = useMergeParams();
+  const detail = compact ? (navLive[`${pathname}|${tab ?? ''}`] || null) : null;
+  const detailItems = detail && detail.items.length ? detail.items : null;
+  const detailCur = detailItems ? (new URLSearchParams(search).get(detail.query) || '') : '';
+  /* 📌 ค้างทั้งก้อน (25/11 หมวดกิจกรรม · `FULL_STICKY_GROUPS`) — Header + Detail Bar + Tool Bar ค้างที่ขอบบน top:0
+     (ไม่ใช่ top ติดลบแบบ "ค้างเฉพาะแถบ") · ต้องอยู่ในโหมดกะทัดรัดอยู่แล้ว */
+  const fullSticky = compact && inNavGroup(navItem, FULL_STICKY_GROUPS);
+  const sticky = compact && ((!!topTabs.length && !tabsInNav) || !!detailItems || fullSticky);
+  /* 🧰 Tool Bar (25/11) — ปุ่มคำสั่งชุดมาตรฐาน ตำแหน่งตายตัวขวาสุดของแถว Detail Bar (ลำดับ ค้นหา · เพิ่ม · แก้ไข · ลบ)
+     · หน้าส่ง `tools=[{ key:'search'|'add'|'edit'|'delete', label, onClick, disabled }]` · ไม่ส่ง = ไม่มี (ปุ่ม 🔍 แบบเดิม)
+     · ลำดับเรียงตาม `TOOL_ORDER` เสมอ ไม่ว่าหน้าส่งมาลำดับไหน (ผู้ใช้จำตำแหน่งได้ — คำสั่ง user) */
+  const toolBar = compact && tools && tools.length ? <ToolBar tools={tools} /> : null;
+  const rootRef = useRef(null);
+  const [stickTop, setStickTop] = useState(0);
+  useLayoutEffect(() => {
+    if (!sticky) return undefined;
+    const root = rootRef.current;
+    if (!root) return undefined;
+    const measure = () => { if (fullSticky) { setStickTop(0); return; } const bar = root.querySelector('[data-tabbar], [data-detailbar]'); setStickTop(bar ? -bar.offsetTop : 0); };
+    measure();
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const ro = new ResizeObserver(measure);
+    ro.observe(root);
+    return () => ro.disconnect();
+  }, [sticky, !!detailItems, fullSticky]);   // eslint-disable-line react-hooks/exhaustive-deps
   const leafLabel = stripIcon(tr((activeGroup ? activeGroup.children : rawTabs).find(t => t.key === tab)?.label));
   const tabLabel = activeGroup ? [stripIcon(tr(activeGroup.label)), leafLabel].filter(Boolean).join(' › ') : leafLabel;
 
@@ -114,7 +246,9 @@ export default function PageHeader({
      แถวลูกติด `data-subtab` = ของที่อนุญาตให้คั่นระหว่างแท็บกับแถบกรอง (stdsweep §2.1) */
   const renderTabs = () => (
     <>
-      <TabBar className="ph-chrome" tabs={topTabs} value={topValue} onChange={onTop} audit />
+      {/* 24/11: โหมดกะทัดรัด = แถวเดียว + ปุ่ม ◀ ▶ เมื่อล้น + ปุ่มค้นหาท้ายแถบ */}
+      <TabBar className="ph-chrome" tabs={topTabs} value={topValue} onChange={onTop} audit
+        {...(sticky ? { scroller: true, after: <HeaderSearch rootRef={rootRef} tabKey={String(tab)} /> } : null)} />
       {activeGroup && (
         <div data-subtab="1" className="ph-chrome" style={{ marginTop: -4 }}>
           <TabBar size="sm" tabs={activeGroup.children} value={tab} onChange={onTab} />
@@ -155,13 +289,8 @@ export default function PageHeader({
     );
   }
 
-  return (
-    /* `data-ph-root` = ก้อนหัวเพจทั้งก้อน (ชื่อ + คำอธิบาย + แถบแท็บ + filters/actions ของหัว)
-       🔴 ตัวตรวจลำดับ (`audit/stdsweep.mjs`) ต้องวัด "ก้นของก้อนนี้" ไม่ใช่ก้นของ `h1`
-          ไม่งั้นคำอธิบายใต้ชื่อหน้า (`sub=`) จะถูกนับเป็น "ของแทรกเหนือแถบกรอง" ทุกหน้า
-          (เจอจริง 20/10: รายงาน 19 มุมมอง ซึ่งส่วนใหญ่เป็น false positive จากเหตุนี้) */
-    <div data-ph-root="1" style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 'var(--ph-mb, 12px)' }}>
-      {breadcrumb && navItem && !inHub && (
+  /* breadcrumb — ปกติอยู่บนสุด · หัวเพจกะทัดรัด (24/11 · คำสั่ง user) = ใต้ชื่อหน้า เหนือแถบแท็บ */
+  const crumbs = breadcrumb && navItem && !inHub ? (
         <div className="ph-chrome" style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', fontSize: 12, color: 'var(--muted)' }}>
           <button onClick={() => navigate('/')} style={{
             background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--muted)', fontSize: 12,
@@ -172,12 +301,22 @@ export default function PageHeader({
           <span style={{ color: 'var(--text)', fontWeight: 700 }}>{tr(navItem.label)}</span>
           {tabLabel && <><span>›</span><span style={{ color: 'var(--text2)' }}>{tabLabel}</span></>}
         </div>
-      )}
+  ) : null;
+
+  return (
+    /* `data-ph-root` = ก้อนหัวเพจทั้งก้อน (ชื่อ + คำอธิบาย + แถบแท็บ + filters/actions ของหัว)
+       🔴 ตัวตรวจลำดับ (`audit/stdsweep.mjs`) ต้องวัด "ก้นของก้อนนี้" ไม่ใช่ก้นของ `h1`
+          ไม่งั้นคำอธิบายใต้ชื่อหน้า (`sub=`) จะถูกนับเป็น "ของแทรกเหนือแถบกรอง" ทุกหน้า
+          (เจอจริง 20/10: รายงาน 19 มุมมอง ซึ่งส่วนใหญ่เป็น false positive จากเหตุนี้) */
+    <div data-ph-root="1" ref={rootRef} style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 'var(--ph-mb, 12px)',
+      /* 📌 sticky: พื้นทึบกันเนื้อหาทะลุ · z ต่ำกว่าแผงเมนู (997+) / กระดิ่ง (1200) · เว้นขวาพ้น 🔔 ให้แถบแท็บ (ชื่อหน้าย้ายมาเว้นที่นี่แทน) */
+      ...(sticky ? { position: 'sticky', top: stickTop, zIndex: 50, background: 'var(--bg)', paddingRight: 52 } : null) }}>
+      {!compact && crumbs}
 
       {(!inHub || sub || actions) && (
       <div className="ph-chrome" style={{
         display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center',
-        justifyContent: 'space-between', paddingRight: inHub ? 0 : 52,   // กัน 🔔 ทับ (UI §7) — ใน hub หัวของแม่กันให้แล้ว
+        justifyContent: 'space-between', paddingRight: (inHub || sticky) ? 0 : 52,   // กัน 🔔 ทับ (UI §7) — ใน hub หัวของแม่กันให้แล้ว · sticky = รากเว้นให้แล้ว
       }}>
         <div style={{ minWidth: 0 }}>
           {!inHub && (
@@ -194,15 +333,30 @@ export default function PageHeader({
             </h2>
             )
           )}
-          {sub && <SubLine text={tr(sub)} marginTop={inHub ? 0 : 3} />}
+          {sub && !compact && <SubLine text={tr(sub)} marginTop={inHub ? 0 : 3} />}
         </div>
         {/* actions = ปุ่ม "คำสั่งระดับหน้า" เท่านั้น (บันทึก/เพิ่ม/พิมพ์/โหมด TV) — ห้ามใส่ตัวกรอง (select/วันที่/ขอบเขต/สเกล)
             ตัวกรองต้องอยู่ `filters` ⇒ ลงใต้แถบแท็บเสมอ (UI-STANDARD §2 ลำดับแนวตั้ง · stdsweep ตรวจ data-ph) */}
         {actions && <div data-ph="actions" style={{ display: 'flex', flexWrap: 'wrap', gap: 7, alignItems: 'center' }}>{actions}</div>}
+        {/* 🔍 หัวเพจกะทัดรัดที่ไม่มีแถบแท็บในหน้า = ปุ่มค้นหาอยู่ท้ายแถวชื่อหน้า (มีแถบแท็บ = อยู่ท้ายแถบแท็บ) */}
+        {compact && !sticky && !detailItems && (toolBar || <HeaderSearch rootRef={rootRef} tabKey={String(tab ?? '')} />)}
       </div>
       )}
 
-      {!!tabList.length && renderTabs()}
+      {compact && crumbs}
+
+      {/* 📍 Detail Bar — ใต้ breadcrumb (ดูคอมเมนต์ `detail` ข้างบน) · "ทั้งหมด" = ล้างตัวกรอง */}
+      {detailItems && (
+        <div data-detailbar="1" className="ph-chrome">
+          <TabBar scroller
+            tabs={[...(detail.all ? [{ key: '__all', label: tr('ทั้งหมด') }] : []), ...detailItems.map(it => ({ key: String(it.key), label: it.label, title: it.label }))]}
+            value={detailCur || (detail.all ? '__all' : String(detailItems[0].key))}
+            onChange={(k) => setUrl({ [detail.query]: k === '__all' ? null : k }, { replace: true })}
+            after={toolBar || <HeaderSearch rootRef={rootRef} tabKey={String(tab ?? '')} />} />
+        </div>
+      )}
+
+      {!!tabList.length && !tabsInNav && renderTabs()}
 
       {/* ── ลำดับแนวตั้งตายตัวทุกหน้า: breadcrumb → ชื่อหน้า|ปุ่มคำสั่ง → แท็บ → แถบกรอง → เนื้อหา ──
           (user 24/09: "ลำดับยังโดดไปมา เดี๋ยวแท็บมาก่อนช่องค้นหา บางหน้าค้นหาอยู่บนสุดก่อนแท็บ") */}

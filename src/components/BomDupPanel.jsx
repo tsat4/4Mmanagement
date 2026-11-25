@@ -192,12 +192,11 @@ export default function BomDupPanel({ onOpenSheet }) {
       <div data-page-note="1" style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 'var(--r-md)', fontSize: 12, lineHeight: 1.65,
         color: 'var(--text2)', border: '1px solid var(--border)', background: 'var(--bg2-surf)' }}>
         <div style={{ fontWeight: 800, color: 'var(--text)', marginBottom: 2 }}>
-          ของชิ้นเดียวถูกกรอกลูกไว้ 2 ที่ — ใบที่ใช้มัน และใบ BOM ของตัวมันเอง
+          {tr("ของชิ้นเดียวถูกกรอกลูกไว้ 2 ที่ — ใบที่ใช้มัน และใบ BOM ของตัวมันเอง")}
         </div>
-        ระบบใช้ <b>{tr('ชุดของใบที่กำลังกางอยู่ชนะทั้งชุด')}</b> (ไม่ได้เอา 2 ชุดมารวมกัน) ⇒
-        ตัวที่มีแต่ในใบของพาร์ทเอง <b style={{ color: BAD }}>{tr('ไม่ถูกระเบิดเลย')}</b> ·
+        {tr("ระบบใช้")} <b>{tr('ชุดของใบที่กำลังกางอยู่ชนะทั้งชุด')}</b> ({tr("ไม่ได้เอา 2 ชุดมารวมกัน) ⇒ ตัวที่มีแต่ในใบของพาร์ทเอง")} <b style={{ color: BAD }}>{tr('ไม่ถูกระเบิดเลย')}</b> ·
         <b> {tr('จอนี้ชี้ให้เห็นอย่างเดียว ไม่ยุบ/ไม่ลบ/ไม่เลือกใบให้เอง')}</b> —
-        ของบางตัวใช้ต่างกันตามรุ่น/ลูกค้าได้จริง การตัดสินเป็นของ PE/Planning
+        {tr("ของบางตัวใช้ต่างกันตามรุ่น/ลูกค้าได้จริง การตัดสินเป็นของ")} PE/Planning
       </div>
 
       <FilterBar style={{ marginBottom: 12 }}>
@@ -207,7 +206,7 @@ export default function BomDupPanel({ onOpenSheet }) {
           { value: 'cleared', label: `${tr("ตรวจแล้ว")} (${prog.cleared})` },
           { value: 'all', label: `${tr("ทั้งหมด")} (${prog.total})` },
         ]} />
-        <SearchInput value={search} onChange={setSearch} fields="MAT ใบ / พาร์ท / ชื่อ" />
+        <SearchInput value={search} onChange={setSearch} fields={tr("MAT ใบ / พาร์ท / ชื่อ")} />
         <span className="spacer" />
         <span className="filter-count">{shown.length} {tr('คู่')}</span>
       </FilterBar>
@@ -235,11 +234,11 @@ export default function BomDupPanel({ onOpenSheet }) {
       {!shown.length ? (
         <div style={{ padding: 20, textAlign: 'center', fontSize: 12.5, color: 'var(--muted)',
           border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)' }}>
-          {!prog.total ? '✅ ไม่มีคู่ที่นิยามไว้ 2 ใบเลย'
-            : vFilter === 'open' ? '✅ ตรวจครบทุกคู่แล้ว (กด "ทั้งหมด" เพื่อดูย้อนหลัง)'
-            : vFilter === 'hot' ? '✅ ของร้อนเคลียร์หมดแล้ว'
-            : vFilter === 'cleared' ? 'ยังไม่มีคู่ที่กดตรวจแล้ว'
-            : 'ไม่มีคู่ที่ตรงคำค้น'}
+          {!prog.total ? tr("✅ ไม่มีคู่ที่นิยามไว้ 2 ใบเลย")
+            : vFilter === 'open' ? tr("✅ ตรวจครบทุกคู่แล้ว (กด \"ทั้งหมด\" เพื่อดูย้อนหลัง)")
+            : vFilter === 'hot' ? tr("✅ ของร้อนเคลียร์หมดแล้ว")
+            : vFilter === 'cleared' ? tr("ยังไม่มีคู่ที่กดตรวจแล้ว")
+            : tr("ไม่มีคู่ที่ตรงคำค้น")}
         </div>
       ) : (
         <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
@@ -316,7 +315,7 @@ export default function BomDupPanel({ onOpenSheet }) {
                       )) : <span style={{ color: 'var(--muted)' }}>—</span>}
                       {p.verdict === 'pair_shot' && (
                         <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2, lineHeight: 1.5 }}>
-                          งานคู่ปั๊มทีเดียวได้ 2 ชิ้น — ใบหนึ่งน่าจะกรอกต่อ shot อีกใบต่อชิ้น
+                          {tr("งานคู่ปั๊มทีเดียวได้ 2 ชิ้น — ใบหนึ่งน่าจะกรอกต่อ shot อีกใบต่อชิ้น")}
                         </div>
                       )}
                     </td>
@@ -325,7 +324,7 @@ export default function BomDupPanel({ onOpenSheet }) {
                       <MatList mats={p.onlyOwn} color={p.verdict === 'op' ? OK : BAD} />
                       {p.verdict === 'op' && p.onlyOwn.length > 0 && (
                         <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-                          ใบขั้นงาน — ไม่นับว่าขาด
+                          {tr("ใบขั้นงาน — ไม่นับว่าขาด")}
                         </div>
                       )}
                     </td>
@@ -340,7 +339,7 @@ export default function BomDupPanel({ onOpenSheet }) {
                           {p.review.note ? <div style={{ color: 'var(--text2)' }}>“{p.review.note}”</div> : null}
                           {p.staleReview && (
                             <div style={{ color: WARN, fontWeight: 800 }}>
-                              ⚠️ BOM เปลี่ยนหลังตรวจ — ต้องตรวจซ้ำ
+                              ⚠️ BOM {tr("เปลี่ยนหลังตรวจ — ต้องตรวจซ้ำ")}
                             </div>
                           )}
                         </div>

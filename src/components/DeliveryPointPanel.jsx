@@ -151,11 +151,11 @@ export default function DeliveryPointPanel({ lineName, lines = [] }) {
       <>
         <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 8 }}>{tr('ป้าย QR ที่สโตร์สแกนตอนวางของถึงไลน์ (ลูปเรียกชิ้นส่วนขั้น 7)')}</div>
         <div>
-          <ReadOnlyNote show={!canManage} role={role} what="ตั้งจุดส่งงานของไลน์" permKey="delivery_point:manage" compact />
+          <ReadOnlyNote show={!canManage} role={role} what={tr("ตั้งจุดส่งงานของไลน์")} permKey="delivery_point:manage" compact />
 
           {missing && (
             <div style={{ fontSize: 12.5, color: '#f59e0b', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 'var(--r-md)', padding: '8px 12px' }}>
-              ⚠️ ยังไม่ได้ apply migration <code>20260903_line_delivery_points.sql</code> (DR) — ตั้งจุดส่งยังไม่ได้ แจ้ง admin
+              ⚠️ {tr("ยังไม่ได้")} apply migration <code>20260903_line_delivery_points.sql</code> (DR) — {tr("ตั้งจุดส่งยังไม่ได้ แจ้ง")} admin
             </div>
           )}
           {loadErr && <div style={{ fontSize: 12.5, color: '#ef4444' }}>{tr('โหลดจุดส่งไม่สำเร็จ:')} {loadErr}</div>}
@@ -196,7 +196,7 @@ export default function DeliveryPointPanel({ lineName, lines = [] }) {
 
           {isLeaf && !missing && rows.length === 0 && !form && (
             <div style={{ fontSize: 12.5, color: '#f59e0b' }}>
-              ⚠️ ไลน์นี้ยังไม่มีจุดส่งงาน — สโตร์กด "จัดส่งแล้ว" ได้แต่ระบบ<b>{tr('ตรวจไม่ได้')}</b>ว่าวางถูกจุดไหม (ใบจะถูกมาร์ก "ไลน์ยังไม่ตั้งจุดส่ง")
+              ⚠️ {tr("ไลน์นี้ยังไม่มีจุดส่งงาน — สโตร์กด \"จัดส่งแล้ว\" ได้แต่ระบบ")}<b>{tr('ตรวจไม่ได้')}</b>{tr("ว่าวางถูกจุดไหม (ใบจะถูกมาร์ก \"ไลน์ยังไม่ตั้งจุดส่ง")}")
             </div>
           )}
 
@@ -224,13 +224,13 @@ export default function DeliveryPointPanel({ lineName, lines = [] }) {
                     </div>
                     {!r.storage_location && (
                       <div style={{ fontSize: 11, color: '#f59e0b', marginTop: 3, lineHeight: 1.45 }}>
-                        ด่าน "ส่งถูกพื้นที่ไหม" ยังไม่ทำงานกับจุดนี้ — ลงทะเบียนพื้นที่ของไลน์ที่
-                        <Link to="/line-stock?tab=settings&set=zones" style={{ color: '#f59e0b', fontWeight: 800 }}> {tr('📦 Stock Management → ตั้งค่า → พื้นที่ SAP / โซนคลัง → “ทะเบียนรหัสคลัง”')}</Link> แล้วกด ✏️ แก้ + บันทึกจุดนี้ซ้ำ
+                        {tr("ด่าน \"ส่งถูกพื้นที่ไหม\" ยังไม่ทำงานกับจุดนี้ — ลงทะเบียนพื้นที่ของไลน์ที่")}
+                        <Link to="/line-stock?tab=settings&set=zones" style={{ color: '#f59e0b', fontWeight: 800 }}> {tr('📦 Stock Management → ตั้งค่า → พื้นที่ SAP / โซนคลัง → “ทะเบียนรหัสคลัง”')}</Link> {tr("แล้วกด ✏️ แก้ + บันทึกจุดนี้ซ้ำ")}
                       </div>
                     )}
                     {others.length > 0 && (
                       <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 3 }}>
-                        {viaChild ? '📍 ของไลน์ย่อย: ' : '🔀 ใช้ร่วมกับ '}{others.join(' · ')}
+                        {viaChild ? tr("📍 ของไลน์ย่อย: ") : tr("🔀 ใช้ร่วมกับ ")}{others.join(' · ')}
                       </div>
                     )}
                     {r.note && <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 3 }}>{r.note}</div>}
@@ -251,7 +251,7 @@ export default function DeliveryPointPanel({ lineName, lines = [] }) {
 
           {active.length > 0 && (
             <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 10 }}>
-              พิมพ์ป้าย QR ไปติดหน้างานที่ <Link to="/qr-labels?kind=delivery" style={{ color: 'var(--accent)', fontWeight: 700 }}>{tr('พิมพ์ป้าย QR → 🎯 จุดส่งงาน')}</Link>
+              {tr("พิมพ์ป้าย QR ไปติดหน้างานที่")} <Link to="/qr-labels?kind=delivery" style={{ color: 'var(--accent)', fontWeight: 700 }}>{tr('พิมพ์ป้าย QR → 🎯 จุดส่งงาน')}</Link>
             </div>
           )}
 
@@ -261,7 +261,7 @@ export default function DeliveryPointPanel({ lineName, lines = [] }) {
               <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>{form.id ? tr('✏️ แก้จุดส่ง') : tr('+ จุดส่งใหม่')}</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px,100%), 1fr))', gap: 10, alignItems: 'start' }}>
                 <label style={{ fontSize: 12, color: 'var(--text2)' }}>{tr('ชื่อจุด *')}
-                  <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder='เช่น "จุดรับของหน้า OP10"' style={inputSt} />
+                  <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder={tr("เช่น \"จุดรับของหน้า OP10\"")} style={inputSt} />
                 </label>
                 <label style={{ fontSize: 12, color: 'var(--text2)' }}>{tr('รหัสสั้นบนป้าย (ให้คนอ่าน/พิมพ์มือ)')}
                   <input value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))} placeholder={tr('เช่น DP-60A')} style={{ ...inputSt, fontFamily: 'monospace' }} />
@@ -299,7 +299,7 @@ export default function DeliveryPointPanel({ lineName, lines = [] }) {
                   </div>
                 );
               })()}
-              <label style={{ display: 'block', marginTop: 10, fontSize: 12, color: 'var(--text2)' }}>หมายเหตุ (ตำแหน่งจริง เช่น "ข้างเสา C4 ฝั่งซ้ายของสายพาน")
+              <label style={{ display: 'block', marginTop: 10, fontSize: 12, color: 'var(--text2)' }}>{tr("หมายเหตุ (ตำแหน่งจริง เช่น \"ข้างเสา C4 ฝั่งซ้ายของสายพาน")}")
                 <input value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} style={inputSt} />
               </label>
               <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'flex-end' }}>

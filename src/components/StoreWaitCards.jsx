@@ -33,9 +33,9 @@ import {
   REQ_STATUS, buildRequestCards, requestLinesOf, matLinesOf, scopeShortMats, waitText,
 } from '../utils/storeTvDemand';
 
-import { tr } from '../utils/i18n';
+import { tr, dateLocale } from '../utils/i18n';
 const card = { background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: 14 };
-const fmtQty = (v) => (v == null || v === '' || !Number.isFinite(Number(v)) ? '–' : Number(v).toLocaleString('th-TH'));
+const fmtQty = (v) => (v == null || v === '' || !Number.isFinite(Number(v)) ? '–' : Number(v).toLocaleString(dateLocale()));
 
 /* สีต่อเคสรอบส่ง — C ด่วนสุด (ไลน์รออยู่แล้วจริง) · D รองลงมา
    ⚠️ "งานค้างของสโตร์" ไม่ใช่ alarm เครื่องหยุด → **ห้ามกระพริบ** (กฎ Andon: กระพริบเฉพาะแดงของเครื่อง) */
@@ -171,17 +171,17 @@ function RequestCard({ c, img, onClick }) {
   return (
     <PartCard
       code={c.mat} name={c.name} img={img}
-      status={{ label: st.label, color: st.color }}
+      status={{ label: tr(st.label), color: st.color }}
       metric={{ label: c.kind === 'raw' ? 'วัตถุดิบที่ต้องจ่าย' : 'จำนวนที่ต้องส่ง', value: fmtQty(c.qty) }}
-      aside={{ label: 'ส่งไปไลน์', value: c.line || '⚠ ไม่ระบุไลน์' }}
+      aside={{ label: tr("ส่งไปไลน์"), value: c.line || '⚠ ไม่ระบุไลน์' }}
       /* รอนานเกินชั่วโมงแรก = รีบจริง (alert สงวนไว้ใช้เฉพาะเคสนี้ · กฎ PartCard ข้อ 5) */
       alert={c.status === 'pending' && c.waitMin != null && c.waitMin >= 60}
       rows={[
         { k: c.status === 'pending' ? 'รอมาแล้ว' : 'ไลน์เรียกเมื่อ', v: wt ? `${wt}` : 'ไม่ทราบเวลา' },
-        { k: 'ที่มา', v: c.kind === 'raw' ? '🧱 ไลน์ child ขอวัตถุดิบ' : c.source === 'store' ? '🏬 สโตร์ส่งตามแผนผลิต' : '📦 ไลน์ขอเบิก' },
-        { k: 'ใช้ทำ', v: c.useFor || null },
-        { k: 'หยิบแล้ว', v: c.pickedQty != null ? fmtQty(c.pickedQty) : null },
-        { k: '⚠️ เลข MAT', v: c.fgWarn ? 'เป็น FG (1xxx) — สโตร์ตัดจ่ายไม่ได้ ถามไลน์ว่าต้องการเลข 2xxx/3xxx/5xxx ตัวไหน' : null },
+        { k: tr("ที่มา"), v: c.kind === 'raw' ? '🧱 ไลน์ child ขอวัตถุดิบ' : c.source === 'store' ? '🏬 สโตร์ส่งตามแผนผลิต' : '📦 ไลน์ขอเบิก' },
+        { k: tr("ใช้ทำ"), v: c.useFor || null },
+        { k: tr("หยิบแล้ว"), v: c.pickedQty != null ? fmtQty(c.pickedQty) : null },
+        { k: tr("⚠️ เลข MAT"), v: c.fgWarn ? 'เป็น FG (1xxx) — สโตร์ตัดจ่ายไม่ได้ ถามไลน์ว่าต้องการเลข 2xxx/3xxx/5xxx ตัวไหน' : null },
       ]}
       onClick={onClick} />
   );
@@ -214,7 +214,7 @@ export default function StoreWaitCards({ data, navigate, big = 1 }) {
     )}
     {loaded && !reqErr && !req.cards.length && (
       <div style={{ ...card, textAlign: 'center', padding: 18, fontSize: 13 * big, fontWeight: 800, color: '#22c55e' }}>
-        ✅ ไม่มีไลน์ไหนเรียกของ
+        ✅ {tr("ไม่มีไลน์ไหนเรียกของ")}
       </div>
     )}
     {!loaded && <div style={{ ...card, color: 'var(--muted)', fontSize: 12.5 }}>{tr('กำลังโหลดคำขอจากไลน์…')}</div>}
@@ -255,7 +255,7 @@ export default function StoreWaitCards({ data, navigate, big = 1 }) {
             {w.line}
           </span>
           <span style={{ marginLeft: 'auto', flexShrink: 0, fontSize: 12 * big, fontWeight: 900, color: w.color, whiteSpace: 'nowrap' }}>
-            {CASE[w.items[0].code].label}
+            {tr(CASE[w.items[0].code].label)}
           </span>
         </div>
         {w.items.slice(0, 3).map((it, i) => (
@@ -291,7 +291,7 @@ export default function StoreWaitCards({ data, navigate, big = 1 }) {
             {/* ครบ 3 ค่าผ่านของกลาง — รหัสไม่ถูกตัด ชื่อตัดได้ตัวเดียว */}
             <MatLabel mat={r.mat_no} name={r.part_name} size={12} style={{ minWidth: 0, flex: 1 }} />
             <span style={{ width: 120, flexShrink: 0, textAlign: 'right', fontSize: 13, fontWeight: 900, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums', color: out ? '#ef4444' : '#facc15' }}>
-              {out ? 'หมด' : fmtQty(r.qty_on_hand)}
+              {out ? tr("หมด") : fmtQty(r.qty_on_hand)}
               <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)' }}> / {fmtQty(r.min_qty)}</span>
             </span>
           </div>
@@ -314,7 +314,7 @@ export default function StoreWaitCards({ data, navigate, big = 1 }) {
     {/* ══ ④ สั่งซื้อค้าง — นับรวมอย่างเดียว ห้ามโชว์รายใบ ══ */}
     {poPending.length > 0 && (
       <div onClick={goQueue} style={{ ...card, cursor: 'pointer', fontSize: 11.5 * big, color: 'var(--muted)' }}>
-        สั่งซื้อค้าง (ยังไม่รับเข้า) <b style={{ color: 'var(--text)' }}>{poPending.length}</b> พาร์ท — ดูที่บอร์ดสโตร์ ›
+        {tr("สั่งซื้อค้าง (ยังไม่รับเข้า")}) <b style={{ color: 'var(--text)' }}>{poPending.length}</b> {tr("พาร์ท — ดูที่บอร์ดสโตร์")} ›
       </div>
     )}
   </>);

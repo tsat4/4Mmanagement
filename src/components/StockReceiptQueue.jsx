@@ -187,7 +187,7 @@ export default function StockReceiptQueue({ banner = null, table = false }) {
           <option value="">{tr('ต้นทาง: ทุกไลน์')}</option>
           {srcs.map(x => <option key={x} value={x}>{tr('ต้นทาง:')} {x}</option>)}
         </select>
-        <SearchInput value={q} onChange={setQ} fields="เลขใบผลิต / MAT / ชื่อพาร์ท / ไลน์" grow={false} onKeyDown={onSearchKey} />
+        <SearchInput value={q} onChange={setQ} fields={tr("เลขใบผลิต / MAT / ชื่อพาร์ท / ไลน์")} grow={false} onKeyDown={onSearchKey} />
         <button type="button" onClick={() => { setByGroup(v => !v); setDiffFor(null); setOpenKey(null); }}
           style={storeBtn(byGroup ? 'primary' : 'secondary', { minHeight: 36, padding: '6px 12px', fontSize: 12.5 })}>
           {byGroup ? tr('🧺 รวมเป็นกอง') : tr('📄 ทีละใบ')}
@@ -230,7 +230,7 @@ export default function StockReceiptQueue({ banner = null, table = false }) {
 
       {byGroup && (groups.length === 0
         ? <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
-            {pendingCount === 0 && !loadErr ? 'ไม่มีของรอรับเข้า — ใบที่ปิดแล้วรับครบหมด' : `${tr("ไม่มีใบที่ตรงตัวกรอง")}${q ? ` "${q}"` : ''}`}
+            {pendingCount === 0 && !loadErr ? tr("ไม่มีของรอรับเข้า — ใบที่ปิดแล้วรับครบหมด") : `${tr("ไม่มีใบที่ตรงตัวกรอง")}${q ? ` "${q}"` : ''}`}
           </div>
         : <StatusZones layout={table ? 'table' : 'cards'} rows={groups} zones={ZONES(false)} statusOf={g => receiptZoneStatus(g.slips[0], staleOf, now)} renderCard={g => {
             const oldest = g.slips[0];
@@ -245,12 +245,12 @@ export default function StockReceiptQueue({ banner = null, table = false }) {
             return (
               <PartCard key={g.key} code={g.mat_no} name={g.part_name} img={imgOf(g.mat_no)} alert={stale}
                 status={stale ? { label: tr('⏰ ค้าง'), color: toneVar('bad') } : { label: tr('📥 รอรับ'), color: toneVar('warn') }}
-                metric={{ label: 'ยอดตามใบผลิตรวม', value: fmt(g.expected), unit: 'ชิ้น' }}
-                aside={{ label: 'เข้าคลัง', value: g.dest_line_name }}
+                metric={{ label: tr("ยอดตามใบผลิตรวม"), value: fmt(g.expected), unit: 'ชิ้น' }}
+                aside={{ label: tr("เข้าคลัง"), value: g.dest_line_name }}
                 rows={[
-                  { k: 'จากไลน์', v: g.source_line },
-                  { k: 'จำนวนใบ', v: `${g.count} ${tr("ใบ")}` },
-                  { k: 'ค้างนานสุด', v: `${ageText(age)} (${tr("ปิดใบ")} ${hhmm(oldest?.created_at) || '—'})` },
+                  { k: tr("จากไลน์"), v: g.source_line },
+                  { k: tr("จำนวนใบ"), v: `${g.count} ${tr("ใบ")}` },
+                  { k: tr("ค้างนานสุด"), v: `${ageText(age)} (${tr("ปิดใบ")} ${hhmm(oldest?.created_at) || '—'})` },
                 ]}
                 footer={
                   <div style={{ display: 'grid', gap: 8 }}>
@@ -265,7 +265,7 @@ export default function StockReceiptQueue({ banner = null, table = false }) {
                         </label>
                         {prev && prev.diff !== 0 && (
                           <div style={{ fontSize: 11.5, color: 'var(--text2)', lineHeight: 1.6 }}>
-                            {tr("ปันแบบ")} <b>ใบเก่าก่อน</b>: {nFull} {tr("ใบได้เต็ม")}{nPart ? ` · ${nPart} ${tr("ใบได้บางส่วน")}` : ''}
+                            {tr("ปันแบบ")} <b>{tr("ใบเก่าก่อน")}</b>: {nFull} {tr("ใบได้เต็ม")}{nPart ? ` · ${nPart} ${tr("ใบได้บางส่วน")}` : ''}
                             {prev.zeroed ? <> · <b style={{ color: toneVar('warn') }}>{prev.zeroed} {tr('ใบได้ 0')}</b> {tr('(ของยังมาไม่ถึง)')}</> : null}
                           </div>
                         )}
@@ -275,27 +275,27 @@ export default function StockReceiptQueue({ banner = null, table = false }) {
                         <div style={{ display: 'flex', gap: 8 }}>
                           <button type="button" disabled={busy === g.key} style={storeBtn('primary', { flex: 1 })}
                             onClick={async () => { if (await receiveGroup(g, form.qty, form.reason.trim())) setDiffFor(null); }}>
-                            {busy === g.key ? 'กำลังบันทึก…' : `✅ ${tr("รับเข้า")} ${form.qty === '' ? '' : fmt(form.qty)}`}
+                            {busy === g.key ? tr("กำลังบันทึก…") : `✅ ${tr("รับเข้า")} ${form.qty === '' ? '' : fmt(form.qty)}`}
                           </button>
-                          <button type="button" style={storeBtn('secondary')} onClick={() => setDiffFor(null)}>ยกเลิก</button>
+                          <button type="button" style={storeBtn('secondary')} onClick={() => setDiffFor(null)}>{tr("ยกเลิก")}</button>
                         </div>
                       </>
                     ) : (
                       <div style={{ display: 'flex', gap: 8 }}>
                         <button type="button" disabled={busy === g.key} style={storeBtn('primary', { flex: 1 })}
                           onClick={() => receiveGroup(g, g.expected, '')}>
-                          {busy === g.key ? 'กำลังบันทึก…' : `✅ ${tr("นับแล้วตรง · รับ")} ${fmt(g.expected)} (${g.count} ${tr("ใบ")})`}
+                          {busy === g.key ? tr("กำลังบันทึก…") : `✅ ${tr("นับแล้วตรง · รับ")} ${fmt(g.expected)} (${g.count} ${tr("ใบ")})`}
                         </button>
                         <button type="button" style={storeBtn('secondary')}
                           onClick={() => { setDiffFor(g.key); setForm({ qty: String(g.expected), reason: '' }); }}>
-                          ✏️ ยอดไม่ตรง
+                          ✏️ {tr("ยอดไม่ตรง")}
                         </button>
                       </div>
                     ))}
                     {/* 🔴 "กางดูรายใบ" ต้องมีเสมอ — ยุบเพื่อกด ไม่ใช่ยุบการเก็บ */}
                     <button type="button" style={storeBtn('secondary', { minHeight: 30, fontSize: 12 })}
                       onClick={() => setOpenKey(k => (k === g.key ? null : g.key))}>
-                      {open ? '▲ ซ่อนรายใบ' : `▼ ${tr("กางดูรายใบ")} (${g.count} ${tr("ใบ")})`}
+                      {open ? tr("▲ ซ่อนรายใบ") : `▼ ${tr("กางดูรายใบ")} (${g.count} ${tr("ใบ")})`}
                     </button>
                     {open && (
                       <div style={{ maxHeight: 220, overflowY: 'auto', border: '1px solid var(--border2)', borderRadius: 'var(--radius)' }}>
@@ -317,7 +317,7 @@ export default function StockReceiptQueue({ banner = null, table = false }) {
 
       {!byGroup && (shown.length === 0
         ? <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
-            {rows.length === 0 && !loadErr ? 'ไม่มีของรอรับเข้า — ใบที่ปิดแล้วรับครบหมด' : `${tr("ไม่มีใบที่ตรงตัวกรอง")}${q ? ` "${q}"` : ''}`}
+            {rows.length === 0 && !loadErr ? tr("ไม่มีของรอรับเข้า — ใบที่ปิดแล้วรับครบหมด") : `${tr("ไม่มีใบที่ตรงตัวกรอง")}${q ? ` "${q}"` : ''}`}
           </div>
         : <StatusZones layout={table ? 'table' : 'cards'} rows={shown} zones={ZONES(showDone)} statusOf={r => receiptZoneStatus(r, staleOf, now)} renderCard={r => {
             const age = receiptAgeMin(r, now);
@@ -330,16 +330,16 @@ export default function StockReceiptQueue({ banner = null, table = false }) {
                   ? (stale ? { label: '⏰ ค้าง', color: '#ef4444' } : { label: 'รอรับ', color: '#f59e0b' })
                   : { label: '✅ รับแล้ว', color: '#22c55e' }}
                 metric={{ label: pending ? 'ยอดตามใบผลิต' : 'รับเข้าจริง', value: fmt(pending ? r.qty_expected : r.qty_received), unit: 'ชิ้น' }}
-                aside={{ label: 'เข้าคลัง', value: r.dest_line_name }}
+                aside={{ label: tr("เข้าคลัง"), value: r.dest_line_name }}
                 dim={!pending}
                 rows={[
-                  { k: 'จากไลน์', v: r.source_line },
-                  { k: 'ใบผลิต', v: r.prod_no },
-                  { k: 'ปิดใบ', v: `${hhmm(r.created_at) || '—'} · ${ageText(age)} ${tr("ที่แล้ว")}` },
+                  { k: tr("จากไลน์"), v: r.source_line },
+                  { k: tr("ใบผลิต"), v: r.prod_no },
+                  { k: tr("ปิดใบ"), v: `${hhmm(r.created_at) || '—'} · ${ageText(age)} ${tr("ที่แล้ว")}` },
                   /* 19/11 — ใบคืนจากถังเหลือง (QA งานดี/ซ่อมผ่าน · trigger fn_qbin_return_receipt) เขียนเหตุผลเต็มประโยคมาเอง */
-                  { k: 'หมายเหตุ', v: r.partial_reason ? (String(r.partial_reason).startsWith('คืนจาก') ? r.partial_reason : `${tr("ยอดบางส่วนจาก")}${r.partial_reason}`) : null },
-                  { k: 'ผู้รับ', v: pending ? null : `${r.received_by || '—'} · ${hhmm(r.received_at) || ''}` },
-                  { k: 'ส่วนต่าง', v: !pending && r.diff_reason ? `${fmt(r.qty_received - r.qty_expected)} — ${r.diff_reason}` : null },
+                  { k: tr("หมายเหตุ"), v: r.partial_reason ? (String(r.partial_reason).startsWith('คืนจาก') ? r.partial_reason : `${tr("ยอดบางส่วนจาก")}${r.partial_reason}`) : null },
+                  { k: tr("ผู้รับ"), v: pending ? null : `${r.received_by || '—'} · ${hhmm(r.received_at) || ''}` },
+                  { k: tr("ส่วนต่าง"), v: !pending && r.diff_reason ? `${fmt(r.qty_received - r.qty_expected)} — ${r.diff_reason}` : null },
                 ]}
                 footer={pending && canReceive ? (editing ? (
                   <div style={{ display: 'grid', gap: 8 }}>
@@ -356,7 +356,7 @@ export default function StockReceiptQueue({ banner = null, table = false }) {
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button type="button" disabled={busy === r.id} style={storeBtn('primary', { flex: 1 })}
                         onClick={async () => { if (await receive(r, form.qty, form.reason.trim())) setDiffFor(null); }}>
-                        {busy === r.id ? 'กำลังบันทึก…' : `✅ ${tr("รับเข้า")} ${form.qty === '' ? '' : fmt(form.qty)}`}
+                        {busy === r.id ? tr("กำลังบันทึก…") : `✅ ${tr("รับเข้า")} ${form.qty === '' ? '' : fmt(form.qty)}`}
                       </button>
                       <button type="button" style={storeBtn('secondary')} onClick={() => setDiffFor(null)}>{tr('ยกเลิก')}</button>
                     </div>
@@ -365,11 +365,11 @@ export default function StockReceiptQueue({ banner = null, table = false }) {
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button type="button" disabled={busy === r.id} style={storeBtn('primary', { flex: 1 })}
                       onClick={() => receive(r, r.qty_expected, '')}>
-                      {busy === r.id ? 'กำลังบันทึก…' : `✅ ${tr("นับแล้วตรง · รับ")} ${fmt(r.qty_expected)}`}
+                      {busy === r.id ? tr("กำลังบันทึก…") : `✅ ${tr("นับแล้วตรง · รับ")} ${fmt(r.qty_expected)}`}
                     </button>
                     <button type="button" style={storeBtn('secondary')}
                       onClick={() => { setDiffFor(r.id); setForm({ qty: String(r.qty_expected), reason: '' }); }}>
-                      ✏️ ยอดไม่ตรง
+                      ✏️ {tr("ยอดไม่ตรง")}
                     </button>
                   </div>
                 )) : null} />
