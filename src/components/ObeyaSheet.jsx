@@ -168,7 +168,11 @@ const SheetIconBtn = ({ fs, title, onClick, children, className }) => (
 /* 20/11 (user: "แว่นขยายกับป้ายสถานะทำหน้าที่เดียวกัน เอาแว่นขยายออก") — แผ่นที่ใช้ `statZoom` ส่ง `zoom={false}` ด้วย ⇒ มุมขวาบนว่าง popup เปิดจากชิปสถานะอย่างเดียว */
 /* `footAside` (16/11 · user: "insight เยอะจนกราฟหาย") = ท้ายแผ่นของใบใน popup ไปอยู่รางขวา (คนละคอลัมน์กับกราฟ)
    ⇒ ใช้กับแผ่นที่ท้ายแผ่นยาวได้จริง (insight) เท่านั้น · ไม่ส่ง = ชั้นล่างเพดาน 30% เหมือนเดิม */
-export function Sheet({ k, cw = 0, span = 1, icon, title, sub, big, unit, bigNote, delta, stat, foot, link, onLink, zoom = true, onClose, statZoom = false, goals = null, footAside = false, idx = 0, children }) {
+/* 📐 มาตรฐาน layout แผ่นในกริด (25/11 · user: "คำอธิบายทำเป็น hover/tooltip · ความสูงกราฟ + ตำแหน่งตัวเลขเน้น ต้องเท่ากันทุกการ์ด")
+   · บรรทัดรอง (`sub`) = **1 บรรทัดเสมอ** ตัดท้าย … · ข้อความเต็มอยู่ใน tooltip (`subFull` ถ้าส่ง ไม่งั้น = sub) · ใน popup 🔍 วาดเต็ม
+   · ท้ายแผ่น = **แถวเดียวความสูงคงที่** (คาดปลายปี 1 บรรทัดซ้าย + ปุ่มลิงก์ขวา) และ **มีเสมอ** แม้ว่าง ⇒ หัว/ท้ายสูงเท่ากันทุกแผ่น → กราฟสูงเท่ากัน · ตัวเลขใหญ่อยู่ตำแหน่งเดียวกัน
+   · ใน popup (`onClose`) ท้ายแผ่นยังเป็นชั้น/รางของ insight เหมือนเดิม */
+export function Sheet({ k, cw = 0, span = 1, icon, title, sub, subFull = null, big, unit, bigNote, delta, stat, foot, link, linkTitle = null, onLink, zoom = true, onClose, statZoom = false, goals = null, footAside = false, idx = 0, children }) {
   const fs = (n) => Math.max(11, Math.round(n * k));
   const status = stat?.status;
   /* 🔢 ตัวเลขใหญ่วิ่งขึ้น (24/11 · useCountUp) — `big` มาเป็นสตริงจัดรูปแล้ว ("1,105,886" · "98.4") ⇒ แกะเลข · วิ่ง · จัดรูปกลับทศนิยมเท่าเดิม
@@ -207,15 +211,22 @@ export function Sheet({ k, cw = 0, span = 1, icon, title, sub, big, unit, bigNot
   const footNode = tv && !onClose
     ? (footRaw && footRaw.type === WarnNote && !footRaw.props?.tvHide ? footRaw : null)
     : footRaw;
-  const footInner = (<>
+  const linkBtn = link && (
+    <button className="tv-hide" onClick={onLink} title={linkTitle || undefined} style={{
+      fontSize: fs(10.5), fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--r-md)', whiteSpace: 'nowrap', flexShrink: 0,
+      background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)', cursor: 'pointer',
+    }}>{link} ↗</button>
+  );
+  const footInner = onClose ? (<>
     {footNode && <div style={{ fontSize: fs(10.5), lineHeight: 1.35, color: 'var(--muted)' }}>{footNode}</div>}
-    {link && (
-      <button className="tv-hide" onClick={onLink} style={{
-        marginTop: 4, fontSize: fs(10.5), fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--r-md)',
-        background: 'var(--bg3-surf)', color: 'var(--text2)', border: '1px solid var(--border2)', cursor: 'pointer',
-      }}>{link} ↗</button>
-    )}
-  </>);
+    {linkBtn && <div style={{ marginTop: 4 }}>{linkBtn}</div>}
+  </>) : (
+    /* กริด: แถวเดียว — ข้อความซ้าย (1 บรรทัด ตัดท้าย) · ปุ่มขวา · สูงคงที่แม้ว่าง */
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: Math.round(22 * k) }}>
+      <div style={{ flex: 1, minWidth: 0, fontSize: fs(10.5), lineHeight: 1.35, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'clip', textOverflow: 'ellipsis' }}>{footNode}</div>
+      {!tv && linkBtn}
+    </div>
+  );
   return (<>
     <motion.div {...(onClose ? {} : stagger(Math.min(idx, 9)))} {...(onClose ? {} : liftHover())} className={onClose ? undefined : 'lift-card'} style={{
       gridColumn: `span ${span}`,
@@ -238,7 +249,10 @@ export function Sheet({ k, cw = 0, span = 1, icon, title, sub, big, unit, bigNot
             ? <SheetIconBtn fs={fs} title={tr('ปิด (Esc)')} onClick={onClose}>✕</SheetIconBtn>
             : (zoom && <SheetIconBtn className="tv-hide" fs={fs} title={tr('ขยายดูใหญ่')} onClick={() => setZoomed(true)}>🔍</SheetIconBtn>)}
         </div>
-        {sub && <div style={{ fontSize: fs(10.5), color: 'var(--muted)', marginTop: 1 }}>{sub}</div>}
+        {onClose
+          ? ((subFull || sub) && <div style={{ fontSize: fs(10.5), color: 'var(--muted)', marginTop: 1 }}>{subFull || sub}</div>)
+          : <div title={typeof (subFull || sub) === 'string' ? (subFull || sub) : undefined}
+              style={{ fontSize: fs(10.5), color: 'var(--muted)', marginTop: 1, minHeight: Math.round(fs(10.5) * 1.35), whiteSpace: 'nowrap', overflow: 'clip', textOverflow: 'ellipsis' }}>{sub || ''}</div>}
         {/* 📱 มือถือ: ขึ้นบรรทัดใหม่ได้ — "14.1 พันบาท เดือน มี.ค. (ล่าสุด) ▲ 35.9 ตามเป้า" กว้าง 371px ในแผ่น 346px (mobilesweep 15/10) */}
         <div ref={headRef} style={{
           display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'space-between',
@@ -285,7 +299,7 @@ export function Sheet({ k, cw = 0, span = 1, icon, title, sub, big, unit, bigNot
         </div>
       ) : (<>
         <div style={{ flex: 1, minHeight: 0, padding: `${Math.round(4 * k)}px ${Math.round(4 * k)}px 0` }}>{body}</div>
-        {(footNode || (link && !tv)) && (
+        {(!onClose || footNode || (link && !tv)) && (
           <div style={{ padding: `${Math.round(5 * k)}px ${Math.round(9 * k)}px ${Math.round(7 * k)}px`, flexShrink: 0,
             ...(onClose ? { maxHeight: '30%', minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain' } : null) }}>
             {footInner}
@@ -295,8 +309,8 @@ export function Sheet({ k, cw = 0, span = 1, icon, title, sub, big, unit, bigNot
     </motion.div>
     {zoomed && (
       <SheetZoom onClose={() => setZoomed(false)}>
-        <Sheet k={zk} cw={1200} icon={icon} title={title} sub={sub} big={big} unit={unit} bigNote={bigNote}
-          delta={delta} stat={stat} foot={foot} link={link} onLink={onLink} zoom={false} statZoom={statZoom} goals={goals}
+        <Sheet k={zk} cw={1200} icon={icon} title={title} sub={sub} subFull={subFull} big={big} unit={unit} bigNote={bigNote}
+          delta={delta} stat={stat} foot={foot} link={link} linkTitle={linkTitle} onLink={onLink} zoom={false} statZoom={statZoom} goals={goals}
           footAside={zAside} onClose={() => setZoomed(false)}>
           {children}
         </Sheet>
