@@ -18745,6 +18745,10 @@ const EN = {
   "จากมิเตอร์บนบอร์ด (Scope 2) · แท็บรายเดือนใช้ยอดบิลเมื่อมี": "From board meters (Scope 2) · monthly tab uses the bill when available",
   "วันนี้ / เดือนนี้": "today / this month",
   "รวมทุกตู้บนบอร์ด (Scope 2) · แท็บรายเดือนใช้ยอดบิลเมื่อมี": "All panels on the board (Scope 2) \u00b7 monthly tab uses the bill when available",
+  'นิยามระดับแม่/โรงงานที่ตกทอดมาให้เห็น — ไม่ใช่ KPI ของใบนี้ ไม่นับน้ำหนักใบนี้ แก้เป้า/น้ำหนักที่ขอบเขตนั้น': 'Parent/plant definitions shown for reference — not this sheet\'s KPIs, not counted in its weight; edit target/weight at that scope',
+  'ตกทอดจากระดับแม่/โรงงาน': 'Inherited from parent/plant',
+  'อ่านอย่างเดียว · ไม่นับน้ำหนักของใบนี้': 'read-only · not counted in this sheet\'s weight',
+  'แก้เป้า/น้ำหนักที่ขอบเขตนั้น': 'edit target/weight at that scope',
 };
 
 export default EN;
