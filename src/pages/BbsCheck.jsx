@@ -31,6 +31,8 @@ import { inSectionScope, scopedLines } from '../utils/sectionScope';
 import { MARKS, MARK_BY_KEY, markGlyph, markColor, daysInMonth, ppeToMark } from '../utils/bbsMarks';
 import { getWorkDate } from '../utils/workDate';
 import { printBbsSheet } from '../lib/bbsPrint';
+import WfRoundPanel from '../components/WfRoundPanel';   // ✍️ สายเซ็นรายเดือน ผู้ตรวจ→SV→Manager (e-Workflow · 25/11)
+import { loadRoundSignoff } from '../lib/wfSignoff';
 import { resolveEmployeeSigner, signatureOfPerson } from '../utils/employeeSignature';   // ✍️ รหัสพนักงาน → ลายเซ็น (C1 · 03/11)
 import { checkWriteRows } from '../utils/dbWrite';
 import { canWriteLine, writeBlockText } from '../utils/writeScope';   // 🔐 ชั้น ③ "ใบของไลน์นี้เป็นของหน่วยงานเราไหม" (19/11)
@@ -254,9 +256,23 @@ export default function BbsCheck() {
     return false;
   };
 
+  /* ✍️ 25/11 — BBS เข้า e-Workflow (ใบรายเดือน: ผู้ตรวจออกใบ → Supervisor ตรวจสอบ → Manager อนุมัติ)
+     มีคนเซ็นแล้ว = ใบเดือนนี้ล็อก (DB ตัดสิน: trigger `bbs_wf_lock` · ที่นี่แค่บอกก่อนกด) · แก้ = ให้ผู้เซ็นตีกลับ/เพิกถอน */
+  const [wfLock, setWfLock] = useState(null);
+  const [lockTick, setLockTick] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    setWfLock(null);
+    if (!lineObj?.name) return undefined;
+    supabase.rpc('wf_bound_locked', { p_kind: 'bbs', p_line: lineObj.name, p_date: `${month}-01`, p_shift: null })
+      .then(({ data, error }) => { if (alive && !error) setWfLock(data || null); });
+    return () => { alive = false; };
+  }, [lineObj?.name, month, lockTick]);
+
   /* ── หัวใบ: สร้างตอนบันทึกจริงเท่านั้น (ห้ามสร้างตอนเปิดดู) ── */
   const ensureSheet = useCallback(async () => {
     if (!lineGuard()) return null;   // ทุกขาเขียน (ทาช่อง · หมายเหตุ · เติม PPE · ผู้ตรวจ) ผ่านตรงนี้
+    if (wfLock) { toast.error(`${tr('ใบ BBS เดือนนี้เซ็นแล้ว')} (${wfLock}) — ${tr('ให้ผู้เซ็นตีกลับ/เพิกถอนก่อนแก้')}`); return null; }
     // ⚠️ ด่านสุดท้ายของขาเขียน — เช็คแค่ `sheet` ไม่พอ ใบของเดือน/ไลน์ก่อนก็ truthy เหมือนกัน
     if (matchesKey(sheet)) return sheet;
     if (!lineObj) return null;
@@ -293,7 +309,7 @@ export default function BbsCheck() {
     }
     setSheet(data);
     return data;
-  }, [sheet, lineObj, month, fullName, signers, lineWrite.ok]);   // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sheet, lineObj, month, fullName, signers, lineWrite.ok, wfLock]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── ทาช่อง ── */
   // markOverride/seqOverride: โหมดมือถือกดชิปตรงๆ ไม่ผ่านแปรง (desktop ส่ง 2 ตัวแรกเหมือนเดิม)
@@ -565,9 +581,13 @@ export default function BbsCheck() {
     const signer = sheet.inspector_code ? await resolveEmployeeSigner(supabase, sheet.inspector_code) : null;
     const sigUrl = sheet.inspector_sig_url || null;   // A6: ลายเซ็นที่บันทึกไว้เท่านั้น — ไม่ resolve จากรหัสที่พิมพ์ตอนพิมพ์ใบ
     if (!sigUrl) toast.info(signer?.note || 'ยังไม่ได้ระบุผู้ตรวจ (เลือกชื่อ หรือสแกน/พิมพ์รหัสพนักงาน) — ใบจะเว้นช่องลายเซ็นไว้ให้เซ็นมือ');
+    /* ✍️ ช่องเซ็นตามสายเซ็น e-Workflow (25/11) · อ่านไม่ได้ = บอก แล้วพิมพ์ช่องเดิม (ห้ามพิมพ์ช่องว่างเหมือน "ยังไม่มีใครเซ็น") */
+    const so = lineObj ? await loadRoundSignoff(supabase, { subject: 'bbs', line: lineObj.name, date: `${month}-01` }) : null;
+    if (so?.error) toast.error(`${tr('อ่านลายเซ็นตามสายเซ็นไม่สำเร็จ — ใบจะใช้ช่องเซ็นเดิม')}: ${so.error}`);
     const ok = await printBbsSheet({
       sheet: { ...sheet, inspector_name: sheet.inspector_name || signer?.name || null, inspector_sig_url: sigUrl },
       days, employees: emps, cells, rowNotes, agreements, autoCount: autoAgreements.length,
+      signoff: so && !so.error ? so : null,
     });
     if (!ok) toast.error('เบราว์เซอร์บล็อกหน้าต่างพิมพ์ — อนุญาต popup ของเว็บนี้ก่อน');
   };
@@ -607,6 +627,15 @@ export default function BbsCheck() {
         <input type="month" value={month} onChange={e => setMonth(e.target.value)} />
         {/* 🔴 ไม่มีปุ่มเลือกกะ — BBS ไม่แยกกะ (ดูหัวบล็อกไฟล์) ห้ามเติมกลับ */}
       </FilterBar>
+
+      {/* ✍️ สายเซ็นของใบเดือนนี้ (e-Workflow · ตั้งผู้เซ็น/ความถี่ที่ /workflow-designer) — เซ็นบนใบนี้เลย ไม่ต้องออกใบแยก */}
+      <WfRoundPanel subject="bbs" line={lineObj?.name || ''} date={`${month}-01`}
+        hasData={sheet ? Object.keys(cells).length > 0 : false} openOnlyWithData
+        summary={`${emps.length} ${tr('คน')} · ${Object.values(cells).filter(c => c.mark === 'ng').length} ${tr('ช่องไม่ปลอดภัย')}`}
+        onChanged={() => setLockTick(x => x + 1)} />
+      {wfLock && (
+        <NoticeBar tone="info" icon="🔒" style={{ marginBottom: 12 }}>{tr('ใบ BBS เดือนนี้เซ็นแล้ว')} ({wfLock}) — {tr('แก้ไม่ได้จนกว่าผู้เซ็นจะตีกลับ/เพิกถอน')}</NoticeBar>
+      )}
 
       {/* ── ผู้ตรวจสอบ + ขอบเขตที่ระบบเติมได้ ── */}
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start', marginBottom: 12 }}>
