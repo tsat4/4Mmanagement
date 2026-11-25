@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { wfPeriodRange, roundKey, validateBinding, roundState, BOUND_SUBJECTS } from '../wfBound.js';
+import { wfPeriodRange, roundKey, validateBinding, roundState, BOUND_SUBJECTS, signoffRows } from '../wfBound.js';
 import { lpaPeriodRange } from '../lpaPlanStatus.js';
 
 test('wfPeriodRange — ตรงกับ wf_period_range() ฝั่ง DB (ผลจำลองบนฐานจริง 25/11)', () => {
@@ -40,9 +40,28 @@ test('roundState — ไม่มีใบ ≠ ยังไม่เซ็น', 
   assert.equal(roundState({}), 'unknown');
 });
 
-test('BOUND_SUBJECTS ตรงกับ wf_bound_subjects() ใน migration', () => {
-  const sql = readFileSync(join(process.cwd(), 'supabase/migrations/20261125b_e_workflow_bound_main.sql'), 'utf8');
+test('BOUND_SUBJECTS ตรงกับ wf_bound_subjects() ตัวล่าสุดใน migration', () => {
+  const dir = join(process.cwd(), 'supabase/migrations');
+  const files = readdirSync(dir).filter(f => f.endsWith('.sql')).sort()
+    .filter(f => readFileSync(join(dir, f), 'utf8').includes('create or replace function public.wf_bound_subjects()'));
+  const sql = readFileSync(join(dir, files[files.length - 1]), 'utf8');
+  const body = sql.slice(sql.indexOf('create or replace function public.wf_bound_subjects()'));
   for (const s of BOUND_SUBJECTS) {
-    assert.ok(sql.includes(`"${s.subject}": {"label": "${s.label}", "record_perm": "${s.recordPerm}"`), `migration ต้องลงทะเบียน ${s.subject}`);
+    const re = new RegExp(`"${s.subject}":\\s*\\{"label": "${s.label}", "record_perm": "${s.recordPerm}", "link": "${s.link.replace(/[?]/g, '\\?')}", "doc_key": ${s.docKey ? `"${s.docKey}"` : 'null'}\\}`);
+    assert.ok(re.test(body), `migration ${files[files.length - 1]} ต้องลงทะเบียน ${s.subject} ให้ตรงกับจอ`);
   }
+});
+
+test('signoffRows — ช่องเซ็นตามขั้น · ยังไม่เซ็น = ว่าง · เอาลายเซ็นล่าสุดของขั้น', () => {
+  const flow = { steps: [{ label: 'ผู้ตรวจ', sig_label: 'ออกโดย' }, { label: 'Supervisor ตรวจสอบ' }, { label: 'Manager', sig_label: 'อนุมัติโดย' }] };
+  const rows = signoffRows(flow, [
+    { action: 'submit', step_index: null, actor_name: 'ระบบ' },
+    { action: 'approve', step_index: 0, actor_name: 'A', acted_at: '2026-11-01T01:00:00Z', actor_id: 'u1' },
+    { action: 'approve', step_index: 1, actor_name: 'B', acted_at: '2026-11-02T01:00:00Z' },
+    { action: 'reject', step_index: 2, actor_name: 'C', acted_at: '2026-11-03T01:00:00Z' },
+  ]);
+  assert.deepEqual(rows.map(r => r.label), ['ออกโดย', 'Supervisor ตรวจสอบ', 'อนุมัติโดย']);
+  assert.deepEqual(rows.map(r => r.name), ['A', 'B', null]);
+  assert.equal(rows[0].actorId, 'u1');
+  assert.deepEqual(signoffRows(null), []);
 });
