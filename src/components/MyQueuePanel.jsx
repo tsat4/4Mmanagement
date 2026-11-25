@@ -76,7 +76,7 @@ export async function loadMyQueue(me) {
   const ok = (r) => (r.error ? undefined : (r.data || []));
 
   const canLu = !!(me.canLevelUp || me.canLevelUp100);
-  const [moR, sesR, prR, moPrR, fourR, actR, lines, luR, binR, binRedR, redPendR, rfqAssessR, gapR, gapOdR, amR] = await Promise.all([
+  const [moR, sesR, prR, moPrR, fourR, actR, lines, luR, binR, binRedR, redPendR, rfqAssessR, gapR, gapOdR, amR, wfR] = await Promise.all([
     /* กรองด้วยสถานะที่ยังมีคนต้องทำต่อ — เดิม `.gt('current_step', 1)` ตัดใบ "รอจ่ายงาน" (current_step = 1)
        ทิ้งทั้งหมด และ `.is('approve_at', null)` ตัดใบ MTN ที่อนุมัติแล้วแต่ยังรอปิดใบ (ขั้น 8) */
     supabaseDR.from('mtn_orders').select(MO_COLS)
@@ -135,6 +135,11 @@ export async function loadMyQueue(me) {
       ? supabaseDR.from('inspections').select('id, inspected_at, jigs!inner(line_name), checklists!inner(department)')
         .eq('approval_status', 'pending').order('inspected_at', { ascending: true }).limit(1000)
       : Promise.resolve({ data: null, error: null }),
+    /* ✍️ 25/11: งาน e-Workflow ที่รอฉัน (ใบฟอร์ม + ใบรอบเอกสาร เช่น Poka-Yoke) — เดิมดูได้แค่แท็บ "รอฉัน" ใน /workflows */
+    me.uid
+      ? supabase.from('wf_tasks').select('id, created_at, wf_instances!inner(id, status, line_name, subject_kind, section, def_id, wf_defs(name))')
+        .eq('assignee_id', me.uid).eq('status', 'open').eq('wf_instances.status', 'in_progress').limit(500)
+      : Promise.resolve({ data: null, error: null }),
   ]);
   const rfqAssess = me.canRfqAssess ? ok(rfqAssessR)?.map(r => ({ id: r.id, rfq_id: r.rfq_id, round: r.round, requested_at: r.requested_at, ...(r.mkt_rfqs || {}) })) : undefined;
   const levelUps = canLu ? ok(luR)?.map(r => ({ id: r.id, to_level: r.to_level, requested_at: r.requested_at, section: r.employees?.section })) : undefined;
@@ -167,6 +172,10 @@ export async function loadMyQueue(me) {
     .map(r => ({ id: r.id, inspected_at: r.inspected_at, line_name: r.jigs?.line_name || null,
       section: secOfLine.get(String(r.jigs?.line_name || '').trim().toLowerCase()) })) : undefined;
   const amPendingTruncated = Array.isArray(amR?.data) && amR.data.length >= 1000;
+
+  // อ่านล้ม = null (⇒ partial · จอเขียนว่าโหลดไม่ครบ) ไม่ใช่ undefined (= ไม่ได้โหลด)
+  const wfTasks = !me.uid ? undefined : wfR.error ? null : (wfR.data || []).map(t => ({ id: t.id, created_at: t.created_at, def: t.wf_instances?.wf_defs?.name || 'ใบงาน',
+    bound: !!t.wf_instances?.subject_kind, line_name: t.wf_instances?.line_name || null }));
 
   const moRows = ok(moR);
   const mo = moRows?.filter(o => !DEAD.includes(String(o.status || '')));
@@ -205,7 +214,7 @@ export async function loadMyQueue(me) {
   return buildQueue({ mo, moAll: mo, moAllCapped: moTruncated, moTruncated,
     prOf: moPrByOrder ? (o) => (moPrByOrder[o.id] || []) : null,
     sessions: ok(sesR), fourM, actions: ok(actR), summaries, levelUps, bins, binsTruncated, redBins, redBinsTruncated, rfqAssess,
-    amPending, amPendingTruncated }, me);
+    amPending, amPendingTruncated, wfTasks }, me);
 }
 
 /* ── UI ชิ้นเล็ก ────────────────────────────────────────────────────────── */
