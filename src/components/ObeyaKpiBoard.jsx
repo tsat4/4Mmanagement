@@ -6,6 +6,7 @@ import { lineNameCompare } from '../utils/lineHierarchy';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Cell, LabelList } from 'recharts';
 import { chartAnim } from '../utils/motion';
+import TabBody from './TabBody';   // 25/11: เปลี่ยนขอบเขต = cross-fade ทั้งกระดานครั้งเดียว (จังหวะเดียวกับสลับแท็บ)
 import { supabase, supabaseDR } from '../supabaseClient';
 import { loadLinesRes } from '../utils/useProductionLines';
 import { UserContext } from '../App';
@@ -161,6 +162,11 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
   const { index: org, ready: orgReady, failed: orgFailed } = useOrgScope(lines);   // ผังองค์กรทุกมิติ (23/09) — แทน org_nodes kind='section'
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  /* 🎞 25/11 (user: "เปลี่ยนไลน์แล้ว animation ดูพังๆ เด้งไปมา") — แผ่นไหลขึ้นทีละใบ (stagger) เล่นเฉพาะข้อมูลชุดแรกที่บอร์ดโผล่
+     เปลี่ยนขอบเขต/ปี = แผ่นส่วนใหญ่ remount (คีย์ = def id ของขอบเขตใหม่) + ลำดับแผ่นต่างกันได้ ⇒ ให้ทั้งกริด cross-fade ครั้งเดียว
+     (`<TabBody tab={data.viewKey}>`) แผ่นข้างในโผล่ทันที (`enter={false}`) · เลขวิ่ง/แท่งยืดยังเล่นตามกฎ chartAnim เหมือนเดิม */
+  const firstViewRef = useRef(null);
+  if (data?.viewKey && firstViewRef.current == null) firstViewRef.current = data.viewKey;   // ชุดแรกที่โผล่ = ชุดเดียวที่ได้ stagger
   const [err, setErr] = useState(null);
   const [showSafety, setShowSafety] = useState(null);   // null | {} | event
   const [board, setBoard] = useState(() => urlBool('board', false)); // โหมดจอ TV = ซ่อนหัวเพจ เต็มจอ · ?board=1 จากจอวนหน้า
@@ -390,6 +396,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
         sessions: roll.sessions || [], defects: roll.defects || [],
         openSess: (op.rows || []).length, targets: tg.data || [],
         safety, safetyMissing, actions, actsMissing, kdefs, kdefsBelow, kentries, kplans, knotes, kbase, kcsat, kemps, kpiMissing, warn, mtnRoll, layoutKeys,
+        viewKey: `${scopeKeyStr}|${year}`,   // 25/11: ขอบเขต+ปีของ "ข้อมูลชุดนี้" — คีย์ cross-fade ของกริด (ไม่ใช่ URL ที่เปลี่ยนก่อนข้อมูลมา)
       });
     } catch (e) {
       if (seq === reqRef.current) { setErr(e?.message || 'โหลดข้อมูลไม่สำเร็จ'); setData(null); }
@@ -1404,6 +1411,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
           ) : !scope ? (
             <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>{tr('กำลังเลือกขอบเขตเริ่มต้น…')}</div>
           ) : (
+            <TabBody tab={data?.viewKey || ''} style={{ height: '100%', minHeight: 0 }}>
             <div style={sheetsBox}>
               {pageItems.filter((x) => x.kind === 'kpi').map(({ row: r }, sheetIdx) => (
                 <div key={r.key} style={{ position: 'relative', minHeight: 0, display: 'grid' }}>
@@ -1413,7 +1421,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
                     <button onClick={() => moveSheet(r.key, 1)} disabled={rows[rows.length - 1]?.key === r.key} title={tr('เลื่อนไปถัดไป')} style={{ ...navBtn, fontSize: 13, padding: '2px 8px' }}>▶</button>
                   </div>
                 )}
-                <Sheet k={k} cw={cw} idx={sheetIdx} icon={r.icon} title={r.name} statZoom goals={(kk, zoomedCopy) => goalsRow(r, kk, zoomedCopy)} footAside
+                <Sheet k={k} cw={cw} idx={sheetIdx} enter={firstViewRef.current === data?.viewKey} icon={r.icon} title={r.name} statZoom goals={(kk, zoomedCopy) => goalsRow(r, kk, zoomedCopy)} footAside
                   /* 30/09 (user): เลขใหญ่ = ค่าเดือนที่เลือก · บรรทัดรอง = YTD บอกวิธีรวม+จำนวนเดือน · ท้ายแผ่น = คาดปลายปี
                      16/11 (user): กดชิปสถานะ = เปิด popup 🔍 (insight) ไม่ใช่พาไปหน้ากรอก — ปุ่ม "กรอก/ตั้งเป้า" ท้ายแผ่นยังไปหน้ากรอกเหมือนเดิม */
                   sub={`${r.curChild ? tr('⬆ ค่ารวมจากหน่วยลูก (เดือนนี้ระดับนี้ไม่ได้กรอก)') : srcLabel(r)}${r.ytd != null
@@ -1475,6 +1483,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
               </Sheet>
               )}
             </div>
+            </TabBody>
           )}
         </div>
       </div>
