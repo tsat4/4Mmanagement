@@ -58,6 +58,28 @@ function stripComments(src) {
    scan: โฟลเดอร์ที่ตรวจ · ext: นามสกุล · re: regex (global) · allow: ไฟล์ที่ยกเว้น + เหตุผล */
 const RULES = [
   {
+    id: 'manpower-layout-stations-via-family',
+    scan: ['src/pages/ManpowerBoard.jsx'], ext: ['.jsx'],
+    /* จับการกรองไลน์ฝั่ง DB ทุกแบบในไฟล์นี้: `line_id.eq.` ใน .or() · .eq/.in('line_name'|'line_id')
+       (ไฟล์นี้ไม่มีคิวรีตารางอื่นที่กรองไลน์ · คิวรีมักแตกบรรทัด `const q = …; q.or(…)` ⇒ ห้ามผูกกับ from('workstations')) */
+    re: /line_(id|name)\.eq\.|\.(eq|in)\(\s*['"`]line_(name|id)['"`]/g,
+    why: '🗺️ user 24/11 "จุดงานก็ไม่ขึ้น" — ผัง LINE APRON ASSY ขึ้นแค่ Supervisor 1 จุด เพราะคิวรีกรอง line_id/line_name ของไลน์แม่ '
+       + 'แต่จุดของไลน์ลูก (Line 60/61/SUB APRON 18 จุด) วางบนผังแม่และผูกด้วย line_name ของลูก (line_id = null) · '
+       + '⚠️ harness mock ไม่กรอง query ⇒ รูป audit ขึ้นครบ จับไม่ได้',
+    fix: 'โหลดจุดงานทั้งหมดแล้วกรองด้วย `stationsOfLineFamily(lines, ชื่อไลน์, rows)` (src/utils/manpowerBoard.js — ไลน์นั้น + ลูกทั้งหมด · จับ id ก่อน ถอยไปชื่อ)',
+    allow: {},
+  },
+  {
+    id: 'manpower-layout-single-line-picker',
+    scan: ['src/pages/ManpowerBoard.jsx'], ext: ['.jsx'],
+    /* จับช่อง <select> ที่ตั้ง ?lline= เอง (ช่องเลือกผังซ้อน) */
+    re: /<select\b[^\n]*merge\(\s*\{\s*lline\s*:/g,
+    why: '🎛️ user 24/11 "dropdown กับ select ทับซ้อนกันรึป่าว" — เคยมีช่องเลือกผังข้างปุ่ม "ผังรายไลน์" ซ้อนกับช่อง ส่วนงาน/ไลน์ บนหัวเพจ '
+       + 'แล้ว 2 ช่องไม่ตามกัน (บน = PD3 · ล่าง = LINE APRON ASSY) · user เลือก "เหลือช่องบนช่องเดียว"',
+    fix: 'เลือกไลน์/ผังผ่าน `SectionScopeSelect pickLine` บนหัวเพจเท่านั้น (ตั้ง ?lline=) — 📄 docs/modules/manpower-board.md §24/11',
+    allow: {},
+  },
+  {
     id: 'wf-tables-write-via-rpc',
     scan: ['src'], ext: ['.jsx', '.js'],
     /* จับการเขียนตาราง e-Workflow ตรงจาก client: from('wf_…').insert/update/upsert/delete */
@@ -4825,7 +4847,7 @@ test('🛡️ approve-needs-confirm-4m — ปุ่มอนุมัติ 4M 
   assert.ok(cAt > 0 && uAt > 0 && cAt < uAt,
     '\n\n❌ `handleApprove` (อนุมัติ 4M) เขียน DB โดยไม่ถามยืนยันก่อน\n'
     + '   ทำไมห้าม: ชื่อคนกดไปอยู่บนใบ · compare-and-swap = กดคืนเองไม่ได้ ต้องให้คนตีกลับ\n'
-    + '   แก้ยังไง: `if (!confirmSign({ what, docLabel, orderNo, actor, as, effect })) return;`\n'
+    + '   แก้ยังไง: `if (!await confirmSign({ what, docLabel, orderNo, actor, as, effect })) return;`\n'
     + '   ⚠️ ขั้น QA ไม่ต้องถามซ้ำ (มี modal แนบรูป) · ตีกลับไม่ต้อง (ต้องพิมพ์เหตุผล)\n');
 
   /* ของกลางต้องเป็นตัวเดียวกับที่ใบ MO ใช้ — ห้ามเขียนข้อความยืนยันเองในหน้า */
@@ -4845,7 +4867,7 @@ test('🛡️ mtn-approve-needs-confirm — ปุ่มเซ็น/อนุ�
   assert.ok(cAt > 0 && uAt > 0 && cAt < uAt,
     '\n\n❌ `signApproval` เขียน DB โดยไม่ถามยืนยันก่อน (หรือถามหลังเขียนไปแล้ว)\n'
     + '   ทำไมห้าม: ลายเซ็นผู้จัดการเป็น one-way — เซ็นพลาดแล้วเจ้าตัวปลดเองไม่ได้\n'
-    + '   แก้ยังไง: `if (!confirmSign({ what, orderNo, actor, as })) return;` ก่อน `.update(`\n');
+    + '   แก้ยังไง: `if (!await confirmSign({ what, orderNo, actor, as })) return;` ก่อน `.update(`\n');
 
   /* ② ขั้นที่เป็นการเซ็น/อนุมัติใน StepModal — ต้องถามผ่านทะเบียน stage ไม่ใช่ไล่เช็คเลขขั้นเอง */
   assert.ok(/needsSignConfirm\s*\(/.test(src) && /confirmSign\s*\(/.test(src),
@@ -10215,8 +10237,9 @@ test('🛡️ pm-notify-via-single-source — แจ้งเตือนผล�
   const page = stripComments(readFileSync(join(ROOT, 'src/pages/PMCheckData.jsx'), 'utf8'));
   assert.ok(/ownersCapped/.test(page),
     '\n\n❌ หน้าจอไม่ได้เตือนเมื่อรายชื่อช่างถูกตัด (จอต้องไม่โกหกว่าส่งครบ)\n');
-  assert.ok(/event:\s*'pm_inspection_ng'/.test(page),
-    '\n\n❌ ไม่ได้ส่ง event key — edge จะตอบ 400 แล้วแจ้งเตือนหายทั้งใบ\n');
+  assert.ok(/'pm_inspection_ng'/.test(page) && /event:\s*'am_inspection_ng'/.test(page),
+    '\n\n❌ ไม่ได้ส่ง event key — edge จะตอบ 400 แล้วแจ้งเตือนหายทั้งใบ\n'
+    + '   (25/11: ใบ AM = am_inspection_ng · ใบ PM ช่าง = pm_inspection_ng — ทั้ง 2 คีย์ต้องมีแถวใน notification_rules)\n');
 });
 
 test('🔊 siren-call-mtn-needs-team — ไซเรน "เรียกช่าง" ต้องรู้ขอบเขตทีมของจอเสมอ', () => {
@@ -12741,6 +12764,51 @@ test('🔴 restamp-lane-needs-machine-no — หารเลนต้องม�
     '\n\n❌ ด่าน DT-เกินเวลากะ ยังเทียบด้วยนาทีดิบ — ไลน์เครื่องขนานจะถูกข้ามทุกกะ\n');
 });
 
+test('🛡️ confirm-sign-must-await — confirmSign() คืน Promise ⇒ ทุกจุดต้อง await (ไม่งั้นกล่องขึ้นแต่ไม่กันอะไรเลย)', () => {
+  /* 24/11 (คำสั่ง user): หน้า /workflows เรียก `if (!confirmSign(...)) return` — Promise เป็น truthy เสมอ
+     ⇒ `!promise` = false ⇒ อนุมัติไปแล้วทั้งที่กล่องยืนยันยังเปิดอยู่ (กดยกเลิกก็ไม่มีผล)
+     ของกลางเปลี่ยนเป็นกล่องในแอป (Promise) ตั้งแต่ 18/11 · จุดที่เขียนก่อนหน้านั้นต้อง await ทุกตัว */
+  const bad = [];
+  const walk = (d) => { for (const n of readdirSync(d, { withFileTypes: true })) {
+    const f = join(d, n.name);
+    if (n.isDirectory()) { if (n.name !== '__tests__' && n.name !== 'node_modules') walk(f); continue; }
+    if (!/\.(jsx?|mjs)$/.test(n.name) || f.endsWith('signConfirm.js')) continue;
+    const src = stripComments(readFileSync(f, 'utf8'));
+    for (const m of src.matchAll(/(\S+\s*)confirmSign\(/g)) {
+      if (/^(await\s*|function\s*)$/.test(m[1]) || /\bawait\s*$/.test(m[1])) continue;
+      if (/import|export/.test(m[1])) continue;
+      bad.push(`${f.replace(ROOT + '/', '')}: ...${m[0]}`);
+    }
+  } };
+  walk(join(ROOT, 'src'));
+  assert.deepEqual(bad, [], `\n\n❌ ${bad.length} จุดเรียก confirmSign() โดยไม่ await\n   ${bad.join('\n   ')}\n   แก้: \`if (!await confirmSign({...})) return\` (ฟังก์ชันรอบนอกต้องเป็น async)\n`);
+});
+
+
+test('🛡️ daily-checker-2411 — แผน/อนุมัติ/ลายเซ็น/แจ้งเตือน Daily Checker (24/11 · คำสั่ง user)', () => {
+  const bad = [];
+  const rd = (f) => stripComments(readFileSync(join(ROOT, f), 'utf8'));
+  const lpa = rd('src/pages/LayerProcessAudit.jsx');
+  for (const [re, why] of [
+    [/lpaPlanCellStatus\(/, 'P4/P5: สถานะช่องแผนต้องผ่าน lpaPlanCellStatus() (นับตามรอบ · ไลน์ไม่เดิน · รอเซ็น)'],
+    [/lpaAutoFillQuarter\(/, 'P3: เติมแผนต้องผ่าน lpaAutoFillQuarter() (ข้ามวันที่ผ่านแล้ว)'],
+    [/levels=\{LAYER_PICK_LEVELS\[k\]\}/, 'P6: ช่องผู้ตรวจต้องดันตำแหน่งที่ตรงขึ้นก่อน'],
+    [/editedByOther \? null/, 'A6: คนอื่นแก้ใบที่เซ็นแล้ว ต้องล้างลายเซ็นผู้ตรวจ'],
+    [/const newFinds = finds\.filter/, 'N5: แจ้ง lpa_finding เฉพาะข้อ N/T ใหม่'],
+  ]) if (!re.test(lpa)) bad.push(why);
+  if (/plan_leader: true[\s\S]{0,40}working\.forEach/.test(lpa)) bad.push('P3: autoFillQuarter เขียนเองในหน้าอีกแล้ว');
+  const bbs = rd('src/pages/BbsCheck.jsx');
+  if (!/const shownSig = sheet\?\.inspector_sig_url \|\| null/.test(bbs)) bad.push('A6: BBS ลายเซ็นบนจอต้องเป็นค่าที่บันทึกไว้ ไม่ resolve จากรหัสที่พิมพ์');
+  if (/employeeSig: signer\?\.signatureUrl \}\);\s*if \(!sigUrl\)/.test(bbs)) bad.push('A6: BBS ใบพิมพ์ห้ามดึงลายเซ็นจากรหัส');
+  const pm = rd('src/pages/PMCheckData.jsx');
+  if (!/lineWrite=\{isAmTeam\(/.test(pm) || !/lineWrite && !lineWrite\.ok/.test(pm)) bad.push('A4: อนุมัติใบ AM ต้องผ่าน canWriteLine ของไลน์อุปกรณ์');
+  const py = rd('src/pages/PokaYokeCheck.jsx');
+  if (!/event: 'pokayoke_fail'/.test(py)) bad.push("N3: Poka-Yoke ไม่ผ่านต้องยิง 'pokayoke_fail'");
+  const mq = rd('src/utils/myQueue.js');
+  if (!/key: `amappr:\$\{g\.line\}`/.test(mq)) bad.push('A5: ใบ AM รออนุมัติต้องอยู่ในคิวงาน (บรรทัดเดียวต่อไลน์)');
+  assert.deepEqual(bad, [], `\n\n❌ ${bad.length} จุด\n   ${bad.join('\n   ')}\n`);
+});
+
 test('🔴 part-oee-range-clamp-visible — ตัดช่วงให้สั้นลงแล้วต้องเขียนบนจอ', () => {
   /* 24/11: แท็บ "รายพาร์ท" คิด `computeSessionOee()` **ทีละกะ** ⇒ ต้องมีเพดานช่วง (PART_MAX_DAYS)
      🔴 กับดัก: ตัดช่วงเงียบๆ = คนเลือก "ปีนี้" แล้วอ่านเลขของ 31 วันโดยคิดว่าเป็นทั้งปี
@@ -12760,4 +12828,13 @@ test('🔴 part-oee-range-clamp-visible — ตัดช่วงให้สั
   const hits = (code.match(/netAvailMin\s*>\s*0\s*\?/g) || []).length;
   assert.equal(hits, 1,
     `\n\n❌ ${rel} มีสูตร %A รายพาร์ท ${hits} ชุด — ต้องอยู่ที่ aggregateByProduct() ที่เดียว\n   (กฎการรวมหลายกะ: ตัวตั้งรวม ÷ ตัวหารรวม · ห้ามเฉลี่ย % รายกะ)\n`);
+});
+
+/* ── 🗺️ order-trace-stations-by-name (24/11 · user "แก้ OrderTrace ด้วย") ──────
+   จุดงานไลน์ลูกผูกด้วย line_name (line_id = null) — หาด้วย line_id อย่างเดียว = สาย APRON ได้ 0 จุด */
+test('🛡️ order-trace-stations-by-name — สอบกลับใบผลิตต้องหาจุดงานด้วยชื่อไลน์ด้วย', () => {
+  const code = stripComments(readFileSync(join(ROOT, 'src/pages/OrderTrace.jsx'), 'utf8'));
+  assert.ok(/from\(\s*'workstations'\s*\)\s*\.select\(\s*wsCols\s*\)\s*\.in\(\s*'line_name'\s*,\s*famNames\s*\)/.test(code),
+    '\n🗺️ OrderTrace.jsx ต้องหาจุดงานด้วย .in(\'line_name\', famNames) ควบคู่ line_id — '
+    + 'จุดของไลน์ลูกผูกด้วยชื่อ (line_id = null) · เดิมได้ 0 จุด ช่อง "จุดประจำ" ขึ้น "—" (📄 docs/modules/order-trace.md §24/11)\n');
 });

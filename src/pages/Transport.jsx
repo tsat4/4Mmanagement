@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useContext, useRef } from 'react';
+import { TRANSPORT_TABS } from '../utils/navSubTabs';
 import ReadOnlyNote from '../components/ReadOnlyNote';
 import { supabase, supabaseDR } from '../supabaseClient';
 import { UserContext } from '../App';
@@ -15,6 +16,7 @@ import { checkWrite } from '../utils/dbWrite';
 import { useOrgSections } from '../utils/useOrgSections';
 
 import { tr } from '../utils/i18n';
+const TT = Object.fromEntries(TRANSPORT_TABS.map(t => [t.key, t.label]));
 /* ─── TRANSPORT — มอบหมายขนส่ง (Teiki-bin phase 1: ก) ─────────────────────────
    ชั้น carrier (คนขับ/ผู้ขน) + สกิลยานพาหนะ + มอบหมาย carrier ให้ "รอบส่ง" ที่มีอยู่
    ต่อยอดบน kanban_delivery_rounds ไม่สร้างคิว/บอร์ดใหม่ · ตาราง DR (anon)
@@ -28,7 +30,7 @@ export default function Transport() {
   const { role, fullName } = useContext(UserContext);
   const canManage = can('transport', 'manage', role);
 
-  const [tab, setTab] = useTabParam(['assign', 'route', 'carriers'], 'assign');
+  const [tab, setTab] = useTabParam(TRANSPORT_TABS.map(t => t.key), 'assign');
   const [vehicles, setVehicles] = useState([]);
   const [carriers, setCarriers] = useState([]);
   const [rounds, setRounds] = useState([]);
@@ -183,9 +185,10 @@ export default function Transport() {
         title={tr('มอบหมายขนส่ง (Transport)')} icon="🚚"
         sub={tr('มอบหมายคนขับ/ผู้ขน (carrier) ให้รอบส่งภายในของวันนี้ · ยึดรอบส่งที่ตั้งไว้แล้ว (📦 Line Stock → รอบจัดส่ง) · เฟส 1')}
         tabs={[
-          { key: 'assign', label: `🗓️ ${tr("มอบหมายวันนี้")} (${nAssigned}/${nRounds})` },
-          { key: 'route', label: `🗺️ ${tr("เส้นทางรอบส่ง")} (${nRoutes})` },
-          { key: 'carriers', label: `👷 ${tr("คนขับ/ยานพาหนะ")} (${carriers.filter(c => c.is_active).length})` },
+          /* ชื่อแท็บจากทะเบียนกลาง `navSubTabs.js` (24/11 — แผงเมนูวาดเป็นข้อย่อย) · ตัวนับต่อท้ายเฉพาะในหน้า */
+          { key: 'assign', label: `🗓️ ${tr(TT.assign)} (${nAssigned}/${nRounds})` },
+          { key: 'route', label: `🗺️ ${tr(TT.route)} (${nRoutes})` },
+          { key: 'carriers', label: `👷 ${tr(TT.carriers)} (${carriers.filter(c => c.is_active).length})` },
         ]}
         tab={tab} onTab={setTab}
       />

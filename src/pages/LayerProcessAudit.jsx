@@ -35,6 +35,7 @@ import { loadLpaQuestionRefs, lpaQuestionBlockMessage, lpaDeleteConfirmText, sav
 /* 🔴 ช่องว่างในตารางตรวจรายวันต้องแยกได้ว่า "ไม่ได้ตรวจ / ไม่ได้ผลิต / ไม่มีแผนตรวจ" (13/10 · คำสั่ง user) */
 import { checkDayState, CHECK_DAY_META, CHECK_DAY_LEGEND, summarizeCheckDays, checkDaysNote } from '../utils/dailyCheckDay';
 import { loadRunDays, ranOn } from '../utils/runDays';
+import { lpaPlanCellStatus, lpaAutoFillQuarter, weekOfDay } from '../utils/lpaPlanStatus';   // 1-7 W1 · 8-14 W2 · 15-21 W3 · 22+ W4 · สถานะช่องแผน (24/11)
 import { useDraftAutosave, loadDraft, clearDraft } from '../utils/formDraft';   // 📝 ร่างในเครื่อง (มือถือ · 22/10)
 import DraftRestoreBar from '../components/DraftRestoreBar';
 
@@ -83,13 +84,17 @@ const thDate = (dstr) => { if (!dstr) return ''; const [y, m, d] = dstr.split('-
 const monthLabel = (mk) => { const [y, m] = mk.split('-').map(Number); const en = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']; return `${en[m - 1]}-${String(y).slice(2)}`; };
 // ไตรมาสของเดือน (Q1 ม.ค-มี.ค / Q2 เม.ย-มิ.ย / Q3 ก.ค-ก.ย / Q4 ต.ค-ธ.ค) + 3 เดือนของไตรมาสนั้น
 const quarterOf = (mk) => Math.floor((Number(mk.split('-')[1]) - 1) / 3) + 1;
+/* P6 (24/11 · คำสั่ง user "จัดเรียงตามตำแหน่ง"): ช่องผู้ตรวจ 4 ชั้น ดันคนที่ตำแหน่งตรงขึ้นก่อน — **ไม่ตัดคนอื่น**
+   (positions.js: ตำแหน่งใช้เป็นคำแนะนำ ห้ามบล็อกงาน) · ค่าคงที่ระดับโมดูล = deps ของ useMemo ไม่เปลี่ยนทุก render */
+const LAYER_PICK_LEVELS = Object.freeze({
+  leader_name: ['leader'], supervisor_name: ['supervisor', 'engineer'], manager_name: ['manager'], gm_name: ['manager'],
+});
 const quarterMonths = (mk) => { const [y, m] = mk.split('-').map(Number); const qs = Math.floor((m - 1) / 3) * 3 + 1; return [0, 1, 2].map(i => `${y}-${pad2(qs + i)}`); };
 const shiftMonth = (mk, delta) => { const [y, m] = mk.split('-').map(Number); const d = new Date(y, m - 1 + delta, 1); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`; };
 const daysInMonth = (mk) => { const [y, m] = mk.split('-').map(Number); return new Date(y, m, 0).getDate(); };
 const dateOf = (mk, day) => `${mk}-${pad2(day)}`;
 const dowOf = (dstr) => { const [y, m, d] = dstr.split('-').map(Number); return new Date(y, m - 1, d).getDay(); };
 const DOW_TH = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
-const weekOfDay = (day) => Math.min(4, Math.ceil(day / 7)); // 1-7 W1 · 8-14 W2 · 15-21 W3 · 22+ W4
 
 async function urlToDataUrl(url) {
   if (!url) return null;
@@ -180,14 +185,19 @@ export default function LayerProcessAudit() {
   const [myProfile, setMyProfile] = useState(null);
   const [calReady, setCalReady] = useState(false);
 
-  const [selLine, setSelLine] = useState('');
+  /* 🔗 N5 (24/11): ลิงก์จากแจ้งเตือน "LPA พบ N/T" เปิดใบนั้นตรงๆ — `?line=&shift=&date=&layer=` (อ่านครั้งเดียวตอนเปิดหน้า) */
+  const [deepLink] = useState(() => {
+    try { const q = new URLSearchParams(window.location.search); return { line: q.get('line') || '', shift: q.get('shift') || '', date: q.get('date') || '', layer: q.get('layer') || '' }; }
+    catch { return {}; }
+  });
+  const [selLine, setSelLine] = useState(deepLink.line || '');
   const lineWrite = canWriteLine(qCtx, selLine, lines);
   const lineGuard = (what) => {
     if (lineWrite.ok) return true;
     toast.error(writeBlockText(lineWrite, { what }));
     return false;
   };
-  const [selShift, setSelShift] = useState(getCurrentShift());
+  const [selShift, setSelShift] = useState(['day', 'night'].includes(deepLink.shift) ? deepLink.shift : getCurrentShift());
   const [selMonth, setSelMonth] = useState(getWorkDate().slice(0, 7));
 
   /* plan */
@@ -202,6 +212,7 @@ export default function LayerProcessAudit() {
   /* แท็บแผน = มองทีละไตรมาส (3 เดือน) — คำสั่ง user 2026-07-20 */
   const [qData, setQData] = useState({});   // { 'YYYY-MM': { plan: row|null, days: {day: pd} } }
   const [qAudits, setQAudits] = useState([]); // audits ทั้งไตรมาส (ใช้ทำสถานะ ● ตรวจแล้ว)
+  const [qRuns, setQRuns] = useState(null);   // วันที่ไลน์เดิน (DR) ทั้งไตรมาส — ใช้ตัดสิน ⊗ vs ไม่ได้ผลิต (P5 · 24/11)
   /* 🔴 อ่านใบ/แผนไตรมาสไม่สำเร็จ = ห้ามทำเป็น "⊗ เลยกำหนด ยังไม่ตรวจ" (ใบนี้พิมพ์ไปเซ็น FM-QMR-008) */
   const [qErr, setQErr] = useState('');
   /* 🔴 P2 (23/11): อ่าน "แผน" ไม่สำเร็จ (แยกจากอ่านผลตรวจไม่สำเร็จ) ⇒ ห้ามบันทึกแผนไตรมาส
@@ -215,8 +226,8 @@ export default function LayerProcessAudit() {
   const [qHeader, setQHeader] = useState({ leader_name: '', supervisor_name: '', manager_name: '', gm_name: '', stations: '' });
 
   /* audit record */
-  const [auditDate, setAuditDate] = useState(getWorkDate());
-  const [auditLayer, setAuditLayer] = useState(role === 'manager' ? 'manager' : role === 'supervisor' ? 'supervisor' : role === 'engineer' || role === 'qa' ? 'supervisor' : 'leader');
+  const [auditDate, setAuditDate] = useState(/^\d{4}-\d{2}-\d{2}$/.test(deepLink.date || '') ? deepLink.date : getWorkDate());
+  const [auditLayer, setAuditLayer] = useState(['leader', 'supervisor', 'manager', 'gm'].includes(deepLink.layer) ? deepLink.layer : role === 'manager' ? 'manager' : role === 'supervisor' ? 'supervisor' : role === 'engineer' || role === 'qa' ? 'supervisor' : 'leader');
   const [draft, setDraft] = useState(null);          // { id?, station, auditor_name, auditor_sig_url, answers: {qid:{answer,note}} }
   /* 🔴 อ่านใบเดิมไม่สำเร็จ = **ห้ามเดาว่า "ยังไม่มีใบ"** (ดูในเอฟเฟกต์โหลดใบ) — เก็บเหตุผลไว้เขียนบนจอ */
   const [draftErr, setDraftErr] = useState('');
@@ -224,6 +235,7 @@ export default function LayerProcessAudit() {
      เตะออกหมดกะ/สลับไลน์-กะ-วัน-ชั้น = คำตอบที่ติ๊กไว้หายทั้งใบ · เก็บร่างต่อชุด line|shift|date|layer|คนกรอก
      แล้วถามกู้คืนตอนเปิดชุดเดิม (utils/formDraft.js) · `loadedSnapRef` = คำตอบที่โหลดจากฐาน (ไว้ดูว่า "แก้แล้วยังไม่บันทึก" ไหม) */
   const loadedSnapRef = useRef('');
+  const savedAnswersRef = useRef({});   // N5: คำตอบที่อยู่ในฐานแล้วของใบที่เปิดอยู่ (ไว้ดูว่า N/T ไหน "ใหม่")
   const [pendingDraft, setPendingDraft] = useState(null);
   const [auditPlanStations, setAuditPlanStations] = useState([]); // สถานีในแผนเดือนที่ตรวจ — ตัวเลือกช่อง "Station ที่ตรวจ"
   const [wsNames, setWsNames] = useState([]);        // จุดงาน (workstations) ของครอบครัวไลน์ที่เลือก — ตัวเลือกสถานี (2026-09-07)
@@ -479,14 +491,18 @@ export default function LayerProcessAudit() {
   };
 
   // สถานะต่อวัน+ชั้น: ● ตรวจแล้ว / ⊗ วางแผนแต่เลยวันแล้วไม่ตรวจ / ○ วางแผน (ยังไม่ถึง/วันนี้)
+  /* 🔴 P4/P5 (24/11): ตัดสินผ่าน `lpaPlanCellStatus()` ที่เดียว — นับตามรอบของชั้น (SV สัปดาห์ · MGR เดือน · GM ไตรมาส)
+     + วันที่ไลน์ไม่เดินไม่ขึ้น ⊗ + อ่านใบไม่ได้ = ? (เดิมนับตรงวันเป๊ะ และใบพิมพ์ขึ้น ⊗ ตอนคิวรีล่ม) */
+  /** A7: ใบที่ยังไม่มีลายเซ็นผู้ตรวจ = "รอเซ็น" ◐ ไม่นับ ● ตรวจแล้ว */
+  const signedTag = (rows) => (rows || []).map(a => ({ ...a, signed: !!a.auditor_sig_url }));
+  const SYM_COLOR = { '◐': 'var(--amber)',  '●': 'var(--green)', '⊗': 'var(--red)', '?': 'var(--amber)', '–': 'var(--muted)', '○': 'var(--text2)' };
   const statusSymbol = (day, layerKey, planKey) => {
-    const dstr = dateOf(selMonth, day);
-    const planned = planDays[day]?.[planKey];
-    const done = auditFor(dstr, layerKey);
-    if (done) return { sym: '●', color: 'var(--green)', title: `${tr("ตรวจแล้ว")} · ${done.auditor_name || ''}` };
-    if (planned && dstr < getWorkDate()) return { sym: '⊗', color: 'var(--red)', title: 'เลยกำหนด — ยังไม่ตรวจ' };
-    if (planned) return { sym: '○', color: 'var(--text2)', title: 'วางแผนตรวจ' };
-    return null;
+    const s = lpaPlanCellStatus({
+      layer: layerKey, dateStr: dateOf(selMonth, day), planned: !!planDays[day]?.[planKey],
+      audits: signedTag(monthAudits), today: getWorkDate(), readErr: !!monthErr,
+      ranOn: runs ? (ds) => ranOn(runs, ds, selShift) : null, isOff: isHoliday,
+    });
+    return s && { ...s, color: SYM_COLOR[s.sym] };
   };
 
   /* ═════════ TAB: แผน (ราย "ไตรมาส" — 3 เดือน) ═════════ */
@@ -496,9 +512,10 @@ export default function LayerProcessAudit() {
     const key = quarterKey;
     const mks = quarterMonths(selMonth);
     const first = dateOf(mks[0], 1), last = dateOf(mks[2], daysInMonth(mks[2]));
-    const [plsRes, audsRes] = await Promise.all([
+    const [plsRes, audsRes, qRunRes] = await Promise.all([
       supabase.from('lpa_plans').select('*, lpa_plan_days(*)').eq('line_name', selLine).eq('shift', selShift).in('month_key', mks),
-      supabase.from('lpa_audits').select('id, audit_date, layer, auditor_name').eq('line_name', selLine).eq('shift', selShift).gte('audit_date', first).lte('audit_date', last),
+      supabase.from('lpa_audits').select('id, audit_date, layer, auditor_name, auditor_sig_url').eq('line_name', selLine).eq('shift', selShift).gte('audit_date', first).lte('audit_date', last),
+      loadRunDays({ lineNames: [selLine], from: first, to: last }),   // ล้ม = ok:false ⇒ ช่องที่ต้องตัดสินขึ้น ? (ไม่ใช่ ⊗)
     ]);
     /* 🔴 อ่านไม่สำเร็จ ≠ "ยังไม่ตรวจ" — ใบไตรมาสนี้ถูกพิมพ์ไปเซ็น ⇒ ช่อง ⊗ ที่มาจากคิวรีล่ม
        = กล่าวหาหน้างานบนกระดาษที่ยื่นออกไปแล้ว (คลาสเดียวกับตารางเดือน · QC audit 20/10) */
@@ -519,6 +536,7 @@ export default function LayerProcessAudit() {
     setQData(map);
     setQDirty(false);
     setQAudits(auds || []);
+    setQRuns(qRunRes);
     const firstPl = mks.map(mk => map[mk].plan).find(Boolean);
     let stations = firstPl?.stations || '';
     if (!stations && canManage && !qpe) { const { list } = await fetchStationNames(); stations = list.join('\n'); }
@@ -553,52 +571,34 @@ export default function LayerProcessAudit() {
     const pd = md.days[day] || { day, station: '', plan_leader: false, plan_supervisor: false, plan_manager: false, plan_gm: false };
     return { ...prev, [mk]: { ...md, days: { ...md.days, [day]: { ...pd, ...patch } } } };
   }); };
-  const qAuditFor = (dstr, layer) => qAudits.find(a => a.audit_date === dstr && a.layer === layer);
+  /* สถานะช่องแผนไตรมาส — กฎเดียวกับใบพิมพ์ (`lpaPlanCellStatus` · นับตามรอบ · ไลน์ไม่เดิน = – · อ่านไม่ได้ = ?) */
   const qStatus = (mk, day, layerKey, planKey) => {
-    const dstr = dateOf(mk, day);
-    const planned = qData[mk]?.days?.[day]?.[planKey];
-    if (qAuditFor(dstr, layerKey)) return { sym: '●', color: 'var(--green)', title: 'ตรวจแล้ว' };
-    /* 🔴 อ่านผลตรวจไม่ได้ = "ไม่รู้" ห้ามขึ้น ⊗ (เลยกำหนด) — จอ/ใบพิมพ์จะกล่าวหาคนจากคิวรีที่ล่ม */
-    if (qErr && planned) return { sym: '?', color: 'var(--amber)', title: 'อ่านผลตรวจไม่ได้ — ยังบอกไม่ได้ว่าตรวจแล้วหรือยัง' };
-    if (planned && dstr < getWorkDate()) return { sym: '⊗', color: 'var(--red)', title: 'เลยกำหนด — ยังไม่ตรวจ' };
-    if (planned) return { sym: '○', color: 'var(--text2)', title: 'วางแผนตรวจ' };
-    return null;
+    const s = lpaPlanCellStatus({
+      layer: layerKey, dateStr: dateOf(mk, day), planned: !!qData[mk]?.days?.[day]?.[planKey],
+      audits: signedTag(qAudits), today: getWorkDate(), readErr: !!qErr,
+      ranOn: qRuns ? (ds) => ranOn(qRuns, ds, selShift) : null, isOff: isHoliday,
+    });
+    return s && { ...s, color: SYM_COLOR[s.sym] };
   };
 
   // เติมแผนอัตโนมัติทั้งไตรมาส — ครอบทุกจุดงาน "ภายในแต่ละเดือน" (แจกหลายสถานี/วันถ้าจุดงาน > วันทำงาน)
   const autoFillQuarter = () => {
     const stationList = (qHeader.stations || '').split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
     if (!stationList.length) { toast.error('กรอก/ดึงรายชื่อสถานี (Station) ก่อน'); return; }
-    const next = { ...qData };
-    qMonths.forEach((mk, mi) => {
-      const nDays = daysInMonth(mk);
+    /* 🔴 P3 (24/11): เติมเฉพาะวันนี้เป็นต้นไป — วันที่ผ่านแล้วคงของเดิมทุกช่อง (กฎใน lpaAutoFillQuarter) */
+    const today = getWorkDate();
+    const months = qMonths.map(mk => {
       const working = [];
-      for (let d = 1; d <= nDays; d++) if (!isHoliday(dateOf(mk, d))) working.push(d);
-      if (!working.length) { next[mk] = { ...(next[mk] || { plan: null }), days: {} }; return; }
-      // ครบทุกจุดงานภายในเดือน → สถานี/วัน = ceil(จำนวนจุดงาน ÷ วันทำงาน)
-      const perDay = Math.max(1, Math.ceil(stationList.length / working.length));
-      const blocks = [[1, 7], [8, 14], [15, 21], [22, 31]];
-      const svDays = blocks.map(([a, b]) => working.find(d => d >= a && d <= b)).filter(Boolean);
-      const wk2 = working.filter(d => d >= 8 && d <= 14);
-      const mgrDay = wk2[1] || wk2[0] || working[Math.floor(working.length / 2)];
-      const gmDay = mi === 0 ? (working.find(d => d >= 15) || working[Math.floor(working.length / 2)]) : null; // GM รายไตรมาส = ครั้งเดียว เดือนแรก
-      const days = {};
-      let si = 0;
-      working.forEach(d => {
-        const stns = [];
-        for (let k = 0; k < perDay && si < stationList.length; k++) { stns.push(stationList[si]); si++; }
-        if (!stns.length) stns.push(stationList[(si + d) % stationList.length]); // แจกครบแล้ว วันที่เหลือให้ตรวจซ้ำ
-        days[d] = {
-          day: d, station: stns.join(', '),
-          plan_leader: true, plan_supervisor: svDays.includes(d),
-          plan_manager: d === mgrDay, plan_gm: gmDay ? d === gmDay : false,
-        };
-      });
-      next[mk] = { ...(next[mk] || { plan: null }), days };
+      for (let d = 1; d <= daysInMonth(mk); d++) if (!isHoliday(dateOf(mk, d))) working.push(d);
+      return { mk, working, existing: qData[mk]?.days || {} };
     });
+    const { byMonth, filledDays } = lpaAutoFillQuarter({ months, stations: stationList, today });
+    if (!filledDays) { toast.info(tr('ไตรมาสนี้ไม่เหลือวันทำงานตั้งแต่วันนี้ — วันที่ผ่านแล้วไม่ถูกเติม/แก้')); return; }
+    const next = { ...qData };
+    qMonths.forEach(mk => { next[mk] = { ...(next[mk] || { plan: null }), days: byMonth[mk] }; });
     setQData(next);
     setQDirty(true);
-    toast.success(`${tr("เติมแผนทั้งไตรมาสแล้ว — ครบ")} ${stationList.length} ${tr("จุดงานในทุกเดือน (แก้ไขได้")})`);
+    toast.success(`${tr("เติมแผนแล้ว")} ${filledDays} ${tr("วัน (ตั้งแต่วันนี้) — ครบ")} ${stationList.length} ${tr("จุดงานในวันที่เหลือของแต่ละเดือน · วันที่ผ่านแล้วคงเดิม")}`);
   };
 
   const saveQuarter = async () => {
@@ -684,9 +684,11 @@ export default function LayerProcessAudit() {
         (existing.lpa_audit_answers || []).forEach(a => { if (a.question_id) ans[a.question_id] = { answer: a.answer, note: a.note || '', text: a.question_text || '' }; });
         setDraft({ key, id: existing.id, station: existing.station || planStation, auditor_name: existing.auditor_name || fullName || '', auditor_sig_url: existing.auditor_sig_url || null, answers: ans });
         loadedSnapRef.current = lpaSnap(ans, existing.station || planStation);
+        savedAnswersRef.current = Object.fromEntries(Object.entries(ans).map(([k, v]) => [k, v.answer]));
       } else {
         setDraft({ key, id: null, station: planStation, auditor_name: fullName || '', auditor_sig_url: myProfile?.signature_url || null, answers: {} });
         loadedSnapRef.current = lpaSnap({}, planStation);
+        savedAnswersRef.current = {};
       }
       const saved = isMobile ? loadDraft(`lpa:${key}:${fullName || ''}`) : null;
       setPendingDraft(saved && lpaSnap(saved.data?.answers, saved.data?.station) !== loadedSnapRef.current ? saved : null);
@@ -786,10 +788,14 @@ export default function LayerProcessAudit() {
     setSavingAudit(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      /* 🔴 A6 (24/11 · คำสั่ง user "ลายเซ็นต้องเป็นของเจ้าตัว"): คนอื่น (ไม่ใช่ผู้ตรวจในใบ) แก้คำตอบ/สถานีของใบที่เซ็นแล้ว
+         ⇒ ลายเซ็นเดิมรับรองเนื้อหาที่เจ้าตัวไม่เคยเห็น ⇒ ล้างทิ้ง ให้ผู้ตรวจ login มาเซ็นใหม่ (ใบนับเป็น "รอเซ็น") */
+      const editedByOther = !!draft.id && !!draft.auditor_sig_url && !isSelfName(draft.auditor_name, fullName)
+        && lpaSnap(draft.answers, draft.station) !== loadedSnapRef.current;
       const row = {
         ...(draft.id ? { id: draft.id } : {}),
         line_name: selLine, shift: selShift, audit_date: auditDate, layer: auditLayer,
-        station: draft.station || null, auditor_name: draft.auditor_name || null, auditor_sig_url: draft.auditor_sig_url || null,
+        station: draft.station || null, auditor_name: draft.auditor_name || null, auditor_sig_url: editedByOther ? null : (draft.auditor_sig_url || null),
         updated_at: new Date().toISOString(),
         ...(draft.id ? {} : { created_by: user?.id || null, created_by_name: fullName || null }),
       };
@@ -812,19 +818,24 @@ export default function LayerProcessAudit() {
       if (insErr) throw insErr;
       // แจ้งเฉพาะ "เจอข้อบกพร่อง" (ตอบ N/T) — ตรวจผ่านล้วนไม่ต้องรบกวนใคร
       const finds = auditQuestions.filter(q => ['N', 'T'].includes(draft.answers[q.id]?.answer));
-      if (finds.length) notifyEvent({
+      /* 🔴 N5 (24/11): แจ้งเฉพาะข้อ N/T ที่ "ใหม่" เทียบกับที่บันทึกไว้แล้ว — เดิมกดบันทึกซ้ำ (แก้โน้ต/เซ็น) ยิงซ้ำทุกครั้ง */
+      const newFinds = finds.filter(q => !['N', 'T'].includes(savedAnswersRef.current?.[q.id]));
+      savedAnswersRef.current = Object.fromEntries(auditQuestions.map(q => [q.id, draft.answers[q.id]?.answer]));
+      if (newFinds.length) notifyEvent({
         event: 'lpa_finding', type: 'error', ref_table: 'lpa_audits', ref_id: saved.id,
+        link: `/daily-checker?tab=lpa&sub=audit&line=${encodeURIComponent(selLine)}&shift=${selShift}&date=${auditDate}&layer=${auditLayer}`,
         line_name: selLine, actor: draft.auditor_name || fullName,
         lines: [
           `🏭 ${tr("ไลน์")}: ${selLine} · ${SHIFT_META[selShift]} · 📅 ${thDate(auditDate)}`,
           `🔍 ${tr("ชั้น")} ${LAYERS.find(l => l.key === auditLayer)?.label || auditLayer}${draft.station ? ` · ${tr("จุด")} ${draft.station}` : ''}`,
-          `❗ ${tr("พบ")} ${finds.length} ${tr("ข้อ จากทั้งหมด")} ${auditQuestions.length} ${tr("ข้อ")}`,
+          `❗ ${tr("พบ")} ${finds.length} ${tr("ข้อ จากทั้งหมด")} ${auditQuestions.length} ${tr("ข้อ")}${newFinds.length < finds.length ? ` (${tr("ใหม่")} ${newFinds.length})` : ''}`,
           ...finds.slice(0, 5).map(q => `  • [${draft.answers[q.id].answer}] ${tr("ข้อ")} ${q.seq} ${q.question.slice(0, 70)} — ${draft.answers[q.id].note?.trim() || ''}`),
           finds.length > 5 ? `  • …${tr("และอีก")} ${finds.length - 5} ${tr("ข้อ")}` : '',
         ],
       });
       toast.success(`${tr("บันทึกผลตรวจ")} LPA ${thDate(auditDate)} ${tr("เรียบร้อย")}`);
-      setDraft(prev => ({ ...prev, id: saved.id }));
+      if (editedByOther) toast.info(`${tr("ใบนี้ถูกแก้โดยคนที่ไม่ใช่ผู้ตรวจ — ล้างลายเซ็นของ")} ${draft.auditor_name} ${tr("แล้ว ต้องให้เจ้าตัว login มาเซ็นใหม่")}`);
+      setDraft(prev => ({ ...prev, id: saved.id, ...(editedByOther ? { auditor_sig_url: null } : {}) }));
       loadedSnapRef.current = lpaSnap(draft.answers, draft.station);   // บันทึกแล้ว = ไม่มีของค้าง ⇒ ร่างถูกล้างเอง
       if (lpaDraftKey) clearDraft(lpaDraftKey);
       loadMonth();
@@ -964,6 +975,9 @@ table{border-collapse:collapse}
     <div><span style="display:inline-block;width:13px;height:13px;border:1.5px solid #000;border-radius:50%;vertical-align:middle"></span> Audit Plan</div>
     <div style="margin-top:2px"><span style="display:inline-block;width:13px;height:13px;border:1.5px solid #000;border-radius:50%;background:#000;vertical-align:middle"></span> Audit is Completed</div>
     <div style="margin-top:2px"><span style="font-size:14px;vertical-align:middle">⊗</span> Audit Not Completed</div>
+    <div style="margin-top:2px"><span style="font-size:13px;vertical-align:middle">◐</span> Audited, not signed</div>
+    <div style="margin-top:2px"><span style="font-size:13px;vertical-align:middle">–</span> No production · <span style="font-size:13px">?</span> Unknown</div>
+    <div style="margin-top:2px">SV/MGR/GM = per week/month/quarter</div>
   </td>
 </tr></table>
 <table style="width:100%">
@@ -1190,7 +1204,7 @@ ${issuesHtml}
               <div key={k}>
                 <div style={lb}>{label}</div>
                 {/* 4 ชั้นผู้ตรวจ = user ระบบ (พิมพ์ลง FM-QMR-008) — PersonSelect profiles แทน datalist ที่รับทุกสะกด (2026-09-07) */}
-                <PersonSelect value={qHeader[k] || ''} history={layerHist[k]} onChange={r => setQHeaderF(k, r.name)} disabled={!canManage} placeholder={`${tr("เลือก")} ${label}…`} />
+                <PersonSelect value={qHeader[k] || ''} history={layerHist[k]} levels={LAYER_PICK_LEVELS[k]} onChange={r => setQHeaderF(k, r.name)} disabled={!canManage} placeholder={`${tr("เลือก")} ${label}…`} />
               </div>
             ))}
           </div>
@@ -1203,7 +1217,7 @@ ${issuesHtml}
             {canManage && (
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <button onClick={fillStationsFromWorkstations} style={btnTeal} title={tr('ดึงรายชื่อจุดงานทั้งหมดในไลน์นี้ (รวมไลน์ย่อย) มาเป็นสถานีตรวจตั้งต้น — LPA ตรวจกระบวนการที่จุดงาน ไม่ใช่ทุกเครื่องจักร')}>{tr('ดึงจุดงานในไลน์')}</button>
-                <button onClick={autoFillQuarter} style={btnAmber} title={tr('กระจายจุดงานให้ครบทุกจุดภายในแต่ละเดือน (Leader ทุกวัน · SV ต้นสัปดาห์ · MGR รายเดือน · GM รายไตรมาส)')}>{tr('เติมแผนทั้งไตรมาส')}</button>
+                <button onClick={autoFillQuarter} style={btnAmber} title={tr('เติมตั้งแต่วันนี้เป็นต้นไป (วันที่ผ่านแล้วคงเดิม) — กระจายจุดงานให้ครบในวันที่เหลือของแต่ละเดือน (Leader ทุกวัน · SV ต้นสัปดาห์ · MGR รายเดือน · GM รายไตรมาส)')}>{tr('เติมแผนทั้งไตรมาส')}</button>
                 <button onClick={saveQuarter} disabled={savingPlan || !!qPlanErr} title={qPlanErr ? tr('อ่านแผนเดิมไม่สำเร็จ — โหลดใหม่ก่อนบันทึก') : undefined} style={btnAccent}>{savingPlan ? '...' : tr('บันทึกแผนไตรมาส')}</button>
                 <button onClick={printPlan} disabled={printing} style={btnBlue} title={`${tr("พิมพ์ใบแผนของเดือน")} ${monthLabel(selMonth)} (${tr("บันทึกก่อนพิมพ์")})`}>{tr('พิมพ์ (')}{monthLabel(selMonth)})</button>
               </div>
@@ -1211,7 +1225,7 @@ ${issuesHtml}
             {!canManage && <button onClick={printPlan} disabled={printing} style={btnBlue}>{tr('พิมพ์ (')}{monthLabel(selMonth)})</button>}
           </div>
           <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>
-            <span style={{ color: 'var(--text2)' }}>{tr('○ วางแผน')}</span> · <span style={{ color: 'var(--green)' }}>{tr('● ตรวจแล้ว')}</span> · <span style={{ color: 'var(--red)' }}>{tr('⊗ เลยกำหนดยังไม่ตรวจ')}</span> · {tr("แถวเขียว = วันหยุด · หลายสถานี/วัน = คั่นด้วย")} ,
+            <span style={{ color: 'var(--text2)' }}>{tr('○ วางแผน')}</span> · <span style={{ color: 'var(--green)' }}>{tr('● ตรวจแล้ว')}</span> · <span style={{ color: 'var(--red)' }}>{tr('⊗ เลยกำหนดยังไม่ตรวจ')}</span> · <span style={{ color: 'var(--amber)' }}>{tr('◐ ตรวจแล้วรอเซ็น')}</span> · <span style={{ color: 'var(--muted)' }}>{tr('– ไลน์ไม่ได้ผลิต')}</span> · <span style={{ color: 'var(--amber)' }}>{tr('? ยังบอกไม่ได้')}</span> · {tr('SV/MGR/GM นับตรวจในสัปดาห์/เดือน/ไตรมาสเดียวกัน')} · {tr("แถวเขียว = วันหยุด · หลายสถานี/วัน = คั่นด้วย")} ,
           </div>
 
           {/* 3 เดือนของไตรมาส */}

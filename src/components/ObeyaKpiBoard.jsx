@@ -354,6 +354,11 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
       const kb = await supabase.from('kpi_base_inputs').select('id, month, scope_kind, scope_value, var_key, value').eq('year', year).limit(5000);
       if (kb.error && (kb.error.code || '') !== '42P01') warn.push(tr("ตัวเลขฐาน KPI"));
       const kbase = kb.data || [];
+      /* 🤝 คะแนนรายลูกค้า (Customer Satisfaction ไฟล์ V5 · 24/11) — ให้ popup 🔍 เจาะรายลูกค้า × Q/D · ตารางยังไม่มี = ไม่มีรายละเอียด ไม่ใช่บอร์ดล่ม */
+      /* cap-ok: kpi_csat_scores ต่อปี = ลูกค้า (4–6) × 2 ชนิด × 12 เดือน ≤ 150 แถว */
+      const kc = await supabase.from('kpi_csat_scores').select('month, customer, kind, result, score, evaluated, remark, grade_a').eq('year', year).limit(5000);
+      if (kc.error && (kc.error.code || '') !== '42P01') warn.push(tr("คะแนนลูกค้ารายราย (Customer Satisfaction)"));
+      const kcsat = kc.data || [];
       /* 👥 ทะเบียนพนักงาน active — ตัวหาร manpower ของ "ยอดขาย/หัว" เมื่อไม่มีใครกรอก (ค่ากรอกมือชนะ) */
       /* cap-ok: employees ทั้งโรงงาน 351 คน (วัด 20/10) */
       const em = await supabase.from('employees').select('id, section, department, is_active, start_date').eq('is_active', true).limit(5000);
@@ -381,7 +386,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
       setData({
         sessions: roll.sessions || [], defects: roll.defects || [],
         openSess: (op.rows || []).length, targets: tg.data || [],
-        safety, safetyMissing, actions, actsMissing, kdefs, kdefsBelow, kentries, kplans, knotes, kbase, kemps, kpiMissing, warn, mtnRoll, layoutKeys,
+        safety, safetyMissing, actions, actsMissing, kdefs, kdefsBelow, kentries, kplans, knotes, kbase, kcsat, kemps, kpiMissing, warn, mtnRoll, layoutKeys,
       });
     } catch (e) {
       if (seq === reqRef.current) { setErr(e?.message || 'โหลดข้อมูลไม่สำเร็จ'); setData(null); }
@@ -398,7 +403,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
   /* ── แถว KPI 8 หัวข้อของกลุ่มที่เลือก — ทุกแถวมี series 12 เดือน + แท่งสรุป ──────────────────── */
   const rows = useMemo(() => {
     if (!data || !scope) return [];
-    const { sessions, defects, targets, safety, kdefs, kdefsBelow, kentries, kplans, knotes, kbase, kemps, mtnRoll } = data;
+    const { sessions, defects, targets, safety, kdefs, kdefsBelow, kentries, kplans, knotes, kbase, kcsat, kemps, mtnRoll } = data;
     const autoSeries = mtnTeam && mtnRoll ? mtnAutoSeries(mtnRoll, year, mtnTeam) : null;
     const planByKpi = {};
     (kplans || []).forEach(e => (planByKpi[e.kpi_id] = planByKpi[e.kpi_id] || {})[e.month] = e.plan_value);
@@ -705,6 +710,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
       };
       return {
         ...r, def, unit, dir, series, value, valueKey, stale, target, st, why, note, manual, fxSrc, amtText, fromDept, needed, parts, partDefs, fxInfo: fiB || null, months, sumKind, sumApprox, ytd, actualMonths, forecast, curFilled, curChild, curDetail, curMan, hrPerPct, childMix, mix, roll,
+        csat: fiB?.key === 'csat_qd_pct' && kcsat?.length ? kcsat : null,   // 🤝 เจาะรายลูกค้าใน popup 🔍 (แผ่นที่คิดจากสูตร csat_qd_pct เท่านั้น)
         atLabel: man?.inherited && man.at ? org.labelOf(man.at.kind, man.at.value) : '',
         commit: bars?.commit_value ?? null, hasPlan: Object.keys(planMap).length > 0,
         dec: decimalsOf(def),
@@ -1088,11 +1094,56 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
       </div>
     );
     if (!(zoomed && r.parts?.length)) return chart;
+    /* 🤝 24/11 (user: "แยก Q/D และเจาะรายลูกค้าได้เลย") — ใต้กราฟลูก Q/D มีตารางรายลูกค้า × เดือน (ผลดิบ + เกรด A/B/C จากไฟล์ V5 ของ QSM)
+       เกรด = ระดับทางการ 1/0.5/0 ของใบจริง ⇒ สีเขียว/เหลือง/แดงตามเกรดได้ (ไม่ใช่สีที่คิดเอง) · "*" = ไม่ประเมินเดือนนั้น · ส่วนนี้เลื่อนในตัวเองเมื่อสูงเกิน */
+    const csatTable = r.csat ? (() => {
+      const custs = [...new Set(r.csat.map(x => x.customer))];
+      const ms = Array.from({ length: 12 }, (_, i) => i + 1);
+      const has = new Set(r.csat.map(x => x.month));
+      const months = ms.filter(m => has.has(m));
+      const find = (c, kd, m) => r.csat.find(x => x.customer === c && x.kind === kd && x.month === m) || null;
+      const cellT = { padding: `${Math.round(2 * kk)}px ${Math.round(5 * kk)}px`, borderBottom: '1px solid var(--border)', textAlign: 'center', whiteSpace: 'nowrap', fontSize: fs(10.5), fontVariantNumeric: 'tabular-nums' };
+      const dotOf = (sc) => <span style={{ display: 'inline-block', width: fs(7), height: fs(7), borderRadius: '50%', background: toneVar(sc >= 1 ? 'good' : sc > 0 ? 'warn' : 'bad'), marginRight: 3, verticalAlign: 'middle' }} />;
+      return (
+        <div style={{ paddingTop: 6 }}>
+          <div style={{ fontSize: fs(10.5), fontWeight: 800, color: 'var(--text2)', padding: '0 4px' }}>
+            🤝 {tr('รายลูกค้า')} <span style={{ fontWeight: 500, color: 'var(--muted)' }}>· {tr('ตัวเลข = ผลดิบจากลูกค้า (คะแนน/PPM) · ● เขียว A=1 · เหลือง B=0.5 · แดง C=0 · * ไม่ประเมิน')}</span>
+          </div>
+          <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+            <thead><tr>
+              <th style={{ ...cellT, textAlign: 'left', color: 'var(--muted)' }}>{tr('ลูกค้า')}</th><th style={{ ...cellT, color: 'var(--muted)' }}>{tr('ด้าน')}</th><th style={{ ...cellT, textAlign: 'left', color: 'var(--muted)' }}>{tr('เกณฑ์ A')}</th>
+              {months.map(m => <th key={m} style={{ ...cellT, color: 'var(--muted)' }}>{m}</th>)}
+            </tr></thead>
+            <tbody>
+              {custs.flatMap(c => ['quality', 'delivery'].map(kd => {
+                const any = r.csat.find(x => x.customer === c && x.kind === kd);
+                if (!any) return null;
+                const rm = r.csat.find(x => x.customer === c && x.kind === kd && x.remark)?.remark;
+                return (
+                  <tr key={`${c}|${kd}`}>
+                    <td style={{ ...cellT, textAlign: 'left', fontWeight: 700 }} title={rm || undefined}>{c}{rm ? ' ⓘ' : ''}</td>
+                    <td style={cellT}>{kd === 'quality' ? 'Q' : 'D'}</td>
+                    <td style={{ ...cellT, textAlign: 'left', color: 'var(--muted)' }}>{any.grade_a || '—'}</td>
+                    {months.map(m => {
+                      const x = find(c, kd, m);
+                      if (!x) return <td key={m} style={{ ...cellT, color: 'var(--muted)' }}>—</td>;
+                      if (!x.evaluated || x.score == null) return <td key={m} style={{ ...cellT, color: 'var(--muted)' }} title={tr('ไม่ประเมินเดือนนี้')}>*</td>;
+                      return <td key={m} style={cellT} title={`${tr('ผล')} ${x.result} · ${tr('คะแนน')} ${x.score}`}>{dotOf(Number(x.score))}{x.result}</td>;
+                    })}
+                  </tr>
+                );
+              }).filter(Boolean))}
+            </tbody>
+          </table>
+        </div>
+      );
+    })() : null;
     /* 🔬 สูตรรวมแตกเป็นกราฟลูกใน popup 🔍 (16/11 · user: "dl+oh พอกดเจาะเข้าไปควรแตกเป็น 2 กราฟ dl กับ oh") — ตัวแปรชุดเดียวกับค่าหลัก (formulaPartSeries) */
     return (
       <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', minHeight: 0 }}>
-        <div style={{ flex: '1 1 58%', minHeight: 0 }}>{chart}</div>
-        <div style={{ flex: '0 0 42%', minHeight: 0, display: 'grid', gridTemplateColumns: `repeat(${r.parts.length}, minmax(0, 1fr))`, gap: 8, paddingTop: 4 }}>
+        <div style={{ flex: csatTable ? '0 0 38%' : '1 1 58%', minHeight: 0 }}>{chart}</div>
+        {csatTable && <div style={{ flex: '1 1 0', overflowY: 'auto', minHeight: 0, order: 2 }}>{csatTable}</div>}
+        <div style={{ flex: csatTable ? '0 0 24%' : '0 0 42%', minHeight: 0, display: 'grid', gridTemplateColumns: `repeat(${r.parts.length}, minmax(0, 1fr))`, gap: 8, paddingTop: 4 }}>
           {r.parts.map((pt) => {
             /* 20/11 (user: "กราฟ DL/OH มีแผนไหม · ที่แดงเพราะส่วนไหน · ตัวเลขทับกันเละ · % หรือไม่ %"):
                · ไม่มี "แผนรายส่วน" ในระบบ — แผน/เป้าตั้งที่ KPI รวม (DL+OH) · ถ้าหน่วยตั้ง KPI สูตรลูก (DL % / OH %) ไว้ ⇒ วาดเส้น T ของมัน (`partDefs`)

@@ -19,7 +19,8 @@ import SignatureModal from './components/SignatureModal';
 import ChangePasswordModal from './components/ChangePasswordModal';
 const FeedbackModal = lazy(() => import('./components/FeedbackModal'));
 const NotifyPrefsModal = lazy(() => import('./components/NotifyPrefsModal'));  // 🔕 ตั้งค่าแจ้งเตือนของฉัน
-import { loadPermissions, canAccessPage, setDeptAdmin, setSharedAccount, can, canSeeded } from './utils/permissions';
+import { loadPermissions, canAccessPage, setDeptAdmin, setSharedAccount, can, canSeeded, hasPermission } from './utils/permissions';
+import { NAV_SUB_TABS } from './utils/navSubTabs';            // 🗂️ 24/11 แท็บของหน้า = ข้อย่อยในแผงเมนู
 /* 🏷️ รุ่นของเว็บ (full / nm) — สลับตอน build ด้วย alias ใน vite.nm.config.js · 📄 src/appEdition.js */
 import { EDITION, EDITION_LABEL, EDITION_HOME } from './appEdition';
 import { LOGISTIC_GROUPS } from './utils/logisticSide';
@@ -104,6 +105,7 @@ const ProgramUpdate = lazy(() => import('./pages/ProgramUpdate'));
 /* 🧭 ไม่ lazy โดยตั้งใจ — หน้านี้ต้องทำงานตอนบันเดิลเก่า/โหลด chunk ไม่ได้ (ดูหัวไฟล์) */
 import NotFound from './pages/NotFound';
 import Icon from './components/Icon';   // ✒️ emoji ในทะเบียนเมนู → ไอคอนเส้นที่จุดวาด (UI §6.36)
+import { ACTIVITIES } from './utils/activityPages';   // 🎯 หมวดกิจกรรม (25/11) — route 9 หน้า
 const HeijunkaKanban = lazy(() => import('./pages/HeijunkaKanban'));
 const ProductMaster  = lazy(() => import('./pages/ProductMaster'));
 const LineStock      = lazy(() => import('./pages/LineStock'));
@@ -137,6 +139,7 @@ const PEDocs = lazy(() => import('./pages/PEDocs'));
 const NPI = lazy(() => import('./pages/NPI'));
 const NewModelBoard = lazy(() => import('./pages/NewModelBoard'));
 const Rfq = lazy(() => import('./pages/Rfq'));
+const Activity = lazy(() => import('./pages/Activity'));   // 🎯 หมวดกิจกรรม 9 หน้า (25/11)
 const Workflows = lazy(() => import('./pages/Workflows'));             // 🧩 e-Workflow ใบงานที่ user สร้างเอง (13/11)
 const WorkflowDesigner = lazy(() => import('./pages/WorkflowDesigner')); // 🧩 ออกแบบใบงาน (Key User → admin เผยแพร่)
 const ScrapReport = lazy(() => import('./pages/ScrapReport'));
@@ -206,7 +209,8 @@ export const NAV_ITEMS = [
   // วางแผนการผลิต ใช้ 2 ฝ่าย: ผลิตตัดสินเปิดกะ/OT · planner เอายอดลูกค้ามาเทียบกำลังผลิต
   // ⇒ **บ้านจริง = ฝ่ายผลิต** (ย้ายไป Logistic = หัวหน้าไลน์หาไม่เจอ) · `alsoIn` = โผล่เป็น
   //    *ทางลัด* ในหมวด Logistic ด้วย (หน้าตาต่างชัด — ดู `isNavGuest`) · สิทธิ์ชุดเดียวเหมือนเดิม
-  { to: '/production-plan', icon: '🗓️', label: 'วางแผนการผลิต',      group: 'ฝ่ายผลิต', alsoIn: LOGISTIC_GROUPS.inbound },
+  //    `alsoInSub` = หัวข้อย่อยของแถวทางลัดในหมวด `alsoIn` (`sub` ใช้กับหมวดบ้านเท่านั้น · ดู `navSubOf`)
+  { to: '/production-plan', icon: '🗓️', label: 'วางแผนการผลิต',      group: 'ฝ่ายผลิต', alsoIn: LOGISTIC_GROUPS.inbound, alsoInSub: 'Planning' },
   { to: '/oee-analytics',  icon: '📈', label: 'OEE',                group: 'วิเคราะห์ & รายงาน' },
   { to: '/product-history', icon: '📜', label: 'ประวัติผลิต (by Product)', group: 'วิเคราะห์ & รายงาน' },
   { to: '/vsm',            icon: '🗺️', label: 'VSM สายธารคุณค่า',   group: 'วิเคราะห์ & รายงาน' },
@@ -219,14 +223,15 @@ export const NAV_ITEMS = [
      ⚠️ Warehouse (เก็บ FG 1xx → ขาออก) ≠ Store (คุม 2xx/3xx/5xx → ขาเข้า) — ห้ามสลับ
      นิยามฝั่ง + การจัดฝั่งจากเลข MAT อยู่ที่ src/utils/logisticSide.js จุดเดียว */
   /* 📦 16/11 (คำสั่ง user) รวม "สต๊อกในไลน์" + "Monitoring แผน-สต๊อก" เป็นหน้าเดียว — /monitoring พาไปแท็บ ?tab=monitoring */
-  { to: '/line-stock',      icon: '📦', label: 'Stock Management',         group: LOGISTIC_GROUPS.inbound },
-  { to: '/heijunka',       icon: '🎴', label: 'บอร์ดคัมบัง (ทุกสโตร์)',   group: LOGISTIC_GROUPS.inbound },
-  { to: '/transport',       icon: '🚚', label: 'มอบหมายขนส่ง (Transport)',   group: LOGISTIC_GROUPS.inbound },
+  /* 🗂️ 24/11 (คำสั่ง user): Sub Bar หมวดนี้แบ่ง 3 หัวข้อ Sale & Marketing → Planning → Store (ลำดับ = `NAV_SUB_ORDER`) */
+  { to: '/line-stock',      icon: '📦', label: 'Stock Management',         group: LOGISTIC_GROUPS.inbound, sub: 'Store' },
+  { to: '/heijunka',       icon: '🎴', label: 'บอร์ดคัมบัง (ทุกสโตร์)',   group: LOGISTIC_GROUPS.inbound, sub: 'Store' },
+  { to: '/transport',       icon: '🚚', label: 'มอบหมายขนส่ง (Transport)',   group: LOGISTIC_GROUPS.inbound, sub: 'Store' },
   // เฝ้าระวังสต๊อกจับทั้ง 2 ฝั่ง (A/B เทียบ min-max ของทุกเลข · E ใบสั่งซื้อค้าง) → โผล่ทั้งสองหมวด
   // `alsoIn` = โชว์ซ้ำเฉพาะใน sidebar/หน้า Home · ที่อื่น (สิทธิ์/ค้นหา/breadcrumb/ตัวนับ) นับครั้งเดียว
-  { to: '/store-monitor',   icon: '🚨', label: 'เฝ้าระวังสต๊อก (Abnormal)',  group: LOGISTIC_GROUPS.inbound, alsoIn: LOGISTIC_GROUPS.outbound },
+  { to: '/store-monitor',   icon: '🚨', label: 'เฝ้าระวังสต๊อก (Abnormal)',  group: LOGISTIC_GROUPS.inbound, alsoIn: LOGISTIC_GROUPS.outbound, sub: 'Store' },
   // 🔴 หมวดแผนงานยุบเข้ามาที่นี่ (30/09 · คำสั่ง user — planner + store = หน่วยเดียว ดู logisticSide.js)
-  { to: '/planner-sales',   icon: '📈', label: 'Planner & Sales',           group: LOGISTIC_GROUPS.inbound },
+  { to: '/planner-sales',   icon: '📈', label: 'Planner & Sales',           group: LOGISTIC_GROUPS.inbound, sub: 'Sale & Marketing' },
 
   /* 📉 บอร์ด Monitoring (01/10) = แท็บ `?tab=monitoring` ของ Stock Management แล้ว (16/11 · คำสั่ง user)
      🔴 ถอด `alsoIn: 'ฝ่ายผลิต'` ไปแล้ว 11/11 · **อย่าเอาเมนูแยกหรือทางลัดกลับโดยไม่ถาม user** */
@@ -261,6 +266,17 @@ export const NAV_ITEMS = [
   { to: '/npi',            icon: '🚀', label: 'พาร์ทใหม่ APQP / PPAP',       group: 'คุณภาพ & วิศวกรรม' },
   { to: '/nm-board',       icon: '🧭', label: 'บอร์ด New Model (IEC)',      group: 'คุณภาพ & วิศวกรรม' },
   { to: '/rfq',            icon: '💼', label: 'RFQ / เสนอราคา (Marketing)', group: 'คุณภาพ & วิศวกรรม' },
+  /* 🎯 หมวดกิจกรรม (25/11 · คำสั่ง user) — 9 หน้าโครงเดียวกัน วาดด้วย pages/Activity.jsx · ทะเบียน `utils/activityPages.js`
+     (path ต้องตรงกัน — ด่าน activityPages.test.mjs) · ยังไม่มีฐานข้อมูล · สิทธิ์ยังไม่ seed = admin เห็นก่อน */
+  { to: '/activity-100p',   icon: '🏅', label: '100P',          group: 'กิจกรรม' },
+  { to: '/activity-5s',     icon: '♻️', label: '5S',            group: 'กิจกรรม' },
+  { to: '/activity-smart',  icon: '🏭', label: 'Smart Factory', group: 'กิจกรรม' },
+  { to: '/activity-kyt',    icon: '🛡️', label: 'KYT',           group: 'กิจกรรม' },
+  { to: '/activity-kaizen', icon: '💡', label: 'Kaizen',        group: 'กิจกรรม' },
+  { to: '/activity-qcc',    icon: '👥', label: 'QCC',           group: 'กิจกรรม' },
+  { to: '/activity-lean',   icon: '📉', label: 'Lean',          group: 'กิจกรรม' },
+  { to: '/activity-cfo',    icon: '💼', label: 'CFO',           group: 'กิจกรรม' },
+  { to: '/activity-cfp',    icon: '📈', label: 'CFP',           group: 'กิจกรรม' },
 
   { to: '/report',        icon: '📋', label: 'รายงาน',            group: 'วิเคราะห์ & รายงาน' },
 
@@ -319,7 +335,7 @@ export const NAV_ITEMS = [
   { to: '/storage-maintenance', icon: '🗜️', label: 'ดูแลพื้นที่จัดเก็บ / ค่าเน็ต', group: 'ตั้งค่าโปรแกรม,ฐานข้อมูล', sub: 'ตั้งค่าระบบ' },
 ];
 
-export const NAV_GROUP_ORDER = ['ภาพรวม', 'จอแสดงผล', 'ฝ่ายผลิต', 'วิเคราะห์ & รายงาน', 'พนักงาน & ทักษะ', LOGISTIC_GROUPS.inbound, LOGISTIC_GROUPS.outbound, 'การตรวจสอบและซ่อมบำรุง', 'คุณภาพ & วิศวกรรม', 'ตั้งค่าโปรแกรม,ฐานข้อมูล', 'ผู้บริหาร & เดโม'];
+export const NAV_GROUP_ORDER = ['ภาพรวม', 'จอแสดงผล', 'ฝ่ายผลิต', 'วิเคราะห์ & รายงาน', 'พนักงาน & ทักษะ', LOGISTIC_GROUPS.inbound, LOGISTIC_GROUPS.outbound, 'การตรวจสอบและซ่อมบำรุง', 'คุณภาพ & วิศวกรรม', 'กิจกรรม', 'ตั้งค่าโปรแกรม,ฐานข้อมูล', 'ผู้บริหาร & เดโม'];
 
 // ไอคอน + ชื่อย่อของหมวด — ใช้บนแถบไอคอน (rail) ของ sidebar แบบใหม่ (2026-08-18 · คำสั่ง user "เอา D เลย")
 // ชื่อย่อ ≤ ~9 ตัวอักษรให้พอดีความกว้าง rail 64px ที่ฟอนต์ 11px (กฎฟอนต์ขั้นต่ำ UI-CONVENTIONS)
@@ -333,6 +349,7 @@ export const NAV_GROUP_META = {
   [LOGISTIC_GROUPS.outbound]:  { icon: '🚚', short: 'จัดส่ง' },
   'การตรวจสอบและซ่อมบำรุง':    { icon: '🛠️', short: 'ซ่อมบำรุง' },
   'คุณภาพ & วิศวกรรม':         { icon: '✅', short: 'คุณภาพ' },
+  'กิจกรรม':                   { icon: '🎯', short: 'กิจกรรม' },   // 25/11 คำสั่ง user — ต่อจากคุณภาพ
   'ตั้งค่าโปรแกรม,ฐานข้อมูล':  { icon: '⚙️', short: 'ตั้งค่า' },
   'ผู้บริหาร & เดโม':          { icon: '🔮', short: 'ผู้บริหาร' },
 };
@@ -363,6 +380,28 @@ export const inNavGroup = (item, groups) =>
        บอกแค่ "ตัวอักษร accent" ไม่ใส่พื้น/แถบซ้าย — ไม่งั้นมันจะดูเป็นบ้านที่สอง */
 export const isNavGuest = (item, group) =>
   !!item.alsoIn && item.alsoIn === group && item.group !== group;
+
+/* 🗂️ หัวข้อย่อยของแถวเมนูในหมวดที่กำลังวาด — บ้านจริงใช้ `sub` · แถวทางลัด (`alsoIn`) ใช้ `alsoInSub`
+   (ไม่งั้นหัวข้อของหมวดหนึ่งไปโผล่ในอีกหมวด) · ไม่มี = ไม่คั่นหัวข้อ (พฤติกรรมเดิม) */
+export const navSubOf = (item, group) => (isNavGuest(item, group) ? item.alsoInSub : item.sub) || null;
+
+/* ลำดับหัวข้อย่อยต่อหมวด — หมวดที่ไม่อยู่ในนี้ = ลำดับตาม NAV_ITEMS เดิมเป๊ะ
+   แถวที่ไม่มีหัวข้อในหมวดที่มีลำดับ = ไปท้ายสุด (ไม่หาย) · 24/11 คำสั่ง user */
+export const NAV_SUB_ORDER = {
+  [LOGISTIC_GROUPS.inbound]: ['Sale & Marketing', 'Planning', 'Store'],
+};
+export function orderNavItems(items, group) {
+  const order = NAV_SUB_ORDER[group];
+  if (!order) return items;
+  const rank = (i) => { const k = order.indexOf(navSubOf(i, group)); return k < 0 ? order.length : k; };
+  return items.map((it, idx) => ({ it, idx })).sort((a, b) => rank(a.it) - rank(b.it) || a.idx - b.idx).map(x => x.it);
+}
+
+/* 📌 หมวดที่ "แถบแท็บหัวเพจ" (Detail bar) ตรึงติดบนตอนเลื่อนจอ — PageHeader อ่านจากที่นี่ (24/11 คำสั่ง user · จอคอมเท่านั้น) */
+export const STICKY_TAB_GROUPS = [LOGISTIC_GROUPS.inbound, 'กิจกรรม'];
+/* 📌 หมวดที่หัวเพจ "ค้างทั้งก้อน" (Header + Detail Bar + Tool Bar) ตอนเลื่อน Card Dashboard (25/11 · คำสั่ง user หมวดกิจกรรม)
+   ต่างจาก STICKY_TAB_GROUPS ที่ค้างเฉพาะแถบ (ชื่อหน้าเลื่อนหาย) · ต้องอยู่ใน STICKY_TAB_GROUPS ด้วย (โหมดกะทัดรัด) */
+export const FULL_STICKY_GROUPS = ['กิจกรรม'];
 
 // สรุปสิทธิ์เข้าหน้าของ role จากตารางสิทธิ์จริง (role_permissions) — ใช้โชว์ในหน้า จัดการผู้ใช้งาน
 // เพื่อไม่ต้อง hardcode รายชื่อโมดูลต่อ role (เคย hardcode แล้ว drift ตามโมดูลที่เพิ่มไม่ทัน)
@@ -533,6 +572,8 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
   // panel = ชื่อหมวด | '__star' (ใช้บ่อย) | '__me' (โปรไฟล์) | null = ปิด
   // ปกติแผง "ลอยทับ" เนื้อหา (เนื้อหาไม่ถูกบีบ — คำสั่ง user) · ปักหมุด 📌 = ค้างไว้และดันเนื้อหา
   const [panel, setPanel] = useState(null);
+  /* 🗂️ ข้อย่อยในแผง (24/11 · คำสั่ง user): กาง/ซ่อนรายเมนู · ไม่เคยกด = กางเฉพาะเมนู/แท็บของหน้าที่เปิดอยู่ */
+  const [subOpen, setSubOpen] = useState({});
   /* คิวงานของฉัน — โหลดที่นี่เพราะ **badge ต้องมีเลขแม้แผงปิดอยู่** (กฎอยู่ MyQueuePanel.jsx) */
   const myQueue = useMyQueue(panel === '__me');
   const pinnedRef = useRef(pinned);
@@ -563,7 +604,7 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
     ? visibleItems.filter(i => (i.label + ' ' + i.group + ' ' + i.to).toLowerCase().includes(q))
     : null;
   const groupedItems = NAV_GROUP_ORDER
-    .map(g => ({ group: g, items: visibleItems.filter(i => inNavGroup(i, [g])) }))
+    .map(g => ({ group: g, items: orderNavItems(visibleItems.filter(i => inNavGroup(i, [g])), g) }))
     .filter(g => g.items.length > 0);
   const displayName = userFullName || userEmail || '';
 
@@ -806,6 +847,61 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
     );
   };
 
+  /* ══ 🗂️ แถวเมนู + ข้อย่อย (แท็บของหน้า) — 24/11 คำสั่ง user "ย้าย Detail bar ไป Sub bar เป็นข้อย่อย"
+     · ข้อย่อย = ทะเบียน `NAV_SUB_TABS` (utils/navSubTabs.js) — เห็นทุกเมนูตลอดแม้ยังไม่เปิดหน้านั้น · กรองสิทธิ์รายแท็บด้วย `perm`
+     · รายการชั้นถัดไป (พื้นที่ SAP ฯลฯ) **ไม่อยู่ในแผงนี้** — อยู่ "Detail Bar" ใต้ breadcrumb ในหน้า (PageHeader · 24/11 รอบ 4)
+     · "อยู่ตรงนี้" หน้าตาเดียวกับทุกชั้น (พื้น accent-dim + แถบซ้าย + aria-current) · ชื่อยาวตัด … + `title` ชื่อเต็ม
+     · กดข้อย่อย = ปิดแผงเหมือนเมนูอื่น (ปักหมุด = ค้าง) — user เลือก 24/11 ══ */
+  const subTabsOf = (item) => {
+    const reg = NAV_SUB_TABS[item.to];
+    if (!reg) return null;
+    const tabs = reg.tabs.filter(t => !t.perm || hasPermission(t.perm, userRole));
+    return tabs.length ? { ...reg, tabs } : null;
+  };
+  const subLinkStyle = (on) => ({
+    display: 'block', position: 'relative', textDecoration: 'none', borderRadius: 'var(--radius)',
+    padding: '5px 8px 5px 10px', fontSize: 12.5,
+    fontWeight: on ? 700 : 500, color: on ? 'var(--accent)' : 'var(--text2)',
+    background: on ? 'var(--accent-dim)' : 'transparent', borderLeft: `2px solid ${on ? 'var(--accent)' : 'transparent'}`,
+    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+  });
+  const chevron = (open, onToggle, label) => (
+    <button type="button" onClick={onToggle} aria-expanded={open} aria-label={label} title={label} style={{
+      width: 24, height: 24, flexShrink: 0, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer',
+      color: 'var(--muted)', fontSize: 11, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+    }}>{open ? '▾' : '▸'}</button>
+  );
+  const subNav = (item, group, onPick) => {
+    const reg = subTabsOf(item);
+    if (!reg) return navRow(item, group, onPick);
+    const onPage = location.pathname === item.to;
+    const sp = new URLSearchParams(location.search);
+    const curTab = onPage ? (sp.get(reg.param) || String(reg.tabs[0].key)) : null;
+    const k2 = item.to;
+    const open2 = subOpen[k2] ?? onPage;
+    const toggle = (k, cur) => setSubOpen(o => ({ ...o, [k]: !cur }));
+    return (
+      <>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>{navRow(item, group, onPick)}</div>
+          {chevron(open2, () => toggle(k2, open2), open2 ? tr('ซ่อนข้อย่อย') : tr('แสดงข้อย่อย'))}
+        </div>
+        {open2 && (
+          <div role="group" aria-label={tr(item.label)} style={{ margin: '1px 0 4px 20px', paddingLeft: 6, borderLeft: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 1 }}>
+            {reg.tabs.map(t => {
+              const on = curTab === String(t.key);
+              const label = tr(t.label);
+              return (
+                <Link key={t.key} to={`${item.to}?${reg.param}=${encodeURIComponent(t.key)}`} onClick={onPick} title={label}
+                  aria-current={on ? 'page' : undefined} style={subLinkStyle(on)}>{label}</Link>
+              );
+            })}
+          </div>
+        )}
+      </>
+    );
+  };
+
   /* ── Desktop: rail 64px + แผงหมวดลอยทับ (sidebar แบบ D · 2026-08-18) ─────────────
      หลัก: เนื้อหาหลักเสีย 64px เท่านั้น (เดิม 252px) — แผงเมนูลอยทับตอนกดไอคอนหมวด
      เลือกเมนูแล้วปิดเอง · 📌 ปักหมุด = ค้างแผงไว้และดันเนื้อหา (opt-in เท่านั้น) */
@@ -988,21 +1084,22 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
             </div>
             {/* ชื่อหมวดของแผงที่เปิด (ย้ายจากหัวแผง · 20/11) */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '12px 8px 6px', fontSize: 12, fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.02em', flexShrink: 0, minWidth: 0 }}>
-              <span style={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{panelMeta.title}</span>
+              {/* 24/11: ชื่อหมวดยาวถูกตัด … ⇒ ชี้เมาส์ดูชื่อเต็ม (คำสั่ง user) */}
+              <span title={panelMeta.title} style={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{panelMeta.title}</span>
             </div>
 
             <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
               {panelItems && panelItems.map((item, i) => (
                 <div key={item.to}>
                   {/* หัวข้อย่อยในหมวด (`sub`) — คั่นเฉพาะตอนเปลี่ยนกลุ่ม ไม่เพิ่มหมวดบนแถบไอคอน */}
-                  {item.sub && item.sub !== panelItems[i - 1]?.sub && (
+                  {navSubOf(item, panel) && navSubOf(item, panel) !== (i ? navSubOf(panelItems[i - 1], panel) : null) && (
                     <div style={{
                       fontSize: 11, fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.04em',
                       padding: '9px 9px 3px', marginTop: i === 0 ? 0 : 5,
                       borderTop: i === 0 ? 'none' : '1px solid var(--border)',
-                    }}>{tr(item.sub)}</div>
+                    }}>{tr(navSubOf(item, panel))}</div>
                   )}
-                  {navRow(item, panel, () => { if (!pinned) setPanel(null); })}
+                  {subNav(item, panel, () => { if (!pinned) setPanel(null); })}
                 </div>
               ))}
 
@@ -1198,12 +1295,12 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
                   {open && items.map((item, i) => (
                     <div key={item.to}>
                       {/* หัวข้อย่อย (`sub`) — เหมือนแผงบน desktop ให้ 2 โหมดเห็นโครงเดียวกัน */}
-                      {item.sub && item.sub !== items[i - 1]?.sub && (
+                      {navSubOf(item, group) && navSubOf(item, group) !== (i ? navSubOf(items[i - 1], group) : null) && (
                         <div style={{
                           fontSize: 11, fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.04em',
                           padding: '9px 9px 3px', marginTop: i === 0 ? 0 : 5,
                           borderTop: i === 0 ? 'none' : '1px solid var(--border)',
-                        }}>{tr(item.sub)}</div>
+                        }}>{tr(navSubOf(item, group))}</div>
                       )}
                       {navRow(item, group, onClose)}
                     </div>
@@ -2423,6 +2520,11 @@ function ProtectedLayout({ session, theme, onToggleTheme, userRole, realRole, vi
               <Route path="/nm-board" element={
                 <RoleRoute path="/nm-board" userRole={role}><NewModelBoard /></RoleRoute>
               } />
+              {/* 🎯 หมวดกิจกรรม — 9 path วาดหน้าเดียว (key = path ให้ state ไม่ข้ามกิจกรรม) */}
+              {ACTIVITIES.map(a => (
+                <Route key={a.path} path={a.path} element={
+                  <RoleRoute path={a.path} userRole={role}><Activity key={a.path} /></RoleRoute>} />
+              ))}
               <Route path="/rfq" element={
                 <RoleRoute path="/rfq" userRole={role}><Rfq /></RoleRoute>
               } />

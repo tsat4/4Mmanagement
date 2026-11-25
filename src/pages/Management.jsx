@@ -1755,8 +1755,8 @@ export default function Management() {
             }
             /* 🖼️ กรอบคิวตามอุดมคติ — สูตรเดียวทั้งระบบ (`planFramePct`) **ห้ามคิดพิกัดเองในหน้า**
                เดิมก๊อปไว้ 2 หน้าแล้วสีเพี้ยนกัน (13/11) ⇒ ย้ายมาที่เดียว · ดู heijunkaQueue.js */
-            const { planLeftPct, planWidthPct, planSlipped } = planFramePct(item, hs, pctPerMs);
-            return { o: item.o, leftPct, widthPct, tailLeftPct, tailWidthPct, realEndMs: item.endMs, isDelayed: item.isDelayed, isLateDone: item.isLateDone, startMs: item.startMs, occupiedEndMs: item.occupiedEndMs, planLeftPct, planWidthPct, planStartMs: item.planStartMs, plannedEndMs: item.plannedEndMs, planSlipped };
+            const { planLeftPct, planWidthPct, planSlipped, planUnknown } = planFramePct(item, hs, pctPerMs);
+            return { o: item.o, leftPct, widthPct, tailLeftPct, tailWidthPct, realEndMs: item.endMs, isDelayed: item.isDelayed, isLateDone: item.isLateDone, startMs: item.startMs, occupiedEndMs: item.occupiedEndMs, planLeftPct, planWidthPct, planStartMs: item.planStartMs, plannedEndMs: item.plannedEndMs, planSlipped, planUnknown };
           };
 
           // การ์ด = `buildBoardCards()` (utils/boardCards.js) ที่เดียว — ห้ามเขียน buildCards ในหน้าอีก (2026-10-19)
@@ -2024,6 +2024,22 @@ export default function Management() {
                     <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>{tr(item.label)}</span>
                   </div>
                 ))}
+                {/* 🖼️ 24/11 · กรอบเส้นประไม่เคยมีคำอธิบายในแถบนี้ ⇒ คนอ่านว่าเป็น "แผนจากทีมวางแผน" */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}
+                  title={tr('กรอบเส้นประ = คิวตามอุดมคติที่ระบบไล่ให้จากใบที่เปิดไว้แล้ว — ไม่ใช่แผนของทีมวางแผน')}>
+                  <span style={{ width: 18, height: 18, borderRadius: 'var(--r-xs)', border: '2px dashed var(--text)', flexShrink: 0 }} />
+                  <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>{tr('หลุดกรอบคิว')}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}
+                  title={tr('ใบนี้อยู่ในกรอบคิวที่ระบบไล่ให้ — กรอบทับแท่งพอดี')}>
+                  <span style={{ width: 18, height: 18, borderRadius: 'var(--r-xs)', border: '1px dashed var(--muted)', opacity: 0.35, flexShrink: 0 }} />
+                  <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>{tr('อยู่ในกรอบคิว')}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}
+                  title={tr('ยังไม่รู้ cycle time ⇒ คำนวณกรอบคิวให้ไม่ได้ — ไม่ใช่ "อยู่ในกรอบ"')}>
+                  <span style={{ width: 18, height: 18, borderLeft: '2px dotted var(--muted)', opacity: 0.8, flexShrink: 0 }} />
+                  <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>{tr('คำนวณกรอบคิวไม่ได้')}</span>
+                </div>
               </div>
               )}
               {/* 🧠 Smart planner — คาดการณ์เวลาเสร็จ / คำแนะนำ OT */}
@@ -2092,7 +2108,7 @@ export default function Management() {
                               const room = (i + 1 < positioned.length ? positioned[i + 1].leftPct : 100) - positioned[i].leftPct;
                               positioned[i].widthPct = Math.max(0, Math.min(Math.max(positioned[i].widthPct, Math.min(minPct, room)), room));
                             }
-                            return positioned.map(({ o, leftPct, widthPct, tailLeftPct, tailWidthPct, realEndMs, isDelayed, isLateDone, startMs, occupiedEndMs, planLeftPct, planWidthPct, planStartMs, plannedEndMs, planSlipped }, oi) => {
+                            return positioned.map(({ o, leftPct, widthPct, tailLeftPct, tailWidthPct, realEndMs, isDelayed, isLateDone, startMs, occupiedEndMs, planLeftPct, planWidthPct, planStartMs, plannedEndMs, planSlipped, planUnknown }, oi) => {
                             if (leftPct >= 100) return null;
                             const sc = isLateDone ? '#f97316' : o.isDone ? '#22c55e' : isDelayed ? '#ef4444' : o.isCarry ? '#f59e0b' : o.is_backfill ? '#6b7280' : '#4d9fff';
                             const icon = o.isDone ? (isLateDone ? '✓!' : '✓') : isDelayed ? '!' : o.isCarry ? '↷' : o.is_backfill ? '⏪' : o.is_manual ? '✍️' : '▶';
@@ -2148,6 +2164,7 @@ export default function Management() {
                               </div>
                               {/* 🖼️ กรอบคิวตามอุดมคติของใบนี้ — ตัววาดตัวเดียวทั้งระบบ (ห้ามวาดเองในหน้า) */}
                               <PlanSlipFrame planLeftPct={planLeftPct} planWidthPct={planWidthPct} planSlipped={planSlipped}
+                              planUnknown={planUnknown} leftPct={leftPct}
                                 planStartMs={planStartMs} plannedEndMs={plannedEndMs}
                                 startMs={startMs} realEndMs={realEndMs} occupiedEndMs={occupiedEndMs} fmtMs={fmtMs} />
                               {/* หางเงาแดง — ยังไม่ปิดงานแม้เลยกำหนดแล้ว ครองไลน์อยู่จนถึงตอนนี้ ดันใบถัดไปไปต่อท้าย */}

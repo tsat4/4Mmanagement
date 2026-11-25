@@ -151,6 +151,20 @@ const PAGE_GROUPS = [
     ],
   },
   {
+    group: 'กิจกรรม',   // 25/11 — หน้าโครง ยังไม่มีฐานข้อมูล · คีย์ยังไม่ seed (admin เห็นก่อน)
+    pages: [
+      { key: 'page:/activity-100p',   label: '100P' },
+      { key: 'page:/activity-5s',     label: '5S' },
+      { key: 'page:/activity-smart',  label: 'Smart Factory' },
+      { key: 'page:/activity-kyt',    label: 'KYT' },
+      { key: 'page:/activity-kaizen', label: 'Kaizen' },
+      { key: 'page:/activity-qcc',    label: 'QCC' },
+      { key: 'page:/activity-lean',   label: 'Lean' },
+      { key: 'page:/activity-cfo',    label: 'CFO' },
+      { key: 'page:/activity-cfp',    label: 'CFP' },
+    ],
+  },
+  {
     group: 'ตั้งค่าโปรแกรม,ฐานข้อมูล',
     pages: [
       // ── ฐานข้อมูลหลัก ──

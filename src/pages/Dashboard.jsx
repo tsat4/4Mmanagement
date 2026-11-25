@@ -1565,6 +1565,23 @@ export default function Dashboard({ view = 'timeline' }) {
                   <span style={{ fontSize: T(12, 18), color: 'var(--muted)', fontWeight: 600 }}>{tr(item.label)}</span>
                 </div>
               ))}
+              {/* 🖼️ 24/11 · user "บางไลน์มีกรอบขาวบางไลน์ไม่มี" — กรอบเส้นประไม่เคยมีคำอธิบายในแถบนี้
+                  ⇒ คนอ่านว่าเป็น "แผนจากทีมวางแผน" ทั้งที่เป็นคิวที่ระบบไล่ให้เอง */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}
+                title={tr('กรอบเส้นประ = คิวตามอุดมคติที่ระบบไล่ให้จากใบที่เปิดไว้แล้ว — ไม่ใช่แผนของทีมวางแผน')}>
+                <span style={{ width: T(16, 24), height: T(16, 24), borderRadius: 'var(--r-xs)', border: '2px dashed var(--text)', flexShrink: 0 }} />
+                <span style={{ fontSize: T(12, 18), color: 'var(--muted)', fontWeight: 600 }}>{tr('หลุดกรอบคิว')}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}
+                title={tr('ใบนี้อยู่ในกรอบคิวที่ระบบไล่ให้ — กรอบทับแท่งพอดี')}>
+                <span style={{ width: T(16, 24), height: T(16, 24), borderRadius: 'var(--r-xs)', border: '1px dashed var(--muted)', opacity: 0.35, flexShrink: 0 }} />
+                <span style={{ fontSize: T(12, 18), color: 'var(--muted)', fontWeight: 600 }}>{tr('อยู่ในกรอบคิว')}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}
+                title={tr('ยังไม่รู้ cycle time ⇒ คำนวณกรอบคิวให้ไม่ได้ — ไม่ใช่ "อยู่ในกรอบ"')}>
+                <span style={{ width: T(16, 24), height: T(16, 24), borderLeft: '2px dotted var(--muted)', opacity: 0.8, flexShrink: 0 }} />
+                <span style={{ fontSize: T(12, 18), color: 'var(--muted)', fontWeight: 600 }}>{tr('คำนวณกรอบคิวไม่ได้')}</span>
+              </div>
             </div>
 
             {/* ── ตัวกรองตู้รวม: ชิปกลุ่มไลน์ + ช่องค้นพาร์ท/MAT/เลขใบ ──
@@ -1796,8 +1813,8 @@ export default function Dashboard({ view = 'timeline' }) {
                          🔴 **วาดทุกใบ** — กรอบคือเส้นอ้างอิงที่ต้องอยู่เสมอ คนถึงจะเทียบได้ว่าแท่งจริง
                             "ล้นออกขวาเท่าไหร่ = หลุดเท่านั้น" (ใบที่ตรงแผน กรอบจะทับแท่งพอดี = เหมือนเส้นขอบ ไม่รก)
                          · `slipped` ใช้เน้นเฉพาะใบที่หลุดจริง (กรอบเข้ม + เส้นปิดท้ายกรอบให้เห็นจุดที่แผนจบ) */
-                      const { planLeftPct, planWidthPct, planSlipped } = planFramePct(item, hs, pctPerMs);
-                      return { o: item.o, leftPct, widthPct, tailLeftPct, tailWidthPct, realEndMs: item.endMs, isDelayed: item.isDelayed, isLateDone: item.isLateDone, startMs: item.startMs, occupiedEndMs: item.occupiedEndMs, planLeftPct, planWidthPct, planStartMs: item.planStartMs, plannedEndMs: item.plannedEndMs, planSlipped };
+                      const { planLeftPct, planWidthPct, planSlipped, planUnknown } = planFramePct(item, hs, pctPerMs);
+                      return { o: item.o, leftPct, widthPct, tailLeftPct, tailWidthPct, realEndMs: item.endMs, isDelayed: item.isDelayed, isLateDone: item.isLateDone, startMs: item.startMs, occupiedEndMs: item.occupiedEndMs, planLeftPct, planWidthPct, planStartMs: item.planStartMs, plannedEndMs: item.plannedEndMs, planSlipped, planUnknown };
                     };
 
                     // เรียงตามเวลาเริ่มจริง แล้วต่อคิวในแถวเดียวกัน (ไม่สร้างแถวใหม่) — แต่ละการ์ดเริ่มได้ไม่ก่อนการ์ดก่อนหน้าสิ้นสุด
@@ -1874,7 +1891,7 @@ export default function Dashboard({ view = 'timeline' }) {
                             const room = (i + 1 < positioned.length ? positioned[i + 1].leftPct : 100) - positioned[i].leftPct;
                             positioned[i].widthPct = Math.max(0, Math.min(Math.max(positioned[i].widthPct, Math.min(minPct, room)), room));
                           }
-                          return positioned.map(({ o, leftPct, widthPct, tailLeftPct, tailWidthPct, realEndMs, isDelayed, isLateDone, startMs, occupiedEndMs, planLeftPct, planWidthPct, planStartMs, plannedEndMs, planSlipped }, oi) => {
+                          return positioned.map(({ o, leftPct, widthPct, tailLeftPct, tailWidthPct, realEndMs, isDelayed, isLateDone, startMs, occupiedEndMs, planLeftPct, planWidthPct, planStartMs, plannedEndMs, planSlipped, planUnknown }, oi) => {
                           if (leftPct >= 100) return null;
                           const statusTone  = o.isDone ? 'good' : isDelayed ? 'bad' : o.isCarry ? 'warn' : 'info';   // เสร็จช้า = เขียว + ป้าย (พาเลต 5 สี)
                           const statusColor = toneVar(statusTone);
@@ -1940,6 +1957,7 @@ export default function Dashboard({ view = 'timeline' }) {
                             </div>
                             {/* 🖼️ กรอบคิวตามอุดมคติของใบนี้ — ตัววาดตัวเดียวทั้งระบบ (ห้ามวาดเองในหน้า) */}
                             <PlanSlipFrame planLeftPct={planLeftPct} planWidthPct={planWidthPct} planSlipped={planSlipped}
+                              planUnknown={planUnknown} leftPct={leftPct}
                               planStartMs={planStartMs} plannedEndMs={plannedEndMs}
                               startMs={startMs} realEndMs={realEndMs} occupiedEndMs={occupiedEndMs} fmtMs={fmtMs} />
                             {/* หางเงาแดง — ยังไม่ปิดงานแม้เลยกำหนดแล้ว ครองไลน์อยู่จนถึงตอนนี้ ดันใบถัดไปไปต่อท้าย */}

@@ -742,3 +742,22 @@ test('ใบที่จบแล้วยังต้องไม่มีเ�
     assert.equal(q.mine.length + q.unit.length, 0, `${status} ห้ามเข้าคิว`);
   }
 });
+
+test('✍️ ใบตรวจ AM รออนุมัติ (A5 · 24/11) — บรรทัดเดียวต่อไลน์ · กรองขอบเขต · ไม่ขึ้น badge · ไม่มีสิทธิ์ = ไม่โหลด', () => {
+  const now = new Date('2026-11-24T03:00:00Z');
+  const base = { mo: [], moAll: [], sessions: [], fourM: [], actions: [], summaries: [], bins: [], redBins: [] };
+  const amPending = [
+    { id: 1, inspected_at: '2026-11-20T01:00:00Z', line_name: 'HDF1', section: 'PD3' },
+    { id: 2, inspected_at: '2026-11-10T01:00:00Z', line_name: 'HDF1', section: 'PD3' },
+    { id: 3, inspected_at: '2026-11-22T01:00:00Z', line_name: 'Line D3', section: 'PD2' },
+    { id: 4, inspected_at: '2026-11-22T01:00:00Z', line_name: 'ไม่มีในทะเบียน', section: undefined },
+  ];
+  const q = buildQueue({ ...base, amPending }, { sections: ['PD3'], canAmApprove: true }, now);
+  const rows = q.unit.filter(x => x.key.startsWith('amappr:'));
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].count, 2); assert.equal(rows[0].age, 14); assert.equal(rows[0].to, '/daily-checker?tab=amcheck');
+  assert.equal(q.mine.some(x => x.key.startsWith('amappr:')), false);
+  assert.equal(buildQueue({ ...base }, { sections: [], canAmApprove: false }, now).missing.includes('amPending'), false);
+  assert.ok(buildQueue({ ...base }, { sections: [], canAmApprove: true }, now).missing.includes('amPending'));
+  assert.ok(buildQueue({ ...base, amPending, amPendingTruncated: true }, { sections: [], canAmApprove: true }, now).missing.includes('am_pending_truncated'));
+});

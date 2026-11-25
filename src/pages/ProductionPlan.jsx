@@ -1,4 +1,5 @@
 import { useState, useEffect, useContext, useMemo, useCallback } from 'react';
+import { PRODUCTION_PLAN_TABS } from '../utils/navSubTabs';
 import { MoreMark } from '../components/InfoMore';
 import { useSearchParams } from 'react-router-dom';
 import { orgValues, sortLike } from '../utils/listOrder';
@@ -109,7 +110,7 @@ export default function ProductionPlan() {
      คนละมุมมอง ซึ่งโรงงานชอบแบบกราฟ"*) — รายวัน/รายเดือนคือ**คำถามเดียวกันคนละหน่วยเวลา**
      ⇒ เป็น "ช่วงเวลา" ของแท็บเดียว ไม่ใช่คนละแท็บ · สไลด์โรงงานเป็น**รูปแบบนำเสนอ** ไม่ใช่การวิเคราะห์ใหม่
      ⇒ เป็นปุ่มสลับโหมด · 🔴 แท็บซ้อนแท็บต้องคนละ query param (UI §6.8 ข้อ 2.4) ⇒ `?cap=` / `?mode=` */
-  const [tab, setTab] = useTabParam(['plan', 'lots', 'settings'], 'plan');
+  const [tab, setTab] = useTabParam(PRODUCTION_PLAN_TABS.map(t => t.key), 'plan');
   const [cap, setCap] = useTabParam(['day', 'month'], 'day', 'cap');
   const [mode, setMode] = useTabParam(['chart', 'slide'], 'chart', 'mode');
 
@@ -673,13 +674,7 @@ export default function ProductionPlan() {
     <Page style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <PageHeader
         title={tr('วางแผนการผลิต')} icon="🗓️"
-        tabs={[
-          { key: 'plan', label: tr("กำลังการผลิต") },
-          /* 📋 แท็บเดียวของหน้านี้ที่ **เขียน DB** — แท็บกำลังการผลิตวิเคราะห์อย่างเดียว
-             (งาน lot size ที่ไม่ได้เดินตามคัมบัง ต้องมีคนวางคิวให้ ไม่ใช่ first come first serve) */
-          { key: 'lots', label: tr("แผนสั่งงาน (ล็อต)") },
-          { key: 'settings', label: tr("ตั้งค่า") },
-        ]}
+        tabs={PRODUCTION_PLAN_TABS /* ทะเบียนกลาง navSubTabs.js (24/11) */}
         tab={tab} onTab={setTab}
       />
       {/* ⚙️ แท็บตั้งค่าไม่มีตัวกรอง/คำเตือนของแผน (05/11) */}
