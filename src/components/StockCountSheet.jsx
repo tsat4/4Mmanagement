@@ -11,10 +11,12 @@ import { checkWrite } from '../utils/dbWrite';
 import { fetchAllPages } from '../utils/fetchByIds';
 import { getWorkDate } from '../utils/workDate';
 import { buildPnIndex, pickStockMat, matIssueText } from '../utils/matResolve';
-import { countDelta, toAdjustTxns, countSummary, lastCountAt, pendingShipCuts } from '../utils/stockCount';
+import { countDelta, toAdjustTxns, countSummary, lastCountAt, pendingShipCuts,
+  countRoundRows } from '../utils/stockCount';
 /* 🔐 ชั้นสิทธิ์ที่ ③ — "ไลน์/คลังนี้เป็นของหน่วยงานเราไหม" (ช่องเลือกไลน์เป็นตัวกรองการดู ไม่ใช่ด่าน) */
 import { canWriteLine, writeBlockText } from '../utils/writeScope';
-import LineSelect from './LineSelect';
+import LineSelect, { scopeLines } from './LineSelect';
+import NoticeBar from './NoticeBar';
 import { useDraftAutosave, loadDraft, clearDraft } from '../utils/formDraft';   // 📝 ร่างในเครื่อง (มือถือ · 22/10)
 import DraftRestoreBar from './DraftRestoreBar';
 
@@ -66,6 +68,9 @@ export default function StockCountSheet({ role, scope }) {
   const [pnIndex, setPnIndex] = useState(() => new Map());
   const [fgDest,  setFgDest]  = useState('');   // คลังปลายทางของ FG จากกฎรับเข้า (ไม่ hardcode ชื่อคลัง)
   const [lines,   setLines]   = useState([]);   // production_lines (Main) — ให้ <LineSelect> กรอง scope ได้
+  const [levels,  setLevels]  = useState([]);   // line_part_levels — พาร์ทที่ทะเบียนบอกว่าต้องมีที่ไลน์นั้น
+  /* 🔴 โหลดไม่สำเร็จ ≠ ไม่มีงานต้องนับ — แผงรอบนับต้องบอกว่าอ่านไม่ได้ ห้ามโชว์ 0 (db-write-rules ข้อ 12) */
+  const [loadFail, setLoadFail] = useState('');
 
   const [lineFilter, setLineFilter] = useState('');
   const [counts,  setCounts]  = useState({});   // mat_no → ยอดที่นับได้ (string)
@@ -76,6 +81,9 @@ export default function StockCountSheet({ role, scope }) {
   const [saving,  setSaving]  = useState(false);
   const [cutting, setCutting] = useState(false);
   const [showGap,  setShowGap]  = useState(false);   // worklist ยาวได้เป็นร้อยแถว — พับไว้ก่อน
+  /* แผงรอบนับ: `null` = ออโต้ — **ยังไม่เลือกไลน์ = กาง** (เป็นทางเข้างาน) · **เลือกแล้ว = พับ**
+     (กฎลำดับแผงของหน้านี้: ห้ามดันตารางนับซึ่งเป็นงานหลักตกจอ) · กดทับได้ แล้วออโต้ไม่ทับซ้ำ */
+  const [showRound, setShowRound] = useState(null);
   /* 📝 ร่างในเครื่อง + ตัวเลขไม่ข้ามไลน์ (มือถือ · 22/10 · audit handheld ข้อ 4)
      เดิม `counts` ผูกด้วย mat_no อย่างเดียว ⇒ นับไลน์ A แล้วสลับไป B ตัวเลขของ MAT เดียวกันโผล่ในการ์ดไลน์ B
      (มือถือเลื่อนการ์ดยาว มองไม่เห็นว่ามีค่าค้าง) · มือถือ: สลับไลน์ = ล้างช่อง + เก็บร่างของไลน์เดิมไว้ กลับมากู้คืนได้
@@ -96,11 +104,13 @@ export default function StockCountSheet({ role, scope }) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [sum, adj, sh, cut, dp, ks, rules, pl] = await Promise.all([
+    const [sum, adj, sh, cut, dp, ks, rules, pl, lv] = await Promise.all([
       fetchAllPages(() => supabaseDR.from('line_stock_summary').select('line_name, mat_no, part_name, qty_on_hand'),
         { orderBy: ['line_name', 'mat_no'] }),
+      /* ⚠️ ต้องมี note + qty ด้วย — แผงรอบนับต้องแยก "ตรวจนับของจริง" ออกจาก "ตั้งยอดตามไฟล์"
+         (ชื่อคอลัมน์เท่าที่ใช้จริง · egress คิดเป็นไบต์ — db-write-rules ข้อ 11) */
       fetchAllPages(() => supabaseDR.from('line_stock_transactions')
-        .select('line_name, mat_no, type, status, created_at').eq('type', 'adjust').eq('status', 'approved'),
+        .select('line_name, mat_no, type, status, created_at, note, qty').eq('type', 'adjust').eq('status', 'approved'),
         { orderBy: 'created_at' }),
       fetchAllPages(() => supabaseDR.from('customer_shipping_orders')
         .select('id, order_no, customer, mat_no, part_name, qty, due_date, ship_time, shipped_at, shipped_by')
@@ -113,13 +123,16 @@ export default function StockCountSheet({ role, scope }) {
       // ⚠️ production_lines อยู่ Main project — ไม่ใช่ DR (ดู CLAUDE.md "Supabase Projects")
       //    ต้องมี section + is_active ไม่งั้น LineSelect กรอง scope ไม่ได้ / ไลน์ปลดระวางโผล่ปน
       loadLinesRes(),
+      supabaseDR.from('line_part_levels').select('line_name, mat_no, is_active'),
     ]);
     setLoading(false);
     // ห้ามกลืน error — คิวรีล้มแล้วจอขึ้นเหมือน "ไม่มีข้อมูล" คือคลาสบั๊กที่โปรเจคเจอซ้ำ
-    const firstErr = sum.error || adj.error || sh.error || cut.error || dp.error || ks.error || rules.error || pl.error;
-    if (firstErr) { toast.error((tr('โหลดข้อมูลสต็อกไม่สำเร็จ') + ': ') + firstErr); return; }
+    const firstErr = sum.error || adj.error || sh.error || cut.error || dp.error || ks.error || rules.error || pl.error || lv.error;
+    if (firstErr) { setLoadFail(String(firstErr)); toast.error((tr('โหลดข้อมูลสต็อกไม่สำเร็จ') + ': ') + firstErr); return; }
+    setLoadFail('');
     setStock(sum.rows);
     setLines(pl.data || []);
+    setLevels((lv.data || []).filter(l => l.is_active !== false));
     setAdjusts(adj.rows);
     setShipped(sh.rows);
     setCutIds(new Set(cut.rows.map(r => r.ref_shipment_id)));
@@ -187,13 +200,54 @@ export default function StockCountSheet({ role, scope }) {
   /* ── 📋 ตารางตรวจนับ ────────────────────────────────────────────────────── */
   // คลังที่ไม่ใช่ไลน์ผลิต — derive จากของที่มีจริง ไม่ hardcode ชื่อคลัง (pattern เดียวกับแท็บ 📦 Stock)
   const warehouseNames = useMemo(
-    () => [...new Set(stock.map(s => s.line_name))].filter(n => n && !lines.some(l => l.name === n)).sort(lineNameCompare),
-    [stock, lines]);
+    /* รวมชื่อจากทะเบียน min/max ด้วย — ไลน์/คลังที่ทะเบียนตั้งไว้แต่ยังไม่มีรายการสต็อกเลย
+       ต้องเลือกได้ในช่องนี้ ไม่งั้นแผงรอบนับชี้ไปแล้วใบนับเปิดไม่ได้ */
+    () => [...new Set([...stock.map(s => s.line_name), ...levels.map(l => l.line_name)])]
+      .filter(n => n && !lines.some(l => l.name === n)).sort(lineNameCompare),
+    [stock, levels, lines]);
   const rows = useMemo(() => {
     let r = lineFilter ? stock.filter(s => s.line_name === lineFilter) : [];
+    /* 🔴 พาร์ทที่ทะเบียน min/max ตั้งไว้ที่ไลน์นี้ แต่ยังไม่เคยมีรายการ = ของควรอยู่ที่นี่
+       แต่ก่อนหน้านี้ไม่มีช่องให้กรอกเลย (ตารางสร้างจากแถวในคลังล้วน) ⇒ ไปยืนนับเจอของ
+       แล้วกลับมาบันทึกไม่ได้ **เงียบ** — เติมเข้ามาเป็นยอดระบบ 0 (ยังไม่มี txn = 0 จริง) */
+    if (lineFilter) {
+      const have = new Set(r.map(x => String(x.mat_no)));
+      levels.forEach(l => {
+        if (String(l.line_name ?? '').trim() !== lineFilter) return;
+        const mat = String(l.mat_no ?? '');
+        if (!mat || have.has(mat)) return;
+        have.add(mat);
+        r = [...r, { line_name: lineFilter, mat_no: mat, part_name: null, qty_on_hand: 0, fromLevels: true }];
+      });
+    }
     if (hideZero) r = r.filter(s => (parseFloat(s.qty_on_hand) || 0) !== 0);
     return [...r].sort((a, b) => String(a.mat_no).localeCompare(String(b.mat_no)));
-  }, [stock, lineFilter, hideZero]);
+  }, [stock, lineFilter, hideZero, levels]);
+
+  /* ── 🧭 ขั้น ② ของแผน min/max — รอบนับตั้งต้น (25/11 · คำสั่ง user "ลุยขั้น ② ต่อ นับที่ไลน์ปลายทาง")
+     ตัวเลขทุกตัวออกจาก `countRoundRows()` (utils/stockCount.js) — **ห้ามนับเองในหน้า**
+     🔴 แผงนี้ตอบ "ไลน์ไหนยังไม่ได้นับ" ด้วย **การนับของจริงเท่านั้น** ("ตั้งยอดให้ตรงไฟล์" ไม่ใช่การนับ) */
+  const roundAll = useMemo(() => countRoundRows({ stock, txns: adjusts, levels }), [stock, adjusts, levels]);
+  const roundRows = useMemo(() => {
+    if (!roundAll) return null;
+    /* ขอบเขต "ที่เห็น" ชุดเดียวกับ <LineSelect> · คลัง (ไม่อยู่ในทะเบียนไลน์) เห็นได้เสมอ */
+    const ok = new Set(scopeLines(lines, scope).map(l => l.name));
+    const known = new Set(lines.map(l => l.name));
+    return roundAll.filter(r => !known.has(r.line_name) || ok.has(r.line_name));
+  }, [roundAll, lines, scope]);
+  const roundHidden = (roundAll?.length || 0) - (roundRows?.length || 0);
+  const roundTotals = useMemo(() => {
+    if (!roundRows) return null;
+    return roundRows.reduce((a, r) => ({
+      lines: a.lines + 1,
+      none:  a.none + (r.status === 'none' ? 1 : 0),
+      done:  a.done + (r.status === 'done' ? 1 : 0),
+      negParts: a.negParts + r.negParts,
+      negQty:   a.negQty + r.negQty,
+      drift:    a.drift + r.driftAfter,
+      noRow:    a.noRow + r.noRowParts,
+    }), { lines: 0, none: 0, done: 0, negParts: 0, negQty: 0, drift: 0, noRow: 0 });
+  }, [roundRows]);
 
   const summary = useMemo(() => countSummary({ rows, counts }), [rows, counts]);
 
@@ -228,8 +282,109 @@ export default function StockCountSheet({ role, scope }) {
 
   if (loading) return <div style={{ ...card, textAlign:'center', color:'var(--muted)' }}>{tr('กำลังโหลด…')}</div>;
 
+  const roundOpen = showRound === null ? !lineFilter : showRound;
+  const ST = {
+    none:    { label: 'ยังไม่เคยนับ', color: 'var(--red)' },
+    partial: { label: 'นับบางส่วน',   color: 'var(--amber)' },
+    done:    { label: 'นับครบแล้ว',   color: 'var(--green)' },
+  };
+
   return (
     <div style={{ display:'grid', gap:16, alignContent:'start' }}>
+
+      {/* ── 🧭 รอบนับตั้งต้น (ขั้น ② ของแผน min/max) ────────────────────────────
+          พับเป็นค่าเริ่มต้น — ห้ามดันตารางนับ (งานหลัก) ตกจอ (กฎลำดับแผงของหน้านี้) */}
+      <div style={card}>
+        <div style={{ display:'flex', flexWrap:'wrap', gap:10, alignItems:'center', justifyContent:'space-between' }}>
+          <div style={{ fontSize:15, fontWeight:800 }}>🧭 {tr('รอบนับตั้งต้น — นับที่ไลน์ปลายทาง')}</div>
+          {!!roundRows?.length && (
+            <button type="button" onClick={() => setShowRound(!roundOpen)} style={btn('var(--bg3)', 'var(--text)')}>
+              {roundOpen ? tr('ซ่อนรายไลน์') : `${tr('ดูรายไลน์')} (${roundRows.length})`}
+            </button>
+          )}
+        </div>
+
+        {loadFail ? (
+          <NoticeBar tone="bad" style={{ marginTop:10 }}>
+            <b>{tr('อ่านข้อมูลสต็อกไม่ได้')}</b> · {tr('ยังบอกไม่ได้ว่าไลน์ไหนนับแล้ว — ลองโหลดหน้าใหม่')}
+          </NoticeBar>
+        ) : !roundRows ? (
+          <NoticeBar tone="warn" style={{ marginTop:10 }}>
+            <b>{tr('ยังอ่านประวัติการนับไม่ได้')}</b> · {tr('ตัวเลขรอบนับจึงยังบอกไม่ได้')}
+          </NoticeBar>
+        ) : !roundRows.length ? (
+          <div style={{ fontSize:13, color:'var(--muted)', marginTop:8 }}>{tr('ยังไม่มีไลน์/คลังที่มีรายการสต็อก')}</div>
+        ) : (
+          <>
+            <div style={{ fontSize:12, color:'var(--muted)', lineHeight:1.7, marginTop:8 }}>
+              {tr('ยังไม่เคยนับ')} <b style={{ color:'var(--red)' }}>{roundTotals.none}</b> {tr('ไลน์')}
+              {' · '}{tr('นับครบแล้ว')} <b style={{ color:'var(--green)' }}>{roundTotals.done}</b> {tr('ไลน์')}
+              {' · '}{tr('ยอดติดลบ')} <b>{n0(roundTotals.negParts)}</b> {tr('พาร์ท')} ({n0(roundTotals.negQty)} {tr('ชิ้น')})
+              <div>
+                🔴 {tr('"นับล่าสุด" นับเฉพาะการไปนับของจริง — การตั้งยอดตามไฟล์ Monitoring ไม่ใช่การนับ')}
+              </div>
+            </div>
+            {roundTotals.drift > 0 && (
+              <NoticeBar tone="warn" style={{ marginTop:10 }}>
+                <b>{tr('หลังนับแล้วยังมีการปรับยอดอีก')} {n0(roundTotals.drift)} {tr('ชิ้น')}</b>
+                {' · '}{tr('ถ้าเลขนี้โตเรื่อยๆ ปัญหาอยู่ที่การบันทึกรับ-จ่าย ไม่ใช่ที่การนับ')}
+              </NoticeBar>
+            )}
+            {roundTotals.noRow > 0 && (
+              <NoticeBar tone="info" style={{ marginTop:10 }}>
+                <b>{n0(roundTotals.noRow)} {tr('พาร์ทที่ทะเบียนตั้งไว้ แต่ยังไม่เคยมีรายการ')}</b>
+                {' · '}{tr('เติมเข้าใบนับให้แล้ว (ยอดระบบ = 0)')}
+              </NoticeBar>
+            )}
+            {roundHidden > 0 && (
+              <div style={{ fontSize:12, color:'var(--muted)', marginTop:8 }}>
+                🔒 {tr('ซ่อน')} {roundHidden} {tr('ไลน์ที่อยู่นอกขอบเขตของคุณ')}
+              </div>
+            )}
+
+            {roundOpen && (
+              <div style={{ overflowX:'auto', maxHeight:'48vh', overflowY:'auto', marginTop:10 }}>
+                <table style={{ width:'100%', borderCollapse:'collapse', minWidth:620 }}>
+                  <thead><tr>
+                    {[tr('ไลน์/คลัง'), tr('ต้องนับ'), tr('ติดลบ'), tr('นับล่าสุด'), tr('ปรับยอดหลังนับ'), tr('สถานะ')].map((h, i) => (
+                      <th key={h} style={{ ...th, position:'sticky', top:0, background:'var(--card)', zIndex:1,
+                        textAlign: i === 0 ? 'left' : i === 5 ? 'left' : 'right' }}>{h}</th>
+                    ))}
+                  </tr></thead>
+                  <tbody>
+                    {roundRows.map(r => {
+                      const st = ST[r.status] || ST.none;
+                      return (
+                        <tr key={r.line_name} onClick={() => changeLine(r.line_name)}
+                          title={tr('กดเพื่อเลือกไลน์นี้ในใบนับข้างล่าง')}
+                          style={{ cursor:'pointer', background: r.line_name === lineFilter ? 'var(--accent-dim)' : undefined }}>
+                          <td style={{ ...td, fontWeight: r.line_name === lineFilter ? 800 : 600 }}>{r.line_name}</td>
+                          <td style={{ ...td, textAlign:'right' }}>{n0(r.parts)}</td>
+                          <td style={{ ...td, textAlign:'right', color: r.negParts ? 'var(--red)' : 'var(--muted)' }}>
+                            {r.negParts ? `${n0(r.negParts)} (${n0(r.negQty)})` : '—'}
+                          </td>
+                          <td style={{ ...td, textAlign:'right', color:'var(--muted)' }}>
+                            {r.lastAt ? String(r.lastAt).slice(0, 10) : '—'}
+                          </td>
+                          <td style={{ ...td, textAlign:'right', color: r.driftAfter ? 'var(--amber)' : 'var(--muted)' }}>
+                            {r.driftAfter ? n0(r.driftAfter) : '—'}
+                          </td>
+                          <td style={{ ...td }}>
+                            <span style={{ fontSize:11, fontWeight:700, color: st.color }}>{tr(st.label)}</span>
+                            {r.never > 0 && r.status === 'partial' && (
+                              <span style={{ fontSize:11, color:'var(--muted)' }}> · {tr('เหลือ')} {n0(r.never)}</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
       {/* ── 📋 ตรวจนับ / เฟิร์มยอด ─────────────────────────────────────────── */}
       <div style={card}>
@@ -278,6 +433,7 @@ export default function StockCountSheet({ role, scope }) {
                   return (
                     <div key={r.mat_no} className={`sc-card${typed ? ' sc-typed' : ''}`}>
                       <MatLabel mat={r.mat_no} name={r.part_name} />
+                      {r.fromLevels && <div style={{ fontSize:11, color:'var(--muted)' }}>🆕 {tr('ทะเบียนตั้งไว้ที่ไลน์นี้ · ยังไม่เคยมีรายการ')}</div>}
                       <div className="sc-row">
                         <div className="sc-sys"><span>{tr('ในระบบ')}</span><b>{n0(r.qty_on_hand)}</b></div>
                         <input type="number" inputMode="numeric" min="0" placeholder={tr('นับได้')} aria-label={`${tr("นับได้จริง")} ${r.mat_no}`}
@@ -307,7 +463,10 @@ export default function StockCountSheet({ role, scope }) {
                     const typed = counts[r.mat_no] !== undefined && counts[r.mat_no] !== '';
                     return (
                       <tr key={r.mat_no}>
-                        <td style={{ ...td, maxWidth:320 }}><MatLabel mat={r.mat_no} name={r.part_name} /></td>
+                        <td style={{ ...td, maxWidth:320 }}>
+                          <MatLabel mat={r.mat_no} name={r.part_name} />
+                          {r.fromLevels && <div style={{ fontSize:11, color:'var(--muted)' }}>🆕 {tr('ทะเบียนตั้งไว้ที่ไลน์นี้ · ยังไม่เคยมีรายการ')}</div>}
+                        </td>
                         <td style={{ ...td, textAlign:'right' }}>{n0(r.qty_on_hand)}</td>
                         <td style={{ ...td, textAlign:'right' }}>
                           <input type="number" inputMode="numeric" min="0" style={numIn}

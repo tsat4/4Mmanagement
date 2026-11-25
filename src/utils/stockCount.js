@@ -128,3 +128,123 @@ export function pendingShipCuts({ orders, cutIds, counted, fgLine, sapOf, baseli
   });
   return { open, closedByCount, unresolved };
 }
+
+/* ─── 🧭 ขั้น ② ของแผน min/max — "รอบนับตั้งต้นที่ไลน์ปลายทาง" (2026-11-25 · คำสั่ง user) ──
+   ลำดับของแผนคือ ① ย้ายทะเบียนไปที่ของนอนรอจริง (ทำแล้ว 24/11) → ② **นับของจริงตั้งต้น**
+   → ③ ค่อยเชื่อ `qty_on_hand` (📄 docs/modules/kanban-auto-calc.md)
+
+   🔴🔴 กฎเหล็กของขั้นนี้ — **"ปรับยอด" ไม่ใช่ "นับของจริง" ห้ามนับรวมกัน**
+   `line_stock_transactions.type='adjust'` เป็นถุงรวมของหลายเรื่องที่คนละความหมายกันสิ้นเชิง:
+     · `ตรวจนับ: …`                  = **คนไปยืนนับของบนชั้น** ⇒ เป็นข้อเท็จจริงของวันนั้น
+     · `ตั้งยอดให้ตรงไฟล์ Monitoring` = ตั้งยอดตามไฟล์ Excel (191+102+88 แถว) — **ไม่ได้นับ**
+     · `ตั้งต้นใหม่ 01/10` · `ย้ายยอด…` · `แก้ย้อนหลัง…` · `กลับรายการ…` = การแก้บัญชี **ไม่ได้นับ**
+   ⇒ ถ้าเอา adjust ทุกแบบมาตอบ "ไลน์นี้นับล่าสุดเมื่อไหร่" จอจะบอกว่า LINE D นับแล้ว 03/11
+     ทั้งที่วันนั้นคือการตั้งยอดตามไฟล์ = **จอโกหก** (เคสจริงของ LINE D: ยอดติดลบ −100,212
+     เกิดจากการตั้งยอดตามไฟล์ทับกันหลายรอบ ไม่ใช่การผลิต — ดูเอกสาร kanban-auto-calc.md)
+
+   🔴 **ทำไมมี 2 ฟังก์ชัน ห้ามยุบเป็นตัวเดียว**
+     · `lastCountAt()`        = เส้น "ห้ามหักใบส่งย้อนหลังข้ามรอบนี้" — ตั้งใจนับ adjust **ทุกแบบ**
+       เพราะการตั้งยอดตามไฟล์ก็สะท้อนของที่ออกไปแล้วเหมือนกัน ⇒ ไม่หัก = **ปลอดภัยกว่า** (fail-closed)
+     · `lastPhysicalCountAt()` = "ไลน์นี้มีคนไปนับของจริงล่าสุดเมื่อไหร่" — ใช้ตอบความคืบหน้าของรอบนับ
+       ที่นี่ fail-closed คือ **ตอบว่ายังไม่นับ** (ไม่เคลมว่านับแล้ว)
+   ──────────────────────────────────────────────────────────────────────────── */
+
+/** หัวข้อ note ที่ `toAdjustTxns()` เขียน — ตัวเดียวที่แปลว่า "คนไปนับของจริง" */
+export const COUNT_NOTE_PREFIX = 'ตรวจนับ:';
+
+/** แถวนี้คือผลการนับของจริงไหม (ไม่ใช่การปรับยอด/ตั้งยอดตามไฟล์) */
+export function isPhysicalCount(t) {
+  if (!t || t.type !== 'adjust') return false;
+  if (t.status && t.status !== 'approved') return false;
+  return String(t.note || '').trimStart().startsWith(COUNT_NOTE_PREFIX);
+}
+
+/** เวลานับ**ของจริง**ล่าสุดต่อ (คลัง, mat) — คนละตัวกับ `lastCountAt` (ดูกฎข้างบน)
+ *  @returns {Object} key `${line_name}\u0000${mat_no}` → ISO string */
+export function lastPhysicalCountAt(txns) {
+  const m = {};
+  (txns || []).forEach(t => {
+    if (!isPhysicalCount(t)) return;
+    const at = t.created_at || null;
+    if (!at) return;
+    const k = `${t.line_name}\u0000${t.mat_no}`;
+    if (!m[k] || at > m[k]) m[k] = at;
+  });
+  return m;
+}
+
+const sKey = (line, mat) => `${line}\u0000${mat}`;
+
+/** 📋 ความคืบหน้ารอบนับ แยกรายไลน์/คลัง — ตัวเลขทุกตัวของแผงรอบนับออกจากที่นี่
+ *
+ *  🔴 อ่าน ledger ไม่ได้ = คืน `null` ห้ามคืน `[]` — "ไม่มีงานต้องนับ" กับ "อ่านไม่ได้" คนละเรื่อง
+ *     (กฎข้อ 12 ของ db-write-rules: ลิสต์ว่าง 2 ความหมาย)
+ *
+ *  @param {Array}  a.stock   line_stock_summary [{ line_name, mat_no, qty_on_hand }]
+ *  @param {Array}  a.txns    adjust ที่ approved [{ line_name, mat_no, qty, note, type, status, created_at }]
+ *  @param {Array}  [a.levels] line_part_levels [{ line_name, mat_no }] — พาร์ทที่ทะเบียนบอกว่าต้องมีที่ไลน์นี้
+ *  @returns {null | Array} เรียงงานมากก่อน (ติดลบมากสุดขึ้นก่อน)
+ */
+export function countRoundRows({ stock, txns, levels }) {
+  if (!Array.isArray(stock) || !Array.isArray(txns)) return null;   // fail-closed
+  const lastAt = lastPhysicalCountAt(txns);
+
+  /* พาร์ทที่ "ต้องนับ" ของแต่ละไลน์ = แถวในคลัง ∪ คู่ที่ทะเบียน min/max ตั้งไว้ที่ไลน์นี้
+     (ทะเบียนตั้งไว้แต่ไม่มีแถวเลย = ของควรอยู่ที่นี่ แต่ระบบยังไม่เคยรู้จัก — ต้องนับได้ด้วย) */
+  const per = new Map();   // line → { mats:Map(mat → qty), fromLevels:Set }
+  const unit = (ln) => {
+    let u = per.get(ln);
+    if (!u) { u = { mats: new Map(), fromLevels: new Set() }; per.set(ln, u); }
+    return u;
+  };
+  (stock || []).forEach(s => {
+    const ln = String(s.line_name ?? '').trim();
+    if (!ln || !s.mat_no) return;
+    unit(ln).mats.set(String(s.mat_no), parseFloat(s.qty_on_hand) || 0);
+  });
+  (levels || []).forEach(l => {
+    const ln = String(l.line_name ?? '').trim();
+    if (!ln || !l.mat_no) return;
+    const u = unit(ln);
+    const mat = String(l.mat_no);
+    if (!u.mats.has(mat)) { u.mats.set(mat, 0); u.fromLevels.add(mat); }
+  });
+
+  /* "หลังนับแล้วมีคนมาปรับยอดอีกเท่าไหร่" — สัญญาณว่าการนับ **ไม่อยู่** (ต้องแก้ที่การบันทึก ไม่ใช่นับซ้ำ) */
+  const drift = {};
+  (txns || []).forEach(t => {
+    if (!t || t.type !== 'adjust') return;
+    if (t.status && t.status !== 'approved') return;
+    if (isPhysicalCount(t)) return;                       // การนับไม่ใช่ drift
+    const k = sKey(String(t.line_name ?? '').trim(), String(t.mat_no ?? ''));
+    const mark = lastAt[k];
+    if (!mark || !t.created_at || t.created_at <= mark) return;   // ก่อนรอบนับ = ไม่นับเป็น drift
+    drift[k] = (drift[k] || 0) + Math.abs(parseFloat(t.qty) || 0);
+  });
+
+  const out = [];
+  per.forEach((u, line_name) => {
+    let parts = 0, zeroParts = 0, negParts = 0, negQty = 0, counted = 0, never = 0;
+    let lineLastAt = null, driftAfter = 0, noRowParts = 0;
+    u.mats.forEach((qty, mat) => {
+      parts += 1;
+      if (qty === 0) zeroParts += 1;
+      if (qty < 0) { negParts += 1; negQty += qty; }
+      if (u.fromLevels.has(mat)) noRowParts += 1;
+      const at = lastAt[sKey(line_name, mat)] || null;
+      if (at) { counted += 1; if (!lineLastAt || at > lineLastAt) lineLastAt = at; } else never += 1;
+      driftAfter += drift[sKey(line_name, mat)] || 0;
+    });
+    out.push({
+      line_name, parts, zeroParts, negParts, negQty, counted, never,
+      noRowParts,                                   // ทะเบียนตั้งไว้ที่นี่ แต่ยังไม่เคยมีรายการ
+      lastAt: lineLastAt,
+      driftAfter,
+      status: never === parts ? 'none' : never > 0 ? 'partial' : 'done',
+    });
+  });
+  /* เรียง "งานมากก่อน": ติดลบหนักสุด → ยังไม่เคยนับ → พาร์ทมาก */
+  out.sort((a, b) => (a.negQty - b.negQty) || (b.never - a.never) || (b.parts - a.parts)
+    || String(a.line_name).localeCompare(String(b.line_name)));
+  return out;
+}
