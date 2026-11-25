@@ -12892,3 +12892,20 @@ test('🏬 store-leg-always-written — ใบขอเติมต้องเ�
     + '\n   ⇒ พาร์ทที่ไม่เข้าเงื่อนไขจะได้ของเข้าไลน์โดยไม่มีใครหัก = ยอด STORE พองเงียบๆ\n'
     + '   fix: push เสมอ · ไม่พอให้ติดลบ แล้วแจ้งเหตุผลใน note/toast (กฎ 19/11 "ตัดเต็มและติดลบ")\n');
 });
+
+/* ── 🛡️ skill-delete-keeps-scores (25/11 · user "ทำด่านกันลบสกิลที่ยังมีคะแนนด้วย") ──────
+   เดิมปุ่มลบสกิลที่ /operator ลบคะแนนพนักงานทุกคนพ่วงไปด้วย · คะแนนค้างไร้นิยาม 22 รหัสขึ้นการ์ดเป็นรหัส
+   ด่านจริงอยู่ DB (trg_skill_def_delete_guard) — ด่านนี้กันจอกลับไปลบคะแนนพ่วง */
+test('🛡️ skill-delete-keeps-scores — ปุ่มลบสกิลห้ามลบคะแนนพนักงานพ่วง', () => {
+  const src = stripComments(readFileSync(join(ROOT, 'src/pages/operator.jsx'), 'utf8'));
+  /* เฉพาะตัวลบสกิล — ฟอร์มแก้พนักงาน (ล้างคะแนนรายคน) ยังลบแถวของคนนั้นได้ตามปกติ */
+  const start = src.indexOf('const handleDeleteSkill');
+  assert.ok(start >= 0, 'หา handleDeleteSkill ใน operator.jsx ไม่เจอ — ย้าย/เปลี่ยนชื่อแล้วต้องตามแก้ด่านนี้');
+  const code = src.slice(start, src.indexOf('const handleUpdateSkill', start));
+  assert.ok(/employee_skills[\s\S]*count:\s*'exact'/.test(code), 'handleDeleteSkill ต้องนับคะแนนก่อนลบ');
+  assert.ok(!/from\(\s*'employee_skills'\s*\)\s*\.delete\(/.test(code),
+    '\n🛡️ operator.jsx ห้าม .from(\'employee_skills\').delete() — ลบสกิลได้เฉพาะตัวที่ยังไม่มีใครมีคะแนน '
+    + '(นับก่อน + trigger trg_skill_def_delete_guard ฝั่ง DB · 📄 docs/modules/employee-skills-exp.md §25/11)\n');
+  const mig = readFileSync(join(ROOT, 'supabase/migrations/20261125b_skill_def_delete_guard.sql'), 'utf8');
+  assert.ok(/before delete on public\.skill_definitions/.test(mig), 'migration ด่านลบสกิลต้องมี trigger before delete');
+});
