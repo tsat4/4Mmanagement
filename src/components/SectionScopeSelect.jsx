@@ -49,7 +49,17 @@ export default function SectionScopeSelect({
   }, [only, scopeSecs]);
 
   const cur = useMemo(() => {
-    if (pickLine && line) return { kind: index?.has?.('line', line) || !index?.has?.('line_group', line) ? 'line' : 'line_group', value: line };
+    /* กลุ่มไลน์ที่ถูกซ่อนเพราะชื่อซ้ำแผนก (`merged` · orgScope.js 30/10 — 📂 LINE APRON ASSY · HYDROFORM · GOR)
+       ⇒ ชี้แผนกที่แสดงแทน ไม่งั้นช่องขึ้น "⚠ ไม่อยู่ในตัวเลือก" (user 25/11 · กดกรอบบนภาพรวมโรงงาน Manpower Board)
+       · กลุ่มที่ไม่ได้ซ่อน (STORE · JIG MTN — มีทั้งแผนกและกลุ่มชื่อเดียวกัน) = คงเป็นกลุ่มไลน์เหมือนเดิม */
+    if (pickLine && line) {
+      if (index?.has?.('line', line)) return { kind: 'line', value: line };
+      if (index?.has?.('line_group', line)) {
+        const hidden = index?.optionOf?.('line_group', line)?.merged && index?.has?.('department', line);
+        return { kind: hidden ? 'department' : 'line_group', value: line };
+      }
+      return { kind: 'line', value: line };
+    }
     if (pickDept && dept) return { kind: 'department', value: dept };
     return value ? { kind: 'section', value } : PLANT;
   }, [value, dept, pickDept, pickLine, line, index]);
