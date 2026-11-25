@@ -85,7 +85,7 @@ Realtime + Edge Functions/Deno) · Telegram Bot API · deploy = Render.com (Stat
   · ทำโมฆะได้เฉพาะ**กะเปล่า + ต้องมีเหตุผล** (trigger `trg_session_void_guard` + CHECK ฝั่ง DB · `voidBlockReason()` ฝั่งจอ)
 - `daily_production_logs.assigned_line` = **id จุดงาน ไม่ใช่ชื่อไลน์**
 - `employee_skills` — ห้ามเขียนคะแนนจาก client (ดู "Employee Skills & EXP Farming")
-- ทะเบียน master ที่มี picker กลางแล้ว (`cost_centers` · **DR:** `customers`/`suppliers`/`die_press_lines`/`die_set_kinds`/`process_types`) — คอลัมน์ปลายทางเก็บ **name/code เป็น text เหมือนเดิม ไม่ผูก FK** · `die_press_lines` ตั้งใจแยกจาก `production_lines`
+- ทะเบียน master ที่มี picker กลางแล้ว (`cost_centers` · `companies` · **DR:** `customers`/`suppliers`/`die_press_lines`/`die_set_kinds`/`process_types`) — คอลัมน์ปลายทางเก็บ **name/code เป็น text เหมือนเดิม ไม่ผูก FK** · `die_press_lines` ตั้งใจแยกจาก `production_lines`
   🔴 **ทะเบียนที่จับคู่ด้วย "ข้อความ" (ไม่ผูก FK) — ลบ/เปลี่ยนชื่อแถวทะเบียน ต้องไล่เช็คและไล่แก้ปลายทางในคราวเดียว**
   ห้ามเช็คแค่ "มีลูกในตารางตัวเองไหม" · ต้นแบบ `src/utils/orgNodeRefs.js` (ผังองค์กร — เช็ค FK + สำเนาชื่อ ·
   ต่างชั้นใช้คีย์ต่างกัน code vs name) · **นับไม่ครบ = ห้ามลบ (fail-closed)** · 📄 `docs/modules/org-hierarchy.md`

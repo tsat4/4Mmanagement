@@ -6291,7 +6291,7 @@ test('🗑️ ทะเบียนข้อความ (SimpleMasterPanel) ต
   /* ทะเบียนที่ปลายทางเก็บเป็น "ข้อความ" ไม่ผูก FK ⇒ ลบแล้วไม่มีใครเตือน — ต้องมีด่านทุกตัว
      (cost_centers ใช้ util เฉพาะของตัวเอง `costCenterRefs.js` ตั้งแต่ 06/10) */
   const MUST_GUARD = ['customers', 'suppliers', 'die_press_lines', 'die_op_types',
-                      'die_set_kinds', 'repair_wi_registry', 'cost_centers'];
+                      'die_set_kinds', 'repair_wi_registry', 'cost_centers', 'companies'];
 
   for (const f of walk(join(ROOT, 'src'), ['.jsx', '.js'])) {
     const src = stripComments(readFileSync(f, 'utf8'));
