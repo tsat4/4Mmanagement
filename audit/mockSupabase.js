@@ -494,7 +494,9 @@ const TABLE_ROWS = {
     const isCount = everCounted && i % 2 === 0;      // นับก่อน (04/11) แล้วตั้งยอดทับทีหลัง (18/11) ⇒ driftAfter > 0
     return { ...r,
       line_name: LINE_NAME((j % 3) + 1), mat_no: `1010${1000 + j}`,
-      type: 'adjust', status: 'approved', qty: (i % 2 ? 1 : -1) * (100 + i * 7),
+      /* 🔴 ต้องมีใบ **pending** ด้วย — ช่องกรอกของพาร์ทที่มีใบค้างถูกปิด + NoticeBar "กันนับซ้ำ"
+         ถ้า mock approved ล้วน สายนั้นไม่เคยถูกเรนเดอร์ใน harness */
+      type: 'adjust', status: i % 7 === 3 ? 'pending' : 'approved', qty: (i % 2 ? 1 : -1) * (100 + i * 7),
       note: isCount ? `ตรวจนับ: ระบบ ${j * 10} → นับได้ ${j * 10 + 5}`
         : j % 2 ? 'ตั้งยอดให้ตรงไฟล์ Monitoring 300T' : 'ย้ายยอดรับเข้าล็อตไป STORE',
       created_at: isCount ? '2026-11-04T02:00:00Z' : '2026-11-18T02:00:00Z' };

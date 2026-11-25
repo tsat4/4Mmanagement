@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { countDelta, toAdjustTxns, countSummary, lastCountAt, pendingShipCuts, STOCK_BASELINE_AT,
-  isPhysicalCount, lastPhysicalCountAt, countRoundRows } from '../stockCount.js';
+  isPhysicalCount, lastPhysicalCountAt, countRoundRows,
+  pendingAdjustMap, splitPendingBlocked, pendingKey } from '../stockCount.js';
 
 /* ─── countDelta — "นับได้เท่าไหร่" ไม่ใช่ "เพิ่ม/ลดเท่าไหร่" ─────────────── */
 test('countDelta: ช่องว่าง = ยังไม่นับ ไม่ใช่ศูนย์', () => {
@@ -248,4 +249,41 @@ test('countRoundRows: เรียงงานมากก่อน — ติ�
     { line_name: 'ปกติ', mat_no: 'A', qty_on_hand: 50 },
   ];
   assert.deepEqual(countRoundRows({ stock, txns: [] }).map(r => r.line_name), ['หนัก', 'เบา', 'ปกติ']);
+});
+
+/* ─── ⏳ กันนับซ้ำเมื่อมีใบค้างรออนุมัติ (25/11 · user "ต่างคนต่างนับ ต่างคนต่างอัพยอด จะมั่วไหม") ──
+   view line_stock_summary = `where status='approved'` ⇒ ใบ pending ไม่อยู่ใน qty_on_hand
+   คนที่ 2 จึงเห็นยอดเดิม แล้วเขียนผลต่างซ้ำ = ของหายสองเท่าเงียบๆ */
+
+test('pendingAdjustMap: รวมใบ adjust ที่ยัง pending ต่อ (คลัง, mat) — ทุกชนิด ไม่ใช่เฉพาะใบตรวจนับ', () => {
+  const m = pendingAdjustMap([
+    { line_name: 'L1', mat_no: 'A', type: 'adjust', status: 'pending', qty: -220, created_by: 'สมชาย', created_at: '2026-11-25T01:00:00Z', note: 'ตรวจนับ: x' },
+    { line_name: 'L1', mat_no: 'A', type: 'adjust', status: 'pending', qty: -30,  created_by: 'สมหญิง', created_at: '2026-11-25T03:00:00Z', note: 'ปรับยอดมือ' },
+    { line_name: 'L1', mat_no: 'B', type: 'adjust', status: 'approved', qty: -99, created_at: '2026-11-25T01:00:00Z', note: 'ตรวจนับ: y' },
+    { line_name: 'L1', mat_no: 'C', type: 'consume', status: 'pending', qty: 5, created_at: '2026-11-25T01:00:00Z' },
+  ]);
+  assert.equal(m[pendingKey('L1', 'A')].n, 2);
+  assert.equal(m[pendingKey('L1', 'A')].qty, -250);
+  assert.equal(m[pendingKey('L1', 'A')].by, 'สมหญิง');          // ใบล่าสุด
+  assert.equal(m[pendingKey('L1', 'B')], undefined);            // อนุมัติแล้ว = อยู่ในยอดแล้ว ไม่ต้องกัน
+  assert.equal(m[pendingKey('L1', 'C')], undefined);            // ไม่ใช่ adjust
+});
+
+test('splitPendingBlocked: คู่ที่มีใบค้างต้องถูกกันไว้ ห้ามทิ้งเงียบ', () => {
+  const pend = pendingAdjustMap([
+    { line_name: 'L1', mat_no: 'A', type: 'adjust', status: 'pending', qty: -220, created_at: '2026-11-25T01:00:00Z' },
+  ]);
+  const { ok, blocked } = splitPendingBlocked([
+    { line_name: 'L1', mat_no: 'A', qty: -220 },
+    { line_name: 'L1', mat_no: 'B', qty: 10 },
+  ], pend);
+  assert.deepEqual(ok.map(t => t.mat_no), ['B']);
+  assert.deepEqual(blocked.map(t => t.mat_no), ['A']);
+  assert.equal(blocked[0].pending.n, 1);                        // จอต้องบอกได้ว่าค้างกี่ใบ
+});
+
+test('splitPendingBlocked: ไม่มีใบค้าง = ผ่านทั้งหมด (พฤติกรรมเดิมเป๊ะ)', () => {
+  const r = splitPendingBlocked([{ line_name: 'L1', mat_no: 'A' }], {});
+  assert.equal(r.ok.length, 1);
+  assert.equal(r.blocked.length, 0);
 });
