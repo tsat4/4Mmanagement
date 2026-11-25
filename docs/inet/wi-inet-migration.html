@@ -1,0 +1,230 @@
+<title>WI ย้าย ESM ขึ้น INET</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;600;800&family=Noto+Sans+Thai:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+/* VOICE work — วิธีปฏิบัติงาน (WI) ให้ทีมโรงงาน/IT/INET ใช้ตามจริง
+   IDEA ใบงานเดินสายของโรงงาน: ทุกขั้นมีเจ้าของเป็นสี (คุณ · IT · INET · Claude)
+   PICTURE แผนผังสายงาน 4 เลน + ภาพสองฐานรวมเป็นหนึ่ง + ภาพจำลองหน้าจอ
+   COLOUR newspaper desk: ชมพูอ่อน, หมึกดำ, teal, claret + สีเจ้าของงาน
+   TYPE Libre Franklin 800 + Noto Sans Thai
+   LAYOUT หัวเรื่อง+ข้อสรุปซ้าย ตัวเลขสำคัญขวา → แผนผังเลนเต็มกว้าง → หัวข้อเรียงลง */
+:root{color-scheme:light dark;--bg:light-dark(#fff4f0,#1c1512);--card:light-dark(#ffffff,#271e1a);--ink:light-dark(#1a1817,#f3ece8);--mute:light-dark(#5b524d,#b9aea8);--line:light-dark(#e8cfc6,#3d302a);--teal:light-dark(#0d7680,#4fb3bc);--claret:light-dark(#990f3d,#e0567f);--you:light-dark(#d9480f,#ff8a4c);--it:light-dark(#6741d9,#a58bff);--inet:light-dark(#0b7a3b,#4fd18b);--ai:light-dark(#1c5d99,#6fb0ee)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.6 "Noto Sans Thai","Libre Franklin",system-ui,sans-serif;overflow-x:clip;margin:0}
+.band{padding-block:clamp(24px,4vw,52px);padding-left:max(5vw,16px,env(safe-area-inset-left,0px));padding-right:max(5vw,16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1180px;margin:0 auto}
+h1{font:800 clamp(30px,4.4vw,48px)/1.1 "Libre Franklin","Noto Sans Thai",sans-serif;letter-spacing:-.02em;margin:0 0 12px}
+h2{font:800 clamp(22px,2.6vw,28px)/1.2 "Libre Franklin","Noto Sans Thai",sans-serif;margin:0 0 10px}
+h3{font-size:17px;margin:0 0 6px}
+p{margin:0 0 10px;max-width:72ch}
+.lede{font-size:18px}
+.top{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:28px;align-items:start}
+.facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.fact{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.fact b{display:block;font:800 30px/1.1 "Libre Franklin",sans-serif;color:var(--teal)}
+.fact span{font-size:14px;color:var(--mute)}
+.note{border-left:4px solid var(--claret);background:var(--card);padding:10px 14px;border-radius:0 8px 8px 0;margin:12px 0}
+.ok{border-left-color:var(--teal)}
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin:6px 0 14px;font-size:14px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.lanes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.lane{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+.lane h3{display:flex;align-items:center;gap:8px}
+.lane h3 i{width:14px;height:14px;border-radius:4px;display:inline-block}
+.step{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;padding:8px 0;border-top:1px dashed var(--line);font-size:15px}
+.step:first-of-type{border-top:0}
+.n{font:800 13px/22px "Libre Franklin",sans-serif;color:#fff;border-radius:50%;width:22px;height:22px;text-align:center}
+.you{background:var(--you)}.it{background:var(--it)}.inet{background:var(--inet)}.ai{background:var(--ai)}
+.done{font-size:12px;color:var(--teal);font-weight:600}
+.fig{position:relative;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.fig svg{display:block;width:100%;height:auto}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;background:var(--card);font-size:15px}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:14px;color:var(--mute);font-weight:600}
+.tag{display:inline-block;font-size:12px;font-weight:600;border-radius:999px;padding:1px 8px;color:#fff;white-space:nowrap}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}
+.shot{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:14px}
+.shot .bar{display:flex;gap:6px;align-items:center;padding:7px 10px;background:light-dark(#2b2b2b,#111);color:#ddd;font-size:12px}
+.shot .bar i{width:9px;height:9px;border-radius:50%;background:#666;display:inline-block}
+.shot .body{display:grid;grid-template-columns:130px minmax(0,1fr)}
+.shot .side{border-right:1px solid var(--line);padding:8px;font-size:13px;color:var(--mute)}
+.shot .side div{padding:4px 6px;border-radius:5px}
+.shot .side .hl{background:var(--you);color:#fff}
+.shot .main{padding:10px 12px}
+.field{border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-family:ui-monospace,monospace;font-size:12px;margin:6px 0;overflow-wrap:anywhere}
+.hot{outline:3px solid var(--you);outline-offset:2px}
+.cap{font-size:13px;color:var(--mute);padding:8px 12px;border-top:1px solid var(--line)}
+ol.wi{padding-left:22px;margin:6px 0}ol.wi li{margin:6px 0}
+code{font-family:ui-monospace,monospace;font-size:.92em;background:light-dark(#f6e6e0,#33261f);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+.dont li{margin:4px 0}
+footer{font-size:13px;color:var(--mute)}
+@media(max-width:900px){.top,.two{grid-template-columns:minmax(0,1fr)}.lanes{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.lanes{grid-template-columns:minmax(0,1fr)}table{font-size:13px}th,td{padding:6px 5px}.shot .body{grid-template-columns:96px minmax(0,1fr)}.stack thead{display:none}.stack tr{display:grid;padding-block:8px;border-bottom:1px solid var(--line)}.stack td{border:0;display:grid;grid-template-columns:7em minmax(0,1fr);gap:8px}.stack td::before{content:attr(data-l);color:var(--mute);font-size:12px}}
+</style>
+
+<div class="band"><div class="wrap top">
+  <div>
+    <h1>WI ย้ายระบบ ESM ขึ้น INET (ฐานข้อมูล Main + DR รวมเป็นฐานเดียว)</h1>
+    <p class="lede"><b>ไม่ต้อง reverse engineer</b> — โค้ดทั้งหมดเป็นของเราอยู่ในรีโป และ dump ได้ทั้งโครงสร้างและข้อมูล ·
+    การรวม 2 ฐาน <b>แก้ 8 จุดในฐานข้อมูล</b> (สคริปต์ทำให้แล้ว ซ้อมผ่าน) และ <b>ไม่แก้โค้ดหน้าเว็บเลย</b> — เปลี่ยนแค่ค่าตั้งตอน build</p>
+    <div class="note"><b>สิ่งที่ INET บอกว่า "dump แล้วอัปโหลดใส่ container"</b> — ไฟล์ dump ต้องลง <b>เครื่องฐานข้อมูล (VLAN 1)</b> ไม่ใช่ container ของแอป
+    และ dump ของ Supabase <b>ลง PostgreSQL ธรรมดาตรงๆ ไม่ได้</b> (มี role/schema/extension เฉพาะ Supabase) ⇒ ต้องลงผ่านสคริปต์รวมฐานของเรา</div>
+    <p style="font-size:14px;color:var(--mute)">สถานะ 25/11/2026 · ของเดิม (Render + Supabase) รันต่อตามปกติ ไม่ถูกแตะ · งานทั้งหมดอยู่ branch <code>claude/quirky-allen-yt4gsi</code></p>
+  </div>
+  <div class="facts">
+    <div class="fact"><b>0</b><span>บรรทัดโค้ดหน้าเว็บที่ต้องแก้</span></div>
+    <div class="fact"><b>8</b><span>จุดในฐานที่ต้องจัดการตอนรวม (สคริปต์พร้อม)</span></div>
+    <div class="fact"><b>15/15</b><span>ข้อทดสอบระบบใหม่ผ่าน (ซ้อมในเครื่อง)</span></div>
+    <div class="fact"><b>133</b><span>ผู้ใช้ login ด้วยรหัสเดิมได้ (ซ้อมพิสูจน์แล้ว)</span></div>
+  </div>
+</div></div>
+
+<div class="band" style="padding-top:0"><div class="wrap">
+  <h2>ใครทำอะไร — 4 เลน เรียงตามลำดับ</h2>
+  <div class="legend"><span><i class="you"></i>คุณ (เจ้าของระบบ)</span><span><i class="it"></i>IT บริษัท</span><span><i class="inet"></i>INET</span><span><i class="ai"></i>Claude (AI)</span></div>
+  <div class="lanes">
+    <div class="lane"><h3><i class="you"></i>คุณ</h3>
+      <div class="step"><span class="n you">1</span><div>ยืนยันแผนกับ INET: ฐานลง VM (VLAN 1) ผ่านสคริปต์ของเรา</div></div>
+      <div class="step"><span class="n you">4</span><div>คัด <b>connection string</b> ฐาน MAIN + Product DB จากหน้า Supabase (ภาพ ก) ส่ง INET ทางช่องทางปลอดภัย</div></div>
+      <div class="step"><span class="n you">5</span><div>รวบรวม <b>ความลับของ edge functions</b> (Telegram ฯลฯ) จากต้นทาง — Supabase แสดงค่าเดิมซ้ำไม่ได้ (ภาพ ข)</div></div>
+      <div class="step"><span class="n you">9</span><div>ให้ผู้ใช้จริงลอง login + ใช้งาน · ตัดสินใจขออนุมัติย้าย</div></div>
+      <div class="step"><span class="n you">10</span><div>หลังยกข้อมูลเสร็จ: <b>เปลี่ยนรหัสฐานข้อมูลบน Supabase</b> (ตรวจแล้วไม่มีอะไรในระบบใช้รหัสนี้)</div></div>
+    </div>
+    <div class="lane"><h3><i class="it"></i>IT บริษัท</h3>
+      <div class="step"><span class="n it">2</span><div>ตั้ง<b>โดเมน</b> (เช่น esm.<i>บริษัท</i>) ชี้ IP Public ของ INET</div></div>
+      <div class="step"><span class="n it">3</span><div>ใบรับรอง HTTPS (หรือให้ INET ติดที่ Load Balancer)</div></div>
+      <div class="step"><span class="n it">11</span><div>วันย้ายจริง: แจ้งจุดที่ส่งข้อมูลเข้าระบบ (Node-RED พลังงาน, เมล demand) ให้ชี้ที่อยู่ใหม่</div></div>
+    </div>
+    <div class="lane"><h3><i class="inet"></i>INET</h3>
+      <div class="step"><span class="n inet">2</span><div>VM ฐานข้อมูล PostgreSQL 17 + extension + <code>wal_level=logical</code></div></div>
+      <div class="step"><span class="n inet">3</span><div>Firewall: VLAN 2→VLAN 1 :5432 · VLAN 2→S3 · container ออกเน็ต HTTPS</div></div>
+      <div class="step"><span class="n inet">3</span><div>S3 2 bucket (ไฟล์ระบบ · backup) + access key · registry ของ Rancher</div></div>
+      <div class="step"><span class="n inet">6</span><div>รันสคริปต์ dump → รวมฐาน → ตรวจ จากเครื่องในรั้ว <b>หลัง 17:30</b> (ทำตาม WI ข้อ 4)</div></div>
+      <div class="step"><span class="n inet">8</span><div>Deploy container 7 ตัวบน Rancher ตามไฟล์ที่เราส่ง</div></div>
+    </div>
+    <div class="lane"><h3><i class="ai"></i>Claude</h3>
+      <div class="step"><span class="n ai">✓</span><div>สคริปต์ dump/รวม/ตรวจ <span class="done">เสร็จ · ซ้อมผ่าน</span></div></div>
+      <div class="step"><span class="n ai">✓</span><div>ชุดโปรแกรม + ค่าตั้ง + ทดสอบ <span class="done">เสร็จ · 15/15</span></div></div>
+      <div class="step"><span class="n ai">7</span><div>แปลงไฟล์ติดตั้งเป็นแบบ Rancher/Kubernetes · สคริปต์สร้าง role ของ Supabase บน Postgres ทั่วไป</div></div>
+      <div class="step"><span class="n ai">7</span><div>สคริปต์ย้ายรูปไป S3 · cron 20 งานที่อยู่ใหม่ · backup รายคืน</div></div>
+      <div class="step"><span class="n ai">7</span><div>เทียบโค้ด edge function ในรีโปกับตัวที่รันบน cloud</div></div>
+    </div>
+  </div>
+</div></div>
+
+<div class="band" style="padding-top:0"><div class="wrap two">
+  <div>
+    <h2>รวม Main + DR: แก้ 8 จุด ไม่แตะโค้ดหน้าเว็บ</h2>
+    <p>ตรวจชื่อทุกชนิดระหว่าง 2 ฐาน (ตาราง · index · ฟังก์ชัน · สิทธิ์ไฟล์ · archive) — <b>ชนจริงแค่ 3 ตาราง + 1 ฟังก์ชัน</b> ที่เหลือยกมาตรงๆ</p>
+    <div class="fig"><svg viewBox="0 0 520 300" role="img" aria-label="ภาพฐาน Main และ DR รวมเป็นฐานเดียวบน INET">
+      <defs><linearGradient id="gm" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#4fb3bc"/><stop offset="1" stop-color="#0d7680"/></linearGradient>
+      <linearGradient id="gd" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#e0567f"/><stop offset="1" stop-color="#990f3d"/></linearGradient>
+      <linearGradient id="gn" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#4fd18b"/><stop offset="1" stop-color="#0b7a3b"/></linearGradient></defs>
+      <g font-family="Noto Sans Thai, sans-serif" font-size="14" fill="var(--ink)">
+        <ellipse cx="95" cy="62" rx="62" ry="14" fill="url(#gm)"/><rect x="33" y="62" width="124" height="62" fill="url(#gm)"/><ellipse cx="95" cy="124" rx="62" ry="14" fill="#0d7680"/>
+        <text x="95" y="98" text-anchor="middle" fill="#fff" font-weight="800">MAIN</text>
+        <text x="95" y="160" text-anchor="middle">157 ตาราง · 296 MB</text><text x="95" y="178" text-anchor="middle">ผู้ใช้ login 133 คน</text>
+        <ellipse cx="425" cy="62" rx="62" ry="14" fill="url(#gd)"/><rect x="363" y="62" width="124" height="62" fill="url(#gd)"/><ellipse cx="425" cy="124" rx="62" ry="14" fill="#990f3d"/>
+        <text x="425" y="98" text-anchor="middle" fill="#fff" font-weight="800">DR</text>
+        <text x="425" y="160" text-anchor="middle">197 ตาราง · 353 MB</text><text x="425" y="178" text-anchor="middle">Product DB</text>
+        <path d="M160 110 C 220 120, 230 200, 248 222" fill="none" stroke="#0d7680" stroke-width="5" stroke-linecap="round"/>
+        <path d="M360 110 C 300 120, 290 200, 272 222" fill="none" stroke="#990f3d" stroke-width="5" stroke-linecap="round"/>
+        <ellipse cx="260" cy="226" rx="74" ry="15" fill="url(#gn)"/><rect x="186" y="226" width="148" height="46" fill="url(#gn)"/><ellipse cx="260" cy="272" rx="74" ry="15" fill="#0b7a3b"/>
+        <text x="260" y="257" text-anchor="middle" fill="#fff" font-weight="800">ฐานเดียวบน INET</text>
+        <rect x="190" y="28" width="140" height="58" rx="8" fill="var(--card)" stroke="var(--claret)" stroke-width="1.5"/>
+        <text x="260" y="51" text-anchor="middle" font-weight="800" fill="var(--claret)">ชื่อชน 4 จุด</text>
+        <text x="260" y="72" text-anchor="middle" font-size="13">ตัดของซ้ำ · รวม audit</text>
+      </g></svg>
+      <div class="cap">ตัวเลขวัดจากฐานจริง 18–20/11/2026 (อ่านอย่างเดียว)</div></div>
+  </div>
+  <div class="scroll"><table class="stack">
+    <thead><tr><th>#</th><th>จุด</th><th>ทำอะไร</th><th>สถานะ</th></tr></thead>
+    <tbody>
+      <tr><td data-l="#">1</td><td data-l="จุด"><code>profiles</code> ของ DR</td><td data-l="ทำอะไร">ไม่ยก (3 แถวเก่า) ใช้ของ Main 133 คน + ตัด 3 ฟังก์ชันที่ใช้แค่กับตารางนี้</td><td data-l="สถานะ">สคริปต์ ✓</td></tr>
+      <tr><td data-l="#">2</td><td data-l="จุด"><code>notifications</code> ของ DR</td><td data-l="ทำอะไร">ไม่ยก (0 แถว) ใช้ของ Main</td><td data-l="สถานะ">สคริปต์ ✓</td></tr>
+      <tr><td data-l="#">3</td><td data-l="จุด"><code>audit_log</code> ชน id</td><td data-l="ทำอะไร">รวมตารางเดียว เลข id ของ DR +1,000,000,000</td><td data-l="สถานะ">สคริปต์ ✓</td></tr>
+      <tr><td data-l="#">4</td><td data-l="จุด">สิทธิ์อ่าน audit</td><td data-l="ทำอะไร">anon อ่านได้เฉพาะของตาราง DR (เหมือนเดิม) ไม่เห็นของ Main</td><td data-l="สถานะ">สคริปต์ ✓</td></tr>
+      <tr><td data-l="#">5</td><td data-l="จุด"><code>fn_audit</code> 2 แบบ</td><td data-l="ทำอะไร">ของ DR เปลี่ยนชื่อเป็น <code>fn_audit_dr</code> + ย้าย trigger 137 ตัว</td><td data-l="สถานะ">สคริปต์ ✓</td></tr>
+      <tr><td data-l="#">6</td><td data-l="จุด">จอสด · ไฟล์ · extension</td><td data-l="ทำอะไร">รวมรายชื่อตารางจอสด · bucket 19 ตัว · ติด <code>pg_trgm</code>/<code>pgstattuple</code></td><td data-l="สถานะ">สคริปต์ ✓</td></tr>
+      <tr><td data-l="#">7</td><td data-l="จุด">cron 20 งาน</td><td data-l="ทำอะไร">สร้างใหม่ด้วยที่อยู่ INET (ของเดิมเขียน URL Supabase ตายตัว)</td><td data-l="สถานะ">Claude ทำต่อ</td></tr>
+      <tr><td data-l="#">8</td><td data-l="จุด">หน้าเว็บ + edge function</td><td data-l="ทำอะไร">ตั้ง <code>VITE_SUPABASE_DR_URL</code> = ที่อยู่เดียวกับ Main ตอน build · ไม่แก้โค้ด</td><td data-l="สถานะ">ค่าตั้ง ✓</td></tr>
+    </tbody></table></div>
+</div></div>
+
+<div class="band" style="padding-top:0"><div class="wrap">
+  <h2>WI ทีละขั้น — ส่วนที่คุณต้องกดเอง</h2>
+  <p style="font-size:14px;color:var(--mute)">ภาพหน้าจอเป็นภาพจำลอง วาดตามโครงหน้า Supabase — ตำแหน่งเมนูจริงอาจต่างเล็กน้อย</p>
+  <div class="two">
+    <div>
+      <h3>ภาพ ก · คัด connection string ของฐานข้อมูล (ทำ 2 รอบ: MAIN และ Product DB)</h3>
+      <div class="shot"><div class="bar"><i></i><i></i><i></i>&nbsp;supabase.com/dashboard · MAIN</div>
+        <div class="body"><div class="side"><div>Table Editor</div><div>SQL Editor</div><div>Database</div><div>Edge Functions</div><div class="hl">Project Settings</div></div>
+          <div class="main"><b>Connect → Session pooler</b>
+            <div class="field">postgresql://postgres.&lt;project&gt;:<span style="color:var(--you)">[YOUR-PASSWORD]</span>@…pooler.supabase.com:<b>5432</b>/postgres</div>
+            <div class="field hot">Database password · Reset password</div>
+            <div style="font-size:12px;color:var(--mute)">ต้องเป็นพอร์ต <b>5432</b> (session) ไม่ใช่ 6543</div></div></div>
+        <div class="cap">ปุ่ม <b>Connect</b> ด้านบนของโปรเจค → แท็บ Session pooler · รหัสผ่านไม่แสดงซ้ำ ถ้าจำไม่ได้ต้อง Reset (ทำหลัง 17:30)</div></div>
+      <ol class="wi">
+        <li>เข้า <code>supabase.com/dashboard</code> → เลือกโปรเจค <b>MAIN</b></li>
+        <li>กด <b>Connect</b> → แท็บ <b>Session pooler</b> → คัดลอกข้อความเชื่อมต่อ (พอร์ต 5432)</li>
+        <li>แทน <code>[YOUR-PASSWORD]</code> ด้วยรหัสฐานข้อมูล (ไม่มี = Reset password)</li>
+        <li>ทำซ้ำกับโปรเจค <b>Product DB</b></li>
+        <li>ส่งให้ INET <b>ทางช่องทางที่ INET กำหนดที่มีรหัสผ่าน</b> — ห้าม LINE/อีเมล/แชท</li>
+      </ol>
+    </div>
+    <div>
+      <h3>ภาพ ข · ความลับของ edge functions (ต้องหาจากต้นทางเดิม)</h3>
+      <div class="shot"><div class="bar"><i></i><i></i><i></i>&nbsp;Edge Functions → Secrets</div>
+        <div class="body"><div class="side"><div>Database</div><div class="hl">Edge Functions</div><div>Storage</div></div>
+          <div class="main"><b>Secrets</b>
+            <div class="field">TELEGRAM_BOT_TOKEN · digest a1b2…</div><div class="field">TELEGRAM_CHAT_ID · digest 9f…</div><div class="field">INGEST_SECRET · digest 77…</div>
+            <div style="font-size:12px;color:var(--mute)">เห็นแค่ชื่อ + รหัสสรุป · <b>ดูค่าจริงไม่ได้</b></div></div></div>
+        <div class="cap">ค่าจริงต้องหาจากที่ตั้งไว้ครั้งแรก (BotFather ของ Telegram · ไฟล์ตั้งค่า Node-RED) หรือออกค่าใหม่</div></div>
+      <ol class="wi">
+        <li>ดูรายชื่อความลับทั้ง 2 โปรเจค (Edge Functions → Secrets) — จดเฉพาะ<b>ชื่อ</b></li>
+        <li>หาค่าจริงจากต้นทาง: Telegram bot token (BotFather), chat id, <code>INGEST_SECRET</code> (ฝั่ง Node-RED) ฯลฯ</li>
+        <li>ไม่เจอ = ออกค่าใหม่ แล้วไปแก้ฝั่งที่เรียกใช้ในวันย้าย</li>
+        <li>กรอกใส่ Secret บนระบบ INET เอง (ฟอร์ม <code>esm-functions</code>) — ห้ามแปะแชท</li>
+      </ol>
+    </div>
+  </div>
+  <h3 style="margin-top:18px">ขั้น INET รันสคริปต์ (ส่งให้ INET ทำตาม)</h3>
+  <ol class="wi">
+    <li>บนเครื่องในรั้ว (มี <code>pg_dump</code> เวอร์ชัน 17): ดึงโค้ดจาก GitHub โฟลเดอร์ <code>inet/</code></li>
+    <li><b>หลัง 17:30:</b> <code>SRC_MAIN_URL=… SRC_DR_URL=… OUT=./work ./10_dump_source.sh</code> — อ่านอย่างเดียว บังคับระดับการเชื่อมต่อ</li>
+    <li><code>TGT_URL=postgresql://…@&lt;IP VM&gt;:5432/postgres OUT=./work ./20_build_target.sh</code> — สร้างฐานรวม (ปฏิเสธทันทีถ้าชี้ผิดไปฐานเดิม)</li>
+    <li><code>TGT_URL=… OUT=./work ./30_verify.sh</code> — <b>ต้องขึ้น "✅ ผ่าน — ข้อมูลครบทุกแถว ทุกตาราง"</b> ไม่ผ่าน = ห้ามใช้งาน</li>
+    <li>ลบโฟลเดอร์ <code>work</code> (มีข้อมูลทั้งโรงงาน) แล้วแจ้งกลับ</li>
+  </ol>
+</div></div>
+
+<div class="band" style="padding-top:0"><div class="wrap two">
+  <div>
+    <h2>Claude ทำให้ไม่ได้ — คุณ/IT/INET ต้องทำ</h2>
+    <div class="scroll"><table><thead><tr><th>เรื่อง</th><th>เหตุผล</th><th>ใคร</th></tr></thead><tbody>
+      <tr><td>รหัสฐานข้อมูล Supabase</td><td>Claude ไม่มีสิทธิ์เข้าหน้า Supabase ด้วยรหัส และห้ามรับรหัสทางแชท</td><td><span class="tag you">คุณ</span></td></tr>
+      <tr><td>ความลับ Telegram ฯลฯ</td><td>Supabase ไม่แสดงค่าเดิม ต้องหาจากต้นทาง</td><td><span class="tag you">คุณ</span></td></tr>
+      <tr><td>รันสคริปต์ในรั้ว INET</td><td>Claude ต่อเข้าเครือข่าย INET ไม่ได้</td><td><span class="tag inet">INET</span></td></tr>
+      <tr><td>VM · firewall · S3 · registry</td><td>เป็นเครื่องของ INET</td><td><span class="tag inet">INET</span></td></tr>
+      <tr><td>โดเมน + HTTPS</td><td>DNS ของบริษัท</td><td><span class="tag it">IT</span></td></tr>
+      <tr><td>ทดลองใช้ + ขออนุมัติ + สั่งวันย้าย</td><td>เป็นการตัดสินใจของคน</td><td><span class="tag you">คุณ</span></td></tr>
+      <tr><td>เปลี่ยนรหัสฐานหลังยกข้อมูล</td><td>ต้องกดในหน้า Supabase</td><td><span class="tag you">คุณ</span></td></tr>
+    </tbody></table></div>
+  </div>
+  <div>
+    <h2>ห้ามทำ</h2>
+    <ul class="dont">
+      <li>ห้ามส่งไฟล์ dump / รหัสฐาน / service key ทาง LINE · อีเมล · แชท — ไฟล์ dump = ข้อมูลทั้งโรงงาน + รหัสผ่านผู้ใช้ (แบบเข้ารหัส)</li>
+      <li>ห้าม dump ช่วง 08:00–17:30 — ฐานเดิมเครื่องเล็ก หน้างานจะช้า</li>
+      <li>ห้ามปิด/แก้ระบบเดิม จนกว่าจะอนุมัติและนับเทียบผ่านในวันย้ายจริง</li>
+      <li>ห้ามเอา dump ของ Supabase ลงฐานใหม่เองตรงๆ — ต้องผ่าน <code>20_build_target.sh</code> (มีจุดชน 4 จุด)</li>
+      <li>ห้ามใช้ข้อมูลในระบบ INET เป็นของจริงก่อนวันย้าย — เป็นสำเนา ณ วันที่ dump</li>
+    </ul>
+    <div class="note ok">ซ้อมแล้วผ่าน: ยกข้อมูล → ตรวจครบ → ผู้ใช้เดิม login ด้วยรหัสเดิม → สิทธิ์เหมือนเดิม → ระบบใหม่ 15/15 · แอบลบ 1 แถวตัวตรวจจับได้ · ชี้ผิดไปฐานเดิมถูกปฏิเสธ</div>
+  </div>
+</div></div>
+
+<div class="band" style="padding-top:0"><div class="wrap"><footer>รายละเอียดเทคนิค: <code>docs/modules/inet-migration.md</code> · คู่มือติดตั้ง <code>inet/stack/README.md</code> · สคริปต์ <code>inet/README.md</code></footer></div></div>
