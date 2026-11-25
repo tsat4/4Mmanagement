@@ -649,7 +649,7 @@ export default function Checkin() {
       return 'ยังไม่กำหนดไลน์/ส่วนงาน';
     }
     if (scopeSecs.length) return `${tr("ส่วนงาน")} ${scopeSecs.join(', ')}`;
-    return 'ทุกส่วนงาน';
+    return tr("ทุกส่วนงาน");
   })();
 
   const handleSwitchUser = async () => {
@@ -1258,7 +1258,7 @@ export default function Checkin() {
           const log = logs[dateStr];
           if (!log) return '';
           if (log.leave_type) return ATT_CODE[log.leave_type] || 'ล';
-          if (!log.is_present) return 'ขาด';
+          if (!log.is_present) return tr("ขาด");
           if (log.has_extended_ot) return '/OT+';
           if (log.has_ot) return '/OT';
           return '/';

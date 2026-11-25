@@ -23,7 +23,7 @@ import { tr } from '../utils/i18n';
  * labels   — (16/11) ป้ายแทนต่อฝั่ง { inbound?, outbound? } — หน้าที่ต้องบอก "นับเลข MAT กลุ่มไหน" ชัดกว่าชื่อฝ่าย
  *            (Stock Management: "ของป้อนไลน์ (2xx·3xx·5xx)" / "FG รอส่ง (1xx)") · ไม่ส่ง = ป้ายเดิมจาก logisticSide.js
  */
-export default function SideFilterChips({ value, onChange, counts = {}, total, unit = 'รายการ', labels = null }) {
+export default function SideFilterChips({ value, onChange, counts = {}, total, unit = tr("รายการ"), labels = null }) {
   const n = { inbound: 0, outbound: 0, unknown: 0, ...counts };
   const all = total ?? (n.inbound + n.outbound + n.unknown);
   // ฝั่งที่ถือของจริง (control = Sales/Planner/Billing ไม่ได้ถือของ จึงไม่มีในตัวกรองพาร์ท)

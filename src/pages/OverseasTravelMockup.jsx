@@ -182,7 +182,7 @@ function PhaseBar({ r }) {
                 fontSize: 11, fontWeight: 800, background: done || bad ? c : 'var(--card)', border: `${cur ? 3 : 2}px solid ${c}`, color: done || bad ? '#fff' : c }}>
               {bad ? '✕' : done ? '✓' : i + 1}
             </span>
-            <span style={{ fontSize: 11, fontWeight: done || cur || bad ? 700 : 400, color: c }}>{label}</span>
+            <span style={{ fontSize: 11, fontWeight: done || cur || bad ? 700 : 400, color: c }}>{tr(label)}</span>
           </div>
         );
       })}

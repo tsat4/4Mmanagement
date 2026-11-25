@@ -129,7 +129,7 @@ const facHealthTextOf = (st) => {
   if (st.supTemp) return '🟡 เครื่องใช้ได้ชั่วคราว';
   if (st.pmOverdue) return `⚠ PM ${tr("เกิน")} ${st.pmOverdue}`;
   if (st.pmDueSoon) return `PM ${tr("ใกล้ครบ")} ${st.pmDueSoon}`;
-  return '🔧 ปกติ';
+  return tr("🔧 ปกติ");
 };
 // ไลน์ผลิต — รวมทุกสัญญาณ เอาตัวแย่สุดตัดสินสี · ข้อความต้องบอก "เหตุผล" เสมอ ห้ามให้เดาจากสี
 const prodHealthSignals = (s) => {

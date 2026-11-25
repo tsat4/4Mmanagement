@@ -22,7 +22,7 @@ export const ROW_FOLD_MAX = 10;
 
 /** @param colSpan  ตั้งเมื่อลูกเป็น <tr> — ปุ่มจะถูกห่อใน <tr><td colSpan> (ปุ่มเปล่าใน <tbody> = HTML ผิด
   *                 เบราว์เซอร์ย้ายออกนอกตารางให้เอง = ปุ่มไปโผล่เหนือตาราง) */
-export default function RowFold({ rows = [], max = ROW_FOLD_MAX, unit = 'รายการ', colSpan = 0, children }) {
+export default function RowFold({ rows = [], max = ROW_FOLD_MAX, unit = tr("รายการ"), colSpan = 0, children }) {
   const [all, setAll] = useState(false);
   const list = Array.isArray(rows) ? rows : [];
   const hidden = Math.max(0, list.length - max);

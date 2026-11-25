@@ -1025,7 +1025,7 @@ export default function ScrapReport() {
                   <label key={v} style={{ fontSize: 12.5, display: 'flex', gap: 4, alignItems: 'center', cursor: 'pointer' }}>
                     <input type="checkbox" style={{ width: 'auto' }} checked={(editor.report.product_categories || []).includes(v)}
                       onChange={e => setRep({ product_categories: e.target.checked ? [...(editor.report.product_categories || []), v] : (editor.report.product_categories || []).filter(x => x !== v) })} />
-                    {l}
+                    {tr(l)}
                   </label>
                 ))}
               </div>

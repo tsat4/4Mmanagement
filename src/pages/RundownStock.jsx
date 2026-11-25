@@ -70,7 +70,7 @@ export default function RundownStock() {
   useLiveBoard(load, { tables: ['line_stock_transactions'], topic: 'rundown-stock', rate: RATE.ANALYTIC });
 
   const custLabel = useCallback((code) => {
-    if (!code) return '— ไม่ระบุลูกค้า —';
+    if (!code) return tr("— ไม่ระบุลูกค้า —");
     const r = shipToMap[code];
     return r && r.customer_name && r.customer_name !== code ? `${r.customer_name} (${code})` : code;
   }, [shipToMap]);

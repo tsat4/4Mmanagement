@@ -274,7 +274,7 @@ export function CheckSheet({ records, rowOf, colOf, rowLabel = 'อุปกร�
 }
 
 /* ═══ ⑦ แบ่งชั้น (Stratification) ═══════════════════════════════════════════ */
-export function Stratify({ records, keyOf, valOf, unit = 'ครั้ง', top = 10, onPick }) {
+export function Stratify({ records, keyOf, valOf, unit = tr("ครั้ง"), top = 10, onPick }) {
   const s = stratify(records, { keyOf, valOf, top });
   if (!s.total) return <NotEnough reason={tr("ยังไม่มีเหตุการณ์ในช่วงนี้")} />;
   const max = Math.max(...s.list.map(g => g.value), 1);
@@ -297,7 +297,7 @@ export function Stratify({ records, keyOf, valOf, unit = 'ครั้ง', top 
 }
 
 /* ═══ ⑦ กราฟแนวโน้ม (Run chart) ═════════════════════════════════════════════ */
-export function RunChart({ records, keyOf, valOf, keys, unit = 'ครั้ง' }) {
+export function RunChart({ records, keyOf, valOf, keys, unit = tr("ครั้ง") }) {
   const rc = runChart(records, { keyOf, valOf, keys });
   if (!rc.n) return <NotEnough reason={tr("ยังไม่มีช่วงเวลาให้เทียบ")} />;
   const max = Math.max(rc.max || 0, 1);

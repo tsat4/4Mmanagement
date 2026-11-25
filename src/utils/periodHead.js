@@ -29,7 +29,7 @@ export function isTodayPeriod(date, today, kind = 'day') {
  * @param {{ kind?:'day'|'week'|'date', today:string, seed?:boolean, seedLabel?:string, seedBot?:string }} o
  * @returns {{ top:string, bot:string, isToday:boolean, weekend:boolean }}
  */
-export function periodHead(date, { kind = 'day', today, seed = false, seedLabel = 'ยกมา', seedBot } = {}) {
+export function periodHead(date, { kind = 'day', today, seed = false, seedLabel = tr("ยกมา"), seedBot } = {}) {
   const t = new Date(ms(date));
   const ok = Number.isFinite(t.getTime());
   const isToday = !seed && isTodayPeriod(date, today, kind);
