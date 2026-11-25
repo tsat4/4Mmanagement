@@ -813,3 +813,67 @@ export function energyHistory({ readings = [], daily = [], names = [], scale = '
     },
   }
 }
+
+/* ══ ⚡ Demand 15 นาที (25/11 · คำสั่ง user "ทำ Demand 15 นาที · เป้า 1600 kW") ══════════════════
+   ค่าที่การไฟฟ้าใช้คิด Demand Charge = กำลังไฟ "เฉลี่ย" ของแต่ละช่วง 15 นาทีตามนาฬิกา (:00 :15 :30 :45)
+   คิดจาก **ส่วนต่างเลขมิเตอร์ kWh** (ไม่ใช่ค่า kW ที่สุ่มรายนาที — โหลดกระชากทำให้เพี้ยน) ของ "ชั้นบนสุดของตู้"
+   · แถวรายนาที bucket b ≈ เลขมิเตอร์ปลายนาที b ⇒ พลังงานช่วง [s, s+15) = kwh(s+14) − kwh(s−1)
+   · มิเตอร์ใดขาดจุดขอบช่วง (ยอมถอยได้ ≤ 2 นาที) / เลขถอยหลัง = ช่วงนั้น null (ห้ามเดา)
+   · ช่วงปัจจุบัน: เฉลี่ยถึงนาทีล่าสุดที่ "ทุกมิเตอร์" มีค่า · คาดการณ์จบช่วง = (พลังงานแล้ว + kW ตอนนี้ × เวลาที่เหลือ) ÷ 15 นาที */
+export const DEMAND_WINDOW_MIN = 15
+const MIN_MS = 60000
+
+/**
+ * @param {{ readings:Array<{scope_name,bucket_at,kwh_total}>, names:string[], nowMs:number, dayStartMs:number, kwNow?:number|null }} p
+ * @returns {null | { current:{start,end,elapsedMin,avgKw,projectedKw}, prev:{start,kw}|null, todayMax:{start,kw}|null, windows:Array<{start,kw}>, missing:string[] }}
+ *   missing = มิเตอร์ชั้นบนสุดที่ไม่มีเลขมิเตอร์เลยในข้อมูลที่ส่งมา (จอต้องเขียนบอกว่าทำไมเป็น —)
+ */
+export function demandWindows({ readings = [], names = [], nowMs = Date.now(), dayStartMs, kwNow = null, windowMin = DEMAND_WINDOW_MIN } = {}) {
+  if (!names.length) return null
+  const W = windowMin * MIN_MS
+  const by = new Map(names.map(n => [n, new Map()]))
+  for (const r of readings || []) {
+    const m = by.get(r.scope_name)
+    const t = Date.parse(r.bucket_at), k = numOrNull(r.kwh_total)
+    if (m && Number.isFinite(t) && k != null) m.set(t, k)
+  }
+  const at = (m, t) => { for (let d = 0; d <= 2; d++) { const v = m.get(t - d * MIN_MS); if (v != null) return v } return null }
+  /** พลังงานรวมทุกมิเตอร์ ระหว่างปลายนาที a ถึงปลายนาที b · ขาด/ถอยหลัง = null */
+  const energy = (a, b) => {
+    let sum = 0
+    for (const m of by.values()) {
+      const x = at(m, a), y = at(m, b)
+      if (x == null || y == null || y < x) return null
+      sum += y - x
+    }
+    return sum
+  }
+  const curStart = Math.floor(nowMs / W) * W
+  const windows = []
+  for (let s = Math.ceil((dayStartMs ?? curStart) / W) * W; s < curStart; s += W) {
+    const e = energy(s - MIN_MS, s + W - MIN_MS)
+    windows.push({ start: s, kw: e == null ? null : e / (windowMin / 60) })
+  }
+  // ช่วงปัจจุบัน — นาทีล่าสุดที่ทุกมิเตอร์มีค่า
+  let tc = Infinity
+  for (const m of by.values()) {
+    let last = null
+    for (const t of m.keys()) if (t >= curStart && (last == null || t > last)) last = t
+    tc = last == null ? -Infinity : Math.min(tc, last)
+  }
+  let elapsedMin = null, avgKw = null, projectedKw = null
+  if (Number.isFinite(tc) && tc >= curStart) {
+    elapsedMin = Math.min(windowMin, (tc - curStart) / MIN_MS + 1)
+    const e = energy(curStart - MIN_MS, tc)
+    if (e != null) {
+      avgKw = e / (elapsedMin / 60)
+      const rest = windowMin - elapsedMin
+      projectedKw = rest <= 0 ? avgKw : (kwNow == null ? null : (e + Math.max(0, kwNow) * (rest / 60)) / (windowMin / 60))
+    }
+  }
+  const done = windows.filter(w => w.kw != null)
+  const todayMax = done.length ? done.reduce((a, b) => (b.kw > a.kw ? b : a)) : null
+  const prev = windows.length ? windows[windows.length - 1] : null
+  const missing = names.filter(n => !by.get(n).size)
+  return { current: { start: curStart, end: curStart + W, elapsedMin, avgKw, projectedKw }, prev, todayMax, windows, missing }
+}

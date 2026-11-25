@@ -12,7 +12,9 @@
             create = เพิ่มตู้ใหม่ — scope ต้องมีใน energy_meter_topics (มีข้อมูลเข้าจริง) และยังไม่อยู่บนบอร์ด
             🔴 scope_name = คีย์ข้อมูล/ประวัติ ห้ามเปลี่ยน — ชื่อบนจอแก้ที่ display_name
             🔴 parent_name ต้องเป็นตู้ที่อยู่บนบอร์ดแล้ว · ห้ามชี้ตัวเอง · ห้ามวน
-     remove { scope_kind, scope_name }  — มีตู้ลูกชี้มาอยู่ = ห้ามลบ (ทะเบียนจับคู่ด้วยข้อความ · fail-closed) */
+     remove { scope_kind, scope_name }  — มีตู้ลูกชี้มาอยู่ = ห้ามลบ (ทะเบียนจับคู่ด้วยข้อความ · fail-closed)
+     panel_target { panel, demand_target_kw|null }  — เป้า Demand 15 นาทีของตู้ (energy_panel_settings · 25/11)
+            ตู้ต้องมีมิเตอร์อยู่บนบอร์ด · ว่าง = ล้างเป้า (การ์ดเขียน "ยังไม่ได้ตั้งเป้า") */
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 const MAIN_URL = 'https://ewhdfqwfwofivojtsizn.supabase.co';
@@ -52,6 +54,23 @@ Deno.serve(async (req) => {
   let body: any;
   try { body = await req.json(); } catch { return json({ error: 'bad json' }, 400); }
   const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+
+  if (body?.action === 'panel_target') {
+    const panel = str(body?.panel, 80);
+    if (!panel) return json({ error: 'ต้องระบุตู้ (panel)' }, 400);
+    const t = num(body?.demand_target_kw);
+    if (t === 'bad' || t === 0) return json({ error: 'เป้าต้องเป็นตัวเลขมากกว่า 0 (เว้นว่าง = ไม่ตั้งเป้า)' }, 400);
+    const { count, error: ce } = await sb.from('energy_live_meters').select('scope_name', { count: 'exact', head: true }).eq('panel', panel);
+    if (ce) return json({ error: ce.message }, 500);
+    if (!count) return json({ error: `ไม่พบตู้ "${panel}" บนบอร์ด` }, 404);
+    const { data, error } = await sb.from('energy_panel_settings')
+      .upsert({ panel, demand_target_kw: t, updated_at: new Date().toISOString(), updated_by: who }, { onConflict: 'panel' })
+      .select('panel, demand_target_kw, updated_at, updated_by');
+    if (error) return json({ error: error.message }, 500);
+    if (!data?.length) return json({ error: 'บันทึกไม่สำเร็จ (0 แถว)' }, 500);
+    return json({ ok: true, panel: data[0] });
+  }
+
   const kind = str(body?.scope_kind, 10) || 'zone';
   const name = str(body?.scope_name, 200);
   if (!['zone', 'line'].includes(kind) || !name) return json({ error: 'ต้องระบุมิเตอร์ (scope_kind/scope_name)' }, 400);
