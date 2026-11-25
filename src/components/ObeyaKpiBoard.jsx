@@ -12,8 +12,9 @@ import { UserContext } from '../App';
 import { usePerms } from '../utils/usePerms';
 import { fetchByIds } from '../utils/fetchByIds';
 import { SESSION_STATUSES_LIVE } from '../utils/sessionStatus';
-import { scoreDef, defBars, unitOf, decimalsOf, summaryModeOf, summaryShort, summaryModeLabel, fmtBar, valueScopeOf, sharedValueDef, yearForecast, neededRunRate, boardSlotOf, baseVarOf } from '../utils/kpiSetup';
-import { buildInsight } from '../utils/kpiInsight';   // 🔎 สรุป insight ใน popup 🔍 (16/11 · เรียงตามความสำคัญมาแล้ว)
+import { scoreDef, defBars, unitOf, decimalsOf, summaryModeOf, summaryShort, summaryModeLabel, fmtBar, valueScopeOf, sharedValueDef, yearForecast, neededRunRate, boardSlotOf, baseVarOf, formulaOf } from '../utils/kpiSetup';
+import { buildInsight } from '../utils/kpiInsight';
+import Segmented from './Segmented';   // 🔁 สลับ ค่าคำนวณ ↔ ค่าดิบ ใน popup 🔍 (25/11)   // 🔎 สรุป insight ใน popup 🔍 (16/11 · เรียงตามความสำคัญมาแล้ว)
 import InsightList from './InsightList';             // 🔎 กล่อง insight 3 ข้อ + กางดูที่เหลือ (ของกลาง · UI §6.38)
 import { scopedLineNames } from '../utils/sectionScope';
 import useOrgScope from '../utils/useOrgScope';
@@ -150,6 +151,8 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
   /* 🧩 โหมดจัดเรียงแผ่น (09/10) — ปุ่ม ◀ ▶ บนแผ่น (จอสัมผัส/TV ไม่มีเมาส์ลาก) · บันทึกลง kpi_board_layouts ต่อ (ปี, ขอบเขต)
      `layoutOverride` = ลำดับที่เพิ่งกด ใช้ทันทีไม่รอโหลดกลับ · เขียนล้ม = คืนค่าเดิม + toast (ห้ามให้จอโชว์ลำดับที่ไม่ได้บันทึก) */
   const [arrange, setArrange] = useState(false);
+  /* 🔁 25/11 (user: "ทุกกราฟที่มีการคำนวณควรมีปุ่มสลับค่าจริงกับค่าคำนวณ — DL/OH กดดูค่าดิบ dl, sale from product ได้") — ต่อแผ่น (คีย์แถว) · เฉพาะ popup */
+  const [rawView, setRawView] = useState({});
   const [layoutOverride, setLayoutOverride] = useState(null);  const [noteFor, setNoteFor] = useState(null);   // { rowKey, title, icon, monthKey, valueText }
   const [sp, setSp] = useSearchParams();
 
@@ -321,7 +324,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
       const actions = (acts.data || []).filter(a => secOk(a.section));
       // 6) นิยาม KPI ของปี + ค่ารายเดือน (กรอกมือ / เป้าของแถว auto)
       let kdRes = await supabase.from('kpi_definitions')
-        .select('*, kpi_catalog(id, name, unit, direction, decimals, summary_mode, value_scope, board_slot, amount_var, value_min, value_max)').eq('year', year).eq('is_active', true);
+        .select('*, kpi_catalog(id, name, unit, direction, decimals, summary_mode, value_scope, board_slot, amount_var, value_min, value_max, rollup_mode)').eq('year', year).eq('is_active', true);
       if (kdRes.error && (kdRes.error.code || '') !== '42P01') {
         kdRes = await supabase.from('kpi_definitions').select('*').eq('year', year).eq('is_active', true);
       }
@@ -468,7 +471,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
          (เดิมยัดรวมเป็นลิสต์ในแผง "Key Performance" ใบเดียว — อ่านจากไกลไม่ได้ ไม่มีกราฟ ไม่มีหมายเหตุรายเดือน) */
     /* ⬆ KPI ของหน่วยลูกที่แม่ไม่ถือ = รวมขึ้นแม่ (utils/kpiRollup.js · 12/10) — จัดกลุ่มตามทะเบียน/ชื่อ · ค่ารวมคิดตอนวาดแถว */
     const childGroups = groupChildDefs(kdefsBelow || []);
-    const rollupOf = (gk) => (gk && childGroups.has(gk) ? rollupChildDefs(childGroups.get(gk), entByKpi, { labelOf: org.labelOf }) : null);
+    const rollupOf = (gk) => (gk && childGroups.has(gk) ? rollupChildDefs(childGroups.get(gk), entByKpi, { labelOf: org.labelOf, formulaInfoOf: (d) => fInfoB[d.id] || null }) : null);   // 25/11 รางสูตร = Σ ตัวตั้งของลูก ÷ ค่ากลาง
     /* กติกาเลือกแผ่นอยู่ใน utils/kpiBoardRows.js (pure · มีเทส) — ที่นี่แค่ส่ง closure หา-นิยาม 2 ตัว */
     const { rows: boardRows } = pickBoardRows({
       templates: boardRowsFor(year), kdefs, scope, hasLines: members.prodGroups.length > 0, childGroups,
@@ -569,7 +572,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
           sumKind = k.effMode; sumApprox = k.approx || roll.approx; manual = true;
           const names = roll.children.map(c => c.label).join(' · ');
           const partial = roll.partial.length ? ` · ${tr("เดือนที่ลูกกรอกไม่ครบ")}: ${roll.partial.map(m => monthLabel(`${year}-${String(m).padStart(2, '0')}`)).join(' ')}` : '';
-          note = `⬆ ${tr("รวมจาก")} ${roll.n} ${tr("หน่วยลูก")} (${roll.combine === 'sum' ? tr('ผลรวม') : tr('เฉลี่ยไม่ถ่วงน้ำหนัก')}): ${names}${partial}`
+          note = `⬆ ${tr("รวมจาก")} ${roll.n} ${tr("หน่วยลูก")} (${roll.combine === 'sum' ? tr('ผลรวม') : roll.combine === 'formula' ? tr('Σ ตัวตั้งของทุกหน่วย ÷ ค่ากลางโรงงาน แล้วคิดสูตรใหม่') : tr('เฉลี่ยไม่ถ่วงน้ำหนัก')}): ${names}${partial}`
             + (roll.targetNote ? ` · ${roll.targetNote} — ${tr("อยากตัดสินด้วยเป้าของระดับนี้ ให้ตั้ง KPI นี้ที่ ⚙️ (แผ่นรวมจะเปลี่ยนเป็นของระดับนี้เอง")})` : '');
         } else if (ak) {
           const autoMonths = {};
@@ -602,7 +605,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
             sumKind = k.effMode; sumApprox = k.approx || rollC.approx;
             childMix = { filled: fx.filled.length, covered: fx.covered.length, n: rollC.n, approx: rollC.approx };
             const mon = (m) => monthLabel(`${year}-${String(m).padStart(2, '0')}`);
-            note = `⬆ ${tr("เดือนที่ระดับนี้ไม่ได้กรอก")} (${fx.filled.map(mon).join(' ')}) ${tr("ใช้ค่า")}${rollC.combine === 'sum' ? tr('รวม') : tr('เฉลี่ย')}${tr("จาก")} ${rollC.n} ${tr("หน่วยลูก")}: ${rollC.children.map(c => c.label).join(' · ')}`
+            note = `⬆ ${tr("เดือนที่ระดับนี้ไม่ได้กรอก")} (${fx.filled.map(mon).join(' ')}) ${tr("ใช้ค่า")}${rollC.combine === 'sum' ? tr('รวม') : rollC.combine === 'formula' ? tr('Σ ตัวตั้ง ÷ ค่ากลาง') : tr('เฉลี่ย')}${tr("จาก")} ${rollC.n} ${tr("หน่วยลูก")}: ${rollC.children.map(c => c.label).join(' · ')}`
               + (fx.covered.length ? ` · ${tr("เดือนที่กรอกเองแล้ว")} (${fx.covered.map(mon).join(' ')}) ${tr("ใช้ค่าของระดับนี้ ไม่บวกของลูกซ้ำ")}` : '');
           } else {
             const k = manualMonthSeries({ entries: manEntries, year, summary });
@@ -871,7 +874,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
   /* 🏷️ บรรทัดรอง = "ที่มาของตัวเลข" แบบย่อ — แทนกล่อง ⚠️ ยาวๆ ใต้แผ่น (09/10) · เต็มความอยู่ใน tooltip ไฟ + popup 🔍
      ⚡ N เดือน = ระบบคำนวณ · ✍️ N เดือน = เติมค่ากรอกมือ · ✍️ ทับ N = กรอกไว้แต่ค่าระบบชนะ · ค่าระดับแม่ติดชื่อระดับ */
   const srcLabel = (r, { full = false } = {}) => {
-    if (r.roll) return `⬆ ${tr("รวม")} ${r.roll.n} ${tr("หน่วยลูก")}${r.roll.approx ? tr(' (≈ เฉลี่ย)') : ''}`;
+    if (r.roll) return `⬆ ${tr("รวม")} ${r.roll.n} ${tr("หน่วยลูก")}${r.roll.combine === 'formula' ? tr(' (Σ ตัวตั้ง ÷ ค่ากลาง)') : r.roll.approx ? tr(' (≈ เฉลี่ย)') : ''}`;
     if (r.childMix) return `✍️ ${tr("กรอกมือ · ⬆ เติมจากลูก")} ${r.childMix.filled} ${tr("เดือน")}${r.childMix.approx ? ' (≈)' : ''}`;
     if (r.fxSrc) return full ? r.fxSrc : r.fxShort;   // 🧮 สูตร: ตัวตั้ง/ตัวหารจริง (09/11) — บนกริดย่อ · เต็มใน tooltip/popup (25/11)
     if (r.manual) return `✍️ ${tr("กรอกมือ")}${r.atLabel ? ` (${tr("ระดับ")} ${r.atLabel})` : ''}`;
@@ -1063,7 +1066,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
           <Tooltip {...chartTip} formatter={(v, name, item) => [`${nf(v, decL)}${unitL ? ' ' + unitL : ''}${name !== 'plan' && item?.payload?.detail ? ` · ${item.payload.detail}` : ''}`, name === 'plan' ? '📅 แผน' : name === 'man' ? '✍️ กรอกมือ (ทีมคิดเอง)' : name === 'proj' ? `📈 ${tr("คาดการณ์")} (${item?.payload?.projSrc === 'plan' ? tr('ตามแผน') : tr('ถ้าทำได้เท่าที่ผ่านมา')})` : `⚡ ${r.name}`]}
             labelFormatter={(l, pl) => (pl?.[0]?.payload?.summary
               ? `${tr("สรุปปี")} ${year} (${r.sumKind === 'sum' ? tr('รวม') : tr('เฉลี่ย')}${r.auto && !r.fromDept ? tr('ถ่วงน้ำหนัก') : ''}${tr("ทั้งปี")})`
-              : `${monthLabel(pl?.[0]?.payload?.k || '')} ${year}${pl?.[0]?.payload?.notes?.length ? ` · 📝 ${pl[0].payload.notes.length} ${tr("หมายเหตุ")}` : ''} · ${tr("กดเพื่อดูเดือนนี้ + หมายเหตุ")}`)} />
+              : `${monthLabel(pl?.[0]?.payload?.k || '')} ${year}${pl?.[0]?.payload?.notes?.length ? ` · 📝 ${pl[0].payload.notes.length} ${tr("หมายเหตุ")}` : ''} · ${tr("กดเพื่อดูหมายเหตุของเดือนนี้")}`)} />
           {/* เส้นเป้า (แดง) + เส้น Commitment (เหลือง) — user 30/09: "มาแต่เส้น target เส้น commitment ไม่เห็น" */}
           {tgtL != null && <ReferenceLine y={tgtL} stroke="var(--red)" strokeDasharray="4 3" label={{ value: zoomed ? `T ${nf(tgtL, decL)}` : 'T', position: 'insideTopRight', fontSize: fs(zoomed ? 10 : 9), fontWeight: 700, fill: 'var(--red)' }} />}
           {cmtL != null && cmtL !== tgtL && <ReferenceLine y={cmtL} stroke="var(--amber)" strokeDasharray="2 3" label={{ value: zoomed ? `C ${nf(cmtL, decL)}` : 'C', position: 'insideTopRight', fontSize: fs(zoomed ? 10 : 9), fontWeight: 700, fill: 'var(--amber)' }} />}
@@ -1095,7 +1098,70 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
       </ResponsiveContainer>
       </div>
     );
-    if (!(zoomed && r.parts?.length)) return chart;
+    /* 🔁 25/11 ค่าดิบของสูตร (user: "ทุกกราฟที่มีการคำนวณควรกดสลับดูค่าจริง เช่น dl, sale from product")
+       · ตัวแปรฐานชุดเดียวกับที่คิดค่าหลัก (`r.fxInfo.inputs[เดือน][ตัวแปร]`) — ไม่คิดใหม่ในหน้า
+       · 🔴 ห้ามแกน Y 2 ข้าง (กฎ `no-dual-y-axis` — จุดตัดระหว่างสเกลอิสระเป็นของปลอม) ⇒ 1 ตัวแปร = 1 กราฟเล็ก ซ้อนแกน X เดียวกัน (เดือน 1–12) · บาท → MB
+       · ปุ่มสลับ = `<Segmented>` (2 ตัวเลือก · UI §มาตรฐานหน้าตา) อยู่เหนือแถวกราฟลูก · สถานะต่อแผ่น (`rawView[r.key]`) */
+    const rawVars = zoomed && r.fxInfo?.key ? (formulaOf(r.fxInfo.key)?.vars || []) : [];
+    const isRaw = rawVars.length > 0 && !!rawView[r.key];
+    const toggle = rawVars.length > 0 ? (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '2px 4px 0', flexShrink: 0 }}>
+        <Segmented size="sm" label={tr('มุมมองกราฟลูก')} value={isRaw ? 'raw' : 'calc'} onChange={(v) => setRawView(o => ({ ...o, [r.key]: v === 'raw' }))}
+          options={[{ value: 'calc', label: r.parts?.length ? tr('ค่าคำนวณ (สูตรลูก)') : tr('ค่าคำนวณ') }, { value: 'raw', label: tr('ค่าดิบ (ตัวตั้ง/ตัวหาร)') }]} />
+        <span style={{ fontSize: fs(10.5), color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'clip', textOverflow: 'ellipsis' }}>
+          {isRaw ? `${tr('ตัวเลขฐานที่ใช้คิด')} ${r.fxInfo.label} · ${tr('บาท = MB')}` : (r.parts?.length ? tr('สูตรลูกของค่าหลัก') : tr('กด "ค่าดิบ" เพื่อดูตัวเลขฐานรายเดือน'))}
+        </span>
+      </div>
+    ) : null;
+    const rawGrid = isRaw ? (
+      <div style={{ flex: '0 0 42%', minHeight: 0, display: 'grid', gridTemplateColumns: `repeat(${rawVars.length}, minmax(0, 1fr))`, gap: 8, paddingTop: 4 }}>
+        {rawVars.map((v) => {
+          const bv = baseVarOf(v);
+          const isBaht = bv?.unit === 'บาท';
+          const unit = isBaht ? 'MB' : (bv?.unit || '');
+          const label = (bv?.label || v).split(' — ').pop().replace(/\s*\(.*$/, '');   // "ความพึงพอใจ — คะแนนที่ได้ ด้านคุณภาพ (Q)" → "คะแนนที่ได้ ด้านคุณภาพ" (เต็มอยู่ใน title)
+          const vals = Array.from({ length: 12 }, (_, i) => { const x = r.fxInfo.inputs?.[i + 1]?.[v]; return x == null || x === '' ? null : (isBaht ? Number(x) / 1e6 : Number(x)); });
+          const have = vals.filter(x => x != null);
+          const dec = isBaht ? 2 : (have.some(x => !Number.isInteger(x)) ? 2 : 0);
+          const avg = have.length ? have.reduce((a, b) => a + b, 0) / have.length : null;
+          const pd = vals.map((x, i) => ({ label: String(i + 1), v: x, vLabel: x == null ? '' : nf(x, dec), auto: r.fxInfo.inputSrc?.[i + 1]?.[v] === 'auto' }));
+          return (
+            <div key={v} style={{ minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+              <div style={{ fontSize: fs(10.5), fontWeight: 800, color: 'var(--text2)', padding: '0 4px', whiteSpace: 'nowrap', overflow: 'clip', textOverflow: 'ellipsis' }}
+                title={`${bv?.label || v} (${bv?.unit || ''}) · ${tr('เฉลี่ย')} ${avg == null ? '—' : nf(avg, dec)} ${unit} · ${tr('≈ จาง = ค่าจากทะเบียน (ไม่มีใครกรอก)')}`}>
+                🧾 {label} <span style={{ fontWeight: 500, color: 'var(--muted)' }}>· {unit} · {tr('เฉลี่ย')} {avg == null ? '—' : nf(avg, dec)}</span>
+              </div>
+              <div style={{ flex: 1, minHeight: 0 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={pd} margin={{ top: axisUnitTop(fs(9.5), fs(6)) + fs(6), right: 6, left: 4, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                    <XAxis dataKey="label" tick={axisTick} interval={rawVars.length > 3 ? 1 : 0} />
+                    <YAxis tick={axisTick} width="auto" label={axisUnitLabel(unit, { fontSize: fs(9.5), lift: fs(6) })} />
+                    <Tooltip {...chartTip} formatter={(x, name, item) => [`${nf(x, dec)} ${unit}${item?.payload?.auto ? tr(' · ≈ทะเบียน') : ''}`, label]} />
+                    {avg != null && <ReferenceLine y={avg} stroke="var(--muted)" strokeDasharray="4 3" label={{ value: `${tr('เฉลี่ย')} ${nf(avg, dec)}`, position: 'insideTopRight', fontSize: fs(9), fill: 'var(--muted)' }} />}
+                    <Bar dataKey="v" fill={CELL_BAR_FILL} radius={[2, 2, 0, 0]} {...chartAnim()}>
+                      <LabelList dataKey="vLabel" position="top" style={{ fontSize: fs(9.5), fontWeight: 700, fill: 'var(--text)' }} />
+                      {pd.map((q, i) => <Cell key={i} fill="var(--blue)" fillOpacity={q.auto ? 0.4 : 0.8} />)}
+                    </Bar>
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    ) : null;
+    if (!(zoomed && (r.parts?.length || rawVars.length))) return chart;
+    if (isRaw || !r.parts?.length) {
+      /* ค่าดิบ หรือ สูตรไม่มีสูตรลูก (เช่น %RM · DSI · ยอดขาย/หัว): กราฟหลัก + แถวปุ่มสลับ (+ กราฟค่าดิบเมื่อกด) */
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', minHeight: 0 }}>
+          <div style={{ flex: isRaw ? '1 1 58%' : '1 1 0', minHeight: 0 }}>{chart}</div>
+          {toggle}
+          {rawGrid}
+        </div>
+      );
+    }
     /* 🤝 24/11 (user: "แยก Q/D และเจาะรายลูกค้าได้เลย") — ใต้กราฟลูก Q/D มีตารางรายลูกค้า × เดือน (ผลดิบ + เกรด A/B/C จากไฟล์ V5 ของ QSM)
        เกรด = ระดับทางการ 1/0.5/0 ของใบจริง ⇒ สีเขียว/เหลือง/แดงตามเกรดได้ (ไม่ใช่สีที่คิดเอง) · "*" = ไม่ประเมินเดือนนั้น · ส่วนนี้เลื่อนในตัวเองเมื่อสูงเกิน */
     const csatTable = r.csat ? (() => {
@@ -1144,6 +1210,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', minHeight: 0 }}>
         <div style={{ flex: csatTable ? '0 0 38%' : '1 1 58%', minHeight: 0 }}>{chart}</div>
+        {toggle}
         {csatTable && <div style={{ flex: '1 1 0', overflowY: 'auto', minHeight: 0, order: 2 }}>{csatTable}</div>}
         <div style={{ flex: csatTable ? '0 0 24%' : '0 0 42%', minHeight: 0, display: 'grid', gridTemplateColumns: `repeat(${r.parts.length}, minmax(0, 1fr))`, gap: 8, paddingTop: 4 }}>
           {r.parts.map((pt) => {
@@ -1193,10 +1260,10 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
     );
   };
   /* กดแท่งเดือน = เลือกเดือนบนบอร์ด + เปิดหมายเหตุของเดือนนั้น (แท่ง "สรุป" = ไม่มีโน้ต) */
+  /* 📝 25/11 (user เห็น QCC "0 % แดง" เพราะบอร์ดถูกสลับไป ม.ค. โดยไม่รู้ตัว): กดแท่ง = เปิดหมายเหตุของเดือนนั้น **ไม่สลับเดือนทั้งบอร์ด** — เปลี่ยนเดือนใช้ ◀ ▶ เท่านั้น */
   const openMonth = (r, p) => {
     const k = p?.k;
     if (!k || k === SUMMARY_KEY) return;
-    setMonth(k);
     const manTxt = p?.manRaw != null || p?.man != null ? ` · ✍️ ${tr("กรอกมือ (ทีมคิดเอง")}) ${nf(p.manRaw ?? p.man, r.dec)}${r.unit ? ' ' + r.unit : ''}` : '';
     setNoteFor({ rowKey: r.key, title: r.name, icon: r.icon, monthKey: k, valueText: p?.v == null ? '—' : `${manTxt ? tr('⚡ ระบบ ') : ''}${nf(p.v, r.dec)}${r.unit ? ' ' + r.unit : ''}${manTxt}` });
   };
