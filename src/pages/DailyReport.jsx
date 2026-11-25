@@ -329,6 +329,12 @@ const CAT_META = {
   planned:   { label: 'ในแผน',  color: 'var(--green)', bg: 'var(--green-dim)' },
 };
 
+/* 🎨 ชิป "ข้อเท็จจริง" — ไม่มีสี (25/11 · คำสั่ง user "สีสันเยอะจนดูไม่ formal")
+   กติกา UI §6.35: **1 แถว = ชิปสีได้ไม่เกิน 1 ตัว** ที่เหลือเป็นเส้นขอบเทา
+   ⇒ เลขนับ/ช่วงเวลา/รหัสใบ/ป้ายประเภท = `CHIP_N` · เก็บสีไว้ให้ "สิ่งที่ต้องลงมือ" เท่านั้น (NG) */
+const CHIP_N = { fontSize: 11, padding: '1px 7px', borderRadius: 'var(--r-pill)',
+  background: 'transparent', border: '1px solid var(--border2)', color: 'var(--text2)', fontWeight: 700 };
+
 /* ═══════════════════════════════════════════════════════════════
    MAIN PAGE
 ═══════════════════════════════════════════════════════════════ */
@@ -3680,7 +3686,9 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
           <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingRight: 4 }}>
           {(() => {
             // จัดกลุ่มตามไลน์แม่ (ไลน์เดี่ยว = เป็นกลุ่มของตัวเอง)
-            const renderGroups = (list) => {
+            /* `inStaleBucket` = แถวนี้อยู่ในถัง "ค้างจากวันก่อน" อยู่แล้ว ⇒ **ชิปอายุไม่ต้องทาแดงซ้ำ**
+               (25/11 · ทั้งถังค้างหมด สีแดง 15 ชิปเรียงกันไม่ได้บอกอะไรเพิ่ม · UI §6.35) */
+            const renderGroups = (list, inStaleBucket = false) => {
             const groups = {};
             list.forEach(s => {
               const parent = lineMap[s.line_name]?.parent_line_name || s.line_name;
@@ -3740,12 +3748,13 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                       </span>
                       {/* ชิปอายุกะค้าง — เหลืองนิ่ง ≥3 วัน · แดงนิ่งเกิน STALE_SESSION_DAYS (งานค้าง ไม่ใช่ alarm ห้ามกระพริบ) */}
                       {(() => { const age = sessionAgeDays(s.work_date); if (age < 3) return null;
-                        const late = age > STALE_SESSION_DAYS;
-                        return <span title={late ? `${tr("ค้างเกินเป้า")} ${STALE_SESSION_DAYS} ${tr("วัน — OEE ของกะนี้ยังไม่เข้ารายงานเดือน")}` : tr("ค้างจากวันก่อน — ปิด/อนุมัติให้ครบ")}
+                        const late = age > STALE_SESSION_DAYS && !inStaleBucket;   // ในถังกะค้าง = ค้างหมดอยู่แล้ว ไม่ต้องย้ำด้วยสี
+                        const warn = !inStaleBucket;
+                        return <span title={age > STALE_SESSION_DAYS ? `${tr("ค้างเกินเป้า")} ${STALE_SESSION_DAYS} ${tr("วัน — OEE ของกะนี้ยังไม่เข้ารายงานเดือน")}` : tr("ค้างจากวันก่อน — ปิด/อนุมัติให้ครบ")}
                           style={{ fontSize: 11, fontWeight: 800, padding: '1px 5px', borderRadius: 'var(--r-md)', whiteSpace: 'nowrap',
-                            background: late ? 'var(--red-dim)' : 'var(--amber-dim)',
-                            color: late ? 'var(--red)' : 'var(--amber)',
-                            border: `1px solid ${late ? 'var(--red-line)' : 'var(--amber-line)'}` }}>{age}{tr('ว')}</span>;
+                            background: late ? 'var(--red-dim)' : warn ? 'var(--amber-dim)' : 'transparent',
+                            color: late ? 'var(--red)' : warn ? 'var(--amber)' : 'var(--text2)',
+                            border: `1px solid ${late ? 'var(--red-line)' : warn ? 'var(--amber-line)' : 'var(--border2)'}` }}>{age}{tr('ว')}</span>;
                       })()}
                     </div>
                   </button>
@@ -3794,7 +3803,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                       const list = (sel && !shown.some(x => x.id === sel.id)) ? [...shown, sel] : shown;
                       return (
                         <div style={{ marginTop: 4 }}>
-                          {renderGroups(list)}
+                          {renderGroups(list, true)}
                           {moreRowsBtn('stale', staleSessions.length)}
                         </div>
                       );
@@ -4163,15 +4172,17 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                                   })()}
                                   {r.name && <span style={{ fontSize: 12, color: 'var(--muted)' }}>{r.name}</span>}
                                   {r.ct > 0 && <span style={{ fontSize: 11, color: 'var(--muted)' }}>· CT {r.ct}s</span>}
+                                  {/* 🎨 เดิมแถวนี้มีชิปสี 5 ตัว (เวลา·เปิด·ปิด·NG·DT) = รุ้งกินน้ำต่อ 1 ชิ้นงาน
+                                      ⇒ เลขนับ/ช่วงเวลา = ชิปเทา · เหลือสีไว้ที่ **NG** ตัวเดียว (UI §6.35) */}
                                   {r.actualStart && (
-                                    <span style={{ fontSize: 11, padding: '1px 7px', borderRadius: 'var(--r-pill)', background: 'var(--blue-dim)', color: 'var(--blue)', fontWeight: 700 }}>
+                                    <span style={CHIP_N}>
                                       {fmtTime(r.actualStart)}–{r.actualEnd ? fmtTime(r.actualEnd) : '...'}
                                     </span>
                                   )}
-                                  <span style={{ fontSize: 11, padding: '1px 7px', borderRadius: 'var(--r-pill)', background: 'var(--amber-dim)', color: 'var(--amber)', fontWeight: 700 }}>{tr('เปิด')} {r.openCnt}</span>
-                                  <span style={{ fontSize: 11, padding: '1px 7px', borderRadius: 'var(--r-pill)', background: 'var(--green-dim)', color: 'var(--green)', fontWeight: 700 }}>{tr('ปิด')} {r.closedCnt}</span>
-                                  {r.ng > 0 && <span style={{ fontSize: 11, padding: '1px 7px', borderRadius: 'var(--r-pill)', background: 'var(--red-dim)', color: 'var(--red)', fontWeight: 700 }}>🔴 NG {r.ng}</span>}
-                                  {r.dt > 0 && <span style={{ fontSize: 11, padding: '1px 7px', borderRadius: 'var(--r-pill)', background: 'var(--blue-dim)', color: 'var(--blue)', fontWeight: 700 }}>⏱ {fmtMin(r.dt)}</span>}
+                                  <span style={CHIP_N}>{tr('เปิด')} {r.openCnt}</span>
+                                  <span style={CHIP_N}>{tr('ปิด')} {r.closedCnt}</span>
+                                  {r.ng > 0 && <span style={{ ...CHIP_N, background: 'var(--red-dim)', color: 'var(--red)', borderColor: 'var(--red-line)' }}>NG {r.ng}</span>}
+                                  {r.dt > 0 && <span style={CHIP_N}>⏱ {fmtMin(r.dt)}</span>}
                                 </div>
                                 <span style={{ fontSize: 13, fontWeight: 800, color: rowClr }}>{r.confirmed} / {r.target} {tr('ชิ้น (')}{r.rowPct}%)</span>
                               </div>
@@ -4254,7 +4265,8 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                       <button type="button" className="pg-btn sm primary" onClick={onScanOpen} title={tr('Scan เปิด Order (Tag Card)')}>{tr('Scan เปิด')}</button>
                       <button type="button" className="pg-btn sm" onClick={onManualOpen} title={tr('เปิดเป้า (ไม่มีบาร์โค้ด) — ไลน์ที่ไม่มี kanban card / SAP ไม่ gen barcode — เปิดเป้าเองแล้วอัพเดทยอดสะสม')}>{tr('เปิดเป้า')}</button>
                       <button type="button" className="pg-btn sm" onClick={onScanClose} title={tr('Scan ปิด / Confirm')}>{tr('Scan ปิด')}</button>
-                      <button type="button" className="pg-btn sm danger" onClick={onDefect} title={tr('บันทึกงานเสีย')}>{tr('งานเสีย')}</button>
+                      {/* 🎨 ปุ่ม "บันทึก" ไม่ใช่ปุ่มทำลาย ⇒ ไม่ใช้ `.danger` (สงวนให้ ทำลาย/ปฏิเสธ · index.css §pg-btn) */}
+                      <button type="button" className="pg-btn sm" onClick={onDefect} title={tr('บันทึกงานเสีย')}>{tr('งานเสีย')}</button>
                     </div>
                   );
                   return (
@@ -4272,8 +4284,10 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                       style={{ background: 'var(--green)', color: '#fff', border: 'none', borderRadius: 'var(--r-md)', padding: '7px 16px', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
                       {tr('Scan ปิด / Confirm')}
                     </button>
+                    {/* 🎨 1 แถว = ปุ่มหลักได้ปุ่มเดียว (UI §6.35) — "Scan ปิด" เป็นปุ่มหลักอยู่แล้ว
+                        ⇒ ปุ่มนี้เป็นปุ่มรอง (ขอบ) · แดงทึบเดิมเด่นกว่าปุ่มหลักทั้งที่เป็นงานรอง */}
                     <button onClick={onDefect}
-                      style={{ background: 'var(--red)', color: '#fff', border: 'none', borderRadius: 'var(--r-md)', padding: '7px 16px', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
+                      style={{ background: 'transparent', color: 'var(--text)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '7px 16px', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
                       {tr('บันทึกงานเสีย')}
                     </button>
                   </div>
@@ -4541,21 +4555,22 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                           <span style={{ fontSize: 12, fontFamily: 'monospace', fontWeight: 700, color: 'var(--text)' }}>{o.prod_no}</span>
                           {/* MAT เปล่าๆ อ่านไม่ออกว่าเป็นชิ้นงานอะไร (feedback 23/09) → ของกลาง <MatLabel> เติมชื่อ+Part No. จากทะเบียนให้เอง */}
                           <MatLabel mat={o.mat_no} name={o.part_name} />
-                          {o.customer && <span style={{ fontSize: 11, padding: '1px 7px', borderRadius: 'var(--r-pill)', background: 'var(--blue-dim)', color: 'var(--blue)', fontWeight: 700 }}>{o.customer}</span>}
+                          {/* ลูกค้า/MAT/ป้ายประเภท = ตัวระบุ ไม่ใช่สถานะ ⇒ ชิปเทา (25/11 · UI §6.35) */}
+                          {o.customer && <span style={CHIP_N}>{o.customer}</span>}
                           {o.machine_no && (
                             <span style={{ fontSize: 11, padding: '1px 7px', borderRadius: 'var(--r-pill)', background: 'var(--bg3)', color: 'var(--muted)', fontWeight: 700 }}
                               title={tr('เครื่องที่ใบนี้วิ่ง (ไลน์เครื่องขนาน)')}>{o.machine_no}</span>
                           )}
                           {isManual && (
-                            <span style={{ fontSize: 11, padding: '1px 7px', borderRadius: 'var(--r-pill)', background: 'var(--blue-dim)', color: 'var(--blue)', fontWeight: 700 }}
+                            <span style={CHIP_N}
                               title={tr('ออเดอร์ manual — ไลน์ไม่มี kanban card เปิดเป้าเองไม่ได้สแกน')}>
-                              ✍️ manual
+                              manual
                             </span>
                           )}
                           {isCarried && (() => {
                             const from = carryFromLabel(o);
                             return (
-                              <span style={{ fontSize: 11, padding: '1px 7px', borderRadius: 'var(--r-pill)', background: 'var(--blue-dim)', color: 'var(--blue)', fontWeight: 700 }}
+                              <span style={CHIP_N}
                                 title={`${from ? `${tr('ยกยอดมาจาก')} ${from}` : tr('ยกยอดมาจากกะก่อน (อ่านกะต้นทางไม่ได้)')}${o.carry_over_note ? ` · ${o.carry_over_note}` : ''}`}>
                                 ➡ {tr("ยกยอดมา")} {from ? `${tr('จาก')} ${from}` : ''} {o.carry_over_note ? `(${o.carry_over_note.match(/\d+\/\d+/)?.[0] || ''})` : ''}
                               </span>
@@ -4835,12 +4850,13 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2, flexWrap: 'wrap' }}>
                           <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{d.dr_defect_types?.name_th || '—'}</span>
                           {d.prod_orders?.mat_no && (
-                            <span style={{ fontSize: 11, padding: '1px 7px', borderRadius: 'var(--r-pill)', background: 'var(--blue-dim)', color: 'var(--blue)', fontWeight: 700, fontFamily: 'monospace' }}>
+                            <span style={{ ...CHIP_N, fontFamily: 'monospace' }}>
                               {d.prod_orders.mat_no}
                             </span>
                           )}
+                          {/* 🎨 รหัสใบ = ตัวระบุ ไม่ใช่สถานะ ⇒ ชิปเทา (เดิมเขียว = เหมือนบอกว่า "ดี") */}
                           {d.prod_orders?.prod_no && (
-                            <span style={{ fontSize: 11, padding: '1px 7px', borderRadius: 'var(--r-pill)', background: 'var(--green-dim)', color: 'var(--green)', fontWeight: 700, fontFamily: 'monospace' }}>
+                            <span style={{ ...CHIP_N, fontFamily: 'monospace' }}>
                               {d.prod_orders.prod_no}
                             </span>
                           )}
@@ -4848,17 +4864,18 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                               ป้ายมาจาก `childPartText()` ของกลาง · %Q/%P ของแถวนี้ยังผูกกับ MAT แม่ */}
                           {childPartText(d) && (
                             <span title={tr('เสียที่พาร์ทลูก — ของเสียยังนับเข้า %Q ของชิ้นงานหลักตามเดิม 1 ชิ้น = 1 ชิ้น')}
-                              style={{ fontSize: 11, padding: '1px 7px', borderRadius: 'var(--r-pill)', background: 'var(--amber-dim)', color: 'var(--amber)', fontWeight: 700, fontFamily: 'monospace' }}>
+                              style={{ ...CHIP_N, fontFamily: 'monospace' }}>
                               {childPartText(d)}
                             </span>
                           )}
                           {d.qty_ng     > 0 && <span style={{ fontSize: 11, color: 'var(--red)', fontWeight: 700 }}>NG {d.qty_ng}</span>}
                           {d.qty_suspect > 0 && <span style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 700 }}>{tr('สงสัย')} {d.qty_suspect}</span>}
-                          {d.qty_repair  > 0 && <span style={{ fontSize: 11, color: 'var(--blue)', fontWeight: 700 }}>{tr('ซ่อม')} {d.qty_repair}</span>}
+                          {/* ซ่อม = ยังไม่รู้ผล (ไม่ดี ไม่เสีย) ⇒ ไม่ใช้สี — NG(แดง)/สงสัย(เหลือง = ถังเหลืองจริง) พอแล้ว */}
+                          {d.qty_repair  > 0 && <span style={{ fontSize: 11, color: 'var(--text2)', fontWeight: 700 }}>{tr('ซ่อม')} {d.qty_repair}</span>}
                           {/* งานทดลองต้องเห็นในลิสต์เสมอ (เป็นของเสียจริง) แค่ไม่ถูกนับเข้า %Q */}
                           {isTrialDefect(d) && (
                             <span title={tr('งานทดลอง — ไม่นับเข้า %Q แต่ยังนับเป็นมูลค่าของเสีย')}
-                              style={{ fontSize: 11, padding: '1px 7px', borderRadius: 'var(--r-pill)', background: 'var(--blue-dim)', color: 'var(--blue)', fontWeight: 700 }}>
+                              style={CHIP_N}>
                               {tr("งานทดลอง")}
                             </span>
                           )}
@@ -4884,7 +4901,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                             title={unknown
                               ? tr("เช็คสถานะถังไม่สำเร็จ — แถวนี้อาจมีใบถังอยู่แล้ว ตรวจในหน้าของเสียก่อนลงซ้ำ")
                               : done
-                                ? `${tr("ลงถังแล้ว")}${lk.yellow ? ` · 🟡 ${lk.yellow} ${tr("ชิ้น")}` : ''}${lk.red ? ` · 🔴 ${lk.red} ${tr("ชิ้น")}` : ''} — ${tr("กดเพื่อลงเพิ่ม")}`
+                                ? `${tr("ลงถังแล้ว")}${lk.yellow ? ` · ${tr("ถังเหลือง")} ${lk.yellow} ${tr("ชิ้น")}` : ''}${lk.red ? ` · ${tr("ถังแดง")} ${lk.red} ${tr("ชิ้น")}` : ''} — ${tr("กดเพื่อลงเพิ่ม")}`
                                 : tr("ส่งเข้าถังเหลือง (ต้องสงสัย) / ถังแดง (เสีย) โดยไม่ต้องคีย์ใบใหม่")}
                             style={{ fontSize: 11, fontWeight: 800, whiteSpace: 'nowrap', cursor: 'pointer',
                               borderRadius: 'var(--r-md)', padding: '3px 10px',
@@ -4893,7 +4910,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                               border: `1px solid var(--${tone}-line)` }}>
                             {unknown ? tr("ลงถัง?")
                               : done
-                                ? `${tr("ลงถังแล้ว")}${lk.yellow ? ` 🟡${lk.yellow}` : ''}${lk.red ? ` 🔴${lk.red}` : ''}`
+                                ? `${tr("ลงถังแล้ว")}${lk.yellow ? ` ${tr("เหลือง")} ${lk.yellow}` : ''}${lk.red ? ` ${tr("แดง")} ${lk.red}` : ''}`
                                 : tr("ลงถัง")}
                           </button>
                         );
@@ -4949,9 +4966,11 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                   ⏱ Downtime ({dtLogs.length} {tr("รายการ")})
                 </div>
                 {/* 🔒 ปุ่มเพิ่มต้องผ่าน canScan เหมือนปุ่มแก้/ปิดรายการ (18/11) — เดิมไม่เช็ค ⇒ role ดูอย่างเดียว/โหมดจำลอง role ก็ลง DT ได้ */}
+                {/* 🎨 แดงทึบ = "อันตราย/หยุด" — ปุ่มนี้คือ "บันทึกข้อมูล" ⇒ ปุ่มรอง (ขอบ) · 25/11
+                    🔴 คอมเมนต์ต้องอยู่ "ก่อน" `{cond && (` — วางข้างในกลายเป็น 2 node = จอขาว (CLAUDE.md §กับดัก) */}
                 {dtOpen && canScan && (
                 <button onClick={() => { setShowDT(true); setDtForm({ id: null, downtime_type_id: '', mode: 'start_end', start_time: '', end_time: '', duration_min: '', machine_no: '', mat_no: '', description: '' }); }}
-                  style={{ background: 'var(--red)', color: '#fff', border: 'none', borderRadius: 'var(--r-md)', padding: '6px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                  style={{ background: 'transparent', color: 'var(--text)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '6px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                   + {tr("บันทึก")} Downtime
                 </button>
                 )}
@@ -4979,9 +4998,9 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                           <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--r-pill)', background: cat.bg, color: cat.color }}>{tr(cat.label)}</span>
                           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{d.dr_downtime_types?.name_th || '—'}</span>
                           {d.machine_no && <span style={{ fontSize: 11, color: 'var(--muted)' }}>· {d.machine_no}</span>}
-                          {d.mat_no && <span style={{ fontSize: 11, fontWeight: 700, padding: '1px 7px', borderRadius: 'var(--r-pill)', background: 'var(--blue-dim)', color: 'var(--blue)' }}>{d.mat_no}</span>}
+                          {d.mat_no && <span style={CHIP_N}>{d.mat_no}</span>}
                           {d.carry_over && <span title={tr('เครื่องยังซ่อมไม่เสร็จตอนปิดกะ — เปิดต่อในกะถัดไปอัตโนมัติ')} style={{ fontSize: 11, fontWeight: 700, padding: '1px 7px', borderRadius: 'var(--r-pill)', background: 'var(--red-dim)', color: 'var(--red)' }}>{tr('ยกข้ามกะ')}</span>}
-                          {d.carried_from_id && <span title={tr('รายการต่อเนื่องจาก Downtime ที่ตัดยอดมาจากกะก่อน')} style={{ fontSize: 11, fontWeight: 700, padding: '1px 7px', borderRadius: 'var(--r-pill)', background: 'var(--amber-dim)', color: 'var(--amber)' }}>{tr('⏩ ต่อจากกะก่อน')}</span>}
+                          {d.carried_from_id && <span title={tr('รายการต่อเนื่องจาก Downtime ที่ตัดยอดมาจากกะก่อน')} style={CHIP_N}>{tr('ต่อจากกะก่อน')}</span>}
                         </div>
                         {d.description && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{d.description}</div>}
                         <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
@@ -8458,7 +8477,8 @@ function HistoryTab({ role }) {
                               )}
                               {d.qty_ng      > 0 && <span style={{ fontSize: 11, color: 'var(--red)', fontWeight: 700 }}>NG {d.qty_ng}</span>}
                               {d.qty_suspect > 0 && <span style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 700 }}>{tr('สงสัย')} {d.qty_suspect}</span>}
-                              {d.qty_repair  > 0 && <span style={{ fontSize: 11, color: 'var(--blue)', fontWeight: 700 }}>{tr('ซ่อม')} {d.qty_repair}</span>}
+                              {/* ซ่อม = ยังไม่รู้ผล (ไม่ดี ไม่เสีย) ⇒ ไม่ใช้สี — NG(แดง)/สงสัย(เหลือง = ถังเหลืองจริง) พอแล้ว */}
+                          {d.qty_repair  > 0 && <span style={{ fontSize: 11, color: 'var(--text2)', fontWeight: 700 }}>{tr('ซ่อม')} {d.qty_repair}</span>}
                               {/* ของเสียทุกรายการเข้าใบรายงานปัญหา (ไม่มีเกณฑ์เวลา) → ลงวิธีแก้ไขได้ทุกแถว */}
                               {(() => {
                                 const done = !!String(d.fix_action || '').trim();
@@ -8503,7 +8523,7 @@ function HistoryTab({ role }) {
                                 <span style={{ fontSize: 11, padding: '1px 7px', borderRadius: 'var(--r-pill)', background: cat.bg, color: cat.color, fontWeight: 700 }}>{tr(cat.label)}</span>
                                 <span style={{ fontSize: 12, color: 'var(--text)', flex: 1 }}>{d.dr_downtime_types?.name_th}</span>
                                 {d.machine_no && <span style={{ fontSize: 11, color: 'var(--muted)' }}>· {d.machine_no}</span>}
-                                {d.mat_no && <span style={{ fontSize: 11, fontWeight: 700, padding: '1px 7px', borderRadius: 'var(--r-pill)', background: 'var(--blue-dim)', color: 'var(--blue)' }}>{d.mat_no}</span>}
+                                {d.mat_no && <span style={CHIP_N}>{d.mat_no}</span>}
                                 <span style={{ fontSize: 12, fontWeight: 700, color: d.dr_downtime_types?.color || 'var(--muted)' }}>{fmtMin(d.duration_min)}</span>
                                 {/* 🛠 เกณฑ์เดียวกับแท็บ Live (นอกแผน ≥ PROBLEM_MIN_MINUTES) — ยังไม่ลง = ส้ม · ลงแล้ว = เขียวเงียบ */}
                                 {dtNeedsFix(d) && (() => {
