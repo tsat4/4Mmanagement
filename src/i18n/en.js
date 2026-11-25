@@ -18357,6 +18357,16 @@ const EN = {
   "%A/%P/%Q ของช่วง = ตัวตั้งรวม ÷ ตัวหารรวม (ไม่ใช่เฉลี่ยรายกะ) — กะที่ผลิตน้อยจึงไม่ถ่วงเท่ากะที่ผลิตเยอะ": "%A/%P/%Q of the range = total numerator ÷ total denominator (not a per-shift average) — low-output shifts weigh less than high-output ones",
   "ข้อมูลบางส่วนถูกตัด (ช่วงยาวเกิน)": "Some data was cut (range too long)",
 
+  'กระแส (A)': 'Current (A)',
+  'สูงสุดในนาที': 'Max in minute',
+  'ชม. ล่าสุด': 'h latest',
+  'ช่วงชั่วโมงล่าสุด': 'Latest hours',
+  'เฉลี่ย 3 เฟส · ลิมิต': '3-phase avg · limit',
+  'จุด = 1 นาที (ค่าที่มิเตอร์ส่งมาในนาทีนั้น) · เส้นประแดง = ลิมิต · มิเตอร์หลุดเกิน 5 นาทีเส้นขาด': 'Dot = 1 minute (value the meter sent that minute) · red dashed = limit · meter offline over 5 minutes breaks the line',
+  'ทุกตัวเลข กราฟ เหตุการณ์ และไฟล์ Excel คิดเฉพาะช่วงนี้': 'All figures, charts, events and the Excel file cover this window only',
+  'กำลังไฟ (kW) — เส้นทึบ = ค่าที่มิเตอร์ส่งมาในนาที · เส้นประ = สูงสุดในนาที': 'Power (kW) — solid = value sent that minute · dashed = max in minute',
+  'กำลังไฟ (ค่าล่าสุด)': 'Power (latest)',
+  'ยังไม่มีค่ารายนาทีใน': 'No per-minute values in the',
 };
 
 export default EN;

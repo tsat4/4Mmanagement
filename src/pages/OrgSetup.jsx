@@ -19,6 +19,9 @@ import OrgAssignmentsPanel from '../components/OrgAssignmentsPanel';   // 👔 �
 import LineSelect from '../components/LineSelect';
 import PersonSelect from '../components/PersonSelect';
 import CostCenterSelect from '../components/CostCenterSelect';
+import SimpleMasterPanel from '../components/SimpleMasterPanel';   // 🏢 ทะเบียนบริษัทในกลุ่ม (25/11)
+import { masterDeleteGuard } from '../utils/masterRefs';
+import { invalidateCompanies } from '../utils/useCompanies';
 
 import InfoMore from '../components/InfoMore';
 import PageHeader from '../components/PageHeader';
@@ -125,7 +128,7 @@ export default function OrgSetup() {
   const scopeCtx = useMemo(() => ({ nodes, isAdmin, canOwn, mySecId }), [nodes, isAdmin, canOwn, mySecId]);
   /* 🌳 แท็บ: มุมมองผัง (ภาพรวมทั้งต้นไม้ + รหัส CC ซ้อนชั้น) · จัดการหน่วยงาน (4 คอลัมน์เดิม)
      ค่าเริ่มต้น = มุมมองผัง เพราะคำถามที่คนถามบ่อยที่สุดคือ "หน่วยไหนอยู่ใต้หน่วยไหน" */
-  const [tab, setTab] = useTabParam(['tree', 'manage', 'teams'], 'tree');
+  const [tab, setTab] = useTabParam(['tree', 'manage', 'teams', 'companies'], 'tree');
   const canEditNode    = (node)   => canEditOrgNode(node, scopeCtx);
   const canAddDeptHere = (secId)  => canAddOrgNodeUnder('department', secId, scopeCtx);
   const canAddLineHere = (deptId) => canAddOrgNodeUnder('line', deptId, scopeCtx);
@@ -373,7 +376,7 @@ export default function OrgSetup() {
       <PageHeader title={tr('แผนผังองค์กร')} icon="🏢"
         sub={tr('จัดการโครงสร้าง Section/ส่วน → Department/แผนก → Group/กลุ่ม พร้อม Cost Center (master data ที่หน้าอื่นใช้อ้างอิง)')}
         tabs={[{ key: 'tree', label: tr("มุมมองผัง") }, { key: 'manage', label: tr("จัดการหน่วยงาน") },
-               { key: 'teams', label: tr("ทีม (จัดกะ)") }]}
+               { key: 'teams', label: tr("ทีม (จัดกะ)") }, { key: 'companies', label: tr("บริษัทในกลุ่ม") }]}
         tab={tab} onTab={setTab} />
 
       {/* ซ่อนปุ่มได้ ห้ามซ่อนเหตุผล (UI-CONVENTIONS §6.9) — ต้องรู้ว่าแก้อะไรได้/ไม่ได้ และต้องไปขอใคร */}
@@ -396,6 +399,34 @@ export default function OrgSetup() {
         <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>{tr('กำลังโหลด...')}</div>
       ) : tab === 'tree' ? (
         <OrgTreeView nodes={nodes} scopeCtx={scopeCtx} canEdit={isAdmin || canOwn} onChanged={fetchAll} />
+      ) : tab === 'companies' ? (
+        /* 🏢 ทะเบียนบริษัทในกลุ่ม (25/11 · template Com Code) — ตาราง Main `companies` ไม่มี FK
+           · org_nodes(company).code / cost_centers.company / รหัสพนักงาน 3 หลักแรก อ้างด้วยข้อความ ⇒ ด่านนับปลายทางก่อนลบ
+           · สิทธิ์เขียน = org:manage_divisions (คีย์เดียวกับ RLS) · ยังไม่ลงโหนดผังของบริษัทอื่น (ผังเรา = สาย P4) */
+        <>
+          <div style={{ marginBottom: 12, padding: '9px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)',
+                        background: 'var(--bg3-surf)', fontSize: 12, color: 'var(--text2)', lineHeight: 1.7 }}>
+            🏢 <b>{tr('ทะเบียนบริษัทในกลุ่ม TSG ตาม template Com Code')}</b> — SPG → {tr('บริษัท')} (SAP 4 {tr('หลัก')} / SAP B1 3 {tr('หลัก')})
+            <div style={{ color: 'var(--muted)' }}>
+              {tr('รหัสพนักงาน 7 หลัก =')} <b>Com Code 3 {tr('หลัก')}</b> + running 4 {tr('หลัก')} ({tr('เช่น')} <code>1100161</code> = TSA <code>110</code> + 0161)
+              · {tr('ชื่อย่อ (code) ต้องตรงกับช่อง company ในทะเบียน Cost Center · รหัส SAP ต้องตรงกับ code ของโหนดบริษัทในผัง')}
+            </div>
+          </div>
+          <SimpleMasterPanel client={supabase} table="companies" keyCol="code" canManage={canDivisions}
+            onBeforeDelete={masterDeleteGuard(supabase, 'companies', r => r?.name || r?.code)}
+            onChanged={invalidateCompanies}
+            emptyText={tr('ยังไม่มีบริษัทในทะเบียน — รัน migration 20261125_companies_registry_main.sql (MAIN) ก่อน')}
+            help={tr('แก้รหัส/ชื่อย่อแล้วต้องไล่แก้ cost_centers.company และโหนดบริษัทในผังด้วย (ไม่ผูก FK) · ปิดใช้ = ไม่โผล่ให้เลือกใหม่')}
+            fields={[
+              { key: 'spg_no', label: 'SPG', required: true, placeholder: '2000', width: 70, mono: true },
+              { key: 'spg_name', label: tr("ชื่อ SPG"), required: true, placeholder: 'Automotive Metal Forming - AMF' },
+              { key: 'name', label: tr("ชื่อบริษัท"), placeholder: 'Thai Summit Autoparts Industry' },
+              { key: 'sap_code', label: 'SAP', placeholder: '2100', width: 70, mono: true },
+              { key: 'sap_b1_code', label: 'SAP B1', placeholder: '600', width: 70, mono: true },
+              { key: 'com_code', label: 'Com Code', placeholder: '210', width: 80, mono: true },
+              { key: 'note', label: tr("หมายเหตุ") },
+            ]} />
+        </>
       ) : tab === 'teams' ? (
         /* 👥 ทีม — แยกออกจากแถวผังองค์กร (22/10 · user: "ระดับ team ไว้ set กะ ไม่มีอยู่ใน organize จริง")
            🔴 ห้ามถอดแท็บนี้ทิ้ง: ทีมเป็นลูกของกลุ่มใน `org_nodes` จริง ถ้าไม่มีที่ให้เห็น

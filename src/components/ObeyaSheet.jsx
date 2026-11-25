@@ -11,6 +11,9 @@ import { statusColor } from '../utils/obeyaKpi';
 import { A4, GAP, chooseSheetGrid } from '../utils/sheetGrid';
 import useIsMobile from '../utils/useIsMobile';
 import useTvShell from '../utils/useTvShell';
+import { motion } from 'framer-motion';
+import { stagger, liftHover } from '../utils/motion';
+import useCountUp from '../utils/useCountUp';
 
 import { tr } from '../utils/i18n';
 /* คณิตของผัง (A4 · GAP · ตัวเลือกผัง) ย้ายไป `src/utils/sheetGrid.js` แล้ว (pure + มีเทส)
@@ -169,9 +172,16 @@ const SheetIconBtn = ({ fs, title, onClick, children, className }) => (
    · บรรทัดรอง (`sub`) = **1 บรรทัดเสมอ** ตัดท้าย … · ข้อความเต็มอยู่ใน tooltip (`subFull` ถ้าส่ง ไม่งั้น = sub) · ใน popup 🔍 วาดเต็ม
    · ท้ายแผ่น = **แถวเดียวความสูงคงที่** (คาดปลายปี 1 บรรทัดซ้าย + ปุ่มลิงก์ขวา) และ **มีเสมอ** แม้ว่าง ⇒ หัว/ท้ายสูงเท่ากันทุกแผ่น → กราฟสูงเท่ากัน · ตัวเลขใหญ่อยู่ตำแหน่งเดียวกัน
    · ใน popup (`onClose`) ท้ายแผ่นยังเป็นชั้น/รางของ insight เหมือนเดิม */
-export function Sheet({ k, cw = 0, span = 1, icon, title, sub, subFull = null, big, unit, bigNote, delta, stat, foot, link, linkTitle = null, onLink, zoom = true, onClose, statZoom = false, goals = null, footAside = false, children }) {
+export function Sheet({ k, cw = 0, span = 1, icon, title, sub, subFull = null, big, unit, bigNote, delta, stat, foot, link, linkTitle = null, onLink, zoom = true, onClose, statZoom = false, goals = null, footAside = false, idx = 0, children }) {
   const fs = (n) => Math.max(11, Math.round(n * k));
   const status = stat?.status;
+  /* 🔢 ตัวเลขใหญ่วิ่งขึ้น (24/11 · useCountUp) — `big` มาเป็นสตริงจัดรูปแล้ว ("1,105,886" · "98.4") ⇒ แกะเลข · วิ่ง · จัดรูปกลับทศนิยมเท่าเดิม
+     ไม่ใช่ตัวเลขล้วน ("—" · "12 ชม.") = โชว์ตามเดิม · ใบใน popup (onClose) ไม่วิ่ง — เปิดมาต้องอ่านได้ทันที */
+  const bigStr = big == null ? '' : String(big);
+  const bigNum = !onClose && /^-?[\d,]+(?:\.\d+)?$/.test(bigStr) ? Number(bigStr.replace(/,/g, '')) : null;
+  const bigDec = bigNum != null && bigStr.includes('.') ? bigStr.split('.')[1].length : 0;
+  const bigRun = useCountUp(bigNum);
+  const bigShown = bigNum == null ? big : bigRun.toLocaleString(undefined, { minimumFractionDigits: bigDec, maximumFractionDigits: bigDec });
   /* 📱 มือถือ: กริดเหลือ 1 คอลัมน์ ⇒ แผ่นกว้าง 2 ช่อง (OEE · ACTION BOARD) ต้องเป็น 1 ช่อง
      ไม่งั้นเกิดคอลัมน์แฝงที่ 2 กว้าง ~0 = ที่ว่างประหลาด + แผ่นถัดไปเบียด (15/10) · จอคอมเดิม */
   const isMobile = useIsMobile();
@@ -218,7 +228,7 @@ export function Sheet({ k, cw = 0, span = 1, icon, title, sub, subFull = null, b
     </div>
   );
   return (<>
-    <div style={{
+    <motion.div {...(onClose ? {} : stagger(Math.min(idx, 9)))} {...(onClose ? {} : liftHover())} className={onClose ? undefined : 'lift-card'} style={{
       gridColumn: `span ${span}`,
       /* ❌ ไม่มีแถบสีบนหัวแผ่นอีกแล้ว (คำสั่ง user 21/09 "สีสันของเส้นแต่ละ box ไม่เอา")
          สีบนแผ่นเหลือความหมายเดียว = **สถานะ** (ไฟดวงบนหัว + สีแท่งกราฟ) ไม่ใช่ "สีประจำแกน"
@@ -253,7 +263,7 @@ export function Sheet({ k, cw = 0, span = 1, icon, title, sub, subFull = null, b
             <div title={fit >= 3 && bigNote ? bigNote : undefined}
               style={{ display: 'flex', alignItems: 'baseline', gap: 5, flexShrink: 0, ...(isMobile ? { flexWrap: 'wrap', flexShrink: 1, minWidth: 0 } : null) }}>
               <div style={{ fontSize: Math.max(11, Math.round(fs(34) * bigScale)), fontWeight: 900, lineHeight: 1, color: status ? statusColor(status) : 'var(--text)' }}>
-                {big}
+                {bigShown}
               </div>
               {unit && <div style={{ fontSize: fs(13), fontWeight: 700, color: 'var(--muted)' }}>{unit}</div>}
               {bigNote && fit < 3 && <div style={{ fontSize: fs(10.5), fontWeight: 600, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{bigNote}</div>}
@@ -296,7 +306,7 @@ export function Sheet({ k, cw = 0, span = 1, icon, title, sub, subFull = null, b
           </div>
         )}
       </>)}
-    </div>
+    </motion.div>
     {zoomed && (
       <SheetZoom onClose={() => setZoomed(false)}>
         <Sheet k={zk} cw={1200} icon={icon} title={title} sub={sub} subFull={subFull} big={big} unit={unit} bigNote={bigNote}
