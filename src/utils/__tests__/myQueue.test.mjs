@@ -761,3 +761,18 @@ test('✍️ ใบตรวจ AM รออนุมัติ (A5 · 24/11) —
   assert.ok(buildQueue({ ...base }, { sections: [], canAmApprove: true }, now).missing.includes('amPending'));
   assert.ok(buildQueue({ ...base, amPending, amPendingTruncated: true }, { sections: [], canAmApprove: true }, now).missing.includes('am_pending_truncated'));
 });
+
+test('✍️ งาน e-Workflow ที่รอฉัน (25/11) — บรรทัดเดียวต่อใบงาน · unit · ไม่ขึ้น badge · ไม่ส่ง = ไม่ partial', () => {
+  const now = new Date('2026-11-25T03:00:00Z');
+  const base = { mo: [], moAll: [], sessions: [], fourM: [], actions: [], summaries: [], bins: [], redBins: [] };
+  const wfTasks = [
+    { id: 1, created_at: '2026-11-24T01:00:00Z', def: 'Poka-Yoke · รับทราบรายวัน', bound: true },
+    { id: 2, created_at: '2026-11-20T01:00:00Z', def: 'Poka-Yoke · รับทราบรายวัน', bound: true },
+  ];
+  const q = buildQueue({ ...base, wfTasks }, { uid: 'u1', sections: [] }, now);
+  const rows = q.unit.filter(x => x.key.startsWith('wf:'));
+  assert.equal(rows.length, 1); assert.equal(rows[0].count, 2); assert.equal(rows[0].age, 5);
+  assert.equal(q.mine.some(x => x.key.startsWith('wf:')), false);
+  assert.equal(buildQueue({ ...base }, { uid: 'u1', sections: [] }, now).missing.includes('wfTasks'), false);
+  assert.ok(buildQueue({ ...base, wfTasks: null }, { uid: 'u1', sections: [] }, now).missing.includes('wfTasks'));
+});

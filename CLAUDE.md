@@ -179,8 +179,9 @@ Realtime + Edge Functions/Deno) · Telegram Bot API · deploy = Render.com (Stat
 
 
 > ### 🔴🔴 กฎเหล็กข้าม session — **ตัวเศษ %P = "ทุกชิ้นที่เครื่องทำออกมา" ไม่ใช่แค่งานดี** (2026-10-04)
-> `P = CT × Total Count ÷ Run` · `Q = Good ÷ Total Count` · **Total Count = ดี + เสีย + ทดลอง + สงสัย**
-> **งานทดลองเข้าด้วย**
+> `P = CT × Total Count ÷ Run` · `Q = Good ÷ Total Count` · **Total Count = ดี + เสีย + ทดลอง + สงสัย + ซ่อม**
+> **งานทดลองเข้าด้วย** · 🔧 **ชิ้นรอซ่อม (`qty_repair`) เข้าด้วย** (25/11) — ตัวเติมตัวเศษ = **`defectQtyForP`**
+> (`defectQtyAll` = ชุดพาเรโต/มูลค่า **ห้ามสลับ**) · ไม่หัก %Q แต่ **จอต้องเขียนว่ารอซ่อมกี่ชิ้น** (`sumReworkPending`)
 > ⇒ `defectQtyAll` ⇒ QA ตัดสินของสงสัย **%Q ขยับ · %P ไม่ขยับ**
 > · เติมผ่าน **`ngByMatFrom()`** → `ngForP` (จอสด) · ปิดกะคิดเองจาก `defects` · **ห้ามบวกในหน้า**
 >   คิวรี `defect_logs` ต้อง embed `prod_orders(mat_no)` · ด่าน `oee-live-needs-ngforp`
@@ -214,7 +215,7 @@ Realtime + Edge Functions/Deno) · Telegram Bot API · deploy = Render.com (Stat
 > ### 🔴🔴 กฎเหล็กข้าม session — **"ของสงสัย" ยังไม่ใช่ของเสีย จนกว่า QA จะตัดสิน** (2026-09-30 · คำสั่ง user)
 > · **ของสงสัย = ยังไม่รู้ว่าดีหรือเสีย ⇒ กันออกจาก %Q แล้ว "เขียนบนจอว่ารอพิจารณากี่ชิ้น"**
 >   ผลพิจารณาอ่านจาก `quality_bin_records` · ตัดสินที่ `suspectState()` (§7.1 `oee.js`) **ห้ามคิดเองในหน้า**
-> · 🔴 **%Q ใช้ `defectQty` · พาเรโต/มูลค่า/รายการ + ตัวเศษ %P ใช้ `defectQtyAll` — ห้ามสลับ**
+> · 🔴 **%Q = `defectQty` · พาเรโต/มูลค่า/รายการ = `defectQtyAll` · ตัวเศษ %P = `defectQtyForP` — ห้ามสลับ**
 > · 🔴 **คิวรีที่เอาไปคิด %Q ต้องต่อ `${QBIN_EMBED}` ใน select** ไม่ต่อ = `suspectState()` คืน `unknown`
 >   แล้วถอยไปใช้พฤติกรรมเดิม · มีด่าน `oee-suspect-needs-qbin-embed`
 >   🔴 กะที่ QA ยังไม่ตัดสิน = **ค่าชั่วคราว** ต้องคิดใหม่เมื่อตัดสิน (`restampSessionQByDefects()` · ใบเหลืองครอบ = กฎเดียวกัน)
@@ -223,18 +224,16 @@ Realtime + Edge Functions/Deno) · Telegram Bot API · deploy = Render.com (Stat
 > `ct_snapshot`/`break_snapshot` (DR) · เจ้าของกฎ **`src/utils/oee.js` §snapshot** · **เก็บ input ไม่ใช่ช่วงพักสำเร็จรูป**
 > · 🔴 **ไม่มี snapshot = ถอยไปทะเบียนสดเป๊ะ ห้ามบล็อก ห้าม backfill กะเก่า** · 🔴 **มีแล้วห้ามทับด้วยทะเบียนวันนี้** (2 ด่าน)
 
-> ### 🔴🔴 กฎเหล็กข้าม session — **PPM มีสูตรที่เดียว** `src/utils/oee.js` §7.3 (2026-11-16 · feedback 16/11)
-> `ppmOf(ng, good)` · `ppmFromDefects(rows, good)` · `fmtPpm()` — **ห้ามคูณ 1e6 เองในหน้า** (2 ด่าน)
-> · 🔴 **ตัวเศษ/ตัวหารฐานเดียวกัน — งานทดลองออกทั้งคู่** (`trialState()` · แยกไม่ออก = คืน `unsureQty` ให้จอเขียน **ห้ามเดา**)
-> · 🔴 **ตัวหาร = "ชิ้น" (ยอดสแกนดี) ห้ามใช้ยอดที่ยุบคู่ RH/LH** (`pairAwareTotal`/`collapseOps` = shot · กฎ "ชิ้น ≠ shot")
-> · ผลิต 0 แต่มีของเสีย = **`null`** ห้าม 0 / 1,000,000 · **โชว์จำนวนเต็ม** (ทศนิยมจาก `kpi_catalog.decimals`)
-> · 🔴 **ห้าม clamp ค่าที่สูง** — PPM = ชิ้นต่อล้าน เกิน 100 ได้ปกติ
+> ### 🔴🔴 กฎเหล็กข้าม session — **PPM มีสูตรที่เดียว** `src/utils/oee.js` §7.3 (2026-11-16)
+> `ppmOf` · `ppmFromDefects` · `fmtPpm` — **ห้ามคูณ 1e6 เองในหน้า** (2 ด่าน) · ตัวเศษ/ตัวหารฐานเดียวกัน
+> (งานทดลองออกทั้งคู่ `trialState()` · แยกไม่ออก = `unsureQty` ให้จอเขียน **ห้ามเดา**)
+> · 🔴 **ตัวหาร = "ชิ้น" (ยอดสแกนดี) ห้ามใช้ยอดที่ยุบคู่ RH/LH** · ผลิต 0 แต่มีของเสีย = **`null`**
+> · 🔴 **ห้าม clamp ค่าที่สูง** (เกิน 100 ได้ปกติ) · 📄 `docs/modules/oee.md` §PPM
 
 > ### 🧩 ของเสียเลือก "พาร์ทลูก" ได้ แต่ **ไม่เข้าสูตร %Q/%P เลย** (2026-11-16 · คำสั่ง user)
 > `defect_logs.child_*` · ของกลาง **`src/utils/defectPart.js`** · ยังหักที่ MAT แม่ **1 ชิ้น = 1 ชิ้น**
-> ตัวหาร %Q ไม่เปลี่ยน · %P ยังผูก `prod_orders.mat_no`
-> 🔴 **ห้ามคูณ/หาร `child_qty_per_fg` ในสูตรใดๆ** (รอ user เคาะ "ลูกเสีย N = FG เสียกี่ชิ้น" · มีด่าน)
-> 🔴 **ไม่มีลูกใน BOM / อ่าน BOM ไม่ได้ = ยังลงของเสียได้ ห้ามบล็อก** · ลิสต์ลูกผ่าน `useBomChildren` เท่านั้น
+> 🔴 **ห้ามคูณ/หาร `child_qty_per_fg` ในสูตรใดๆ** (มีด่าน) · 🔴 **ไม่มีลูกใน BOM/อ่านไม่ได้ = ยังลงของเสียได้
+> ห้ามบล็อก** · ลิสต์ลูกผ่าน `useBomChildren` เท่านั้น
 
 > 📄 รายละเอียดเต็ม → `docs/modules/oee.md`
 
