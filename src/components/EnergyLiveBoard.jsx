@@ -215,8 +215,12 @@ export default function EnergyLiveBoard() {
         <Kpi color={GOOD} label={tr('CO₂ ที่ปล่อยวันนี้')} value={ef ? fmtTco2e(co2eKg(t.todayKwh, ef)) : '—'} unit="tCO₂e"
           sub={factors?.err ? <span style={{ color: WARN }}>{tr('อ่านค่าการปล่อย (EF) ไม่ได้')}</span>
             : !ef ? (factors == null ? '…' : <span style={{ color: WARN }}>{tr('ยังไม่ได้ตั้งค่าการปล่อย (EF) — แท็บค่าการปล่อย')}</span>)
-            : <>{tr('เดือนนี้')} <b>{fmtTco2e(co2eKg(t.monthKwh, ef))}</b> tCO₂e · EF {Number(ef.kg_co2e)} kgCO₂e/kWh<br />
-                <span style={{ color: 'var(--muted)' }}>{tr('จากมิเตอร์บนบอร์ด (Scope 2) · แท็บรายเดือนใช้ยอดบิลเมื่อมี')}</span></>} />
+            : <>{tr('เดือนนี้')} <b>{fmtTco2e(co2eKg(t.monthKwh, ef))}</b> tCO₂e · EF {Number(ef.kg_co2e)} kgCO₂e/kWh
+                {/* แยกรายตู้ (25/11 · user เลือก "รวมทั้งโรงงาน + แยกรายตู้") — แต่ละตู้มาจากต้นทาง/ทีมต่างกัน เทียบจอ Node-RED ของทีมนั้นได้ */}
+                {board.panels.length > 1 && board.panels.map(p => (
+                  <div key={p.panel}>{tr('ตู้')} {p.panel}: {fmtTco2e(co2eKg(p.todayKwh, ef))} / {fmtTco2e(co2eKg(p.monthKwh, ef))} t <span style={{ color: 'var(--muted)' }}>({tr('วันนี้ / เดือนนี้')})</span></div>
+                ))}
+                <span style={{ color: 'var(--muted)' }}>{tr('รวมทุกตู้บนบอร์ด (Scope 2) · แท็บรายเดือนใช้ยอดบิลเมื่อมี')}</span></>} />
         <Kpi color={t.offline || t.never ? WARN : GOOD} label={tr('สถานะมิเตอร์')} value={t.online} unit={`/ ${t.total} ${tr("ออนไลน์")}`}
           sub={<><span style={{ color: WARN }}>{tr('ขาดการติดต่อ')} {t.offline}</span> · <span style={{ color: 'var(--muted)' }}>{tr('ยังไม่เคยส่ง')} {t.never}</span></>} />
         <Kpi color={t.alerts.length ? BAD : GOOD} label={tr('เกินลิมิตตอนนี้')} value={t.alerts.length} unit={tr("เครื่อง")}
