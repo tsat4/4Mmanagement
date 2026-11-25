@@ -236,6 +236,17 @@ function Editor({ def, latest, canDesign, canPublish, mySection, onSaved }) {
               <input type="checkbox" disabled={readOnly} checked={!!s.binding.perShift} onChange={e => up({ binding: { ...s.binding, perShift: e.target.checked } })} />
               {tr('แยกใบตามกะ (เช้า/ดึก)')}</label>
           </>}
+          {/* 📄 25/11 — เอกสารที่ผูก = แถวในทะเบียนเอกสาร (เลขฟอร์ม/Rev/โลโก้) · ช่องเซ็นบนใบพิมพ์ = ขั้นในสายอนุมัติด้านล่าง */}
+          {s.binding && (() => {
+            const dk = BOUND_SUBJECTS.find(b => b.subject === s.binding.subject)?.docKey;
+            return (
+              <div style={{ gridColumn: '1 / -1', fontSize: 12, color: 'var(--muted)' }}>
+                📄 {tr('ทะเบียนเอกสาร')}: {dk
+                  ? <><a href="/doc-forms">{dk}</a> · {tr('เลขฟอร์ม/Rev/โลโก้ แก้ที่ /doc-forms · ช่องเซ็นบนใบพิมพ์ = ขั้นในสายอนุมัติด้านล่าง')}</>
+                  : tr('เอกสารนี้ยังไม่มีใบพิมพ์ในทะเบียน')}
+              </div>
+            );
+          })()}
         </div>
       </div>
 
@@ -274,6 +285,8 @@ function Editor({ def, latest, canDesign, canPublish, mySection, onSaved }) {
           return (
             <div key={i} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: 8, padding: '8px 0', borderTop: i ? '1px solid var(--border)' : 'none', alignItems: 'end' }}>
               <Field label={`${tr('ขั้นที่')} ${i + 1}`}><input value={st.label || ''} disabled={readOnly} onChange={e => setStep(i, { label: e.target.value })} style={inp} /></Field>
+              {/* ✍️ 25/11 — ชื่อช่องเซ็นบนใบพิมพ์ (ออกโดย/ตรวจสอบโดย/อนุมัติโดย) · ว่าง = ใช้ชื่อขั้น */}
+              <Field label={tr('ช่องเซ็นบนใบพิมพ์')}><input value={st.sig_label || ''} disabled={readOnly} placeholder={tr('เช่น ตรวจสอบโดย')} onChange={e => setStep(i, { sig_label: e.target.value || undefined })} style={inp} /></Field>
               <Field label={tr('ชนิดขั้น')}>
                 <select value={st.kind || 'approve'} disabled={readOnly} onChange={e => setStep(i, { kind: e.target.value })} style={inp}>
                   {STEP_KINDS.map(k => <option key={k.kind} value={k.kind}>{tr(k.label)}</option>)}

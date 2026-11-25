@@ -750,6 +750,8 @@ const TABLE_ROWS = {
     const k = Math.floor(i / 2);
     return { ...r, scope_kind: 'zone', scope_name: i % 2 ? 'MDB-10' : 'MDB', bucket_at: new Date(t).toISOString(), kw: 900, kw_max: 980, kwh_total: (i % 2 ? 5000 : 1000) + k * 15 };
   },
+  /* 🌱 EF ไฟฟ้า (2026-11-25 · ห้ามถอด) — เดิมไม่มี utility_key ⇒ efFor() ไม่เจอ = การ์ด CO₂ บนบอร์ด + แท็บรายเดือนวาดแต่กิ่ง "ยังไม่ได้ตั้ง" */
+  energy_emission_factors: (r, i) => ({ ...r, utility_key: 'electric', kg_co2e: i % 2 ? 0.493 : 0.482, effective_from: i % 2 ? '2023-11-28' : '2026-10-21', source_ref: 'TGO (mock)' }),
   energy_panel_settings: (r, i) => ({ ...r, panel: i % 2 ? 'MDB-03' : 'MDB', demand_target_kw: i % 2 ? null : 1600 }),
   integration_sources: (r, i) => ({
     ...r, kinds: i % 2 ? ['energy_readings', 'energy_events'] : ['machine_state', 'piece_count'],

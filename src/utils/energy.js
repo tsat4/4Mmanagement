@@ -493,6 +493,7 @@ export function buildLiveBoard({ meters = [], live = [], daily = [], today, nowM
       // ยอดตู้ = ผลรวมชั้นบนสุดที่ออนไลน์เท่านั้น · ไม่ครบ = partial (จอต้องเขียนว่ากี่/กี่เครื่อง)
       kw: sumKnown(on.map(m => m.kw)), partial: on.length < rs.length,
       todayKwh: sumKnown(rs.map(m => m.todayKwh)),
+      monthKwh: sumKnown(rs.map(m => m.monthKwh)),   // 🌱 CO₂ แยกรายตู้บนการ์ด (25/11) — ชั้นบนสุดของตู้เท่านั้น ไม่นับลูกซ้ำ
     }
   })
 

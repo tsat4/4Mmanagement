@@ -1014,6 +1014,18 @@ function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, d
   const [saving, setSaving] = useState(false)
   const [savedIds, setSavedIds] = useState(() => new Set())
   const rowRefs = useRef({})
+  /* 🖼️ รูปเครื่อง + หมุดจุดตรวจ ต่อเครื่อง (25/11 · feedback หน้างาน "ใบรวมมองไม่เห็นรูปที่จะตรวจ")
+     ตัววาดตัวเดียวกับใบเดี่ยว `JigSpinCheck` · เฟรม = jig_images (ไม่มี → image_path เป็นเฟรมเดียว)
+     อ่านรูปไม่ได้ = ใบยังตรวจ/บันทึกได้ + เขียนบอกบนจอ (ไม่ล้มทั้งใบ) */
+  const [framesByJig, setFramesByJig] = useState({ key: '', map: {}, err: '' })
+  const [activeCp, setActiveCp] = useState(null)
+  const [wide, setWide] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 1180px)').matches)
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1180px)')
+    const on = () => setWide(mq.matches)
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
   const memberKey = memberJigs.map(j => j.id).join(',')
   const loadKey = `${station.id}|${memberKey}|${amDept}`
   /* 📝 ร่างในเครื่อง (มือถือ · 23/11 · ชุดเดียวกับใบเดี่ยว utils/formDraft.js) — คีย์ = สถานี|สมาชิก|ทีม|คนกรอก
@@ -1037,7 +1049,15 @@ function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, d
           const ngHist = await loadNgHistory(jig).catch(e => ({ byCp: {}, machine: null, error: String(e?.message || e) }))
           list.push({ jig, checklistId: cl?.id ?? null, cps: data ?? [], ngHist })
         }
+        const imgRes = await supabaseDR.from('jig_images').select('id, jig_id, image_path, sort').in('jig_id', memberJigs.map(j => j.id)).order('sort')
         if (!alive) return
+        const fmap = {}
+        for (const j of memberJigs) {
+          let fr = (imgRes.data ?? []).filter(im => im.jig_id === j.id).map(im => ({ id: im.id, url: getPublicUrl(im.image_path) }))
+          if (!fr.length && j.image_path) fr = [{ id: 'legacy', url: getPublicUrl(j.image_path) }]
+          fmap[j.id] = fr
+        }
+        setFramesByJig({ key: loadKey, map: fmap, err: imgRes.error ? (imgRes.error.message || String(imgRes.error)) : '' })
         const init = {}
         list.forEach(m => m.cps.forEach(c => { init[c.id] = { v1: '', v2: '', v3: '', attr: '', note: '', mval: '', reason: '', reasonAccepted: false } }))
         setResults(init)
@@ -1192,6 +1212,9 @@ function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, d
         </div>
       </div>
       <DraftRestoreBar draft={pendingDraft} what={`${tr('ใบสถานี')} ${station.name}`} onRestore={restoreDraft} onDiscard={discardDraft} />
+      {framesByJig.key === loadKey && framesByJig.err && (
+        <div style={{ fontSize: 12, color: 'var(--amber)', marginBottom: 8 }}>⚠ {tr('โหลดรูปเครื่องไม่สำเร็จ — ตรวจตามรายการได้ตามปกติ')} ({framesByJig.err})</div>
+      )}
       {!allSaved && (
         <div style={{ position: 'sticky', top: 0, zIndex: 3, background: 'var(--card)', padding: '6px 0', marginBottom: 8, fontSize: 12.5, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <b>{tr('ตรวจแล้ว')} {doneCps}/{totalCps}</b>
@@ -1220,7 +1243,10 @@ function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, d
             </div>
             {m.ngHist?.error && <div style={{ fontSize: 11.5, color: 'var(--amber)', margin: '0 0 6px' }}>⚠ {tr('อ่านประวัติการตรวจครั้งก่อนไม่ได้ — ต้องพิมพ์เหตุผล NG เอง')}</div>}
             {!saved && !m.cps.length && <div style={{ fontSize: 12.5, color: 'var(--amber)' }}>{tr('เครื่องนี้ยังไม่มีจุดตรวจ AM — ตั้งที่ PM Setup แท็บฝ่ายผลิต')}</div>}
-            {!saved && m.cps.map((cp, idx) => {
+            {(() => {
+            const frames = framesByJig.key === loadKey ? (framesByJig.map[m.jig.id] || []) : []
+            const showPhoto = !saved && m.cps.length > 0 && frames.length > 0
+            const rows = !saved && m.cps.map((cp, idx) => {
               const r = results[cp.id] ?? {}
               const row = cp.type === 'variable' ? (
                 <VariableRow cp={cp} idx={idx} r={calcRes[cp.id] ?? { v1: '', v2: '', v3: '' }} onChange={v => setResults(p => ({ ...p, [cp.id]: v }))} methodIndex={methodIndex}
@@ -1236,8 +1262,22 @@ function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, d
                   onAccept={() => setResults(p => ({ ...p, [cp.id]: { ...p[cp.id], reasonAccepted: true, reason: carryOf(m, cp.id)?.text || '' } }))}
                   okWarn={okWarnOf(m, cp.id)} />
               )
-              return <div key={cp.id} ref={el => { rowRefs.current[cp.id] = el }} style={{ scrollMarginTop: 60 }}>{row}</div>
-            })}
+              return <div key={cp.id} ref={el => { rowRefs.current[cp.id] = el }} onClickCapture={() => setActiveCp(cp.id)} style={{ scrollMarginTop: 60 }}>{row}</div>
+            })
+            if (!showPhoto) return rows
+            const mine = activeCp && m.cps.some(c => c.id === activeCp) ? activeCp : null
+            const viewer = (
+              <JigSpinCheck frames={frames} checkpoints={m.cps} results={calcRes} activeCpId={mine}
+                onPinClick={(id) => { setActiveCp(id); jumpTo(id) }} maxH={wide ? 480 : 300} compact={!wide} />
+            )
+            /* จอกว้าง = รูปซ้ายค้างไว้ระหว่างเลื่อนรายการของเครื่องนั้น · จอแคบ = รูปอยู่บนหัวรายการ (แบบใบเดี่ยว) */
+            return wide ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 5fr) minmax(0, 6fr)', gap: 14, alignItems: 'start' }}>
+                <div style={{ position: 'sticky', top: 44 }}>{viewer}</div>
+                <div>{rows}</div>
+              </div>
+            ) : <>{viewer}{rows}</>
+            })()}
           </section>
         )
       })}

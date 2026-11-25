@@ -14,7 +14,7 @@ import { UserContext } from '../App';
 import { toast } from './Toast';
 import { checkWrite } from '../utils/dbWrite';
 import { confirmSign } from '../utils/signConfirm';
-import { wfPeriodRange, roundKey, roundState, PERIOD_LABEL } from '../utils/wfBound';
+import { wfPeriodRange, roundKey, roundState, PERIOD_LABEL, signoffRows } from '../utils/wfBound';
 import { tr, dateLocale } from '../utils/i18n';
 
 const ACTIVE = ['in_progress', 'returned', 'approved'];
@@ -36,8 +36,9 @@ const STATE_META = {
  * @param hasData   รอบรายวันมีข้อมูลแล้วไหม (false = ยังไม่เปิดใบ) · null = ไม่รู้
  * @param summary   ข้อความสรุปใส่ในกล่องยืนยัน (เช่น "ไม่ผ่าน 1 รายการ")
  * @param onChanged เรียกหลังเซ็น/เพิกถอน (หน้าแม่โหลดสถานะล็อกใหม่)
+ * @param openOnlyWithData ไม่เปิดใบรอบเมื่อ `hasData === false` ทุกความถี่ (BBS รายเดือน: ใบเปล่าไม่ต้องมีใครเซ็น · 25/11)
  */
-export default function WfRoundPanel({ subject, line, date, shift, hasData = null, summary = '', onChanged }) {
+export default function WfRoundPanel({ subject, line, date, shift, hasData = null, summary = '', onChanged, openOnlyWithData = false }) {
   const { fullName, userId: ctxUid } = useContext(UserContext);
   const [rows, setRows] = useState(null);          // null = กำลังโหลด
   const [err, setErr] = useState('');
@@ -62,12 +63,12 @@ export default function WfRoundPanel({ subject, line, date, shift, hasData = nul
       const sh = b.perShift ? shift : null;
       let ensureStatus = null;
       // รอบรายวันที่ยังไม่มีข้อมูล = ยังไม่ต้องเปิดใบ · ที่เหลือขอให้ DB เปิด/คืนใบเดิม (ไม่มีสิทธิ์ = แค่อ่าน)
-      if (!(b.period === 'day' && hasData === false)) {
+      if (!(b.period === 'day' && hasData === false) && !(openOnlyWithData && hasData === false)) {
         const e = await supabase.rpc('wf_bound_ensure', { p_key: d.key, p_line: line, p_date: date, p_shift: sh });
         if (!e.error) ensureStatus = e.data?.status || null;
       }
       const iRes = await supabase.from('wf_instances')
-        .select('id, doc_no, status, step_rev, current_step, blocked_reason, period_from, period_to, shift, wf_tasks(id, assignee_id, status, step_index), wf_actions(action, actor_name, acted_at, comment)')
+        .select('id, doc_no, status, step_rev, current_step, blocked_reason, period_from, period_to, shift, wf_tasks(id, assignee_id, status, step_index), wf_actions(action, step_index, actor_id, actor_name, acted_at, comment)')
         .eq('def_id', d.id).eq('subject_key', roundKey(line, from, sh)).order('created_at', { ascending: false }).limit(3);
       if (iRes.error) return { err: iRes.error.message };
       const inst = (iRes.data || []).find(x => ACTIVE.includes(x.status)) || null;
@@ -75,7 +76,7 @@ export default function WfRoundPanel({ subject, line, date, shift, hasData = nul
       out.push({ def: d, flow, b, from, to, inst, lastClosed, me, ensureStatus });
     }
     return { rows: out };
-  }, [subject, line, date, shift, hasData, ctxUid]);
+  }, [subject, line, date, shift, hasData, ctxUid, openOnlyWithData]);
 
   useEffect(() => {
     let alive = true;
@@ -122,7 +123,9 @@ export default function WfRoundPanel({ subject, line, date, shift, hasData = nul
       {err && <div style={{ fontSize: 12, color: 'var(--red)' }}>⚠ {tr('อ่านสถานะการเซ็นไม่สำเร็จ')}: {err}</div>}
       {rows == null && !err && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('กำลังโหลด...')}</div>}
       {(rows || []).map(r => {
-        const st = roundState({ instance: r.inst || (r.lastClosed && !r.ensureStatus ? r.lastClosed : null), ensureStatus: r.ensureStatus, hasData: r.b.period === 'day' ? hasData : null });
+        const st = roundState({ instance: r.inst || (r.lastClosed && !r.ensureStatus ? r.lastClosed : null), ensureStatus: r.ensureStatus, hasData: (r.b.period === 'day' || openOnlyWithData) ? hasData : null });
+        // สายเซ็นหลายขั้น (ออกโดย → ตรวจสอบโดย → อนุมัติโดย) = โชว์ทุกช่อง ใครเซ็นแล้ว/รออยู่ขั้นไหน
+        const chain = (r.flow.steps || []).length > 1 && r.inst ? signoffRows(r.flow, r.inst.wf_actions) : null;
         const meta = STATE_META[st] || STATE_META.unknown;
         const step = r.inst ? r.flow.steps?.[r.inst.current_step] : null;
         const myTask = r.inst?.wf_tasks?.find(t => t.status === 'open' && t.assignee_id === r.me && t.step_index === r.inst.current_step);
@@ -139,12 +142,24 @@ export default function WfRoundPanel({ subject, line, date, shift, hasData = nul
             {st === 'waiting' && <span style={{ color: 'var(--muted)' }}>{step?.label} · {tr('ผู้มีสิทธิ์')} {openN} {tr('คน')}</span>}
             {st === 'blocked' && <span style={{ color: 'var(--red)' }}>{r.inst.blocked_reason}</span>}
             {r.inst && <span style={{ color: 'var(--muted)', fontSize: 11 }}>{r.inst.doc_no}</span>}
+            {chain && (
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', width: '100%' }}>
+                {chain.map((c, i) => {
+                  const now = r.inst.status === 'in_progress' && r.inst.current_step === i;
+                  return (
+                    <span key={i} style={{ fontSize: 11.5, padding: '2px 8px', borderRadius: 'var(--r-md)', border: `1px solid ${c.name ? 'var(--green)' : now ? 'var(--amber)' : 'var(--border)'}`, color: c.name ? 'var(--green)' : now ? 'var(--amber)' : 'var(--muted)' }}>
+                      {c.name ? '✅' : now ? '⏳' : '○'} {c.label}{c.name ? `: ${c.name}` : ''}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
             <span style={{ flex: 1 }} />
             {st === 'waiting' && myTask && !askingReason && (
               <>
                 <button disabled={busy} onClick={() => approve(r, myTask, step)}
                   style={{ padding: '4px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--accent)', background: 'var(--accent-dim)', color: 'var(--accent)', fontWeight: 700, cursor: 'pointer' }}>
-                  {step?.kind === 'ack' ? tr('รับทราบ') : tr('อนุมัติ')}
+                  {step?.sig_label ? `${tr('เซ็น')} · ${step.sig_label}` : step?.kind === 'ack' ? tr('รับทราบ') : tr('อนุมัติ')}
                 </button>
                 {step?.kind !== 'ack' && <button disabled={busy} onClick={() => { setReasonFor({ id: r.def.id, mode: 'reject' }); setReason(''); }}
                   style={{ padding: '4px 10px', borderRadius: 'var(--r-md)', border: '1px solid var(--red)', background: 'transparent', color: 'var(--red)', cursor: 'pointer' }}>{tr('ตีกลับ')}</button>}

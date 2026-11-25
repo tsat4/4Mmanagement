@@ -29,6 +29,12 @@ Legend/ผู้ออกเอกสาร/Revision History **ได้เอ�
 
 ---
 
+## ✍️ ช่องเซ็นของเอกสารที่ "สายเซ็นคุมโดย e-Workflow" (2026-11-25 · คำสั่ง user รวมระบบเอกสารกับ e-workflow)
+ทะเบียนนี้ยังเป็นเจ้าของ **เลขฟอร์ม/Rev/วันมีผล/โลโก้/footer** · แต่เอกสารที่ผูกใบงาน e-Workflow (`BOUND_SUBJECTS[].docKey`)
+**ช่องเซ็นบนใบพิมพ์มาจากขั้นของใบงาน** (`step.sig_label`) ไม่ใช่ `sig_blocks` ของแถวนี้ · แถวในจอ /doc-forms ขึ้นป้าย "✍️ สายเซ็นคุมโดย e-Workflow"
+· ตอนนี้: `bbs_observation` (ใบงาน `bbs_monthly`) · ตัวโหลด `src/lib/wfSignoff.js` · 📄 `e-workflow.md` §BBS
+🔴 **ห้ามสร้างตารางทะเบียนช่องเซ็นแยก** — สายเซ็นอยู่ใน `wf_versions.flow_schema` ที่เดียว
+
 ## 📑 CSV export ก็เป็น "เอกสาร" — เข้าทะเบียนแล้ว (2026-10-06 · คำสั่ง user หลัง QC audit)
 
 QC audit 06/10 ถามว่า *"CSV dump เข้าข่ายกฎ 'export ใหม่ทุกตัวต้อง register' ไหม"* — **user เคาะว่าเข้า ทำเลย**
