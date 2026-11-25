@@ -12949,6 +12949,33 @@ test('🛡️ skill-delete-keeps-scores — ปุ่มลบสกิลห้
   assert.ok(/before delete on public\.skill_definitions/.test(mig), 'migration ด่านลบสกิลต้องมี trigger before delete');
 });
 
+/* ── ⏳ count-blocks-pending-adjust (25/11 · user "ต่างคนต่างนับ ต่างคนต่างอัพยอด จะมั่วไหม") ────
+   view `line_stock_summary` มี `where status='approved'` ⇒ **ใบ pending ไม่อยู่ใน qty_on_hand**
+   คนที่ 1 นับแล้วใบยังรออนุมัติ · คนที่ 2 เปิดจอเห็น "ยอดระบบ" ตัวเดิม กรอกยอดเดิม = เขียนผลต่างซ้ำ
+   พออนุมัติทั้งคู่ ของหายสองเท่า **ไม่มี error ไม่มีใครรู้** (คลาสเดียวกับการหักซ้ำ 1.3 ล้านชิ้น 25/11)
+   ⇒ ใบนับต้องกันคู่ (ไลน์, mat) ที่มีใบ adjust ค้าง และ **เขียนบนจอว่ากันไว้กี่พาร์ท ห้ามทิ้งเงียบ** */
+test('🛡️ count-blocks-pending-adjust — ใบนับต้องกันพาร์ทที่มีใบปรับยอดค้างรออนุมัติ', () => {
+  const rel = 'src/utils/stockCount.js';
+  const code = stripComments(readFileSync(join(ROOT, rel), 'utf8'));
+  assert.match(code, /export function pendingAdjustMap\(/, `\n\n❌ ${rel} ไม่มี pendingAdjustMap()\n`);
+  assert.match(code, /export function splitPendingBlocked\(/, `\n\n❌ ${rel} ไม่มี splitPendingBlocked()\n`);
+  /* ต้องกันทุกชนิดของ adjust ที่ pending ไม่ใช่เฉพาะใบตรวจนับ — ใบ 🔧 ปรับยอดก็ทำให้ยอดตั้งต้นเพี้ยน */
+  const body = code.slice(code.indexOf('export function pendingAdjustMap('));
+  assert.ok(!/isPhysicalCount\(/.test(body.slice(0, body.indexOf('export function splitPendingBlocked'))),
+    `\n\n❌ ${rel}: pendingAdjustMap กรองเฉพาะใบตรวจนับ — ใบปรับยอดค้างก็ทำให้นับซ้ำได้เหมือนกัน\n`);
+
+  const ui = 'src/components/StockCountSheet.jsx';
+  const uic = stripComments(readFileSync(join(ROOT, ui), 'utf8'));
+  /* โหลดใบค้างมาจริง (ไม่งั้น map ว่างตลอด = ด่านหลอก) */
+  assert.match(uic, /status'\s*,\s*'pending'\)|eq\('status',\s*'pending'\)/,
+    `\n\n❌ ${ui} ไม่ได้โหลดใบ adjust ที่ pending — ด่านกันนับซ้ำจะว่างเปล่าตลอด\n`);
+  const save = uic.slice(uic.indexOf('const save = async'), uic.indexOf('if (loading)'));
+  assert.match(save, /splitPendingBlocked\(/,
+    `\n\n❌ ${ui}: save() ต้องผ่าน splitPendingBlocked() — ช่องที่ disabled ไม่ใช่ด่าน (กฎชั้น ③)\n`);
+  assert.match(save, /blocked\.length/,
+    `\n\n❌ ${ui}: กันแถวออกแล้วต้องเขียนบนจอว่ากันไว้กี่พาร์ท (ห้ามทิ้งเงียบ)\n`);
+});
+
 test('🎨 no-var-alpha-hex — ห้ามเอา var(--x) ไปต่อ alpha-hex (`${c}14`)', () => {
   /* 25/11: รอบไล่สีดิบ → token เผลอแปลงค่าที่ถูกเอาไป **ต่อ 2 หลักท้ายเป็น alpha**
      (`linear-gradient(${c}14, ${c}14)` = ท่าแทน color-mix() ของโปรเจคนี้ · CLAUDE.md §เพดานเบราว์เซอร์)

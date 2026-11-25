@@ -248,3 +248,49 @@ export function countRoundRows({ stock, txns, levels }) {
     || String(a.line_name).localeCompare(String(b.line_name)));
   return out;
 }
+
+/* ─── ⏳ ใบปรับยอดที่ "รออนุมัติ" — กันนับซ้ำหักซ้ำ (2026-11-25 · user ถาม "ต่างคนต่างนับจะปนกันมั่วไหม") ──
+   🔴🔴 กฎเหล็ก — **`qty_on_hand` ไม่รวมใบที่ยังไม่อนุมัติ**
+   view `line_stock_summary` มี `where status = 'approved'` ⇒ ใบ `pending` ไม่อยู่ในยอดที่จอโชว์
+   ⇒ คนที่ 2 เปิดจอมาเห็น "ยอดระบบ" ตัวเดิม แล้วกรอกยอดที่นับได้ตัวเดิม = **เขียนผลต่างซ้ำอีกใบ**
+     พออนุมัติทั้งคู่ ของหายสองเท่า **เงียบสนิท ไม่มี error** (คลาสเดียวกับการหักซ้ำ 1.3 ล้านชิ้น 25/11)
+   ⇒ คู่ (ไลน์, mat) ที่มีใบค้าง **ห้ามรับผลนับใบใหม่** จนกว่าใบเดิมจะถูกอนุมัติหรือตีกลับ
+     (fail-closed: ยอมให้ช้า ดีกว่ายอมให้ของหายโดยไม่มีใครรู้)
+   🔴 ห้าม "เอาใบ pending มาบวกในยอดตั้งต้น" แทนการบล็อก — ใบที่ยังไม่อนุมัติอาจถูกตีกลับ
+     เอามาคิดผลต่าง = ตั้งยอดจากตัวเลขที่ยังไม่จริง */
+
+const PEND_KEY = (line, mat) => `${String(line ?? '').trim()}\u0000${String(mat ?? '')}`;
+
+/** ใบปรับยอดที่ยังรออนุมัติ ต่อ (คลัง, mat)
+ *  ⚠️ นับ **ทุกใบ `adjust` ที่ pending** ไม่ใช่เฉพาะใบตรวจนับ — ใบ 🔧 ปรับยอดก็ทำให้ยอดตั้งต้นเพี้ยนเหมือนกัน
+ *  @returns {Object} key → { n, qty, by, at } (qty = ผลรวมที่จะมีผลเมื่ออนุมัติ)
+ */
+export function pendingAdjustMap(txns) {
+  const m = {};
+  (txns || []).forEach(t => {
+    if (!t || t.type !== 'adjust' || t.status !== 'pending') return;
+    const k = PEND_KEY(t.line_name, t.mat_no);
+    const cur = m[k] || { n: 0, qty: 0, by: null, at: null };
+    cur.n += 1;
+    cur.qty += parseFloat(t.qty) || 0;
+    if (!cur.at || (t.created_at && t.created_at > cur.at)) { cur.at = t.created_at || cur.at; cur.by = t.created_by || cur.by; }
+    m[k] = cur;
+  });
+  return m;
+}
+
+/** แยกผลนับที่บันทึกได้ ออกจากที่ต้องกันไว้เพราะมีใบค้าง
+ *  🔴 ห้ามทิ้งเงียบ — ผู้เรียกต้องเอา `blocked` ไปเขียนบนจอว่ากันไว้กี่พาร์ทและเพราะอะไร
+ *  @returns {{ ok:Array, blocked:Array }}
+ */
+export function splitPendingBlocked(txns, pendingMap) {
+  const ok = [], blocked = [];
+  (txns || []).forEach(t => {
+    const p = pendingMap?.[PEND_KEY(t.line_name, t.mat_no)];
+    if (p?.n) blocked.push({ ...t, pending: p }); else ok.push(t);
+  });
+  return { ok, blocked };
+}
+
+/** คีย์ของ map ข้างบน — ให้จอถามรายแถวได้โดยไม่ต้องรู้รูปแบบคีย์ */
+export const pendingKey = PEND_KEY;

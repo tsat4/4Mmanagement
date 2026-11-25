@@ -12,7 +12,7 @@ import { fetchAllPages } from '../utils/fetchByIds';
 import { getWorkDate } from '../utils/workDate';
 import { buildPnIndex, pickStockMat, matIssueText } from '../utils/matResolve';
 import { countDelta, toAdjustTxns, countSummary, lastCountAt, pendingShipCuts,
-  countRoundRows } from '../utils/stockCount';
+  countRoundRows, pendingAdjustMap, splitPendingBlocked, pendingKey } from '../utils/stockCount';
 /* 🔐 ชั้นสิทธิ์ที่ ③ — "ไลน์/คลังนี้เป็นของหน่วยงานเราไหม" (ช่องเลือกไลน์เป็นตัวกรองการดู ไม่ใช่ด่าน) */
 import { canWriteLine, writeBlockText } from '../utils/writeScope';
 import LineSelect, { scopeLines } from './LineSelect';
@@ -69,6 +69,8 @@ export default function StockCountSheet({ role, scope }) {
   const [fgDest,  setFgDest]  = useState('');   // คลังปลายทางของ FG จากกฎรับเข้า (ไม่ hardcode ชื่อคลัง)
   const [lines,   setLines]   = useState([]);   // production_lines (Main) — ให้ <LineSelect> กรอง scope ได้
   const [levels,  setLevels]  = useState([]);   // line_part_levels — พาร์ทที่ทะเบียนบอกว่าต้องมีที่ไลน์นั้น
+  /* ⏳ ใบปรับยอดที่ยังรออนุมัติ — ไม่อยู่ใน qty_on_hand ⇒ ถ้าไม่กัน คนที่ 2 จะนับซ้ำแล้วหักซ้ำ */
+  const [pendAdj, setPendAdj] = useState([]);
   /* 🔴 โหลดไม่สำเร็จ ≠ ไม่มีงานต้องนับ — แผงรอบนับต้องบอกว่าอ่านไม่ได้ ห้ามโชว์ 0 (db-write-rules ข้อ 12) */
   const [loadFail, setLoadFail] = useState('');
 
@@ -104,7 +106,7 @@ export default function StockCountSheet({ role, scope }) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [sum, adj, sh, cut, dp, ks, rules, pl, lv] = await Promise.all([
+    const [sum, adj, sh, cut, dp, ks, rules, pl, lv, pa] = await Promise.all([
       fetchAllPages(() => supabaseDR.from('line_stock_summary').select('line_name, mat_no, part_name, qty_on_hand'),
         { orderBy: ['line_name', 'mat_no'] }),
       /* ⚠️ ต้องมี note + qty ด้วย — แผงรอบนับต้องแยก "ตรวจนับของจริง" ออกจาก "ตั้งยอดตามไฟล์"
@@ -124,15 +126,19 @@ export default function StockCountSheet({ role, scope }) {
       //    ต้องมี section + is_active ไม่งั้น LineSelect กรอง scope ไม่ได้ / ไลน์ปลดระวางโผล่ปน
       loadLinesRes(),
       supabaseDR.from('line_part_levels').select('line_name, mat_no, is_active'),
+      supabaseDR.from('line_stock_transactions')
+        .select('line_name, mat_no, qty, type, status, created_at, created_by, note')
+        .eq('type', 'adjust').eq('status', 'pending'),
     ]);
     setLoading(false);
     // ห้ามกลืน error — คิวรีล้มแล้วจอขึ้นเหมือน "ไม่มีข้อมูล" คือคลาสบั๊กที่โปรเจคเจอซ้ำ
-    const firstErr = sum.error || adj.error || sh.error || cut.error || dp.error || ks.error || rules.error || pl.error || lv.error;
+    const firstErr = sum.error || adj.error || sh.error || cut.error || dp.error || ks.error || rules.error || pl.error || lv.error || pa.error;
     if (firstErr) { setLoadFail(String(firstErr)); toast.error((tr('โหลดข้อมูลสต็อกไม่สำเร็จ') + ': ') + firstErr); return; }
     setLoadFail('');
     setStock(sum.rows);
     setLines(pl.data || []);
     setLevels((lv.data || []).filter(l => l.is_active !== false));
+    setPendAdj(pa.data || []);
     setAdjusts(adj.rows);
     setShipped(sh.rows);
     setCutIds(new Set(cut.rows.map(r => r.ref_shipment_id)));
@@ -249,6 +255,12 @@ export default function StockCountSheet({ role, scope }) {
     }), { lines: 0, none: 0, done: 0, negParts: 0, negQty: 0, drift: 0, noRow: 0 });
   }, [roundRows]);
 
+  /* ⏳ map ใบค้าง — ของกลางคิดให้ (utils/stockCount.js) ห้ามไล่หาเองในหน้า */
+  const pendMap = useMemo(() => pendingAdjustMap(pendAdj), [pendAdj]);
+  const pendHereCount = useMemo(
+    () => (lineFilter ? rows.filter(r => pendMap[pendingKey(lineFilter, r.mat_no)]).length : 0),
+    [rows, pendMap, lineFilter]);
+
   const summary = useMemo(() => countSummary({ rows, counts }), [rows, counts]);
 
   const save = async () => {
@@ -256,8 +268,15 @@ export default function StockCountSheet({ role, scope }) {
        ⇒ ด่านชั้น ③ ต้องอยู่ตรงนี้ ไม่ใช่แค่กรองรายการใน `<LineSelect>` */
     const w = canWriteLine(wctx, lineFilter, lines);
     if (!w.ok) { toast.error(writeBlockText(w, { what: `${tr("ยอดคลังของ")} ${lineFilter || tr('ไลน์นี้')}` })); return; }
-    const txns = toAdjustTxns({ rows, lineName: lineFilter, workDate, by: fullName, note, counts });
-    if (!txns.length) { toast.info('ยังไม่มีแถวที่ยอดต่างจากระบบ'); return; }
+    const all = toAdjustTxns({ rows, lineName: lineFilter, workDate, by: fullName, note, counts });
+    /* 🔴 กันนับซ้ำ: คู่ที่มีใบปรับยอดค้างอยู่ ยอดในจอยังไม่รวมใบนั้น ⇒ ผลต่างที่คิดได้จะซ้ำกับใบเดิม
+       (view line_stock_summary = where status='approved') · ห้ามทิ้งเงียบ ต้องบอกว่ากันไว้กี่พาร์ท */
+    const { ok: txns, blocked } = splitPendingBlocked(all, pendMap);
+    if (blocked.length) {
+      toast.error(`⏳ ${tr('กันไว้')} ${blocked.length} ${tr('พาร์ทที่มีใบปรับยอดค้างรออนุมัติ')} — `
+        + `${tr('ยอดในจอยังไม่รวมใบนั้น นับซ้ำจะหักซ้ำ')} · ${tr('ให้อนุมัติ/ตีกลับใบเดิมที่แท็บ')} 📦 Stock ${tr('ก่อน')}`);
+    }
+    if (!txns.length) { toast.info(blocked.length ? 'ไม่มีแถวที่บันทึกได้ในรอบนี้' : 'ยังไม่มีแถวที่ยอดต่างจากระบบ'); return; }
     const approved = approveNow && canApprove;
     if (!await askConfirm(
       `${tr("บันทึกผลตรวจนับ")} ${txns.length} ${tr("รายการที่")} ${lineFilter}?`
@@ -416,6 +435,12 @@ export default function StockCountSheet({ role, scope }) {
             style={{ width: isMobile ? '100%' : 220, padding:'6px 8px', borderRadius: 'var(--ctl-r)', border:'1px solid var(--border)', background: 'var(--bg2-surf)', color:'var(--text)', fontSize:13 }} />
         </div>
 
+        {pendHereCount > 0 && (
+          <NoticeBar tone="warn" style={{ marginBottom:12 }}>
+            <b>{n0(pendHereCount)} {tr('พาร์ทมีใบปรับยอดค้างรออนุมัติ')}</b>
+            {' · '}{tr('ยอดในจอยังไม่รวมใบนั้น — กรอกไม่ได้จนกว่าจะอนุมัติ/ตีกลับที่แท็บ')} 📦 Stock
+          </NoticeBar>
+        )}
         {!lineFilter ? (
           <div style={{ fontSize:13, color:'var(--muted)' }}>{tr('เลือกไลน์/คลังก่อน แล้วรายการพาร์ทจะขึ้นให้กรอก')}</div>
         ) : !rows.length ? (
@@ -430,13 +455,17 @@ export default function StockCountSheet({ role, scope }) {
                 {rows.map(r => {
                   const d = countDelta(r.qty_on_hand, counts[r.mat_no]);
                   const typed = counts[r.mat_no] !== undefined && counts[r.mat_no] !== '';
+                  const pend = pendMap[pendingKey(lineFilter, r.mat_no)];
                   return (
                     <div key={r.mat_no} className={`sc-card${typed ? ' sc-typed' : ''}`}>
                       <MatLabel mat={r.mat_no} name={r.part_name} />
                       {r.fromLevels && <div style={{ fontSize:11, color:'var(--muted)' }}>🆕 {tr('ทะเบียนตั้งไว้ที่ไลน์นี้ · ยังไม่เคยมีรายการ')}</div>}
+                      {pend && <div style={{ fontSize:11, color:'var(--amber)', fontWeight:700 }}>
+                        ⏳ {tr('มีใบค้างรออนุมัติ')} {pend.qty > 0 ? '+' : ''}{n0(pend.qty)}{pend.by ? ` · ${pend.by}` : ''}</div>}
                       <div className="sc-row">
                         <div className="sc-sys"><span>{tr('ในระบบ')}</span><b>{n0(r.qty_on_hand)}</b></div>
-                        <input type="number" inputMode="numeric" min="0" placeholder={tr('นับได้')} aria-label={`${tr("นับได้จริง")} ${r.mat_no}`}
+                        <input type="number" inputMode="numeric" min="0" disabled={!!pend}
+                          placeholder={pend ? tr('รออนุมัติ') : tr('นับได้')} aria-label={`${tr("นับได้จริง")} ${r.mat_no}`}
                           value={counts[r.mat_no] ?? ''}
                           onChange={e => setCounts(c => ({ ...c, [r.mat_no]: e.target.value }))} />
                         <div className="sc-diff" style={{ color: !d ? (typed ? 'var(--accent)' : 'var(--muted)') : d.dir === 'up' ? '#22c55e' : '#ef4444' }}>
@@ -461,15 +490,20 @@ export default function StockCountSheet({ role, scope }) {
                   {rows.map(r => {
                     const d = countDelta(r.qty_on_hand, counts[r.mat_no]);
                     const typed = counts[r.mat_no] !== undefined && counts[r.mat_no] !== '';
+                    const pend = pendMap[pendingKey(lineFilter, r.mat_no)];
                     return (
                       <tr key={r.mat_no}>
                         <td style={{ ...td, maxWidth:320 }}>
                           <MatLabel mat={r.mat_no} name={r.part_name} />
                           {r.fromLevels && <div style={{ fontSize:11, color:'var(--muted)' }}>🆕 {tr('ทะเบียนตั้งไว้ที่ไลน์นี้ · ยังไม่เคยมีรายการ')}</div>}
+                          {pend && <div style={{ fontSize:11, color:'var(--amber)', fontWeight:700 }}>
+                            ⏳ {tr('มีใบค้างรออนุมัติ')} {pend.qty > 0 ? '+' : ''}{n0(pend.qty)}{pend.by ? ` · ${pend.by}` : ''}
+                            {' · '}{tr('กรอกไม่ได้จนกว่าจะอนุมัติ/ตีกลับ')}</div>}
                         </td>
                         <td style={{ ...td, textAlign:'right' }}>{n0(r.qty_on_hand)}</td>
                         <td style={{ ...td, textAlign:'right' }}>
-                          <input type="number" inputMode="numeric" min="0" style={numIn}
+                          <input type="number" inputMode="numeric" min="0" style={numIn} disabled={!!pend}
+                            title={pend ? tr('มีใบปรับยอดค้างรออนุมัติ — ยอดในจอยังไม่รวมใบนั้น') : undefined}
                             value={counts[r.mat_no] ?? ''}
                             onChange={e => setCounts(c => ({ ...c, [r.mat_no]: e.target.value }))} />
                         </td>
@@ -495,7 +529,11 @@ export default function StockCountSheet({ role, scope }) {
                 <button style={{ ...btn('var(--bg3)', 'var(--text)'), border:'1px solid var(--border2)', fontSize:12, padding:'6px 12px' }}
                   onClick={() => setCounts(c => {
                     const next = { ...c };
-                    rows.forEach(r => { if (next[r.mat_no] === undefined || next[r.mat_no] === '') next[r.mat_no] = '0'; });
+                    /* ข้ามแถวที่มีใบค้าง — ช่องถูกปิดอยู่ เติมไปก็ถูกกันตอนบันทึก (กันนับซ้ำ) */
+                    rows.forEach(r => {
+                      if (pendMap[pendingKey(lineFilter, r.mat_no)]) return;
+                      if (next[r.mat_no] === undefined || next[r.mat_no] === '') next[r.mat_no] = '0';
+                    });
                     return next;
                   })}>
                   {tr("เติม 0 ให้แถวที่ยังไม่กรอก")}
