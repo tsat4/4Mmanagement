@@ -139,11 +139,11 @@ export default function ThailandZoneMap({ zones, groups = [], onPickZone, onPick
 
           {/* จังหวัด/เมือง */}
           {CITIES.map(c => (
-            <g key={c.n}>
+            <g key={tr(c.n)}>
               <circle cx={px(c.lon)} cy={py(c.lat)} r={c.big ? 5 : 3.5} fill="#94a3b8" opacity="0.85" />
               <text x={px(c.lon) + (c.anchor === 'end' ? -8 : 8)} y={py(c.lat) + 5 + (c.dy || 0)}
                 textAnchor={c.anchor === 'end' ? 'end' : 'start'}
-                fill="#9fb0c0" fontSize={c.big ? 17 : 14} fontWeight={c.big ? 700 : 500}>{c.n}</text>
+                fill="#9fb0c0" fontSize={c.big ? 17 : 14} fontWeight={c.big ? 700 : 500}>{tr(c.n)}</text>
             </g>
           ))}
 

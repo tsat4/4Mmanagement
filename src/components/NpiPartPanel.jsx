@@ -239,7 +239,7 @@ export default function NpiPartPanel({ part, project, template, phases, delivs, 
           <div style={{ fontSize: 13, fontWeight: 800 }}>{tr('เอกสารส่งมอบ / ทะเบียน PPAP')}</div>
           {/* UI-STANDARD 2026-09-24 — ตัวกรอง 4 ตัวเลือก = Segmented ("ทุก…" ซ้ายสุด) */}
           <Segmented size="sm" value={filter} onChange={setFilter} label={tr('กรองเอกสารส่งมอบ')} options={[
-            { value: 'all', label: allOf('รายการ') },
+            { value: 'all', label: allOf(tr("รายการ")) },
             { value: 'open', label: tr("ยังไม่ปิด") },
             { value: 'ppap', label: tr("เฉพาะ PPAP") },
             { value: 'red', label: tr("🔴 เลยกำหนด") },
@@ -268,7 +268,7 @@ export default function NpiPartPanel({ part, project, template, phases, delivs, 
                     <tbody>
                       {rows.map(d => {
                         const lt = deliverableLight(d, today);
-                        const kind = DOC_KIND[d.doc_kind] || DOC_KIND.other;
+                        const kind = DOC_KIND[d.doc_kind] || tr(DOC_KIND.other);
                         return (
                           <tr key={d.id} style={{ opacity: d.status === 'not_required' ? 0.55 : 1 }}>
                             <td style={tdSt}><LightDot light={lt} /></td>

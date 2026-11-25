@@ -341,7 +341,7 @@ export default function DailyPM() {
                         : row.status === 'idle'
                         ? (row.hasSession === true ? tr("เปิดกะแล้ว · ยังไม่มีใบผลิต")
                           : row.hasSession === false ? tr("ยังไม่เปิดกะ") : tr("❔ ไม่รู้ว่าเปิดกะหรือไม่"))
-                        : meta.label}
+                        : tr(meta.label)}
                     </span>
                   </div>
                   <div style={{ marginTop: 10, fontSize: 13, color: 'var(--text2)' }}>

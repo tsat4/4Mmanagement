@@ -464,7 +464,7 @@ export default function QaCheckSheet({ canRecord }) {
   }, [partMat]);
   const minPieces = sheet?.status === 'done' ? 1 : sampleN.n;
   const seq = useMemo(() => evalSequence(pieces, actions, { minPieces }), [pieces, actions, minPieces]);
-  const shiftLabel = shift === 'day' ? 'กะเช้า' : 'กะดึก';
+  const shiftLabel = shift === 'day' ? tr("กะเช้า") : 'กะดึก';
 
   const savePiece = useCallback(async (p) => {
     if (!canRecord) { toast.error('ไม่มีสิทธิ์บันทึกผลตรวจ'); return; }

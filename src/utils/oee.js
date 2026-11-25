@@ -32,6 +32,7 @@
 
 // งานคู่ gang die / RH-LH — ยุบเป็น "1 shot" ก่อนคิดเวลามาตรฐานของ %P (ดูกติกา ชิ้น≠shot ในไฟล์นั้น)
 import { collapsePairShots } from './pairTotals.js';
+import { tr } from './i18n.js';
 // §8 computeSessionOee ต้องรู้โหมดไลน์/จำนวนสถานีขนาน (source of truth = lineTypes.js · ไม่มี import วนกลับ)
 import { parallelUnitsOf, flowModeOf } from './lineTypes.js';
 /* 🏷️ คีย์เลขเครื่อง — `machine_no` เป็นข้อความอิสระ (SW10 vs SW-10 = เครื่องเดียวกัน)
@@ -1070,7 +1071,7 @@ export function groupLean({ axis = 'six_big_loss', downtimes = [], defects = [],
   downtimes.forEach(d => {
     const ty = d.dr_downtime_types || {};
     if (!includePlanned && ty.category === 'planned') return;
-    put(ty[axis], ty.name_th || 'ไม่ระบุประเภท', { min: Number(d.duration_min) || 0, count: 1 });
+    put(ty[axis], ty.name_th || tr("ไม่ระบุประเภท"), { min: Number(d.duration_min) || 0, count: 1 });
   });
   defects.forEach(d => {
     const ty = d.dr_defect_types || {};

@@ -346,7 +346,7 @@ export default function PMSchedule() {
   }, {})
   const statusOptions = [
     { value: '', label: `${tr("ทุกสถานะ")} (${baseRows.length})` },
-    ...Object.entries(STATUS_META).filter(([k]) => counts[k]).map(([k, m]) => ({ value: k, label: `${m.label} (${counts[k]})` })),
+    ...Object.entries(STATUS_META).filter(([k]) => counts[k]).map(([k, m]) => ({ value: k, label: `${tr(m.label)} (${counts[k]})` })),
   ]
   const focusName = focusEq ? (rows.find(r => r.cl.equipment_id === focusEq)?.eq?.name ?? null) : null
   const onScanEquip = (parsed) => {
@@ -360,7 +360,7 @@ export default function PMSchedule() {
   return (
     <Page style={S.page}>
       <PageHeader title={tr('ปฏิทินแผน PM')} icon="📅"
-        sub={`${tr("ตารางการตรวจสอบ")} · ${teamMeta?.label ?? DEPT_LABEL[department] ?? department}`}
+        sub={`${tr("ตารางการตรวจสอบ")} · ${tr(teamMeta?.label ?? DEPT_LABEL[department] ?? department)}`}
         filters={<>
           {/* ทีม = ตัวเลือกแรกของแถบกรอง (UI-STANDARD: ชื่อ → แท็บ → แถบกรอง → เนื้อหา · เดิมเป็นแถวปุ่มใต้หัวเพจ) */}
           <Segmented label={tr('ทีม')} value={department} onChange={setDept}

@@ -1142,7 +1142,7 @@ ${issuesHtml}
       {/* <LineSelect> — ลำดับชั้น/ตัดไลน์ปลดระวาง/ค่าเดิมไม่หายเงียบ (visibleLines กรอง scope ไว้แล้ว · 2026-09-07) */}
       <LineSelect lines={visibleLines} value={selLine} placeholder={null} onChange={changeLine} />
       <Segmented value={selShift} onChange={changeShift} label={tr('กะ')}
-        options={[{ value: 'day', label: SHIFT_META.day }, { value: 'night', label: SHIFT_META.night }]} />
+        options={[{ value: 'day', label: tr(SHIFT_META.day) }, { value: 'night', label: tr(SHIFT_META.night) }]} />
       <span className="filter-label">{tr('เดือน')}</span>
       <input type="month" value={selMonth} onChange={e => e.target.value && changeMonth(e.target.value)} />
     </FilterBar>
@@ -1245,7 +1245,7 @@ ${issuesHtml}
                       <tr style={{ fontSize: 12 }}>
                         <th style={{ width: 90 }}>{tr('วันที่')}</th>
                         <th style={{ textAlign: 'left' }}>Station for audit</th>
-                        {LAYERS.map(l => <th key={l.key} style={{ width: 96, textAlign: 'center' }}>{tr(l.label)}<div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400 }}>{l.freq}</div></th>)}
+                        {LAYERS.map(l => <th key={l.key} style={{ width: 96, textAlign: 'center' }}>{tr(l.label)}<div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400 }}>{tr(l.freq)}</div></th>)}
                       </tr>
                     </thead>
                     <tbody>
@@ -1310,7 +1310,7 @@ ${issuesHtml}
             <div>
               <div style={lb}>{tr('ชั้นผู้ตรวจ (Layer)')}</div>
               <select value={auditLayer} onChange={e => setAuditLayer(e.target.value)} style={{ width: 190, padding: '7px 10px', borderRadius: 'var(--ctl-r)', fontSize: 13 }}>
-                {LAYERS.map(l => <option key={l.key} value={l.key}>{tr(l.label)} · {l.freq}</option>)}
+                {LAYERS.map(l => <option key={l.key} value={l.key}>{tr(l.label)} · {tr(l.freq)}</option>)}
               </select>
             </div>
             <div>
@@ -1528,7 +1528,7 @@ ${issuesHtml}
                   const m = CHECK_DAY_META[k];
                   return (
                     <span key={k} style={{ marginRight: 8 }}>
-                      <span style={{ display: 'inline-block', padding: '0 3px', borderRadius: 'var(--r-xs)', border: `1px solid ${m.color}`, background: m.tint || undefined, color: m.color, fontWeight: 700 }}>{m.mark}</span>{' '}
+                      <span style={{ display: 'inline-block', padding: '0 3px', borderRadius: 'var(--r-xs)', border: `1px solid ${m.color}`, background: m.tint || undefined, color: m.color, fontWeight: 700 }}>{tr(m.mark)}</span>{' '}
                       {tr(m.label)}
                     </span>
                   );
@@ -1565,9 +1565,9 @@ ${issuesHtml}
                         <th key={d} title={tr(meta.label)}
                           style={{ ...cellStyle, fontSize: 11, fontWeight: 700, color: meta.color,
                             padding: '3px 1px', background: meta.tint || undefined }}>
-                          {meta.mark && (
+                          {tr(meta.mark) && (
                             <span style={{ display: 'inline-block', padding: '0 3px', borderRadius: 'var(--r-xs)',
-                              border: `1px solid ${meta.color}`, lineHeight: '14px', fontSize: 11 }}>{meta.mark}</span>
+                              border: `1px solid ${meta.color}`, lineHeight: '14px', fontSize: 11 }}>{tr(meta.mark)}</span>
                           )}
                         </th>
                       );
@@ -1605,7 +1605,7 @@ ${issuesHtml}
                 {issues.map((i, idx) => (
                   <div key={idx} style={{ fontSize: 12, color: 'var(--text2)', padding: '4px 0', borderBottom: '1px dashed var(--border)' }}>
                     <b style={{ color: ansMeta(i.ans).color }}>[{i.ans}]</b> {thDate(i.date)} · {i.q} — <b style={{ color: 'var(--text)' }}>{i.note || '-'}</b>
-                    <span style={{ color: 'var(--muted)' }}> ({LAYERS.find(l => l.key === i.layer)?.label})</span>
+                    <span style={{ color: 'var(--muted)' }}> ({tr(LAYERS.find(l => l.key === i.layer)?.label)})</span>
                   </div>
                 ))}
               </div>

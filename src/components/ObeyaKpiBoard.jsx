@@ -278,7 +278,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
   }, [scope, org, scopeOpts]);
   const parentScope = useMemo(() => (scope && !isPlant(scope) ? org.ancestorsOf(scope.kind, scope.value).slice(-1)[0] || PLANT : null), [scope, org]);
   const secSet = useMemo(() => (scope ? org.sectionsOf(scope.kind, scope.value) : null), [scope, org]);   // null = ไม่จำกัด
-  const scopeText = useMemo(() => scopePathText(org, scope, 'ทั้งโรงงาน'), [scope, org]);   // CC = เส้นทางเจ้าของ › 💰 รหัส (utils/orgScope)
+  const scopeText = useMemo(() => scopePathText(org, scope, tr("ทั้งโรงงาน")), [scope, org]);   // CC = เส้นทางเจ้าของ › 💰 รหัส (utils/orgScope)
 
   /* ── โหลด — ทุกก้อนเช็ค error → warn[] เพื่อขึ้นแถบ "โหลดไม่ครบ" ห้ามเงียบ ─────────────────────
      deps เป็น primitive ล้วน (กฎเหล็ก DB ข้อ 9) · lineNames ส่งเป็นสตริงคั่นด้วย | */
@@ -421,7 +421,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
     const fxB = applyFormulaEntries([...(kdefs || []), ...(kdefsBelow || [])], entByKpi, baseIdxB, org);
     Object.assign(entByKpi, fxB.entries);
     const fInfoB = fxB.info;
-    const skLabelB = (sk) => { const i = String(sk).indexOf(':'); return i < 0 ? 'ทั้งโรงงาน' : org.labelOf(sk.slice(0, i), sk.slice(i + 1)); };
+    const skLabelB = (sk) => { const i = String(sk).indexOf(':'); return i < 0 ? tr("ทั้งโรงงาน") : org.labelOf(sk.slice(0, i), sk.slice(i + 1)); };
     /* เป้า/นิยาม = ของขอบเขตที่เลือกก่อน ไม่มีค่อยไต่ขึ้นบรรพบุรุษทีละชั้น (แผนก → ส่วนงาน → ฝ่าย → โรงงาน)
        แหล่งเดียวกับแท็บ ⚙️ ห้ามตั้งคนละที่ · `inherited` = เอามาจากระดับแม่ (จอต้องบอก) */
     const chain = org.chainOf(scope.kind, scope.value);   // CC → เจ้าของรหัส → แม่ … → โรงงาน (06/10)
@@ -855,9 +855,9 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
     /* 09/10 (user "remark เยอะไป ซ้ำกันทุกการ์ด"): แผ่นที่คาดไม่ได้ **ไม่เขียนบรรทัดนี้** — ไปรวมเป็นชิปเดียวใต้บอร์ด (`warnLines`)
        ว่ามีกี่แผ่นที่ยังไม่มีแผนรายเดือน · บนแผ่นเหลือเฉพาะตอนคำนวณได้จริง */
     if (f.value == null) return null;
-    const verdict = f.status === 'good' ? { t: '✅ คาดถึงเป้า', c: 'var(--green)' }
+    const verdict = f.status === 'good' ? { t: tr("✅ คาดถึงเป้า"), c: 'var(--green)' }
       : f.status === 'warn' ? { t: '🟡 ถึงแค่ Commitment', c: 'var(--amber)' }
-      : f.status === 'bad' ? { t: '❌ คาดไม่ถึงเป้า', c: 'var(--red)' } : null;
+      : f.status === 'bad' ? { t: tr("❌ คาดไม่ถึงเป้า"), c: 'var(--red)' } : null;
     const nAs = f.assumedMonths?.length || 0;
     const assumeTxt = nAs ? (f.assumed?.kind === 'slope' ? `${tr("เดือนที่เหลือ")} ${nAs} ${tr("ด. สมมติเพิ่มต่อเท่าอัตราเดิม")}` : `${tr("เดือนที่เหลือ")} ${nAs} ${tr("ด. สมมติทำได้เท่าค่าเฉลี่ย")} ${nf(f.assumed?.rate, r.dec)}${r.unit ? ' ' + r.unit : ''}`) : '';
     return (
@@ -1377,7 +1377,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
               {has('todo') && (
               <Sheet k={k} cw={cw} icon="🚨" title={tr('งานที่ต้องตามแก้')}
                 sub={`action ${tr("จากประชุมเช้า/ห้อง Obeya + เหตุความปลอดภัยที่ยังไม่ปิด")}${data?.actsMissing ? tr(' · ⚠ ยังไม่มีตารางติดตาม') : ''}`}
-                big={todo.length ? String(overdue || todo.length) : '0'} unit={overdue ? 'รายการเกินกำหนด' : 'รายการค้าง'}
+                big={todo.length ? String(overdue || todo.length) : '0'} unit={overdue ? 'รายการเกินกำหนด' : tr("รายการค้าง")}
                 stat={todo.length
                   ? (overdue ? { status: 'bad', label: `${tr("เกินกำหนด")} ${overdue}`, why: `${tr("มี")} ${overdue} ${tr("รายการเลยวันครบกำหนดแล้วยังไม่ปิด")}` }
                     : { status: 'warn', label: `${tr("ค้าง")} ${todo.length}`, why: 'ยังมีงานค้างที่ยังไม่ปิด' })

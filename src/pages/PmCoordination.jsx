@@ -465,7 +465,7 @@ function PlanModal({ plan, lines, machines, teams, pmPlans = [], scopeLines, ful
     if (!pp) { setF(v => ({ ...v, pm_plan_id: '' })); return; }
     setF(v => ({ ...v, pm_plan_id: pp.plan_id, machine_id: pp.machine_id || '', machine_no: pp.machine_no || '',
       machine_name: pp.machine_name || '', line_name: pp.line_name || v.line_name,
-      title: v.title.trim() || (pp.machine_name ? `PM ${pp.machine_name}` : 'แผน PM') }));
+      title: v.title.trim() || (pp.machine_name ? `PM ${pp.machine_name}` : tr("แผน PM")) }));
     if (pp.next_due_date) setTasks(ts => {
       const has = ts.some(t => t.task_date === pp.next_due_date);
       return has ? ts : [{ task_date: pp.next_due_date, team: pp.department || '', description: pp.checklist_name ? `PM ${tr("ตามแผน")}: ${pp.checklist_name}` : 'PM ตามแผน', time_from: '', time_to: '', is_support: false }, ...ts.filter(t => t.description || t.task_date !== todayStr())];

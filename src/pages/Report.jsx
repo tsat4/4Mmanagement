@@ -422,7 +422,7 @@ function OtTransportBookingTab({ autoOpenMaster }) {
     downloadCSV(
       'csv_ot_bus_booking',
       `${trI18n("จองรถ")}_OT_${date}.csv`,
-      ['ลำดับ', 'รหัสพนักงาน', 'ชื่อ-สกุล', 'ไลน์/แผนก', 'กะ', 'ช่วงเวลา OT', 'สายรถ', 'งานที่ทำ'],
+      ['ลำดับ', 'รหัสพนักงาน', 'ชื่อ-สกุล', 'ไลน์/แผนก', trI18n("กะ"), 'ช่วงเวลา OT', 'สายรถ', 'งานที่ทำ'],
       filteredRows.map((r, i) => [
         i + 1,
         r.employees?.employee_id_code || '',
@@ -884,7 +884,7 @@ table{border-collapse:collapse;width:100%}
         <CsvBtn onClick={() => downloadCSV(
           'csv_daily_checkin',
           `daily_${date}_${shift}.csv`,
-          ['วันที่', 'ประเภทวัน', 'กะ', 'รหัสพนักงาน', 'ชื่อ', 'แผนก', 'ทีม', 'หมวก', 'รองเท้า', 'ถุงมือ', 'OT'],
+          ['วันที่', 'ประเภทวัน', trI18n("กะ"), 'รหัสพนักงาน', 'ชื่อ', trI18n("แผนก"), 'ทีม', 'หมวก', 'รองเท้า', 'ถุงมือ', 'OT'],
           // fallback กะจาก team: C = กะเช้าตลอด · A/B หมุนกะ ไม่รู้รอบจริง = เว้นว่าง (เดิมเดา A=เช้า B=ดึกตายตัว — ผิดครึ่งสัปดาห์)
           filteredLogs.map(l => [date, trI18n(DAY_TYPE_META[getDayType(date)]?.label) || '', l.shift || (l.employees?.team === 'C' ? 'day' : ''), l.employees?.employee_id_code, l.employees?.name, l.employees?.department || '', l.employees?.team || '', l.has_helmet ? '✓' : '✗', l.has_boots ? '✓' : '✗', l.has_gloves ? '✓' : '✗', l.has_ot ? '✓' : ''])
         )} />
@@ -1069,7 +1069,7 @@ table{border-collapse:collapse;width:100%}
           downloadCSV(
             'csv_employee_month',
             `employee_${emp?.employee_id_code || selected}_${month}.csv`,
-            ['วันที่', 'ประเภทวัน', 'มาทำงาน', 'หมวก', 'รองเท้า', 'ถุงมือ', 'จุดงาน'],
+            ['วันที่', 'ประเภทวัน', trI18n("มาทำงาน"), 'หมวก', 'รองเท้า', 'ถุงมือ', 'จุดงาน'],
             // assigned_line เก็บ id จุดงาน — ต้อง map เป็นชื่อสถานีเหมือนหน้าจอ/PDF (เดิม CSV ออกเป็น uuid ดิบ)
             logs.map(l => [l.work_date, trI18n(DAY_TYPE_META[getDayType(l.work_date)]?.label) || '', l.is_present ? '✓' : '✗', l.has_helmet ? '✓' : '✗', l.has_boots ? '✓' : '✗', l.has_gloves ? '✓' : '✗', stationMap[String(l.assigned_line)] || l.assigned_line || ''])
           );
@@ -1276,7 +1276,7 @@ table{border-collapse:collapse;width:100%}
         <CsvBtn onClick={() => downloadCSV(
           'csv_station_attendance',
           `station_${station?.station_name || selectedStation}_${from}_${to}.csv`,
-          ['วันที่', 'ประเภทวัน', 'รหัส', 'ชื่อ', 'ทีม', 'กะ', 'สังกัด', 'มาทำงาน', 'PPE ครบ'],
+          ['วันที่', 'ประเภทวัน', 'รหัส', 'ชื่อ', 'ทีม', trI18n("กะ"), 'สังกัด', trI18n("มาทำงาน"), 'PPE ครบ'],
           filteredRows.map(r => [r.work_date, trI18n(DAY_TYPE_META[getDayType(r.work_date)].label), r.employees?.employee_id_code, r.employees?.name, r.employees?.team || '', r.shift || '', r.employees?.section || '', r.is_present ? '✓' : '✗', (r.has_helmet && r.has_boots && r.has_gloves) ? '✓' : '✗'])
         )} />
       </TimeRangeBar>
@@ -1985,7 +1985,7 @@ function FourMTab({ focusId = '', initStatus = '', initFrom = '' }) {
         <CsvBtn onClick={() => downloadCSV(
           'csv_4m_changes',
           `4m_changes_${from}_${to}.csv`,
-          ['วันที่', 'ประเภทวัน', 'ไลน์', 'ประเภท', 'ประเภทย่อย', 'รายละเอียด', 'สถานะ', 'เวลาสร้าง'],
+          ['วันที่', 'ประเภทวัน', trI18n("ไลน์"), 'ประเภท', 'ประเภทย่อย', 'รายละเอียด', 'สถานะ', 'เวลาสร้าง'],
           // export ชุดเดียวกับตารางบนจอ (ผ่าน filter ส่วนงาน) — เดิมใช้ logs ดิบ CSV ไม่ตรงจอ
           fourMFilteredLogs.map(l => [l.work_date, trI18n(DAY_TYPE_META[getDayType(l.work_date)]?.label) || '', l.line_name, l.category, l.change_subtype || '', l.description, l.status, l.created_at ? fmtDateTime(l.created_at) : ''])
         )} />
@@ -2595,7 +2595,7 @@ ${catHeaderCells}
           downloadCSV(
             'csv_skill_matrix',
             `skill_matrix_${toLocalDateStr(new Date())}.csv`,
-            ['รหัส', 'ชื่อ', 'ส่วนงาน', 'Team', ...ordered.map(s => s.label), 'เฉลี่ย'],
+            ['รหัส', 'ชื่อ', trI18n("ส่วนงาน"), 'Team', ...ordered.map(s => s.label), 'เฉลี่ย'],
             employees.map(emp => {
               const sm = Object.fromEntries((emp.employee_skills || []).map(s => [s.skill_name, s.score]));
               // นิยามเดียวกับหน้าจอ: คะแนน 0 = ยังไม่มีสกิล (ช่องว่าง) และไม่ถูกนำมาเฉลี่ย
@@ -3166,7 +3166,7 @@ function MultiSkillFormTab() {
             downloadCSV(
               'csv_multi_skill',
               `multi_skill_${toLocalDateStr(new Date())}.csv`,
-              ['รหัส', 'ชื่อ', 'ตำแหน่ง', 'ส่วนงาน', 'Team', 'อายุงาน', ...msVisibleDefs.map(s => s.label), 'ทักษะโดยรวม'],
+              ['รหัส', 'ชื่อ', 'ตำแหน่ง', trI18n("ส่วนงาน"), 'Team', 'อายุงาน', ...msVisibleDefs.map(s => s.label), 'ทักษะโดยรวม'],
               empLevelRows.map(({ emp, levels, overall }) => [
                 emp.employee_id_code || '',
                 emp.name || '',
@@ -3192,7 +3192,7 @@ function MultiSkillFormTab() {
               {[
                 { label: 'ฝ่าย', val: dept,       set: setDept,       opts: divisions.map(d => d.label), plain: true },
                 { label: 'ส่วน', val: section,    set: setSection,    opts: orgSectionsMS },
-                { label: 'แผนก', val: department, set: setDepartment, opts: deptsOfMS(section) },
+                { label: trI18n("แผนก"), val: department, set: setDepartment, opts: deptsOfMS(section) },
               ].map(({ label, val, set, opts, plain }) => (
                 <div key={label}>
                   <span style={lbSt}>{label}</span>
@@ -3920,7 +3920,7 @@ function SkillAllowanceTab() {
             downloadCSV(
               'csv_skill_allowance',
               `skill_allowance_${year}_${String(month).padStart(2,'0')}_p${period}.csv`,
-              ['รหัสพนักงาน', 'ชื่อ', 'ส่วนงาน', 'Team', 'กะ', ...daysArr.map(d => String(d)), 'รวมวัน'],
+              ['รหัสพนักงาน', 'ชื่อ', trI18n("ส่วนงาน"), 'Team', trI18n("กะ"), ...daysArr.map(d => String(d)), 'รวมวัน'],
               csvRows
             );
           }} />
@@ -4359,7 +4359,7 @@ function AttendanceFormTab() {
 
     const empHtml = empRows.map((r, i) => {
       // นับตามน้ำหนักวันลา (ครึ่งวัน 0.5 / รายชั่วโมง ชม.×0.1) ตาม legend ท้ายฟอร์ม — เดิมนับเต็ม 1 เสมอ
-      const cntSick     = sumLeave(r, days, 'ลาป่วย');
+      const cntSick     = sumLeave(r, days, trI18n("ลาป่วย"));
       const cntPersonal = sumLeave(r, days, 'ลากิจ');
       const cntVacation = sumLeave(r, days, 'ลาพักร้อน');
       const cntAbsent   = days.filter(d => { const b=r.byDay[d]; return b && !b.present && !b.leave; }).length;
@@ -4555,7 +4555,7 @@ function AttendanceFormTab() {
             downloadCSV(
               'csv_attendance_sheet',
               `attendance_${year}_${String(month).padStart(2,'0')}_p${period}.csv`,
-              ['รหัสพนักงาน', 'ชื่อ', 'ส่วนงาน', 'Team', ...daysArr.map(d => isSunday(d) ? `${d}(${trI18n("หยุด")})` : String(d)), 'รวมวัน', 'OT (ชม.)'],
+              ['รหัสพนักงาน', 'ชื่อ', trI18n("ส่วนงาน"), 'Team', ...daysArr.map(d => isSunday(d) ? `${d}(${trI18n("หยุด")})` : String(d)), 'รวมวัน', 'OT (ชม.)'],
               empRows.map(r => {
                 const totalP  = daysArr.filter(d => r.byDay[d]?.present).length;
                 const totalOT = sumOtHours(r, daysArr);

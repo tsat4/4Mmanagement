@@ -276,7 +276,7 @@ function StockTab({ role, scope }) {
     if (qty <= 0) return { label: 'หมด/ติดลบ', color:'var(--red)', bg:'var(--red-dim)', low:true };
     if (min != null && qty <= min) return { label:`🟡 ${tr("ต่ำกว่า")} min (${min})`, color:'var(--amber)', bg:'var(--amber-dim)', low:true };
     if (min == null && qty < 10)   return { label: 'เหลือน้อย', color:'var(--amber)', bg:'var(--amber-dim)', low:true };
-    return { label: 'ปกติ', color:'var(--green)', bg:'var(--green-dim)', low:false };
+    return { label: tr("ปกติ"), color:'var(--green)', bg:'var(--green-dim)', low:false };
   }, [ksMap]);
 
   // on-hand ปัจจุบันของ line+mat (จาก stock ที่โหลดมา) — ใช้โชว์ในฟอร์ม + กันติดลบ
@@ -430,7 +430,7 @@ function StockTab({ role, scope }) {
   const signedQty = (t) => { const q = parseFloat(t.qty) || 0; return (t.type === 'consume' || t.type === 'return') ? -Math.abs(q) : q; };
   const exportTxns = () => {
     if (!txnRows.length) { toast.info('ไม่มีรายการให้ export'); return; }
-    const head = ['วันที่งาน', 'เวลาบันทึก', 'ไลน์/คลัง', 'Part Name', 'MAT', 'ประเภท', 'จำนวน', 'สถานะ', 'หมายเหตุ', 'โดย'];
+    const head = ['วันที่งาน', 'เวลาบันทึก', 'ไลน์/คลัง', 'Part Name', 'MAT', 'ประเภท', 'จำนวน', 'สถานะ', tr("หมายเหตุ"), 'โดย'];
     const body = txnRows.map(t => [t.work_date, t.created_at ? new Date(t.created_at).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok' }) : '',
       t.line_name, t.part_name || '', t.mat_no, TYPE_LABEL[t.type] || t.type, signedQty(t), STATUS_LABEL[t.status] || t.status || '', t.note || '', t.created_by || '']
       .map(csvCell).join(','));
@@ -628,7 +628,7 @@ function StockTab({ role, scope }) {
             <table style={{ width:'100%', borderCollapse:'collapse' }}>
               <thead>
                 <tr style={{ background:'var(--bg2)' }}>
-                  {['วันที่','ไลน์','ชิ้นงาน','ประเภท','จำนวน','หมายเหตุ','โดย', canApprove ? 'จัดการ' : 'สถานะ'].map(h => (
+                  {['วันที่',tr("ไลน์"),'ชิ้นงาน','ประเภท','จำนวน',tr("หมายเหตุ"),'โดย', canApprove ? 'จัดการ' : 'สถานะ'].map(h => (
                     <th key={h} style={{ padding:'8px 12px', fontSize:11, fontWeight:800, color:'var(--muted)', textAlign:'left', whiteSpace:'nowrap', textTransform:'uppercase' }}>{tr(h)}</th>
                   ))}
                 </tr>
@@ -659,7 +659,7 @@ function StockTab({ role, scope }) {
                             style={{ ...btn('var(--bg)', 'var(--red)'), border:'1px solid var(--red)40', padding:'4px 10px', fontSize:11 }}>{tr('ปฏิเสธ')}</button>
                         </div>
                       ) : (
-                        <span style={{ fontSize:11, padding:'2px 8px', borderRadius: 'var(--r-md)', fontWeight:700, background:`${tint(STATUS_COLOR.pending, 'dim')}`, color:STATUS_COLOR.pending }}>{STATUS_LABEL.pending}</span>
+                        <span style={{ fontSize:11, padding:'2px 8px', borderRadius: 'var(--r-md)', fontWeight:700, background:`${tint(STATUS_COLOR.pending, 'dim')}`, color:STATUS_COLOR.pending }}>{tr(STATUS_LABEL.pending)}</span>
                       )}
                     </td>
                   </tr>
@@ -685,12 +685,12 @@ function StockTab({ role, scope }) {
         {/* 📏 ตัวเลขต้องมีหน่วย + ฐานเทียบ (UI §6.18 ข้อ 4) — "1" เฉยๆ ตอบไม่ได้ว่ามากหรือน้อย
             "Stock หมด" เป็นส่วนหนึ่งของ "รายการพาร์ท" จึงบอกสัดส่วนของยอดรวมกำกับ */}
         {[
-          { label:'ไลน์ที่มี stock', value: Object.keys(stockByLine).length, unit:'ไลน์', icon:'🏭' },
-          { label:'รายการพาร์ท', value: filteredStock.length, unit:'รายการ', icon:'🔩',
+          { label:'ไลน์ที่มี stock', value: Object.keys(stockByLine).length, unit:tr("ไลน์"), icon:'🏭' },
+          { label:'รายการพาร์ท', value: filteredStock.length, unit:tr("รายการ"), icon:'🔩',
             sub: lineFilter ? `${tr("เฉพาะ")} ${lineFilter}`
                  : scopePickLines ? `${scopePick.label} · ${scopePickLines.length} ${tr("ไลน์")}`
-                 : scopeNames ? `${scopeNames.length} ${tr("ไลน์ในขอบเขตของคุณ + คลัง")}` : 'ทุกไลน์/คลัง' },
-          { label:'Stock หมด / ติดลบ', value: totalLow, unit:'รายการ', icon:'⚠️', warn: totalLow > 0,
+                 : scopeNames ? `${scopeNames.length} ${tr("ไลน์ในขอบเขตของคุณ + คลัง")}` : tr("ทุกไลน์/คลัง") },
+          { label:'Stock หมด / ติดลบ', value: totalLow, unit:tr("รายการ"), icon:'⚠️', warn: totalLow > 0,
             sub: filteredStock.length > 0 ? `${Math.round(totalLow / filteredStock.length * 100)}% ${tr("ของ")} ${filteredStock.length} ${tr("รายการ")}` : 'ยังไม่มีรายการ' },
         ].map(c => (
           <div key={c.label} style={{ ...card, padding:'12px 16px', borderColor: c.warn ? 'var(--red-line)' : 'var(--border)' }}>
@@ -736,7 +736,7 @@ function StockTab({ role, scope }) {
             <span style={{ fontSize:11, color:'var(--muted)' }}>
               {keys.length} {groupMode === 'sloc' ? tr("พื้นที่") : tr("ไลน์/คลัง")}
               {forceOpen ? ` · ${tr("แสดง")} ${shownPartCount.toLocaleString()} ${tr("จาก")} ${allPartCount.toLocaleString()} ${tr("รายการ")}` : tr(" · แตะหัวกลุ่มเพื่อย่อ-กาง")}
-              {groupMode === 'sloc' && ' · ยอดในพื้นที่เดียวกันรวมข้ามไลน์แล้ว (MIN/MAX เป็นค่าต่อ MAT ระดับพื้นที่)'}
+              {groupMode === 'sloc' && tr("· ยอดในพื้นที่เดียวกันรวมข้ามไลน์แล้ว (MIN/MAX เป็นค่าต่อ MAT ระดับพื้นที่)")}
             </span>
             {groupMode === 'sloc' && homeSloc.error && (
               <span style={{ fontSize:11, color:'var(--red)', fontWeight:700 }}>

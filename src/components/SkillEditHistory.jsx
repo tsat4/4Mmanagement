@@ -59,7 +59,7 @@ export default function SkillEditHistory({ employeeId, limit = 30 }) {
     // ฟิลด์อื่นที่ไม่ได้แปลเป็นภาษาคน — แสดงชื่อดิบไว้ ดีกว่าเงียบ
     const rest = ch.filter(k => !['score', 'pending_level', 'last_daily_farm_date'].includes(k));
     if (rest.length) parts.push(rest.join(', '));
-    return { skill, text: parts.join(' · ') || 'แก้ไข' };
+    return { skill, text: parts.join(' · ') || tr("แก้ไข") };
   };
 
   return (

@@ -222,7 +222,7 @@ export default function NpiDrawingsEci({ project, parts, partId, onPickPart, dra
                       <td style={tdSt}><Pill label={tr(ECI_STATUS[e.status]?.label)} color={ECI_STATUS[e.status]?.color} />{e.status === 'rejected' && e.reject_reason && <div style={{ fontSize: 11, color: '#f59e0b' }}>{e.reject_reason}</div>}</td>
                       <td style={tdSt}>
                         {legs.length ? <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>{legs.map(l => <Pill key={l.flag} label={`${e[l.link] ? '✓' : '○'} ${tr(l.label)}`} color={e[l.link] ? '#22c55e' : '#f59e0b'} small />)}</div> : <span style={{ color: 'var(--muted)' }}>{tr('ยังไม่ประเมิน')}</span>}
-                        {legs.length > 0 && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{linked}/{legs.length}</div>}
+                        {legs.length > 0 && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{tr(linked)}/{legs.length}</div>}
                       </td>
                       <td style={{ ...tdSt, color: late ? '#ef4444' : undefined, fontWeight: late ? 800 : 400 }}>{e.target_date ? fmtDate(e.target_date) : '—'}{e.effective_date ? <div style={{ fontSize: 11, color: '#22c55e' }}>{tr('มีผล')} {fmtDate(e.effective_date)}</div> : null}</td>
                       <td style={{ ...tdSt, whiteSpace: 'nowrap' }}>

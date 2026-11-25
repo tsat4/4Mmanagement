@@ -59,7 +59,7 @@ export default function PushCoveragePanel() {
     if (!stat) return [];
     const m = new Map();
     for (const r of stat.noDev) {
-      const k = r.section || '— ไม่ระบุส่วนงาน';
+      const k = r.section || tr("— ไม่ระบุส่วนงาน");
       if (!m.has(k)) m.set(k, []);
       m.get(k).push(r);
     }

@@ -214,7 +214,7 @@ export default function RundownStock() {
                     </th>
                     {(() => {
                       /* คอลัมน์ "ยกมา" = stock พร้อมส่งตอนนี้ — ป้าย/สีชุดเดียวกับคอลัมน์ยกมาของบอร์ด */
-                      const h = periodHead(today, { today, seed: true, seedBot: 'ตอนนี้' });
+                      const h = periodHead(today, { today, seed: true, seedBot: tr("ตอนนี้") });
                       const t = periodTone({ seed: true });
                       return (
                         <th style={{ padding: '6px 8px', fontSize: 11, textAlign: 'right', minWidth: 64, background: t.bg, borderLeft: t.edge, borderRight: t.edge }}>

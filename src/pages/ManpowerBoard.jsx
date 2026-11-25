@@ -543,7 +543,7 @@ function TeamColumn({ c, skills }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
         <RoleTag>{trI18n('หัวหน้ากลุ่ม')}</RoleTag>
         <strong style={{ fontSize: 14 }}>{c.team ? `${trI18n("ทีม")} ${c.team}` : trI18n("ไม่ระบุทีม")}</strong>
-        <span style={{ fontSize: 12, fontWeight: 700, color: sm.color }}>● {c.shift ? `${sm.label}${trI18n("วันนี้")}` : sm.label}</span>
+        <span style={{ fontSize: 12, fontWeight: 700, color: sm.color }}>● {c.shift ? `${trI18n(sm.label)}${trI18n("วันนี้")}` : trI18n(sm.label)}</span>
         <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--muted)' }}>
           {c.ops.length} {trI18n('คน')}{slotText(c)}
         </span>
@@ -1239,7 +1239,7 @@ function StationModal({ x, lineName, skills, fit, onClose }) {
               })}
               {sh !== 'none' && Array.from({ length: x.missing?.[sh] || 0 }, (_, i) => (
                 <div key={`m${i}`} style={{ padding: 8, borderRadius: 'var(--r-md)', border: `1px dashed ${shiftMeta(sh).color}`, fontSize: 12, color: 'var(--muted)' }}>
-                  + {trI18n('ช่องว่าง')} {shiftMeta(sh).label}
+                  + {trI18n('ช่องว่าง')} {trI18n(shiftMeta(sh).label)}
                 </div>
               ))}
             </div>
@@ -1269,7 +1269,7 @@ function SkillGapTable({ gaps, defs }) {
             <tr key={`${g.emp.id}-${g.station.id}`}>
               <td style={{ ...td, fontWeight: 700 }}>{g.emp.name}{g.temp && <span title={trI18n('ย้ายมายืนจุดนี้วันนี้ (จุดประจำอยู่ที่อื่น)')} style={{ marginLeft: 6, color: 'var(--blue)' }}>{trI18n('✳ ย้ายมาวันนี้')}</span>}</td>
               <td style={td}>{g.station.station_name || '–'}</td>
-              <td style={{ ...td, whiteSpace: 'nowrap', color: shiftMeta(g.shift).color }}>{shiftMeta(g.shift).label}</td>
+              <td style={{ ...td, whiteSpace: 'nowrap', color: shiftMeta(g.shift).color }}>{trI18n(shiftMeta(g.shift).label)}</td>
               <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{g.fit.passed}/{g.fit.total}</td>
               <td style={td}>
                 <span style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -1328,7 +1328,7 @@ function LayoutMap({ layout, placed, reserve = 12, fit = null, focus = null, onO
                     const dim = away || attend === 'leave' || attend === 'absent';
                     const fs = !tv && fit ? personFitState(x, p, fit) : null;
                     return (
-                      <div key={emp.id} title={`${emp.name} · ${shiftMeta(shift).label} · ${trI18n(ATTEND_META[attend].label)}${temp ? trI18n(' · ย้ายมาวันนี้') : ''}${away ? trI18n(' · วันนี้ไปยืนจุดอื่น') : ''}`}
+                      <div key={emp.id} title={`${emp.name} · ${trI18n(shiftMeta(shift).label)} · ${trI18n(ATTEND_META[attend].label)}${temp ? trI18n(' · ย้ายมาวันนี้') : ''}${away ? trI18n(' · วันนี้ไปยืนจุดอื่น') : ''}`}
                         style={{ position: 'relative', width: sz, height: sz }}>
                         <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', background: '#1a1a1a',
                           border: `${ms?.ring || 2}px ${temp ? 'dashed' : 'solid'} ${c}`, opacity: dim ? 0.4 : 1, filter: dim ? 'grayscale(1)' : undefined }}>
@@ -1583,7 +1583,7 @@ function OrgTv({ board, depts, skills }) {
                     <div style={{ height: TV_COLHEAD_H, display: 'flex', flexDirection: 'column', justifyContent: 'center', overflow: 'hidden' }}>
                       <div style={{ display: 'flex', gap: 8, alignItems: 'center', whiteSpace: 'nowrap' }}>
                         <strong style={{ fontSize: 15 }}>{c.team ? `${trI18n("ทีม")} ${c.team}` : trI18n("ไม่ระบุทีม")}</strong>
-                        <span style={{ fontSize: 12.5, fontWeight: 700, color: sm.color }}>● {c.shift ? `${sm.label}${trI18n("วันนี้")}` : sm.label}</span>
+                        <span style={{ fontSize: 12.5, fontWeight: 700, color: sm.color }}>● {c.shift ? `${trI18n(sm.label)}${trI18n("วันนี้")}` : trI18n(sm.label)}</span>
                         <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--muted)' }}>{c.ops.length} {trI18n('คน')}{slotText(c)}</span>
                       </div>
                       <div style={{ fontSize: 12, color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

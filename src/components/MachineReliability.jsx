@@ -280,10 +280,10 @@ export default function MachineReliability({ machines = [], lineObjs = [], scope
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
           {[
-            { k: 'mttaMin', icon: '⏳', label: 'รอช่าง (MTTA)', color: 'var(--red)', tip: 'ตั้งแต่เครื่องหยุด จนช่างกดรับงาน — คิว/ระยะทาง/การแจ้ง' },
-            { k: 'mttrPureMin', icon: '🔧', label: 'ซ่อมจริง (MTTR)', color: 'var(--amber)', tip: 'ตั้งแต่ช่างรับงาน จนกดซ่อมเสร็จ — ทักษะช่าง/อะไหล่' },
-            { k: 'restartMin', icon: '▶️', label: 'กลับมารัน', color: 'var(--blue)', tip: 'ตั้งแต่ซ่อมเสร็จ จนไลน์เดินต่อ — ตรวจชิ้นแรก/warm-up' },
-            { k: 'totalMin', icon: '🛑', label: 'รวม (Downtime)', color: 'var(--text)', tip: 'ผลรวมทั้ง 3 ท่อน = MTTR แบบ Restore ที่ตารางข้างล่างโชว์' },
+            { k: 'mttaMin', icon: '⏳', label: 'รอช่าง (MTTA)', color: 'var(--red)', tip: trI18n("ตั้งแต่เครื่องหยุด จนช่างกดรับงาน — คิว/ระยะทาง/การแจ้ง") },
+            { k: 'mttrPureMin', icon: '🔧', label: 'ซ่อมจริง (MTTR)', color: 'var(--amber)', tip: trI18n("ตั้งแต่ช่างรับงาน จนกดซ่อมเสร็จ — ทักษะช่าง/อะไหล่") },
+            { k: 'restartMin', icon: '▶️', label: 'กลับมารัน', color: 'var(--blue)', tip: trI18n("ตั้งแต่ซ่อมเสร็จ จนไลน์เดินต่อ — ตรวจชิ้นแรก/warm-up") },
+            { k: 'totalMin', icon: '🛑', label: 'รวม (Downtime)', color: 'var(--text)', tip: trI18n("ผลรวมทั้ง 3 ท่อน = MTTR แบบ Restore ที่ตารางข้างล่างโชว์") },
           ].map(c => (
             <div key={c.k} title={c.tip} style={{ flex: 1, minWidth: 140, background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 12px' }}>
               <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{c.icon} {trI18n(c.label)}</div>

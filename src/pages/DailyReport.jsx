@@ -358,7 +358,7 @@ export default function DailyReport() {
             label: stale.error ? '⏰ กะค้าง ⚠' : `⏰ ${tr("กะค้าง")} ${stale.rows.length}${staleOver ? ` · ${tr("เกิน")} ${STALE_SESSION_DAYS} ${tr("วัน")} ${staleOver}` : ''}`,
           }] : []),
           { key: 'history', label: tr("ประวัติ") },
-          { key: 'export', label: 'Export' },
+          { key: 'export', label: tr("ส่งออก") },
           ...(canSetup ? [{ key: 'setup', label: 'ตั้งค่า' }] : []),
         ]}
         tab={tab} onTab={setTab}
@@ -3526,7 +3526,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
     if (!ok) return;
     const dtType = dtTypes.find(t => t.id === d.downtime_type_id);
     const mcName = machines.find(m => m.machine_no === d.machine_no)?.machine_name || '';
-    const shiftLabel = selSession.shift === 'day' ? 'กะเช้า' : 'กะดึก';
+    const shiftLabel = selSession.shift === 'day' ? tr("กะเช้า") : 'กะดึก';
     const startTime = d.started_at ? fmtTime(new Date(d.started_at)) : '';
     notifyEvent({
       event: 'downtime_call_mtn',
@@ -5546,7 +5546,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                           { label: 'วิ่งงาน', color: 'var(--green)' },
                           { label: 'พักตามนโยบาย', color: 'var(--blue)' },
                           { label: 'หยุดในแผน', color: 'var(--amber)' },
-                          { label: 'หยุดนอกแผน', color: 'var(--red)' },
+                          { label: tr("หยุดนอกแผน"), color: 'var(--red)' },
                         ].map(k => (
                           <div key={k.label} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--muted)' }}>
                             <span style={{ width: 9, height: 9, borderRadius: 'var(--r-xs)', background: k.color, display: 'inline-block' }} />{tr(k.label)}</div>
@@ -5901,7 +5901,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                         { label: 'เวลากะ',       value: fmtMin(shiftMin),        color: 'var(--text)' },
                         { label: 'หยุดนโยบาย',   value: fmtMin(Math.round(policyBreakMin)), color: 'var(--green)' },
                         { label: 'หยุดในแผน',     value: fmtMin(Math.round(loggedPlannedDT)), color: 'var(--amber)' },
-                        { label: 'หยุดนอกแผน',    value: fmtMin(Math.round(loggedUnplannedDT)), color: 'var(--red)' },
+                        { label: tr("หยุดนอกแผน"),    value: fmtMin(Math.round(loggedUnplannedDT)), color: 'var(--red)' },
                         { label: 'Run Time',      value: fmtMin(runMin),          color: 'var(--blue)' },
                         { label: 'Order ที่ปิด', value: `${prodOrders.filter(o => o.status === 'confirmed').length} ใบ`, color: 'var(--green)' },
                         { label: 'ผลิตได้',     value: `${totalProduced} ชิ้น`, color: 'var(--green)' },
@@ -6161,7 +6161,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                           { label: 'วิ่งงาน', color: 'var(--green)' },
                           { label: 'พักตามนโยบาย', color: 'var(--blue)' },
                           { label: 'หยุดในแผน', color: 'var(--amber)' },
-                          { label: 'หยุดนอกแผน', color: 'var(--red)' },
+                          { label: tr("หยุดนอกแผน"), color: 'var(--red)' },
                         ].map(k => (
                           <div key={k.label} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--muted)' }}>
                             <span style={{ width: 9, height: 9, borderRadius: 'var(--r-xs)', background: k.color, display: 'inline-block' }} />{tr(k.label)}</div>
@@ -7324,7 +7324,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
           const dtMachineOptions = (() => {
             const line = (selSession?.line_name || '').trim().toLowerCase();
             const fam = new Set(getLineFamilyNames(lines, selSession?.line_name || '').map(n => (n || '').trim().toLowerCase()));
-            const G = ['🏭 เครื่องในไลน์นี้', '🔗 เครื่องในกลุ่มไลน์', '🏢 เครื่องอื่นในโรงงาน', '🔨 แม่พิมพ์'];
+            const G = ['🏭 เครื่องในไลน์นี้', '🔗 เครื่องในกลุ่มไลน์', '🏢 เครื่องอื่นในโรงงาน', ("🔨 " + tr("แม่พิมพ์"))];
             const inFam = (m) => { const s = (m.line_name || '').trim().toLowerCase(); return !!s && (s === line || fam.has(s)); };
             const rank = (m) => {
               if (m.equipment_kind === 'die') return 3;      // แม่พิมพ์ผูกชื่อกลุ่มเครื่องปั๊ม ไม่ใช่ไลน์ผลิต
@@ -7350,7 +7350,7 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                 const r = c ? (c.tier === 'linked' ? -2 : -1) : rank(m);
                 return {
                   id: m.machine_no, _r: r, _i: i,
-                  group: r === -2 ? DIE_CAND_GROUP.linked : r === -1 ? DIE_CAND_GROUP.guess : G[r],
+                  group: r === -2 ? tr(DIE_CAND_GROUP.linked) : r === -1 ? tr(DIE_CAND_GROUP.guess) : G[r],
                   label: `${m.machine_no}${m.machine_name ? ` · ${m.machine_name}` : ''}`,
                   sub: c ? `${tr("ชุด")} ${c.set.set_code} · ${tr("งาน")} ${c.mats.join(', ')}` : (r === 0 ? '' : (m.line_name || 'ไม่ระบุไลน์')),
                   keywords: `${m.machine_name || ''} ${m.line_name || ''} ${m.machine_type || ''}`,
@@ -8649,7 +8649,7 @@ function ExportTab() {
       'Customer': o.customer || '',
       'Qty แผน': o.qty || 0,
       'Qty OK': o.qty_ok ?? '',
-      'สถานะ': o.status === 'confirmed' ? 'ปิดแล้ว' : o.status === 'carry_over' ? 'ยกยอด (รอกะถัดไปรับ)' : o.status === 'imported' ? 'ส่งกะถัดไปแล้ว' : o.status === 'open' ? 'กำลังผลิต' : o.status,
+      'สถานะ': o.status === 'confirmed' ? 'ปิดแล้ว' : o.status === 'carry_over' ? 'ยกยอด (รอกะถัดไปรับ)' : o.status === 'imported' ? 'ส่งกะถัดไปแล้ว' : o.status === 'open' ? tr("กำลังผลิต") : o.status,
       'ยิงย้อนหลัง': o.is_backfill ? 'ใช่' : '',
       'เปิดโดย': o.opened_by || '',
       'เวลาเปิด': o.opened_at ? fmtDateTimeFull(new Date(o.opened_at)) : '',
@@ -8764,14 +8764,14 @@ function ExportTab() {
      · `docKey` มาจากชนิดรายงาน (kanban/output/oee/downtime) — คนละเลขฟอร์มกันได้
      · เลขฟอร์มอยู่ที่ **ชื่อไฟล์** ห้ามแทรกบรรทัดในเนื้อ CSV (คอลัมน์จะเลื่อนทั้งไฟล์) */
   const exportCSV = (rows, filename, reportType) => {
-    if (!rows.length) { toast.error('ไม่มีข้อมูล'); return; }
+    if (!rows.length) { toast.error(tr("ไม่มีข้อมูล")); return; }
     const headers = Object.keys(rows[0]);
     downloadCsvDoc(`csv_dr_${reportType}`, filename, csvText(headers, rows.map(r => headers.map(h => r[h] ?? ''))));
   };
 
   // ── PDF export via jsPDF + autoTable ──────────────────────────
   const exportPDF = async (rows, title, filename) => {
-    if (!rows.length) { toast.error('ไม่มีข้อมูล'); return; }
+    if (!rows.length) { toast.error(tr("ไม่มีข้อมูล")); return; }
     const { default: jsPDF } = await import('jspdf');
     const { default: autoTable } = await import('jspdf-autotable');
     const { registerThaiFont } = await import('../lib/pdfThaiFont');
@@ -8819,7 +8819,7 @@ function ExportTab() {
   // เผื่อยังไม่มีไฟล์ฟอร์มจริงอ้างอิง ใช้ layout มาตรฐานโรงงานไปก่อน (หัวกระดาษ/กรอบข้อมูล/ตาราง/ช่องเซ็นชื่อ)
   // ปรับ layout ตรงนี้ได้ทันทีที่ได้รับไฟล์ฟอร์มจริง
   const exportShiftFormPDF = async (sessions) => {
-    if (!sessions.length) { toast.error('ไม่มีข้อมูล'); return; }
+    if (!sessions.length) { toast.error(tr("ไม่มีข้อมูล")); return; }
     const { default: jsPDF } = await import('jspdf');
     const { default: autoTable } = await import('jspdf-autotable');
     const { registerThaiFont } = await import('../lib/pdfThaiFont');
@@ -8863,7 +8863,7 @@ function ExportTab() {
         styles: { font: 'Sarabun', fontSize: 9, cellPadding: 2 },
         body: [
           ['ไลน์ผลิต',        s.line_name || '-',          'วันที่',         fmtDate(s.work_date)],
-          ['กะ',              shiftLabel,                    'สินค้า',        s.dr_products?.name || '-'],
+          [tr("กะ"),              shiftLabel,                    'สินค้า',        s.dr_products?.name || '-'],
           ['เวลาเริ่มกะ',      s.start_time || '-',          'เวลาสิ้นสุดกะ',  s.end_time || '-'],
           ['ผู้เปิดกะ',        s.opened_by_name || '-',      'ผู้ปิดกะ',       s.closed_by_name || '-'],
         ],
@@ -8910,7 +8910,7 @@ function ExportTab() {
         head: [['PROD.NO', 'MAT.NO', 'Part Name', 'Qty แผน', 'Qty OK', 'สถานะ']],
         body: orders.length ? orders.map(o => [
           o.prod_no || '-', o.mat_no || '-', o.part_name || '-', o.qty || 0, o.qty_ok ?? '-',
-          o.status === 'confirmed' ? 'ปิดแล้ว' : o.status === 'carry_over' ? 'ยกยอด (รอกะถัดไปรับ)' : o.status === 'imported' ? 'ส่งกะถัดไปแล้ว' : o.status === 'open' ? 'กำลังผลิต' : o.status,
+          o.status === 'confirmed' ? 'ปิดแล้ว' : o.status === 'carry_over' ? 'ยกยอด (รอกะถัดไปรับ)' : o.status === 'imported' ? 'ส่งกะถัดไปแล้ว' : o.status === 'open' ? tr("กำลังผลิต") : o.status,
         ]) : [['-', '-', 'ไม่มีรายการ', '-', '-', '-']],
         headStyles: { font: 'Sarabun', fillColor: [60,60,60], textColor: 255, fontStyle: 'bold', fontSize: 8 },
         margin: { left: MARGIN, right: MARGIN },
@@ -9540,7 +9540,7 @@ function BreakPolicySetup({ role }) {
     load();
   };
 
-  const SHIFT_LABEL = { day: '☀️ กะเช้า', night: '🌙 กะดึก', both: '⏰ ทั้งสองกะ' };
+  const SHIFT_LABEL = { day: tr("☀️ กะเช้า"), night: '🌙 กะดึก', both: '⏰ ทั้งสองกะ' };
   /* ⚠️ พักบางรายการเกิด "อย่างใดอย่างหนึ่ง" ระหว่างวันทำโอ/ไม่ทำโอ (เช่น พักเบรค OT)
      ตั้งผิด = หักพักซ้ำ → %A ของทุกจอเพี้ยน (เคสจริง 2026-09-14) · ดู migration 20260914_break_policies_ot_scope
      🔚 20/10 — พักที่ "เลื่อนตามเวลาเลิกกะ" (5ส.) ใช้ anchor='shift_end' แทนการแตกแถวตาม ot_scope

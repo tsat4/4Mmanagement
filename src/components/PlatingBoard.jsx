@@ -387,7 +387,7 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
           return (
             <PartCard key={o.id} code={o.after_mat} name={o.part_name} img={imgOf(o.after_mat) || imgOf(o.before_mat)} alert={zone === 'late'}
               status={isOpen ? (zone === 'late' ? { label: '⏰ เกินกำหนด', color: '#ef4444' } : { label: 'ที่ร้าน', color: '#06b6d4' }) : { label: '✅ ปิดแล้ว', color: '#22c55e' }}
-              metric={{ label: isOpen ? 'ค้างที่ร้าน' : 'รับกลับแล้ว', value: fmt(isOpen ? open : o.qty_received), unit: 'ชิ้น' }}
+              metric={{ label: isOpen ? 'ค้างที่ร้าน' : 'รับกลับแล้ว', value: fmt(isOpen ? open : o.qty_received), unit: tr("ชิ้น") }}
               aside={{ label: tr("ร้าน"), value: o.vendor }}
               dim={!isOpen}
               rows={[
@@ -448,7 +448,7 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
               const fg = whFg[a.after] || (direct.length === 1 ? direct[0].fg : '');
               return (
                 <PartCard key={a.after} code={a.after} name={a.afterName} img={imgOf(a.after)}
-                  metric={{ label: a.loc ? `${tr("ใน")} ${a.loc}` : 'ไม่มีกฎรับเข้าคลัง', value: a.have == null ? '—' : fmt(a.have), unit: 'ชิ้น' }}
+                  metric={{ label: a.loc ? `${tr("ใน")} ${a.loc}` : 'ไม่มีกฎรับเข้าคลัง', value: a.have == null ? '—' : fmt(a.have), unit: tr("ชิ้น") }}
                   rows={[
                     ...direct.map(t => ({ k: 'แปลงเป็น', v: `${t.fg} ${t.name}${t.qpu !== 1 ? ` (${tr("ใช้")} ${t.qpu} ${tr("ต่อ")} 1)` : ''}` })),
                     ...asm.map(t => ({ k: 'ประกอบที่', v: `${t.line || tr('ไลน์ (ยังไม่ระบุ)')} → ${t.fg}` })),

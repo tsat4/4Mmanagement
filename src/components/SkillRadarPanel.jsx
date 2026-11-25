@@ -79,7 +79,7 @@ export default function SkillRadarPanel({ emp, skillDefs, subItemsByskill = {}, 
       // ไม่ตรงกับที่ doc_control ตั้งไว้ที่ /doc-forms (โหลดแล้วครั้งเดียว เรียกซ้ำคืน cache ทันที)
       await Promise.all([loadDocForms(), loadPositions()]);   // master ตำแหน่ง — ใบพิมพ์แปลง key เป็นชื่อ
       // ดึงผู้ประเมิน (หัวหน้าแผนก/leader) + ผู้รับรอง (หัวหน้าส่วน/supervisor หรือ manager) จากไลน์ของพนักงาน
-      let assessor = { name: '', pos: 'หัวหน้าแผนก', sig: null };
+      let assessor = { name: '', pos: tr("หัวหน้าแผนก"), sig: null };
       let certifier = { name: '', pos: 'หัวหน้าส่วน', sig: null };
       if (emp.line_id) {
         // หา "คนเซ็น" ตามไลน์ ไม่ใช่การเช็คสิทธิ์ — จึงเทียบ role ตรงๆ ได้ (ไม่ขัดกฎห้าม hardcode role array)
@@ -90,7 +90,7 @@ export default function SkillRadarPanel({ emp, skillDefs, subItemsByskill = {}, 
         const ldr = (sgs || []).find(p => p.role === 'leader');
         const sv  = (sgs || []).find(p => p.role === 'supervisor');
         const mgr = (sgs || []).find(p => p.role === 'manager');
-        if (ldr) assessor  = { name: ldr.full_name || '', pos: ldr.position || 'หัวหน้าแผนก', sig: ldr.signature_url || null };
+        if (ldr) assessor  = { name: ldr.full_name || '', pos: ldr.position || tr("หัวหน้าแผนก"), sig: ldr.signature_url || null };
         const cert = sv || mgr;
         if (cert) certifier = { name: cert.full_name || '', pos: cert.position || 'หัวหน้าส่วน', sig: cert.signature_url || null };
       }

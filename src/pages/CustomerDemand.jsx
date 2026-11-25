@@ -388,7 +388,7 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
   const byCustomer = useMemo(() => {
     const m = {};
     orders.forEach(o => {
-      const key = custLabel ? custLabel(o.customer) : (o.customer || '— ไม่ระบุลูกค้า —');
+      const key = custLabel ? custLabel(o.customer) : (o.customer || tr("— ไม่ระบุลูกค้า —"));
       (m[key] = m[key] || []).push(o);
     });
     return m;
@@ -1052,8 +1052,8 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
                   <PartCard
                     code={sap} name={o.part_name}
                     img={imgOf(sap)}
-                    status={{ label: plan ? '📋 แผน 862 · รอ e-SMART' : od ? '🔴 เลยเวลา' : pl ? '🟠 หลุดเฟส' : statusLabel(o), color: cardColor }}
-                    metric={{ label: tr("จำนวนส่ง"), value: fmt(o.qty), unit: 'ชิ้น' }}
+                    status={{ label: plan ? '📋 แผน 862 · รอ e-SMART' : od ? ("🔴 " + tr("เลยเวลา")) : pl ? '🟠 หลุดเฟส' : statusLabel(o), color: cardColor }}
+                    metric={{ label: tr("จำนวนส่ง"), value: fmt(o.qty), unit: tr("ชิ้น") }}
                     aside={{ label: tr("รอบส่ง"), value: `🕐 ${o.ship_time ? o.ship_time.slice(0, 5) : 'ไม่ระบุเวลา'}${o.due_date !== day ? ` (เช้า ${(o.due_date || '').slice(5)})` : ''} · ${o.customer ? (custLabel ? custLabel(o.customer) : o.customer) : '—'}` }}
                     rows={[
                       { k: tr("เลขลูกค้า"), v: o.customer_part_no && o.customer_part_no !== sap ? o.customer_part_no : null },

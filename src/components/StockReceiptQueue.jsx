@@ -245,7 +245,7 @@ export default function StockReceiptQueue({ banner = null, table = false }) {
             return (
               <PartCard key={g.key} code={g.mat_no} name={g.part_name} img={imgOf(g.mat_no)} alert={stale}
                 status={stale ? { label: tr('⏰ ค้าง'), color: toneVar('bad') } : { label: tr('📥 รอรับ'), color: toneVar('warn') }}
-                metric={{ label: tr("ยอดตามใบผลิตรวม"), value: fmt(g.expected), unit: 'ชิ้น' }}
+                metric={{ label: tr("ยอดตามใบผลิตรวม"), value: fmt(g.expected), unit: tr("ชิ้น") }}
                 aside={{ label: tr("เข้าคลัง"), value: g.dest_line_name }}
                 rows={[
                   { k: tr("จากไลน์"), v: g.source_line },
@@ -329,7 +329,7 @@ export default function StockReceiptQueue({ banner = null, table = false }) {
                 status={pending
                   ? (stale ? { label: '⏰ ค้าง', color: '#ef4444' } : { label: 'รอรับ', color: '#f59e0b' })
                   : { label: '✅ รับแล้ว', color: '#22c55e' }}
-                metric={{ label: pending ? 'ยอดตามใบผลิต' : 'รับเข้าจริง', value: fmt(pending ? r.qty_expected : r.qty_received), unit: 'ชิ้น' }}
+                metric={{ label: pending ? 'ยอดตามใบผลิต' : 'รับเข้าจริง', value: fmt(pending ? r.qty_expected : r.qty_received), unit: tr("ชิ้น") }}
                 aside={{ label: tr("เข้าคลัง"), value: r.dest_line_name }}
                 dim={!pending}
                 rows={[

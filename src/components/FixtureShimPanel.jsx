@@ -198,7 +198,7 @@ export default function FixtureShimPanel({
           </div>
 
           <div style={{ fontSize: 12, color: LV[st.level].c, fontWeight: 600 }}>
-            {st.level === 'over' ? '🔴 ' : st.level === 'warn' ? '🟠 ' : ''}{LV[st.level].t}
+            {st.level === 'over' ? '🔴 ' : st.level === 'warn' ? '🟠 ' : ''}{tr(LV[st.level].t)}
           </div>
 
           {shotAssumed && (

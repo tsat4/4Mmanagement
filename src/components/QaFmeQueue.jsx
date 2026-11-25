@@ -192,7 +192,7 @@ export default function QaFmeQueue({ scopedLineNames, onOpen }) {
         )}
         <span style={{ flex: 1 }} />
         <div style={{ display: 'flex', gap: 4, background: 'var(--bg2-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-pill)', padding: 2 }}>
-          {[{ k: 'list', t: 'รายการ' }, { k: 'board', t: 'ไทม์ไลน์' }].map(v => (
+          {[{ k: 'list', t: tr("รายการ") }, { k: 'board', t: 'ไทม์ไลน์' }].map(v => (
             <button key={v.k} onClick={() => setViewSaved(v.k)}
               title={v.k === 'board' ? tr('เห็นทั้งวันว่าต้องไปตรวจไลน์ไหน กี่โมง') : tr('คิวที่ต้องทำตอนนี้')}
               style={{ padding: '3px 11px', borderRadius: 18, fontSize: 11.5, fontWeight: 700, cursor: 'pointer', border: 'none',

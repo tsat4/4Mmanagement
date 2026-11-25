@@ -36,6 +36,7 @@ import { assignedTechsOf } from './mtnPurchase.js';
 import { isMtnFormRow, isApprovalBlocked } from './mtnMoForm.js';
 import { bkkDateStr } from './workDate.js';
 import { binTagAge, ncStep } from './qualityBin.js';   // อายุแท็กถังเหลือง/แดง (WI-PD3-087 §5.6) — ห้ามเขียนเลขวันซ้ำที่นี่
+import { tr } from './i18n.js';
 
 /** 3 ชั้นของคิว — ชื่อชั้นใช้ร่วมกับจอ ห้ามพิมพ์สตริงเองในหน้า */
 export const TIER = { MINE: 'mine', UNIT: 'unit', FLOOR: 'floor' };
@@ -361,7 +362,7 @@ export function buildQueue(src = {}, me = {}, now = new Date()) {
     unit.push({
       key: `ses:${s.id}`, icon: '📋', tier: TIER.UNIT,
       title: `คำขอปิดกะ — ${s.line_name || '-'}`,
-      detail: s.shift === 'night' ? 'กะดึก' : 'กะเช้า',
+      detail: s.shift === 'night' ? 'กะดึก' : tr("กะเช้า"),
       age: ageDays(s.work_date, now), tag: 'รอหัวหน้าอนุมัติ',
       to: `/daily-report?date=${s.work_date || ''}`,
     });

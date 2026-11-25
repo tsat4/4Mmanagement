@@ -932,7 +932,7 @@ export default function ProductMaster() {
           { key:'routing', label: 'Routing' },
           { key:'prodgrp', label:'Production', children: [{ key:'products', label:'Production Data' }, { key:'packaging', label: 'Packaging' }, { key:'kanban', label: 'Kanban Std' }, { key:'ct', label: 'ทบทวน CT' }] },
           { key:'refgrp', label:'Reference', children: [{ key:'customers', label: 'ลูกค้า' }, { key:'suppliers', label: 'Supplier' }, { key:'uom', label: 'หน่วยนับ' }] },
-          { key:'export', label: 'Export' }]}
+          { key:'export', label: tr("ส่งออก") }]}
         tab={mainTab} onTab={setMainTab} />
 
       {mainTab === 'products' && (<>

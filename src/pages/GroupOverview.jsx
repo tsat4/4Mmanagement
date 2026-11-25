@@ -160,7 +160,7 @@ const LTYPES = [
    (ถ้าจะยุบทั้งระบบจริง ต้องแก้ LINE_TYPES ใน src/utils/lineTypes.js + migrate ข้อมูลไลน์ที่เป็น hydroform) */
 const LT_MERGE = { hydroform: 'stamping' };
 const normLt = (v) => (v ? (LT_MERGE[v] || v) : null);
-const ltLabel = (v) => LTYPES.find(t => t.value === v)?.label || '📦 ไม่ระบุประเภท';
+const ltLabel = (v) => LTYPES.find(t => t.value === v)?.label || tr("📦 ไม่ระบุประเภท");
 const ltShort = (v) => (ltLabel(v).split(' / ')[0] || '').trim();
 
 const SHIFT_MIN_FALLBACK = 570;
@@ -250,7 +250,7 @@ export default function GroupOverview() {
         loadOpInfo(), // map รายการขั้นตอน (OP งานขับนัท) — ตัวที่ 5 ไม่เข้า destructure แค่ให้ cache พร้อม
         loadBreakPolicies(),   // ล้ม = โยน ⇒ จอบอกโหลดไม่สำเร็จ (ห้ามถือว่า "ไม่มีพัก" แล้วหักซ้ำ)
       ]);
-      const orders = need(ordRes, 'ใบผลิต'), dts = need(dtRes, 'เครื่องหยุด'), defs = need(defRes, 'ของเสีย');
+      const orders = need(ordRes, 'ใบผลิต'), dts = need(dtRes, tr("เครื่องหยุด")), defs = need(defRes, 'ของเสีย');
       // น้ำหนัก wLoad = shift_min − planned ที่ "หักได้จริง" (ตัดส่วนทับพัก · กฎเหล็ก OEE downtime ทับพัก)
       const effBySess = dtMinBySession(sessions, dts || [], brk || [], { lines: plRes.data || [], affectsBy: await loadAffectsLanes() });   // หารเลนไลน์เครื่องขนาน (oee.js §3.2)
       const ngBySess = {}; (defs || []).forEach(x => { ngBySess[x.session_id] = (ngBySess[x.session_id] || 0) + (Number(x.qty_ng) || 0) + (Number(x.qty_suspect) || 0); });
@@ -530,7 +530,7 @@ export default function GroupOverview() {
             <TabBar size="sm" value={ltFilter ?? ''} onChange={k => setLtFilter(k || null)} style={{ flex: 1, minWidth: 240 }}
               tabs={[{ value: null, label: ALL.type }, ...LTYPES.filter(t => (tree.typeCount[t.value] || 0) > 0)].map(t => ({
                 key: t.value ?? '', label: `${t.label}${t.extra ? ' *' : ''}`, badge: t.value ? tree.typeCount[t.value] : undefined,
-                title: t.extra ? 'ยังไม่มีใน master ประเภทไลน์ปัจจุบัน (ต้องเพิ่มถ้าทำ multi-company จริง)' : undefined }))} />
+                title: t.extra ? tr("ยังไม่มีใน master ประเภทไลน์ปัจจุบัน (ต้องเพิ่มถ้าทำ multi-company จริง)") : undefined }))} />
             <InfoMore size={11.5}>
               {tr("ประเภทไลน์ของ")} <b>TSAT4</b> {tr("มาจากที่ตั้งไว้ในหน้า ⚙️ ตั้งค่าผังไลน์")} ·
               <b> {tr("ไฮโดรฟอร์มนับรวมใน \"ปั๊มขึ้นรูป")} / Metal Forming"</b> ({tr("งานขึ้นรูปโลหะเหมือนกัน — รวมเฉพาะการแสดงผลหน้านี้) · * = ประเภทที่โรงงานเรายังไม่มี (เราเป็นงานโลหะ) ต้องเพิ่มเมื่อเปิดใช้หลายบริษัทจริง")}

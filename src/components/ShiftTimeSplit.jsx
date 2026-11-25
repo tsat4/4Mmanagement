@@ -73,7 +73,7 @@ export default function ShiftTimeSplit({ split, compact = false }) {
       </div>
 
       {note && (
-        <div style={{ fontSize: fs, color: note.c, fontWeight: 700, marginTop: 3 }}>⚠️ {note.t}</div>
+        <div style={{ fontSize: fs, color: note.c, fontWeight: 700, marginTop: 3 }}>⚠️ {tr(note.t)}</div>
       )}
       {split.startTimeOutOfFrame && (
         <div style={{ fontSize: fs, color: '#ef4444', fontWeight: 700, marginTop: 2 }}>

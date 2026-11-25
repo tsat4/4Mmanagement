@@ -1,4 +1,5 @@
 import { weekdaysMin } from './dateFormat.js';
+import { tr } from './i18n.js';
 /* ═══ 🗓️ หัวคอลัมน์ช่วงเวลา — ตัวเดียวทุกตารางมอนิเตอร์ (2026-10-08 · คำสั่ง user)
 
    user: *"รูปแบบหัวตาราง รูปแบบการ visualize เอาให้มันเป็นไปในทางเดียวกัน การกรอง การแสดงวันเริ่ม
@@ -35,7 +36,7 @@ export function periodHead(date, { kind = 'day', today, seed = false, seedLabel 
   const sameYear = ok && String(today || '').slice(0, 4) === String(t.getUTCFullYear());
   const dm = ok ? `${t.getUTCDate()}/${t.getUTCMonth() + 1}${sameYear ? '' : `/${String(t.getUTCFullYear()).slice(2)}`}` : '–';
   const weekend = ok && kind !== 'week' && (t.getUTCDay() === 0 || t.getUTCDay() === 6);
-  const top = seed ? seedLabel : isToday ? '📍 วันนี้' : kind === 'week' ? 'สัปดาห์' : (ok ? weekdaysMin()[t.getUTCDay()] : '');
+  const top = seed ? seedLabel : isToday ? tr("📍 วันนี้") : kind === 'week' ? 'สัปดาห์' : (ok ? weekdaysMin()[t.getUTCDay()] : '');
   return { top, bot: seed && seedBot ? seedBot : dm, isToday, weekend };
 }
 

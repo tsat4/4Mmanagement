@@ -55,7 +55,7 @@ const stickyCol = { position: 'sticky', left: 0, background: 'var(--card)', zInd
 function StateChip({ state }) {
   const m = CHECK_DAY_META[state]
   if (!m?.mark) return null
-  return <span style={{ display: 'inline-block', padding: '0 3px', borderRadius: 'var(--r-xs)', border: `1px solid ${m.color}`, color: m.color, fontWeight: 700, lineHeight: '14px', fontSize: 11 }}>{m.mark}</span>
+  return <span style={{ display: 'inline-block', padding: '0 3px', borderRadius: 'var(--r-xs)', border: `1px solid ${m.color}`, color: m.color, fontWeight: 700, lineHeight: '14px', fontSize: 11 }}>{tr(m.mark)}</span>
 }
 
 export default function AmMonthlyReport({ lines = [], scopedLines = [] }) {

@@ -1,3 +1,4 @@
+import { tr } from './i18n.js';
 /**
  * qualityBin — กติกาของถังเหลือง/ถังแดง ที่ถอดจาก WI จริง (ที่เดียวทั้งระบบ)
  *   WI-PD3-069 Rev.02 "Control of Non-Conforming product" + WI-PD3-087 "การใช้งาน Tag Green/Yellow/Red"
@@ -237,7 +238,7 @@ export function ncFlow(row, opts = {}) {
     if (row.qa_decision === 'repair' && row.repair_date) return mk([D, D, D, D, K], null, true);
     return mk([D, D, K, K, K], null, true);
   }
-  const who = st.owner === 'qa' ? 'QA' : st.owner === 'prod' ? 'ฝ่ายผลิต' : null;
+  const who = st.owner === 'qa' ? 'QA' : st.owner === 'prod' ? tr("ฝ่ายผลิต") : null;
   const w = who ? `${who} — ${st.label}` : st.label;
   switch (st.key) {
     case 'qa_decide': case 'use_as_is_doc': return mk([D, C, T, T, T], w, false);

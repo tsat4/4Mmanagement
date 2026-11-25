@@ -46,7 +46,7 @@ export default function EmojiPicker({ value, onChange, style, placeholder }) {
                     <button key={em} type="button" onClick={() => { onChange(em); setOpen(false); }}
                       onMouseEnter={e => { if (!on) e.currentTarget.style.background = 'var(--bg3)'; }}
                       onMouseLeave={e => { if (!on) e.currentTarget.style.background = 'transparent'; }}
-                      style={{ ...cell, ...(on ? { background: 'var(--accent-dim)', border: '1px solid var(--accent)' } : {}) }}>{em}</button>
+                      style={{ ...cell, ...(on ? { background: 'var(--accent-dim)', border: '1px solid var(--accent)' } : {}) }}>{tr(em)}</button>
                   );
                 })}
               </div>

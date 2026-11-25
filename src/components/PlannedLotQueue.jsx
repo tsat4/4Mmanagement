@@ -20,7 +20,7 @@ import { qtyText, splitPlanForSession, matchPlanToActual } from '../utils/planLo
 import { fetchAllPages } from '../utils/fetchByIds';
 
 import { tr } from '../utils/i18n';
-const shiftLabel = (sh) => (sh === 'night' ? 'กะดึก' : 'กะเช้า');
+const shiftLabel = (sh) => (sh === 'night' ? 'กะดึก' : tr("กะเช้า"));
 const STATE_COLOR = { done: '#22c55e', partial: '#4d9fff', pending: 'var(--border2)' };
 
 export default function PlannedLotQueue({ session, orders = [] }) {

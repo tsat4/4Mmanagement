@@ -84,11 +84,11 @@ const DEPTS = [
   {
     key: 'production', icon: '🏭', label: 'ฝ่ายผลิต', to: '/obeya?tab=todo&dept=production',
     signals: (c) => [
-      { label: 'กะที่ปิดครบ', now: c.sessClosed, total: c.sess, unit: 'กะ' },
+      { label: 'กะที่ปิดครบ', now: c.sessClosed, total: c.sess, unit: tr("กะ") },
       { label: 'ใบผลิตที่ปิด', now: c.ordConfirmed, total: c.ord, unit: 'ใบ' },
       { label: 'ชิ้นงานที่ตั้ง CT (รอบเวลา)', now: c.prodWithCt, total: c.prodAll, unit: 'พาร์ท', gapTo: '/products' },
       {
-        label: 'กะที่บันทึกของเสีย', now: c.sessWithNg, total: c.sess, unit: 'กะ',
+        label: 'กะที่บันทึกของเสีย', now: c.sessWithNg, total: c.sess, unit: tr("กะ"),
         gap: 'กะที่เหลือไม่มีข้อมูลของเสียเลย — %Q ที่เห็นจึงสูงกว่าความจริง', gapTo: '/daily-report',
       },
     ],
@@ -105,9 +105,9 @@ const DEPTS = [
         label: 'เหตุเครื่องหยุดที่เปิดใบซ่อม', now: c.mo, total: c.dtUnplannedRows, unit: 'ใบ',
         gap: 'เครื่องหยุดถูกบันทึกครบ แต่แทบไม่มีใบซ่อมตามมา = ไม่มีใครตามแก้ต้นเหตุ', gapTo: '/mtn-repair',
       },
-      { label: 'เครื่องจักรที่มีแผน PM', now: c.pmPlans, total: c.machinesProd, unit: 'เครื่อง', gapTo: '/pm?tab=setup' },
-      { label: 'ประวัติการตรวจที่บันทึก', now: c.inspections, total: null, unit: 'ครั้ง', gapTo: '/pm?tab=check' },
-      { label: 'อะไหล่ในคลัง', now: c.spare, total: null, unit: 'รายการ', gap: 'ยังไม่ได้ย้ายจากไฟล์ Excel เข้าระบบ', gapTo: '/mtn-repair?tab=spare' },
+      { label: 'เครื่องจักรที่มีแผน PM', now: c.pmPlans, total: c.machinesProd, unit: tr("เครื่อง"), gapTo: '/pm?tab=setup' },
+      { label: 'ประวัติการตรวจที่บันทึก', now: c.inspections, total: null, unit: tr("ครั้ง"), gapTo: '/pm?tab=check' },
+      { label: 'อะไหล่ในคลัง', now: c.spare, total: null, unit: tr("รายการ"), gap: 'ยังไม่ได้ย้ายจากไฟล์ Excel เข้าระบบ', gapTo: '/mtn-repair?tab=spare' },
       { label: 'แม่พิมพ์/จิ๊กที่ลงทะเบียนตรวจ', now: c.jigsReal, total: c.dies, unit: 'ตัว', gapTo: '/equipment?tab=die' },
     ],
     unlocks: [
@@ -126,7 +126,7 @@ const DEPTS = [
       },
       { label: 'รายการตัดสต็อกขาออก', now: c.stockConsume, total: c.stockAll, unit: 'แถว', gapTo: '/line-stock' },
       { label: 'พาร์ทที่ลงต้นทุนต่อชิ้น', now: c.partsWithCost, total: c.partsAll, unit: 'พาร์ท', gap: 'ไม่มีต้นทุน = คิดเงินของเสียเป็นบาทไม่ได้', gapTo: '/products' },
-      { label: 'ไลน์ที่ผูก cost center', now: c.linesWithCc, total: c.linesAll, unit: 'ไลน์', gapTo: '/linesetup' },
+      { label: 'ไลน์ที่ผูก cost center', now: c.linesWithCc, total: c.linesAll, unit: tr("ไลน์"), gapTo: '/linesetup' },
     ],
     unlocks: [
       'ยอดคงเหลือตรงกับของจริง → เลิกนับสต็อกซ้ำเพื่อเช็คว่าระบบถูกไหม',
@@ -141,7 +141,7 @@ const DEPTS = [
       { label: 'พาร์ทที่ตั้งมาตรฐานการตรวจ', now: c.qaParts, total: c.prodAll, unit: 'พาร์ท', gapTo: '/qa-setup' },
       { label: 'ค่าที่วัดเข้า SPC', now: c.qaMeas, total: null, unit: 'ค่า', gap: 'ยังไม่มีข้อมูลพอคำนวณ Cp/Cpk', gapTo: '/qa' },
       { label: 'ใบ NCR (ของไม่เป็นไปตามข้อกำหนด)', now: c.qaNcr, total: null, unit: 'ใบ', gapTo: '/qa' },
-      { label: 'การตรวจ LPA', now: c.lpaAudits, total: null, unit: 'ครั้ง', good: true },
+      { label: 'การตรวจ LPA', now: c.lpaAudits, total: null, unit: tr("ครั้ง"), good: true },
     ],
     unlocks: [
       'ของเสียทุกชิ้นมีที่มา — รู้ว่าหลุดที่จุดตรวจไหน เครื่องไหน กะไหน',
@@ -996,7 +996,7 @@ function LadderTab({ c, navigate, isMobile }) {
                 </div>
                 {nowAt.length
                   ? <ul style={{ margin: 0, paddingLeft: 17, display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    {nowAt.map((q, i) => <li key={i} style={{ fontSize: 11.5, lineHeight: 1.5 }}>{q.dim.icon} {q.q}</li>)}
+                    {nowAt.map((q, i) => <li key={i} style={{ fontSize: 11.5, lineHeight: 1.5 }}>{q.dim.icon} {tr(q.q)}</li>)}
                   </ul>
                   : <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{tr('— ยังไม่มีคำถามไหนอยู่ระดับนี้')}</div>}
               </div>
@@ -1006,7 +1006,7 @@ function LadderTab({ c, navigate, isMobile }) {
                 </div>
                 {fullAt.length
                   ? <ul style={{ margin: 0, paddingLeft: 17, display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    {fullAt.map((q, i) => <li key={i} style={{ fontSize: 11.5, lineHeight: 1.5 }}>{q.dim.icon} {q.q}</li>)}
+                    {fullAt.map((q, i) => <li key={i} style={{ fontSize: 11.5, lineHeight: 1.5 }}>{q.dim.icon} {tr(q.q)}</li>)}
                   </ul>
                   : <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>—</div>}
               </div>
@@ -1025,8 +1025,8 @@ function LadderTab({ c, navigate, isMobile }) {
           const tally = {};
           all.forEach(q => q.chain.forEach(s => {
             if (s.have(c)) return;
-            const k = `${s.l}|${s.d}`;
-            (tally[k] ||= { l: s.l, d: s.d, n: 0 }).n++;
+            const k = `${tr(s.l)}|${s.d}`;
+            (tally[k] ||= { l: tr(s.l), d: s.d, n: 0 }).n++;
           }));
           const list = Object.values(tally).sort((a, b) => b.n - a.n);
           if (!list.length) return <div style={{ fontSize: 13, color: 'var(--green)' }}>{tr('✅ สายข้อมูลครบทุกจุดแล้ว')}</div>;
@@ -1112,7 +1112,7 @@ function DeptTab({ c, navigate, isMobile }) {
                 <span style={{ fontSize: 13, fontWeight: 700 }}>{tr('เมื่อใช้ครบทั้งแผนก')}</span><Badge tone="guess">{tr('ภาพคาดการณ์')}</Badge>
               </div>
               <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {r.unlocks.map((u, i) => <li key={i} style={{ fontSize: 12.5, lineHeight: 1.5 }}>{u}</li>)}
+                {r.unlocks.map((u, i) => <li key={i} style={{ fontSize: 12.5, lineHeight: 1.5 }}>{tr(u)}</li>)}
               </ul>
             </div>
           </div>
@@ -1381,7 +1381,7 @@ function DeepDiveTab({ dd, err, demoOn, navigate, isMobile }) {
       icon: '📄', name: 'Process Flow (PFC)', n: dd.pe.proc,
       q: 'ขั้นตอนที่เกิดปัญหา อยู่ในผังกระบวนการมั้ย · เครื่องตัวนี้อยู่ OP ไหน',
       demo: () => ({
-        verdict: 'ok', head: `${tr("อยู่ในผัง")} — OP${D.n('op', 20, 60)} ${D.p('pn', ['ขึ้นรูป Hydroform', 'เชื่อมประกอบ', 'เจาะรู'])}`,
+        verdict: 'ok', head: `${tr("อยู่ในผัง")} — OP${D.n('op', 20, 60)} ${D.p('pn', ['ขึ้นรูป Hydroform', tr("เชื่อมประกอบ"), 'เจาะรู'])}`,
         lines: [`${tr("เครื่องที่ใช้")}: ${topFails[0]?.machine_no || S.line_name} · special characteristic: ${D.p('sc', ['SC', '—'])}`],
       }),
     },

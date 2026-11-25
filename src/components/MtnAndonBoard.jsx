@@ -370,7 +370,7 @@ export default function MtnAndonBoard({ d, ctx, cards = 'maintenance' }) {
       const j = jigById[cl?.equipment_id];
       const dept = teamKeyOf(cl?.department);
       const { bucket, daysTo } = planDueBucket(p, workDate, { frequency: cl?.frequency, soonDays: PM_SOON_DAYS });
-      return { ...p, dept, am: isAmTeam(dept), bucket, name: j?.name || j?.jig_no || j?.machine_no || 'อุปกรณ์ (ไม่พบชื่อ)', line: j?.line_name || '', days: daysTo };
+      return { ...p, dept, am: isAmTeam(dept), bucket, name: j?.name || j?.jig_no || j?.machine_no || tr("อุปกรณ์ (ไม่พบชื่อ)"), line: j?.line_name || '', days: daysTo };
     });
   }, [d, workDate]);
   /* 🔭 ขอบเขตบัญชีจอ (09/11 · user: จอ TV โชว์เฉพาะส่วนงาน/ไลน์ของบัญชี — หลักเดียวกับใบซ่อม `allMo` ข้างบน)

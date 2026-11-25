@@ -114,7 +114,7 @@ export default function DowntimeTimeline({ sessions = [], downtimes = [], workDa
       row.stops.push({
         ...sp, planned,
         open: !d.ended_at && !(Number(d.duration_min) > 0),
-        name: d.dr_downtime_types?.name_th || 'ไม่ระบุประเภท',
+        name: d.dr_downtime_types?.name_th || tr("ไม่ระบุประเภท"),
         color: planned ? PLANNED_COLOR : (d.dr_downtime_types?.color || '#ef4444'),
         machine: d.machine_no || '',
         note: d.description || '',
