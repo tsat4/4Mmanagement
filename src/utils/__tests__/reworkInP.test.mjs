@@ -89,3 +89,57 @@ test('🔧 กะถัดไปที่ซ่อมเสร็จแล้ว
   });
   assert.equal(noScan.totalProduced, 0, 'ไม่สแกน = ไม่มียอด — ของ 7 ชิ้นหายจากยอดงานดีทั้งระบบ');
 });
+
+/* ══ 🔧 รอบ 2 (25/11 · user เลือก "ให้ซ่อมเข้าถังเหลือง") ═══════════════════════════════
+   คำถาม user: *"อยากให้ยอดดีของชิ้นที่ซ่อมเสร็จ กลับไปที่กะต้นทาง … ควรย้อนยอดผลิตกลับมั้ย"*
+   คำตอบที่ลง: **ไม่ย้อนยอดผลิต** (ของไหลออกกะไหนนับกะนั้น ไม่งั้นนับซ้ำกับสต๊อก/แผน)
+   แต่ **ผลซ่อมย้อนกลับไปแก้ %Q ของกะต้นทาง** ผ่านรางถังเหลืองเดิม (§7.2 + restampSessionQByDefects)
+   ⇒ เทสนี้ตรึง 3 ทาง: รอตัดสิน / ซ่อมแล้วดี / ซ่อมแล้วเสีย                                  */
+import { binPiecesOf, yellowRowFromDefect } from '../qualityBin.js';
+import { defectQty as dq, suspectPendingQty, reworkPendingQty as rpq } from '../oee.js';
+
+const repRow = (bins) => ({
+  id: 'D9', prod_order_id: 'O1', qty_ng: 0, qty_suspect: 0, qty_repair: 7,
+  prod_orders: { mat_no: 'M1' }, quality_bin_records: bins,
+});
+const yellow = (over = {}) => ({ id: 'Y1', bin: 'yellow', qty: 7, qa_decision: null,
+  return_date: null, from_yellow_id: null, is_active: true, ...over });
+
+test('🔧 ของที่ส่งซ่อมต้องเข้าถังเหลือง (ไม่งั้นไม่มีใครตัดสินผลซ่อม)', () => {
+  const d = repRow([]);
+  assert.equal(binPiecesOf(d), 7, 'binPiecesOf ต้องนับ qty_repair ด้วย');
+  const row = yellowRowFromDefect(d, { line_name: 'Assy GOR', work_date: '2026-11-24' });
+  assert.ok(row, 'แถวที่มีแต่ "ซ่อม" ก็ต้องได้ใบถังเหลือง');
+  assert.equal(row.qty, 7);
+  assert.equal(row.qa_decision, undefined, 'ห้ามเดาผลให้ — ต้องให้คนตัดสิน');
+  assert.match(row.cause, /ส่งซ่อม 7 ชิ้น/, 'QA ต้องอ่านออกว่าก้อนนี้รอ "ผลซ่อม"');
+});
+
+test('🔧 รอตัดสิน = ไม่หัก %Q แต่ต้องขึ้นบนจอ', () => {
+  const d = repRow([yellow()]);
+  assert.equal(dq(d), 0, 'ยังไม่ตัดสิน = ห้ามหัก %Q');
+  assert.equal(suspectPendingQty(d), 7, 'ต้องนับเป็น "รอพิจารณา" ให้จอเขียน');
+  assert.equal(rpq(d), 0, 'มีใบถังแล้ว — ห้ามนับซ้ำกับ suspectPendingQty');
+});
+
+test('🔧 ซ่อมแล้วดี (QA ตรวจรับ) = %Q ของกะต้นทางคงเดิม', () => {
+  const d = repRow([yellow({ return_date: '2026-11-25' })]);
+  assert.equal(dq(d), 0);
+  assert.equal(suspectPendingQty(d), 0, 'ตัดสินแล้ว = ไม่ค้างในจอแล้ว');
+});
+
+test('🔧 ซ่อมแล้วเสีย = ย้อนกลับไปหัก %Q ของกะที่ทำมันออกมา', () => {
+  const scrapAll = repRow([yellow({ qa_decision: 'scrap' })]);
+  assert.equal(dq(scrapAll), 7, 'ทำลายทั้งใบ = เสีย 7 ชิ้น');
+  /* ย้ายลงถังแดงบางส่วน (3 จาก 7) — ที่เหลือซ่อมผ่าน */
+  const part = repRow([yellow({ return_date: '2026-11-25' }),
+    { id: 'R1', bin: 'red', qty: 3, from_yellow_id: 'Y1', is_active: true }]);
+  assert.equal(dq(part), 3, 'เสียเฉพาะที่ลงถังแดงจริง');
+  assert.equal(suspectPendingQty(part), 0);
+});
+
+test('🔧 แถวเก่าที่ไม่มีใบถัง — ยังต้องเขียน "รอซ่อม" บนจอ (ห้ามเงียบ)', () => {
+  const noBin = { id: 'D8', qty_ng: 0, qty_suspect: 0, qty_repair: 4 };   // ไม่ได้ embed ทะเบียนถัง
+  assert.equal(rpq(noBin), 4);
+  assert.equal(dq(noBin), 0, 'ไม่รู้ผล = ห้ามหัก %Q');
+});
