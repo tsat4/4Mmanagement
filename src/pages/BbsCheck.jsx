@@ -265,7 +265,7 @@ export default function BbsCheck() {
     setWfLock(null);
     if (!lineObj?.name) return undefined;
     supabase.rpc('wf_bound_locked', { p_kind: 'bbs', p_line: lineObj.name, p_date: `${month}-01`, p_shift: null })
-      .then(({ data, error }) => { if (alive && !error) setWfLock(data || null); });
+      .then(({ data, error }) => { if (alive && !error) setWfLock(typeof data === 'string' && data ? data : null); });
     return () => { alive = false; };
   }, [lineObj?.name, month, lockTick]);
 
