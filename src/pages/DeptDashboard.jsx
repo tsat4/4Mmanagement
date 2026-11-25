@@ -107,7 +107,8 @@ function Kpi({ label, value, unit, sub, color, delta }) {
           </span>
         )}
       </div>
-      <div style={{ fontSize: 11.5, color: 'var(--muted)', minHeight: 15 }}>{sub || ' '}</div>
+      {/* 📐 25/11 (มาตรฐาน layout การ์ด · user "ขยายผลทุก tab"): บรรทัดบริบท 1 บรรทัดตัดท้าย … ข้อความเต็มใน title ⇒ ทุกการ์ดสูงเท่ากัน ตัวเลขอยู่ตำแหน่งเดียวกัน */}
+      <div title={typeof sub === 'string' ? sub : undefined} style={{ fontSize: 11.5, color: 'var(--muted)', minHeight: 15, whiteSpace: 'nowrap', overflow: 'clip', textOverflow: 'ellipsis' }}>{sub || ' '}</div>
     </div>
   );
 }

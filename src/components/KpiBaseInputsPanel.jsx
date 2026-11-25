@@ -161,12 +161,12 @@ export default function KpiBaseInputsPanel({ year, scope, org, rows = [], base: 
           <tbody>
             {vars.map(v => (
               <tr key={v.key}>
-                <td style={nameTd}>
+                {/* 📐 25/11: แถวสูงเท่ากัน — "ใช้ในสูตร" และเหตุที่ล็อก ไปอยู่ tooltip ของชื่อตัวแปร (ⓘ/🔒 บอกว่ามีอะไรให้ hover) */}
+                <td style={{ ...nameTd, whiteSpace: 'nowrap', overflow: 'clip', textOverflow: 'ellipsis', maxWidth: 320 }}
+                  title={[formulasUsingVar(v.key).length ? `${tr('ใช้ในสูตร:')} ${formulasUsingVar(v.key).join(' · ')}` : '', lockedKeys?.has(v.key) ? `🔒 ${tr('รวมจากคะแนนรายลูกค้า (นำเข้าไฟล์ V5) — แก้ที่ไฟล์แล้วนำเข้าใหม่')}` : ''].filter(Boolean).join('\n') || undefined}>
                   <b>{tr(v.label)}</b> <span style={{ color: 'var(--muted)', fontSize: 11 }}>({v.unit})</span>
-                  {formulasUsingVar(v.key).length > 0 && (
-                    <div style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('ใช้ในสูตร:')} {formulasUsingVar(v.key).join(' · ')}</div>
-                  )}
-                  {lockedKeys?.has(v.key) && <div style={{ fontSize: 11, color: 'var(--blue)' }}>🔒 {tr('รวมจากคะแนนรายลูกค้า (นำเข้าไฟล์ V5) — แก้ที่ไฟล์แล้วนำเข้าใหม่')}</div>}
+                  {formulasUsingVar(v.key).length > 0 && <span style={{ marginLeft: 4, fontSize: 11, color: 'var(--muted)' }}>ⓘ</span>}
+                  {lockedKeys?.has(v.key) && <span style={{ marginLeft: 4, fontSize: 11, color: 'var(--blue)' }}>🔒</span>}
                 </td>
                 {monthsShort().map((_, i) => {
                   const r = base.row(sk, v.key, i + 1);
