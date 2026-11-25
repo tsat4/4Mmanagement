@@ -103,6 +103,7 @@ const ProgramUpdate = lazy(() => import('./pages/ProgramUpdate'));
 /* 🧭 ไม่ lazy โดยตั้งใจ — หน้านี้ต้องทำงานตอนบันเดิลเก่า/โหลด chunk ไม่ได้ (ดูหัวไฟล์) */
 import NotFound from './pages/NotFound';
 import Icon from './components/Icon';   // ✒️ emoji ในทะเบียนเมนู → ไอคอนเส้นที่จุดวาด (UI §6.36)
+import { ACTIVITIES } from './utils/activityPages';   // 🎯 หมวดกิจกรรม (25/11) — route 9 หน้า
 const HeijunkaKanban = lazy(() => import('./pages/HeijunkaKanban'));
 const ProductMaster  = lazy(() => import('./pages/ProductMaster'));
 const LineStock      = lazy(() => import('./pages/LineStock'));
@@ -136,6 +137,7 @@ const PEDocs = lazy(() => import('./pages/PEDocs'));
 const NPI = lazy(() => import('./pages/NPI'));
 const NewModelBoard = lazy(() => import('./pages/NewModelBoard'));
 const Rfq = lazy(() => import('./pages/Rfq'));
+const Activity = lazy(() => import('./pages/Activity'));   // 🎯 หมวดกิจกรรม 9 หน้า (25/11)
 const Workflows = lazy(() => import('./pages/Workflows'));             // 🧩 e-Workflow ใบงานที่ user สร้างเอง (13/11)
 const WorkflowDesigner = lazy(() => import('./pages/WorkflowDesigner')); // 🧩 ออกแบบใบงาน (Key User → admin เผยแพร่)
 const ScrapReport = lazy(() => import('./pages/ScrapReport'));
@@ -262,6 +264,17 @@ export const NAV_ITEMS = [
   { to: '/npi',            icon: '🚀', label: 'พาร์ทใหม่ APQP / PPAP',       group: 'คุณภาพ & วิศวกรรม' },
   { to: '/nm-board',       icon: '🧭', label: 'บอร์ด New Model (IEC)',      group: 'คุณภาพ & วิศวกรรม' },
   { to: '/rfq',            icon: '💼', label: 'RFQ / เสนอราคา (Marketing)', group: 'คุณภาพ & วิศวกรรม' },
+  /* 🎯 หมวดกิจกรรม (25/11 · คำสั่ง user) — 9 หน้าโครงเดียวกัน วาดด้วย pages/Activity.jsx · ทะเบียน `utils/activityPages.js`
+     (path ต้องตรงกัน — ด่าน activityPages.test.mjs) · ยังไม่มีฐานข้อมูล · สิทธิ์ยังไม่ seed = admin เห็นก่อน */
+  { to: '/activity-100p',   icon: '🏅', label: '100P',          group: 'กิจกรรม' },
+  { to: '/activity-5s',     icon: '♻️', label: '5S',            group: 'กิจกรรม' },
+  { to: '/activity-smart',  icon: '🏭', label: 'Smart Factory', group: 'กิจกรรม' },
+  { to: '/activity-kyt',    icon: '🛡️', label: 'KYT',           group: 'กิจกรรม' },
+  { to: '/activity-kaizen', icon: '💡', label: 'Kaizen',        group: 'กิจกรรม' },
+  { to: '/activity-qcc',    icon: '👥', label: 'QCC',           group: 'กิจกรรม' },
+  { to: '/activity-lean',   icon: '📉', label: 'Lean',          group: 'กิจกรรม' },
+  { to: '/activity-cfo',    icon: '💼', label: 'CFO',           group: 'กิจกรรม' },
+  { to: '/activity-cfp',    icon: '📈', label: 'CFP',           group: 'กิจกรรม' },
 
   { to: '/report',        icon: '📋', label: 'รายงาน',            group: 'วิเคราะห์ & รายงาน' },
 
@@ -320,7 +333,7 @@ export const NAV_ITEMS = [
   { to: '/storage-maintenance', icon: '🗜️', label: 'ดูแลพื้นที่จัดเก็บ / ค่าเน็ต', group: 'ตั้งค่าโปรแกรม,ฐานข้อมูล', sub: 'ตั้งค่าระบบ' },
 ];
 
-export const NAV_GROUP_ORDER = ['ภาพรวม', 'จอแสดงผล', 'ฝ่ายผลิต', 'วิเคราะห์ & รายงาน', 'พนักงาน & ทักษะ', LOGISTIC_GROUPS.inbound, LOGISTIC_GROUPS.outbound, 'การตรวจสอบและซ่อมบำรุง', 'คุณภาพ & วิศวกรรม', 'ตั้งค่าโปรแกรม,ฐานข้อมูล', 'ผู้บริหาร & เดโม'];
+export const NAV_GROUP_ORDER = ['ภาพรวม', 'จอแสดงผล', 'ฝ่ายผลิต', 'วิเคราะห์ & รายงาน', 'พนักงาน & ทักษะ', LOGISTIC_GROUPS.inbound, LOGISTIC_GROUPS.outbound, 'การตรวจสอบและซ่อมบำรุง', 'คุณภาพ & วิศวกรรม', 'กิจกรรม', 'ตั้งค่าโปรแกรม,ฐานข้อมูล', 'ผู้บริหาร & เดโม'];
 
 // ไอคอน + ชื่อย่อของหมวด — ใช้บนแถบไอคอน (rail) ของ sidebar แบบใหม่ (2026-08-18 · คำสั่ง user "เอา D เลย")
 // ชื่อย่อ ≤ ~9 ตัวอักษรให้พอดีความกว้าง rail 64px ที่ฟอนต์ 11px (กฎฟอนต์ขั้นต่ำ UI-CONVENTIONS)
@@ -334,6 +347,7 @@ export const NAV_GROUP_META = {
   [LOGISTIC_GROUPS.outbound]:  { icon: '🚚', short: 'จัดส่ง' },
   'การตรวจสอบและซ่อมบำรุง':    { icon: '🛠️', short: 'ซ่อมบำรุง' },
   'คุณภาพ & วิศวกรรม':         { icon: '✅', short: 'คุณภาพ' },
+  'กิจกรรม':                   { icon: '🎯', short: 'กิจกรรม' },   // 25/11 คำสั่ง user — ต่อจากคุณภาพ
   'ตั้งค่าโปรแกรม,ฐานข้อมูล':  { icon: '⚙️', short: 'ตั้งค่า' },
   'ผู้บริหาร & เดโม':          { icon: '🔮', short: 'ผู้บริหาร' },
 };
@@ -382,7 +396,10 @@ export function orderNavItems(items, group) {
 }
 
 /* 📌 หมวดที่ "แถบแท็บหัวเพจ" (Detail bar) ตรึงติดบนตอนเลื่อนจอ — PageHeader อ่านจากที่นี่ (24/11 คำสั่ง user · จอคอมเท่านั้น) */
-export const STICKY_TAB_GROUPS = [LOGISTIC_GROUPS.inbound];
+export const STICKY_TAB_GROUPS = [LOGISTIC_GROUPS.inbound, 'กิจกรรม'];
+/* 📌 หมวดที่หัวเพจ "ค้างทั้งก้อน" (Header + Detail Bar + Tool Bar) ตอนเลื่อน Card Dashboard (25/11 · คำสั่ง user หมวดกิจกรรม)
+   ต่างจาก STICKY_TAB_GROUPS ที่ค้างเฉพาะแถบ (ชื่อหน้าเลื่อนหาย) · ต้องอยู่ใน STICKY_TAB_GROUPS ด้วย (โหมดกะทัดรัด) */
+export const FULL_STICKY_GROUPS = ['กิจกรรม'];
 
 // สรุปสิทธิ์เข้าหน้าของ role จากตารางสิทธิ์จริง (role_permissions) — ใช้โชว์ในหน้า จัดการผู้ใช้งาน
 // เพื่อไม่ต้อง hardcode รายชื่อโมดูลต่อ role (เคย hardcode แล้ว drift ตามโมดูลที่เพิ่มไม่ทัน)
@@ -2496,6 +2513,11 @@ function ProtectedLayout({ session, theme, onToggleTheme, userRole, realRole, vi
               <Route path="/nm-board" element={
                 <RoleRoute path="/nm-board" userRole={role}><NewModelBoard /></RoleRoute>
               } />
+              {/* 🎯 หมวดกิจกรรม — 9 path วาดหน้าเดียว (key = path ให้ state ไม่ข้ามกิจกรรม) */}
+              {ACTIVITIES.map(a => (
+                <Route key={a.path} path={a.path} element={
+                  <RoleRoute path={a.path} userRole={role}><Activity key={a.path} /></RoleRoute>} />
+              ))}
               <Route path="/rfq" element={
                 <RoleRoute path="/rfq" userRole={role}><Rfq /></RoleRoute>
               } />

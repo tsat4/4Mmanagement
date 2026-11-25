@@ -22,6 +22,7 @@ const EN = {
   'การตรวจสอบและซ่อมบำรุง': 'Inspection & Maintenance',
   'ซ่อมบำรุง': 'Maint.',   // ชื่อย่อบน rail 64px — 'Maintenance' ถูกตัดเป็น 'Mainten…'
   'คุณภาพ & วิศวกรรม': 'Quality & Engineering',
+  'กิจกรรม': 'Activities',
   'คุณภาพ': 'Quality',
   'ตั้งค่าโปรแกรม,ฐานข้อมูล': 'Master Data & Settings',
   'ตั้งค่า': 'Settings',

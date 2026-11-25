@@ -1,7 +1,7 @@
 import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { MoreMark } from './InfoMore';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { NAV_ITEMS, STICKY_TAB_GROUPS, inNavGroup } from '../App';
+import { NAV_ITEMS, STICKY_TAB_GROUPS, FULL_STICKY_GROUPS, inNavGroup } from '../App';
 import { NAV_SUB_TABS } from '../utils/navSubTabs';
 import { useNavSubItemsStore } from '../utils/navSubItems';   // 🗂️ Detail Bar = รายการที่หน้าประกาศตอนรัน (พื้นที่ SAP)
 import { useMergeParams } from '../utils/useTabParam';   // 🗂️ 24/11 หน้าที่แท็บย้ายไปเป็นข้อย่อยในแผงเมนู
@@ -158,8 +158,27 @@ function HeaderSearch({ rootRef, tabKey }) {
   );
 }
 
+/* ══ 🧰 Tool Bar — ค้นหา · เพิ่ม · แก้ไข · ลบ (2026-11-25 · คำสั่ง user "ต้องอยู่ตำแหน่งดังภาพตลอด") ══ */
+const TOOL_ORDER = ['search', 'add', 'edit', 'delete'];
+const TOOL_TONE = { search: null, add: 'var(--green)', edit: 'var(--amber)', delete: 'var(--red)' };
+const TOOL_DIM  = { search: null, add: 'var(--green-dim)', edit: 'var(--amber-dim)', delete: 'var(--red-dim)' };
+function ToolBar({ tools }) {
+  const { tr } = useLang();
+  const list = [...tools].sort((a, b) => TOOL_ORDER.indexOf(a.key) - TOOL_ORDER.indexOf(b.key));
+  return (
+    <span data-ph="toolbar" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 8 }}>
+      {list.map(t => (
+        <button key={t.key} type="button" data-tool={t.key} onClick={t.onClick} disabled={!!t.disabled} title={tr(t.label)}
+          style={{ height: 30, padding: '0 12px', borderRadius: 'var(--r-md)', fontSize: 13, fontWeight: 600, cursor: t.disabled ? 'default' : 'pointer',
+            border: `1px solid ${TOOL_TONE[t.key] || 'var(--border2)'}`, background: TOOL_DIM[t.key] || 'var(--card)',
+            color: TOOL_TONE[t.key] || 'var(--text)', opacity: t.disabled ? 0.5 : 1, whiteSpace: 'nowrap' }}>{tr(t.label)}</button>
+      ))}
+    </span>
+  );
+}
+
 export default function PageHeader({
-  title, icon, sub, actions, tabs, tab, onTab, breadcrumb = true, filters, children,
+  title, icon, sub, actions, tabs, tab, onTab, breadcrumb = true, filters, children, tools,
 }) {
   const isMobile = useIsMobile();
   const { tr } = useLang();
@@ -199,20 +218,27 @@ export default function PageHeader({
   const detail = compact ? (navLive[`${pathname}|${tab ?? ''}`] || null) : null;
   const detailItems = detail && detail.items.length ? detail.items : null;
   const detailCur = detailItems ? (new URLSearchParams(search).get(detail.query) || '') : '';
-  const sticky = compact && ((!!topTabs.length && !tabsInNav) || !!detailItems);
+  /* 📌 ค้างทั้งก้อน (25/11 หมวดกิจกรรม · `FULL_STICKY_GROUPS`) — Header + Detail Bar + Tool Bar ค้างที่ขอบบน top:0
+     (ไม่ใช่ top ติดลบแบบ "ค้างเฉพาะแถบ") · ต้องอยู่ในโหมดกะทัดรัดอยู่แล้ว */
+  const fullSticky = compact && inNavGroup(navItem, FULL_STICKY_GROUPS);
+  const sticky = compact && ((!!topTabs.length && !tabsInNav) || !!detailItems || fullSticky);
+  /* 🧰 Tool Bar (25/11) — ปุ่มคำสั่งชุดมาตรฐาน ตำแหน่งตายตัวขวาสุดของแถว Detail Bar (ลำดับ ค้นหา · เพิ่ม · แก้ไข · ลบ)
+     · หน้าส่ง `tools=[{ key:'search'|'add'|'edit'|'delete', label, onClick, disabled }]` · ไม่ส่ง = ไม่มี (ปุ่ม 🔍 แบบเดิม)
+     · ลำดับเรียงตาม `TOOL_ORDER` เสมอ ไม่ว่าหน้าส่งมาลำดับไหน (ผู้ใช้จำตำแหน่งได้ — คำสั่ง user) */
+  const toolBar = compact && tools && tools.length ? <ToolBar tools={tools} /> : null;
   const rootRef = useRef(null);
   const [stickTop, setStickTop] = useState(0);
   useLayoutEffect(() => {
     if (!sticky) return undefined;
     const root = rootRef.current;
     if (!root) return undefined;
-    const measure = () => { const bar = root.querySelector('[data-tabbar], [data-detailbar]'); setStickTop(bar ? -bar.offsetTop : 0); };
+    const measure = () => { if (fullSticky) { setStickTop(0); return; } const bar = root.querySelector('[data-tabbar], [data-detailbar]'); setStickTop(bar ? -bar.offsetTop : 0); };
     measure();
     if (typeof ResizeObserver === 'undefined') return undefined;
     const ro = new ResizeObserver(measure);
     ro.observe(root);
     return () => ro.disconnect();
-  }, [sticky, !!detailItems]);   // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sticky, !!detailItems, fullSticky]);   // eslint-disable-line react-hooks/exhaustive-deps
   const leafLabel = stripIcon(tr((activeGroup ? activeGroup.children : rawTabs).find(t => t.key === tab)?.label));
   const tabLabel = activeGroup ? [stripIcon(tr(activeGroup.label)), leafLabel].filter(Boolean).join(' › ') : leafLabel;
 
@@ -313,7 +339,7 @@ export default function PageHeader({
             ตัวกรองต้องอยู่ `filters` ⇒ ลงใต้แถบแท็บเสมอ (UI-STANDARD §2 ลำดับแนวตั้ง · stdsweep ตรวจ data-ph) */}
         {actions && <div data-ph="actions" style={{ display: 'flex', flexWrap: 'wrap', gap: 7, alignItems: 'center' }}>{actions}</div>}
         {/* 🔍 หัวเพจกะทัดรัดที่ไม่มีแถบแท็บในหน้า = ปุ่มค้นหาอยู่ท้ายแถวชื่อหน้า (มีแถบแท็บ = อยู่ท้ายแถบแท็บ) */}
-        {compact && !sticky && !detailItems && <HeaderSearch rootRef={rootRef} tabKey={String(tab ?? '')} />}
+        {compact && !sticky && !detailItems && (toolBar || <HeaderSearch rootRef={rootRef} tabKey={String(tab ?? '')} />)}
       </div>
       )}
 
@@ -323,10 +349,10 @@ export default function PageHeader({
       {detailItems && (
         <div data-detailbar="1" className="ph-chrome">
           <TabBar scroller
-            tabs={[{ key: '__all', label: tr('ทั้งหมด') }, ...detailItems.map(it => ({ key: String(it.key), label: it.label, title: it.label }))]}
-            value={detailCur || '__all'}
+            tabs={[...(detail.all ? [{ key: '__all', label: tr('ทั้งหมด') }] : []), ...detailItems.map(it => ({ key: String(it.key), label: it.label, title: it.label }))]}
+            value={detailCur || (detail.all ? '__all' : String(detailItems[0].key))}
             onChange={(k) => setUrl({ [detail.query]: k === '__all' ? null : k }, { replace: true })}
-            after={<HeaderSearch rootRef={rootRef} tabKey={String(tab ?? '')} />} />
+            after={toolBar || <HeaderSearch rootRef={rootRef} tabKey={String(tab ?? '')} />} />
         </div>
       )}
 

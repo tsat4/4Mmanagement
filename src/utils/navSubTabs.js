@@ -57,6 +57,8 @@ export const PRODUCTION_PLAN_TABS = [
   { key: 'settings', label: 'ตั้งค่า' },
 ];
 
+import { ACTIVITIES, ACTIVITY_TABS } from './activityPages.js';
+
 /* path → { param, tabs } · แท็บแรก = ค่าตั้งต้นของหน้า (ตรงกับ default ของ useTabParam ในหน้า) */
 export const NAV_SUB_TABS = {
   '/line-stock':      { param: 'tab',  tabs: LINE_STOCK_TABS },
@@ -64,4 +66,6 @@ export const NAV_SUB_TABS = {
   '/transport':       { param: 'tab',  tabs: TRANSPORT_TABS },
   '/planner-sales':   { param: 'tab',  tabs: PLANNER_SALES_TABS },
   '/production-plan': { param: 'tab',  tabs: PRODUCTION_PLAN_TABS },
+  /* 🎯 หมวดกิจกรรม (25/11) — 9 กิจกรรม × Dashboard · Edit Data · Setting (`src/utils/activityPages.js`) */
+  ...Object.fromEntries(ACTIVITIES.map(a => [a.path, { param: 'tab', tabs: ACTIVITY_TABS }])),
 };
