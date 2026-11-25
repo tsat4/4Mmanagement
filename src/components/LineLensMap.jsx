@@ -186,7 +186,7 @@ export function MachineDetailCard({ m, lens, onClose }) {
 function StationDetailCard({ m, onClose }) {
   const st = m._station;
   const shTxt = (v) => v === 'day' ? '☀️' : v === 'night' ? '🌙' : '';
-  const attTxt = (p) => p.is_present === true ? 'มา' : p.is_present === false ? 'ขาด' : 'ยังไม่เช็คชื่อ';
+  const attTxt = (p) => p.is_present === true ? 'มา' : p.is_present === false ? tr("ขาด") : 'ยังไม่เช็คชื่อ';
   return (
     <div style={{ background: 'var(--bg3-surf)', border: `1px solid ${m.color}66`, borderLeft: `4px solid ${m.color}`, borderRadius: 'var(--r-md)', padding: '8px 10px', fontSize: 12, display: 'grid', gap: 6 }}>
       <div style={{ fontWeight: 800, color: 'var(--text)', display: 'flex', gap: 8, alignItems: 'flex-start' }}>

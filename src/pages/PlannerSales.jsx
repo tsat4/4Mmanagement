@@ -1626,8 +1626,8 @@ function KanbanCalcTab({ canApply, fullName, custLabel }) {
   const NHEAD = calcType === 'production'
     ? [{ t: 'Pkg', u: 'ชิ้น/กล่อง' },
        { t: 'CAP/ชม.', u: 'ชิ้น/ชม.' },
-       { t: 'Process', u: 'ชิ้น', tip: 'Process LT = ค่านี้ × CT' },
-       { t: 'Lot Qty', u: 'ชิ้น', tip: 'ขนาดล็อตผลิต · Info LT = ค่านี้ × CT · ใบ/ล็อต = ⌈ค่านี้ ÷ Pkg⌉' },
+       { t: 'Process', u: tr("ชิ้น"), tip: 'Process LT = ค่านี้ × CT' },
+       { t: 'Lot Qty', u: tr("ชิ้น"), tip: 'ขนาดล็อตผลิต · Info LT = ค่านี้ × CT · ใบ/ล็อต = ⌈ค่านี้ ÷ Pkg⌉' },
        { t: 'Setup', u: 'วินาที' },
        { t: 'Safety', u: 'วัน' }]
     : [{ t: 'เตรียม', u: 'นาที' },
@@ -1735,10 +1735,10 @@ function KanbanCalcTab({ canApply, fullName, custLabel }) {
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1000 }}>
               <thead>
                 <tr style={{ background: 'var(--bg2)' }}>
-                  {[{ t: 'Mat SAP' }, { t: 'Part / ไลน์' }, { t: 'Order/เดือน', u: 'ชิ้น' }, ...NHEAD,
+                  {[{ t: 'Mat SAP' }, { t: 'Part / ไลน์' }, { t: 'Order/เดือน', u: tr("ชิ้น") }, ...NHEAD,
                     { t: 'Min', u: 'ใบ' }, { t: 'Max', u: 'ใบ' },
                     { t: 'Total', u: 'ใบ', tip: 'Total = Max + Lot' },
-                    { t: 'Min→Max', u: 'ชิ้น', tip: 'แปลงเป็นชิ้นแล้ว = ใบ × Pkg' }, { t: 'สถานะ' }].map(h => (
+                    { t: 'Min→Max', u: tr("ชิ้น"), tip: 'แปลงเป็นชิ้นแล้ว = ใบ × Pkg' }, { t: 'สถานะ' }].map(h => (
                     <th key={h.t} title={h.tip || ''} style={{ padding: '6px 8px', fontSize: 11, fontWeight: 800, color: 'var(--muted)', textAlign: 'center', whiteSpace: 'nowrap', textTransform: 'uppercase', cursor: h.tip ? 'help' : undefined }}>
                       <div>{h.t}{h.tip ? ' ⓘ' : ''}</div>
                       {/* หน่วยต้องเห็นตลอด ห้ามซ่อนใน tooltip — คนกรอกไม่มีทางรู้ว่าช่องนี้เป็นใบหรือชิ้น */}
@@ -1950,7 +1950,7 @@ export default function PlannerSales() {
   }, []);
   useEffect(() => { loadShipTo(); }, [loadShipTo]);
   const custLabel = useCallback((code) => {
-    if (!code) return '— ไม่ระบุลูกค้า —';
+    if (!code) return tr("— ไม่ระบุลูกค้า —");
     const r = shipToMap[code];
     return r && r.customer_name && r.customer_name !== code ? `${r.customer_name} (${code})` : code;
   }, [shipToMap]);

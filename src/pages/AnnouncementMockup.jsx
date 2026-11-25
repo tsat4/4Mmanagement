@@ -55,12 +55,12 @@ const fmtDate = (s) => { try { return new Date(`${s}T00:00:00`).toLocaleDateStri
 let seq = 3;
 const seed = (today) => ([
   {
-    id: 1, topic: 'กำหนดวันหยุดประจำปี 2570', detail: 'บริษัทประกาศวันหยุดประจำปี 2570 รวม 16 วัน รายละเอียดตามเอกสารแนบ (ตัวอย่าง)',
+    id: 1, topic: tr("กำหนดวันหยุดประจำปี 2570"), detail: tr("บริษัทประกาศวันหยุดประจำปี 2570 รวม 16 วัน รายละเอียดตามเอกสารแนบ (ตัวอย่าง)"),
     scopes: [{ ...PLANT }], effective: addDaysStr(today, -2), state: 'approved', issuer: ISSUER, seedAck: 0.4,
-    log: [{ at: addDaysStr(today, -4), text: 'ผู้แจ้งส่งขออนุมัติ' }, { at: addDaysStr(today, -3), text: 'EVP อนุมัติ' }],
+    log: [{ at: addDaysStr(today, -4), text: 'ผู้แจ้งส่งขออนุมัติ' }, { at: addDaysStr(today, -3), text: tr("EVP อนุมัติ") }],
   },
   {
-    id: 2, topic: 'ปรับเวลาพักกลางวันช่วงปิดปรับปรุงโรงอาหาร', detail: 'ช่วงปรับปรุงโรงอาหาร พักกลางวันเหลื่อมเวลาเป็น 2 รอบ (ตัวอย่าง)',
+    id: 2, topic: tr("ปรับเวลาพักกลางวันช่วงปิดปรับปรุงโรงอาหาร"), detail: tr("ช่วงปรับปรุงโรงอาหาร พักกลางวันเหลื่อมเวลาเป็น 2 รอบ (ตัวอย่าง)"),
     scopes: [{ ...PLANT }], effective: addDaysStr(today, 3), state: 'pending', issuer: ISSUER,
     log: [{ at: today, text: 'ผู้แจ้งส่งขออนุมัติ' }],
   },
@@ -166,7 +166,7 @@ export default function AnnouncementMockup() {
   };
 
   const notify = (to, text, annId) => setNotifs(n => [{ id: Date.now() + Math.random(), to, at: today, text, annId }, ...n]);
-  const label = (sc) => (index ? scopePathText(index, sc) : (isPlant(sc) ? 'ทั้งโรงงาน' : sc.value));
+  const label = (sc) => (index ? scopePathText(index, sc) : (isPlant(sc) ? tr("ทั้งโรงงาน") : sc.value));
 
   const addScope = () => {
     const sc = pick || { ...PLANT };
@@ -196,7 +196,7 @@ export default function AnnouncementMockup() {
   };
 
   const approve = (a) => {
-    setItems(xs => xs.map(x => (x.id === a.id ? { ...x, state: 'approved', log: [...x.log, { at: today, text: 'EVP อนุมัติ' }] } : x)));
+    setItems(xs => xs.map(x => (x.id === a.id ? { ...x, state: 'approved', log: [...x.log, { at: today, text: tr("EVP อนุมัติ") }] } : x)));
     notify('issuer', `EVP ${tr("อนุมัติแล้ว")}: ${a.topic} · ${tr("ประกาศจะขึ้นวันที่")} ${fmtDate(a.effective)}`, a.id);
     toast.success('อนุมัติแล้ว — แจ้งผู้แจ้ง (จำลอง)');
   };

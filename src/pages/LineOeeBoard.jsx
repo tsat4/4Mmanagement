@@ -556,20 +556,20 @@ export default function LineOeeBoard() {
           {/* แถว 2: A / P / Q + ที่มาตัวเลข (กางให้เห็นตามกฎ "ตัวเลขต้องกางที่มา") */}
           <div style={rowSt(0)}>
             {apqCard('Availability', 'A', C.A, 'good', [
-              ['เวลารับภาระ (กะ − หยุดในแผน)', `${hrs(C.loadMin)} ${tr("ชม.")}`],
-              ['เวลาเดินเครื่อง', `${hrs(C.runMin)} ${tr("ชม.")}`, undefined, true],
-              ['หยุดนอกแผน', `${hrs(C.unplMin)} ${tr("ชม.")}`, C.unplMin > 0 ? 'var(--red)' : undefined, true],
-              ['หยุดตามแผน/พัก', `${hrs(C.plMin)} ${tr("ชม.")}`],
+              [tr("เวลารับภาระ (กะ − หยุดในแผน)"), `${hrs(C.loadMin)} ${tr("ชม.")}`],
+              [tr("เวลาเดินเครื่อง"), `${hrs(C.runMin)} ${tr("ชม.")}`, undefined, true],
+              [tr("หยุดนอกแผน"), `${hrs(C.unplMin)} ${tr("ชม.")}`, C.unplMin > 0 ? 'var(--red)' : undefined, true],
+              [tr("หยุดตามแผน/พัก"), `${hrs(C.plMin)} ${tr("ชม.")}`],
             ])}
             {apqCard('Performance', 'P', C.P, 'info', [
-              ['ผลิตจริง', `${nf(C.produced)} ${tr("ชิ้น")}`, undefined, true],
-              ['อัตราจริง', C.runMin > 0 ? `${nf(C.produced / (C.runMin / 60), 1)} ${tr("ชิ้น/ชม.")}` : '—', undefined, true],
-              ['เทียบมาตรฐาน (CT)', C.P == null ? 'ยังคำนวณไม่ได้' : `${C.P.toFixed(1)}% ${tr("ของความเร็วมาตรฐาน")}`],
+              [tr("ผลิตจริง"), `${nf(C.produced)} ${tr("ชิ้น")}`, undefined, true],
+              [tr("อัตราจริง"), C.runMin > 0 ? `${nf(C.produced / (C.runMin / 60), 1)} ${tr("ชิ้น/ชม.")}` : '—', undefined, true],
+              [tr("เทียบมาตรฐาน (CT)"), C.P == null ? tr("ยังคำนวณไม่ได้") : `${C.P.toFixed(1)}% ${tr("ของความเร็วมาตรฐาน")}`],
             ])}
             {apqCard('Quality', 'Q', C.Q, 'none', [
-              ['ผลิตทั้งหมด (ดี+เสีย)', `${nf(C.produced + C.ngTotal)} ${tr("ชิ้น")}`],
-              ['ของดี (ยอดสแกน)', `${nf(C.produced)} ${tr("ชิ้น")}`, undefined, true],
-              ['ของเสีย (ไม่รวมงานทดลอง)', `${nf(C.ngTotal)} ${tr("ชิ้น")}`, C.ngTotal > 0 ? 'var(--red)' : undefined, true],
+              [tr("ผลิตทั้งหมด (ดี+เสีย)"), `${nf(C.produced + C.ngTotal)} ${tr("ชิ้น")}`],
+              [tr("ของดี (ยอดสแกน)"), `${nf(C.produced)} ${tr("ชิ้น")}`, undefined, true],
+              [tr("ของเสีย (ไม่รวมงานทดลอง)"), `${nf(C.ngTotal)} ${tr("ชิ้น")}`, C.ngTotal > 0 ? 'var(--red)' : undefined, true],
             ])}
           </div>
 
@@ -582,7 +582,7 @@ export default function LineOeeBoard() {
                           C.dtTrash.noMachine ? ` · ${C.dtTrash.noMachine} ${tr("ใบไม่กรอกเครื่อง = ชี้เป้าไม่ได้")}` : ''})` : ''}`,
                       // จอประชุม: เก็บแค่เรื่องที่ทำให้แท่งเชื่อไม่ได้ (ใบไม่ระบุสาเหตุ) — ห้ามหายเงียบ
                       C.dtTrash?.vague ? `🗑️ ${tr("ไม่ระบุสาเหตุ")} ${C.dtTrash.vague} ${tr("ใบ")}` : null)}
-            {barChart(`Defect Top 6 (${tr("ชิ้น")} · ${DAYS_KPI} ${tr("วัน")})`, C.defTop6, 'var(--red)', 'รวมทุกรายการ (🧪 = งานทดลอง ไม่ถูกนับใน %Q)')}
+            {barChart(`Defect Top 6 (${tr("ชิ้น")} · ${DAYS_KPI} ${tr("วัน")})`, C.defTop6, 'var(--red)', tr("รวมทุกรายการ (🧪 = งานทดลอง ไม่ถูกนับใน %Q)"))}
             <div style={{ ...card, flex: 1.2, minWidth: tv ? 0 : 340, ...(tv ? { overflow: 'hidden' } : {}) }}>
               <div style={capSt}>{tr('Alarm History (ล่าสุด)')}</div>
               {/* ห้ามซ่อน — แถวที่ลืมปิดทำให้ %A ของกะนั้นสูงกว่าจริง ต้องมีคนไปตามปิด */}

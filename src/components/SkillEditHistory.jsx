@@ -59,7 +59,7 @@ export default function SkillEditHistory({ employeeId, limit = 30 }) {
     // ฟิลด์อื่นที่ไม่ได้แปลเป็นภาษาคน — แสดงชื่อดิบไว้ ดีกว่าเงียบ
     const rest = ch.filter(k => !['score', 'pending_level', 'last_daily_farm_date'].includes(k));
     if (rest.length) parts.push(rest.join(', '));
-    return { skill, text: parts.join(' · ') || 'แก้ไข' };
+    return { skill, text: parts.join(' · ') || tr("แก้ไข") };
   };
 
   return (
@@ -83,7 +83,7 @@ export default function SkillEditHistory({ employeeId, limit = 30 }) {
           {loading && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('กำลังโหลด…')}</div>}
 
           {err && (
-            <div style={{ fontSize: 12, color: '#ef4444', background: '#ef444415', border: '1px solid #ef444440', borderRadius: 'var(--r-md)', padding: '7px 9px' }}>
+            <div style={{ fontSize: 12, color: 'var(--red)', background: '#ef444415', border: '1px solid #ef444440', borderRadius: 'var(--r-md)', padding: '7px 9px' }}>
               ⚠️ {tr("โหลดประวัติไม่สำเร็จ")} — {err}
               <button type="button" onClick={load}
                 style={{ marginLeft: 8, fontSize: 11, padding: '2px 8px', width: 'auto', cursor: 'pointer' }}>{tr('ลองใหม่')}</button>

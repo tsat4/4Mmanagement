@@ -558,7 +558,7 @@ function RfqSheet({ rfq, award, parts, mainParts, npi, canEdit, canAward, canAss
         {row('APW / MPW', `${fmtN(rfq.apw)} / ${fmtN(rfq.mpw)}`)}
         {row('🔒 ราคาเป้าหมายลูกค้า', rfq.customer_target_price != null ? `${fmtN(rfq.customer_target_price, 2)} THB/pc` : '—')}
         {row('ผู้รับผิดชอบ', rfq.owner_name)}
-        {rfq.remark && row('หมายเหตุ', rfq.remark)}
+        {rfq.remark && row(tr("หมายเหตุ"), rfq.remark)}
       </div>
 
       {/* CRD → NPI */}

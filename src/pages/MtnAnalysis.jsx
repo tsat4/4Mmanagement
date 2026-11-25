@@ -406,7 +406,7 @@ export default function MtnAnalysis() {
   const PARETO_DIMS = useMemo(() => ([
     { key: 'sub', label: 'อาการย่อย' },
     { key: 'machine', label: 'อุปกรณ์' },
-    { key: 'line', label: 'ไลน์' },
+    { key: 'line', label: trI18n("ไลน์") },
     { key: 'team', label: 'ทีมช่าง' },
     { key: 'note', label: 'อาการที่แจ้ง (จับกลุ่มคำ)', cluster: true },
     { key: 'why', label: 'ที่มาของหมวด' },

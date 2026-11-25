@@ -27,6 +27,9 @@ import useColumnHistory from '../utils/useColumnHistory';
 import { loadLinesRes, LINE_COLUMNS } from '../utils/useProductionLines';
 import { specLabel } from '../utils/qaSpec';
 import { checkWrite } from '../utils/dbWrite';
+
+/* ความถี่ตรวจ (ค่าใน DB เป็นอังกฤษ) → ป้ายไทย · แปลที่จุดวาดด้วย tr() (25/11 · ตารางตัดสินใจ i18n) */
+const FREQ_TH = { daily: 'รายวัน', weekly: 'รายสัปดาห์', monthly: 'รายเดือน', quarterly: 'รายไตรมาส', periodic: 'ตามรอบ', per_lot: 'ต่อล็อต', per_shift: 'ต่อกะ' };
 // 🧩 ตั้งค่าจุดตรวจ = ตัวกลางชุดเดียวกับ PM (15/10 · docs/modules/inspection-point-setup.md)
 import { AttachImage } from '../components/ImageLightbox';   // 🔍 รูปแนบกดขยายในแอป (ห้ามเปิดแท็บใหม่)
 import SpinAnnotator from '../components/SpinAnnotator';
@@ -530,7 +533,7 @@ export default function QAInspectionSetup() {
                         <td style={tdSt}>{it.method || '—'}</td>
                         <td style={tdSt}>{it.rank ? <Chip label={it.rank} color={QA_RANK[it.rank]?.color || '#6b7280'} /> : '—'}</td>
                         <td style={tdSt}><Chip label={tr(STAGE[it.stage]?.label) || it.stage} color={STAGE[it.stage]?.color || '#6b7280'} /></td>
-                        <td style={tdSt}>{[it.frequency, it.sample_size != null ? `n=${it.sample_size}` : null].filter(Boolean).join(' · ') || '—'}</td>
+                        <td style={tdSt}>{[tr(FREQ_TH[it.frequency] || it.frequency), it.sample_size != null ? `n=${it.sample_size}` : null].filter(Boolean).join(' · ') || '—'}</td>
                         {canManage && (
                           <td style={{ ...tdSt, whiteSpace: 'nowrap' }}>
                             {canEdit && <button className="tbtn" title={tr('แก้ไขจุดนี้ (เปิดตั้งค่าจุดตรวจที่การ์ดของจุดนี้)')} onClick={() => setEditor({ focusItemId: it.id })} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13 }}>✏️</button>}

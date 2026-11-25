@@ -300,7 +300,7 @@ export default function WorldFactoryMap({
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 8, fontSize: 12, color: 'var(--muted)' }}>
         <span><b>{tr('ขนาดวง')}</b> = {tr("ยอดผลิตของวันนั้น")}</span>
-        <span><b>{tr('สี:')}</b> <b style={{ color: '#22c55e' }}>●</b> {tr('ตามเป้า')} <b style={{ color: '#f59e0b' }}>●</b> {tr('เฝ้าระวัง')} <b style={{ color: '#ef4444' }}>●</b> {tr('ต้องแก้')}</span>
+        <span><b>{tr('สี:')}</b> <b style={{ color: 'var(--green)' }}>●</b> {tr('ตามเป้า')} <b style={{ color: 'var(--amber)' }}>●</b> {tr('เฝ้าระวัง')} <b style={{ color: 'var(--red)' }}>●</b> {tr('ต้องแก้')}</span>
         {!!groups.length && <span><b>{tr('ไอคอนในหมุด:')}</b> {groups.map(g => `${g.icon} ${g.short}`).join(' · ')}</span>}
         <span>★ = {tr("บริษัทเรา (ข้อมูลจริง")})</span>
         <span>{tr("คลิกประเทศ = ซูมเข้า · คลิกหมุด = เลือกทางเข้า")}</span>

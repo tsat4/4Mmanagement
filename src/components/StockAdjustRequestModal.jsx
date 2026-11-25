@@ -64,7 +64,7 @@ export default function StockAdjustRequestModal({ req, by, onClose }) {
           {tr("ช่อง IN ของพาร์ทนี้ระบบเป็นเจ้าของแล้ว (คลังกดรับ / Daily Report ลงยอด) — แก้บนบอร์ดไม่ได้ ถ้าของจริงไม่ตรง ให้ส่งยอดที่นับได้ เข้าคิวอนุมัติของคลัง")}
         </div>
         {!loc ? (
-          <div style={{ fontSize: 12, color: '#f87171', marginBottom: 12 }}>
+          <div style={{ fontSize: 12, color: 'var(--red)', marginBottom: 12 }}>
             ⚠️ {tr("ยังไม่รู้ว่าพาร์ทนี้อยู่คลังไหน (กฎรับเข้าคลัง/Product Master ยังไม่ครบ) — ส่งคำขอไม่ได้ ให้ตั้งที่ /products ก่อน")}
           </div>
         ) : (

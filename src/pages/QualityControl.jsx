@@ -1972,7 +1972,7 @@ function calState(inst) {
   if (due < today) return { label: 'เกินกำหนด!', color: 'var(--red)' };
   const soon = new Date(); soon.setDate(soon.getDate() + 30);
   if (due <= localDateStr(soon)) return { label: 'ใกล้ครบกำหนด', color: 'var(--amber)' };
-  return { label: 'ปกติ', color: 'var(--green)' };
+  return { label: trI18n("ปกติ"), color: 'var(--green)' };
 }
 
 function InstrumentTab({ lineObjs, canManage }) {

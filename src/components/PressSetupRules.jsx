@@ -23,7 +23,7 @@ const SCOPES = [
   { key: 'line', label: 'เฉพาะไลน์' },
   { key: 'machine', label: 'เฉพาะเครื่อง' },
 ];
-const scopeLabel = (r) => (r.scope_kind === 'global' ? 'ทั้งโรงงาน' : `${r.scope_kind === 'line' ? tr('ไลน์') : tr('เครื่อง')} ${r.scope_value || '—'}`);
+const scopeLabel = (r) => (r.scope_kind === 'global' ? tr("ทั้งโรงงาน") : `${r.scope_kind === 'line' ? tr('ไลน์') : tr('เครื่อง')} ${r.scope_value || '—'}`);
 
 const inp = { padding: '5px 8px', borderRadius: 6, fontSize: 12, border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text)', width: '100%', boxSizing: 'border-box' };
 const btn = (bg, color = '#fff') => ({ padding: '5px 10px', borderRadius: 6, fontSize: 11.5, fontWeight: 700, cursor: 'pointer', background: bg, color, border: '1px solid var(--border)', whiteSpace: 'nowrap' });
@@ -176,23 +176,23 @@ export default function PressSetupRules({ dies = [], lineNames = [], canEdit = f
 
       {state === 'loading' && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('กำลังโหลด…')}</div>}
       {state === 'missing' && (
-        <div style={{ fontSize: 12, color: '#f59e0b' }}>
+        <div style={{ fontSize: 12, color: 'var(--amber)' }}>
           ⚠️ {tr("ยังไม่ได้")} apply migration <code>20260925_press_die_height_setup_dr.sql</code> (DR · Product DB) — {tr("แจ้ง")} admin
         </div>
       )}
       {state === 'error' && (
-        <div style={{ fontSize: 12, color: '#ef4444' }}>❌ {tr("โหลดกฎไม่ได้ (คนละเรื่องกับ \"ยังไม่มีกฎ\") — ลองใหม่อีกครั้ง")}</div>
+        <div style={{ fontSize: 12, color: 'var(--red)' }}>❌ {tr("โหลดกฎไม่ได้ (คนละเรื่องกับ \"ยังไม่มีกฎ\") — ลองใหม่อีกครั้ง")}</div>
       )}
 
       {/* ความพร้อมของข้อมูล — บอกตรงๆ ว่ายังขาดอะไร */}
       <div style={{ background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '9px 12px', fontSize: 12, lineHeight: 1.8 }}>
         <b>{tr('ความพร้อมของข้อมูล')}</b><br />
         {tr("กฎที่ใช้งานอยู่")} <b>{ready.ruleCount}</b> {tr("ข้อ · แม่พิมพ์ในขอบเขตนี้")} <b>{ready.dieTotal}</b> {tr('ตัว — กรอกความสูงแล้ว')} <b>{ready.dieWithHeight}</b>
-        {ready.dieMissing > 0 && <span style={{ color: '#f59e0b' }}> {tr('· ยังไม่กรอก')} <b>{ready.dieMissing}</b> {tr('ตัว')}</span>}
+        {ready.dieMissing > 0 && <span style={{ color: 'var(--amber)' }}> {tr('· ยังไม่กรอก')} <b>{ready.dieMissing}</b> {tr('ตัว')}</span>}
         <br />
         {ready.canPlan
           ? <span style={{ color: 'var(--accent)' }}>{tr('✅ เริ่มเทียบลำดับได้แล้ว (ยิ่งกรอกความสูงครบ ตัวเลขยิ่งตรง)')}</span>
-          : <span style={{ color: '#f59e0b' }}>⚠️ {tr("ยังจัดลำดับให้ไม่ได้ — ต้องมีกฎที่บอก \"ผลของความสูง\" + รู้ความสูงอย่างน้อย 2 ตัว")}</span>}
+          : <span style={{ color: 'var(--amber)' }}>⚠️ {tr("ยังจัดลำดับให้ไม่ได้ — ต้องมีกฎที่บอก \"ผลของความสูง\" + รู้ความสูงอย่างน้อย 2 ตัว")}</span>}
         {/* 2 คำถามคนละเรื่อง: จัดลำดับได้ (ไม่ต้องรู้เวลาฐาน) vs ตอบเวลารวมได้ (ต้องรู้) */}
         {!ready.canTotal && (
           <div style={{ color: 'var(--muted)' }}>
@@ -326,7 +326,7 @@ export default function PressSetupRules({ dies = [], lineNames = [], canEdit = f
               {lineNames.map(n => <option key={n} value={n}>{tr(n)}</option>)}
             </select>
           </div>
-          {!preview?.rule && <div style={{ color: '#f59e0b' }}>{tr('⚠️ ไลน์นี้ยังไม่มีกฎ (ของไลน์เองหรือของทั้งโรงงาน) — เทียบเวลาไม่ได้')}</div>}
+          {!preview?.rule && <div style={{ color: 'var(--amber)' }}>{tr('⚠️ ไลน์นี้ยังไม่มีกฎ (ของไลน์เองหรือของทั้งโรงงาน) — เทียบเวลาไม่ได้')}</div>}
           {preview?.rule && preview.tooFew && <div style={{ color: 'var(--muted)' }}>{tr('ไลน์นี้มีแม่พิมพ์ที่ใช้งานอยู่น้อยกว่า 2 ตัว — ไม่มีลำดับให้เทียบ')}</div>}
           {preview?.rule && !preview.tooFew && (() => {
             /* ⭐ เทียบด้วย varMin = "ส่วนที่ขึ้นกับลำดับ" (ผลของความสูง) ไม่ใช่เวลารวม
@@ -350,7 +350,7 @@ export default function PressSetupRules({ dies = [], lineNames = [], canEdit = f
                 )}
                 {tot != null && <div style={{ color: 'var(--text2)' }}>{tr("เวลารวมทั้งรอบ (รวมเวลาฐาน")}) = <b>{fmtMin(tot)}</b> {tr('นาที')}</div>}
                 {preview.sortedSeq.unknownCount > 0 && (
-                  <div style={{ color: '#f59e0b' }}>
+                  <div style={{ color: 'var(--amber)' }}>
                     ⚠️ {tr("มี")} {preview.sortedSeq.unknownCount} {tr('ช่วงที่ประเมินผลความสูงไม่ได้ (ยังไม่กรอกความสูง) — ตัวเลขนี้')} <b>{tr('ต่ำกว่าความจริง')}</b>
                   </div>
                 )}

@@ -97,20 +97,20 @@ export default function PickScanModal({ request, canOverride = false, fullName, 
               <div style={{ fontSize: 20, fontWeight: 900, color: 'var(--text)' }}>{fmt(request?.request_qty)}</div>
             </div>
             <div style={{ background: 'rgba(59,130,246,0.12)', borderRadius: 'var(--r-md)', padding: '8px 10px' }}>
-              <div style={{ fontSize: 11, color: '#3b82f6' }}>{tr('ปลายทาง')}</div>
-              <div style={{ fontSize: 14, fontWeight: 900, color: '#3b82f6' }}>➜ {request?.line_name || '—'}</div>
+              <div style={{ fontSize: 11, color: 'var(--blue)' }}>{tr('ปลายทาง')}</div>
+              <div style={{ fontSize: 14, fontWeight: 900, color: 'var(--blue)' }}>➜ {request?.line_name || '—'}</div>
             </div>
           </div>
 
           {/* ① พาร์ท */}
           <div style={{ marginTop: 14, fontSize: 12.5, fontWeight: 800, color: 'var(--text2)' }}>{tr('① ยิงบาร์โค้ดพาร์ทที่หยิบมา')}</div>
           {partOk && (
-            <div style={{ marginTop: 6, fontSize: 13, color: '#22c55e', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.35)', borderRadius: 'var(--r-md)', padding: '8px 12px', fontWeight: 700 }}>
+            <div style={{ marginTop: 6, fontSize: 13, color: 'var(--green)', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.35)', borderRadius: 'var(--r-md)', padding: '8px 12px', fontWeight: 700 }}>
               {part.message}{part.loose ? <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400 }}> {tr('· บาร์โค้ดมีเลขต่อท้าย — ระบบเทียบเฉพาะส่วนที่เป็น MAT')}</span> : null}
             </div>
           )}
           {part?.block && (
-            <div style={{ marginTop: 6, fontSize: 13, color: '#ef4444', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 'var(--r-md)', padding: '8px 12px' }}>
+            <div style={{ marginTop: 6, fontSize: 13, color: 'var(--red)', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 'var(--r-md)', padding: '8px 12px' }}>
               🔴 {part.message}
             </div>
           )}
@@ -157,12 +157,12 @@ export default function PickScanModal({ request, canOverride = false, fullName, 
               {canOverride ? (
                 !overriding ? (
                   <button onClick={() => setOverriding(true)} disabled={busy}
-                    style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: 12, fontWeight: 700, cursor: 'pointer', padding: 0 }}>
+                    style={{ background: 'none', border: 'none', color: 'var(--red)', fontSize: 12, fontWeight: 700, cursor: 'pointer', padding: 0 }}>
                     {tr('สแกนไม่ได้ / ป้ายพาร์ทหาย → ปลดบล็อกโดยหัวหน้า (บันทึกชื่อ+เหตุผล)')}
                   </button>
                 ) : (
                   <div>
-                    <div style={{ fontSize: 12.5, fontWeight: 800, color: '#ef4444' }}>{tr('ปลดบล็อก — ระบุเหตุผล (ถูกบันทึกเป็นข้อมูล)')}</div>
+                    <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--red)' }}>{tr('ปลดบล็อก — ระบุเหตุผล (ถูกบันทึกเป็นข้อมูล)')}</div>
                     <select value={reasonKey} onChange={e => setReasonKey(e.target.value)} style={{ ...inputSt, marginTop: 6 }}>
                       <option value="">{tr('— เลือกเหตุผล —')}</option>
                       {OVERRIDE_REASONS.map(r => <option key={r.key} value={r.key}>{tr(r.label)}</option>)}

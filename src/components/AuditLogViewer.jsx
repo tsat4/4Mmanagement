@@ -82,7 +82,7 @@ export default function AuditLogViewer({ client, tables, limit = 300, intro, fmt
         {showTable && (
           <select value={fTable} onChange={e => setFTable(e.target.value)}>
             <option value="">{tr(ALL.table)}</option>
-            {tableOpts.map(t => <option key={t} value={t}>{tableLabel(t)}</option>)}
+            {tableOpts.map(t => <option key={t} value={t}>{tr(tableLabel(t))}</option>)}
           </select>
         )}
         <select value={fActor} onChange={e => setFActor(e.target.value)}>
@@ -101,7 +101,7 @@ export default function AuditLogViewer({ client, tables, limit = 300, intro, fmt
 
       {/* โหลดไม่ได้ ≠ ไม่มีประวัติ — ต้องแยกให้ขาด */}
       {!!err && (
-        <div style={{ color: '#f59e0b', padding: 12, fontSize: 12.5, background: 'rgba(245,158,11,0.1)', border: '1px solid #f59e0b', borderRadius: 'var(--r-md)' }}>
+        <div style={{ color: 'var(--amber)', padding: 12, fontSize: 12.5, background: 'rgba(245,158,11,0.1)', border: '1px solid #f59e0b', borderRadius: 'var(--r-md)' }}>
           ⚠️ {tr("โหลดประวัติไม่ได้")}: {err}
           <br />{tr('(ถ้าเป็นเพราะตาราง')} <code>audit_log</code> {tr('ไม่มี — ต้อง apply migration')} <code>20260724_audit_log_main.sql</code> / <code>_dr.sql</code> {tr("ก่อน")})
         </div>
@@ -119,9 +119,9 @@ export default function AuditLogViewer({ client, tables, limit = 300, intro, fmt
         return (
           <div key={r.id} style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderLeft: `3px solid ${act.c}`, borderRadius: 'var(--r-md)', padding: '9px 11px' }}>
             <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap', fontSize: 12.5 }}>
-              <b style={{ color: act.c }}>{act.t}</b>
-              <span style={{ color: 'var(--muted)' }}>{tableLabel(r.table_name)}</span>
-              <b style={{ color: 'var(--text)' }}>{rowLabel(r)}</b>
+              <b style={{ color: act.c }}>{tr(act.t)}</b>
+              <span style={{ color: 'var(--muted)' }}>{tr(tableLabel(r.table_name))}</span>
+              <b style={{ color: 'var(--text)' }}>{tr(rowLabel(r))}</b>
               <span style={{ marginLeft: 'auto', color: 'var(--muted)', fontSize: 11.5 }}>
                 {r.actor || tr("— (ระบบ/migration)")} · {fmtDT(r.changed_at)}
               </span>
@@ -155,7 +155,7 @@ export default function AuditLogViewer({ client, tables, limit = 300, intro, fmt
               <div style={{ marginTop: 5, display: 'grid', gap: 2 }}>
                 {fields.map(f => (
                   <div key={f} style={{ fontSize: 11.5, color: 'var(--text2)' }}>
-                    <span style={{ color: 'var(--muted)' }}>{fieldLabel(f)}:</span>{' '}
+                    <span style={{ color: 'var(--muted)' }}>{tr(fieldLabel(f))}:</span>{' '}
                     <span style={{ textDecoration: 'line-through', opacity: 0.65 }}>{val(f, r.old_data?.[f])}</span>
                     {' → '}<b>{val(f, r.new_data?.[f])}</b>
                   </div>

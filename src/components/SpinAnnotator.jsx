@@ -225,7 +225,7 @@ export default function SpinAnnotator({
           )}
         </div>
       )}
-      {isPdf && <div style={{ fontSize: 11.5, color: '#f59a3f', fontWeight: 700 }}>{tr('⚠️ แผ่น PDF ปักหมุดไม่ได้ — ถ้าต้องการหมุดให้อัปเป็นรูปภาพ (PNG/JPG)')}</div>}
+      {isPdf && <div style={{ fontSize: 11.5, color: 'var(--amber)', fontWeight: 700 }}>{tr('⚠️ แผ่น PDF ปักหมุดไม่ได้ — ถ้าต้องการหมุดให้อัปเป็นรูปภาพ (PNG/JPG)')}</div>}
 
       {!readOnlyFrames && <div style={{ fontSize: 11, color: 'var(--muted)' }}>
         {spinnable

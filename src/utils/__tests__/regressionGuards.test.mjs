@@ -70,6 +70,16 @@ const RULES = [
     allow: {},
   },
   {
+    id: 'manpower-layout-no-auto-lline',
+    scan: ['src/pages/ManpowerBoard.jsx'], ext: ['.jsx'],
+    /* จับการเขียน ?lline= ให้เองใน effect (ตั้งผังแรกอัตโนมัติ) */
+    re: /merge\(\s*\{\s*lline\s*:\s*firstLayout/g,
+    why: '🎛️ user 25/11 "ช่องเด้งข้ามไปไลน์ลูก ตอนเลือกไลน์แม่" — ตัวตั้งผังแรกอัตโนมัติเขียน ?lline= ทุกครั้งที่ว่าง '
+       + '⇒ เลือกแผนก GOR (ล้าง lline) แล้วช่องเด้งไป Laser GOR ทันที',
+    fix: 'ยังไม่ระบุไลน์ = แสดงผังแรก + เขียนบอกบนจอ (autoLayout) · ห้ามเขียน URL แทนคน',
+    allow: {},
+  },
+  {
     id: 'manpower-layout-single-line-picker',
     scan: ['src/pages/ManpowerBoard.jsx'], ext: ['.jsx'],
     /* จับช่อง <select> ที่ตั้ง ?lline= เอง (ช่องเลือกผังซ้อน) */
@@ -12904,6 +12914,35 @@ test('🏬 store-leg-always-written — ใบขอเติมต้องเ�
     + '   fix: push เสมอ · ไม่พอให้ติดลบ แล้วแจ้งเหตุผลใน note/toast (กฎ 19/11 "ตัดเต็มและติดลบ")\n');
 });
 
+/* ── 🧭 count-progress-physical-only (25/11 · ขั้น ② นับที่ไลน์ปลายทาง) ──────────
+   `line_stock_transactions.type='adjust'` เป็นถุงรวม: "ตรวจนับ:" (คนไปนับของจริง) ปนกับ
+   "ตั้งยอดให้ตรงไฟล์ Monitoring" (191+102+88 แถว) · "ตั้งต้นใหม่ 01/10" · "ย้ายยอด…" · "แก้ย้อนหลัง…"
+   เอามารวมกันตอบ "ไลน์นี้นับล่าสุดเมื่อไหร่" = จอบอกว่า LINE D นับแล้ว 03/11 ทั้งที่วันนั้นตั้งยอดตามไฟล์
+   (ยอด −100,212 ของ LINE D เกิดจากการตั้งยอดทับกันหลายรอบ ไม่ใช่การผลิต)
+   ⇒ ความคืบหน้ารอบนับต้องใช้ `lastPhysicalCountAt` · เส้นห้ามหักใบส่งย้อนหลังยังใช้ `lastCountAt` (fail-closed คนละทาง)
+   🔴 ห้ามยุบ 2 ฟังก์ชันนี้เป็นตัวเดียว */
+test('🛡️ count-progress-physical-only — ความคืบหน้ารอบนับห้ามนับ "ปรับยอด" เป็นการนับ', () => {
+  const rel = 'src/utils/stockCount.js';
+  const code = stripComments(readFileSync(join(ROOT, rel), 'utf8'));
+  assert.match(code, /export function lastCountAt\(/, `\n\n❌ ${rel} ไม่มี lastCountAt() — เส้นห้ามหักใบส่งย้อนหลังหายไป\n`);
+  assert.match(code, /export function lastPhysicalCountAt\(/,
+    `\n\n❌ ${rel} ไม่มี lastPhysicalCountAt() — ความคืบหน้ารอบนับจะไปใช้ adjust ทุกแบบ = จอโกหก\n`);
+  /* ตัวตัดสิน "นี่คือการนับของจริงไหม" ต้องดูที่ note prefix ห้ามถือว่า adjust ทุกใบคือการนับ */
+  assert.match(code, /startsWith\(COUNT_NOTE_PREFIX\)/,
+    `\n\n❌ ${rel}: isPhysicalCount ต้องตัดสินจาก note "ตรวจนับ:" (COUNT_NOTE_PREFIX)\n`);
+  const body = code.slice(code.indexOf('export function countRoundRows('));
+  assert.match(body, /lastPhysicalCountAt\(/,
+    `\n\n❌ ${rel}: countRoundRows() ต้องใช้ lastPhysicalCountAt()\n`);
+  assert.ok(!/\blastCountAt\(/.test(body),
+    `\n\n❌ ${rel}: countRoundRows() เรียก lastCountAt() — "ตั้งยอดตามไฟล์" จะถูกนับเป็นการนับของจริง\n`);
+  /* แผงบนจอต้องอ่านตัวเลขจากของกลาง ห้ามไล่นับ negative/วันนับเองในหน้า */
+  const ui = 'src/components/StockCountSheet.jsx';
+  const uic = stripComments(readFileSync(join(ROOT, ui), 'utf8'));
+  assert.match(uic, /countRoundRows\(/, `\n\n❌ ${ui} ไม่ได้ใช้ countRoundRows() — ตัวเลขรอบนับต้องมีชุดเดียว\n`);
+  assert.ok(!/lastPhysicalCountAt\(/.test(uic),
+    `\n\n❌ ${ui} ไล่หาวันนับเองในหน้า — ให้ผ่าน countRoundRows() ที่เดียว\n`);
+});
+
 /* ── 🛡️ skill-delete-keeps-scores (25/11 · user "ทำด่านกันลบสกิลที่ยังมีคะแนนด้วย") ──────
    เดิมปุ่มลบสกิลที่ /operator ลบคะแนนพนักงานทุกคนพ่วงไปด้วย · คะแนนค้างไร้นิยาม 22 รหัสขึ้นการ์ดเป็นรหัส
    ด่านจริงอยู่ DB (trg_skill_def_delete_guard) — ด่านนี้กันจอกลับไปลบคะแนนพ่วง */
@@ -12920,3 +12959,75 @@ test('🛡️ skill-delete-keeps-scores — ปุ่มลบสกิลห้
   const mig = readFileSync(join(ROOT, 'supabase/migrations/20261125b_skill_def_delete_guard.sql'), 'utf8');
   assert.ok(/before delete on public\.skill_definitions/.test(mig), 'migration ด่านลบสกิลต้องมี trigger before delete');
 });
+
+/* ── ⏳ count-blocks-pending-adjust (25/11 · user "ต่างคนต่างนับ ต่างคนต่างอัพยอด จะมั่วไหม") ────
+   view `line_stock_summary` มี `where status='approved'` ⇒ **ใบ pending ไม่อยู่ใน qty_on_hand**
+   คนที่ 1 นับแล้วใบยังรออนุมัติ · คนที่ 2 เปิดจอเห็น "ยอดระบบ" ตัวเดิม กรอกยอดเดิม = เขียนผลต่างซ้ำ
+   พออนุมัติทั้งคู่ ของหายสองเท่า **ไม่มี error ไม่มีใครรู้** (คลาสเดียวกับการหักซ้ำ 1.3 ล้านชิ้น 25/11)
+   ⇒ ใบนับต้องกันคู่ (ไลน์, mat) ที่มีใบ adjust ค้าง และ **เขียนบนจอว่ากันไว้กี่พาร์ท ห้ามทิ้งเงียบ** */
+test('🛡️ count-blocks-pending-adjust — ใบนับต้องกันพาร์ทที่มีใบปรับยอดค้างรออนุมัติ', () => {
+  const rel = 'src/utils/stockCount.js';
+  const code = stripComments(readFileSync(join(ROOT, rel), 'utf8'));
+  assert.match(code, /export function pendingAdjustMap\(/, `\n\n❌ ${rel} ไม่มี pendingAdjustMap()\n`);
+  assert.match(code, /export function splitPendingBlocked\(/, `\n\n❌ ${rel} ไม่มี splitPendingBlocked()\n`);
+  /* ต้องกันทุกชนิดของ adjust ที่ pending ไม่ใช่เฉพาะใบตรวจนับ — ใบ 🔧 ปรับยอดก็ทำให้ยอดตั้งต้นเพี้ยน */
+  const body = code.slice(code.indexOf('export function pendingAdjustMap('));
+  assert.ok(!/isPhysicalCount\(/.test(body.slice(0, body.indexOf('export function splitPendingBlocked'))),
+    `\n\n❌ ${rel}: pendingAdjustMap กรองเฉพาะใบตรวจนับ — ใบปรับยอดค้างก็ทำให้นับซ้ำได้เหมือนกัน\n`);
+
+  const ui = 'src/components/StockCountSheet.jsx';
+  const uic = stripComments(readFileSync(join(ROOT, ui), 'utf8'));
+  /* โหลดใบค้างมาจริง (ไม่งั้น map ว่างตลอด = ด่านหลอก) */
+  assert.match(uic, /status'\s*,\s*'pending'\)|eq\('status',\s*'pending'\)/,
+    `\n\n❌ ${ui} ไม่ได้โหลดใบ adjust ที่ pending — ด่านกันนับซ้ำจะว่างเปล่าตลอด\n`);
+  const save = uic.slice(uic.indexOf('const save = async'), uic.indexOf('if (loading)'));
+  assert.match(save, /splitPendingBlocked\(/,
+    `\n\n❌ ${ui}: save() ต้องผ่าน splitPendingBlocked() — ช่องที่ disabled ไม่ใช่ด่าน (กฎชั้น ③)\n`);
+  assert.match(save, /blocked\.length/,
+    `\n\n❌ ${ui}: กันแถวออกแล้วต้องเขียนบนจอว่ากันไว้กี่พาร์ท (ห้ามทิ้งเงียบ)\n`);
+});
+
+test('🎨 no-var-alpha-hex — ห้ามเอา var(--x) ไปต่อ alpha-hex (`${c}14`)', () => {
+  /* 25/11: รอบไล่สีดิบ → token เผลอแปลงค่าที่ถูกเอาไป **ต่อ 2 หลักท้ายเป็น alpha**
+     (`linear-gradient(${c}14, ${c}14)` = ท่าแทน color-mix() ของโปรเจคนี้ · CLAUDE.md §เพดานเบราว์เซอร์)
+     ⇒ ได้ `var(--green)14` ซึ่ง **parse ไม่ได้ = เบราว์เซอร์ทิ้งทั้งบรรทัด declaration**
+     พื้น/ขอบหายเงียบๆ ไม่มี error ไม่มีจอพัง — build/lint/เทส/crashsweep จับไม่ได้เลย
+     (เกิดจริงกับ `PlanFrameRow.jsx` และ**หลุดขึ้น main ไปแล้ว 1 รอบ** ก่อนจะจับได้)
+     ⇒ โทนจางต้องใช้ token ที่เป็น rgba อยู่แล้ว: `--x-dim` (พื้น 12%) · `--x-line` (เส้น 40%)
+
+     วิธีตรวจ: หา `${…}NN` (NN = 2 หลัก hex) แล้วไล่ดูว่า "ค่าที่ไหลมาถึงตรงนั้น" เป็น `var(--…)` ไหม
+     · `${NAME}NN`      → ดู `const NAME =` / `NAME =` (ไม่ดู `NAME:` เพราะชนกับ style prop ทั่วไป)
+     · `${obj.PROP}NN`  → ดูทุก `PROP: '…'` ในไฟล์ (ทะเบียนสถานะมักเขียนแบบนี้ — เคส PlanFrameRow) */
+  const alpha = /\$\{([^}]{1,60})\}([0-9a-fA-F]{2})\b/g
+  const bad = []
+  for (const file of walk(join(ROOT, 'src'), ['.jsx', '.js'])) {
+    const rel = relative(ROOT, file)
+    const code = stripComments(readFileSync(file, 'utf8'))
+    let m
+    while ((m = alpha.exec(code))) {
+      const expr = m[1].trim()
+      const parts = expr.split('.')
+      const head = parts[0]
+      if (!/^[A-Za-z_$][\w$]*$/.test(head)) continue
+      let isVar = false
+      if (parts.length > 1 && /^[A-Za-z_$][\w$]*$/.test(parts[1])) {
+        /* `${st.c}14` — ทะเบียนเขียนเป็น `c: 'var(--green)'`
+           🔴 ชื่อ prop ที่ตรงกับชื่อ CSS property (`color`, `background`, …) **ข้าม** —
+              ไฟล์เดียวกันมักมี `color: 'var(--muted)'` ใน inline style อยู่แล้ว = false positive
+              ⇒ ด่านนี้จับ "ทะเบียนที่ตั้งชื่อ prop เอง" (c/clr/tone/bg) ซึ่งเป็นรูปที่พลาดจริง
+              (รูป `color:` ยังต้องอาศัยคนรีวิว — เขียนไว้ตรงนี้ให้รู้ว่าเป็นช่องโหว่ที่ยอมรับ) */
+        const CSSPROP = ['color', 'background', 'backgroundColor', 'borderColor', 'fill', 'stroke', 'bg'];
+        isVar = !CSSPROP.includes(parts[1])
+          && new RegExp(`\\b${parts[1]}\\s*:\\s*'var\\(--`).test(code)
+      } else {
+        isVar = new RegExp(`(?:const|let|var)\\s+${head}\\s*=\\s*'var\\(--`).test(code)
+          || new RegExp(`(?<![:\\w])${head}\\s*=\\s*'var\\(--`).test(code)
+      }
+      if (isVar) bad.push(`${rel}: \${${expr}}${m[2]}`)
+    }
+  }
+  assert.deepEqual([...new Set(bad)], [],
+    '\n\n❌ เอา var(--x) ไปต่อ alpha-hex — CSS ทิ้งทั้งบรรทัด (พื้น/ขอบหายเงียบ):\n   '
+    + [...new Set(bad)].join('\n   ')
+    + '\n   ⇒ ใช้ var(--x-dim) (พื้น 12%) / var(--x-line) (เส้น 40%) แทน\n')
+})

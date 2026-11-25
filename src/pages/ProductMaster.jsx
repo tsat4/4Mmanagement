@@ -932,7 +932,7 @@ export default function ProductMaster() {
           { key:'routing', label: 'Routing' },
           { key:'prodgrp', label:'Production', children: [{ key:'products', label:'Production Data' }, { key:'packaging', label: 'Packaging' }, { key:'kanban', label: 'Kanban Std' }, { key:'ct', label: 'ทบทวน CT' }] },
           { key:'refgrp', label:'Reference', children: [{ key:'customers', label: 'ลูกค้า' }, { key:'suppliers', label: 'Supplier' }, { key:'uom', label: 'หน่วยนับ' }] },
-          { key:'export', label: 'Export' }]}
+          { key:'export', label: tr("ส่งออก") }]}
         tab={mainTab} onTab={setMainTab} />
 
       {mainTab === 'products' && (<>
@@ -1108,7 +1108,7 @@ export default function ProductMaster() {
                           {item.posting_mode === 'lot_accumulate' ? `📥 ${tr("สะสม")} Lot ≥${item.lot_accumulate_threshold ?? '?'}` : tr("📌 มีกัมบังก็ผลิต")}
                         </span>
                         {members.length > 1 && <span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 'var(--r-pill)', background: 'var(--blue-dim)', color: 'var(--blue)', fontWeight: 700 }}>{members.length} revisions</span>}
-                        {!active && <span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 'var(--r-pill)', background: 'rgba(107,114,128,0.15)', color: '#6b7280', fontWeight: 700 }}>{tr('ปิดใช้งาน')}</span>}
+                        {!active && <span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 'var(--r-pill)', background: 'rgba(107,114,128,0.15)', color: 'var(--muted)', fontWeight: 700 }}>{tr('ปิดใช้งาน')}</span>}
                       </div>
                     )}
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 4 }}>
@@ -1162,7 +1162,7 @@ export default function ProductMaster() {
                         {rev.p_no && <span style={{ fontFamily: 'monospace', color: 'var(--muted)' }}>{rev.p_no}</span>}
                         <span style={{ fontFamily: 'monospace', color: 'var(--muted)' }}>MAT {rev.mat_no || '—'}</span>
                         <span>{rev.effective_from || '?'} → {rev.superseded_at || '?'}</span>
-                        <span style={{ fontSize: 11, padding: '1px 5px', borderRadius: 'var(--r-md)', background: 'rgba(107,114,128,0.15)', color: '#6b7280' }}>superseded</span>
+                        <span style={{ fontSize: 11, padding: '1px 5px', borderRadius: 'var(--r-md)', background: 'rgba(107,114,128,0.15)', color: 'var(--muted)' }}>superseded</span>
                       </div>
                     ))}
                   </div>
@@ -1184,7 +1184,7 @@ export default function ProductMaster() {
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                                 <span style={{ fontSize: 13, fontWeight: 800, fontFamily: 'monospace', color: isOldRev ? 'var(--muted)' : 'var(--blue)' }}>{std.mat_no}</span>
-                                {isOldRev && <span style={{ fontSize: 11, padding: '1px 5px', borderRadius: 'var(--r-md)', background: 'rgba(107,114,128,0.12)', color: '#6b7280' }}>{tr('rev เก่า')}</span>}
+                                {isOldRev && <span style={{ fontSize: 11, padding: '1px 5px', borderRadius: 'var(--r-md)', background: 'rgba(107,114,128,0.12)', color: 'var(--muted)' }}>{tr('rev เก่า')}</span>}
                                 {!std.is_active && <span style={{ fontSize: 11, color: 'var(--red)' }}>{tr('ปิด')}</span>}
                               </div>
                             </div>

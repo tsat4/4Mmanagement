@@ -165,7 +165,7 @@ export function OrderDetailCard({ c }) {
       {row('เปิดใบ', c.orderStartMs ? fmtMs(c.orderStartMs) : 'ยังไม่เปิด')}
       {row('ควรเสร็จ (ตาม CT)', c.ctSec > 0 && c.orderEndMs ? fmtMs(c.orderEndMs) : 'ไม่รู้ CT — ประเมินไม่ได้')}
       {c.confirmed_at && row('ปิดใบ', fmtMs(new Date(c.confirmed_at).getTime()))}
-      {c.machine_no && row('เครื่อง', c.machine_no)}
+      {c.machine_no && row(tr("เครื่อง"), c.machine_no)}
       {c.is_backfill && <div style={{ color: 'var(--muted)' }}>{tr('ใบเปิดย้อนหลัง — ไม่ตัดสินดีเลย์')}</div>}
     </div>
   );

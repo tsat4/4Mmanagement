@@ -347,19 +347,19 @@ export default function DeptHub({ onLogout, theme, onToggleTheme, userFullName, 
      ตอนนี้: ตัวที่ไม่มีเป้า = **เทา + โชว์ตัวหาร** ให้คนตัดสินเอง · ตัวที่ 0 = ดี ค่อยมีสี */
   const lineTotal = scopeNames ? scopeNames.length : (prodLines.length || null);
   const TELE = [
-    { key: 'lines',   label: 'ไลน์กำลังผลิต',  val: tele.lines,   unit: 'ไลน์', note: 'เปิดกะอยู่ตอนนี้',
+    { key: 'lines',   label: 'ไลน์กำลังผลิต',  val: tele.lines,   unit: tr("ไลน์"), note: 'เปิดกะอยู่ตอนนี้',
       of: lineTotal, tone: 'none',   // "ควรเดินกี่ไลน์" ขึ้นกับแผนผลิตรายวัน — ระบบไม่มีเป้านี้ ⇒ ห้ามทาสี
-      to: '/daily-report', goTitle: 'เปิด Daily Report — ดูกะที่เปิดอยู่' },
-    { key: 'present', label: 'เช็คชื่อวันนี้',   val: tele.present, unit: 'คน', note: 'มาทำงานวันนี้',
+      to: '/daily-report', goTitle: tr("เปิด Daily Report — ดูกะที่เปิดอยู่") },
+    { key: 'present', label: tr("เช็คชื่อวันนี้"),   val: tele.present, unit: tr("คน"), note: 'มาทำงานวันนี้',
       tone: 'none',                  // ยอดคนที่ "ควรมา" อยู่ที่ตารางกะ ไม่ใช่ที่นี่ ⇒ เทา
-      to: '/checkin', goTitle: 'เปิดหน้าเช็คชื่อ & PPE' },
+      to: '/checkin', goTitle: tr("เปิดหน้าเช็คชื่อ & PPE") },
     { key: 'dt',      label: 'Downtime ค้าง', val: tele.dt,      unit: 'จุด', note: tele.dt > 0 ? 'เครื่องหยุดอยู่ตอนนี้' : 'ไม่มีเครื่องหยุด',
       tone: toneOf({ value: tele.dt, zeroIsGood: true }),          // > 0 = ผลิตหยุดอยู่จริง ⇒ แดง
-      to: '/dashboard', goTitle: 'เปิด Dashboard — แผง Andon เครื่องที่หยุดอยู่' },
-    { key: 'fourM',   label: '4M รออนุมัติ',   val: tele.fourM,   unit: 'รายการ', note: tele.fourM > 0 ? 'รออนุมัติอยู่' : 'ไม่มีค้าง',
+      to: '/dashboard', goTitle: tr("เปิด Dashboard — แผง Andon เครื่องที่หยุดอยู่") },
+    { key: 'fourM',   label: '4M รออนุมัติ',   val: tele.fourM,   unit: tr("รายการ"), note: tele.fourM > 0 ? 'รออนุมัติอยู่' : 'ไม่มีค้าง',
       // คิวค้าง = ต้องไปจัดการ แต่สายการผลิตยังเดิน ⇒ เหลือง ไม่ใช่แดง (จอที่แดงตลอดคือจอที่คนเลิกมอง)
       tone: toneOf({ value: tele.fourM, zeroIsGood: true, over: 'warn' }),
-      to: fourMLink, goTitle: 'เปิดคิวอนุมัติ 4M (ย้อนหลัง 90 วัน)' },
+      to: fourMLink, goTitle: tr("เปิดคิวอนุมัติ 4M (ย้อนหลัง 90 วัน)") },
   ];
 
   // ชิปเมนูย่อย = เมนูจริงจาก NAV_ITEMS (sidebar) กรองตามสิทธิ์ role — ตรงกับ sidebar เสมอ
