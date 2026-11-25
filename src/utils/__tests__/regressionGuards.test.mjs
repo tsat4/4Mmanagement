@@ -70,6 +70,16 @@ const RULES = [
     allow: {},
   },
   {
+    id: 'manpower-layout-no-auto-lline',
+    scan: ['src/pages/ManpowerBoard.jsx'], ext: ['.jsx'],
+    /* จับการเขียน ?lline= ให้เองใน effect (ตั้งผังแรกอัตโนมัติ) */
+    re: /merge\(\s*\{\s*lline\s*:\s*firstLayout/g,
+    why: '🎛️ user 25/11 "ช่องเด้งข้ามไปไลน์ลูก ตอนเลือกไลน์แม่" — ตัวตั้งผังแรกอัตโนมัติเขียน ?lline= ทุกครั้งที่ว่าง '
+       + '⇒ เลือกแผนก GOR (ล้าง lline) แล้วช่องเด้งไป Laser GOR ทันที',
+    fix: 'ยังไม่ระบุไลน์ = แสดงผังแรก + เขียนบอกบนจอ (autoLayout) · ห้ามเขียน URL แทนคน',
+    allow: {},
+  },
+  {
     id: 'manpower-layout-single-line-picker',
     scan: ['src/pages/ManpowerBoard.jsx'], ext: ['.jsx'],
     /* จับช่อง <select> ที่ตั้ง ?lline= เอง (ช่องเลือกผังซ้อน) */
