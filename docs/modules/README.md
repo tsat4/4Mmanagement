@@ -10,13 +10,16 @@
 
 | โมดูล | ไฟล์ |
 |---|---|
+| 🪜 แถบขั้นตอน StepFlow (ใบไหนใส่แล้ว/ไม่ใส่ + กฎ) | `step-flow.md` |
 | Adoption Outlook — 🔮 ภาพเมื่อข้อมูลเชื่อมกันทั้งองค์กร (`/adoption-outlook` · 2026-08-13) | `docs/modules/adoption-outlook.md` |
+| 💬 AskBot — แชทถามข้อมูลในระบบ (ปุ่มลอยขวาล่าง · ขั้นที่ 1 ยังไม่มี AI · 2026-11-19) | `docs/modules/askbot.md` |
 | 🔗 Audit AM↔PM ทั้งโปรเจค — 2 ระบบ AM ไม่ sync · null due = "ปกติ" · ลำดับแก้ 3 รอบ (2026-10-08 · ยังไม่แก้) | `docs/modules/am-pm-linkage-audit.md` |
 | 🦺 BBS — สังเกตพฤติกรรมความปลอดภัย (Behavior-Based Safety · paperless · 2026-08-21) | `docs/modules/bbs-safety.md` |
 | 🌳 ชั้น BOM ที่แก้ได้ + ผูกขั้นตอน (PFC/OP) — `/products` แท็บ BOM (2026-09-16) | `docs/modules/bom-levels.md` |
 | ด่านใน `npm run build` — ที่มาของแต่ละด่าน + เคสจริงที่ทำให้ต้องมี | `docs/modules/build-gates.md` |
 | รีด CLAUDE.md ให้มีที่ว่าง (2026-09-30) — ย้ายอะไรไปไหน | `docs/modules/claude-md-slim.md` |
 | 🔗 ลูปปิด 8D → PFMEA / PFC / Control Plan (2026-08-17 · คำสั่ง user) | `docs/modules/closed-loop-8d-pfmea.md` |
+| 📘 8D ตามเกณฑ์ Ford G8D — สรุป deck "How to write an 8D" + เทียบระบบ + ช่องว่าง (2026-11-19 · วิเคราะห์ ยังไม่ลงมือ) | `docs/modules/8d-ford-g8d-reference.md` |
 | ⏱ ทบทวน Cycle Time — "ระบบเสนอ วิศวกรตัดสิน" | `docs/modules/ct-review.md` |
 | Daily Report — ไลน์ผสมหลาย process (welding + metal forming ในไลน์เดียว · 2026-07-22) | `docs/modules/daily-report-mixed-process.md` |
 | Daily Report — ออเดอร์ manual สำหรับไลน์ไม่มี kanban card (2026-07-12) | `docs/modules/daily-report.md` |
@@ -25,8 +28,10 @@
 | หลักฐาน/ตัวเลขเบื้องหลัง "กฎเหล็กการเขียน DB จาก client" | `docs/modules/db-write-rules.md` |
 | 🔗 สายธารความต้องการ (Demand Flow) — `/flow-tower` (audit + หน้าจริง · 2026-08-19) | `docs/modules/demand-flow-tower.md` |
 | Deploy | `docs/modules/deploy.md` |
+| 🖥️ สเปค server บริษัทที่ต้องขอ (รองรับ 10 ปี · ใบขอสำหรับยื่น IT · 2026-11-23) | `docs/modules/onprem-server-sizing.md` |
 | 🏷️ แยก frontend ของ New Model (2 เว็บจากโค้ดชุดเดียว · edition) | `docs/modules/nm-frontend-split.md` |
 | 💼 RFQ / เสนอราคา — Marketing (Q-neX เฟส 1 · `/rfq` · 2026-10-30) | `docs/modules/mkt-rfq.md` |
+| 🧩 e-Workflow — ใบงานที่ user สร้างเอง (`/workflows` · `/workflow-designer` · เฟส 1 2026-11-13) | `docs/modules/e-workflow.md` |
 | 🚨 ระบบล่ม 21/10 (ช่องต่อฐานข้อมูลเต็ม) + กฎ "ถอยเมื่อ 503" | `docs/modules/conn-outage-2026-10-21.md` |
 | Dashboard ส่วนงาน — 📋 `/dept-dashboard` (2026-08-06) | `docs/modules/dept-dashboard-tv.md` |
 | DIE MAINTENANCE — Layout & สถานะแม่พิมพ์ (2026-08-19) | `docs/modules/die-maintenance.md` |
@@ -48,6 +53,7 @@
 | Kanban Auto-Calc — คำนวณ kanban จาก forecast (แท็บ 🎴 คำนวณ Kanban ใน /planner-sales · 2026-07-16..17) | `docs/modules/kanban-auto-calc.md` |
 | Logistic — Planner & Sales / Delivery / Rundown Stock (2026-07-10..11) | `docs/modules/logistic-planner-sales.md` |
 | Layer Process Audit — LPA paperless (2026-07-20) | `docs/modules/lpa-audit.md` |
+| 🗂️ ออดิท Check Sheet แบบเอกสาร — LPA · Poka-Yoke · BBS · PPE (มาตรฐานร่วม + ผลออดิท · 2026-11-19) | `docs/modules/check-sheet-audit.md` |
 | 🧑‍🤝‍🧑 Manpower Control Board — ผังกำลังคน · ผัง LAYOUT · ป้าย 4M (`/manpower-board` · 2026-10-06) | `docs/modules/manpower-board.md` |
 | 📉 Monitoring Boards — `/monitoring` (2026-10-02) | `docs/modules/monitoring-boards.md` |
 | Morning Meeting — ประชุมแถวเช้า (2026-07-13) | `docs/modules/morning-meeting.md` |
@@ -75,6 +81,8 @@
 | ใบรายงานปัญหาการผลิต + ถังเหลือง/ถังแดง (paperless · 2026-08-19 · feedback หน้างาน) | `docs/modules/production-problem-report-bins.md` |
 | 📦 อัพเดทโปรแกรม — `/program-update` (2026-10-01 · คำสั่ง user) | `docs/modules/program-update.md` |
 | 🌐 ปุ่มสลับ ไทย/English — ชั้นภาษาโครงหลัก `tr()` (2026-11-02 · คำสั่ง user) | `docs/modules/i18n.md` |
+| 🦺 ข้อกำหนด PPE รายหน่วยงาน (4 ชั้น) + ผลตรวจรายคน (`/ppe-setup` · 2026-11-10 · คำสั่ง user) | `docs/modules/ppe-requirements.md` |
+| 🔌 ศูนย์เชื่อมต่อ Node-RED / เครื่องจักร — ต้นทาง · รหัสลับต่อต้นทาง · สุขภาพการส่ง · gen flow (`/integrations` · 2026-11-11) | `docs/modules/integration-hub.md` |
 | QA Inspection — setup → ใบตรวจ (ปิดช่องว่าง 2026-08-04) | `docs/modules/qa-inspection.md` |
 | ประวัติผล QC Audit (ตรวจ+แก้แล้ว — บันทึกกัน regress) | `docs/modules/qc-audit-history.md` |
 | QR / บาร์โค้ดอุปกรณ์ — สแกนเลือกเครื่อง/จิ๊ก/สินค้า (2026-08-03 · คำสั่ง user) | `docs/modules/qr-equipment-scan.md` |
@@ -107,3 +115,4 @@
 - `doc-forms.md` — ขั้นตอน register เอกสาร export เข้าทะเบียน `/doc-forms`
 - `employee-identity.md` — สร้างตัวตนพนักงานเข้าฐาน (`/register` + โมดัลใน `/add-user`) · กฎ `newEmployeeRow()` · กับดัก `staff_kind` default เงียบ
 - `qa-inspector-scopes.md` — QC ประจำไลน์ (`qa_inspector_scopes`) · แยก 3 แกน สังกัด/เห็น/ตรวจให้หน่วยไหน · กฎ `src/utils/qaScope.js`
+- `ux-laws-audit.md` — ผล audit กฎ UX 6 ข้อ (Closure · Figure-ground · Banner blindness · Parkinson · Connectedness · Choice overload) + ผลวัด modal ของจริง 225 ตัว (13/11/2026)

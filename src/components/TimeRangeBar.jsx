@@ -10,13 +10,14 @@ import {
   bucketIndex, autoBucket,
 } from '../utils/timeRange';
 
+import { tr } from '../utils/i18n';
 /* ══ ⏱️ TimeRangeBar — แถบกรองช่วงเวลามาตรฐาน ใช้เหมือนกันทุกหน้า (2026-09-23 · คำสั่ง user) ══
  *
  * *"ระบบการกรองช่วงเวลา อยากไห้เป็นมาตรฐานเดียวกัน มีเหมือนกันทุกหน้า คือ เลือกสเกลที่จะดู
  *   รายวัน สัปดาห์ เดือน ปี และกรอบเวลา และ scope 30วันย้อนหลัง 60 90 120"*
  *
  * เรียงซ้าย→ขวาตามลำดับที่คนคิด: **ดูช่วงไหน → ย้อนหลังเท่าไหร่ → วันเป๊ะๆ → ของเฉพาะหน้า → โหลด**
- *   [วันนี้|สัปดาห์นี้|เดือนนี้|ปีนี้|หลายปี] [30|60|90|120 ย้อนหลัง] [จาก]–[ถึง] {children} [🔄]
+ *   [วันนี้|สัปดาห์นี้|เดือนนี้|ปีนี้|หลายปี] [ย้อนหลัง… ▾] [จาก]–[ถึง] {children   (18/11: 30|60|90|120 ยุบเป็นช่องเดียว · 10 → 7 control)} [🔄]
  *   แถวล่าง: แท่งละ [− ละเอียดขึ้น] «1 วัน» [หยาบลง +]   + คำเตือน/เพดานของจอนี้
  *
  * ── 🪜 บันไดความละเอียด (23/09) ────────────────────────────────────────────────────
@@ -109,7 +110,7 @@ export default function TimeRangeBar({
   const rows = (kids) => (<>
       <div className="trb-row">
         {periodList.length > 0 && (
-          <div style={{ display: 'flex', gap: 4 }} role="group" aria-label="ช่วงที่ดู">
+          <div style={{ display: 'flex', gap: 4 }} role="group" aria-label={tr('ช่วงที่ดู')}>
             {periodList.map(p => {
               const locked = p.heavy && !multiYear;
               return (
@@ -117,9 +118,9 @@ export default function TimeRangeBar({
                   onClick={() => { const r = periodRange(p.key, today); if (r) applyRange(r.from, r.to, p.key); }}
                   style={{ ...on(curPeriod === p.key), opacity: locked ? 0.45 : 1, cursor: locked ? 'not-allowed' : 'pointer' }}
                   title={locked
-                    ? (multiYearNote || 'ยังไม่เปิด — จอนี้ยังไม่มีตัวสรุปฝั่งเซิร์ฟเวอร์ (RPC rollup) '
-                      + 'การดึงข้อมูลดิบหลายปีลงเบราว์เซอร์ทำให้โควต้าข้อมูลบานปลาย')
-                    : `ดู${p.label} — แท่งละ 1 ${scaleOf(capBucket(p.bucket, finest, coarsest))?.short}`}>
+                    ? (multiYearNote || (tr('ยังไม่เปิด — จอนี้ยังไม่มีตัวสรุปฝั่งเซิร์ฟเวอร์') + ' (RPC rollup) ')
+                      + tr('การดึงข้อมูลดิบหลายปีลงเบราว์เซอร์ทำให้โควต้าข้อมูลบานปลาย'))
+                    : `${tr("ดู")}${p.label} — ${tr("แท่งละ")} 1 ${scaleOf(capBucket(p.bucket, finest, coarsest))?.short}`}>
                   {locked ? `🔒 ${tr(p.label)}` : tr(p.label)}
                 </button>
               );
@@ -127,31 +128,27 @@ export default function TimeRangeBar({
           </div>
         )}
 
+        {/* ↩️ ย้อนหลัง N วัน = ช่องเดียว (18/11 · audit กฎ Choice overload: แถบนี้กิน 10 control ทุกหน้า → 7)
+            เดิมเป็นปุ่ม 30|60|90|120 — ความหมายเดิมเป๊ะ: เลือกแล้ว "เติมวัน" ลงช่อง ไม่ใช่โหมด (กติกาข้อ 1)
+            · ค่าที่โชว์ = ตัวที่ช่วงตรงเป๊ะ (`matchPreset`) · แก้วันเอง ⇒ กลับเป็น "ย้อนหลัง…" เอง
+            · ปุ่มย้อนหลังก็ไล่บันไดเหมือนกัน (90 วัน → แท่งรายสัปดาห์) ⇒ period=null ให้ `autoBucket` ตัดสินจากจำนวนวัน */}
         {presets?.length > 0 && (
-          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }} role="group" aria-label="ช่วงย้อนหลัง">
-            <span className="filter-label">{tr('ย้อนหลัง')}</span>
-            {presets.map(d => (
-              <button key={d}
-                onClick={() => {
-                  /* ปุ่มย้อนหลังก็ไล่บันไดเหมือนกัน (90 วัน → แท่งรายสัปดาห์ 13 แท่ง)
-                     แต่ไม่มี "ชื่อช่วง" ⇒ ส่ง period=null ให้ `autoBucket` ตัดสินจากจำนวนวัน */
-                  const r = presetRange(d, today);
-                  if (r && onView) applyRange(r.from, r.to); else onPreset?.(d);
-                }}
-                style={{ ...on(active === d), padding: '5px 9px' }}
-                title={`ตั้งกรอบเวลาเป็น ${d} วันล่าสุด (นับถึงวันทำงานวันนี้) — แก้วันต่อเองได้`}>{d}</button>
-            ))}
-            <span className="filter-label">{unitDays(2)}</span>
-          </div>
+          <select value={presets.includes(active) ? String(active) : ''} aria-label={tr('ช่วงย้อนหลัง')} data-lookback="1"
+            title={tr('ตั้งกรอบเวลาเป็น N วันล่าสุด (นับถึงวันทำงานวันนี้) — แก้วันต่อได้')}
+            onChange={e => { const d = Number(e.target.value); if (!d) return; const r = presetRange(d, today); if (r && onView) applyRange(r.from, r.to); else onPreset?.(d); }}
+            style={{ width: 'auto', ...(presets.includes(active) ? { borderColor: 'var(--accent)', color: 'var(--accent)', fontWeight: 700 } : null) }}>
+            <option value="">{tr('ย้อนหลัง…')}</option>
+            {presets.map(d => <option key={d} value={d}>{tr('ย้อนหลัง')} {d} {unitDays(d)}</option>)}
+          </select>
         )}
 
         {/* flexWrap: วันที่ 2 ช่อง (150px) + ป้าย + "(30 วัน)" ≈ 388px > จอ handheld 360px ⇒ ตัวนับวันโดนตัดขอบ (15/10) */}
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
           <input type="date" value={from || ''} max={to || undefined}
-            onChange={e => applyRange(e.target.value, to)} aria-label="ตั้งแต่วันที่" />
+            onChange={e => applyRange(e.target.value, to)} aria-label={tr('ตั้งแต่วันที่')} />
           <span className="filter-label">{tr('ถึง')}</span>
           <input type="date" value={to || ''} min={from || undefined}
-            onChange={e => applyRange(from, e.target.value)} aria-label="ถึงวันที่" />
+            onChange={e => applyRange(from, e.target.value)} aria-label={tr('ถึงวันที่')} />
           {days != null && (
             <span className="filter-count">
               ({days.toLocaleString()} {unitDays(days)})
@@ -175,18 +172,18 @@ export default function TimeRangeBar({
           <button onClick={() => setBucket(-1)} disabled={scale === finest}
             style={{ ...btnBase, height: 28, padding: '0 9px', background: 'var(--bg3)', color: 'var(--text)',
               border: '1px solid var(--border2)', opacity: scale === finest ? 0.4 : 1 }}
-            title="ละเอียดขึ้น 1 ขั้น">− {tr('ละเอียดขึ้น')}</button>
+            title={tr('ละเอียดขึ้น 1 ขั้น')}>− {tr('ละเอียดขึ้น')}</button>
           <span style={{
             fontSize: 12.5, fontWeight: 700, color: 'var(--accent)', minWidth: 74, textAlign: 'center',
           }}>1 {tr(scaleOf(scale)?.short) || '—'}</span>
           <button onClick={() => setBucket(1)} disabled={scale === coarsest}
             style={{ ...btnBase, height: 28, padding: '0 9px', background: 'var(--bg3)', color: 'var(--text)',
               border: '1px solid var(--border2)', opacity: scale === coarsest ? 0.4 : 1 }}
-            title="หยาบลง 1 ขั้น">หยาบลง +</button>
+            title={tr('หยาบลง 1 ขั้น')}>{tr('หยาบลง +')}</button>
           {/* กฎความซื่อสัตย์: ละเอียดกว่านี้ไม่ได้ ต้องบอกว่าทำไม ห้ามให้คนกดแล้วงงว่าปุ่มเสีย */}
           {capped && finest !== 'hour' && (
             <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-              · จอนี้ละเอียดสุดได้ราย{finestLabel} (ข้อมูลต้นทางไม่ได้เก็บเวลาที่ละเอียดกว่านี้)
+              · {tr("จอนี้ละเอียดสุดได้ราย")}{finestLabel} ({tr("ข้อมูลต้นทางไม่ได้เก็บเวลาที่ละเอียดกว่านี้")})
             </span>
           )}
         </div>
@@ -194,7 +191,7 @@ export default function TimeRangeBar({
 
       {/* เตือนเท่านั้น — ไม่บล็อก ไม่แก้สเกลให้เอง (ข้อ 2 ด้านบน) */}
       {warn && !isMobile && (
-        <div style={{ fontSize: 11.5, color: '#f59e0b', lineHeight: 1.6 }}>⚠️ {warn}</div>
+        <div style={{ fontSize: 11.5, color: 'var(--amber)', lineHeight: 1.6 }}>⚠️ {warn}</div>
       )}
       {note && <div style={{ fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.6 }}>{note}</div>}
   </>);
@@ -203,10 +200,10 @@ export default function TimeRangeBar({
     return (
       <div className="filter-bar trb" style={style}>
         <MobileFilterFold search={split.search} tail={split.tail}
-          summary={`${dm(from)}–${dm(to)}${days != null ? ` (${days.toLocaleString()} วัน)` : ''}`}>
+          summary={`${dm(from)}–${dm(to)}${days != null ? ` (${days.toLocaleString()} ${tr("วัน")})` : ''}`}>
           {rows(split.fold)}
         </MobileFilterFold>
-        {warn && <div style={{ fontSize: 11.5, color: '#f59e0b', lineHeight: 1.6 }}>⚠️ {warn}</div>}
+        {warn && <div style={{ fontSize: 11.5, color: 'var(--amber)', lineHeight: 1.6 }}>⚠️ {warn}</div>}
         {!noClear && <ClearFiltersBtn keep={clearKeep} onClear={onClear} />}
       </div>
     );
@@ -223,5 +220,5 @@ export default function TimeRangeBar({
 export function rangeText(scale, from, to) {
   const n = rangeDays(from, to);
   const s = scaleOf(scale);
-  return `${from} ถึง ${to}${n != null ? ` (${n.toLocaleString()} วัน)` : ''}${s ? ` · ${s.label}` : ''}`;
+  return `${from} ${tr("ถึง")} ${to}${n != null ? ` (${n.toLocaleString()} ${tr("วัน")})` : ''}${s ? ` · ${s.label}` : ''}`;
 }

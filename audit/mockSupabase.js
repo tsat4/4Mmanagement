@@ -158,6 +158,11 @@ const ROW = (i) => ({
   scrap_report_id: i % 2 === 0 ? `id-${i}` : null,   // ครึ่งหนึ่งออกใบแล้ว ครึ่งหนึ่งยังค้าง (ต้องได้ทั้ง 2 สาขา)
   from_yellow_id: null, defect_log_id: `id-${i}`,
   qa_decision: ['good', 'repair', 'use_as_is', 'scrap', null][i % 5],
+  /* 🪣 `bin` ของ `quality_bin_records` (2026-11-05) — เดิมไม่มีคีย์นี้เลย ⇒ ทุกโค้ดที่ถามว่า
+     "แถวนี้เหลืองหรือแดง" (`r.bin === 'yellow'`) ได้ false เสมอ = **คิวรอพิจารณา/สายถังเหลือง
+     ไม่เคยถูกเรนเดอร์ใน harness สักครั้ง** (bug class เดียวกับ session_id ที่เคยชี้ `s-${i}`)
+     คละ 2 ค่าเพื่อให้ได้ทั้ง 2 สาขาในชุดเดียว */
+  bin: i % 3 === 0 ? 'red' : 'yellow',
   special_use_doc_no: i % 5 === 2 ? `QA042-${i}` : null,
   /* ⚠️ `symptom` ต้องเป็นคำที่ **ปรากฏจริงในข้อความของแถวอื่น** (ยืมจาก DEF_NAMES) ไม่งั้น
      `matchRepairWi()` ไม่เคยจับคู่ติดเลยใน harness ⇒ ชิป 📕 WI ซ่อม ไม่เคยถูกเรนเดอร์
@@ -252,9 +257,46 @@ const AM_TARGET = {
 const AM_INSP = { 2: 'fail', 5: 'pending', 8: 'pending', 12: 'pending', 13: 'pending', 14: 'pending' }
 
 const TABLE_ROWS = {
+  /* 📈 SPC จากใบตรวจ (13/11 · ห้ามถอด) — เดิมแถวกลางไม่มี `qa_parts` embed / `values_json`
+     ⇒ แท็บ SPC "จากใบตรวจ" เดินแต่สาขา "ชิ้นงานนี้ยังไม่มีจุดวัดค่า" · ตารางสรุปจุด/กราฟ I-MR ไม่เคยถูกรัน
+     รูปทรง = ของจริง: จุด variable ผูกพาร์ท · ผล 1 แถว = 1 รอบ × 1 จุด · มีค่าหลุด spec 1 ค่า + จุดที่กด "ข้าม" */
+  qa_inspection_items: (r, i) => isNullish(r) ? r : ({
+    ...r, id: `id-${i}`, part_id: i % 2 ? 'id-1' : 'id-2', item_type: 'variable', balloon_no: String(i),
+    characteristic: `ระยะรู ${i}`, unit: 'mm', nominal: 10, lsl: 9.9, usl: 10.1, is_active: true, calc: null,
+    qa_parts: { part_no: i % 2 ? 'P-TEST-001' : 'P-TEST-002', part_name: 'พาร์ททดสอบ', line_name: LINE_NAME(1) },
+  }),
+  qa_inspection_results: (r, i) => ({
+    ...r, item_id: `id-${(i % 5) * 2 + 1}`, item_type: 'variable', judgement: i === 4 ? 'na' : 'ok',
+    values_json: isNullish(r) ? null : [i === 9 ? 10.2 : 10 + ((i % 7) - 3) * 0.02],
+    qa_inspection_sheets: { part_id: 'id-1', work_date: _recentDay(i % 10), shift: i % 2 ? 'day' : 'night', round_no: (i % 3) + 1, inspector_name: 'QA ทดสอบ' },
+  }),
   /* 🔨 ผังจัดเก็บแม่พิมพ์ — ชื่อต้องไม่ชนชื่อไลน์ (2026-10-16 · ห้ามถอด)
      เดิมได้ `name` = LINE_NAME(i) เหมือนไลน์ผลิต ⇒ FactoryMap `openLine()` เข้าใจว่าทุกกรอบเป็นโซนแม่พิมพ์
      แล้ว navigate ทิ้ง ⇒ **กล่องรายละเอียดไลน์ (story modal) ไม่เคยถูกเรนเดอร์ใน harness เลย** */
+  /* 🦺 ทะเบียน PPE (2026-11-10 · ห้ามถอด) — เดิม `ppe_items`/`ppe_requirements` ได้ ROWS ทั่วไป
+     ที่ไม่มี `scope_kind`/`name_th` เลย ⇒ `resolvePpe` กรองทิ้งหมด ⇒ **ทุกจอที่ใช้ PPE เดินแต่
+     สาขา "ไม่บังคับอะไรเลย"**: แผงถาม PPE ใน /scan ไม่เคยถูกวาด · /ppe-setup ขึ้นรายการชื่อ undefined
+     และตัวนับ "ต้องใส่ N ชิ้น" เป็น 0 เสมอ
+     รูปทรงที่ตั้งไว้ = ของจริงหลัง migration: 3 ชิ้นผูกคอลัมน์เดิม + ชิ้นที่ไม่มีคอลัมน์เดิม (ผ้ากันเปื้อน/
+     ปลอกแขน/แว่นตา — เหตุผลที่ทำระบบนี้ขึ้นมา) · ต้องมีทั้ง "บังคับ" และ "ยกเว้น" (required=false)
+     ไม่งั้นสาขายกเว้นรายไลน์ไม่เคยถูกรัน */
+  ppe_items: (r, i) => ({
+    ...r,
+    id: i,
+    code:       ['safety_helmet', 'safety_shoes', 'safety_gloves', 'safety_glasses', 'apron', 'arm_sleeve'][i % 6],
+    name_th:    ['หมวกนิรภัย', 'รองเท้านิรภัย', 'ถุงมือนิรภัย', 'แว่นตานิรภัย', 'ผ้ากันเปื้อน', 'ปลอกแขน'][i % 6],
+    legacy_col: ['has_helmet', 'has_boots', 'has_gloves', null, null, null][i % 6],
+    sort_order: i * 10,
+    is_active:  true,
+  }),
+  ppe_requirements: (r, i) => ({
+    ...r,
+    // แถว 1-3 = ค่าพื้นฐานทั้งโรงงาน (ของจริง seed ไว้) · 4-5 = ไลน์เพิ่มของตัวเอง · 6 = ไลน์ยกเว้น
+    scope_kind: i <= 3 ? 'plant' : i === 6 ? 'line' : 'line',
+    scope_key:  i <= 3 ? '*' : String(((i - 3) % 3) + 1),
+    item_id:    i <= 3 ? i : ((i % 6) + 1),
+    required:   i !== 6,
+  }),
   die_storage_areas: (r, i) => ({ ...r, name: `คลังแม่พิมพ์ทดสอบ ${i}` }),
   /* 🏬 โซนคลังสินค้า — เหตุผลเดียวกัน (ชื่อชนไลน์ = คลิกไลน์แล้วเปิด popup คลังแทน) · แถว 1 ตรงกับกรอบ rg-4 ให้การ์ดคลังยังถูกวาด */
   storage_zones: (r, i) => ({ ...r, name: i === 1 ? 'คลังสินค้า FG ทดสอบ' : `คลังสินค้าทดสอบ ${i}` }),
@@ -306,24 +348,47 @@ const TABLE_ROWS = {
   }),
   /* org_nodes: ผังองค์กรทรงจริง (2026-09-23 — picker ขอบเขต `orgScope.js` ต้องได้ต้นไม้ครบชั้น ไม่งั้นสาขา
      แผนก/ฝ่าย/กลุ่มไลน์ ไม่เคยถูกรันใน harness): 1 = ส่วนงาน PD1 · 2 = แผนกใต้ PD1 · 3-5 = ไลน์ในแผนก
-     (ref_line_id ชี้ production_lines mock ที่ id เป็น 'id-N') · 6 = แผนกขึ้นตรงฝ่ายช่าง (ไม่มีไลน์) ·
+     (ref_line_id ชี้ production_lines mock ที่ id เป็น **เลข** — ดูหมายเหตุที่ production_lines) · 6 = แผนกขึ้นตรงฝ่ายช่าง (ไม่มีไลน์) ·
      7 = org line node ไม่ผูก production line (สโตร์) · ที่เหลือ = ทีม · แถว NULLISH ยังคงว่างตามกติกา */
   /* 🏭 ชนิดหน่วย — **ต้องมีแถว `support` อย่างน้อย 1 ตัวเสมอ ห้ามถอด** (2026-10-13)
      ของจริงมี 3 หน่วย (Office PD4 · Coating · Rework - PD1) ที่ไม่ใช่ไลน์ผลิต
      ไม่มีในmock = สาขา "กรองหน่วยสนับสนุนออก" + ป้าย "🗂️ หน่วยสนับสนุน" ของค่าที่เลือกไว้แล้ว
      ไม่เคยถูกรันใน harness เลย · เลือกแถว 5 เพราะเป็นไลน์เดี่ยว (ไม่อยู่ใน PARENT_OF
      และไม่ถูกอ้างโดย sessions/workstations ที่ผูก LINE_NAME(1..3)) */
-  production_lines: (r, i) => ({ ...r, unit_kind: i === 5 ? 'support' : 'production' }),
+  /* 🔑 **`id` ต้องเป็นเลข ไม่ใช่ `id-N`** (2026-11-13 · ห้ามถอด)
+     ของจริง `production_lines.id` เป็น **integer** (เช่น 8/10/17) — mock เคยใช้ `id-N` เหมือนตารางอื่น
+     ⇒ ① `CTX.lineId` ของ harness (เลข) ไม่ตรงกับไลน์ไหนเลย ⇒ **กิ่ง "ขอบเขตรายไลน์" ไม่เคยถูกรัน**
+        ② `ROW().line_id = 1` ของทุกตาราง join กลับไปหาไลน์ไม่เจอเลยสักแถว
+        ③ โค้ดจริงมี `Number(lineId)` หลายจุด — ถ้า mock เป็นสตริงจะได้ `NaN` แล้วเดินผิดกิ่ง
+           คนละแบบกับของจริง (= harness โกหกอีกทาง ไม่ใช่แก้)
+     🔴 แก้ id ที่นี่แล้ว **ต้องตามไปแก้ทุกจุดที่ชี้ไลน์ให้เป็นเลขด้วย** (employees.line_id ·
+        org_nodes.ref_line_id · line_technicians.line_id · audit_log.new_data.line_id)
+     📄 docs/modules/permission-scope-audit.md §13/11 ช่องว่างของ harness */
+  production_lines: (r, i) => ({ ...r, id: i, unit_kind: i === 5 ? 'support' : 'production' }),
+  /* 🔗 โซ่ส่งต่อ MO (11/11) — แผง "ส่งต่อแล้วปลายทางไม่มีใครทำ" ต้องถูกรันทั้ง 3 สาขา
+     ของจริงมี 3 รูปทรง: ลิงก์ว่าง (ใบลูกถูกลบ) · ใบลูกถูกยกเลิก · ใบลูกยังทำงาน (ต้องไม่โผล่)
+     ⚠️ แถว NULLISH ยังว่างตามกติกา = สาขา "ไม่มีวันเวลาให้นับ" (ต้องขึ้น "ไม่มีวันเวลาให้นับ" ไม่ใช่ 0 วัน) */
+  mtn_order_handoffs: (r, i) => isNullish(r) ? r : ({
+    ...r,
+    from_order_id: `id-${i}`,
+    to_order_id: i % 3 === 0 ? null : `id-${i}`,   // 1 ใน 3 = ใบลูกถูกลบ (ลิงก์ว่าง)
+    to_dept: ['jig_maintenance', 'maintenance', 'die_maintenance'][i % 3],
+    reason: `ทีมแรกติดตรงนี้ ${i}`,
+    handed_by: `หัวหน้าทดสอบ ${i}`,
+  }),
 
+  /* 🏢 ชั้นบน (20/11 · ห้ามถอด) — ของจริงส่วนงานทุกตัวชี้ plant แล้ว (migration 20261120_org_nodes_upper_layer_rows_main.sql)
+     ⇒ แถว 13 = company (ราก) · 12 = plant ใต้ company · PD1 (แถว 1) ชี้ plant · JIG MTN (6) ยังไม่มีแม่ = เคส "แผนกขึ้นตรง"
+     ชั้นบนไม่มี CC/ฝ่าย ตามของจริง (ใส่ = ไหลลงหน่วยผ่าน divisionOfNode/laborTypeOfNode) · ทีมเหลือ 8–11,15 */
   org_nodes: (r, i) => ({
     ...r,
-    kind: i === 1 ? 'section' : (i === 2 || i === 6) ? 'department' : i <= 5 || i === 7 ? 'line' : 'team',
-    code: i === 1 ? 'PD1' : i <= 5 || i === 7 ? null : i === 6 ? null : r.code,
-    name: i === 6 ? 'JIG MTN' : r.name,   // แผนกช่างชื่อจริง — ให้สาย ⚡ KPI ช่าง (kpi_mtn_rollup → kpiAuto) ถูกรันใน harness
-    parent_id: i === 1 || i === 6 ? null : i === 2 ? 'id-1' : i <= 5 ? 'id-2' : i === 7 ? 'id-6' : 'id-3',
-    ref_line_id: i >= 3 && i <= 5 ? `id-${i}` : null,
+    kind: i === 13 ? 'company' : i === 12 ? 'plant' : i === 1 ? 'section' : (i === 2 || i === 6) ? 'department' : i <= 5 || i === 7 ? 'line' : 'team',
+    code: i === 13 ? '2100' : i === 12 ? '2140' : i === 1 ? 'PD1' : i <= 5 || i === 7 ? null : i === 6 ? null : r.code,
+    name: i === 13 ? 'TSAT' : i === 12 ? 'TSAT-P4' : i === 6 ? 'JIG MTN' : r.name,   // แผนกช่างชื่อจริง — ให้สาย ⚡ KPI ช่าง (kpi_mtn_rollup → kpiAuto) ถูกรันใน harness
+    parent_id: i === 13 || i === 6 ? null : i === 12 ? 'id-13' : i === 1 ? 'id-12' : i === 2 ? 'id-1' : i <= 5 ? 'id-2' : i === 7 ? 'id-6' : 'id-3',
+    ref_line_id: i >= 3 && i <= 5 ? i : null,          // 🔑 เลข — ชี้ production_lines.id (ดูหมายเหตุที่ production_lines)
     division: i === 1 ? 'production' : i === 6 ? 'maintenance' : null,
-    cost_center: isNullish(r) ? null : `21406${String(i).padStart(5, '0')}`,
+    cost_center: isNullish(r) || i === 12 || i === 13 ? null : `21406${String(i).padStart(5, '0')}`,
     sort_order: i,
   }),
   /* 🧑‍🤝‍🧑 Manpower Control Board (2026-10-06) — ผังคนต้องได้ "ตำแหน่ง + หน่วย + ทีม" คละกัน
@@ -334,7 +399,7 @@ const TABLE_ROWS = {
     position: ['manager', 'engineer', 'dept_head', 'line_leader', 'line_leader', 'technician'][i - 1] || 'operator',
     team: i === 1 || i === 2 ? 'C' : i % 2 ? 'A' : 'B',
     org_node_id: i <= 2 ? 'id-1' : 'id-2',
-    line_id: i <= 2 ? null : 'id-3',
+    line_id: i <= 2 ? null : 3,                        // 🔑 เลข — ไลน์ลูกของ id 1 (ดูหมายเหตุที่ production_lines)
     image_url: i % 4 === 0 ? FACTORY_MAP_IMG : '',
   }),
   // ทะเบียนตำแหน่ง — key จริงตาม seed (positions.js DEFAULT_POSITIONS) ไม่งั้นทุกคนกลายเป็น "ตำแหน่งที่ระบบไม่รู้จัก"
@@ -354,7 +419,7 @@ const TABLE_ROWS = {
     const t = ['manpower_slot_plans', 'station_slot_plans', 'line_technicians', 'employees'][i % 4];
     const act = ['INSERT', 'UPDATE', 'DELETE'][i % 3];
     const data = t === 'manpower_slot_plans' ? { org_node_id: 'id-2', team: 'A', slots: i }
-      : t === 'station_slot_plans' ? { station_id: `id-${i}`, per_shift: 1 } : { employee_id: `id-${i}`, line_id: 'id-3' };
+      : t === 'station_slot_plans' ? { station_id: `id-${i}`, per_shift: 1 } : { employee_id: `id-${i}`, line_id: 3 };
     return { ...r, id: i, table_name: t, action: act, actor: isNullish(r) ? null : `ผู้แก้ ${i}`,
       old_data: act === 'INSERT' ? null : { ...data, slots: (data.slots ?? 0) + 2 }, new_data: act === 'DELETE' ? null : data,
       changed_at: `2026-${String(8 + (i % 3)).padStart(2, '0')}-1${i % 9}T03:00:00Z` };
@@ -364,7 +429,7 @@ const TABLE_ROWS = {
      แล้วสาย **คนวิ่งข้ามแผนก** (employee_flex_units) ถูกกฎ "ไม่วาดซ้ำคนที่อยู่แผนกนี้แล้ว"
      กรองออกทุกแถว ⇒ การ์ด flex ไม่เคยถูกรันใน harness เลย (วัดจริงด้วย console probe)
      ⇒ ต้องมีคนที่ **ไม่ใช่** ทั้งคนในสังกัดและช่างของแผนก id-2 เหลืออยู่เสมอ */
-  line_technicians: (r, i) => ({ ...r, employee_id: `id-${(i % 13) + 3}`, line_id: 'id-3' }),
+  line_technicians: (r, i) => ({ ...r, employee_id: `id-${(i % 13) + 3}`, line_id: 3 }),   // 🔑 line_id เป็นเลข
   /* 🏃 คนวิ่งข้ามแผนก (14/10) — คนที่ผูกระดับ **ส่วนงาน** (employees 1-2 = org_node_id 'id-1')
      ไปช่วยแผนก 'id-2' ⇒ สายการ์ด flex + ป้าย "↗ บ้าน" + ตัวนับ "วิ่งข้ามมาช่วย" ถูกรัน
      🔴 ห้ามชี้หน่วยเดียวกับบ้านของคนนั้น — กฎกรองออก (ไม่วาดซ้ำ) แล้วสายนี้จะไม่เคยถูกรันเลย
@@ -376,11 +441,11 @@ const TABLE_ROWS = {
   employee_flex_units: (r, i) => ({ ...r, employee_id: `id-${(i % 2) + 1}`, org_node_id: i % 3 === 2 ? 'id-1' : 'id-2',
     kind: i % 3 === 2 ? 'acting' : 'flex',
     note: isNullish(r) ? null : 'ช่วยกะเช้าประจำ' }),
-  line_helpers: (r, i) => ({ ...r, employee_id: `id-${(i % 4) + 7}`, to_line_id: 'id-9', shift: i % 2 ? 'day' : 'night',
+  line_helpers: (r, i) => ({ ...r, employee_id: `id-${(i % 4) + 7}`, to_line_id: 9, shift: i % 2 ? 'day' : 'night',
     work_date: _recentDay(i % 20) }),
   /* 📊 แผน vs มาจริง (08/10) — เช็คชื่อกระจาย 20 วันล่าสุด · คนตรงกับทะเบียน (id-*) · คละ มา/ลา/ขาด
      ⇒ จอย้อนหลังรายวันมีทั้งกะที่ขาด/ครบ/เกิน/ไม่ได้เช็ค · หน้าอื่นที่อ่านเช็คชื่อวันนี้ยังได้แถววันนี้ (i%20 = 0) */
-  shift_schedules: (r, i) => ({ ...r, line_id: 'id-3', dept_name: null, day_team: i % 2 ? 'A' : 'B', work_date: _recentDay(i % 20) }),
+  shift_schedules: (r, i) => ({ ...r, line_id: 3, dept_name: null, day_team: i % 2 ? 'A' : 'B', work_date: _recentDay(i % 20) }),
   /* 🎯 คะแนนทักษะคละ 25–100 ให้คนในทะเบียน (id-*) — มีทั้งคนผ่านครบ ผ่านบางข้อ และไม่มีคะแนน */
   employee_skills: (r, i) => ({ ...r, employee_id: `id-${(i % 14) + 1}`, skill_name: i % 2 ? 'SPOT' : 'GAUGE', score: [25, 50, 75, 100][i % 4] }),
   daily_production_logs: (r, i) => ({ ...r, employee_id: `id-${(i % 14) + 1}`, work_date: _recentDay(i % 20),
@@ -391,7 +456,7 @@ const TABLE_ROWS = {
   machine_points: (r, i) => ({ ...r, machine_no: `SP-${i}`, line_name: LINE_NAME((i % 3) + 1),
     pos_top: isNullish(r) ? null : `${(40 + (i * 7) % 22).toFixed(2)}%`, pos_left: isNullish(r) ? null : `${(35 + (i * 11) % 30).toFixed(2)}%` }),
   /* จุดงาน + จุดประจำ + รูปผัง — ให้สาย "รูปคนบนผัง LAYOUT" ถูกรัน (เดิมไม่มีพิกัด = ไม่มีจุดถูกวาด) */
-  workstations: (r, i) => ({ ...r, station_name: `ST-${i} SPOT WELD`, line_id: 'id-3', line_name: LINE_NAME(3),
+  workstations: (r, i) => ({ ...r, station_name: `ST-${i} SPOT WELD`, line_id: 3, line_name: LINE_NAME(3),
     /* 🎯 (12/10) ทักษะที่จุดต้องการ — 2 ใน 3 จุดตั้งไว้ ⇒ แผง "ยืนจุดที่ทักษะยังไม่ถึง" + "ยังไม่ตั้งทักษะ" ถูกรันทั้งคู่ */
     station_requirements: i % 3 ? [{ skill_name: 'SPOT', min_score: 50 }, { skill_name: 'GAUGE', min_score: 75 }] : [],
     pos_top: isNullish(r) ? null : String(15 + (i * 5) % 70), pos_left: isNullish(r) ? null : String(8 + (i * 7) % 84) }),
@@ -409,10 +474,46 @@ const TABLE_ROWS = {
      · คละให้ครบทุกสาขา: ตั้ง min แล้ว · มีแถวแต่ไม่ใส่ min · ไม่มีแถวจุดเรียกเติมเลย · ยอดเหลือ 0
      · เว้นบางแถวไว้ที่ชื่อเดิม (i % 5 === 0) ให้ยังมี "ปลายทางที่ไม่ใช่ไลน์ผลิต" = ตัวนับ "กันออก"
        และ optgroup 🏬 คลัง ของตัวเลือกไลน์ยังถูกเรนเดอร์เหมือนเดิม */
+  /* 🔴 ยอดคงเหลือ **ติดลบได้จริง** (25/11) — วัดจากฐานจริง 85 คู่ติดลบ (−85,582 ชิ้นที่ไลน์ปลายทาง)
+     เดิม mock ไม่มีแถวติดลบเลย ⇒ สาย "ติดลบ" (คอลัมน์แดงในแผงรอบนับ · ตัวนับ negParts/negQty)
+     ไม่เคยถูกเรนเดอร์ใน harness — บทเรียนเดียวกับ pair_mat_no ข้างบน */
   line_stock_summary: (r, i) => ({ ...r, line_name: i % 5 === 0 ? r.line_name : LINE_NAME((i % 3) + 1),
-    qty_on_hand: i % 4 === 0 ? 0 : i * 120 }),
+    qty_on_hand: i % 4 === 0 ? 0 : i % 5 === 1 ? -(i * 80 + 60) : i * 120 }),
   line_part_levels: (r, i) => ({ ...r, line_name: LINE_NAME((i % 3) + 1), mat_no: `1010${1000 + (i % 8)}`,
     min_qty: i % 3 === 0 ? null : 40 * i, max_qty: 200 * i }),
+  /* 🔴 แถวปรับยอด — ต้องคละ "ไปนับของจริง" กับ "ตั้งยอดตามไฟล์" (2026-11-25)
+     แผง 🧭 รอบนับตั้งต้น (/line-stock?tab=count) แยก 2 อย่างนี้ด้วย `note` ที่ขึ้นต้น `ตรวจนับ:`
+     ถ้า mock ให้ note เดียวกันหมด ⇒ ทุกไลน์ได้สถานะ "ยังไม่เคยนับ" ⇒ สาย partial/done/driftAfter
+     (ป้ายสถานะ · NoticeBar "ปรับยอดหลังนับ") **ไม่เคยถูกเรนเดอร์ใน harness เลย** — บทเรียนเดียวกับ mtn_orders
+     คู่ (ไลน์, mat) ต้องตรงกับ line_stock_summary ไม่งั้นจับคู่ไม่ติดและยังเงียบเหมือนเดิม */
+  /* 🎴 ใบ e-Kanban — ต้องคละ **ทุกสถานะ** ไม่งั้นสาย in_box/picking/delivering + คิวหยิบของสโตร์
+     ไม่เคยถูกเรนเดอร์ใน harness · ต้องมีใบ "ไม่รู้โซน" (from_location ว่าง) ด้วย
+     ไม่งั้น NoticeBar "ยังไม่รู้โซนหยิบ" ไม่เคยขึ้น (2026-11-25) */
+  kanban_cards: (r, i) => ({ ...r,
+    card_no: `1010${1000 + (i % 8)}-${String((i % 4) + 1).padStart(2, '0')}`,
+    mat_no: `1010${1000 + (i % 8)}`, line_name: LINE_NAME((i % 3) + 1),
+    from_location: i % 5 === 0 ? null : `P4${10 + (i % 3)}`,
+    qty_per_card: 600, seq: (i % 4) + 1, total_cards: 4,
+    state: ['at_line', 'in_box', 'picking', 'delivering'][i % 4],
+    state_at: '2026-11-25T02:00:00Z',
+    suggested_at: i % 4 === 0 && i % 2 === 0 ? '2026-11-25T03:00:00Z' : null,
+    suggest_reason: i % 4 === 0 && i % 2 === 0 ? 'ผลิตไปแล้ว 600 ชิ้น ตั้งแต่ใบนี้ถึงไลน์' : null,
+    is_active: true }),
+  line_stock_transactions: (r, i) => {
+    /* 2 แถวต่อ 1 คู่ (ไลน์, mat) — คู่เดียวกับที่ line_stock_summary สร้าง (index j)
+       ไม่งั้น "การนับ" กับ "แถวสต็อก" คนละคู่กัน ⇒ จับคู่ไม่ติด แล้วทุกไลน์ได้ "ยังไม่เคยนับ" เหมือนเดิม */
+    const j = Math.floor(i / 2);
+    const everCounted = j % 4 !== 3;                 // คู่ที่ 4 ของทุกวง = ไม่เคยถูกนับ → สถานะ partial โผล่จริง
+    const isCount = everCounted && i % 2 === 0;      // นับก่อน (04/11) แล้วตั้งยอดทับทีหลัง (18/11) ⇒ driftAfter > 0
+    return { ...r,
+      line_name: LINE_NAME((j % 3) + 1), mat_no: `1010${1000 + j}`,
+      /* 🔴 ต้องมีใบ **pending** ด้วย — ช่องกรอกของพาร์ทที่มีใบค้างถูกปิด + NoticeBar "กันนับซ้ำ"
+         ถ้า mock approved ล้วน สายนั้นไม่เคยถูกเรนเดอร์ใน harness */
+      type: 'adjust', status: i % 7 === 3 ? 'pending' : 'approved', qty: (i % 2 ? 1 : -1) * (100 + i * 7),
+      note: isCount ? `ตรวจนับ: ระบบ ${j * 10} → นับได้ ${j * 10 + 5}`
+        : j % 2 ? 'ตั้งยอดให้ตรงไฟล์ Monitoring 300T' : 'ย้ายยอดรับเข้าล็อตไป STORE',
+      created_at: isCount ? '2026-11-04T02:00:00Z' : '2026-11-18T02:00:00Z' };
+  },
   /* 🔴 ใบแจ้งซ่อม MO — ต้องคละ **สถานะจริงของ workflow** (2026-10-06)
      เดิมทุกแถวได้ `status: 'open'` จาก ROW() ซึ่ง **ไม่ใช่สถานะของ mtn_orders เลย**
      ⇒ `nextStepOf()` คืน null ทุกแถว ⇒ โค้ดสาย "ใบนี้รอขั้นไหน / รอใคร" (ตัวกรองรอขั้นไหน ·
@@ -451,7 +552,7 @@ const TABLE_ROWS = {
           ถ้าทุกแถวมีชื่อ = เส้นทางนั้นหลุดด่าน แล้วใบที่ชี้เป้าไม่ได้จะหายจากแผงโดยไม่มีใครรู้ */
     assigned_to: isNullish(r) || i % 7 === 0 ? null : 'ช่างเอก',
   }),
-  line_layouts: (r, i) => ({ ...r, line_id: `id-${i}`, line_name: LINE_NAME(i), image_url: FACTORY_MAP_IMG }),
+  line_layouts: (r, i) => ({ ...r, line_id: i, line_name: LINE_NAME(i), image_url: FACTORY_MAP_IMG }),   // 🔑 line_id เป็นเลข
   /* คิวรับเข้าคลัง (2026-10-02) — คละ รอรับ/ค้างเกินกำหนด/รับแล้ว(ยอดไม่ตรง) ให้ทุกโซนของ StockReceiptQueue ถูกรัน */
   stock_receipts: (r, i) => ({
     ...r, prod_order_id: `po-${i}`, prod_no: `01203${90000 + i}`, mat_no: i % 2 ? '30047001' : '20057003',
@@ -460,6 +561,14 @@ const TABLE_ROWS = {
     created_at: new Date(Date.now() - (i % 3 === 0 ? 6 : 0.5) * 3600e3).toISOString(),
     qty_received: i % 4 === 0 ? 55 : null, diff_reason: i % 4 === 0 ? 'ของเสีย 5' : null,
     received_by: i % 4 === 0 ? 'สมชาย ใจดี' : null, received_at: i % 4 === 0 ? new Date().toISOString() : null,
+  }),
+  /* ใบไลน์เรียกของ (24/11) — สถานะจริงของตาราง (pending/preparing/delivered) + เวลาเรียกคละ 5–45 นาที
+     ให้จอทีวีสโตร์ (`/tv?dept=storeq`) ได้รันทั้ง ปกติ/เหลือง >15/แดง >30 · ส่งแล้วรอไลน์รับ
+     (เดิมได้ `status: 'open'` จาก ROW() ซึ่งไม่ใช่สถานะของตารางนี้ = บอร์ดว่างตลอด) */
+  wip_replenish_requests: (r, i) => ({
+    ...r, status: ['pending', 'pending', 'preparing', 'delivered'][i % 4], request_qty: 40 + i * 10, uom: null,
+    requested_at: new Date(Date.now() - [5, 20, 45, 12, 33][i % 5] * 60e3).toISOString(),
+    delivered_at: i % 4 === 3 ? new Date(Date.now() - 8 * 60e3).toISOString() : null, source: 'line_adhoc', store_ack_at: null,
   }),
   child_lot_requests: (r, i) => ({
     ...r, source_line: FAM_LINE, child_mat_no: `1010${1001 + (i % 3)}`, seq_no: i,
@@ -608,6 +717,16 @@ const TABLE_ROWS = {
     ...r, line_name: LINE_NAME(AM_TARGET[i][0]), jig_id: `id-${AM_TARGET[i][1]}`,
     shift: AM_TARGET[i][2], is_active: true, sort_order: i,
   } : { ...r, line_name: LINE_NAME(5), jig_id: `id-${i}`, shift: null, is_active: false, sort_order: i }),
+  /* 🧩 สถานี AM (2026-11-23 · ห้ามถอด) — ใบรวมของอุปกรณ์ที่ติดตั้งคู่กัน + บอร์ดนับเป็นชุด
+     ไลน์ 1 = สถานีที่มีตัว NG (id-2 fail) · ไลน์ 4 = สถานีที่ยังขาดตัว (id-12 pending)
+     ⇒ ใบสถานี (/daily-checker?tab=amcheck&equip=id-1) · แท็บตั้งค่าสถานี · ชิป "ขาด" บนบอร์ด ถูกวาดใน crashsweep */
+  am_stations: (r, i) => (i <= 2
+    ? { ...r, id: `id-${i}`, name: i === 1 ? 'Robot cell #1 (mock)' : 'Robot cell #4 (mock)', line_name: LINE_NAME(i === 1 ? 1 : 4), is_active: true, sort_order: i }
+    : { ...r, line_name: LINE_NAME(5), is_active: false, sort_order: i }),
+  am_station_members: (r, i) => {
+    const M = { 1: ['id-1', 'id-1'], 2: ['id-1', 'id-2'], 3: ['id-2', 'id-11'], 4: ['id-2', 'id-12'] };
+    return M[i] ? { ...r, station_id: M[i][0], jig_id: M[i][1], sort_order: i } : { ...r, station_id: 'none', jig_id: `zz-${i}`, sort_order: i };
+  },
   /* 🗺️ factory_map / factory_line_regions — **ต้องมีเสมอ ห้ามถอด** (2026-09-22)
      `/factory-map` เช็ค `if (!imageUrl) return <ยังไม่มีรูปผังโรงงาน>` ก่อนวาดอะไรทั้งนั้น
      ⇒ mock เดิมคืน `image_url: ''` (falsy) ⇒ **ทั้งหน้าไม่เคยเรนเดอร์อะไรเลยนอกจากข้อความว่าง**
@@ -616,6 +735,63 @@ const TABLE_ROWS = {
      · รูป = data URI (ออฟไลน์ ไม่ต้องต่อเน็ต) ขนาด 1600×900 ให้ aspect ใกล้ผังจริง
      · กรอบ: 2 ไลน์ผลิต (แม่ 1 + ลูก 1) + 1 โซนสนับสนุนที่ไม่ใช่ไลน์ผลิต (isFac = true)
        ⇒ ได้ทั้งสาขา "ไลน์" และ "โซน facility" ที่คิดสถานะคนละชุด */
+
+  /* 🏭 ศูนย์เชื่อมต่อ · ข้อมูลจากเครื่อง (2026-11-11 · ห้ามถอด) — เดิม `kinds` ไม่มีในแถว ⇒ แผง
+     MachineFactsPanel (/integrations?src=) ไม่เคยถูกวาดใน harness · ต้องมีทั้ง tag ที่ผูกแล้ว/ยังไม่ผูก
+     + สถานะทั้งที่จับคู่ได้ (fault/no_plan) และจับคู่ไม่ได้ (idle) + เวลาที่อ่านไม่ออก (isNullish) */
+  /* ⚡ ผังจ่ายไฟหลายชั้น (2026-11-20 · ห้ามถอด) — ต้องมีทั้งตู้ชั้นเดียว (MDB-03 · วาดด้วย TreeFlow เหมือนกัน · ≥2 ตู้ ⇒ แถบเลือกตู้ ?panel=)
+     และตู้ที่มีแม่-ลูก 3 ชั้น (MDB → MDB-07 → AIR → AC-*) + แม่ที่ชี้ชื่อไม่มีในทะเบียน (เตือนบนจอ)
+     ⇒ TreeFlow / ไฟไม่มีมิเตอร์วัด / ยอดไม่นับซ้ำ ถูกวาดใน crashsweep */
+  energy_live_meters: (r, i) => {
+    const M = [['DB-CNC', 'MDB-03', null], ['DB-LASER', 'MDB-03', null], ['MDB', 'MDB', null], ['MDB-07', 'MDB', 'MDB'],
+      ['AIR', 'MDB', 'MDB-07'], ['AC-06', 'MDB', 'AIR'], ['AC-07', 'MDB', 'AIR'], ['ORPHAN', 'MDB-03', 'NOPE']][i % 8];
+    return { ...r, scope_kind: 'zone', scope_name: i < 8 ? M[0] : `${M[0]}-${i}`, panel: M[1], parent_name: M[2], is_active: i < 8, sort_order: i, limit_kw: 1000, gauge_max_kw: 1000 };
+  },
+  energy_live: (r, i) => {
+    const N = ['DB-CNC', 'DB-LASER', 'MDB', 'MDB-07', 'AIR', 'AC-06', 'AC-07', 'ORPHAN'];
+    const KW = [40, 25, 900, 60, 56, 20, 30, 5];
+    /* แถว 8+ = ค่ารายเฟสของ DB-LASER (แผง 3 เฟสหน้ารายตู้) · 14+ = กระแสรวม */
+    const PH = [['v1', 392], ['v2', 391], ['v3', 393], ['a1', 58.6], ['a2', 45.7], ['a3', 45.4]];
+    if (i >= 8 && i < 14) return { ...r, scope_kind: 'zone', scope_name: 'DB-LASER', field: PH[i - 8][0], value: PH[i - 8][1], received_at: new Date().toISOString() };
+    return { ...r, scope_kind: 'zone', scope_name: N[i % 8], field: i < 8 ? 'kw' : 'a', value: i < 8 ? KW[i] : 50, received_at: new Date().toISOString() };
+  },
+  /* ⚡ Demand 15 นาที (2026-11-25 · ห้ามถอด) — แถวรายนาทีของตู้ MDB ต่อเนื่องถึงนาทีนี้ (เลขมิเตอร์เพิ่ม 15 kWh/นาที = 900 kW)
+     + เป้าตู้ MDB ⇒ DemandCard วาดครบทั้งค่าเฉลี่ย/คาดการณ์/แท่ง ใน crashsweep (เดิมไม่มี kwh_total = การ์ดเป็น "—" ล้วน) */
+  energy_readings: (r, i) => {
+    // ตู้ MDB ใน mock มีชั้นบนสุด 2 ตัว (MDB · MDB-10) ⇒ สลับกัน นาทีเดียวกันได้ทั้งคู่ (7 นาทีล่าสุด)
+    const t = Math.floor(Date.now() / 60000) * 60000 - Math.floor((14 - i) / 2) * 60000;
+    const k = Math.floor(i / 2);
+    return { ...r, scope_kind: 'zone', scope_name: i % 2 ? 'MDB-10' : 'MDB', bucket_at: new Date(t).toISOString(), kw: 900, kw_max: 980, kwh_total: (i % 2 ? 5000 : 1000) + k * 15 };
+  },
+  /* 🌱 EF ไฟฟ้า (2026-11-25 · ห้ามถอด) — เดิมไม่มี utility_key ⇒ efFor() ไม่เจอ = การ์ด CO₂ บนบอร์ด + แท็บรายเดือนวาดแต่กิ่ง "ยังไม่ได้ตั้ง" */
+  energy_emission_factors: (r, i) => ({ ...r, utility_key: 'electric', kg_co2e: i % 2 ? 0.493 : 0.482, effective_from: i % 2 ? '2023-11-28' : '2026-10-21', source_ref: 'TGO (mock)' }),
+  energy_panel_settings: (r, i) => ({ ...r, panel: i % 2 ? 'MDB-03' : 'MDB', demand_target_kw: i % 2 ? null : 1600, baseline_start: i % 2 ? null : '12:00:00', baseline_end: i % 2 ? null : '12:50:00' }),
+  integration_sources: (r, i) => ({
+    ...r, kinds: i % 2 ? ['energy_readings', 'energy_events'] : ['machine_state', 'piece_count'],
+    legacy_secret: false, key_hint: i % 3 ? 'ab12' : null,
+  }),
+  machine_tag_map: (r, i) => ({ ...r, tag: `JTSRA03-0${(i % 4) + 1}`, machine_id: i % 3 ? `id-${i}` : null }),
+  machine_state_events: (r, i) => ({
+    ...r, machine_tag: `JTSRA03-0${(i % 5) + 1}`,
+    started_at: isNullish(r) ? null : new Date(Date.now() - (i + 1) * 3600000).toISOString(),
+    ended_at: isNullish(r) ? null : new Date(Date.now() - (i + 1) * 3600000 + 300000).toISOString(),
+    duration_sec: 300, state: ['fault', 'idle', 'planned_stop', 'no_plan', 'comm_loss', 'weird'][i % 6],
+    reason_code: i % 4, reason_text: i % 2 ? `เหตุผล ${i % 4}` : null, is_minor: i % 2 === 0,
+  }),
+  fn_machine_counter_hourly: (r, i) => ({
+    ...r, machine_tag: `JTSRA03-0${(i % 5) + 1}`,
+    hour_at: isNullish(r) ? null : new Date(Date.now() - (i + 1) * 3600000).toISOString(),
+    qty: 40 + i, ng: i % 2, minutes: 60,
+  }),
+  fn_machine_shift_facts: (r, i) => ({
+    ...r, machine_tag: `JTSRA03-0${(i % 4) + 1}`, work_date: '2026-11-13', shift: i % 2 ? 'night' : 'day',
+    state: ['fault', 'idle', 'planned_stop', 'no_plan', 'unplanned'][i % 5], is_minor: i % 3 === 0, sec: 300 + i * 10, n: 1 + (i % 4),
+  }),
+  machine_live_state: (r, i) => ({
+    ...r, machine_tag: `JTSRA03-0${(i % 4) + 1}`, state_code: i % 5, state_text: i % 2 ? 'รองาน/Idle' : 'เดินเครื่อง',
+    since: new Date(Date.now() - (i + 1) * 60000).toISOString(), alarm_text: i % 3 ? null : 'None', received_at: new Date(Date.now() - (i % 2 ? 30000 : 600000)).toISOString(),
+  }),
+  machine_reason_map: (r, i) => ({ ...r, reason_kind: i % 2 ? 'onplan' : 'unplan', reason_code: i % 4, downtime_type_id: i % 3 ? `id-${i}` : null }),
 
   v_demand_flow_blocks: (r, i) => ({
     ...r, maker_line: FAM_LINE, pending_qty: isNullish(r) ? null : 500 + i,
@@ -646,6 +822,30 @@ const TABLE_FIXED = {
        ② `ot_scope: 'ot'`        เปิดสาขา isOt (ทิ้งแถว no_ot ทั้งหมด)
        ③ `anchor: 'shift_end'`   เปิดสาขาพักท้ายกะ (ยึดเวลาเลิกกะ · offset_min)
           — ถอดแถวนี้ = สาขาที่เพิ่งแก้ 20/10 ไม่ถูกรันในสวีปใดเลย */
+  /* 🧾 production_plan_lots — **ชั้นแผนของทีมวางแผน (Layer 1)** ที่ `<PlanFrameRow>` วาดบน /management
+     🔴 เดิมตารางนี้ไม่มีแถวใน mock เลย ⇒ แถวกรอบแผนไม่เคยถูกวาดในสวีปใดเลย และไม่มีใคร
+        (รวมทั้ง user) เคยเห็นว่าชั้นนี้มีอยู่จริง — เข้าใจผิดว่าบอร์ด "ไม่เชื่อมกับหน้าวางแผน"
+     ต้องตรงกับ mock ตัวอื่น: work_date 2026-08-04 · line LINE APRON ASSY / HYDROFORM · mat 10101001/02
+     **ห้ามถอดแถวพวกนี้** (audit/README.md §แถวพิเศษ) */
+  production_plan_lots: [
+    { id: 'pl-1', work_date: '2026-08-04', shift: 'day', line_name: 'LINE APRON ASSY / HYDROFORM',
+      seq: 1, mat_no: '10101001', part_name: 'BRKT RAD SUPT UPR RH', qty_plan: 360,
+      machine_no: 'SW10', die_no: 'D-1001', status: 'planned', prod_order_id: null,
+      est_min: null, setup_min_est: 20, note: null, planned_by: 'ทีมวางแผน' },
+    { id: 'pl-2', work_date: '2026-08-04', shift: 'day', line_name: 'LINE APRON ASSY / HYDROFORM',
+      seq: 2, mat_no: '10101002', part_name: 'BRKT RAD SUPT UPR LH', qty_plan: 240,
+      machine_no: 'SW10', die_no: 'D-1002', status: 'planned', prod_order_id: null,
+      est_min: null, setup_min_est: 20, note: null, planned_by: 'ทีมวางแผน' },
+    { id: 'pl-3', work_date: '2026-08-04', shift: 'day', line_name: 'LINE APRON ASSY / HYDROFORM',
+      seq: 3, mat_no: '10101001', part_name: 'BRKT RAD SUPT UPR RH', qty_plan: 480,
+      machine_no: 'SW10', die_no: 'D-1001', status: 'planned', prod_order_id: null,
+      est_min: null, setup_min_est: 20, note: null, planned_by: 'ทีมวางแผน' },
+    /* 🔴 ล็อตที่ไม่รู้ CT — เปิดสาขา `noCt` ของ PlanFrameRow (กล่องไม่สเกลกับเวลา + ตัวหลังจางลง) */
+    { id: 'pl-4', work_date: '2026-08-04', shift: 'day', line_name: 'LINE APRON ASSY / HYDROFORM',
+      seq: 4, mat_no: '19999999', part_name: 'พาร์ทที่ยังไม่มี cycle time', qty_plan: 120,
+      machine_no: null, die_no: null, status: 'planned', prod_order_id: null,
+      est_min: null, setup_min_est: null, note: null, planned_by: 'ทีมวางแผน' },
+  ],
   break_policies: [
     { id: 'bp-1', name_th: 'ประชุมแถวกะเช้า', name_en: 'Morning Line Meeting', shift: 'day',
       start_time: '08:00:00', duration_min: 10, process_type: 'common', ot_scope: 'always',
@@ -780,14 +980,17 @@ const TABLE_FIXED = {
     { id: 'kd-6', year: 2026, section: 'JIG MTN', scope_kind: 'department', scope_value: 'JIG MTN', line_group: null, category: 'customer', seq: 6, name: 'MO Closed on target', source: 'manual', unit: '%', target_compare: '>=', target_value: 99, commit_compare: '>=', commit_value: 95, direction: 'up', weight: 6, is_active: true, catalog_id: null, std_unit: 'Maintenance', std_item_id: null, kpi_catalog: null },
     /* ✍️ OEE กรอกมือของ PD1 (09/10 · เคสจริง PD2 คีย์ OEE ม.ค.–ส.ค. แล้วไม่ขึ้น) — เปิดสาขา overlay บนแถว auto:
        เดือนที่กรอก = ค่าทางการ (ทึบ) · เดือนที่ไม่กรอก = ค่าระบบ (computed ลายประ) · ห้ามถอด */
-    { id: 'kd-8', year: 2026, section: 'PD1', scope_kind: 'section', scope_value: 'PD1', line_group: null, category: 'internal', seq: 8, name: 'OEE', source: 'manual', target_value: 85, direction: 'up', weight: 5, is_active: true, catalog_id: 'kc-oee', std_unit: 'Production', std_item_id: null, kpi_catalog: { id: 'kc-oee', name: 'OEE', unit: '%', category: 'internal', direction: 'up', decimals: 2, summary_mode: 'average', value_scope: 'own', board_slot: 'oee' } },
+    /* 🤝 24/11 Customer Satisfaction (Q&D): นิยามโรงงาน = รางสูตร csat_qd_pct · นิยาม PD1 ถือเป้า/น้ำหนัก แต่ค่าอ่านจากแผ่นโรงงาน (value_scope plant) */
+    { id: 'kd-csat', year: 2026, section: null, scope_kind: 'plant', scope_value: null, line_group: null, category: 'customer', seq: 1, name: 'Customer Satisfaction (Q&D)', source: 'manual', provider: 'formula', provider_config: { formula: 'csat_qd_pct' }, target_compare: '>=', target_value: 100, commit_compare: '>=', commit_value: 95, direction: 'up', weight: 5, is_active: true, catalog_id: 'kc-csat', std_unit: null, std_item_id: null, kpi_catalog: { id: 'kc-csat', name: 'Customer Satisfaction (Q&D)', unit: '%', category: 'customer', direction: 'up', decimals: 2, summary_mode: 'average', value_scope: 'plant', board_slot: 'csat', value_min: 0, value_max: 100 } },
+    { id: 'kd-csat-pd1', year: 2026, section: 'PD1', scope_kind: 'section', scope_value: 'PD1', line_group: null, category: 'customer', seq: 1, name: 'Customer Satisfaction (Q&D)', source: 'manual', target_compare: '>=', target_value: 100, commit_compare: '>=', commit_value: 95, direction: 'up', weight: 5, is_active: true, catalog_id: 'kc-csat', std_unit: 'Production', std_item_id: null, kpi_catalog: { id: 'kc-csat', name: 'Customer Satisfaction (Q&D)', unit: '%', category: 'customer', direction: 'up', decimals: 2, summary_mode: 'average', value_scope: 'plant', board_slot: 'csat', value_min: 0, value_max: 100 } },
+    { id: 'kd-8', year: 2026, section: 'PD1', scope_kind: 'section', scope_value: 'PD1', line_group: null, category: 'internal', seq: 8, name: 'OEE', source: 'manual', target_value: 85, direction: 'up', weight: 5, is_active: true, catalog_id: 'kc-oee', std_unit: 'Production', std_item_id: null, kpi_catalog: { id: 'kc-oee', name: 'OEE', unit: '%', category: 'internal', direction: 'up', decimals: 2, summary_mode: 'average', value_scope: 'own', board_slot: 'oee', value_min: 0, value_max: 100 } },
     { id: 'kd-9', year: 2026, section: 'PD1', scope_kind: 'section', scope_value: 'PD1', line_group: null, category: 'internal', seq: 9, name: 'Safety', source: 'manual', target_value: 0, direction: 'down', weight: 5, is_active: true, catalog_id: 'kc-safe', std_unit: 'Production', std_item_id: null, kpi_catalog: { id: 'kc-safe', name: 'Safety', unit: 'ครั้ง', category: 'internal', direction: 'down', decimals: 0, summary_mode: 'sum', value_scope: 'own', board_slot: 'safe' } },
     // ⬆ 12/10 นิยามของ "หน่วยลูก" (แผนก id-2 ใต้ PD1) ที่ PD1 ไม่มี ⇒ บอร์ด PD1 ต้องรวมขึ้นเป็นแผ่น roll:… (sum · เป้ารวม) — ห้ามถอด
     { id: 'kd-10', year: 2026, section: 'PD1', scope_kind: 'department', scope_value: LINE_NAME(2), line_group: null, category: 'internal', seq: 10, name: 'Scrap Cost', source: 'manual', target_value: 50, direction: 'down', weight: 5, is_active: true, catalog_id: 'kc-scrap', std_unit: 'Production', std_item_id: null, kpi_catalog: { id: 'kc-scrap', name: 'Scrap Cost', unit: 'พันบาท', category: 'internal', direction: 'down', decimals: 1, summary_mode: 'sum', value_scope: 'own', board_slot: null } },
     // ⬆ 12/10 แม่ PD1 (kd-12) กับลูกแผนก id-2 (kd-11) ถือ KPI ทะเบียนเดียวกัน kc-rw (own · ไม่ใช่ค่าโรงงานร่วม): PD1 กรอกเอง ก.พ. · ลูกกรอก ม.ค.+ก.พ.
     //    ⇒ ม.ค. เติมจากลูก · ก.พ. ใช้ของ PD1 ไม่บวกซ้ำ (user: "แม่มี 2 ลูกกรอก 2 ไม่ใช่ 4") — ห้ามถอด
-    { id: 'kd-12', year: 2026, section: 'PD1', scope_kind: 'section', scope_value: 'PD1', line_group: null, category: 'internal', seq: 12, name: 'Rework Rate', source: 'manual', target_value: 3, direction: 'down', weight: 5, is_active: true, catalog_id: 'kc-rw', std_unit: 'Production', std_item_id: null, kpi_catalog: { id: 'kc-rw', name: 'Rework Rate', unit: '%', category: 'internal', direction: 'down', decimals: 2, summary_mode: 'average', value_scope: 'own', board_slot: null } },
-    { id: 'kd-11', year: 2026, section: 'PD1', scope_kind: 'department', scope_value: LINE_NAME(2), line_group: null, category: 'internal', seq: 11, name: 'Rework Rate', source: 'manual', target_value: 3, direction: 'down', weight: 5, is_active: true, catalog_id: 'kc-rw', std_unit: 'Production', std_item_id: null, kpi_catalog: { id: 'kc-rw', name: 'Rework Rate', unit: '%', category: 'internal', direction: 'down', decimals: 2, summary_mode: 'average', value_scope: 'own', board_slot: null } },
+    { id: 'kd-12', year: 2026, section: 'PD1', scope_kind: 'section', scope_value: 'PD1', line_group: null, category: 'internal', seq: 12, name: 'Rework Rate', source: 'manual', target_value: 3, direction: 'down', weight: 5, is_active: true, catalog_id: 'kc-rw', std_unit: 'Production', std_item_id: null, kpi_catalog: { id: 'kc-rw', name: 'Rework Rate', unit: '%', category: 'internal', direction: 'down', decimals: 2, summary_mode: 'average', value_scope: 'own', board_slot: null, value_min: 0, value_max: 100 } },
+    { id: 'kd-11', year: 2026, section: 'PD1', scope_kind: 'department', scope_value: LINE_NAME(2), line_group: null, category: 'internal', seq: 11, name: 'Rework Rate', source: 'manual', target_value: 3, direction: 'down', weight: 5, is_active: true, catalog_id: 'kc-rw', std_unit: 'Production', std_item_id: null, kpi_catalog: { id: 'kc-rw', name: 'Rework Rate', unit: '%', category: 'internal', direction: 'down', decimals: 2, summary_mode: 'average', value_scope: 'own', board_slot: null, value_min: 0, value_max: 100 } },
   ],
   /* ค่าจริง + แผนรายเดือนของ KPI กรอกมือ (2026-09-25) — ไม่มี 2 ตารางนี้ใน mock แปลว่า
      ทั้งตารางกรอกมือ · คอลัมน์สรุปทั้งปี · มินิกราฟ · แถว 📅 แผน **ไม่เคยถูกรันด้วยข้อมูลจริงใน harness**
@@ -804,13 +1007,31 @@ const TABLE_FIXED = {
     ...[12.5, 9.8, 14.1].map((v, i) => ({ id: `ke-10-${i}`, kpi_id: 'kd-10', month: i + 1, value: v })),   // ⬆ ค่าของหน่วยลูก (roll-up ขึ้น PD1)
     { id: 'ke-12-feb', kpi_id: 'kd-12', month: 2, value: 2.2 },   // แม่ PD1 กรอกเอง ก.พ. (ชนะของลูก)
     { id: 'ke-11-0', kpi_id: 'kd-11', month: 1, value: 4.5 }, { id: 'ke-11-1', kpi_id: 'kd-11', month: 2, value: 9 },   // ลูก: ม.ค. ถูกเติมขึ้นแม่ · ก.พ. ถูกของแม่ทับ   // Safety สรุปหน่วยงาน ⇒ เติมเดือนที่หน้างานไม่มีบันทึก (ROWS ทั่วไปไม่มี event_date/kind ⇒ นับได้ 0)
-    { id: 'ke-8-aug', kpi_id: 'kd-8', month: 8, value: 90.5 },   // เดือนที่ระบบมีค่าจากกะ (sessions 2026-08-04) ⇒ ต้องถูกค่าระบบทับ + จอเขียนบอก
+    { id: 'ke-8-aug', kpi_id: 'kd-8', month: 8, value: 90.5 },
+    /* 🧱 20/11 Rework Rate PD1 (kd-12 · ≤ 3 % · ยิ่งต่ำยิ่งดี) สูงทั้งปี ⇒ "เดือนที่เหลือต้องติดลบ" = การ์ด "ไม่ทัน Target ปีนี้" (ห้ามถอด — ด่านภาพ feasibility) */
+    ...[[1, 8.2], [3, 7.8], [4, 9.6], [5, 8.9], [6, 9.3], [7, 8.4], [8, 9.9], [9, 9.2], [10, 8.7]].map(([m, v]) => ({ id: `ke-12-m${m}`, kpi_id: 'kd-12', month: m, value: v })),   // ก.พ. มีแถว ke-12-feb อยู่แล้ว   // เดือนที่ระบบมีค่าจากกะ (sessions 2026-08-04) ⇒ ต้องถูกค่าระบบทับ + จอเขียนบอก
   ],
   /* 🧩 ลำดับแผ่นที่คนจัด (09/10) — PD1 เอา OEE ขึ้นก่อน %RM · คีย์ 'gone' = แผ่นที่ไม่มีแล้ว ต้องถูกข้ามไม่พัง (ห้ามถอด) */
   kpi_board_layouts: [
     { id: 'kbl-1', year: 2026, scope_kind: 'section', scope_value: 'PD1', row_keys: ['oee', 'gone', 'rm'], updated_by_name: 'ทดสอบ ระบบ' },
   ],
   /* 📝 หมายเหตุรายเดือน (30/09) — แผ่น %RM (slot rm) ที่ทั้งโรงงาน เดือน 3 มีโน้ต ⇒ เปิดสายเครื่องหมาย 📝 บนแท่ง + โมดัล (ห้ามถอด) */
+  /* 🤝 Customer Satisfaction (Q&D) รางสูตร (24/11) — นิยามโรงงาน provider formula csat_qd_pct + นิยาม PD1 (ค่าโรงงาน value_scope plant) ⇒ แผ่น csat ของ PD1 คิดจาก kpi_base_inputs csat_* (ห้ามถอด) */
+  kpi_base_inputs: [
+    ...[[1, 3, 3, 3, 3], [2, 4, 4, 3.5, 4], [3, 3, 4, 4, 4]].flatMap(([m, qa, qt, da, dt]) => [
+      { id: `kb-csat-q-a-${m}`, year: 2026, month: m, scope_kind: 'plant', scope_value: '', var_key: 'csat_q_actual', value: qa, created_by_name: 'csat-rollup' },
+      { id: `kb-csat-q-t-${m}`, year: 2026, month: m, scope_kind: 'plant', scope_value: '', var_key: 'csat_q_total', value: qt, created_by_name: 'csat-rollup' },
+      { id: `kb-csat-d-a-${m}`, year: 2026, month: m, scope_kind: 'plant', scope_value: '', var_key: 'csat_d_actual', value: da, created_by_name: 'csat-rollup' },
+      { id: `kb-csat-d-t-${m}`, year: 2026, month: m, scope_kind: 'plant', scope_value: '', var_key: 'csat_d_total', value: dt, created_by_name: 'csat-rollup' },
+    ]),
+  ],
+  /* 🤝 คะแนน Customer Satisfaction รายลูกค้า (24/11) — ให้ popup 🔍 ของแผ่น csat วาดตารางรายลูกค้า (ห้ามถอด · FORD ต.ค. Q เกรด C = เคสสีแดง) */
+  kpi_csat_scores: [
+    ...['FORD (FTM+AAT)', 'GWM', 'TSPKK', 'TSRA'].flatMap((c, ci) => [1, 2, 3].flatMap(m => [
+      { id: `kcs-${ci}-d-${m}`, year: 2026, month: m, customer: c, kind: 'delivery', result: c === 'GWM' ? 0 : 100 - (m === 2 && ci === 2 ? 3 : 0), score: m === 2 && ci === 2 ? 0.5 : 1, evaluated: !(c === 'GWM' && m === 1), remark: c === 'TSRA' ? 'ไม่มีการประเมินจากลูกค้า เนื่องจากไม่มี Order' : null, grade_a: c === 'GWM' ? '≤ 5 Points' : '≥ 81 Points' },
+      { id: `kcs-${ci}-q-${m}`, year: 2026, month: m, customer: c, kind: 'quality', result: m === 3 && ci === 0 ? 14 : 0, score: m === 3 && ci === 0 ? 0 : 1, evaluated: !(c === 'GWM' && m === 1), remark: null, grade_a: '≤ 6 PPM.' },
+    ])),
+  ],
   kpi_month_notes: [
     { id: 'kn-1', year: 2026, month: 3, scope_kind: 'plant', scope_value: '', row_key: 'rm', kind: 'remark', text: 'ราคาเหล็กขึ้น 4% ตามสัญญา Q1', created_by_name: 'ทดสอบ ระบบ', created_at: '2026-04-02T02:00:00Z', is_active: true },
     { id: 'kn-2', year: 2026, month: 3, scope_kind: 'plant', scope_value: '', row_key: 'rm', kind: 'action', text: 'เจรจา supplier รอบ 2 · เป้าลดลง 1.5% ใน Q2', created_by_name: 'ทดสอบ ระบบ', created_at: '2026-04-02T02:05:00Z', is_active: true },
@@ -907,6 +1128,17 @@ const TABLE_FIXED = {
         { key: 'from_vendor', label: 'รับคืนจากชุบ', kind: 'input' },
         { key: 'at_vendor', label: 'ค้างที่ร้านชุบ', kind: 'recur', recur: 'สูตรที่ยังไม่มี' },
       ] },
+    /* 🏬 บอร์ดสโตร์ (16/11) — start_date ว่าง = หน้าต่างเลื่อนตามวันนี้ · ไม่มี FC/SL · แถว รับ/จ่าย/คงเหลือ/SAP/Diff */
+    { id: 'mon-store', board_key: 'store-s407', name: 'S407 · พื้นที่สโตร์ภายนอก (Purchase part)', kind: 'st_purchase',
+      line_name: 'STORE', customer: null, period_kind: 'day', period_count: 22,
+      start_date: null, sl_row: 'out', sl_includes_seed: false, sort_order: 2, note: null,
+      rows: [
+        { key: 'in', label: 'รับ', kind: 'system' },
+        { key: 'out', label: 'จ่าย', kind: 'system' },
+        { key: 'balance', label: 'คงเหลือ', kind: 'recur', recur: 'stock_run' },
+        { key: 'sap', label: 'SAP', kind: 'input' },
+        { key: 'diff', label: 'Diff (SAP − คงเหลือ)', kind: 'recur', recur: 'sap_diff' },
+      ] },
   ],
   /* พาร์ท: mp-1 ใส่ยอดยกมาครบ · mp-2 **ไม่ใส่** (ต้องขึ้นแถบ "ยังไม่ใส่ยอดยกมา") ·
      mp-3 ไม่มีเลข MAT ในทะเบียนสินค้า (ต้องขึ้นป้าย "ยังไม่อยู่ในทะเบียนสินค้า") */
@@ -935,6 +1167,12 @@ const TABLE_FIXED = {
       model: null, raw_mat: null, process: null, rack: null, lot_qty: null, packing: null, cost: null,
       ct_sec: null, fc: null, pieces_per_shot: 2, kg_per_piece: 0.148, spec: 'WSS-M1A365-A11 1.40 X 187 X COIL',
       semi_part: 'GST FRT FNDR APR LH', sort_order: 1, note: null, is_active: true },
+    { id: 'mp-st1', board_id: 'mon-store', mat_no: '30047784', part_no: null, part_name: 'N1WB-E286F72-AC',
+      model: null, raw_mat: null, process: null, rack: null, lot_qty: null, packing: 300, cost: null,
+      ct_sec: null, fc: null, pieces_per_shot: null, kg_per_piece: null, spec: null, semi_part: null, sort_order: 1, note: null, is_active: true },
+    { id: 'mp-st2', board_id: 'mon-store', mat_no: '30047785', part_no: null, part_name: 'N1WB-E286F73-AC',
+      model: null, raw_mat: null, process: null, rack: null, lot_qty: null, packing: 300, cost: null,
+      ct_sec: null, fc: null, pieces_per_shot: null, kg_per_piece: null, spec: null, semi_part: null, sort_order: 2, note: null, is_active: true },
     { id: 'mp-6', board_id: 'mon-bad', mat_no: '20066542', part_no: 'R1WB-17K824-AAW', part_name: null,
       model: null, raw_mat: null, process: null, rack: null, lot_qty: null, packing: null, cost: null,
       ct_sec: null, fc: 3383.6, pieces_per_shot: null, kg_per_piece: null, spec: null, semi_part: null,
@@ -1169,4 +1407,6 @@ export const supabase = {
   functions: { invoke: () => Promise.resolve({ data: null, error: null }) },
 }
 export const supabaseDR = supabase
+/* ตรงกับ supabaseClient.js (ศูนย์เชื่อมต่อ /integrations ใช้ประกอบ URL ของ edge ใน flow Node-RED · 11/11) */
+export const DR_BASE_URL = 'https://mock-dr.supabase.co'
 export const setDrActorName = () => {}

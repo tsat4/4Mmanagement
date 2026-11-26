@@ -100,6 +100,9 @@ export async function exportMoExcel({
      โหลดจาก `loadRepairTechsFor()` ตอนกดปุ่มเท่านั้น (ไม่อยู่ใน MO_LIST_COLS — เหตุผลในไฟล์นั้น)
      🔴 **คนละคอลัมน์กับ "ช่างที่มอบหมาย"** — มอบหมายไว้ ≠ ลงมือจริง ห้ามยุบรวม */
   techsBy = {}, techsError = null,
+  /* 💳 ดัชนี "เลขเครื่อง → I/O" จาก `buildIoIndex(machines)` (18/11) — ใบที่ไม่มี `io_no` ของตัวเอง
+     ถอยไปอ่านทะเบียนเครื่อง · null = ยังไม่รู้ ⇒ คอลัมน์เขียนกำกับ ห้ามขีดเฉยๆ */
+  ioIdx = null,
 }) {
   const df = await getDocForm('mtn_mo_monthly_export', { title: 'สรุปใบแจ้งซ่อม MO รายเดือน' });
   const ExcelJS = (await import('exceljs')).default;   // lazy — ก้อน ~960KB ใช้ร่วมกับ export ตัวอื่น
@@ -163,7 +166,7 @@ export async function exportMoExcel({
   }
   head(ws1, 4, H1, moExportWidths());
 
-  const cellCtx = { statusLabel, teamName, cmtOf, commentText: moCommentText, commentsError, prsBy, prsError, techsBy, techsError };
+  const cellCtx = { statusLabel, teamName, cmtOf, commentText: moCommentText, commentsError, prsBy, prsError, techsBy, techsError, ioIdx };
   enriched.forEach((r, i) => {
     const n = 5 + i;
     moExportCells(r, cellCtx).forEach((cell, ci) => put(ws1, `${colRef(ci)}${n}`, cell.value, cell.opt));

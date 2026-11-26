@@ -29,13 +29,25 @@ test('🔴 ข้อมูลไม่ครบ ต้องไม่พ่น�
   assert.match(t, /ยืนยันเซ็น/);
 });
 
-test('confirmSign: กดตกลง = true · กดยกเลิก = false', () => {
-  assert.equal(confirmSign({ orderNo: 'A' }, () => true), true);
-  assert.equal(confirmSign({ orderNo: 'A' }, () => false), false);
+test('confirmSign: กดตกลง = true · กดยกเลิก = false (18/11: คืน Promise — ผู้เรียกต้อง await)', async () => {
+  assert.equal(await confirmSign({ orderNo: 'A' }, () => true), true);
+  assert.equal(await confirmSign({ orderNo: 'A' }, () => false), false);
+  assert.equal(await confirmSign({ orderNo: 'A' }, async () => true), true);   // ask ที่เป็น async (กล่องในแอป)
 });
 
-test('🔴 ไม่มี window (เทส/SSR) = ไม่ขวางการทำงาน', () => {
-  assert.equal(confirmSign({ orderNo: 'A' }), true);
+test('🔴 ไม่มี window/host (เทส/SSR) = ไม่ขวางการทำงาน', async () => {
+  assert.equal(await confirmSign({ orderNo: 'A' }), true);
+});
+
+test('warn — จังหวะที่ของจริงแก้ได้ ต้องเปลี่ยนบรรทัดเตือนท้ายได้ (คำเตือนที่ไม่จริง = คนเลิกอ่าน)', () => {
+  const def = signConfirmText({ what: 'x', orderNo: 'MO-1', actor: 'ก', as: 'หัวหน้า' });
+  assert.ok(def.includes('เซ็นแล้วแก้เองไม่ได้'), 'ไม่ส่ง warn = ข้อความ one-way เดิมต้องไม่เปลี่ยน');
+  const bin = signConfirmText({ what: 'ผลพิจารณา', orderNo: 'พาร์ท A · 2026-11-08',
+    actor: 'ข', as: 'ผู้พิจารณา', warn: '⚠️ แก้ย้อนหลังได้ที่ทะเบียน' });
+  assert.ok(bin.includes('⚠️ แก้ย้อนหลังได้ที่ทะเบียน'));
+  assert.ok(!bin.includes('เซ็นแล้วแก้เองไม่ได้'), 'ส่ง warn แล้วต้องแทนที่ ไม่ใช่ต่อท้าย');
+  /* 3 อย่างที่ต้องมีเสมอ ไม่ว่าจะส่ง warn หรือไม่ */
+  for (const t of ['ผลพิจารณา', 'พาร์ท A · 2026-11-08', 'ข', 'ผู้พิจารณา']) assert.ok(bin.includes(t), t);
 });
 
 test('ทะเบียน stage ของใบ MO — จ่ายงาน/ลงผลซ่อม ไม่ใช่การอนุมัติ ห้ามถาม', () => {

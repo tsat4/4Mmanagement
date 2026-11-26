@@ -3,6 +3,7 @@ import { allOf } from '../utils/filterLabels';
 import SearchSelect from './SearchSelect';
 import { SCOPE_KIND_META, scopeKey, parseScopeKey, filterScopeOptions, isPlant } from '../utils/orgScope';
 
+import { tr } from '../utils/i18n';
 /* ══ <OrgScopePicker> — เลือก "ขอบเขต" ตามผังองค์กร ทุกมิติ (2026-09-23 · คำสั่ง user) ═════════════
    *"เลือกส่วนงานตอนนี้เหมือนเลือกได้แค่ section และไม่ตรงกับผังองค์กร ควรกรองได้ทุกมิติในผังองค์กร"*
 
@@ -113,7 +114,7 @@ export default function OrgScopePicker({
   // ค่าที่เลือกไว้แต่ไม่อยู่ในตัวเลือก (นอกขอบเขต/ผังเปลี่ยน) ต้องไม่หายเงียบ — โชว์เป็นแถว ⚠
   const known = (ccOnly ? opts : all).some(o => o.key === curKey);
   const ghost = !known && curKey !== 'plant'
-    ? { key: curKey, kind: value.kind, value: value.value, depth: 0, label: `${index?.labelOf?.(value.kind, value.value) || value.value} ⚠ ${ccOnly && !isCc ? 'หน่วยนี้ไม่มีรหัส cost center เดียว — เลือกรหัสจากลิสต์' : 'ไม่อยู่ในตัวเลือกของคุณ'}` }
+    ? { key: curKey, kind: value.kind, value: value.value, depth: 0, label: `${index?.labelOf?.(value.kind, value.value) || value.value} ⚠ ${ccOnly && !isCc ? tr('หน่วยนี้ไม่มีรหัส cost center เดียว — เลือกรหัสจากลิสต์') : tr('ไม่อยู่ในตัวเลือกของคุณ')}` }
     : null;
 
   const emit = (key) => onChange?.(parseScopeKey(key));
@@ -123,12 +124,12 @@ export default function OrgScopePicker({
   const ccHint = useMemo(() => {
     if (!index || !ccAllowed || isCc || isPlant(value)) return null;
     const { code, multi } = index.ccOf(value.kind, value.value);
-    if (multi) return { text: `💰 ${multi} รหัส`, title: 'ไลน์ในกลุ่มนี้ใช้ cost center คนละรหัส — เลือกทีละรหัสที่ช่อง 💰', code: null };
+    if (multi) return { text: `💰 ${multi} ${tr("รหัส")}`, title: 'ไลน์ในกลุ่มนี้ใช้ cost center คนละรหัส — เลือกทีละรหัสที่ช่อง 💰', code: null };
     if (!code) return null;
     const pickable = ccOpts.some(o => o.value === code);
     return {
       text: `💰 ${code}`, code: pickable ? code : null,
-      title: pickable ? `cost center ของหน่วยนี้ — กดเพื่อดูตามรหัสนี้แทน` : `cost center ของหน่วยนี้ (${code})`,
+      title: pickable ? `cost center ${tr("ของหน่วยนี้ — กดเพื่อดูตามรหัสนี้แทน")}` : `cost center ${tr("ของหน่วยนี้")} (${code})`,
     };
   }, [index, value, ccAllowed, isCc, ccOpts]);
 
@@ -139,7 +140,7 @@ export default function OrgScopePicker({
     const mine = inside ? ccOpts.filter(o => inside.has(o.value)) : [];
     const rest = inside ? ccOpts.filter(o => !inside.has(o.value)) : ccOpts;
     const groups = [];
-    if (mine.length) groups.push({ label: `📍 ใน ${index.labelOf(value.kind, value.value)}`, items: mine });
+    if (mine.length) groups.push({ label: `📍 ${tr("ใน")} ${index.labelOf(value.kind, value.value)}`, items: mine });
     let cur = null;
     rest.forEach((o) => {
       const g = o.cc_group || 'รหัสที่ผังยังไม่ผูกหน่วย';
@@ -153,19 +154,19 @@ export default function OrgScopePicker({
     <select
       value={isCc ? curKey : ''} disabled={disabled}
       title={isCc
-        ? `กำลังกรองด้วยรหัสนี้ (หน่วยเจ้าของ = ${ccOwner ? index.labelOf(ccOwner.kind, ccOwner.value) : 'ผังยังไม่ผูกหน่วย'}) · เลือก "ทุกรหัส" = กลับไปดูทั้งหน่วยเจ้าของ`
-        : 'Cost Center — แกนคนละสายกับผังองค์กร (1 กลุ่มไลน์ครอบหลายรหัสได้ และหลายไลน์ใช้รหัสเดียวกันได้)'}
+        ? `${tr("กำลังกรองด้วยรหัสนี้ (หน่วยเจ้าของ")} = ${ccOwner ? index.labelOf(ccOwner.kind, ccOwner.value) : tr('ผังยังไม่ผูกหน่วย')}) · ${tr("เลือก \"ทุกรหัส\" = กลับไปดูทั้งหน่วยเจ้าของ")}`
+        : tr("Cost Center — แกนคนละสายกับผังองค์กร (1 กลุ่มไลน์ครอบหลายรหัสได้ และหลายไลน์ใช้รหัสเดียวกันได้)")}
       /* "ทุกรหัส" ตอนกรองด้วย cc อยู่ = ถอยไปหน่วยเจ้าของ (ไม่ใช่กระโดดไปทั้งโรงงาน) */
       onChange={e => (e.target.value ? emit(e.target.value) : emit(ownerKey || 'plant'))}
       style={{ width: 210, fontSize: 13, ...inputStyle, ...(isCc ? { borderColor: 'var(--accent)', boxShadow: '0 0 0 1px var(--accent)' } : null) }}>
       <option value="">💰 {allOf('รหัส Cost Center')}</option>
       {/* รหัสที่เลือกไว้แต่ไม่อยู่ในตัวเลือก (ผังเปลี่ยน/นอกขอบเขต) ต้องไม่หายเงียบ */}
-      {ghost && isCc && <option value={ghost.key}>⚠ {ghost.label}</option>}
+      {ghost && isCc && <option value={ghost.key}>⚠ {tr(ghost.label)}</option>}
       {ccGroups.map(g => (
-        <optgroup key={g.label} label={g.label}>
+        <optgroup key={g.label} label={tr(g.label)}>
           {g.items.map(o => (
             <option key={o.key} value={o.key}>
-              {`💰 ${o.value}${o.cc_name ? ` · ${o.cc_name}` : ''}`}
+              {`${o.value}${o.cc_name ? ` · ${o.cc_name}` : ''}`}
             </option>
           ))}
         </optgroup>
@@ -174,14 +175,14 @@ export default function OrgScopePicker({
   ) : null;
 
   const ownerChip = isCc && ccOwner ? (
-    <button type="button" onClick={() => emit(ownerKey)} title={`เลิกกรองด้วยรหัส — ดูทั้ง ${index.labelOf(ccOwner.kind, ccOwner.value)}`}
-      style={{ padding: '3px 8px', fontSize: 11.5, borderRadius: 999, cursor: 'pointer', fontWeight: 700, border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text2)' }}>
-      ↑ ทั้ง {index.labelOf(ccOwner.kind, ccOwner.value)}
+    <button type="button" onClick={() => emit(ownerKey)} title={`${tr("เลิกกรองด้วยรหัส — ดูทั้ง")} ${index.labelOf(ccOwner.kind, ccOwner.value)}`}
+      style={{ padding: '3px 8px', fontSize: 11.5, borderRadius: 'var(--r-md)', cursor: 'pointer', fontWeight: 700, border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text2)' }}>
+      {tr('↑ ทั้ง')} {index.labelOf(ccOwner.kind, ccOwner.value)}
     </button>
   ) : null;
   /* ⚠️ ผังโหลดไม่สำเร็จ — ต้องเห็นข้างช่องทั้ง 2 โหมด (native select ไม่มีที่เขียนในลิสต์) */
   const failNote = failed
-    ? <span key="orgfail" style={{ fontSize: 11, fontWeight: 700, color: 'var(--red)' }}>⚠️ {failed} — ตัวเลือกไม่ครบ</span>
+    ? <span key="orgfail" style={{ fontSize: 11, fontWeight: 700, color: 'var(--red)' }}>⚠️ {failed} {tr('— ตัวเลือกไม่ครบ')}</span>
     : null;
   const wrap = (node) => (ccSelect || ccHint || ownerChip || failNote
     ? (
@@ -191,13 +192,13 @@ export default function OrgScopePicker({
         {ccHint && (ccHint.code
           ? (
             <button type="button" onClick={() => emit(scopeKey('cost_center', ccHint.code))} title={ccHint.title}
-              style={{ padding: '3px 8px', fontSize: 11.5, borderRadius: 999, cursor: 'pointer', fontWeight: 700, border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text2)' }}>
+              style={{ padding: '3px 8px', fontSize: 11.5, borderRadius: 'var(--r-md)', cursor: 'pointer', fontWeight: 700, border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text2)' }}>
               {ccHint.text}
             </button>
           )
           : (
             <span title={ccHint.title}
-              style={{ padding: '3px 8px', fontSize: 11.5, borderRadius: 999, border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--muted)' }}>
+              style={{ padding: '3px 8px', fontSize: 11.5, borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--muted)' }}>
               {ccHint.text}
             </span>
           ))}
@@ -224,7 +225,7 @@ export default function OrgScopePicker({
       id: o.key,
       label: `💰 ${o.value}${o.cc_name ? ` · ${o.cc_name}` : ''}`,
       sub: (o.owners || []).length
-        ? `ผูกกับ ${(o.owners || []).map(w => index.labelOf(w.kind, w.value)).join(' · ')}`
+        ? `${tr("ผูกกับ")} ${(o.owners || []).map(w => index.labelOf(w.kind, w.value)).join(' · ')}`
         : 'ผังยังไม่มีหน่วยไหนผูกรหัสนี้',
       group: `💰 ${g.label}`,
       keywords: [o.cc_name, ...(o.owners || []).map(w => w.value)].filter(Boolean).join(' '),
@@ -234,9 +235,9 @@ export default function OrgScopePicker({
     return (
       <SearchSelect value={sel ? sel.id : ''} text={sel ? sel.label : ''} options={sOpts}
         onChange={({ id: k }) => { if (k) emit(k); else if (plantLabel != null) emit('plant'); }}
-        placeholder={ccAllowed ? 'ค้นส่วนงาน / แผนก / ไลน์ / รหัส cost center…' : 'ค้นส่วนงาน / แผนก / ไลน์…'}
-        emptyText="ไม่พบในผังองค์กร — ตั้งผังที่ /org-setup"
-        loadFail={failed ? `⚠️ ${failed} — ตัวเลือกขอบเขตไม่ครบ (ไม่ได้แปลว่าผังมีแค่นี้)` : ''}
+        placeholder={ccAllowed ? tr('ค้นส่วนงาน / แผนก / ไลน์ / รหัส cost center…') : tr('ค้นส่วนงาน / แผนก / ไลน์…')}
+        emptyText={tr('ไม่พบในผังองค์กร — ตั้งผังที่ /org-setup')}
+        loadFail={failed ? `⚠️ ${failed} — ${tr("ตัวเลือกขอบเขตไม่ครบ (ไม่ได้แปลว่าผังมีแค่นี้")})` : ''}
         maxRows={999} disabled={disabled} inputId={id} style={{ width, ...style }} inputStyle={inputStyle} />
     );
   }
@@ -261,7 +262,7 @@ export default function OrgScopePicker({
   const ccLabel = (o) => {
     const nm = o.cc_name || (o.owners?.[0] ? index.labelOf(o.owners[0].kind, o.owners[0].value) : '');
     const n = index?.lineNamesOf ? index.lineNamesOf('cost_center', o.value).length : 0;
-    return `💰 ${o.value}${nm ? ` · ${nm}` : ''}${n > 1 ? ` (${n} ไลน์)` : ''}`;
+    return `💰 ${o.value}${nm ? ` · ${nm}` : ''}${n > 1 ? ` (${n} ${tr("ไลน์")})` : ''}`;
   };
   const render = (o) => (
     <option key={o.key} value={o.key} disabled={!canPick(o)}>
@@ -270,16 +271,16 @@ export default function OrgScopePicker({
   );
   return wrap(
     <select id={id} value={orgKey} disabled={disabled}
-      title={isCc && ccOwner ? `หน่วยเจ้าของรหัส ${value.value} (กำลังกรองด้วยรหัสอยู่ — เปลี่ยนช่องนี้ = เลิกกรองด้วยรหัส)` : title}
+      title={isCc && ccOwner ? `${tr("หน่วยเจ้าของรหัส")} ${value.value} (${tr("กำลังกรองด้วยรหัสอยู่ — เปลี่ยนช่องนี้ = เลิกกรองด้วยรหัส")})` : title}
       /* เลือกหน่วยเจ้าของซ้ำตอนกรองด้วย cc = เลิกกรองด้วยรหัส (select ไม่ยิง change ถ้าค่าเท่าเดิม ⇒ จับที่ click ของ option ไม่ได้ · ใช้ชิป ↑ แทน) */
       onChange={e => emit(e.target.value)}
       style={{ width, fontSize: 13, ...style, ...inputStyle }}>
-      {ghost && !isCc && <option value={ghost.key}>⚠ {ghost.label}</option>}
+      {ghost && !isCc && <option value={ghost.key}>⚠ {tr(ghost.label)}</option>}
       {groups.map((g, i) => (g.label
         ? (
-          <optgroup key={i} label={g.label}>
+          <optgroup key={i} label={tr(g.label)}>
             {g.div && (!kinds || kinds.includes('division')) && (
-              <option value={g.div.key} disabled={!canPick(g.div)}>{`${g.div.icon || '🏢'} ${g.div.label} (ทั้งฝ่าย)`}</option>
+              <option value={g.div.key} disabled={!canPick(g.div)}>{`${g.div.icon || '🏢'} ${g.div.label} (${tr("ทั้งฝ่าย")})`}</option>
             )}
             {g.items.map(render)}
           </optgroup>

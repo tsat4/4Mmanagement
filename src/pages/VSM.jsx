@@ -17,7 +17,7 @@ import { UserContext } from '../App';
 import { toast } from '../components/Toast';
 import { can } from '../utils/permissions';
 import { isFgMat } from '../utils/matPrefix';
-import { inSectionScope } from '../utils/sectionScope';
+import { inSectionScope, lineScope } from '../utils/sectionScope';
 import { getLineFamilyNames } from '../utils/lineHierarchy';
 import { loadCompanyCalendar, countWorkingDaysInMonth } from '../utils/companyCalendar';
 import { groupRoutings } from '../utils/routing';
@@ -42,6 +42,9 @@ import { RATE, LIVE } from '../utils/refreshRates';
 import { coalesce } from '../utils/liveRefresh';
 import { liveChannel } from '../utils/liveChannel';
 import { DeleteButton } from '../components/IconButton';
+import { tr, dateLocale } from '../utils/i18n';
+import InfoMore from '../components/InfoMore';   // ⓘ คำอธิบายพับ (UI §6.10)
+import { directSheetRows } from '../utils/bomTree';   // 🌳 ลูกตรงแบบ SAP (19/11)
 
 const monthKeyNow = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; };
 // วันงานตามกฎระบบ: ก่อน 08:00 = วันก่อนหน้า (กะดึกข้ามวัน) — ห้าม toISOString (UTC เพี้ยน)
@@ -56,22 +59,22 @@ const monthBounds = mk => {
   return { from: `${mk}-01`, to: `${mk}-${String(last).padStart(2, '0')}` };
 };
 const STATES = [
-  { key: 'current', label: '📍 Current state' },
-  { key: 'future', label: '🎯 Future state' },
-  { key: 'ideal', label: '✨ Ideal state' },
+  { key: 'current', label: 'Current state' },
+  { key: 'future', label: 'Future state' },
+  { key: 'ideal', label: 'Ideal state' },
 ];
 const TABS = [
-  { key: 'doc', label: '📋 เอกสาร VSM (snapshot)' },
-  { key: 'live', label: '⚡ สายธารสด (Realtime)' },
+  { key: 'doc', label: 'เอกสาร VSM (snapshot)' },
+  { key: 'live', label: 'สายธารสด (Realtime)' },
 ];
 const WARN_STYLE = {
-  error: { bg: 'rgba(239,68,68,0.12)', bd: '#ef4444', icon: '⛔' },
-  warn: { bg: 'rgba(245,158,11,0.12)', bd: '#f59e0b', icon: '⚠️' },
-  info: { bg: 'rgba(59,130,246,0.10)', bd: '#3b82f6', icon: 'ℹ️' },
+  error: { bg: 'var(--red-dim)', bd: 'var(--red)', icon: '⛔' },
+  warn: { bg: 'var(--amber-dim)', bd: 'var(--amber)', icon: '⚠️' },
+  info: { bg: 'var(--blue-dim)', bd: 'var(--blue)', icon: 'ℹ️' },
 };
 
 export default function VSM() {
-  const { role, lineId, sections, fullName } = useContext(UserContext);
+  const { role, lineId, sections, fullName, scopeIdx } = useContext(UserContext);
   const scopeSecs = sections || [];
   const canManage = can('vsm', 'manage', role);
   const [tab, setTab] = useTabParam(TABS.map(t => t.key), 'doc');
@@ -124,14 +127,12 @@ export default function VSM() {
   }, []);
 
   // scope มาตรฐาน: leader = family ไลน์ตัวเอง · role อื่น = ตาม sections · ไม่มี scope = ทั้งหมด
+  /* 🔭 ของกลาง `lineScope()` (QC audit 09/11) — สูตรเดิมที่นี่แคบกว่าที่ `profiles` ตั้งไว้
+     (leader ได้ครอบครัวไลน์ล้วน · ไม่รู้จัก scopeIdx) · `null` = ไม่จำกัด (ความหมายเดิม) */
   const scopeLineNames = useMemo(() => {
-    if (role === 'leader' && lineId) {
-      const me = lines.find(l => String(l.id) === String(lineId));
-      return me ? new Set(getLineFamilyNames(lines, me.name).map(n => n.toLowerCase())) : null;
-    }
-    if (scopeSecs.length) return new Set(lines.filter(l => inSectionScope(scopeSecs, l.section)).map(l => l.name.toLowerCase()));
-    return null;
-  }, [role, lineId, lines, scopeSecs]);
+    const r = lineScope({ role, lineId, sections: scopeSecs, lines, scopeIdx });
+    return r.unlimited ? null : new Set(r.names.map(n => String(n).toLowerCase()));
+  }, [role, lineId, lines, scopeSecs, scopeIdx]);
 
   /* ตัวเลือก FG — เฉพาะเบอร์ 1 (สินค้าสำเร็จรูป) + กรองตาม scope (กฎ dropdown-scope)
      🔴 ไม่กรองด้วยคำค้นที่นี่อีก (QC 06/10) — เดิมหน้านี้มี **2 ตัวควบคุมทำงานเดียวกัน**:
@@ -145,6 +146,26 @@ export default function VSM() {
     if (scopeLineNames && p.line_name && !scopeLineNames.has(String(p.line_name).toLowerCase())) return false;
     return true;
   }), [products, scopeLineNames]);
+
+  /* 🔭 ใบ VSM ที่บันทึกไว้ — กรองตามขอบเขตบัญชีด้วยแกนเดียวกับตัวเลือก FG ข้างบน (09/11)
+     ใบผูก `mat_no` ของ FG ⇒ ไลน์ของใบ = `dr_products.line_name` ของ MAT นั้น
+     · MAT มีหลายแถว (หลายลูกค้า/ไลน์) = ซ่อนเฉพาะเมื่อ**ทุก**ไลน์ที่รู้อยู่นอกขอบเขต
+     · หา MAT ในทะเบียนไม่เจอ / ไม่มีไลน์ = ตัดสินไม่ได้ ⇒ คงไว้ · `scopeLineNames = null` = ชุดเดิมเป๊ะ
+     🔴 ซ่อนไปกี่ใบต้องเขียนบนจอ (`savedHidden`) */
+  const savedVisible = useMemo(() => {
+    if (!scopeLineNames) return savedMaps;
+    const linesOfMat = {};
+    products.forEach(p => {
+      if (!p.mat_no || !p.line_name) return;
+      (linesOfMat[p.mat_no] ||= new Set()).add(String(p.line_name).toLowerCase());
+    });
+    return savedMaps.filter(m => {
+      const ls = linesOfMat[m.mat_no];
+      if (!ls || !ls.size) return true;
+      return [...ls].some(n => scopeLineNames.has(n));
+    });
+  }, [savedMaps, products, scopeLineNames]);
+  const savedHidden = savedMaps.length - savedVisible.length;
 
   // ชุด PFC (/pe-docs) ที่ตรงกับ FG นี้ — worklist ใช้ชี้ปุ่ม "เสนอ routing จาก PFC" ให้ตรงชุด
   const peSetForFg = useMemo(() => {
@@ -172,10 +193,11 @@ export default function VSM() {
       // BOM ของ FG → รู้ว่าต้องดึง routing/สต๊อกของพาร์ทลูกตัวไหนบ้าง
       // ⚠ error ของ supabase คืน data:null (ไม่ใช่ undefined) — default `= []` ไม่ทำงาน ต้อง throw ให้ toast บอกจริง
       const { data: bomRaw, error: bomErr } = await supabaseDR.from('bom_items')
-        .select('mat_no, part_no, part_name, qty_per_unit, supplier, source_line')
+        .select('product_id, parent_mat, mat_no, part_no, part_name, qty_per_unit, supplier, source_line')
         .eq('product_id', fg.id).eq('is_active', true);
       if (bomErr) throw new Error(`โหลด BOM ไม่สำเร็จ: ${bomErr.message}`);
-      const bomItems = bomRaw || [];
+      // 🌳 19/11: ลูกตรงของ FG เท่านั้น (กติกา SAP) — แถวหลานในใบนี้ไม่ใช่ลูกของ FG (qty เป็นต่อ 1 ลูก)
+      const bomItems = directSheetRows(bomRaw || [], [{ id: fg.id, mat_no: fg.mat_no }]);
 
       const allMats = [fg.mat_no, ...bomItems.map(b => b.mat_no)].filter(Boolean);
       const childLines = bomItems
@@ -209,7 +231,7 @@ export default function VSM() {
       //    + `const { data }` กลืน error ⇒ C/O (setup) กับเวลาหยุดตามแผน ต่ำกว่าจริง/เป็น 0
       //    แล้ว **ค้างอยู่ใน snapshot ที่พิมพ์ออกไปแล้ว** (VSM เก็บถาวร แก้ย้อนหลังไม่ได้)
       const dtRes = await fetchByIds(sessionIds, (c) => supabaseDR.from('downtime_logs')
-        .select('session_id, duration_min, started_at, ended_at, dr_downtime_types(category, six_big_loss)')
+        .select('session_id, duration_min, started_at, ended_at, dr_downtime_types(category, planned_cap_min, six_big_loss)')
         .in('session_id', c));
       const dtRaw = dtRes.rows;
       if (dtRes.error || dtRes.truncated) setLoadWarn('โหลด downtime ไม่ครบ — ค่า C/O และเวลาหยุดตามแผนอาจต่ำกว่าจริง (อย่าเพิ่งบันทึกเป็นเอกสาร)');
@@ -354,7 +376,7 @@ export default function VSM() {
           .select('session_id, mat_no, status, qty, qty_ok, qty_actual, qty_target, machine_no, opened_at, confirmed_at')
           .in('session_id', ids),
         supabaseDR.from('downtime_logs')
-          .select('session_id, machine_no, description, started_at, ended_at, duration_min, created_at, dr_downtime_types(name_th, category)')
+          .select('session_id, machine_no, description, started_at, ended_at, duration_min, created_at, dr_downtime_types(name_th, category, planned_cap_min)')
           .in('session_id', ids),
         // excl_from_q ต้อง join มาด้วย ไม่งั้นงานทดลองตกหล่นเงียบ (กฎ %Q)
         supabaseDR.from('defect_logs')
@@ -479,53 +501,60 @@ export default function VSM() {
   // UI-STANDARD 2026-09-24 — วางใน <FilterBar> (select ไม่ยืดเต็มแถวอีก · ขนาดจาก token)
   const fgPicker = (
     <>
-      <span className="filter-label">สินค้าสำเร็จรูป (FG · เบอร์ 1)</span>
+      <span className="filter-label">{tr('สินค้าสำเร็จรูป (FG · เบอร์ 1)')}</span>
       <ProductSelect value={matNo} products={fgOptions} onChange={({ mat_no }) => setMatNo(mat_no || '')}
-        placeholder="— ค้น MAT / ชื่อ / P/N เพื่อเลือกสินค้า —" style={{ flex: 1, minWidth: 240 }} />
+        placeholder={tr('— ค้น MAT / ชื่อ / P/N เพื่อเลือกสินค้า —')} style={{ flex: 1, minWidth: 240 }} />
     </>
   );
 
   return (
     <Page width="full">
-      <PageHeader title="แผนผังสายธารคุณค่า (Value Stream Map)" icon="🗺️"
+      <PageHeader title={tr('แผนผังสายธารคุณค่า (Value Stream Map)')} icon="🗺️"
         sub={tab === 'live'
-          ? 'มุมมองสด: สถานะไลน์ · OEE กะปัจจุบัน · คงคลัง ▲ ปัจจุบัน — ไม่ใช่เอกสารทางการ'
-          : 'เลือกสินค้าสำเร็จรูป → ระบบดึง CT · %OEE · C/O · LOT · คงคลัง · TT จากข้อมูลจริงมาสร้างผังให้'}
+          ? tr("มุมมองสด: สถานะไลน์ · OEE กะปัจจุบัน · คงคลัง ▲ ปัจจุบัน — ไม่ใช่เอกสารทางการ")
+          : tr("เลือกสินค้าสำเร็จรูป → ระบบดึง CT · %OEE · C/O · LOT · คงคลัง · TT จากข้อมูลจริงมาสร้างผังให้")}
         tabs={TABS} tab={tab} onTab={setTab} />
 
-      <ReadOnlyNote show={!canManage} role={role} what="สร้าง/แก้ใบ VSM"
-        permKey="vsm:manage" hint="ยังเปิดดูใบเดิมและพิมพ์ได้ตามปกติ" />
+      <ReadOnlyNote show={!canManage} role={role} what={tr("สร้าง/แก้ใบ VSM")}
+        permKey="vsm:manage" hint={tr('ยังเปิดดูใบเดิมและพิมพ์ได้ตามปกติ')} />
 
       {tab === 'doc' && <>
       {/* ── แถบควบคุม ── */}
       <FilterBar style={{ marginBottom: 14 }}>
         {fgPicker}
-        <span className="filter-label">เดือนข้อมูล</span>
+        <span className="filter-label">{tr('เดือนข้อมูล')}</span>
         <input type="month" value={monthKey} onChange={e => setMonthKey(e.target.value)} />
-        <span className="filter-label">สถานะผัง</span>
+        <span className="filter-label">{tr('สถานะผัง')}</span>
         <select value={state} onChange={e => setState(e.target.value)}>
-          {STATES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+          {STATES.map(s => <option key={s.key} value={s.key}>{tr(s.label)}</option>)}
         </select>
         <span className="spacer" />
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button onClick={() => generate(false)} disabled={!matNo || busy} style={btn('var(--accent)', { opacity: (!matNo || busy) ? 0.5 : 1 })}>
-            {busy ? '⏳ กำลังดึง…' : '⚡ สร้างร่างจากข้อมูลจริง'}
+            {busy ? tr('กำลังดึง…') : tr('สร้างร่างจากข้อมูลจริง')}
           </button>
           {model && rawRef && (
-            <button onClick={() => generate(true)} disabled={busy} style={btn('var(--bg3)', { color: 'var(--text)' })}>↻ ดึงข้อมูลใหม่</button>
+            <button onClick={() => generate(true)} disabled={busy} style={btn('var(--bg3)', { color: 'var(--text)' })}>{tr('ดึงข้อมูลใหม่')}</button>
           )}
-          {model && canManage && <button onClick={save} disabled={busy} style={btn('#3b82f6', { color: '#fff' })}>💾 บันทึก</button>}
-          {model && <button onClick={() => doPrint('a3')} style={btn('#f59e0b')}>📋 A3 Report (Toyota)</button>}
-          {model && <button onClick={() => doPrint('sheet')} style={btn('var(--bg3)', { color: 'var(--text)' })}>🖨️ ใบ VSM</button>}
-          {model && <button onClick={() => setShowA3(v => !v)} style={btn('var(--bg3)', { color: 'var(--text)' })}>✍️ เนื้อหา A3</button>}
-          <button onClick={() => setShowLoad(v => !v)} style={btn('var(--bg3)', { color: 'var(--text)' })}>📂 ใบที่บันทึกไว้ ({savedMaps.length})</button>
+          {model && canManage && <button onClick={save} disabled={busy} style={btn('var(--blue)', { color: '#fff' })}>{tr('บันทึก')}</button>}
+          {model && <button onClick={() => doPrint('a3')} style={btn('var(--amber)')}>A3 Report (Toyota)</button>}
+          {model && <button onClick={() => doPrint('sheet')} style={btn('var(--bg3)', { color: 'var(--text)' })}>{tr('ใบ VSM')}</button>}
+          {model && <button onClick={() => setShowA3(v => !v)} style={btn('var(--bg3)', { color: 'var(--text)' })}>{tr('เนื้อหา A3')}</button>}
+          <button onClick={() => setShowLoad(v => !v)} style={btn('var(--bg3)', { color: 'var(--text)' })}>{tr('ใบที่บันทึกไว้ (')}{savedVisible.length})</button>
         </div>
       </FilterBar>
 
       {showLoad && (
         <div style={{ ...S.card, marginBottom: 14, maxHeight: 260, overflowY: 'auto' }}>
-          {!savedMaps.length && <div style={{ fontSize: 13, color: 'var(--muted)' }}>ยังไม่มีใบที่บันทึกไว้</div>}
-          {savedMaps.map(m => (
+          {!savedVisible.length && <div style={{ fontSize: 13, color: 'var(--muted)' }}>
+            {savedHidden ? tr("ไม่มีใบของไลน์ในขอบเขตของคุณ") : tr("ยังไม่มีใบที่บันทึกไว้")}
+          </div>}
+          {savedHidden > 0 && (
+            <div style={{ fontSize: 12, color: 'var(--muted)', padding: '4px 8px' }}>
+              🔭 {tr("แสดงเฉพาะใบของไลน์ในขอบเขตของคุณ · ซ่อนใบของไลน์อื่น")} {savedHidden} {tr("ใบ")}
+            </div>
+          )}
+          {savedVisible.map(m => (
             <div key={m.id} onClick={() => openSaved(m.id)}
               style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '7px 8px', borderBottom: '1px solid var(--border)', cursor: 'pointer', fontSize: 12.5, color: 'var(--text)' }}>
               <span style={{ fontWeight: 700, minWidth: 92 }}>{m.mat_no}</span>
@@ -540,19 +569,19 @@ export default function VSM() {
 
       {!model && (
         <div style={{ ...S.card, textAlign: 'center', padding: 40, color: 'var(--muted)', fontSize: 14 }}>
-          เลือกสินค้าสำเร็จรูปแล้วกด <b style={{ color: 'var(--text)' }}>⚡ สร้างร่างจากข้อมูลจริง</b>
-          <div style={{ fontSize: 12, marginTop: 8 }}>
-            ลำดับกระบวนการ (ปั๊ม → ประกอบ → …) ตั้งที่ <b>Product Master → 🔀 Routing</b> —
-            ยังไม่ได้ตั้ง ระบบจะใช้ไลน์เดียวจาก Product Master ไปก่อนแล้วเตือนไว้
-          </div>
+          {tr("เลือกสินค้าสำเร็จรูปแล้วกด")} <b style={{ color: 'var(--text)' }}>{tr('⚡ สร้างร่างจากข้อมูลจริง')}</b>
+          <InfoMore label={tr('ลำดับกระบวนการมาจากไหน')} size={11.5} style={{ marginTop: 8 }}>
+            {tr("ลำดับกระบวนการ (ปั๊ม → ประกอบ → …) ตั้งที่")} <b>Product Master → 🔀 Routing</b> —
+            {tr("ยังไม่ได้ตั้ง ระบบจะใช้ไลน์เดียวจาก Product Master ไปก่อนแล้วเตือนไว้")}
+          </InfoMore>
         </div>
       )}
 
       {model && showA3 && (
         <div style={{ ...S.card, marginBottom: 14 }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>✍️ เนื้อหา A3 Report (Toyota / Denso)</div>
+          <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>{tr('✍️ เนื้อหา A3 Report (Toyota / Denso)')}</div>
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 12 }}>
-            ช่อง <b>② สภาพปัจจุบัน</b> ระบบสรุปข้อเท็จจริง + ผัง VSM ให้เอง — ที่เหลือเป็นการวิเคราะห์ของคน ระบบไม่เดาให้
+            {tr("ช่อง")} <b>{tr('② สภาพปัจจุบัน')}</b> {tr("ระบบสรุปข้อเท็จจริง + ผัง VSM ให้เอง — ที่เหลือเป็นการวิเคราะห์ของคน ระบบไม่เดาให้")}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12, alignContent: 'start' }}>
             {[
@@ -567,8 +596,8 @@ export default function VSM() {
                 <label style={{ fontSize: 11.5, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>{label}</label>
                 <textarea rows={rows} value={a3[k] || ''} onChange={e => setA3(v => ({ ...v, [k]: e.target.value }))}
                   placeholder={ph}
-                  style={{ width: '100%', fontSize: 12.5, padding: '7px 10px', borderRadius: 6, resize: 'vertical',
-                    border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', fontFamily: 'var(--font-body)' }} />
+                  style={{ width: '100%', fontSize: 12.5, padding: '7px 10px', borderRadius: 'var(--ctl-r)', resize: 'vertical',
+                    border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)', fontFamily: 'var(--font-body)' }} />
               </div>
             ))}
           </div>
@@ -576,10 +605,10 @@ export default function VSM() {
           {/* ⑥ แผนดำเนินการ */}
           <div style={{ marginTop: 14 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-              <label style={{ fontSize: 11.5, color: 'var(--muted)' }}>⑥ แผนดำเนินการ (ใคร / อะไร / เมื่อไหร่)</label>
+              <label style={{ fontSize: 11.5, color: 'var(--muted)' }}>{tr('⑥ แผนดำเนินการ (ใคร / อะไร / เมื่อไหร่)')}</label>
               <button onClick={() => setA3(v => ({ ...v, plan: [...(v.plan || []), { what: '', who: '', when: '', status: '' }] }))}
-                style={{ padding: '4px 12px', borderRadius: 5, border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text)', cursor: 'pointer', fontSize: 12 }}>
-                + เพิ่มแถว
+                style={{ padding: '4px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg3-surf)', color: 'var(--text)', cursor: 'pointer', fontSize: 12 }}>
+                + {tr("เพิ่มแถว")}
               </button>
             </div>
             {(a3.plan || []).map((r, i) => (
@@ -587,17 +616,17 @@ export default function VSM() {
                 {[['what', 'สิ่งที่ต้องทำ'], ['who', 'ผู้รับผิดชอบ'], ['when', 'กำหนดเสร็จ'], ['status', 'สถานะ']].map(([f, ph]) => (
                   f === 'who'
                     // ผู้รับผิดชอบเลือกจากทะเบียนคน — พิมพ์เองได้ (เจ้าของแผน A3 เป็นชื่อทีมได้) (2026-09-07)
-                    ? <PersonSelect key={f} value={r.who || ''} placeholder={ph} allowFree freeHint="ระบุเป็นชื่อทีมได้"
+                    ? <PersonSelect key={f} value={r.who || ''} placeholder={ph} allowFree freeHint={tr("ระบุเป็นชื่อทีมได้")}
                         onChange={({ name }) => setA3(v => ({ ...v, plan: v.plan.map((x, j) => j === i ? { ...x, who: name } : x) }))}
                         inputStyle={{ fontSize: 12, padding: '5px 26px 5px 8px', borderRadius: 5, background: 'var(--bg2)' }} />
                     : <input key={f} value={r[f] || ''} placeholder={ph}
                         onChange={e => setA3(v => ({ ...v, plan: v.plan.map((x, j) => j === i ? { ...x, [f]: e.target.value } : x) }))}
-                        style={{ fontSize: 12, padding: '5px 8px', borderRadius: 5, border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)' }} />
+                        style={{ fontSize: 12, padding: '5px 8px', borderRadius: 'var(--ctl-r)', border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)' }} />
                 ))}
-                <DeleteButton onClick={() => setA3(v => ({ ...v, plan: v.plan.filter((_, j) => j !== i) }))} title="ลบ" />
+                <DeleteButton onClick={() => setA3(v => ({ ...v, plan: v.plan.filter((_, j) => j !== i) }))} title={tr('ลบ')} />
               </div>
             ))}
-            {!(a3.plan || []).length && <div style={{ fontSize: 12, color: 'var(--muted)' }}>ยังไม่มีแถว — กด "+ เพิ่มแถว"</div>}
+            {!(a3.plan || []).length && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr("ยังไม่มีแถว — กด \"+ เพิ่มแถว")}"</div>}
           </div>
         </div>
       )}
@@ -606,9 +635,9 @@ export default function VSM() {
         {/* ⚠️ ข้อมูลดิบโหลดไม่ครบ — ต่างจาก worklist ข้างล่าง (นั่นคือ "ยังไม่มีใครลงข้อมูล")
             อันนี้คือ "มีข้อมูลแต่ดึงมาไม่หมด" ⇒ ตัวเลขต่ำกว่าจริง ห้ามบันทึกเป็นเอกสาร */}
         {loadWarn && (
-          <div style={{ ...S.card, marginBottom: 12, padding: '10px 14px', border: '1px solid #f59e0b', background: 'rgba(245,158,11,0.10)' }}>
-            <div style={{ fontSize: 13, fontWeight: 800, color: '#f59e0b' }}>⚠️ {loadWarn}</div>
-            <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 3 }}>ลองกด "↻ ดึงข้อมูลใหม่" อีกครั้ง — ถ้ายังขึ้นซ้ำให้แจ้งผู้ดูแลระบบ</div>
+          <div style={{ ...S.card, marginBottom: 12, padding: '10px 14px', border: '1px solid var(--amber)', background: 'var(--amber-dim)' }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--amber)' }}>⚠️ {loadWarn}</div>
+            <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 3 }}>{tr("ลองกด \"↻ ดึงข้อมูลใหม่\" อีกครั้ง — ถ้ายังขึ้นซ้ำให้แจ้งผู้ดูแลระบบ")}</div>
           </div>
         )}
         {/* ── 📋 worklist "ข้อมูลที่ VSM ยังขาด" (คำขอ user 2026-08-20 หลัง audit) ──
@@ -619,24 +648,24 @@ export default function VSM() {
           return (
             <div style={{ ...S.card, marginBottom: 12, padding: '10px 14px' }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', marginBottom: gaps.length ? 8 : 0 }}>
-                📋 ข้อมูลที่ VSM ยังขาด{gaps.length ? ` · ${gaps.length} รายการ` : ''}
-                {gaps.length > 0 && <span style={{ fontWeight: 400, fontSize: 11, color: 'var(--muted)' }}> — กดปุ่มท้ายรายการเพื่อไปลงข้อมูลที่ต้นทาง</span>}
+                {tr("ข้อมูลที่ VSM ยังขาด")}{gaps.length ? ` · ${gaps.length} ${tr("รายการ")}` : ''}
+                {gaps.length > 0 && <span style={{ fontWeight: 400, fontSize: 11, color: 'var(--muted)' }}> {tr('— กดปุ่มท้ายรายการเพื่อไปลงข้อมูลที่ต้นทาง')}</span>}
               </div>
-              {!gaps.length && <div style={{ fontSize: 12.5, color: 'var(--accent)', marginTop: 6 }}>✅ ข้อมูลครบทุกช่องของใบนี้แล้ว</div>}
+              {!gaps.length && <div style={{ fontSize: 12.5, color: 'var(--accent)', marginTop: 6 }}>{tr('✅ ข้อมูลครบทุกช่องของใบนี้แล้ว')}</div>}
               <div style={{ display: 'grid', gap: 6 }}>
                 {gaps.map((g, i) => {
                   const st = WARN_STYLE[g.level] || WARN_STYLE.info;
                   return (
-                    <div key={i} style={{ background: st.bg, borderLeft: `3px solid ${st.bd}`, borderRadius: 6, padding: '7px 12px', fontSize: 12.5, color: 'var(--text)', display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <div key={i} style={{ background: st.bg, borderLeft: `3px solid ${st.bd}`, borderRadius: 'var(--r-md)', padding: '7px 12px', fontSize: 12.5, color: 'var(--text)', display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
                       <span style={{ flex: '1 1 340px' }}>{st.icon} {g.text}</span>
                       <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         {g.actions.map((a, j) => a.to ? (
                           <Link key={j} to={a.to}
                             style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 999, padding: '3px 10px', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-                            {a.label} →
+                            {tr(a.label)} →
                           </Link>
                         ) : (
-                          <span key={j} style={{ fontSize: 11.5, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{a.label}</span>
+                          <span key={j} style={{ fontSize: 11.5, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{tr(a.label)}</span>
                         ))}
                       </span>
                     </div>
@@ -654,15 +683,15 @@ export default function VSM() {
 
         {/* ── ตารางแก้ค่า ── */}
         <div style={{ ...S.card, marginBottom: 14, overflowX: 'auto' }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>ปรับค่าในกล่องกระบวนการ</div>
+          <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>{tr('ปรับค่าในกล่องกระบวนการ')}</div>
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 10 }}>
-            ช่องว่าง = ใช้ค่าที่ระบบคำนวณให้ · กรอกทับเมื่อค่าจริงไม่ตรง ·
-            <b style={{ color: '#f59e0b' }}> คงคลังระหว่างทาง (WIP) ระบบไม่ได้เก็บ ต้องกรอกเอง</b>
+            {tr("ช่องว่าง = ใช้ค่าที่ระบบคำนวณให้ · กรอกทับเมื่อค่าจริงไม่ตรง")} ·
+            <b style={{ color: 'var(--amber)' }}> {tr('คงคลังระหว่างทาง (WIP) ระบบไม่ได้เก็บ ต้องกรอกเอง')}</b>
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
             <thead><tr style={{ background: 'var(--bg2)' }}>
-              {['ขั้น', 'กระบวนการ', 'ไลน์', 'C/T (sec)', 'C/O (sec)', '%OEE', 'LOT', 'คน', 'คงคลังหลังขั้นนี้ (pcs)'].map(h =>
-                <th key={h} style={{ padding: '7px 8px', fontSize: 11.5, color: 'var(--muted)', textAlign: 'left', whiteSpace: 'nowrap' }}>{h}</th>)}
+              {[tr("ขั้น"), tr("กระบวนการ"), tr("ไลน์"), 'C/T (sec)', 'C/O (sec)', '%OEE', 'LOT', tr("คน"), tr("คงคลังหลังขั้นนี้ (pcs)")].map(h =>
+                <th key={h} style={{ padding: '7px 8px', fontSize: 11.5, color: 'var(--muted)', textAlign: 'left', whiteSpace: 'nowrap' }}>{tr(h)}</th>)}
             </tr></thead>
             <tbody>
               {model.chain.map((b, i) => {
@@ -671,10 +700,10 @@ export default function VSM() {
                   <td style={{ padding: '4px 6px', borderTop: '1px solid var(--border)' }}>
                     <input value={ov[field] ?? ''} onChange={e => setOv(b.key, field, e.target.value)}
                       placeholder={val == null ? '—' : String(Math.round(val * 10) / 10)}
-                      title={src ? `ค่าที่ระบบคำนวณ: ${val ?? '—'} (จาก ${src})` : 'ระบบไม่มีข้อมูล'}
+                      title={src ? `${tr("ค่าที่ระบบคำนวณ")}: ${val ?? '—'} (${tr("จาก")} ${src})` : tr("ระบบไม่มีข้อมูล")}
                       style={{
-                        width: 82, fontSize: 12, padding: '4px 6px', borderRadius: 5, background: 'var(--bg2)', color: 'var(--text)',
-                        border: `1px solid ${val == null && !ov[field] ? '#f59e0b' : 'var(--border)'}`,
+                        width: 82, fontSize: 12, padding: '4px 6px', borderRadius: 'var(--ctl-r)', background: 'var(--bg2-surf)', color: 'var(--text)',
+                        border: `1px solid ${val == null && !ov[field] ? 'var(--amber)' : 'var(--border)'}`,
                       }} />
                   </td>
                 );
@@ -682,8 +711,8 @@ export default function VSM() {
                 return <tr key={b.key}>
                   <td style={{ padding: '6px 8px', fontSize: 12, color: 'var(--muted)', borderTop: '1px solid var(--border)' }}>{i + 1}</td>
                   <td style={{ padding: '6px 8px', fontSize: 12.5, fontWeight: 700, color: 'var(--text)', borderTop: '1px solid var(--border)' }}>
-                    {b.name}{b.isOutsourced && <span style={{ color: '#a78bfa', fontWeight: 400 }}> · จ้างนอก</span>}
-                    {b.isFallback && <span style={{ color: '#ef4444', fontWeight: 400, fontSize: 11 }}> · ยังไม่ลง routing</span>}
+                    {b.name}{b.isOutsourced && <span style={{ color: 'var(--blue)', fontWeight: 400 }}> {tr('· จ้างนอก')}</span>}
+                    {b.isFallback && <span style={{ color: 'var(--red)', fontWeight: 400, fontSize: 11 }}> {tr('· ยังไม่ลง routing')}</span>}
                   </td>
                   <td style={{ padding: '6px 8px', fontSize: 12, color: 'var(--muted)', borderTop: '1px solid var(--border)' }}>{b.line || '—'}</td>
                   {cell('ct_sec', b.ct, b.ctSrc)}
@@ -692,7 +721,7 @@ export default function VSM() {
                   {cell('lot_size', b.lotSize, b.lotSrc)}
                   {cell('operators', b.operators, b.opSrc)}
                   <td style={{ padding: '4px 6px', borderTop: '1px solid var(--border)' }}>
-                    {isLast ? <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>ใช้ยอด FG Warehouse</span> : cell('wip_qty', b.wipQty, b.wipQty != null ? 'routing' : null)}
+                    {isLast ? <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{tr('ใช้ยอด FG Warehouse')}</span> : cell('wip_qty', b.wipQty, b.wipQty != null ? 'routing' : null)}
                   </td>
                 </tr>;
               })}
@@ -702,45 +731,45 @@ export default function VSM() {
 
         {/* ── ข้อมูลที่ระบบไม่มี ต้องกรอกเอง ── */}
         <div style={{ ...S.card, marginBottom: 14 }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>รอบส่ง (ระบบยังไม่เก็บ — กรอกเอง)</div>
+          <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>{tr('รอบส่ง (ระบบยังไม่เก็บ — กรอกเอง)')}</div>
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 10 }}>
-            รูปแบบตามใบเดิมของบริษัท เช่น <b>7:1:1</b> (ผู้ส่งมอบ) · <b>1:4:2</b> (ลูกค้า)
+            {tr("รูปแบบตามใบเดิมของบริษัท เช่น")} <b>7:1:1</b> {tr('(ผู้ส่งมอบ) ·')} <b>1:4:2</b> ({tr("ลูกค้า")})
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10, alignContent: 'start' }}>
             <div>
               <label style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>
-                🚚 ลูกค้า — {model.customer.name || model.header.customer || 'ไม่ระบุ'}
+                {tr('ลูกค้า —')} {model.customer.name || model.header.customer || tr("ไม่ระบุ")}
               </label>
               <input value={overrides.__customer_pattern || ''} onChange={e => setTopOv('__customer_pattern', e.target.value)}
-                placeholder={model.customer.roundsPerDay ? `ระบบเห็น ${model.customer.roundsPerDay} รอบ/วัน` : 'เช่น 1:4:2'}
-                style={{ width: '100%', fontSize: 12.5, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)' }} />
+                placeholder={model.customer.roundsPerDay ? `${tr("ระบบเห็น")} ${model.customer.roundsPerDay} ${tr("รอบ/วัน")}` : tr("เช่น 1:4:2")}
+                style={{ width: '100%', fontSize: 12.5, padding: '6px 10px', borderRadius: 'var(--ctl-r)', border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)' }} />
             </div>
             {model.suppliers.map(sp => (
               <div key={sp.matNo}>
                 <label style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>
-                  🏭 {sp.supplier || 'ยังไม่ระบุผู้ส่งมอบ'} · {sp.matNo}
+                  {sp.supplier || tr("ยังไม่ระบุผู้ส่งมอบ")} · {sp.matNo}
                 </label>
                 <input value={(overrides.__supplier_pattern || {})[sp.matNo] || ''} onChange={e => setSupPattern(sp.matNo, e.target.value)}
-                  placeholder="เช่น 7:1:1"
-                  style={{ width: '100%', fontSize: 12.5, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)' }} />
+                  placeholder={tr('เช่น 7:1:1')}
+                  style={{ width: '100%', fontSize: 12.5, padding: '6px 10px', borderRadius: 'var(--ctl-r)', border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)' }} />
               </div>
             ))}
-            {!model.suppliers.length && <div style={{ fontSize: 12, color: 'var(--muted)' }}>BOM ของสินค้านี้ยังไม่มีพาร์ทซื้อนอก</div>}
+            {!model.suppliers.length && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('BOM ของสินค้านี้ยังไม่มีพาร์ทซื้อนอก')}</div>}
           </div>
         </div>
 
         {/* ── สรุป + สัญลักษณ์ ── */}
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 380px) 1fr', gap: 14, alignItems: 'start', marginBottom: 14 }}>
           <div style={S.card}>
-            <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>สรุปสายธาร</div>
+            <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>{tr('สรุปสายธาร')}</div>
             {[
-              ['PLT (Production Lead Time)', model.totals.pltDays == null ? '—' : `${model.totals.pltDays} วัน`],
+              ['PLT (Production Lead Time)', model.totals.pltDays == null ? '—' : `${model.totals.pltDays} ${tr("วัน")}`],
               ['PT (Processing Time)', fmtMinSec(model.totals.ptSec) || '—'],
               // MCT = headline ของใบจริง TSAT (skill: vsm-tsat-reference)
               ['MCT (PLT + PT)', fmtMct(model.totals.pltDays, model.totals.ptSec) || '—'],
               ['%VA (Value Added)', model.totals.vaPct == null ? '—' : `${model.totals.vaPct}%`],
               ['Takt Time', model.info.ttSec == null ? '—' : `${model.info.ttSec} sec`],
-              ['Available Time', model.info.atSec == null ? '—' : `${model.info.atSec.toLocaleString('th-TH')} sec/วัน`],
+              ['Available Time', model.info.atSec == null ? '—' : `${model.info.atSec.toLocaleString(dateLocale())} sec/${tr("วัน")}`],
             ].map(([k, v]) => (
               <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid var(--border)', fontSize: 12.5 }}>
                 <span style={{ color: 'var(--muted)' }}>{k}</span>
@@ -749,7 +778,7 @@ export default function VSM() {
             ))}
             <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8, lineHeight: 1.5 }}>
               %VA = VA ÷ (VA + NVA) × 100 &nbsp;โดย NVA = PLT × A/T
-              <br />(สูตรเดียวกับใบ VSM กระดาษของบริษัท)
+              <br />({tr("สูตรเดียวกับใบ VSM กระดาษของบริษัท")})
             </div>
           </div>
           <div data-legend><VsmLegend palette={palette} /></div>
@@ -770,8 +799,8 @@ export default function VSM() {
           if (lv.status === 'idle') return { v: null, note: 'ยังไม่เปิดกะวันนี้' };
           if (lv.status === 'closed') return { v: lv.closedOee, note: 'กะปิดแล้ว · ค่าที่ stamp' };
           if (!lv.live) return { v: null, note: 'ยังประเมินไม่ได้ — กะต้องเปิดเกิน 10 นาที (และกะต้องมีเวลาเริ่ม)' };
-          if (lv.live.noOutput) return { v: null, note: `ยังไม่ผลิตชิ้นแรก · A ${lv.live.A}%` };
-          if (lv.live.noCt) return { v: null, note: `ชิ้นงานยังไม่ตั้ง CT — ประเมิน P ไม่ได้ · A ${lv.live.A}%` };
+          if (lv.live.noOutput) return { v: null, note: `${tr("ยังไม่ผลิตชิ้นแรก")} · A ${lv.live.A}%` };
+          if (lv.live.noCt) return { v: null, note: `${tr("ชิ้นงานยังไม่ตั้ง CT — ประเมิน P ไม่ได้")} · A ${lv.live.A}%` };
           return {
             v: lv.live.oee,
             note: `A ${lv.live.A} · P ${lv.live.P} · Q ${lv.live.Q}`
@@ -782,31 +811,31 @@ export default function VSM() {
           <FilterBar style={{ marginBottom: 14 }}>
             {fgPicker}
             <div style={{ flex: '2 1 280px', fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.6 }}>
-              ค่ามาตรฐานในกล่อง (C/T · C/O · %OEE · A/T) = ค่าเฉลี่ย<b style={{ color: 'var(--text)' }}>เดือนนี้</b> ·
-              สถานะไลน์ / ยอดวันนี้ / คงคลัง ▲ = <b style={{ color: 'var(--accent)' }}>สด</b><br />
-              มุมมองนี้<b>ไม่บันทึก/ไม่พิมพ์</b> — เอกสาร VSM ทางการ (snapshot) อยู่แท็บ 📋
+              {tr("ค่ามาตรฐานในกล่อง (C/T · C/O · %OEE · A/T) = ค่าเฉลี่ย")}<b style={{ color: 'var(--text)' }}>{tr('เดือนนี้')}</b> ·
+              {tr("สถานะไลน์ / ยอดวันนี้ / คงคลัง")} ▲ = <b style={{ color: 'var(--accent)' }}>{tr('สด')}</b><br />
+              {tr("มุมมองนี้")}<b>{tr('ไม่บันทึก/ไม่พิมพ์')}</b> — {tr("เอกสาร VSM ทางการ (snapshot) อยู่แท็บ")} 📋
             </div>
-            {liveRaw && <button onClick={loadLive} style={btn('var(--bg3)', { color: 'var(--text)' })}>↻ รีเฟรชตอนนี้</button>}
+            {liveRaw && <button onClick={loadLive} style={btn('var(--bg3)', { color: 'var(--text)' })}>{tr('รีเฟรชตอนนี้')}</button>}
           </FilterBar>
 
           {!matNo && (
             <div style={{ ...S.card, textAlign: 'center', padding: 40, color: 'var(--muted)', fontSize: 14 }}>
-              เลือกสินค้าสำเร็จรูปก่อน — ระบบจะกางสายธารแล้วตามสถานะสดให้เอง
+              {tr("เลือกสินค้าสำเร็จรูปก่อน — ระบบจะกางสายธารแล้วตามสถานะสดให้เอง")}
             </div>
           )}
           {matNo && liveBusy && !liveModel && (
-            <div style={{ ...S.card, textAlign: 'center', padding: 30, color: 'var(--muted)', fontSize: 13 }}>⏳ กำลังโหลดโครงสายธาร…</div>
+            <div style={{ ...S.card, textAlign: 'center', padding: 30, color: 'var(--muted)', fontSize: 13 }}>{tr('⏳ กำลังโหลดโครงสายธาร…')}</div>
           )}
           {/* โหลดโครงพลาด (เน็ตสะดุด ฯลฯ) — ห้ามจอว่างตัน ต้องมีปุ่มลองใหม่ */}
           {matNo && !liveBusy && !liveModel && liveErr && (
             <div style={{ ...S.card, textAlign: 'center', padding: 30 }}>
-              <div style={{ fontSize: 13.5, color: '#ef4444', fontWeight: 700, marginBottom: 6 }}>
-                ⛔ โหลดโครงสายธารไม่สำเร็จ
+              <div style={{ fontSize: 13.5, color: 'var(--red)', fontWeight: 700, marginBottom: 6 }}>
+                ⛔ {tr("โหลดโครงสายธารไม่สำเร็จ")}
               </div>
               <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14 }}>
-                {liveErr} — มักเป็นสัญญาณเน็ตสะดุดชั่วคราว ลองใหม่ได้เลย
+                {liveErr} — {tr("มักเป็นสัญญาณเน็ตสะดุดชั่วคราว ลองใหม่ได้เลย")}
               </div>
-              <button onClick={() => setLiveTick(t => t + 1)} style={btn('var(--accent)')}>🔄 ลองใหม่</button>
+              <button onClick={() => setLiveTick(t => t + 1)} style={btn('var(--accent)')}>{tr('ลองใหม่')}</button>
             </div>
           )}
 
@@ -815,45 +844,52 @@ export default function VSM() {
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
               <span style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700,
-                padding: '5px 12px', borderRadius: 999, background: 'var(--bg3)', color: 'var(--text)',
+                padding: '5px 12px', borderRadius: 'var(--r-pill)', background: 'var(--bg3)', color: 'var(--text)',
               }}>
                 {/* จุดสถานะ live = นิ่ง+เรืองแสง ห้ามกระพริบ (Andon สงวนกระพริบให้แดง) */}
-                <span style={{ width: 8, height: 8, borderRadius: 99, background: '#22c55e', boxShadow: '0 0 6px #22c55e' }} />
-                REALTIME · อัปเดต {liveData?.at ? new Date(liveData.at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'}
-                <span style={{ color: 'var(--muted)', fontWeight: 400 }}>· วันงาน {liveData?.workDate || getWorkDate()}</span>
+                <span style={{ width: 8, height: 8, borderRadius: 'var(--r-pill)', background: 'var(--green)', boxShadow: '0 0 6px var(--green)' }} />
+                REALTIME · {tr("อัปเดต")} {liveData?.at ? new Date(liveData.at).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'}
+                <span style={{ color: 'var(--muted)', fontWeight: 400 }}>{tr('· วันงาน')} {liveData?.workDate || getWorkDate()}</span>
               </span>
               {liveData?.partial && (
-                <span style={{ fontSize: 12, fontWeight: 700, padding: '5px 12px', borderRadius: 999, background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid #f59e0b' }}>
-                  ⚠ โหลดข้อมูลสดไม่ครบ — ตัวเลขบางส่วนอาจขาด (จะลองใหม่รอบถัดไป)
+                <span style={{ fontSize: 12, fontWeight: 700, padding: '5px 12px', borderRadius: 'var(--r-pill)', background: 'var(--amber-dim)', color: 'var(--amber)', border: '1px solid var(--amber)' }}>
+                  ⚠ {tr("โหลดข้อมูลสดไม่ครบ — ตัวเลขบางส่วนอาจขาด (จะลองใหม่รอบถัดไป")})
                 </span>
               )}
               {chips.map(([k, nn]) => (
                 <span key={k} className={k === 'down' && nn > 0 ? 'dt-alarm-blink' : undefined}
                   style={{
-                    fontSize: 12, fontWeight: 700, padding: '5px 12px', borderRadius: 999,
-                    background: 'var(--bg3)', border: '1px solid var(--border)',
+                    fontSize: 12, fontWeight: 700, padding: '5px 12px', borderRadius: 'var(--r-pill)',
+                    background: 'var(--bg3-surf)', border: '1px solid var(--border)',
                     // dt-alarm-blink ทาพื้นแดง — ตัวอักษรต้องขาว ไม่งั้นแดงบนแดงอ่านไม่ออก
                     color: k === 'down' && nn > 0 ? '#fff' : nn > 0 ? LIVE_STATUS[k].color : 'var(--muted)',
                   }}>
-                  {LIVE_STATUS[k].label} · {nn} ไลน์
+                  {tr(LIVE_STATUS[k].label)} · {nn} {tr("ไลน์")}
                 </span>
               ))}
               {(liveData?.summary?.plannedOpen || 0) > 0 && (
-                <span style={{ fontSize: 12, padding: '5px 12px', borderRadius: 999, background: 'var(--bg3)', color: 'var(--muted)', border: '1px solid var(--border)' }}>
-                  🗓️ หยุดตามแผนค้าง {liveData.summary.plannedOpen} รายการ (ไม่นับเป็น Andon)
+                <span style={{ fontSize: 12, padding: '5px 12px', borderRadius: 'var(--r-pill)', background: 'var(--bg3-surf)', color: 'var(--muted)', border: '1px solid var(--border)' }}>
+                  {tr("หยุดตามแผนค้าง")} {liveData.summary.plannedOpen} {tr("รายการ (ไม่นับเป็น")} Andon)
+                </span>
+              )}
+              {/* แถวเปิดค้างในกะที่ปิดไปแล้ว = คนลืมปิดรายการ — ไม่ใช่ Andon (กฎ dtOpenKind) แต่ห้ามซ่อน */}
+              {(liveData?.summary?.forgottenDt || 0) > 0 && (
+                <span title={tr('กะปิดไปแล้วแต่รายการ Downtime ยังไม่ถูกปิด — นาทีที่หยุดไม่ได้ถูกหักใน %A ของกะนั้น')}
+                  style={{ fontSize: 12, padding: '5px 12px', borderRadius: 'var(--r-pill)', background: 'var(--bg3-surf)', color: 'var(--amber)', border: '1px solid var(--border)', fontWeight: 700 }}>
+                  ⚠️ {tr("ไม่ได้ปิดรายการ")} {liveData.summary.forgottenDt} {tr("ใบ (กะปิดแล้ว")})
                 </span>
               )}
             </div>
 
             {/* ── Downtime ค้าง (Andon) — ต้องเห็นก่อนอย่างอื่น ห้ามซ่อน ── */}
             {(liveData?.summary?.alarms || []).length > 0 && (
-              <div style={{ background: 'rgba(239,68,68,0.10)', borderLeft: '3px solid #ef4444', borderRadius: 6, padding: '8px 12px', marginBottom: 12 }}>
-                <div style={{ fontSize: 12.5, fontWeight: 800, color: '#ef4444', marginBottom: 4 }}>🚨 Downtime ค้างในสายธารนี้</div>
+              <div style={{ background: 'var(--red-dim)', borderLeft: '3px solid var(--red)', borderRadius: 'var(--r-md)', padding: '8px 12px', marginBottom: 12 }}>
+                <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--red)', marginBottom: 4 }}>{tr('Downtime ค้างในสายธารนี้')}</div>
                 {liveData.summary.alarms.map((a, i) => (
                   <div key={i} style={{ fontSize: 12.5, color: 'var(--text)', padding: '2px 0' }}>
-                    <b>{a.line}</b>{a.machineNo ? ` · ${a.machineNo}` : ''} — {a.typeName || 'ไม่ระบุประเภท'}
+                    <b>{a.line}</b>{a.machineNo ? ` · ${a.machineNo}` : ''} — {a.typeName || tr("ไม่ระบุประเภท")}
                     {a.description ? ` · 💬 ${a.description}` : ''}
-                    {a.openMin != null && <span style={{ color: '#ef4444', fontWeight: 700 }}> · ค้าง {a.openMin} นาที</span>}
+                    {a.openMin != null && <span style={{ color: 'var(--red)', fontWeight: 700 }}> {tr('· ค้าง')} {a.openMin} {tr('นาที')}</span>}
                   </div>
                 ))}
               </div>
@@ -864,7 +900,7 @@ export default function VSM() {
               <div style={{ marginBottom: 12, display: 'grid', gap: 6 }}>
                 {liveModel.warnings.map((w, i) => {
                   const st = WARN_STYLE[w.level] || WARN_STYLE.info;
-                  return <div key={i} style={{ background: st.bg, borderLeft: `3px solid ${st.bd}`, borderRadius: 6, padding: '7px 12px', fontSize: 12.5, color: 'var(--text)' }}>
+                  return <div key={i} style={{ background: st.bg, borderLeft: `3px solid ${st.bd}`, borderRadius: 'var(--r-md)', padding: '7px 12px', fontSize: 12.5, color: 'var(--text)' }}>
                     {st.icon} {w.text}
                   </div>;
                 })}
@@ -876,9 +912,8 @@ export default function VSM() {
               <VsmCanvas model={liveModel} palette={palette} live={liveData} />
             </div>
             <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 14 }}>
-              ขอบกล่องกระบวนการ: <b style={{ color: '#ef4444' }}>แดงกระพริบ = Downtime ค้าง</b> ·
-              <b style={{ color: '#22c55e' }}> เขียว = กำลังผลิต</b> · เส้นประจาง = ยังไม่เปิดกะวันนี้ —
-              วางเมาส์บนกล่องเพื่อดูสถานะ · ▲ คงคลัง/PLT/%VA คำนวณจากยอดคงเหลือปัจจุบัน
+              {tr("ขอบกล่องกระบวนการ")}: <b style={{ color: 'var(--red)' }}>{tr("แดงกระพริบ = Downtime ค้าง")}</b> ·
+              <b style={{ color: 'var(--green)' }}> {tr("เขียว = กำลังผลิต")}</b> · {tr("เส้นประจาง = ยังไม่เปิดกะวันนี้ — วางเมาส์บนกล่องเพื่อดูสถานะ · ▲ คงคลัง/PLT/%VA คำนวณจากยอดคงเหลือปัจจุบัน")}
             </div>
 
             {/* ── การ์ดสถานะรายขั้น (ค่าสดเต็มรูป) ── */}
@@ -895,25 +930,23 @@ export default function VSM() {
                         <span style={{ color: 'var(--muted)', fontWeight: 400 }}> · {b.line || '—'}</span>
                       </div>
                       <span className={lv?.status === 'down' ? 'dt-alarm-blink' : undefined}
-                        style={{ fontSize: 11.5, fontWeight: 700, color: lv?.status === 'down' ? '#fff' : meta.color, whiteSpace: 'nowrap', padding: '2px 8px', borderRadius: 999, background: 'var(--bg2)' }}>
-                        {meta.label}
-                      </span>
+                        style={{ fontSize: 11.5, fontWeight: 700, color: lv?.status === 'down' ? '#fff' : meta.color, whiteSpace: 'nowrap', padding: '2px 8px', borderRadius: 'var(--r-pill)', background: 'var(--bg2)' }}>{tr(meta.label)}</span>
                     </div>
                     <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 12.5, color: 'var(--text)' }}>
-                      <span>OEE {lv?.status === 'closed' ? 'วันนี้' : 'กะนี้ (สด)'}:{' '}
+                      <span>OEE {lv?.status === 'closed' ? tr("วันนี้") : tr("กะนี้ (สด)")}:{' '}
                         <b>{oee.v == null ? '—' : `${oee.v}%`}</b></span>
-                      <span>วันนี้: <b>{lv?.produced ?? '—'}</b>{lv?.target ? ` / ${lv.target}` : ''} ชิ้น</span>
-                      <span style={{ color: 'var(--muted)' }}>OEE เฉลี่ยเดือนนี้: {b.oeePct == null ? '—' : `${b.oeePct}%`}</span>
+                      <span>{tr('วันนี้:')} <b>{lv?.produced ?? '—'}</b>{lv?.target ? ` / ${lv.target}` : ''} {tr('ชิ้น')}</span>
+                      <span style={{ color: 'var(--muted)' }}>{tr('OEE เฉลี่ยเดือนนี้:')} {b.oeePct == null ? '—' : `${b.oeePct}%`}</span>
                     </div>
                     <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{oee.note}</div>
                     {(lv?.alarms || []).map((a, j) => (
-                      <div key={j} style={{ fontSize: 11.5, color: '#ef4444' }}>
-                        🚨 {a.machineNo || 'ไม่ระบุเครื่อง'} · {a.typeName || '—'}{a.openMin != null ? ` · ค้าง ${a.openMin} นาที` : ''}
+                      <div key={j} style={{ fontSize: 11.5, color: 'var(--red)' }}>
+                        {a.machineNo || tr("ไม่ระบุเครื่อง")} · {a.typeName || '—'}{a.openMin != null ? ` · ${tr("ค้าง")} ${a.openMin} ${tr("นาที")}` : ''}
                       </div>
                     ))}
                     {(lv?.plannedOpen || []).length > 0 && (
                       <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-                        🗓️ หยุดตามแผนค้าง {lv.plannedOpen.length} รายการ
+                        {tr("หยุดตามแผนค้าง")} {lv.plannedOpen.length} {tr("รายการ")}
                       </div>
                     )}
                   </div>
@@ -923,9 +956,9 @@ export default function VSM() {
 
             {/* ── สรุปสายธารสด ── */}
             <div style={{ ...S.card, maxWidth: 460, marginBottom: 14 }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>สรุปสายธาร (จากคงคลังปัจจุบัน)</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>{tr('สรุปสายธาร (จากคงคลังปัจจุบัน)')}</div>
               {[
-                ['PLT (Production Lead Time)', liveModel.totals.pltDays == null ? '—' : `${liveModel.totals.pltDays} วัน`],
+                ['PLT (Production Lead Time)', liveModel.totals.pltDays == null ? '—' : `${liveModel.totals.pltDays} ${tr("วัน")}`],
                 ['PT (Processing Time)', fmtMinSec(liveModel.totals.ptSec) || '—'],
                 ['MCT (PLT + PT)', fmtMct(liveModel.totals.pltDays, liveModel.totals.ptSec) || '—'],
                 ['%VA (Value Added)', liveModel.totals.vaPct == null ? '—' : `${liveModel.totals.vaPct}%`],
@@ -937,7 +970,7 @@ export default function VSM() {
                 </div>
               ))}
               <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8, lineHeight: 1.5 }}>
-                คงคลัง WIP กลางทางระบบยังไม่เก็บ (กรอกได้ในแท็บ 📋) — PLT สดจึงอาจต่ำกว่าความจริง
+                {tr("คงคลัง WIP กลางทางระบบยังไม่เก็บ (กรอกได้ในแท็บ 📋) — PLT สดจึงอาจต่ำกว่าความจริง")}
               </div>
             </div>
           </>}

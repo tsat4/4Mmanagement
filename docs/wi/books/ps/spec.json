@@ -1,0 +1,508 @@
+[
+ {
+  "id": "ps_upload",
+  "p": "PlannerSales",
+  "q": "tab=upload",
+  "marks": [
+   "อัพโหลด (Sales)",
+   "Forecast ล่วงหน้า",
+   "Order + รอบส่งงาน",
+   "เลือกไฟล์ Excel/CSV",
+   "ฟอร์แมตไฟล์ลูกค้า"
+  ]
+ },
+ {
+  "id": "ps_monup",
+  "p": "PlannerSales",
+  "q": "tab=monitoring",
+  "marks": [
+   "Monitoring (Planning)"
+  ]
+ },
+ {
+  "id": "ps_planner",
+  "p": "PlannerSales",
+  "q": "tab=planner",
+  "marks": [
+   "Forecast Planner"
+  ]
+ },
+ {
+  "id": "ps_kanban",
+  "p": "PlannerSales",
+  "q": "tab=kanban",
+  "marks": [
+   "คำนวณ Kanban",
+   "Withdrawal",
+   "Production (ผลิต",
+   "ค่ากลาง",
+   "Preview & Apply",
+   "CSV"
+  ]
+ },
+ {
+  "id": "pp_plan",
+  "p": "ProductionPlan",
+  "q": "tab=plan",
+  "marks": [
+   "กำลังการผลิต",
+   "รวมงานจาก BOM",
+   "หักสต็อก STORE",
+   "ปกติ (median)",
+   "รายวัน (21",
+   "รายเดือน (Forecast)",
+   "โหมดสไลด์โรงงาน",
+   "ตั้งค่า"
+  ]
+ },
+ {
+  "id": "pp_lots",
+  "p": "ProductionPlan",
+  "q": "tab=lots",
+  "marks": [
+   "แผนสั่งงาน (ล็อต)",
+   "จองเครื่องทดลอง",
+   "เสนอลำดับ",
+   "บันทึกแล้ว",
+   "ตั้งค่า"
+  ]
+ },
+ {
+  "id": "mon_line",
+  "p": "LineStock",
+  "q": "tab=monitoring&mon=line",
+  "marks": [
+   "=Monitoring แผน-สต๊อก",
+   "แผนผลิต",
+   "=สโตร์",
+   "คลังสินค้า FG",
+   "ไลน์ปั๊ม",
+   "ความต้องการรายสัปดาห์",
+   "สร้างบอร์ด FG",
+   "นำเข้าจากไฟล์ Excel"
+  ]
+ },
+ {
+  "id": "mon_fg",
+  "p": "LineStock",
+  "q": "tab=monitoring&mon=fg",
+  "marks": [
+   "ของจะขาดวันไหน",
+   "บอร์ดแก้มือ",
+   "คลังสินค้า FG",
+   "FG ทุกตัว (862/830)",
+   "สร้างบอร์ด FG"
+  ]
+ },
+ {
+  "id": "sm",
+  "p": "StoreMonitor",
+  "q": "",
+  "marks": [
+   "ทั้งหมด 15",
+   "จะขาด",
+   "ล้น"
+  ]
+ },
+ {
+  "id": "h_views",
+  "p": "HeijunkaKanban",
+  "q": "view=unified",
+  "marks": [
+   "ตู้ Kanban รวม",
+   "Store Time Chart",
+   "Store Board",
+   "Heijunka Board",
+   "Pull / ใบสั่งผลิต",
+   "ความต้องการวันนี้",
+   "ส่งของเข้าไลน์",
+   "รับของเข้าคลัง"
+  ]
+ },
+ {
+  "id": "h_pull",
+  "p": "HeijunkaKanban",
+  "q": "view=pull",
+  "marks": [
+   "ถึงจุดต้องปล่อยคัมบัง",
+   "ตัวสะสม Demand",
+   "ใบสั่งผลิตล็อต"
+  ],
+  "loose": true
+ },
+ {
+  "id": "ls_out",
+  "p": "LineStock",
+  "q": "tab=out",
+  "marks": [
+   "=ส่งของเข้าไลน์",
+   "ไลน์ใช้ของแล้ว แต่สโตร์ยังไม่ลงจ่าย",
+   "Store Semi Part",
+   "Store Purchase Part / สโตร์ภายนอก",
+   "Store Raw Mat",
+   "รอบส่งคัมบังเข้าไลน์",
+   "งานที่ไลน์เปิดอยู่",
+   "~งานชุบ",
+   "ภาชนะ (ดูอย่างเดียว)",
+   "css=select[aria-label=\"พื้นที่สโตร์ต้นทาง\"]",
+   "css=select[aria-label=\"พื้นที่ปลายทาง\"]",
+   "=Stock",
+   "=รับของเข้าคลัง",
+   "=ตั้งค่า"
+  ]
+ },
+ {
+  "id": "ls_gap",
+  "p": "LineStock",
+  "q": "tab=out",
+  "click": "ไม่ได้จ่าย",
+  "marks": [
+   "ไลน์ใช้ของแล้ว แต่สโตร์ยังไม่ลงจ่าย",
+   "~เกิน 1 กะ",
+   "ยืนยันจ่ายทั้งหมดที่เห็น",
+   "จ่ายไปแล้ว",
+   "css=input[placeholder*=\"เหตุผล\"]",
+   "=บันทึก"
+  ]
+ },
+ {
+  "id": "h_wip",
+  "p": "LineStock",
+  "q": "tab=out&store=child",
+  "marks": [
+   "ถึงไลน์แล้ว · สแกนจุดส่ง",
+   "เริ่มเตรียม · สแกนพาร์ท",
+   "ยกเลิกใบเบิกนี้ (ใบผลิตปิดแล้ว)",
+   "ไลน์เปิดใบผลิต (แตก BOM)"
+  ],
+  "scrollTo": "ไลน์/แผนเรียกแล้ว",
+  "scrollOff": 420
+ },
+ {
+  "id": "h_wip_pick",
+  "p": "LineStock",
+  "q": "tab=out&store=child",
+  "click": "เริ่มเตรียม · สแกนพาร์ท",
+  "marks": [
+   "=สแกนพาร์ท",
+   "ยืนยัน · เริ่มเตรียม",
+   "~ปลดบล็อกโดยหัวหน้า"
+  ]
+ },
+ {
+  "id": "h_wip_deliver",
+  "p": "LineStock",
+  "q": "tab=out&store=child",
+  "click": "ถึงไลน์แล้ว · สแกนจุดส่ง",
+  "marks": [
+   "สแกน QR จุดส่ง",
+   "ตัดจ่ายใน SAP ไม่ได้",
+   "ยืนยันส่งแล้ว"
+  ]
+ },
+ {
+  "id": "out_open",
+  "p": "LineStock",
+  "q": "tab=out&store=open",
+  "marks": [
+   "งานที่ไลน์เปิดอยู่",
+   "ต้องส่งเพิ่ม",
+   "STORE มี",
+   "รีเฟรช"
+  ],
+  "scrollTo": "ไลน์เปิดใบผลิตแล้ว",
+  "scrollOff": 330
+ },
+ {
+  "id": "h_raw",
+  "p": "LineStock",
+  "q": "tab=out&store=raw",
+  "marks": [
+   "Store Raw Mat",
+   "จ่ายวัตถุดิบ"
+  ],
+  "scrollTo": "รอจ่าย",
+  "scrollOff": 260
+ },
+ {
+  "id": "h_plating",
+  "p": "LineStock",
+  "q": "tab=out&store=plating",
+  "marks": [
+   "งานชุบ",
+   "ส่งงานไปชุบ"
+  ]
+ },
+ {
+  "id": "h_rack",
+  "p": "LineStock",
+  "q": "tab=out&store=rack",
+  "marks": [
+   "ภาชนะ (ดูอย่างเดียว)",
+   "จัดการที่ Rack Center"
+  ],
+  "scrollTo": "เฉพาะงานค้าง",
+  "scrollOff": 130
+ },
+ {
+  "id": "ls_in",
+  "p": "LineStock",
+  "q": "tab=in",
+  "marks": [
+   "=รับของเข้าคลัง",
+   "รอรับเข้า (ไลน์ปิดใบผลิต)",
+   "จัดซื้อ",
+   "ใบล็อตผลิต Semi Part",
+   "รับกลับจากร้านชุบ",
+   "ทุกคลัง",
+   "css=select[aria-label=\"ไลน์ต้นทาง\"]",
+   "css=input[placeholder*=\"เลขใบผลิต\"]"
+  ]
+ },
+ {
+  "id": "h_purchase",
+  "p": "LineStock",
+  "q": "tab=in&store=purchase",
+  "marks": [
+   "Child ซื้อ (3xxxxxxx)",
+   "Raw Mat (5xxxxxxx)",
+   "สั่งซื้อแล้ว",
+   "รับเข้าสโตร์"
+  ],
+  "scrollTo": "Child ซื้อ (3xxxxxxx)",
+  "scrollOff": 70
+ },
+ {
+  "id": "h_child",
+  "p": "LineStock",
+  "q": "tab=in&store=lots",
+  "marks": [
+   "ปล่อยเข้าไลน์",
+   "ปิดใบล็อต · ไม่ลงสต็อกที่นี่"
+  ],
+  "scrollTo": "อยู่ที่ไลน์ผลิต",
+  "scrollOff": 60
+ },
+ {
+  "id": "ls_receipts",
+  "p": "LineStock",
+  "q": "tab=in&store=receipts",
+  "marks": [
+   "รวมเป็นกอง",
+   "นับแล้วตรง",
+   "ยอดไม่ตรง",
+   "ซ่อนรายใบ",
+   "ไปที่ คลังพัก/ผลต่าง"
+  ],
+  "click": "กางดูรายใบ"
+ },
+ {
+  "id": "ls_plating_in",
+  "p": "LineStock",
+  "q": "tab=in&store=plating_in",
+  "marks": [
+   "~อยู่ที่ร้านชุบ · รอรับกลับ",
+   "นับแล้วครบ",
+   "ไม่ครบ"
+  ],
+  "scrollTo": "เกิน lead time ของร้าน",
+  "scrollOff": 30
+ },
+ {
+  "id": "ls_sap",
+  "p": "LineStock",
+  "q": "tab=sap",
+  "marks": [
+   "ค้างตัด SAP",
+   "ยังค้าง",
+   "เคลียร์แล้ว",
+   "ตัดใน SAP แล้ว"
+  ]
+ },
+ {
+  "id": "ls_diff",
+  "p": "LineStock",
+  "q": "tab=diff",
+  "marks": [
+   "คลังพัก/ผลต่าง",
+   "ดูเดือนนี้",
+   "=ยังไม่เคลียร์",
+   "เสนอผลเคลียร์",
+   "ยืนยัน",
+   "Export CSV"
+  ]
+ },
+ {
+  "id": "ls_stock",
+  "p": "LineStock",
+  "q": "tab=stock",
+  "marks": [
+   "จ่ายพาร์ทเข้าไลน์",
+   "ประวัติ Transaction",
+   "รออนุมัติ",
+   "css=select[aria-label=\"เลือกพื้นที่ SAP\"]",
+   "css=input[aria-label=\"ค้นหาพาร์ทในสต็อก\"]",
+   "~มุม SAP",
+   "=Stock"
+  ]
+ },
+ {
+  "id": "ls_txn",
+  "p": "LineStock",
+  "q": "tab=stock",
+  "click": "ประวัติ Transaction",
+  "marks": [
+   "css=select[data-lookback]",
+   "Export CSV",
+   "ดู Stock"
+  ]
+ },
+ {
+  "id": "ls_issue",
+  "p": "LineStock",
+  "q": "tab=stock",
+  "click": "จ่ายพาร์ทเข้าไลน์",
+  "marks": [
+   "จ่ายเข้าไลน์",
+   "คืน Store",
+   "ปรับยอด",
+   "บันทึก"
+  ]
+ },
+ {
+  "id": "ls_count",
+  "p": "LineStock",
+  "q": "tab=count",
+  "marks": [
+   "css=select",
+   "~วันที่นับ",
+   "~ส่งลูกค้าแล้ว แต่ยังไม่ถูกหัก",
+   "ตรวจนับ/เฟิร์มยอด"
+  ]
+ },
+ {
+  "id": "mon_store",
+  "p": "LineStock",
+  "q": "tab=monitoring&mon=st_purchase",
+  "marks": [
+   "=สโตร์",
+   "Raw Mat",
+   "Semi Part",
+   "Purchase Part",
+   "งานชุบ",
+   "Blank",
+   "=SAP",
+   "~Diff (SAP − คงเหลือ)"
+  ]
+ },
+ {
+  "id": "ls_levels",
+  "p": "LineStock",
+  "q": "tab=settings&set=levels",
+  "marks": [
+   "ยังไม่มีใครเฝ้า",
+   "ตั้ง min แล้ว",
+   "=ตั้งค่า",
+   "จุดเรียกเติม (ทั้งโรงงาน)",
+   "พื้นที่ SAP / โซนคลัง"
+  ]
+ },
+ {
+  "id": "ls_wip",
+  "p": "LineStock",
+  "q": "tab=wip",
+  "marks": [
+   "=WIP ค้างระหว่างขั้น",
+   "~ยอดค้างระหว่างขั้น",
+   "นับจริง"
+  ]
+ },
+ {
+  "id": "ls_sapview",
+  "p": "LineStock",
+  "q": "tab=sapview",
+  "marks": [
+   "=เทียบตัดแบบ SAP",
+   "css=select[data-lookback]",
+   "เฉพาะที่ต่าง",
+   "=แบบ SAP",
+   "=ESM ตัดจริง",
+   "=ต่าง (ESM − SAP)"
+  ],
+  "click": "ทั้งหมด"
+ },
+ {
+  "id": "ls_delivery",
+  "p": "LineStock",
+  "q": "tab=settings&set=delivery",
+  "marks": [
+   "เพิ่มรอบจัดส่ง",
+   "=ตั้งค่า",
+   "=รอบจัดส่ง",
+   "กฎรับเข้า",
+   "บอร์ดเวลา (ดูอย่างเดียว)"
+  ]
+ },
+ {
+  "id": "tr_assign",
+  "p": "Transport",
+  "q": "tab=assign",
+  "marks": [
+   "มอบหมายวันนี้",
+   "css=select"
+  ]
+ },
+ {
+  "id": "tr_route",
+  "p": "Transport",
+  "q": "tab=route",
+  "marks": [
+   "เส้นทางรอบส่ง",
+   "css=select"
+  ]
+ },
+ {
+  "id": "tr_carriers",
+  "p": "Transport",
+  "q": "tab=carriers",
+  "marks": [
+   "คนขับ/ยานพาหนะ",
+   "เพิ่มคนขับ"
+  ]
+ },
+ {
+  "id": "dr_call",
+  "p": "DailyReport",
+  "q": "tab=live",
+  "marks": [
+   "เรียกชิ้นส่วนจากสโตร์",
+   "ความต้องการจากใบผลิตที่เปิดอยู่",
+   "คำนวณ + แจ้งสโตร์",
+   "ขอเบิกพาร์ทนี้เลย",
+   "รับครบ",
+   "ได้ไม่ครบ"
+  ],
+  "scrollTo": "เรียกชิ้นส่วนจากสโตร์",
+  "scrollOff": 20
+ },
+ {
+  "id": "dr_close",
+  "p": "DailyReport",
+  "q": "tab=live",
+  "marks": [
+   "Live กะนี้",
+   "Prod Orders"
+  ]
+ },
+ {
+  "id": "qa_matreq",
+  "p": "QualityControl",
+  "q": "tab=matreq",
+  "marks": [
+   "ใบเบิกทดสอบ",
+   "ออกใบเบิกใหม่",
+   "งานรอตรวจ",
+   "จาก template"
+  ]
+ }
+]

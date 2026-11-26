@@ -9,6 +9,8 @@
    · pure ทั้งไฟล์ · ไม่แตะ supabase · เทส `__tests__/kpiFormula.test.mjs` */
 import { KPI_BASE_VARS, baseVarOf, formulaOf, evalFormula, fmtKpi } from './kpiSetup.js';
 import { scopeKey, scopeOfDef, canonicalScope, isPlant } from './orgScope.js';
+import { dateLocale } from './i18n.js';
+import { tr } from './i18n.js';
 
 export const PLANT_BASE_KEY = 'plant';
 /** คีย์ขอบเขตของตัวเลขฐาน — ทั้งโรงงาน = 'plant' · อื่นๆ = `kind:value` (ต้อง canonical ก่อนส่งเข้า) */
@@ -53,7 +55,7 @@ export function formulaMonths({ def, scope, base }) {
   const key = formulaOfDef(def);
   const f = key ? formulaOf(key) : null;
   if (!f || !base) return null;
-  const varScopes = Object.fromEntries(f.vars.map(v => [v, baseScopeForVar(v, scope)]));
+  const varScopes = Object.fromEntries(f.vars.map(v => [v, f.scope === 'plant' ? PLANT_BASE_KEY : baseScopeForVar(v, scope)]));   // สูตรค่ากลาง (ยอดขาย/หัว) อ่านทุกตัวแปรจาก ทั้งโรงงาน
   const months = {}, inputs = {}, missing = {}, inputSrc = {};
   const cum = new Set(f.cum || []);
   const srcOf = (v, mm) => (base.src ? base.src(varScopes[v], v, mm) : (base.get(varScopes[v], v, mm) != null ? 'manual' : null));
@@ -117,8 +119,8 @@ export const formulaMonthMode = (info, month) => {
   return info.months?.[m] != null ? 'computed' : 'manual';
 };
 
-const fmtBaht = (v) => (v == null ? '–' : Number(v).toLocaleString('th-TH', { maximumFractionDigits: 2 }));
-const scopeText = (sk, labelOf) => (sk === PLANT_BASE_KEY ? 'ทั้งโรงงาน' : (labelOf ? labelOf(sk) : sk));
+const fmtBaht = (v) => (v == null ? '–' : Number(v).toLocaleString(dateLocale(), { maximumFractionDigits: 2 }));
+const scopeText = (sk, labelOf) => (sk === PLANT_BASE_KEY ? tr("ทั้งโรงงาน") : (labelOf ? labelOf(sk) : sk));
 
 /** ข้อความอธิบาย 1 เดือน — คำนวณได้: "DL 1,200,000 + OH 800,000 ÷ ยอดขายจากสินค้า 150,000,000 (ทั้งโรงงาน)" · ขาด: "ขาด ยอดขายจากสินค้า (ทั้งโรงงาน)" */
 export function formulaNoteText(info, month, { labelOf = null, def = null } = {}) {
@@ -155,3 +157,60 @@ export const BASE_VARS_BY_LEVEL = {
   plant: KPI_BASE_VARS.filter(v => v.level === 'plant'),
   unit: KPI_BASE_VARS.filter(v => v.level !== 'plant'),
 };
+
+/* ── 💰 ยอดเงินคู่กัน (2026-11-16 · user: "ให้ขึ้นยอดเงินคู่กัน") ──
+   KPI ที่ค่ารายเดือนเป็น "% ของยอดขาย" (100P · Cost Reduction) — ใบบัญชีมี 2 บรรทัดคู่กันเสมอ: % และยอดเงิน (100P: 0.73% · 10.16 MB)
+   · ตัวแปรยอดเงิน = `kpi_catalog.amount_var` (คีย์ใน KPI_BASE_VARS ที่หน่วยเป็น "บาท") ตั้งที่ 📘 ทะเบียน — ของตัวตน KPI ไม่ใช่รายแถว
+   · อ่านจาก kpi_base_inputs ที่ขอบเขตของนิยาม (unit var) / ทั้งโรงงาน (plant var) ผ่าน `baseScopeForVar` — แหล่งเดียวกับสูตร
+   · ยอดสะสม = Σ ม.ค.→เดือนที่เลือก เฉพาะเดือนที่มีตัวเลข · **เดือนที่ขาดต้องเขียนบนจอ ห้ามเดา 0** · ไม่มีเลย = `value/ytd = null` (จอเขียนว่ายังไม่กรอก) */
+export const amountVarOf = (d) => {
+  const k = d?.kpi_catalog?.amount_var || d?.amount_var || null;
+  const v = k ? baseVarOf(k) : null;
+  return v && v.unit === 'บาท' ? v : null;
+};
+export function fmtMoney(x) {
+  if (x == null || !Number.isFinite(Number(x))) return '—';
+  const n = Number(x);
+  return Math.abs(n) >= 1e6 ? `${(n / 1e6).toLocaleString(dateLocale(), { maximumFractionDigits: 2 })} MB` : `${Math.round(n).toLocaleString(dateLocale())} บ.`;
+}
+export function amountCompanion({ def, scope, base, month }) {
+  const v = amountVarOf(def);
+  if (!v || !base) return null;
+  const sk = baseScopeForVar(v.key, scope);
+  const upto = Math.min(12, Math.max(1, Number(month) || 12));
+  const months = {}, have = [], missing = [];
+  for (let m = 1; m <= upto; m++) {
+    const x = base.get(sk, v.key, m);
+    months[m] = x;
+    if (x != null) have.push(m); else missing.push(m);
+  }
+  const ytd = have.length ? have.reduce((s, m) => s + months[m], 0) : null;
+  return { varKey: v.key, label: v.label, scopeKey: sk, month: upto, value: months[upto] ?? null, ytd, have, missing, months };
+}
+/** ข้อความบรรทัดรองของแผ่น — `monthLabel(m)` = ป้ายเดือนสั้น · ไม่มีตัวแปร = '' */
+export function amountText(a, { monthLabel = (m) => `เดือน ${m}` } = {}) {
+  if (!a) return '';
+  const name = String(a.label || '').split(' (')[0];
+  if (!a.have.length) return `💰 ${name}: ยังไม่กรอกยอดเงิน`;
+  const lastHave = a.have[a.have.length - 1];
+  const cur = a.value != null
+    ? `${monthLabel(a.month)} ${fmtMoney(a.value)}`
+    : `${monthLabel(lastHave)} ${fmtMoney(a.months[lastHave])} (${monthLabel(a.month)} ยังไม่กรอก)`;
+  const miss = a.missing.length ? ` · ขาด ${a.missing.map(monthLabel).join(' ')}` : '';
+  return `💰 ${cur} · สะสม ${fmtMoney(a.ytd)} (${a.have.length} เดือน${miss})`;
+}
+
+/* ── 🔬 แตกสูตรรวมเป็นสูตรลูก (16/11 · user: "dl+oh พอเจาะเข้าไปควรแตกเป็น 2 กราฟ dl กับ oh") ──
+   สูตรที่ประกาศ `parts` ใน KPI_FORMULAS (dloh_pct → dl_pct · oh_pct) — ใช้ `inputs` รายเดือนชุดเดียวกับที่คำนวณค่าหลัก
+   (`applyFormulaEntries().info[defId]`) ⇒ ตัวเลขลูกกับแม่มาจากตัวแปรชุดเดียวกันเสมอ · ไม่มี parts = [] */
+export function formulaPartSeries(info) {
+  const f = info?.key ? formulaOf(info.key) : null;
+  if (!f || !Array.isArray(f.parts) || !f.parts.length) return [];
+  return f.parts.map((pk) => {
+    const pf = formulaOf(pk);
+    if (!pf) return null;
+    const months = {};
+    for (let m = 1; m <= 12; m++) months[m] = evalFormula(pk, info.inputs?.[m] || {}).value;
+    return { key: pk, label: pf.label, unit: pf.unit, expr: pf.expr, months };
+  }).filter(Boolean);
+}

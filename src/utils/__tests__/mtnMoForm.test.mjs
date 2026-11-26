@@ -1,7 +1,7 @@
 // เทสสูตรเงิน/คะแนนของใบ M/O ทีม MTN — src/utils/mtnMoForm.js (pure)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { laborAmount, partAmount, sumLabor, sumParts, grandTotal, satScore, needsPlantManager, needsApprovalFirst, qaAppliesTo, mtnApprovalState, purposeOfPrint } from '../mtnMoForm.js';
+import { laborAmount, partAmount, sumLabor, sumParts, grandTotal, satScore, needsPlantManager, needsApprovalFirst, qaAppliesTo, mtnApprovalState, purposeOfPrint, causeText, causeCatLabel } from '../mtnMoForm.js';
 
 test('ค่าแรง: rate × hours · มี amount ที่กรอกเองให้ใช้ค่านั้น', () => {
   assert.equal(laborAmount({ rate_per_hour: 100, hours: 1 }), 100);
@@ -110,4 +110,58 @@ test('ช่องติ๊กจุดประสงค์บนใบพิ�
   assert.equal(purposeOfPrint({ repair_type: 'งานปรับปรุง (IM)' }), 'improve');
   assert.equal(purposeOfPrint({ repair_type: 'BM' }), 'repair');
   assert.equal(needsApprovalFirst({ repair_type: 'งานปรับปรุง (IM)' }), false, 'ด่านกั้นงานต้องไม่เดาจาก repair_type');
+});
+
+/* ── สาเหตุเกิดจาก: ป้ายชุดเดียวกับ CAUSE_CATS (18/11 · ใช้ทั้งจอ · ใบพิมพ์ · Excel) */
+test('causeText — ป้ายจาก CAUSE_CATS · เติม "อื่นๆ" ที่พิมพ์เอง · รับ 2 รูปคีย์', () => {
+  assert.equal(causeText({ cause_category: 'part_life' }), 'อายุอะไหล่');
+  assert.equal(causeText({ causeCategory: 'man' }), 'คน', 'loader แปลงเป็น camelCase แล้วต้องยังอ่านได้');
+  assert.equal(causeText({ cause_category: 'other', cause_other: 'ไฟตก' }), 'อื่นๆ — ไฟตก');
+  assert.equal(causeCatLabel('method'), 'วิธีการทำงาน');
+});
+
+test('🔴 คีย์ที่ไม่รู้จัก = คืนคีย์ดิบ ห้ามกลืนหาย · ไม่เลือกหมวดแต่พิมพ์ไว้ = เอาข้อความมาแสดง', () => {
+  assert.equal(causeText({ cause_category: 'machine' }), 'machine', 'หมวดที่เพิ่มทีหลังต้องยังเห็นในรายงาน');
+  assert.equal(causeText({ cause_category: null, cause_other: 'ของเก่าไม่ได้ติ๊กหมวด' }), 'ของเก่าไม่ได้ติ๊กหมวด');
+  assert.equal(causeText({}), '');
+  assert.equal(causeText(), '');
+  assert.equal(causeCatLabel('ไม่มีจริง'), null, 'ไม่รู้จัก = null ให้ผู้เรียกตัดสิน ห้ามคืนคีย์ดิบเป็นป้าย');
+});
+
+/* ── ✍️ ช่องเซ็นที่ 1 ของ FM-JIG-008 = "ฝั่งช่าง" (19/11 · หน้างานแจ้งจากใบจริง)
+   *"อันนี้ MO die แต่ไปดึงชื่อช่างมา มันต้องดึงหัวหน้า/วิศวกร ช่างส่วนงานนั้น และลายเซ็น"* */
+test('ใบทีมเครื่องมือ (DIE/JIG) — ช่อง 1 ต้องเป็นหัวหน้าแผนกช่างที่ตรวจรับขั้น 4 ไม่ใช่ช่างที่ซ่อม', async () => {
+  const { moTechSignBox } = await import('../mtnMoForm.js');
+  const die = {
+    mtn_dept: 'die_maintenance',
+    tech_main: 'อนุพนธ์ เค้าแคน', tech_main_uid: null, repair_done_at: '2026-11-12T08:01:14Z',
+    checker_name: 'toolingmaintenance', checker_uid: 'u-head', check_at: '2026-11-18T02:09:41Z',
+  };
+  const r = moTechSignBox(die, 'DIE', 'JIG APPROVE');
+  assert.equal(r.who, 'checker');
+  assert.equal(r.name, 'toolingmaintenance');
+  assert.equal(r.uid, 'u-head', 'ต้องได้ uid มาด้วย ไม่งั้นลายเซ็นไม่ขึ้น (ใบ DIE 82/82 ใบไม่มีลายเซ็นเพราะ tech_main_uid ว่าง)');
+  assert.equal(r.at, '2026-11-18T02:09:41Z');
+  assert.equal(r.label, 'DIE APPROVE', '🔴 ใบ DIE ห้ามขึ้นป้าย JIG APPROVE');
+});
+
+test('🔴 ใบฝ่ายผลิต (AM) ไม่เปลี่ยน — ยังเป็นช่างที่ซ่อม (ขั้น 4 ของใบผลิต = ฝ่ายที่แจ้ง)', async () => {
+  const { moTechSignBox } = await import('../mtnMoForm.js');
+  const pro = {
+    mtn_dept: 'production',
+    tech_main: 'สมชาย', tech_main_uid: 'u-tech', repair_done_at: '2026-11-18T01:00:00Z',
+    checker_name: 'หัวหน้าไลน์', checker_uid: 'u-line', check_at: '2026-11-18T02:00:00Z',
+  };
+  const r = moTechSignBox(pro, 'PRO', 'JIG APPROVE');
+  assert.equal(r.who, 'tech');
+  assert.equal(r.name, 'สมชาย');
+  assert.equal(r.label, 'PRO APPROVE');
+});
+
+test('🔴 ไม่รู้รหัสทีม = ใช้ป้ายตั้งต้นจาก /doc-forms ห้าม hardcode ในโค้ดพิมพ์', async () => {
+  const { moTechSignBox } = await import('../mtnMoForm.js');
+  assert.equal(moTechSignBox({ mtn_dept: 'die_maintenance' }, '', 'JIG APPROVE').label, 'JIG APPROVE');
+  assert.equal(moTechSignBox({ mtn_dept: 'die_maintenance' }, 'die', 'x').label, 'DIE APPROVE', 'รหัสเล็กต้องเป็นตัวใหญ่');
+  /* ช่องว่างทั้งคู่ = ไม่มีป้าย (ไม่ใช่ "undefined APPROVE") */
+  assert.equal(moTechSignBox({}, '', '').label, '');
 });

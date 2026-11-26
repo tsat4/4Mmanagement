@@ -7,6 +7,9 @@ import EmojiPicker from './EmojiPicker';
 import { pickUnusedColor } from '../utils/colorPick';
 import { DeleteButton } from './IconButton';
 import { loadProcessTypeRefs, processTypeBlockMessage } from '../utils/processTypeRefs';
+import { tr } from '../utils/i18n';
+import InfoMore from './InfoMore';   // ⓘ คำอธิบายพับ (UI §6.10)
+import { askConfirm } from '../utils/askConfirm';
 
 /* ── ProcessTypeSetup — ตัวจัดการ master กระบวนการผลิต (process_types, DR) ─────────────
    component เดียว ใช้ได้หลายจุด (Daily Report ⚙️ + หน้า /process-setup ในหมวดตั้งค่าฯ)
@@ -47,14 +50,14 @@ export default function ProcessTypeSetup({ role }) {
     if (!form.label?.trim()) { toast.error('กรอกชื่อกระบวนการ'); return; }
     const key = editing === 'new' ? (slug(form.key) || slug(form.label)) : form.key;
     if (!key) { toast.error('กรอก key ภาษาอังกฤษ (เช่น laser_cutting)'); return; }
-    if (editing === 'new' && items.some(i => i.key === key)) { toast.error(`key "${key}" มีอยู่แล้ว`); return; }
+    if (editing === 'new' && items.some(i => i.key === key)) { toast.error(`key "${key}" ${tr("มีอยู่แล้ว")}`); return; }
     setSaving(true);
     const { error } = await supabaseDR.from('process_types').upsert({
       key, label: form.label.trim(), icon: form.icon || null, color: form.color || null,
       sort_order: Number(form.sort_order) || 0, is_active: !!form.is_active,
     }, { onConflict: 'key' });
     setSaving(false);
-    if (error) { toast.error('บันทึกไม่สำเร็จ: ' + error.message + ' (ยัง apply migration process_types ไม่ครบ?)'); return; }
+    if (error) { toast.error((tr('บันทึกไม่สำเร็จ') + ': ') + error.message + (' (' + tr('ยัง apply migration process_types ไม่ครบ') + '?)')); return; }
     toast.success('บันทึกกระบวนการแล้ว — มีผลทุกจุดที่ใช้ทันที');
     setEditing(null); load();
   };
@@ -68,7 +71,7 @@ export default function ProcessTypeSetup({ role }) {
     setBusyKey(null);
     const block = processTypeBlockMessage(it.label || it.key, refs);
     if (block) { toast.error(block); return; }
-    if (!window.confirm(`ลบกระบวนการ "${it.label}"?\nตรวจแล้วไม่มีเครื่องจักร/สินค้า/สูตรพัก/ขั้นตอน ที่ tag ค่านี้อยู่`)) return;
+    if (!await askConfirm(`${tr("ลบกระบวนการ")} "${it.label}"?\n${tr("ตรวจแล้วไม่มีเครื่องจักร/สินค้า/สูตรพัก/ขั้นตอน ที่ tag ค่านี้อยู่")}`)) return;
     const { error } = await supabaseDR.from('process_types').delete().eq('key', it.key);
     if (error) { toast.error(error.message); return; }
     toast.success('ลบแล้ว'); load();
@@ -77,64 +80,63 @@ export default function ProcessTypeSetup({ role }) {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <div style={{ fontSize: 13, color: 'var(--muted)' }}>{items.length} กระบวนการ</div>
-        {canEdit && <button onClick={() => openEdit()} style={saveBtnStyle}>+ เพิ่มกระบวนการ</button>}
+        <div style={{ fontSize: 13, color: 'var(--muted)' }}>{items.length} {tr('กระบวนการ')}</div>
+        {canEdit && <button onClick={() => openEdit()} style={saveBtnStyle}>{tr('+ เพิ่มกระบวนการ')}</button>}
       </div>
-      <div style={{ background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: '#a78bfa' }}>
-        🏭 กระบวนการที่ตั้งไว้ที่นี่ถูกใช้ร่วมกันทั้งระบบ: tag เครื่องจักร (ตั้งค่าผังไลน์) · สินค้า (Product Master) ·
-        ประเภท Downtime/งานเสีย/นโยบายพัก — ไลน์เห็นประเภทตามกระบวนการของเครื่อง/สินค้าที่มีจริงในไลน์
-      </div>
+      <InfoMore label={tr('กระบวนการที่ตั้งไว้ที่นี่ใช้ที่ไหนบ้าง')} id="pts-usage" size={12} style={{ marginBottom: 16 }}>
+        {tr("กระบวนการที่ตั้งไว้ที่นี่ถูกใช้ร่วมกันทั้งระบบ: tag เครื่องจักร (ตั้งค่าผังไลน์) · สินค้า (Product Master) · ประเภท Downtime/งานเสีย/นโยบายพัก — ไลน์เห็นประเภทตามกระบวนการของเครื่อง/สินค้าที่มีจริงในไลน์")}
+      </InfoMore>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {items.map(it => (
-          <div key={it.key} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 9, opacity: it.is_active !== false ? 1 : 0.45 }}>
+          <div key={it.key} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', opacity: it.is_active !== false ? 1 : 0.45 }}>
             <span style={{ fontSize: 20 }}>{it.icon || '🏭'}</span>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: it.color || 'var(--text)' }}>{it.label}</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: it.color || 'var(--text)' }}>{tr(it.label)}</span>
               <span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 8, fontFamily: 'monospace' }}>{it.key}</span>
-              {it.is_active === false && <span style={{ fontSize: 11, color: '#ef4444', marginLeft: 8 }}>ปิดใช้งาน</span>}
+              {it.is_active === false && <span style={{ fontSize: 11, color: 'var(--red)', marginLeft: 8 }}>{tr('ปิดใช้งาน')}</span>}
             </div>
             {canEdit && <>
               <button onClick={() => openEdit(it)} className="tbtn" style={{ ...cancelBtnStyle, padding: '5px 12px' }}>✏️</button>
               {/* ตรวจปลายทางก่อนลบเสมอ (fail-closed) — ระหว่างนับ ปิดปุ่มไว้ไม่ให้กดซ้ำ */}
               <DeleteButton onClick={() => handleDelete(it)} disabled={busyKey === it.key}
-                title={busyKey === it.key ? 'กำลังตรวจว่ามีอะไรใช้กระบวนการนี้อยู่…' : 'ลบกระบวนการนี้ (ตรวจการใช้งานก่อนเสมอ)'} />
+                title={busyKey === it.key ? tr('กำลังตรวจว่ามีอะไรใช้กระบวนการนี้อยู่…') : tr('ลบกระบวนการนี้ (ตรวจการใช้งานก่อนเสมอ)')} />
             </>}
           </div>
         ))}
       </div>
 
       {editing && form && (
-        <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14 }}>
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 14, padding: 18, width: 'min(96vw, 560px)' }}>
-            <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginBottom: 12 }}>{editing === 'new' ? '➕ เพิ่มกระบวนการ' : `✏️ แก้ไข ${form.label}`}</div>
+        <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14 }}>
+          <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(96vw, 560px)' }}>
+            <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginBottom: 12 }}>{editing === 'new' ? tr("➕ เพิ่มกระบวนการ") : `✏️ ${tr("แก้ไข")} ${form.label}`}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10 }}>
-                <Field label="ชื่อกระบวนการ *">
-                  <input value={form.label} onChange={e => setForm(f => ({ ...f, label: e.target.value }))} placeholder="เช่น Laser Cutting" style={inputStyle} />
+                <Field label={tr('ชื่อกระบวนการ *')}>
+                  <input value={form.label} onChange={e => setForm(f => ({ ...f, label: e.target.value }))} placeholder={tr('เช่น Laser Cutting')} style={inputStyle} />
                 </Field>
-                <Field label="ไอคอน (emoji)">
+                <Field label={tr('ไอคอน (emoji)')}>
                   <EmojiPicker value={form.icon || ''} onChange={v => setForm(f => ({ ...f, icon: v }))} style={inputStyle} />
                 </Field>
               </div>
               <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 10 }}>
-                <Field label={editing === 'new' ? 'key (อังกฤษ — เว้นว่าง = สร้างจากชื่อ)' : 'key (แก้ไม่ได้ — ผูกกับข้อมูลที่ tag แล้ว)'}>
+                <Field label={editing === 'new' ? tr('key (อังกฤษ — เว้นว่าง = สร้างจากชื่อ)') : tr('key (แก้ไม่ได้ — ผูกกับข้อมูลที่ tag แล้ว)')}>
                   <input value={form.key || ''} onChange={e => setForm(f => ({ ...f, key: e.target.value }))} disabled={editing !== 'new'}
                     placeholder="laser_cutting" style={{ ...inputStyle, fontFamily: 'monospace', opacity: editing !== 'new' ? 0.55 : 1 }} />
                 </Field>
-                <Field label="สี">
+                <Field label={tr('สี')}>
                   <input type="color" value={form.color || '#8b5cf6'} onChange={e => setForm(f => ({ ...f, color: e.target.value }))} style={{ ...inputStyle, padding: 2, height: 36 }} />
                 </Field>
-                <Field label="ลำดับ">
+                <Field label={tr('ลำดับ')}>
                   <input type="number" value={form.sort_order} onChange={e => setForm(f => ({ ...f, sort_order: e.target.value }))} style={inputStyle} />
                 </Field>
               </div>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text)' }}>
                 <input type="checkbox" checked={form.is_active !== false} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} style={{ width: 'auto' }} />
-                ใช้งานอยู่
+                {tr('ใช้งานอยู่')}
               </label>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
-                <button onClick={() => setEditing(null)} style={cancelBtnStyle}>ยกเลิก</button>
-                <button onClick={handleSave} disabled={saving} style={saveBtnStyle}>{saving ? '⏳...' : '💾 บันทึก'}</button>
+                <button onClick={() => setEditing(null)} style={cancelBtnStyle}>{tr('ยกเลิก')}</button>
+                <button onClick={handleSave} disabled={saving} style={saveBtnStyle}>{saving ? '⏳...' : tr('💾 บันทึก')}</button>
               </div>
             </div>
           </div>

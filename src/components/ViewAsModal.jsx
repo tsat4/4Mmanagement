@@ -18,6 +18,7 @@ import { ROLE_OPTIONS, roleLabel } from '../utils/roleMeta';
 import LineSelect from './LineSelect';
 import { loadPmTeams, pmTeamsSync } from '../utils/pmTeams';
 
+import { tr } from '../utils/i18n';
 export default function ViewAsModal({ current, onClose, onApply }) {
   const [role, setRole] = useState(current?.role || 'leader');
   const [deptAdmin, setDeptAdmin] = useState(!!current?.deptAdmin);
@@ -65,46 +66,45 @@ export default function ViewAsModal({ current, onClose, onApply }) {
   };
 
   return (
-    <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 10001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: 'var(--card)', border: '1.5px solid #a855f7', borderRadius: 14, padding: '20px 24px', maxWidth: 480, width: '100%', maxHeight: '88vh', overflowY: 'auto', boxShadow: 'var(--shadow-lg)' }}>
+    <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 10001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div style={{ background: 'var(--card)', border: '1.5px solid #a855f7', borderRadius: 'var(--r-lg)', padding: '20px 24px', maxWidth: 480, width: '100%', maxHeight: '88vh', overflowY: 'auto', boxShadow: 'var(--shadow-lg)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-          <div style={{ fontSize: 18, fontWeight: 900, color: 'var(--text)' }}>🎭 จำลองมุมมอง role</div>
+          <div style={{ fontSize: 18, fontWeight: 900, color: 'var(--text)' }}>{tr('จำลองมุมมอง role')}</div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 18, cursor: 'pointer', padding: 4 }}>✕</button>
         </div>
         <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.6, marginBottom: 12 }}>
-          ดูระบบเหมือนที่ user role นั้นเห็น (เมนู/ปุ่ม/ขอบเขตข้อมูล) — เฉพาะแท็บนี้ · ออกได้จากป้าย 🎭 ล่างจอ
+          {tr("ดูระบบเหมือนที่ user role นั้นเห็น (เมนู/ปุ่ม/ขอบเขตข้อมูล) — เฉพาะแท็บนี้ · ออกได้จากป้าย 🎭 ล่างจอ")}
         </div>
-        <div style={{ padding: '8px 12px', borderRadius: 8, marginBottom: 14, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', fontSize: 11.5, color: 'var(--amber)', lineHeight: 1.55 }}>
-          ⚠️ จำลองเฉพาะ "การมองเห็น" ฝั่งจอ — ถ้ากดบันทึก ระบบยังบันทึกด้วยสิทธิ์จริงของบัญชี admin
-          (ฝั่งฐานข้อมูลไม่ได้ถูกจำลอง) จึงควรใช้ดูอย่างเดียว
+        <div style={{ padding: '8px 12px', borderRadius: 'var(--r-md)', marginBottom: 14, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', fontSize: 11.5, color: 'var(--amber)', lineHeight: 1.55 }}>
+          ⚠️ {tr("จำลองเฉพาะ \"การมองเห็น\" ฝั่งจอ — ถ้ากดบันทึก ระบบยังบันทึกด้วยสิทธิ์จริงของบัญชี admin (ฝั่งฐานข้อมูลไม่ได้ถูกจำลอง) จึงควรใช้ดูอย่างเดียว")}
         </div>
 
         <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', display: 'block', marginBottom: 10 }}>
-          Role ที่ต้องการจำลอง
+          {tr('Role ที่ต้องการจำลอง')}
           <select value={role} onChange={e => { setRole(e.target.value); setSections([]); setLineId(''); setTeam(''); }} style={{ marginTop: 4 }}>
-            {roleOpts.map(r => <option key={r.value} value={r.value}>{r.icon} {r.label}</option>)}
+            {roleOpts.map(r => <option key={r.value} value={r.value}>{r.icon} {tr(r.label)}</option>)}
           </select>
         </label>
 
         {role !== 'display' && (
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: '#eab308', marginBottom: 12, cursor: 'pointer' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: 'var(--amber)', marginBottom: 12, cursor: 'pointer' }}>
             <input type="checkbox" checked={deptAdmin} onChange={e => setDeptAdmin(e.target.checked)}
               style={{ width: 16, height: 16, accentColor: '#eab308' }} />
-            🛡️ เป็นแอดมินหน่วยงานด้วย (ได้ action เพิ่มตามคอลัมน์ในหน้าจัดการสิทธิ์)
+            {tr('🛡️ เป็นแอดมินหน่วยงานด้วย (ได้ action เพิ่มตามคอลัมน์ในหน้าจัดการสิทธิ์)')}
           </label>
         )}
 
         {isLeader ? (
           <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
             <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', flex: 2, minWidth: 200 }}>
-              ไลน์ของหัวหน้ากลุ่ม (scope = ทั้งครอบครัวไลน์)
+              {tr("ไลน์ของหัวหน้ากลุ่ม (scope = ทั้งครอบครัวไลน์")})
               {/* picker กลาง (UI §5.1.2) — ไม่ส่ง role/sections เพราะจอนี้คือ "สวมบทบาท" ต้องเห็นทุกไลน์
                   includeRetired: คงพฤติกรรมเดิม (เดิม map จาก lines ดิบ ไม่กรอง is_active) */}
               <LineSelect lines={lines} value={lineId} onChange={setLineId} valueKey="id"
-                placeholder="— ยังไม่กำหนดไลน์ —" includeRetired style={{ marginTop: 4 }} />
+                placeholder={tr('— ยังไม่กำหนดไลน์ —')} includeRetired style={{ marginTop: 4 }} />
             </label>
             <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', flex: 1, minWidth: 90 }}>
-              ทีม
+              {tr('ทีม')}
               <select value={team} onChange={e => setTeam(e.target.value)} style={{ marginTop: 4 }}>
                 <option value="">—</option>
                 {/* 🗂️ ทีมมาจากผังองค์กร (`org_nodes kind='team'`) ไม่ใช่ A/B/C ตายตัว —
@@ -116,13 +116,13 @@ export default function ViewAsModal({ current, onClose, onApply }) {
         ) : role !== 'display' && (
           <div style={{ marginBottom: 12 }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', marginBottom: 6 }}>
-              จำกัดขอบเขตส่วนงาน (ไม่ติ๊ก = ไม่จำกัด — เห็นทั้งโรงงานตามกติกา role)
+              {tr("จำกัดขอบเขตส่วนงาน (ไม่ติ๊ก = ไม่จำกัด — เห็นทั้งโรงงานตามกติกา")} role)
             </div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {orgSections.map(s => (
                 <button key={s} onClick={() => toggleSection(s)}
                   style={{
-                    padding: '5px 12px', borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                    padding: '5px 12px', borderRadius: 'var(--r-md)', fontSize: 12, fontWeight: 700, cursor: 'pointer',
                     border: sections.includes(s) ? '2px solid var(--accent)' : '1px solid var(--border2)',
                     background: sections.includes(s) ? 'var(--accent-dim)' : 'var(--bg3)',
                     color: sections.includes(s) ? 'var(--accent)' : 'var(--text2)',
@@ -137,17 +137,17 @@ export default function ViewAsModal({ current, onClose, onApply }) {
         {role !== 'display' && (
           <div style={{ marginBottom: 12 }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', marginBottom: 6 }}>
-              🔧 ทีมช่างซ่อมที่สังกัด (ไม่ติ๊ก = ไม่ได้ถูกตั้งทีม — ใบซ่อมขั้น 2-4 จะทำไม่ได้)
+              {tr("ทีมช่างซ่อมที่สังกัด (ไม่ติ๊ก = ไม่ได้ถูกตั้งทีม — ใบซ่อมขั้น 2-4 จะทำไม่ได้")})
             </div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {(teamRows || []).map(t => (
                 <button key={t.key} onClick={() => toggleMtnTeam(t.key)}
                   style={{
-                    padding: '5px 12px', borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                    padding: '5px 12px', borderRadius: 'var(--r-md)', fontSize: 12, fontWeight: 700, cursor: 'pointer',
                     border: mtnTeams.includes(t.key) ? '2px solid var(--accent)' : '1px solid var(--border2)',
                     background: mtnTeams.includes(t.key) ? 'var(--accent-dim)' : 'var(--bg3)',
                     color: mtnTeams.includes(t.key) ? 'var(--accent)' : 'var(--text2)',
-                  }}>{t.icon ? `${t.icon} ` : ''}{t.dept_name || t.label || t.key}</button>
+                  }}>{t.icon ? `${t.icon} ` : ''}{t.dept_name || tr(t.label) || t.key}</button>
               ))}
             </div>
           </div>
@@ -155,12 +155,12 @@ export default function ViewAsModal({ current, onClose, onApply }) {
 
         <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
           <button onClick={onClose}
-            style={{ flex: 1, padding: '10px 0', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
-            ยกเลิก
+            style={{ flex: 1, padding: '10px 0', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+            {tr('ยกเลิก')}
           </button>
           <button onClick={apply}
-            style={{ flex: 1.4, padding: '10px 0', borderRadius: 8, border: 'none', background: '#a855f7', color: '#fff', fontSize: 14, fontWeight: 800, cursor: 'pointer' }}>
-            🎭 เริ่มจำลองเป็น {roleLabel(role)}
+            style={{ flex: 1.4, padding: '10px 0', borderRadius: 'var(--r-md)', border: 'none', background: '#a855f7', color: '#fff', fontSize: 14, fontWeight: 800, cursor: 'pointer' }}>
+            {tr('เริ่มจำลองเป็น')} {roleLabel(role)}
           </button>
         </div>
       </div>

@@ -8,8 +8,11 @@ import { DAY_TYPE_META } from '../utils/companyCalendar';
 import InfoMore from '../components/InfoMore';
 import PageHeader from '../components/PageHeader';
 import Page from '../components/Page';
+import { tr } from '../utils/i18n';
+import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
+import { askConfirm } from '../utils/askConfirm';
+import { weekdaysShort } from '../utils/dateFormat';
 const MONTH_NAMES = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-const WEEKDAY_HEAD = ['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'];
 const DAY_TYPES = ['working', 'ot15', 'ot2', 'shutdown75'];
 
 const toDateStr = (y, m, d) => `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
@@ -67,11 +70,11 @@ export default function CompanyCalendar() {
     }));
     const { error } = await supabase.from('company_calendar').upsert(rows, { onConflict: 'work_date' });
     if (error) {
-      toast.error('บันทึกไม่สำเร็จ: ' + error.message);
+      toast.error((tr('บันทึกไม่สำเร็จ') + ': ') + error.message);
     } else {
       setCalendar(prev => ({ ...prev, ...draft }));
       setDraft({});
-      toast.success(`บันทึก ${rows.length} วันเรียบร้อย`);
+      toast.success(`${tr("บันทึก")} ${rows.length} ${tr("วันเรียบร้อย")}`);
     }
     setSaving(false);
   };
@@ -88,14 +91,14 @@ export default function CompanyCalendar() {
       d.setDate(d.getDate() + 1);
     }
     // เขียนทับทั้งปีทีเดียว — ยืนยันก่อน (ต่างจากคลิกรายวันที่มี draft)
-    if (!confirm(`ตั้งค่า ${dates.length} วัน (ทุกวันในสัปดาห์ที่เลือก ทั้งปี ${year}) เป็น "${bulkType}" ?\n\nเขียนทับค่าเดิมของวันเหล่านี้ทันที`)) return;
+    if (!await askConfirm(`${tr("ตั้งค่า")} ${dates.length} ${tr("วัน (ทุกวันในสัปดาห์ที่เลือก ทั้งปี")} ${year}) ${tr("เป็น")} "${bulkType}" ?\n\n${tr("เขียนทับค่าเดิมของวันเหล่านี้ทันที")}`)) return;
     setLoading(true);
     const { error } = await supabase.from('company_calendar').upsert(
       dates.map(dt => ({ work_date: dt, day_type: bulkType, updated_at: new Date().toISOString() })),
       { onConflict: 'work_date' }
     );
-    if (error) toast.error('บันทึกไม่สำเร็จ: ' + error.message);
-    else toast.success(`ตั้งค่า ${dates.length} วันเรียบร้อย`);
+    if (error) toast.error((tr('บันทึกไม่สำเร็จ') + ': ') + error.message);
+    else toast.success(`${tr("ตั้งค่า")} ${dates.length} ${tr("วันเรียบร้อย")}`);
     await fetchYear();
     setLoading(false);
   };
@@ -107,7 +110,7 @@ export default function CompanyCalendar() {
     const { error } = await supabase.from('company_calendar').upsert({
       work_date: singleDate, day_type: singleType, note: singleNote.trim() || null, updated_at: new Date().toISOString(),
     }, { onConflict: 'work_date' });
-    if (error) toast.error('บันทึกไม่สำเร็จ: ' + error.message);
+    if (error) toast.error((tr('บันทึกไม่สำเร็จ') + ': ') + error.message);
     else toast.success('เพิ่มวันหยุดเรียบร้อย');
     await fetchYear();
     setLoading(false);
@@ -121,9 +124,9 @@ export default function CompanyCalendar() {
 
   return (
     <Page>
-      <PageHeader title="ปฏิทินบริษัท — วันทำงาน/วันหยุด" icon="📅"
+      <PageHeader title={tr('ปฏิทินบริษัท — วันทำงาน/วันหยุด')} icon="📅"
         filters={<>
-          <span className="filter-label">ปี</span>
+          <span className="filter-label">{tr('ปี')}</span>
           <button className="ctl-btn" onClick={() => setYear(y => y - 1)} style={navBtnSt}>‹</button>
           <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)', minWidth: 50, textAlign: 'center' }}>{year}</span>
           <button className="ctl-btn" onClick={() => setYear(y => y + 1)} style={navBtnSt}>›</button>
@@ -133,12 +136,12 @@ export default function CompanyCalendar() {
       <div style={{ display: 'flex', gap: 14, marginBottom: 18, flexWrap: 'wrap', alignItems: 'center' }}>
         {DAY_TYPES.map(t => (
           <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text2)', whiteSpace: 'nowrap' }}>
-            <div style={{ width: 12, height: 12, borderRadius: 3, background: DAY_TYPE_META[t].color, flexShrink: 0 }} />
-            {DAY_TYPE_META[t].label} <strong style={{ color: 'var(--text)' }}>{counts[t]} วัน</strong>
+            <div style={{ width: 12, height: 12, borderRadius: 'var(--r-xs)', background: DAY_TYPE_META[t].color, flexShrink: 0 }} />
+            {tr(DAY_TYPE_META[t].label)} <strong style={{ color: 'var(--text)' }}>{counts[t]} {tr('วัน')}</strong>
           </div>
         ))}
         {!canEdit && (
-          <span style={{ fontSize: 11, color: 'var(--muted)' }}>🔒 ดูได้อย่างเดียว — แก้ไขได้เฉพาะชุดสิทธิ์ ผู้ดูแลระบบ / งานเอกสาร</span>
+          <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('ดูได้อย่างเดียว — แก้ไขได้เฉพาะชุดสิทธิ์ ผู้ดูแลระบบ / งานเอกสาร')}</span>
         )}
       </div>
 
@@ -146,32 +149,32 @@ export default function CompanyCalendar() {
         <div className="card" style={{ padding: 14, marginBottom: 20, display: 'flex', flexWrap: 'wrap', gap: 24 }}>
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
-              ตั้งค่าวันหยุดประจำสัปดาห์ทั้งปี
+              {tr("ตั้งค่าวันหยุดประจำสัปดาห์ทั้งปี")}
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               {/* width กัน index.css input/select {width:100%} ยืดเต็ม toolbar (กับดัก CSS ใน CLAUDE.md) */}
               <select value={bulkWeekday} onChange={e => setBulkWeekday(e.target.value)} style={{ width: 'auto' }}>
-                {WEEKDAY_HEAD.map((w, i) => <option key={i} value={i}>{w}</option>)}
+                {weekdaysShort().map((w, i) => <option key={i} value={i}>{tr(w)}</option>)}
               </select>
-              <span style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap' }}>เป็น</span>
+              <span style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{tr('เป็น')}</span>
               <select value={bulkType} onChange={e => setBulkType(e.target.value)} style={{ width: 'auto' }}>
-                {DAY_TYPES.filter(t => t !== 'working').map(t => <option key={t} value={t}>{DAY_TYPE_META[t].label}</option>)}
+                {DAY_TYPES.filter(t => t !== 'working').map(t => <option key={t} value={t}>{tr(DAY_TYPE_META[t].label)}</option>)}
               </select>
-              <button onClick={handleBulkWeekday} disabled={loading} style={primaryBtnSt}>ตั้งค่าทั้งปี</button>
+              <button onClick={handleBulkWeekday} disabled={loading} style={primaryBtnSt}>{tr('ตั้งค่าทั้งปี')}</button>
             </div>
           </div>
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
-              เพิ่มวันหยุดพิเศษ/ประเพณีนิยม/แลกเปลี่ยน
+              {tr("เพิ่มวันหยุดพิเศษ/ประเพณีนิยม/แลกเปลี่ยน")}
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               {/* width กัน index.css input/select {width:100%} ยืดเต็ม toolbar (กับดัก CSS ใน CLAUDE.md) */}
               <input type="date" value={singleDate} onChange={e => setSingleDate(e.target.value)} style={{ width: 150 }} />
               <select value={singleType} onChange={e => setSingleType(e.target.value)} style={{ width: 'auto' }}>
-                {DAY_TYPES.filter(t => t !== 'working').map(t => <option key={t} value={t}>{DAY_TYPE_META[t].label}</option>)}
+                {DAY_TYPES.filter(t => t !== 'working').map(t => <option key={t} value={t}>{tr(DAY_TYPE_META[t].label)}</option>)}
               </select>
-              <input placeholder="หมายเหตุ เช่น วันสงกรานต์" value={singleNote} onChange={e => setSingleNote(e.target.value)} style={{ width: 180 }} />
-              <button onClick={handleAddSingle} disabled={loading} style={primaryBtnSt}>เพิ่ม</button>
+              <input placeholder={tr('หมายเหตุ เช่น วันสงกรานต์')} value={singleNote} onChange={e => setSingleNote(e.target.value)} style={{ width: 180 }} />
+              <button onClick={handleAddSingle} disabled={loading} style={primaryBtnSt}>{tr('เพิ่ม')}</button>
             </div>
           </div>
         </div>
@@ -179,10 +182,9 @@ export default function CompanyCalendar() {
 
       {canEdit && (
         <InfoMore size={11} style={{ marginBottom: 14 }} id="cal_help"
-          lead={<>💡 คลิกตัวเลขวันที่เพื่อสลับสถานะ — <b>ยังไม่บันทึกจนกว่าจะกด "บันทึก"</b></>}>
-          ลำดับที่สลับ: วันทำงาน → OT×1.5 → OT×2 → หยุดจ่าย 75% → วันทำงาน
-          <br /><b>หยุดจ่าย 75% (ม.75)</b> = หยุดชั่วคราวเหตุลูกค้าลด order — หยุดได้ค่าจ้าง 75% ·
-          มาทำงาน = ค่าแรงปกติ (ไม่ใช่ OT วันหยุด)
+          lead={<>{tr('💡 คลิกตัวเลขวันที่เพื่อสลับสถานะ —')} <b>{tr("ยังไม่บันทึกจนกว่าจะกด \"บันทึก")}"</b></>}>
+          {tr("ลำดับที่สลับ: วันทำงาน → OT×1.5 → OT×2 → หยุดจ่าย 75% → วันทำงาน")}
+          <br /><b>{tr('หยุดจ่าย 75% (ม.75)')}</b> = {tr("หยุดชั่วคราวเหตุลูกค้าลด order — หยุดได้ค่าจ้าง 75% · มาทำงาน = ค่าแรงปกติ (ไม่ใช่ OT วันหยุด")})
         </InfoMore>
       )}
 
@@ -193,9 +195,9 @@ export default function CompanyCalendar() {
           const cells = [...Array(firstWeekday).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
           return (
             <div key={m} className="card" style={{ padding: 12 }}>
-              <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', marginBottom: 8 }}>{name}</div>
+              <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', marginBottom: 8 }}>{tr(name)}</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3, marginBottom: 4 }}>
-                {WEEKDAY_HEAD.map(w => (
+                {weekdaysShort().map(w => (
                   <div key={w} style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'center' }}>{w}</div>
                 ))}
               </div>
@@ -211,15 +213,15 @@ export default function CompanyCalendar() {
                       key={i}
                       className="cal-day"
                       onClick={() => cycleDay(dateStr)}
-                      title={isDirty ? `${meta.label} (ยังไม่บันทึก)` : meta.label}
+                      title={isDirty ? `${tr(meta.label)} (${tr("ยังไม่บันทึก")})` : tr(meta.label)}
                       style={{
                         position: 'relative',
-                        fontSize: 11, textAlign: 'center', padding: '4px 0', borderRadius: 5,
+                        fontSize: 11, textAlign: 'center', padding: '4px 0', borderRadius: 'var(--r-xs)',
                         background: type === 'working' ? 'transparent' : meta.color + '33',
                         color: type === 'working' ? 'var(--text2)' : meta.color,
                         fontWeight: type === 'working' ? 400 : 700,
                         cursor: canEdit ? 'pointer' : 'default',
-                        border: isDirty ? `1px dashed ${meta.color}` : (type === 'working' ? '1px solid transparent' : `1px solid ${meta.color}66`),
+                        border: isDirty ? `1px dashed ${meta.color}` : (type === 'working' ? '1px solid transparent' : `1px solid ${tint(meta.color, 'line')}`),
                         boxShadow: isDirty ? `0 0 0 1px ${meta.color}` : 'none',
                       }}
                     >
@@ -241,15 +243,15 @@ export default function CompanyCalendar() {
         <div style={{
           position: 'sticky', bottom: 16, marginTop: 18,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
-          background: 'var(--bg3)', border: '1px solid var(--accent)', borderRadius: 10,
+          background: 'var(--bg3-surf)', border: '1px solid var(--accent)', borderRadius: 'var(--r-md)',
           padding: '12px 16px', boxShadow: 'var(--shadow-float)',
         }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
-            ● มีการเปลี่ยนแปลงที่ยังไม่บันทึก {pendingCount} วัน
+            ● {tr("มีการเปลี่ยนแปลงที่ยังไม่บันทึก")} {pendingCount} {tr("วัน")}
           </span>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={handleDiscardDraft} disabled={saving} style={cancelBtnSt}>ยกเลิก</button>
-            <button onClick={handleSaveDraft} disabled={saving} style={saveBtnSt}>{saving ? 'กำลังบันทึก...' : `💾 บันทึก (${pendingCount})`}</button>
+            <button onClick={handleDiscardDraft} disabled={saving} style={cancelBtnSt}>{tr('ยกเลิก')}</button>
+            <button onClick={handleSaveDraft} disabled={saving} style={saveBtnSt}>{saving ? tr("กำลังบันทึก...") : `${tr("บันทึก")} (${pendingCount})`}</button>
           </div>
         </div>
       )}

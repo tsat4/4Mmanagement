@@ -22,7 +22,10 @@ import { parseMonitoringWorkbook, monitoringToRecords, sheetReport, stockAdjustP
 import { refStockOf, inflowDestOf } from '../utils/partRefStock';
 import { buildBoardPlan, writeBoardPlan, BoardPlanPreview } from './MonitorImport';
 import MatLabel from './MatLabel';
+import { ImportInfo, WrongFileNote } from './ImportKit';
+import { importLabel, whichImport } from '../utils/importRegistry';
 
+import { tr } from '../utils/i18n';
 /* วันที่งาน (ตัด 08:00 — งานกะดึกข้ามวันนับเป็นวันก่อนหน้า)
    ⚠️ ห้ามใช้ toISOString() — คืน UTC ทำให้วันที่เพี้ยนสำหรับไทย (กฎ Date/Time ใน CLAUDE.md)
    (ยังไม่มี util กลางของ getWorkDate — ทุกหน้าประกาศเองเหมือนกันหมด) */
@@ -48,13 +51,14 @@ async function insertChunked(table, rows, label) {
 
 export default function MonitoringUpload({ canUpload, canBoard = true, fullName, onImported, asModal = false, onClose }) {
   const [busy, setBusy] = useState(false);
+  const [wrong, setWrong] = useState(null);       // 📥 ไฟล์ของจุดนำเข้าอื่น (importRegistry) · null = ไม่รู้/ไม่ผิดช่อง
   const [preview, setPreview] = useState(null);   // { fileName, month, rec, parsed, stockPlan, kbDiff, board }
   const fileRef = useRef(null);
 
   /* ── อ่านไฟล์ → แกะ → เตรียมสิ่งที่จะเขียน (ยังไม่เขียน) ─────────────────── */
   const handleFile = useCallback(async (file) => {
     if (!file) return;
-    setBusy(true); setPreview(null);
+    setBusy(true); setPreview(null); setWrong(null);
     try {
       const XLSX = await import('xlsx');
       const wb = XLSX.read(await file.arrayBuffer(), { cellDates: true });
@@ -65,14 +69,18 @@ export default function MonitoringUpload({ canUpload, canBoard = true, fullName,
       const today = getWorkDate();
       const parsed = parseMonitoringWorkbook(sheets, { asOf: today });
       if (!parsed.press.length && !parsed.customer.length) {
-        toast.error('แกะไฟล์นี้ไม่ได้ — ไม่พบชีทแบบ Monitoring (ไลน์ปั๊ม / ชีทลูกค้า)');
+        /* 📥 ไฟล์ของจุดนำเข้าอื่น (เช่น Stock_Store ของสโตร์) = บอกว่าต้องไปนำเข้าที่ไหน · ไม่รู้จัก = ข้อความเดิม */
+        const other = whichImport(sheets, 'planner_monitoring');
+        if (other) setWrong(other);
+        else toast.error('แกะไฟล์นี้ไม่ได้ — ไม่พบชีทแบบ Monitoring (ไลน์ปั๊ม / ชีทลูกค้า)');
+        if (fileRef.current) fileRef.current.value = '';
         setBusy(false); return;
       }
 
       /* ไลน์ของพาร์ท + ยอดคงเหลือปัจจุบัน — อ่านจากทะเบียนจริง ไม่เดาในไฟล์ */
       const { data: prodRows, error: prodErr } = await fetchAllRows(
         supabaseDR, 'dr_products', 'mat_no, name, line_name, is_active, is_operation', q => q.order('mat_no'));
-      if (prodErr) { toast.error(`อ่านทะเบียนสินค้าไม่สำเร็จ: ${prodErr.message} — ยังไม่เขียนอะไร`); setBusy(false); return; }
+      if (prodErr) { toast.error(`${tr("อ่านทะเบียนสินค้าไม่สำเร็จ")}: ${prodErr.message} — ${tr("ยังไม่เขียนอะไร")}`); setBusy(false); return; }
       /* 🔴 ทะเบียนลูกค้า — ชื่อชีท (TSPK / TSESA+LA) → ลูกค้าจริง
          เดิมไม่เขียน customer เลย ⇒ ใบทั้งหมดไปกองใน "— ไม่ระบุลูกค้า —" ที่จอ 🚚 Delivery
          (แพลนนิ่งรายงาน 24/09 ว่า "ลูกค้า TSESA ไม่ขึ้น") · ไม่มีในทะเบียน = null ห้ามเดา */
@@ -95,7 +103,7 @@ export default function MonitoringUpload({ canUpload, canBoard = true, fullName,
         supabaseDR.from('stock_inflow_rules').select('match_type, match_value, dest_line_name, is_active, mode').eq('is_active', true),
       ]);
       const stockRulesOk = !ruleR.error;
-      if (!stockRulesOk) toast.info(`อ่านกฎรับเข้าคลังไม่ได้ — รอบนี้ไม่ลงยอดคงเหลือจากชีทไลน์ปั๊ม (ส่วนอื่นนำเข้าได้): ${ruleR.error.message}`);
+      if (!stockRulesOk) toast.info(`${tr("อ่านกฎรับเข้าคลังไม่ได้ — รอบนี้ไม่ลงยอดคงเหลือจากชีทไลน์ปั๊ม (ส่วนอื่นนำเข้าได้")}): ${ruleR.error.message}`);
       const rules = ruleR.data || [];
       const fgDest = inflowDestOf('1', rules.filter(r => r.match_type === 'prefix'));
       const stockLocOf = (mat, line) => {
@@ -117,7 +125,7 @@ export default function MonitoringUpload({ canUpload, canBoard = true, fullName,
 
       /* สต็อก: คิดส่วนต่างจากยอดปัจจุบัน (ลง ledger เป็น adjust — ย้อนได้ ตรวจได้) */
       const { data: stkRows, error: stkErr } = await readStock();
-      if (stkErr) { toast.error(`อ่านยอดคงเหลือไม่สำเร็จ: ${stkErr.message} — ยังไม่เขียนอะไร`); setBusy(false); return; }
+      if (stkErr) { toast.error(`${tr("อ่านยอดคงเหลือไม่สำเร็จ")}: ${stkErr.message} — ${tr("ยังไม่เขียนอะไร")}`); setBusy(false); return; }
       const stockPlan = stockAdjustPlan(rec.stock, stkRows, norm);
       const stockKept = stockSeedKept(rec.stock, stkRows, norm);
 
@@ -150,7 +158,7 @@ export default function MonitoringUpload({ canUpload, canBoard = true, fullName,
       const board = buildBoardPlan(sheets, { today });
       setPreview({ fileName: file.name, month, parsed, rec, stockPlan, stockKept, kbDiff, nameOfMat, norm, today, bySheet, board });
     } catch (e) {
-      toast.error(`อ่านไฟล์ไม่สำเร็จ: ${e.message}`);
+      toast.error(`${tr("อ่านไฟล์ไม่สำเร็จ")}: ${e.message}`);
     }
     setBusy(false);
   }, []);
@@ -187,14 +195,31 @@ export default function MonitoringUpload({ canUpload, canBoard = true, fullName,
 
     // ② ออเดอร์ล่วงหน้า — เฉพาะดิวตั้งแต่วันนี้ไป (ดิวเก่าเป็นประวัติ ไม่ใช่ backlog)
     const future = rec.orders.filter(o => !o.past);
-    if (ok) ok = checkWrite(await supabaseDR.from('customer_shipping_orders')
-      .delete().eq('source', 'monitoring').eq('status', 'pending'), 'ล้างออเดอร์รอบก่อน');
-    if (ok && future.length) {
-      ok = await insertChunked('customer_shipping_orders', future.map(o => ({
-        mat_no: o.mat_no, part_name: o.part_name || nameOfMat[norm(o.mat_no)] || null,
-        customer: o.customer || null, customer_part_no: o.customer_part_no, due_date: o.due_date, qty: o.qty,
-        status: 'pending', source: 'monitoring', note: o.note, created_by_name: by,
-      })), 'บันทึกออเดอร์');
+    /* 🔴 ลบ+ใส่ ต้องอยู่ใน transaction เดียว ⇒ ผ่าน RPC `fn_monitoring_orders_replace` (16/11)
+       เดิมเป็น **2 คำขอแยกกัน**: ถ้าตัวใส่ล้มหลังตัวลบสำเร็จ (เน็ตสะดุด/ไฟล์ใหญ่)
+       **ออเดอร์หายทั้งชุด ไม่มีอะไรย้อนให้** — จอขึ้นว่าบันทึกไม่สำเร็จ แต่ของเดิมหายไปแล้ว
+       (ร้ายกว่านั้น: `shipping_phase_alerts` ผูก FK `on delete cascade` = หายตามไปด้วย)
+       และ RPC ปิด audit รายแถวในตัว แล้วเขียน **audit สรุป 1 แถว** (`BULK_REPLACE`) แทน N แถว
+       — ตารางนี้กิน **28.2% ของ `audit_log` ทั้งตาราง** เพราะลบทั้งชุดแล้วเขียนใหม่ทุกรอบอัปโหลด
+       ⚠️ ส่งทั้งก้อนในคำขอเดียว (แบ่ง chunk ไม่ได้ ไม่งั้นหมดความเป็น transaction เดียว)
+          — ไฟล์ปกติหลักร้อยถึงพันแถว ≈ ไม่กี่ร้อย KB · ถ้าวันหนึ่งไฟล์ใหญ่กว่านี้มาก
+          ต้องเปลี่ยนไปใช้ staging table ฝั่ง DB ไม่ใช่กลับไปแบ่ง chunk */
+    if (ok) {
+      const { data: repRows, error: eRep } = await supabaseDR.rpc('fn_monitoring_orders_replace', {
+        p_rows: future.map(o => ({
+          mat_no: o.mat_no, part_name: o.part_name || nameOfMat[norm(o.mat_no)] || null,
+          customer: o.customer || null, customer_part_no: o.customer_part_no,
+          due_date: o.due_date, qty: o.qty, note: o.note,
+        })),
+        p_by: by,
+      });
+      ok = checkWrite({ error: eRep }, 'บันทึกออเดอร์');
+      /* 🔴 RPC ตัดแถวที่ไม่มีรหัส/ไม่มีดิวทิ้ง (ใส่ไม่ได้อยู่ดี — คอลัมน์เป็น NOT NULL)
+         แต่ **ตัดแล้วต้องบอก ห้ามเงียบ** ไม่งั้นคนอัปโหลดเข้าใจว่าเข้าครบ */
+      const inserted = Array.isArray(repRows) ? (repRows[0]?.inserted ?? null) : null;
+      if (ok && inserted != null && inserted < future.length) {
+        toast.info(`⚠️ ${tr("ออเดอร์เข้า")} ${inserted} ${tr("จาก")} ${future.length} ${tr("แถว")} — ${future.length - inserted} ${tr("แถวไม่มีรหัสพาร์ทหรือไม่มีวันดิว")}`);
+      }
     }
 
     // ③ ประวัติการส่ง → ตารางของตัวเอง (ห้ามปนกับใบส่งของ)
@@ -242,13 +267,13 @@ export default function MonitoringUpload({ canUpload, canBoard = true, fullName,
     let stockDone = 0;
     if (ok && stockPlan.length) {
       const { data: freshStk, error: freshErr } = await readStock();
-      if (freshErr) { toast.error(`อ่านยอดคงเหลือล่าสุดไม่สำเร็จ — ยังไม่ปรับสต็อก: ${freshErr.message}`); ok = false; }
+      if (freshErr) { toast.error(`${tr("อ่านยอดคงเหลือล่าสุดไม่สำเร็จ — ยังไม่ปรับสต็อก")}: ${freshErr.message}`); ok = false; }
       const plan = ok ? stockAdjustPlan(stockPlan, freshStk, norm) : [];
       stockDone = plan.length;
       const tx = plan.map(s => ({
         line_name: s.line_name, mat_no: s.mat_no, part_name: s.part_name || nameOfMat[norm(s.mat_no)] || null,
         qty: s.delta, type: 'adjust', work_date: today, status: 'approved',
-        note: `ตั้งยอดให้ตรงไฟล์ Monitoring ${s.sheet} (ก่อนหน้า ${s.have} → ${s.qty})`,
+        note: `${tr("ตั้งยอดให้ตรงไฟล์")} Monitoring ${s.sheet} (${tr("ก่อนหน้า")} ${s.have} → ${s.qty})`,
         created_by: by, reviewed_by: by, reviewed_at: new Date().toISOString(),
       }));
       if (ok && tx.length) ok = await insertChunked('line_stock_transactions', tx, 'ปรับยอดสต็อก');
@@ -259,13 +284,13 @@ export default function MonitoringUpload({ canUpload, canBoard = true, fullName,
        ตอนนี้จริงแล้ว (สต็อกคิดส่วนต่างจากยอดสด · FC/ออเดอร์ล้างของรอบก่อนแล้วลงใหม่ · ประวัติ/MIN upsert)
        แต่ต้องบอกด้วยว่า **ระหว่างนี้ข้อมูลบางขั้นหายไปแล้ว** (FC/ออเดอร์ถูกล้างก่อนลงใหม่) — ห้ามปล่อยค้าง */
     if (!ok) { toast.error('นำเข้าไม่ครบ — ข้อมูลบางขั้น (Forecast/ออเดอร์) อาจถูกล้างไปแล้วแต่ยังลงใหม่ไม่ครบ: กดยืนยันนำเข้าอีกครั้ง (ขั้นที่ลงไปแล้วจะถูกแทนที่ · สต็อกคิดส่วนต่างจากยอดล่าสุด จึงไม่ซ้อน)'); return; }
-    toast.success((boardRes ? `นำเข้าสำเร็จ — บอร์ด ${boardRes.boardsN} (${fmt(boardRes.partsN)} พาร์ท) · ` : 'นำเข้าสำเร็จ — ')
-      + `FC ${rec.forecasts.length} · ออเดอร์ ${future.length} · ประวัติ ${histUniq.length} · MIN ${rec.levels.length} · สต็อก ${stockDone}`
-      + (stockDone < stockPlan.length ? ` (อีก ${stockPlan.length - stockDone} รายการตรงไฟล์อยู่แล้ว)` : ''));
+    toast.success((boardRes ? `${tr("นำเข้าสำเร็จ — บอร์ด")} ${boardRes.boardsN} (${fmt(boardRes.partsN)} ${tr("พาร์ท")}) · ` : 'นำเข้าสำเร็จ — ')
+      + `FC ${rec.forecasts.length} · ${tr("ออเดอร์")} ${future.length} · ${tr("ประวัติ")} ${histUniq.length} · MIN ${rec.levels.length} · ${tr("สต็อก")} ${stockDone}`
+      + (stockDone < stockPlan.length ? ` (${tr("อีก")} ${stockPlan.length - stockDone} ${tr("รายการตรงไฟล์อยู่แล้ว")})` : ''));
     /* ซ้ำในไฟล์ที่ค่าไม่ตรงกัน = ไฟล์ขัดกันเอง ต้องให้คนไปดู ห้ามกลืน */
     if (boardRes?.conflictParts || boardRes?.conflictCells) {
-      toast.error(`⚠️ ของซ้ำในไฟล์ที่ค่าไม่ตรงกัน ${fmt(boardRes.conflictParts)} พาร์ท · ${fmt(boardRes.conflictCells)} ช่อง`
-        + ' — ระบบใช้ค่าของบล็อกล่างสุด ให้ทีมวางแผนตรวจไฟล์');
+      toast.error(`⚠️ ${tr("ของซ้ำในไฟล์ที่ค่าไม่ตรงกัน")} ${fmt(boardRes.conflictParts)} ${tr("พาร์ท")} · ${fmt(boardRes.conflictCells)} ${tr("ช่อง")}`
+        + (' — ' + tr('ระบบใช้ค่าของบล็อกล่างสุด ให้ทีมวางแผนตรวจไฟล์')));
     }
     setPreview(null);
     if (fileRef.current) fileRef.current.value = '';
@@ -278,32 +303,33 @@ export default function MonitoringUpload({ canUpload, canBoard = true, fullName,
   const body = (
     <div style={{ display: 'grid', gap: 14 }}>
       <div style={card}>
-        <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>📗 ไฟล์ Monitoring ของแพลนนิ่ง</div>
+        <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>📥 {tr(importLabel('planner_monitoring'))}</div>
+        <div style={{ marginBottom: 10 }}><ImportInfo k="planner_monitoring" /></div>
         <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.7 }}>
-          ไฟล์ <b>1.Monitoring-&lt;เดือน&gt;.xlsx</b> — ลูกค้าที่ไม่ได้ส่ง EDI (TSPK · TSESA · TSLA · TSRA · GWM · Argen)<br />
-          ระบบจะอ่าน: <b>ตารางบอร์ดของทุกชีท</b> · <b>FC รายเดือน</b> · <b>MIN/MAX</b> ·
-          <b>ออเดอร์ล่วงหน้า</b>ของชีทลูกค้า/Argen · <b>ยอดคงเหลือ</b> · <b>ประวัติการส่ง</b>
-          — แล้วขึ้นสรุปให้ตรวจก่อนเขียนเสมอ
+          {tr("ไฟล์")} <b>1.Monitoring-&lt;เดือน&gt;.xlsx</b> {tr('— ลูกค้าที่ไม่ได้ส่ง EDI (TSPK · TSESA · TSLA · TSRA · GWM · Argen)')}<br />
+          {tr("ระบบจะอ่าน")}: <b>{tr('ตารางบอร์ดของทุกชีท')}</b> · <b>{tr('FC รายเดือน')}</b> · <b>MIN/MAX</b> ·
+          <b>{tr('ออเดอร์ล่วงหน้า')}</b>{tr('ของชีทลูกค้า/Argen ·')} <b>{tr('ยอดคงเหลือ')}</b> · <b>{tr('ประวัติการส่ง')}</b>
+          — {tr("แล้วขึ้นสรุปให้ตรวจก่อนเขียนเสมอ")}
           <div style={{ marginTop: 6, color: 'var(--muted)' }}>
-            ⏱️ ยอดคงเหลืออ่าน <b>ณ วันที่ {getWorkDate()}</b> · ช่องวันอนาคตในไฟล์เป็นยอดพยากรณ์ ไม่ใช่ของจริง
+            ⏱️ {tr("ยอดคงเหลืออ่าน")} <b>{tr('ณ วันที่')} {getWorkDate()}</b> · {tr("ช่องวันอนาคตในไฟล์เป็นยอดพยากรณ์ ไม่ใช่ของจริง")}
           </div>
           {/* 🔴 จุดอัพโหลดมีจุดเดียว เขียนครบทุกชั้นในครั้งเดียว (08/10 คำสั่ง user) — ห้ามแยกกลับเป็น 2 ปุ่ม */}
           <div style={{ marginTop: 6, color: 'var(--text2)' }}>
-            ✅ <b>อัพที่นี่ครั้งเดียวจบ</b> — ระบบลงให้ครบทั้ง <b>ตารางบอร์ด 13 ชีท</b> (หน้า Monitoring แผน-สต๊อก)
-            และ <b>ตัวเลขที่เอาไปใช้ต่อ</b> (แผนผลิต · Delivery · คานบัง) ในการกดยืนยันครั้งเดียว
+            ✅ <b>{tr('อัพที่นี่ครั้งเดียวจบ')}</b> {tr('— ระบบลงให้ครบทั้ง')} <b>{tr('ตารางบอร์ด 13 ชีท')}</b> ({tr("หน้า Monitoring แผน-สต๊อก) และ")} <b>{tr('ตัวเลขที่เอาไปใช้ต่อ')}</b> ({tr("แผนผลิต · Delivery · คานบัง) ในการกดยืนยันครั้งเดียว")}
           </div>
         </div>
         {!canUpload && (
-          <div style={{ marginTop: 10, fontSize: 12, color: '#f59e0b' }}>
-            ⚠️ บัญชีนี้ไม่มีสิทธิ์อัพโหลด (ขอสิทธิ์ <code>demand:upload</code> ที่หน้าจัดการสิทธิ์)
+          <div style={{ marginTop: 10, fontSize: 12, color: 'var(--amber)' }}>
+            ⚠️ {tr("บัญชีนี้ไม่มีสิทธิ์อัพโหลด (ขอสิทธิ์")} <code>demand:upload</code> {tr("ที่หน้าจัดการสิทธิ์")})
           </div>
         )}
         <div style={{ marginTop: 12 }}>
           <input ref={fileRef} type="file" accept=".xlsx,.xlsm,.xlsb,.xls" disabled={!canUpload || busy}
                  onChange={e => handleFile(e.target.files?.[0])}
                  style={{ width: 'auto', fontSize: 13 }} />
-          {busy && <span style={{ marginLeft: 10, fontSize: 12, color: 'var(--muted)' }}>กำลังอ่าน…</span>}
+          {busy && <span style={{ marginLeft: 10, fontSize: 12, color: 'var(--muted)' }}>{tr('กำลังอ่าน…')}</span>}
         </div>
+        {wrong && <div style={{ marginTop: 10 }}><WrongFileNote k={wrong} here="planner_monitoring" onGo={onClose} /></div>}
       </div>
 
       {preview && <PreviewPanel p={preview} canBoard={canBoard}
@@ -319,7 +345,7 @@ export default function MonitoringUpload({ canUpload, canBoard = true, fullName,
       <div className="modal" onClick={(e) => e.stopPropagation()}
         style={{ width: 'min(900px, 96vw)', maxHeight: '92vh', overflowY: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <button type="button" onClick={onClose} aria-label="ปิด" title="ปิด"
+          <button type="button" onClick={onClose} aria-label={tr('ปิด')} title={tr('ปิด')}
             style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 18, cursor: 'pointer', lineHeight: 1, padding: 2 }}>✕</button>
         </div>
         {body}
@@ -337,21 +363,21 @@ function PreviewPanel({ p, canBoard, onCancel, onConfirm, busy, card, warnBox })
   const boardParts = boardMade.reduce((a, b) => a + b.parts.length, 0);
   const rows = [
     ['🗂️ ตารางบอร์ด (13 ชีท)',
-      canBoard ? `${boardMade.length} บอร์ด · ${fmt(boardParts)} พาร์ท` : '— ไม่มีสิทธิ์ ข้ามส่วนนี้',
+      canBoard ? `${boardMade.length} ${tr("บอร์ด")} · ${fmt(boardParts)} ${tr("พาร์ท")}` : '— ไม่มีสิทธิ์ ข้ามส่วนนี้',
       canBoard ? 'หน้า Monitoring แผน-สต๊อก — นำเข้าซ้ำ = อัพเดทบอร์ดเดิม' : 'ต้องมีสิทธิ์ monitoring:manage'],
-    ['📈 Forecast', `${rec.forecasts.length} แถว · ${fmt(rec.forecasts.reduce((s, r) => s + r.qty, 0))} ชิ้น`, `เดือน ${month} — เขียนทับรอบก่อนของเดือนนี้`],
-    ['🚚 ออเดอร์ล่วงหน้า', `${future.length} แถว · ${fmt(future.reduce((s, r) => s + r.qty, 0))} ชิ้น`, 'ดิวตั้งแต่วันนี้ไป — เขียนทับรอบก่อน'],
-    ['📜 ประวัติการส่ง', `${histCount} แถว`, 'ลงตารางประวัติ ไม่ใช่ใบส่งของ · อัพซ้ำไม่เกิดแถวซ้ำ'],
-    ['📉 MIN/MAX', `${rec.levels.length} พาร์ท`, 'ต่อไลน์ — ทับค่าเดิมของพาร์ทนั้น'],
-    ['📦 ปรับยอดสต็อก', `${stockPlan.length} รายการ`,
-      'ลงเป็นรายการ adjust (ไม่ลบของเก่า ย้อนได้) · ยอดจากชีทไลน์ปั๊มลงคลังตามกฎ (STORE ฯลฯ) ไม่ใช่ที่ไลน์'
-      + ((p.stockKept || []).length ? ` · ไม่ทับ ${p.stockKept.length} พาร์ทที่คลังมียอดในระบบแล้ว` : '')
-      + (rec.pressStockSkipped ? ` · ข้าม ${rec.pressStockSkipped} พาร์ท FG (ยอดคลัง FG มาจากชีทลูกค้า)` : '')],
+    ['📈 Forecast', `${rec.forecasts.length} ${tr("แถว")} · ${fmt(rec.forecasts.reduce((s, r) => s + r.qty, 0))} ${tr("ชิ้น")}`, `${tr("เดือน")} ${month} — ${tr("เขียนทับรอบก่อนของเดือนนี้")}`],
+    ['🚚 ออเดอร์ล่วงหน้า', `${future.length} ${tr("แถว")} · ${fmt(future.reduce((s, r) => s + r.qty, 0))} ${tr("ชิ้น")}`, 'ดิวตั้งแต่วันนี้ไป — เขียนทับรอบก่อน'],
+    ['📜 ประวัติการส่ง', `${histCount} ${tr("แถว")}`, 'ลงตารางประวัติ ไม่ใช่ใบส่งของ · อัพซ้ำไม่เกิดแถวซ้ำ'],
+    ['📉 MIN/MAX', `${rec.levels.length} ${tr("พาร์ท")}`, 'ต่อไลน์ — ทับค่าเดิมของพาร์ทนั้น'],
+    ['📦 ปรับยอดสต็อก', `${stockPlan.length} ${tr("รายการ")}`,
+      tr('ลงเป็นรายการ adjust (ไม่ลบของเก่า ย้อนได้) · ยอดจากชีทไลน์ปั๊มลงคลังตามกฎ (STORE ฯลฯ) ไม่ใช่ที่ไลน์')
+      + ((p.stockKept || []).length ? ` · ${tr("ไม่ทับ")} ${p.stockKept.length} ${tr("พาร์ทที่คลังมียอดในระบบแล้ว")}` : '')
+      + (rec.pressStockSkipped ? ` · ${tr("ข้าม")} ${rec.pressStockSkipped} ${tr("พาร์ท FG (ยอดคลัง FG มาจากชีทลูกค้า")})` : '')],
   ];
   return (
     <div style={{ ...card, borderColor: 'var(--accent)' }}>
       <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>
-        ตรวจก่อนเขียน — <span style={{ color: 'var(--accent)' }}>{fileName}</span>
+        {tr("ตรวจก่อนเขียน")} — <span style={{ color: 'var(--accent)' }}>{fileName}</span>
       </div>
       {/* 🔎 สรุปรายชีท — บังคับโชว์เสมอ (24/09)
           เดิมบอกแค่ยอดรวม "ออเดอร์ 232 ใบ" ⇒ คนเข้าใจว่าครบทุกลูกค้า
@@ -359,9 +385,9 @@ function PreviewPanel({ p, canBoard, onCancel, onConfirm, busy, card, warnBox })
       <div style={{ overflowX: 'auto', marginBottom: 10 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
           <thead><tr>
-            {['ชีท', 'ชนิด', 'ลูกค้า', 'พาร์ท', 'ออเดอร์', 'ถึงวันที่'].map((h, i) => (
+            {[tr("ชีท"), tr("ชนิด"), tr("ลูกค้า"), tr("พาร์ท"), tr("ออเดอร์"), tr("ถึงวันที่")].map((h, i) => (
               <th key={h} style={{ textAlign: i >= 3 ? 'right' : 'left', padding: '4px 8px', fontSize: 11,
-                                   color: 'var(--muted)', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>{h}</th>
+                                   color: 'var(--muted)', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>{tr(h)}</th>
             ))}
           </tr></thead>
           <tbody>
@@ -369,21 +395,21 @@ function PreviewPanel({ p, canBoard, onCancel, onConfirm, busy, card, warnBox })
               <tr key={r.sheet + r.kind}>
                 <td style={{ padding: '4px 8px', fontSize: 12, fontWeight: 700, borderBottom: '1px solid var(--border2)' }}>
                   {r.sheet}
-                  {r.note && <div style={{ fontWeight: 400, fontSize: 11, color: '#f59e0b', whiteSpace: 'normal' }}>⚠️ {r.note}</div>}
+                  {r.note && <div style={{ fontWeight: 400, fontSize: 11, color: 'var(--amber)', whiteSpace: 'normal' }}>⚠️ {r.note}</div>}
                 </td>
                 <td style={{ padding: '4px 8px', fontSize: 12, color: 'var(--muted)', borderBottom: '1px solid var(--border2)' }}>{r.kind}</td>
                 <td style={{ padding: '4px 8px', fontSize: 12, borderBottom: '1px solid var(--border2)',
                              color: r.customer ? 'var(--text)' : 'var(--muted)' }}>
-                  {r.customer || (r.kind === 'ลูกค้า' ? '— ไม่มีในทะเบียน —' : '—')}
+                  {r.customer || (r.kind === 'ลูกค้า' ? tr("— ไม่มีในทะเบียน —") : '—')}
                 </td>
                 <td style={{ padding: '4px 8px', fontSize: 12, textAlign: 'right', borderBottom: '1px solid var(--border2)' }}>{r.parts}</td>
                 <td style={{ padding: '4px 8px', fontSize: 12, textAlign: 'right', fontWeight: 700,
                              color: r.orders ? 'var(--accent)' : '#ef4444', borderBottom: '1px solid var(--border2)' }}>
-                  {r.orders ? `${r.orders} ใบ · ${r.orderQty.toLocaleString()}` : '0 ใบ'}
+                  {r.orders ? `${r.orders} ${tr("ใบ")} · ${r.orderQty.toLocaleString()}` : tr("0 ใบ")}
                 </td>
                 <td style={{ padding: '4px 8px', fontSize: 12, textAlign: 'right', whiteSpace: 'nowrap',
                              color: r.staleDays > 0 ? '#f59e0b' : 'var(--muted)', borderBottom: '1px solid var(--border2)' }}>
-                  {r.lastDate || '—'}{r.staleDays > 0 ? ` (−${r.staleDays} วัน)` : ''}
+                  {r.lastDate || '—'}{r.staleDays > 0 ? ` (−${r.staleDays} ${tr("วัน")})` : ''}
                 </td>
               </tr>
             ))}
@@ -392,14 +418,14 @@ function PreviewPanel({ p, canBoard, onCancel, onConfirm, busy, card, warnBox })
       </div>
       {parsed.skipped?.length > 0 && (
         <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 10 }}>
-          ชีทที่ข้าม (ไม่ใช่รูปแบบ Monitoring): {parsed.skipped.join(' · ')}
+          {tr("ชีทที่ข้าม (ไม่ใช่รูปแบบ")} Monitoring): {parsed.skipped.join(' · ')}
         </div>
       )}
 
       <div style={{ display: 'grid', gap: 6 }}>
         {rows.map(([t, v, note]) => (
           <div key={t} style={{ display: 'grid', gridTemplateColumns: 'minmax(120px,1fr) minmax(140px,1fr) 2fr',
-                                gap: 8, fontSize: 12, padding: '6px 8px', background: 'var(--bg2)', borderRadius: 6 }}>
+                                gap: 8, fontSize: 12, padding: '6px 8px', background: 'var(--bg2)', borderRadius: 'var(--r-md)' }}>
             <b>{t}</b><span>{v}</span><span style={{ color: 'var(--muted)' }}>{note}</span>
           </div>
         ))}
@@ -408,13 +434,13 @@ function PreviewPanel({ p, canBoard, onCancel, onConfirm, busy, card, warnBox })
       {/* ── สิ่งที่ "ไม่" เขียน ต้องบอกให้ครบ ห้ามเงียบ ── */}
       {!!parsed.skipped.length && (
         <div style={warnBox('#78350f22', '#f59e0b')}>
-          <b style={{ fontSize: 12 }}>⚠️ ชีทที่อ่านไม่ได้ {parsed.skipped.length} ชีท — ไม่ถูกนำเข้า</b>
+          <b style={{ fontSize: 12 }}>{tr('⚠️ ชีทที่อ่านไม่ได้')} {parsed.skipped.length} {tr('ชีท — ไม่ถูกนำเข้า')}</b>
           <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 4 }}>{parsed.skipped.join(' · ')}</div>
         </div>
       )}
       {!!parsed.warnings.length && (
         <div style={warnBox('#78350f22', '#f59e0b')}>
-          <b style={{ fontSize: 12 }}>⚠️ ข้อมูลในไฟล์ไม่ครบ</b>
+          <b style={{ fontSize: 12 }}>{tr('⚠️ ข้อมูลในไฟล์ไม่ครบ')}</b>
           <ul style={{ fontSize: 12, color: 'var(--text2)', margin: '4px 0 0', paddingLeft: 18 }}>
             {parsed.warnings.map((w, i) => <li key={i}>{w}</li>)}
           </ul>
@@ -422,18 +448,17 @@ function PreviewPanel({ p, canBoard, onCancel, onConfirm, busy, card, warnBox })
       )}
       {!!rec.stockNegative?.length && (
         <div style={warnBox('#7f1d1d22', '#ef4444')}>
-          <b style={{ fontSize: 12, color: '#ef4444' }}>🚫 ยอดคงเหลือติดลบ {rec.stockNegative.length} พาร์ท — ไม่เอาไปตั้งยอดสต็อก</b>
+          <b style={{ fontSize: 12, color: 'var(--red)' }}>{tr('ยอดคงเหลือติดลบ')} {rec.stockNegative.length} {tr('พาร์ท — ไม่เอาไปตั้งยอดสต็อก')}</b>
           <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 4 }}>
-            ในไฟล์นี้ยอดติดลบแปลว่า <b>ความต้องการที่ยังไม่ได้ผลิต</b> ไม่ใช่ของติดลบในคลัง —
-            เขียนทับสต็อกจริงไม่ได้ · ตัวอย่าง: {rec.stockNegative.slice(0, 5).map(s => `${s.mat_no} (${fmt(s.qty)})`).join(' · ')}
+            {tr("ในไฟล์นี้ยอดติดลบแปลว่า")} <b>{tr('ความต้องการที่ยังไม่ได้ผลิต')}</b> {tr("ไม่ใช่ของติดลบในคลัง — เขียนทับสต็อกจริงไม่ได้ · ตัวอย่าง")}: {rec.stockNegative.slice(0, 5).map(s => `${s.mat_no} (${fmt(s.qty)})`).join(' · ')}
           </div>
         </div>
       )}
       {!!rec.orderDupes && (
         <div style={warnBox('#78350f22', '#f59e0b')}>
-          <b style={{ fontSize: 12 }}>🔁 บล็อกซ้ำในไฟล์ {rec.orderDupes} แถว — ยุบให้แล้ว</b>
+          <b style={{ fontSize: 12 }}>{tr('บล็อกซ้ำในไฟล์')} {rec.orderDupes} {tr('แถว — ยุบให้แล้ว')}</b>
           <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 4 }}>
-            พาร์ทเดียวถูกเขียนไว้หลายบล็อกในชีทเดียวกัน · ถ้าไม่ยุบ ความต้องการจะกลายเป็น 2 เท่า
+            {tr("พาร์ทเดียวถูกเขียนไว้หลายบล็อกในชีทเดียวกัน · ถ้าไม่ยุบ ความต้องการจะกลายเป็น 2 เท่า")}
           </div>
         </div>
       )}
@@ -441,15 +466,13 @@ function PreviewPanel({ p, canBoard, onCancel, onConfirm, busy, card, warnBox })
       {!!(rec.forecastDupes || rec.levelDupes) && (
         <div style={warnBox('#78350f22', '#f59e0b')}>
           <b style={{ fontSize: 12 }}>
-            🔁 พาร์ทซ้ำ — Forecast {rec.forecastDupes} แถว · MIN/MAX {rec.levelDupes} แถว — ยุบให้แล้ว (เอาค่ามากสุด ไม่บวกกัน)
+            {tr("พาร์ทซ้ำ")} — Forecast {rec.forecastDupes} {tr('แถว · MIN/MAX')} {rec.levelDupes} {tr("แถว — ยุบให้แล้ว (เอาค่ามากสุด ไม่บวกกัน")})
           </b>
           <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 4 }}>
-            พาร์ทเดียวเขียนหลายบรรทัด (เช่น 300T MAT 20059152 คว่ำครีบ/หงายครีบ — FC เดือนเป็นของพาร์ทเดียวกัน)
-            · ไม่ยุบ = ยอดพยากรณ์ 2 เท่า และ MIN/MAX เขียนไม่ลงทั้งก้อน
+            {tr("พาร์ทเดียวเขียนหลายบรรทัด (เช่น 300T MAT 20059152 คว่ำครีบ/หงายครีบ — FC เดือนเป็นของพาร์ทเดียวกัน) · ไม่ยุบ = ยอดพยากรณ์ 2 เท่า และ MIN/MAX เขียนไม่ลงทั้งก้อน")}
             {!!(rec.forecastConflicts || rec.levelConflicts) && (
-              <div style={{ color: '#f59e0b', fontWeight: 700, marginTop: 4 }}>
-                ⚠️ ในนั้น <b>ค่าไม่ตรงกัน {rec.forecastConflicts + rec.levelConflicts} คู่</b> — ระบบเลือกค่ามากสุดให้ก่อน
-                แต่ควรไปแก้ไฟล์ต้นทางให้เหลือค่าเดียว
+              <div style={{ color: 'var(--amber)', fontWeight: 700, marginTop: 4 }}>
+                ⚠️ {tr("ในนั้น")} <b>{tr('ค่าไม่ตรงกัน')} {rec.forecastConflicts + rec.levelConflicts} {tr('คู่')}</b> — {tr("ระบบเลือกค่ามากสุดให้ก่อน แต่ควรไปแก้ไฟล์ต้นทางให้เหลือค่าเดียว")}
               </div>
             )}
           </div>
@@ -459,25 +482,24 @@ function PreviewPanel({ p, canBoard, onCancel, onConfirm, busy, card, warnBox })
           ห้ามยุบกลับเป็นตารางเดียวที่นับรวม "N พาร์ทไม่ตรง" */}
       {(!!kbDiff.lot.length || !!kbDiff.pack.length || !!kbDiff.noStd.length) && (
         <div style={warnBox('#1e3a8a22', '#60a5fa')}>
-          <b style={{ fontSize: 12 }}>📋 เทียบกับทะเบียน kanban — <u>ระบบไม่แก้ให้</u></b>
+          <b style={{ fontSize: 12 }}>{tr('เทียบกับทะเบียน kanban —')} <u>{tr('ระบบไม่แก้ให้')}</u></b>
           <div style={{ fontSize: 12, color: 'var(--text2)', margin: '4px 0 8px' }}>
-            ทะเบียน kanban ใช้ร่วมกับบัตรคานบัง · OEE · Heijunka · ป้าย QR — เขียนทับอัตโนมัติกระทบกว้างเกินไป
-            ให้ไปแก้เองที่ <b>/products → 🎴 Kanban Std</b> ถ้ายืนยันว่าค่าในไฟล์ถูกกว่า
+            {tr("ทะเบียน kanban ใช้ร่วมกับบัตรคานบัง · OEE · Heijunka · ป้าย QR — เขียนทับอัตโนมัติกระทบกว้างเกินไป ให้ไปแก้เองที่")} <b>/products → 🎴 Kanban Std</b> {tr("ถ้ายืนยันว่าค่าในไฟล์ถูกกว่า")}
           </div>
           <KbDiffTable
-            title={`📦 LOT size ไม่ตรง ${kbDiff.lot.length} พาร์ท`}
-            why="ขนาดล็อตผลิต — คุมว่าสะสมครบเท่าไหร่ถึงออกใบสั่งผลิต + เข้าสูตรจำนวนบัตร"
+            title={`LOT size ${tr("ไม่ตรง")} ${kbDiff.lot.length} ${tr("พาร์ท")}`}
+            why={tr("ขนาดล็อตผลิต — คุมว่าสะสมครบเท่าไหร่ถึงออกใบสั่งผลิต + เข้าสูตรจำนวนบัตร")}
             rows={kbDiff.lot} />
           <KbDiffTable
-            title={`🗳️ Packing ไม่ตรง ${kbDiff.pack.length} พาร์ท`}
-            why="จำนวนชิ้นต่อกล่อง/ต่อบัตร — คุมการบรรจุและการส่ง ไม่เกี่ยวกับจังหวะเปิดใบผลิต"
+            title={`Packing ${tr("ไม่ตรง")} ${kbDiff.pack.length} ${tr("พาร์ท")}`}
+            why={tr("จำนวนชิ้นต่อกล่อง/ต่อบัตร — คุมการบรรจุและการส่ง ไม่เกี่ยวกับจังหวะเปิดใบผลิต")}
             rows={kbDiff.pack} />
           {!!kbDiff.noStd.length && (
             <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 8 }}>
-              ⚪ <b>ยังไม่มีในทะเบียน kanban {kbDiff.noStd.length} พาร์ท</b> —
+              ⚪ <b>{tr('ยังไม่มีในทะเบียน kanban')} {kbDiff.noStd.length} {tr('พาร์ท')}</b> —
               {' '}{kbDiff.noStd.slice(0, 8).map(l => l.mat_no).join(' · ')}
-              {kbDiff.noStd.length > 8 ? ` … อีก ${kbDiff.noStd.length - 8}` : ''}
-              <div style={{ color: 'var(--muted)' }}>คนละเรื่องกับ "ไม่ตรง" — ตัวนี้คือยังไม่เคยตั้งค่าเลย</div>
+              {kbDiff.noStd.length > 8 ? ` … ${tr("อีก")} ${kbDiff.noStd.length - 8}` : ''}
+              <div style={{ color: 'var(--muted)' }}>{tr("คนละเรื่องกับ \"ไม่ตรง\" — ตัวนี้คือยังไม่เคยตั้งค่าเลย")}</div>
             </div>
           )}
         </div>
@@ -485,30 +507,29 @@ function PreviewPanel({ p, canBoard, onCancel, onConfirm, busy, card, warnBox })
       {/* 🗂️ ส่วนตารางบอร์ด — รายชีท + ชีทที่ยกไม่ได้ (ตัววาดเดียวกับที่ `MonitorImport` เคยใช้) */}
       {canBoard && !!boardMade.length && (
         <div style={{ ...warnBox('var(--bg2)', 'var(--border)') }}>
-          <b style={{ fontSize: 12 }}>🗂️ ตารางบอร์ด — {boardMade.length} บอร์ด · {fmt(boardParts)} พาร์ท</b>
+          <b style={{ fontSize: 12 }}>{tr('ตารางบอร์ด —')} {boardMade.length} {tr('บอร์ด ·')} {fmt(boardParts)} {tr('พาร์ท')}</b>
           <div style={{ fontSize: 11, color: 'var(--muted)', margin: '3px 0 7px' }}>
-            คือตารางที่เห็นในหน้า <b>Monitoring แผน-สต๊อก</b> · นำเข้าซ้ำ = อัพเดทบอร์ดเดิม ไม่สร้างซ้ำ
+            {tr("คือตารางที่เห็นในหน้า")} <b>{tr('Monitoring แผน-สต๊อก')}</b> · {tr("นำเข้าซ้ำ = อัพเดทบอร์ดเดิม ไม่สร้างซ้ำ")}
           </div>
           <BoardPlanPreview made={boardMade} skipped={p.board?.skipped || []} />
         </div>
       )}
       {!!past && (
         <div style={{ ...warnBox('var(--bg2)', 'var(--border)'), fontSize: 12, color: 'var(--text2)' }}>
-          ℹ️ ความต้องการที่ดิวเก่ากว่าวันนี้ <b>{past} แถว</b> ถูกเก็บเป็น<b>ประวัติ</b> ไม่ใช่งานค้างส่ง —
-          ไม่งั้นแผนรายวันจะขึ้น backlog ปลอมก้อนใหญ่ในวันแรก
+          ℹ️ {tr("ความต้องการที่ดิวเก่ากว่าวันนี้")} <b>{past} {tr('แถว')}</b> {tr('ถูกเก็บเป็น')}<b>{tr('ประวัติ')}</b> {tr("ไม่ใช่งานค้างส่ง — ไม่งั้นแผนรายวันจะขึ้น backlog ปลอมก้อนใหญ่ในวันแรก")}
         </div>
       )}
 
       <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
         <button onClick={onConfirm} disabled={busy}
-                style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, borderRadius: 6,
+                style={{ padding: '8px 16px', fontSize: 13, fontWeight: 700, borderRadius: 'var(--r-md)',
                          background: 'var(--accent)', color: 'var(--accent-ink)', border: 'none', cursor: busy ? 'wait' : 'pointer' }}>
-          {busy ? 'กำลังเขียน…' : '✔ ยืนยันนำเข้า (ลงให้ครบทุกส่วนในครั้งเดียว)'}
+          {busy ? tr('กำลังเขียน…') : tr('✔ ยืนยันนำเข้า (ลงให้ครบทุกส่วนในครั้งเดียว)')}
         </button>
         <button onClick={onCancel} disabled={busy}
-                style={{ padding: '8px 16px', fontSize: 13, borderRadius: 6, background: 'var(--bg3)',
+                style={{ padding: '8px 16px', fontSize: 13, borderRadius: 'var(--r-md)', background: 'var(--bg3-surf)',
                          color: 'var(--text)', border: '1px solid var(--border)', cursor: 'pointer' }}>
-          ยกเลิก
+          {tr('ยกเลิก')}
         </button>
       </div>
     </div>
@@ -527,19 +548,19 @@ function KbDiffTable({ title, why, rows = [] }) {
         <table style={{ width: '100%', fontSize: 11, borderCollapse: 'collapse' }}>
           {/* ลำดับบนจอ = Part No. → Part Name → MAT SAP (UI §ลำดับ MAT · มีด่าน) ⇒ ใช้ <MatLabel> วาดให้ */}
           <thead><tr style={{ textAlign: 'left', color: 'var(--muted)' }}>
-            <th>พาร์ท</th><th style={{ textAlign: 'right' }}>ในไฟล์</th><th style={{ textAlign: 'right' }}>ในทะเบียน</th>
+            <th>{tr('พาร์ท')}</th><th style={{ textAlign: 'right' }}>{tr('ในไฟล์')}</th><th style={{ textAlign: 'right' }}>{tr('ในทะเบียน')}</th>
           </tr></thead>
           <tbody>
             {rows.slice(0, 40).map((l, i) => (
               <tr key={i} style={{ borderTop: '1px solid var(--border2)' }}>
                 <td><MatLabel mat={l.mat_no} name={l.part_name} size={11} /></td>
                 <td style={{ textAlign: 'right', fontWeight: 700 }}>{fmt(l.file)}</td>
-                <td style={{ textAlign: 'right' }}>{l.std == null ? '— ยังไม่ตั้ง' : fmt(l.std)}</td>
+                <td style={{ textAlign: 'right' }}>{l.std == null ? tr('— ยังไม่ตั้ง') : fmt(l.std)}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        {rows.length > 40 && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>… อีก {rows.length - 40} พาร์ท</div>}
+        {rows.length > 40 && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>{tr('… อีก')} {rows.length - 40} {tr('พาร์ท')}</div>}
       </div>
     </div>
   );

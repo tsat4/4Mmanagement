@@ -26,6 +26,9 @@ import {
   shimStack, pointDueStatus, toolLifeStatus, n0, pointPin,
 } from '../utils/fixturePoints';
 
+import NoticeBar from '../components/NoticeBar';
+import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 const jigImgUrl = (path) => supabaseDR.storage.from('jig-images').getPublicUrl(path).data.publicUrl;
 
 /* ═══════════════════════════════════════════════════════════════
@@ -57,7 +60,7 @@ const inp = {
   background: 'var(--bg)', color: 'var(--text)', fontSize: 13, boxSizing: 'border-box',
 };
 const card = { background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 10, padding: 14 };
-const Blank = () => <span style={{ color: '#f59e0b', fontWeight: 700 }} title="ยังไม่ได้กรอก">—</span>;
+const Blank = () => <span style={{ color: 'var(--amber)', fontWeight: 700 }} title={tr('ยังไม่ได้กรอก')}>—</span>;
 
 function Field({ label, hint, children }) {
   return (
@@ -131,10 +134,10 @@ export default function FixtureRegistry() {
       supabaseDR.from('jig_images').select('jig_id'),   // แค่รู้ว่าตัวไหนมีรูป — ป้าย 📷 ให้เลือกตัวที่ปักหมุดได้ก่อน
     ]);
 
-    if (ln.error) warn.push('ไลน์');
-    if (mc.error) warn.push('เครื่องจักร');
-    if (pr.error) warn.push('สินค้า');
-    if (fp.error) warn.push('ทะเบียนจุด');
+    if (ln.error) warn.push(tr("ไลน์"));
+    if (mc.error) warn.push(tr("เครื่องจักร"));
+    if (pr.error) warn.push(tr("สินค้า"));
+    if (fp.error) warn.push(tr("ทะเบียนจุด"));
     setLines(ln.data || []);
     setMachines(mc.data || []);
     setJigsShadow(jg.data || []);
@@ -143,7 +146,7 @@ export default function FixtureRegistry() {
     if (kd.data?.length) setKinds(kd.data);
     setAllPoints(fp.data || []);
     setImgJigIds(new Set((ji.data || []).map(r => r.jig_id)));
-    setDataWarn(warn.length ? `โหลดไม่สำเร็จ: ${warn.join(' · ')} — ตัวเลขบางส่วนอาจไม่ครบ` : '');
+    setDataWarn(warn.length ? `${tr("โหลดไม่สำเร็จ")}: ${warn.join(' · ')} — ${tr("ตัวเลขบางส่วนอาจไม่ครบ")}` : '');
     setLoading(false);
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -153,19 +156,12 @@ export default function FixtureRegistry() {
      (`ReferenceError: Cannot access 'scopedLines' before initialization` — เกิดจริง 25-26/10
       กับทุกบัญชีที่ไม่ใช่ leader และมีขอบเขตส่วนงาน · crashsweep จับไม่ได้เพราะ mock ใช้ `sections: []`)
      ⇒ เรียกของกลางผ่านชื่อ alias เสมอ · มีด่าน `no-shadowed-import-call` */
+  /* 🔭 ของกลาง `scopedLines()` ตัวเดียว (QC audit 09/11) — สูตรที่เคยก๊อปไว้ที่นี่ให้ leader
+     เห็นแค่ครอบครัวไลน์ตัวเอง = แคบกว่าที่ `profiles` ตั้ง (กฎ 26/10: ไลน์ตัวเอง ∪ ส่วนงานที่กำกับ) */
   const scopedLines = useMemo(() => {
-    if (role === 'leader' && userLineId) {
-      const my = lines.find(l => l.id === userLineId);
-      const fam = new Set(my ? getLineFamilyNames(lines, my.name) : []);
-      const out = lines.filter(l => fam.has(l.name));
-      return out.length ? out : lines;
-    }
-    if (scopeSecs?.length) {
-      const out = scopedLinesOf({ role, lineId: userLineId, sections: scopeSecs, lines, scopeIdx });
-      return out.length ? out : lines;   // กรองแล้วไม่เหลือ = ไม่กรอง (หน่วยงานสนับสนุนไม่มีไลน์)
-    }
-    return lines;
-  }, [lines, role, userLineId, scopeSecs]);
+    const out = scopedLinesOf({ role, lineId: userLineId, sections: scopeSecs, lines, scopeIdx });
+    return out.length ? out : lines;   // กรองแล้วไม่เหลือ = ไม่กรอง (หน่วยงานสนับสนุนไม่มีไลน์)
+  }, [lines, role, userLineId, scopeSecs, scopeIdx]);
   const scopeNames = useMemo(() => new Set(scopedLines.map(l => l.name)), [scopedLines]);
   const scopeOn = scopedLines.length !== lines.length;
   const inScope = useCallback((n) => !scopeOn || scopeNames.has(n), [scopeOn, scopeNames]);
@@ -176,13 +172,24 @@ export default function FixtureRegistry() {
   );
   const shadowByMachine = useMemo(() => Object.fromEntries(jigsShadow.map(j => [j.machine_id, j])), [jigsShadow]);
   const hasImg = useCallback((f) => { const sh = shadowByMachine[f.id]; return !!(sh && imgJigIds.has(sh.id)); }, [shadowByMachine, imgJigIds]);
+  /* 📍 "ฟิกเจอร์ตัวไหนลงจุดชิมแล้ว" (20/11 · user ทัก "ทำไม jig/fixture ข้อมูลไม่ขึ้นเลย")
+     วัดจริงตอนนั้น: ฟิกเจอร์ 217 ตัว **ลงจุดแล้วแค่ 6 ตัว** (จุดที่เปิดใช้ 18 จุด)
+     ⇒ คนเปิดมาเจอ "ยังไม่มีจุด" เกือบทุกตัว แล้วนึกว่าจอพัง ทั้งที่จอบอกความจริง
+     🔴 จอต้องบอก **ความครบของทะเบียนทั้งระบบ** ไม่ใช่ปล่อยให้ไล่เลือกทีละตัวเอง
+        (กฎความซื่อสัตย์ของจอ — "ว่าง" 2 ความหมาย: ยังไม่ลง vs เลือกผิดตัว) */
+  const ptsCountOf = useCallback((f) => allPoints.filter(p => p.machine_id === f.id).length, [allPoints]);
+  const hasPts = useCallback((f) => ptsCountOf(f) > 0, [ptsCountOf]);
+  const withPtsCount = useMemo(() => fixtures.filter(hasPts).length, [fixtures, hasPts]);
+  const [onlyWithPts, setOnlyWithPts] = useState(false);   // 📍 กรองเฉพาะตัวที่ลงจุดชิมแล้ว (20/11)
   const shownFixtures = useMemo(() => {
     const kw = q.trim().toLowerCase();
     let out = kw ? fixtures.filter(f => `${f.machine_no} ${f.machine_name} ${f.line_name || ''}`.toLowerCase().includes(kw)) : fixtures;
     if (onlyWithImg) out = out.filter(hasImg);
-    // ตัวที่มีรูปขึ้นก่อน — ปักหมุดได้ทันที (ไม่ตัดตัวอื่นทิ้ง)
-    return [...out].sort((a, b) => (hasImg(b) - hasImg(a)) || String(a.machine_no).localeCompare(String(b.machine_no)));
-  }, [fixtures, q, onlyWithImg, hasImg]);
+    if (onlyWithPts) out = out.filter(hasPts);
+    /* ตัวที่ลงจุดแล้วขึ้นก่อน → แล้วตัวที่มีรูป (ปักหมุดได้ทันที) — ไม่ตัดตัวอื่นทิ้ง */
+    return [...out].sort((a, b) => (hasPts(b) - hasPts(a)) || (hasImg(b) - hasImg(a))
+      || String(a.machine_no).localeCompare(String(b.machine_no)));
+  }, [fixtures, q, onlyWithImg, onlyWithPts, hasImg, hasPts]);
   const withImgCount = useMemo(() => fixtures.filter(hasImg).length, [fixtures, hasImg]);
 
   const fx = useMemo(() => fixtures.find(f => f.id === fxId) || null, [fixtures, fxId]);
@@ -223,15 +230,15 @@ export default function FixtureRegistry() {
     if (!armPoint) return;
     const imageId = frames[frameIdx]?._key ?? null;
     const res = await saveShimPointPin(armPoint, { x, y, imageId }, fullName);
-    if (!res.ok) return toast.error(`ปักหมุดไม่สำเร็จ: ${res.error}`);
+    if (!res.ok) return toast.error(`${tr("ปักหมุดไม่สำเร็จ")}: ${res.error}`);
     toast.success('ปักหมุดแล้ว');
     setArmPoint('');
     load();
   };
   const removePin = async (pid) => {
-    if (!window.confirm('ถอนหมุดของจุดนี้ออกจากรูป? (ข้อมูลชิมไม่หาย)')) return;
+    if (!await askConfirm('ถอนหมุดของจุดนี้ออกจากรูป? (ข้อมูลชิมไม่หาย)')) return;
     const res = await saveShimPointPin(pid, null, fullName);
-    if (!res.ok) return toast.error(`ถอนหมุดไม่สำเร็จ: ${res.error}`);
+    if (!res.ok) return toast.error(`${tr("ถอนหมุดไม่สำเร็จ")}: ${res.error}`);
     load();
   };
 
@@ -254,7 +261,7 @@ export default function FixtureRegistry() {
       );
       if (dead) return;
       if (error) {
-        setShot({ shots: null, assumed: false, note: `นับ shot ไม่ได้: ${error}` });
+        setShot({ shots: null, assumed: false, note: `${tr("นับ shot ไม่ได้")}: ${error}` });
         return;
       }
       const pieces = rows.reduce((s, o) => s + Number(o.qty_ok ?? o.qty ?? 0), 0);
@@ -299,8 +306,8 @@ export default function FixtureRegistry() {
     const { data, error } = await q2;
     if (error) {
       return toast.error(error.code === '23505'
-        ? `เลขจุด "${no}" ซ้ำกับจุดที่มีอยู่แล้วในฟิกเจอร์นี้`
-        : `บันทึกไม่สำเร็จ: ${error.message}`);
+        ? `${tr("เลขจุด")} "${no}" ${tr("ซ้ำกับจุดที่มีอยู่แล้วในฟิกเจอร์นี้")}`
+        : `${tr("บันทึกไม่สำเร็จ")}: ${error.message}`);
     }
     if (!data?.length) return toast.error('บันทึกไม่สำเร็จ — ไม่มีแถวถูกเขียน');
     toast.success('บันทึกจุดแล้ว');
@@ -338,8 +345,8 @@ export default function FixtureRegistry() {
     }
     if (!rows.length) return toast.info('มีจุดเหล่านี้อยู่แล้วทั้งหมด');
     const { data, error } = await supabaseDR.from('fixture_points').insert(rows).select('id');
-    if (error) return toast.error(`สร้างไม่สำเร็จ: ${error.message}`);
-    toast.success(`สร้าง ${data?.length ?? 0} จุด — อย่าลืมกรอก baseline ของแต่ละจุด`);
+    if (error) return toast.error(`${tr("สร้างไม่สำเร็จ")}: ${error.message}`);
+    toast.success(`${tr("สร้าง")} ${data?.length ?? 0} ${tr("จุด — อย่าลืมกรอก baseline ของแต่ละจุด")}`);
     setTpl(null);
     load();
   };
@@ -349,7 +356,7 @@ export default function FixtureRegistry() {
     const others = fixtures.filter(f => f.id !== fx.id && allPoints.some(p => p.machine_id === f.id));
     if (!others.length) return toast.error('ยังไม่มีฟิกเจอร์ตัวอื่นที่ลงจุดไว้');
     const pick = window.prompt(
-      `คัดลอกชุดจุดจากฟิกเจอร์ไหน? (พิมพ์เลขเครื่อง)\n\n${others.map(o => o.machine_no).join(', ')}`,
+      `${tr("คัดลอกชุดจุดจากฟิกเจอร์ไหน? (พิมพ์เลขเครื่อง")})\n\n${others.map(o => o.machine_no).join(', ')}`,
       others[0].machine_no,
     );
     const src = others.find(o => o.machine_no === String(pick || '').trim());
@@ -364,17 +371,17 @@ export default function FixtureRegistry() {
     }));
     if (!rows.length) return toast.info('ไม่มีจุดใหม่ให้คัดลอก');
     const { data, error } = await supabaseDR.from('fixture_points').insert(rows).select('id');
-    if (error) return toast.error(`คัดลอกไม่สำเร็จ: ${error.message}`);
-    toast.success(`คัดลอก ${data?.length ?? 0} จุด (ไม่รวม baseline — ต้องวัดของตัวเอง)`);
+    if (error) return toast.error(`${tr("คัดลอกไม่สำเร็จ")}: ${error.message}`);
+    toast.success(`${tr("คัดลอก")} ${data?.length ?? 0} ${tr("จุด (ไม่รวม baseline — ต้องวัดของตัวเอง")})`);
     load();
   };
 
   const removePoint = async (p) => {
-    if (!window.confirm(`ปิดใช้งานจุด ${p.point_no}?\nประวัติชิมยังอยู่ครบ`)) return;
+    if (!await askConfirm(`${tr("ปิดใช้งานจุด")} ${p.point_no}?\n${tr("ประวัติชิมยังอยู่ครบ")}`)) return;
     // ⚠️ RLS ปฏิเสธ UPDATE = 0 แถว ไม่มี error (กฎเหล็กข้อ 2) → ต้อง .select() แล้วนับแถว
     const { data, error } = await supabaseDR.from('fixture_points')
       .update({ is_active: false, updated_by_name: fullName || null }).eq('id', p.id).select('id');
-    if (error) return toast.error(`ลบไม่สำเร็จ: ${error.message}`);
+    if (error) return toast.error(`${tr("ลบไม่สำเร็จ")}: ${error.message}`);
     if (!data?.length) return toast.error('ลบไม่สำเร็จ — ไม่มีแถวถูกเขียน (สิทธิ์ไม่พอ?)');
     toast.success('ปิดใช้งานจุดแล้ว');
     load();
@@ -405,7 +412,7 @@ export default function FixtureRegistry() {
           🔴 prop ชื่อ `tab` ไม่ใช่ `activeTab` — เดิมส่งผิดชื่อ ⇒ **แท็บไม่เคยไฮไลต์เลยสักอัน**
              (PageHeader ไม่มี `activeTab` มันเลยอ่าน `tab` ได้ undefined เงียบๆ · แก้ 22/09) */}
       <PageHeader title="JIG / Fixture" icon="📐"
-        tabs={TABS.map(t => ({ key: t.k, label: `${t.icon} ${t.label}` }))}
+        tabs={TABS.map(t => ({ key: tr(t.k), label: `${t.icon} ${tr(t.label)}` }))}
         tab={tab} onTab={setTab}
       />
 
@@ -416,32 +423,40 @@ export default function FixtureRegistry() {
       {(tab === 'points' || tab === 'shim') && (
         <>
           <FilterBar>
-            <SearchInput value={q} onChange={setQ} fields="ฟิกเจอร์" grow={false} />
+            <SearchInput value={q} onChange={setQ} fields={tr("ฟิกเจอร์")} grow={false} />
             <select value={fxId} onChange={e => setFxId(e.target.value)}>
-              <option value="">— เลือกจิ๊ก / ฟิกเจอร์ ({shownFixtures.length}) —</option>
+              <option value="">{tr('— เลือกจิ๊ก / ฟิกเจอร์ (')}{shownFixtures.length}) —</option>
               {shownFixtures.map(f => (
                 <option key={f.id} value={f.id}>
-                  {hasImg(f) ? '📷 ' : ''}{f.machine_no} · {f.machine_name || '—'}{f.line_name ? ` (${f.line_name})` : ''}
+                  {hasPts(f) ? `📍${ptsCountOf(f)} ` : ''}{hasImg(f) ? '📷 ' : ''}{f.machine_no} · {f.machine_name || '—'}{f.line_name ? ` (${f.line_name})` : ''}
                 </option>
               ))}
             </select>
-            <label style={{ fontSize: 12, color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer' }} title="มีรูปเครื่องจาก PM Setup แล้ว = ปักตำแหน่งจุดบนรูปได้ทันที">
+            <label style={{ fontSize: 12, color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer' }} title={tr('มีรูปเครื่องจาก PM Setup แล้ว = ปักตำแหน่งจุดบนรูปได้ทันที')}>
               <input type="checkbox" checked={onlyWithImg} onChange={e => setOnlyWithImg(e.target.checked)} />
-              📷 เฉพาะที่มีรูป ({withImgCount})
+              {tr('📷 เฉพาะที่มีรูป (')}{withImgCount})
             </label>
-            {scopeOn && <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>👥 เห็นเฉพาะส่วนงานของคุณ</span>}
+            {/* 📍 20/11 — กรอง + บอกความครบทั้งระบบ ไม่ต้องไล่เลือกทีละตัวว่าตัวไหนมีข้อมูล */}
+            <label style={{ fontSize: 12, color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer' }} title={tr('ลงจุดชิมในทะเบียนแล้ว')}>
+              <input type="checkbox" checked={onlyWithPts} onChange={e => setOnlyWithPts(e.target.checked)} />
+              {tr('📍 เฉพาะที่ลงจุดแล้ว')} ({withPtsCount})
+            </label>
+            <span style={{ fontSize: 11.5, color: withPtsCount ? 'var(--muted)' : 'var(--amber)' }}>
+              {tr('ลงจุดชิมแล้ว')} <b style={{ color: withPtsCount ? 'var(--text2)' : 'var(--amber)' }}>{withPtsCount}</b> {tr('จาก')} {fixtures.length} {tr('ตัว')}
+            </span>
+            {scopeOn && <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{tr('เห็นเฉพาะส่วนงานของคุณ')}</span>}
           </FilterBar>
 
           {fx && (
             <div style={{ ...card, marginBottom: 12, display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 12, color: 'var(--muted)' }}>
-              <span>พาร์ทที่จับ: {shadow?.part_no ? <b style={{ color: 'var(--text)' }}>{shadow.part_no}</b> : <Blank />}</span>
+              <span>{tr('พาร์ทที่จับ:')} {shadow?.part_no ? <b style={{ color: 'var(--text)' }}>{shadow.part_no}</b> : <Blank />}</span>
               <span>
-                shot สะสม: {shot.shots == null
-                  ? <span style={{ color: '#f59e0b', fontWeight: 700 }}>ยังนับไม่ได้</span>
+                shot {tr("สะสม")}: {shot.shots == null
+                  ? <span style={{ color: 'var(--amber)', fontWeight: 700 }}>{tr('ยังนับไม่ได้')}</span>
                   : <b style={{ color: 'var(--text)' }}>{shot.shots.toLocaleString()}</b>}
                 {shot.note && <span style={{ marginLeft: 6 }}>· {shot.note}</span>}
               </span>
-              <span>ชิ้นต่อ 1 ครั้ง: {fx.pieces_per_cycle ?? <span style={{ color: '#f59e0b' }}>ยังไม่ตั้ง (ถือว่า 1)</span>}</span>
+              <span>{tr('ชิ้นต่อ 1 ครั้ง:')} {fx.pieces_per_cycle ?? <span style={{ color: 'var(--amber)' }}>{tr('ยังไม่ตั้ง (ถือว่า 1)')}</span>}</span>
             </div>
           )}
         </>
@@ -452,42 +467,41 @@ export default function FixtureRegistry() {
           ⇒ stdsweep วัดระยะแท็บ→แถบกรองได้ 75px เวลาที่แถบเตือนโผล่ (แก้ 08/10)
           ⚠️ ยังอยู่บนสุดของเนื้อหา — คนต้องเห็นก่อนเชื่อตัวเลขด้านล่าง */}
       {dataWarn && (
-        <div style={{ background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.45)',
-                      borderRadius: 10, padding: '9px 14px', fontSize: 12.5, marginBottom: 12 }}>
-          ⚠️ {dataWarn}
-        </div>
+        <NoticeBar tone="bad" style={{ marginBottom: 12 }}>
+          {dataWarn}
+        </NoticeBar>
       )}
 
       {loading ? (
-        <div style={{ fontSize: 13, color: 'var(--muted)' }}>กำลังโหลด…</div>
+        <div style={{ fontSize: 13, color: 'var(--muted)' }}>{tr('กำลังโหลด…')}</div>
       ) : tab === 'classify' ? (
         <>
-          <ReadOnlyNote show={!canClassify} role={role} what="เปลี่ยนชนิดอุปกรณ์" permKey="machines:edit" />
+          <ReadOnlyNote show={!canClassify} role={role} what={tr("เปลี่ยนชนิดอุปกรณ์")} permKey="machines:edit" />
           <FixtureClassify machines={machines} mapKeys={mapKeys} canEdit={canClassify}
                            lines={lines} onSaved={load} />
         </>
       ) : tab === 'status' ? (
         <div style={{ display: 'grid', gap: 12 }}>
           <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>
-            จุดที่ต้องดูแล — เกินเพดานชิม · ถึงกำหนดตรวจ · ใกล้ครบ · จากทุกฟิกเจอร์ในขอบเขตของคุณ
+            {tr("จุดที่ต้องดูแล — เกินเพดานชิม · ถึงกำหนดตรวจ · ใกล้ครบ · จากทุกฟิกเจอร์ในขอบเขตของคุณ")}
           </div>
           {!statusRows.length ? (
-            <div style={{ background: 'rgba(34,197,94,0.10)', border: '1px solid rgba(34,197,94,0.45)',
-                          borderRadius: 10, padding: '14px 16px', fontSize: 13 }}>
-              ✅ ไม่มีจุดที่ต้องดูแลตอนนี้
+            <div style={{ background: 'var(--green-dim)', border: '1px solid var(--green-line)',
+                          borderRadius: 'var(--r-md)', padding: '14px 16px', fontSize: 13 }}>
+              ✅ {tr("ไม่มีจุดที่ต้องดูแลตอนนี้")}
               {!allPoints.length && (
                 <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 6 }}>
-                  (ยังไม่มีจุดในทะเบียนเลย — เริ่มที่แท็บ 📋 ทะเบียนจุด)
+                  ({tr("ยังไม่มีจุดในทะเบียนเลย — เริ่มที่แท็บ 📋 ทะเบียนจุด")})
                 </div>
               )}
             </div>
           ) : (
-            <div style={{ border: '1px solid var(--border)', borderRadius: 10, overflow: 'auto' }}>
+            <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-md)', overflow: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
                 <thead style={{ background: 'var(--bg2)' }}>
                   <tr style={{ textAlign: 'left' }}>
-                    {['ฟิกเจอร์', 'จุด', 'ชิม (รวม/เพดาน)', 'กำหนดตรวจ', 'สิ่งที่ต้องทำ'].map(h =>
-                      <th key={h} style={{ padding: '8px 10px' }}>{h}</th>)}
+                    {[tr("ฟิกเจอร์"), tr("จุด"), tr("ชิม (รวม/เพดาน)"), tr("กำหนดตรวจ"), tr("สิ่งที่ต้องทำ")].map(h =>
+                      <th key={h} style={{ padding: '8px 10px' }}>{tr(h)}</th>)}
                   </tr>
                 </thead>
                 <tbody>
@@ -500,16 +514,16 @@ export default function FixtureRegistry() {
                       <td style={{ padding: '7px 10px' }}>
                         {kindMeta(p.kind_code).icon} {p.point_no}
                       </td>
-                      <td style={{ padding: '7px 10px', color: st.level === 'over' ? '#ef4444' : st.level === 'warn' ? '#f59e0b' : 'inherit' }}>
+                      <td style={{ padding: '7px 10px', color: st.level === 'over' ? 'var(--red)' : st.level === 'warn' ? 'var(--amber)' : 'inherit' }}>
                         {st.current ?? '—'} / {p.max_shim_mm ?? '—'} mm
                       </td>
-                      <td style={{ padding: '7px 10px', color: due.due ? '#ef4444' : due.level === 'soon' ? '#f59e0b' : 'var(--muted)' }}>
+                      <td style={{ padding: '7px 10px', color: due.due ? 'var(--red)' : due.level === 'soon' ? 'var(--amber)' : 'var(--muted)' }}>
                         {due.text}
                       </td>
                       <td style={{ padding: '7px 10px' }}>
-                        {st.level === 'over' ? '🔴 เกินเพดาน — เปิดใบซ่อมเปลี่ยนชิ้นส่วน'
-                          : due.due ? '🟠 ถึงกำหนดตรวจ'
-                          : st.level === 'warn' ? '🟠 ใกล้เพดานชิม' : '⏳ ใกล้ครบกำหนด'}
+                        {st.level === 'over' ? tr("🔴 เกินเพดาน — เปิดใบซ่อมเปลี่ยนชิ้นส่วน")
+                          : due.due ? tr("🟠 ถึงกำหนดตรวจ")
+                          : st.level === 'warn' ? tr("🟠 ใกล้เพดานชิม") : tr("⏳ ใกล้ครบกำหนด")}
                       </td>
                     </tr>
                   ))}
@@ -520,17 +534,16 @@ export default function FixtureRegistry() {
         </div>
       ) : !fx ? (
         <div style={{ fontSize: 13, color: 'var(--muted)' }}>
-          เลือกจิ๊ก/ฟิกเจอร์ก่อน
+          {tr("เลือกจิ๊ก/ฟิกเจอร์ก่อน")}
           {!fixtures.length && (
-            <div style={{ marginTop: 8, color: '#f59e0b' }}>
-              ⚠️ ยังไม่มีอุปกรณ์ที่เป็นชนิด “จิ๊ก / ฟิกเจอร์” ในขอบเขตของคุณ —
-              ไปที่แท็บ <b>⚙️ จัดชนิดอุปกรณ์</b> เพื่อติ๊กเครื่องที่จริงๆ เป็นจิ๊กก่อน
+            <div data-warn="1" style={{ marginTop: 8, color: 'var(--amber)' }}>
+              ⚠️ {tr("ยังไม่มีอุปกรณ์ที่เป็นชนิด “จิ๊ก / ฟิกเจอร์” ในขอบเขตของคุณ — ไปที่แท็บ")} <b>{tr('จัดชนิดอุปกรณ์')}</b> {tr("เพื่อติ๊กเครื่องที่จริงๆ เป็นจิ๊กก่อน")}
             </div>
           )}
         </div>
       ) : tab === 'shim' ? (
         <>
-          <ReadOnlyNote show={!canRecord} role={role} what="บันทึกการใส่/ถอดชิม" permKey="fixture_shim:record" />
+          <ReadOnlyNote show={!canRecord} role={role} what={tr("บันทึกการใส่/ถอดชิม")} permKey="fixture_shim:record" />
           <FixtureShimPanel
             points={points} pointId={pointId} onPickPoint={setPointId}
             canRecord={canRecord} canApprove={canApprove} canManage={canManage}
@@ -540,24 +553,21 @@ export default function FixtureRegistry() {
         </>
       ) : (
         <div style={{ display: 'grid', gap: 12 }}>
-          <ReadOnlyNote show={!canManage} role={role} what="จัดการทะเบียนจุด/baseline/เกณฑ์"
+          <ReadOnlyNote show={!canManage} role={role} what={tr("จัดการทะเบียนจุด/baseline/เกณฑ์")}
                         permKey="fixture_point:manage" />
           {canManage && (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <button onClick={() => setEditing({ ...emptyPoint })}
-                      style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8,
-                               padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-                ➕ เพิ่มจุด
+              <button type="button" className="pg-btn sm primary" onClick={() => setEditing({ ...emptyPoint })}
+                     >
+                {tr('เพิ่มจุด')}
               </button>
-              <button onClick={genTemplate}
-                      style={{ background: 'var(--bg2)', color: 'var(--text)', border: '1px solid var(--border)',
-                               borderRadius: 8, padding: '8px 14px', fontSize: 13, cursor: 'pointer' }}>
-                🧩 สร้างจากแม่แบบ
+              <button type="button" className="pg-btn sm" onClick={genTemplate}
+                     >
+                {tr('สร้างจากแม่แบบ')}
               </button>
-              <button onClick={copyFrom}
-                      style={{ background: 'var(--bg2)', color: 'var(--text)', border: '1px solid var(--border)',
-                               borderRadius: 8, padding: '8px 14px', fontSize: 13, cursor: 'pointer' }}>
-                ⧉ คัดลอกจากฟิกเจอร์อื่น
+              <button type="button" className="pg-btn sm" onClick={copyFrom}
+                     >
+                {tr('⧉ คัดลอกจากฟิกเจอร์อื่น')}
               </button>
             </div>
           )}
@@ -571,12 +581,12 @@ export default function FixtureRegistry() {
                     เป็น overflowX:'clip' — ห้ามเปลี่ยนเป็น hidden/auto (กับดักใน CLAUDE.md) */
               <div style={{ ...card, display: 'grid', gap: 8, position: 'sticky', top: 0, zIndex: 3 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <b style={{ fontSize: 13 }}>📍 ตำแหน่งจุดชิมบนรูปเครื่อง</b>
+                  <b style={{ fontSize: 13 }}>{tr('ตำแหน่งจุดชิมบนรูปเครื่อง')}</b>
                   <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-                    ปักแล้ว {points.filter(p => pointPin(p, cpById)).length}/{points.length} จุด · รูปชุดเดียวกับใบตรวจ PM — เปลี่ยนรูปที่ PM Setup
+                    {tr("ปักแล้ว")} {points.filter(p => pointPin(p, cpById)).length}/{points.length} {tr("จุด · รูปชุดเดียวกับใบตรวจ PM — เปลี่ยนรูปที่")} PM Setup
                   </span>
                   {armPoint && <span style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 700 }}>
-                    กำลังวาง {points.find(p => p.id === armPoint)?.point_no} — คลิกบนรูป · <span onClick={() => setArmPoint('')} style={{ cursor: 'pointer', textDecoration: 'underline' }}>ยกเลิก</span>
+                    {tr("กำลังวาง")} {points.find(p => p.id === armPoint)?.point_no} {tr('— คลิกบนรูป ·')} <span onClick={() => setArmPoint('')} style={{ cursor: 'pointer', textDecoration: 'underline' }}>{tr('ยกเลิก')}</span>
                   </span>}
                 </div>
                 <SpinAnnotator readOnlyFrames
@@ -587,31 +597,30 @@ export default function FixtureRegistry() {
                     .map(({ p, pin }) => ({ key: p.id, x: pin.x, y: pin.y, label: p.point_no,
                       label_dx: p.label_dx, label_dy: p.label_dy,
                       selected: armPoint === p.id,
-                      color: armPoint === p.id ? 'var(--accent)' : '#a78bfa' }))}
+                      color: armPoint === p.id ? 'var(--accent)' : 'var(--blue)' }))}
                   onPlace={canManage ? placePin : undefined}
                   onRemovePin={canManage ? (key) => { const p = points.find(x => x.id === key); if (p && pointPin(p, cpById)?.source === 'own') removePin(key); else toast.info('หมุดนี้ยืมจากจุดตรวจ PM — แก้ที่ PM Setup'); } : undefined} />
               </div>
             ) : (
-              <div style={{ background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.45)', borderRadius: 10, padding: '10px 14px', fontSize: 12.5, lineHeight: 1.6 }}>
-                📷 ยังไม่มีรูปเครื่องของ <b>{fx.machine_no}</b> จึงยังปักตำแหน่งจุดบนรูปไม่ได้ —
-                อัปโหลดรูป (หลายมุมได้) ที่ <Link to="/pm?tab=setup" style={{ color: 'var(--accent)', fontWeight: 700 }}>PM Setup → ⚙️ ตั้งค่าจุดตรวจ</Link> แล้วกลับมาปักที่นี่
-                {!shadow && <div style={{ marginTop: 4, color: 'var(--muted)' }}>(เครื่องนี้ยังไม่มีแถวลงทะเบียนอุปกรณ์ PM — สร้างที่ PM Setup ก่อน)</div>}
+              <div style={{ background: 'var(--amber-dim)', border: '1px solid var(--amber-line)', borderRadius: 'var(--r-md)', padding: '10px 14px', fontSize: 12.5, lineHeight: 1.6 }}>
+                {tr("ยังไม่มีรูปเครื่องของ")} <b>{fx.machine_no}</b> {tr("จึงยังปักตำแหน่งจุดบนรูปไม่ได้ — อัปโหลดรูป (หลายมุมได้) ที่")} <Link to="/pm?tab=setup" style={{ color: 'var(--accent)', fontWeight: 700 }}>{tr('PM Setup → ⚙️ ตั้งค่าจุดตรวจ')}</Link> {tr("แล้วกลับมาปักที่นี่")}
+                {!shadow && <div style={{ marginTop: 4, color: 'var(--muted)' }}>{tr('(เครื่องนี้ยังไม่มีแถวลงทะเบียนอุปกรณ์ PM — สร้างที่ PM Setup ก่อน)')}</div>}
               </div>
             )
           )}
 
           {!points.length ? (
             <div style={{ fontSize: 13, color: 'var(--muted)' }}>
-              ยังไม่มีจุดในทะเบียนของฟิกเจอร์ตัวนี้
+              {tr("ยังไม่มีจุดในทะเบียนของฟิกเจอร์ตัวนี้")}
               {canManage && ' — กด “สร้างจากแม่แบบ” เพื่อเริ่มเร็วที่สุด'}
             </div>
           ) : (
-            <div style={{ border: '1px solid var(--border)', borderRadius: 10, overflow: 'auto' }}>
+            <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-md)', overflow: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
                 <thead style={{ background: 'var(--bg2)' }}>
                   <tr style={{ textAlign: 'left' }}>
-                    {['จุด', 'ชนิด', 'บนรูป', 'baseline', 'ปัจจุบัน', 'เพดาน', 'ความถี่ตรวจ', 'อายุชิ้นส่วน', ''].map(h =>
-                      <th key={h} style={{ padding: '8px 10px' }}>{h}</th>)}
+                    {[tr("จุด"), tr("ชนิด"), tr("บนรูป"), 'baseline', tr("ปัจจุบัน"), tr("เพดาน"), tr("ความถี่ตรวจ"), tr("อายุชิ้นส่วน"), ''].map(h =>
+                      <th key={h} style={{ padding: '8px 10px' }}>{tr(h)}</th>)}
                   </tr>
                 </thead>
                 <tbody>
@@ -628,38 +637,38 @@ export default function FixtureRegistry() {
                         <td style={{ padding: '7px 10px' }}>{kindMeta(p.kind_code).icon} {kindMeta(p.kind_code).label}</td>
                         <td style={{ padding: '7px 10px', whiteSpace: 'nowrap', fontSize: 11.5 }}>
                           {(() => { const pin = pointPin(p, cpById); return pin
-                            ? <span style={{ color: '#a78bfa', fontWeight: 700 }} title={pin.source === 'checkpoint' ? 'ยืมหมุดจากจุดตรวจ PM' : 'หมุดของจุดนี้เอง'}>📍 {pin.source === 'checkpoint' ? 'จาก PM' : `เฟรม ${Math.max(1, frames.findIndex(f => f._key === (pin.imageId ?? frames[0]?._key)) + 1)}`}</span>
+                            ? <span style={{ color: 'var(--blue)', fontWeight: 700 }} title={pin.source === 'checkpoint' ? tr('ยืมหมุดจากจุดตรวจ PM') : tr('หมุดของจุดนี้เอง')}>{pin.source === 'checkpoint' ? tr("จาก PM") : `${tr("เฟรม")} ${Math.max(1, frames.findIndex(f => f._key === (pin.imageId ?? frames[0]?._key)) + 1)}`}</span>
                             : <span style={{ color: 'var(--muted)' }}>—</span>; })()}
                           {canManage && frames.length > 0 && (
-                            <button onClick={() => setArmPoint(a => a === p.id ? '' : p.id)} title="วางตำแหน่งบนรูป"
-                              style={{ marginLeft: 6, background: armPoint === p.id ? 'var(--accent)' : 'var(--bg2)', color: armPoint === p.id ? 'var(--accent-ink)' : 'var(--text)', border: '1px solid var(--border)', borderRadius: 6, padding: '2px 7px', fontSize: 11, cursor: 'pointer' }}>
-                              {armPoint === p.id ? 'คลิกรูป…' : (pointPin(p, cpById)?.source === 'own' ? 'ย้าย' : 'วาง')}
+                            <button onClick={() => setArmPoint(a => a === p.id ? '' : p.id)} title={tr('วางตำแหน่งบนรูป')}
+                              style={{ marginLeft: 6, background: armPoint === p.id ? 'var(--accent)' : 'var(--bg2)', color: armPoint === p.id ? 'var(--accent-ink)' : 'var(--text)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '2px 7px', fontSize: 11, cursor: 'pointer' }}>
+                              {armPoint === p.id ? tr('คลิกรูป…') : (pointPin(p, cpById)?.source === 'own' ? tr('ย้าย') : tr('วาง'))}
                             </button>
                           )}
                         </td>
                         <td style={{ padding: '7px 10px' }}>{p.baseline_shim_mm ?? <Blank />}</td>
                         <td style={{ padding: '7px 10px',
-                                     color: st.level === 'over' ? '#ef4444' : st.level === 'warn' ? '#f59e0b' : 'inherit',
+                                     color: st.level === 'over' ? 'var(--red)' : st.level === 'warn' ? 'var(--amber)' : 'inherit',
                                      fontWeight: st.level === 'over' || st.level === 'warn' ? 700 : 400 }}>
                           {st.current ?? <Blank />}
                         </td>
                         <td style={{ padding: '7px 10px' }}>
-                          {p.max_shim_mm ?? <span style={{ color: 'var(--muted)' }} title="ไม่ตั้ง = ไม่เตือน">ไม่ตั้ง</span>}
+                          {p.max_shim_mm ?? <span style={{ color: 'var(--muted)' }} title={tr('ไม่ตั้ง = ไม่เตือน')}>{tr('ไม่ตั้ง')}</span>}
                         </td>
                         <td style={{ padding: '7px 10px', fontSize: 11.5,
-                                     color: due.due ? '#ef4444' : due.level === 'soon' ? '#f59e0b' : 'var(--muted)' }}>
+                                     color: due.due ? 'var(--red)' : due.level === 'soon' ? 'var(--amber)' : 'var(--muted)' }}>
                           {due.text}
                         </td>
                         <td style={{ padding: '7px 10px', fontSize: 11.5 }}>
                           {life.pct == null ? <span style={{ color: 'var(--muted)' }}>—</span>
-                            : <span style={{ color: life.level === 'over' ? '#ef4444' : life.level === 'warn' ? '#f59e0b' : 'inherit' }}>
+                            : <span style={{ color: life.level === 'over' ? 'var(--red)' : life.level === 'warn' ? 'var(--amber)' : 'inherit' }}>
                                 {Math.round(life.pct)}%
                               </span>}
                         </td>
                         <td style={{ padding: '7px 10px', whiteSpace: 'nowrap' }}>
                           {canManage && (
                             <>
-                              <button onClick={() => setEditing({
+                              <button type="button" className="pg-btn sm" onClick={() => setEditing({
                                 ...emptyPoint, ...p,
                                 baseline_shim_mm: p.baseline_shim_mm ?? '', baseline_at: p.baseline_at ?? '',
                                 max_shim_mm: p.max_shim_mm ?? '', interval_days: p.interval_days ?? '',
@@ -667,12 +676,9 @@ export default function FixtureRegistry() {
                                 expected_life_cycles: p.expected_life_cycles ?? '',
                                 name: p.name ?? '', note: p.note ?? '',
                               })}
-                                style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 6,
-                                         padding: '3px 9px', fontSize: 11.5, cursor: 'pointer', color: 'var(--text)' }}>✏️</button>
-                              <button onClick={() => removePoint(p)}
-                                style={{ marginLeft: 4, background: 'var(--bg2)', border: '1px solid var(--border)',
-                                         borderRadius: 6, padding: '3px 9px', fontSize: 11.5, cursor: 'pointer',
-                                         color: 'var(--text)' }}>🚫</button>
+                               >✏️</button>
+                              <button type="button" className="pg-btn sm" onClick={() => removePoint(p)}
+                                style={{ marginLeft: 4 }}>🚫</button>
                             </>
                           )}
                         </td>
@@ -685,12 +691,10 @@ export default function FixtureRegistry() {
           )}
 
           {points.some(p => p.baseline_shim_mm == null) && (
-            <div style={{ background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.45)',
-                          borderRadius: 10, padding: '10px 14px', fontSize: 12.5 }}>
-              ⚠️ ยังไม่ได้วัด baseline <b>{points.filter(p => p.baseline_shim_mm == null).length}</b> จุด —
-              ถ้าไม่มี baseline ระบบจะตอบได้แค่ “ใส่ชิมไปกี่ครั้ง” แต่ตอบไม่ได้ว่า
-              <b> ห่างจากตอนรับมอบเท่าไหร่แล้ว</b> ซึ่งเป็นคำถามที่ลูกค้าถามจริง
-            </div>
+            <NoticeBar tone="warn" style={{ marginBottom: 0 }}>
+              {tr("ยังไม่ได้วัด")} baseline <b>{points.filter(p => p.baseline_shim_mm == null).length}</b> {tr("จุด — ถ้าไม่มี baseline ระบบจะตอบได้แค่ “ใส่ชิมไปกี่ครั้ง” แต่ตอบไม่ได้ว่า")}
+              <b> {tr('ห่างจากตอนรับมอบเท่าไหร่แล้ว')}</b> {tr("ซึ่งเป็นคำถามที่ลูกค้าถามจริง")}
+            </NoticeBar>
           )}
         </div>
       )}
@@ -698,50 +702,48 @@ export default function FixtureRegistry() {
       {/* ── modal แก้ไขจุด ── */}
       {/* ฟอร์มสร้างจุดจากแม่แบบ — ชนิดจุดเลือกจาก fixture_point_kinds (แทน window.prompt ที่ต้องพิมพ์รหัสเอง) · 2026-09-07 */}
       {tpl && (
-        <div className="modal-scroll" /* modal-scroll = เลื่อนถึงปุ่มล่างได้เมื่อจอเตี้ย/คีย์บอร์ดเด้ง (UI-CONVENTIONS §4 · index.css) */ style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 3100,
+        <div className="modal-scroll" /* modal-scroll = เลื่อนถึงปุ่มล่างได้เมื่อจอเตี้ย/คีย์บอร์ดเด้ง (UI-CONVENTIONS §4 · index.css) */ style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 3100,
                       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12,
+          <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)',
                         padding: 18, width: 'min(420px,100%)' }}>
-            <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 12 }}>✨ สร้างจุดจากแม่แบบ · {fx?.machine_no}</div>
+            <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 12 }}>{tr('✨ สร้างจุดจากแม่แบบ ·')} {fx?.machine_no}</div>
             <div style={{ display: 'grid', gap: 10 }}>
-              <Field label="ชนิดจุด">
+              <Field label={tr('ชนิดจุด')}>
                 <select value={tpl.kind} style={inp}
                         onChange={e => setTpl(t => ({ ...t, kind: e.target.value, prefix: e.target.value === 'locator_pin' ? 'L' : 'P' }))}>
-                  {kinds.map(k => <option key={k.code} value={k.code}>{k.icon} {k.label}</option>)}
+                  {kinds.map(k => <option key={k.code} value={k.code}>{k.icon} {tr(k.label)}</option>)}
                 </select>
               </Field>
-              <Field label="สร้างกี่จุด" hint="1–60">
+              <Field label={tr('สร้างกี่จุด')} hint="1–60">
                 <input type="number" min="1" max="60" value={tpl.n} onChange={e => setTpl(t => ({ ...t, n: e.target.value }))} style={inp} />
               </Field>
-              <Field label="ตัวนำหน้าเลขจุด" hint={`${tpl.prefix || 'P'}1, ${tpl.prefix || 'P'}2, …`}>
+              <Field label={tr('ตัวนำหน้าเลขจุด')} hint={`${tpl.prefix || 'P'}1, ${tpl.prefix || 'P'}2, …`}>
                 <input value={tpl.prefix} onChange={e => setTpl(t => ({ ...t, prefix: e.target.value }))} style={inp} />
               </Field>
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent: 'flex-end' }}>
-              <button onClick={() => setTpl(null)}
-                      style={{ background: 'var(--bg2)', color: 'var(--text)', border: '1px solid var(--border)',
-                               borderRadius: 8, padding: '8px 16px', fontSize: 13, cursor: 'pointer' }}>ยกเลิก</button>
-              <button onClick={runTemplate}
-                      style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8,
-                               padding: '8px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>สร้างจุด</button>
+              <button type="button" className="pg-btn sm" onClick={() => setTpl(null)}
+                     >{tr('ยกเลิก')}</button>
+              <button type="button" className="pg-btn sm primary" onClick={runTemplate}
+                     >{tr('สร้างจุด')}</button>
             </div>
           </div>
         </div>
       )}
       {editing && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 3000,
+        <div style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 3000,
                       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12,
+          <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)',
                         padding: 18, width: 'min(620px,100%)', maxHeight: '90vh', overflow: 'auto' }}>
             <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 12 }}>
-              {editing.id ? `แก้ไขจุด ${editing.point_no}` : 'เพิ่มจุดใหม่'} · {fx?.machine_no}
+              {editing.id ? `${tr("แก้ไขจุด")} ${editing.point_no}` : tr("เพิ่มจุดใหม่")} · {fx?.machine_no}
             </div>
             <div className="mgrid" style={{ display: 'grid', gap: 10,
                                             gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))' }}>
-              <Field label="เลขจุด (ตาม drawing)" hint="L1, C3, RP2">
+              <Field label={tr('เลขจุด (ตาม drawing)')} hint="L1, C3, RP2">
                 <input value={editing.point_no} onChange={e => setEditing(p => ({ ...p, point_no: e.target.value }))} style={inp} />
               </Field>
-              <Field label="ชนิดจุด">
+              <Field label={tr('ชนิดจุด')}>
                 <select value={editing.kind_code || ''} onChange={e => {
                   const k = kinds.find(x => x.code === e.target.value);
                   setEditing(p => ({
@@ -752,51 +754,49 @@ export default function FixtureRegistry() {
                     expected_life_cycles: p.id || p.expected_life_cycles !== '' ? p.expected_life_cycles : (k?.default_life_cycles ?? ''),
                   }));
                 }} style={inp}>
-                  {kinds.map(k => <option key={k.code} value={k.code}>{k.icon} {k.label}</option>)}
+                  {kinds.map(k => <option key={k.code} value={k.code}>{k.icon} {tr(k.label)}</option>)}
                 </select>
               </Field>
-              <Field label="คำอธิบายจุด" hint="ถ้ามี">
+              <Field label={tr('คำอธิบายจุด')} hint={tr('ถ้ามี')}>
                 <input value={editing.name} onChange={e => setEditing(p => ({ ...p, name: e.target.value }))} style={inp} />
               </Field>
-              <Field label="baseline (mm)" hint={editing.id ? '⚠️ แก้ = เปลี่ยนจุดอ้างอิง' : 'ค่า ณ วันรับมอบ'}>
+              <Field label="baseline (mm)" hint={editing.id ? tr('⚠️ แก้ = เปลี่ยนจุดอ้างอิง') : tr('ค่า ณ วันรับมอบ')}>
                 <input value={editing.baseline_shim_mm} inputMode="decimal"
                        onChange={e => setEditing(p => ({ ...p, baseline_shim_mm: e.target.value }))} style={inp} />
               </Field>
-              <Field label="วันที่วัด baseline">
+              <Field label={tr('วันที่วัด baseline')}>
                 <input type="date" value={editing.baseline_at || ''}
                        onChange={e => setEditing(p => ({ ...p, baseline_at: e.target.value }))} style={inp} />
               </Field>
-              <Field label="เพดานชิม (mm)" hint="เว้นว่าง = ไม่เตือน">
+              <Field label={tr('เพดานชิม (mm)')} hint={tr('เว้นว่าง = ไม่เตือน')}>
                 <input value={editing.max_shim_mm} inputMode="decimal"
                        onChange={e => setEditing(p => ({ ...p, max_shim_mm: e.target.value }))} style={inp} />
               </Field>
-              <Field label="ตรวจทุกกี่วัน" hint="เว้นว่าง = ตามเช็คลิสต์">
+              <Field label={tr('ตรวจทุกกี่วัน')} hint={tr('เว้นว่าง = ตามเช็คลิสต์')}>
                 <input value={editing.interval_days} inputMode="numeric"
                        onChange={e => setEditing(p => ({ ...p, interval_days: e.target.value }))} style={inp} />
               </Field>
-              <Field label="ตรวจทุกกี่ shot" hint="เว้นว่าง = ไม่ใช้แกนนี้">
+              <Field label={tr('ตรวจทุกกี่ shot')} hint={tr('เว้นว่าง = ไม่ใช้แกนนี้')}>
                 <input value={editing.interval_cycles} inputMode="numeric"
                        onChange={e => setEditing(p => ({ ...p, interval_cycles: e.target.value }))} style={inp} />
               </Field>
-              <Field label="อายุชิ้นส่วน (shot)" hint="tool life — ปรับได้เมื่อมีประวัติจริง">
+              <Field label={tr('อายุชิ้นส่วน (shot)')} hint={tr('tool life — ปรับได้เมื่อมีประวัติจริง')}>
                 <input value={editing.expected_life_cycles} inputMode="numeric"
                        onChange={e => setEditing(p => ({ ...p, expected_life_cycles: e.target.value }))} style={inp} />
               </Field>
-              <Field label="หมายเหตุ">
+              <Field label={tr('หมายเหตุ')}>
                 <input value={editing.note} onChange={e => setEditing(p => ({ ...p, note: e.target.value }))} style={inp} />
               </Field>
             </div>
             <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 10, lineHeight: 1.6 }}>
-              • ไม่ตั้งเพดาน = ระบบจะไม่เตือนเรื่องชิมของจุดนี้ (ตั้งทีหลังได้เมื่อมีข้อมูลพอ)<br />
-              • ไม่ตั้งความถี่ทั้ง 2 แกน = ใช้ความถี่ของเช็คลิสต์ PM เหมือนเดิม
+              • {tr("ไม่ตั้งเพดาน = ระบบจะไม่เตือนเรื่องชิมของจุดนี้ (ตั้งทีหลังได้เมื่อมีข้อมูลพอ")})<br />
+              • {tr("ไม่ตั้งความถี่ทั้ง 2 แกน = ใช้ความถี่ของเช็คลิสต์ PM เหมือนเดิม")}
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent: 'flex-end' }}>
-              <button onClick={() => setEditing(null)}
-                      style={{ background: 'var(--bg2)', color: 'var(--text)', border: '1px solid var(--border)',
-                               borderRadius: 8, padding: '8px 16px', fontSize: 13, cursor: 'pointer' }}>ยกเลิก</button>
-              <button onClick={savePoint}
-                      style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8,
-                               padding: '8px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>บันทึก</button>
+              <button type="button" className="pg-btn sm" onClick={() => setEditing(null)}
+                     >{tr('ยกเลิก')}</button>
+              <button type="button" className="pg-btn sm primary" onClick={savePoint}
+                     >{tr('บันทึก')}</button>
             </div>
           </div>
         </div>

@@ -15,17 +15,24 @@
  */
 import { useState } from 'react';
 import ImageCropModal from './ImageCropModal';
+import { AttachImage } from './ImageLightbox';
+import { useObjectUrl } from '../utils/useObjectUrl';
 import { acceptImageFile } from '../utils/acceptImageFile';
 import { QUALITY_IMG_ASPECT } from '../utils/qualityImage';
 
+import { tr } from '../utils/i18n';
 const lbl = { fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 3 };
 
 export default function QualityPhotoField({
   label, url = null, file = null, onPick, readOnly = false, hint = null,
 }) {
   const [cropFile, setCropFile] = useState(null);
-  // รูปที่ยังไม่ได้อัปโหลด (File ใน state) ต้องเห็นพรีวิวด้วย ไม่งั้นแนบแล้วเหมือนไม่มีอะไรเกิดขึ้น
-  const preview = file ? URL.createObjectURL(file) : url;
+  /* รูปที่ยังไม่ได้อัปโหลด (File ใน state) ต้องเห็นพรีวิวด้วย ไม่งั้นแนบแล้วเหมือนไม่มีอะไรเกิดขึ้น
+     🔴 ผ่าน `useObjectUrl` เท่านั้น (audit รูปภาพ 16/11) — เดิมเรียก `URL.createObjectURL(file)`
+     ใน render ⇒ สร้าง blob URL ใหม่ทุกตัวอักษรที่พิมพ์ในฟอร์ม และไม่มีใคร revoke
+     = ตรึงรูปหลาย MB ไว้ทุกใบ บนมือถือชนเพดานแล้วบีบรูปใบถัดไปล้ม (กฎข้อ 2 ของ storage-images) */
+  const filePreview = useObjectUrl(file);
+  const preview = filePreview || url;
 
   return (
     <div>
@@ -35,18 +42,16 @@ export default function QualityPhotoField({
       </label>
 
       {preview ? (
-        <a href={preview} target="_blank" rel="noreferrer" title="เปิดรูปเต็ม">
-          <img src={preview} alt={label} style={{
-            display: 'block', maxHeight: 120, maxWidth: '100%', borderRadius: 8,
-            border: '1px solid var(--border)', marginBottom: 6,
-          }} />
-        </a>
+        /* 🔍 กดขยายในแอป — เดิมเป็น `<a target="_blank">` = เด้งออกจากใบที่กรอกค้างอยู่
+           (หน้างานลงของเสียจากมือถือ · กฎเดียวกับรูปจุดตรวจ PM · ของกลาง ImageLightbox 16/11) */
+        <AttachImage url={preview} title={label} caption={hint} maxHeight={120}
+          style={{ marginBottom: 6 }} hint={tr('เปิดรูปเต็ม')} />
       ) : (
         /* 🔴 ว่างต้องเขียนว่าว่าง ห้ามปล่อยเป็นช่องเปล่าให้เดาเอง */
         <div style={{
           fontSize: 11.5, color: 'var(--muted)', padding: '10px 12px', marginBottom: 6,
-          border: '1px dashed var(--border)', borderRadius: 8, background: 'var(--bg2)',
-        }}>ยังไม่มีรูป</div>
+          border: '1px dashed var(--border)', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)',
+        }}>{tr('ยังไม่มีรูป')}</div>
       )}
 
       {!readOnly && (
@@ -63,9 +68,9 @@ export default function QualityPhotoField({
           {(file || url) && (
             <button type="button" onClick={() => onPick(null)}
               style={{
-                fontSize: 11.5, padding: '4px 10px', borderRadius: 6, cursor: 'pointer',
-                border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text2)',
-              }}>🗑 เอารูปออก</button>
+                fontSize: 11.5, padding: '4px 10px', borderRadius: 'var(--r-md)', cursor: 'pointer',
+                border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text2)',
+              }}>{tr('เอารูปออก')}</button>
           )}
         </div>
       )}
@@ -73,8 +78,8 @@ export default function QualityPhotoField({
       {cropFile && (
         <ImageCropModal
           file={cropFile} aspect={QUALITY_IMG_ASPECT} outputSize={1024} quality={0.8} webp
-          allowFull fullDefault fullHint="เก็บทั้งภาพไว้ — ค่าแนะนำสำหรับรูปหลักฐาน"
-          title="จัดกรอบรูปหลักฐานของเสีย"
+          allowFull fullDefault fullHint={tr("เก็บทั้งภาพไว้ — ค่าแนะนำสำหรับรูปหลักฐาน")}
+          title={tr('จัดกรอบรูปหลักฐานของเสีย')}
           onCancel={() => setCropFile(null)}
           onConfirm={(cropped) => { onPick(cropped); setCropFile(null); }}
         />

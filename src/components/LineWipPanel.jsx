@@ -7,6 +7,7 @@ import { fetchAllPages, fetchByIds } from '../utils/fetchByIds';
 import { loadProductsMaster } from '../utils/useProducts';
 import { buildLineWip, WIP_STATUS } from '../utils/lineWipLedger';
 
+import { tr } from '../utils/i18n';
 /**
  * 📦 WIP ที่ไลน์ — แผงบนหน้า Daily Report ของไลน์ที่กำลังเปิดกะ
  *
@@ -21,8 +22,15 @@ import { buildLineWip, WIP_STATUS } from '../utils/lineWipLedger';
  *   📦 ค้างที่ไลน์   ส่งมา − ตัดเป็น FG                                    = **ค่าที่คำนวณ**
  *
  * ⚠️⚠️ ห้ามเอา `line_stock_summary.qty_on_hand` มาตอบว่า "ค้างที่ไลน์เท่าไหร่"
- * backflush ไม่ทำงาน (issue 5,908 : consume 40) → ยอดในระบบแทบไม่เคยลด สูงกว่าความจริงเสมอ
- * แผงนี้จึงโชว์มันเป็น **ตัวเลขวินิจฉัย** คู่กับส่วนต่าง ไม่ใช่คำตอบหลัก
+ * แผงนี้โชว์มันเป็น **ตัวเลขวินิจฉัย** คู่กับส่วนต่าง ไม่ใช่คำตอบหลัก
+ *
+ * 🔄 **เหตุผลเปลี่ยนไปแล้ว — กฎเดิม (18/11)** เลขเก่าในหัวไฟล์นี้ ("backflush ไม่ทำงาน
+ *   issue 5,908 : consume 40") **หมดอายุ** · วัดสด 18/11: backflush **เดินอยู่จริงทุกวัน**
+ *   (`consume` 22,163 แถว · ล่าสุดวันนี้ · trigger `fn_explode_child_demand` → `fn_area_take`)
+ *   🔴 แต่ยอดคงเหลือ **ยังเชื่อไม่ได้เหมือนเดิม ด้วยเหตุผลใหม่**:
+ *     **ใบตรวจนับ 169 ใบทั้งระบบ ตรงเป๊ะ 0 ใบ** — ไม่มีแม้ใบเดียวที่ระบบตรงกับของจริง
+ *     (STORE: นับ 47 ครั้ง ระบบสูงกว่าจริง 35 ครั้ง สุทธิ −101,791 ชิ้น)
+ *   ⇒ **ห้ามถอดคำเตือนนี้เพราะ "backflush ทำงานแล้ว"** — คนละเรื่องกัน
  *
  * ⚠️ ฐานเวลา = **วันแรกที่สโตร์เริ่มบันทึกการจ่ายเข้าไลน์นี้** ไม่ใช่ตั้งแต่ระบบเกิด
  * ก่อนวันนั้นไม่มีบันทึกรับเข้าเลย เอามาคิด "ค้างเหลือ" ไม่ได้ (จะติดลบทั้งกระดาน)
@@ -35,7 +43,8 @@ const fmt  = (n) => {
 };
 const card = { background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 10 };
 const chip = (bg, color) => ({ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: bg, color, whiteSpace: 'nowrap' });
-const TONE = { ok: 'var(--accent)', warn: '#f59e0b', crit: '#ef4444', muted: 'var(--muted)' };
+/* 🎨 25/11 สีดิบ → token (พาเลต 5 สี · ธีมสว่างต้องเปลี่ยนตาม · UI §6.17) */
+const TONE = { ok: 'var(--accent)', warn: 'var(--amber)', crit: 'var(--red)', muted: 'var(--muted)' };
 
 const RANGES = [
   { key: 'day',  label: 'กะ/วันนี้', days: 0 },
@@ -192,12 +201,13 @@ export default function LineWipPanel({ lineName, workDate, lines = [] }) {
   /* ⚠️ ไลน์แม่ที่มีลูก = แผนก ไม่ใช่จุดวางของ (กฎหน่วยย่อยที่สุด)
      ตัวเลข WIP ระดับนี้ไม่มีความหมาย — บอกให้ไปเปิดที่ไลน์ลูก **ห้ามโชว์ตัวเลขให้เข้าใจผิด** */
   if (!isLeaf) return (
-    <div style={{ ...card, borderColor: 'rgba(59,130,246,0.3)', marginBottom: 16, padding: '12px 14px' }}>
-      <div style={{ fontSize: 13, fontWeight: 800, color: '#60a5fa', marginBottom: 4 }}>📦 WIP ที่ไลน์</div>
+    <div style={{ ...card, borderColor: 'var(--border2)', marginBottom: 16, padding: '12px 14px' }}>
+      {/* 🎨 หัวข้อแผง = สีข้อความปกติ (เดิม #60a5fa = ฟ้าคนละเฉดกับ token + ธีมสว่างไม่เปลี่ยน) */}
+      <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>{tr('WIP ที่ไลน์')}</div>
       <div style={{ fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.7 }}>
-        <b>{lineName}</b> เป็นไลน์แม่ (มีไลน์ย่อย {kidNames.length}) — ของและยอดค้างอยู่ที่ <b>ไลน์ย่อย</b>
-        <br />เปิดกะที่ไลน์ย่อยเพื่อดู: {kidNames.map(n => (
-          <span key={n} style={{ display: 'inline-block', margin: '3px 4px 0 0', padding: '2px 8px', borderRadius: 6, background: 'var(--bg3)', border: '1px solid var(--border2)', color: 'var(--text2)', fontSize: 11 }}>{n}</span>
+        <b>{lineName}</b> {tr('เป็นไลน์แม่ (มีไลน์ย่อย')} {kidNames.length}) — {tr("ของและยอดค้างอยู่ที่")} <b>{tr('ไลน์ย่อย')}</b>
+        <br />{tr('เปิดกะที่ไลน์ย่อยเพื่อดู:')} {kidNames.map(n => (
+          <span key={n} style={{ display: 'inline-block', margin: '3px 4px 0 0', padding: '2px 8px', borderRadius: 'var(--r-md)', background: 'var(--bg3-surf)', border: '1px solid var(--border2)', color: 'var(--text2)', fontSize: 11 }}>{n}</span>
         ))}
       </div>
     </div>
@@ -205,25 +215,27 @@ export default function LineWipPanel({ lineName, workDate, lines = [] }) {
 
   /* ไม่มีทั้ง ledger และการใช้ของ = ไลน์นี้ยังไม่เข้าระบบ WIP → ไม่ต้องรกจอ
      ⚠️ แต่ถ้ามีของค้างอยู่ที่ไลน์แม่ ต้องโชว์ — นั่นคือคำอธิบายว่าทำไมไลน์นี้ถึงว่าง */
-  if (!err && !wip.parts.length && !stuckUp.length) return null;
+  /* 🙈 05/11 (คำสั่ง user "พวกโชว์ของค้างอยู่ไลน์แม่ ไม่ต้องโชว์ให้งง · พื้นที่อ้างอิง SAP ไม่สนแม่หรือลูก") — ปิดการโชว์ของค้างที่ไลน์แม่ */
+  const SHOW_UP = false;
+  if (!err && !wip.parts.length && !(SHOW_UP && stuckUp.length)) return null;
 
   const t = wip.totals;
   const rows = showAll ? wip.parts : wip.parts.slice(0, 8);
 
   return (
-    <div style={{ ...card, borderColor: 'rgba(59,130,246,0.3)', marginBottom: 16 }}>
+    <div style={{ ...card, borderColor: 'var(--border2)', marginBottom: 16 }}>
       <div onClick={() => setOpen(o => !o)}
         style={{ padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 13, fontWeight: 800, color: '#60a5fa' }}>
-          📦 WIP ที่ไลน์ ({wip.parts.length} พาร์ท)
+        <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)' }}>
+          WIP {tr("ที่ไลน์")} ({wip.parts.length} {tr("พาร์ท")})
         </span>
         {/* ตัวเลขหลักต้องเห็นแม้พับ — ไม่งั้นต้องกดทุกครั้งถึงจะรู้ว่ามีอะไร */}
         <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-          📥 รับ {fmt(t.received)} · 🏭 ใช้ {fmt(t.usedCalc)} · 📦 ค้าง <b style={{ color: t.shouldRemain < 0 ? TONE.crit : 'var(--accent)' }}>{fmt(t.shouldRemain)}</b>
+          {tr("รับ")} {fmt(t.received)} {tr('· ใช้')} {fmt(t.usedCalc)} {tr('· ค้าง')} <b style={{ color: t.shouldRemain < 0 ? TONE.crit : 'var(--accent)' }}>{fmt(t.shouldRemain)}</b>
         </span>
-        {t.negative > 0     && <span style={chip('rgba(239,68,68,0.14)', TONE.crit)}>🔴 ใช้เกินที่รับ {t.negative}</span>}
-        {t.neverIssued > 0  && <span style={chip('rgba(245,158,11,0.14)', TONE.warn)}>📭 ไม่มีบันทึกรับเข้า {t.neverIssued}</span>}
-        {stuckUp.length > 0 && <span style={chip('rgba(245,158,11,0.14)', TONE.warn)}>🔀 ค้างที่ไลน์แม่ {stuckUp.length} พาร์ท</span>}
+        {t.negative > 0     && <span style={chip('rgba(239,68,68,0.14)', TONE.crit)}>{tr('🔴 ใช้เกินที่รับ')} {t.negative}</span>}
+        {t.neverIssued > 0  && <span style={chip('rgba(245,158,11,0.14)', TONE.warn)}>{tr('ไม่มีบันทึกรับเข้า')} {t.neverIssued}</span>}
+        {SHOW_UP && stuckUp.length > 0 && <span style={chip('rgba(245,158,11,0.14)', TONE.warn)}>{tr('ค้างที่ไลน์แม่')} {stuckUp.length} {tr('พาร์ท')}</span>}
         <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--muted)' }}>{open ? '▾' : '▸'}</span>
       </div>
 
@@ -231,74 +243,72 @@ export default function LineWipPanel({ lineName, workDate, lines = [] }) {
         <div style={{ padding: '0 14px 12px' }}>
           {err && (
             <div style={{ ...card, borderColor: 'rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.07)', padding: '8px 11px', marginBottom: 10, fontSize: 11.5, color: TONE.crit }}>
-              ⚠️ โหลดข้อมูล WIP ไม่สำเร็จ — ตัวเลขด้านล่างอาจไม่ครบ · {err}
+              ⚠️ {tr("โหลดข้อมูล WIP ไม่สำเร็จ — ตัวเลขด้านล่างอาจไม่ครบ")} · {err}
             </div>
           )}
           {partial && !err && (
             <div style={{ fontSize: 11, color: TONE.warn, marginBottom: 8 }}>
-              ⚠️ โหลดได้ไม่ครบทุกแถว — ตัวเลขอาจต่ำกว่าความจริง ลองรีเฟรช
+              ⚠️ {tr("โหลดได้ไม่ครบทุกแถว — ตัวเลขอาจต่ำกว่าความจริง ลองรีเฟรช")}
             </div>
           )}
 
           {!firstIssueDate ? (
             <div style={{ ...card, background: 'var(--bg2)', padding: '10px 12px', fontSize: 11.5, color: 'var(--muted)', marginBottom: 10 }}>
-              📭 <b>ไลน์นี้ยังไม่เคยมีบันทึก "จ่ายพาร์ทเข้าไลน์" ในระบบเลย</b> — ตอบไม่ได้ว่าค้างอยู่เท่าไหร่
+              📭 <b>{tr("ไลน์นี้ยังไม่เคยมีบันทึก \"จ่ายพาร์ทเข้าไลน์\" ในระบบเลย")}</b> — {tr("ตอบไม่ได้ว่าค้างอยู่เท่าไหร่")}
               <div style={{ marginTop: 2 }}>
-                ตัวเลข "ตัดเป็น FG" ด้านล่างคำนวณจากใบผลิตได้ตามปกติ · ให้สโตร์บันทึกที่{' '}
-                <Link to="/line-stock" style={{ color: 'var(--accent)', fontWeight: 700 }}>📦 Line Stock → + จ่ายพาร์ทเข้าไลน์</Link>{' '}
-                แล้วยอดค้างจะคำนวณได้เอง
+                {tr("ตัวเลข \"ตัดเป็น FG\" ด้านล่างคำนวณจากใบผลิตได้ตามปกติ · ให้สโตร์บันทึกที่")}{' '}
+                <Link to="/line-stock" style={{ color: 'var(--accent)', fontWeight: 700 }}>{tr('📦 Line Stock → + จ่ายพาร์ทเข้าไลน์')}</Link>{' '}
+                {tr("แล้วยอดค้างจะคำนวณได้เอง")}
               </div>
             </div>
           ) : (
             <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8 }}>
-              ยอดสะสมนับตั้งแต่ <b>{firstIssueDate}</b> (วันแรกที่สโตร์เริ่มบันทึกการจ่ายเข้าไลน์นี้)
+              {tr("ยอดสะสมนับตั้งแต่")} <b>{firstIssueDate}</b> ({tr("วันแรกที่สโตร์เริ่มบันทึกการจ่ายเข้าไลน์นี้")})
             </div>
           )}
 
           {/* ⚠️ ของที่จ่ายไว้ที่ไลน์แม่ — ไม่นับเป็นของไลน์นี้ แต่ต้องเห็น (ห้ามเงียบ)
               นี่คือคำอธิบายว่าทำไมยอดค้างของไลน์ถึงน้อย/ติดลบ ทั้งที่สโตร์จ่ายมาแล้ว */}
-          {stuckUp.length > 0 && (
+          {SHOW_UP && stuckUp.length > 0 && (
             <div style={{ ...card, borderColor: 'rgba(245,158,11,0.4)', background: 'rgba(245,158,11,0.07)', padding: '9px 12px', marginBottom: 10, fontSize: 11.5, color: 'var(--text2)' }}>
-              🔀 <b style={{ color: TONE.warn }}>มีของค้างอยู่ที่ไลน์แม่ {stuckUp.length} พาร์ท</b> — ยังไม่ถูกย้ายลงมาที่ไลน์นี้ จึงไม่นับรวมด้านล่าง
+              🔀 <b style={{ color: TONE.warn }}>{tr('มีของค้างอยู่ที่ไลน์แม่')} {stuckUp.length} {tr('พาร์ท')}</b> — {tr("ยังไม่ถูกย้ายลงมาที่ไลน์นี้ จึงไม่นับรวมด้านล่าง")}
               <div style={{ marginTop: 4, display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                 {stuckUp.slice(0, 8).map(s => (
-                  <span key={s.mat_no} style={{ padding: '2px 8px', borderRadius: 6, background: 'var(--bg3)', border: '1px solid var(--border2)', fontSize: 11 }}>
+                  <span key={s.mat_no} style={{ padding: '2px 8px', borderRadius: 'var(--r-md)', background: 'var(--bg3-surf)', border: '1px solid var(--border2)', fontSize: 11 }}>
                     {s.mat_no} · {fmt(s.qty)}
                   </span>
                 ))}
-                {stuckUp.length > 8 && <span style={{ fontSize: 11, color: 'var(--muted)' }}>+ อีก {stuckUp.length - 8}</span>}
+                {stuckUp.length > 8 && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('+ อีก')} {stuckUp.length - 8}</span>}
               </div>
               <div style={{ marginTop: 4 }}>
-                ย้ายที่{' '}
-                <Link to="/line-stock" style={{ color: 'var(--accent)', fontWeight: 700 }}>📦 Line Stock → 🔀 ย้ายเข้าไลน์ลูก</Link>
+                {tr("ย้ายที่")}{' '}
+                <Link to="/line-stock" style={{ color: 'var(--accent)', fontWeight: 700 }}>{tr('📦 Line Stock → 🔀 ย้ายเข้าไลน์ลูก')}</Link>
               </div>
             </div>
           )}
 
           {/* ── 3 ตัวเลขที่ถาม ── */}
           <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{ fontSize: 11, color: 'var(--muted)' }}>ช่วง:</span>
+            <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('ช่วง:')}</span>
             {RANGES.map(r => (
               <button key={r.key} onClick={() => setRange(r.key)}
-                style={{ ...chip(range === r.key ? 'rgba(96,165,250,0.18)' : 'var(--bg3)', range === r.key ? '#60a5fa' : 'var(--muted)'),
-                  border: '1px solid var(--border)', cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
-                {r.label}
-              </button>
+                style={{ ...chip(range === r.key ? 'var(--accent-dim)' : 'var(--bg3)', range === r.key ? 'var(--accent)' : 'var(--muted)'),
+                  border: '1px solid var(--border)', cursor: 'pointer', fontFamily: 'var(--font-body)' }}>{tr(r.label)}</button>
             ))}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: 8, marginBottom: 10 }}>
             {[
               { icon: '📥', label: 'สโตร์ส่งเข้าไลน์', now: t.inPeriod,   all: t.received,     tone: 'var(--accent)', note: 'จากบันทึกจริง' },
-              { icon: '🏭', label: 'ตัดไปเป็น FG',     now: t.usedPeriod, all: t.usedCalc,     tone: '#60a5fa',       note: 'คำนวณจากใบผลิต × BOM' },
+              { icon: '🏭', label: 'ตัดไปเป็น FG',     now: t.usedPeriod, all: t.usedCalc,     tone: 'var(--blue)',   note: 'คำนวณจากใบผลิต × BOM' },
               { icon: '📦', label: 'ค้างที่ไลน์',       now: null,         all: t.shouldRemain, tone: t.shouldRemain < 0 ? TONE.crit : 'var(--accent)', note: 'ส่งเข้า − ตัดเป็น FG' },
             ].map(k => (
               <div key={k.label} style={{ ...card, background: 'var(--bg2)', padding: '8px 11px' }}>
-                <div style={{ fontSize: 11, color: 'var(--muted)' }}>{k.icon} {k.label}</div>
+                <div style={{ fontSize: 11, color: 'var(--muted)' }}>{k.icon} {tr(k.label)}</div>
                 <div style={{ fontSize: 20, fontWeight: 900, color: k.tone, fontFamily: 'var(--font-display)', lineHeight: 1.25 }}>
                   {fmt(k.now ?? k.all)}
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                  {k.now != null ? <>สะสม {fmt(k.all)} · {k.note}</> : k.note}
+                  {k.now != null ? <>{tr('สะสม')} {fmt(k.all)} · {k.note}</> : k.note}
                 </div>
               </div>
             ))}
@@ -307,18 +317,17 @@ export default function LineWipPanel({ lineName, workDate, lines = [] }) {
           {/* ⚠️ ตัวเลขวินิจฉัย — ทำให้ปัญหา backflush มีตัวเลขบนจอ ห้ามซ่อน */}
           {Math.abs(t.gap) > 0.5 && (
             <div style={{ ...card, borderColor: 'rgba(245,158,11,0.35)', background: 'rgba(245,158,11,0.06)', padding: '8px 11px', marginBottom: 10, fontSize: 11.5 }}>
-              <b style={{ color: TONE.warn }}>⚠️ ยอดในระบบยังไม่ถูกหัก {fmt(t.gap)} ชิ้น</b>
+              <b style={{ color: TONE.warn }}>{tr('⚠️ ยอดในระบบยังไม่ถูกหัก')} {fmt(t.gap)} {tr('ชิ้น')}</b>
               <div style={{ color: 'var(--muted)', marginTop: 2 }}>
-                ยอดที่ระบบบันทึกไว้ <b>{fmt(t.onHandLedger)}</b> แต่ที่ควรเหลือจริง <b>{fmt(t.shouldRemain)}</b> —
-                เพราะการหักอัตโนมัติตอนปิดใบ (backflush) ยังหาไลน์ปลายทางไม่เจอ
-                ⇒ <b>ยอดคงเหลือในหน้า Store สูงกว่าความจริง</b> ให้ยึดตัวเลข “ค้างที่ไลน์” ด้านบนแทน
+                {tr("ยอดที่ระบบบันทึกไว้")} <b>{fmt(t.onHandLedger)}</b> {tr('แต่ที่ควรเหลือจริง')} <b>{fmt(t.shouldRemain)}</b> —
+                {tr("เพราะการหักอัตโนมัติตอนปิดใบ (backflush) ยังหาไลน์ปลายทางไม่เจอ")}
+                ⇒ <b>{tr('ยอดคงเหลือในหน้า Store สูงกว่าความจริง')}</b> {tr("ให้ยึดตัวเลข “ค้างที่ไลน์” ด้านบนแทน")}
               </div>
             </div>
           )}
           {t.chainWarn > 0 && (
             <div style={{ fontSize: 11, color: TONE.warn, marginBottom: 8 }}>
-              ⚠️ {t.chainWarn} พาร์ทมี BOM ซ้อนชั้น (ถูกนับทั้งทางตรงและผ่านขั้นกลาง) — ยอด “ตัดเป็น FG” ของพาร์ทนั้นสูงเกินจริง
-              รอ PE/Planning เคาะว่าจะต่อโซ่หรือทำ BOM แบน
+              ⚠️ {t.chainWarn} {tr("พาร์ทมี BOM ซ้อนชั้น (ถูกนับทั้งทางตรงและผ่านขั้นกลาง) — ยอด “ตัดเป็น FG” ของพาร์ทนั้นสูงเกินจริง รอ PE/Planning เคาะว่าจะต่อโซ่หรือทำ BOM แบน")}
             </div>
           )}
 
@@ -326,25 +335,25 @@ export default function LineWipPanel({ lineName, workDate, lines = [] }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <div style={{ display: 'flex', gap: 8, fontSize: 11, color: 'var(--muted)', fontWeight: 700, padding: '2px 0', borderBottom: '1px solid var(--border2)' }}>
               <span style={{ width: 18 }} />
-              <span style={{ flex: 1 }}>พาร์ท</span>
-              <span style={{ width: 74, textAlign: 'right' }}>📥 รับเข้า</span>
-              <span style={{ width: 74, textAlign: 'right' }}>🏭 ตัดเป็น FG</span>
-              <span style={{ width: 74, textAlign: 'right' }}>📦 ค้าง</span>
+              <span style={{ flex: 1 }}>{tr('พาร์ท')}</span>
+              <span style={{ width: 74, textAlign: 'right' }}>{tr('รับเข้า')}</span>
+              <span style={{ width: 74, textAlign: 'right' }}>{tr('ตัดเป็น FG')}</span>
+              <span style={{ width: 74, textAlign: 'right' }}>{tr('ค้าง')}</span>
             </div>
             {rows.map(p => {
               const meta = WIP_STATUS[p.status] || WIP_STATUS.ok;
               const tone = TONE[meta.tone] || 'var(--muted)';
               return (
                 <div key={p.mat_no} style={{ display: 'flex', gap: 8, alignItems: 'baseline', fontSize: 11.5, padding: '1px 0' }}>
-                  <span style={{ width: 18 }} title={meta.label}>{meta.icon}</span>
+                  <span style={{ width: 18 }} title={tr(meta.label)}>{meta.icon}</span>
                   <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {/* ครบ 3 ค่าผ่านของกลาง (30/09) */}
                     <MatLabel mat={p.mat_no} name={p.part_name} size={11} />
-                    {p.chainWarn && <span style={{ color: TONE.warn }} title="BOM ซ้อนชั้น — ยอดตัดเป็น FG สูงเกินจริง"> ⚠BOM</span>}
+                    {p.chainWarn && <span style={{ color: TONE.warn }} title={tr('BOM ซ้อนชั้น — ยอดตัดเป็น FG สูงเกินจริง')}> ⚠BOM</span>}
                   </span>
                   <span style={{ width: 74, textAlign: 'right', color: 'var(--muted)' }}>{fmt(p.received)}</span>
                   <span style={{ width: 74, textAlign: 'right', color: 'var(--muted)' }}
-                    title={Object.entries(p.fgSources).map(([fg, q]) => `${fg}: ${fmt(q)}`).join(' · ') || 'ยังไม่ถูกใช้'}>
+                    title={Object.entries(p.fgSources).map(([fg, q]) => `${fg}: ${fmt(q)}`).join(' · ') || tr("ยังไม่ถูกใช้")}>
                     {fmt(p.usedCalc)}
                   </span>
                   <span style={{ width: 74, textAlign: 'right', fontWeight: 800, color: tone }}>{fmt(p.shouldRemain)}</span>
@@ -355,15 +364,14 @@ export default function LineWipPanel({ lineName, workDate, lines = [] }) {
           {wip.parts.length > rows.length && (
             <button onClick={() => setShowAll(true)}
               style={{ marginTop: 6, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--muted)', fontFamily: 'var(--font-body)' }}>
-              ▸ ดูอีก {wip.parts.length - rows.length} พาร์ท
+              {tr('▸ ดูอีก')} {wip.parts.length - rows.length} {tr('พาร์ท')}
             </button>
           )}
 
           <div style={{ marginTop: 8, fontSize: 11, color: 'var(--muted)', lineHeight: 1.5 }}>
-            📥 <b>รับเข้า</b> = บันทึกจริงจากสโตร์ (issue + ปรับยอด − คืน) ·
-            🏭 <b>ตัดเป็น FG</b> = <b>คำนวณ</b> จากยอดผลิต × BOM (ไม่ได้อ่านยอดตัดสต็อก เพราะ backflush ยังไม่ทำงาน) ·
-            📦 <b>ค้าง</b> = รับเข้า − ตัดเป็น FG ·
-            📭 = ไลน์ใช้ของแล้วแต่ไม่มีบันทึกรับเข้า (สโตร์ยังไม่ได้ลงระบบ ไม่ใช่ของหมด)
+            📥 <b>{tr('รับเข้า')}</b> = {tr("บันทึกจริงจากสโตร์ (issue + ปรับยอด − คืน")}) ·
+            🏭 <b>{tr('ตัดเป็น FG')}</b> = <b>{tr('คำนวณ')}</b> {tr("จากยอดผลิต × BOM (ไม่ได้อ่านยอดตัดสต็อก เพราะ backflush ยังไม่ทำงาน")}) ·
+            📦 <b>{tr('ค้าง')}</b> = {tr("รับเข้า − ตัดเป็น FG · 📭 = ไลน์ใช้ของแล้วแต่ไม่มีบันทึกรับเข้า (สโตร์ยังไม่ได้ลงระบบ ไม่ใช่ของหมด")})
           </div>
         </div>
       )}

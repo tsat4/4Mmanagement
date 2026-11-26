@@ -1,5 +1,7 @@
 # 🔐 Audit — "เข้าหน้าได้ ≠ แก้ของหน่วยงานอื่นได้" (2026-10-15 · คำสั่ง user)
 
+> 🆕 **รอบ 13/11 (role ↔ scope ซ้ำซ้อน · `manager` ไม่ได้แปลว่าข้ามแผนก · `scope:all_units` → รายคน · bucket `dept_admin`)** → audit `docs/ROLE-SCOPE-AUDIT-2026-11-13.md` · สิ่งที่แก้แล้ว + ผลพิสูจน์กับทะเบียนจริง → **§16 ท้ายไฟล์นี้**
+
 > *"ปัญหาหลักเลยเรื่องสิทธิ์ ตอนนี้มั่วเลย ... user เป็น mtn ที่เป็นแค่แอดมินส่วนงาน
 >  แต่เข้าไปแก้ KPI ของแผนกอื่นได้ มั่วเลย"* → *"ต้องไม่เกิดเคสนี้อีก ที่ user บางรole
 >  เข้าหน้าได้ทุกหน้า แต่ต้องไม่มีสิทธิ์ไปแก้ข้อมูลส่วนงานคนอื่น"*
@@ -103,11 +105,10 @@
 |---|---|---|
 | ของกลาง | `effectiveSections()` (`sectionScope.js`) | **`writeScope.js`** (ใหม่) · ฝั่งช่าง = **`canWriteTeam()`** (`mtnTeams.js`) |
 | อ่านจาก | `profiles.sections` — **ว่าง = เห็นทั้งโรงงาน** | **`profiles.section` (บ้านจริง)** — ว่าง = **บล็อก** + บอกทางแก้ |
-| ใบผ่าน | — | คีย์ **`scope:all_units`** (ปรับที่ `/permissions`) |
+| ใบผ่าน | — | ~~คีย์ `scope:all_units` (ราย role)~~ → **13/11: รายคน `profiles.all_units`** (ติ๊กที่ `/add-user` ช่อง 🌐) · ดู §16 |
 
 🔴 **ห้ามเอา `sections` มาตัดสินการแก้** — 31/122 บัญชีว่างโดยตั้งใจ (ช่าง 16 คนต้องเห็นทุกไลน์)
-· คีย์ `scope:all_units` = true: admin·manager·qa·planner_store·engineer·engineer_nm·document_control·warehouse_delivery
-· = false: supervisor·leader·mtn·**dept_admin**·sale·display
+· ~~คีย์ `scope:all_units` = true: admin·manager·qa·planner_store·engineer·engineer_nm·document_control·warehouse_delivery~~ (ประวัติ 15/10–13/11 · ถอดแล้ว ดู §16)
 
 ### ปิดครบ 10 จุดระดับ A
 | จุด | ทำอะไร |
@@ -1013,3 +1014,206 @@ line_id: emp.line_id ?? ident.line_id
   และ "ทำงานคนละตำแหน่ง" (ไม่ใช่ข้อผิดพลาด) นับเป็นงานค้าง ⇒ แก้ไม่ได้ ค้างตลอดกาล (ย้ายไปข้อมูลประกอบแล้ว · A6)
 - ตอนนี้: แต่ละเรื่องมีปุ่ม **🔎 กรองตาราง** (`tableIssue` ใน `AddUser.jsx`) ⇒ ตารางโชว์เฉพาะบัญชีที่ค้างเรื่องนั้น
   + แถบบอกบนจอว่ากรองอะไร / เหลือกี่บัญชี / วิธีแก้ · แก้แล้วบัญชีหลุดจากตารางเอง · เคลียร์ครบ = "✓ ไม่มีบัญชีค้างเรื่องนี้แล้ว"
+
+---
+
+## 🧹 09/11 — หน้า `/scrap-report` ยังตัดขอบเขตด้วยสูตรที่เขียนเองในหน้า (QC audit)
+
+**เจอจาก:** QC audit รอบ 09/11 (หมวด C+D) — ด่าน `line-scope-two-answers` จับไม่ได้ เพราะเป็น**สำเนาสูตร**
+ที่เขียนในหน้า ไม่ได้ import ของกลางมาแล้วเพี้ยน
+
+สูตรเดิมใน `ScrapReport.jsx` ให้คำตอบ **แคบกว่า** `lineScope()` 2 ทาง:
+1. `leader` ได้ **ครอบครัวไลน์ตัวเองล้วน** — ของจริงตามกฎ 26/10 คือ **ไลน์ตัวเอง ∪ ส่วนงานที่กำกับไว้**
+   (`reason:'own_family+sections'`) ⇒ หัวหน้ากลุ่มที่ถูกกำกับส่วนงานไว้ เห็นใบน้อยกว่าที่ `profiles` ตั้ง
+2. ไม่ส่ง `scopeIdx` ⇒ ขอบเขตที่เป็น **แผนก/กลุ่ม/ไลน์เดี่ยว** ตกหมด (ถอยไปเทียบข้อความ `l.section` ตรงตัว)
+
+ซ้ำร้าย: แท็บ **ถังเหลือง/แดง** ในหน้าเดียวกัน (`?tab=bins`) ใช้ของกลางอยู่แล้ว
+⇒ **2 แท็บในหน้าเดียวตอบขอบเขตคนละชุด**
+
+**แก้แล้ว (09/11):** เรียก `lineScope({ role, lineId, sections, lines, scopeIdx })` · `unlimited` → `null`
+(คงความหมายเดิมของตัวแปรทั้งหน้า) · เพิ่มแถบเตือนบนจอเมื่อ `unsure`
+(โหลดทะเบียนไลน์ไม่สำเร็จ / ไม่พบไลน์ที่สังกัด / ส่วนงานไม่ตรงทะเบียน) — เดิมเงียบสนิท
+· ด่าน `scrap-report-scope-central` ใน `regressionGuards`
+
+**ยังเหลือ (งานกวาดก้อนเดียว ไม่ใช่รอบนี้):** สำเนาสูตร `role === 'leader' && lineId` ที่เขียนเองในหน้า
+อีก ~14 ไฟล์ — `MtnAnalysis` · `MorningMeeting` · `DieRegistry` · `FixtureRegistry` · `DailyReport` (4 จุด) ·
+`MaintenanceLevels` · `WorkforceInsight` (2 จุด) · `VSM` · `PmForecast` · `ShiftOrganize` (2 จุด)
+
+### ✅ 09/11 — ปิดช่องชั้น ③ ที่ QC audit ชี้
+- **`QualityBins.jsx`** (ตาราง `quality_bin_records` ฝั่ง DR · anon-open) — เดิมมีแค่ชั้น ② `can('scrap','record')`
+  ⇒ เขียนแถวของไลน์ไหนก็ได้ถ้ารู้ id · ตอนนี้ทุกฟังก์ชันที่เขียน DB ผ่าน `guardLines()`
+  (`canWriteLine` + `unknownTarget:'block'` · แก้ของเดิม = เช็คไลน์เดิม + ไลน์ปลายทาง · ทะเบียนไม่โหลด = บล็อก)
+- **`ProductMaster.jsx` → `BOMPanel` → `OpStepsPanel`** — แผงลูกเคยรับแค่ `canEdit` แล้ว insert/delete
+  `bom_items` โดยไม่เช็คอะไรซ้ำ ⇒ ส่ง `guard` (= `pGuard` ของหน้าแม่ ผูกไลน์ของพาร์ท) ลงไปแล้ว
+  ⚠️ **ยังเหลือ legacy:** BOM ของพาร์ทเองใน `BOMPanel` (5 จุดเขียน `bom_items`) ยังไม่มีชั้น ③
+
+### 🧹 09/11 — กวาด "สำเนาสูตรขอบเขตที่เขียนเองในหน้า" ชุดแรก (12 ไฟล์)
+
+สูตรที่ก๊อปไว้ในหน้าให้คำตอบ **แคบกว่า** ของกลาง 2 ทางเสมอ:
+`leader` ได้ครอบครัวไลน์ล้วน (ของจริง = ไลน์ตัวเอง ∪ ส่วนงานที่กำกับ · กฎ 26/10) · ไม่ส่ง `scopeIdx`
+⇒ ขอบเขตที่เป็นแผนก/กลุ่ม/ไลน์เดี่ยว และแกน Cost Center ตกหมด
+
+**กวาดแล้ว (ด่าน `scope-copies-swept`):** `ScrapReport` · `MtnAnalysis` · `MaintenanceLevels` ·
+`MorningMeeting` · `DieRegistry` · `FixtureRegistry` · `VSM` · `PmForecast` · `WorkforceInsight` (2 จุด) ·
+`ShiftOrganize` (4 จุด: พนักงาน · override · ลิสต์ไลน์/ส่วนงาน · merge event) · `DailyReport` (4 จุด) ·
+`QualityBins`
+
+จุดที่พฤติกรรมเปลี่ยน (ตั้งใจ — คืนสิ่งที่ `profiles` ตั้งไว้):
+- `ShiftOrganize` เดิม `scopedLines` ของ leader = **ไลน์ตัวเองไลน์เดียว** (ไม่ถึงครอบครัว) และ override
+  กรอง `line_id` ตรงตัว ⇒ หัวหน้าที่ผูกไลน์แม่มองไม่เห็นคนในไลน์ลูก
+- `WorkforceInsight` ตัวเลือกส่วนงานของ leader เดิมเหลือช่องเดียว แม้ถูกกำกับส่วนงานอื่นไว้
+- คนที่ **ไม่ผูกไลน์** (งานสนับสนุน) ยังตัดด้วยส่วนงานเหมือนเดิมทุกจอ — ไม่ถูกดึงเข้ามาเพิ่ม
+
+**กวาดรอบ 2 แล้ว (09/11):** `PmCoordination` · `QrLabels` · `OrderTrace` · `ProductHistory` ·
+`Dashboard` · `MachineDatabase` · `EventLog` · `OEEAnalytics` · `OjtTraining` (2 จุด: ส่วนงานที่เห็นได้
++ รายการอบรม) · `DailyPM` (ธง `restricted`) · `Report` (แท็บ OT — 1 จุดจาก 21)
+
+**กวาดรอบ 3 แล้ว (09/11) — ปิดครบทั้งรีโป:** `Report.jsx` (20 จุดที่เหลือ · เพิ่ม hook `useScopeOf()`
+ตัวเดียวในไฟล์ให้ทุกแท็บเรียก) · `Checkin.jsx` (4 จุด — คิวรีหลัก · คนยืม · ใบ export · dropdown) ·
+`MtnRepair` · `Improvements` · `ProductionPlan` · `WipBetweenSteps` · **`utils/staleSessions.js`**
+(เจอเพิ่มตอนขยายด่านให้สแกนทั้ง `src/`)
+
+🔴 **ด่าน `scope-copies-swept` สแกนทั้ง `src/` แล้ว** — ไฟล์ใหม่ที่ก๊อปสูตร `role === 'leader' && lineId`
+ไปใช้จะถูกจับทันที · ยกเว้น 2 ไฟล์ที่เป็น **ตัวของกลางเอง**: `utils/sectionScope.js` · `components/LineSelect.jsx`
+
+~~**ยังเหลือ (รอบ 3):**~~
+- 🔴 **`Report.jsx` อีก 20 จุด** — ไฟล์ใหญ่หลายแท็บ (OT · เช็คชื่อ · สถานี · รายคน · 4M …)
+  แต่ละจุดคนละรูป (กรองแถว · ลิสต์ไลน์ · ลิสต์ส่วนงาน · `q.in('line_id', …)`)
+  ⇒ ควรทำเป็นคอมมิทของตัวเอง + เพิ่ม hook ขอบเขตตัวเดียวในไฟล์ แล้วให้ทุกแท็บเรียกตัวนั้น
+- `Checkin.jsx` (4 จุด) · `ProductionPlan.jsx` · `MtnRepair.jsx` · `Improvements.jsx` ·
+  `components/WipBetweenSteps.jsx` · (`components/LineSelect.jsx` = ของกลาง **ถูกต้องแล้ว ห้ามแตะ**)
+
+---
+
+## 🏠 13/11 — "หัวหน้าไลน์เห็นพนักงานไลน์อื่นตอนเช็คชื่อ" (หัวหน้ากลุ่ม PD4 แจ้งหน้างาน)
+
+### วัดจริงก่อนแก้ (ทะเบียน PD4)
+
+| ครอบครัวไลน์ | ไลน์ (คน) | ควรเห็น | เห็นจริง |
+|---|---|---|---|
+| **GOR** | GOR 18 · Assy GOR 6 · Laser GOR 0 | **24** | **52** |
+| **LWR BAR** | LWR BAR 16 · Assy LWR 5 · Laser LWR 0 | **21** | **52** |
+| (ปน) | Office PD4 7 | — | — |
+
+⇒ หัวหน้า GOR เห็นคนของครอบครัว LWR BAR + ออฟฟิศเกินมา 28 คน และกลับกัน
+**เป็นทุกส่วนงาน ไม่ใช่แค่ PD4** — เช็คทะเบียน `profiles` แล้ว leader ทุกคนมี `sections = [ส่วนงานตัวเอง]`
+
+### ต้นเหตุ — ไม่ใช่บั๊กที่หลุดมา เป็นของที่ตั้งใจให้กว้าง
+
+`lineScope()` (`src/utils/sectionScope.js`) สำหรับ `role='leader'` คืน **ไลน์ตัวเอง ∪ ไลน์ในส่วนงาน**
+— แก้ให้กว้างเมื่อ **26/10** เพราะตอนล็อก "ไลน์ตัวเองไลน์เดียว" แล้ว *ทั้งโรงงานเปิดกะไม่ได้เช้าวันจันทร์*
+
+🔴 **แก้ที่การตั้งค่าไม่ได้** — `effectiveSections()` ถ้า `sections` ว่างจะถอยไปใช้ `profiles.section`
+⇒ leader ได้ `[ส่วนงาน]` ตลอด ไม่ว่าแอดมินจะตั้งอย่างไร (จึงไม่เข้าข้อ "การบีบขอบเขตเป็นการตั้งค่า")
+
+### 🔴 ทางที่ "ห้ามทำ" — อย่าทำซ้ำ
+
+1. **บีบ `lineScope()` ให้ leader เห็นแค่ครอบครัวไลน์ตัวเอง** → ซ้ำเหตุ 26/10 (เปิดกะไม่ได้)
+   และ **ปุ่ม "ยืมคน" พังด้วย** — ต้องเห็นคนไลน์อื่นก่อนจึงยืมเข้าไลน์ตัวเองได้
+2. **เขียนสูตร `role === 'leader' && lineId` ในหน้า** → ด่าน `scope-copies-swept` จับ (และถูกจับจริงรอบนี้)
+
+### ทางที่ใช้จริง — แก้ "ค่าตั้งต้นของช่องกรอง" ไม่แตะชั้นสิทธิ์
+
+คำสั่ง user 13/11: *"เปิดมาเห็นไลน์ตัวเอง แต่สลับดูไลน์อื่นในส่วนงานได้"*
+
+1. **`defaultLineFilter({ role, lineId, lines })`** ของกลางใน `sectionScope.js` — ตอบว่า "จอหน้างาน
+   เปิดมาควรอยู่ที่ไลน์ไหน" · `leader` → ไลน์ตัวเอง · **`supervisor` ไม่เข้าข่าย** (ดูทั้งส่วนงานเป็นหน้าที่)
+   · ไลน์ตัวเองไม่อยู่ในทะเบียน / ไม่ผูกไลน์ = คืน `''` (ไม่ให้จอว่างเทียม)
+   · ทะเบียนยังไม่โหลด = ใช้ไลน์ตัวเองไปก่อน (ไม่เด้งเป็นทั้งโรงงานตอนโหลด)
+   · เทส 8 เคส `src/utils/__tests__/defaultLineFilter.test.mjs` — **รวมเคสตรึงว่า `lineScope()` ต้องไม่ถูกบีบ**
+2. 🔴 **เปิดแถบกรองขอบเขตให้ leader ด้วย** (`showScopeFilter` ใน `Checkin.jsx`) — เดิมซ่อนทั้ง role
+   ด้วยเหตุผล *"หัวหน้าไลน์มีไลน์เดียว ไม่ต้องกรอง"* ซึ่งผิด · ไม่เปิด = ตั้งค่าตั้งต้นแล้วเขา
+   **ติดอยู่ไลน์เดียว ยืมคนข้ามไลน์ไม่ได้เลย** · ขอบเขตมีไลน์เดียวจริง = ซ่อนเหมือนเดิม
+3. **จอเขียนว่าซ่อนไว้กี่คน** — ชิป `+N คนในไลน์อื่น` ข้างตัวนับ (กฎ "กรองแถวออกแล้วต้องบอก")
+   ไม่บอก = หัวหน้าคิดว่าส่วนงานมีแค่นี้ แล้วหา "ยืมคน" ไม่เจอ
+
+ด่าน: `checkin-opens-on-own-line` (regressionGuards) — คุมทั้ง 3 ข้อ + ตรึงว่า `lineScope` ยังเป็น `own ∪ sections`
+
+### ✅ ช่องว่างของ harness ที่เจอตอนนี้ — **แก้แล้ว 13/11** (คำสั่ง user)
+
+`audit/main.jsx` ตั้ง `CTX.lineId = 1` แต่ไลน์ใน `audit/mockSupabase.js` มี `id` เป็น **`id-N`**
+⇒ ไม่ตรงกันเลยสักแถว ⇒ **กิ่งโค้ด "ขอบเขตรายไลน์ของ leader" ไม่เคยถูกรันใน crashsweep**
+(เจอตอนยิง `?role=leader` แล้วตาข่าย fail-open ล้างค่าตั้งต้นทิ้งเพราะหาไลน์ตัวเองไม่เจอ)
+· และใหญ่กว่านั้น: `ROW()` ตั้ง `line_id: 1` เป็นเลขอยู่แล้ว**ทุกตาราง** ⇒ การ join จากแถวใดๆ
+  กลับไปหาไลน์ก็หาไม่เจอมาตลอด ไม่ใช่แค่เรื่องผู้ใช้คนเดียว
+
+**แก้ยังไง** — ให้ `production_lines.id` เป็น **เลข** ให้ตรงกับของจริง (DB เป็น integer)
+แล้วตามไปแก้จุดที่ชี้ไลน์ครบ 9 จุด · `CTX.lineId = 2` (ไลน์**ลูก**ที่มีหลาน) ให้สายตกทอดถูกเดิน
+🔴 **ห้ามแก้กลับทางให้ `CTX.lineId` เป็นสตริง** — โค้ดจริงมี `Number(lineId)` หลายจุด จะได้ `NaN`
+แล้วเดินผิดกิ่งคนละแบบกับของจริง = harness โกหกอีกทาง ไม่ใช่การแก้
+
+**และเพิ่มรอบที่ 3 ใน `crashsweep.mjs` = `role=leader`** (คำสั่ง user *"เลเวลนั้นคือคนใช้งานบ่อยที่สุด"*)
+พิสูจน์ว่ารอบใหม่ตรวจจริงด้วยการใส่ crash ที่เกิดเฉพาะ leader: รอบ 1 (admin) และรอบ 2
+(supervisor+PD1) รายงาน **พัง 0** ขณะที่รอบ 3 จับได้ `🔭 [leader] Checkin` — คือภาพของคลาสบั๊ก
+ที่หลุดถึงหน้างานมาตลอด · 📄 `audit/README.md` §`CTX.lineId` · `docs/modules/build-gates.md` §รอบที่ 3
+· ด่าน `harness-lineid-matches-mock` ผูก 2 เรื่องนี้ไว้ด้วยกัน
+
+## 16. 🔐 13/11 — role ≠ ขอบเขต: ใบผ่านข้ามหน่วยเป็นรายคน · `sections` เลิกตัดสินการแก้ (audit `docs/ROLE-SCOPE-AUDIT-2026-11-13.md`)
+
+**คำสั่ง user:** *role = ชุดสิทธิ์ใช้ระบบ ไม่ใช่ตำแหน่ง · "manager ไม่ได้แปลว่าแก้ข้ามแผนกได้" · ความกว้างของ "การแก้" มาจากขอบเขตรายคนเท่านั้น
+(profiles.section · resp_cost_centers · org_assignments) ห้ามมาจากชื่อ role หรือชื่อคีย์* → เคาะรายชื่อ 13/11: *"โอเคตามตาราง ชัยยุทธให้ทั้งโรงงาน ลุยเลย"*
+
+**ที่เปลี่ยน (branch `claude/exciting-faraday-g7gu9v` · migration `20261113_role_scope_p1_main.sql` · apply พร้อม deploy เท่านั้น):**
+| ข้อ | เดิม | ใหม่ |
+|---|---|---|
+| P1-1 ใบผ่านข้ามหน่วย | คีย์ `scope:all_units` ของ **8 role** (37 บัญชีที่ไม่ใช่ admin) | **`profiles.all_units` รายคน** 12 ใบ (warehouse_delivery 6 · planner_store 3 · engineer · engineer_nm · ชัยยุทธ) + มอบหมาย `scope_depth='all'` · คีย์/catalog ถอดออก (สำรอง `archive.bk_role_scope_20261113`) |
+| P1-6 "แก้หน่วยไหนได้" | จอ: `sections` ก่อนแล้วถอยบ้าน · DB: บ้านอย่างเดียว + มี CC = true | **แหล่งเดียว**: จอ `writeUnitsOf({section, writeUnits})` = บ้าน ∪ หน่วยที่ได้รับมอบ (`assignmentOverlay` ประกอบ · `UserContext.writeUnits`) · DB `app_write_units()` + `app_cc_covers()` (เช็ค CC จริงตามผัง รวม partial_unit) · `app_can_write_unit()`/`app_can_write_line()` ตรรกะเดียวกับ `writeScope.js` (ยัง fail-open ที่ DB ตามกติกา 20/10) |
+| P1-2 ทางลัด `role === 'manager'` | `mtnTeamOwn` · `MtnRepair isBoss` · `TaxonomyManagerModal` · `Report canApproveLog` | ทุกจุดใช้ `allUnits` รายคน · ด่าน `role-not-scope` |
+| P1-3 `four_m_logs` | policy `ALL · true` | `four_m_select/insert/update/delete` — insert ต้อง `app_can_write_line(line_name)` · update = (approve_sv ∧ ไลน์ในขอบเขต) ∨ approve_qa ∨ manage_docs ∨ reset ∨ เจ้าของใบที่ยัง pending · จอ: อนุมัติ SV + reset ผ่าน `canWriteLine` |
+| P1-4 `employees:edit_all_sections` | ถือโดย leader/supervisor/mtn/manager (~70 บัญชี) | **ถอดคีย์ทิ้ง** · จอ `canEditEmp`/`canEditSkillsFor` → `canWriteUnit(…, {unknownTarget:'block'})` · DB policy UPDATE/DELETE `employees` + `app_can_write_unit(section)` · storage `emp_signature_*` เหลือ `employees:edit` |
+| P1-5 จัดกะ / จอวนหน้า | เขียนตาม `lineScope` (ที่เห็น) · `fn_can_manage_display` ใช้ `sections`/`scope_depth` | `handleSave` กรองด้วย `canWriteLine` + เขียนบนจอว่าตัดกี่ไลน์ · `canManageDisplay(writeUnits, tv, {allUnits})` + `fn_can_manage_display` ใช้ `app_write_units()` (ไม่มีหน่วย = ตั้งไม่ได้ · เดิม fail-open) |
+| P1-7 ด่านชั้น ③ ที่หาย | close_shift / approve_close / four_m:reset / line_setup:delete ไม่มีด่านหน่วย | `closeScopeOk()` ใน DailyReport · reset ใน Report · `handleDeleteLine` ใน LineSetup |
+| P1-8 `document_controls` | policy hardcode `role = ANY(admin,manager)` | `has_perm('doc_forms:manage')` (ตารางเก่า 1 แถว ไม่มีจอเขียน) |
+| P2 role `dept_scope` | 189 แถวสิทธิ์ · 0 คนถือ · รับคีย์ใหม่ทุก seed | ลบแถวสิทธิ์ทั้งหมด (enum คงไว้ · ห้ามตั้งให้ user) |
+| บั๊ก | `skills:delete` ลบครึ่งเดียวเงียบ · `line_setup:delete` ลบจุดงานไม่ได้ · `fn_weekly_skill_update` เช็คชื่อ role | นับแถวตอนลบนิยามสกิล + policy `skill_definitions` รับ `skills:delete` · policy `workstations`/`station_requirements`/`line_layouts` รับ `line_setup:delete` · guard เป็น `has_perm('skills:run_weekly_update')` |
+| ป้าย | `roleMeta.manager.desc` บอกว่า role จำกัดการแก้ไม่ได้ | เขียนใหม่: "แก้ของหน่วยไหนได้" มาจากขอบเขตรายคน |
+
+**พิสูจน์กับทะเบียนจริง (`src/utils/__tests__/writeScopeRegistryGate.test.mjs` · fixture `fixtures/writeScopeRegistry.json` · 131 บัญชี · ไม่มีชื่อคน):**
+- A ผู้ถือใบผ่านที่ไม่ใช่ admin = 12 ใบที่เคาะเป๊ะ · ไม่มี role ไหนได้เป็นชุด
+- B ทุกบัญชีที่มีบ้านยังแก้บ้านตัวเองได้ (0 ราย ถูกล็อกออก)
+- C "แก้อะไรไม่ได้เลย" (ไม่มีบ้าน/CC/ใบผ่าน) = marketing 1 ใบ (รู้ตัว · งาน RFQ ไม่ผูกหน่วยผลิต)
+- D ที่แคบลงจากการเลิกใช้ `sections`: **qa 13** (บ้าน QA · sections = ส่วนงานที่ไปตรวจ — จอคุณภาพไม่กระทบเพราะ `qaWriteCtx` ด่าน E) · **mtn 2** → migration §6 ย้ายส่วนงานเหล่านั้นเป็น CC ให้แล้ว (ไม่แคบลงจริง)
+- บัญชีที่ "เสียใบผ่าน" 27 ใบ: manager 5 (ทุกคนมี CC อยู่แล้ว → CC คุมจริงเป็นครั้งแรก · สุรเสนถือ CC 5 ส่วนงาน = เท่าเดิม) · qa 18 (ดู D/E) · document_control 2 (มี CC ของส่วนตัวเอง · ทะเบียนเอกสารเป็นของกลางผ่าน `unknownTarget` อยู่แล้ว)
+
+**ยังเหลือ (ไม่ได้ทำรอบนี้ · ต้องการ user เคาะ):** P3 ยุบคีย์ที่ชื่อฝังขอบเขต (`shift_schedule:edit` vs `edit_dept` · `org:manage_divisions` vs `manage_own_unit` · `mtn_repair:service` vs `service_own_team`) · bucket `dept_admin` สร้างใหม่จาก allow-list · คีย์ "รอเคาะ" (`products:create` · `four_m:reset` · `skills:delete` · `line_stock:approve` · `event_log:approve_*` · `mtn_repair:*` ฝั่งช่าง) · ด่านหน่วยฝั่ง DB ของ `shift_schedules` (ยัง has_perm อย่างเดียว) · DR ทั้งฝั่ง (anon · known gap)
+
+### 16.1 · 20/11 — หลัง deploy: จำลองสิทธิ์จริงในฐาน + hotfix `four_m_insert` (ฝั่ง DB อย่างเดียว)
+
+- **วิธีพิสูจน์** (ทำซ้ำได้ใน SQL Editor ของ MAIN): `set_config('request.jwt.claims', '{"sub":"<uuid>"}', true)` แล้วเรียก
+  `app_can_write_line('<ไลน์>')` — จำลองทุกบัญชี leader/supervisor/manager/qa/mtn
+- **ผล:** หัวหน้าไลน์/หัวหน้าส่วน/ผจก. ฝ่ายผลิต ผ่านบนไลน์ตัวเองทุกคน · **ทุกคู่ (คน × ไลน์) ที่เปิด/ปิด/ขอปิดกะจริงใน 30 วันล่าสุด
+  (DR `production_sessions` 100+ คู่) ผ่านหมด 0 บล็อก** · ชื่อไลน์ `Assy  LWR` (เว้นวรรค 2 ช่อง) ตรงกันทั้ง DR/Main
+- **เจอหลุด 1 จุด:** QA 13 บัญชี · ช่าง 15 · หัวหน้าส่วน QA/Planning&Store/Maintenance · ผจก. QA = `false` บนไลน์ผลิต
+  ⇒ `four_m_insert with check (app_can_write_line)` บล็อก QA check sheet ที่ออกใบ 4M ให้ไลน์ที่ตรวจ (ฝั่งจอผ่านด้วย `qaWriteCtx`)
+  = DB เข้มกว่าจอ ขัด §2 ของ migration เอง · แก้ `20261120_four_m_insert_support_units_main.sql`: `or has_perm('qa:record') or has_perm('mtn_repair:service')`
+  (apply แล้ว 16:45 · ไม่ต้อง deploy) · ขั้น update/delete ไม่แตะ
+- ที่ยังเป็นไปได้แต่ไม่เคยเกิดจริง: หัวหน้าไลน์ที่ถือ CC ระดับไลน์ 8 คน ปิดกะ "ไลน์พี่น้อง" ในส่วนเดียวกันไม่ได้ (ขอบเขตที่ตั้งไว้เอง ·
+  30 วันไม่มีเคส) — ถ้าหน้างานแจ้ง ให้เพิ่ม CC ระดับแผนกที่ /add-user ช่อง ④ ไม่ใช่แก้โค้ด
+
+### 16.2 · 21/11 (เสาร์ OT) — QA ติด "ของหน่วยงานอื่น" ตอนตั้งค่าใบตรวจ/ทะเบียนพาร์ท → คืนใบผ่านรายคนให้ QA + เอกสาร
+
+- หน้างานแจ้ง 08:58 (สุริยา · QA · จอตั้งค่าใบตรวจ QA/ทะเบียนพาร์ท) · สาเหตุ: ก่อน 20/11 role `qa`(19) + `document_control`(2) ได้ `scope:all_units`
+  ผ่าน role · 20261113 ย้ายเป็นรายคน 12 บัญชี **ไม่รวม QA** โดยพึ่ง `qaWriteCtx()` — แต่เงื่อนไข "บ้าน QA ไม่มีไลน์ในทะเบียน"
+  เป็นเท็จตั้งแต่ 05/11 (หน่วยสนับสนุนอยู่ใน `production_lines` แล้ว · unit_kind='support') ⇒ QA ไม่ถูกยกเว้น
+- แก้ (DB อย่างเดียว · 09:25): `20261121_all_units_qa_doccontrol_main.sql` ตั้ง `all_units=true` ให้ qa 19 + document_control 2 = เท่าเดิมก่อน 20/11
+- ทำไมเมื่อคืนตรวจไม่เจอ: วัดจาก `audit_log` ซึ่งไม่ครอบตาราง qa_parts/ทะเบียนพาร์ท ⇒ **บทเรียน: การพิสูจน์ด้วย audit_log ครอบเฉพาะตารางที่มี trigger audit**
+  ต้องไล่ "role ที่เสียใบผ่าน × จอที่มีด่านหน่วย" เป็นรายจอด้วย (ลิสต์จอ: grep canWriteUnit/canWriteLine/writableRows)
+- ✅ 24/11: `qaWriteCtx` นับเฉพาะไลน์ผลิต (`isProductionUnit` · utils/unitKind.js) — หน่วยสนับสนุนในทะเบียนไม่ทำให้ QA "มีไลน์" · เทสใน `qaViewScope.test.mjs` · ใบผ่านรายคนของ QA ยังคงไว้ (ชั้นกันซ้อน)
+
+### 16.3 · 25/11 — มาตรฐาน role ของฝ่าย QA/QC: ทุกคน `qa` · หัวหน้าติ๊กแอดมินหน่วยงาน · ตำแหน่งไม่ตัดสิทธิ์ (`20261125_qa_roles_standard_main.sql`)
+
+user ถาม "คน QA ควรตั้ง role แบบไหน — ทุกคนเป็น QA แล้วตัดกันที่ตำแหน่ง?" (feedback: บางคนดูได้อย่างเดียว · บางคน over scope)
+- **คำตอบที่ใช้:** role = ชุดสิทธิ์ตามสายงาน ⇒ ฝ่าย QA ใช้ `qa` ตัวเดียวทุกคน + ใบผ่านข้ามหน่วย `all_units` (งาน QA ข้ามไลน์โดยธรรมชาติ) ·
+  **หัวหน้า** = `qa` + `is_dept_admin` (ได้ชุดจัดการคนของหน่วยตัวเอง: เช็คชื่อ/จัดกะ/ทะเบียนพนักงาน/ทักษะ/LPA — ไม่ต้องยืม role ผลิต) ·
+  ผจก. = `manager` ตามเดิม + เติม `qa:bin_decide` ให้ role manager · **ตำแหน่ง (position) ไม่ใช่ตัวตัดสิทธิ์** (ล็อกแค่ช่องเซ็น MO)
+- **ที่ผิดจริงในทะเบียน (26 บัญชี):** หัวหน้า Inspection/PQA-Press 3 คน = `leader` · เจ้าหน้าที่/หัวหน้าส่วน 2 คน = `supervisor` ⇒ ไม่มี
+  `qa:manage`/`qa:bin_decide`/`four_m:approve_qa`/`page:/qa-setup` = "ดูได้อย่างเดียว" บนจอคุณภาพ · วิศวกร 1 คน = `admin` = over scope ·
+  ผจก. ตัดสินถังเหลืองไม่ได้ (`qa:bin_decide` มีแต่ใน `qa`)
+- **สิ่งที่คนจาก role ผลิตเสียไป (ยอมรับ):** `daily_report:open_shift`/`close_shift` · `four_m:approve_sv` · `bbs:record` · `obeya:record` · `wip_*` ·
+  หน้า manpower-board/workforce-insight/production-plan · supervisor เสียเพิ่ม `org:manage_divisions` · `skills:approve_levelup` · `pm:monthly_approve`
+  — ถ้าหน้างานแจ้งว่าต้องใช้ตัวไหน = เติมเป็น**คีย์ของ role qa** ที่ /permissions ไม่ใช่สลับ role กลับ
+- **พิสูจน์ฝั่ง DB** (จำลอง JWT 8 บัญชี): คีย์คุณภาพ 4 ตัว true ทุกคน · `app_all_units()` true (ผจก. false ตามเดิม — จอคุณภาพผ่าน `qaWriteCtx` ซึ่งไม่ดู role) ·
+  `employees:edit` true เฉพาะผู้ติ๊กแอดมินหน่วยงาน · backup `archive.bk_qa_roles_20261125` (SQL ย้อนอยู่หัวไฟล์ migration)
+- **ค้าง (เป็นดีไซน์เดิม ไม่ใช่บั๊ก):** role `qa` มี `page:/bbs` แต่ไม่มี `bbs:record` · มี `page:/shift-organize` แต่คนที่ไม่ติ๊กแอดมินหน่วยงานแก้กะไม่ได้ ·
+  QC 3 บัญชี (ขอบเขต PD3 · ไม่มี CC) ไม่เข้าใช้ตั้งแต่ ก.ย./ต.ค. — รอ user ยืนยันว่ายังทำงานไหม
+

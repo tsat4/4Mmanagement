@@ -2,13 +2,14 @@
    ที่มาทุกเคส → docs/OBEYA-KPI-SOURCES.md §8.3 (คู่มือ KPI Online) · §12.2 (สูตรในเซลล์) */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {
+import { planBarsOf,
   scoreKpi, totalPoints, summarizeMonths, evalFormula, parseBar, fmtBar,
   providerReaches, scopeLabel, inferCompare, scoreDef, defBars, KPI_SCOPE_LEVELS, KPI_PROVIDERS, KPI_BASE_VARS, KPI_FORMULAS,
   KPI_STD_UNITS, KPI_REQUIREMENTS, KPI_TOTAL_WEIGHT, stdUnitOf, stdUnitLabel,
-  isStdFixed, isStdParent, checkStdSelection, matchStdItems,
+  isStdFixed, isStdParent, checkStdSelection, matchStdItems, guessStdUnit,
   unitOf, decimalsOf, summaryModeOf, summaryShort, summaryModeLabel, fmtKpi, summaryOf, KPI_SUMMARY_MODES,
   planProgress, valueScopeOf, sharedValueDef, yearForecast, boardSlotOf, KPI_BOARD_SLOTS,
+  KPI_STD_UNIT_ALIASES, weightAudit,
 } from '../kpiSetup.js';
 
 /* ── เกณฑ์คะแนน: ตรวจกับ 6 แถวจริงในคู่มือ KPI Online (§8.3) ─────────────────────────── */
@@ -617,4 +618,203 @@ test('plantDefPayloadFrom: โคลนเป้า/หน่วย/ทะเบ
   const f = plantDefPayloadFrom({ ...u, provider: 'formula', provider_config: { formula: 'rm_pct' } }, { year: 2027, note: 'x' });
   assert.equal(f.year, 2027); assert.deepEqual(f.provider_config, { formula: 'rm_pct' }); assert.equal(f.scope_text, 'x');
   assert.equal(plantDefPayloadFrom(null), null);
+});
+
+test('📅 score_by_plan: เดือนที่มีแผนสะสม เทียบแผนเดือนนั้น (commit = แผน × commit/target) · ไม่มีแผน/ไม่ติ๊ก = เทียบเป้าทั้งปีเหมือนเดิม', () => {
+  const def = { score_by_plan: true, direction: 'up', target_value: 5.654, commit_value: 5.489 };
+  const sep = scoreDef(4.17, def, { plan: 3.92 });     // ชีทบัญชี ก.ย.: Plan สะสม 3.920 · Actual 4.17 ⇒ เขียว (เดิมแดงเพราะเทียบ 5.654)
+  assert.equal(sep.status, 'good'); assert.equal(sep.bars.byPlan, true); assert.equal(sep.bars.annualTarget, 5.654);
+  assert.ok(Math.abs(sep.bars.commit_value - 3.92 * 5.489 / 5.654) < 1e-9);
+  const noPlan = scoreDef(4.17, def, { plan: null });
+  assert.equal(noPlan.status, 'bad'); assert.equal(noPlan.bars.byPlan, false);
+  const off = scoreDef(4.17, { ...def, score_by_plan: false }, { plan: 3.92 });
+  assert.equal(off.status, 'bad', 'ไม่ติ๊ก = แผนไม่มีผล');
+  const warn = scoreDef(3.85, def, { plan: 3.92 });
+  assert.equal(warn.status, 'warn', 'ต่ำกว่าแผนแต่ถึง commit ของเดือน (3.806)');
+  assert.equal(planBarsOf({ score_by_plan: true, direction: 'up', target_value: 10 }, 4).commit_value, null, 'ไม่มี commit ปี = ไม่มีขั้น 0.5');
+});
+
+import { neededRunRate } from '../kpiSetup.js';
+/* ── 📈 yearForecast fallback + neededRunRate (16/11 · user: "ทุกกราฟต้องตอบได้ว่าจบปีจะผ่านไหม") ── */
+test('yearForecast fallback: ไม่มีแผน = สมมติเท่าค่าเฉลี่ย (บอก basis/assumed/เดือนที่สมมติ) · ค่าเริ่มต้นยังเป็น no_plan เหมือนเดิม', () => {
+  const actual = [80, 90, 100, null, null, null, null, null, null, null, null, null];
+  const def = { kpi_catalog: { summary_mode: 'average' } };
+  assert.equal(yearForecast({ actual, plan: [], def }).reason, 'no_plan');
+  const r = yearForecast({ actual, plan: [], def, fallback: true });
+  assert.equal(r.reason, null); assert.equal(r.basis, 'runrate'); assert.equal(r.assumed.kind, 'average'); assert.equal(r.assumed.rate, 90);
+  assert.equal(r.value, 90); assert.deepEqual(r.assumedMonths, [4, 5, 6, 7, 8, 9, 10, 11, 12]); assert.equal(r.src[3], 'assumed'); assert.equal(r.src[0], 'actual');
+  // มีแผนบางเดือน = แผนชนะสมมติ ⇒ mixed
+  const plan = [null, null, null, 120, null, null, null, null, null, null, null, null];
+  const m = yearForecast({ actual, plan, def, fallback: true });
+  assert.equal(m.basis, 'mixed'); assert.equal(m.planMonths, 1); assert.equal(m.assumedMonths.length, 8); assert.equal(m.months[3], 120);
+});
+test('yearForecast fallback: ตัวสะสม (max) เพิ่มต่อด้วยอัตราเดิม ไม่ใช่เฉลี่ย (ค่าสะสมถอยหลังไม่ได้)', () => {
+  const actual = [1, 2, 3, null, null, null, null, null, null, null, null, null];
+  const r = yearForecast({ actual, plan: [], def: { kpi_catalog: { summary_mode: 'max' } }, fallback: true });
+  assert.equal(r.assumed.kind, 'slope'); assert.equal(r.assumed.rate, 1);
+  assert.equal(r.months[11], 12); assert.equal(r.value, 12);
+  // เดือนเดียว = อัตรา = ค่า ÷ เดือนที่เดินมา
+  const one = yearForecast({ actual: [null, null, 6, ...Array(9).fill(null)], plan: [], def: { kpi_catalog: { summary_mode: 'as_of' } }, fallback: true });
+  assert.equal(one.assumed.rate, 2); assert.equal(one.value, 6 + 2 * 9);
+});
+test('neededRunRate: average/sum/reach · ไม่มีเป้า/ครบปี/rate = null', () => {
+  const def = (mode) => ({ kpi_catalog: { summary_mode: mode } });
+  const a = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, null, null];   // Σ 10 · 10 เดือน
+  /* ทะเบียนไม่มีขอบ = feasible เสมอ · trivial เท็จ (20/11 เพิ่ม feasible/trivial/limit/bounds) */
+  const open = { feasible: true, trivial: false, limit: null, bounds: { min: null, max: null }, bestCase: null };
+  assert.deepEqual(neededRunRate({ actual: a, target: 1.2, def: def('average') }), { kind: 'avg', perMonth: (1.2 * 12 - 10) / 2, remaining: 2, ...open });
+  assert.deepEqual(neededRunRate({ actual: a, target: 16, def: def('sum') }), { kind: 'sum', perMonth: 3, remaining: 2, ...open });
+  assert.deepEqual(neededRunRate({ actual: a, target: 5, def: def('max') }), { kind: 'reach', perMonth: 5, remaining: 2, add: 4, ...open });
+  assert.equal(neededRunRate({ actual: a, target: null, def: def('average') }), null);
+  assert.equal(neededRunRate({ actual: Array(12).fill(1), target: 2, def: def('average') }), null);
+  assert.equal(neededRunRate({ actual: a, target: 2, def: def('rate') }), null);
+});
+
+/* ── 📘 เดาหน่วยงานมาตรฐานจากชื่อขอบเขต (16/11 · เคส QA ที่ยังไม่มีแถว KPI เลยสักข้อ) ───────
+   เป็น "ข้อเสนอให้คนกดยืนยัน" — ไม่ตรงเป๊ะต้องคืน null ห้ามเดาคลุมแล้วลากชุด KPI ของหน่วยอื่นมาให้ */
+test('guessStdUnit — ตรงเป๊ะเท่านั้น (QA ตรง · "Tooling MTN" ต้องไม่กลายเป็น Tooling)', () => {
+  assert.equal(guessStdUnit('QA'), 'QA');
+  assert.equal(guessStdUnit('qa'), 'QA');
+  assert.equal(guessStdUnit('Logistic & Sales'), 'Logistic & Sales');
+  assert.equal(guessStdUnit('logistic and sales'), null);          // "and" ไม่ใช่ "&" ⇒ ไม่เดา
+  assert.equal(guessStdUnit('Die Maintenance'), 'Die Maintenance');
+  /* 🔄 19/11 · คำสั่ง user — "Tooling MTN" ไม่ได้ null แล้ว แต่**ไม่ใช่เพราะผ่อนเกณฑ์การเดา**
+     user เคาะว่าทีมช่างทุกทีมอิงแบบ `Maintenance` ⇒ ขึ้นทะเบียน `KPI_STD_UNIT_ALIASES`
+     กฎเดิมยังอยู่ครบ: ชื่อที่ไม่อยู่ในทะเบียนและไม่ตรงเป๊ะ = null เหมือนเดิม
+     และยังต้อง **ไม่กลายเป็น `Tooling`** (ธุรกิจขายแม่พิมพ์) ซึ่งเป็นกับดักเดิมของเคสนี้ */
+  assert.equal(guessStdUnit('Tooling MTN'), 'Maintenance');
+  assert.notEqual(guessStdUnit('Tooling MTN'), 'Tooling');
+  assert.equal(guessStdUnit('PD3'), null);
+  assert.equal(guessStdUnit(''), null);
+  assert.equal(guessStdUnit(null), null);
+  /* ทุกชื่อในทะเบียนต้องเดาตัวเองเจอ (กันพิมพ์ชื่อหน่วยงานผิดในลิสต์) */
+  for (const u of KPI_STD_UNITS) assert.equal(guessStdUnit(u.unit), u.unit, u.unit);
+});
+
+/* ── 🧾 scoreRuleText / defIssues (16/11 · หน้ากรอก KPI ต้องบอกกติกาเป็นประโยค + เตือนเกณฑ์ขัดกัน) ── */
+import { scoreRuleText, defIssues } from '../kpiSetup.js';
+test('scoreRuleText: อ่านจาก defBars (ตัวเลข/ข้อความเก่า) · ไม่มีเป้า = ไม่ตัดสิน · ไม่มีทิศทาง = บอกว่าตัดสินไม่ได้ · score_by_plan เปลี่ยนหัวประโยค', () => {
+  const r = scoreRuleText({ target_value: 1.017, commit_value: 1.0485, direction: 'down', unit: '%', kpi_catalog: { summary_mode: 'average' } });
+  assert.equal(r.ok, true); assert.match(r.text, /ทุกเดือนเทียบเป้าเดียวกัน: ○ ≤ 1\.017 % · △ ≤ 1\.0485 % · ✗ เกินนั้น · สรุปปี = ค่าเฉลี่ยรายเดือน/);
+  const t = scoreRuleText({ target: '≥ 95%', commitment: '≥ 90%', unit: '%' });   // ข้อความเก่า
+  assert.match(t.text, /○ ≥ 95 % · △ ≥ 90 % · ✗ ต่ำกว่านั้น/);
+  assert.equal(scoreRuleText({ unit: '%' }).ok, false);
+  assert.match(scoreRuleText({ target_value: 5, unit: 'MB' }).text, /ไม่ได้บอกทิศทาง/);
+  assert.match(scoreRuleText({ target_value: 5.654, commit_value: 5.489, direction: 'up', score_by_plan: true, unit: 'MB' }).text, /^รายเดือนเทียบ "แผนของเดือนนั้น"/);
+});
+test('defIssues: Commit ผิดด้าน (เคส QCC PD1 "≤ 0" กับเป้า 30) · ไม่มีทิศทาง · ข้อความอ่านไม่ออก · แผนกรอกแต่ไม่ใช้ / ตั้งใช้แต่ไม่กรอก', () => {
+  const qcc = defIssues({ target_value: 30, direction: 'up', commitment: '≤ 0' });
+  assert.ok(qcc.some(i => i.code === 'commit_dir_conflict'));   // เครื่องหมายสวนทาง
+  assert.ok(defIssues({ target_value: 1.0, commit_value: 0.9, direction: 'down' }).some(i => i.code === 'commit_wrong_side'));   // ด้านเดียวกันแต่ Commit เข้มกว่า
+  assert.ok(defIssues({ target_value: 5 }).some(i => i.code === 'no_direction'));
+  assert.ok(defIssues({ target_value: 5, direction: 'up', commitment: 'ตามแผน' }).some(i => i.code === 'commit_text_unparsed'));
+  assert.equal(defIssues({ target_value: 5, direction: 'up', commitment: '-' }).length, 0);   // "-" = ไม่มี Commitment ไม่ใช่ปัญหา
+  assert.ok(defIssues({ target_value: 5, direction: 'up' }, { plans: { 1: 1, 2: 2 } }).some(i => i.code === 'plan_unused'));
+  assert.ok(defIssues({ target_value: 5, direction: 'up', score_by_plan: true }, { plans: {} }).some(i => i.code === 'plan_missing'));
+  assert.equal(defIssues({ target_value: 1.017, commit_value: 1.0485, direction: 'down' }, { plans: {} }).length, 0);
+});
+
+test('🔧 ทีมช่างทุกทีมอิงมาตรฐาน Maintenance (19/11 · คำสั่ง user)', () => {
+  /* user 19/11: *"ทีมช่างใช้มาตรฐานเดียวกันคือ KPI Maintenance เพราะในแบบ KPI Die Maintenance
+                   เหมือนเป็นของโรงงานสร้างแม่พิมพ์ใช้"*
+     วัดจากทะเบียนจริง 19/11: แบบ `Die Maintenance` มี Annual Sale Per Head · Customer Satisfaction (Q&D)
+     · Manage project … on time delivery to customer · Keep inventory no more than
+     และ **ไม่มี MTBF/MTTR/MO Closed/Machine Break Down เลย** ⇒ ไม่ใช่แบบของทีมช่างในโรงงานปั๊ม */
+  for (const u of ['Die MTN', 'JIG MTN', 'Tooling MTN', 'Mechanic', 'Electric']) {
+    assert.equal(guessStdUnit(u), 'Maintenance', `${u} ต้องอิงแบบ Maintenance`);
+  }
+  /* เขียนยังไงก็ได้ — ตัวพิมพ์/ช่องว่าง/ขีด ไม่เกี่ยว */
+  assert.equal(guessStdUnit('die-mtn'), 'Maintenance');
+  assert.equal(guessStdUnit('  TOOLING MTN '), 'Maintenance');
+
+  /* 🔴 ห้ามกลืนหน่วยที่ "ชื่อคล้าย แต่คนละชุด KPI" — `Tooling` = ธุรกิจขายแม่พิมพ์ ไม่ใช่ทีมช่าง */
+  assert.equal(guessStdUnit('Tooling'), 'Tooling', 'Tooling เฉยๆ ยังเป็นแบบของตัวเอง');
+  assert.equal(guessStdUnit('Die Maintenance'), 'Die Maintenance', 'ชื่อแบบในทะเบียนยังหยิบตรงๆ ได้');
+  /* 🔴 ไม่รู้จัก = null เหมือนเดิม ห้ามเดาคลุม */
+  assert.equal(guessStdUnit('PD1'), null);
+  assert.equal(guessStdUnit(''), null);
+
+  /* ทะเบียนต้องชี้ไปหาหน่วยที่มีอยู่จริงเท่านั้น */
+  for (const v of Object.values(KPI_STD_UNIT_ALIASES)) {
+    assert.ok(KPI_STD_UNITS.some(u => u.unit === v), `${v} ต้องมีใน KPI_STD_UNITS`);
+  }
+});
+
+test('🧾 checkStdSelection บอก "ของนอกมาตรฐาน" ได้ (19/11)', () => {
+  const std = [
+    { id: 'a', topic: 'MTTR', requirement: 'fixed' },
+    { id: 'b', topic: 'Safety', requirement: 'fixed' },
+  ];
+  const rows = [
+    { std_item_id: 'a', name: 'MTTR', weight: 10 },
+    { name: 'Safety', weight: 10 },
+    { name: 'Annual Sale Per Head', weight: 3 },   // ← ของแบบโรงงานขายแม่พิมพ์ที่ค้างอยู่
+  ];
+  const r = checkStdSelection(rows, std);
+  assert.equal(r.extras.length, 1, 'ต้องเห็นของนอกมาตรฐาน 1 ข้อ');
+  assert.equal(r.extras[0].name, 'Annual Sale Per Head');
+  assert.deepEqual(r.missingFixed, [], 'ข้อบังคับหยิบครบแล้ว (จับคู่ได้ทั้ง std_item_id และชื่อ)');
+
+  /* ไม่ส่งทะเบียนมา = ตรวจแค่น้ำหนัก ห้ามเดาว่าทุกแถวนอกมาตรฐาน */
+  assert.deepEqual(checkStdSelection(rows).extras, []);
+});
+
+test('⚖️ weightAudit — สรุปหน่วยที่น้ำหนักยังไม่ครบ 50 (19/11 · คำสั่ง user)', () => {
+  const defs = [
+    { scope_kind: 'section', scope_value: 'Tooling MTN', weight: 50, std_unit: 'Maintenance' },
+    { scope_kind: 'department', scope_value: 'Die MTN', weight: 22, std_unit: 'Maintenance' },
+    { scope_kind: 'department', scope_value: 'Die MTN', weight: null },          // เพิ่งหยิบเข้ามา ยังไม่ถ่วง
+    { scope_kind: 'department', scope_value: 'Die MTN', weight: null },
+    { scope_kind: 'department', scope_value: 'JIG MTN', weight: null },
+    { scope_kind: 'plant', scope_value: null, weight: 55 },                      // เกินเป้า
+    { scope_kind: 'department', scope_value: 'ปิดอยู่', weight: 99, is_active: false },  // แถวปิด ห้ามนับ
+  ];
+  const r = weightAudit(defs);
+  const by = Object.fromEntries(r.map(x => [x.key, x]));
+
+  assert.equal(by['section:Tooling MTN'].diff, 0, 'ครบ 50 = diff 0');
+  assert.equal(by['section:Tooling MTN'].ok, true);
+  assert.equal(by['department:Die MTN'].weight, 22);
+  assert.equal(by['department:Die MTN'].diff, -28, 'ขาดต้องติดลบ');
+  assert.equal(by['department:Die MTN'].noWeight, 2, 'นับแถวที่ยังไม่ใส่น้ำหนัก');
+  assert.equal(by['department:Die MTN'].count, 3);
+  assert.equal(by['department:Die MTN'].stdUnit, 'Maintenance');
+  assert.equal(by['department:JIG MTN'].diff, -50, 'ไม่มีน้ำหนักเลย = ขาดทั้ง 50');
+  assert.equal(by.plant.diff, 5, 'เกินต้องเป็นบวก');
+  assert.ok(!r.some(x => x.key === 'department:ปิดอยู่'), 'แถวที่ปิดใช้งานต้องไม่ถูกนับ');
+
+  /* ห่างเป้ามากสุดขึ้นก่อน */
+  assert.equal(r[0].key, 'department:JIG MTN', 'ขาด 50 ต้องมาก่อน');
+  assert.equal(r.at(-1).key, 'section:Tooling MTN', 'ครบแล้วอยู่ท้ายสุด');
+
+  /* 🔴 โหลดไม่ได้ = null ห้ามคืนลิสต์ว่าง (ลิสต์ว่าง = "ครบทุกหน่วย" ซึ่งตรงข้ามความจริง) */
+  assert.equal(weightAudit(null), null);
+  assert.equal(weightAudit(undefined), null);
+  assert.deepEqual(weightAudit([]), [], 'ไม่มีแถวจริงๆ = ลิสต์ว่าง ไม่ใช่ null');
+
+  /* รับ scopeKeyOf/labelOf จากจอได้ (CC ↔ หน่วยเจ้าของต้องยุบเป็นขอบเขตเดียว) */
+  const r2 = weightAudit(
+    [{ scope_kind: 'cost_center', scope_value: '2140563100', weight: 10 },
+     { scope_kind: 'department', scope_value: 'Electric', weight: 15 }],
+    { scopeOf: () => ({ kind: 'department', value: 'Electric' }), labelOf: () => 'ไฟฟ้า' });
+  assert.equal(r2.length, 1, 'ยุบเป็นขอบเขตเดียว');
+  assert.equal(r2[0].weight, 25);
+  assert.equal(r2[0].label, 'ไฟฟ้า');
+  assert.equal(r2[0].kind, 'department');
+  assert.equal(r2[0].value, 'Electric', '🔴 ปลายทางที่กดแล้วไป ต้องเป็นขอบเขตที่ยุบแล้ว ไม่ใช่ค่าดิบของแถวแรก');
+});
+
+test('⚖️ weightAudit — ป้ายซ้ำต้องแยกออกจากกัน (19/11 · เจอจริงตอนทดสอบ)', () => {
+  /* 2 ใบคนละขอบเขต แต่ labelOf คืนชื่อเดียวกัน ⇒ ถ้าปล่อยไว้ คนอ่านแยกไม่ออกว่าต้องไปแก้ใบไหน */
+  const r = weightAudit(
+    [{ scope_kind: 'plant', scope_value: null, weight: 4 },
+     { scope_kind: 'company', scope_value: 'TSAT', weight: 5 },
+     { scope_kind: 'section', scope_value: 'PD1', weight: 20 }],
+    { labelOf: (k) => (k === 'section' ? 'ส่วนงาน: PD1' : 'ทั้งโรงงาน') });
+  const labels = r.map(x => x.label);
+  assert.equal(new Set(labels).size, labels.length, 'ป้ายต้องไม่ซ้ำกันเลย');
+  assert.ok(labels.some(l => l.includes('ทั้งโรงงาน [plant]')));
+  assert.ok(labels.some(l => l.includes('ทั้งโรงงาน [company:TSAT]')));
+  /* ตัวที่ไม่ซ้ำต้องคงรูปเดิม ไม่ต่อคีย์ให้รก */
+  assert.ok(labels.includes('ส่วนงาน: PD1'));
 });

@@ -29,6 +29,12 @@ Legend/ผู้ออกเอกสาร/Revision History **ได้เอ�
 
 ---
 
+## ✍️ ช่องเซ็นของเอกสารที่ "สายเซ็นคุมโดย e-Workflow" (2026-11-25 · คำสั่ง user รวมระบบเอกสารกับ e-workflow)
+ทะเบียนนี้ยังเป็นเจ้าของ **เลขฟอร์ม/Rev/วันมีผล/โลโก้/footer** · แต่เอกสารที่ผูกใบงาน e-Workflow (`BOUND_SUBJECTS[].docKey`)
+**ช่องเซ็นบนใบพิมพ์มาจากขั้นของใบงาน** (`step.sig_label`) ไม่ใช่ `sig_blocks` ของแถวนี้ · แถวในจอ /doc-forms ขึ้นป้าย "✍️ สายเซ็นคุมโดย e-Workflow"
+· ตอนนี้: `bbs_observation` (ใบงาน `bbs_monthly`) · ตัวโหลด `src/lib/wfSignoff.js` · 📄 `e-workflow.md` §BBS
+🔴 **ห้ามสร้างตารางทะเบียนช่องเซ็นแยก** — สายเซ็นอยู่ใน `wf_versions.flow_schema` ที่เดียว
+
 ## 📑 CSV export ก็เป็น "เอกสาร" — เข้าทะเบียนแล้ว (2026-10-06 · คำสั่ง user หลัง QC audit)
 
 QC audit 06/10 ถามว่า *"CSV dump เข้าข่ายกฎ 'export ใหม่ทุกตัวต้อง register' ไหม"* — **user เคาะว่าเข้า ทำเลย**
@@ -133,6 +139,9 @@ migration `20261008_doc_forms_csv_round2_main.sql` (MAIN · **apply แล้ว
 > · เทียบกับคีย์ที่โค้ดอ่านจริง: `grep -rhoE "['\"](csv|xlsx)_[a-z0-9_]+['\"]" src/`
 >   (⚠️ `/daily-report` ประกอบคีย์แบบ `csv_dr_${reportType}` ⇒ grep ตรงๆ ไม่เห็น 4 คีย์นั้น)
 
+**เพิ่ม 05/11:** `xlsx_die_registry` — Excel ทะเบียนแม่พิมพ์ (`/equipment?tab=die` ปุ่ม 📥 · `DieRegistry.jsx` · แถว `src/utils/dieRegistryExport.js`) · migration `20261105b_doc_forms_xlsx_die_registry_main.sql` (MAIN · **apply แล้ว** · `form_code` ว่าง)
+
+**16/11:** `qa_inspection_sheet` ตั้ง FM-QA-112 Rev. 01 (Effective 13/11/2020 · ช่องเซ็น Approved/Checked/Prepared) ตามใบจริง · เพิ่ม `csv_qa_inspection_data` (CSV ผล Inspection Data) — migration `20261116b_doc_forms_qa_inspection_data_main.sql`
 **เพิ่ม 05/11:** `qa_inspection_sheet` — ใบตรวจตามมาตรฐาน QA (ปุ่ม 🖨️ ใน `/qa` แท็บใบตรวจ · `src/lib/qaSheetPrint.js` · แถว `src/utils/qaPrintRows.js`)
 · migration `20261105_doc_forms_qa_inspection_sheet_main.sql` (MAIN · **apply แล้ว**) · `form_code` ว่าง — doc_control ตั้งเลข/ช่องเซ็นที่ `/doc-forms` (fallback ช่องเซ็น: ผู้ตรวจ · ผู้ทบทวน)
 · 🔴 จุดที่ยังไม่ตรวจต้องพิมพ์ด้วย (แถว "ยังไม่ตรวจ" + หัวใบ "ตรวจแล้ว X/Y จุด") · ใบที่ยังไม่ปิด = แถบเตือนบนใบ
@@ -208,3 +217,29 @@ user เลือก "ทางเลือก B" หลังเทียบ 3 
 · ใบพิมพ์ `src/lib/mktProductionOrderDoc.js` — 2 หน้าในไฟล์เดียว (หน้า 2 = F-MKT-002) อ่าน `docFormSync()` ทั้ง 2 คีย์ + `withDocFoot(html, 'mkt_production_order')`
 · 🔴 **เป็น "บันทึก" ไม่ใช่ใบ generate** — เลขที่ + snapshot อยู่ `mkt_awards.production_order_*` · พิมพ์ซ้ำ = ใบเดิม (กฎเดียวกับ `prod_problem_reports`)
 · migration `20261030b_mkt_rfq_phase1_main.sql` (MAIN · **apply แล้ว 30/10** · ตรวจกลับ: 2 แถว) · 📄 `docs/modules/mkt-rfq.md` §5 ข้อ 4
+
+---
+
+## 📥 CSV ผลตรวจ QA — 3 คีย์ (2026-11-16 · feedback ประชุม 16/11)
+
+user: *"หน้า QA พวกการตรวจสอบและทุกๆการตรวจสอบ export data พวกผลตรวจ เป็น CSV ทั้งดาต้ารายพาร์ทและ SPC"*
+
+| doc_key | ไฟล์คืออะไร | ปุ่มอยู่ไหน |
+|---|---|---|
+| `csv_qa_inspection_results` | ผลตรวจรายจุด ทุกรอบ ของพาร์ทที่เลือก (ย้อนหลัง 7/30/60/90/180 วัน) | `/qa?tab=sheet` · `components/QaCheckSheet.jsx` |
+| `csv_qa_spc_values` | ค่าวัด SPC รายค่า (1 แถว = 1 ค่า + LSL/Nominal/USL + ธง "หลุด") | `/qa?tab=spc` · `pages/QualityControl.jsx` (`SPCTab`) |
+| `csv_qa_spc_summary` | สรุป n/Mean/σ/Cp/Cpk/Pp/Ppk/ค่าหลุด spec รายจุดวัด | `/qa?tab=spc` (โหมดใบตรวจ) |
+
+· แถวประกอบที่ **`src/utils/qaCsvRows.js`** (pure · เทส `src/utils/__tests__/qaCsvRows.test.mjs` 12 เคส) —
+  ไฟล์ออกทาง `downloadCsvDoc()` + `csvText()` ของ `csvDoc.js` (ไม่มี `new Blob('text/csv')` ในหน้า · ด่าน `csv-export-via-csvDoc`)
+· migration `20261116_doc_forms_csv_qa_exports_main.sql` (MAIN · **ยังไม่ apply** — ก่อน apply ได้ชื่อไฟล์เดิม
+  `qa_results_<พาร์ท>_<from>_<to>.csv` / `qa_spc_values_…` / `qa_spc_summary_…` ไม่ล้ม · `form_code` ว่างทั้ง 3 แถว)
+· 🔴 **ชื่อไฟล์ติดคำว่า "ไม่ครบ" เมื่อข้อมูลที่ดึงมาไม่ครบ** (error / ชนเพดานหน้า) + ถามยืนยันก่อนดาวน์โหลด —
+  เตือนในเนื้อ CSV ไม่ได้ เพราะแถวแรกต้องเป็นหัวตาราง (คอลัมน์เลื่อน = พัง pivot/สูตรของผู้ใช้)
+· สิทธิ์ปุ่ม = `report:export` (คีย์เดียวกับปุ่ม export ทั้งระบบ · ดาวน์โหลดไม่ได้เขียนอะไร ⇒ ไม่ผูก `qa:record`)
+· 📄 กฎรายไฟล์ (ค่าว่าง ≠ 0 · จุดที่ข้าม · egress) → `docs/modules/qa-inspection.md` §Export ผลตรวจเป็น CSV
+
+## 📍 ตำแหน่งเลขฟอร์ม / Issue Date ของใบโรงงาน (2026-11-20 · feedback user)
+ใบส่วนใหญ่ของโรงงาน: **เลขฟอร์มซ้ายล่าง · Issue Date ขวาล่าง** (วันที่แบบ `dd/mm/yyyy`) — ค่าวันที่มาจาก `doc_forms.effective_date`
+· ทำแล้ว: **ใบ OJT FM-HRM-004** (`OjtTraining.jsx` คลาส `.docfoot` · ตอนพิมพ์ `position:fixed` ติดล่างทุกหน้า · ทะเบียน `ojt.effective_date = 2014-07-01`)
+· ใบอื่นยังพิมพ์ป้าย "Effective Date" ต่อท้ายเนื้อหาเหมือนเดิม — ยังไม่ได้กวาด (รอ user สั่ง)

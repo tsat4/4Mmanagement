@@ -28,6 +28,7 @@ import {
   buildMoTvBoard, fmtWait, moTvGroupMeta, MO_TV_GROUPS, MO_TV_COLS, MO_TV_DONE_FILTER,
 } from '../utils/moTvBoard';
 
+import { tr } from '../utils/i18n';
 /** เพดานแถว — ใบเปิดทั้งโรงงาน ~400 ใบ (13/10) · ชนเพดาน = จอเขียนบอกว่าอาจไม่ครบ */
 const CAP = 1000;
 
@@ -65,8 +66,8 @@ export default function MoTvBoard({ inScope, isMobile = false }) {
   }), [rows, group, team, inScope, now]);
 
   const g = moTvGroupMeta(group);
-  const title = g ? `${g.icon} ${g.label}` : '🧾 ใบแจ้งซ่อม MO ที่ยังไม่ปิด · ทุกขั้น';
-  const teamLabel = team ? deptNameOf(team) : 'ทุกทีมช่าง';
+  const title = g ? `${g.icon} ${g.label}` : tr("🧾 ใบแจ้งซ่อม MO ที่ยังไม่ปิด · ทุกขั้น");
+  const teamLabel = team ? deptNameOf(team) : tr("ทุกทีมช่าง");
 
   const boxRef = useRef(null);
   const pager = useTvPager(boxRef, {
@@ -90,12 +91,12 @@ export default function MoTvBoard({ inScope, isMobile = false }) {
       {/* ── กล่องสถานะหัวจอ: ซ้าย "ตอนนี้ดูกองไหน" ตัวใหญ่ · ขวาตัวนับ (UI §6.33 หน้าตาชุดเดียวกับ Andon) ── */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', padding: tv ? '14px 20px' : '10px 14px',
-        borderRadius: 12, background: 'var(--card)', border: `2px solid ${edge}`, boxShadow: 'var(--shadow-sm)',
+        borderRadius: 'var(--r-lg)', background: 'var(--card)', border: `2px solid ${edge}`, boxShadow: 'var(--shadow-sm)',
       }}>
         <div style={{ fontSize: fz(18, 40), fontWeight: 900, color: 'var(--text)', lineHeight: 1.2 }}>{title}</div>
         <div style={{ fontSize: fz(13, 24), color: 'var(--text2)', fontWeight: 700 }}>{teamLabel}</div>
         <div style={{ marginLeft: 'auto', fontSize: fz(26, 60), fontWeight: 900, color: worst === 'none' ? 'var(--text)' : statusColor(worst), lineHeight: 1 }}>
-          {rows ? board.rows.length : '…'} <span style={{ fontSize: fz(13, 26), fontWeight: 700, color: 'var(--text2)' }}>ใบ</span>
+          {rows ? board.rows.length : '…'} <span style={{ fontSize: fz(13, 26), fontWeight: 700, color: 'var(--text2)' }}>{tr('ใบ')}</span>
         </div>
       </div>
 
@@ -108,40 +109,40 @@ export default function MoTvBoard({ inScope, isMobile = false }) {
           return (
             <button key={x.key || 'all'} type="button" onClick={() => setGroup(x.key)} disabled={tv}
               style={{
-                fontSize: fz(12.5, 22), fontWeight: 800, padding: tv ? '6px 16px' : '5px 12px', borderRadius: 999,
+                fontSize: fz(12.5, 22), fontWeight: 800, padding: tv ? '6px 16px' : '5px 12px', borderRadius: 'var(--r-md)',
                 cursor: tv ? 'default' : 'pointer', opacity: 1,
                 background: on ? 'var(--accent)' : 'var(--bg3)', color: on ? 'var(--accent-ink)' : 'var(--text)',
                 border: `1px solid ${on ? 'var(--accent)' : 'var(--border2)'}`,
               }}>
-              {x.icon} {x.label} · {rows ? n : '…'}
+              {x.icon} {tr(x.label)} · {rows ? n : '…'}
             </button>
           );
         })}
       </div>
 
       {/* 🔴 ความซื่อสัตย์ของจอ — ห้ามซ่อนบน TV (ย่อเป็นบรรทัดสั้นตัวใหญ่) */}
-      {err && <Warn tv={tv} fz={fz}>⚠ โหลดใบ MO ไม่สำเร็จ — ตัวเลขบนจอยังไม่ใช่ของจริง ({err})</Warn>}
-      {board.badGroup && <Warn tv={tv} fz={fz}>⚠ ค่า mo=&quot;{group}&quot; ไม่รู้จัก — แสดงทุกขั้นแทน (แก้ลิงก์ที่หน้าตั้งค่าจอวน)</Warn>}
-      {rows && rows.length >= CAP && <Warn tv={tv} fz={fz}>⚠ ใบเปิดเกิน {CAP} ใบ — จออาจแสดงไม่ครบ</Warn>}
+      {err && <Warn tv={tv} fz={fz}>{tr('⚠ โหลดใบ MO ไม่สำเร็จ — ตัวเลขบนจอยังไม่ใช่ของจริง (')}{err})</Warn>}
+      {board.badGroup && <Warn tv={tv} fz={fz}>⚠ {tr("ค่า")} mo=&quot;{group}&quot; {tr("ไม่รู้จัก — แสดงทุกขั้นแทน (แก้ลิงก์ที่หน้าตั้งค่าจอวน")})</Warn>}
+      {rows && rows.length >= CAP && <Warn tv={tv} fz={fz}>{tr('⚠ ใบเปิดเกิน')} {CAP} {tr('ใบ — จออาจแสดงไม่ครบ')}</Warn>}
 
       {/* ที่ซ่อน/ประมาณ — เขียนให้เห็นเสมอ (กรองแล้วต้องบอกว่าซ่อนกี่รายการ)
           วางก่อนกล่องแบ่งหน้า: useTvPager ตั้งความสูงกล่องถึงขอบล่างจอ ⇒ ของที่อยู่ใต้กล่องตกจอ */}
       {(board.hiddenScope > 0 || board.hiddenTeam > 0 || board.approxAge > 0 || board.unknownAge > 0) && (
         <div style={{ fontSize: fz(11.5, 20), color: 'var(--text2)' }}>
-          {board.hiddenTeam > 0 && `ไม่นับใบของทีมอื่น ${board.hiddenTeam} ใบ · `}
-          {board.hiddenScope > 0 && `ไม่นับใบนอกส่วนงานของจอนี้ ${board.hiddenScope} ใบ · `}
-          {board.approxAge > 0 && `≈ ${board.approxAge} ใบนับจากเวลาแจ้ง (ไม่มีเวลาเข้าขั้น) · `}
-          {board.unknownAge > 0 && `${board.unknownAge} ใบไม่รู้ว่าค้างมานานเท่าไหร่ · `}
-          ค้างมา = นับจากเวลาที่ใบเข้าขั้นปัจจุบัน
+          {board.hiddenTeam > 0 && `${tr("ไม่นับใบของทีมอื่น")} ${board.hiddenTeam} ${tr("ใบ")} · `}
+          {board.hiddenScope > 0 && `${tr("ไม่นับใบนอกส่วนงานของจอนี้")} ${board.hiddenScope} ${tr("ใบ")} · `}
+          {board.approxAge > 0 && `≈ ${board.approxAge} ${tr("ใบนับจากเวลาแจ้ง (ไม่มีเวลาเข้าขั้น")}) · `}
+          {board.unknownAge > 0 && `${board.unknownAge} ${tr("ใบไม่รู้ว่าค้างมานานเท่าไหร่")} · `}
+          {tr("ค้างมา = นับจากเวลาที่ใบเข้าขั้นปัจจุบัน")}
         </div>
       )}
       <div ref={boxRef}>
         {rows && board.rows.length === 0 && !err && (
           <div data-tv-item style={{ textAlign: 'center', padding: tv ? 48 : 28, color: 'var(--text2)', fontSize: fz(15, 32), fontWeight: 800 }}>
-            ✅ ไม่มีใบค้างในกองนี้
+            ✅ {tr("ไม่มีใบค้างในกองนี้")}
           </div>
         )}
-        {!rows && !err && <div style={{ textAlign: 'center', padding: 28, color: 'var(--muted)', fontSize: fz(14, 26) }}>กำลังโหลด...</div>}
+        {!rows && !err && <div style={{ textAlign: 'center', padding: 28, color: 'var(--muted)', fontSize: fz(14, 26) }}>{tr('กำลังโหลด...')}</div>}
         <div style={{ display: 'grid', gridTemplateColumns: cols, gap: tv ? 14 : 10, alignContent: 'start' }}>
           {board.rows.map(r => <MoCard key={r.o.id} r={r} tv={tv} fz={fz} showStage={!g} />)}
         </div>
@@ -154,7 +155,7 @@ export default function MoTvBoard({ inScope, isMobile = false }) {
 
 function Warn({ tv, fz, children }) {
   return (
-    <div role="alert" style={{ background: 'var(--card)', border: '1px solid var(--red)', color: 'var(--red)', borderRadius: 10, padding: tv ? '10px 16px' : 10, fontSize: fz(13, 24), fontWeight: 700 }}>
+    <div role="alert" style={{ background: 'var(--card-surf)', border: '1px solid var(--red)', color: 'var(--red)', borderRadius: 'var(--r-md)', padding: tv ? '10px 16px' : 10, fontSize: fz(13, 24), fontWeight: 700 }}>
       {children}
     </div>
   );
@@ -167,27 +168,27 @@ function MoCard({ r, tv, fz, showStage }) {
   const reporter = o.reported_by_name || o.reporter_prod || '';
   return (
     <div data-tv-item style={{
-      background: 'var(--card)', border: '1px solid var(--border)', borderLeft: `6px solid ${r.tone === 'none' ? 'var(--border2)' : ink}`,
-      borderRadius: 12, padding: tv ? '14px 18px' : '10px 12px', boxShadow: 'var(--shadow-sm)',
+      background: 'var(--card-surf)', border: '1px solid var(--border)', borderLeft: `6px solid ${r.tone === 'none' ? 'var(--border2)' : ink}`,
+      borderRadius: 'var(--r-lg)', padding: tv ? '14px 18px' : '10px 12px', boxShadow: 'var(--shadow-sm)',
       display: 'flex', flexDirection: 'column', gap: tv ? 6 : 4, minWidth: 0,
     }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-        <span style={{ fontFamily: 'monospace', fontWeight: 900, fontSize: fz(14, 28), color: 'var(--text)' }}>{o.mo_no || '(ยังไม่ออกเลข)'}</span>
+        <span style={{ fontFamily: 'monospace', fontWeight: 900, fontSize: fz(14, 28), color: 'var(--text)' }}>{o.mo_no || tr('(ยังไม่ออกเลข)')}</span>
         <span style={{ marginLeft: 'auto', fontWeight: 900, fontSize: fz(18, 40), color: ink, whiteSpace: 'nowrap' }}>
           {r.exact || r.ageMin == null ? '' : '≈'}{fmtWait(r.ageMin)}
         </span>
       </div>
       <div style={{ fontSize: fz(14, 28), fontWeight: 800, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        🏭 {o.machine_no || '–'}{o.line_name ? ` · ${o.line_name}` : ''}
+        {o.machine_no || '–'}{o.line_name ? ` · ${o.line_name}` : ''}
       </div>
       <div style={{ fontSize: fz(13, 24), color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {o.problem_characteristic || o.problem_group || o.item_type || '–'}
       </div>
       <div style={{ fontSize: fz(12, 22), color: 'var(--text2)', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        <span>🔧 {deptNameOf(o.mtn_dept) || '–'}</span>
+        <span>{deptNameOf(o.mtn_dept) || '–'}</span>
         {showStage && <span style={{ fontWeight: 800, color: 'var(--text)' }}>{r.waitIcon} {r.waitTitle}</span>}
-        {!showStage && r.waitWho && <span>รอ: {r.waitWho}</span>}
-        {techs ? <span>👷 {techs}</span> : (reporter && <span>ผู้แจ้ง: {reporter}</span>)}
+        {!showStage && r.waitWho && <span>{tr('รอ:')} {r.waitWho}</span>}
+        {techs ? <span>{techs}</span> : (reporter && <span>{tr('ผู้แจ้ง:')} {reporter}</span>)}
         {r.group === 'other' && <span>{moStatusLabel(o)}</span>}
       </div>
     </div>

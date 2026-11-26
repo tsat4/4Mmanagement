@@ -16,10 +16,12 @@ import { supabase } from '../supabaseClient';
 import { toast } from './Toast';
 import { checkWriteRows } from '../utils/dbWrite';
 import { orgNodeCompare } from '../utils/listOrder';
+import { isUpperKind } from '../utils/orgLayers.js';   // 🏢 ชั้นบน (20/11)
 import { positionLabel } from '../utils/positions';
 import PersonSelect from './PersonSelect';
 import { DeleteButton } from './IconButton';
 
+import { tr } from '../utils/i18n';
 const KIND_TH = { section: 'ส่วนงาน', department: 'แผนก', line: 'กลุ่ม/ไลน์' };
 
 export default function QaInspectorScopes({ canManage = false }) {
@@ -38,7 +40,7 @@ export default function QaInspectorScopes({ canManage = false }) {
     ]);
     if (!alive()) return;
     const bad = [n.error && 'ผังองค์กร', e.error && 'ทะเบียนพนักงาน', r.error && 'ทะเบียน QC ประจำหน่วย'].filter(Boolean);
-    setLoadFail(bad.length ? `อ่าน${bad.join(' · ')}ไม่สำเร็จ — รายการที่เห็นอาจไม่ครบ` : '');
+    setLoadFail(bad.length ? `${tr("อ่าน")}${bad.join(' · ')}${tr("ไม่สำเร็จ — รายการที่เห็นอาจไม่ครบ")}` : '');
     setNodes([...(n.data || [])].sort(orgNodeCompare));
     setEmps(e.data || []);
     setRows(r.data || []);
@@ -55,7 +57,7 @@ export default function QaInspectorScopes({ canManage = false }) {
     let cur = n, guard = 0;
     while (cur?.parent_id && guard++ < 8) {
       const p = nodes.find(x => x.id === cur.parent_id);
-      if (!p) break;
+      if (!p || isUpperKind(p.kind)) break;   // 🏢 ป้ายสายหยุดที่ชั้นบน (Plant/Company ไม่ใช่หน่วยในโรงงาน · 20/11)
       seg.unshift(p.code || p.name);
       cur = p;
     }
@@ -90,28 +92,28 @@ export default function QaInspectorScopes({ canManage = false }) {
 
   return (
     <div style={{ display: 'grid', gap: 12, alignContent: 'start' }}>
-      <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 14px', boxShadow: 'var(--shadow-sm)' }}>
-        <div style={{ fontWeight: 800, marginBottom: 4 }}>🔬 QC หน้างานคนนี้ตรวจคุณภาพให้หน่วยไหน</div>
+      <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '12px 14px', boxShadow: 'var(--shadow-sm)' }}>
+        <div style={{ fontWeight: 800, marginBottom: 4 }}>{tr('QC หน้างานคนนี้ตรวจคุณภาพให้หน่วยไหน')}</div>
         <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.6 }}>
-          QC ที่ไปประจำหน้างาน <b>ยังสังกัดส่วน QA เหมือนเดิม</b> — ตารางนี้บอกแค่ว่ารับตรวจให้หน่วยไหน
+          QC {tr("ที่ไปประจำหน้างาน")} <b>{tr('ยังสังกัดส่วน QA เหมือนเดิม')}</b> — {tr("ตารางนี้บอกแค่ว่ารับตรวจให้หน่วยไหน")}
           <div style={{ marginTop: 4 }}>
-            <b>ไม่ย้ายสังกัด · cost center ไม่เปลี่ยน · ไม่นับเป็นกำลังคนของไลน์ · ไม่ใช่ด่านสิทธิ์</b>
-            {' '}(QA ยังเห็นทั้งโรงงานในเรื่องคุณภาพตามที่ตั้งไว้)
+            <b>{tr('ไม่ย้ายสังกัด · cost center ไม่เปลี่ยน · ไม่นับเป็นกำลังคนของไลน์ · ไม่ใช่ด่านสิทธิ์')}</b>
+            {' '}(QA {tr("ยังเห็นทั้งโรงงานในเรื่องคุณภาพตามที่ตั้งไว้")})
           </div>
-          <div style={{ marginTop: 4 }}>ตั้งที่ชั้นไหนก็ได้ — ตั้ง "ส่วนงาน" = รับตรวจทุกแผนก/กลุ่มที่อยู่ใต้ลงไป</div>
+          <div style={{ marginTop: 4 }}>{tr("ตั้งที่ชั้นไหนก็ได้ — ตั้ง \"ส่วนงาน\" = รับตรวจทุกแผนก/กลุ่มที่อยู่ใต้ลงไป")}</div>
         </div>
-        {loadFail && <div style={{ marginTop: 8, fontSize: 12, color: '#f59e0b' }}>⚠️ {loadFail}</div>}
-        {!canManage && <div style={{ marginTop: 8, fontSize: 12, color: 'var(--muted)' }}>🔒 ดูได้อย่างเดียว — แก้ได้เฉพาะบัญชีที่มีสิทธิ์จัดการ QA</div>}
+        {loadFail && <div style={{ marginTop: 8, fontSize: 12, color: 'var(--amber)' }}>⚠️ {loadFail}</div>}
+        {!canManage && <div style={{ marginTop: 8, fontSize: 12, color: 'var(--muted)' }}>{tr('ดูได้อย่างเดียว — แก้ได้เฉพาะบัญชีที่มีสิทธิ์จัดการ QA')}</div>}
         {/* 🔴 "ยังไม่ได้ตั้ง" ≠ "ไม่รับผิดชอบอะไรเลย" — ต้องเขียนบนจอ (qaScope.js §UNSET) */}
         {unsetCount > 0 && (
-          <div style={{ marginTop: 8, fontSize: 12, color: '#f59e0b' }}>
-            ⚠️ มีคนในส่วน QA อีก <b>{unsetCount}</b> คนที่ยังไม่ได้ตั้งว่ารับตรวจหน่วยไหน
+          <div style={{ marginTop: 8, fontSize: 12, color: 'var(--amber)' }}>
+            ⚠️ {tr("มีคนในส่วน QA อีก")} <b>{unsetCount}</b> {tr("คนที่ยังไม่ได้ตั้งว่ารับตรวจหน่วยไหน")}
           </div>
         )}
       </div>
 
-      <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: '10px 14px 14px', boxShadow: 'var(--shadow-sm)', display: 'grid', gap: 8 }}>
-        {!units.length && !loadFail && <div style={{ fontSize: 13, color: 'var(--muted)' }}>ยังไม่มีหน่วยงานในผังองค์กร (ตั้งที่ /org-setup)</div>}
+      <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '10px 14px 14px', boxShadow: 'var(--shadow-sm)', display: 'grid', gap: 8 }}>
+        {!units.length && !loadFail && <div style={{ fontSize: 13, color: 'var(--muted)' }}>{tr('ยังไม่มีหน่วยงานในผังองค์กร (ตั้งที่ /org-setup)')}</div>}
         {units.map(u => {
           const mine = rows.filter(r => r.org_node_id === u.id);
           return (
@@ -126,20 +128,20 @@ export default function QaInspectorScopes({ canManage = false }) {
                 {mine.map(r => {
                   const e = empById.get(r.employee_id);
                   return (
-                    <span key={r.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '2px 4px 2px 10px', border: '1px solid var(--border2)', borderRadius: 999, background: 'var(--bg2)', fontSize: 13 }}>
-                      🔬 {e ? e.name : '(ไม่อยู่ในทะเบียน active)'}
+                    <span key={r.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '2px 4px 2px 10px', border: '1px solid var(--border2)', borderRadius: 'var(--r-pill)', background: 'var(--bg2-surf)', fontSize: 13 }}>
+                      {e ? e.name : tr("(ไม่อยู่ในทะเบียน active)")}
                       {e?.position && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{positionLabel(e.position)}</span>}
-                      {canManage && <DeleteButton disabled={busy} onClick={() => remove(r)} title={`เอา ${e?.name || ''} ออกจาก ${u.code || u.name}`} style={{ width: 26, height: 26 }} />}
+                      {canManage && <DeleteButton disabled={busy} onClick={() => remove(r)} title={`${tr("เอา")} ${e?.name || ''} ${tr("ออกจาก")} ${u.code || u.name}`} style={{ width: 26, height: 26 }} />}
                     </span>
                   );
                 })}
                 {canManage && (
                   <div style={{ minWidth: 220, flex: '1 1 220px', maxWidth: 360 }}>
                     <PersonSelect source="employees" allowFree={false} value="" disabled={busy}
-                      placeholder="+ เพิ่ม QC ที่รับตรวจหน่วยนี้: ค้นชื่อ / รหัส…" onChange={(p) => add(u.id, p)} />
+                      placeholder={tr('+ เพิ่ม QC ที่รับตรวจหน่วยนี้: ค้นชื่อ / รหัส…')} onChange={(p) => add(u.id, p)} />
                   </div>
                 )}
-                {!mine.length && !canManage && <span style={{ fontSize: 12, color: 'var(--muted)' }}>— ยังไม่ได้ตั้ง —</span>}
+                {!mine.length && !canManage && <span style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('— ยังไม่ได้ตั้ง —')}</span>}
               </div>
             </div>
           );

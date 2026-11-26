@@ -105,3 +105,12 @@ test('โหลดข้อมูลไม่ได้ (null) = ok:null + เห
   assert.equal(r3.canEnable, false);
   assert.ok(r3.checks.every(c => c.ok === null));
 });
+
+test('ผู้รับในแอปอย่างเดียว (ไม่มีห้อง Telegram) = พร้อม · ไม่มีทั้งคู่ = ไม่พร้อม (16/11)', () => {
+  const r1 = assessFmeReadiness({ qaParts: [{ id: "a", part_no: "RB3B-16E061-BA" }], products: PRODUCTS,
+    rules: [{ event_key: 'qa_fme_call', channel_ids: [], inapp_roles: ['qa'], is_enabled: true }] })
+  assert.equal(r1.checks.find(c => c.key === 'room_call').ok, true)
+  const r2 = assessFmeReadiness({ qaParts: [{ id: "a", part_no: "RB3B-16E061-BA" }], products: PRODUCTS,
+    rules: [{ event_key: 'qa_fme_call', channel_ids: [], inapp_roles: [], is_enabled: true }] })
+  assert.equal(r2.checks.find(c => c.key === 'room_call').ok, false)
+})

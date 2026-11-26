@@ -15,28 +15,30 @@ import { toast } from './Toast';
 import { checkWrite } from '../utils/dbWrite';
 import { resolveSetupRule, sequenceSetup, orderByDieHeight, setupDataReadiness } from '../utils/pressSetup';
 
+import { tr, dateLocale } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 const COLS = 'id, scope_kind, scope_value, per_mm_sec, base_min, same_die_min, height_steps, note, is_active, updated_by_name, updated_at';
 const SCOPES = [
-  { key: 'global', label: '🏭 ทั้งโรงงาน (ค่าตั้งต้น)' },
-  { key: 'line', label: '📍 เฉพาะไลน์' },
-  { key: 'machine', label: '⚙️ เฉพาะเครื่อง' },
+  { key: 'global', label: 'ทั้งโรงงาน (ค่าตั้งต้น)' },
+  { key: 'line', label: 'เฉพาะไลน์' },
+  { key: 'machine', label: 'เฉพาะเครื่อง' },
 ];
-const scopeLabel = (r) => (r.scope_kind === 'global' ? 'ทั้งโรงงาน' : `${r.scope_kind === 'line' ? 'ไลน์' : 'เครื่อง'} ${r.scope_value || '—'}`);
+const scopeLabel = (r) => (r.scope_kind === 'global' ? tr("ทั้งโรงงาน") : `${r.scope_kind === 'line' ? tr('ไลน์') : tr('เครื่อง')} ${r.scope_value || '—'}`);
 
 const inp = { padding: '5px 8px', borderRadius: 6, fontSize: 12, border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text)', width: '100%', boxSizing: 'border-box' };
 const btn = (bg, color = '#fff') => ({ padding: '5px 10px', borderRadius: 6, fontSize: 11.5, fontWeight: 700, cursor: 'pointer', background: bg, color, border: '1px solid var(--border)', whiteSpace: 'nowrap' });
 const numOrNull = (v) => (v === '' || v == null || Number.isNaN(Number(v)) ? null : Number(v));
 
 /* ปัดเศษนาทีให้อ่านรู้เรื่อง — นาทีที่มาจากวินาที/60 เป็นทศนิยมยาว (ห้ามโชว์ดิบ) */
-const fmtMin = (v) => (v == null ? '—' : (Math.abs(v) < 10 ? Math.round(v * 10) / 10 : Math.round(v)).toLocaleString('th-TH'));
+const fmtMin = (v) => (v == null ? '—' : (Math.abs(v) < 10 ? Math.round(v * 10) / 10 : Math.round(v)).toLocaleString(dateLocale()));
 
 /* แปลงกฎผลของความสูงเป็นข้อความอ่านง่าย — อัตราต่อมม. + ขั้นบันได (ถ้ามี) */
 function heightRuleText(rule) {
   const per = rule?.per_mm_sec;
   const list = Array.isArray(rule?.height_steps) ? rule.height_steps : [];
   const parts = [];
-  if (per != null && per !== '') parts.push(`ต่างกัน 1 มม. = ${per} วินาที`);
-  if (list.length) parts.push(list.map(s => (s.max_mm == null ? `เกินนั้น +${s.add_min ?? 0} น.` : `≤${s.max_mm} มม. +${s.add_min ?? 0} น.`)).join(' · '));
+  if (per != null && per !== '') parts.push(`${tr("ต่างกัน 1 มม.")} = ${per} ${tr("วินาที")}`);
+  if (list.length) parts.push(list.map(s => (s.max_mm == null ? `${tr("เกินนั้น")} +${s.add_min ?? 0} ${tr("น.")}` : `≤${s.max_mm} ${tr("มม.")} +${s.add_min ?? 0} ${tr("น.")}`)).join(' · '));
   return parts.length ? parts.join(' + ') : '🔴 ยังไม่ได้บอกผลของความสูง — จัดลำดับให้ไม่ได้ (ทุกลำดับจะเท่ากันหมด)';
 }
 
@@ -48,13 +50,13 @@ function StepsEditor({ steps, onChange, disabled }) {
     <div style={{ display: 'grid', gap: 4 }}>
       {list.map((s, i) => (
         <div key={i} style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 5, fontSize: 11.5 }}>
-          <span style={{ color: 'var(--muted)' }}>ต่างไม่เกิน</span>
+          <span style={{ color: 'var(--muted)' }}>{tr('ต่างไม่เกิน')}</span>
           <input type="number" step="1" min="0" disabled={disabled} value={s.max_mm ?? ''} placeholder="∞"
             onChange={e => set(i, 'max_mm', e.target.value)} style={{ ...inp, width: 68 }} />
-          <span style={{ color: 'var(--muted)' }}>มม. → +</span>
+          <span style={{ color: 'var(--muted)' }}>{tr('มม. → +')}</span>
           <input type="number" step="1" min="0" disabled={disabled} value={s.add_min ?? ''} placeholder="0"
             onChange={e => set(i, 'add_min', e.target.value)} style={{ ...inp, width: 62 }} />
-          <span style={{ color: 'var(--muted)' }}>นาที</span>
+          <span style={{ color: 'var(--muted)' }}>{tr('นาที')}</span>
           {!disabled && (
             <button type="button" onClick={() => onChange(list.filter((_, j) => j !== i))} style={btn('var(--bg2)', 'var(--text2)')}>✕</button>
           )}
@@ -62,11 +64,11 @@ function StepsEditor({ steps, onChange, disabled }) {
       ))}
       {!disabled && (
         <button type="button" onClick={() => onChange([...list, { max_mm: null, add_min: null }])} style={{ ...btn('var(--bg2)', 'var(--text)'), width: 'fit-content' }}>
-          + เพิ่มขั้น
+          {tr('+ เพิ่มขั้น')}
         </button>
       )}
       <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-        เว้น "ไม่เกิน" ว่าง = ขั้นสุดท้าย (ไม่จำกัด) · ระบบเรียงขั้นให้เองจากน้อยไปมาก
+        {tr("เว้น \"ไม่เกิน\" ว่าง = ขั้นสุดท้าย (ไม่จำกัด) · ระบบเรียงขั้นให้เองจากน้อยไปมาก")}
       </div>
     </div>
   );
@@ -127,7 +129,7 @@ export default function PressSetupRules({ dies = [], lineNames = [], canEdit = f
     setBusy(true);
     const res = await supabaseDR.from('press_setup_rules').update(payload).eq('id', r.id).select('id');
     setBusy(false);
-    if (!checkWrite(res, `บันทึกกฎ ${scopeLabel(r)}`)) return;
+    if (!checkWrite(res, `${tr("บันทึกกฎ")} ${scopeLabel(r)}`)) return;
     // 🔴 RLS ปฏิเสธ UPDATE = "สำเร็จ 0 แถว ไม่มี error" → ต้องนับแถว ห้ามขึ้นเขียวจาก !error
     if (!res.data?.length) { toast.error('บันทึกไม่ติด (0 แถว) — อาจไม่มีสิทธิ์แก้กฎนี้'); return; }
     toast.success('บันทึกแล้ว');
@@ -158,7 +160,7 @@ export default function PressSetupRules({ dies = [], lineNames = [], canEdit = f
 
   const toggle = async (r) => {
     const on = r.is_active !== false;
-    if (on && !window.confirm(`ปิดใช้กฎ "${scopeLabel(r)}" ?\n\nจอที่ใช้กฎนี้จะกลับไปเป็น "ยังไม่มีกฎ" (ตอบเวลา setup ไม่ได้) จนกว่าจะเปิดกลับ`)) return;
+    if (on && !await askConfirm(`${tr("ปิดใช้กฎ")} "${scopeLabel(r)}" ?\n\n${tr("จอที่ใช้กฎนี้จะกลับไปเป็น \"ยังไม่มีกฎ\" (ตอบเวลา setup ไม่ได้) จนกว่าจะเปิดกลับ")}`)) return;
     const res = await supabaseDR.from('press_setup_rules').update({ is_active: !on }).eq('id', r.id).select('id');
     if (!checkWrite(res, 'เปลี่ยนสถานะกฎ')) return;
     if (!res.data?.length) { toast.error('เปลี่ยนสถานะไม่ติด (0 แถว) — อาจไม่มีสิทธิ์'); return; }
@@ -168,35 +170,33 @@ export default function PressSetupRules({ dies = [], lineNames = [], canEdit = f
   return (
     <div style={{ display: 'grid', gap: 12 }}>
       <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.7 }}>
-        เวลาเปลี่ยนรุ่นของงานปั๊ม <b>ขึ้นกับลำดับที่ผลิต</b> — เปลี่ยนจากแม่พิมพ์ที่ความสูงใกล้กัน
-        ปรับ shut height น้อย เสียเวลาน้อย · ตัวเลขทั้งหมดในหน้านี้ <b>มาจากช่างปั๊ม</b> ไม่ใช่ค่าที่ระบบเดา
-        {' '}(โค้ดไม่มีเวลา setup ฝังไว้เลย — ตารางว่าง = ทุกจอจะเขียนว่า "ยังตอบไม่ได้")
+        {tr("เวลาเปลี่ยนรุ่นของงานปั๊ม")} <b>{tr('ขึ้นกับลำดับที่ผลิต')}</b> — {tr("เปลี่ยนจากแม่พิมพ์ที่ความสูงใกล้กัน ปรับ shut height น้อย เสียเวลาน้อย · ตัวเลขทั้งหมดในหน้านี้")} <b>{tr('มาจากช่างปั๊ม')}</b> {tr("ไม่ใช่ค่าที่ระบบเดา")}
+        {' '}({tr("โค้ดไม่มีเวลา setup ฝังไว้เลย — ตารางว่าง = ทุกจอจะเขียนว่า \"ยังตอบไม่ได้")}")
       </div>
 
-      {state === 'loading' && <div style={{ fontSize: 12, color: 'var(--muted)' }}>กำลังโหลด…</div>}
+      {state === 'loading' && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('กำลังโหลด…')}</div>}
       {state === 'missing' && (
-        <div style={{ fontSize: 12, color: '#f59e0b' }}>
-          ⚠️ ยังไม่ได้ apply migration <code>20260925_press_die_height_setup_dr.sql</code> (DR · Product DB) — แจ้ง admin
+        <div style={{ fontSize: 12, color: 'var(--amber)' }}>
+          ⚠️ {tr("ยังไม่ได้")} apply migration <code>20260925_press_die_height_setup_dr.sql</code> (DR · Product DB) — {tr("แจ้ง")} admin
         </div>
       )}
       {state === 'error' && (
-        <div style={{ fontSize: 12, color: '#ef4444' }}>❌ โหลดกฎไม่ได้ (คนละเรื่องกับ "ยังไม่มีกฎ") — ลองใหม่อีกครั้ง</div>
+        <div style={{ fontSize: 12, color: 'var(--red)' }}>❌ {tr("โหลดกฎไม่ได้ (คนละเรื่องกับ \"ยังไม่มีกฎ\") — ลองใหม่อีกครั้ง")}</div>
       )}
 
       {/* ความพร้อมของข้อมูล — บอกตรงๆ ว่ายังขาดอะไร */}
-      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10, padding: '9px 12px', fontSize: 12, lineHeight: 1.8 }}>
-        <b>📋 ความพร้อมของข้อมูล</b><br />
-        กฎที่ใช้งานอยู่ <b>{ready.ruleCount}</b> ข้อ ·
-        แม่พิมพ์ในขอบเขตนี้ <b>{ready.dieTotal}</b> ตัว — กรอกความสูงแล้ว <b>{ready.dieWithHeight}</b>
-        {ready.dieMissing > 0 && <span style={{ color: '#f59e0b' }}> · ยังไม่กรอก <b>{ready.dieMissing}</b> ตัว</span>}
+      <div style={{ background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '9px 12px', fontSize: 12, lineHeight: 1.8 }}>
+        <b>{tr('ความพร้อมของข้อมูล')}</b><br />
+        {tr("กฎที่ใช้งานอยู่")} <b>{ready.ruleCount}</b> {tr("ข้อ · แม่พิมพ์ในขอบเขตนี้")} <b>{ready.dieTotal}</b> {tr('ตัว — กรอกความสูงแล้ว')} <b>{ready.dieWithHeight}</b>
+        {ready.dieMissing > 0 && <span style={{ color: 'var(--amber)' }}> {tr('· ยังไม่กรอก')} <b>{ready.dieMissing}</b> {tr('ตัว')}</span>}
         <br />
         {ready.canPlan
-          ? <span style={{ color: 'var(--accent)' }}>✅ เริ่มเทียบลำดับได้แล้ว (ยิ่งกรอกความสูงครบ ตัวเลขยิ่งตรง)</span>
-          : <span style={{ color: '#f59e0b' }}>⚠️ ยังจัดลำดับให้ไม่ได้ — ต้องมีกฎที่บอก "ผลของความสูง" + รู้ความสูงอย่างน้อย 2 ตัว</span>}
+          ? <span style={{ color: 'var(--accent)' }}>{tr('✅ เริ่มเทียบลำดับได้แล้ว (ยิ่งกรอกความสูงครบ ตัวเลขยิ่งตรง)')}</span>
+          : <span style={{ color: 'var(--amber)' }}>⚠️ {tr("ยังจัดลำดับให้ไม่ได้ — ต้องมีกฎที่บอก \"ผลของความสูง\" + รู้ความสูงอย่างน้อย 2 ตัว")}</span>}
         {/* 2 คำถามคนละเรื่อง: จัดลำดับได้ (ไม่ต้องรู้เวลาฐาน) vs ตอบเวลารวมได้ (ต้องรู้) */}
         {!ready.canTotal && (
           <div style={{ color: 'var(--muted)' }}>
-            ℹ️ ยังไม่มีกฎไหนกรอก <b>เวลาฐาน</b> ⇒ จอจะบอก "เวลารวมทั้งรอบ" ไม่ได้ (แต่เทียบลำดับได้)
+            ℹ️ {tr("ยังไม่มีกฎไหนกรอก")} <b>{tr('เวลาฐาน')}</b> ⇒ {tr("จอจะบอก \"เวลารวมทั้งรอบ\" ไม่ได้ (แต่เทียบลำดับได้")})
           </div>
         )}
       </div>
@@ -206,7 +206,7 @@ export default function PressSetupRules({ dies = [], lineNames = [], canEdit = f
         <div style={{ display: 'grid', gap: 8 }}>
           {rows.length === 0 && (
             <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-              ยังไม่มีกฎในทะเบียน — {canEdit ? 'กด "+ เพิ่มกฎ" เพื่อกรอกตัวเลขที่ช่างปั๊มให้มา' : 'ให้ผู้มีสิทธิ์แก้ทะเบียนเป็นคนกรอก'}
+              {tr("ยังไม่มีกฎในทะเบียน")} — {canEdit ? tr("กด \"+ เพิ่มกฎ\" เพื่อกรอกตัวเลขที่ช่างปั๊มให้มา") : tr("ให้ผู้มีสิทธิ์แก้ทะเบียนเป็นคนกรอก")}
             </div>
           )}
           {rows.map(r => {
@@ -214,54 +214,54 @@ export default function PressSetupRules({ dies = [], lineNames = [], canEdit = f
             const dirty = !!draft[r.id];
             return (
               <div key={r.id} style={{
-                background: 'var(--card)', border: `1px solid ${dirty ? 'rgba(245,158,11,0.5)' : 'var(--border)'}`,
-                borderRadius: 10, padding: '10px 12px', opacity: off ? 0.55 : 1,
+                background: 'var(--card-surf)', border: `1px solid ${dirty ? 'rgba(245,158,11,0.5)' : 'var(--border)'}`,
+                borderRadius: 'var(--r-md)', padding: '10px 12px', opacity: off ? 0.55 : 1,
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
                   <b style={{ fontSize: 13 }}>{scopeLabel(r)}</b>
-                  {off && <span style={{ fontSize: 11, color: 'var(--muted)' }}>(ปิดใช้)</span>}
+                  {off && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('(ปิดใช้)')}</span>}
                   <span className="spacer" style={{ flex: 1 }} />
                   {r.updated_by_name && (
-                    <span style={{ fontSize: 11, color: 'var(--muted)' }}>แก้ล่าสุด: {r.updated_by_name}</span>
+                    <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('แก้ล่าสุด:')} {r.updated_by_name}</span>
                   )}
                   {canEdit && <>
-                    {dirty && <button onClick={() => saveRow(r)} disabled={busy} style={btn('var(--accent)', 'var(--accent-ink)')}>💾 บันทึก</button>}
-                    <button onClick={() => toggle(r)} style={btn('var(--bg2)', 'var(--text2)')}>{off ? 'เปิดใช้' : 'ปิดใช้'}</button>
+                    {dirty && <button onClick={() => saveRow(r)} disabled={busy} style={btn('var(--accent)', 'var(--accent-ink)')}>{tr('บันทึก')}</button>}
+                    <button onClick={() => toggle(r)} style={btn('var(--bg2)', 'var(--text2)')}>{off ? tr('เปิดใช้') : tr('ปิดใช้')}</button>
                   </>}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10, alignItems: 'start' }}>
                   {/* ⭐ ตัวแปรหลักจากช่างปั๊ม: ต่างกัน 1 มม. = กี่วินาที (25/09 = 1 วินาที) */}
                   <label style={{ fontSize: 11, color: 'var(--muted)' }}>
-                    ต่างกัน 1 มม. = กี่วินาที
+                    {tr("ต่างกัน 1 มม. = กี่วินาที")}
                     <input type="number" step="0.1" min="0" disabled={!canEdit} value={valOf(r, 'per_mm_sec') ?? ''}
-                      placeholder="ยังไม่รู้" onChange={e => patch(r.id, 'per_mm_sec', e.target.value)} style={{ ...inp, marginTop: 3 }} />
+                      placeholder={tr('ยังไม่รู้')} onChange={e => patch(r.id, 'per_mm_sec', e.target.value)} style={{ ...inp, marginTop: 3 }} />
                   </label>
                   {/* 🔴 ว่าง = "ยังไม่รู้" ไม่ใช่ 0 — placeholder ต้องเขียนให้ชัด ไม่งั้นคนอ่านว่าไม่เสียเวลา */}
                   <label style={{ fontSize: 11, color: 'var(--muted)' }}>
-                    เวลาฐาน (เปลี่ยนแม่พิมพ์คนละตัว) นาที
+                    {tr('เวลาฐาน (เปลี่ยนแม่พิมพ์คนละตัว) นาที')}
                     <input type="number" step="1" min="0" disabled={!canEdit} value={valOf(r, 'base_min') ?? ''}
-                      placeholder="ยังไม่รู้ = เว้นว่าง" onChange={e => patch(r.id, 'base_min', e.target.value)} style={{ ...inp, marginTop: 3 }} />
+                      placeholder={tr('ยังไม่รู้ = เว้นว่าง')} onChange={e => patch(r.id, 'base_min', e.target.value)} style={{ ...inp, marginTop: 3 }} />
                   </label>
                   <label style={{ fontSize: 11, color: 'var(--muted)' }}>
-                    แม่พิมพ์ตัวเดิม (เปลี่ยนแค่ล็อต) นาที
+                    {tr('แม่พิมพ์ตัวเดิม (เปลี่ยนแค่ล็อต) นาที')}
                     <input type="number" step="1" min="0" disabled={!canEdit} value={valOf(r, 'same_die_min') ?? ''}
-                      placeholder="ยังไม่รู้ = เว้นว่าง" onChange={e => patch(r.id, 'same_die_min', e.target.value)} style={{ ...inp, marginTop: 3 }} />
+                      placeholder={tr('ยังไม่รู้ = เว้นว่าง')} onChange={e => patch(r.id, 'same_die_min', e.target.value)} style={{ ...inp, marginTop: 3 }} />
                   </label>
                   <div style={{ gridColumn: '1 / -1' }}>
                     <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 3 }}>
-                      ผลของความสูง — <span style={{ color: 'var(--text2)' }}>
+                      {tr("ผลของความสูง")} — <span style={{ color: 'var(--text2)' }}>
                         {heightRuleText({ per_mm_sec: valOf(r, 'per_mm_sec'), height_steps: valOf(r, 'height_steps') })}
                       </span>
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>
-                      ขั้นบันไดด้านล่างเป็น <b>ของเสริม</b> (บวกทับอัตราต่อมม.) — ไว้ใส่เงื่อนไขแบบขั้น เช่น "เกิน 200 มม. ต้องเปลี่ยนบล็อกรอง +30 น." · ไม่มีก็เว้นว่างได้
+                      {tr("ขั้นบันไดด้านล่างเป็น")} <b>{tr('ของเสริม')}</b> ({tr("บวกทับอัตราต่อมม.) — ไว้ใส่เงื่อนไขแบบขั้น เช่น \"เกิน 200 มม. ต้องเปลี่ยนบล็อกรอง +30 น.\" · ไม่มีก็เว้นว่างได้")}
                     </div>
                     <StepsEditor steps={valOf(r, 'height_steps')} disabled={!canEdit}
                       onChange={v => patch(r.id, 'height_steps', v)} />
                   </div>
                   <label style={{ fontSize: 11, color: 'var(--muted)', gridColumn: '1 / -1' }}>
-                    หมายเหตุ (ใครให้ตัวเลขนี้ / วัดจากอะไร)
-                    <input disabled={!canEdit} value={valOf(r, 'note') ?? ''} placeholder="เช่น ช่างปั๊มกะเช้าให้ตัวเลข 25/09"
+                    {tr('หมายเหตุ (ใครให้ตัวเลขนี้ / วัดจากอะไร)')}
+                    <input disabled={!canEdit} value={valOf(r, 'note') ?? ''} placeholder={tr('เช่น ช่างปั๊มกะเช้าให้ตัวเลข 25/09')}
                       onChange={e => patch(r.id, 'note', e.target.value)} style={{ ...inp, marginTop: 3 }} />
                   </label>
                 </div>
@@ -270,64 +270,64 @@ export default function PressSetupRules({ dies = [], lineNames = [], canEdit = f
           })}
 
           {canEdit && (adding ? (
-            <div style={{ background: 'var(--bg2)', border: '1px dashed var(--border2)', borderRadius: 10, padding: '10px 12px', display: 'grid', gap: 8 }}>
+            <div style={{ background: 'var(--bg2-surf)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)', padding: '10px 12px', display: 'grid', gap: 8 }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8 }}>
-                <label style={{ fontSize: 11, color: 'var(--muted)' }}>ขอบเขต
+                <label style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('ขอบเขต')}
                   <select value={adding.scope_kind || 'global'} onChange={e => setAdding(a => ({ ...a, scope_kind: e.target.value, scope_value: '' }))} style={{ ...inp, marginTop: 3 }}>
-                    {SCOPES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+                    {SCOPES.map(s => <option key={s.key} value={s.key}>{tr(s.label)}</option>)}
                   </select>
                 </label>
                 {adding.scope_kind === 'line' && (
-                  <label style={{ fontSize: 11, color: 'var(--muted)' }}>ไลน์
+                  <label style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('ไลน์')}
                     <select value={adding.scope_value || ''} onChange={e => setAdding(a => ({ ...a, scope_value: e.target.value }))} style={{ ...inp, marginTop: 3 }}>
-                      <option value="">— เลือกไลน์ —</option>
-                      {lineNames.map(n => <option key={n} value={n}>{n}</option>)}
+                      <option value="">{tr('— เลือกไลน์ —')}</option>
+                      {lineNames.map(n => <option key={n} value={n}>{tr(n)}</option>)}
                     </select>
                   </label>
                 )}
                 {adding.scope_kind === 'machine' && (
-                  <label style={{ fontSize: 11, color: 'var(--muted)' }}>เลขเครื่อง
+                  <label style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('เลขเครื่อง')}
                     <input value={adding.scope_value || ''} onChange={e => setAdding(a => ({ ...a, scope_value: e.target.value.toUpperCase() }))}
-                      placeholder="เช่น P-01" style={{ ...inp, marginTop: 3, fontFamily: 'monospace' }} />
+                      placeholder={tr('เช่น P-01')} style={{ ...inp, marginTop: 3, fontFamily: 'monospace' }} />
                   </label>
                 )}
-                <label style={{ fontSize: 11, color: 'var(--muted)' }}>ต่างกัน 1 มม. = กี่วินาที
-                  <input type="number" step="0.1" min="0" value={adding.per_mm_sec ?? ''} placeholder="เช่น 1"
+                <label style={{ fontSize: 11, color: 'var(--muted)' }}>{tr("ต่างกัน 1 มม. = กี่วินาที")}
+                  <input type="number" step="0.1" min="0" value={adding.per_mm_sec ?? ''} placeholder={tr('เช่น 1')}
                     onChange={e => setAdding(a => ({ ...a, per_mm_sec: e.target.value }))} style={{ ...inp, marginTop: 3 }} />
                 </label>
-                <label style={{ fontSize: 11, color: 'var(--muted)' }}>เวลาฐาน (นาที)
-                  <input type="number" min="0" value={adding.base_min ?? ''} placeholder="ยังไม่รู้ = เว้นว่าง"
+                <label style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('เวลาฐาน (นาที)')}
+                  <input type="number" min="0" value={adding.base_min ?? ''} placeholder={tr('ยังไม่รู้ = เว้นว่าง')}
                     onChange={e => setAdding(a => ({ ...a, base_min: e.target.value }))} style={{ ...inp, marginTop: 3 }} />
                 </label>
-                <label style={{ fontSize: 11, color: 'var(--muted)' }}>ตัวเดิม เปลี่ยนล็อต (นาที)
-                  <input type="number" min="0" value={adding.same_die_min ?? ''} placeholder="ยังไม่รู้ = เว้นว่าง"
+                <label style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('ตัวเดิม เปลี่ยนล็อต (นาที)')}
+                  <input type="number" min="0" value={adding.same_die_min ?? ''} placeholder={tr('ยังไม่รู้ = เว้นว่าง')}
                     onChange={e => setAdding(a => ({ ...a, same_die_min: e.target.value }))} style={{ ...inp, marginTop: 3 }} />
                 </label>
               </div>
               <StepsEditor steps={adding.height_steps} onChange={v => setAdding(a => ({ ...a, height_steps: v }))} />
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                <button onClick={() => setAdding(null)} style={btn('var(--bg2)', 'var(--text2)')}>ยกเลิก</button>
-                <button onClick={addRule} disabled={busy} style={btn('var(--accent)', 'var(--accent-ink)')}>บันทึกกฎใหม่</button>
+                <button onClick={() => setAdding(null)} style={btn('var(--bg2)', 'var(--text2)')}>{tr('ยกเลิก')}</button>
+                <button onClick={addRule} disabled={busy} style={btn('var(--accent)', 'var(--accent-ink)')}>{tr('บันทึกกฎใหม่')}</button>
               </div>
             </div>
           ) : (
             <button onClick={() => setAdding({ scope_kind: rows.some(r => r.scope_kind === 'global') ? 'line' : 'global', height_steps: [] })}
-              style={{ ...btn('var(--bg2)', 'var(--text)'), width: 'fit-content' }}>+ เพิ่มกฎ</button>
+              style={{ ...btn('var(--bg2)', 'var(--text)'), width: 'fit-content' }}>{tr('+ เพิ่มกฎ')}</button>
           ))}
         </div>
       )}
 
       {/* ตัวอย่างผลของการจัดลำดับ — ข้อเสนอ ไม่ใช่คำสั่ง */}
       {state === 'ok' && lineNames.length > 0 && (
-        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', fontSize: 12 }}>
+        <div style={{ background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '10px 12px', fontSize: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
-            <b>🧪 ลองเทียบลำดับ</b>
+            <b>{tr('ลองเทียบลำดับ')}</b>
             <select value={previewLine} onChange={e => setPreviewLine(e.target.value)} style={{ ...inp, width: 'auto' }}>
-              {lineNames.map(n => <option key={n} value={n}>{n}</option>)}
+              {lineNames.map(n => <option key={n} value={n}>{tr(n)}</option>)}
             </select>
           </div>
-          {!preview?.rule && <div style={{ color: '#f59e0b' }}>⚠️ ไลน์นี้ยังไม่มีกฎ (ของไลน์เองหรือของทั้งโรงงาน) — เทียบเวลาไม่ได้</div>}
-          {preview?.rule && preview.tooFew && <div style={{ color: 'var(--muted)' }}>ไลน์นี้มีแม่พิมพ์ที่ใช้งานอยู่น้อยกว่า 2 ตัว — ไม่มีลำดับให้เทียบ</div>}
+          {!preview?.rule && <div style={{ color: 'var(--amber)' }}>{tr('⚠️ ไลน์นี้ยังไม่มีกฎ (ของไลน์เองหรือของทั้งโรงงาน) — เทียบเวลาไม่ได้')}</div>}
+          {preview?.rule && preview.tooFew && <div style={{ color: 'var(--muted)' }}>{tr('ไลน์นี้มีแม่พิมพ์ที่ใช้งานอยู่น้อยกว่า 2 ตัว — ไม่มีลำดับให้เทียบ')}</div>}
           {preview?.rule && !preview.tooFew && (() => {
             /* ⭐ เทียบด้วย varMin = "ส่วนที่ขึ้นกับลำดับ" (ผลของความสูง) ไม่ใช่เวลารวม
                เพราะลำดับที่สลับกันบนของชุดเดิมมีจำนวนครั้งเปลี่ยนเท่ากัน ⇒ เวลาฐานหักกลบ
@@ -337,27 +337,25 @@ export default function PressSetupRules({ dies = [], lineNames = [], canEdit = f
             const tot = preview.sortedSeq.totalMin;
             return (
               <div style={{ lineHeight: 1.9 }}>
-                เวลาปรับ shut height ตามลำดับทะเบียนตอนนี้ ({preview.list.length} ตัว) = <b>{fmtMin(a)}</b> นาที ·
-                เรียงตามความสูง = <b>{fmtMin(b)}</b> นาที
+                {tr("เวลาปรับ shut height ตามลำดับทะเบียนตอนนี้")} ({preview.list.length} {tr("ตัว")}) = <b>{fmtMin(a)}</b> {tr("นาที · เรียงตามความสูง")} = <b>{fmtMin(b)}</b> {tr("นาที")}
                 {save != null && (
                   <div style={{ color: save > 0.05 ? 'var(--accent)' : 'var(--muted)', fontWeight: 700 }}>
-                    {save > 0.05 ? `⇒ จัดลำดับใหม่ประหยัดได้ ~${fmtMin(save)} นาที/รอบ` : '⇒ ลำดับที่เป็นอยู่ดีอยู่แล้ว (เรียงใหม่ไม่ช่วย)'}
+                    {save > 0.05 ? `⇒ ${tr("จัดลำดับใหม่ประหยัดได้")} ~${fmtMin(save)} ${tr("นาที/รอบ")}` : tr("⇒ ลำดับที่เป็นอยู่ดีอยู่แล้ว (เรียงใหม่ไม่ช่วย)")}
                   </div>
                 )}
                 {preview.sortedSeq.baseUnknown && (
                   <div style={{ color: 'var(--muted)' }}>
-                    ℹ️ ยังไม่รู้ <b>เวลาฐาน</b> (ยกแม่พิมพ์ลง-ขึ้น-จูน) จึงบอก "เวลารวมทั้งรอบ" ไม่ได้ —
-                    แต่เทียบลำดับได้ เพราะทุกลำดับเปลี่ยนแม่พิมพ์ {preview.sortedSeq.changeCount} ครั้งเท่ากัน เวลาฐานจึงหักกลบ
+                    ℹ️ {tr("ยังไม่รู้")} <b>{tr('เวลาฐาน')}</b> ({tr("ยกแม่พิมพ์ลง-ขึ้น-จูน) จึงบอก \"เวลารวมทั้งรอบ\" ไม่ได้ — แต่เทียบลำดับได้ เพราะทุกลำดับเปลี่ยนแม่พิมพ์")} {preview.sortedSeq.changeCount} {tr("ครั้งเท่ากัน เวลาฐานจึงหักกลบ")}
                   </div>
                 )}
-                {tot != null && <div style={{ color: 'var(--text2)' }}>เวลารวมทั้งรอบ (รวมเวลาฐาน) = <b>{fmtMin(tot)}</b> นาที</div>}
+                {tot != null && <div style={{ color: 'var(--text2)' }}>{tr("เวลารวมทั้งรอบ (รวมเวลาฐาน")}) = <b>{fmtMin(tot)}</b> {tr('นาที')}</div>}
                 {preview.sortedSeq.unknownCount > 0 && (
-                  <div style={{ color: '#f59e0b' }}>
-                    ⚠️ มี {preview.sortedSeq.unknownCount} ช่วงที่ประเมินผลความสูงไม่ได้ (ยังไม่กรอกความสูง) — ตัวเลขนี้ <b>ต่ำกว่าความจริง</b>
+                  <div style={{ color: 'var(--amber)' }}>
+                    ⚠️ {tr("มี")} {preview.sortedSeq.unknownCount} {tr('ช่วงที่ประเมินผลความสูงไม่ได้ (ยังไม่กรอกความสูง) — ตัวเลขนี้')} <b>{tr('ต่ำกว่าความจริง')}</b>
                   </div>
                 )}
                 <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                  เป็นการทดลองบนทะเบียนทั้งไลน์ (ไม่ใช่คิวงานจริง) — ใช้ดูว่า "ลำดับมีผลแค่ไหน" ก่อนเอาไปจัดแผนจริง
+                  {tr("เป็นการทดลองบนทะเบียนทั้งไลน์ (ไม่ใช่คิวงานจริง) — ใช้ดูว่า \"ลำดับมีผลแค่ไหน\" ก่อนเอาไปจัดแผนจริง")}
                 </div>
               </div>
             );
@@ -367,7 +365,7 @@ export default function PressSetupRules({ dies = [], lineNames = [], canEdit = f
 
       {onClose && (
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <button onClick={onClose} style={btn('var(--bg2)', 'var(--text)')}>ปิด</button>
+          <button onClick={onClose} style={btn('var(--bg2)', 'var(--text)')}>{tr('ปิด')}</button>
         </div>
       )}
     </div>

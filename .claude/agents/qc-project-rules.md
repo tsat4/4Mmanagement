@@ -60,6 +60,13 @@ model: inherit
   · payload ไหนที่เขียน `oee_a` ลง `production_sessions` **ต้องเขียน `actual_qty`/`qty_ok` ด้วย**
     (ด่าน `oee-restamp-needs-qty`) — ไม่งั้นแถวเดียวกันขัดแย้งกันเอง: ยอด 1,000 แต่ %P คิดจาก 1,100
     (วัดจริง ก.ย. 2026: 26 กะ · 885 ชิ้น) · ยอดขยับ = ต้องขึ้น toast บอกก่อน-หลัง ห้ามแก้เงียบ
+- **A5.3** 🧩 **ของเสียระดับ "พาร์ทลูก" ห้ามเข้าสูตร %Q/%P** (2026-11-16 · คำสั่ง user)
+  · `defect_logs.child_mat_no/child_part_name/child_qty_per_fg` = ข้อมูลเพิ่มเพื่อพาเรโต/ใบรายงาน
+    **ไม่ใช่ตัวแปรของสูตร** — ของเสียยังหักที่ MAT แม่ 1 ชิ้น = 1 ชิ้น · ตัวหาร %Q ไม่เปลี่ยน
+  · grep: `child_qty_per_fg` นอก `utils/defectPart.js` / `pages/DailyReport.jsx` = **ผิด**
+    (ด่าน `defect-child-qty-not-in-oee`) · เอาไปคูณ = OEE เพี้ยนย้อนหลังทั้งโรงงาน
+  · ลิสต์พาร์ทลูกต้องมาจาก `useBomChildren` → `bomChildCandidates` (ใบเดียว ห้ามรวมหลายใบ = นับซ้ำ)
+    และ **ไม่มีลูก/อ่าน BOM ไม่ได้ ต้องยังลงของเสียได้** (fail-open · ช่องนี้ห้ามเป็นช่องบังคับ)
 - **A6** ห้ามสร้างช่วงเวลาพักเอง — `break_policies` → ช่วงเวลา ต้องผ่าน `breakIntervalsIn()` /
   `policyBreakOverlapMin()` / `policyBreakForShift()` เท่านั้น (เคยมีสูตรซ้ำ 4 ชุด ให้ผลต่างกัน
   · ชุดที่เขียนเองมักตก `process_type = null` และ `ot_scope` → นับพักเกิน 20 นาทีทุกกะเช้าที่ทำโอ)
@@ -139,6 +146,23 @@ model: inherit
   เจ้าของกฎ `utils/downtimeBands.js` + `components/DowntimeBand.jsx` **ห้ามวาดเองในหน้า**
   · ด่านอัตโนมัติ: `downtime-band-central` ใน `regressionGuards` · 📄 UI §6.31
 
+- **B-ANDON** 🚨 **แถบ Andon ลอย (`position: fixed`) ต้องอ่านออกและกดรับทราบได้บนมือถือ** (05/11)
+  — flex แถวเดียว `nowrap` ที่มีปุ่ม/ชิปความกว้างตายตัวหลายตัว จะ**บีบกล่องข้อความเหลือกว้าง 0**
+  บนจอ 390px (วัดจริง: ของตายตัว 377px > กล่อง 374px) · แก้ด้วย class กลาง `andon-bar` +
+  `andon-bar-msg` ใน `src/index.css` ใต้ `@media (max-width:768px)` **ต้องมี `!important`**
+  (inline `flex:1` ชนะ CSS) · **ห้ามย่อฟอนต์/ซ่อนปุ่มแทน** · แถบที่ wrap แล้วสูงขึ้น 4 เท่า ⇒
+  **มือถือโชว์ทีละใบ + เขียนว่าเหลืออีกกี่ใบ** (ซ้อนกันเกินจอ = ปุ่มรับทราบตกนอกจอ กดไม่ได้)
+  · ด่านอัตโนมัติ: `andon-bar-mobile` ใน `regressionGuards` · 📄 UI §6.32
+- **B-HOME1** 🏠 **เอกสาร/ทะเบียนชุดเดียว ต้องมี "บ้าน" หน้าเดียว** (06/11 · คำสั่ง user — ถังเหลือง/แดง
+  *"หลักๆอันนี้ต้องอยู่หมวดของผลิตนะ qa จะไปโชว์แค่พวกงานค้างอนุมัติของแผนก"*) — คอมโพเนนต์เดียวกัน
+  ฝัง 2 หน้าได้ แต่ต้องรับ **prop โหมด** ให้หน้าที่ไม่ใช่บ้านเห็นแค่ *คิวงานที่ต้องลงมือ* (ไม่มีทะเบียน/
+  แถบกรอง/ปุ่มบันทึก/ทะเบียนลูก) + **ลิงก์กลับบ้านจริงที่เช็ค `canAccessPage()` ก่อนโชว์** ·
+  2 หน้าเต็มเหมือนกัน = คนกรอกคนละที่แล้วเถียงว่าใบจริงอยู่ไหน (หลักเดียวกับ `alsoIn` = ทางลัด
+  ไม่ใช่บ้านที่สอง) · โหมดคิวต้อง**ข้ามคิวรีของทะเบียน** ด้วย (egress ที่ไม่มีใครดู)
+  · ต้นแบบ/ด่าน: `qa-bins-queue-only` ใน `regressionGuards` · 📄 `docs/modules/production-problem-report-bins.md`
+- [ ] **ตาราง e-Workflow (`wf_*`) เขียนผ่าน RPC เท่านั้น** (13/11) — grep `from('wf_…').insert|update|upsert|delete` ใน `src/` ต้องได้ 0 ·
+  ตารางไม่มี policy เขียนโดยตั้งใจ · ด่าน `wf-tables-write-via-rpc` · 📄 `docs/modules/e-workflow.md`
+
 ### หมวด C — Permissions (data-driven)
 
 - **[C-RLS-1]** policy RLS ฝั่ง Main ที่เขียนได้ (`for all/update/delete`) ห้าม hardcode `role = any(array[...])` — ต้องเป็น `has_perm('<คีย์เดียวกับ can() ของปุ่มนั้น>')` (2026-09-04 · `20260904_rls_match_ui_permissions.sql`) · ตรวจ: `grep -n "ARRAY\['admin'" supabase/migrations/*.sql` เทียบกับ pg_policies ปัจจุบัน
@@ -195,6 +219,10 @@ model: inherit
   (จ) แท็บคนละเรื่องห้ามตั้งชื่อชนกันข้ามหน้า (เคยเกิด: 'WIP ระหว่างขั้น' vs 'WIP Point') ·
   (ฉ) เมนูใหม่ในหมวด 'ตั้งค่าโปรแกรม,ฐานข้อมูล' ต้องใส่ field `sub` (ฐานข้อมูลหลัก/ตั้งค่าระบบ)
   · grep: `label:` ใน NAV_ITEMS เทียบกับ `<h1>`/`<h2>` ของหน้านั้น
+
+- **C-AM-B4** (10/11) ใบตรวจ AM: ผู้ตรวจตัวจริง = คนตามบัตร (`inspections.inspector_code`) ไม่ใช่บัญชีที่ login —
+  ตำแหน่ง/ใบตัวเองของสายอนุมัติต้องผ่าน `amInspectorIdentity()` · บันทึกต้องผ่าน `amBadgeGate()` + `amOnSiteApproval()`
+  (`src/utils/amApproval.js`) · grep: `inspPosById[` + `.inspector_id]` ใน PMCheckData = ผิด (ด่าน `am-onsite-badge-verify`)
 
 ### หมวด D — Section/Line/Team Scoping
 - **D1** หน้าที่ query ข้อมูลตาม line/section ต้องกรองด้วย `sections` array จาก UserContext
@@ -276,6 +304,7 @@ model: inherit
 - **[F-TXT]** คำอธิบาย > 1 บรรทัด (≈120 ตัวอักษร) ต้องอยู่หลัง `<InfoMore>` (+`title=` ได้) ไม่วางนิ่งบนจอ · ตรวจ `node audit/textsweep.mjs` ต้อง 0 ก้อนในหน้าที่แตะ · ความผิดปกติ/ข้อมูลไม่ครบห้ามพับ (ใช้ NoticeBar/WarnNote) · 📄 `UI-CONVENTIONS.md` §6.10
 - **[F-ICN]** แท็บ PageHeader = เส้นใต้ (ห้ามวาดแท็บเอง) · จุดวาดกลาง (เมนู/Home/OverflowMenu/หัวเพจ) ต้องวาดไอคอนผ่าน `<Icon glyph>` ไม่ใช่ `{it.icon}` ดิบ · emoji ใหม่ในทะเบียนเมนู/`icon=` ต้องอยู่ใน `ICON_MAP` (ด่าน `iconMap.test.mjs`) · 📄 `UI-CONVENTIONS.md` §6.36
 - **[F-PAL]** พาเลต 5 สี + เทา: หน้า/คอมโพเนนต์ใหม่ห้ามมี hex/rgba ดิบ (ใช้ `var(--green|--amber|--red|--blue)` + `-dim`/`-line` หรือ `toneVar/toneDim/toneLine`) · ห้าม `--purple` · ห้าม `${…}20` ต่อ alpha บน token · ด่าน ratchet `colorRatchet.test.mjs` (ไฟล์เดิมลดได้อย่างเดียว) · grep: `#[0-9a-f]{6}` `rgba(` ในไฟล์ที่แตะ · 📄 `UI-CONVENTIONS.md` §6.17
+- **[F-SURF]** ไล่เฉดพื้น = สีเดียว ΔL ≤ 5% ผ่าน token เท่านั้น (20/11): แผง inline (กรอบ+มุมโค้ง) ต้องเป็น `background:'var(--card-surf)'`/`--bg2-surf`/`--bg3-surf` ไม่ใช่ `var(--card)` เปล่า · ห้าม `linear-gradient` ของพื้นเองในหน้า · ห้ามหยิบ `--card-top/-bot` มาใช้ตรง · ด่าน `gradientDeltaCap.test.mjs` + `surf-gradient-token-only` · grep: `linear-gradient(` ในไฟล์ที่แตะ · 📄 `UI-CONVENTIONS.md` §6.17 ข้อ 6
 - **[F-ACT]** คำสั่งระดับหน้า/การ์ด: ปุ่มตายตัว ≤2 (`.pg-btn` / `.pg-btn.primary`) ที่เหลือ `<OverflowMenu>` · แถบแจ้ง = `<NoticeBar>` แถบเดียว · การ์ดตัวเลข = `<KpiTile>` (ตัวเลขสีเดียว) · ป้ายปุ่มไม่มี emoji · grep: `actions={` แล้วนับ `<button` · `rgba(239,68,68` ในแถบเตือนใหม่ · 📄 `UI-CONVENTIONS.md` §6.35
 - **[F-I18N]** ป้ายโครงหลัก (เมนู/หมวด/ชื่อหน้า/แท็บ/ป้ายกรอง) แปลผ่าน `tr()` จาก `utils/useLang` เท่านั้น · 🔴 ห้าม `lang === 'en' ?` / `getLang() === 'en' ?` กระจายในหน้า (grep: `=== 'en' ?`) · ห้ามแก้ค่าไทยใน `NAV_ITEMS`/ชื่อหมวด (เป็นคีย์) · เมนู/หน้าใหม่ต้องมีคำใน `src/i18n/en.js` (ด่าน `i18n.test.mjs`) · 📄 `UI-CONVENTIONS.md` §6.34
 - **[F-TVFIT]** จอบอร์ด fit-to-viewport (ผัง A4 / grid ที่ต้องเต็มจอไม่เลื่อน — ต้นแบบ `/obeya`, UI-CONVENTIONS §6.14 · 2026-09-15):
@@ -431,6 +460,18 @@ model: inherit
   · grep: `domain=\{\[(dataMin|\(?\w+\)? =>|[1-9])` · `domain:\s*\[(dataMin|\w+ =>)` · ด่าน `chart-yaxis-domain-hand-made`
 - **F-KPILEVEL** ช่องตัดสิน KPI (`yn`/`ynTotal`/สีจุดกราฟ) ต้องเป็นระดับ 1/0.5/0 จาก `scoreDef` — ห้าม `v >= target` / `v < target` เอง (2 สีไม่รู้จัก Commitment)
   · grep: `yn(Total)?:\s*[^,]*(>=|<=)` · `const \w*(miss|hit|pass)Target\w* =` · ด่าน `kpi-yn-boolean-compare`
+- **F-CSATQD** 🤝 **ความพึงพอใจลูกค้า = ค่าเดียวของโรงงาน ทุกหน่วยดึงไปใช้** (คำสั่ง user 16/11
+  "ต้อง single source of truth · ค่าของโรงงานต้องมีค่าเดียว ดึงไปใช้เอา") ⇒ คะแนนดิบเป็น **ตัวแปรฐาน
+  `level:'plant'`** ใน `kpi_base_inputs` (`csat_q_actual`/`csat_q_total`/`csat_d_actual`/`csat_d_total`)
+  · ค่ารวม = สูตร `csat_qd_pct` (`scope:'plant'`) · ขาย่อย = `parts: ['csat_q_pct','csat_d_pct']`
+  — ⛔ **ห้ามมีตาราง/ช่องกรอกคะแนนรายขาชุดที่ 2** (เคยทำแล้วถอน: `kpi_customer_sat_parts` คีย์ `kpi_id`
+  ⇒ นิยาม 7 แถวถือคะแนนคนละชุดของแบบสอบถามใบเดียวกัน) · 🔴 **ค่ารวม = ตัวตั้งรวม ÷ ตัวหารรวม
+  ห้ามเฉลี่ย % ของ 2 ขา** (ตัวหารไม่เท่ากัน: Q 21/24 + D 6/8 ⇒ 84.375 ไม่ใช่ 81.25) · ขาไม่ครบ = `null`
+  **ห้ามนับ 0** · ทะเบียนมีหัวข้อนี้ **1 ข้อ 1 คะแนน** ⇒ ห้ามแตกเป็น KPI 2 ตัว/2 น้ำหนัก
+  · `Internal Satisfaction` (`value_scope='own'`) = ใบคนละใบรายหน่วย **ห้ามเอามารวมค่ากลาง**
+  · grep: `kpi_customer_sat_parts` · `actual_score` · `total_score` · ด่าน `csat-no-second-entry-point`
+- **F-KPIDUP** 👯 จอที่ตั้ง/กรอก KPI ต้องฟ้องเมื่อมี KPI ซ้ำในขอบเขตเดียวกัน (`findDupDefs` · `utils/kpiDupDefs.js`)
+  — **ห้ามลบ/ปิด/ย้ายค่าให้เอง** (ค่าที่กรอกไว้กำพร้า) · เคสจริง: ระดับโรงงานมี `Customer Satisfaction` 2 แถว ต่างกันแค่ `(Q&D)`
 - **F-SHADOW** 💥 `const <ชื่อ>` ที่**ชนกับ named import ในไฟล์เดียวกัน** แล้วมีการเรียก `<ชื่อ>()` ข้างใน
   = **TDZ จอขาวทั้งหน้า** (เคสจริง 25-26/10 · 4 หน้า: /energy /morning-meeting die/jig registry)
   · lint `no-use-before-define` จับไม่ได้เพราะการอ่านอยู่ใน callback (คนละ scope)
@@ -441,6 +482,9 @@ model: inherit
   — grep หน้าที่ใช้ `CalloutPin`/วาดโมดัลจุดตรวจเอง นอก `components/inspect/`, `SpinAnnotator`, จอตรวจ (`PMCheckData`/`QaCheckSheet`)
   · ด่าน `inspection-setup-shared` ครอบ PMSetup + QaPointsEditor · 📄 `docs/modules/inspection-point-setup.md`
   · QA คัดลอกจุดตรวจข้ามพาร์ท: แถวผ่าน `qaItemCopyRow()` · ไฟล์ต้อง `storage.copy` เข้า `parts/<ปลายทาง>/` — grep insert `image_path`/`drawing_url` ของพาร์ทอื่นตรงๆ = ผิด
+- **F-icon-orphan (2026-11-09)** ไอคอนหายเงียบ: U+FE0F ที่ไม่มี emoji นำหน้า (ซากสคริปต์ตัด emoji) + ปุ่มไอคอนล้วนที่ข้างในเหลือแค่ `<ToggleDot>`/ไม่มีอะไร = กล่องเปล่า
+  — grep `['"\s]\uFE0F` · ด่าน `orphan-emoji-variation-selector` · การ์ดใน grid ที่ชื่อ `nowrap` ใช้ `repeat(N, 1fr)` เปล่า = คอลัมน์ถ่างตามชื่อ → ต้อง `minmax(0, 1fr)` (UI §7.1)
+- **F-dr-live-fold (2026-11-09)** `/daily-report` Live desktop: แถวย่อใบผลิตต้องยังโชว์ ⚠ ยอดไม่อัพเดท / ➡ ยกยอดมา / สถานะ (ด่าน `dr-order-fold-keeps-alerts`) · ปุ่ม Prod Orders 4 ตัว = ข้อยกเว้น ≤2 ปุ่มที่ user เลือก ห้ามรายงานเป็นการละเมิด
 
 ### หมวด G — Workflow & เอกสาร
 - **G1** pattern ใหม่ที่ใช้หลายหน้า ต้องมีบันทึกใน docs/UI-CONVENTIONS.md · schema/workflow ใหม่
@@ -511,3 +555,15 @@ model: inherit
 > `writeScope.js` (`canWriteUnit`/`canWriteLine`/`writableRows`) · `ccScope.js` (`canWriteScope`) ·
 > `mtnTeams.js` (`canWriteTeam`) — **จอที่เขียน DB ต้องเช็คซ้ำในฟังก์ชันที่เขียนจริง ไม่ใช่แค่ซ่อนปุ่ม** ·
 > `sections` = ขอบเขต "ที่เห็น" **ห้ามเอามาตัดสินการแก้** · หน้าแม่ต้องส่งกฎลงแผงลูก (ส่งแค่ `canEdit` ไม่พอ)
+
+### ด่านที่เพิ่ม 2026-11-13
+> 🚫 **ไม่มี FG เข้าไลน์** — ทุกจุดที่ insert `wip_replenish_requests` ต้องกันเลข 1xx ผ่าน `isFgMat()` (`src/utils/storeOps.js`) ·
+> ห้ามเทียบ `charAt(0) === '1'` เองในหน้า (ด่าน `no-fg-line-request`)
+
+### ด่านที่เพิ่ม 2026-11-19
+> 🔻 **ตัด-จ่ายสต็อกต้องหักเต็ม ยอมติดลบ** — จ่ายจาก STORE / ส่งลูกค้า / ตัดวัตถุดิบตอนปิดใบ ห้าม "ยอดในระบบไม่พอ = ไม่หัก/หักเท่าที่มี"
+> ต้องหักเต็มแล้วเขียนบนจอว่าติดลบ (`STORE_NEG_NOTE` · `inflowDestOf` ใน CustomerDemand · DB `fn_take_raw`) — ด่าน "ตัด-จ่ายสต็อกต้องหักเต็ม"
+
+### ด่านที่เพิ่ม 2026-11-20
+- **📈 อนิเมชันกราฟ** (UI-CONVENTIONS §6.34c · ด่าน `chart-anim-shared` + `src/utils/__tests__/chartAnim.test.mjs`): ทุก series ของ Recharts (`<Bar|Line|Area|Pie|Radar|Scatter>`) ต้องมี `{...chartAnim()}` จาก `src/utils/motion.js` · เจอ `isAnimationActive=` ในหน้า = ขัดกฎ · แถบที่วาดเองด้วย div ใช้ `animClass('sweep'|'grow')` ห้ามเขียน `@keyframes` ใหม่สำหรับกราฟในหน้า
+- **⚡ ค่าไฟหลายชั้น** (`docs/ENERGY_MONITORING_DESIGN.md` §15.3.5–6): ยอดรวมตู้/ทั้งหน้า/สัดส่วนโหลด นับเฉพาะมิเตอร์ชั้นบนสุด (`!m.parent`) — ผลรวมที่บวกทุกมิเตอร์ใน `buildLiveBoard().meters` ตรงๆ = นับซ้ำ (ใช้ `totals`/`panels`/`loadShare()` ของกลาง)

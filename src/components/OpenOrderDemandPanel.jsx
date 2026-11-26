@@ -13,6 +13,7 @@ import { openOrderDemand } from '../utils/openOrderDemand';
 import { normSearch } from '../utils/thaiText';
 import MatLabel from './MatLabel';
 
+import { tr } from '../utils/i18n';
 const card = { background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, boxShadow: 'var(--shadow-sm)' };
 const fmt = (n) => (n == null ? '—' : Number(n).toLocaleString(undefined, { maximumFractionDigits: 2 }));
 const STORE_LOC = 'STORE';
@@ -34,15 +35,15 @@ export default function OpenOrderDemandPanel({ q = '' }) {
         .eq('status', 'open').in('production_sessions.status', SESSION_STATUSES_LIVE)),
       loadProductsMaster().catch(() => null),
     ]);
-    if (ordRes.error || ordRes.truncated) errs.push('ใบผลิตที่เปิดอยู่');
-    if (!prods) errs.push('ทะเบียนสินค้า');
+    if (ordRes.error || ordRes.truncated) errs.push(tr("ใบผลิตที่เปิดอยู่"));
+    if (!prods) errs.push(tr("ทะเบียนสินค้า"));
     const orders = (ordRes.rows || []).map(o => ({ ...o, line_name: o.production_sessions?.line_name || '' }));
     const products = prods || [];
     const fgMats = new Set(orders.map(o => String(o.mat_no || '').trim()));
     const fgIds = products.filter(p => fgMats.has(String(p.mat_no || '').trim()) && p.is_active !== false).map(p => p.id);
     const bomRes = fgIds.length
       ? await fetchByIds(fgIds, ids => supabaseDR.from('bom_items')
-          .select('id, product_id, mat_no, part_name, qty_per_unit, uom, is_active').in('product_id', ids).eq('is_active', true))
+          .select('id, product_id, parent_mat, mat_no, part_name, qty_per_unit, uom, is_active').in('product_id', ids).eq('is_active', true))
       : { rows: [] };
     if (bomRes.error || bomRes.truncated) errs.push('BOM');
     const childMats = [...new Set((bomRes.rows || []).map(b => String(b.mat_no || '').trim()).filter(Boolean))];
@@ -50,7 +51,7 @@ export default function OpenOrderDemandPanel({ q = '' }) {
       ? await fetchByIds(childMats, ms => supabaseDR.from('line_stock_summary')
           .select('line_name, mat_no, qty_on_hand').in('mat_no', ms), { orderBy: 'mat_no' })
       : { rows: [] };
-    if (stkRes.error || stkRes.truncated) errs.push('ยอดสต็อก');
+    if (stkRes.error || stkRes.truncated) errs.push(tr("ยอดสต็อก"));
     if (my !== reqRef.current) return;
     const stock = new Map();
     for (const s of stkRes.rows || []) stock.set(`${s.line_name}\u0001${s.mat_no}`, Number(s.qty_on_hand));
@@ -84,47 +85,46 @@ export default function OpenOrderDemandPanel({ q = '' }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ ...card, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', alignItems: 'flex-start' }}>
         <div style={{ fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.65, flex: '1 1 420px' }}>
-          📋 <b style={{ color: 'var(--text)' }}>ไลน์เปิดใบผลิตแล้ว → ชิ้นส่วนที่ต้องเตรียมส่ง</b> (คิดจาก BOM ชั้นแรกของใบ · ยอดใบ × จำนวนต่อชิ้น)
-          <br />“ต้องส่งเพิ่ม” = ความต้องการ − ยอดคงเหลือหน้าไลน์ · <b>จอนี้แจ้งล่วงหน้าอย่างเดียว</b> ไม่ออกใบเบิก/ใบขอซื้อ —
-          ตอนไลน์ปิดใบ ระบบตัดสต็อกและออกใบตามเดิม
+          📋 <b style={{ color: 'var(--text)' }}>{tr('ไลน์เปิดใบผลิตแล้ว → ชิ้นส่วนที่ต้องเตรียมส่ง')}</b> ({tr("คิดจาก BOM ชั้นแรกของใบ · ยอดใบ × จำนวนต่อชิ้น")})
+          <br />“{tr("ต้องส่งเพิ่ม” = ความต้องการ − ยอดคงเหลือหน้าไลน์")} · <b>{tr('จอนี้แจ้งล่วงหน้าอย่างเดียว')}</b> {tr("ไม่ออกใบเบิก/ใบขอซื้อ — ตอนไลน์ปิดใบ ระบบตัดสต็อกและออกใบตามเดิม")}
         </div>
-        <button onClick={load} disabled={busy} style={{ padding: '7px 14px', borderRadius: 8, cursor: busy ? 'wait' : 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-body)', background: 'var(--bg2)', color: 'var(--text2)', border: '1px solid var(--border)' }}>
-          {busy ? '⏳ กำลังโหลด…' : '🔄 รีเฟรช'}
+        <button onClick={load} disabled={busy} style={{ padding: '7px 14px', borderRadius: 'var(--r-md)', cursor: busy ? 'wait' : 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-body)', background: 'var(--bg2-surf)', color: 'var(--text2)', border: '1px solid var(--border)' }}>
+          {busy ? tr('⏳ กำลังโหลด…') : tr('🔄 รีเฟรช')}
         </button>
       </div>
 
       {loadErr.length > 0 && (
         <div style={{ ...card, padding: '10px 14px', borderColor: 'var(--red)', color: 'var(--red)', fontSize: 12, fontWeight: 700 }}>
-          ⚠ โหลดไม่ครบ: {loadErr.join(' · ')} — ตัวเลขข้างล่างอาจไม่ครบ (กดรีเฟรช)
+          ⚠ {tr("โหลดไม่ครบ")}: {loadErr.join(' · ')} — {tr("ตัวเลขข้างล่างอาจไม่ครบ (กดรีเฟรช")})
         </div>
       )}
       {data && (data.noProduct.length > 0 || data.noBom.length > 0 || data.opOrders > 0) && (
         <div style={{ fontSize: 11.5, color: 'var(--amber)', lineHeight: 1.7 }}>
-          {data.noBom.length > 0 && <div>⚠️ ใบที่เปิดอยู่แต่<b>ไม่มี BOM</b> {data.noBom.length} พาร์ท — สโตร์ไม่รู้ว่าต้องเตรียมอะไร: {data.noBom.join(', ')}</div>}
-          {data.noProduct.length > 0 && <div>⚠️ ใบที่ MAT <b>ไม่อยู่ในทะเบียนสินค้า</b> {data.noProduct.length} พาร์ท: {data.noProduct.join(', ')}</div>}
-          {data.opOrders > 0 && <div style={{ color: 'var(--muted)' }}>ไม่นับใบชั้น OP {data.opOrders} ใบ (ไม่ระเบิด BOM เหมือนตอนปิดใบ)</div>}
+          {data.noBom.length > 0 && <div>{tr('⚠️ ใบที่เปิดอยู่แต่')}<b>{tr('ไม่มี BOM')}</b> {data.noBom.length} {tr('พาร์ท — สโตร์ไม่รู้ว่าต้องเตรียมอะไร:')} {data.noBom.join(', ')}</div>}
+          {data.noProduct.length > 0 && <div>{tr('⚠️ ใบที่ MAT')} <b>{tr('ไม่อยู่ในทะเบียนสินค้า')}</b> {data.noProduct.length} {tr('พาร์ท:')} {data.noProduct.join(', ')}</div>}
+          {data.opOrders > 0 && <div style={{ color: 'var(--muted)' }}>{tr('ไม่นับใบชั้น OP')} {data.opOrders} {tr('ใบ (ไม่ระเบิด BOM เหมือนตอนปิดใบ)')}</div>}
         </div>
       )}
 
       {busy && !data ? (
-        <div style={{ ...card, padding: '30px 16px', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>กำลังรวบรวม…</div>
+        <div style={{ ...card, padding: '30px 16px', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('กำลังรวบรวม…')}</div>
       ) : !data ? null : data.rows.length === 0 ? (
-        <div style={{ ...card, padding: '30px 16px', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>ตอนนี้ไม่มีใบผลิตที่เปิดอยู่ที่ต้องใช้ชิ้นส่วน</div>
+        <div style={{ ...card, padding: '30px 16px', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('ตอนนี้ไม่มีใบผลิตที่เปิดอยู่ที่ต้องใช้ชิ้นส่วน')}</div>
       ) : shown === 0 ? (
-        <div style={{ ...card, padding: '30px 16px', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>ไม่มีรายการที่ตรงกับคำค้น “{q}” (ซ่อน {data.rows.length} รายการ)</div>
+        <div style={{ ...card, padding: '30px 16px', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('ไม่มีรายการที่ตรงกับคำค้น “')}{q}{tr('” (ซ่อน')} {data.rows.length} {tr("รายการ")})</div>
       ) : (<>
-        {shown < data.rows.length && <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>👁 ซ่อนอยู่ · ไม่ตรงคำค้น {data.rows.length - shown} รายการ</div>}
+        {shown < data.rows.length && <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{tr('ซ่อนอยู่ · ไม่ตรงคำค้น')} {data.rows.length - shown} {tr('รายการ')}</div>}
         {groups.map(([line, rs]) => (
           <div key={line} style={{ ...card, padding: 0, overflow: 'hidden' }}>
             <div style={{ padding: '10px 16px', background: 'var(--bg2)', borderBottom: '1px solid var(--border)', fontWeight: 800, fontSize: 14 }}>
-              🏭 {line || '(ไม่ระบุไลน์)'} <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--muted)' }}>· {rs.length} ชิ้นส่วน</span>
+              {line || tr("(ไม่ระบุไลน์)")} <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--muted)' }}>· {rs.length} {tr('ชิ้นส่วน')}</span>
             </div>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
                     {[['ชิ้นส่วน', 'left'], ['ต้องใช้', 'right'], ['หน้าไลน์มี', 'right'], ['ต้องส่งเพิ่ม', 'right'], ['STORE มี', 'right'], ['จากใบผลิต', 'left']].map(([h, al]) => (
-                      <th key={h} style={{ padding: '8px 14px', fontSize: 11, fontWeight: 800, color: 'var(--muted)', textAlign: al, whiteSpace: 'nowrap' }}>{h}</th>
+                      <th key={h} style={{ padding: '8px 14px', fontSize: 11, fontWeight: 800, color: 'var(--muted)', textAlign: al, whiteSpace: 'nowrap' }}>{tr(h)}</th>
                     ))}
                   </tr>
                 </thead>
@@ -138,17 +138,17 @@ export default function OpenOrderDemandPanel({ q = '' }) {
                       <tr key={r.mat_no}>
                         <td style={{ ...td, textAlign: 'left', maxWidth: 340, whiteSpace: 'normal' }}>
                           <MatLabel mat={r.mat_no} name={r.part_name} size={13} />
-                          {r.uomConflict && <div style={{ fontSize: 11, color: 'var(--red)' }}>⚠ หน่วยใน BOM ไม่ตรงกัน — ตัวเลขรวมอาจผิด</div>}
+                          {r.uomConflict && <div style={{ fontSize: 11, color: 'var(--red)' }}>{tr('⚠ หน่วยใน BOM ไม่ตรงกัน — ตัวเลขรวมอาจผิด')}</div>}
                         </td>
                         <td style={td}>{fmt(r.need)} <span style={{ fontSize: 11, color: 'var(--muted)' }}>{r.uom}</span></td>
-                        <td style={td}>{r.atLine == null ? <span style={{ fontSize: 11, color: 'var(--muted)' }}>ไม่มียอด</span> : fmt(r.atLine)}</td>
+                        <td style={td}>{r.atLine == null ? <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('ไม่มียอด')}</span> : fmt(r.atLine)}</td>
                         <td style={{ ...td, fontWeight: 800, color: lack > 0 ? 'var(--amber)' : 'var(--green)' }}>
-                          {lack > 0 ? fmt(lack) : '✅ พอ'}
-                          {r.shortAtLine == null && <div style={{ fontSize: 11, fontWeight: 400, color: 'var(--muted)' }}>(ไม่รู้ยอดหน้าไลน์ — แสดงเต็มจำนวน)</div>}
+                          {lack > 0 ? fmt(lack) : tr("✅ พอ")}
+                          {r.shortAtLine == null && <div style={{ fontSize: 11, fontWeight: 400, color: 'var(--muted)' }}>{tr('(ไม่รู้ยอดหน้าไลน์ — แสดงเต็มจำนวน)')}</div>}
                         </td>
                         <td style={{ ...td, color: storeShort ? 'var(--red)' : 'var(--text)', fontWeight: storeShort ? 800 : 400 }}>
-                          {st == null ? <span style={{ fontSize: 11, color: 'var(--muted)' }}>ไม่มียอด</span> : fmt(st)}
-                          {storeShort && <div style={{ fontSize: 11 }}>ไม่พอส่ง</div>}
+                          {st == null ? <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('ไม่มียอด')}</span> : fmt(st)}
+                          {storeShort && <div style={{ fontSize: 11 }}>{tr('ไม่พอส่ง')}</div>}
                         </td>
                         <td style={{ ...td, textAlign: 'left', fontSize: 11.5, color: 'var(--muted)', whiteSpace: 'normal' }}>
                           {r.orders.map(o => `${o.prod_no || '—'} (${o.fg_mat} × ${fmt(o.qty)})`).join(' · ')}

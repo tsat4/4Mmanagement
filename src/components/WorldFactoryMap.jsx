@@ -10,6 +10,8 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { COUNTRIES, lonX, latY } from './worldGeo';
+import { tr } from '../utils/i18n';
+import TabBar from './TabBar';   // แถบเลือก = แท็บเส้นใต้มาตรฐาน (UI §6.36 ข้อ 0)
 
 /* กรอบเริ่มต้น: ครอบทุกภูมิภาคที่มีโรงงาน (อเมริกา → เอเชีย) + เผื่อบริบท */
 const VIEW0 = (() => {
@@ -152,44 +154,17 @@ export default function WorldFactoryMap({
   return (
     <div>
       {/* แถบควบคุม: กลับทั้งโลก · ชิปประเทศ · ไฮไลต์กลุ่มธุรกิจ */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginBottom: 8 }}>
-        <button onClick={zoomOut} style={{
-          fontSize: 12.5, fontWeight: 700, padding: '4px 11px', borderRadius: 999, cursor: 'pointer',
-          background: zoomCc ? 'var(--bg3)' : 'var(--accent)', color: zoomCc ? 'var(--text)' : 'var(--accent-ink)',
-          border: `1px solid ${zoomCc ? 'var(--border2)' : 'var(--accent)'}`,
-        }}>🌏 ทั้งโลก</button>
-        {byCc.map(c => (
-          <button key={c.cc} onClick={() => zoomToCountry(c.cc)} style={{
-            fontSize: 12.5, fontWeight: 700, padding: '4px 10px', borderRadius: 999, cursor: 'pointer',
-            background: zoomCc === c.cc ? 'var(--accent)' : 'var(--bg3)',
-            color: zoomCc === c.cc ? '#08120a' : 'var(--text)',
-            border: `1px solid ${zoomCc === c.cc ? 'var(--accent)' : 'var(--border2)'}`,
-          }}>
-            {c.meta.flag} {c.meta.name}
-            <span style={{ marginLeft: 5, opacity: 0.75 }}>{c.list.length}</span>
-          </button>
-        ))}
-      </div>
+      <TabBar size="sm" style={{ marginBottom: 8 }} value={zoomCc ?? ''} onChange={k => (k ? zoomToCountry(k) : zoomOut())}
+        tabs={[{ key: '', label: tr("ทั้งโลก") }, ...byCc.map(c => ({ key: c.cc, label: `${c.meta.flag} ${c.meta.name}`, badge: c.list.length }))]} />
       {!!groups.length && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginBottom: 8 }}>
-          <span style={{ fontSize: 12, color: 'var(--muted)' }}>ไฮไลต์กลุ่มธุรกิจ:</span>
-          {[{ key: null, icon: '🏢', short: 'ทุกกลุ่ม' }, ...groups].map(g => {
-            const on = gFilter === g.key;
-            return (
-              <button key={g.key || 'all'} onClick={() => setGFilter(g.key)} style={{
-                fontSize: 12.5, fontWeight: 700, padding: '4px 10px', borderRadius: 999, cursor: 'pointer',
-                background: on ? 'var(--accent)' : 'var(--bg3)', color: on ? 'var(--accent-ink)' : 'var(--text)',
-                border: `1px solid ${on ? 'var(--accent)' : 'var(--border2)'}`,
-              }}>
-                {g.icon} {g.short}
-                {g.key && <span style={{ marginLeft: 5, opacity: 0.75 }}>{comps.filter(c => c.groupMeta?.key === g.key).length}</span>}
-              </button>
-            );
-          })}
+          <span style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('ไฮไลต์กลุ่มธุรกิจ:')}</span>
+          <TabBar size="sm" style={{ flex: 1, minWidth: 200 }} value={gFilter ?? ''} onChange={k => setGFilter(k || null)}
+            tabs={[{ key: '', label: tr("ทุกกลุ่ม") }, ...groups.map(g => ({ key: g.key, label: g.short }))]} />
         </div>
       )}
 
-      <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border)' }}>
+      <div style={{ position: 'relative', borderRadius: 'var(--r-lg)', overflow: 'hidden', border: '1px solid var(--border)' }}>
         <svg viewBox={vb} preserveAspectRatio="xMidYMid meet"
           style={{ width: '100%', height: 'auto', maxHeight: height, display: 'block', background: '#071322' }}>
           <defs>
@@ -244,7 +219,7 @@ export default function WorldFactoryMap({
                 </text>
                 <text x={lx} y={ly + 26 / k} textAnchor="middle" fill={col}
                   fontSize={13 / k} fontWeight="700" style={{ paintOrder: 'stroke', stroke: '#050d18', strokeWidth: 3.4 / k }}>
-                  {c.list.length} โรง · {fmt(c.actual)} ชิ้น
+                  {c.list.length} {tr('โรง ·')} {fmt(c.actual)} {tr("ชิ้น")}
                 </text>
               </g>
             );
@@ -290,25 +265,25 @@ export default function WorldFactoryMap({
           return (
             <div style={{
               position: 'absolute', left, top, transform: 'translate(-50%, calc(-100% - 22px))',
-              pointerEvents: 'none', zIndex: 5, background: 'var(--card)', border: `1px solid ${col}`,
-              borderRadius: 8, padding: '8px 11px', minWidth: 196, boxShadow: 'var(--shadow-float)',
+              pointerEvents: 'none', zIndex: 5, background: 'var(--card-surf)', border: `1px solid ${col}`,
+              borderRadius: 'var(--r-md)', padding: '8px 11px', minWidth: 196, boxShadow: 'var(--shadow-float)',
             }}>
               <div style={{ fontSize: 14, fontWeight: 800 }}>
                 {hover.kind === 'country' ? `${o.meta.flag} ${o.meta.name}` : `${o.flag} ${o.code}`}
               </div>
               <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 5 }}>
-                {hover.kind === 'country' ? `${o.list.length} โรงงาน` : `${o.groupMeta?.icon} ${o.groupMeta?.short} · ${o.region}`}
+                {hover.kind === 'country' ? `${o.list.length} ${tr("โรงงาน")}` : `${o.groupMeta?.icon} ${o.groupMeta?.short} · ${o.region}`}
               </div>
               {[['OEE', o.oee == null ? '—' : o.oee + '%', col],
               ['ผลิต/เป้า', `${fmt(o.actual)}/${fmt(o.target)}`, 'var(--text)'],
-              ['Downtime', `${fmt(o.dtMin)} น.`, o.dtMin > 0 ? '#f59e0b' : 'var(--text)'],
-              ['ของเสีย', `${fmt(o.ng)} ชิ้น`, o.ng > 0 ? '#ef4444' : 'var(--text)']].map(([l, v, c2]) => (
+              ['Downtime', `${fmt(o.dtMin)} ${tr("น.")}`, o.dtMin > 0 ? '#f59e0b' : 'var(--text)'],
+              ['ของเสีย', `${fmt(o.ng)} ${tr("ชิ้น")}`, o.ng > 0 ? '#ef4444' : 'var(--text)']].map(([l, v, c2]) => (
                 <div key={l} style={{ fontSize: 12, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
                   <span style={{ color: 'var(--muted)' }}>{l}</span><b style={{ color: c2 }}>{v}</b>
                 </div>
               ))}
               <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-                {hover.kind === 'country' ? 'คลิกเพื่อซูมเข้าประเทศนี้' : 'คลิกเพื่อเลือกทางเข้า'}
+                {hover.kind === 'country' ? tr("คลิกเพื่อซูมเข้าประเทศนี้") : tr("คลิกเพื่อเลือกทางเข้า")}
               </div>
             </div>
           );
@@ -317,18 +292,18 @@ export default function WorldFactoryMap({
         {/* ป้ายบอกระดับที่กำลังดู */}
         <div style={{
           position: 'absolute', left: 10, top: 10, fontSize: 12, fontWeight: 700,
-          background: 'rgba(5,13,24,0.78)', border: '1px solid var(--border2)', borderRadius: 8, padding: '5px 10px', color: 'var(--text)',
+          background: 'rgba(5,13,24,0.78)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '5px 10px', color: 'var(--text)',
         }}>
-          {zoomCc ? `${byCc.find(c => c.cc === zoomCc)?.meta.flag} ${byCc.find(c => c.cc === zoomCc)?.meta.name} · ${plants.length} โรงงาน` : `🌏 ทั้งโลก · ${comps.length} โรงงาน · ${byCc.length} ประเทศ`}
+          {zoomCc ? `${byCc.find(c => c.cc === zoomCc)?.meta.flag} ${byCc.find(c => c.cc === zoomCc)?.meta.name} · ${plants.length} ${tr("โรงงาน")}` : `🌏 ${tr("ทั้งโลก")} · ${comps.length} ${tr("โรงงาน")} · ${byCc.length} ${tr("ประเทศ")}`}
         </div>
       </div>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 8, fontSize: 12, color: 'var(--muted)' }}>
-        <span><b>ขนาดวง</b> = ยอดผลิตของวันนั้น</span>
-        <span><b>สี:</b> <b style={{ color: '#22c55e' }}>●</b> ตามเป้า <b style={{ color: '#f59e0b' }}>●</b> เฝ้าระวัง <b style={{ color: '#ef4444' }}>●</b> ต้องแก้</span>
-        {!!groups.length && <span><b>ไอคอนในหมุด:</b> {groups.map(g => `${g.icon} ${g.short}`).join(' · ')}</span>}
-        <span>★ = บริษัทเรา (ข้อมูลจริง)</span>
-        <span>คลิกประเทศ = ซูมเข้า · คลิกหมุด = เลือกทางเข้า</span>
+        <span><b>{tr('ขนาดวง')}</b> = {tr("ยอดผลิตของวันนั้น")}</span>
+        <span><b>{tr('สี:')}</b> <b style={{ color: 'var(--green)' }}>●</b> {tr('ตามเป้า')} <b style={{ color: 'var(--amber)' }}>●</b> {tr('เฝ้าระวัง')} <b style={{ color: 'var(--red)' }}>●</b> {tr('ต้องแก้')}</span>
+        {!!groups.length && <span><b>{tr('ไอคอนในหมุด:')}</b> {groups.map(g => `${g.icon} ${g.short}`).join(' · ')}</span>}
+        <span>★ = {tr("บริษัทเรา (ข้อมูลจริง")})</span>
+        <span>{tr("คลิกประเทศ = ซูมเข้า · คลิกหมุด = เลือกทางเข้า")}</span>
       </div>
     </div>
   );

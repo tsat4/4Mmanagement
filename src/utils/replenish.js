@@ -1,0 +1,245 @@
+/* ═══ 📥 เติมเต็ม (Replenishment) — "ของลดต่ำกว่า Max เท่าไหร่ ⇒ ต้องเติมเท่าไหร่" ═══════
+ *
+ * ที่มา (2026-10-20/21 · user): *"ที่จริงระบบกัมบัง มันคือเติมเต็มใช่มั้ย มันควรจะตีกรอบได้ว่า
+ * งานลดลงต่ำกว่าค่า max เท่าไหร่แล้ว เพื่อตีกรอบให้เองปะว่าต้องผลิตเท่าไหร่เพื่อเติมให้เต็มค่า max"*
+ * และ *"ยิ่งงานที่ไลน์นั้นมี product เดียว ยิ่ง auto ได้เลย"*
+ *
+ * ── 🔴 กล่องนี้ **ไม่ใช่** ตู้เฮจุนกะ (คำสั่ง user 21/10 "เราควรแยกออกจากตู้เฮจุนกะ") ────
+ *   · ตู้เฮจุนกะ = "ใบที่**ปล่อยแล้ว** ทำเวลาไหน" — ในตู้มีแต่ใบจริง
+ *   · กล่องเติมเต็ม = "ต้อง**ปล่อย**กี่ใบ" — เป็น **สัญญาณ** ยังไม่ใช่ใบ
+ *   เอาสัญญาณไปวาดในตู้ = ตู้มีใบที่ยังไม่มีอยู่จริงปนใบจริง ⇒ **ตู้เริ่มโกหก**
+ *   ลำดับที่ถูก: กล่องเติมเต็มคำนวณ → **คนกดออกใบ** → ใบเข้าตู้เฮจุนกะ
+ *   ⇒ ไฟล์นี้ **ห้ามสร้างใบ/เขียน DB** · "ระบบเสนอ คนตัดสิน"
+ *
+ * ── 🔴🔴 กับดักที่ทำให้ตัวเลขนี้ "พังแบบเงียบ" (วัดจริง 20/10 ก่อนเขียนไฟล์นี้) ───────────
+ *   332 คู่ไลน์+พาร์ท มี **252 คู่ที่ `qty_on_hand = 0`** ซึ่งแปลว่า **"ไม่ได้นับ" ไม่ใช่ "ของหมด"**
+ *   คิดตรงๆ จะได้ "ต้องผลิต 3,071,326 ชิ้น" ⇒ คนเห็นครั้งเดียวก็เลิกเชื่อทั้งจอ
+ *   (บทเรียนเดียวกับ §เลิกจุด WIP: *"ยอดที่ไม่มีใครหักออก = ยอดปลอม"*)
+ *   ⇒ **ยอดที่เชื่อไม่ได้ ต้องคืน `unknown` ห้ามคืนตัวเลข** · และจอต้องเขียนว่าเชื่อไม่ได้เพราะอะไร
+ *
+ * ── ⏸️ สถานะ: **ยังไม่มีผู้เรียกใช้ — ตั้งใจ** (21/10) ────────────────────────────────
+ *   เขียนสูตรเสร็จแล้วแต่ **ยังไม่ต่อเข้าข้อมูลจริง** เพราะ input ที่มีอยู่เชื่อไม่ได้:
+ *   `line_stock_summary.qty_on_hand` **สูงกว่าจริงอย่างเป็นระบบ**
+ *   🔴 **หลักฐานที่ยังจริงวันนี้ (วัดสด 18/11) = ใบตรวจนับ 169 ใบทั้งระบบ ตรงเป๊ะ 0 ใบ**
+ *     ไม่มีแม้ใบเดียวที่ระบบตรงกับของจริง · STORE นับ 47 ครั้ง **ระบบสูงกว่าจริง 35 ครั้ง**
+ *     สุทธิ −101,791 ชิ้น (ตัวเลข "ตัดออกแค่ 9%" ในเวอร์ชันก่อนของหัวไฟล์นี้ **หมดอายุ** —
+ *     มันเป็นค่าสะสมทั้งหมด ไม่ใช่สถานะวันนี้ · 30 วันล่าสุดตัดออก 35%)
+ *   🔴 ต่อเข้าไปจะผิด**ด้านที่เงียบที่สุด**: คงเหลือพอง ⇒ บอก "ไม่ต้องเติม" ทั้งที่ต้องเติม
+ *   ⇒ สัญญาณที่ถูกคือ **ช่องว่างในตู้คัมบัง** (ป้ายที่ถอดกลับมา = ข้อเท็จจริงทางกายภาพ
+ *     ไม่ต้องพึ่งบัญชี) — ยังไม่มีในระบบ รอ user ตัดสินวิธีบันทึก (สแกน / นับต้นกะ / อนุมาน)
+ *   🔄 **18/11: "รอ backflush" ไม่ใช่เงื่อนไขอีกแล้ว — backflush เดินทุกวันจริง**
+ *     (`consume` 22,163 แถว ล่าสุดวันนี้) ⇒ เงื่อนไขที่เหลือคือ **ตั้งต้นยอดด้วยการนับจริง**
+ *     ที่ "ที่ของนอนรออยู่จริง" แล้วค่อยเชื่อ `qty_on_hand` · **ห้ามต่อก่อนนับ**
+ *
+ * ไฟล์นี้ pure — ห้าม import supabase/react
+ * 📄 docs/modules/kanban-auto-calc.md §เติมเต็ม
+ * ═══════════════════════════════════════════════════════════════════════════════════ */
+
+/** ledger เงียบเกินกี่วัน = ยอดคงเหลือเชื่อไม่ได้
+ *  (Assy GOR วัดจริง 21/10: ใบเคลื่อนไหวล่าสุด 12/10 = ค้าง 9 วันทั้งที่ไลน์ยังเดิน) */
+export const STALE_DAYS = 3;
+
+export const REFILL_STATE = {
+  need:    { key: 'need',    label: 'ต้องเติม',        color: '#f59e0b' },
+  full:    { key: 'full',    label: 'เต็มแล้ว',         color: '#22c55e' },
+  unknown: { key: 'unknown', label: 'ตอบไม่ได้',        color: '#8aa0b4' },
+};
+
+/* 🔴 `Number(null)` = 0 และ `Number('')` = 0 — **ทั้งคู่ finite** ⇒ เช็คแค่ isFinite ไม่พอ
+   "ไม่มีบัญชี" จะกลายเป็น "มี 0 ชิ้น" แล้วสั่งผลิตเต็ม Max ทันที (กับดักหลักของไฟล์นี้เลย) */
+const num = (v) => {
+  if (v == null || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+};
+
+/** ห่างกี่วัน — ตอบไม่ได้ = `null` (ห้ามคืน 0 · 0 แปลว่า "วันนี้") */
+export function daysSince(iso, now) {
+  const a = Date.parse(iso || '');
+  const b = Date.parse(now || '');
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+  return Math.max(0, Math.floor((b - a) / 86400000));
+}
+
+/**
+ * ต้องเติมเท่าไหร่เพื่อให้เต็ม Max
+ * @param {number|null} onHand      ยอดคงเหลือที่จุดนั้น · `null` = ไม่มีบัญชี
+ * @param {number|null} max         Max ของจุดนั้น · ไม่มี = ตอบไม่ได้
+ * @param {number|null} perKanban   ชิ้นต่อ 1 ใบคัมบัง (แปลงชิ้น → จำนวนใบ)
+ * @param {string|null} lastMoveAt  เวลาที่ ledger ขยับล่าสุด (ISO) · ไม่มี = ไม่เคยนับ
+ * @param {string}      now         เวลาปัจจุบัน (ISO) — **รับเข้ามาเสมอ** เพื่อให้เทสตรึงเวลาได้
+ * @returns {{ state:'need'|'full'|'unknown', pcs:number|null, cards:number|null, why:string|null, staleDays:number|null }}
+ */
+export function refillNeed({ onHand = null, max = null, perKanban = null, lastMoveAt = null, now = null, staleDays = STALE_DAYS } = {}) {
+  const miss = (why) => ({ state: 'unknown', pcs: null, cards: null, why, staleDays: null });
+  const mx = num(max);
+  if (mx == null || mx <= 0) return miss('ยังไม่ตั้ง Max ของจุดนี้');
+
+  const oh = num(onHand);
+  /* 🔴 "ไม่มีบัญชี" ≠ "ของหมด" — ตัวนี้คือกับดักหลักของทั้งเรื่อง ห้ามบีบเป็น 0 */
+  if (oh == null) return miss('ไม่มีบัญชีคงเหลือของจุดนี้ — ยังนับไม่ได้ว่าขาดเท่าไหร่');
+  if (!lastMoveAt) return miss('ยอดคงเหลือไม่เคยถูกบันทึกเลย — เลข 0 ไม่ได้แปลว่าของหมด');
+
+  const age = daysSince(lastMoveAt, now);
+  if (age == null) return miss('อ่านเวลาเคลื่อนไหวล่าสุดไม่ได้');
+  if (age > staleDays) {
+    return { state: 'unknown', pcs: null, cards: null, staleDays: age,
+      why: `ยอดคงเหลือค้างมา ${age} วัน (ขยับล่าสุด ${String(lastMoveAt).slice(0, 10)}) — เชื่อเป็นของจริงไม่ได้` };
+  }
+
+  const pcs = Math.max(0, Math.round(mx - oh));
+  const pk = num(perKanban);
+  return {
+    state: pcs > 0 ? 'need' : 'full',
+    pcs,
+    /* ไม่รู้ว่า 1 ใบกี่ชิ้น = บอกเป็นใบไม่ได้ (คืน null ไม่ใช่ 0) แต่ยังบอกเป็น "ชิ้น" ได้ */
+    cards: pk != null && pk > 0 ? Math.ceil(pcs / pk) : null,
+    why: null,
+    staleDays: age,
+  };
+}
+
+/** สรุปทั้งไลน์ — จอต้องตอบได้ว่า "ตอบไม่ได้กี่รายการ" ไม่ใช่ซ่อนมันไป
+ *  @param rows [{ mat_no, part_name, need }] โดย need = ผลของ refillNeed()
+ *  @returns {{ need:number, full:number, unknown:number, pcs:number, cards:number|null, coverage:number|null }}
+ *   `coverage` = ตอบได้กี่ % ของรายการทั้งหมด (null = ไม่มีรายการเลย) */
+export function refillSummary(rows = []) {
+  let need = 0, full = 0, unknown = 0, pcs = 0, cards = 0, cardsKnown = false;
+  for (const r of rows || []) {
+    const s = r?.need?.state;
+    if (s === 'need') { need++; pcs += r.need.pcs || 0; if (r.need.cards != null) { cards += r.need.cards; cardsKnown = true; } }
+    else if (s === 'full') full++;
+    else unknown++;
+  }
+  const total = need + full + unknown;
+  return {
+    need, full, unknown, pcs,
+    cards: cardsKnown ? cards : null,
+    coverage: total ? Math.round(((need + full) / total) * 100) : null,
+  };
+}
+
+/* ═══ 🔔 "ของถึง min แล้ว" — ส่งความต้องการไปหาไลน์เจ้าของงาน + ฝ่ายวางแผน (2026-11-13) ═══
+ *
+ * คำสั่ง user 13/11: *"เมื่อ stock ลดลงถึง min จะแสดงความต้องการไปหาไลน์ผลิตเจ้าของงานนั้น
+ * เพื่อให้เตรียมตัว และไปฝ่ายวางแผนเพื่อเห็นว่ามีงานตัวไหนต้องจัดแผนลง"*
+ *
+ * 🔴 **"ติด min" กับ "ต้องผลิตเท่าไหร่" เป็นคนละคำถาม — ตอบได้คนละชุด**
+ *   · ติด min = รู้ min + รู้ยอดที่นับแล้ว ⇒ **ตอบได้**
+ *   · ต้องผลิตเท่าไหร่ = ต้องรู้ max ด้วย ⇒ วัดจริง 13/11: **41 แถวของชิ้นส่วน ไม่มี max เลยสักแถว**
+ *     ⇒ ตอบ "ต้องผลิตเท่าไหร่" ไม่ได้ **ห้ามเดา** (คืน `refillPcs: null` · จอต้องเขียนว่ายังตอบไม่ได้)
+ *
+ * 🔴 **ไม่มีบัญชี ≠ ของหมด** — คู่ไลน์+พาร์ทที่ไม่มีแถวใน ledger เลย = `unknown` ห้ามนับเป็น "ติด min"
+ *   (วัดจริง 13/11: ชิ้นส่วน 7 จาก 41 แถวไม่มีบัญชีเลย) · กับดักเดียวกับ `refillNeed()` ข้างบน
+ *
+ * 🔴🔴 **ที่จริงมี 3 ที่ ไม่ใช่ 2** (วัดจริง 18/11) — เจ้าของงาน · ที่ทะเบียนตั้ง min · **ที่ของนอนรอ/ถูกกินจริง**
+ *   วัด 41 คู่ที่ตั้ง min: **35 คู่ ของจริงถูกกินที่อื่น** ไม่ใช่ไลน์ในทะเบียน
+ *   (STORE 28 คู่ · ไลน์ประกอบอื่น 7 คู่ — D6 / Assembly D / APRON ASSY / ร้านชุบ)
+ *   เพราะโซ่จริงคือ **ไลน์ปั๊ม ──issue──▶ STORE ──ใบขอเติม──▶ ไลน์ประกอบ ──คอนเฟิร์ม FG──▶ consume**
+ *   แต่ทะเบียนตั้ง min ไว้ที่**ไลน์ปั๊ม** ซึ่งของออกไปแล้ว ⇒ บัญชีที่นั่นนิ่งถาวร
+ *   ⇒ `minAlerts` รับ `movesElsewhereOf` มาชี้ว่า "ของขยับจริงที่ไหน" แล้วติดธง `wrongPlace`
+ *   **ยังคืน `state:'unknown'` เหมือนเดิม** (ตอบ "ติด min" ไม่ได้จริงๆ) แต่เปลี่ยนจอจาก
+ *   "ตอบไม่ได้" กองตาย → **รายการที่คนแก้ทะเบียนได้** · 🔴 **เป็นข้อเสนอ ห้ามย้ายทะเบียนให้เอง**
+ *
+ * 🔴 **"ไลน์เจ้าของงาน" ≠ "ไลน์ที่ของไปกอง"** — เจ้าของงานมาจาก `dr_products.line_name`
+ *   (ช่อง "ไลน์" ใน Product Master) · ไลน์ที่ของกองคือ `line_part_levels.line_name`
+ *   วัดจริง 13/11: ชิ้นส่วนตรงกันทั้ง 41 แถว · FG ต่างกัน 5 แถว (แต่ FG ไม่ควรมี min ที่ไลน์อยู่แล้ว)
+ *   ⇒ **ส่งงานไปหาไลน์ ต้องใช้เจ้าของงาน ไม่ใช่ที่ของกอง** (ไม่งั้นแจ้งผิดไลน์)
+ *
+ * ⚠️ FG (mat ขึ้นต้น 1) **ห้ามมี min/max ที่ไลน์** (กฎเดิมใน `utils/monitoringSheet.js`)
+ *   แต่ทะเบียนจริงมี FG ปน 32 จาก 74 แถว ⇒ `minAlerts` ติดธง `fgNotAllowed` ให้จอเขียนบอก
+ *   **ห้ามกรองทิ้งเงียบ** (ซ่อน = ไม่มีใครรู้ว่าทะเบียนเปื้อน แล้วมันจะเปื้อนต่อไปเรื่อยๆ)
+ * ═══════════════════════════════════════════════════════════════════════════════ */
+
+/** FG = MAT ขึ้นต้นด้วย 1 (กฎเดียวกับ `utils/matPrefix.js`) — ของสำเร็จรูป ไม่ใช่ของที่ไลน์ถือ */
+export const isFgMat = (mat) => /^1/.test(String(mat ?? '').trim());
+
+/**
+ * ของที่ถึง min แล้ว — ตัวเดียวที่ทั้งจอผลิตและจอวางแผนต้องอ่าน
+ * @param levels  [{ line_name, mat_no, min_qty, max_qty, part_name }] ทะเบียน `line_part_levels`
+ * @param onHandOf (line_name, mat_no) => number|null   · **`null` = ไม่มีบัญชี ห้ามส่ง 0 มาแทน**
+ * @param ownerLineOf (mat_no) => string|null           · ไลน์เจ้าของงานจาก Product Master
+ * @param opt.movesElsewhereOf (line_name, mat_no) => { line_name, lastAt, moves }|null
+ *        · "mat นี้ขยับจริงที่ไหน (ที่ไม่ใช่ไลน์ในทะเบียน)" — ไม่ส่ง = ไม่ตรวจ = พฤติกรรมเดิมเป๊ะ
+ * @returns [{ line_name, ownerLine, mat_no, part_name, min, max, onHand, state, refillPcs, why, fgNotAllowed, elsewhere, wrongPlace }]
+ *          `state`: 'at_min' (ติด min แล้ว) · 'ok' (ยังพอ) · 'unknown' (ตอบไม่ได้)
+ *          เรียง: ติด min ก่อน → ขาดลึกสุดก่อน → ตอบไม่ได้ต่อท้าย (**ห้ามตัดทิ้ง**)
+ */
+export function minAlerts(levels = [], onHandOf = () => null, ownerLineOf = () => null,
+  { lastMoveOf = null, movesElsewhereOf = null, now = null, staleDays = STALE_DAYS } = {}) {
+  /* "ของตัวนี้ขยับจริงที่ไหน" → ท้ายข้อความ + ธง · อ่านไม่ได้/ไม่ส่ง = ไม่เติมอะไรเลย */
+  const elsewhereOf = (line, mat) => {
+    if (typeof movesElsewhereOf !== 'function') return { tail: '', flag: {} };
+    let el = null;
+    try { el = movesElsewhereOf(line, mat); } catch { el = null; }
+    const where = String(el?.line_name ?? '').trim();
+    if (!where || where === String(line ?? '').trim()) return { tail: '', flag: {} };
+    const when = el?.lastAt ? ` ล่าสุด ${String(el.lastAt).slice(0, 10)}` : '';
+    return {
+      tail: ` · 🔎 ของตัวนี้ขยับจริงที่ "${where}"${when} ⇒ ทะเบียนน่าจะตั้ง min ผิดที่`,
+      flag: { wrongPlace: true, elsewhere: { line_name: where, lastAt: el?.lastAt ?? null, moves: num(el?.moves) } },
+    };
+  };
+  const rows = (levels || []).filter(Boolean).map((l) => {
+    const min = num(l.min_qty);
+    const max = num(l.max_qty);
+    const onHand = num(onHandOf(l.line_name, l.mat_no));
+    const base = {
+      line_name: l.line_name || '', mat_no: l.mat_no || '', part_name: l.part_name || '',
+      ownerLine: ownerLineOf(l.mat_no) || null,
+      min, max, onHand, refillPcs: null,
+      fgNotAllowed: isFgMat(l.mat_no),
+      elsewhere: null, wrongPlace: false,
+    };
+    if (min == null || min <= 0) return { ...base, state: 'unknown', why: 'ยังไม่ตั้ง min ของคู่ไลน์+พาร์ทนี้' };
+    /* 🔴 ไม่มีบัญชี = ยังไม่เคยนับ ไม่ใช่ของหมด — นับเป็น "ติด min" ไม่ได้ */
+    if (onHand == null) return { ...base, state: 'unknown', why: 'ไม่มีบัญชีคงเหลือของคู่นี้ — ยังไม่เคยนับ' };
+    if (onHand > min) return { ...base, state: 'ok', why: null };
+    /* 🔴🔴 ด่านความสดของบัญชี — **เลข 0 บนบัญชีที่ไม่มีใครขยับ ไม่ได้แปลว่าของหมด**
+       วัดจริง 16/11: 41 คู่ที่ตั้ง min ไว้ → ติด min 32 คู่ และ **ทั้ง 32 คู่คงเหลือ 0 เป๊ะ**
+       ไม่มีสักคู่ที่มีของเหลือบางส่วน · บัญชีขยับล่าสุด 30/10 (17 วันก่อน) · 7 คู่ไม่เคยขยับเลย
+       ⇒ ปล่อยตามนี้ = จอขึ้น "ติด min 32 ตัว" ที่ผิดทั้ง 32 ตัว แล้วคนเลิกเชื่อทั้งจอ
+       (กับดักเดียวกับ `refillNeed()` ข้างบน · ไม่ส่ง `lastMoveOf` = ไม่ตรวจ = พฤติกรรมเดิม) */
+    if (lastMoveOf) {
+      /* 🔴 บัญชีที่ทะเบียนชี้นิ่ง — ก่อนจะบอกแค่ "ตอบไม่ได้" ให้ดูว่า mat นี้ขยับจริงที่ไหน
+         เจอ = ทะเบียนน่าจะตั้งผิดที่ (ข้อเสนอ · คนตัดสิน) ไม่ใช่ปริศนา */
+      const el = elsewhereOf(l.line_name, l.mat_no);
+      const at = lastMoveOf(l.line_name, l.mat_no);
+      if (!at) {
+        return { ...base, state: 'unknown', ...el.flag,
+          why: `บัญชีของคู่นี้ไม่เคยขยับเลย — เลข 0 ไม่ได้แปลว่าของหมด${el.tail}` };
+      }
+      const age = daysSince(at, now);
+      if (age == null) return { ...base, state: 'unknown', why: 'อ่านเวลาเคลื่อนไหวล่าสุดของบัญชีไม่ได้' };
+      if (age > (num(staleDays) ?? STALE_DAYS)) {
+        return { ...base, state: 'unknown', staleDays: age, ...el.flag,
+          why: `บัญชีไม่ขยับมา ${age} วัน (ล่าสุด ${String(at).slice(0, 10)}) — ยอดคงเหลือเชื่อเป็นของจริงไม่ได้${el.tail}` };
+      }
+    }
+    return {
+      ...base, state: 'at_min',
+      /* รู้ max ถึงจะบอกได้ว่าเติมเท่าไหร่ — ไม่รู้ = null ให้จอเขียนว่ายังตอบไม่ได้ */
+      refillPcs: max != null && max > min ? Math.max(0, Math.round(max - onHand)) : null,
+      why: null,
+    };
+  });
+  const rank = { at_min: 0, ok: 1, unknown: 2 };
+  return rows.sort((a, b) => (rank[a.state] - rank[b.state])
+    || ((b.min - b.onHand) - (a.min - a.onHand))
+    || String(a.mat_no).localeCompare(String(b.mat_no)));
+}
+
+/** สรุปให้จอเขียนบนหัวข้อได้ตรงๆ — `noMax` = ติด min แล้วแต่ยังบอกไม่ได้ว่าต้องผลิตเท่าไหร่ */
+export function minAlertSummary(rows = []) {
+  const at = (rows || []).filter(r => r?.state === 'at_min');
+  return {
+    atMin: at.length,
+    unknown: (rows || []).filter(r => r?.state === 'unknown').length,
+    ok: (rows || []).filter(r => r?.state === 'ok').length,
+    noMax: at.filter(r => r.refillPcs == null).length,
+    fgRows: (rows || []).filter(r => r?.fgNotAllowed).length,
+    /* ตอบไม่ได้เพราะ "ทะเบียนตั้งผิดที่" — แยกออกจากกองตอบไม่ได้ทั่วไป เพราะอันนี้**แก้ได้** */
+    wrongPlace: (rows || []).filter(r => r?.wrongPlace).length,
+    lines: [...new Set(at.map(r => r.ownerLine).filter(Boolean))].length,
+  };
+}

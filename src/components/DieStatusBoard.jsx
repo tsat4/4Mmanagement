@@ -1,4 +1,4 @@
-/* ═══ DieStatusBoard — 📊 สถานะแม่พิมพ์ (แท็บใน /die-registry) — 2026-08-19 ═══════════════
+/* ═══ DieStatusBoard — สถานะแม่พิมพ์ (แท็บใน /die-registry) — 2026-08-19 ═══════════════
    บอร์ดติดตามสถานะแม่พิมพ์ทั้งทะเบียน: สรุปตัวนับต่อสถานะ + ตารางไล่ดู/เปลี่ยนสถานะรายตัว
    • สถานะ manual (die_status) เปลี่ยนได้จาก select ในแถว (สิทธิ์ machines:edit)
    • "มีใบซ่อม MO ค้าง" derive สดจาก mtn_orders — คอลัมน์นี้ทำงานได้แม้ยังไม่ apply migration
@@ -15,6 +15,7 @@ import {
   DIE_STATUSES, DIE_STATUS_UNSET, dieStatusMeta, buildOpenMoMap, openMosOf,
   regrindOver, saveDieStatus, MIGRATION_HINT,
 } from '../utils/dieStatus';
+import { tr, dateLocale } from '../utils/i18n';
 import { moStatusLabel } from '../utils/mtnStepPerm';   // ป้ายสถานะใบ MO (แยกรอ QA / รอรับมอบ)
 
 const inp = { padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 13, boxSizing: 'border-box' };
@@ -92,13 +93,13 @@ export default function DieStatusBoard({
     setSavingId(null);
     if (error) {
       const miss = error.code === '42703' || error.code === '42P01';
-      return toast.error(miss ? MIGRATION_HINT : 'บันทึกสถานะไม่สำเร็จ: ' + error.message);
+      return toast.error(miss ? MIGRATION_HINT : (tr('บันทึกสถานะไม่สำเร็จ') + ': ') + error.message);
     }
     patchDieExt(d.id, {
       die_status: key || null,
       status_updated_at: new Date().toISOString(), status_updated_by_name: fullName || null,
     });
-    toast.success(`${dieStatusMeta(key || null).icon} อัพเดทสถานะแล้ว`);
+    toast.success(`${dieStatusMeta(key || null).icon} ${tr("อัพเดทสถานะแล้ว")}`);
   };
   const editNote = async (d) => {
     const v = prompt('หมายเหตุสถานะ (เช่น ซ่อมคมตัด OP20 / ส่งบริษัท xxx)', d.ext?.status_note || '');
@@ -106,7 +107,7 @@ export default function DieStatusBoard({
     const { error } = await saveDieStatus({ machineId: d.id, status: d.ext?.die_status, note: v, byName: fullName });
     if (error) {
       const miss = error.code === '42703' || error.code === '42P01';
-      return toast.error(miss ? MIGRATION_HINT : 'บันทึกไม่สำเร็จ: ' + error.message);
+      return toast.error(miss ? MIGRATION_HINT : (tr('บันทึกไม่สำเร็จ') + ': ') + error.message);
     }
     patchDieExt(d.id, { status_note: v.trim() || null, status_updated_at: new Date().toISOString(), status_updated_by_name: fullName || null });
     toast.success('บันทึกหมายเหตุแล้ว');
@@ -115,7 +116,7 @@ export default function DieStatusBoard({
   const chip = (label, value, { color = 'var(--text)', border = 'var(--border)', active = false, onClick } = {}) => (
     <button key={label} onClick={onClick} style={{
       background: active ? 'var(--bg3)' : 'var(--card)', border: `1px solid ${active ? 'var(--accent)' : border}`,
-      borderRadius: 10, padding: '7px 12px', minWidth: 96, textAlign: 'left', cursor: onClick ? 'pointer' : 'default',
+      borderRadius: 'var(--r-md)', padding: '7px 12px', minWidth: 96, textAlign: 'left', cursor: onClick ? 'pointer' : 'default',
     }}>
       <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, whiteSpace: 'nowrap' }}>{label}</div>
       <div style={{ fontSize: 18, fontWeight: 800, color }}>{value}</div>
@@ -126,15 +127,14 @@ export default function DieStatusBoard({
     <div>
       {!ready && (
         <div data-page-note="1" style={{ ...warnBox, marginBottom: 12 }}>
-          <b>⚠️ สถานะ manual ยังใช้ไม่ได้</b> — {MIGRATION_HINT}
-          <div style={{ marginTop: 3, color: 'var(--muted)' }}>คอลัมน์ "ใบซ่อม MO ค้าง" ยังแสดงได้ปกติ (อ่านจากระบบแจ้งซ่อมโดยตรง)</div>
+          <b>{tr('⚠️ สถานะ manual ยังใช้ไม่ได้')}</b> — {MIGRATION_HINT}
+          <div style={{ marginTop: 3, color: 'var(--muted)' }}>{tr("คอลัมน์ \"ใบซ่อม MO ค้าง\" ยังแสดงได้ปกติ (อ่านจากระบบแจ้งซ่อมโดยตรง")})</div>
         </div>
       )}
 
       {counts.unset > 0 && ready && (
         <div data-page-note="1" style={{ ...warnBox, marginBottom: 12 }}>
-          ⚠️ แม่พิมพ์ <b>{counts.unset}</b> ตัวยังไม่ระบุสถานะ — ระบบไม่เดาให้ (หลักเดียวกับ backfill ทะเบียน)
-          ให้ทีม DIE MTN ไล่ตั้งสถานะจริงจากหน้างาน แล้วตัวนับนี้จะหายเอง
+          ⚠️ {tr("แม่พิมพ์")} <b>{counts.unset}</b> {tr("ตัวยังไม่ระบุสถานะ — ระบบไม่เดาให้ (หลักเดียวกับ backfill ทะเบียน) ให้ทีม DIE MTN ไล่ตั้งสถานะจริงจากหน้างาน แล้วตัวนับนี้จะหายเอง")}
         </div>
       )}
 
@@ -146,7 +146,7 @@ export default function DieStatusBoard({
         <LineSelect
           lines={prodLines.filter(l => lineNames.includes(l.name))}
           value={fLine} onChange={setFLine} placeholder={ALL.line}
-          extraGroups={[{ label: '🔨 กลุ่มเครื่องปั๊ม', options: lineNames.filter(n => !prodLines.some(l => l.name === n)).map(n => ({ value: n })) }]}
+          extraGroups={[{ label: tr("กลุ่มเครื่องปั๊ม"), options: lineNames.filter(n => !prodLines.some(l => l.name === n)).map(n => ({ value: n })) }]}
         />
         {/* ชิปสถานะ = ตัวกรอง (กดเพื่อกรอง) ⇒ อยู่ "ใน" แถบกรอง ไม่ใช่แถวการ์ดเหนือมัน (UI-STANDARD §2.1) */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -155,10 +155,10 @@ export default function DieStatusBoard({
             color: counts.mo ? '#ef4444' : 'var(--text)', border: counts.mo ? 'rgba(239,68,68,0.5)' : 'var(--border)',
             active: fStatus === 'mo', onClick: () => setFStatus(v => v === 'mo' ? '' : 'mo'),
           })}
-          {DIE_STATUSES.map(s => chip(`${s.icon} ${s.label}`, counts.per[s.key] || 0, {
+          {DIE_STATUSES.map(s => chip(`${s.icon} ${tr(s.label)}`, counts.per[s.key] || 0, {
             color: s.color, active: fStatus === s.key, onClick: () => setFStatus(v => v === s.key ? '' : s.key),
           }))}
-          {chip(`${DIE_STATUS_UNSET.icon} ยังไม่ระบุ`, counts.unset, {
+          {chip(`${DIE_STATUS_UNSET.icon} ${tr("ยังไม่ระบุ")}`, counts.unset, {
             color: counts.unset ? '#f59e0b' : 'var(--text)', border: counts.unset ? 'rgba(245,158,11,0.5)' : 'var(--border)',
             active: fStatus === 'unset', onClick: () => setFStatus(v => v === 'unset' ? '' : 'unset'),
           })}
@@ -167,25 +167,25 @@ export default function DieStatusBoard({
             active: fStatus === 'regrind', onClick: () => setFStatus(v => v === 'regrind' ? '' : 'regrind'),
           })}
         </div>
-        <SearchInput value={q} onChange={setQ} fields="เลขแม่พิมพ์ / พาร์ท / หมายเหตุ" />
+        <SearchInput value={q} onChange={setQ} fields={tr("เลขแม่พิมพ์ / พาร์ท / หมายเหตุ")} />
         <span className="spacer" />
-        <span className="filter-count">แสดง {rows.length} ตัว</span>
+        <span className="filter-count">{tr('แสดง')} {rows.length} {tr('ตัว')}</span>
       </FilterBar>
 
-      <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
+      <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto', maxHeight: 'calc(100vh - 340px)', overflowY: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 980 }}>
             <thead>
               <tr>
-                <th style={{ ...thStyle, minWidth: 190 }}>สถานะ</th>
-                <th style={thStyle}>เลขแม่พิมพ์ / ชุด</th>
-                <th style={thStyle}>ไลน์</th>
-                <th style={{ ...thStyle, textAlign: 'right' }}>ตัน</th>
-                <th style={{ ...thStyle, textAlign: 'right' }}>shot สะสม</th>
-                <th style={{ ...thStyle, textAlign: 'right' }}>เจียร</th>
-                <th style={thStyle}>ใบซ่อม MO ค้าง</th>
-                <th style={thStyle}>ตำแหน่งจัดเก็บ</th>
-                <th style={thStyle}>อัพเดทสถานะล่าสุด</th>
+                <th style={{ ...thStyle, minWidth: 190 }}>{tr('สถานะ')}</th>
+                <th style={thStyle}>{tr('เลขแม่พิมพ์ / ชุด')}</th>
+                <th style={thStyle}>{tr('ไลน์')}</th>
+                <th style={{ ...thStyle, textAlign: 'right' }}>{tr('ตัน')}</th>
+                <th style={{ ...thStyle, textAlign: 'right' }}>{tr('shot สะสม')}</th>
+                <th style={{ ...thStyle, textAlign: 'right' }}>{tr('เจียร')}</th>
+                <th style={thStyle}>{tr('ใบซ่อม MO ค้าง')}</th>
+                <th style={thStyle}>{tr('ตำแหน่งจัดเก็บ')}</th>
+                <th style={thStyle}>{tr('อัพเดทสถานะล่าสุด')}</th>
               </tr>
             </thead>
             <tbody>
@@ -201,21 +201,21 @@ export default function DieStatusBoard({
                         <select value={e.die_status || ''} disabled={savingId === d.id}
                           onChange={ev => changeStatus(d, ev.target.value)}
                           style={{ ...inp, width: '100%', padding: '5px 7px', fontSize: 12, borderColor: meta.color, color: meta.color, fontWeight: 700 }}>
-                          <option value="">❔ ยังไม่ระบุสถานะ</option>
-                          {DIE_STATUSES.map(s => <option key={s.key} value={s.key}>{s.icon} {s.label}</option>)}
+                          <option value="">{tr('❔ ยังไม่ระบุสถานะ')}</option>
+                          {DIE_STATUSES.map(s => <option key={s.key} value={s.key}>{s.icon} {tr(s.label)}</option>)}
                         </select>
                       ) : (
                         <span style={{
-                          fontSize: 11.5, fontWeight: 700, padding: '2px 9px', borderRadius: 999,
+                          fontSize: 11.5, fontWeight: 700, padding: '2px 9px', borderRadius: 'var(--r-pill)',
                           color: meta.color, background: meta.bg, border: `1px solid ${meta.color}`, whiteSpace: 'nowrap',
-                        }}>{meta.icon} {meta.label}</span>
+                        }}>{meta.icon} {tr(meta.label)}</span>
                       )}
                       <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3, display: 'flex', gap: 4, alignItems: 'baseline' }}>
                         <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={e.status_note || ''}>
                           {e.status_note ? `📝 ${e.status_note}` : ''}
                         </span>
                         {canEdit && ready && (
-                          <button onClick={() => editNote(d)} title="แก้หมายเหตุสถานะ"
+                          <button onClick={() => editNote(d)} title={tr('แก้หมายเหตุสถานะ')}
                             style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--muted)', padding: 0 }}>✎</button>
                         )}
                       </div>
@@ -224,7 +224,7 @@ export default function DieStatusBoard({
                       <div style={{ fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={d.machine_no}>{d.machine_no}</div>
                       <div style={{ fontSize: 11, color: 'var(--muted)' }}>
                         {setNameOf(d) || '—'}{e.op_seq != null ? ` · OP${e.op_seq}` : ''}
-                        {feedLineOf(d) ? <> · 🏭 ป้อนไลน์ <b style={{ color: 'var(--text2)' }}>{feedLineOf(d)}</b></> : null}
+                        {feedLineOf(d) ? <> {tr('· ป้อนไลน์')} <b style={{ color: 'var(--text2)' }}>{feedLineOf(d)}</b></> : null}
                       </div>
                     </td>
                     <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>{d.line_name || '—'}</td>
@@ -235,24 +235,24 @@ export default function DieStatusBoard({
                     </td>
                     <td style={tdStyle}>
                       {mos.length ? mos.map(o => (
-                        <div key={o.id} style={{ fontSize: 11.5, color: '#ef4444', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                          {o.mo_no || '(ยังไม่ออกเลข MO)'} <span style={{ fontWeight: 400 }}>· {moStatusLabel(o)}</span>
+                        <div key={o.id} style={{ fontSize: 11.5, color: 'var(--red)', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                          {o.mo_no || tr("(ยังไม่ออกเลข MO)")} <span style={{ fontWeight: 400 }}>· {moStatusLabel(o)}</span>
                         </div>
                       )) : <span style={{ color: 'var(--muted)' }}>—</span>}
                     </td>
                     <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
                       {placed ? (
-                        <button onClick={() => onShowOnMap(d)} title="ดูตำแหน่งบนผังจัดเก็บ"
-                          style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 7, padding: '3px 9px', fontSize: 11.5, color: 'var(--text)', cursor: 'pointer' }}>
-                          🗺️ {areaNameOf(e.area_id) || 'ดูบนผัง'}
+                        <button onClick={() => onShowOnMap(d)} title={tr('ดูตำแหน่งบนผังจัดเก็บ')}
+                          style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '3px 9px', fontSize: 11.5, color: 'var(--text)', cursor: 'pointer' }}>
+                          {areaNameOf(e.area_id) || tr('ดูบนผัง')}
                         </button>
                       ) : (
-                        <span style={{ fontSize: 11.5, color: '#f59e0b' }} title="ไปวางที่แท็บผังจัดเก็บ">ยังไม่วางบนผัง</span>
+                        <span style={{ fontSize: 11.5, color: 'var(--amber)' }} title={tr('ไปวางที่แท็บผังจัดเก็บ')}>{tr('ยังไม่วางบนผัง')}</span>
                       )}
                     </td>
                     <td style={{ ...tdStyle, fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>
                       {e.status_updated_at
-                        ? <>{new Date(e.status_updated_at).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' })}
+                        ? <>{new Date(e.status_updated_at).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' })}
                           {e.status_updated_by_name ? <div>{e.status_updated_by_name}</div> : null}</>
                         : '—'}
                     </td>
@@ -260,7 +260,7 @@ export default function DieStatusBoard({
                 );
               })}
               {!rows.length && (
-                <tr><td colSpan={9} style={{ ...tdStyle, textAlign: 'center', color: 'var(--muted)', padding: 24 }}>ไม่พบแม่พิมพ์ตามเงื่อนไข</td></tr>
+                <tr><td colSpan={9} style={{ ...tdStyle, textAlign: 'center', color: 'var(--muted)', padding: 24 }}>{tr('ไม่พบแม่พิมพ์ตามเงื่อนไข')}</td></tr>
               )}
             </tbody>
           </table>
@@ -268,8 +268,8 @@ export default function DieStatusBoard({
       </div>
 
       <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 8, lineHeight: 1.7 }}>
-        • "ใบซ่อม MO ค้าง" อ่านสดจากระบบแจ้งซ่อม (/mtn-repair) — ปิด MO แล้วหายจากบอร์ดเอง ไม่ต้องมาแก้สถานะซ้ำ<br />
-        • ประวัติว่าใครเปลี่ยนสถานะ/ค่าไหน ดูได้จาก audit log ของตาราง equipment_die (⚙️ ข้อมูลตั้งต้น → 📜 ประวัติการแก้ไข ใน /mtn-repair)
+        • "{tr("ใบซ่อม MO ค้าง\" อ่านสดจากระบบแจ้งซ่อม (/mtn-repair) — ปิด MO แล้วหายจากบอร์ดเอง ไม่ต้องมาแก้สถานะซ้ำ")}<br />
+        • {tr("ประวัติว่าใครเปลี่ยนสถานะ/ค่าไหน ดูได้จาก audit log ของตาราง equipment_die (⚙️ ข้อมูลตั้งต้น → 📜 ประวัติการแก้ไข ใน")} /mtn-repair)
       </div>
     </div>
   );

@@ -2,6 +2,7 @@ import { Children, Fragment, isValidElement, useLayoutEffect, useRef, useState }
 import SearchInput from './SearchInput';
 import Segmented from './Segmented';
 
+import { tr } from '../utils/i18n';
 /* ══ 🔎 MobileFilterFold — พับแถบตัวกรองบนมือถือ (2026-10-15 · docs/MOBILE-UX-STANDARD.md §2 ข้อ 3) ══════════════
    ปัญหาที่เจอบน handheld 360×640: แถบกรอง (ช่วงเวลา + dropdown 5 ตัว + กะ + ค้นหา) กินจอแรกทั้งจอ
    ⇒ ปุ่มหลัก ("➕ แจ้งซ่อมใหม่" /mtn-repair) ตกไปจอที่ 2 · คนหน้างานเปิดมาเพื่อ "ทำงาน" ไม่ใช่ "กรอง"
@@ -41,12 +42,14 @@ export function splitFilterChildren(children) {
 }
 
 /** ตัวกรองที่ตั้งไว้ (ไม่ใช่ค่า "ทั้งหมด") → ป้ายสั้นๆ ของค่าที่เลือก เช่น ['🔵 ยังไม่ปิด'] */
-function activeLabels(root) {
+export function activeLabels(root) {   // ใช้ร่วมกับ FilterMore (จอคอม) 18/11
   if (!root) return [];
   const out = [];
   root.querySelectorAll('select').forEach(s => { if (s.selectedIndex > 0) out.push((s.options[s.selectedIndex]?.text || '').trim()); });
   root.querySelectorAll('input[type=text], input[type=search], input:not([type])').forEach(i => { if (i.value) out.push(`"${i.value}"`); });
   root.querySelectorAll('.seg').forEach(g => { const on = g.querySelector('button.on'); if (on && on !== g.firstElementChild) out.push(on.textContent.trim()); });
+  // ชิปที่หน้าวาดเอง (ไม่ใช่ Segmented) ต้องติด aria-pressed — ไม่ติด = ตั้งค่าไว้แล้วจอไม่รู้ (18/11 · FilterMore)
+  root.querySelectorAll('button[aria-pressed="true"]').forEach(b => out.push(b.textContent.trim()));
   return out.filter(Boolean);
 }
 
@@ -67,7 +70,7 @@ export default function MobileFilterFold({ summary, search, tail, children }) {
         <button type="button" className="mfold-toggle" aria-expanded={open} onClick={() => setOpen(o => !o)}>
           <span className="mfold-ico" aria-hidden="true">🔎</span>
           <span className="mfold-txt">
-            <b>ตัวกรอง</b>{summary ? <span className="mfold-sum"> · {summary}</span> : null}
+            <b>{tr('ตัวกรอง')}</b>{summary ? <span className="mfold-sum"> · {summary}</span> : null}
           </span>
           {/* บอก "ค่าที่ตั้งไว้" ไม่ใช่แค่จำนวน — คนต้องรู้ว่าทำไมรายการหาย (เช่น 🔵 ยังไม่ปิด) */}
           {active.length > 0 && <span className="mfold-n" title={active.join(' · ')}>{active[0]}{active.length > 1 ? ` +${active.length - 1}` : ''}</span>}

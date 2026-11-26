@@ -4,6 +4,7 @@ import useIsMobile from '../utils/useIsMobile';
 import { UserContext } from '../App';
 import { toast } from '../components/Toast';
 import { can } from '../utils/permissions';
+import { inflowDestOf } from '../utils/partRefStock';   // 19/11 คลังที่ติดลบเมื่อส่งเกินยอดในระบบ
 import { FRAME_START, frameMin, breaksToFrame } from '../utils/timeFrame';
 import { mergeById } from '../utils/mergeRows';
 import PageHeader from '../components/PageHeader';
@@ -16,6 +17,7 @@ import { buildPnIndex, pickStockMat, stockLookupKeys, matIssueText } from '../ut
 import CustomerSelect from '../components/CustomerSelect';
 import ProductSelect from '../components/ProductSelect';
 import useProducts from '../utils/useProducts';
+import { ImportButton } from '../components/ImportKit';
 const PullSignalUpload = lazy(() => import('../components/PullSignalUpload'));   // 📥 อัพโหลด e-SMART (ตัวอ่าน xlsx โหลดตอนเปิดเท่านั้น)
 const OrderIntakeLog = lazy(() => import('../components/OrderIntakeLog'));       // 📜 ประวัติ order เข้าระบบ (3 ทางเข้า)
 const PullRoundsPanel = lazy(() => import('../components/PullRoundsPanel'));
@@ -27,7 +29,10 @@ import { buildEsmartManaged, isEsmartPlanRow } from '../utils/shipPlan'; // แ�
 import { fetchAllPages } from '../utils/fetchByIds';
 import PartCard, { partCardGrid } from '../components/PartCard';   // 🃏 การ์ดมาตรฐานเดียวกับสโตร์ (UI §6.23)
 import usePartImages from '../utils/usePartImages';
+import { tr, dateLocale } from '../utils/i18n';
 import { storeBtn } from '../utils/storeUi'; // วันงาน + รอบ → due_date ตามปฏิทิน (16/10)
+import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
+import { askConfirm } from '../utils/askConfirm';
 
 /* ─── DELIVERY — Shipping Time Chart + Ship-to Config (Logistic) ──────────
    ติดตามรอบส่งงานลูกค้ารายวัน (walkback 4 activity, FG stock, ranking ดิว)
@@ -53,14 +58,14 @@ const workDateStr = () => { const d = new Date(); if (d.getHours() < 8) d.setDat
 
 /* ─── Shipping Time Chart Tab (Logistic) ──────────────────────────────────── */
 const SHIP_STATUS = {
-  pending:   { label: '🕐 รอยืนยัน',    color: '#f59e0b', next: 'confirmed', nextLabel: '✔️ ยืนยันออเดอร์แล้ว' },
-  confirmed: { label: '✔️ ยืนยันแล้ว',  color: '#38bdf8', next: 'prepared',  nextLabel: '📦 เตรียมของแล้ว' },
-  prepared:  { label: '📦 เตรียมแล้ว',  color: '#0ea5e9', next: 'loaded',    nextLabel: '🚛 โหลดขึ้นรถแล้ว' },
-  loaded:    { label: '🚛 โหลดแล้ว',    color: '#a855f7', next: 'shipped',   nextLabel: '🚚 ส่งถึงลูกค้าแล้ว' },
-  shipped:   { label: '✅ ส่งแล้ว',     color: '#22c55e', next: null,        nextLabel: null },
+  pending:   { label: 'รอยืนยัน',    color: 'var(--amber)', next: 'confirmed', nextLabel: '✔️ ยืนยันออเดอร์แล้ว' },
+  confirmed: { label: 'ยืนยันแล้ว',  color: 'var(--blue)', next: 'prepared',  nextLabel: '📦 เตรียมของแล้ว' },
+  prepared:  { label: 'เตรียมแล้ว',  color: 'var(--blue)', next: 'loaded',    nextLabel: '🚛 โหลดขึ้นรถแล้ว' },
+  loaded:    { label: 'โหลดแล้ว',    color: 'var(--blue)', next: 'shipped',   nextLabel: '🚚 ส่งถึงลูกค้าแล้ว' },
+  shipped:   { label: 'ส่งแล้ว',     color: 'var(--green)', next: null,        nextLabel: null },
   /* ปิดใบโดยไม่ได้ส่ง (ลูกค้ายกเลิก / ใบผี / นำเข้าผิด) — ไม่มี next ไม่นับเป็นงานค้าง
      ⚠️ ไม่มีใน SHIP_RANK ตั้งใจ: มันไม่ใช่ "ขั้นหนึ่งของ workflow" แต่เป็นทางออกข้างทาง */
-  cancelled: { label: '🚫 ยกเลิก',      color: '#94a3b8', next: null,        nextLabel: null },
+  cancelled: { label: 'ยกเลิก',      color: 'var(--muted)', next: null,        nextLabel: null },
 };
 const SHIP_RANK = { pending: 0, confirmed: 1, prepared: 2, loaded: 3, shipped: 4 };
 function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shipToMap }) {
@@ -73,6 +78,7 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
   const [busy, setBusy] = useState(null);
   const [fgStock, setFgStock] = useState({});   // **เลข SAP** → { total, fg, lines } — fg = เฉพาะคลัง FG (ส่งได้จริง)
   const [fgDest, setFgDest] = useState(null);   // ชื่อคลัง FG จาก stock_inflow_rules (null = ไม่รู้ → นับรวมแบบเดิม)
+  const [inflowRules, setInflowRules] = useState([]);   // 19/11 — คลังที่ "ติดลบ" ตอนส่งของเกินยอดในระบบ (inflowDestOf)
   // เลขบน order (อาจเป็นเลขลูกค้า) → ผลการจับคู่ MAT SAP · ดู utils/matResolve.js
   const [matMap, setMatMap] = useState({});
   const [cardFilter, setCardFilter] = useState('todo');   // 'todo' | 'overdue' | 'shipped' | 'all'
@@ -114,7 +120,7 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
       .then(({ rows, error, truncated }) => {
         if (!alive) return;
         setEsmartManaged(buildEsmartManaged(rows));
-        setManagedErr(error ? `อ่านรายการพาร์ทที่ e-SMART คุมไม่ได้ (${error}) — ใบแผน 862 แสดงเป็น order ปกติ`
+        setManagedErr(error ? `${tr("อ่านรายการพาร์ทที่ e-SMART คุมไม่ได้")} (${error}) — ${tr("ใบแผน 862 แสดงเป็น order ปกติ")}`
           : truncated ? 'รายการพาร์ทที่ e-SMART คุมเยอะเกินเพดาน — บางใบแผนอาจแสดงเป็น order' : '');
       });
     return () => { alive = false; };
@@ -128,12 +134,12 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
     if (!mat) { toast.error('กรอก MAT No.'); return; }
     // MAT เป็นกุญแจ join (dr_products / line_stock / kanban / Rundown) — นอก Product Master ให้ถามยืนยัน ไม่บล็อกเงียบ
     // (2026-09-07 เดิมบล็อกแข็ง — user สั่ง: ทะเบียนไม่มีต้องยังใช้ค่าที่เคยบันทึกได้ · ใบจาก EDI ก็เก็บ MAT นอกทะเบียนอยู่แล้ว)
-    if (!prodNames[mat] && !window.confirm(`MAT ${mat} ไม่มีใน Product Master — Rundown/สต็อกจะจับคู่ไม่ได้จนกว่าจะเพิ่มที่ /products · ใช้ค่านี้ต่อหรือไม่?`)) return;
+    if (!prodNames[mat] && !await askConfirm(`MAT ${mat} ${tr("ไม่มีใน Product Master — Rundown/สต็อกจะจับคู่ไม่ได้จนกว่าจะเพิ่มที่ /products · ใช้ค่านี้ต่อหรือไม่")}?`)) return;
     if (!qty || qty <= 0) { toast.error('จำนวนต้องมากกว่า 0'); return; }
     if (!addForm.due_date) { toast.error('เลือกวันที่ส่ง'); return; }
     // ship-to นอกทะเบียน ship_to_plants (active) → ถามยืนยัน (2026-09-07 เดิมบล็อกแข็ง) — ป้าย/workflow ต่อลูกค้าจะไม่ครบจนกว่าจะตั้งที่แท็บ ⚙️ Ship-to Config
     if (addForm.customer && !(shipToCodes || []).includes(addForm.customer)
-      && !window.confirm(`Ship-to ${addForm.customer} ไม่มีในทะเบียน — ชาร์ต/workflow ต่อลูกค้าจะไม่ครบจนกว่าจะตั้งค่าที่แท็บ ⚙️ Ship-to Config · ใช้ค่านี้ต่อหรือไม่?`)) return;
+      && !await askConfirm(`Ship-to ${addForm.customer} ${tr("ไม่มีในทะเบียน — ชาร์ต/workflow ต่อลูกค้าจะไม่ครบจนกว่าจะตั้งค่าที่แท็บ ⚙️ Ship-to Config · ใช้ค่านี้ต่อหรือไม่")}?`)) return;
     setAddSaving(true);
     const rec = {
       customer: addForm.customer.trim() || null,
@@ -156,7 +162,7 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
     }
     setAddSaving(false);
     if (error) { toast.error(error.message); return; }
-    toast.success(`➕ เพิ่ม order ${mat} × ${fmt(qty)} แล้ว`);
+    toast.success(`➕ ${tr("เพิ่ม")} order ${mat} × ${fmt(qty)} ${tr("แล้ว")}`);
     setShowAdd(false);
     setAddForm(emptyAdd);
     if (addForm.due_date !== day && addForm.due_date >= workDateStr()) setDay(addForm.due_date);
@@ -165,7 +171,7 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
 
   // ลบได้เฉพาะใบที่คีย์มือและยังไม่เริ่ม workflow — ใบจาก EDI ให้จัดการด้วยการอัพโหลดแทนที่ตามปกติ
   const deleteManualOrder = async (o) => {
-    if (!window.confirm(`ลบ order ${o.mat_no} × ${fmt(o.qty)} (คีย์มือ)?`)) return;
+    if (!await askConfirm(`${tr("ลบ")} order ${o.mat_no} × ${fmt(o.qty)} (${tr("คีย์มือ")})?`)) return;
     // นับแถวที่ลบจริง — เงื่อนไข source/status ไม่ตรง (ใบเริ่ม workflow ไปแล้ว) = ลบ 0 แถว
     // ห้ามขึ้น "ลบแล้ว" ทั้งที่ใบยังอยู่ (กฎ RLS-เงียบ: สำเร็จ 0 แถว ≠ สำเร็จ)
     const { data: del, error } = await supabaseDR.from('customer_shipping_orders')
@@ -187,10 +193,10 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
   const cancelOrder = async (o) => {
     const cutAt = deductStatusOf(o.customer);
     if ((SHIP_RANK[o.status] ?? 0) >= (SHIP_RANK[cutAt] ?? 4)) {
-      toast.error(`ยกเลิกไม่ได้ — ใบนี้ถึงขั้น "${SHIP_STATUS[o.status]?.label || o.status}" สต็อกถูกหักไปแล้ว · ต้องคืนของเข้าคลังก่อน`);
+      toast.error(`${tr("ยกเลิกไม่ได้ — ใบนี้ถึงขั้น")} "${SHIP_STATUS[o.status]?.label || o.status}" ${tr("สต็อกถูกหักไปแล้ว · ต้องคืนของเข้าคลังก่อน")}`);
       return;
     }
-    const why = window.prompt(`ยกเลิกใบ ${o.mat_no} × ${fmt(o.qty)} — เพราะอะไร?\n(เหตุผลจะถูกบันทึกไว้ สืบกลับได้)`);
+    const why = window.prompt(`${tr("ยกเลิกใบ")} ${o.mat_no} × ${fmt(o.qty)} — ${tr("เพราะอะไร?\\n(เหตุผลจะถูกบันทึกไว้ สืบกลับได้")})`);
     if (why == null) return;
     if (!why.trim()) { toast.error('ต้องระบุเหตุผล'); return; }
     setBusy(o.id);
@@ -206,7 +212,7 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
       return;
     }
     if (!upd || upd.length === 0) { toast.error('ยกเลิกไม่สำเร็จ — มีคนเลื่อนสถานะใบนี้ไปก่อนแล้ว'); await load(); return; }
-    toast.success(`🚫 ยกเลิกใบ ${o.mat_no} แล้ว`);
+    toast.success(`🚫 ${tr("ยกเลิกใบ")} ${o.mat_no} ${tr("แล้ว")}`);
     setPopup(null);
     await load();
   };
@@ -240,11 +246,12 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
         .or(`due_date.lt.${day},and(due_date.eq.${day},ship_time.lt.08:00)`),
       // คลังปลายทางของ FG จากกฎรับเข้าอัตโนมัติ — "ของพร้อมส่ง" ต้องเป็นของในคลัง FG เท่านั้น
       // (ของใน STORE/มินิสโตร์ยังไม่ผ่านแพ็ค/รับเข้าคลัง ส่งลูกค้าไม่ได้ — กฎเดียวกับ RundownStock)
-      supabaseDR.from('stock_inflow_rules').select('match_type, match_value, dest_line_name').eq('is_active', true),
+      supabaseDR.from('stock_inflow_rules').select('match_type, match_value, dest_line_name, mode, is_active').eq('is_active', true),
     ]);
     if (stale()) return;   // ผู้ใช้เปลี่ยนวันระหว่างรอผล — ทิ้งทั้งชุด ห้ามเขียนทับของวันที่กำลังดู
     const fgDestName = (inflowRules || []).find(r => r.match_type === 'prefix' && r.match_value === '1')?.dest_line_name || null;
     setFgDest(fgDestName);
+    setInflowRules(inflowRules || []);
     setWfSteps(wfs || []);
     setPastDue(past || []);
     /* 2 คิวรีคนละ due_date (D · D+1 กะดึก) ไม่ใช่ transaction ⇒ ใบที่ถูกอัพโหลดทับ/แก้เวลาส่ง
@@ -370,7 +377,7 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
     const past = (SHIP_RANK[o.status] ?? 0) >= (SHIP_RANK[fin] ?? 4);
     return {
       to: 'shipped',
-      label: !terminal ? st.nextLabel : past ? '✅ จบงาน (ปิดรอบส่ง)' : `${st.nextLabel} · จบงาน`,
+      label: !terminal ? st.nextLabel : past ? '✅ จบงาน (ปิดรอบส่ง)' : `${st.nextLabel} · ${tr("จบงาน")}`,
       color: st.color, terminal,
     };
   };
@@ -381,7 +388,7 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
   const byCustomer = useMemo(() => {
     const m = {};
     orders.forEach(o => {
-      const key = custLabel ? custLabel(o.customer) : (o.customer || '— ไม่ระบุลูกค้า —');
+      const key = custLabel ? custLabel(o.customer) : (o.customer || tr("— ไม่ระบุลูกค้า —"));
       (m[key] = m[key] || []).push(o);
     });
     return m;
@@ -496,11 +503,28 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
           txns.push({
             line_name: l.line_name, mat_no: sap, part_name: o.part_name, qty: use,
             type: 'consume', work_date: workDateStr(),
-            note: `ส่งลูกค้า ${o.customer || ''} · ${o.due_date} ${o.ship_time || ''}${o.order_no ? ` · PO ${o.order_no}` : ''}`,
+            note: `${tr("ส่งลูกค้า")} ${o.customer || ''} · ${o.due_date} ${o.ship_time || ''}${o.order_no ? ` · PO ${o.order_no}` : ''}`,
             created_by: fullName || 'Logistic',
             ref_shipment_id: o.id,   // ผูกกลับรอบส่งใบนี้ → /order-trace สอบกลับได้ตรงใบ ไม่ต้องเดาจากเวลา
           });
         });
+      /* 🔴 19/11 (คำสั่ง user "ตัดเต็มและติดลบ") — ยอดในระบบไม่พอ ⇒ หักส่วนที่ขาดที่ "คลังรับเข้าของพาร์ท"
+         (`inflowDestOf` · ไม่มีกฎ = คลัง FG) ให้ติดลบ แล้วพอปิดใบผลิต/รับเข้าคลัง ยอดหักล้างเอง
+         เดิม: ส่งไปแต่ไม่ตัด ⇒ ยอดค้างสูงเกินจริงถาวร · ไม่รู้คลังเลย = ไม่ตัด + เตือน (ห้ามเดาคลัง) */
+      let negQty = 0, negLoc = null;
+      if (left > 0 && sap) {
+        negLoc = inflowDestOf(sap, inflowRules) || fgDest || null;
+        if (negLoc) {
+          negQty = left; left = 0;
+          txns.push({
+            line_name: negLoc, mat_no: sap, part_name: o.part_name, qty: negQty,
+            type: 'consume', work_date: workDateStr(),
+            note: `${tr("ส่งลูกค้า")} ${o.customer || ''} · ${o.due_date} ${o.ship_time || ''}${o.order_no ? ` · PO ${o.order_no}` : ''} · ⚠ ${tr("ในระบบไม่พอ ตัดเกิน")} ${negQty.toLocaleString()} (${tr("ติดลบ รอรับเข้าหักล้าง")})`,
+            created_by: fullName || 'Logistic',
+            ref_shipment_id: o.id,
+          });
+        }
+      }
       let cut = want - left;
       let insertFailed = false, insertErrMsg = '';
       if (txns.length) {
@@ -527,18 +551,20 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
           .update(back).eq('id', o.id).eq('status', to).select('id');
         reverted = !eRb && (rb?.length || 0) > 0;
         shipMsg = reverted
-          ? `🔴 ตัดสต็อก ${o.mat_no} ไม่สำเร็จ (ระบบ) — คืนสถานะใบเป็น "${SHIP_STATUS[o.status]?.label || o.status}" แล้ว กดใหม่อีกครั้ง · ${insertErrMsg}`
-          : `🔴 ${at} ${o.mat_no} แล้ว — ตัดสต็อกไม่สำเร็จ (ระบบ) และคืนสถานะใบไม่ได้ ยอดคงเหลือยังไม่ถูกหัก · แจ้ง admin · ${insertErrMsg}`;
+          ? `🔴 ${tr("ตัดสต็อก")} ${o.mat_no} ${tr("ไม่สำเร็จ (ระบบ) — คืนสถานะใบเป็น")} "${SHIP_STATUS[o.status]?.label || o.status}" ${tr("แล้ว กดใหม่อีกครั้ง")} · ${insertErrMsg}`
+          : `🔴 ${at} ${o.mat_no} ${tr("แล้ว — ตัดสต็อกไม่สำเร็จ (ระบบ) และคืนสถานะใบไม่ได้ ยอดคงเหลือยังไม่ถูกหัก · แจ้ง")} admin · ${insertErrMsg}`;
       } else if (cut <= 0) {
         // ยอดคลังไม่ขยับ → ยอดคงเหลือจะสูงกว่าความจริงไปเรื่อยๆ ต้องบอกให้รู้ว่าติดตรงไหน
         // แยก 2 สาเหตุที่คนละวิธีแก้: จับคู่เลขไม่ได้ (แก้ master) vs จับคู่ได้แต่ของไม่เคยเข้าคลัง (แก้การปิดออเดอร์ผลิต)
         const why = matIssueText(o.mat_no, res);
-        shipMsg = `⚠️ ${at} ${o.mat_no} แล้ว — แต่ไม่ได้หักสต็อก · `
-          + (why || `ไม่มีข้อมูลสต็อกของ ${sap} ในคลัง (ของยังไม่เคยถูกบันทึกเข้า — เช็คการปิดออเดอร์ผลิต/กฎรับเข้าอัตโนมัติ)`);
+        shipMsg = `⚠️ ${at} ${o.mat_no} ${tr("แล้ว — แต่ไม่ได้หักสต็อก")} · `
+          + (why || `${tr("ไม่มีข้อมูลสต็อกของ")} ${sap} ${tr("ในคลัง (ของยังไม่เคยถูกบันทึกเข้า — เช็คการปิดออเดอร์ผลิต/กฎรับเข้าอัตโนมัติ")})`);
       } else if (cut < want) {
-        shipMsg = `⚠️ ${at} ${o.mat_no} แล้ว — หักสต็อกได้ ${cut.toLocaleString()}/${want.toLocaleString()} ชิ้น (สต็อกในระบบไม่พอ ขาด ${(want - cut).toLocaleString()})`;
+        shipMsg = `⚠️ ${at} ${o.mat_no} ${tr("แล้ว — หักสต็อกได้")} ${cut.toLocaleString()}/${want.toLocaleString()} ${tr("ชิ้น (สต็อกในระบบไม่พอ ขาด")} ${(want - cut).toLocaleString()})`;
+      } else if (negQty > 0) {
+        shipMsg = `⚠️ ${at} ${o.mat_no} ${tr("แล้ว — หักครบ")} ${want.toLocaleString()} ${tr("ชิ้น แต่")} ${negQty.toLocaleString()} ${tr("ชิ้นทำให้")} ${negLoc} ${tr("ติดลบ (ของในระบบไม่พอ — เช็คการปิดใบผลิต/รับเข้าคลัง")})`;
       } else if (cutOffFg > 0) {
-        shipMsg = `⚠️ ${at} ${o.mat_no} แล้ว — หักครบ แต่ ${cutOffFg.toLocaleString()} ชิ้นถูกหักจากคลังนอก FG (ของยังไม่ผ่านรับเข้าคลัง FG — เช็คขั้นแพ็ค/รับเข้า)`;
+        shipMsg = `⚠️ ${at} ${o.mat_no} ${tr("แล้ว — หักครบ แต่")} ${cutOffFg.toLocaleString()} ${tr("ชิ้นถูกหักจากคลังนอก FG (ของยังไม่ผ่านรับเข้าคลัง FG — เช็คขั้นแพ็ค/รับเข้า")})`;
       }
     }
     if (to === 'shipped' && !reverted) {
@@ -625,40 +651,38 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
         <button onClick={() => shiftDay(-1)} style={{ ...btn(false), width: 'auto', flexShrink: 0 }}>◀</button>
         <input type="date" value={day} onChange={e => e.target.value && setDay(e.target.value)} />
         <button onClick={() => shiftDay(1)} style={{ ...btn(false), width: 'auto', flexShrink: 0 }}>▶</button>
-        {!isToday && <button onClick={() => setDay(workDateStr())} style={{ ...btn(true), width: 'auto', flexShrink: 0 }}>วันนี้</button>}
-        <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 8, background: 'var(--bg2)', border: '1px solid var(--border)', color: 'var(--muted)', flexShrink: 0 }}>
-          🕗 วันงาน 08:00 → 08:00
+        {!isToday && <button onClick={() => setDay(workDateStr())} style={{ ...btn(true), width: 'auto', flexShrink: 0 }}>{tr('วันนี้')}</button>}
+        <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)', border: '1px solid var(--border)', color: 'var(--muted)', flexShrink: 0 }}>
+          {tr("วันงาน")} 08:00 → 08:00
         </span>
         <span style={{ width: 1, height: 22, background: 'var(--border)', flexShrink: 0 }} />
         <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 700 }}>
-          🚚 {orders.length} รอบส่ง · ✅ {shippedCount} ส่งแล้ว
-          {overdueCount > 0 && <span style={{ color: '#ef4444' }}> · 🔴 {overdueCount} เลยเวลา</span>}
-          {planCount > 0 && <span style={{ color: '#94a3b8' }} title="ใบจาก 862 ของพาร์ทที่ลูกค้ายืนยันรอบด้วย e-SMART — ยังไม่มีไฟล์ e-SMART ยืนยัน = เป็นแผน ไม่ใช่ order ที่ต้องส่ง"> · 📋 {planCount} แผน 862 รอ e-SMART</span>}
-          {managedErr && <span style={{ color: '#f59e0b' }} title={managedErr}> · ⚠ {managedErr}</span>}
-          {shortCount > 0 && <span style={{ color: '#f59e0b' }}> · 📦 {shortCount} รอบ stock ไม่พอ</span>}
-          {unknownCount > 0 && <span style={{ color: 'var(--muted)' }} title="เลขพาร์ทลูกค้ายังไม่จับคู่ MAT SAP — เช็คสต็อกและตัดสต็อกอัตโนมัติไม่ได้ ตั้ง p_no ที่ Product Master"> · ❔ {unknownCount} รอบ ยังเช็ค stock ไม่ได้</span>}
+          {orders.length} {tr('รอบส่ง · ✅')} {shippedCount} {tr("ส่งแล้ว")}
+          {overdueCount > 0 && <span style={{ color: 'var(--red)' }}> · 🔴 {overdueCount} {tr('เลยเวลา')}</span>}
+          {planCount > 0 && <span style={{ color: 'var(--muted)' }} title={tr('ใบจาก 862 ของพาร์ทที่ลูกค้ายืนยันรอบด้วย e-SMART — ยังไม่มีไฟล์ e-SMART ยืนยัน = เป็นแผน ไม่ใช่ order ที่ต้องส่ง')}> · {planCount} {tr('แผน 862 รอ e-SMART')}</span>}
+          {managedErr && <span style={{ color: 'var(--amber)' }} title={managedErr}> · ⚠ {managedErr}</span>}
+          {shortCount > 0 && <span style={{ color: 'var(--amber)' }}> · {shortCount} {tr('รอบ stock ไม่พอ')}</span>}
+          {unknownCount > 0 && <span style={{ color: 'var(--muted)' }} title={tr('เลขพาร์ทลูกค้ายังไม่จับคู่ MAT SAP — เช็คสต็อกและตัดสต็อกอัตโนมัติไม่ได้ ตั้ง p_no ที่ Product Master')}> · ❔ {unknownCount} {tr('รอบ ยังเช็ค stock ไม่ได้')}</span>}
         </span>
         {pastDueReal.length > 0 && (
           <button onClick={() => setDay(pastDueReal.reduce((a, p) => (p.due_date > a ? p.due_date : a), pastDueReal[0].due_date))}
-            title="คลิกเพื่อกระโดดไปวันงานล่าสุดที่ยังมีใบค้างส่ง"
-            style={{ padding: '4px 12px', borderRadius: 8, border: '1.5px solid rgba(239,68,68,0.5)', background: 'rgba(239,68,68,0.12)', color: '#ef4444', fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: 'var(--font-body)', flexShrink: 0 }}>
-            ⏰ ค้างส่งจากวันก่อน {pastDueReal.length} ใบ — กดดู
+            title={tr('คลิกเพื่อกระโดดไปวันงานล่าสุดที่ยังมีใบค้างส่ง')}
+            style={{ padding: '4px 12px', borderRadius: 'var(--r-md)', border: '1.5px solid var(--red-line)', background: 'var(--red-dim)', color: 'var(--red)', fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: 'var(--font-body)', flexShrink: 0 }}>
+            {tr('ค้างส่งจากวันก่อน')} {pastDueReal.length} {tr('ใบ — กดดู')}
           </button>
         )}
         {canAdd && (
           /* 📥 e-SMART = ยอดยืนยันสุดท้ายก่อนส่งจากลูกค้า (ดู PullSignalUpload.jsx) — วางคู่ "เพิ่ม order ด่วน"
              เพราะเป็นทางเข้าของ order เหมือนกัน ต่างกันแค่ "คนคีย์" กับ "ลูกค้ายืนยันมาเป็นไฟล์" */
-          <button onClick={() => setShowPull(true)}
-            title="ลูกค้าส่งไฟล์ยอดเรียกงานจริง (e-SMART) มาเป็นช่วงเวลา — อัพเข้าระบบเพื่อยืนยัน/แก้ยอดของรอบนั้น · พาร์ทที่ไม่อยู่ในไฟล์ถือว่าตรงกับ 862"
-            style={{ padding: '4px 12px', borderRadius: 8, border: '1px solid #0ea5e9', background: 'rgba(14,165,233,0.14)', color: '#0ea5e9', fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: 'var(--font-body)', flexShrink: 0, marginLeft: 'auto' }}>
-            📥 อัพโหลด e-SMART
-          </button>
+          <ImportButton k="esmart" onClick={() => setShowPull(true)} tone="quiet"
+            title={tr('ลูกค้าส่งไฟล์ยอดเรียกงานจริง (e-SMART) มาเป็นช่วงเวลา — อัพเข้าระบบเพื่อยืนยัน/แก้ยอดของรอบนั้น · พาร์ทที่ไม่อยู่ในไฟล์ถือว่าตรงกับ 862')}
+            style={{ padding: '4px 12px', fontSize: 12, flexShrink: 0, marginLeft: 'auto' }} />
         )}
         {canAdd && (
           <button onClick={() => { setAddForm({ ...emptyAdd, due_date: day >= workDateStr() ? day : workDateStr() }); setShowAdd(true); }}
-            title="ลูกค้าสั่งเพิ่มนอกไฟล์ EDI (สั่งด่วน/โทรสั่ง) — คีย์เข้าระบบได้ทันที ไม่ต้องรออัพโหลด 862"
-            style={{ padding: '4px 12px', borderRadius: 8, border: '1px solid var(--accent)', background: 'var(--accent)', color: 'var(--accent-ink)', fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: 'var(--font-body)', flexShrink: 0 }}>
-            ➕ เพิ่ม order ด่วน
+            title={tr('ลูกค้าสั่งเพิ่มนอกไฟล์ EDI (สั่งด่วน/โทรสั่ง) — คีย์เข้าระบบได้ทันที ไม่ต้องรออัพโหลด 862')}
+            style={{ padding: '4px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--accent)', background: 'var(--accent)', color: 'var(--accent-ink)', fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: 'var(--font-body)', flexShrink: 0 }}>
+            {tr("เพิ่ม order ด่วน")}
           </button>
         )}
       </FilterBar>
@@ -679,50 +703,49 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
 
       {/* Modal คีย์ order ด่วน — ปิดได้จากปุ่มเท่านั้น (มีฟอร์ม ห้ามปิดจาก backdrop ตาม UI-CONVENTIONS §5) */}
       {showAdd && (
-        <div className="modal-scroll" style={{ position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 14, width: 'min(94vw, 460px)', maxHeight: '92vh', overflowY: 'auto', boxShadow: 'var(--shadow-lg)' }}>
+        <div className="modal-scroll" style={{ position: 'fixed', inset: 0, zIndex: 2000, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', width: 'min(94vw, 460px)', maxHeight: '92vh', overflowY: 'auto', boxShadow: 'var(--shadow-lg)' }}>
             <div style={{ padding: '12px 18px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 15, fontWeight: 900, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>➕ เพิ่ม order ด่วน (คีย์มือ)</span>
+              <span style={{ fontSize: 15, fontWeight: 900, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{tr('➕ เพิ่ม order ด่วน (คีย์มือ)')}</span>
               <button onClick={() => setShowAdd(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 18, cursor: 'pointer', lineHeight: 1 }}>✕</button>
             </div>
             <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.6 }}>
-                สำหรับ order ที่ลูกค้าสั่งเพิ่มนอกไฟล์ EDI — ใบนี้จะเข้าชาร์ต/walkback/หัก stock เหมือน order ปกติ
-                และ<strong>ไม่ถูกแทนที่</strong>ตอนอัพโหลด 862 รอบถัดไป (แทนที่เฉพาะใบจาก EDI)
+                {tr("สำหรับ order ที่ลูกค้าสั่งเพิ่มนอกไฟล์ EDI — ใบนี้จะเข้าชาร์ต/walkback/หัก stock เหมือน order ปกติ และ")}<strong>{tr('ไม่ถูกแทนที่')}</strong>{tr("ตอนอัพโหลด 862 รอบถัดไป (แทนที่เฉพาะใบจาก")} EDI)
               </div>
               <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11, fontWeight: 700, color: 'var(--muted)' }}>ลูกค้า (Ship-to)
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11, fontWeight: 700, color: 'var(--muted)' }}>{tr('ลูกค้า (Ship-to)')}
                   {/* เลือกจากทะเบียน ship_to_plants (active) — code นี้เป็น join key ของ custLabel/ชาร์ต/workflow ต่อลูกค้า พิมพ์เองไม่ได้ (2026-09-07)
                       ค่าที่ติดมาแต่ไม่อยู่ในทะเบียน active คงไว้เป็นตัวเลือก ⚠ ไม่ล้างเงียบ (save จะถามยืนยัน) */}
                   <select value={addForm.customer} onChange={e => setAddForm(f => ({ ...f, customer: e.target.value }))} style={inputSt}>
-                    <option value="">— ไม่ระบุลูกค้า —</option>
-                    {addForm.customer && !(shipToCodes || []).includes(addForm.customer) && <option value={addForm.customer}>⚠ {addForm.customer} (นอกทะเบียน)</option>}
+                    <option value="">{tr('— ไม่ระบุลูกค้า —')}</option>
+                    {addForm.customer && !(shipToCodes || []).includes(addForm.customer) && <option value={addForm.customer}>⚠ {addForm.customer} {tr('(นอกทะเบียน)')}</option>}
                     {(shipToCodes || []).map(c => <option key={c} value={c}>{custLabel(c)}</option>)}
                   </select>
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11, fontWeight: 700, color: 'var(--muted)' }}>MAT No. *
                   {/* picker กลาง Product Master + กลุ่ม 📜 MAT ที่เคยบันทึกไว้ (นอกทะเบียน → save ถามยืนยัน) · เลือกแล้วเติมชื่อพาร์ทให้ (2026-09-07) */}
-                  <ProductSelect products={prodMaster} value={addForm.mat_no} placeholder="ค้น MAT / ชื่อพาร์ท / P/N…" history={shipMatHist}
+                  <ProductSelect products={prodMaster} value={addForm.mat_no} placeholder={tr('ค้น MAT / ชื่อพาร์ท / P/N…')} history={shipMatHist}
                     onChange={({ mat_no, name }) => setAddForm(f => ({ ...f, mat_no, part_name: name || prodNames[mat_no] || f.part_name }))} />
                 </label>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11, fontWeight: 700, color: 'var(--muted)' }}>จำนวน (ชิ้น) *
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11, fontWeight: 700, color: 'var(--muted)' }}>{tr('จำนวน (ชิ้น) *')}
                   <input type="number" min="1" value={addForm.qty} onChange={e => setAddForm(f => ({ ...f, qty: e.target.value }))} style={inputSt} />
                 </label>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11, fontWeight: 700, color: 'var(--muted)' }}>ชื่อพาร์ท{prodNames[addForm.mat_no.trim()] ? ' (จาก Product Master)' : ''}
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11, fontWeight: 700, color: 'var(--muted)' }}>{tr('ชื่อพาร์ท')}{prodNames[addForm.mat_no.trim()] ? tr(" (จาก Product Master)") : ''}
                   {/* snapshot ชื่อจาก dr_products — MAT ที่เลือกจากทะเบียนแล้วห้ามแก้ชื่อเอง (ชื่อคนละแบบ = สอบกลับไม่เจอ) (2026-09-07) */}
                   <input value={addForm.part_name} readOnly={!!prodNames[addForm.mat_no.trim()]} onChange={e => setAddForm(f => ({ ...f, part_name: e.target.value }))}
                     style={{ ...inputSt, opacity: prodNames[addForm.mat_no.trim()] ? 0.75 : 1 }} />
                 </label>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11, fontWeight: 700, color: 'var(--muted)' }}>วันงาน (08:00 → 07:59) *
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11, fontWeight: 700, color: 'var(--muted)' }}>{tr('วันงาน (08:00 → 07:59) *')}
                   <input type="date" value={addForm.due_date} onChange={e => setAddForm(f => ({ ...f, due_date: e.target.value }))} style={inputSt} />
                   {addForm.ship_time && addForm.ship_time < '08:00' && addForm.due_date && (
-                    <span style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b' }}>🌙 รอบกะดึก → ส่งจริง {shipDueDate(addForm.due_date, addForm.ship_time)} {addForm.ship_time}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--amber)' }}>{tr('รอบกะดึก → ส่งจริง')} {shipDueDate(addForm.due_date, addForm.ship_time)} {addForm.ship_time}</span>
                   )}
                 </label>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11, fontWeight: 700, color: 'var(--muted)' }}>รอบเวลาส่ง (เว้นว่าง = ⏳ ไม่ระบุ)
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11, fontWeight: 700, color: 'var(--muted)' }}>{tr("รอบเวลาส่ง (เว้นว่าง = ⏳ ไม่ระบุ")})
                   <input type="time" value={addForm.ship_time} onChange={e => setAddForm(f => ({ ...f, ship_time: e.target.value }))} style={inputSt} />
                 </label>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11, fontWeight: 700, color: 'var(--muted)' }}>เลขที่ PO
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11, fontWeight: 700, color: 'var(--muted)' }}>{tr('เลขที่ PO')}
                   <input value={addForm.order_no} onChange={e => setAddForm(f => ({ ...f, order_no: e.target.value }))} style={inputSt} />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11, fontWeight: 700, color: 'var(--muted)' }}>Dock
@@ -731,10 +754,10 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
               </div>
               <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                 <button onClick={saveAddOrder} disabled={addSaving}
-                  style={{ flex: 1, padding: '10px 12px', borderRadius: 9, border: 'none', background: 'var(--accent)', color: 'var(--accent-ink)', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'var(--font-body)', opacity: addSaving ? 0.6 : 1 }}>
-                  {addSaving ? 'กำลังบันทึก...' : '💾 เพิ่ม order'}
+                  style={{ flex: 1, padding: '10px 12px', borderRadius: 'var(--r-md)', border: 'none', background: 'var(--accent)', color: 'var(--accent-ink)', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'var(--font-body)', opacity: addSaving ? 0.6 : 1 }}>
+                  {addSaving ? tr('กำลังบันทึก...') : tr('เพิ่ม order')}
                 </button>
-                <button onClick={() => setShowAdd(false)} style={btn(false)}>ยกเลิก</button>
+                <button onClick={() => setShowAdd(false)} style={btn(false)}>{tr('ยกเลิก')}</button>
               </div>
             </div>
           </div>
@@ -743,20 +766,20 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
 
       {orders.length === 0 ? (
         <div style={{ ...card, padding: 40, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
-          ไม่มีรอบส่งงานในวันงาน {day} (08:00 → 08:00 วันถัดไป) — อัพโหลด Order ที่แท็บ 📤 อัพโหลด
+          {tr("ไม่มีรอบส่งงานในวันงาน")} {day} (08:00 → 08:00 {tr("วันถัดไป) — อัพโหลด Order ที่แท็บ 📤 อัพโหลด")}
         </div>
       ) : (
         <>
           {/* Shipping time chart — เต็ม 24 ชม.ในจอเดียว · รอบเวลาชนกันแยกชั้นอัตโนมัติ · คลิกบล็อกดูรายละเอียด */}
           <div style={{ ...card, padding: 0, overflow: 'hidden' }}>
             <div style={{ padding: '8px 14px', borderBottom: '1px solid var(--border2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <span style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>🕐 Shipping Time Chart — วันงาน {day}</span>
-              <span style={{ fontSize: 11, color: 'var(--muted)' }}>คลิกที่บล็อกเพื่อดูรายละเอียด / ไปที่การ์ดรายการ</span>
+              <span style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{tr('Shipping Time Chart — วันงาน')} {day}</span>
+              <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('คลิกที่บล็อกเพื่อดูรายละเอียด / ไปที่การ์ดรายการ')}</span>
             </div>
             <div style={isMobile ? { overflowX: 'auto', WebkitOverflowScrolling: 'touch' } : undefined}>
             <div style={isMobile ? { minWidth: 780 } : undefined}>
             <div style={{ display: 'flex', borderBottom: '1px solid var(--border2)', background: 'var(--bg2)', position: 'relative' }}>
-              <div style={{ width: chartLeftW, flexShrink: 0, padding: '3px 10px', fontSize: 11, fontWeight: 700, color: 'var(--muted)', borderRight: '1px solid var(--border2)', ...(isMobile ? { position: 'sticky', left: 0, zIndex: 6, background: 'var(--bg2)' } : null) }}>ลูกค้า · คลิกชื่อเพื่อย่อ/ขยาย</div>
+              <div style={{ width: chartLeftW, flexShrink: 0, padding: '3px 10px', fontSize: 11, fontWeight: 700, color: 'var(--muted)', borderRight: '1px solid var(--border2)', ...(isMobile ? { position: 'sticky', left: 0, zIndex: 6, background: 'var(--bg2)' } : null) }}>{tr('ลูกค้า · คลิกชื่อเพื่อย่อ/ขยาย')}</div>
               <div style={{ flex: 1, position: 'relative', height: 22 }}>
                 {hourMarks.map((m, i) => (i % 2 === 0 &&
                   <span key={m} style={{ position: 'absolute', left: `${((m - tStart) / span) * 100}%`, fontSize: 11, color: (m % 1440) === 480 || (m % 1440) === 1200 ? 'var(--text2)' : 'var(--muted)', fontWeight: (m % 1440) === 480 || (m % 1440) === 1200 ? 800 : 500, transform: (isMobile ? (m - tStart) / span > 0.97 : m === tStart + span) ? 'translateX(-100%)' : 'translateX(-50%)', top: 4, whiteSpace: 'nowrap' }}>
@@ -779,12 +802,12 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
               return (
                 <div key={cust} style={{ display: 'flex', borderTop: '1px solid var(--border)' }}>
                   <div onClick={() => setCollapsedCust(m => ({ ...m, [cust]: !m[cust] }))}
-                    title={isCol ? 'คลิกเพื่อขยาย' : 'คลิกเพื่อย่อ'}
+                    title={isCol ? tr('คลิกเพื่อขยาย') : tr('คลิกเพื่อย่อ')}
                     style={{ width: chartLeftW, flexShrink: 0, padding: '4px 10px', fontSize: 11, fontWeight: 700, color: 'var(--text2)', borderRight: '1px solid var(--border2)', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'center', cursor: 'pointer', userSelect: 'none', ...(isMobile ? { position: 'sticky', left: 0, zIndex: 6, background: 'var(--card)' } : null) }}>
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       <span style={{ color: 'var(--muted)', marginRight: 4 }}>{isCol ? '▸' : '▾'}</span>{cust}
                     </span>
-                    <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>{list.length} รอบ · ✅ {doneN}</span>
+                    <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600 }}>{list.length} {tr('รอบ · ✅')} {doneN}</span>
                   </div>
                   <div style={{ flex: 1, position: 'relative', height: rowH }}>
                     {hourMarks.map(m => (
@@ -795,7 +818,7 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
                       const widthPct = Math.min(100 - leftPct, ((b.e - b.s) / span) * 100);
                       if (widthPct <= 0) return null;
                       return (
-                        <div key={`brk-${bi}`} title={`${b.label} — เวลาพัก`}
+                        <div key={`brk-${bi}`} title={`${b.label} — ${tr("เวลาพัก")}`}
                           style={{
                             position: 'absolute', top: 0, bottom: 0, left: `${leftPct}%`, width: `${widthPct}%`,
                             background: 'repeating-linear-gradient(45deg, rgba(148,163,184,0.18) 0px, rgba(148,163,184,0.18) 4px, transparent 4px, transparent 8px)',
@@ -830,13 +853,13 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
                       return (
                         <div key={o.id}
                           onClick={e => setPopup({ o, x: e.clientX, y: e.clientY })}
-                          title={plan ? `แผน 862 · ${o.mat_no} × ${fmt(o.qty)} — รอ e-SMART ยืนยัน (ไม่ใช่ order ที่ต้องส่ง)` : undefined}
+                          title={plan ? `${tr("แผน")} 862 · ${o.mat_no} × ${fmt(o.qty)} — ${tr("รอ e-SMART ยืนยัน (ไม่ใช่ order ที่ต้องส่ง")})` : undefined}
                           style={{
                             position: 'absolute', top: 5 + lane * LANE_H, height: LANE_H - 6,
                             left: `${Math.min(left, 97)}%`, width: `${(SPAN_MIN / span) * 100}%`, minWidth: 48,
-                            background: plan ? 'transparent' : `${color}${isSel ? '55' : '22'}`, border: `1.5px ${plan ? 'dashed' : 'solid'} ${color}${isSel ? '' : 'cc'}`, borderRadius: 5, zIndex: 1,
+                            background: plan ? 'transparent' : tint(color, isSel ? 'line' : 'dim'), border: `1.5px ${plan ? 'dashed' : 'solid'} ${isSel ? color : tint(color, 'line')}`, borderRadius: 'var(--r-xs)', zIndex: 1,
                             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3, overflow: 'hidden', cursor: 'pointer', boxSizing: 'border-box',
-                            boxShadow: od ? `0 0 5px ${color}55` : 'none',
+                            boxShadow: od ? `0 0 5px ${tint(color, 'line')}` : 'none',
                           }}>
                           <span style={{ fontSize: 12, fontWeight: 800, color, whiteSpace: 'nowrap', lineHeight: 1 }}>
                             {(o.ship_time || '—').slice(0, 5)}{o.status === 'shipped' ? ' ✅' : ''}
@@ -852,16 +875,16 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
                       const doneAll = noTime.every(isClosedOrder);
                       return (
                         <div onClick={e => setPopup({ o: noTime[0], x: e.clientX, y: e.clientY })}
-                          title={`ไม่ระบุเวลาส่ง ${noTime.length} รายการ: ${noTime.map(o => `${o.mat_no} × ${fmt(o.qty)}`).join(' · ')}`}
+                          title={`${tr("ไม่ระบุเวลาส่ง")} ${noTime.length} ${tr("รายการ")}: ${noTime.map(o => `${o.mat_no} × ${fmt(o.qty)}`).join(' · ')}`}
                           style={{
                             position: 'absolute', top: isCol ? 2 : 5, right: 4, height: isCol ? 22 : LANE_H - 6,
                             padding: '0 10px', display: 'flex', alignItems: 'center', gap: 4,
-                            background: doneAll ? 'rgba(34,197,94,0.12)' : 'rgba(245,158,11,0.12)',
-                            border: `1.5px dashed ${doneAll ? '#22c55e' : '#f59e0b'}`, borderRadius: 5,
+                            background: doneAll ? 'var(--green-dim)' : 'var(--amber-dim)',
+                            border: `1.5px dashed ${doneAll ? 'var(--green)' : 'var(--amber)'}`, borderRadius: 'var(--r-xs)',
                             cursor: 'pointer', zIndex: 2, boxSizing: 'border-box',
                           }}>
-                          <span style={{ fontSize: 12, fontWeight: 800, color: doneAll ? '#22c55e' : '#f59e0b', whiteSpace: 'nowrap', lineHeight: 1 }}>
-                            ⏳ {noTime.length} ไม่ระบุเวลา{doneAll ? ' ✅' : ''}
+                          <span style={{ fontSize: 12, fontWeight: 800, color: doneAll ? 'var(--green)' : 'var(--amber)', whiteSpace: 'nowrap', lineHeight: 1 }}>
+                            ⏳ {noTime.length} {tr('ไม่ระบุเวลา')}{doneAll ? ' ✅' : ''}
                           </span>
                         </div>
                       );
@@ -889,83 +912,83 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
             return (
               <>
                 <div onClick={() => setPopup(null)} style={{ position: 'fixed', inset: 0, zIndex: 998 }} />
-                <div style={{ position: 'fixed', left, top, width: W, zIndex: 1300, background: 'var(--bg3)', border: `1px solid ${od ? '#ef4444' : st.color}66`, borderRadius: 12, boxShadow: 'var(--shadow-float)', overflow: 'hidden' }}>
-                  <div style={{ height: 4, background: od ? '#ef4444' : st.color }} />
+                <div style={{ position: 'fixed', left, top, width: W, zIndex: 1300, background: 'var(--bg3-surf)', border: `1px solid ${tint(od ? 'var(--red)' : st.color, 'line')}`, borderRadius: 'var(--r-lg)', boxShadow: 'var(--shadow-float)', overflow: 'hidden' }}>
+                  <div style={{ height: 4, background: od ? 'var(--red)' : st.color }} />
                   <div style={{ padding: '10px 14px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 15, fontWeight: 900, color: 'var(--text)' }}>🕐 {(o.ship_time ? o.ship_time.slice(0, 5) : '⏳ ไม่ระบุเวลา')}</span>
-                      <span style={{ fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 8, background: 'rgba(0,0,0,0.15)', color: plan ? '#94a3b8' : od ? '#ef4444' : pl ? '#f97316' : st.color }}>{plan ? '📋 แผน 862 · รอ e-SMART' : od ? '🔴 เลยเวลา' : pl ? '🟠 หลุดเฟส' : statusLabel(o)}</span>
+                      <span style={{ fontSize: 15, fontWeight: 900, color: 'var(--text)' }}>{(o.ship_time ? o.ship_time.slice(0, 5) : tr('⏳ ไม่ระบุเวลา'))}</span>
+                      <span style={{ fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 'var(--r-md)', background: 'rgba(0,0,0,0.15)', color: plan ? '#94a3b8' : od ? '#ef4444' : pl ? '#f97316' : st.color }}>{plan ? tr('📋 แผน 862 · รอ e-SMART') : od ? tr('🔴 เลยเวลา') : pl ? tr('🟠 หลุดเฟส') : statusLabel(o)}</span>
                     </div>
-                    {plan && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>ลูกค้ายืนยันรอบจริงด้วย e-SMART — อัพไฟล์แล้วใบนี้จะถูกแทนด้วยยอดจริง</div>}
-                    <div style={{ fontSize: 11, fontWeight: 700, color: '#3b82f6', marginTop: 2 }}>{custLabel ? custLabel(o.customer) : o.customer}{o.due_date !== day ? ` · ส่งเช้า ${o.due_date}` : ''}</div>
+                    {plan && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{tr('ลูกค้ายืนยันรอบจริงด้วย e-SMART — อัพไฟล์แล้วใบนี้จะถูกแทนด้วยยอดจริง')}</div>}
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--blue)', marginTop: 2 }}>{custLabel ? custLabel(o.customer) : o.customer}{o.due_date !== day ? ` · ${tr("ส่งเช้า")} ${o.due_date}` : ''}</div>
                     {/* ลำดับ Part No. ลูกค้า → ชื่องาน → MAT (UI §6.21 · 2026-09-30) */}
-                    <div style={{ fontSize: 12, fontFamily: 'monospace', color: '#0ea5e9', fontWeight: 700, marginTop: 6 }}>
+                    <div style={{ fontSize: 12, fontFamily: 'monospace', color: 'var(--blue)', fontWeight: 700, marginTop: 6 }}>
                       {o.customer_part_no && o.customer_part_no !== o.mat_no ? o.customer_part_no : (o.part_name || '')}
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--muted)' }}>
                       {o.customer_part_no && o.customer_part_no !== o.mat_no && o.part_name ? `${o.part_name} · ` : ''}MAT {o.mat_no}
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 6 }}>
-                      <span style={{ fontSize: 18, fontWeight: 900, color: 'var(--text)' }}>{fmt(o.qty)} <span style={{ fontSize: 11, color: 'var(--muted)' }}>ชิ้น</span></span>
+                      <span style={{ fontSize: 18, fontWeight: 900, color: 'var(--text)' }}>{fmt(o.qty)} <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('ชิ้น')}</span></span>
                       <span style={{ fontSize: 11, color: 'var(--muted)' }}>{o.order_no ? `PO ${o.order_no}` : ''}{o.dock_code ? ` · Dock ${o.dock_code}` : ''}</span>
                     </div>
                     {isOpenOrder(o) && cov && (
                       cov.unknown
-                        ? <div title={matIssueText(o.mat_no, matMap[o.mat_no]) || ''} style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700, marginTop: 4 }}>❔ ยังเช็ค stock ไม่ได้ — เลขนี้ยังไม่จับคู่ MAT SAP</div>
+                        ? <div title={matIssueText(o.mat_no, matMap[o.mat_no]) || ''} style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700, marginTop: 4 }}>{tr('❔ ยังเช็ค stock ไม่ได้ — เลขนี้ยังไม่จับคู่ MAT SAP')}</div>
                         : cov.short <= 0
-                          ? <div style={{ fontSize: 11, color: '#22c55e', fontWeight: 700, marginTop: 4 }}>📦 stock พร้อมส่งครบ</div>
+                          ? <div style={{ fontSize: 11, color: 'var(--green)', fontWeight: 700, marginTop: 4 }}>{tr('stock พร้อมส่งครบ')}</div>
                           : cov.offFg >= cov.short
                             /* ของมีพอแต่อยู่นอกคลัง FG (STORE/มินิสโตร์) — ปัญหาอยู่ขั้นแพ็ค/รับเข้าคลัง ไม่ใช่ "ต้องผลิต" */
-                            ? <div style={{ fontSize: 11, color: '#f59e0b', fontWeight: 700, marginTop: 4 }}>🟠 คลัง FG มี {fmt(cov.covered)} — อีก {fmt(cov.short)} อยู่นอกคลัง FG (ยังไม่ผ่านรับเข้า)</div>
+                            ? <div style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 700, marginTop: 4 }}>{tr('🟠 คลัง FG มี')} {fmt(cov.covered)} {tr('— อีก')} {fmt(tr(cov.short))} {tr('อยู่นอกคลัง FG (ยังไม่ผ่านรับเข้า)')}</div>
                             : cov.covered > 0 || cov.offFg > 0
-                              ? <div style={{ fontSize: 11, color: '#f59e0b', fontWeight: 700, marginTop: 4 }}>⚠️ stock มี {fmt(cov.covered)}{cov.offFg > 0 ? ` (+${fmt(cov.offFg)} นอกคลัง FG)` : ''} — ขาด {fmt(cov.short)} ชิ้น</div>
-                              : <div style={{ fontSize: 12, color: '#ef4444', fontWeight: 800, marginTop: 4 }}>🚨 ไม่มี stock พร้อมส่ง — ขาด {fmt(cov.short)} ชิ้น ต้องผลิต!</div>
+                              ? <div style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 700, marginTop: 4 }}>{tr('⚠️ stock มี')} {fmt(cov.covered)}{cov.offFg > 0 ? ` (+${fmt(cov.offFg)} ${tr("นอกคลัง")} FG)` : ''} {tr('— ขาด')} {fmt(tr(cov.short))} {tr('ชิ้น')}</div>
+                              : <div style={{ fontSize: 12, color: 'var(--red)', fontWeight: 800, marginTop: 4 }}>{tr('ไม่มี stock พร้อมส่ง — ขาด')} {fmt(tr(cov.short))} {tr('ชิ้น ต้องผลิต!')}</div>
                     )}
                     {isOpenOrder(o) && phases.length > 0 && (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
                         {phases.map(ph => (
-                          <span key={ph.id} title={`${ph.name} — ต้องเสร็จภายใน ${ph.deadline}`} style={{ fontSize: 11, fontWeight: 700, padding: '2px 6px', borderRadius: 6,
-                            background: ph.done ? 'rgba(34,197,94,0.12)' : ph.missed ? 'rgba(239,68,68,0.12)' : 'var(--bg2)',
-                            color: ph.done ? '#22c55e' : ph.missed ? '#ef4444' : 'var(--muted)',
-                            border: `1px solid ${ph.done ? 'rgba(34,197,94,0.3)' : ph.missed ? 'rgba(239,68,68,0.35)' : 'var(--border)'}` }}>
+                          <span key={ph.id} title={`${ph.name} — ${tr("ต้องเสร็จภายใน")} ${ph.deadline}`} style={{ fontSize: 11, fontWeight: 700, padding: '2px 6px', borderRadius: 'var(--r-md)',
+                            background: ph.done ? 'var(--green-dim)' : ph.missed ? 'var(--red-dim)' : 'var(--bg2)',
+                            color: ph.done ? 'var(--green)' : ph.missed ? 'var(--red)' : 'var(--muted)',
+                            border: `1px solid ${ph.done ? 'var(--green-line)' : ph.missed ? 'var(--red-line)' : 'var(--border)'}` }}>
                             {ph.done ? '✓' : ph.missed ? '🔴' : '⏳'} {ph.name} {ph.deadline}
                           </span>
                         ))}
                       </div>
                     )}
                     {isCancelled(o) && (
-                      <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700, marginTop: 6, background: 'rgba(148,163,184,0.1)', border: '1px solid rgba(148,163,184,0.3)', borderRadius: 8, padding: '5px 8px' }}>
-                        🚫 ยกเลิก{o.cancelled_by ? ` โดย ${o.cancelled_by}` : ''}{o.cancel_reason ? ` — ${o.cancel_reason}` : ''}
+                      <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700, marginTop: 6, background: 'rgba(148,163,184,0.1)', border: '1px solid rgba(148,163,184,0.3)', borderRadius: 'var(--r-md)', padding: '5px 8px' }}>
+                        {tr("ยกเลิก")}{o.cancelled_by ? ` ${tr("โดย")} ${o.cancelled_by}` : ''}{o.cancel_reason ? ` — ${o.cancel_reason}` : ''}
                       </div>
                     )}
-                    {o.shipped_by && <div style={{ fontSize: 11, color: '#22c55e', marginTop: 4 }}>✓ {o.shipped_by}</div>}
+                    {o.shipped_by && <div style={{ fontSize: 11, color: 'var(--green)', marginTop: 4 }}>✓ {o.shipped_by}</div>}
                     <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
                       {(() => {
                         const nx = nextStep(o);
                         if (!nx) return null;
                         return (
                           <button onClick={() => { advance(o); setPopup(null); }} disabled={busy === o.id}
-                            title={nx.terminal ? 'เฟสท้ายสุดที่ตั้งไว้ = จบงาน (ปิดรอบส่งเลย ไม่มีขั้นถัดไป)' : undefined}
-                            style={{ flex: 1, padding: '7px 8px', borderRadius: 8, fontSize: 11, fontWeight: 800, cursor: 'pointer', background: `${nx.color}22`, color: nx.color, border: `1px solid ${nx.color}55`, fontFamily: 'var(--font-body)' }}>
-                            {busy === o.id ? '...' : nx.label}
+                            title={nx.terminal ? tr('เฟสท้ายสุดที่ตั้งไว้ = จบงาน (ปิดรอบส่งเลย ไม่มีขั้นถัดไป)') : undefined}
+                            style={{ flex: 1, padding: '7px 8px', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 800, cursor: 'pointer', background: `${tint(nx.color, 'dim')}`, color: nx.color, border: `1px solid ${tint(nx.color, 'line')}`, fontFamily: 'var(--font-body)' }}>
+                            {busy === o.id ? '...' : tr(nx.label)}
                           </button>
                         );
                       })()}
                       <button onClick={() => goToCard(o)}
-                        style={{ flex: 1, padding: '7px 8px', borderRadius: 8, fontSize: 11, fontWeight: 800, cursor: 'pointer', background: 'var(--bg2)', color: 'var(--text2)', border: '1px solid var(--border)', fontFamily: 'var(--font-body)' }}>
-                        ⬇ ไปที่การ์ด
+                        style={{ flex: 1, padding: '7px 8px', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 800, cursor: 'pointer', background: 'var(--bg2-surf)', color: 'var(--text2)', border: '1px solid var(--border)', fontFamily: 'var(--font-body)' }}>
+                        {tr('ไปที่การ์ด')}
                       </button>
                       {canAdd && isOpenOrder(o) && (
                         <button className="tbtn" onClick={() => cancelOrder(o)} disabled={busy === o.id}
-                          title="ยกเลิกใบนี้ (ลูกค้ายกเลิก / ใบผี) — ต้องระบุเหตุผล · ใบที่หักสต็อกไปแล้วยกเลิกไม่ได้"
-                          style={{ padding: '7px 10px', borderRadius: 8, fontSize: 11, fontWeight: 800, cursor: 'pointer', background: 'rgba(148,163,184,0.12)', color: '#94a3b8', border: '1px solid rgba(148,163,184,0.35)', fontFamily: 'var(--font-body)' }}>
+                          title={tr('ยกเลิกใบนี้ (ลูกค้ายกเลิก / ใบผี) — ต้องระบุเหตุผล · ใบที่หักสต็อกไปแล้วยกเลิกไม่ได้')}
+                          style={{ padding: '7px 10px', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 800, cursor: 'pointer', background: 'rgba(148,163,184,0.12)', color: 'var(--muted)', border: '1px solid rgba(148,163,184,0.35)', fontFamily: 'var(--font-body)' }}>
                           🚫
                         </button>
                       )}
                       {canAdd && o.source === 'manual' && o.status === 'pending' && (
                         <button className="tbtn" onClick={() => deleteManualOrder(o)}
-                          title="ลบได้เฉพาะใบคีย์มือที่ยังไม่เริ่ม workflow"
-                          style={{ padding: '7px 10px', borderRadius: 8, fontSize: 11, fontWeight: 800, cursor: 'pointer', background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', fontFamily: 'var(--font-body)' }}>
+                          title={tr('ลบได้เฉพาะใบคีย์มือที่ยังไม่เริ่ม workflow')}
+                          style={{ padding: '7px 10px', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 800, cursor: 'pointer', background: 'var(--red-dim)', color: 'var(--red)', border: '1px solid var(--red-line)', fontFamily: 'var(--font-body)' }}>
                           🗑
                         </button>
                       )}
@@ -979,20 +1002,20 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
           {/* รายการรอบส่ง + ปุ่มอัปเดตสถานะ — กรองให้เห็นเฉพาะที่ต้องทำก่อน */}
           {/* UI-STANDARD 2026-09-24 — ตัวเลือกเท่ากัน ≤5 = Segmented · "ทุกสถานะ" ซ้ายสุด ไม่มีวงเล็บจำนวน */}
           <FilterBar bare style={{ marginBottom: 0 }}>
-            <Segmented value={cardFilter} onChange={setCardFilter} label="สถานะรอบส่ง" options={[
+            <Segmented value={cardFilter} onChange={setCardFilter} label={tr('สถานะรอบส่ง')} options={[
               { value: 'all',     label: ALL.status },
-              { value: 'todo',    label: `🕐 ต้องทำ (${orders.filter(o => isOpenOrder(o) && !isPlan(o)).length})` },
-              { value: 'overdue', label: `🔴 เลยเวลา (${overdueCount})` },
-              { value: 'shipped', label: `✅ ส่งแล้ว (${shippedCount})` },
+              { value: 'todo',    label: `🕐 ${tr("ต้องทำ")} (${orders.filter(o => isOpenOrder(o) && !isPlan(o)).length})` },
+              { value: 'overdue', label: `🔴 ${tr("เลยเวลา")} (${overdueCount})` },
+              { value: 'shipped', label: `✅ ${tr("ส่งแล้ว")} (${shippedCount})` },
             ]} />
             <span className="sep" />
-            <span className="filter-label">เรียง:</span>
-            <Segmented value={sortMode} onChange={setSortMode} label="เรียงลำดับ" options={[
-              { value: 'urgent', label: '⚡ ใกล้ดิวก่อน', title: 'ใบที่หลุดเฟส/deadline ใกล้สุดขึ้นแถวบน' },
-              { value: 'time',   label: '🕐 ตามเวลาส่ง' },
+            <span className="filter-label">{tr('เรียง:')}</span>
+            <Segmented value={sortMode} onChange={setSortMode} label={tr('เรียงลำดับ')} options={[
+              { value: 'urgent', label: tr("ใกล้ดิวก่อน"), title: tr("ใบที่หลุดเฟส/deadline ใกล้สุดขึ้นแถวบน") },
+              { value: 'time',   label: tr("ตามเวลาส่ง") },
             ]} />
             <span className="spacer" />
-            <span className="filter-count">{orders.length} รอบส่ง</span>
+            <span className="filter-count">{orders.length} {tr('รอบส่ง')}</span>
           </FilterBar>
           {/* 🃏 การ์ดรอบส่ง = `<PartCard>` มาตรฐานเดียวกับสโตร์ (28/10 · user: "การ์ดของหน้าจัดส่งยังไม่เห็นมีรูปแบบการ์ดของสโตร์")
               รูปชิ้นงาน + Part No. → ชื่องาน → MAT (UI §6.21-6.23) · สีสถานะอยู่ที่แถบซ้าย + ป้ายเท่านั้น */}
@@ -1014,31 +1037,31 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
               const cov = isOpenOrder(o) ? coverage[o.id] : null;
               const covEl = !cov ? null
                 : cov.unknown
-                  ? <span title={matIssueText(o.mat_no, matMap[o.mat_no]) || ''} style={{ color: 'var(--muted)', fontWeight: 700 }}>❔ ยังเช็คไม่ได้ — เลขนี้ยังไม่จับคู่ MAT SAP</span>
+                  ? <span title={matIssueText(o.mat_no, matMap[o.mat_no]) || ''} style={{ color: 'var(--muted)', fontWeight: 700 }}>{tr('❔ ยังเช็คไม่ได้ — เลขนี้ยังไม่จับคู่ MAT SAP')}</span>
                   : cov.short <= 0
-                    ? <span style={{ color: '#22c55e', fontWeight: 700 }}>📦 พร้อมส่งครบ</span>
+                    ? <span style={{ color: 'var(--green)', fontWeight: 700 }}>{tr('พร้อมส่งครบ')}</span>
                     : cov.offFg >= cov.short
-                      ? <span style={{ color: '#f59e0b', fontWeight: 700 }}>🟠 คลัง FG มี {fmt(cov.covered)} — อีก {fmt(cov.short)} อยู่นอกคลัง FG (ยังไม่ผ่านรับเข้า)</span>
+                      ? <span style={{ color: 'var(--amber)', fontWeight: 700 }}>{tr('🟠 คลัง FG มี')} {fmt(cov.covered)} {tr('— อีก')} {fmt(tr(cov.short))} {tr('อยู่นอกคลัง FG (ยังไม่ผ่านรับเข้า)')}</span>
                       : cov.covered > 0 || cov.offFg > 0
-                        ? <span style={{ color: '#f59e0b', fontWeight: 700 }}>⚠️ มี {fmt(cov.covered)}{cov.offFg > 0 ? ` (+${fmt(cov.offFg)} นอกคลัง FG)` : ''} — ขาด {fmt(cov.short)} (รอผลิต)</span>
-                        : <span style={{ color: '#ef4444', fontWeight: 800 }}>🚨 ไม่มีของพร้อมส่ง — ขาด {fmt(cov.short)} ต้องผลิต!</span>;
+                        ? <span style={{ color: 'var(--amber)', fontWeight: 700 }}>{tr('⚠️ มี')} {fmt(cov.covered)}{cov.offFg > 0 ? ` (+${fmt(cov.offFg)} ${tr("นอกคลัง")} FG)` : ''} {tr('— ขาด')} {fmt(tr(cov.short))} {tr('(รอผลิต)')}</span>
+                        : <span style={{ color: 'var(--red)', fontWeight: 800 }}>{tr('ไม่มีของพร้อมส่ง — ขาด')} {fmt(tr(cov.short))} {tr('ต้องผลิต!')}</span>;
               const nx = nextStep(o);
               return (
                 <div key={o.id} id={`ship-card-${o.id}`} style={{ borderRadius: 'var(--radius-lg)',
-                  boxShadow: isHl ? '0 0 0 3px rgba(77,159,255,0.65)' : 'none', transition: 'box-shadow 0.3s' }}>
+                  boxShadow: isHl ? '0 0 0 3px var(--blue-line)' : 'none', transition: 'box-shadow 0.3s' }}>
                   <PartCard
                     code={sap} name={o.part_name}
                     img={imgOf(sap)}
-                    status={{ label: plan ? '📋 แผน 862 · รอ e-SMART' : od ? '🔴 เลยเวลา' : pl ? '🟠 หลุดเฟส' : statusLabel(o), color: cardColor }}
-                    metric={{ label: 'จำนวนส่ง', value: fmt(o.qty), unit: 'ชิ้น' }}
-                    aside={{ label: 'รอบส่ง', value: `🕐 ${o.ship_time ? o.ship_time.slice(0, 5) : 'ไม่ระบุเวลา'}${o.due_date !== day ? ` (เช้า ${(o.due_date || '').slice(5)})` : ''} · ${o.customer ? (custLabel ? custLabel(o.customer) : o.customer) : '—'}` }}
+                    status={{ label: plan ? '📋 แผน 862 · รอ e-SMART' : od ? ("🔴 " + tr("เลยเวลา")) : pl ? '🟠 หลุดเฟส' : statusLabel(o), color: cardColor }}
+                    metric={{ label: tr("จำนวนส่ง"), value: fmt(o.qty), unit: tr("ชิ้น") }}
+                    aside={{ label: tr("รอบส่ง"), value: `🕐 ${o.ship_time ? o.ship_time.slice(0, 5) : 'ไม่ระบุเวลา'}${o.due_date !== day ? ` (เช้า ${(o.due_date || '').slice(5)})` : ''} · ${o.customer ? (custLabel ? custLabel(o.customer) : o.customer) : '—'}` }}
                     rows={[
-                      { k: 'เลขลูกค้า', v: o.customer_part_no && o.customer_part_no !== sap ? o.customer_part_no : null },
+                      { k: tr("เลขลูกค้า"), v: o.customer_part_no && o.customer_part_no !== sap ? o.customer_part_no : null },
                       { k: 'PO / Dock', v: [o.order_no && `PO ${o.order_no}`, o.dock_code && `Dock ${o.dock_code}`].filter(Boolean).join(' · ') || null },
-                      { k: 'สต็อก', v: covEl },
-                      { k: 'ส่งโดย', v: o.shipped_by ? `✓ ${o.shipped_by}${o.shipped_at ? ` · ${new Date(o.shipped_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' })}` : ''}` : null },
+                      { k: tr("สต็อก"), v: covEl },
+                      { k: tr("ส่งโดย"), v: o.shipped_by ? `✓ ${o.shipped_by}${o.shipped_at ? ` · ${new Date(o.shipped_at).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' })}` : ''}` : null },
                     ]}
-                    note={plan ? 'ลูกค้ายืนยันรอบจริงด้วย e-SMART — อัพไฟล์แล้วใบนี้จะถูกแทนด้วยยอดจริง' : null}
+                    note={plan ? tr("ลูกค้ายืนยันรอบจริงด้วย e-SMART — อัพไฟล์แล้วใบนี้จะถูกแทนด้วยยอดจริง") : null}
                     alert={od}
                     dim={isClosedOrder(o)}
                     footer={(isOpenOrder(o) && phases.length > 0) || nx ? (
@@ -1046,10 +1069,10 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
                         {isOpenOrder(o) && phases.length > 0 && (
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                             {phases.map(ph => (
-                              <span key={ph.id} title={`${ph.name} — ต้องเสร็จภายใน ${ph.deadline}`} style={{ fontSize: 11, fontWeight: 700, padding: '2px 6px', borderRadius: 'var(--radius)',
-                                background: ph.done ? 'rgba(34,197,94,0.12)' : ph.missed ? 'rgba(239,68,68,0.12)' : 'var(--bg2)',
-                                color: ph.done ? '#22c55e' : ph.missed ? '#ef4444' : 'var(--muted)',
-                                border: `1px solid ${ph.done ? 'rgba(34,197,94,0.3)' : ph.missed ? 'rgba(239,68,68,0.35)' : 'var(--border)'}` }}>
+                              <span key={ph.id} title={`${ph.name} — ${tr("ต้องเสร็จภายใน")} ${ph.deadline}`} style={{ fontSize: 11, fontWeight: 700, padding: '2px 6px', borderRadius: 'var(--radius)',
+                                background: ph.done ? 'var(--green-dim)' : ph.missed ? 'var(--red-dim)' : 'var(--bg2)',
+                                color: ph.done ? 'var(--green)' : ph.missed ? 'var(--red)' : 'var(--muted)',
+                                border: `1px solid ${ph.done ? 'var(--green-line)' : ph.missed ? 'var(--red-line)' : 'var(--border)'}` }}>
                                 {ph.done ? '✓' : ph.missed ? '🔴' : '⏳'} {ph.name} {ph.deadline}
                               </span>
                             ))}
@@ -1057,9 +1080,9 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
                         )}
                         {nx && (
                           <button onClick={() => advance(o)} disabled={busy === o.id}
-                            title={nx.terminal ? 'เฟสท้ายสุดที่ตั้งไว้ = จบงาน (ปิดรอบส่งเลย ไม่มีขั้นถัดไป)' : undefined}
+                            title={nx.terminal ? tr('เฟสท้ายสุดที่ตั้งไว้ = จบงาน (ปิดรอบส่งเลย ไม่มีขั้นถัดไป)') : undefined}
                             style={storeBtn('primary', { width: '100%' })}>
-                            {busy === o.id ? '...' : nx.label}
+                            {busy === o.id ? '...' : tr(nx.label)}
                           </button>
                         )}
                       </div>
@@ -1079,10 +1102,10 @@ function ShippingTab({ fullName, refreshKey, custLabel, canAdd, shipToCodes, shi
    จากเวลาส่งถึงลูกค้า ถอยกลับเป็น deadline ต่อเฟส — scanner (ทุก 10 นาที) ใช้ตารางนี้
    ตัดสินว่า "หลุดเฟสไหน" แล้วแจ้ง Smart Logistic ทันที ไม่ต้องรอตก due ─────────── */
 const REQ_STATUS_OPTIONS = [
-  { value: 'confirmed', label: '✔️ ยืนยันออเดอร์แล้ว' },
-  { value: 'prepared',  label: '📦 เตรียมของแล้ว' },
-  { value: 'loaded',    label: '🚛 โหลดขึ้นรถแล้ว' },
-  { value: 'shipped',   label: '🚚 ส่งถึงลูกค้าแล้ว' },
+  { value: 'confirmed', label: 'ยืนยันออเดอร์แล้ว' },
+  { value: 'prepared',  label: 'เตรียมของแล้ว' },
+  { value: 'loaded',    label: 'โหลดขึ้นรถแล้ว' },
+  { value: 'shipped',   label: 'ส่งถึงลูกค้าแล้ว' },
 ];
 function WorkflowSection({ canEdit }) {
   const [steps, setSteps] = useState([]);
@@ -1111,13 +1134,13 @@ function WorkflowSection({ canEdit }) {
        ⇒ คิวรีล้มแล้วจอบอกว่า "ยังไม่มีค่ามาตรฐานให้คัดลอก" = จอโกหก (กฎเขียน DB ข้อ 12)
        คนอ่านแล้วไปตั้งค่ามาตรฐานใหม่ทั้งชุด ทั้งที่มีอยู่แล้ว */
     const defRes = await supabaseDR.from('shipping_workflow_steps').select('*').is('customer', null).eq('is_active', true).order('step_no');
-    if (defRes.error) { toast.error('อ่านค่ามาตรฐานไม่สำเร็จ — ยังไม่ได้คัดลอก (ไม่ได้แปลว่าไม่มีค่ามาตรฐาน) ลองใหม่อีกครั้ง: ' + defRes.error.message); return; }
+    if (defRes.error) { toast.error((tr('อ่านค่ามาตรฐานไม่สำเร็จ — ยังไม่ได้คัดลอก (ไม่ได้แปลว่าไม่มีค่ามาตรฐาน) ลองใหม่อีกครั้ง') + ': ') + defRes.error.message); return; }
     const defs = defRes.data;
     if (!defs?.length) { toast.error('ยังไม่มีค่ามาตรฐานให้คัดลอก'); return; }
     const { error } = await supabaseDR.from('shipping_workflow_steps')
       .insert(defs.map(d => ({ customer: scope, step_no: d.step_no, name: d.name, offset_min: d.offset_min, requires_status: d.requires_status, deducts_stock: d.deducts_stock ?? false })));
     if (error) toast.error(error.message);
-    else { toast.success(`สร้างชุดเฟสของ ${scope} จากค่ามาตรฐานแล้ว`); await load(); }
+    else { toast.success(`${tr("สร้างชุดเฟสของ")} ${scope} ${tr("จากค่ามาตรฐานแล้ว")}`); await load(); }
   };
 
   const val = (r, k) => (draft[r.id]?.[k] ?? r[k] ?? '');
@@ -1144,7 +1167,7 @@ function WorkflowSection({ canEdit }) {
     setBusy(null);
   };
   const remove = async (r) => {
-    if (!window.confirm(`ลบเฟส "${r.name}"? การแจ้งเตือนของเฟสนี้จะหยุดทันที`)) return;
+    if (!await askConfirm(`${tr("ลบเฟส")} "${r.name}"? ${tr("การแจ้งเตือนของเฟสนี้จะหยุดทันที")}`)) return;
     setBusy(r.id);
     const { error } = await supabaseDR.from('shipping_workflow_steps').update({ is_active: false }).eq('id', r.id);
     if (error) toast.error(error.message);
@@ -1154,7 +1177,7 @@ function WorkflowSection({ canEdit }) {
   const add = async () => {
     const maxNo = steps.reduce((m, x) => Math.max(m, x.step_no || 0), 0);
     const { error } = await supabaseDR.from('shipping_workflow_steps')
-      .insert({ customer: scope || null, step_no: maxNo + 1, name: 'เฟสใหม่', offset_min: 30, requires_status: 'prepared' });
+      .insert({ customer: scope || null, step_no: maxNo + 1, name: tr('เฟสใหม่'), offset_min: 30, requires_status: 'prepared' });
     if (error) toast.error(error.message);
     else await load();
   };
@@ -1170,25 +1193,23 @@ function WorkflowSection({ canEdit }) {
 
   return (
     <div style={{ ...card, marginTop: 16 }}>
-      <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)', marginBottom: 4, fontFamily: 'var(--font-display)' }}>🚛 Standard Workflow การส่งงาน (walkback)</div>
+      <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)', marginBottom: 4, fontFamily: 'var(--font-display)' }}>{tr('Standard Workflow การส่งงาน (walkback)')}</div>
       <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>
-        นับถอยหลังจาก<strong>เวลาส่งถึงลูกค้า</strong> — แต่ละเฟสต้องถึงสถานะที่กำหนดก่อน deadline (เวลาส่ง − นาที walkback)
-        ระบบสแกนทุก 10 นาที เฟสไหนหลุดจะแจ้งเข้า Smart Logistic ทันที ไม่ต้องรอตก due ลูกค้า
-        · เพิ่ม/ลดจำนวนเฟสได้ตามความเหมาะสมของแต่ละลูกค้า
+        {tr("นับถอยหลังจาก")}<strong>{tr('เวลาส่งถึงลูกค้า')}</strong> — {tr("แต่ละเฟสต้องถึงสถานะที่กำหนดก่อน deadline (เวลาส่ง − นาที walkback) ระบบสแกนทุก 10 นาที เฟสไหนหลุดจะแจ้งเข้า Smart Logistic ทันที ไม่ต้องรอตก due ลูกค้า · เพิ่ม/ลดจำนวนเฟสได้ตามความเหมาะสมของแต่ละลูกค้า")}
       </div>
       {/* ⭐ 2 กติกาที่คนตั้งค่าต้องเห็น ไม่งั้นตั้งแล้วไม่รู้ว่าจะเกิดอะไรขึ้นหน้างาน */}
-      <div style={{ fontSize: 12, color: 'var(--text2)', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', marginBottom: 12, lineHeight: 1.65 }}>
-        🏁 <strong>เฟสท้ายสุด = จบงาน</strong> — พอกดถึงเฟสล่างสุดของตาราง ระบบปิดรอบส่งให้เลย ไม่มีปุ่มให้กดต่อ
-        {lastStep && <> (ตอนนี้คือ <strong style={{ color: '#a855f7' }}>{lastStep.name}</strong>)</>}
-        {lastStep && lastStep.requires_status !== 'shipped' && <> · เหมาะกับลูกค้าที่<strong>เอารถ milk run มารับเอง</strong> — ของขึ้นรถแล้วงานของเราจบตรงนั้น</>}
+      <div style={{ fontSize: 12, color: 'var(--text2)', background: 'var(--bg2-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '9px 12px', marginBottom: 12, lineHeight: 1.65 }}>
+        🏁 <strong>{tr("เฟสท้ายสุด = จบงาน")}</strong> — {tr("พอกดถึงเฟสล่างสุดของตาราง ระบบปิดรอบส่งให้เลย ไม่มีปุ่มให้กดต่อ")}
+        {lastStep && <> {tr('(ตอนนี้คือ')} <strong style={{ color: 'var(--blue)' }}>{lastStep.name}</strong>)</>}
+        {lastStep && lastStep.requires_status !== 'shipped' && <> {tr('· เหมาะกับลูกค้าที่')}<strong>{tr('เอารถ milk run มารับเอง')}</strong> {tr('— ของขึ้นรถแล้วงานของเราจบตรงนั้น')}</>}
         <br />
-        📦 <strong>หักสต็อก</strong> — ติ๊กเฟสที่ของถูกตัดออกจาก warehouse จริง (ให้ตรงกับ SAP ที่ตัดตั้งแต่ย้ายของไปพื้นที่ shipping area ก่อนขึ้นรถ)
-        {' '}ตอนนี้หักตอน <strong style={{ color: '#0ea5e9' }}>{cutStep ? cutStep.name : 'จบงาน (ค่าเริ่มต้น — ยังไม่ติ๊กเฟสไหน)'}</strong> · หักครั้งเดียวต่อรอบส่งเสมอ ติ๊กหลายเฟสจะยึดเฟสแรกสุด
+        📦 <strong>{tr('หักสต็อก')}</strong> — {tr("ติ๊กเฟสที่ของถูกตัดออกจาก warehouse จริง (ให้ตรงกับ SAP ที่ตัดตั้งแต่ย้ายของไปพื้นที่ shipping area ก่อนขึ้นรถ")})
+        {' '}{tr('ตอนนี้หักตอน')} <strong style={{ color: 'var(--blue)' }}>{cutStep ? cutStep.name : tr('จบงาน (ค่าเริ่มต้น — ยังไม่ติ๊กเฟสไหน)')}</strong> · {tr("หักครั้งเดียวต่อรอบส่งเสมอ ติ๊กหลายเฟสจะยึดเฟสแรกสุด")}
       </div>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)' }}>ชุดเฟสของ:</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)' }}>{tr('ชุดเฟสของ:')}</span>
         <select value={scope} onChange={e => setScope(e.target.value)} style={{ ...inputSt, width: 220 }}>
-          <option value="">🌐 ค่ามาตรฐาน (ทุกลูกค้า)</option>
+          <option value="">{tr('ค่ามาตรฐาน (ทุกลูกค้า)')}</option>
           {codes.map(c => (
             <option key={c.code} value={c.code}>
               {c.customer_name && c.customer_name !== c.code ? `${c.customer_name} (${c.code})` : c.code}
@@ -1196,17 +1217,17 @@ function WorkflowSection({ canEdit }) {
           ))}
         </select>
         {scope && steps.length === 0 && canEdit && (
-          <button onClick={copyFromDefault} style={btn(false)}>📋 คัดลอกจากค่ามาตรฐาน</button>
+          <button onClick={copyFromDefault} style={btn(false)}>{tr('คัดลอกจากค่ามาตรฐาน')}</button>
         )}
         {scope && steps.length === 0 && (
-          <span style={{ fontSize: 11, color: 'var(--muted)' }}>ลูกค้านี้ยังไม่มีชุดเฟสของตัวเอง — ตอนนี้ใช้ค่ามาตรฐานอยู่</span>
+          <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('ลูกค้านี้ยังไม่มีชุดเฟสของตัวเอง — ตอนนี้ใช้ค่ามาตรฐานอยู่')}</span>
         )}
       </div>
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 700 }}>
           <thead><tr style={{ background: 'var(--bg2)' }}>
-            {['ลำดับ', 'ชื่อเฟส', 'ก่อนเวลาส่ง (นาที)', 'ต้องถึงสถานะ', '📦 หักสต็อก', ''].map(h => (
-              <th key={h} style={{ padding: '8px 10px', fontSize: 11, fontWeight: 800, color: 'var(--muted)', textAlign: 'left' }}>{h}</th>
+            {[tr("ลำดับ"), tr("ชื่อเฟส"), tr("ก่อนเวลาส่ง (นาที)"), tr("ต้องถึงสถานะ"), tr("📦 หักสต็อก"), ''].map(h => (
+              <th key={h} style={{ padding: '8px 10px', fontSize: 11, fontWeight: 800, color: 'var(--muted)', textAlign: 'left' }}>{tr(h)}</th>
             ))}
           </tr></thead>
           <tbody>
@@ -1217,31 +1238,31 @@ function WorkflowSection({ canEdit }) {
                 <td style={cell}>{canEdit ? <input type="number" min="0" value={val(r, 'offset_min')} onChange={e => setVal(r, 'offset_min', e.target.value)} style={{ ...edSt, width: 110 }} /> : <span style={{ fontSize: 13 }}>{r.offset_min}</span>}</td>
                 <td style={cell}>{canEdit ? (
                   <select value={val(r, 'requires_status')} onChange={e => setVal(r, 'requires_status', e.target.value)} style={{ ...edSt, width: 170 }}>
-                    {REQ_STATUS_OPTIONS.map(x => <option key={x.value} value={x.value}>{x.label}</option>)}
+                    {REQ_STATUS_OPTIONS.map(x => <option key={x.value} value={x.value}>{tr(x.label)}</option>)}
                   </select>
-                ) : <span style={{ fontSize: 12 }}>{REQ_STATUS_OPTIONS.find(x => x.value === r.requires_status)?.label || r.requires_status}</span>}</td>
+                ) : <span style={{ fontSize: 12 }}>{tr(REQ_STATUS_OPTIONS.find(x => x.value === r.requires_status)?.label) || r.requires_status}</span>}</td>
                 <td style={{ ...cell, whiteSpace: 'nowrap' }}>
                   {canEdit ? (
                     <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, cursor: 'pointer', color: 'var(--text2)' }}
-                      title="ติ๊กเฟสที่ของถูกตัดออกจาก warehouse จริง (SAP ตัดตั้งแต่ย้ายเข้าพื้นที่ shipping area)">
+                      title={tr('ติ๊กเฟสที่ของถูกตัดออกจาก warehouse จริง (SAP ตัดตั้งแต่ย้ายเข้าพื้นที่ shipping area)')}>
                       <input type="checkbox" checked={!!val(r, 'deducts_stock')}
                         onChange={e => setVal(r, 'deducts_stock', e.target.checked)} style={{ width: 'auto', margin: 0 }} />
-                      หักที่เฟสนี้
+                      {tr('หักที่เฟสนี้')}
                     </label>
-                  ) : <span style={{ fontSize: 12 }}>{r.deducts_stock ? '📦 หักที่เฟสนี้' : '—'}</span>}
-                  {r.id === cutStep?.id && <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 800, color: '#0ea5e9' }}>← จุดหักจริง</span>}
+                  ) : <span style={{ fontSize: 12 }}>{r.deducts_stock ? tr('📦 หักที่เฟสนี้') : '—'}</span>}
+                  {r.id === cutStep?.id && <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 800, color: 'var(--blue)' }}>{tr('← จุดหักจริง')}</span>}
                 </td>
                 <td style={{ ...cell, whiteSpace: 'nowrap' }}>
                   {canEdit && draft[r.id] && (
                     <button className="tbtn" onClick={() => save(r)} disabled={busy === r.id}
-                      style={{ padding: '5px 14px', borderRadius: 7, border: 'none', background: 'var(--accent)', color: 'var(--accent-ink)', fontSize: 11, fontWeight: 800, cursor: 'pointer', fontFamily: 'var(--font-body)', marginRight: 6 }}>
-                      {busy === r.id ? '...' : '💾 บันทึก'}
+                      style={{ padding: '5px 14px', borderRadius: 'var(--r-md)', border: 'none', background: 'var(--accent)', color: 'var(--accent-ink)', fontSize: 11, fontWeight: 800, cursor: 'pointer', fontFamily: 'var(--font-body)', marginRight: 6 }}>
+                      {busy === r.id ? '...' : tr('บันทึก')}
                     </button>
                   )}
                   {canEdit && (
                     <button className="tbtn" onClick={() => remove(r)} disabled={busy === r.id}
-                      style={{ padding: '5px 10px', borderRadius: 7, fontSize: 11, fontWeight: 700, cursor: 'pointer', background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', fontFamily: 'var(--font-body)' }}>
-                      🗑 ลบ
+                      style={{ padding: '5px 10px', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 700, cursor: 'pointer', background: 'var(--red-dim)', color: 'var(--red)', border: '1px solid var(--red-line)', fontFamily: 'var(--font-body)' }}>
+                      {tr('ลบ')}
                     </button>
                   )}
                 </td>
@@ -1251,11 +1272,11 @@ function WorkflowSection({ canEdit }) {
         </table>
       </div>
       {canEdit && (
-        <button onClick={add} style={{ ...btn(false), marginTop: 12 }}>➕ เพิ่มเฟส</button>
+        <button onClick={add} style={{ ...btn(false), marginTop: 12 }}>{tr('เพิ่มเฟส')}</button>
       )}
       <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 10, lineHeight: 1.7 }}>
-        ตัวอย่าง: ส่งถึงลูกค้า 13:00 → เตรียมงานเสร็จ (120 นาที) deadline 11:00 · โหลดขึ้นรถ (60 นาที) deadline 12:00 · รถออก/ส่ง (0 นาที) deadline 13:00<br />
-        รถลูกค้ามารับเอง (milk run): ตั้งแค่ 3 เฟสจบที่ <em>โหลดขึ้นรถ</em> แล้วติ๊กหักสต็อกที่ <em>เตรียมงานเสร็จ</em> → กดโหลดขึ้นรถ = ปิดรอบส่งเลย
+        {tr("ตัวอย่าง: ส่งถึงลูกค้า 13:00 → เตรียมงานเสร็จ (120 นาที) deadline 11:00 · โหลดขึ้นรถ (60 นาที) deadline 12:00 · รถออก/ส่ง (0 นาที")}) deadline 13:00<br />
+        {tr("รถลูกค้ามารับเอง (milk run): ตั้งแค่ 3 เฟสจบที่")} <em>{tr('โหลดขึ้นรถ')}</em> {tr('แล้วติ๊กหักสต็อกที่')} <em>{tr('เตรียมงานเสร็จ')}</em> → {tr("กดโหลดขึ้นรถ = ปิดรอบส่งเลย")}
       </div>
     </div>
   );
@@ -1296,7 +1317,7 @@ function ShipToTab({ canEdit, onChanged, fullName }) {
         sort_order: d.sort_order === '' || d.sort_order == null ? null : Number(d.sort_order), updated_at: new Date().toISOString() })
       .eq('code', code);
     if (error) toast.error(error.message);
-    else { toast.success(`บันทึก ${code} แล้ว`); await load(); onChanged?.(); }
+    else { toast.success(`${tr("บันทึก")} ${code} ${tr("แล้ว")}`); await load(); onChanged?.(); }
     setBusy(null);
   };
   const addCode = async () => {
@@ -1308,11 +1329,11 @@ function ShipToTab({ canEdit, onChanged, fullName }) {
     await load();
   };
   const removeCode = async (r) => {
-    if (!window.confirm(`ลบ code "${r.code}"${r.customer_name !== r.code ? ` (${r.customer_name})` : ''}?\n\nข้อมูล order/forecast ที่อ้าง code นี้ยังอยู่ครบ (จะแสดงเป็น code ดิบแทนชื่อ) และถ้า code นี้โผล่ในไฟล์ EDI ครั้งหน้า ระบบจะเพิ่มกลับมาให้อัตโนมัติ`)) return;
+    if (!await askConfirm(`${tr("ลบ")} code "${r.code}"${r.customer_name !== r.code ? ` (${r.customer_name})` : ''}?\n\n${tr("ข้อมูล order/forecast ที่อ้าง code นี้ยังอยู่ครบ (จะแสดงเป็น code ดิบแทนชื่อ) และถ้า code นี้โผล่ในไฟล์ EDI ครั้งหน้า ระบบจะเพิ่มกลับมาให้อัตโนมัติ")}`)) return;
     setBusy(r.code);
     const { error } = await supabaseDR.from('ship_to_plants').delete().eq('code', r.code);
     if (error) toast.error(error.message);
-    else { toast.success(`ลบ ${r.code} แล้ว`); await load(); onChanged?.(); }
+    else { toast.success(`${tr("ลบ")} ${r.code} ${tr("แล้ว")}`); await load(); onChanged?.(); }
     setBusy(null);
   };
 
@@ -1324,21 +1345,21 @@ function ShipToTab({ canEdit, onChanged, fullName }) {
   return (
     <>
     <div style={card}>
-      <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)', marginBottom: 4, fontFamily: 'var(--font-display)' }}>⚙️ Ship-to Plant Config</div>
+      <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)', marginBottom: 4, fontFamily: 'var(--font-display)' }}>Ship-to Plant Config</div>
       <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>
-        ตั้งชื่อลูกค้าให้ code ปลายทางจากไฟล์ EDI (เช่น GRBNA → AAT) — ชื่อนี้จะแสดงแทน code ในทุกหน้าจอ · code ใหม่จากไฟล์ EDI จะถูกเพิ่มเข้าลิสต์นี้อัตโนมัติ
-        · 🔒 <b>ลำดับในชาร์ต</b> = แถวลูกค้าบน Shipping Time Chart (เลขน้อยอยู่บน · ล็อกตายตัวทุกวัน · ว่าง = ต่อท้าย)
-        <div style={{ marginTop: 5, color: '#f59e0b' }}>
-          ⚠️ ชื่อนี้ถูกใช้เป็น<b>กุญแจแยกออเดอร์</b> ตอนนำเข้า EDI — เลขพาร์ทลูกค้าตัวเดียวมีได้หลายเลข SAP ต่างกันที่ลูกค้าปลายทาง
-          <b> ต้องสะกดตรงกับช่อง "ลูกค้า" ใน Product Master</b> ไม่งั้นแยกไม่ออก แล้วออเดอร์ทุกเจ้าจะไปกองที่เลขเดียว
-          <div style={{ color: 'var(--muted)', marginTop: 2 }}>→ เลือกจากลิสต์ (ดึงจาก Product Master) แทนการพิมพ์เอง · พิมพ์เองได้ถ้าเป็นลูกค้าใหม่ที่ยังไม่มีสินค้า</div>
+        {tr("ตั้งชื่อลูกค้าให้ code ปลายทางจากไฟล์ EDI (เช่น GRBNA → AAT) — ชื่อนี้จะแสดงแทน code ในทุกหน้าจอ · code ใหม่จากไฟล์ EDI จะถูกเพิ่มเข้าลิสต์นี้อัตโนมัติ")}
+        · 🔒 <b>{tr('ลำดับในชาร์ต')}</b> = {tr("แถวลูกค้าบน Shipping Time Chart (เลขน้อยอยู่บน · ล็อกตายตัวทุกวัน · ว่าง = ต่อท้าย")})
+        <div style={{ marginTop: 5, color: 'var(--amber)' }}>
+          ⚠️ {tr("ชื่อนี้ถูกใช้เป็น")}<b>{tr('กุญแจแยกออเดอร์')}</b> {tr("ตอนนำเข้า EDI — เลขพาร์ทลูกค้าตัวเดียวมีได้หลายเลข SAP ต่างกันที่ลูกค้าปลายทาง")}
+          <b> {tr("ต้องสะกดตรงกับช่อง \"ลูกค้า\" ใน")} Product Master</b> {tr("ไม่งั้นแยกไม่ออก แล้วออเดอร์ทุกเจ้าจะไปกองที่เลขเดียว")}
+          <div style={{ color: 'var(--muted)', marginTop: 2 }}>{tr('→ เลือกจากลิสต์ (ดึงจาก Product Master) แทนการพิมพ์เอง · พิมพ์เองได้ถ้าเป็นลูกค้าใหม่ที่ยังไม่มีสินค้า')}</div>
         </div>
       </div>
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
           <thead><tr style={{ background: 'var(--bg2)' }}>
-            {['ลำดับในชาร์ต', 'Code', 'ชื่อลูกค้า *', 'โรงงาน/ท่า', 'หมายเหตุ', ''].map(h => (
-              <th key={h} style={{ padding: '8px 10px', fontSize: 11, fontWeight: 800, color: 'var(--muted)', textAlign: 'left' }}>{h}</th>
+            {[tr("ลำดับในชาร์ต"), 'Code', tr("ชื่อลูกค้า *"), tr("โรงงาน/ท่า"), tr("หมายเหตุ"), ''].map(h => (
+              <th key={h} style={{ padding: '8px 10px', fontSize: 11, fontWeight: 800, color: 'var(--muted)', textAlign: 'left' }}>{tr(h)}</th>
             ))}
           </tr></thead>
           <tbody>
@@ -1348,7 +1369,7 @@ function ShipToTab({ canEdit, onChanged, fullName }) {
                 <td style={{ ...cell, width: 90 }}>{canEdit
                   ? <input type="number" step={10} value={val(r, 'sort_order')} onChange={e => setVal(r, 'sort_order', e.target.value)} style={{ ...edSt, width: 70 }} />
                   : <span style={{ fontSize: 12, color: 'var(--text2)' }}>{r.sort_order ?? '—'}</span>}</td>
-                <td style={{ ...cell, fontFamily: 'monospace', fontWeight: 800, color: '#0ea5e9', fontSize: 13 }}>{r.code}</td>
+                <td style={{ ...cell, fontFamily: 'monospace', fontWeight: 800, color: 'var(--blue)', fontSize: 13 }}>{r.code}</td>
                 <td style={cell}>{canEdit ? <CustomerPicker
                     value={val(r, 'customer_name')} code={r.code} opts={custOpts}
                     onChange={(v) => setVal(r, 'customer_name', v)} edSt={edSt} />
@@ -1358,14 +1379,14 @@ function ShipToTab({ canEdit, onChanged, fullName }) {
                 <td style={{ ...cell, whiteSpace: 'nowrap' }}>
                   {canEdit && draft[r.code] && (
                     <button className="tbtn" onClick={() => save(r.code)} disabled={busy === r.code}
-                      style={{ padding: '5px 14px', borderRadius: 7, border: 'none', background: 'var(--accent)', color: 'var(--accent-ink)', fontSize: 11, fontWeight: 800, cursor: 'pointer', fontFamily: 'var(--font-body)', marginRight: 6 }}>
-                      {busy === r.code ? '...' : '💾 บันทึก'}
+                      style={{ padding: '5px 14px', borderRadius: 'var(--r-md)', border: 'none', background: 'var(--accent)', color: 'var(--accent-ink)', fontSize: 11, fontWeight: 800, cursor: 'pointer', fontFamily: 'var(--font-body)', marginRight: 6 }}>
+                      {busy === r.code ? '...' : tr('บันทึก')}
                     </button>
                   )}
                   {canEdit && (
                     <button className="tbtn" onClick={() => removeCode(r)} disabled={busy === r.code}
-                      style={{ padding: '5px 10px', borderRadius: 7, fontSize: 11, fontWeight: 700, cursor: 'pointer', background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', fontFamily: 'var(--font-body)' }}>
-                      🗑 ลบ
+                      style={{ padding: '5px 10px', borderRadius: 'var(--r-md)', fontSize: 11, fontWeight: 700, cursor: 'pointer', background: 'var(--red-dim)', color: 'var(--red)', border: '1px solid var(--red-line)', fontFamily: 'var(--font-body)' }}>
+                      {tr('ลบ')}
                     </button>
                   )}
                 </td>
@@ -1376,8 +1397,8 @@ function ShipToTab({ canEdit, onChanged, fullName }) {
       </div>
       {canEdit && (
         <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-          <input value={newCode} onChange={e => setNewCode(e.target.value)} placeholder="เพิ่ม code ใหม่" style={{ ...inputSt, width: 160 }} />
-          <button onClick={addCode} style={btn(false)}>➕ เพิ่ม</button>
+          <input value={newCode} onChange={e => setNewCode(e.target.value)} placeholder={tr('เพิ่ม code ใหม่')} style={{ ...inputSt, width: 160 }} />
+          <button onClick={addCode} style={btn(false)}>{tr('เพิ่ม')}</button>
         </div>
       )}
     </div>
@@ -1409,7 +1430,7 @@ export default function CustomerDemand() {
   }, []);
   useEffect(() => { loadShipTo(); }, [loadShipTo]);
   const custLabel = useCallback((code) => {
-    if (!code) return '— ไม่ระบุลูกค้า —';
+    if (!code) return tr("— ไม่ระบุลูกค้า —");
     const r = shipToMap[code];
     return r && r.customer_name && r.customer_name !== code ? `${r.customer_name} (${code})` : code;
   }, [shipToMap]);
@@ -1417,12 +1438,12 @@ export default function CustomerDemand() {
   return (
     <Page>
       <PageHeader
-        title="Delivery — ติดตามการส่งงานลูกค้า" icon="🚚"
-        sub="Logistic ติดตามรอบส่งงานรายวันตาม standard workflow · Forecast/อัพโหลดไฟล์ของ Sales อยู่หน้า 📈 Planner & Sales"
+        title={tr('Delivery — ติดตามการส่งงานลูกค้า')} icon="🚚"
+        sub={tr('Logistic ติดตามรอบส่งงานรายวันตาม standard workflow · Forecast/อัพโหลดไฟล์ของ Sales อยู่หน้า 📈 Planner & Sales')}
         tabs={[
-          { key: 'shipping', label: '🕐 Shipping Chart' },
-          { key: 'log', label: '📜 ประวัติ order เข้าระบบ' },
-          { key: 'shipto', label: '⚙️ Ship-to Config' },   // ⚠️ แท็บตั้งค่าอยู่ท้ายสุดเสมอ (UI-CONVENTIONS §6.8 ข้อ 4)
+          { key: 'shipping', label: 'Shipping Chart' },
+          { key: 'log', label: tr("ประวัติ order เข้าระบบ") },
+          { key: 'shipto', label: 'Ship-to Config' },   // ⚠️ แท็บตั้งค่าอยู่ท้ายสุดเสมอ (UI-CONVENTIONS §6.8 ข้อ 4)
         ]}
         tab={tab} onTab={setTab}
       />
@@ -1430,7 +1451,7 @@ export default function CustomerDemand() {
       {/* ship-to ที่เลือกได้ในฟอร์มคีย์ order = เฉพาะ active (ปิดใช้แล้วยังแสดงชื่อผ่าน custLabel ได้ตามเดิม) */}
       {tab === 'shipping' && <ShippingTab fullName={fullName} refreshKey={refreshKey} custLabel={custLabel} canAdd={canConfig} shipToCodes={Object.keys(shipToMap).filter(c => shipToMap[c]?.is_active !== false).sort()} shipToMap={shipToMap} />}
       {tab === 'log' && (
-        <Suspense fallback={<div style={{ fontSize: 12, color: 'var(--text2)', padding: 16 }}>⏳ กำลังโหลด…</div>}>
+        <Suspense fallback={<div style={{ fontSize: 12, color: 'var(--text2)', padding: 16 }}>{tr('⏳ กำลังโหลด…')}</div>}>
           <OrderIntakeLog shipToMap={shipToMap} custLabel={custLabel} />
         </Suspense>
       )}
@@ -1454,14 +1475,14 @@ function CustomerPicker({ value, code, opts, onChange, edSt }) {
     <div>
       <CustomerSelect value={v} onChange={({ customer }) => onChange(customer)} inputStyle={edSt}
         extra={opts.map(o => o.name)}
-        freeHint="ลูกค้าใหม่ — ถ้าไม่มีสินค้าไหนใช้ชื่อนี้ จะแยกออเดอร์ตามลูกค้าไม่ได้" />
+        freeHint={tr("ลูกค้าใหม่ — ถ้าไม่มีสินค้าไหนใช้ชื่อนี้ จะแยกออเดอร์ตามลูกค้าไม่ได้")} />
       {/* บอกผลการจับคู่ทันที — "SOUTH ARFIGA" ต้องเห็นว่าไม่ตรงกับใครตั้งแต่ยังไม่กดบันทึก */}
       {unset ? (
-        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>ยังไม่ตั้ง — แยกออเดอร์ตามลูกค้าไม่ได้</div>
+        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{tr('ยังไม่ตั้ง — แยกออเดอร์ตามลูกค้าไม่ได้')}</div>
       ) : hit ? (
-        <div style={{ fontSize: 11, color: '#22c55e', marginTop: 2 }}>✓ ตรงกับ {hit.n} สินค้าใน Product Master</div>
+        <div style={{ fontSize: 11, color: 'var(--green)', marginTop: 2 }}>{tr('✓ ตรงกับ')} {hit.n} {tr('สินค้าใน Product Master')}</div>
       ) : (
-        <div style={{ fontSize: 11, color: '#f59e0b', marginTop: 2 }}>⚠ ไม่มีสินค้าไหนใช้ชื่อลูกค้านี้ — แยกออเดอร์ไม่ได้ (ตรวจตัวสะกด หรือไปตั้งช่อง "ลูกค้า" ที่ Product Master)</div>
+        <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 2 }}>⚠ {tr("ไม่มีสินค้าไหนใช้ชื่อลูกค้านี้ — แยกออเดอร์ไม่ได้ (ตรวจตัวสะกด หรือไปตั้งช่อง \"ลูกค้า\" ที่")} Product Master)</div>
       )}
     </div>
   );

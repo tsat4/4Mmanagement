@@ -26,7 +26,10 @@ import { statusColor, toneInk } from '../utils/statusTone';
 import { staleTone } from '../utils/mtnStale';
 /* 🏃 "ใบนี้รอใครลงมือ" — กฎการแบ่งฝั่ง/หาเป้าอยู่ util ที่เดียว (05/11 · ห้ามตัดสินฝั่งในไฟล์นี้) */
 import { chaseSideMeta } from '../utils/moChase';
+/* 🔗 โซ่ส่งต่อที่ขาด — กฎตัดสินอยู่ util ที่เดียว (11/11 · ห้ามเทียบสถานะใบลูกในไฟล์นี้) */
+import { handoffGapMeta } from '../utils/moHandoffGaps';
 
+import { tr } from '../utils/i18n';
 const FIRST_ROWS = 8;   // โชว์ก่อน 8 ใบ ที่เหลือพับ + บอกจำนวนที่พับ (§5.5 "ห้ามตัดข้อมูลเงียบ")
 
 /** ชิปตัวเลข — กดได้ = ปุ่ม (ตัวกรองของหน้าแม่) · กดไม่ได้ = span (ขั้นที่ไม่ใช่ stage เช่นใบตีกลับ) */
@@ -64,6 +67,9 @@ export default function MoStalePanel({
   /* 🏃 แผงไล่งาน (05/11 · คำสั่ง user "ทำแผงไล่ MO ค้างให้หัวหน้าช่าง") — `chase` = ผลจาก
      `buildMoChaseBoard()` · `null` = หน้าแม่ยังไม่ส่งมา (แผงเดิมทำงานเหมือนเดิมเป๊ะ) */
   chase = null, onText, onLine,
+  /* 🔗 โซ่ส่งต่อที่ขาด (11/11 · คำสั่ง user) — ผลจาก `buildHandoffGapBoard()`
+     `null` = หน้าแม่ยังไม่ส่งมา (แผงเดิมทำงานเหมือนเดิมเป๊ะ) · `onOpenId(id)` = เปิดใบแม่ */
+  gaps = null, gapsErr = '', gapsCapped = false, onOpenId,
 }) {
   const [side, setSide] = useState('');   // ฝั่งที่กางอยู่ ('' = ยังไม่เลือก)
   const [all, setAll] = useState(false);
@@ -93,49 +99,47 @@ export default function MoStalePanel({
       id="mo-stale" storePrefix="mo" defaultOpen={false}
       style={{ marginBottom: 10, padding: '10px 13px', ...headSkin }}
       title={<span style={{ fontSize: 13 }}>
-        ⏳ ค้างขั้นเดิมเกิน {days} วัน{' '}
+        ⏳ {tr("ค้างขั้นเดิมเกิน")} {days} {tr('วัน')}{' '}
         <b style={{ color: toneInk(headTone), fontSize: 15 }}>{stale}</b>
-        <span style={{ color: 'var(--muted)', fontWeight: 600 }}> / {open} ใบที่ยังไม่ปิด</span>
-        {oldest != null && <span style={{ color: 'var(--muted)', fontWeight: 600 }}> · เก่าสุด {oldest} วัน</span>}
+        <span style={{ color: 'var(--muted)', fontWeight: 600 }}> / {open} {tr('ใบที่ยังไม่ปิด')}</span>
+        {oldest != null && <span style={{ color: 'var(--muted)', fontWeight: 600 }}> {tr('· เก่าสุด')} {oldest} {tr('วัน')}</span>}
       </span>}
       right={hard > 0 && (
         <span style={{ fontSize: 11.5, fontWeight: 800, color: statusColor('bad'), flexShrink: 0 }}>
-          🔴 เกิน {hardDays} วัน {hard} ใบ
+          🔴 {tr("เกิน")} {hardDays} {tr('วัน')} {hard} {tr("ใบ")}
         </span>
       )}
     >
       {/* เกณฑ์การนับ — ต้องเขียนไว้ เพราะสรุปเช้า/Telegram นับจาก "วันแจ้ง" จึงได้เลขมากกว่าโดยเจตนา */}
       <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 7, lineHeight: 1.5 }}>
-        นับจาก<b> เวลาที่ใบเข้าขั้นปัจจุบัน</b> (ไม่ใช่วันแจ้ง) — ใบที่เพิ่งถูกเลื่อนขั้นจะเริ่มนับใหม่
-        · สรุปเช้า/Telegram นับจาก<b> วันแจ้ง</b> จึงได้ยอดมากกว่าปกติ
-        · นับ<b> ทุกใบที่ยังไม่ปิดในขอบเขตของคุณ</b> ไม่ขึ้นกับตัวกรองด้านบน
+        {tr("นับจาก")}<b> {tr('เวลาที่ใบเข้าขั้นปัจจุบัน')}</b> ({tr("ไม่ใช่วันแจ้ง) — ใบที่เพิ่งถูกเลื่อนขั้นจะเริ่มนับใหม่ · สรุปเช้า/Telegram นับจาก")}<b> {tr('วันแจ้ง')}</b> {tr("จึงได้ยอดมากกว่าปกติ · นับ")}<b> {tr('ทุกใบที่ยังไม่ปิดในขอบเขตของคุณ')}</b> {tr("ไม่ขึ้นกับตัวกรองด้านบน")}
       </div>
 
       {/* ── ความซื่อสัตย์ของจอ: ยอดนี้ครบหรือไม่ครบ ต้องรู้ก่อนอ่านเลข ── */}
       {loadErr && (
         <div role="alert" style={{ fontSize: 11.5, fontWeight: 700, color: statusColor('bad'), marginBottom: 6 }}>
-          ⚠️ โหลดใบซ่อมไม่สำเร็จ ({loadErr}) — ยอดค้างด้านล่าง<b>ไม่ใช่ของครบ</b>
+          ⚠️ {tr("โหลดใบซ่อมไม่สำเร็จ")} ({loadErr}) — {tr("ยอดค้างด้านล่าง")}<b>{tr('ไม่ใช่ของครบ')}</b>
         </div>
       )}
       {partial && (
         <div style={{ fontSize: 11.5, color: 'var(--text2)', marginBottom: 6 }}>
-          ⚠️ ใบถูกตัดที่เพดานคิวรี — ใบที่เก่ากว่านั้นไม่ได้โหลดมา ยอดค้างจริงอาจมากกว่านี้
+          ⚠️ {tr("ใบถูกตัดที่เพดานคิวรี — ใบที่เก่ากว่านั้นไม่ได้โหลดมา ยอดค้างจริงอาจมากกว่านี้")}
         </div>
       )}
       {unknown > 0 && (
         <div style={{ fontSize: 11.5, color: 'var(--text2)', marginBottom: 6 }}>
-          ❓ <b>{unknown} ใบไม่มีวันเวลาให้นับ</b> — ยังไม่รู้ว่าค้างนานแค่ไหน (ไม่ถูกนับรวมใน {stale} ใบข้างบน)
+          ❓ <b>{unknown} {tr('ใบไม่มีวันเวลาให้นับ')}</b> {tr('— ยังไม่รู้ว่าค้างนานแค่ไหน (ไม่ถูกนับรวมใน')} {stale} {tr("ใบข้างบน")})
         </div>
       )}
       {approx > 0 && (
         <div style={{ fontSize: 11.5, color: 'var(--text2)', marginBottom: 6 }}>
-          ℹ️ <b>{approx} ใบไม่มีเวลาเข้าขั้น</b> จึงนับจากวันแจ้งไปก่อน — ตัวเลขของใบเหล่านี้<b>เก่ากว่าความจริง</b>
+          ℹ️ <b>{approx} {tr('ใบไม่มีเวลาเข้าขั้น')}</b> {tr('จึงนับจากวันแจ้งไปก่อน — ตัวเลขของใบเหล่านี้')}<b>{tr('เก่ากว่าความจริง')}</b>
         </div>
       )}
 
       {stale === 0 && !loadErr ? (
         <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text2)' }}>
-          ✅ ไม่มีใบค้างขั้นเดิมเกิน {days} วัน{open > 0 ? ` (ใบที่ยังไม่ปิด ${open} ใบ อยู่ในเกณฑ์ทั้งหมด)` : ''}
+          ✅ {tr("ไม่มีใบค้างขั้นเดิมเกิน")} {days} {tr('วัน')}{open > 0 ? ` (${tr("ใบที่ยังไม่ปิด")} ${open} ${tr("ใบ อยู่ในเกณฑ์ทั้งหมด")})` : ''}
         </div>
       ) : (
         <>
@@ -143,10 +147,10 @@ export default function MoStalePanel({
               ขั้นมาจาก stepMeta() ในฝั่ง util · ถัง `status:` คือใบที่ไม่อยู่ในลูปขั้น (ตีกลับ/ส่งซ่อมนอก) กรองด้วย wait ไม่ได้ */}
           <div style={{ marginBottom: 7 }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-              <span style={lbl}>ค้างที่ขั้น:</span>
+              <span style={lbl}>{tr('ค้างที่ขั้น:')}</span>
               {byStage.filter(s => s.stale > 0).map(s => (
                 <Chip key={s.key} tone={staleTone(s.hard > 0 ? hardDays : days)}
-                  label={`${s.icon} ${s.title}`} sub={`${s.stale} ใบ`}
+                  label={`${s.icon} ${s.title}`} sub={`${s.stale} ${tr("ใบ")}`}
                   onClick={s.stage && onStage ? () => onStage(s.stage) : undefined}
                   title={[`ค้างเกิน ${days} วัน ${s.stale} ใบ (จากทั้งขั้น ${s.n} ใบ)`,
                     s.hard > 0 && `เกิน ${hardDays} วัน ${s.hard} ใบ`,
@@ -158,10 +162,10 @@ export default function MoStalePanel({
           </div>
           {/* ── ค้างของทีมไหน — กดเพื่อกรองทีมช่าง ── */}
           <div style={{ marginBottom: 9, display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-            <span style={lbl}>ทีมช่าง:</span>
+            <span style={lbl}>{tr('ทีมช่าง:')}</span>
             {byTeam.filter(t => t.stale > 0).map(t => (
               <Chip key={t.dept || '(none)'} tone={staleTone(t.hard > 0 ? hardDays : days)}
-                label={t.dept ? (teamName(t.dept) || t.dept) : '(ไม่ระบุทีม)'} sub={`${t.stale} ใบ`}
+                label={t.dept ? (teamName(t.dept) || t.dept) : tr('(ไม่ระบุทีม)')} sub={`${t.stale} ${tr("ใบ")}`}
                 onClick={t.dept && onTeam ? () => onTeam(t.dept) : undefined}
                 title={[`ค้างเกิน ${days} วัน ${t.stale} ใบ (จากทั้งทีม ${t.n} ใบ)`,
                   t.oldest != null && `เก่าสุด ${t.oldest} วัน`,
@@ -177,11 +181,11 @@ export default function MoStalePanel({
           {chase && chase.sides.length > 0 && (
             <div style={{ marginBottom: 9, paddingTop: 7, borderTop: '1px solid var(--border)' }}>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginBottom: 5 }}>
-                <span style={lbl}>🏃 รอใครลงมือ:</span>
+                <span style={lbl}>{tr('รอใครลงมือ:')}</span>
                 {chase.sides.map(s2 => (
                   <Chip key={s2.side} tone={s2.tone}
                     label={`${s2.meta.icon} ${s2.meta.label}`}
-                    sub={`${s2.n} ใบ`}
+                    sub={`${s2.n} ${tr("ใบ")}`}
                     onClick={() => setSide(side === s2.side ? '' : s2.side)}
                     title={[s2.meta.hint,
                       s2.hard > 0 && `เกิน ${hardDays} วัน ${s2.hard} ใบ`,
@@ -193,19 +197,19 @@ export default function MoStalePanel({
               {/* ❓ ใบที่นับวันไม่ได้ ไม่ได้อยู่ในแถบนี้เลย — ต้องเขียนบอก ไม่ใช่ปล่อยให้ยอดไม่ตรงกันเงียบๆ */}
               {chase.unknownAge > 0 && (
                 <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 5 }}>
-                  ❓ อีก <b>{chase.unknownAge} ใบ</b> ไม่มีวันเวลาให้นับ จึงยังไม่รู้ว่ารอใครนานแค่ไหน (ไม่อยู่ในแถบนี้)
+                  ❓ {tr("อีก")} <b>{chase.unknownAge} {tr('ใบ')}</b> {tr("ไม่มีวันเวลาให้นับ จึงยังไม่รู้ว่ารอใครนานแค่ไหน (ไม่อยู่ในแถบนี้")})
                 </div>
               )}
               {!side ? (
                 <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                  กดกองด้านบนเพื่อดูรายชื่อ “ต้องไปตามใคร” — เรียงใบที่ดองนานสุดขึ้นก่อน
+                  {tr("กดกองด้านบนเพื่อดูรายชื่อ “ต้องไปตามใคร” — เรียงใบที่ดองนานสุดขึ้นก่อน")}
                 </div>
               ) : (() => {
                 const sel = chase.sides.find(x => x.side === side);
                 if (!sel) return null;
                 return (<>
                   <div style={{ fontSize: 11, color: 'var(--text2)', marginBottom: 4, lineHeight: 1.5 }}>
-                    {sel.meta.icon} <b>{sel.meta.label}</b> — {sel.meta.hint}
+                    {sel.meta.icon} <b>{tr(sel.meta.label)}</b> — {tr(sel.meta.hint)}
                   </div>
                   <div style={{ display: 'grid', gap: 3, alignContent: 'start' }}>
                     {sel.targets.map(t => {
@@ -217,19 +221,19 @@ export default function MoStalePanel({
                       return (
                         <div key={t.key} onClick={act}
                           style={{ display: 'flex', flexWrap: 'wrap', gap: 7, alignItems: 'baseline', fontSize: 11.5,
-                            color: 'var(--text2)', padding: '4px 7px', borderRadius: 6, background: 'var(--bg3)',
+                            color: 'var(--text2)', padding: '4px 7px', borderRadius: 'var(--r-md)', background: 'var(--bg3)',
                             borderLeft: `3px solid ${statusColor(t.tone)}`, cursor: act ? 'pointer' : 'default' }}
                           title={[`ค้างเกิน ${days} วัน ${t.n} ใบ`,
                             t.hard > 0 && `เกิน ${hardDays} วัน ${t.hard} ใบ`,
                             t.oldest != null && `เก่าสุด ${t.oldest} วัน`,
                             act ? 'กดเพื่อกรองลิสต์ด้านล่างเฉพาะกองนี้' : 'ชี้เป้าไม่ได้ — กรองอัตโนมัติไม่ได้ ต้องเปิดดูทีละใบ',
                           ].filter(Boolean).join(' · ')}>
-                          <b style={{ color: toneInk(t.tone), minWidth: 62 }}>{t.oldest} วัน</b>
-                          <b style={{ color: 'var(--text)' }}>{t.label}</b>
-                          {t.whoShort && t.kind !== 'role' && <span style={{ color: 'var(--muted)' }}>· ต้องกดโดย {t.whoShort}</span>}
-                          <span>· {t.n} ใบ</span>
-                          {t.hard > 0 && <span style={{ color: statusColor('bad'), fontWeight: 700 }}>· เกิน {hardDays} วัน {t.hard} ใบ</span>}
-                          {t.kind === 'no_target' && <span style={{ color: 'var(--muted)' }}>· ⓘ ใบไม่มีข้อมูลให้ชี้ตัวคน</span>}
+                          <b style={{ color: toneInk(t.tone), minWidth: 62 }}>{t.oldest} {tr('วัน')}</b>
+                          <b style={{ color: 'var(--text)' }}>{tr(t.label)}</b>
+                          {t.whoShort && t.kind !== 'role' && <span style={{ color: 'var(--muted)' }}>{tr('· ต้องกดโดย')} {t.whoShort}</span>}
+                          <span>· {t.n} {tr('ใบ')}</span>
+                          {t.hard > 0 && <span style={{ color: statusColor('bad'), fontWeight: 700 }}>{tr('· เกิน')} {hardDays} {tr('วัน')} {t.hard} {tr('ใบ')}</span>}
+                          {t.kind === 'no_target' && <span style={{ color: 'var(--muted)' }}>{tr('· ใบไม่มีข้อมูลให้ชี้ตัวคน')}</span>}
                         </div>
                       );
                     })}
@@ -245,39 +249,111 @@ export default function MoStalePanel({
               <div key={o.id} onClick={onOpen ? () => onOpen(o) : undefined}
                 style={{
                   display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'baseline', fontSize: 11.5,
-                  color: 'var(--text2)', padding: '3px 6px', borderRadius: 6,
+                  color: 'var(--text2)', padding: '3px 6px', borderRadius: 'var(--r-md)',
                   borderLeft: `3px solid ${statusColor(o._tone)}`, background: 'var(--bg3)',
                   cursor: onOpen ? 'pointer' : 'default',
                 }}>
-                <b style={{ color: toneInk(o._tone), minWidth: 62 }}>{o._stale.days} วัน</b>
-                <b style={{ color: 'var(--text)' }}>{o.mo_no || '(ยังไม่ออกเลข MO)'}</b>
-                <span>· {o._stale.icon} รอ{o._stale.title}</span>
-                <span>· {teamName(o.mtn_dept) || '(ไม่ระบุทีม)'}</span>
+                <b style={{ color: toneInk(o._tone), minWidth: 62 }}>{o._stale.days} {tr('วัน')}</b>
+                <b style={{ color: 'var(--text)' }}>{o.mo_no || tr('(ยังไม่ออกเลข MO)')}</b>
+                <span>· {o._stale.icon} {tr('รอ')}{o._stale.title}</span>
+                <span>· {teamName(o.mtn_dept) || tr("(ไม่ระบุทีม)")}</span>
                 {o.line_name && <span>· {o.line_name}</span>}
                 {o.machine_no && <span>· {o.machine_no}</span>}
                 {o.problem_characteristic && <span style={{ color: 'var(--muted)' }}>· {o.problem_characteristic}</span>}
                 {statusLabel(o) && <span style={{ color: 'var(--muted)' }}>· {statusLabel(o)}</span>}
-                {!o._stale.exact && <span style={{ color: 'var(--muted)' }}>· ⓘ นับจากวันแจ้ง (ไม่มีเวลาเข้าขั้น)</span>}
+                {!o._stale.exact && <span style={{ color: 'var(--muted)' }}>{tr('· นับจากวันแจ้ง (ไม่มีเวลาเข้าขั้น)')}</span>}
               </div>
             ))}
             {rows.length > rowsShown.length && (
               <button type="button" onClick={() => setAll(true)}
                 style={{ justifySelf: 'start', marginTop: 2, fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
-                  background: 'var(--bg2)', color: 'var(--text)', border: '1px solid var(--border2)',
+                  background: 'var(--bg2-surf)', color: 'var(--text)', border: '1px solid var(--border2)',
                   borderRadius: 'var(--ctl-r)', padding: '4px 11px' }}>
-                ▼ แสดงอีก {rows.length - rowsShown.length} ใบ
+                {tr('▼ แสดงอีก')} {rows.length - rowsShown.length} {tr('ใบ')}
               </button>
             )}
             {all && rows.length > FIRST_ROWS && (
               <button type="button" onClick={() => setAll(false)}
                 style={{ justifySelf: 'start', marginTop: 2, fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
-                  background: 'var(--bg2)', color: 'var(--text)', border: '1px solid var(--border2)',
+                  background: 'var(--bg2-surf)', color: 'var(--text)', border: '1px solid var(--border2)',
                   borderRadius: 'var(--ctl-r)', padding: '4px 11px' }}>
-                ▲ ย่อเหลือ {FIRST_ROWS} ใบ
+                {tr('▲ ย่อเหลือ')} {FIRST_ROWS} {tr('ใบ')}
               </button>
             )}
           </div>
         </>
+      )}
+
+      {/* ── 🔗 ส่งต่อแล้วแต่ปลายทางไม่มีใครทำ ───────────────────────────────────────
+          🔴 ใบแม่จบที่ `transferred` (สถานะจบ) ⇒ **ไม่อยู่ในกองใบค้างข้างบน** ถ้าไม่มีแผงนี้
+             ปัญหาที่ส่งต่อไปแล้วปลายทางถูกลบ/ยกเลิก จะไม่โผล่ที่ไหนในระบบเลย
+          · แยกบล็อกจากกองค้าง เพราะคนละชุดข้อมูลและคนละการแก้ (ต้องเปิดใบใหม่ให้ ไม่ใช่ไปตามขั้น)
+          · โหลดล้ม/ชนเพดาน = เขียนบนจอ ห้ามโชว์ 0 (กฎความซื่อสัตย์ของจอ) */}
+      {gapsErr ? (
+        <div role="alert" style={{ marginTop: 10, fontSize: 12, fontWeight: 700,
+          color: statusColor('bad'), background: 'var(--card-surf)',
+          border: `1px solid ${statusColor('bad')}55`, borderRadius: 'var(--r-md)', padding: '7px 10px' }}>
+          ⚠️ {tr("อ่านโซ่การส่งต่อไม่สำเร็จ — ยังไม่รู้ว่ามีใบที่ส่งต่อแล้วปลายทางหายไปหรือเปล่า")}
+          <div style={{ fontWeight: 400, color: 'var(--text2)', marginTop: 2 }}>{gapsErr}</div>
+        </div>
+      ) : gaps && gaps.total > 0 && (
+        <div style={{ marginTop: 10, borderTop: '1px dashed var(--border2)', paddingTop: 9 }}>
+          <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 6 }}>
+            🔗 {tr("ส่งต่อแล้วแต่ปลายทางไม่มีใครทำ")} · <b style={{ color: statusColor('bad') }}>{gaps.total} {tr('ใบ')}</b>
+            <div style={{ fontSize: 11.5, fontWeight: 400, color: 'var(--text2)', marginTop: 2 }}>
+              {tr("ใบต้นทางปิดไปแล้ว (ส่งต่อ = จบที่ทีมนั้น) — ใบพวกนี้")}<b>{tr('ไม่อยู่ในกองค้างข้างบน')}</b> {tr("และไม่อยู่ในคิวของใคร")}
+            </div>
+          </div>
+          {gapsCapped && (
+            <div style={{ fontSize: 11.5, color: statusColor('warn'), fontWeight: 700, marginBottom: 5 }}>
+              ⚠️ {tr("โซ่ส่งต่อชนเพดานที่โหลด — อาจมีมากกว่าที่เห็น")}
+            </div>
+          )}
+          <div style={{ display: 'grid', gap: 6, alignContent: 'start' }}>
+            {gaps.groups.map(g => (
+              <div key={g.key}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: statusColor(g.tone) }}>
+                  {g.icon} {tr(g.label)} · {g.n} {tr("ใบ")}
+                </div>
+                <div style={{ fontSize: 11.5, color: 'var(--text2)', marginBottom: 4 }}>{tr(g.hint)}</div>
+                <div style={{ display: 'grid', gap: 4, alignContent: 'start' }}>
+                  {g.rows.map(r => {
+                    const meta = handoffGapMeta(r.kind);
+                    const body = (
+                      <>
+                        <b>{r.moNo || tr('(ใบต้นทางไม่มีเลข)')}</b>
+                        {r.lineName ? ` · ${r.lineName}` : ''}{r.machineNo ? ` · ${r.machineNo}` : ''}
+                        {r.toDeptLabel ? <> {tr('· ส่งให้')} <b>{r.toDeptLabel}</b></> : null}
+                        {' · '}
+                        {r.days == null
+                          ? <span style={{ color: statusColor('warn') }}>{tr('ไม่มีวันเวลาให้นับ')}</span>
+                          : <span style={{ color: statusColor(meta.tone) }}>{r.days} {tr('วันแล้ว')}</span>}
+                        {r.problem ? <div style={{ color: 'var(--text2)', fontWeight: 400 }}>{tr('ปัญหา:')} {r.problem}</div> : null}
+                        {r.reason ? <div style={{ color: 'var(--text2)', fontWeight: 400 }}>{tr('เหตุที่ส่งต่อ:')} {r.reason}</div> : null}
+                        {r.childStatusLabel ? (
+                          <div style={{ color: 'var(--text2)', fontWeight: 400 }}>
+                            {tr("ใบปลายทาง")}: {r.childStatusLabel}{r.childReason ? ` — ${r.childReason}` : ''}
+                          </div>
+                        ) : null}
+                      </>
+                    );
+                    const sty = {
+                      textAlign: 'left', fontSize: 11.5, lineHeight: 1.5, padding: '5px 9px',
+                      background: 'var(--bg2-surf)', color: 'var(--text)',
+                      border: `1px solid ${statusColor(meta.tone)}55`, borderRadius: 'var(--r-md)',
+                    };
+                    return (r.fromOrderId && onOpenId) ? (
+                      <button key={r.id} type="button" onClick={() => onOpenId(r.fromOrderId)}
+                        title={tr('เปิดใบต้นทาง — เนื้อปัญหาอยู่ในใบนี้')} style={{ ...sty, cursor: 'pointer' }}>
+                        {body}
+                      </button>
+                    ) : <div key={r.id} style={sty}>{body}</div>;
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </CollapseCard>
   );

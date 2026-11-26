@@ -13,7 +13,7 @@
  *   · ของที่ "ผิดรูป" (ลอย/ไม่มีรหัส/ปิดใช้งาน) **ต้องเห็นบนจอ ห้ามซ่อน** (กฎความซื่อสัตย์ของจอ)
  */
 import { useEffect, useMemo, useState } from 'react';
-import { unitParentId, nodeMap } from '../utils/orgLayers.js';   // 🏢 แม่ที่เป็นหน่วย (รองรับชั้นบน · 04/11)
+import { unitParentId, nodeMap, isUpperKind, UPPER_META } from '../utils/orgLayers.js';   // 🏢 แม่ที่เป็นหน่วย + ป้ายชั้นบน (04/11 · 20/11)
 import { supabase } from '../supabaseClient';
 import { checkWriteRows } from '../utils/dbWrite';
 import { toast } from './Toast';
@@ -21,6 +21,7 @@ import { buildCcIndex } from '../utils/ccScope';
 import { ORG_PARENT_KIND, orgSaveBlockReason, filterParentOptions } from '../utils/orgNodeEdit';
 import { orgNodeCompare } from '../utils/listOrder';
 import SearchInput from './SearchInput';
+import { tr } from '../utils/i18n';
 import { printOrgChart } from '../lib/orgChartPrint';   // 🖨️ ใบผังองค์กร FM-HRM-I-001
 
 /** ชั้นในผัง ↔ "เลเวล" ที่โรงงานใช้ (= หลักที่ 5 ของรหัส CC · ดู utils/roleMeta.js ORG_LEVELS)
@@ -29,6 +30,8 @@ const KIND_META = {
   section:    { th: 'ส่วนงาน', icon: '🏢', level: 4, color: '#4d9fff' },
   department: { th: 'แผนก',    icon: '🏭', level: 5, color: '#22c55e' },
   line:       { th: 'กลุ่ม',    icon: '▦',  level: 6, color: '#f59e0b' },
+  /* 🏢 ชั้นบน เลเวล 0–3 (20/11) — ป้าย/เลเวลมาจาก UPPER_META ที่เดียว · ไม่มีรหัส CC (ใช้รหัส SAP ใน `code`) */
+  ...Object.fromEntries(Object.entries(UPPER_META).map(([k, m]) => [k, { ...m, color: 'var(--purple)' }])),
 };
 
 /* 🔴 "ทีม" ไม่ใช่ชั้นในผังองค์กรจริง (22/10 · คำสั่ง user: *"ระดับ team คือไว้ set กะ การทำงาน
@@ -63,19 +66,23 @@ export default function OrgTreeView({ nodes = [], scopeCtx = {}, canEdit = false
 
   /* ผังองค์กรจริง = ส่วนงาน/แผนก/กลุ่ม เท่านั้น (ดูคอมเมนต์ที่ ORG_KINDS) */
   const orgNodes = useMemo(() => nodes.filter(n => ORG_KINDS.includes(n.kind)), [nodes]);
-  const teamCount = nodes.length - orgNodes.length;
+  /* 🏢 ชั้นบน (Group → SPG → Company → Plant) วาดเป็นหัวสายเหนือส่วนงาน (20/11) — เฉพาะที่เปิดใช้ */
+  const upperNodes = useMemo(() => nodes.filter(n => isUpperKind(n.kind) && n.is_active !== false), [nodes]);
+  const treeNodes = useMemo(() => [...upperNodes, ...orgNodes], [upperNodes, orgNodes]);
+  /* 🔴 นับเฉพาะ kind='team' — เดิมเป็น `nodes.length - orgNodes.length` = นับชั้นบนเป็นทีมด้วย */
+  const teamCount = nodes.filter(n => n.kind === 'team').length;
 
   const ccIdx = useMemo(() => buildCcIndex(nodes), [nodes]);
   const kids = useMemo(() => {
     const m = new Map();
-    orgNodes.forEach(n => {
+    treeNodes.forEach(n => {
       const k = n.parent_id || '__root__';
       if (!m.has(k)) m.set(k, []);
       m.get(k).push(n);
     });
     m.forEach(arr => arr.sort(orgNodeCompare));
     return m;
-  }, [orgNodes]);
+  }, [treeNodes]);
 
   /** นับคนทั้งสาย (ตัวเอง + ลูกหลาน) — `null` = ยังไม่รู้ */
   const deepCount = useMemo(() => {
@@ -88,31 +95,35 @@ export default function OrgTreeView({ nodes = [], scopeCtx = {}, canEdit = false
       memo.set(id, sum);
       return sum;
     };
-    orgNodes.forEach(n => walk(n.id));
+    treeNodes.forEach(n => walk(n.id));
     return memo;
-  }, [empCount, kids, orgNodes]);
+  }, [empCount, kids, treeNodes]);
 
   /* ค้นหา: โชว์โหนดที่ตรง + บรรพบุรุษของมัน (ไม่งั้นกิ่งขาด อ่านไม่รู้เรื่อง) */
   const matchSet = useMemo(() => {
     const kw = q.trim().toLowerCase();
     if (!kw) return null;
-    const byId = new Map(orgNodes.map(n => [n.id, n]));
+    const byId = new Map(treeNodes.map(n => [n.id, n]));
     const keep = new Set();
-    orgNodes.forEach(n => {
+    treeNodes.forEach(n => {
       const hay = [n.name, n.code, n.cost_center].filter(Boolean).join(' ').toLowerCase();
       if (!hay.includes(kw)) return;
       let cur = n;
       while (cur) { keep.add(cur.id); cur = cur.parent_id ? byId.get(cur.parent_id) : null; }
     });
     return keep;
-  }, [q, orgNodes]);
+  }, [q, treeNodes]);
 
   const roots = useMemo(() => {
-    const secs = orgNodes.filter(n => n.kind === 'section');
     const byId = nodeMap(nodes);   // ผังทั้งต้น (รวมชั้นบน) — "ลอย" = ไม่มีแม่ที่เป็นหน่วย
-    const floats = orgNodes.filter(n => n.kind !== 'section' && unitParentId(n, byId) == null);
-    return { secs: [...secs].sort(orgNodeCompare), floats: [...floats].sort(orgNodeCompare) };
-  }, [orgNodes]);
+    /* อยู่ใต้ชั้นบนที่วาดอยู่ = วาดผ่านสายของชั้นบนแล้ว (ห้ามวาดซ้ำที่ราก) */
+    const upIds = new Set(upperNodes.map(n => String(n.id)));
+    const underUpper = (n) => n.parent_id != null && upIds.has(String(n.parent_id));
+    const uppers = upperNodes.filter(n => !underUpper(n));
+    const secs = orgNodes.filter(n => n.kind === 'section' && !underUpper(n));
+    const floats = orgNodes.filter(n => n.kind !== 'section' && unitParentId(n, byId) == null && !underUpper(n));
+    return { uppers: [...uppers].sort(orgNodeCompare), secs: [...secs].sort(orgNodeCompare), floats: [...floats].sort(orgNodeCompare) };
+  }, [orgNodes, upperNodes, nodes]);
 
   /* 🔒 สลับ "ขอบเขตของหน่วยแม่ครอบหน่วยนี้ไหม" — ผังยังโชว์ใต้แม่เหมือนเดิม
      (22/10 · user: "องค์กรเรามันแปลกตรงเอาจิ๊กมาฝากกับผลิต") */
@@ -121,10 +132,10 @@ export default function OrgTreeView({ nodes = [], scopeCtx = {}, canEdit = false
     const why = orgSaveBlockReason({ kind: node.kind, parentId: node.parent_id, editing: node }, scopeCtx);
     if (why) { toast.error(why); return; }
     setBusy(true);
-    const ok = checkWriteRows(await supabase.from('org_nodes').update({ inherit_scope: next }).eq('id', node.id).select('id'), `ตั้งการตกทอดสิทธิ์ของ ${node.name}`);
+    const ok = checkWriteRows(await supabase.from('org_nodes').update({ inherit_scope: next }).eq('id', node.id).select('id'), `${tr("ตั้งการตกทอดสิทธิ์ของ")} ${node.name}`);
     setBusy(false);
     if (!ok) return;
-    toast.success(next ? `${node.name}: สิทธิ์ตกทอดจากหน่วยแม่ตามปกติ` : `${node.name}: หน่วยแม่จะไม่มีสิทธิ์แก้ข้อมูลหน่วยนี้`);
+    toast.success(next ? `${node.name}: ${tr("สิทธิ์ตกทอดจากหน่วยแม่ตามปกติ")}` : `${node.name}: ${tr("หน่วยแม่จะไม่มีสิทธิ์แก้ข้อมูลหน่วยนี้")}`);
     onChanged?.();
   };
 
@@ -132,10 +143,10 @@ export default function OrgTreeView({ nodes = [], scopeCtx = {}, canEdit = false
     const why = orgSaveBlockReason({ kind: node.kind, parentId, editing: node }, scopeCtx);
     if (why) { toast.error(why); return; }
     setBusy(true);
-    const ok = checkWriteRows(await supabase.from('org_nodes').update({ parent_id: parentId || null }).eq('id', node.id).select('id'), `ย้าย ${node.name}`);
+    const ok = checkWriteRows(await supabase.from('org_nodes').update({ parent_id: parentId || null }).eq('id', node.id).select('id'), `${tr("ย้าย")} ${node.name}`);
     setBusy(false);
     if (!ok) return;
-    toast.success(`ย้าย ${node.name} แล้ว`);
+    toast.success(`${tr("ย้าย")} ${node.name} ${tr("แล้ว")}`);
     setMoving(null);
     onChanged?.();
   };
@@ -148,7 +159,7 @@ export default function OrgTreeView({ nodes = [], scopeCtx = {}, canEdit = false
       const ok = await printOrgChart({ ...opts, nodes });
       if (!ok) toast.error('เปิดหน้าต่างพิมพ์ไม่ได้ — เบราว์เซอร์บล็อกป๊อปอัป ให้อนุญาตแล้วลองใหม่');
     } catch (e) {
-      toast.error(`ออกใบผังไม่สำเร็จ: ${e?.message || e}`);
+      toast.error(`${tr("ออกใบผังไม่สำเร็จ")}: ${e?.message || e}`);
     }
     setPrinting(false);
   };
@@ -157,6 +168,32 @@ export default function OrgTreeView({ nodes = [], scopeCtx = {}, canEdit = false
     if (matchSet && !matchSet.has(n.id)) return null;
     if (n.is_active === false && !showOff) return null;
     const meta = KIND_META[n.kind] || { th: n.kind, icon: '•', level: null, color: 'var(--muted)' };
+    if (isUpperKind(n.kind)) {
+      /* ชั้นบน: อ่านอย่างเดียว · ไม่มี CC/ย้าย/ตกทอด (การตกทอดทุกชนิดหยุดที่ชั้นบน — orgLayers.js) */
+      const up = deepCount?.get(n.id);
+      return (
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap',
+            padding: '5px 8px', marginLeft: depth * 22, borderLeft: depth ? '2px solid var(--border2)' : 'none',
+            background: 'var(--bg3)', borderRadius: 'var(--r-md)', marginBottom: 2 }}>
+            <span style={{ fontSize: 13 }}>{meta.icon}</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{n.name}</span>
+            {n.code && n.code !== n.name && (
+              <span title={tr('รหัสในทะเบียนกลุ่ม (SAP / Com Code)')} style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'monospace' }}>({n.code})</span>
+            )}
+            {/* สีเป็น token (var) ⇒ ต่อท้าย alpha แบบป้ายชั้นหน่วยไม่ได้ — ใช้กรอบเส้นแทน */}
+            <span style={{ fontSize: 11, fontWeight: 700, padding: '0 6px', borderRadius: 'var(--r-xs)',
+              color: meta.color, border: `1px solid ${meta.color}` }}>
+              {tr(meta.th)} · {tr("เลเวล")} {meta.level}
+            </span>
+            {deepCount === null
+              ? <span style={{ fontSize: 11, color: 'var(--muted)' }}>👤 …</span>
+              : up > 0 && <span title={tr('จำนวนพนักงานทั้งสาย (รวมหน่วยลูก)')} style={{ fontSize: 11, color: 'var(--text2)' }}>{up}</span>}
+          </div>
+          {(kids.get(n.id) || []).map(k => <Row key={k.id} n={k} depth={depth + 1} />)}
+        </>
+      );
+    }
     const cc = ccIdx.ccOfNode(n.id);
     const inherited = cc?.cc && cc?.from && cc.from.id !== n.id;
     const kidRows = (kids.get(n.id) || []);
@@ -169,71 +206,71 @@ export default function OrgTreeView({ nodes = [], scopeCtx = {}, canEdit = false
       <>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap',
           padding: '5px 8px', marginLeft: depth * 22, borderLeft: depth ? '2px solid var(--border2)' : 'none',
-          background: depth === 0 ? 'var(--bg3)' : 'transparent', borderRadius: 7, marginBottom: 2,
+          background: (depth === 0 || n.kind === 'section') ? 'var(--bg3)' : 'transparent', borderRadius: 'var(--r-md)', marginBottom: 2,
           opacity: n.is_active === false ? 0.55 : 1 }}>
           <span style={{ fontSize: 13 }}>{meta.icon}</span>
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{n.name}</span>
           {n.code && n.code !== n.name && (
             <span style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'monospace' }}>({n.code})</span>
           )}
-          <span style={{ fontSize: 11, fontWeight: 700, padding: '0 6px', borderRadius: 5,
+          <span style={{ fontSize: 11, fontWeight: 700, padding: '0 6px', borderRadius: 'var(--r-xs)',
             background: `${meta.color}1f`, color: meta.color, border: `1px solid ${meta.color}55` }}>
-            {meta.th}{meta.level ? ` · เลเวล ${meta.level}` : ''}
+            {tr(meta.th)}{meta.level ? ` · ${tr("เลเวล")} ${meta.level}` : ''}
           </span>
           {cc?.cc ? (
-            <span title={inherited ? `ตกทอดจาก ${cc.from?.name || 'หน่วยแม่'}` : 'รหัสของหน่วยนี้เอง'}
+            <span title={inherited ? `${tr("ตกทอดจาก")} ${cc.from?.name || tr('หน่วยแม่')}` : tr("รหัสของหน่วยนี้เอง")}
               style={{ fontSize: 11, fontWeight: 700, fontFamily: 'monospace',
                 color: inherited ? 'var(--muted)' : '#22c55e' }}>
-              💰 {cc.cc}{inherited ? ' · ตกทอด' : ''}
+              {cc.cc}{inherited ? tr(" · ตกทอด") : ''}
             </span>
           ) : (
-            <span title="ไม่มีรหัส Cost Center ทั้งสาย — ตั้งที่หน่วยนี้หรือหน่วยแม่"
-              style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b' }}>⚠ ไม่มีรหัส CC</span>
+            <span title={tr('ไม่มีรหัส Cost Center ทั้งสาย — ตั้งที่หน่วยนี้หรือหน่วยแม่')}
+              style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b' }}>{tr('⚠ ไม่มีรหัส CC')}</span>
           )}
           {deepCount === null
             ? <span style={{ fontSize: 11, color: 'var(--muted)' }}>👤 …</span>
-            : cnt > 0 && <span title="จำนวนพนักงานทั้งสาย (รวมหน่วยลูก)" style={{ fontSize: 11, color: 'var(--text2)' }}>👤 {cnt}</span>}
-          {n.is_active === false && <span style={{ fontSize: 11, fontWeight: 700, color: '#ef4444' }}>⛔ ปิดใช้งาน</span>}
+            : cnt > 0 && <span title={tr('จำนวนพนักงานทั้งสาย (รวมหน่วยลูก)')} style={{ fontSize: 11, color: 'var(--text2)' }}>{cnt}</span>}
+          {n.is_active === false && <span style={{ fontSize: 11, fontWeight: 700, color: '#ef4444' }}>{tr('⛔ ปิดใช้งาน')}</span>}
           {n.inherit_scope === false && (
-            <span title="อยู่ใต้หน่วยแม่ในผัง แต่ขอบเขตสิทธิ์ของหน่วยแม่ไม่ครอบหน่วยนี้ (เช่น หน่วยที่มาฝากไว้)"
-              style={{ fontSize: 11, fontWeight: 700, color: '#a855f7' }}>🔒 ไม่ตกทอดสิทธิ์</span>
+            <span title={tr('อยู่ใต้หน่วยแม่ในผัง แต่ขอบเขตสิทธิ์ของหน่วยแม่ไม่ครอบหน่วยนี้ (เช่น หน่วยที่มาฝากไว้)')}
+              style={{ fontSize: 11, fontWeight: 700, color: '#a855f7' }}>{tr('ไม่ตกทอดสิทธิ์')}</span>
           )}
           {unitParentId(n, nodes) == null && n.kind !== 'section' && (
-            <span title="ไม่มีหน่วยแม่ในผัง — ลำดับชั้น/รหัสจะตกทอดไม่ได้"
-              style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b' }}>🚩 ไม่มีหน่วยแม่</span>
+            <span title={tr('ไม่มีหน่วยแม่ในผัง — ลำดับชั้น/รหัสจะตกทอดไม่ได้')}
+              style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b' }}>{tr('ไม่มีหน่วยแม่')}</span>
           )}
           {canEdit && parentKind && (
             moving === n.id ? (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <select disabled={busy} defaultValue={n.parent_id || ''}
                   onChange={e => doMove(n, e.target.value)} style={{ width: 'auto', fontSize: 12 }}>
-                  <option value="">— เลือกหน่วยแม่ —</option>
-                  {parentOpts.rows.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                  <option value="">{tr('— เลือกหน่วยแม่ —')}</option>
+                  {parentOpts.rows.map(o => <option key={o.id} value={o.id}>{tr(o.name)}</option>)}
                 </select>
                 {parentOpts.hidden > 0 && (
-                  <span style={{ fontSize: 11, color: 'var(--muted)' }}>ซ่อน {parentOpts.hidden} หน่วยนอกขอบเขตคุณ</span>
+                  <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('ซ่อน')} {parentOpts.hidden} {tr('หน่วยนอกขอบเขตคุณ')}</span>
                 )}
                 <button type="button" className="tbtn" onClick={() => setMoving(null)}
-                  style={{ fontSize: 11, padding: '2px 8px' }}>ยกเลิก</button>
+                  style={{ fontSize: 11, padding: '2px 8px' }}>{tr('ยกเลิก')}</button>
               </span>
             ) : (
               <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: 6 }}>
                 {(n.kind === 'section' || n.kind === 'department') && (
                   <button type="button" className="tbtn" onClick={() => doPrint({ mode: 'dept', rootId: n.id })}
-                    disabled={printing} title="ออกใบผังองค์กรเฉพาะหน่วยนี้ (กางถึงกลุ่ม + รายชื่อ)"
-                    style={{ fontSize: 11, padding: '2px 8px' }}>🖨️ ผังย่อย</button>
+                    disabled={printing} title={tr('ออกใบผังองค์กรเฉพาะหน่วยนี้ (กางถึงกลุ่ม + รายชื่อ)')}
+                    style={{ fontSize: 11, padding: '2px 8px' }}>{tr('ผังย่อย')}</button>
                 )}
                 {n.parent_id && (
                   <button type="button" className="tbtn" onClick={() => toggleInherit(n)} disabled={busy}
                     title={n.inherit_scope === false
-                      ? 'ให้ขอบเขตของหน่วยแม่ครอบหน่วยนี้ตามปกติ'
-                      : 'หน่วยนี้มาฝากไว้ใต้หน่วยแม่ — ไม่ให้หน่วยแม่มีสิทธิ์แก้ข้อมูล'}
+                      ? tr("ให้ขอบเขตของหน่วยแม่ครอบหน่วยนี้ตามปกติ")
+                      : tr("หน่วยนี้มาฝากไว้ใต้หน่วยแม่ — ไม่ให้หน่วยแม่มีสิทธิ์แก้ข้อมูล")}
                     style={{ fontSize: 11, padding: '2px 8px' }}>
-                    {n.inherit_scope === false ? '🔓 ให้ตกทอด' : '🔒 ไม่ตกทอด'}
+                    {n.inherit_scope === false ? tr('🔓 ให้ตกทอด') : tr('🔒 ไม่ตกทอด')}
                   </button>
                 )}
                 <button type="button" className="tbtn" onClick={() => setMoving(n.id)} disabled={busy}
-                  style={{ fontSize: 11, padding: '2px 8px' }}>↕ ย้าย</button>
+                  style={{ fontSize: 11, padding: '2px 8px' }}>{tr('↕ ย้าย')}</button>
               </span>
             )
           )}
@@ -247,37 +284,38 @@ export default function OrgTreeView({ nodes = [], scopeCtx = {}, canEdit = false
   return (
     <div className="card" style={{ padding: 14 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
-        <SearchInput value={q} onChange={setQ} fields="ชื่อหน่วย / รหัส / CC" />
+        <SearchInput value={q} onChange={setQ} fields={tr("ชื่อหน่วย / รหัส / CC")} />
         <button type="button" className="tbtn" onClick={() => doPrint({ mode: 'overall' })} disabled={printing}
-          title="ออกใบแผนผังองค์กรทั้งโรงงาน (ฝ่าย → ส่วน → แผนก) ตามฟอร์ม FM-HRM-I-001"
-          style={{ fontSize: 12, padding: '3px 10px' }}>🖨️ ผังใหญ่ (ทั้งโรงงาน)</button>
+          title={tr('ออกใบแผนผังองค์กรทั้งโรงงาน (ฝ่าย → ส่วน → แผนก) ตามฟอร์ม FM-HRM-I-001')}
+          style={{ fontSize: 12, padding: '3px 10px' }}>{tr('ผังใหญ่ (ทั้งโรงงาน)')}</button>
         <label style={{ fontSize: 12, color: 'var(--text2)', display: 'inline-flex', alignItems: 'center', gap: 5, cursor: 'pointer' }}>
           <input type="checkbox" checked={showOff} onChange={e => setShowOff(e.target.checked)} style={{ margin: 0 }} />
-          โชว์ที่ปิดใช้งาน ({offCount})
+          {tr('โชว์ที่ปิดใช้งาน (')}{offCount})
         </label>
         <span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 'auto', lineHeight: 1.5 }}>
-          ลำดับชั้นมาจากผัง (หน่วยแม่) ไม่ใช่ตัวเลขรหัส · 💰 เทา = ตกทอดจากหน่วยแม่
+          {tr("ลำดับชั้นมาจากผัง (หน่วยแม่) ไม่ใช่ตัวเลขรหัส · เทา = ตกทอดจากหน่วยแม่")}
         </span>
       </div>
       {/* 🔴 ห้ามซ่อนเงียบ — บอกตรงๆ ว่าตัดอะไรออกและของนั้นไปอยู่ไหน */}
       {teamCount > 0 && (
         <div style={{ fontSize: 11.5, color: 'var(--text2)', marginBottom: 6 }}>
-          👥 ไม่นับทีม {teamCount} รายการ — <b>ทีม A/B/C ใช้จัดกะการทำงาน ไม่ใช่ชั้นในผังองค์กร</b>
-          {' '}(จัดการที่แท็บ “จัดการหน่วยงาน”)
+          {tr("ไม่นับทีม")} {teamCount} {tr('รายการ —')} <b>{tr('ทีม A/B/C ใช้จัดกะการทำงาน ไม่ใช่ชั้นในผังองค์กร')}</b>
+          {' '}({tr("จัดการที่แท็บ “จัดการหน่วยงาน")}”)
         </div>
       )}
       {empCount === undefined && (
         <div style={{ fontSize: 11.5, color: '#f59e0b', marginBottom: 6 }}>
-          ⚠ อ่านจำนวนพนักงานไม่สำเร็จ — ตัวเลข 👤 จะไม่ขึ้น (ไม่ได้แปลว่าหน่วยนั้นไม่มีคน)
+          ⚠ {tr("อ่านจำนวนพนักงานไม่สำเร็จ — ตัวเลข 👤 จะไม่ขึ้น (ไม่ได้แปลว่าหน่วยนั้นไม่มีคน")})
         </div>
       )}
       <div style={{ display: 'grid', alignContent: 'start', gap: 2 }}>
+        {roots.uppers.map(n => <Row key={n.id} n={n} depth={0} />)}
         {roots.secs.map(n => <Row key={n.id} n={n} depth={0} />)}
         {roots.floats.length > 0 && (
           <>
             <div style={{ fontSize: 12, fontWeight: 800, color: '#f59e0b', marginTop: 10 }}>
-              🚩 หน่วยที่ยังไม่มีหน่วยแม่ ({roots.floats.length})
-              <span style={{ fontWeight: 400, color: 'var(--muted)' }}> — ตกทอดรหัส/ขอบเขตจากใครไม่ได้ ควรย้ายเข้าสาย</span>
+              {tr("หน่วยที่ยังไม่มีหน่วยแม่")} ({roots.floats.length})
+              <span style={{ fontWeight: 400, color: 'var(--muted)' }}> {tr('— ตกทอดรหัส/ขอบเขตจากใครไม่ได้ ควรย้ายเข้าสาย')}</span>
             </div>
             {roots.floats.map(n => <Row key={n.id} n={n} depth={0} />)}
           </>

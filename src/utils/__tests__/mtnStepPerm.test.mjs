@@ -2,7 +2,7 @@
 // pure module (ไม่ import supabase) → import ตรงได้เลย ไม่ต้อง bundle
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { canDoStep, canSignMtnApproval, lastStep, canSkipQa, isOrderReporter, orderReporterText, isQaSkipped, isWaitingQa, MTN_STEPS, stepDenyHint, stepLabel, stepMeta } from '../mtnStepPerm.js';
+import { canDoStep, canSignMtnApproval, lastStep, canSkipQa, canCancelOwnMo, isOrderReporter, orderReporterText, isQaSkipped, isWaitingQa, MTN_STEPS, stepDenyHint, stepLabel, stepMeta, moFlow, moPendingAcks } from '../mtnStepPerm.js';
 
 // ผูก role เป็นชุดสิทธิ์ง่ายๆ: keys = คีย์ที่ role นั้นถือ
 const perms = (keys, seededKeys = null) => ({
@@ -567,6 +567,23 @@ test('orderReporterText: มีฟิลด์เดียว/ไม่มีเ
 
 /* ── 🗑️→🚫 moRemoveMode — ลบได้เฉพาะใบที่ยังไม่มีเลข (2026-10-14 · คำสั่ง user) ────── */
 import { moRemoveMode, OPEN_MO_STATUSES } from '../mtnStepPerm.js';
+test('🔗 moRemoveMode: ใบปลายทางของการส่งต่อ ลบไม่ได้แม้ยังไม่ออกเลข (11/11)', () => {
+  /* เคสจริง: ใบลูกที่ทีมปลายทางยังไม่กดรับ **ยังไม่มีเลข MO** ⇒ เกณฑ์เดิมให้ "ลบได้"
+     ลบแล้ว FK `on delete set null` ล้างลิงก์ ⇒ ใบแม่ยัง transferred (จบ) = ปัญหาหายจากระบบ
+     วัด 11/11: โดนไปแล้ว 4 ใบ (ทีม JIG ลบตอน pending 3 ใบ ยืนยันจาก audit_log) */
+  const child = { status: 'pending', mo_no: null, transferred_from_mo: 'PRO-BM-220926-0461' };
+  const r = moRemoveMode(child);
+  assert.equal(r.mode, 'cancel', 'ใบที่ถูกส่งต่อมา ต้องยกเลิก ไม่ใช่ลบ');
+  assert.match(r.why, /ส่งต่อ/, 'ต้องบอกเหตุผลบนจอว่าทำไมลบไม่ได้');
+  assert.match(r.why, /PRO-BM-220926-0461/, 'ต้องบอกว่ามาจากใบไหน');
+  // ใบธรรมดาที่ยังไม่ออกเลข = ลบได้เหมือนเดิมเป๊ะ (ห้ามเหวี่ยงไปบล็อกทั้งหมด)
+  assert.equal(moRemoveMode({ status: 'pending', mo_no: null }).mode, 'delete');
+  assert.equal(moRemoveMode({ status: 'pending', mo_no: null, transferred_from_mo: '' }).mode, 'delete');
+  assert.equal(moRemoveMode({ status: 'pending', mo_no: null, transferred_from_mo: '   ' }).mode, 'delete');
+  // ใบที่ส่งต่อมาแล้วออกเลขแล้ว ก็ยังเป็น cancel ตามเกณฑ์เดิม
+  assert.equal(moRemoveMode({ status: 'repaired', mo_no: 'JIG-1', transferred_from_mo: 'PRO-9' }).mode, 'cancel');
+});
+
 test('🔴 moRemoveMode: ใบที่ออกเลขแล้ว ลบไม่ได้ — ยกเลิกเท่านั้น', () => {
   // เคสจริงที่ทำให้ต้องมีกฎนี้: ใบสถานะ repaired ถูก delete ไป ⇒ ค่าแรง/อะไหล่หายถาวร
   const r = moRemoveMode({ status: 'repaired', mo_no: 'MTN.2026/10-5' });
@@ -712,4 +729,147 @@ test('🔧 ป้ายปุ่ม/เหตุผลตอนกดไม่�
   const hint = stepDenyHint(4, { toolTeam: true, wrongSide: true }).join(' ');
   assert.match(hint, /หัวหน้าแผนกช่าง/);
   assert.match(hint, /ฝั่งซ่อมบำรุง/, 'ต้องบอกว่าเป็นช่องของฝั่งช่าง ไม่ใช่ของฝ่ายที่แจ้ง');
+});
+
+test('moFlow — แถบขั้นตอนใบ MO: ข้าม QA = skipped ไม่ใช่ done · ใบ MTN 8 ขั้นแยกด้วยเวลาเซ็น · ตีกลับหยุดที่ขั้นถัดไป · สถานะแปลก = known:false', async () => {
+  const { moFlow } = await import('../mtnStepPerm.js');
+  const st = (f) => f.steps.map(s => s.state + (s.tone ? '/' + s.tone : ''));
+  const p = moFlow({ status: 'pending', current_step: 1 });
+  assert.deepEqual(st(p), ['done', 'current', 'todo', 'todo', 'todo', 'todo', 'todo']);
+  assert.match(p.waiting, /หัวหน้าช่าง/);
+  // ข้าม QA (ไม่เกี่ยวกับคุณภาพ) → ขั้น 5 ⏭ · ขั้น 6 current
+  assert.deepEqual(st(moFlow({ status: 'checked', current_step: 4, qa_skipped_at: 'x', mtn_dept: 'die' })), ['done', 'done', 'done', 'done', 'skipped', 'current', 'todo']);
+  // รอ QA จริง
+  assert.equal(moFlow({ status: 'checked', current_step: 4, mtn_dept: 'die' }).steps[4].state, 'current');
+  // ใบ MTN (8 ขั้น · ไม่มี QA) ช่วง handover แยก 6/7/8 ด้วยเวลาเซ็น
+  const h = moFlow({ status: 'handover', current_step: 7, mtn_dept: 'mtn', mtn_head_at: null, approve_at: null });
+  assert.equal(h.steps.length, 8); assert.equal(h.steps[5].state, 'current');
+  assert.equal(moFlow({ status: 'handover', current_step: 7, mtn_dept: 'mtn', mtn_head_at: 'x', approve_at: null }).steps[6].state, 'current');
+  // ปิดแล้ว = ครบ · ตีกลับ = ขั้นถัดไปเป็นสีแดง ไม่เขียวยาว
+  assert.ok(moFlow({ status: 'closed', current_step: 7, mtn_dept: 'die', qa_at: 'x' }).steps.every(s => s.state === 'done'));
+  const r = moFlow({ status: 'rejected', current_step: 1 });
+  assert.equal(r.steps[1].tone, 'bad'); assert.equal(r.closed, true); assert.equal(r.waiting, null);
+  // ส่งซ่อมภายนอก = ใบยังเปิด รอ supplier
+  assert.match(moFlow({ status: 'waiting_vendor', current_step: 3 }).waiting, /supplier/);
+  assert.equal(moFlow({ status: 'weird' }).known, false);
+});
+
+test('🏁 ขั้น 7 ใบ JIG/DIE = ผจก.ฝ่ายผู้แจ้ง (60) · ใบ PD คงหัวหน้าแผนก (50)', () => {
+  assert.equal(stepMeta(7, { toolTeam: true }).minRank, 60);
+  assert.equal(stepMeta(7, { toolTeam: true }).side, 'reporter');
+  assert.equal(stepMeta(7, { toolTeam: true }).stage, 'close');
+  assert.equal(stepMeta(7, {}).minRank, 50);
+  assert.equal(stepMeta(8, { mtnForm: true }).minRank, 60);
+  const jig = { mtn_dept: 'jig_maintenance', status: 'handover' };
+  const base = { can: () => true, actorSide: 'reporter', inReporterScope: true };
+  assert.equal(canDoStep(7, { ...base, order: jig, posRank: 50 }).code, 'rank_too_low');
+  assert.equal(canDoStep(7, { ...base, order: jig, posRank: 60 }).ok, true);
+  const pd = { mtn_dept: 'production', status: 'handover' };
+  assert.equal(canDoStep(7, { ...base, order: pd, posRank: 50 }).ok, true);
+});
+
+test('✍️ ช่องเซ็น 4 ฟอร์ม MTN: ผจก.ส่วนซ่อมบำรุง ต้องกดรับทราบเอง', () => {
+  const o = { mtn_dept: 'maintenance', mo_approved_by: 'นาย ก  ข' };
+  const base = { order: o, actorSide: 'mtn', hasTeams: true, inOrderTeam: true, can: () => false };
+  assert.equal(canSignMtnApproval('mtn_mgr', { ...base, fullName: 'นาย ก ข', posRank: 60 }).code, 'named');
+  assert.equal(canSignMtnApproval('mtn_mgr', { ...base, fullName: 'นาย ค', posRank: 60 }).code, 'denied');
+  assert.equal(canSignMtnApproval('mtn_mgr', { ...base, fullName: 'นาย ค', posRank: 60, can: () => true }).ok, true);
+  assert.equal(canSignMtnApproval('mtn_mgr', { ...base, fullName: 'นาย ก ข', posRank: 50 }).code, 'rank_too_low');
+  assert.equal(canSignMtnApproval('mtn_mgr', { ...base, fullName: 'นาย ก ข', posRank: 60, actorSide: 'reporter' }).code, 'wrong_side');
+  assert.equal(canSignMtnApproval('mtn_mgr', { ...base, fullName: 'นาย ก ข', posRank: 60, inOrderTeam: false }).code, 'other_team');
+  assert.equal(canSignMtnApproval('mtn_mgr', { ...base, order: { ...o, mo_ack_at: '2026-11-13' }, fullName: 'นาย ก ข', posRank: 60 }).code, 'already_signed');
+  // ไม่รู้ตำแหน่ง/ฝั่ง = ไม่บล็อก
+  assert.equal(canSignMtnApproval('mtn_mgr', { ...base, fullName: 'นาย ก ข', posRank: null, actorSide: 'unknown' }).ok, true);
+});
+
+test('🖥️ บัญชีกลางเซ็นช่องที่ล็อกตำแหน่งไม่ได้ · ขั้นกรอกงานยังทำได้', () => {
+  const mtn = { mtn_dept: 'maintenance', status: 'handover' };
+  const base = { order: mtn, can: () => true, actorSide: 'mtn', hasTeams: true, inOrderTeam: true, mtnForm: true, isShared: true };
+  assert.equal(canDoStep(7, base).code, 'shared_account');          // ผจก.ช่าง อนุมัติ
+  assert.equal(canDoStep(6, base).code, 'shared_account');          // หัวหน้าแผนกช่าง
+  assert.equal(canDoStep(3, { ...base, order: { ...mtn, status: 'assigned' } }).ok, true);   // ลงผลซ่อม
+  assert.equal(canDoStep(7, { ...base, isShared: false }).ok, true);
+  assert.equal(canSignMtnApproval('dept', { order: {}, can: () => true, isShared: true }).code, 'shared_account');
+  assert.equal(canSignMtnApproval('mtn_mgr', { order: { mo_approved_by: 'x' }, fullName: 'x', isShared: true }).code, 'shared_account');
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   🙋 ผู้เปิดใบถอนใบของตัวเองได้                           2026-11-16 · คำสั่ง user
+   *"MO กรณี owner รู้ว่าเปิดผิดและยังไม่ถูกรับงานหรือ reject สามารถเข้าไปยกเลิกเองได้"*
+   ═══════════════════════════════════════════════════════════════════════════ */
+test('🙋 canCancelOwnMo — เจ้าของใบถอนได้เฉพาะ pending/returned', () => {
+  const own = { reported_by_name: 'สมชาย ใจดี' };
+  for (const status of ['pending', 'returned']) {
+    assert.equal(canCancelOwnMo({ ...own, status }, { fullName: 'สมชาย ใจดี' }), true, status);
+  }
+  // ช่างรับงาน/ลงมือแล้ว = เรื่องของทีมช่าง ไม่ใช่ของผู้แจ้งฝ่ายเดียว
+  for (const status of ['assigned', 'repairing', 'repaired', 'checked', 'qa', 'handover']) {
+    assert.equal(canCancelOwnMo({ ...own, status }, { fullName: 'สมชาย ใจดี' }), false, status);
+  }
+  // ใบที่จบแล้วไม่ต้องถอนซ้ำ
+  for (const status of ['closed', 'rejected', 'cancelled', 'transferred']) {
+    assert.equal(canCancelOwnMo({ ...own, status }, { fullName: 'สมชาย ใจดี' }), false, status);
+  }
+});
+
+test('🙋 canCancelOwnMo — คนอื่นถอนใบเราไม่ได้ · ไม่รู้ชื่อ = ไม่ได้', () => {
+  const o = { status: 'pending', reported_by_name: 'สมชาย ใจดี' };
+  assert.equal(canCancelOwnMo(o, { fullName: 'คนอื่น ไม่เกี่ยว' }), false);
+  assert.equal(canCancelOwnMo(o, { fullName: '' }), false, 'ไม่รู้ชื่อ = ไม่ใช่เจ้าของ (ไม่รู้ ≠ ใช่)');
+  assert.equal(canCancelOwnMo(o, {}), false);
+  // ใบเก่าก่อนมีคอลัมน์ stamp — ถอยไปดู `reporter_prod` (กติกาเดียวกับ isOrderReporter)
+  assert.equal(canCancelOwnMo({ status: 'pending', reporter_prod: 'สมชาย ใจดี' },
+    { fullName: 'สมชาย ใจดี' }), true);
+  /* ⚠️ `isOrderReporter` เทียบชื่อแบบ **ไม่ตัดคำนำหน้า** (ใช้ `norm` ไม่ใช่ `normPersonName`)
+     ⇒ "นายสมชาย ใจดี" ไม่ตรงกับ "สมชาย ใจดี" · **ล็อกพฤติกรรมนี้ไว้โดยเจตนา**
+     ปกติไม่เป็นปัญหาเพราะใบ stamp ชื่อจากโปรไฟล์คนเดียวกันตอนเปิดใบ (สตริงเดียวกันทั้ง 2 ฝั่ง)
+     🔴 ห้ามแก้ `isOrderReporter` ให้หลวมลงเพื่อเคสนี้ — มันเป็นด่าน `isReporterSelf` ของทุกขั้น
+        (ขั้น 4/6/7 ข้ามด่านตำแหน่งได้ถ้าเป็นผู้เปิดใบ) ⇒ หลวม = คนชื่อคล้ายเซ็นแทนกันได้ */
+  assert.equal(canCancelOwnMo({ status: 'pending', reporter_prod: 'สมชาย ใจดี' },
+    { fullName: 'นายสมชาย ใจดี' }), false);
+});
+
+/* ══ ✍️ ลายเซ็น "นอกลำดับขั้น" ต้องมีที่บอกบนจอ (2026-11-18 · หน้างานแจ้ง) ══
+   แถบขั้นบนใบบอกว่า "รอ: ผจก.ฝ่ายที่แจ้ง อนุมัติปิดใบ" เหมือนเหลือขั้นเดียว
+   แต่ใบจริง O-MTN.2026/11-40 ยังค้างลายเซ็นไม่ล็อกงานอีก 2 ช่องที่ไม่โผล่ที่ไหนเลย
+   คำ user: "flow เหมือนขาดแค่ขั้นสุดท้าย แต่ขั้นไม่บล็อกงานไม่มีบอกเลย" */
+const MO40 = {                      // ใบจริงจากฐาน DR (ภาพหน้าจอ 18/11)
+  mo_no: 'O-MTN.2026/11-40', status: 'handover', current_step: 7,
+  mtn_dept: 'maintenance', purpose: 'repair', line_name: 'Line 60',
+  mo_approved_by: 'นายอำพรรณ์ กมลรักษ์', mo_ack_at: null,
+  dept_manager_name: 'ดุลยทรรศน์ ลาภธนสารสมบัติ', dept_manager_at: null, plant_manager_at: null,
+};
+
+test('✍️ ใบจริง O-MTN.2026/11-40 — ต้องรายงานลายเซ็นค้าง 2 ช่อง', () => {
+  const acks = moPendingAcks(MO40);
+  assert.deepEqual(acks.map(a => a.key), ['mtn_mgr', 'dept']);
+  assert.ok(acks.every(a => a.done === false));
+  /* ต้องมากับ moFlow() ด้วย — จอวาดจากตัวนั้นตัวเดียว */
+  assert.deepEqual(moFlow(MO40).acks.map(a => a.key), ['mtn_mgr', 'dept']);
+});
+
+test('🔴 ไม่ได้ select คอลัมน์มา = ไม่รู้ ห้ามเดาว่าค้าง', () => {
+  /* จอที่ดึงคอลัมน์ไม่ครบต้องไม่ขึ้นป้าย "ยังไม่เซ็น" มั่วๆ */
+  assert.deepEqual(moPendingAcks({ status: 'handover', mtn_dept: 'maintenance', purpose: 'repair' }), []);
+  const noAck = moPendingAcks({ ...MO40, mo_ack_at: undefined });
+  assert.deepEqual(noAck.map(a => a.key), ['dept'], 'ขาดเฉพาะช่องที่ไม่รู้ ช่องที่รู้ยังต้องรายงาน');
+  const noDept = moPendingAcks({ ...MO40, dept_manager_at: undefined });
+  assert.deepEqual(noDept.map(a => a.key), ['mtn_mgr']);
+});
+
+test('เซ็นแล้วต้องบอกว่าเซ็นแล้ว · ไม่มีช่องนั้นในใบ = ไม่รายงาน', () => {
+  const signed = moPendingAcks({ ...MO40, mo_ack_at: '2026-11-18T01:00:00Z', dept_manager_at: '2026-11-18T01:00:00Z' });
+  assert.deepEqual(signed.map(a => [a.key, a.done]), [['mtn_mgr', true]], 'ช่องที่เซ็นแล้วยังโชว์ (ให้เห็นว่าครบ) · ช่อง dept หลุดจากลิสต์เพราะไม่ค้างแล้ว');
+  /* ไม่เคยระบุชื่อ ผจก.ส่วนซ่อมบำรุง = ใบนี้ไม่มีช่องนั้น ไม่ใช่ "ค้าง" */
+  assert.deepEqual(moPendingAcks({ ...MO40, mo_approved_by: null }).map(a => a.key), ['dept']);
+});
+
+test('🔴 ใบ JIG/DIE/PD ไม่มีช่องพวกนี้ — ต้องไม่ขึ้นอะไรเลย', () => {
+  assert.deepEqual(moPendingAcks({ status: 'handover', current_step: 6, mtn_dept: 'jig', item_type: 'JIG' }), []);
+});
+
+test('🔴 ใบที่ยังติดด่านอนุมัติจริง (blocked) ไม่ต้องซ้ำที่นี่ — มีแผงของตัวเองแล้ว', () => {
+  /* งานปรับปรุง = ด่านจริง (บล็อกขั้น 2-3) ⇒ ackPending=false ⇒ ไม่เข้าลิสต์นี้ */
+  const improve = { ...MO40, status: 'pending', current_step: 1, purpose: 'improve', mo_approved_by: null };
+  assert.deepEqual(moPendingAcks(improve), []);
 });

@@ -38,6 +38,18 @@ function hhmm(iso: string | null): string {
   return `${String(b.getUTCHours()).padStart(2, '0')}:${String(b.getUTCMinutes()).padStart(2, '0')}`;
 }
 const norm = (s: unknown) => String(s ?? '').replace(/[\s-]/g, '').toUpperCase();
+/* "พาร์ทจริง" = สินค้า ไม่ใช่ MAT ตัวเดียว (กฎเหล็ก CLAUDE.md · 13/11 user: สาย 60/61 มี FTM/AAT/FVL
+   คนละ MAT แต่เลขพาร์ทลูกค้าเดียวกัน ⇒ สลับลูกค้า ≠ เปลี่ยนรุ่น · ห้ามเรียก First ใหม่)
+   🔴 ตรรกะต้องตรงกับ `partCoreOf()` ใน src/utils/partGroup.js ทุกบรรทัด (edge import src ไม่ได้) */
+function partCoreOf(pNo: unknown): string {
+  const toks = String(pNo || '').toUpperCase().split(/[^A-Z0-9]+/).filter(Boolean);
+  if (!toks.length) return '';
+  if (toks.length >= 3) {
+    const mid = toks.slice(1, -1).join('');
+    if (mid.length >= 3 && /\d/.test(mid)) return mid;
+  }
+  return toks.join('');
+}
 
 /* ── Telegram routing (pattern เดียวกับ mtn-daily-summary) ── */
 type Route = { enabled: boolean; chats: string[]; template?: string | null };
@@ -73,7 +85,10 @@ function chatsFor(routes: Record<string, Route>, key: string): string[] | null {
   const r = routes[key];
   if (r && !r.enabled) return null;                       // ปิดที่ /notification-config = ไม่ส่ง
   if (r && r.chats.length) return r.chats;
-  return TELEGRAM_CHAT_ID ? [TELEGRAM_CHAT_ID] : [];      // ยังไม่ตั้งห้อง = ห้อง default
+  /* 🔔 มีกฎแต่ไม่ได้เลือกห้อง = ในแอปอย่างเดียว (13/11 · กฎ: แจ้งเตือนใหม่ = ในแอป ห้ามเพิ่มทาง Telegram)
+     เดิมถอยไปห้อง default ⇒ เปิดสวิตช์ FME แล้วข้อความเด้งเข้ากลุ่ม Telegram รวมโดยไม่มีใครตั้ง */
+  if (r) return [];
+  return TELEGRAM_CHAT_ID ? [TELEGRAM_CHAT_ID] : [];      // ไม่มีกฎเลย (ยังไม่ apply migration) = ห้อง default
 }
 /* ── 🔔 แจ้งเตือน "ในแอป" (กระดิ่ง + Web Push ผ่าน trigger trg_notify_push) ───────────────
    เดิมฟังก์ชันนี้ส่ง **Telegram ทางเดียว** — ถอด Telegram ออกเมื่อไหร่ การแจ้งเตือนหายสนิท
@@ -135,13 +150,22 @@ async function sendTelegram(message: string, chats: string[]): Promise<boolean> 
 }
 
 /* ── DR REST (คนละ project — ใช้ anon key ตาม convention ของ supabaseDR) ── */
-async function dr<T>(path: string): Promise<T[]> {
+/* ⚠️ PostgREST ตัดที่ 1000 แถว/คำขอเงียบๆ — อ่านทีละหน้าจนหมดเสมอ (13/11 · dry-run จริงเจอ
+   ใบผลิต 2 วัน = 1,011 ใบ แต่อ่านได้ 1,000 ⇒ รุ่นที่ตกไปไม่เกิดงาน First/End โดยไม่มีใครรู้)
+   `orderCol` = คอลัมน์ไม่ซ้ำที่ใช้เรียงให้หน้าไม่เหลื่อมกัน (ไม่เรียง = หน้าซ้อน/ข้ามแถวได้) */
+const DR_PAGE = 1000;
+async function dr<T>(path: string, orderCol = 'id'): Promise<T[]> {
   if (!DR_URL || !DR_KEY) return [];
-  const res = await fetch(`${DR_URL}/rest/v1/${path}`, {
-    headers: { apikey: DR_KEY, Authorization: `Bearer ${DR_KEY}` },
-  });
-  if (!res.ok) throw new Error(`DR ${path} → ${res.status} ${await res.text()}`);
-  return await res.json() as T[];
+  const out: T[] = [];
+  for (let off = 0; ; off += DR_PAGE) {
+    const url = `${DR_URL}/rest/v1/${path}${path.includes('?') ? '&' : '?'}order=${orderCol}&limit=${DR_PAGE}&offset=${off}`;
+    const res = await fetch(url, { headers: { apikey: DR_KEY, Authorization: `Bearer ${DR_KEY}` } });
+    if (!res.ok) throw new Error(`DR ${path} → ${res.status} ${await res.text()}`);
+    const rows = await res.json() as T[];
+    out.push(...rows);
+    if (rows.length < DR_PAGE) return out;
+    if (off >= 50 * DR_PAGE) throw new Error(`DR ${path} → เกิน ${50 * DR_PAGE} แถว (หยุดกันวนไม่จบ)`);
+  }
 }
 
 type Sess = { id: string; work_date: string; line_name: string; shift: string; status: string; closed_at: string | null };
@@ -154,7 +178,7 @@ type Prod = { mat_no: string | null; pair_mat_no: string | null; name: string | 
 const STAGE_LABEL: Record<string, string> = { first: 'ชิ้นแรก (First)', middle: 'ระหว่างผลิต (Middle)', end: 'ชิ้นสุดท้าย (End)' };
 const REASON_LABEL: Record<string, string> = {
   shift_start: 'เริ่มกะ', model_change: 'เปลี่ยนรุ่น', mid_run: 'รุ่นนี้ผลิตต่อเนื่องนาน',
-  model_change_out: 'จบรุ่น (กำลังเปลี่ยนรุ่น)', shift_end: 'ปิดกะ',
+  model_change_out: 'จบรุ่น (กำลังเปลี่ยนรุ่น)', shift_end: 'ปิดกะ', lot_end: 'ครบล็อต',
 };
 // สเตจของ obligation ↔ stage ในใบตรวจ (qa_inspection_sheets.stage) — ใช้จับคู่ว่า "ตรวจแล้ว"
 const SHEET_STAGE: Record<string, string> = { first: 'setup_first', middle: 'inprocess', end: 'final' };
@@ -201,11 +225,8 @@ Deno.serve(async (req) => {
     const orders = await dr<Ord>(
       `prod_orders?select=id,session_id,mat_no,part_name,status,opened_at,confirmed_at,qty,qty_ok,qty_actual&session_id=in.(${sIds.join(',')})`);
     const products = await dr<Prod>('dr_products?select=mat_no,pair_mat_no,name,p_no,is_operation,op_parent_mat');
-    /* ⚠️ PostgREST ตัดที่ 1000 แถวเงียบๆ (กฎ CLAUDE.md) — 2 master นี้ยังไม่ถึง แต่โตได้
-       ชนเพดานเมื่อไหร่ = พาร์ทที่หายไปจะไม่มี lot_size/pair/OP → ไม่มี Middle แบบไม่มีใครรู้
-       → ไม่แก้ให้เอง (ต้องไป paginate) แต่ **ต้องรายงานเสมอ ห้ามเงียบ** */
+    /* เพดาน 1000 แถว: `dr()` อ่านทีละหน้าจนหมดแล้ว (13/11) — `truncated` เหลือไว้ให้รูปคำตอบเดิมไม่เปลี่ยน */
     const truncated: string[] = [];
-    if (products.length >= 1000) truncated.push(`dr_products (${products.length})`);
     /* lot_size รายพาร์ท = ฐานของคาบตรวจ Middle (คำสั่ง user 2026-08-20)
        ⚠️ ไม่ตั้ง lot_size = ไม่เดา → พาร์ทนั้นไม่มี Middle แต่ต้องรายงานออกมา ห้ามเงียบ */
     /* ⚠️ kanban_standards ไม่มีคอลัมน์ line_name (เจอตอน dry-run 2026-08-21 → 42703)
@@ -214,7 +235,6 @@ Deno.serve(async (req) => {
                   qty_per_kanban: number | null; min_qty: number | null; max_qty: number | null };
     const kstd = await dr<Kstd>(
       'kanban_standards?select=mat_no,product_id,lot_size,qty_per_kanban,min_qty,max_qty&is_active=eq.true');
-    if (kstd.length >= 1000) truncated.push(`kanban_standards (${kstd.length})`);
     /* ⚠️ 1 mat มีได้หลายแถว (คนละไลน์/ปลายทาง) — เดิม `set()` ทับกันไปเรื่อยๆ แถวสุดท้ายชนะ
        = หยิบ lot_size มาแบบสุ่มโดยไม่มีใครรู้ · ถ้าค่าไม่ตรงกัน **ไม่เลือกให้เอง** ต้องรายงาน */
     const lotRows = new Map<string, Kstd[]>();
@@ -234,7 +254,7 @@ Deno.serve(async (req) => {
            → ออกมา 500-600 ชิ้นทุกตัว = ล็อตที่ตั้งใจตั้งไว้จริง ไม่ใช่ค่ามั่ว */
     type Kparam = { mat_no: string; calc_type: string | null; lot_qty: number | null;
                     lot_size: number | null; packaging: number | null };
-    const kparam = await dr<Kparam>('kanban_calc_params?select=mat_no,calc_type,lot_qty,lot_size,packaging');
+    const kparam = await dr<Kparam>('kanban_calc_params?select=mat_no,calc_type,lot_qty,lot_size,packaging', 'mat_no');
     const paramRows = new Map<string, Kparam>();
     for (const p of kparam) if (p.mat_no) paramRows.set(p.mat_no, p);
 
@@ -262,7 +282,8 @@ Deno.serve(async (req) => {
       else if (vals.length > 1) lotConflict.set(mat, vals.sort((a, b) => a - b));
     }
     const { data: partRules } = await supabase.from('qa_fme_part_rules').select('*');
-    const ruleByMat = new Map<string, { mid_every_pcs: number | null; is_active: boolean }>();
+    const ruleByMat = new Map<string, { mid_every_pcs: number | null; is_active: boolean;
+      mid_mode?: string | null; mid_every_min?: number | null; sample_n?: number | null }>();
     for (const r of partRules ?? []) ruleByMat.set(r.mat_no, r);
 
     /* ── 2) จับคู่ RH/LH เป็น "รุ่นเดียวกัน" — ตัวแทนกลุ่ม = mat ที่เรียงน้อยกว่า ── */
@@ -286,10 +307,39 @@ Deno.serve(async (req) => {
     //    ของพาร์ทเดียวกัน · ไม่ยุบ = เรียก QA ซ้ำหลายรอบต่อพาร์ทเดียว (dry-run 2026-08-19 เจอ
     //    14/30 รายการเป็น OP) · กฎเหล็กชั้น Operation ใน CLAUDE.md
     //    OP ที่ยังไม่ผูกพาร์ทจริง (op_parent_mat null) = ใช้เลขเดิมไปก่อน + ติดธงบอกให้ไปผูก
-    const canon = (mat: string) => {
-      const base = opParent.get(mat) || mat;
-      const pair = pairOf.get(base);
+    // MAT ทุกตัวที่เลขพาร์ทลูกค้าแกนเดียวกัน → ตัวแทน = เลขที่เรียงน้อยสุด (ไม่ใช่ OP · OP ยุบเข้าพาร์ทจริงแล้ว)
+    const coreOf = (mat: string) => partCoreOf(pnoOf.get(mat));
+    const coreRep = new Map<string, string>();
+    const coreMats = new Map<string, string[]>();
+    for (const p of products) {
+      if (!p.mat_no || p.is_operation) continue;
+      const c = partCoreOf(p.p_no);
+      if (!c) continue;
+      const cur = coreRep.get(c);
+      if (!cur || p.mat_no < cur) coreRep.set(c, p.mat_no);
+      coreMats.set(c, [...(coreMats.get(c) ?? []), p.mat_no]);
+    }
+    const repOf = (mat: string) => { const c = coreOf(mat); return (c && coreRep.get(c)) || mat; };
+    const canon1 = (mat: string) => {
+      const base = repOf(opParent.get(mat) || mat);
+      const pairRaw = pairOf.get(opParent.get(mat) || mat) || pairOf.get(base);
+      const pair = pairRaw ? repOf(pairRaw) : null;
       return pair && pair < base ? pair : base;
+    };
+    /* 🔴 OP ที่เป็นคู่ RH/LH กันเอง (ปั๊มทีเดียวได้ 2 ตัว) = รุ่นเดียว แม้พาร์ทแม่คนละตัว (16/11 · HDF2 ท่อ
+       90031601↔90031602 ผูกแม่คนละพาร์ท ⇒ เดิมเรียก First 2 งานเวลาเดียวกัน) — เลือกตัวแทนที่เรียงน้อยกว่า */
+    const canon = (mat: string) => {
+      const a = canon1(mat);
+      const p = opParent.has(mat) ? pairOf.get(mat) : null;
+      if (!p || !opParent.has(p)) return a;
+      const b = canon1(p);
+      return b < a ? b : a;
+    };
+    /* MAT ทั้งตระกูลของรุ่น (ใช้หาขนาดล็อต) — ตัวที่ผลิตจริงในกะ + พี่น้องเลขพาร์ทเดียวกัน */
+    const familyOf = (mats: string[]) => {
+      const out = new Set<string>(mats);
+      for (const m of mats) { const c = coreOf(m); for (const x of (c && coreMats.get(c)) || []) out.add(x); }
+      return [...out];
     };
 
     /* ── 3) แตกเป็น "run" ต่อ (กะ × รุ่น) ── */
@@ -348,6 +398,7 @@ Deno.serve(async (req) => {
     const noLot = new Set<string>();
     const tooSmall = new Map<string, number>();   // mat → คาบที่คำนวณได้ (ต่ำเกินจนไม่น่าใช่ค่าจริง)
     const everyByMat = new Map<string, number>(); // mat → คาบที่ใช้จริง (ไว้ตรวจสอบใน dry-run)
+    const lotOfRun = new Map<Run, number>();      // ขนาดล็อตที่ใช้ของรุ่นนี้ (ไว้ตัดสิน "ครบล็อต = End")
     const midEveryFor = (r: Run): number | null => {
       for (const m of [r.mat, ...r.mats]) {
         const rule = ruleByMat.get(m);
@@ -360,14 +411,17 @@ Deno.serve(async (req) => {
           }
         }
       }
-      for (const m of [r.mat, ...r.mats]) {
-        const lot = lotByMat.get(m);
-        if (lot) {
-          const every = Math.max(1, Math.round(lot * Number(cfg.mid_lot_ratio ?? 1)));
-          if (every < midMin) { tooSmall.set(r.mat, every); return null; }
-          everyByMat.set(r.mat, every);
-          return every;
-        }
+      /* ขนาดล็อตของ "รุ่น" = ล็อตที่ใหญ่สุดในตระกูล (13/11 · user: 60/61 ลอทผลิต 500 → เรียก 1/250/500)
+         ตัวเล็ก (เช่น AAT ตั้ง 1 ใบ × 10 = 10 ชิ้น) คือล็อตเบิกของลูกค้ารายนั้น ไม่ใช่ล็อตผลิต
+         ⇒ หยิบตัวแรกที่เจอ = Middle ทุก 10 ชิ้น = เรียกทุกออเดอร์ที่สแกน */
+      let lot = 0;
+      for (const m of familyOf([r.mat, ...r.mats])) lot = Math.max(lot, lotByMat.get(m) ?? 0);
+      if (lot) {
+        const every = Math.max(1, Math.round(lot * Number(cfg.mid_lot_ratio ?? 1)));
+        if (every < midMin) { tooSmall.set(r.mat, every); return null; }
+        everyByMat.set(r.mat, every);
+        lotOfRun.set(r, lot);
+        return every;
       }
       // ค่าไม่ตรงกันระหว่างแถว = "ไม่รู้ว่าอันไหนใช่" ไม่ใช่ "ไม่มี" — แยกให้ขาด (รายงานคนละช่อง)
       if ([r.mat, ...r.mats].some(m => lotConflict.has(m))) return null;
@@ -379,6 +433,8 @@ Deno.serve(async (req) => {
       ? (Number(o.qty_ok ?? o.qty) || 0)
       : (Number(o.qty_actual) || 0);
 
+    const lotEndAt = new Map<Run, number>();      // ยอดสะสมตอน End ครบล็อตครั้งล่าสุด
+    const runQty = new Map<Run, number>();        // ยอดรวมของรุ่นในกะ
     const bySess = new Map<string, Run[]>();
     for (const r of runs.values()) {
       const arr = bySess.get(r.sess.id) ?? [];
@@ -396,37 +452,91 @@ Deno.serve(async (req) => {
            ไล่ใบตามเวลา สะสมยอด · ทุกครั้งที่ข้ามหลัก N ชิ้น = ถึงคิวตรวจ 1 ครั้ง
            ⇒ ลอทใหญ่ผลิตทั้งวันได้หลายครั้ง · ลอทสั้นจบก่อนถึงหลักแรก = ไม่มีเลย (ถูกต้อง)
            เวลาที่ใช้ = เวลาของใบที่ทำให้ยอดข้ามหลักนั้น (ไม่ใช่เวลาที่สแกนเจอ) */
-        const midMode = String(cfg.mid_mode ?? 'lot');
+        /* 🎛️ โหมด Middle รายพาร์ท (19/11 · user: "ให้ QA ตั้งได้ว่าตัวไหนรอบเวลา ตัวไหนตามจำนวนที่คอนเฟิม")
+           qa_fme_part_rules.mid_mode ชนะค่ากลาง · แถวเก่า is_active=false = ปิด Middle เหมือนเดิม · ไม่มีแถว = ค่ากลาง */
+        let midMode = String(cfg.mid_mode ?? 'lot');
+        let ruleMin = 0;
+        for (const m of [r.mat, ...r.mats]) {
+          const pr = ruleByMat.get(m);
+          if (!pr) continue;
+          if (pr.mid_mode) { midMode = String(pr.mid_mode); ruleMin = Number(pr.mid_every_min ?? 0); break; }
+          if (pr.is_active === false) { midMode = 'off'; break; }
+        }
         if (midMode === 'lot') {
           const every = midEveryFor(r);
           if (every) {
-            const evts = r.list
-              .map(o => ({ at: o.confirmed_at || o.opened_at, q: qtyOf(o) }))
-              .filter(e => !!e.at && e.q > 0)
-              .sort((a, b) => (a.at as string) < (b.at as string) ? -1 : 1);
+            /* 🔴 ใบที่ยืนยัน "นาทีเดียวกัน" = เหตุการณ์เดียว (16/11 · รันจริงครั้งแรก: คู่ RH/LH ของ LASER-789
+               ยืนยันพร้อมกัน 07:48 ⇒ เดิมแยกเป็น End 2 งานห่างกัน 0 นาที) — QA เดินไปครั้งเดียวตรวจทั้งคู่ */
+            const byMin = new Map<string, { at: string; q: number }>();
+            for (const o of r.list) {
+              const at = o.confirmed_at || o.opened_at; const q = qtyOf(o);
+              if (!at || q <= 0) continue;
+              const k = at.slice(0, 16);
+              const cur = byMin.get(k);
+              if (cur) { cur.q += q; if (at > cur.at) cur.at = at; } else byMin.set(k, { at, q });
+            }
+            const evts = [...byMin.values()].sort((a, b) => a.at < b.at ? -1 : 1);
+            /* 🎯 ต่อ 1 ล็อต = First (ชิ้นแรก) · Middle (กลางล็อต) · End (ครบล็อต) — 13/11 คำสั่ง user
+               "60/61 สแกนใบละ 10 แต่ลอทผลิต 500 → เรียก 1/250/500 ไม่ใช่ทุกใบ"
+               ⇒ หลักที่ลงตัวกับขนาดล็อต (500, 1000…) = **End ครบล็อต** · หลักอื่น (250, 750…) = Middle
+               seq ของ Middle/End นับแยกกันตามลำดับในรอบ (unique key รวม seq) */
             const cap = Number(cfg.mid_max_per_run ?? 12);
-            let acc = 0, k = 0;
+            const lot = lotOfRun.get(r) ?? 0;
+            let acc = 0, k = 0, nMid = 0, nEnd = 0;
+            /* 🔴 ใบเดียวข้ามหลายหลัก = เรียก **ครั้งเดียว** (16/11 · dry-run จริง: LASER-789 ยืนยันใบเดียว 600 ชิ้น
+               ⇒ เดิมเกิด 12 งานในนาทีเดียว ทุก 50 ชิ้นย้อนหลัง — ตรวจย้อนหลังไม่ได้ = เรียกเปล่า)
+               ข้ามหลักครบล็อตในใบนั้น = End ที่หลักครบล็อตสูงสุด · ไม่ครบล็อต = Middle ที่หลักสูงสุด */
             for (const e of evts) {
               acc += e.q;
+              let lastMark = 0, lastLotEnd = 0;
               while (acc >= (k + 1) * every && k < cap) {
                 k += 1;
-                add(r, 'middle', 'mid_run', e.at as string, cfg.first_due_min, k, k * every);
+                const mark = k * every;
+                lastMark = mark;
+                if (lot && mark % lot === 0) lastLotEnd = mark;
+              }
+              if (lastLotEnd) {
+                nEnd += 1;
+                add(r, 'end', 'lot_end', e.at as string, cfg.end_due_min, nEnd, lastLotEnd);
+                lotEndAt.set(r, lastLotEnd);
+              } else if (lastMark) {
+                nMid += 1;
+                add(r, 'middle', 'mid_run', e.at as string, cfg.first_due_min, nMid, lastMark);
               }
               if (k >= cap) break;   // เพดานกัน QA ถูกเรียกรัวจนใช้งานไม่ได้
             }
+            runQty.set(r, evts.reduce((a, e) => a + e.q, 0));
           }
-        } else if (midMode === 'min' && cfg.mid_after_min > 0) {
-          // โหมดเดิม (ตามเวลา) — เก็บไว้เผื่อบางไลน์อยากใช้ ไม่ใช่ค่าเริ่มต้นแล้ว
-          const midAt = new Date(new Date(r.firstOpen).getTime() + cfg.mid_after_min * 60_000);
-          if (midAt <= now && !r.allDone) add(r, 'middle', 'mid_run', midAt.toISOString(), cfg.first_due_min);
+        } else if (midMode === 'min') {
+          /* ตามเวลา — ซ้ำทุก N นาทีนับจากเริ่มรุ่น ตราบที่รุ่นยังวิ่ง (รุ่นจบแล้ว = ถึงเวลาชิ้นสุดท้าย lastAct)
+             N = รายพาร์ท (mid_every_min) > ค่ากลาง (mid_after_min) · 0/ว่าง = ไม่เรียก (จอตั้งค่าเตือนแล้ว) */
+          const every = ruleMin > 0 ? ruleMin : Number(cfg.mid_after_min ?? 0);
+          if (every > 0) {
+            const cap = Number(cfg.mid_max_per_run ?? 12);
+            const t0 = new Date(r.firstOpen).getTime();
+            const until = r.allDone ? new Date(r.lastAct).getTime() : now.getTime();
+            for (let k = 1; k <= cap; k++) {
+              const at = t0 + k * every * 60_000;
+              if (at > until) break;
+              add(r, 'middle', 'mid_run', new Date(at).toISOString(), cfg.first_due_min, k);
+            }
+          }
         }
 
-        // end — ปิดกะ หรือ รุ่นนี้ปิดใบครบแล้วและมีรุ่นอื่นเริ่มหลังจากนั้น (= กำลังเปลี่ยนรุ่น)
-        if (r.sess.status === 'closed') {
-          add(r, 'end', 'shift_end', r.sess.closed_at || r.lastAct, cfg.end_due_min);
-        } else if (r.allDone) {
-          const next = list.find(x => x !== r && x.firstOpen > r.lastAct);
-          if (next) add(r, 'end', 'model_change_out', next.firstOpen, cfg.end_due_min);
+        /* end — ปิดกะ หรือ รุ่นนี้ปิดใบครบแล้วและมีรุ่นอื่นเริ่มหลังจากนั้น (= กำลังเปลี่ยนรุ่น)
+           ⚠️ seq = 0 (คนละคีย์กับ End ครบล็อต seq 1..n) · จบตรงหลักครบล็อตพอดี (เหลือไม่ถึง mid_min_pcs)
+              = End ครบล็อตครอบแล้ว **ไม่เรียกซ้ำ** (ลอท 500 ผลิต 500 = เรียก End ครั้งเดียว) */
+        const tail = (runQty.get(r) ?? 0) - (lotEndAt.get(r) ?? -1e9);
+        const coveredByLotEnd = lotEndAt.has(r) && tail < midMin;
+        if (!coveredByLotEnd) {
+          if (r.sess.status === 'closed') {
+            /* เวลาเรียก = ชิ้นสุดท้ายที่ผลิตจริง (lastAct) ไม่ใช่เวลากดปิดกะ — 16/11 กะเช้าเมื่อวานปิดตอน 08:30 วันนี้
+               ⇒ เดิมเรียก End ช้า 15 ชม. (ของถูกส่งไปแล้ว ตรวจไม่ได้) · ใช้ lastAct แล้วด่าน skip_older_min ตัดทิ้งเอง */
+            add(r, 'end', 'shift_end', r.lastAct || r.sess.closed_at, cfg.end_due_min, 0);
+          } else if (r.allDone) {
+            const next = list.find(x => x !== r && x.firstOpen > r.lastAct);
+            if (next) add(r, 'end', 'model_change_out', next.firstOpen, cfg.end_due_min, 0);
+          }
         }
       });
     }
@@ -458,13 +568,18 @@ Deno.serve(async (req) => {
     let created = 0;
     // กันคีย์ซ้ำในก้อนเดียวกัน (ข้อมูลกะซ้ำผิดปกติ) ก่อนส่งเข้า upsert
     const seen = new Set<string>();
-    const rows = want
+    let rows = want
       .filter(w => {
         const k = `${w.line_name}|${w.work_date}|${w.shift}|${w.mat_no}|${w.stage}|${w.seq}`;
         if (seen.has(k)) return false;
         seen.add(k); return true;
       })
       .map(w => ({ ...w, part_id: resolvePart(w.mat_group, w.mat_no) }));
+    /* 🎯 linked_only (16/11 · คำสั่ง user "เฉพาะพาร์ทที่ตั้งจุดตรวจไว้แล้วก่อน") — รุ่นที่ไม่มีพาร์ทในระบบตรวจ
+       = QA กดเปิดใบตรวจจากคิวไม่ได้ ⇒ ไม่สร้างงาน · นับไว้รายงาน (ห้ามตัดเงียบ) · คอลัมน์ไม่มี = ถือว่า true */
+    const linkedOnly = cfg.linked_only !== false;
+    const unlinkedSkipped = linkedOnly ? rows.filter(r => !r.part_id) : [];
+    if (linkedOnly) rows = rows.filter(r => r.part_id);
 
     // ── โหมดทดลอง: บอกว่า "จะเรียกอะไรบ้าง" แล้วจบ (ไม่เขียน ไม่ส่ง) ──
     if (dry) {
@@ -477,6 +592,10 @@ Deno.serve(async (req) => {
         scanned: { sessions: sessions.length, orders: orders.length, runs: runs.size },
         summary: {
           would_create: list.length,
+          linked_only: linkedOnly,
+          // รุ่นที่ผลิตแต่ไม่มีพาร์ทในระบบตรวจ (ข้ามเพราะ linked_only) — ต้องเห็นว่าข้ามอะไรไป
+          skipped_unlinked: unlinkedSkipped.length,
+          skipped_unlinked_lines: [...new Set(unlinkedSkipped.map(r => r.line_name))],
           // part_linked = กดปุ่ม "เปิดใบตรวจ" จากคิวได้จริงกี่รายการ (ต้องผูก qa_parts.mat_no ก่อน)
           part_linked: list.filter(r => r.part_id).length,
           op_unlinked: [...new Set(list.flatMap(r => r.mat_group.filter(m => opNoParent.has(m))))],
@@ -535,30 +654,61 @@ Deno.serve(async (req) => {
     /* ── 7) sync ว่า "ตรวจแล้วหรือยัง" ── */
     // เปิดใบตรวจ = รับงานแล้ว (หยุดเตือน) · ปิดใบ = จบงาน  ⇒ ห้ามเตือนซ้ำหลังคนรับงานแล้ว
     const { data: open } = await supabase.from('qa_fme_obligations')
-      .select('*').in('status', ['pending', 'acked']).gte('work_date', yest);
+      .select('*').in('status', ['pending', 'acked', 'expired']).gte('work_date', yest);   // expired: ตรวจทีหลังยังจับคู่ปิดได้
     const obs = open ?? [];
     const { data: sheets } = await supabase.from('qa_inspection_sheets')
-      .select('id, part_id, line_name, work_date, shift, stage, status, result')
+      .select('id, part_id, line_name, work_date, shift, stage, status, result, created_at')
       .in('work_date', [today, yest]);
 
     let closed = 0;
-    for (const ob of obs) {
-      let sh = ob.sheet_id ? (sheets ?? []).find(s => s.id === ob.sheet_id) : null;
-      if (!sh) {
-        // ใบที่ QA เปิดเองโดยไม่ผ่านปุ่มในคิว → จับคู่ด้วย พาร์ท+วัน+กะ+สเตจ
-        sh = (sheets ?? []).find(s =>
-          s.work_date === ob.work_date && s.shift === ob.shift &&
-          s.stage === SHEET_STAGE[ob.stage] &&
-          (ob.part_id ? s.part_id === ob.part_id : s.line_name === ob.line_name));
-      }
+    /* 🔗 จับคู่งานตรวจ ↔ ใบตรวจจริง (16/11 · user: "หน้างานตรวจจากฟอร์มแต่ไม่ได้กดจากไทม์ไลน์ กลายเป็นว่าไม่ได้ตรวจ")
+       ใบที่ QA เปิดเองจากฟอร์มตรวจ **ไม่มี stage** (null) — เดิมบังคับ stage ตรง ⇒ ไม่เคยจับคู่ได้ งานค้าง "เกินเวลา" ทั้งที่ตรวจแล้ว
+       ⇒ จับด้วย พาร์ท (ไม่ผูกพาร์ท = ไลน์) + วันงาน + กะ · stage ตรง **หรือว่าง** · เปิดใบไม่ก่อนเรียก 30 นาที และไม่เกิน 8 ชม.หลังเรียก
+       · 1 ใบใช้ปิดได้งานเดียว (ไล่งานตามเวลาเรียก เลือกใบที่ใกล้สุด — ใบที่ปิดแล้วก่อนใบที่ยังเปิด) · ผูกด้วย sheet_id ไว้ตลอด */
+    const PRE_MS = 30 * 60_000, POST_MS = 8 * 3600_000;
+    const used = new Set(obs.map(o => o.sheet_id).filter(Boolean));
+    const sheetsAll = sheets ?? [];
+    const pickSheet = (ob: Record<string, unknown>) => {
+      const t0 = new Date(ob.triggered_at as string).getTime();
+      const cands = sheetsAll.filter(s =>
+        !used.has(s.id) && s.work_date === ob.work_date && s.shift === ob.shift &&
+        (!s.stage || s.stage === SHEET_STAGE[ob.stage as string]) &&
+        (ob.part_id ? s.part_id === ob.part_id : s.line_name === ob.line_name) &&
+        (() => { const t = new Date(s.created_at).getTime(); return t >= t0 - PRE_MS && t <= t0 + POST_MS; })());
+      if (!cands.length) return null;
+      const dist = (s: { created_at: string }) => Math.abs(new Date(s.created_at).getTime() - t0);
+      cands.sort((a, b) => (a.status === 'done' ? 0 : 1) - (b.status === 'done' ? 0 : 1) || dist(a) - dist(b));
+      return cands[0];
+    };
+    for (const ob of [...obs].sort((a, b) => String(a.triggered_at).localeCompare(String(b.triggered_at)))) {
+      let sh = ob.sheet_id ? sheetsAll.find(s => s.id === ob.sheet_id) : null;
+      // ผูกใบที่ยังเปิดค้าง (เช่น รอบ 1 ไม่ได้ปิด) แต่มีใบที่ตรวจจบแล้วในช่วงเดียวกัน = ใช้ใบที่จบ
+      if (!sh || sh.status !== 'done') { const alt = pickSheet(ob); if (alt && (!sh || alt.status === 'done')) sh = alt; }
       if (!sh) continue;
+      used.add(sh.id);
       const patch = sh.status === 'done'
         ? { status: sh.result === 'fail' ? 'done_ng' : 'done_ok', done_at: new Date().toISOString(), sheet_id: sh.id }
-        : (ob.status === 'pending' ? { status: 'acked', acked_at: new Date().toISOString(), sheet_id: sh.id } : null);
+        : (ob.status === 'pending' ? { status: 'acked', acked_at: new Date().toISOString(), sheet_id: sh.id }
+          : (ob.sheet_id !== sh.id ? { sheet_id: sh.id } : null));
       if (!patch) continue;
       await supabase.from('qa_fme_obligations').update(patch).eq('id', ob.id);
       Object.assign(ob, patch);
       if (sh.status === 'done') closed++;
+    }
+
+    /* ⌛ หมดเวลา = ข้ามกะแล้วยังไม่ได้ตรวจ (17/11 · user "ทำปิดงานค้างข้ามกะเป็นหมดเวลา") — เดิมค้าง pending แล้วเตือน "เกินเวลา" ทั้งคืน
+       กะของงานจบแล้ว (วันงาน/กะ ≠ ตอนนี้) และเลยกำหนดตรวจแล้ว ⇒ status 'expired' + เหตุผล · **ไม่ลบ ไม่นับเป็นตรวจแล้ว**
+       (ย้อนดูได้ว่างานไหนไม่ได้ตรวจ) · ถ้า QA ตรวจทีหลังแล้วจับคู่ใบได้ รอบ sync ข้างบนปิดเป็น done ให้เอง · acked (QA เปิดใบแล้ว) ไม่แตะ */
+    const curShift = (() => { const h = bangkok(now).getUTCHours(); return h >= 8 && h < 20 ? 'day' : 'night'; })();
+    const stale = obs.filter(ob => ob.status === 'pending'
+      && (ob.work_date !== today || ob.shift !== curShift) && now > new Date(ob.due_at));
+    let expired = 0;
+    if (stale.length) {
+      const { error: exErr } = await supabase.from('qa_fme_obligations')
+        .update({ status: 'expired', cancel_reason: 'ระบบ: หมดเวลา — ข้ามกะแล้วยังไม่ได้ตรวจ' })
+        .in('id', stale.map(o => o.id)).eq('status', 'pending');
+      if (exErr) console.error('qa-fme-scan: expire', exErr.message);
+      else { expired = stale.length; stale.forEach(o => { o.status = 'expired'; }); }
     }
 
     /* ── 8) แจ้ง Telegram: เรียกครั้งแรก + เตือนซ้ำเมื่อเกินเวลา ── */
@@ -661,7 +811,7 @@ Deno.serve(async (req) => {
     // master อ่านมาไม่ครบ = ต้องเห็นใน log ของ cron ด้วย ไม่ใช่เฉพาะ dry-run (ห้ามล้มเหลวเงียบ)
     if (truncated.length) console.error('qa-fme-scan: master ชนเพดาน 1000 แถว →', truncated.join(', '));
     return json({ ok: true, scanned: { sessions: sessions.length, runs: runs.size },
-      created, closed, calls, escalations, master_truncated: truncated });
+      created, closed, expired, calls, escalations, master_truncated: truncated });
   } catch (e) {
     console.error('qa-fme-scan', e);
     return json({ ok: false, error: String((e as Error)?.message ?? e) }, 500);

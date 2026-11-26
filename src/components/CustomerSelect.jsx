@@ -13,6 +13,7 @@ import SearchSelect from './SearchSelect';
 import { useCustomersState, customerKey } from '../utils/useCustomers';
 import { registryFailText } from '../utils/useMasterRows.js';
 
+import { tr } from '../utils/i18n';
 export default function CustomerSelect({
   value = '', onChange, allowFree = true, placeholder = 'เลือก / ค้นลูกค้า…', freeHint = 'ลูกค้าใหม่ — ตรวจสะกดให้ตรงกับ Product Master',
   disabled, inputStyle, style, extra = [], history = [],   // history = ชื่อลูกค้าที่เคยบันทึกในคอลัมน์ปลายทาง (useColumnHistory)
@@ -30,9 +31,9 @@ export default function CustomerSelect({
       if (c.is_active === false && customerKey(value) !== k) continue;
       out.push({
         id: k, label: c.name, aliases: (c.aliases || []).map(customerKey),
-        badge: c.is_active === false ? '⏸' : (c.n ? `${c.n} สินค้า` : (c.history ? '⚠ นอกทะเบียน' : null)),
+        badge: c.is_active === false ? '⏸' : (c.n ? `${c.n} ${tr("สินค้า")}` : (c.history ? '⚠ นอกทะเบียน' : null)),
         badgeColor: c.history ? 'var(--accent2)' : undefined,
-        sub: c.note || ((c.aliases || []).length ? `สะกดอื่น: ${c.aliases.join(', ')}` : ''),
+        sub: c.note || ((c.aliases || []).length ? `${tr("สะกดอื่น")}: ${c.aliases.join(', ')}` : ''),
         keywords: `${k} ${(c.aliases || []).join(' ')}`, group: c.history ? '📜 เคยบันทึกไว้ (ไม่มีในทะเบียน)' : undefined,
       });
     }
@@ -46,7 +47,7 @@ export default function CustomerSelect({
   };
   return (
     <SearchSelect value={sel ? sel.id : ''} text={sel ? sel.label : (value || '')} options={options} onChange={emit}
-      allowFree={allowFree} placeholder={placeholder} freeHint={freeHint} emptyText="ยังไม่มีลูกค้าชื่อนี้ใน Product Master"
+      allowFree={allowFree} placeholder={placeholder} freeHint={freeHint} emptyText={tr('ยังไม่มีลูกค้าชื่อนี้ใน Product Master')}
       loadFail={failed ? registryFailText('ทะเบียนลูกค้า', stale) : ''}
       disabled={disabled} inputStyle={inputStyle} style={style} />
   );

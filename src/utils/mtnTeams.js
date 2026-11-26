@@ -27,6 +27,15 @@ export function deptNameOf(v) {
   const hit = teamRows().find(t => String(t.key || '').toLowerCase() === low || String(t.dept_name || '').toLowerCase() === low)
   return hit ? (hit.dept_name || hit.key) : s
 }
+// ค่าใดๆ → รหัสสั้นของทีม (mtn_teams.mo_code เช่น JIG/DIE/PRO/MTN) — ใช้เป็นป้ายช่องเซ็นบนใบพิมพ์
+// 🔴 ป้ายช่องเซ็นต้องมาจากทะเบียนนี้ ห้าม hardcode 'JIG APPROVE' ลงใบ (ใบ DIE เคยขึ้น JIG · 19/11)
+export function moCodeOf(v) {
+  const s = String(v || '').trim(); if (!s) return ''
+  const low = s.toLowerCase()
+  const hit = teamRows().find(t => String(t.key || '').toLowerCase() === low || String(t.dept_name || '').toLowerCase() === low)
+  return hit ? String(hit.mo_code || '').trim() : ''
+}
+
 // เทียบ 2 ค่าว่าเป็นทีมเดียวกันไหม (ไม่สน encoding key/label)
 export function sameTeam(a, b) { return teamKeyOf(a) === teamKeyOf(b) }
 
@@ -123,11 +132,11 @@ export const teamOptions = () => teamRows().map(t => ({ key: t.key, name: t.dept
 /* ═══ "แถวนี้ใครแก้/ลบได้" — กฎเจ้าของทีม (2026-08-11 · ขยายคุมคลังอะไหล่ 2026-10-14) ═══
    📄 เหตุผล/กติกาเต็ม + fallback ที่ห้ามเปลี่ยน → `mtnTeamOwn.js` (ตรรกะจริงอยู่ที่นั่น pure)
    ที่นี่แค่ normalize ชื่อทีม→key ให้ก่อน (ข้อมูลเก่าบางแถวเก็บเป็นชื่อ ไม่ใช่ key) */
-export function teamRowOwner(row, { myTeams = [], role = '', strict = false } = {}) {
+export function teamRowOwner(row, { myTeams = [], role = '', strict = false, allUnits = false } = {}) {
   return teamRowOwnerKeys(
     teamKeyOf(row?.team),
     (Array.isArray(myTeams) ? myTeams : []).map(teamKeyOf).filter(Boolean),
-    role, { strict })
+    role, { strict, allUnits })   // allUnits = ใบผ่านรายคนจาก UserContext (13/11 — เลิกถือว่า manager = บอส)
 }
 
 /** เหตุผลที่กดไม่ได้ — ต้องเขียนบนจอเสมอ ห้ามซ่อนปุ่มเงียบ (กฎความซื่อสัตย์ของจอ)

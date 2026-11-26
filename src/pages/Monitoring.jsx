@@ -1,4 +1,7 @@
+import { ImportButton } from '../components/ImportKit';
+import { importLabel } from '../utils/importRegistry';
 import { useState, useEffect, useCallback, useMemo, useRef, useContext, lazy, Suspense } from 'react';
+import { MoreMark } from '../components/InfoMore';
 import { supabaseDR } from '../supabaseClient';
 import { UserContext } from '../App';
 import { can, canSeeded } from '../utils/permissions';
@@ -9,12 +12,13 @@ import { fetchAllPages, fetchByIds } from '../utils/fetchByIds';
 import { useLiveBoard } from '../utils/useLiveBoard';
 import { getWorkDate, addDaysStr } from '../utils/workDate';
 import { toast } from '../components/Toast';
-import Page, { Hub } from '../components/Page';
+import Page, { Hub, HubContext } from '../components/Page';
 import PageHeader from '../components/PageHeader';
+import OverflowMenu from '../components/OverflowMenu';
 import FilterBar from '../components/FilterBar';
 import useTabParam from '../utils/useTabParam';
 import MonitorBoardGrid from '../components/MonitorBoardGrid';
-import { BOARD_TABS, boardPeriods, rowDefs } from '../utils/monitorBoards';
+import { BOARD_TABS, BOARD_GROUPS, MON_SUBS, subOfKind, BOARD_STAGE_LABEL, boardPeriods, rowDefs, isStoreBoard, STORE_LEDGER_LINE } from '../utils/monitorBoards';
 import {
   sumByMatDate, firstByMat, makeSystemLookup, OUT_TXN_TYPES, IN_TXN_TYPES,
   DEMAND_SKIP_STATUS, onHandAtRef, outAtRef, inAtRef, fgAnchorBalance, makeAnchorLookup, rackOrderSyncPlan,
@@ -25,9 +29,11 @@ import { isTodayPeriod } from '../utils/periodHead';
 import { buildPnIndex, pickStockMat } from '../utils/matResolve';
 import { openOnly } from '../utils/shipStatus';
 
+import { tr } from '../utils/i18n';
 /* 🔴 จุดอัพโหลดไฟล์ Monitoring มี **จุดเดียวทั้งระบบ** (08/10 คำสั่ง user) — ตัวเดียวกับที่
    `/planner-sales?tab=monitoring` ใช้ · กดที่ไหนก็ลงครบทุกชั้นในครั้งเดียว ห้ามแยกกลับเป็น 2 ตัว */
 const MonitoringUpload = lazy(() => import('../components/MonitoringUpload'));
+const StoreStockUpload = lazy(() => import('../components/StoreStockUpload'));   // 📥 ไฟล์ทะเบียนพาร์ทสโตร์ (23/11)
 const MonitorFgSync = lazy(() => import('../components/MonitorFgSync'));
 /* 📉 "คาดการณ์ของจะขาด" ของเดิม — embed ทั้งดุ้น ไม่แก้ของเดิม (pattern เดียวกับ /equipment · PmHub)
    เหตุผลที่**ยุบตารางเข้าด้วยกันตรงๆ ไม่ได้** เขียนไว้ที่ docs/modules/monitoring-boards.md §6.6 */
@@ -56,13 +62,44 @@ const StockAdjustRequestModal = lazy(() => import('../components/StockAdjustRequ
 const card = { background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 14 };
 const FS = 12;
 
+/* ── 📝 บรรทัดหมายเหตุใต้แถบกรอง — ย่อรูปแบบ ไม่ย่อความจริง (2026-11-18 · คำสั่ง user) ──────
+   user: *"ข้อความสีเทาแบบนั้นอยากให้เป็น tooltip เพื่ออ่านมากกว่าโชว์มาเยอะๆแบบนี้"*
+   🔴 **⚠️ ทุกท่อนอยู่บนจอเสมอ** — กฎ `components/InfoMore.jsx`: คำเตือนสถานะจริงห้ามพับ
+      (ซ่อนแล้วกลับไปผิดเงียบ ซึ่งโปรเจคนี้ห้ามที่สุด)
+   🔴 ประโยคแรกอยู่บนจอ — เป็นตัวบอกว่า "บอร์ดนี้ผูกกับอะไร" ซึ่งเปลี่ยนความหมายของทุกตัวเลขในตาราง
+   · ท่อนที่เหลือ = คำอธิบายที่มาของเลข ⇒ ไป `title=` (ขาดไปก็ยังอ่านตารางถูก)
+   · ไม่มีอะไรต้องพับ = ไม่ขึ้น ⓘ ให้รก                                                     */
+function NoteLine({ text = '', fs = 12 }) {
+  const parts = String(text).split(' · ').map(x => x.trim()).filter(Boolean);
+  const head = parts[0] || '';
+  const warns = parts.slice(1).filter(x => x.startsWith('⚠'));
+  const rest = parts.slice(1).filter(x => !x.startsWith('⚠'));
+  return (
+    <span style={{ fontSize: fs, color: 'var(--muted)', flex: '1 1 100%', minWidth: 0 }}
+      title={rest.length ? rest.join(' · ') : undefined}>
+      {head}{rest.length ? ' ' : ''}{rest.length ? <MoreMark text={rest.join(' · ')} size={fs - 1} /> : null}
+      {warns.map((w, i) => (
+        <span key={i} style={{ color: 'var(--amber)', fontWeight: 700 }}> · {w}</span>
+      ))}
+    </span>
+  );
+}
+
 export default function Monitoring() {
   const { role, fullName, section: homeSection, sections: mySections, allUnits, respCostCenters, scopeIdx } = useContext(UserContext);
   /* 🔐 บอร์ดผูก "ไลน์เจ้าของ" (`monitor_boards.line_name`) ⇒ กรอก/ลบช่องได้เฉพาะบอร์ดของส่วนงานตัวเอง
      (audit 15/10 — เดิมโหลดทุกบอร์ด แล้ว syncRackOrder ยิงต่อเป็นใบส่งของจริง)
      🔴 บอร์ดชนิด `fg` ผูก "ลูกค้า" ไม่ใช่ไลน์ ⇒ ไม่มีไลน์ให้เทียบ = ตัดสินไม่ได้ ⇒ ไม่บล็อก */
   const lineRows = useProductionLines();
-  const [tab, setTab] = useTabParam(BOARD_TABS.map(t => t.key), BOARD_TABS[0].key);
+  /* 📦 16/11 — ฝังเป็นแท็บ "Monitoring แผน-สต๊อก" ของ Stock Management (`/line-stock?tab=monitoring`)
+     แท็บซ้อนแท็บต้องคนละ query param (UI §6.8 ข้อ 2.4) ⇒ ใน hub ใช้ `?mon=` · เปิดเดี่ยว (ไม่มีแล้ว — route redirect) ใช้ `?tab=` */
+  const inHub = useContext(HubContext);
+  /* 🗂️ 18/11 — แท็บ 2 ชั้น: กลุ่ม (BOARD_GROUPS) → แท็บย่อย (MON_SUBS) · URL เก็บคีย์แท็บย่อย
+     ลิงก์เก่าที่ชี้ชนิดบอร์ด (`raw`/`vendor`/`st_before`/`st_after`) ตกเข้าแท็บย่อยที่รวมชนิดนั้นไว้ */
+  const [rawTab, setTab] = useTabParam([...MON_SUBS.map(s => s.key), ...BOARD_TABS.map(t => t.key)], MON_SUBS[0].key, inHub ? 'mon' : 'tab');
+  const tab = MON_SUBS.some(s => s.key === rawTab) ? rawTab : (subOfKind(rawTab) || MON_SUBS[0].key);
+  const subDef = MON_SUBS.find(s => s.key === tab) || MON_SUBS[0];
+  const groupDef = BOARD_GROUPS.find(g => g.key === subDef.group) || BOARD_GROUPS[0];
   /* แท็บซ้อนแท็บต้องคนละ query param (UI §6.8 ข้อ 2.4) — หน้าลูกของแท็บ FG ใช้ `?fgv=` */
   const [fgView, setFgView] = useTabParam(['rundown', 'board'], 'rundown', 'fgv');
 
@@ -84,11 +121,14 @@ export default function Monitoring() {
   const [adjReq, setAdjReq] = useState(null);            // { mat, part_name, loc, onHand }
   const [sysOut, setSysOut] = useState(() => new Map());
   const [sysMin, setSysMin] = useState(() => new Map());
+  /* 🏬 บอร์ดสโตร์: MAT → { min, max } จาก kanban_standards (ทะเบียนเดียวกับหน้า Stock · 16/11) */
+  const [sysLevels, setSysLevels] = useState(() => new Map());
   const [registry, setRegistry] = useState(null);
   const [loading, setLoading] = useState(true);
   const [warn, setWarn] = useState('');
   const [truncated, setTruncated] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showStoreUp, setShowStoreUp] = useState(false);   // 📥 ไฟล์ทะเบียนพาร์ทสโตร์ (Stock_Store.xlsm · 23/11)
   const [showFgSync, setShowFgSync] = useState(false);
 
   const canEditPerm = canSeeded('monitoring', 'manage', role);
@@ -106,7 +146,7 @@ export default function Monitoring() {
       .select('id, board_key, name, kind, line_name, customer, period_kind, period_count, start_date, rows, sl_row, sl_includes_seed, sort_order, note')
       .eq('is_active', true)
       .order('kind').order('sort_order', { nullsFirst: false }).order('name');
-    if (error) { setWarn(`โหลดทะเบียนบอร์ดไม่สำเร็จ: ${error.message}`); return; }
+    if (error) { setWarn(`${tr("โหลดทะเบียนบอร์ดไม่สำเร็จ")}: ${error.message}`); return; }
     setBoards(data || []);
   }, []);
   const wctx = useMemo(() => ({ role, section: homeSection, sections: mySections, allUnits, respCostCenters, scopeIdx }),
@@ -114,7 +154,13 @@ export default function Monitoring() {
 
   useEffect(() => { loadBoards(); }, [loadBoards]);
 
-  const tabBoards = useMemo(() => boards.filter(b => b.kind === tab), [boards, tab]);
+  /* แท็บย่อยที่รวมหลายชนิด (Raw Mat · งานชุบ) เรียงบอร์ดตามลำดับชนิด = ลำดับสายงาน (ก่อนชุบ → ร้าน → หลังชุบ) */
+  const subKindsKey = subDef.kinds.join(',');
+  const tabBoards = useMemo(() => {
+    const kinds = subKindsKey.split(',');
+    return boards.filter(b => kinds.includes(b.kind)).map((b, i) => ({ b, i }))
+      .sort((x, y) => kinds.indexOf(x.b.kind) - kinds.indexOf(y.b.kind) || x.i - y.i).map(x => x.b);
+  }, [boards, subKindsKey]);
   const board = useMemo(
     () => tabBoards.find(b => b.id === boardId) || tabBoards[0] || null,
     [tabBoards, boardId],
@@ -136,6 +182,8 @@ export default function Monitoring() {
   const isFg = board?.kind === 'fg';
   /* บอร์ด Argen (ชิ้นส่วนส่งเกรท) — ไม่ผูกไลน์/ลูกค้า แต่ของอยู่ในคลังจริง ⇒ ยึดยอดคลังได้ (13/10 · user สั่ง) */
   const isGreat = board?.kind === 'great';
+  /* 🏬 บอร์ดสโตร์ (16/11) — ยอดอยู่ที่ ledger `STORE` · ตัดสินชนิดที่ `isStoreBoard()` ที่เดียว */
+  const isStore = isStoreBoard(board);
   /* 🔴 deps เป็น primitive ล้วน — ส่ง object/array เข้า deps = พ่อ setState ใบใหม่เนื้อเดิม
      แล้วลูกยิงคิวรีซ้ำฟรีๆ (กฎเหล็กการเขียน DB ข้อ 9) */
   /* 🔴 guard กัน stale-response (กฎเหล็กการเขียน DB ข้อ 4) — สลับบอร์ดเร็วๆ แล้วคำตอบของ
@@ -158,7 +206,7 @@ export default function Monitoring() {
       { orderBy: ['sort_order', 'id'] },
     );
     if (!mine()) return;
-    if (pr.error) { setWarn(`โหลดพาร์ทไม่สำเร็จ: ${pr.error}`); setLoading(false); return; }
+    if (pr.error) { setWarn(`${tr("โหลดพาร์ทไม่สำเร็จ")}: ${pr.error}`); setLoading(false); return; }
     const partRows = pr.rows || [];
 
     /* 🔴 `.in(ids)` ยาวเกินเพดาน proxy = คืนค่าว่าง**เงียบ** (ข้อ 5) ⇒ ต้องผ่าน fetchByIds ที่แบ่งก้อนให้
@@ -178,7 +226,7 @@ export default function Monitoring() {
     setCells(cr.rows || []);
     setWarn(
       pr.truncated ? 'พาร์ทบนบอร์ดนี้มีมากกว่าที่ดึงมาได้ — รายการด้านล่างไม่ครบ'
-        : (cr.errors && cr.errors.length) ? `โหลดช่องที่กรอกไว้ไม่ครบ: ${cr.errors[0]}` : '',
+        : (cr.errors && cr.errors.length) ? `${tr("โหลดช่องที่กรอกไว้ไม่ครบ")}: ${cr.errors[0]}` : '',
     );
     setLoading(false);
   }, [bId]);
@@ -220,7 +268,7 @@ export default function Monitoring() {
     const scope = isFg ? bCust : (isGreat ? 'great' : bLine);
     if (!scope || !dFrom || !dTo || !matsKey) {
       setSysIn(new Map()); setSysOut(new Map()); setSysMin(new Map()); setSysOrder(new Map());
-      setSysAnchor(new Map()); setSysNote(''); setSysLock(new Map()); setSysLoc(new Map());
+      setSysAnchor(new Map()); setSysNote(''); setSysLock(new Map()); setSysLoc(new Map()); setSysLevels(new Map());
       /* 🔴 บอร์ดที่ไม่ผูกไลน์/ลูกค้า (รายแร็ค) ก็ต้องเช็คทะเบียน — เดิมข้ามไป ⇒ ทุกพาร์ทขึ้น
          "ยังไม่อยู่ในทะเบียนสินค้า" ทั้งที่อยู่ (12/10 · 10057225) = ป้ายเตือนปลอม */
       const myKey = `reg|${matsKey}`;
@@ -233,7 +281,8 @@ export default function Monitoring() {
       return;
     }
     const mats = matsKey.split(',');
-    const myKey = `${isFg ? 'fg' : (isGreat ? 'great' : 'line')}|${scope}|${dFrom}|${dTo}|${matsKey}`;
+    const myKey = `${isFg ? 'fg' : (isGreat ? 'great' : (isStore ? 'store' : 'line'))}|${scope}|${dFrom}|${dTo}|${matsKey}`;
+    if (!isStore) setSysLevels(new Map());
     const mine = () => curSysRef.current === myKey;
     curSysRef.current = myKey;
 
@@ -276,13 +325,69 @@ export default function Monitoring() {
       const locs = [...new Set(mats.map(m => locOf(m)).filter(Boolean))].sort();
       const noRow = mats.filter(m => !onHand.has(m)).length;
       setSysNote(refErr
-        ? `⚠️ อ่านยอดคลังไม่ครบ (${refErr.message || refErr}) ⇒ BALANCE สัปดาห์นี้ยังเป็นค่าจากสูตร และไม่มี IN จากระบบ`
+        ? `⚠️ ${tr("อ่านยอดคลังไม่ครบ")} (${refErr.message || refErr}) ⇒ BALANCE ${tr("สัปดาห์นี้ยังเป็นค่าจากสูตร และไม่มี IN จากระบบ")}`
         : [
           `BALANCE สัปดาห์นี้ = ยอดคงเหลือจริงในคลัง (${locs.join(' · ') || '–'}) · IN = ของที่คลังกดรับแล้ว`,
           rcpQty ? `⏳ รอคลังกดรับ ${(rcpR.rows || []).length} ใบ · ${rcpQty.toLocaleString()} ชิ้น (ยังไม่นับใน IN)` : '',
           noRow ? `⚠️ ${noRow} พาร์ทไม่มีแถวในคลัง ⇒ ยังเช็คยอดจริงไม่ได้ — ตั้งยอดที่ /line-stock?tab=count` : '',
         ].filter(Boolean).join(' · '));
       setRegistry(new Set((prodR.rows || []).filter(r => r.is_active !== false).map(r => String(r.mat_no || '').trim())));
+      return;
+    }
+
+    /* ── 🏬 บอร์ดสโตร์ (16/11 · แบบที่สโตร์ส่งมา) ─────────────────────────────────────────
+       รับ = ledger `issue` ที่ STORE · จ่าย = `consume`+`return` ที่ STORE (ชนิดเดียวกับบอร์ดไลน์ — OUT/IN_TXN_TYPES)
+       คงเหลือวันนี้ = ยอดจริงใน `line_stock_summary` ที่ STORE (ยึด) · ยอดยกมา = ยอดจริง − Σ(รับ − จ่าย) ถึงวันนี้
+       MIN/MAX = `kanban_standards` (ทะเบียนเดียวกับหน้า Stock — ห้ามเก็บซ้ำในบอร์ด) */
+    if (isStore) {
+      const todayW = getWorkDate();
+      const [txnR, stkR, kbR, pmR] = await Promise.all([
+        fetchAllPages(() => supabaseDR.from('line_stock_transactions')
+          .select('id, line_name, mat_no, qty, type, status, work_date')
+          .eq('line_name', STORE_LEDGER_LINE).in('type', [...OUT_TXN_TYPES, ...IN_TXN_TYPES]).eq('status', 'approved')
+          .in('mat_no', mats).gte('work_date', dFrom).lte('work_date', dTo), { orderBy: ['id'] }),
+        fetchAllPages(() => supabaseDR.from('line_stock_summary')
+          .select('line_name, mat_no, qty_on_hand').eq('line_name', STORE_LEDGER_LINE).in('mat_no', mats), { orderBy: ['mat_no'] }),
+        fetchAllPages(() => supabaseDR.from('kanban_standards')
+          .select('mat_no, min_qty, max_qty').eq('is_active', true).in('mat_no', mats), { orderBy: ['mat_no'] }),
+        fetchAllPages(() => supabaseDR.from('parts_master').select('mat_no').in('mat_no', mats), { orderBy: ['mat_no'] }),
+      ]);
+      if (!mine()) return;
+      const loadErr = (r) => r?.error || (r?.errors && r.errors[0]) || (r?.truncated ? 'ดึงข้อมูลได้ไม่ครบ' : null);
+      const refErr = loadErr(txnR) || loadErr(stkR);
+      const locOf = refErr ? () => null : () => STORE_LEDGER_LINE;
+      const inIdx = refErr ? new Map() : inAtRef(txnR.rows || [], locOf);
+      const outIdx = refErr ? new Map() : outAtRef(txnR.rows || [], locOf);
+      const onHand = refErr ? new Map() : onHandAtRef(stkR.rows || [], locOf);
+      /* ยอดยกมา (คอลัมน์แรก) ย้อนจากยอดจริง — ไม่มีแถวในคลัง = ไม่รู้ ⇒ ไม่ใส่ (ห้ามเดา 0) */
+      const ps = periodsRef.current || [];
+      const seedBal = new Map();
+      for (const m of mats) {
+        if (!onHand.has(m)) continue;
+        let v = onHand.get(m);
+        for (const p of ps.slice(1)) {
+          if (p.key > todayW) break;
+          v -= (inIdx.get(`${m}|${p.key}`) || 0) - (outIdx.get(`${m}|${p.key}`) || 0);
+        }
+        seedBal.set(m, v);
+      }
+      setSysIn(inIdx); setSysOut(outIdx); setSysAnchor(onHand); setSysSeedBal(seedBal);
+      setSysMin(new Map()); setSysOrder(new Map());
+      const kbErr = loadErr(kbR);
+      setSysLevels(kbErr ? new Map() : new Map((kbR.rows || []).map(r => [String(r.mat_no || '').trim(),
+        { min: r.min_qty ?? null, max: r.max_qty ?? null }])));
+      applyLock({ refErr, poR: { rows: [] }, inRows: txnR.rows, locOf, mats });
+      const noRow = mats.filter(m => !onHand.has(m)).length;
+      const noLv = kbErr ? mats.length : mats.filter(m => !(kbR.rows || []).some(r => String(r.mat_no || '').trim() === m && (r.min_qty != null || r.max_qty != null))).length;
+      setSysNote(refErr
+        ? `⚠️ ${tr("อ่านยอดคลัง STORE ไม่ครบ")} (${refErr.message || refErr}) ⇒ ${tr("รับ/จ่าย/คงเหลือ ยังไม่ขึ้นจากระบบ")}`
+        : [
+          'รับ / จ่าย / คงเหลือ = รายการจริงที่ STORE · คอลัมน์วันนี้ = ยอดคงเหลือจริง · SAP = สโตร์กรอก · Diff = SAP − คงเหลือ',
+          noRow ? `⚠️ ${noRow} พาร์ทยังไม่มียอดที่ STORE ⇒ คงเหลือขึ้น – (ตั้งยอดที่ /line-stock?tab=count)` : '',
+          kbErr ? '⚠️ อ่าน MIN/MAX ไม่ได้ ⇒ ช่องคงเหลือยังไม่ตีสี'
+            : (noLv ? `${noLv} พาร์ทยังไม่ตั้ง MIN/MAX ⇒ ช่องคงเหลือไม่ตีสี (ตั้งที่ /products แท็บ Kanban Std)` : ''),
+        ].filter(Boolean).join(' · '));
+      setRegistry(loadErr(pmR) ? null : new Set((pmR.rows || []).map(r => String(r.mat_no || '').trim())));
       return;
     }
 
@@ -431,7 +536,7 @@ export default function Monitoring() {
     const locs = [...new Set(mats.map(m => locOf(m)).filter(Boolean))].sort();
     const noRow = mats.filter(m => !onHand.has(m)).length;
     setSysNote(refErr
-      ? `⚠️ อ่านกฎรับเข้าคลัง/ยอดคลังไม่ครบ (${refErr.message || refErr}) ⇒ คอลัมน์วันนี้ยังไม่ได้ยึดยอดจริง และไม่มีของออกจากระบบ — BALANCE เป็นค่าจากสูตรล้วน`
+      ? `⚠️ ${tr("อ่านกฎรับเข้าคลัง/ยอดคลังไม่ครบ")} (${refErr.message || refErr}) ⇒ ${tr("คอลัมน์วันนี้ยังไม่ได้ยึดยอดจริง และไม่มีของออกจากระบบ — BALANCE เป็นค่าจากสูตรล้วน")}`
       : [
         `คอลัมน์วันนี้ = ยอดคงเหลือจริงในคลัง (${locs.join(' · ') || '–'}) · IN = คลังกดรับแล้ว · ของออก = ใช้/คืนจากคลังนั้น`,
         rcpRows.length ? `⏳ ผลิตคอนเฟิร์มแล้วรอคลังกดรับ ${rcpRows.length} ใบ · ${rcpQty.toLocaleString()} ชิ้น (ยังไม่นับใน IN — รับที่ /line-stock?tab=in&store=receipts)` : '',
@@ -439,7 +544,7 @@ export default function Monitoring() {
         noRow ? `⚠️ ${noRow} พาร์ทไม่มีแถวในคลังอ้างอิง ⇒ ยังเช็คยอดจริงไม่ได้ (เดินสูตรจากยอดยกมา) — ตั้งยอดที่ /line-stock?tab=count` : '',
       ].filter(Boolean).join(' · '));
     setRegistry(new Set((prodR.rows || []).map(r => String(r.mat_no || '').trim())));
-  }, [isFg, isGreat, bCust, bLine, dFrom, dTo, matsKey, periodsKey]);
+  }, [isFg, isGreat, isStore, bCust, bLine, dFrom, dTo, matsKey, periodsKey]);
 
   useEffect(() => { loadSystem(); }, [loadSystem]);
 
@@ -478,7 +583,7 @@ export default function Monitoring() {
     [partMat, sysLock, periods, board?.period_kind],
   );
   const lockNote = sysLock.size
-    ? ` · 🔒 IN ล็อก ${sysLock.size} พาร์ท (ระบบมีตัวเลขแล้ว — ตั้งแต่วันแรกที่มีถึงวันนี้ · ยอดไม่ตรงกดช่องเพื่อขอปรับยอดคลัง)`
+    ? ` · IN ${tr("ล็อก")} ${sysLock.size} ${tr("พาร์ท (ระบบมีตัวเลขแล้ว — ตั้งแต่วันแรกที่มีถึงวันนี้ · ยอดไม่ตรงกดช่องเพื่อขอปรับยอดคลัง")})`
     : '';
   /* กดช่อง IN ที่ล็อก ⇒ เปิดใบ "ขอปรับยอดคลัง" (ไม่ใช่พิมพ์ทับ) */
   const onLockedCell = useCallback(({ partId }) => {
@@ -502,8 +607,8 @@ export default function Monitoring() {
     const mat = String(part?.mat_no || '').trim();
     if (!mat) return;
     const cust = board?.customer || '';
-    if (!cust) { toast.info(`บอร์ด ${board?.name || ''} ยังไม่ผูกลูกค้า — ยอดนี้ยังไม่ขึ้นหน้า Delivery`); return; }
-    const fail = (msg) => toast.error(`บันทึกบนบอร์ดแล้ว แต่ส่งเข้าใบส่งของ (Delivery) ไม่สำเร็จ: ${msg} — แก้ช่องนี้อีกครั้ง`);
+    if (!cust) { toast.info(`${tr("บอร์ด")} ${board?.name || ''} ${tr("ยังไม่ผูกลูกค้า — ยอดนี้ยังไม่ขึ้นหน้า")} Delivery`); return; }
+    const fail = (msg) => toast.error(`${tr("บันทึกบนบอร์ดแล้ว แต่ส่งเข้าใบส่งของ (Delivery) ไม่สำเร็จ")}: ${msg} — ${tr("แก้ช่องนี้อีกครั้ง")}`);
     const { data: rows, error } = await supabaseDR.from('customer_shipping_orders')
       .select('id, qty, status, source').eq('customer', cust).eq('mat_no', mat).eq('due_date', periodKey)
       .in('status', ['pending', 'shipped']);
@@ -520,7 +625,7 @@ export default function Monitoring() {
       const r = await supabaseDR.from('customer_shipping_orders').insert({
         mat_no: mat, part_name: part?.part_name || null, customer: cust,
         customer_part_no: part?.part_no || null, due_date: periodKey, qty: plan.insertQty,
-        status: 'pending', source: 'monitoring', note: `Monitoring · บอร์ด ${board?.name || ''}`,
+        status: 'pending', source: 'monitoring', note: `Monitoring · ${tr("บอร์ด")} ${board?.name || ''}`,
         created_by_name: fullName || null,
       }).select('id');
       if (r.error || !r.data?.length) { fail(r.error?.message || 'ไม่มีสิทธิ์เขียน'); return; }
@@ -555,7 +660,7 @@ export default function Monitoring() {
     let qty = null;
     if (!isText) {
       const n = Number(raw.replace(/,/g, ''));
-      if (!Number.isFinite(n)) { toast.error(`"${raw}" ไม่ใช่ตัวเลข`); return; }
+      if (!Number.isFinite(n)) { toast.error(`"${raw}" ${tr("ไม่ใช่ตัวเลข")}`); return; }
       qty = n;
     }
     const row = {
@@ -577,32 +682,45 @@ export default function Monitoring() {
     if (isRackOrder) await syncRackOrder(partId, periodKey, row.qty);
   }, [canEdit, board, fullName, syncRackOrder]);
 
-  const tabs = BOARD_TABS.map(t => ({
-    key: t.key,
-    label: `${t.label}${boards.filter(b => b.kind === t.key).length ? ` (${boards.filter(b => b.kind === t.key).length})` : ''}`,
-  }));
+  const countOf = (kinds) => boards.filter(b => kinds.includes(b.kind)).length;
+  const groupTabs = BOARD_GROUPS.map(g => ({ key: g.key, label: tr(g.label) }));
+  const subTabs = groupDef.subs.map(sd => {
+    const full = MON_SUBS.find(x => x.key === sd.key);
+    const n = countOf(full.kinds);
+    return { key: full.key, label: `${full.label}${n ? ` (${n})` : ''}` };
+  });
 
   return (
     <Page>
       <PageHeader
-        title="Monitoring ติดตามแผน-สต๊อก" icon="📉"
-        sub="บอร์ดแทนไฟล์ Excel ของทีมวางแผน — PLAN กรอกเอง · ของเข้า/ออก/ขั้นต่ำ ระบบเติมให้"
-        tabs={tabs} tab={tab} onTab={setTab}
+        title={tr('Monitoring ติดตามแผน-สต๊อก')} icon="📉"
+        sub={tr('บอร์ดแทนไฟล์ Excel ของทีมวางแผน — PLAN กรอกเอง · ของเข้า/ออก/ขั้นต่ำ ระบบเติมให้')}
+        tabs={groupTabs} tab={groupDef.key} onTab={(g) => setTab(BOARD_GROUPS.find(x => x.key === g)?.subs[0]?.key || MON_SUBS[0].key)}
+      />
+      {/* แท็บย่อย + แถบกรอง — ครอบ <Hub> ให้ PageHeader วาดเฉพาะแท็บ/กรอง (ไม่มีชื่อหน้าซ้ำ) · ลำดับ กลุ่ม → แท็บย่อย → แถบกรอง */}
+      <Hub>
+      <PageHeader
+        tabs={subTabs} tab={tab} onTab={setTab}
         actions={canEdit ? (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {/* 📦 บอร์ด FG ไม่ได้มาจากไฟล์ Excel — ปุ่มจึงแยกจาก "นำเข้าจากไฟล์" ตั้งแต่หัวเพจ
                 (ปุ่มเดียวกันแล้วเดาจากแท็บ = คนกดผิดแล้วงงว่าทำไมไม่ขอไฟล์) */}
-            <button type="button" onClick={() => setShowFgSync(true)}
-              title="สร้าง/อัพเดทบอร์ด FG ต่อลูกค้า จากออเดอร์ EDI 862/830 ที่นำเข้าไว้แล้ว"
-              style={{ fontSize: 13, fontWeight: 700, padding: '7px 14px', borderRadius: 8, cursor: 'pointer',
-                background: 'var(--bg3)', color: 'var(--text)', border: '1px solid var(--border2)' }}>
-              📦 สร้างบอร์ด FG จากออเดอร์
-            </button>
-            <button type="button" onClick={() => setShowImport(true)}
-              style={{ fontSize: 13, fontWeight: 700, padding: '7px 14px', borderRadius: 8, cursor: 'pointer',
-                background: 'var(--accent)', color: 'var(--accent-ink)', border: 'none' }}>
-              📗 นำเข้าจากไฟล์ Excel
-            </button>
+            {/* 🏬 23/11 — กลุ่มสโตร์: ปุ่มหลักคือไฟล์ของสโตร์ (Stock_Store.xlsm · คนละไฟล์กับทีมวางแผน)
+                ปุ่มบอร์ด FG ย้ายเข้า ⋯ เฉพาะกลุ่มนี้ (ปุ่มตายตัว ≤ 2 · UI §6.35) · กลุ่มอื่นเหมือนเดิมเป๊ะ */}
+            {groupDef.key === 'store' ? (
+              <ImportButton k="store_stock" onClick={() => setShowStoreUp(true)} />
+            ) : (
+              <button type="button" className="pg-btn" onClick={() => setShowFgSync(true)}
+                title={tr('สร้าง/อัพเดทบอร์ด FG ต่อลูกค้า จากออเดอร์ EDI 862/830 ที่นำเข้าไว้แล้ว')}
+                style={{ fontSize: 13, fontWeight: 700, padding: '7px 14px', borderRadius: 8, cursor: 'pointer',
+                  background: 'var(--bg3-surf)', color: 'var(--text)', border: '1px solid var(--border2)' }}>
+                {tr('สร้างบอร์ด FG จากออเดอร์')}
+              </button>
+            )}
+            <ImportButton k="planner_monitoring" onClick={() => setShowImport(true)}
+              tone={groupDef.key === 'store' ? 'quiet' : 'primary'} />
+            <OverflowMenu items={[{ key: 'fg-sync', icon: '📦', label: tr('สร้างบอร์ด FG จากออเดอร์'),
+              onClick: () => setShowFgSync(true), hidden: groupDef.key !== 'store' }]} />
           </div>
         ) : null}
         filters={(tab !== 'fg' || fgView === 'board') && tabBoards.length ? (
@@ -611,32 +729,36 @@ export default function Monitoring() {
                 <select> ที่ไม่มี minWidth:0 จะดันกล่องจนล้นออกนอกจอแล้วปัดไม่ได้
                 (mobilesweep จับได้ 02/10) · label ต้อง minWidth:0 และ select ต้อง maxWidth:100% */}
             <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: FS + 1, minWidth: 0, flex: '0 1 380px', maxWidth: 380 }}>
-              <span style={{ flexShrink: 0 }}>บอร์ด</span>
+              <span style={{ flexShrink: 0 }}>{tr('บอร์ด')}</span>
               <select value={board?.id || ''} onChange={e => setBoardId(e.target.value)}
                 style={{ minWidth: 0, maxWidth: '100%', flex: 1 }}>
                 {tabBoards.map(b => (
                   <option key={b.id} value={b.id}>
-                    {b.name}{b.line_name ? ` — ${b.line_name}` : ''}{b.customer ? ` — ${b.customer}` : ''}
+                    {BOARD_STAGE_LABEL[b.kind] && subDef.kinds.length > 1 ? `${BOARD_STAGE_LABEL[b.kind]} · ` : ''}{b.name}{b.line_name ? ` — ${b.line_name}` : ''}{b.customer ? ` — ${b.customer}` : ''}
                   </option>
                 ))}
               </select>
             </label>
-            <span style={{ fontSize: FS, color: 'var(--muted)', flex: '1 1 100%', minWidth: 0 }}>
-              {/* 🔴 บอร์ด FG ไม่ผูกไลน์ แต่**ไม่ใช่** "ต้องกรอกเองทุกช่อง" — ยอดลูกค้าสั่งมาจาก
-                  EDI 862/830 · ผลิตเข้าจากใบผลิตทุกไลน์ ⇒ ต้องแยกข้อความ ไม่งั้นจอโกหก (06/10) */}
-              {isFg
-                ? (bCust
-                  ? `ผูกลูกค้า ${bCust} ⇒ ยอดยกมา = ของพร้อมส่งในคลัง FG · ลูกค้าสั่งจาก EDI 862/830 (รวมใบค้างส่งไว้คอลัมน์แรก) · ผลิตเข้านับจากใบผลิตทุกไลน์${sysNote ? ` · ${sysNote}` : ''}`
-                  : '⚠️ บอร์ด FG ใบนี้ยังไม่ผูกลูกค้า ⇒ ระบบดึงยอดลูกค้าสั่งให้ไม่ได้ — กด "📦 สร้างบอร์ด FG จากออเดอร์" ใหม่อีกครั้ง')
-                : isGreat
-                  ? `ส่งเกรท (รายสัปดาห์) ⇒ ระบบเติมของเข้าให้ · ส่งลูกค้ากรอกเอง${sysNote ? ` · ${sysNote}` : ''}${lockNote}`
-                : board?.line_name
-                  ? `ผูกไลน์ ${board.line_name} ⇒ ระบบเติมของเข้า/ออก/ขั้นต่ำให้${sysNote ? ` · ${sysNote}` : ''}${lockNote}`
-                  : 'ยังไม่ผูกไลน์ ⇒ ทุกช่องต้องกรอกเอง'}
-            </span>
+            {/* 🔴 บอร์ด FG ไม่ผูกไลน์ แต่**ไม่ใช่** "ต้องกรอกเองทุกช่อง" — ยอดลูกค้าสั่งมาจาก
+                EDI 862/830 · ผลิตเข้าจากใบผลิตทุกไลน์ ⇒ ต้องแยกข้อความ ไม่งั้นจอโกหก (06/10)
+                18/11 · user "ข้อความสีเทาแบบนั้นอยากให้เป็น tooltip มากกว่าโชว์มาเยอะๆ":
+                บรรทัดนี้เคยยาว 569 ตัวอักษร (textsweep) ⇒ แยกเป็น
+                  · ประโยคแรก (บอร์ดนี้ผูกกับอะไร) = อยู่บนจอ
+                  · ⚠️ ทุกท่อน = **อยู่บนจอเสมอ ห้ามพับ** (กฎ InfoMore: คำเตือนสถานะจริงซ่อนไม่ได้)
+                  · ท่อนที่เหลือ (อธิบายว่าเลขมาจากไหน) = ไป title */}
+            <NoteLine text={isFg
+              ? (bCust
+                ? `${tr("ผูกลูกค้า")} ${bCust} ⇒ ${tr("ยอดยกมา = ของพร้อมส่งในคลัง FG · ลูกค้าสั่งจาก EDI 862/830 (รวมใบค้างส่งไว้คอลัมน์แรก) · ผลิตเข้านับจากใบผลิตทุกไลน์")}${sysNote ? ` · ${sysNote}` : ''}`
+                : tr("⚠️ บอร์ด FG ใบนี้ยังไม่ผูกลูกค้า ⇒ ระบบดึงยอดลูกค้าสั่งให้ไม่ได้ — กด \"📦 สร้างบอร์ด FG จากออเดอร์\" ใหม่อีกครั้ง"))
+              : isGreat
+                ? `${tr("ส่งเกรท (รายสัปดาห์) ⇒ ระบบเติมของเข้าให้ · ส่งลูกค้ากรอกเอง")}${sysNote ? ` · ${sysNote}` : ''}${lockNote}`
+              : board?.line_name
+                ? `${tr("ผูกไลน์")} ${board.line_name} ⇒ ${tr("ระบบเติมของเข้า/ออก/ขั้นต่ำให้")}${sysNote ? ` · ${sysNote}` : ''}${lockNote}`
+                : tr("ยังไม่ผูกไลน์ ⇒ ทุกช่องต้องกรอกเอง")} fs={FS} />
           </FilterBar>
         ) : null}
       />
+      </Hub>
 
       {warn ? (
         <div style={{ ...card, borderColor: 'var(--accent2)', fontSize: FS + 1, marginBottom: 10 }}>🔴 {warn}</div>
@@ -651,13 +773,13 @@ export default function Monitoring() {
         /* data-subtab = แถวนี้ทำหน้าที่ "แท็บย่อย" ⇒ ลำดับ แท็บ → แท็บย่อย → แถบกรอง (UI-STANDARD §2.1) */
         <div data-subtab="1" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
           {[
-            { k: 'rundown', t: '📉 ของจะขาดวันไหน', s: 'อัตโนมัติล้วน · เรียงตัวที่จะขาดก่อน · ครอบ FG ทุกตัวที่มีออเดอร์' },
+            { k: 'rundown', t: 'ของจะขาดวันไหน', s: 'อัตโนมัติล้วน · เรียงตัวที่จะขาดก่อน · ครอบ FG ทุกตัวที่มีออเดอร์' },
             { k: 'board', t: '✏️ บอร์ดแก้มือ (ต่อลูกค้า)', s: 'พิมพ์ทับยอดได้ · เห็นผลิตเข้า/ขั้นต่ำในตารางเดียว' },
           ].map(v => (
             <button key={v.k} type="button" onClick={() => setFgView(v.k)}
               aria-current={fgView === v.k ? 'true' : undefined}
               style={{
-                textAlign: 'left', padding: '7px 13px', borderRadius: 9, cursor: 'pointer',
+                textAlign: 'left', padding: '7px 13px', borderRadius: 'var(--r-md)', cursor: 'pointer',
                 border: `1px solid ${fgView === v.k ? 'var(--accent)' : 'var(--border2)'}`,
                 background: fgView === v.k ? 'var(--accent-dim)' : 'var(--bg2)',
                 color: fgView === v.k ? 'var(--accent)' : 'var(--text2)',
@@ -670,25 +792,25 @@ export default function Monitoring() {
       ) : null}
 
       {tab === 'fg' && fgView === 'rundown' ? (
-        <Suspense fallback={<div style={{ ...card, fontSize: FS + 1, color: 'var(--muted)' }}>กำลังโหลด…</div>}>
+        <Suspense fallback={<div style={{ ...card, fontSize: FS + 1, color: 'var(--muted)' }}>{tr('กำลังโหลด…')}</div>}>
           {/* embed ทั้งดุ้น — ต้องครอบ <Hub> เสมอ ไม่งั้นหัวเรื่องซ้อน 2 ชั้น (มีด่าน · UI-STANDARD §2) */}
           <Hub><RundownStock /></Hub>
         </Suspense>
       ) : !tabBoards.length ? (
         <div style={{ ...card, fontSize: FS + 1, lineHeight: 1.9 }}>
-          ยังไม่มีบอร์ดในหมวดนี้ ({BOARD_TABS.find(t => t.key === tab)?.sheets})
+          {tr("ยังไม่มีบอร์ดในหมวดนี้")} ({subDef.kinds.map(k => tr(BOARD_TABS.find(t => t.key === k)?.sheets)).filter(Boolean).join(' · ')})
           {canEdit
-            ? <> — กด <b>📗 นำเข้าจากไฟล์ Excel</b> แล้วเลือกไฟล์ <code>1.Monitoring-&lt;เดือน&gt;.xlsx</code> ระบบจะสร้างบอร์ดให้ตามชีทในไฟล์</>
-            : ' — ต้องมีสิทธิ์จัดการบอร์ดจึงจะนำเข้าได้'}
+            ? <> {tr('— กด')} <b>📥 {tr(importLabel('planner_monitoring'))}</b> {tr('แล้วเลือกไฟล์')} <code>1.Monitoring-&lt;เดือน&gt;.xlsx</code> {tr('ระบบจะสร้างบอร์ดให้ตามชีทในไฟล์')}</>
+            : tr(" — ต้องมีสิทธิ์จัดการบอร์ดจึงจะนำเข้าได้")}
         </div>
       ) : loading && !parts.length ? (
-        <div style={{ ...card, fontSize: FS + 1, color: 'var(--muted)' }}>กำลังโหลด…</div>
+        <div style={{ ...card, fontSize: FS + 1, color: 'var(--muted)' }}>{tr('กำลังโหลด…')}</div>
       ) : (<>
         {/* 🔐 มีสิทธิ์จัดการบอร์ด แต่บอร์ดนี้เป็นของส่วนงานอื่น — เขียนบอก ห้ามให้ช่องเทาเฉยๆ */}
         {canEditPerm && !boardWrite.ok && (
           <div style={{ ...card, padding: '8px 10px', marginBottom: 8, fontSize: FS,
-            borderLeft: '4px solid #eab308' }}>
-            🔒 {writeBlockText(boardWrite, { what: `บอร์ด "${board?.name || ''}"` })}
+            borderLeft: '4px solid var(--amber)' }}>
+            {writeBlockText(boardWrite, { what: `${tr("บอร์ด")} "${board?.name || ''}"` })}
           </div>
         )}
         <MonitorBoardGrid
@@ -697,6 +819,7 @@ export default function Monitoring() {
           onLockedCell={canRequestAdj ? onLockedCell : null}
           onEditCell={onEditCell} editable={canEdit} truncated={truncated}
           windowSize={board?.period_kind === 'week' ? 10 : 14}
+          levelOf={isStore ? (part) => sysLevels.get(String(part.mat_no || '').trim()) || null : null}
         />
       </>)}
       {adjReq ? (
@@ -711,6 +834,14 @@ export default function Monitoring() {
             onClose={() => setShowFgSync(false)} fullName={fullName}
             onSynced={() => { setTab('fg'); loadBoards(); }}
           />
+        </Suspense>
+      ) : null}
+
+      {showStoreUp ? (
+        <Suspense fallback={null}>
+          <StoreStockUpload canEdit={canEdit} fullName={fullName}
+            onClose={() => setShowStoreUp(false)}
+            onImported={() => { setShowStoreUp(false); loadBoards(); load(); }} />
         </Suspense>
       ) : null}
 

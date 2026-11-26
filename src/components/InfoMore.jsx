@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { tr } from '../utils/i18n';
 /**
  * ⓘ InfoMore — พับคำอธิบายยาวไว้หลังปุ่มเล็ก ๆ
  *
@@ -26,7 +27,7 @@ import { useState } from 'react';
  *
  * ใช้:
  *   <InfoMore lead="เลือกได้หลายส่วนงาน">ข้อความยาว…</InfoMore>
- *   <InfoMore label="วิธีใช้" id="cal_help">ข้อความยาว…</InfoMore>   // id = จำสถานะเปิด/ปิด
+ *   <InfoMore label={tr('วิธีใช้')} id="cal_help">ข้อความยาว…</InfoMore>   // id = จำสถานะเปิด/ปิด
  */
 
 /** เครื่องหมายเปิดอ่านเพิ่ม — แก้ที่นี่ที่เดียวทั้งระบบ
@@ -70,19 +71,75 @@ export default function InfoMore({
       <button type="button" onClick={toggle}
         aria-expanded={open}
         style={{
-          marginLeft: lead ? 6 : 0, padding: '1px 7px', borderRadius: 6, cursor: 'pointer',
-          border: `1px solid var(--border2)`, background: 'var(--bg3)',
+          marginLeft: lead ? 6 : 0, padding: '1px 7px', borderRadius: 'var(--r-md)', cursor: 'pointer',
+          border: `1px solid var(--border2)`, background: 'var(--bg3-surf)',
           color: 'var(--muted)', fontSize: Math.max(11, size - 1.5), fontWeight: 700,
           whiteSpace: 'nowrap', verticalAlign: 'middle',
         }}>
-        {open ? '▴ ย่อ' : `${MORE_MARK} ${label}`}
+        {open ? tr('▴ ย่อ') : `${MORE_MARK} ${tr(label)}`}
       </button>
       {open && (
         <div style={{
-          marginTop: 5, padding: '7px 10px', borderRadius: 8,
+          marginTop: 5, padding: '7px 10px', borderRadius: 'var(--r-md)',
           background: box.bg, border: `1px solid ${box.bd}`, color: 'var(--text2)',
         }}>{children}</div>
       )}
     </div>
+  );
+}
+
+/* ── 💬 Why — "สถานะสั้น + วิธีแก้ซ่อนไว้" (2026-11-05 · คำสั่ง user "text ที่เป็น comment ต้องเป็น tooltip ไม่ใช่โชว์ทุกอย่าง รกมาก")
+   บรรทัดสถานะในการ์ดเคยเขียน "⚠ ไลน์ยังไม่ตั้ง cost center — กรอกที่หน้าจัดการไลน์ (ไลน์แม่ ตกทอดถึงลูก)" ซ้ำทุกใบ ⇒ การ์ด 3 ใบ = 15 บรรทัดอธิบาย
+   กติกา: บนจอเหลือ **สถานะ** (ก่อน " — ") · **วิธีแก้/เหตุผล** (หลัง " — ") อยู่ใน title= + กดเปิดได้ (จอสัมผัสไม่มี hover)
+   · ไม่ใช่การพับคำเตือน — สถานะยังเห็นเสมอ (ติด data-warn ให้ textsweep รู้ว่าเป็นของสั้นโดยตั้งใจ)
+   ใช้:  <Why msg="ไลน์ยังไม่ตั้ง cost center — กรอกที่หน้าจัดการไลน์" />   // แยกเองที่ " — " ตัวแรก
+         <Why what="ยังไม่ได้ตั้งเป้าหมาย" how="กด แก้ไข แล้วกรอกช่อง “เป้าหมาย”" tone="warn" /> */
+const WHY_TONE = { warn: 'var(--amber)', bad: 'var(--red)', info: 'var(--blue)', muted: 'var(--muted)' };
+export const splitWhy = (msg) => {
+  const s = String(msg ?? ''); const i = s.indexOf(' — ');
+  return i < 0 ? [s, ''] : [s.slice(0, i), s.slice(i + 3)];
+};
+export function Why({ msg, what, how, tone = 'warn', size = 11, style }) {
+  const [w, h] = msg != null ? splitWhy(msg) : [what, how];
+  const [open, setOpen] = useState(false);
+  const c = WHY_TONE[tone] || WHY_TONE.warn;
+  return (
+    <div data-warn="1" style={{ fontSize: size, color: c, lineHeight: 1.5, ...style }}>
+      <span title={h || undefined} style={{ cursor: h ? 'help' : 'default', borderBottom: h ? '1px dotted currentColor' : 'none' }}
+        onClick={() => h && setOpen(o => !o)}>{w}</span>
+      {h && <button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open} title={h}
+        style={{ marginLeft: 5, padding: 0, border: 'none', background: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: size, lineHeight: 1 }}>{MORE_MARK}</button>}
+      {open && h && <div style={{ color: 'var(--text2)', marginTop: 2 }}>{h}</div>}
+    </div>
+  );
+}
+
+/* ── ⓘ MoreMark — เครื่องหมาย "มีของให้อ่านต่อ" ตัวจิ๋ว ใช้แทรกกลางบรรทัดได้
+   (2026-11-18 · คำสั่ง user *"ข้อความสีเทาแบบนั้นอยากให้เป็น tooltip เพื่ออ่านมากกว่าโชว์มาเยอะๆแบบนี้"*)
+
+   ต่างจาก `InfoMore` (กล่องกาง มีหัวข้อ) และ `Why` (บรรทัดสถานะ สีเตือน) —
+   ตัวนี้คือ **ⓘ ตัวเดียวต่อท้ายข้อความที่ย่อแล้ว** สำหรับจุดที่ของเดิมเป็นย่อหน้าเทาลอยๆ
+
+   🔴 ทำไมไม่ใช้ `title=` เปล่าๆ: UI-CONVENTIONS §6.10 — **จอสัมผัส/จอ TV ไม่มีเมาส์**
+      ⇒ ต้องมี "ทางกดเปิด" ควบคู่ไปกับ tooltip เสมอ ไม่งั้นบนแท็บเล็ตหน้างาน = ข้อความหายไปเลย
+   🔴 ของที่ห้ามพับยังห้ามเหมือนเดิม (ตัวเลข/ที่มาสูตร · คำเตือนสถานะจริง · ป้ายกันอ้างเกินจริง)
+      — ดูตารางใน §6.10 · ตัวนี้ไม่ได้ผ่อนกฎข้อนั้น
+
+   ใช้:  <span title={rest}>หัวข้อสั้น <MoreMark text={rest} /></span>   // title ที่พ่อ = hover ได้ทั้งบรรทัด
+         ...หรือปล่อยให้ MoreMark ถือ title เองก็ได้ (ไม่ส่ง title ที่พ่อ) */
+export function MoreMark({ text = '', size = 11 }) {
+  const [open, setOpen] = useState(false);
+  const t = String(text || '');
+  if (!t) return null;
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open}
+        title={t} aria-label={tr('อ่านเพิ่ม')}
+        style={{
+          padding: 0, border: 'none', background: 'none', color: 'inherit', opacity: 0.75,
+          cursor: 'pointer', fontSize: Math.max(11, size), lineHeight: 1, verticalAlign: 'baseline',
+        }}>{open ? '▴' : MORE_MARK}</button>
+      {open && <span style={{ color: 'var(--text2)' }}> {t}</span>}
+    </>
   );
 }

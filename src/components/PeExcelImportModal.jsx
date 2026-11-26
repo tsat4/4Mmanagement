@@ -14,6 +14,10 @@ import {
   normSheetKey, isDataSheet, buildImportPlan, planSummary,
 } from '../utils/peExcelImport';
 
+import { tr } from '../utils/i18n';
+import { ImportInfo, WrongFileNote } from './ImportKit';
+import { importLabel, whichImport } from '../utils/importRegistry';
+import { askConfirm } from '../utils/askConfirm';
 const nz = (v) => { const s = String(v ?? '').trim(); return s || null; };
 const CHUNK = 400;
 const chunks = (a, n = CHUNK) => Array.from({ length: Math.ceil(a.length / n) }, (_, i) => a.slice(i * n, i * n + n));
@@ -26,18 +30,19 @@ const inp = { marginTop: 4, padding: '7px 9px', fontSize: 12, borderRadius: 7, b
 const FILES = [
   { key: 'fmea', label: '⚠️ PFMEA', hint: 'ชีทละ OP · ได้ทั้ง failure mode และประวัติแก้ไข' },
   { key: 'cp', label: '✅ Control Plan (CNP)', hint: 'ใช้สร้างรายการ OP + ชื่อขั้นงาน + เครื่องจักร' },
-  { key: 'pfc', label: '🗺️ Process Flow (PFC)', hint: 'ใช้เฉพาะประวัติการแก้ไข (ไม่บังคับ)' },
+  { key: 'pfc', label: 'Process Flow (PFC)', hint: 'ใช้เฉพาะประวัติการแก้ไข (ไม่บังคับ)' },
 ];
 
 /** อ่าน 1 ไฟล์ → { sheets, revs, unreadable } (xlsx เป็น lazy chunk — ห้าม import แบบ static) */
 async function readWorkbook(file, kind) {
   const XLSX = await import('xlsx');
   const wb = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: true });
-  const sheets = {}; const revs = []; const unreadable = [];
+  const sheets = {}; const revs = []; const unreadable = []; const raw = [];
   let header = null;
 
   for (const name of wb.SheetNames) {
     const { rows, merges } = sheetToGrid(XLSX, wb.Sheets[name]);
+    raw.push({ name, rows });
     const key = normSheetKey(name);
     // หัวเอกสารซ้ำอยู่ทุกชีท — เอาใบแรกที่อ่านได้พอสมควรมาใช้กรอกข้อมูลชุดให้อัตโนมัติ
     if (!header) { const h = parseFormHeader(rows); if (Object.keys(h.fields).length >= 2) header = h; }
@@ -49,7 +54,8 @@ async function readWorkbook(file, kind) {
     if (cover.length) revs.push(...cover.map((r) => ({ ...r, doc_type: kind })));
     else if (isDataSheet(key)) unreadable.push(name);
   }
-  return { sheets, revs, unreadable, header };
+  /* 📥 ฟอร์ม PE อ่านตามตำแหน่ง (ไม่มีหัวคอลัมน์ให้จำ) ⇒ ตรวจได้แค่ "เป็นไฟล์ของจุดนำเข้าอื่นไหม" (importRegistry) */
+  return { sheets, revs, unreadable, header, wrong: whichImport(raw, 'pe_form') };
 }
 
 export default function PeExcelImportModal({ sets = [], currentSetId = '', onClose, onDone }) {
@@ -80,7 +86,7 @@ export default function PeExcelImportModal({ sets = [], currentSetId = '', onClo
         cpSheets: parts.cp?.sheets || {},
         revisions: [...(parts.fmea?.revs || []), ...(parts.cp?.revs || []), ...(parts.pfc?.revs || [])],
       });
-      if (unread.length) p.warnings.push({ level: 'warn', text: `มี ${unread.length} ชีทที่ดูเหมือนชีท OP แต่แกะไม่ได้ (layout ไม่ตรงฟอร์ม) — ถูกข้าม`, rows: unread.map((t) => ({ sheet: t })) });
+      if (unread.length) p.warnings.push({ level: 'warn', text: `${tr("มี")} ${unread.length} ${tr("ชีทที่ดูเหมือนชีท OP แต่แกะไม่ได้ (layout ไม่ตรงฟอร์ม) — ถูกข้าม")}`, rows: unread.map((t) => ({ sheet: t })) });
       /* กรอกข้อมูลชุดให้อัตโนมัติจากหัวเอกสาร (FMEA → CP → PFC ตามลำดับความครบ) */
       const hf = [parts.fmea?.header, parts.cp?.header, parts.pfc?.header].map((h) => h?.fields || {});
       const pick = (k) => hf.find((h) => h[k])?.[k] || '';
@@ -92,10 +98,11 @@ export default function PeExcelImportModal({ sets = [], currentSetId = '', onClo
       /* พาร์ทนี้มีชุดเอกสารอยู่แล้ว → เดาว่าอยากเติมทับ (ยังเปลี่ยนเองได้) */
       const hit = auto.part_no && sets.find((x) => String(x.part_no).replace(/\s/g, '') === auto.part_no.replace(/\s/g, ''));
       if (hit) { setMode('fill'); setTargetId(hit.id); } else if (auto.part_no) setMode('new');
+      p.wrong = p.ops.length ? null : (['fmea', 'cp', 'pfc'].map((k) => parts[k]?.wrong).find(Boolean) || null);
       setPlan(p);
       setStep('preview');
     } catch (e) {
-      toast.error(`อ่านไฟล์ไม่สำเร็จ: ${e.message || e}`);
+      toast.error(`${tr("อ่านไฟล์ไม่สำเร็จ")}: ${e.message || e}`);
     } finally { setBusy(false); }
   }
 
@@ -103,9 +110,9 @@ export default function PeExcelImportModal({ sets = [], currentSetId = '', onClo
     if (mode === 'new' && !meta.part_no.trim()) { toast.error('กรอก Part No. ของชุดใหม่ก่อน'); return; }
     if (mode === 'fill' && !targetId) { toast.error('เลือกชุดเอกสารปลายทางก่อน'); return; }
     const warn = mode === 'fill'
-      ? `จะแทนที่รายการ PFMEA / Control Plan / ประวัติแก้ไข ทั้งหมดของชุด "${target?.part_no}" ด้วยข้อมูลจากไฟล์\n(ขั้นงาน OP เดิมที่แก้ไว้จะไม่ถูกลบ)\n\nยืนยัน?`
-      : `จะสร้างชุดเอกสารใหม่ "${meta.part_no}" พร้อม ${plan.ops.length} OP\n\nยืนยัน?`;
-    if (!window.confirm(warn)) return;
+      ? `${tr("จะแทนที่รายการ PFMEA / Control Plan / ประวัติแก้ไข ทั้งหมดของชุด")} "${target?.part_no}" ${tr("ด้วยข้อมูลจากไฟล์\\n(ขั้นงาน OP เดิมที่แก้ไว้จะไม่ถูกลบ)\\n\\nยืนยัน")}?`
+      : `${tr("จะสร้างชุดเอกสารใหม่")} "${meta.part_no}" ${tr("พร้อม")} ${plan.ops.length} OP\n\n${tr("ยืนยัน")}?`;
+    if (!await askConfirm(warn)) return;
 
     setBusy(true);
     try {
@@ -172,10 +179,10 @@ export default function PeExcelImportModal({ sets = [], currentSetId = '', onClo
         for (const c of chunks(rows)) { const { error: e2 } = await supabase.from('pe_doc_revisions').insert(c); if (e2) throw e2; }
       }
 
-      toast.success(`นำเข้าสำเร็จ · ${plan.ops.length} OP · PFMEA ${fRows.length} · Control Plan ${cRows.length} · ประวัติ ${plan.revisions.length}`);
+      toast.success(`${tr("นำเข้าสำเร็จ")} · ${plan.ops.length} OP · PFMEA ${fRows.length} · Control Plan ${cRows.length} · ${tr("ประวัติ")} ${plan.revisions.length}`);
       onDone?.(sid);
     } catch (e) {
-      toast.error(`นำเข้าไม่สำเร็จ: ${e.message || e}`);
+      toast.error(`${tr("นำเข้าไม่สำเร็จ")}: ${e.message || e}`);
     } finally { setBusy(false); }
   }
 
@@ -187,21 +194,22 @@ export default function PeExcelImportModal({ sets = [], currentSetId = '', onClo
   return (
     <div className="overlay"><div className="modal" style={{ width: 'min(920px, 96vw)', maxHeight: '92vh', overflowY: 'auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>📥 นำเข้าจากไฟล์ Excel</h3>
+        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>📥 {tr(importLabel('pe_form'))}</h3>
         <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 20, cursor: 'pointer' }}>×</button>
       </div>
 
       {step === 'pick' && (<>
+        <div style={{ marginBottom: 12 }}><ImportInfo k="pe_form" /></div>
         <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12, lineHeight: 1.6 }}>
-          ใช้ไฟล์ฟอร์ม TSAT ได้เลยไม่ต้องจัดใหม่ — ระบบอ่านทุกชีท OP แล้วประกอบเป็นชุดเอกสารให้<br />
-          <b style={{ color: 'var(--text2)' }}>จะให้ดูสรุปก่อนเสมอ ยังไม่เขียนฐานข้อมูลจนกว่าจะกดยืนยัน</b>
+          {tr("ใช้ไฟล์ฟอร์ม TSAT ได้เลยไม่ต้องจัดใหม่ — ระบบอ่านทุกชีท OP แล้วประกอบเป็นชุดเอกสารให้")}<br />
+          <b style={{ color: 'var(--text2)' }}>{tr('จะให้ดูสรุปก่อนเสมอ ยังไม่เขียนฐานข้อมูลจนกว่าจะกดยืนยัน')}</b>
         </div>
         <div style={{ display: 'grid', gap: 10 }}>
           {FILES.map((f) => (
-            <div key={f.key} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: 10, background: 'var(--bg2)', borderRadius: 8, border: '1px solid var(--border)' }}>
+            <div key={f.key} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: 10, background: 'var(--bg2-surf)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)' }}>
               <div style={{ minWidth: 190 }}>
-                <div style={{ fontSize: 13, fontWeight: 700 }}>{f.label}</div>
-                <div style={{ fontSize: 11, color: 'var(--muted)' }}>{f.hint}</div>
+                <div style={{ fontSize: 13, fontWeight: 700 }}>{tr(f.label)}</div>
+                <div style={{ fontSize: 11, color: 'var(--muted)' }}>{tr(f.hint)}</div>
               </div>
               <input type="file" accept=".xlsx,.xlsm" style={{ width: 'auto', flex: 1, fontSize: 11.5 }}
                 onChange={(e) => setFiles({ ...files, [f.key]: e.target.files?.[0] || null })} />
@@ -209,15 +217,15 @@ export default function PeExcelImportModal({ sets = [], currentSetId = '', onClo
           ))}
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
-          <button style={btn} onClick={onClose}>ยกเลิก</button>
-          <button style={btnPrim} disabled={busy} onClick={analyse}>{busy ? 'กำลังอ่านไฟล์...' : '🔍 อ่านไฟล์ & ดูสรุป'}</button>
+          <button style={btn} onClick={onClose}>{tr('ยกเลิก')}</button>
+          <button style={btnPrim} disabled={busy} onClick={analyse}>{busy ? tr('กำลังอ่านไฟล์...') : tr('🔍 อ่านไฟล์ & ดูสรุป')}</button>
         </div>
       </>)}
 
       {step === 'preview' && plan && (<>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
           {[['ขั้นงาน (OP)', plan.ops.length], ['PFMEA', plan.fmea.length], ['Control Plan', plan.cp.length], ['ประวัติแก้ไข', plan.revisions.length]].map(([k, v]) => (
-            <div key={k} style={{ flex: '1 1 150px', padding: 10, background: 'var(--bg2)', borderRadius: 8, border: '1px solid var(--border)' }}>
+            <div key={k} style={{ flex: '1 1 150px', padding: 10, background: 'var(--bg2-surf)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)' }}>
               <div style={{ fontSize: 11, color: 'var(--muted)' }}>{k}</div>
               <div style={{ fontSize: 22, fontWeight: 800, color: v ? 'var(--accent)' : 'var(--muted)' }}>{v}</div>
             </div>
@@ -225,32 +233,34 @@ export default function PeExcelImportModal({ sets = [], currentSetId = '', onClo
         </div>
 
         {errs.map((w, i) => (
-          <div key={i} style={{ padding: 10, marginBottom: 8, borderRadius: 8, background: 'rgba(220,60,60,.12)', border: '1px solid rgba(220,60,60,.5)', fontSize: 12 }}>
+          <div key={i} style={{ padding: 10, marginBottom: 8, borderRadius: 'var(--r-md)', background: 'rgba(220,60,60,.12)', border: '1px solid rgba(220,60,60,.5)', fontSize: 12 }}>
             <b style={{ color: '#ff8a8a' }}>⛔ {w.text}</b>
             {w.rows && <div style={{ marginTop: 6, fontSize: 11, color: 'var(--muted)', fontFamily: 'monospace', maxHeight: 110, overflowY: 'auto' }}>
-              {w.rows.map((r, j) => <div key={j}>ชีท {r.sheet}{r.op ? ` · OP ${r.op}` : ''}{r.text ? ` · ${r.text}` : ''}</div>)}
+              {w.rows.map((r, j) => <div key={j}>{tr('ชีท')} {r.sheet}{r.op ? ` · OP ${r.op}` : ''}{r.text ? ` · ${r.text}` : ''}</div>)}
             </div>}
           </div>
         ))}
         {warns.map((w, i) => (
-          <div key={i} style={{ padding: 10, marginBottom: 8, borderRadius: 8, background: 'rgba(240,170,60,.12)', border: '1px solid rgba(240,170,60,.45)', fontSize: 12, color: 'var(--text2)' }}>
+          <div key={i} style={{ padding: 10, marginBottom: 8, borderRadius: 'var(--r-md)', background: 'rgba(240,170,60,.12)', border: '1px solid rgba(240,170,60,.45)', fontSize: 12, color: 'var(--text2)' }}>
             ⚠️ {w.text}
             {w.rows && <div style={{ marginTop: 6, fontSize: 11, color: 'var(--muted)', fontFamily: 'monospace' }}>{w.rows.map((r, j) => <div key={j}>{r.sheet}</div>)}</div>}
           </div>
         ))}
 
-        {nothing ? (
+        {nothing && plan.wrong ? (
+          <div style={{ marginBottom: 12 }}><WrongFileNote k={plan.wrong} here="pe_form" onGo={onClose} /></div>
+        ) : nothing ? (
           <div style={{ padding: 20, textAlign: 'center', fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.7 }}>
-            อ่านไฟล์ไม่ออก — layout ต่างจากฟอร์มที่ระบบรู้จัก<br />
-            ระบบคาดว่า <b>PFMEA</b> ข้อมูลเริ่มแถว 10 คอลัมน์ B–S · <b>Control Plan</b> เริ่มแถว 12 มีเลข Char No. ที่คอลัมน์ D<br />
-            ถ้าไฟล์เป็นฟอร์มคนละแบบ ให้ส่งไฟล์ให้ผู้ดูแลระบบเพิ่มรูปแบบใหม่ให้
+            {tr("อ่านไฟล์ไม่ออก — layout ต่างจากฟอร์มที่ระบบรู้จัก")}<br />
+            {tr("ระบบคาดว่า")} <b>PFMEA</b> {tr('ข้อมูลเริ่มแถว 10 คอลัมน์ B–S ·')} <b>Control Plan</b> {tr('เริ่มแถว 12 มีเลข Char No. ที่คอลัมน์ D')}<br />
+            {tr("ถ้าไฟล์เป็นฟอร์มคนละแบบ ให้ส่งไฟล์ให้ผู้ดูแลระบบเพิ่มรูปแบบใหม่ให้")}
           </div>
         ) : (<>
-          <div style={{ maxHeight: 230, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8, marginBottom: 12 }}>
+          <div style={{ maxHeight: 230, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', marginBottom: 12 }}>
             <table className="table-sticky" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11.5 }}>
               <thead><tr style={{ background: 'var(--bg3)' }}>
-                {['OP', 'ชื่อขั้นงาน', 'ชนิด', 'PFMEA', 'CP', 'child part / เครื่อง'].map((h) => (
-                  <th key={h} style={{ padding: '6px 8px', textAlign: 'left', fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{h}</th>
+                {['OP', tr("ชื่อขั้นงาน"), tr("ชนิด"), 'PFMEA', 'CP', tr("child part / เครื่อง")].map((h) => (
+                  <th key={h} style={{ padding: '6px 8px', textAlign: 'left', fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{tr(h)}</th>
                 ))}
               </tr></thead>
               <tbody>
@@ -268,34 +278,34 @@ export default function PeExcelImportModal({ sets = [], currentSetId = '', onClo
             </table>
           </div>
 
-          <div style={{ padding: 10, background: 'var(--bg2)', borderRadius: 8, border: '1px solid var(--border)' }}>
+          <div style={{ padding: 10, background: 'var(--bg2-surf)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', gap: 14, marginBottom: 8, fontSize: 12.5 }}>
               <label style={{ display: 'flex', gap: 5, alignItems: 'center', cursor: 'pointer' }}>
-                <input type="radio" checked={mode === 'new'} onChange={() => setMode('new')} /> สร้างชุดเอกสารใหม่
+                <input type="radio" checked={mode === 'new'} onChange={() => setMode('new')} /> {tr('สร้างชุดเอกสารใหม่')}
               </label>
               <label style={{ display: 'flex', gap: 5, alignItems: 'center', cursor: sets.length ? 'pointer' : 'not-allowed', opacity: sets.length ? 1 : 0.5 }}>
-                <input type="radio" checked={mode === 'fill'} disabled={!sets.length} onChange={() => setMode('fill')} /> เติมทับชุดที่มีอยู่
+                <input type="radio" checked={mode === 'fill'} disabled={!sets.length} onChange={() => setMode('fill')} /> {tr('เติมทับชุดที่มีอยู่')}
               </label>
             </div>
             {mode === 'new' ? (
               <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 8 }}>
                 <label style={lbl}>Part No. *<input value={meta.part_no} onChange={(e) => setMeta({ ...meta, part_no: e.target.value })} placeholder="MB3B-16E062-CH" style={inp} /></label>
-                <label style={lbl}>ชื่อพาร์ท<input value={meta.part_name} onChange={(e) => setMeta({ ...meta, part_name: e.target.value })} style={inp} /></label>
+                <label style={lbl}>{tr('ชื่อพาร์ท')}<input value={meta.part_name} onChange={(e) => setMeta({ ...meta, part_name: e.target.value })} style={inp} /></label>
                 <label style={lbl}>Model<input value={meta.model} onChange={(e) => setMeta({ ...meta, model: e.target.value })} placeholder="P703" style={inp} /></label>
                 {/* ลูกค้า — จากรายชื่อใน Product Master (CustomerSelect) ให้ชุดใหม่สะกดตรงชุดอื่น (2026-09-07) */}
-                <div style={lbl}>ลูกค้า<CustomerSelect value={meta.customer || ''} placeholder="FORD" style={{ marginTop: 4 }} inputStyle={{ fontSize: 12, padding: '7px 30px 7px 9px' }} onChange={({ customer }) => setMeta({ ...meta, customer })} /></div>
-                <label style={lbl}>เลขเอกสาร PFC<input value={meta.doc_no_pfc} onChange={(e) => setMeta({ ...meta, doc_no_pfc: e.target.value })} style={inp} /></label>
-                <label style={lbl}>เลขเอกสาร FMEA<input value={meta.doc_no_fmea} onChange={(e) => setMeta({ ...meta, doc_no_fmea: e.target.value })} style={inp} /></label>
-                <label style={lbl}>เลขเอกสาร CP<input value={meta.doc_no_cp} onChange={(e) => setMeta({ ...meta, doc_no_cp: e.target.value })} style={inp} /></label>
+                <div style={lbl}>{tr('ลูกค้า')}<CustomerSelect value={meta.customer || ''} placeholder="FORD" style={{ marginTop: 4 }} inputStyle={{ fontSize: 12, padding: '7px 30px 7px 9px' }} onChange={({ customer }) => setMeta({ ...meta, customer })} /></div>
+                <label style={lbl}>{tr('เลขเอกสาร PFC')}<input value={meta.doc_no_pfc} onChange={(e) => setMeta({ ...meta, doc_no_pfc: e.target.value })} style={inp} /></label>
+                <label style={lbl}>{tr('เลขเอกสาร FMEA')}<input value={meta.doc_no_fmea} onChange={(e) => setMeta({ ...meta, doc_no_fmea: e.target.value })} style={inp} /></label>
+                <label style={lbl}>{tr('เลขเอกสาร CP')}<input value={meta.doc_no_cp} onChange={(e) => setMeta({ ...meta, doc_no_cp: e.target.value })} style={inp} /></label>
               </div>
             ) : (
               <>
                 <select value={targetId} onChange={(e) => setTargetId(e.target.value)} style={{ ...inp, width: '100%' }}>
-                  <option value="">— เลือกชุดเอกสารปลายทาง —</option>
+                  <option value="">{tr('— เลือกชุดเอกสารปลายทาง —')}</option>
                   {sets.map((s) => <option key={s.id} value={s.id}>{s.part_no} · {s.part_name || ''}</option>)}
                 </select>
                 <div style={{ fontSize: 11, color: '#ffb86b', marginTop: 6 }}>
-                  ⚠️ รายการ PFMEA / Control Plan / ประวัติแก้ไข เดิมของชุดนี้จะถูกแทนที่ทั้งหมด · ขั้นงาน OP ที่มีอยู่แล้วจะไม่ถูกลบ (เพิ่มเฉพาะ OP ใหม่)
+                  ⚠️ {tr("รายการ PFMEA / Control Plan / ประวัติแก้ไข เดิมของชุดนี้จะถูกแทนที่ทั้งหมด · ขั้นงาน OP ที่มีอยู่แล้วจะไม่ถูกลบ (เพิ่มเฉพาะ OP ใหม่")})
                 </div>
               </>
             )}
@@ -303,9 +313,9 @@ export default function PeExcelImportModal({ sets = [], currentSetId = '', onClo
         </>)}
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
-          <button style={btn} onClick={() => setStep('pick')}>← เลือกไฟล์ใหม่</button>
-          <button style={btn} onClick={onClose}>ยกเลิก</button>
-          <button style={btnPrim} disabled={busy || nothing} onClick={apply}>{busy ? 'กำลังนำเข้า...' : '✅ ยืนยันนำเข้า'}</button>
+          <button style={btn} onClick={() => setStep('pick')}>{tr('← เลือกไฟล์ใหม่')}</button>
+          <button style={btn} onClick={onClose}>{tr('ยกเลิก')}</button>
+          <button style={btnPrim} disabled={busy || nothing} onClick={apply}>{busy ? tr('กำลังนำเข้า...') : tr('✅ ยืนยันนำเข้า')}</button>
         </div>
       </>)}
     </div></div>

@@ -209,9 +209,14 @@ export function sectionsOfProfile(p) {
  * · จอที่ไม่ได้ตั้งส่วนงาน (= เห็นทั้งโรงงาน) = **เฉพาะผู้ตั้งทั้งโรงงาน** (ไม่งั้นแอดมิน PD3 ตั้งจอที่เห็น PD1 ได้)
  * · จอหลายส่วนงาน = ผู้ตั้งต้องครอบ **ทุก** ส่วนงานของจอ
  */
-export function canManageDisplay(managerSections, targetSections) {
-  const mine = (Array.isArray(managerSections) ? managerSections : []).map(normSec).filter(Boolean);
-  if (!mine.length) return true;
+/* 🔴 13/11 (audit role↔scope P1-7): ตัดสินด้วย "หน่วยที่แก้ได้" (`UserContext.writeUnits` = บ้าน ∪ มอบหมาย)
+   + ใบผ่านรายคน (`allUnits`) — เดิมใช้ `sections` (ที่เห็น) และ "ไม่มีส่วนงาน = ตั้งได้ทุกจอ" (fail-open)
+   · ไม่มีหน่วยที่แก้ได้และไม่มีใบผ่าน = ตั้งจอไม่ได้เลย · จอที่ยังไม่ตั้งส่วนงาน (ทั้งโรงงาน) = เฉพาะผู้ถือใบผ่าน
+   ⚠️ ตรรกะต้องตรงกับ `fn_can_manage_display()` ฝั่ง DB (migration 20261113_role_scope_p1 §5) */
+export function canManageDisplay(managerUnits, targetSections, { allUnits = false } = {}) {
+  if (allUnits === true) return true;
+  const mine = (Array.isArray(managerUnits) ? managerUnits : []).map(normSec).filter(Boolean);
+  if (!mine.length) return false;
   const tgt = (Array.isArray(targetSections) ? targetSections : []).map(normSec).filter(Boolean);
   if (!tgt.length) return false;
   return tgt.every(s => mine.includes(s));
@@ -354,7 +359,7 @@ export const DISPLAY_PAGE_PARAMS = Object.freeze({
       opt('unified', '🗄️ ตู้ Kanban รวม'), opt('chart', '🕐 Store Time Chart'), opt('board', '🏪 Store Board'),
       opt('timeline', '📊 Heijunka Board'), opt('pull', '🔄 Pull / ใบสั่งผลิต'), opt('demand', '📋 ความต้องการวันนี้')] },
     { key: 'store', label: 'สโตร์', kind: 'select', showIf: { view: ['', 'unified'] }, options: [
-      opt('fg', '🏭 Store FG'), opt('child', '🔧 Store Child'), opt('purchase', '🛒 จัดซื้อ'), opt('raw', 'Raw Mat'),
+      opt('fg', '🚚 รอบส่งคัมบังเข้าไลน์'), opt('child', '🔧 Store Child'), opt('purchase', '🛒 จัดซื้อ'), opt('raw', 'Raw Mat'),
       opt('rack', '📦 Rack Center'), opt('wip', 'WIP'), opt('plating', 'ชุบ')] },
     { key: 'sec', label: 'ส่วนงาน', kind: 'section' },
     { key: 'fline', label: 'ไลน์', kind: 'line' },
@@ -424,7 +429,7 @@ export const DISPLAY_PAGE_PARAMS = Object.freeze({
     { key: 'state', label: 'สถานะ', kind: 'select', showIf: { tab: ['', 'doc'] }, options: [opt('current', 'Current state'), opt('future', '🎯 Future state')] },
   ],
   '/energy': [
-    { key: 'tab', label: 'แท็บ', kind: 'select', options: [opt('summary', '📊 สรุป & วิเคราะห์'), opt('mqtt', '📡 มิเตอร์ / MQTT'), opt('setup', '⚙️ ตั้งค่า')] },
+    { key: 'tab', label: 'แท็บ', kind: 'select', options: [opt('summary', '📊 สรุป & วิเคราะห์'), opt('setup', '⚙️ ตั้งค่า')] },
     { key: 'unmet', label: 'แสดงจุดที่ยังไม่ได้แยกมิเตอร์', kind: 'bool', showIf: { tab: ['', 'input'] } },
   ],
   '/report': [

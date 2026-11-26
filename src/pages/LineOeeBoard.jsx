@@ -7,10 +7,11 @@ import { UserContext } from '../App';
 import { wavg, wLoad, wRun, wProd, buildCtMap, computeLiveOee, isTrialDefect, defectQty, ngByMatFrom, dtMinBySession, QBIN_EMBED } from '../utils/oee';
 import { loadAffectsLanes } from '../utils/affectsLanes';
 import { parallelUnitsOf, flowModeOf } from '../utils/lineTypes';
-import { isOpenDT, isPlannedDT } from '../utils/downtimeRules';
+import { isOpenDT, isPlannedDT, dtOpenKind, isForgottenDT, DT_OPEN_META } from '../utils/downtimeRules';
 import { dtBucketName, dtTrashStats, buildDtIndex } from '../utils/downtimeCategory';
 import { getLineFamilyNames, getLeafLineNames, getAncestorNames, isLeafLine } from '../utils/lineHierarchy';
 import LineSelect, { lineOptions } from '../components/LineSelect';
+import LineJigCards from '../components/LineJigCards';
 import { getWorkDate } from '../utils/workDate';
 import { cachedMaster } from '../utils/masterCache';
 import { loadBreakPolicies, loadCtProducts, loadCtKanban } from '../utils/oeeMasters';
@@ -25,9 +26,11 @@ import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, ReferenceLine, LabelList, Cell,
 } from 'recharts';
+import { chartAnim } from '../utils/motion';
 import { CELL_BAR_FILL } from '../utils/chartAxis';
 import useTvShell, { tvSizer } from '../utils/useTvShell';
 
+import { tr, dateLocale } from '../utils/i18n';
 /* ═══ 📟 OEE บอร์ดหน้าไลน์ — /line-oee (2026-08-25 · คำสั่ง user "เพิ่มหน้า OEE หน้าไลน์แบบนี้") ═══
    จอ TV ประจำไลน์ผลิต 1 จอ = 1 ไลน์ (deep-link ?line=<ชื่อกลุ่มไลน์>) — โครงตามภาพอ้างอิง
    OEE SUMMARY WEEKLY ของ vendor: Overall vs Target/Variance · เทรนด์รายวัน · การ์ด A/P/Q
@@ -58,7 +61,7 @@ const hrs = (min) => (min / 60).toLocaleString(undefined, { maximumFractionDigit
 const nf = (v, d = 0) => (v == null || !Number.isFinite(v) ? '—' : Number(v).toLocaleString(undefined, { maximumFractionDigits: d }));
 
 export default function LineOeeBoard() {
-  const { role, lineId, sections } = useContext(UserContext);
+  const { role, lineId, sections, scopeIdx } = useContext(UserContext);
   /* 📺 โหมดจอประชุม (20/10 · TV 43–50" ยืนดู 2–3 ม.) — ทุกอย่างผูกกับ `tv` · จอคอมเหมือนเดิมเป๊ะ
      ตัวเลขใหญ่ขึ้น · ตัดคำอธิบายเล็ก · เต็มความสูงจอพอดี (ไม่ล้น — ล้น = ตัววนจอย่อ zoom ตัวหนังสือกลับไปเล็ก) */
   const tv = useTvShell();
@@ -117,8 +120,8 @@ export default function LineOeeBoard() {
     return act.filter(l => everLines.has(l.name) || getLeafLineNames(act, l.name).some(n => everLines.has(n)));
   }, [lines, everLines]);
   const options = useMemo(
-    () => lineOptions(boardLines, { role, lineId, sections }).map(o => o.value),
-    [boardLines, role, lineId, sections],
+    () => lineOptions(boardLines, { role, lineId, sections, scopeIdx }).map(o => o.value),
+    [boardLines, role, lineId, sections, scopeIdx],
   );
   // deep-link ?line= — นอก scope/สะกดผิด = ตกไปตัวแรกที่เข้าได้ (pattern เดียวกับ Management)
   const line = useMemo(() => {
@@ -126,6 +129,8 @@ export default function LineOeeBoard() {
     return q && options.includes(q) ? q : (options[0] || '');
   }, [sp, options]);
   const setLine = (v) => { const n = new URLSearchParams(sp); n.set('line', v); setSp(n, { replace: true }); };
+  /* ไลน์ที่ใช้หาจิ๊ก Node-RED — กติกาเดียวกับ load(): leaf = ตัวเอง · แม่ = ทั้งครอบครัว (useMemo กัน array ใหม่ทุก render — กฎ DB ข้อ 9) */
+  const jigLineNames = useMemo(() => (!line || !lines.length ? [] : isLeafLine(lines, line) ? [line] : getLineFamilyNames(lines, line)), [line, lines]);
 
   /* ── โหลดข้อมูลทั้งหน้าต่าง (ไลน์เดียว 14 วัน — payload เล็ก) · poll RATE.BOARD ── */
   const begin = useLatestRequest();   // เปลี่ยนไลน์ระหว่างโหลด = คำตอบของไลน์เก่าห้ามทับจอ (กฎ DB ข้อ 4)
@@ -152,7 +157,7 @@ export default function LineOeeBoard() {
 
     const [dtR, defR, prods, kstds, breaks] = await Promise.all([
       fetchByIds(ids, c => supabaseDR.from('downtime_logs')
-        .select('id, session_id, duration_min, started_at, ended_at, machine_no, description, call_mtn, dr_downtime_types(name_th, category)')
+        .select('id, session_id, duration_min, started_at, ended_at, machine_no, description, call_mtn, dr_downtime_types(name_th, category, planned_cap_min)')
         .in('session_id', c)),
       fetchByIds(ids, c => supabaseDR.from('defect_logs')
         // prod_orders(mat_no) = ไว้ชี้ CT ของ NG ตอนบวกเข้าตัวเศษ %P (ngByMatFrom)
@@ -268,7 +273,10 @@ export default function LineOeeBoard() {
         a: aVal,
         p: s.status === 'open' ? (lv?.P ?? null) : (s.oee_p != null ? Number(s.oee_p) : null),
         q: s.status === 'open' ? (lv?.Q ?? null) : (s.oee_q != null ? Number(s.oee_q) : null),
-        shift_min: Number(s.shift_min) || 570, plannedMin: plannedBy[s.id] || 0,
+        /* กะที่ยังเดิน = ถ่วงด้วย "เวลาที่เดินมาแล้ว" ไม่ใช่ทั้งกะ (09/11 · ชุดเดียวกับ /oee-analytics)
+           เดิมใช้ 570 ⇒ กะที่เพิ่งเปิด 1 ชม. ถูกนับน้ำหนักเท่ากะที่ปิดครบ = ค่าเฉลี่ย 7 วันแกว่งตามค่าสดเกินจริง */
+        shift_min: (s.status === 'open' && lv?.elapsedMin > 0) ? lv.elapsedMin : (Number(s.shift_min) || 570),
+        plannedMin: plannedBy[s.id] || 0,
         unplannedMin: unplannedBy[s.id] || 0, produced, ngQty: ngBySess[s.id] || 0,
         calcA: aVal, totalQty: produced,
       };
@@ -317,21 +325,36 @@ export default function LineOeeBoard() {
     });
     const top6 = (o) => Object.entries(o).map(([name, v]) => ({ name, v })).sort((a, b) => b.v - a.v).slice(0, 6);
 
-    // Alarm history — ล่าสุดก่อน · active (นอกแผน) = กระพริบ
+    /* Alarm history — ล่าสุดก่อน · กระพริบเฉพาะ "เครื่องยังหยุดอยู่จริง" (กะยังเปิด)
+       🔴 แถวที่เปิดค้างใน **กะที่ปิดไปแล้ว** = คนลืมปิดรายการ ห้ามกระพริบ ห้ามเขียนว่า "ยังหยุดอยู่"
+          แต่ห้ามซ่อน — นับไว้บอกบนหัวการ์ด (กฎ dtOpenKind · utils/downtimeRules 09/11) */
+    const sessStatusById = {};
+    sessions.forEach(s => { sessStatusById[s.id] = s.status; });
     const history = [...dts].filter(d2 => kpiSessIds.has(d2.session_id))
-      .sort((a, b) => String(b.started_at || '').localeCompare(String(a.started_at || ''))).slice(0, 8);
+      .sort((a, b) => String(b.started_at || '').localeCompare(String(a.started_at || ''))).slice(0, 8)
+      .map(d2 => ({ ...d2, _sessStatus: sessStatusById[d2.session_id] ?? null }));
+    const forgottenDt = dts.filter(d2 => kpiSessIds.has(d2.session_id)
+      && isForgottenDT(d2, sessStatusById[d2.session_id])).length;
 
     // สถานะปัจจุบัน (footer)
     const openNow = sessions.filter(s => s.status === 'open' && s.work_date === today);
     const activeDt = dts.filter(d2 => openNow.some(s => s.id === d2.session_id) && isOpenDT(d2) && !isPlannedDT(d2));
-    const liveNow = openNow.length ? liveBySess[openNow[0].id] : null;
+    const liveSess = openNow.length ? openNow[0] : null;
+    const liveNow = liveSess ? liveBySess[liveSess.id] : null;
+    /* 🔴 กฎความซื่อสัตย์ของจอ — การ์ด "ตอนนี้" ต้องตอบได้ว่าเลขนี้มาจากไหนและเชื่อได้แค่ไหน (16/11 · user ทัก "OEE 100 ผิดรึเปล่า")
+       · กะไหน (ไลน์แม่มีหลายไลน์ลูก การ์ดโชว์ได้กะเดียว ⇒ ต้องบอกชื่อ + จำนวนที่เหลือ)
+       · กะนี้ยังไม่มีใครลง downtime เลยไหม (A = 100 เพราะ "ไม่มีข้อมูล" ไม่ใช่ "เครื่องไม่เคยหยุด")
+       วัดจริง พ.ย. 69: กะที่ปิดแล้ว 512 กะ — %A = 100 เป๊ะ 191 กะ · %P = 100 เป๊ะ 141 กะ (27.5%) */
+    const liveLine = liveSess?.line_name || null;
+    const liveMore = Math.max(0, openNow.length - 1);
+    const liveNoDt = !!liveSess && !dts.some(d2 => d2.session_id === liveSess.id);
 
     return {
       trend, overall, A, P, Q, tgt, variance: overall != null ? +(overall - tgt).toFixed(1) : null,
       loadMin, runMin, unplMin, plMin, produced, ngTotal,
-      dtTop6: top6(dtTop), defTop6: top6(defTop), history,
+      dtTop6: top6(dtTop), defTop6: top6(defTop), history, forgottenDt,
       dtTrash: dtTrashStats(dts.filter(d2 => kpiSessIds.has(d2.session_id) && d2.dr_downtime_types?.category !== 'planned'), { index: dtIdx }),
-      hasOpen: !!openNow.length, activeDt, liveNow, kpiN: kpiRows.length,
+      hasOpen: !!openNow.length, activeDt, liveNow, liveLine, liveMore, liveNoDt, kpiN: kpiRows.length,
       liveInWindow: kpiRows.some(r => r.live && r.oee != null),
     };
   }, [data]);
@@ -367,7 +390,7 @@ export default function LineOeeBoard() {
   const barChart = (title, items, color, unit, tvNote = null) => (
     <div style={{ ...card, flex: 1, minWidth: tv ? 0 : 300 }}>
       <div style={capSt}>{title}</div>
-      {!items.length ? <div style={{ fontSize: T(12.5, 24), color: 'var(--muted)', padding: '26px 0', textAlign: 'center' }}>ไม่มีข้อมูลในช่วง {DAYS_KPI} วัน</div> : tv ? (
+      {!items.length ? <div style={{ fontSize: T(12.5, 24), color: 'var(--muted)', padding: '26px 0', textAlign: 'center' }}>{tr('ไม่มีข้อมูลในช่วง')} {DAYS_KPI} {tr('วัน')}</div> : tv ? (
         /* จอประชุม = แท่งนอน: ชื่อรายการอยู่ซ้ายเต็มคำ (แท่งตั้งเอียงป้าย = ตัดเหลือ "เครื่อง …" อ่านไม่ออก) */
         <div style={{ flex: 1, minHeight: 0 }}>
           <ResponsiveContainer width="100%" height="100%">
@@ -376,7 +399,7 @@ export default function LineOeeBoard() {
               <YAxis type="category" dataKey="name" width={290} interval={0} tickLine={false} axisLine={false}
                 tick={{ fontSize: 20, fill: 'var(--text)', fontWeight: 700 }}
                 tickFormatter={n => n.length > 21 ? n.slice(0, 20) + '…' : n} />
-              <Bar dataKey="v" fill={CELL_BAR_FILL} radius={[0, 5, 5, 0]} isAnimationActive={false}>
+              <Bar dataKey="v" fill={CELL_BAR_FILL} radius={[0, 5, 5, 0]} {...chartAnim()}>
                 <LabelList dataKey="v" position="right" style={{ fontSize: 22, fontWeight: 900, fill: 'var(--text)' }} />
                 {items.map((_, i) => <Cell key={i} fill={color} fillOpacity={1 - i * 0.11} />)}
               </Bar>
@@ -389,7 +412,7 @@ export default function LineOeeBoard() {
             <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--text2)' }} interval={0}
               tickFormatter={n => n.length > 9 ? n.slice(0, 8) + '…' : n} angle={-25} height={48} textAnchor="end" />
             <YAxis hide />
-            <Bar dataKey="v" fill={CELL_BAR_FILL} radius={[4, 4, 0, 0]} isAnimationActive={false}>
+            <Bar dataKey="v" fill={CELL_BAR_FILL} radius={[4, 4, 0, 0]} {...chartAnim()}>
               <LabelList dataKey="v" position="top" style={{ fontSize: 11, fontWeight: 800, fill: 'var(--text)' }} />
               {items.map((_, i) => <Cell key={i} fill={color} fillOpacity={1 - i * 0.11} />)}
             </Bar>
@@ -408,49 +431,49 @@ export default function LineOeeBoard() {
       {/* header — ไม่ใช้ PageHeader (บอร์ดจอ TV — ข้อยกเว้นเดียวกับ Dashboard/Management)
           ph-chrome = กรอบจอ TV ซ่อน (แถบบนของกรอบโชว์ไลน์ที่ตั้งจากลิงก์ + นาฬิกาแทน · index.css) */}
       <div className="ph-chrome" style={{ ...card, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '10px 16px' }}>
-        <span style={{ fontSize: 17, fontWeight: 900, color: 'var(--text)' }}>📟 OEE รายไลน์ (Weekly)</span>
+        <span style={{ fontSize: 17, fontWeight: 900, color: 'var(--text)' }}>{tr('OEE รายไลน์ (Weekly)')}</span>
         {/* picker กลาง (UI §5.1.2) — ลำดับชั้นแม่→ลูกครบ · width กัน index.css select width:100% */}
         <LineSelect lines={boardLines} value={line} onChange={setLine} placeholder={null}
-          role={role} lineId={lineId} sections={sections}
-          style={{ width: 250, padding: '6px 10px', fontSize: 14, fontWeight: 700, borderRadius: 8, background: 'var(--bg2)', border: '1px solid var(--border)', color: 'var(--text)' }} />
-        <span style={{ fontSize: 12, color: 'var(--muted)' }}>หน้าต่าง {DAYS_KPI} วันล่าสุด{C?.liveInWindow ? ' · รวมกะที่กำลังเปิด (สด)' : ''}</span>
+          role={role} lineId={lineId} sections={sections} scopeIdx={scopeIdx}
+          style={{ width: 250, padding: '6px 10px', fontSize: 14, fontWeight: 700, borderRadius: 8, background: 'var(--bg2-surf)', border: '1px solid var(--border)', color: 'var(--text)' }} />
+        <span style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('หน้าต่าง')} {DAYS_KPI} {tr('วันล่าสุด')}{C?.liveInWindow ? tr(" · รวมกะที่กำลังเปิด (สด)") : ''}</span>
         <span style={{ marginLeft: 'auto', fontSize: 20, fontWeight: 900, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>
-          {now.toLocaleTimeString('th-TH', { hour12: false })}
-          <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--muted)', marginLeft: 8 }}>{now.toLocaleDateString('th-TH')}</span>
+          {now.toLocaleTimeString(dateLocale(), { hour12: false })}
+          <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--muted)', marginLeft: 8 }}>{now.toLocaleDateString(dateLocale())}</span>
         </span>
       </div>
 
       {partial && (
         <div style={{ ...card, borderColor: 'var(--amber)', color: 'var(--amber)', fontSize: T(12.5, 22), padding: '8px 14px', flex: tv ? '0 0 auto' : undefined }}>
-          {tv ? '⚠ โหลดข้อมูลได้ไม่ครบ — ตัวเลขอาจต่ำกว่าจริง' : '⚠ โหลดข้อมูลได้ไม่ครบ — ตัวเลขบางส่วนอาจต่ำกว่าจริง (ลองรีเฟรช/เช็คเครือข่าย)'}
+          {tv ? tr("⚠ โหลดข้อมูลได้ไม่ครบ — ตัวเลขอาจต่ำกว่าจริง") : tr("⚠ โหลดข้อมูลได้ไม่ครบ — ตัวเลขบางส่วนอาจต่ำกว่าจริง (ลองรีเฟรช/เช็คเครือข่าย)")}
         </div>
       )}
 
       {!C ? (
-        <div style={{ ...card, textAlign: 'center', color: 'var(--muted)', padding: 40, fontSize: tv ? 26 : undefined }}>กำลังโหลดข้อมูล...</div>
+        <div style={{ ...card, textAlign: 'center', color: 'var(--muted)', padding: 40, fontSize: tv ? 26 : undefined }}>{tr('กำลังโหลดข้อมูล...')}</div>
       ) : (
         <>
           {/* แถว 1: Overall + เทรนด์ */}
           <div style={rowSt(1.15)}>
             <div style={{ ...card, flex: tv ? '0 0 380px' : '0 0 250px', display: 'flex', flexDirection: 'column' }}>
-              <div style={capSt}>Overall OEE ({DAYS_KPI} วัน)</div>
+              <div style={capSt}>Overall OEE ({DAYS_KPI} {tr("วัน")})</div>
               <div style={{ fontSize: tv ? 108 : 'clamp(44px,4.5vw,62px)', fontWeight: 900, lineHeight: 1.1, fontVariantNumeric: 'tabular-nums',
                 color: C.overall == null ? 'var(--muted)' : C.overall >= C.tgt ? 'var(--green)' : C.overall >= C.tgt - 10 ? 'var(--amber)' : 'var(--red)' }}>
                 {C.overall == null ? '—' : `${C.overall.toFixed(1)}%`}
               </div>
-              {C.overall == null && <div style={{ fontSize: T(12, 22), color: 'var(--muted)' }}>{tv ? 'ยังไม่มีข้อมูลในช่วงนี้' : 'ยังไม่มีกะปิด/ข้อมูลสดในช่วงนี้'}</div>}
+              {C.overall == null && <div style={{ fontSize: T(12, 22), color: 'var(--muted)' }}>{tv ? tr('ยังไม่มีข้อมูลในช่วงนี้') : tr('ยังไม่มีกะปิด/ข้อมูลสดในช่วงนี้')}</div>}
               <div style={{ display: 'flex', gap: 18, marginTop: 'auto', paddingTop: 8, borderTop: '1px dashed var(--border2)' }}>
-                <div><div style={capSt}>Target</div><b style={{ fontSize: T(18, 36), color: 'var(--amber)', whiteSpace: 'nowrap' }}>{C.tgt.toFixed(1)}%{tv && !data?.target && <span style={{ fontSize: 20, fontWeight: 700, color: 'var(--muted)' }}> มาตรฐาน</span>}</b></div>
+                <div><div style={capSt}>Target</div><b style={{ fontSize: T(18, 36), color: 'var(--amber)', whiteSpace: 'nowrap' }}>{C.tgt.toFixed(1)}%{tv && !data?.target && <span style={{ fontSize: 20, fontWeight: 700, color: 'var(--muted)' }}> {tr('มาตรฐาน')}</span>}</b></div>
                 <div><div style={capSt}>Variance</div>
                   <b style={{ fontSize: T(18, 36), color: C.variance == null ? 'var(--muted)' : varUp ? 'var(--green)' : 'var(--red)' }}>
                     {C.variance == null ? '—' : `${varUp ? '▲ +' : '▼ '}${C.variance}`}</b>
                 </div>
               </div>
               {/* จอประชุม: บอกในป้าย Target แทน (บรรทัดแยกล้นการ์ด) */}
-              {!data?.target && !tv && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>เป้ามาตรฐาน (ยังไม่ตั้ง 🎯 ที่ /oee-analytics)</div>}
+              {!data?.target && !tv && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>{tr('เป้ามาตรฐาน (ยังไม่ตั้ง 🎯 ที่ /oee-analytics)')}</div>}
               {data?.target?.inheritedFrom && !tv && (
                 <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-                  ใช้เป้าของกรุ๊ป <b style={{ color: 'var(--text2)' }}>{data.target.inheritedFrom}</b> (ไลน์นี้ยังไม่ตั้งเป้าของตัวเอง)
+                  {tr("ใช้เป้าของกรุ๊ป")} <b style={{ color: 'var(--text2)' }}>{data.target.inheritedFrom}</b> ({tr("ไลน์นี้ยังไม่ตั้งเป้าของตัวเอง")})
                 </div>
               )}
             </div>
@@ -459,11 +482,11 @@ export default function LineOeeBoard() {
                 → เพิ่มการ์ด "ตอนนี้ (Live)" ให้เห็นคู่กันชัดๆ ตั้งแต่แถวบนสุด (แถบท้ายจอเดิมยังอยู่
                 เป็นรายละเอียด/เหตุผลกำกับ) — ที่มาข้อมูลเหมือนเดิมทุกอย่าง (C.activeDt/C.hasOpen/C.liveNow) */}
             <div style={{ ...card, flex: tv ? '0 0 330px' : '0 0 220px', display: 'flex', flexDirection: 'column' }}>
-              <div style={capSt}>ตอนนี้ (Live)</div>
+              <div style={capSt}>{tr('ตอนนี้ (Live)')}</div>
               {C.activeDt.length ? (
                 <>
                   <div style={{ fontSize: tv ? 72 : 'clamp(30px,3vw,40px)', fontWeight: 900, lineHeight: 1.15, color: 'var(--red)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span className="dt-alarm-icon">🔴</span> หยุด
+                    <span className="dt-alarm-icon">🔴</span> {tr("หยุด")}
                   </div>
                   <div style={{ fontSize: T(11.5, 22), color: tv ? 'var(--text2)' : 'var(--muted)', marginTop: 4 }}>
                     {C.activeDt.map(d2 => d2.dr_downtime_types?.name_th || 'ไม่ระบุ').join(' · ')}
@@ -471,23 +494,45 @@ export default function LineOeeBoard() {
                 </>
               ) : C.hasOpen ? (
                 <>
+                  {/* 🔴 %P ถูก cap ที่ 100 = "ยอด/เวลา/CT ขัดกัน" ไม่ใช่ "ไลน์เดินสมบูรณ์แบบ"
+                      ⇒ ห้ามโชว์เขียวสนิท ต้องเขียนบอก (16/11 · user ทัก "LIVE 100% ผิดรึเปล่า")
+                      สูตรส่ง `pOver` + `pRawPct` มาให้อยู่แล้ว — เดิมการ์ดนี้ทิ้งทั้งคู่ = จอโกหก */}
                   <div style={{ fontSize: tv ? 96 : 'clamp(36px,3.8vw,50px)', fontWeight: 900, lineHeight: 1.1, fontVariantNumeric: 'tabular-nums',
-                    color: C.liveNow?.oee == null ? 'var(--muted)' : 'var(--green)' }}>
+                    color: C.liveNow?.oee == null ? 'var(--muted)' : C.liveNow?.pOver ? 'var(--amber)' : 'var(--green)' }}>
                     {C.liveNow?.oee != null ? `${Math.round(C.liveNow.oee)}%` : '—'}
                   </div>
                   <div style={{ fontSize: T(11.5, 22), color: tv ? 'var(--text2)' : 'var(--muted)', marginTop: 4 }}>
-                    {C.liveNow?.oee != null ? '🟢 กำลังผลิต · OEE กะนี้' : C.liveNow?.noCt ? '⚠ ยังไม่ตั้ง CT — คำนวณไม่ได้' : '🟢 กำลังผลิต · ยังประเมินไม่ได้'}
+                    {C.liveNow?.oee != null ? tr("🟢 กำลังผลิต · OEE กะนี้") : C.liveNow?.noCt ? tr("⚠ ยังไม่ตั้ง CT — คำนวณไม่ได้") : tr("🟢 กำลังผลิต · ยังประเมินไม่ได้")}
+                    {C.liveLine && C.liveLine !== line ? ` · ${C.liveLine}` : ''}
+                    {C.liveMore > 0 ? ` (+${C.liveMore} ${tr("ไลน์เปิดอยู่")})` : ''}
                   </div>
+                  {/* ที่มาของเลข — 100% ต้องอธิบายได้ว่ามาจากขาไหน */}
+                  {C.liveNow?.oee != null && (
+                    <div style={{ fontSize: T(11, 20), color: 'var(--muted)', marginTop: 3, fontVariantNumeric: 'tabular-nums' }}>
+                      A {C.liveNow.A ?? '—'} · P {C.liveNow.P ?? '—'} · Q {C.liveNow.Q ?? '—'}
+                    </div>
+                  )}
+                  {C.liveNow?.pOver && (
+                    <div style={{ fontSize: T(11, 20), color: 'var(--amber)', fontWeight: 700, marginTop: 4, lineHeight: 1.5 }}>
+                      ⚠ %P {tr("คิดได้")} {C.liveNow.pRawPct}% ({tr("ถูกตัดเหลือ 100) — งานที่บันทึกใช้เวลามากกว่าเวลาที่เครื่องมี")}
+                      <span style={{ fontWeight: 400 }}> · {tr("เช็คยอดที่ลง / เวลาเปิดใบ / CT ในทะเบียน")}</span>
+                    </div>
+                  )}
+                  {C.liveNoDt && (
+                    <div style={{ fontSize: T(11, 20), color: 'var(--amber)', marginTop: 4, lineHeight: 1.5 }}>
+                      ⚠ {tr("กะนี้ยังไม่มีใครลง Downtime — %A = 100 เพราะ")}<b>{tr("ยังไม่มีข้อมูล")}</b> {tr("ไม่ใช่เครื่องไม่เคยหยุด")}
+                    </div>
+                  )}
                 </>
               ) : (
                 <>
                   <div style={{ fontSize: tv ? 72 : 'clamp(30px,3vw,40px)', fontWeight: 900, color: 'var(--muted)' }}>⏸</div>
-                  <div style={{ fontSize: T(11.5, 26), color: tv ? 'var(--text2)' : 'var(--muted)', marginTop: 4 }}>ยังไม่เปิดกะ</div>
+                  <div style={{ fontSize: T(11.5, 26), color: tv ? 'var(--text2)' : 'var(--muted)', marginTop: 4 }}>{tr('ยังไม่เปิดกะ')}</div>
                 </>
               )}
             </div>
             <div style={{ ...card, flex: 1, minWidth: tv ? 0 : 'min(380px, 100%)' }}>
-              <div style={capSt}>{tv ? `OEE Trend รายวัน (${DAYS_TREND} วัน)` : `OEE Trend รายวัน (${DAYS_TREND} วัน · เฉลี่ยถ่วงเวลารับภาระ)`}</div>
+              <div style={capSt}>{tv ? `OEE Trend ${tr("รายวัน")} (${DAYS_TREND} ${tr("วัน")})` : `OEE Trend ${tr("รายวัน")} (${DAYS_TREND} ${tr("วัน · เฉลี่ยถ่วงเวลารับภาระ")})`}</div>
               <div style={tv ? { flex: 1, minHeight: 0 } : undefined}>
               <ResponsiveContainer width="100%" height={tv ? '100%' : 168}>
                 <AreaChart data={C.trend} margin={{ top: 8, left: 4, right: 8, bottom: 0 }}>
@@ -501,7 +546,7 @@ export default function LineOeeBoard() {
                   <YAxis width="auto" domain={[0, 100]} ticks={[0, 50, 100]} tick={{ fontSize: T(11, 20), fill: 'var(--text2)' }} tickFormatter={v => `${v}%`} />
                   <ReferenceLine y={C.tgt} stroke="var(--amber)" strokeDasharray="6 4"
                     label={{ value: `target ${C.tgt.toFixed(0)}%`, position: 'insideTopRight', fill: 'var(--amber)', fontSize: T(11, 22), fontWeight: 800 }} />
-                  <Area type="monotone" dataKey="oee" stroke="var(--green)" strokeWidth={tv ? 4 : 2.2} fill="url(#oeeG)" connectNulls={false} isAnimationActive={false} dot={{ r: tv ? 5 : 2.5 }} />
+                  <Area type="monotone" dataKey="oee" stroke="var(--green)" strokeWidth={tv ? 4 : 2.2} fill="url(#oeeG)" connectNulls={false} {...chartAnim()} dot={{ r: tv ? 5 : 2.5 }} />
                 </AreaChart>
               </ResponsiveContainer>
               </div>
@@ -511,50 +556,58 @@ export default function LineOeeBoard() {
           {/* แถว 2: A / P / Q + ที่มาตัวเลข (กางให้เห็นตามกฎ "ตัวเลขต้องกางที่มา") */}
           <div style={rowSt(0)}>
             {apqCard('Availability', 'A', C.A, 'good', [
-              ['เวลารับภาระ (กะ − หยุดในแผน)', `${hrs(C.loadMin)} ชม.`],
-              ['เวลาเดินเครื่อง', `${hrs(C.runMin)} ชม.`, undefined, true],
-              ['หยุดนอกแผน', `${hrs(C.unplMin)} ชม.`, C.unplMin > 0 ? 'var(--red)' : undefined, true],
-              ['หยุดตามแผน/พัก', `${hrs(C.plMin)} ชม.`],
+              [tr("เวลารับภาระ (กะ − หยุดในแผน)"), `${hrs(C.loadMin)} ${tr("ชม.")}`],
+              [tr("เวลาเดินเครื่อง"), `${hrs(C.runMin)} ${tr("ชม.")}`, undefined, true],
+              [tr("หยุดนอกแผน"), `${hrs(C.unplMin)} ${tr("ชม.")}`, C.unplMin > 0 ? 'var(--red)' : undefined, true],
+              [tr("หยุดตามแผน/พัก"), `${hrs(C.plMin)} ${tr("ชม.")}`],
             ])}
             {apqCard('Performance', 'P', C.P, 'info', [
-              ['ผลิตจริง', `${nf(C.produced)} ชิ้น`, undefined, true],
-              ['อัตราจริง', C.runMin > 0 ? `${nf(C.produced / (C.runMin / 60), 1)} ชิ้น/ชม.` : '—', undefined, true],
-              ['เทียบมาตรฐาน (CT)', C.P == null ? 'ยังคำนวณไม่ได้' : `${C.P.toFixed(1)}% ของความเร็วมาตรฐาน`],
+              [tr("ผลิตจริง"), `${nf(C.produced)} ${tr("ชิ้น")}`, undefined, true],
+              [tr("อัตราจริง"), C.runMin > 0 ? `${nf(C.produced / (C.runMin / 60), 1)} ${tr("ชิ้น/ชม.")}` : '—', undefined, true],
+              [tr("เทียบมาตรฐาน (CT)"), C.P == null ? tr("ยังคำนวณไม่ได้") : `${C.P.toFixed(1)}% ${tr("ของความเร็วมาตรฐาน")}`],
             ])}
             {apqCard('Quality', 'Q', C.Q, 'none', [
-              ['ผลิตทั้งหมด (ดี+เสีย)', `${nf(C.produced + C.ngTotal)} ชิ้น`],
-              ['ของดี (ยอดสแกน)', `${nf(C.produced)} ชิ้น`, undefined, true],
-              ['ของเสีย (ไม่รวมงานทดลอง)', `${nf(C.ngTotal)} ชิ้น`, C.ngTotal > 0 ? 'var(--red)' : undefined, true],
+              [tr("ผลิตทั้งหมด (ดี+เสีย)"), `${nf(C.produced + C.ngTotal)} ${tr("ชิ้น")}`],
+              [tr("ของดี (ยอดสแกน)"), `${nf(C.produced)} ${tr("ชิ้น")}`, undefined, true],
+              [tr("ของเสีย (ไม่รวมงานทดลอง)"), `${nf(C.ngTotal)} ${tr("ชิ้น")}`, C.ngTotal > 0 ? 'var(--red)' : undefined, true],
             ])}
           </div>
 
           {/* แถว 3: Pareto + Alarm history */}
           <div style={rowSt(1.5)}>
-            {barChart(`Alarm Top 6 (นาที · ${DAYS_KPI} วัน)`, C.dtTop6, 'var(--amber)',
-                      `เฉพาะหยุดนอกแผน — หยุดตามแผนไม่ใช่ loss${C.dtTrash?.vague
-                        ? ` · 🗑️ ไม่ได้ระบุสาเหตุ ${C.dtTrash.vague} ใบ (${
-                          C.dtTrash.guessed ? `🔎 เดาจากคำ ${C.dtTrash.guessed} · ` : ''}แตกตามเครื่อง${
-                          C.dtTrash.noMachine ? ` · ${C.dtTrash.noMachine} ใบไม่กรอกเครื่อง = ชี้เป้าไม่ได้` : ''})` : ''}`,
+            {barChart(`Alarm Top 6 (${tr("นาที")} · ${DAYS_KPI} ${tr("วัน")})`, C.dtTop6, 'var(--amber)',
+                      `${tr("เฉพาะหยุดนอกแผน — หยุดตามแผนไม่ใช่")} loss${C.dtTrash?.vague
+                        ? ` · ${tr("ไม่ได้ระบุสาเหตุ")} ${C.dtTrash.vague} ${tr("ใบ")} (${
+                          C.dtTrash.guessed ? `🔎 ${tr("เดาจากคำ")} ${C.dtTrash.guessed} · ` : ''}${tr("แตกตามเครื่อง")}${
+                          C.dtTrash.noMachine ? ` · ${C.dtTrash.noMachine} ${tr("ใบไม่กรอกเครื่อง = ชี้เป้าไม่ได้")}` : ''})` : ''}`,
                       // จอประชุม: เก็บแค่เรื่องที่ทำให้แท่งเชื่อไม่ได้ (ใบไม่ระบุสาเหตุ) — ห้ามหายเงียบ
-                      C.dtTrash?.vague ? `🗑️ ไม่ระบุสาเหตุ ${C.dtTrash.vague} ใบ` : null)}
-            {barChart(`Defect Top 6 (ชิ้น · ${DAYS_KPI} วัน)`, C.defTop6, 'var(--red)', 'รวมทุกรายการ (🧪 = งานทดลอง ไม่ถูกนับใน %Q)')}
+                      C.dtTrash?.vague ? `🗑️ ${tr("ไม่ระบุสาเหตุ")} ${C.dtTrash.vague} ${tr("ใบ")}` : null)}
+            {barChart(`Defect Top 6 (${tr("ชิ้น")} · ${DAYS_KPI} ${tr("วัน")})`, C.defTop6, 'var(--red)', tr("รวมทุกรายการ (🧪 = งานทดลอง ไม่ถูกนับใน %Q)"))}
             <div style={{ ...card, flex: 1.2, minWidth: tv ? 0 : 340, ...(tv ? { overflow: 'hidden' } : {}) }}>
-              <div style={capSt}>Alarm History (ล่าสุด)</div>
-              {!C.history.length ? <div style={{ fontSize: T(12.5, 24), color: 'var(--muted)', padding: '26px 0', textAlign: 'center' }}>ไม่มีรายการหยุดในช่วงนี้</div> : (
+              <div style={capSt}>{tr('Alarm History (ล่าสุด)')}</div>
+              {/* ห้ามซ่อน — แถวที่ลืมปิดทำให้ %A ของกะนั้นสูงกว่าจริง ต้องมีคนไปตามปิด */}
+              {C.forgottenDt > 0 && (
+                <div style={{ fontSize: T(11, 20), color: 'var(--amber)', fontWeight: 700, marginTop: 2 }}>
+                  ⚠️ {tr("ไม่ได้ปิดรายการ")} {C.forgottenDt} {tr("ใบ (กะปิดไปแล้ว) — %A ของกะนั้นสูงกว่าจริง")}
+                </div>
+              )}
+              {!C.history.length ? <div style={{ fontSize: T(12.5, 24), color: 'var(--muted)', padding: '26px 0', textAlign: 'center' }}>{tr('ไม่มีรายการหยุดในช่วงนี้')}</div> : (
                 <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 4, ...(tv ? { tableLayout: 'fixed' } : {}) }}>
                   {tv && <colgroup><col style={{ width: '22%' }} /><col /><col style={{ width: '16%' }} /><col style={{ width: '11%' }} /><col style={{ width: '20%' }} /></colgroup>}
-                  <thead><tr>{['เวลา', 'รายการ', 'เครื่อง', 'นาที', 'สถานะ'].map(h => (
-                    <th key={h} style={{ fontSize: T(11, 20), color: 'var(--muted)', textAlign: 'left', padding: tv ? '4px 6px' : '3px 6px', borderBottom: '1px solid var(--border2)' }}>{h}</th>))}
+                  <thead><tr>{[tr("เวลา"), tr("รายการ"), tr("เครื่อง"), tr("นาที"), tr("สถานะ")].map(h => (
+                    <th key={h} style={{ fontSize: T(11, 20), color: 'var(--muted)', textAlign: 'left', padding: tv ? '4px 6px' : '3px 6px', borderBottom: '1px solid var(--border2)' }}>{tr(h)}</th>))}
                   </tr></thead>
                   {/* จอประชุม: 5 แถวล่าสุด ตัวใหญ่ · ตัดคำอธิบายย่อย (คนยืนห่าง 2–3 ม. อ่านไม่ทัน) */}
                   <tbody>{(tv ? C.history.slice(0, 5) : C.history).map(d2 => {
-                    const active = isOpenDT(d2), planned = isPlannedDT(d2);
+                    const kind = dtOpenKind(d2, d2._sessStatus), planned = isPlannedDT(d2);
+                    const active = kind === 'open' || kind === 'unknown';   // เครื่องยังหยุดอยู่จริง (กะยังเปิด)
+                    const meta = DT_OPEN_META[kind];
                     return (
                       <tr key={d2.id} className={active && !planned ? 'dt-alarm-blink' : undefined}>
                         <td style={{ fontSize: T(11.5, 20), color: 'var(--text2)', padding: tdPad, whiteSpace: 'nowrap', ...cellClip }}>
                           {d2.started_at ? (tv
-                            ? new Date(d2.started_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false })
-                            : new Date(d2.started_at).toLocaleString('th-TH', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })) : '—'}
+                            ? new Date(d2.started_at).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit', hour12: false })
+                            : new Date(d2.started_at).toLocaleString(dateLocale(), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })) : '—'}
                         </td>
                         <td style={{ fontSize: T(11.5, 20), color: 'var(--text)', padding: tdPad, ...cellClip }}>
                           {d2.dr_downtime_types?.name_th || '—'}{d2.description && !tv ? <span style={{ color: 'var(--muted)' }}> · {d2.description}</span> : ''}
@@ -568,9 +621,15 @@ export default function LineOeeBoard() {
                               (คู่กับ "✓ กลับมาแล้ว") → แยกไอคอนออกมา shake เดี่ยว ข้อความเป็นภาษาไทยล้วน */}
                           {active
                             ? <b style={{ color: planned ? 'var(--muted)' : 'var(--red)' }}>
-                                {planned ? '🗓️ ตามแผน' : <><span className="dt-alarm-icon">🔴</span> ยังหยุดอยู่</>}
+                                {planned ? tr("🗓️ ตามแผน") : <><span className="dt-alarm-icon">🔴</span> {tr('ยังหยุดอยู่')}</>}
                               </b>
-                            : <span style={{ color: 'var(--green)' }}>{tv ? '✓ กลับมา' : '✓ กลับมาแล้ว'}</span>}
+                            /* 🔴 กะปิดแล้วแต่แถวยังเปิดค้าง = คนลืมปิดรายการ — บอกตรงๆ ห้ามแปลงเป็น
+                               "ยังหยุดอยู่" (กระพริบค้างเป็นเดือน) และห้ามแปลงเป็น "กลับมาแล้ว" (ไม่มีใครไปตามปิด) */
+                            : kind === 'forgotten'
+                              ? <b style={{ color: meta.color }} title={`${tr("กะ")} ${d2._sessStatus === 'closed' ? tr('ปิดแล้ว') : d2._sessStatus} ${tr("แต่รายการนี้ยังไม่ถูกปิด — นาทีที่หยุดไม่ได้ถูกหักใน %A ของกะนั้น")}`}>
+                                  {meta.icon} {tv ? tr(meta.short) : tr(meta.text)}
+                                </b>
+                              : <span style={{ color: 'var(--green)' }}>{tv ? tr('✓ กลับมา') : tr('✓ กลับมาแล้ว')}</span>}
                           {d2.call_mtn && <span style={{ color: 'var(--amber)' }}> 📞</span>}
                         </td>
                       </tr>
@@ -581,20 +640,24 @@ export default function LineOeeBoard() {
             </div>
           </div>
 
+          {/* 🏭 รายจิ๊กจากเครื่อง (Node-RED) — เฉพาะไลน์ที่ผูกเครื่องแล้ว · ไลน์อื่นไม่วาดอะไร (13/11) */}
+          <LineJigCards lineNames={jigLineNames} style={{ flex: tv ? '0 0 auto' : undefined }} />
+
           {/* footer สถานะปัจจุบัน — กระพริบเฉพาะแดง (DT นอกแผนค้าง) ตาม Andon */}
           <div style={{ ...card, display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 14, padding: '8px 16px', flex: tv ? '0 0 auto' : undefined }}>
             {C.activeDt.length ? (
               // shake เฉพาะไอคอน 🔴 — ห้าม shake ทั้งประโยค (กฎเดียวกับที่แก้ในตาราง Alarm History ข้างบน)
               <b style={{ color: 'var(--red)', fontSize: T(14, 28) }}>
-                <span className="dt-alarm-icon">🔴</span> {line} หยุดอยู่: {C.activeDt.map(d2 => d2.dr_downtime_types?.name_th || 'ไม่ระบุ').join(' · ')}
+                <span className="dt-alarm-icon">🔴</span> {line} {tr('หยุดอยู่:')} {C.activeDt.map(d2 => d2.dr_downtime_types?.name_th || 'ไม่ระบุ').join(' · ')}
               </b>
             ) : C.hasOpen ? (
-              <b style={{ color: 'var(--green)', fontSize: T(14, 28) }}>▶ {line} กำลังผลิต{C.liveNow?.oee != null ? ` · OEE กะนี้ (สด) ${Math.round(C.liveNow.oee)}%` : C.liveNow?.noCt ? ' · ⚠ ยังไม่ตั้ง CT — คำนวณ P ไม่ได้' : ''}</b>
+              /* %P ถูก cap = เลขไม่น่าเชื่อ ⇒ แถบท้ายจอต้องเตือนเหมือนการ์ดบน (ห้ามเขียวสนิท) */
+              <b style={{ color: C.liveNow?.pOver ? 'var(--amber)' : 'var(--green)', fontSize: T(14, 28) }}>▶ {line} {tr('กำลังผลิต')}{C.liveNow?.oee != null ? ` · OEE ${tr("กะนี้ (สด")}) ${Math.round(C.liveNow.oee)}%` : C.liveNow?.noCt ? tr(" · ⚠ ยังไม่ตั้ง CT — คำนวณ P ไม่ได้") : ''}{C.liveNow?.pOver ? ` · ⚠ %P ${tr("คิดได้")} ${C.liveNow.pRawPct}% ${tr("ถูกตัดเหลือ")} 100` : ''}</b>
             ) : (
-              <b style={{ color: 'var(--muted)', fontSize: T(14, 28) }}>⏸ {line} ยังไม่เปิดกะ</b>
+              <b style={{ color: 'var(--muted)', fontSize: T(14, 28) }}>⏸ {line} {tr('ยังไม่เปิดกะ')}</b>
             )}
             <span className="tv-hide" style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--muted)' }}>
-              จาก {C.kpiN} กะ · สูตรชุดเดียวกับ Daily Report/OEE Analytics · อัพเดตทุก {Math.round(RATE.BOARD / 60000)} นาที
+              {tr("จาก")} {C.kpiN} {tr('กะ · สูตรชุดเดียวกับ Daily Report/OEE Analytics · อัพเดตทุก')} {Math.round(RATE.BOARD / 60000)} {tr("นาที")}
             </span>
           </div>
         </>

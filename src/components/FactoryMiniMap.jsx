@@ -21,6 +21,7 @@ import { cachedMaster } from '../utils/masterCache';
 import { labelAnchor as anchorOf, plainLabelLayout } from '../utils/regionGeom';
 import useTvShell from '../utils/useTvShell';
 
+import { tr } from '../utils/i18n';
 /* 📺 ป้ายบนผัง = หน้าตาเดียวกับ /factory-map (22/10 · user "ทำป้ายบนผังให้เป็นแบบเดียวกัน")
    ปกติ = ข้อความล้วนในกรอบ · ผิดปกติ = การ์ดพื้นเข้ม ขอบล่างหนาสีสถานะ ชื่อบน/สถานะล่าง · จอ TV ขยาย ×1.4
    (ค่าเดียวกับ `lblScale` บนจอ TV ของผังรวม) — แก้หน้าตาป้ายที่หนึ่ง ต้องแก้อีกที่ด้วย */
@@ -40,7 +41,12 @@ const tint = (c, lvl) => {
   return `${c}${lvl === 'line' ? '66' : '2b'}`;
 };
 
-export default function FactoryMiniMap({ stateOf, onPick, bottomReserve = 28 }) {
+/* 🔢 `badgeOf(lineName) → { text, title } | null` (ไม่บังคับ · 20/11 Manpower Board) — วงกลมเลขกลางกรอบ **แทนชื่อไลน์**
+   ใช้เมื่อจอมีแผงรายการคู่กันให้จับคู่ด้วยเลข (ชื่อยาวในกรอบเล็กถูกตัดจนอ่านไม่ออก) · ไม่ส่ง = พฤติกรรมเดิมเป๊ะ */
+/* 🎨 โหมดบอร์ด (ไม่บังคับ · 20/11 Manpower Board · ไม่ส่ง = พฤติกรรมเดิมเป๊ะ)
+   `dimMap` = ผังพื้นหลังเทา/มืดลงให้สีสถานะเด่น · `focusNames` (Set) = กรอบที่ถูกชี้ (ที่เหลือจาง)
+   `onHover(name|null)` = แจ้งจอแม่ตอนชี้กรอบ/เลข · `badgeOf()` คืน `pct` (0–1) = วงแหวนรอบเลข (null = วงประ "ตัดสินไม่ได้") */
+export default function FactoryMiniMap({ stateOf, onPick, bottomReserve = 28, badgeOf = null, dimMap = false, focusNames = null, onHover = null }) {
   const K = useTvShell() ? TV_LBL_K : 1;
   const [map, setMap] = useState(null);      // { image_url }
   const [regions, setRegions] = useState([]);
@@ -133,12 +139,13 @@ export default function FactoryMiniMap({ stateOf, onPick, bottomReserve = 28 }) 
       const below = at[1] - bh * 1.08 < 0;   // ชิดขอบบน = การ์ดลงไปอยู่ในกรอบ (ตรงกับตอนวาด)
       return { x: at[0] - bw / 2, y: below ? at[1] : at[1] - bh * 1.08, w: bw, h: bh };
     }) : [];
+    if (badgeOf) return [];   // โหมดเลข: ไม่วางชื่อไลน์
     return plainLabelLayout(regions, { wrapW: w, wrapH: h, reserved, skip: new Set(marks.map(m => m.r.line_name)), charPx: 7.4 * K, linePx: 18 * K });
-  }, [regions, marks, boxWH, K]);
+  }, [regions, marks, boxWH, K, badgeOf]);
 
-  if (err) return <div style={box}>⚠ โหลดผังโรงงานไม่สำเร็จ — {err}</div>;
+  if (err) return <div style={box}>{tr('⚠ โหลดผังโรงงานไม่สำเร็จ —')} {err}</div>;
   if (!map?.image_url) {
-    return <div style={box}>ยังไม่มีรูปผังโรงงาน — ให้ผู้ดูแลอัปโหลดที่ ตั้งค่าผัง/Floorplan ก่อน</div>;
+    return <div style={box}>{tr('ยังไม่มีรูปผังโรงงาน — ให้ผู้ดูแลอัปโหลดที่ ตั้งค่าผัง/Floorplan ก่อน')}</div>;
   }
 
   return (
@@ -149,15 +156,15 @@ export default function FactoryMiniMap({ stateOf, onPick, bottomReserve = 28 }) 
        เพราะ wrapper กว้างเท่ารูปเสมอ (ถ้าไปคุมที่ img ตรงๆ รูปจะแคบกว่า wrapper แล้วกรอบเลื่อน) */
     <div ref={wrapRef} style={{ display: 'flex', justifyContent: 'center' }}>
       <div ref={boxRef} style={{
-        position: 'relative', width: '100%', borderRadius: 10, overflow: 'hidden',
+        position: 'relative', width: '100%', borderRadius: 'var(--r-md)', overflow: 'hidden',
         border: '1px solid var(--border)', background: '#0a0a0f',
         maxWidth: ar && availH ? availH * ar : undefined,
         /* กันภาพสูงพรวดก่อน onLoad (ยังไม่รู้ aspect) — ตั้งให้ **ใหญ่กว่าสูตรความกว้าง 10px**
            เหมือน /factory-map (สูตร 210px vs clamp 200px) → สูตรความกว้างชนะเสมอ ไม่มีทาง crop */
         maxHeight: availH ? availH + 10 : undefined,
       }}>
-        <img ref={imgRef} src={map.image_url} alt="ผังโรงงาน" onLoad={readAr}
-          style={{ display: 'block', width: '100%', height: 'auto', userSelect: 'none' }} />
+        <img ref={imgRef} src={map.image_url} alt={tr("ผังโรงงาน")} onLoad={readAr}
+          style={{ display: 'block', width: '100%', height: 'auto', userSelect: 'none', ...(dimMap ? { filter: 'grayscale(0.75) brightness(0.55)' } : null) }} />
         <div style={{ position: 'absolute', inset: 0, background: 'rgba(6,8,14,0.14)', pointerEvents: 'none' }} />
 
         {/* ⚠️ preserveAspectRatio=none + vector-effect: non-scaling-stroke — พิกัดเป็น % ของรูปจริง
@@ -166,14 +173,17 @@ export default function FactoryMiniMap({ stateOf, onPick, bottomReserve = 28 }) 
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
           {regions.map(r => {
             const st = stateOf?.(r.line_name) || DIM;
+            const faded = focusNames && !focusNames.has(r.line_name);
+            const lit = focusNames && focusNames.has(r.line_name);
             return (
-              <polygon key={r.id} points={ptsStr(r.points)}
+              <polygon key={r.id} points={ptsStr(r.points)} opacity={faded ? 0.25 : 1}
+                onMouseEnter={onHover ? () => onHover(r.line_name) : undefined} onMouseLeave={onHover ? () => onHover(null) : undefined}
                 className={st.blink ? 'region-alarm' : undefined}
                 /* ค่าเดียวกับ /factory-map เป๊ะ: ปกติ = fill 2b / stroke 1.75 · ไลน์ที่มีปัญหาใช้ค่า
                    "ไฮไลต์" ของผังรวม (55 / 3.5) — ต่างกันได้แค่ "เน้น" ห้ามต่างกันที่สเกล/สี */
-                fill={st.blink ? undefined : tint(st.color, st.label ? 'line' : 'dim')}
+                fill={st.blink ? undefined : tint(st.color, st.label || lit || (badgeOf && dimMap) ? 'line' : 'dim')}
                 stroke={st.blink ? undefined : st.color}
-                strokeWidth={st.label ? '3.5' : '1.75'} vectorEffect="non-scaling-stroke" strokeLinejoin="round"
+                strokeWidth={st.label || lit ? '3.5' : badgeOf ? '2.25' : '1.75'} vectorEffect="non-scaling-stroke" strokeLinejoin="round"
                 style={{ pointerEvents: onPick ? 'auto' : 'none', cursor: onPick ? 'pointer' : 'default' }}
                 onClick={onPick ? () => onPick(r.line_name) : undefined} />
             );
@@ -195,6 +205,34 @@ export default function FactoryMiniMap({ stateOf, onPick, bottomReserve = 28 }) 
             }}>{n.name}</div>
         ))}
 
+        {/* 🔢 โหมดเลข — วงกลมเลข + วงแหวน % (pct) สีสถานะ ที่จุดยึดเดียวกับป้าย (labelAnchor) · ชื่อเต็มอยู่ใน title */}
+        {badgeOf && regions.map(r => {
+          const b = badgeOf(r.line_name);
+          if (!b || (r.points || []).length < 3) return null;
+          const [x, y] = anchorOf(r.points);
+          const c = stateOf?.(r.line_name)?.color || DIM.color;
+          const faded = focusNames && !focusNames.has(r.line_name);
+          const D = 34, R0 = 14, C = 2 * Math.PI * R0;
+          const pct = b.pct == null ? null : Math.max(0, Math.min(1, b.pct));
+          return (
+            <div key={`bd-${r.id}`} title={b.title || r.line_name} onClick={onPick ? () => onPick(r.line_name) : undefined}
+              onMouseEnter={onHover ? () => onHover(r.line_name) : undefined} onMouseLeave={onHover ? () => onHover(null) : undefined}
+              style={{ position: 'absolute', left: `${x}%`, top: `${y}%`, transform: `translate(-50%, -50%)${focusNames?.has(r.line_name) ? ' scale(1.2)' : ''}`,
+                transition: 'transform .15s, opacity .15s', opacity: faded ? 0.3 : 1, ...(K !== 1 ? { zoom: K } : {}),
+                width: D, height: D, pointerEvents: onPick || onHover ? 'auto' : 'none', cursor: onPick ? 'pointer' : 'default' }}>
+              <svg width={D} height={D} viewBox={`0 0 ${D} ${D}`} style={{ position: 'absolute', inset: 0, overflow: 'visible' }}>
+                <circle cx={D / 2} cy={D / 2} r={R0 + 2.5} fill="var(--bg)" opacity="0.88" />
+                <circle cx={D / 2} cy={D / 2} r={R0} fill="none" stroke="var(--border2)" strokeWidth="3"
+                  strokeDasharray={pct == null ? '3 3' : undefined} />
+                {pct != null && <circle cx={D / 2} cy={D / 2} r={R0} fill="none" stroke={c} strokeWidth="3.5" strokeLinecap="round"
+                  strokeDasharray={`${C * pct} ${C}`} transform={`rotate(-90 ${D / 2} ${D / 2})`} />}
+              </svg>
+              <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 13, fontWeight: 800, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{b.text}</span>
+            </div>
+          );
+        })}
+
         {/* ป้าย = HTML (ไม่โดน viewBox ยืดผิดสัดส่วน — กฎเดียวกับ marker บนผังไลน์) */}
         {marks.map(({ r, st, at }) => {
           // เหนือกรอบไม่มีที่ (ไลน์ชิดขอบบนผัง) = วางในกรอบแทน — กรอบผัง overflow:hidden จะตัดป้ายทิ้งครึ่งใบ
@@ -211,11 +249,11 @@ export default function FactoryMiniMap({ stateOf, onPick, bottomReserve = 28 }) 
             <div style={{
               ...(K !== 1 ? { zoom: K } : {}),
               background: 'linear-gradient(180deg, rgba(8,10,16,0.9), rgba(8,10,16,0.76))', border: `1px solid ${tint(st.color, 'line')}`,
-              borderBottom: `2.5px solid ${st.color}`, borderRadius: 7, padding: '2px 8px 3px', textAlign: 'center',
+              borderBottom: `2.5px solid ${st.color}`, borderRadius: 'var(--r-md)', padding: '2px 8px 3px', textAlign: 'center',
               textShadow: '0 1px 3px rgba(0,0,0,0.95)', boxShadow: 'var(--shadow-float)',
             }}>
               <div style={{ fontSize: 'clamp(11px,1vw,14px)', fontWeight: 800, color: '#fff', letterSpacing: 0.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.3 }}>{r.line_name}</div>
-              <div style={{ fontSize: 'clamp(11px,0.9vw,12.5px)', fontWeight: 800, color: st.color, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.25 }}>{st.label}</div>
+              <div style={{ fontSize: 'clamp(11px,0.9vw,12.5px)', fontWeight: 800, color: st.color, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.25 }}>{tr(st.label)}</div>
             </div>
           </div>
           );

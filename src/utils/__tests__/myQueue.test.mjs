@@ -66,9 +66,12 @@ test('🔴 moWaitingOn — ขั้นที่รอ "ตำแหน่ง" �
   }
 });
 
-test('moWaitingOn — ใบปิด/ตีกลับ (ไม่อยู่ในลูป) คืน meta = null', () => {
+test('moWaitingOn — ใบที่ "ไม่มีใครต้องทำต่อ" คืน meta = null', () => {
   assert.equal(moWaitingOn(mo({ status: 'closed', current_step: 7 })).meta, null);
-  assert.equal(moWaitingOn(mo({ status: 'returned', current_step: 1 })).meta, null);
+  /* 🔄 **แก้เทสนี้ 16/11 (คำสั่ง user)** — เดิมบรรทัดนี้ล็อกว่าใบ `returned` ต้องคืน null ด้วย
+     ซึ่งคือพฤติกรรมที่ทำให้ใบตีกลับหลุดจากคิวทุกชั้น (9 ใบ เก่าสุด 52 วัน · วัด 13/11)
+     ตอนนี้ใบตีกลับมีเจ้าภาพ = ผู้แจ้ง (ดูหมวด "ใบนอกลูปขั้น" ท้ายไฟล์) */
+  assert.ok(moWaitingOn(mo({ status: 'returned', current_step: 1 })).meta, 'ใบตีกลับต้องมีเจ้าภาพแล้ว');
 });
 
 test('🔴 moWaitingOn — ขั้นรอ = ขั้น "ถัดไป" จาก status ไม่ใช่ current_step (workflow audit 05/10)', () => {
@@ -104,7 +107,7 @@ test('🔴 inMyScope — ใบที่ไม่ระบุส่วนงา�
 });
 
 // ── buildQueue ─────────────────────────────────────────────────────────────
-const EMPTY_SRC = { mo: [], sessions: [], fourM: [], actions: [], summaries: [] };
+const EMPTY_SRC = { mo: [], sessions: [], fourM: [], actions: [], bins: [], summaries: [] };
 
 test('buildQueue — ใบที่รอเราเข้าชั้น mine · ใบส่วนงานเดียวกันเข้าชั้น unit', () => {
   const q = buildQueue({
@@ -135,7 +138,7 @@ test('🔴 buildQueue — เรียงเก่าสุดขึ้นก่
 });
 
 test('🔴 buildQueue — ก้อนที่โหลดไม่สำเร็จต้องติด partial (ห้ามเงียบแล้วขึ้นว่าไม่มีงาน)', () => {
-  const q = buildQueue({ mo: undefined, sessions: [], fourM: [], actions: [] }, ME, NOW);
+  const q = buildQueue({ mo: undefined, sessions: [], fourM: [], actions: [], bins: [] }, ME, NOW);
   assert.equal(q.partial, true);
   assert.deepEqual(q.missing, ['mo']);
 });
@@ -240,7 +243,7 @@ test('buildQueue — นับ unattributed แยกจาก "ของหน�
       { id: 'c', status: 'checked', mtn_dept: 'production', dept_section: null },   // ชี้ไม่ได้
       { id: 'd', status: 'checked', mtn_dept: 'production', dept_section: '' },     // ชี้ไม่ได้
     ],
-    sessions: [], fourM: [], actions: [],
+    sessions: [], fourM: [], actions: [], bins: [],
   }, ME);
   assert.equal(q.unattributed, 2, 'นับเฉพาะใบที่ไม่ระบุส่วนงาน');
   assert.equal(q.counts.unit, 1, 'ใบของหน่วยอื่นไม่เข้าคิว และไม่ถูกนับเป็น unattributed');
@@ -250,7 +253,7 @@ test('buildQueue — นับ unattributed แยกจาก "ของหน�
 test('buildQueue — ไม่จำกัดขอบเขต = unattributed ต้องเป็น 0 (ห้ามเตือนหมาหอน)', () => {
   const q = buildQueue({
     mo: [{ id: 'c', status: 'checked', mtn_dept: 'production', dept_section: null }],
-    sessions: [], fourM: [], actions: [],
+    sessions: [], fourM: [], actions: [], bins: [],
   }, { uid: 'u1', name: 'x', sections: [] });
   assert.equal(q.unattributed, 0);
   assert.equal(q.counts.unit, 1, 'ไม่จำกัดขอบเขต = เห็นใบนั้นตามปกติ');
@@ -267,7 +270,7 @@ test('floor — ใบ MO ที่รอตำแหน่ง ต้องส�
       { id: 'c', status: 'checked', mtn_dept: 'production', dept_section: null, work_date: '2026-09-10' },
       { id: 'd', status: 'pending', mtn_dept: 'production', dept_section: 'PD1', work_date: '2026-09-25' },
     ],
-    sessions: [], fourM: [], actions: [],
+    sessions: [], fourM: [], actions: [], bins: [],
   }, ME, new Date('2026-10-06T03:00:00Z'));
   const qa = q.floor.find(f => f.key.startsWith('mowait:'));
   assert.ok(qa, 'ต้องมีบรรทัดสรุปของขั้นที่รอตำแหน่ง');
@@ -282,7 +285,7 @@ test('floor — ใบ MO ที่รอตำแหน่ง ต้องส�
 test('🔴 floor — บรรทัดสรุปนี้ห้ามขึ้น badge (badge นับเฉพาะ mine)', () => {
   const q = buildQueue({
     mo: [{ id: 'a', status: 'checked', mtn_dept: 'production', dept_section: 'PD3', work_date: '2026-09-01' }],
-    sessions: [], fourM: [], actions: [],
+    sessions: [], fourM: [], actions: [], bins: [],
   }, ME);
   assert.ok(q.floor.some(f => f.key.startsWith('mowait:')));
   assert.equal(q.counts.mine, 0);
@@ -290,7 +293,7 @@ test('🔴 floor — บรรทัดสรุปนี้ห้ามขึ�
 });
 
 test('floor — ไม่มีใบรอตำแหน่ง = ไม่มีบรรทัดสรุป (ห้ามวาดบรรทัดเลข 0)', () => {
-  const q = buildQueue({ mo: [], sessions: [], fourM: [], actions: [] }, ME);
+  const q = buildQueue({ mo: [], sessions: [], fourM: [], actions: [], bins: [] }, ME);
   assert.equal(q.floor.filter(f => f.key.startsWith('mowait:')).length, 0);
 });
 
@@ -305,7 +308,7 @@ test('🔴 floor — ขั้น 7 ที่ stage ต่างกัน (JIG=�
       { id: 'jig', status: 'handover', mtn_dept: 'jig_maintenance', dept_section: 'PD3', work_date: '2026-09-01' },
       { id: 'mtn', status: 'handover', mtn_dept: 'maintenance', dept_section: 'PD3', work_date: '2026-09-01',
         mtn_head_at: '2026-09-02T00:00:00Z', approve_at: null },
-    ], sessions: [], fourM: [], actions: [],
+    ], sessions: [], fourM: [], actions: [], bins: [],
   }, ME, new Date('2026-10-06T03:00:00Z'));
   const rows = q.floor.filter(f => f.key.startsWith('mowait:'));
   assert.equal(rows.length, 2, 'คนละ stage = คนละกอง ห้ามยุบด้วยเลขขั้น');
@@ -316,7 +319,7 @@ test('🔴 floor — ขั้น 7 ที่ stage ต่างกัน (JIG=�
 test('floor — ลิงก์ต้องพาไปถึงกองนั้น: กรอง stage + ถอย from= ให้ครอบใบเก่าสุด', () => {
   const q = buildQueue({
     mo: [{ id: 'a', status: 'checked', mtn_dept: 'production', dept_section: 'PD3', work_date: '2026-09-26' }],
-    sessions: [], fourM: [], actions: [],
+    sessions: [], fourM: [], actions: [], bins: [],
   }, ME, new Date('2026-10-06T03:00:00Z'));
   const qa = q.floor.find(f => f.key === 'mowait:qa');
   assert.match(qa.to, /^\/mtn-repair\?tab=list&wait=qa&from=2026-09-26$/,
@@ -337,7 +340,7 @@ test('soleSigner — ผจก.ฝ่ายผู้แจ้งในขอบ�
   const old = { id: 'r1', mo_no: 'MO-1', status: 'repaired', work_date: '2026-09-01', dept_section: 'PD3', reported_by_uid: 'me' }
   const mgr = { uid: 'me', name: 'ผจก', sections: ['PD3'], actorSide: 'reporter', posRank: 60, can: (k) => k === 'close_cost' }
   assert.equal(soleSignerFor(handover, moWaitingOn(handover), mgr), true)
-  const q = buildQueue({ mo: [old, handover], sessions: [], fourM: [], actions: [], summaries: [] }, mgr, new Date('2026-10-13T03:00:00Z'))
+  const q = buildQueue({ mo: [old, handover], sessions: [], fourM: [], actions: [], bins: [], summaries: [] }, mgr, new Date('2026-10-13T03:00:00Z'))
   assert.deepEqual(q.mine.map(i => i.key), ['mo:h1', 'mo:r1'])   // ช่องเซ็นขึ้นก่อนแม้ใหม่กว่า
   assert.equal(q.mine[0].sign, true)
   assert.ok(!q.unit.some(i => i.key === 'mo:h1'))                 // ไม่ซ้ำในคิวหน่วยงาน
@@ -359,7 +362,7 @@ test('soleSigner — ใบนอกขอบเขตส่วนงาน ไ�
   const { buildQueue, soleSignerFor, moWaitingOn } = await import('../myQueue.js')
   const other = { id: 'h2', status: 'handover', work_date: '2026-10-12', dept_section: 'PD1', mtn_dept: 'jig_maintenance' }
   const mgr = { uid: 'me', sections: ['PD3'], actorSide: 'reporter', posRank: 60, can: () => true }
-  const q = buildQueue({ mo: [other], sessions: [], fourM: [], actions: [], summaries: [] }, mgr, new Date('2026-10-13T03:00:00Z'))
+  const q = buildQueue({ mo: [other], sessions: [], fourM: [], actions: [], bins: [], summaries: [] }, mgr, new Date('2026-10-13T03:00:00Z'))
   assert.equal(q.mine.length, 0)
   const qa = { id: 'q1', status: 'checked', dept_section: 'PD3', mtn_dept: 'jig_maintenance', quality_related: true }
   assert.equal(soleSignerFor(qa, moWaitingOn(qa), mgr), false)
@@ -368,14 +371,14 @@ test('soleSigner — ใบนอกขอบเขตส่วนงาน ไ�
 test('soleSigner — ไม่ส่งเกณฑ์ตำแหน่งมา = พฤติกรรมเดิม (ไม่มีใบรอเซ็นใน mine)', async () => {
   const { buildQueue } = await import('../myQueue.js')
   const h = { id: 'h1', status: 'handover', work_date: '2026-10-12', dept_section: 'PD3', mtn_dept: 'jig_maintenance' }
-  const q = buildQueue({ mo: [h], sessions: [], fourM: [], actions: [], summaries: [] }, { uid: 'me', sections: ['PD3'] }, new Date('2026-10-13T03:00:00Z'))
+  const q = buildQueue({ mo: [h], sessions: [], fourM: [], actions: [], bins: [], summaries: [] }, { uid: 'me', sections: ['PD3'] }, new Date('2026-10-13T03:00:00Z'))
   assert.equal(q.mine.length, 0)
   assert.equal(q.unit.length, 1)
 })
 
 test('⬆️ คำขอขึ้นขั้น: เฉพาะคนอนุมัติได้ · บรรทัดเดียวชั้น unit · ขั้น 100 ต้องสิทธิ์แยก · ตัดตามส่วนงาน · ไม่ขึ้น badge', () => {
   const now = new Date('2026-10-13T03:00:00Z');
-  const src = { mo: [], sessions: [], fourM: [], actions: [], levelUps: [
+  const src = { mo: [], sessions: [], fourM: [], actions: [], bins: [], levelUps: [
     { id: 1, to_level: 50, requested_at: '2026-09-07T00:00:00Z', section: 'PD3' },
     { id: 2, to_level: 100, requested_at: '2026-08-24T00:00:00Z', section: 'PD3' },
     { id: 3, to_level: 75, requested_at: '2026-10-01T00:00:00Z', section: 'PD4' },
@@ -405,7 +408,7 @@ test('🔢 floor — นับกองจาก moAll (ชุดเต็ม) �
     mo:    [CHECKED('a', '2026-09-01'), CHECKED('b', '2026-09-02')],              // ชุดรายการ 2 ใบ
     moAll: [CHECKED('a', '2026-09-01'), CHECKED('b', '2026-09-02'),
             CHECKED('c', '2026-09-03'), CHECKED('d', '2026-09-04')],              // ของจริง 4 ใบ
-    sessions: [], fourM: [], actions: [],
+    sessions: [], fourM: [], actions: [], bins: [],
   }, ME, new Date('2026-10-22T03:00:00Z'));
   const qa = q.floor.find(f => f.key.startsWith('mowait:'));
   assert.equal(qa.count, 4, 'ต้องได้ยอดจริงจาก moAll');
@@ -417,7 +420,7 @@ test('🔢 floor — นับกองจาก moAll (ชุดเต็ม) �
 test('🔴 ไม่ส่ง moAll = ถอยไปนับจาก mo แบบเดิม **แต่ต้องติดธงว่านับไม่ครบ**', () => {
   const q = buildQueue({
     mo: [CHECKED('a', '2026-09-01'), CHECKED('b', '2026-09-02')],
-    sessions: [], fourM: [], actions: [],
+    sessions: [], fourM: [], actions: [], bins: [],
   }, ME, new Date('2026-10-22T03:00:00Z'));
   const qa = q.floor.find(f => f.key.startsWith('mowait:'));
   assert.equal(qa.count, 2, 'พฤติกรรมเดิมเป๊ะ (นับจาก mo)');
@@ -430,7 +433,7 @@ test('🔴 moAll ชนเพดานคิวรี (moAllCapped) = ยัง�
     mo: [CHECKED('a', '2026-09-01')],
     moAll: [CHECKED('a', '2026-09-01'), CHECKED('b', '2026-09-02')],
     moAllCapped: true,
-    sessions: [], fourM: [], actions: [],
+    sessions: [], fourM: [], actions: [], bins: [],
   }, ME, new Date('2026-10-22T03:00:00Z'));
   const qa = q.floor.find(f => f.key.startsWith('mowait:'));
   assert.equal(qa.count, 2);
@@ -442,7 +445,7 @@ test('🔢 ชุดนับไม่กระทบรายการชั้
   const q = buildQueue({
     mo:    [CHECKED('a', '2026-09-01')],
     moAll: [CHECKED('a', '2026-09-01'), CHECKED('b', '2026-09-02'), CHECKED('c', '2026-09-03')],
-    sessions: [], fourM: [], actions: [],
+    sessions: [], fourM: [], actions: [], bins: [],
   }, ME, new Date('2026-10-22T03:00:00Z'));
   assert.equal(q.unit.filter(i => i.key.startsWith('mo:')).length, 1,
     'ชุดนับห้ามโผล่เป็นรายการ (คอลัมน์บาง วาดแถวไม่ได้)');
@@ -456,7 +459,7 @@ test('🔢 ชุดนับต้องผ่าน moWaitMeta เหมือ
       { id: 'j', status: 'checked', mtn_dept: 'production', dept_section: 'PD3', work_date: '2026-09-01' },
       { id: 'm', status: 'checked', mtn_dept: 'maintenance', dept_section: 'PD3', work_date: '2026-09-02' },
     ],
-    sessions: [], fourM: [], actions: [],
+    sessions: [], fourM: [], actions: [], bins: [],
   }, ME, new Date('2026-10-22T03:00:00Z'));
   const qa = q.floor.find(f => f.key === 'mowait:qa');
   assert.equal(qa.count, 1,
@@ -472,7 +475,7 @@ test('🔢 ชุดนับต้องผ่าน moWaitMeta เหมือ
    เดิม `partial` ติดเฉพาะตอนคิวรี **ล่ม** (need() เจอ null) ⇒ ตัดแถวทิ้งเงียบสนิท */
 test('🔴 moTruncated = partial (ชนเพดานต้องบอก ไม่ใช่ยืนยันว่าไม่มีงาน)', () => {
   const me = { name: 'ก', sections: [], posRank: 60, actorSide: 'reporter', can: () => true };
-  const base = { mo: [], sessions: [], fourM: [], actions: [], summaries: [] };
+  const base = { mo: [], sessions: [], fourM: [], actions: [], bins: [], summaries: [] };
   assert.equal(buildQueue(base, me).partial, false, 'โหลดครบต้องไม่ติด partial');
   const cut = buildQueue({ ...base, moTruncated: true }, me);
   assert.equal(cut.partial, true, 'ชนเพดานแล้วต้องติด partial');
@@ -497,7 +500,7 @@ const closeRow = (id, d) => ({
 test('✍️ ใบรอเราเซ็น ≥2 ใบ ⇒ มีบรรทัดสรุปบนสุด + ลิงก์กรอง ?wait=', () => {
   const q = buildQueue({
     mo: [closeRow('a', '2026-09-20'), closeRow('b', '2026-09-22'), closeRow('c', '2026-09-24')],
-    sessions: [], fourM: [], actions: [], summaries: [],
+    sessions: [], fourM: [], actions: [], bins: [], summaries: [],
   }, MGR, NOW);
   const top = q.mine[0];
   assert.ok(top?.rollup, 'บรรทัดสรุปต้องอยู่บนสุดของชั้น mine');
@@ -510,7 +513,7 @@ test('✍️ ใบรอเราเซ็น ≥2 ใบ ⇒ มีบรร�
 });
 
 test('✍️ ใบเดียวไม่ต้องมีบรรทัดสรุป (แถวของใบพาไปถึงใบได้ตรงกว่า)', () => {
-  const q = buildQueue({ mo: [closeRow('a', '2026-09-20')], sessions: [], fourM: [], actions: [], summaries: [] }, MGR, NOW);
+  const q = buildQueue({ mo: [closeRow('a', '2026-09-20')], sessions: [], fourM: [], actions: [], bins: [], summaries: [] }, MGR, NOW);
   assert.equal(q.mine.filter(x => x.rollup).length, 0);
   assert.equal(q.counts.mine, 1);
   assert.match(q.mine[0].to, /\?mo=/, 'ใบเดียว = ลิงก์ตรงไปที่ใบนั้น');
@@ -532,7 +535,7 @@ const ackRow = (id, extra = {}) => ({
 });
 
 test('✍️ ใบ MTN ที่ ผจก.ยังไม่เซ็นรับทราบ ⇒ มีป้ายในคิว + บอกว่าไม่บล็อกงาน', () => {
-  const q = buildQueue({ mo: [ackRow('a'), ackRow('b')], sessions: [], fourM: [], actions: [], summaries: [] }, ACK_MGR, NOW);
+  const q = buildQueue({ mo: [ackRow('a'), ackRow('b')], sessions: [], fourM: [], actions: [], bins: [], summaries: [] }, ACK_MGR, NOW);
   const ack = q.mine.find(x => x.key === 'sign:ack_dept');
   assert.ok(ack, 'ต้องมีป้าย "รอคุณเซ็นรับทราบ"');
   assert.match(ack.title, /รอคุณเซ็นรับทราบ 2 ใบ/);
@@ -542,12 +545,12 @@ test('✍️ ใบ MTN ที่ ผจก.ยังไม่เซ็นรั
 });
 
 test('✍️ ใบที่ปิดแล้วแต่ยังไม่เซ็นรับทราบ ก็ต้องนับ (ย้อนเซ็นได้)', () => {
-  const q = buildQueue({ mo: [ackRow('c', { status: 'closed', current_step: 8 })], sessions: [], fourM: [], actions: [], summaries: [] }, ACK_MGR, NOW);
+  const q = buildQueue({ mo: [ackRow('c', { status: 'closed', current_step: 8 })], sessions: [], fourM: [], actions: [], bins: [], summaries: [] }, ACK_MGR, NOW);
   assert.ok(q.mine.find(x => x.key === 'sign:ack_dept'), 'ใบปิดแล้วต้องยังนับ — ช่องนี้ยังว่างอยู่จริง');
 });
 
 test('✍️ เซ็นแล้ว / ใบฟอร์ม JIG / นอกขอบเขต = ไม่นับ', () => {
-  const none = (mo) => buildQueue({ mo, sessions: [], fourM: [], actions: [], summaries: [] }, ACK_MGR, NOW)
+  const none = (mo) => buildQueue({ mo, sessions: [], fourM: [], actions: [], bins: [], summaries: [] }, ACK_MGR, NOW)
     .mine.find(x => x.key === 'sign:ack_dept');
   assert.equal(none([ackRow('d', { dept_manager_at: '2026-09-21T00:00:00Z' })]), undefined, 'เซ็นแล้ว');
   assert.equal(none([ackRow('e', { mtn_dept: 'jig_maintenance' })]), undefined, 'ฟอร์ม JIG ไม่มีช่องนี้');
@@ -558,7 +561,218 @@ test('🔴 ใบที่ลายเซ็นนี้บล็อกงาน
   /* ใบแบบนั้นขึ้นเป็นรายการของตัวเองอยู่แล้ว (moWaitMeta → approve_first)
      ถ้านับซ้ำ badge จะเกินจริง และป้ายที่เขียนว่า "ไม่บล็อกงาน" จะกลายเป็นคำโกหก */
   const blocked = ackRow('g', { purpose: 'improve', status: 'pending', current_step: 1 });
-  const q = buildQueue({ mo: [blocked], sessions: [], fourM: [], actions: [], summaries: [] }, ACK_MGR, NOW);
+  const q = buildQueue({ mo: [blocked], sessions: [], fourM: [], actions: [], bins: [], summaries: [] }, ACK_MGR, NOW);
   assert.equal(q.mine.filter(x => x.key === 'sign:ack_dept').length, 0, 'ต้องไม่มีป้ายรับทราบ');
   assert.ok(q.mine.length >= 1, 'แต่ใบต้องยังขึ้นเป็นรายการรออนุมัติของตัวเอง');
+});
+
+/* ══ 🟡 ถังเหลืองรอพิจารณา (2026-11-09) ═════════════════════════════════════════
+   วัดจริง 4 วันแรกหลังเปิดแท็กอัตโนมัติ: ตั้งแท็ก 14 ใบ **ตัดสินแล้ว 0 ใบ**
+   ⇒ กองนี้ต้องถูก "ดึง" ให้เห็นจากคิวงาน ไม่ใช่รอให้คนเปิดหน้าถังเอง */
+const BIN_NOW = new Date('2026-11-09T03:00:00Z');          // 10:00 ไทย
+const binRow = (o = {}) => ({ id: 'b1', work_date: '2026-11-07', line_name: 'HDF1',
+  section: 'PD1', mat_no: '90031602', qty: 3, cause: 'รอยร้าว/แตก', ...o });
+const binSrc = (bins) => ({ mo: [], sessions: [], fourM: [], actions: [], summaries: [], bins });
+
+test('🟡 หน่วยเรา = บรรทัดสรุปชั้น unit · ทั้งโรงงาน = บรรทัดสรุปชั้น floor', () => {
+  const q = buildQueue(binSrc([binRow(), binRow({ id: 'b2', section: 'PD3', line_name: 'LASER-789', qty: 5 })]),
+    { uid: 'me', sections: ['PD1'] }, BIN_NOW);
+  const mineRow = q.unit.find(x => x.key === 'binpend_unit');
+  assert.equal(mineRow?.count, 1, 'ชั้น unit นับเฉพาะของหน่วยเรา');
+  assert.match(mineRow.detail, /3 ชิ้น/);
+  assert.equal(q.unit.filter(x => String(x.key).startsWith('bin:')).length, 0, '🔴 ห้ามแตกรายตัว (เพดาน 6 แถวจะดันงานอื่นตกจอ)');
+  const sum = q.floor.find(x => x.key === 'binpend');
+  assert.equal(sum?.count, 2, 'บรรทัดสรุปนับทั้งโรงงาน (ไม่กรองขอบเขต)');
+  assert.match(sum.detail, /8 ชิ้น/);
+});
+
+test('🔴 QA ตัดสินแต่ส่วนงานไม่ตรงไลน์ผลิต — ต้องยังเห็นกองผ่านชั้น floor', () => {
+  /* มีแต่ชั้น unit = คนที่ต้องตัดสินไม่เห็นอะไรเลย = เหตุผลที่ต้องมี 2 ชั้น */
+  const q = buildQueue(binSrc([binRow()]), { uid: 'qa', sections: ['QA'] }, BIN_NOW);
+  assert.equal(q.unit.find(x => x.key === 'binpend_unit'), undefined, 'ไม่มีใบของส่วนงาน QA');
+  assert.equal(q.floor.find(x => x.key === 'binpend')?.count, 1, 'แต่ต้องเห็นกองผ่านชั้นโรงงาน');
+});
+
+test('🟡 เกินอายุแท็ก 5 วัน (WI-PD3-087 §5.6) ต้องติดธงทั้งรายตัวและบรรทัดสรุป', () => {
+  const old = binRow({ id: 'b3', work_date: '2026-11-01' });     // 8 วัน
+  const q = buildQueue(binSrc([old]), { uid: 'me', sections: [] }, BIN_NOW);
+  assert.equal(q.unit.find(x => x.key === 'binpend_unit').tag, 'เกินอายุแท็กแล้ว');
+  assert.match(q.unit.find(x => x.key === 'binpend_unit').detail, /⏱ เกินอายุแท็ก 1/);
+  assert.match(q.floor.find(x => x.key === 'binpend').detail, /เก่าสุด 8 วัน/);
+  assert.equal(q.unit.find(x => x.key === 'binpend_unit').age, 8, 'อายุของแถว = ใบที่เก่าสุด');
+});
+
+test('🔴 โหลดคิวถังไม่ได้ = partial (ห้ามเงียบแล้วบอกว่าเคลียร์หมด) · ไม่มีใบ = ไม่มีบรรทัดสรุป', () => {
+  const fail = buildQueue({ mo: [], sessions: [], fourM: [], actions: [], summaries: [] }, ME, BIN_NOW);
+  assert.ok(fail.partial, 'ไม่ส่ง bins = โหลดไม่ครบ');
+  const empty = buildQueue(binSrc([]), ME, BIN_NOW);
+  assert.equal(empty.partial, false);
+  assert.equal(empty.floor.find(x => x.key === 'binpend'), undefined);
+});
+
+test('🔴 ถังเหลืองห้ามขึ้น badge (badge = ชั้น mine เท่านั้น)', () => {
+  const q = buildQueue(binSrc([binRow(), binRow({ id: 'b9' })]), { uid: 'me', sections: [] }, BIN_NOW);
+  assert.equal(badgeCount(q), 0, 'คิวหน่วยงาน/โรงงานห้ามทำให้เลขบนไอคอนเด้ง');
+});
+
+test('🔴 ถังแดงยังไม่ออกใบ → ชั้น unit บรรทัดเดียว (หัวหน้าแผนกทวง) · ไม่ส่งก้อน = ข้าม · null = partial', async () => {
+  const { buildQueue: bq } = await import('../myQueue.js');
+  const now = new Date('2026-11-10T03:00:00Z');
+  const me = { sections: ['PD3'] };
+  const reds = [
+    { id: 'a', work_date: '2026-11-05', qty: 3, section: 'PD3' },
+    { id: 'b', work_date: '2026-11-09', qty: 2, section: 'PD3' },
+    { id: 'c', work_date: '2026-11-09', qty: 9, section: 'PD1' },
+  ];
+  const q = bq({ redBins: reds }, me, now);
+  const row = q.unit.find(x => x.key === 'binred_unit');
+  assert.ok(row);
+  assert.equal(row.count, 2);
+  assert.match(row.detail, /5 ชิ้น/);
+  assert.equal(q.mine.some(x => x.key === 'binred_unit'), false);
+  assert.equal(bq({}, me, now).missing.includes('redBins'), false);
+  assert.ok(bq({ redBins: null }, me, now).missing.includes('redBins'));
+});
+
+test('📐 RFQ รอ IEC ประเมิน (เฟส 2a) — เข้าชั้น unit เฉพาะคนมีสิทธิ์ rfq:assess · ไม่ผ่าน keep (ไม่มีส่วนงาน) · ไม่ขึ้น badge · ไม่ส่ง = ไม่ partial', () => {
+  const now = new Date('2026-11-13T03:00:00Z');
+  const src = { mo: [], moAll: [], sessions: [], fourM: [], actions: [], summaries: [], bins: [], redBins: [],
+    rfqAssess: [{ id: 'a1', rfq_id: 'r1', round: 2, requested_at: '2026-11-10', rfq_no: 'RFQ-2026-003', customer: 'FORD', model: 'P703', priority: 'urgent' }] };
+  const q = buildQueue(src, { sections: ['PD1'], canRfqAssess: true }, now);
+  const it = q.unit.find(x => x.key === 'rfqassess:a1');
+  assert.ok(it, 'ต้องอยู่ชั้น unit'); assert.equal(it.to, '/rfq?rfq=r1'); assert.match(it.detail, /รอบ 2/); assert.equal(it.tag, '🔴 ด่วน');
+  assert.equal(it.age, 3);
+  assert.equal(q.mine.some(x => x.key === 'rfqassess:a1'), false, 'ห้ามขึ้น mine/badge');
+  // ไม่มีสิทธิ์ = ไม่โหลด = ไม่ต้องติด partial
+  const q2 = buildQueue({ ...src, rfqAssess: undefined }, { sections: [], canRfqAssess: false }, now);
+  assert.equal(q2.unit.some(x => x.key.startsWith('rfqassess:')), false);
+  assert.equal(q2.missing.includes('rfqAssess'), false);
+  // มีสิทธิ์แต่โหลดล่ม = partial (ห้ามเงียบ)
+  const q3 = buildQueue({ ...src, rfqAssess: undefined }, { sections: [], canRfqAssess: true }, now);
+  assert.ok(q3.missing.includes('rfqAssess'));
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   👥 ใบที่มอบหมายช่างหลายคน + ↩️📤 ใบนอกลูปขั้น            2026-11-16 · คำสั่ง user
+   ตัวเลขในหมวดนี้ถอดจาก DR จริง 13/11: ใบขั้น 3 เปิดอยู่ 32 ใบ — มอบหมาย ≥2 คน **21 ใบ**
+   · `tech_main_uid` ว่างทั้ง 32 ใบ · ใบ `returned` 9 ใบ เก่าสุด 52 วัน
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/** src ที่ "โหลดครบทุกก้อน" — จำเป็นเมื่อทดสอบ badge (ขาดก้อนใด = `partial` = badgeCount คืน 0 ตามกฎ) */
+const whole = (rows) => ({ mo: rows, sessions: [], fourM: [], actions: [], bins: [] });
+
+/** ใบขั้น 3 (ช่างรับงานแล้ว) — ฟอร์ม JIG/DIE · `accept_at` ให้ stage เป็น service */
+const svc = (o) => mo({ status: 'assigned', current_step: 2, accept_at: '2026-11-04T01:00:00Z', ...o });
+
+test('ช่าง 2 คน — ใบต้องขึ้น mine ของ "ทั้งคู่" (เดิมไม่ขึ้นของใครเลย)', () => {
+  const row = svc({
+    assigned_to: 'นายวัชระ  ใจนิ่ม, นายสหพลล์  แสงชา',
+    assigned_techs: ['นายวัชระ  ใจนิ่ม', 'นายสหพลล์  แสงชา'],
+    tech_main: null, tech_main_uid: null,
+  });
+  const w = moWaitingOn(row);
+  assert.equal(w.meta.stage, 'service');
+  assert.equal(w.byName, true);
+  // 🔴 `who` (ตัวที่เอาไปโชว์) ต้องคงรูปเดิมเป๊ะ — จอห้ามเปลี่ยน
+  assert.equal(w.who.name, 'นายวัชระ  ใจนิ่ม, นายสหพลล์  แสงชา');
+  for (const nm of ['วัชระ  ใจนิ่ม', 'นายสหพลล์ แสงชา']) {
+    const q = buildQueue(whole([row]), { uid: 'u1', name: nm, sections: ['PD3'] }, NOW);
+    assert.equal(q.mine.length, 1, `${nm} ต้องเห็นใบนี้ใน mine`);
+    assert.equal(q.partial, false, 'src ครบ = ห้ามติด partial (ไม่งั้น badge คืน 0 โดยถูกต้อง)');
+    assert.equal(badgeCount(q), 1);
+  }
+  // คนอื่นในส่วนงานเดียวกันยังเป็นคิวหน่วยงาน ไม่ใช่ของเรา
+  const other = buildQueue({ mo: [row] }, { uid: 'u9', name: 'คนอื่น ไม่เกี่ยว', sections: ['PD3'] }, NOW);
+  assert.equal(other.mine.length, 0);
+  assert.equal(other.unit.length, 1);
+});
+
+test('ช่างคนเดียว + ไม่มี assigned_techs — พฤติกรรมเดิมเป๊ะ (ถอยไปแกะ assigned_to)', () => {
+  const row = svc({ assigned_to: 'ณัฐพล สีพิมพ์ขัด', assigned_techs: null, tech_main: null });
+  const q = buildQueue({ mo: [row] }, { uid: 'u2', name: 'ณัฐพล สีพิมพ์ขัด', sections: ['PD3'] }, NOW);
+  assert.equal(q.mine.length, 1);
+  assert.equal(moWaitingOn(row).who.name, 'ณัฐพล สีพิมพ์ขัด');
+});
+
+test('uid ของช่างหลักยังชนะชื่อ — และไม่บล็อกช่างคนที่ 2 ที่เทียบด้วยชื่อ', () => {
+  const row = svc({
+    assigned_to: 'ก ข, ค ง', assigned_techs: ['ก ข', 'ค ง'],
+    tech_main: 'ก ข', tech_main_uid: 'uid-main',
+  });
+  // ช่างหลักเข้าทาง uid (ชื่อในโปรไฟล์สะกดต่างก็ยังตรง)
+  assert.equal(buildQueue({ mo: [row] }, { uid: 'uid-main', name: 'สะกดคนละแบบ', sections: ['PD3'] }, NOW).mine.length, 1);
+  // 🔴 ช่างคนที่ 2 มี uid ของตัวเอง (ไม่ตรงกับ tech_main_uid) ต้องยังเข้าทางชื่อได้
+  assert.equal(buildQueue({ mo: [row] }, { uid: 'uid-other', name: 'ค ง', sections: ['PD3'] }, NOW).mine.length, 1);
+  // คนที่ไม่เกี่ยวเลย ยังต้องไม่เข้า
+  assert.equal(buildQueue({ mo: [row] }, { uid: 'uid-x', name: 'ไม่เกี่ยว เลย', sections: ['PD3'] }, NOW).mine.length, 0);
+});
+
+test('↩️ ใบตีกลับ — ต้องขึ้น mine ของผู้แจ้ง (เดิมหลุดทั้ง 3 ชั้น)', () => {
+  const row = mo({
+    status: 'returned', current_step: 1, mo_no: null,
+    reporter_prod: 'ฉัตรชัย  ใจรักเรียน', reporter_prod_uid: 'uid-rep',
+    returned_at: '2026-09-25T03:30:00Z',
+  });
+  const w = moWaitingOn(row);
+  assert.ok(w.meta, 'ใบตีกลับต้องมีเจ้าภาพ');
+  assert.equal(w.meta.offLoop, true);
+  assert.equal(w.step, null, 'ใบนอกลูปขั้นไม่มีเลขขั้น ห้ามแปลงเป็น 0');
+  const q = buildQueue(whole([row]), { uid: 'uid-rep', name: 'ฉัตรชัย ใจรักเรียน', sections: ['PD3'] }, NOW);
+  assert.equal(q.mine.length, 1);
+  assert.match(q.mine[0].title, /ตีกลับ/);
+  assert.equal(q.mine[0].to, `/mtn-repair?mo=${row.id}`, 'ต้องพาไปถึงใบนั้นจริง');
+  assert.equal(badgeCount(q), 1);
+});
+
+test('📤 ส่งซ่อมภายนอก — เข้าชั้นหน่วยงาน ไม่ใช่ mine และห้ามขึ้น badge', () => {
+  const row = mo({ status: 'waiting_vendor', current_step: 3, vendor_sent_at: '2026-11-01T02:00:00Z' });
+  const q = buildQueue({ mo: [row] }, { uid: 'u3', name: 'ใครก็ได้ ในหน่วย', sections: ['PD3'] }, NOW);
+  assert.equal(q.mine.length, 0);
+  assert.equal(q.unit.length, 1);
+  assert.equal(badgeCount(q), 0);
+  // 🔴 ห้ามหลุดไปอยู่บรรทัดสรุปชั้น floor (ลิงก์ ?wait= ของหน้า MO ไม่รู้จัก stage นี้ = กดแล้วลิสต์ว่าง)
+  assert.equal(q.floor.some(x => /status:/.test(x.key || '')), false);
+});
+
+test('ใบที่จบแล้วยังต้องไม่มีเจ้าภาพ — cancelled/transferred ห้ามโผล่ในคิว', () => {
+  for (const status of ['cancelled', 'rejected', 'transferred', 'closed']) {
+    const row = mo({ status, current_step: 3 });
+    assert.equal(moWaitingOn(row).meta, null, `${status} ต้องไม่มี meta`);
+    const q = buildQueue({ mo: [row] }, ME, NOW);
+    assert.equal(q.mine.length + q.unit.length, 0, `${status} ห้ามเข้าคิว`);
+  }
+});
+
+test('✍️ ใบตรวจ AM รออนุมัติ (A5 · 24/11) — บรรทัดเดียวต่อไลน์ · กรองขอบเขต · ไม่ขึ้น badge · ไม่มีสิทธิ์ = ไม่โหลด', () => {
+  const now = new Date('2026-11-24T03:00:00Z');
+  const base = { mo: [], moAll: [], sessions: [], fourM: [], actions: [], summaries: [], bins: [], redBins: [] };
+  const amPending = [
+    { id: 1, inspected_at: '2026-11-20T01:00:00Z', line_name: 'HDF1', section: 'PD3' },
+    { id: 2, inspected_at: '2026-11-10T01:00:00Z', line_name: 'HDF1', section: 'PD3' },
+    { id: 3, inspected_at: '2026-11-22T01:00:00Z', line_name: 'Line D3', section: 'PD2' },
+    { id: 4, inspected_at: '2026-11-22T01:00:00Z', line_name: 'ไม่มีในทะเบียน', section: undefined },
+  ];
+  const q = buildQueue({ ...base, amPending }, { sections: ['PD3'], canAmApprove: true }, now);
+  const rows = q.unit.filter(x => x.key.startsWith('amappr:'));
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].count, 2); assert.equal(rows[0].age, 14); assert.equal(rows[0].to, '/daily-checker?tab=amcheck');
+  assert.equal(q.mine.some(x => x.key.startsWith('amappr:')), false);
+  assert.equal(buildQueue({ ...base }, { sections: [], canAmApprove: false }, now).missing.includes('amPending'), false);
+  assert.ok(buildQueue({ ...base }, { sections: [], canAmApprove: true }, now).missing.includes('amPending'));
+  assert.ok(buildQueue({ ...base, amPending, amPendingTruncated: true }, { sections: [], canAmApprove: true }, now).missing.includes('am_pending_truncated'));
+});
+
+test('✍️ งาน e-Workflow ที่รอฉัน (25/11) — บรรทัดเดียวต่อใบงาน · unit · ไม่ขึ้น badge · ไม่ส่ง = ไม่ partial', () => {
+  const now = new Date('2026-11-25T03:00:00Z');
+  const base = { mo: [], moAll: [], sessions: [], fourM: [], actions: [], summaries: [], bins: [], redBins: [] };
+  const wfTasks = [
+    { id: 1, created_at: '2026-11-24T01:00:00Z', def: 'Poka-Yoke · รับทราบรายวัน', bound: true },
+    { id: 2, created_at: '2026-11-20T01:00:00Z', def: 'Poka-Yoke · รับทราบรายวัน', bound: true },
+  ];
+  const q = buildQueue({ ...base, wfTasks }, { uid: 'u1', sections: [] }, now);
+  const rows = q.unit.filter(x => x.key.startsWith('wf:'));
+  assert.equal(rows.length, 1); assert.equal(rows[0].count, 2); assert.equal(rows[0].age, 5);
+  assert.equal(q.mine.some(x => x.key.startsWith('wf:')), false);
+  assert.equal(buildQueue({ ...base }, { uid: 'u1', sections: [] }, now).missing.includes('wfTasks'), false);
+  assert.ok(buildQueue({ ...base, wfTasks: null }, { uid: 'u1', sections: [] }, now).missing.includes('wfTasks'));
 });

@@ -5,6 +5,7 @@ import useTabParam from '../utils/useTabParam';
 import PageHeader from '../components/PageHeader';
 import Page, { Hub } from '../components/Page';
 
+import { tr } from '../utils/i18n';
 /* ── Daily Checker — ศูนย์รวมระบบเช็ครายวันของไลน์ผลิต (2026-07-23) ──────────────────
    ขมวด Daily PM + LPA (+ ระบบเช็คอื่นที่จะเพิ่ม) เป็นหน้าเดียว แยกด้วยแท็บ
    - แต่ละแท็บ = component หน้าเดิม (embed ทั้งดุ้น ไม่แก้ของเดิม) แสดงตามสิทธิ์หน้านั้นๆ
@@ -17,13 +18,18 @@ const DailyPM           = lazy(() => import('./DailyPM'));
 const LayerProcessAudit = lazy(() => import('./LayerProcessAudit'));
 const PokaYokeCheck     = lazy(() => import('./PokaYokeCheck'));
 const BbsCheck          = lazy(() => import('./BbsCheck'));
+const PMCheckData       = lazy(() => import('./PMCheckData'));
+/* ✅ บันทึกผลตรวจ AM (19/11 · คำสั่ง user) — ตัวบันทึกเดียวกับ PM ช่าง แต่ล็อกเฉพาะทีม AM
+   (หน้า /pm?tab=check เหลือเฉพาะทีมช่าง · เปิดด้วยทีม AM จะถูกพามาที่นี่) · สิทธิ์ piggyback page:/pm-check เดิม */
+const AmCheck = () => <PMCheckData mode="am" />;
 
 // เพิ่มระบบเช็คใหม่ตรงนี้ (key/label/หน้าเดิมที่คุมสิทธิ์/component)
 const TABS = [
-  { key: 'pm',       label: '🔧 Autonomous Maintenance (AM)', page: '/daily-pm', Comp: DailyPM },
-  { key: 'pokayoke', label: '🛡️ Poka-Yoke Check',            page: '/pokayoke', Comp: PokaYokeCheck },
-  { key: 'lpa',      label: '📋 Layer Process Audit (LPA)',   page: '/lpa',      Comp: LayerProcessAudit },
-  { key: 'bbs',      label: '🦺 สังเกตพฤติกรรมความปลอดภัย (BBS)', page: '/bbs',  Comp: BbsCheck },
+  { key: 'pm',       label: 'Autonomous Maintenance (AM)', page: '/daily-pm', Comp: DailyPM },
+  { key: 'amcheck',  label: 'บันทึกผลตรวจ AM',            page: '/pm-check', Comp: AmCheck },
+  { key: 'pokayoke', label: 'Poka-Yoke Check',            page: '/pokayoke', Comp: PokaYokeCheck },
+  { key: 'lpa',      label: 'Layer Process Audit (LPA)',   page: '/lpa',      Comp: LayerProcessAudit },
+  { key: 'bbs',      label: 'สังเกตพฤติกรรมความปลอดภัย (BBS)', page: '/bbs',  Comp: BbsCheck },
 ];
 
 export default function DailyChecker() {
@@ -38,18 +44,18 @@ export default function DailyChecker() {
   return (
     <Page>
       {/* หัว + แท็บ — ใช้ PageHeader มาตรฐาน (UI §6.8) ห้ามวาดหัว/แถบแท็บเอง
-          หน้าลูกครอบด้วย <Hub> ⇒ ไม่วาดชื่อหน้าซ้ำ · <Page> ของหน้าลูกไม่เพิ่มขอบซ้ำ (UI-STANDARD §1) */}
+          หน้าลูกครอบด้วย <Hub> {tr('⇒ ไม่วาดชื่อหน้าซ้ำ ·')} <Page> ของหน้าลูกไม่เพิ่มขอบซ้ำ (UI-STANDARD §1) */}
         <PageHeader title="Daily Checker" icon="🗂️"
-          sub="ศูนย์รวมระบบตรวจเช็ครายวันของไลน์ผลิต — เลือกแท็บด้านล่าง"
-          tabs={available.map(t => ({ key: t.key, label: t.label }))} tab={active} onTab={setActive} />
+          sub={tr('ศูนย์รวมระบบตรวจเช็ครายวันของไลน์ผลิต — เลือกแท็บด้านล่าง')}
+          tabs={available.map(t => ({ key: t.key, label: tr(t.label) }))} tab={active} onTab={setActive} />
 
       {/* เนื้อหาแท็บ (component หน้าเดิม) */}
       {Cur ? (
-        <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>กำลังโหลด...</div>}>
+        <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>{tr('กำลังโหลด...')}</div>}>
           <Hub><Cur /></Hub>
         </Suspense>
       ) : (
-        <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>ยังไม่มีสิทธิ์เข้าระบบเช็คใดในหน้านี้</div>
+        <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>{tr('ยังไม่มีสิทธิ์เข้าระบบเช็คใดในหน้านี้')}</div>
       )}
     </Page>
   );

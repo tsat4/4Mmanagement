@@ -13,34 +13,42 @@
  * ⏳ ระหว่างโหลดห้ามขึ้น (loading) ไม่งั้นแถบกะพริบทุกครั้งที่เปลี่ยนหน้า
  */
 import { useState } from 'react';
-import { useProductionLinesState } from '../utils/useProductionLines';
+import { useProductionLinesState, invalidateProductionLines } from '../utils/useProductionLines';
 import { registryFailText } from '../utils/useMasterRows';
 
+import { tr } from '../utils/i18n';
 export default function LineRegistryAlert() {
   const { failed, stale, message, loading, reload } = useProductionLinesState();
   const [busy, setBusy] = useState(false);
   if (loading || !failed) return null;
 
-  const onReload = () => { setBusy(true); reload(); setTimeout(() => setBusy(false), 1200); };
+  /* 🔴 ล้างทุกคีย์ที่ถือทะเบียนไลน์ก่อน (`:v3` + ชั้นนอกของ /daily-report) แล้วค่อยสั่งโหลดใหม่
+     — `reload()` ของ useMasterRows ล้างแค่คีย์ของ picker ⇒ หน้าเปิดกะจะยังได้ลิสต์ว่างเดิม */
+  const onReload = () => {
+    setBusy(true);
+    invalidateProductionLines();
+    reload();
+    setTimeout(() => setBusy(false), 1200);
+  };
   return (
     <div role="status" style={{
-      margin: '0 16px 10px', padding: '8px 11px', borderRadius: 8, fontSize: 12.5, fontWeight: 700,
-      color: stale ? '#f59e0b' : '#ef4444', background: 'var(--card)',
+      margin: '0 16px 10px', padding: '8px 11px', borderRadius: 'var(--r-md)', fontSize: 12.5, fontWeight: 700,
+      color: stale ? '#f59e0b' : '#ef4444', background: 'var(--card-surf)',
       border: `1px solid ${stale ? 'rgba(245,158,11,0.5)' : 'rgba(239,68,68,0.5)'}`,
       display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
     }}>
       <span style={{ flex: 1, minWidth: 220 }}>
         {registryFailText('ทะเบียนไลน์', stale)}
         <div style={{ fontWeight: 400, color: 'var(--text2)', marginTop: 2 }}>
-          ช่องเลือกไลน์ทุกหน้าจะว่างหรือไม่ครบ — <b>ไม่ใช่เรื่องสิทธิ์ และไม่ได้แปลว่าไลน์ถูกลบ</b>
-          {message ? <> · เหตุผลจากระบบ: {message}</> : null}
+          {tr("ช่องเลือกไลน์ทุกหน้าจะว่างหรือไม่ครบ")} — <b>{tr('ไม่ใช่เรื่องสิทธิ์ และไม่ได้แปลว่าไลน์ถูกลบ')}</b>
+          {message ? <> {tr('· เหตุผลจากระบบ:')} {message}</> : null}
         </div>
       </span>
       <button onClick={onReload} disabled={busy} style={{
-        padding: '5px 11px', borderRadius: 7, fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap',
-        border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)',
+        padding: '5px 11px', borderRadius: 'var(--r-md)', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap',
+        border: '1px solid var(--border)', background: 'var(--bg2-surf)', color: 'var(--text)',
         cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1,
-      }}>{busy ? 'กำลังโหลด…' : '🔄 โหลดทะเบียนไลน์ใหม่'}</button>
+      }}>{busy ? tr('กำลังโหลด…') : tr('🔄 โหลดทะเบียนไลน์ใหม่')}</button>
     </div>
   );
 }

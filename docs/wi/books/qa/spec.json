@@ -1,0 +1,437 @@
+[
+ {
+  "id": "qc_fme",
+  "p": "QualityControl",
+  "q": "tab=fme",
+  "marks": [
+   "แผนตรวจ (ผลิตเรียก)",
+   "ฝ่ายผลิตเรียกตรวจ (FME)",
+   "เปิดใบตรวจ",
+   "=รายการ",
+   "ไทม์ไลน์",
+   "รายการ (QA เปิดใบแล้วแต่ยังไม่ปิด)"
+  ]
+ },
+ {
+  "id": "qc_sheet",
+  "p": "QualityControl",
+  "q": "tab=sheet",
+  "marks": [
+   "ใบตรวจ (Check Sheet)",
+   "พาร์ทที่ตรวจ",
+   "📷",
+   "วันงาน",
+   "รอบที่",
+   "รหัสพนักงานผู้ตรวจ",
+   "ใบ Inspection Data",
+   "CSV ผลตรวจ"
+  ]
+ },
+ {
+  "id": "qc_piece",
+  "p": "QualityControl",
+  "q": "tab=sheet",
+  "scroll": "ผ่านทุกจุดที่เหลือ",
+  "marks": [
+   "ข้าม",
+   "ผ่านทุกจุดที่เหลือ",
+   "ยังบันทึกไม่ได้",
+   "ใบตรวจล่าสุดของพาร์ทนี้"
+  ]
+ },
+ {
+  "id": "qc_spc",
+  "p": "QualityControl",
+  "q": "tab=spc",
+  "marks": [
+   "SPC / Cp-Cpk",
+   "จากใบตรวจ (อัตโนมัติ)",
+   "จุดควบคุมที่ตั้งเอง",
+   "ทุกจุด",
+   "Cpk < 1.33",
+   "CSV ค่าวัด",
+   "CSV สรุป Cpk",
+   "จุดวัดค่าของชิ้นงาน",
+   "Individuals (I) Chart"
+  ]
+ },
+ {
+  "id": "qc_morepair",
+  "p": "QualityControl",
+  "q": "tab=morepair",
+  "marks": [
+   "งานรอตรวจ",
+   "ใบซ่อมรอตรวจ",
+   "MO-2610-003",
+   "โหลดใหม่"
+  ]
+ },
+ {
+  "id": "qc_bins",
+  "p": "QualityControl",
+  "q": "tab=bins",
+  "marks": [
+   "งานรอตรวจ",
+   "ถังเหลืองรอตัดสิน",
+   "ค้างในสายถังเหลือง",
+   "ขั้น 2/5",
+   "✅ งานดี",
+   "🔧 ส่งซ่อม",
+   "🔴 เสียแน่ → ถังแดง",
+   "🔍 รายละเอียด"
+  ]
+ },
+ {
+  "id": "qc_bins_det",
+  "p": "QualityControl",
+  "q": "tab=bins",
+  "click": "🔍 รายละเอียด",
+  "marks": [
+   "📷 รูปหลักฐาน",
+   "📋 รายการ",
+   "🏭 ที่มาจาก Daily Report",
+   "✍️ ผลพิจารณา QA / การซ่อม",
+   "✅ งานดี",
+   "🔧 ส่งซ่อม"
+  ]
+ },
+ {
+  "id": "qc_bins_pend",
+  "p": "QualityControl",
+  "q": "tab=bins",
+  "marks": [
+   "⏱ เกินอายุแท็ก",
+   "✅ ตรวจรับ",
+   "↩️ ตีกลับ",
+   "🔧 ลงผลซ่อม",
+   "🔴 ย้ายลงถังแดง",
+   "กรอกเลขใบ"
+  ]
+ },
+ {
+  "id": "qc_bins_qa",
+  "p": "ScrapReport",
+  "q": "tab=bins",
+  "click": "✏️",
+  "marks": [
+   "✅ งานดี",
+   "🔧 ซ่อม",
+   "📄 ขอใช้",
+   "🔴 ทำลาย",
+   "วันที่นำกลับเข้ากระบวนการ"
+  ]
+ },
+ {
+  "id": "qc_dash",
+  "p": "QualityControl",
+  "q": "tab=dashboard",
+  "marks": [
+   "Dashboard คุณภาพ",
+   "PPM — ของเสียต่อล้านชิ้น",
+   "NCR เปิดค้าง",
+   "CAPA เกินกำหนด",
+   "FTT (First Time Through)"
+  ]
+ },
+ {
+  "id": "qc_ncr_new",
+  "p": "QualityControl",
+  "q": "tab=ncr",
+  "click": "เปิด NCR ใหม่",
+  "marks": [
+   "วันที่พบ",
+   "Part No.",
+   "ระดับความรุนแรง",
+   "รายละเอียดของเสีย / สิ่งที่ไม่เป็นไปตาม"
+  ]
+ },
+ {
+  "id": "qc_ncr_det",
+  "p": "QualityControl",
+  "q": "tab=ncr",
+  "click": "NCR-2611-001",
+  "marks": [
+   "1) มาตรการกักกัน",
+   "บันทึกกักกัน",
+   "2) สาเหตุเบื้องต้น",
+   "3) Disposition",
+   "บันทึก Disposition",
+   "เปิด 8D CAPA จาก NCR นี้",
+   "=ปิด NCR"
+  ]
+ },
+ {
+  "id": "qc_claim_det",
+  "p": "QualityControl",
+  "q": "tab=claims",
+  "click": "CL-2611-001",
+  "marks": [
+   "วันที่รับเคลม",
+   "กำหนดตอบกลับ",
+   "เลขพาร์ท (กุญแจหาเอกสาร PFMEA)",
+   "เปิด 8D จากเคลมนี้",
+   "=บันทึก",
+   "บันทึกว่าตอบลูกค้าแล้ว",
+   "✅ ปิดเคลม"
+  ]
+ },
+ {
+  "id": "qc_capa_new",
+  "p": "QualityControl",
+  "q": "tab=capa",
+  "click": "เปิด CAPA ใหม่",
+  "marks": [
+   "หัวข้อ *",
+   "กำหนดปิด (due date)",
+   "เลขพาร์ท (ใช้หาเอกสาร",
+   "D1 — ทีมงาน",
+   "D4 — วิเคราะห์สาเหตุราก (Root Cause",
+   "=บันทึก"
+  ]
+ },
+ {
+  "id": "qc_capa_close",
+  "p": "QualityControl",
+  "q": "tab=capa",
+  "click": "CAPA-2611-003",
+  "scrollAfter": "=ปิด CAPA",
+  "marks": [
+   "หาเอกสารที่เกี่ยว",
+   "เพิ่มเอง",
+   "สรุปเรื่องเอกสาร PE",
+   "=บันทึก",
+   "=ปิด CAPA"
+  ]
+ },
+ {
+  "id": "rep_4m",
+  "p": "Report",
+  "q": "tab=4",
+  "marks": [
+   "4M Changes",
+   "รอ QA Approve",
+   "QA Approve",
+   "Reject",
+   "ใบ Changing Point"
+  ]
+ },
+ {
+  "id": "qc_approve",
+  "p": "QualityControl",
+  "q": "tab=sheet&sheet=id-1&wi=approve",
+  "marks": [
+   "ใบตรวจรอหัวหน้า QA อนุมัติ",
+   "✍️ รอหัวหน้า QA อนุมัติ",
+   "✓ อนุมัติ",
+   "↩ ตีกลับ",
+   "ใบ Inspection Data"
+  ]
+ },
+ {
+  "id": "qs_part",
+  "p": "QAInspectionSetup",
+  "q": "tab=std",
+  "marks": [
+   "มาตรฐานการตรวจ & Drawing",
+   "＋",
+   "ตั้งค่าจุดตรวจ & Drawing",
+   "แก้ไข Part",
+   "คัดลอกไปพาร์ทอื่น",
+   "แก้ไข / เพิ่มจุดตรวจ"
+  ]
+ },
+ {
+  "id": "qs_points",
+  "p": "QAInspectionSetup",
+  "q": "tab=std",
+  "click": "ตั้งค่าจุดตรวจ & Drawing",
+  "marks": [
+   "+ เพิ่มจุดตรวจ",
+   "Variable (ค่าตัวเลข)",
+   "Attribute (OK/NG)",
+   "Rank (",
+   "ไปที่จุด"
+  ]
+ },
+ {
+  "id": "qs_insp",
+  "p": "QAInspectionSetup",
+  "q": "tab=inspectors",
+  "marks": [
+   "QC ประจำไลน์"
+  ]
+ },
+ {
+  "id": "qc_fme_cfg",
+  "p": "QualityControl",
+  "q": "tab=fme",
+  "click": "ตั้งค่าการเรียกตรวจ",
+  "marks": [
+   "ตั้งค่าการเรียกตรวจ",
+   "ความพร้อมก่อนเปิด",
+   "ตามยอดผลิต (lot size)",
+   "ตามเวลา (แบบเดิม)",
+   "ไม่ตรวจช่วงกลาง",
+   "ไทม์ไลน์"
+  ]
+ },
+ {
+  "id": "qc_fme_rules",
+  "p": "QualityControl",
+  "q": "tab=fme",
+  "click": "ตั้งค่าการเรียกตรวจ",
+  "scrollAfter": "กฎรายพาร์ท",
+  "marks": [
+   "🎛️ กฎรายพาร์ท — ความถี่ Middle + จำนวนชิ้นต่อรอบ",
+   "=Middle",
+   "ทุกกี่ชิ้น",
+   "ทุกกี่นาที",
+   "ตรวจต่อรอบ (ชิ้น)"
+  ]
+ },
+ {
+  "id": "qc_inst",
+  "p": "QualityControl",
+  "q": "tab=instruments",
+  "marks": [
+   "เครื่องมือวัด",
+   "เพิ่มเครื่องมือวัด",
+   "ใกล้ครบกำหนด (≤30 วัน)",
+   "เกินกำหนด / ยังไม่สอบเทียบ",
+   "✏️"
+  ]
+ },
+ {
+  "id": "qc_alarm",
+  "p": "QualityControl",
+  "q": "tab=sheet&wi=alarm",
+  "scroll": "บันทึก action แล้วให้ QA",
+  "marks": [
+   "รอ action แก้ไข",
+   "ชิ้น 1 ✕",
+   "เปิดใบ 4M จากการแก้ไขนี้",
+   "บันทึก action แล้วให้ QA ตรวจต่อ"
+  ]
+ },
+ {
+  "id": "qc_mr_new",
+  "p": "QualityControl",
+  "q": "tab=matreq",
+  "click": "ออกใบเบิกใหม่",
+  "marks": [
+   "เลขที่เอกสาร",
+   "ไลน์ที่ขอของ",
+   "เลือกแม่ → แตก BOM",
+   "เลือกจาก Material Master",
+   "เพิ่มแถว",
+   "บันทึกเป็น template",
+   "=บันทึก",
+   "บันทึก + ส่งขออนุมัติ"
+  ]
+ },
+ {
+  "id": "qc_matreq",
+  "p": "QualityControl",
+  "q": "tab=matreq",
+  "marks": [
+   "ใบเบิกทดสอบ",
+   "ออกใบเบิกใหม่",
+   "จาก template",
+   "📤",
+   "🖨️",
+   "ⓘ อ่านเพิ่ม"
+  ]
+ },
+ {
+  "id": "qc_bins_home",
+  "p": "ScrapReport",
+  "q": "tab=bins",
+  "marks": [
+   "ถังเหลือง / ถังแดง",
+   "+ บันทึกรายการ",
+   "ค้างในสาย",
+   "พิมพ์ใบ",
+   "ทะเบียน WI ซ่อม",
+   "🔧 ลงผลซ่อม",
+   "🔴 ย้ายลงถังแดง"
+  ]
+ },
+ {
+  "id": "qc_bins_new",
+  "p": "ScrapReport",
+  "q": "tab=bins",
+  "click": "+ บันทึกรายการ",
+  "marks": [
+   "วันที่ลงถัง *",
+   "จำนวน (ชิ้น) *",
+   "ผู้แจ้ง (พนักงาน)",
+   "ผู้ตรวจสอบ (QA)"
+  ]
+ },
+ {
+  "id": "qc_bins_repair",
+  "p": "ScrapReport",
+  "q": "tab=bins",
+  "click": "🔧 ลงผลซ่อม",
+  "marks": [
+   "ซ่อมแล้วดี (ชิ้น)",
+   "ซ่อมไม่ได้ (ชิ้น) → ถังแดงตอนตรวจรับ",
+   "รายละเอียดการซ่อม (ทำอะไร · ตาม WI ไหน) *",
+   "บันทึกผลซ่อม → ส่ง QA"
+  ]
+ },
+ {
+  "id": "scrap_new",
+  "p": "ScrapReport",
+  "q": "",
+  "click": "เปิดใบใหม่",
+  "marks": [
+   "ดึงจากถังแดง",
+   "ดึงจาก Daily Report",
+   "ดึงจากใบเบิก QA",
+   "ผู้ตรวจสอบ (QC)",
+   "ผู้อนุมัติ (ผจก. QA/QC)"
+  ]
+ },
+ {
+  "id": "ev_list",
+  "p": "EventLog",
+  "q": "",
+  "marks": [
+   "ทุกหมวด",
+   "Cat C",
+   "Export Excel",
+   "Export PDF",
+   "บันทึก Event ใหม่",
+   "Robot Alarm"
+  ]
+ },
+ {
+  "id": "ev_new",
+  "p": "EventLog",
+  "q": "",
+  "click": "บันทึก Event ใหม่",
+  "marks": [
+   "ไลน์ผลิต",
+   "Station Number",
+   "Weld Cell Operator",
+   "Issue / สาเหตุ",
+   "บันทึก Event & ส่ง Notification",
+   "Checklist ตาม Matrix"
+  ],
+  "loose": true
+ },
+ {
+  "id": "ev_det",
+  "p": "EventLog",
+  "q": "",
+  "click": "Robot Alarm",
+  "marks": [
+   "Quality Technician",
+   "=อนุมัติ",
+   "=ปฏิเสธ",
+   "ตรวจ Teardown ชิ้นแรก",
+   "N/A"
+  ]
+ }
+]

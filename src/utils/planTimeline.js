@@ -31,6 +31,40 @@ import { lotRunMin, sortBySeq, ACTIVE_LOT } from './planLots.js';
 /* กล่องที่คำนวณความยาวไม่ได้ ต้องกว้างพอให้คนกดถูก (px ขั้นต่ำแปลงเป็น % ที่ชั้นจอ) */
 export const UNKNOWN_BOX_MIN_PCT = 4;
 
+/* ══ 🎨 สีของกล่อง/พื้นไทม์ไลน์ — นิยามที่เดียว ใช้ทั้งมุมมองราง และ มุมมองสัปดาห์ (2026-11-17) ══
+   🔴 **ห้ามก๊อปค่าสีไปไว้ในจอ** — 2 มุมมองวาดแผนใบเดียวกัน กล่องใบเดียวกันต้องสีเดียวกัน
+      (ก๊อปแล้วแก้ทีหลังไม่ครบ = กล่องเดียวกันคนละสี 2 จอ คนอ่านนึกว่าคนละงาน)
+   🔴 **ห้ามใช้เขียว/เหลือง/แดงเป็นสีประจำชนิดงาน** — สงวนให้ Andon/สถานะเทียบเป้า
+      (UI-CONVENTIONS · `utils/statusTone.js`) · `afterUnknown` ใช้ส้มได้เพราะเป็น**คำเตือน**จริง
+   ℹ️ ไทม์ไลน์อยู่ในกลุ่ม "กราฟ/ผัง" ที่ได้ชุดสีของตัวเอง (ลิสต์ `CHART_FILES` ของด่านสีดิบ) —
+      ย้ายมาไว้ใน util เพื่อให้จอ**ไม่ต้องมีสีดิบเลย** ไม่ใช่เพื่อหลบด่าน                      */
+export const LOT_TONE = Object.freeze({
+  unknown: '#94a3b8',       // ไม่มี CT — คำนวณความยาวไม่ได้ (คู่กับลายทแยง)
+  trial: '#22d3ee',         // 🧪 จองเครื่องทดลองงานใหม่ — คนละเรื่องกับงานผลิต
+  paired: '#a78bfa',        // 👯 คู่ RH/LH ปั๊มจังหวะเดียวกับใบก่อนหน้า
+  afterUnknown: '#f59e0b',  // ⚠️ มีใบที่คำนวณไม่ได้อยู่ก่อน ⇒ เวลาใบนี้เชื่อไม่ได้
+  normal: '#4d9fff',
+});
+
+/** สีของกล่อง 1 ใบ — ลำดับความสำคัญคงที่ทั้ง 2 มุมมอง */
+export function lotTone(box = {}, { isTrial = false } = {}) {
+  if (box.noCt) return LOT_TONE.unknown;
+  if (isTrial) return LOT_TONE.trial;
+  if (box.pairedWithPrev) return LOT_TONE.paired;
+  if (box.afterUnknown) return LOT_TONE.afterUnknown;
+  return LOT_TONE.normal;
+}
+
+/* พื้นหลัง/ลายของราง — ค่าเดียวกันทั้ง 2 มุมมอง (กะดึก · เวลาพัก · ช่วงเปลี่ยนรุ่น · วันหยุด · ที่วางท้ายคิว) */
+export const PLAN_SURFACE = Object.freeze({
+  night: 'rgba(99,102,241,0.07)',
+  breakBand: 'rgba(148,163,184,0.18)',
+  closedHatch: 'repeating-linear-gradient(135deg, rgba(148,163,184,0.25) 0 6px, transparent 6px 12px)',
+  setupHatch: 'repeating-linear-gradient(45deg, rgba(245,158,11,0.35) 0 5px, transparent 5px 10px)',
+  setupBorder: '1px solid rgba(245,158,11,0.5)',
+  dropZone: 'rgba(34,197,94,0.15)',
+});
+
 /* 🔴 ช่อง "นามธรรม" ของกล่องที่คำนวณเวลาไม่ได้ — **ไม่ใช่เวลาจริง** (2026-09-30 · เจอจากจอทดสอบ)
    ถ้าไม่เลื่อน cursor เลย กล่องที่ไม่มี CT **ทุกใบจะทับกันที่จุดเดียว** (วัดจริงใน harness:
    14 ใบซ้อนกันหมด อ่านไม่ออก กดไม่ได้ ลากไม่ได้) ⇒ แย่กว่าการยอมให้ตำแหน่งไม่ตรงเวลา

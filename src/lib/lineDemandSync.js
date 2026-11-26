@@ -14,59 +14,177 @@ import { SESSION_STATUSES_LIVE } from '../utils/sessionStatus';
 import { madeHereMats } from '../utils/partRefStock';
 import { planLineRequest } from '../utils/packRound';
 import { isCoilUom } from '../utils/coilUom';
+import { isFgMat, FG_NO_LINE_REQUEST } from '../utils/storeOps';   // 🚫 ไม่มี FG เข้าไลน์ (13/11)
 import { planConfirmText } from '../utils/linePlanText';
 import { getActor } from '../utils/actorStamp';
 import { can } from '../utils/permissions';
+import { loadStorageLocations } from '../utils/useStorageLocations';
+import { loadProductionLines } from '../utils/useProductionLines';
+import { areaLinesOf } from '../utils/storageLoc';
+import { opInputsOf, parentKidsAfterOps, isFirstOpInChain, resolveOpParent } from '../utils/opInputs';
+import { opFamilyKey } from '../utils/partGroup';
+import { askConfirm } from '../utils/askConfirm';
 
 const key = (s) => String(s ?? '').trim();
 
+/** MAT ต่อ 1 คำขอ — เพดาน PostgREST คือ 1000 **แถว** ไม่ใช่ 1000 MAT
+ *  วัด 13/11: สินค้าทั้งทะเบียน 243 ตัว = 476 แถว (เฉลี่ย ~2 ลูก/ตัว) ⇒ 60 MAT/ก้อน ≈ 120 แถว
+ *  ห่างเพดานมาก แต่**ยังต้องเช็คซ้ำ**ใน `bomKidsOf` เพราะพาร์ทตัวเดียวที่มีลูกเยอะผิดปกติ
+ *  ก็ดันก้อนนั้นชนเพดานได้ */
+export const BOM_MANY_CHUNK = 60;
+
 /**
- * ความต้องการลูกตรงจาก "ใบผลิตที่เปิดอยู่" ของไลน์ (ยังไม่หักของหน้าไลน์ · ไม่รวมลูกที่ไลน์ผลิตเอง)
- * ใช้ร่วม: ตัวออกใบ (ข้างล่าง) + จอสโตร์เช็คว่าใบเบิกยังมีใบผลิตรองรับไหม (`openDemandMatsByLine`)
- * @returns {Promise<{ error?: string, need: Map<string,{need:number,part_name:string|null}>, made: Set<string> }>}
+ * แตก BOM "ลูกตรง" ของหลาย MAT — **ยิงเป็นก้อน ไม่ใช่ 1 คำขอต่อ 1 MAT**
+ *
+ * 🔴 เดิมบรรทัดนี้เขียนว่า `Promise.all(mats.map(m => rpc('fn_bom_direct_demand', …)))`
+ *    = N+1 · วัด 10-11/11/2026: `rpc/fn_bom_direct_demand` **25,512 ครั้ง/วัน
+ *    = 59% ของ POST ทั้งหมดฝั่ง DR** มาจากจุดนี้จุดเดียว คูณจำนวนจอที่เปิดอยู่
+ *    ⇒ ใช้ `fn_bom_direct_demand_many(text[])` แทน (migration 20261113 · DR)
+ *    ตัวนั้น `cross join lateral` เรียกฟังก์ชันเดิมทีละ MAT ⇒ **ผลเหมือนเดิมเป๊ะโดยโครงสร้าง**
+ *    (พิสูจน์ 13/11: สินค้า 243 ตัว = 476 แถว ตรงกันทั้งสองทาง ต่าง 0 แถว)
+ *
+ * 🔴 ชนเพดาน 1000 แถว = ข้อมูลขาดแบบเงียบ ⇒ **fail-closed** คืน error ห้ามคืนของไม่ครบ
+ *    (กฎเดียวกับ `fetchByIds`/`fetchAllPages` — ดูหัวไฟล์ `src/utils/fetchByIds.js`)
+ *
+ * @param {string[]} mats  MAT ที่ผ่าน `key()` มาแล้ว (trim แล้ว)
+ * @returns {Promise<{ kidsOf: Map<string, Array>, error: string|null }>}
+ *   **ทุก MAT ที่ส่งเข้ามามีคีย์เสมอ** (ไม่มีลูก = `[]`) — ผู้เรียกพึ่งพฤติกรรมนี้
  */
-export async function loadOpenOrderDemand(lineName, products = null) {
+export async function bomKidsOf(mats) {
+  const kidsOf = new Map((mats || []).map(m => [m, []]));
+  for (let i = 0; i < (mats || []).length; i += BOM_MANY_CHUNK) {
+    const chunk = mats.slice(i, i + BOM_MANY_CHUNK);
+    const { data, error } = await supabaseDR.rpc('fn_bom_direct_demand_many', { p_fg_mats: chunk });
+    if (error) return { kidsOf, error: `แตก BOM ไม่ได้ (${error.message})` };
+    const rows = data || [];
+    if (rows.length >= 1000) return { kidsOf, error: 'แตก BOM ได้ไม่ครบ (ชนเพดาน 1000 แถว) — แจ้งผู้ดูแลระบบ' };
+    for (const r of rows) {
+      const list = kidsOf.get(r.fg_mat);
+      if (!list) continue;   // DB คืนเฉพาะ MAT ที่ส่งไป (ทั้งสองฝั่ง trim แล้ว) — กันคีย์ผีไว้เฉยๆ
+      // ตัด `fg_mat` (คอลัมน์ของตัวแบ่งกลุ่ม) ออก ⇒ รูปแถวเท่ากับที่ `fn_bom_direct_demand` เคยคืนเป๊ะ
+      list.push({
+        mat_no: r.mat_no, part_name: r.part_name, qty_per_unit: r.qty_per_unit,
+        source_line: r.source_line, via_phantom: r.via_phantom,
+      });
+    }
+  }
+  return { kidsOf, error: null };
+}
+
+/**
+ * 📍 พื้นที่ SAP ของไลน์ (05/11 · คำสั่ง user "แม่-ลูกในพื้นที่ SAP เดียวกันนับว่าอยู่ที่เดียวกัน")
+ * @returns {Promise<{ error?: string, code: string|null, lines: string[] }>}  ไม่ผูก = เฉพาะไลน์ตัวเอง
+ */
+export async function loadArea(lineName) {
   const line = key(lineName);
-  const out = { need: new Map(), made: new Set() };
-  if (!line) return { ...out, error: 'ไม่รู้ไลน์' };
+  try {
+    const [slocs, lines] = await Promise.all([loadStorageLocations(), loadProductionLines()]);
+    return areaLinesOf(slocs || [], lines || [], line);
+  } catch (e) {
+    return { code: null, lines: [line], error: `อ่านทะเบียนพื้นที่ SAP ไม่ได้ (${e?.message || e})` };
+  }
+}
+
+/**
+ * ความต้องการลูกตรงจาก "ใบผลิตที่เปิดอยู่" ของไลน์ในพื้นที่ (ยังไม่หักของ · ไม่รวมลูกที่พื้นที่นี้ผลิตเอง)
+ * ใช้ร่วม: ตัวออกใบ (ข้างล่าง) + จอสโตร์เช็คว่าใบเบิกยังมีใบผลิตรองรับไหม (`openDemandMatsByLine`)
+ * @param {string|string[]} lineNames  ไลน์เดียว หรือทุกไลน์ในพื้นที่
+ * @returns {Promise<{ error?: string, need: Map, made: Set, orders: number, noBom: Array<{mat_no, qty}> }>}
+ *   noBom = ใบผลิตที่เปิดอยู่แต่ MAT นั้นไม่มีลูกใน BOM (แตกไม่ได้ ⇒ ไม่มีอะไรไปแจ้งสโตร์ — ต้องเขียนบนจอ)
+ */
+export async function loadOpenOrderDemand(lineNames, products = null) {
+  const ls = [...new Set((Array.isArray(lineNames) ? lineNames : [lineNames]).map(key).filter(Boolean))];
+  const out = { need: new Map(), made: new Set(), orders: 0, noBom: [], opUnset: [] };
+  if (!ls.length) return { ...out, error: 'ไม่รู้ไลน์' };
   const [ordRes, prods] = await Promise.all([
     fetchAllPages(() => supabaseDR.from('prod_orders')
       .select('id, mat_no, qty, production_sessions!inner(line_name, status)')
-      .eq('status', 'open').eq('production_sessions.line_name', line).in('production_sessions.status', SESSION_STATUSES_LIVE)),
+      .eq('status', 'open').in('production_sessions.line_name', ls).in('production_sessions.status', SESSION_STATUSES_LIVE)),
     products ? Promise.resolve(products) : loadProductsMaster().catch(() => null),
   ]);
   if (ordRes.error || ordRes.truncated) return { ...out, error: 'อ่านใบผลิตที่เปิดอยู่ไม่ได้' };
   if (!prods) return { ...out, error: 'อ่านทะเบียนสินค้าไม่ได้' };
-  const made = new Set(madeHereMats(line, prods));
+  const made = new Set(ls.flatMap(l => madeHereMats(l, prods)));
   const qtyByFg = new Map();
   for (const o of ordRes.rows || []) {
     const m = key(o.mat_no); const q = Number(o.qty) || 0;
     if (m && q > 0) qtyByFg.set(m, (qtyByFg.get(m) || 0) + q);
   }
+  /* 🔩 08/11 — ขั้น OP: ของที่กิน = BOM ของขั้นเอง → ยังไม่ผูก+แม่มีลูกตัวเดียว = ลูกตัวนั้น → ไม่งั้น `opUnset` (เตือน ไม่เดา)
+     ใบแม่ = ลูก BOM SAP หักของที่ขั้น OP ของมันกินแล้ว · ลูกที่เป็นแถวขั้น OP = ของที่ทำในพื้นที่ ไม่เบิก (เหมือน trigger ตอนตัด) */
+  const prodOf = new Map((prods || []).filter(p => p?.is_active !== false).map(p => [key(p.mat_no), p]));
+  const isOp = (m) => !!prodOf.get(key(m))?.is_operation;
+  const opsOf = new Map();   // แม่ → [ขั้น OP]
+  (prods || []).forEach(p => {
+    if (p?.is_active === false || !p?.is_operation || !key(p.op_parent_mat)) return;
+    const par = key(p.op_parent_mat);
+    opsOf.set(par, [...(opsOf.get(par) || []), key(p.mat_no)]);
+  });
   const fgs = [...qtyByFg.keys()];
-  const bomRes = await Promise.all(fgs.map(fg => supabaseDR.rpc('fn_bom_direct_demand', { p_fg_mat: fg })));
-  const bomErr = bomRes.find(r => r.error);
-  if (bomErr) return { ...out, made, error: `แตก BOM ไม่ได้ (${bomErr.error.message})` };
+  const want = new Set(fgs);
+  /* 🔩 20/11 — FG ต่างลูกค้าของพาร์ทเดียวกัน (ไม่มี OP ของตัวเอง) ใช้โซ่ OP ของแม่ในกลุ่ม · กฎเดียวกับ SQL `fn_op_parent_resolve` */
+  const familyOf = (m) => opFamilyKey(prodOf.get(key(m))?.p_no);
+  const famCands = (fg) => (opsOf.get(fg) || []).length || !familyOf(fg) ? []
+    : [...opsOf.keys()].filter(p => p !== fg && familyOf(p) === familyOf(fg));
+  fgs.forEach(fg => {
+    if (isOp(fg)) { const par = key(prodOf.get(fg)?.op_parent_mat); if (par) want.add(par); }
+    else {
+      (opsOf.get(fg) || []).forEach(op => want.add(op));
+      famCands(fg).forEach(p => { want.add(p); (opsOf.get(p) || []).forEach(op => want.add(op)); });
+    }
+  });
+  const mats = [...want];
+  const { kidsOf, error: bomErr } = await bomKidsOf(mats);
+  if (bomErr) return { ...out, made, error: bomErr };
   const need = new Map();
-  fgs.forEach((fg, i) => (bomRes[i].data || []).forEach(k => {
-    const m = key(k.mat_no); const q = qtyByFg.get(fg) * (Number(k.qty_per_unit) || 0);
-    if (!m || !(q > 0) || made.has(m)) return;
-    const cur = need.get(m) || { need: 0, part_name: k.part_name || null };
-    cur.need += q; cur.part_name = cur.part_name || k.part_name || null;
-    need.set(m, cur);
-  }));
-  return { need, made };
+  const noBom = [];
+  const opUnset = [];
+  fgs.forEach(fg => {
+    const qty = qtyByFg.get(fg);
+    let kids;
+    if (isOp(fg)) {
+      const par = key(prodOf.get(fg)?.op_parent_mat);
+      const parentKids = par ? (kidsOf.get(par) || []) : [];
+      const sibs = (opsOf.get(par) || []).map(m => prodOf.get(m)).filter(Boolean);
+      const r = opInputsOf({ ownKids: kidsOf.get(fg) || [], parentKids, firstInChain: isFirstOpInChain(prodOf.get(fg), sibs) });
+      if (r.via === 'from_prev') return;   // ขั้นถัดไปในโซ่ — ของมาจากขั้นก่อนหน้าในพื้นที่ ไม่เบิกสโตร์
+      if (r.via === 'unset') { opUnset.push({ mat_no: fg, parent: par || null, parentKids: parentKids.length, qty }); return; }
+      kids = r.kids;
+    } else {
+      const own = kidsOf.get(fg) || [];
+      if (!own.length) { noBom.push({ mat_no: fg, qty }); return; }
+      const isPre = (op, p) => !(kidsOf.get(op) || []).some(x => key(x.mat_no) === p);
+      const par = resolveOpParent(fg, { opsOf, familyOf, isPre });
+      const ops = par === fg ? (opsOf.get(fg) || []) : (opsOf.get(par) || []).filter(op => isPre(op, par));
+      const sibs = ops.map(m => prodOf.get(m)).filter(Boolean);
+      const eaten = ops.map(op => opInputsOf({ ownKids: kidsOf.get(op) || [], parentKids: par === fg ? own : (kidsOf.get(par) || []),
+        firstInChain: isFirstOpInChain(prodOf.get(op), sibs) }).kids);
+      kids = parentKidsAfterOps(own, eaten);
+    }
+    kids.forEach(k => {
+      const m = key(k.mat_no); const q = qty * (Number(k.qty_per_unit) || 0);
+      if (!m || !(q > 0) || made.has(m) || isOp(m)) return;
+      const cur = need.get(m) || { need: 0, part_name: k.part_name || null };
+      cur.need += q; cur.part_name = cur.part_name || k.part_name || null;
+      need.set(m, cur);
+    });
+  });
+  return { need, made, orders: (ordRes.rows || []).length, noBom, opUnset };
 }
 
 /**
- * 🧾 จอสโตร์: ไลน์ไหน "ยังมีใบผลิตเปิดอยู่ที่ใช้พาร์ทนี้" — ใบเบิกจากใบผลิต (`line_order`) ที่ไม่มีใบผลิตรองรับแล้ว
+ * 🧾 จอสโตร์: ไลน์ไหน "ยังมีใบผลิตเปิดอยู่ (ทั้งพื้นที่ SAP) ที่ใช้พาร์ทนี้" — ใบเบิกจากใบผลิต (`line_order`) ที่ไม่มีใบผลิตรองรับแล้ว
  * = ใบผลิตต้นทางปิด/ยกเลิก ⇒ เตือนบนการ์ด ให้คนตัดสินเอง (ระบบไม่ยกเลิก/ลดยอดเอง · คำสั่ง user 05/11)
  * @returns {Promise<Map<string, Set<string>|null>>} null = อ่านไม่ได้ (ห้ามเตือน — ไม่รู้ ≠ ไม่มี)
  */
 export async function openDemandMatsByLine(lineNames = []) {
   const lines = [...new Set(lineNames.map(key).filter(Boolean))];
   const products = await loadProductsMaster().catch(() => null);
-  const res = await Promise.all(lines.map(l => loadOpenOrderDemand(l, products)));
+  const res = await Promise.all(lines.map(async l => {
+    const a = await loadArea(l);
+    if (a.error) return { error: a.error };
+    return loadOpenOrderDemand(a.lines, products);
+  }));
   return new Map(lines.map((l, i) => [l, res[i].error ? null : new Set(res[i].need.keys())]));
 }
 
@@ -81,15 +199,33 @@ export const canNotifyStore = (role) => can('wip_request', 'decide', role) || ca
  * @returns ผลแบบ syncLineOrderDemand + `cancelled` (คนกดยกเลิก) / `nothingToSend` (ไม่มีอะไรต้องแจ้ง แสดงให้ดูแล้ว)
  */
 export async function confirmAndSyncLineDemand({ lineName, role, extra = [], title = '', focus = [],
-  confirmFn = (t) => window.confirm(t), alertFn = (t) => window.alert(t) }) {
+  confirmFn = async (t) => await askConfirm(t), alertFn = (t) => window.alert(t) }) {
   const empty = { rows: [], inserted: 0, raised: 0, dup: 0, writeErrors: [] };
   if (!canNotifyStore(role)) return { ...empty, error: NO_PERM };
   const dry = await syncLineOrderDemand({ lineName, role, extra, dryRun: true });
-  if (dry.error || !dry.rows.length) return dry;
-  const { text, sendCount } = planConfirmText(dry.rows, { title, focus });
+  if (dry.error) return dry;
+  /* ไม่มีอะไรต้องคิด: ไม่มีใบผลิต = เงียบได้ · ใบผลิตไม่มี BOM = ต้องบอก (แตกไม่ได้ ไม่ใช่ "ของพอ") */
+  if (!dry.rows.length && !dry.noBom?.length && !dry.opUnset?.length && !dry.fgSkipped?.length) return dry;
+  const { text, sendCount } = planConfirmText(dry.rows, { title, focus, area: dry.area, noBom: dry.noBom, opUnset: dry.opUnset, fgSkipped: dry.fgSkipped });
   if (!sendCount) { alertFn(text); return { ...dry, nothingToSend: true }; }
-  if (!confirmFn(text)) return { ...dry, cancelled: true };
+  /* 🔴 19/11 — ต้อง await: askConfirm คืน Promise (codemod 18/11) · เดิม `!confirmFn(text)` = !Promise = false เสมอ
+     ⇒ กด "ยกเลิก" แล้วยังแจ้งสโตร์อยู่ดี (มีด่าน `line-demand-confirm-awaited`) */
+  if (!(await confirmFn(text))) return { ...dry, cancelled: true };
   return syncLineOrderDemand({ lineName, role, extra });
+}
+
+/**
+ * 📦 คิดอย่างเดียว ไม่ถาม ไม่เขียน — ใช้ตอน "เปิดใบผลิต" (19/11 · คำสั่ง user "เปิดออเดอร์ต่อกันไม่ได้ · ห้ามตัดออก")
+ * จอเอาผลไปขึ้น **แถบไม่บังจอ** (`StoreNotifyBar`) แทน popup · คนกดแถบ ⇒ `confirmAndSyncLineDemand()` คิดใหม่สดแล้วค่อยถาม
+ * @returns ผลแบบ dryRun + `sendCount` (รายการที่จะแจ้ง/เพิ่มยอด) + `warnCount` (noBom/opUnset/fgSkipped — ต้องบอก ห้ามเงียบ)
+ */
+export async function previewLineDemand({ lineName, role, extra = [] }) {
+  if (!canNotifyStore(role)) return { rows: [], error: NO_PERM, sendCount: 0, warnCount: 0 };
+  const dry = await syncLineOrderDemand({ lineName, role, extra, dryRun: true });
+  if (dry.error) return { ...dry, sendCount: 0, warnCount: 0 };
+  const sendCount = (dry.rows || []).filter(r => r.action === 'insert' || r.action === 'raise').length;
+  const warnCount = (dry.noBom?.length || 0) + (dry.opUnset?.length || 0) + (dry.fgSkipped?.length || 0);
+  return { ...dry, sendCount, warnCount };
 }
 
 /**
@@ -106,9 +242,14 @@ export async function syncLineOrderDemand({ lineName, role, extra = [], dryRun =
   const canWrite = canNotifyStore(role);
   if (!dryRun && !canWrite) return { ...empty, error: NO_PERM };
 
-  // 1-2) ใบผลิตที่เปิดอยู่ → แตก BOM ลูกตรง (ชุดเดียวกับตอนตัดสต็อก)
-  const od = await loadOpenOrderDemand(line);
-  if (od.error) return { ...empty, error: od.error };
+  // 0) 📍 พื้นที่ SAP — แม่/ลูก/พี่น้องในรหัสเดียวกันนับเป็นที่เดียว (ความต้องการ · ของคงเหลือ · ใบรอหยิบ)
+  const area = await loadArea(line);
+  if (area.error) return { ...empty, error: area.error };
+  const areaLines = area.lines;
+  // 1-2) ใบผลิตที่เปิดอยู่ (ทั้งพื้นที่) → แตก BOM ลูกตรง (ชุดเดียวกับตอนตัดสต็อก)
+  const od = await loadOpenOrderDemand(areaLines);
+  if (od.error) return { ...empty, area, error: od.error };
+  empty.area = area; empty.orders = od.orders; empty.noBom = od.noBom; empty.opUnset = od.opUnset;
   const made = od.made;
   const need = new Map();   // mat → { need, part_name, fromOrders, direct }
   const add = (mat, q, name, fromOrders, direct = false) => {
@@ -120,21 +261,37 @@ export async function syncLineOrderDemand({ lineName, role, extra = [], dryRun =
   };
   od.need.forEach((v, m) => add(m, v.need, v.part_name, true));
   (extra || []).forEach(x => add(x.mat_no, Number(x.need) || 0, x.part_name, false, !x.viaBom));
+  /* 🚫 ไม่มี FG เข้าไลน์ (13/11 · utils/storeOps.js) — ขอตรง = ไม่เขียน + บอก (แบบเดียวกับ coil) ·
+     มาจาก BOM = ข้ามแล้วรายงาน (BOM ที่มีลูกเป็น 1xx = ข้อมูล BOM ผิด ให้ PE แก้ ห้ามแก้ bom_items ให้เอง) */
+  const fgMats = [...need.keys()].filter(m => isFgMat(m));
+  const fgDirect = fgMats.filter(m => need.get(m).direct);
+  if (fgDirect.length) return { ...empty, error: `${fgDirect.join(', ')} — ${FG_NO_LINE_REQUEST}` };
+  fgMats.forEach(m => need.delete(m));
+  empty.fgSkipped = fgMats;
   const mats = [...need.keys()];
-  if (!mats.length) return { ...empty };
+  if (!mats.length) return { ...empty };   // area/orders/noBom ติดไปด้วย — จอต้องบอกได้ว่า "ไม่มีใบ" หรือ "ใบไม่มี BOM"
 
   // 3) ยอดหน้าไลน์ · packing std · ใบรอหยิบที่มีอยู่
   const [stk, pkgs, pend] = await Promise.all([
-    fetchByIds(mats, ms => supabaseDR.from('line_stock_summary').select('line_name, mat_no, qty_on_hand').eq('line_name', line).in('mat_no', ms), { orderBy: 'mat_no' }),
+    fetchByIds(mats, ms => supabaseDR.from('line_stock_summary').select('line_name, mat_no, qty_on_hand').in('line_name', areaLines).in('mat_no', ms), { orderBy: 'mat_no' }),
     fetchByIds(mats, ms => supabaseDR.from('parts_master').select('mat_no, qty_per_pkg, uom, is_active').in('mat_no', ms), { orderBy: 'mat_no' }),
-    fetchByIds(mats, ms => supabase.from('wip_replenish_requests').select('id, mat_no, request_qty, status').eq('line_name', line).eq('status', 'pending').in('mat_no', ms), { orderBy: 'mat_no' }),
+    fetchByIds(mats, ms => supabase.from('wip_replenish_requests').select('id, line_name, mat_no, request_qty, status').in('line_name', areaLines).eq('status', 'pending').in('mat_no', ms), { orderBy: 'mat_no' }),
   ]);
   if (stk.error || stk.truncated) return { ...empty, error: 'อ่านยอดหน้าไลน์ไม่ได้' };
   if (pkgs.error || pkgs.truncated) return { ...empty, error: 'อ่าน packing std ไม่ได้' };
   if (pend.error || pend.truncated) return { ...empty, error: 'อ่านใบเบิกที่รอหยิบไม่ได้' };
-  const onHand = new Map((stk.rows || []).map(r => [key(r.mat_no), Number(r.qty_on_hand) || 0]));
+  /* ของคงเหลือ = รวมทุกไลน์ในพื้นที่ (ติดลบของไลน์หนึ่งหักกับบวกของอีกไลน์ — ยอดสุทธิของพื้นที่) */
+  const onHand = new Map();
+  (stk.rows || []).forEach(r => { const m = key(r.mat_no); onHand.set(m, (onHand.get(m) || 0) + (Number(r.qty_on_hand) || 0)); });
   const pkgOf = new Map((pkgs.rows || []).filter(r => r.is_active !== false).map(r => [key(r.mat_no), r.qty_per_pkg]));
-  const pendOf = new Map((pend.rows || []).map(r => [key(r.mat_no), r]));
+  /* ใบรอหยิบทั้งพื้นที่: ยอดรวม + ใบที่จะเพิ่มยอด (ของไลน์ตัวเองก่อน · ไม่มีก็ใบแรกของพื้นที่ — ปลายทางพื้นที่เดียวกัน) */
+  const pendOf = new Map();
+  (pend.rows || []).forEach(r => {
+    const m = key(r.mat_no); const cur = pendOf.get(m) || { sum: 0, pick: null };
+    cur.sum += Number(r.request_qty) || 0;
+    if (!cur.pick || (key(r.line_name) === line && key(cur.pick.line_name) !== line)) cur.pick = r;
+    pendOf.set(m, cur);
+  });
   const coil = new Set((pkgs.rows || []).filter(r => r.is_active !== false && isCoilUom(r.uom)).map(r => key(r.mat_no)));
   /* 🧲 05/11 (คำสั่ง user "ต้องเบิกผ่านพาร์ท") — coil ขอตรงไม่ได้: ไลน์ไม่รู้ว่าต้องใช้กี่ kg ต้องให้ BOM คิดจากพาร์ทที่จะผลิต */
   const directCoil = mats.filter(m => coil.has(m) && need.get(m).direct);
@@ -143,10 +300,11 @@ export async function syncLineOrderDemand({ lineName, role, extra = [], dryRun =
   // 4) ตัดสิน + เขียน
   const rows = mats.sort().map(m => {
     const n = need.get(m); const p = pendOf.get(m);
-    return { mat_no: m, part_name: n.part_name, fromOrders: n.fromOrders, pendingId: p?.id || null,
-      ...planLineRequest({ need: n.need, onHand: onHand.get(m) ?? 0, pendingQty: p?.request_qty, pkg: pkgOf.get(m), coil: coil.has(m) }), uom: coil.has(m) ? 'KG' : null };
+    return { mat_no: m, part_name: n.part_name, fromOrders: n.fromOrders, pendingId: p?.pick?.id || null,
+      pendPickQty: Number(p?.pick?.request_qty) || 0, pendPickLine: p?.pick?.line_name || null,
+      ...planLineRequest({ need: n.need, onHand: onHand.get(m) ?? 0, pendingQty: p?.sum, pkg: pkgOf.get(m), coil: coil.has(m) }), uom: coil.has(m) ? 'KG' : null };
   });
-  const res = { rows, inserted: 0, raised: 0, dup: 0, writeErrors: [] };
+  const res = { rows, inserted: 0, raised: 0, dup: 0, raceSkipped: 0, writeErrors: [], area, orders: od.orders, noBom: od.noBom, opUnset: od.opUnset, fgSkipped: fgMats };
   if (dryRun) return res;
   const who = getActor();
   for (const r of rows) {
@@ -160,11 +318,15 @@ export async function syncLineOrderDemand({ lineName, role, extra = [], dryRun =
       else if (error.code === '23505') res.dup++;   // อีกเครื่องเปิดใบไปพร้อมกัน — รอบหน้าจะ "เพิ่มยอด" ให้
       else res.writeErrors.push(`${r.mat_no}: ${error.message}`);
     } else if (r.action === 'raise' && r.pendingId) {
-      // CAS — เพิ่มได้เฉพาะใบที่ยังรอหยิบ และยอดเท่าที่เราเห็น
-      const { data, error } = await supabase.from('wip_replenish_requests').update({ request_qty: r.qty })
-        .eq('id', r.pendingId).eq('status', 'pending').eq('request_qty', r.pending).select('id');
+      // CAS — เพิ่มได้เฉพาะใบที่ยังรอหยิบ และยอดเท่าที่เราเห็น · เพิ่มเฉพาะส่วนต่างของทั้งพื้นที่ (เป้า − ยอดรอหยิบรวม)
+      const next = Math.round((r.pendPickQty + (r.qty - r.pending)) * 1e6) / 1e6;
+      const { data, error } = await supabase.from('wip_replenish_requests').update({ request_qty: next })
+        .eq('id', r.pendingId).eq('status', 'pending').eq('request_qty', r.pendPickQty).select('id');
       if (error) res.writeErrors.push(`${r.mat_no}: ${error.message}`);
       else if (data?.length) res.raised++;
+      /* 🔴 CAS ไม่ตรง = 0 แถว ไม่มี error — ใบถูกแก้ยอด/ถูกหยิบไปก่อน ⇒ **รอบนี้ไม่ได้เพิ่มยอดให้**
+         เดิมหายเงียบ คนอ่านสรุปแล้วเข้าใจว่าแจ้งสโตร์ครบ (QC audit 09/11) */
+      else res.raceSkipped++;
     }
   }
   return res;
@@ -181,6 +343,10 @@ export function syncSummaryText(r) {
   if (r.raised) parts.push(`เพิ่มยอดใบเดิม ${r.raised} พาร์ท`);
   if (wait) parts.push(`${wait} พาร์ทยังไม่ครบกล่อง (สะสมรอ)`);
   if (noPkg.length) parts.push(`${noPkg.length} พาร์ทยังไม่ตั้ง packing std (${noPkg.slice(0, 3).map(x => x.mat_no).join(', ')}${noPkg.length > 3 ? '…' : ''}) — ไม่ได้แจ้ง`);
+  if (r.raceSkipped) parts.push(`${r.raceSkipped} พาร์ทไม่ได้เพิ่มยอด (ใบถูกแก้/หยิบไปก่อน) — กดซ้ำอีกครั้ง`);
   if (r.writeErrors.length) parts.push(`เขียนไม่สำเร็จ ${r.writeErrors.length}: ${r.writeErrors[0]}`);
-  return parts.join(' · ') || 'ของหน้าไลน์พอ — ไม่ต้องเบิก';
+  if (r.noBom?.length) parts.push(`${r.noBom.length} ใบผลิตไม่มีลูกใน BOM (${r.noBom.slice(0, 3).map(x => x.mat_no).join(', ')}) — แตกไม่ได้ แจ้ง PE ตั้ง BOM`);
+  if (r.fgSkipped?.length) parts.push(`${r.fgSkipped.length} พาร์ทใน BOM เป็นเลข FG 1xx (${r.fgSkipped.slice(0, 3).join(', ')}) — ไม่เบิกเข้าไลน์ แจ้ง PE ตรวจ BOM`);
+  if (r.opUnset?.length) parts.push(`${r.opUnset.length} ใบขั้น OP ยังไม่ได้ผูกว่ากินอะไร (${r.opUnset.slice(0, 3).map(x => x.mat_no).join(', ')}) — ตั้งที่ /products แท็บ BOM ใบของแม่ → แผง 🔩 ขั้น OP`);
+  return parts.join(' · ') || (r.orders === 0 ? 'ไม่มีใบผลิตเปิดอยู่ในพื้นที่นี้' : 'ของในพื้นที่พอ — ไม่ต้องเบิก');
 }

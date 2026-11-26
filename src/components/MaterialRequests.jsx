@@ -27,8 +27,15 @@ import { loadLinesRes } from '../utils/useProductionLines';
 import { useOrgSections } from '../utils/useOrgSections';
 import { scopedLineNames } from '../utils/sectionScope';
 import {
-  movesFor, moveNeeds, moveLabel, KIND_LABEL, statusMeta, nextReqNo, maxReqSeq, reqNoPrefix, isPullable,
+  movesFor, moveNeeds, moveLabel, KIND_LABEL, statusMeta, nextReqNo, maxReqSeq, reqNoPrefix, isPullable, matReqFlow,
+  bomPickRows, rescalePickRows, parentPickList, pickedToItems, templateFromEditor, editorFromTemplate,
 } from '../utils/materialRequest';
+import useBomChildren, { loadBomParentIds } from '../utils/useBomChildren';
+import { loadProductsMaster } from '../utils/useProducts';
+import { useStorageLocationsState } from '../utils/useStorageLocations';
+import { slocCodeOfLine } from '../utils/storageLoc';
+import { checkWriteRows } from '../utils/dbWrite';
+import StepFlow from './StepFlow';
 import { printMaterialRequest } from '../lib/materialRequestPrint';
 import { notifyEvent } from '../utils/notifyEvent';
 import SearchSelect from './SearchSelect';
@@ -39,6 +46,9 @@ import { useUomUnitsState } from '../utils/useUomUnits'; // 📏 ทะเบี
 import { buildUomIndex, normUom, uomOptions, DEFAULT_UOM } from '../utils/uom';
 import { registryFailText } from '../utils/useMasterRows.js';
 
+import { tr } from '../utils/i18n';
+import { pickSignerPatch, isSelfName } from '../utils/selfSign';
+import { askConfirm } from '../utils/askConfirm';
 const today = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -78,6 +88,10 @@ export default function MaterialRequests() {
   const [editor, setEditor] = useState(null);   // { req, items }
   const [picker, setPicker] = useState(null);   // { itemKey } | null
   const [pq, setPq] = useState('');
+  const [bomPick, setBomPick] = useState(false);   // 🌳 เลือกแม่ → ตัดลูกตาม BOM (18/11 · ปรับ 19/11)
+  const [tpls, setTpls] = useState({ rows: [], failed: '' });   // 📋 template งานประจำ (DR)
+  const [tplOpen, setTplOpen] = useState(false);
+  const [tplSave, setTplSave] = useState(null);   // { name } | null
 
   /* ── scope มาตรฐาน: leader = ทั้งครอบครัวไลน์ตัวเอง · อื่น = ตาม sections ── */
   //   helper กลาง scopedLineNames — เดิมเทียบ sections.includes(l.section) ตรงตัว (ไม่ normalize
@@ -87,7 +101,7 @@ export default function MaterialRequests() {
     if (!names) return lines;
     const set = new Set(names);
     return lines.filter(l => set.has(l.name));
-  }, [lines, role, lineId, sections]);
+  }, [lines, role, lineId, sections, scopeIdx]);   // 🔴 scopeIdx มาแบบ async — ไม่อยู่ใน deps = ขอบเขตค้างค่าเดิม (QC audit 09/11)
   const scopeNames = useMemo(() => new Set(scopedLines.map(l => l.name)), [scopedLines]);
 
   useEffect(() => {
@@ -102,6 +116,16 @@ export default function MaterialRequests() {
       .then(({ data }) => setParts(data || []));
   }, []);
 
+  const loadTpls = useCallback(async () => {
+    const { data, error } = await supabaseDR.from('material_request_templates')
+      .select('id, name, kind, move_code, requester_dept, dest_storage_location, order_no, cost_center, plant_code, storage_location, detail, line_name, items, created_by_name, updated_at')
+      .eq('is_active', true).order('name').limit(500);
+    setTpls(error
+      ? { rows: [], failed: error.code === '42P01' ? 'ยังไม่ได้ apply migration ของ template' : `${tr("โหลด template ไม่สำเร็จ")}: ${error.message}` }
+      : { rows: data || [], failed: '' });
+  }, []);
+  useEffect(() => { loadTpls(); }, [loadTpls]);
+
   const load = useCallback(async () => {
     setLoading(true); setWarn('');
     const from = `${month}-01`;
@@ -115,7 +139,7 @@ export default function MaterialRequests() {
     if (error) {
       setWarn(error.code === '42P01'
         ? 'ยังไม่ได้ apply migration ของใบเบิก — แจ้งผู้ดูแลระบบ'
-        : `โหลดไม่สำเร็จ: ${error.message}`);
+        : `${tr("โหลดไม่สำเร็จ")}: ${error.message}`);
     }
     setRows(data || []);
     setLoading(false);
@@ -141,8 +165,9 @@ export default function MaterialRequests() {
   };
 
   /* ── เปิดฟอร์ม ── */
-  const openNew = async () => {
+  const openNew = async (tpl = null) => {
     const d = today();
+    const fromTpl = tpl ? editorFromTemplate(tpl) : null;
     const autoNo = await issueReqNo(d);
     if (!autoNo) toast.error('ออกเลขที่ใบอัตโนมัติไม่สำเร็จ — กรอกเลขเองหรือลองเปิดใหม่');
     setEditor({
@@ -155,15 +180,20 @@ export default function MaterialRequests() {
         _autoNo: autoNo || null,   // เลขที่ระบบเสนอ — ตอนบันทึกจะออกใหม่ถ้ายังไม่ถูกแก้ (กันชนกับคนที่เปิดฟอร์มพร้อมกัน)
         made_by_name: fullName || '', made_by_date: d,
         made_by_sig_url: signers.find(s => s.full_name === fullName)?.signature_url || null,
+        ...(fromTpl?.req || {}),
+        _tplName: tpl?.name || null,
       },
-      items: [EMPTY_ITEM()],
+      items: fromTpl?.items.length
+        ? fromTpl.items.map(it => ({ ...EMPTY_ITEM(), ...it, unit: normUom(it.unit, uomIdx) || DEFAULT_UOM }))
+        : [EMPTY_ITEM()],
     });
+    setTplOpen(false);
   };
 
   const openEdit = async (r) => {
     const { data, error } = await supabaseDR.from('material_request_items')
       .select('*').eq('request_id', r.id).order('seq');
-    if (error) return toast.error(`โหลดรายการไม่สำเร็จ: ${error.message}`);
+    if (error) return toast.error(`${tr("โหลดรายการไม่สำเร็จ")}: ${error.message}`);
     setEditor({
       req: { ...r },
       items: (data || []).map(it => ({ ...it, _key: it.id })).concat(data?.length ? [] : [EMPTY_ITEM()]),
@@ -183,11 +213,11 @@ export default function MaterialRequests() {
     const real = items.filter(it => String(it.mat_no || '').trim() || String(it.description || '').trim());
     if (!real.length) return toast.error('ยังไม่มีรายการสินค้าสักรายการ');
     const noQty = real.filter(it => !(Number(it.qty) > 0));
-    if (noQty.length) return toast.error(`มี ${noQty.length} รายการที่ยังไม่ได้ใส่จำนวน`);
+    if (noQty.length) return toast.error(`${tr("มี")} ${noQty.length} ${tr("รายการที่ยังไม่ได้ใส่จำนวน")}`);
 
     const payload = { ...req, updated_by_name: fullName || null };
     delete payload.id;
-    delete payload._autoNo;
+    delete payload._autoNo; delete payload._tplName;
     /* ใบใหม่ที่ยังใช้เลขที่ระบบเสนอ → ออกเลขใหม่ ณ ตอนบันทึก (อีกคนอาจบันทึกเลขเดียวกันไปก่อน)
        เปลี่ยนวันที่เบิกข้ามเดือนก็ได้เลขของเดือนใหม่ · คนพิมพ์เลขเองแล้ว = เคารพค่าที่คนกรอก */
     if (!req.id && req._autoNo && req.doc_no === req._autoNo) {
@@ -201,12 +231,12 @@ export default function MaterialRequests() {
     if (id) {
       const { data, error } = await supabaseDR.from('material_requests')
         .update(payload).eq('id', id).select('id');
-      if (error) return toast.error(`บันทึกไม่สำเร็จ: ${error.message}`);
+      if (error) return toast.error(`${tr("บันทึกไม่สำเร็จ")}: ${error.message}`);
       if (!data?.length) return toast.error('บันทึกไม่สำเร็จ — ไม่พบใบนี้แล้ว');
     } else {
       const { data, error } = await supabaseDR.from('material_requests')
         .insert(payload).select().single();
-      if (error) return toast.error(`สร้างใบไม่สำเร็จ: ${error.message}`);
+      if (error) return toast.error(`${tr("สร้างใบไม่สำเร็จ")}: ${error.message}`);
       id = data.id;
     }
 
@@ -217,7 +247,7 @@ export default function MaterialRequests() {
     let delQ = supabaseDR.from('material_request_items').delete().eq('request_id', id);
     if (keep.length) delQ = delQ.not('id', 'in', `(${keep.join(',')})`);
     const { error: eDel } = await delQ;
-    if (eDel) return toast.error(`ล้างรายการเดิมไม่สำเร็จ: ${eDel.message}`);
+    if (eDel) return toast.error(`${tr("ล้างรายการเดิมไม่สำเร็จ")}: ${eDel.message}`);
 
     const up = real.map((it, i) => ({
       ...(it.id ? { id: it.id } : {}),
@@ -232,20 +262,20 @@ export default function MaterialRequests() {
     /* 🔴 `defaultToNull:false` — ปนแถวเดิม (มี id) กับแถวใหม่ (ไม่มี id) ในก้อนเดียว postgrest ส่งคอลัมน์รวม
        แล้วเติม id = NULL ให้แถวใหม่ ⇒ 23502 ล้มทั้งก้อน หลังลบแถวเดิมไปแล้ว (audit 19/10) */
     const { error: eUp } = await supabaseDR.from('material_request_items').upsert(up, { defaultToNull: false });
-    if (eUp) return toast.error(`บันทึกรายการไม่สำเร็จ: ${eUp.message}`);
+    if (eUp) return toast.error(`${tr("บันทึกรายการไม่สำเร็จ")}: ${eUp.message}`);
 
     // แจ้งเมื่อใบถูก "ส่งขออนุมัติ" (ไม่ใช่ตอนร่าง) — คนอนุมัติต้องรู้ว่ามีใบรออยู่
     if (nextStatus && nextStatus !== 'draft') notifyEvent({
       event: 'material_request', type: 'info', ref_table: 'material_requests', ref_id: id,
       line_name: req.line_name || null, actor: fullName,
       lines: [
-        `📄 ${payload.doc_no || '(ยังไม่ออกเลขใบ)'} · ${req.kind === 'return' ? 'คืนของ' : 'เบิกของ'}${req.move_code ? ` (${req.move_code})` : ''}`,
-        `🏭 ไลน์: ${req.line_name || '—'} · หน่วยงาน: ${req.requester_dept || '—'}`,
-        `📦 ${real.length} รายการ · รวม ${real.reduce((s, it) => s + (Number(it.qty) || 0), 0)} ชิ้น`,
+        `📄 ${payload.doc_no || tr('(ยังไม่ออกเลขใบ)')} · ${req.kind === 'return' ? tr('คืนของ') : tr('เบิกของ')}${req.move_code ? ` (${req.move_code})` : ''}`,
+        `🏭 ${tr("ไลน์")}: ${req.line_name || '—'} · ${tr("หน่วยงาน")}: ${req.requester_dept || '—'}`,
+        `📦 ${real.length} ${tr("รายการ · รวม")} ${real.reduce((s, it) => s + (Number(it.qty) || 0), 0)} ${tr("ชิ้น")}`,
         req.detail ? `📝 ${String(req.detail).slice(0, 200)}` : '',
       ],
     });
-    toast.success(nextStatus ? `บันทึกและเปลี่ยนสถานะเป็น "${statusMeta(nextStatus).label}" ✓` : 'บันทึกแล้ว ✓');
+    toast.success(nextStatus ? `${tr("บันทึกและเปลี่ยนสถานะเป็น")} "${statusMeta(nextStatus).label}" ✓` : 'บันทึกแล้ว ✓');
     setEditor(null);
     load();
   };
@@ -253,9 +283,9 @@ export default function MaterialRequests() {
   const setStatus = async (r, s) => {
     const { data, error } = await supabaseDR.from('material_requests')
       .update({ status: s, updated_by_name: fullName || null }).eq('id', r.id).select('id');
-    if (error) return toast.error(`เปลี่ยนสถานะไม่สำเร็จ: ${error.message}`);
+    if (error) return toast.error(`${tr("เปลี่ยนสถานะไม่สำเร็จ")}: ${error.message}`);
     if (!data?.length) return toast.error('เปลี่ยนสถานะไม่สำเร็จ');
-    toast.success(`เปลี่ยนเป็น "${statusMeta(s).label}" ✓`);
+    toast.success(`${tr("เปลี่ยนเป็น")} "${statusMeta(s).label}" ✓`);
     load();
   };
 
@@ -263,12 +293,12 @@ export default function MaterialRequests() {
     /* 🔴 ใบที่อนุมัติ/จ่ายของแล้ว = บันทึกการเคลื่อนไหวของคลังจริง (ใบ scrap ดึงไปอ้างอิงได้) ⇒ ห้ามลบจริง
        ให้ "ยกเลิก" (status cancelled) แทน — สืบย้อนได้ (QC 05/10 · หลักเดียวกับยกเลิกล็อต) */
     if (isPullable(r)) {
-      if (!window.confirm(`ใบ ${r.doc_no || ''} ${statusMeta(r.status).label} — ลบทิ้งไม่ได้ (เป็นบันทึกการเบิกจริง)\n\nเปลี่ยนสถานะเป็น "ยกเลิก" แทน?`)) return;
+      if (!await askConfirm(`${tr("ใบ")} ${r.doc_no || ''} ${statusMeta(r.status).label} — ${tr("ลบทิ้งไม่ได้ (เป็นบันทึกการเบิกจริง)\\n\\nเปลี่ยนสถานะเป็น \"ยกเลิก\" แทน")}?`)) return;
       return setStatus(r, 'cancelled');
     }
-    if (!window.confirm(`ลบใบ ${r.doc_no || ''} ?\nรายการในใบจะถูกลบด้วย · ใบรายงานของเสียที่ดึงจากใบนี้ไปแล้วจะยังอยู่ แต่ลิงก์สืบย้อนจะขาด`)) return;
+    if (!await askConfirm(`${tr("ลบใบ")} ${r.doc_no || ''} ?\n${tr("รายการในใบจะถูกลบด้วย · ใบรายงานของเสียที่ดึงจากใบนี้ไปแล้วจะยังอยู่ แต่ลิงก์สืบย้อนจะขาด")}`)) return;
     const { error } = await supabaseDR.from('material_requests').delete().eq('id', r.id);
-    if (error) return toast.error(`ลบไม่สำเร็จ: ${error.message}`);
+    if (error) return toast.error(`${tr("ลบไม่สำเร็จ")}: ${error.message}`);
     toast.success('ลบแล้ว'); load();
   };
 
@@ -288,16 +318,46 @@ export default function MaterialRequests() {
     return src.slice(0, 200);
   }, [parts, pq]);
 
+  /* 🗂 รายแถว = เลือกรหัสเดี่ยวจาก Material Master (ไม่แตก BOM) · แตก BOM อยู่ที่ปุ่มหัวตาราง */
   const applyPart = (p) => {
-    if (picker?.itemKey) {
-      setItem(picker.itemKey, { mat_no: p.mat_no, description: p.part_name || '', unit: normUom(p.uom, uomIdx) || DEFAULT_UOM });
-    } else {
-      setEditor(e => ({
-        ...e,
-        items: [...e.items, { ...EMPTY_ITEM(), mat_no: p.mat_no, description: p.part_name || '', unit: normUom(p.uom, uomIdx) || DEFAULT_UOM }],
-      }));
-    }
+    const patch = { mat_no: p.mat_no, description: p.part_name || '', unit: normUom(p.uom, uomIdx) || DEFAULT_UOM };
+    if (picker?.itemKey) setItem(picker.itemKey, patch);
+    else setEditor(e => ({ ...e, items: [...e.items, { ...EMPTY_ITEM(), ...patch }] }));
     setPicker(null); setPq('');
+  };
+  /* 🌳 ลูกที่ติ๊กจาก BOM → ต่อท้ายใบ (แถวเปล่าตั้งต้นเก็บทิ้ง) */
+  const applyBomPick = (picked) => {
+    const add = picked.map(it => ({ ...EMPTY_ITEM(), ...it, unit: normUom(it.unit, uomIdx) || DEFAULT_UOM }));
+    setEditor(e => {
+      const isBlank = (it) => !String(it.mat_no || '').trim() && !String(it.description || '').trim();
+      return { ...e, items: [...e.items.filter(it => !isBlank(it)), ...add] };
+    });
+    setBomPick(false);
+  };
+
+  /* ── 📋 template ── */
+  const saveTemplate = async () => {
+    const name = String(tplSave?.name || '').trim();
+    if (!name) return toast.error('ตั้งชื่อ template ก่อน');
+    const row = templateFromEditor(editor.req, editor.items, name);
+    if (!row.items.length) return toast.error('ใบนี้ยังไม่มีรายการ — ใส่รายการก่อนบันทึกเป็น template');
+    const same = tpls.rows.find(t => t.name.trim().toLowerCase() === name.toLowerCase());
+    if (same && !await askConfirm(`${tr("มี template ชื่อ")} "${same.name}" ${tr("อยู่แล้ว — บันทึกทับใช่ไหม")}?`)) return;
+    const res = same
+      ? await supabaseDR.from('material_request_templates')
+        .update({ ...row, updated_by_name: fullName || null, updated_at: new Date().toISOString() }).eq('id', same.id).select('id')
+      : await supabaseDR.from('material_request_templates')
+        .insert({ ...row, created_by_name: fullName || null, updated_by_name: fullName || null }).select('id');
+    if (!checkWriteRows(res, 'บันทึก template')) return;
+    toast.success(`${tr("บันทึก")} template "${name}" ${tr("แล้ว")}`);
+    setTplSave(null); loadTpls();
+  };
+  const removeTemplate = async (t) => {
+    if (!await askConfirm(`${tr("ลบ")} template "${t.name}"? (${tr("ใบที่ออกไปแล้วไม่กระทบ")})`)) return;
+    const res = await supabaseDR.from('material_request_templates')
+      .update({ is_active: false, updated_by_name: fullName || null, updated_at: new Date().toISOString() }).eq('id', t.id).select('id');
+    if (!checkWriteRows(res, 'ลบ template')) return;
+    toast.success('ลบ template แล้ว'); loadTpls();
   };
 
   // ไม่มี padding บน — ระยะแท็บ→แถบกรองเป็นของ PageHeader (16px มาตรฐาน · stdsweep 05/10 เดิมเกิน 4px = 20px)
@@ -305,49 +365,49 @@ export default function MaterialRequests() {
 
   return (
     <div style={wrap}>
-      <ReadOnlyNote show={!canRecord} role={role} what="ออกใบเบิก/คืนสินค้าคงคลัง" permKey="scrap:record" />
+      <ReadOnlyNote show={!canRecord} role={role} what={tr("ออกใบเบิก/คืนสินค้าคงคลัง")} permKey="scrap:record" />
 
       {warn && (
-        <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid #ef4444', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 12.5 }}>
+        <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid #ef4444', borderRadius: 'var(--r-md)', padding: '8px 12px', marginBottom: 12, fontSize: 12.5 }}>
           ⚠️ {warn}
         </div>
       )}
 
       {/* UI-STANDARD 2026-09-24: แถบกรองมาตรฐาน — ช่วงเวลา → ตัวกรอง → ปุ่มหลักชิดขวา */}
       <FilterBar style={{ marginBottom: 10 }}>
-        <span className="filter-label">เดือน</span>
+        <span className="filter-label">{tr('เดือน')}</span>
         <input type="month" value={month} onChange={e => setMonth(e.target.value)} />
-        <span className="filter-label">สถานะ</span>
+        <span className="filter-label">{tr('สถานะ')}</span>
         <select value={fStatus} onChange={e => setFStatus(e.target.value)}>
-          <option value="">{ALL.status}</option>
+          <option value="">{tr(ALL.status)}</option>
           {['draft', 'submitted', 'approved', 'issued', 'cancelled'].map(s =>
             <option key={s} value={s}>{statusMeta(s).label}</option>)}
         </select>
         <span className="spacer" />
-        {canRecord && <button onClick={openNew} style={btnSt('var(--accent)')}>＋ ออกใบเบิกใหม่</button>}
+        {canRecord && <button onClick={() => setTplOpen(true)} style={btnSt()}
+          title={tr('ออกใบใหม่จาก template งานประจำ')}>📋 {tr('จาก template')}{tpls.rows.length ? ` (${tpls.rows.length})` : ''}</button>}
+        {canRecord && <button onClick={() => openNew()} style={btnSt('var(--accent)')}>{tr('＋ ออกใบเบิกใหม่')}</button>}
       </FilterBar>
 
       <InfoMore style={{ marginBottom: 10 }} id="mr_help"
-        lead={<>📦 ใบนี้ใช้เบิกชิ้นงานจากฝ่ายผลิตไปทดสอบ — ของที่ทดสอบแล้วดึงเข้า<b>ใบรายงานของเสีย</b>ได้</>}>
-        ที่หน้า <b>ใบรายงานของเสีย</b> กดปุ่ม “⤵ ดึงจากใบเบิก QA” แล้วเลือกใบ —
-        รายการจะถูกเติมให้พร้อมผูกกลับมาที่ใบเบิกใบนี้ (สืบย้อนได้ว่าชิ้นไหนเบิกด้วยใบไหน)
-        <br />⚠️ ดึงได้เฉพาะใบที่ <b>อนุมัติแล้ว</b> ขึ้นไป — ใบที่ยังไม่อนุมัติแปลว่ายังไม่ได้ของ
-        จะรายงานว่าทำลายไปแล้วไม่ได้
-        <br />จำนวนที่ดึงไปใช้ <b>“จำนวนที่จ่ายจริง”</b> ก่อนเสมอ ไม่มีค่อยใช้จำนวนที่ขอเบิก
+        lead={<>{tr('📦 ใบนี้ใช้เบิกชิ้นงานจากฝ่ายผลิตไปทดสอบ — ของที่ทดสอบแล้วดึงเข้า')}<b>{tr('ใบรายงานของเสีย')}</b>{tr('ได้')}</>}>
+        {tr("ที่หน้า")} <b>{tr('ใบรายงานของเสีย')}</b> {tr("กดปุ่ม “⤵ ดึงจากใบเบิก QA” แล้วเลือกใบ — รายการจะถูกเติมให้พร้อมผูกกลับมาที่ใบเบิกใบนี้ (สืบย้อนได้ว่าชิ้นไหนเบิกด้วยใบไหน")})
+        <br />{tr('⚠️ ดึงได้เฉพาะใบที่')} <b>{tr('อนุมัติแล้ว')}</b> {tr("ขึ้นไป — ใบที่ยังไม่อนุมัติแปลว่ายังไม่ได้ของ จะรายงานว่าทำลายไปแล้วไม่ได้")}
+        <br />{tr('จำนวนที่ดึงไปใช้')} <b>{tr('“จำนวนที่จ่ายจริง”')}</b> {tr("ก่อนเสมอ ไม่มีค่อยใช้จำนวนที่ขอเบิก")}
       </InfoMore>
 
       {loading ? (
-        <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)' }}>กำลังโหลด...</div>
+        <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)' }}>{tr('กำลังโหลด...')}</div>
       ) : !visible.length ? (
-        <div style={{ padding: 26, textAlign: 'center', color: 'var(--muted)', border: '1px dashed var(--border2)', borderRadius: 8 }}>
-          ยังไม่มีใบเบิกในเดือนนี้{hidden > 0 && ` (ซ่อน ${hidden} ใบของส่วนงานอื่น)`}
+        <div style={{ padding: 26, textAlign: 'center', color: 'var(--muted)', border: '1px dashed var(--border2)', borderRadius: 'var(--r-md)' }}>
+          {tr("ยังไม่มีใบเบิกในเดือนนี้")}{hidden > 0 && ` (${tr("ซ่อน")} ${hidden} ${tr("ใบของส่วนงานอื่น")})`}
         </div>
       ) : (
-        <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
+        <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 760 }}>
             <thead><tr>
-              {['เลขที่', 'วันที่เบิก', 'ประเภท', 'ผู้ขอเบิก', 'หน่วยงาน', 'รายละเอียด', 'สถานะ', ''].map((h, i) =>
-                <th key={i} style={thSt}>{h}</th>)}
+              {[tr("เลขที่"), tr("วันที่เบิก"), tr("ประเภท"), tr("ผู้ขอเบิก"), tr("หน่วยงาน"), tr("รายละเอียด"), tr("สถานะ"), ''].map((h, i) =>
+                <th key={i} style={thSt}>{tr(h)}</th>)}
             </tr></thead>
             <tbody>
               {visible.map(r => {
@@ -362,16 +422,16 @@ export default function MaterialRequests() {
                     <td style={tdSt}>{r.requester_dept || '—'}</td>
                     <td style={tdSt}>{r.detail || '—'}</td>
                     <td style={tdSt}>
-                      <span style={{ color: st.color, fontWeight: 700 }}>{st.label}</span>
-                      {isPullable(r) && <span title="ดึงเข้าใบรายงานของเสียได้" style={{ marginLeft: 4 }}>⤵</span>}
+                      <span style={{ color: st.color, fontWeight: 700 }}>{tr(st.label)}</span>
+                      {isPullable(r) && <span title={tr('ดึงเข้าใบรายงานของเสียได้')} style={{ marginLeft: 4 }}>⤵</span>}
                     </td>
                     <td style={{ ...tdSt, whiteSpace: 'nowrap' }}>
                       <button onClick={() => openEdit(r)} style={miniBtn}>{canRecord ? '✏️' : '👁'}</button>
-                      <button onClick={() => doPrint(r)} style={miniBtn} title="พิมพ์ / PDF">🖨️</button>
-                      {canRecord && r.status === 'draft' && <button onClick={() => setStatus(r, 'submitted')} style={miniBtn} title="ส่งขออนุมัติ">📤</button>}
-                      {canManage && r.status === 'submitted' && <button onClick={() => setStatus(r, 'approved')} style={miniBtn} title="อนุมัติ">✅</button>}
-                      {canRecord && r.status === 'approved' && <button onClick={() => setStatus(r, 'issued')} style={miniBtn} title="สโตร์จ่ายของแล้ว">📦</button>}
-                      {canManage && <DeleteButton onClick={() => remove(r)} title="ลบ" />}
+                      <button onClick={() => doPrint(r)} style={miniBtn} title={tr('พิมพ์ / PDF')}>🖨️</button>
+                      {canRecord && r.status === 'draft' && <button onClick={() => setStatus(r, 'submitted')} style={miniBtn} title={tr('ส่งขออนุมัติ')}>📤</button>}
+                      {canManage && r.status === 'submitted' && <button onClick={() => setStatus(r, 'approved')} style={miniBtn} title={tr('อนุมัติ')}>✅</button>}
+                      {canRecord && r.status === 'approved' && <button onClick={() => setStatus(r, 'issued')} style={miniBtn} title={tr('สโตร์จ่ายของแล้ว')}>📦</button>}
+                      {canManage && <DeleteButton onClick={() => remove(r)} title={tr('ลบ')} />}
                     </td>
                   </tr>
                 );
@@ -381,25 +441,78 @@ export default function MaterialRequests() {
         </div>
       )}
       {hidden > 0 && visible.length > 0 && (
-        <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 6 }}>ซ่อน {hidden} ใบของส่วนงานอื่น (ตามขอบเขตของบัญชีนี้)</div>
+        <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 6 }}>{tr('ซ่อน')} {hidden} {tr('ใบของส่วนงานอื่น (ตามขอบเขตของบัญชีนี้)')}</div>
       )}
 
       {editor && (
         <Editor
           editor={editor} setReq={setReq} setItem={setItem} addItem={addItem} delItem={delItem} uomIdx={uomIdx} uomState={uomState}
-          canRecord={canRecord} role={role} signers={signers} scopedLines={scopedLines} parts={parts}
-          onPick={(k) => setPicker({ itemKey: k })}
+          canRecord={canRecord} role={role} signers={signers} scopedLines={scopedLines} parts={parts} fullName={fullName}
+          onPick={(k) => setPicker({ itemKey: k })} onPickBom={() => setBomPick(true)}
+          onSaveTemplate={() => setTplSave({ name: editor.req._tplName || editor.req.detail || '' })}
           onClose={() => setEditor(null)} onSave={save}
         />
       )}
 
+      {bomPick && (
+        <BomPickModal sloc={editor?.req?.storage_location || ''} lines={lines}
+          onClose={() => setBomPick(false)} onApply={applyBomPick} />
+      )}
+
+      {tplSave && (
+        <Modal title={tr('💾 บันทึกใบนี้เป็น template งานประจำ')} width={460} onClose={() => setTplSave(null)}>
+          <label style={lblSt}>{tr('ชื่อ template')}</label>
+          <input autoFocus value={tplSave.name} onChange={e => setTplSave({ name: e.target.value })}
+            onKeyDown={e => { if (e.key === 'Enter') saveTemplate(); }}
+            placeholder={tr('เช่น Test ประจำเดือน ไลน์ 060')} style={{ ...inpSt, width: '100%' }} />
+          <div style={{ fontSize: 11.5, color: 'var(--muted)', margin: '8px 0 12px' }}>
+            {tr('เก็บ: ประเภท/การเคลื่อนไหว · หน่วยงาน · คลัง · Order/Cost center · รายละเอียด · ไลน์ · รายการสินค้า+จำนวน')}<br />
+            {tr('ไม่เก็บ: เลขที่ใบ · วันที่ · ผู้ขอ · ลายเซ็น · สถานะ (ของพวกนี้เป็นของแต่ละใบ)')}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <button onClick={() => setTplSave(null)} style={btnSt()}>{tr('ยกเลิก')}</button>
+            <button onClick={saveTemplate} style={btnSt('var(--accent)')}>{tr('💾 บันทึก')}</button>
+          </div>
+        </Modal>
+      )}
+
+      {tplOpen && (
+        <Modal title={tr('📋 ออกใบใหม่จาก template งานประจำ')} width={640} dismissable onClose={() => setTplOpen(false)}>
+          {tpls.failed && <div style={{ fontSize: 12, color: 'var(--amber)', marginBottom: 8 }}>⚠️ {tpls.failed}</div>}
+          {!tpls.failed && !tpls.rows.length && (
+            <div style={{ padding: 18, textAlign: 'center', color: 'var(--muted)', fontSize: 12.5 }}>
+              {tr('ยังไม่มี template — เปิดใบเบิกตามปกติ แล้วกด “💾 บันทึกเป็น template” ในฟอร์ม')}
+            </div>
+          )}
+          <div style={{ maxHeight: 420, overflowY: 'auto' }}>
+            {tpls.rows.map(t => {
+              const n = Array.isArray(t.items) ? t.items.length : 0;
+              const mine = !!fullName && t.created_by_name === fullName;
+              return (
+                <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 6px', borderBottom: '1px solid var(--border)' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13 }}>{t.name}</div>
+                    <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>
+                      {KIND_LABEL[t.kind] || t.kind} · {n} {tr('รายการ')}
+                      {t.line_name ? ` · ${t.line_name}` : ''}{t.created_by_name ? ` · ${tr('สร้างโดย')} ${t.created_by_name}` : ''}
+                    </div>
+                  </div>
+                  <button onClick={() => openNew(t)} style={btnSt('var(--accent)')}>{tr('ใช้')}</button>
+                  {(mine || canManage) && <DeleteButton onClick={() => removeTemplate(t)} title={tr('ลบ template')} />}
+                </div>
+              );
+            })}
+          </div>
+        </Modal>
+      )}
+
       {picker && (
-        <Modal title="เลือกรหัสสินค้าคงคลัง (จากทะเบียนกลาง Parts Master)" dismissable onClose={() => { setPicker(null); setPq(''); }}>
+        <Modal title={tr('เลือกรหัสสินค้าคงคลัง (จากทะเบียนกลาง Material Master)')} dismissable onClose={() => { setPicker(null); setPq(''); }}>
           <input autoFocus value={pq} onChange={e => setPq(e.target.value)}
-            placeholder="ค้นด้วยรหัส MAT หรือชื่อพาร์ท" style={{ ...inpSt, width: '100%', marginBottom: 8 }} />
+            placeholder={tr('ค้นด้วยรหัส MAT หรือชื่อพาร์ท')} style={{ ...inpSt, width: '100%', marginBottom: 8 }} />
           {!parts.length && (
-            <div style={{ fontSize: 12, color: '#f59e0b', marginBottom: 8 }}>
-              ⚠️ ยังไม่มีข้อมูลใน Parts Master — กรอกรหัส/ชื่อเองได้ในตาราง แล้วไปลงทะเบียนที่ Product Master → 🗂 Parts Master
+            <div style={{ fontSize: 12, color: 'var(--amber)', marginBottom: 8 }}>
+              ⚠️ {tr("ยังไม่มีข้อมูลใน Material Master — กรอกรหัส/ชื่อเองได้ในตาราง แล้วไปลงทะเบียนที่")} Product Master → 🗂 Material Master
             </div>
           )}
           <div style={{ maxHeight: 380, overflowY: 'auto' }}>
@@ -412,7 +525,7 @@ export default function MaterialRequests() {
               </div>
             ))}
             {!pickList.length && parts.length > 0 &&
-              <div style={{ padding: 16, textAlign: 'center', color: 'var(--muted)', fontSize: 12.5 }}>ไม่พบรายการที่ตรงกับคำค้น</div>}
+              <div style={{ padding: 16, textAlign: 'center', color: 'var(--muted)', fontSize: 12.5 }}>{tr('ไม่พบรายการที่ตรงกับคำค้น')}</div>}
           </div>
         </Modal>
       )}
@@ -421,7 +534,7 @@ export default function MaterialRequests() {
 }
 
 /* ── ฟอร์มใบเบิก ─────────────────────────────────────────────────────────── */
-function Editor({ editor, setReq, setItem, addItem, delItem, canRecord, role, signers, scopedLines, parts = [], onPick, onClose, onSave, uomIdx, uomState }) {
+function Editor({ editor, setReq, setItem, addItem, delItem, canRecord, role, signers, scopedLines, parts = [], onPick, onPickBom, onSaveTemplate, onClose, onSave, uomIdx, uomState, fullName = '' }) {
   const { req, items } = editor;
   // 📜 ค่าที่เคยบันทึกใน material_requests (DR) — รหัสคลังที่ยังไม่ลง storage_locations / ผู้ขอที่ไม่มีบัญชี ยังเลือกซ้ำได้ ไม่หายเงียบ (2026-09-07)
   const destHist = useColumnHistory(supabaseDR, 'material_requests', 'dest_storage_location', { upper: true });
@@ -441,75 +554,83 @@ function Editor({ editor, setReq, setItem, addItem, delItem, canRecord, role, si
     setReq({ kind: k, ...(ok ? {} : { move_code: movesFor(k)[0].code }) });
   };
 
+  /* ✍️ ลายเซ็นติดเฉพาะเจ้าตัว (13/11 · คำสั่ง user · utils/selfSign.js) — เลือกชื่อคนอื่นได้
+     แต่ช่องลายเซ็นว่าง ("รอเจ้าตัวเซ็น") จนกว่าเจ้าตัว login มากด "เซ็นช่องนี้" แล้วบันทึก */
+  const mySig = signers.find(x => isSelfName(x.full_name, fullName))?.signature_url || null;
   const pickSigner = (k, id) => {
     const p = signers.find(s => s.id === id);
-    setReq({ [`${k}_name`]: p?.full_name || null, [`${k}_sig_url`]: p?.signature_url || null });
+    const pk = pickSignerPatch(p?.full_name, { fullName, mySig });
+    setReq({ [`${k}_name`]: pk.name, [`${k}_sig_url`]: pk.sig });
   };
 
   return (
-    <Modal title={`${req.id ? 'แก้ไข' : 'ออก'}ใบขอ${KIND_LABEL[req.kind]}สินค้าคงคลัง (FM-STO-003)`} onClose={onClose} width={1020}>
-      <ReadOnlyNote show={ro} role={role} compact what="แก้ใบเบิก" permKey="scrap:record" />
+    <Modal title={`${req.id ? tr('แก้ไข') : tr('ออก')}${tr("ใบขอ")}${KIND_LABEL[req.kind]}${tr("สินค้าคงคลัง")} (FM-STO-003)`} onClose={onClose} width={1020}>
+      <ReadOnlyNote show={ro} role={role} compact what={tr("แก้ใบเบิก")} permKey="scrap:record" />
+      {/* 🪜 ถึงขั้นไหน — กฎ matReqFlow() (utils/materialRequest.js) · UI §6.30 */}
+      {req.id && (() => { const f = matReqFlow(req); return <div style={{ marginBottom: 12 }}><StepFlow steps={f.steps} waiting={f.waiting} unknown={!f.known} /></div>; })()}
 
       {/* mgrid = กติกากลางของ grid ในโมดัล (UI-CONVENTIONS §4) — มือถือยุบเป็นคอลัมน์เดียว */}
       <div className="mgrid" style={grid3}>
-        <F label="เลขที่เอกสาร"><input value={req.doc_no || ''} readOnly={ro} onChange={e => setReq({ doc_no: e.target.value })} style={inpSt} /></F>
-        <F label="ประเภท">
+        <F label={tr('เลขที่เอกสาร')}><input value={req.doc_no || ''} readOnly={ro} onChange={e => setReq({ doc_no: e.target.value })} style={inpSt} /></F>
+        <F label={tr('ประเภท')}>
           <select value={req.kind} disabled={ro} onChange={e => changeKind(e.target.value)} style={inpSt}>
-            <option value="withdraw">ขอเบิก</option>
-            <option value="return">ขอคืน</option>
+            <option value="withdraw">{tr('ขอเบิก')}</option>
+            <option value="return">{tr('ขอคืน')}</option>
           </select>
         </F>
-        <F label="สถานะ"><input value={statusMeta(req.status).label} readOnly style={{ ...inpSt, color: statusMeta(req.status).color, fontWeight: 700 }} /></F>
+        <F label={tr('สถานะ')}><input value={statusMeta(req.status).label} readOnly style={{ ...inpSt, color: statusMeta(req.status).color, fontWeight: 700 }} /></F>
 
         {/* ผู้ขอ = user ระบบ (profiles) · ผู้ขอที่ไม่มีบัญชีพิมพ์เองได้พร้อมป้าย (2026-09-07) */}
-        <F label="ชื่อผู้ขอเบิก"><PersonSelect value={req.requester_name || ''} history={requesterHist} disabled={ro} inputStyle={{ fontSize: 12.5, padding: '6px 30px 6px 8px' }} onChange={r => setReq({ requester_name: r.name })} /></F>
-        <F label="หน่วยงาน / ตำแหน่ง">
-          <SelectOrFree value={req.requester_dept || ''} options={orgSections} readOnly={ro} placeholder="— เลือกส่วนงาน —"
+        <F label={tr('ชื่อผู้ขอเบิก')}><PersonSelect value={req.requester_name || ''} history={requesterHist} disabled={ro} inputStyle={{ fontSize: 12.5, padding: '6px 30px 6px 8px' }} onChange={r => setReq({ requester_name: r.name })} /></F>
+        <F label={tr('หน่วยงาน / ตำแหน่ง')}>
+          <SelectOrFree value={req.requester_dept || ''} options={orgSections} readOnly={ro} placeholder={tr('— เลือกส่วนงาน —')}
             onChange={v => setReq({ requester_dept: v })} selectStyle={inpSt} inputStyle={inpSt} />
         </F>
-        <F label="ไลน์ที่ขอของ (ใช้จับคู่ใบของเสีย)">
+        <F label={tr('ไลน์ที่ขอของ (ใช้จับคู่ใบของเสีย)')}>
           {/* ชื่อไลน์ต้อง canonical (จับคู่ใบของเสีย) → <LineSelect> · scopedLines กรอง scope ไว้แล้ว (2026-09-07) */}
-          <LineSelect lines={scopedLines} value={req.line_name || ''} disabled={ro} placeholder="— ไม่ระบุ —" style={inpSt}
+          <LineSelect lines={scopedLines} value={req.line_name || ''} disabled={ro} placeholder={tr('— ไม่ระบุ —')} style={inpSt}
             onChange={v => setReq({ line_name: v || null })} />
         </F>
 
-        <F label="วันที่เบิก *"><input type="date" value={req.request_date || ''} readOnly={ro} onChange={e => setReq({ request_date: e.target.value })} style={inpSt} /></F>
-        <F label="วันที่ต้องการสินค้า"><input type="date" value={req.need_date || ''} readOnly={ro} onChange={e => setReq({ need_date: e.target.value })} style={inpSt} /></F>
-        <F label={`ประเภทของการ${KIND_LABEL[req.kind]}`}>
+        <F label={tr('วันที่เบิก *')}><input type="date" value={req.request_date || ''} readOnly={ro} onChange={e => setReq({ request_date: e.target.value })} style={inpSt} /></F>
+        <F label={tr('วันที่ต้องการสินค้า')}><input type="date" value={req.need_date || ''} readOnly={ro} onChange={e => setReq({ need_date: e.target.value })} style={inpSt} /></F>
+        <F label={`${tr("ประเภทของการ")}${KIND_LABEL[req.kind]}`}>
           <select value={req.move_code || ''} disabled={ro} onChange={e => setReq({ move_code: e.target.value })} style={inpSt}>
-            {moves.map(m => <option key={m.code} value={m.code}>{m.label}</option>)}
+            {moves.map(m => <option key={m.code} value={m.code}>{tr(m.label)}</option>)}
           </select>
         </F>
 
         {/* ช่องข้างช่องติ๊กบนใบ — โผล่เฉพาะที่ประเภทนั้นต้องใช้ */}
         {/* รหัสคลังจากทะเบียน storage_locations (DR · migration 20260902) — รหัสนอกทะเบียนยังบันทึกได้พร้อมป้าย ⚠ (2026-09-07) */}
-        {needs === 'dest' && <F label="Storage Location ปลายทาง"><StorageLocSelect value={req.dest_storage_location || ''} history={destHist} disabled={ro} inputStyle={{ fontSize: 12.5, padding: '6px 30px 6px 8px' }} onChange={({ code }) => setReq({ dest_storage_location: code })} /></F>}
+        {needs === 'dest' && <F label={tr('Storage Location ปลายทาง')}><StorageLocSelect value={req.dest_storage_location || ''} history={destHist} disabled={ro} inputStyle={{ fontSize: 12.5, padding: '6px 30px 6px 8px' }} onChange={({ code }) => setReq({ dest_storage_location: code })} /></F>}
         {needs === 'order' && <F label="Production Order"><input value={req.order_no || ''} readOnly={ro} onChange={e => setReq({ order_no: e.target.value })} style={inpSt} /></F>}
         {needs === 'cc' && <F label="Cost Center"><input value={req.cost_center || ''} readOnly={ro} onChange={e => setReq({ cost_center: e.target.value })} style={inpSt} /></F>}
 
-        <F label="รหัสโรงงาน (Plant)"><input value={req.plant_code || ''} readOnly={ro} onChange={e => setReq({ plant_code: e.target.value })} style={inpSt} /></F>
-        <F label="รหัสคลังสินค้า / สโตร์"><StorageLocSelect value={req.storage_location || ''} history={slocHist} disabled={ro} inputStyle={{ fontSize: 12.5, padding: '6px 30px 6px 8px' }} onChange={({ code }) => setReq({ storage_location: code })} /></F>
+        <F label={tr('รหัสโรงงาน (Plant)')}><input value={req.plant_code || ''} readOnly={ro} onChange={e => setReq({ plant_code: e.target.value })} style={inpSt} /></F>
+        <F label={tr('รหัสคลังสินค้า / สโตร์')}><StorageLocSelect value={req.storage_location || ''} history={slocHist} disabled={ro} inputStyle={{ fontSize: 12.5, padding: '6px 30px 6px 8px' }} onChange={({ code }) => setReq({ storage_location: code })} /></F>
       </div>
 
-      <F label="รายละเอียด" full>
+      <F label={tr('รายละเอียด')} full>
         <input value={req.detail || ''} readOnly={ro} onChange={e => setReq({ detail: e.target.value })}
-          placeholder="เช่น Test ประจำปี" style={{ ...inpSt, width: '100%' }} />
+          placeholder={tr('เช่น Test ประจำปี')} style={{ ...inpSt, width: '100%' }} />
       </F>
 
       {/* ── รายการสินค้า ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '12px 0 6px' }}>
-        <b style={{ fontSize: 13 }}>รายการสินค้าคงคลัง</b>
+        <b style={{ fontSize: 13 }}>{tr('รายการสินค้าคงคลัง')}</b>
         <span style={{ flex: 1 }} />
         {canRecord && <>
-          <button onClick={() => onPick(null)} style={btnSt()}>🗂 เลือกจาก Parts Master</button>
-          <button onClick={addItem} style={btnSt()}>＋ เพิ่มแถว</button>
+          <button onClick={onPickBom} style={btnSt()} title={tr('เลือกพาร์ทแม่ในพื้นที่นี้ แล้วระบบแตก BOM ให้ติ๊กลูกที่จะเบิก')}>🌳 {tr('เลือกแม่ → แตก BOM')}</button>
+          <button onClick={() => onPick(null)} style={btnSt()}>{tr('เลือกจาก Material Master')}</button>
+          <button onClick={addItem} style={btnSt()}>{tr('＋ เพิ่มแถว')}</button>
+          <button onClick={onSaveTemplate} style={btnSt()} title={tr('เก็บหัวใบ+รายการไว้ใช้ซ้ำกับงานประจำ')}>{tr('💾 บันทึกเป็น template')}</button>
         </>}
       </div>
-      <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
+      <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 820 }}>
           <thead><tr>
-            {['#', 'รหัสสินค้าคงคลัง', 'รายละเอียด', 'จำนวนที่ขอ', 'หน่วย', 'จ่าย/รับคืนจริง', 'วันที่ผลิต', 'Batch No.', ''].map((h, i) =>
-              <th key={i} style={thSt}>{h}</th>)}
+            {['#', tr("รหัสสินค้าคงคลัง"), tr("รายละเอียด"), tr("จำนวนที่ขอ"), tr("หน่วย"), tr("จ่าย/รับคืนจริง"), tr("วันที่ผลิต"), 'Batch No.', ''].map((h, i) =>
+              <th key={i} style={thSt}>{tr(h)}</th>)}
           </tr></thead>
           <tbody>
             {items.map((it, i) => (
@@ -519,12 +640,12 @@ function Editor({ editor, setReq, setItem, addItem, delItem, canRecord, role, si
                   <div style={{ display: 'flex', gap: 3 }}>
                     <input value={it.mat_no || ''} readOnly={ro} style={{ ...inpSt, width: 100 }}
                       onChange={e => { const v = e.target.value; const u = uomOf(v); setItem(it._key, { mat_no: v, ...(u ? { unit: u } : {}) }); }} />
-                    {canRecord && <button onClick={() => onPick(it._key)} style={miniBtn} title="เลือกจากทะเบียน">🗂</button>}
+                    {canRecord && <button onClick={() => onPick(it._key)} style={miniBtn} title={tr('เลือกจากทะเบียน')}>🗂</button>}
                   </div>
                 </td>
                 <td style={tdSt}><input value={it.description || ''} readOnly={ro} onChange={e => setItem(it._key, { description: e.target.value })} style={{ ...inpSt, width: 230 }} /></td>
                 <td style={tdSt}><input type="number" min="0" value={it.qty ?? ''} readOnly={ro} onChange={e => setItem(it._key, { qty: e.target.value })} style={{ ...inpSt, width: 72 }} /></td>
-                {/* 📏 หน่วยจากทะเบียน `uom_units` + ✏️ ระบุเอง (หน่วยนอกทะเบียน) · ล็อกตาม Parts Master เมื่อ MAT อยู่ในทะเบียน (เหมือนเดิม) */}
+                {/* 📏 หน่วยจากทะเบียน `uom_units` + ✏️ ระบุเอง (หน่วยนอกทะเบียน) · ล็อกตาม Material Master เมื่อ MAT อยู่ในทะเบียน (เหมือนเดิม) */}
                 <td style={tdSt}><SelectOrFree compact value={it.unit || ''} readOnly={ro || !!uomOf(it.mat_no)} disabled={ro || !!uomOf(it.mat_no)}
                   options={uomOptions(uomIdx).map(o => o.value)} onChange={v => setItem(it._key, { unit: v })}
                   style={{ width: 96, ...(uomOf(it.mat_no) ? { opacity: 0.8 } : {}) }} selectStyle={{ ...inpSt, width: '100%' }} inputStyle={inpSt} />
@@ -532,43 +653,48 @@ function Editor({ editor, setReq, setItem, addItem, delItem, canRecord, role, si
                 <td style={tdSt}><input type="number" min="0" value={it.qty_issued ?? ''} readOnly={ro} onChange={e => setItem(it._key, { qty_issued: e.target.value })} style={{ ...inpSt, width: 84 }} /></td>
                 <td style={tdSt}><input type="date" value={it.produced_date || ''} readOnly={ro} onChange={e => setItem(it._key, { produced_date: e.target.value })} style={{ ...inpSt, width: 130 }} /></td>
                 <td style={tdSt}><input value={it.batch_no || ''} readOnly={ro} onChange={e => setItem(it._key, { batch_no: e.target.value })} style={{ ...inpSt, width: 90 }} /></td>
-                <td style={tdSt}>{canRecord && <DeleteButton onClick={() => delItem(it._key)} title="ลบ" />}</td>
+                <td style={tdSt}>{canRecord && <DeleteButton onClick={() => delItem(it._key)} title={tr('ลบ')} />}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
       <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-        “จ่าย/รับคืนจริง” สโตร์เป็นคนกรอก — ใบรายงานของเสียจะยึดจำนวนนี้ก่อน ไม่มีค่อยใช้จำนวนที่ขอ
+        “{tr("จ่าย/รับคืนจริง” สโตร์เป็นคนกรอก — ใบรายงานของเสียจะยึดจำนวนนี้ก่อน ไม่มีค่อยใช้จำนวนที่ขอ")}
       </div>
 
       {/* ── ลายเซ็น ── */}
-      <div style={{ margin: '14px 0 6px', fontSize: 13, fontWeight: 700 }}>ลายเซ็น</div>
+      <div style={{ margin: '14px 0 6px', fontSize: 13, fontWeight: 700 }}>{tr('ลายเซ็น')}</div>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         {SIGS.map(s => (
-          <div key={s.k} style={{ flex: '1 1 180px', minWidth: 170, border: '1px solid var(--border)', borderRadius: 8, padding: 8 }}>
+          <div key={tr(s.k)} style={{ flex: '1 1 180px', minWidth: 170, border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 8 }}>
             <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700, marginBottom: 3 }}>
-              {s.label} <span style={{ fontWeight: 400 }}>({s.group === 'req' ? 'ผู้เบิก/คืน' : 'ผู้จ่ายสินค้า'})</span>
+              {tr(s.label)} <span style={{ fontWeight: 400 }}>({s.group === 'req' ? tr('ผู้เบิก/คืน') : tr('ผู้จ่ายสินค้า')})</span>
             </div>
-            <SearchSelect disabled={ro} value={signers.find(x => x.full_name === req[`${s.k}_name`])?.id || ''} placeholder="— เลือก (พิมพ์ค้นหาชื่อ) —"
-              inputStyle={inpSt} options={signers.map(x => ({ id: x.id, label: x.full_name }))} onChange={({ id }) => pickSigner(s.k, id)} />
-            <input type="date" disabled={ro} value={req[`${s.k}_date`] || ''}
-              onChange={e => setReq({ [`${s.k}_date`]: e.target.value || null })} style={{ ...inpSt, width: '100%', marginTop: 4 }} />
-            {req[`${s.k}_sig_url`] &&
-              <img src={req[`${s.k}_sig_url`]} alt="" style={{ height: 26, marginTop: 4, background: '#fff', borderRadius: 4, padding: 2 }} />}
+            <SearchSelect disabled={ro} value={signers.find(x => x.full_name === req[`${tr(s.k)}_name`])?.id || ''} placeholder={tr('— เลือก (พิมพ์ค้นหาชื่อ) —')}
+              inputStyle={inpSt} options={signers.map(x => ({ id: x.id, label: x.full_name }))} onChange={({ id }) => pickSigner(tr(s.k), id)} />
+            <input type="date" disabled={ro} value={req[`${tr(s.k)}_date`] || ''}
+              onChange={e => setReq({ [`${tr(s.k)}_date`]: e.target.value || null })} style={{ ...inpSt, width: '100%', marginTop: 4 }} />
+            {req[`${tr(s.k)}_sig_url`] &&
+              <img src={req[`${tr(s.k)}_sig_url`]} alt="" style={{ height: 26, marginTop: 4, background: '#fff', borderRadius: 4, padding: 2 }} />}
+            {!req[`${tr(s.k)}_sig_url`] && req[`${tr(s.k)}_name`] && (isSelfName(req[`${tr(s.k)}_name`], fullName)
+              ? (mySig && !ro
+                  ? <button onClick={() => setReq({ [`${tr(s.k)}_sig_url`]: mySig })} style={{ ...btnSt(), marginTop: 4, fontSize: 11, padding: '3px 9px' }}>✍️ {tr("เซ็นช่องนี้")}</button>
+                  : <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 3 }}>{mySig ? '' : tr("โปรไฟล์ของคุณยังไม่มีลายเซ็น")}</div>)
+              : <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 3 }}>{tr("รอ")} {req[`${tr(s.k)}_name`]} login {tr("มาเซ็นเอง")}</div>)}
           </div>
         ))}
       </div>
       <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 5 }}>
-        ลายเซ็นดึงจากโปรไฟล์ผู้ใช้ — ใครยังไม่มีให้ไปบันทึกที่เมนูโปรไฟล์ → จัดการลายเซ็น
+        {tr("ลายเซ็นดึงจากโปรไฟล์ของ")}<b>{tr("คนที่ login เท่านั้น")}</b> — {tr("เลือกชื่อคนอื่นได้ แต่เจ้าตัวต้องมากดเซ็นเอง · ใครยังไม่มีลายเซ็นให้ไปบันทึกที่เมนูโปรไฟล์ → จัดการลายเซ็น")}
       </div>
 
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
-        <button onClick={onClose} style={btnSt()}>ปิด</button>
+        <button onClick={onClose} style={btnSt()}>{tr('ปิด')}</button>
         {canRecord && <>
-          <button onClick={() => onSave()} style={btnSt()}>💾 บันทึก</button>
+          <button onClick={() => onSave()} style={btnSt()}>{tr('บันทึก')}</button>
           {req.status === 'draft' &&
-            <button onClick={() => onSave('submitted')} style={btnSt('var(--accent)')}>📤 บันทึก + ส่งขออนุมัติ</button>}
+            <button onClick={() => onSave('submitted')} style={btnSt('var(--accent)')}>{tr('บันทึก + ส่งขออนุมัติ')}</button>}
         </>}
       </div>
     </Modal>
@@ -595,14 +721,162 @@ const F = ({ label, children, full }) => (
   </div>
 );
 
+/* ── 🌳 เลือกแม่ → แตก BOM → ติ๊กลูกที่จะเบิก (18/11 · ปรับตาม feedback 19/11) ───────────────
+   user 19/11: "เห็นชิ้นงานทั้งโรงงาน · เลือกพื้นที่ P409 แล้วยังเห็นพื้นที่อื่น · เราจะไม่ตัดแม่สิ
+                เลือกแม่เพื่อจะตัดลูก ใส่จำนวนแม่ ลูกคำนวณให้เบื้องต้น และแก้เองได้"
+   · ขั้น ① แม่ = ทะเบียนสินค้า (dr_products) กรองด้วย "รหัสคลัง/สโตร์" ของใบ → ไลน์ที่ผูกพื้นที่นั้น (`slocCodeOfLine`)
+     พาร์ทที่ไลน์ยังไม่ผูกพื้นที่ = ไม่ซ่อน (ไม่รู้ ≠ คนละพื้นที่) แต่เขียนบอกจำนวน · มี BOM ขึ้นก่อน + ป้าย
+   · ขั้น ② ลูกผ่าน `useBomChildren` ที่เดียว · **ไม่มีแถวแม่** · จำนวนลูก = จำนวนแม่ × ต่อ 1 ชิ้น
+     (`bomPickRows`/`rescalePickRows`) แก้รายแถวได้ — แถวที่แก้เองแล้วไม่ถูกทับเมื่อเปลี่ยนจำนวนแม่
+   🔴 BOM ว่าง / อ่านไม่ได้ = เขียนบอก ห้ามสรุปว่า "ไม่มีลูก" เงียบๆ */
+function BomPickModal({ sloc, lines, onClose, onApply }) {
+  const slocState = useStorageLocationsState();
+  const [products, setProducts] = useState({ rows: [], failed: '' });
+  const [bomIds, setBomIds] = useState({ ids: null, failed: false, message: '' });
+  const [allArea, setAllArea] = useState(false);
+  const [q, setQ] = useState('');
+  const [root, setRoot] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    loadProductsMaster()
+      .then(r => { if (alive) setProducts({ rows: r || [], failed: '' }); })
+      .catch(e => { if (alive) setProducts({ rows: [], failed: `${tr("โหลดทะเบียนสินค้าไม่สำเร็จ")} (${e?.message || e})` }); });
+    loadBomParentIds().then(r => { if (alive) setBomIds(r); });
+    return () => { alive = false; };
+  }, []);
+  const area = allArea ? '' : String(sloc || '').trim().toUpperCase();
+  const list = useMemo(() => parentPickList(products.rows, {
+    slocOfLine: (ln) => slocCodeOfLine(slocState.rows, lines, ln), sloc: area, bomIds: bomIds.ids,
+  }), [products.rows, slocState.rows, lines, area, bomIds.ids]);
+  const shown = useMemo(() => {
+    const k = q.trim().toLowerCase();
+    return (k ? list.rows.filter(p => `${p.mat_no} ${p.name} ${p.line_name}`.toLowerCase().includes(k)) : list.rows).slice(0, 300);
+  }, [list.rows, q]);
+
+  if (root) return <BomKidsStep root={root} onBack={() => setRoot(null)} onClose={onClose} onApply={onApply} />;
+  return (
+    <Modal title={`🌳 ${tr('เลือกพาร์ทแม่ที่จะแตก BOM')}`} width={720} dismissable onClose={onClose}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8, fontSize: 12.5 }}>
+        {sloc
+          ? <span>{tr('พื้นที่')} <b>{String(sloc).toUpperCase()}</b>{allArea ? <span style={{ color: 'var(--muted)' }}> ({tr('ปิดกรองอยู่')})</span> : ''}</span>
+          : <span style={{ color: 'var(--amber)' }}>⚠️ {tr('ใบนี้ยังไม่ได้เลือกรหัสคลัง/สโตร์ — แสดงทั้งโรงงาน')}</span>}
+        {sloc && <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
+          <input type="checkbox" checked={allArea} onChange={e => setAllArea(e.target.checked)} />{tr('ดูทั้งโรงงาน')}</label>}
+        <span style={{ flex: 1 }} />
+        <input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder={tr('ค้นด้วย MAT / ชื่อ / ไลน์')}
+          style={{ ...inpSt, width: 220 }} />
+      </div>
+      {products.failed && <div style={{ fontSize: 12, color: 'var(--amber)', marginBottom: 6 }}>⚠️ {products.failed}</div>}
+      {slocState.failed && <div style={{ fontSize: 12, color: 'var(--amber)', marginBottom: 6 }}>⚠️ {tr('อ่านทะเบียนพื้นที่ไม่ได้ — กรองตามพื้นที่ไม่ได้ แสดงทั้งหมด')}</div>}
+      {bomIds.failed && <div style={{ fontSize: 12, color: 'var(--amber)', marginBottom: 6 }}>⚠️ {bomIds.message} — {tr('ยังไม่รู้ว่าตัวไหนมี BOM')}</div>}
+      {area && (list.hiddenOtherArea > 0 || list.noArea > 0) && (
+        <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 6 }}>
+          {list.hiddenOtherArea > 0 && <>{tr('ซ่อน')} {list.hiddenOtherArea} {tr('พาร์ทของพื้นที่อื่น')}</>}
+          {list.hiddenOtherArea > 0 && list.noArea > 0 && ' · '}
+          {list.noArea > 0 && <>{list.noArea} {tr('พาร์ทที่ไลน์ยังไม่ผูกพื้นที่ (แสดงไว้ เพราะไม่รู้ว่าอยู่ไหน)')}</>}
+        </div>
+      )}
+      <div style={{ maxHeight: '58vh', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
+        {shown.map(p => (
+          <div key={p.mat_no} onClick={() => setRoot(p)}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderBottom: '1px solid var(--border)', cursor: 'pointer', fontSize: 12.5 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <b>{p.name || p.mat_no}</b>{' '}<span style={{ color: 'var(--text2)', fontFamily: 'monospace' }}>MAT {p.mat_no}</span>
+              <div style={{ fontSize: 11, color: 'var(--muted)' }}>{p.line_name || tr('ไม่ระบุไลน์')}{p.area ? ` · ${p.area}` : ''}</div>
+            </div>
+            {p.hasBom === true && <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', border: '1px solid var(--accent)', borderRadius: 999, padding: '1px 8px' }}>BOM</span>}
+            {p.hasBom === false && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('ยังไม่มี BOM')}</span>}
+          </div>
+        ))}
+        {!shown.length && (
+          <div style={{ padding: 18, textAlign: 'center', color: 'var(--muted)', fontSize: 12.5 }}>
+            {products.rows.length ? tr('ไม่พบพาร์ทในพื้นที่นี้ที่ตรงกับคำค้น') : tr('กำลังโหลด...')}
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
+function BomKidsStep({ root, onBack, onClose, onApply }) {
+  const bom = useBomChildren(root?.mat_no);
+  const [parentQty, setParentQty] = useState(1);
+  const [rows, setRows] = useState([]);
+  const kidsSig = bom.rows.map(k => `${k.level}:${k.mat_no}:${k.qtyPerRoot}`).join('|');
+  useEffect(() => { setRows(bomPickRows(root, bom.rows, 1)); setParentQty(1); }, [kidsSig, root?.mat_no]); // eslint-disable-line react-hooks/exhaustive-deps
+  const changeParent = (v) => { const n = Math.max(1, Number(v) || 1); setParentQty(n); setRows(rs => rescalePickRows(rs, n)); };
+  const set = (key, patch) => setRows(rs => rs.map(r => (r.key === key ? { ...r, ...patch } : r)));
+  const nUse = rows.filter(r => r.use).length;
+  return (
+    <Modal title={`🌳 ${tr('แตก BOM')} — ${root?.name || root?.mat_no}`} width={760} onClose={onClose}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8, fontSize: 12.5 }}>
+        <button onClick={onBack} style={miniBtn}>← {tr('เลือกแม่ใหม่')}</button>
+        <span>{tr('จำนวนแม่')} <span style={{ fontFamily: 'monospace', color: 'var(--text2)' }}>MAT {root?.mat_no}</span></span>
+        <input type="number" min="1" value={parentQty} onChange={e => changeParent(e.target.value)} style={{ ...inpSt, width: 90 }} />
+        <span style={{ color: 'var(--muted)' }}>{tr('ชิ้น → ลูก = จำนวนแม่ × ต่อ 1 ชิ้น (แก้รายแถวได้ · ตัวแม่ไม่ถูกเบิก)')}</span>
+        <span style={{ flex: 1 }} />
+        {rows.length > 0 && <>
+          <button onClick={() => setRows(rs => rs.map(r => ({ ...r, use: true })))} style={miniBtn}>{tr('ใช้ทั้งหมด')}</button>
+          <button onClick={() => setRows(rs => rs.map(r => ({ ...r, use: false })))} style={miniBtn}>{tr('ไม่ใช้ทั้งหมด')}</button>
+        </>}
+      </div>
+      {bom.loading && <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>{tr('กำลังโหลด BOM...')}</div>}
+      {bom.failed && <div style={{ fontSize: 12, color: 'var(--amber)', marginBottom: 6 }}>⚠️ {bom.message}</div>}
+      {!bom.loading && !bom.failed && !rows.length && (
+        <div style={{ fontSize: 12.5, color: 'var(--amber)', margin: '10px 0' }}>
+          ⚠️ {tr('พาร์ทนี้ยังไม่มี BOM ในระบบ — ลงทะเบียนที่ Product Master → แท็บ BOM หรือเลือกแม่ตัวอื่น')}
+        </div>
+      )}
+      {bom.sheets.length > 1 && (
+        <div style={{ fontSize: 12, color: 'var(--amber)', marginBottom: 6 }}>⚠️ {tr('พาร์ทนี้มี BOM')} {bom.sheets.length} {tr('ใบ — แสดงใบแรก ตรวจรายการก่อนใช้')}</div>
+      )}
+      {rows.length > 0 && (
+        <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', maxHeight: '55vh', overflowY: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 600 }}>
+            <thead><tr>
+              {[tr("ใช้"), tr("ชั้น"), tr("ลูก"), tr("ต่อ 1 แม่"), tr("จำนวนเบิก"), tr("หน่วย")].map(h => <th key={h} style={thSt}>{tr(h)}</th>)}
+            </tr></thead>
+            <tbody>
+              {rows.map(r => (
+                <tr key={r.key} style={{ opacity: r.use ? 1 : 0.45 }}>
+                  <td style={{ ...tdSt, textAlign: 'center' }}>
+                    <input type="checkbox" checked={r.use} onChange={e => set(r.key, { use: e.target.checked })} />
+                  </td>
+                  <td style={{ ...tdSt, color: 'var(--muted)' }}>L{r.level}</td>
+                  <td style={{ ...tdSt, paddingLeft: 8 + (r.level - 1) * 14 }}>
+                    <b>{r.description || r.mat_no}</b>{' '}
+                    <span style={{ color: 'var(--text2)', fontFamily: 'monospace' }}>MAT {r.mat_no}</span>
+                  </td>
+                  <td style={{ ...tdSt, color: 'var(--muted)' }}>{r.rate != null ? r.rate : '—'}</td>
+                  <td style={tdSt}>
+                    <input type="number" min="0" value={r.qty} onChange={e => set(r.key, { qty: e.target.value, edited: true })}
+                      placeholder={r.unsure ? tr('กรอก') : ''} style={{ ...inpSt, width: 90 }} />
+                    {r.unsure && <span title={tr('อัตราต่อชิ้นใน BOM เชื่อไม่ได้ (มีหลายบรรทัด) — กรอกเอง')} style={{ marginLeft: 4 }}>⚠️</span>}
+                  </td>
+                  <td style={tdSt}>{r.unit || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, marginTop: 12 }}>
+        <span style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('เลือก')} {nUse}/{rows.length} {tr('รายการ')}</span>
+        <button onClick={onClose} style={btnSt()}>{tr('ยกเลิก')}</button>
+        <button disabled={!nUse} onClick={() => onApply(pickedToItems(rows))} style={btnSt('var(--accent)')}>{tr('เพิ่มลงใบ')}</button>
+      </div>
+    </Modal>
+  );
+}
+
 /* ⚠️ `dismissable` default = false — modal ที่มีฟอร์มกรอก **ห้ามปิดจากการคลิกพื้นหลัง**
    (UI-CONVENTIONS §5 · คำสั่ง user 2026-07-09: เผลอแตะแล้วข้อมูลที่พิมพ์อยู่หายทั้งฟอร์ม)
    ใบขอเบิก FM-STO-003 มีช่องกรอก ~20 ช่อง + ตารางรายการที่คีย์ทีละแถว = เสียหายจริง
    ส่วน popup เลือกของ (picker) ไม่มีอะไรให้เสีย จึงส่ง dismissable ได้ */
 function Modal({ title, onClose, children, width = 620, dismissable = false }) {
   return (
-    <div className="modal-scroll" onClick={dismissable ? onClose : undefined} style={{ position: 'fixed', inset: 0, zIndex: 3000, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '3vh 12px', overflowY: 'auto' }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 14, width: `min(${width}px, 97vw)`, maxHeight: '94vh', overflowY: 'auto', padding: 18 }}>
+    <div className="modal-scroll" onClick={dismissable ? onClose : undefined} style={{ position: 'fixed', inset: 0, zIndex: 3000, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '3vh 12px', overflowY: 'auto' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', width: `min(${width}px, 97vw)`, maxHeight: '94vh', overflowY: 'auto', padding: 18 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <div style={{ fontWeight: 800, fontSize: 15 }}>{title}</div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 18, cursor: 'pointer' }}>✕</button>

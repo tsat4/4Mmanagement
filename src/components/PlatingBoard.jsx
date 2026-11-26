@@ -16,12 +16,14 @@ import useSuppliers from '../utils/useSuppliers';
 import ProductSelect from './ProductSelect';
 import SupplierSelect from './SupplierSelect';
 import PartCard, { partCardGrid } from './PartCard';
-import StatusZones from './StatusZones';
+import StatusZones, { RowTable } from './StatusZones';
 import {
   platingProducts, platingRoutes, beforeCandidatesOf, autoBeforeOf, outstandingByVendor, toWhTargets,
   sendBlockReason, sendStockWarn, openQtyOf, receiveBlockReason, orderZone, OUTSOURCE_LINE_TYPE,
 } from '../utils/plating';
 
+import { tr, dateLocale } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 /* ═══ 🧪 งานชุบภายนอก — แท็บในตู้ Kanban รวม (/heijunka) · 2026-10-13 คำสั่ง user
 
    ลำดับงานจริง (user 13/10 · ตัวอย่าง GOR 297):
@@ -43,16 +45,16 @@ const box = { background: 'var(--card)', border: '1px solid var(--border)', bord
 const h3 = { fontSize: 15, fontWeight: 800, margin: '0 0 8px', color: 'var(--text)' };
 const muted = { fontSize: 12, color: 'var(--muted)' };
 const inp = { minHeight: 40, padding: '6px 10px', borderRadius: 'var(--radius)', border: '1px solid var(--border2)', background: 'var(--bg2)', color: 'var(--text)', fontSize: 13.5, fontFamily: 'var(--font-body)', boxSizing: 'border-box' };
-const warnTxt = { fontSize: 12, color: '#f59e0b', fontWeight: 700 };
-const errTxt = { fontSize: 12, color: '#ef4444', fontWeight: 700 };
+const warnTxt = { fontSize: 12, color: 'var(--amber)', fontWeight: 700 };
+const errTxt = { fontSize: 12, color: 'var(--red)', fontWeight: 700 };
 const ZONES = (withDone) => [
-  { key: 'late', statuses: ['late'], label: '⏰ เกิน lead time ของร้าน', color: '#ef4444', hint: 'ส่งไปนานเกินกำหนดแล้ว — ตามร้าน' },
-  { key: 'vendor', statuses: ['vendor'], label: '🧪 อยู่ที่ร้านชุบ · รอรับกลับ', color: '#06b6d4', hint: 'งานกลับมา → นับของจริงแล้วกดรับ · ทยอยรับได้' },
-  ...(withDone ? [{ key: 'closed', statuses: ['closed'], label: '✅ ปิดแล้ว (ล่าสุด)', color: '#22c55e', hint: '' }] : []),
+  { key: 'late', statuses: ['late'], label: '⏰ เกิน lead time ของร้าน', color: 'var(--red)', hint: 'ส่งไปนานเกินกำหนดแล้ว — ตามร้าน' },
+  { key: 'vendor', statuses: ['vendor'], label: 'อยู่ที่ร้านชุบ · รอรับกลับ', color: '#06b6d4', hint: 'งานกลับมา → นับของจริงแล้วกดรับ · ทยอยรับได้' },
+  ...(withDone ? [{ key: 'closed', statuses: ['closed'], label: '✅ ปิดแล้ว (ล่าสุด)', color: 'var(--green)', hint: '' }] : []),
 ];
 const dmy = (iso) => {
   const d = iso ? new Date(iso) : null;
-  return d && !isNaN(d) ? d.toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok', day: '2-digit', month: 'short' }) : '—';
+  return d && !isNaN(d) ? d.toLocaleDateString(dateLocale(), { timeZone: 'Asia/Bangkok', day: '2-digit', month: 'short' }) : '—';
 };
 const daysAgo = (iso, nowMs) => {
   const t = Date.parse(iso);
@@ -63,7 +65,9 @@ const blankLine = () => ({ key: Math.random().toString(36).slice(2), after: '', 
 /* readOnly (04/11) — ฝังใน /heijunka (monitor) = ดูอย่างเดียว · ทำรายการที่ /line-stock?tab=out (ส่ง) · ?tab=in (รับกลับ) */
 /* part (05/11 · คำสั่ง user แยกขาออก/ขาเข้า): 'send' = ยอดที่ร้าน + ส่งไปชุบ + ส่งเข้า W/H + ตั้งค่า (ขาออก)
    · 'receive' = การ์ดรอรับกลับจากร้าน (ขาเข้า) · 'all' = ทั้งหมด (จอดู /heijunka) */
-export default function PlatingBoard({ q = '', showDone = false, readOnly = false, part = 'all' }) {
+/* 📋 20/11 (คำสั่ง user "ทำแท็บงานชุบเป็นตาราง") — `table` = 1 แถว = 1 ใบ (UI §6.23.1 แบบตาราง)
+   ส่งมาจาก Stock Management เฉพาะจอคอม · มือถือ/จอเดิมไม่ส่ง = การ์ดเหมือนเดิม · ข้อมูล/ปุ่มชุดเดิมทุกตัว */
+export default function PlatingBoard({ q = '', showDone = false, readOnly = false, part = 'all', table = false }) {
   const { role, fullName } = useContext(UserContext);
   const canSend = !readOnly && canSeeded('plating', 'send', role);
   const canReceive = !readOnly && canSeeded('plating', 'receive', role);
@@ -142,11 +146,11 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
   const [busy, setBusy] = useState(null);
   const rpc = async (key, fn, args, okMsg) => {
     // ด่านชั้นเขียนจริง — ไม่พึ่งการซ่อนปุ่ม (monitor = ห้ามขยับยอดเด็ดขาด)
-    if (readOnly) { toast.error('หน้านี้ดูอย่างเดียว — ทำรายการที่ Line Stock › 📤 ขาออก / 📥 ขาเข้า'); return null; }
+    if (readOnly) { toast.error('หน้านี้ดูอย่างเดียว — ทำรายการที่ Stock Management › 📤 ส่งของเข้าไลน์ / 📥 รับของเข้าคลัง'); return null; }
     setBusy(key);
     const { data, error } = await supabaseDR.rpc(fn, args);
     setBusy(null);
-    if (error) { toast.error(`ไม่สำเร็จ — ${error.message}`); loadLive(); return null; }
+    if (error) { toast.error(`${tr("ไม่สำเร็จ")} — ${error.message}`); loadLive(); return null; }
     if (okMsg) toast.success(typeof okMsg === 'function' ? okMsg(data) : okMsg);
     return data ?? true;
   };
@@ -168,7 +172,7 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
   };
   const filled = sendLines.filter(l => l.after || l.qty);
   const infos = filled.map(l => ({ l, i: lineInfo(l) }));
-  const sendBlock = !vendor.trim() ? 'เลือกร้านชุบ' : !filled.length ? 'เพิ่มรายการที่จะส่ง' : (infos.find(x => x.i.block)?.i.block || null);
+  const sendBlock = !vendor.trim() ? tr("เลือกร้านชุบ") : !filled.length ? tr("เพิ่มรายการที่จะส่ง") : (infos.find(x => x.i.block)?.i.block || null);
   const doSend = async () => {
     if (sendBlock) { toast.error(sendBlock); return; }
     let ok = 0;
@@ -187,8 +191,8 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
       }, null);
       if (res) ok += 1; else failed.push(l.after);
     }
-    if (ok) toast.success(`📤 ส่งไป ${vendor.trim()} แล้ว ${ok} รายการ — การ์ดรอรับกลับอยู่ด้านล่าง`);
-    if (failed.length) toast.error(`ส่งไม่สำเร็จ: ${failed.join(', ')} — รายการนี้ยังค้างในฟอร์ม`);
+    if (ok) toast.success(`📤 ${tr("ส่งไป")} ${vendor.trim()} ${tr("แล้ว")} ${ok} ${tr("รายการ — การ์ดรอรับกลับอยู่ด้านล่าง")}`);
+    if (failed.length) toast.error(`${tr("ส่งไม่สำเร็จ")}: ${failed.join(', ')} — ${tr("รายการนี้ยังค้างในฟอร์ม")}`);
     setSendLines(ls => { const keep = ls.filter(l => failed.includes(l.after)); return keep.length ? keep : [blankLine()]; });
     if (!failed.length) { setDocNo(''); setSendOpen(false); }
     if (infos.some(x => !x.i.linked)) reloadMaster();
@@ -201,13 +205,13 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
   const receive = async (o, qty, reason, close) => {
     const open = openQtyOf(o);
     const toLoc = locOf(o.after_mat);
-    if (!toLoc) { toast.error(`ยังไม่มีกฎรับเข้าคลังของ ${o.after_mat} — ตั้งที่ /line-stock?tab=inflow ก่อน`); return false; }
+    if (!toLoc) { toast.error(`${tr("ยังไม่มีกฎรับเข้าคลังของ")} ${o.after_mat} — ${tr("ตั้งที่ /line-stock?tab=settings&set=inflow ก่อน")}`); return false; }
     const why = receiveBlockReason({ open, qty, reason, close });
     if (why) { toast.error(why); return false; }
     const res = await rpc(`recv|${o.id}`, 'plating_receive_order', {
       p_order_id: o.id, p_qty: Number(qty), p_to_loc: toLoc, p_reason: reason || null, p_close: !!close, p_by: by(),
-    }, (d) => `📥 รับ ${o.after_mat} ${fmt(d?.received)} ชิ้นเข้า ${toLoc}`
-      + (d?.left_open > 0 ? ` · ยังค้างร้าน ${fmt(d.left_open)}` : '') + (d?.written_off > 0 ? ` · ปิดใบ ขาด ${fmt(d.written_off)}` : ''));
+    }, (d) => `📥 ${tr("รับ")} ${o.after_mat} ${fmt(d?.received)} ${tr("ชิ้นเข้า")} ${toLoc}`
+      + (d?.left_open > 0 ? ` · ${tr("ยังค้างร้าน")} ${fmt(d.left_open)}` : '') + (d?.written_off > 0 ? ` · ${tr("ปิดใบ ขาด")} ${fmt(d.written_off)}` : ''));
     loadLive();
     return !!res;
   };
@@ -217,9 +221,9 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
   const [woReason, setWoReason] = useState('');
   const doWriteoff = async (g) => {
     if (!woReason.trim()) { toast.error('ต้องใส่เหตุผลการตัดยอด'); return; }
-    if (!window.confirm(`ตัดยอดค้างที่ ${g.vendor} ทั้งหมด ${fmt(g.open)} ชิ้น (${g.orders} ใบ)?\nย้อนไม่ได้ — ใบจะถูกปิด`)) return;
+    if (!await askConfirm(`${tr("ตัดยอดค้างที่")} ${g.vendor} ${tr("ทั้งหมด")} ${fmt(g.open)} ${tr("ชิ้น")} (${g.orders} ${tr("ใบ)?\\nย้อนไม่ได้ — ใบจะถูกปิด")}`)) return;
     const ok = await rpc(`wo|${g.vendor}`, 'plating_writeoff', { p_vendor: g.vendor, p_order_ids: null, p_reason: woReason.trim(), p_by: by() },
-      (d) => `✂️ ตัดยอดค้าง ${g.vendor} ${fmt(d?.qty)} ชิ้น (${d?.orders} ใบ)`);
+      (d) => `✂️ ${tr("ตัดยอดค้าง")} ${g.vendor} ${fmt(d?.qty)} ${tr("ชิ้น")} (${d?.orders} ${tr("ใบ")})`);
     if (ok) { setWoFor(null); setWoReason(''); }
     loadLive();
   };
@@ -238,11 +242,11 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
     const qv = Number(whQty[a.after]);
     const toLoc = t ? locOf(t.fg) : null;
     if (!t) { toast.error('เลือก FG ที่จะแปลงเข้า'); return; }
-    if (!toLoc) { toast.error(`ยังไม่มีกฎรับเข้าคลังของ ${t.fg} — ตั้งที่ /line-stock?tab=inflow ก่อน`); return; }
+    if (!toLoc) { toast.error(`${tr("ยังไม่มีกฎรับเข้าคลังของ")} ${t.fg} — ${tr("ตั้งที่ /line-stock?tab=settings&set=inflow ก่อน")}`); return; }
     if (!(qv > 0)) { toast.error('ใส่จำนวน'); return; }
     const ok = await rpc(`wh|${a.after}`, 'plating_to_wh', {
       p_after: a.after, p_fg: t.fg, p_qty: qv, p_from_loc: a.loc, p_to_loc: toLoc, p_note: null, p_by: by(),
-    }, (d) => `🏬 ส่ง ${a.after} ${fmt(qv)} → ${toLoc} เป็น ${t.fg} ${fmt(d?.fg_qty)} ชิ้น`);
+    }, (d) => `🏬 ${tr("ส่ง")} ${a.after} ${fmt(qv)} → ${toLoc} ${tr("เป็น")} ${t.fg} ${fmt(d?.fg_qty)} ${tr("ชิ้น")}`);
     if (ok) setWhQty(m => ({ ...m, [a.after]: '' }));
     loadLive();
   };
@@ -255,7 +259,7 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
     if (!before) { toast.error('เลือกเลขก่อนชุบก่อน'); return; }
     const ok = await rpc(`link|${r.after}`, 'plating_setup_route', {
       p_before: before, p_after: r.after, p_after_name: null, p_vendor: null, p_process_type: null, p_by: by(),
-    }, `🌳 ผูก BOM ${r.after} ← ${before} แล้ว`);
+    }, `🌳 ${tr("ผูก")} BOM ${r.after} ← ${before} ${tr("แล้ว")}`);
     if (ok) reloadMaster();
   };
 
@@ -269,12 +273,11 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
 
   return (
     <div style={{ display: 'grid', gap: 12, alignContent: 'start' }}>
-      {masterErr && <div style={errTxt}>⚠ โหลดทะเบียนสินค้า/BOM/กฎคลัง/ไลน์ไม่ครบ — {masterErr} · รายการงานชุบบนจออาจขาด</div>}
-      {liveErr && <div style={errTxt}>⚠ โหลดใบส่งชุบ/ยอดคลังไม่ครบ — {liveErr} · ตัวเลขบนจออาจขาด</div>}
+      {masterErr && <div style={errTxt}>{tr('⚠ โหลดทะเบียนสินค้า/BOM/กฎคลัง/ไลน์ไม่ครบ —')} {masterErr} {tr('· รายการงานชุบบนจออาจขาด')}</div>}
+      {liveErr && <div style={errTxt}>{tr('⚠ โหลดใบส่งชุบ/ยอดคลังไม่ครบ —')} {liveErr} {tr('· ตัวเลขบนจออาจขาด')}</div>}
       {masterReady && !platList.length && (
         <div style={warnTxt}>
-          ยังไม่มีสินค้าหลังชุบ — ระบบนับสินค้าที่อยู่บน "ไลน์ประเภท 🧪 จ้างนอก" เป็นงานหลังชุบ ·
-          ตั้งประเภทไลน์ที่ /line-setup (เช่นไลน์ Coating) แล้วสร้างสินค้าหลังชุบไว้บนไลน์นั้นที่ /products
+          {tr("ยังไม่มีสินค้าหลังชุบ — ระบบนับสินค้าที่อยู่บน \"ไลน์ประเภท 🧪 จ้างนอก\" เป็นงานหลังชุบ · ตั้งประเภทไลน์ที่ /line-setup (เช่นไลน์ Coating) แล้วสร้างสินค้าหลังชุบไว้บนไลน์นั้นที่")} /products
         </div>
       )}
 
@@ -286,65 +289,65 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
           const late = g.items.some(it => it.overdue);
           return (
             <div key={g.vendor} style={{ ...box, flex: '1 1 220px', borderColor: late ? '#ef4444' : 'var(--border)' }}>
-              <div style={{ fontSize: 13, fontWeight: 800 }}>🧪 {g.vendor}</div>
-              <div style={{ fontSize: 22, fontWeight: 800, fontFamily: 'var(--font-display)' }}>{fmt(g.open)} <span style={{ fontSize: 12, color: 'var(--muted)' }}>ชิ้นอยู่ที่ร้าน</span></div>
-              <div style={muted}>{g.orders} ใบ · {g.items.length} พาร์ท · เก่าสุด {oldest} วัน
-                {g.leadDays == null ? ' · ยังไม่ตั้ง lead time ร้าน (ทะเบียน Supplier)' : ` · lead time ${g.leadDays} วัน`}</div>
-              {late && <div style={errTxt}>มีงานเกิน lead time</div>}
+              <div style={{ fontSize: 13, fontWeight: 800 }}>{g.vendor}</div>
+              <div style={{ fontSize: 22, fontWeight: 800, fontFamily: 'var(--font-display)' }}>{fmt(g.open)} <span style={{ fontSize: 12, color: 'var(--muted)' }}>{tr('ชิ้นอยู่ที่ร้าน')}</span></div>
+              <div style={muted}>{g.orders} {tr('ใบ ·')} {g.items.length} {tr('พาร์ท · เก่าสุด')} {oldest} {tr("วัน")}
+                {g.leadDays == null ? tr(" · ยังไม่ตั้ง lead time ร้าน (ทะเบียน Supplier)") : ` · lead time ${g.leadDays} ${tr("วัน")}`}</div>
+              {late && <div style={errTxt}>{tr('มีงานเกิน lead time')}</div>}
             </div>
           );
         })}
-        {!groups.length && masterReady && <div style={{ ...box, flex: '1 1 220px', ...muted }}>ไม่มีงานค้างที่ร้านชุบ</div>}
+        {!groups.length && masterReady && <div style={{ ...box, flex: '1 1 220px', ...muted }}>{tr('ไม่มีงานค้างที่ร้านชุบ')}</div>}
         <button type="button" disabled={!canSend} onClick={() => setSendOpen(v => !v)}
           style={storeBtn(sendOpen ? 'secondary' : 'primary', { alignSelf: 'center', opacity: canSend ? 1 : 0.5 })}
-          title={canSend ? '' : 'ไม่มีสิทธิ์ส่งชุบ (plating:send)'}>
-          {sendOpen ? '▾ ปิดฟอร์มส่ง' : '📤 ส่งงานไปชุบ'}
+          title={canSend ? '' : tr('ไม่มีสิทธิ์ส่งชุบ (plating:send)')}>
+          {sendOpen ? tr('▾ ปิดฟอร์มส่ง') : tr('📤 ส่งงานไปชุบ')}
         </button>
       </div>
 
       {sendOpen && (
         <div style={box}>
-          <h3 style={h3}>📤 ส่งงานไปชุบ</h3>
+          <h3 style={h3}>{tr('ส่งงานไปชุบ')}</h3>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 8 }}>
             <div style={{ flex: '1 1 240px', minWidth: 0 }}>
-              <SupplierSelect value={vendor} onChange={({ supplier }) => setVendor(supplier || '')} kinds={['service']} placeholder="ร้านชุบ (ทะเบียน Supplier)…" />
+              <SupplierSelect value={vendor} onChange={({ supplier }) => setVendor(supplier || '')} kinds={['service']} placeholder={tr('ร้านชุบ (ทะเบียน Supplier)…')} />
             </div>
-            <input placeholder="เลขใบส่งของ (ถ้ามี)" value={docNo} onChange={e => setDocNo(e.target.value)} style={{ ...inp, flex: '1 1 160px' }} aria-label="เลขใบส่งของ" />
+            <input placeholder={tr('เลขใบส่งของ (ถ้ามี)')} value={docNo} onChange={e => setDocNo(e.target.value)} style={{ ...inp, flex: '1 1 160px' }} aria-label={tr('เลขใบส่งของ')} />
           </div>
           <div style={{ display: 'grid', gap: 8 }}>
             {sendLines.map((l, idx) => {
               const i = lineInfo(l);
               return (
-                <div key={l.key} style={{ display: 'grid', gap: 6, padding: 10, borderRadius: 'var(--radius)', background: 'var(--bg2)', border: '1px solid var(--border)' }}>
+                <div key={l.key} style={{ display: 'grid', gap: 6, padding: 10, borderRadius: 'var(--radius)', background: 'var(--bg2-surf)', border: '1px solid var(--border)' }}>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                     <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--muted)' }}>#{idx + 1}</span>
                     <div style={{ flex: '2 1 260px', minWidth: 0 }}>
                       <ProductSelect value={l.after} onChange={({ mat_no }) => setLine(l.key, { after: mat_no || '', before: '' })}
-                        products={platList} includeInactive disabled={!platList.length} placeholder="งานหลังชุบ — ค้น MAT / ชื่อ / P/N…" />
+                        products={platList} includeInactive disabled={!platList.length} placeholder={tr('งานหลังชุบ — ค้น MAT / ชื่อ / P/N…')} />
                     </div>
-                    <input type="number" min="0" inputMode="numeric" placeholder="จำนวน" value={l.qty}
-                      onChange={e => setLine(l.key, { qty: e.target.value })} style={{ ...inp, width: 110 }} aria-label="จำนวนที่ส่ง" />
+                    <input type="number" min="0" inputMode="numeric" placeholder={tr('จำนวน')} value={l.qty}
+                      onChange={e => setLine(l.key, { qty: e.target.value })} style={{ ...inp, width: 110 }} aria-label={tr('จำนวนที่ส่ง')} />
                     {sendLines.length > 1 && (
-                      <button type="button" onClick={() => setSendLines(ls => ls.filter(x => x.key !== l.key))} style={storeBtn('secondary', { minHeight: 40, padding: '6px 12px' })} aria-label="ลบรายการ">✕</button>
+                      <button type="button" onClick={() => setSendLines(ls => ls.filter(x => x.key !== l.key))} style={storeBtn('secondary', { minHeight: 40, padding: '6px 12px' })} aria-label={tr('ลบรายการ')}>✕</button>
                     )}
                   </div>
                   {l.after && (
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', fontSize: 12.5 }}>
-                      <span>ส่งเป็นเลขก่อนชุบ:</span>
+                      <span>{tr('ส่งเป็นเลขก่อนชุบ:')}</span>
                       {i.cands.length > 1 || (i.cands.length === 1 && !i.cands[0].linked) ? (
-                        <select value={i.before} onChange={e => setLine(l.key, { before: e.target.value })} style={{ ...inp, minHeight: 36 }} aria-label="เลขก่อนชุบ">
-                          <option value="">— เลือก —</option>
-                          {i.cands.map(c => <option key={c.mat} value={c.mat}>{c.mat} {c.name}{c.linked ? '' : ' (P/N ตรง · ยังไม่ผูก BOM)'}</option>)}
+                        <select value={i.before} onChange={e => setLine(l.key, { before: e.target.value })} style={{ ...inp, minHeight: 36 }} aria-label={tr('เลขก่อนชุบ')}>
+                          <option value="">{tr('— เลือก —')}</option>
+                          {i.cands.map(c => <option key={c.mat} value={c.mat}>{c.mat} {c.name}{c.linked ? '' : tr(" (P/N ตรง · ยังไม่ผูก BOM)")}</option>)}
                         </select>
                       ) : i.cands.length === 1 ? <b>{i.cands[0].mat} {i.cands[0].name}</b> : (
                         <div style={{ flex: '1 1 240px', minWidth: 0 }}>
-                          <ProductSelect value={l.before} onChange={({ mat_no }) => setLine(l.key, { before: mat_no || '' })} products={products} placeholder="ไม่เจอใน BOM — เลือกเลขก่อนชุบเอง…" />
+                          <ProductSelect value={l.before} onChange={({ mat_no }) => setLine(l.key, { before: mat_no || '' })} products={products} placeholder={tr('ไม่เจอใน BOM — เลือกเลขก่อนชุบเอง…')} />
                         </div>
                       )}
-                      {i.before && !i.linked && <span style={warnTxt}>ส่งครั้งแรก ระบบจะผูก BOM {l.after} ← {i.before} ให้</span>}
+                      {i.before && !i.linked && <span style={warnTxt}>{tr('ส่งครั้งแรก ระบบจะผูก BOM')} {l.after} ← {i.before} {tr('ให้')}</span>}
                     </div>
                   )}
-                  {i.before && <div style={muted}>ตัดของจาก <b>{i.fromLoc || '—'}</b>{i.fromLoc && <> · ระบบเห็นคงเหลือ {i.have == null ? 'ไม่มีข้อมูลสต็อก' : `${fmt(i.have)} ชิ้น`}</>}</div>}
+                  {i.before && <div style={muted}>{tr('ตัดของจาก')} <b>{i.fromLoc || '—'}</b>{i.fromLoc && <> {tr('· ระบบเห็นคงเหลือ')} {i.have == null ? tr("ไม่มีข้อมูลสต็อก") : `${fmt(i.have)} ${tr("ชิ้น")}`}</>}</div>}
                   {i.block && l.qty !== '' && l.after && <div style={errTxt}>{i.block}</div>}
                   {i.warn && <div style={warnTxt}>{i.warn}</div>}
                 </div>
@@ -352,10 +355,10 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
             })}
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10, alignItems: 'center' }}>
-            <button type="button" onClick={() => setSendLines(ls => [...ls, blankLine()])} style={storeBtn('secondary')}>+ เพิ่มรายการ</button>
+            <button type="button" onClick={() => setSendLines(ls => [...ls, blankLine()])} style={storeBtn('secondary')}>{tr('+ เพิ่มรายการ')}</button>
             <button type="button" disabled={!!sendBlock || String(busy || '').startsWith('send|')} onClick={doSend}
               style={storeBtn('primary', { opacity: sendBlock ? 0.5 : 1 })}>
-              {String(busy || '').startsWith('send|') ? 'กำลังบันทึก…' : `📤 ส่ง ${filled.length} รายการ · ${fmt(filled.reduce((a, l) => a + Number(l.qty || 0), 0))} ชิ้น`}
+              {String(busy || '').startsWith('send|') ? tr("กำลังบันทึก…") : `📤 ${tr("ส่ง")} ${filled.length} ${tr("รายการ")} · ${fmt(filled.reduce((a, l) => a + Number(l.qty || 0), 0))} ${tr("ชิ้น")}`}
             </button>
             {sendBlock && filled.length > 0 && <span style={muted}>{sendBlock}</span>}
           </div>
@@ -366,16 +369,15 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
       {part !== 'send' && (<>
       {/* 🃏 การ์ดใบส่งชุบ — รอรับกลับ */}
       <div style={muted}>
-        🧪 อยู่ที่ร้านรวม <b>{fmt(totalOpen)} ชิ้น · {orders.length} ใบ</b> · งานกลับมา: นับของจริงก่อน ครบกดรับ · ไม่ครบกรอกยอดที่นับได้ + รายละเอียด
-        (ส่วนที่เหลือค้างร้านต่อ หรือติ๊กปิดใบถ้าไม่กลับแล้ว) · ร้านชุบไม่ยืนยันยอดเอง สโตร์เป็นคนยืนยัน
-        {!canReceive && <span style={warnTxt}> · บัญชีนี้ไม่มีสิทธิ์รับคืน (plating:receive) — ดูได้อย่างเดียว</span>}
+        {tr("อยู่ที่ร้านรวม")} <b>{fmt(totalOpen)} {tr('ชิ้น ·')} {orders.length} {tr('ใบ')}</b> · {tr("งานกลับมา: นับของจริงก่อน ครบกดรับ · ไม่ครบกรอกยอดที่นับได้ + รายละเอียด (ส่วนที่เหลือค้างร้านต่อ หรือติ๊กปิดใบถ้าไม่กลับแล้ว) · ร้านชุบไม่ยืนยันยอดเอง สโตร์เป็นคนยืนยัน")}
+        {!canReceive && <span style={warnTxt}> {tr('· บัญชีนี้ไม่มีสิทธิ์รับคืน (plating:receive) — ดูได้อย่างเดียว')}</span>}
       </div>
       {cards.length === 0 ? (
         <div style={{ padding: 24, textAlign: 'center', ...muted }}>
-          {orders.length === 0 && !s ? 'ไม่มีงานรอรับกลับจากร้านชุบ' : `ไม่มีใบที่ตรงคำค้น${s ? ` "${q}"` : ''}`}
+          {orders.length === 0 && !s ? tr("ไม่มีงานรอรับกลับจากร้านชุบ") : `${tr("ไม่มีใบที่ตรงคำค้น")}${s ? ` "${q}"` : ''}`}
         </div>
       ) : (
-        <StatusZones rows={cards} zones={ZONES(showDone)} statusOf={zoneOf} renderCard={o => {
+        <StatusZones layout={table ? 'table' : 'cards'} rows={cards} zones={ZONES(showDone)} statusOf={zoneOf} renderCard={o => {
           const open = openQtyOf(o);
           const isOpen = o.status === 'open';
           const editing = diffFor === o.id;
@@ -384,48 +386,48 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
           const age = daysAgo(o.sent_at, now.getTime());
           return (
             <PartCard key={o.id} code={o.after_mat} name={o.part_name} img={imgOf(o.after_mat) || imgOf(o.before_mat)} alert={zone === 'late'}
-              status={isOpen ? (zone === 'late' ? { label: '⏰ เกินกำหนด', color: '#ef4444' } : { label: '🧪 ที่ร้าน', color: '#06b6d4' }) : { label: '✅ ปิดแล้ว', color: '#22c55e' }}
-              metric={{ label: isOpen ? 'ค้างที่ร้าน' : 'รับกลับแล้ว', value: fmt(isOpen ? open : o.qty_received), unit: 'ชิ้น' }}
-              aside={{ label: 'ร้าน', value: o.vendor }}
+              status={isOpen ? (zone === 'late' ? { label: '⏰ เกินกำหนด', color: 'var(--red)' } : { label: 'ที่ร้าน', color: '#06b6d4' }) : { label: '✅ ปิดแล้ว', color: 'var(--green)' }}
+              metric={{ label: isOpen ? 'ค้างที่ร้าน' : 'รับกลับแล้ว', value: fmt(isOpen ? open : o.qty_received), unit: tr("ชิ้น") }}
+              aside={{ label: tr("ร้าน"), value: o.vendor }}
               dim={!isOpen}
               rows={[
-                { k: 'ส่งไปเป็น', v: o.before_mat },
-                { k: 'ส่ง / รับแล้ว', v: `${fmt(o.qty_sent)} / ${fmt(o.qty_received)}${Number(o.qty_written_off) > 0 ? ` · ตัด ${fmt(o.qty_written_off)}` : ''}` },
-                { k: 'ส่งเมื่อ', v: `${dmy(o.sent_at)}${age != null ? ` · ${age} วันที่แล้ว` : ''}${o.sent_by_name ? ` · ${o.sent_by_name}` : ''}` },
-                { k: 'ใบส่งของ', v: o.doc_no },
-                { k: 'รับเข้า', v: isOpen ? (toLoc || '⚠ ไม่มีกฎรับเข้าคลัง') : null },
-                { k: 'ปิดใบ', v: !isOpen ? `${dmy(o.closed_at)} · ${o.closed_reason || o.status}` : null },
+                { k: tr("ส่งไปเป็น"), v: o.before_mat },
+                { k: tr("ส่ง / รับแล้ว"), v: `${fmt(o.qty_sent)} / ${fmt(o.qty_received)}${Number(o.qty_written_off) > 0 ? ` · ${tr("ตัด")} ${fmt(o.qty_written_off)}` : ''}` },
+                { k: tr("ส่งเมื่อ"), v: `${dmy(o.sent_at)}${age != null ? ` · ${age} ${tr("วันที่แล้ว")}` : ''}${o.sent_by_name ? ` · ${o.sent_by_name}` : ''}` },
+                { k: tr("ใบส่งของ"), v: o.doc_no },
+                { k: tr("รับเข้า"), v: isOpen ? (toLoc || '⚠ ไม่มีกฎรับเข้าคลัง') : null },
+                { k: tr("ปิดใบ"), v: !isOpen ? `${dmy(o.closed_at)} · ${o.closed_reason || o.status}` : null },
               ]}
               footer={isOpen && canReceive ? (editing ? (
                 <div style={{ display: 'grid', gap: 8 }}>
                   <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text2)' }}>
-                    ยอดที่นับได้จริง (ค้างร้าน {fmt(open)})
+                    {tr('ยอดที่นับได้จริง (ค้างร้าน')} {fmt(open)})
                     <input type="number" min="0" inputMode="numeric" value={form.qty} autoFocus
                       onChange={e => setForm(f => ({ ...f, qty: e.target.value }))}
                       style={{ ...inp, display: 'block', width: '100%', marginTop: 4, fontSize: 15, fontWeight: 800 }} />
                   </label>
-                  <input placeholder="รายละเอียด (บังคับเมื่อไม่ครบ) เช่น ร้านทยอยส่ง / NG ที่ร้าน 5" value={form.reason}
-                    onChange={e => setForm(f => ({ ...f, reason: e.target.value }))} style={inp} aria-label="รายละเอียด" />
+                  <input placeholder={tr('รายละเอียด (บังคับเมื่อไม่ครบ) เช่น ร้านทยอยส่ง / NG ที่ร้าน 5')} value={form.reason}
+                    onChange={e => setForm(f => ({ ...f, reason: e.target.value }))} style={inp} aria-label={tr('รายละเอียด')} />
                   <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 12.5 }}>
                     <input type="checkbox" checked={form.close} onChange={e => setForm(f => ({ ...f, close: e.target.checked }))} />
-                    ปิดใบนี้ — ส่วนที่ขาดไม่กลับแล้ว (ไม่ติ๊ก = ส่วนที่เหลือยังค้างร้าน ทยอยรับได้)
+                    {tr("ปิดใบนี้ — ส่วนที่ขาดไม่กลับแล้ว (ไม่ติ๊ก = ส่วนที่เหลือยังค้างร้าน ทยอยรับได้")})
                   </label>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button type="button" disabled={busy === `recv|${o.id}`} style={storeBtn('primary', { flex: 1 })}
                       onClick={async () => { if (await receive(o, form.qty, form.reason.trim(), form.close)) setDiffFor(null); }}>
-                      {busy === `recv|${o.id}` ? 'กำลังบันทึก…' : `✅ รับเข้า ${form.qty === '' ? '' : fmt(form.qty)}`}
+                      {busy === `recv|${o.id}` ? tr("กำลังบันทึก…") : `✅ ${tr("รับเข้า")} ${form.qty === '' ? '' : fmt(form.qty)}`}
                     </button>
-                    <button type="button" style={storeBtn('secondary')} onClick={() => setDiffFor(null)}>ยกเลิก</button>
+                    <button type="button" style={storeBtn('secondary')} onClick={() => setDiffFor(null)}>{tr('ยกเลิก')}</button>
                   </div>
                 </div>
               ) : (
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button type="button" disabled={busy === `recv|${o.id}` || !toLoc} style={storeBtn('primary', { flex: 1, opacity: toLoc ? 1 : 0.5 })}
                     onClick={() => receive(o, open, '', false)}>
-                    {busy === `recv|${o.id}` ? 'กำลังบันทึก…' : `✅ นับแล้วครบ · รับ ${fmt(open)}`}
+                    {busy === `recv|${o.id}` ? tr("กำลังบันทึก…") : `✅ ${tr("นับแล้วครบ · รับ")} ${fmt(open)}`}
                   </button>
                   <button type="button" style={storeBtn('secondary')}
-                    onClick={() => { setDiffFor(o.id); setForm({ qty: String(open), reason: '', close: false }); }}>✏️ ไม่ครบ</button>
+                    onClick={() => { setDiffFor(o.id); setForm({ qty: String(open), reason: '', close: false }); }}>{tr('✏️ ไม่ครบ')}</button>
                 </div>
               )) : null} />
           );
@@ -437,53 +439,54 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
       {/* 🏬 หลังชุบในคลัง → W/H */}
       {afterStock.length > 0 && (
         <div style={box}>
-          <h3 style={h3}>🏬 งานหลังชุบในคลัง → ส่งเข้า W/H</h3>
-          {!canToWh && <div style={warnTxt}>บัญชีนี้ไม่มีสิทธิ์ส่งเข้า W/H (plating:to_wh) — ดูได้อย่างเดียว</div>}
-          <div style={muted}>ระบบแปลงเป็นเบอร์ 1xx ตาม BOM ให้เอง — เฉพาะ FG ที่มีลูกเป็นงานหลังชุบตัวเดียว · FG ที่ต้องประกอบต่อ ส่งไปไลน์ตามใบผลิตปกติ</div>
-          <div style={{ ...partCardGrid(), marginTop: 8 }}>
-            {afterStock.map(a => {
+          <h3 style={h3}>{tr('งานหลังชุบในคลัง → ส่งเข้า W/H')}</h3>
+          {!canToWh && <div style={warnTxt}>{tr('บัญชีนี้ไม่มีสิทธิ์ส่งเข้า W/H (plating:to_wh) — ดูได้อย่างเดียว')}</div>}
+          <div style={muted}>{tr('ระบบแปลงเป็นเบอร์ 1xx ตาม BOM ให้เอง — เฉพาะ FG ที่มีลูกเป็นงานหลังชุบตัวเดียว · FG ที่ต้องประกอบต่อ ส่งไปไลน์ตามใบผลิตปกติ')}</div>
+          {(() => { const items = afterStock.map(a => {
               const direct = a.targets.filter(t => t.direct);
               const asm = a.targets.filter(t => !t.direct);
               const fg = whFg[a.after] || (direct.length === 1 ? direct[0].fg : '');
               return (
                 <PartCard key={a.after} code={a.after} name={a.afterName} img={imgOf(a.after)}
-                  metric={{ label: a.loc ? `ใน ${a.loc}` : 'ไม่มีกฎรับเข้าคลัง', value: a.have == null ? '—' : fmt(a.have), unit: 'ชิ้น' }}
+                  metric={{ label: a.loc ? `${tr("ใน")} ${a.loc}` : 'ไม่มีกฎรับเข้าคลัง', value: a.have == null ? '—' : fmt(a.have), unit: tr("ชิ้น") }}
                   rows={[
-                    ...direct.map(t => ({ k: 'แปลงเป็น', v: `${t.fg} ${t.name}${t.qpu !== 1 ? ` (ใช้ ${t.qpu} ต่อ 1)` : ''}` })),
-                    ...asm.map(t => ({ k: 'ประกอบที่', v: `${t.line || 'ไลน์ (ยังไม่ระบุ)'} → ${t.fg}` })),
-                    { k: 'หมายเหตุ', v: a.targets.length ? null : 'ยังไม่มี FG ใช้เลขนี้ใน BOM' },
+                    ...direct.map(t => ({ k: 'แปลงเป็น', v: `${t.fg} ${t.name}${t.qpu !== 1 ? ` (${tr("ใช้")} ${t.qpu} ${tr("ต่อ")} 1)` : ''}` })),
+                    ...asm.map(t => ({ k: 'ประกอบที่', v: `${t.line || tr('ไลน์ (ยังไม่ระบุ)')} → ${t.fg}` })),
+                    { k: tr("หมายเหตุ"), v: a.targets.length ? null : 'ยังไม่มี FG ใช้เลขนี้ใน BOM' },
                   ]}
                   footer={direct.length > 0 && canToWh ? (
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                       {direct.length > 1 && (
-                        <select value={fg} onChange={e => setWhFg(m => ({ ...m, [a.after]: e.target.value }))} style={{ ...inp, flex: '1 1 100%' }} aria-label="FG ปลายทาง">
-                          <option value="">— เลือก FG —</option>
+                        <select value={fg} onChange={e => setWhFg(m => ({ ...m, [a.after]: e.target.value }))} style={{ ...inp, flex: '1 1 100%' }} aria-label={tr('FG ปลายทาง')}>
+                          <option value="">{tr('— เลือก FG —')}</option>
                           {direct.map(t => <option key={t.fg} value={t.fg}>{t.fg} {t.name}</option>)}
                         </select>
                       )}
-                      <input type="number" min="0" inputMode="numeric" placeholder="จำนวน" value={whQty[a.after] || ''}
-                        onChange={e => setWhQty(m => ({ ...m, [a.after]: e.target.value }))} style={{ ...inp, width: 100 }} aria-label="จำนวนส่งเข้า W/H" />
-                      <button type="button" disabled={busy === `wh|${a.after}` || !a.loc} onClick={() => doToWh(a)} style={storeBtn('primary', { flex: 1 })}>🏬 ส่งเข้า W/H</button>
+                      <input type="number" min="0" inputMode="numeric" placeholder={tr('จำนวน')} value={whQty[a.after] || ''}
+                        onChange={e => setWhQty(m => ({ ...m, [a.after]: e.target.value }))} style={{ ...inp, width: 100 }} aria-label={tr('จำนวนส่งเข้า W/H')} />
+                      <button type="button" disabled={busy === `wh|${a.after}` || !a.loc} onClick={() => doToWh(a)} style={storeBtn('primary', { flex: 1 })}>{tr('ส่งเข้า W/H')}</button>
                     </div>
                   ) : null} />
               );
-            })}
-          </div>
+            });
+            return table
+              ? <div style={{ marginTop: 8 }}><RowTable>{items}</RowTable></div>
+              : <div style={{ ...partCardGrid(), marginTop: 8 }}>{items}</div>;
+          })()}
         </div>
       )}
 
       {/* ⚙️ ตั้งค่า / ตัดยอด */}
       <div style={box}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <h3 style={{ ...h3, margin: 0 }}>⚙️ สินค้าหลังชุบ {platList.length} ตัว</h3>
-          {unknownBefore.length > 0 && <span style={warnTxt}>{unknownBefore.length} ตัวยังไม่ผูกเลขก่อนชุบใน BOM</span>}
-          <button type="button" onClick={() => setSetupOpen(v => !v)} style={{ ...storeBtn('secondary'), marginLeft: 'auto' }}>{setupOpen ? '▾ ซ่อน' : '▸ ดู/ผูก BOM · ตัดยอด'}</button>
+          <h3 style={{ ...h3, margin: 0 }}>{tr('สินค้าหลังชุบ')} {platList.length} {tr('ตัว')}</h3>
+          {unknownBefore.length > 0 && <span style={warnTxt}>{unknownBefore.length} {tr('ตัวยังไม่ผูกเลขก่อนชุบใน BOM')}</span>}
+          <button type="button" onClick={() => setSetupOpen(v => !v)} style={{ ...storeBtn('secondary'), marginLeft: 'auto' }}>{setupOpen ? tr('▾ ซ่อน') : tr('▸ ดู/ผูก BOM · ตัดยอด')}</button>
         </div>
         {setupOpen && (
           <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
             <div style={muted}>
-              สินค้าหลังชุบ = สินค้าบนไลน์ประเภท 🧪 จ้างนอก ({outLines.length ? outLines.join(', ') : 'ยังไม่มี — ตั้งที่ /line-setup'}) หรือที่ตั้งร้านไว้ ·
-              เลขก่อนชุบอ่านจาก BOM · ยังไม่ผูก = ระบบเสนอจาก P/N ตรงกัน (ส่งครั้งแรกจะผูกให้เอง หรือผูกล่วงหน้าที่นี่)
+              {tr("สินค้าหลังชุบ = สินค้าบนไลน์ประเภท 🧪 จ้างนอก")} ({outLines.length ? outLines.join(', ') : tr('ยังไม่มี — ตั้งที่ /line-setup')}) {tr("หรือที่ตั้งร้านไว้ · เลขก่อนชุบอ่านจาก BOM · ยังไม่ผูก = ระบบเสนอจาก P/N ตรงกัน (ส่งครั้งแรกจะผูกให้เอง หรือผูกล่วงหน้าที่นี่")})
             </div>
             {routes.map(r => (
               <div key={r.after} style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', fontSize: 12.5, padding: '6px 0', borderTop: '1px solid var(--border)' }}>
@@ -493,17 +496,17 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
                     <span style={warnTxt}>{r.problem}</span>
                     {canSetup && (
                       <>
-                        <select value={linkPick[r.after] || ''} onChange={e => setLinkPick(m => ({ ...m, [r.after]: e.target.value }))} style={{ ...inp, minHeight: 34 }} aria-label="เลขก่อนชุบ">
-                          <option value="">— เลขก่อนชุบ —</option>
+                        <select value={linkPick[r.after] || ''} onChange={e => setLinkPick(m => ({ ...m, [r.after]: e.target.value }))} style={{ ...inp, minHeight: 34 }} aria-label={tr('เลขก่อนชุบ')}>
+                          <option value="">{tr('— เลขก่อนชุบ —')}</option>
                           {r.candidates.map(c => <option key={c.mat} value={c.mat}>{c.mat} {c.name}</option>)}
                         </select>
                         {!r.candidates.length && (
                           <div style={{ minWidth: 220 }}>
-                            <ProductSelect value={linkPick[r.after] || ''} onChange={({ mat_no }) => setLinkPick(m => ({ ...m, [r.after]: mat_no || '' }))} products={products} placeholder="ค้นเลขก่อนชุบ…" />
+                            <ProductSelect value={linkPick[r.after] || ''} onChange={({ mat_no }) => setLinkPick(m => ({ ...m, [r.after]: mat_no || '' }))} products={products} placeholder={tr('ค้นเลขก่อนชุบ…')} />
                           </div>
                         )}
                         <button type="button" disabled={!linkPick[r.after] || busy === `link|${r.after}`} onClick={() => doLink(r)}
-                          style={storeBtn('secondary', { minHeight: 34, padding: '4px 10px', fontSize: 12 })}>🌳 ผูก BOM</button>
+                          style={storeBtn('secondary', { minHeight: 34, padding: '4px 10px', fontSize: 12 })}>{tr('ผูก BOM')}</button>
                       </>
                     )}
                   </>
@@ -512,18 +515,18 @@ export default function PlatingBoard({ q = '', showDone = false, readOnly = fals
             ))}
             {canWriteoff && groups.length > 0 && (
               <div style={{ display: 'grid', gap: 6, marginTop: 6, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
-                <div style={{ fontSize: 13, fontWeight: 800 }}>✂️ ตัดยอดค้างร้าน (ปีละครั้ง · ต้องมีเหตุผล)</div>
+                <div style={{ fontSize: 13, fontWeight: 800 }}>{tr('✂️ ตัดยอดค้างร้าน (ปีละครั้ง · ต้องมีเหตุผล)')}</div>
                 {groups.map(g => (
                   <div key={g.vendor} style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 12.5, minWidth: 140 }}>{g.vendor} · ค้าง {fmt(g.open)}</span>
+                    <span style={{ fontSize: 12.5, minWidth: 140 }}>{g.vendor} {tr('· ค้าง')} {fmt(g.open)}</span>
                     {woFor === g.vendor ? (
                       <>
-                        <input placeholder="เหตุผล เช่น ตัดยอดสิ้นปี 2026 ตามที่ตกลงกับร้าน" value={woReason} onChange={e => setWoReason(e.target.value)} style={{ ...inp, flex: '1 1 260px' }} aria-label="เหตุผลการตัดยอด" />
-                        <button type="button" disabled={busy === `wo|${g.vendor}`} onClick={() => doWriteoff(g)} style={storeBtn('primary')}>ยืนยันตัดยอด</button>
-                        <button type="button" onClick={() => setWoFor(null)} style={storeBtn('secondary')}>ยกเลิก</button>
+                        <input placeholder={tr('เหตุผล เช่น ตัดยอดสิ้นปี 2026 ตามที่ตกลงกับร้าน')} value={woReason} onChange={e => setWoReason(e.target.value)} style={{ ...inp, flex: '1 1 260px' }} aria-label={tr('เหตุผลการตัดยอด')} />
+                        <button type="button" disabled={busy === `wo|${g.vendor}`} onClick={() => doWriteoff(g)} style={storeBtn('primary')}>{tr('ยืนยันตัดยอด')}</button>
+                        <button type="button" onClick={() => setWoFor(null)} style={storeBtn('secondary')}>{tr('ยกเลิก')}</button>
                       </>
                     ) : (
-                      <button type="button" onClick={() => { setWoFor(g.vendor); setWoReason(''); }} style={storeBtn('secondary')}>✂️ ตัดยอด…</button>
+                      <button type="button" onClick={() => { setWoFor(g.vendor); setWoReason(''); }} style={storeBtn('secondary')}>{tr('✂️ ตัดยอด…')}</button>
                     )}
                   </div>
                 ))}

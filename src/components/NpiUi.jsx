@@ -5,6 +5,7 @@ import { LIGHT } from '../utils/npi';
 import { uploadAttachment, removeAttachment, attachFileName } from '../utils/fileAttach';
 import FilePickBase from './FilePick';
 
+import { tr } from '../utils/i18n';
 export const inp = {
   width: '100%', padding: '7px 10px', borderRadius: 8, border: '1px solid var(--border)',
   background: 'var(--bg)', color: 'var(--text)', fontSize: 13, boxSizing: 'border-box',
@@ -32,7 +33,7 @@ export function Field({ label, hint, children, span }) {
 
 export function Pill({ label, color = '#94a3b8', title, small }) {
   return (
-    <span title={title} style={{ display: 'inline-block', padding: small ? '0 6px' : '1px 8px', borderRadius: 999,
+    <span title={title} style={{ display: 'inline-block', padding: small ? '0 6px' : '1px 8px', borderRadius: 'var(--r-pill)',
       fontSize: small ? 10.5 : 11.5, fontWeight: 800, color, background: `${color}22`, border: `1px solid ${color}66`, whiteSpace: 'nowrap' }}>
       {label}
     </span>
@@ -43,7 +44,7 @@ export function Pill({ label, color = '#94a3b8', title, small }) {
 export function LightDot({ light = 'grey', size = 12, title }) {
   const c = (LIGHT[light] || LIGHT.grey).color;
   return (
-    <span title={title || LIGHT[light]?.label} className={light === 'red' ? 'dt-alarm-blink' : undefined}
+    <span title={title || tr(LIGHT[light]?.label)} className={light === 'red' ? 'dt-alarm-blink' : undefined}
       style={{ display: 'inline-block', width: size, height: size, borderRadius: '50%', background: c,
         boxShadow: light === 'grey' ? 'none' : `0 0 0 3px ${c}33`, flexShrink: 0 }} />
   );
@@ -53,7 +54,7 @@ export function LightDot({ light = 'grey', size = 12, title }) {
 export function MetaSelect({ value, onChange, meta, disabled, style, exclude = [] }) {
   return (
     <select value={value || ''} onChange={e => onChange(e.target.value)} disabled={disabled} style={{ ...inp, ...style }}>
-      {Object.entries(meta).filter(([k]) => !exclude.includes(k)).map(([k, m]) => <option key={k} value={k}>{m.label}</option>)}
+      {Object.entries(meta).filter(([k]) => !exclude.includes(k)).map(([k, m]) => <option key={k} value={k}>{tr(m.label)}</option>)}
     </select>
   );
 }
@@ -66,7 +67,7 @@ export function Modal({ title, onClose, children, width = 640, footer }) {
         style={{ width: `min(${width}px, 96vw)`, maxHeight: '92vh', overflowY: 'auto', padding: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, gap: 8 }}>
           <h3 style={{ margin: 0, fontSize: 16 }}>{title}</h3>
-          <button className="tbtn" onClick={onClose} aria-label="ปิด" style={{ ...ghost, padding: '4px 9px' }}>✕</button>
+          <button className="tbtn" onClick={onClose} aria-label={tr('ปิด')} style={{ ...ghost, padding: '4px 9px' }}>✕</button>
         </div>
         {children}
         {footer && <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>{footer}</div>}
@@ -79,7 +80,7 @@ export function Modal({ title, onClose, children, width = 640, footer }) {
 export function WarnBar({ children, color = '#ef4444' }) {
   if (!children) return null;
   return (
-    <div style={{ background: `${color}18`, border: `1px solid ${color}66`, color, borderRadius: 8, padding: '8px 12px', fontSize: 12.5, fontWeight: 700, marginBottom: 10 }}>
+    <div style={{ background: `${color}18`, border: `1px solid ${color}66`, color, borderRadius: 'var(--r-md)', padding: '8px 12px', fontSize: 12.5, fontWeight: 700, marginBottom: 10 }}>
       {children}
     </div>
   );

@@ -25,6 +25,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from './Toast';
 import { checkWrite } from '../utils/dbWrite';
 
+import { tr } from '../utils/i18n';
+import { askConfirm } from '../utils/askConfirm';
 const inp = { padding: '5px 8px', borderRadius: 6, fontSize: 12, border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text)', width: '100%' };
 const btn = (bg, color = '#fff') => ({ padding: '5px 10px', borderRadius: 6, fontSize: 11.5, fontWeight: 700, cursor: 'pointer', background: bg, color, border: '1px solid var(--border)', whiteSpace: 'nowrap' });
 
@@ -43,7 +45,7 @@ function FieldInput({ f, value, onChange, disabled }) {
   if (f.type === 'select') return (
     <select value={value ?? ''} disabled={disabled} onChange={e => onChange(e.target.value)} style={st}>
       {!f.required && <option value="">—</option>}
-      {(f.options || []).map(o => <option key={o.value} value={o.value}>{o.label ?? o.value}</option>)}
+      {(f.options || []).map(o => <option key={o.value} value={o.value}>{tr(o.label) ?? o.value}</option>)}
     </select>
   );
   if (f.type === 'textarea') return <textarea rows={2} value={value ?? ''} disabled={disabled} placeholder={f.placeholder} onChange={e => onChange(e.target.value)} style={st} />;
@@ -78,17 +80,17 @@ export default function SimpleMasterPanel({
     const payload = {};
     for (const f of fields) {
       const v = fromInput(f, adding?.[f.key]);
-      if (f.required && (v == null || v === '' || (Array.isArray(v) && !v.length))) { toast.error(`กรอก "${f.label}" ก่อน`); return; }
+      if (f.required && (v == null || v === '' || (Array.isArray(v) && !v.length))) { toast.error(`${tr("กรอก")} "${f.label}" ${tr("ก่อน")}`); return; }
       payload[f.key] = v;
     }
     const key = String(keyFrom ? keyFrom(payload) : (adding?.[keyCol] || '')).trim();
-    if (!key) { toast.error(`กรอก "${keyCol}" ก่อน`); return; }
-    if (rows.some(r => String(r[keyCol]).toUpperCase() === key.toUpperCase())) { toast.error(`มี ${key} ในทะเบียนแล้ว`); return; }
+    if (!key) { toast.error(`${tr("กรอก")} "${keyCol}" ${tr("ก่อน")}`); return; }
+    if (rows.some(r => String(r[keyCol]).toUpperCase() === key.toUpperCase())) { toast.error(`${tr("มี")} ${key} ${tr("ในทะเบียนแล้ว")}`); return; }
     setBusy(true);
-    const ok = checkWrite(await client.from(table).insert([{ [keyCol]: key, ...payload, sort_order: Math.max(100, ...rows.map(r => r.sort_order || 0)) + 1, ...stamp }]), `เพิ่ม ${key}`);
+    const ok = checkWrite(await client.from(table).insert([{ [keyCol]: key, ...payload, sort_order: Math.max(100, ...rows.map(r => r.sort_order || 0)) + 1, ...stamp }]), `${tr("เพิ่ม")} ${key}`);
     setBusy(false);
     if (!ok) return;
-    toast.success(`เพิ่ม ${key} แล้ว`); setAdding(null); done();
+    toast.success(`${tr("เพิ่ม")} ${key} ${tr("แล้ว")}`); setAdding(null); done();
   };
 
   const saveRow = async (r) => {
@@ -98,13 +100,13 @@ export default function SimpleMasterPanel({
     setBusy(true);
     const res = await client.from(table).update({ ...payload, ...stamp }).eq(keyCol, r[keyCol]).select(keyCol);
     setBusy(false);
-    if (!checkWrite(res, `บันทึก ${r[keyCol]}`)) return;
+    if (!checkWrite(res, `${tr("บันทึก")} ${r[keyCol]}`)) return;
     if (!res.data?.length) { toast.error('บันทึกไม่ติด (0 แถว) — อาจไม่มีสิทธิ์แก้ทะเบียนนี้'); return; }
     toast.success('บันทึกแล้ว'); setDraft(x => { const n = { ...x }; delete n[r[keyCol]]; return n; }); done();
   };
 
   const toggle = async (r) => {
-    if (r.is_active !== false && !window.confirm(`ปิดใช้ "${r[keyCol]}" ?\n\n${offNote}\n(เปิดกลับได้ภายหลัง)`)) return;
+    if (r.is_active !== false && !await askConfirm(`${tr("ปิดใช้")} "${r[keyCol]}" ?\n\n${offNote}\n(${tr("เปิดกลับได้ภายหลัง")})`)) return;
     const res = await client.from(table).update({ is_active: r.is_active === false, ...stamp }).eq(keyCol, r[keyCol]).select(keyCol);
     if (!checkWrite(res, 'เปลี่ยนสถานะ')) return;
     if (!res.data?.length) { toast.error('เปลี่ยนสถานะไม่ติด (0 แถว) — อาจไม่มีสิทธิ์'); return; }
@@ -122,9 +124,9 @@ export default function SimpleMasterPanel({
       setBusy(false);
       if (msg) { toast.error(msg); return; }
     }
-    if (!window.confirm(`ลบ "${r[keyCol]}" ออกจากทะเบียน?\n\nข้อมูลเก่าที่บันทึกด้วยชื่อ/รหัสนี้ยังอ่านออก (ไม่ผูก FK) — ถ้าแค่เลิกใช้ แนะนำกด "ปิดใช้" แทน`)) return;
+    if (!await askConfirm(`${tr("ลบ")} "${r[keyCol]}" ${tr("ออกจากทะเบียน?\\n\\nข้อมูลเก่าที่บันทึกด้วยชื่อ/รหัสนี้ยังอ่านออก (ไม่ผูก FK) — ถ้าแค่เลิกใช้ แนะนำกด \"ปิดใช้\" แทน")}`)) return;
     const res = await client.from(table).delete().eq(keyCol, r[keyCol]).select(keyCol);
-    if (!checkWrite(res, `ลบ ${r[keyCol]}`)) return;
+    if (!checkWrite(res, `${tr("ลบ")} ${r[keyCol]}`)) return;
     if (!res.data?.length) { toast.error('ลบไม่ติด (0 แถว) — อาจไม่มีสิทธิ์'); return; }
     done();
   };
@@ -141,32 +143,32 @@ export default function SimpleMasterPanel({
       {title && <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 4 }}>{title} <span style={{ color: 'var(--muted)', fontWeight: 600 }}>({rows.length})</span></div>}
       {help && <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8 }}>{help}</div>}
       {missing ? (
-        <div style={{ fontSize: 12, color: '#f59e0b' }}>⚠ ยังไม่ได้ apply migration ของตาราง {table} (แจ้ง admin) — ระหว่างนี้ช่องเลือกยังพิมพ์เองได้พร้อมป้ายเตือน</div>
+        <div style={{ fontSize: 12, color: 'var(--amber)' }}>{tr('⚠ ยังไม่ได้ apply migration ของตาราง')} {table} {tr('(แจ้ง admin) — ระหว่างนี้ช่องเลือกยังพิมพ์เองได้พร้อมป้ายเตือน')}</div>
       ) : (
         <>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8, flexWrap: 'wrap' }}>
-            <input placeholder="🔍 ค้นหา…" value={q} onChange={e => setQ(e.target.value)} style={{ ...inp, width: 220 }} />
-            {offCount > 0 && <label style={{ fontSize: 11.5, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 4 }}><input type="checkbox" checked={showOff} onChange={e => setShowOff(e.target.checked)} /> แสดงที่ปิดใช้ ({offCount})</label>}
+            <input placeholder={tr('ค้นหา…')} value={q} onChange={e => setQ(e.target.value)} style={{ ...inp, width: 220 }} />
+            {offCount > 0 && <label style={{ fontSize: 11.5, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 4 }}><input type="checkbox" checked={showOff} onChange={e => setShowOff(e.target.checked)} /> {tr('แสดงที่ปิดใช้ (')}{offCount})</label>}
             <div style={{ flex: 1 }} />
-            {canManage && !adding && <button onClick={() => setAdding({})} style={btn('var(--accent)', 'var(--accent-ink)')}>+ เพิ่ม</button>}
+            {canManage && !adding && <button onClick={() => setAdding({})} style={btn('var(--accent)', 'var(--accent-ink)')}>{tr('+ เพิ่ม')}</button>}
           </div>
 
           {adding && (
-            <div style={{ display: 'grid', gridTemplateColumns: `${keyFrom ? '' : '150px '}repeat(${fields.length}, minmax(120px, 1fr)) auto`, gap: 6, alignItems: 'end', padding: 8, borderRadius: 8, background: 'var(--bg2)', border: '1px dashed var(--border2)', marginBottom: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: `${keyFrom ? '' : '150px '}repeat(${fields.length}, minmax(120px, 1fr)) auto`, gap: 6, alignItems: 'end', padding: 8, borderRadius: 'var(--r-md)', background: 'var(--bg2-surf)', border: '1px dashed var(--border2)', marginBottom: 8 }}>
               {!keyFrom && <div><div style={{ fontSize: 11, color: 'var(--muted)' }}>{keyCol}</div><input value={adding[keyCol] || ''} onChange={e => setAdding(a => ({ ...a, [keyCol]: e.target.value }))} style={{ ...inp, fontFamily: 'monospace' }} /></div>}
-              {fields.map(f => <div key={f.key}><div style={{ fontSize: 11, color: 'var(--muted)' }}>{f.label}{f.required ? ' *' : ''}</div><FieldInput f={f} value={adding[f.key]} onChange={v => setAdding(a => ({ ...a, [f.key]: v }))} /></div>)}
+              {fields.map(f => <div key={f.key}><div style={{ fontSize: 11, color: 'var(--muted)' }}>{tr(f.label)}{f.required ? ' *' : ''}</div><FieldInput f={f} value={adding[f.key]} onChange={v => setAdding(a => ({ ...a, [f.key]: v }))} /></div>)}
               <div style={{ display: 'flex', gap: 4 }}>
-                <button onClick={add} disabled={busy} style={btn('var(--accent)', 'var(--accent-ink)')}>บันทึก</button>
-                <button onClick={() => setAdding(null)} style={btn('var(--bg3)', 'var(--text2)')}>ยกเลิก</button>
+                <button onClick={add} disabled={busy} style={btn('var(--accent)', 'var(--accent-ink)')}>{tr('บันทึก')}</button>
+                <button onClick={() => setAdding(null)} style={btn('var(--bg3)', 'var(--text2)')}>{tr('ยกเลิก')}</button>
               </div>
             </div>
           )}
 
-          <div style={{ maxHeight, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
+          <div style={{ maxHeight, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
               <thead><tr style={{ background: 'var(--bg3)' }}>
-                <th style={{ textAlign: 'left', padding: '6px 8px', fontSize: 11, color: 'var(--muted)' }}>{keyCol}</th>
-                {fields.map(f => <th key={f.key} style={{ textAlign: 'left', padding: '6px 8px', fontSize: 11, color: 'var(--muted)', width: f.width }}>{f.label}</th>)}
+                <th style={{ textAlign: 'left', padding: '6px 8px', fontSize: 11, color: 'var(--muted)' }}>{tr(keyCol)}</th>
+                {fields.map(f => <th key={f.key} style={{ textAlign: 'left', padding: '6px 8px', fontSize: 11, color: 'var(--muted)', width: f.width }}>{tr(f.label)}</th>)}
                 {canManage && <th style={{ width: 150 }} />}
               </tr></thead>
               <tbody>
@@ -185,8 +187,8 @@ export default function SimpleMasterPanel({
                       {canManage && (
                         <td style={{ padding: '4px 6px', whiteSpace: 'nowrap' }}>
                           {d && <button onClick={() => saveRow(r)} disabled={busy} style={{ ...btn('var(--accent)', 'var(--accent-ink)'), marginRight: 4 }}>💾</button>}
-                          <button onClick={() => toggle(r)} style={{ ...btn('transparent', 'var(--text2)'), marginRight: 4 }}>{r.is_active === false ? 'เปิดใช้' : 'ปิดใช้'}</button>
-                          <button onClick={() => remove(r)} style={btn('transparent', '#ef4444')}>ลบ</button>
+                          <button onClick={() => toggle(r)} style={{ ...btn('transparent', 'var(--text2)'), marginRight: 4 }}>{r.is_active === false ? tr('เปิดใช้') : tr('ปิดใช้')}</button>
+                          <button onClick={() => remove(r)} style={btn('transparent', '#ef4444')}>{tr('ลบ')}</button>
                         </td>
                       )}
                     </tr>

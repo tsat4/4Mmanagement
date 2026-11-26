@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { toast } from './Toast';
 import { DIE_STATUSES, dieStatusMeta, saveDieStatus, MIGRATION_HINT } from '../utils/dieStatus';
 
+import { tr, dateLocale } from '../utils/i18n';
 /* ═══ DieStatusEditor — ตัวเปลี่ยนสถานะแม่พิมพ์ (ใช้ร่วมแท็บ 🗺️ ผังจัดเก็บ + 📊 สถานะ) ═══
    สถานะ manual เท่านั้น — สถานะ "มีใบซ่อมค้าง" derive จาก MO เสมอ ไม่ให้คนตั้งเองที่นี่
    (die = แถว machines พร้อม .ext) · เขียนสำเร็จแล้วเรียก onSaved(patch) ให้หน้าแม่ update state */
@@ -23,7 +24,7 @@ export default function DieStatusEditor({ die, canEdit, fullName, ready, onSaved
     if (error) {
       // 42703/42P01 = migration ยังไม่ apply — ต้องบอกให้ชัด ห้ามเงียบ
       const miss = error.code === '42703' || error.code === '42P01';
-      return toast.error(miss ? MIGRATION_HINT : 'บันทึกสถานะไม่สำเร็จ: ' + error.message);
+      return toast.error(miss ? MIGRATION_HINT : (tr('บันทึกสถานะไม่สำเร็จ') + ': ') + error.message);
     }
     toast.success('บันทึกสถานะแม่พิมพ์แล้ว');
     onSaved?.({
@@ -42,12 +43,12 @@ export default function DieStatusEditor({ die, canEdit, fullName, ready, onSaved
       <div style={{ display: 'grid', gap: 4 }}>
         <span style={{
           alignSelf: 'start', justifySelf: 'start', fontSize: 12, fontWeight: 700, padding: '3px 10px',
-          borderRadius: 999, color: meta.color, background: meta.bg, border: `1px solid ${meta.color}`,
-        }}>{meta.icon} {meta.label}</span>
-        {ext.status_note && <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>📝 {ext.status_note}</div>}
+          borderRadius: 'var(--r-pill)', color: meta.color, background: meta.bg, border: `1px solid ${meta.color}`,
+        }}>{meta.icon} {tr(meta.label)}</span>
+        {ext.status_note && <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{ext.status_note}</div>}
         {ext.status_updated_at && (
           <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-            อัพเดท {new Date(ext.status_updated_at).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}
+            {tr("อัพเดท")} {new Date(ext.status_updated_at).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok' })}
             {ext.status_updated_by_name ? ` · ${ext.status_updated_by_name}` : ''}
           </div>
         )}
@@ -58,25 +59,25 @@ export default function DieStatusEditor({ die, canEdit, fullName, ready, onSaved
   return (
     <div style={{ display: 'grid', gap: 6 }}>
       <select value={status} onChange={e => setStatus(e.target.value)} style={{ ...inp, borderColor: dieStatusMeta(status || null).color }}>
-        <option value="">❔ ยังไม่ระบุสถานะ</option>
-        {DIE_STATUSES.map(s => <option key={s.key} value={s.key}>{s.icon} {s.label}</option>)}
+        <option value="">{tr('❔ ยังไม่ระบุสถานะ')}</option>
+        {DIE_STATUSES.map(s => <option key={s.key} value={s.key}>{s.icon} {tr(s.label)}</option>)}
       </select>
       {!compact && (
         <div style={{ fontSize: 11, color: 'var(--muted)' }}>{dieStatusMeta(status || null).desc}</div>
       )}
-      <input value={note} onChange={e => setNote(e.target.value)} placeholder="หมายเหตุ (เช่น ซ่อมคมตัด OP20 / ส่งบริษัท xxx)" style={inp} />
+      <input value={note} onChange={e => setNote(e.target.value)} placeholder={tr('หมายเหตุ (เช่น ซ่อมคมตัด OP20 / ส่งบริษัท xxx)')} style={inp} />
       {ext.status_updated_at && (
         <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-          ล่าสุด {new Date(ext.status_updated_at).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}
+          {tr("ล่าสุด")} {new Date(ext.status_updated_at).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok' })}
           {ext.status_updated_by_name ? ` · ${ext.status_updated_by_name}` : ''}
         </div>
       )}
       {dirty && (
         <button onClick={save} disabled={saving} style={{
-          background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8,
+          background: '#16a34a', color: '#fff', border: 'none', borderRadius: 'var(--r-md)',
           padding: '7px 14px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', justifySelf: 'start',
           opacity: saving ? 0.6 : 1,
-        }}>{saving ? 'กำลังบันทึก…' : '💾 บันทึกสถานะ'}</button>
+        }}>{saving ? tr('กำลังบันทึก…') : tr('💾 บันทึกสถานะ')}</button>
       )}
     </div>
   );

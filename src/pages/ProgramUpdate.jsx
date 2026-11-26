@@ -22,6 +22,8 @@ import SearchInput from '../components/SearchInput';
 import useTimeRange from '../utils/useTimeRange';
 import { useMergeParams } from '../utils/useTabParam';
 import { KINDS, USER_KINDS, kindOf, buildFeed, countByKind, limitFeed } from '../utils/changelog';
+import { tr as trI18n, dateLocale } from '../utils/i18n';
+import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 
 /* เพดานรายการที่วาดต่อรอบ — ช่วงกว้างมาก (ทั้งประวัติ = 1,157 รายการ) ทำจอ TV/มือถือหน่วง
    🔴 ตัดแล้วต้องเขียนบนจอว่า "แสดงกี่จากกี่" + ปุ่มดูเพิ่ม **ห้ามตัดเงียบ** */
@@ -30,13 +32,13 @@ const PAGE_ROWS = 400;
 const fmtThaiDate = (ymd) => {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(ymd || ''));
   if (!m) return ymd || '—';
-  return new Date(`${ymd}T00:00:00`).toLocaleDateString('th-TH',
+  return new Date(`${ymd}T00:00:00`).toLocaleDateString(dateLocale(),
     { day: 'numeric', month: 'short', year: '2-digit', timeZone: 'Asia/Bangkok' });
 };
 const fmtStamp = (iso) => {
   const t = Date.parse(iso || '');
   return Number.isFinite(t)
-    ? new Date(t).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Bangkok' })
+    ? new Date(t).toLocaleString(dateLocale(), { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Bangkok' })
     : '—';
 };
 
@@ -104,45 +106,45 @@ export default function ProgramUpdate() {
 
   const userN = USER_KINDS.reduce((n, k) => n + (counts[k] || 0), 0);
   const segOpts = [
-    { value: 'user', label: `สำหรับผู้ใช้ ${userN}`, title: 'ฟีเจอร์ใหม่ · แก้ปัญหา · ปรับปรุง (ไม่รวมเอกสาร/งานระบบ)' },
-    { value: 'all', label: `ทั้งหมด ${inRange.length}` },
-    ...KINDS.map(k => ({ value: k.key, label: `${k.icon} ${k.label}${counts[k.key] ? ` ${counts[k.key]}` : ''}`,
-      disabled: !counts[k.key], title: k.hint })),
+    { value: 'user', label: `${trI18n("สำหรับผู้ใช้")} ${userN}`, title: trI18n("ฟีเจอร์ใหม่ · แก้ปัญหา · ปรับปรุง (ไม่รวมเอกสาร/งานระบบ)") },
+    { value: 'all', label: `${trI18n("ทั้งหมด")} ${inRange.length}` },
+    ...KINDS.map(k => ({ value: k.key, label: `${k.icon} ${trI18n(k.label)}${counts[k.key] ? ` ${counts[k.key]}` : ''}`,
+      disabled: !counts[k.key], title: trI18n(k.hint) })),
   ];
 
   return (
     <Page>
       <PageHeader
-        icon="📦" title="อัพเดทโปรแกรม"
+        icon="📦" title={trI18n('อัพเดทโปรแกรม')}
         sub={data
-          ? `ข้อมูลสดถึง ${fmtStamp(data.generatedAt)} · เก็บจากประวัติการแก้จริงของระบบ`
-          : 'รายการสิ่งที่เพิ่ม/แก้ไปในระบบ — อ่านจากประวัติการแก้จริง'}
+          ? `${trI18n("ข้อมูลสดถึง")} ${fmtStamp(data.generatedAt)} · ${trI18n("เก็บจากประวัติการแก้จริงของระบบ")}`
+          : trI18n("รายการสิ่งที่เพิ่ม/แก้ไปในระบบ — อ่านจากประวัติการแก้จริง")}
         filters={(
           <TimeRangeBar
             scale={tr.scale} from={from} to={to} today={tr.today} scales={null}
             onFrom={tr.setFrom} onTo={tr.setTo} onPreset={tr.setPreset}
             note={data?.truncated
-              ? `เก็บได้ถึง ${fmtThaiDate(data.from)} · เก่ากว่านั้นอยู่ในประวัติของระบบแต่ไม่อยู่ในไฟล์นี้`
+              ? `${trI18n("เก็บได้ถึง")} ${fmtThaiDate(data.from)} · ${trI18n("เก่ากว่านั้นอยู่ในประวัติของระบบแต่ไม่อยู่ในไฟล์นี้")}`
               : null}
           >
-            <Segmented value={kind} onChange={setKind} options={segOpts} label="ชนิดการเปลี่ยนแปลง" />
-            <SearchInput value={q} onChange={setQ} fields="ข้อความ / เรื่อง" />
+            <Segmented value={kind} onChange={setKind} options={segOpts} label={trI18n('ชนิดการเปลี่ยนแปลง')} />
+            <SearchInput value={q} onChange={setQ} fields={trI18n("ข้อความ / เรื่อง")} />
           </TimeRangeBar>
         )}
       />
 
       {err && (
-        <div style={{ background: 'var(--card)', border: '1px solid #ef444466', borderLeft: '4px solid #ef4444',
-                      borderRadius: 8, padding: '10px 14px', fontSize: 13, color: 'var(--text2)', lineHeight: 1.6 }}>
-          ❌ <b>โหลดรายการอัพเดทไม่สำเร็จ</b> ({err}) — <b>ไม่ได้หมายความว่าไม่มีอัพเดท</b>
+        <div style={{ background: 'var(--card-surf)', border: '1px solid var(--red)66', borderLeft: '4px solid var(--red)',
+                      borderRadius: 'var(--r-md)', padding: '10px 14px', fontSize: 13, color: 'var(--text2)', lineHeight: 1.6 }}>
+          ❌ <b>{trI18n('โหลดรายการอัพเดทไม่สำเร็จ')}</b> ({err}) — <b>{trI18n('ไม่ได้หมายความว่าไม่มีอัพเดท')}</b>
           <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-            ไฟล์ <code>changelog.json</code> ถูกสร้างตอน build — ถ้าเพิ่ง deploy ลองรีเฟรชอีกครั้ง
+            {trI18n("ไฟล์")} <code>changelog.json</code> {trI18n("ถูกสร้างตอน build — ถ้าเพิ่ง deploy ลองรีเฟรชอีกครั้ง")}
           </div>
         </div>
       )}
 
       {!data && !err && (
-        <div style={{ fontSize: 13, color: 'var(--muted)', padding: '12px 2px' }}>กำลังโหลดรายการอัพเดท…</div>
+        <div style={{ fontSize: 13, color: 'var(--muted)', padding: '12px 2px' }}>{trI18n('กำลังโหลดรายการอัพเดท…')}</div>
       )}
 
       {data && (
@@ -150,40 +152,40 @@ export default function ProgramUpdate() {
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 12, alignContent: 'start' }}>
             {KINDS.map(k => (
               <div key={k.key} style={{
-                background: 'var(--card)', border: `1px solid ${k.color}44`, borderLeft: `4px solid ${k.color}`,
-                borderRadius: 10, padding: '8px 14px', minWidth: 132, boxShadow: 'var(--shadow-sm)',
+                background: 'var(--card-surf)', border: `1px solid ${tint(k.color, 'line')}`, borderLeft: `4px solid ${k.color}`,
+                borderRadius: 'var(--r-md)', padding: '8px 14px', minWidth: 132, boxShadow: 'var(--shadow-sm)',
               }}>
-                <div style={{ fontSize: 11.5, color: 'var(--text2)', fontWeight: 700 }}>{k.icon} {k.label}</div>
+                <div style={{ fontSize: 11.5, color: 'var(--text2)', fontWeight: 700 }}>{k.icon} {trI18n(k.label)}</div>
                 <div style={{ fontSize: 21, fontWeight: 800, color: k.color, lineHeight: 1.25 }}>
                   {(counts[k.key] || 0).toLocaleString()}
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--muted)' }}>{k.hint}</div>
+                <div style={{ fontSize: 11, color: 'var(--muted)' }}>{trI18n(k.hint)}</div>
               </div>
             ))}
           </div>
 
           <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>
-            {fmtThaiDate(from)} – {fmtThaiDate(to)} · <b style={{ color: 'var(--text2)' }}>{shown.toLocaleString()}</b> รายการ
-            {view.hidden > 0 ? <> จาก {view.total.toLocaleString()}</> : null}
-            {' '}ใน {view.days.length} วันที่มีการแก้
+            {fmtThaiDate(from)} – {fmtThaiDate(to)} · <b style={{ color: 'var(--text2)' }}>{shown.toLocaleString()}</b> {trI18n("รายการ")}
+            {view.hidden > 0 ? <> {trI18n('จาก')} {view.total.toLocaleString()}</> : null}
+            {' '}{trI18n('ใน')} {view.days.length} {trI18n("วันที่มีการแก้")}
             {(kind !== 'all' || q) && inRange.length !== shown
-              ? <> · กรองจากทั้งหมด {inRange.length.toLocaleString()} รายการในช่วงนี้</> : null}
+              ? <> {trI18n('· กรองจากทั้งหมด')} {inRange.length.toLocaleString()} {trI18n('รายการในช่วงนี้')}</> : null}
           </div>
 
           {!feed.length ? (
             <div style={{ fontSize: 13, color: 'var(--muted)', padding: '14px 2px' }}>
               {inRange.length
-                ? 'ไม่มีรายการที่ตรงกับตัวกรอง — ลองเปลี่ยนชนิดหรือล้างคำค้น'
-                : 'ช่วงเวลานี้ไม่มีการเปลี่ยนแปลงระบบ (ไม่ใช่โหลดไม่ได้ — ข้อมูลโหลดครบแล้ว)'}
+                ? trI18n("ไม่มีรายการที่ตรงกับตัวกรอง — ลองเปลี่ยนชนิดหรือล้างคำค้น")
+                : trI18n("ช่วงเวลานี้ไม่มีการเปลี่ยนแปลงระบบ (ไม่ใช่โหลดไม่ได้ — ข้อมูลโหลดครบแล้ว)")}
             </div>
           ) : <>
           {view.days.length > 1 && (
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
               <button type="button" onClick={() => { setOpenDays({}); setAllOpen(a => !(a == null ? (fewItems || false) : a)); }}
-                title="กางทุกวันเพื่ออ่านต่อเนื่อง หรือพับให้เห็นเฉพาะหัววัน"
-                style={{ padding: '3px 10px', borderRadius: 7, fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
-                         border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)' }}>
-                {(allOpen == null ? fewItems : allOpen) ? '▴ พับทุกวัน' : '▾ กางทุกวัน'}
+                title={trI18n('กางทุกวันเพื่ออ่านต่อเนื่อง หรือพับให้เห็นเฉพาะหัววัน')}
+                style={{ padding: '3px 10px', borderRadius: 'var(--r-md)', fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
+                         border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)' }}>
+                {(allOpen == null ? fewItems : allOpen) ? trI18n("พับทุกวัน") : trI18n("กางทุกวัน")}
               </button>
             </div>
           )}
@@ -193,22 +195,22 @@ export default function ProgramUpdate() {
             <div key={day.date} style={{ marginBottom: open ? 14 : 4 }}>
               {/* หัววันกดพับได้ — จำนวนรายการโชว์เสมอแม้พับ (ห้ามซ่อนเงียบ) */}
               <div onClick={() => setOpenDays(m => ({ ...m, [day.date]: !open }))}
-                title={open ? 'พับวันนี้' : 'กางดูรายการของวันนี้'}
+                title={open ? trI18n('พับวันนี้') : trI18n('กางดูรายการของวันนี้')}
                 style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5, cursor: 'pointer', userSelect: 'none' }}>
                 <span style={{ fontSize: 11, color: 'var(--muted)', width: 10 }}>{open ? '▾' : '▸'}</span>
                 <div style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--text)' }}>{fmtThaiDate(day.date)}</div>
                 <div style={{ height: 1, flex: 1, background: 'var(--border)' }} />
-                <div style={{ fontSize: 11, color: 'var(--muted)' }}>{day.items.length} รายการ</div>
+                <div style={{ fontSize: 11, color: 'var(--muted)' }}>{day.items.length} {trI18n('รายการ')}</div>
               </div>
               {open && day.items.slice(0, dayCap[day.date] || DAY_ROWS).map(c => {
                 const k = kindOf(c.t);
                 return (
                   <div key={c.h} style={{
                     display: 'flex', gap: 9, alignItems: 'flex-start', padding: '5px 10px',
-                    borderLeft: `3px solid ${k.color}`, background: 'var(--card)',
-                    border: '1px solid var(--border)', borderLeftWidth: 3, borderRadius: 7, marginBottom: 4,
+                    borderLeft: `3px solid ${k.color}`, background: 'var(--card-surf)',
+                    border: '1px solid var(--border)', borderLeftWidth: 3, borderRadius: 'var(--r-md)', marginBottom: 4,
                   }}>
-                    <span style={{ fontSize: 13, flexShrink: 0 }} title={k.label}>{k.icon}</span>
+                    <span style={{ fontSize: 13, flexShrink: 0 }} title={trI18n(k.label)}>{k.icon}</span>
                     {/* 📱 ข้อความ commit มีคำยาวไม่มีช่องว่าง (ชื่อไฟล์/ชื่อฟังก์ชัน) ⇒ ต้องตัดคำได้
                         ไม่ใส่ = ล้นแล้วปัดไม่ได้ที่ 390px (mobilesweep จับได้ 01/10) */}
                     <span style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>
@@ -224,9 +226,9 @@ export default function ProgramUpdate() {
               {open && day.items.length > (dayCap[day.date] || DAY_ROWS) && (
                 <button type="button"
                   onClick={() => setDayCap(m => ({ ...m, [day.date]: day.items.length }))}
-                  style={{ margin: '2px 0 6px', padding: '3px 10px', borderRadius: 7, fontSize: 11.5, fontWeight: 700,
-                           cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text2)' }}>
-                  ▾ ดูอีก {(day.items.length - (dayCap[day.date] || DAY_ROWS)).toLocaleString()} รายการของวันนี้
+                  style={{ margin: '2px 0 6px', padding: '3px 10px', borderRadius: 'var(--r-md)', fontSize: 11.5, fontWeight: 700,
+                           cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text2)' }}>
+                  {trI18n('ดูอีก')} {(day.items.length - (dayCap[day.date] || DAY_ROWS)).toLocaleString()} {trI18n('รายการของวันนี้')}
                 </button>
               )}
             </div>);
@@ -235,15 +237,15 @@ export default function ProgramUpdate() {
 
           {view.hidden > 0 && (
             <div style={{ padding: '4px 2px 10px', fontSize: 12, color: 'var(--muted)' }}>
-              ยังเหลืออีก <b style={{ color: 'var(--text2)' }}>{view.hidden.toLocaleString()}</b> รายการในช่วงนี้
+              {trI18n("ยังเหลืออีก")} <b style={{ color: 'var(--text2)' }}>{view.hidden.toLocaleString()}</b> {trI18n("รายการในช่วงนี้")}
               {' '}
               <button type="button" onClick={() => setCap(c => c + PAGE_ROWS)}
-                style={{ marginLeft: 6, padding: '4px 12px', borderRadius: 7, fontSize: 12, fontWeight: 700,
-                         cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--bg3)', color: 'var(--text)' }}>
-                ดูเพิ่ม {Math.min(PAGE_ROWS, view.hidden).toLocaleString()} รายการ
+                style={{ marginLeft: 6, padding: '4px 12px', borderRadius: 'var(--r-md)', fontSize: 12, fontWeight: 700,
+                         cursor: 'pointer', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text)' }}>
+                {trI18n('ดูเพิ่ม')} {Math.min(PAGE_ROWS, view.hidden).toLocaleString()} {trI18n('รายการ')}
               </button>
               <div style={{ fontSize: 11, marginTop: 4 }}>
-                (วาดทีละ {PAGE_ROWS} รายการ — ช่วงกว้างมากแล้ววาดหมดทีเดียวทำจอหน้างานหน่วง)
+                ({trI18n("วาดทีละ")} {PAGE_ROWS} {trI18n("รายการ — ช่วงกว้างมากแล้ววาดหมดทีเดียวทำจอหน้างานหน่วง")})
               </div>
             </div>
           )}

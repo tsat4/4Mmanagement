@@ -1,3 +1,4 @@
+import { tr } from './i18n.js';
 /* ── ป้ายภาษาไทยของ audit_log — ใช้ร่วมทุกจอที่โชว์ประวัติการแก้ข้อมูล (2026-08-19) ──
    audit_log มี **2 ชุด คนละ project** (Main + DR) และครอบ ~74 ตารางรวมกัน
    ป้ายอยู่ที่นี่ที่เดียว — **ห้ามนิยาม label ของตาราง/ฟิลด์ซ้ำในหน้าใดๆ**
@@ -9,6 +10,9 @@ export const AUDIT_ACTIONS = {
   INSERT: { t: '➕ เพิ่ม',  c: '#22c55e' },
   UPDATE: { t: '✏️ แก้ไข', c: '#f59e0b' },
   DELETE: { t: '🗑 ลบ',    c: '#ef4444' },
+  /* ปิดใบผลิตข้ามไลน์ (03/11) — ไม่มีการกดยืนยัน ด่านคือ `canWriteLine` + แถวนี้
+     ⇒ ป้ายต้องอ่านออกว่า "นี่คือการเขียนข้ามหน่วยงาน" ไม่ใช่ UPDATE ธรรมดา */
+  CROSS_LINE_CLOSE: { t: '📤 ปิดใบข้ามไลน์', c: '#38bdf8' },
 };
 
 /* ตาราง → ชื่อไทย (รวมทั้ง 2 project · จัดกลุ่มตามโดเมนเพื่อให้หาง่ายเวลาแก้) */
@@ -27,6 +31,7 @@ export const AUDIT_TABLE_LABELS = {
   station_slot_plans:      '📍 คนต่อกะของจุดงาน (Manpower Board)',
   // ── ผังองค์กร & ไลน์ (Main) ──
   org_nodes:               '🏢 ผังองค์กร',
+  factory_line_regions:    '🗺️ กรอบไลน์บนผังรวมโรงงาน',
   production_lines:        '🏭 ไลน์ผลิต',
   workstations:            '📍 จุดงาน',
   cost_center_rates:       '💰 Activity Rate',
@@ -66,7 +71,7 @@ export const AUDIT_TABLE_LABELS = {
   npi_tooling_step_templates: '🔧 NPI แม่แบบขั้นงาน tooling',
 
   // ── สินค้า & คัมบัง (DR) ──
-  prod_orders:             '🎫 ใบผลิต (แก้หลังปิดกะ)',
+  prod_orders:             '🎫 ใบผลิต (แก้หลังปิดกะ · ปิดข้ามไลน์)',
   dr_products:             '📦 สินค้า (Product Master)',
   parts_master:            '🗂 ทะเบียนพาร์ท',
   kanban_standards:        '🎴 มาตรฐานคัมบัง',
@@ -93,6 +98,7 @@ export const AUDIT_TABLE_LABELS = {
   die_sets:                '🔨 ชุดแม่พิมพ์',
   die_op_types:            '🔨 กระบวนการแม่พิมพ์',
   die_set_kinds:           '🔨 รูปแบบชุดแม่พิมพ์',
+  die_set_shared_dies:     '🔗 แม่พิมพ์ใช้ร่วม (common die)',
   equipment_die:           '🔨 แม่พิมพ์ (สถานะ/ตำแหน่ง)',
   die_storage_areas:       '🗺️ ผังจัดเก็บแม่พิมพ์',
   press_setup_rules:       '⏱️ กฎเวลาเปลี่ยนรุ่น (ปั๊ม)',
@@ -142,6 +148,7 @@ export const AUDIT_FIELD_LABELS = {
   rfq_no: 'เลข RFQ', customer_target_price: 'ราคาเป้าหมายลูกค้า', annual_volume: 'volume/ปี', volume_source: 'ที่มา volume',
   crd_no: 'เลขที่ CRD', crd_sent_at: 'วันส่ง CRD', npi_project_id: 'โปรเจค NPI', outcome: 'ผล (ได้งาน/ไม่ได้)', loss_reason: 'เหตุผลที่ไม่ได้งาน',
   unit_price: 'ราคาชิ้น', tooling_price: 'ราคาแม่พิมพ์', annual_sales: 'ยอดขาย/ปี', production_order_no: 'เลขใบแจ้งจัดทำ',
+  points: 'จุดมุมกรอบ (% ของผัง)',
   name: 'ชื่อ', name_th: 'ชื่อ (ไทย)', label: 'ป้าย', code: 'รหัส', note: 'หมายเหตุ',
   is_active: 'สถานะใช้งาน', sort_order: 'ลำดับ', category: 'หมวด',
   characteristic: 'ลักษณะปัญหา', detail: 'รายละเอียด', group_name: 'กลุ่ม',
@@ -160,7 +167,9 @@ export const AUDIT_FIELD_LABELS = {
   die_status: 'สถานะแม่พิมพ์', status_note: 'หมายเหตุสถานะ', area_id: 'ผังจัดเก็บ',
   pos_x: 'ตำแหน่ง X (%)', pos_y: 'ตำแหน่ง Y (%)',
   regrind_count: 'เจียรไปแล้ว (ครั้ง)', regrind_limit: 'เจียรได้สูงสุด', tonnage_ton: 'ขนาดตัน', op_seq: 'OP',
-  die_height_mm: 'ความสูงแม่พิมพ์ (มม.)', shut_height_min_mm: 'shut height ต่ำสุด (มม.)',
+  die_height_mm: 'ความสูงตอนปิดแม่พิมพ์ (มม.)', die_no: 'เลขแม่พิมพ์', feed_type: 'ชนิดป้อน',
+  pieces_in_per_stroke: 'ชิ้นเข้า/shot', feed_pitch_mm: 'ระยะพิทช์ (มม.)', coil_width_mm: 'กว้างคอยล์ (มม.)',
+  weight_kg: 'น้ำหนัก (กก.)', length_mm: 'ยาว (มม.)', width_mm: 'กว้าง (มม.)', shut_height_min_mm: 'shut height ต่ำสุด (มม.)',
   shut_height_max_mm: 'shut height สูงสุด (มม.)',
   base_min: 'เวลาฐานเปลี่ยนรุ่น (นาที)', same_die_min: 'ตัวเดิม เปลี่ยนล็อต (นาที)',
   height_steps: 'ขั้นบันไดตามความสูง', scope_kind: 'ขอบเขตกฎ', scope_value: 'ขอบเขต (ค่า)',
@@ -191,5 +200,5 @@ export const rowLabel = (r) => {
   return d.name || d.name_th || d.full_name || d.emp_name || d.prod_no || d.machine_no || d.mat_no || d.characteristic
       || d.label || d.code || d.permission_key || d.cost_center
       || d.ncr_no || d.capa_no || d.claim_no || d.part_no || d.title
-      || (d.piece_no != null ? `ชิ้นที่ ${d.piece_no}` : null) || '(ไม่ระบุชื่อ)';
+      || (d.piece_no != null ? `${tr('ชิ้นที่')} ${d.piece_no}` : null) || d.line_name || tr('(ไม่ระบุชื่อ)');
 };

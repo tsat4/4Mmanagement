@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useContext, useMemo, lazy, Suspense } from
 import { LOGISTIC_GROUPS } from '../utils/logisticSide';
 import { useNavigate } from 'react-router-dom';
 import { navItemsForGroups, isNavGuest, NAV_GROUP_META, NAV_GROUP_ORDER, UserContext } from '../App';
-import { toneOf } from '../utils/statusTone';
+import { toneOf, statusColor } from '../utils/statusTone';
 import { topPaths } from '../utils/navRecent';
 import { scopedLineNames, MAINTENANCE_ROLES } from '../utils/sectionScope';
 import { roleLabel } from '../utils/roleMeta';
@@ -14,7 +14,10 @@ import { supabase, supabaseDR } from '../supabaseClient';
 import { loadLinesRes } from '../utils/useProductionLines';
 import { fetchActiveDowntimes } from '../utils/downtimeAlarm';
 import { toast } from '../components/Toast';
-import KpiTile from '../components/KpiTile';   // การ์ดตัวเลขโครงเดียว (UI §6.35 · 04/11)
+import KpiTile from '../components/KpiTile';
+import { motion } from 'framer-motion';
+import { stagger } from '../utils/motion';
+import { buildStatusLine } from '../utils/statusLine';   // การ์ดตัวเลขโครงเดียว (UI §6.35 · 04/11)
 import { uploadMyAvatar } from '../utils/profileSelf';
 import ImageCropModal from '../components/ImageCropModal';
 import SignatureModal from '../components/SignatureModal';
@@ -25,6 +28,7 @@ import { visibleInterval } from '../utils/usePolling';
 import { RATE, LIVE } from '../utils/refreshRates';
 import { liveChannel } from '../utils/liveChannel';
 import { coalesce, makeIdleGate } from '../utils/liveRefresh';
+import { tr, dateLocale } from '../utils/i18n';
 import Icon from '../components/Icon';   // ✒️ ไอคอนเส้นแทน emoji (UI §6.36)
 
 /* ── DeptHub — landing "Smart Factory / Industry 5.0" (redesign v2 2026-07-13) ──
@@ -143,9 +147,9 @@ const DEPT_CSS = `
    ตารางนี้เก็บแค่ "หน้าตา" ของการ์ด (รหัส/สี/ปลายทางเริ่มต้น/คำอธิบาย)
    ส่วน "มีเมนูอะไรบ้าง" ยังมาจาก NAV_ITEMS ผ่าน navItemsForGroups เสมอ */
 const CARD_META = {
-/* 🔴 **สีประจำโมดูล ห้ามเป็นสีสถานะ** (`STATUS_COLOR` ใน `utils/statusTone.js`: เขียว #22c55e ·
-   เหลือง #f59e0b · แดง #ef4444) — 23/09 ก้อน B · มีด่าน `module-identity-not-status-hue`
-   เดิม "ฝ่ายผลิต" เป็น #22c55e และ "Warehouse & Delivery" เป็น #f59e0b **เป๊ะตัวเดียวกับไฟสถานะ**
+/* 🔴 **สีประจำโมดูล ห้ามเป็นสีสถานะ** (`STATUS_COLOR` ใน `utils/statusTone.js`: เขียว var(--green) ·
+   เหลือง var(--amber) · แดง var(--red)) — 23/09 ก้อน B · มีด่าน `module-identity-not-status-hue`
+   เดิม "ฝ่ายผลิต" เป็น var(--green) และ "Warehouse & Delivery" เป็น var(--amber) **เป๊ะตัวเดียวกับไฟสถานะ**
    ที่การ์ด telemetry บนหน้าเดียวกันใช้อยู่ ⇒ จอเดียวกันมีแถบเขียว/เหลือง 2 ความหมายปนกัน
    คนหน้างานอ่านแถบเหลืองเหนือ Warehouse ว่า "คลังมีปัญหา" ทั้งที่มันแปลว่า "นี่คือการ์ดคลัง"
    ⇒ ย้ายไปโทนเย็นที่ไม่มีความหมายสถานะ (teal / indigo) · การ์ดยังแยกกันออกด้วย emoji + code + สีอื่น */
@@ -156,7 +160,7 @@ const CARD_META = {
   'วิเคราะห์ & รายงาน':       { code: 'ANL·03', route: '/oee-analytics', label: 'Analytics & Reports',    desc: 'OEE · VSM · สอบกลับ Order · ประวัติผลิต · รายงาน/ใบพิมพ์' },
   'พนักงาน & ทักษะ':          { code: 'HRM·04', route: '/operator',     label: 'People & Skills',         desc: 'ฐานข้อมูลพนักงาน · สกิล & Level Up · OJT · ตารางกะ' },
   // Logistic แยก 3 ฝั่งตามแผนกเจ้าของ — ⚠️ Warehouse (FG 1xx · ส่งลูกค้า) ≠ Store (2xx/3xx/5xx · ป้อนไลน์) · ชื่อหมวดจาก LOGISTIC_GROUPS
-  [LOGISTIC_GROUPS.inbound]:  { code: 'STO·06', route: '/line-stock',      label: 'Planning & Store',      desc: 'แผนงาน + Store (3xx ซื้อนอก · 5xx raw · 2xx ผลิตเอง) — Planner & Sales · สต๊อกในไลน์ · บอร์ดคัมบัง · ขนส่งเข้าไลน์' },
+  [LOGISTIC_GROUPS.inbound]:  { code: 'STO·06', route: '/line-stock',      label: 'Planning & Store',      desc: 'แผนงาน + Store (3xx ซื้อนอก · 5xx raw · 2xx ผลิตเอง) — Planner & Sales · Stock Management · บอร์ดคัมบัง · ขนส่งเข้าไลน์' },
   [LOGISTIC_GROUPS.outbound]: { code: 'DLV·07', route: '/customer-demand', label: 'Warehouse & Delivery',  desc: 'Warehouse (FG 1xx) · Delivery · Rack Center — จัดส่งลูกค้า · คาดการณ์ของจะขาด · ภาชนะ' },
   'การตรวจสอบและซ่อมบำรุง':   { code: 'MTN·08', route: '/mtn-repair',   label: 'Inspection & Maintenance', desc: 'แจ้งซ่อม MO · ศูนย์ PM (ตรวจ·แผน·ล่วงหน้า) · ผังเครื่องจักร · พลังงาน' },
   'คุณภาพ & วิศวกรรม':        { code: 'QUA·09', route: '/qa',           label: 'Quality & Engineering',   desc: 'ใบตรวจ · SPC · NCR · CAPA/8D · เคลมลูกค้า · CQI-15 · PFMEA/Control Plan' },
@@ -194,7 +198,8 @@ export default function DeptHub({ onLogout, theme, onToggleTheme, userFullName, 
   const navigate = useNavigate();
   const { lang, toggleLang, tr } = useLang();
   // scope ของผู้ใช้ (DeptHub อยู่ใน UserContext.Provider ของ App แล้ว)
-  const { lineId: userLineId, sections: userSections = [] } = useContext(UserContext);
+  const { lineId: userLineId, sections: userSections = [], fullName } = useContext(UserContext);
+  const firstName = (fullName || '').trim().split(/\s+/)[0] || null;   // ทักทายชื่อต้น — ไม่มีชื่อ (บัญชีกลาง) = ไม่ทักทายชื่อ
 
   // ── โปรไฟล์เมนู: รายการมาจาก buildProfileMenu (utils/profileMenu.js) ชุดเดียวกับ sidebar ──
   //    เดิมหน้านี้เขียนเมนูของตัวเองแล้ว drift (ขาด 💬 แจ้งปัญหา / 🎭 จำลองมุมมอง / รีโมทจอ)
@@ -242,7 +247,7 @@ export default function DeptHub({ onLogout, theme, onToggleTheme, userFullName, 
   }, []);
   const isDayShift = now.getHours() >= 8 && now.getHours() < 20;
   const clock = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-  const thaiDate = now.toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  const thaiDate = now.toLocaleDateString(dateLocale(), { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 
   // ── LIVE TELEMETRY — นับจากตารางจริง (head:true count = เบา) refresh ทุก 60 วิ ──
   // เป็นของเสริมของหน้า hub: query พลาด = คงค่าเดิม/แสดง "–" ห้ามทำหน้าพัง
@@ -342,19 +347,19 @@ export default function DeptHub({ onLogout, theme, onToggleTheme, userFullName, 
      ตอนนี้: ตัวที่ไม่มีเป้า = **เทา + โชว์ตัวหาร** ให้คนตัดสินเอง · ตัวที่ 0 = ดี ค่อยมีสี */
   const lineTotal = scopeNames ? scopeNames.length : (prodLines.length || null);
   const TELE = [
-    { key: 'lines',   label: 'ไลน์กำลังผลิต',  val: tele.lines,   unit: 'ไลน์', note: 'เปิดกะอยู่ตอนนี้',
+    { key: 'lines',   label: 'ไลน์กำลังผลิต',  val: tele.lines,   unit: tr("ไลน์"), note: 'เปิดกะอยู่ตอนนี้',
       of: lineTotal, tone: 'none',   // "ควรเดินกี่ไลน์" ขึ้นกับแผนผลิตรายวัน — ระบบไม่มีเป้านี้ ⇒ ห้ามทาสี
-      to: '/daily-report', goTitle: 'เปิด Daily Report — ดูกะที่เปิดอยู่' },
-    { key: 'present', label: 'เช็คชื่อวันนี้',   val: tele.present, unit: 'คน', note: 'มาทำงานวันนี้',
+      to: '/daily-report', goTitle: tr("เปิด Daily Report — ดูกะที่เปิดอยู่") },
+    { key: 'present', label: tr("เช็คชื่อวันนี้"),   val: tele.present, unit: tr("คน"), note: 'มาทำงานวันนี้',
       tone: 'none',                  // ยอดคนที่ "ควรมา" อยู่ที่ตารางกะ ไม่ใช่ที่นี่ ⇒ เทา
-      to: '/checkin', goTitle: 'เปิดหน้าเช็คชื่อ & PPE' },
+      to: '/checkin', goTitle: tr("เปิดหน้าเช็คชื่อ & PPE") },
     { key: 'dt',      label: 'Downtime ค้าง', val: tele.dt,      unit: 'จุด', note: tele.dt > 0 ? 'เครื่องหยุดอยู่ตอนนี้' : 'ไม่มีเครื่องหยุด',
       tone: toneOf({ value: tele.dt, zeroIsGood: true }),          // > 0 = ผลิตหยุดอยู่จริง ⇒ แดง
-      to: '/dashboard', goTitle: 'เปิด Dashboard — แผง Andon เครื่องที่หยุดอยู่' },
-    { key: 'fourM',   label: '4M รออนุมัติ',   val: tele.fourM,   unit: 'รายการ', note: tele.fourM > 0 ? 'รออนุมัติอยู่' : 'ไม่มีค้าง',
+      to: '/dashboard', goTitle: tr("เปิด Dashboard — แผง Andon เครื่องที่หยุดอยู่") },
+    { key: 'fourM',   label: '4M รออนุมัติ',   val: tele.fourM,   unit: tr("รายการ"), note: tele.fourM > 0 ? 'รออนุมัติอยู่' : 'ไม่มีค้าง',
       // คิวค้าง = ต้องไปจัดการ แต่สายการผลิตยังเดิน ⇒ เหลือง ไม่ใช่แดง (จอที่แดงตลอดคือจอที่คนเลิกมอง)
       tone: toneOf({ value: tele.fourM, zeroIsGood: true, over: 'warn' }),
-      to: fourMLink, goTitle: 'เปิดคิวอนุมัติ 4M (ย้อนหลัง 90 วัน)' },
+      to: fourMLink, goTitle: tr("เปิดคิวอนุมัติ 4M (ย้อนหลัง 90 วัน)") },
   ];
 
   // ชิปเมนูย่อย = เมนูจริงจาก NAV_ITEMS (sidebar) กรองตามสิทธิ์ role — ตรงกับ sidebar เสมอ
@@ -437,7 +442,7 @@ export default function DeptHub({ onLogout, theme, onToggleTheme, userFullName, 
 
         {/* Avatar → เมนูโปรไฟล์: เปลี่ยนรูป / ลายเซ็น / เปลี่ยนรหัสผ่าน */}
         <div style={{ position: 'relative' }}>
-          <button onClick={() => setProfileOpen(o => !o)} title="โปรไฟล์ของฉัน" style={{
+          <button onClick={() => setProfileOpen(o => !o)} title={tr('โปรไฟล์ของฉัน')} style={{
             width: 40, height: 40, borderRadius: '50%', padding: 0, cursor: 'pointer', overflow: 'hidden',
             border: `2px solid ${profileOpen ? 'var(--accent)' : 'var(--border2)'}`,
             background: 'var(--card)', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -454,7 +459,7 @@ export default function DeptHub({ onLogout, theme, onToggleTheme, userFullName, 
               <div onClick={() => setProfileOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 1290 }} />
               <div style={{
                 position: 'absolute', top: 46, right: 0, zIndex: 1300, width: 240,
-                background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 12,
+                background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)',
                 boxShadow: 'var(--shadow-lg)', overflow: 'hidden',
               }}>
                 <div style={{ padding: '14px 14px 12px', borderBottom: '1px solid var(--border)', display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -471,7 +476,7 @@ export default function DeptHub({ onLogout, theme, onToggleTheme, userFullName, 
                     </div>
                   </div>
                   <span style={{
-                    fontSize: 11, fontWeight: 800, padding: '2px 6px', borderRadius: 4, flexShrink: 0,
+                    fontSize: 11, fontWeight: 800, padding: '2px 6px', borderRadius: 'var(--r-xs)', flexShrink: 0,
                     background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid var(--green-line)',
                   }}>{userRole?.toUpperCase() || '—'}</span>
                 </div>
@@ -493,10 +498,10 @@ export default function DeptHub({ onLogout, theme, onToggleTheme, userFullName, 
                     }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
                       <Icon glyph={it.icon} size={15} />
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.label}</span>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tr(it.label)}</span>
                     </span>
                     {it.kind === 'toggle' && (
-                      <span style={{ width: 32, height: 18, borderRadius: 9, flexShrink: 0, position: 'relative', background: it.on ? 'var(--accent)' : 'var(--border2)', transition: 'background 0.25s' }}>
+                      <span style={{ width: 32, height: 18, borderRadius: 'var(--r-md)', flexShrink: 0, position: 'relative', background: it.on ? 'var(--accent)' : 'var(--border2)', transition: 'background 0.25s' }}>
                         <span style={{ position: 'absolute', top: 2, left: it.on ? 16 : 2, width: 14, height: 14, borderRadius: '50%', background: '#fff', transition: 'left 0.25s' }} />
                       </span>
                     )}
@@ -508,8 +513,8 @@ export default function DeptHub({ onLogout, theme, onToggleTheme, userFullName, 
         </div>
         {/* 🌐 ปุ่มสลับภาษา — คู่กับปุ่มธีม ป้ายบอก "กดแล้วได้ภาษาอะไร" */}
         <button type="button" onClick={toggleLang} title={langToggleTitle(lang)} aria-label={langToggleTitle(lang)} style={{
-          height: 38, minWidth: 44, padding: '0 10px', borderRadius: 10,
-          background: 'var(--card)', border: '1px solid var(--border)',
+          height: 38, minWidth: 44, padding: '0 10px', borderRadius: 'var(--r-md)',
+          background: 'var(--card-surf)', border: '1px solid var(--border)',
           color: 'var(--text)', cursor: 'pointer', fontSize: 12.5, fontWeight: 700, letterSpacing: '0.04em',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
         }}>
@@ -517,8 +522,8 @@ export default function DeptHub({ onLogout, theme, onToggleTheme, userFullName, 
         </button>
         {onToggleTheme && (
           <button onClick={onToggleTheme} title={tr('สลับธีม')} style={{
-            width: 38, height: 38, borderRadius: 10,
-            background: 'var(--card)', border: '1px solid var(--border)',
+            width: 38, height: 38, borderRadius: 'var(--r-md)',
+            background: 'var(--card-surf)', border: '1px solid var(--border)',
             color: 'var(--text)', cursor: 'pointer', fontSize: 16,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
@@ -547,7 +552,7 @@ export default function DeptHub({ onLogout, theme, onToggleTheme, userFullName, 
             style={{ maxWidth: 460, marginTop: 14 }}>
             <span style={{ fontSize: 15 }}>🔎</span>
             <span style={{ flex: 1 }}>{tr('ค้นหาเมนู… (เช่น ซ่อม, oee, สต๊อก)')}</span>
-            <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: 'var(--bg3)', border: '1px solid var(--border2)', color: 'var(--text2)' }}>
+            <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700, padding: '2px 6px', borderRadius: 'var(--r-xs)', background: 'var(--bg3-surf)', border: '1px solid var(--border2)', color: 'var(--text2)' }}>
               Ctrl K
             </span>
           </button>
@@ -556,14 +561,14 @@ export default function DeptHub({ onLogout, theme, onToggleTheme, userFullName, 
 
         {/* นาฬิกา + กะ — readout สด (ชิดขวาบนจอกว้าง) */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-          <span className="hub-clock" style={{ fontFamily: MONO, fontSize: 14, fontWeight: 700, color: 'var(--text)', background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 6, padding: '4px 12px', fontVariantNumeric: 'tabular-nums' }}>
+          <span className="hub-clock" style={{ fontFamily: MONO, fontSize: 14, fontWeight: 700, color: 'var(--text)', background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '4px 12px', fontVariantNumeric: 'tabular-nums' }}>
             ⏱ {clock}
           </span>
-          <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 700, color: isDayShift ? 'var(--amber)' : 'var(--blue)', background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 6, padding: '5px 12px' }}>
+          <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 700, color: isDayShift ? 'var(--amber)' : 'var(--blue)', background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '5px 12px' }}>
             {tr(isDayShift ? '☀️ กะเช้า 08:00–20:00' : '🌙 กะดึก 20:00–08:00')}
           </span>
-          <span className="hub-date" style={{ fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 600, color: 'var(--text2)', background: 'var(--card)', border: '1px solid var(--border2)', borderRadius: 6, padding: '5px 12px' }}>
-            📅 {thaiDate}
+          <span className="hub-date" style={{ fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 600, color: 'var(--text2)', background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', padding: '5px 12px' }}>
+            {thaiDate}
           </span>
         </div>
       </div>
@@ -576,24 +581,40 @@ export default function DeptHub({ onLogout, theme, onToggleTheme, userFullName, 
           </span>
           {/* ขอบเขตของตัวเลข — ห้ามให้เดาเอง (เคยเข้าใจผิดว่าเห็น Andon ของแผนกอื่นเป็นของตัวเอง) */}
           <span style={{
-            fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 99,
+            fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 'var(--r-pill)',
             border: '1px solid var(--border)', color: wholeFactory ? 'var(--muted)' : 'var(--accent)',
           }} title={wholeFactory
-              ? (MAINTENANCE_ROLES.includes(userRole) ? 'หน่วยงานช่างดูแลเครื่องจักรทุกไลน์ จึงเห็นทั้งโรงงาน' : 'บัญชีนี้ไม่ได้จำกัดส่วนงาน')
-              : `นับเฉพาะไลน์: ${(scopeNames || []).join(', ')}`}>
-            {wholeFactory ? tr('🏭 ทั้งโรงงาน') : `👥 ส่วนงานของฉัน (${(scopeNames || []).length} ไลน์)`}
+              ? (MAINTENANCE_ROLES.includes(userRole) ? tr("หน่วยงานช่างดูแลเครื่องจักรทุกไลน์ จึงเห็นทั้งโรงงาน") : tr("บัญชีนี้ไม่ได้จำกัดส่วนงาน"))
+              : `${tr("นับเฉพาะไลน์")}: ${(scopeNames || []).join(', ')}`}>
+            {wholeFactory ? tr('🏭 ทั้งโรงงาน') : `👥 ${tr("ส่วนงานของฉัน")} (${(scopeNames || []).length} ${tr("ไลน์")})`}
           </span>
           <span style={{ flex: 1, height: 1, background: 'var(--border)' }} />
           <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('อัปเดตทุก 60 วินาที')}</span>
         </div>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        {/* 🗣 ประโยคสรุปสถานะ (18/11 · ก๊อป ERP) — ข้อมูลชุดเดียวกับการ์ด TELE · ทักทายชื่อจาก login · null = "ยังไม่มีข้อมูล" */}
+        {(() => {
+          const sl = buildStatusLine(TELE.map(t => ({ label: t.label, value: t.val, unit: t.unit, tone: t.tone,
+            need: t.val != null && t.val > 0 ? `${t.label} ${t.val} ${t.unit}` : t.label })), { now: new Date(), name: firstName });
+          return (
+            <div style={{ margin: '0 0 12px', fontSize: 'clamp(13px, 1.6vw, 15px)', lineHeight: 1.55, color: 'var(--text2)' }}>
+              {sl.text.split(' — ').map((seg, k, arr) => (
+                <span key={k} style={k === arr.length - 1 && sl.focus ? { color: statusColor(sl.tone), fontWeight: 700 } : undefined}>
+                  {k > 0 ? ' — ' : ''}{seg}
+                </span>
+              ))}
+            </div>
+          );
+        })()}
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           {/* การ์ดตัวเลขโครงเดียว (UI §6.35) — ตัวเลขสีเดียว · สถานะอยู่ที่บรรทัดล่าง · กดได้เฉพาะที่มีสิทธิ์เข้าปลายทาง */}
-          {TELE.map(t => (
-            <KpiTile key={t.key} label={tr(t.label)} value={t.val}
+          {TELE.map((t, i) => (
+            <motion.div key={t.key} {...stagger(i)} style={{ flex: '1 1 150px', display: 'flex' }}>
+            <KpiTile label={tr(t.label)} value={t.val}
               unit={t.of != null && t.val != null ? `/ ${t.of} ${tr(t.unit)}` : tr(t.unit)}
-              note={t.val == null ? 'ยังโหลดไม่ได้' : tr(t.note)} tone={t.val == null ? undefined : (t.tone === 'none' ? undefined : t.tone)}
-              title={t.goTitle} style={{ flex: '1 1 150px' }}
+              note={t.val == null ? tr("ยังโหลดไม่ได้") : tr(t.note)} tone={t.val == null ? undefined : (t.tone === 'none' ? undefined : t.tone)}
+              title={t.goTitle} style={{ flex: 1 }} hero={t.key === 'dt'}
               onClick={t.to && canAccessPage(t.to.split('?')[0], userRole) ? () => navigate(t.to) : undefined} />
+            </motion.div>
           ))}
         </div>
       </div>
@@ -647,9 +668,7 @@ export default function DeptHub({ onLogout, theme, onToggleTheme, userFullName, 
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
               <Icon glyph={d.icon} size={28} strokeWidth={1.5} />
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 'clamp(15px, 2vw, 17px)', fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', letterSpacing: '-0.01em', lineHeight: 1.2 }}>
-                  {d.label}
-                </div>
+                <div style={{ fontSize: 'clamp(15px, 2vw, 17px)', fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', letterSpacing: '-0.01em', lineHeight: 1.2 }}>{tr(d.label)}</div>
                 {/* ชื่อหมวดไทยใต้ชื่ออังกฤษ — โหมด English ถ้าแปลแล้วซ้ำกับหัว (Production/Production) ไม่วาดซ้ำ */}
                 {tr(d.labelTh) !== d.label && (
                 <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2, fontFamily: 'var(--font-body)' }}>
@@ -671,13 +690,13 @@ export default function DeptHub({ onLogout, theme, onToggleTheme, userFullName, 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {chips.map(item => {
                 /* 🚪 ชิป "ทางลัด" (หน้าที่บ้านจริงอยู่การ์ดอื่น · `alsoIn`) ต้องหน้าตาต่างจากของการ์ดนี้
-                   — จางลง + `↗ <หมวดบ้าน>` ท้ายชิป · ไม่งั้นการ์ดดูเหมือนเป็นเจ้าของหน้านั้นด้วย
+                   — จางลง + `<หมวดบ้าน>` ท้ายชิป · ไม่งั้นการ์ดดูเหมือนเป็นเจ้าของหน้านั้นด้วย
                    แล้วคำถาม "หน้านี้อยู่หมวดไหน" มี 2 คำตอบ (24/09 · คำสั่ง user — ดู `isNavGuest`) */
                 const guest = isNavGuest(item, d.group);
-                const homeShort = NAV_GROUP_META[item.group]?.short || item.group;
+                const homeShort = tr(NAV_GROUP_META[item.group]?.short) || item.group;
                 return (
                   <button key={item.to} type="button" className="dept-chip"
-                    title={guest ? `เปิด ${item.label} — ทางลัด · เมนูนี้อยู่หมวด "${item.group}"` : `เปิด ${item.label}`}
+                    title={guest ? `${tr("เปิด")} ${item.label} — ${tr("ทางลัด · เมนูนี้อยู่หมวด")} "${item.group}"` : `${tr("เปิด")} ${item.label}`}
                     onClick={e => openMenu(e, item.to)}
                     style={guest
                       ? { background: 'transparent', color: 'var(--text2)', border: '1px dashed var(--border2)' }
@@ -691,7 +710,7 @@ export default function DeptHub({ onLogout, theme, onToggleTheme, userFullName, 
               {hidden.length > 0 && (
                 <button type="button" className="dept-chip more-chip"
                   onClick={e => { e.stopPropagation(); setExpanded(s => ({ ...s, [d.key]: !open })); }}>
-                  {open ? `▲ ${tr('ย่อ')}` : `▾ ${tr('ดูทั้งหมด')} (${hidden.length})`}
+                  {open ? `${tr('ย่อ')}` : `${tr('ดูทั้งหมด')} (${hidden.length})`}
                 </button>
               )}
             </div>
@@ -706,7 +725,7 @@ export default function DeptHub({ onLogout, theme, onToggleTheme, userFullName, 
       {cropFile && (
         /* 🚫 รูปคนไม่รับ GIF + บันทึกเป็น webp — สเปคเดียวกับ /operator · /register · sidebar */
         <ImageCropModal file={cropFile} aspect={1} shape="circle" outputSize={480} allowGif={false} webp
-          title="จัดตำแหน่งรูปโปรไฟล์" onCancel={() => setCropFile(null)} onConfirm={onAvatarCropped} />
+          title={tr('จัดตำแหน่งรูปโปรไฟล์')} onCancel={() => setCropFile(null)} onConfirm={onAvatarCropped} />
       )}
       <SignatureModal open={sigOpen} onClose={() => setSigOpen(false)}
         currentSignatureUrl={userSignatureUrl} onSaved={(url) => onSignatureSaved?.(url)} />

@@ -14,43 +14,46 @@
 */
 import { SIDES, UNKNOWN_SIDE } from '../utils/logisticSide';
 
+import { tr } from '../utils/i18n';
 /**
  * value    — '' (ทั้งหมด) | 'inbound' | 'outbound' | 'unknown'
  * counts   — { inbound, outbound, unknown } จำนวนรายการต่อฝั่ง (จาก splitBySide)
  * total    — จำนวนทั้งหมด (ไม่ส่ง = บวกจาก counts)
  * unit     — หน่วยที่ต่อท้ายตัวเลข เช่น 'รายการ' (default 'รายการ')
+ * labels   — (16/11) ป้ายแทนต่อฝั่ง { inbound?, outbound? } — หน้าที่ต้องบอก "นับเลข MAT กลุ่มไหน" ชัดกว่าชื่อฝ่าย
+ *            (Stock Management: "ของป้อนไลน์ (2xx·3xx·5xx)" / "FG รอส่ง (1xx)") · ไม่ส่ง = ป้ายเดิมจาก logisticSide.js
  */
-export default function SideFilterChips({ value, onChange, counts = {}, total, unit = 'รายการ' }) {
+export default function SideFilterChips({ value, onChange, counts = {}, total, unit = tr("รายการ"), labels = null }) {
   const n = { inbound: 0, outbound: 0, unknown: 0, ...counts };
   const all = total ?? (n.inbound + n.outbound + n.unknown);
   // ฝั่งที่ถือของจริง (control = Sales/Planner/Billing ไม่ได้ถือของ จึงไม่มีในตัวกรองพาร์ท)
   const matSides = SIDES;   // เหลือเฉพาะฝั่งที่ถือของ (control ถูกยุบออกแล้ว 30/09)
   const chips = [
-    { key: '', icon: '📋', short: 'ทั้งหมด', color: 'var(--text2)', count: all, desc: `ทุกฝั่งรวมกัน ${all} ${unit}` },
-    ...matSides.map(s => ({ key: s.key, icon: s.icon, short: s.short, color: s.color, count: n[s.key], desc: `${s.owner} — ${s.desc}` })),
+    { key: '', icon: '📋', short: 'ทั้งหมด', color: 'var(--text2)', count: all, desc: `${tr("ทุกฝั่งรวมกัน")} ${all} ${unit}` },
+    ...matSides.map(s => ({ key: s.key, icon: s.icon, short: labels?.[s.key] || tr(s.short), color: s.color, count: n[s.key], desc: `${s.owner} — ${tr(s.desc)}` })),
     // โชว์เฉพาะเมื่อมีของค้างจริง (ปกติควรเป็น 0)
     ...(n.unknown > 0
-      ? [{ key: 'unknown', icon: UNKNOWN_SIDE.icon, short: UNKNOWN_SIDE.short, color: UNKNOWN_SIDE.color, count: n.unknown, desc: UNKNOWN_SIDE.desc }]
+      ? [{ key: 'unknown', icon: UNKNOWN_SIDE.icon, short: tr(UNKNOWN_SIDE.short), color: UNKNOWN_SIDE.color, count: n.unknown, desc: tr(UNKNOWN_SIDE.desc) }]
       : []),
   ];
 
   return (
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-      <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--muted)' }}>ฝั่งงาน:</span>
+      <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--muted)' }}>{tr('ฝั่งงาน:')}</span>
       {chips.map(c => {
         const on = value === c.key;
         const dim = c.count === 0 && c.key !== '';
         return (
-          <button key={c.key || 'all'} type="button" onClick={() => onChange(c.key)} title={c.desc}
+          <button key={c.key || 'all'} type="button" onClick={() => onChange(c.key)} title={tr(c.desc)}
             style={{
-              padding: '5px 12px', borderRadius: 999, cursor: 'pointer', fontSize: 12, fontWeight: 800,
+              padding: '5px 12px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontSize: 12, fontWeight: 800,
               fontFamily: 'var(--font-body)', whiteSpace: 'nowrap',
               background: on ? `${c.color}22` : 'var(--bg2)',
               color: on ? c.color : dim ? 'var(--muted)' : 'var(--text2)',
               border: `1px solid ${on ? c.color : 'var(--border)'}`,
               opacity: dim ? 0.55 : 1,
             }}>
-            {c.icon} {c.short} <span style={{ fontWeight: 900 }}>{c.count}</span>
+            {c.icon} {tr(c.short)} <span style={{ fontWeight: 900 }}>{c.count}</span>
           </button>
         );
       })}

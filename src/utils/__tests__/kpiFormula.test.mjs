@@ -22,7 +22,9 @@ const dlohDef = (scope_kind, scope_value) => ({ id: `d-${scope_value || 'plant'}
 
 test('ตัวแปรระดับโรงงานทุกตัวมี level plant · ตัวแปรหน่วยไม่มี · plant var อ่านจาก plant เสมอแม้นิยามอยู่หน่วย', () => {
   assert.ok(KPI_BASE_VARS.every(v => v.level === 'plant' || v.level === 'unit'));
-  assert.deepEqual(BASE_VARS_BY_LEVEL.plant.map(v => v.key), ['sale_total', 'sale_product', 'sale_trading', 'cogs', 'days_in_month']);
+  assert.deepEqual(BASE_VARS_BY_LEVEL.plant.map(v => v.key), ['sale_total', 'sale_product', 'sale_trading', 'cogs', 'days_in_month', 'manpower',
+    'csat_q_actual', 'csat_q_total', 'csat_d_actual', 'csat_d_total']);   // 09/11 manpower = คนทั้งโรงงาน (ยอดขาย/หัว ค่ากลาง) · 16/11 csat_* = แบบสอบถามใบเดียวของโรงงาน (ค่าเดียว ดึงไปใช้)
+  assert.equal(baseScopeForVar('manpower', { kind: 'section', value: 'PD1' }), 'plant');
   assert.equal(baseScopeForVar('sale_product', { kind: 'section', value: 'PD1' }), 'plant');
   assert.equal(baseScopeForVar('dl', { kind: 'section', value: 'PD1' }), 'section:PD1');
   assert.equal(baseScopeForVar('dl', PLANT), 'plant');
@@ -88,24 +90,114 @@ test('sale_per_head = Σ Total Sales ม.ค.→เดือนนี้ ÷ ก�
   assert.deepEqual(fm.missing[6].map(x => x.key), ['sale_total']);
 });
 
-test('ตัวแปรประมาณจากทะเบียน (auto) ไม่ทับค่าที่กรอกไว้ — เติมได้แค่ช่องว่าง · formulaMonthMode บอกว่าช่องไหนยังกรอกมือได้', () => {
-  const r = [row('plant', '', 'sale_total', 1, 160_000_000), row('plant', '', 'sale_total', 2, 160_000_000)];
-  const auto = (sk, v, m) => (v === 'manpower' && sk === 'section:PD1' ? 32 : null);   // ทะเบียน PD1 มี 32 คน (ของจริง ~300)
+test('ตัวแปรประมาณจากทะเบียน (auto) ไม่ทับค่าที่กรอกไว้ — เติมได้แค่ช่องว่าง · formulaMonthMode บอกว่าช่องไหนยังกรอกมือได้ · ยอดขาย/หัว = ค่ากลางโรงงาน', () => {
+  const r = [row('plant', '', 'sale_total', 1, 160_000_000), row('plant', '', 'sale_total', 2, 160_000_000),
+    row('section', 'PD1', 'manpower', 1, 32), row('section', 'PD1', 'manpower', 2, 32)];   // 09/11: กำลังคนที่หน่วยกรอกเอง **ต้องไม่ถูกใช้** (เคส PD1 = 47.951)
+  const auto = (sk, v, m) => (v === 'manpower' && sk === 'plant' ? 320 : null);   // ทะเบียนทั้งโรงงาน (≈ · ของจริงจากใบบัญชี ~382)
   const base = buildBaseIndex(r, { auto });
   const def = { id: 'sph1', name: 'Annual Sale Per Head', provider: 'formula', provider_config: { formula: 'sale_per_head' }, scope_kind: 'section', scope_value: 'PD1', unit: 'MB/Head', decimals: 3 };
   const entries = { sph1: { 1: 0.52 } };   // ม.ค. ทีมกรอกค่าจริงไว้ · ก.พ. ว่าง
   const { entries: e2, info } = applyFormulaEntries([def], entries, base, org);
   assert.equal(e2.sph1[1], 0.52, 'ม.ค. ค่ากรอกมือชนะสูตรที่ใช้กำลังคนประมาณ');
-  assert.ok(Math.abs(e2.sph1[2] - 320 / 32) < 1e-6, 'ก.พ. ว่าง ⇒ เติมด้วยค่าประมาณ (320 MB สะสม ÷ 32)');
+  assert.ok(Math.abs(e2.sph1[2] - 320 / 320) < 1e-6, 'ก.พ. ว่าง ⇒ เติมด้วยค่าประมาณ (320 MB สะสม ÷ คนทั้งโรงงาน 320 ≈ทะเบียน) — ไม่ใช่ ÷ 32 ของ PD1');
   assert.deepEqual(info.sph1.usedManual, [1]); assert.deepEqual(info.sph1.computed, [2]); assert.deepEqual(info.sph1.approx, [2]);
+  assert.equal(info.sph1.varScopes.manpower, 'plant', 'ตัวหารอ่านจาก ทั้งโรงงาน เสมอ');
   assert.equal(formulaMonthMode(info.sph1, 1), 'manual', 'ช่อง ม.ค. ยังกรอกมือได้');
   assert.equal(formulaMonthMode(info.sph1, 2), 'computed');
   assert.equal(formulaMonthMode(info.sph1, 3), 'manual', 'ไม่มีอะไรเลย = กรอกมือได้');
   assert.equal(formulaMonthMode(null, 1), 'manual');
   assert.match(formulaNoteText(info.sph1, 1, { def }), /✍️ ใช้ค่ากรอกมือ — สูตรคำนวณได้ .* แต่ใช้กำลังคนประมาณจากทะเบียน/);
   assert.match(formulaNoteText(info.sph1, 2, { def }), /≈ทะเบียนพนักงาน/);
-  // ตัวเลขฐานกรอกมือครบ ⇒ สูตรชนะตามกฎเดิม
-  const base2 = buildBaseIndex([...r, row('section', 'PD1', 'manpower', 1, 300)], { auto });
+  // ตัวเลขฐานกรอกมือครบ (กำลังคน ทั้งโรงงาน จากใบบัญชี) ⇒ สูตรชนะตามกฎเดิม
+  const base2 = buildBaseIndex([...r, row('plant', '', 'manpower', 1, 382)], { auto });
   const o2 = applyFormulaEntries([def], entries, base2, org);
-  assert.ok(Math.abs(o2.entries.sph1[1] - 160 / 300) < 1e-6); assert.equal(formulaMonthMode(o2.info.sph1, 1), 'computed');
+  assert.ok(Math.abs(o2.entries.sph1[1] - 160 / 382) < 1e-6); assert.equal(formulaMonthMode(o2.info.sph1, 1), 'computed');
+});
+
+/* 💰 ยอดเงินคู่กัน (16/11) — 100P เป็น % ของยอดขาย ใบบัญชีมียอดเงินคู่กัน ⇒ แผ่นต้องบอก MB ด้วย · เดือนที่ขาดต้องเขียน ห้ามเดา 0 */
+test('amountCompanion: อ่าน amount_var ที่ขอบเขตของนิยาม · สะสมเฉพาะเดือนที่มี · เดือนขาดถูกระบุ · ไม่มีตัวแปร = null', async () => {
+  const { amountCompanion, amountText, amountVarOf, fmtMoney } = await import('../kpiFormula.js');
+  const base = buildBaseIndex([
+    { year: 2026, month: 1, scope_kind: 'section', scope_value: 'PD2', var_key: 'cost_100p', value: 1_000_000 },
+    { year: 2026, month: 2, scope_kind: 'section', scope_value: 'PD2', var_key: 'cost_100p', value: 2_500_000 },
+    { year: 2026, month: 4, scope_kind: 'section', scope_value: 'PD2', var_key: 'cost_100p', value: 500_000 },
+    { year: 2026, month: 1, scope_kind: 'section', scope_value: 'PD1', var_key: 'cost_100p', value: 9_000_000 },
+  ]);
+  const def = { id: 'x', scope_kind: 'section', scope_value: 'PD2', kpi_catalog: { amount_var: 'cost_100p' } };
+  const a = amountCompanion({ def, scope: { kind: 'section', value: 'PD2' }, base, month: 4 });
+  assert.equal(a.ytd, 4_000_000);                 // ไม่ปนของ PD1 · ไม่นับเดือน 3 ที่ขาดเป็น 0
+  assert.deepEqual(a.have, [1, 2, 4]); assert.deepEqual(a.missing, [3]);
+  assert.equal(a.value, 500_000);
+  const txt = amountText(a, { monthLabel: (m) => `M${m}` });
+  assert.match(txt, /M4 500,000 บ\./); assert.match(txt, /สะสม 4 MB \(3 เดือน · ขาด M3\)/);
+  // เดือนที่เลือกยังไม่กรอก ⇒ โชว์เดือนล่าสุดที่มี + บอกว่าเดือนที่เลือกยังไม่กรอก
+  const b = amountCompanion({ def, scope: { kind: 'section', value: 'PD2' }, base, month: 5 });
+  assert.equal(b.value, null); assert.equal(b.ytd, 4_000_000);
+  assert.match(amountText(b, { monthLabel: (m) => `M${m}` }), /M4 500,000 บ\. \(M5 ยังไม่กรอก\)/);
+  // ไม่มีสักเดือน ⇒ ytd null + ข้อความบอกว่ายังไม่กรอก (ห้ามเป็น 0)
+  const c = amountCompanion({ def, scope: { kind: 'section', value: 'PD3' }, base, month: 3 });
+  assert.equal(c.ytd, null); assert.match(amountText(c), /ยังไม่กรอกยอดเงิน/);
+  // ตัวแปรที่ไม่ใช่เงิน / ไม่ตั้ง = null
+  assert.equal(amountVarOf({ kpi_catalog: { amount_var: 'manpower' } }), null);
+  assert.equal(amountCompanion({ def: { kpi_catalog: {} }, scope: { kind: 'section', value: 'PD2' }, base, month: 4 }), null);
+  assert.equal(fmtMoney(10_158_808.55), '10.16 MB'); assert.equal(fmtMoney(null), '—');
+});
+
+/* 🔬 formulaPartSeries (16/11) — DL+OH แตกเป็น DL % กับ OH % จาก inputs ชุดเดียวกัน */
+test('formulaPartSeries: dloh_pct → dl_pct + oh_pct รายเดือน · สูตรที่ไม่มี parts = []', async () => {
+  const { formulaPartSeries } = await import('../kpiFormula.js');
+  const info = { key: 'dloh_pct', inputs: { 1: { dl: 10, oh: 30, sale_product: 1000 }, 2: { dl: 20, sale_product: 1000 } } };
+  const parts = formulaPartSeries(info);
+  assert.deepEqual(parts.map(p => p.key), ['dl_pct', 'oh_pct']);
+  assert.equal(parts[0].months[1], 1); assert.equal(parts[1].months[1], 3);
+  assert.equal(parts[0].months[2], 2); assert.equal(parts[1].months[2], null);   // ขาด oh = null ไม่ใช่ 0
+  assert.equal(parts[0].months[7], null);
+  assert.deepEqual(formulaPartSeries({ key: 'rm_pct', inputs: {} }), []);
+  assert.deepEqual(formulaPartSeries(null), []);
+});
+
+/* ══ 🤝 ความพึงพอใจลูกค้า Q/D บนรางสูตร (16/11 · คำสั่ง user "ต้อง single source of truth
+      · ค่าของโรงงานต้องมีค่าเดียว ดึงไปใช้เอา · การแตกค่าแยก อย่าง Q-D, DL-OH จะเซ็ทยังไง") ══════ */
+test('csat_qd_pct: ตัวตั้งรวม ÷ ตัวหารรวม (ห้ามเฉลี่ย 2 ขา) · ขาไม่ครบ = null · ทุกหน่วยอ่านค่าโรงงานตัวเดียว', async () => {
+  const { formulaOf, evalFormula } = await import('../kpiSetup.js');
+  const { formulaMonths, formulaPartSeries, baseScopeForVar } = await import('../kpiFormula.js');
+
+  /* Q 21/24 · D 6/8 → ทางการ 27/32 = 84.375% · เฉลี่ย % 2 ขา = 81.25 (เลขที่ไม่มีอยู่จริง) */
+  const v = { csat_q_actual: 21, csat_q_total: 24, csat_d_actual: 6, csat_d_total: 8 };
+  assert.ok(Math.abs(evalFormula('csat_qd_pct', v).value - 84.375) < 1e-9);
+  assert.notEqual(evalFormula('csat_qd_pct', v).value, (87.5 + 75) / 2);
+  assert.ok(Math.abs(evalFormula('csat_q_pct', v).value - 87.5) < 1e-9);   // ขา = เทียบคะแนนเต็มของขาเอง
+  assert.ok(Math.abs(evalFormula('csat_d_pct', v).value - 75) < 1e-9);
+
+  /* ขาไม่ครบ = null + บอกว่าขาดตัวไหน — ห้ามคิดจากขาเดียว ห้ามเดา 0 */
+  const half = evalFormula('csat_qd_pct', { csat_q_actual: 21, csat_q_total: 24 });
+  assert.equal(half.value, null);
+  assert.deepEqual(half.missing, ['csat_d_actual', 'csat_d_total']);
+
+  /* 🔴 ค่าเดียวทั้งโรงงาน: `scope:'plant'` ⇒ นิยามที่อยู่หน่วยไหนก็อ่านตัวแปรจากขอบเขต ทั้งโรงงาน */
+  assert.equal(formulaOf('csat_qd_pct').scope, 'plant');
+  ['csat_q_actual', 'csat_q_total', 'csat_d_actual', 'csat_d_total'].forEach((k) => {
+    assert.equal(baseScopeForVar(k, { kind: 'section', value: 'PD1' }), 'plant');
+  });
+  const base = buildBaseIndex([
+    { year: 2026, month: 1, scope_kind: 'plant', scope_value: '', var_key: 'csat_q_actual', value: 21 },
+    { year: 2026, month: 1, scope_kind: 'plant', scope_value: '', var_key: 'csat_q_total',  value: 24 },
+    { year: 2026, month: 1, scope_kind: 'plant', scope_value: '', var_key: 'csat_d_actual', value: 6 },
+    { year: 2026, month: 1, scope_kind: 'plant', scope_value: '', var_key: 'csat_d_total',  value: 8 },
+    /* กับดัก: มีใครเผลอกรอกคะแนนที่ขอบเขตของหน่วย — ต้อง **ไม่ถูกใช้** (ไม่งั้นกลายเป็นค่าที่ 2) */
+    { year: 2026, month: 1, scope_kind: 'section', scope_value: 'PD1', var_key: 'csat_q_actual', value: 1 },
+    { year: 2026, month: 1, scope_kind: 'section', scope_value: 'PD1', var_key: 'csat_q_total',  value: 100 },
+  ]);
+  const def = (kind, value) => ({ id: `c-${value || 'plant'}`, name: 'Customer Satisfaction (Q&D)', provider: 'formula',
+    provider_config: { formula: 'csat_qd_pct' }, scope_kind: kind, scope_value: value, unit: '%' });
+  const atPlant = formulaMonths({ def: def('plant', null), scope: PLANT, base });
+  const atPd1 = formulaMonths({ def: def('section', 'PD1'), scope: { kind: 'section', value: 'PD1' }, base });
+  assert.ok(Math.abs(atPlant.months[1] - 84.375) < 1e-9);
+  assert.equal(atPd1.months[1], atPlant.months[1]);   // หน่วยได้เลขเดียวกับโรงงานเป๊ะ
+
+  /* ขาย่อยมาจาก `parts` ที่เดียว — คนละกราฟ ไม่ได้ซ้อนให้บวกกัน */
+  const parts = formulaPartSeries(atPlant);
+  assert.deepEqual(parts.map(p => p.key), ['csat_q_pct', 'csat_d_pct']);
+  assert.ok(Math.abs(parts[0].months[1] - 87.5) < 1e-9);
+  assert.ok(Math.abs(parts[1].months[1] - 75) < 1e-9);
 });

@@ -1,4 +1,6 @@
 import { lineNameCompare } from './lineHierarchy.js';
+import { looksLikePartNo } from './matLabel.js';   // "Part No. นี้ขึ้นหัวได้ไหม" — จุดเดียวทั้งระบบ
+import { uomLabel } from './bomTree.js';           // PC/EA/pcs = ของเดียวกัน (แปลงเฉพาะตอนแสดง)
 /* ── pickerOptions — ตัวสร้าง option list ของ picker กลาง (pure · ไม่ import supabase/react) ──
    (2026-09-07 · single-source audit) ใช้โดย <PersonSelect> <MachineSelect> <ProductSelect>
    แยกออกมาให้เทสได้ตรงๆ (node:test) — กฎการ "เรียงของที่เกี่ยวข้องขึ้นก่อน ไม่ตัดของอื่นทิ้ง"
@@ -15,6 +17,7 @@ export const sameName = (a, b) => normName(a).toLowerCase() === normName(b).toLo
 export function personOptions({
   profiles = [], employees = [], source = 'profiles', lines, lineIds, section, roles, teams, strict = false,
   posLabel = (v) => String(v || ''), roleLabel = (v) => String(v || ''),
+  levels, levelOf = () => null,   // 24/11: ระดับตำแหน่ง (POSITION_LEVELS key) ที่ควรขึ้นก่อน — ช่องผู้ตรวจ LPA · ไม่ตัดคนอื่น
 } = {}) {
   const prefLines = new Set((lines || []).map(up).filter(Boolean));
   const prefLineIds = new Set((lineIds || []).filter(x => x != null && x !== '').map(Number));
@@ -23,13 +26,15 @@ export function personOptions({
   // ทีมช่าง (mtn_teams ของ profile / mtn_team ของ employee) — 06/10 คอมเมนต์ทีม DIE: หัวหน้าช่างที่เป็น "พนักงาน" ไม่มี role
   // ⇒ prefer ด้วย roles อย่างเดียวไม่มีวันขึ้น 🎯 · ส่ง teams=[ทีมของใบ] ให้คนในทีมขึ้นก่อน (ไม่ตัดคนอื่น)
   const prefTeams = new Set((teams || []).filter(Boolean).map(String));
-  const hasPref = !!(prefLines.size || prefLineIds.size || prefSection || prefRoles.size || prefTeams.size);
+  const prefLevels = new Set((levels || []).filter(Boolean).map(String));
+  const hasPref = !!(prefLines.size || prefLineIds.size || prefSection || prefRoles.size || prefTeams.size || prefLevels.size);
   const prefer = (o) =>
     (prefLineIds.size && o.line_id != null && prefLineIds.has(Number(o.line_id))) ||
     (prefLines.size && o.line_name && prefLines.has(up(o.line_name))) ||
     (prefSection && o.section && up(o.section) === prefSection) ||
     (prefRoles.size && o.role && prefRoles.has(String(o.role))) ||
-    (prefTeams.size && (o.mtn_teams || []).some(t => prefTeams.has(String(t)))) || false;
+    (prefTeams.size && (o.mtn_teams || []).some(t => prefTeams.has(String(t)))) ||
+    (prefLevels.size && o.position && prefLevels.has(String(levelOf(o.position) || ''))) || false;
 
   const out = [];
   const byName = new Map();
@@ -198,4 +203,64 @@ export function appendHistoryOptions(options, { history = [], current = '', keyO
   (history || []).forEach(add);
   add(current);
   return extra.length ? [...options, ...extra] : options;
+}
+
+/* ── 🧩 พาร์ทลูกของ MAT หนึ่งตัว (ช่อง "พาร์ทลูกที่เสีย" ใน Daily Report · 2026-11-16) ──
+   รับ `rows` จาก `bomChildCandidates()` (`utils/bomTree.js`) ที่เลือก "ใบเดียว" + ยุบ mat ซ้ำแล้ว
+   🔴 ไม่กรองแถวทิ้งเองที่นี่ — ลิสต์สั้นอยู่แล้ว (วัด 16/11: FG ที่มี BOM มีลูกชั้น 1 เฉลี่ย 2.4 ตัว)
+      ตัดแถว = คนหาของที่มีจริงไม่เจอ แล้วไปลงของเสียผิดระดับ
+   ⚠️ `part_no` ของวัตถุดิบ 5xx มักเป็น "คำบรรยาย" ไม่ใช่เลขพาร์ท ⇒ ขึ้นหัวได้เฉพาะที่
+      `looksLikePartNo()` ผ่าน (กฎเดียวกับ `<MatLabel>`) แต่ยังโชว์เป็นบรรทัดรองเสมอ ห้ามทิ้ง */
+export function bomChildOptions(rows = [], { current = '' } = {}) {
+  const cur = up(current);
+  const seen = new Set();
+  const out = [];
+  for (const r of rows || []) {
+    const mat = String(r?.mat_no ?? '').trim();
+    const k = up(mat);
+    if (!k || seen.has(k)) continue;
+    seen.add(k);
+    const lv = Number(r?.level) || 1;
+    const pno = String(r?.part_no ?? '').trim();
+    const isCode = looksLikePartNo(pno);
+    const name = String(r?.part_name ?? '').trim();
+    const head = isCode ? pno : name;
+    const per = Number(r?.qtyPerRoot);
+    const uom = uomLabel(r?.uom);
+    out.push({
+      id: `bc:${k}`, key: k, label: mat,
+      lead: isCode ? pno : null,
+      title: head ? (name || pno) : `MAT ${mat}`,
+      code: head ? `MAT ${mat}` : null,
+      sub: [
+        lv > 1 && r?.parent ? `ชั้น ${lv} · ใต้ ${r.parent}` : null,
+        Number.isFinite(per) && per > 0 && !r?.flatDupe ? `ใช้ ${per}${uom ? ` ${uom}` : ''}/FG` : null,
+        r?.op_no ? `OP ${r.op_no}` : null,
+        !isCode && pno ? pno : null,
+      ].filter(Boolean).join(' · '),
+      keywords: `${name} ${pno} ${r?.parent || ''}`,
+      /* ⚠ บรรทัดที่ถูกใส่ซ้ำทั้งชั้น 1 และชั้นลึก — ยอด/อัตราเชื่อไม่ได้ (bomTree §explodeBom)
+         เลือกได้ แต่ต้องเห็นว่า BOM ยังต้องเคลียร์ (ซ่อนแถว = คนหาไม่เจอ) */
+      badge: r?.flatDupe ? '⚠ ซ้ำ 2 ชั้น' : (lv > 1 ? `ชั้น ${lv}` : null),
+      badgeColor: r?.flatDupe ? 'var(--amber)' : undefined,
+      group: lv > 1 ? '🔧 ชั้นลึก (ลูกของลูก)' : '🧩 พาร์ทลูกชั้น 1',
+      mat_no: mat, part_name: name || null, part_no: pno || null,
+      level: lv, qtyPerRoot: Number.isFinite(per) ? per : null, flatDupe: !!r?.flatDupe,
+    });
+  }
+  /* ค่าที่เก็บอยู่ในใบแต่ไม่อยู่ในลิสต์ (BOM ถูกแก้/โหลดไม่ขึ้น) — ต้องไม่หายจากช่อง
+     ไม่งั้น SearchSelect ล้างค่า แล้วกดบันทึกทับ = พาร์ทลูกที่คนระบุไว้หายเงียบ */
+  if (cur && !seen.has(cur)) {
+    const v = String(current).trim();
+    out.push({
+      id: `bc:${cur}`, key: cur, label: v,
+      title: `MAT ${v}`,
+      sub: 'ค่าเดิมในใบนี้ — ไม่อยู่ใน BOM ที่โหลดได้ตอนนี้',
+      badge: '⚠ นอกลิสต์', badgeColor: 'var(--accent2)',
+      group: '📜 ค่าเดิมในใบนี้',
+      mat_no: v, part_name: null, part_no: null,
+      level: null, qtyPerRoot: null, flatDupe: false, offList: true,
+    });
+  }
+  return out;
 }
