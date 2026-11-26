@@ -851,6 +851,7 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
   };
 
   /* ══ 🗂️ แถวเมนู + ข้อย่อย (แท็บของหน้า) — 24/11 คำสั่ง user "ย้าย Detail bar ไป Sub bar เป็นข้อย่อย"
+     · 26/11 (คำสั่ง user "แท็บอยู่ในหน้า · เมนูเป็นทางเข้า"): ข้อย่อยเป็น **ทางลัด** เข้าแท็บ — แถบแท็บยังวาดในหน้าเสมอ (PageHeader · ด่าน `tabs-stay-in-page`)
      · ข้อย่อย = ทะเบียน `NAV_SUB_TABS` (utils/navSubTabs.js) — เห็นทุกเมนูตลอดแม้ยังไม่เปิดหน้านั้น · กรองสิทธิ์รายแท็บด้วย `perm`
      · รายการชั้นถัดไป (พื้นที่ SAP ฯลฯ) **ไม่อยู่ในแผงนี้** — อยู่ "Detail Bar" ใต้ breadcrumb ในหน้า (PageHeader · 24/11 รอบ 4)
      · "อยู่ตรงนี้" หน้าตาเดียวกับทุกชั้น (พื้น accent-dim + แถบซ้าย + aria-current) · ชื่อยาวตัด … + `title` ชื่อเต็ม

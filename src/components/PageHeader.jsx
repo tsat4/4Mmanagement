@@ -2,7 +2,6 @@ import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { MoreMark } from './InfoMore';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { NAV_ITEMS, STICKY_TAB_GROUPS, FULL_STICKY_GROUPS, inNavGroup } from '../App';
-import { NAV_SUB_TABS } from '../utils/navSubTabs';
 import { useNavSubItemsStore } from '../utils/navSubItems';   // 🗂️ Detail Bar = รายการที่หน้าประกาศตอนรัน (พื้นที่ SAP)
 import { useMergeParams } from '../utils/useTabParam';   // 🗂️ 24/11 หน้าที่แท็บย้ายไปเป็นข้อย่อยในแผงเมนู
 import useIsMobile from '../utils/useIsMobile';
@@ -206,9 +205,9 @@ export default function PageHeader({
   /* 🗜️ 24/11 (คำสั่ง user) เงื่อนไขเดียวกันนี้ = "หัวเพจกะทัดรัด" ด้วย: ไม่มี breadcrumb · ไม่มีคำบรรยาย (`sub`) ·
      ชื่อหน้าอยู่บนสุด · แถบแท็บแถวเดียว (ล้น = ปุ่ม ◀ ▶) · ปุ่ม 🔍 ท้ายแถบ (`HeaderSearch`) */
   const compact = !inHub && !isMobile && !filters && !!navItem && inNavGroup(navItem, STICKY_TAB_GROUPS);
-  /* 🗂️ 24/11 (คำสั่ง user "ย้าย Detail bar ไป Sub bar เป็นข้อย่อย") — หน้าที่อยู่ในทะเบียน `NAV_SUB_TABS` เปลี่ยนแท็บที่แผงเมนู
-     ⇒ ไม่วาดแถบแท็บในหน้า · ปุ่ม 🔍 ย้ายไปแถวชื่อหน้า · ไม่อยู่ในทะเบียน = แถบแท็บตรึงบนแบบเดิม (แท็บไม่มีวันหายเฉยๆ) */
-  const tabsInNav = compact && !!NAV_SUB_TABS[pathname];
+  /* 🗂️ 26/11 (คำสั่ง user "แท็บอยู่ในหน้า · เมนูเป็นทางเข้า") — หน้าที่อยู่ในทะเบียน `NAV_SUB_TABS` **ยังวาดแถบแท็บในหน้าเสมอ**
+     ข้อย่อยในแผงเมนูเป็น *ทางลัด* เข้าแท็บ (กดจากที่อื่นแล้วตกถึงแท็บนั้นเลย) ไม่ใช่ตัวสลับแท็บ
+     — รอบ 24/11 เคยซ่อนแถบแท็บของหน้าพวกนี้ ⇒ สลับแท็บต้องเปิดแผง 2–3 คลิก และคนไม่เห็นว่าหน้านี้มีแท็บอะไรอีก (ถอดแล้ว · ด่าน `tabs-stay-in-page`) */
   /* 📍 Detail Bar (24/11 รอบ 4 · คำสั่ง user "ถัดจาก breadcrumb = Detail Bar: S401, S402…") — ใต้ breadcrumb
      รายการมาจากหน้า (`useNavSubItems(path, tab, query, items)` — ข้อมูลจริงของแท็บนั้น ไม่เดา) · กด = ตั้ง `?<query>=` (ตัวกรองเดียวกับช่องบนจอ)
      · ตอนนี้มีเฉพาะแท็บที่จัดกลุ่มตามพื้นที่ SAP (user เลือก "แสดงเฉพาะหน้าที่มีพื้นที่ SAP") · ไม่มีรายการ = ไม่วาดแถบ
@@ -221,7 +220,7 @@ export default function PageHeader({
   /* 📌 ค้างทั้งก้อน (25/11 หมวดกิจกรรม · `FULL_STICKY_GROUPS`) — Header + Detail Bar + Tool Bar ค้างที่ขอบบน top:0
      (ไม่ใช่ top ติดลบแบบ "ค้างเฉพาะแถบ") · ต้องอยู่ในโหมดกะทัดรัดอยู่แล้ว */
   const fullSticky = compact && inNavGroup(navItem, FULL_STICKY_GROUPS);
-  const sticky = compact && ((!!topTabs.length && !tabsInNav) || !!detailItems || fullSticky);
+  const sticky = compact && (!!topTabs.length || !!detailItems || fullSticky);
   /* 🧰 Tool Bar (25/11) — ปุ่มคำสั่งชุดมาตรฐาน ตำแหน่งตายตัวขวาสุดของแถว Detail Bar (ลำดับ ค้นหา · เพิ่ม · แก้ไข · ลบ)
      · หน้าส่ง `tools=[{ key:'search'|'add'|'edit'|'delete', label, onClick, disabled }]` · ไม่ส่ง = ไม่มี (ปุ่ม 🔍 แบบเดิม)
      · ลำดับเรียงตาม `TOOL_ORDER` เสมอ ไม่ว่าหน้าส่งมาลำดับไหน (ผู้ใช้จำตำแหน่งได้ — คำสั่ง user) */
@@ -356,7 +355,7 @@ export default function PageHeader({
         </div>
       )}
 
-      {!!tabList.length && !tabsInNav && renderTabs()}
+      {!!tabList.length && renderTabs()}
 
       {/* ── ลำดับแนวตั้งตายตัวทุกหน้า: breadcrumb → ชื่อหน้า|ปุ่มคำสั่ง → แท็บ → แถบกรอง → เนื้อหา ──
           (user 24/09: "ลำดับยังโดดไปมา เดี๋ยวแท็บมาก่อนช่องค้นหา บางหน้าค้นหาอยู่บนสุดก่อนแท็บ") */}
