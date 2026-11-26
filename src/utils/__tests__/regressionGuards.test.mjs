@@ -58,6 +58,21 @@ function stripComments(src) {
    scan: โฟลเดอร์ที่ตรวจ · ext: นามสกุล · re: regex (global) · allow: ไฟล์ที่ยกเว้น + เหตุผล */
 const RULES = [
   {
+    id: 'jig-images-via-dept',
+    scan: ['src'], ext: ['.jsx', '.js'],
+    re: /from\(\s*['"`]jig_images['"`]\s*\)/g,
+    why: '🖼️ 26/11 "ข้อมูล PM ของ JIG MTN โดนไลน์ผลิตแก้ทับเละ" — รูปเครื่องเคยใช้ชุดเดียวกันทุกแผนก ⇒ AM (ผลิต) เปลี่ยนรูปที่ PM Setup '
+       + 'แล้วกดบันทึก = ลบรูปของ JIG MTN 140 รูป · FK ON DELETE SET NULL ล้างจุดตรวจ JIG MTN 1,567 จุดให้ไปวางบนรูป AM',
+    fix: 'อ่านเฟรมผ่าน `loadDeptFrames(jigIds, department)` · แก้/ลบได้เฉพาะ `ownsFrame(row, department)` (src/utils/jigFrames.js) · insert ต้องใส่ department',
+    allow: {
+      'src/utils/jigFrames.js': 'เจ้าของกฎ',
+      'src/pages/PMSetup.jsx': 'ตัวบันทึก — ใส่ department ตอน insert + แก้/ลบผ่าน ownsFrame เท่านั้น',
+      'src/pages/FixtureRegistry.jsx': 'ทะเบียนจุดชิม: แค่รู้ว่าเครื่องไหนมีรูป + วาดหมุดชิมบนทุกเฟรมของเครื่อง (อ่านอย่างเดียว · ไม่ผูกแผนก)',
+      'src/utils/jigImageRefs.js': 'นับผู้อ้าง path ก่อนลบไฟล์ — ต้องนับทุกแผนก',
+      'src/utils/recompressLayouts.js': 'ย้ายไฟล์รูปทั้ง bucket — ระดับ path ไม่ใช่ระดับแผนก',
+    },
+  },
+  {
     id: 'manpower-layout-stations-via-family',
     scan: ['src/pages/ManpowerBoard.jsx'], ext: ['.jsx'],
     /* จับการกรองไลน์ฝั่ง DB ทุกแบบในไฟล์นี้: `line_id.eq.` ใน .or() · .eq/.in('line_name'|'line_id')

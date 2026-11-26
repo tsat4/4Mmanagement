@@ -54,6 +54,7 @@ import { tr } from '../utils/i18n';
 import InfoMore from '../components/InfoMore';   // ⋯ ปุ่มตายตัว ≤2 (UI §6.35)
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 import { askConfirm } from '../utils/askConfirm';
+import { loadDeptFrames, ownsFrame } from '../utils/jigFrames';   // รูปเครื่องแยกตามแผนก (26/11)
 /* สีจาก token (var(--red) …) ต่อ alpha-hex ไม่ได้ (SVG/CSS parse พัง = ดำ · UI §6.17) ⇒ ย่อยเป็น -dim/-line · hex จาก DB ยังต่อ alpha ได้เหมือนเดิม */
 const tintOf = (c, lvl) => {
   const m = /^var\(--(green|amber|red|blue)\)$/.exec(c || '');
@@ -352,6 +353,7 @@ function EquipmentModal({ onClose, onSaved, editJig, department, categories, met
   const [checkpoints, setCheckpoints] = useState([])
   const [layoutType, setLayoutType] = useState(editJig?.layout_type ?? 'image_pin')
   // รูปหลายมุมต่ออุปกรณ์ (1 รูป = ปกติ, ≥2 รูป = ปัดดูรอบเครื่อง — ไม่บังคับจำนวน)
+  const [framesLoadErr, setFramesLoadErr] = useState('')   // โหลดรูปของแผนกไม่ได้ = ห้ามบันทึก (26/11)
   const [frames, setFrames] = useState([])   // [{ _key, id?, image_path?, _file?, _preview, title }]
   const initialImagePathsRef = useRef(new Set()) // path รูปตอนเปิดแก้ไข — ใช้เก็บกวาดไฟล์ที่ถูกถอดตอน save
   const [frameIdx, setFrameIdx] = useState(0)
@@ -457,8 +459,11 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
       setOrigFreq(cl?.frequency ?? null)
       setCycleDays(''); setNextDue(''); setNextDueDirty(false); setOrigCycle(null); setLastDoneYmd(null)
       // load spin frames (jig_images); fall back to jigs.image_path as one frame
-      // — รูปเป็นของ "เครื่อง" ไม่ใช่ของ checklist จึงต้องโหลดเสมอแม้แผนกนี้ยังไม่มี checklist
-      const { data: imgs } = await supabaseDR.from('jig_images').select('*').eq('jig_id', editJig.id).order('sort')
+      // 🔴 รูปเป็นของ "แผนก" (26/11) — เห็นแค่ชุดของแผนกนี้ผ่าน loadDeptFrames (utils/jigFrames.js)
+      //    เดิมโหลดทุกรูปของเครื่อง ⇒ AM กดบันทึกแล้วลบรูปของ JIG MTN ทิ้ง (จุดตรวจ 1,567 จุดหลุดรูป)
+      //    โหลดไม่ได้ = ล็อกปุ่มบันทึก (บันทึกด้วยชุดรูปว่าง = ทับของเดิม)
+      const { rows: imgs, error: imgErr } = await loadDeptFrames([editJig.id], department)
+      setFramesLoadErr(imgErr ? (imgErr.message || String(imgErr)) : '')
       let fr = (imgs ?? []).map(im => ({ _key: im.id, id: im.id, image_path: im.image_path, _preview: getPublicUrl(im.image_path), title: im.title }))
       if (!fr.length && editJig.image_path) fr = [{ _key: 'legacy', image_path: editJig.image_path, _preview: getPublicUrl(editJig.image_path), title: null }]
       setFrames(fr); setFrameIdx(0)
@@ -742,6 +747,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
       if (lo != null && hi != null && lo >= hi) { setError(`${tr("จุดตรวจ")} "${c.name.trim()}" ${tr("ค่าต่ำสุด")} (${lo}) ${tr("ต้องน้อยกว่าค่าสูงสุด")} (${hi}) — ${tr("ไม่งั้นจะขึ้น NG ทุกครั้ง")}`); return }
     }
     // รูปหลายมุมได้ตั้งแต่ 1 รูปขึ้นไป ไม่บังคับจำนวน — 2 รูปขึ้นไปปัดดูรอบเครื่องได้ ยิ่งเยอะยิ่งลื่น
+    if (editJig?.id && framesLoadErr) { setError(`${tr('โหลดรูปเครื่องไม่สำเร็จ')} (${framesLoadErr}) — ${tr('ยังบันทึกไม่ได้ กันรูปของแผนกอื่นถูกทับ · ปิดแล้วเปิดใหม่')}`); return }
     setSaving(true); setError('')
     try {
       // ⚠️ เครื่องเดียวกันต้องเป็นแถว jigs แถวเดียว แม้ตรวจหลายแผนก — ถ้าเครื่องจาก Machine Master
@@ -773,10 +779,19 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
         }
       }
       const imagePath = layoutType === 'list' ? null : (resolvedFrames[0]?.path ?? null)
+      /* 🔴 รูปหลัก `jigs.image_path` ใช้ร่วมทุกแผนก (26/11) — เครื่องที่แผนกอื่นมีใบตรวจอยู่แล้ว ห้ามทับ
+         (เดิม AM บันทึกแล้วรูปหลักของ JIG MTN กลายเป็นรูป AM) · นับไม่ได้ = ถือว่าใช้ร่วม (ไม่ทับ) */
+      let sharedJig = false
+      if (editJig?.id || jigId) {
+        const { count: otherCl, error: eOther } = await supabaseDR.from('checklists')
+          .select('id', { count: 'exact', head: true }).eq('equipment_id', jigId).neq('department', department)
+        sharedJig = !!eOther || otherCl == null || otherCl > 0
+      }
+      const keepMainImage = sharedJig && !!editJig?.image_path
 
       const { error: jigErr } = await supabaseDR.from('jigs').upsert({
         id: jigId, name: name.trim(), description: description.trim() || null,
-        image_path: imagePath,
+        image_path: keepMainImage ? editJig.image_path : imagePath,
         created_by: userId, module: editJig?.module ?? 'mtn',
         jig_no: jigNo.trim() || null, process: process.trim() || null,
         model: model.trim() || null, part_name: partName.trim() || null,
@@ -798,23 +813,28 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
       //    เดิม delete-all ⇒ fixture_points.image_id / jig_checkpoints.image_id (ON DELETE SET NULL) หลุดทุกครั้งที่กดบันทึก
       const frameIdByKey = {}
       {
-        const { data: curImgs, error: eCur } = await supabaseDR.from('jig_images').select('id').eq('jig_id', jigId)
+        /* 🔴 แยกตามแผนก (26/11 · utils/jigFrames.js) — แก้/ลบได้เฉพาะรูปที่ department = แผนกนี้
+           รูปของแผนกอื่น/ไม่รู้เจ้าของ (null) ห้ามแตะ — เดิมลบทุกรูปที่ไม่อยู่ในชุดใหม่ ⇒ ลบรูป JIG MTN ทิ้ง */
+        const { data: curImgs, error: eCur } = await supabaseDR.from('jig_images').select('id, department').eq('jig_id', jigId)
         if (eCur) throw eCur
+        const curById = Object.fromEntries((curImgs ?? []).map(r => [r.id, r]))
         const keepIds = new Set()
         for (let i = 0; i < resolvedFrames.length; i++) {
           const f = resolvedFrames[i]
           const row = { image_path: f.path, sort: i, is_spin_frame: spinMode, title: f.title }
           if (f.id) {
-            const { error: eU } = await supabaseDR.from('jig_images').update(row).eq('id', f.id)
-            if (eU) throw eU
+            if (ownsFrame(curById[f.id], department)) {
+              const { error: eU } = await supabaseDR.from('jig_images').update(row).eq('id', f.id)
+              if (eU) throw eU
+            }
             keepIds.add(f.id); frameIdByKey[f.key] = f.id
           } else {
-            const { data: ins, error: eI } = await supabaseDR.from('jig_images').insert({ jig_id: jigId, ...row }).select('id').single()
+            const { data: ins, error: eI } = await supabaseDR.from('jig_images').insert({ jig_id: jigId, department, ...row }).select('id').single()
             if (eI) throw eI
             frameIdByKey[f.key] = ins.id
           }
         }
-        const dropImg = (curImgs ?? []).map(r => r.id).filter(id => !keepIds.has(id))
+        const dropImg = (curImgs ?? []).filter(r => ownsFrame(r, department)).map(r => r.id).filter(id => !keepIds.has(id))
         if (dropImg.length) {
           const { error: eD } = await supabaseDR.from('jig_images').delete().in('id', dropImg)
           if (eD) throw eD
