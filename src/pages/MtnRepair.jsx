@@ -128,6 +128,10 @@ const PR_FILTERS = [
   { v: 'need',  label: trI18n(PR_QUEUE_META.need.label) },
   { v: 'no_no', label: trI18n(PR_QUEUE_META.no_no.label) },
   { v: 'open',  label: trI18n(PR_QUEUE_META.open.label) },
+  /* 🚫 26/11 · คำสั่ง user ("ถ้าจะกรองงานที่ไม่เกี่ยวกับ loop pr จะกรองยังไง")
+     **ไม่ใช่ขั้นที่ 4** — 3 ขั้นบนคือ "งาน PR" ส่วนตัวนี้คือ *ส่วนเติมเต็ม* (ใบที่ `prQueueStateOf()` คืน null)
+     🔴 `unknown_po` (อ่านคอลัมน์ไม่ครบ = ไม่รู้) **ห้ามตกถังนี้** — ไม่รู้ ≠ ไม่มี */
+  { v: 'none',  label: '🚫 ไม่มีงาน PR (จบในตัว)' },
 ];
 /* ── helpers ─────────────────────────────────────────────── */
 // แปลง URL โลโก้ (รวมโลโก้ที่ admin อัปโหลดใน /doc-forms) เป็น dataURL เพื่อฝังในหน้าพิมพ์
@@ -903,12 +907,14 @@ const HANDOFF_CAP = 2000;
   const prMatch = useCallback((o) => {
     if (!fPr || !PR_FILTERS.some(x => x.v === fPr)) return true;   // ค่าที่ไม่รู้จัก = ไม่กรอง (ลิงก์เก่าห้ามทำจอว่าง)
     const st = prStateOf(o);
-    return fPr === 'waiting' ? (st === 'need' || st === 'no_no') : st === fPr;
+    if (fPr === 'waiting') return st === 'need' || st === 'no_no';
+    if (fPr === 'none') return st === null;      // 🔴 null เท่านั้น — `unknown_po` = ไม่รู้ ไม่ใช่ไม่มี
+    return st === fPr;
   }, [fPr, prStateOf]);
   const prCounts = useMemo(() => {
     /* 🔴 ต้องมีทุกคีย์ที่ `prQueueStateOf()` คืนได้ — ขาดคีย์ = `c[st]++` บน undefined = NaN เงียบๆ */
-    const c = { need: 0, no_no: 0, open: 0, unknown_po: 0 };
-    beforeWait.forEach(o => { const st = prStateOf(o); if (st) c[st]++; });
+    const c = { need: 0, no_no: 0, open: 0, unknown_po: 0, none: 0 };
+    beforeWait.forEach(o => { const st = prStateOf(o); c[st === null ? 'none' : st]++; });
     return { ...c, waiting: c.need + c.no_no };
   }, [beforeWait, prStateOf]);
   /* ✍️ ตัวตนของผู้ใช้ในรูปแบบที่ `ackWaitsOnMe()` ต้องการ — ชุดเดียวกับที่คิวงานส่งให้ */
@@ -4004,8 +4010,10 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
     return () => { alive = false; };
   }, [prGateOn, fetchOpenPrs]);
   /* `loading` ⇒ ส่ง [] (ยังไม่ต้องเตือนอะไร) · `error` ⇒ ส่ง null ⇒ gate = unknown = ไม่บล็อก + เขียนบนจอ */
+  /* 🔴 ต้องส่ง `o.repair_path` ด้วย — ไม่ส่ง = ด่าน "เส้นทางต้องเปิด PR แต่ไม่มีใบเลย" เงียบ
+     (26/11 · `repair_path` อยู่ใน MO_LIST_COLS แล้ว · ด่าน `mo-close-gate-needs-path`) */
   const prGate = moCloseGate(stageOf(step, { mtnForm: isMtnForm }),
-    prq.state === 'error' ? null : prq.rows);
+    prq.state === 'error' ? null : prq.rows, o.repair_path);
 
   const addLabor = () => { if (laborState !== 'ok') return; touch(); setLaborRows(r => [...r, { worker_name: '', rate_per_hour: '', hours: 1 }]); };
   const setLabor = (i, k, v) => { touch(); setLaborRows(r => r.map((x, j) => (j === i ? { ...x, [k]: v } : x))); };
@@ -4174,7 +4182,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
                 (ด่าน `pr-loop-not-locked-by-mo`) ไม่งั้นด่านนี้กลายเป็นวงจรล็อกตัวเอง
              🔴 อ่านไม่ได้ = **ไม่บล็อก** แต่เขียนกำกับในกล่องยืนยัน (ไม่รู้ ≠ มีค้าง) */
           const _gate = PR_CLOSE_STAGES.includes(_stage)
-            ? moCloseGate(_stage, await fetchOpenPrs())
+            ? moCloseGate(_stage, await fetchOpenPrs(), o.repair_path)
             : { gate: 'ok' };
           if (_gate.gate === 'block') {
             setSaving(false);

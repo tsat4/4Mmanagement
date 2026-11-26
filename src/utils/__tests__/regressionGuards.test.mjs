@@ -9743,8 +9743,9 @@ test('🛒 pr-queue-needs-po-col — คิวรีลิสต์ MO ต้อ
     '\n\n❌ คิวรีลิสต์ใบขอซื้อไม่ได้ใช้ PR_QUEUE_COLS แล้ว (พิมพ์ชื่อคอลัมน์เอง)\n'
     + '   ผล: ลืม po_no เมื่อไหร่ ถัง "🚚 สั่งแล้ว (มี PO) · รอของเข้า" ว่างตลอดโดยไม่มีใครรู้\n');
   /* ตัวนับต้องมีคีย์ครบทุกค่าที่สูตรคืนได้ — ขาดคีย์ = c[st]++ บน undefined = NaN เงียบๆ */
-  assert.match(page, /const c = \{ need: 0, no_no: 0, open: 0, unknown_po: 0 \}/,
-    '\n\n❌ ตัวนับถัง PR ขาดคีย์ unknown_po — c[st]++ บน undefined = NaN แล้วเลขในวงเล็บเพี้ยนทั้งแถบ\n');
+  assert.match(page, /const c = \{ need: 0, no_no: 0, open: 0, unknown_po: 0, none: 0 \}/,
+    '\n\n❌ ตัวนับถัง PR ขาดคีย์ — c[st]++ บน undefined = NaN แล้วเลขในวงเล็บเพี้ยนทั้งแถบ\n'
+    + '   ต้องครบทุกค่าที่ prQueueStateOf() คืนได้ **รวม `none`** (26/11 · ถัง "ไม่มีงาน PR")\n');
 });
 test('🔧 mo-export-shows-solution — ไฟล์ Excel ของ MO ต้องมี "วิธีการแก้ไข" + สาเหตุ', () => {
   /* why (18/11 · หน้างานแจ้ง): *"ใน Excel ที่ Export ไม่มีวิธีการแก้ไขครับผม
@@ -10675,9 +10676,26 @@ test('🚦 mo-close-gated-by-pr-loop — ปิดใบ MO ต้องถา�
   assert.ok(/moCloseGate\(/.test(page),
     '\n\n❌ หน้า MO ไม่เรียก moCloseGate() แล้ว — ปิดใบได้ทั้งที่ใบขอซื้อยังค้าง\n');
   /* ① + ② ด่านตอนกดบันทึกต้องถามฐานสด ไม่ใช่อ่าน prop ที่ติดมากับ order */
-  assert.ok(/moCloseGate\(_stage,\s*await fetchOpenPrs\(\)\)/.test(page),
+  assert.ok(/moCloseGate\(_stage,\s*await fetchOpenPrs\(\)/.test(page),
     '\n\n❌ ด่านตอนกดเซ็นไม่ได้โหลดใบขอซื้อสดๆ\n'
     + '   ⇒ ตัดสินด้วยค่าค้างในหน้า = บล็อกผิด (ของมาถึงแล้ว) หรือปล่อยผิด (เพิ่ง PR ใบใหม่)\n');
+  /* 🛒 26/11 — ด่าน "เส้นทางบังคับ PR แต่ไม่มีใบเลย" อ่าน `repair_path` ของใบ
+     **ไม่ส่งอาร์กิวเมนต์ที่ 3 = ด่านนั้นเงียบสนิท** (undefined = ไม่รู้เส้นทาง ⇒ ไม่บล็อก) */
+  const calls = [];
+  for (let i = page.indexOf('moCloseGate('); i >= 0; i = page.indexOf('moCloseGate(', i + 1)) {
+    const open = page.indexOf('(', i);
+    let d = 0, j = open;
+    for (; j < page.length; j++) {                      // นับวงเล็บให้ครบ — `[^;]*?` หยุดที่ `)` ตัวแรก
+      if (page[j] === '(') d++;
+      else if (page[j] === ')' && --d === 0) break;
+    }
+    calls.push(page.slice(i, j + 1));
+  }
+  for (const c2 of calls) {
+    assert.ok(/repair_path/.test(c2),
+      `\n\n❌ เรียก moCloseGate() โดยไม่ส่ง repair_path:\n   ${c2}\n`
+      + '   ⇒ ใบที่ "ต้องเปิด PR แต่ไม่มีใบเลย" จะปิดผ่านฉลุยเหมือนเดิม (หลุดมาแล้ว 20 ใบ)\n');
+  }
   assert.ok(!/moCloseGate\([^)]*_prs/.test(page) && !/openPrRows\(o\._prs/.test(page),
     '\n\n❌ ด่านกลับไปอ่าน `order._prs` อีกแล้ว — StepModal ไม่เคยได้รับฟิลด์นี้ (ว่างเสมอ = ด่านตาย)\n');
   /* ห้ามหน้าเขียนเกณฑ์ "ลูป PR จบ" ชุดที่ 2 (= drift)
