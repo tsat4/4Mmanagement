@@ -54,7 +54,8 @@ import { tr } from '../utils/i18n';
 import InfoMore from '../components/InfoMore';   // ⋯ ปุ่มตายตัว ≤2 (UI §6.35)
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 import { askConfirm } from '../utils/askConfirm';
-import { loadDeptFrames, ownsFrame } from '../utils/jigFrames';   // รูปเครื่องแยกตามแผนก (26/11)
+import { loadDeptFrames, ownsFrame } from '../utils/jigFrames';
+import { identityPatch, deleteMode, IDENTITY_FIELDS, IDENTITY_LABEL } from '../utils/sharedEquipment';   // ตัวตนใช้ร่วม · มุมมองแยก (26/11)   // รูปเครื่องแยกตามแผนก (26/11)
 /* สีจาก token (var(--red) …) ต่อ alpha-hex ไม่ได้ (SVG/CSS parse พัง = ดำ · UI §6.17) ⇒ ย่อยเป็น -dim/-line · hex จาก DB ยังต่อ alpha ได้เหมือนเดิม */
 const tintOf = (c, lvl) => {
   const m = /^var\(--(green|amber|red|blue)\)$/.exec(c || '');
@@ -759,7 +760,39 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
           .select('id').eq('module', 'mtn').eq('machine_id', machineId).maybeSingle()
         if (existJig) jigId = existJig.id
       }
+      const existing = !!jigId
       if (!jigId) jigId = crypto.randomUUID()
+
+      /* 🔗 ตัวตนใช้ร่วม · มุมมองแยก (26/11 · utils/sharedEquipment.js) — เช็คก่อนอัปโหลดอะไร
+         เครื่องที่แผนกอื่นใช้อยู่: เพิ่มใหม่ = เติมแค่ช่องว่าง · แก้ไข = เขียนแค่ช่องที่แก้จริง + ถามยืนยัน
+         อ่านไม่ได้ = ถือว่าใช้ร่วม (ไม่ทับ) */
+      let sharedJig = false, curJig = null, otherDepts = []
+      if (existing) {
+        const [rOther, rCur] = await Promise.all([
+          supabaseDR.from('checklists').select('department').eq('equipment_id', jigId).neq('department', department),
+          supabaseDR.from('jigs').select(['image_path', ...IDENTITY_FIELDS].join(', ')).eq('id', jigId).maybeSingle(),
+        ])
+        if (rCur.error) throw rCur.error
+        curJig = rCur.data
+        otherDepts = [...new Set((rOther.data ?? []).map(r => r.department))]
+        sharedJig = !!rOther.error || otherDepts.length > 0
+      }
+      const idForm = {
+        name: name.trim(), description: description.trim() || null,
+        jig_no: jigNo.trim() || null, process: process.trim() || null,
+        model: model.trim() || null, part_name: partName.trim() || null,
+        part_no: partNo.trim() || null, line_name: lineName || null,
+        machine_no: machineNo || null, machine_id: machineId || null,
+        equipment_type: equipType, equipment_category: equipCategory,
+      }
+      const { patch: idPatch, changes: idChanges } = identityPatch({ cur: curJig, orig: editJig?.id ? editJig : null, form: idForm, shared: sharedJig && !!curJig })
+      if (sharedJig && idChanges.length) {
+        const deptNames = otherDepts.map(d => pmTeamsSync().find(t => t.key === d)?.label ?? d).join(', ') || tr('แผนกอื่น (อ่านรายชื่อไม่ได้)')
+        const lines = idChanges.map(c => `• ${tr(IDENTITY_LABEL[c.field] ?? c.field)}: ${c.from ?? '—'} → ${c.to ?? '—'}`).join('\n')
+        if (!await askConfirm(`${tr('เครื่องนี้ใช้ร่วมกับ')} ${deptNames}\n${tr('ข้อมูลตัวเครื่องต่อไปนี้จะเปลี่ยนให้ทุกแผนกเห็นเหมือนกัน')}:\n\n${lines}\n\n${tr('ยืนยันเปลี่ยน?')}`)) {
+          setSaving(false); return
+        }
+      }
 
       // ── resolve spin frames: upload new files, keep existing paths ──
       const spinMode = layoutType === 'image_pin' && frames.length >= 2
@@ -779,32 +812,21 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
         }
       }
       const imagePath = layoutType === 'list' ? null : (resolvedFrames[0]?.path ?? null)
-      /* 🔴 รูปหลัก `jigs.image_path` ใช้ร่วมทุกแผนก (26/11) — เครื่องที่แผนกอื่นมีใบตรวจอยู่แล้ว ห้ามทับ
-         (เดิม AM บันทึกแล้วรูปหลักของ JIG MTN กลายเป็นรูป AM) · นับไม่ได้ = ถือว่าใช้ร่วม (ไม่ทับ) */
-      let sharedJig = false
-      if (editJig?.id || jigId) {
-        const { count: otherCl, error: eOther } = await supabaseDR.from('checklists')
-          .select('id', { count: 'exact', head: true }).eq('equipment_id', jigId).neq('department', department)
-        sharedJig = !!eOther || otherCl == null || otherCl > 0
-      }
-      const keepMainImage = sharedJig && !!editJig?.image_path
-
-      const { error: jigErr } = await supabaseDR.from('jigs').upsert({
-        id: jigId, name: name.trim(), description: description.trim() || null,
-        image_path: keepMainImage ? editJig.image_path : imagePath,
-        created_by: userId, module: editJig?.module ?? 'mtn',
-        jig_no: jigNo.trim() || null, process: process.trim() || null,
-        model: model.trim() || null, part_name: partName.trim() || null,
-        part_no: partNo.trim() || null, line_name: lineName || null,
-        machine_no: machineNo || null, machine_id: machineId || null,
-        equipment_type: equipType, equipment_category: equipCategory,
-      })
+      /* 🔴 รูปหลัก `jigs.image_path` ใช้ร่วมทุกแผนก (26/11) — เครื่องที่แผนกอื่นใช้อยู่ ห้ามทับรูปที่มีอยู่แล้ว
+         (เดิม AM บันทึกแล้วรูปหลักของ JIG MTN กลายเป็นรูป AM) */
+      const keepMainImage = sharedJig && !!curJig?.image_path
+      const { error: jigErr } = curJig
+        ? await supabaseDR.from('jigs').update({ ...idPatch, ...(keepMainImage ? {} : { image_path: imagePath }) }).eq('id', jigId)
+        : await supabaseDR.from('jigs').upsert({
+            id: jigId, ...idForm, image_path: imagePath,
+            created_by: userId, module: editJig?.module ?? 'mtn',
+          })
       if (jigErr) throw jigErr
       invalidateTable('jigs')   // ทะเบียนเข้า cache แล้ว (13/10) — บอร์ด AM อ่านจากคีย์ 'jigs:am'
       /* 🔗 ย้ายไลน์ของอุปกรณ์ ⇒ ทะเบียน AM รายวันต้องตามไป (08/10 audit) — เดิมค้างไลน์เก่า ⇒ ไลน์เก่าเตือนค้าง/ไลน์ใหม่ไม่เตือน
          (กติกาเดียวกับ assignJigLine ใน DailyPM.jsx) · ล้ม = บอก ไม่เงียบ แต่ไม่ยกเลิกการบันทึกอุปกรณ์ */
-      if (editJig?.id && (editJig.line_name || null) !== (lineName || null)) {
-        const { error: tgErr } = await supabaseDR.from('pm_daily_line_targets').update({ line_name: lineName || null }).eq('jig_id', editJig.id).eq('is_active', true)
+      if (editJig?.id && 'line_name' in idPatch && (editJig.line_name || null) !== (idPatch.line_name || null)) {
+        const { error: tgErr } = await supabaseDR.from('pm_daily_line_targets').update({ line_name: idPatch.line_name || null }).eq('jig_id', editJig.id).eq('is_active', true)
         if (tgErr) toast.error((tr('ย้ายรายการลงทะเบียน AM ตามไลน์ใหม่ไม่สำเร็จ') + ': ') + tgErr.message + (' — ' + tr('ไปแก้ที่จอ AM รายวัน')))
         else invalidateTable('pm_daily_line_targets')
       }
@@ -1822,6 +1844,30 @@ export default function PMSetup() {
 
   const handleDelete = async (jig) => {
     if (!deptWrite.ok) { toast.info(teamBlockText(deptWrite, 'อุปกรณ์ของทีมนี้')); return }
+    /* 🔗 ตัวตนใช้ร่วม · มุมมองแยก (26/11 · utils/sharedEquipment.js) — แผนกอื่นยังใช้เครื่องนี้ = ถอดแค่ใบตรวจของแผนกนี้
+       เดิมลบแถว jigs ทั้งแถว ⇒ cascade ลบใบตรวจ/จุดตรวจ/แผน/รูป ของ "ทุกแผนก" ไปด้วย · นับไม่ได้ = ไม่ลบ */
+    const rOther = await supabaseDR.from('checklists').select('department').eq('equipment_id', jig.id).neq('department', department)
+    const mode = deleteMode(rOther.data?.length, rOther.error)
+    if (mode === 'unknown') { toast.error(tr('ตรวจไม่ได้ว่าแผนกอื่นใช้เครื่องนี้อยู่ไหม — ยังไม่ลบ') + (rOther.error ? `: ${rOther.error.message}` : '')); return }
+    if (mode === 'view') {
+      const names = [...new Set(rOther.data.map(r => r.department))].map(d => pmTeamsSync().find(t => t.key === d)?.label ?? d).join(', ')
+      if (!await askConfirm(`${tr("ถอด")} "${jig.name}" ${tr("ออกจากแผนกนี้")} ?\n\n${tr('เครื่องนี้ยังใช้อยู่ที่')} ${names} — ${tr('ตัวเครื่องและข้อมูลของแผนกนั้นไม่ถูกแตะ')}\n${tr('ที่หายคือจุดตรวจ/แผน/รูปของแผนกนี้เท่านั้น')}`)) return
+      const cl = await findChecklist(jig.id, 'mtn', department)
+      if (cl) {
+        const r = await supabaseDR.from('checklists').delete().eq('id', cl.id).select('id')
+        if (!checkWrite(r, 'ถอดใบตรวจของแผนกนี้')) return
+        if (!(r.data || []).length) { toast.error(tr('ถอดไม่สำเร็จ (0 แถว)')); return }
+      }
+      // รูปของแผนกนี้ — ลบตาม id ที่เป็นของแผนกนี้จริง (ownsFrame) ไม่ลบด้วยคีย์แม่
+      const { rows: myFrames, error: eFr } = await loadDeptFrames([jig.id], department)
+      const dropIds = eFr ? [] : myFrames.filter(r => ownsFrame(r, department)).map(r => r.id)
+      const ri = dropIds.length ? await supabaseDR.from('jig_images').delete().in('id', dropIds) : { error: eFr }
+      if (ri.error) toast.error(tr('ถอดใบตรวจแล้ว แต่ลบรูปของแผนกนี้ไม่สำเร็จ (รูปยังค้าง ไม่กระทบแผนกอื่น)') + `: ${ri.error.message || ri.error}`)
+      invalidateTable('checklists')
+      toast.success(tr('ถอดออกจากแผนกนี้แล้ว'))
+      fetchData()
+      return
+    }
     if (!await askConfirm(`${tr("ลบ")} "${jig.name}" ?`)) return
     /* 🔴 นับแถวก่อนแตะ storage (QC audit 06/10) — ไม่นับ = แถว jig ยังอยู่
        แต่รูปทั้งชุด (เฟรม + จุดตรวจ + โมเดล 3D) ถูกลบ ⇒ ทะเบียนจิ๊กเสียรูปถาวร */

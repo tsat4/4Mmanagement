@@ -13126,3 +13126,18 @@ test('🛡️ scope-select-merged-group — ไลน์ที่เป็นก
     '\n🎛️ SectionScopeSelect (pickLine) ต้องเช็ค optionOf(\'line_group\', line).merged แล้วชี้แผนก — '
     + 'กลุ่มชื่อซ้ำแผนกถูกซ่อนในลิสต์ (📄 docs/modules/manpower-board.md §25/11)\n');
 });
+
+/* 🚫 ใบรวมสถานี AM ห้ามมีจุดชิม/งาน PM (26/11 · คำสั่ง user "สถานีจะใช้แค่กับ am ไม่ยุ่งกับ pm, shim record
+   เพราะ shim record เป็นงานของส่วนช่าง") + ใบเดี่ยวของทีม AM ดูค่าชิมได้อย่างเดียว
+   คลาสเดียวกับบั๊ก 26/11 "AM ไปแก้ข้อมูลของ JIG MTN" (รูปเครื่องปนแผนก) */
+test('🛡️ am-station-no-shim — ใบรวมสถานี AM ไม่อ่าน/เขียนจุดชิม · ใบ AM บันทึกค่าชิมไม่ได้', () => {
+  const src = stripComments(readFileSync(join(ROOT, 'src/pages/PMCheckData.jsx'), 'utf8'));
+  const a = src.indexOf('function AmStationSheet('), b = src.indexOf('export default function PMCheckData(');
+  assert.ok(a > 0 && b > a, 'หา AmStationSheet ไม่เจอ');
+  const station = src.slice(a, b);
+  for (const bad of ['recordShimEvent', 'fixture_points', 'ShimRecordSection', 'shimPins']) {
+    assert.ok(!station.includes(bad), `\n\n❌ ใบรวมสถานี AM มี "${bad}" — สถานีเป็นงาน AM ล้วน ห้ามแตะจุดชิม (งานของทีมช่าง)\n`);
+  }
+  assert.match(src, /const canShim = can\('fixture_shim', 'record', userRole\) && !shimAmReadOnly/,
+    '\n\n❌ ใบ AM (ใบเดี่ยว) กรอก/บันทึกค่าชิมได้อีกแล้ว — ต้องดูได้อย่างเดียว (shimAmReadOnly = isAmTeam(department))\n');
+});
