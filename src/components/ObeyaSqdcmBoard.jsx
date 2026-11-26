@@ -52,7 +52,10 @@ import PersonSelect from './PersonSelect';
 import { toast } from './Toast';
 import { can } from '../utils/permissions';
 import { dtBucketName, buildDtIndex } from '../utils/downtimeCategory';
-import { checkWrite } from '../utils/dbWrite';
+import { checkWrite, checkWriteRows } from '../utils/dbWrite';
+import { otCostOf, otCostYearRows, otRateText } from '../utils/otCost';   // 💸 26/11 ค่า OT = ก้อนที่ 3 ของแกน C
+import { loadCompanyCalendar, getDayType } from '../utils/companyCalendar';
+import { otPeriodMeta } from '../utils/otPeriods';
 import { fetchAllPages, fetchByIds } from '../utils/fetchByIds';
 import { inSectionScope, scopedLineNames } from '../utils/sectionScope';
 import useOrgScope from '../utils/useOrgScope';
@@ -116,6 +119,8 @@ function ActionImgBtn({ url, label, result, fs }) {
 export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
   const { role, lineId, sections, fullName, section: homeSection, allUnits, respCostCenters, scopeIdx } = useContext(UserContext);
   const canRecord = can('obeya', 'record', role) || can('morning_meeting', 'record', role);
+  const canManage = can('kpi', 'manage', role);   // 💸 ตั้งค่าแรง OT (obeya_cost_settings · RLS has_perm('kpi:manage'))
+  const [otRateOpen, setOtRateOpen] = useState(false);
   const today = getWorkDate();
 
   const [period, setPeriod] = useState(() => urlPick('period', ['week', 'month', 'year'], 'week'));   // ?period= ค่าตั้งต้น (จอวนหน้า) — ยังเป็น "ดูช่วงไหน" ไม่ใช่วันที่ตายตัว
@@ -198,6 +203,17 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
   /* daily_production_logs.assigned_line = **id จุดงาน (workstations.id)** ไม่ใช่ชื่อไลน์ (docs/modules/morning-meeting.md)
      — เดิมจอนี้เอา id ไปเทียบชื่อไลน์ตรงๆ ⇒ ติดตัวกรองส่วนงานเมื่อไหร่ แกน S/M หายเกลี้ยงเงียบๆ (แก้ 2026-09-22) */
   const [stationLine, setStationLine] = useState({});
+  /* 💸 ค่าแรงมาตรฐาน OT (obeya_cost_settings · ตัวเดียวทั้งโรงงาน · user 26/11 "ใช้ 50 บาทไปก่อน") — null = ยังไม่โหลด/โหลดไม่ได้ ⇒ C เขียนว่าคิด OT ไม่ได้ ห้าม 0
+     ปฏิทินบริษัทโหลดครั้งเดียว (ตัวคูณ 1.5/2 อ่านจาก day_type เท่านั้น) */
+  const [otRate, setOtRate] = useState(null);
+  const [otRateFail, setOtRateFail] = useState(false);
+  const [calReady, setCalReady] = useState(false);
+  const [bookings, setBookings] = useState([]);
+  useEffect(() => {
+    supabase.from('obeya_cost_settings').select('ot_wage_per_hour').eq('id', 'default').maybeSingle()
+      .then(({ data, error }) => { if (error || !data) setOtRateFail(true); else setOtRate(Number(data.ot_wage_per_hour)); });
+    loadCompanyCalendar().then(() => setCalReady(true)).catch(() => setCalReady(false));
+  }, []);
   useEffect(() => {
     loadLinesRes()
       .then(({ data, error }) => { if (!error) setLines(data || []); });
@@ -240,7 +256,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
       const ids = sRes.rows.map(s => s.id);
 
       // ⚠️ ห้าม .in(ids) ตรงๆ — ช่วงเดือนมี 400+ กะ URL ยาวเกินเพดาน proxy แล้วคืนค่าว่างเงียบ
-      const [dtRes, dfRes, ordRes, pRes, atRes] = await Promise.all([
+      const [dtRes, dfRes, ordRes, pRes, atRes, bkRes] = await Promise.all([
         fetchByIds(ids, c => supabaseDR.from('downtime_logs')
           /* ⚠️ ข้อความอิสระของ downtime ชื่อ `description` **ไม่ใช่ `reason`** — ไม่มีคอลัมน์ชื่อนั้นในตาราง
              เขียนผิดมาตั้งแต่สร้างบอร์ด ⇒ คิวรีนี้ล้มทั้งก้อน แผง "ทำไมถึงหลุดเป้า" กับครึ่งหนึ่งของ C
@@ -255,13 +271,17 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
           .select('id, work_date, line_name, oee, oee_a, oee_p, oee_q, actual_qty, qty_ng, shift_min')
           .eq('status', 'closed').gte('work_date', prev.from).lte('work_date', prev.to), { orderBy: ['work_date', 'id'] }),
         fetchAllPages(() => supabase.from('daily_production_logs')
-          .select('work_date, is_present, has_helmet, has_boots, has_gloves, has_ot, has_extended_ot, assigned_line')
+          .select('work_date, employee_id, shift, is_present, has_helmet, has_boots, has_gloves, has_ot, has_extended_ot, assigned_line')
+          .gte('work_date', from).lte('work_date', to), { orderBy: ['work_date'] }),
+        /* 💸 ใบจอง OT วันหยุด = ชั่วโมงต่อคน (8/10) ของวันที่ปฏิทินมาร์ค ot15/ot2 — วันทำงานไม่ใช้ (ชม.ตามกะ) */
+        fetchAllPages(() => supabase.from('ot_night_bookings')
+          .select('work_date, employee_id, ot_period')
           .gte('work_date', from).lte('work_date', to), { orderBy: ['work_date'] }),
       ]);
 
       if (!live()) return;
       setSess(sRes.rows); setPrevSess(pRes.rows);
-      setDts(dtRes.rows); setDefs(dfRes.rows); setOrders(ordRes.rows); setAttend(atRes.rows);
+      setDts(dtRes.rows); setDefs(dfRes.rows); setOrders(ordRes.rows); setAttend(atRes.rows); setBookings(bkRes.error ? [] : bkRes.rows);
       // โหลดไม่ครบ = ตัวเลขต่ำกว่าจริง **ต้องบอกบนจอ** ห้ามเงียบ (บทเรียนแท็บแนวโน้ม /oee-analytics)
       // กะโหลดไม่ได้ = ไม่มี id ไปดึง downtime ⇒ "ว่าง" ของ downtime ก็เชื่อไม่ได้เช่นกัน
       setDtBad(!!(dtRes.error || dtRes.truncated || sRes.error || sRes.truncated));
@@ -446,10 +466,19 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
       ngBaht += v;
       (byDay[wd] || (byDay[wd] = { k: wd, dt: 0, ng: 0 })).ng += v;
     });
+    /* 💸 ค่า OT (ประมาณการ) — ชม.จากเช็คชื่อในขอบเขต × ค่าแรงมาตรฐาน × ตัวคูณปฏิทิน (utils/otCost.js) */
+    const bkHours = {};
+    bookings.forEach(b => { const h = otPeriodMeta(b.ot_period)?.hours; if (h) bkHours[`${b.employee_id}|${b.work_date}`] = h; });
+    const ot = otCostOf({ logs: fAttend, rate: otRate, dayTypeOf: calReady ? getDayType : () => null, bookingHoursOf: (e, d) => bkHours[`${e}|${d}`] ?? null });
+    Object.entries(ot.byDate).forEach(([wd, b]) => { (byDay[wd] || (byDay[wd] = { k: wd, dt: 0, ng: 0 })).ot = Math.round(b.baht); });
+    const otNote = otRateFail ? 'โหลดค่าแรง OT ไม่ได้ — ค่า OT ไม่ถูกนับ'
+      : (ot.rows && ot.unknownRate) ? 'ยังไม่ตั้งค่าแรง OT — ค่า OT ไม่ถูกนับ'
+      : (!calReady && ot.rows) ? 'อ่านปฏิทินบริษัทไม่ได้ — OT คิดที่อัตราวันทำงาน 1.5 ทุกวัน' : '';
     const series = Object.values(byDay).sort((a, b) => a.k.localeCompare(b.k))
-      .map(b => ({ ...b, v: Math.round(b.dt + b.ng) }));
-    return axisCost({ dtBaht, ngBaht, series, missingRate: noRate.size, missingCost: noCost.size, sessions: fSess.length });
-  }, [fDts, fDefs, fSess, lines, ccRates, partCost]);
+      .map(b => ({ ...b, ot: b.ot || 0, v: Math.round(b.dt + b.ng + (b.ot || 0)) }));
+    return { ...axisCost({ dtBaht, ngBaht, otBaht: ot.baht ?? 0, otNote, series, missingRate: noRate.size, missingCost: noCost.size, sessions: fSess.length }),
+      otHours: ot.hours, otRows: ot.rows, otHolidayGuess: ot.holidayGuess };
+  }, [fDts, fDefs, fSess, fAttend, bookings, otRate, otRateFail, calReady, lines, ccRates, partCost]);
 
   // ── โหมดปี: KPI จากผลรวมรายเดือน (obeyaYear.js) — โครงผลลัพธ์เดียวกับโหมดเดือน ─────────
   const kOeeY = useMemo(() => axisOeeYear({ rows: ySess, year, target }), [ySess, year, target]);
@@ -472,8 +501,14 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
       if (!unit) { if (d.mat) noCost.add(d.mat); return; }
       rows.push({ m: d.m, dt: 0, ng: ((Number(d.ng) || 0) - (Number(d.trial_ng) || 0)) * unit });
     });
-    return axisCostYear({ rows, year, missingRate: noRate.size, missingCost: noCost.size, sessions: ySess.length });
-  }, [yDts, yDefs, ySess, year, lines, ccRates, partCost]);
+    /* 💸 OT รายปีจาก RPC (นับคน-วันแยกชนิด · ชม.วันหยุดถือ 8 = ประมาณ) */
+    const oty = otCostYearRows(yAttend, otRate);
+    oty.rows.forEach(r => rows.push(r));
+    const otNote = otRateFail ? 'โหลดค่าแรง OT ไม่ได้ — ค่า OT ไม่ถูกนับ'
+      : (oty.unknownRate && yAttend.some(a => Number(a.ot) > 0)) ? 'ยังไม่ตั้งค่าแรง OT — ค่า OT ไม่ถูกนับ'
+      : oty.legacy ? 'ตัวรวมยอดรายปียังไม่แยกชนิด OT (ต้องอัปเดตฐาน) — บางเดือนไม่มีค่า OT' : '';
+    return { ...axisCostYear({ rows, year, missingRate: noRate.size, missingCost: noCost.size, otNote, sessions: ySess.length }), otApprox: oty.approx };
+  }, [yDts, yDefs, ySess, yAttend, otRate, otRateFail, year, lines, ccRates, partCost]);
   const paretoY = useMemo(() => paretoYear(yDts), [yDts]);
 
   /* จอวาดจากชุดเดียว — โหมดปีกับโหมดวันให้โครงผลลัพธ์เหมือนกัน (value/target/state/note/series) */
@@ -702,7 +737,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
           <YAxis domain={stacked ? undefined : domain} ticks={stacked ? undefined : ticks} allowDataOverflow={!stacked && !!ticks} tick={tickY} width="auto"
             tickFormatter={stacked ? (v => (v >= 1000 ? `${Math.round(v / 1000)}k` : v)) : undefined} />
           <Tooltip {...chartTip} formatter={stacked
-            ? ((v, nm) => [fmtBaht(v), nm === 'dt' ? tr("เครื่องหยุด") : 'ของเสีย'])
+            ? ((v, nm) => [fmtBaht(v), nm === 'dt' ? tr("เครื่องหยุด") : nm === 'ot' ? tr('ค่า OT') : 'ของเสีย'])
             : (v => [fmt(v), name])}
             labelFormatter={(l, pl) => (pl?.[0]?.payload?.summary
               ? `${tr("สรุปปี")} ${year} (${pl[0].payload.kind === 'sum' ? tr('รวมทั้งปี') : tr('เฉลี่ยถ่วงน้ำหนักทั้งปี')})`
@@ -711,8 +746,11 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
           {stacked ? (
             <>
               <Bar {...chartAnim()} dataKey="dt" stackId="c" fill="var(--amber)" onClick={onBarClick} cursor="pointer" />
-              <Bar {...chartAnim()} dataKey="ng" stackId="c" fill="var(--blue)" radius={[2, 2, 0, 0]} onClick={onBarClick} cursor="pointer">
+              <Bar {...chartAnim()} dataKey="ng" stackId="c" fill="var(--blue)" onClick={onBarClick} cursor="pointer">
                 {data.map((p, i) => <Cell key={i} fill="var(--blue)" fillOpacity={p.summary ? 0.55 : 1} />)}
+              </Bar>
+              <Bar {...chartAnim()} dataKey="ot" stackId="c" fill="var(--purple)" radius={[2, 2, 0, 0]} onClick={onBarClick} cursor="pointer">
+                {data.map((p, i) => <Cell key={i} fill="var(--purple)" fillOpacity={p.summary ? 0.55 : 1} />)}
               </Bar>
             </>
           ) : (
@@ -954,11 +992,22 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
           {/* ═══ C — ต้นทุน ═══ */}
           {has('C') && (
           <Sheet k={k} cw={cw} idx={3} icon={axisSheet('C').icon} title={tr('C ต้นทุนที่เสียไป')}
-            sub={`${isYear ? tr("รวมทั้งปี · ") : ""}${tr("เครื่องหยุดนอกแผน + ของเสีย")}`}
+            sub={`${isYear ? tr("รวมทั้งปี · ") : ""}${tr("เครื่องหยุดนอกแผน + ของเสีย + ค่า OT")}${otRate != null ? ` (${tr('OT ประมาณ')} ${otRateText(otRate)} × 1.5/2)` : ''}`}
+            subFull={`${tr("เครื่องหยุดนอกแผน + ของเสีย + ค่า OT")} — ${tr('ค่า OT = ชม. OT จากเช็คชื่อ × ค่าแรงมาตรฐาน × ตัวคูณตามปฏิทิน (วันทำงาน 1.5 · วันหยุด 1.5/2) · ประมาณการให้เห็นภาพ ไม่ใช่ต้นทุนบัญชี')}${kC.otHolidayGuess ? ` · ${tr('วันหยุดที่ไม่มีใบจอง OT คิด 8 ชม.')} ${kC.otHolidayGuess} ${tr('คน-วัน')}` : ''}${kC.otApprox ? ` · ${tr('วันหยุดในโหมดปีคิด 8 ชม./คน')}` : ''}`}
             big={kC.value != null ? fmtBaht(kC.value) : '—'}
             stat={costStat}
             foot={kC.note ? <WarnNote k={k} text={kC.note} />
-              : `${tr("เครื่องหยุด")} ${fmtBaht(kC.dtBaht)} · ${tr("ของเสีย")} ${fmtBaht(kC.ngBaht)}`}
+              : (
+                <span>
+                  {`${tr("เครื่องหยุด")} ${fmtBaht(kC.dtBaht)} · ${tr("ของเสีย")} ${fmtBaht(kC.ngBaht)} · OT ${fmtBaht(kC.otBaht)}${!isYear && kC.otHours ? ` (${kC.otHours} ${tr('ชม.')})` : ''}`}
+                  {canManage && !tv && (
+                    <button type="button" onClick={() => setOtRateOpen(true)} title={tr('ตั้งค่าแรงมาตรฐาน OT (บาท/ชม.) — ตัวเดียวทั้งโรงงาน · ประมาณการให้หน้างานเห็นภาพ')}
+                      style={{ marginLeft: 6, background: 'none', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', color: 'var(--accent)', fontSize: 'inherit', padding: '0 6px', cursor: 'pointer' }}>
+                      ✎ {otRate != null ? otRateText(otRate) : tr('ตั้งค่าแรง OT')}
+                    </button>
+                  )}
+                </span>
+              )}
             link={tr("ดู LOSS ละเอียด")} onLink={() => drill('/oee-analytics', { tab: 'insight', ...drillParams(org, scope) })}>
             {isYear ? (yearBars(kC, { stacked: true }) || <EmptyChart k={k} text={tr("ยังไม่มีความสูญเสียที่คิดเป็นเงินได้")} />) : kC.series.length ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -966,9 +1015,10 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                   <XAxis dataKey="label" tick={axisTick} interval="preserveStartEnd" />
                   <YAxis tick={axisTick} width="auto" tickFormatter={v => (v >= 1000 ? `${Math.round(v / 1000)}k` : v)} />
-                  <Tooltip {...chartTip} formatter={(v, n) => [fmtBaht(v), n === 'dt' ? tr("เครื่องหยุด") : 'ของเสีย']} />
+                  <Tooltip {...chartTip} formatter={(v, n) => [fmtBaht(v), n === 'dt' ? tr("เครื่องหยุด") : n === 'ot' ? tr('ค่า OT') : 'ของเสีย']} />
                   <Bar {...chartAnim()} dataKey="dt" stackId="c" fill="var(--amber)" />
-                  <Bar {...chartAnim()} dataKey="ng" stackId="c" fill="var(--blue)" radius={[2, 2, 0, 0]} />
+                  <Bar {...chartAnim()} dataKey="ng" stackId="c" fill="var(--blue)" />
+                  <Bar {...chartAnim()} dataKey="ot" stackId="c" fill="var(--purple)" radius={[2, 2, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : <EmptyChart k={k} text={tr("ยังไม่มีความสูญเสียที่คิดเป็นเงินได้")} />}
@@ -1187,6 +1237,11 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
       )}
 
       {/* ── modal ตั้ง action ─────────────────────────────────────────────────── */}
+      {otRateOpen && (
+        <OtRateModal value={otRate} fullName={fullName}
+          onClose={() => setOtRateOpen(false)}
+          onSaved={(v) => { setOtRate(v); setOtRateFail(false); setOtRateOpen(false); }} />
+      )}
       {modal && (
         <div className="modal-scroll" /* ไม่ปิดจาก backdrop — UI-CONVENTIONS §5: เผลอแตะพื้นหลังแล้วข้อมูลหายทั้งฟอร์ม (ปิดด้วยปุ่มยกเลิก/✕ เท่านั้น) */ style={{
           position: 'fixed', inset: 0, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', zIndex: 2000,
@@ -1248,6 +1303,42 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/* 💸 โมดัลตั้ง "ค่าแรงมาตรฐาน OT" (26/11 · user: "ใช้ 50 บาทไปก่อน") — ตัวเลขเดียวทั้งโรงงาน · บันทึกที่ obeya_cost_settings id='default'
+   🔴 ประมาณการให้หน้างานเห็นภาพ ไม่ใช่ต้นทุนบัญชี — เขียนไว้ในโมดัลและบนแผ่น · RLS has_perm('kpi:manage') · เขียนผ่าน checkWriteRows (RLS ปฏิเสธ = 0 แถว) */
+function OtRateModal({ value, fullName, onClose, onSaved }) {
+  const [v, setV] = useState(value == null ? '' : String(value));
+  const [busy, setBusy] = useState(false);
+  const save = async () => {
+    const n = Number(v);
+    if (!(n >= 0) || v === '') { toast.error(tr('กรอกค่าแรงเป็นตัวเลข ≥ 0')); return; }
+    setBusy(true);
+    const ok = checkWriteRows(await supabase.from('obeya_cost_settings').update({ ot_wage_per_hour: n, updated_by_name: fullName || null }).eq('id', 'default').select('id'),
+      tr('ค่าแรงมาตรฐาน OT'), { zeroMsg: 'ไม่มีสิทธิ์ kpi:manage' });
+    setBusy(false);
+    if (ok) { toast.success(`${tr('ตั้งค่าแรง OT')} ${n.toLocaleString('en-US')} ${tr('บาท/ชม. แล้ว')}`); onSaved(n); }
+  };
+  return (
+    <div className="modal-scroll" style={{ position: 'fixed', inset: 0, background: 'var(--scrim)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14 }}>
+      {/* ฟอร์มกรอก ⇒ ปิดด้วยปุ่มเท่านั้น (ด่าน modal-closes-on-backdrop) */}
+      <div style={{ background: 'var(--card-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 18, width: 'min(420px, 96vw)', boxShadow: 'var(--shadow-lg)' }}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{tr('ค่าแรงมาตรฐาน OT')}</div>
+        <div style={{ fontSize: 12, color: 'var(--muted)', margin: '4px 0 12px', lineHeight: 1.6 }}>
+          {tr('ตัวเลขเดียวทั้งโรงงาน ใช้คิด "ค่า OT" บนแกน C: ชม. OT จากเช็คชื่อ × ค่าแรงนี้ × ตัวคูณตามปฏิทิน (วันทำงาน 1.5 · วันหยุด 1.5/2)')}
+          <br /><b style={{ color: 'var(--amber)' }}>{tr('ประมาณการเพื่อให้หน้างานเห็นภาพ ไม่ใช่ต้นทุนบัญชี')}</b>
+        </div>
+        <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text2)' }}>{tr('บาท / ชั่วโมง')}</label>
+        <input type="number" min="0" step="any" value={v} onChange={e => setV(e.target.value)} autoFocus
+          onKeyDown={e => { if (e.key === 'Enter') save(); }}
+          style={{ display: 'block', width: '100%', marginTop: 4, fontSize: 16, fontWeight: 800, padding: '8px 10px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)' }} />
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 14 }}>
+          <button type="button" className="pg-btn" onClick={onClose}>{tr('ยกเลิก')}</button>
+          <button type="button" className="pg-btn primary" disabled={busy} onClick={save}>{busy ? tr('กำลังบันทึก…') : tr('บันทึก')}</button>
+        </div>
+      </div>
     </div>
   );
 }
