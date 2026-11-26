@@ -14,6 +14,8 @@
 export const BOUND_SUBJECTS = Object.freeze([
   { subject: 'pokayoke', label: 'Poka-Yoke Check', recordPerm: 'pokayoke:record', link: '/daily-checker?tab=pokayoke', docKey: null },
   { subject: 'bbs', label: 'BBS — สังเกตพฤติกรรมความปลอดภัย', recordPerm: 'bbs:record', link: '/daily-checker?tab=bbs', docKey: 'bbs_observation' },
+  // 🧩 26/11 ใบตรวจแบบตาราง — สิทธิ์บันทึก/ทะเบียนเอกสารอยู่ในช่อง checkgrid ของฟอร์มใบงานเอง (utils/checkGrid.js)
+  { subject: 'grid', label: 'ใบตรวจแบบตาราง (ออกแบบในใบงานนี้)', recordPerm: null, link: null, docKey: null },
 ]);
 
 export const PERIODS = Object.freeze([

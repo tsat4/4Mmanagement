@@ -14,6 +14,7 @@ import CommitInput from '../components/CommitInput';
 import { DEPT_LABEL, EQUIP_TYPE_LABEL, CYCLE_PRESETS, cycleDaysOf, cycleLabel, freqForCycle, ymdBangkok } from '../lib/pmSchedule'
 import { addDays as addDaysYmd } from '../utils/pmUsage'
 import { loadPmTeams, pmTeamsSync, teamKind, teamKindOf, teamEquipTypeOf, clearPmTeamsCache, isAmTeam, teamLabel } from '../utils/pmTeams'
+import { AM_FREQS, AM_FREQ_META, amFreqOf, amFreqSetupIssue } from '../utils/amCheckFreq'   // 🗓️ รอบตรวจรายหัวข้อ AM (26/11)
 // picker กลาง (single-source audit 2026-09-07) — ไลน์/เครื่อง/พาร์ท/กระบวนการ อ่านจากทะเบียน ไม่พิมพ์เอง
 import LineSelect from '../components/LineSelect'
 import MachineSelect from '../components/MachineSelect'
@@ -54,6 +55,8 @@ import { tr } from '../utils/i18n';
 import InfoMore from '../components/InfoMore';   // ⋯ ปุ่มตายตัว ≤2 (UI §6.35)
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 import { askConfirm } from '../utils/askConfirm';
+import { loadDeptFrames, ownsFrame } from '../utils/jigFrames';
+import { identityPatch, deleteMode, ownerTeamOf, canEditIdentity, IDENTITY_FIELDS, IDENTITY_LABEL } from '../utils/sharedEquipment';   // ตัวตนใช้ร่วม · มุมมองแยก (26/11)   // รูปเครื่องแยกตามแผนก (26/11)
 /* สีจาก token (var(--red) …) ต่อ alpha-hex ไม่ได้ (SVG/CSS parse พัง = ดำ · UI §6.17) ⇒ ย่อยเป็น -dim/-line · hex จาก DB ยังต่อ alpha ได้เหมือนเดิม */
 const tintOf = (c, lvl) => {
   const m = /^var\(--(green|amber|red|blue)\)$/.exec(c || '');
@@ -96,7 +99,7 @@ function equipTypeOfMachine(m) {
 
 function newCheckpoint(extra = {}) {
   return {
-    _key: crypto.randomUUID(), name: '', type: 'variable', calc: null,   // _key จุดใหม่ = id ตอน insert (จุดคำนวณอ้างได้ก่อนบันทึก)
+    _key: crypto.randomUUID(), name: '', type: 'variable', calc: null, am_check_freq: 'shift',   // _key จุดใหม่ = id ตอน insert (จุดคำนวณอ้างได้ก่อนบันทึก)
     axis: null, category: null, checking_method: null, unit: '', nominal: '', lsl: '', usl: '', lcl: '', ucl: '',
     // โหมดเกณฑ์ของจุดชนิด "ค่าวัด" — client-only (ขึ้นต้น _ = ไม่ลง DB) เพราะ DB มีแค่ lsl/usl
     // ⚠️ ต้องเป็น state จริง ห้าม derive จาก lsl/usl (ดู mMode ด้านล่าง — เคยทำแล้วกดปุ่มไม่ติด)
@@ -176,7 +179,7 @@ const S = {
 }
 
 // ─── CheckpointCard ───────────────────────────────────────────────────────────
-function CheckpointCard({ cp, label, onChange, onDelete, onDuplicate, onCpImage, isPinning, onPinToggle, onUnpin, hasImage, categories, allCategories, methods, calcOptions, calcIssues }) {
+function CheckpointCard({ cp, label, onChange, onDelete, onDuplicate, onCpImage, isPinning, onPinToggle, onUnpin, hasImage, categories, allCategories, methods, calcOptions, calcIssues, isAm = false }) {
   const isVar = cp.type === 'variable'
   // ถ้าหมวดที่เลือกไว้เดิมไม่อยู่ในลิสต์ที่กรองแล้ว (เช่น jig เก่า) ยังต้องโชว์ไม่ให้หาย
   const catOpts = cp.category && !(categories ?? []).some(c => c.code === cp.category)
@@ -217,6 +220,18 @@ function CheckpointCard({ cp, label, onChange, onDelete, onDuplicate, onCpImage,
           </select>
         </div>
       </div>
+      {/* 🗓️ รอบตรวจรายหัวข้อ — เฉพาะใบของทีม AM (26/11 · utils/amCheckFreq.js) · ใบ PM ของช่างตามรอบแผนทั้งใบ ไม่มีช่องนี้ */}
+      {isAm && (
+        <div style={{ marginBottom: 10 }}>
+          <label style={S.label}>{tr('รอบตรวจ (AM)')}</label>
+          <div style={S.freqBtns}>
+            {AM_FREQS.map(f => (
+              <button key={f} type="button" onClick={() => onChange({ am_check_freq: f })} style={S.freqBtn(amFreqOf(cp) === f)}
+                title={tr(AM_FREQ_META[f].short)}>{tr(AM_FREQ_META[f].label)}</button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div style={{ display: 'flex', gap: 6, marginBottom: (isVar || cp.type === 'measure') ? 10 : 0, flexWrap: 'wrap' }}>
         {['variable', 'measure', 'attribute', 'note'].map(t => {
@@ -352,6 +367,8 @@ function EquipmentModal({ onClose, onSaved, editJig, department, categories, met
   const [checkpoints, setCheckpoints] = useState([])
   const [layoutType, setLayoutType] = useState(editJig?.layout_type ?? 'image_pin')
   // รูปหลายมุมต่ออุปกรณ์ (1 รูป = ปกติ, ≥2 รูป = ปัดดูรอบเครื่อง — ไม่บังคับจำนวน)
+  const [idLock, setIdLock] = useState(null)   // { owner, error } = หัวเครื่องเป็นของทีมอื่น ⇒ ช่องหัวเครื่องล็อก (แบบ ก. 26/11)
+  const [framesLoadErr, setFramesLoadErr] = useState('')   // โหลดรูปของแผนกไม่ได้ = ห้ามบันทึก (26/11)
   const [frames, setFrames] = useState([])   // [{ _key, id?, image_path?, _file?, _preview, title }]
   const initialImagePathsRef = useRef(new Set()) // path รูปตอนเปิดแก้ไข — ใช้เก็บกวาดไฟล์ที่ถูกถอดตอน save
   const [frameIdx, setFrameIdx] = useState(0)
@@ -454,11 +471,20 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
     //    เครื่องนี้อาจยังไม่มี checklist ของแผนกที่เลือก = ฟอร์มเปล่าให้เริ่มลงจุดตรวจใหม่ (สร้างจริงตอน save)
     ;(async () => {
       const cl = await findChecklist(editJig.id, 'mtn', department)
+      // 🔒 แบบ ก. (26/11 · utils/sharedEquipment.js) — หัวเครื่องแก้ได้เฉพาะทีมเจ้าของ · ล็อกช่องให้เห็นตั้งแต่เปิด
+      {
+        const rCl = await supabaseDR.from('checklists').select('id, department, created_at').eq('equipment_id', editJig.id)
+        const owner = rCl.error ? null : ownerTeamOf(rCl.data)
+        setIdLock(canEditIdentity({ owner, department, error: rCl.error }) ? null : { owner, error: rCl.error ? (rCl.error.message || String(rCl.error)) : '' })
+      }
       setOrigFreq(cl?.frequency ?? null)
       setCycleDays(''); setNextDue(''); setNextDueDirty(false); setOrigCycle(null); setLastDoneYmd(null)
       // load spin frames (jig_images); fall back to jigs.image_path as one frame
-      // — รูปเป็นของ "เครื่อง" ไม่ใช่ของ checklist จึงต้องโหลดเสมอแม้แผนกนี้ยังไม่มี checklist
-      const { data: imgs } = await supabaseDR.from('jig_images').select('*').eq('jig_id', editJig.id).order('sort')
+      // 🔴 รูปเป็นของ "แผนก" (26/11) — เห็นแค่ชุดของแผนกนี้ผ่าน loadDeptFrames (utils/jigFrames.js)
+      //    เดิมโหลดทุกรูปของเครื่อง ⇒ AM กดบันทึกแล้วลบรูปของ JIG MTN ทิ้ง (จุดตรวจ 1,567 จุดหลุดรูป)
+      //    โหลดไม่ได้ = ล็อกปุ่มบันทึก (บันทึกด้วยชุดรูปว่าง = ทับของเดิม)
+      const { rows: imgs, error: imgErr } = await loadDeptFrames([editJig.id], department)
+      setFramesLoadErr(imgErr ? (imgErr.message || String(imgErr)) : '')
       let fr = (imgs ?? []).map(im => ({ _key: im.id, id: im.id, image_path: im.image_path, _preview: getPublicUrl(im.image_path), title: im.title }))
       if (!fr.length && editJig.image_path) fr = [{ _key: 'legacy', image_path: editJig.image_path, _preview: getPublicUrl(editJig.image_path), title: null }]
       setFrames(fr); setFrameIdx(0)
@@ -658,7 +684,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
     if (i < 0) return prev
     const src = prev[i]
     const copy = newCheckpoint({
-      name: src.name, type: src.type, category: src.category, checking_method: src.checking_method,
+      name: src.name, type: src.type, category: src.category, checking_method: src.checking_method, am_check_freq: amFreqOf(src),
       unit: src.unit, group_name: src.group_name, axis: src.axis === 'Y' ? 'X' : 'Y',
       x_pos: src.x_pos, y_pos: src.y_pos, _frameKey: src._frameKey,
       image_path: src.image_path, _imgPreview: src._imgPreview,
@@ -742,6 +768,8 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
       if (lo != null && hi != null && lo >= hi) { setError(`${tr("จุดตรวจ")} "${c.name.trim()}" ${tr("ค่าต่ำสุด")} (${lo}) ${tr("ต้องน้อยกว่าค่าสูงสุด")} (${hi}) — ${tr("ไม่งั้นจะขึ้น NG ทุกครั้ง")}`); return }
     }
     // รูปหลายมุมได้ตั้งแต่ 1 รูปขึ้นไป ไม่บังคับจำนวน — 2 รูปขึ้นไปปัดดูรอบเครื่องได้ ยิ่งเยอะยิ่งลื่น
+    if (isAmTeam(department)) { const fIssue = amFreqSetupIssue(checkpoints); if (fIssue) { setError(tr(fIssue)); return } }
+    if (editJig?.id && framesLoadErr) { setError(`${tr('โหลดรูปเครื่องไม่สำเร็จ')} (${framesLoadErr}) — ${tr('ยังบันทึกไม่ได้ กันรูปของแผนกอื่นถูกทับ · ปิดแล้วเปิดใหม่')}`); return }
     setSaving(true); setError('')
     try {
       // ⚠️ เครื่องเดียวกันต้องเป็นแถว jigs แถวเดียว แม้ตรวจหลายแผนก — ถ้าเครื่องจาก Machine Master
@@ -753,7 +781,46 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
           .select('id').eq('module', 'mtn').eq('machine_id', machineId).maybeSingle()
         if (existJig) jigId = existJig.id
       }
+      const existing = !!jigId
       if (!jigId) jigId = crypto.randomUUID()
+
+      /* 🔗 ตัวตนใช้ร่วม · มุมมองแยก (26/11 · utils/sharedEquipment.js) — เช็คก่อนอัปโหลดอะไร
+         เครื่องที่แผนกอื่นใช้อยู่: เพิ่มใหม่ = เติมแค่ช่องว่าง · แก้ไข = เขียนแค่ช่องที่แก้จริง + ถามยืนยัน
+         อ่านไม่ได้ = ถือว่าใช้ร่วม (ไม่ทับ) */
+      let sharedJig = false, curJig = null, otherDepts = [], ownerTeam = null, idEditable = true
+      if (existing) {
+        const [rCl, rCur] = await Promise.all([
+          supabaseDR.from('checklists').select('id, department, created_at').eq('equipment_id', jigId),
+          supabaseDR.from('jigs').select(['image_path', ...IDENTITY_FIELDS].join(', ')).eq('id', jigId).maybeSingle(),
+        ])
+        if (rCur.error) throw rCur.error
+        curJig = rCur.data
+        otherDepts = [...new Set((rCl.data ?? []).map(r => r.department).filter(d => d !== department))]
+        sharedJig = !!rCl.error || otherDepts.length > 0
+        // 🔒 แบบ ก. (user 26/11): หัวเครื่องแก้ได้เฉพาะ "ทีมที่ตั้งเครื่องนี้เป็นทีมแรก" · อ่านไม่ได้ = แก้ไม่ได้
+        ownerTeam = rCl.error ? null : ownerTeamOf(rCl.data)
+        idEditable = canEditIdentity({ owner: ownerTeam, department, error: rCl.error })
+      }
+      const idForm = {
+        name: name.trim(), description: description.trim() || null,
+        jig_no: jigNo.trim() || null, process: process.trim() || null,
+        model: model.trim() || null, part_name: partName.trim() || null,
+        part_no: partNo.trim() || null, line_name: lineName || null,
+        machine_no: machineNo || null, machine_id: machineId || null,
+        equipment_type: equipType, equipment_category: equipCategory,
+      }
+      const { patch: idPatch, changes: idChanges, blocked: idBlocked } = identityPatch({ cur: curJig, orig: editJig?.id ? editJig : null, form: idForm, shared: sharedJig && !!curJig, canEdit: idEditable })
+      if (sharedJig && idBlocked.length) {
+        const ownerLabel = ownerTeam ? (pmTeamsSync().find(t => t.key === ownerTeam)?.label ?? ownerTeam) : tr('(อ่านไม่ได้)')
+        toast.info(`${tr('ข้อมูลตัวเครื่องเป็นของทีม')} ${ownerLabel} — ${tr('ช่องที่ไม่ถูกบันทึก')}: ${idBlocked.map(f => tr(IDENTITY_LABEL[f] ?? f)).join(', ')}`)
+      }
+      if (sharedJig && idChanges.length) {
+        const deptNames = otherDepts.map(d => pmTeamsSync().find(t => t.key === d)?.label ?? d).join(', ') || tr('แผนกอื่น (อ่านรายชื่อไม่ได้)')
+        const lines = idChanges.map(c => `• ${tr(IDENTITY_LABEL[c.field] ?? c.field)}: ${c.from ?? '—'} → ${c.to ?? '—'}`).join('\n')
+        if (!await askConfirm(`${tr('เครื่องนี้ใช้ร่วมกับ')} ${deptNames}\n${tr('ข้อมูลตัวเครื่องต่อไปนี้จะเปลี่ยนให้ทุกแผนกเห็นเหมือนกัน')}:\n\n${lines}\n\n${tr('ยืนยันเปลี่ยน?')}`)) {
+          setSaving(false); return
+        }
+      }
 
       // ── resolve spin frames: upload new files, keep existing paths ──
       const spinMode = layoutType === 'image_pin' && frames.length >= 2
@@ -773,23 +840,21 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
         }
       }
       const imagePath = layoutType === 'list' ? null : (resolvedFrames[0]?.path ?? null)
-
-      const { error: jigErr } = await supabaseDR.from('jigs').upsert({
-        id: jigId, name: name.trim(), description: description.trim() || null,
-        image_path: imagePath,
-        created_by: userId, module: editJig?.module ?? 'mtn',
-        jig_no: jigNo.trim() || null, process: process.trim() || null,
-        model: model.trim() || null, part_name: partName.trim() || null,
-        part_no: partNo.trim() || null, line_name: lineName || null,
-        machine_no: machineNo || null, machine_id: machineId || null,
-        equipment_type: equipType, equipment_category: equipCategory,
-      })
+      /* 🔴 รูปหลัก `jigs.image_path` ใช้ร่วมทุกแผนก (26/11) — เครื่องที่แผนกอื่นใช้อยู่ ห้ามทับรูปที่มีอยู่แล้ว
+         (เดิม AM บันทึกแล้วรูปหลักของ JIG MTN กลายเป็นรูป AM) */
+      const keepMainImage = sharedJig && !!curJig?.image_path
+      const { error: jigErr } = curJig
+        ? await supabaseDR.from('jigs').update({ ...idPatch, ...(keepMainImage ? {} : { image_path: imagePath }) }).eq('id', jigId)
+        : await supabaseDR.from('jigs').upsert({
+            id: jigId, ...idForm, image_path: imagePath,
+            created_by: userId, module: editJig?.module ?? 'mtn',
+          })
       if (jigErr) throw jigErr
       invalidateTable('jigs')   // ทะเบียนเข้า cache แล้ว (13/10) — บอร์ด AM อ่านจากคีย์ 'jigs:am'
       /* 🔗 ย้ายไลน์ของอุปกรณ์ ⇒ ทะเบียน AM รายวันต้องตามไป (08/10 audit) — เดิมค้างไลน์เก่า ⇒ ไลน์เก่าเตือนค้าง/ไลน์ใหม่ไม่เตือน
          (กติกาเดียวกับ assignJigLine ใน DailyPM.jsx) · ล้ม = บอก ไม่เงียบ แต่ไม่ยกเลิกการบันทึกอุปกรณ์ */
-      if (editJig?.id && (editJig.line_name || null) !== (lineName || null)) {
-        const { error: tgErr } = await supabaseDR.from('pm_daily_line_targets').update({ line_name: lineName || null }).eq('jig_id', editJig.id).eq('is_active', true)
+      if (editJig?.id && 'line_name' in idPatch && (editJig.line_name || null) !== (idPatch.line_name || null)) {
+        const { error: tgErr } = await supabaseDR.from('pm_daily_line_targets').update({ line_name: idPatch.line_name || null }).eq('jig_id', editJig.id).eq('is_active', true)
         if (tgErr) toast.error((tr('ย้ายรายการลงทะเบียน AM ตามไลน์ใหม่ไม่สำเร็จ') + ': ') + tgErr.message + (' — ' + tr('ไปแก้ที่จอ AM รายวัน')))
         else invalidateTable('pm_daily_line_targets')
       }
@@ -798,23 +863,28 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
       //    เดิม delete-all ⇒ fixture_points.image_id / jig_checkpoints.image_id (ON DELETE SET NULL) หลุดทุกครั้งที่กดบันทึก
       const frameIdByKey = {}
       {
-        const { data: curImgs, error: eCur } = await supabaseDR.from('jig_images').select('id').eq('jig_id', jigId)
+        /* 🔴 แยกตามแผนก (26/11 · utils/jigFrames.js) — แก้/ลบได้เฉพาะรูปที่ department = แผนกนี้
+           รูปของแผนกอื่น/ไม่รู้เจ้าของ (null) ห้ามแตะ — เดิมลบทุกรูปที่ไม่อยู่ในชุดใหม่ ⇒ ลบรูป JIG MTN ทิ้ง */
+        const { data: curImgs, error: eCur } = await supabaseDR.from('jig_images').select('id, department').eq('jig_id', jigId)
         if (eCur) throw eCur
+        const curById = Object.fromEntries((curImgs ?? []).map(r => [r.id, r]))
         const keepIds = new Set()
         for (let i = 0; i < resolvedFrames.length; i++) {
           const f = resolvedFrames[i]
           const row = { image_path: f.path, sort: i, is_spin_frame: spinMode, title: f.title }
           if (f.id) {
-            const { error: eU } = await supabaseDR.from('jig_images').update(row).eq('id', f.id)
-            if (eU) throw eU
+            if (ownsFrame(curById[f.id], department)) {
+              const { error: eU } = await supabaseDR.from('jig_images').update(row).eq('id', f.id)
+              if (eU) throw eU
+            }
             keepIds.add(f.id); frameIdByKey[f.key] = f.id
           } else {
-            const { data: ins, error: eI } = await supabaseDR.from('jig_images').insert({ jig_id: jigId, ...row }).select('id').single()
+            const { data: ins, error: eI } = await supabaseDR.from('jig_images').insert({ jig_id: jigId, department, ...row }).select('id').single()
             if (eI) throw eI
             frameIdByKey[f.key] = ins.id
           }
         }
-        const dropImg = (curImgs ?? []).map(r => r.id).filter(id => !keepIds.has(id))
+        const dropImg = (curImgs ?? []).filter(r => ownsFrame(r, department)).map(r => r.id).filter(id => !keepIds.has(id))
         if (dropImg.length) {
           const { error: eD } = await supabaseDR.from('jig_images').delete().in('id', dropImg)
           if (eD) throw eD
@@ -890,6 +960,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
             checklist_id: cl.id, jig_id: jigId, name: c.name.trim(), type: c.type,
             axis: c.type === 'variable' ? (c.axis ?? null) : null,
             category: c.category ?? null, checking_method: c.checking_method ?? null, unit: c.unit || null,
+            am_check_freq: isAmTeam(department) ? amFreqOf(c) : 'shift',   // 🗓️ ใบ PM ไม่ใช้ — เก็บค่าเดิมทุกกะ
             nominal: c.nominal !== '' && c.nominal != null ? Number(c.nominal) : null,
             lsl: c.lsl !== '' && c.lsl != null ? Number(c.lsl) : null,
             usl: c.usl !== '' && c.usl != null ? Number(c.usl) : null,
@@ -1014,7 +1085,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
         onDuplicate={() => duplicateCp(cp._key)} onCpImage={f => handleCpImage(cp._key, f)}
         isPinning={activePinKey === cp._key} onPinToggle={() => togglePin(cp._key)} hasImage={frames.length > 0}
         onUnpin={() => { updateCp(cp._key, { x_pos: null, y_pos: null }); if (activePinKey === cp._key) setActivePinKey(null) }}
-        categories={scopedCategories} allCategories={categories} methods={methods} />
+        categories={scopedCategories} allCategories={categories} methods={methods} isAm={isAmTeam(department)} />
     </div>
   )
 
@@ -1309,6 +1380,14 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
             </div>
           )}
 
+          {isEdit && idLock && (
+            <div style={{ fontSize: 12, padding: '8px 10px', borderRadius: 'var(--r-md)', background: 'var(--amber-dim)', border: '1px solid var(--amber-line)', color: 'var(--text2)' }}>
+              🔒 {idLock.error
+                ? `${tr('อ่านไม่ได้ว่าทีมไหนเป็นเจ้าของเครื่องนี้ — ล็อกข้อมูลตัวเครื่องไว้ก่อน')} (${idLock.error})`
+                : `${tr('ข้อมูลตัวเครื่อง (ชื่อ · No. · Part · ไลน์) เป็นของทีม')} ${pmTeamsSync().find(t => t.key === idLock.owner)?.label ?? idLock.owner} — ${tr('ทีมนี้แก้ได้เฉพาะจุดตรวจ/รูป/รอบ PM ของตัวเอง')}`}
+            </div>
+          )}
+          <fieldset disabled={!!(isEdit && idLock)} style={{ display: 'contents', border: 0, padding: 0, margin: 0, minWidth: 0 }}>
           <div>
             <label style={S.label}>{tr('ชื่ออุปกรณ์ *')}</label>
             <input value={name} onChange={e => setName(e.target.value)} placeholder={tr('เช่น JIG-001 ตรวจ Pin Diameter')}
@@ -1369,6 +1448,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
                 style={{ width: '100%' }} />
             </div>
           )}
+          </fieldset>
 
           <div>
             <label style={S.label}>{tr('รอบ PM — ทำซ้ำทุกกี่วัน (')}{deptLabel})</label>
@@ -1802,6 +1882,38 @@ export default function PMSetup() {
 
   const handleDelete = async (jig) => {
     if (!deptWrite.ok) { toast.info(teamBlockText(deptWrite, 'อุปกรณ์ของทีมนี้')); return }
+    /* 🔗 ตัวตนใช้ร่วม · มุมมองแยก (26/11 · utils/sharedEquipment.js) — แผนกอื่นยังใช้เครื่องนี้ = ถอดแค่ใบตรวจของแผนกนี้
+       เดิมลบแถว jigs ทั้งแถว ⇒ cascade ลบใบตรวจ/จุดตรวจ/แผน/รูป ของ "ทุกแผนก" ไปด้วย · นับไม่ได้ = ไม่ลบ */
+    const rOther = await supabaseDR.from('checklists').select('department').eq('equipment_id', jig.id).neq('department', department)
+    const mode = deleteMode(rOther.data?.length, rOther.error)
+    if (mode === 'unknown') { toast.error(tr('ตรวจไม่ได้ว่าแผนกอื่นใช้เครื่องนี้อยู่ไหม — ยังไม่ลบ') + (rOther.error ? `: ${rOther.error.message}` : '')); return }
+    if (mode === 'view') {
+      const names = [...new Set(rOther.data.map(r => r.department))].map(d => pmTeamsSync().find(t => t.key === d)?.label ?? d).join(', ')
+      if (!await askConfirm(`${tr("ถอด")} "${jig.name}" ${tr("ออกจากแผนกนี้")} ?\n\n${tr('เครื่องนี้ยังใช้อยู่ที่')} ${names} — ${tr('ตัวเครื่องและข้อมูลของแผนกนั้นไม่ถูกแตะ')}\n${tr('ที่หายคือจุดตรวจ/แผน/รูปของแผนกนี้เท่านั้น')}${isAmTeam(department) ? '\n' + tr('และปิดรายการ AM รายวันของเครื่องนี้') : ''}`)) return
+      const cl = await findChecklist(jig.id, 'mtn', department)
+      if (cl) {
+        const r = await supabaseDR.from('checklists').delete().eq('id', cl.id).select('id')
+        if (!checkWrite(r, 'ถอดใบตรวจของแผนกนี้')) return
+        if (!(r.data || []).length) { toast.error(tr('ถอดไม่สำเร็จ (0 แถว)')); return }
+      }
+      // รูปของแผนกนี้ — ลบตาม id ที่เป็นของแผนกนี้จริง (ownsFrame) ไม่ลบด้วยคีย์แม่
+      const { rows: myFrames, error: eFr } = await loadDeptFrames([jig.id], department)
+      const dropIds = eFr ? [] : myFrames.filter(r => ownsFrame(r, department)).map(r => r.id)
+      const ri = dropIds.length ? await supabaseDR.from('jig_images').delete().in('id', dropIds) : { error: eFr }
+      if (ri.error) toast.error(tr('ถอดใบตรวจแล้ว แต่ลบรูปของแผนกนี้ไม่สำเร็จ (รูปยังค้าง ไม่กระทบแผนกอื่น)') + `: ${ri.error.message || ri.error}`)
+      /* 📋 ถอดฝั่ง AM ⇒ ปิดรายการ AM รายวันของเครื่องนี้ด้วย (user 26/11) — ไม่งั้นบอร์ด AM เตือน "ยังไม่มีจุดตรวจ" ค้าง
+         ปิด = is_active false (ไม่ลบ · กติกาเดียวกับเอาออกที่ /daily-pm) · ล้ม = บอก ไม่ยกเลิกการถอด */
+      let amNote = ''
+      if (isAmTeam(department)) {
+        const rt = await supabaseDR.from('pm_daily_line_targets').update({ is_active: false }).eq('jig_id', jig.id).eq('is_active', true).select('id')
+        if (rt.error) toast.error(tr('ถอดแล้ว แต่ปิดรายการ AM รายวันไม่สำเร็จ — ไปเอาออกที่จอ AM รายวัน') + `: ${rt.error.message}`)
+        else if ((rt.data || []).length) { invalidateTable('pm_daily_line_targets'); amNote = ` · ${tr('ปิดรายการ AM รายวัน')} ${rt.data.length} ${tr('รายการ')}` }
+      }
+      invalidateTable('checklists')
+      toast.success(tr('ถอดออกจากแผนกนี้แล้ว') + amNote)
+      fetchData()
+      return
+    }
     if (!await askConfirm(`${tr("ลบ")} "${jig.name}" ?`)) return
     /* 🔴 นับแถวก่อนแตะ storage (QC audit 06/10) — ไม่นับ = แถว jig ยังอยู่
        แต่รูปทั้งชุด (เฟรม + จุดตรวจ + โมเดล 3D) ถูกลบ ⇒ ทะเบียนจิ๊กเสียรูปถาวร */

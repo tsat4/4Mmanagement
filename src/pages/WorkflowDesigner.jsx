@@ -24,6 +24,8 @@ import { ROLE_OPTIONS, roleLabel } from '../utils/roleMeta';
 import { FIELD_TYPES, STEP_KINDS, ASSIGNEE_RULES, validateDef, nextKey, TEMPLATE_4M } from '../utils/wfSchema';
 import { wfFlow } from '../utils/wfFlow';
 import { BOUND_SUBJECTS, PERIODS } from '../utils/wfBound';   // 🔗 ใบรอบเอกสาร (โหมดผูกเอกสาร · 25/11)
+import WfGridFieldEditor from '../components/WfGridFieldEditor';   // 🧩 ตารางตรวจ (คน × วัน) · 26/11
+import { emptyGrid } from '../utils/checkGrid';
 import { useSearchParams } from 'react-router-dom';
 import { tr } from '../utils/i18n';
 
@@ -238,7 +240,7 @@ function Editor({ def, latest, canDesign, canPublish, mySection, onSaved }) {
           </>}
           {/* 📄 25/11 — เอกสารที่ผูก = แถวในทะเบียนเอกสาร (เลขฟอร์ม/Rev/โลโก้) · ช่องเซ็นบนใบพิมพ์ = ขั้นในสายอนุมัติด้านล่าง */}
           {s.binding && (() => {
-            const dk = BOUND_SUBJECTS.find(b => b.subject === s.binding.subject)?.docKey;
+            const dk = BOUND_SUBJECTS.find(b => b.subject === s.binding.subject)?.docKey || s.fields.find(f => f.type === 'checkgrid')?.docKey;
             return (
               <div style={{ gridColumn: '1 / -1', fontSize: 12, color: 'var(--muted)' }}>
                 📄 {tr('ทะเบียนเอกสาร')}: {dk
@@ -258,7 +260,7 @@ function Editor({ def, latest, canDesign, canPublish, mySection, onSaved }) {
             <div key={i} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 8, padding: '8px 0', borderTop: i ? '1px solid var(--border)' : 'none', alignItems: 'end' }}>
               <Field label={`${i + 1}. ${tr('ชื่อช่อง')}`}><input value={f.label || ''} disabled={readOnly} onChange={e => setField(i, { label: e.target.value })} style={inp} /></Field>
               <Field label={tr('ชนิด')}>
-                <select value={f.type} disabled={readOnly} onChange={e => setField(i, { type: e.target.value })} style={inp}>
+                <select value={f.type} disabled={readOnly} onChange={e => (e.target.value === 'checkgrid' ? up({ fields: s.fields.map((x, j) => (j === i ? { ...emptyGrid(), key: x.key || 'grid', label: x.label || 'ตารางตรวจ' } : x)) }) : setField(i, { type: e.target.value }))} style={inp}>
                   {FIELD_TYPES.map(t => <option key={t.type} value={t.type}>{tr(t.label)}</option>)}
                 </select></Field>
               <Field label={tr('รหัสช่อง')}><input value={f.key || ''} disabled={readOnly} onChange={e => setField(i, { key: e.target.value.toLowerCase() })} style={inp} /></Field>
@@ -266,6 +268,8 @@ function Editor({ def, latest, canDesign, canPublish, mySection, onSaved }) {
                 <input value={(f.options || []).join(',')} disabled={readOnly} onChange={e => setField(i, { options: e.target.value.split(',').map(x => x.trim()) })} style={inp} /></Field>}
               {!meta?.display && <label style={{ fontSize: 12, display: 'flex', gap: 6, alignItems: 'center' }}>
                 <input type="checkbox" checked={!!f.required} disabled={readOnly} onChange={e => setField(i, { required: e.target.checked })} /> {tr('บังคับกรอก')}</label>}
+              {f.type === 'checkgrid' && <div style={{ gridColumn: '1 / -1' }}>
+                <WfGridFieldEditor value={f} readOnly={readOnly} perms={perms} onChange={(g) => up({ fields: s.fields.map((x, j) => (j === i ? g : x)) })} /></div>}
               {!readOnly && <div style={{ display: 'flex', gap: 4 }}>
                 <button type="button" style={ghost} onClick={() => up({ fields: move(s.fields, i, -1) })} aria-label={tr('เลื่อนขึ้น')}>↑</button>
                 <button type="button" style={ghost} onClick={() => up({ fields: move(s.fields, i, 1) })} aria-label={tr('เลื่อนลง')}>↓</button>
@@ -275,6 +279,8 @@ function Editor({ def, latest, canDesign, canPublish, mySection, onSaved }) {
           );
         })}
         {!readOnly && <button type="button" style={{ ...ghost, marginTop: 8 }} onClick={() => up({ fields: [...s.fields, { key: nextKey('f', s.fields), type: 'text', label: '', required: false }] })}>{tr('+ เพิ่มช่อง')}</button>}
+        {!readOnly && s.binding?.subject === 'grid' && !s.fields.some(f => f.type === 'checkgrid') && (
+          <button type="button" style={{ ...ghost, marginTop: 8, marginLeft: 6 }} onClick={() => up({ fields: [...s.fields, emptyGrid()] })}>{tr('+ ตารางตรวจ (คน × วัน)')}</button>)}
       </div>
 
       <div style={card}>

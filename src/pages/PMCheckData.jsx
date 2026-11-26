@@ -5,6 +5,7 @@ import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { useMergeParams } from '../utils/useTabParam'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase, supabaseDR } from '../supabaseClient'
+import { loadDeptFrames } from '../utils/jigFrames'   // รูปเครื่องแยกตามแผนก (26/11)
 import { UserContext } from '../App'
 import { lineScope } from '../utils/sectionScope'   // 🔒 แท็บ AM เห็นเฉพาะไลน์ของตัวเอง (11/11)
 import { can, isActionSeeded } from '../utils/permissions'
@@ -37,7 +38,9 @@ import { checkWriteRows } from '../utils/dbWrite';
 import NoticeBar from '../components/NoticeBar';
 import { tr, dateLocale } from '../utils/i18n';
 import { getWorkDate } from '../utils/workDate'
-import { amShiftInfo, AM_MO_COLS } from '../lib/dailyAmBoard'
+import { amShiftInfo, AM_MO_COLS, loadAmCpLastDone } from '../lib/dailyAmBoard'
+import { splitDueCps, AM_FREQ_META } from '../utils/amCheckFreq'   // 🗓️ รอบตรวจรายหัวข้อ AM (26/11)
+import { amSlotOf } from '../lib/amMonthly'
 import { DEFAULT_POINT_KINDS, pointDueStatus, pointPin, shimStack, deriveShimAction } from '../utils/fixturePoints'
 import { recordShimEvent } from '../utils/fixtureShimApi'
 import Page from '../components/Page'
@@ -992,6 +995,87 @@ function HistoryModal({ inspection, checkpoints: cpsFromPage, jig, onClose, user
   )
 }
 
+/* 🗓️ แถบ "ข้อที่ยังไม่ถึงรอบ" ของใบ AM (26/11 · utils/amCheckFreq.js) — ใช้ทั้งใบเดี่ยวและใบรวมสถานี
+   notDue = [{ cp, freq, lastDate }] · err = อ่านประวัติไม่ได้ (ทุกข้อถึงรอบ) · กดกาง = ตรวจข้อพวกนี้เพิ่มในใบนี้ได้ (กลายเป็นข้อที่ต้องกรอก) */
+function AmNotDueBar({ notDue = [], err = '', shown = false, onToggle }) {
+  if (err) return <NoticeBar tone="warn" style={{ marginBottom: 8 }}>{tr('อ่านประวัติรอบตรวจไม่ได้ — แสดงทุกข้อให้ตรวจ (ข้อรายสัปดาห์/รายเดือนอาจซ้ำ)')} ({err})</NoticeBar>
+  if (!notDue.length) return null
+  const fmt = (d) => (d ? `${d.slice(8, 10)}/${d.slice(5, 7)}` : '—')
+  return (
+    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', padding: '7px 12px', marginBottom: 8, borderRadius: 'var(--r-md)', background: 'var(--bg3-surf)', border: '1px solid var(--border)', fontSize: 12.5, color: 'var(--text2)' }}>
+      <span>🗓️ <b>{tr('ยังไม่ถึงรอบ')} {notDue.length} {tr('ข้อ')}</b> — {notDue.slice(0, 4).map(x => `${x.cp.name} (${tr(AM_FREQ_META[x.freq]?.label || x.freq)} · ${tr('ตรวจแล้ว')} ${fmt(x.lastDate)})`).join(' · ')}{notDue.length > 4 ? ' …' : ''}</span>
+      <span style={{ flex: 1 }} />
+      <button type="button" onClick={onToggle} style={{ fontSize: 12, padding: '4px 10px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--card)', color: 'var(--text)', cursor: 'pointer' }}>
+        {shown ? tr('ซ่อนข้อที่ยังไม่ถึงรอบ') : tr('แสดงเพื่อตรวจเพิ่ม')}
+      </button>
+    </div>
+  )
+}
+
+/* 🔩 แถวกรอกค่าชิม (Shim Record) — ชิ้นเดียวใช้ร่วม ใบเดี่ยว + ใบรวมสถานี AM (26/11 แยกออกมาจากใบเดี่ยว ไม่เปลี่ยนหน้าตา)
+   points = ทุกจุดของเครื่อง (นับหัว/ถึงรอบ) · shown = จุดที่โชว์แถว · pinnedIds = จุดที่ปักบนรูปแล้ว */
+function ShimRecordSection({ points, shown, shimKinds, shimVals, setShimVals, canShim, pinnedIds, rowRefs, scrollMarginTop = 0, readOnlyNote = null }) {
+  const kindOf = (code) => shimKinds.find(k => k.code === code) || { icon: '🔩', label: code || '—' }
+  const dueN = points.filter(pt => pointDueStatus(pt, { currentShot: null }).due).length
+  return (
+    <div style={{ marginTop: 12 }}>
+      <div style={{ padding: '7px 12px', borderRadius: 'var(--r-md)', marginBottom: 8, background: 'var(--blue-dim)', border: '1px solid var(--blue-line)', fontSize: 12.5, fontWeight: 800, color: SHIM_PIN_COLOR }}>
+        {tr("จุดชิม")} (Shim Record) · {points.length} {tr('จุด')}{dueN ? <span style={{ color: 'var(--red)' }}> {tr('· ถึงรอบ')} {dueN}</span> : null}
+        <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted)', marginTop: 2 }}>
+          {tr("วัดค่าชิมรวมตอนนี้แล้วกรอกเป็น mm — บันทึกพร้อมใบตรวจนี้ลงประวัติชิมของจุด (ไม่บังคับ · จุดที่ไม่กรอก = ไม่แตะ")})
+          {pinnedIds.size < points.length && <span> · {points.length - pinnedIds.size} {tr('จุดยังไม่ปักบนรูป — ปักที่ /fixture แท็บทะเบียนจุด')}</span>}
+        </div>
+      </div>
+      {!canShim && (
+        <NoticeBar tone="warn" style={{ marginBottom: 8 }}>
+          {readOnlyNote || <>{tr("บัญชีนี้ดูค่าชิมได้แต่บันทึกไม่ได้ — ต้องมีสิทธิ์ fixture_shim:record (admin เปิดให้ที่")} /permissions)</>}
+        </NoticeBar>
+      )}
+      {shown.map(pt => {
+        const st = shimStack(pt)
+        const due = pointDueStatus(pt, { currentShot: null })
+        const v = shimVals[pt.id] ?? { mm: '', note: '' }
+        const mm = v.mm === '' ? null : Number(v.mm)
+        const act = deriveShimAction(pt.current_shim_mm, mm)
+        const pinned = pinnedIds.has(pt.id)
+        const overMax = mm != null && pt.max_shim_mm != null && mm > Number(pt.max_shim_mm)
+        const k = kindOf(pt.kind_code)
+        return (
+          <div key={pt.id} ref={el => { rowRefs.current[`shim:${pt.id}`] = el }}
+            style={{ ...S.cpRow(null), borderColor: overMax ? 'var(--red)' : mm != null ? SHIM_PIN_COLOR : 'var(--border)', scrollMarginTop }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <span style={{ minWidth: 22, height: 18, padding: '0 5px', borderRadius: 'var(--r-md)', background: pinned ? SHIM_PIN_COLOR : 'var(--border2)', color: '#fff', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }} title={pinned ? tr('ปักบนรูปแล้ว') : tr('ยังไม่ปักบนรูป')}>{pt.point_no}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{k.icon} {tr(k.label)}{pt.name ? <span style={{ fontWeight: 500, color: 'var(--muted)' }}> · {pt.name}</span> : null}</span>
+              <span style={{ fontSize: 11.5, color: 'var(--muted)', marginLeft: 'auto' }}>
+                {tr("ชิมรวม")} <b style={{ color: st.level === 'over' ? 'var(--red)' : st.level === 'warn' ? 'var(--amber)' : 'var(--text)' }}>{st.current ?? '—'}</b> {tr('/ เพดาน')} {pt.max_shim_mm ?? tr("ไม่ตั้ง")} mm
+                {due.level !== 'unset' && <span style={{ marginLeft: 8, color: due.due ? 'var(--red)' : due.level === 'soon' ? 'var(--amber)' : 'var(--muted)' }}>· {due.text}</span>}
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <label style={{ fontSize: 12, color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                {tr('ค่าชิมรวมที่วัดได้')}
+                <input type="number" step="0.01" inputMode="decimal" value={v.mm} disabled={!canShim} placeholder="mm"
+                  onChange={e => setShimVals(prev => ({ ...prev, [pt.id]: { ...v, mm: e.target.value } }))}
+                  style={{ width: 84, textAlign: 'center', fontFamily: 'monospace' }} />
+                <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>mm</span>
+              </label>
+              <input value={v.note} disabled={!canShim} placeholder={tr('หมายเหตุ (แผ่นที่ซ้อน/เหตุผล)')}
+                onChange={e => setShimVals(prev => ({ ...prev, [pt.id]: { ...v, note: e.target.value } }))}
+                style={{ flex: '1 1 160px', minWidth: 120 }} />
+              {mm != null && (
+                <span style={{ fontSize: 11.5, fontWeight: 700, color: overMax ? 'var(--red)' : SHIM_PIN_COLOR }}>
+                  {act === 'check' ? tr("→ ยืนยันเท่าเดิม") : act === 'add' ? `→ ${tr("เพิ่ม")} +${(mm - Number(pt.current_shim_mm)).toFixed(2)} mm` : `→ ${tr("ลด")} ${(mm - Number(pt.current_shim_mm)).toFixed(2)} mm`}
+                  {overMax && ' · เกินเพดาน — ควรเปิดใบซ่อมเปลี่ยนชิ้นส่วน'}
+                </span>
+              )}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 // ─── PMCheckData (main) ───────────────────────────────────────────────────────
 /** มีช่องไหนในใบตรวจถูกกรอกไหม (ร่างในเครื่อง) — ค่าว่างทั้งใบ = ไม่ต้องเก็บ/ไม่ต้องถามกู้คืน */
 const pmHasInput = (results, notes) => !!(notes && String(notes).trim())
@@ -1014,6 +1098,21 @@ function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, d
   const [saving, setSaving] = useState(false)
   const [savedIds, setSavedIds] = useState(() => new Set())
   const rowRefs = useRef({})
+  /* 🖼️ รูปเครื่อง + หมุดจุดตรวจ ต่อเครื่อง (25/11 · feedback หน้างาน "ใบรวมมองไม่เห็นรูปที่จะตรวจ")
+     ตัววาดตัวเดียวกับใบเดี่ยว `JigSpinCheck` · เฟรม = jig_images (ไม่มี → image_path เป็นเฟรมเดียว)
+     อ่านรูปไม่ได้ = ใบยังตรวจ/บันทึกได้ + เขียนบอกบนจอ (ไม่ล้มทั้งใบ) */
+  const [framesByJig, setFramesByJig] = useState({ key: '', map: {}, err: '' })
+  const [activeCp, setActiveCp] = useState(null)
+  const [showNdJig, setShowNdJig] = useState(() => new Set())   // 🗓️ เครื่องที่กางข้อ "ยังไม่ถึงรอบ" มาตรวจเพิ่ม
+  /* 🚫 ใบรวมสถานี = งาน AM ล้วน — ไม่มีจุดชิม (Shim Record) ไม่แตะ PM (26/11 · คำสั่ง user
+     "สถานีจะใช้แค่กับ am ไม่ยุ่งกับ pm/shim record เพราะ shim record เป็นงานของส่วนช่าง") · ห้ามเติมกลับ (มีด่าน) */
+  const [wide, setWide] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 1180px)').matches)
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1180px)')
+    const on = () => setWide(mq.matches)
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
   const memberKey = memberJigs.map(j => j.id).join(',')
   const loadKey = `${station.id}|${memberKey}|${amDept}`
   /* 📝 ร่างในเครื่อง (มือถือ · 23/11 · ชุดเดียวกับใบเดี่ยว utils/formDraft.js) — คีย์ = สถานี|สมาชิก|ทีม|คนกรอก
@@ -1024,7 +1123,7 @@ function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, d
 
   useEffect(() => {
     let alive = true
-    setSec({ key: loadKey, status: 'loading', list: [], err: '' }); setResults({}); setSavedIds(new Set())
+    setSec({ key: loadKey, status: 'loading', list: [], err: '' }); setResults({}); setSavedIds(new Set()); setShowNdJig(new Set())
     ;(async () => {
       try {
         const list = []
@@ -1035,11 +1134,24 @@ function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, d
             : { data: [], error: null }
           if (error) throw error
           const ngHist = await loadNgHistory(jig).catch(e => ({ byCp: {}, machine: null, error: String(e?.message || e) }))
-          list.push({ jig, checklistId: cl?.id ?? null, cps: data ?? [], ngHist })
+          // 🗓️ รอบตรวจรายหัวข้อ AM (26/11) — cps = ข้อที่ถึงรอบกะนี้ · allCps = ทั้งใบ · อ่านประวัติไม่ได้ = ทุกข้อถึงรอบ + บอก
+          const all = data ?? []
+          const ld = all.length ? await loadAmCpLastDone(all) : { map: new Map(), error: null }
+          const sp = splitDueCps(all, amSlotOf(new Date()), ld.map)
+          list.push({ jig, checklistId: cl?.id ?? null, cps: sp.due, allCps: all, notDue: sp.notDue, freqErr: ld.error ? String(ld.error) : '', ngHist })
         }
+        // รูปแยกตามแผนก (26/11 · utils/jigFrames.js) — เห็นเฉพาะชุดรูปของทีม AM นี้
+        const imgRes = await loadDeptFrames(memberJigs.map(j => j.id), amDept)
         if (!alive) return
+        const fmap = {}
+        for (const j of memberJigs) {
+          let fr = (imgRes.rows ?? []).filter(im => im.jig_id === j.id).map(im => ({ id: im.id, url: getPublicUrl(im.image_path) }))
+          if (!fr.length && j.image_path) fr = [{ id: 'legacy', url: getPublicUrl(j.image_path) }]
+          fmap[j.id] = fr
+        }
+        setFramesByJig({ key: loadKey, map: fmap, err: imgRes.error ? (imgRes.error.message || String(imgRes.error)) : '' })
         const init = {}
-        list.forEach(m => m.cps.forEach(c => { init[c.id] = { v1: '', v2: '', v3: '', attr: '', note: '', mval: '', reason: '', reasonAccepted: false } }))
+        list.forEach(m => m.allCps.forEach(c => { init[c.id] = { v1: '', v2: '', v3: '', attr: '', note: '', mval: '', reason: '', reasonAccepted: false } }))
         setResults(init)
         setSec({ key: loadKey, status: 'ok', list, err: '' })
         const dr = draftKey ? loadDraft(draftKey) : null
@@ -1053,13 +1165,15 @@ function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, d
 
   const carryOf = (m, cpId) => { const h = m.ngHist?.byCp?.[cpId]; return h ? carryNgReason({ prev: h.prev, mo: h.mo, machine: m.ngHist.machine }) : null }
   const okWarnOf = (m, cpId) => { const h = m.ngHist?.byCp?.[cpId]; return h ? okWhileMoOpen({ attr: 'ok', mo: h.mo, machine: m.ngHist.machine }) : null }
-  const pending = sec.list.filter(m => !savedIds.has(m.jig.id))
+  const secList = sec.list.map(m => (showNdJig.has(m.jig.id) ? { ...m, cps: m.allCps } : m))   // 🗓️ กางข้อที่ยังไม่ถึงรอบ = ตรวจเพิ่ม
+  const pendingAll = secList.filter(m => !savedIds.has(m.jig.id))
+  const pending = pendingAll.filter(m => m.cps.length > 0)            // เครื่องที่ไม่มีข้อถึงรอบกะนี้ = ไม่ต้องบันทึกใบ
   const allCps = pending.flatMap(m => m.cps)
   const calcRes = pmCalcResults(allCps, results)
   const missingList = pending.flatMap(m => m.cps.map((cp, i) => (!cpFilledOf(cp, calcRes[cp.id]) ? { m, cp, no: i + 1 } : null)).filter(Boolean))
-  const noCl = pending.filter(m => !m.cps.length)
+  const noCl = pendingAll.filter(m => !m.allCps.length)
 
-  const allSavedNow = sec.list.length > 0 && pending.length === 0
+  const allSavedNow = secList.length > 0 && pending.length === 0 && noCl.length === 0
   const liveDraftKey = draftKey && sec.status === 'ok' && sec.key === loadKey ? draftKey : null
   const stDirty = !!liveDraftKey && !pendingDraft && !allSavedNow && (pmHasInput(results, notes) || savedIds.size > 0)
   useDraftAutosave(liveDraftKey, { results, notes, savedIds: [...savedIds] }, stDirty)
@@ -1068,7 +1182,7 @@ function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, d
     // เติมเฉพาะจุดตรวจที่ยังมีอยู่ (จุดที่ถูกลบออกจากเช็คลิสต์ทีหลังไม่เอากลับ) · savedIds เฉพาะสมาชิกปัจจุบัน
     setResults(prev => { const n = { ...prev }; Object.entries(d.results || {}).forEach(([k, v]) => { if (k in n) n[k] = { ...n[k], ...v } }); return n })
     if (d.notes) setNotes(d.notes)
-    const ids = new Set(sec.list.map(m => m.jig.id))
+    const ids = new Set(secList.map(m => m.jig.id))
     const sv = (d.savedIds || []).filter(id => ids.has(id))
     if (sv.length) setSavedIds(new Set(sv))
     setPendingDraft(null)
@@ -1182,16 +1296,19 @@ function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, d
 
   const totalCps = allCps.length
   const doneCps = totalCps - missingList.length
-  const allSaved = sec.list.length > 0 && pending.length === 0
+  const allSaved = secList.length > 0 && pending.length === 0 && noCl.length === 0
   return (
     <div>
       <div style={{ marginBottom: 12, padding: '10px 12px', borderRadius: 'var(--r-md)', background: 'var(--accent-dim)', border: '1px solid var(--border2)' }}>
         <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>🧩 {tr('สถานี')} {station.name}</div>
         <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 2 }}>
-          {station.line_name} · {sec.list.length} {tr('เครื่อง ตรวจในใบเดียว กดบันทึกครั้งเดียว — ระบบแยกเก็บผลรายเครื่อง')}
+          {station.line_name} · {secList.length} {tr('เครื่อง ตรวจในใบเดียว กดบันทึกครั้งเดียว — ระบบแยกเก็บผลรายเครื่อง')}
         </div>
       </div>
       <DraftRestoreBar draft={pendingDraft} what={`${tr('ใบสถานี')} ${station.name}`} onRestore={restoreDraft} onDiscard={discardDraft} />
+      {framesByJig.key === loadKey && framesByJig.err && (
+        <div style={{ fontSize: 12, color: 'var(--amber)', marginBottom: 8 }}>⚠ {tr('โหลดรูปเครื่องไม่สำเร็จ — ตรวจตามรายการได้ตามปกติ')} ({framesByJig.err})</div>
+      )}
       {!allSaved && (
         <div style={{ position: 'sticky', top: 0, zIndex: 3, background: 'var(--card)', padding: '6px 0', marginBottom: 8, fontSize: 12.5, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <b>{tr('ตรวจแล้ว')} {doneCps}/{totalCps}</b>
@@ -1204,7 +1321,7 @@ function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, d
           ))}
         </div>
       )}
-      {sec.list.map((m, mi) => {
+      {secList.map((m, mi) => {
         const saved = savedIds.has(m.jig.id)
         const shift = checkedThisShift?.[m.jig.id]
         const owner = ownerTeamOf(m.jig)
@@ -1219,8 +1336,16 @@ function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, d
               <button type="button" onClick={() => onOpenSingle?.(m.jig.id)} style={{ fontSize: 11.5, padding: '3px 9px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'transparent', color: 'var(--text2)', cursor: 'pointer' }}>{tr('ประวัติเครื่องนี้')}</button>
             </div>
             {m.ngHist?.error && <div style={{ fontSize: 11.5, color: 'var(--amber)', margin: '0 0 6px' }}>⚠ {tr('อ่านประวัติการตรวจครั้งก่อนไม่ได้ — ต้องพิมพ์เหตุผล NG เอง')}</div>}
-            {!saved && !m.cps.length && <div style={{ fontSize: 12.5, color: 'var(--amber)' }}>{tr('เครื่องนี้ยังไม่มีจุดตรวจ AM — ตั้งที่ PM Setup แท็บฝ่ายผลิต')}</div>}
-            {!saved && m.cps.map((cp, idx) => {
+            {!saved && !m.allCps.length && <div style={{ fontSize: 12.5, color: 'var(--amber)' }}>{tr('เครื่องนี้ยังไม่มีจุดตรวจ AM — ตั้งที่ PM Setup แท็บฝ่ายผลิต')}</div>}
+            {!saved && (m.notDue.length > 0 || m.freqErr) && (
+              <AmNotDueBar notDue={m.notDue} err={m.freqErr} shown={showNdJig.has(m.jig.id)}
+                onToggle={() => setShowNdJig(prev => { const n = new Set(prev); n.has(m.jig.id) ? n.delete(m.jig.id) : n.add(m.jig.id); return n })} />
+            )}
+            {!saved && m.allCps.length > 0 && !m.cps.length && <div style={{ fontSize: 12.5, color: 'var(--muted)', margin: '0 0 6px' }}>{tr('กะนี้ไม่มีข้อที่ถึงรอบตรวจของเครื่องนี้ — ไม่ต้องบันทึก')}</div>}
+            {(() => {
+            const frames = framesByJig.key === loadKey ? (framesByJig.map[m.jig.id] || []) : []
+            const showPhoto = !saved && m.cps.length > 0 && frames.length > 0
+            const rowsOnly = !saved && m.cps.map((cp, idx) => {
               const r = results[cp.id] ?? {}
               const row = cp.type === 'variable' ? (
                 <VariableRow cp={cp} idx={idx} r={calcRes[cp.id] ?? { v1: '', v2: '', v3: '' }} onChange={v => setResults(p => ({ ...p, [cp.id]: v }))} methodIndex={methodIndex}
@@ -1236,8 +1361,23 @@ function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, d
                   onAccept={() => setResults(p => ({ ...p, [cp.id]: { ...p[cp.id], reasonAccepted: true, reason: carryOf(m, cp.id)?.text || '' } }))}
                   okWarn={okWarnOf(m, cp.id)} />
               )
-              return <div key={cp.id} ref={el => { rowRefs.current[cp.id] = el }} style={{ scrollMarginTop: 60 }}>{row}</div>
-            })}
+              return <div key={cp.id} ref={el => { rowRefs.current[cp.id] = el }} onClickCapture={() => setActiveCp(cp.id)} style={{ scrollMarginTop: 60 }}>{row}</div>
+            })
+            const rows = rowsOnly
+            if (!showPhoto) return rows
+            const mine = activeCp && m.cps.some(c => c.id === activeCp) ? activeCp : null
+            const viewer = (
+              <JigSpinCheck frames={frames} checkpoints={m.cps} results={calcRes} activeCpId={mine}
+                onPinClick={(id) => { setActiveCp(id); jumpTo(id) }} maxH={wide ? 480 : 300} compact={!wide} />
+            )
+            /* จอกว้าง = รูปซ้ายค้างไว้ระหว่างเลื่อนรายการของเครื่องนั้น · จอแคบ = รูปอยู่บนหัวรายการ (แบบใบเดี่ยว) */
+            return wide ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 5fr) minmax(0, 6fr)', gap: 14, alignItems: 'start' }}>
+                <div style={{ position: 'sticky', top: 44 }}>{viewer}</div>
+                <div>{rows}</div>
+              </div>
+            ) : <>{viewer}{rows}</>
+            })()}
           </section>
         )
       })}
@@ -1324,7 +1464,13 @@ export default function PMCheckData({ mode = 'pm' }) {
   const [listErr, setListErr] = useState('')         // โหลดลิสต์ไม่ครบ — โชว์แถบเตือนเหนือรายการ
   const [selectedJig, setSelectedJig] = useState(null)
   const [checklistId, setChecklistId] = useState(null)
-  const [checkpoints, setCheckpoints] = useState([])
+  const [loadedCps, setCheckpoints] = useState([])   // จุดตรวจทั้งใบที่โหลดมา
+  /* 🗓️ รอบตรวจรายหัวข้อ AM (26/11 · utils/amCheckFreq.js) — ข้อรายวัน/สัปดาห์/เดือนที่ "ตรวจในรอบนี้แล้ว" ซ่อนไว้ + บอกจำนวน
+     `checkpoints` ข้างล่าง = ข้อที่ต้องตรวจกะนี้ (ตัวตั้งของ "ครบ/ขาด" · แถวผลตรวจ · หมุด) · ใบ PM ของช่างไม่ใช้ (notDue ว่างเสมอ) */
+  const [freqInfo, setFreqInfo] = useState({ key: '', notDue: new Map(), err: '' })
+  const [showNotDue, setShowNotDue] = useState(false)
+  const checkpoints = useMemo(() => (showNotDue || !freqInfo.notDue.size ? loadedCps : loadedCps.filter(c => !freqInfo.notDue.has(c.id))),
+    [loadedCps, freqInfo, showNotDue])
   const [otherDepts, setOtherDepts] = useState([])   // แผนกอื่นที่ลงจุดตรวจของเครื่องนี้ไว้ (โชว์เมื่อแผนกปัจจุบันยังไม่มี)
   /* 🔴 กันคำตอบเก่าทับเครื่องใหม่ (stale-response · 2026-10-19 audit PM)
      สลับเครื่องเร็วๆ = คิวรีของเครื่องก่อนตอบทีหลัง แล้วเขียน checklistId/จุดตรวจ/รูป ของเครื่องเก่าทับ
@@ -1376,7 +1522,10 @@ export default function PMCheckData({ mode = 'pm' }) {
   const [shimPoints, setShimPoints] = useState([])
   const [shimVals, setShimVals] = useState({})
   const [shimKinds, setShimKinds] = useState(DEFAULT_POINT_KINDS)
-  const canShim = can('fixture_shim', 'record', userRole)
+  /* 🔩 ใบ AM = ดูค่าชิมได้อย่างเดียว (26/11 · คำสั่ง user "shim record เป็นงานของส่วนช่าง")
+     บันทึกค่าชิมได้เฉพาะใบ PM ของทีมช่าง — กันฝั่งผลิตไปแก้ค่าชิมในทะเบียนจุดชิมของ JIG MTN (คลาสเดียวกับบั๊กรูปปน 26/11) */
+  const shimAmReadOnly = isAmTeam(department)
+  const canShim = can('fixture_shim', 'record', userRole) && !shimAmReadOnly
   // 🔎 ค้นในลิสต์เครื่อง (feedback 2026-09-08: JIG MTN มี 60+ เครื่อง ไล่เลื่อนหาเอง) — เทียบเลขเครื่อง/ชื่อ/ไลน์
   const [jigQuery, setJigQuery] = useState('')
   /* 🗂️ ลิสต์ซ้ายแท็บช่าง (PM) — จัดกลุ่มตามไลน์ + กรองขอบเขตไลน์ (20/10 audit หน้า PM ข้อ 6)
@@ -1763,7 +1912,8 @@ export default function PMCheckData({ mode = 'pm' }) {
         .then(({ data, error }) => { if (!live()) return; if (error) toast.error(`${tr("โหลดจุดชิมไม่สำเร็จ")}: ${error.message}`); setShimPoints(data ?? []) })
     } else setShimPoints([])
     // เฟรมรูป 360° (ถ้าไม่มี jig_images → ใช้รูปหลัก image_path เป็นเฟรมเดียว)
-    supabaseDR.from('jig_images').select('id, image_path, sort').eq('jig_id', selectedJig.id).order('sort').then(({ data, error }) => {
+    // รูปแยกตามแผนก (26/11 · utils/jigFrames.js) — เห็นเฉพาะชุดรูปของแผนกที่กำลังตรวจ
+    loadDeptFrames([selectedJig.id], department).then(({ rows: data, error }) => {
       if (!live()) return
       if (error) toast.error(`${tr("โหลดรูปเครื่องไม่สำเร็จ")}: ${error.message}`)
       let fr = (data ?? []).map(im => ({ id: im.id, url: getPublicUrl(im.image_path) }))
@@ -1787,7 +1937,15 @@ export default function PMCheckData({ mode = 'pm' }) {
         if (live()) setCpLoad({ key, status: 'error', msg: e?.message || String(e) })
         return
       }
+      // 🗓️ ใบ AM: ข้อไหนถึงรอบกะนี้ (อ่านประวัติไม่ได้ = ทุกข้อถึงรอบ + เขียนบอก)
+      let fInfo = { key, notDue: new Map(), err: '' }
+      if (isAmTeam(department) && cps.length) {
+        const ld = await loadAmCpLastDone(cps)
+        const sp = splitDueCps(cps, amSlotOf(new Date()), ld.map)
+        fInfo = { key, notDue: new Map(sp.notDue.map(x => [x.cp.id, x])), err: ld.error ? String(ld.error) : '' }
+      }
       if (!live()) return
+      setFreqInfo(fInfo); setShowNotDue(false)
       setChecklistId(cl?.id ?? null)
       setCheckpoints(cps)
       setCpLoad({ key, status: 'ok', msg: '' })
@@ -2328,8 +2486,13 @@ export default function PMCheckData({ mode = 'pm' }) {
                       maxH={twoCol ? 560 : (isNarrow ? 300 : 320)} compact={stackCompact} />
                   : null
 
+                const notDueN = freqInfo.key === `${selectedJig.id}|${department}` ? freqInfo.notDue.size : 0
+                const freqBanner = cpLoad.status === 'ok' && freqInfo.key === `${selectedJig.id}|${department}` && (notDueN > 0 || freqInfo.err) ? (
+                  <AmNotDueBar notDue={[...freqInfo.notDue.values()]} err={freqInfo.err} shown={showNotDue} onToggle={() => setShowNotDue(v => !v)} />
+                ) : null
                 const formNode = (
                   <>
+                  {freqBanner}
                   {cpLoad.status === 'loading' ? (
                     <div style={{ textAlign: 'center', color: 'var(--muted)', fontSize: 13, padding: '32px 12px' }}>{tr('กำลังโหลดรายการตรวจ…')}</div>
                   ) : cpLoad.status === 'error' ? (
@@ -2338,6 +2501,8 @@ export default function PMCheckData({ mode = 'pm' }) {
                       <div style={{ fontSize: 12, color: 'var(--muted)' }}>{cpLoad.msg}</div>
                       <button onClick={() => setCpReload(n => n + 1)} style={{ marginTop: 10, padding: '6px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--text)', cursor: 'pointer', fontSize: 13 }}>{tr('ลองใหม่')}</button>
                     </div>
+                  ) : checkpoints.length === 0 && notDueN > 0 ? (
+                    <div style={{ textAlign: 'center', color: 'var(--muted)', fontSize: 13, padding: '24px 12px' }}>{tr('กะนี้ไม่มีข้อที่ถึงรอบตรวจ — ข้อรายวัน/รายสัปดาห์/รายเดือนตรวจในรอบนี้ไปแล้ว')}</div>
                   ) : checkpoints.length === 0 ? (
                     <div style={{ textAlign: 'center', color: 'var(--muted)', fontSize: 13, padding: '32px 12px', lineHeight: 1.7 }}>
                       {tr("เครื่องนี้ยังไม่มีรายการตรวจของ")} <b style={{ color: deptColor }}>{(teams.find(t => t.key === department) || {}).label || department}</b>
@@ -2525,67 +2690,13 @@ export default function PMCheckData({ mode = 'pm' }) {
                           </div>
                         )
                       })()}
-                      {shimPoints.length > 0 && (!focusOn || activeShimId) && (() => {
-                        const kindOf = (code) => shimKinds.find(k => k.code === code) || { icon: '🔩', label: code || '—' }
-                        const dueN = shimPoints.filter(pt => pointDueStatus(pt, { currentShot: null }).due).length
-                        return (
-                          <div style={{ marginTop: 12 }}>
-                            <div style={{ padding: '7px 12px', borderRadius: 'var(--r-md)', marginBottom: 8, background: 'var(--blue-dim)', border: '1px solid var(--blue-line)', fontSize: 12.5, fontWeight: 800, color: SHIM_PIN_COLOR }}>
-                              {tr("จุดชิม")} (Shim Record) · {shimPoints.length} {tr('จุด')}{dueN ? <span style={{ color: 'var(--red)' }}> {tr('· ถึงรอบ')} {dueN}</span> : null}
-                              <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted)', marginTop: 2 }}>
-                                {tr("วัดค่าชิมรวมตอนนี้แล้วกรอกเป็น mm — บันทึกพร้อมใบตรวจนี้ลงประวัติชิมของจุด (ไม่บังคับ · จุดที่ไม่กรอก = ไม่แตะ")})
-                                {shimPins.length < shimPoints.length && <span> · {shimPoints.length - shimPins.length} {tr('จุดยังไม่ปักบนรูป — ปักที่ /fixture แท็บทะเบียนจุด')}</span>}
-                              </div>
-                            </div>
-                            {!canShim && (
-                              <NoticeBar tone="warn" style={{ marginBottom: 8 }}>
-                                {tr("บัญชีนี้ดูค่าชิมได้แต่บันทึกไม่ได้ — ต้องมีสิทธิ์ fixture_shim:record (admin เปิดให้ที่")} /permissions)
-                              </NoticeBar>
-                            )}
-                            {shimPoints.filter(pt => !focusOn || pt.id === activeShimId).map(pt => {
-                              const st = shimStack(pt)
-                              const due = pointDueStatus(pt, { currentShot: null })
-                              const v = shimVals[pt.id] ?? { mm: '', note: '' }
-                              const mm = v.mm === '' ? null : Number(v.mm)
-                              const act = deriveShimAction(pt.current_shim_mm, mm)
-                              const pinned = shimPins.some(x => x.point.id === pt.id)
-                              const overMax = mm != null && pt.max_shim_mm != null && mm > Number(pt.max_shim_mm)
-                              const k = kindOf(pt.kind_code)
-                              return (
-                                <div key={pt.id} ref={el => { rowRefs.current[`shim:${pt.id}`] = el }}
-                                  style={{ ...S.cpRow(null), borderColor: overMax ? 'var(--red)' : mm != null ? SHIM_PIN_COLOR : 'var(--border)', scrollMarginTop: (stackCompact ? viewerH : 0) + progH + 12 }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                                    <span style={{ minWidth: 22, height: 18, padding: '0 5px', borderRadius: 'var(--r-md)', background: pinned ? SHIM_PIN_COLOR : 'var(--border2)', color: '#fff', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }} title={pinned ? tr('ปักบนรูปแล้ว') : tr('ยังไม่ปักบนรูป')}>{pt.point_no}</span>
-                                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{k.icon} {tr(k.label)}{pt.name ? <span style={{ fontWeight: 500, color: 'var(--muted)' }}> · {pt.name}</span> : null}</span>
-                                    <span style={{ fontSize: 11.5, color: 'var(--muted)', marginLeft: 'auto' }}>
-                                      {tr("ชิมรวม")} <b style={{ color: st.level === 'over' ? 'var(--red)' : st.level === 'warn' ? 'var(--amber)' : 'var(--text)' }}>{st.current ?? '—'}</b> {tr('/ เพดาน')} {pt.max_shim_mm ?? tr("ไม่ตั้ง")} mm
-                                      {due.level !== 'unset' && <span style={{ marginLeft: 8, color: due.due ? 'var(--red)' : due.level === 'soon' ? 'var(--amber)' : 'var(--muted)' }}>· {due.text}</span>}
-                                    </span>
-                                  </div>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                    <label style={{ fontSize: 12, color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                      {tr('ค่าชิมรวมที่วัดได้')}
-                                      <input type="number" step="0.01" inputMode="decimal" value={v.mm} disabled={!canShim} placeholder="mm"
-                                        onChange={e => setShimVals(prev => ({ ...prev, [pt.id]: { ...v, mm: e.target.value } }))}
-                                        style={{ width: 84, textAlign: 'center', fontFamily: 'monospace' }} />
-                                      <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>mm</span>
-                                    </label>
-                                    <input value={v.note} disabled={!canShim} placeholder={tr('หมายเหตุ (แผ่นที่ซ้อน/เหตุผล)')}
-                                      onChange={e => setShimVals(prev => ({ ...prev, [pt.id]: { ...v, note: e.target.value } }))}
-                                      style={{ flex: '1 1 160px', minWidth: 120 }} />
-                                    {mm != null && (
-                                      <span style={{ fontSize: 11.5, fontWeight: 700, color: overMax ? 'var(--red)' : SHIM_PIN_COLOR }}>
-                                        {act === 'check' ? tr("→ ยืนยันเท่าเดิม") : act === 'add' ? `→ ${tr("เพิ่ม")} +${(mm - Number(pt.current_shim_mm)).toFixed(2)} mm` : `→ ${tr("ลด")} ${(mm - Number(pt.current_shim_mm)).toFixed(2)} mm`}
-                                        {overMax && ' · เกินเพดาน — ควรเปิดใบซ่อมเปลี่ยนชิ้นส่วน'}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )
-                      })()}
+                      {shimPoints.length > 0 && (!focusOn || activeShimId) && (
+                        <ShimRecordSection points={shimPoints} shown={shimPoints.filter(pt => !focusOn || pt.id === activeShimId)}
+                          shimKinds={shimKinds} shimVals={shimVals} setShimVals={setShimVals} canShim={canShim}
+                          pinnedIds={new Set(shimPins.map(x => x.point.id))} rowRefs={rowRefs}
+                          scrollMarginTop={(stackCompact ? viewerH : 0) + progH + 12}
+                          readOnlyNote={shimAmReadOnly ? tr('ใบ AM ดูค่าชิมได้อย่างเดียว — บันทึกค่าชิมเป็นงานของทีมช่าง (ใบ PM)') : null} />
+                      )}
                       <InspectorCodeField value={inspectorCode} onChange={setInspectorCode} required style={{ marginTop: 8 }} />
                       <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder={tr('หมายเหตุ (ถ้ามี)...')} style={{ marginTop: 8 }} />
                       {/* 🔴 ตรวจไม่ครบ = บันทึกไม่ได้ (19/11 · คำสั่ง user — มาตรฐานเดียวกับใบตรวจ QA)
@@ -2734,7 +2845,7 @@ export default function PMCheckData({ mode = 'pm' }) {
 
       <AnimatePresence>
         {viewInspection && (
-          <HistoryModal inspection={viewInspection} checkpoints={checkpoints} jig={selectedJig}
+          <HistoryModal inspection={viewInspection} checkpoints={loadedCps} jig={selectedJig}
             userId={userId} userRole={userRole} deptWrite={deptWrite} canRecord={canRecord}
             isAm={isAmTeam(clDeptById[viewInspection.checklist_id] ?? department)}
             lineWrite={isAmTeam(clDeptById[viewInspection.checklist_id] ?? department) ? amLineWriteOf(selectedJig?.line_name) : null}

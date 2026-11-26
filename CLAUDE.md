@@ -36,6 +36,7 @@
 - **⚠️ ส่ง SQL ให้ user: วาง SQL เต็มๆ ในแชท (ห้ามบอกแค่ชื่อไฟล์) · ระบุ project (Main/DR) ทุกครั้ง · แนบคิวรีเช็คผล** — user มีแค่ **SQL Editor บนเว็บ** ⇒ **ห้ามส่งคำสั่ง shell/CLI ให้รัน** · migration ที่ย้อนได้ + edge function = AI apply/deploy เองผ่าน MCP แล้วตรวจกลับ · 📄 `docs/modules/db-write-rules.md` §ส่ง SQL ให้ user · `docs/modules/edge-functions.md`
 - **เอกสาร export ใหม่ทุกตัว (ฟอร์มพิมพ์/PDF/Excel/CSV — ไม่มีข้อยกเว้น) ต้อง register เข้า `/doc-forms`** · **ห้าม hardcode เลขฟอร์ม/Rev/โลโก้ · ห้ามสร้างตารางทะเบียนเอกสารใหม่** · อ่านผ่าน `src/utils/docForms.js` (CSV = `csvDoc.js` · 🔴 เลขฟอร์มอยู่ที่ **ชื่อไฟล์** ห้ามแทรกบรรทัดในเนื้อ CSV) · 📄 `docs/modules/doc-forms.md` · UI §6.6
 - **ห้าม**แก้พฤติกรรมระบบแล้วปล่อยให้เอกสารล้าสมัย — เอกสารที่ผิดแย่กว่าไม่มีเอกสาร
+- 🧩 **pattern ที่ใช้หลายหน้า (หัวเพจ/แท็บ/เมนู/แถบกรอง/การ์ด) แก้ที่ของกลางเท่านั้น ห้ามแตกเฉพาะโมดูล** (26/11 · คำสั่ง user) · ของใหม่ = ทำ 1 หน้า → ถ่ายรูป → user เคาะ → ลง UI-CONVENTIONS → กวาดทั้งระบบคอมมิทเดียว · 📄 UI §0.1
 
 ---
 
@@ -105,7 +106,7 @@ Realtime + Edge Functions/Deno) · Telegram Bot API · deploy = Render.com (Stat
 `traceability-audit-log` · `reusable-pm-checker` · `logistic-planner-sales` · `scrap-report` ·
 `store-requisition-form` · `qa-inspection` · `bbs-safety` · `dept-dashboard-tv` · `vsm` ·
 `spare-part-master` · `fixture-shim-record` · `floorplan-setup` · `workforce-insight` ·
-`product-history` · `order-trace` · `feedback-inbox` · `mkt-rfq` · `i18n` · `ppe-requirements` · `integration-hub` · `e-workflow` · `askbot` · `check-sheet-audit`
+`product-history` · `order-trace` · `feedback-inbox` · `mkt-rfq` · `i18n` · `live-benefits` · `ppe-requirements` · `integration-hub` · `e-workflow` · `askbot` · `check-sheet-audit`
 (ดีไซน์ Dashboard → `docs/DASHBOARD-DESIGN.md`)
 
 ---

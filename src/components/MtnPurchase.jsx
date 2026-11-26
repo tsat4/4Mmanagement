@@ -28,7 +28,7 @@ import { fmtDateTime } from '../utils/dateFormat';
 import {
   PR_STATUS_META, PR_SOURCE_LABEL, prStatusMeta, isPrOpen, REPAIR_PATHS, repairPathMeta,
   GL_CATEGORIES, glCategoryLabel, glCategoryForPr, defaultGlFor, isBelowMin, suggestReorderQty, openPrQtyByPart,
-  normalizePrNo, isAwaitingPrNo, mosNeedingPr, NEEDS_PR_PATHS, prFlow,
+  normalizePrNo, isAwaitingPrNo, mosNeedingPr, NEEDS_PR_PATHS, prFlow, needsPrNoPr,
 } from '../utils/mtnPurchase';
 import { groupPrs, prGroupDefaults } from '../utils/prGroups';      // 🧾 1 ใบ PR หลายรายการ (18/11)
 import { quoteState, quoteText } from '../utils/prQuote';          // 🧾 ใบเสนอราคา — 3 สถานะ + "ไม่รู้"
@@ -479,7 +479,6 @@ function PrGroupCard({ g, canEdit, mayAdd, fullName, parts, glCodes, orderId, te
       เดิมหน้า MO ส่ง `canEdit={isMoOpen(o) && …}` ⇒ ใบปิด = แผงอ่านอย่างเดียว ⇒ กดรับของเข้าสต็อก
       หรือยกเลิก PR ไม่ได้ตลอดกาล · หลักเดียวกับแผง "ส่งซ่อมนอก" ที่ไม่ผูกกับ isMoOpen โดยตั้งใจ */
 export function MtnPrPanel({ order, parts = [], fullName, canEdit = false, canAdd = null, teamKey = null, onOrderChanged }) {
-  const mayAdd = canAdd == null ? canEdit : canAdd
   const [prs, setPrs] = useState([]);
   const [glCodes, setGlCodes] = useState([]);
   const [loadErr, setLoadErr] = useState(null);
@@ -487,6 +486,13 @@ export function MtnPrPanel({ order, parts = [], fullName, canEdit = false, canAd
   const [path, setPath] = useState(order?.repair_path || '');
   const orderId = order?.id;
   useEffect(() => { setPath(order?.repair_path || ''); }, [order?.repair_path]);
+  /* 🔓 26/11 (user: *"ที่กดปิดไปแล้วแต่ PR ยังไม่เปิด ย้อนไห้ด้วย"*)
+     ใบที่ปิดไปแล้วแต่ **เส้นทางบังคับ PR และไม่มีใบเลย** ⇒ ยังต้องเปิด PR ได้
+     ไม่งั้นอะไหล่ที่ตัดไปใช้ไม่ได้ซื้อมาเติม และไม่มีทางแก้เลย (20 ใบที่หลุดก่อนมีด่าน)
+     🔴 เกณฑ์อยู่ `needsPrNoPr()` ใน utils/mtnPurchase.js **ห้ามเทียบ path/status เองที่นี่**
+     🔴 `loadErr` = อ่าน PR ไม่สำเร็จ ⇒ ส่ง `null` ⇒ ไม่ปลดล็อก (ไม่รู้ ≠ ไม่มี) */
+  const unlockAdd = needsPrNoPr(order, loadErr ? null : prs);
+  const mayAdd = (canAdd == null ? canEdit : canAdd) || (canEdit && unlockAdd);
 
   const load = useCallback(async () => {
     if (!orderId) return;
@@ -577,6 +583,16 @@ export function MtnPrPanel({ order, parts = [], fullName, canEdit = false, canAd
         <div style={{ fontSize: 11, color: 'var(--text2)', background: 'var(--bg3-surf)', border: '1px solid var(--border2)',
                       borderRadius: 'var(--r-md)', padding: '6px 9px', marginBottom: 6, lineHeight: 1.6 }}>
           {tr("ใบ MO นี้ปิดแล้ว")} — <b>{tr('ใบขอซื้อที่ค้างอยู่ยังทำต่อได้ตามปกติ')}</b> ({tr("ลงเลข PR · สั่งซื้อ · รับของเข้าสต็อก · ยกเลิก) เพราะของมักมาถึงหลังปิดใบ · แต่")}<b>{tr('เปิด PR ใบใหม่กับใบที่ปิดแล้วไม่ได้')}</b>
+        </div>
+      )}
+      {/* 🔓 26/11 (user: *"ที่กดปิดไปแล้วแต่ PR ยังไม่เปิด ย้อนไห้ด้วย"*)
+          ใบปิดแล้วแต่เส้นทางบังคับ PR และไม่มีใบเลย ⇒ ปลดล็อกปุ่มเปิด PR ให้ทำงานที่ค้างต่อ
+          🔴 ต้องเขียนบนจอว่า "ทำไมปุ่มยังอยู่ทั้งที่ใบปิดแล้ว" ไม่งั้นคนไม่กล้ากด */}
+      {unlockAdd && !isMoOpen(order) && (
+        <div style={{ fontSize: 11, color: 'var(--amber)', background: 'var(--amber-dim)', border: '1px solid var(--amber)',
+                      borderRadius: 'var(--r-md)', padding: '6px 9px', marginBottom: 6, lineHeight: 1.6 }}>
+          🔒 <b>{tr('ใบ MO นี้ปิดไปแล้วทั้งที่ยังไม่ได้เปิดใบขอซื้อ')}</b> — {tr('อะไหล่ที่ตัดไปใช้ยังไม่ได้ซื้อมาเติม')}
+          <div style={{ color: 'var(--text2)' }}>{tr('เปิด PR ที่นี่ได้ตามปกติ (ระบบปลดล็อกให้เฉพาะกรณีนี้) · ใบใหม่จะถูกบล็อกไม่ให้ปิดก่อนเปิด PR แล้ว')}</div>
         </div>
       )}
       {/* 🛒 ใบยังไม่ปิด + PR ค้าง = ใบ MO ปิดไม่ได้จนลูปนี้จบ (10/11 · คำสั่ง user "บล็อกเลย")
@@ -725,6 +741,12 @@ export function MtnPrBoard({ parts = [], fullName, canEdit = false, onStockChang
               <span style={{ flex: 1, minWidth: 160 }}>{[o.item_type, o.machine_no, o.line_name].filter(Boolean).join(' · ') || '—'}</span>
               <span style={{ color: 'var(--muted)' }}>{repairPathMeta(o.repair_path)?.label}</span>
               <span style={{ color: 'var(--muted)' }}>{tr('แจ้ง')} {fmtDateTime(o.report_at)}</span>
+              {/* 🔒 26/11 — ใบที่ปิดไปแล้วแต่ยังไม่เคยเปิด PR ก็อยู่ลิสต์นี้ (เดิมหลุดหายเงียบ 20 ใบ)
+                     ต้องติดป้ายให้เห็น ไม่ใช่ปนกับใบที่ยังเปิด */}
+              {o._moClosed && <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--amber)',
+                background: 'var(--amber-dim)', border: '1px solid var(--amber)', borderRadius: 'var(--ctl-r)', padding: '1px 7px' }}
+                title={tr('ใบ MO ปิดไปแล้วทั้งที่ยังไม่ได้เปิด PR — อะไหล่ที่ตัดไปใช้ยังไม่ได้ซื้อมาเติม')}>
+                {tr('🔒 ใบ MO ปิดแล้ว')}</span>}
               {canEdit && <button onClick={() => setPrFor(prFor === o.id ? null : o.id)} style={{ ...btnGhost, color: 'var(--accent)', borderColor: 'var(--accent)' }}>{tr('+ กรอกรายการขอซื้อ / เลข PR')}</button>}
             </div>
             {prFor === o.id && <NewPrForm parts={parts} glCodes={glCodes} fullName={fullName}

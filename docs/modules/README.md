@@ -12,6 +12,7 @@
 |---|---|
 | 🪜 แถบขั้นตอน StepFlow (ใบไหนใส่แล้ว/ไม่ใส่ + กฎ) | `step-flow.md` |
 | Adoption Outlook — 🔮 ภาพเมื่อข้อมูลเชื่อมกันทั้งองค์กร (`/adoption-outlook` · 2026-08-13) | `docs/modules/adoption-outlook.md` |
+| Live Benefits — 📈 ประโยชน์จาก ESM นับสด: กระดาษที่ทดแทน (จากทะเบียน `doc_forms` · รายกะ/รายเดือน/รายเรื่อง) + เวลาที่ลด (`/live-benefits` · 2026-11-26) | `docs/modules/live-benefits.md` |
 | 💬 AskBot — แชทถามข้อมูลในระบบ (ปุ่มลอยขวาล่าง · ขั้นที่ 1 ยังไม่มี AI · 2026-11-19) | `docs/modules/askbot.md` |
 | 🔗 Audit AM↔PM ทั้งโปรเจค — 2 ระบบ AM ไม่ sync · null due = "ปกติ" · ลำดับแก้ 3 รอบ (2026-10-08 · ยังไม่แก้) | `docs/modules/am-pm-linkage-audit.md` |
 | 🦺 BBS — สังเกตพฤติกรรมความปลอดภัย (Behavior-Based Safety · paperless · 2026-08-21) | `docs/modules/bbs-safety.md` |
@@ -73,6 +74,7 @@
 | PE Core Tools — Process Flow / PFMEA / Control Plan (2026-08-13) | `docs/modules/pe-core-tools.md` |
 | 🔐 Audit — "เข้าหน้าได้ ≠ แก้ของหน่วยงานอื่นได้" (2026-10-15 · คำสั่ง user) | `docs/modules/permission-scope-audit.md` |
 | PM Coordination — แผนประสานงาน PM ข้ามวัน (MTN แจ้ง Production · 2026-07-23) | `docs/modules/pm-coordination.md` |
+| 🔗 อุปกรณ์ตัวเดียวหลายแผนก — ตัวตนใช้ร่วม · มุมมองแยก (รูป/หัวเครื่อง/ปุ่มลบ · 2026-11-26) | `docs/modules/equipment-shared-identity.md` |
 | 🔧 ศูนย์ PM — แท็บตรวจ PM + ตั้งค่าจุดตรวจ (ปุ่มบันทึกตรวจไม่ครบ · คัดลอกแผน PM ข้ามเครื่อง · 2026-10-07) | `docs/modules/pm-hub-check-setup.md` |
 | PM Predictive & Planner Sync — เห็นวัน PM ล่วงหน้า + buffer (2026-07-16) · 🧭 3 ระดับ Preventive→Predictive→Prescriptive (2026-09-23) | `docs/modules/pm-predictive-planner-sync.md` |
 | กระบวนการผลิต (process types) — master data-driven (2026-07-23) | `docs/modules/process-types.md` |

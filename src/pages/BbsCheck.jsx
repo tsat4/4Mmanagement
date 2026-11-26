@@ -33,6 +33,8 @@ import { getWorkDate } from '../utils/workDate';
 import { printBbsSheet } from '../lib/bbsPrint';
 import WfRoundPanel from '../components/WfRoundPanel';   // ✍️ สายเซ็นรายเดือน ผู้ตรวจ→SV→Manager (e-Workflow · 25/11)
 import { loadRoundSignoff } from '../lib/wfSignoff';
+import WfGridSheet from '../components/WfGridSheet';   // 🧩 ธ.ค. 2569 เป็นต้นไป = ใบตรวจแบบตารางของ e-Workflow (26/11)
+import { BBS_GRID_KEY, isBbsGridMonth } from '../utils/checkGrid';
 import { resolveEmployeeSigner, signatureOfPerson } from '../utils/employeeSignature';   // ✍️ รหัสพนักงาน → ลายเซ็น (C1 · 03/11)
 import { checkWriteRows } from '../utils/dbWrite';
 import { canWriteLine, writeBlockText } from '../utils/writeScope';   // 🔐 ชั้น ③ "ใบของไลน์นี้เป็นของหน่วยงานเราไหม" (19/11)
@@ -594,6 +596,30 @@ export default function BbsCheck() {
 
   const lbl = { fontSize: 11, color: 'var(--muted)', fontWeight: 700, display: 'block', marginBottom: 3 };
 
+  /* ── แถบเลือกใบ ── ลำดับ: ไลน์ → เดือน (ใช้ทั้งใบเดิมและใบตรวจแบบตาราง) */
+  const filterBar = (
+      <FilterBar style={{ marginBottom: 12 }}>
+        <span className="filter-label">{tr('พื้นที่ / ไลน์')}</span>
+        {/* <LineSelect valueKey="id"> — เก็บ line id เหมือนเดิม · scopedLines กรอง scope ไว้แล้ว (2026-09-07) */}
+        <LineSelect lines={scopedLines} value={selLine} valueKey="id" placeholder={null} onChange={setSelLine} includeSupport />
+        <span className="filter-label">{tr('เดือน')}</span>
+        <input type="month" value={month} onChange={e => setMonth(e.target.value)} />
+        {/* 🔴 ไม่มีปุ่มเลือกกะ — BBS ไม่แยกกะ (ดูหัวบล็อกไฟล์) ห้ามเติมกลับ */}
+      </FilterBar>
+  );
+
+  /* 🧩 26/11 (คำสั่ง user "เริ่มตารางใหม่ 1 ธ.ค."): ธ.ค. 2569 เป็นต้นไป BBS = ใบตรวจแบบตารางของ e-Workflow
+     (ใบงาน `bbs_grid` · ตาราง wf_grid_* · สัญลักษณ์/หัวข้อ/สายเซ็นตั้งที่ /workflow-designer)
+     ต.ค.–พ.ย. ยังเป็นใบเดิมด้านล่าง (ตาราง bbs_*) จนกว่าจะย้ายข้อมูลย้อนหลัง */
+  if (isBbsGridMonth(month)) {
+    return (
+      <Page width="full">
+        <WfGridSheet defKey={BBS_GRID_KEY} lineObj={lineObj} lines={lines} month={month} filters={filterBar}
+          title={tr('สังเกตพฤติกรรมความปลอดภัย (BBS)')} icon="🦺" />
+      </Page>
+    );
+  }
+
   return (
     <Page width="full">
       <ReadOnlyNote show={!canRecord} role={role} what={tr("บันทึกผลสังเกต BBS")} permKey="bbs:record" />
@@ -618,15 +644,7 @@ export default function BbsCheck() {
           <button type="button" className="pg-btn" onClick={doPrint} disabled={!sheet}>{tr('พิมพ์ / PDF')}</button>
         </>} />
 
-      {/* ── แถบเลือกใบ ── ลำดับ: ไลน์ → เดือน → กะ */}
-      <FilterBar style={{ marginBottom: 12 }}>
-        <span className="filter-label">{tr('พื้นที่ / ไลน์')}</span>
-        {/* <LineSelect valueKey="id"> — เก็บ line id เหมือนเดิม · scopedLines กรอง scope ไว้แล้ว (2026-09-07) */}
-        <LineSelect lines={scopedLines} value={selLine} valueKey="id" placeholder={null} onChange={setSelLine} includeSupport />
-        <span className="filter-label">{tr('เดือน')}</span>
-        <input type="month" value={month} onChange={e => setMonth(e.target.value)} />
-        {/* 🔴 ไม่มีปุ่มเลือกกะ — BBS ไม่แยกกะ (ดูหัวบล็อกไฟล์) ห้ามเติมกลับ */}
-      </FilterBar>
+      {filterBar}
 
       {/* ✍️ สายเซ็นของใบเดือนนี้ (e-Workflow · ตั้งผู้เซ็น/ความถี่ที่ /workflow-designer) — เซ็นบนใบนี้เลย ไม่ต้องออกใบแยก */}
       <WfRoundPanel subject="bbs" line={lineObj?.name || ''} date={`${month}-01`}

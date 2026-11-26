@@ -101,6 +101,7 @@ const GroupOverview = lazy(() => import('./pages/GroupOverview'));
 const AnnouncementMockup = lazy(() => import('./pages/AnnouncementMockup'));
 const OverseasTravelMockup = lazy(() => import('./pages/OverseasTravelMockup'));
 const AdoptionOutlook = lazy(() => import('./pages/AdoptionOutlook'));
+const LiveBenefits = lazy(() => import('./pages/LiveBenefits'));
 const ProgramUpdate = lazy(() => import('./pages/ProgramUpdate'));
 /* 🧭 ไม่ lazy โดยตั้งใจ — หน้านี้ต้องทำงานตอนบันเดิลเก่า/โหลด chunk ไม่ได้ (ดูหัวไฟล์) */
 import NotFound from './pages/NotFound';
@@ -297,6 +298,8 @@ export const NAV_ITEMS = [
   { to: '/group-overview', icon: '🏢', label: 'ภาพรวมกลุ่มโรงงาน (Mockup)', group: 'ผู้บริหาร & เดโม' },
   // "ข้อมูลเชื่อมกันทั้งองค์กรแล้วตอบคำถามอะไรได้" — สอบกลับ/คุมคุณภาพ/predictive/prescriptive
   // ฝั่งวันนี้นับสดจากฐานจริง ฝั่งอนาคตติดป้ายคาดการณ์ (seed: admin/manager)
+  // 📈 ประโยชน์ที่ได้แล้ว นับสด — กระดาษที่ทดแทน (จากทะเบียน /doc-forms) + เวลาที่ลด (seed: admin/manager · 26/11)
+  { to: '/live-benefits', icon: '📈', label: 'ประโยชน์จาก ESM (Live)', group: 'ผู้บริหาร & เดโม' },
   { to: '/adoption-outlook', icon: '🔮', label: 'ภาพเมื่อข้อมูลเชื่อมกัน', group: 'ผู้บริหาร & เดโม' },
   // 🧪 mockup workflow ประกาศบริษัท Issue → EVP Approve → Publish ตามวันมีผล (ไม่เขียน DB · seed: admin/manager)
   { to: '/announcements', icon: '📢', label: 'ประกาศบริษัท (Mockup)', group: 'ผู้บริหาร & เดโม' },
@@ -848,6 +851,7 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
   };
 
   /* ══ 🗂️ แถวเมนู + ข้อย่อย (แท็บของหน้า) — 24/11 คำสั่ง user "ย้าย Detail bar ไป Sub bar เป็นข้อย่อย"
+     · 26/11 (คำสั่ง user "แท็บอยู่ในหน้า · เมนูเป็นทางเข้า"): ข้อย่อยเป็น **ทางลัด** เข้าแท็บ — แถบแท็บยังวาดในหน้าเสมอ (PageHeader · ด่าน `tabs-stay-in-page`)
      · ข้อย่อย = ทะเบียน `NAV_SUB_TABS` (utils/navSubTabs.js) — เห็นทุกเมนูตลอดแม้ยังไม่เปิดหน้านั้น · กรองสิทธิ์รายแท็บด้วย `perm`
      · รายการชั้นถัดไป (พื้นที่ SAP ฯลฯ) **ไม่อยู่ในแผงนี้** — อยู่ "Detail Bar" ใต้ breadcrumb ในหน้า (PageHeader · 24/11 รอบ 4)
      · "อยู่ตรงนี้" หน้าตาเดียวกับทุกชั้น (พื้น accent-dim + แถบซ้าย + aria-current) · ชื่อยาวตัด … + `title` ชื่อเต็ม
@@ -2360,6 +2364,9 @@ function ProtectedLayout({ session, theme, onToggleTheme, userRole, realRole, vi
               <Route path="/dept-dashboard" element={<LegacyTabRedirect to="/obeya" tab="todo" />} />
               <Route path="/flow-tower" element={
                 <RoleRoute path="/flow-tower" userRole={role}><FlowTower /></RoleRoute>
+              } />
+              <Route path="/live-benefits" element={
+                <RoleRoute path="/live-benefits" userRole={role}><LiveBenefits /></RoleRoute>
               } />
               <Route path="/adoption-outlook" element={
                 <RoleRoute path="/adoption-outlook" userRole={role}><AdoptionOutlook /></RoleRoute>

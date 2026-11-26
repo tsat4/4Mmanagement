@@ -23,6 +23,8 @@ const inp = { width: '100%', minWidth: 0, fontSize: 13 };
 const addLbl = { display: 'grid', gap: 3, fontSize: 12, color: 'var(--muted)', flex: '1 1 180px', minWidth: 0 };
 const keyOf = (r) => `${r.scope_kind}|${r.scope_name}`;
 const toDraft = (r) => Object.fromEntries(FIELDS.map(f => [f, r[f] == null ? (f === 'is_active' ? true : '') : r[f]]));
+/** 'HH:MM:SS' (time ของ DB) → 'HH:MM' · ว่าง = '' */
+const hm5 = (v) => (v ? String(v).slice(0, 5) : '');
 const same = (a, b) => FIELDS.every(f => String(a[f] ?? '') === String(b[f] ?? ''));
 
 async function callAdmin(action, payload) {
@@ -51,18 +53,20 @@ export default function EnergyMeterSetup() {
   const [busy, setBusy] = useState('');
   const [panelCfg, setPanelCfg] = useState(undefined);   // undefined = ยังโหลด · null = อ่านไม่ได้
   const [targetDraft, setTargetDraft] = useState({});
+  const [baseDraft, setBaseDraft] = useState({});     // { [panel]: { s:'HH:MM', e:'HH:MM' } } ช่วง Baseline (26/11)
   const [add, setAdd] = useState({ scope: '', panel: '', parent_name: '', display_name: '' });
 
   const load = useCallback(async () => {
     const [m, t, ps] = await Promise.all([
       supabaseDR.from('energy_live_meters').select(COLS).order('panel').order('sort_order').order('scope_name'),
       supabaseDR.from('energy_meter_topics').select('scope_kind, scope_name').limit(1000),
-      supabaseDR.from('energy_panel_settings').select('panel, demand_target_kw, updated_by'),
+      supabaseDR.from('energy_panel_settings').select('panel, demand_target_kw, baseline_start, baseline_end, updated_by'),
     ]);
     // 🎯 เป้า Demand ต่อตู้ — อ่านไม่ได้ = null (ช่องเป้าล็อก + เขียนบอก · ห้ามโชว์ว่างเหมือนไม่ได้ตั้ง)
     const pmap = ps.error ? null : Object.fromEntries((ps.data || []).map(x => [x.panel, x]));
     setPanelCfg(pmap);
     setTargetDraft(pmap ? Object.fromEntries(Object.entries(pmap).map(([k, v]) => [k, v.demand_target_kw ?? ''])) : {});
+    setBaseDraft(pmap ? Object.fromEntries(Object.entries(pmap).map(([k, v]) => [k, { s: hm5(v.baseline_start), e: hm5(v.baseline_end) }])) : {});
     if (m.error) { setErr(m.error.message); setRows(null); return; }
     setErr(t.error ? `อ่านรายชื่อมิเตอร์ที่ผูก topic ไม่ได้: ${t.error.message}`
       : (t.data || []).length >= 1000 ? 'รายชื่อ topic เกิน 1,000 แถว — ตัวเลือก "เพิ่มตู้" อาจไม่ครบ' : '');
@@ -107,7 +111,8 @@ export default function EnergyMeterSetup() {
   const saveTarget = async (panel) => {
     setBusy(`t|${panel}`);
     try {
-      await callAdmin('panel_target', { panel, demand_target_kw: targetDraft[panel] ?? '' });
+      const b = baseDraft[panel] || {};
+      await callAdmin('panel_target', { panel, demand_target_kw: targetDraft[panel] ?? '', baseline_start: b.s || null, baseline_end: b.e || null });
       toast.success(`${tr('บันทึกเป้า Demand ตู้')} ${panel}`);
       await load();
     } catch (e) { toast.error(`${tr('บันทึกไม่สำเร็จ')}: ${e.message}`); } finally { setBusy(''); }
@@ -186,21 +191,33 @@ export default function EnergyMeterSetup() {
       </div>
 
       <div style={card}>
-        <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{tr('เป้า Demand 15 นาที ต่อตู้')}</div>
+        <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{tr('ค่าตั้งต่อตู้ — เป้า Demand 15 นาที · ช่วง Baseline')}</div>
         <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 8 }}>
           {tr('ใช้กับการ์ด Demand 15 นาทีบนแท็บค่าไฟสด · ว่าง = ไม่ตั้งเป้า (การ์ดไม่ตัดสินเกิน/ไม่เกิน)')}
+          {' · '}{tr('ช่วง Baseline = เวลาพักที่เครื่องควรเบา (เวลาไทย 24 ชม.) · ว่างทั้งคู่ = ไม่โชว์ Baseline')}
         </div>
         {panelCfg === null ? <NoticeBar tone="warn">{tr('อ่านเป้า Demand ไม่ได้ — ลองโหลดใหม่')}</NoticeBar> : (
           <div style={{ display: 'grid', gap: 6 }}>
             {panels.map(p => {
               const cur = panelCfg?.[p]?.demand_target_kw ?? '';
-              const dirty = String(targetDraft[p] ?? '') !== String(cur);
+              const b = baseDraft[p] || { s: '', e: '' };
+              const bCur = { s: hm5(panelCfg?.[p]?.baseline_start), e: hm5(panelCfg?.[p]?.baseline_end) };
+              const dirty = String(targetDraft[p] ?? '') !== String(cur) || b.s !== bCur.s || b.e !== bCur.e;
+              const setB = (k, v) => setBaseDraft(x => ({ ...x, [p]: { ...(x[p] || { s: '', e: '' }), [k]: v } }));
               return (
                 <div key={p} style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                   <span style={{ minWidth: 140, fontWeight: 700, color: 'var(--text)' }}>{tr('ตู้')} {p}</span>
                   <input type="number" min="0" style={{ ...inp, width: 140 }} value={targetDraft[p] ?? ''} disabled={!canEdit || panelCfg === undefined}
                     placeholder={tr('ไม่ตั้งเป้า')} onChange={e => setTargetDraft(x => ({ ...x, [p]: e.target.value }))} aria-label={`${tr('เป้า Demand')} ${p}`} />
                   <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>kW</span>
+                  <span style={{ fontSize: 12.5, color: 'var(--muted)', marginLeft: 8 }}>Baseline</span>
+                  <input type="time" style={{ ...inp, width: 110 }} value={b.s} disabled={!canEdit || panelCfg === undefined}
+                    onChange={e => setB('s', e.target.value)} aria-label={`${tr('เริ่ม Baseline')} ${p}`} />
+                  <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>–</span>
+                  <input type="time" style={{ ...inp, width: 110 }} value={b.e} disabled={!canEdit || panelCfg === undefined}
+                    onChange={e => setB('e', e.target.value)} aria-label={`${tr('จบ Baseline')} ${p}`} />
+                  {/* ช่อง time แสดงผลตามเครื่อง (อาจเป็น AM/PM) ⇒ ทวนค่า 24 ชม. ให้เห็นเสมอ (กฎเวลาที่คนกรอก) */}
+                  <span style={{ fontSize: 12, color: 'var(--text2)' }}>{b.s || b.e ? `= ${b.s || '--:--'}–${b.e || '--:--'} ${tr('น.')}` : tr('ไม่ตั้ง')}</span>
                   {canEdit && <button type="button" className="pg-btn primary" disabled={!dirty || busy === `t|${p}`} onClick={() => saveTarget(p)}>{busy === `t|${p}` ? '…' : tr('บันทึก')}</button>}
                   {panelCfg?.[p]?.updated_by && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{tr('แก้ล่าสุดโดย')} {panelCfg[p].updated_by}</span>}
                 </div>

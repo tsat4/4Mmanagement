@@ -58,6 +58,21 @@ function stripComments(src) {
    scan: โฟลเดอร์ที่ตรวจ · ext: นามสกุล · re: regex (global) · allow: ไฟล์ที่ยกเว้น + เหตุผล */
 const RULES = [
   {
+    id: 'jig-images-via-dept',
+    scan: ['src'], ext: ['.jsx', '.js'],
+    re: /from\(\s*['"`]jig_images['"`]\s*\)/g,
+    why: '🖼️ 26/11 "ข้อมูล PM ของ JIG MTN โดนไลน์ผลิตแก้ทับเละ" — รูปเครื่องเคยใช้ชุดเดียวกันทุกแผนก ⇒ AM (ผลิต) เปลี่ยนรูปที่ PM Setup '
+       + 'แล้วกดบันทึก = ลบรูปของ JIG MTN 140 รูป · FK ON DELETE SET NULL ล้างจุดตรวจ JIG MTN 1,567 จุดให้ไปวางบนรูป AM',
+    fix: 'อ่านเฟรมผ่าน `loadDeptFrames(jigIds, department)` · แก้/ลบได้เฉพาะ `ownsFrame(row, department)` (src/utils/jigFrames.js) · insert ต้องใส่ department',
+    allow: {
+      'src/utils/jigFrames.js': 'เจ้าของกฎ',
+      'src/pages/PMSetup.jsx': 'ตัวบันทึก — ใส่ department ตอน insert + แก้/ลบผ่าน ownsFrame เท่านั้น',
+      'src/pages/FixtureRegistry.jsx': 'ทะเบียนจุดชิม: แค่รู้ว่าเครื่องไหนมีรูป + วาดหมุดชิมบนทุกเฟรมของเครื่อง (อ่านอย่างเดียว · ไม่ผูกแผนก)',
+      'src/utils/jigImageRefs.js': 'นับผู้อ้าง path ก่อนลบไฟล์ — ต้องนับทุกแผนก',
+      'src/utils/recompressLayouts.js': 'ย้ายไฟล์รูปทั้ง bucket — ระดับ path ไม่ใช่ระดับแผนก',
+    },
+  },
+  {
     id: 'manpower-layout-stations-via-family',
     scan: ['src/pages/ManpowerBoard.jsx'], ext: ['.jsx'],
     /* จับการกรองไลน์ฝั่ง DB ทุกแบบในไฟล์นี้: `line_id.eq.` ใน .or() · .eq/.in('line_name'|'line_id')
@@ -1287,6 +1302,17 @@ const RULES = [
     re: /['"`>\s]\uFE0F/g,
     why: 'emoji ถูกลบเหลือแต่ U+FE0F (มองไม่เห็น) — ไอคอนหายเงียบ ปุ่มไอคอนล้วนกลายเป็นกล่องเปล่า (09/11 · e839b388)',
     fix: 'ใส่ไอคอนกลับเป็น <Icon glyph="…" /> (ปุ่มมีป้าย · UI §6.35 ข้อ 5) หรือ emoji เต็มตัว (ปุ่มไอคอนล้วน) · ไม่ต้องการไอคอน = ลบ FE0F ทิ้ง',
+    allow: {},
+  },
+  {
+    id: 'tabs-stay-in-page',
+    scan: ['src/components'], ext: ['.jsx'],
+    /* 26/11 (คำสั่ง user "แท็บอยู่ในหน้า · เมนูเป็นทางเข้า"): รอบ 24/11 เคยให้ PageHeader ซ่อนแถบแท็บของหน้าที่อยู่ใน NAV_SUB_TABS
+       (ย้ายไปเป็นข้อย่อยในแผงเมนู) ⇒ สลับแท็บต้องเปิดแผง 2–3 คลิก · คนไม่เห็นว่าหน้ามีแท็บอะไร · แต่ละโมดูลหน้าตาต่างกัน
+       ข้อย่อยในแผงเมนู = ทางลัดเข้าแท็บเท่านั้น · แถบแท็บวาดในหน้าเสมอ */
+    re: /(tabsInNav|NAV_SUB_TABS\[[^\]]+\])\s*&&\s*renderTabs|!\s*(tabsInNav|NAV_SUB_TABS\[[^\]]+\])\s*&&\s*renderTabs|renderTabs\(\)\s*:\s*null/g,
+    why: 'แถบแท็บเป็นของหน้า ห้ามให้ทะเบียนเมนูเป็นคนตัดสินว่าจะวาดหรือไม่ — ข้อย่อยในแผงเมนูเป็นทางลัด ไม่ใช่ตัวสลับแท็บ (UI §6.8.1)',
+    fix: "วาด renderTabs() เสมอเมื่อมีแท็บ · อยากให้กดจากเมนูตกถึงแท็บ ใช้ NAV_SUB_TABS เป็นทางลัด (ลิงก์ ?tab=) ไม่ต้องซ่อนแถบ",
     allow: {},
   },
   {
@@ -9728,8 +9754,9 @@ test('🛒 pr-queue-needs-po-col — คิวรีลิสต์ MO ต้อ
     '\n\n❌ คิวรีลิสต์ใบขอซื้อไม่ได้ใช้ PR_QUEUE_COLS แล้ว (พิมพ์ชื่อคอลัมน์เอง)\n'
     + '   ผล: ลืม po_no เมื่อไหร่ ถัง "🚚 สั่งแล้ว (มี PO) · รอของเข้า" ว่างตลอดโดยไม่มีใครรู้\n');
   /* ตัวนับต้องมีคีย์ครบทุกค่าที่สูตรคืนได้ — ขาดคีย์ = c[st]++ บน undefined = NaN เงียบๆ */
-  assert.match(page, /const c = \{ need: 0, no_no: 0, open: 0, unknown_po: 0 \}/,
-    '\n\n❌ ตัวนับถัง PR ขาดคีย์ unknown_po — c[st]++ บน undefined = NaN แล้วเลขในวงเล็บเพี้ยนทั้งแถบ\n');
+  assert.match(page, /const c = \{ need: 0, no_no: 0, open: 0, unknown_po: 0, none: 0 \}/,
+    '\n\n❌ ตัวนับถัง PR ขาดคีย์ — c[st]++ บน undefined = NaN แล้วเลขในวงเล็บเพี้ยนทั้งแถบ\n'
+    + '   ต้องครบทุกค่าที่ prQueueStateOf() คืนได้ **รวม `none`** (26/11 · ถัง "ไม่มีงาน PR")\n');
 });
 test('🔧 mo-export-shows-solution — ไฟล์ Excel ของ MO ต้องมี "วิธีการแก้ไข" + สาเหตุ', () => {
   /* why (18/11 · หน้างานแจ้ง): *"ใน Excel ที่ Export ไม่มีวิธีการแก้ไขครับผม
@@ -10660,9 +10687,26 @@ test('🚦 mo-close-gated-by-pr-loop — ปิดใบ MO ต้องถา�
   assert.ok(/moCloseGate\(/.test(page),
     '\n\n❌ หน้า MO ไม่เรียก moCloseGate() แล้ว — ปิดใบได้ทั้งที่ใบขอซื้อยังค้าง\n');
   /* ① + ② ด่านตอนกดบันทึกต้องถามฐานสด ไม่ใช่อ่าน prop ที่ติดมากับ order */
-  assert.ok(/moCloseGate\(_stage,\s*await fetchOpenPrs\(\)\)/.test(page),
+  assert.ok(/moCloseGate\(_stage,\s*await fetchOpenPrs\(\)/.test(page),
     '\n\n❌ ด่านตอนกดเซ็นไม่ได้โหลดใบขอซื้อสดๆ\n'
     + '   ⇒ ตัดสินด้วยค่าค้างในหน้า = บล็อกผิด (ของมาถึงแล้ว) หรือปล่อยผิด (เพิ่ง PR ใบใหม่)\n');
+  /* 🛒 26/11 — ด่าน "เส้นทางบังคับ PR แต่ไม่มีใบเลย" อ่าน `repair_path` ของใบ
+     **ไม่ส่งอาร์กิวเมนต์ที่ 3 = ด่านนั้นเงียบสนิท** (undefined = ไม่รู้เส้นทาง ⇒ ไม่บล็อก) */
+  const calls = [];
+  for (let i = page.indexOf('moCloseGate('); i >= 0; i = page.indexOf('moCloseGate(', i + 1)) {
+    const open = page.indexOf('(', i);
+    let d = 0, j = open;
+    for (; j < page.length; j++) {                      // นับวงเล็บให้ครบ — `[^;]*?` หยุดที่ `)` ตัวแรก
+      if (page[j] === '(') d++;
+      else if (page[j] === ')' && --d === 0) break;
+    }
+    calls.push(page.slice(i, j + 1));
+  }
+  for (const c2 of calls) {
+    assert.ok(/repair_path/.test(c2),
+      `\n\n❌ เรียก moCloseGate() โดยไม่ส่ง repair_path:\n   ${c2}\n`
+      + '   ⇒ ใบที่ "ต้องเปิด PR แต่ไม่มีใบเลย" จะปิดผ่านฉลุยเหมือนเดิม (หลุดมาแล้ว 20 ใบ)\n');
+  }
   assert.ok(!/moCloseGate\([^)]*_prs/.test(page) && !/openPrRows\(o\._prs/.test(page),
     '\n\n❌ ด่านกลับไปอ่าน `order._prs` อีกแล้ว — StepModal ไม่เคยได้รับฟิลด์นี้ (ว่างเสมอ = ด่านตาย)\n');
   /* ห้ามหน้าเขียนเกณฑ์ "ลูป PR จบ" ชุดที่ 2 (= drift)
@@ -12891,6 +12935,24 @@ test('🔗 wf-bound-signoff — เอกสารที่ผูก e-Workflow 
   assert.deepEqual(bad, [], `\n\n❌ ${bad.length} จุด\n   ${bad.join('\n   ')}\n`);
 });
 
+test('🧩 wf-checkgrid — ใบตรวจแบบตาราง: จอเดียว อ่านนิยามจากใบงาน · ด่านเขียนครบ (26/11 · คำสั่ง user)', () => {
+  const bad = [];
+  const rd = (f) => stripComments(readFileSync(join(ROOT, f), 'utf8'));
+  const sheet = rd('src/components/WfGridSheet.jsx');
+  /* ทุกขาเขียนผ่าน ensureSheet ⇒ ต้องเช็ค สิทธิ์ (recordPerm) · ชั้น ③ (canWriteLine) · ล็อก (มีคนเซ็น) · ใบที่โชว์ตรงกับที่เลือก */
+  const ens = sheet.slice(sheet.indexOf('const ensureSheet = async'), sheet.indexOf('const notifyAlert'));
+  for (const [re, why] of [[/canRecord/, 'สิทธิ์บันทึก'], [/lineWrite\.ok/, 'ชั้น ③ canWriteLine'], [/if \(lock\)/, 'ล็อกเมื่อเซ็นแล้ว'], [/matches\(/, 'stale guard']])
+    if (!re.test(ens)) bad.push(`WfGridSheet.ensureSheet: ขาดด่าน ${why}`);
+  if (/from '\.\.\/utils\/bbsMarks'/.test(sheet) || /from '\.\.\/utils\/bbsMarks'/.test(rd('src/lib/gridPrint.js')))
+    bad.push('WfGridSheet/gridPrint: ห้าม import สัญลักษณ์ BBS ตายตัว — อ่านจาก checkgrid ของใบงาน');
+  if (/from\('wf_grid_(cells|sheets|row_notes)'\)/.test(rd('src/pages/BbsCheck.jsx'))) bad.push('BbsCheck: ห้ามเขียน wf_grid_* เอง — ใช้ <WfGridSheet>');
+  if (!/isBbsGridMonth\(month\)[\s\S]{0,200}<WfGridSheet defKey=\{BBS_GRID_KEY\}/.test(rd('src/pages/BbsCheck.jsx'))) bad.push('BbsCheck: เดือนตั้งแต่ BBS_GRID_FROM ต้องวาด <WfGridSheet defKey={BBS_GRID_KEY}>');
+  const mig = readFileSync(join(ROOT, 'supabase/migrations/20261126_wf_checkgrid_main.sql'), 'utf8');
+  for (const t of ['trg_wf_grid_sheets_lock', 'trg_wf_grid_cells_lock', 'trg_wf_grid_notes_lock']) if (!mig.includes(`create trigger ${t}`)) bad.push(`migration: ต้องมี ${t}`);
+  if (!/using \(wf_grid_can_write\(def_key\)\)/.test(mig)) bad.push('migration: RLS เขียน wf_grid_sheets ต้องผ่าน wf_grid_can_write');
+  assert.deepEqual(bad, [], `\n\n❌ ${bad.length} จุด\n   ${bad.join('\n   ')}\n`);
+});
+
 test('🏬 store-leg-always-written — ใบขอเติมต้องเขียน "ออกจาก STORE" เสมอ ห้ามมีเงื่อนไข', () => {
   /* 🔴 วัดจริง 25/11: ใบขอเติม 726 ใบ → **174 ใบมีแต่ขาเข้าไลน์ ไม่มีขาออกจาก STORE** (116,878 ชิ้น)
        ต้นเหตุ: โค้ดก่อน 19/11 เขียนว่า
@@ -12958,6 +13020,30 @@ test('🛡️ skill-delete-keeps-scores — ปุ่มลบสกิลห้
     + '(นับก่อน + trigger trg_skill_def_delete_guard ฝั่ง DB · 📄 docs/modules/employee-skills-exp.md §25/11)\n');
   const mig = readFileSync(join(ROOT, 'supabase/migrations/20261125b_skill_def_delete_guard.sql'), 'utf8');
   assert.ok(/before delete on public\.skill_definitions/.test(mig), 'migration ด่านลบสกิลต้องมี trigger before delete');
+});
+
+test('🪪 account-hint-only-identity-codes — บรรทัด "บัญชีที่กำลังใช้" ห้ามขึ้นกับด่านที่เป็นเรื่องของช่อง/ใบ', () => {
+  /* 25/11 · user: "ช่องนี้ตรงที่บอกว่าใช้บัญชีอะไร มันดูตลก … งานที่ไม่เกี่ยวกับบัญชีที่ล็อกอินอยู่
+     แต่มาแจ้งเป็นชื่อเจ้าของบัญชี เค้าจะสับสนมั้ย ว่าช่องนี้เกี่ยวอะไรกับเค้า ทำไมมีชื่อเค้า"
+     เคสจริง: ช่อง "รอ ผจก.ส่วนซ่อมบำรุง รับทราบ" (code `other_team`) ที่ระบุชื่อช่างไว้คนละคน
+     แล้วต่อท้ายด้วยชื่อ "คนที่กำลังดู" ⇒ อ่านแล้วเหมือนช่องนั้นเป็นของเรา
+     ⇒ กฎ: โชว์ได้เฉพาะโค้ดที่ข้อความของมันพูดถึง "บัญชีนี้" อยู่แล้ว (ทะเบียน ACCOUNT_HINT_CODES) */
+  const perm = readFileSync(ROOT + 'src/utils/mtnStepPerm.js', 'utf8');
+  assert.ok(/export const ACCOUNT_HINT_CODES\b/.test(perm) && /export function showsAccountHint\b/.test(perm),
+    '\n\n❌ ไม่มีทะเบียน ACCOUNT_HINT_CODES / showsAccountHint() ใน utils/mtnStepPerm.js\n');
+  assert.ok(!/ACCOUNT_HINT_CODES\s*=\s*Object\.freeze\(\[[^\]]*'other_team'/.test(perm)
+    && !/ACCOUNT_HINT_CODES\s*=\s*Object\.freeze\(\[[^\]]*'wrong_side'/.test(perm),
+    '\n\n❌ ACCOUNT_HINT_CODES มี other_team / wrong_side — 2 โค้ดนี้บอกว่า "ช่องนี้เป็นของฝั่ง/ทีมอื่น"\n'
+    + '   ต่อท้ายด้วยชื่อคนที่กำลังดู = จอโกหกว่าช่องนั้นเกี่ยวกับเขา\n');
+
+  const page = readFileSync(ROOT + 'src/pages/MtnRepair.jsx', 'utf8');
+  const spots = page.match(/\{whoAmILine[^}]*&&[^}]*<span/g) || [];
+  assert.ok(spots.length > 0, '\n\n❌ หา whoAmILine ใน MtnRepair.jsx ไม่เจอ — ด่านนี้ตามของจริงไม่ทันแล้ว\n');
+  for (const s of spots) {
+    assert.ok(/showsAccountHint\(/.test(s),
+      `\n\n❌ MtnRepair.jsx โชว์บรรทัดบัญชีโดยไม่ถาม showsAccountHint():\n   ${s}\n`
+      + '   ⇒ ต้องเป็น {whoAmILine && showsAccountHint(<code ของด่านนั้น>) && <span …>}\n');
+  }
 });
 
 /* ── ⏳ count-blocks-pending-adjust (25/11 · user "ต่างคนต่างนับ ต่างคนต่างอัพยอด จะมั่วไหม") ────
@@ -13039,4 +13125,38 @@ test('🛡️ scope-select-merged-group — ไลน์ที่เป็นก
   assert.ok(/optionOf\?\.\(\s*'line_group'[\s\S]{0,80}\.merged/.test(code),
     '\n🎛️ SectionScopeSelect (pickLine) ต้องเช็ค optionOf(\'line_group\', line).merged แล้วชี้แผนก — '
     + 'กลุ่มชื่อซ้ำแผนกถูกซ่อนในลิสต์ (📄 docs/modules/manpower-board.md §25/11)\n');
+});
+
+test('🖼️ jig-frames-no-dup — loadDeptFrames ต้องกันค่าว่างเข้า .in() และยุบ id ซ้ำก่อนคืน', () => {
+  /* 26/11 · crashsweep เจอ "คีย์ซ้ำในลิสต์ 15 ตัว" ที่ /pm?tab=setup ตอนกด "แก้ไข"
+     ต้นเหตุ: `extra` = `refd.data.map(r => r.image_id)` แล้วยัดเข้า `.in('id', extra)` ต่อทันที
+     โดยเชื่อว่าคิวรีก่อนหน้ากรอง `.not('image_id','is',null)` ไว้แล้ว
+     ⇒ หลุดมาตัวเดียว = `.in('id',[null])` ซึ่งคืน **ทุกแถว** แทนที่จะคืน 0 แถว
+     ⇒ `rows` มีของซ้ำ ⇒ ผู้เรียกใช้ `im.id` เป็น React key ⇒ แถวถูกวาดซ้ำ/กลืนแบบไม่การันตี
+     (React เตือนทาง console ไม่ throw ⇒ build/เทส/จอผ่านหมด เห็นจาก crashsweep เท่านั้น)
+     🔴 กฎ: ฟังก์ชันที่ต่อผลหลายคิวรีของ **ตารางเดียวกัน** ต้องยุบ id ซ้ำที่ตัวมันเอง
+        ห้ามฝากให้ผู้เรียกระวัง (ผู้เรียกเห็นแค่ "อาเรย์ของแถว" ไม่รู้ที่มา) */
+  const src = readFileSync(join(ROOT, 'src/utils/jigFrames.js'), 'utf8');
+  assert.match(src, /\.filter\(Boolean\)/,
+    '\n\n❌ jigFrames.js ไม่ได้กรองค่าว่างออกจาก `extra` ก่อนส่งเข้า `.in()`\n'
+    + '   `.in(col, [null])` คืนทุกแถว ไม่ใช่ 0 แถว ⇒ ได้ของซ้ำกลับมาเงียบๆ\n');
+  assert.ok(/new Map\(\)[\s\S]{0,400}byId\.has\(/.test(src),
+    '\n\n❌ jigFrames.js ไม่ได้ยุบ id ซ้ำก่อนคืน `rows`\n'
+    + '   ฟังก์ชันนี้ต่อผล 2 คิวรีของ jig_images ⇒ ต้องการันตี id ไม่ซ้ำที่ตัวเอง\n'
+    + '   (ผู้เรียกใน PMSetup/PMCheckData ใช้ `im.id` เป็น React key)\n');
+});
+
+/* 🚫 ใบรวมสถานี AM ห้ามมีจุดชิม/งาน PM (26/11 · คำสั่ง user "สถานีจะใช้แค่กับ am ไม่ยุ่งกับ pm, shim record
+   เพราะ shim record เป็นงานของส่วนช่าง") + ใบเดี่ยวของทีม AM ดูค่าชิมได้อย่างเดียว
+   คลาสเดียวกับบั๊ก 26/11 "AM ไปแก้ข้อมูลของ JIG MTN" (รูปเครื่องปนแผนก) */
+test('🛡️ am-station-no-shim — ใบรวมสถานี AM ไม่อ่าน/เขียนจุดชิม · ใบ AM บันทึกค่าชิมไม่ได้', () => {
+  const src = stripComments(readFileSync(join(ROOT, 'src/pages/PMCheckData.jsx'), 'utf8'));
+  const a = src.indexOf('function AmStationSheet('), b = src.indexOf('export default function PMCheckData(');
+  assert.ok(a > 0 && b > a, 'หา AmStationSheet ไม่เจอ');
+  const station = src.slice(a, b);
+  for (const bad of ['recordShimEvent', 'fixture_points', 'ShimRecordSection', 'shimPins']) {
+    assert.ok(!station.includes(bad), `\n\n❌ ใบรวมสถานี AM มี "${bad}" — สถานีเป็นงาน AM ล้วน ห้ามแตะจุดชิม (งานของทีมช่าง)\n`);
+  }
+  assert.match(src, /const canShim = can\('fixture_shim', 'record', userRole\) && !shimAmReadOnly/,
+    '\n\n❌ ใบ AM (ใบเดี่ยว) กรอก/บันทึกค่าชิมได้อีกแล้ว — ต้องดูได้อย่างเดียว (shimAmReadOnly = isAmTeam(department))\n');
 });

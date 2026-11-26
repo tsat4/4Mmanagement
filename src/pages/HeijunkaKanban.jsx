@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef, useContext } from 'react';
 import { HEIJUNKA_VIEW_META } from '../utils/navSubTabs';
+import KanbanCabinet from '../components/KanbanCabinet';
 import { isCoilUom } from '../utils/coilUom';
 import { urlParam, urlPick, urlBool } from '../utils/urlInit';
 import { lineNameCompare } from '../utils/lineHierarchy';
@@ -3378,6 +3379,9 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
             rounds={rounds} deliveries={deliveries} view={view} kanbanStd={kanbanStd} fmt={fmt} lineMap={lineMap}
             workDate={workDate} breakPolicies={breakPolicies} nowMs={nowMs}
           />
+        ) : viewMode === 'cards' ? (
+          /* 🎴 ตู้ e-Kanban — แผงของตัวเอง ไม่พึ่ง state ของบอร์ดเดิม (คนละข้อมูล คนละงาน) */
+          <KanbanCabinet role={role} />
         ) : viewMode === 'pull' ? (
           <PullBoard
             lotRequests={lotRequests} rawRequests={rawRequests} accumulator={accumulator}

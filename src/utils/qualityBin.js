@@ -126,8 +126,19 @@ export function overdueBins(rows = [], today, redChildOf = new Set(), scrapStatu
  *    อยากให้ผลพิจารณามีผลกับ %Q ต้องแก้ที่ `oee.js` โดยตั้งใจ ไม่ใช่ผลข้างเคียงของไฟล์นี้
  */
 
-/** ของในแถวงานเสียที่ "ต้องเอาไปพิจารณา" = NG + ต้องสงสัย (ซ่อมไม่นับ — ของที่ซ่อมผ่านถังมาแล้ว) */
-export const binPiecesOf = (d) => (Number(d?.qty_ng) || 0) + (Number(d?.qty_suspect) || 0);
+/** ของในแถวงานเสียที่ "ต้องเอาไปพิจารณา" = NG + ต้องสงสัย + **ซ่อม**
+ *
+ * 🔧 25/11 (คำสั่ง user) — เดิมไม่นับ `qty_repair` ด้วยเหตุผลว่า "ของที่ซ่อมผ่านถังมาแล้ว"
+ *    แต่หน้างานใช้ช่องนี้แบบ **"ส่งซ่อม/รอซ่อม"** (เคสจริง Assy GOR 24/11: *"งานซ่อมแนวเชื่อม
+ *    รอ Q ยืนยันคุณภาพ"*) ⇒ ของก้อนนั้น **ไม่เคยเข้าถัง ไม่มีใครตัดสินผลซ่อม**
+ *    ⇒ ซ่อมผ่าน/ไม่ผ่าน ไม่เคยไหลกลับไปแก้ %Q ของกะที่ทำมันออกมา
+ *
+ * 🔴 ผลที่ตามมา (ตั้งใจ): ชิ้นที่รอซ่อมจะ **ค้างอยู่ในถังเหลืองจนมีคนตัดสิน** เหมือน NG/ของสงสัย
+ *    — ซ่อมแล้วดี (`return_date`/`good`/`use_as_is`) = ไม่หัก %Q · ซ่อมแล้วเสีย (`scrap`/ลงถังแดง) = หัก
+ *    กลไกไหลกลับอยู่ที่ `oee.js` §7.2 (`binCoveredSplit`) + `restampSessionQByDefects()` ตัวเดิม
+ */
+export const binPiecesOf = (d) =>
+  (Number(d?.qty_ng) || 0) + (Number(d?.qty_suspect) || 0) + (Number(d?.qty_repair) || 0);
 
 /**
  * แถว `quality_bin_records` (ถังเหลือง) ที่ต้องสร้างจากบันทึกงานเสีย 1 แถว
@@ -162,6 +173,8 @@ export function yellowRowFromDefect(defect, session, { actorName = '', partNo = 
       defect?.child_mat_no
         ? `🧩 เสียที่พาร์ทลูก ${[String(defect.child_mat_no).trim(), String(defect.child_part_name || '').trim()].filter(Boolean).join(' · ')} (ไม่เสียทั้งชุด)`
         : '',
+      /* 🔧 ชิ้นที่ส่งซ่อม — QA เปิดถังต้องรู้ว่าก้อนนี้รอ "ผลซ่อม" ไม่ใช่รอตัดสินว่าเสียไหม */
+      (Number(defect?.qty_repair) || 0) > 0 ? `ส่งซ่อม ${Number(defect.qty_repair)} ชิ้น — รอผลซ่อม` : '',
       defect?.is_trial ? '🧪 งานทดลอง' : '']
       .map(x => String(x || '').trim()).filter(Boolean).join(' — '),
     reported_by: defect?.reported_by_name || actorName || null,

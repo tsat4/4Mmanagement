@@ -486,6 +486,19 @@ const TABLE_ROWS = {
      ถ้า mock ให้ note เดียวกันหมด ⇒ ทุกไลน์ได้สถานะ "ยังไม่เคยนับ" ⇒ สาย partial/done/driftAfter
      (ป้ายสถานะ · NoticeBar "ปรับยอดหลังนับ") **ไม่เคยถูกเรนเดอร์ใน harness เลย** — บทเรียนเดียวกับ mtn_orders
      คู่ (ไลน์, mat) ต้องตรงกับ line_stock_summary ไม่งั้นจับคู่ไม่ติดและยังเงียบเหมือนเดิม */
+  /* 🎴 ใบ e-Kanban — ต้องคละ **ทุกสถานะ** ไม่งั้นสาย in_box/picking/delivering + คิวหยิบของสโตร์
+     ไม่เคยถูกเรนเดอร์ใน harness · ต้องมีใบ "ไม่รู้โซน" (from_location ว่าง) ด้วย
+     ไม่งั้น NoticeBar "ยังไม่รู้โซนหยิบ" ไม่เคยขึ้น (2026-11-25) */
+  kanban_cards: (r, i) => ({ ...r,
+    card_no: `1010${1000 + (i % 8)}-${String((i % 4) + 1).padStart(2, '0')}`,
+    mat_no: `1010${1000 + (i % 8)}`, line_name: LINE_NAME((i % 3) + 1),
+    from_location: i % 5 === 0 ? null : `P4${10 + (i % 3)}`,
+    qty_per_card: 600, seq: (i % 4) + 1, total_cards: 4,
+    state: ['at_line', 'in_box', 'picking', 'delivering'][i % 4],
+    state_at: '2026-11-25T02:00:00Z',
+    suggested_at: i % 4 === 0 && i % 2 === 0 ? '2026-11-25T03:00:00Z' : null,
+    suggest_reason: i % 4 === 0 && i % 2 === 0 ? 'ผลิตไปแล้ว 600 ชิ้น ตั้งแต่ใบนี้ถึงไลน์' : null,
+    is_active: true }),
   line_stock_transactions: (r, i) => {
     /* 2 แถวต่อ 1 คู่ (ไลน์, mat) — คู่เดียวกับที่ line_stock_summary สร้าง (index j)
        ไม่งั้น "การนับ" กับ "แถวสต็อก" คนละคู่กัน ⇒ จับคู่ไม่ติด แล้วทุกไลน์ได้ "ยังไม่เคยนับ" เหมือนเดิม */
@@ -750,7 +763,9 @@ const TABLE_ROWS = {
     const k = Math.floor(i / 2);
     return { ...r, scope_kind: 'zone', scope_name: i % 2 ? 'MDB-10' : 'MDB', bucket_at: new Date(t).toISOString(), kw: 900, kw_max: 980, kwh_total: (i % 2 ? 5000 : 1000) + k * 15 };
   },
-  energy_panel_settings: (r, i) => ({ ...r, panel: i % 2 ? 'MDB-03' : 'MDB', demand_target_kw: i % 2 ? null : 1600 }),
+  /* 🌱 EF ไฟฟ้า (2026-11-25 · ห้ามถอด) — เดิมไม่มี utility_key ⇒ efFor() ไม่เจอ = การ์ด CO₂ บนบอร์ด + แท็บรายเดือนวาดแต่กิ่ง "ยังไม่ได้ตั้ง" */
+  energy_emission_factors: (r, i) => ({ ...r, utility_key: 'electric', kg_co2e: i % 2 ? 0.493 : 0.482, effective_from: i % 2 ? '2023-11-28' : '2026-10-21', source_ref: 'TGO (mock)' }),
+  energy_panel_settings: (r, i) => ({ ...r, panel: i % 2 ? 'MDB-03' : 'MDB', demand_target_kw: i % 2 ? null : 1600, baseline_start: i % 2 ? null : '12:00:00', baseline_end: i % 2 ? null : '12:50:00' }),
   integration_sources: (r, i) => ({
     ...r, kinds: i % 2 ? ['energy_readings', 'energy_events'] : ['machine_state', 'piece_count'],
     legacy_secret: false, key_hint: i % 3 ? 'ab12' : null,
@@ -798,6 +813,24 @@ const MOCK_DAY = (n) => {
 }
 
 const TABLE_FIXED = {
+  /* 📈 ทะเบียนเอกสาร (2026-11-26 · /live-benefits) — ต้องมีครบทุกสาขาของ buildPaperModel():
+     รายกะ/รายเดือน/รายเรื่อง ที่นับได้ · รายเรื่องที่นับไม่ได้ (material_request) · นับรวมกับตัวอื่น (mo_report_mtn) ·
+     เอกสารควบคุม/รายงาน (ไม่นับ) · ยังไม่จัด (paper_basis null) · ปิดใช้ */
+  doc_forms: [
+    { id: 'df1', doc_key: 'daily_production_report', form_code: null, title: 'DAILY PRODUCTION REPORT (ใบรายงานการผลิตประจำกะ)', paper_basis: 'shift', paper_unit: 'ไลน์ × กะ', used_route: '/daily-report', is_active: true },
+    { id: 'df2', doc_key: 'qa_inspection_sheet', form_code: 'FM-QA-112', title: 'Inspection Data', paper_basis: 'shift', paper_unit: 'พาร์ท × กะ × รอบ', used_route: '/qa', is_active: true },
+    { id: 'df3', doc_key: 'attendance_record', form_code: null, title: 'ใบบันทึกการมาทำงาน', paper_basis: 'month', paper_unit: 'ไลน์ × กะ', used_route: '/report', is_active: true },
+    { id: 'df4', doc_key: 'xlsx_am_monthly', form_code: null, title: 'รายงาน AM รายเดือน (Excel)', paper_basis: 'month', paper_unit: 'เครื่อง × กะ', used_route: null, is_active: true },
+    { id: 'df5', doc_key: 'lpa_report', form_code: 'FM-QMR-008', title: 'Layer Process Audit Report', paper_basis: 'month', paper_unit: 'ไลน์ × กะ', used_route: '/lpa', is_active: true },
+    { id: 'df6', doc_key: 'mo_report', form_code: 'FM-JIG-008', title: 'ใบแจ้งซ่อม / Work Order (MO)', paper_basis: 'event', paper_unit: 'เรื่อง', used_route: '/mtn-repair', is_active: true },
+    { id: 'df7', doc_key: 'mo_report_mtn', form_code: 'FM-MTN-006', title: 'ใบสั่งงานซ่อมบำรุง (MTN)', paper_basis: 'event', paper_unit: 'เรื่อง', used_route: '/mtn-repair', is_active: true },
+    { id: 'df8', doc_key: 'material_request', form_code: 'FM-STO-003', title: 'แบบฟอร์มการขอเบิก/คืนสินค้าคงคลัง', paper_basis: 'event', paper_unit: 'ใบ', used_route: '/qa?tab=matreq', is_active: true },
+    { id: 'df13', doc_key: 'multi_skill', form_code: 'FM-PD1-017', title: 'MULTI SKILL OF OPERATORS (สรุปทั้งไลน์)', paper_basis: 'quarter', paper_unit: 'ไลน์', used_route: '/skills-report', is_active: true },
+    { id: 'df9', doc_key: 'pe_fmea', form_code: 'FM-PE1-018', title: 'Process FMEA', paper_basis: 'document', paper_unit: 'พาร์ท', used_route: '/pe-docs', is_active: true },
+    { id: 'df10', doc_key: 'csv_dr_oee', form_code: null, title: 'รายงาน OEE รายกะ (CSV)', paper_basis: 'report', paper_unit: null, used_route: null, is_active: true },
+    { id: 'df11', doc_key: 'new_unclassified_form', form_code: null, title: 'ฟอร์มใหม่ที่ยังไม่จัดรอบ', paper_basis: null, paper_unit: null, used_route: null, is_active: true },
+    { id: 'df12', doc_key: 'old_form', form_code: null, title: 'ฟอร์มที่ปิดใช้', paper_basis: 'shift', paper_unit: null, used_route: null, is_active: false },
+  ],
   /* ☕ ทะเบียนเวลาพัก — **ห้ามถอด** (2026-10-20)
      เดิมตารางนี้ตกไปใช้ ROWS กลาง ⇒ ได้แถวขยะ (ไม่มีชื่อ · process "undefined" · เริ่ม 08:00 ทุกแถว)
      ⇒ จอ "☕ นโยบายหยุดพัก" ไม่เคยถูกสวีปด้วยข้อมูลทรงจริงเลย และที่สำคัญกว่า:
@@ -1206,11 +1239,26 @@ const TABLE_EXTRA = {
 /* 📺 ?rot=<path>[,<path>] (20/10) — แผนจอวนหน้าของบัญชี display ใน harness (คู่กับ ?tvshell=1)
    ไม่มีแถวนี้ = DisplayRotator ไม่ active ⇒ "พอดีจอ/แบ่งส่วน/รอหน้าย่อย" ไม่เคยถูกรันในฮาร์เนส
    ไม่ใส่ ?rot = พฤติกรรมเดิม (แถวกลาง ROWS → แผนไม่ active) */
+/* 🧩 ?wfgrid=1 (26/11) — ใบงาน "ใบตรวจแบบตาราง" (bbs_grid) ตัวอย่าง ⇒ จอ WfGridSheet วาดตารางจริงในฮาร์เนส
+   ไม่ใส่ = แถวกลาง ROWS (status ไม่ใช่ active ⇒ จอขึ้น "ใบงานนี้ยังไม่เปิดใช้" = สาขา fail-closed) */
+const WF_GRID_FIXTURE = typeof location !== 'undefined' && new URLSearchParams(location.search).get('wfgrid') === '1'
+  ? [{ id: 'wfd-grid', key: 'bbs_grid', name: 'BBS · สังเกตพฤติกรรมความปลอดภัย', status: 'active', current_version_id: 'wfv-grid',
+      wf_versions: {
+        form_schema: { fields: [{ key: 'grid', type: 'checkgrid', label: 'ผลสังเกต', rows: 'line_employees', recordPerm: 'bbs:record',
+          docKey: 'bbs_observation', autofill: 'ppe_daily', alertEvent: 'bbs_unsafe', rowNote: true, itemsTitle: 'ข้อตกลงด้านความปลอดภัย',
+          marks: [{ key: 'ok', glyph: '✓', label: 'พฤติกรรมเหมาะสม', color: 'green' }, { key: 'ng', glyph: '#', label: 'ไม่เหมาะสม (ใส่เลขข้อ)', color: 'red', needsItem: true, alert: true },
+                  { key: 'fixed', glyph: 'm', label: 'ปรับแก้แล้ว', color: 'blue' }, { key: 'na', glyph: '✗', label: 'ไม่ได้ตรวจ', color: 'muted' }],
+          items: [{ seq: 1, text: 'สวมหมวกนิรภัย', auto: 'helmet' }, { seq: 2, text: 'สวมรองเท้านิรภัย', auto: 'boots' }, { seq: 3, text: 'ปฏิบัติตาม SOP' }] }] },
+        flow_schema: { binding: { subject: 'grid', period: 'month', perShift: false },
+          steps: [{ key: 'issue', label: 'ผู้ตรวจ', sig_label: 'ออกโดย', kind: 'ack', assignee: { rule: 'perm_in_line', perm: 'bbs:record' } },
+                  { key: 'check', label: 'Supervisor', sig_label: 'ตรวจสอบโดย', kind: 'approve', assignee: { rule: 'perm_in_line', perm: 'bbs:check' } }] } } }]
+  : null
 const ROT_PATHS = typeof location !== 'undefined' ? (new URLSearchParams(location.search).get('rot') || '') : ''
 const rowsFor = (table) => {
   if (table === 'display_rotations' && ROT_PATHS) {
     return [{ enabled: true, items: ROT_PATHS.split(',').map(path => ({ path, sec: 20 })), default_sec: 20, pause_sec: 120, reload_min: 0 }]
   }
+  if (table === 'wf_defs' && WF_GRID_FIXTURE) return WF_GRID_FIXTURE
   if (TABLE_FIXED[table]) return TABLE_FIXED[table]
   const fn = TABLE_ROWS[table]
   const base = fn ? ROWS.map((r, idx) => fn(r, idx + 1)) : ROWS
@@ -1354,7 +1402,32 @@ const PM_USAGE_DAILY = () => {
   return out;
 };
 
+/* 📈 esm_benefits_rollup — ของจริงเรียก 2 project (Main ก่อน · DR หลัง ใน Promise.all) แต่ mock มี client เดียว
+   ⇒ สลับคืนชุด Main/DR ตามลำดับการเรียก (ตัวเลข = ทรงจริงจากผล RPC 26/11 · นับล้วน ไม่มีชื่อคน)
+   มีเดือนอนาคต (แผน LPA ล่วงหน้า) ให้ตัวกรองเดือนถูกเรนเดอร์ */
+let benefitsCall = 0
+const BENEFITS_MAIN = [
+  ['paper', 'attendance_record', '2026-10', 49, 886], ['paper', 'attendance_record', '2026-11', 59, 900],
+  ['paper', 'lpa_report', '2026-10', 20, 460], ['paper', 'lpa_report', '2026-11', 20, 503], ['paper', 'lpa_report', '2026-12', 20, 0],
+  ['paper', 'qa_inspection_sheet', '2026-10', 139, 139], ['paper', 'qa_inspection_sheet', '2026-11', 897, 897],
+  ['paper', 'multi_skill', '2026-10', 27, 4242],
+  ['paper', 'pokayoke_check', '2026-10', 16, 16], ['paper', 'pokayoke_check', '2026-11', 98, 1758],
+  ['flow', 'fourm_approve_h', '2026-10', 384, 236.3], ['flow', 'fourm_approve_h', '2026-11', 5, 3.1],
+]
+const BENEFITS_DR = [
+  ['paper', 'daily_production_report', '2026-09', 420, 420], ['paper', 'daily_production_report', '2026-10', 783, 783], ['paper', 'daily_production_report', '2026-11', 881, 881],
+  ['paper', 'xlsx_am_monthly', '2026-10', 53, 263], ['paper', 'xlsx_am_monthly', '2026-11', 91, 934],
+  ['paper', 'mo_report', '2026-09', 300, 300], ['paper', 'mo_report', '2026-10', 832, 832], ['paper', 'mo_report', '2026-11', 1008, 1008],
+  ['flow', 'mo_accept_min', '2026-10', 823, 10], ['flow', 'mo_accept_min', '2026-11', 995, 9],
+  ['flow', 'mo_fix_min', '2026-10', 792, 17], ['flow', 'mo_fix_min', '2026-11', 931, 14],
+  ['flow', 'mo_linked', '2026-10', 832, 450], ['flow', 'mo_linked', '2026-11', 1008, 507],
+  ['flow', 'close_lag_h', '2026-09', 300, 16], ['flow', 'close_lag_h', '2026-10', 781, 4.4], ['flow', 'close_lag_h', '2026-11', 847, 10.9],
+]
+const BENEFITS_ROLL = () => (benefitsCall++ % 2 === 0 ? BENEFITS_MAIN : BENEFITS_DR)
+  .map(([kind, key, month_key, n, val]) => ({ kind, key, month_key, n, val }))
+
 const RPC_RESULT = {
+  esm_benefits_rollup: BENEFITS_ROLL,
   pm_usage_daily: PM_USAGE_DAILY,
   kpi_mtn_rollup: KPI_MTN_ROLL,
   obeya_year_rollup: OBEYA_YEAR,

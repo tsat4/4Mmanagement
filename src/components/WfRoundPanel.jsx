@@ -36,9 +36,10 @@ const STATE_META = {
  * @param hasData   รอบรายวันมีข้อมูลแล้วไหม (false = ยังไม่เปิดใบ) · null = ไม่รู้
  * @param summary   ข้อความสรุปใส่ในกล่องยืนยัน (เช่น "ไม่ผ่าน 1 รายการ")
  * @param onChanged เรียกหลังเซ็น/เพิกถอน (หน้าแม่โหลดสถานะล็อกใหม่)
+ * @param defKey    เฉพาะใบงานนี้ (ใบตรวจแบบตาราง subject 'grid' มีหลายใบงาน · 26/11)
  * @param openOnlyWithData ไม่เปิดใบรอบเมื่อ `hasData === false` ทุกความถี่ (BBS รายเดือน: ใบเปล่าไม่ต้องมีใครเซ็น · 25/11)
  */
-export default function WfRoundPanel({ subject, line, date, shift, hasData = null, summary = '', onChanged, openOnlyWithData = false }) {
+export default function WfRoundPanel({ subject, defKey = null, line, date, shift, hasData = null, summary = '', onChanged, openOnlyWithData = false }) {
   const { fullName, userId: ctxUid } = useContext(UserContext);
   const [rows, setRows] = useState(null);          // null = กำลังโหลด
   const [err, setErr] = useState('');
@@ -54,7 +55,7 @@ export default function WfRoundPanel({ subject, line, date, shift, hasData = nul
     const dRes = await supabase.from('wf_defs').select('id, key, name, status, current_version_id, wf_versions!wf_defs_current_version_fk(flow_schema)')
       .eq('status', 'active');
     if (dRes.error) return { err: dRes.error.message };
-    const defs = (dRes.data || []).filter(d => d.wf_versions?.flow_schema?.binding?.subject === subject);
+    const defs = (dRes.data || []).filter(d => d.wf_versions?.flow_schema?.binding?.subject === subject && (!defKey || d.key === defKey));
     const out = [];
     for (const d of defs) {
       const flow = d.wf_versions.flow_schema;
@@ -76,7 +77,7 @@ export default function WfRoundPanel({ subject, line, date, shift, hasData = nul
       out.push({ def: d, flow, b, from, to, inst, lastClosed, me, ensureStatus });
     }
     return { rows: out };
-  }, [subject, line, date, shift, hasData, ctxUid, openOnlyWithData]);
+  }, [subject, defKey, line, date, shift, hasData, ctxUid, openOnlyWithData]);
 
   useEffect(() => {
     let alive = true;
