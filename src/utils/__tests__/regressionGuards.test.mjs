@@ -12891,6 +12891,24 @@ test('🔗 wf-bound-signoff — เอกสารที่ผูก e-Workflow 
   assert.deepEqual(bad, [], `\n\n❌ ${bad.length} จุด\n   ${bad.join('\n   ')}\n`);
 });
 
+test('🧩 wf-checkgrid — ใบตรวจแบบตาราง: จอเดียว อ่านนิยามจากใบงาน · ด่านเขียนครบ (26/11 · คำสั่ง user)', () => {
+  const bad = [];
+  const rd = (f) => stripComments(readFileSync(join(ROOT, f), 'utf8'));
+  const sheet = rd('src/components/WfGridSheet.jsx');
+  /* ทุกขาเขียนผ่าน ensureSheet ⇒ ต้องเช็ค สิทธิ์ (recordPerm) · ชั้น ③ (canWriteLine) · ล็อก (มีคนเซ็น) · ใบที่โชว์ตรงกับที่เลือก */
+  const ens = sheet.slice(sheet.indexOf('const ensureSheet = async'), sheet.indexOf('const notifyAlert'));
+  for (const [re, why] of [[/canRecord/, 'สิทธิ์บันทึก'], [/lineWrite\.ok/, 'ชั้น ③ canWriteLine'], [/if \(lock\)/, 'ล็อกเมื่อเซ็นแล้ว'], [/matches\(/, 'stale guard']])
+    if (!re.test(ens)) bad.push(`WfGridSheet.ensureSheet: ขาดด่าน ${why}`);
+  if (/from '\.\.\/utils\/bbsMarks'/.test(sheet) || /from '\.\.\/utils\/bbsMarks'/.test(rd('src/lib/gridPrint.js')))
+    bad.push('WfGridSheet/gridPrint: ห้าม import สัญลักษณ์ BBS ตายตัว — อ่านจาก checkgrid ของใบงาน');
+  if (/from\('wf_grid_(cells|sheets|row_notes)'\)/.test(rd('src/pages/BbsCheck.jsx'))) bad.push('BbsCheck: ห้ามเขียน wf_grid_* เอง — ใช้ <WfGridSheet>');
+  if (!/isBbsGridMonth\(month\)[\s\S]{0,200}<WfGridSheet defKey=\{BBS_GRID_KEY\}/.test(rd('src/pages/BbsCheck.jsx'))) bad.push('BbsCheck: เดือนตั้งแต่ BBS_GRID_FROM ต้องวาด <WfGridSheet defKey={BBS_GRID_KEY}>');
+  const mig = readFileSync(join(ROOT, 'supabase/migrations/20261126_wf_checkgrid_main.sql'), 'utf8');
+  for (const t of ['trg_wf_grid_sheets_lock', 'trg_wf_grid_cells_lock', 'trg_wf_grid_notes_lock']) if (!mig.includes(`create trigger ${t}`)) bad.push(`migration: ต้องมี ${t}`);
+  if (!/using \(wf_grid_can_write\(def_key\)\)/.test(mig)) bad.push('migration: RLS เขียน wf_grid_sheets ต้องผ่าน wf_grid_can_write');
+  assert.deepEqual(bad, [], `\n\n❌ ${bad.length} จุด\n   ${bad.join('\n   ')}\n`);
+});
+
 test('🏬 store-leg-always-written — ใบขอเติมต้องเขียน "ออกจาก STORE" เสมอ ห้ามมีเงื่อนไข', () => {
   /* 🔴 วัดจริง 25/11: ใบขอเติม 726 ใบ → **174 ใบมีแต่ขาเข้าไลน์ ไม่มีขาออกจาก STORE** (116,878 ชิ้น)
        ต้นเหตุ: โค้ดก่อน 19/11 เขียนว่า

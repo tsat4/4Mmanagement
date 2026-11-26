@@ -19,10 +19,13 @@ export const FIELD_TYPES = [
   { type: 'mat',      label: 'MAT / พาร์ท (ทะเบียน)', picker: 'ProductSelect' },
   { type: 'line',     label: 'ไลน์ผลิต (ทะเบียน)',   picker: 'LineSelect' },
   { type: 'heading',  label: 'หัวข้อคั่น (ไม่เก็บค่า)', display: true },
+  // 🧩 26/11 ตารางตรวจ (คน × วัน) — ใช้ได้เฉพาะใบที่ผูกเอกสาร "ใบตรวจแบบตาราง" · ข้อมูลอยู่ wf_grid_* ไม่อยู่ใน data ของใบ (utils/checkGrid.js)
+  { type: 'checkgrid', label: 'ตารางตรวจ (คน × วัน)', display: true, gridOnly: true },
 ];
 export const FIELD_TYPE_MAP = Object.fromEntries(FIELD_TYPES.map(t => [t.type, t]));
 
 import { validateBinding } from './wfBound.js';
+import { validateGrid } from './checkGrid.js';
 
 export const STEP_KINDS = [
   { kind: 'approve', label: 'อนุมัติ (อนุมัติ/ตีกลับ/ส่งกลับแก้ได้)' },
@@ -96,6 +99,13 @@ export function validateDef({ key, name, ownerSection, form, flow, startRoles } 
   });
   if (!bound && !(startRoles || []).length) errs.push('ยังไม่ได้เลือกว่า role ไหนเปิดใบได้');
   if (bound) errs.push(...validateBinding(flow.binding, steps));
+  // 🧩 ใบตรวจแบบตาราง: ตารางตรวจ 1 ช่องพอดี · ไม่แยกกะ (ตรงกับด่านใน wf_request_publish · 20261126)
+  const grids = fields.filter(f => f.type === 'checkgrid');
+  if (flow?.binding?.subject === 'grid') {
+    if (grids.length !== 1) errs.push(`ใบตรวจแบบตารางต้องมีช่อง "ตารางตรวจ" 1 ช่องพอดี (ตอนนี้ ${grids.length} ช่อง)`);
+    if (flow.binding.perShift) errs.push('ใบตรวจแบบตารางยังไม่รองรับแยกกะ');
+    grids.forEach(g => errs.push(...validateGrid(g)));
+  } else if (grids.length) errs.push('ช่อง "ตารางตรวจ" ใช้ได้เฉพาะใบที่ผูกเอกสาร "ใบตรวจแบบตาราง"');
   return errs;
 }
 
