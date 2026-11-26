@@ -56,7 +56,7 @@ import InfoMore from '../components/InfoMore';   // ⋯ ปุ่มตายต
 import { tint } from '../utils/statusTone';   // สี token ต่อ alpha-hex ไม่ได้ ⇒ ย่อยเป็น -dim/-line (UI §6.17)
 import { askConfirm } from '../utils/askConfirm';
 import { loadDeptFrames, ownsFrame } from '../utils/jigFrames';
-import { identityPatch, deleteMode, IDENTITY_FIELDS, IDENTITY_LABEL } from '../utils/sharedEquipment';   // ตัวตนใช้ร่วม · มุมมองแยก (26/11)   // รูปเครื่องแยกตามแผนก (26/11)
+import { identityPatch, deleteMode, ownerTeamOf, canEditIdentity, IDENTITY_FIELDS, IDENTITY_LABEL } from '../utils/sharedEquipment';   // ตัวตนใช้ร่วม · มุมมองแยก (26/11)   // รูปเครื่องแยกตามแผนก (26/11)
 /* สีจาก token (var(--red) …) ต่อ alpha-hex ไม่ได้ (SVG/CSS parse พัง = ดำ · UI §6.17) ⇒ ย่อยเป็น -dim/-line · hex จาก DB ยังต่อ alpha ได้เหมือนเดิม */
 const tintOf = (c, lvl) => {
   const m = /^var\(--(green|amber|red|blue)\)$/.exec(c || '');
@@ -367,6 +367,7 @@ function EquipmentModal({ onClose, onSaved, editJig, department, categories, met
   const [checkpoints, setCheckpoints] = useState([])
   const [layoutType, setLayoutType] = useState(editJig?.layout_type ?? 'image_pin')
   // รูปหลายมุมต่ออุปกรณ์ (1 รูป = ปกติ, ≥2 รูป = ปัดดูรอบเครื่อง — ไม่บังคับจำนวน)
+  const [idLock, setIdLock] = useState(null)   // { owner, error } = หัวเครื่องเป็นของทีมอื่น ⇒ ช่องหัวเครื่องล็อก (แบบ ก. 26/11)
   const [framesLoadErr, setFramesLoadErr] = useState('')   // โหลดรูปของแผนกไม่ได้ = ห้ามบันทึก (26/11)
   const [frames, setFrames] = useState([])   // [{ _key, id?, image_path?, _file?, _preview, title }]
   const initialImagePathsRef = useRef(new Set()) // path รูปตอนเปิดแก้ไข — ใช้เก็บกวาดไฟล์ที่ถูกถอดตอน save
@@ -470,6 +471,12 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
     //    เครื่องนี้อาจยังไม่มี checklist ของแผนกที่เลือก = ฟอร์มเปล่าให้เริ่มลงจุดตรวจใหม่ (สร้างจริงตอน save)
     ;(async () => {
       const cl = await findChecklist(editJig.id, 'mtn', department)
+      // 🔒 แบบ ก. (26/11 · utils/sharedEquipment.js) — หัวเครื่องแก้ได้เฉพาะทีมเจ้าของ · ล็อกช่องให้เห็นตั้งแต่เปิด
+      {
+        const rCl = await supabaseDR.from('checklists').select('id, department, created_at').eq('equipment_id', editJig.id)
+        const owner = rCl.error ? null : ownerTeamOf(rCl.data)
+        setIdLock(canEditIdentity({ owner, department, error: rCl.error }) ? null : { owner, error: rCl.error ? (rCl.error.message || String(rCl.error)) : '' })
+      }
       setOrigFreq(cl?.frequency ?? null)
       setCycleDays(''); setNextDue(''); setNextDueDirty(false); setOrigCycle(null); setLastDoneYmd(null)
       // load spin frames (jig_images); fall back to jigs.image_path as one frame
@@ -780,16 +787,19 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
       /* 🔗 ตัวตนใช้ร่วม · มุมมองแยก (26/11 · utils/sharedEquipment.js) — เช็คก่อนอัปโหลดอะไร
          เครื่องที่แผนกอื่นใช้อยู่: เพิ่มใหม่ = เติมแค่ช่องว่าง · แก้ไข = เขียนแค่ช่องที่แก้จริง + ถามยืนยัน
          อ่านไม่ได้ = ถือว่าใช้ร่วม (ไม่ทับ) */
-      let sharedJig = false, curJig = null, otherDepts = []
+      let sharedJig = false, curJig = null, otherDepts = [], ownerTeam = null, idEditable = true
       if (existing) {
-        const [rOther, rCur] = await Promise.all([
-          supabaseDR.from('checklists').select('department').eq('equipment_id', jigId).neq('department', department),
+        const [rCl, rCur] = await Promise.all([
+          supabaseDR.from('checklists').select('id, department, created_at').eq('equipment_id', jigId),
           supabaseDR.from('jigs').select(['image_path', ...IDENTITY_FIELDS].join(', ')).eq('id', jigId).maybeSingle(),
         ])
         if (rCur.error) throw rCur.error
         curJig = rCur.data
-        otherDepts = [...new Set((rOther.data ?? []).map(r => r.department))]
-        sharedJig = !!rOther.error || otherDepts.length > 0
+        otherDepts = [...new Set((rCl.data ?? []).map(r => r.department).filter(d => d !== department))]
+        sharedJig = !!rCl.error || otherDepts.length > 0
+        // 🔒 แบบ ก. (user 26/11): หัวเครื่องแก้ได้เฉพาะ "ทีมที่ตั้งเครื่องนี้เป็นทีมแรก" · อ่านไม่ได้ = แก้ไม่ได้
+        ownerTeam = rCl.error ? null : ownerTeamOf(rCl.data)
+        idEditable = canEditIdentity({ owner: ownerTeam, department, error: rCl.error })
       }
       const idForm = {
         name: name.trim(), description: description.trim() || null,
@@ -799,7 +809,11 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
         machine_no: machineNo || null, machine_id: machineId || null,
         equipment_type: equipType, equipment_category: equipCategory,
       }
-      const { patch: idPatch, changes: idChanges } = identityPatch({ cur: curJig, orig: editJig?.id ? editJig : null, form: idForm, shared: sharedJig && !!curJig })
+      const { patch: idPatch, changes: idChanges, blocked: idBlocked } = identityPatch({ cur: curJig, orig: editJig?.id ? editJig : null, form: idForm, shared: sharedJig && !!curJig, canEdit: idEditable })
+      if (sharedJig && idBlocked.length) {
+        const ownerLabel = ownerTeam ? (pmTeamsSync().find(t => t.key === ownerTeam)?.label ?? ownerTeam) : tr('(อ่านไม่ได้)')
+        toast.info(`${tr('ข้อมูลตัวเครื่องเป็นของทีม')} ${ownerLabel} — ${tr('ช่องที่ไม่ถูกบันทึก')}: ${idBlocked.map(f => tr(IDENTITY_LABEL[f] ?? f)).join(', ')}`)
+      }
       if (sharedJig && idChanges.length) {
         const deptNames = otherDepts.map(d => pmTeamsSync().find(t => t.key === d)?.label ?? d).join(', ') || tr('แผนกอื่น (อ่านรายชื่อไม่ได้)')
         const lines = idChanges.map(c => `• ${tr(IDENTITY_LABEL[c.field] ?? c.field)}: ${c.from ?? '—'} → ${c.to ?? '—'}`).join('\n')
@@ -1366,6 +1380,14 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
             </div>
           )}
 
+          {isEdit && idLock && (
+            <div style={{ fontSize: 12, padding: '8px 10px', borderRadius: 'var(--r-md)', background: 'var(--amber-dim)', border: '1px solid var(--amber-line)', color: 'var(--text2)' }}>
+              🔒 {idLock.error
+                ? `${tr('อ่านไม่ได้ว่าทีมไหนเป็นเจ้าของเครื่องนี้ — ล็อกข้อมูลตัวเครื่องไว้ก่อน')} (${idLock.error})`
+                : `${tr('ข้อมูลตัวเครื่อง (ชื่อ · No. · Part · ไลน์) เป็นของทีม')} ${pmTeamsSync().find(t => t.key === idLock.owner)?.label ?? idLock.owner} — ${tr('ทีมนี้แก้ได้เฉพาะจุดตรวจ/รูป/รอบ PM ของตัวเอง')}`}
+            </div>
+          )}
+          <fieldset disabled={!!(isEdit && idLock)} style={{ display: 'contents', border: 0, padding: 0, margin: 0, minWidth: 0 }}>
           <div>
             <label style={S.label}>{tr('ชื่ออุปกรณ์ *')}</label>
             <input value={name} onChange={e => setName(e.target.value)} placeholder={tr('เช่น JIG-001 ตรวจ Pin Diameter')}
@@ -1426,6 +1448,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
                 style={{ width: '100%' }} />
             </div>
           )}
+          </fieldset>
 
           <div>
             <label style={S.label}>{tr('รอบ PM — ทำซ้ำทุกกี่วัน (')}{deptLabel})</label>
