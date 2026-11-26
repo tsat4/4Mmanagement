@@ -23,12 +23,13 @@ export const SHEETS_PER_REAM = 500;
 export const PAPER_BASIS = Object.freeze({
   shift:    { label: 'ออกทุกกะ',            short: 'รายกะ',     paper: true,  project: true,  tone: 'var(--blue)' },
   month:    { label: 'เดือนละใบ',           short: 'รายเดือน',  paper: true,  project: false, tone: 'var(--green)' },
+  quarter:  { label: 'ทุก 3 เดือน',          short: 'รายไตรมาส', paper: true,  project: false, tone: 'var(--accent)' },   // skill matrix (26/11)
   event:    { label: 'ออกต่อเรื่อง',          short: 'รายเรื่อง',  paper: true,  project: true,  tone: 'var(--amber)' },
   document: { label: 'เอกสารควบคุม/ทะเบียน', short: 'เอกสารควบคุม', paper: false, project: false, tone: 'var(--purple)' },
   report:   { label: 'รายงาน/ส่งออกข้อมูล',   short: 'รายงาน',    paper: false, project: false, tone: 'var(--muted)' },
   other:    { label: 'ป้าย/แม่แบบนำเข้า',     short: 'อื่นๆ',      paper: false, project: false, tone: 'var(--muted)' },
 });
-export const BASIS_ORDER = ['shift', 'month', 'event', 'document', 'report', 'other'];
+export const BASIS_ORDER = ['shift', 'month', 'quarter', 'event', 'document', 'report', 'other'];
 
 /** ฟอร์มที่ถูกนับรวมใต้อีกตัว — MO 2 ฟอร์ม (FM-JIG-008 / FM-MTN-006) แยกด้วยกฎ isMtnFormRow ฝั่ง JS ทำใน SQL ไม่ได้ */
 export const COUNTED_WITH = Object.freeze({ mo_report_mtn: 'mo_report' });

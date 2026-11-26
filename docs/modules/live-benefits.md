@@ -14,7 +14,7 @@
 | ชั้น | อยู่ที่ | หน้าที่ |
 |---|---|---|
 | รายชื่อฟอร์ม | `doc_forms` (ทะเบียนเอกสาร — ฟอร์ม export ทุกตัวต้องลงอยู่แล้ว) | **ไม่มีลิสต์มือ** · ฟอร์มใหม่ที่ลงทะเบียน = โผล่หน้านี้เอง |
-| รอบการออกใบ | `doc_forms.paper_basis` + `paper_unit` (แก้ที่ `/doc-forms` ไม่ต้อง deploy) | `shift` ออกทุกกะ · `month` เดือนละใบ · `event` ต่อเรื่อง · `document` เอกสารควบคุม · `report` รายงาน/ส่งออก · `other` ป้าย/แม่แบบ · `null` ยังไม่จัด |
+| รอบการออกใบ | `doc_forms.paper_basis` + `paper_unit` (แก้ที่ `/doc-forms` ไม่ต้อง deploy) | `shift` ออกทุกกะ · `month` เดือนละใบ · `quarter` ทุก 3 เดือน · `event` ต่อเรื่อง · `document` เอกสารควบคุม · `report` รายงาน/ส่งออก · `other` ป้าย/แม่แบบ · `null` ยังไม่จัด |
 | ตัวนับ | RPC `esm_benefits_rollup(p_from)` **ชื่อเดียวกันทั้ง 2 project** | คืน `(kind, key, month_key, n, val)` · `paper`: n = แผ่น · val = ครั้งที่บันทึก · `flow`: n = ตัวอย่าง · val = มัธยฐาน · **นับอย่างเดียว ไม่คิด KPI** |
 | ประกอบ/คาดการณ์ | `utils/paperBenefits.js` | `buildPaperModel` · `buildFlowModel` · `flowTrend` · `keyingHours` · **ห้ามคิดซ้ำในหน้า** |
 
@@ -48,6 +48,7 @@
 | `changing_point` (FM-PD-037) | Main | ไลน์ ต่อเดือน | รายการ 4M |
 | `cqi15_event_log` | Main | ไลน์ ต่อเดือน | เหตุการณ์ |
 | `qa_inspection_sheet` · `ojt` | Main | ใบ | = แผ่น |
+| `multi_skill` (FM-PD1-017 skill matrix) | Main | ไลน์ ต่อไตรมาส — วางที่เดือนต้นไตรมาส · **ทะเบียนทักษะไม่มีประวัติรายไตรมาส ⇒ ใช้ภาพปัจจุบัน** (migration `20261126b_…`) | ช่องคะแนนทักษะ |
 | `pokayoke_check` | Main | อุปกรณ์ × กะ ต่อเดือน — **ไม่อยู่ใน `doc_forms`** (ยังไม่มีแบบพิมพ์) ⇒ อยู่ใน `EXTRA_FORMS` | ครั้งที่ตรวจ |
 
 **ตัวชี้วัดเวลา (`FLOW_METRICS`):** แจ้งซ่อม→ช่างรับงาน · แจ้งซ่อม→ซ่อมเสร็จ · % ใบซ่อมที่เปิดต่อจาก downtime/ผลตรวจ AM ·
@@ -58,6 +59,9 @@
   (สถานะ "ยังนับสดไม่ได้") · **นับสด** = เติม 1 บล็อก `union all` ใน RPC ของ project ที่ตารางอยู่ (key = doc_key) — ไม่ต้องแก้หน้า
 - **ตัวชี้วัดเวลาใหม่** — เติม `union all` kind='flow' ใน RPC + 1 entry ใน `FLOW_METRICS`
 - ฟอร์มที่ทำในระบบแต่ไม่มีแบบพิมพ์ = `EXTRA_FORMS` (พอมีแบบพิมพ์แล้วให้ลง `doc_forms` แล้วลบออกจาก `EXTRA_FORMS`)
+
+## รอบ 2 (26/11 · user "ใบ OJT เซ็นในจอได้ทั้งหมด · ใบ skill matrix อัพทุก 3 เดือน = ลดกระดาษ")
+- เพิ่ม `paper_basis='quarter'` + `multi_skill` = quarter ต่อไลน์ · OJT นับอยู่แล้ว (รายเรื่อง — ใบละครั้งที่อบรม)
 
 ## ยังไม่ทำ (เฟสถัดไป)
 - นับสดฟอร์มรายเรื่องที่เหลือ: `material_request` · `pm_coordination` · `ot_booking` · `ot_compensation_report` · `morning_meeting` ·

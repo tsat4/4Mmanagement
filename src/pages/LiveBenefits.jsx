@@ -128,7 +128,7 @@ function PaperTab({ model }) {
       || (b.byMonth[model.cur]?.sheetsProj ?? 0) - (a.byMonth[model.cur]?.sheetsProj ?? 0));
   const chart = model.months.map(mk => {
     const row = { m: monthText(mk) };
-    for (const b of ['shift', 'month', 'event']) {
+    for (const b of ['shift', 'month', 'quarter', 'event']) {
       row[b] = counted.filter(i => i.basis === b).reduce((a, i) => a + (i.byMonth[mk]?.sheetsProj ?? i.byMonth[mk]?.sheets ?? 0), 0);
     }
     return row;
@@ -155,7 +155,7 @@ function PaperTab({ model }) {
               <YAxis width="auto" tick={axisTick()} />
               <Tooltip {...tooltipProps()} formatter={(v) => Number(v).toLocaleString()} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
-              {['shift', 'month', 'event'].map(b => (
+              {['shift', 'month', 'quarter', 'event'].map(b => (
                 <Bar key={b} dataKey={b} stackId="p" name={tr(PAPER_BASIS[b].label)} fill={PAPER_BASIS[b].tone} {...chartAnim()} />
               ))}
             </BarChart>

@@ -81,7 +81,8 @@ test('ยอดรวม: เดือนอนาคตถูกทิ้ง ·
 
 test('ทุก paper_basis มีป้าย · ชนิดที่ไม่ใช่กระดาษไม่ถูกนับ', () => {
   for (const b of ['document', 'report', 'other']) assert.equal(PAPER_BASIS[b].paper, false)
-  for (const b of ['shift', 'month', 'event']) assert.equal(PAPER_BASIS[b].paper, true)
+  for (const b of ['shift', 'month', 'quarter', 'event']) assert.equal(PAPER_BASIS[b].paper, true)
+  assert.equal(PAPER_BASIS.quarter.project, false)   // skill matrix ทุก 3 เดือน — ห้ามคูณคาดการณ์
 })
 
 test('flow — ratio เป็น % · เดือนไม่มีข้อมูล = null · trend ดีขึ้น/แย่ลงตามทิศของตัวชี้วัด', () => {
