@@ -93,6 +93,7 @@ const EN = {
   'รายฟอร์ม — แผ่นต่อเดือน (ในวงเล็บ = ครั้งที่บันทึก)': 'By form — sheets per month (entries in brackets)',
   'ออกทุกกะ': 'Every shift',
   'เดือนละใบ': 'One per month',
+  'ทุก 3 เดือน': 'Every 3 months',
   'ออกต่อเรื่อง': 'Per event',
   'เอกสารควบคุม/ทะเบียน': 'Controlled document / register',
   'รายงาน/ส่งออกข้อมูล': 'Report / data export',

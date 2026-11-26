@@ -825,6 +825,7 @@ const TABLE_FIXED = {
     { id: 'df6', doc_key: 'mo_report', form_code: 'FM-JIG-008', title: 'ใบแจ้งซ่อม / Work Order (MO)', paper_basis: 'event', paper_unit: 'เรื่อง', used_route: '/mtn-repair', is_active: true },
     { id: 'df7', doc_key: 'mo_report_mtn', form_code: 'FM-MTN-006', title: 'ใบสั่งงานซ่อมบำรุง (MTN)', paper_basis: 'event', paper_unit: 'เรื่อง', used_route: '/mtn-repair', is_active: true },
     { id: 'df8', doc_key: 'material_request', form_code: 'FM-STO-003', title: 'แบบฟอร์มการขอเบิก/คืนสินค้าคงคลัง', paper_basis: 'event', paper_unit: 'ใบ', used_route: '/qa?tab=matreq', is_active: true },
+    { id: 'df13', doc_key: 'multi_skill', form_code: 'FM-PD1-017', title: 'MULTI SKILL OF OPERATORS (สรุปทั้งไลน์)', paper_basis: 'quarter', paper_unit: 'ไลน์', used_route: '/skills-report', is_active: true },
     { id: 'df9', doc_key: 'pe_fmea', form_code: 'FM-PE1-018', title: 'Process FMEA', paper_basis: 'document', paper_unit: 'พาร์ท', used_route: '/pe-docs', is_active: true },
     { id: 'df10', doc_key: 'csv_dr_oee', form_code: null, title: 'รายงาน OEE รายกะ (CSV)', paper_basis: 'report', paper_unit: null, used_route: null, is_active: true },
     { id: 'df11', doc_key: 'new_unclassified_form', form_code: null, title: 'ฟอร์มใหม่ที่ยังไม่จัดรอบ', paper_basis: null, paper_unit: null, used_route: null, is_active: true },
@@ -1404,6 +1405,7 @@ const BENEFITS_MAIN = [
   ['paper', 'attendance_record', '2026-10', 49, 886], ['paper', 'attendance_record', '2026-11', 59, 900],
   ['paper', 'lpa_report', '2026-10', 20, 460], ['paper', 'lpa_report', '2026-11', 20, 503], ['paper', 'lpa_report', '2026-12', 20, 0],
   ['paper', 'qa_inspection_sheet', '2026-10', 139, 139], ['paper', 'qa_inspection_sheet', '2026-11', 897, 897],
+  ['paper', 'multi_skill', '2026-10', 27, 4242],
   ['paper', 'pokayoke_check', '2026-10', 16, 16], ['paper', 'pokayoke_check', '2026-11', 98, 1758],
   ['flow', 'fourm_approve_h', '2026-10', 384, 236.3], ['flow', 'fourm_approve_h', '2026-11', 5, 3.1],
 ]
