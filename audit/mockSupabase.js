@@ -813,6 +813,23 @@ const MOCK_DAY = (n) => {
 }
 
 const TABLE_FIXED = {
+  /* 📈 ทะเบียนเอกสาร (2026-11-26 · /live-benefits) — ต้องมีครบทุกสาขาของ buildPaperModel():
+     รายกะ/รายเดือน/รายเรื่อง ที่นับได้ · รายเรื่องที่นับไม่ได้ (material_request) · นับรวมกับตัวอื่น (mo_report_mtn) ·
+     เอกสารควบคุม/รายงาน (ไม่นับ) · ยังไม่จัด (paper_basis null) · ปิดใช้ */
+  doc_forms: [
+    { id: 'df1', doc_key: 'daily_production_report', form_code: null, title: 'DAILY PRODUCTION REPORT (ใบรายงานการผลิตประจำกะ)', paper_basis: 'shift', paper_unit: 'ไลน์ × กะ', used_route: '/daily-report', is_active: true },
+    { id: 'df2', doc_key: 'qa_inspection_sheet', form_code: 'FM-QA-112', title: 'Inspection Data', paper_basis: 'shift', paper_unit: 'พาร์ท × กะ × รอบ', used_route: '/qa', is_active: true },
+    { id: 'df3', doc_key: 'attendance_record', form_code: null, title: 'ใบบันทึกการมาทำงาน', paper_basis: 'month', paper_unit: 'ไลน์ × กะ', used_route: '/report', is_active: true },
+    { id: 'df4', doc_key: 'xlsx_am_monthly', form_code: null, title: 'รายงาน AM รายเดือน (Excel)', paper_basis: 'month', paper_unit: 'เครื่อง × กะ', used_route: null, is_active: true },
+    { id: 'df5', doc_key: 'lpa_report', form_code: 'FM-QMR-008', title: 'Layer Process Audit Report', paper_basis: 'month', paper_unit: 'ไลน์ × กะ', used_route: '/lpa', is_active: true },
+    { id: 'df6', doc_key: 'mo_report', form_code: 'FM-JIG-008', title: 'ใบแจ้งซ่อม / Work Order (MO)', paper_basis: 'event', paper_unit: 'เรื่อง', used_route: '/mtn-repair', is_active: true },
+    { id: 'df7', doc_key: 'mo_report_mtn', form_code: 'FM-MTN-006', title: 'ใบสั่งงานซ่อมบำรุง (MTN)', paper_basis: 'event', paper_unit: 'เรื่อง', used_route: '/mtn-repair', is_active: true },
+    { id: 'df8', doc_key: 'material_request', form_code: 'FM-STO-003', title: 'แบบฟอร์มการขอเบิก/คืนสินค้าคงคลัง', paper_basis: 'event', paper_unit: 'ใบ', used_route: '/qa?tab=matreq', is_active: true },
+    { id: 'df9', doc_key: 'pe_fmea', form_code: 'FM-PE1-018', title: 'Process FMEA', paper_basis: 'document', paper_unit: 'พาร์ท', used_route: '/pe-docs', is_active: true },
+    { id: 'df10', doc_key: 'csv_dr_oee', form_code: null, title: 'รายงาน OEE รายกะ (CSV)', paper_basis: 'report', paper_unit: null, used_route: null, is_active: true },
+    { id: 'df11', doc_key: 'new_unclassified_form', form_code: null, title: 'ฟอร์มใหม่ที่ยังไม่จัดรอบ', paper_basis: null, paper_unit: null, used_route: null, is_active: true },
+    { id: 'df12', doc_key: 'old_form', form_code: null, title: 'ฟอร์มที่ปิดใช้', paper_basis: 'shift', paper_unit: null, used_route: null, is_active: false },
+  ],
   /* ☕ ทะเบียนเวลาพัก — **ห้ามถอด** (2026-10-20)
      เดิมตารางนี้ตกไปใช้ ROWS กลาง ⇒ ได้แถวขยะ (ไม่มีชื่อ · process "undefined" · เริ่ม 08:00 ทุกแถว)
      ⇒ จอ "☕ นโยบายหยุดพัก" ไม่เคยถูกสวีปด้วยข้อมูลทรงจริงเลย และที่สำคัญกว่า:
@@ -1364,7 +1381,31 @@ const PM_USAGE_DAILY = () => {
   return out;
 };
 
+/* 📈 esm_benefits_rollup — ของจริงเรียก 2 project (Main ก่อน · DR หลัง ใน Promise.all) แต่ mock มี client เดียว
+   ⇒ สลับคืนชุด Main/DR ตามลำดับการเรียก (ตัวเลข = ทรงจริงจากผล RPC 26/11 · นับล้วน ไม่มีชื่อคน)
+   มีเดือนอนาคต (แผน LPA ล่วงหน้า) ให้ตัวกรองเดือนถูกเรนเดอร์ */
+let benefitsCall = 0
+const BENEFITS_MAIN = [
+  ['paper', 'attendance_record', '2026-10', 49, 886], ['paper', 'attendance_record', '2026-11', 59, 900],
+  ['paper', 'lpa_report', '2026-10', 20, 460], ['paper', 'lpa_report', '2026-11', 20, 503], ['paper', 'lpa_report', '2026-12', 20, 0],
+  ['paper', 'qa_inspection_sheet', '2026-10', 139, 139], ['paper', 'qa_inspection_sheet', '2026-11', 897, 897],
+  ['paper', 'pokayoke_check', '2026-10', 16, 16], ['paper', 'pokayoke_check', '2026-11', 98, 1758],
+  ['flow', 'fourm_approve_h', '2026-10', 384, 236.3], ['flow', 'fourm_approve_h', '2026-11', 5, 3.1],
+]
+const BENEFITS_DR = [
+  ['paper', 'daily_production_report', '2026-09', 420, 420], ['paper', 'daily_production_report', '2026-10', 783, 783], ['paper', 'daily_production_report', '2026-11', 881, 881],
+  ['paper', 'xlsx_am_monthly', '2026-10', 53, 263], ['paper', 'xlsx_am_monthly', '2026-11', 91, 934],
+  ['paper', 'mo_report', '2026-09', 300, 300], ['paper', 'mo_report', '2026-10', 832, 832], ['paper', 'mo_report', '2026-11', 1008, 1008],
+  ['flow', 'mo_accept_min', '2026-10', 823, 10], ['flow', 'mo_accept_min', '2026-11', 995, 9],
+  ['flow', 'mo_fix_min', '2026-10', 792, 17], ['flow', 'mo_fix_min', '2026-11', 931, 14],
+  ['flow', 'mo_linked', '2026-10', 832, 450], ['flow', 'mo_linked', '2026-11', 1008, 507],
+  ['flow', 'close_lag_h', '2026-09', 300, 16], ['flow', 'close_lag_h', '2026-10', 781, 4.4], ['flow', 'close_lag_h', '2026-11', 847, 10.9],
+]
+const BENEFITS_ROLL = () => (benefitsCall++ % 2 === 0 ? BENEFITS_MAIN : BENEFITS_DR)
+  .map(([kind, key, month_key, n, val]) => ({ kind, key, month_key, n, val }))
+
 const RPC_RESULT = {
+  esm_benefits_rollup: BENEFITS_ROLL,
   pm_usage_daily: PM_USAGE_DAILY,
   kpi_mtn_rollup: KPI_MTN_ROLL,
   obeya_year_rollup: OBEYA_YEAR,

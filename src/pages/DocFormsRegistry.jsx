@@ -17,7 +17,8 @@ import { DeleteButton } from '../components/IconButton';
 import { tr } from '../utils/i18n';
 import InfoMore from '../components/InfoMore';   // ⓘ คำอธิบายพับ (UI §6.10)
 import { askConfirm } from '../utils/askConfirm';
-import { BOUND_SUBJECTS } from '../utils/wfBound';   // ✍️ เอกสารที่สายเซ็นคุมโดย e-Workflow (25/11)
+import { BOUND_SUBJECTS } from '../utils/wfBound';
+import { PAPER_BASIS, BASIS_ORDER } from '../utils/paperBenefits';   // 📈 รอบการออกใบ (นับกระดาษที่ทดแทน · /live-benefits)   // ✍️ เอกสารที่สายเซ็นคุมโดย e-Workflow (25/11)
 
 /* ══════════════════════════════════════════════════════════════
    📄 ทะเบียนเอกสาร & ฟอร์ม (Document Master) — หน้า /doc-forms
@@ -208,6 +209,8 @@ export default function DocFormsRegistry() {
         paper: editing.paper?.trim() || null,
         paper_size: editing.paper_size || null,
         orientation: editing.orientation || null,
+        paper_basis: editing.paper_basis || null,
+        paper_unit: editing.paper_unit?.trim() || null,
         sig_blocks: sig.length ? sig : null,
         footer_note: editing.footer_note?.trim() || null,
         notes: editing.notes?.trim() || null,
@@ -333,6 +336,20 @@ export default function DocFormsRegistry() {
                     <input type="checkbox" checked={editing.is_active !== false} onChange={e => setF('is_active', e.target.checked)} style={{ width: 'auto' }} />
                     {tr("เปิดใช้ (ปิด = ฟอร์มใช้ค่า default ในโค้ด")})
                   </label>
+                </div>
+              </div>
+              {/* 📈 รอบการออกใบ — หน้า /live-benefits นับกระดาษที่ทดแทนจากช่องนี้ (26/11) */}
+              <div className="mgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div>
+                  <div style={lb}>{tr('รอบการออกใบ (นับกระดาษที่ทดแทน)')}</div>
+                  <select value={editing.paper_basis || ''} onChange={e => setF('paper_basis', e.target.value || null)} style={{ width: '100%' }}>
+                    <option value="">{tr('— ยังไม่จัด —')}</option>
+                    {BASIS_ORDER.map(b => <option key={b} value={b}>{tr(PAPER_BASIS[b].label)}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <div style={lb}>{tr('1 แผ่นต่อ (เช่น ไลน์ × กะ · เครื่อง × กะ)')}</div>
+                  <input type="text" value={editing.paper_unit || ''} onChange={e => setF('paper_unit', e.target.value)} placeholder={tr('ไลน์ × กะ')} style={{ width: '100%' }} />
                 </div>
               </div>
               <div>

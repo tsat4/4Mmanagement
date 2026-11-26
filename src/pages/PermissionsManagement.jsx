@@ -196,6 +196,7 @@ const PAGE_GROUPS = [
     pages: [
       { key: 'page:/flow-tower', label: 'สายธารความต้องการ (Flow Tower)' },
       { key: 'page:/group-overview', label: 'ภาพรวมกลุ่มโรงงาน (Mockup)' },
+      { key: 'page:/live-benefits', label: 'ประโยชน์จาก ESM (Live) — กระดาษที่ทดแทน + เวลาที่ลด' },
       { key: 'page:/adoption-outlook', label: 'ภาพเมื่อข้อมูลเชื่อมกัน' },
       { key: 'page:/announcements', label: 'ประกาศบริษัท (Mockup)' },
       { key: 'page:/overseas-travel', label: 'เบิกเดินทางต่างประเทศ (Mockup)' },
