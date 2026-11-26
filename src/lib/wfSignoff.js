@@ -14,11 +14,11 @@ const ACTIVE = ['in_progress', 'returned', 'approved'];
 /**
  * @returns {Promise<null | { error: string } | { defName, docNo, status, rows: [{label,name,at,sigUrl}] }>}
  */
-export async function loadRoundSignoff(supabase, { subject, line, date, shift = null }) {
+export async function loadRoundSignoff(supabase, { subject, defKey = null, line, date, shift = null }) {
   const dRes = await supabase.from('wf_defs')
     .select('id, key, name, wf_versions!wf_defs_current_version_fk(flow_schema)').eq('status', 'active');
   if (dRes.error) return { error: dRes.error.message };
-  const def = (dRes.data || []).find(d => d.wf_versions?.flow_schema?.binding?.subject === subject);
+  const def = (dRes.data || []).find(d => d.wf_versions?.flow_schema?.binding?.subject === subject && (!defKey || d.key === defKey));
   if (!def) return null;
   const flow = def.wf_versions.flow_schema;
   const [from] = wfPeriodRange(flow.binding.period, date) || [];

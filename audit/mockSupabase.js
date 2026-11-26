@@ -1234,11 +1234,26 @@ const TABLE_EXTRA = {
 /* 📺 ?rot=<path>[,<path>] (20/10) — แผนจอวนหน้าของบัญชี display ใน harness (คู่กับ ?tvshell=1)
    ไม่มีแถวนี้ = DisplayRotator ไม่ active ⇒ "พอดีจอ/แบ่งส่วน/รอหน้าย่อย" ไม่เคยถูกรันในฮาร์เนส
    ไม่ใส่ ?rot = พฤติกรรมเดิม (แถวกลาง ROWS → แผนไม่ active) */
+/* 🧩 ?wfgrid=1 (26/11) — ใบงาน "ใบตรวจแบบตาราง" (bbs_grid) ตัวอย่าง ⇒ จอ WfGridSheet วาดตารางจริงในฮาร์เนส
+   ไม่ใส่ = แถวกลาง ROWS (status ไม่ใช่ active ⇒ จอขึ้น "ใบงานนี้ยังไม่เปิดใช้" = สาขา fail-closed) */
+const WF_GRID_FIXTURE = typeof location !== 'undefined' && new URLSearchParams(location.search).get('wfgrid') === '1'
+  ? [{ id: 'wfd-grid', key: 'bbs_grid', name: 'BBS · สังเกตพฤติกรรมความปลอดภัย', status: 'active', current_version_id: 'wfv-grid',
+      wf_versions: {
+        form_schema: { fields: [{ key: 'grid', type: 'checkgrid', label: 'ผลสังเกต', rows: 'line_employees', recordPerm: 'bbs:record',
+          docKey: 'bbs_observation', autofill: 'ppe_daily', alertEvent: 'bbs_unsafe', rowNote: true, itemsTitle: 'ข้อตกลงด้านความปลอดภัย',
+          marks: [{ key: 'ok', glyph: '✓', label: 'พฤติกรรมเหมาะสม', color: 'green' }, { key: 'ng', glyph: '#', label: 'ไม่เหมาะสม (ใส่เลขข้อ)', color: 'red', needsItem: true, alert: true },
+                  { key: 'fixed', glyph: 'm', label: 'ปรับแก้แล้ว', color: 'blue' }, { key: 'na', glyph: '✗', label: 'ไม่ได้ตรวจ', color: 'muted' }],
+          items: [{ seq: 1, text: 'สวมหมวกนิรภัย', auto: 'helmet' }, { seq: 2, text: 'สวมรองเท้านิรภัย', auto: 'boots' }, { seq: 3, text: 'ปฏิบัติตาม SOP' }] }] },
+        flow_schema: { binding: { subject: 'grid', period: 'month', perShift: false },
+          steps: [{ key: 'issue', label: 'ผู้ตรวจ', sig_label: 'ออกโดย', kind: 'ack', assignee: { rule: 'perm_in_line', perm: 'bbs:record' } },
+                  { key: 'check', label: 'Supervisor', sig_label: 'ตรวจสอบโดย', kind: 'approve', assignee: { rule: 'perm_in_line', perm: 'bbs:check' } }] } } }]
+  : null
 const ROT_PATHS = typeof location !== 'undefined' ? (new URLSearchParams(location.search).get('rot') || '') : ''
 const rowsFor = (table) => {
   if (table === 'display_rotations' && ROT_PATHS) {
     return [{ enabled: true, items: ROT_PATHS.split(',').map(path => ({ path, sec: 20 })), default_sec: 20, pause_sec: 120, reload_min: 0 }]
   }
+  if (table === 'wf_defs' && WF_GRID_FIXTURE) return WF_GRID_FIXTURE
   if (TABLE_FIXED[table]) return TABLE_FIXED[table]
   const fn = TABLE_ROWS[table]
   const base = fn ? ROWS.map((r, idx) => fn(r, idx + 1)) : ROWS

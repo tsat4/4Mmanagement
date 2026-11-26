@@ -91,6 +91,26 @@
 **จำลองบนฐานจริง 25/11 (rollback):** Line 60 ต.ค. — ขั้นผู้ตรวจ 8 คน · SV PD3 11 คน · Manager PD3 1 คน (+admin) · ก่อนเซ็นแก้ได้ · เซ็นขั้นแรกแล้วแก้ = ถูกบล็อก · พ.ย. (ยังไม่จบเดือน) = `period_open` · scan เปิดรอบ ต.ค. 18 ไลน์
 🐞 cron `wf-bound-scan` ของ 20261125b **ไม่ได้ลงจริง** (บรรทัด `cron.schedule` อยู่นอก transaction ตอน apply) — ลงแล้วใน 20261125c (ตรวจ `cron.job`)
 
+### 🧩 ขั้น 2 — "ใบตรวจแบบตาราง (คน × วัน)" ออกแบบได้ในหน้าออกแบบใบงาน (2026-11-26 · migration `20261126_wf_checkgrid_main.sql` apply แล้ว)
+> user: *"สร้างใบตรวจแบบตารางได้ทุกแบบ"* · *"ข้อ 1 เริ่มตารางใหม่ 1 ธ.ค."* · *"พอขึ้นตารางใหม่ค่อยย้าย data เก่ามาใส่ย้อนหลังให้ แล้วลบตารางเดิมทิ้ง"*
+
+| เรื่อง | ที่อยู่ |
+|---|---|
+| ใบงาน = ผูกเอกสาร `binding.subject = 'grid'` + ช่องชนิด `checkgrid` 1 ช่อง | ตั้งที่ `/workflow-designer` (ตัวตั้งค่า `src/components/WfGridFieldEditor.jsx`) |
+| นิยามช่อง: แหล่งแถว · คีย์สิทธิ์บันทึก (`recordPerm`) · ทะเบียนเอกสาร (`docKey` → `/doc-forms`) · สัญลักษณ์ (`marks[]` รหัส/ตัวในช่อง/ความหมาย/สี token/ต้องระบุข้อ/แจ้ง) · หัวข้อ (`items[]` + `auto`) · ตัวเติม (`autofill`) · แจ้งเตือน (`alertEvent` = event_key ใน notification_rules) · หมายเหตุท้ายแถว | ของกลาง `src/utils/checkGrid.js` (`validateGrid` · `ppeToGridCell` · `GRID_ROW_SOURCES` · `GRID_AUTOFILL` · `GRID_COLORS`) |
+| ข้อมูล (Main) | `wf_grid_sheets` (ใบงาน × ไลน์ × รอบ) · `wf_grid_cells` (row_key × col) · `wf_grid_row_notes` — RLS เขียน = `wf_grid_can_write(def_key)` = has_perm(`recordPerm` ของฟอร์มเวอร์ชันที่ใช้อยู่) · ไม่มีใบงาน/ไม่ตั้งคีย์ = เขียนไม่ได้ |
+| ล็อก | trigger `wf_grid_lock` ทั้ง 3 ตาราง → `wf_grid_locked(def_key, line, from)` (มีคนเซ็นแล้ว = ล็อก) |
+| จอ | `src/components/WfGridSheet.jsx` (ตาราง desktop + การ์ดรายวันมือถือ + หมายเหตุ + เติมอัตโนมัติ + ตัวหาร/วันหยุด/ไลน์ไม่เดิน + แผงเซ็น `WfRoundPanel defKey`) |
+| ใบพิมพ์ | `src/lib/gridPrint.js` (หัว = /doc-forms · ช่องเซ็น = ขั้น · ข้อความบังคับ "ระบบเติมได้ N จาก M ข้อ") |
+| ด่านเผยแพร่ | `wf_request_publish` (DB) ↔ `validateDef` (จอ): grid ต้องมี checkgrid 1 ช่อง + คีย์บันทึก · ไม่แยกกะ · checkgrid ห้ามอยู่ในใบที่ไม่ใช่ grid |
+| ตัวสแกน | `wf_bound_scan` เปิดใบรอบของใบที่มีข้อมูล + รอบจบแล้วภายใน 40 วัน |
+
+🦺 **BBS ตั้งแต่ ธ.ค. 2569 = ใบงาน `bbs_grid`** (`BBS_GRID_FROM` ใน checkGrid.js · `BbsCheck.jsx` แตกสาขาตามเดือน) · หัวข้อ 13 ข้อยกจาก `bbs_agreements` ณ 26/11 ·
+แก้หัวข้อ/สัญลักษณ์ = หน้าออกแบบ → เวอร์ชันใหม่ → admin เผยแพร่ (ไม่ใช่ปุ่ม 📋 ข้อตกลงบนจอ BBS เดิม)
+· ⚠️ ของที่ใบใหม่**ไม่มี**: ช่อง "ผู้ตรวจ" + สแกนรหัสพนักงาน/ลายเซ็นจากฐานพนักงาน (C1 03/11) — ผู้ตรวจ = คนที่เซ็น "ออกโดย" ในสายเซ็น (ลายเซ็นโปรไฟล์ของตัวเอง)
+· ⏳ **ค้าง (คำสั่ง user):** ย้ายข้อมูล ต.ค.–พ.ย. จาก `bbs_*` เข้า `wf_grid_*` (สำเนาเก่าเก็บ `archive`) → ตรวจนับตรง → ลบตาราง `bbs_*` + ใบงาน `bbs_monthly` — **ทำหลังใบใหม่ขึ้นใช้จริง · ถาม user ยืนยันก่อนลบ**
+· ฮาร์เนส: `?wfgrid=1` = ใบงานตัวอย่าง (`audit/mockSupabase.js`)
+
 **ยังไม่ย้าย:** LPA (ตั้งใจ — ตรวจแล้ว = เซ็น) · AM · 4M (ย้ายทีละตัวตามที่ user สั่ง)
 
 ## ⏳ ยังไม่ทำ (ตั้งใจ — ตาม E-WORKFLOW-DESIGN §13)

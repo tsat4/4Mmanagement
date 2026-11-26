@@ -55,14 +55,15 @@ export default function DocFormsRegistry() {
   const [wfErr, setWfErr] = useState('');
   useEffect(() => {
     let alive = true;
-    supabase.from('wf_defs').select('id, name, wf_versions!wf_defs_current_version_fk(flow_schema)').eq('status', 'active')
+    supabase.from('wf_defs').select('id, name, wf_versions!wf_defs_current_version_fk(flow_schema, form_schema)').eq('status', 'active')
       .then(({ data, error }) => {
         if (!alive) return;
         if (error) { setWfErr(error.message); return; }
         const m = {};
         (data || []).forEach(d => {
           const f = d.wf_versions?.flow_schema;
-          const dk = BOUND_SUBJECTS.find(b => b.subject === f?.binding?.subject)?.docKey;
+          const dk = BOUND_SUBJECTS.find(b => b.subject === f?.binding?.subject)?.docKey
+            || (d.wf_versions?.form_schema?.fields || []).find(x => x.type === 'checkgrid')?.docKey;   // 🧩 ใบตรวจแบบตาราง (26/11)
           if (dk) (m[dk] ||= []).push({ id: d.id, name: d.name, steps: (f.steps || []).map(x => x.sig_label || x.label) });
         });
         setWfByDoc(m);
