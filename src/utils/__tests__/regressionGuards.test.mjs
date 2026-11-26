@@ -12978,6 +12978,30 @@ test('🛡️ skill-delete-keeps-scores — ปุ่มลบสกิลห้
   assert.ok(/before delete on public\.skill_definitions/.test(mig), 'migration ด่านลบสกิลต้องมี trigger before delete');
 });
 
+test('🪪 account-hint-only-identity-codes — บรรทัด "บัญชีที่กำลังใช้" ห้ามขึ้นกับด่านที่เป็นเรื่องของช่อง/ใบ', () => {
+  /* 25/11 · user: "ช่องนี้ตรงที่บอกว่าใช้บัญชีอะไร มันดูตลก … งานที่ไม่เกี่ยวกับบัญชีที่ล็อกอินอยู่
+     แต่มาแจ้งเป็นชื่อเจ้าของบัญชี เค้าจะสับสนมั้ย ว่าช่องนี้เกี่ยวอะไรกับเค้า ทำไมมีชื่อเค้า"
+     เคสจริง: ช่อง "รอ ผจก.ส่วนซ่อมบำรุง รับทราบ" (code `other_team`) ที่ระบุชื่อช่างไว้คนละคน
+     แล้วต่อท้ายด้วยชื่อ "คนที่กำลังดู" ⇒ อ่านแล้วเหมือนช่องนั้นเป็นของเรา
+     ⇒ กฎ: โชว์ได้เฉพาะโค้ดที่ข้อความของมันพูดถึง "บัญชีนี้" อยู่แล้ว (ทะเบียน ACCOUNT_HINT_CODES) */
+  const perm = readFileSync(ROOT + 'src/utils/mtnStepPerm.js', 'utf8');
+  assert.ok(/export const ACCOUNT_HINT_CODES\b/.test(perm) && /export function showsAccountHint\b/.test(perm),
+    '\n\n❌ ไม่มีทะเบียน ACCOUNT_HINT_CODES / showsAccountHint() ใน utils/mtnStepPerm.js\n');
+  assert.ok(!/ACCOUNT_HINT_CODES\s*=\s*Object\.freeze\(\[[^\]]*'other_team'/.test(perm)
+    && !/ACCOUNT_HINT_CODES\s*=\s*Object\.freeze\(\[[^\]]*'wrong_side'/.test(perm),
+    '\n\n❌ ACCOUNT_HINT_CODES มี other_team / wrong_side — 2 โค้ดนี้บอกว่า "ช่องนี้เป็นของฝั่ง/ทีมอื่น"\n'
+    + '   ต่อท้ายด้วยชื่อคนที่กำลังดู = จอโกหกว่าช่องนั้นเกี่ยวกับเขา\n');
+
+  const page = readFileSync(ROOT + 'src/pages/MtnRepair.jsx', 'utf8');
+  const spots = page.match(/\{whoAmILine[^}]*&&[^}]*<span/g) || [];
+  assert.ok(spots.length > 0, '\n\n❌ หา whoAmILine ใน MtnRepair.jsx ไม่เจอ — ด่านนี้ตามของจริงไม่ทันแล้ว\n');
+  for (const s of spots) {
+    assert.ok(/showsAccountHint\(/.test(s),
+      `\n\n❌ MtnRepair.jsx โชว์บรรทัดบัญชีโดยไม่ถาม showsAccountHint():\n   ${s}\n`
+      + '   ⇒ ต้องเป็น {whoAmILine && showsAccountHint(<code ของด่านนั้น>) && <span …>}\n');
+  }
+});
+
 /* ── ⏳ count-blocks-pending-adjust (25/11 · user "ต่างคนต่างนับ ต่างคนต่างอัพยอด จะมั่วไหม") ────
    view `line_stock_summary` มี `where status='approved'` ⇒ **ใบ pending ไม่อยู่ใน qty_on_hand**
    คนที่ 1 นับแล้วใบยังรออนุมัติ · คนที่ 2 เปิดจอเห็น "ยอดระบบ" ตัวเดิม กรอกยอดเดิม = เขียนผลต่างซ้ำ
