@@ -156,3 +156,93 @@ test('QR: รหัสชนิดห้ามชนกัน (เพิ่ม�
   const codes = Object.values(QR_KINDS).map(k => k.code);
   assert.equal(new Set(codes).size, codes.length);
 });
+
+/* ── ② ตัวเสนอแบบ FIFO ─────────────────────────────────────────────────────── */
+import { suggestFifo, linePartKey } from '../kanbanCard.js';
+
+test('suggestFifo: ไม่รู้ยอด/ไม่รู้ขนาดกล่อง = ไม่เสนอ + บอกเหตุผล (boxes=null ไม่ใช่ 0)', () => {
+  const cards = [{ id: 'a', state: 'at_line', qty_per_card: 600, state_at: '2026-11-25T01:00:00Z' }];
+  const r1 = suggestFifo({ cards, consumedQty: null });
+  assert.equal(r1.boxes, null);
+  assert.equal(r1.ids.size, 0);
+  assert.match(r1.why, /ใช้ไปเท่าไหร่/);
+  const r2 = suggestFifo({ cards: [{ id: 'a', state: 'at_line', qty_per_card: 0 }], consumedQty: 5000 });
+  assert.equal(r2.boxes, null);
+  assert.match(r2.why, /กี่ชิ้นต่อกล่อง/);
+});
+
+test('suggestFifo: 🔴 กินหลายกล่อง = เสนอเฉพาะใบที่มาถึงก่อน ไม่เสนอยกชุด', () => {
+  const cards = [
+    { id: 'c3', state: 'at_line', qty_per_card: 600, state_at: '2026-11-25T03:00:00Z' },
+    { id: 'c1', state: 'at_line', qty_per_card: 600, state_at: '2026-11-25T01:00:00Z' },
+    { id: 'c2', state: 'at_line', qty_per_card: 600, state_at: '2026-11-25T02:00:00Z' },
+    { id: 'x',  state: 'in_box',  qty_per_card: 600, state_at: '2026-11-25T00:00:00Z' },
+  ];
+  const r = suggestFifo({ cards, consumedQty: 1250 });   // 2.08 กล่อง
+  assert.equal(r.boxes, 2);
+  assert.deepEqual([...r.ids].sort(), ['c1', 'c2']);     // เก่าสุด 2 ใบ ไม่ใช่ c3
+  assert.match(r.why, /2 กล่อง/);
+});
+
+test('suggestFifo: เศษไม่นับ — 1.9 กล่อง = เสนอ 1 ใบ (กล่องที่ 2 ยังมีของ)', () => {
+  const cards = [
+    { id: 'a', state: 'at_line', qty_per_card: 600, state_at: '2026-11-25T01:00:00Z' },
+    { id: 'b', state: 'at_line', qty_per_card: 600, state_at: '2026-11-25T02:00:00Z' },
+  ];
+  assert.equal(suggestFifo({ cards, consumedQty: 1140 }).boxes, 1);
+  assert.equal(suggestFifo({ cards, consumedQty: 599 }).boxes, 0);
+  assert.equal(suggestFifo({ cards, consumedQty: 0 }).boxes, 0);
+});
+
+test('suggestFifo: เสนอได้ไม่เกินจำนวนใบที่อยู่ที่ไลน์จริง', () => {
+  const cards = [{ id: 'a', state: 'at_line', qty_per_card: 100, state_at: '2026-11-25T01:00:00Z' }];
+  const r = suggestFifo({ cards, consumedQty: 999999 });
+  assert.equal(r.boxes, 1);
+  assert.equal(r.ids.size, 1);
+});
+
+test('suggestFifo: ไม่มีใบอยู่ที่ไลน์ = 0 (ไม่ใช่ null — รู้แน่ว่าไม่มีอะไรให้ถอด)', () => {
+  const r = suggestFifo({ cards: [{ id: 'x', state: 'in_box', qty_per_card: 600 }], consumedQty: 9999 });
+  assert.equal(r.boxes, 0);
+  assert.equal(r.why, null);
+});
+
+test('linePartKey: คีย์จับคู่ชุดเดียว ห้ามประกอบเองในหน้า', () => {
+  assert.equal(linePartKey('Line 061', '30051864'), 'Line 061\u000030051864');
+  assert.equal(linePartKey(' Line 061 ', ' 30051864 '), 'Line 061\u000030051864');
+});
+
+/* ── 🔢 เลขใบต้องไม่ซ้ำข้ามไลน์ (user ทักจากรูป 26/11: "10101001-02" ขึ้น 2 ใบ) ─────
+   `card_no` = MAT-ลำดับ **ไม่มีชื่อไลน์อยู่ในเลข** ⇒ ถ้าเดินลำดับรายไลน์ พาร์ทเดียวกัน
+   คนละไลน์จะได้เลขเดียวกัน = ชน unique index (23505) ออกใบไม่ได้ + คนแยกใบไม่ออก */
+
+test('planCards: พาร์ทใช้หลายไลน์ = ออกใบไม่ได้ (ทะเบียนบอกจำนวนใบรวม ไม่ได้บอกรายไลน์)', () => {
+  const r = planCards({ matNo: 'A', lineName: 'L1', totalCards: 4, qtyPerCard: 600, otherLines: 1 });
+  assert.equal(r.ok, false);
+  assert.match(r.why, /2 ไลน์/);
+  assert.deepEqual(r.toCreate, []);
+});
+
+test('planCards: ลำดับเดินต่อทั้งพาร์ท — ไม่ทับเลขที่ไลน์อื่นใช้ไปแล้ว', () => {
+  /* ไลน์อื่นถือ seq 1,2 อยู่ (ส่งผ่าน matCards) ⇒ ไลน์นี้ต้องได้ 3,4 ไม่ใช่ 1,2 */
+  const r = planCards({ matNo: '30051864', lineName: 'L2', totalCards: 2, qtyPerCard: 600,
+    existing: [], matCards: [{ seq: 1, is_active: true }, { seq: 2, is_active: true }] });
+  assert.equal(r.ok, true);
+  assert.deepEqual(r.toCreate.map(c => c.seq), [3, 4]);
+  assert.deepEqual(r.toCreate.map(c => c.card_no), ['30051864-03', '30051864-04']);
+});
+
+test('planCards: เลขใบที่ออกมา ห้ามซ้ำกับใบที่มีอยู่แล้วเลย', () => {
+  const matCards = [{ seq: 1, is_active: true }, { seq: 3, is_active: true }, { seq: 7, is_active: true }];
+  const r = planCards({ matNo: 'A', lineName: 'L9', totalCards: 3, qtyPerCard: 100, matCards, existing: [] });
+  const made = r.toCreate.map(c => c.seq);
+  assert.equal(made.length, 3);
+  assert.equal(made.some(s => [1, 3, 7].includes(s)), false);
+  assert.equal(new Set(made).size, 3);
+});
+
+test('planCards: ไม่ส่ง matCards = พฤติกรรมเดิม (นับเฉพาะใบของไลน์นี้)', () => {
+  const r = planCards({ matNo: 'A', lineName: 'L1', totalCards: 3, qtyPerCard: 100,
+    existing: [{ seq: 1, is_active: true }] });
+  assert.deepEqual(r.toCreate.map(c => c.seq), [2, 3]);
+});

@@ -83,7 +83,8 @@ export function cardNo(matNo, seq) {
  *  🔴 ใบที่มีอยู่แล้วห้ามแตะ — ใบคือของจริงที่หมุนอยู่ ลดจำนวนใบ = **เสนอให้ถอนออก ไม่ลบให้เอง**
  *  @returns {{ ok:boolean, why:string|null, toCreate:Array, toRetire:Array, keep:number }}
  */
-export function planCards({ matNo, lineName, totalCards = null, qtyPerCard = null, fromLocation = null, existing = [] } = {}) {
+export function planCards({ matNo, lineName, totalCards = null, qtyPerCard = null, fromLocation = null,
+  existing = [], matCards = null, otherLines = 0 } = {}) {
   const bad = (why) => ({ ok: false, why, toCreate: [], toRetire: [], keep: 0 });
   const mat = String(matNo ?? '').trim();
   const line = String(lineName ?? '').trim();
@@ -93,16 +94,37 @@ export function planCards({ matNo, lineName, totalCards = null, qtyPerCard = nul
   if (!Number.isFinite(n) || n < 1) return bad('ทะเบียนยังไม่ได้ตั้ง "จำนวนใบ" (total_kanban) — ออกใบไม่ได้');
   if (!Number.isFinite(q) || q <= 0) return bad('ทะเบียนยังไม่ได้ตั้ง "ชิ้นต่อใบ" (qty_per_kanban) — ออกใบไม่ได้');
 
+  /* 🔴🔴 ทะเบียนบอก "จำนวนใบ" ต่อ **พาร์ท** ไม่ได้บอกว่า *ไลน์ละกี่ใบ*
+     พาร์ทที่ป้อนหลายไลน์จึงแบ่งใบไม่ได้โดยไม่เดา ⇒ **ออกใบไม่ได้ ต้องให้คนตั้งก่อน**
+     (เคยพลาด: ออก 1..N ให้ทุกไลน์ ⇒ ใบรวมเกินจริง N เท่า และเลขใบชนกัน) */
+  if (Number(otherLines) > 0) {
+    return bad(`พาร์ทนี้ใช้ ${Number(otherLines) + 1} ไลน์ แต่ทะเบียนบอกจำนวนใบรวม ไม่ได้บอกว่าไลน์ละกี่ใบ — ออกใบไม่ได้`);
+  }
+
   const live = (existing || []).filter(c => c && c.is_active !== false);
   const bySeq = new Map(live.map(c => [Number(c.seq), c]));
+
+  /* 🔴 `seq` เดินต่อ **ทั้งพาร์ท ไม่ใช่ต่อไลน์** — `card_no` = MAT-ลำดับ ไม่มีชื่อไลน์อยู่ในเลข
+     ถ้าเดินต่อรายไลน์ พาร์ทเดียวกันคนละไลน์จะได้เลขเดียวกัน ⇒ ชน unique index (23505)
+     ออกใบไม่ได้เลย **และคนอ่านก็แยกใบไม่ออกเวลา QR อ่านไม่ติด** */
+  const taken = new Set((matCards == null ? live : matCards)
+    .filter(c => c && c.is_active !== false).map(c => Number(c.seq)));
   const toCreate = [];
-  for (let s = 1; s <= n; s += 1) {
-    if (bySeq.has(s)) continue;
+  let s = 1;
+  for (let k = 0; k < n; k += 1) {
+    if (bySeq.has(s) && taken.has(s)) { s += 1; k -= 1; continue; }   // ใบนี้ของไลน์นี้มีแล้ว ข้ามไป
+    while (taken.has(s)) s += 1;                                      // เลขนี้มีคนใช้แล้ว (ไลน์อื่น)
+    if (live.length + toCreate.length >= n) break;
+    taken.add(s);
     toCreate.push({ card_no: cardNo(mat, s), mat_no: mat, line_name: line, from_location: fromLocation || null,
       qty_per_card: q, seq: s, total_cards: n, state: 'at_line' });
+    s += 1;
   }
   /* ใบเกินจำนวนที่ทะเบียนบอก = **เสนอให้ถอน** (คนตัดสิน) — ของจริงอาจยังมีกล่องหมุนอยู่ */
-  const toRetire = live.filter(c => Number(c.seq) > n);
+  const extra = Math.max(0, live.length - n);
+  const toRetire = extra
+    ? [...live].sort((a, b) => Number(b.seq) - Number(a.seq)).slice(0, extra)
+    : [];
   return { ok: true, why: null, toCreate, toRetire, keep: live.length - toRetire.length };
 }
 
@@ -175,3 +197,49 @@ export function cabinetSummary(cards, now = null) {
   });
   return { waiting, oldestMin, suggested, total: cards.length };
 }
+
+/* ── 🤖 ②ตัวเสนอแบบ FIFO — "กินไปกี่กล่องแล้ว" ไม่ใช่ "ใบไหนก็ได้" (2026-11-25) ────
+   🔴 กับดักที่ต้องกัน: ไลน์หนึ่งมีใบ `at_line` หลายใบพร้อมกัน (เช่น 4 กล่องวางเรียงอยู่)
+   ถ้าเอายอดที่ผลิตไปเทียบกับ "ทุกใบ" จะเสนอให้ถอดทั้ง 4 ใบพร้อมกัน = **สโตร์ยกมาเกิน 4 เท่า**
+   ของจริงกินทีละกล่อง เรียงตามที่มาถึงก่อน ⇒ ยอดที่ผลิตไปแปลงเป็น **"กี่กล่อง"** แล้วเสนอ
+   เฉพาะใบที่มาถึงก่อนตามจำนวนนั้น (FIFO)
+
+   🔴 **เศษไม่นับ** — ผลิตไป 1.9 กล่อง = เสนอ 1 ใบ (กล่องที่ 2 ยังมีของอยู่จริง)
+   🔴 ไม่รู้ยอด/ไม่รู้ขนาดกล่อง = **ไม่เสนอเลย** ห้ามเดา                              */
+
+/** เสนอว่าใบไหนของคู่ (ไลน์, พาร์ท) น่าจะหมดแล้ว — FIFO ตามเวลาที่ใบมาถึงไลน์
+ *  @param {Array}  a.cards        ใบของคู่นี้ (ทุกสถานะ — ฟังก์ชันคัด at_line เอง)
+ *  @param {number} a.consumedQty  ชิ้นที่ถูกใช้ที่ไลน์นี้ **นับตั้งแต่ใบเก่าสุดที่ยังอยู่ที่ไลน์ มาถึง**
+ *  @returns {{ ids:Set<string>, boxes:number|null, why:string|null }}
+ *           ids ว่าง + boxes null = ตอบไม่ได้ (จอต้องเขียนบอก ห้ามแปลว่า "ยังไม่หมด")
+ */
+export function suggestFifo({ cards = [], consumedQty = null } = {}) {
+  const atLine = (cards || [])
+    .filter(c => c && c.state === 'at_line')
+    .sort((a, b) => String(a.state_at ?? '').localeCompare(String(b.state_at ?? '')));
+  if (!atLine.length) return { ids: new Set(), boxes: 0, why: null };
+
+  /* 🔴 `Number(null)` = 0 ⇒ เช็ค "ไม่มีค่า" ก่อนแปลงเสมอ ไม่งั้น "ไม่รู้ยอด" กลายเป็น "ผลิตได้ 0"
+     แล้วจอจะบอกว่า "ยังไม่หมด" ทั้งที่ความจริงคือตอบไม่ได้ (คลาสเดียวกับ qty_on_hand = 0) */
+  const used = (consumedQty === null || consumedQty === undefined || consumedQty === '')
+    ? NaN : Number(consumedQty);
+  if (!Number.isFinite(used) || used < 0) {
+    return { ids: new Set(), boxes: null, why: 'ยังไม่รู้ว่าไลน์นี้ใช้ไปเท่าไหร่ — ระบบจึงเสนอไม่ได้' };
+  }
+  /* ขนาดกล่องอ่านจากใบเก่าสุด (ใบเดียวกันทั้งชุดตามปกติ · ใบเก่าที่ snapshot ไว้ต่างค่า = ใช้ของใบนั้น) */
+  const q = Number(atLine[0].qty_per_card);
+  if (!Number.isFinite(q) || q <= 0) {
+    return { ids: new Set(), boxes: null, why: 'ใบนี้ไม่รู้ว่ากี่ชิ้นต่อกล่อง — ระบบจึงเสนอไม่ได้' };
+  }
+  const boxes = Math.min(atLine.length, Math.floor(used / q));   // 🔴 เศษไม่นับ
+  const ids = new Set(atLine.slice(0, boxes).map(c => c.id));
+  return {
+    ids, boxes,
+    why: boxes > 0
+      ? `ผลิตไปแล้ว ${Math.round(used).toLocaleString()} ชิ้น = ${boxes} กล่อง (กล่องละ ${Math.round(q).toLocaleString()})`
+      : null,
+  };
+}
+
+/** คีย์จับคู่ (ไลน์, พาร์ท) — ใช้ร่วมกันทั้งตัวเสนอและตัวนับยอด ห้ามประกอบคีย์เองในหน้า */
+export const linePartKey = (line, mat) => `${String(line ?? '').trim()}\u0000${String(mat ?? '').trim()}`;
